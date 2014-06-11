@@ -131,8 +131,8 @@ contains
        QTRC,              &
        RHOT_t => RHOT_tp
     use mod_atmos_phy_sf_vars, only: &
-       SFC_TEMP        => ATMOS_PHY_SF_SFC_TEMP,  &
-       SFC_albedo_land => ATMOS_PHY_SF_SFC_albedo
+       SFC_TEMP   => ATMOS_PHY_SF_SFC_TEMP,  &
+       SFC_albedo => ATMOS_PHY_SF_SFC_albedo
     use mod_atmos_phy_rd_vars, only: &
        RHOT_t_RD    => ATMOS_PHY_RD_RHOT_t,       &
        SFLX_LW_up   => ATMOS_PHY_RD_SFLX_LW_up,   &
@@ -143,10 +143,6 @@ contains
        TOAFLX_LW_dn => ATMOS_PHY_RD_TOAFLX_LW_dn, &
        TOAFLX_SW_up => ATMOS_PHY_RD_TOAFLX_SW_up, &
        TOAFLX_SW_dn => ATMOS_PHY_RD_TOAFLX_SW_dn
-    use mod_cpl_admin, only: &
-       CPL_sw
-    use mod_cpl_vars, only: &
-       CPL_getATM_RD
     implicit none
 
     logical, intent(in) :: update_flag
@@ -174,11 +170,6 @@ contains
 
     if ( update_flag ) then
 
-       if ( CPL_sw ) then
-          call CPL_getATM_RD( SFC_TEMP       (:,:),  & ! [OUT]
-                              SFC_albedo_land(:,:,:) ) ! [OUT]
-       endif
-
        ! calc solar insolation
        if ( SOLARINS_fixedlatlon ) then
           LON(:,:) = REAL_BASEPOINT_LON
@@ -198,7 +189,7 @@ contains
                           REAL_CZ, REAL_FZ,  & ! [IN]
                           LANDUSE_frac_land, & ! [IN]
                           SFC_TEMP,          & ! [IN]
-                          SFC_albedo_land,   & ! [IN]
+                          SFC_albedo,        & ! [IN]
                           solins, cosSZA,    & ! [IN]
                           flux_rad,          & ! [OUT]
                           flux_rad_top       ) ! [OUT]
@@ -230,7 +221,7 @@ contains
 
           call HIST_in( solins(:,:), 'SOLINS', 'solar insolation',        'W/m2', dt_RD )
           call HIST_in( cosSZA(:,:), 'COSZ',   'cos(solar zenith angle)', '0-1',  dt_RD )
-          call HIST_in( SFC_TEMP  (:,:), 'SFC_TEMP',   'surface skin temperature (merged)',    'K',    dt_RD )
+
           call HIST_in( SFLX_LW_up(:,:), 'SFLX_LW_up', 'upward   surface longwave  radiation', 'W/m2', dt_RD )
           call HIST_in( SFLX_LW_dn(:,:), 'SFLX_LW_dn', 'downward surface longwave  radiation', 'W/m2', dt_RD )
           call HIST_in( SFLX_SW_up(:,:), 'SFLX_SW_up', 'upward   surface shortwave radiation', 'W/m2', dt_RD )

@@ -23,6 +23,10 @@ module mod_atmos_driver
   use scale_stdio
   use scale_prof
   use scale_grid_index
+
+  use scale_const, only: &
+     I_SW  => CONST_I_SW, &
+     I_LW  => CONST_I_LW
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -32,6 +36,7 @@ module mod_atmos_driver
   !
   public :: ATMOS_driver_setup
   public :: ATMOS_driver
+  public :: ATMOS_SURFACE_GET
   public :: ATMOS_SURFACE_SET
 
   !-----------------------------------------------------------------------------
@@ -54,18 +59,17 @@ contains
     use scale_time, only: &
        TIME_NOWDATE
     use mod_atmos_vars, only: &
-       ATMOS_vars_diagnostics, &
-       DENS,              &
-       MOMZ,              &
-       MOMX,              &
-       MOMY,              &
-       RHOT,              &
-       QTRC,              &
-       DENS_tp,           &
-       MOMZ_tp,           &
-       MOMX_tp,           &
-       MOMY_tp,           &
-       RHOT_tp,           &
+       DENS,    &
+       MOMZ,    &
+       MOMX,    &
+       MOMY,    &
+       RHOT,    &
+       QTRC,    &
+       DENS_tp, &
+       MOMZ_tp, &
+       MOMX_tp, &
+       MOMY_tp, &
+       RHOT_tp, &
        QTRC_tp
     use scale_atmos_solarins, only: &
        ATMOS_SOLARINS_setup
@@ -93,8 +97,10 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[DRIVER]/Categ[ATMOS]'
-    if( IO_L ) write(IO_FID_LOG,*) '*** setup each atmospheric components'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[DRIVER] / Categ[ATMOS] / Origin[SCALE-LES]'
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '*** Setup each atmospheric components...'
 
     !--- setup solar insolation
     call ATMOS_SOLARINS_setup( TIME_NOWDATE(1) )
@@ -113,12 +119,6 @@ contains
     call ATMOS_PHY_TB_driver_setup
     call ATMOS_PHY_CP_driver_setup
 
-    !########## Calculate diagnostic variables ##########
-    call ATMOS_vars_diagnostics
-
-    !########## Set surface boundary & put to other model ##########
-    call ATMOS_SURFACE_SET
-
     !########## initialize tendencies ##########
     DENS_tp(:,:,:)   = 0.0_RP
     MOMZ_tp(:,:,:)   = 0.0_RP
@@ -127,7 +127,8 @@ contains
     RHOT_tp(:,:,:)   = 0.0_RP
     QTRC_tp(:,:,:,:) = 0.0_RP
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** setup ATMOS finished.'
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '*** Finish setup of each atmospheric components.'
 
     return
   end subroutine ATMOS_driver_setup
@@ -162,6 +163,7 @@ contains
     use mod_atmos_vars, only: &
        ATMOS_vars_diagnostics, &
        ATMOS_vars_history,     &
+       ATMOS_vars_monitor,     &
        DENS,                   &
        MOMZ,                   &
        MOMX,                   &
@@ -198,10 +200,13 @@ contains
        call ATMOS_REFSTATE_update( DENS, RHOT, QTRC ) ! (in)
     endif
 
-    !########## Boundary Condition ###########
+    !########## Lateral/Top Boundary Condition ###########
     if ( ATMOS_BOUNDARY_UPDATE_FLAG ) then
-       call ATMOS_BOUNDARY_update()
+       call ATMOS_BOUNDARY_update
     endif
+
+    !########## Get Surface Boundary Condition from coupler ##########
+    call ATMOS_SURFACE_GET( setup=.false. )
 
     !########## Microphysics ##########
     if ( ATMOS_sw_phy_mp ) then
@@ -262,12 +267,13 @@ contains
     !########## Calculate diagnostic variables ##########
     call ATMOS_vars_diagnostics
 
-    !########## Set surface boundary & put to other model ##########
-    call ATMOS_SURFACE_SET
+    !########## Set Surface Boundary & Put to coupler ##########
+    call ATMOS_SURFACE_SET( setup=.false. )
 
     !########## History & Monitor ##########
     call PROF_rapstart('ATM History Vars')
     call ATMOS_vars_history
+    call ATMOS_vars_monitor
     call PROF_rapend  ('ATM History Vars')
 
     !########## reset tendencies ##########
@@ -282,8 +288,84 @@ contains
   end subroutine ATMOS_driver
 
   !-----------------------------------------------------------------------------
-  !> Set surface boundary condition (ATM2CPL)
-  subroutine ATMOS_SURFACE_SET
+  !> Get surface boundary condition (CPL2ATM)
+  subroutine ATMOS_SURFACE_GET( setup )
+    use scale_time, only: &
+       TIME_DTSEC
+    use scale_history, only: &
+       HIST_in
+    use mod_atmos_phy_sf_vars, only: &
+       SFC_TEMP   => ATMOS_PHY_SF_SFC_TEMP,   &
+       SFC_albedo => ATMOS_PHY_SF_SFC_albedo, &
+       SFC_Z0     => ATMOS_PHY_SF_SFC_Z0,     &
+       SFLX_MW    => ATMOS_PHY_SF_SFLX_MW,    &
+       SFLX_MU    => ATMOS_PHY_SF_SFLX_MU,    &
+       SFLX_MV    => ATMOS_PHY_SF_SFLX_MV,    &
+       SFLX_SH    => ATMOS_PHY_SF_SFLX_SH,    &
+       SFLX_LH    => ATMOS_PHY_SF_SFLX_LH,    &
+       SFLX_QTRC  => ATMOS_PHY_SF_SFLX_QTRC
+    use mod_cpl_admin, only: &
+       CPL_sw
+    use mod_cpl_vars, only: &
+       CPL_getATM,   &
+       CPL_getATM_SF
+    implicit none
+
+    logical, intent(in) :: setup
+
+    real(RP) :: Uabs10  (IA,JA) ! 10m absolute wind [m/s]
+    real(RP) :: U10     (IA,JA) ! 10m x-wind [m/s]
+    real(RP) :: V10     (IA,JA) ! 10m y-wind [m/s]
+    real(RP) :: T2      (IA,JA) !  2m Temp   [K]
+    real(RP) :: Q2      (IA,JA) !  2m Vapor  [kg/kg]
+    real(RP) :: FLX_heat(IA,JA) ! ground heat flux [J/m2/s]
+    !---------------------------------------------------------------------------
+
+    if ( setup ) then
+       call CPL_getATM_SF( SFLX_MW  (:,:),  & ! [OUT]
+                           SFLX_MU  (:,:),  & ! [OUT]
+                           SFLX_MV  (:,:),  & ! [OUT]
+                           SFLX_SH  (:,:),  & ! [OUT]
+                           SFLX_LH  (:,:),  & ! [OUT]
+                           SFLX_QTRC(:,:,:) ) ! [OUT]
+    endif
+
+    if ( CPL_sw ) then
+       call CPL_getATM( SFC_TEMP  (:,:),   & ! [OUT]
+                        SFC_albedo(:,:,:), & ! [OUT]
+                        SFC_Z0    (:,:),   & ! [OUT]
+                        Uabs10    (:,:),   & ! [OUT]
+                        U10       (:,:),   & ! [OUT]
+                        V10       (:,:),   & ! [OUT]
+                        T2        (:,:),   & ! [OUT]
+                        Q2        (:,:),   & ! [OUT]
+                        FLX_heat  (:,:)    ) ! [OUT]
+
+       if ( .NOT. setup ) then
+          call HIST_in( SFC_Z0(:,:), 'SFC_Z0', 'roughness length',  'm',     TIME_DTSEC )
+          call HIST_in( Uabs10(:,:), 'Uabs10', '10m absolute wind', 'm/s',   TIME_DTSEC )
+          call HIST_in( U10   (:,:), 'U10'  ,  '10m x-wind',        'm/s',   TIME_DTSEC )
+          call HIST_in( V10   (:,:), 'V10'  ,  '10m y-wind',        'm/s',   TIME_DTSEC )
+          call HIST_in( T2    (:,:), 'T2 '  ,  '2m temperature',    'K',     TIME_DTSEC )
+          call HIST_in( Q2    (:,:), 'Q2 '  ,  '2m water vapor',    'kg/kg', TIME_DTSEC )
+
+          call HIST_in( FLX_heat(:,:), 'GHFLX', 'ground heat flux (merged)', 'W/m2', TIME_DTSEC )
+       endif
+    endif
+
+    if ( .NOT. setup ) then
+       ! if coupler is disabled, SFC_TEMP, SFC_albedo is set in ATMOS_PHY_SF_vars
+       call HIST_in( SFC_TEMP  (:,:),      'SFC_TEMP',   'surface skin temperature (merged)', 'K',    TIME_DTSEC )
+       call HIST_in( SFC_albedo(:,:,I_LW), 'SFC_ALB_LW', 'surface albedo (longwave, merged)', '0-1',  TIME_DTSEC )
+       call HIST_in( SFC_albedo(:,:,I_SW), 'SFC_ALB_SW', 'surface albedo (shortwave,merged)', '0-1',  TIME_DTSEC )
+    endif
+
+    return
+  end subroutine ATMOS_SURFACE_GET
+
+  !-----------------------------------------------------------------------------
+  !> Set surface boundary condition (ATM->CPL)
+  subroutine ATMOS_SURFACE_SET( setup )
     use scale_const, only: &
        RovCP => CONST_RovCP
     use scale_topography, only: &
@@ -318,6 +400,8 @@ contains
     use mod_cpl_vars, only: &
        CPL_putATM
     implicit none
+
+    logical, intent(in) :: setup
 
     ! works
     real(RP) :: SFC_TEMP(IA,JA)

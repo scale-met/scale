@@ -40,6 +40,7 @@ module mod_atmos_vars
   public :: ATMOS_vars_history
   public :: ATMOS_vars_total
   public :: ATMOS_vars_diagnostics
+  public :: ATMOS_vars_monitor
 
   !-----------------------------------------------------------------------------
   !
@@ -1748,9 +1749,6 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Calc diagnostics'
 
-    call THERMODYN_qd( QDRY(:,:,:),  & ! [OUT]
-                       QTRC(:,:,:,:) ) ! [IN]
-
     call THERMODYN_temp_pres( TEMP(:,:,:),  & ! [OUT]
                               PRES(:,:,:),  & ! [OUT]
                               DENS(:,:,:),  & ! [IN]
@@ -1808,36 +1806,66 @@ contains
     enddo
     enddo
 
-    do j = JS, JE
-    do i = IS, IE
-       SFLX_RD_net(i,j) = ( SFLX_LW_up(i,j) - SFLX_LW_dn(i,j) ) &
-                        + ( SFLX_SW_up(i,j) - SFLX_SW_dn(i,j) )
+    return
+  end subroutine ATMOS_vars_diagnostics
 
-       TOAFLX_RD_net(i,j) = ( TOAFLX_LW_up(i,j) - TOAFLX_LW_dn(i,j) ) &
-                          + ( TOAFLX_SW_up(i,j) - TOAFLX_SW_dn(i,j) )
-    enddo
-    enddo
+  !-----------------------------------------------------------------------------
+  !> monitor output
+  subroutine ATMOS_vars_monitor
+    use scale_const, only: &
+       GRAV   => CONST_GRAV,   &
+       CVdry  => CONST_CVdry
+    use scale_grid_real, only: &
+       REAL_CZ
+    use scale_comm, only: &
+       COMM_vars8, &
+       COMM_wait
+    use scale_statistics, only: &
+       STATISTICS_checktotal, &
+       STAT_total
+    use scale_monitor, only: &
+       MONIT_put, &
+       MONIT_in
+    use scale_atmos_thermodyn, only: &
+       THERMODYN_qd        => ATMOS_THERMODYN_qd,        &
+       THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres, &
+       CVw => AQ_CV
+    use mod_atmos_phy_mp_vars, only: &
+       SFLX_rain => ATMOS_PHY_MP_SFLX_rain, &
+       SFLX_snow => ATMOS_PHY_MP_SFLX_snow
+    use mod_atmos_phy_rd_vars, only: &
+       SFLX_LW_up   => ATMOS_PHY_RD_SFLX_LW_up,   &
+       SFLX_LW_dn   => ATMOS_PHY_RD_SFLX_LW_dn,   &
+       SFLX_SW_up   => ATMOS_PHY_RD_SFLX_SW_up,   &
+       SFLX_SW_dn   => ATMOS_PHY_RD_SFLX_SW_dn,   &
+       TOAFLX_LW_up => ATMOS_PHY_RD_TOAFLX_LW_up, &
+       TOAFLX_LW_dn => ATMOS_PHY_RD_TOAFLX_LW_dn, &
+       TOAFLX_SW_up => ATMOS_PHY_RD_TOAFLX_SW_up, &
+       TOAFLX_SW_dn => ATMOS_PHY_RD_TOAFLX_SW_dn
+    use mod_atmos_phy_sf_vars, only: &
+       SFLX_SH   => ATMOS_PHY_SF_SFLX_SH, &
+       SFLX_LH   => ATMOS_PHY_SF_SFLX_LH, &
+       SFLX_QTRC => ATMOS_PHY_SF_SFLX_QTRC
+    implicit none
 
-    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       ENGP(k,i,j) = DENS(k,i,j) * GRAV * REAL_CZ(k,i,j)
+    real(RP) :: QDRY(KA,IA,JA) ! dry air         [kg/kg]
+    real(RP) :: RHOQ(KA,IA,JA) ! DENS * tracer   [kg/m3]
+    real(RP) :: PRCP(IA,JA)    ! rain + snow     [kg/m2/s]
 
-       ENGK(k,i,j) = 0.5_RP * DENS(k,i,j) * ( W(k,i,j)**2 &
-                                            + U(k,i,j)**2 &
-                                            + V(k,i,j)**2 )
+    real(RP) :: ENGT(KA,IA,JA) ! total     energy [J/m3]
+    real(RP) :: ENGP(KA,IA,JA) ! potential energy [J/m3]
+    real(RP) :: ENGK(KA,IA,JA) ! kinetic   energy [J/m3]
+    real(RP) :: ENGI(KA,IA,JA) ! internal  energy [J/m3]
 
-       ENGI(k,i,j) = DENS(k,i,j) * QDRY(k,i,j) * TEMP(k,i,j) * CVdry
-       do iq = QQS, QQE
-          ENGI(k,i,j) = ENGI(k,i,j) &
-                      + DENS(k,i,j) * QTRC(k,i,j,iq) * TEMP(k,i,j) * CVw(iq)
-       enddo
-    enddo
-    enddo
-    enddo
+    real(RP) :: ENGFLXT      (IA,JA) ! total flux             [J/m2/s]
+    real(RP) :: SFLX_RD_net  (IA,JA) ! net SFC radiation flux [J/m2/s]
+    real(RP) :: TOAFLX_RD_net(IA,JA) ! net TOA radiation flux [J/m2/s]
 
+    real(RP) :: total ! dummy
+    integer  :: k, i, j, iq
+    !---------------------------------------------------------------------------
 
+    if( IO_L ) write(IO_FID_LOG,*) '*** Monitor'
 
     call MONIT_in( DENS(:,:,:), VAR_NAME(I_DENS), VAR_DESC(I_DENS), VAR_UNIT(I_DENS), ndim=3, isflux=.false. )
     call MONIT_in( MOMZ(:,:,:), VAR_NAME(I_MOMZ), VAR_DESC(I_MOMZ), VAR_UNIT(I_MOMZ), ndim=3, isflux=.false. )
@@ -1860,6 +1888,10 @@ contains
     enddo
 
     ! total dry airmass
+
+    call THERMODYN_qd( QDRY(:,:,:),  & ! [OUT]
+                       QTRC(:,:,:,:) ) ! [IN]
+
     !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
     do i = IS, IE
@@ -1894,12 +1926,47 @@ contains
 
     !##### Energy Budget #####
 
+    call THERMODYN_temp_pres( TEMP(:,:,:),  & ! [OUT]
+                              PRES(:,:,:),  & ! [OUT]
+                              DENS(:,:,:),  & ! [IN]
+                              RHOT(:,:,:),  & ! [IN]
+                              QTRC(:,:,:,:) ) ! [IN]
+
+    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       ENGP(k,i,j) = DENS(k,i,j) * GRAV * REAL_CZ(k,i,j)
+
+       ENGK(k,i,j) = 0.5_RP * DENS(k,i,j) * ( W(k,i,j)**2 &
+                                            + U(k,i,j)**2 &
+                                            + V(k,i,j)**2 )
+
+       ENGI(k,i,j) = DENS(k,i,j) * QDRY(k,i,j) * TEMP(k,i,j) * CVdry
+       do iq = QQS, QQE
+          ENGI(k,i,j) = ENGI(k,i,j) &
+                      + DENS(k,i,j) * QTRC(k,i,j,iq) * TEMP(k,i,j) * CVw(iq)
+       enddo
+    enddo
+    enddo
+    enddo
+
     !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
        ENGT(k,i,j) = ENGP(k,i,j) + ENGK(k,i,j) + ENGI(k,i,j)
     enddo
+    enddo
+    enddo
+
+    do j = JS, JE
+    do i = IS, IE
+       SFLX_RD_net(i,j) = ( SFLX_LW_up(i,j) - SFLX_LW_dn(i,j) ) &
+                        + ( SFLX_SW_up(i,j) - SFLX_SW_dn(i,j) )
+
+       TOAFLX_RD_net(i,j) = ( TOAFLX_LW_up(i,j) - TOAFLX_LW_dn(i,j) ) &
+                          + ( TOAFLX_SW_up(i,j) - TOAFLX_SW_dn(i,j) )
     enddo
     enddo
 
@@ -1918,6 +1985,7 @@ contains
 
     call MONIT_put( AD_MONIT_id(I_ENGFLXT), ENGFLXT(:,:) )
 
+
     call MONIT_put( AD_MONIT_id(I_ENGSFC_SH), SFLX_SH      (:,:) )
     call MONIT_put( AD_MONIT_id(I_ENGSFC_LH), SFLX_LH      (:,:) )
     call MONIT_put( AD_MONIT_id(I_ENGSFC_RD), SFLX_RD_net  (:,:) )
@@ -1934,6 +2002,6 @@ contains
     call MONIT_put( AD_MONIT_id(I_ENGTOA_SW_dn), TOAFLX_SW_dn(:,:) )
 
     return
-  end subroutine ATMOS_vars_diagnostics
+  end subroutine ATMOS_vars_monitor
 
 end module mod_atmos_vars

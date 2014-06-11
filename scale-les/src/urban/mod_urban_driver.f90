@@ -26,6 +26,7 @@ module mod_urban_driver
   !
   public :: URBAN_driver_setup
   public :: URBAN_driver
+  public :: URBAN_SURFACE_SET
 
   !-----------------------------------------------------------------------------
   !
@@ -49,8 +50,6 @@ contains
        URBAN_sw
     use mod_urban_phy_ucm, only: &
        URBAN_PHY_driver_setup
-    use mod_urban_phy_ucm, only: &
-       URBAN_SURFACE_SET
     implicit none
     !---------------------------------------------------------------------------
 
@@ -58,8 +57,6 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[DRIVER] / Categ[URBAN] / Origin[SCALE-LES]'
 
     if( URBAN_sw ) call URBAN_PHY_driver_setup( URBAN_TYPE )
-
-    if( URBAN_sw ) call URBAN_SURFACE_SET
 
     return
   end subroutine URBAN_driver_setup
@@ -72,24 +69,19 @@ contains
     use mod_urban_vars, only: &
        URBAN_vars_history
     use mod_urban_phy_ucm, only: &
-       URBAN_PHY_driver, &
-       URBAN_SURFACE_SET
+       URBAN_PHY_driver
     implicit none
     !---------------------------------------------------------------------------
 
-    !########## Physics First ##########
+    !########## Physics ##########
     if ( URBAN_sw ) then
       call PROF_rapstart('URB Physics')
       call URBAN_PHY_driver
       call PROF_rapend  ('URB Physics')
     endif
 
-    !########## Physics Final ##########
-    if ( URBAN_sw ) then
-      call PROF_rapstart('URB Physics')
-      call URBAN_SURFACE_SET
-      call PROF_rapend  ('URB Physics')
-    endif
+    !########## Put surface boundary to other model ##########
+    call URBAN_SURFACE_SET( setup=.false. )
 
     !########## History & Monitor ##########
     call PROF_rapstart('URB History')
@@ -98,5 +90,34 @@ contains
 
     return
   end subroutine URBAN_driver
+
+  !-----------------------------------------------------------------------------
+  !> Put surface boundary to other model
+  subroutine URBAN_SURFACE_SET( setup )
+    use mod_urban_vars, only: &
+       URBAN_vars_fillhalo
+    use mod_cpl_admin, only: &
+       CPL_sw_AtmUrb
+    use mod_cpl_vars, only: &
+       CPL_putUrb_setup, &
+       CPL_putUrb
+    implicit none
+
+    logical, intent(in) :: setup
+    !---------------------------------------------------------------------------
+
+    if ( CPL_sw_AtmUrb ) then
+       call URBAN_vars_fillhalo
+
+       if ( setup ) then
+!       call CPL_putUrb_setup( URBAN_TEMP(:,:) ) ! [IN]
+       endif
+
+!       call CPL_putUrb( URBAN_TEMP(:,:) ) ! [IN]
+
+    endif
+
+    return
+  end subroutine URBAN_SURFACE_SET
 
 end module mod_urban_driver

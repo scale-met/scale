@@ -43,7 +43,7 @@ module mod_cpl_vars
   public :: CPL_putLnd
   public :: CPL_putUrb
   public :: CPL_getAtm
-  public :: CPL_getAtm_RD
+  public :: CPL_getAtm_SF
   public :: CPL_getOcn
   public :: CPL_getLnd
   public :: CPL_getUrb
@@ -560,72 +560,75 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine CPL_getAtm( &
-       SFC_Z0,    &
+       SFC_TEMP,   &
+       SFC_albedo, &
+       Z0,         &
+       Uabs10,     &
+       U10,        &
+       V10,        &
+       T2,         &
+       Q2,         &
+       FLX_heat    )
+    implicit none
+
+    real(RP), intent(out) :: SFC_TEMP  (IA,JA)
+    real(RP), intent(out) :: SFC_albedo(IA,JA,2)
+    real(RP), intent(out) :: Z0        (IA,JA)
+    real(RP), intent(out) :: Uabs10    (IA,JA)
+    real(RP), intent(out) :: U10       (IA,JA)
+    real(RP), intent(out) :: V10       (IA,JA)
+    real(RP), intent(out) :: T2        (IA,JA)
+    real(RP), intent(out) :: Q2        (IA,JA)
+    real(RP), intent(out) :: FLX_heat  (IA,JA)
+    !---------------------------------------------------------------------------
+
+    SFC_TEMP  (:,:)   = CPL_Merged_SFC_TEMP  (:,:)
+    SFC_albedo(:,:,:) = CPL_Merged_SFC_albedo(:,:,:)
+    Z0        (:,:)   = CPL_Merged_Z0M       (:,:)
+    U10       (:,:)   = CPL_Merged_U10       (:,:)
+    V10       (:,:)   = CPL_Merged_V10       (:,:)
+    T2        (:,:)   = CPL_Merged_T2        (:,:)
+    Q2        (:,:)   = CPL_Merged_Q2        (:,:)
+    FLX_heat  (:,:)   = CPL_Merged_FLX_heat  (:,:)
+
+    Uabs10(:,:) = sqrt( CPL_Merged_U10(:,:)*CPL_Merged_U10(:,:) &
+                      + CPL_Merged_V10(:,:)*CPL_Merged_V10(:,:) )
+
+    return
+  end subroutine CPL_getAtm
+
+  !-----------------------------------------------------------------------------
+  subroutine CPL_getAtm_SF( &
        SFLX_MW,   &
        SFLX_MU,   &
        SFLX_MV,   &
        SFLX_SH,   &
        SFLX_LH,   &
-       SFLX_QTRC, &
-       Uabs10,    &
-       U10,       &
-       V10,       &
-       T2,        &
-       Q2         )
+       SFLX_QTRC  )
     implicit none
 
-    real(RP), intent(out) :: SFC_Z0   (IA,JA)
     real(RP), intent(out) :: SFLX_MW  (IA,JA)
     real(RP), intent(out) :: SFLX_MU  (IA,JA)
     real(RP), intent(out) :: SFLX_MV  (IA,JA)
     real(RP), intent(out) :: SFLX_SH  (IA,JA)
     real(RP), intent(out) :: SFLX_LH  (IA,JA)
     real(RP), intent(out) :: SFLX_QTRC(IA,JA,QA)
-    real(RP), intent(out) :: Uabs10   (IA,JA)
-    real(RP), intent(out) :: U10      (IA,JA)
-    real(RP), intent(out) :: V10      (IA,JA)
-    real(RP), intent(out) :: T2       (IA,JA)
-    real(RP), intent(out) :: Q2       (IA,JA)
     !---------------------------------------------------------------------------
 
-    SFC_Z0   (:,:)   = 0.0_RP                ! tentative
     SFLX_MW  (:,:)   = CPL_Merged_FLX_MW(:,:)
     SFLX_MU  (:,:)   = CPL_Merged_FLX_MU(:,:)
     SFLX_MV  (:,:)   = CPL_Merged_FLX_MV(:,:)
     SFLX_SH  (:,:)   = CPL_Merged_FLX_SH(:,:)
     SFLX_LH  (:,:)   = CPL_Merged_FLX_LH(:,:)
-    SFLX_QTRC(:,:,:) = 0.0_RP                ! tentative
+    SFLX_QTRC(:,:,:) = 0.0_RP                 ! tentative
     SFLX_QTRC(:,:,1) = CPL_Merged_FLX_QV(:,:) ! tentative
-
-    Uabs10   (:,:)   = sqrt( CPL_Merged_U10(:,:)*CPL_Merged_U10(:,:) &
-                           + CPL_Merged_V10(:,:)*CPL_Merged_V10(:,:) )
-    U10      (:,:)   = CPL_Merged_U10   (:,:)
-    V10      (:,:)   = CPL_Merged_V10   (:,:)
-    T2       (:,:)   = CPL_Merged_T2    (:,:)
-    Q2       (:,:)   = CPL_Merged_Q2    (:,:)
 
     CNT_AtmLnd = 0.0_RP
     CNT_AtmUrb = 0.0_RP
     CNT_AtmOcn = 0.0_RP
 
     return
-  end subroutine CPL_getAtm
-
-  !-----------------------------------------------------------------------------
-  subroutine CPL_getAtm_RD( &
-       SFC_TEMP,  &
-       SFC_albedo )
-    implicit none
-
-    real(RP), intent(out) :: SFC_TEMP  (IA,JA)
-    real(RP), intent(out) :: SFC_albedo(IA,JA,2)
-    !---------------------------------------------------------------------------
-
-    SFC_TEMP  (:,:)   = CPL_Merged_SFC_TEMP  (:,:)
-    SFC_albedo(:,:,:) = CPL_Merged_SFC_albedo(:,:,:)
-
-    return
-  end subroutine CPL_getAtm_RD
+  end subroutine CPL_getAtm_SF
 
   !-----------------------------------------------------------------------------
   subroutine CPL_getOcn( &

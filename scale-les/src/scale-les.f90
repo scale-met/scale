@@ -95,7 +95,9 @@ program scaleles
      ATMOS_admin_setup, &
      ATMOS_do
   use mod_atmos_vars, only: &
-     ATMOS_vars_setup,         &
+     ATMOS_vars_setup,                         &
+     ATMOS_vars_diagnostics,                   &
+     ATMOS_vars_monitor,                       &
      ATMOS_vars_restart_read,                  &
      ATMOS_sw_restart => ATMOS_RESTART_OUTPUT, &
      ATMOS_vars_restart_write,                 &
@@ -103,7 +105,9 @@ program scaleles
      ATMOS_vars_restart_check
   use mod_atmos_driver, only: &
      ATMOS_driver_setup, &
-     ATMOS_driver
+     ATMOS_driver,       &
+     ATMOS_SURFACE_GET,  &
+     ATMOS_SURFACE_SET
   use mod_ocean_admin, only: &
      OCEAN_admin_setup, &
      OCEAN_do
@@ -114,7 +118,8 @@ program scaleles
      OCEAN_vars_restart_write
   use mod_ocean_driver, only: &
      OCEAN_driver_setup, &
-     OCEAN_driver
+     OCEAN_driver,       &
+     OCEAN_SURFACE_set
   use mod_land_admin, only: &
      LAND_admin_setup, &
      LAND_do
@@ -125,7 +130,8 @@ program scaleles
      LAND_vars_restart_write
   use mod_land_driver, only: &
      LAND_driver_setup, &
-     LAND_driver
+     LAND_driver,       &
+     LAND_SURFACE_set
   use mod_urban_admin, only: &
      URBAN_admin_setup, &
      URBAN_do
@@ -136,7 +142,8 @@ program scaleles
      URBAN_vars_restart_write
   use mod_urban_driver, only: &
      URBAN_driver_setup, &
-     URBAN_driver
+     URBAN_driver,       &
+     URBAN_SURFACE_set
   use mod_cpl_admin, only: &
      CPL_admin_setup, &
      CPL_do
@@ -253,12 +260,25 @@ program scaleles
   call LAND_vars_restart_read
   call URBAN_vars_restart_read
 
-  ! setup driver
+  ! calc diagnostics
+  call ATMOS_vars_diagnostics
+
+  ! first surface coupling
+  call ATMOS_SURFACE_SET( setup=.true. )
+  call OCEAN_SURFACE_SET( setup=.true. )
+  call LAND_SURFACE_SET ( setup=.true. )
+  call URBAN_SURFACE_SET( setup=.true. )
+  call CPL_driver_setup
+  call ATMOS_SURFACE_GET( setup=.true. )
+
+  ! first monitor
+  call ATMOS_vars_monitor
+
+  ! setup submodel driver
   call ATMOS_driver_setup
   call OCEAN_driver_setup
   call LAND_driver_setup
   call URBAN_driver_setup
-  call CPL_driver_setup
 
   ! setup user-defined procedure
   call USER_setup

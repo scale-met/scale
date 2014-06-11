@@ -28,6 +28,7 @@ module mod_land_driver
   !
   public :: LAND_driver_setup
   public :: LAND_driver
+  public :: LAND_SURFACE_SET
 
   !-----------------------------------------------------------------------------
   !
@@ -37,8 +38,6 @@ module mod_land_driver
   !
   !++ Private procedure
   !
-  private :: LAND_SURFACE_SET
-
   !-----------------------------------------------------------------------------
   !
   !++ Private parameters & variables
@@ -48,50 +47,17 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine LAND_driver_setup
-    use scale_land_grid, only: &
-       dz => GRID_LCDZ
     use mod_land_admin, only: &
        LAND_sw
-    use mod_land_vars, only: &
-       LAND_vars_fillhalo, &
-       I_ThermalCond,      &
-       I_Z0M,              &
-       I_Z0H,              &
-       I_Z0E,              &
-       LAND_SFC_TEMP,      &
-       LAND_SFC_albedo,    &
-       LAND_PROPERTY
     use mod_land_phy_bucket, only: &
        LAND_PHY_driver_setup
-    use mod_cpl_admin, only: &
-       CPL_sw_AtmLnd
-    use mod_cpl_vars, only: &
-       CPL_putLnd_setup
     implicit none
-
-    real(RP) :: LAND_DZ(IA,JA)
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[DRIVER] / Categ[LAND] / Origin[SCALE-LES]'
 
     if( LAND_sw ) call LAND_PHY_driver_setup
-
-    if ( CPL_sw_AtmLnd ) then
-       call LAND_vars_fillhalo
-
-       LAND_DZ(:,:) = dz(LKS)
-
-       call CPL_putLnd_setup( LAND_SFC_TEMP  (:,:),               & ! [IN]
-                              LAND_SFC_albedo(:,:,:),             & ! [IN]
-                              LAND_PROPERTY  (:,:,I_ThermalCond), & ! [IN]
-                              LAND_DZ        (:,:),               & ! [IN]
-                              LAND_PROPERTY  (:,:,I_Z0M),         & ! [IN]
-                              LAND_PROPERTY  (:,:,I_Z0H),         & ! [IN]
-                              LAND_PROPERTY  (:,:,I_Z0E)          ) ! [IN]
-    endif
-
-    call LAND_SURFACE_SET
 
     return
   end subroutine LAND_driver_setup
@@ -134,7 +100,7 @@ contains
     enddo
 
     !########## Put surface boundary to other model ##########
-    call LAND_SURFACE_SET
+    call LAND_SURFACE_SET( setup=.false. )
 
     !########## History & Monitor ##########
     call PROF_rapstart('LND History')
@@ -153,19 +119,31 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Put surface boundary to other model
-  subroutine LAND_SURFACE_SET
+  subroutine LAND_SURFACE_SET( setup )
+    use scale_land_grid, only: &
+       dz => GRID_LCDZ
     use mod_land_vars, only: &
        LAND_vars_fillhalo, &
        I_WaterCritical,    &
+       I_ThermalCond,      &
+       I_Z0M,              &
+       I_Z0H,              &
+       I_Z0E,              &
        LAND_TEMP,          &
        LAND_WATER,         &
+       LAND_SFC_TEMP,      &
+       LAND_SFC_albedo,    &
        LAND_PROPERTY
     use mod_cpl_admin, only: &
        CPL_sw_AtmLnd
     use mod_cpl_vars, only: &
+       CPL_putLnd_setup, &
        CPL_putLnd
     implicit none
 
+    logical, intent(in) :: setup
+
+    real(RP) :: LAND_DZ     (IA,JA)
     real(RP) :: LAND_TEMP_Z1(IA,JA)
     real(RP) :: LAND_BETA   (IA,JA)
 
@@ -174,6 +152,18 @@ contains
 
     if ( CPL_sw_AtmLnd ) then
        call LAND_vars_fillhalo
+
+       if ( setup ) then
+          LAND_DZ(:,:) = dz(LKS)
+
+          call CPL_putLnd_setup( LAND_SFC_TEMP  (:,:),               & ! [IN]
+                                 LAND_SFC_albedo(:,:,:),             & ! [IN]
+                                 LAND_PROPERTY  (:,:,I_ThermalCond), & ! [IN]
+                                 LAND_DZ        (:,:),               & ! [IN]
+                                 LAND_PROPERTY  (:,:,I_Z0M),         & ! [IN]
+                                 LAND_PROPERTY  (:,:,I_Z0H),         & ! [IN]
+                                 LAND_PROPERTY  (:,:,I_Z0E)          ) ! [IN]
+       endif
 
        LAND_TEMP_Z1(:,:) = LAND_TEMP(LKS,:,:)
 
