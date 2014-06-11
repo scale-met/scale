@@ -308,22 +308,16 @@ contains
     use scale_landuse, only: &
        LANDUSE_write
     use mod_atmos_vars, only: &
-       ATMOS_sw_restart,        &
+       ATMOS_sw_restart => ATMOS_RESTART_OUTPUT, &
        ATMOS_vars_restart_write
-    use mod_atmos_phy_sf_vars, only: &
-       ATMOS_PHY_SF_sw_restart,        &
-       ATMOS_PHY_SF_vars_restart_write
-    use mod_atmos_phy_rd_vars, only: &
-       ATMOS_PHY_RD_sw_restart,        &
-       ATMOS_PHY_RD_vars_restart_write
     use mod_ocean_vars, only: &
-       OCEAN_sw_restart,        &
+       OCEAN_sw_restart => OCEAN_RESTART_OUTPUT, &
        OCEAN_vars_restart_write
     use mod_land_vars, only: &
-       LAND_sw_restart,        &
+       LAND_sw_restart => LAND_RESTART_OUTPUT, &
        LAND_vars_restart_write
     use mod_urban_vars, only: &
-       URBAN_sw_restart,        &
+       URBAN_sw_restart => URBAN_RESTART_OUTPUT, &
        URBAN_vars_restart_write
     implicit none
 
@@ -424,8 +418,6 @@ contains
 
       ! output restart file
       if( ATMOS_sw_restart ) call ATMOS_vars_restart_write
-         if( ATMOS_PHY_SF_sw_restart ) call ATMOS_PHY_SF_vars_restart_write
-         if( ATMOS_PHY_RD_sw_restart ) call ATMOS_PHY_RD_vars_restart_write
       if( OCEAN_sw_restart ) call OCEAN_vars_restart_write
       if( LAND_sw_restart  ) call LAND_vars_restart_write
       if( URBAN_sw_restart ) call URBAN_vars_restart_write

@@ -55,7 +55,6 @@ module mod_cpl_vars
   !
   !++ Public parameters & variables
   !
-  logical, public :: CPL_sw_restart            !< output coupler restart?
 
   !##### INPUT: Submodel->Coupler (flux is upward(Surface submodel->Atmosphere) positive) #####
 
@@ -93,8 +92,6 @@ module mod_cpl_vars
   ! Input form urban model
   real(RP), public, allocatable :: CPL_fromUrb_SFC_TEMP  (:,:)   ! (first time only) surface skin temperature [K]
   real(RP), public, allocatable :: CPL_fromUrb_SFC_albedo(:,:,:) ! (first time only) surface albedo           [0-1]
-
-
 
   !##### OUTPUT: Coupler->Submodel (flux is upward(Surface submodel->Atmosphere) positive) #####
 

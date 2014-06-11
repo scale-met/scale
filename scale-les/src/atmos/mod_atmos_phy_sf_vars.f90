@@ -41,7 +41,7 @@ module mod_atmos_phy_sf_vars
   !
   !++ Public parameters & variables
   !
-  logical, public ::  ATMOS_PHY_SF_sw_restart = .false.
+  logical,  public :: ATMOS_PHY_SF_RESTART_OUTPUT = .false. !< output restart file?
 
   real(RP), public, allocatable :: ATMOS_PHY_SF_DENS_t(:,:)   ! tendency DENS [    kg/m3/s]
   real(RP), public, allocatable :: ATMOS_PHY_SF_MOMZ_t(:,:)   ! tendency MOMZ [m/s*kg/m3/s]
@@ -77,7 +77,6 @@ module mod_atmos_phy_sf_vars
   !
   !++ Private parameters & variables
   !
-  logical,                private :: ATMOS_PHY_SF_RESTART_OUTPUT       = .false.                !< output restart file?
   character(len=H_LONG),  private :: ATMOS_PHY_SF_RESTART_IN_BASENAME  = ''                     !< basename of the restart file
   character(len=H_LONG),  private :: ATMOS_PHY_SF_RESTART_OUT_BASENAME = ''                     !< basename of the output file
   character(len=H_MID),   private :: ATMOS_PHY_SF_RESTART_OUT_TITLE    = 'ATMOS_PHY_SF restart' !< title    of the output file
@@ -207,11 +206,9 @@ contains
     if (       ATMOS_PHY_SF_RESTART_OUTPUT             &
          .AND. ATMOS_PHY_SF_RESTART_OUT_BASENAME /= '' ) then
        if( IO_L ) write(IO_FID_LOG,*) '*** Restart output? : ', trim(ATMOS_PHY_SF_RESTART_OUT_BASENAME)
-       ATMOS_PHY_SF_sw_restart = .true.
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** Restart output? : NO'
        ATMOS_PHY_SF_RESTART_OUTPUT = .false.
-       ATMOS_PHY_SF_sw_restart = .false.
     endif
 
     return

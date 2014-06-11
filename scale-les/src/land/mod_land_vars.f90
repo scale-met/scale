@@ -46,7 +46,7 @@ module mod_land_vars
   !
   !++ Public parameters & variables
   !
-  logical,  public :: LAND_sw_restart
+  logical, public :: LAND_RESTART_OUTPUT = .false. !< output restart file?
 
   ! prognostic variables
   real(RP), public, allocatable :: LAND_TEMP      (:,:,:) !< temperature of each soil layer [K]
@@ -82,7 +82,6 @@ module mod_land_vars
   !
   !++ Private parameters & variables
   !
-  logical,                private :: LAND_RESTART_OUTPUT       = .false.        !< output restart file?
   character(len=H_LONG),  private :: LAND_RESTART_IN_BASENAME  = ''             !< basename of the restart file
   character(len=H_LONG),  private :: LAND_RESTART_OUT_BASENAME = ''             !< basename of the output file
   character(len=H_MID),   private :: LAND_RESTART_OUT_TITLE    = 'LAND restart' !< title    of the output file
@@ -206,11 +205,9 @@ contains
     if (       LAND_RESTART_OUTPUT             &
          .AND. LAND_RESTART_OUT_BASENAME /= '' ) then
        if( IO_L ) write(IO_FID_LOG,*) '*** Restart output? : ', trim(LAND_RESTART_OUT_BASENAME)
-       LAND_sw_restart = .true.
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** Restart output? : NO'
        LAND_RESTART_OUTPUT = .false.
-       LAND_sw_restart = .false.
     endif
 
 
@@ -220,19 +217,19 @@ contains
     allocate( LAND_PROPERTY(IA,JA,LAND_PROPERTY_nmax) )
 
     ! tentative, mosaic is off
-    do v = 1, LAND_PROPERTY_nmax
+    do p = 1, LAND_PROPERTY_nmax
     do j = JS, JE
     do i = IS, IE
-       LAND_PROPERTY(i,j,v) = LAND_PROPERTY_table( LANDUSE_index_PFT(i,j,1),v )
+       LAND_PROPERTY(i,j,p) = LAND_PROPERTY_table( LANDUSE_index_PFT(i,j,1),p )
     enddo
     enddo
     enddo
 
-    do v = 1, LAND_PROPERTY_nmax
-       call COMM_vars8( LAND_PROPERTY(:,:,v), v )
+    do p = 1, LAND_PROPERTY_nmax
+       call COMM_vars8( LAND_PROPERTY(:,:,p), p )
     enddo
-    do v = 1, LAND_PROPERTY_nmax
-       call COMM_wait ( LAND_PROPERTY(:,:,v), v )
+    do p = 1, LAND_PROPERTY_nmax
+       call COMM_wait ( LAND_PROPERTY(:,:,p), p )
     enddo
 
     return

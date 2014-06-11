@@ -42,7 +42,7 @@ module mod_urban_vars
   !
   !++ Public parameters & variables
   !
-  logical, public :: URBAN_sw_restart
+  logical, public :: URBAN_RESTART_OUTPUT = .false. !< output restart file?
 
   ! prognostic variables
   real(RP), public, allocatable :: TR_URB (:,:)   ! Surface temperature of roof [K]
@@ -81,7 +81,6 @@ module mod_urban_vars
   !
   !++ Private parameters & variables
   !
-  logical,                private :: URBAN_RESTART_OUTPUT       = .false.         !< output restart file?
   character(len=H_LONG),  private :: URBAN_RESTART_IN_BASENAME  = ''              !< basename of the restart file
   character(len=H_LONG),  private :: URBAN_RESTART_OUT_BASENAME = ''              !< basename of the output file
   character(len=H_MID),   private :: URBAN_RESTART_OUT_TITLE    = 'URBAN restart' !< title    of the output file
@@ -314,11 +313,9 @@ contains
     if (       URBAN_RESTART_OUTPUT             &
          .AND. URBAN_RESTART_OUT_BASENAME /= '' ) then
        if( IO_L ) write(IO_FID_LOG,*) '*** Restart output? : ', trim(URBAN_RESTART_OUT_BASENAME)
-       URBAN_sw_restart = .true.
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** Restart output? : NO'
        URBAN_RESTART_OUTPUT = .false.
-       URBAN_sw_restart = .false.
     endif
 
     return
