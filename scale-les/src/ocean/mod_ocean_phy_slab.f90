@@ -68,6 +68,8 @@ contains
 
        call OCEAN_PHY_driver( .true., .false. )
 
+    else
+       if( IO_L ) write(IO_FID_LOG,*) '*** this component is never called.'
     endif
 
     return

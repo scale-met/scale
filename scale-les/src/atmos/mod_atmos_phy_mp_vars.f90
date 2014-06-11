@@ -219,10 +219,14 @@ contains
        TIME_gettimelabel
     use scale_fileio, only: &
        FILEIO_write
+    use scale_statistics, only: &
+       STAT_total
     implicit none
 
     character(len=15)     :: timelabel
     character(len=H_LONG) :: basename
+
+    real(RP) :: total
     !---------------------------------------------------------------------------
 
     if ( ATMOS_PHY_MP_RESTART_OUT_BASENAME /= '' ) then
@@ -233,6 +237,11 @@ contains
        if( IO_L ) write(IO_FID_LOG,*)
        if( IO_L ) write(IO_FID_LOG,*) '*** Output restart file (ATMOS_PHY_MP) ***'
        if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(basename)
+
+       call ATMOS_PHY_MP_vars_fillhalo
+
+       call STAT_total( total, ATMOS_PHY_MP_SFLX_rain(:,:), VAR_NAME(1) )
+       call STAT_total( total, ATMOS_PHY_MP_SFLX_snow(:,:), VAR_NAME(1) )
 
        call FILEIO_write( ATMOS_PHY_MP_SFLX_rain(:,:), basename,       ATMOS_PHY_MP_RESTART_OUT_TITLE, & ! [IN]
                           VAR_NAME(1), VAR_DESC(1), VAR_UNIT(1), 'XY', ATMOS_PHY_MP_RESTART_OUT_DTYPE  ) ! [IN]

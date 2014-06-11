@@ -72,6 +72,7 @@ contains
     use mod_ocean_vars, only: &
        OCEAN_TEMP,        &
        OCEAN_TEMP_t,      &
+       OCEAN_vars_total,  &
        OCEAN_vars_history
     use mod_ocean_phy_slab, only: &
        OCEAN_PHY_driver
@@ -102,6 +103,8 @@ contains
        OCEAN_TEMP(i,j) = OCEAN_TEMP(i,j) + OCEAN_TEMP_t(i,j) * dt
     enddo
     enddo
+
+    call OCEAN_vars_total
 
     !########## Put surface boundary to other model ##########
     call OCEAN_SURFACE_SET( setup=.false. )

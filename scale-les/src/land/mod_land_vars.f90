@@ -65,8 +65,8 @@ module mod_land_vars
   integer,  public, parameter   :: LAND_PROPERTY_nmax = 8
   integer,  public, parameter   :: I_WaterLimit       = 1 ! maximum  soil moisture        [m3/m3]
   integer,  public, parameter   :: I_WaterCritical    = 2 ! critical soil moisture        [m3/m3]
-  integer,  public, parameter   :: I_ThermalCond      = 3 ! thermal conductivity for soil [W/m/K]
-  integer,  public, parameter   :: I_HeatCapacity     = 4 ! heat capacity        for soil [J/K]
+  integer,  public, parameter   :: I_ThermalCond      = 3 ! thermal conductivity for soil [W/K/m]
+  integer,  public, parameter   :: I_HeatCapacity     = 4 ! heat capacity        for soil [J/K/m3]
   integer,  public, parameter   :: I_WaterDiff        = 5 ! moisture diffusivity in the soil [m2/s]
   integer,  public, parameter   :: I_Z0M              = 6 ! roughness length for momemtum [m]
   integer,  public, parameter   :: I_Z0H              = 7 ! roughness length for heat     [m]
@@ -544,7 +544,7 @@ contains
        LAND_PROPERTY_table(index,I_Z0H          ) = Z0H
        LAND_PROPERTY_table(index,I_Z0E          ) = Z0E
 
-       if( IO_L ) write(IO_FID_LOG,'(1x,A8,I3,1x,A12,8(1x,F9.2))') &
+       if( IO_L ) write(IO_FID_LOG,'(1x,A8,I3,1x,A12,3(1x,F9.2),(1x,1PE9.1),4(1x,F9.2))') &
                                      '*** IDX=', index, &
                                      trim(description), &
                                      STRGMAX, &

@@ -74,6 +74,9 @@ contains
        LH0  => CONST_LH0,  &
        I_SW => CONST_I_SW, &
        I_LW => CONST_I_LW
+    use scale_statistics, only: &
+       STATISTICS_checktotal, &
+       STAT_total
     use scale_cpl_atmos_land, only: &
        CPL_AtmLnd
     use mod_cpl_vars, only: &
@@ -126,6 +129,8 @@ contains
     real(RP) :: ATM_V10     (IA,JA)
     real(RP) :: ATM_T2      (IA,JA)
     real(RP) :: ATM_Q2      (IA,JA)
+
+    real(RP) :: total ! dummy
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Coupler: Atmos-Land'
@@ -141,7 +146,7 @@ contains
                      ATM_V10     (:,:),      & ! [OUT]
                      ATM_T2      (:,:),      & ! [OUT]
                      ATM_Q2      (:,:),      & ! [OUT]
-                     sfc_temp_update,            & ! [IN]
+                     sfc_temp_update,        & ! [IN]
                      ATM_DENS    (:,:),      & ! [IN]
                      ATM_U       (:,:),      & ! [IN]
                      ATM_V       (:,:),      & ! [IN]
@@ -180,6 +185,22 @@ contains
 
     CNT_AtmLnd = CNT_AtmLnd + 1.0_RP
     CNT_Lnd    = CNT_Lnd    + 1.0_RP
+
+    if ( STATISTICS_checktotal ) then
+       call STAT_total( total, CPL_AtmLnd_ATM_FLX_MW    (:,:), 'ATM_FLX_MW    ' )
+       call STAT_total( total, CPL_AtmLnd_ATM_FLX_MU    (:,:), 'ATM_FLX_MU    ' )
+       call STAT_total( total, CPL_AtmLnd_ATM_FLX_MV    (:,:), 'ATM_FLX_MV    ' )
+       call STAT_total( total, CPL_AtmLnd_ATM_FLX_SH    (:,:), 'ATM_FLX_SH    ' )
+       call STAT_total( total, CPL_AtmLnd_ATM_FLX_LH    (:,:), 'ATM_FLX_LH    ' )
+       call STAT_total( total, CPL_AtmLnd_ATM_FLX_evap  (:,:), 'ATM_FLX_evap  ' )
+       call STAT_total( total, CPL_AtmLnd_ATM_U10       (:,:), 'ATM_U10       ' )
+       call STAT_total( total, CPL_AtmLnd_ATM_V10       (:,:), 'ATM_V10       ' )
+       call STAT_total( total, CPL_AtmLnd_ATM_T2        (:,:), 'ATM_T2        ' )
+       call STAT_total( total, CPL_AtmLnd_ATM_Q2        (:,:), 'ATM_Q2        ' )
+       call STAT_total( total, CPL_AtmLnd_LND_FLX_heat  (:,:), 'LND_FLX_heat  ' )
+       call STAT_total( total, CPL_AtmLnd_LND_FLX_precip(:,:), 'LND_FLX_precip' )
+       call STAT_total( total, CPL_AtmLnd_LND_FLX_evap  (:,:), 'LND_FLX_evap  ' )
+    endif
 
     return
   end subroutine CPL_AtmLnd_driver

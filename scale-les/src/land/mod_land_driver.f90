@@ -47,8 +47,6 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine LAND_driver_setup
-    use mod_land_admin, only: &
-       LAND_sw
     use mod_land_phy_bucket, only: &
        LAND_PHY_driver_setup
     implicit none
@@ -57,7 +55,7 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[DRIVER] / Categ[LAND] / Origin[SCALE-LES]'
 
-    if( LAND_sw ) call LAND_PHY_driver_setup
+    call LAND_PHY_driver_setup
 
     return
   end subroutine LAND_driver_setup
@@ -74,6 +72,7 @@ contains
        LAND_WATER,       &
        LAND_TEMP_t,      &
        LAND_WATER_t,     &
+       LAND_vars_total,  &
        LAND_vars_history
     use mod_land_phy_bucket, only: &
        LAND_PHY_driver
@@ -98,6 +97,8 @@ contains
     enddo
     enddo
     enddo
+
+    call LAND_vars_total
 
     !########## Put surface boundary to other model ##########
     call LAND_SURFACE_SET( setup=.false. )
