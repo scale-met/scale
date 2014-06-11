@@ -79,6 +79,9 @@ contains
        LH0  => CONST_LH0,  &
        I_SW => CONST_I_SW, &
        I_LW => CONST_I_LW
+    use scale_statistics, only: &
+       STATISTICS_checktotal, &
+       STAT_total
     use scale_ocean_roughness, only: &
        OCEAN_roughness
     use scale_cpl_atmos_ocean, only: &
@@ -97,7 +100,7 @@ contains
        FLX_SW_dn  => CPL_fromAtm_FLX_SW_dn,  &
        SFC_TEMP   => CPL_fromOcn_SFC_TEMP,   &
        SFC_albedo => CPL_fromOcn_SFC_albedo, &
-       SFC_Z0     => CPL_fromOcn_SFC_Z0,     &
+       SFC_Z0     => CPL_fromOcn_SFC_Z0M,    &
        OCN_TEMP   => CPL_fromOcn_OCN_TEMP,   &
        CPL_AtmOcn_ATM_FLX_MW,                &
        CPL_AtmOcn_ATM_FLX_MU,                &
@@ -132,6 +135,8 @@ contains
     real(RP) :: SFC_Z0M     (IA,JA)
     real(RP) :: SFC_Z0H     (IA,JA)
     real(RP) :: SFC_Z0E     (IA,JA)
+
+    real(RP) :: total ! dummy
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Coupler: Atmos-Ocean'
@@ -143,6 +148,12 @@ contains
                            ATM_U  (:,:), & ! [IN]
                            ATM_V  (:,:), & ! [IN]
                            ATM_W  (:,:)  ) ! [IN]
+
+    if ( STATISTICS_checktotal ) then
+       call STAT_total( total, SFC_Z0M(:,:), 'SFC_Z0M' )
+       call STAT_total( total, SFC_Z0H(:,:), 'SFC_Z0H' )
+       call STAT_total( total, SFC_Z0E(:,:), 'SFC_Z0E' )
+    endif
 
     call CPL_AtmOcn( SFC_TEMP    (:,:),      & ! [INOUT]
                      ATM_FLX_MU  (:,:),      & ! [OUT]
@@ -190,6 +201,22 @@ contains
 
     CNT_AtmOcn = CNT_AtmOcn + 1.0_RP
     CNT_Ocn    = CNT_Ocn    + 1.0_RP
+
+    if ( STATISTICS_checktotal ) then
+       call STAT_total( total, CPL_AtmOcn_ATM_FLX_MW    (:,:), 'ATM_FLX_MW    ' )
+       call STAT_total( total, CPL_AtmOcn_ATM_FLX_MU    (:,:), 'ATM_FLX_MU    ' )
+       call STAT_total( total, CPL_AtmOcn_ATM_FLX_MV    (:,:), 'ATM_FLX_MV    ' )
+       call STAT_total( total, CPL_AtmOcn_ATM_FLX_SH    (:,:), 'ATM_FLX_SH    ' )
+       call STAT_total( total, CPL_AtmOcn_ATM_FLX_LH    (:,:), 'ATM_FLX_LH    ' )
+       call STAT_total( total, CPL_AtmOcn_ATM_FLX_evap  (:,:), 'ATM_FLX_evap  ' )
+       call STAT_total( total, CPL_AtmOcn_ATM_U10       (:,:), 'ATM_U10       ' )
+       call STAT_total( total, CPL_AtmOcn_ATM_V10       (:,:), 'ATM_V10       ' )
+       call STAT_total( total, CPL_AtmOcn_ATM_T2        (:,:), 'ATM_T2        ' )
+       call STAT_total( total, CPL_AtmOcn_ATM_Q2        (:,:), 'ATM_Q2        ' )
+       call STAT_total( total, CPL_AtmOcn_OCN_FLX_heat  (:,:), 'OCN_FLX_heat  ' )
+       call STAT_total( total, CPL_AtmOcn_OCN_FLX_precip(:,:), 'OCN_FLX_precip' )
+       call STAT_total( total, CPL_AtmOcn_OCN_FLX_evap  (:,:), 'OCN_FLX_evap  ' )
+    endif
 
     return
   end subroutine CPL_AtmOcn_driver

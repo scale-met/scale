@@ -75,7 +75,7 @@ module mod_cpl_vars
   ! Input form ocean model
   real(RP), public, allocatable :: CPL_fromOcn_SFC_TEMP  (:,:)   ! (first time only) surface skin temperature [K]
   real(RP), public, allocatable :: CPL_fromOcn_SFC_albedo(:,:,:) ! (first time only) surface albedo           [0-1]
-  real(RP), public, allocatable :: CPL_fromOcn_SFC_Z0    (:,:)   ! roughness length for momemtum [m]
+  real(RP), public, allocatable :: CPL_fromOcn_SFC_Z0M   (:,:)   ! roughness length for momemtum [m]
   real(RP), public, allocatable :: CPL_fromOcn_OCN_TEMP  (:,:)   ! temperature at the uppermost ocean layer [K]
 
   ! Input form land model
@@ -104,10 +104,13 @@ module mod_cpl_vars
   real(RP), public, allocatable :: CPL_Merged_FLX_SH    (:,:)   ! Merged sensible heat flux [J/m2/s]
   real(RP), public, allocatable :: CPL_Merged_FLX_LH    (:,:)   ! Merged latent heat   flux [J/m2/s]
   real(RP), public, allocatable :: CPL_Merged_FLX_QV    (:,:)   ! Merged water vapor   flux [kg/m2/s]
+  real(RP), public, allocatable :: CPL_Merged_Z0M       (:,:)   ! Merged roughness length   [m]
   real(RP), public, allocatable :: CPL_Merged_U10       (:,:)   ! Merged velocity u at 10m  [m/s]
   real(RP), public, allocatable :: CPL_Merged_V10       (:,:)   ! Merged velocity v at 10m  [m/s]
   real(RP), public, allocatable :: CPL_Merged_T2        (:,:)   ! Merged temperature at 2m  [K]
   real(RP), public, allocatable :: CPL_Merged_Q2        (:,:)   ! Merged water vapor at 2m  [kg/kg]
+  ! Output for surface model (merged, for history)
+  real(RP), public, allocatable :: CPL_Merged_FLX_heat  (:,:)   ! Merged heat flux [J/m2/s]
 
   ! Atmosphere-Ocean coupler: Output for atmosphere model
   real(RP), public, allocatable :: CPL_AtmOcn_ATM_FLX_MW    (:,:) ! w-momentum    flux [kg/m2/s]
@@ -205,7 +208,7 @@ contains
 
     allocate( CPL_fromOcn_SFC_TEMP  (IA,JA) )
     allocate( CPL_fromOcn_SFC_albedo(IA,JA,2) )
-    allocate( CPL_fromOcn_SFC_Z0    (IA,JA) )
+    allocate( CPL_fromOcn_SFC_Z0M   (IA,JA) )
     allocate( CPL_fromOcn_OCN_TEMP  (IA,JA) )
 
     allocate( CPL_fromLnd_SFC_TEMP  (IA,JA) )
@@ -229,10 +232,12 @@ contains
     allocate( CPL_Merged_FLX_SH    (IA,JA) )
     allocate( CPL_Merged_FLX_LH    (IA,JA) )
     allocate( CPL_Merged_FLX_QV    (IA,JA) )
+    allocate( CPL_Merged_Z0M       (IA,JA) )
     allocate( CPL_Merged_U10       (IA,JA) )
     allocate( CPL_Merged_V10       (IA,JA) )
     allocate( CPL_Merged_T2        (IA,JA) )
     allocate( CPL_Merged_Q2        (IA,JA) )
+    allocate( CPL_Merged_FLX_heat  (IA,JA) )
 
     allocate( CPL_AtmOcn_ATM_FLX_MU    (IA,JA) )
     allocate( CPL_AtmOcn_ATM_FLX_MV    (IA,JA) )
@@ -289,16 +294,23 @@ contains
   !-----------------------------------------------------------------------------
   subroutine CPL_vars_merge
     use scale_landuse, only: &
-      frac_land  => LANDUSE_frac_land,  &
-      frac_lake  => LANDUSE_frac_lake,  &
-      frac_urban => LANDUSE_frac_urban, &
-      frac_PFT   => LANDUSE_frac_PFT
+       frac_land  => LANDUSE_frac_land,  &
+       frac_lake  => LANDUSE_frac_lake,  &
+       frac_urban => LANDUSE_frac_urban, &
+       frac_PFT   => LANDUSE_frac_PFT
+    use scale_statistics, only: &
+       STATISTICS_checktotal, &
+       STAT_total
     implicit none
 
     real(RP) :: factOcn(IA,JA)
     real(RP) :: factLnd(IA,JA)
     real(RP) :: factUrb(IA,JA)
+
+    real(RP) :: total ! dummy
     !---------------------------------------------------------------------------
+
+    if( IO_L ) write(IO_FID_LOG,*) '*** Coupler: Merge values of surface submodel'
 
     factOcn(:,:) = ( 1.0_RP - frac_land(:,:) )
     factLnd(:,:) = (          frac_land(:,:) ) * ( 1.0_RP - frac_urban(:,:) )
@@ -340,6 +352,10 @@ contains
                            + factLnd(:,:) * CPL_AtmLnd_ATM_FLX_evap(:,:) &
                            + factUrb(:,:) * CPL_AtmUrb_ATM_FLX_evap(:,:)
 
+    CPL_Merged_Z0M   (:,:) = factOcn(:,:) * CPL_fromOcn_SFC_Z0M  (:,:) &
+                           + factLnd(:,:) * CPL_fromLnd_SFC_Z0M  (:,:) &
+                           + factUrb(:,:) * CPL_fromLnd_SFC_Z0M  (:,:)   ! tentative
+
     CPL_Merged_U10   (:,:) = factOcn(:,:) * CPL_AtmOcn_ATM_U10     (:,:) &
                            + factLnd(:,:) * CPL_AtmLnd_ATM_U10     (:,:) &
                            + factUrb(:,:) * CPL_AtmUrb_ATM_U10     (:,:)
@@ -355,6 +371,27 @@ contains
     CPL_Merged_Q2    (:,:) = factOcn(:,:) * CPL_AtmOcn_ATM_Q2      (:,:) &
                            + factLnd(:,:) * CPL_AtmLnd_ATM_Q2      (:,:) &
                            + factUrb(:,:) * CPL_AtmUrb_ATM_Q2      (:,:)
+
+    CPL_Merged_FLX_heat(:,:) = factOcn(:,:) * CPL_AtmOcn_OCN_FLX_heat(:,:) &
+                             + factLnd(:,:) * CPL_AtmLnd_LND_FLX_heat(:,:) &
+                             + factUrb(:,:) * CPL_AtmUrb_URB_FLX_heat(:,:)
+
+    if ( STATISTICS_checktotal ) then
+       call STAT_total( total, CPL_Merged_SFC_TEMP  (:,:),      'SFC_TEMP  ' )
+       call STAT_total( total, CPL_Merged_SFC_albedo(:,:,I_LW), 'SFC_ALB_LW' )
+       call STAT_total( total, CPL_Merged_SFC_albedo(:,:,I_SW), 'SFC_ALB_SW' )
+       call STAT_total( total, CPL_Merged_FLX_MU    (:,:),      'FLX_MU    ' )
+       call STAT_total( total, CPL_Merged_FLX_MV    (:,:),      'FLX_MV    ' )
+       call STAT_total( total, CPL_Merged_FLX_MW    (:,:),      'FLX_MW    ' )
+       call STAT_total( total, CPL_Merged_FLX_SH    (:,:),      'FLX_SH    ' )
+       call STAT_total( total, CPL_Merged_FLX_LH    (:,:),      'FLX_LH    ' )
+       call STAT_total( total, CPL_Merged_FLX_QV    (:,:),      'FLX_QV    ' )
+       call STAT_total( total, CPL_Merged_U10       (:,:),      'U10       ' )
+       call STAT_total( total, CPL_Merged_V10       (:,:),      'V10       ' )
+       call STAT_total( total, CPL_Merged_T2        (:,:),      'T2        ' )
+       call STAT_total( total, CPL_Merged_Q2        (:,:),      'Q2        ' )
+       call STAT_total( total, CPL_Merged_FLX_heat  (:,:),      'FLX_heat  ' )
+    endif
 
     return
   end subroutine CPL_vars_merge
@@ -386,7 +423,7 @@ contains
 
     CPL_fromOcn_SFC_TEMP  (:,:)   = SFC_TEMP  (:,:)
     CPL_fromOcn_SFC_albedo(:,:,:) = SFC_albedo(:,:,:)
-    CPL_fromOcn_SFC_Z0    (:,:)   = SFC_Z0    (:,:)
+    CPL_fromOcn_SFC_Z0M   (:,:)   = SFC_Z0    (:,:)
 
     return
   end subroutine CPL_putOcn_setup
@@ -667,7 +704,7 @@ contains
 
     SFC_TEMP  (:,:)   = CPL_fromOcn_SFC_TEMP  (:,:)
     SFC_albedo(:,:,:) = CPL_fromOcn_SFC_albedo(:,:,:)
-    SFC_Z0    (:,:)   = CPL_fromOcn_SFC_Z0    (:,:)
+    SFC_Z0    (:,:)   = CPL_fromOcn_SFC_Z0M   (:,:)
 
     return
   end subroutine CPL_getOcn_restart

@@ -78,6 +78,9 @@ contains
   subroutine OCEAN_PHY_driver( update_flag, history_flag )
     use scale_time, only: &
        dt => TIME_DTSEC_OCEAN
+    use scale_statistics, only: &
+       STATISTICS_checktotal, &
+       STAT_total
     use scale_history, only: &
        HIST_in
     use mod_ocean_vars, only: &
@@ -95,6 +98,8 @@ contains
     real(RP) :: FLX_heat  (IA,JA)
     real(RP) :: FLX_precip(IA,JA)
     real(RP) :: FLX_evap  (IA,JA)
+
+    real(RP) :: total ! dummy
     !---------------------------------------------------------------------------
 
     if ( update_flag ) then
@@ -115,6 +120,10 @@ contains
           call HIST_in( OCEAN_TEMP_t(:,:), 'OCEAN_TEMP_t', 'SST tendency', 'K', dt )
        endif
 
+    endif
+
+    if ( STATISTICS_checktotal ) then
+       call STAT_total( total, OCEAN_TEMP_t(:,:), 'OCEAN_TEMP_t' )
     endif
 
     return
