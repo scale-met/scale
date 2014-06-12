@@ -412,6 +412,8 @@ contains
        vterm, &
        DENS0, &
        QTRC0  )
+    use scale_atmos_refstate, only: &
+       REFSTATE_dens => ATMOS_REFSTATE_dens
     implicit none
 
     real(RP), intent(inout) :: vterm(KA,IA,JA,QA)
@@ -430,7 +432,8 @@ contains
     do k = KS, KE
        zerosw = 0.5_RP - sign(0.5_RP, QTRC0(k,i,j,I_QR) - 1.E-12_RP )
        vterm(k,i,j,I_QR) = - 36.34_RP * ( DENS0(k,i,j) * ( QTRC0(k,i,j,I_QR) + zerosw ) )**0.1364_RP &
-                         * factor_vterm(k) * ( 1.0_RP - zerosw )
+                         * REFSTATE_dens(KS,i,j) / REFSTATE_dens(k,i,j) * ( 1.0_RP - zerosw )
+!                         * factor_vterm(k) * ( 1.0_RP - zerosw )
     enddo
     enddo
     enddo
