@@ -45,9 +45,6 @@ module mod_user
   !
   logical,  private, save :: USER_do = .false. !< do user step?
 
-  real(RP), private, save :: SFC_THETA = 300.0_RP ! surface potential temperature [K]
-  real(RP), private, save :: ENV_BVF   =  0.01_RP ! Brunt Vaisala frequencies of environment [1/s]
-
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -58,9 +55,7 @@ contains
     implicit none
 
     namelist / PARAM_USER / &
-       USER_do,   &
-       SFC_THETA, &
-       ENV_BVF
+       USER_do
 
     integer :: ierr
     !---------------------------------------------------------------------------
@@ -91,36 +86,39 @@ contains
     use scale_process, only: &
        PRC_MPIstop
     use scale_grid_real, only : &
-       CZ => REAL_CZ
+       CZ => REAL_CZ, &
+       FZ => REAL_FZ
     use scale_time, only : &
        NOWSEC => TIME_NOWSEC
     use mod_atmos_vars, only: &
        QTRC
     implicit none
 
-    integer :: modsec
+    integer  :: modsec
+    real(RP) :: dist
 
-    integer :: k, i, j
+    integer  :: k, i, j
     !---------------------------------------------------------------------------
 
     if ( USER_do ) then
        if( IO_L ) write(IO_FID_LOG,*) '*** Add rain.'
+       USER_do = .false.
 
-       modsec = mod(int(NOWSEC),300)
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          dist = ( ( CZ(k,i,j) - 3000.0_RP ) / 50.0_RP )**2
 
-       if ( modsec < 1 ) then
-          do j = JS, JE
-          do i = IS, IE
-          do k = KS, KE
-             if (       CZ(k,i,j) >= 2950.0_RP &
-                  .AND. CZ(k,i,j) <  3050.0_RP ) then
-
-                QTRC(k,i,j,I_QR) = 1.E-3
-             endif
-          enddo
-          enddo
-          enddo
-       endif
+          QTRC(k,i,j,I_QR) = 1.E-3 / ( 1.0_RP + dist )
+!          if (       FZ(k,  i,j) >= 3000.0_RP &
+!               .AND. FZ(k-1,i,j) <  3000.0_RP ) then
+!
+!             if( IO_L ) write(IO_FID_LOG,*) k,i,j,CZ(k,i,j),dist,1.E-3/( 1.0_RP + dist )
+!             QTRC(k,i,j,I_QR) = 1.E-3
+!          endif
+       enddo
+       enddo
+       enddo
     endif
 
     return
