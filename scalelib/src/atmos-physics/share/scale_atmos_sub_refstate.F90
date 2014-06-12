@@ -477,6 +477,8 @@ contains
        TIME_NOWSEC
     use scale_comm, only: &
        COMM_horizontal_mean
+    use scale_interpolation, only: &
+       INTERP_vertical_xi2z
     use scale_atmos_thermodyn, only: &
        THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres
     implicit none
@@ -487,6 +489,9 @@ contains
     real(RP) :: temp(KA,IA,JA)
     real(RP) :: pres(KA,IA,JA)
     real(RP) :: pott(KA,IA,JA)
+    real(RP) :: work(KA,IA,JA)
+
+    integer  :: k
     !---------------------------------------------------------------------------
 
     if ( TIME_NOWSEC - last_updated >= ATMOS_REFSTATE_UPDATE_DT ) then
@@ -501,16 +506,55 @@ contains
 
        pott(:,:,:) = RHOT(:,:,:) / DENS(:,:,:)
 
-       call COMM_horizontal_mean( ATMOS_REFSTATE1D_temp(:), temp(:,:,:)      )
-       call COMM_horizontal_mean( ATMOS_REFSTATE1D_pres(:), pres(:,:,:)      )
-       call COMM_horizontal_mean( ATMOS_REFSTATE1D_dens(:), DENS(:,:,:)      )
-       call COMM_horizontal_mean( ATMOS_REFSTATE1D_pott(:), pott(:,:,:)      )
-       call COMM_horizontal_mean( ATMOS_REFSTATE1D_qv  (:), QTRC(:,:,:,I_QV) )
+       call INTERP_vertical_xi2z( temp(:,:,:), & ! [IN]
+                                  work(:,:,:)  ) ! [OUT]
 
+       call COMM_horizontal_mean( ATMOS_REFSTATE1D_temp(:), work(:,:,:) )
+       do k = KE-1, KS, -1 ! fill undefined value
+          if ( abs(ATMOS_REFSTATE1D_temp(k)) < 1.E-12_RP ) then
+             ATMOS_REFSTATE1D_temp(k) = ATMOS_REFSTATE1D_temp(k+1)
+          endif
+       enddo
        call smoothing( ATMOS_REFSTATE1D_temp(:) )
+
+
+       call INTERP_vertical_xi2z( pres(:,:,:), & ! [IN]
+                                  work(:,:,:)  ) ! [OUT]
+
+       call COMM_horizontal_mean( ATMOS_REFSTATE1D_pres(:), work(:,:,:) )
+       do k = KE-1, KS, -1 ! fill undefined value
+          if ( abs(ATMOS_REFSTATE1D_pres(k)) < 1.E-12_RP ) then
+             ATMOS_REFSTATE1D_pres(k) = ATMOS_REFSTATE1D_pres(k+1)
+          endif
+       enddo
        call smoothing( ATMOS_REFSTATE1D_pres(:) )
+
+       call INTERP_vertical_xi2z( DENS(:,:,:), & ! [IN]
+                                  work(:,:,:)  ) ! [OUT]
+
+       call COMM_horizontal_mean( ATMOS_REFSTATE1D_dens(:), work(:,:,:) )
+       do k = KE-1, KS, -1 ! fill undefined value
+          if ( abs(ATMOS_REFSTATE1D_dens(k)) < 1.E-12_RP ) then
+             ATMOS_REFSTATE1D_dens(k) = ATMOS_REFSTATE1D_dens(k+1)
+          endif
+       enddo
        call smoothing( ATMOS_REFSTATE1D_dens(:) )
+
+       call INTERP_vertical_xi2z( pott(:,:,:), & ! [IN]
+                                  work(:,:,:)  ) ! [OUT]
+
+       call COMM_horizontal_mean( ATMOS_REFSTATE1D_pott(:), work(:,:,:) )
+       do k = KE-1, KS, -1 ! fill undefined value
+          if ( abs(ATMOS_REFSTATE1D_pott(k)) < 1.E-12_RP ) then
+             ATMOS_REFSTATE1D_pott(k) = ATMOS_REFSTATE1D_pott(k+1)
+          endif
+       enddo
        call smoothing( ATMOS_REFSTATE1D_pott(:) )
+
+       call INTERP_vertical_xi2z( QTRC(:,:,:,I_QV), & ! [IN]
+                                  work(:,:,:)       ) ! [OUT]
+
+       call COMM_horizontal_mean( ATMOS_REFSTATE1D_qv  (:), work(:,:,:) )
        call smoothing( ATMOS_REFSTATE1D_qv  (:) )
 
        call ATMOS_REFSTATE_calc3D
