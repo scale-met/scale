@@ -47,6 +47,7 @@ module scale_comm
   public :: COMM_rdma_vars8
 #endif
   public :: COMM_horizontal_mean
+  public :: COMM_horizontal_max
 
   interface COMM_vars
      module procedure COMM_vars_2D
@@ -2047,14 +2048,80 @@ contains
 #endif
 
   !-----------------------------------------------------------------------------
-  !> calculate horizontal mean (global total with communication, not in real coordinate)
+  !> calculate horizontal mean (global total with communication)
   subroutine COMM_horizontal_mean( varmean, var )
     use scale_process, only: &
        PRC_nmax
+    use scale_const, only: &
+       CONST_UNDEF
     implicit none
 
     real(RP), intent(out) :: varmean(KA)       !< horizontal mean
     real(RP), intent(in)  :: var    (KA,IA,JA) !< 3D value
+
+    real(RP) :: statval   (KA)
+    real(RP) :: statcnt   (KA)
+    real(RP) :: allstatval(KA)
+    real(RP) :: allstatcnt(KA)
+    real(RP) :: zerosw
+
+    integer :: ierr
+    integer :: k, i, j
+    !---------------------------------------------------------------------------
+
+    statval(:) = 0.0_RP
+    statcnt(:) = 0.0_RP
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       if ( abs(var(k,i,j)) < abs(CONST_UNDEF) ) then
+          statval(k) = statval(k) + var(k,i,j)
+          statcnt(k) = statcnt(k) + 1.D0
+       endif
+    enddo
+    enddo
+    enddo
+
+    ! [NOTE] always communicate globally
+    call PROF_rapstart('COMM Allreduce MPI')
+    ! All reduce
+    call MPI_Allreduce( statval(1),     &
+                        allstatval(1),  &
+                        KA,             &
+                        COMM_datatype,  &
+                        MPI_SUM,        &
+                        MPI_COMM_WORLD, &
+                        ierr            )
+    ! All reduce
+    call MPI_Allreduce( statcnt(1),     &
+                        allstatcnt(1),  &
+                        KA,             &
+                        COMM_datatype,  &
+                        MPI_SUM,        &
+                        MPI_COMM_WORLD, &
+                        ierr            )
+
+    call PROF_rapend  ('COMM Allreduce MPI')
+
+    do k = KS, KE
+       zerosw = 0.5_RP - sign(0.5_RP, allstatcnt(k) - 1.E-12_RP )
+       varmean(k) = allstatval(k) / ( allstatcnt(k) + zerosw ) * ( 1.0_RP - zerosw )
+    enddo
+    varmean(   1:KS-1) = 0.0_RP
+    varmean(KE+1:KA  ) = 0.0_RP
+
+    return
+  end subroutine COMM_horizontal_mean
+
+  !-----------------------------------------------------------------------------
+  !> Get minimam value in horizontal area
+  subroutine COMM_horizontal_max( varmax, var )
+    use scale_process, only: &
+       PRC_nmax
+    implicit none
+
+    real(RP), intent(out) :: varmax(KA)       !< horizontal minimum
+    real(RP), intent(in)  :: var   (KA,IA,JA) !< 3D value
 
     real(RP) :: statval   (KA)
     real(RP) :: allstatval(KA)
@@ -2063,40 +2130,32 @@ contains
     integer :: k, i, j
     !---------------------------------------------------------------------------
 
-    statval(:) = 0.0_RP
-    do j = JS, JE
-    do i = IS, IE
+    statval(:) = -1.E99_RP
     do k = KS, KE
-       statval(k) = statval(k) + var(k,i,j)
-    enddo
-    enddo
-    enddo
-
-    do k = KS, KE
-       statval(k) = statval(k) / real(IMAX*JMAX,kind=RP)
+       statval(k) = maxval(var(k,IS:IE,JS:JE))
     enddo
 
     ! [NOTE] always communicate globally
     call PROF_rapstart('COMM Allreduce MPI')
     ! All reduce
-    call MPI_Allreduce( statval(1),           &
-                        allstatval(1),        &
-                        KA,                   &
-                        COMM_datatype,          &
-                        MPI_SUM,              &
-                        MPI_COMM_WORLD,       &
-                        ierr                  )
+    call MPI_Allreduce( statval(1),     &
+                        allstatval(1),  &
+                        KA,             &
+                        COMM_datatype,  &
+                        MPI_MAX,        &
+                        MPI_COMM_WORLD, &
+                        ierr            )
 
     call PROF_rapend  ('COMM Allreduce MPI')
 
     do k = KS, KE
-       varmean(k) = allstatval(k) / real(PRC_nmax,kind=RP)
+       varmax(k) = allstatval(k)
     enddo
-    varmean(   1:KS-1) = 0.0_RP
-    varmean(KE+1:KA  ) = 0.0_RP
+    varmax(   1:KS-1) = 0.0_RP
+    varmax(KE+1:KA  ) = 0.0_RP
 
     return
-  end subroutine COMM_horizontal_mean
+  end subroutine COMM_horizontal_max
 
 end module scale_comm
 !-------------------------------------------------------------------------------
