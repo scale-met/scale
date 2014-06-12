@@ -658,8 +658,11 @@ contains
     real(RP) :: rhoq(KA,QA) ! rho * q before precipitation
     real(RP) :: qflx(KA,QA)
     real(RP) :: eflx(KA)
-    real(RP) :: rcdz(KA)
-    real(RP) :: rfdz(KA)
+
+    real(RP) :: rcdz  (KA)
+    real(RP) :: rcdz_u(KA)
+    real(RP) :: rcdz_v(KA)
+    real(RP) :: rfdz  (KA)
 
     integer :: k, i, j, iq
     !---------------------------------------------------------------------------
@@ -690,15 +693,26 @@ contains
 
        eflx(KE) = 0.0_RP
 
-       do iq = I_QC, QQE
-          do k = KS, KE
-             rcdz(k) = 1.0_RP / ( REAL_FZ(k,i,j) - REAL_FZ(k-1,i,j) )
-          enddo
+       do k = KS, KE
+          rcdz(k) = 1.0_RP / ( REAL_FZ(k,i,j) - REAL_FZ(k-1,i,j) )
+       enddo
 
-          rfdz(KS-1) = 1.0_RP / ( REAL_CZ(KS,i,j) - REAL_FZ(KS-1,i,j) )
-          do k = KS, KE
-             rfdz(k) = 1.0_RP / ( REAL_CZ(k+1,i,j) - REAL_CZ(k,i,j) )
-          enddo
+       do k = KS, KE
+          rcdz_u(k) = 2.0_RP / ( ( REAL_FZ(k,i+1,j) - REAL_FZ(k-1,i+1,j) ) &
+                               + ( REAL_FZ(k,i  ,j) - REAL_FZ(k-1,i  ,j) ) )
+       enddo
+
+       do k = KS, KE
+          rcdz_v(k) = 2.0_RP / ( ( REAL_FZ(k,i,j+1) - REAL_FZ(k-1,i,j+1) ) &
+                               + ( REAL_FZ(k,i,j  ) - REAL_FZ(k-1,i,j  ) ) )
+       enddo
+
+       rfdz(KS-1) = 1.0_RP / ( REAL_CZ(KS,i,j) - REAL_FZ(KS-1,i,j) )
+       do k = KS, KE
+          rfdz(k) = 1.0_RP / ( REAL_CZ(k+1,i,j) - REAL_CZ(k,i,j) )
+       enddo
+
+       do iq = I_QC, QQE
 
           !--- mass flux for each mass tracer, upwind with vel < 0
           do k  = KS-1, KE-1
@@ -740,7 +754,7 @@ contains
                                * MOMX(k+1,i,j)
           enddo
           do k  = KS, KE
-             MOMX(k,i,j) = MOMX(k,i,j) - dt * ( eflx(k) - eflx(k-1) ) * rcdz(k)
+             MOMX(k,i,j) = MOMX(k,i,j) - dt * ( eflx(k) - eflx(k-1) ) * rcdz_u(k)
           enddo
 
           !--- momentum y
@@ -750,7 +764,7 @@ contains
                                * MOMY(k+1,i,j)
           enddo
           do k  = KS, KE
-             MOMY(k,i,j) = MOMY(k,i,j) - dt * ( eflx(k) - eflx(k-1) ) * rcdz(k)
+             MOMY(k,i,j) = MOMY(k,i,j) - dt * ( eflx(k) - eflx(k-1) ) * rcdz_v(k)
           enddo
 
        enddo ! mass tracer loop
