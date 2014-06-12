@@ -5,8 +5,9 @@
 
 TOPDIR      = ../..
 
-include $(TOPDIR)/Mkinclude
+SYSDEP_DIR = $(TOPDIR)/sysdep
 include $(SYSDEP_DIR)/Makedef.$(SCALE_SYS)
+include $(TOPDIR)/Mkinclude
 
 LIBNAME = libgagetry.a 
 
@@ -27,7 +28,7 @@ FPX3    = perl tools/fpx3 -I.
 .inc_fpx3.inc:
 	$(FPX3) $< > $@
 
-all:	$(LIBDIR)/$(LIBNAME)
+all:	$(LIBDIR)/$(LIBNAME) instmodules
 
 $(LIBDIR)/$(LIBNAME):	$(LIBNAME)
 	mkdir -p $(LIBDIR)
@@ -37,12 +38,17 @@ $(LIBNAME):	$(OBJECTS)
 	$(AR) r $@ $?
 	$(RANLIB) $@
 
+instmodules:   makemodules
+	mkdir -p $(MODDIR)
+	install $(MODULES) $(MODDIR)
+
+makemodules: $(OBJECTS)
+
 include depend.mk
 
 clean:
 	rm -f $(OBJECTS)
 	rm -f $(MODULES)
-	rm -f $(LIBNAME)
 
 distclean: clean
 	rm -f $(LIBNAME)
@@ -52,5 +58,4 @@ allclean:
 	rm -f $(MODULES)
 	rm -f $(LIBNAME)
 	rm -f $(LIBDIR)/$(LIBNAME)
-
-include depend.mk
+	cd $(MODDIR); rm -f $(MODULES)

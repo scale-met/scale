@@ -1,6 +1,6 @@
 #################################################################
 #
-# Makefile for Mersenne Twister
+# Makefile for Super-Droplet Method
 #
 #################################################################
 
@@ -10,13 +10,12 @@ SYSDEP_DIR = $(TOPDIR)/sysdep
 include $(SYSDEP_DIR)/Makedef.$(SCALE_SYS)
 include $(TOPDIR)/Mkinclude
 
-LIBNAME = libmt.a 
+LIBNAME = libsdm.a 
 
 MODS	= \
-	  rng_uniform_mt.mod
-
+	  sdm_common.mod
 OBJS	= \
-	  rng_uniform_mt.o
+	  sdm_common.o
 
 all:	$(LIBDIR)/$(LIBNAME) instmodules
 
@@ -34,8 +33,10 @@ instmodules:	makemodules
 
 makemodules: $(OBJS)
 
-rng_uniform_mt.o: rng_uniform_mt.F90
-	$(FC) $(FFLAGS) -o $@ -c $<
+sdm_common.o: sdm_common.f90 \
+	$(BUILD_DIR)/scale_precision.mod \
+	$(MODDIR)/rng_uniform_mt.mod
+	$(FC) $(FFLAGS) -I$(BUILD_DIR) -I$(MODDIR) -o $@ -c $<
 
 clean:
 	rm -f $(MODS)

@@ -54,6 +54,7 @@ module scale_atmos_phy_mp_sdm
      rng_save_state, &
      rng_load_state, &
      gen_rand_array => rng_generate_array
+  use sdm_common
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -88,16 +89,16 @@ module scale_atmos_phy_mp_sdm
   character(len=H_LONG), save :: SD_OUT_BASENAME = ''
   character(len=H_LONG), save :: RANDOM_IN_BASENAME = ''
   character(len=H_LONG), save :: RANDOM_OUT_BASENAME = ''
-  type(c_rng_uniform_mt), save :: rng_s2c
-  integer, save :: fid_sd_i, fid_sd_o
-  integer, save :: fid_random_i, fid_random_o
-  logical, save :: sd_rest_flg_in = .false. ! restart flg of Super Droplet
-  logical, save :: sd_first = .true. 
+!  type(c_rng_uniform_mt), save :: rng_s2c
+!  integer, save :: fid_sd_i, fid_sd_o
+!  integer, save :: fid_random_i, fid_random_o
+!  logical, save :: sd_rest_flg_in = .false. ! restart flg of Super Droplet
+!  logical, save :: sd_first = .true. 
   !
   !++ Basic variable for SDM
   !
   !------------------------------------------------------------------------------
-  integer(DP), allocatable :: sdn_s2c(:)   ! multipilicity
+!  integer(DP), allocatable :: sdn_s2c(:)   ! multipilicity
   real(RP), allocatable :: sdrk_s2c(:)     ! index-k(real) of s.d.
   real(RP), allocatable :: sdx_s2c(:)      ! x-cordinate of s.d.
   real(RP), allocatable :: sdy_s2c(:)      ! y-cordinate of s.d.
