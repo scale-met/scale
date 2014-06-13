@@ -62,37 +62,37 @@ module scale_atmos_boundary
   !
   !++ Private parameters & variables
   !
-  character(len=H_LONG), private :: ATMOS_BOUNDARY_TYPE          = 'NONE'
-  character(len=H_LONG), private :: ATMOS_BOUNDARY_IN_BASENAME   = ''
-  character(len=H_LONG), private :: ATMOS_BOUNDARY_OUT_BASENAME  = ''
-  character(len=H_MID),  private :: ATMOS_BOUNDARY_OUT_TITLE     = 'SCALE-LES BOUNDARY CONDITION' !< title of the output file
-  character(len=H_MID),  private :: ATMOS_BOUNDARY_OUT_DTYPE     = 'DEFAULT'                      !< REAL4 or REAL8
+  character(len=H_LONG), private :: ATMOS_BOUNDARY_TYPE         = 'NONE'
+  character(len=H_LONG), private :: ATMOS_BOUNDARY_IN_BASENAME  = ''
+  character(len=H_LONG), private :: ATMOS_BOUNDARY_OUT_BASENAME = ''
+  character(len=H_MID),  private :: ATMOS_BOUNDARY_OUT_TITLE    = 'SCALE-LES BOUNDARY CONDITION' !< title of the output file
+  character(len=H_MID),  private :: ATMOS_BOUNDARY_OUT_DTYPE    = 'DEFAULT'                      !< REAL4 or REAL8
 
-  logical,                   private :: ATMOS_BOUNDARY_USE_VELZ      = .false. ! read from file?
-  logical,                   private :: ATMOS_BOUNDARY_USE_VELX      = .false. ! read from file?
-  logical,                   private :: ATMOS_BOUNDARY_USE_VELY      = .false. ! read from file?
-  logical,                   private :: ATMOS_BOUNDARY_USE_POTT      = .false. ! read from file?
-  logical,                   private :: ATMOS_BOUNDARY_USE_QV        = .false. ! read from file?
+  logical,               private :: ATMOS_BOUNDARY_USE_VELZ     = .false. ! read from file?
+  logical,               private :: ATMOS_BOUNDARY_USE_VELX     = .false. ! read from file?
+  logical,               private :: ATMOS_BOUNDARY_USE_VELY     = .false. ! read from file?
+  logical,               private :: ATMOS_BOUNDARY_USE_POTT     = .false. ! read from file?
+  logical,               private :: ATMOS_BOUNDARY_USE_QV       = .false. ! read from file?
 
-  real(RP),                  private :: ATMOS_BOUNDARY_VALUE_VELZ    =  0.0_RP ! w at boundary, 0 [m/s]
-  real(RP),                  private :: ATMOS_BOUNDARY_VALUE_VELX    =  5.0_RP ! u at boundary, 5 [m/s]
-  real(RP),                  private :: ATMOS_BOUNDARY_VALUE_VELY    =  5.E0_RP ! v at boundary, 5 [m/s]
-  real(RP),                  private :: ATMOS_BOUNDARY_VALUE_POTT    = 300.E0_RP! PT at boundary, 300 [K]
-  real(RP),                  private :: ATMOS_BOUNDARY_VALUE_QV      = 1.E-3_RP ! QV at boundary, 1e-3 [kg/kg]
+  real(RP),              private :: ATMOS_BOUNDARY_VALUE_VELZ   =   0.0_RP ! w at boundary, 0 [m/s]
+  real(RP),              private :: ATMOS_BOUNDARY_VALUE_VELX   =   5.0_RP ! u at boundary, 5 [m/s]
+  real(RP),              private :: ATMOS_BOUNDARY_VALUE_VELY   =   5.0_RP ! v at boundary, 5 [m/s]
+  real(RP),              private :: ATMOS_BOUNDARY_VALUE_POTT   = 300.0_RP ! PT at boundary, 300 [K]
+  real(RP),              private :: ATMOS_BOUNDARY_VALUE_QV     = 1.E-3_RP ! QV at boundary, 1e-3 [kg/kg]
 
-  real(RP),                  private :: ATMOS_BOUNDARY_FRACZ         = 1.0_RP  ! fraction of boundary region for dumping [z]
-  real(RP),                  private :: ATMOS_BOUNDARY_FRACX         = 1.0_RP  ! fraction of boundary region for dumping [x]
-  real(RP),                  private :: ATMOS_BOUNDARY_FRACY         = 1.0_RP  ! fraction of boundary region for dumping [y]
-  real(RP),                  private :: ATMOS_BOUNDARY_tauz          = 75.0_RP ! maximum value for damping tau (z) [s]
-  real(RP),                  private :: ATMOS_BOUNDARY_taux          = 75.0_RP ! maximum value for damping tau (x) [s]
-  real(RP),                  private :: ATMOS_BOUNDARY_tauy          = 75.0_RP ! maximum value for damping tau (y) [s]
+  real(RP),              private :: ATMOS_BOUNDARY_FRACZ        = 1.0_RP  ! fraction of boundary region for dumping [z]
+  real(RP),              private :: ATMOS_BOUNDARY_FRACX        = 1.0_RP  ! fraction of boundary region for dumping [x]
+  real(RP),              private :: ATMOS_BOUNDARY_FRACY        = 1.0_RP  ! fraction of boundary region for dumping [y]
+  real(RP),              private :: ATMOS_BOUNDARY_tauz         = 75.0_RP ! maximum value for damping tau (z) [s]
+  real(RP),              private :: ATMOS_BOUNDARY_taux         = 75.0_RP ! maximum value for damping tau (x) [s]
+  real(RP),              private :: ATMOS_BOUNDARY_tauy         = 75.0_RP ! maximum value for damping tau (y) [s]
 
-  real(RP),                  private, allocatable :: ATMOS_BOUNDARY_var_ref(:,:,:,:,:)    !> reference container (with HALO)
-  real(RP),                  private, allocatable :: ATMOS_BOUNDARY_increment(:,:,:,:)    !> damping coefficient [0-1]
+  real(RP),              private, allocatable :: ATMOS_BOUNDARY_var_ref(:,:,:,:,:)    !> reference container (with HALO)
+  real(RP),              private, allocatable :: ATMOS_BOUNDARY_increment(:,:,:,:)    !> damping coefficient [0-1]
 
-  real(DP),                  private, save :: ATMOS_BOUNDARY_UPDATE_DT = 0.0_DP ! inteval time of boudary data update [s]
-  real(DP),                  private, save :: last_updated
-  integer,                   private, save :: boundary_timestep     = 0
+  real(DP),              private :: ATMOS_BOUNDARY_UPDATE_DT = 0.0_DP ! inteval time of boudary data update [s]
+  real(DP),              private :: last_updated
+  integer,               private :: boundary_timestep        = 0
 
   character(len=H_SHORT), private :: REF_NAME(5)
   data REF_NAME / 'VELZ_ref','VELX_ref','VELY_ref','POTT_ref','QV_ref' /
