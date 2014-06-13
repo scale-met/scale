@@ -14,6 +14,7 @@ LIBNAME = libsdm.a
 
 MODS	= \
 	  sdm_common.mod
+
 OBJS	= \
 	  sdm_common.o
 
@@ -35,6 +36,8 @@ makemodules: $(OBJS)
 
 sdm_common.o: sdm_common.f90 \
 	$(BUILD_DIR)/scale_precision.mod \
+	$(BUILD_DIR)/scale_stdio.mod \
+	$(BUILD_DIR)/scale_const.mod \
 	$(MODDIR)/rng_uniform_mt.mod
 	$(FC) $(FFLAGS) -I$(BUILD_DIR) -I$(MODDIR) -o $@ -c $<
 

@@ -138,7 +138,7 @@ makegtool:
 
 
 ifeq ($(SDM),-D_SDM)
-makesdm: $(BUILD_DIR)/scale_precision.o $(MODDIR)/rng_uniform_mt.mod
+makesdm: $(BUILD_DIR)/scale_precision.o $(BUILD_DIR)/scale_stdio.o $(BUILD_DIR)/scale_const.o $(MODDIR)/rng_uniform_mt.mod
 	cp -pf $(SDMDIR)/scale_atmos_phy_mp_sdm.F90 $(SCALELIBDIR)/src/atmos-physics/microphysics/
 	cp -pf $(SDMDIR)/scale_tracer_sdm.F90 $(SCALELIBDIR)/src/atmos-physics/microphysics/
 	$(MAKE) -C $(GAGETRYDIR)
@@ -175,7 +175,7 @@ ifeq ($(SDM),-D_SDM)
 cleangsdm:
 	$(MAKE) -C $(GAGETRYDIR) allclean
 	$(MAKE) -C $(MTDIR)      allclean
-	$(MAKE) -C $(SDMDIR)      allclean
+	$(MAKE) -C $(SDMDIR)     allclean
 else
 cleangsdm:
 	@echo "skip cleaning additional component"
