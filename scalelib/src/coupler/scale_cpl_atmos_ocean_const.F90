@@ -231,7 +231,7 @@ contains
 
     do j = 1, JA
     do i = 1, IA
-      Uabs = sqrt( UA(i,j)**2 + VA(i,j)**2 + WA(i,j)**2 )
+      Uabs = sqrt( UA(i,j)**2 + VA(i,j)**2 )
 
       if( CMTYPE == 1 ) then
         ! friction velocity is constant
