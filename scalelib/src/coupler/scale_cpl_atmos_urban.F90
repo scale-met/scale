@@ -56,6 +56,7 @@ module scale_cpl_atmos_urban
         RnB_URB, & ! (out)
         RnG_URB, & ! (out)
         UST,     & ! (out)
+        RN,      & ! (out)
         SHFLX,   & ! (out)
         LHFLX,   & ! (out)
         GHFLX,   & ! (out)
@@ -105,6 +106,7 @@ module scale_cpl_atmos_urban
        real(RP), intent(out) :: RnB_URB
        real(RP), intent(out) :: RnG_URB
        real(RP), intent(out) :: UST
+       real(RP), intent(out) :: RN
        real(RP), intent(out) :: SHFLX
        real(RP), intent(out) :: LHFLX
        real(RP), intent(out) :: GHFLX

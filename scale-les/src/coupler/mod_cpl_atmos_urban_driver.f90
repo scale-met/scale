@@ -118,32 +118,34 @@ contains
        LON => REAL_lon, &
        LAT => REAL_lat
     use mod_urban_vars, only: &
-       TR_URB,  &
-       TG_URB,  &
-       TB_URB,  &
-       TC_URB,  &
-       QC_URB,  &
-       UC_URB,  &
-       TS_URB,  &
-       TRL_URB, &
-       TGL_URB, &
-       TBL_URB, &
-       SHR_URB, &
-       SHB_URB, &
-       SHG_URB, &
-       LHR_URB, &
-       LHB_URB, &
-       LHG_URB, &
-       GHR_URB, &
-       GHB_URB, &
-       GHG_URB, &
-       RnR_URB, &
-       RnB_URB, &
-       RnG_URB, &
+       TR_URB,    &
+       TG_URB,    &
+       TB_URB,    &
+       TC_URB,    &
+       QC_URB,    &
+       UC_URB,    &
+       TS_URB,    &
+       TRL_URB,   &
+       TGL_URB,   &
+       TBL_URB,   &
+       SHR_URB,   &
+       SHB_URB,   &
+       SHG_URB,   &
+       LHR_URB,   &
+       LHB_URB,   &
+       LHG_URB,   &
+       GHR_URB,   &
+       GHB_URB,   &
+       GHG_URB,   &
+       RnR_URB,   &
+       RnB_URB,   &
+       RnG_URB,   &
        RAINR_URB, &
        RAINB_URB, &
        RAING_URB, &
-       ROFF_URB
+       ROFF_URB,  &
+       Rngrd_URB 
+
     implicit none
 
     logical, intent(in) :: sfc_temp_update
@@ -159,9 +161,9 @@ contains
     real(RP) :: ATM_T2      (IA,JA)
     real(RP) :: ATM_Q2      (IA,JA)
 
-    logical  :: LSOLAR = .false. ! logical [true=both, false=SSG only]
-    real(RP) :: QMA              ! mixing ratio at the lowest atmospheric level  [kg/kg]
-    real(RP) :: Uabs             ! wind speed at the lowest atmospheric level    [m/s]
+    logical  :: LSOLAR = .false.    ! logical [true=both, false=SSG only]
+    !real(RP) :: QMA                 ! mixing ratio at the lowest atmospheric level  [kg/kg]
+    real(RP) :: Uabs                ! wind speed at the lowest atmospheric level    [m/s]
     integer  :: i, j
 
     real(RP) :: total ! dummy
@@ -172,9 +174,8 @@ contains
     do j = 1, JA
     do i = 1, IA
 
-      QMA = ATM_QV(i,j) / ( 1.0_RP - ATM_QV(i,j) ) ! specific humidity [kg/kg]
-
       Uabs = sqrt( ATM_U(i,j)**2 + ATM_V(i,j)**2 + ATM_W(i,j)**2 )
+
 
       call CPL_AtmUrb( TR_URB      (i,j),   & ! [INOUT]
                        TB_URB      (i,j),   & ! [INOUT]
@@ -203,12 +204,13 @@ contains
                        RnB_URB     (i,j),   & ! [OUT]
                        RnG_URB     (i,j),   & ! [OUT]
                        SFC_TEMP    (i,j),   & ! [OUT]
+                       Rngrd_URB   (i,j),   & ! [OUT]
                        ATM_FLX_SH  (i,j),   & ! [OUT]
                        ATM_FLX_LH  (i,j),   & ! [OUT]
                        URB_FLX_heat(i,j),   & ! [OUT]
                        LSOLAR,              & ! [IN]
                        ATM_TEMP    (i,j),   & ! [IN]
-                       QMA,                 & ! [IN]
+                       ATM_QV      (i,j),   & ! [IN]
                        Uabs,                & ! [IN]
                        ATM_U       (i,j),   & ! [IN]
                        ATM_V       (i,j),   & ! [IN]
