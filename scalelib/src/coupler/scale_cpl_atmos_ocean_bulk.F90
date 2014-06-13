@@ -41,12 +41,12 @@ module scale_cpl_atmos_ocean_bulk
   !++ Private parameters & variables
   !
   !-----------------------------------------------------------------------------
-  real(RP), private :: U_minM   =   0.0_RP    ! minimum U_abs for u,v,w
-  real(RP), private :: U_minH   =   0.0_RP    !                   T
-  real(RP), private :: U_minE   =   0.0_RP    !                   q
-  real(RP), private :: U_maxM   = 100.0_RP    ! maximum U_abs for u,v,w
-  real(RP), private :: U_maxH   = 100.0_RP    !                   T
-  real(RP), private :: U_maxE   = 100.0_RP    !                   q
+  real(RP), private :: U_minM  = 1.E-2_RP ! minimum U_abs for u,v,w
+  real(RP), private :: U_minH  = 1.E-2_RP !                   T
+  real(RP), private :: U_minE  = 1.E-2_RP !                   q
+  real(RP), private :: U_maxM  = 1.E+2_RP ! maximum U_abs for u,v,w
+  real(RP), private :: U_maxH  = 1.E+2_RP !                   T
+  real(RP), private :: U_maxE  = 1.E+2_RP !                   q
 
 contains
   !-----------------------------------------------------------------------------

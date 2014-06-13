@@ -403,6 +403,7 @@ contains
          call MKINIT_landcouple ! tentative
          call MKINIT_urbancouple
       case(I_SEABREEZE)
+         call MKINIT_planestate
          call MKINIT_seabreeze
       case(I_DYCOMS2_RF02_DNS)
          call MKINIT_DYCOMS2_RF02_DNS
@@ -3713,16 +3714,6 @@ contains
        LAND_SFC_albedo
     implicit none
 
-    ! surface state
-    real(RP) :: SFC_THETA                  ! surface potential temperature [K]
-    real(RP) :: SFC_PRES                   ! surface pressure [Pa]
-    real(RP) :: SFC_RH            = 0.0_RP ! surface relative humidity [%]
-    ! atmospheric state
-    real(RP) :: ATM_THLAPS        = 0.0_RP ! Lapse rate of THETA [K/m]
-    real(RP) :: ATM_RH            = 0.0_RP ! relative humidity [%]
-    real(RP) :: ATM_U             = 0.0_RP ! velocity u [m/s]
-    real(RP) :: ATM_V             = 0.0_RP ! velocity v [m/s]
-
     ! Flux from Atmosphere
     real(RP) :: FLX_rain          = 0.0_RP ! surface rain flux                         [kg/m2/s]
     real(RP) :: FLX_snow          = 0.0_RP ! surface snow flux                         [kg/m2/s]
@@ -3742,13 +3733,6 @@ contains
     real(RP) :: LND_SFC_albedo_SW = 0.0_RP ! land surface albedo for SW [0-1]
 
     NAMELIST / PARAM_MKINIT_SEABREEZE / &
-       SFC_THETA,         &
-       SFC_PRES,          &
-       SFC_RH,            &
-       ATM_THLAPS,        &
-       ATM_RH,            &
-       ATM_U,             &
-       ATM_V,             &
        FLX_rain,          &
        FLX_snow,          &
        FLX_LW_dn,         &
@@ -3767,14 +3751,11 @@ contains
     real(RP) :: dist
 
     integer  :: ierr
-    integer  :: k, i, j
+    integer  :: i, j
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Sea Breeze]/Categ[MKINIT]'
-
-    SFC_THETA = THETAstd
-    SFC_PRES  = Pstd
 
     OCN_TEMP  = THETAstd
     LND_TEMP  = THETAstd
@@ -3789,78 +3770,6 @@ contains
        call PRC_MPIstop
     endif
     if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_SEABREEZE)
-
-    ! calc in dry condition
-    do j = JS, JE
-    do i = IS, IE
-       pott_sfc(1,i,j) = SFC_THETA
-       pres_sfc(1,i,j) = SFC_PRES
-       qv_sfc  (1,i,j) = 0.0_RP
-       qc_sfc  (1,i,j) = 0.0_RP
-
-       do k = KS, KE
-          pott(k,i,j) = SFC_THETA + ATM_THLAPS * REAL_CZ(k,i,j)
-          qv  (k,i,j) = 0.0_RP
-          qc  (k,i,j) = 0.0_RP
-       enddo
-    enddo
-    enddo
-
-    ! make density & pressure profile in dry condition
-    call HYDROSTATIC_buildrho( DENS    (:,:,:), & ! [OUT]
-                               temp    (:,:,:), & ! [OUT]
-                               pres    (:,:,:), & ! [OUT]
-                               pott    (:,:,:), & ! [IN]
-                               qv      (:,:,:), & ! [IN]
-                               qc      (:,:,:), & ! [IN]
-                               temp_sfc(:,:,:), & ! [OUT]
-                               pres_sfc(:,:,:), & ! [IN]
-                               pott_sfc(:,:,:), & ! [IN]
-                               qv_sfc  (:,:,:), & ! [IN]
-                               qc_sfc  (:,:,:)  ) ! [IN]
-
-    ! calc QV from RH
-    call SATURATION_pres2qsat_all( qsat_sfc(1,:,:), temp_sfc(1,:,:), pres_sfc(1,:,:) )
-    call SATURATION_pres2qsat_all( qsat    (:,:,:), temp    (:,:,:), pres    (:,:,:) )
-
-    do j = JS, JE
-    do i = IS, IE
-       qv_sfc(1,i,j) = SFC_RH * 1.E-2_RP * qsat_sfc(1,i,j)
-
-       do k = KS, KE
-          qv(k,i,j) = ATM_RH * 1.E-2_RP * qsat(k,i,j)
-       enddo
-    enddo
-    enddo
-
-    ! make density & pressure profile in moist condition
-    call HYDROSTATIC_buildrho( DENS    (:,:,:), & ! [OUT]
-                               temp    (:,:,:), & ! [OUT]
-                               pres    (:,:,:), & ! [OUT]
-                               pott    (:,:,:), & ! [IN]
-                               qv      (:,:,:), & ! [IN]
-                               qc      (:,:,:), & ! [IN]
-                               temp_sfc(:,:,:), & ! [OUT]
-                               pres_sfc(:,:,:), & ! [IN]
-                               pott_sfc(:,:,:), & ! [IN]
-                               qv_sfc  (:,:,:), & ! [IN]
-                               qc_sfc  (:,:,:)  ) ! [IN]
-
-    call COMM_vars8( DENS(:,:,:), 1 )
-    call COMM_wait ( DENS(:,:,:), 1 )
-
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       MOMX(k,i,j) = ATM_U * 0.5_RP * ( DENS(k,i+1,j) + DENS(k,i,j) )
-       MOMY(k,i,j) = ATM_V * 0.5_RP * ( DENS(k,i,j+1) + DENS(k,i,j) )
-       MOMZ(k,i,j) = 0.0_RP
-       RHOT(k,i,j) = pott(k,i,j) * DENS(k,i,j)
-
-       QTRC(k,i,j,I_QV) = qv(k,i,j)
-    enddo
-    enddo
-    enddo
 
     ! make surface, land, and ocean conditions
     ATMOS_PHY_MP_SFLX_rain   (:,:) = FLX_rain
