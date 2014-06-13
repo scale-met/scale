@@ -15,6 +15,7 @@
 !! @li      2012-03-12 (Y.Ohno)     [mod] RDMA communication
 !! @li      2012-03-23 (H.Yashiro)  [mod] Explicit index parameter inclusion
 !! @li      2012-03-27 (H.Yashiro)  [mod] Area/volume weighted total value report
+!! @li      2014-06-13 (R.Yoshida)  [mod] gather data from whole processes
 !!
 !<
 #include "inc_openmp.h"
@@ -48,6 +49,7 @@ module scale_comm
 #endif
   public :: COMM_horizontal_mean
   public :: COMM_horizontal_max
+  public :: COMM_gather
 
   interface COMM_vars
      module procedure COMM_vars_2D
@@ -61,6 +63,10 @@ module scale_comm
      module procedure COMM_wait_2D
      module procedure COMM_wait_3D
   end interface COMM_WAIT
+  interface COMM_gather
+     module procedure COMM_gather_2D
+     module procedure COMM_gather_3D
+  end interface COMM_gather
 
   !-----------------------------------------------------------------------------
   !
@@ -2156,6 +2162,75 @@ contains
 
     return
   end subroutine COMM_horizontal_max
+
+  !-----------------------------------------------------------------------------
+  !> Get data from whole process value in 2D field
+  subroutine COMM_gather_2D( recv, send, gIA, gJA )
+    use scale_process, only: &
+       PRC_master,           &
+       PRC_myrank,           &
+       PRC_nmax
+    implicit none
+
+    real(RP), intent(out) :: recv(:,:)  !< receive buffer (gIA,gJA*PRC_nmax)
+    real(RP), intent(in)  :: send(:,:)  !< send buffer (gIA,gJA)
+    integer, intent(in)  :: gIA        !< dimension size of x
+    integer, intent(in)  :: gJA        !< dimension size of y
+
+    integer :: ierr
+    integer :: sendcounts, recvcounts
+    !---------------------------------------------------------------------------
+
+    sendcounts = gIA * gJA
+    recvcounts = gIA * gJA
+
+    call MPI_GATHER( send(:,:),      &
+                     sendcounts,      &
+                     COMM_datatype,   &
+                     recv(:,:),       &
+                     recvcounts,      &
+                     COMM_datatype,   &
+                     PRC_master,      &
+                     MPI_COMM_WORLD,  &
+                     ierr             )
+
+    return
+  end subroutine COMM_gather_2D
+
+  !-----------------------------------------------------------------------------
+  !> Get data from whole process value in 3D field
+  subroutine COMM_gather_3D( recv, send, gIA, gJA, gKA )
+    use scale_process, only: &
+       PRC_master,           &
+       PRC_myrank,           &
+       PRC_nmax
+    implicit none
+
+    real(RP), intent(out) :: recv(:,:,:)  !< receive buffer (gIA,gJA,gKA*PRC_nmax)
+    real(RP), intent(in)  :: send(:,:,:)  !< send buffer (gIA,gJA,gKA)
+    integer, intent(in)  :: gIA          !< dimension size of x
+    integer, intent(in)  :: gJA          !< dimension size of y
+    integer, intent(in)  :: gKA          !< dimension size of z
+
+    integer :: ierr
+    integer :: sendcounts, recvcounts
+    !---------------------------------------------------------------------------
+
+    sendcounts = gIA * gJA * gKA
+    recvcounts = gIA * gJA * gKA
+
+    call MPI_GATHER( send(:,:,:),    &
+                     sendcounts,      &
+                     COMM_datatype,   &
+                     recv(:,:,:),     &
+                     recvcounts,      &
+                     COMM_datatype,   &
+                     PRC_master,      &
+                     MPI_COMM_WORLD,  &
+                     ierr             )
+
+    return
+  end subroutine COMM_gather_3D
 
 end module scale_comm
 !-------------------------------------------------------------------------------
