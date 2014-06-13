@@ -162,7 +162,7 @@ contains
 
     do j = 1, JA
     do i = 1, IA
-       Uabs  = sqrt( UA(i,j)**2 + VA(i,j)**2 + WA(i,j)**2 )
+       Uabs  = sqrt( UA(i,j)**2 + VA(i,j)**2 )
        Ustar = max( sqrt(CM0) * Uabs, OCEAN_roughness_Ustar_min )
 
        Z0M(i,j) = max( Z0MI + Z0MR/GRAV*Ustar*Ustar + Z0MS*visck/Ustar, OCEAN_roughness_Z0M_min )
@@ -215,7 +215,7 @@ contains
     do j = 1, JA
     do i = 1, IA
        Z0M (i,j) = Z0(i,j)
-       Uabs(i,j) = sqrt( UA(i,j)**2 + VA(i,j)**2 + WA(i,j)**2 )
+       Uabs(i,j) = sqrt( UA(i,j)**2 + VA(i,j)**2 )
     enddo
     enddo
 

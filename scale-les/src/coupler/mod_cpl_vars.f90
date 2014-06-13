@@ -70,7 +70,7 @@ module mod_cpl_vars
   real(RP), public, allocatable :: CPL_fromAtm_FLX_precip(:,:) ! liquid water                 flux [kg/m2/s]
   real(RP), public, allocatable :: CPL_fromAtm_FLX_SW_dn (:,:) ! downward shortwave radiation flux [J/m2/s]
   real(RP), public, allocatable :: CPL_fromAtm_FLX_LW_dn (:,:) ! downward longwave  radiation flux [J/m2/s]
-  real(RP), public, allocatable :: CPL_fromATM_ATM_Z1    (:,:) ! height of lowermost atmosphere layer (cell center) [m]
+  real(RP), public, allocatable :: CPL_fromAtm_ATM_Z1    (:,:) ! height of lowermost atmosphere layer (cell center) [m]
 
   ! Input form ocean model
   real(RP), public, allocatable :: CPL_fromOcn_SFC_TEMP  (:,:)   ! (first time only) surface skin temperature [K]
@@ -481,7 +481,7 @@ contains
     real(RP), intent(in) :: ATM_Z1(IA,JA)
     !---------------------------------------------------------------------------
 
-    CPL_fromATM_ATM_Z1(:,:) = ATM_Z1(:,:)
+    CPL_fromAtm_ATM_Z1(:,:) = ATM_Z1(:,:)
 
     return
   end subroutine CPL_putAtm_setup
