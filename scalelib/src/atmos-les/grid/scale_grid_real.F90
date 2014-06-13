@@ -81,6 +81,7 @@ contains
     use scale_fileio, only: &
        FILEIO_set_coordinates
     implicit none
+
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -159,10 +160,47 @@ contains
        MPRJ_basepoint_lon, &
        MPRJ_basepoint_lat, &
        MPRJ_xy2lonlat
+    use scale_process, only: &
+       PRC_master,           &
+       PRC_myrank,           &
+       PRC_nmax,             &
+       PRC_MPIstop
+    use scale_comm, only: &
+       COMM_gather
     implicit none
 
+    real(RP), allocatable :: mine(:,:)    !< send buffer of lon-lat [deg]
+    real(RP), allocatable :: whole(:,:)   !< recieve buffer of lon-lat [deg]
+
+    integer, parameter :: I_LON  = 1
+    integer, parameter :: I_LAT  = 2
+    integer, parameter :: I_NW   = 1
+    integer, parameter :: I_NE   = 2
+    integer, parameter :: I_SW   = 3
+    integer, parameter :: I_SE   = 4
+
     integer :: i, j
+    integer :: fid, ierr
+
+    !< metadata files for lat-lon domain for all processes
+    character(len=H_LONG) :: DOMAIN_CATALOGUE_FNAME = 'latlon_domain_catalogue.txt'
+    logical :: DOMAIN_CATALOGUE_OUTPUT = .true.
+
+    NAMELIST / PARAM_DOMAIN_CATALOGUE / &
+       DOMAIN_CATALOGUE_FNAME,  &
+       DOMAIN_CATALOGUE_OUTPUT
     !---------------------------------------------------------------------------
+
+    !--- read namelist
+    rewind(IO_FID_CONF)
+    read(IO_FID_CONF,nml=PARAM_DOMAIN_CATALOGUE,iostat=ierr)
+    if( ierr < 0 ) then !--- missing
+       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+    elseif( ierr > 0 ) then !--- fatal error
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_DOMAIN_CATALOGUE. Check!'
+       call PRC_MPIstop
+    endif
+    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_DOMAIN_CATALOGUE)
 
     REAL_BASEPOINT_LON = MPRJ_basepoint_lon * D2R
     REAL_BASEPOINT_LAT = MPRJ_basepoint_lat * D2R
@@ -197,6 +235,47 @@ contains
     if( IO_L ) write(IO_FID_LOG,'(1x,A,f9.5,A,f9.5,A,A,f9.5,A,f9.5,A)') &
                                 'SW(',REAL_LON(IS,JS)/D2R,',',REAL_LAT(IS,JS)/D2R,')-', &
                                 'SE(',REAL_LON(IE,JS)/D2R,',',REAL_LAT(IE,JS)/D2R,')'
+
+    if( DOMAIN_CATALOGUE_OUTPUT ) then
+       allocate( mine (4, 2         ) )
+       allocate( whole(4, 2*PRC_nmax) )
+
+       mine(I_NW,I_LON) = REAL_LON(IS,JE)/D2R
+       mine(I_NE,I_LON) = REAL_LON(IE,JE)/D2R
+       mine(I_SW,I_LON) = REAL_LON(IS,JS)/D2R
+       mine(I_SE,I_LON) = REAL_LON(IE,JS)/D2R
+       mine(I_NW,I_LAT) = REAL_LAT(IS,JE)/D2R
+       mine(I_NE,I_LAT) = REAL_LAT(IE,JE)/D2R
+       mine(I_SW,I_LAT) = REAL_LAT(IS,JS)/D2R
+       mine(I_SE,I_LAT) = REAL_LAT(IE,JS)/D2R
+
+       call COMM_gather( whole, mine, 4, 2 )
+
+       if( PRC_myrank == PRC_master )then
+
+          fid = IO_get_available_fid()
+          open( fid,                                    &
+                file   = trim(DOMAIN_CATALOGUE_FNAME), &
+                form   = 'formatted',                  &
+                status = 'replace',                    &
+                iostat = ierr                          )
+
+          if ( ierr /= 0 ) then
+             if( IO_L ) write(*,*) 'xxx cannot create latlon-catalogue file!'
+             call PRC_MPIstop
+          endif
+
+          do i = 1, PRC_nmax
+             write(fid,*,iostat=ierr) i, whole(I_NW,I_LON+2*(i-1)), whole(I_NE,I_LON+2*(i-1)), & ! LON: NW, NE
+                                          whole(I_SW,I_LON+2*(i-1)), whole(I_SE,I_LON+2*(i-1)), & ! LON: SW, SE
+                                          whole(I_NW,I_LAT+2*(i-1)), whole(I_NE,I_LAT+2*(i-1)), & ! LAT: NW, NE
+                                          whole(I_SW,I_LAT+2*(i-1)), whole(I_SE,I_LAT+2*(i-1))    ! LAT: SW, SE
+             if ( ierr /= 0 ) exit
+          enddo
+          close(fid)
+       endif
+
+    endif
 
     return
   end subroutine REAL_calc_latlon
