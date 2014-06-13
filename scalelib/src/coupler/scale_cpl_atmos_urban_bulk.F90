@@ -61,10 +61,10 @@ module scale_cpl_atmos_urban_bulk
   real(RP), private :: STRGR      = 0.0        ! rain strage on roof [-]
   real(RP), private :: STRGB      = 0.0        !             on building [-]
   real(RP), private :: STRGG      = 0.0        !             on ground [-]
-  real(RP), private :: CAPR       = 1.2E6      ! heat capacity of roof
+  real(RP), private :: CAPR       = 1.2E6      ! heat capacity of roof [J m-3 K]
   real(RP), private :: CAPB       = 1.2E6      !  ( units converted in code
   real(RP), private :: CAPG       = 1.2E6      !            to [ cal cm{-3} deg{-1} ] )
-  real(RP), private :: AKSR       = 2.28       ! thermal conductivity of roof, wall, and ground
+  real(RP), private :: AKSR       = 2.28       ! thermal conductivity of roof, wall, and ground [W m-1 K]
   real(RP), private :: AKSB       = 2.28       !  ( units converted in code
   real(RP), private :: AKSG       = 2.28       !            to [ cal cm{-1} s{-1} deg{-1} ] )
   real(RP), private :: ALBR       = 0.2        ! surface albedo of roof
@@ -140,6 +140,9 @@ contains
     real(RP) :: URBAN_UCM_TRLEND
     real(RP) :: URBAN_UCM_TBLEND
     real(RP) :: URBAN_UCM_TGLEND
+    real(RP) :: URBAN_UCM_DZR
+    real(RP) :: URBAN_UCM_DZB
+    real(RP) :: URBAN_UCM_DZG
     integer  :: URBAN_UCM_BOUND
 
     NAMELIST / PARAM_CPL_ATMURB_BULK / &
@@ -173,6 +176,9 @@ contains
        URBAN_UCM_TRLEND,     &
        URBAN_UCM_TBLEND,     &
        URBAN_UCM_TGLEND,     &
+       URBAN_UCM_DZR,        &
+       URBAN_UCM_DZB,        &
+       URBAN_UCM_DZG,        &
        URBAN_UCM_BOUND
 
     integer :: ierr
@@ -217,6 +223,9 @@ contains
     URBAN_UCM_TBLEND       = TBLEND
     URBAN_UCM_TGLEND       = TGLEND
     URBAN_UCM_BOUND        = BOUND
+    URBAN_UCM_DZR          = 0.05
+    URBAN_UCM_DZB          = 0.05
+    URBAN_UCM_DZG          = 0.50
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -269,6 +278,10 @@ contains
     allocate( DZB(UKS:UKE) )
     allocate( DZG(UKS:UKE) )
 
+    DZR(UKS:UKE) = URBAN_UCM_DZR
+    DZB(UKS:UKE) = URBAN_UCM_DZB
+    DZG(UKS:UKE) = URBAN_UCM_DZG
+
     ! set other urban parameters
     call urban_param_setup
 
@@ -304,9 +317,10 @@ contains
         RNB,     & ! (out)
         RNG,     & ! (out)
         RTS,     & ! (out)
+        RN,      & ! (out)
         SH,      & ! (out)
         LH,      & ! (out)
-        G,       & ! (out)
+        GHFLX,   & ! (out)
         LSOLAR,  & ! (in)
         TA,      & ! (in)
         QA,      & ! (in)
@@ -342,7 +356,7 @@ contains
 
     !-- Input variables from Coupler to Urban
     real(RP), intent(in)    :: TA   ! temp at 1st atmospheric level          [K]
-    real(RP), intent(in)    :: QA   ! mixing ratio at 1st atmospheric level  [kg/kg]
+    real(RP), intent(in)    :: QA   ! specific humidity at 1st atmospheric level  [kg/kg]
     real(RP), intent(in)    :: UA   ! wind speed at 1st atmospheric level    [m/s]
     real(RP), intent(in)    :: U1   ! u at 1st atmospheric level             [m/s]
     real(RP), intent(in)    :: V1   ! v at 1st atmospheric level             [m/s]
@@ -383,7 +397,8 @@ contains
     real(RP), intent(out)   :: RTS    ! radiative surface temperature    [K]
     real(RP), intent(out)   :: SH     ! sensible heat flux               [W/m/m]
     real(RP), intent(out)   :: LH     ! latent heat flux                 [W/m/m]
-    real(RP), intent(out)   :: G      ! heat flux into the ground        [W/m/m]
+    real(RP), intent(out)   :: GHFLX  ! heat flux into the ground        [W/m/m]
+    real(RP), intent(out)   :: RN     ! net radition                [W/m/m]
     real(RP), intent(out)   :: RNR, RNB, RNG
     real(RP), intent(out)   :: SHR, SHB, SHG
     real(RP), intent(out)   :: LHR, LHB, LHG
@@ -427,13 +442,13 @@ contains
 
     real(RP) :: PS         ! Surface Pressure [hPa]
     real(RP) :: TAV        ! Vertial Temperature [K]
+    real(RP) :: qmix       ! mixing ratio [kg/kg]
     real(RP) :: ES
 
     real(RP) :: LUP, LDN, RUP, ALBD_LW_grid
     real(RP) :: SUP, SDN, ALBD_SW_grid
 
     real(RP) :: LNET, SNET, FLXUV, FLXTH, FLXHUM, FLXG
-    real(RP) :: RN     ! net radition                [W/m/m]
     real(RP) :: SW     ! shortwave radition           [W/m/m]
     real(RP) :: LW     ! longwave radition           [W/m/m]
     real(RP) :: PSIM   ! similality stability shear function for momentum
@@ -483,7 +498,7 @@ contains
     real(RP) :: PSIX, PSIT, PSIX2, PSIT2, PSIX10, PSIT10
 
     integer  :: iteration, K
-
+  
     !-----------------------------------------------------------
     ! Set parameters
     !-----------------------------------------------------------
@@ -509,6 +524,8 @@ contains
     ! AH_t  = AH  * ahdiurnal(tloc)
     ! ALH_t = ALH * ahdiurnal(tloc)
 
+ 
+    !if(dsec==0.) print *,'tloc',tloc,SSG,RHOO,QA,TA
 
     if( ZDC+Z0C+2.0_RP >= ZA) then
       if( IO_L ) write(IO_FID_LOG,*) 'ZDC + Z0C + 2m is larger than the 1st WRF level' // &
@@ -585,10 +602,6 @@ contains
     !-----------------------------------------------------------
 
     RAINT = RAIN * DELT  !!! check [kg/m2/s -> kg/m2 ?]
-!    RAINT = TIME/300./2.
-!    if (RAINT > 10. ) then
-!      RAINT = 0.
-!    endif
 
     call cal_beta(BETR, RAINT, RAINR, STRGR, ROFFR)
     call cal_beta(BETB, RAINT, RAINB, STRGB, ROFFB)
@@ -614,7 +627,8 @@ contains
 
     CHR = ALPHAR / RHO / CP / UA
 
-    TAV = TA * ( 1.0_RP + 0.61_RP * QA )
+    qmix = QA / ( 1.0_RP - QA )
+    TAV = TA * ( 1.0_RP + 0.61_RP * qmix )
     PS  = RHOO * Rdry * TAV / 100.0_RP ! [hPa]
 
     ! TR  Solving Non-Linear Equation by Newton-Rapson
@@ -649,6 +663,10 @@ contains
       if( abs(F) < 0.000001_RP .AND. abs(DTR) < 0.000001_RP ) exit
 
     end do
+
+    !print *,'roof',tloc,SR,RR,HR,ELER,G0R
+    !print *,'HR', tloc,HR,RHO,CHR,UA,(TRP-TA)
+
 
     FLXTHR  = HR / RHO / CP / 100.0_RP
     FLXHUMR = ELER / RHO / EL / 100.0_RP
@@ -874,7 +892,8 @@ contains
     LW = LLG - ( LNET * 697.7_RP * 60.0_RP ) ! Upward longwave radiation   [W/m/m]
     SW = SSG - ( SNET * 697.7_RP * 60.0_RP ) ! Upward shortwave radiation  [W/m/m]
 
-    G  = -FLXG * 697.7_RP * 60.0_RP          ! [W/m/m]
+    GHFLX  = -FLXG * 697.7_RP * 60.0_RP          ! [W/m/m]
+
     RN = (SNET+LNET) * 697.7_RP * 60.0_RP    ! Net radiation [W/m/m]
 
     RUP = RUP * 697.7_RP * 60.0_RP        ! Upward longwave = sig*T**4 [W/m/m]
@@ -1195,12 +1214,12 @@ contains
     SVF  = 0.0_RP
 
     ! Thickness of roof, building wall, ground layers
-    DZR(UKS:UKE) = 0.05 ! [m]
-    DZB(UKS:UKE) = 0.05 ! [m]
-    DZG(1)       = 0.05 ! [m]
-    DZG(2)       = 0.25 ! [m]
-    DZG(3)       = 0.50 ! [m]
-    DZG(4)       = 0.75 ! [m]
+    ! DZR(UKS:UKE) = 0.05 ! [m]
+    ! DZB(UKS:UKE) = 0.05 ! [m]
+    ! DZG(1)       = 0.05 ! [m]
+    ! DZG(2)       = 0.25 ! [m]
+    ! DZG(3)       = 0.50 ! [m]
+    ! DZG(4)       = 0.75 ! [m]
 
     ! convert unit
     DZR(UKS:UKE) = DZR(UKS:UKE) * 100.0_RP ! [m]-->[cm]
