@@ -20,7 +20,7 @@ radiation  = mstrnx
 # for run
 INITCONF  = init.conf
 RUNCONF   = run.conf
-TPROC     = 6
+TPROC     = 1
 
 
 # build, makedir, run, jobshell, allclean, clean is inside of common Makefile

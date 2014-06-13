@@ -12,7 +12,7 @@ TESTDIR     = ../../..
 index      = 500m60x100x100
 precision  = real8
 dynamics   = heve
-tracer     = tomita08
+tracer     = kessler
 sfcflx     = const
 turbulence = dummy
 radiation  = dummy
@@ -20,7 +20,7 @@ radiation  = dummy
 # for run
 INITCONF  = init.conf
 RUNCONF   = run.conf
-TPROC     = 6
+TPROC     = 8
 
 # src files
 CODE_DIR     = ..

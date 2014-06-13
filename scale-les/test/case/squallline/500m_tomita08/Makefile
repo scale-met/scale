@@ -20,7 +20,7 @@ radiation  = dummy
 # for run
 INITCONF  = init.conf
 RUNCONF   = run.conf
-TPROC     = 6
+TPROC     = 8
 
 # src files
 CODE_DIR     = ..
