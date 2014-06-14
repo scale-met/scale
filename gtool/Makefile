@@ -12,52 +12,63 @@ include $(SYSDEP_DIR)/Makedef.$(SCALE_SYS)
 
 LIBNAME = libgtool.a
 
+DEPENDLIB = $(LIBDIR)/libdcutils.a
+
 MODS = \
-	gtool_file.o \
-	gtool_file_f.o \
-	gtool_file_h.o \
+	gtool_file_h.o  \
+	gtool_file.o    \
 	gtool_history.o \
+	gtool_file_f.o  \
 	gtool_netcdf.o
 
 
-all: $(LIBDIR)/$(LIBNAME)
+
+all: makedir $(LIBDIR)/$(LIBNAME)
+
+makedir:
+	@echo;echo "Entering gtool..."
+	mkdir -p $(LIBDIR)
+
+$(LIBDIR)/libdcutils.a:
+	$(MAKE) -C $(DCUTILSDIR)
 
 $(LIBDIR)/$(LIBNAME): $(LIBNAME)
-	mkdir -p $(LIBDIR)
 	install $(LIBNAME) $(LIBDIR)
 
-$(LIBNAME): $(DCUTILSDIR)/libdcutils.a $(MODS)
-	$(AR) r $@ $(MODS)
+$(LIBNAME): $(MODS)
+	$(AR) $(ARFLAGS) $@ $?
 	$(RANLIB) $@
 
-$(DCUTILSDIR)/libdcutils.a:
-	cd $(DCUTILSDIR); $(MAKE)
+gtool_file_h.o  : gtool_file_h.f90  $(DEPENDLIB)
+gtool_file.o    : gtool_file.f90    $(DEPENDLIB) gtool_file_h.o
+gtool_history.o : gtool_history.f90 $(DEPENDLIB) gtool_file_h.o gtool_file.o
+gtool_file_f.o  : gtool_file_f.c
+gtool_netcdf.o  : gtool_netcdf.c
 
-gtool_file.f90: gtool_file.f90.erb
-	erb $< > $@
 
-gtool_history.f90: gtool_history.f90.erb
-	erb $< > $@
 
-gtool_netcdf.o: gtool_netcdf.c
-	$(CC) $(CFLAGS) $(NETCDF_INCLUDE) -o $@ -c $<
+allclean: distclean
+	$(MAKE) -C $(DCUTILSDIR) distclean
+	rm -f $(LIBDIR)/$(LIBNAME)
 
-gtool_file.o: gtool_file.f90 gtool_file_h.o $(LIBDIR)/libdcutils.a
-gtool_history.o: gtool_history.f90 gtool_file_h.o $(LIBDIR)/libdcutils.a
+distclean: clean
+	rm -f $(LIBNAME)
 
 clean:
 	rm -f $(MODS) *.mod
-distclean: clean
-	rm -f $(LIBNAME)
-allclean: distclean
-	cd $(DCUTILSDIR); $(MAKE) distclean
-	rm -f $(LIBDIR)/$(LIBNAME)
+
+
 
 .SUFFIXES:
-.SUFFIXES: .o .f90 .c
+.SUFFIXES: .o .f90 .c .erb .mod
+
+%.f90 : %.f90.erb
+	erb $< > $@
 
 .f90.o:
 	$(FC) $(FFLAGS) -I$(DCUTILSDIR) -o $@ -c $<
+.c.o:
+	$(CC) $(CFLAGS) $(NETCDF_INCLUDE) -o $@ -c $<
 
 %.o: %.mod
 

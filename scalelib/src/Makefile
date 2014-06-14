@@ -13,6 +13,8 @@ include $(TOPDIR)/Mkinclude
 
 LIBNAME = libscale.a
 
+DEPENDLIB = $(LIBDIR)/libgtool.a $(LIBDIR)/libdcutils.a
+
 VPATH = common:                     \
         io:                         \
         atmos-physics:              \
@@ -129,20 +131,21 @@ OBJS = $(scale_rdma)	\
 	scale_tracer_suzuki10.o	\
 	scale_tracer_tomita08.o
 
-all: makedir makedcutils makegtool $(LIBDIR)/$(LIBNAME) modules
+
+
+all: makedir $(LIBDIR)/$(LIBNAME) modules
 	@echo "Complete making scalelib."
 
 makedir:
-	@echo;echo "Entering scalelib..."
-	@echo "Current version is " $(LIBVERSION)
+	@echo;echo "Entering scalelib... \nCurrent version is " $(LIBVERSION)
 	@mkdir -p $(BUILD_DIR)
 	@mkdir -p $(MODDIR)
 	mkdir -p $(LIBDIR)
 
-makedcutils:
+$(LIBDIR)/libdcutils.a:
 	$(MAKE) -C $(DCUTILSDIR)
 
-makegtool:
+$(LIBDIR)/libgtool.a: $(LIBDIR)/libdcutils.a
 	$(MAKE) -C $(GTOOLDIR)
 
 $(LIBDIR)/$(LIBNAME): $(BUILD_DIR)/$(LIBNAME)
@@ -152,24 +155,21 @@ $(BUILD_DIR)/$(LIBNAME): $(patsubst %,$(BUILD_DIR)/%,$(OBJS))
 	$(AR) $(ARFLAGS) $@ $?
 	$(RANLIB) $@
 
-modules:
-	@install $(patsubst %,$(BUILD_DIR)/%,$(MODS)) $(MODDIR)
+modules: $(patsubst %,$(BUILD_DIR)/%,$(OBJS))
+	install $(patsubst %,$(BUILD_DIR)/%,$(MODS)) $(MODDIR)
 
 
 
-allclean: cleandcutils cleangtool distclean
-
-cleandcutils:
+allclean: distclean
 	$(MAKE) -C $(DCUTILSDIR) allclean
-
-cleangtool:
 	$(MAKE) -C $(GTOOLDIR)   allclean
+	rm -f $(LIBDIR)/$(LIBNAME)
 
 distclean: clean
-	rm -f $(BUILD_DIR)/$(LIBNAME) $(BUILD_DIR)/*.a
+	rm -f $(BUILD_DIR)/$(LIBNAME)
 
 clean:
-	rm -f $(PRJS) $(BUILD_DIR)/*.f90 $(BUILD_DIR)/*.mod $(BUILD_DIR)/*.o $(BUILD_DIR)/*.lst
+	rm -f $(BUILD_DIR)/*.o $(BUILD_DIR)/*.mod $(BUILD_DIR)/*.lst
 
 dependency:
 	../tools/makedepend .
