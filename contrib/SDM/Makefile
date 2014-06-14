@@ -13,9 +13,11 @@ include $(TOPDIR)/Mkinclude
 LIBNAME = libsdm.a 
 
 MODS	= \
-	  sdm_common.mod
+	  m_sdm_numset.mod \
+	  m_sdm_common.mod
 
 OBJS	= \
+	  sdm_numset.o \
 	  sdm_common.o
 
 all:	$(LIBDIR)/$(LIBNAME) instmodules
@@ -34,10 +36,18 @@ instmodules:	makemodules
 
 makemodules: $(OBJS)
 
+sdm_numset.o: sdm_numset.f90 \
+	sdm_common.o \
+	$(BUILD_DIR)/scale_precision.o \
+	$(BUILD_DIR)/scale_grid_index.o \
+	$(BUILD_DIR)/scale_topography.o \
+	$(BUILD_DIR)/scale_grid_real.o 
+	$(FC) $(FFLAGS) -I$(BUILD_DIR) -I$(MODDIR) -o $@ -c $<
+
 sdm_common.o: sdm_common.f90 \
-	$(BUILD_DIR)/scale_precision.mod \
-	$(BUILD_DIR)/scale_stdio.mod \
-	$(BUILD_DIR)/scale_const.mod \
+	$(BUILD_DIR)/scale_precision.o \
+	$(BUILD_DIR)/scale_stdio.o \
+	$(BUILD_DIR)/scale_const.o \
 	$(MODDIR)/rng_uniform_mt.mod
 	$(FC) $(FFLAGS) -I$(BUILD_DIR) -I$(MODDIR) -o $@ -c $<
 

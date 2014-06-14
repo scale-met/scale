@@ -17,7 +17,7 @@
 !!
 !<
 !-------------------------------------------------------------------------------
-module sdm_common
+module m_sdm_common
   !-----------------------------------------------------------------------------
   !
   !++ used modules
@@ -336,4 +336,4 @@ module sdm_common
   logical, save :: doprecipitation  = .true.
   logical, save :: domovement = .true.
   logical, save :: donegative_fixer  = .true.  ! apply negative fixer?
-end module sdm_common
+end module m_sdm_common

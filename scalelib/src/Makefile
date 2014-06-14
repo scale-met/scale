@@ -138,7 +138,13 @@ makegtool:
 
 
 ifeq ($(SDM),-D_SDM)
-makesdm: $(BUILD_DIR)/scale_precision.o $(BUILD_DIR)/scale_stdio.o $(BUILD_DIR)/scale_const.o $(MODDIR)/rng_uniform_mt.mod
+makesdm: $(BUILD_DIR)/scale_precision.o \
+	$(BUILD_DIR)/scale_stdio.o \
+	$(BUILD_DIR)/scale_const.o \
+	$(BUILD_DIR)/scale_grid_index.o \
+	$(BUILD_DIR)/scale_topography.o \
+	$(BUILD_DIR)/scale_grid_real.o \
+	$(MODDIR)/rng_uniform_mt.mod
 	cp -pf $(SDMDIR)/scale_atmos_phy_mp_sdm.F90 $(SCALELIBDIR)/src/atmos-physics/microphysics/
 	cp -pf $(SDMDIR)/scale_tracer_sdm.F90 $(SCALELIBDIR)/src/atmos-physics/microphysics/
 	$(MAKE) -C $(GAGETRYDIR)
@@ -205,6 +211,7 @@ dependency:
 %.F90 : %.F90.erb
 	erb $< > $@
 
+# Is this working? Could not build $(BUILD_DIR)/scale_precision.mod. \S.Shima.
 $(BUILD_DIR)/%.mod: %.F90
 	make $(patsubst %.F90,$(BUILD_DIR)/%.o,$<)
 
