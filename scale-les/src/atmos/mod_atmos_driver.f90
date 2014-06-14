@@ -322,12 +322,21 @@ contains
     !---------------------------------------------------------------------------
 
     if ( setup ) then
-       call CPL_getATM_SF( SFLX_MW  (:,:),  & ! [OUT]
-                           SFLX_MU  (:,:),  & ! [OUT]
-                           SFLX_MV  (:,:),  & ! [OUT]
-                           SFLX_SH  (:,:),  & ! [OUT]
-                           SFLX_LH  (:,:),  & ! [OUT]
-                           SFLX_QTRC(:,:,:) ) ! [OUT]
+       if ( CPL_sw ) then
+          call CPL_getATM_SF( SFLX_MW  (:,:),  & ! [OUT]
+                              SFLX_MU  (:,:),  & ! [OUT]
+                              SFLX_MV  (:,:),  & ! [OUT]
+                              SFLX_SH  (:,:),  & ! [OUT]
+                              SFLX_LH  (:,:),  & ! [OUT]
+                              SFLX_QTRC(:,:,:) ) ! [OUT]
+       else
+          SFLX_MW  (:,:)   = 0.0_RP
+          SFLX_MU  (:,:)   = 0.0_RP
+          SFLX_MV  (:,:)   = 0.0_RP
+          SFLX_SH  (:,:)   = 0.0_RP
+          SFLX_LH  (:,:)   = 0.0_RP
+          SFLX_QTRC(:,:,:) = 0.0_RP
+       endif
     endif
 
     if ( CPL_sw ) then
