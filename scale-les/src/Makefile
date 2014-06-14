@@ -179,7 +179,7 @@ $(BUILD_DIR)/mod_convert.o                : mod_convert.f90    $(DEPENDLIB) mod_
 $(BUILD_DIR)/mod_cnvtopo.o                : mod_cnvtopo.f90    $(DEPENDLIB)
 $(BUILD_DIR)/mod_cnvlanduse.o             : mod_cnvlanduse.f90 $(DEPENDLIB)
 
-$(BUILD_DIR)/mod_user.o                   : mod_user.f90 $(DEPENDLIB)
+$(BUILD_DIR)/mod_user.o                   : mod_user.f90 $(DEPENDLIB) $(patsubst %,$(BUILD_DIR)/%,$(OBJS))
 
 
 
