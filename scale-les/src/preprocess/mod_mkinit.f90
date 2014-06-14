@@ -81,6 +81,18 @@ module mod_mkinit
      MOMZ, &
      RHOT, &
      QTRC
+  use mod_atmos_phy_mp_vars, only: &
+     SFLX_rain    => ATMOS_PHY_MP_SFLX_rain, &
+     SFLX_snow    => ATMOS_PHY_MP_SFLX_snow
+  use mod_atmos_phy_rd_vars, only: &
+     SFLX_LW_up   => ATMOS_PHY_RD_SFLX_LW_up,   &
+     SFLX_LW_dn   => ATMOS_PHY_RD_SFLX_LW_dn,   &
+     SFLX_SW_up   => ATMOS_PHY_RD_SFLX_SW_up,   &
+     SFLX_SW_dn   => ATMOS_PHY_RD_SFLX_SW_dn,   &
+     TOAFLX_LW_up => ATMOS_PHY_RD_TOAFLX_LW_up, &
+     TOAFLX_LW_dn => ATMOS_PHY_RD_TOAFLX_LW_dn, &
+     TOAFLX_SW_up => ATMOS_PHY_RD_TOAFLX_SW_up, &
+     TOAFLX_SW_dn => ATMOS_PHY_RD_TOAFLX_SW_dn
   use mod_realinput
   !-----------------------------------------------------------------------------
   implicit none
@@ -804,6 +816,21 @@ contains
     enddo
     enddo
 
+    do j = JS, JE
+    do i = IS, IE
+       SFLX_rain   (i,j) = 0.0_RP
+       SFLX_snow   (i,j) = 0.0_RP
+       SFLX_LW_up  (i,j) = 0.0_RP
+       SFLX_LW_dn  (i,j) = 0.0_RP
+       SFLX_SW_up  (i,j) = 0.0_RP
+       SFLX_SW_dn  (i,j) = 0.0_RP
+       TOAFLX_LW_up(i,j) = 0.0_RP
+       TOAFLX_LW_dn(i,j) = 0.0_RP
+       TOAFLX_SW_up(i,j) = 0.0_RP
+       TOAFLX_SW_dn(i,j) = 0.0_RP
+    enddo
+    enddo
+
     return
   end subroutine MKINIT_planestate
 
@@ -1140,6 +1167,13 @@ contains
 
        QTRC(k,i,j,I_QV) = qv(k,1,1)
     enddo
+    enddo
+    enddo
+
+    do j = JS, JE
+    do i = IS, IE
+       SFLX_rain(i,j) = 0.0_RP
+       SFLX_snow(i,j) = 0.0_RP
     enddo
     enddo
 
@@ -1766,6 +1800,13 @@ contains
     enddo
     enddo
 
+    do j = JS, JE
+    do i = IS, IE
+       SFLX_rain(i,j) = 0.0_RP
+       SFLX_snow(i,j) = 0.0_RP
+    enddo
+    enddo
+
     return
   end subroutine MKINIT_supercell
 
@@ -1918,6 +1959,13 @@ contains
 
        QTRC(k,i,j,I_QV) = qv(k,1,1)
     enddo
+    enddo
+    enddo
+
+    do j = JS, JE
+    do i = IS, IE
+       SFLX_rain(i,j) = 0.0_RP
+       SFLX_snow(i,j) = 0.0_RP
     enddo
     enddo
 
@@ -3437,18 +3485,6 @@ contains
   !-----------------------------------------------------------------------------
   !> Make initial state ( ocean variables )
   subroutine MKINIT_oceancouple
-    use mod_atmos_phy_mp_vars, only: &
-       ATMOS_PHY_MP_SFLX_rain, &
-       ATMOS_PHY_MP_SFLX_snow
-    use mod_atmos_phy_rd_vars, only: &
-       ATMOS_PHY_RD_SFLX_LW_up,   &
-       ATMOS_PHY_RD_SFLX_LW_dn,   &
-       ATMOS_PHY_RD_SFLX_SW_up,   &
-       ATMOS_PHY_RD_SFLX_SW_dn,   &
-       ATMOS_PHY_RD_TOAFLX_LW_up, &
-       ATMOS_PHY_RD_TOAFLX_LW_dn, &
-       ATMOS_PHY_RD_TOAFLX_SW_up, &
-       ATMOS_PHY_RD_TOAFLX_SW_dn
     use mod_ocean_vars, only: &
        OCEAN_TEMP,       &
        OCEAN_SFC_TEMP,   &
@@ -3499,16 +3535,10 @@ contains
     endif
     if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_OCEANCOUPLE)
 
-    ATMOS_PHY_MP_SFLX_rain   (:,:) = FLX_rain
-    ATMOS_PHY_MP_SFLX_snow   (:,:) = FLX_snow
-    ATMOS_PHY_RD_SFLX_LW_up  (:,:) = 0.0_RP
-    ATMOS_PHY_RD_SFLX_LW_dn  (:,:) = FLX_LW_dn
-    ATMOS_PHY_RD_SFLX_SW_up  (:,:) = 0.0_RP
-    ATMOS_PHY_RD_SFLX_SW_dn  (:,:) = FLX_SW_dn
-    ATMOS_PHY_RD_TOAFLX_LW_up(:,:) = 0.0_RP
-    ATMOS_PHY_RD_TOAFLX_LW_dn(:,:) = 0.0_RP
-    ATMOS_PHY_RD_TOAFLX_SW_up(:,:) = 0.0_RP
-    ATMOS_PHY_RD_TOAFLX_SW_dn(:,:) = 0.0_RP
+    SFLX_rain (:,:) = FLX_rain
+    SFLX_snow (:,:) = FLX_snow
+    SFLX_LW_dn(:,:) = FLX_LW_dn
+    SFLX_SW_dn(:,:) = FLX_SW_dn
 
     OCEAN_TEMP      (:,:)      = OCN_TEMP
     OCEAN_SFC_TEMP  (:,:)      = SFC_TEMP
@@ -3522,18 +3552,6 @@ contains
   !-----------------------------------------------------------------------------
   !> Make initial state ( land variables )
   subroutine MKINIT_landcouple
-    use mod_atmos_phy_mp_vars, only: &
-       ATMOS_PHY_MP_SFLX_rain, &
-       ATMOS_PHY_MP_SFLX_snow
-    use mod_atmos_phy_rd_vars, only: &
-       ATMOS_PHY_RD_SFLX_LW_up,   &
-       ATMOS_PHY_RD_SFLX_LW_dn,   &
-       ATMOS_PHY_RD_SFLX_SW_up,   &
-       ATMOS_PHY_RD_SFLX_SW_dn,   &
-       ATMOS_PHY_RD_TOAFLX_LW_up, &
-       ATMOS_PHY_RD_TOAFLX_LW_dn, &
-       ATMOS_PHY_RD_TOAFLX_SW_up, &
-       ATMOS_PHY_RD_TOAFLX_SW_dn
     use mod_land_vars, only: &
        LAND_TEMP,       &
        LAND_WATER,      &
@@ -3584,16 +3602,10 @@ contains
     endif
     if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_LANDCOUPLE)
 
-    ATMOS_PHY_MP_SFLX_rain   (:,:) = FLX_rain
-    ATMOS_PHY_MP_SFLX_snow   (:,:) = FLX_snow
-    ATMOS_PHY_RD_SFLX_LW_up  (:,:) = 0.0_RP
-    ATMOS_PHY_RD_SFLX_LW_dn  (:,:) = FLX_LW_dn
-    ATMOS_PHY_RD_SFLX_SW_up  (:,:) = 0.0_RP
-    ATMOS_PHY_RD_SFLX_SW_dn  (:,:) = FLX_SW_dn
-    ATMOS_PHY_RD_TOAFLX_LW_up(:,:) = 0.0_RP
-    ATMOS_PHY_RD_TOAFLX_LW_dn(:,:) = 0.0_RP
-    ATMOS_PHY_RD_TOAFLX_SW_up(:,:) = 0.0_RP
-    ATMOS_PHY_RD_TOAFLX_SW_dn(:,:) = 0.0_RP
+    SFLX_rain (:,:) = FLX_rain
+    SFLX_snow (:,:) = FLX_snow
+    SFLX_LW_dn(:,:) = FLX_LW_dn
+    SFLX_SW_dn(:,:) = FLX_SW_dn
 
     LAND_TEMP      (:,:,:)    = LND_TEMP
     LAND_WATER     (:,:,:)    = LND_WATER
@@ -3690,18 +3702,6 @@ contains
        PRC_NUM_X
     use scale_landuse, only: &
        LANDUSE_frac_land
-    use mod_atmos_phy_mp_vars, only: &
-       ATMOS_PHY_MP_SFLX_rain, &
-       ATMOS_PHY_MP_SFLX_snow
-    use mod_atmos_phy_rd_vars, only: &
-       ATMOS_PHY_RD_SFLX_LW_up,   &
-       ATMOS_PHY_RD_SFLX_LW_dn,   &
-       ATMOS_PHY_RD_SFLX_SW_up,   &
-       ATMOS_PHY_RD_SFLX_SW_dn,   &
-       ATMOS_PHY_RD_TOAFLX_LW_up, &
-       ATMOS_PHY_RD_TOAFLX_LW_dn, &
-       ATMOS_PHY_RD_TOAFLX_SW_up, &
-       ATMOS_PHY_RD_TOAFLX_SW_dn
     use mod_ocean_vars, only: &
        OCEAN_TEMP,       &
        OCEAN_SFC_TEMP,   &
@@ -3772,16 +3772,10 @@ contains
     if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_SEABREEZE)
 
     ! make surface, land, and ocean conditions
-    ATMOS_PHY_MP_SFLX_rain   (:,:) = FLX_rain
-    ATMOS_PHY_MP_SFLX_snow   (:,:) = FLX_snow
-    ATMOS_PHY_RD_SFLX_LW_up  (:,:) = 0.0_RP
-    ATMOS_PHY_RD_SFLX_LW_dn  (:,:) = FLX_LW_dn
-    ATMOS_PHY_RD_SFLX_SW_up  (:,:) = 0.0_RP
-    ATMOS_PHY_RD_SFLX_SW_dn  (:,:) = FLX_SW_dn
-    ATMOS_PHY_RD_TOAFLX_LW_up(:,:) = 0.0_RP
-    ATMOS_PHY_RD_TOAFLX_LW_dn(:,:) = 0.0_RP
-    ATMOS_PHY_RD_TOAFLX_SW_up(:,:) = 0.0_RP
-    ATMOS_PHY_RD_TOAFLX_SW_dn(:,:) = 0.0_RP
+    SFLX_rain (:,:) = FLX_rain
+    SFLX_snow (:,:) = FLX_snow
+    SFLX_LW_dn(:,:) = FLX_LW_dn
+    SFLX_SW_dn(:,:) = FLX_SW_dn
 
     OCEAN_TEMP      (:,:)      = OCN_TEMP
     OCEAN_SFC_TEMP  (:,:)      = OCN_SFC_TEMP
