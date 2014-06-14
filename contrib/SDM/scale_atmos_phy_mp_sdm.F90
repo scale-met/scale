@@ -20,6 +20,7 @@
 !! @li      2014-06-07 (Y.Sato)  [rev] Remove dt=max(dt_sdm) and some other changes
 !! @li      2014-06-09 (S.Shima) [rev] Check whether dt is the least common multiple of sdm_dtcmph(i) that satisfies sdm_dtcmph(i)<= dt. Fixed a hidden bug: "/=" to "==".
 !! @li      2014-06-13 (S.Shima) [rev] Common variables are separated into sdm_common.f90
+!! @li      2014-06-14 (S.Shima) [rev] Check the initialization of the random number generator. Where to finalize?
 !!
 !<
 !-------------------------------------------------------------------------------
@@ -46,7 +47,6 @@ module scale_atmos_phy_mp_sdm
      gadg_count_sort
   use rng_uniform_mt, only: &
      c_rng_uniform_mt, &
-     rng_init, &
      rng_save_state, &
      rng_load_state, &
      gen_rand_array => rng_generate_array
@@ -1113,7 +1113,8 @@ contains
       endif
 
       !### Get random generator seed ###!
-
+      !! Random number generator has already been initialized in scale-les/src/preprocess/mod_mkinit.f90
+      !! Be careful. If unit (=fid_random_i) is specified, filename is ignored and the object is initialized by the unit.
       call rng_load_state( rng_s2c, trim(RANDOM_IN_BASENAME), fid_random_i )
 
       ! Initialized super-droplets.
