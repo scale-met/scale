@@ -98,10 +98,13 @@ contains
        LWD  => CPL_fromAtm_FLX_LW_dn,   &
        SHFLX => CPL_AtmUrb_ATM_FLX_SH,  &
        LHFLX => CPL_AtmUrb_ATM_FLX_LH,  &
-       GHFLX => CPL_AtmUrb_URB_FLX_heat
+       GHFLX => CPL_AtmUrb_URB_FLX_heat, &
+       CNT_AtmUrb,                       &
+       CNT_Urb
     use scale_time, only:   &
        TIME => TIME_NOWSEC, &   !< absolute sec
-       TIME_DTSEC_URBAN !< time interval of urban step [sec]
+       TIME_DTSEC_URBAN,    &   !< time interval of urban step [sec]
+       TIME_DOURBAN_step
     use scale_history, only: &
        HIST_in
     implicit none
@@ -109,6 +112,7 @@ contains
     real(RP) :: LON, LAT
     real(RP) :: tloc,dsec,DELT
 
+    real(RP) :: RAIN(IA,JA)
     real(RP) :: PT(0:24)
     real(RP) :: Wind(0:24)
     real(RP) :: SW(0:24)
@@ -122,9 +126,11 @@ contains
     integer :: i, j, k
     !---------------------------------------------------------------------------
 
-    if ( USER_do ) then
+    if ( USER_do .AND. TIME_DOURBAN_step ) then
 
        DELT=TIME_DTSEC_URBAN
+       CNT_AtmUrb=0.0_RP
+       CNT_Urb=0.0_RP
 
        do j = 1, JA
        do i = 1, IA
@@ -149,15 +155,16 @@ contains
          SWD(i,j)  = (SW(tloc)*(3600.0_RP-dsec)+SW(tloc+1)*dsec)/3600.0_RP 
          LWD(i,j)  = 400.0_RP
 
-       !print *,'user',TMPA(i,j),QVA(i,j),SWD(i,j)
-
        enddo
        enddo
+       
+       RAIN(:,:) = PREC(:,:)*DELT
 
-       call HIST_in( SWD(:,:),  'SWD_urb', 'Downward shortwave radiation', 'W/m2', TIME_DTSEC_URBAN)
-       call HIST_in( LWD(:,:),  'LWD_urb', 'Downward longwave radiation',  'W/m2', TIME_DTSEC_URBAN)
-       call HIST_in( TMPA(:,:), 'PT_urb',  'Potential temp', 'K',   TIME_DTSEC_URBAN)
-       call HIST_in( UA(:,:),   'UA_urb',  'Wind speed',     'm/s', TIME_DTSEC_URBAN)
+       call HIST_in( SWD(:,:),  'SWD_urb',  'Downward shortwave radiation', 'W/m2', TIME_DTSEC_URBAN)
+       call HIST_in( LWD(:,:),  'LWD_urb',  'Downward longwave radiation',  'W/m2', TIME_DTSEC_URBAN)
+       call HIST_in( TMPA(:,:), 'PT_urb',   'Potential temp',               'K',   TIME_DTSEC_URBAN)
+       call HIST_in( UA(:,:),   'UA_urb',   'Wind speed',                   'm/s', TIME_DTSEC_URBAN)
+       call HIST_in( RAIN(:,:), 'RAIN_urb', 'Precipitation',                'kg/m2', TIME_DTSEC_URBAN)
 
        call HIST_in( SHFLX(:,:), 'SHFLX_urb', 'Sensible heat flux', 'W/m2', TIME_DTSEC_URBAN)
        call HIST_in( LHFLX(:,:), 'LHFLX_urb', 'Latent heat flux',   'W/m2', TIME_DTSEC_URBAN)

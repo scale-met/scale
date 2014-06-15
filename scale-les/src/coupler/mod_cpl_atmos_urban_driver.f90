@@ -175,8 +175,7 @@ contains
     do i = 1, IA
 
       Uabs = sqrt( ATM_U(i,j)**2 + ATM_V(i,j)**2 + ATM_W(i,j)**2 )
-
-
+     
       call CPL_AtmUrb( TR_URB      (i,j),   & ! [INOUT]
                        TB_URB      (i,j),   & ! [INOUT]
                        TG_URB      (i,j),   & ! [INOUT]

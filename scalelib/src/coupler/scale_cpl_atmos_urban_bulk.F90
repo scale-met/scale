@@ -596,7 +596,6 @@ contains
     end if
 
 
-
     !-----------------------------------------------------------
     ! Set evaporation efficiency on roof/wall/road
     !-----------------------------------------------------------
@@ -611,7 +610,7 @@ contains
                 + 0.1_RP*ROFFB          &
                 + (RW-0.05_RP)*ROFFG
 
-!    print *, TIME, BETR, BETB, BETG, ROFF
+    !print *, TIME, BETR, BETB, BETG, ROFF
 
     !-----------------------------------------------------------
     ! Energy balance on roof/wall/road surface
@@ -665,8 +664,10 @@ contains
     end do
 
     !print *,'roof',tloc,SR,RR,HR,ELER,G0R
-    !print *,'HR', tloc,HR,RHO,CHR,UA,(TRP-TA)
-
+    !print *,'HR  ',TIME,HR,RHO,CHR,UA,(TRP-TA)
+    !print *,'ELER',TIME,ELER,RHO,CHR,UA,BETR,(QS0R-QA)
+    !print *,'G0R ',TIME,G0R,AKSR,(TRP-TRL(1)),DZR(1)
+    !print *,'F   ',iteration-1,abs(F),abs(DTR)
 
     FLXTHR  = HR / RHO / CP / 100.0_RP
     FLXHUMR = ELER / RHO / EL / 100.0_RP
