@@ -2079,7 +2079,7 @@ contains
     statcnt(:) = 0.0_RP
     do j = JS, JE
     do i = IS, IE
-    do k = KS, KE
+    do k = 1,  KA
        if ( abs(var(k,i,j)) < abs(CONST_UNDEF) ) then
           statval(k) = statval(k) + var(k,i,j)
           statcnt(k) = statcnt(k) + 1.D0
@@ -2109,12 +2109,10 @@ contains
 
     call PROF_rapend  ('COMM Allreduce MPI')
 
-    do k = KS, KE
+    do k = 1, KA
        zerosw = 0.5_RP - sign(0.5_RP, allstatcnt(k) - 1.E-12_RP )
        varmean(k) = allstatval(k) / ( allstatcnt(k) + zerosw ) * ( 1.0_RP - zerosw )
     enddo
-    varmean(   1:KS-1) = 0.0_RP
-    varmean(KE+1:KA  ) = 0.0_RP
 
     return
   end subroutine COMM_horizontal_mean
