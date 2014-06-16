@@ -123,7 +123,7 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '+++ Smagorinsky-type Eddy Viscocity Model'
 
     if ( TYPE_TB /= 'SMAGORINSKY' ) then
-       if ( IO_L ) write(IO_FID_LOG,*) 'xxx ATMOS_PHY_TB_TYPE is not SMAGORINSKY. Check!'
+       write(*,*) 'xxx ATMOS_PHY_TB_TYPE is not SMAGORINSKY. Check!'
        call PRC_MPIstop
     endif
 

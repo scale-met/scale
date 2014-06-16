@@ -68,7 +68,7 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '*** HEVE'
 
     if ( ATMOS_DYN_TYPE .ne. 'HEVE' ) then
-       if ( IO_L ) write(IO_FID_LOG,*) 'xxx ATMOS_DYN_TYPE is not HEVE. Check!'
+       write(*,*) 'xxx ATMOS_DYN_TYPE is not HEVE. Check!'
        call PRC_MPIstop
     endif
 

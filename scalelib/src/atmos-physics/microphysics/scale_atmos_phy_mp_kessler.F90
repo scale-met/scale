@@ -89,14 +89,14 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '*** KESSLER-type 1-moment bulk 3 category'
 
     if ( MP_TYPE /= 'KESSLER' ) then
-       if ( IO_L ) write(IO_FID_LOG,*) 'xxx ATMOS_PHY_MP_TYPE is not KESSLER. Check!'
+       write(*,*) 'xxx ATMOS_PHY_MP_TYPE is not KESSLER. Check!'
        call PRC_MPIstop
     endif
 
     if (      I_QV <= 0 &
          .OR. I_QC <= 0 &
          .OR. I_QR <= 0 ) then
-       if ( IO_L ) write(IO_FID_LOG,*) 'xxx KESSLER needs QV, QC, QR tracer. Check!'
+       write(*,*) 'xxx KESSLER needs QV, QC, QR tracer. Check!'
        call PRC_MPIstop
     endif
 

@@ -601,7 +601,7 @@ contains
        enddo
 
        if ( .NOT. converged ) then
-          if( IO_L ) write(IO_FID_LOG,*) 'xxx [moist_conversion] not converged! dtemp=', dtemp, k,i,j,ite
+          write(*,*) 'xxx [moist_conversion] not converged! dtemp=', dtemp, k,i,j,ite
           call PRC_MPIstop
        endif
 

@@ -89,7 +89,7 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '*** HIVI'
 
     if ( ATMOS_DYN_TYPE .ne. 'HIVI' ) then
-       if ( IO_L ) write(IO_FID_LOG,*) 'xxx ATMOS_DYN_TYPE is not HIVI. Check!'
+       write(*,*) 'xxx ATMOS_DYN_TYPE is not HIVI. Check!'
        call PRC_MPIstop
     end if
 
@@ -97,7 +97,7 @@ contains
     if ( IO_L ) write(IO_FID_LOG,*) '*** USING Bi-CGSTAB'
 #else
     if ( IO_L ) write(IO_FID_LOG,*) '*** USING Multi-Grid'
-    if ( IO_L ) write(IO_FID_LOG,*) 'xxx Not Implemented yet'
+    write(*,*) 'xxx Not Implemented yet'
     call PRC_MPIstop
 #endif
 
@@ -125,7 +125,7 @@ contains
     else if ( RP == SP ) then
        mtype = MPI_REAL
     else
-       if ( IO_L ) write(IO_FID_LOG,*) 'xxx Unsupported precision'
+       write(*,*) 'xxx Unsupported precision'
        call PRC_MPIstop
     end if
 
@@ -977,7 +977,7 @@ contains
                  + ( qflx_hi(k,i  ,j,YDIR) - qflx_hi(k  ,i,j-1,YDIR) ) * RCDY(j) ) &
                - ( J13G(k+1,i,j,I_UYZ) * ( DPRES(k+1,i+1,j)+DPRES(k+1,i,j) ) &
                  - J13G(k-1,i,j,I_UYZ) * ( DPRES(k-1,i+1,j)+DPRES(k-1,i,j) ) ) &
-                 * 0.5_RP / ( FDZ(k+1)+FDZ(k) ) & 
+                 * 0.5_RP / ( FDZ(k+1)+FDZ(k) ) &
                ) / GSQRT(k,i,j,I_UYZ) &
                + 0.0625_RP * ( CORIOLI(1,i,j)+CORIOLI(1,i+1,j) ) &
                            * ( DENS(k,i,j)+DENS(k,i+1,j) ) &

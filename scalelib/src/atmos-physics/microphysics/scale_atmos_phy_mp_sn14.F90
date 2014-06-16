@@ -388,7 +388,7 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '*** Wrapper for SN14'
 
     if ( MP_TYPE .ne. 'SN14' ) then
-       if ( IO_L ) write(IO_FID_LOG,*) 'xxx ATMOS_PHY_MP_TYPE is not SN14. Check!'
+       write(*,*) 'xxx ATMOS_PHY_MP_TYPE is not SN14. Check!'
        call PRC_MPIstop
     end if
 
@@ -403,7 +403,7 @@ contains
          .OR. I_NI <= 0 &
          .OR. I_NS <= 0 &
          .OR. I_NG <= 0 ) then
-       if ( IO_L ) write(IO_FID_LOG,*) 'xxx SN14 needs QV/C/R/I/S/G and NC/R/I/S/G tracer. Check!'
+       write(*,*) 'xxx SN14 needs QV/C/R/I/S/G and NC/R/I/S/G tracer. Check!'
        call PRC_MPIstop
     endif
 

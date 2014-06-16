@@ -181,8 +181,6 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine CPL_vars_setup
-    use scale_process, only: &
-       PRC_MPIstop
     use scale_const, only: &
        UNDEF => CONST_UNDEF
     implicit none

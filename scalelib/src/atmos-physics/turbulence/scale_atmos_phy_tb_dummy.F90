@@ -70,7 +70,7 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '*** Turbulence Dummy'
 
     if ( TYPE_TB /= 'DUMMY' ) then
-       if ( IO_L ) write(IO_FID_LOG,*) 'xxx ATMOS_PHY_TB_TYPE is not Dummy. Check!'
+       write(*,*) 'xxx ATMOS_PHY_TB_TYPE is not Dummy. Check!'
        call PRC_MPIstop
     endif
 

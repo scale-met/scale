@@ -232,9 +232,7 @@ contains
        enddo
 
        if ( .NOT. converged ) then
-          if( IO_L ) write(IO_FID_LOG,*) 'xxx [buildrho 1D sfc] iteration not converged!', &
-                                         dens(KS),ite,dens_s,dhyd,dgrd
-          if( IO_L ) write(*         ,*) 'xxx [buildrho 1D sfc] iteration not converged!', &
+          write(*,*) 'xxx [buildrho 1D sfc] iteration not converged!', &
                                          dens(KS),ite,dens_s,dhyd,dgrd
           call PRC_MPIstop
        endif

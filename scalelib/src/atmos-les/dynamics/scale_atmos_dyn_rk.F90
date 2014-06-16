@@ -166,7 +166,7 @@ contains
        call ATMOS_DYN_rk_hivi_setup( ATMOS_DYN_TYPE )
        ATMOS_DYN_rk => ATMOS_DYN_rk_hivi
     case default
-       if( IO_L ) write(IO_FID_LOG,*) 'xxx ATMOS_DYN_TYPE is invalid'
+       write(*,*) 'xxx ATMOS_DYN_TYPE is invalid'
        call PRC_MPIstop
     end select
 

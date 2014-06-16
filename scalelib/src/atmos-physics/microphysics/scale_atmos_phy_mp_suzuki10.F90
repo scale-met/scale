@@ -276,7 +276,7 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '*** Wrapper for SBM (warm cloud)'
 
     if ( MP_TYPE .ne. 'SUZUKI10' ) then
-       if ( IO_L ) write(IO_FID_LOG,*) 'xxx ATMOS_PHY_MP_TYPE is not SUZUKI10. Check!'
+       write(*,*) 'xxx ATMOS_PHY_MP_TYPE is not SUZUKI10. Check!'
        call PRC_MPIstop
     end if
 
@@ -305,7 +305,7 @@ contains
     if( IO_L ) write(IO_FID_LOG,nml=PARAM_ATMOS_PHY_MP)
 
     if ( nspc /= 1 .and. nspc /= 7 ) then
-       if ( IO_L ) write(IO_FID_LOG,*) 'xxx nspc should be set as 1(warm rain) or 7(mixed phase) check!'
+       write(*,*) 'xxx nspc should be set as 1(warm rain) or 7(mixed phase) check!'
        call PRC_MPIstop
     end if
 
@@ -335,7 +335,7 @@ contains
         read( fid_micpara,* ) nnspc, nnbin
 
         if( nnbin /= nbin ) then
-           if ( IO_L ) write(IO_FID_LOG,*) 'xxx nbin in inc_tracer and nbin in micpara.dat is different check!'
+           write(*,*) 'xxx nbin in inc_tracer and nbin in micpara.dat is different check!'
            call PRC_MPIstop
         end if
 
@@ -402,7 +402,7 @@ contains
         read( fid_micpara,* ) nnspc, nnbin
 
         if( nnbin /= nbin ) then
-           if ( IO_L ) write(IO_FID_LOG,*) 'xxx nbin in inc_tracer and nbin in micpara.dat is different check!'
+           write(*,*) 'xxx nbin in inc_tracer and nbin in micpara.dat is different check!'
            call PRC_MPIstop
         end if
 

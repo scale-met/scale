@@ -765,7 +765,7 @@ contains
 
        call ATMOS_vars_total
     else
-       if( IO_L ) write(IO_FID_LOG,*) '*** restart file for atmosphere is not specified. STOP!'
+       write(*,*) '*** restart file for atmosphere is not specified. STOP!'
        call PRC_MPIstop
     endif
 

@@ -28,7 +28,6 @@ program scaleles_init
   use scale_process, only: &
      PRC_setup,    &
      PRC_MPIstart, &
-     PRC_MPIstop,  &
      PRC_MPIfinish
   use scale_const, only: &
      CONST_setup

@@ -93,7 +93,7 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[AtmLnd bulk] / Categ[COUPLER] / Origin[SCALElib]'
 
     if ( CPL_TYPE_AtmLnd /= 'BULK' ) then
-       if ( IO_L ) write(IO_FID_LOG,*) 'xxx CPL_TYPE_AtmLnd is not BULK. Check!'
+       write(*,*) 'xxx CPL_TYPE_AtmLnd is not BULK. Check!'
        call PRC_MPIstop
     endif
 

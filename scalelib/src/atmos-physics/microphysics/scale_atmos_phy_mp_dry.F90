@@ -67,7 +67,7 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '*** dummy process (dry Atmosphere)'
 
     if ( MP_TYPE /= 'DRY' ) then
-       if ( IO_L ) write(IO_FID_LOG,*) 'xxx ATMOS_PHY_MP_TYPE is not DRY. Check!'
+       write(*,*) 'xxx ATMOS_PHY_MP_TYPE is not DRY. Check!'
        call PRC_MPIstop
     endif
 

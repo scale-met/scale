@@ -253,7 +253,7 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '+++ MstrnX radiation process'
 
     if ( RD_TYPE /= 'MSTRNX' ) then
-       if ( IO_L ) write(IO_FID_LOG,*) 'xxx RD_TYPE is not MSTRNX. Check!'
+       write(*,*) 'xxx RD_TYPE is not MSTRNX. Check!'
        call PRC_MPIstop
     endif
 
@@ -688,7 +688,7 @@ contains
           iostat = ierr                           )
 
        if ( ierr /= 0 ) then
-          if( IO_L ) write(IO_FID_LOG,*) 'xxx Input data file does not found! ', trim(MSTRN_GASPARA_INPUTFILE)
+          write(*,*) 'xxx Input data file does not found! ', trim(MSTRN_GASPARA_INPUTFILE)
           stop
        endif
 
@@ -696,27 +696,27 @@ contains
        read(fid,*) nband, nstream, nfitP, nfitT, nflag, ncfc
 
        if ( nband /= MSTRN_nband ) then
-          if( IO_L ) write(IO_FID_LOG,*) 'xxx Inconsistent parameter value! nband(given,file)=', MSTRN_nband, nband
+          write(*,*) 'xxx Inconsistent parameter value! nband(given,file)=', MSTRN_nband, nband
           stop
        endif
        if ( nstream /= MSTRN_nstream ) then
-          if( IO_L ) write(IO_FID_LOG,*) 'xxx Inconsistent parameter value! nstream(given,file)=', MSTRN_nstream, nstream
+          write(*,*) 'xxx Inconsistent parameter value! nstream(given,file)=', MSTRN_nstream, nstream
           stop
        endif
        if ( nfitP /= MSTRN_nfitP ) then
-          if( IO_L ) write(IO_FID_LOG,*) 'xxx Inconsistent parameter value! nfitP(given,file)=', MSTRN_nfitP, nfitP
+          write(*,*) 'xxx Inconsistent parameter value! nfitP(given,file)=', MSTRN_nfitP, nfitP
           stop
        endif
        if ( nfitT /= MSTRN_nfitT ) then
-          if( IO_L ) write(IO_FID_LOG,*) 'xxx Inconsistent parameter value! nfitT(given,file)=', MSTRN_nfitT, nfitT
+          write(*,*) 'xxx Inconsistent parameter value! nfitT(given,file)=', MSTRN_nfitT, nfitT
           stop
        endif
        if ( nflag /= MSTRN_nflag ) then
-          if( IO_L ) write(IO_FID_LOG,*) 'xxx Inconsistent parameter value! nflag(given,file)=', MSTRN_nflag, nflag
+          write(*,*) 'xxx Inconsistent parameter value! nflag(given,file)=', MSTRN_nflag, nflag
           stop
        endif
        if ( ncfc /= MSTRN_ncfc ) then
-          if( IO_L ) write(IO_FID_LOG,*) 'xxx Inconsistent parameter value! ncfc(given,file)=', MSTRN_ncfc, ncfc
+          write(*,*) 'xxx Inconsistent parameter value! ncfc(given,file)=', MSTRN_ncfc, ncfc
           stop
        endif
 
@@ -798,7 +798,7 @@ contains
           iostat = ierr                            )
 
        if ( ierr /= 0 ) then
-          if( IO_L ) write(IO_FID_LOG,*) 'xxx Input data file does not found! ', trim(MSTRN_AEROPARA_INPUTFILE)
+          write(*,*) 'xxx Input data file does not found! ', trim(MSTRN_AEROPARA_INPUTFILE)
           stop
        endif
 
@@ -806,27 +806,27 @@ contains
        read(fid,*) nband, nsfc, nptype, nstream, nplkord, nfitPLK
 
        if ( nband /= MSTRN_nband ) then
-          if( IO_L ) write(IO_FID_LOG,*) 'xxx Inconsistent parameter value! nband(given,file)=', MSTRN_nband, nband
+          write(*,*) 'xxx Inconsistent parameter value! nband(given,file)=', MSTRN_nband, nband
           stop
        endif
        if ( nsfc /= MSTRN_nsfc ) then
-          if( IO_L ) write(IO_FID_LOG,*) 'xxx Inconsistent parameter value! nsfc(given,file)=', MSTRN_nsfc, nsfc
+          write(*,*) 'xxx Inconsistent parameter value! nsfc(given,file)=', MSTRN_nsfc, nsfc
           stop
        endif
        if ( nptype /= MSTRN_nptype ) then
-          if( IO_L ) write(IO_FID_LOG,*) 'xxx Inconsistent parameter value! nptype(given,file)=', MSTRN_nptype, nptype
+          write(*,*) 'xxx Inconsistent parameter value! nptype(given,file)=', MSTRN_nptype, nptype
           stop
        endif
        if ( nstream /= MSTRN_nstream ) then
-          if( IO_L ) write(IO_FID_LOG,*) 'xxx Inconsistent parameter value! nstream(given,file)=', MSTRN_nstream, nstream
+          write(*,*) 'xxx Inconsistent parameter value! nstream(given,file)=', MSTRN_nstream, nstream
           stop
        endif
        if ( nplkord /= MSTRN_nplkord ) then
-          if( IO_L ) write(IO_FID_LOG,*) 'xxx Inconsistent parameter value! nplkord(given,file)=', MSTRN_nplkord, nplkord
+          write(*,*) 'xxx Inconsistent parameter value! nplkord(given,file)=', MSTRN_nplkord, nplkord
           stop
        endif
        if ( nfitPLK /= MSTRN_nfitPLK ) then
-          if( IO_L ) write(IO_FID_LOG,*) 'xxx Inconsistent parameter value! nfitPLK(given,file)=', MSTRN_nfitPLK, nfitPLK
+          write(*,*) 'xxx Inconsistent parameter value! nfitPLK(given,file)=', MSTRN_nfitPLK, nfitPLK
           stop
        endif
 
@@ -883,14 +883,14 @@ contains
           iostat = ierr                             )
 
        if ( ierr /= 0 ) then
-          if( IO_L ) write(IO_FID_LOG,*) 'xxx Input data file does not found! ', trim(MSTRN_HYGROPARA_INPUTFILE)
+          write(*,*) 'xxx Input data file does not found! ', trim(MSTRN_HYGROPARA_INPUTFILE)
           stop
        endif
 
        read(fid,*) nptype
 
        if ( nptype /= MSTRN_nptype ) then
-          if( IO_L ) write(IO_FID_LOG,*) 'xxx Inconsistent parameter value! nptype(given,file)=', MSTRN_nptype, nptype
+          write(*,*) 'xxx Inconsistent parameter value! nptype(given,file)=', MSTRN_nptype, nptype
           stop
        endif
 
@@ -899,7 +899,7 @@ contains
           read(fid,*) hygro_flag(iptype), nradius
 
           if ( nradius /= MSTRN_nradius ) then
-             if( IO_L ) write(IO_FID_LOG,*) 'xxx Inconsistent parameter value! nradius(given,file)=', MSTRN_nradius, nradius
+             write(*,*) 'xxx Inconsistent parameter value! nradius(given,file)=', MSTRN_nradius, nradius
              stop
           endif
 

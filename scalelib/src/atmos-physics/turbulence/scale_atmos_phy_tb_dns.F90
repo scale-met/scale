@@ -85,7 +85,7 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '+++ Eddy Viscocity Model for DNS'
 
     if ( TYPE_TB /= 'DNS' ) then
-       if ( IO_L ) write(IO_FID_LOG,*) 'xxx ATMOS_PHY_TB_TYPE is not DNS. Check!'
+       write(*,*) 'xxx ATMOS_PHY_TB_TYPE is not DNS. Check!'
        call PRC_MPIstop
     endif
 

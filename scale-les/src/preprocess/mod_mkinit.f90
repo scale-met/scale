@@ -247,7 +247,7 @@ contains
     read(IO_FID_CONF,nml=PARAM_MKINIT,iostat=ierr)
 
     if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Check!'
+       if( IO_L ) write(IO_FID_LOG,*) 'xxx Not found namelist. Check!'
        call PRC_MPIstop
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT. Check!'
@@ -483,7 +483,7 @@ contains
     read(IO_FID_CONF,nml=PARAM_BUBBLE,iostat=ierr)
 
     if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Check!'
+       if( IO_L ) write(IO_FID_LOG,*) 'xxx Not found namelist. Check!'
        call PRC_MPIstop
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_BUBBLE. Check!'
@@ -562,7 +562,7 @@ contains
     read(IO_FID_CONF,nml=PARAM_SBMAERO,iostat=ierr)
 
     if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Check!'
+       if( IO_L ) write(IO_FID_LOG,*) 'xxx Not found namelist. Check!'
        call PRC_MPIstop
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist SBMAERO. Check!'
@@ -3379,6 +3379,7 @@ contains
        end do
     end if
 
+    do i = 1, IA
     ! make density & pressure profile in moist condition
     call HYDROSTATIC_buildrho_atmos( DENS(:,:,:), & ! [INOUT]
                                      temp(:,:,:), & ! [OUT]

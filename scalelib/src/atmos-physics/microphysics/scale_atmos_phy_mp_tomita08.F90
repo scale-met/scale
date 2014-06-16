@@ -284,7 +284,7 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '*** TOMITA08: 1-moment bulk 6 category'
 
     if ( MP_TYPE /= 'TOMITA08' ) then
-       if ( IO_L ) write(IO_FID_LOG,*) 'xxx ATMOS_PHY_MP_TYPE is not TOMITA08. Check!'
+       write(*,*) 'xxx ATMOS_PHY_MP_TYPE is not TOMITA08. Check!'
        call PRC_MPIstop
     endif
 
@@ -294,7 +294,7 @@ contains
          .OR. I_QI <= 0 &
          .OR. I_QS <= 0 &
          .OR. I_QG <= 0 ) then
-       if ( IO_L ) write(IO_FID_LOG,*) 'xxx TOMITA08 needs QV/C/R/I/S/G tracer. Check!'
+       write(*,*) 'xxx TOMITA08 needs QV/C/R/I/S/G tracer. Check!'
        call PRC_MPIstop
     endif
 

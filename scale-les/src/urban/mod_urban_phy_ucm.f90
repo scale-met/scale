@@ -149,7 +149,7 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[UCM] / Categ[URBAN PHYSICS] / Origin[SCALE-LES]'
 
     if ( URBAN_TYPE /= 'UCM' ) then
-       if( IO_L ) write(IO_FID_LOG,*) 'xxx URBAN_TYPE is not UCM. Check!'
+       write(*,*) 'xxx URBAN_TYPE is not UCM. Check!'
        call PRC_MPIstop
     endif
 

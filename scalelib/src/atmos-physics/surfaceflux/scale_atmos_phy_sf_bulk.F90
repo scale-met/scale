@@ -81,7 +81,7 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '+++ Bulk scheme'
 
     if ( ATMOS_PHY_SF_TYPE /= 'BULK' ) then
-       if ( IO_L ) write(IO_FID_LOG,*) 'xxx ATMOS_PHY_SF_TYPE is not BULK. Check!'
+       write(*,*) 'xxx ATMOS_PHY_SF_TYPE is not BULK. Check!'
        call PRC_MPIstop
     endif
 

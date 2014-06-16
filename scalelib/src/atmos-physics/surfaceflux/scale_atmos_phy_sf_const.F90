@@ -96,7 +96,7 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '+++ Constant flux'
 
     if ( ATMOS_PHY_SF_TYPE /= 'CONST' ) then
-       if ( IO_L ) write(IO_FID_LOG,*) 'xxx ATMOS_PHY_SF_TYPE is not CONST. Check!'
+       write(*,*) 'xxx ATMOS_PHY_SF_TYPE is not CONST. Check!'
        call PRC_MPIstop
     endif
 

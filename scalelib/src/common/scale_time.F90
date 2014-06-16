@@ -252,11 +252,11 @@ contains
     ! check time setting
     if ( setup_TimeIntegration ) then
        if ( TIME_DT == UNDEF8 ) then
-          if( IO_L ) write(IO_FID_LOG,*) 'xxx Not found TIME_DT.'
+          write(*,*) 'xxx Not found TIME_DT.'
           call PRC_MPIstop
        endif
        if ( TIME_DURATION == UNDEF8 ) then
-          if( IO_L ) write(IO_FID_LOG,*) 'xxx Not found TIME_DURATION.'
+          write(*,*) 'xxx Not found TIME_DURATION.'
           call PRC_MPIstop
        endif
 

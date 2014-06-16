@@ -118,7 +118,7 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '*** Atmos-Ocean: constant flux parameter'
 
     if ( CPL_TYPE_AtmOcn /= 'CONST' ) then
-       if ( IO_L ) write(IO_FID_LOG,*) 'xxx CPL_TYPE_AtmOcn is not CONST. Check!'
+       write(*,*) 'xxx CPL_TYPE_AtmOcn is not CONST. Check!'
        call PRC_MPIstop
     endif
 

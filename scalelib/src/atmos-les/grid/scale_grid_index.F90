@@ -136,10 +136,10 @@ contains
 
     !-- Block size must be divisible
     if    ( mod(IMAX,IBLOCK) > 0 ) then
-       if( IO_L ) write(IO_FID_LOG,*) 'xxx number of grid size IMAX must be divisible by IBLOCK! ', IMAX, IBLOCK
+       write(*,*) 'xxx number of grid size IMAX must be divisible by IBLOCK! ', IMAX, IBLOCK
        call PRC_MPIstop
     elseif( mod(JMAX,JBLOCK) > 0 ) then
-       if( IO_L ) write(IO_FID_LOG,*) 'xxx number of grid size JMAX must be divisible by JBLOCK! ', JMAX, JBLOCK
+       write(*,*) 'xxx number of grid size JMAX must be divisible by JBLOCK! ', JMAX, JBLOCK
        call PRC_MPIstop
     endif
 

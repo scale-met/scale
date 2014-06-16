@@ -188,7 +188,7 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[AtmUrb bulk] / Categ[COUPLER] / Origin[SCALElib]'
 
     if ( CPL_TYPE_AtmUrb /= 'BULK' ) then
-       if ( IO_L ) write(IO_FID_LOG,*) 'xxx CPL_TYPE_AtmUrb is not BULK. Check!'
+       write(*,*) 'xxx CPL_TYPE_AtmUrb is not BULK. Check!'
        call PRC_MPIstop
     endif
 
@@ -498,7 +498,7 @@ contains
     real(RP) :: PSIX, PSIT, PSIX2, PSIT2, PSIX10, PSIT10
 
     integer  :: iteration, K
-  
+
     !-----------------------------------------------------------
     ! Set parameters
     !-----------------------------------------------------------
@@ -524,7 +524,7 @@ contains
     ! AH_t  = AH  * ahdiurnal(tloc)
     ! ALH_t = ALH * ahdiurnal(tloc)
 
- 
+
     !if(dsec==0.) print *,'tloc',tloc,SSG,RHOO,QA,TA
 
     if( ZDC+Z0C+2.0_RP >= ZA) then

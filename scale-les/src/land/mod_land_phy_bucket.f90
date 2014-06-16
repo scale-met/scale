@@ -192,7 +192,7 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[BUCKET] / Categ[LAND PHYSICS] / Origin[SCALE-LES]'
 
     if ( LAND_TYPE /= 'BUCKET' ) then
-       if( IO_L ) write(IO_FID_LOG,*) 'xxx LAND_TYPE is not BUCKET. Check!'
+       write(*,*) 'xxx LAND_TYPE is not BUCKET. Check!'
        call PRC_MPIstop
     endif
 
