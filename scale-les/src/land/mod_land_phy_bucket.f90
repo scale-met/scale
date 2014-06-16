@@ -270,7 +270,7 @@ contains
     do j = JS, JE
     do i = IS, IE
        L(LKS,i,j) = 0.0_RP
-       U(LKS,i,j) = - LAND_WaterDiff(i,j) / ( CDZ(LKS) * ( CDZ(LKS) + CDZ(LKS+1) ) ) * dt
+       U(LKS,i,j) = -2.0_RP * LAND_WaterDiff(i,j) / ( CDZ(LKS) * ( CDZ(LKS) + CDZ(LKS+1) ) ) * dt
        M(LKS,i,j) = 1.0_RP - L(LKS,i,j) - U(LKS,i,j)
     enddo
     enddo
@@ -278,8 +278,8 @@ contains
     do j = JS, JE
     do i = IS, IE
     do k = LKS+1, LKE-1
-       L(k,i,j) = - LAND_WaterDiff(i,j) / ( CDZ(k) * ( CDZ(k) + CDZ(k-1) ) ) * dt
-       U(k,i,j) = - LAND_WaterDiff(i,j) / ( CDZ(k) * ( CDZ(k) + CDZ(k+1) ) ) * dt
+       L(k,i,j) = -2.0_RP * LAND_WaterDiff(i,j) / ( CDZ(k) * ( CDZ(k) + CDZ(k-1) ) ) * dt
+       U(k,i,j) = -2.0_RP * LAND_WaterDiff(i,j) / ( CDZ(k) * ( CDZ(k) + CDZ(k+1) ) ) * dt
        M(k,i,j) = 1.0_RP - L(k,i,j) - U(k,i,j)
     enddo
     enddo
@@ -357,7 +357,7 @@ contains
     do j = JS, JE
     do i = IS, IE
        L(LKS,i,j) = 0.0_RP
-       U(LKS,i,j) = - LAND_ThermalCond(i,j) / ( SOIL_DENSCS(i,j) + LAND_WATER(LKS,i,j)*WATER_DENSCS ) &
+       U(LKS,i,j) = -2.0_RP * LAND_ThermalCond(i,j) / ( SOIL_DENSCS(i,j) + LAND_WATER(LKS,i,j)*WATER_DENSCS ) &
                     / ( CDZ(LKS) * ( CDZ(LKS) + CDZ(LKS+1) ) ) * dt
        M(LKS,i,j) = 1.0_RP - L(LKS,i,j) - U(LKS,i,j)
     enddo
@@ -366,9 +366,9 @@ contains
     do j = JS, JE
     do i = IS, IE
     do k = LKS+1, LKE-1
-       L(k,i,j) = - LAND_ThermalCond(i,j) / ( SOIL_DENSCS(i,j) + LAND_WATER(k,i,j)*WATER_DENSCS ) &
+       L(k,i,j) = -2.0_RP * LAND_ThermalCond(i,j) / ( SOIL_DENSCS(i,j) + LAND_WATER(k,i,j)*WATER_DENSCS ) &
                   / ( CDZ(k) * ( CDZ(k) + CDZ(k-1) ) ) * dt
-       U(k,i,j) = - LAND_ThermalCond(i,j) / ( SOIL_DENSCS(i,j) + LAND_WATER(k,i,j)*WATER_DENSCS ) &
+       U(k,i,j) = -2.0_RP * LAND_ThermalCond(i,j) / ( SOIL_DENSCS(i,j) + LAND_WATER(k,i,j)*WATER_DENSCS ) &
                   / ( CDZ(k) * ( CDZ(k) + CDZ(k+1) ) ) * dt
        M(k,i,j) = 1.0_RP - L(k,i,j) - U(k,i,j)
     enddo
