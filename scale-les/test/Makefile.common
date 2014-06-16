@@ -37,6 +37,26 @@ build: makedir $(patsubst %,$(BUILD_DIR)/%,$(ORG_SRCS))
                         radiation=$(radiation)   \
                         postfix=$(postfix)
 
+dcutils:
+	$(MAKE) -C $(SRCDIR) dcutils SYSDEP_DIR=$(SYSDEP_DIR)
+
+gtool:
+	$(MAKE) -C $(SRCDIR) gtool   SYSDEP_DIR=$(SYSDEP_DIR)
+
+scalelib:
+	$(MAKE) -C $(SRCDIR) scalelib                 \
+                        BINDIR=$(BINDIR)         \
+                        BUILD_DIR=$(BUILD_DIR)   \
+                        SYSDEP_DIR=$(SYSDEP_DIR) \
+                        index=$(index)           \
+                        precision=$(precision)   \
+                        tracer=$(tracer)         \
+                        dynamics=$(dynamics)     \
+                        sfcflx=$(sfcflx)         \
+                        turbulence=$(turbulence) \
+                        radiation=$(radiation)   \
+                        postfix=$(postfix)
+
 makedir:
 	mkdir -p $(BUILD_DIR)
 
@@ -52,13 +72,21 @@ jobshell:
 
 
 
-.PHONY: allclean clean distclean
+.PHONY: allclean distclean clean
 
-allclean: clean
-	$(MAKE) -C $(SRCDIR) allclean
+allclean: distclean clean
+	$(MAKE) -C $(SRCDIR) allclean BINDIR=$(BINDIR)         \
+                                 BUILD_DIR=$(BUILD_DIR)   \
+                                 SYSDEP_DIR=$(SYSDEP_DIR)
+
+distclean: clean
+	$(MAKE) -C $(SRCDIR) distclean BINDIR=$(BINDIR)         \
+                                  BUILD_DIR=$(BUILD_DIR)   \
+                                  SYSDEP_DIR=$(SYSDEP_DIR)
+	rm -f *.nc *LOG.pe* monitor.pe* run.sh
 
 clean:
-	rm -f $(BUILD_DIR)/*.h $(BUILD_DIR)/*.mod $(BUILD_DIR)/*.o $(BUILD_DIR)/*.a
+	$(MAKE) -C $(SRCDIR) clean BINDIR=$(BINDIR)         \
+                              BUILD_DIR=$(BUILD_DIR)   \
+                              SYSDEP_DIR=$(SYSDEP_DIR)
 
-distclean:
-	rm -f *.nc LOG.pe* init_LOG.pe* monitor.pe* run.sh
