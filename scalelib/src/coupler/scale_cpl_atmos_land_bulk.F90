@@ -380,7 +380,7 @@ contains
           ! not converged and stop program
           if( IO_L ) write(IO_FID_LOG,*) 'Error: surface tempearture is not converged.'
           if( IO_L ) write(IO_FID_LOG,*) 'location (i,j):', i, j
-          !call PRC_MPIstop
+          call PRC_MPIstop
         end if
 
       else
