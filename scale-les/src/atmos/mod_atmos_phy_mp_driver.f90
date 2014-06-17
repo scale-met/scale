@@ -136,9 +136,9 @@ contains
 
     if ( update_flag ) then
 
-       do j  = JS, JE
-       do i  = IS, IE
-       do k  = KS, KE
+       do j  = 1, JA
+       do i  = 1, IA
+       do k  = 1, KA
           DENS0(k,i,j) = DENS(k,i,j) ! save
           MOMZ0(k,i,j) = MOMZ(k,i,j) ! save
           MOMX0(k,i,j) = MOMX(k,i,j) ! save
@@ -149,9 +149,9 @@ contains
        enddo
 
        do iq = 1, QA
-       do j  = JS, JE
-       do i  = IS, IE
-       do k  = KS, KE
+       do j  = 1, JA
+       do i  = 1, IA
+       do k  = 1, KA
           QTRC0(k,i,j,iq) = QTRC(k,i,j,iq) ! save
        enddo
        enddo
