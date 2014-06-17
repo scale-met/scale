@@ -776,6 +776,10 @@ contains
     do j  = JS, JE
     do i  = IS, IE
 
+       do k = KS, KE
+          rcdz(k) = 1.0_RP / ( REAL_FZ(k,i,j) - REAL_FZ(k-1,i,j) )
+       enddo
+
        ! save previous value
        do iq = 1, QA
        do k  = KS-1, KE
