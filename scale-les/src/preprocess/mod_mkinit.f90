@@ -3050,6 +3050,8 @@ contains
        FileRead
     implicit none
 
+    real(RP) :: dz(KA,IA,JA)
+
     real(RP) :: W(KA,IA,JA)
     real(RP) :: U(KA,IA,JA)
     real(RP) :: V(KA,IA,JA)
@@ -3379,14 +3381,22 @@ contains
        end do
     end if
 
-    do i = 1, IA
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS+1, KE
+       dz(k,i,j) = REAL_CZ(k,i,j) - REAL_CZ(k-1,i,j) ! distance from cell center to cell center
+    enddo
+    enddo
+    enddo
+
     ! make density & pressure profile in moist condition
     call HYDROSTATIC_buildrho_atmos( DENS(:,:,:), & ! [INOUT]
                                      temp(:,:,:), & ! [OUT]
                                      pres(:,:,:), & ! [OUT]
                                      pott(:,:,:), & ! [IN]
                                      qv  (:,:,:), & ! [IN]
-                                     qc  (:,:,:)  ) ! [IN]
+                                     qc  (:,:,:), & ! [IN]
+                                     dz  (:,:,:)  ) ! [IN]
 
     do j = JS, JE
     do i = IS, IE

@@ -211,6 +211,7 @@ contains
     real(RP), allocatable :: TEMP(:,:,:)
     real(RP), allocatable :: QV(:,:,:)
     real(RP), allocatable :: QC(:,:,:)
+    real(RP), allocatable :: dz(:,:,:)
 
     integer :: k, i, j
 
@@ -225,6 +226,7 @@ contains
     allocate( temp(KA,IA,JA) )
     allocate( qv(KA,IA,JA) )
     allocate( qc(KA,IA,JA) )
+    allocate( dz(KA,IA,JA) )
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[realinput]/Categ[Input]'
@@ -291,13 +293,22 @@ contains
        end do
     end if
 
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS+1, KE
+       dz(k,i,j) = CZ(k,i,j) - CZ(k-1,i,j) ! distance from cell center to cell center
+    enddo
+    enddo
+    enddo
+
     ! make density & pressure profile in moist condition
     call HYDROSTATIC_buildrho_atmos( dens(:,:,:), & ! [INOUT]
                                      temp(:,:,:), & ! [OUT]
                                      pres(:,:,:), & ! [OUT]
                                      pott(:,:,:), & ! [IN]
                                      qv  (:,:,:), & ! [IN]
-                                     qc  (:,:,:)  ) ! [IN]
+                                     qc  (:,:,:), & ! [IN]
+                                     dz  (:,:,:)  ) ! [IN]
 
     call COMM_vars8( dens(:,:,:), 1 )
     call COMM_wait ( dens(:,:,:), 1 )
