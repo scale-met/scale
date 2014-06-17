@@ -48,12 +48,16 @@ module scale_cpl_atmos_ocean_bulk
   real(RP), private :: U_maxH  = 1.E+2_RP !                   T
   real(RP), private :: U_maxE  = 1.E+2_RP !                   q
 
+  logical, allocatable, private :: is_FLX(:,:) ! is atmos-land coupler run?
+
 contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine CPL_AtmOcn_bulk_setup( CPL_TYPE_AtmOcn )
     use scale_process, only: &
        PRC_MPIstop
+    use scale_landuse, only: &
+       LANDUSE_frac_land
     use scale_cpl_bulkcoef, only: &
        CPL_bulkcoef_setup
     implicit none
@@ -75,6 +79,7 @@ contains
        CPL_AtmOcn_bulk_U_maxH,  &
        CPL_AtmOcn_bulk_U_maxE
 
+    integer :: i, j
     integer :: ierr
     !---------------------------------------------------------------------------
 
@@ -110,6 +115,19 @@ contains
     U_maxM    = CPL_AtmOcn_bulk_U_maxM
     U_maxH    = CPL_AtmOcn_bulk_U_maxH
     U_maxE    = CPL_AtmOcn_bulk_U_maxE
+
+    !--- judge to run atmos-ocean coupler
+    allocate( is_FLX(IA,JA) )
+
+    do j = 1, JA
+    do i = 1, IA
+      if( ( 1.0_RP - LANDUSE_frac_land(i,j) ) > 0.0_RP ) then
+        is_FLX(i,j) = .true.
+      else
+        is_FLX(i,j) = .false.
+      end if
+    end do
+    end do
 
     !--- set up bulk coefficient function
     call CPL_bulkcoef_setup
@@ -211,51 +229,67 @@ contains
       ! get surface flux without SST updating
     end if
 
-    ! calculate surface flux
     do j = 1, JA
     do i = 1, IA
-      Uabs = sqrt( UA(i,j)**2 + VA(i,j)**2 + WA(i,j)**2 )
 
-      call CPL_bulkcoef( &
-          Cm,        & ! (out)
-          Ch,        & ! (out)
-          Ce,        & ! (out)
-          R10m,      & ! (out)
-          R02h,      & ! (out)
-          R02e,      & ! (out)
-          TMPA(i,j), & ! (in)
-          SST (i,j), & ! (in)
-          PRSA(i,j), & ! (in)
-          PRSS(i,j), & ! (in)
-          Uabs,      & ! (in)
-          Z1  (i,j), & ! (in)
-          Z0M (i,j), & ! (in)
-          Z0H (i,j), & ! (in)
-          Z0E (i,j)  ) ! (in)
+      if( is_FLX(i,j) ) then
+        ! calculate surface flux
+        Uabs = sqrt( UA(i,j)**2 + VA(i,j)**2 )
 
-      XMFLX(i,j) = -Cm * min(max(Uabs,U_minM),U_maxM) * RHOA(i,j) * UA(i,j)
-      YMFLX(i,j) = -Cm * min(max(Uabs,U_minM),U_maxM) * RHOA(i,j) * VA(i,j)
-      ZMFLX(i,j) = -Cm * min(max(Uabs,U_minM),U_maxM) * RHOA(i,j) * WA(i,j)
+        call CPL_bulkcoef( &
+            Cm,        & ! (out)
+            Ch,        & ! (out)
+            Ce,        & ! (out)
+            R10m,      & ! (out)
+            R02h,      & ! (out)
+            R02e,      & ! (out)
+            TMPA(i,j), & ! (in)
+            SST (i,j), & ! (in)
+            PRSA(i,j), & ! (in)
+            PRSS(i,j), & ! (in)
+            Uabs,      & ! (in)
+            Z1  (i,j), & ! (in)
+            Z0M (i,j), & ! (in)
+            Z0H (i,j), & ! (in)
+            Z0E (i,j)  ) ! (in)
 
-      ! saturation at the surface
-      call qsat( SQV, SST(i,j), PRSS(i,j) )
+        XMFLX(i,j) = -Cm * min(max(Uabs,U_minM),U_maxM) * RHOA(i,j) * UA(i,j)
+        YMFLX(i,j) = -Cm * min(max(Uabs,U_minM),U_maxM) * RHOA(i,j) * VA(i,j)
+        ZMFLX(i,j) = -Cm * min(max(Uabs,U_minM),U_maxM) * RHOA(i,j) * WA(i,j)
 
-      SHFLX (i,j) = CPdry * min(max(Uabs,U_minH),U_maxH) * RHOA(i,j) * Ch * ( SST(i,j) - TMPA(i,j) )
-      LHFLX (i,j) = LH0   * min(max(Uabs,U_minE),U_maxE) * RHOA(i,j) * Ce * ( SQV - QVA(i,j) )
+        ! saturation at the surface
+        call qsat( SQV, SST(i,j), PRSS(i,j) )
 
-      ! calculation for residual
-      WHFLX(i,j) = ( 1.0_RP - ALB_SW(i,j) ) * SWD(i,j) * (-1.0_RP) &
-                 - ( 1.0_RP - ALB_LW(i,j) ) * ( LWD(i,j) - STB * SST(i,j)**4 )&
-                 + SHFLX(i,j) + LHFLX(i,j)
+        SHFLX (i,j) = CPdry * min(max(Uabs,U_minH),U_maxH) * RHOA(i,j) * Ch * ( SST(i,j) - TMPA(i,j) )
+        LHFLX (i,j) = LH0   * min(max(Uabs,U_minE),U_maxE) * RHOA(i,j) * Ce * ( SQV - QVA(i,j) )
 
-      ! diagnositc variables
-      U10(i,j) = R10m * UA(i,j)
-      V10(i,j) = R10m * VA(i,j)
+        ! calculation for residual
+        WHFLX(i,j) = ( 1.0_RP - ALB_SW(i,j) ) * SWD(i,j) * (-1.0_RP) &
+                   - ( 1.0_RP - ALB_LW(i,j) ) * ( LWD(i,j) - STB * SST(i,j)**4 )&
+                   + SHFLX(i,j) + LHFLX(i,j)
 
-      T2(i,j) = (          R02h ) * TMPA(i,j) &
-              + ( 1.0_RP - R02h ) * SST (i,j)
-      Q2(i,j) = (          R02e ) * QVA (i,j) &
-              + ( 1.0_RP - R02e ) * SQV
+        ! diagnositc variables
+        U10(i,j) = R10m * UA(i,j)
+        V10(i,j) = R10m * VA(i,j)
+
+        T2(i,j) = (          R02h ) * TMPA(i,j) &
+                + ( 1.0_RP - R02h ) * SST (i,j)
+        Q2(i,j) = (          R02e ) * QVA (i,j) &
+                + ( 1.0_RP - R02e ) * SQV
+
+      else
+        ! not calculate surface flux
+        XMFLX(i,j) = 0.0_RP
+        YMFLX(i,j) = 0.0_RP
+        ZMFLX(i,j) = 0.0_RP
+        SHFLX(i,j) = 0.0_RP
+        LHFLX(i,j) = 0.0_RP
+        WHFLX(i,j) = 0.0_RP
+        U10  (i,j) = 0.0_RP
+        V10  (i,j) = 0.0_RP
+        T2   (i,j) = 0.0_RP
+        Q2   (i,j) = 0.0_RP
+      end if
 
     enddo
     enddo

@@ -53,12 +53,16 @@ module scale_cpl_atmos_land_bulk
   real(RP), private :: U_maxH  = 1.E+2_RP !                   T
   real(RP), private :: U_maxE  = 1.E+2_RP !                   q
 
+  logical, allocatable, private :: is_FLX(:,:) ! is atmos-land coupler run?
+
 contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine CPL_AtmLnd_bulk_setup( CPL_TYPE_AtmLnd )
     use scale_process, only: &
        PRC_MPIstop
+    use scale_landuse, only: &
+       LANDUSE_frac_land
     use scale_cpl_bulkcoef, only: &
        CPL_bulkcoef_setup
     implicit none
@@ -86,6 +90,7 @@ contains
        CPL_AtmLnd_bulk_U_maxH,  &
        CPL_AtmLnd_bulk_U_maxE
 
+    integer :: i, j
     integer :: ierr
     !---------------------------------------------------------------------------
 
@@ -127,6 +132,19 @@ contains
     U_maxM  = CPL_AtmLnd_bulk_U_maxM
     U_maxH  = CPL_AtmLnd_bulk_U_maxH
     U_maxE  = CPL_AtmLnd_bulk_U_maxE
+
+    !--- judge to run atmos-land coupler
+    allocate( is_FLX(IA,JA) )
+
+    do j = 1, JA
+    do i = 1, IA
+      if( LANDUSE_frac_land(i,j) > 0.0_RP ) then
+        is_FLX(i,j) = .true.
+      else
+        is_FLX(i,j) = .false.
+      end if
+    end do
+    end do
 
     !--- set up bulk coefficient function
     call CPL_bulkcoef_setup
@@ -225,10 +243,10 @@ contains
     real(RP), intent(in) :: Z0E   (IA,JA) ! roughness length for vapor [m]
 
     ! works
-    real(RP) :: RES   (IA,JA)
-    real(RP) :: DRES  (IA,JA)
-    real(RP) :: oldRES(IA,JA) ! RES in previous step
-    real(RP) :: redf  (IA,JA) ! reduced factor
+    real(RP) :: res    ! residual
+    real(RP) :: dres   ! d(residual)/dLST
+    real(RP) :: oldres ! residual in previous step
+    real(RP) :: redf   ! reduced factor
 
     real(RP) :: Uabs ! absolute velocity at the lowest atmospheric layer [m/s]
     real(RP) :: Cm, Ch, Ce, dCm, dCh, dCe ! bulk transfer coeff. [no unit]
@@ -239,139 +257,148 @@ contains
     integer :: i, j, n
     !---------------------------------------------------------------------------
 
-    redf  (:,:) = 1.0_RP
-    oldRES(:,:) = 1.0E+5_RP
+    do j = 1, JA
+    do i = 1, IA
 
-    do n = 1, nmax
+      if( is_FLX(i,j) ) then
+        ! calculate surface flux
+        redf   = 1.0_RP
+        oldres = 1.0E+5_RP
 
-      ! calculate surface flux
-      do j = 1, JA
-      do i = 1, IA
-        Uabs = sqrt( UA(i,j)**2 + VA(i,j)**2 + WA(i,j)**2 )
+        ! modified Newton-Raphson method (Tomita 2009)
+        do n = 1, nmax
+          Uabs = sqrt( UA(i,j)**2 + VA(i,j)**2 )
 
-        call CPL_bulkcoef( &
-            Cm,        & ! (out)
-            Ch,        & ! (out)
-            Ce,        & ! (out)
-            R10m,      & ! (out)
-            R02h,      & ! (out)
-            R02e,      & ! (out)
-            TMPA(i,j), & ! (in)
-            LST (i,j), & ! (in)
-            PRSA(i,j), & ! (in)
-            PRSS(i,j), & ! (in)
-            Uabs,      & ! (in)
-            Z1  (i,j), & ! (in)
-            Z0M (i,j), & ! (in)
-            Z0H (i,j), & ! (in)
-            Z0E (i,j)  ) ! (in)
+          call CPL_bulkcoef( &
+              Cm,        & ! (out)
+              Ch,        & ! (out)
+              Ce,        & ! (out)
+              R10m,      & ! (out)
+              R02h,      & ! (out)
+              R02e,      & ! (out)
+              TMPA(i,j), & ! (in)
+              LST (i,j), & ! (in)
+              PRSA(i,j), & ! (in)
+              PRSS(i,j), & ! (in)
+              Uabs,      & ! (in)
+              Z1  (i,j), & ! (in)
+              Z0M (i,j), & ! (in)
+              Z0H (i,j), & ! (in)
+              Z0E (i,j)  ) ! (in)
 
-        XMFLX(i,j) = -Cm * min(max(Uabs,U_minM),U_maxM) * RHOA(i,j) * UA(i,j)
-        YMFLX(i,j) = -Cm * min(max(Uabs,U_minM),U_maxM) * RHOA(i,j) * VA(i,j)
-        ZMFLX(i,j) = -Cm * min(max(Uabs,U_minM),U_maxM) * RHOA(i,j) * WA(i,j)
+          XMFLX(i,j) = -Cm * min(max(Uabs,U_minM),U_maxM) * RHOA(i,j) * UA(i,j)
+          YMFLX(i,j) = -Cm * min(max(Uabs,U_minM),U_maxM) * RHOA(i,j) * VA(i,j)
+          ZMFLX(i,j) = -Cm * min(max(Uabs,U_minM),U_maxM) * RHOA(i,j) * WA(i,j)
 
-        ! saturation at the surface
-        call qsat( SQV, LST(i,j), PRSS(i,j) )
+          ! saturation at the surface
+          call qsat( SQV, LST(i,j), PRSS(i,j) )
 
-        SHFLX (i,j) = CPdry * min(max(Uabs,U_minH),U_maxH) * RHOA(i,j) * Ch * ( LST(i,j) - TMPA(i,j) )
-        LHFLX (i,j) = LH0   * min(max(Uabs,U_minE),U_maxE) * RHOA(i,j) * QVEF(i,j) * Ce * ( SQV - QVA(i,j) )
-        GHFLX (i,j) = -2.0_RP * TCS(i,j) * ( LST(i,j) - TG(i,j)  ) / DZG(i,j)
+          SHFLX (i,j) = CPdry * min(max(Uabs,U_minH),U_maxH) * RHOA(i,j) * Ch * ( LST(i,j) - TMPA(i,j) )
+          LHFLX (i,j) = LH0   * min(max(Uabs,U_minE),U_maxE) * RHOA(i,j) * QVEF(i,j) * Ce * ( SQV - QVA(i,j) )
+          GHFLX (i,j) = -2.0_RP * TCS(i,j) * ( LST(i,j) - TG(i,j)  ) / DZG(i,j)
 
-        ! calculation for residual
-        RES(i,j) = ( 1.0_RP - ALB_SW(i,j) ) * SWD(i,j) &
-                 + ( 1.0_RP - ALB_LW(i,j) ) * ( LWD(i,j) - STB * LST(i,j)**4 ) &
-                 - SHFLX(i,j) - LHFLX(i,j) + GHFLX(i,j)
+          ! calculation for residual
+          res = ( 1.0_RP - ALB_SW(i,j) ) * SWD(i,j) &
+              + ( 1.0_RP - ALB_LW(i,j) ) * ( LWD(i,j) - STB * LST(i,j)**4 ) &
+              - SHFLX(i,j) - LHFLX(i,j) + GHFLX(i,j)
 
-        call CPL_bulkcoef( &
-            dCm,             & ! (out)
-            dCh,             & ! (out)
-            dCe,             & ! (out)
-            dR10m,           & ! (out)
-            dR02h,           & ! (out)
-            dR02e,           & ! (out)
-            TMPA(i,j),       & ! (in)
-            LST (i,j) + dTS, & ! (in)
-            PRSA(i,j),       & ! (in)
-            PRSS(i,j),       & ! (in)
-            Uabs,            & ! (in)
-            Z1  (i,j),       & ! (in)
-            Z0M (i,j),       & ! (in)
-            Z0H (i,j),       & ! (in)
-            Z0E (i,j)        ) ! (in)
+          call CPL_bulkcoef( &
+              dCm,             & ! (out)
+              dCh,             & ! (out)
+              dCe,             & ! (out)
+              dR10m,           & ! (out)
+              dR02h,           & ! (out)
+              dR02e,           & ! (out)
+              TMPA(i,j),       & ! (in)
+              LST (i,j) + dTS, & ! (in)
+              PRSA(i,j),       & ! (in)
+              PRSS(i,j),       & ! (in)
+              Uabs,            & ! (in)
+              Z1  (i,j),       & ! (in)
+              Z0M (i,j),       & ! (in)
+              Z0H (i,j),       & ! (in)
+              Z0E (i,j)        ) ! (in)
 
-        call qsat( dSQV, LST(i,j)+dTS, PRSS(i,j) )
+          call qsat( dSQV, LST(i,j)+dTS, PRSS(i,j) )
 
-        dSHFLX  = CPdry * min(max(Uabs,U_minH),U_maxH) * RHOA(i,j) &
-                * ( (dCh-Ch)/dTS * ( LST(i,j) - TMPA(i,j) ) + Ch )
-        dLHFLX  = LH0   * min(max(Uabs,U_minE),U_maxE) * RHOA(i,j) * QVEF(i,j) &
-                * ( (dCe-Ce)/dTS * ( SQV - QVA(i,j) ) + Ce * (dSQV-SQV)/dTS )
-        dGHFLX  = -2.0_RP * TCS(i,j) / DZG(i,j)
+          dSHFLX  = CPdry * min(max(Uabs,U_minH),U_maxH) * RHOA(i,j) &
+                  * ( (dCh-Ch)/dTS * ( LST(i,j) - TMPA(i,j) ) + Ch )
+          dLHFLX  = LH0   * min(max(Uabs,U_minE),U_maxE) * RHOA(i,j) * QVEF(i,j) &
+                  * ( (dCe-Ce)/dTS * ( SQV - QVA(i,j) ) + Ce * (dSQV-SQV)/dTS )
+          dGHFLX  = -2.0_RP * TCS(i,j) / DZG(i,j)
 
-        ! calculation for d(residual)/dTS
-        DRES(i,j) = -4.0_RP * ( 1.0_RP - ALB_LW(i,j) ) * STB * LST(i,j)**3 &
-                  - dSHFLX - dLHFLX + dGHFLX
+          ! calculation for d(residual)/dLST
+          dres = -4.0_RP * ( 1.0_RP - ALB_LW(i,j) ) * STB * LST(i,j)**3 &
+               - dSHFLX - dLHFLX + dGHFLX
 
-        ! diagnositc variables
-        U10(i,j) = R10m * UA(i,j)
-        V10(i,j) = R10m * VA(i,j)
+          ! diagnositc variables
+          U10(i,j) = R10m * UA(i,j)
+          V10(i,j) = R10m * VA(i,j)
 
-        T2(i,j) = (          R02h ) * TMPA(i,j) &
-                + ( 1.0_RP - R02h ) * LST (i,j)
-        Q2(i,j) = (          R02e ) * QVA (i,j) &
-                + ( 1.0_RP - R02e ) * QVEF(i,j) * SQV
+          T2(i,j) = (          R02h ) * TMPA(i,j) &
+                  + ( 1.0_RP - R02h ) * LST (i,j)
+          Q2(i,j) = (          R02e ) * QVA (i,j) &
+                  + ( 1.0_RP - R02e ) * QVEF(i,j) * SQV
 
-      enddo
-      enddo
+          if( LST_UPDATE ) then
+              if( redf < 0.0_RP ) then
+                redf = 1.0_RP
+              end if
 
-      if( LST_UPDATE ) then
+              if( abs(res) > abs(oldres) ) then
+                redf = max( TFa*redf, redf_min )
+              else
+                redf = min( TFb*redf, redf_max )
+              end if
 
-        do j = 1, JA
-        do i = 1, IA
+              if( dres > 0.0_RP ) then
+                redf = -1.0_RP
+              end if
 
-          if( redf(i,j) < 0.0_RP ) then
-            redf(i,j) = 1.0_RP
-          end if
+              ! update surface temperature
+              LST(i,j) = LST(i,j) - redf * res / dres
 
-          if( abs(RES(i,j)) > abs(oldRES(i,j)) ) then
-            redf(i,j) = max( TFa*redf(i,j), redf_min )
+              ! put residual in ground heat flux
+              GHFLX(i,j) = GHFLX(i,j) - res
+
+              ! save residual in this step
+              oldres = res
+
+            if( abs(res) < res_min ) then
+              ! iteration converged
+              exit
+            end if
+
           else
-            redf(i,j) = min( TFb*redf(i,j), redf_max )
+            ! get surface flux without LST updating
+            exit
           end if
 
-          if( DRES(i,j) > 0.0_RP ) then
-            redf(i,j) = -1.0_RP
-          end if
-
-          ! update surface temperature
-          LST(i,j)  = LST(i,j) - redf(i,j) * RES(i,j)/DRES(i,j)
-
-          ! put residual in ground heat flux
-          GHFLX(i,j) = GHFLX(i,j) - RES(i,j)
-
-          ! save residual in this step
-          oldRES(i,j) = RES(i,j)
-
-        end do
         end do
 
-        if( maxval(abs(RES(:,:))) < res_min ) then
-          ! iteration converged
-          exit
+        if( n > nmax ) then
+          ! not converged and stop program
+          if( IO_L ) write(IO_FID_LOG,*) 'Error: surface tempearture is not converged.'
+          if( IO_L ) write(IO_FID_LOG,*) 'location (i,j):', i, j
+          call PRC_MPIstop
         end if
 
       else
-        ! get surface flux without LST updating
-        exit
-
+        ! not calculate surface flux
+        XMFLX(i,j) = 0.0_RP
+        YMFLX(i,j) = 0.0_RP
+        ZMFLX(i,j) = 0.0_RP
+        SHFLX(i,j) = 0.0_RP
+        LHFLX(i,j) = 0.0_RP
+        GHFLX(i,j) = 0.0_RP
+        U10  (i,j) = 0.0_RP
+        V10  (i,j) = 0.0_RP
+        T2   (i,j) = 0.0_RP
+        Q2   (i,j) = 0.0_RP
       end if
 
-    end do
-
-    if( n > nmax ) then
-      ! not converged and stop program
-      if( IO_L ) write(IO_FID_LOG,*) 'Error: surface tempearture is not converged.'
-      call PRC_MPIstop
-    end if
+    enddo
+    enddo
 
     return
   end subroutine CPL_AtmLnd_bulk

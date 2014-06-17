@@ -89,7 +89,7 @@ module scale_cpl_bulkcoef
   character(len=H_SHORT), private :: bulkcoef_TYPE = 'BH91'
 
   ! limiter
-  real(RP), private :: U_min  = 1.0E-8_RP ! minimum absolute velocity
+  real(RP), private :: U_min  = 1.0E-2_RP ! minimum absolute velocity
   real(RP), private :: Cm_min = 1.0E-8_RP ! minimum bulk coef. of u,v,w
   real(RP), private :: Ch_min = 1.0E-8_RP !                       T
   real(RP), private :: Ce_min = 1.0E-8_RP !                       q

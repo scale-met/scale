@@ -5,7 +5,7 @@
   !
   !-----------------------------------------------------------------------------
   integer,  private, parameter :: KMAX =   40 ! # of computational cells: z
-  integer,  private, parameter :: IMAX =   10 ! # of computational cells: x
+  integer,  private, parameter :: IMAX =  100 ! # of computational cells: x
   integer,  private, parameter :: JMAX =    2 ! # of computational cells: y
 
   integer,  private, parameter :: IBLOCK =  2 ! block size for cache blocking: x
