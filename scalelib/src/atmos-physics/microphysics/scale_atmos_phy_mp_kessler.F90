@@ -61,7 +61,6 @@ module scale_atmos_phy_mp_kessler
   logical,  private :: MP_doprecipitation  = .true. ! apply sedimentation (precipitation)?
 
   real(RP), private, allocatable :: factor_vterm(:) ! collection factor for terminal velocity of QR
-  real(RP), private, allocatable :: vterm(:,:,:,:) ! terminal velocity of each tracer [m/s]
 
   logical,  private :: first = .true.
 
@@ -121,10 +120,6 @@ contains
     ATMOS_PHY_MP_DENS(I_mp_QC) = CONST_DWATR
     ATMOS_PHY_MP_DENS(I_mp_QR) = CONST_DWATR
 
-    allocate( vterm(KA,IA,JA,QA) )
-    vterm(:,:,:,I_QV) = 0.0_RP
-    vterm(:,:,:,I_QC) = 0.0_RP
-
     return
   end subroutine ATMOS_PHY_MP_kessler_setup
 
@@ -172,6 +167,7 @@ contains
     real(RP) :: temp  (KA,IA,JA)
     real(RP) :: pres  (KA,IA,JA)
 
+    real(RP) :: vterm   (KA,IA,JA,QA) ! terminal velocity of each tracer [m/s]
     real(RP) :: FLX_rain(KA,IA,JA)
     real(RP) :: FLX_snow(KA,IA,JA)
 
@@ -215,7 +211,6 @@ contains
                      DENS  (:,:,:)    ) ! [IN]
 
     if ( MP_doprecipitation ) then
-       vterm = 0.0_RP
        call MP_kessler_vterm( vterm(:,:,:,:), & ! [OUT]
                               DENS (:,:,:),   & ! [IN]
                               QTRC (:,:,:,:)  ) ! [IN]
@@ -421,17 +416,25 @@ contains
        REFSTATE_dens => ATMOS_REFSTATE_dens
     implicit none
 
-    real(RP), intent(inout) :: vterm(KA,IA,JA,QA)
-    real(RP), intent(in)    :: DENS0(KA,IA,JA)
-    real(RP), intent(in)    :: QTRC0(KA,IA,JA,QA)
+    real(RP), intent(out) :: vterm(KA,IA,JA,QA)
+    real(RP), intent(in)  :: DENS0(KA,IA,JA)
+    real(RP), intent(in)  :: QTRC0(KA,IA,JA,QA)
 
     real(RP) :: zerosw
 
     integer :: k, i, j
     !---------------------------------------------------------------------------
 
-    ! only update QR
     !$omp parallel do private(i,j,k,zerosw) OMP_SCHEDULE_ collapse(2)
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       vterm(k,i,j,I_QV) = 0.0_RP
+       vterm(k,i,j,I_QC) = 0.0_RP
+    enddo
+    enddo
+    enddo
+
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE

@@ -1353,9 +1353,9 @@ contains
        QTRC0   )
     implicit none
 
-    real(RP), intent(inout) :: vterm(KA,IA,JA,QA)
-    real(RP), intent(in)    :: DENS0(KA,IA,JA)
-    real(RP), intent(in)    :: QTRC0(KA,IA,JA,QA)
+    real(RP), intent(out) :: vterm(KA,IA,JA,QA)
+    real(RP), intent(in)  :: DENS0(KA,IA,JA)
+    real(RP), intent(in)  :: QTRC0(KA,IA,JA,QA)
 
     real(RP) :: dens
     real(RP) :: q(QA)
@@ -1396,6 +1396,8 @@ contains
 
        !---< terminal velocity >
        zerosw = 0.5_RP + sign(0.5_RP, q(I_QI) - 1.E-8_RP )
+       vterm(k,i,j,I_QV) = 0.0_RP
+       vterm(k,i,j,I_QC) = 0.0_RP
        vterm(k,i,j,I_QI) = -3.29_RP * ( dens * q(I_QI) * zerosw )**0.16_RP
        vterm(k,i,j,I_QR) = -Cr * rho_fact * GAM_1brdr / GAM_1br * RLMDr_dr
        vterm(k,i,j,I_QS) = -Cs * rho_fact * GAM_1bsds / GAM_1bs * RLMDs_ds
