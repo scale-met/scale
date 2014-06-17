@@ -61,6 +61,7 @@ module scale_atmos_phy_mp_kessler
   logical,  private :: MP_doprecipitation  = .true. ! apply sedimentation (precipitation)?
 
   real(RP), private, allocatable :: factor_vterm(:) ! collection factor for terminal velocity of QR
+  real(RP), private, allocatable :: vterm(:,:,:,:) ! terminal velocity of each tracer [m/s]
 
   logical,  private :: first = .true.
 
@@ -120,6 +121,10 @@ contains
     ATMOS_PHY_MP_DENS(I_mp_QC) = CONST_DWATR
     ATMOS_PHY_MP_DENS(I_mp_QR) = CONST_DWATR
 
+    allocate( vterm(KA,IA,JA,QA) )
+    vterm(:,:,:,I_QV) = 0.0_RP
+    vterm(:,:,:,I_QC) = 0.0_RP
+
     return
   end subroutine ATMOS_PHY_MP_kessler_setup
 
@@ -167,7 +172,6 @@ contains
     real(RP) :: temp  (KA,IA,JA)
     real(RP) :: pres  (KA,IA,JA)
 
-    real(RP) :: vterm   (KA,IA,JA,QA) ! terminal velocity of each tracer [m/s]
     real(RP) :: FLX_rain(KA,IA,JA)
     real(RP) :: FLX_snow(KA,IA,JA)
 
@@ -211,6 +215,7 @@ contains
                      DENS  (:,:,:)    ) ! [IN]
 
     if ( MP_doprecipitation ) then
+       vterm = 0.0_RP
        call MP_kessler_vterm( vterm(:,:,:,:), & ! [OUT]
                               DENS (:,:,:),   & ! [IN]
                               QTRC (:,:,:,:)  ) ! [IN]
