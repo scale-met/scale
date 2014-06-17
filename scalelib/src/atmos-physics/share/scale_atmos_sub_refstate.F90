@@ -510,51 +510,35 @@ contains
                                   work(:,:,:)  ) ! [OUT]
 
        call COMM_horizontal_mean( ATMOS_REFSTATE1D_temp(:), work(:,:,:) )
-       do k = KE-1, KS, -1 ! fill undefined value
-          if ( abs(ATMOS_REFSTATE1D_temp(k)) < 1.E-12_RP ) then
-             ATMOS_REFSTATE1D_temp(k) = ATMOS_REFSTATE1D_temp(k+1)
-          endif
-       enddo
-       call smoothing( ATMOS_REFSTATE1D_temp(:) )
-
 
        call INTERP_vertical_xi2z( pres(:,:,:), & ! [IN]
                                   work(:,:,:)  ) ! [OUT]
 
        call COMM_horizontal_mean( ATMOS_REFSTATE1D_pres(:), work(:,:,:) )
-       do k = KE-1, KS, -1 ! fill undefined value
-          if ( abs(ATMOS_REFSTATE1D_pres(k)) < 1.E-12_RP ) then
-             ATMOS_REFSTATE1D_pres(k) = ATMOS_REFSTATE1D_pres(k+1)
-          endif
-       enddo
-       call smoothing( ATMOS_REFSTATE1D_pres(:) )
 
        call INTERP_vertical_xi2z( DENS(:,:,:), & ! [IN]
                                   work(:,:,:)  ) ! [OUT]
 
        call COMM_horizontal_mean( ATMOS_REFSTATE1D_dens(:), work(:,:,:) )
-       do k = KE-1, KS, -1 ! fill undefined value
-          if ( abs(ATMOS_REFSTATE1D_dens(k)) < 1.E-12_RP ) then
-             ATMOS_REFSTATE1D_dens(k) = ATMOS_REFSTATE1D_dens(k+1)
-          endif
-       enddo
-       call smoothing( ATMOS_REFSTATE1D_dens(:) )
 
        call INTERP_vertical_xi2z( pott(:,:,:), & ! [IN]
                                   work(:,:,:)  ) ! [OUT]
 
        call COMM_horizontal_mean( ATMOS_REFSTATE1D_pott(:), work(:,:,:) )
-       do k = KE-1, KS, -1 ! fill undefined value
-          if ( abs(ATMOS_REFSTATE1D_pott(k)) < 1.E-12_RP ) then
-             ATMOS_REFSTATE1D_pott(k) = ATMOS_REFSTATE1D_pott(k+1)
-          endif
-       enddo
-       call smoothing( ATMOS_REFSTATE1D_pott(:) )
 
        call INTERP_vertical_xi2z( QTRC(:,:,:,I_QV), & ! [IN]
                                   work(:,:,:)       ) ! [OUT]
 
        call COMM_horizontal_mean( ATMOS_REFSTATE1D_qv  (:), work(:,:,:) )
+
+       do k = KE-1, KS, -1 ! fill undefined value
+          if( ATMOS_REFSTATE1D_dens(k) <= 0.0_RP ) ATMOS_REFSTATE1D_dens(k) = ATMOS_REFSTATE1D_dens(k+1)
+          if( ATMOS_REFSTATE1D_temp(k) <= 0.0_RP ) ATMOS_REFSTATE1D_temp(k) = ATMOS_REFSTATE1D_temp(k+1)
+          if( ATMOS_REFSTATE1D_pres(k) <= 0.0_RP ) ATMOS_REFSTATE1D_pres(k) = ATMOS_REFSTATE1D_pres(k+1)
+          if( ATMOS_REFSTATE1D_pott(k) <= 0.0_RP ) ATMOS_REFSTATE1D_pott(k) = ATMOS_REFSTATE1D_pott(k+1)
+          if( ATMOS_REFSTATE1D_qv  (k) <= 0.0_RP ) ATMOS_REFSTATE1D_qv  (k) = ATMOS_REFSTATE1D_qv  (k+1)
+       enddo
+       call smoothing( ATMOS_REFSTATE1D_pott(:) )
        call smoothing( ATMOS_REFSTATE1D_qv  (:) )
 
        call ATMOS_REFSTATE_calc3D
@@ -567,72 +551,174 @@ contains
   end subroutine ATMOS_REFSTATE_update
 
   !-----------------------------------------------------------------------------
-  !> apply 1D reference to 3D (terrain-following)
+  !> apply 1D reference to 3D (terrain-following) with re-calc hydrostatic balance
   subroutine ATMOS_REFSTATE_calc3D
     use scale_const, only: &
        Rdry  => CONST_Rdry,  &
        RovCP => CONST_RovCP, &
        P00   => CONST_PRE00
+    use scale_comm, only: &
+       COMM_vars8, &
+       COMM_wait
+    use scale_grid, only: &
+       GRID_CZ, &
+       GRID_FZ
     use scale_grid_real, only: &
-       PHI => REAL_PHI
+       REAL_PHI, &
+       REAL_CZ,  &
+       REAL_FZ
     use scale_interpolation, only: &
        INTERP_vertical_z2xi
+    use scale_atmos_hydrostatic, only: &
+       HYDROSTATIC_buildrho_atmos_0D     => ATMOS_HYDROSTATIC_buildrho_atmos_0D,     &
+       HYDROSTATIC_buildrho_atmos_rev_2D => ATMOS_HYDROSTATIC_buildrho_atmos_rev_2D, &
+       HYDROSTATIC_buildrho_atmos_rev_3D => ATMOS_HYDROSTATIC_buildrho_atmos_rev_3D
     implicit none
 
-    real(RP) :: work(KA,IA,JA)
 
-    integer  :: i, j
+    real(RP) :: dens(KA,IA,JA)
+    real(RP) :: temp(KA,IA,JA)
+    real(RP) :: pres(KA,IA,JA)
+    real(RP) :: pott(KA,IA,JA)
+    real(RP) :: qv  (KA,IA,JA)
+    real(RP) :: qc  (KA,IA,JA)
+    real(RP) :: dz  (KA,IA,JA)
+
+    real(RP) :: dens_toa_1D
+    real(RP) :: temp_toa_1D
+    real(RP) :: pres_toa_1D
+    real(RP) :: qc_1D
+    real(RP) :: dz_1D
+
+    real(RP) :: work(KA,IA,JA)
+    integer  :: k, i, j
     !---------------------------------------------------------------------------
 
-    !--- temperature
-    do j = 1, JA
-    do i = 1, IA
-       work(:,i,j) = ATMOS_REFSTATE1D_temp(:)
-    enddo
-    enddo
-
-    call INTERP_vertical_z2xi( work               (:,:,:), & ! [IN]
-                               ATMOS_REFSTATE_temp(:,:,:)  ) ! [OUT]
-
-    !--- pressure
-    do j = 1, JA
-    do i = 1, IA
-       work(:,i,j) = ATMOS_REFSTATE1D_pres(:)
-    enddo
-    enddo
-
-    call INTERP_vertical_z2xi( work               (:,:,:), & ! [IN]
-                               ATMOS_REFSTATE_pres(:,:,:)  ) ! [OUT]
-
-    !--- density
-    do j = 1, JA
-    do i = 1, IA
-       work(:,i,j) = ATMOS_REFSTATE1D_dens(:)
-    enddo
-    enddo
-
-    call INTERP_vertical_z2xi( work               (:,:,:), & ! [IN]
-                               ATMOS_REFSTATE_dens(:,:,:)  ) ! [OUT]
-
     !--- potential temperature
-    do j = 1, JA
-    do i = 1, IA
+    do j = JS, JE
+    do i = IS, IE
        work(:,i,j) = ATMOS_REFSTATE1D_pott(:)
     enddo
     enddo
 
-    call INTERP_vertical_z2xi( work               (:,:,:), & ! [IN]
-                               ATMOS_REFSTATE_pott(:,:,:)  ) ! [OUT]
+    call INTERP_vertical_z2xi( work(:,:,:), & ! [IN]
+                               pott(:,:,:)  ) ! [OUT]
 
     !--- water vapor
-    do j = 1, JA
-    do i = 1, IA
+    do j = JS, JE
+    do i = IS, IE
        work(:,i,j) = ATMOS_REFSTATE1D_qv(:)
     enddo
     enddo
 
-    call INTERP_vertical_z2xi( work             (:,:,:), & ! [IN]
-                               ATMOS_REFSTATE_qv(:,:,:)  ) ! [OUT]
+    call INTERP_vertical_z2xi( work(:,:,:), & ! [IN]
+                               qv  (:,:,:)  ) ! [OUT]
+
+
+
+    !--- build up density to TOA (1D)
+    qc_1D = 0.0_RP
+    dz_1D = GRID_FZ(KE) - GRID_CZ(KE)
+
+    call HYDROSTATIC_buildrho_atmos_0D( dens_toa_1D,               & ! [OUT]
+                                        temp_toa_1D,               & ! [OUT]
+                                        pres_toa_1D,               & ! [OUT]
+                                        ATMOS_REFSTATE1D_pott(KE), & ! [IN]
+                                        ATMOS_REFSTATE1D_qv  (KE), & ! [IN]
+                                        qc_1D,                     & ! [IN]
+                                        ATMOS_REFSTATE1D_dens(KE), & ! [IN]
+                                        ATMOS_REFSTATE1D_pott(KE), & ! [IN]
+                                        ATMOS_REFSTATE1D_qv  (KE), & ! [IN]
+                                        qc_1D,                     & ! [IN]
+                                        dz_1D,                     & ! [IN]
+                                        KE+1                       ) ! [IN]
+
+    ! build down density from TOA (3D)
+    do j = JS, JE
+    do i = IS, IE
+       dz(KS,i,j) = REAL_CZ(KS,i,j) - REAL_FZ(KS-1,i,j) ! distance from surface to cell center
+       do k = KS+1, KE
+          dz(k,i,j) = REAL_CZ(k,i,j) - REAL_CZ(k-1,i,j) ! distance from cell center to cell center
+       enddo
+       dz(KE+1,i,j) = REAL_FZ(KE,i,j) - REAL_CZ(KE,i,j) ! distance from cell center to TOA
+    enddo
+    enddo
+
+    do j = JS, JE
+    do i = IS, IE
+       dens(KE+1,i,j) = dens_toa_1D
+       temp(KE+1,i,j) = temp_toa_1D
+       pres(KE+1,i,j) = pres_toa_1D
+       pott(KE+1,i,j) = pott(KE,i,j)
+       qv  (KE+1,i,j) = qv  (KE,i,j)
+    enddo
+    enddo
+
+    do j = JS, JE
+    do i = IS, IE
+       pott(KS-1,i,j) = pott(KS,i,j)
+       qv  (KS-1,i,j) = qv  (KS,i,j)
+    enddo
+    enddo
+
+    qc(:,:,:) = 0.0_RP
+
+    call HYDROSTATIC_buildrho_atmos_rev_2D( dens(KE  ,:,:), & ! [OUT]
+                                            temp(KE  ,:,:), & ! [OUT]
+                                            pres(KE  ,:,:), & ! [OUT]
+                                            pott(KE  ,:,:), & ! [IN]
+                                            qv  (KE  ,:,:), & ! [IN]
+                                            qc  (KE  ,:,:), & ! [IN]
+                                            dens(KE+1,:,:), & ! [IN]
+                                            pott(KE+1,:,:), & ! [IN]
+                                            qv  (KE+1,:,:), & ! [IN]
+                                            qc  (KE+1,:,:), & ! [IN]
+                                            dz  (KE+1,:,:), & ! [IN]
+                                            KE+1            ) ! [IN]
+
+    call HYDROSTATIC_buildrho_atmos_rev_3D( dens(:,:,:), & ! [INOUT]
+                                            temp(:,:,:), & ! [OUT]
+                                            pres(:,:,:), & ! [OUT]
+                                            pott(:,:,:), & ! [IN]
+                                            qv  (:,:,:), & ! [IN]
+                                            qc  (:,:,:), & ! [IN]
+                                            dz  (:,:,:)  ) ! [IN]
+
+!    call HYDROSTATIC_buildrho_atmos_rev_2D( dens(KS-1,:,:), & ! [OUT]
+!                                            temp(KS-1,:,:), & ! [OUT]
+!                                            pres(KS-1,:,:), & ! [OUT]
+!                                            pott(KS-1,:,:), & ! [IN]
+!                                            qv  (KS-1,:,:), & ! [IN]
+!                                            qc  (KS-1,:,:), & ! [IN]
+!                                            dens(KS  ,:,:), & ! [IN]
+!                                            pott(KS  ,:,:), & ! [IN]
+!                                            qv  (KS  ,:,:), & ! [IN]
+!                                            qc  (KS  ,:,:), & ! [IN]
+!                                            dz  (KS  ,:,:), & ! [IN]
+!                                            KS              ) ! [IN]
+
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       ATMOS_REFSTATE_dens(k,i,j) = dens(k,i,j)
+       ATMOS_REFSTATE_temp(k,i,j) = temp(k,i,j)
+       ATMOS_REFSTATE_pres(k,i,j) = pres(k,i,j)
+       ATMOS_REFSTATE_pott(k,i,j) = pott(k,i,j)
+       ATMOS_REFSTATE_qv  (k,i,j) = qv  (k,i,j)
+    enddo
+    enddo
+    enddo
+
+    call COMM_vars8( ATMOS_REFSTATE_dens(:,:,:), 1 )
+    call COMM_vars8( ATMOS_REFSTATE_temp(:,:,:), 2 )
+    call COMM_vars8( ATMOS_REFSTATE_pres(:,:,:), 3 )
+    call COMM_vars8( ATMOS_REFSTATE_pott(:,:,:), 4 )
+    call COMM_vars8( ATMOS_REFSTATE_qv  (:,:,:), 5 )
+    call COMM_wait ( ATMOS_REFSTATE_dens(:,:,:), 1 )
+    call COMM_wait ( ATMOS_REFSTATE_temp(:,:,:), 2 )
+    call COMM_wait ( ATMOS_REFSTATE_pres(:,:,:), 3 )
+    call COMM_wait ( ATMOS_REFSTATE_pott(:,:,:), 4 )
+    call COMM_wait ( ATMOS_REFSTATE_qv  (:,:,:), 5 )
 
     ! boundary condition
     do j = 1, JA
@@ -641,9 +727,9 @@ contains
        ATMOS_REFSTATE_temp(KE+1,i,j) = ATMOS_REFSTATE_temp(KE,i,j)
 
        ATMOS_REFSTATE_pres(KS-1,i,j) = ATMOS_REFSTATE_pres(KS+1,i,j) &
-                                     - ATMOS_REFSTATE_dens(KS  ,i,j) * ( PHI(KS-1,i,j) - PHI(KS+1,i,j) )
+                                     - ATMOS_REFSTATE_dens(KS  ,i,j) * ( REAL_PHI(KS-1,i,j) - REAL_PHI(KS+1,i,j) )
        ATMOS_REFSTATE_pres(KE+1,i,j) = ATMOS_REFSTATE_pres(KE-1,i,j) &
-                                     - ATMOS_REFSTATE_dens(KE  ,i,j) * ( PHI(KE+1,i,j) - PHI(KE-1,i,j) )
+                                     - ATMOS_REFSTATE_dens(KE  ,i,j) * ( REAL_PHI(KE+1,i,j) - REAL_PHI(KE-1,i,j) )
 
        ATMOS_REFSTATE_dens(KS-1,i,j) = ATMOS_REFSTATE_pres(KS-1,i,j) / ( ATMOS_REFSTATE_temp(KS-1,i,j) * Rdry )
        ATMOS_REFSTATE_dens(KE+1,i,j) = ATMOS_REFSTATE_pres(KE+1,i,j) / ( ATMOS_REFSTATE_temp(KE+1,i,j) * Rdry )
