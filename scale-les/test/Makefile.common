@@ -83,7 +83,7 @@ distclean: clean
 	$(MAKE) -C $(SRCDIR) distclean BINDIR=$(BINDIR)         \
                                   BUILD_DIR=$(BUILD_DIR)   \
                                   SYSDEP_DIR=$(SYSDEP_DIR)
-	rm -f *.nc *LOG.pe* monitor.pe* run.sh
+	rm -f *.nc *LOG.pe* monitor.pe* latlon* run.sh
 
 clean:
 	$(MAKE) -C $(SRCDIR) clean BINDIR=$(BINDIR)         \
