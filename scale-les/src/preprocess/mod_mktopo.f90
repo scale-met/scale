@@ -45,13 +45,15 @@ module mod_mktopo
   !
   integer, public            :: MKTOPO_TYPE = -1
   integer, public, parameter :: I_IGNORE    =  0
-  integer, public, parameter :: I_BELLSHAPE =  1
-  integer, public, parameter :: I_SCHAER    =  2
+  integer, public, parameter :: I_FLAT      =  1
+  integer, public, parameter :: I_BELLSHAPE =  2
+  integer, public, parameter :: I_SCHAER    =  3
 
   !-----------------------------------------------------------------------------
   !
   !++ Private procedure
   !
+  private :: MKTOPO_flat
   private :: MKTOPO_bellshape
   private :: MKTOPO_schaer
 
@@ -92,6 +94,9 @@ contains
     case('NONE')
        MKTOPO_TYPE = I_IGNORE
 
+    case('FLAT')
+       MKTOPO_TYPE = I_FLAT
+
     case('BELLSHAPE')
        MKTOPO_TYPE = I_BELLSHAPE
 
@@ -126,6 +131,9 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '++++++ START MAKING TOPOGRAPHY DATA ++++++'
 
        select case(MKTOPO_TYPE)
+       case(I_FLAT)
+          call MKTOPO_flat
+
        case(I_BELLSHAPE)
           call MKTOPO_bellshape
 
@@ -145,6 +153,44 @@ contains
 
     return
   end subroutine MKTOPO
+
+  !-----------------------------------------------------------------------------
+  !> Make flat mountain
+  subroutine MKTOPO_flat
+    implicit none
+
+    ! flat mountain parameter
+    real(RP) :: FLAT_HEIGHT   =  100.0_RP ! height of mountain [m]
+
+    NAMELIST / PARAM_MKTOPO_FLAT / &
+       FLAT_HEIGHT
+
+    integer :: ierr
+    integer :: i, j
+    !---------------------------------------------------------------------------
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[FLAT]/Categ[MKTOPO]'
+
+    !--- read namelist
+    rewind(IO_FID_CONF)
+    read(IO_FID_CONF,nml=PARAM_MKTOPO_FLAT,iostat=ierr)
+    if( ierr < 0 ) then !--- missing
+       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+    elseif( ierr > 0 ) then !--- fatal error
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_MKTOPO_FLAT. Check!'
+       call PRC_MPIstop
+    endif
+    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKTOPO_FLAT)
+
+    do j = JS, JE
+    do i = IS, IE
+       TOPO_Zsfc(i,j) = FLAT_HEIGHT
+    enddo
+    enddo
+
+    return
+  end subroutine MKTOPO_flat
 
   !-----------------------------------------------------------------------------
   !> Make bell-shaped mountain
@@ -177,6 +223,7 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[BELLSHAPE]/Categ[MKTOPO]'
+
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_MKTOPO_BELLSHAPE,iostat=ierr)
@@ -240,6 +287,7 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[SCHEAR]/Categ[MKTOPO]'
+
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_MKTOPO_SCHEAR,iostat=ierr)
