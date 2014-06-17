@@ -81,13 +81,15 @@ OBJS =	\
 
 
 
-all: makedir makebin
+all: makedir makelib makebin
 	@echo "Complete making scale-les."
 
 makedir:
 	@echo;echo "Entering scale-les...\nCurrent version is " $(VERSION)
 	mkdir -p $(BINDIR)
 	@mkdir -p $(BUILD_DIR)
+
+makelib: dcutils gtool scalelib
 
 dcutils:
 	$(MAKE) -C $(DCUTILSDIR)
