@@ -98,10 +98,13 @@ contains
        LWD  => CPL_fromAtm_FLX_LW_dn,   &
        SHFLX => CPL_AtmUrb_ATM_FLX_SH,  &
        LHFLX => CPL_AtmUrb_ATM_FLX_LH,  &
-       GHFLX => CPL_AtmUrb_URB_FLX_heat
+       GHFLX => CPL_AtmUrb_URB_FLX_heat, &
+       CNT_AtmUrb,                       &
+       CNT_Urb
     use scale_time, only:   &
        TIME => TIME_NOWSEC, &   !< absolute sec
-       TIME_DTSEC_URBAN
+       TIME_DTSEC_URBAN,    &
+       TIME_DOURBAN_step
     use scale_history, only: &
        HIST_in
     implicit none
@@ -121,10 +124,13 @@ contains
 
     integer :: i, j, k
     !---------------------------------------------------------------------------
-
-    if ( USER_do ) then
+ 
+    
+    if ( USER_do .AND. TIME_DOURBAN_step ) then
 
        DELT=TIME_DTSEC_URBAN
+       CNT_AtmUrb=0.0_RP
+       CNT_Urb=0.0_RP
 
        do j = 1, JA
        do i = 1, IA
@@ -146,10 +152,10 @@ contains
        enddo
        enddo
 
-       call HIST_in( SWD(:,:),  'SWD_urb', 'Downward shortwave radiation', 'W/m2', TIME_DTSEC_URBAN)
-       call HIST_in( LWD(:,:),  'LWD_urb', 'Downward longwave radiation',  'W/m2', TIME_DTSEC_URBAN)
-       call HIST_in( TMPA(:,:), 'PT_urb',  'Potential temp', 'K',   TIME_DTSEC_URBAN)
-       call HIST_in( UA(:,:),   'UA_urb',  'Wind speed',     'm/s', TIME_DTSEC_URBAN)
+       call HIST_in( SWD(:,:),  'SWD_urb',  'Downward shortwave radiation', 'W/m2', TIME_DTSEC_URBAN)
+       call HIST_in( LWD(:,:),  'LWD_urb',  'Downward longwave radiation',  'W/m2', TIME_DTSEC_URBAN)
+       call HIST_in( TMPA(:,:), 'PT_urb',   'Potential temp',               'K',   TIME_DTSEC_URBAN)
+       call HIST_in( UA(:,:),   'UA_urb',   'Wind speed',                   'm/s', TIME_DTSEC_URBAN)
 
        call HIST_in( SHFLX(:,:), 'SHFLX_urb', 'Sensible heat flux', 'W/m2', TIME_DTSEC_URBAN)
        call HIST_in( LHFLX(:,:), 'LHFLX_urb', 'Latent heat flux',   'W/m2', TIME_DTSEC_URBAN)
