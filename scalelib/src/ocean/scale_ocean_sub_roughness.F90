@@ -214,7 +214,7 @@ contains
 
     do j = 1, JA
     do i = 1, IA
-       Z0M (i,j) = Z0(i,j)
+       Z0M(i,j)  = max( Z0(i,j), OCEAN_roughness_Z0M_min )
        Uabs(i,j) = sqrt( UA(i,j)**2 + VA(i,j)**2 )
     enddo
     enddo
