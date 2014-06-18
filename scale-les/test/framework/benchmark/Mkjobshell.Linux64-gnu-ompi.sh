@@ -21,7 +21,7 @@ cat << EOF1 > ./run.sh
 #
 ################################################################################
 export FORT_FMT_RECL=400
-
+!export GFORTRAN_UNBUFFERED_ALL=Y
 
 # run
 ${MPIEXEC} ${BINDIR}/${INITNAME} ${INITCONF} || exit

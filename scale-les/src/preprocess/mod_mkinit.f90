@@ -638,6 +638,11 @@ contains
   !-----------------------------------------------------------------------------
   !> Make initial state ( horizontally uniform + random disturbance )
   subroutine MKINIT_planestate
+    use mod_ocean_vars, only: &
+       OCEAN_TEMP,       &
+       OCEAN_SFC_TEMP,   &
+       OCEAN_SFC_albedo, &
+       OCEAN_SFC_Z0
     implicit none
 
     ! Surface state
@@ -828,6 +833,12 @@ contains
        TOAFLX_LW_dn(i,j) = 0.0_RP
        TOAFLX_SW_up(i,j) = 0.0_RP
        TOAFLX_SW_dn(i,j) = 0.0_RP
+
+       OCEAN_TEMP      (i,j)      = THETAstd
+       OCEAN_SFC_TEMP  (i,j)      = THETAstd
+       OCEAN_SFC_albedo(i,j,I_LW) = 0.04_RP
+       OCEAN_SFC_albedo(i,j,I_SW) = 0.05_RP
+       OCEAN_SFC_Z0    (i,j)      = 0.0_RP
     enddo
     enddo
 
