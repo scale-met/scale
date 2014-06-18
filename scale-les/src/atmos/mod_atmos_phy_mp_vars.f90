@@ -200,7 +200,7 @@ contains
        call ATMOS_PHY_MP_vars_fillhalo
 
        call STAT_total( total, ATMOS_PHY_MP_SFLX_rain(:,:), VAR_NAME(1) )
-       call STAT_total( total, ATMOS_PHY_MP_SFLX_snow(:,:), VAR_NAME(1) )
+       call STAT_total( total, ATMOS_PHY_MP_SFLX_snow(:,:), VAR_NAME(2) )
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** restart file for ATMOS_PHY_MP is not specified.'
     endif

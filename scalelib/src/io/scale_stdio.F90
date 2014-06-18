@@ -59,7 +59,7 @@ module scale_stdio
   logical,               public            :: IO_LNML             = .false. !< output log or not? (for namelist, this process)
   logical,               public            :: IO_LOG_SUPPRESS     = .false. !< suppress all of log output?
   logical,               public            :: IO_LOG_ALLNODE      = .false. !< output log for each node?
-  logical,               public            :: IO_LOG_NML_SUPPRESS = .true.  !< suppress all of log output?
+  logical,               public            :: IO_LOG_NML_SUPPRESS = .false. !< suppress all of log output?
 
   !-----------------------------------------------------------------------------
   !

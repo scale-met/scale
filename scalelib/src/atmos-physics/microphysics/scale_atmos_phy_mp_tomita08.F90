@@ -445,7 +445,7 @@ contains
     real(RP) :: FLX_snow(KA,IA,JA)
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Microphysics(tomita08)'
+    if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Cloud microphysics(tomita08)'
 
     if ( MP_donegative_fixer ) then
        call MP_negative_fixer( DENS(:,:,:),  & ! [INOUT]

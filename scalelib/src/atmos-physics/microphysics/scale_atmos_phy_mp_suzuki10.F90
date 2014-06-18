@@ -646,9 +646,9 @@ call START_COLLECTION("MICROPHYSICS")
 
 
     if( nspc == 1 ) then
-     if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Microphysics(SBM Liquid water only)'
+     if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Cloud microphysics(SBM Liquid water only)'
     elseif( nspc == 7 ) then
-     if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Microphysics(SBM Mixed phase)'
+     if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Cloud microphysics(SBM Mixed phase)'
     endif
 
     if( flg_sf_aero ) then

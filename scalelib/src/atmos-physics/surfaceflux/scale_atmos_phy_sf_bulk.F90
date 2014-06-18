@@ -174,7 +174,7 @@ contains
     integer  :: i, j
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** Physics step, surface flux(bulk)'
+    if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Surface flux(bulk)'
 
     do j = JS, JE
     do i = IS, IE

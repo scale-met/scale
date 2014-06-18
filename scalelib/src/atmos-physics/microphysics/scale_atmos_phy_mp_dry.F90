@@ -101,7 +101,7 @@ contains
     real(RP), intent(out)   :: SFLX_snow(IA,JA)
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** Physics step, cloud microphysics(dummy)'
+    if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Cloud microphysics(dummy)'
 
     return
   end subroutine ATMOS_PHY_MP_dry

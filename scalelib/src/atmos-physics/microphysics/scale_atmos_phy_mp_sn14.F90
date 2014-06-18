@@ -489,7 +489,7 @@ contains
     real(RP), intent(out)   :: SFLX_snow(IA,JA)
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Microphysics(SN14)'
+    if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Cloud microphysics(SN14)'
 
     call PROF_rapstart('MP0 Setup')
     call MP_negativefilter( DENS, QTRC )

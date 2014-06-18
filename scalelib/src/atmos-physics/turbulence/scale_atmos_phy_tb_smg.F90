@@ -250,7 +250,7 @@ contains
     integer :: k, i, j, iq
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** Physics step, turbulence(smagorinsky)'
+    if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Turbulence(smagorinsky)'
 
 #ifdef DEBUG
     qflx_sgs_momz(:,:,:,:)   = UNDEF

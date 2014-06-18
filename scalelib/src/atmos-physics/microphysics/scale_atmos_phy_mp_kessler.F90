@@ -175,7 +175,7 @@ contains
     integer  :: k
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** Physics step, cloud microphysics(kessler)'
+    if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Cloud microphysics(kessler)'
 
     if ( first ) then
        ! Calculate collection factor for terminal velocity of QR
