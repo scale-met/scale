@@ -179,16 +179,15 @@ contains
     integer, parameter :: I_SW   = 3
     integer, parameter :: I_SE   = 4
 
-    integer :: i, j
-    integer :: fid, ierr
-
-    !< metadata files for lat-lon domain for all processes
-    character(len=H_LONG) :: DOMAIN_CATALOGUE_FNAME = 'latlon_domain_catalogue.txt'
-    logical :: DOMAIN_CATALOGUE_OUTPUT = .true.
+    character(len=H_LONG) :: DOMAIN_CATALOGUE_FNAME = 'latlon_domain_catalogue.txt' !< metadata files for lat-lon domain for all processes
+    logical               :: DOMAIN_CATALOGUE_OUTPUT = .false.
 
     NAMELIST / PARAM_DOMAIN_CATALOGUE / &
        DOMAIN_CATALOGUE_FNAME,  &
        DOMAIN_CATALOGUE_OUTPUT
+
+    integer :: i, j
+    integer :: fid, ierr
     !---------------------------------------------------------------------------
 
     !--- read namelist
