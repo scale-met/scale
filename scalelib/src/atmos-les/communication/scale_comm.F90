@@ -2112,6 +2112,7 @@ contains
     do k = 1, KA
        zerosw = 0.5_RP - sign(0.5_RP, allstatcnt(k) - 1.E-12_RP )
        varmean(k) = allstatval(k) / ( allstatcnt(k) + zerosw ) * ( 1.0_RP - zerosw )
+       !if( IO_L ) write(IO_FID_LOG,*) k, varmean(k), allstatval(k), allstatcnt(k)
     enddo
 
     return

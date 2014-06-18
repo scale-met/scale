@@ -420,18 +420,6 @@ contains
     enddo
     enddo
 
-    if( IO_L ) write(IO_FID_LOG,*)  dens    (KE  ,1,1)
-    if( IO_L ) write(IO_FID_LOG,*)  temp    (KE  ,1,1)
-    if( IO_L ) write(IO_FID_LOG,*)  pres    (KE  ,1,1)
-    if( IO_L ) write(IO_FID_LOG,*)  pott    (KE  ,1,1)
-    if( IO_L ) write(IO_FID_LOG,*)  qv      (KE  ,1,1)
-    if( IO_L ) write(IO_FID_LOG,*)  qc      (KE  ,1,1)
-    if( IO_L ) write(IO_FID_LOG,*)  dens    (KE+1,1,1)
-    if( IO_L ) write(IO_FID_LOG,*)  pott_toa(1,1)
-    if( IO_L ) write(IO_FID_LOG,*)  qv_toa  (1,1)
-    if( IO_L ) write(IO_FID_LOG,*)  qc_toa  (1,1)
-    if( IO_L ) write(IO_FID_LOG,*)  dz      (KE+1,1,1)
-
     call ATMOS_HYDROSTATIC_buildrho_atmos_rev_2D( dens    (KE  ,:,:), & ! [OUT]
                                                   temp    (KE  ,:,:), & ! [OUT]->not used
                                                   pres    (KE  ,:,:), & ! [OUT]->not used
