@@ -81,24 +81,19 @@ OBJS =	\
 
 
 
-all: makedir makelib makebin
+all:
+	$(MAKE) makedir
+	$(MAKE) -C $(DCUTILSDIR)
+	$(MAKE) -C $(GTOOLDIR)
+	$(MAKE) -C $(SCALELIBDIR)/src
+	@echo;echo "Entering scale-les...";echo "Current version is " $(VERSION)
+	$(MAKE) makebin
 	@echo "Complete making scale-les."
 
 makedir:
-	@echo;echo "Entering scale-les...\nCurrent version is " $(VERSION)
 	mkdir -p $(BINDIR)
-	@mkdir -p $(BUILD_DIR)
-
-makelib: dcutils gtool scalelib
-
-dcutils:
-	$(MAKE) -C $(DCUTILSDIR)
-
-gtool:
-	$(MAKE) -C $(GTOOLDIR)
-
-scalelib:
-	$(MAKE) -C $(SCALELIBDIR)/src
+	mkdir -p $(LIBDIR)
+	mkdir -p $(BUILD_DIR)
 
 $(LIBDIR)/libdcutils.a :
 	$(MAKE) -C $(DCUTILSDIR)
@@ -194,6 +189,8 @@ $(BUILD_DIR)/mod_user.o                   : mod_user.f90 $(DEPENDLIB) $(patsubst
 
 
 allclean: distclean
+	$(MAKE) -C $(DCUTILSDIR)      allclean
+	$(MAKE) -C $(GTOOLDIR)        allclean
 	$(MAKE) -C $(SCALELIBDIR)/src allclean
 	rm -f $(BINDIR)/$(BINNAME)
 	rm -f $(BINDIR)/$(INITNAME)
