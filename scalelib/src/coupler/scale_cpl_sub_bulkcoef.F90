@@ -350,6 +350,7 @@ contains
     real(RP) :: fm10, fm02, fh02
     real(RP) :: fmUS10, fmUS02, fhUS02
     real(RP) :: fmS10, fmS02, fhS02
+    !---------------------------------------------------------------------------
 
     RiB0 = GRAV * Za * ( Ta*(Ps/Pa)**RovCP - Ts ) / ( Ta*(Ps/Pa)**RovCP * max(Ua,U_min)**2 )
     if( abs( RiB0 ) < RiB_min ) then
@@ -401,11 +402,11 @@ contains
       dCh = ( sw ) * dChUS + ( 1.0_RP-sw ) * dChS 
       dCe = ( sw ) * dCeUS + ( 1.0_RP-sw ) * dCeS 
 
-      ! calculate d(residual)
-      dres = (L+dL) - Za * dCm**1.5_RP / ( KARMAN * dCh * RiB0 )
+      ! calculate d(residual)/dL
+      dres = ( (L+dL) - Za * dCm**1.5_RP / ( KARMAN * dCh * RiB0 ) - res ) / dL
 
       ! update Obukhov length
-      L = L - res / ( dres - res ) * dL
+      L = L - res / dres
 
       if( abs( res ) < res_min ) then
         ! finish iteration

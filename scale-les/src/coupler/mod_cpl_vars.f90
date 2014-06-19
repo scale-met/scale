@@ -815,8 +815,8 @@ contains
     real(RP), intent(out) :: SFC_albedo(IA,JA,2)
     !---------------------------------------------------------------------------
 
-   SFC_TEMP  (:,:)   = CPL_fromUrb_SFC_TEMP  (:,:)
-   SFC_albedo(:,:,:) = CPL_fromUrb_SFC_albedo(:,:,:)
+    SFC_TEMP  (:,:)   = CPL_fromUrb_SFC_TEMP  (:,:)
+    SFC_albedo(:,:,:) = CPL_fromUrb_SFC_albedo(:,:,:)
 
     return
   end subroutine CPL_getUrb_restart
