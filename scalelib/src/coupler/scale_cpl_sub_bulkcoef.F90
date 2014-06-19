@@ -77,10 +77,10 @@ module scale_cpl_bulkcoef
   !
   private :: CPL_bulkcoef_uno
   private :: CPL_bulkcoef_beljaars
-  private :: fmUS
-  private :: fhUS
-  private :: fmS
-  private :: fhS
+  private :: fm_unstable
+  private :: fh_unstable
+  private :: fm_stable
+  private :: fh_stable
 
   !-----------------------------------------------------------------------------
   !
@@ -338,10 +338,18 @@ contains
     real(RP) :: RiB0, RiB ! bulk Richardson number [no unit]
     real(RP) :: L ! Obukhov length [m]
     real(RP) :: res, dres
+    real(RP) :: CmUS, ChUS, CeUS
+    real(RP) :: CmS, ChS, CeS
     real(RP) :: dCm, dCh, dCe
-    real(RP) :: tmp
+    real(RP) :: dCmUS, dChUS, dCeUS
+    real(RP) :: dCmS, dChS, dCeS
+    real(RP) :: sw
     real(RP) :: fm, fh
+    real(RP) :: fmUS, fhUS
+    real(RP) :: fmS, fhS
     real(RP) :: fm10, fm02, fh02
+    real(RP) :: fmUS10, fmUS02, fhUS02
+    real(RP) :: fmS10, fmS02, fhS02
 
     RiB0 = GRAV * Za * ( Ta*(Ps/Pa)**RovCP - Ts ) / ( Ta*(Ps/Pa)**RovCP * max(Ua,U_min)**2 )
     if( abs( RiB0 ) < RiB_min ) then
@@ -352,39 +360,47 @@ contains
     L = Za / RiB0
 
     do n = 1, nmax
-      if( L < 0.0_RP ) then
-        ! unstable condition
-        Cm = KARMAN**2 / ( log(Za/Z0M) - fmUS(Za/L) + fmUS(Z0M/L) )**2
-        Ch = KARMAN**2 / ( log(Za/Z0M) - fmUS(Za/L) + fmUS(Z0M/L) ) &
-                       / ( log(Za/Z0H) - fhUS(Za/L) + fhUS(Z0H/L) )
-        Ce = KARMAN**2 / ( log(Za/Z0M) - fmUS(Za/L) + fmUS(Z0M/L) ) &
-                       / ( log(Za/Z0E) - fhUS(Za/L) + fhUS(Z0E/L) )
-      else
-        ! stable condition
-        Cm = KARMAN**2 / ( log(Za/Z0M) - fmS(Za/L) + fmS(Z0M/L) )**2
-        Ch = KARMAN**2 / ( log(Za/Z0M) - fmS(Za/L) + fmS(Z0M/L) ) &
-                       / ( log(Za/Z0H) - fhS(Za/L) + fhS(Z0H/L) )
-        Ce = KARMAN**2 / ( log(Za/Z0M) - fmS(Za/L) + fmS(Z0M/L) ) &
-                       / ( log(Za/Z0E) - fhS(Za/L) + fhS(Z0E/L) )
-      end if
+      ! unstable condition
+      CmUS = KARMAN**2 / ( log(Za/Z0M) - fm_unstable(Za,L) + fm_unstable(Z0M,L) )**2
+      ChUS = KARMAN**2 / ( log(Za/Z0M) - fm_unstable(Za,L) + fm_unstable(Z0M,L) ) &
+                       / ( log(Za/Z0H) - fh_unstable(Za,L) + fh_unstable(Z0H,L) )
+      CeUS = KARMAN**2 / ( log(Za/Z0M) - fm_unstable(Za,L) + fm_unstable(Z0M,L) ) &
+                       / ( log(Za/Z0E) - fh_unstable(Za,L) + fh_unstable(Z0E,L) )
+      ! stable condition
+      CmS = KARMAN**2 / ( log(Za/Z0M) - fm_stable(Za,L) + fm_stable(Z0M,L) )**2
+      ChS = KARMAN**2 / ( log(Za/Z0M) - fm_stable(Za,L) + fm_stable(Z0M,L) ) &
+                      / ( log(Za/Z0H) - fh_stable(Za,L) + fh_stable(Z0H,L) )
+      CeS = KARMAN**2 / ( log(Za/Z0M) - fm_stable(Za,L) + fm_stable(Z0M,L) ) &
+                      / ( log(Za/Z0E) - fh_stable(Za,L) + fh_stable(Z0E,L) )
+
+      sw = 0.5_RP - sign( 0.5_RP, L ) ! if unstable, sw = 1
+
+      Cm = ( sw ) * CmUS + ( 1.0_RP-sw ) * CmS 
+      Ch = ( sw ) * ChUS + ( 1.0_RP-sw ) * ChS 
+      Ce = ( sw ) * CeUS + ( 1.0_RP-sw ) * CeS 
+
       ! calculate residual
       res = L - Za * Cm**1.5_RP / ( KARMAN * Ch * RiB0 )
 
-      if( L+dL < 0.0_RP ) then
-        ! unstable condition
-        dCm = KARMAN**2 / ( log(Za/Z0M) - fmUS(Za/(L+dL)) + fmUS(Z0M/(L+dL)) )**2
-        dCh = KARMAN**2 / ( log(Za/Z0M) - fmUS(Za/(L+dL)) + fmUS(Z0M/(L+dL)) ) &
-                        / ( log(Za/Z0H) - fhUS(Za/(L+dL)) + fhUS(Z0H/(L+dL)) )
-        dCe = KARMAN**2 / ( log(Za/Z0M) - fmUS(Za/(L+dL)) + fmUS(Z0M/(L+dL)) ) &
-                        / ( log(Za/Z0E) - fhUS(Za/(L+dL)) + fhUS(Z0E/(L+dL)) )
-      else
-        ! stable condition
-        dCm = KARMAN**2 / ( log(Za/Z0M) - fmS(Za/(L+dL)) + fmS(Z0M/(L+dL)) )**2
-        dCh = KARMAN**2 / ( log(Za/Z0M) - fmS(Za/(L+dL)) + fmS(Z0M/(L+dL)) ) &
-                        / ( log(Za/Z0H) - fhS(Za/(L+dL)) + fhS(Z0H/(L+dL)) )
-        dCe = KARMAN**2 / ( log(Za/Z0M) - fmS(Za/(L+dL)) + fmS(Z0M/(L+dL)) ) &
-                        / ( log(Za/Z0E) - fhS(Za/(L+dL)) + fhS(Z0E/(L+dL)) )
-      end if
+      ! unstable condition
+      dCmUS = KARMAN**2 / ( log(Za/Z0M) - fm_unstable(Za,L+dL) + fm_unstable(Z0M,L+dL) )**2
+      dChUS = KARMAN**2 / ( log(Za/Z0M) - fm_unstable(Za,L+dL) + fm_unstable(Z0M,L+dL) ) &
+                        / ( log(Za/Z0H) - fh_unstable(Za,L+dL) + fh_unstable(Z0H,L+dL) )
+      dCeUS = KARMAN**2 / ( log(Za/Z0M) - fm_unstable(Za,L+dL) + fm_unstable(Z0M,L+dL) ) &
+                        / ( log(Za/Z0E) - fh_unstable(Za,L+dL) + fh_unstable(Z0E,L+dL) )
+      ! stable condition
+      dCmS = KARMAN**2 / ( log(Za/Z0M) - fm_stable(Za,L+dL) + fm_stable(Z0M,L+dL) )**2
+      dChS = KARMAN**2 / ( log(Za/Z0M) - fm_stable(Za,L+dL) + fm_stable(Z0M,L+dL) ) &
+                       / ( log(Za/Z0H) - fh_stable(Za,L+dL) + fh_stable(Z0H,L+dL) )
+      dCeS = KARMAN**2 / ( log(Za/Z0M) - fm_stable(Za,L+dL) + fm_stable(Z0M,L+dL) ) &
+                       / ( log(Za/Z0E) - fh_stable(Za,L+dL) + fh_stable(Z0E,L+dL) )
+
+      sw = 0.5_RP - sign( 0.5_RP, L+dL ) ! if unstable, sw = 1
+
+      dCm = ( sw ) * dCmUS + ( 1.0_RP-sw ) * dCmS 
+      dCh = ( sw ) * dChUS + ( 1.0_RP-sw ) * dChS 
+      dCe = ( sw ) * dCeUS + ( 1.0_RP-sw ) * dCeS 
+
       ! calculate d(residual)
       dres = (L+dL) - Za * dCm**1.5_RP / ( KARMAN * dCh * RiB0 )
 
@@ -399,37 +415,42 @@ contains
     end do
 
     if( n > nmax ) then
-      if( IO_L ) write(IO_FID_LOG,*) 'Error: reach maximum iteration in the function of CPL_bulkcoef_beljaars.'
+      if( IO_L ) write(IO_FID_LOG,*) 'Warning: reach maximum iteration in the function of CPL_bulkcoef_beljaars.'
     end if
+
+    Cm = min( max( Cm, Cm_min ), Cm_max )
+    Ch = min( max( Ch, Ch_min ), Ch_max )
+    Ce = min( max( Ce, Ce_min ), Ce_max )
 
     ! update bulk Richardson nubmer
-    !RiB = Za * Cm**1.5_RP / ( L * KARMAN * Ch )
+    RiB = Za * Cm**1.5_RP / ( L * KARMAN * Ch )
 
-    if( L < 0.0_RP ) then
-      ! unstable condition
-      fm   = fmUS(      Za/L )
-      fh   = fhUS(      Za/L )
-      fm10 = fmUS( 10.0_RP/L )
-      fm02 = fmUS(  2.0_RP/L )
-      fh02 = fhUS(  2.0_RP/L )
-    else
-      ! stable condition
-      fm   = fmS(      Za/L )
-      fh   = fhS(      Za/L )
-      fm10 = fmS( 10.0_RP/L )
-      fm02 = fmS(  2.0_RP/L )
-      fh02 = fhS(  2.0_RP/L )
-    end if
+    ! unstable condition
+    fmUS   = fm_unstable(      Za, L )
+    fhUS   = fh_unstable(      Za, L )
+    fmUS10 = fm_unstable( 10.0_RP, L )
+    fmUS02 = fm_unstable(  2.0_RP, L )
+    fhUS02 = fh_unstable(  2.0_RP, L )
+    ! stable condition
+    fmS   = fm_stable(      Za, L )
+    fhS   = fh_stable(      Za, L )
+    fmS10 = fm_stable( 10.0_RP, L )
+    fmS02 = fm_stable(  2.0_RP, L )
+    fhS02 = fh_stable(  2.0_RP, L )
+
+    sw = 0.5_RP - sign( 0.5_RP, L ) ! if unstable, sw = 1
+
+    fm   = ( sw ) * fmUS   + ( 1.0_RP-sw ) * fmS
+    fh   = ( sw ) * fhUS   + ( 1.0_RP-sw ) * fhS
+    fm10 = ( sw ) * fmUS10 + ( 1.0_RP-sw ) * fmS10
+    fm02 = ( sw ) * fmUS02 + ( 1.0_RP-sw ) * fmS02
+    fh02 = ( sw ) * fhUS02 + ( 1.0_RP-sw ) * fhS02
 
     R10m = log( 10.0_RP/Z0M ) / log( Za/Z0M ) / sqrt( fm10 / fm )
     R02h = ( log( Z0M/Z0H ) / log( Za/Z0M ) + sqrt( fm02 ) / fh02 * log( 2.0_RP/Z0M ) ) &
          / ( log( Z0M/Z0H ) / log( Za/Z0M ) + sqrt( fm   ) / fh   * log(     Za/Z0M ) )
     R02e = ( log( Z0M/Z0E ) / log( Za/Z0M ) + sqrt( fm02 ) / fh02 * log( 2.0_RP/Z0M ) ) &
          / ( log( Z0M/Z0E ) / log( Za/Z0M ) + sqrt( fm   ) / fh   * log(     Za/Z0M ) )
-
-    Cm = min( max( Cm, Cm_min ), Cm_max )
-    Ch = min( max( Ch, Ch_min ), Ch_max )
-    Ce = min( max( Ce, Ce_min ), Ce_max )
 
     R10m = min( max( R10m, 0.0_RP ), 1.0_RP )
     R02h = min( max( R02h, 0.0_RP ), 1.0_RP )
@@ -439,71 +460,102 @@ contains
   end subroutine CPL_bulkcoef_beljaars
 
   ! stability function for momemtum in unstable condition
-  function fmUS( R )
+  function fm_unstable( Z, L )
     use scale_const, only: &
-      PI => CONST_PI
+      PI  => CONST_PI,  &
+      EPS => CONST_EPS
     implicit none
 
     ! argument
-    real(RP), intent(in) :: R
+    real(RP), intent(in) :: Z
+    real(RP), intent(in) :: L
 
     ! function
-    real(RP) :: fmUS
+    real(RP) :: fm_unstable
+
+    ! works
+    real(RP) :: R
+    real(RP) :: r4R
+    !---------------------------------------------------------------------------
+
+    R = Z / min(L,-EPS) ! should be negative
+    r4R = ( 1.0_RP - 16.0_RP * R )**0.25_RP
 
     ! Paulson (1974); Dyer (1974)
-    fmUS = log( ( 1.0_RP + ( 1.0_RP - 16.0_RP * R )**0.25_RP )**2 * ( 1.0_RP + sqrt( 1.0_RP - 16.0_RP * R ) ) * 0.125_RP ) &
-         - 2.0_RP * atan( ( 1.0_RP - 16.0_RP * R )**0.25_RP ) + PI * 0.5_RP
+    fm_unstable = log( ( 1.0_RP + r4R )**2 * ( 1.0_RP + r4R * r4R ) * 0.125_RP ) &
+                - 2.0_RP * atan( r4R ) + PI * 0.5_RP
 
     return
-  end function fmUS
+  end function fm_unstable
 
   ! stability function for heat/vapor in unstable condition
-  function fhUS( R )
+  function fh_unstable( Z, L )
+    use scale_const, only: &
+      EPS => CONST_EPS
     implicit none
 
     ! argument
-    real(RP), intent(in) :: R
+    real(RP), intent(in) :: Z
+    real(RP), intent(in) :: L
 
     ! function
-    real(RP) :: fhUS
+    real(RP) :: fh_unstable
+
+    ! works
+    real(RP) :: R
+    !---------------------------------------------------------------------------
+
+    R = Z / min(L,-EPS) ! should be negative
 
     ! Paulson (1974); Dyer (1974)
-    fhUS = 2.0_RP * log( ( 1.0_RP + sqrt( 1.0_RP - 16.0_RP * R ) ) * 0.5_RP )
+    fh_unstable = 2.0_RP * log( ( 1.0_RP + sqrt( 1.0_RP - 16.0_RP * R ) ) * 0.5_RP )
 
     return
-  end function fhUS
+  end function fh_unstable
 
   ! stability function for momemtum in stable condition
-  function fmS( R )
+  function fm_stable( Z, L )
+    use scale_const, only: &
+      EPS => CONST_EPS
     implicit none
 
     ! argument
-    real(RP), intent(in) :: R
+    real(RP), intent(in) :: Z
+    real(RP), intent(in) :: L
 
     ! function
-    real(RP) :: fmS
+    real(RP) :: fm_stable
 
     ! parameters of stability functions (Beljaars and Holtslag 1991)
     real(RP), parameter :: a = 1.0_RP
     real(RP), parameter :: b = 0.667_RP
     real(RP), parameter :: c = 5.0_RP
     real(RP), parameter :: d = 0.35_RP
+
+    ! works
+    real(RP) :: R
+    !---------------------------------------------------------------------------
+
+    R = Z / max(L,EPS) ! should be positive
 
     ! Holtslag and DeBruin (1988)
-    fmS = - a*R - b*( R - c/d )*exp( -d*R ) - b*c/d
+    fm_stable = - a*R - b*( R - c/d )*exp( -d*R ) - b*c/d
 
     return
-  end function fmS
+  end function fm_stable
 
   ! stability function for heat/vapor in stable condition
-  function fhS( R )
+  function fh_stable( Z, L )
+    use scale_const, only: &
+      EPS => CONST_EPS
     implicit none
 
     ! argument
-    real(RP), intent(in) :: R
+    real(RP), intent(in) :: Z
+    real(RP), intent(in) :: L
 
     ! function
-    real(RP) :: fhS
+    real(RP) :: fh_stable
 
     ! parameters of stability functions (Beljaars and Holtslag 1991)
     real(RP), parameter :: a = 1.0_RP
@@ -511,10 +563,16 @@ contains
     real(RP), parameter :: c = 5.0_RP
     real(RP), parameter :: d = 0.35_RP
 
+    ! works
+    real(RP) :: R
+    !---------------------------------------------------------------------------
+
+    R = Z / max(L,EPS) ! should be positive
+
     ! Beljaars and Holtslag (1991)
-    fhS = 1.0_RP - ( 1.0_RP + 2.0_RP/3.0_RP * a*R )**1.5_RP - b*( R - c/d )*exp( -d*R ) - b*c/d
+    fh_stable = 1.0_RP - ( 1.0_RP + 2.0_RP/3.0_RP * a*R )**1.5_RP - b*( R - c/d )*exp( -d*R ) - b*c/d
 
     return
-  end function fhS
+  end function fh_stable
 
 end module scale_cpl_bulkcoef
