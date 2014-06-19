@@ -341,28 +341,28 @@ contains
                   + ( 1.0_RP - R02e ) * QVEF(i,j) * SQV
 
           if( LST_UPDATE ) then
-              if( redf < 0.0_RP ) then
-                redf = 1.0_RP
-              end if
+            if( redf < 0.0_RP ) then
+              redf = 1.0_RP
+            end if
 
-              if( abs(res) > abs(oldres) ) then
-                redf = max( TFa*redf, redf_min )
-              else
-                redf = min( TFb*redf, redf_max )
-              end if
+            if( abs(res) > abs(oldres) ) then
+              redf = max( TFa*redf, redf_min )
+            else
+              redf = min( TFb*redf, redf_max )
+            end if
 
-              if( dres > 0.0_RP ) then
-                redf = -1.0_RP
-              end if
+            if( dres > 0.0_RP ) then
+              redf = -1.0_RP
+            end if
 
-              ! update surface temperature
-              LST(i,j) = LST(i,j) - redf * res / dres
+            ! update surface temperature
+            LST(i,j) = LST(i,j) - redf * res / dres
 
-              ! put residual in ground heat flux
-              GHFLX(i,j) = GHFLX(i,j) - res
+            ! put residual in ground heat flux
+            GHFLX(i,j) = GHFLX(i,j) - res
 
-              ! save residual in this step
-              oldres = res
+            ! save residual in this step
+            oldres = res
 
             if( abs(res) < res_min ) then
               ! iteration converged
