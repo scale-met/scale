@@ -133,12 +133,13 @@ module mod_mkinit
   integer, public, parameter :: I_LANDCOUPLE    = 16
   integer, public, parameter :: I_OCEANCOUPLE   = 17
   integer, public, parameter :: I_URBANCOUPLE   = 18
+  integer, public, parameter :: I_TRIPLECOUPLE   = 19
 
-  integer, public, parameter :: I_SEABREEZE     = 19
+  integer, public, parameter :: I_SEABREEZE     = 20
 
-  integer, public, parameter :: I_DYCOMS2_RF02_DNS = 20
+  integer, public, parameter :: I_DYCOMS2_RF02_DNS = 21
 
-  integer, public, parameter :: I_REAL          = 21
+  integer, public, parameter :: I_REAL          = 22
 
   !-----------------------------------------------------------------------------
   !
@@ -300,6 +301,8 @@ contains
        MKINIT_TYPE = I_OCEANCOUPLE
     case('URBANCOUPLE')
        MKINIT_TYPE = I_URBANCOUPLE
+    case('TRIPLECOUPLE')
+       MKINIT_TYPE = I_TRIPLECOUPLE
     case('SEABREEZE')
        MKINIT_TYPE = I_SEABREEZE
     case('DYCOMS2_RF02_DNS')
@@ -413,6 +416,11 @@ contains
       case(I_URBANCOUPLE)
          call MKINIT_planestate
          call MKINIT_landcouple ! tentative
+         call MKINIT_urbancouple
+      case(I_TRIPLECOUPLE)
+         call MKINIT_planestate
+         call MKINIT_oceancouple
+         call MKINIT_landcouple
          call MKINIT_urbancouple
       case(I_SEABREEZE)
          call MKINIT_planestate
