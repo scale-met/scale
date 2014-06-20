@@ -103,8 +103,8 @@ contains
     allocate( LANDUSE_index_PFT(IA,JA,LANDUSE_PFT_mosaic) )
     allocate( LANDUSE_frac_PFT (IA,JA,LANDUSE_PFT_mosaic) )
     LANDUSE_frac_PFT (:,:,:) = 0.0_RP
-    LANDUSE_frac_PFT (:,:,1) = 1.0_RP
-    LANDUSE_index_PFT(:,:,:) = 1
+    LANDUSE_frac_PFT (:,:,1) = 1.0_RP ! tentative, mosaic is off
+    LANDUSE_index_PFT(:,:,:) = 1      ! default
 
     ! read from file
     call LANDUSE_read
@@ -137,7 +137,7 @@ contains
     real(RP) :: temp(IA,JA)
 
     character(len=H_SHORT) :: varname
-    integer :: p
+    integer :: p, tag
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -165,16 +165,18 @@ contains
           call FILEIO_read( LANDUSE_frac_PFT(:,:,p),                   & ! [OUT]
                             LANDUSE_IN_BASENAME, varname, 'XY', step=1 ) ! [IN]
 
-          call COMM_vars8( LANDUSE_frac_PFT (:,:,p), 4 )
-          call COMM_wait ( LANDUSE_frac_PFT (:,:,p), 4 )
+          tag = 4 + (p-1)*LANDUSE_PFT_mosaic
+          call COMM_vars8( LANDUSE_frac_PFT (:,:,p), tag )
+          call COMM_wait ( LANDUSE_frac_PFT (:,:,p), tag )
 
           write(varname,'(A9,I1.1)') 'INDEX_PFT', p
 
           call FILEIO_read( temp(:,:),                                 & ! [OUT]
                             LANDUSE_IN_BASENAME, varname, 'XY', step=1 ) ! [IN]
 
-          call COMM_vars8( temp(:,:), 5 )
-          call COMM_wait ( temp(:,:), 5 )
+          tag = 5 + (p-1)*LANDUSE_PFT_mosaic
+          call COMM_vars8( temp(:,:), tag )
+          call COMM_wait ( temp(:,:), tag )
 
           LANDUSE_index_PFT(:,:,p) = int(temp(:,:))
        enddo

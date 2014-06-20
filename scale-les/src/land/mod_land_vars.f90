@@ -112,9 +112,7 @@ module mod_land_vars
                   '0-1',   &
                   '0-1'    /
 
-  integer,  private, parameter :: LAND_NUM_IDX = 2 ! # of land indices
-
-  real(RP), private            :: LAND_PROPERTY_table(LAND_NUM_IDX,LAND_PROPERTY_nmax)
+  real(RP), private, allocatable :: LAND_PROPERTY_table(:,:)
 
   integer,  private              :: LAND_QA_comm
   real(RP), private, allocatable :: work_comm(:,:,:) ! for communication
@@ -465,6 +463,8 @@ contains
        PRC_MPIstop
     use scale_const, only: &
        CONST_UNDEF
+    use scale_landuse, only: &
+       LANDUSE_PFT_nmax
     implicit none
 
     integer                :: index
@@ -494,6 +494,7 @@ contains
     integer :: ierr
     !---------------------------------------------------------------------------
 
+    allocate( LAND_PROPERTY_table(LANDUSE_PFT_nmax,LAND_PROPERTY_nmax) )
     LAND_PROPERTY_table(:,:) = CONST_UNDEF
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -511,7 +512,7 @@ contains
 
     !--- read namelist
     rewind(IO_FID_CONF)
-    do n = 1, LAND_NUM_IDX
+    do n = 1, LANDUSE_PFT_nmax
        ! undefined roughness length
        Z0H = -1.0_RP
        Z0E = -1.0_RP
