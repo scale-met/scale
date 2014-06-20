@@ -248,9 +248,10 @@ contains
     real(RP) :: oldres ! residual in previous step
     real(RP) :: redf   ! reduced factor
 
-    real(RP) :: Uabs ! absolute velocity at the lowest atmospheric layer [m/s]
-    real(RP) :: Cm, Ch, Ce, dCm, dCh, dCe ! bulk transfer coeff. [no unit]
-    real(RP) :: R10m, R02h, R02e, dR10m, dR02h, dR02e ! lapse rate [0-1]
+    real(RP) :: Uabs, Uabs02 ! absolute velocity at the lowest atmospheric layer [m/s]
+    real(RP) :: Cm, Ch, Ce ! bulk transfer coeff. [no unit]
+    real(RP) :: dCm, dCh, dCe ! bulk transfer coeff. for differential equation [no unit]
+    real(RP) :: Cm02, Ch02, Ce02 ! bulk transfer coeff. for 2m [no unit]
     real(RP) :: SQV, dSQV ! saturation water vapor mixing ratio at surface [kg/kg]
     real(RP) :: dSHFLX, dLHFLX, dGHFLX
 
@@ -273,9 +274,6 @@ contains
               Cm,        & ! (out)
               Ch,        & ! (out)
               Ce,        & ! (out)
-              R10m,      & ! (out)
-              R02h,      & ! (out)
-              R02e,      & ! (out)
               TMPA(i,j), & ! (in)
               LST (i,j), & ! (in)
               PRSA(i,j), & ! (in)
@@ -306,9 +304,6 @@ contains
               dCm,             & ! (out)
               dCh,             & ! (out)
               dCe,             & ! (out)
-              dR10m,           & ! (out)
-              dR02h,           & ! (out)
-              dR02e,           & ! (out)
               TMPA(i,j),       & ! (in)
               LST (i,j) + dTS, & ! (in)
               PRSA(i,j),       & ! (in)
@@ -330,15 +325,6 @@ contains
           ! calculation for d(residual)/dLST
           dres = -4.0_RP * ( 1.0_RP - ALB_LW(i,j) ) * STB * LST(i,j)**3 &
                - dSHFLX - dLHFLX + dGHFLX
-
-          ! diagnositc variables
-          U10(i,j) = R10m * UA(i,j)
-          V10(i,j) = R10m * VA(i,j)
-
-          T2(i,j) = (          R02h ) * TMPA(i,j) &
-                  + ( 1.0_RP - R02h ) * LST (i,j)
-          Q2(i,j) = (          R02e ) * QVA (i,j) &
-                  + ( 1.0_RP - R02e ) * QVEF(i,j) * SQV
 
           if( LST_UPDATE ) then
             if( redf < 0.0_RP ) then
@@ -375,6 +361,31 @@ contains
           end if
 
         end do
+
+        ! diagnositc variables
+        U10(i,j) = UA(i,j) * log( 10.0_RP / Z0M(i,j) ) / log( Z1(i,j) / Z0M(i,j) )
+        V10(i,j) = VA(i,j) * log( 10.0_RP / Z0M(i,j) ) / log( Z1(i,j) / Z0M(i,j) )
+
+        Uabs02 = sqrt( UA(i,j)**2 + VA(i,j)**2 ) * log( 2.0_RP / Z0M(i,j) ) / log( Z1(i,j) / Z0M(i,j) )
+
+        call CPL_bulkcoef( &
+            Cm02,      & ! (out)
+            Ch02,      & ! (out)
+            Ce02,      & ! (out)
+            TMPA(i,j), & ! (in)
+            LST (i,j), & ! (in)
+            PRSA(i,j), & ! (in)
+            PRSS(i,j), & ! (in)
+            Uabs,      & ! (in)
+            2.0_RP,    & ! (in)
+            Z0M (i,j), & ! (in)
+            Z0H (i,j), & ! (in)
+            Z0E (i,j)  ) ! (in)
+
+        T2(i,j) = LST(i,j) - ( LST(i,j) - TMPA(i,j) ) * ( Ch   * min( max( Uabs,   U_minH ), U_maxH ) ) &
+                                                      / ( Ch02 * min( max( Uabs02, U_minH ), U_maxH ) )
+        Q2(i,j) = SQV      - ( SQV      - QVA (i,j) ) * ( Ce   * min( max( Uabs,   U_minE ), U_maxE ) ) &
+                                                      / ( Ce02 * min( max( Uabs02, U_minE ), U_maxE ) )
 
         if( n > nmax ) then
           ! not converged and stop program
