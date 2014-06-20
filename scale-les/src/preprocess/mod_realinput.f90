@@ -68,7 +68,7 @@ module mod_realinput
   public :: ParentAtomSetup
   public :: ParentAtomInput
   public :: ParentAtomBoundary
-  public :: ParentLndOcnInput
+  public :: ParentLndOcnUrbInput
 
   !-----------------------------------------------------------------------------
   !
@@ -188,6 +188,8 @@ contains
     use scale_comm, only: &
        COMM_vars8, &
        COMM_wait
+    use mod_atmos_phy_rd_vars, only: &
+       ATMOS_PHY_RD_vars_external_in
     implicit none
 
     real(RP),         intent(out) :: dens(:,:,:)
@@ -212,6 +214,8 @@ contains
     real(RP), allocatable :: QV(:,:,:)
     real(RP), allocatable :: QC(:,:,:)
     real(RP), allocatable :: dz(:,:,:)
+
+    real(RP) :: phy_rd_init_value = 0.D0
 
     integer :: k, i, j
 
@@ -344,6 +348,8 @@ contains
     enddo
     enddo
     enddo
+
+    call ATMOS_PHY_RD_vars_external_in( phy_rd_init_value )
 
     deallocate( w )
     deallocate( u )
@@ -491,7 +497,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Land&Ocean Data Read/Write
   !-----------------------------------------------------------------------------
-  subroutine ParentLndOcnInput( &
+  subroutine ParentLndOcnUrbInput( &
       basename_org, &
       dims,         &
       timelen,      &
@@ -506,6 +512,8 @@ contains
     use mod_urban_vars, only: &
        URBAN_vars_restart_write, &
        URBAN_vars_external_in
+    use mod_atmos_phy_sf_vars, only: &
+       ATMOS_PHY_SF_vars_external_in
     implicit none
 
     character(LEN=*), intent(in) :: basename_org
@@ -589,15 +597,15 @@ contains
 
     ! Write out: Ocean
     call OCEAN_vars_external_in( tw, sst, albw, z0w )
-    call OCEAN_vars_restart_write
 
     ! Write out: Land
     call LAND_vars_external_in( tg, strg, lst, albg )
-    call LAND_vars_restart_write
 
     ! Write out: Urban
     call URBAN_vars_external_in( ust )
-    call URBAN_vars_restart_write
+
+    ! Input to PHY_SF Container
+    call ATMOS_PHY_SF_vars_external_in( skint, albw(:,:,I_LW), albw(:,:,I_SW), z0w )
 
     deallocate( tg    )
     deallocate( strg  )
@@ -616,7 +624,7 @@ contains
     deallocate( snowt )
 
     return
-  end subroutine ParentLndOcnInput
+  end subroutine ParentLndOcnUrbInput
 
   !-----------------------------------------------------------------------------
   !> Individual Procedures

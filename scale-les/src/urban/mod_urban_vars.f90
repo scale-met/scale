@@ -681,12 +681,28 @@ contains
     implicit none
 
     real(RP), intent(in) :: ts_urb_in(IA,JA)
+    integer :: i
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** External Input (coupler) ***'
 
     TS_URB(:,:) = ts_urb_in(:,:)
+    TR_URB(:,:) = ts_urb_in(:,:)
+    TB_URB(:,:) = ts_urb_in(:,:)
+    TG_URB(:,:) = ts_urb_in(:,:)
+
+    do i=UKS, UKE
+       TRL_URB(i,:,:) = ts_urb_in(:,:)
+       TBL_URB(i,:,:) = ts_urb_in(:,:)
+       TGL_URB(i,:,:) = ts_urb_in(:,:)
+    enddo
+
+    RAINR_URB(:,:) = 0.D0
+    RAINB_URB(:,:) = 0.D0
+    RAING_URB(:,:) = 0.D0
+    ROFF_URB(:,:) = 0.D0
+    Rngrd_URB(:,:) = 0.D0
 
     call URBAN_vars_fillhalo
 

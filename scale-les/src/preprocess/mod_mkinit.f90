@@ -4165,11 +4165,11 @@ enddo
     n = 1
     write(NUM,'(I5.5)') n-1
     BASENAME_WITHNUM = trim(BASENAME_ORG)//"_"//NUM
-    call ParentLndOcnInput( BASENAME_WITHNUM, &
-                            dims,              &
-                            timelen,           &
-                            mdlid,             &
-                            INITIAL_STEP       )
+    call ParentLndOcnUrbInput( BASENAME_WITHNUM, &
+                              dims,              &
+                              timelen,           &
+                              mdlid,             &
+                              INITIAL_STEP       )
 
     return
   end subroutine MKINIT_real
