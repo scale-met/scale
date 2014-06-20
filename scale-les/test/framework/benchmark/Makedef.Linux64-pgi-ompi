@@ -10,11 +10,11 @@ FFLAGS_FAST = -Mpreprocess -O2 -fastsse -Mipa=fast,inline -m64 \
               -mcmodel=medium                    \
               -Msmartalloc=huge -DHEVI_BICGSTAB
 
-# FFLAGS_DEBUG = -Mpreprocess -O2 -m64 \
-#                -pg \
-#                -Mbyteswapio                       \
-#                -Mflushz -pc 80                    \
-#                -mcmodel=medium                    \
+# FFLAGS_DEBUG = -Mpreprocess -O2 -m64           \
+#                -pg                             \
+#                -Mbyteswapio                    \
+#                -Mflushz -pc 80                 \
+#                -mcmodel=medium                 \
 #                -Msmartalloc=huge
 
 FFLAGS_DEBUG = -Mpreprocess -O0 -m64             \
@@ -24,8 +24,8 @@ FFLAGS_DEBUG = -Mpreprocess -O0 -m64             \
                -mcmodel=medium -Minfo
 
 FC     = mpif90
-#FFLAGS = $(FFLAGS_FAST)
-FFLAGS = $(FFLAGS_DEBUG)
+FFLAGS = $(FFLAGS_FAST)
+#FFLAGS = $(FFLAGS_DEBUG)
 
 ifneq ($(ENABLE_OPENMP),)
       FFLAGS += -openmp -openmp-report
