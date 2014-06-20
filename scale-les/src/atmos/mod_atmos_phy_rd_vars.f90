@@ -32,6 +32,7 @@ module mod_atmos_phy_rd_vars
   public :: ATMOS_PHY_RD_vars_fillhalo
   public :: ATMOS_PHY_RD_vars_restart_read
   public :: ATMOS_PHY_RD_vars_restart_write
+  public :: ATMOS_PHY_RD_vars_external_in
 
   !-----------------------------------------------------------------------------
   !
@@ -324,5 +325,30 @@ contains
 
     return
   end subroutine ATMOS_PHY_RD_vars_restart_write
+
+  !-----------------------------------------------------------------------------
+  !> Input from External I/O
+  subroutine ATMOS_PHY_RD_vars_external_in( &
+      init_value_in  )
+    implicit none
+
+    real(RP), intent(in) :: init_value_in
+    !---------------------------------------------------------------------------
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '*** External Input (PHY_RD) ***'
+
+    ATMOS_PHY_RD_SFLX_LW_up  (:,:) = init_value_in
+    ATMOS_PHY_RD_SFLX_LW_dn  (:,:) = init_value_in
+    ATMOS_PHY_RD_SFLX_SW_up  (:,:) = init_value_in
+    ATMOS_PHY_RD_SFLX_SW_dn  (:,:) = init_value_in
+    ATMOS_PHY_RD_TOAFLX_LW_up(:,:) = init_value_in
+    ATMOS_PHY_RD_TOAFLX_LW_dn(:,:) = init_value_in
+    ATMOS_PHY_RD_TOAFLX_SW_up(:,:) = init_value_in
+    ATMOS_PHY_RD_TOAFLX_SW_dn(:,:) = init_value_in
+
+    return
+  end subroutine ATMOS_PHY_RD_vars_external_in
+
 
 end module mod_atmos_phy_rd_vars
