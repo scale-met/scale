@@ -130,7 +130,8 @@ contains
        COMM_vars8, &
        COMM_wait
     use scale_landuse, only: &
-       LANDUSE_index_PFT
+       LANDUSE_index_PFT, &
+       LANDUSE_PFT_nmax
     implicit none
 
     NAMELIST / PARAM_LAND_VARS /  &
@@ -206,7 +207,7 @@ contains
 
     ! Read land property table
     allocate( LAND_PROPERTY_table(LANDUSE_PFT_nmax,LAND_PROPERTY_nmax) )
-    LAND_PROPERTY_table(:,:) = CONST_UNDEF
+    LAND_PROPERTY_table(:,:) = UNDEF
 
     call LAND_param_read
 
@@ -464,8 +465,6 @@ contains
   subroutine LAND_param_read
     use scale_process, only: &
        PRC_MPIstop
-    use scale_const, only: &
-       CONST_UNDEF
     use scale_landuse, only: &
        LANDUSE_PFT_nmax
     implicit none
@@ -498,8 +497,10 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** [LAND ] vegetation parameters'
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,11(1x,A))') '***        ',  &
+    if( IO_L ) write(IO_FID_LOG,*) '*** Properties for each plant functional type (PFT)'
+    if( IO_L ) write(IO_FID_LOG,*) &
+    '--------------------------------------------------------------------------------------------------------'
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,11(1x,A))') '***         ',  &
                                                    ' description', &
                                                    ' Max Stg.', &
                                                    ' CRT Stg.', &
@@ -542,7 +543,7 @@ contains
        LAND_PROPERTY_table(index,I_Z0E          ) = Z0E
 
        if( IO_L ) write(IO_FID_LOG,'(1x,A8,I3,1x,A12,3(1x,F9.2),(1x,1PE9.1),4(1x,F9.2))') &
-                                     '*** IDX=', index, &
+                                     '*** IDX =', index, &
                                      trim(description), &
                                      STRGMAX, &
                                      STRGCRT, &
@@ -553,6 +554,9 @@ contains
                                      Z0H,     &
                                      Z0E
     enddo
+
+    if( IO_L ) write(IO_FID_LOG,*) &
+    '--------------------------------------------------------------------------------------------------------'
 
     return
   end subroutine LAND_param_read
