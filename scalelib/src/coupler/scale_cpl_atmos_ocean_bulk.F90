@@ -214,9 +214,9 @@ contains
     real(RP), intent(in) :: Z0E   (IA,JA) ! roughness length for vapor [m]
 
     ! works
-    real(RP) :: Uabs ! absolute velocity at the lowest atmospheric layer [m/s]
+    real(RP) :: Uabs, Uabs02 ! absolute velocity at the lowest atmospheric layer [m/s]
     real(RP) :: Cm, Ch, Ce ! bulk transfer coeff. [no unit]
-    real(RP) :: R10m, R02h, R02e ! lapse rate [0-1]
+    real(RP) :: Cm02, Ch02, Ce02 ! bulk transfer coeff. for 2m [no unit]
     real(RP) :: SQV ! saturation water vapor mixing ratio at surface [kg/kg]
 
     integer :: i, j, n
@@ -240,9 +240,6 @@ contains
             Cm,        & ! (out)
             Ch,        & ! (out)
             Ce,        & ! (out)
-            R10m,      & ! (out)
-            R02h,      & ! (out)
-            R02e,      & ! (out)
             TMPA(i,j), & ! (in)
             SST (i,j), & ! (in)
             PRSA(i,j), & ! (in)
@@ -269,13 +266,29 @@ contains
                    + SHFLX(i,j) + LHFLX(i,j)
 
         ! diagnositc variables
-        U10(i,j) = R10m * UA(i,j)
-        V10(i,j) = R10m * VA(i,j)
+        U10(i,j) = UA(i,j) * log( 10.0_RP / Z0M(i,j) ) / log( Z1(i,j) / Z0M(i,j) )
+        V10(i,j) = VA(i,j) * log( 10.0_RP / Z0M(i,j) ) / log( Z1(i,j) / Z0M(i,j) )
 
-        T2(i,j) = (          R02h ) * TMPA(i,j) &
-                + ( 1.0_RP - R02h ) * SST (i,j)
-        Q2(i,j) = (          R02e ) * QVA (i,j) &
-                + ( 1.0_RP - R02e ) * SQV
+        Uabs02 = sqrt( UA(i,j)**2 + VA(i,j)**2 ) * log( 2.0_RP / Z0M(i,j) ) / log( Z1(i,j) / Z0M(i,j) )
+
+        call CPL_bulkcoef( &
+            Cm02,      & ! (out)
+            Ch02,      & ! (out)
+            Ce02,      & ! (out)
+            TMPA(i,j), & ! (in)
+            SST (i,j), & ! (in)
+            PRSA(i,j), & ! (in)
+            PRSS(i,j), & ! (in)
+            Uabs,      & ! (in)
+            2.0_RP,    & ! (in)
+            Z0M (i,j), & ! (in)
+            Z0H (i,j), & ! (in)
+            Z0E (i,j)  ) ! (in)
+
+        T2(i,j) = SST(i,j) - ( SST(i,j) - TMPA(i,j) ) * ( Ch   * min( max( Uabs,   U_minH ), U_maxH ) ) &
+                                                      / ( Ch02 * min( max( Uabs02, U_minH ), U_maxH ) )
+        Q2(i,j) = SQV      - ( SQV      - QVA (i,j) ) * ( Ce   * min( max( Uabs,   U_minE ), U_maxE ) ) &
+                                                      / ( Ce02 * min( max( Uabs02, U_minE ), U_maxE ) )
 
       else
         ! not calculate surface flux

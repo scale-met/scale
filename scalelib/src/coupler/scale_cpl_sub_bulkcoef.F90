@@ -30,9 +30,6 @@ module scale_cpl_bulkcoef
           Cm,   & ! (out)
           Ch,   & ! (out)
           Ce,   & ! (out)
-          R10m, & ! (out)
-          R02h, & ! (out)
-          R02e, & ! (out)
           Ta,   & ! (in)
           Ts,   & ! (in)
           Pa,   & ! (in)
@@ -48,9 +45,6 @@ module scale_cpl_bulkcoef
        real(RP), intent(out) :: Cm   ! momentum bulk coefficient [no unit]
        real(RP), intent(out) :: Ch   ! heat bulk coefficient [no unit]
        real(RP), intent(out) :: Ce   ! moisture bulk coefficient [no unit]
-       real(RP), intent(out) :: R10m ! lapse rate for 10m momentum [0-1]
-       real(RP), intent(out) :: R02h ! lapse rate for 2m heat [0-1]
-       real(RP), intent(out) :: R02e ! lapse rate for 2m moisture [0-1]
 
        real(RP), intent(in) :: Ta  ! tempearature at the lowest atmospheric layer [K]
        real(RP), intent(in) :: Ts  ! skin temperature [K]
@@ -172,13 +166,11 @@ contains
     return
   end subroutine CPL_bulkcoef_setup
 
+  !-----------------------------------------------------------------------------
   subroutine CPL_bulkcoef_uno( &
       Cm,   & ! (out)
       Ch,   & ! (out)
       Ce,   & ! (out)
-      R10m, & ! (out)
-      R02h, & ! (out)
-      R02e, & ! (out)
       Ta,   & ! (in)
       Ts,   & ! (in)
       Pa,   & ! (in)
@@ -198,9 +190,6 @@ contains
     real(RP), intent(out) :: Cm   ! momentum bulk coefficient [no unit]
     real(RP), intent(out) :: Ch   ! heat bulk coefficient [no unit]
     real(RP), intent(out) :: Ce   ! moisture bulk coefficient [no unit]
-    real(RP), intent(out) :: R10m ! lapse rate for 10m momentum [0-1]
-    real(RP), intent(out) :: R02h ! lapse rate for 2m heat [0-1]
-    real(RP), intent(out) :: R02e ! lapse rate for 2m moisture [0-1]
 
     real(RP), intent(in) :: Ta  ! tempearature at the lowest atmospheric layer [K]
     real(RP), intent(in) :: Ts  ! skin temperature [K]
@@ -221,16 +210,12 @@ contains
 
     ! work
     real(RP) :: RiB, RiBT ! bulk Richardson number [no unit]
-    real(RP) :: C0, C0_10, C0_02 ! initial drag coefficient [no unit]
+    real(RP) :: C0 ! initial drag coefficient [no unit]
     real(RP) :: fm, fh, t0th, q0qe
-    real(RP) :: fm10, fm02, fh02
 
-    C0    = ( KARMAN / log(      Za/Z0M ) )**2
-    C0_10 = ( KARMAN / log( 10.0_RP/Z0M ) )**2
-    C0_02 = ( KARMAN / log(  2.0_RP/Z0M ) )**2
-
-    RiBT  = GRAV * Za * ( Ta*(Ps/Pa)**RovCP - Ts ) / ( Ta*(Ps/Pa)**RovCP * max(Ua,U_min)**2 )
-    RiB   = RiBT
+    C0   = ( KARMAN / log(      Za/Z0M ) )**2
+    RiBT = GRAV * Za * ( Ta*(Ps/Pa)**RovCP - Ts ) / ( Ta*(Ps/Pa)**RovCP * max(Ua,U_min)**2 )
+    RiB  = RiBT
 
     if( RiBT >= 0.0_RP ) then
       ! stable condition
@@ -248,18 +233,12 @@ contains
 
     if( RiBT >= 0.0_RP ) then
       ! stable condition
-      fm   = 1.0_RP / ( 1.0_RP + LFbp * RiB )**2
-      fh   = fm
-      fm10 = fm
-      fm02 = fm
-      fh02 = fm
+      fm = 1.0_RP / ( 1.0_RP + LFbp * RiB )**2
+      fh = fm
     else
       ! unstable condition
-      fm   = 1.0_RP - LFb * RiB / ( 1.0_RP + LFb * LFdm * C0    * sqrt(      Za/Z0M ) * sqrt( abs( RiB ) ) )
-      fh   = 1.0_RP - LFb * RiB / ( 1.0_RP + LFb * LFdh * C0    * sqrt(      Za/Z0M ) * sqrt( abs( RiB ) ) )
-      fm10 = 1.0_RP - LFb * RiB / ( 1.0_RP + LFb * LFdm * C0_10 * sqrt( 10.0_RP/Z0M ) * sqrt( abs( RiB ) ) )
-      fm02 = 1.0_RP - LFb * RiB / ( 1.0_RP + LFb * LFdm * C0_02 * sqrt(  2.0_RP/Z0M ) * sqrt( abs( RiB ) ) )
-      fh02 = 1.0_RP - LFb * RiB / ( 1.0_RP + LFb * LFdh * C0_02 * sqrt(  2.0_RP/Z0M ) * sqrt( abs( RiB ) ) )
+      fm = 1.0_RP - LFb * RiB / ( 1.0_RP + LFb * LFdm * C0 * sqrt( Za/Z0M ) * sqrt( abs( RiB ) ) )
+      fh = 1.0_RP - LFb * RiB / ( 1.0_RP + LFb * LFdh * C0 * sqrt( Za/Z0M ) * sqrt( abs( RiB ) ) )
     end if
 
     t0th = 1.0_RP / ( 1.0_RP + log( Z0M/Z0H ) / log( Za/Z0M ) / sqrt( fm ) * fh )
@@ -269,30 +248,18 @@ contains
     Ch = C0 * fh * t0th / tPrn
     Ce = C0 * fh * q0qe / tPrn
 
-    R10m = log( 10.0_RP/Z0M ) / log( Za/Z0M ) / sqrt( fm10 / fm )
-    R02h = ( log( Z0M/Z0H ) / log( Za/Z0M ) + sqrt( fm02 ) / fh02 * log( 2.0_RP/Z0M ) ) &
-         / ( log( Z0M/Z0H ) / log( Za/Z0M ) + sqrt( fm   ) / fh   * log(     Za/Z0M ) )
-    R02e = ( log( Z0M/Z0E ) / log( Za/Z0M ) + sqrt( fm02 ) / fh02 * log( 2.0_RP/Z0M ) ) &
-         / ( log( Z0M/Z0E ) / log( Za/Z0M ) + sqrt( fm   ) / fh   * log(     Za/Z0M ) )
-
     Cm = min( max( Cm, Cm_min ), Cm_max )
     Ch = min( max( Ch, Ch_min ), Ch_max )
     Ce = min( max( Ce, Ce_min ), Ce_max )
 
-    R10m = min( max( R10m, 0.0_RP ), 1.0_RP )
-    R02h = min( max( R02h, 0.0_RP ), 1.0_RP )
-    R02e = min( max( R02e, 0.0_RP ), 1.0_RP )
-
     return
   end subroutine CPL_bulkcoef_uno
 
+  !-----------------------------------------------------------------------------
   subroutine CPL_bulkcoef_beljaars( &
       Cm,   & ! (out)
       Ch,   & ! (out)
       Ce,   & ! (out)
-      R10m, & ! (out)
-      R02h, & ! (out)
-      R02e, & ! (out)
       Ta,   & ! (in)
       Ts,   & ! (in)
       Pa,   & ! (in)
@@ -312,9 +279,6 @@ contains
     real(RP), intent(out) :: Cm   ! momentum bulk coefficient [no unit]
     real(RP), intent(out) :: Ch   ! heat bulk coefficient [no unit]
     real(RP), intent(out) :: Ce   ! moisture bulk coefficient [no unit]
-    real(RP), intent(out) :: R10m ! lapse rate for 10m momentum [0-1]
-    real(RP), intent(out) :: R02h ! lapse rate for 2m heat [0-1]
-    real(RP), intent(out) :: R02e ! lapse rate for 2m moisture [0-1]
 
     real(RP), intent(in) :: Ta  ! tempearature at the lowest atmospheric layer [K]
     real(RP), intent(in) :: Ts  ! skin temperature [K]
@@ -344,12 +308,6 @@ contains
     real(RP) :: dCmUS, dChUS, dCeUS
     real(RP) :: dCmS, dChS, dCeS
     real(RP) :: sw
-    real(RP) :: fm, fh
-    real(RP) :: fmUS, fhUS
-    real(RP) :: fmS, fhS
-    real(RP) :: fm10, fm02, fh02
-    real(RP) :: fmUS10, fmUS02, fhUS02
-    real(RP) :: fmS10, fmS02, fhS02
     !---------------------------------------------------------------------------
 
     RiB0 = GRAV * Za * ( Ta*(Ps/Pa)**RovCP - Ts ) / ( Ta*(Ps/Pa)**RovCP * max(Ua,U_min)**2 )
@@ -426,40 +384,10 @@ contains
     ! update bulk Richardson nubmer
     RiB = Za * Cm**1.5_RP / ( L * KARMAN * Ch )
 
-    ! unstable condition
-    fmUS   = fm_unstable(      Za, L )
-    fhUS   = fh_unstable(      Za, L )
-    fmUS10 = fm_unstable( 10.0_RP, L )
-    fmUS02 = fm_unstable(  2.0_RP, L )
-    fhUS02 = fh_unstable(  2.0_RP, L )
-    ! stable condition
-    fmS   = fm_stable(      Za, L )
-    fhS   = fh_stable(      Za, L )
-    fmS10 = fm_stable( 10.0_RP, L )
-    fmS02 = fm_stable(  2.0_RP, L )
-    fhS02 = fh_stable(  2.0_RP, L )
-
-    sw = 0.5_RP - sign( 0.5_RP, L ) ! if unstable, sw = 1
-
-    fm   = ( sw ) * fmUS   + ( 1.0_RP-sw ) * fmS
-    fh   = ( sw ) * fhUS   + ( 1.0_RP-sw ) * fhS
-    fm10 = ( sw ) * fmUS10 + ( 1.0_RP-sw ) * fmS10
-    fm02 = ( sw ) * fmUS02 + ( 1.0_RP-sw ) * fmS02
-    fh02 = ( sw ) * fhUS02 + ( 1.0_RP-sw ) * fhS02
-
-    R10m = log( 10.0_RP/Z0M ) / log( Za/Z0M ) / sqrt( fm10 / fm )
-    R02h = ( log( Z0M/Z0H ) / log( Za/Z0M ) + sqrt( fm02 ) / fh02 * log( 2.0_RP/Z0M ) ) &
-         / ( log( Z0M/Z0H ) / log( Za/Z0M ) + sqrt( fm   ) / fh   * log(     Za/Z0M ) )
-    R02e = ( log( Z0M/Z0E ) / log( Za/Z0M ) + sqrt( fm02 ) / fh02 * log( 2.0_RP/Z0M ) ) &
-         / ( log( Z0M/Z0E ) / log( Za/Z0M ) + sqrt( fm   ) / fh   * log(     Za/Z0M ) )
-
-    R10m = min( max( R10m, 0.0_RP ), 1.0_RP )
-    R02h = min( max( R02h, 0.0_RP ), 1.0_RP )
-    R02e = min( max( R02e, 0.0_RP ), 1.0_RP )
-
     return
   end subroutine CPL_bulkcoef_beljaars
 
+  !-----------------------------------------------------------------------------
   ! stability function for momemtum in unstable condition
   function fm_unstable( Z, L )
     use scale_const, only: &
@@ -489,6 +417,7 @@ contains
     return
   end function fm_unstable
 
+  !-----------------------------------------------------------------------------
   ! stability function for heat/vapor in unstable condition
   function fh_unstable( Z, L )
     use scale_const, only: &
@@ -514,6 +443,7 @@ contains
     return
   end function fh_unstable
 
+  !-----------------------------------------------------------------------------
   ! stability function for momemtum in stable condition
   function fm_stable( Z, L )
     use scale_const, only: &
@@ -545,6 +475,7 @@ contains
     return
   end function fm_stable
 
+  !-----------------------------------------------------------------------------
   ! stability function for heat/vapor in stable condition
   function fh_stable( Z, L )
     use scale_const, only: &

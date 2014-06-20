@@ -204,10 +204,13 @@ contains
        LAND_RESTART_OUTPUT = .false.
     endif
 
-
+    ! Read land property table
+    allocate( LAND_PROPERTY_table(LANDUSE_PFT_nmax,LAND_PROPERTY_nmax) )
+    LAND_PROPERTY_table(:,:) = CONST_UNDEF
 
     call LAND_param_read
 
+    ! Apply land property to 2D map
     allocate( LAND_PROPERTY(IA,JA,LAND_PROPERTY_nmax) )
 
     ! tentative, mosaic is off
@@ -493,9 +496,6 @@ contains
     integer :: n
     integer :: ierr
     !---------------------------------------------------------------------------
-
-    allocate( LAND_PROPERTY_table(LANDUSE_PFT_nmax,LAND_PROPERTY_nmax) )
-    LAND_PROPERTY_table(:,:) = CONST_UNDEF
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** [LAND ] vegetation parameters'
