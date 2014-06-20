@@ -85,6 +85,8 @@ module mod_land_vars
 
   logical,                private :: LAND_VARS_CHECKRANGE      = .false.
 
+  integer,                private :: LAND_NUM_IDX              = 1              !< # of land indices
+
   integer,                private, parameter :: VMAX            = 5 !< number of the variables
   integer,                private, parameter :: I_TEMP          = 1
   integer,                private, parameter :: I_WATER         = 2
@@ -112,9 +114,7 @@ module mod_land_vars
                   '0-1',   &
                   '0-1'    /
 
-  integer,  private, parameter :: LAND_NUM_IDX = 2 ! # of land indices
-
-  real(RP), private            :: LAND_PROPERTY_table(LAND_NUM_IDX,LAND_PROPERTY_nmax)
+  real(RP), private, allocatable :: LAND_PROPERTY_table(:,:)
 
   integer,  private              :: LAND_QA_comm
   real(RP), private, allocatable :: work_comm(:,:,:) ! for communication
@@ -141,7 +141,8 @@ contains
        LAND_RESTART_OUT_BASENAME, &
        LAND_RESTART_OUT_TITLE,    &
        LAND_RESTART_OUT_DTYPE,    &
-       LAND_VARS_CHECKRANGE
+       LAND_VARS_CHECKRANGE,      &
+       LAND_NUM_IDX
 
     integer :: ierr
     integer :: i, j, iv, p
@@ -206,7 +207,7 @@ contains
        LAND_RESTART_OUTPUT = .false.
     endif
 
-
+    allocate( LAND_PROPERTY_table( LAND_NUM_IDX, LAND_PROPERTY_nmax ) )
 
     call LAND_param_read
 
