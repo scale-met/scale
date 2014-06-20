@@ -53,12 +53,16 @@ contains
        CDX => GRID_CDX, &
        CDY => GRID_CDY, &
        CZ  => GRID_CZ
-    use scale_atmos_phy_tb, only: &
-       ATMOS_PHY_TB_setup
     use mod_atmos_admin, only: &
        ATMOS_PHY_TB_TYPE, &
        ATMOS_sw_phy_tb
+    use scale_atmos_phy_tb, only: &
+       ATMOS_PHY_TB_setup
+    use mod_atmos_phy_tb_vars, only: &
+       MOMZ_t_TB => ATMOS_PHY_TB_MOMZ_t
     implicit none
+
+    integer :: i, j
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -76,6 +80,13 @@ contains
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** this component is never called.'
     endif
+
+    do j = JS, JE
+    do i = IS, IE
+       MOMZ_t_TB(KS-1,i,j) = 0.0_RP
+       MOMZ_t_TB(KE  ,i,j) = 0.0_RP
+    enddo
+    enddo
 
     return
   end subroutine ATMOS_PHY_TB_driver_setup
@@ -201,6 +212,7 @@ contains
           enddo
           enddo
           enddo
+
           do j = JJS, JJE
           do i = IIS, IIE
              MOMZ_t_TB(KS,i,j) = - ( ( GSQRT(KS,i  ,j,I_UYW) * QFLX_MOMZ(KS,i  ,j,XDIR) &
@@ -415,6 +427,11 @@ contains
           call HIST_in( NU (:,:,:), 'NU',  'eddy viscosity',           'm2/s',  dt_TB )
           call HIST_in( Ri (:,:,:), 'Ri',  'Richardson number',        'NIL',   dt_TB )
           call HIST_in( Pr (:,:,:), 'Pr',  'Prantle number',           'NIL',   dt_TB )
+
+          call HIST_in( MOMZ_t_TB(:,:,:), 'MOMZ_t_TB', 'MOMZ tendency (TB)', 'kg/m2/s2', dt_TB )
+          call HIST_in( MOMX_t_TB(:,:,:), 'MOMX_t_TB', 'MOMX tendency (TB)', 'kg/m2/s2', dt_TB )
+          call HIST_in( MOMY_t_TB(:,:,:), 'MOMY_t_TB', 'MOMY tendency (TB)', 'kg/m2/s2', dt_TB )
+          call HIST_in( RHOT_t_TB(:,:,:), 'RHOT_t_TB', 'RHOT tendency (TB)', 'kg/m2/s2', dt_TB )
 
           call HIST_in( QFLX_MOMZ(:,:,:,ZDIR), 'SGS_ZFLX_MOMZ', 'SGS Z FLUX of MOMZ', 'kg/m/s2', dt_TB, zdim='half')
           call HIST_in( QFLX_MOMZ(:,:,:,XDIR), 'SGS_XFLX_MOMZ', 'SGS X FLUX of MOMZ', 'kg/m/s2', dt_TB, xdim='half')
