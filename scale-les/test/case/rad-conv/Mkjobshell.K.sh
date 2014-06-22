@@ -35,7 +35,7 @@ cat << EOF1 > ./run.sh
 ################################################################################
 #PJM --rsc-list "rscgrp=${rscgrp}"
 #PJM --rsc-list "node=${TPROC}"
-#PJM --rsc-list "elapse=01:00:00"
+#PJM --rsc-list "elapse=08:00:00"
 #PJM --stg-transfiles all
 #PJM --mpi "use-rankdir"
 #PJM --stgin  "rank=* ${BINDIR}/${INITNAME} %r:./"
