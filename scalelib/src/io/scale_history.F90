@@ -507,7 +507,9 @@ contains
        call HistoryPut(itemid, var2(1:isize*jsize), dt)
 
     else
-       if ( zinterp .AND. INTERP_available ) then
+       if (       ksize == KMAX    &
+            .AND. zinterp          &
+            .AND. INTERP_available ) then
           call PROF_rapstart('FILE O Interpolation')
           call INTERP_vertical_xi2z( var  (:,:,:), & ! [IN]
                                      var_Z(:,:,:)  ) ! [OUT]
