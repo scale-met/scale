@@ -188,6 +188,12 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Urban step: UCM'
 
+    do j = JS, JE
+    do i = IS, IE
+       URBAN_TEMP_t(i,j) = 0.0_RP
+    enddo
+    enddo
+
     return
   end subroutine URBAN_PHY_ucm
 
