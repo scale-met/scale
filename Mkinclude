@@ -31,6 +31,10 @@ ifeq ($(ENABLE_PAPI),T)
       PAPI_LIBS    = -L$(PAPI)/lib -lpapi
 endif
 
+ifneq ($(USE_NETCDF3),)
+      CFLAGS += -DNETCDF3
+endif
+
 ifeq ($(ENABLE_FIXEDINDEX),T)
       FFLAGS += -D_FIXEDINDEX_
       inc_index = $(INDEX_DIR)/inc_index.h

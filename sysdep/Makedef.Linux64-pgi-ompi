@@ -40,23 +40,12 @@ FC     = mpif90
 FFLAGS = $(FFLAGS_FAST)
 #FFLAGS = $(FFLAGS_DEBUG)
 
-ifneq ($(ENABLE_OPENMP),)
-      FFLAGS += -openmp -openmp-report
-endif
-ifneq ($(ENABLE_PAPI),)
-      FFLAGS += -D_PAPI_
-      PAPI_INCLUDE = -I$(PAPI)/include
-      PAPI_LIBS    = -L$(PAPI)/lib -lpapi
-endif
+FFLAGS_DYN ?= $(FFLAGS)
 
 MODDIROPT ?= -module
 
 CC     = mpicc
 CFLAGS = -fastsse -mcmodel=medium
-
-ifneq ($(USE_NETCDF3),)
-      CFLAGS += -DNETCDF3
-endif
 
 LD      = $(FC)
 LDFLAGS = $(FFLAGS)

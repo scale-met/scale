@@ -25,23 +25,11 @@ FFLAGS_DYN ?= $(FFLAGS)
 ifneq ($(DISABLE_VEC),)
       FFLAGS += -no-vec
 endif
-ifneq ($(ENABLE_OPENMP),)
-      FFLAGS += -openmp -openmp-report
-endif
-ifneq ($(ENABLE_PAPI),)
-      FFLAGS += -D_PAPI_
-      PAPI_INCLUDE = -I$(PAPI)/include
-      PAPI_LIBS    = -L$(PAPI)/lib -lpapi
-endif
 
 MODDIROPT ?= -module
 
 CC     = mpiicc
 CFLAGS = -O3 -xHost -ip -ftz -mcmodel=medium -shared-intel
-
-ifneq ($(USE_NETCDF3),)
-      CFLAGS += -DNETCDF3
-endif
 
 LD      = $(FC)
 LDFLAGS = $(FFLAGS)

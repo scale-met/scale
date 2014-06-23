@@ -7,6 +7,9 @@ BINNAME=${3}
 INITCONF=${4}
 RUNCONF=${5}
 TPROC=${6}
+DATDIR=${7}
+DATPARAM=(`echo ${8} | tr -s ',' ' '`)
+DATDISTS=(`echo ${9} | tr -s ',' ' '`)
 
 # System specific
 MPIEXEC="mpiexec"
@@ -42,6 +45,33 @@ cat << EOF1 > ./run.sh
 #PJM --stgin  "rank=* ${BINDIR}/${BINNAME}  %r:./"
 #PJM --stgin  "rank=*         ./${INITCONF} %r:./"
 #PJM --stgin  "rank=*         ./${RUNCONF}  %r:./"
+EOF1
+
+if [ ! ${DATPARAM[0]} = "" ]; then
+   for f in ${DATPARAM[@]}
+   do
+         if [ -f ${DATDIR}/${f} ]; then
+            echo "#PJM --stgin  'rank=* ${DATDIR}/${f} %r:./'" >> ./run.sh
+         else
+            echo "datafile does not found! : ${DATDIR}/${f}"
+            exit 1
+         fi
+   done
+fi
+
+if [ ! ${DATDISTS[0]} = "" ]; then
+   for f in ${DATDISTS[@]}
+   do
+      if [ -f ${DATDIR}/${f}.pe000000 ]; then
+         echo "#PJM --stgin  'rank=* ${DATDIR}/${f}.pe%06r %r:./'" >> ./run.sh
+      else
+         echo "datafile does not found! : ${DATDIR}/${f}.pe000000"
+         exit 1
+      fi
+   done
+fi
+
+cat << EOF2 >> ./run.sh
 #PJM --stgout "rank=* %r:./*      ./"
 #PJM -j
 #PJM -s
@@ -57,4 +87,4 @@ ${MPIEXEC} ./${INITNAME} ${INITCONF} || exit
 ${MPIEXEC} ./${BINNAME}  ${RUNCONF}  || exit
 
 ################################################################################
-EOF1
+EOF2

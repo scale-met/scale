@@ -34,10 +34,6 @@ MODDIROPT ?= -to
 CC     = sxmpic++
 CFLAGS = -C vsafe
 
-ifneq ($(USE_NETCDF3),)
-      CFLAGS += -DNETCDF3
-endif
-
 LD      = $(FC)
 LDFLAGS = $(FFLAGS)
 

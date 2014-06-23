@@ -7,6 +7,9 @@ BINNAME=${3}
 INITCONF=${4}
 RUNCONF=${5}
 TPROC=${6}
+DATDIR=${7}
+DATPARAM=(`echo ${8} | tr -s ',' ' '`)
+DATDISTS=(`echo ${9} | tr -s ',' ' '`)
 
 # System specific
 MPIEXEC="mpiexec"
@@ -35,17 +38,40 @@ cat << EOF1 > ./run.sh
 ################################################################################
 #PJM --rsc-list "rscgrp=${rscgrp}"
 #PJM --rsc-list "node=${TPROC}"
-#PJM --rsc-list "elapse=01:00:00"
+#PJM --rsc-list "elapse=02:00:00"
 #PJM --stg-transfiles all
 #PJM --mpi "use-rankdir"
 #PJM --stgin  "rank=* ${BINDIR}/${INITNAME} %r:./"
 #PJM --stgin  "rank=* ${BINDIR}/${BINNAME}  %r:./"
-#PJM --stgin  "rank=* rad_o3_profs.txt      %r:./"
-#PJM --stgin  "rank=* ../../../data/PARAG.29     %r:./"
-#PJM --stgin  "rank=* ../../../data/PARAPC.29    %r:./"
-#PJM --stgin  "rank=* ../../../data/VARDATA.RM29 %r:./"
 #PJM --stgin  "rank=*         ./${INITCONF} %r:./"
 #PJM --stgin  "rank=*         ./${RUNCONF}  %r:./"
+EOF1
+
+if [ ! ${DATPARAM[0]} = "" ]; then
+   for f in ${DATPARAM[@]}
+   do
+         if [ -f ${DATDIR}/${f} ]; then
+            echo "#PJM --stgin  'rank=* ${DATDIR}/${f} %r:./'" >> ./run.sh
+         else
+            echo "datafile does not found! : ${DATDIR}/${f}"
+            exit 1
+         fi
+   done
+fi
+
+if [ ! ${DATDISTS[0]} = "" ]; then
+   for f in ${DATDISTS[@]}
+   do
+      if [ -f ${DATDIR}/${f}.pe000000 ]; then
+         echo "#PJM --stgin  'rank=* ${DATDIR}/${f}.pe%06r %r:./'" >> ./run.sh
+      else
+         echo "datafile does not found! : ${DATDIR}/${f}.pe000000"
+         exit 1
+      fi
+   done
+fi
+
+cat << EOF2 >> ./run.sh
 #PJM --stgout "rank=* %r:./*      ./"
 #PJM --stgout "rank=* %r:./prof/* ./prof/"
 #PJM -j
@@ -60,8 +86,8 @@ export OMP_NUM_THREADS=8
 rm -rf ./prof
 
 # run
-                              ${MPIEXEC} ./${INITNAME} ${INITCONF} || exit
+${MPIEXEC} ./${INITNAME} ${INITCONF} || exit
 fipp -C -Srange -Ihwm -d prof ${MPIEXEC} ./${BINNAME}  ${RUNCONF}  || exit
 
 ################################################################################
-EOF1
+EOF2

@@ -98,10 +98,10 @@ module scale_grid
   real(RP),              private :: GRID_OFFSET_X     = 0.0_RP
   real(RP),              private :: GRID_OFFSET_Y     = 0.0_RP
 
-  real(RP), private :: BUFFER_DZ = 5000.0_RP ! thickness of buffer region [m]: z
-  real(RP), private :: BUFFER_DX =    0.0_RP ! thickness of buffer region [m]: x
-  real(RP), private :: BUFFER_DY =    0.0_RP ! thickness of buffer region [m]: y
-  real(RP), private :: BUFFFACT  =    1.1_RP ! strech factor for dx/dy/dz of buffer region
+  real(RP), private :: BUFFER_DZ = 0.0_RP ! thickness of buffer region [m]: z
+  real(RP), private :: BUFFER_DX = 0.0_RP ! thickness of buffer region [m]: x
+  real(RP), private :: BUFFER_DY = 0.0_RP ! thickness of buffer region [m]: y
+  real(RP), private :: BUFFFACT  = 1.0_RP ! strech factor for dx/dy/dz of buffer region
 
   !-----------------------------------------------------------------------------
 contains

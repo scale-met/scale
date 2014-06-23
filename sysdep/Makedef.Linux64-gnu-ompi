@@ -33,12 +33,6 @@ FFLAGS = $(FFLAGS_DEBUG)
 
 FFLAGS_DYN = $(FFLAGS)
 
-ifneq ($(ENABLE_PAPI),)
-      FFLAGS += -D_PAPI_
-      PAPI_INCLUDE = -I$(PAPI)/include
-      PAPI_LIBS    = -L$(PAPI)/lib -lpapi
-endif
-
 CC     = gcc
 CFLAGS = -O3 -m64
 

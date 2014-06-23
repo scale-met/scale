@@ -7,6 +7,9 @@ BINNAME=${3}
 INITCONF=${4}
 RUNCONF=${5}
 TPROC=${6}
+DATDIR=${7}
+DATPARAM=(`echo ${8} | tr -s ',' ' '`)
+DATDISTS=(`echo ${9} | tr -s ',' ' '`)
 
 # System specific
 MPIEXEC="mpirun -nnp ${TPROC} /usr/lib/mpi/mpisep.sh"
@@ -30,7 +33,6 @@ cat << EOF1 > ./run.sh
 
 #PBS -v F_RECLUNIT=byte
 #PBS -v F_ERRCNT=0
-##PBS -v F_FTRACE=FMT1
 #PBS -v F_PROGINF=DETAIL
 #PBS -v MPIPROGINF=ALL_DETAIL
 #PBS -v F_SETBUF=102400

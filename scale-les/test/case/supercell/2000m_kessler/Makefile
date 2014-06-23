@@ -8,19 +8,21 @@ PWD         = $(shell pwd)
 TOPDIR      = $(abspath ../../../../..)
 TESTDIR     = ../../..
 
-# for build
-index      = 2000m60x25x25
-precision  = real8
-dynamics   = heve
-tracer     = sn14
-sfcflx     = const
-turbulence = dummy
-radiation  = dummy
 
-# for run
-INITCONF  = init.conf
-RUNCONF   = run.conf
-TPROC     = 9
+# user-defined source files
+CODE_DIR    = .
+ORG_SRCS    =
+
+# parameters for run
+INITCONF    = init.conf
+RUNCONF     = run.conf
+TPROC       = 9
+
+# required data (parameters,distributed files)
+DATDIR      = ../../../data
+DATPARAM    = input_sounding/supercell.txt
+DATDISTS    =
+
 
 
 # build, makedir, run, jobshell, allclean, clean is inside of common Makefile
