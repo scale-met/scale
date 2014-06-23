@@ -28,14 +28,10 @@ module scale_land_grid_index
   !
   !++ Public parameters & variables
   !
-#ifdef FIXED_INDEX
-  include "inc_index.h"
-#else
   integer, public :: LKMAX = 1 ! # of computational cells: z for land
 
   integer, public :: LKS       ! start point of inner domain: z for land, local
   integer, public :: LKE       ! end   point of inner domain: z for land, local
-#endif
 
   !-----------------------------------------------------------------------------
   !
@@ -54,10 +50,8 @@ contains
        PRC_MPIstop
     implicit none
 
-#ifndef FIXED_INDEX
     namelist / PARAM_LAND_INDEX / &
        LKMAX
-#endif
 
     integer :: ierr
     !---------------------------------------------------------------------------
@@ -65,11 +59,6 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[GRID_INDEX] / Categ[LAND GRID] / Origin[SCALElib]'
 
-#ifdef FIXED_INDEX
-    if( IO_L ) write(IO_FID_LOG,*) '*** No namelists.'
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** fixed index mode'
-#else
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_LAND_INDEX,iostat=ierr)
@@ -83,7 +72,6 @@ contains
 
     LKS  = 1
     LKE  = LKMAX
-#endif
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** Land grid index information ***'

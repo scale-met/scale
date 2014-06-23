@@ -4,14 +4,9 @@
 #
 ################################################################################
 
-include $(TOPDIR)/Mkinclude
-include $(SYSDEP_DIR)/Makedef.$(SCALE_SYS)
-
-BUILD_DIR := $(PWD)/.libs
-INDEX_DIR := $(PWD)
-
-BINDIR     = $(PWD)
-SRCDIR     = $(SCALELESDIR)/src
+ifeq ($(origin SYSDEP_DIR), undefined)
+   SYSDEP_DIR = $(TOPDIR)/sysdep
+endif
 
 ifeq ($(origin BINNAME), undefined)
    BINNAME = scale-les
@@ -21,44 +16,27 @@ ifeq ($(origin INITNAME), undefined)
    INITNAME = scale-les_init
 endif
 
+BUILD_DIR := $(PWD)/.libs
+INDEX_DIR := $(PWD)
+BINDIR     = $(PWD)
+
+include $(SYSDEP_DIR)/Makedef.$(SCALE_SYS)
+include $(TOPDIR)/Mkinclude
+
 $(BUILD_DIR)/%.f90: $(CODE_DIR)/%.f90
 	cp -f $< $@
 
-build: makedir $(patsubst %,$(BUILD_DIR)/%,$(ORG_SRCS))
-	$(MAKE) -C $(SRCDIR) BINDIR=$(BINDIR)         \
-                        BUILD_DIR=$(BUILD_DIR)   \
-                        SYSDEP_DIR=$(SYSDEP_DIR) \
-                        index=$(index)           \
-                        precision=$(precision)   \
-                        tracer=$(tracer)         \
-                        dynamics=$(dynamics)     \
-                        sfcflx=$(sfcflx)         \
-                        turbulence=$(turbulence) \
-                        radiation=$(radiation)   \
-                        postfix=$(postfix)
-
-dcutils:
-	$(MAKE) -C $(SRCDIR) dcutils SYSDEP_DIR=$(SYSDEP_DIR)
-
-gtool:
-	$(MAKE) -C $(SRCDIR) gtool   SYSDEP_DIR=$(SYSDEP_DIR)
-
-scalelib:
-	$(MAKE) -C $(SRCDIR) scalelib                 \
-                        BINDIR=$(BINDIR)         \
-                        BUILD_DIR=$(BUILD_DIR)   \
-                        SYSDEP_DIR=$(SYSDEP_DIR) \
-                        index=$(index)           \
-                        precision=$(precision)   \
-                        tracer=$(tracer)         \
-                        dynamics=$(dynamics)     \
-                        sfcflx=$(sfcflx)         \
-                        turbulence=$(turbulence) \
-                        radiation=$(radiation)   \
-                        postfix=$(postfix)
-
-makedir:
+build: $(patsubst %,$(BUILD_DIR)/%,$(ORG_SRCS))
 	mkdir -p $(BUILD_DIR)
+	$(MAKE) -C $(SCALELESDIR)/src SYSDEP_DIR=$(SYSDEP_DIR) \
+                                 BUILD_DIR=$(BUILD_DIR)   \
+                                 INDEX_DIR=$(INDEX_DIR)   \
+                                 BINDIR=$(BINDIR)         \
+                                 dynamics=$(dynamics)     \
+                                 sfcflx=$(sfcflx)         \
+                                 turbulence=$(turbulence) \
+                                 radiation=$(radiation)   \
+                                 postfix=$(postfix)
 
 run: jobshell
 	$(JOBSUB) run.sh
@@ -75,18 +53,18 @@ jobshell:
 .PHONY: allclean distclean clean
 
 allclean: distclean clean
-	$(MAKE) -C $(SRCDIR) allclean BINDIR=$(BINDIR)         \
-                                 BUILD_DIR=$(BUILD_DIR)   \
-                                 SYSDEP_DIR=$(SYSDEP_DIR)
+	$(MAKE) -C $(SCALELESDIR)/src allclean BINDIR=$(BINDIR)         \
+                                          BUILD_DIR=$(BUILD_DIR)   \
+                                          SYSDEP_DIR=$(SYSDEP_DIR)
 
 distclean: clean
-	$(MAKE) -C $(SRCDIR) distclean BINDIR=$(BINDIR)         \
-                                  BUILD_DIR=$(BUILD_DIR)   \
-                                  SYSDEP_DIR=$(SYSDEP_DIR)
+	$(MAKE) -C $(SCALELESDIR)/src distclean BINDIR=$(BINDIR)         \
+                                           BUILD_DIR=$(BUILD_DIR)   \
+                                           SYSDEP_DIR=$(SYSDEP_DIR)
 	rm -f *.nc *LOG.pe* monitor.pe* latlon* run.sh
 
 clean:
-	$(MAKE) -C $(SRCDIR) clean BINDIR=$(BINDIR)         \
-                              BUILD_DIR=$(BUILD_DIR)   \
-                              SYSDEP_DIR=$(SYSDEP_DIR)
+	$(MAKE) -C $(SCALELESDIR)/src clean BINDIR=$(BINDIR)         \
+                                       BUILD_DIR=$(BUILD_DIR)   \
+                                       SYSDEP_DIR=$(SYSDEP_DIR)
 

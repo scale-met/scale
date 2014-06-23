@@ -32,40 +32,41 @@ module scale_grid_index
   !
   !++ Public parameters & variables
   !
-  integer, public, parameter :: KHALO = 2 ! # of halo cells: z
-  integer, public, parameter :: IHALO = 2 ! # of halo cells: x
-  integer, public, parameter :: JHALO = 2 ! # of halo cells: y
-
   integer, public, parameter :: ZDIR  = 1
   integer, public, parameter :: XDIR  = 2
   integer, public, parameter :: YDIR  = 3
 
-#ifdef FIXED_INDEX
+#ifdef _FIXEDINDEX_
   include "inc_index.h"
+  include "inc_index_common.h"
 #else
-  integer, public            :: KMAX =   -1 !< # of computational cells: z
-  integer, public            :: IMAX =   -1 !< # of computational cells: x
-  integer, public            :: JMAX =   -1 !< # of computational cells: y
+  integer, public :: KMAX   = -1 !< # of computational cells: z
+  integer, public :: IMAX   = -1 !< # of computational cells: x
+  integer, public :: JMAX   = -1 !< # of computational cells: y
 
-  integer, public            :: IBLOCK = -1 !< block size for cache blocking: x
-  integer, public            :: JBLOCK = -1 !< block size for cache blocking: y
+  integer, public :: IBLOCK = -1 !< block size for cache blocking: x
+  integer, public :: JBLOCK = -1 !< block size for cache blocking: y
 
-  integer, public            :: KA          !< # of z whole cells (local, with HALO)
-  integer, public            :: IA          !< # of x whole cells (local, with HALO)
-  integer, public            :: JA          !< # of y whole cells (local, with HALO)
+  integer, public :: KHALO  = 2  !< # of halo cells: z
+  integer, public :: IHALO  = 2  !< # of halo cells: x
+  integer, public :: JHALO  = 2  !< # of halo cells: y
 
-  integer, public            :: KS          !< start point of inner domain: z, local
-  integer, public            :: KE          !< end   point of inner domain: z, local
-  integer, public            :: IS          !< start point of inner domain: x, local
-  integer, public            :: IE          !< end   point of inner domain: x, local
-  integer, public            :: JS          !< start point of inner domain: y, local
-  integer, public            :: JE          !< end   point of inner domain: y, local
+  integer, public :: KA          !< # of z whole cells (local, with HALO)
+  integer, public :: IA          !< # of x whole cells (local, with HALO)
+  integer, public :: JA          !< # of y whole cells (local, with HALO)
+
+  integer, public :: KS          !< start point of inner domain: z, local
+  integer, public :: KE          !< end   point of inner domain: z, local
+  integer, public :: IS          !< start point of inner domain: x, local
+  integer, public :: IE          !< end   point of inner domain: x, local
+  integer, public :: JS          !< start point of inner domain: y, local
+  integer, public :: JE          !< end   point of inner domain: y, local
 #endif
 
-  integer, public            :: ISG         !< start point of the inner domain: x, global
-  integer, public            :: IEG         !< end   point of the inner domain: x, global
-  integer, public            :: JSG         !< start point of the inner domain: y, global
-  integer, public            :: JEG         !< end   point of the inner domain: y, global
+  integer, public :: ISG         !< start point of the inner domain: x, global
+  integer, public :: IEG         !< end   point of the inner domain: x, global
+  integer, public :: JSG         !< start point of the inner domain: y, global
+  integer, public :: JEG         !< end   point of the inner domain: y, global
 
   !-----------------------------------------------------------------------------
   !
@@ -88,7 +89,7 @@ contains
        PRC_NUM_Y
     implicit none
 
-#ifndef FIXED_INDEX
+#ifndef _FIXEDINDEX_
     namelist / PARAM_INDEX / &
        KMAX,   &
        IMAX,   &
@@ -103,7 +104,7 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[GRID_INDEX] / Categ[ATMOS-LES GRID] / Origin[SCALElib]'
 
-#ifdef FIXED_INDEX
+#ifdef _FIXEDINDEX_
     if( IO_L ) write(IO_FID_LOG,*) '*** No namelists.'
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** fixed index mode'

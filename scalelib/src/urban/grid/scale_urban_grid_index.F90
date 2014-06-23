@@ -28,14 +28,10 @@ module scale_urban_grid_index
   !
   !++ Public parameters & variables
   !
-#ifdef FIXED_INDEX
-  include "inc_index.h"
-#else
   integer, public :: UKMAX = 1 ! # of computational cells: z for urban
 
   integer, public :: UKS       ! start point of inner domain: z for urban, local
   integer, public :: UKE       ! end   point of inner domain: z for urban, local
-#endif
 
   !-----------------------------------------------------------------------------
   !
@@ -54,10 +50,8 @@ contains
        PRC_MPIstop
     implicit none
 
-#ifndef FIXED_INDEX
     namelist / PARAM_URBAN_INDEX / &
        UKMAX
-#endif
 
     integer :: ierr
     !---------------------------------------------------------------------------
@@ -65,11 +59,6 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[GRID_INDEX] / Categ[URBAN GRID] / Origin[SCALElib]'
 
-#ifdef FIXED_INDEX
-    if( IO_L ) write(IO_FID_LOG,*) '*** No namelists.'
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** fixed index mode'
-#else
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_URBAN_INDEX,iostat=ierr)
@@ -83,7 +72,6 @@ contains
 
     UKS  = 1
     UKE  = UKMAX
-#endif
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** Urban grid index information ***'

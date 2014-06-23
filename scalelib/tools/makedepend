@@ -52,11 +52,11 @@ parse(deps, pros, srcdir)
 
 File.open( File.join(srcdir, "depend"), "w" ) do |file|
   deps.sort.each do |name, dep|
-    file.print "$(BUILD_DIR)/#{name}.o: #{dep[:dir]}/#{name}.F90 $(DEPENDLIB)"
-#    file.print "$(BUILD_DIR)/#{name}.o: $(BUILD_DIR)/#{name}.f90"
+    file.print "#{name}.o: #{dep[:dir]}/#{name}.F90 $(inc_index) $(DEPENDLIB)"
+#    file.print "#{name}.o: #{name}.f90"
     dep[:depends].sort.each do |mod|
       if pro = pros[mod]
-        file.print " $(BUILD_DIR)/#{pro[:file]}.o"
+        file.print " #{pro[:file]}.o"
       else
         p name
         p mod

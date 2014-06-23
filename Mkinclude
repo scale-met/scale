@@ -10,13 +10,30 @@ ifeq ($(origin MODDIR), undefined)
    MODDIR = $(TOPDIR)/include
 endif
 
-ifeq ($(origin SYSDEP_DIR), undefined)
-   SYSDEP_DIR = $(TOPDIR)/sysdep
-endif
-
 GTOOLDIR    = $(TOPDIR)/gtool
 DCUTILSDIR  = $(TOPDIR)/dc_utils
 SCALELIBDIR = $(TOPDIR)/scalelib
 
 SCALELESDIR = $(TOPDIR)/scale-les
 SCALEGMDIR  = $(TOPDIR)/scale-gm
+
+ifeq ($(origin INDEX_DIR), undefined)
+   INDEX_DIR = $(SCALELIBDIR)/include
+endif
+
+ifeq ($(ENABLE_OPENMP),T)
+      FFLAGS += -openmp -openmp-report
+endif
+
+ifeq ($(ENABLE_PAPI),T)
+      FFLAGS += -D_PAPI_
+      PAPI_INCLUDE = -I$(PAPI)/include
+      PAPI_LIBS    = -L$(PAPI)/lib -lpapi
+endif
+
+ifeq ($(ENABLE_FIXEDINDEX),T)
+      FFLAGS += -D_FIXEDINDEX_
+      inc_index = $(INDEX_DIR)/inc_index.h
+else
+      inc_index =
+endif
