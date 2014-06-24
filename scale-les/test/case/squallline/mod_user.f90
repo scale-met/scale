@@ -79,18 +79,18 @@ contains
     implicit none
 
     namelist / PARAM_USER / &
-       USER_do, &
+       USER_do,        &
        FORCE_DURATION, &
-       DT_MAX, &
-       DQ_MAX, &
-       SHIFT_X, &
-       SHIFT_Y, &
-       POOL_CX, &
-       POOL_CY0, &
-       POOL_TOP, &
-       POOL_RX, &
-       POOL_RY, &
-       POOL_DIST, &
+       DT_MAX,         &
+       DQ_MAX,         &
+       SHIFT_X,        &
+       SHIFT_Y,        &
+       POOL_CX,        &
+       POOL_CY0,       &
+       POOL_TOP,       &
+       POOL_RX,        &
+       POOL_RY,        &
+       POOL_DIST,      &
        POOL_NUM
 
     integer :: k
@@ -103,14 +103,13 @@ contains
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_USER,iostat=ierr)
-
     if( ierr < 0 ) then !--- missing
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_USER. Check!'
        call PRC_MPIstop
     endif
-    if( IO_L ) write(IO_FID_LOG,nml=PARAM_USER)
+    if( IO_NML ) write(IO_FID_LOG,nml=PARAM_USER)
 
     if ( USER_do ) then
        if( IO_L ) write(IO_FID_LOG,*) '*** Enable cold pool forcing'
@@ -123,10 +122,9 @@ contains
           if ( CZ(k) > POOL_TOP ) then
              Ktop = k-1
              exit
-          end if
+          endif
        enddo
-
-    end if
+    endif
 
     return
   end subroutine USER_setup
@@ -156,39 +154,46 @@ contains
     real(RP) :: time
     real(RP) :: fact, dist
     real(RP) :: POOL_CY
+
     integer :: k, i, j, n
     !---------------------------------------------------------------------------
 
     if ( USER_do ) then
+
        time = NOWSEC - TIME0
+
        if ( time <= FORCE_DURATION ) then
           do j = JS, JE
           do i = IS, IE
              dt = 0.0_RP
              dq = 0.0_RP
+
              do n = 1, POOL_NUM
                 POOL_CY = POOL_CY0 - real(2*n-POOL_NUM-1) * 0.5 * POOL_DIST
                 dist = ( (CX(i)-POOL_CX+SHIFT_X*time)/POOL_RX )**2 &
                      + ( (CY(j)-POOL_CY+SHIFT_Y*time)/POOL_RY )**2
+
                 if ( dist < 1.0_RP ) then
                    fact = cos( pi2*sqrt(dist) )**2
                    dt = dt + DT_MAX * fact
                    dq = dq + DQ_MAX * fact
-                end if
+                endif
              enddo
+
              do k = KS, Ktop
-                RHOT(k,i,j) = RHOT(k,i,j) &
-                     + dt * DENS(k,i,j) * DTSEC
-                QTRC(k,i,j,I_QV) = QTRC(k,i,j,I_QV) &
-                     + max( dq*DTSEC, -QTRC(k,i,j,I_QV) )
+                RHOT(k,i,j)      = RHOT(k,i,j)      +      dt*DTSEC * DENS(k,i,j)
+                QTRC(k,i,j,I_QV) = QTRC(k,i,j,I_QV) + max( dq*DTSEC, -QTRC(k,i,j,I_QV) )
              enddo
+
           enddo
           enddo
-          call COMM_vars8( RHOT(:,:,:), 1)
+
+          call COMM_vars8( RHOT(:,:,:),      1)
           call COMM_vars8( QTRC(:,:,:,I_QV), 2)
-          call COMM_wait( RHOT(:,:,:), 1)
-          call COMM_wait( QTRC(:,:,:,I_QV), 2)
-       end if
+          call COMM_wait ( RHOT(:,:,:),      1)
+          call COMM_wait ( QTRC(:,:,:,I_QV), 2)
+       endif
+
     endif
 
     return
