@@ -13,10 +13,12 @@ include $(TOPDIR)/Mkinclude
 LIBNAME = libsdm.a 
 
 MODS	= \
+	  m_sdm_memmgr.mod \
 	  m_sdm_numset.mod \
 	  m_sdm_common.mod
 
 OBJS	= \
+	  sdm_memmgr.o \
 	  sdm_numset.o \
 	  sdm_common.o
 
@@ -35,6 +37,12 @@ instmodules:	makemodules
 	install $(MODS) $(MODDIR)
 
 makemodules: $(OBJS)
+
+sdm_memmgr.o: sdm_memmgr.f90 \
+	sdm_common.o \
+	$(BUILD_DIR)/scale_grid_index.o \
+	$(BUILD_DIR)/scale_gridtrans.o
+	$(FC) $(FFLAGS) -I$(BUILD_DIR) -I$(MODDIR) -o $@ -c $<
 
 sdm_numset.o: sdm_numset.f90 \
 	sdm_common.o \
