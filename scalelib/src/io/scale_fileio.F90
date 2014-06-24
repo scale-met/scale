@@ -146,7 +146,8 @@ contains
        fid,  &
        dtype )
     use gtool_file, only: &
-       FilePutAxis,     &
+       FilePutAxis,  &
+       FileSetTAttr, &
        FilePutAssociatedCoordinates
     use scale_grid, only: &
        GRID_CZ,    &
@@ -226,22 +227,6 @@ contains
     call FilePutAxis( fid, 'UFZ',  'Urban Grid Face Position Z',   'm', 'UFZ', dtype, GRID_UFZ )
     call FilePutAxis( fid, 'UCDZ', 'Urban Grid Cell length Z',     'm', 'UCZ', dtype, GRID_UCZ )
 
-    AXIS_name = (/'x ','y '/)
-    call FilePutAssociatedCoordinates( fid, 'lon' , 'longitude'             ,            &
-                                       'degrees_east' , AXIS_name, dtype, AXIS_LON (:,:) )
-
-    AXIS_name = (/'xh','y '/)
-    call FilePutAssociatedCoordinates( fid, 'lon_u', 'longitude (half level)',            &
-                                       'degrees_east' , AXIS_name, dtype, AXIS_LONX(:,:) )
-
-    AXIS_name = (/'x ','y '/)
-    call FilePutAssociatedCoordinates( fid, 'lat' , 'latitude'              ,            &
-                                       'degrees_north', AXIS_name, dtype, AXIS_LAT (:,:) )
-
-    AXIS_name = (/'x ','yh'/)
-    call FilePutAssociatedCoordinates( fid, 'lat_v', 'latitude (half level)' ,            &
-                                       'degrees_north', AXIS_name, dtype, AXIS_LATY(:,:) )
-
     call FilePutAxis( fid, 'CBFZ', 'Boundary factor Center Z', '1', 'CZ', dtype, GRID_CBFZ )
     call FilePutAxis( fid, 'CBFX', 'Boundary factor Center X', '1', 'CX', dtype, GRID_CBFX )
     call FilePutAxis( fid, 'CBFY', 'Boundary factor Center Y', '1', 'CY', dtype, GRID_CBFY )
@@ -258,6 +243,31 @@ contains
     call FilePutAxis( fid, 'CBFYG', 'Boundary factor Center Y (global)', '1', 'CYG', dtype, GRID_CBFYG )
     call FilePutAxis( fid, 'FBFXG', 'Boundary factor Face X (global)',   '1', 'CXG', dtype, GRID_FBFXG )
     call FilePutAxis( fid, 'FBFYG', 'Boundary factor Face Y (global)',   '1', 'CYG', dtype, GRID_FBFYG )
+
+
+    ! associate coordinates
+    AXIS_name = (/'x ','y '/)
+    call FilePutAssociatedCoordinates( fid, 'lon' , 'longitude'             ,            &
+                                       'degrees_east' , AXIS_name, dtype, AXIS_LON (:,:) )
+    AXIS_name = (/'xh','y '/)
+    call FilePutAssociatedCoordinates( fid, 'lon_u', 'longitude (half level)',            &
+                                       'degrees_east' , AXIS_name, dtype, AXIS_LONX(:,:) )
+    AXIS_name = (/'x ','y '/)
+    call FilePutAssociatedCoordinates( fid, 'lat' , 'latitude'              ,            &
+                                       'degrees_north', AXIS_name, dtype, AXIS_LAT (:,:) )
+    AXIS_name = (/'x ','yh'/)
+    call FilePutAssociatedCoordinates( fid, 'lat_v', 'latitude (half level)' ,            &
+                                       'degrees_north', AXIS_name, dtype, AXIS_LATY(:,:) )
+
+    ! attributes
+    call FileSetTAttr( fid, 'lz',  'positive', 'down' )
+    call FileSetTAttr( fid, 'lzh', 'positive', 'down' )
+    call FileSetTAttr( fid, 'uz',  'positive', 'down' )
+    call FileSetTAttr( fid, 'uzh', 'positive', 'down' )
+    call FileSetTAttr( fid, 'LCZ', 'positive', 'down' )
+    call FileSetTAttr( fid, 'LFZ', 'positive', 'down' )
+    call FileSetTAttr( fid, 'UCZ', 'positive', 'down' )
+    call FileSetTAttr( fid, 'UFZ', 'positive', 'down' )
 
     return
   end subroutine FILEIO_set_axes

@@ -296,6 +296,28 @@ int32_t file_set_global_attributes( int32_t  fid,         // (in)
   return SUCCESS_CODE;
 }
 
+int32_t file_set_tattr( int32_t  fid,   // (in)
+			char    *vname, // (in)
+			char    *key,   // (in)
+			char    *val)   // (in)
+{
+  int ncid;
+  int varid;
+  int attid;
+
+  if ( files[fid] == NULL ) return ALREADY_CLOSED_CODE;
+  ncid = files[fid]->ncid;
+
+ CHECK_ERROR( nc_inq_varid(ncid, vname, &varid) );
+
+  if ( nc_inq_attid(ncid, varid, key, &attid) == NC_NOERR ) // check if existed
+    return ALREADY_EXISTED_CODE;
+
+  CHECK_ERROR( nc_put_att_text(ncid, varid, key, strlen(val), val) );
+
+  return SUCCESS_CODE;
+}
+
 int32_t file_put_axis( int32_t fid,        // (in)
 		       char   *name,       // (in)
 		       char   *desc,       // (in)
