@@ -10,8 +10,8 @@ TESTDIR     = ../../..
 
 
 # user-defined source files
-CODE_DIR    = .
-ORG_SRCS    =
+CODE_DIR    = ..
+ORG_SRCS    = mod_user.f90
 
 # parameters for run
 INITCONF    = init.conf
