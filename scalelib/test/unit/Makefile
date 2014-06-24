@@ -1,9 +1,11 @@
 PWD = $(shell pwd)
-TOPDIR = ../../..
 BUILD_DIR := $(PWD)/.libs
 
-include $(TOPDIR)/Mkinclude
+TOPDIR     = ../../..
+SYSDEP_DIR = ../../../sysdep
+
 include $(SYSDEP_DIR)/Makedef.$(SCALE_SYS)
+include $(TOPDIR)/Mkinclude
 
 VPATH = $(BUILD_DIR)
 
@@ -49,7 +51,7 @@ $(BUILD_DIR)/unit.o: unit.f90 test_atmos_phy_tb_smg.o test_atmos_dyn_fent_fct.o
 
 .SUFFIXES: .o .f90
 $(BUILD_DIR)/%.o : %.f90
-	$(FC) $(FFLAGS_DEBUG) -I$(BUILD_DIR) -I$(DCUTILSDIR) -o $@ -c $< $(MODDIROPT) $(BUILD_DIR)
+	$(FC) $(FFLAGS_DEBUG) -I$(BUILD_DIR) -I$(DCUTILSDIR) -I$(MODDIR) -o $@ -c $< $(MODDIROPT) $(BUILD_DIR)
 
 %.o: %.mod
 
