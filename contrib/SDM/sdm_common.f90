@@ -94,8 +94,8 @@ module m_sdm_common
   integer, allocatable, save :: sortfreq_s2c(:)
   integer, allocatable, save :: sortkey_s2c(:)
   integer, allocatable, save :: sorttag_s2c(:)
-  real(DP), allocatable, save :: rbuf(:,:,:)
-  real(DP), allocatable, save :: sbuf(:,:,:)
+  real(DP), allocatable, save :: rbuf(:,:,:) ! We should prepare different rbuf and sbuf for multiplicity(long int) and other variables(real RP)
+  real(DP), allocatable, save :: sbuf(:,:,:) ! Will be fixed in the near future
   integer, allocatable, save :: sdm_itmp1(:)
   integer, allocatable, save :: sdm_itmp2(:)
   integer, allocatable, save :: sdm_itmp3(:)

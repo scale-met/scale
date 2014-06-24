@@ -82,9 +82,11 @@ contains
     allocate(sdr_fm(1:sdfmnum_s2c))
     allocate(sdvz_fm(1:sdfmnum_s2c))
     allocate(sdasl_fm(1:sdnum_s2c,1:sdnumasl_s2c))
+
     allocate(sdrkl_s2c(IA,JA))
     allocate(sdrku_s2c(IA,JA))
 
+    ! These variables are not needed for SCALE. They are for leap-frog scheme of CReSS.
     allocate(sdn_tmp(1:1))
     allocate(sdrk_tmp(1:1))
     allocate(sdx_tmp(1:1))
@@ -95,6 +97,7 @@ contains
     allocate(sdv_tmp(1:1))
     allocate(sdvz_tmp(1:1))
     allocate(sdasl_tmp(1:1,1:1))
+
     allocate(rand_s2c(1:sdnum_s2c))
     allocate(sortid_s2c(1:sdnum_s2c))
     allocate(sortkey_s2c(1:sdnum_s2c))
@@ -113,9 +116,12 @@ contains
     allocate(sdm_itmp1(1:ni_s2c*nj_s2c*nk_s2c+2))
     allocate(sdm_itmp2(1:ni_s2c*nj_s2c*nk_s2c+2))
     allocate(sdm_itmp3(1:ni_s2c*nj_s2c*nk_s2c+2))
+
+    ! OpenMP not supported for SCLAE-LES-SDM. Rmove nomp in the near future.
     allocate(sd_itmp1(1:sdnum_s2c,1:nomp))
     allocate(sd_itmp2(1:sdnum_s2c,1:nomp))
     allocate(sd_itmp3(1:sdnum_s2c,1:nomp))
+
     allocate(sd_dtmp1(1:sdnum_s2c))
 
     ! Initialize allocated array
@@ -185,6 +191,7 @@ contains
     enddo
     enddo
 
+    ! Check the evaluation of Jacobian later.
     do k = 1, KA
     do i = 1, IA
     do j = 1, JA
