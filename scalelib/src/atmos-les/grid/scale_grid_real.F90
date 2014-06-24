@@ -42,8 +42,12 @@ module scale_grid_real
   real(RP), public              :: REAL_BASEPOINT_LON  !< position of base point in real world [rad,0-2pi]
   real(RP), public              :: REAL_BASEPOINT_LAT  !< position of base point in real world [rad,-pi,pi]
 
-  real(RP), public, allocatable :: REAL_LONX(:,:)      !< longitude at staggered point (u) [rad,0-2pi]
-  real(RP), public, allocatable :: REAL_LATY(:,:)      !< latitude  at staggered point (v) [rad,-pi,pi]
+  real(RP), public, allocatable :: REAL_LONX(:,:)      !< longitude at staggered point (uy) [rad,0-2pi]
+  real(RP), public, allocatable :: REAL_LONY(:,:)      !< longitude at staggered point (xv) [rad,0-2pi]
+  real(RP), public, allocatable :: REAL_LONXY(:,:)      !< longitude at staggered point (uv) [rad,0-2pi]
+  real(RP), public, allocatable :: REAL_LATX(:,:)      !< latitude  at staggered point (uy) [rad,-pi,pi]
+  real(RP), public, allocatable :: REAL_LATY(:,:)      !< latitude  at staggered point (xv) [rad,-pi,pi]
+  real(RP), public, allocatable :: REAL_LATXY(:,:)      !< latitude  at staggered point (uv) [rad,-pi,pi]
   real(RP), public, allocatable :: REAL_DLON(:,:)      !< delta longitude
   real(RP), public, allocatable :: REAL_DLAT(:,:)      !< delta latitude
 
@@ -90,7 +94,11 @@ contains
     allocate( REAL_LON (IA,JA) )
     allocate( REAL_LAT (IA,JA) )
     allocate( REAL_LONX(IA,JA) )
+    allocate( REAL_LONY(IA,JA) )
+    allocate( REAL_LONXY(IA,JA) )
+    allocate( REAL_LATX(IA,JA) )
     allocate( REAL_LATY(IA,JA) )
+    allocate( REAL_LATXY(IA,JA) )
     allocate( REAL_DLON(IA,JA) )
     allocate( REAL_DLAT(IA,JA) )
 
@@ -115,8 +123,8 @@ contains
     call REAL_calc_areavol
 
     ! set latlon and z to fileio module
-    call FILEIO_set_coordinates( REAL_LON, REAL_LONX, &
-                                 REAL_LAT, REAL_LATY, &
+    call FILEIO_set_coordinates( REAL_LON, REAL_LONX, REAL_LONY, REAL_LONXY, &
+                                 REAL_LAT, REAL_LATX, REAL_LATY, REAL_LATXY, &
                                  REAL_CZ,  REAL_FZ    )
 
     return
@@ -139,8 +147,8 @@ contains
     call REAL_calc_areavol
 
     ! set latlon and z to fileio module
-    call FILEIO_set_coordinates( REAL_LON, REAL_LONX, &
-                                 REAL_LAT, REAL_LATY, &
+    call FILEIO_set_coordinates( REAL_LON, REAL_LONX, REAL_LONY, REAL_LONXY, &
+                                 REAL_LAT, REAL_LATX, REAL_LATY, REAL_LATXY, &
                                  REAL_CZ,  REAL_FZ    )
 
     return
@@ -210,8 +218,10 @@ contains
 
     do j = 1, JA
     do i = 1, IA
-       call MPRJ_xy2lonlat( CX(i), FY(j), REAL_LON(i,j), REAL_LATY(i,j))
-       call MPRJ_xy2lonlat( FX(i), CY(j), REAL_LONX(i,j), REAL_LAT(i,j))
+       call MPRJ_xy2lonlat( CX(i), CY(j), REAL_LON (i,j), REAL_LAT (i,j))
+       call MPRJ_xy2lonlat( FX(i), CY(j), REAL_LONX(i,j), REAL_LATX(i,j))
+       call MPRJ_xy2lonlat( CX(i), FY(j), REAL_LONY(i,j), REAL_LATY(i,j))
+       call MPRJ_xy2lonlat( FX(i), FY(j), REAL_LONXY(i,j), REAL_LATXY(i,j))
     enddo
     enddo
 

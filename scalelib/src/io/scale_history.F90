@@ -158,8 +158,12 @@ contains
        REAL_FZ,   &
        REAL_LON,  &
        REAL_LONX, &
+       REAL_LONY, &
+       REAL_LONXY, &
        REAL_LAT,  &
-       REAL_LATY
+       REAL_LATX, &
+       REAL_LATY, &
+       REAL_LATXY
     implicit none
 
     real(RP)         :: AXIS     (IMAX,JMAX,KMAX)
@@ -249,6 +253,38 @@ contains
     call HistoryPutAssociatedCoordinates( 'height_xvz' , 'height (half level xvz)'             ,     &
                                           'm' , AXIS_name(1:3), AXIS(:,:,:) )
 
+    do k = 1, KMAX
+       AXIS(1:IMAX,1:JMAX,k) = &
+            ( REAL_CZ(k+KS-1,IS:IE    ,JS:JE) + REAL_CZ(k+KS-1,IS:IE    ,JS+1:JE+1) &
+            + REAL_CZ(k+KS-1,IS+1:IE+1,JS:JE) + REAL_CZ(k+KS-1,IS+1:IE+1,JS+1:JE+1) ) * 0.25_RP
+    end do
+    AXIS_name(1:3) = (/'xh','yh', 'z '/)
+    call HistoryPutAssociatedCoordinates( 'height_uvz' , 'height (half level uvz)'             ,     &
+                                          'm' , AXIS_name(1:3), AXIS(:,:,:) )
+
+    do k = 1, KMAX
+       AXIS(1:IMAX,1:JMAX,k) = ( REAL_FZ(k+KS-1,IS:IE,JS:JE) + REAL_FZ(k+KS-1,IS+1:IE+1,JS:JE) ) * 0.5_RP
+    end do
+    AXIS_name(1:3) = (/'xh','y ', 'zh'/)
+    call HistoryPutAssociatedCoordinates( 'height_uyw' , 'height (half level uyw)'             ,     &
+                                          'm' , AXIS_name(1:3), AXIS(:,:,:) )
+
+    do k = 1, KMAX
+       AXIS(1:IMAX,1:JMAX,k) = ( REAL_FZ(k+KS-1,IS:IE,JS:JE) + REAL_FZ(k+KS-1,IS:IE,JS+1:JE+1) ) * 0.5_RP
+    end do
+    AXIS_name(1:3) = (/'x ','yh', 'zh'/)
+    call HistoryPutAssociatedCoordinates( 'height_xvw' , 'height (half level xvw)'             ,     &
+                                          'm' , AXIS_name(1:3), AXIS(:,:,:) )
+
+    do k = 1, KMAX
+       AXIS(1:IMAX,1:JMAX,k) = &
+            ( REAL_FZ(k+KS-1,IS:IE    ,JS:JE) + REAL_FZ(k+KS-1,IS:IE    ,JS+1:JE+1) &
+            + REAL_FZ(k+KS-1,IS+1:IE+1,JS:JE) + REAL_FZ(k+KS-1,IS+1:IE+1,JS+1:JE+1) ) * 0.25_RP
+    end do
+    AXIS_name(1:3) = (/'xh','yh', 'zh'/)
+    call HistoryPutAssociatedCoordinates( 'height_uvw' , 'height (half level uvw)'             ,     &
+                                          'm' , AXIS_name(1:3), AXIS(:,:,:) )
+
     AXIS(1:IMAX,1:JMAX,1) = REAL_LON (IS:IE,JS:JE) / D2R
     AXIS_name(1:2) = (/'x ','y '/)
     call HistoryPutAssociatedCoordinates( 'lon' , 'longitude'             ,     &
@@ -256,7 +292,15 @@ contains
 
     AXIS(1:IMAX,1:JMAX,1) = REAL_LONX(IS:IE,JS:JE) / D2R
     AXIS_name(1:2) = (/'xh','y '/)
-    call HistoryPutAssociatedCoordinates( 'lon_u', 'longitude (half level)',     &
+    call HistoryPutAssociatedCoordinates( 'lon_uy', 'longitude (half level uy)',     &
+                                          'degrees_east' , AXIS_name(1:2), AXIS(:,:,1) )
+    AXIS(1:IMAX,1:JMAX,1) = REAL_LONY(IS:IE,JS:JE) / D2R
+    AXIS_name(1:2) = (/'x ','yh'/)
+    call HistoryPutAssociatedCoordinates( 'lon_xv', 'longitude (half level xv)',     &
+                                          'degrees_east' , AXIS_name(1:2), AXIS(:,:,1) )
+    AXIS(1:IMAX,1:JMAX,1) = REAL_LONXY(IS:IE,JS:JE) / D2R
+    AXIS_name(1:2) = (/'xh','yh'/)
+    call HistoryPutAssociatedCoordinates( 'lon_uv', 'longitude (half level uv)',     &
                                           'degrees_east' , AXIS_name(1:2), AXIS(:,:,1) )
 
     AXIS(1:IMAX,1:JMAX,1) = REAL_LAT (IS:IE,JS:JE) / D2R
@@ -264,9 +308,17 @@ contains
     call HistoryPutAssociatedCoordinates( 'lat' , 'latitude'              ,     &
                                           'degrees_north', AXIS_name(1:2), AXIS(:,:,1) )
 
+    AXIS(1:IMAX,1:JMAX,1) = REAL_LATX(IS:IE,JS:JE) / D2R
+    AXIS_name(1:2) = (/'xh','y '/)
+    call HistoryPutAssociatedCoordinates( 'lat_uy', 'latitude (half level uy)' ,     &
+                                          'degrees_north', AXIS_name(1:2), AXIS(:,:,1) )
     AXIS(1:IMAX,1:JMAX,1) = REAL_LATY(IS:IE,JS:JE) / D2R
     AXIS_name(1:2) = (/'x ','yh'/)
-    call HistoryPutAssociatedCoordinates( 'lat_v', 'latitude (half level)' ,     &
+    call HistoryPutAssociatedCoordinates( 'lat_xv', 'latitude (half level xv)' ,     &
+                                          'degrees_north', AXIS_name(1:2), AXIS(:,:,1) )
+    AXIS(1:IMAX,1:JMAX,1) = REAL_LATXY(IS:IE,JS:JE) / D2R
+    AXIS_name(1:2) = (/'xh','yh'/)
+    call HistoryPutAssociatedCoordinates( 'lat_uv', 'latitude (half level uv)' ,     &
                                           'degrees_north', AXIS_name(1:2), AXIS(:,:,1) )
 
     return
@@ -299,6 +351,9 @@ contains
     character(len=*), intent(in), optional :: ydim
     character(len=*), intent(in), optional :: zdim
 
+    logical :: xh
+    logical :: yh
+
     logical :: existed
 
     character(len=16) :: dims(3)
@@ -306,15 +361,32 @@ contains
 
     call PROF_rapstart('FILE O NetCDF')
 
-    dims(1) = 'lon'
-    dims(2) = 'lat'
-    dims(3) = 'height'
+    xh = .false.
     if ( present(xdim) ) then
-       if ( xdim=='half' ) dims(1) = 'lon_u'
-    endif
+       if ( xdim=='half' ) xh = .true.
+    end if
+    yh = .false.
     if ( present(ydim) ) then
-       if ( ydim=='half' ) dims(2) = 'lat_v'
-    endif
+       if ( ydim=='half' ) yh = .true.
+    end if
+
+    if ( xh .and. yh ) then
+       dims(1) = 'lon_uv'
+       dims(2) = 'lat_uv'
+       dims(3) = 'height_uvz'
+    else if ( xh ) then
+       dims(1) = 'lon_uy'
+       dims(2) = 'lat_uy'
+       dims(3) = 'height_uyz'
+    else if ( yh ) then
+       dims(1) = 'lon_xv'
+       dims(2) = 'lat_xv'
+       dims(3) = 'height_xvz'
+    else
+       dims(1) = 'lon'
+       dims(2) = 'lat'
+       dims(3) = 'height'
+    end if
 
     if ( present(zdim) ) then
        if ( zdim=='land' ) then
@@ -326,12 +398,14 @@ contains
        else if ( zdim=='urbanhalf' ) then
           dims(3) = 'uzh'
        else if ( zdim=='half' ) then
-          dims(3) = 'height_xyw'
-       else
-          if (dims(1) == 'lon_u') then
-             dims(3) = 'height_uyz'
-          else if (dims(2) == 'lat_v') then
-             dims(3) = 'height_xvz'
+          if ( xh .and. yh ) then
+             dims(3) = 'height_uvw'
+          else if ( xh ) then
+             dims(3) = 'height_uyw'
+          else if ( yh ) then
+             dims(3) = 'height_xvw'
+          else
+             dims(3) = 'height_xyw'
           end if
        end if
     endif

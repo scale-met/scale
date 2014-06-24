@@ -63,8 +63,12 @@ module scale_fileio
   !
   real(RP), private, allocatable :: AXIS_LON (:,:) ! [deg]
   real(RP), private, allocatable :: AXIS_LONX(:,:) ! [deg]
+  real(RP), private, allocatable :: AXIS_LONY(:,:) ! [deg]
+  real(RP), private, allocatable :: AXIS_LONXY(:,:) ! [deg]
   real(RP), private, allocatable :: AXIS_LAT (:,:) ! [deg]
+  real(RP), private, allocatable :: AXIS_LATX(:,:) ! [deg]
   real(RP), private, allocatable :: AXIS_LATY(:,:) ! [deg]
+  real(RP), private, allocatable :: AXIS_LATXY(:,:) ! [deg]
 
   real(RP), private, allocatable :: AXIS_CZ(:,:,:) ! [m]
   real(RP), private, allocatable :: AXIS_FZ(:,:,:) ! [m]
@@ -87,8 +91,12 @@ contains
 
     allocate( AXIS_LON (IMAX,JMAX) )
     allocate( AXIS_LONX(IMAX,JMAX) )
+    allocate( AXIS_LONY(IMAX,JMAX) )
+    allocate( AXIS_LONXY(IMAX,JMAX) )
     allocate( AXIS_LAT (IMAX,JMAX) )
+    allocate( AXIS_LATX(IMAX,JMAX) )
     allocate( AXIS_LATY(IMAX,JMAX) )
+    allocate( AXIS_LATXY(IMAX,JMAX) )
 
     allocate( AXIS_CZ  (  KA,IA,JA) )
     allocate( AXIS_FZ  (0:KA,IA,JA) )
@@ -113,8 +121,12 @@ contains
   subroutine FILEIO_set_coordinates( &
        LON,  &
        LONX, &
+       LONY, &
+       LONXY, &
        LAT,  &
+       LATX, &
        LATY, &
+       LATXY, &
        CZ,   &
        FZ    )
     use scale_const, only: &
@@ -123,16 +135,24 @@ contains
 
     real(RP), intent(in) :: LON (IA,JA)
     real(RP), intent(in) :: LONX(IA,JA)
+    real(RP), intent(in) :: LONY(IA,JA)
+    real(RP), intent(in) :: LONXY(IA,JA)
     real(RP), intent(in) :: LAT (IA,JA)
+    real(RP), intent(in) :: LATX(IA,JA)
     real(RP), intent(in) :: LATY(IA,JA)
+    real(RP), intent(in) :: LATXY(IA,JA)
     real(RP), intent(in) :: CZ  (  KA,IA,JA)
     real(RP), intent(in) :: FZ  (0:KA,IA,JA)
     !---------------------------------------------------------------------------
 
     AXIS_LON (1:IMAX,1:JMAX) = LON (IS:IE,JS:JE) / D2R
     AXIS_LONX(1:IMAX,1:JMAX) = LONX(IS:IE,JS:JE) / D2R
+    AXIS_LONY(1:IMAX,1:JMAX) = LONY(IS:IE,JS:JE) / D2R
+    AXIS_LONXY(1:IMAX,1:JMAX) = LONXY(IS:IE,JS:JE) / D2R
     AXIS_LAT (1:IMAX,1:JMAX) = LAT (IS:IE,JS:JE) / D2R
+    AXIS_LATX(1:IMAX,1:JMAX) = LATX(IS:IE,JS:JE) / D2R
     AXIS_LATY(1:IMAX,1:JMAX) = LATY(IS:IE,JS:JE) / D2R
+    AXIS_LATXY(1:IMAX,1:JMAX) = LATXY(IS:IE,JS:JE) / D2R
 
     AXIS_CZ(:,:,:) = CZ(:,:,:)
     AXIS_FZ(:,:,:) = FZ(:,:,:)
@@ -250,14 +270,26 @@ contains
     call FilePutAssociatedCoordinates( fid, 'lon' , 'longitude'             ,            &
                                        'degrees_east' , AXIS_name, dtype, AXIS_LON (:,:) )
     AXIS_name = (/'xh','y '/)
-    call FilePutAssociatedCoordinates( fid, 'lon_u', 'longitude (half level)',            &
+    call FilePutAssociatedCoordinates( fid, 'lon_uy', 'longitude (half level uy)',            &
                                        'degrees_east' , AXIS_name, dtype, AXIS_LONX(:,:) )
+    AXIS_name = (/'x ','yh'/)
+    call FilePutAssociatedCoordinates( fid, 'lon_xv', 'longitude (half level xv)',            &
+                                       'degrees_east' , AXIS_name, dtype, AXIS_LONY(:,:) )
+    AXIS_name = (/'xh','yh'/)
+    call FilePutAssociatedCoordinates( fid, 'lon_uv', 'longitude (half level uv)',            &
+                                       'degrees_east' , AXIS_name, dtype, AXIS_LONXY(:,:) )
     AXIS_name = (/'x ','y '/)
     call FilePutAssociatedCoordinates( fid, 'lat' , 'latitude'              ,            &
                                        'degrees_north', AXIS_name, dtype, AXIS_LAT (:,:) )
+    AXIS_name = (/'xh','y '/)
+    call FilePutAssociatedCoordinates( fid, 'lat_uy', 'latitude (half level uy)' ,            &
+                                       'degrees_north', AXIS_name, dtype, AXIS_LATX(:,:) )
     AXIS_name = (/'x ','yh'/)
-    call FilePutAssociatedCoordinates( fid, 'lat_v', 'latitude (half level)' ,            &
+    call FilePutAssociatedCoordinates( fid, 'lat_xv', 'latitude (half level xv)' ,            &
                                        'degrees_north', AXIS_name, dtype, AXIS_LATY(:,:) )
+    AXIS_name = (/'xh','yh'/)
+    call FilePutAssociatedCoordinates( fid, 'lat_uv', 'latitude (half level uv)' ,            &
+                                       'degrees_north', AXIS_name, dtype, AXIS_LATXY(:,:) )
 
     ! attributes
     call FileSetTAttr( fid, 'lz',  'positive', 'down' )

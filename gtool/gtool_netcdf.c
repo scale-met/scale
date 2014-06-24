@@ -521,7 +521,9 @@ int32_t file_add_variable( int32_t *vid,     // (out)
   has_assoc = 0;
   nndims = 0;
   for (i=0; i<n; i++) {
+    //printf("%d %s\n", i, dims[i]);
     if ( nc_inq_dimid(ncid, dims[i], &dimid) == NC_NOERR ) {
+      //printf("not assoc\n");
       new = 1;
       for (k=0; k<nndims; k++) {
 	if (dimid == dimids[k]) {
@@ -533,6 +535,7 @@ int32_t file_add_variable( int32_t *vid,     // (out)
 	dimids[ndims-(++nndims)] = dimid;
       }
     } else {
+      //printf("assoc\n");
       CHECK_ERROR( nc_inq_varid(ncid, dims[i], &acid) );
       CHECK_ERROR( nc_inq_varndims(ncid, acid, &m) );
       acdimids = (int*) malloc((sizeof(int)*m));
@@ -551,7 +554,8 @@ int32_t file_add_variable( int32_t *vid,     // (out)
 	    return ERROR_CODE;
 	  }
           dimids[ndims-(++nndims)] = acdimids[j];
-	  nc_inq_dimname(ncid, acdimids[j], tname);
+	  //nc_inq_dimname(ncid, acdimids[j], tname);
+	  //printf("add %s\n", tname);
 	}
       }
       free(acdimids);

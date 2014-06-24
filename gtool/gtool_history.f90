@@ -172,7 +172,7 @@ module gtool_history
   integer            :: History_axis_count = 0;
   type(axis)         :: History_axis(History_axis_limit)
 
-  integer, parameter :: History_assoc_limit = 10 !> number limit of associated coordinates
+  integer, parameter :: History_assoc_limit = 20 !> number limit of associated coordinates
   integer            :: History_assoc_count = 0;
   type(assoc)        :: History_assoc(History_assoc_limit)
 
@@ -624,6 +624,9 @@ contains
        else
           History_axis(History_axis_count)%down = .false.
        end if
+    else
+       write(message,*) 'xxx Number of axis exceeds the limit.'
+       call Log('E', message)
     endif
 
     return
@@ -680,6 +683,9 @@ contains
        else
           History_axis(History_axis_count)%down = .false.
        end if
+    else
+       write(message,*) 'xxx Number of axis exceeds the limit.'
+       call Log('E', message)
     endif
 
     return
@@ -734,6 +740,9 @@ contains
        History_assoc(History_assoc_count)%type  = type
        allocate(History_assoc(History_assoc_count)%var(size(var)))
        History_assoc(History_assoc_count)%var = reshape(var, (/size(var)/))
+    else
+       write(message,*) 'xxx Number of associate coordinates exceeds the limit.'
+       call Log('E', message)
     endif
 
     return
@@ -784,6 +793,9 @@ contains
        History_assoc(History_assoc_count)%type  = type
        allocate(History_assoc(History_assoc_count)%var(size(var)))
        History_assoc(History_assoc_count)%var = reshape(var, (/size(var)/))
+    else
+       write(message,*) 'xxx Number of associate coordinates exceeds the limit.'
+       call Log('E', message)
     endif
 
     return
@@ -834,6 +846,9 @@ contains
        History_assoc(History_assoc_count)%type  = type
        allocate(History_assoc(History_assoc_count)%var(size(var)))
        History_assoc(History_assoc_count)%var = reshape(var, (/size(var)/))
+    else
+       write(message,*) 'xxx Number of associate coordinates exceeds the limit.'
+       call Log('E', message)
     endif
 
     return
@@ -884,6 +899,9 @@ contains
        History_assoc(History_assoc_count)%type  = type
        allocate(History_assoc(History_assoc_count)%var(size(var)))
        History_assoc(History_assoc_count)%var = reshape(var, (/size(var)/))
+    else
+       write(message,*) 'xxx Number of associate coordinates exceeds the limit.'
+       call Log('E', message)
     endif
 
     return
@@ -934,6 +952,9 @@ contains
        History_assoc(History_assoc_count)%type  = type
        allocate(History_assoc(History_assoc_count)%var(size(var)))
        History_assoc(History_assoc_count)%var = reshape(var, (/size(var)/))
+    else
+       write(message,*) 'xxx Number of associate coordinates exceeds the limit.'
+       call Log('E', message)
     endif
 
     return
@@ -984,6 +1005,9 @@ contains
        History_assoc(History_assoc_count)%type  = type
        allocate(History_assoc(History_assoc_count)%var(size(var)))
        History_assoc(History_assoc_count)%var = reshape(var, (/size(var)/))
+    else
+       write(message,*) 'xxx Number of associate coordinates exceeds the limit.'
+       call Log('E', message)
     endif
 
     return
@@ -1034,6 +1058,9 @@ contains
        History_assoc(History_assoc_count)%type  = type
        allocate(History_assoc(History_assoc_count)%var(size(var)))
        History_assoc(History_assoc_count)%var = reshape(var, (/size(var)/))
+    else
+       write(message,*) 'xxx Number of associate coordinates exceeds the limit.'
+       call Log('E', message)
     endif
 
     return
@@ -1084,6 +1111,9 @@ contains
        History_assoc(History_assoc_count)%type  = type
        allocate(History_assoc(History_assoc_count)%var(size(var)))
        History_assoc(History_assoc_count)%var = reshape(var, (/size(var)/))
+    else
+       write(message,*) 'xxx Number of associate coordinates exceeds the limit.'
+       call Log('E', message)
     endif
 
     return
