@@ -7,7 +7,7 @@ do
       if [ ${subdir} = "500m" -o ${subdir} = "1000m" -o ${subdir} = "2000m" ]; then
          echo ./case/${dir}/${subdir}
 
-         if [ ${dir} = "radiation" -o ${dir} = "rad-conv" ]; then
+         if [ ${dir} = "radiation" -o ${dir} = "rad-conv" -o ${dir} = "urban" ]; then
             echo "--->skip"
             rm -rf ./case/${dir}/${subdir}_hevi
             rm -rf ./case/${dir}/${subdir}_hivi
