@@ -43,15 +43,10 @@ module scale_cpl_atmos_land_bulk
   !-----------------------------------------------------------------------------
   integer,  private :: nmax = 100 ! maximum iteration number
 
-  real(RP), private :: res_min =   1.0_RP ! minimum number of residual
+  real(RP), private :: res_min = 1.E+0_RP ! minimum number of residual
   real(RP), private :: dTS     = 1.E-8_RP ! delta surface temp.
-
-  real(RP), private :: U_minM  = 1.E-2_RP ! minimum U_abs for u,v,w
-  real(RP), private :: U_minH  = 1.E-2_RP !                   T
-  real(RP), private :: U_minE  = 1.E-2_RP !                   q
-  real(RP), private :: U_maxM  = 1.E+2_RP ! maximum U_abs for u,v,w
-  real(RP), private :: U_maxH  = 1.E+2_RP !                   T
-  real(RP), private :: U_maxE  = 1.E+2_RP !                   q
+  real(RP), private :: U_min   = 1.E-2_RP ! minimum U_abs
+  real(RP), private :: U_max   = 1.E+2_RP ! maximum U_abs
 
   logical, allocatable, private :: is_FLX(:,:) ! is atmos-land coupler run?
 
@@ -72,23 +67,15 @@ contains
     integer  :: CPL_AtmLnd_bulk_nmax
     real(RP) :: CPL_AtmLnd_bulk_res_min
     real(RP) :: CPL_AtmLnd_bulk_dTS
-    real(RP) :: CPL_AtmLnd_bulk_U_minM
-    real(RP) :: CPL_AtmLnd_bulk_U_minH
-    real(RP) :: CPL_AtmLnd_bulk_U_minE
-    real(RP) :: CPL_AtmLnd_bulk_U_maxM
-    real(RP) :: CPL_AtmLnd_bulk_U_maxH
-    real(RP) :: CPL_AtmLnd_bulk_U_maxE
+    real(RP) :: CPL_AtmLnd_bulk_U_min
+    real(RP) :: CPL_AtmLnd_bulk_U_max
 
     NAMELIST / PARAM_CPL_ATMLND_BULK / &
        CPL_AtmLnd_bulk_nmax,    &
        CPL_AtmLnd_bulk_res_min, &
        CPL_AtmLnd_bulk_dTS,     &
-       CPL_AtmLnd_bulk_U_minM,  &
-       CPL_AtmLnd_bulk_U_minH,  &
-       CPL_AtmLnd_bulk_U_minE,  &
-       CPL_AtmLnd_bulk_U_maxM,  &
-       CPL_AtmLnd_bulk_U_maxH,  &
-       CPL_AtmLnd_bulk_U_maxE
+       CPL_AtmLnd_bulk_U_min,   &
+       CPL_AtmLnd_bulk_U_max
 
     integer :: i, j
     integer :: ierr
@@ -105,12 +92,8 @@ contains
     CPL_AtmLnd_bulk_nmax    = nmax
     CPL_AtmLnd_bulk_res_min = res_min
     CPL_AtmLnd_bulk_dTS     = dTS
-    CPL_AtmLnd_bulk_U_minM  = U_minM
-    CPL_AtmLnd_bulk_U_minH  = U_minH
-    CPL_AtmLnd_bulk_U_minE  = U_minE
-    CPL_AtmLnd_bulk_U_maxM  = U_maxM
-    CPL_AtmLnd_bulk_U_maxH  = U_maxH
-    CPL_AtmLnd_bulk_U_maxE  = U_maxE
+    CPL_AtmLnd_bulk_U_min   = U_min
+    CPL_AtmLnd_bulk_U_max   = U_max
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -126,12 +109,8 @@ contains
     nmax    = CPL_AtmLnd_bulk_nmax
     res_min = CPL_AtmLnd_bulk_res_min
     dTS     = CPL_AtmLnd_bulk_dTS
-    U_minM  = CPL_AtmLnd_bulk_U_minM
-    U_minH  = CPL_AtmLnd_bulk_U_minH
-    U_minE  = CPL_AtmLnd_bulk_U_minE
-    U_maxM  = CPL_AtmLnd_bulk_U_maxM
-    U_maxH  = CPL_AtmLnd_bulk_U_maxH
-    U_maxE  = CPL_AtmLnd_bulk_U_maxE
+    U_min   = CPL_AtmLnd_bulk_U_min
+    U_max   = CPL_AtmLnd_bulk_U_max
 
     !--- judge to run atmos-land coupler
     allocate( is_FLX(IA,JA) )
@@ -268,7 +247,7 @@ contains
 
         ! modified Newton-Raphson method (Tomita 2009)
         do n = 1, nmax
-          Uabs = sqrt( UA(i,j)**2 + VA(i,j)**2 )
+          Uabs = min( max( sqrt( UA(i,j)**2 + VA(i,j)**2 ), U_min ), U_max )
 
           call CPL_bulkcoef( &
               Cm,        & ! (out)
@@ -284,15 +263,15 @@ contains
               Z0H (i,j), & ! (in)
               Z0E (i,j)  ) ! (in)
 
-          XMFLX(i,j) = -Cm * min(max(Uabs,U_minM),U_maxM) * RHOA(i,j) * UA(i,j)
-          YMFLX(i,j) = -Cm * min(max(Uabs,U_minM),U_maxM) * RHOA(i,j) * VA(i,j)
-          ZMFLX(i,j) = -Cm * min(max(Uabs,U_minM),U_maxM) * RHOA(i,j) * WA(i,j)
+          XMFLX(i,j) = -Cm * Uabs * RHOA(i,j) * UA(i,j)
+          YMFLX(i,j) = -Cm * Uabs * RHOA(i,j) * VA(i,j)
+          ZMFLX(i,j) = -Cm * Uabs * RHOA(i,j) * WA(i,j)
 
           ! saturation at the surface
           call qsat( SQV, LST(i,j), PRSS(i,j) )
 
-          SHFLX (i,j) = CPdry * min(max(Uabs,U_minH),U_maxH) * RHOA(i,j) * Ch * ( LST(i,j) - TMPA(i,j) )
-          LHFLX (i,j) = LH0   * min(max(Uabs,U_minE),U_maxE) * RHOA(i,j) * QVEF(i,j) * Ce * ( SQV - QVA(i,j) )
+          SHFLX (i,j) = CPdry * Uabs * RHOA(i,j) * Ch * ( LST(i,j) - TMPA(i,j) )
+          LHFLX (i,j) = LH0   * Uabs * RHOA(i,j) * Ce * ( SQV - QVA(i,j) ) * QVEF(i,j)
           GHFLX (i,j) = -2.0_RP * TCS(i,j) * ( LST(i,j) - TG(i,j)  ) / DZG(i,j)
 
           ! calculation for residual
@@ -316,10 +295,8 @@ contains
 
           call qsat( dSQV, LST(i,j)+dTS, PRSS(i,j) )
 
-          dSHFLX  = CPdry * min(max(Uabs,U_minH),U_maxH) * RHOA(i,j) &
-                  * ( (dCh-Ch)/dTS * ( LST(i,j) - TMPA(i,j) ) + Ch )
-          dLHFLX  = LH0   * min(max(Uabs,U_minE),U_maxE) * RHOA(i,j) * QVEF(i,j) &
-                  * ( (dCe-Ce)/dTS * ( SQV - QVA(i,j) ) + Ce * (dSQV-SQV)/dTS )
+          dSHFLX  = CPdry * Uabs * RHOA(i,j) * ( (dCh-Ch)/dTS * ( LST(i,j) - TMPA(i,j) ) + Ch )
+          dLHFLX  = LH0   * Uabs * RHOA(i,j) * ( (dCe-Ce)/dTS * ( SQV - QVA(i,j) ) + Ce * (dSQV-SQV)/dTS ) * QVEF(i,j)
           dGHFLX  = -2.0_RP * TCS(i,j) / DZG(i,j)
 
           ! calculation for d(residual)/dLST
@@ -363,29 +340,10 @@ contains
         end do
 
         ! diagnositc variables
-        U10(i,j) = UA(i,j) * log( 10.0_RP / Z0M(i,j) ) / log( Z1(i,j) / Z0M(i,j) )
-        V10(i,j) = VA(i,j) * log( 10.0_RP / Z0M(i,j) ) / log( Z1(i,j) / Z0M(i,j) )
-
-        Uabs02 = sqrt( UA(i,j)**2 + VA(i,j)**2 ) * log( 2.0_RP / Z0M(i,j) ) / log( Z1(i,j) / Z0M(i,j) )
-
-        call CPL_bulkcoef( &
-            Cm02,      & ! (out)
-            Ch02,      & ! (out)
-            Ce02,      & ! (out)
-            TMPA(i,j), & ! (in)
-            LST (i,j), & ! (in)
-            PRSA(i,j), & ! (in)
-            PRSS(i,j), & ! (in)
-            Uabs,      & ! (in)
-            2.0_RP,    & ! (in)
-            Z0M (i,j), & ! (in)
-            Z0H (i,j), & ! (in)
-            Z0E (i,j)  ) ! (in)
-
-        T2(i,j) = LST(i,j) - ( LST(i,j) - TMPA(i,j) ) * ( Ch   * min( max( Uabs,   U_minH ), U_maxH ) ) &
-                                                      / ( Ch02 * min( max( Uabs02, U_minH ), U_maxH ) )
-        Q2(i,j) = SQV      - ( SQV      - QVA (i,j) ) * ( Ce   * min( max( Uabs,   U_minE ), U_maxE ) ) &
-                                                      / ( Ce02 * min( max( Uabs02, U_minE ), U_maxE ) )
+        U10(i,j) = UA  (i,j) * log( 10.0_RP / Z0M(i,j) ) / log( Z1(i,j) / Z0M(i,j) )
+        V10(i,j) = VA  (i,j) * log( 10.0_RP / Z0M(i,j) ) / log( Z1(i,j) / Z0M(i,j) )
+        T2 (i,j) = TMPA(i,j) * log(  2.0_RP / Z0H(i,j) ) / log( Z1(i,j) / Z0H(i,j) )
+        Q2 (i,j) = QVA (i,j) * log(  2.0_RP / Z0E(i,j) ) / log( Z1(i,j) / Z0E(i,j) )
 
         if( n > nmax ) then
           ! not converged and stop program
