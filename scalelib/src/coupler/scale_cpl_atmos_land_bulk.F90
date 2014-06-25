@@ -45,7 +45,7 @@ module scale_cpl_atmos_land_bulk
 
   real(RP), private :: res_min = 1.E+0_RP ! minimum number of residual
   real(RP), private :: dTS     = 1.E-8_RP ! delta surface temp.
-  real(RP), private :: U_min   = 1.E-2_RP ! minimum U_abs
+  real(RP), private :: U_min   = 4.E-1_RP ! minimum U_abs
   real(RP), private :: U_max   = 1.E+2_RP ! maximum U_abs
 
   logical, allocatable, private :: is_FLX(:,:) ! is atmos-land coupler run?

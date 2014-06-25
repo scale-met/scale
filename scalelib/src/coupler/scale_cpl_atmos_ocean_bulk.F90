@@ -41,7 +41,7 @@ module scale_cpl_atmos_ocean_bulk
   !++ Private parameters & variables
   !
   !-----------------------------------------------------------------------------
-  real(RP), private :: U_min  = 1.E-2_RP ! minimum U_abs
+  real(RP), private :: U_min  = 4.E-1_RP ! minimum U_abs
   real(RP), private :: U_max  = 1.E+2_RP ! maximum U_abs
 
   logical, allocatable, private :: is_FLX(:,:) ! is atmos-land coupler run?
