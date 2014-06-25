@@ -487,7 +487,7 @@ contains
        ! land fraction : 1 - ocean / total
        allsum = categ_sum(i,j,-2) + categ_sum(i,j,-1) + categ_sum(i,j,0) + categ_pftsum
        zerosw = 0.5_RP - sign( 0.5_RP, allsum-EPS )
-       LANDUSE_frac_land (i,j) = 1.0_RP - categ_sum(i,j,-1) * ( 1.0_RP-zerosw ) / ( allsum-zerosw )
+       LANDUSE_frac_land (i,j) = 1.0_RP-zerosw - categ_sum(i,j,-1) * ( 1.0_RP-zerosw ) / ( allsum-zerosw )
 
        ! lake fraction : lake / ( total - ocean )
        allsum = categ_sum(i,j,-2) + categ_sum(i,j,0) + categ_pftsum
