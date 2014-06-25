@@ -79,6 +79,11 @@ extern int32_t file_set_global_attributes( int32_t  fid,          // (in)
 					   int32_t *nodeidx,      // (in)
 					   int32_t  nodeidx_dim); // (in)
 
+extern int32_t file_set_tattr( int32_t  fid,   // (in)
+			       char    *vname, // (in)
+			       char    *key,   // (in)
+			       char    *val);  // (in)
+
 extern int32_t file_put_axis( int32_t fid,        // (in)
 			      char   *name,       // (in)
 			      char   *desc,       // (in)

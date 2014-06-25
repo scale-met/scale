@@ -43,7 +43,7 @@ module gtool_history
   public :: HistoryAddVariable
   public :: HistoryPutAxis
   public :: HistoryPutAssociatedCoordinates
-
+  public :: HistorySetTAttr
   public :: HistoryPut
   public :: HistoryWrite
   public :: HistoryWriteAll
@@ -108,6 +108,7 @@ module gtool_history
      character(len=File_HSHORT) :: dim
      integer                    :: type
      real(DP), pointer          :: var(:)
+     logical                    :: down
   end type axis
   type assoc
      character(len=File_HSHORT) :: name
@@ -171,7 +172,7 @@ module gtool_history
   integer            :: History_axis_count = 0;
   type(axis)         :: History_axis(History_axis_limit)
 
-  integer, parameter :: History_assoc_limit = 10 !> number limit of associated coordinates
+  integer, parameter :: History_assoc_limit = 20 !> number limit of associated coordinates
   integer            :: History_assoc_count = 0;
   type(assoc)        :: History_assoc(History_assoc_limit)
 
@@ -213,7 +214,6 @@ contains
     character(len=*), intent(in), optional :: namelist_filename
     integer         , intent(in), optional :: namelist_fid
 
-    integer :: ndims
     character(len=File_HLONG)  :: HISTORY_DEFAULT_BASENAME  = 'history'
     real(DP)                   :: HISTORY_DEFAULT_TINTERVAL = 1.0_DP
     character(len=File_HSHORT) :: HISTORY_DEFAULT_TUNIT     = 'sec'
@@ -422,6 +422,7 @@ contains
          FileCreate, &
          FileSetOption, &
          FileAddVariable, &
+         FileSetTAttr, &
          FilePutAxis, &
          FilePutAssociatedCoordinates
     implicit none
@@ -438,7 +439,7 @@ contains
     logical :: fileexisted
     integer :: id
     integer :: nmax, reqid
-    integer :: n, m, l
+    integer :: n, m
     integer :: ic, ie, is, lo
     intrinsic size
     !---------------------------------------------------------------------------
@@ -524,6 +525,14 @@ contains
                   History_req_tavg   (reqid)       & ! (in)
                   )
 
+             do m = 1, History_axis_count
+                if ( History_axis(m)%down ) then
+                   call FileSetTAttr( &
+                        History_fid(id), History_axis(m)%name, &
+                        "positive", "down" )
+                end if
+             end do
+
              History_item   (id) = varname
 
              History_tintsec(id) = History_req_tintsec(reqid)
@@ -569,7 +578,8 @@ contains
        units, & ! (in)
        dim,   & ! (in)
        var,   & ! (in)
-       dtype  & ! (in) optional
+       dtype, & ! (in) optional
+       down   & ! (in) optional
        )
     use gtool_file_h, only: &
        File_REAL4, &
@@ -582,9 +592,9 @@ contains
     character(len=*), intent(in) :: dim
     real(SP),         intent(in) :: var(:)
     character(len=*), intent(in), optional :: dtype
+    logical,          intent(in), optional :: down
 
     integer :: type
-    integer :: m, n
     !---------------------------------------------------------------------------
 
     if ( present(dtype) ) then
@@ -609,6 +619,14 @@ contains
        History_axis(History_axis_count)%type  = type
        allocate(History_axis(History_axis_count)%var(size(var)))
        History_axis(History_axis_count)%var = var
+       if ( present(down) ) then
+          History_axis(History_axis_count)%down = down
+       else
+          History_axis(History_axis_count)%down = .false.
+       end if
+    else
+       write(message,*) 'xxx Number of axis exceeds the limit.'
+       call Log('E', message)
     endif
 
     return
@@ -619,7 +637,8 @@ contains
        units, & ! (in)
        dim,   & ! (in)
        var,   & ! (in)
-       dtype  & ! (in) optional
+       dtype, & ! (in) optional
+       down   & ! (in) optional
        )
     use gtool_file_h, only: &
        File_REAL4, &
@@ -632,9 +651,9 @@ contains
     character(len=*), intent(in) :: dim
     real(DP),         intent(in) :: var(:)
     character(len=*), intent(in), optional :: dtype
+    logical,          intent(in), optional :: down
 
     integer :: type
-    integer :: m, n
     !---------------------------------------------------------------------------
 
     if ( present(dtype) ) then
@@ -659,14 +678,22 @@ contains
        History_axis(History_axis_count)%type  = type
        allocate(History_axis(History_axis_count)%var(size(var)))
        History_axis(History_axis_count)%var = var
+       if ( present(down) ) then
+          History_axis(History_axis_count)%down = down
+       else
+          History_axis(History_axis_count)%down = .false.
+       end if
+    else
+       write(message,*) 'xxx Number of axis exceeds the limit.'
+       call Log('E', message)
     endif
 
     return
   end subroutine HistoryPutAxisDP
+
   !-----------------------------------------------------------------------------
   ! interface HistoryPutAssociatedCoordinates
   !-----------------------------------------------------------------------------
-
   subroutine HistoryPut1DAssociatedCoordinatesSP( &
        name,  & ! (in)
        desc,  & ! (in)
@@ -688,8 +715,6 @@ contains
     character(len=*), intent(in), optional :: dtype
 
     integer :: type
-    integer :: m, n
-    logical flag
     !---------------------------------------------------------------------------
 
     if ( present(dtype) ) then
@@ -715,6 +740,9 @@ contains
        History_assoc(History_assoc_count)%type  = type
        allocate(History_assoc(History_assoc_count)%var(size(var)))
        History_assoc(History_assoc_count)%var = reshape(var, (/size(var)/))
+    else
+       write(message,*) 'xxx Number of associate coordinates exceeds the limit.'
+       call Log('E', message)
     endif
 
     return
@@ -740,8 +768,6 @@ contains
     character(len=*), intent(in), optional :: dtype
 
     integer :: type
-    integer :: m, n
-    logical flag
     !---------------------------------------------------------------------------
 
     if ( present(dtype) ) then
@@ -767,6 +793,9 @@ contains
        History_assoc(History_assoc_count)%type  = type
        allocate(History_assoc(History_assoc_count)%var(size(var)))
        History_assoc(History_assoc_count)%var = reshape(var, (/size(var)/))
+    else
+       write(message,*) 'xxx Number of associate coordinates exceeds the limit.'
+       call Log('E', message)
     endif
 
     return
@@ -792,8 +821,6 @@ contains
     character(len=*), intent(in), optional :: dtype
 
     integer :: type
-    integer :: m, n
-    logical flag
     !---------------------------------------------------------------------------
 
     if ( present(dtype) ) then
@@ -819,6 +846,9 @@ contains
        History_assoc(History_assoc_count)%type  = type
        allocate(History_assoc(History_assoc_count)%var(size(var)))
        History_assoc(History_assoc_count)%var = reshape(var, (/size(var)/))
+    else
+       write(message,*) 'xxx Number of associate coordinates exceeds the limit.'
+       call Log('E', message)
     endif
 
     return
@@ -844,8 +874,6 @@ contains
     character(len=*), intent(in), optional :: dtype
 
     integer :: type
-    integer :: m, n
-    logical flag
     !---------------------------------------------------------------------------
 
     if ( present(dtype) ) then
@@ -871,6 +899,9 @@ contains
        History_assoc(History_assoc_count)%type  = type
        allocate(History_assoc(History_assoc_count)%var(size(var)))
        History_assoc(History_assoc_count)%var = reshape(var, (/size(var)/))
+    else
+       write(message,*) 'xxx Number of associate coordinates exceeds the limit.'
+       call Log('E', message)
     endif
 
     return
@@ -896,8 +927,6 @@ contains
     character(len=*), intent(in), optional :: dtype
 
     integer :: type
-    integer :: m, n
-    logical flag
     !---------------------------------------------------------------------------
 
     if ( present(dtype) ) then
@@ -923,6 +952,9 @@ contains
        History_assoc(History_assoc_count)%type  = type
        allocate(History_assoc(History_assoc_count)%var(size(var)))
        History_assoc(History_assoc_count)%var = reshape(var, (/size(var)/))
+    else
+       write(message,*) 'xxx Number of associate coordinates exceeds the limit.'
+       call Log('E', message)
     endif
 
     return
@@ -948,8 +980,6 @@ contains
     character(len=*), intent(in), optional :: dtype
 
     integer :: type
-    integer :: m, n
-    logical flag
     !---------------------------------------------------------------------------
 
     if ( present(dtype) ) then
@@ -975,6 +1005,9 @@ contains
        History_assoc(History_assoc_count)%type  = type
        allocate(History_assoc(History_assoc_count)%var(size(var)))
        History_assoc(History_assoc_count)%var = reshape(var, (/size(var)/))
+    else
+       write(message,*) 'xxx Number of associate coordinates exceeds the limit.'
+       call Log('E', message)
     endif
 
     return
@@ -1000,8 +1033,6 @@ contains
     character(len=*), intent(in), optional :: dtype
 
     integer :: type
-    integer :: m, n
-    logical flag
     !---------------------------------------------------------------------------
 
     if ( present(dtype) ) then
@@ -1027,6 +1058,9 @@ contains
        History_assoc(History_assoc_count)%type  = type
        allocate(History_assoc(History_assoc_count)%var(size(var)))
        History_assoc(History_assoc_count)%var = reshape(var, (/size(var)/))
+    else
+       write(message,*) 'xxx Number of associate coordinates exceeds the limit.'
+       call Log('E', message)
     endif
 
     return
@@ -1052,8 +1086,6 @@ contains
     character(len=*), intent(in), optional :: dtype
 
     integer :: type
-    integer :: m, n
-    logical flag
     !---------------------------------------------------------------------------
 
     if ( present(dtype) ) then
@@ -1079,10 +1111,37 @@ contains
        History_assoc(History_assoc_count)%type  = type
        allocate(History_assoc(History_assoc_count)%var(size(var)))
        History_assoc(History_assoc_count)%var = reshape(var, (/size(var)/))
+    else
+       write(message,*) 'xxx Number of associate coordinates exceeds the limit.'
+       call Log('E', message)
     endif
 
     return
   end subroutine HistoryPut4DAssociatedCoordinatesDP
+
+  !-----------------------------------------------------------------------------
+  ! HistorySetTAttr
+  !-----------------------------------------------------------------------------
+  subroutine HistorySetTAttr( &
+       varname, &
+       key,     &
+       val      )
+    use gtool_file, only: &
+         FileSetTAttr
+    implicit none
+    character(len=*), intent(in) :: varname
+    character(len=*), intent(in) :: key
+    character(len=*), intent(in) :: val
+
+    integer :: n
+
+    do n = 1, History_id_count
+       call FileSetTAttr( &
+            History_fid(n), varname, & ! (in)
+            key, val                 ) ! (in)
+    enddo
+
+  end subroutine HistorySetTAttr
 
   !-----------------------------------------------------------------------------
   ! interface HistoryPut

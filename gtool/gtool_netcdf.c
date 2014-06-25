@@ -296,6 +296,28 @@ int32_t file_set_global_attributes( int32_t  fid,         // (in)
   return SUCCESS_CODE;
 }
 
+int32_t file_set_tattr( int32_t  fid,   // (in)
+			char    *vname, // (in)
+			char    *key,   // (in)
+			char    *val)   // (in)
+{
+  int ncid;
+  int varid;
+  int attid;
+
+  if ( files[fid] == NULL ) return ALREADY_CLOSED_CODE;
+  ncid = files[fid]->ncid;
+
+ CHECK_ERROR( nc_inq_varid(ncid, vname, &varid) );
+
+  if ( nc_inq_attid(ncid, varid, key, &attid) == NC_NOERR ) // check if existed
+    return ALREADY_EXISTED_CODE;
+
+  CHECK_ERROR( nc_put_att_text(ncid, varid, key, strlen(val), val) );
+
+  return SUCCESS_CODE;
+}
+
 int32_t file_put_axis( int32_t fid,        // (in)
 		       char   *name,       // (in)
 		       char   *desc,       // (in)
@@ -499,7 +521,9 @@ int32_t file_add_variable( int32_t *vid,     // (out)
   has_assoc = 0;
   nndims = 0;
   for (i=0; i<n; i++) {
+    //printf("%d %s\n", i, dims[i]);
     if ( nc_inq_dimid(ncid, dims[i], &dimid) == NC_NOERR ) {
+      //printf("not assoc\n");
       new = 1;
       for (k=0; k<nndims; k++) {
 	if (dimid == dimids[k]) {
@@ -511,6 +535,7 @@ int32_t file_add_variable( int32_t *vid,     // (out)
 	dimids[ndims-(++nndims)] = dimid;
       }
     } else {
+      //printf("assoc\n");
       CHECK_ERROR( nc_inq_varid(ncid, dims[i], &acid) );
       CHECK_ERROR( nc_inq_varndims(ncid, acid, &m) );
       acdimids = (int*) malloc((sizeof(int)*m));
@@ -529,7 +554,8 @@ int32_t file_add_variable( int32_t *vid,     // (out)
 	    return ERROR_CODE;
 	  }
           dimids[ndims-(++nndims)] = acdimids[j];
-	  nc_inq_dimname(ncid, acdimids[j], tname);
+	  //nc_inq_dimname(ncid, acdimids[j], tname);
+	  //printf("add %s\n", tname);
 	}
       }
       free(acdimids);

@@ -140,6 +140,32 @@ void file_set_global_attributes_( int32_t *fid,             // (in)
   *error = file_set_global_attributes( *fid, _title, _source, _institution, _time_units, *nodeid, nodeidx, *nodeidx_dim );
 }
 
+void file_set_tattr_( int32_t *fid,       // (in)
+		      char    *vname,     // (in)
+		      char    *key,       // (in)
+		      char    *val,       // (in)
+		      int32_t *error,     // (out)
+		      int32_t  vname_len, // (in)
+		      int32_t  key_len,   // (in)
+		      int32_t  val_len)   // (in)
+{
+  char _vname[File_HSHORT+1];
+  char _key[File_HSHORT+1];
+  char _val[File_HLONG+1];
+  int32_t len;
+
+  len = vname_len > File_HLONG ? File_HLONG : vname_len;
+  fstr2cstr(_vname, vname, len);
+
+  len = key_len > File_HLONG ? File_HLONG : key_len;
+  fstr2cstr(_key, key, len);
+
+  len = val_len > File_HLONG ? File_HLONG : val_len;
+  fstr2cstr(_val, val, len);
+
+  *error = file_set_tattr( *fid, _vname, _key, _val );
+}
+
 void file_put_axis_( int32_t *fid,          // (in)
 		     char    *name,         // (in)
 		     char    *desc,         // (in)

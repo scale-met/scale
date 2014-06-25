@@ -114,7 +114,7 @@ contains
   !> Put axis coordinate to history file
   subroutine HIST_put_axes
     use gtool_history, only: &
-       HistoryPutAxis, &
+       HistoryPutAxis,  &
        HistoryPutAssociatedCoordinates
     use scale_const, only: &
        D2R => CONST_D2R
@@ -158,8 +158,12 @@ contains
        REAL_FZ,   &
        REAL_LON,  &
        REAL_LONX, &
+       REAL_LONY, &
+       REAL_LONXY, &
        REAL_LAT,  &
-       REAL_LATY
+       REAL_LATX, &
+       REAL_LATY, &
+       REAL_LATXY
     implicit none
 
     real(RP)         :: AXIS     (IMAX,JMAX,KMAX)
@@ -175,11 +179,11 @@ contains
     call HistoryPutAxis( 'yh',  'Y (half level)',  'm', 'yh',  GRID_FY(JS:JE) )
     call HistoryPutAxis( 'zh',  'Z (half level)',  'm', 'zh',  GRID_FZ(KS:KE) )
 
-    call HistoryPutAxis( 'lz',  'LZ',              'm', 'lz',  GRID_LCZ(LKS:LKE) )
-    call HistoryPutAxis( 'lzh', 'LZ (half level)', 'm', 'lzh', GRID_LFZ(LKS:LKE) )
+    call HistoryPutAxis( 'lz',  'LZ',              'm', 'lz',  GRID_LCZ(LKS:LKE), down=.true. )
+    call HistoryPutAxis( 'lzh', 'LZ (half level)', 'm', 'lzh', GRID_LFZ(LKS:LKE), down=.true. )
 
-    call HistoryPutAxis( 'uz',  'UZ',              'm', 'uz',  GRID_UCZ(UKS:UKE) )
-    call HistoryPutAxis( 'uzh', 'UZ (half level)', 'm', 'uzh', GRID_UFZ(UKS:UKE) )
+    call HistoryPutAxis( 'uz',  'UZ',              'm', 'uz',  GRID_UCZ(UKS:UKE), down=.true. )
+    call HistoryPutAxis( 'uzh', 'UZ (half level)', 'm', 'uzh', GRID_UFZ(UKS:UKE), down=.true. )
 
     call HistoryPutAxis( 'CZ',  'Atmos Grid Center Position Z', 'm', 'CZ',  GRID_CZ )
     call HistoryPutAxis( 'CX',  'Atmos Grid Center Position X', 'm', 'CX',  GRID_CX )
@@ -195,14 +199,32 @@ contains
     call HistoryPutAxis( 'FDX',  'Grid distance X',    'm', 'FDX', GRID_FDX )
     call HistoryPutAxis( 'FDY',  'Grid distance Y',    'm', 'FDY', GRID_FDY )
 
-    call HistoryPutAxis( 'LCZ',  'Land Grid Center Position Z', 'm', 'LCZ', GRID_LCZ  )
-    call HistoryPutAxis( 'LFZ',  'Land Grid Face Position Z',   'm', 'LFZ', GRID_LFZ  )
+    call HistoryPutAxis( 'LCZ',  'Land Grid Center Position Z', 'm', 'LCZ', GRID_LCZ, down=.true. )
+    call HistoryPutAxis( 'LFZ',  'Land Grid Face Position Z',   'm', 'LFZ', GRID_LFZ, down=.true. )
     call HistoryPutAxis( 'LCDZ', 'Land Grid Cell length Z',     'm', 'LCZ', GRID_LCDZ )
 
-    call HistoryPutAxis( 'UCZ',  'Urban Grid Center Position Z', 'm', 'UCZ', GRID_UCZ  )
-    call HistoryPutAxis( 'UFZ',  'Urban Grid Face Position Z',   'm', 'UFZ', GRID_UFZ  )
+    call HistoryPutAxis( 'UCZ',  'Urban Grid Center Position Z', 'm', 'UCZ', GRID_UCZ, down=.true.  )
+    call HistoryPutAxis( 'UFZ',  'Urban Grid Face Position Z',   'm', 'UFZ', GRID_UFZ , down=.true. )
     call HistoryPutAxis( 'UCDZ', 'Urban Grid Cell length Z',     'm', 'UCZ', GRID_UCDZ )
 
+    call HistoryPutAxis('CBFZ',  'Boundary factor Center Z', '1', 'CZ', GRID_CBFZ)
+    call HistoryPutAxis('CBFX',  'Boundary factor Center X', '1', 'CX', GRID_CBFX)
+    call HistoryPutAxis('CBFY',  'Boundary factor Center Y', '1', 'CY', GRID_CBFY)
+    call HistoryPutAxis('FBFZ',  'Boundary factor Face Z',   '1', 'CZ', GRID_FBFZ)
+    call HistoryPutAxis('FBFX',  'Boundary factor Face X',   '1', 'CX', GRID_FBFX)
+    call HistoryPutAxis('FBFY',  'Boundary factor Face Y',   '1', 'CY', GRID_FBFY)
+
+    call HistoryPutAxis('CXG',   'Grid Center Position X (global)', 'm', 'CXG', GRID_CXG)
+    call HistoryPutAxis('CYG',   'Grid Center Position Y (global)', 'm', 'CYG', GRID_CYG)
+    call HistoryPutAxis('FXG',   'Grid Face Position X (global)',   'm', 'FXG', GRID_FXG)
+    call HistoryPutAxis('FYG',   'Grid Face Position Y (global)',   'm', 'FYG', GRID_FYG)
+
+    call HistoryPutAxis('CBFXG', 'Boundary factor Center X (global)', '1', 'CXG', GRID_CBFXG)
+    call HistoryPutAxis('CBFYG', 'Boundary factor Center Y (global)', '1', 'CYG', GRID_CBFYG)
+    call HistoryPutAxis('FBFXG', 'Boundary factor Face X (global)',   '1', 'CXG', GRID_FBFXG)
+    call HistoryPutAxis('FBFYG', 'Boundary factor Face Y (global)',   '1', 'CYG', GRID_FBFYG)
+
+    ! associate coordinates
     do k = 1, KMAX
        AXIS(1:IMAX,1:JMAX,k) = REAL_CZ(k+KS-1,IS:IE,JS:JE)
     end do
@@ -231,6 +253,38 @@ contains
     call HistoryPutAssociatedCoordinates( 'height_xvz' , 'height (half level xvz)'             ,     &
                                           'm' , AXIS_name(1:3), AXIS(:,:,:) )
 
+    do k = 1, KMAX
+       AXIS(1:IMAX,1:JMAX,k) = &
+            ( REAL_CZ(k+KS-1,IS:IE    ,JS:JE) + REAL_CZ(k+KS-1,IS:IE    ,JS+1:JE+1) &
+            + REAL_CZ(k+KS-1,IS+1:IE+1,JS:JE) + REAL_CZ(k+KS-1,IS+1:IE+1,JS+1:JE+1) ) * 0.25_RP
+    end do
+    AXIS_name(1:3) = (/'xh','yh', 'z '/)
+    call HistoryPutAssociatedCoordinates( 'height_uvz' , 'height (half level uvz)'             ,     &
+                                          'm' , AXIS_name(1:3), AXIS(:,:,:) )
+
+    do k = 1, KMAX
+       AXIS(1:IMAX,1:JMAX,k) = ( REAL_FZ(k+KS-1,IS:IE,JS:JE) + REAL_FZ(k+KS-1,IS+1:IE+1,JS:JE) ) * 0.5_RP
+    end do
+    AXIS_name(1:3) = (/'xh','y ', 'zh'/)
+    call HistoryPutAssociatedCoordinates( 'height_uyw' , 'height (half level uyw)'             ,     &
+                                          'm' , AXIS_name(1:3), AXIS(:,:,:) )
+
+    do k = 1, KMAX
+       AXIS(1:IMAX,1:JMAX,k) = ( REAL_FZ(k+KS-1,IS:IE,JS:JE) + REAL_FZ(k+KS-1,IS:IE,JS+1:JE+1) ) * 0.5_RP
+    end do
+    AXIS_name(1:3) = (/'x ','yh', 'zh'/)
+    call HistoryPutAssociatedCoordinates( 'height_xvw' , 'height (half level xvw)'             ,     &
+                                          'm' , AXIS_name(1:3), AXIS(:,:,:) )
+
+    do k = 1, KMAX
+       AXIS(1:IMAX,1:JMAX,k) = &
+            ( REAL_FZ(k+KS-1,IS:IE    ,JS:JE) + REAL_FZ(k+KS-1,IS:IE    ,JS+1:JE+1) &
+            + REAL_FZ(k+KS-1,IS+1:IE+1,JS:JE) + REAL_FZ(k+KS-1,IS+1:IE+1,JS+1:JE+1) ) * 0.25_RP
+    end do
+    AXIS_name(1:3) = (/'xh','yh', 'zh'/)
+    call HistoryPutAssociatedCoordinates( 'height_uvw' , 'height (half level uvw)'             ,     &
+                                          'm' , AXIS_name(1:3), AXIS(:,:,:) )
+
     AXIS(1:IMAX,1:JMAX,1) = REAL_LON (IS:IE,JS:JE) / D2R
     AXIS_name(1:2) = (/'x ','y '/)
     call HistoryPutAssociatedCoordinates( 'lon' , 'longitude'             ,     &
@@ -238,7 +292,15 @@ contains
 
     AXIS(1:IMAX,1:JMAX,1) = REAL_LONX(IS:IE,JS:JE) / D2R
     AXIS_name(1:2) = (/'xh','y '/)
-    call HistoryPutAssociatedCoordinates( 'lon_u', 'longitude (half level)',     &
+    call HistoryPutAssociatedCoordinates( 'lon_uy', 'longitude (half level uy)',     &
+                                          'degrees_east' , AXIS_name(1:2), AXIS(:,:,1) )
+    AXIS(1:IMAX,1:JMAX,1) = REAL_LONY(IS:IE,JS:JE) / D2R
+    AXIS_name(1:2) = (/'x ','yh'/)
+    call HistoryPutAssociatedCoordinates( 'lon_xv', 'longitude (half level xv)',     &
+                                          'degrees_east' , AXIS_name(1:2), AXIS(:,:,1) )
+    AXIS(1:IMAX,1:JMAX,1) = REAL_LONXY(IS:IE,JS:JE) / D2R
+    AXIS_name(1:2) = (/'xh','yh'/)
+    call HistoryPutAssociatedCoordinates( 'lon_uv', 'longitude (half level uv)',     &
                                           'degrees_east' , AXIS_name(1:2), AXIS(:,:,1) )
 
     AXIS(1:IMAX,1:JMAX,1) = REAL_LAT (IS:IE,JS:JE) / D2R
@@ -246,27 +308,18 @@ contains
     call HistoryPutAssociatedCoordinates( 'lat' , 'latitude'              ,     &
                                           'degrees_north', AXIS_name(1:2), AXIS(:,:,1) )
 
+    AXIS(1:IMAX,1:JMAX,1) = REAL_LATX(IS:IE,JS:JE) / D2R
+    AXIS_name(1:2) = (/'xh','y '/)
+    call HistoryPutAssociatedCoordinates( 'lat_uy', 'latitude (half level uy)' ,     &
+                                          'degrees_north', AXIS_name(1:2), AXIS(:,:,1) )
     AXIS(1:IMAX,1:JMAX,1) = REAL_LATY(IS:IE,JS:JE) / D2R
     AXIS_name(1:2) = (/'x ','yh'/)
-    call HistoryPutAssociatedCoordinates( 'lat_v', 'latitude (half level)' ,     &
+    call HistoryPutAssociatedCoordinates( 'lat_xv', 'latitude (half level xv)' ,     &
                                           'degrees_north', AXIS_name(1:2), AXIS(:,:,1) )
-
-    call HistoryPutAxis('CBFZ',  'Boundary factor Center Z', '1', 'CZ', GRID_CBFZ)
-    call HistoryPutAxis('CBFX',  'Boundary factor Center X', '1', 'CX', GRID_CBFX)
-    call HistoryPutAxis('CBFY',  'Boundary factor Center Y', '1', 'CY', GRID_CBFY)
-    call HistoryPutAxis('FBFZ',  'Boundary factor Face Z',   '1', 'CZ', GRID_FBFZ)
-    call HistoryPutAxis('FBFX',  'Boundary factor Face X',   '1', 'CX', GRID_FBFX)
-    call HistoryPutAxis('FBFY',  'Boundary factor Face Y',   '1', 'CY', GRID_FBFY)
-
-    call HistoryPutAxis('CXG',   'Grid Center Position X (global)', 'm', 'CXG', GRID_CXG)
-    call HistoryPutAxis('CYG',   'Grid Center Position Y (global)', 'm', 'CYG', GRID_CYG)
-    call HistoryPutAxis('FXG',   'Grid Face Position X (global)',   'm', 'FXG', GRID_FXG)
-    call HistoryPutAxis('FYG',   'Grid Face Position Y (global)',   'm', 'FYG', GRID_FYG)
-
-    call HistoryPutAxis('CBFXG', 'Boundary factor Center X (global)', '1', 'CXG', GRID_CBFXG)
-    call HistoryPutAxis('CBFYG', 'Boundary factor Center Y (global)', '1', 'CYG', GRID_CBFYG)
-    call HistoryPutAxis('FBFXG', 'Boundary factor Face X (global)',   '1', 'CXG', GRID_FBFXG)
-    call HistoryPutAxis('FBFYG', 'Boundary factor Face Y (global)',   '1', 'CYG', GRID_FBFYG)
+    AXIS(1:IMAX,1:JMAX,1) = REAL_LATXY(IS:IE,JS:JE) / D2R
+    AXIS_name(1:2) = (/'xh','yh'/)
+    call HistoryPutAssociatedCoordinates( 'lat_uv', 'latitude (half level uv)' ,     &
+                                          'degrees_north', AXIS_name(1:2), AXIS(:,:,1) )
 
     return
   end subroutine HIST_put_axes
@@ -298,6 +351,9 @@ contains
     character(len=*), intent(in), optional :: ydim
     character(len=*), intent(in), optional :: zdim
 
+    logical :: xh
+    logical :: yh
+
     logical :: existed
 
     character(len=16) :: dims(3)
@@ -305,15 +361,32 @@ contains
 
     call PROF_rapstart('FILE O NetCDF')
 
-    dims(1) = 'lon'
-    dims(2) = 'lat'
-    dims(3) = 'height'
+    xh = .false.
     if ( present(xdim) ) then
-       if ( xdim=='half' ) dims(1) = 'lon_u'
-    endif
+       if ( xdim=='half' ) xh = .true.
+    end if
+    yh = .false.
     if ( present(ydim) ) then
-       if ( ydim=='half' ) dims(2) = 'lat_v'
-    endif
+       if ( ydim=='half' ) yh = .true.
+    end if
+
+    if ( xh .and. yh ) then
+       dims(1) = 'lon_uv'
+       dims(2) = 'lat_uv'
+       dims(3) = 'height_uvz'
+    else if ( xh ) then
+       dims(1) = 'lon_uy'
+       dims(2) = 'lat_uy'
+       dims(3) = 'height_uyz'
+    else if ( yh ) then
+       dims(1) = 'lon_xv'
+       dims(2) = 'lat_xv'
+       dims(3) = 'height_xvz'
+    else
+       dims(1) = 'lon'
+       dims(2) = 'lat'
+       dims(3) = 'height'
+    end if
 
     if ( present(zdim) ) then
        if ( zdim=='land' ) then
@@ -325,12 +398,14 @@ contains
        else if ( zdim=='urbanhalf' ) then
           dims(3) = 'uzh'
        else if ( zdim=='half' ) then
-          dims(3) = 'height_xyw'
-       else
-          if (dims(1) == 'lon_u') then
-             dims(3) = 'height_uyz'
-          else if (dims(2) == 'lat_v') then
-             dims(3) = 'height_xvz'
+          if ( xh .and. yh ) then
+             dims(3) = 'height_uvw'
+          else if ( xh ) then
+             dims(3) = 'height_uyw'
+          else if ( yh ) then
+             dims(3) = 'height_xvw'
+          else
+             dims(3) = 'height_xyw'
           end if
        end if
     endif

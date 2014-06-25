@@ -193,7 +193,7 @@ module mod_urban_vars
                   'K',     &
                   'K',     &
                   'K',     &
-                  '-',     &
+                  'kg/kg', &
                   'm/s',   &
                   'K',     &
                   'W/m2',  &

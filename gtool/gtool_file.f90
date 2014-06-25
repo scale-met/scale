@@ -36,6 +36,7 @@ module gtool_file
   public :: FilePutAxis
   public :: FilePutAssociatedCoordinates
   public :: FileAddVariable
+  public :: FileSetTAttr
   public :: FileGetShape
   public :: FileRead
   public :: FileWrite
@@ -708,6 +709,33 @@ contains
 
     return
   end subroutine FileAddVariableRealDP
+
+  !-----------------------------------------------------------------------------
+  ! FileSetTAttr
+  !-----------------------------------------------------------------------------
+  subroutine FileSetTAttr( &
+     fid,   & ! (in)
+     vname, & ! (in)
+     key,   & ! (in)
+     val    & ! (in)
+     )
+    integer,          intent(in) :: fid
+    character(len=*), intent(in) :: vname
+    character(len=*), intent(in) :: key
+    character(len=*), intent(in) :: val
+
+    integer :: error
+
+    call file_set_tattr( &
+         fid, vname, & ! (in)
+         key, val,   & ! (in)
+         error       ) ! (out)
+    if ( error /= SUCCESS_CODE .and. error /= ALREADY_EXISTED_CODE ) then
+       call Log('E', 'xxx failed to put axis')
+    end if
+
+    return
+  end subroutine FileSetTAttr
 
   !-----------------------------------------------------------------------------
   ! FileGetShape
