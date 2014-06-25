@@ -83,10 +83,10 @@ module scale_cpl_bulkcoef
   character(len=H_SHORT), private :: bulkcoef_TYPE = 'BH91'
 
   ! limiter
-  real(RP), private :: U_min  = 1.0E-2_RP ! minimum absolute velocity
-  real(RP), private :: Cm_min = 1.0E-8_RP ! minimum bulk coef. of u,v,w
-  real(RP), private :: Ch_min = 1.0E-8_RP !                       T
-  real(RP), private :: Ce_min = 1.0E-8_RP !                       q
+  real(RP), private :: U_min  = 4.0E-1_RP ! minimum absolute velocity
+  real(RP), private :: Cm_min = 1.0E-6_RP ! minimum bulk coef. of u,v,w
+  real(RP), private :: Ch_min = 1.0E-6_RP !                       T
+  real(RP), private :: Ce_min = 1.0E-6_RP !                       q
   real(RP), private :: Cm_max = 1.0_RP    ! maximum bulk coef. of u,v,w
   real(RP), private :: Ch_max = 1.0_RP    !                       T
   real(RP), private :: Ce_max = 1.0_RP    !                       q
@@ -103,6 +103,7 @@ contains
 
     character(len=H_SHORT) :: CPL_bulkcoef_TYPE
 
+    real(RP) :: CPL_bulkcoef_U_min
     real(RP) :: CPL_bulkcoef_Cm_min
     real(RP) :: CPL_bulkcoef_Ch_min
     real(RP) :: CPL_bulkcoef_Ce_min
@@ -112,6 +113,7 @@ contains
 
     NAMELIST / PARAM_CPL_BULKCOEF / &
        CPL_bulkcoef_TYPE,    &
+       CPL_bulkcoef_U_min,   &
        CPL_bulkcoef_Cm_min,  &
        CPL_bulkcoef_Ch_min,  &
        CPL_bulkcoef_Ce_min,  &
@@ -123,6 +125,7 @@ contains
     !---------------------------------------------------------------------------
 
     CPL_bulkcoef_TYPE   = bulkcoef_TYPE
+    CPL_bulkcoef_U_min  = U_min
     CPL_bulkcoef_Cm_min = Cm_min
     CPL_bulkcoef_Ch_min = Ch_min
     CPL_bulkcoef_Ce_min = Ce_min
@@ -146,6 +149,7 @@ contains
     if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_CPL_BULKCOEF)
 
     bulkcoef_TYPE = CPL_bulkcoef_TYPE
+    U_min         = CPL_bulkcoef_U_min
     Cm_min        = CPL_bulkcoef_Cm_min
     Ch_min        = CPL_bulkcoef_Ch_min
     Ce_min        = CPL_bulkcoef_Ce_min

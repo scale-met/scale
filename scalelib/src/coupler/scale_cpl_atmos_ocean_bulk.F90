@@ -41,12 +41,8 @@ module scale_cpl_atmos_ocean_bulk
   !++ Private parameters & variables
   !
   !-----------------------------------------------------------------------------
-  real(RP), private :: U_minM  = 1.E-2_RP ! minimum U_abs for u,v,w
-  real(RP), private :: U_minH  = 1.E-2_RP !                   T
-  real(RP), private :: U_minE  = 1.E-2_RP !                   q
-  real(RP), private :: U_maxM  = 1.E+2_RP ! maximum U_abs for u,v,w
-  real(RP), private :: U_maxH  = 1.E+2_RP !                   T
-  real(RP), private :: U_maxE  = 1.E+2_RP !                   q
+  real(RP), private :: U_min  = 4.E-1_RP ! minimum U_abs
+  real(RP), private :: U_max  = 1.E+2_RP ! maximum U_abs
 
   logical, allocatable, private :: is_FLX(:,:) ! is atmos-land coupler run?
 
@@ -64,20 +60,12 @@ contains
 
     character(len=*), intent(in) :: CPL_TYPE_AtmOcn
 
-    real(RP) :: CPL_AtmOcn_bulk_U_minM
-    real(RP) :: CPL_AtmOcn_bulk_U_minH
-    real(RP) :: CPL_AtmOcn_bulk_U_minE
-    real(RP) :: CPL_AtmOcn_bulk_U_maxM
-    real(RP) :: CPL_AtmOcn_bulk_U_maxH
-    real(RP) :: CPL_AtmOcn_bulk_U_maxE
+    real(RP) :: CPL_AtmOcn_bulk_U_min
+    real(RP) :: CPL_AtmOcn_bulk_U_max
 
     NAMELIST / PARAM_CPL_ATMOCN_BULK / &
-       CPL_AtmOcn_bulk_U_minM,  &
-       CPL_AtmOcn_bulk_U_minH,  &
-       CPL_AtmOcn_bulk_U_minE,  &
-       CPL_AtmOcn_bulk_U_maxM,  &
-       CPL_AtmOcn_bulk_U_maxH,  &
-       CPL_AtmOcn_bulk_U_maxE
+       CPL_AtmOcn_bulk_U_min,  &
+       CPL_AtmOcn_bulk_U_max
 
     integer :: i, j
     integer :: ierr
@@ -91,12 +79,8 @@ contains
        call PRC_MPIstop
     endif
 
-    CPL_AtmOcn_bulk_U_minM  = U_minM
-    CPL_AtmOcn_bulk_U_minH  = U_minH
-    CPL_AtmOcn_bulk_U_minE  = U_minE
-    CPL_AtmOcn_bulk_U_maxM  = U_maxM
-    CPL_AtmOcn_bulk_U_maxH  = U_maxH
-    CPL_AtmOcn_bulk_U_maxE  = U_maxE
+    CPL_AtmOcn_bulk_U_min = U_min
+    CPL_AtmOcn_bulk_U_max = U_max
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -109,12 +93,8 @@ contains
     endif
     if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_CPL_ATMOCN_BULK)
 
-    U_minM    = CPL_AtmOcn_bulk_U_minM
-    U_minH    = CPL_AtmOcn_bulk_U_minH
-    U_minE    = CPL_AtmOcn_bulk_U_minE
-    U_maxM    = CPL_AtmOcn_bulk_U_maxM
-    U_maxH    = CPL_AtmOcn_bulk_U_maxH
-    U_maxE    = CPL_AtmOcn_bulk_U_maxE
+    U_min = CPL_AtmOcn_bulk_U_min
+    U_max = CPL_AtmOcn_bulk_U_max
 
     !--- judge to run atmos-ocean coupler
     allocate( is_FLX(IA,JA) )
@@ -234,7 +214,7 @@ contains
 
       if( is_FLX(i,j) ) then
         ! calculate surface flux
-        Uabs = sqrt( UA(i,j)**2 + VA(i,j)**2 )
+        Uabs = min( max( sqrt( UA(i,j)**2 + VA(i,j)**2 ), U_min ), U_max )
 
         call CPL_bulkcoef( &
             Cm,        & ! (out)
@@ -250,15 +230,15 @@ contains
             Z0H (i,j), & ! (in)
             Z0E (i,j)  ) ! (in)
 
-        XMFLX(i,j) = -Cm * min(max(Uabs,U_minM),U_maxM) * RHOA(i,j) * UA(i,j)
-        YMFLX(i,j) = -Cm * min(max(Uabs,U_minM),U_maxM) * RHOA(i,j) * VA(i,j)
-        ZMFLX(i,j) = -Cm * min(max(Uabs,U_minM),U_maxM) * RHOA(i,j) * WA(i,j)
+        XMFLX(i,j) = -Cm * Uabs * RHOA(i,j) * UA(i,j)
+        YMFLX(i,j) = -Cm * Uabs * RHOA(i,j) * VA(i,j)
+        ZMFLX(i,j) = -Cm * Uabs * RHOA(i,j) * WA(i,j)
 
         ! saturation at the surface
         call qsat( SQV, SST(i,j), PRSS(i,j) )
 
-        SHFLX (i,j) = CPdry * min(max(Uabs,U_minH),U_maxH) * RHOA(i,j) * Ch * ( SST(i,j) - TMPA(i,j) )
-        LHFLX (i,j) = LH0   * min(max(Uabs,U_minE),U_maxE) * RHOA(i,j) * Ce * ( SQV - QVA(i,j) )
+        SHFLX (i,j) = CPdry * Uabs * RHOA(i,j) * Ch * ( SST(i,j) - TMPA(i,j) )
+        LHFLX (i,j) = LH0   * Uabs * RHOA(i,j) * Ce * ( SQV - QVA(i,j) )
 
         ! calculation for residual
         WHFLX(i,j) = ( 1.0_RP - ALB_SW(i,j) ) * SWD(i,j) * (-1.0_RP) &
@@ -266,29 +246,10 @@ contains
                    + SHFLX(i,j) + LHFLX(i,j)
 
         ! diagnositc variables
-        U10(i,j) = UA(i,j) * log( 10.0_RP / Z0M(i,j) ) / log( Z1(i,j) / Z0M(i,j) )
-        V10(i,j) = VA(i,j) * log( 10.0_RP / Z0M(i,j) ) / log( Z1(i,j) / Z0M(i,j) )
-
-        Uabs02 = sqrt( UA(i,j)**2 + VA(i,j)**2 ) * log( 2.0_RP / Z0M(i,j) ) / log( Z1(i,j) / Z0M(i,j) )
-
-        call CPL_bulkcoef( &
-            Cm02,      & ! (out)
-            Ch02,      & ! (out)
-            Ce02,      & ! (out)
-            TMPA(i,j), & ! (in)
-            SST (i,j), & ! (in)
-            PRSA(i,j), & ! (in)
-            PRSS(i,j), & ! (in)
-            Uabs,      & ! (in)
-            2.0_RP,    & ! (in)
-            Z0M (i,j), & ! (in)
-            Z0H (i,j), & ! (in)
-            Z0E (i,j)  ) ! (in)
-
-        T2(i,j) = SST(i,j) - ( SST(i,j) - TMPA(i,j) ) * ( Ch   * min( max( Uabs,   U_minH ), U_maxH ) ) &
-                                                      / ( Ch02 * min( max( Uabs02, U_minH ), U_maxH ) )
-        Q2(i,j) = SQV      - ( SQV      - QVA (i,j) ) * ( Ce   * min( max( Uabs,   U_minE ), U_maxE ) ) &
-                                                      / ( Ce02 * min( max( Uabs02, U_minE ), U_maxE ) )
+        U10(i,j) = UA  (i,j) * log( 10.0_RP / Z0M(i,j) ) / log( Z1(i,j) / Z0M(i,j) )
+        V10(i,j) = VA  (i,j) * log( 10.0_RP / Z0M(i,j) ) / log( Z1(i,j) / Z0M(i,j) )
+        T2 (i,j) = TMPA(i,j) * log(  2.0_RP / Z0H(i,j) ) / log( Z1(i,j) / Z0H(i,j) )
+        Q2 (i,j) = QVA (i,j) * log(  2.0_RP / Z0E(i,j) ) / log( Z1(i,j) / Z0E(i,j) )
 
       else
         ! not calculate surface flux
