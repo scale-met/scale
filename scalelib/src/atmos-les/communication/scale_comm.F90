@@ -55,14 +55,22 @@ module scale_comm
      module procedure COMM_vars_2D
      module procedure COMM_vars_3D
   end interface COMM_vars
+
   interface COMM_vars8
      module procedure COMM_vars8_2D
      module procedure COMM_vars8_3D
   end interface COMM_vars8
+
   interface COMM_wait
      module procedure COMM_wait_2D
      module procedure COMM_wait_3D
   end interface COMM_WAIT
+
+  interface COMM_horizontal_max
+     module procedure COMM_horizontal_max_2D
+     module procedure COMM_horizontal_max_3D
+  end interface COMM_horizontal_max
+
   interface COMM_gather
      module procedure COMM_gather_2D
      module procedure COMM_gather_3D
@@ -2056,8 +2064,6 @@ contains
   !-----------------------------------------------------------------------------
   !> calculate horizontal mean (global total with communication)
   subroutine COMM_horizontal_mean( varmean, var )
-    use scale_process, only: &
-       PRC_nmax
     use scale_const, only: &
        CONST_UNDEF
     implicit none
@@ -2120,12 +2126,44 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Get minimam value in horizontal area
-  subroutine COMM_horizontal_max( varmax, var )
-    use scale_process, only: &
-       PRC_nmax
+  subroutine COMM_horizontal_max_2D( varmax, var )
     implicit none
 
-    real(RP), intent(out) :: varmax(KA)       !< horizontal minimum
+    real(RP), intent(out) :: varmax     !< horizontal maximum
+    real(RP), intent(in)  :: var(IA,JA) !< 2D value
+
+    real(RP) :: statval
+    real(RP) :: allstatval
+
+    integer :: ierr
+    !---------------------------------------------------------------------------
+
+    statval = maxval(var(IS:IE,JS:JE))
+
+    ! [NOTE] always communicate globally
+    call PROF_rapstart('COMM Allreduce MPI')
+    ! All reduce
+    call MPI_Allreduce( statval,        &
+                        allstatval,     &
+                        1,              &
+                        COMM_datatype,  &
+                        MPI_MAX,        &
+                        MPI_COMM_WORLD, &
+                        ierr            )
+
+    call PROF_rapend  ('COMM Allreduce MPI')
+
+    varmax = allstatval
+
+    return
+  end subroutine COMM_horizontal_max_2D
+
+  !-----------------------------------------------------------------------------
+  !> Get minimam value in horizontal area
+  subroutine COMM_horizontal_max_3D( varmax, var )
+    implicit none
+
+    real(RP), intent(out) :: varmax(KA)       !< horizontal maximum
     real(RP), intent(in)  :: var   (KA,IA,JA) !< 3D value
 
     real(RP) :: statval   (KA)
@@ -2160,38 +2198,36 @@ contains
     varmax(KE+1:KA  ) = 0.0_RP
 
     return
-  end subroutine COMM_horizontal_max
+  end subroutine COMM_horizontal_max_3D
 
   !-----------------------------------------------------------------------------
   !> Get data from whole process value in 2D field
   subroutine COMM_gather_2D( recv, send, gIA, gJA )
     use scale_process, only: &
-       PRC_master,           &
-       PRC_myrank,           &
-       PRC_nmax
+       PRC_master
     implicit none
 
-    real(RP), intent(out) :: recv(:,:)  !< receive buffer (gIA,gJA*PRC_nmax)
-    real(RP), intent(in)  :: send(:,:)  !< send buffer (gIA,gJA)
-    integer, intent(in)  :: gIA        !< dimension size of x
-    integer, intent(in)  :: gJA        !< dimension size of y
+    real(RP), intent(out) :: recv(:,:) !< receive buffer (gIA,gJA)
+    real(RP), intent(in)  :: send(:,:) !< send buffer (gIA,gJA)
+    integer,  intent(in)  :: gIA       !< dimension size of x
+    integer,  intent(in)  :: gJA       !< dimension size of y
 
-    integer :: ierr
     integer :: sendcounts, recvcounts
+    integer :: ierr
     !---------------------------------------------------------------------------
 
     sendcounts = gIA * gJA
     recvcounts = gIA * gJA
 
     call MPI_GATHER( send(:,:),      &
-                     sendcounts,      &
-                     COMM_datatype,   &
-                     recv(:,:),       &
-                     recvcounts,      &
-                     COMM_datatype,   &
-                     PRC_master,      &
-                     MPI_COMM_WORLD,  &
-                     ierr             )
+                     sendcounts,     &
+                     COMM_datatype,  &
+                     recv(:,:),      &
+                     recvcounts,     &
+                     COMM_datatype,  &
+                     PRC_master,     &
+                     MPI_COMM_WORLD, &
+                     ierr            )
 
     return
   end subroutine COMM_gather_2D
@@ -2200,33 +2236,31 @@ contains
   !> Get data from whole process value in 3D field
   subroutine COMM_gather_3D( recv, send, gIA, gJA, gKA )
     use scale_process, only: &
-       PRC_master,           &
-       PRC_myrank,           &
-       PRC_nmax
+       PRC_master
     implicit none
 
-    real(RP), intent(out) :: recv(:,:,:)  !< receive buffer (gIA,gJA,gKA*PRC_nmax)
-    real(RP), intent(in)  :: send(:,:,:)  !< send buffer (gIA,gJA,gKA)
-    integer, intent(in)  :: gIA          !< dimension size of x
-    integer, intent(in)  :: gJA          !< dimension size of y
-    integer, intent(in)  :: gKA          !< dimension size of z
+    real(RP), intent(out) :: recv(:,:,:) !< receive buffer(gIA,gJA,gKA)
+    real(RP), intent(in)  :: send(:,:,:) !< send buffer   (gIA,gJA,gKA)
+    integer,  intent(in)  :: gIA         !< dimension size of x
+    integer,  intent(in)  :: gJA         !< dimension size of y
+    integer,  intent(in)  :: gKA         !< dimension size of z
 
-    integer :: ierr
     integer :: sendcounts, recvcounts
+    integer :: ierr
     !---------------------------------------------------------------------------
 
     sendcounts = gIA * gJA * gKA
     recvcounts = gIA * gJA * gKA
 
     call MPI_GATHER( send(:,:,:),    &
-                     sendcounts,      &
-                     COMM_datatype,   &
-                     recv(:,:,:),     &
-                     recvcounts,      &
-                     COMM_datatype,   &
-                     PRC_master,      &
-                     MPI_COMM_WORLD,  &
-                     ierr             )
+                     sendcounts,     &
+                     COMM_datatype,  &
+                     recv(:,:,:),    &
+                     recvcounts,     &
+                     COMM_datatype,  &
+                     PRC_master,     &
+                     MPI_COMM_WORLD, &
+                     ierr            )
 
     return
   end subroutine COMM_gather_3D
