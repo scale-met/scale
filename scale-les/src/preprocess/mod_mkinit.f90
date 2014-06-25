@@ -4033,7 +4033,7 @@ enddo
     character(len=H_LONG) :: FILETYPE_ORG       = ''
     character(len=H_LONG) :: BASENAME_BOUNDARY  = 'boundary_real'
     character(len=H_LONG) :: BOUNDARY_TITLE     = 'SCALE-LES BOUNDARY CONDITION for REAL CASE'
-    real(DP)               :: BOUNDARY_UPDATE_DT = 0.0_DP ! inteval time of boudary data update [s]
+    real(DP)              :: BOUNDARY_UPDATE_DT = 0.0_DP ! inteval time of boudary data update [s]
     logical               :: WRF_FILE_TYPE      = .true.  ! wrf filetype: T=wrfout, F=wrfrst
 
     NAMELIST / PARAM_MKINIT_REAL / &
@@ -4078,18 +4078,18 @@ enddo
     endif
     if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_REAL)
 
-    BASENAME_WITHNUM = trim(BASENAME_ORG)//"_00000"
-    call ParentAtomSetup( dims(:), timelen, mdlid, BASENAME_WITHNUM,       &
-                           FILETYPE_ORG, INTERP_SERC_DIV_NUM, WRF_FILE_TYPE )
-
-    if ( timelen /= 1 ) then
-       write(*,*) 'xxx Multiple Time Steps Found in Original File! Cannot Handle These.'
-       write(*,*) 'xxx System Going to Abort...Sorry'
+    if ( BOUNDARY_UPDATE_DT <= 0 ) then
+       write(*,*) 'xxx BOUNDARY_UPDATE_DT is necessary in real case preprocess'
        call PRC_MPIstop
     endif
 
-    if( BOUNDARY_UPDATE_DT <= 0 ) then
-       write(*,*) 'xxx BOUNDARY_UPDATE_DT is necessary in real case preprocess'
+    BASENAME_WITHNUM = trim(BASENAME_ORG)//"_00000"
+    call ParentAtomSetup( dims(:), timelen, mdlid,           & ![OUT]
+                          BASENAME_WITHNUM, FILETYPE_ORG,    & ![IN]
+                          INTERP_SERC_DIV_NUM, WRF_FILE_TYPE ) ![IN]
+
+    if ( timelen /= 1 ) then
+       write(*,*) 'xxx Multiple Time Steps Found in Original File!'
        call PRC_MPIstop
     endif
 

@@ -118,13 +118,13 @@ contains
       wrf_file_type_in  )
     implicit none
 
-    integer,          intent(out)   :: dims(:)
-    integer,          intent(out)   :: timelen
-    integer,          intent(out)   :: mdlid
-    character(LEN=*), intent( in)  :: basename_org
-    character(LEN=*), intent( in)  :: filetype
-    integer,          intent( in)   :: search_divnum_in
-    logical,          intent( in)   :: wrf_file_type_in
+    integer,          intent(out) :: dims(:)
+    integer,          intent(out) :: timelen
+    integer,          intent(out) :: mdlid
+    character(len=*), intent(in)  :: basename_org
+    character(len=*), intent(in)  :: filetype
+    integer,          intent(in)  :: search_divnum_in
+    logical,          intent(in)  :: wrf_file_type_in
 
     intrinsic shape
     !---------------------------------------------------------------------------
