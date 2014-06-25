@@ -20,7 +20,9 @@
 !! @li      2014-06-07 (Y.Sato)  [rev] Remove dt=max(dt_sdm) and some other changes
 !! @li      2014-06-09 (S.Shima) [rev] Check whether dt is the least common multiple of sdm_dtcmph(i) that satisfies sdm_dtcmph(i)<= dt. Fixed a hidden bug: "/=" to "==".
 !! @li      2014-06-13 (S.Shima) [rev] Common variables are separated into sdm_common.f90
-!! @li      2014-06-14 (S.Shima) [rev] Check the initialization of the random number generator. Where to finalize?
+!! @li      2014-06-14 (S.Shima) [rev] Check the initialization of the random number generator.
+!! @li      2014-06-24 (S.Shima) [rev] Separated sdm_allocinit
+!! @li      2014-06-25 (S.Shima) [rev] Bugfix and improvement of ATMOS_PHY_MP_sdm_restart_in and sdm_iniset
 !!
 !<
 !-------------------------------------------------------------------------------
@@ -538,8 +540,12 @@ contains
     if( sd_first ) then
       sd_first = .false.
       if( IO_L ) write(IO_FID_LOG,*) '*** S.D.: setup'
-      !---- set initial condition
-      call sdm_iniset(DENS, RHOT, QTRC,                   &
+      if( sd_rest_flg_in ) then
+         !---- read restart file
+         call ATMOS_PHY_MP_sdm_restart_in
+      else
+         !---- set initial condition
+         call sdm_iniset(DENS, RHOT, QTRC,                   &
                       RANDOM_IN_BASENAME, fid_random_i,   &
                       xmax_sdm, ymax_sdm, sdm_dtcmph,     &
                       sdm_rdnc,sdm_sdnmlvol,sdm_aslset,   &
@@ -554,6 +560,7 @@ contains
                       sdz_s2c, sdr_s2c,                   &
                       sdrk_s2c, sdvz_s2c,                 &
                       sdrkl_s2c, sdrku_s2c                )
+      end if
     endif
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Microphysics(Super Droplet Method)'
@@ -858,11 +865,12 @@ contains
       end do
       end do
 
-      ! restart files are used for S.D.
-      if( sd_rest_flg_in ) then
-         call ATMOS_PHY_MP_sdm_restart_in
-         return
-      endif
+      ! This should not be called here
+!!$      ! restart files are used for S.D.
+!!$      if( sd_rest_flg_in ) then
+!!$         call ATMOS_PHY_MP_sdm_restart_in
+!!$         return
+!!$      endif
 
       !### Get random generator seed ###!
       !! Random number generator has already been initialized in scale-les/src/preprocess/mod_mkinit.f90
@@ -8100,6 +8108,10 @@ contains
     integer :: dp_dum, rp_dum, n, m, ierr
     real(DP) :: otime
 
+    !### Get random generator seed ###!
+    !! Random number generator has already been initialized in scale-les/src/preprocess/mod_mkinit.f90
+    !! Be careful. If unit (=fid_random_i) is specified, filename is ignored and the object is initialized by the unit.
+    call rng_load_state( rng_s2c, trim(RANDOM_IN_BASENAME), fid_random_i )
 
     open (fid_sd_i, file = trim(SD_IN_BASENAME), &! action = "read", &
           access = "sequential", status = "old", form = "unformatted", &
