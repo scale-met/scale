@@ -24,6 +24,7 @@
 !! @li      2014-06-24 (S.Shima) [rev] Separated sdm_allocinit
 !! @li      2014-06-25 (S.Shima) [rev] Bugfix and improvement of ATMOS_PHY_MP_sdm_restart_in and sdm_iniset
 !! @li      2014-06-25 (S.Shima) [rev] Bugfix of sd position initialization, and many modification
+!! @li      2014-06-25 (S.Shima) [rev] Bugfix: dx_sdm, dy_sdm, dxiv_sdn, dyiv_sdm restored
 !<
 !-------------------------------------------------------------------------------
 #include "macro_thermodyn.h"
@@ -122,7 +123,7 @@ contains
        CBFX => GRID_CBFX, &
        CBFY => GRID_CBFY, &
        ISG, IEG, JSG, JEG,&
-       DZ
+       DX,DY,DZ
     use scale_topography, only: &
        TOPO_Zsfc
     implicit none
@@ -458,10 +459,11 @@ contains
 !!$    dx_sdm(1:IA) = FDX(1:IA)
 !!$    dy_sdm(1:JA) = FDY(1:JA)
 !!$    dz_sdm(1:KA) = FDZ(1:KA)
-!!$    dxiv_sdm(1:IA) = 1.0_RP / dx_sdm(1:IA)
-!!$    dyiv_sdm(1:JA) = 1.0_RP / dy_sdm(1:JA)
-!!$    dziv_sdm(1:KA) = 1.0_RP / dz_sdm(1:KA)
+    dx_sdm(1:IA) = DX
+    dy_sdm(1:JA) = DY
     dz_sdm(1:KA) = DZ
+    dxiv_sdm(1:IA) = 1.0_RP / dx_sdm(1:IA)
+    dyiv_sdm(1:JA) = 1.0_RP / dy_sdm(1:JA)
     dziv_sdm(1:KA) = 1.0_RP / dz_sdm(1:KA)
     xmax_sdm = GRID_FX(IE)-GRID_FX(IS-1)
     ymax_sdm = GRID_FY(JE)-GRID_FY(JS-1)
