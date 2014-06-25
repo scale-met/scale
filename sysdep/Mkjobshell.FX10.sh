@@ -84,16 +84,15 @@ if [ ! ${DATDISTS[0]} = "" ]; then
       PE=`printf %06d ${prcm1}`
       for f in ${DATDISTS[@]}
       do
-         if [ -f ${DATDIR}/${f}.pe${PE} ]; then
-            echo "ln -svf ${DATDIR}/${f}.pe${PE} ." >> ./run.sh
+         if [ -f ${f}.pe${PE}.nc ]; then
+            echo "ln -svf ${f}.pe${PE}.nc ." >> ./run.sh
          else
-            echo "datafile does not found! : ${DATDIR}/${f}.pe${PE}"
+            echo "datafile does not found! : ${f}.pe${PE}.nc"
             exit 1
          fi
       done
    done
 fi
-
 
 cat << EOF2 >> ./run.sh
 

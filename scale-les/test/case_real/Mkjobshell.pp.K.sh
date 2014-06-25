@@ -2,14 +2,16 @@
 
 # Arguments
 BINDIR=${1}
-INITNAME=${2}
-BINNAME=${3}
-INITCONF=${4}
-RUNCONF=${5}
-TPROC=${6}
-DATDIR=${7}
-DATPARAM=(`echo ${8} | tr -s ',' ' '`)
-DATDISTS=(`echo ${9} | tr -s ',' ' '`)
+PPNAME=${2}
+INITNAME=${3}
+BINNAME=${4}
+PPCONF=${5}
+INITCONF=${6}
+RUNCONF=${7}
+TPROC=${8}
+DATDIR=${9}
+DATPARAM=(`echo ${10} | tr -s ',' ' '`)
+DATDISTS=(`echo ${11} | tr -s ',' ' '`)
 
 # System specific
 MPIEXEC="mpiexec"
@@ -45,33 +47,7 @@ cat << EOF1 > ./run.sh
 #PJM --stgin  "rank=* ${BINDIR}/${BINNAME}  %r:./"
 #PJM --stgin  "rank=*         ./${INITCONF} %r:./"
 #PJM --stgin  "rank=*         ./${RUNCONF}  %r:./"
-EOF1
-
-if [ ! ${DATPARAM[0]} = "" ]; then
-   for f in ${DATPARAM[@]}
-   do
-         if [ -f ${DATDIR}/${f} ]; then
-            echo "#PJM --stgin  'rank=* ${DATDIR}/${f} %r:./'" >> ./run.sh
-         else
-            echo "datafile does not found! : ${DATDIR}/${f}"
-            exit 1
-         fi
-   done
-fi
-
-if [ ! ${DATDISTS[0]} = "" ]; then
-   for f in ${DATDISTS[@]}
-   do
-      if [ -f ${f}.pe000000 ]; then
-         echo "#PJM --stgin  'rank=* ${f}.pe%06r.nc %r:./'" >> ./run.sh
-      else
-         echo "datafile does not found! : ${f}.pe000000.nc"
-         exit 1
-      fi
-   done
-fi
-
-cat << EOF2 >> ./run.sh
+#PJM --stgin  "rank=*           ${DATDIR}/* %r:./input/"
 #PJM --stgout "rank=* %r:./*      ./"
 #PJM -j
 #PJM -s
@@ -83,8 +59,16 @@ export OMP_NUM_THREADS=8
 #export fu08bf=1
 
 # run
-${MPIEXEC} ./${INITNAME} ${INITCONF} || exit
-${MPIEXEC} ./${BINNAME}  ${RUNCONF}  || exit
+EOF1
 
-################################################################################
-EOF2
+if [ ! ${PPNAME}   = "NONE" ]; then
+   echo "${MPIEXEC} ${BINDIR}/${PPNAME}   ${PPCONF}   || exit 1" >> ./run.sh
+fi
+
+if [ ! ${INITNAME} = "NONE" ]; then
+   echo "${MPIEXEC} ${BINDIR}/${INITNAME} ${INITCONF} || exit 1" >> ./run.sh
+fi
+
+if [ ! ${BINNAME} = "NONE" ]; then
+   echo "${MPIEXEC} ${BINDIR}/${BINNAME}  ${RUNCONF}  || exit 1" >> ./run.sh
+fi
