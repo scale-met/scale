@@ -409,6 +409,10 @@ contains
     real(RP), parameter    :: EL  = 583.0_RP    ! latent heat of vaporation [cgs unit]
     real(RP), parameter    :: SIG = 8.17E-11_RP ! stefun bolzman constant   [cgs unit]
     real(RP), parameter    :: SRATIO = 0.75_RP  ! ratio between direct/total solar [-]
+    real(RP), parameter    :: TFa      = 0.5_RP      ! factor a in Tomita (2009) 
+    real(RP), parameter    :: TFb      = 1.1_RP      ! factor b in Tomita (2009) 
+    real(RP), parameter    :: redf_min = 1.0E-2_RP   ! minimum reduced factor
+    real(RP), parameter    :: redf_max = 1.0_RP      ! maximum reduced factor
 
     !-- Local variables
     logical  :: SHADOW = .false.
@@ -478,6 +482,9 @@ contains
     real(RP) :: ALPHAC, ALPHAB, ALPHAG
     real(RP) :: CHC, CHB, CHG, CDC
     real(RP) :: TC1, TC2, QC1, QC2
+
+    real(RP) :: oldF,oldGF      ! residual in previous step
+    real(RP) :: redf,redfg      ! reduced factor
 
     real(RP) :: F
     real(RP) :: DRRDTR, DHRDTR, DELERDTR, DG0RDTR
@@ -634,6 +641,9 @@ contains
 
     ! TRP = 350.0_RP
 
+    redf   = 1.0_RP
+    oldF   = 1.0E+5_RP
+
     do iteration = 1, 20
 
       ES       = 6.11_RP * exp( ( LH0/Rvap) * (TRP-TEM00) / (TEM00*TRP) )
@@ -654,10 +664,28 @@ contains
       DG0RDTR  = 2.0_RP * AKSR / DZR(1)
 
       DFDT     = DRRDTR - DHRDTR - DELERDTR - DG0RDTR
-      DTR      = F / DFDT
 
-      TR       = TRP - DTR
+      DTR      = -1.0_RP * F / DFDT
+
+      !DTR      = F / DFDT
+      !TR       = TRP - DTR
+      !TRP      = TR
+
+      !!! Tomita(2009)
+      if( redf < 0.0_RP ) then
+      	  redf = 1.0_RP
+      end if
+      if( abs(F) > abs(oldF) ) then
+          redf = max( TFa*redf, redf_min )
+      else
+	  redf = min( TFb*redf, redf_max )
+      end if
+      if( DFDT > 0.0_RP ) then
+      	  redf = -1.0_RP
+      end if
+      TR       = TRP + redf * DTR
       TRP      = TR
+      oldF     = F      
 
       if( abs(F) < 0.000001_RP .AND. abs(DTR) < 0.000001_RP ) exit
 
