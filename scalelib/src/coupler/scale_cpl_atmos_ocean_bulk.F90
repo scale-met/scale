@@ -194,9 +194,8 @@ contains
     real(RP), intent(in) :: Z0E   (IA,JA) ! roughness length for vapor [m]
 
     ! works
-    real(RP) :: Uabs, Uabs02 ! absolute velocity at the lowest atmospheric layer [m/s]
+    real(RP) :: Uabs ! absolute velocity at the lowest atmospheric layer [m/s]
     real(RP) :: Cm, Ch, Ce ! bulk transfer coeff. [no unit]
-    real(RP) :: Cm02, Ch02, Ce02 ! bulk transfer coeff. for 2m [no unit]
     real(RP) :: SQV ! saturation water vapor mixing ratio at surface [kg/kg]
 
     integer :: i, j, n
@@ -246,10 +245,12 @@ contains
                    + SHFLX(i,j) + LHFLX(i,j)
 
         ! diagnositc variables
-        U10(i,j) = UA  (i,j) * log( 10.0_RP / Z0M(i,j) ) / log( Z1(i,j) / Z0M(i,j) )
-        V10(i,j) = VA  (i,j) * log( 10.0_RP / Z0M(i,j) ) / log( Z1(i,j) / Z0M(i,j) )
-        T2 (i,j) = TMPA(i,j) * log(  2.0_RP / Z0H(i,j) ) / log( Z1(i,j) / Z0H(i,j) )
-        Q2 (i,j) = QVA (i,j) * log(  2.0_RP / Z0E(i,j) ) / log( Z1(i,j) / Z0E(i,j) )
+        U10(i,j) = UA (i,j) * log( 10.0_RP / Z0M(i,j) ) / log( Z1(i,j) / Z0M(i,j) )
+        V10(i,j) = VA (i,j) * log( 10.0_RP / Z0M(i,j) ) / log( Z1(i,j) / Z0M(i,j) )
+        T2 (i,j) = SST(i,j) + ( TMPA(i,j) - SST(i,j) ) * ( log(  2.0_RP / Z0M(i,j) ) * log(  2.0_RP / Z0H(i,j) ) ) &
+                                                       / ( log( Z1(i,j) / Z0M(i,j) ) * log( Z1(i,j) / Z0H(i,j) ) )
+        Q2 (i,j) = SQV      + (  QVA(i,j) - SQV      ) * ( log(  2.0_RP / Z0M(i,j) ) * log(  2.0_RP / Z0E(i,j) ) ) &
+                                                       / ( log( Z1(i,j) / Z0M(i,j) ) * log( Z1(i,j) / Z0E(i,j) ) )
 
       else
         ! not calculate surface flux

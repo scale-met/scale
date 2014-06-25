@@ -227,10 +227,9 @@ contains
     real(RP) :: oldres ! residual in previous step
     real(RP) :: redf   ! reduced factor
 
-    real(RP) :: Uabs, Uabs02 ! absolute velocity at the lowest atmospheric layer [m/s]
+    real(RP) :: Uabs ! absolute velocity at the lowest atmospheric layer [m/s]
     real(RP) :: Cm, Ch, Ce ! bulk transfer coeff. [no unit]
     real(RP) :: dCm, dCh, dCe ! bulk transfer coeff. for differential equation [no unit]
-    real(RP) :: Cm02, Ch02, Ce02 ! bulk transfer coeff. for 2m [no unit]
     real(RP) :: SQV, dSQV ! saturation water vapor mixing ratio at surface [kg/kg]
     real(RP) :: dSHFLX, dLHFLX, dGHFLX
 
@@ -340,10 +339,12 @@ contains
         end do
 
         ! diagnositc variables
-        U10(i,j) = UA  (i,j) * log( 10.0_RP / Z0M(i,j) ) / log( Z1(i,j) / Z0M(i,j) )
-        V10(i,j) = VA  (i,j) * log( 10.0_RP / Z0M(i,j) ) / log( Z1(i,j) / Z0M(i,j) )
-        T2 (i,j) = TMPA(i,j) * log(  2.0_RP / Z0H(i,j) ) / log( Z1(i,j) / Z0H(i,j) )
-        Q2 (i,j) = QVA (i,j) * log(  2.0_RP / Z0E(i,j) ) / log( Z1(i,j) / Z0E(i,j) )
+        U10(i,j) = UA (i,j) * log( 10.0_RP / Z0M(i,j) ) / log( Z1(i,j) / Z0M(i,j) )
+        V10(i,j) = VA (i,j) * log( 10.0_RP / Z0M(i,j) ) / log( Z1(i,j) / Z0M(i,j) )
+        T2 (i,j) = LST(i,j) + ( TMPA(i,j) - LST(i,j) ) * ( log(  2.0_RP / Z0M(i,j) ) * log(  2.0_RP / Z0H(i,j) ) ) &
+                                                       / ( log( Z1(i,j) / Z0M(i,j) ) * log( Z1(i,j) / Z0H(i,j) ) )
+        Q2 (i,j) = SQV      + (  QVA(i,j) - SQV      ) * ( log(  2.0_RP / Z0M(i,j) ) * log(  2.0_RP / Z0E(i,j) ) ) &
+                                                       / ( log( Z1(i,j) / Z0M(i,j) ) * log( Z1(i,j) / Z0E(i,j) ) )
 
         if( n > nmax ) then
           ! not converged and stop program
