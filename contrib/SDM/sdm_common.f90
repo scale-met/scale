@@ -109,7 +109,7 @@ module m_sdm_common
   !
   !------------------------------------------------------------------------------
   real(RP) :: xmax_sdm, ymax_sdm      ! Distance in X, Y-direction
-  real(RP) :: rkumax, rkumin, rklmax  ! Maxinum nad Minumu real number of 'sd_rku, sd_rku, sd_rkl
+  real(RP) :: rkumax, rkumin, rklmax  ! Maxinum and Minuimum real number of sd_rku and sd_rkl
   real(RP) :: minzph                  ! Minimum of zph(i,j,2)
   integer :: knum_sdm                ! Maximum number of SDM grid in vertical
 !  integer :: ni=IE-IS+1, nj=JE-JS+1, nz=KE-KS+1     ! Number of grid for each dirrection with halo

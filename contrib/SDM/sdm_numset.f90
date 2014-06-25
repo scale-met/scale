@@ -38,7 +38,8 @@ contains
     use scale_topography, only: &
          TOPO_Zsfc
     use scale_grid_real, only: &
-         REAL_CZ
+!         REAL_CZ
+         REAL_FZ
     use scale_grid_index, only: &
          IE,IS,KE,KS,JE,JS,IA,KA,JA ! S:start, E: end of active grids. A: num of grids including HALO.
     use m_sdm_common, only: &
@@ -82,7 +83,8 @@ contains
     do k = 1, KA
        do j = 1, JA
           do i = 1, IA
-             zph_crs(k,i,j) = REAL_CZ(k,i,j)
+!             zph_crs(k,i,j) = REAL_CZ(k,i,j)
+             zph_crs(k,i,j) = REAL_FZ(k,i,j)
           enddo
        enddo
     enddo

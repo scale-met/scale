@@ -23,7 +23,7 @@
 !! @li      2014-06-14 (S.Shima) [rev] Check the initialization of the random number generator.
 !! @li      2014-06-24 (S.Shima) [rev] Separated sdm_allocinit
 !! @li      2014-06-25 (S.Shima) [rev] Bugfix and improvement of ATMOS_PHY_MP_sdm_restart_in and sdm_iniset
-!!
+!! @li      2014-06-25 (S.Shima) [rev] Bugfix of sd position initialization, and many modification
 !<
 !-------------------------------------------------------------------------------
 #include "macro_thermodyn.h"
@@ -105,18 +105,24 @@ contains
        COMM_horizontal_mean
     use scale_time, only: &
        dt => TIME_DTSEC_ATMOS_PHY_MP
+    use scale_grid_real, only: & ! These should be all REAL_xx. Check later.
+       REAL_FZ
     use scale_grid, only: &
-       CDZ => GRID_CDZ,   &
-       CDX => GRID_CDX,   &
-       CDY => GRID_CDY,   &
-       CZ  => GRID_CZ,    &
-       FZ  => GRID_FZ,    &
-       FX  => GRID_FX,    &
-       FY  => GRID_FY,    &
+!!$       CDZ => GRID_CDZ,   &
+!!$       CDX => GRID_CDX,   &
+!!$       CDY => GRID_CDY,   &
+!!$       CZ  => GRID_CZ,    &
+!!$       FZ  => GRID_FZ,    &
+!!$       FDX => GRID_FDX,   &
+!!$       FDY => GRID_FDY,   &
+!!$       FDZ => GRID_FDZ,   & 
+       GRID_FX,    &
+       GRID_FY,    &
        CBFZ => GRID_CBFZ, &
        CBFX => GRID_CBFX, &
        CBFY => GRID_CBFY, &
-       ISG, IEG, JSG, JEG
+       ISG, IEG, JSG, JEG,&
+       DZ
     use scale_topography, only: &
        TOPO_Zsfc
     implicit none
@@ -196,6 +202,12 @@ contains
     do k = KS, KE
       buffact = max( buffact,CBFZ(k) )
     enddo
+    do j = JS, JE
+      buffact = max( buffact,CBFY(j) )
+    enddo
+    do i = IS, IE
+      buffact = max( buffact,CBFX(i) )
+    enddo
 
     if( buffact > 0.0_RP ) then
        sthopt = 1
@@ -203,11 +215,21 @@ contains
        sthopt = 0
     endif
 
+    if(sthopt==1) then
+       if( IO_L ) write(IO_FID_LOG,*) 'ERROR: stretched coordinate is not yet supported!'
+       call PRC_MPIstop
+    end if
+
     if( maxval( TOPO_Zsfc ) > 0.0_RP ) then
        trnopt = 2
     elseif( maxval( TOPO_Zsfc ) == 0.0_RP ) then
        trnopt = 0
     endif
+
+    if(trnopt==2) then
+       if( IO_L ) write(IO_FID_LOG,*) 'ERROR: terrain following coordinate is not yet supported!'
+       call PRC_MPIstop
+    end if
 
     do k = 2, KA
       KMIN1(k) = k-1
@@ -252,8 +274,10 @@ contains
 
     tag  = 0
 
-    sdm_zlower = CZ(KS)
-    sdm_zupper = CZ(KE)
+! Why overwritten? sdm_zlower and sdm_zupper are defined in run.conf and should not be altered.
+!    sdm_zlower = CZ(KS)
+!    sdm_zupper = CZ(KE)
+
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_ATMOS_PHY_MP,iostat=ierr)
@@ -311,14 +335,22 @@ contains
     if( doautoconversion ) sdm_calvar(2) = .true.
     if( domovement )       sdm_calvar(3) = .true.
 
-     if( sdm_zlower < CZ(KS) ) then
-      if( mype == PRC_master )  write(*,*) "sdm_zlower was set to CZ(KS) because zlower < CZ(KS)"
-      sdm_zlower = CZ(KS)
-     endif
-     if( sdm_zupper > CZ(KE) ) then
-      if( mype == PRC_master )  write(*,*) "sdm_zupper was set to CZ(KE) because zupper > CZ(KE)"
-      sdm_zupper = CZ(KE)
-     endif
+! zlower+surface height is the lower boundary of SDs.
+!!$     if( sdm_zlower < CZ(KS) ) then
+!!$      if( mype == PRC_master )  write(*,*) "sdm_zlower was set to CZ(KS) because zlower < CZ(KS)"
+!!$      sdm_zlower = CZ(KS)
+!!$     endif
+! 
+
+!     if( sdm_zupper > CZ(KE) ) then
+!      if( mype == PRC_master )  write(*,*) "sdm_zupper was set to CZ(KE) because zupper > CZ(KE)"
+!      sdm_zupper = CZ(KE)
+!     endif
+
+    if( sdm_zupper > minval(REAL_FZ(KE,IS:IE,JS:JE)) ) then
+       if( mype == PRC_master )  write(*,*) "sdm_zupper was set to minval(REAL_FZ(KE)) because zupper > minval(REAL_FZ(KE))"
+       sdm_zupper = minval(REAL_FZ(KE,IS:IE,JS:JE))
+    endif
 
      sdm_dtevl = real( sdm_dtcmph(1),kind=RP )  !! condensation/evaporation
      sdm_dtcol = real( sdm_dtcmph(2),kind=RP )  !! stochastic coalescence
@@ -420,14 +452,19 @@ contains
        call PRC_MPIstop
     end if
 
-    dx_sdm(1:IA) = CDX(1:IA)
-    dy_sdm(1:JA) = CDY(1:JA)
-    dz_sdm(1:KA) = CDZ(1:KA)
-    dxiv_sdm(1:IA) = 1.0_RP / dx_sdm(1:IA)
-    dyiv_sdm(1:JA) = 1.0_RP / dy_sdm(1:JA)
+!!$    dx_sdm(1:IA) = CDX(1:IA)
+!!$    dy_sdm(1:JA) = CDY(1:JA)
+!!$    dz_sdm(1:KA) = CDZ(1:KA)
+!!$    dx_sdm(1:IA) = FDX(1:IA)
+!!$    dy_sdm(1:JA) = FDY(1:JA)
+!!$    dz_sdm(1:KA) = FDZ(1:KA)
+!!$    dxiv_sdm(1:IA) = 1.0_RP / dx_sdm(1:IA)
+!!$    dyiv_sdm(1:JA) = 1.0_RP / dy_sdm(1:JA)
+!!$    dziv_sdm(1:KA) = 1.0_RP / dz_sdm(1:KA)
+    dz_sdm(1:KA) = DZ
     dziv_sdm(1:KA) = 1.0_RP / dz_sdm(1:KA)
-    xmax_sdm = FX(IE)-FX(IS-1)
-    ymax_sdm = FY(JE)-FY(JS-1)
+    xmax_sdm = GRID_FX(IE)-GRID_FX(IS-1)
+    ymax_sdm = GRID_FY(JE)-GRID_FY(JS-1)
 
     !--- set number of super droplet etc...
     call sdm_numset(              &
@@ -671,6 +708,7 @@ contains
                       !--- Y.Sato add ---
                       sd_itmp1,sd_itmp2,crs_dtmp1,crs_dtmp2)
 
+
 ! not supported yet. S.Shima
 !!$     ! Aerosol formation process of super-droplets
 !!$
@@ -718,20 +756,21 @@ contains
 !!$
 !!$      end if
 
-    !--- update MOMENTUM, RHOT, and QV
-    do k = 1, KA
-    do i = 1, IA
-    do j = 1, JA
-      RHOT(k,i,j) = ( ptbr_crs(k,i,j)+ptpf_crs(k,i,j) ) * DENS(k,i,j)
-!      MOMX(k,i,j) = uf_crs(k,i,j) * 0.5_RP * ( DENS(k,i,j)+DENS(k,IPLS1(i),j) )
-!      MOMY(k,i,j) = vf_crs(k,i,j) * 0.5_RP * ( DENS(k,i,j)+DENS(k,i,JPLS1(j)) )
-!      MOMZ(k,i,j) = wcf_crs(k,i,j) * 0.5_RP * ( DENS(k,i,j)+DENS(KPLS1(k),i,j) ) / jcb8w(k,i,j)
-      QTRC(k,i,j,I_QV) = qvf_crs(k,i,j)
-      QTRC(k,i,j,I_QC) = rhoc_sdm(k,i,j) / DENS(k,i,j)
-      QTRC(k,i,j,I_QR) = rhor_sdm(k,i,j) / DENS(k,i,j)
-    enddo
-    enddo
-    enddo
+! No feedback to atmosphere for debugging.
+!!$    !--- update MOMENTUM, RHOT, and QV
+!!$    do k = 1, KA
+!!$    do i = 1, IA
+!!$    do j = 1, JA
+!!$      RHOT(k,i,j) = ( ptbr_crs(k,i,j)+ptpf_crs(k,i,j) ) * DENS(k,i,j)
+!!$!      MOMX(k,i,j) = uf_crs(k,i,j) * 0.5_RP * ( DENS(k,i,j)+DENS(k,IPLS1(i),j) )
+!!$!      MOMY(k,i,j) = vf_crs(k,i,j) * 0.5_RP * ( DENS(k,i,j)+DENS(k,i,JPLS1(j)) )
+!!$!      MOMZ(k,i,j) = wcf_crs(k,i,j) * 0.5_RP * ( DENS(k,i,j)+DENS(KPLS1(k),i,j) ) / jcb8w(k,i,j)
+!!$      QTRC(k,i,j,I_QV) = qvf_crs(k,i,j)
+!!$      QTRC(k,i,j,I_QC) = rhoc_sdm(k,i,j) / DENS(k,i,j)
+!!$      QTRC(k,i,j,I_QR) = rhor_sdm(k,i,j) / DENS(k,i,j)
+!!$    enddo
+!!$    enddo
+!!$    enddo
 
     call HIST_in( rhoa_sdm(:,:,:), 'RAERO', 'aerosol mass conc.', 'kg/m3', dt)
     call HIST_in( prr_crs(:,:,1), 'RAIN', 'surface rain rate', 'kg/m2/s', dt)
@@ -771,10 +810,13 @@ contains
         CPw => AQ_CP
       use scale_tracer, only: &
         QAD => QA
+    use scale_grid, only: &
+       GRID_FX,    &
+       GRID_FY
 
-      real(RP), intent(in) :: DENS(KA,IA,JA)
-      real(RP), intent(in) :: RHOT(KA,IA,JA)
-      real(RP), intent(in) :: QTRC(KA,IA,JA,QAD)
+      real(RP), intent(in) :: DENS(KA,IA,JA) ! Density     [kg/m3]
+      real(RP), intent(in) :: RHOT(KA,IA,JA) ! DENS * POTT [K*kg/m3]
+      real(RP), intent(in) :: QTRC(KA,IA,JA,QAD) ! ratio of mass of tracer to total mass[kg/kg]
       character(len=H_LONG), intent(in) :: RANDOM_IN_BASENAME
       integer, intent(in) :: fid_random_i
       real(RP),intent(in) :: xmax_sdm, ymax_sdm
@@ -803,7 +845,7 @@ contains
       real(RP),intent(inout) :: sdrkl_s2c(IA,JA)
       real(RP),intent(inout) :: sdrku_s2c(IA,JA)
       ! Work variables
-      real(RP) :: rbr_crs(KA,IA,JA)   ! density
+!      real(RP) :: rbr_crs(KA,IA,JA)   ! density ! not used
       real(RP) :: ptbr_crs(KA,IA,JA)  ! potential temperature
       real(RP) :: ptp_crs(KA,IA,JA)   ! Potential temperature perturbation
       real(RP) :: pbr_crs(KA,IA,JA)   ! pressure
@@ -821,6 +863,8 @@ contains
       integer :: sd_str, sd_end, sd_valid
      !---------------------------------------------------------------------
 
+      ! conversion of SCALE variables to CReSS variables: ptbr ptp pbr pp rhod qv 
+      ! This part will be omitted in the future.
       CPTOT(:,:,:) = 0.0_RP
       QDRY(:,:,:) = 1.0_RP
       do k = 1, KA
@@ -830,7 +874,7 @@ contains
         do iq = QQS, QQE
           QDRY(k,i,j) = QDRY(k,i,j) - QTRC(k,i,j,iq)
         enddo
-        rbr_crs(k,i,j) = DENS(k,i,j) * QDRY(k,i,j)
+        rhod_crs(k,i,j) = DENS(k,i,j) * QDRY(k,i,j) ! dry air density
         RTOT (k,i,j) = Rdry * QDRY(k,i,j) + Rvap * QTRC(k,i,j,I_QV)
         CPTOT(k,i,j) = CPdry * QDRY(k,i,j)
         do iq = QQS, QQE
@@ -840,7 +884,7 @@ contains
         pbr_crs(k,i,j) = P00 * ( RHOT(k,i,j) * RTOT(k,i,j) / P00 )**CPovCV(k,i,j)
         pp_crs(k,i,j) = 0.0_RP
         ptp_crs(k,i,j) = 0.0_RP
-        qv_crs(k,i,j) = QTRC(k,i,j,I_QV)
+        qv_crs(k,i,j) = QTRC(k,i,j,I_QV) ! Be careful. The definition of qv is different. (SCALE: qv=rhov/rho, CReSS: qv=rhov/rhod)
       enddo
       enddo
       enddo
@@ -850,20 +894,20 @@ contains
           .not. sdm_calvar(3)        ) return
 
       !### Get index[k/real] at "sdm_zlower" and "sdm_zupper"  ###!
-      call sdm_getrklu(sdm_zlower,sdm_zupper,zph_crs,      &
+      call sdm_getrklu(sdm_zlower,sdm_zupper,      &
                        sdrkl_s2c,sdrku_s2c)
 
-      !### Get base state density ###!
-!      do k=1,nk
-!      do j=0,nj+1
-!      do i=0,ni+1
-      do k = 1, KA
-      do j = 1, JA
-      do i = 1, IA
-         rhod_crs(k,i,j) = rbr_crs(k,i,j)
-      end do
-      end do
-      end do
+!!$      !### Get base state density ###!
+!!$!      do k=1,nk
+!!$!      do j=0,nj+1
+!!$!      do i=0,ni+1
+!!$      do k = 1, KA
+!!$      do j = 1, JA
+!!$      do i = 1, IA
+!!$         rhod_crs(k,i,j) = rbr_crs(k,i,j)
+!!$      end do
+!!$      end do
+!!$      end do
 
       ! This should not be called here
 !!$      ! restart files are used for S.D.
@@ -959,13 +1003,14 @@ contains
       call gen_rand_array( rng_s2c, sdz_s2c  )
       call gen_rand_array( rng_s2c, sdr_s2c  )
       call gen_rand_array( rng_s2c, sdvz_s2c )
-      do n=1,sdnum_s2c
-       sdx_s2c(n) = sdx_s2c(n)-0.5_RP
-       sdy_s2c(n) = sdy_s2c(n)-0.5_RP
-       sdz_s2c(n) = sdz_s2c(n)-0.5_RP
-       sdr_s2c(n) = sdr_s2c(n)-0.5_RP
-       sdvz_s2c(n) = sdvz_s2c(n)-0.5_RP
-      enddo
+! Why are they halved??
+!!$      do n=1,sdnum_s2c
+!!$       sdx_s2c(n) = sdx_s2c(n)-0.5_RP
+!!$       sdy_s2c(n) = sdy_s2c(n)-0.5_RP
+!!$       sdz_s2c(n) = sdz_s2c(n)-0.5_RP
+!!$       sdr_s2c(n) = sdr_s2c(n)-0.5_RP
+!!$       sdvz_s2c(n) = sdvz_s2c(n)-0.5_RP
+!!$      enddo
 
       iexced = 1     !! check for memory size of int*8
 
@@ -1064,42 +1109,58 @@ contains
 
       !### position of super-droplets in horizontal ###!
       do n=1,sdnum_s2c
-         sdx_s2c(n) = xmax_sdm * sdx_s2c(n)
-         sdy_s2c(n) = ymax_sdm * sdy_s2c(n)
+         sdx_s2c(n) = xmax_sdm * sdx_s2c(n)+GRID_FX(IS-1)
+         sdy_s2c(n) = ymax_sdm * sdy_s2c(n)+GRID_FY(JS-1)
       end do
 
       !### position of super-droplets in vertical ###!
-      sdnum_tmp1 = int( nint(sdininum_s2c)/nomp )
-      sdnum_tmp2 = mod( nint(sdininum_s2c),nomp )
-
-      do np=1,nomp
-
-         sd_str = int(sdnum_s2c/nomp)*(np-1) + 1
-         sd_end = int(sdnum_s2c/nomp)*np
-
-         if( np<=sdnum_tmp2 ) then
-            sd_valid = sd_str + sdnum_tmp1
+      !! valid super-droplets
+      do n=1,nint(sdininum_s2c)
+         if( sdn_s2c(n)>0 ) then
+            sdz_s2c(n) = real(minzph+sdm_zlower,kind=RP)             &
+                 + sdz_s2c(n)                                  &
+                 * real(sdm_zupper-(minzph+sdm_zlower),kind=RP)
          else
-            sd_valid = sd_str + (sdnum_tmp1-1)
+            sdz_s2c(n) = INVALID     !!! check muliplicity
          end if
-
-         !! valid super-droplets
-
-         do n=sd_str,sd_valid
-            if( sdn_s2c(n)>0 ) then
-               sdz_s2c(n) = real(minzph+sdm_zlower,kind=RP)             &
-                          + sdz_s2c(n)                                  &
-                          * real(sdm_zupper-(minzph+sdm_zlower),kind=RP)
-            else
-               sdz_s2c(n) = INVALID     !!! check muliplicity
-            end if
-         end do
-
-         !! invalid super-droplets
-         do n=sd_valid+1,sd_end
-            sdz_s2c(n) = INVALID
-         end do
       end do
+
+      !! invalid super-droplets
+      do n=nint(sdininum_s2c)+1,sdnum_s2c
+         sdz_s2c(n) = INVALID
+      end do
+      
+!!$      sdnum_tmp1 = int( nint(sdininum_s2c)/nomp )
+!!$      sdnum_tmp2 = mod( nint(sdininum_s2c),nomp )
+!!$
+!!$      do np=1,nomp
+!!$
+!!$         sd_str = int(sdnum_s2c/nomp)*(np-1) + 1
+!!$         sd_end = int(sdnum_s2c/nomp)*np
+!!$
+!!$         if( np<=sdnum_tmp2 ) then
+!!$            sd_valid = sd_str + sdnum_tmp1
+!!$         else
+!!$            sd_valid = sd_str + (sdnum_tmp1-1)
+!!$         end if
+!!$
+!!$         !! valid super-droplets
+!!$
+!!$         do n=sd_str,sd_valid
+!!$            if( sdn_s2c(n)>0 ) then
+!!$               sdz_s2c(n) = real(minzph+sdm_zlower,kind=RP)             &
+!!$                          + sdz_s2c(n)                                  &
+!!$                          * real(sdm_zupper-(minzph+sdm_zlower),kind=RP)
+!!$            else
+!!$               sdz_s2c(n) = INVALID     !!! check muliplicity
+!!$            end if
+!!$         end do
+!!$
+!!$         !! invalid super-droplets
+!!$         do n=sd_valid+1,sd_end
+!!$            sdz_s2c(n) = INVALID
+!!$         end do
+!!$      end do
 
       do n=1,sdnum_s2c
 !ORG     sdr_s2c(n) = 1.0e-5 * ( log(1.0/(1.0-sdr_s2c(n))) )**O_THRD
@@ -1109,7 +1170,7 @@ contains
 
       !### index[k/real] of super-droplets               ###!
       !### modify position[z] of invalid super-droplets  ###!
-      call sdm_getindex(sdm_zlower,sdm_zupper, zph_crs,            &
+      call sdm_getindex(sdm_zlower,sdm_zupper,            &
                         sdnum_s2c,sdx_s2c,sdy_s2c,sdz_s2c,sdrk_s2c )
 
       !### terminal velocity                            ###!
@@ -1180,14 +1241,15 @@ contains
   end subroutine sdm_iniset
   !-----------------------------------------------------------------------------
   subroutine sdm_getindex(sdm_zlower,sdm_zupper,             &
-                          zph_crs,sd_num,sd_x,sd_y,sd_z,sd_rk)
+                          sd_num,sd_x,sd_y,sd_z,sd_rk)
 
       use scale_grid, only: &
-        FX => GRID_FX, &
-        FY => GRID_FY
+        GRID_FX, &
+        GRID_FY
+      use scale_grid_real, only: &
+        REAL_FZ
       real(RP),intent(in) :: sdm_zlower   ! sdm_zlower in namelist
       real(RP),intent(in) :: sdm_zupper   ! sdm_zupper in namelist table
-      real(RP),intent(in) :: zph_crs(KA,IA,JA)   ! z physical coordinate
       integer, intent(in) :: sd_num       ! number of super-droplets
       real(RP), intent(in) :: sd_x(1:sd_num)   ! x-coordinate of super-droplets
       real(RP), intent(in) :: sd_y(1:sd_num)   ! y-coordinate of super-droplets
@@ -1231,36 +1293,36 @@ contains
 !         ri = sd_x(n) * real(dxiv_sdm,kind=RP) + 2.d0
 !         rj = sd_y(n) * real(dyiv_sdm,kind=RP) + 2.d0
          iloop: do i = IS, IE
-           if( sd_x(n) < ( FX(i)-FX(IS-1) ) ) then
-            ri = real(i-1,kind=RP) + real( ( sd_x(n)-( FX(i-1)-FX(IS-1) ) ) / ( FX(i)-FX(i-1) ) )
+           if( sd_x(n) < GRID_FX(i) ) then
+            ri = real(i-1,kind=RP) + ( sd_x(n)-GRID_FX(i-1) ) / ( GRID_FX(i)-GRID_FX(i-1) )
             exit iloop
            endif
          enddo iloop
          jloop: do j = JS, JE
-           if( sd_y(n) < ( FY(j)-FY(JS-1) ) ) then
-            rj = real(j-1,kind=RP) + real( ( sd_y(n)-( FY(j-1)-FY(JS-1) ) ) / ( FY(j)-FY(j-1) ) )
+           if( sd_y(n) < GRID_FY(j) ) then
+            rj = real(j-1,kind=RP) + ( sd_y(n)-GRID_FY(j-1) ) / ( GRID_FY(j)-GRID_FY(j-1) ) 
             exit jloop
            endif
          enddo jloop
 
 !         iXm = floor(ri-0.5d0)
-         iXm = floor(ri)
+         iXm = floor(ri+0.5d0) ! Face to Center conversion
          iXp = iXm + 1
 !         sXm = (ri-0.5d0) - real(iXm,kind=RP)
-         sXm = (ri) - real(iXm,kind=RP)
+         sXm = (ri+0.5d0) - real(iXm,kind=RP)
          sXp = 1.d0 - sXm
 
 !         iYm = floor(rj-0.5d0)
-         iYm = floor(rj)
+         iYm = floor(rj+0.5d0)
          iYp = iYm + 1
 !         sYm = (rj-0.5d0) - real(iYm,kind=RP)
-         sYm = rj - real(iYm,kind=RP)
+         sYm = (rj+0.5d0) - real(iYm,kind=RP)
          sYp = 1.d0 - sYm
 
-         zph_s = real(zph_crs(KS,iXm,iYm),kind=RP) * ( SXp * SYp )       &
-               + real(zph_crs(KS,iXp,iYm),kind=RP) * ( SXm * SYp )       &
-               + real(zph_crs(KS,iXm,iYp),kind=RP) * ( SXp * SYm )       &
-               + real(zph_crs(KS,iXp,iYp),kind=RP) * ( SXm * SYm )
+         zph_s = real(REAL_FZ(KS-1,iXm,iYm),kind=RP) * ( SXp * SYp )       &
+               + real(REAL_FZ(KS-1,iXp,iYm),kind=RP) * ( SXm * SYp )       &
+               + real(REAL_FZ(KS-1,iXm,iYp),kind=RP) * ( SXp * SYm )       &
+               + real(REAL_FZ(KS-1,iXp,iYp),kind=RP) * ( SXm * SYm )
 
          if( sd_z(n)<real(zph_s+sdm_zlower,kind=RP) ) then
             sd_z(n) = INVALID
@@ -1270,17 +1332,17 @@ contains
          !### get vertical index of super-droplets ###!
 
 !         do k=2,nk-1
-         do k=KS,KE
+         do k=KS-1,KE
 
-            zph_u = real(zph_crs(k+1,iXm,iYm),kind=RP) * ( SXp * SYp )  &
-                  + real(zph_crs(k+1,iXp,iYm),kind=RP) * ( SXm * SYp )  &
-                  + real(zph_crs(k+1,iXm,iYp),kind=RP) * ( SXp * SYm )  &
-                  + real(zph_crs(k+1,iXp,iYp),kind=RP) * ( SXm * SYm )
+            zph_u = real(REAL_FZ(k+1,iXm,iYm),kind=RP) * ( SXp * SYp )  &
+                  + real(REAL_FZ(k+1,iXp,iYm),kind=RP) * ( SXm * SYp )  &
+                  + real(REAL_FZ(k+1,iXm,iYp),kind=RP) * ( SXp * SYm )  &
+                  + real(REAL_FZ(k+1,iXp,iYp),kind=RP) * ( SXm * SYm )
 
-            zph_l = real(zph_crs(k,iXm,iYm),kind=RP) * ( SXp * SYp )    &
-                  + real(zph_crs(k,iXp,iYm),kind=RP) * ( SXm * SYp )    &
-                  + real(zph_crs(k,iXm,iYp),kind=RP) * ( SXp * SYm )    &
-                  + real(zph_crs(k,iXp,iYp),kind=RP) * ( SXm * SYm )
+            zph_l = real(REAL_FZ(k,iXm,iYm),kind=RP) * ( SXp * SYp )    &
+                  + real(REAL_FZ(k,iXp,iYm),kind=RP) * ( SXm * SYp )    &
+                  + real(REAL_FZ(k,iXm,iYp),kind=RP) * ( SXp * SYm )    &
+                  + real(REAL_FZ(k,iXp,iYp),kind=RP) * ( SXm * SYm )
 
             if( sd_z(n)>=zph_l .and. sd_z(n)<zph_u ) then
 
@@ -1296,20 +1358,19 @@ contains
   end subroutine sdm_getindex
   !-----------------------------------------------------------------------------
   subroutine sdm_getrklu(sdm_zlower,sdm_zupper,             &
-                         zph_crs,sd_rkl,sd_rku)
+                         sd_rkl,sd_rku)
 
-   use scale_grid, only : &
-       FZ => GRID_FZ
-   real(RP),intent(in) :: sdm_zlower  ! Unique index of sdm_zlower in namelist table
-   real(RP),intent(in) :: sdm_zupper  ! Unique index of sdm_zupper in namelist table
-   real(RP),intent(in) :: zph_crs(KA,IA,JA)   ! z physical coordinate
+   use scale_grid_real, only : &
+        REAL_FZ
+   real(RP),intent(in) :: sdm_zlower  ! sdm_zlower+surface height is the lower limitaion of SD's position
+   real(RP),intent(in) :: sdm_zupper  ! Upper limitaion of SD's position
    real(RP),intent(out) :: sd_rkl(IA,JA)    ! index-k(real) at "sdm_zlower"
    real(RP),intent(out) :: sd_rku(IA,JA)    ! index-k(real) at "sdm_zupper"
 
    ! Work variables
-   real(RP) :: zph_l         ! "zph_crs" at lower[k]
-   real(RP) :: zph_u         ! "zph_crs" at upper[k+1]
-   real(RP) :: zph_s         ! "zph_crs" at surface[k=2]
+   real(RP) :: zph_l         ! REAL_FZ(k,:,:)
+   real(RP) :: zph_u         ! REAL_FZ(k+1,:,:)
+   real(RP) :: zph_s         ! REAL_FZ(KS-1,:,:), i.e., surface height
 
    integer :: i, j, k        ! index
    !---------------------------------------------------------------------
@@ -1331,13 +1392,13 @@ contains
 !      do k=2,nk-1
 !      do j=1,nj-1
 !      do i=1,ni-1
-      do k=KS,KE+1
+      do k=KS-1,KE
       do j=JS-1,JE+1
       do i=IS-1,IE+1
 
-         zph_u = zph_crs(k+1,i,j)
-         zph_l = zph_crs(k,i,j)
-         zph_s = zph_crs(KS,i,j)
+         zph_u = REAL_FZ(k+1,i,j)
+         zph_l = REAL_FZ(k,i,j)
+         zph_s = REAL_FZ(KS,i,j)
 
          !### get vertical index of 'sdm_zlower' ###!
 
@@ -1345,7 +1406,7 @@ contains
                        sdm_zlower>=(zph_l-zph_s) ) then
 
             sd_rkl(i,j) = real(k,kind=RP)                               &
-                        + real((sdm_zlower-zph_l)/(zph_u-zph_l),kind=RP)
+                        + real((sdm_zlower+zph_s-zph_l)/(zph_u-zph_l),kind=RP)
          end if
 
          !### get vertical index of 'sdm_zupper' ###!
@@ -1420,7 +1481,7 @@ contains
       end do
 
 !      knum_sdm = min( nk-3, (floor(rkumax)+1)-2 )
-      knum_sdm = min( KE-KS+1, (floor(rkumax)+1)-2 )
+      knum_sdm = min( KE-KS+1, (floor(rkumax)+1)-KS+1 )
 
     return
   end subroutine sdm_getrklu
@@ -5190,9 +5251,10 @@ contains
          !### move super-droplets (explicit) ###!
          sd_x(n)  = sd_x(n)  + sd_u(n)  * real(sdm_dtadv,kind=RP)
          sd_y(n)  = sd_y(n)  + sd_v(n)  * real(sdm_dtadv,kind=RP)
-         sd_rk(n) = sd_rk(n) + sd_wc(n) * real(sdm_dtadv,kind=RP)       &
-                                        * real(dziv_sdm(int(sd_rk(n))),kind=RP)
-!                                        * real(dziv_sdm(floor(sd_rk(n))),kind=RP)
+         sd_rk(n) = sd_rk(n) + 0.1_RP * real(sdm_dtadv,kind=RP)
+!!$         sd_rk(n) = sd_rk(n) + sd_wc(n) * real(sdm_dtadv,kind=RP)       &
+!!$                                        * real(dziv_sdm(int(sd_rk(n))),kind=RP)
+!!$!                                        * real(dziv_sdm(floor(sd_rk(n))),kind=RP)
       enddo
 
     return
@@ -7021,7 +7083,7 @@ contains
 
       !### index[k/real] of super-droplets ###!
 
-      call sdm_getindex(sdm_zlower,sdm_zupper,zph_crs,       &
+      call sdm_getindex(sdm_zlower,sdm_zupper,       &
                         sd_fmnum,sd_fmx,sd_fmy,sd_fmz,sd_fmrk)
 
       ! Set radius of super-droplets
