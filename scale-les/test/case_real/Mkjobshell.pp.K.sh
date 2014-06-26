@@ -43,12 +43,24 @@ cat << EOF1 > ./run.sh
 #PJM --rsc-list "elapse=02:00:00"
 #PJM --stg-transfiles all
 #PJM --mpi "use-rankdir"
-#PJM --stgin  "rank=* ${BINDIR}/${INITNAME} %r:./"
-#PJM --stgin  "rank=* ${BINDIR}/${BINNAME}  %r:./"
-#PJM --stgin  "rank=*         ./${INITCONF} %r:./"
-#PJM --stgin  "rank=*         ./${RUNCONF}  %r:./"
-#PJM --stgin  "rank=*           ${DATDIR}/* %r:./input/"
-#PJM --stgout "rank=* %r:./*      ./"
+EOF1
+
+if [ ! ${PPNAME}   = "NONE" ]; then
+   echo "#PJM --stgin  'rank=* ${BINDIR}/${PPNAME}   %r:./'" >> ./run.sh
+   echo "#PJM --stgin  'rank=*         ./${PPCONF}   %r:./'" >> ./run.sh
+fi
+if [ ! ${INITNAME}   = "NONE" ]; then
+   echo "#PJM --stgin  'rank=* ${BINDIR}/${INITNAME} %r:./'" >> ./run.sh
+   echo "#PJM --stgin  'rank=*         ./${INITCONF} %r:./'" >> ./run.sh
+fi
+if [ ! ${BINNAME}   = "NONE" ]; then
+   echo "#PJM --stgin  'rank=* ${BINDIR}/${BINNAME}  %r:./'" >> ./run.sh
+   echo "#PJM --stgin  'rank=*         ./${RUNCONF}  %r:./'" >> ./run.sh
+fi
+
+cat << EOF2 >> ./run.sh
+#PJM --stgin  "rank=* ${DATDIR}/* %r:./input/"
+#PJM --stgout "rank=* %r:./* ./"
 #PJM -j
 #PJM -s
 #
@@ -59,16 +71,16 @@ export OMP_NUM_THREADS=8
 #export fu08bf=1
 
 # run
-EOF1
+EOF2
 
 if [ ! ${PPNAME}   = "NONE" ]; then
-   echo "${MPIEXEC} ${BINDIR}/${PPNAME}   ${PPCONF}   || exit 1" >> ./run.sh
+   echo "${MPIEXEC} ./${PPNAME}   ${PPCONF}   || exit 1" >> ./run.sh
 fi
 
 if [ ! ${INITNAME} = "NONE" ]; then
-   echo "${MPIEXEC} ${BINDIR}/${INITNAME} ${INITCONF} || exit 1" >> ./run.sh
+   echo "${MPIEXEC} ./${INITNAME} ${INITCONF} || exit 1" >> ./run.sh
 fi
 
 if [ ! ${BINNAME} = "NONE" ]; then
-   echo "${MPIEXEC} ${BINDIR}/${BINNAME}  ${RUNCONF}  || exit 1" >> ./run.sh
+   echo "${MPIEXEC} ./${BINNAME}  ${RUNCONF}  || exit 1" >> ./run.sh
 fi

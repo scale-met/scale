@@ -342,6 +342,8 @@ contains
        enddo
     endif
 
+    if( IO_L ) write(IO_FID_LOG,*)
+
     deallocate( halomask )
 
     deallocate( statval )
