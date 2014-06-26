@@ -109,9 +109,9 @@ module scale_atmos_phy_mp_tomita08
   real(RP), private            :: gamma_gacs = 90.E-3_RP !< effect of low temperature for Egs
 
   ! Auto-conversion parameter
-  real(RP), private            :: Nc_lnd     = 2000.0_RP !< number concentration of cloud water (land)  [1/cc]
-  real(RP), private            :: Nc_ocn     =   50.0_RP !< number concentration of cloud water (ocean) [1/cc]
-  real(RP), private, allocatable :: Nc_def(:,:)          !< number concentration of cloud water         [1/cc]
+  real(RP), private, parameter   :: Nc_lnd = 2000.0_RP !< number concentration of cloud water (land)  [1/cc]
+  real(RP), private, parameter   :: Nc_ocn =   50.0_RP !< number concentration of cloud water (ocean) [1/cc]
+  real(RP), private, allocatable :: Nc_def(:,:)        !< number concentration of cloud water         [1/cc]
 
   real(RP), private            :: beta_saut  =  6.E-3_RP  !< auto-conversion factor beta  for ice
   real(RP), private            :: gamma_saut = 60.E-3_RP  !< auto-conversion factor gamma for ice
@@ -266,13 +266,16 @@ contains
 
     character(len=*), intent(in) :: MP_TYPE
 
+    real(RP) :: autoconv_nc = Nc_ocn !< number concentration of cloud water [1/cc]
+
     NAMELIST / PARAM_ATMOS_PHY_MP / &
        MP_doprecipitation, &
        MP_donegative_fixer
 
     NAMELIST / PARAM_ATMOS_PHY_MP_TOMITA08 / &
-       dens_s, &
-       dens_g, &
+       autoconv_nc, &
+       dens_s,      &
+       dens_g,      &
        debug
 
     integer :: ierr
@@ -384,7 +387,7 @@ contains
 
     do j = JS, JE
     do i = IS, IE
-       Nc_def(i,j) = Nc_ocn
+       Nc_def(i,j) = autoconv_nc
     enddo
     enddo
 
