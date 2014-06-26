@@ -646,6 +646,11 @@ contains
 
     do iteration = 1, 20
 
+      ! update of CHR using updated TRP
+      RIBR = ( GRAV * 2.0_RP / (TA+TRP) ) * (TA-TRP) * (Z+Z0R) / (UA*UA)
+      call mos(XXXR,ALPHAR,CDR,BHR,RIBR,Z,Z0R,UA,TA,TRP,RHO)
+      CHR = ALPHAR / RHO / CP / UA
+
       ES       = 6.11_RP * exp( ( LH0/Rvap) * (TRP-TEM00) / (TEM00*TRP) )
       DESDT    = (LH0/Rvap) * ES / (TRP**2)
       QS0R     = 0.622_RP * ES / ( PS - 0.378_RP * ES )
@@ -724,10 +729,12 @@ contains
 
 
     ! TB,TG  Solving Non-Linear Simultaneous Equation by Newton-Rapson
-    ! TBP = 350.0_RP
-    ! TGP = 350.0_RP
 
     do iteration = 1, 20
+
+      ! update of CHC using updated TCP
+      RIBC = ( GRAV * 2.0_RP / (TA+TCP) ) * (TA-TCP) * (Z+Z0C) / (UA*UA)
+      call mos(XXXC,ALPHAC,CDC,BHC,RIBC,Z,Z0C,UA,TA,TCP,RHO)
 
       ES       = 6.11_RP * exp( (LH0/Rvap) * (TBP-TEM00) / (TEM00*TBP) )
       DESDT    = (LH0/Rvap) * ES / (TBP**2)
