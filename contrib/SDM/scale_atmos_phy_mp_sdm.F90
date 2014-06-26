@@ -25,6 +25,7 @@
 !! @li      2014-06-25 (S.Shima) [rev] Bugfix and improvement of ATMOS_PHY_MP_sdm_restart_in and sdm_iniset
 !! @li      2014-06-25 (S.Shima) [rev] Bugfix of sd position initialization, and many modification
 !! @li      2014-06-25 (S.Shima) [rev] Bugfix: dx_sdm, dy_sdm, dxiv_sdn, dyiv_sdm restored
+!! @li      2014-06-26 (S.Shima) [rev] sdm_getrklu and sdm_getindex are separated
 !<
 !-------------------------------------------------------------------------------
 #include "macro_thermodyn.h"
@@ -812,9 +813,12 @@ contains
         CPw => AQ_CP
       use scale_tracer, only: &
         QAD => QA
-    use scale_grid, only: &
-       GRID_FX,    &
-       GRID_FY
+      use scale_grid, only: &
+        GRID_FX,    &
+        GRID_FY
+      use m_sdm_coordtrans, only: &
+        sdm_getrklu, &
+        sdm_getindex
 
       real(RP), intent(in) :: DENS(KA,IA,JA) ! Density     [kg/m3]
       real(RP), intent(in) :: RHOT(KA,IA,JA) ! DENS * POTT [K*kg/m3]
@@ -1241,252 +1245,6 @@ contains
     return
 
   end subroutine sdm_iniset
-  !-----------------------------------------------------------------------------
-  subroutine sdm_getindex(sdm_zlower,sdm_zupper,             &
-                          sd_num,sd_x,sd_y,sd_z,sd_rk)
-
-      use scale_grid, only: &
-        GRID_FX, &
-        GRID_FY
-      use scale_grid_real, only: &
-        REAL_FZ
-      real(RP),intent(in) :: sdm_zlower   ! sdm_zlower in namelist
-      real(RP),intent(in) :: sdm_zupper   ! sdm_zupper in namelist table
-      integer, intent(in) :: sd_num       ! number of super-droplets
-      real(RP), intent(in) :: sd_x(1:sd_num)   ! x-coordinate of super-droplets
-      real(RP), intent(in) :: sd_y(1:sd_num)   ! y-coordinate of super-droplets
-      real(RP), intent(inout) :: sd_z(1:sd_num)! z-coordinate of super-droplets
-      real(RP), intent(out) :: sd_rk(1:sd_num) ! index-k(real) of super-droplets
-
-      ! Work variables
-      real(RP) :: ri      ! real index [i] of super-droplets
-      real(RP) :: rj      ! real index [j] of super-droplets
-      real(RP) :: sXm     ! variable for inteporation
-      real(RP) :: sXp     ! variable for inteporation
-      real(RP) :: sYm     ! variable for inteporation
-      real(RP) :: sYp     ! variable for inteporation
-      real(RP) :: zph_l   ! "zph_crs" at lower[k]
-      real(RP) :: zph_u   ! "zph_crs" at upper[k+1]
-      real(RP) :: zph_s   ! "zph_crs" at surface[k=2]
-
-      integer :: iXm           ! index for inteporation
-      integer :: iXp           ! index for inteporation
-      integer :: iYm           ! index for inteporation
-      integer :: iYp           ! index for inteporation
-
-      integer :: k, n, i, j    ! index
-   !-------------------------------------------------------------------
-      ! -----
-      ! Get vertical index[k/real] of super-droplets
-      do n=1,sd_num
-
-         !### initialize ###!
-
-         sd_rk(n) = INVALID
-
-         !### convert to invalid super-droplets ###!
-
-         if( sd_z(n)>=real(sdm_zupper,kind=RP) ) then
-            sd_z(n) = INVALID
-            cycle
-         end if
-
-         !### get horizontal index of super-droplets ###!
-!         ri = sd_x(n) * real(dxiv_sdm,kind=RP) + 2.d0
-!         rj = sd_y(n) * real(dyiv_sdm,kind=RP) + 2.d0
-         iloop: do i = IS, IE
-           if( sd_x(n) < GRID_FX(i) ) then
-            ri = real(i-1,kind=RP) + ( sd_x(n)-GRID_FX(i-1) ) / ( GRID_FX(i)-GRID_FX(i-1) )
-            exit iloop
-           endif
-         enddo iloop
-         jloop: do j = JS, JE
-           if( sd_y(n) < GRID_FY(j) ) then
-            rj = real(j-1,kind=RP) + ( sd_y(n)-GRID_FY(j-1) ) / ( GRID_FY(j)-GRID_FY(j-1) ) 
-            exit jloop
-           endif
-         enddo jloop
-
-!         iXm = floor(ri-0.5d0)
-         iXm = floor(ri+0.5d0) ! Face to Center conversion
-         iXp = iXm + 1
-!         sXm = (ri-0.5d0) - real(iXm,kind=RP)
-         sXm = (ri+0.5d0) - real(iXm,kind=RP)
-         sXp = 1.d0 - sXm
-
-!         iYm = floor(rj-0.5d0)
-         iYm = floor(rj+0.5d0)
-         iYp = iYm + 1
-!         sYm = (rj-0.5d0) - real(iYm,kind=RP)
-         sYm = (rj+0.5d0) - real(iYm,kind=RP)
-         sYp = 1.d0 - sYm
-
-         zph_s = real(REAL_FZ(KS-1,iXm,iYm),kind=RP) * ( SXp * SYp )       &
-               + real(REAL_FZ(KS-1,iXp,iYm),kind=RP) * ( SXm * SYp )       &
-               + real(REAL_FZ(KS-1,iXm,iYp),kind=RP) * ( SXp * SYm )       &
-               + real(REAL_FZ(KS-1,iXp,iYp),kind=RP) * ( SXm * SYm )
-
-         if( sd_z(n)<real(zph_s+sdm_zlower,kind=RP) ) then
-            sd_z(n) = INVALID
-            cycle
-         end if
-
-         !### get vertical index of super-droplets ###!
-
-!         do k=2,nk-1
-         do k=KS-1,KE
-
-            zph_u = real(REAL_FZ(k+1,iXm,iYm),kind=RP) * ( SXp * SYp )  &
-                  + real(REAL_FZ(k+1,iXp,iYm),kind=RP) * ( SXm * SYp )  &
-                  + real(REAL_FZ(k+1,iXm,iYp),kind=RP) * ( SXp * SYm )  &
-                  + real(REAL_FZ(k+1,iXp,iYp),kind=RP) * ( SXm * SYm )
-
-            zph_l = real(REAL_FZ(k,iXm,iYm),kind=RP) * ( SXp * SYp )    &
-                  + real(REAL_FZ(k,iXp,iYm),kind=RP) * ( SXm * SYp )    &
-                  + real(REAL_FZ(k,iXm,iYp),kind=RP) * ( SXp * SYm )    &
-                  + real(REAL_FZ(k,iXp,iYp),kind=RP) * ( SXm * SYm )
-
-            if( sd_z(n)>=zph_l .and. sd_z(n)<zph_u ) then
-
-               sd_rk(n) = real(k,kind=RP)                               &
-                        + (sd_z(n)-zph_l)/(zph_u-zph_l)
-
-            end if
-         end do
-
-      end do
-
-    return
-  end subroutine sdm_getindex
-  !-----------------------------------------------------------------------------
-  subroutine sdm_getrklu(sdm_zlower,sdm_zupper,             &
-                         sd_rkl,sd_rku)
-
-   use scale_grid_real, only : &
-        REAL_FZ
-   real(RP),intent(in) :: sdm_zlower  ! sdm_zlower+surface height is the lower limitaion of SD's position
-   real(RP),intent(in) :: sdm_zupper  ! Upper limitaion of SD's position
-   real(RP),intent(out) :: sd_rkl(IA,JA)    ! index-k(real) at "sdm_zlower"
-   real(RP),intent(out) :: sd_rku(IA,JA)    ! index-k(real) at "sdm_zupper"
-
-   ! Work variables
-   real(RP) :: zph_l         ! REAL_FZ(k,:,:)
-   real(RP) :: zph_u         ! REAL_FZ(k+1,:,:)
-   real(RP) :: zph_s         ! REAL_FZ(KS-1,:,:), i.e., surface height
-
-   integer :: i, j, k        ! index
-   !---------------------------------------------------------------------
-
-      rkumax = 0.0_RP
-      rkumin = real(KE+1,kind=RP) + 1.0_RP
-      rklmax = 0.0_RP
-
-!      do j=0,nj+1
-!      do i=0,ni+1
-      do j=1,JA
-      do i=1,IA
-         sd_rkl(i,j) = 0.0_RP
-         sd_rku(i,j) = 0.0_RP
-      end do
-      end do
-
-     ! Get vertical index[k/real] at 'sdm_zlower', 'sdm_zupper'
-!      do k=2,nk-1
-!      do j=1,nj-1
-!      do i=1,ni-1
-      do k=KS-1,KE
-      do j=JS-1,JE+1
-      do i=IS-1,IE+1
-
-         zph_u = REAL_FZ(k+1,i,j)
-         zph_l = REAL_FZ(k,i,j)
-         zph_s = REAL_FZ(KS,i,j)
-
-         !### get vertical index of 'sdm_zlower' ###!
-
-         if( sdm_zlower<(zph_u-zph_s) .and.                             &
-                       sdm_zlower>=(zph_l-zph_s) ) then
-
-            sd_rkl(i,j) = real(k,kind=RP)                               &
-                        + real((sdm_zlower+zph_s-zph_l)/(zph_u-zph_l),kind=RP)
-         end if
-
-         !### get vertical index of 'sdm_zupper' ###!
-
-         if( (sdm_zupper>=zph_l) .and. (sdm_zupper<zph_u) ) then
-
-            sd_rku(i,j) = real(k,kind=RP)                               &
-                        + real((sdm_zupper-zph_l)/(zph_u-zph_l),kind=RP)
-
-         end if
-
-      end do
-      end do
-      end do
-
-     ! -----
-     ! Copy data
-
-!      do i=0,ni+1
-      do i=1,IA
-
-!         sd_rkl(i,0)    = sd_rkl(i,1)
-!         sd_rkl(i,nj)   = sd_rkl(i,nj-1)
-!         sd_rkl(i,nj+1) = sd_rkl(i,nj-1)
-         sd_rkl(i,1)   = sd_rkl(i,2)
-         sd_rkl(i,JA)  = sd_rkl(i,JE+1)
-
-!         sd_rku(i,0)    = sd_rku(i,1)
-!         sd_rku(i,nj)   = sd_rku(i,nj-1)
-!         sd_rku(i,nj+1) = sd_rku(i,nj-1)
-         sd_rku(i,1)   = sd_rku(i,2)
-         sd_rku(i,JA)  = sd_rku(i,JE+1)
-
-      end do
-
-!      do j=0,nj+1
-      do j=1, JA
-
-!         sd_rkl(0,j)    = sd_rkl(1,j)
-!         sd_rkl(ni,j)   = sd_rkl(ni-1,j)
-!         sd_rkl(ni+1,j) = sd_rkl(ni-1,j)
-         sd_rkl(1,j)  = sd_rkl(2,j)
-         sd_rkl(IA,j) = sd_rkl(IE+1,j)
-
-!         sd_rku(0,j)    = sd_rku(1,j)
-!         sd_rku(ni,j)   = sd_rku(ni-1,j)
-!         sd_rku(ni+1,j) = sd_rku(ni-1,j)
-         sd_rku(1,j)  = sd_rku(2,j)
-         sd_rku(IA,j) = sd_rku(IE+1,j)
-
-      end do
-
-     ! Get maximum grid number, maximum index and minimum index in vertical
-!      do j=0,nj+1
-!      do i=0,ni+1
-      do j=1,JA
-      do i=1,IA
-
-         if( sd_rku(i,j)>rkumax ) then
-            rkumax = sd_rku(i,j)
-         end if
-
-         if( sd_rku(i,j)<rkumin ) then
-            rkumin = sd_rku(i,j)
-         end if
-
-         if( sd_rkl(i,j)>rklmax ) then
-            rklmax = sd_rkl(i,j)
-         end if
-
-      end do
-      end do
-
-!      knum_sdm = min( nk-3, (floor(rkumax)+1)-2 )
-      knum_sdm = min( KE-KS+1, (floor(rkumax)+1)-KS+1 )
-
-    return
-  end subroutine sdm_getrklu
   !-----------------------------------------------------------------------------
   subroutine sdm_condevp(sdm_aslset,                     &
                          sdm_aslmw,sdm_aslion,sdm_dtevl, &
@@ -6951,6 +6709,9 @@ contains
                          sort_freq,sort_tag,sd_rng,               &
 !                         sort_freq,sort_tag,                      &
                          sort_tag0,sd_itmp1,sd_itmp2,sd_itmp3)
+
+    use m_sdm_coordtrans, only: sdm_getindex
+
       ! Input variables
       logical, intent(in) :: sdm_calvar(3) ! Control flag of calculation using SDM
       integer, intent(in) :: sdm_aslset    ! Option for aerosol species
