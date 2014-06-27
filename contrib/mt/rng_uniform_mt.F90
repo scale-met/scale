@@ -73,15 +73,13 @@ module rng_uniform_mt
 
   integer, parameter :: int32 = selected_int_kind(9)
 
-!#ifdef CONF_USE_64BIT_ARITHMETIC
-!  integer, parameter :: intopt = selected_int_kind(15) ! optimal integer kind
-!#else
-!  integer, parameter :: intopt = int32 ! optimal integer kind
-!#endif
-  integer, parameter :: intopt = 8
+#ifdef CONF_USE_64BIT_ARITHMETIC
+  integer, parameter :: intopt = selected_int_kind(15) ! optimal integer kind
+#else
+  integer, parameter :: intopt = int32 ! optimal integer kind
+#endif
 
-!  integer, parameter :: dp = selected_real_kind(12)
-  integer, parameter :: dp = 8
+  integer, parameter :: dp = selected_real_kind(12)
 
   integer, parameter :: n = 624, m = 397  ! Period parameters
 
@@ -94,16 +92,11 @@ module rng_uniform_mt
   ! in the Fortran95, most compilers and Fortran2003 extend the use of
   ! non-decimal constants.
 
-  integer(intopt), parameter :: mata   = 2567483615_intopt  ! constant vector a
-  integer(intopt), parameter :: umask  = 2147483648_intopt  ! most significant w-r bits
-  integer(intopt), parameter :: lmask  = 2147483647_intopt  ! least significant r bits
-  integer(intopt), parameter :: tmaskb = 2636928640_intopt  ! tempering parameter b
-  integer(intopt), parameter :: tmaskc = 4022730752_intopt  ! tempering parameter c
-!  integer(intopt), parameter :: mata   = z"9908b0df"  ! constant vector a
-!  integer(intopt), parameter :: umask  = z"80000000"  ! most significant w-r bits
-!  integer(intopt), parameter :: lmask  = z"7fffffff"  ! least significant r bits
-!  integer(intopt), parameter :: tmaskb = z"9d2c5680"  ! tempering parameter b
-!  integer(intopt), parameter :: tmaskc = z"efc60000"  ! tempering parameter c
+  integer(intopt), parameter :: mata   = z"9908b0df"  ! constant vector a
+  integer(intopt), parameter :: umask  = z"80000000"  ! most significant w-r bits
+  integer(intopt), parameter :: lmask  = z"7fffffff"  ! least significant r bits
+  integer(intopt), parameter :: tmaskb = z"9d2c5680"  ! tempering parameter b
+  integer(intopt), parameter :: tmaskc = z"efc60000"  ! tempering parameter c
 
   integer, parameter :: default_seed = 4357   ! default random seed
 
@@ -174,8 +167,7 @@ contains
     !=------------------------------------------------------------------------
     integer :: i
     integer(int32) ::  kmt
-    integer(intopt), parameter :: mask = 4294967295_intopt
-!    integer(intopt), parameter :: mask = z"ffffffff"
+    integer(intopt), parameter :: mask = z"ffffffff"
 
     kmt = int(seed, int32)
     self%mt(0) = kmt
@@ -282,26 +274,18 @@ contains
     io_unit = 2993
     if (present(unit)) then
       io_unit = unit
-      open (io_unit, file = filename, action = "write", &
-      &     access = "sequential", status = "replace", form = "unformatted", &
-      &     err = 998)
     else
       open (io_unit, file = filename, action = "write", &
       &     access = "sequential", status = "replace", form = "unformatted", &
-      &     err = 998)
+      &     err = 999)
     end if
-
     write (io_unit, err = 999) "rng_uniform_mt"
     write (io_unit, err = 999) self%mt(:), self%mti
     if (.not. present(unit)) close (io_unit, err = 999)
-    close(io_unit)
-
     return
 
     999 continue
     print ERR_FMT, 1, "rng_save_state", "Write error: " // filename
-    998 continue
-    print ERR_FMT, 1, "rng_save_state", "open error: " // filename
     stop
   end subroutine rng_save_state_
 
@@ -322,15 +306,11 @@ contains
     io_unit = 2993
     if (present(unit)) then
       io_unit = unit
-      open (io_unit, file = filename, action = "read", &
-      &     access = "sequential", status = "old", form = "unformatted", &
-      &     err = 999)
     else
       open (io_unit, file = filename, action = "read", &
       &     access = "sequential", status = "old", form = "unformatted", &
       &     err = 999)
     end if
-
     read(io_unit, err = 999) s
     if (s /= "rng_uniform_mt") then
       print ERR_FMT, 2, "rng_load_state", "Wrong format: " // filename
@@ -338,8 +318,6 @@ contains
     end if
     read (io_unit, err = 999) self%mt(:), self%mti
     if (.not. present(unit)) close (io_unit, err = 999)
-
-    close(io_unit)
     return
 
     999 continue

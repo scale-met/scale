@@ -673,7 +673,8 @@ contains
     endif
 
     call rng_init( rng_s2c_i, PRC_myrank )
-    call rng_save_state( rng_s2c_i, basename, fid_output )
+    call rng_save_state( rng_s2c_i, basename)
+!    call rng_save_state( rng_s2c_i, basename, fid_output )
 
     return
   end subroutine SDM_random_setup

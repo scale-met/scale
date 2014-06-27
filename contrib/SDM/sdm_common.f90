@@ -55,6 +55,8 @@ module m_sdm_common
   !
   !------------------------------------------------------------------------------
   integer(DP), allocatable, save :: sdn_s2c(:)   ! multipilicity
+  real(RP), allocatable, save :: sdri_s2c(:)     ! index-i(real) of s.d.
+  real(RP), allocatable, save :: sdrj_s2c(:)     ! index-j(real) of s.d.
   real(RP), allocatable, save :: sdrk_s2c(:)     ! index-k(real) of s.d.
   real(RP), allocatable, save :: sdx_s2c(:)      ! x-cordinate of s.d.
   real(RP), allocatable, save :: sdy_s2c(:)      ! y-cordinate of s.d.
@@ -78,6 +80,8 @@ module m_sdm_common
   real(RP), allocatable, save :: sdasl_tmp(:,:)  ! aerosol mass of super-droplets
   ! SDM for aerosol formation
   integer(DP), allocatable, save :: sdn_fm(:)    ! multiplicity of super-droplets
+  real(RP), allocatable, save :: sdri_fm(:)      ! index-i(real) of super-droplets
+  real(RP), allocatable, save :: sdrj_fm(:)      ! index-j(real) of super-droplets
   real(RP), allocatable, save :: sdrk_fm(:)      ! index-k(real) of super-droplets
   real(RP), allocatable, save :: sdx_fm(:)       ! x-coordinate of super-droplets
   real(RP), allocatable, save :: sdy_fm(:)       ! y-coordinate of super-droplets
@@ -288,6 +292,18 @@ module m_sdm_common
                                             ! 1:adjust number of droplet by adding
                                             ! 2:adjust number of droplet by removal 
                                             ! 3:adjust number of droplet by adding and removal
+  integer, save :: sdm_dmpvar  = 000   ! Control flag to output Super Droplets
+                                       ! 1st digit (10^0) corresponds to text output
+                                       ! 2nd digit (10^1) corresponds to binary output
+                                       ! 3rd digit (10^2) corresponds to binary output of large droplets 
+                                       ! 0: off, 1: on, 2: output with sort data (only for binary output)
+                                       ! currently only 001 is supported   
+  real(RP), save :: sdm_dmpitva  = 0.e0 ! Time interval of text output [s]
+  integer, save :: sdm_dmpnskip = 1     ! Base skip to store super droplets in text format
+  real(RP), save :: sdm_dmpitvb  = 0.e0  ! Time interval of binary output of all droplets [s]
+  real(RP), save :: sdm_dmpitvl  = 0.e0  ! Time interval of binary output of large droplets [s]
+  real(RP), save :: sdm_dmpsdsiz = 0.e0  ! Threshold radius to store large super droplets in binary format [m]
+
   data sdm_dtcmph / 0.1_RP,0.1_RP,0.1_RP /
   data sdm_calvar / .false.,.false.,.false. /
   data sdm_aslmw  / 0.0_RP, 0.0_RP, 0.0_RP, 0.0_RP, 0.0_RP, &

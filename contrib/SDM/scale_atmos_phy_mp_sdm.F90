@@ -25,7 +25,8 @@
 !! @li      2014-06-25 (S.Shima) [rev] Bugfix and improvement of ATMOS_PHY_MP_sdm_restart_in and sdm_iniset
 !! @li      2014-06-25 (S.Shima) [rev] Bugfix of sd position initialization, and many modification
 !! @li      2014-06-25 (S.Shima) [rev] Bugfix: dx_sdm, dy_sdm, dxiv_sdn, dyiv_sdm restored
-!! @li      2014-06-26 (S.Shima) [rev] sdm_getrklu and sdm_getindex are separated
+!! @li      2014-06-26 (S.Shima) [rev] sdm_getrklu and sdm_z2rk are separated
+!! @li      2014-06-27 (S.Shima) [rev] sd data output functionality added
 !<
 !-------------------------------------------------------------------------------
 #include "macro_thermodyn.h"
@@ -159,7 +160,13 @@ contains
        sdm_colkrnl, &
        sdm_mvexchg, &
        sdm_nadjdt, &
-       sdm_nadjvar
+       sdm_nadjvar,&
+       sdm_dmpvar,&
+       sdm_dmpitva,&
+       sdm_dmpnskip,& 
+       sdm_dmpitvb,& 
+       sdm_dmpitvl,&
+       sdm_dmpsdsiz
 
     real(RP) :: dtevl
     real(RP) :: n0, dry_r
@@ -524,6 +531,11 @@ contains
     use scale_atmos_thermodyn, only: &
        CPw => AQ_CP
 
+    use m_sdm_io, only: &
+       sdm_outasci
+    use m_sdm_coordtrans, only: &
+       sdm_rk2z
+
     implicit none
     real(RP), intent(inout) :: DENS(KA,IA,JA)
     real(RP), intent(inout) :: MOMZ(KA,IA,JA)
@@ -657,6 +669,22 @@ contains
     bufsiz1 = nomp * ( int((bufsiz1-1)/nomp) + 1 ) !! being multiple number to 'nomp'
     bufsiz2 = 8 + sdnumasl_s2c    !! n,x,y,rk,u,v,wc(vz),r,asl
 
+
+    !--
+    ! SD data output
+    if( (mod(sdm_dmpvar,10)==1) .and. sdm_dmpitva>0.0_RP .and. &
+         mod(10*int(1.E+2_RP*(TIME_NOWSEC+0.0010_RP)), &
+             int(1.E+3_RP*(sdm_dmpitva+0.00010_RP))) == 0 ) then
+       if( IO_L ) write(IO_FID_LOG,*) ' *** Output Super Droplet Data in ASCII'
+       call sdm_rk2z(sdnum_s2c,sdx_s2c,sdy_s2c,sdrk_s2c,sdz_s2c,sdri_s2c,sdrj_s2c)
+       call sdm_outasci(TIME_NOWSEC,                               &
+                        sdnum_s2c,sdnumasl_s2c,                    &
+                        sdn_s2c,sdx_s2c,sdy_s2c,sdz_s2c,sdr_s2c,sdasl_s2c,sdvz_s2c, &
+                        sdm_dmpnskip)
+    else if(sdm_dmpvar>1)then
+       if( IO_L ) write(IO_FID_LOG,*) 'ERROR: sdm_dmpvar>1 not supported for now. Set sdm_dmpvar=1 (Output Super Droplet Data in ASCII)'
+    end if
+
     ! -----
     ! Perform super-droplets method (SDM)
     !== get the exner function at future ==!
@@ -717,7 +745,7 @@ contains
 !!$
 !!$     if( dtcl(4)>0.0_RP .and. &
 !!$         mod(10*int(1.E+2_RP*(TIME_NOWSEC+0.0010_RP)), &
-!!$             int(1.E+3_RP*(dtcl(4),0.00010_RP))) == 0 ) then
+!!$             int(1.E+3_RP*(dtcl(4)+0.00010_RP))) == 0 ) then
 !!$
 !!$        call sdm_aslform(sdm_calvar,sdm_aslset,                      &
 !!$                         sdm_aslfmsdnc,sdm_sdnmlvol,                 &
@@ -728,7 +756,7 @@ contains
 !!$                         sdy_s2c,sdz_s2c,sdrk_s2c,sdu_s2c,           &
 !!$                         sdv_s2c,sdvz_s2c,sdr_s2c,sdasl_s2c,         &
 !!$                         sdfmnum_s2c,sdn_fm,sdx_fm,sdy_fm,sdz_fm,    &
-!!$                         sdrk_fm,sdvz_fm,sdr_fm,sdasl_fm,            &
+!!$                         sdri_fm,sdrj_fm,sdrk_fm,sdvz_fm,sdr_fm,sdasl_fm,            &
 !!$                         ni_s2c,nj_s2c,nk_s2c,                       &
 !!$                         sortid_s2c,sortkey_s2c,sortfreq_s2c,        &
 !!$                         sorttag_s2c,rng_s2c,                        &
@@ -742,7 +770,7 @@ contains
 !!$
 !!$     if( dtcl(5)>0.0_RP .and. &
 !!$         mod(10*int(1.E+2_RP*(TIME_NOWSEC+0.0010_RP)), &
-!!$             int(1.E+3_RP*(dtcl(5),0.00010_RP))) == 0 ) then
+!!$             int(1.E+3_RP*(dtcl(5)+0.00010_RP))) == 0 ) then
 !!$
 !!$       !== averaged number concentration in a grid ==!
 !!$
@@ -782,8 +810,6 @@ contains
     return
   end subroutine ATMOS_PHY_MP_sdm
   !-----------------------------------------------------------------------------
-
-  !-----------------------------------------------------------------------------
    subroutine sdm_iniset(DENS, RHOT, QTRC,                   &
                          RANDOM_IN_BASENAME, fid_random_i,   &
                          xmax_sdm, ymax_sdm, dtcmph,         &
@@ -818,7 +844,7 @@ contains
         GRID_FY
       use m_sdm_coordtrans, only: &
         sdm_getrklu, &
-        sdm_getindex
+        sdm_z2rk
 
       real(RP), intent(in) :: DENS(KA,IA,JA) ! Density     [kg/m3]
       real(RP), intent(in) :: RHOT(KA,IA,JA) ! DENS * POTT [K*kg/m3]
@@ -925,7 +951,8 @@ contains
       !### Get random generator seed ###!
       !! Random number generator has already been initialized in scale-les/src/preprocess/mod_mkinit.f90
       !! Be careful. If unit (=fid_random_i) is specified, filename is ignored and the object is initialized by the unit.
-      call rng_load_state( rng_s2c, trim(RANDOM_IN_BASENAME), fid_random_i )
+      call rng_load_state( rng_s2c, trim(RANDOM_IN_BASENAME))
+!      call rng_load_state( rng_s2c, trim(RANDOM_IN_BASENAME), fid_random_i )
 
       ! Initialized super-droplets.
       !### Get parameter for 3mode log-nomiral distribution ###!
@@ -1114,10 +1141,12 @@ contains
       end if
 
       !### position of super-droplets in horizontal ###!
+      if( IO_L ) write(IO_FID_LOG,*) sdx_s2c(4)
       do n=1,sdnum_s2c
          sdx_s2c(n) = xmax_sdm * sdx_s2c(n)+GRID_FX(IS-1)
          sdy_s2c(n) = ymax_sdm * sdy_s2c(n)+GRID_FY(JS-1)
       end do
+      if( IO_L ) write(IO_FID_LOG,*) sdx_s2c(4),xmax_sdm
 
       !### position of super-droplets in vertical ###!
       !! valid super-droplets
@@ -1176,8 +1205,8 @@ contains
 
       !### index[k/real] of super-droplets               ###!
       !### modify position[z] of invalid super-droplets  ###!
-      call sdm_getindex(sdm_zlower,sdm_zupper,            &
-                        sdnum_s2c,sdx_s2c,sdy_s2c,sdz_s2c,sdrk_s2c )
+      call sdm_z2rk(sdm_zlower,sdm_zupper,            &
+                        sdnum_s2c,sdx_s2c,sdy_s2c,sdz_s2c,sdri_s2c,sdrj_s2c,sdrk_s2c )
 
       !### terminal velocity                            ###!
       !### ( at only condensation/evaporation process ) ###!
@@ -6704,13 +6733,13 @@ contains
                          sd_num,sd_numasl,sd_n,sd_x,sd_y,sd_z,    &
                          sd_rk,sd_u,sd_v,sd_vz,sd_r,sd_asl,       &
                          sd_fmnum,sd_fmn,sd_fmx,sd_fmy,sd_fmz,    &
-                         sd_fmrk,sd_fmvz,sd_fmr,sd_fmasl,         &
+                         sd_fmri,sd_fmrj,sd_fmrk,sd_fmvz,sd_fmr,sd_fmasl,         &
                          ni_sdm,nj_sdm,nk_sdm,sort_id,sort_key,   &
                          sort_freq,sort_tag,sd_rng,               &
 !                         sort_freq,sort_tag,                      &
                          sort_tag0,sd_itmp1,sd_itmp2,sd_itmp3)
 
-    use m_sdm_coordtrans, only: sdm_getindex
+    use m_sdm_coordtrans, only: sdm_z2rk
 
       ! Input variables
       logical, intent(in) :: sdm_calvar(3) ! Control flag of calculation using SDM
@@ -6749,6 +6778,8 @@ contains
       real(RP), intent(inout) :: sd_fmx(1:sd_fmnum)  ! x-coordinate of super-droplets at aerosol formation
       real(RP), intent(inout) :: sd_fmy(1:sd_fmnum)  ! y-coordinate of super-droplets at aerosol formation
       real(RP), intent(inout) :: sd_fmz(1:sd_fmnum)  ! z-coordinate of super-droplets at aerosol formation
+      real(RP), intent(inout) :: sd_fmri(1:sd_fmnum) ! index[i/real] of super-droplets at aerosol formation
+      real(RP), intent(inout) :: sd_fmrj(1:sd_fmnum) ! index[j/real] of super-droplets at aerosol formation
       real(RP), intent(inout) :: sd_fmrk(1:sd_fmnum) ! index[k/real] of super-droplets at aerosol formation
       real(RP), intent(inout) :: sd_fmvz(1:sd_fmnum) ! terminal velocity of super-droplet at aerosol formation
       real(RP), intent(inout) :: sd_fmr(1:sd_fmnum)  ! equivalent radius of super-droplets at aerosol formation
@@ -6846,8 +6877,8 @@ contains
 
       !### index[k/real] of super-droplets ###!
 
-      call sdm_getindex(sdm_zlower,sdm_zupper,       &
-                        sd_fmnum,sd_fmx,sd_fmy,sd_fmz,sd_fmrk)
+      call sdm_z2rk(sdm_zlower,sdm_zupper,       &
+                        sd_fmnum,sd_fmx,sd_fmy,sd_fmz,sd_fmri,sd_fmrj,sd_fmrk)
 
       ! Set radius of super-droplets
       if( sdm_calvar(1) ) then
@@ -7936,7 +7967,8 @@ contains
     !### Get random generator seed ###!
     !! Random number generator has already been initialized in scale-les/src/preprocess/mod_mkinit.f90
     !! Be careful. If unit (=fid_random_i) is specified, filename is ignored and the object is initialized by the unit.
-    call rng_load_state( rng_s2c, trim(RANDOM_IN_BASENAME), fid_random_i )
+    call rng_load_state( rng_s2c, trim(RANDOM_IN_BASENAME))
+!    call rng_load_state( rng_s2c, trim(RANDOM_IN_BASENAME), fid_random_i )
 
     open (fid_sd_i, file = trim(SD_IN_BASENAME), &! action = "read", &
           access = "sequential", status = "old", form = "unformatted", &
@@ -8007,7 +8039,8 @@ contains
        write(fmt2(14:14),'(I1)') 6
        write(fmt2(16:16),'(I1)') 6
        write(ftmp,fmt3) 'SD_output', '_', trim(basename_time)
-       write(SD_OUT_BASENAME,fmt2) trim(ftmp), 'pe',mype
+!       write(SD_OUT_BASENAME,fmt2) trim(ftmp), 'pe',mype ! Perhaps a bug?
+       write(basename_sd_out,fmt2) trim(ftmp),'pe',mype
     else
        write(fmt2(14:14),'(I1)') 6
        write(fmt2(16:16),'(I1)') 6
@@ -8055,10 +8088,10 @@ contains
 
     fid_random_o = IO_get_available_fid()
     if( IO_L ) write(IO_FID_LOG,*) '*** Output random number for SDM ***', trim(basename_random)
-    call rng_save_state( rng_s2c, trim(basename_random), fid_random_o )
+    call rng_save_state( rng_s2c, trim(basename_random))
+!    call rng_save_state( rng_s2c, trim(basename_random), fid_random_o )
 
     return
   end subroutine ATMOS_PHY_MP_sdm_restart_out
-  !-----------------------------------------------------------------------------
 end module scale_atmos_phy_mp_sdm
 !-------------------------------------------------------------------------------

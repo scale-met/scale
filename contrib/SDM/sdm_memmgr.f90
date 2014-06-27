@@ -65,6 +65,8 @@ contains
     
     !--- Allocate arrays for SDM
     allocate(sdn_s2c(1:sdnum_s2c))
+    allocate(sdri_s2c(1:sdnum_s2c))
+    allocate(sdrj_s2c(1:sdnum_s2c))
     allocate(sdrk_s2c(1:sdnum_s2c))
     allocate(sdx_s2c(1:sdnum_s2c))
     allocate(sdy_s2c(1:sdnum_s2c))
@@ -75,6 +77,8 @@ contains
     allocate(sdvz_s2c(1:sdnum_s2c))
     allocate(sdasl_s2c(1:sdnum_s2c,1:sdnumasl_s2c))
     allocate(sdn_fm(1:sdfmnum_s2c))
+    allocate(sdri_fm(1:sdfmnum_s2c))
+    allocate(sdrj_fm(1:sdfmnum_s2c))
     allocate(sdrk_fm(1:sdfmnum_s2c))
     allocate(sdx_fm(1:sdfmnum_s2c))
     allocate(sdy_fm(1:sdfmnum_s2c))

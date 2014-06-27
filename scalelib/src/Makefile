@@ -145,9 +145,11 @@ makesdm: $(BUILD_DIR)/scale_precision.o \
 	$(BUILD_DIR)/scale_topography.o \
 	$(BUILD_DIR)/scale_grid_real.o \
 	$(BUILD_DIR)/scale_gridtrans.o \
+	$(BUILD_DIR)/scale_process.o \
 	$(MODDIR)/rng_uniform_mt.mod
-	cp -pf $(SDMDIR)/scale_atmos_phy_mp_sdm.F90 $(SCALELIBDIR)/src/atmos-physics/microphysics/
+	cp -f $(SDMDIR)/scale_atmos_phy_mp_sdm.F90 $(SCALELIBDIR)/src/atmos-physics/microphysics/
 	cp -pf $(SDMDIR)/scale_tracer_sdm.F90 $(SCALELIBDIR)/src/atmos-physics/microphysics/
+	$(MAKE) -C $(MTDIR)
 	$(MAKE) -C $(GAGETRYDIR)
 	$(MAKE) -C $(SDMDIR)
 
