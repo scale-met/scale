@@ -1818,7 +1818,8 @@ contains
        COMM_wait
     use scale_statistics, only: &
        STATISTICS_checktotal, &
-       STAT_total
+       STAT_total,            &
+       STAT_detail
     use scale_monitor, only: &
        MONIT_put, &
        MONIT_in
@@ -1856,6 +1857,9 @@ contains
     real(RP) :: ENGFLXT      (IA,JA) ! total flux             [J/m2/s]
     real(RP) :: SFLX_RD_net  (IA,JA) ! net SFC radiation flux [J/m2/s]
     real(RP) :: TOAFLX_RD_net(IA,JA) ! net TOA radiation flux [J/m2/s]
+
+    real(RP)               :: WORK (KA,IA,JA,3)
+    character(len=H_SHORT) :: WNAME(3)
 
     real(RP) :: total ! dummy
     integer  :: k, i, j, iq
@@ -1996,6 +2000,18 @@ contains
     call MONIT_put( AD_MONIT_id(I_ENGTOA_LW_dn), TOAFLX_LW_dn(:,:) )
     call MONIT_put( AD_MONIT_id(I_ENGTOA_SW_up), TOAFLX_SW_up(:,:) )
     call MONIT_put( AD_MONIT_id(I_ENGTOA_SW_dn), TOAFLX_SW_dn(:,:) )
+
+    if ( ATMOS_VARS_CHECKRANGE ) then
+       WORK(:,:,:,1) = W(:,:,:)
+       WORK(:,:,:,2) = U(:,:,:)
+       WORK(:,:,:,3) = V(:,:,:)
+
+       WNAME(1) = "W"
+       WNAME(2) = "U"
+       WNAME(3) = "V"
+
+       call STAT_detail( WORK(:,:,:,:), WNAME(:) )
+    endif
 
     return
   end subroutine ATMOS_vars_monitor
