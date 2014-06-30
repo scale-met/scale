@@ -49,7 +49,7 @@ module scale_atmos_boundary
   !
   real(RP), public, allocatable :: ATMOS_BOUNDARY_var  (:,:,:,:)         !> reference container (with HALO)
   real(RP), public, allocatable :: ATMOS_BOUNDARY_alpha(:,:,:,:)         !> damping coefficient [0-1]
-  logical, public                :: ATMOS_BOUNDARY_UPDATE_FLAG = .false. !> switch for real case
+  logical,  public              :: ATMOS_BOUNDARY_UPDATE_FLAG = .false. !> switch for real case
 
   !-----------------------------------------------------------------------------
   !
@@ -74,44 +74,45 @@ module scale_atmos_boundary
   logical,               private :: ATMOS_BOUNDARY_USE_POTT     = .false. ! read from file?
   logical,               private :: ATMOS_BOUNDARY_USE_QV       = .false. ! read from file?
 
-  real(RP),              private :: ATMOS_BOUNDARY_VALUE_VELZ   =   0.0_RP ! w at boundary, 0 [m/s]
-  real(RP),              private :: ATMOS_BOUNDARY_VALUE_VELX   =   5.0_RP ! u at boundary, 5 [m/s]
-  real(RP),              private :: ATMOS_BOUNDARY_VALUE_VELY   =   5.0_RP ! v at boundary, 5 [m/s]
-  real(RP),              private :: ATMOS_BOUNDARY_VALUE_POTT   = 300.0_RP ! PT at boundary, 300 [K]
-  real(RP),              private :: ATMOS_BOUNDARY_VALUE_QV     = 1.E-3_RP ! QV at boundary, 1e-3 [kg/kg]
+  real(RP),              private :: ATMOS_BOUNDARY_VALUE_VELZ   =   0.0_RP ! velocity w      at boundary, 0   [m/s]
+  real(RP),              private :: ATMOS_BOUNDARY_VALUE_VELX   =   0.0_RP ! velocity u      at boundary, 0   [m/s]
+  real(RP),              private :: ATMOS_BOUNDARY_VALUE_VELY   =   0.0_RP ! velocity v      at boundary, 0   [m/s]
+  real(RP),              private :: ATMOS_BOUNDARY_VALUE_POTT   = 300.0_RP ! potential temp. at boundary, 300 [K]
+  real(RP),              private :: ATMOS_BOUNDARY_VALUE_QV     =   0.0_RP ! water vapor     at boundary, 0   [kg/kg]
 
-  real(RP),              private :: ATMOS_BOUNDARY_FRACZ        = 1.0_RP  ! fraction of boundary region for dumping [z]
-  real(RP),              private :: ATMOS_BOUNDARY_FRACX        = 1.0_RP  ! fraction of boundary region for dumping [x]
-  real(RP),              private :: ATMOS_BOUNDARY_FRACY        = 1.0_RP  ! fraction of boundary region for dumping [y]
-  real(RP),              private :: ATMOS_BOUNDARY_tauz         = 75.0_RP ! maximum value for damping tau (z) [s]
-  real(RP),              private :: ATMOS_BOUNDARY_taux         = 75.0_RP ! maximum value for damping tau (x) [s]
-  real(RP),              private :: ATMOS_BOUNDARY_tauy         = 75.0_RP ! maximum value for damping tau (y) [s]
+  real(RP),              private :: ATMOS_BOUNDARY_FRACZ        =   1.0_RP ! fraction of boundary region for dumping (z) [0-1]
+  real(RP),              private :: ATMOS_BOUNDARY_FRACX        =   1.0_RP ! fraction of boundary region for dumping (x) [0-1]
+  real(RP),              private :: ATMOS_BOUNDARY_FRACY        =   1.0_RP ! fraction of boundary region for dumping (y) [0-1]
+  real(RP),              private :: ATMOS_BOUNDARY_tauz         =  60.0_RP ! maximum value for damping tau (z) [s]
+  real(RP),              private :: ATMOS_BOUNDARY_taux         =  60.0_RP ! maximum value for damping tau (x) [s]
+  real(RP),              private :: ATMOS_BOUNDARY_tauy         =  60.0_RP ! maximum value for damping tau (y) [s]
 
-  real(RP),              private, allocatable :: ATMOS_BOUNDARY_var_ref(:,:,:,:,:)    !> reference container (with HALO)
-  real(RP),              private, allocatable :: ATMOS_BOUNDARY_increment(:,:,:,:)    !> damping coefficient [0-1]
+  real(RP),              private, allocatable :: ATMOS_BOUNDARY_var_ref  (:,:,:,:,:) !> reference container (with HALO)
+  real(RP),              private, allocatable :: ATMOS_BOUNDARY_increment(:,:,:,:)   !> damping coefficient [0-1]
 
-  real(DP),              private :: ATMOS_BOUNDARY_UPDATE_DT = 0.0_DP ! inteval time of boudary data update [s]
-  real(DP),              private :: last_updated
-  integer,               private :: boundary_timestep        = 0
+  real(DP),              private :: ATMOS_BOUNDARY_UPDATE_DT    = 0.0_DP   ! inteval time of boudary data update [s]
+
+  real(DP),              private :: last_updated      =  -999.0_DP
+  integer,               private :: boundary_timestep = 0
 
   character(len=H_SHORT), private :: REF_NAME(5)
   data REF_NAME / 'VELZ_ref','VELX_ref','VELY_ref','POTT_ref','QV_ref' /
 
   !-----------------------------------------------------------------------------
 contains
-
   !-----------------------------------------------------------------------------
-  !> Initialize Boundary Treatment
-  !-----------------------------------------------------------------------------
+  !> Setup
   subroutine ATMOS_BOUNDARY_setup( &
-       DENS, MOMZ, MOMX, MOMY, RHOT, QTRC )
+       DENS, &
+       MOMZ, &
+       MOMX, &
+       MOMY, &
+       RHOT, &
+       QTRC  )
     use scale_process, only: &
        PRC_MPIstop
     use scale_const, only: &
        CONST_UNDEF
-    use scale_comm, only: &
-       COMM_vars8, &
-       COMM_wait
     implicit none
 
     real(RP), intent(in) :: DENS(KA,IA,JA)
@@ -122,26 +123,26 @@ contains
     real(RP), intent(in) :: QTRC(KA,IA,JA,QA)
 
     NAMELIST / PARAM_ATMOS_BOUNDARY / &
-       ATMOS_BOUNDARY_TYPE,          &
-       ATMOS_BOUNDARY_IN_BASENAME,   &
-       ATMOS_BOUNDARY_OUT_BASENAME,  &
-       ATMOS_BOUNDARY_OUT_TITLE,     &
-       ATMOS_BOUNDARY_USE_VELZ,      &
-       ATMOS_BOUNDARY_USE_VELX,      &
-       ATMOS_BOUNDARY_USE_VELY,      &
-       ATMOS_BOUNDARY_USE_POTT,      &
-       ATMOS_BOUNDARY_USE_QV,        &
-       ATMOS_BOUNDARY_VALUE_VELZ,    &
-       ATMOS_BOUNDARY_VALUE_VELY,    &
-       ATMOS_BOUNDARY_VALUE_VELX,    &
-       ATMOS_BOUNDARY_VALUE_POTT,    &
-       ATMOS_BOUNDARY_VALUE_QV,      &
-       ATMOS_BOUNDARY_FRACZ,         &
-       ATMOS_BOUNDARY_FRACX,         &
-       ATMOS_BOUNDARY_FRACY,         &
-       ATMOS_BOUNDARY_tauz,          &
-       ATMOS_BOUNDARY_taux,          &
-       ATMOS_BOUNDARY_tauy,          &
+       ATMOS_BOUNDARY_TYPE,         &
+       ATMOS_BOUNDARY_IN_BASENAME,  &
+       ATMOS_BOUNDARY_OUT_BASENAME, &
+       ATMOS_BOUNDARY_OUT_TITLE,    &
+       ATMOS_BOUNDARY_USE_VELZ,     &
+       ATMOS_BOUNDARY_USE_VELX,     &
+       ATMOS_BOUNDARY_USE_VELY,     &
+       ATMOS_BOUNDARY_USE_POTT,     &
+       ATMOS_BOUNDARY_USE_QV,       &
+       ATMOS_BOUNDARY_VALUE_VELZ,   &
+       ATMOS_BOUNDARY_VALUE_VELY,   &
+       ATMOS_BOUNDARY_VALUE_VELX,   &
+       ATMOS_BOUNDARY_VALUE_POTT,   &
+       ATMOS_BOUNDARY_VALUE_QV,     &
+       ATMOS_BOUNDARY_FRACZ,        &
+       ATMOS_BOUNDARY_FRACX,        &
+       ATMOS_BOUNDARY_FRACY,        &
+       ATMOS_BOUNDARY_tauz,         &
+       ATMOS_BOUNDARY_taux,         &
+       ATMOS_BOUNDARY_tauy,         &
        ATMOS_BOUNDARY_UPDATE_DT
 
     integer :: ierr
@@ -152,71 +153,75 @@ contains
 
     allocate( ATMOS_BOUNDARY_var  (KA,IA,JA,5) )
     allocate( ATMOS_BOUNDARY_alpha(KA,IA,JA,5) )
+    ATMOS_BOUNDARY_var  (:,:,:,:) = CONST_UNDEF
+    ATMOS_BOUNDARY_alpha(:,:,:,:) = 0.0_RP
 
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_ATMOS_BOUNDARY,iostat=ierr)
-
     if( ierr < 0 ) then !--- missing
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_BOUNDARY. Check!'
        call PRC_MPIstop
     endif
-    if( IO_L ) write(IO_FID_LOG,nml=PARAM_ATMOS_BOUNDARY)
+    if( IO_LNML) write(IO_FID_LOG,nml=PARAM_ATMOS_BOUNDARY)
 
-    !--- set reference field for boundary
-    ATMOS_BOUNDARY_var(:,:,:,:) = CONST_UNDEF
+    if ( ATMOS_BOUNDARY_TYPE == 'CONST' ) then
 
-    if     ( ATMOS_BOUNDARY_TYPE == 'NONE' ) then
-       ! for backward compatibility
-       if ( ATMOS_BOUNDARY_IN_BASENAME /= '' ) then
-          write(*,*) 'xxx [obsolete] use ATMOS_BOUNDARY_TYPE'
-          call ATMOS_BOUNDARY_read
-       elseif( ATMOS_BOUNDARY_OUT_BASENAME /= '' ) then
-          write(*,*) 'xxx [obsolete] use ATMOS_BOUNDARY_TYPE'
-          call ATMOS_BOUNDARY_generate
-          call ATMOS_BOUNDARY_setalpha
-       endif
-       ATMOS_BOUNDARY_UPDATE_FLAG = .false.
-    elseif ( ATMOS_BOUNDARY_TYPE == 'INIT' ) then
-       call ATMOS_BOUNDARY_setinitval( &
-            DENS, MOMZ, MOMX, MOMY, RHOT, QTRC ) ! (in)
+       call ATMOS_BOUNDARY_generate
 
        call ATMOS_BOUNDARY_setalpha
+
        ATMOS_BOUNDARY_UPDATE_FLAG = .false.
+
+    elseif ( ATMOS_BOUNDARY_TYPE == 'INIT' ) then
+
+       call ATMOS_BOUNDARY_setinitval( DENS, & ! [IN]
+                                       MOMZ, & ! [IN]
+                                       MOMX, & ! [IN]
+                                       MOMY, & ! [IN]
+                                       RHOT, & ! [IN]
+                                       QTRC  ) ! [IN]
+
+       call ATMOS_BOUNDARY_setalpha
+
+       ATMOS_BOUNDARY_UPDATE_FLAG = .false.
+
     elseif ( ATMOS_BOUNDARY_TYPE == 'FILE' ) then
+
        if ( ATMOS_BOUNDARY_IN_BASENAME /= '' ) then
           call ATMOS_BOUNDARY_read
        else
           write(*,*) 'xxx You need specify ATMOS_BOUNDARY_IN_BASENAME'
           call PRC_MPIstop
        endif
+
        ATMOS_BOUNDARY_UPDATE_FLAG = .false.
-    elseif ( ATMOS_BOUNDARY_TYPE == 'CONST' ) then
-       call ATMOS_BOUNDARY_generate
-       call ATMOS_BOUNDARY_setalpha
-       ATMOS_BOUNDARY_UPDATE_FLAG = .false.
+
     elseif ( ATMOS_BOUNDARY_TYPE == 'REAL' ) then
-       boundary_timestep = 1  ! to call as an initialize
-       last_updated = -999    ! to call as an initialize
-       allocate( ATMOS_BOUNDARY_var_ref(KA,IA,JA,5,2) )
-       allocate( ATMOS_BOUNDARY_increment(KA,IA,JA,5) )
+
+       allocate( ATMOS_BOUNDARY_var_ref  (KA,IA,JA,5,2) )
+       allocate( ATMOS_BOUNDARY_increment(KA,IA,JA,5)   )
 
        if ( ATMOS_BOUNDARY_UPDATE_DT <= 0.0_DP ) then
           write(*,*) 'xxx You need specify ATMOS_BOUNDARY_UPDATE_DT as larger than 0.0'
           call PRC_MPIstop
        endif
+
        if ( ATMOS_BOUNDARY_IN_BASENAME /= '' ) then
           call ATMOS_BOUNDARY_initialize
        else
           write(*,*) 'xxx You need specify ATMOS_BOUNDARY_IN_BASENAME'
           call PRC_MPIstop
        endif
-       ATMOS_BOUNDARY_UPDATE_FLAG = .true.
+
        call ATMOS_BOUNDARY_setalpha
+
+       ATMOS_BOUNDARY_UPDATE_FLAG = .true.
+
     else
-       write(*,*) 'xxx ATMOS_BOUNDARY_TYPE is invalid'
+       write(*,*) 'xxx unsupported ATMOS_BOUNDARY_TYPE. Check!', trim(ATMOS_BOUNDARY_TYPE)
        call PRC_MPIstop
     endif
 
@@ -224,17 +229,73 @@ contains
        call ATMOS_BOUNDARY_write
     endif
 
-    call COMM_vars8( ATMOS_BOUNDARY_var  (:,:,:,I_BND_QV), 1 )
-    call COMM_vars8( ATMOS_BOUNDARY_alpha(:,:,:,i_BND_QV), 2 )
-    call COMM_wait ( ATMOS_BOUNDARY_var  (:,:,:,I_BND_QV), 1 )
-    call COMM_wait ( ATMOS_BOUNDARY_alpha(:,:,:,i_BND_QV), 2 )
-
     return
   end subroutine ATMOS_BOUNDARY_setup
 
   !-----------------------------------------------------------------------------
-  !> Calc dumping coefficient alpha
+  !> HALO Communication
+  subroutine ATMOS_BOUNDARY_var_fillhalo
+    use scale_comm, only: &
+       COMM_vars8, &
+       COMM_wait
+    implicit none
+
+    integer :: i, j, iv
+    !---------------------------------------------------------------------------
+
+    do iv = I_BND_VELZ, I_BND_QV
+    do j  = 1, JA
+    do i  = 1, IA
+       ATMOS_BOUNDARY_var(   1:KS-1,i,j,iv) = ATMOS_BOUNDARY_var(KS,i,j,iv)
+       ATMOS_BOUNDARY_var(KE+1:KA,  i,j,iv) = ATMOS_BOUNDARY_var(KE,i,j,iv)
+    enddo
+    enddo
+    enddo
+
+    do iv = I_BND_VELZ, I_BND_QV
+       call COMM_vars8( ATMOS_BOUNDARY_var(:,:,:,iv), iv )
+    enddo
+
+    do iv = I_BND_VELZ, I_BND_QV
+       call COMM_wait ( ATMOS_BOUNDARY_var(:,:,:,iv), iv )
+    enddo
+
+    return
+  end subroutine ATMOS_BOUNDARY_var_fillhalo
+
   !-----------------------------------------------------------------------------
+  !> HALO Communication
+  subroutine ATMOS_BOUNDARY_alpha_fillhalo
+    use scale_comm, only: &
+       COMM_vars8, &
+       COMM_wait
+    implicit none
+
+    integer :: i, j, iv
+    !---------------------------------------------------------------------------
+
+    do iv = I_BND_VELZ, I_BND_QV
+    do j  = 1, JA
+    do i  = 1, IA
+       ATMOS_BOUNDARY_alpha(   1:KS-1,i,j,iv) = ATMOS_BOUNDARY_alpha(KS,i,j,iv)
+       ATMOS_BOUNDARY_alpha(KE+1:KA,  i,j,iv) = ATMOS_BOUNDARY_alpha(KE,i,j,iv)
+    enddo
+    enddo
+    enddo
+
+    do iv = I_BND_VELZ, I_BND_QV
+       call COMM_vars8( ATMOS_BOUNDARY_alpha(:,:,:,iv), iv )
+    enddo
+
+    do iv = I_BND_VELZ, I_BND_QV
+       call COMM_wait ( ATMOS_BOUNDARY_alpha(:,:,:,iv), iv )
+    enddo
+
+    return
+  end subroutine ATMOS_BOUNDARY_alpha_fillhalo
+
+  !-----------------------------------------------------------------------------
+  !> Calc dumping coefficient alpha
   subroutine ATMOS_BOUNDARY_setalpha
     use scale_const, only: &
        CONST_UNDEF, &
@@ -253,9 +314,6 @@ contains
     integer :: i, j, k
     !---------------------------------------------------------------------------
 
-    !--- set damping coefficient
-    ATMOS_BOUNDARY_alpha(:,:,:,:) = 0.0_RP
-
     if ( ATMOS_BOUNDARY_tauz <= 0.0_RP ) then ! invalid tau
        coef = 0.0_RP
     else
@@ -263,14 +321,11 @@ contains
     endif
 
     ! check invalid fraction
-    if ( ATMOS_BOUNDARY_FRACZ < 0.0_RP ) ATMOS_BOUNDARY_FRACZ = 0.0_RP
-    if ( ATMOS_BOUNDARY_FRACZ > 1.0_RP ) ATMOS_BOUNDARY_FRACZ = 1.0_RP
-    if ( ATMOS_BOUNDARY_FRACX < 0.0_RP ) ATMOS_BOUNDARY_FRACX = 0.0_RP
-    if ( ATMOS_BOUNDARY_FRACX > 1.0_RP ) ATMOS_BOUNDARY_FRACX = 1.0_RP
-    if ( ATMOS_BOUNDARY_FRACY < 0.0_RP ) ATMOS_BOUNDARY_FRACY = 0.0_RP
-    if ( ATMOS_BOUNDARY_FRACY > 1.0_RP ) ATMOS_BOUNDARY_FRACY = 1.0_RP
+    ATMOS_BOUNDARY_FRACZ = max( min( ATMOS_BOUNDARY_FRACZ, 1.0_RP ), 0.0_RP )
+    ATMOS_BOUNDARY_FRACX = max( min( ATMOS_BOUNDARY_FRACX, 1.0_RP ), 0.0_RP )
+    ATMOS_BOUNDARY_FRACY = max( min( ATMOS_BOUNDARY_FRACY, 1.0_RP ), 0.0_RP )
 
-    do k = KS, KE
+    do k = 1, KA
        ee1 = CBFZ(k)
        if ( ee1 <= 1.0_RP - ATMOS_BOUNDARY_FRACZ ) then
           ee1 = 0.0_RP
@@ -293,7 +348,7 @@ contains
        endif
     enddo
 
-    do k = KS, KE-1
+    do k = 1, KA
        ee2 = FBFZ(k)
        if ( ee2 <= 1.0_RP - ATMOS_BOUNDARY_FRACZ ) then
           ee2 = 0.0_RP
@@ -316,7 +371,7 @@ contains
        coef = 1.0_RP / ATMOS_BOUNDARY_taux
     endif
 
-    do i = IS, IE
+    do i = 1, IA
        ee1 = CBFX(i)
        ee2 = FBFX(i)
        if ( ee1 <= 1.0_RP - ATMOS_BOUNDARY_FRACX ) then
@@ -359,7 +414,7 @@ contains
        coef = 1.0_RP / ATMOS_BOUNDARY_tauy
     endif
 
-    do j = JS, JE
+    do j = 1, JA
        ee1 = CBFY(j)
        ee2 = FBFY(j)
        if ( ee1 <= 1.0_RP - ATMOS_BOUNDARY_FRACY ) then
@@ -396,37 +451,35 @@ contains
        endif
     enddo
 
-    do j = JS, JE
-    do i = IS, IE
-       do k = KS, KE
-          if ( ATMOS_BOUNDARY_var(k,i,j,I_BND_VELX) == CONST_UNDEF ) then
-             ATMOS_BOUNDARY_alpha(k,i,j,I_BND_VELX) = 0.0_RP
-          endif
-          if ( ATMOS_BOUNDARY_var(k,i,j,I_BND_VELY) == CONST_UNDEF ) then
-            ATMOS_BOUNDARY_alpha(k,i,j,I_BND_VELY) = 0.0_RP
-          endif
-          if ( ATMOS_BOUNDARY_var(k,i,j,I_BND_POTT) == CONST_UNDEF ) then
-             ATMOS_BOUNDARY_alpha(k,i,j,I_BND_POTT) = 0.0_RP
-          endif
-          if ( ATMOS_BOUNDARY_var(k,i,j,I_BND_QV) == CONST_UNDEF ) then
-             ATMOS_BOUNDARY_alpha(k,i,j,I_BND_QV) = 0.0_RP
-          endif
-       enddo
+    do j = 1, JA
+    do i = 1, IA
+    do k = 1, KA
+       if ( ATMOS_BOUNDARY_var(k,i,j,I_BND_VELZ) == CONST_UNDEF ) then
+           ATMOS_BOUNDARY_alpha(k,i,j,I_BND_VELZ) = 0.0_RP
+       endif
+        if ( ATMOS_BOUNDARY_var(k,i,j,I_BND_VELX) == CONST_UNDEF ) then
+           ATMOS_BOUNDARY_alpha(k,i,j,I_BND_VELX) = 0.0_RP
+        endif
+        if ( ATMOS_BOUNDARY_var(k,i,j,I_BND_VELY) == CONST_UNDEF ) then
+          ATMOS_BOUNDARY_alpha(k,i,j,I_BND_VELY) = 0.0_RP
+        endif
+        if ( ATMOS_BOUNDARY_var(k,i,j,I_BND_POTT) == CONST_UNDEF ) then
+           ATMOS_BOUNDARY_alpha(k,i,j,I_BND_POTT) = 0.0_RP
+        endif
+        if ( ATMOS_BOUNDARY_var(k,i,j,I_BND_QV  ) == CONST_UNDEF ) then
+           ATMOS_BOUNDARY_alpha(k,i,j,I_BND_QV  ) = 0.0_RP
+        endif
+    enddo
+    enddo
+    enddo
 
-       do k = KS, KE-1
-          if ( ATMOS_BOUNDARY_var(k,i,j,I_BND_VELZ) == CONST_UNDEF ) then
-             ATMOS_BOUNDARY_alpha(k,i,j,I_BND_VELZ) = 0.0_RP
-         endif
-      enddo
-    enddo
-    enddo
+    call ATMOS_BOUNDARY_alpha_fillhalo
 
     return
   end subroutine ATMOS_BOUNDARY_setalpha
 
   !-----------------------------------------------------------------------------
   !> Read boundary data
-  !-----------------------------------------------------------------------------
   subroutine ATMOS_BOUNDARY_setinitval( &
        DENS, MOMZ, MOMX, MOMY, RHOT, QTRC )
     use scale_const, only: &
@@ -435,9 +488,6 @@ contains
        CZ_mask => GRID_CZ_mask, &
        CX_mask => GRID_CX_mask, &
        CY_mask => GRID_CY_mask
-    use scale_comm, only: &
-       COMM_vars, &
-       COMM_wait
     implicit none
     real(RP), intent(in) :: DENS(KA,IA,JA)
     real(RP), intent(in) :: MOMZ(KA,IA,JA)
@@ -448,12 +498,6 @@ contains
 
     integer :: i, j, k, iv
     !---------------------------------------------------------------------------
-
-    ATMOS_BOUNDARY_var(:,:,:,I_BND_VELZ) = CONST_UNDEF
-    ATMOS_BOUNDARY_var(:,:,:,I_BND_VELY) = CONST_UNDEF
-    ATMOS_BOUNDARY_var(:,:,:,I_BND_VELX) = CONST_UNDEF
-    ATMOS_BOUNDARY_var(:,:,:,I_BND_POTT) = CONST_UNDEF
-    ATMOS_BOUNDARY_var(:,:,:,I_BND_QV  ) = CONST_UNDEF
 
     do j = JS, JE
     do i = IS, IE
@@ -471,7 +515,7 @@ contains
           if ( ATMOS_BOUNDARY_USE_POTT ) then
             ATMOS_BOUNDARY_var(k,i,j,I_BND_POTT) = RHOT(k,i,j) / DENS(k,i,j)
           endif
-          if ( ATMOS_BOUNDARY_USE_QV ) then
+          if ( ATMOS_BOUNDARY_USE_QV   ) then
             ATMOS_BOUNDARY_var(k,i,j,I_BND_QV  ) = QTRC(k,i,j,I_QV)
           endif
        endif
@@ -479,37 +523,18 @@ contains
     enddo
     enddo
 
-    do iv = I_BND_VELZ, I_BND_QV
-    do j  = JS, JE
-    do i  = IS, IE
-       ATMOS_BOUNDARY_var(   1:KS-1,i,j,iv) = ATMOS_BOUNDARY_var(KS,i,j,iv)
-       ATMOS_BOUNDARY_var(KE+1:KA,  i,j,iv) = ATMOS_BOUNDARY_var(KE,i,j,iv)
-    enddo
-    enddo
-    enddo
-
-    do iv = I_BND_VELZ, I_BND_QV
-       call COMM_vars( ATMOS_BOUNDARY_var(:,:,:,iv), iv )
-    enddo
-
-    do iv = I_BND_VELZ, I_BND_QV
-       call COMM_wait( ATMOS_BOUNDARY_var(:,:,:,iv), iv )
-    enddo
+    call ATMOS_BOUNDARY_var_fillhalo
 
     return
   end subroutine ATMOS_BOUNDARY_setinitval
 
   !-----------------------------------------------------------------------------
   !> Read boundary data
-  !-----------------------------------------------------------------------------
   subroutine ATMOS_BOUNDARY_read
     use gtool_file, only: &
        FileRead
-    use scale_comm, only: &
-       COMM_vars, &
-       COMM_wait
     use scale_process, only: &
-         PRC_myrank
+       PRC_myrank
     implicit none
 
     real(RP) :: reference_atmos(KMAX,IMAX,JMAX) !> restart file (no HALO)
@@ -549,41 +574,21 @@ contains
        ATMOS_BOUNDARY_alpha(KS:KE,IS:IE,JS:JE,I_BND_POTT) = reference_atmos(1:KMAX,1:IMAX,1:JMAX)
     endif
 
-    if ( ATMOS_BOUNDARY_USE_QV ) then
+    if ( ATMOS_BOUNDARY_USE_QV   ) then
        call FileRead( reference_atmos(:,:,:), bname, 'QV',   1, PRC_myrank )
        ATMOS_BOUNDARY_var(KS:KE,IS:IE,JS:JE,I_BND_QV) = reference_atmos(1:KMAX,1:IMAX,1:JMAX)
        call FileRead( reference_atmos(:,:,:), bname, 'ALPHA_QV', 1, PRC_myrank )
        ATMOS_BOUNDARY_alpha(KS:KE,IS:IE,JS:JE,I_BND_QV) = reference_atmos(1:KMAX,1:IMAX,1:JMAX)
     endif
 
-
-    do iv = I_BND_VELZ, I_BND_QV
-    do j  = 1, JA
-    do i  = 1, IA
-       ATMOS_BOUNDARY_var  (   1:KS-1,i,j,iv) = ATMOS_BOUNDARY_var  (KS,i,j,iv)
-       ATMOS_BOUNDARY_alpha(   1:KS-1,i,j,iv) = ATMOS_BOUNDARY_alpha(KS,i,j,iv)
-       ATMOS_BOUNDARY_var  (KE+1:KA,  i,j,iv) = ATMOS_BOUNDARY_var  (KE,i,j,iv)
-       ATMOS_BOUNDARY_alpha(KE+1:KA,  i,j,iv) = ATMOS_BOUNDARY_alpha(KE,i,j,iv)
-    enddo
-    enddo
-    enddo
-
-    do iv = I_BND_VELZ, I_BND_QV
-       call COMM_vars( ATMOS_BOUNDARY_var  (:,:,:,iv), iv          )
-       call COMM_vars( ATMOS_BOUNDARY_alpha(:,:,:,iv), iv+I_BND_QV )
-    enddo
-
-    do iv = I_BND_VELZ, I_BND_QV
-       call COMM_wait( ATMOS_BOUNDARY_var  (:,:,:,iv), iv          )
-       call COMM_wait( ATMOS_BOUNDARY_alpha(:,:,:,iv), iv+I_BND_QV )
-    enddo
+    call ATMOS_BOUNDARY_var_fillhalo
+    call ATMOS_BOUNDARY_alpha_fillhalo
 
     return
   end subroutine ATMOS_BOUNDARY_read
 
   !-----------------------------------------------------------------------------
   !> Write boundary data
-  !-----------------------------------------------------------------------------
   subroutine ATMOS_BOUNDARY_write
     use scale_fileio, only: &
        FILEIO_write
@@ -597,7 +602,7 @@ contains
                           ATMOS_BOUNDARY_OUT_DTYPE                               )
        call FILEIO_write( ATMOS_BOUNDARY_alpha(:,:,:,I_BND_VELZ),                &
                           ATMOS_BOUNDARY_OUT_BASENAME, ATMOS_BOUNDARY_OUT_TITLE, &
-                          'ALPHA_VELZ', 'Alpha for w', '1', 'ZXY',          &
+                          'ALPHA_VELZ', 'Alpha for w', '1', 'ZXY',               &
                           ATMOS_BOUNDARY_OUT_DTYPE                               )
     endif
 
@@ -608,7 +613,7 @@ contains
                           ATMOS_BOUNDARY_OUT_DTYPE                               )
        call FILEIO_write( ATMOS_BOUNDARY_alpha(:,:,:,I_BND_VELX),                &
                           ATMOS_BOUNDARY_OUT_BASENAME, ATMOS_BOUNDARY_OUT_TITLE, &
-                          'ALPHA_VELX', 'Alpha for u', '1', 'ZXY',          &
+                          'ALPHA_VELX', 'Alpha for u', '1', 'ZXY',               &
                           ATMOS_BOUNDARY_OUT_DTYPE                               )
     endif
 
@@ -619,7 +624,7 @@ contains
                           ATMOS_BOUNDARY_OUT_DTYPE                               )
        call FILEIO_write( ATMOS_BOUNDARY_alpha(:,:,:,I_BND_VELY),                &
                           ATMOS_BOUNDARY_OUT_BASENAME, ATMOS_BOUNDARY_OUT_TITLE, &
-                          'ALPHA_VELY', 'Alpha for v', '1', 'ZXY',          &
+                          'ALPHA_VELY', 'Alpha for v', '1', 'ZXY',               &
                           ATMOS_BOUNDARY_OUT_DTYPE                               )
     endif
 
@@ -630,18 +635,18 @@ contains
                           ATMOS_BOUNDARY_OUT_DTYPE                               )
        call FILEIO_write( ATMOS_BOUNDARY_alpha(:,:,:,I_BND_POTT),                &
                           ATMOS_BOUNDARY_OUT_BASENAME, ATMOS_BOUNDARY_OUT_TITLE, &
-                          'ALPHA_POTT', 'Alpha for PT', '1', 'ZXY',          &
+                          'ALPHA_POTT', 'Alpha for PT', '1', 'ZXY',              &
                           ATMOS_BOUNDARY_OUT_DTYPE                               )
     endif
 
-    if ( ATMOS_BOUNDARY_USE_QV ) then
+    if ( ATMOS_BOUNDARY_USE_QV   ) then
        call FILEIO_write( ATMOS_BOUNDARY_var(:,:,:,I_BND_QV),                    &
                           ATMOS_BOUNDARY_OUT_BASENAME, ATMOS_BOUNDARY_OUT_TITLE, &
                           'QV', 'Reference water vapor', 'kg/kg', 'ZXY',         &
                           ATMOS_BOUNDARY_OUT_DTYPE                               )
-       call FILEIO_write( ATMOS_BOUNDARY_alpha(:,:,:,I_BND_QV),                &
+       call FILEIO_write( ATMOS_BOUNDARY_alpha(:,:,:,I_BND_QV),                  &
                           ATMOS_BOUNDARY_OUT_BASENAME, ATMOS_BOUNDARY_OUT_TITLE, &
-                          'ALPHA_QV', 'Alpha for QV', '1', 'ZXY',          &
+                          'ALPHA_QV', 'Alpha for QV', '1', 'ZXY',                &
                           ATMOS_BOUNDARY_OUT_DTYPE                               )
     endif
 
@@ -649,32 +654,20 @@ contains
   end subroutine ATMOS_BOUNDARY_write
 
   !-----------------------------------------------------------------------------
-  !> generate boundary data (temporal)
-  !-----------------------------------------------------------------------------
+  !> generate boundary data
   subroutine ATMOS_BOUNDARY_generate
-    use scale_const, only: &
-       CONST_UNDEF
     use scale_grid, only: &
        CZ_mask => GRID_CZ_mask, &
        CX_mask => GRID_CX_mask, &
        CY_mask => GRID_CX_mask
-    use scale_comm, only: &
-       COMM_vars8, &
-       COMM_wait
     implicit none
 
     integer :: i, j, k, iv
     !---------------------------------------------------------------------------
 
-    ATMOS_BOUNDARY_var(:,:,:,I_BND_VELZ) = CONST_UNDEF
-    ATMOS_BOUNDARY_var(:,:,:,I_BND_VELY) = CONST_UNDEF
-    ATMOS_BOUNDARY_var(:,:,:,I_BND_VELX) = CONST_UNDEF
-    ATMOS_BOUNDARY_var(:,:,:,I_BND_POTT) = CONST_UNDEF
-    ATMOS_BOUNDARY_var(:,:,:,I_BND_QV  ) = CONST_UNDEF
-
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
+    do j = 1, JA
+    do i = 1, IA
+    do k = 1, KA
        if ( .not. ( CZ_mask(k) .AND. CX_mask(i) .AND. CY_mask(j) ) ) then ! Buffer Layer
           if ( ATMOS_BOUNDARY_USE_VELZ ) then
             ATMOS_BOUNDARY_var(k,i,j,I_BND_VELZ) = ATMOS_BOUNDARY_VALUE_VELZ
@@ -688,7 +681,7 @@ contains
           if ( ATMOS_BOUNDARY_USE_POTT ) then
             ATMOS_BOUNDARY_var(k,i,j,I_BND_POTT) = ATMOS_BOUNDARY_VALUE_POTT
           endif
-          if ( ATMOS_BOUNDARY_USE_QV ) then
+          if ( ATMOS_BOUNDARY_USE_QV   ) then
             ATMOS_BOUNDARY_var(k,i,j,I_BND_QV  ) = ATMOS_BOUNDARY_VALUE_QV
           endif
        endif
@@ -696,88 +689,59 @@ contains
     enddo
     enddo
 
-!    do j = JS-1, JE+1
-!    do i = IS-1, IE+1
-!       do k = KS, KE
-!          if ( CZ_mask(k) .AND. CX_mask(i) ) then ! Inner Area
-!             ATMOS_BOUNDARY_var(k,i,j,I_BND_VELX) = CONST_UNDEF
-!          else                                    ! Buffer Area
-!             ATMOS_BOUNDARY_var(k,i,j,I_BND_VELX) = FBFX(i) * ATMOS_BOUNDARY_VALUE_VELX &
-!                                                  * ( 1.0_RP - CBFZ(k) )
-!          endif
-!       enddo
-!    enddo
-!    enddo
-!    ATMOS_BOUNDARY_var(:,:,:,I_BND_VELX) = CONST_UNDEF
-
-    do iv = I_BND_VELZ, I_BND_QV
-    do j  = JS, JE
-    do i  = IS, IE
-       ATMOS_BOUNDARY_var(   1:KS-1,i,j,iv) = ATMOS_BOUNDARY_var(KS,i,j,iv)
-       ATMOS_BOUNDARY_var(KE+1:KA,  i,j,iv) = ATMOS_BOUNDARY_var(KE,i,j,iv)
-    enddo
-    enddo
-    enddo
-
-    do iv = I_BND_VELZ, I_BND_QV
-       call COMM_vars8( ATMOS_BOUNDARY_var(:,:,:,iv), iv )
-    enddo
-
-    do iv = I_BND_VELZ, I_BND_QV
-       call COMM_wait( ATMOS_BOUNDARY_var(:,:,:,iv), iv )
-    enddo
+    call ATMOS_BOUNDARY_var_fillhalo
 
     return
   end subroutine ATMOS_BOUNDARY_generate
 
   !-----------------------------------------------------------------------------
   !> Initialize boundary value for real case experiment
-  subroutine ATMOS_BOUNDARY_initialize( &
-       )
-    use scale_time, only: &
-       TIME_DTSEC,        &
-       TIME_NOWSEC
+  subroutine ATMOS_BOUNDARY_initialize()
     use gtool_file, only: &
        FileRead
-    use scale_comm, only: &
-       COMM_vars, &
-       COMM_wait
     use scale_process, only: &
-         PRC_myrank
+       PRC_myrank
+    use scale_comm, only: &
+       COMM_vars8, &
+       COMM_wait
+    use scale_time, only: &
+       TIME_DTSEC,  &
+       TIME_NOWSEC
     implicit none
 
     real(RP) :: reference_atmos(KMAX,IMAX,JMAX) !> restart file (no HALO)
-    integer :: step
-    integer :: i, j, k, iv
+
     character(len=H_LONG) :: bname
+
+    integer  :: i, j, k, iv
     !---------------------------------------------------------------------------
 
     bname = ATMOS_BOUNDARY_IN_BASENAME
 
     ! read boundary data from input file
-    step  = 1
-    call FileRead( reference_atmos(:,:,:), bname, 'VELZ', step, PRC_myrank )
+    boundary_timestep = 1
+    call FileRead( reference_atmos(:,:,:), bname, 'VELZ', boundary_timestep, PRC_myrank )
     ATMOS_BOUNDARY_var_ref(KS:KE,IS:IE,JS:JE,I_BND_VELZ,1) = reference_atmos(1:KMAX,1:IMAX,1:JMAX)
-    call FileRead( reference_atmos(:,:,:), bname, 'VELX', step, PRC_myrank )
+    call FileRead( reference_atmos(:,:,:), bname, 'VELX', boundary_timestep, PRC_myrank )
     ATMOS_BOUNDARY_var_ref(KS:KE,IS:IE,JS:JE,I_BND_VELX,1) = reference_atmos(1:KMAX,1:IMAX,1:JMAX)
-    call FileRead( reference_atmos(:,:,:), bname, 'VELY', step, PRC_myrank )
+    call FileRead( reference_atmos(:,:,:), bname, 'VELY', boundary_timestep, PRC_myrank )
     ATMOS_BOUNDARY_var_ref(KS:KE,IS:IE,JS:JE,I_BND_VELY,1) = reference_atmos(1:KMAX,1:IMAX,1:JMAX)
-    call FileRead( reference_atmos(:,:,:), bname, 'POTT', step, PRC_myrank )
+    call FileRead( reference_atmos(:,:,:), bname, 'POTT', boundary_timestep, PRC_myrank )
     ATMOS_BOUNDARY_var_ref(KS:KE,IS:IE,JS:JE,I_BND_POTT,1) = reference_atmos(1:KMAX,1:IMAX,1:JMAX)
-    call FileRead( reference_atmos(:,:,:), bname, 'QV',   step, PRC_myrank )
-    ATMOS_BOUNDARY_var_ref(KS:KE,IS:IE,JS:JE,I_BND_QV,1) = reference_atmos(1:KMAX,1:IMAX,1:JMAX)
+    call FileRead( reference_atmos(:,:,:), bname, 'QV',   boundary_timestep, PRC_myrank )
+    ATMOS_BOUNDARY_var_ref(KS:KE,IS:IE,JS:JE,I_BND_QV  ,1) = reference_atmos(1:KMAX,1:IMAX,1:JMAX)
 
-    step  = 2
-    call FileRead( reference_atmos(:,:,:), bname, 'VELZ', step, PRC_myrank )
+    boundary_timestep = 2
+    call FileRead( reference_atmos(:,:,:), bname, 'VELZ', boundary_timestep, PRC_myrank )
     ATMOS_BOUNDARY_var_ref(KS:KE,IS:IE,JS:JE,I_BND_VELZ,2) = reference_atmos(1:KMAX,1:IMAX,1:JMAX)
-    call FileRead( reference_atmos(:,:,:), bname, 'VELX', step, PRC_myrank )
+    call FileRead( reference_atmos(:,:,:), bname, 'VELX', boundary_timestep, PRC_myrank )
     ATMOS_BOUNDARY_var_ref(KS:KE,IS:IE,JS:JE,I_BND_VELX,2) = reference_atmos(1:KMAX,1:IMAX,1:JMAX)
-    call FileRead( reference_atmos(:,:,:), bname, 'VELY', step, PRC_myrank )
+    call FileRead( reference_atmos(:,:,:), bname, 'VELY', boundary_timestep, PRC_myrank )
     ATMOS_BOUNDARY_var_ref(KS:KE,IS:IE,JS:JE,I_BND_VELY,2) = reference_atmos(1:KMAX,1:IMAX,1:JMAX)
-    call FileRead( reference_atmos(:,:,:), bname, 'POTT', step, PRC_myrank )
+    call FileRead( reference_atmos(:,:,:), bname, 'POTT', boundary_timestep, PRC_myrank )
     ATMOS_BOUNDARY_var_ref(KS:KE,IS:IE,JS:JE,I_BND_POTT,2) = reference_atmos(1:KMAX,1:IMAX,1:JMAX)
-    call FileRead( reference_atmos(:,:,:), bname, 'QV',   step, PRC_myrank )
-    ATMOS_BOUNDARY_var_ref(KS:KE,IS:IE,JS:JE,I_BND_QV,2) = reference_atmos(1:KMAX,1:IMAX,1:JMAX)
+    call FileRead( reference_atmos(:,:,:), bname, 'QV',   boundary_timestep, PRC_myrank )
+    ATMOS_BOUNDARY_var_ref(KS:KE,IS:IE,JS:JE,I_BND_QV  ,2) = reference_atmos(1:KMAX,1:IMAX,1:JMAX)
 
     do iv = I_BND_VELZ, I_BND_QV
     do j  = 1, JA
@@ -791,8 +755,8 @@ contains
     enddo
 
     do iv = I_BND_VELZ, I_BND_QV
-       call COMM_vars( ATMOS_BOUNDARY_var_ref(:,:,:,iv,1), iv )
-       call COMM_vars( ATMOS_BOUNDARY_var_ref(:,:,:,iv,2), iv )
+       call COMM_vars8( ATMOS_BOUNDARY_var_ref(:,:,:,iv,1), iv )
+       call COMM_vars8( ATMOS_BOUNDARY_var_ref(:,:,:,iv,2), iv )
     enddo
 
     do iv = I_BND_VELZ, I_BND_QV
@@ -805,16 +769,15 @@ contains
     do j  = 1, JA
     do i  = 1, IA
     do k  = 1, KA
-       ATMOS_BOUNDARY_var(k,i,j,iv) = ATMOS_BOUNDARY_var_ref(k,i,j,iv,1)
-       ATMOS_BOUNDARY_increment(k,i,j,iv) = (   ATMOS_BOUNDARY_var_ref(k,i,j,iv,2)     &
-                                              - ATMOS_BOUNDARY_var_ref(k,i,j,iv,1) )   &
-                                            / (ATMOS_BOUNDARY_UPDATE_DT / TIME_DTSEC)
+       ATMOS_BOUNDARY_var      (k,i,j,iv) = ATMOS_BOUNDARY_var_ref(k,i,j,iv,1)
+       ATMOS_BOUNDARY_increment(k,i,j,iv) = ( ATMOS_BOUNDARY_var_ref(k,i,j,iv,2) &
+                                            - ATMOS_BOUNDARY_var_ref(k,i,j,iv,1) ) &
+                                            / ( ATMOS_BOUNDARY_UPDATE_DT / TIME_DTSEC )
     enddo
     enddo
     enddo
     enddo
 
-    boundary_timestep = boundary_timestep + 1
     last_updated = TIME_NOWSEC
 
     return
@@ -822,35 +785,36 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Update boundary value with a constant time increment
-  subroutine ATMOS_BOUNDARY_update( &
-       )
+  subroutine ATMOS_BOUNDARY_update()
     use scale_time, only: &
-       TIME_DTSEC,        &
+       TIME_DTSEC, &
        TIME_NOWSEC
     implicit none
 
     real(DP) :: integrated_sec
-    integer :: i, j, k, iv
+    integer  :: i, j, k, iv
     !---------------------------------------------------------------------------
+
     integrated_sec = TIME_NOWSEC - last_updated
 
     if ( integrated_sec >= ATMOS_BOUNDARY_UPDATE_DT ) then
-       call ATMOS_BOUNDARY_updatefile()
+       boundary_timestep = boundary_timestep + 1
+
+       call ATMOS_BOUNDARY_updatefile
 
        do iv = I_BND_VELZ, I_BND_QV
        do j  = 1, JA
        do i  = 1, IA
        do k  = 1, KA
-          ATMOS_BOUNDARY_var(k,i,j,iv) = ATMOS_BOUNDARY_var_ref(k,i,j,iv,1)
-          ATMOS_BOUNDARY_increment(k,i,j,iv) = (   ATMOS_BOUNDARY_var_ref(k,i,j,iv,2)     &
-                                                 - ATMOS_BOUNDARY_var_ref(k,i,j,iv,1) )   &
-                                               / (ATMOS_BOUNDARY_UPDATE_DT / TIME_DTSEC)
+          ATMOS_BOUNDARY_var      (k,i,j,iv) = ATMOS_BOUNDARY_var_ref(k,i,j,iv,1)
+          ATMOS_BOUNDARY_increment(k,i,j,iv) = ( ATMOS_BOUNDARY_var_ref(k,i,j,iv,2) &
+                                               - ATMOS_BOUNDARY_var_ref(k,i,j,iv,1) ) &
+                                               / ( ATMOS_BOUNDARY_UPDATE_DT / TIME_DTSEC )
        enddo
        enddo
        enddo
        enddo
 
-       boundary_timestep = boundary_timestep + 1
        last_updated = TIME_NOWSEC
     else
        do iv = I_BND_VELZ, I_BND_QV
@@ -869,26 +833,25 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Update reference boundary file
-  subroutine ATMOS_BOUNDARY_updatefile( &
-       )
-    use scale_time, only: &
-       TIME_NOWSEC
+  subroutine ATMOS_BOUNDARY_updatefile()
     use gtool_file, only: &
        FileRead
-    use scale_comm, only: &
-       COMM_vars, &
-       COMM_wait
     use scale_process, only: &
-         PRC_myrank
+       PRC_myrank
+    use scale_comm, only: &
+       COMM_vars8, &
+       COMM_wait
+    use scale_time, only: &
+       TIME_NOWSEC
     implicit none
 
     real(RP) :: reference_atmos(KMAX,IMAX,JMAX) !> restart file (no HALO)
-    integer :: step
-    integer :: i, j, k, iv
+
     character(len=H_LONG) :: bname
+
+    integer :: i, j, k, iv
     !---------------------------------------------------------------------------
 
-    step  = boundary_timestep + 1
     bname = ATMOS_BOUNDARY_IN_BASENAME
 
     do iv = I_BND_VELZ, I_BND_QV
@@ -901,16 +864,16 @@ contains
     enddo
     enddo
 
-    call FileRead( reference_atmos(:,:,:), bname, 'VELZ', step, PRC_myrank )
+    call FileRead( reference_atmos(:,:,:), bname, 'VELZ', boundary_timestep, PRC_myrank )
     ATMOS_BOUNDARY_var_ref(KS:KE,IS:IE,JS:JE,I_BND_VELZ,2) = reference_atmos(1:KMAX,1:IMAX,1:JMAX)
-    call FileRead( reference_atmos(:,:,:), bname, 'VELX', step, PRC_myrank )
+    call FileRead( reference_atmos(:,:,:), bname, 'VELX', boundary_timestep, PRC_myrank )
     ATMOS_BOUNDARY_var_ref(KS:KE,IS:IE,JS:JE,I_BND_VELX,2) = reference_atmos(1:KMAX,1:IMAX,1:JMAX)
-    call FileRead( reference_atmos(:,:,:), bname, 'VELY', step, PRC_myrank )
+    call FileRead( reference_atmos(:,:,:), bname, 'VELY', boundary_timestep, PRC_myrank )
     ATMOS_BOUNDARY_var_ref(KS:KE,IS:IE,JS:JE,I_BND_VELY,2) = reference_atmos(1:KMAX,1:IMAX,1:JMAX)
-    call FileRead( reference_atmos(:,:,:), bname, 'POTT', step, PRC_myrank )
+    call FileRead( reference_atmos(:,:,:), bname, 'POTT', boundary_timestep, PRC_myrank )
     ATMOS_BOUNDARY_var_ref(KS:KE,IS:IE,JS:JE,I_BND_POTT,2) = reference_atmos(1:KMAX,1:IMAX,1:JMAX)
-    call FileRead( reference_atmos(:,:,:), bname, 'QV',   step, PRC_myrank )
-    ATMOS_BOUNDARY_var_ref(KS:KE,IS:IE,JS:JE,I_BND_QV,2) = reference_atmos(1:KMAX,1:IMAX,1:JMAX)
+    call FileRead( reference_atmos(:,:,:), bname, 'QV',   boundary_timestep, PRC_myrank )
+    ATMOS_BOUNDARY_var_ref(KS:KE,IS:IE,JS:JE,I_BND_QV  ,2) = reference_atmos(1:KMAX,1:IMAX,1:JMAX)
 
     do iv = I_BND_VELZ, I_BND_QV
     do j  = 1, JA
@@ -922,11 +885,11 @@ contains
     enddo
 
     do iv = I_BND_VELZ, I_BND_QV
-       call COMM_vars( ATMOS_BOUNDARY_var_ref(:,:,:,iv,2), iv )
+       call COMM_vars8( ATMOS_BOUNDARY_var_ref(:,:,:,iv,2), iv )
     enddo
 
     do iv = I_BND_VELZ, I_BND_QV
-       call COMM_wait( ATMOS_BOUNDARY_var_ref(:,:,:,iv,2), iv )
+       call COMM_wait ( ATMOS_BOUNDARY_var_ref(:,:,:,iv,2), iv )
     enddo
 
     return
