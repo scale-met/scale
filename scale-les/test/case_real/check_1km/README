@@ -1,18 +1,17 @@
-神戸市チェック実験　操作手順
+Kobe check run: operateing procedure
 
-まず、地形と土地利用の情報をSCALEに合うように取り込む。
-landuse/topoディレクトリが該当する。
+First, you have to adjust topography and land utilization data to SCALE.
+This operation is done in the landuse/topo directories.
 
 landuse:
-MakefileにあるDATDIRのパスに注意。
-pearlscaleでは、/data2/scale_databaseの下に元となるlanduseデータが入っている。
-Makefileを確認後、makeでscale_ppを生成、make runでlanduse.pe*.ncを生成する。
+This data has to be GrADS format. Note the DATDIR path in Makefile.
+In pearlscale server, land utilization data are installed under "/data2/scale_database/landuse".
+After checking Makefile, you execute "make" and then "make run".
 
 topo:
-landuse同様、MakefileにあるDATDIRのパスに注意。
-pearlscaleでは、/data2/scale_databaseの下に元となるtopoデータが入っている。
-Makefileを確認後、makeでscale_ppを生成、make runでtopo.pe*.ncを生成する。
+This data has to be GrADS format. Note the DATDIR path in Makefile.
+In pearlscale server, topography data are installed under "/data2/scale_database/topo".
+After checking Makefile, you execute "make" and then "make run".
 
-次にチェック実験を実行したいディレクトリに移動する。
-D1_smagorinsky実験であればD1_smagorinskyディレクトリでmake後、make runすればOK。
-landuseやtopo、放射データに対しシンボリックリンクを貼り、実験を開始する。
+Next, you should move into the directory of testcase you want to run.
+You execute "make" and then "make run" under the direcotry.
