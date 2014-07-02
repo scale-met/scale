@@ -1,0 +1,18 @@
+神戸市チェック実験　操作手順
+
+まず、地形と土地利用の情報をSCALEに合うように取り込む。
+landuse/topoディレクトリが該当する。
+
+landuse:
+MakefileにあるDATDIRのパスに注意。
+pearlscaleでは、/data2/scale_databaseの下に元となるlanduseデータが入っている。
+Makefileを確認後、makeでscale_ppを生成、make runでlanduse.pe*.ncを生成する。
+
+topo:
+landuse同様、MakefileにあるDATDIRのパスに注意。
+pearlscaleでは、/data2/scale_databaseの下に元となるtopoデータが入っている。
+Makefileを確認後、makeでscale_ppを生成、make runでtopo.pe*.ncを生成する。
+
+次にチェック実験を実行したいディレクトリに移動する。
+D1_smagorinsky実験であればD1_smagorinskyディレクトリでmake後、make runすればOK。
+landuseやtopo、放射データに対しシンボリックリンクを貼り、実験を開始する。
