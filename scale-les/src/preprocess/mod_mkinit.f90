@@ -135,12 +135,13 @@ module mod_mkinit
   integer, public, parameter :: I_OCEANCOUPLE   = 18
   integer, public, parameter :: I_URBANCOUPLE   = 19
   integer, public, parameter :: I_TRIPLECOUPLE  = 20
+  integer, public, parameter :: I_BUBBLECOUPLE  = 21
 
-  integer, public, parameter :: I_SEABREEZE     = 21
+  integer, public, parameter :: I_SEABREEZE     = 22
 
-  integer, public, parameter :: I_DYCOMS2_RF02_DNS = 22
+  integer, public, parameter :: I_DYCOMS2_RF02_DNS = 23
 
-  integer, public, parameter :: I_REAL          = 23
+  integer, public, parameter :: I_REAL          = 24
 
   !-----------------------------------------------------------------------------
   !
@@ -307,6 +308,9 @@ contains
        MKINIT_TYPE = I_URBANCOUPLE
     case('TRIPLECOUPLE')
        MKINIT_TYPE = I_TRIPLECOUPLE
+    case('BUBBLECOUPLE')
+       MKINIT_TYPE = I_BUBBLECOUPLE
+       call BUBBLE_setup
     case('SEABREEZE')
        MKINIT_TYPE = I_SEABREEZE
     case('DYCOMS2_RF02_DNS')
@@ -425,6 +429,12 @@ contains
          call MKINIT_urbancouple
       case(I_TRIPLECOUPLE)
          call MKINIT_planestate
+         call MKINIT_oceancouple
+         call MKINIT_landcouple
+         call MKINIT_urbancouple
+      case(I_BUBBLECOUPLE)
+         call MKINIT_planestate
+         call MKINIT_warmbubble
          call MKINIT_oceancouple
          call MKINIT_landcouple
          call MKINIT_urbancouple
@@ -1649,6 +1659,8 @@ contains
     real(RP) :: SFC_PRES                ! surface pressure [Pa]
     real(RP) :: SFC_RH       =  80.0_RP ! surface relative humidity [%]
     ! Environment state
+    real(RP) :: ENV_U        =   0.0_RP ! velocity u of environment [m/s]
+    real(RP) :: ENV_V        =   0.0_RP ! velocity v of environment [m/s]
     real(RP) :: ENV_RH       =  80.0_RP ! Relative Humidity of environment [%]
     real(RP) :: ENV_L1_ZTOP  =  1.E3_RP ! top height of the layer1 (constant THETA)       [m]
     real(RP) :: ENV_L2_ZTOP  = 14.E3_RP ! top height of the layer2 (small THETA gradient) [m]
@@ -1660,6 +1672,8 @@ contains
     NAMELIST / PARAM_MKINIT_WARMBUBBLE / &
        SFC_THETA,    &
        SFC_PRES,     &
+       ENV_U,        &
+       ENV_V,        &
        ENV_RH,       &
        ENV_L1_ZTOP,  &
        ENV_L2_ZTOP,  &
@@ -1753,8 +1767,8 @@ contains
     do k = KS, KE
        DENS(k,i,j) = DENS(k,1,1)
        MOMZ(k,i,j) = 0.0_RP
-       MOMX(k,i,j) = 0.0_RP
-       MOMY(k,i,j) = 0.0_RP
+       MOMX(k,i,j) = ENV_U * DENS(k,i,j)
+       MOMY(k,i,j) = ENV_V * DENS(k,i,j)
 
        ! make warm bubble
        RHOT(k,i,j) = DENS(k,1,1) * ( pott(k,1,1) + BBL_THETA * bubble(k,i,j) )
@@ -1766,8 +1780,16 @@ contains
 
     do j = JS, JE
     do i = IS, IE
-       SFLX_rain(i,j) = 0.0_RP
-       SFLX_snow(i,j) = 0.0_RP
+       SFLX_rain   (i,j) = 0.0_RP
+       SFLX_snow   (i,j) = 0.0_RP
+       SFLX_LW_up  (i,j) = 0.0_RP
+       SFLX_LW_dn  (i,j) = 0.0_RP
+       SFLX_SW_up  (i,j) = 0.0_RP
+       SFLX_SW_dn  (i,j) = 0.0_RP
+       TOAFLX_LW_up(i,j) = 0.0_RP
+       TOAFLX_LW_dn(i,j) = 0.0_RP
+       TOAFLX_SW_up(i,j) = 0.0_RP
+       TOAFLX_SW_dn(i,j) = 0.0_RP
     enddo
     enddo
 
