@@ -80,7 +80,7 @@ module scale_cpl_bulkflux
   !++ Private procedure
   !
   private :: CPL_bulkflux_uno
-  private :: CPL_bulkflux_beljaars
+  private :: CPL_bulkflux_default
   private :: fm_unstable
   private :: fh_unstable
   private :: fm_stable
@@ -90,7 +90,7 @@ module scale_cpl_bulkflux
   !
   !++ Private parameters & variables
   !
-  character(len=H_SHORT), private :: bulkflux_TYPE = 'BH91'
+  character(len=H_SHORT), private :: bulkflux_TYPE = ''
 
   real(RP), private :: WSCF = 1.2E+0_RP ! empirical scaling factor of Wstar (Beljaars 1994)
 
@@ -156,11 +156,8 @@ contains
     select case( bulkflux_TYPE )
     case ( 'U95' )
        CPL_bulkflux => CPL_bulkflux_uno
-    case ( 'BH91' )
-       CPL_bulkflux => CPL_bulkflux_beljaars
     case default
-       write(*,*) 'xxx invalid bulk scheme (', trim(bulkflux_TYPE), '). CHECK!'
-       call PRC_MPIstop
+       CPL_bulkflux => CPL_bulkflux_default
     end select
 
     return
@@ -268,7 +265,7 @@ contains
   end subroutine CPL_bulkflux_uno
 
   !-----------------------------------------------------------------------------
-  subroutine CPL_bulkflux_beljaars( &
+  subroutine CPL_bulkflux_default( &
       Ustar,   & ! (out)
       Tstar,   & ! (out)
       Qstar,   & ! (out)
@@ -325,12 +322,11 @@ contains
     real(RP) :: res    ! residual
     real(RP) :: dres   ! d(residual)/dL
 
-    real(RP) :: RiB0 ! bulk Richardson number [no unit]
     real(RP) :: L ! Obukhov length [m]
-    real(RP) :: Bflux, dBflux ! buoyancy flux
-    real(RP) :: Wstar ! free convection velocity scale [m/s]
+    real(RP) :: RiB0 ! bulk Richardson number [no unit]
+    real(RP) :: Wstar, dWstar ! free convection velocity scale [m/s]
 
-    real(RP) :: UabsUS, UabsS
+    real(RP) :: UabsUS, UabsS, dUabsUS, dUabsS
     real(RP) :: UstarUS, UstarS, dUstar, dUstarUS, dUstarS
     real(RP) :: TstarUS, TstarS, dTstar, dTstarUS, dTstarS
     real(RP) :: QstarUS, QstarS, dQstar, dQstarUS, dQstarS
@@ -338,30 +334,33 @@ contains
     real(RP) :: sw
     !---------------------------------------------------------------------------
 
-    RiB0 = GRAV * Za * ( Ta - Ts*(Pa/Ps)**RovCP ) / ( Ta * max( sqrt( Ua**2 + Va**2 ), Uabs_min )**2 )
+    Uabs = max( sqrt( Ua**2 + Va**2 ), Uabs_min )
+
+    ! initial bulk Richardson number
+    RiB0 = GRAV * Za * ( Ta - Ts*(Pa/Ps)**RovCP ) / ( Ta * Uabs**2 )
     if( abs( RiB0 ) < RiB_min ) then
       RiB0 = sign( RiB_min, RiB0 )
     end if
 
-    ! initial Obukhov length assumed by bulk Richardson number
-    L = Za / RiB0
+    ! initial Obukhov length assumed by neutral condition
+    L = Za / RiB0 * log(Za/Z0H) / log(Za/Z0M)**2
 
     ! initial free convection velocity scale
-    Wstar = Wstar_min
+    Wstar  = Wstar_min
+    dWstar = Wstar_min
 
-    ! modified Newton-Raphson method (Tomtia 2009)
     do n = 1, nmax
       ! unstable condition
       UabsUS  = max( sqrt( Ua**2 + Va**2 + (WSCF*Wstar)**2 ), Uabs_min )
-      UstarUS = KARMAN / ( log((Za+Z0M)/Z0M) - fm_unstable(Za+Z0M,L) + fm_unstable(Z0M,L) ) * UabsUS
-      TstarUS = KARMAN / ( log((Za+Z0M)/Z0H) - fh_unstable(Za+Z0M,L) + fh_unstable(Z0H,L) ) * ( Ta - Ts*(Pa/Ps)**RovCP )
-      QstarUS = KARMAN / ( log((Za+Z0M)/Z0E) - fh_unstable(Za+Z0M,L) + fh_unstable(Z0E,L) ) * ( Qa - Qs )
+      UstarUS = KARMAN / ( log(Za/Z0M) - fm_unstable(Za,L) + fm_unstable(Z0M,L) ) * UabsUS
+      TstarUS = KARMAN / ( log(Za/Z0H) - fh_unstable(Za,L) + fh_unstable(Z0H,L) ) * ( Ta - Ts*(Pa/Ps)**RovCP )
+      QstarUS = KARMAN / ( log(Za/Z0E) - fh_unstable(Za,L) + fh_unstable(Z0E,L) ) * ( Qa - Qs )
 
       ! stable condition
       UabsS  = max( sqrt( Ua**2 + Va**2 ), Uabs_min )
-      UstarS = KARMAN / ( log((Za+Z0M)/Z0M) - fm_stable(Za+Z0M,L) + fm_stable(Z0M,L) ) * UabsS
-      TstarS = KARMAN / ( log((Za+Z0M)/Z0H) - fh_stable(Za+Z0M,L) + fh_stable(Z0H,L) ) * ( Ta - Ts*(Pa/Ps)**RovCP )
-      QstarS = KARMAN / ( log((Za+Z0M)/Z0E) - fh_stable(Za+Z0M,L) + fh_stable(Z0E,L) ) * ( Qa - Qs )
+      UstarS = KARMAN / ( log(Za/Z0M) - fm_stable(Za,L) + fm_stable(Z0M,L) ) * UabsS
+      TstarS = KARMAN / ( log(Za/Z0H) - fh_stable(Za,L) + fh_stable(Z0H,L) ) * ( Ta - Ts*(Pa/Ps)**RovCP )
+      QstarS = KARMAN / ( log(Za/Z0E) - fh_stable(Za,L) + fh_stable(Z0E,L) ) * ( Qa - Qs )
 
       sw = 0.5_RP - sign( 0.5_RP, L ) ! if unstable, sw = 1
 
@@ -370,25 +369,22 @@ contains
       Tstar = ( sw ) * TstarUS + ( 1.0_RP-sw ) * TstarS 
       Qstar = ( sw ) * QstarUS + ( 1.0_RP-sw ) * QstarS 
 
-      ! calculate buoyancy flux
-      Bflux = -Ustar * Tstar * ( 1.0_RP + Qa * EPSTvap ) - Ta * Ustar * Qstar * EPSTvap
-
-      if( n <= 10 ) then
       ! update free convection velocity scale
-      Wstar = ( PBL * GRAV / Ta * Bflux )**(1.0_RP/3.0_RP)
-      endif
+      Wstar = ( -PBL * GRAV / Ta * Ustar * Tstar )**(1.0_RP/3.0_RP)
 
       ! calculate residual
-      res = L + Ustar**3 * Ta / ( KARMAN * GRAV * Bflux )
+      res = L - Ustar**2 * Ta / ( KARMAN * GRAV * Tstar )
 
       ! unstable condition
-      dUstarUS = KARMAN / ( log((Za+Z0M)/Z0M) - fm_unstable(Za+Z0M,L+dL) + fm_unstable(Z0M,L+dL) ) * UabsUS
-      dTstarUS = KARMAN / ( log((Za+Z0M)/Z0H) - fh_unstable(Za+Z0M,L+dL) + fh_unstable(Z0H,L+dL) ) * ( Ta - Ts*(Pa/Ps)**RovCP )
-      dQstarUS = KARMAN / ( log((Za+Z0M)/Z0E) - fh_unstable(Za+Z0M,L+dL) + fh_unstable(Z0E,L+dL) ) * ( Qa - Qs )
+      dUabsUS  = max( sqrt( Ua**2 + Va**2 + (WSCF*dWstar)**2 ), Uabs_min )
+      dUstarUS = KARMAN / ( log(Za/Z0M) - fm_unstable(Za,L+dL) + fm_unstable(Z0M,L+dL) ) * dUabsUS
+      dTstarUS = KARMAN / ( log(Za/Z0H) - fh_unstable(Za,L+dL) + fh_unstable(Z0H,L+dL) ) * ( Ta - Ts*(Pa/Ps)**RovCP )
+      dQstarUS = KARMAN / ( log(Za/Z0E) - fh_unstable(Za,L+dL) + fh_unstable(Z0E,L+dL) ) * ( Qa - Qs )
       ! stable condition
-      dUstarS = KARMAN / ( log((Za+Z0M)/Z0M) - fm_stable(Za+Z0M,L+dL) + fm_stable(Z0M,L+dL) ) * UabsS
-      dTstarS = KARMAN / ( log((Za+Z0M)/Z0H) - fh_stable(Za+Z0M,L+dL) + fh_stable(Z0H,L+dL) ) * ( Ta - Ts*(Pa/Ps)**RovCP )
-      dQstarS = KARMAN / ( log((Za+Z0M)/Z0E) - fh_stable(Za+Z0M,L+dL) + fh_stable(Z0E,L+dL) ) * ( Qa - Qs )
+      dUabsS  = max( sqrt( Ua**2 + Va**2 ), Uabs_min )
+      dUstarS = KARMAN / ( log(Za/Z0M) - fm_stable(Za,L+dL) + fm_stable(Z0M,L+dL) ) * dUabsS
+      dTstarS = KARMAN / ( log(Za/Z0H) - fh_stable(Za,L+dL) + fh_stable(Z0H,L+dL) ) * ( Ta - Ts*(Pa/Ps)**RovCP )
+      dQstarS = KARMAN / ( log(Za/Z0E) - fh_stable(Za,L+dL) + fh_stable(Z0E,L+dL) ) * ( Qa - Qs )
 
       sw = 0.5_RP - sign( 0.5_RP, L+dL ) ! if unstable, sw = 1
 
@@ -396,11 +392,11 @@ contains
       dTstar = ( sw ) * dTstarUS + ( 1.0_RP-sw ) * dTstarS 
       dQstar = ( sw ) * dQstarUS + ( 1.0_RP-sw ) * dQstarS 
 
-      ! calculate d(buoyancy flux)
-      dBflux = -dUstar * dTstar * ( 1.0_RP + Qa * EPSTvap ) - Ta * dUstar * dQstar * EPSTvap
+      ! update d(free convection velocity scale)
+      dWstar = ( -PBL * GRAV / Ta * dUstar * dTstar )**(1.0_RP/3.0_RP)
 
       ! calculate d(residual)/dL
-      dres = ( (L+dL) + dUstar**3 * Ta / ( KARMAN * GRAV * dBflux ) - res ) / dL
+      dres = ( (L+dL) - dUstar**2 * Ta / ( KARMAN * GRAV * dTstar ) - res ) / dL
 
       ! update Obukhov length
       L = L - res / dres
@@ -413,11 +409,11 @@ contains
     end do
 
     if( n > nmax ) then
-      if( IO_L ) write(IO_FID_LOG,*) 'Warning: reach maximum iteration in the function of CPL_bulkflux_beljaars.'
+      if( IO_L ) write(IO_FID_LOG,*) 'Warning: reach maximum iteration in the function of CPL_bulkflux_default.'
     end if
 
     return
-  end subroutine CPL_bulkflux_beljaars
+  end subroutine CPL_bulkflux_default
 
   !-----------------------------------------------------------------------------
   ! stability function for momemtum in unstable condition
@@ -439,9 +435,9 @@ contains
     !---------------------------------------------------------------------------
 
     R = min( Z/L, 0.0_RP )
-    r4R = ( 1.0_RP - 16.0_RP * R )**0.25_RP
 
     ! Paulson (1974); Dyer (1974)
+    r4R = ( 1.0_RP - 16.0_RP * R )**0.25_RP
     fm_unstable = log( ( 1.0_RP + r4R )**2 * ( 1.0_RP + r4R * r4R ) * 0.125_RP ) &
                 - 2.0_RP * atan( r4R ) + PI * 0.5_RP
 
