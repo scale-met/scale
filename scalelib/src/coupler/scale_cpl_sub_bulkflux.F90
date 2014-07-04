@@ -436,10 +436,12 @@ contains
 
     R = min( Z/L, 0.0_RP )
 
+    !! Wilson (2001)
+    !fm_unstable = 3.0_RP * log( ( 1.0_RP + sqrt( 1.0_RP + 3.6_RP * R**(2.0_RP/3.0_RP) ) ) * 0.5_RP )
+
     ! Paulson (1974); Dyer (1974)
     r4R = ( 1.0_RP - 16.0_RP * R )**0.25_RP
-    fm_unstable = log( ( 1.0_RP + r4R )**2 * ( 1.0_RP + r4R * r4R ) * 0.125_RP ) &
-                - 2.0_RP * atan( r4R ) + PI * 0.5_RP
+    fm_unstable = log( ( 1.0_RP + r4R )**2 * ( 1.0_RP + r4R * r4R ) * 0.125_RP ) - 2.0_RP * atan( r4R ) + PI * 0.5_RP
 
     return
   end function fm_unstable
@@ -461,6 +463,9 @@ contains
     !---------------------------------------------------------------------------
 
     R = min( Z/L, 0.0_RP )
+
+    !! Wilson (2001)
+    !fh_unstable = 3.0_RP * log( ( 1.0_RP + sqrt( 1.0_RP + 7.9_RP * R**(2.0_RP/3.0_RP) ) ) * 0.5_RP )
 
     ! Paulson (1974); Dyer (1974)
     fh_unstable = 2.0_RP * log( ( 1.0_RP + sqrt( 1.0_RP - 16.0_RP * R ) ) * 0.5_RP )
