@@ -52,6 +52,8 @@ module scale_grid_real
   real(RP), public, allocatable :: REAL_DLAT(:,:)      !< delta latitude
 
   real(RP), public, allocatable :: REAL_Z1  (:,:)      !< Height of the lowermost grid from surface (cell center) [m]
+  real(RP), public              :: REAL_ASPECT_MAX     !< maximum aspect ratio of the grid cell
+  real(RP), public              :: REAL_ASPECT_MIN     !< minimum aspect ratio of the grid cell
 
   real(RP), public, allocatable :: REAL_PHI (:,:,:)    !< geopotential [m2/s2] (cell center)
 
@@ -295,13 +297,16 @@ contains
     use scale_const, only: &
        GRAV => CONST_GRAV
     use scale_grid, only: &
-       GRID_CZ, &
-       GRID_FZ
+       GRID_CZ,  &
+       GRID_FZ,  &
+       GRID_CDX, &
+       GRID_CDY
     use scale_topography, only: &
        Zsfc => TOPO_Zsfc
     implicit none
 
     real(RP) :: Htop
+    real(RP) :: DFZ
 
     integer  :: k, i, j
     !---------------------------------------------------------------------------
@@ -327,6 +332,22 @@ contains
     REAL_Z1(:,:) = REAL_CZ(KS,:,:) - Zsfc(:,:)
 
     REAL_PHI(:,:,:) = GRAV * REAL_CZ(:,:,:)
+
+    REAL_ASPECT_MAX = -1.E+30_RP
+    REAL_ASPECT_MIN =  1.E+30_RP
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       DFZ = REAL_FZ(k,i,j) - REAL_FZ(k-1,i,j)
+       REAL_ASPECT_MAX = max( REAL_ASPECT_MAX, GRID_CDX(i) / DFZ, GRID_CDY(j) / DFZ )
+       REAL_ASPECT_MIN = min( REAL_ASPECT_MIN, GRID_CDX(i) / DFZ, GRID_CDY(j) / DFZ )
+    enddo
+    enddo
+    enddo
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '*** Minimum & maximum aspect ratio'
+    if( IO_L ) write(IO_FID_LOG,*) '->(',REAL_ASPECT_MIN,',',REAL_ASPECT_MAX,')'
 
     return
   end subroutine REAL_calc_Z
