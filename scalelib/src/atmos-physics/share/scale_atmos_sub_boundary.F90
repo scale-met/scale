@@ -298,8 +298,8 @@ contains
   !> Calc dumping coefficient alpha
   subroutine ATMOS_BOUNDARY_setalpha
     use scale_const, only: &
-       CONST_UNDEF, &
-       PI => CONST_PI
+       EPS => CONST_EPS, &
+       PI  => CONST_PI
     use scale_grid, only: &
        CBFZ => GRID_CBFZ, &
        CBFX => GRID_CBFX, &
@@ -308,23 +308,40 @@ contains
        FBFX => GRID_FBFX, &
        FBFY => GRID_FBFY
 
-    real(RP) :: coef, alpha
+    real(RP) :: coef_z, alpha_z1, alpha_z2
+    real(RP) :: coef_x, alpha_x1, alpha_x2
+    real(RP) :: coef_y, alpha_y1, alpha_y2
     real(RP) :: ee1, ee2
 
     integer :: i, j, k
     !---------------------------------------------------------------------------
 
+    ! check invalid fraction
+    ATMOS_BOUNDARY_FRACZ = max( min( ATMOS_BOUNDARY_FRACZ, 1.0_RP ), EPS )
+    ATMOS_BOUNDARY_FRACX = max( min( ATMOS_BOUNDARY_FRACX, 1.0_RP ), EPS )
+    ATMOS_BOUNDARY_FRACY = max( min( ATMOS_BOUNDARY_FRACY, 1.0_RP ), EPS )
+
     if ( ATMOS_BOUNDARY_tauz <= 0.0_RP ) then ! invalid tau
-       coef = 0.0_RP
+       coef_z = 0.0_RP
     else
-       coef = 1.0_RP / ATMOS_BOUNDARY_tauz
+       coef_z = 1.0_RP / ATMOS_BOUNDARY_tauz
     endif
 
-    ! check invalid fraction
-    ATMOS_BOUNDARY_FRACZ = max( min( ATMOS_BOUNDARY_FRACZ, 1.0_RP ), 0.0_RP )
-    ATMOS_BOUNDARY_FRACX = max( min( ATMOS_BOUNDARY_FRACX, 1.0_RP ), 0.0_RP )
-    ATMOS_BOUNDARY_FRACY = max( min( ATMOS_BOUNDARY_FRACY, 1.0_RP ), 0.0_RP )
+    if ( ATMOS_BOUNDARY_taux <= 0.0_RP ) then ! invalid tau
+       coef_x = 0.0_RP
+    else
+       coef_x = 1.0_RP / ATMOS_BOUNDARY_taux
+    endif
 
+    if ( ATMOS_BOUNDARY_tauy <= 0.0_RP ) then ! invalid tau
+       coef_y = 0.0_RP
+    else
+       coef_y = 1.0_RP / ATMOS_BOUNDARY_tauy
+    endif
+    if( IO_L ) write(IO_FID_LOG,*) "OK01"
+
+    do j = 1, JA
+    do i = 1, IA
     do k = 1, KA
        ee1 = CBFZ(k)
        if ( ee1 <= 1.0_RP - ATMOS_BOUNDARY_FRACZ ) then
@@ -333,22 +350,6 @@ contains
           ee1 = ( ee1 - 1.0_RP + ATMOS_BOUNDARY_FRACZ ) / ATMOS_BOUNDARY_FRACZ
        endif
 
-       if    ( ee1 > 0.0_RP .AND. ee1 <= 0.5_RP ) then
-          alpha = coef * 0.5_RP * ( 1.0_RP - cos( ee1*PI ) )
-          ATMOS_BOUNDARY_alpha(k,:,:,I_BND_VELX) = max( alpha, ATMOS_BOUNDARY_alpha(k,:,:,I_BND_VELX) )
-          ATMOS_BOUNDARY_alpha(k,:,:,I_BND_VELY) = max( alpha, ATMOS_BOUNDARY_alpha(k,:,:,I_BND_VELY) )
-          ATMOS_BOUNDARY_alpha(k,:,:,I_BND_POTT) = max( alpha, ATMOS_BOUNDARY_alpha(k,:,:,I_BND_POTT) )
-          ATMOS_BOUNDARY_alpha(k,:,:,I_BND_QV  ) = max( alpha, ATMOS_BOUNDARY_alpha(k,:,:,I_BND_QV  ) )
-       elseif( ee1 > 0.5_RP .AND. ee1 <= 1.0_RP ) then
-          alpha = coef * 0.5_RP * ( 1.0_RP + sin( (ee1-0.5_RP)*PI ) )
-          ATMOS_BOUNDARY_alpha(k,:,:,I_BND_VELX) = max( alpha, ATMOS_BOUNDARY_alpha(k,:,:,I_BND_VELX) )
-          ATMOS_BOUNDARY_alpha(k,:,:,I_BND_VELY) = max( alpha, ATMOS_BOUNDARY_alpha(k,:,:,I_BND_VELY) )
-          ATMOS_BOUNDARY_alpha(k,:,:,I_BND_POTT) = max( alpha, ATMOS_BOUNDARY_alpha(k,:,:,I_BND_POTT) )
-          ATMOS_BOUNDARY_alpha(k,:,:,I_BND_QV  ) = max( alpha, ATMOS_BOUNDARY_alpha(k,:,:,I_BND_QV  ) )
-       endif
-    enddo
-
-    do k = 1, KA
        ee2 = FBFZ(k)
        if ( ee2 <= 1.0_RP - ATMOS_BOUNDARY_FRACZ ) then
           ee2 = 0.0_RP
@@ -356,122 +357,101 @@ contains
           ee2 = ( ee2 - 1.0_RP + ATMOS_BOUNDARY_FRACZ ) / ATMOS_BOUNDARY_FRACZ
        endif
 
-       if    ( ee2 > 0.0_RP .AND. ee2 <= 0.5_RP ) then
-          alpha = coef * 0.5_RP * ( 1.0_RP - cos( ee2*PI ) )
-          ATMOS_BOUNDARY_alpha(k,:,:,I_BND_VELZ) = max( alpha, ATMOS_BOUNDARY_alpha(k,:,:,I_BND_VELZ) )
-       elseif( ee2 > 0.5_RP .AND. ee2 <= 1.0_RP ) then
-          alpha = coef * 0.5_RP * ( 1.0_RP + sin( (ee2-0.5_RP)*PI ) )
-          ATMOS_BOUNDARY_alpha(k,:,:,I_BND_VELZ) = max( alpha, ATMOS_BOUNDARY_alpha(k,:,:,I_BND_VELZ) )
+       alpha_z1 = 0.0_RP
+       if    ( ee1 > 0.0_RP .AND. ee1 <= 0.5_RP ) then
+          alpha_z1 = coef_z * 0.5_RP * ( 1.0_RP - cos( ee1*PI ) )
+       elseif( ee1 > 0.5_RP .AND. ee1 <= 1.0_RP ) then
+          alpha_z1 = coef_z * 0.5_RP * ( 1.0_RP + sin( (ee1-0.5_RP)*PI ) )
        endif
-    enddo
 
-    if ( ATMOS_BOUNDARY_taux <= 0.0_RP ) then ! invalid tau
-       coef = 0.0_RP
-    else
-       coef = 1.0_RP / ATMOS_BOUNDARY_taux
-    endif
+       alpha_z2 = 0.0_RP
+       if    ( ee2 > 0.0_RP .AND. ee2 <= 0.5_RP ) then
+          alpha_z2 = coef_z * 0.5_RP * ( 1.0_RP - cos( ee2*PI ) )
+       elseif( ee2 > 0.5_RP .AND. ee2 <= 1.0_RP ) then
+          alpha_z2 = coef_z * 0.5_RP * ( 1.0_RP + sin( (ee2-0.5_RP)*PI ) )
+       endif
 
-    do i = 1, IA
        ee1 = CBFX(i)
-       ee2 = FBFX(i)
        if ( ee1 <= 1.0_RP - ATMOS_BOUNDARY_FRACX ) then
           ee1 = 0.0_RP
        else
           ee1 = ( ee1 - 1.0_RP + ATMOS_BOUNDARY_FRACX ) / ATMOS_BOUNDARY_FRACX
        endif
+
+       ee2 = FBFX(i)
        if ( ee2 <= 1.0_RP - ATMOS_BOUNDARY_FRACX ) then
           ee2 = 0.0_RP
        else
           ee2 = ( ee2 - 1.0_RP + ATMOS_BOUNDARY_FRACX ) / ATMOS_BOUNDARY_FRACX
        endif
 
-       if ( ee1 > 0.0_RP .AND. ee1 <= 0.5_RP ) then
-          alpha = coef * 0.5_RP * ( 1.0_RP - cos( ee1*PI ) )
-          ATMOS_BOUNDARY_alpha(:,i,:,I_BND_VELZ) = max( alpha, ATMOS_BOUNDARY_alpha(:,i,:,I_BND_VELZ) )
-          ATMOS_BOUNDARY_alpha(:,i,:,I_BND_VELY) = max( alpha, ATMOS_BOUNDARY_alpha(:,i,:,I_BND_VELY) )
-          ATMOS_BOUNDARY_alpha(:,i,:,I_BND_POTT) = max( alpha, ATMOS_BOUNDARY_alpha(:,i,:,I_BND_POTT) )
-          ATMOS_BOUNDARY_alpha(:,i,:,I_BND_QV  ) = max( alpha, ATMOS_BOUNDARY_alpha(:,i,:,I_BND_QV  ) )
+       alpha_x1 = 0.0_RP
+       if    ( ee1 > 0.0_RP .AND. ee1 <= 0.5_RP ) then
+          alpha_x1 = coef_x * 0.5_RP * ( 1.0_RP - cos( ee1*PI ) )
        elseif( ee1 > 0.5_RP .AND. ee1 <= 1.0_RP ) then
-          alpha = coef * 0.5_RP * ( 1.0_RP + sin( (ee1-0.5_RP)*PI ) )
-          ATMOS_BOUNDARY_alpha(:,i,:,I_BND_VELZ) = max( alpha, ATMOS_BOUNDARY_alpha(:,i,:,I_BND_VELZ) )
-          ATMOS_BOUNDARY_alpha(:,i,:,I_BND_VELY) = max( alpha, ATMOS_BOUNDARY_alpha(:,i,:,I_BND_VELY) )
-          ATMOS_BOUNDARY_alpha(:,i,:,I_BND_POTT) = max( alpha, ATMOS_BOUNDARY_alpha(:,i,:,I_BND_POTT) )
-          ATMOS_BOUNDARY_alpha(:,i,:,I_BND_QV  ) = max( alpha, ATMOS_BOUNDARY_alpha(:,i,:,I_BND_QV  ) )
+          alpha_x1 = coef_x * 0.5_RP * ( 1.0_RP + sin( (ee1-0.5_RP)*PI ) )
        endif
 
-       if ( ee2 > 0.0_RP .AND. ee2 <= 0.5_RP ) then
-          alpha = coef * 0.5_RP * ( 1.0_RP - cos( ee2*PI ) )
-          ATMOS_BOUNDARY_alpha(:,i,:,I_BND_VELX) = max( alpha, ATMOS_BOUNDARY_alpha(:,i,:,I_BND_VELX) )
+       alpha_x2 = 0.0_RP
+       if    ( ee2 > 0.0_RP .AND. ee2 <= 0.5_RP ) then
+          alpha_x2 = coef_x * 0.5_RP * ( 1.0_RP - cos( ee2*PI ) )
        elseif( ee2 > 0.5_RP .AND. ee2 <= 1.0_RP ) then
-          alpha = coef * 0.5_RP * ( 1.0_RP + sin( (ee2-0.5_RP)*PI ) )
-          ATMOS_BOUNDARY_alpha(:,i,:,I_BND_VELX) = max( alpha, ATMOS_BOUNDARY_alpha(:,i,:,I_BND_VELX) )
+          alpha_x2 = coef_x * 0.5_RP * ( 1.0_RP + sin( (ee2-0.5_RP)*PI ) )
        endif
-    enddo
 
-    if ( ATMOS_BOUNDARY_tauy <= 0.0_RP ) then ! invalid tau
-       coef = 0.0_RP
-    else
-       coef = 1.0_RP / ATMOS_BOUNDARY_tauy
-    endif
-
-    do j = 1, JA
        ee1 = CBFY(j)
-       ee2 = FBFY(j)
        if ( ee1 <= 1.0_RP - ATMOS_BOUNDARY_FRACY ) then
           ee1 = 0.0_RP
        else
           ee1 = ( ee1 - 1.0_RP + ATMOS_BOUNDARY_FRACY ) / ATMOS_BOUNDARY_FRACY
        endif
+
+       ee2 = FBFY(j)
        if ( ee2 <= 1.0_RP - ATMOS_BOUNDARY_FRACY ) then
           ee2 = 0.0_RP
        else
           ee2 = ( ee2 - 1.0_RP + ATMOS_BOUNDARY_FRACY ) / ATMOS_BOUNDARY_FRACY
        endif
 
-       if ( ee1 > 0.0_RP .AND. ee1 <= 0.5_RP ) then
-          alpha = coef * 0.5_RP * ( 1.0_RP - cos( ee1*PI ) )
-          ATMOS_BOUNDARY_alpha(:,:,j,I_BND_VELZ) = max( alpha, ATMOS_BOUNDARY_alpha(:,:,j,I_BND_VELZ) )
-          ATMOS_BOUNDARY_alpha(:,:,j,I_BND_VELX) = max( alpha, ATMOS_BOUNDARY_alpha(:,:,j,I_BND_VELX) )
-          ATMOS_BOUNDARY_alpha(:,:,j,I_BND_POTT) = max( alpha, ATMOS_BOUNDARY_alpha(:,:,j,I_BND_POTT) )
-          ATMOS_BOUNDARY_alpha(:,:,j,I_BND_QV  ) = max( alpha, ATMOS_BOUNDARY_alpha(:,:,j,I_BND_QV  ) )
+       alpha_y1 = 0.0_RP
+       if    ( ee1 > 0.0_RP .AND. ee1 <= 0.5_RP ) then
+          alpha_y1 = coef_y * 0.5_RP * ( 1.0_RP - cos( ee1*PI ) )
        elseif( ee1 > 0.5_RP .AND. ee1 <= 1.0_RP ) then
-          alpha = coef * 0.5_RP * ( 1.0_RP + sin( (ee1-0.5_RP)*PI ) )
-          ATMOS_BOUNDARY_alpha(:,:,j,I_BND_VELZ) = max( alpha, ATMOS_BOUNDARY_alpha(:,:,j,I_BND_VELZ) )
-          ATMOS_BOUNDARY_alpha(:,:,j,I_BND_VELX) = max( alpha, ATMOS_BOUNDARY_alpha(:,:,j,I_BND_VELX) )
-          ATMOS_BOUNDARY_alpha(:,:,j,I_BND_POTT) = max( alpha, ATMOS_BOUNDARY_alpha(:,:,j,I_BND_POTT) )
-          ATMOS_BOUNDARY_alpha(:,:,j,I_BND_QV  ) = max( alpha, ATMOS_BOUNDARY_alpha(:,:,j,I_BND_QV  ) )
+          alpha_y1 = coef_y * 0.5_RP * ( 1.0_RP + sin( (ee1-0.5_RP)*PI ) )
        endif
 
-       if ( ee2 > 0.0_RP .AND. ee2 <= 0.5_RP ) then
-          alpha = coef * 0.5_RP * ( 1.0_RP - cos( ee2*PI ) )
-          ATMOS_BOUNDARY_alpha(:,:,j,I_BND_VELY) = max( alpha, ATMOS_BOUNDARY_alpha(:,:,j,I_BND_VELY) )
+       alpha_y2 = 0.0_RP
+       if    ( ee2 > 0.0_RP .AND. ee2 <= 0.5_RP ) then
+          alpha_y2 = coef_y * 0.5_RP * ( 1.0_RP - cos( ee2*PI ) )
        elseif( ee2 > 0.5_RP .AND. ee2 <= 1.0_RP ) then
-          alpha = coef * 0.5_RP * ( 1.0_RP + sin( (ee2-0.5_RP)*PI ) )
-          ATMOS_BOUNDARY_alpha(:,:,j,I_BND_VELY) = max( alpha, ATMOS_BOUNDARY_alpha(:,:,j,I_BND_VELY) )
+          alpha_y2 = coef_y * 0.5_RP * ( 1.0_RP + sin( (ee2-0.5_RP)*PI ) )
        endif
-    enddo
 
-    do j = 1, JA
-    do i = 1, IA
-    do k = 1, KA
-       if ( ATMOS_BOUNDARY_var(k,i,j,I_BND_VELZ) == CONST_UNDEF ) then
-           ATMOS_BOUNDARY_alpha(k,i,j,I_BND_VELZ) = 0.0_RP
-       endif
-        if ( ATMOS_BOUNDARY_var(k,i,j,I_BND_VELX) == CONST_UNDEF ) then
-           ATMOS_BOUNDARY_alpha(k,i,j,I_BND_VELX) = 0.0_RP
-        endif
-        if ( ATMOS_BOUNDARY_var(k,i,j,I_BND_VELY) == CONST_UNDEF ) then
-          ATMOS_BOUNDARY_alpha(k,i,j,I_BND_VELY) = 0.0_RP
-        endif
-        if ( ATMOS_BOUNDARY_var(k,i,j,I_BND_POTT) == CONST_UNDEF ) then
-           ATMOS_BOUNDARY_alpha(k,i,j,I_BND_POTT) = 0.0_RP
-        endif
-        if ( ATMOS_BOUNDARY_var(k,i,j,I_BND_QV  ) == CONST_UNDEF ) then
-           ATMOS_BOUNDARY_alpha(k,i,j,I_BND_QV  ) = 0.0_RP
-        endif
+       ATMOS_BOUNDARY_alpha(k,i,j,I_BND_VELZ) = max( alpha_z2, alpha_x1, alpha_y1 )
+       ATMOS_BOUNDARY_alpha(k,i,j,I_BND_VELX) = max( alpha_z1, alpha_x2, alpha_y1 )
+       ATMOS_BOUNDARY_alpha(k,i,j,I_BND_VELY) = max( alpha_z1, alpha_x1, alpha_y2 )
+       ATMOS_BOUNDARY_alpha(k,i,j,I_BND_POTT) = max( alpha_z1, alpha_x1, alpha_y1 )
+       ATMOS_BOUNDARY_alpha(k,i,j,I_BND_QV  ) = max( alpha_z1, alpha_x1, alpha_y1 )
     enddo
     enddo
     enddo
+    if( IO_L ) write(IO_FID_LOG,*) "OK02"
+
+    if ( .NOT. ATMOS_BOUNDARY_USE_VELZ ) then
+       ATMOS_BOUNDARY_alpha(:,:,:,I_BND_VELZ) = 0.0_RP
+    endif
+    if ( .NOT. ATMOS_BOUNDARY_USE_VELX ) then
+       ATMOS_BOUNDARY_alpha(:,:,:,I_BND_VELX) = 0.0_RP
+    endif
+    if ( .NOT. ATMOS_BOUNDARY_USE_VELY ) then
+       ATMOS_BOUNDARY_alpha(:,:,:,I_BND_VELY) = 0.0_RP
+    endif
+    if ( .NOT. ATMOS_BOUNDARY_USE_POTT ) then
+       ATMOS_BOUNDARY_alpha(:,:,:,I_BND_POTT) = 0.0_RP
+    endif
+    if ( .NOT. ATMOS_BOUNDARY_USE_QV   ) then
+       ATMOS_BOUNDARY_alpha(:,:,:,I_BND_QV  ) = 0.0_RP
+    endif
 
     call ATMOS_BOUNDARY_alpha_fillhalo
 
@@ -502,23 +482,11 @@ contains
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       if ( .not. ( CZ_mask(k) .AND. CX_mask(i) .AND. CY_mask(j) ) ) then ! Buffer Layer
-          if ( ATMOS_BOUNDARY_USE_VELZ ) then
-            ATMOS_BOUNDARY_var(k,i,j,I_BND_VELZ) = 2.0_RP * MOMZ(k,i,j) / ( DENS(k+1,i,j) + DENS(k,i,j) )
-          endif
-          if ( ATMOS_BOUNDARY_USE_VELX ) then
-            ATMOS_BOUNDARY_var(k,i,j,I_BND_VELX) = 2.0_RP * MOMX(k,i,j) / ( DENS(k,i+1,j) + DENS(k,i,j) )
-          endif
-          if ( ATMOS_BOUNDARY_USE_VELY ) then
-            ATMOS_BOUNDARY_var(k,i,j,I_BND_VELY) = 2.0_RP * MOMY(k,i,j) / ( DENS(k,i,j+1) + DENS(k,i,j) )
-          endif
-          if ( ATMOS_BOUNDARY_USE_POTT ) then
-            ATMOS_BOUNDARY_var(k,i,j,I_BND_POTT) = RHOT(k,i,j) / DENS(k,i,j)
-          endif
-          if ( ATMOS_BOUNDARY_USE_QV   ) then
-            ATMOS_BOUNDARY_var(k,i,j,I_BND_QV  ) = QTRC(k,i,j,I_QV)
-          endif
-       endif
+       ATMOS_BOUNDARY_var(k,i,j,I_BND_VELZ) = 2.0_RP * MOMZ(k,i,j) / ( DENS(k+1,i,j) + DENS(k,i,j) )
+       ATMOS_BOUNDARY_var(k,i,j,I_BND_VELX) = 2.0_RP * MOMX(k,i,j) / ( DENS(k,i+1,j) + DENS(k,i,j) )
+       ATMOS_BOUNDARY_var(k,i,j,I_BND_VELY) = 2.0_RP * MOMY(k,i,j) / ( DENS(k,i,j+1) + DENS(k,i,j) )
+       ATMOS_BOUNDARY_var(k,i,j,I_BND_POTT) = RHOT(k,i,j) / DENS(k,i,j)
+       ATMOS_BOUNDARY_var(k,i,j,I_BND_QV  ) = QTRC(k,i,j,I_QV)
     enddo
     enddo
     enddo
@@ -668,23 +636,11 @@ contains
     do j = 1, JA
     do i = 1, IA
     do k = 1, KA
-       if ( .not. ( CZ_mask(k) .AND. CX_mask(i) .AND. CY_mask(j) ) ) then ! Buffer Layer
-          if ( ATMOS_BOUNDARY_USE_VELZ ) then
-            ATMOS_BOUNDARY_var(k,i,j,I_BND_VELZ) = ATMOS_BOUNDARY_VALUE_VELZ
-          endif
-          if ( ATMOS_BOUNDARY_USE_VELY ) then
-            ATMOS_BOUNDARY_var(k,i,j,I_BND_VELY) = ATMOS_BOUNDARY_VALUE_VELY
-          endif
-          if ( ATMOS_BOUNDARY_USE_VELX ) then
-            ATMOS_BOUNDARY_var(k,i,j,I_BND_VELX) = ATMOS_BOUNDARY_VALUE_VELX
-          endif
-          if ( ATMOS_BOUNDARY_USE_POTT ) then
-            ATMOS_BOUNDARY_var(k,i,j,I_BND_POTT) = ATMOS_BOUNDARY_VALUE_POTT
-          endif
-          if ( ATMOS_BOUNDARY_USE_QV   ) then
-            ATMOS_BOUNDARY_var(k,i,j,I_BND_QV  ) = ATMOS_BOUNDARY_VALUE_QV
-          endif
-       endif
+       ATMOS_BOUNDARY_var(k,i,j,I_BND_VELZ) = ATMOS_BOUNDARY_VALUE_VELZ
+       ATMOS_BOUNDARY_var(k,i,j,I_BND_VELY) = ATMOS_BOUNDARY_VALUE_VELY
+       ATMOS_BOUNDARY_var(k,i,j,I_BND_VELX) = ATMOS_BOUNDARY_VALUE_VELX
+       ATMOS_BOUNDARY_var(k,i,j,I_BND_POTT) = ATMOS_BOUNDARY_VALUE_POTT
+       ATMOS_BOUNDARY_var(k,i,j,I_BND_QV  ) = ATMOS_BOUNDARY_VALUE_QV
     enddo
     enddo
     enddo
@@ -696,7 +652,7 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Initialize boundary value for real case experiment
-  subroutine ATMOS_BOUNDARY_initialize()
+  subroutine ATMOS_BOUNDARY_initialize
     use gtool_file, only: &
        FileRead
     use scale_process, only: &
