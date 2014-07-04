@@ -42,46 +42,41 @@ module scale_grid
   real(RP), public              :: DX = 500.0_RP !< length in the main region [m]: x
   real(RP), public              :: DY = 500.0_RP !< length in the main region [m]: y
 
-  real(RP), public, allocatable :: GRID_CZ  (:)     !< center coordinate [m]: z, local=global
-  real(RP), public, allocatable :: GRID_CX  (:)     !< center coordinate [m]: x, local
-  real(RP), public, allocatable :: GRID_CY  (:)     !< center coordinate [m]: y, local
-  real(RP), public, allocatable :: GRID_CDZ (:)     !< z-length of control volume [m]
-  real(RP), public, allocatable :: GRID_CDX (:)     !< x-length of control volume [m]
-  real(RP), public, allocatable :: GRID_CDY (:)     !< y-length of control volume [m]
-  real(RP), public, allocatable :: GRID_RCDZ(:)     !< reciprocal of center-dz
-  real(RP), public, allocatable :: GRID_RCDX(:)     !< reciprocal of center-dx
-  real(RP), public, allocatable :: GRID_RCDY(:)     !< reciprocal of center-dy
+  real(RP), public, allocatable :: GRID_CZ  (:)  !< center coordinate [m]: z, local=global
+  real(RP), public, allocatable :: GRID_CX  (:)  !< center coordinate [m]: x, local
+  real(RP), public, allocatable :: GRID_CY  (:)  !< center coordinate [m]: y, local
+  real(RP), public, allocatable :: GRID_CDZ (:)  !< z-length of control volume [m]
+  real(RP), public, allocatable :: GRID_CDX (:)  !< x-length of control volume [m]
+  real(RP), public, allocatable :: GRID_CDY (:)  !< y-length of control volume [m]
+  real(RP), public, allocatable :: GRID_RCDZ(:)  !< reciprocal of center-dz
+  real(RP), public, allocatable :: GRID_RCDX(:)  !< reciprocal of center-dx
+  real(RP), public, allocatable :: GRID_RCDY(:)  !< reciprocal of center-dy
 
-  real(RP), public, allocatable :: GRID_FZ  (:)     !< face   coordinate [m]: z, local=global
-  real(RP), public, allocatable :: GRID_FX  (:)     !< face   coordinate [m]: x, local
-  real(RP), public, allocatable :: GRID_FY  (:)     !< face   coordinate [m]: y, local
-  real(RP), public, allocatable :: GRID_FDZ (:)     !< z-length of grid(k+1) to grid(k) [m]
-  real(RP), public, allocatable :: GRID_FDX (:)     !< x-length of grid(i+1) to grid(i) [m]
-  real(RP), public, allocatable :: GRID_FDY (:)     !< y-length of grid(j+1) to grid(j) [m]
-  real(RP), public, allocatable :: GRID_RFDZ(:)     !< reciprocal of face-dz
-  real(RP), public, allocatable :: GRID_RFDX(:)     !< reciprocal of face-dx
-  real(RP), public, allocatable :: GRID_RFDY(:)     !< reciprocal of face-dy
+  real(RP), public, allocatable :: GRID_FZ  (:)  !< face   coordinate [m]: z, local=global
+  real(RP), public, allocatable :: GRID_FX  (:)  !< face   coordinate [m]: x, local
+  real(RP), public, allocatable :: GRID_FY  (:)  !< face   coordinate [m]: y, local
+  real(RP), public, allocatable :: GRID_FDZ (:)  !< z-length of grid(k+1) to grid(k) [m]
+  real(RP), public, allocatable :: GRID_FDX (:)  !< x-length of grid(i+1) to grid(i) [m]
+  real(RP), public, allocatable :: GRID_FDY (:)  !< y-length of grid(j+1) to grid(j) [m]
+  real(RP), public, allocatable :: GRID_RFDZ(:)  !< reciprocal of face-dz
+  real(RP), public, allocatable :: GRID_RFDX(:)  !< reciprocal of face-dx
+  real(RP), public, allocatable :: GRID_RFDY(:)  !< reciprocal of face-dy
 
-  real(RP), public, allocatable :: GRID_CBFZ   (:)  !< center buffer factor [0-1]: z
-  real(RP), public, allocatable :: GRID_CBFX   (:)  !< center buffer factor [0-1]: x
-  real(RP), public, allocatable :: GRID_CBFY   (:)  !< center buffer factor [0-1]: y
-  real(RP), public, allocatable :: GRID_FBFZ   (:)  !< face   buffer factor [0-1]: z
-  real(RP), public, allocatable :: GRID_FBFX   (:)  !< face   buffer factor [0-1]: x
-  real(RP), public, allocatable :: GRID_FBFY   (:)  !< face   buffer factor [0-1]: y
-  logical,  public, allocatable :: GRID_CZ_mask(:)  !< main/buffer region mask: z
-  logical,  public, allocatable :: GRID_CX_mask(:)  !< main/buffer region mask: x
-  logical,  public, allocatable :: GRID_CY_mask(:)  !< main/buffer region mask: y
+  real(RP), public, allocatable :: GRID_CBFZ(:)  !< center buffer factor [0-1]: z
+  real(RP), public, allocatable :: GRID_CBFX(:)  !< center buffer factor [0-1]: x
+  real(RP), public, allocatable :: GRID_CBFY(:)  !< center buffer factor [0-1]: y
+  real(RP), public, allocatable :: GRID_FBFZ(:)  !< face   buffer factor [0-1]: z
+  real(RP), public, allocatable :: GRID_FBFX(:)  !< face   buffer factor [0-1]: x
+  real(RP), public, allocatable :: GRID_FBFY(:)  !< face   buffer factor [0-1]: y
 
-  real(RP), public, allocatable :: GRID_FXG     (:) !< face   coordinate [m]: x, global
-  real(RP), public, allocatable :: GRID_FYG     (:) !< face   coordinate [m]: y, global
-  real(RP), public, allocatable :: GRID_CXG     (:) !< center coordinate [m]: x, global
-  real(RP), public, allocatable :: GRID_CYG     (:) !< center coordinate [m]: y, global
-  real(RP), public, allocatable :: GRID_FBFXG   (:) !< face   buffer factor [0-1]: x, global
-  real(RP), public, allocatable :: GRID_FBFYG   (:) !< face   buffer factor [0-1]: y, global
-  real(RP), public, allocatable :: GRID_CBFXG   (:) !< center buffer factor [0-1]: x, global
-  real(RP), public, allocatable :: GRID_CBFYG   (:) !< center buffer factor [0-1]: y, global
-  logical,  public, allocatable :: GRID_CXG_mask(:) !< main/buffer region mask: x, global
-  logical,  public, allocatable :: GRID_CYG_mask(:) !< main/buffer region mask: y, global
+  real(RP), public, allocatable :: GRID_FXG  (:) !< face   coordinate [m]: x, global
+  real(RP), public, allocatable :: GRID_FYG  (:) !< face   coordinate [m]: y, global
+  real(RP), public, allocatable :: GRID_CXG  (:) !< center coordinate [m]: x, global
+  real(RP), public, allocatable :: GRID_CYG  (:) !< center coordinate [m]: y, global
+  real(RP), public, allocatable :: GRID_FBFXG(:) !< face   buffer factor [0-1]: x, global
+  real(RP), public, allocatable :: GRID_FBFYG(:) !< face   buffer factor [0-1]: y, global
+  real(RP), public, allocatable :: GRID_CBFXG(:) !< center buffer factor [0-1]: x, global
+  real(RP), public, allocatable :: GRID_CBFYG(:) !< center buffer factor [0-1]: y, global
 
   !-----------------------------------------------------------------------------
   !
@@ -103,7 +98,7 @@ module scale_grid
   real(RP), private :: BUFFER_DY = 0.0_RP ! thickness of buffer region [m]: y
   real(RP), private :: BUFFFACT  = 1.0_RP ! strech factor for dx/dy/dz of buffer region
 
-  real(RP), private, allocatable :: CZ(:) !< user defined center coordinate [m]: z, local=global
+  real(RP), private, allocatable :: FZ(:) !< user defined center coordinate [m]: z, local=global
 
   logical,  private :: debug = .false.
 
@@ -128,7 +123,7 @@ contains
        BUFFER_DX,         &
        BUFFER_DY,         &
        BUFFFACT,          &
-       CZ,                &
+       FZ,                &
        debug
 
     integer :: ierr
@@ -188,8 +183,8 @@ contains
     !---------------------------------------------------------------------------
 
     ! working
-    allocate( CZ(KMAX) )
-    CZ(:) = -1.0_RP
+    allocate( FZ(KMAX) )
+    FZ(:) = -1.0_RP
 
     ! local domain
     allocate( GRID_CZ  (KA) )
@@ -212,10 +207,6 @@ contains
     allocate( GRID_RFDX(IA-1) )
     allocate( GRID_RFDY(JA-1) )
 
-    allocate( GRID_CZ_mask(KA) )
-    allocate( GRID_CX_mask(IA) )
-    allocate( GRID_CY_mask(JA) )
-
     allocate( GRID_CBFZ(KA) )
     allocate( GRID_CBFX(IA) )
     allocate( GRID_CBFY(JA) )
@@ -228,16 +219,14 @@ contains
     JAG = JHALO + JMAX*PRC_NUM_Y + JHALO
 
     ! global domain
-    allocate( GRID_FXG     (0:IAG) )
-    allocate( GRID_FYG     (0:JAG) )
-    allocate( GRID_CXG     (  IAG) )
-    allocate( GRID_CYG     (  JAG) )
-    allocate( GRID_CBFXG   (  IAG) )
-    allocate( GRID_CBFYG   (  JAG) )
-    allocate( GRID_FBFXG   (  IAG) )
-    allocate( GRID_FBFYG   (  JAG) )
-    allocate( GRID_CXG_mask(  IAG) )
-    allocate( GRID_CYG_mask(  JAG) )
+    allocate( GRID_FXG  (0:IAG) )
+    allocate( GRID_FYG  (0:JAG) )
+    allocate( GRID_CXG  (  IAG) )
+    allocate( GRID_CYG  (  JAG) )
+    allocate( GRID_CBFXG(  IAG) )
+    allocate( GRID_CBFYG(  JAG) )
+    allocate( GRID_FBFXG(  IAG) )
+    allocate( GRID_FBFYG(  JAG) )
 
     return
   end subroutine GRID_allocate
@@ -249,8 +238,6 @@ contains
        FileRead
     use scale_process, only: &
        PRC_myrank
-    use scale_const, only: &
-       EPS => CONST_EPS
     implicit none
 
     character(len=H_LONG) :: bname
@@ -295,30 +282,6 @@ contains
     call FileRead( GRID_FBFZ(:), bname, 'FBFZ', 1, PRC_myrank )
     call FileRead( GRID_FBFX(:), bname, 'FBFX', 1, PRC_myrank )
     call FileRead( GRID_FBFY(:), bname, 'FBFY', 1, PRC_myrank )
-
-    do k = 1, KA
-       if ( abs(GRID_CBFZ(k)) < EPS ) then
-          GRID_CZ_mask(k) = .true.
-       else
-          GRID_CZ_mask(k) = .false.
-       endif
-    enddo
-
-    do i = 1, IA
-       if ( abs(GRID_CBFX(i)) < EPS ) then
-          GRID_CX_mask(i) = .true.
-       else
-          GRID_CX_mask(i) = .false.
-       endif
-    enddo
-
-    do j = 1, JA
-       if ( abs(GRID_CBFY(j)) < EPS ) then
-          GRID_CY_mask(j) = .true.
-       else
-          GRID_CY_mask(j) = .false.
-       endif
-    enddo
 
     return
   end subroutine GRID_read
@@ -381,36 +344,31 @@ contains
     enddo
 
     do i = 1, IHALO
-       GRID_CXG     (i) = 0.5_RP * ( GRID_FXG(i)+GRID_FXG(i-1) )
-       GRID_CXG_mask(i) = .false.
+       GRID_CXG(i) = 0.5_RP * ( GRID_FXG(i)+GRID_FXG(i-1) )
     enddo
 
     if ( ibuff > 0 ) then
        do i = IHALO+1, IHALO+ibuff
-          GRID_FXG     (i) = GRID_FXG(i-1) + buffx(ibuff+IHALO+1-i)
-          GRID_CXG     (i) = 0.5_RP * ( GRID_FXG(i)+GRID_FXG(i-1) )
-          GRID_CXG_mask(i) = .false.
+          GRID_FXG(i) = GRID_FXG(i-1) + buffx(ibuff+IHALO+1-i)
+          GRID_CXG(i) = 0.5_RP * ( GRID_FXG(i)+GRID_FXG(i-1) )
        enddo
     endif
 
     do i = IHALO+ibuff+1, IHALO+ibuff+imain
-       GRID_FXG     (i) = GRID_FXG(i-1) + DX
-       GRID_CXG     (i) = 0.5_RP * ( GRID_FXG(i)+GRID_FXG(i-1) )
-       GRID_CXG_mask(i) = .true.
+       GRID_FXG(i) = GRID_FXG(i-1) + DX
+       GRID_CXG(i) = 0.5_RP * ( GRID_FXG(i)+GRID_FXG(i-1) )
     enddo
 
     if ( ibuff > 0 ) then
        do i = IHALO+ibuff+imain+1, IHALO+ibuff+imain+ibuff
-          GRID_FXG     (i) = GRID_FXG(i-1) + buffx(i-IHALO-ibuff-imain)
-          GRID_CXG     (i) = 0.5_RP * ( GRID_FXG(i)+GRID_FXG(i-1) )
-          GRID_CXG_mask(i) = .false.
+          GRID_FXG(i) = GRID_FXG(i-1) + buffx(i-IHALO-ibuff-imain)
+          GRID_CXG(i) = 0.5_RP * ( GRID_FXG(i)+GRID_FXG(i-1) )
        enddo
     endif
 
     do i = IHALO+ibuff+imain+ibuff+1, IHALO+ibuff+imain+ibuff+IHALO
-       GRID_FXG     (i) = GRID_FXG(i-1) + buffx(ibuff)
-       GRID_CXG     (i) = 0.5_RP * ( GRID_FXG(i)+GRID_FXG(i-1) )
-       GRID_CXG_mask(i) = .false.
+       GRID_FXG(i) = GRID_FXG(i-1) + buffx(ibuff)
+       GRID_CXG(i) = 0.5_RP * ( GRID_FXG(i)+GRID_FXG(i-1) )
     enddo
 
     ! calc buffer factor (global domaim)
@@ -467,36 +425,31 @@ contains
     enddo
 
     do j = 1, JHALO
-       GRID_CYG     (j) = 0.5_RP * ( GRID_FYG(j)+GRID_FYG(j-1) )
-       GRID_CYG_mask(j) = .false.
+       GRID_CYG(j) = 0.5_RP * ( GRID_FYG(j)+GRID_FYG(j-1) )
     enddo
 
     if ( jbuff > 0 ) then
        do j = JHALO+1, JHALO+jbuff
-          GRID_FYG     (j) = GRID_FYG(j-1) + buffy(jbuff+JHALO+1-j)
-          GRID_CYG     (j) = 0.5_RP * ( GRID_FYG(j)+GRID_FYG(j-1) )
-          GRID_CYG_mask(j) = .false.
+          GRID_FYG(j) = GRID_FYG(j-1) + buffy(jbuff+JHALO+1-j)
+          GRID_CYG(j) = 0.5_RP * ( GRID_FYG(j)+GRID_FYG(j-1) )
        enddo
     endif
 
     do j = JHALO+jbuff+1, JHALO+jbuff+jmain
-       GRID_FYG     (j) = GRID_FYG(j-1) + DY
-       GRID_CYG     (j) = 0.5_RP * ( GRID_FYG(j)+GRID_FYG(j-1) )
-       GRID_CYG_mask(j) = .true.
+       GRID_FYG(j) = GRID_FYG(j-1) + DY
+       GRID_CYG(j) = 0.5_RP * ( GRID_FYG(j)+GRID_FYG(j-1) )
     enddo
 
     if ( jbuff > 0 ) then
        do j = JHALO+jbuff+jmain+1, JHALO+jbuff+jmain+jbuff
-          GRID_FYG     (j) = GRID_FYG(j-1) + buffy(j-JHALO-jbuff-jmain)
-          GRID_CYG     (j) = 0.5_RP * ( GRID_FYG(j)+GRID_FYG(j-1) )
-          GRID_CYG_mask(j) = .false.
+          GRID_FYG(j) = GRID_FYG(j-1) + buffy(j-JHALO-jbuff-jmain)
+          GRID_CYG(j) = 0.5_RP * ( GRID_FYG(j)+GRID_FYG(j-1) )
        enddo
     endif
 
     do j = JHALO+jbuff+jmain+jbuff+1, JHALO+jbuff+jmain+jbuff+JHALO
-       GRID_FYG     (j) = GRID_FYG(j-1) + buffy(jbuff)
-       GRID_CYG     (j) = 0.5_RP * ( GRID_FYG(j)+GRID_FYG(j-1) )
-       GRID_CYG_mask(j) = .false.
+       GRID_FYG(j) = GRID_FYG(j-1) + buffy(jbuff)
+       GRID_CYG(j) = 0.5_RP * ( GRID_FYG(j)+GRID_FYG(j-1) )
     enddo
 
     ! calc buffer factor (global domaim)
@@ -533,11 +486,11 @@ contains
 
     allocate( buffz(0:KA) )
 
-    if ( minval(CZ(1:KMAX)) > 0 ) then ! input from namelist
+    if ( minval(FZ(1:KMAX)) > 0 ) then ! input from namelist
        if( IO_L ) write(IO_FID_LOG,*) '*** Z coordinate is given from NAMELIST.'
 
        if ( KMAX < 2 ) then
-          write(*,*) 'xxx If you use CZ, KMAX must be larger than 1. Check!', KMAX
+          write(*,*) 'xxx If you use FZ, KMAX must be larger than 1. Check!', KMAX
           call PRC_MPIstop
        endif
 
@@ -548,7 +501,7 @@ contains
        do k = KMAX, 2, -1
           if( bufftotz >= BUFFER_DZ ) exit
 
-          bufftotz = bufftotz + ( CZ(k) - CZ(k-1) )
+          bufftotz = bufftotz + ( FZ(k) - FZ(k-1) )
        enddo
        kbuff = KMAX - k
        kmain = k
@@ -561,35 +514,22 @@ contains
        ! vartical coordinate (local=global domaim)
        GRID_FZ(KS-1) = 0.0_RP
 
-       DZ = 2.0_RP * CZ(1)
+       DZ = FZ(1)
        do k = KS-2, 0, -1
           GRID_FZ(k) = GRID_FZ(k+1) - DZ
        enddo
 
-       do k = KS, KE-1
-          GRID_FZ(k) = 0.5_RP * ( CZ(k-KS+2) + CZ(k-KS+1) )
+       do k = KS, KE
+          GRID_FZ(k) = FZ(k-KS+1)
        enddo
 
-       DZ = CZ(KMAX) - CZ(KMAX-1)
-       do k = KE, KA
+       DZ = FZ(KMAX) - FZ(KMAX-1)
+       do k = KE+1, KA
           GRID_FZ(k) = GRID_FZ(k-1) + DZ
        enddo
 
-       do k = 1, KS+kmain-1
-          GRID_CZ     (k) = 0.5_RP * ( GRID_FZ(k)+GRID_FZ(k-1) )
-          GRID_CZ_mask(k) = .true.
-       enddo
-
-       if ( kbuff > 0 ) then
-          do k = KS+kmain, KE
-             GRID_CZ     (k) = 0.5_RP * ( GRID_FZ(k)+GRID_FZ(k-1) )
-             GRID_CZ_mask(k) = .false.
-          enddo
-       endif
-
-       do k = KE+1, KA
-          GRID_CZ     (k) = 0.5_RP * ( GRID_FZ(k)+GRID_FZ(k-1) )
-          GRID_CZ_mask(k) = .false.
+       do k = 1, KA
+          GRID_CZ(k) = 0.5_RP * ( GRID_FZ(k)+GRID_FZ(k-1) )
        enddo
 
     else ! calc using DZ
@@ -620,28 +560,24 @@ contains
        enddo
 
        do k = 1, KS-1
-          GRID_CZ     (k) = 0.5_RP * ( GRID_FZ(k)+GRID_FZ(k-1) )
-          GRID_CZ_mask(k) = .true.
+          GRID_CZ(k) = 0.5_RP * ( GRID_FZ(k)+GRID_FZ(k-1) )
        enddo
 
        do k = KS, KS+kmain-1
-          GRID_FZ     (k) = GRID_FZ(k-1) + DZ
-          GRID_CZ     (k) = 0.5_RP * ( GRID_FZ(k)+GRID_FZ(k-1) )
-          GRID_CZ_mask(k) = .true.
+          GRID_FZ(k) = GRID_FZ(k-1) + DZ
+          GRID_CZ(k) = 0.5_RP * ( GRID_FZ(k)+GRID_FZ(k-1) )
        enddo
 
        if ( kbuff > 0 ) then
           do k = KS+kmain, KE
-             GRID_FZ     (k) = GRID_FZ(k-1) + buffz(k-KS-kmain+1)
-             GRID_CZ     (k) = 0.5_RP * ( GRID_FZ(k)+GRID_FZ(k-1) )
-             GRID_CZ_mask(k) = .false.
+             GRID_FZ(k) = GRID_FZ(k-1) + buffz(k-KS-kmain+1)
+             GRID_CZ(k) = 0.5_RP * ( GRID_FZ(k)+GRID_FZ(k-1) )
           enddo
        endif
 
        do k = KE+1, KA
-          GRID_FZ     (k) = GRID_FZ(k-1) + buffz(kbuff)
-          GRID_CZ     (k) = 0.5_RP * ( GRID_FZ(k)+GRID_FZ(k-1) )
-          GRID_CZ_mask(k) = .false.
+          GRID_FZ(k) = GRID_FZ(k-1) + buffz(kbuff)
+          GRID_CZ(k) = 0.5_RP * ( GRID_FZ(k)+GRID_FZ(k-1) )
        enddo
 
     endif
@@ -687,9 +623,7 @@ contains
     do i = 1, IA
        ii = i + PRC_2Drank(PRC_myrank,1) * IMAX
 
-       GRID_CX     (i) = GRID_CXG     (ii)
-       GRID_CX_mask(i) = GRID_CXG_mask(ii)
-
+       GRID_CX  (i) = GRID_CXG  (ii)
        GRID_CBFX(i) = GRID_CBFXG(ii)
        GRID_FBFX(i) = GRID_FBFXG(ii)
 
@@ -713,9 +647,7 @@ contains
     do j = 1, JA
        jj = j + PRC_2Drank(PRC_myrank,2) * JMAX
 
-       GRID_CY     (j) = GRID_CYG     (jj)
-       GRID_CY_mask(j) = GRID_CYG_mask(jj)
-
+       GRID_CY  (j) = GRID_CYG  (jj)
        GRID_CBFY(j) = GRID_CBFYG(jj)
        GRID_FBFY(j) = GRID_FBFYG(jj)
 
@@ -766,79 +698,80 @@ contains
     if ( debug ) then
        if( IO_L ) write(IO_FID_LOG,*)
        if( IO_L ) write(IO_FID_LOG,'(1x,A)') &
-       '|======= Vertical  Coordinate =======|'
+       '|============= Vertical Coordinate =============|'
        if( IO_L ) write(IO_FID_LOG,'(1x,A)') &
-       '|   k        z       zh       dz   k |'
+       '|    k        z       zh       dz   buffer    k |'
        if( IO_L ) write(IO_FID_LOG,'(1x,A)') &
-       '|          [m]      [m]      [m]     |'
+       '|           [m]      [m]      [m]   factor      |'
 
        do k = KA, KE+1, -1
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,F9.2,A,I4,A)') &
-       '|             ',GRID_FZ(k),'         ',k,' |'
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,I4,F9.2,A,F9.2,A)') &
-       '|',k,GRID_CZ(k),'         ',GRID_CDZ(k),'     |'
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,F9.2,A,F9.2,I5,A)') &
+       '|              ',GRID_FZ(k),'         ', GRID_FBFZ(k),k,' |'
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,I5,F9.2,A,2F9.2,A)') &
+       '|',k,GRID_CZ(k),'         ',GRID_CDZ(k), GRID_CBFZ(k),'      |'
        enddo
 
        k = KE
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,F9.2,A,I4,A)') &
-       '|             ',GRID_FZ(k),'        |',k,' | KE = TOA'
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,I4,F9.2,A,F9.2,A)') &
-       '|',k,GRID_CZ(k),'         ',GRID_CDZ(k),'     |'
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,F9.2,A,F9.2,I5,A)') &
+       '|              ',GRID_FZ(k),'         ', GRID_FBFZ(k),k,' | KE = TOA'
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,I5,F9.2,A,2F9.2,A)') &
+       '|',k,GRID_CZ(k),'         ',GRID_CDZ(k), GRID_CBFZ(k),'      |'
 
        do k = KE-1, KS, -1
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,F9.2,A,I4,A)') &
-       '|             ',GRID_FZ(k),'        |',k,' | '
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,I4,F9.2,A,F9.2,A)') &
-       '|',k,GRID_CZ(k),'         ',GRID_CDZ(k),'     | '
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,F9.2,A,F9.2,I5,A)') &
+       '|              ',GRID_FZ(k),'         ', GRID_FBFZ(k),k,' |'
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,I5,F9.2,A,2F9.2,A)') &
+       '|',k,GRID_CZ(k),'         ',GRID_CDZ(k), GRID_CBFZ(k),'      |'
        enddo
 
        k = KS-1
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,F9.2,A,I4,A)') &
-       '|             ',GRID_FZ(k),'        |',k,' | KS-1 = surface'
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,I4,F9.2,A,F9.2,A)') &
-       '|',k,GRID_CZ(k),'         ',GRID_CDZ(k),'     |'
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,F9.2,A,F9.2,I5,A)') &
+       '|              ',GRID_FZ(k),'         ', GRID_FBFZ(k),k,' | KS-1 = surface'
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,I5,F9.2,A,2F9.2,A)') &
+       '|',k,GRID_CZ(k),'         ',GRID_CDZ(k), GRID_CBFZ(k),'      |'
 
        do k = KS-2, 1, -1
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,F9.2,A,I4,A)') &
-       '|             ',GRID_FZ(k),'        |',k,' | '
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,I4,F9.2,A,F9.2,A)') &
-       '|',k,GRID_CZ(k),'         ',GRID_CDZ(k),'     | '
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,F9.2,A,F9.2,I5,A)') &
+       '|              ',GRID_FZ(k),'         ', GRID_FBFZ(k),k,' |'
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,I5,F9.2,A,2F9.2,A)') &
+       '|',k,GRID_CZ(k),'         ',GRID_CDZ(k), GRID_CBFZ(k),'      |'
        enddo
 
        k = 0
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,F9.2,A,I4,A)') &
-       '|             ',GRID_FZ(k),'         ',k,' |'
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,F9.2,A,F9.2,I5,A)') &
+       '|              ',GRID_FZ(k),'         ', GRID_FBFZ(k),k,' |'
 
        if( IO_L ) write(IO_FID_LOG,'(1x,A)') &
-       '|====================================|'
+       '|===============================================|'
+
 !       if( IO_L ) write(IO_FID_LOG,*)
 !       if( IO_L ) write(IO_FID_LOG,*) ' ', 0, GRID_FZ(0)
 !       do k = 1, KA-1
-!          if( IO_L ) write(IO_FID_LOG,*) k, GRID_CZ(k), GRID_CBFZ(k), GRID_CDZ(k), GRID_CZ_mask(k)
+!          if( IO_L ) write(IO_FID_LOG,*) k, GRID_CZ(k), GRID_CBFZ(k), GRID_CDZ(k)
 !          if( IO_L ) write(IO_FID_LOG,*) ' ', k, GRID_FZ(k), GRID_FBFZ(k), GRID_FDZ(k)
 !       enddo
 !       k = KA
-!       if( IO_L ) write(IO_FID_LOG,*) k, GRID_CZ(k), GRID_CBFZ(k), GRID_CDZ(k), GRID_CZ_mask(k)
+!       if( IO_L ) write(IO_FID_LOG,*) k, GRID_CZ(k), GRID_CBFZ(k), GRID_CDZ(k)
 !       if( IO_L ) write(IO_FID_LOG,*) ' ', k, GRID_FZ(k), GRID_FBFZ(k)
 !
 !       if( IO_L ) write(IO_FID_LOG,*)
 !       if( IO_L ) write(IO_FID_LOG,*) ' ', 0, GRID_FX(0)
 !       do i = 1, IA-1
-!          if( IO_L ) write(IO_FID_LOG,*) i, GRID_CX(i), GRID_CBFX(i), GRID_CDX(i), GRID_CX_mask(i)
+!          if( IO_L ) write(IO_FID_LOG,*) i, GRID_CX(i), GRID_CBFX(i), GRID_CDX(i)
 !          if( IO_L ) write(IO_FID_LOG,*) ' ', i, GRID_FX(i), GRID_FBFX(i), GRID_FDX(i)
 !       enddo
 !       i = IA
-!       if( IO_L ) write(IO_FID_LOG,*) i, GRID_CX(i), GRID_CBFX(i), GRID_CDX(i), GRID_CX_mask(i)
+!       if( IO_L ) write(IO_FID_LOG,*) i, GRID_CX(i), GRID_CBFX(i), GRID_CDX(i)
 !       if( IO_L ) write(IO_FID_LOG,*) ' ', i, GRID_FX(i), GRID_FBFX(i)
 !
 !       if( IO_L ) write(IO_FID_LOG,*)
 !       if( IO_L ) write(IO_FID_LOG,*) ' ', 0, GRID_FY(0)
 !       do j = 1, JA-1
-!          if( IO_L ) write(IO_FID_LOG,*) j, GRID_CY(j), GRID_CBFY(j), GRID_CDY(j), GRID_CY_mask(j)
+!          if( IO_L ) write(IO_FID_LOG,*) j, GRID_CY(j), GRID_CBFY(j), GRID_CDY(j)
 !          if( IO_L ) write(IO_FID_LOG,*) ' ', j, GRID_FY(j), GRID_FBFY(j), GRID_FDY(j)
 !       enddo
 !       j = JA
-!       if( IO_L ) write(IO_FID_LOG,*) j, GRID_CY(j), GRID_CBFY(j), GRID_CDY(j), GRID_CY_mask(j)
+!       if( IO_L ) write(IO_FID_LOG,*) j, GRID_CY(j), GRID_CBFY(j), GRID_CDY(j)
 !       if( IO_L ) write(IO_FID_LOG,*) ' ', j, GRID_FY(j), GRID_FBFY(j)
     endif
 

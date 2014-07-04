@@ -338,7 +338,6 @@ contains
     else
        coef_y = 1.0_RP / ATMOS_BOUNDARY_tauy
     endif
-    if( IO_L ) write(IO_FID_LOG,*) "OK01"
 
     do j = 1, JA
     do i = 1, IA
@@ -435,7 +434,6 @@ contains
     enddo
     enddo
     enddo
-    if( IO_L ) write(IO_FID_LOG,*) "OK02"
 
     if ( .NOT. ATMOS_BOUNDARY_USE_VELZ ) then
        ATMOS_BOUNDARY_alpha(:,:,:,I_BND_VELZ) = 0.0_RP
@@ -464,11 +462,8 @@ contains
        DENS, MOMZ, MOMX, MOMY, RHOT, QTRC )
     use scale_const, only: &
        CONST_UNDEF
-    use scale_grid, only: &
-       CZ_mask => GRID_CZ_mask, &
-       CX_mask => GRID_CX_mask, &
-       CY_mask => GRID_CY_mask
     implicit none
+
     real(RP), intent(in) :: DENS(KA,IA,JA)
     real(RP), intent(in) :: MOMZ(KA,IA,JA)
     real(RP), intent(in) :: MOMX(KA,IA,JA)
@@ -624,10 +619,6 @@ contains
   !-----------------------------------------------------------------------------
   !> generate boundary data
   subroutine ATMOS_BOUNDARY_generate
-    use scale_grid, only: &
-       CZ_mask => GRID_CZ_mask, &
-       CX_mask => GRID_CX_mask, &
-       CY_mask => GRID_CX_mask
     implicit none
 
     integer :: i, j, k, iv

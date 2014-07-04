@@ -108,7 +108,7 @@ contains
   use scale_atmos_dyn, only: &
      ATMOS_DYN_setup
   use scale_grid, only: &
-     GRID_CZ_mask
+     GRID_CBFZ
   use scale_const, only: &
      GRAV => CONST_GRAV
 
@@ -189,7 +189,7 @@ contains
                         .false., lat                        ) ! (in)
 
   do k = KS+1, KE
-     if ( .not. GRID_CZ_mask(k) ) then
+     if ( GRID_CBFZ(k) > 0.0_RP ) then
         KME = k - 1
         exit
      end if

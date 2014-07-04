@@ -64,7 +64,7 @@ contains
      CDX => GRID_CDX, &
      CDY => GRID_CDX, &
      CZ  => GRID_CZ, &
-     GRID_CZ_mask
+     GRID_CBFZ
 
   !-----------------------------------------------------------------------------
   implicit none
@@ -111,7 +111,7 @@ contains
   ZERO(:,:,:,:) = 0.0_RP
 
   do k = KS+1, KE
-     if ( .not. GRID_CZ_mask(k) ) then
+     if ( GRID_CBFZ(k) > 0.0_RP ) then
         KME = k - 1
         exit
      end if
