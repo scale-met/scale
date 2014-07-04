@@ -96,7 +96,7 @@ OBJS = $(scale_rdma)	\
 	scale_cpl_atmos_ocean.o	\
 	scale_cpl_atmos_ocean_bulk.o	\
 	scale_cpl_atmos_ocean_const.o	\
-	scale_cpl_sub_bulkcoef.o	\
+	scale_cpl_sub_bulkflux.o	\
 	scale_debug.o	\
 	scale_external_io.o	\
 	scale_fileio.o	\

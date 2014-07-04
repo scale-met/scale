@@ -413,6 +413,7 @@ contains
     logical, intent(in) :: setup
 
     ! works
+    real(RP) :: ATM_PBL (IA,JA)
     real(RP) :: SFC_TEMP(IA,JA)
     !---------------------------------------------------------------------------
 
@@ -425,17 +426,22 @@ contains
                           SFC_DENS (:,:),   & ! [OUT]
                           SFC_PRES (:,:)    ) ! [OUT]
 
+    ! planetary boundary layer
+    ATM_PBL(:,:) = 1.0E+3_RP ! tentative
+
     if ( CPL_sw ) then
-       call COMM_vars8( SFC_PRES  (:,:), 1 )
-       call COMM_vars8( SFLX_LW_dn(:,:), 2 )
-       call COMM_vars8( SFLX_SW_dn(:,:), 3 )
-       call COMM_vars8( SFLX_rain (:,:), 4 )
-       call COMM_vars8( SFLX_snow (:,:), 5 )
-       call COMM_wait ( SFC_PRES  (:,:), 1 )
-       call COMM_wait ( SFLX_LW_dn(:,:), 2 )
-       call COMM_wait ( SFLX_SW_dn(:,:), 3 )
-       call COMM_wait ( SFLX_rain (:,:), 4 )
-       call COMM_wait ( SFLX_snow (:,:), 5 )
+       call COMM_vars8( ATM_PBL   (:,:), 1 )
+       call COMM_vars8( SFC_PRES  (:,:), 2 )
+       call COMM_vars8( SFLX_LW_dn(:,:), 3 )
+       call COMM_vars8( SFLX_SW_dn(:,:), 4 )
+       call COMM_vars8( SFLX_rain (:,:), 5 )
+       call COMM_vars8( SFLX_snow (:,:), 6 )
+       call COMM_wait ( ATM_PBL   (:,:), 1 )
+       call COMM_wait ( SFC_PRES  (:,:), 2 )
+       call COMM_wait ( SFLX_LW_dn(:,:), 3 )
+       call COMM_wait ( SFLX_SW_dn(:,:), 4 )
+       call COMM_wait ( SFLX_rain (:,:), 5 )
+       call COMM_wait ( SFLX_snow (:,:), 6 )
 
        call CPL_putAtm( TEMP      (KS,:,:),   & ! [IN]
                         PRES      (KS,:,:),   & ! [IN]
@@ -444,6 +450,7 @@ contains
                         V         (KS,:,:),   & ! [IN]
                         DENS      (KS,:,:),   & ! [IN]
                         QTRC      (KS,:,:,:), & ! [IN]
+                        ATM_PBL   (:,:),      & ! [IN]
                         SFC_PRES  (:,:),      & ! [IN]
                         SFLX_LW_dn(:,:),      & ! [IN]
                         SFLX_SW_dn(:,:),      & ! [IN]

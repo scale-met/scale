@@ -43,10 +43,8 @@ module scale_cpl_atmos_land_bulk
   !-----------------------------------------------------------------------------
   integer,  private :: nmax = 100 ! maximum iteration number
 
-  real(RP), private :: res_min = 1.E+0_RP ! minimum number of residual
-  real(RP), private :: dTS     = 1.E-8_RP ! delta surface temp.
-  real(RP), private :: U_min   = 4.E-1_RP ! minimum U_abs
-  real(RP), private :: U_max   = 1.E+2_RP ! maximum U_abs
+  real(RP), private :: res_min = 1.0E+0_RP ! minimum number of residual
+  real(RP), private :: dTS     = 1.0E-8_RP ! delta surface temp.
 
   logical, allocatable, private :: is_FLX(:,:) ! is atmos-land coupler run?
 
@@ -58,8 +56,8 @@ contains
        PRC_MPIstop
     use scale_landuse, only: &
        LANDUSE_frac_land
-    use scale_cpl_bulkcoef, only: &
-       CPL_bulkcoef_setup
+    use scale_cpl_bulkflux, only: &
+       CPL_bulkflux_setup
     implicit none
 
     character(len=*), intent(in) :: CPL_TYPE_AtmLnd
@@ -67,15 +65,11 @@ contains
     integer  :: CPL_AtmLnd_bulk_nmax
     real(RP) :: CPL_AtmLnd_bulk_res_min
     real(RP) :: CPL_AtmLnd_bulk_dTS
-    real(RP) :: CPL_AtmLnd_bulk_U_min
-    real(RP) :: CPL_AtmLnd_bulk_U_max
 
     NAMELIST / PARAM_CPL_ATMLND_BULK / &
        CPL_AtmLnd_bulk_nmax,    &
        CPL_AtmLnd_bulk_res_min, &
-       CPL_AtmLnd_bulk_dTS,     &
-       CPL_AtmLnd_bulk_U_min,   &
-       CPL_AtmLnd_bulk_U_max
+       CPL_AtmLnd_bulk_dTS
 
     integer :: i, j
     integer :: ierr
@@ -92,8 +86,6 @@ contains
     CPL_AtmLnd_bulk_nmax    = nmax
     CPL_AtmLnd_bulk_res_min = res_min
     CPL_AtmLnd_bulk_dTS     = dTS
-    CPL_AtmLnd_bulk_U_min   = U_min
-    CPL_AtmLnd_bulk_U_max   = U_max
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -109,8 +101,6 @@ contains
     nmax    = CPL_AtmLnd_bulk_nmax
     res_min = CPL_AtmLnd_bulk_res_min
     dTS     = CPL_AtmLnd_bulk_dTS
-    U_min   = CPL_AtmLnd_bulk_U_min
-    U_max   = CPL_AtmLnd_bulk_U_max
 
     !--- judge to run atmos-land coupler
     allocate( is_FLX(IA,JA) )
@@ -126,7 +116,7 @@ contains
     end do
 
     !--- set up bulk coefficient function
-    call CPL_bulkcoef_setup
+    call CPL_bulkflux_setup
 
     return
   end subroutine CPL_AtmLnd_bulk_setup
@@ -152,6 +142,7 @@ contains
         TMPA,       & ! (in)
         PRSA,       & ! (in)
         QVA,        & ! (in)
+        PBL,        & ! (in)
         PRSS,       & ! (in)
         SWD,        & ! (in)
         LWD,        & ! (in)
@@ -174,8 +165,8 @@ contains
       Z1 => REAL_Z1
     use scale_atmos_saturation, only: &
       qsat => ATMOS_SATURATION_pres2qsat_all
-    use scale_cpl_bulkcoef, only: &
-      CPL_bulkcoef
+    use scale_cpl_bulkflux, only: &
+      CPL_bulkflux
     implicit none
 
     ! parameters
@@ -207,6 +198,7 @@ contains
     real(RP), intent(in) :: TMPA(IA,JA) ! temperature at the lowest atmospheric layer [K]
     real(RP), intent(in) :: PRSA(IA,JA) ! pressure at the lowest atmospheric layer [Pa]
     real(RP), intent(in) :: QVA (IA,JA) ! ratio of water vapor mass to total mass at the lowest atmospheric layer [kg/kg]
+    real(RP), intent(in) :: PBL (IA,JA) ! the top of atmospheric mixing layer [m]
     real(RP), intent(in) :: PRSS(IA,JA) ! pressure at the surface [Pa]
     real(RP), intent(in) :: SWD (IA,JA) ! downward short-wave radiation flux at the surface [W/m2]
     real(RP), intent(in) :: LWD (IA,JA) ! downward long-wave radiation flux at the surface [W/m2]
@@ -227,9 +219,10 @@ contains
     real(RP) :: oldres ! residual in previous step
     real(RP) :: redf   ! reduced factor
 
-    real(RP) :: Uabs ! absolute velocity at the lowest atmospheric layer [m/s]
-    real(RP) :: Cm, Ch, Ce ! bulk transfer coeff. [no unit]
-    real(RP) :: dCm, dCh, dCe ! bulk transfer coeff. for differential equation [no unit]
+    real(RP) :: Ustar, dUstar ! friction velocity [m]
+    real(RP) :: Tstar, dTstar ! friction temperature [K]
+    real(RP) :: Qstar, dQstar ! friction mixing rate [kg/kg]
+    real(RP) :: Uabs, dUabs ! modified absolute velocity [m/s]
     real(RP) :: SQV, dSQV ! saturation water vapor mixing ratio at surface [kg/kg]
     real(RP) :: dSHFLX, dLHFLX, dGHFLX
 
@@ -246,31 +239,34 @@ contains
 
         ! modified Newton-Raphson method (Tomita 2009)
         do n = 1, nmax
-          Uabs = min( max( sqrt( UA(i,j)**2 + VA(i,j)**2 ), U_min ), U_max )
+          ! saturation at the surface
+          call qsat( SQV, LST(i,j), PRSS(i,j) )
 
-          call CPL_bulkcoef( &
-              Cm,        & ! (out)
-              Ch,        & ! (out)
-              Ce,        & ! (out)
+          call CPL_bulkflux( &
+              Ustar,     & ! (out)
+              Tstar,     & ! (out)
+              Qstar,     & ! (out)
+              Uabs,      & ! (out)
               TMPA(i,j), & ! (in)
               LST (i,j), & ! (in)
               PRSA(i,j), & ! (in)
               PRSS(i,j), & ! (in)
-              Uabs,      & ! (in)
+              QVA (i,j), & ! (in)
+              SQV,       & ! (in)
+              UA  (i,j), & ! (in)
+              VA  (i,j), & ! (in)
               Z1  (i,j), & ! (in)
+              PBL (i,j), & ! (in)
               Z0M (i,j), & ! (in)
               Z0H (i,j), & ! (in)
               Z0E (i,j)  ) ! (in)
 
-          XMFLX(i,j) = -Cm * Uabs * RHOA(i,j) * UA(i,j)
-          YMFLX(i,j) = -Cm * Uabs * RHOA(i,j) * VA(i,j)
-          ZMFLX(i,j) = -Cm * Uabs * RHOA(i,j) * WA(i,j)
+          XMFLX(i,j) = -RHOA(i,j) * Ustar**2 / Uabs * UA(i,j)
+          YMFLX(i,j) = -RHOA(i,j) * Ustar**2 / Uabs * VA(i,j)
+          ZMFLX(i,j) = -RHOA(i,j) * Ustar**2 / Uabs * WA(i,j)
 
-          ! saturation at the surface
-          call qsat( SQV, LST(i,j), PRSS(i,j) )
-
-          SHFLX (i,j) = CPdry * Uabs * RHOA(i,j) * Ch * ( LST(i,j) - TMPA(i,j) )
-          LHFLX (i,j) = LH0   * Uabs * RHOA(i,j) * Ce * ( SQV - QVA(i,j) ) * QVEF(i,j)
+          SHFLX (i,j) = -CPdry * RHOA(i,j) * Ustar * Tstar
+          LHFLX (i,j) = -LH0   * RHOA(i,j) * Ustar * Qstar * QVEF(i,j)
           GHFLX (i,j) = -2.0_RP * TCS(i,j) * ( LST(i,j) - TG(i,j)  ) / DZG(i,j)
 
           ! calculation for residual
@@ -278,24 +274,30 @@ contains
               + ( 1.0_RP - ALB_LW(i,j) ) * ( LWD(i,j) - STB * LST(i,j)**4 ) &
               - SHFLX(i,j) - LHFLX(i,j) + GHFLX(i,j)
 
-          call CPL_bulkcoef( &
-              dCm,             & ! (out)
-              dCh,             & ! (out)
-              dCe,             & ! (out)
+          ! d(saturation) at the surface
+          call qsat( dSQV, LST(i,j)+dTS, PRSS(i,j) )
+
+          call CPL_bulkflux( &
+              dUstar,          & ! (out)
+              dTstar,          & ! (out)
+              dQstar,          & ! (out)
+              dUabs,           & ! (out)
               TMPA(i,j),       & ! (in)
               LST (i,j) + dTS, & ! (in)
               PRSA(i,j),       & ! (in)
               PRSS(i,j),       & ! (in)
-              Uabs,            & ! (in)
+              QVA (i,j),       & ! (in)
+              dSQV,            & ! (in)
+              UA  (i,j),       & ! (in)
+              VA  (i,j),       & ! (in)
               Z1  (i,j),       & ! (in)
+              PBL (i,j),       & ! (in)
               Z0M (i,j),       & ! (in)
               Z0H (i,j),       & ! (in)
               Z0E (i,j)        ) ! (in)
 
-          call qsat( dSQV, LST(i,j)+dTS, PRSS(i,j) )
-
-          dSHFLX  = CPdry * Uabs * RHOA(i,j) * ( (dCh-Ch)/dTS * ( LST(i,j) - TMPA(i,j) ) + Ch )
-          dLHFLX  = LH0   * Uabs * RHOA(i,j) * ( (dCe-Ce)/dTS * ( SQV - QVA(i,j) ) + Ce * (dSQV-SQV)/dTS ) * QVEF(i,j)
+          dSHFLX  = -CPdry  * RHOA(i,j) * ( (dUstar-Ustar)/dTS * Tstar + Ustar * (dTstar-Tstar)/dTS )
+          dLHFLX  = -LH0    * RHOA(i,j) * ( (dUstar-Ustar)/dTS * Qstar + Ustar * (dQstar-Qstar)/dTS ) * QVEF(i,j)
           dGHFLX  = -2.0_RP * TCS(i,j) / DZG(i,j)
 
           ! calculation for d(residual)/dLST
@@ -349,7 +351,6 @@ contains
         if( n > nmax ) then
           ! not converged and stop program
           if( IO_L ) write(IO_FID_LOG,*) 'Error: surface tempearture is not converged.'
-          if( IO_L ) write(IO_FID_LOG,*) 'location (i,j):', i, j
           call PRC_MPIstop
         end if
 

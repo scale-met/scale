@@ -41,9 +41,6 @@ module scale_cpl_atmos_ocean_bulk
   !++ Private parameters & variables
   !
   !-----------------------------------------------------------------------------
-  real(RP), private :: U_min  = 4.E-1_RP ! minimum U_abs
-  real(RP), private :: U_max  = 1.E+2_RP ! maximum U_abs
-
   logical, allocatable, private :: is_FLX(:,:) ! is atmos-land coupler run?
 
 contains
@@ -54,18 +51,16 @@ contains
        PRC_MPIstop
     use scale_landuse, only: &
        LANDUSE_frac_land
-    use scale_cpl_bulkcoef, only: &
-       CPL_bulkcoef_setup
+    use scale_cpl_bulkflux, only: &
+       CPL_bulkflux_setup
     implicit none
 
     character(len=*), intent(in) :: CPL_TYPE_AtmOcn
 
-    real(RP) :: CPL_AtmOcn_bulk_U_min
-    real(RP) :: CPL_AtmOcn_bulk_U_max
+    logical :: dummy
 
     NAMELIST / PARAM_CPL_ATMOCN_BULK / &
-       CPL_AtmOcn_bulk_U_min,  &
-       CPL_AtmOcn_bulk_U_max
+      dummy
 
     integer :: i, j
     integer :: ierr
@@ -79,9 +74,6 @@ contains
        call PRC_MPIstop
     endif
 
-    CPL_AtmOcn_bulk_U_min = U_min
-    CPL_AtmOcn_bulk_U_max = U_max
-
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_CPL_ATMOCN_BULK,iostat=ierr)
@@ -92,9 +84,6 @@ contains
        call PRC_MPIstop
     endif
     if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_CPL_ATMOCN_BULK)
-
-    U_min = CPL_AtmOcn_bulk_U_min
-    U_max = CPL_AtmOcn_bulk_U_max
 
     !--- judge to run atmos-ocean coupler
     allocate( is_FLX(IA,JA) )
@@ -110,7 +99,7 @@ contains
     end do
 
     !--- set up bulk coefficient function
-    call CPL_bulkcoef_setup
+    call CPL_bulkflux_setup
 
     return
   end subroutine CPL_AtmOcn_bulk_setup
@@ -136,6 +125,7 @@ contains
         TMPA,       & ! (in)
         PRSA,       & ! (in)
         QVA,        & ! (in)
+        PBL,        & ! (in)
         PRSS,       & ! (in)
         SWD,        & ! (in)
         LWD,        & ! (in)
@@ -155,8 +145,8 @@ contains
       Z1 => REAL_Z1
     use scale_atmos_saturation, only: &
       qsat => ATMOS_SATURATION_pres2qsat_all
-    use scale_cpl_bulkcoef, only: &
-      CPL_bulkcoef
+    use scale_cpl_bulkflux, only: &
+      CPL_bulkflux
     implicit none
 
     ! arguments
@@ -182,6 +172,7 @@ contains
     real(RP), intent(in) :: TMPA(IA,JA) ! temperature at the lowest atmospheric layer [K]
     real(RP), intent(in) :: PRSA(IA,JA) ! pressure at the lowest atmospheric layer [Pa]
     real(RP), intent(in) :: QVA (IA,JA) ! ratio of water vapor mass to total mass at the lowest atmospheric layer [kg/kg]
+    real(RP), intent(in) :: PBL (IA,JA) ! the top of atmospheric mixing layer [m]
     real(RP), intent(in) :: PRSS(IA,JA) ! pressure at the surface [Pa]
     real(RP), intent(in) :: SWD (IA,JA) ! downward short-wave radiation flux at the surface [W/m2]
     real(RP), intent(in) :: LWD (IA,JA) ! downward long-wave radiation flux at the surface [W/m2]
@@ -194,8 +185,10 @@ contains
     real(RP), intent(in) :: Z0E   (IA,JA) ! roughness length for vapor [m]
 
     ! works
-    real(RP) :: Uabs ! absolute velocity at the lowest atmospheric layer [m/s]
-    real(RP) :: Cm, Ch, Ce ! bulk transfer coeff. [no unit]
+    real(RP) :: Ustar ! friction velocity [m]
+    real(RP) :: Tstar ! friction temperature [K]
+    real(RP) :: Qstar ! friction mixing rate [kg/kg]
+    real(RP) :: Uabs ! modified absolute velocity [m/s]
     real(RP) :: SQV ! saturation water vapor mixing ratio at surface [kg/kg]
 
     integer :: i, j, n
@@ -212,32 +205,34 @@ contains
     do i = 1, IA
 
       if( is_FLX(i,j) ) then
-        ! calculate surface flux
-        Uabs = min( max( sqrt( UA(i,j)**2 + VA(i,j)**2 ), U_min ), U_max )
+        ! saturation at the surface
+        call qsat( SQV, SST(i,j), PRSS(i,j) )
 
-        call CPL_bulkcoef( &
-            Cm,        & ! (out)
-            Ch,        & ! (out)
-            Ce,        & ! (out)
+        call CPL_bulkflux( &
+            Ustar,     & ! (out)
+            Tstar,     & ! (out)
+            Qstar,     & ! (out)
+            Uabs,      & ! (out)
             TMPA(i,j), & ! (in)
             SST (i,j), & ! (in)
             PRSA(i,j), & ! (in)
             PRSS(i,j), & ! (in)
-            Uabs,      & ! (in)
+            QVA (i,j), & ! (in)
+            SQV,       & ! (in)
+            UA  (i,j), & ! (in)
+            VA  (i,j), & ! (in)
             Z1  (i,j), & ! (in)
+            PBL (i,j), & ! (in)
             Z0M (i,j), & ! (in)
             Z0H (i,j), & ! (in)
             Z0E (i,j)  ) ! (in)
 
-        XMFLX(i,j) = -Cm * Uabs * RHOA(i,j) * UA(i,j)
-        YMFLX(i,j) = -Cm * Uabs * RHOA(i,j) * VA(i,j)
-        ZMFLX(i,j) = -Cm * Uabs * RHOA(i,j) * WA(i,j)
+        XMFLX(i,j) = -RHOA(i,j) * Ustar**2 / Uabs * UA(i,j)
+        YMFLX(i,j) = -RHOA(i,j) * Ustar**2 / Uabs * VA(i,j)
+        ZMFLX(i,j) = -RHOA(i,j) * Ustar**2 / Uabs * WA(i,j)
 
-        ! saturation at the surface
-        call qsat( SQV, SST(i,j), PRSS(i,j) )
-
-        SHFLX (i,j) = CPdry * Uabs * RHOA(i,j) * Ch * ( SST(i,j) - TMPA(i,j) )
-        LHFLX (i,j) = LH0   * Uabs * RHOA(i,j) * Ce * ( SQV - QVA(i,j) )
+        SHFLX (i,j) = -CPdry * RHOA(i,j) * Ustar * Tstar
+        LHFLX (i,j) = -LH0   * RHOA(i,j) * Ustar * Qstar
 
         ! calculation for residual
         WHFLX(i,j) = ( 1.0_RP - ALB_SW(i,j) ) * SWD(i,j) * (-1.0_RP) &

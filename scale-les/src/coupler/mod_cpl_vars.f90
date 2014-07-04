@@ -66,6 +66,7 @@ module mod_cpl_vars
   real(RP), public, allocatable :: CPL_fromAtm_ATM_TEMP  (:,:) ! temperature at the lowermost atmosphere layer [K]
   real(RP), public, allocatable :: CPL_fromAtm_ATM_PRES  (:,:) ! pressure    at the lowermost atmosphere layer [Pa]
   real(RP), public, allocatable :: CPL_fromAtm_ATM_QV    (:,:) ! water vapor at the lowermost atmosphere layer [kg/kg]
+  real(RP), public, allocatable :: CPL_fromAtm_ATM_PBL   (:,:) ! the top of atmospheric mixing layer           [m]
   real(RP), public, allocatable :: CPL_fromAtm_SFC_PRES  (:,:) ! pressure    at the surface                    [Pa]
   real(RP), public, allocatable :: CPL_fromAtm_FLX_precip(:,:) ! liquid water                 flux [kg/m2/s]
   real(RP), public, allocatable :: CPL_fromAtm_FLX_SW_dn (:,:) ! downward shortwave radiation flux [J/m2/s]
@@ -199,6 +200,7 @@ contains
     allocate( CPL_fromAtm_ATM_TEMP  (IA,JA) )
     allocate( CPL_fromAtm_ATM_PRES  (IA,JA) )
     allocate( CPL_fromAtm_ATM_QV    (IA,JA) )
+    allocate( CPL_fromAtm_ATM_PBL   (IA,JA) )
     allocate( CPL_fromAtm_SFC_PRES  (IA,JA) )
     allocate( CPL_fromAtm_FLX_precip(IA,JA) )
     allocate( CPL_fromAtm_FLX_SW_dn (IA,JA) )
@@ -210,6 +212,7 @@ contains
     CPL_fromAtm_ATM_TEMP  (:,:) = UNDEF
     CPL_fromAtm_ATM_PRES  (:,:) = UNDEF
     CPL_fromAtm_ATM_QV    (:,:) = UNDEF
+    CPL_fromAtm_ATM_PBL   (:,:) = UNDEF
     CPL_fromAtm_SFC_PRES  (:,:) = UNDEF
     CPL_fromAtm_FLX_precip(:,:) = UNDEF
     CPL_fromAtm_FLX_SW_dn (:,:) = UNDEF
@@ -561,6 +564,7 @@ contains
        ATM_V,      &
        ATM_DENS,   &
        ATM_QTRC,   &
+       ATM_PBL,    &
        SFC_PRES,   &
        SFLX_LW_dn, &
        SFLX_SW_dn, &
@@ -575,6 +579,7 @@ contains
     real(RP), intent(in) :: ATM_V     (IA,JA)
     real(RP), intent(in) :: ATM_DENS  (IA,JA)
     real(RP), intent(in) :: ATM_QTRC  (IA,JA,QA)
+    real(RP), intent(in) :: ATM_PBL   (IA,JA)
     real(RP), intent(in) :: SFC_PRES  (IA,JA)
     real(RP), intent(in) :: SFLX_LW_dn(IA,JA)
     real(RP), intent(in) :: SFLX_SW_dn(IA,JA)
@@ -589,6 +594,7 @@ contains
     CPL_fromAtm_ATM_V     (:,:) = ATM_V     (:,:)
     CPL_fromAtm_ATM_DENS  (:,:) = ATM_DENS  (:,:)
     CPL_fromAtm_ATM_QV    (:,:) = ATM_QTRC  (:,:,1)
+    CPL_fromAtm_ATM_PBL   (:,:) = ATM_PBL   (:,:)
     CPL_fromAtm_SFC_PRES  (:,:) = SFC_PRES  (:,:)
     CPL_fromAtm_FLX_LW_dn (:,:) = SFLX_LW_dn(:,:)
     CPL_fromAtm_FLX_SW_dn (:,:) = SFLX_SW_dn(:,:)

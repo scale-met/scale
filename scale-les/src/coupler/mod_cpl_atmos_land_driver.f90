@@ -92,6 +92,7 @@ contains
        ATM_TEMP   => CPL_fromAtm_ATM_TEMP,   &
        ATM_PRES   => CPL_fromAtm_ATM_PRES,   &
        ATM_QV     => CPL_fromAtm_ATM_QV,     &
+       ATM_PBL    => CPL_fromAtm_ATM_PBL,    &
        SFC_PRES   => CPL_fromAtm_SFC_PRES,   &
        FLX_precip => CPL_fromAtm_FLX_precip, &
        FLX_LW_dn  => CPL_fromAtm_FLX_LW_dn,  &
@@ -159,6 +160,7 @@ contains
                      ATM_TEMP    (:,:),      & ! [IN]
                      ATM_PRES    (:,:),      & ! [IN]
                      ATM_QV      (:,:),      & ! [IN]
+                     ATM_PBL     (:,:),      & ! [IN]
                      SFC_PRES    (:,:),      & ! [IN]
                      FLX_SW_dn   (:,:),      & ! [IN]
                      FLX_LW_dn   (:,:),      & ! [IN]

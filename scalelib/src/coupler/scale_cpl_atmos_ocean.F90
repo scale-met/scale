@@ -48,6 +48,7 @@ module scale_cpl_atmos_ocean
          TMPA,       & ! (in)
          PRSA,       & ! (in)
          QVA,        & ! (in)
+         PBL,        & ! (in)
          PRSS,       & ! (in)
          SWD,        & ! (in)
          LWD,        & ! (in)
@@ -83,6 +84,7 @@ module scale_cpl_atmos_ocean
        real(RP), intent(in) :: TMPA(IA,JA) ! temperature at the lowest atmospheric layer [K]
        real(RP), intent(in) :: PRSA(IA,JA) ! pressure at the lowest atmospheric layer [Pa]
        real(RP), intent(in) :: QVA (IA,JA) ! ratio of water vapor mass to total mass at the lowest atmospheric layer [kg/kg]
+       real(RP), intent(in) :: PBL (IA,JA) ! the top of atmospheric mixing layer [m]
        real(RP), intent(in) :: PRSS(IA,JA) ! pressure at the surface [Pa]
        real(RP), intent(in) :: SWD (IA,JA) ! downward short-wave radiation flux at the surface (upward positive) [W/m2]
        real(RP), intent(in) :: LWD (IA,JA) ! downward long-wave radiation flux at the surface (upward positive) [W/m2]

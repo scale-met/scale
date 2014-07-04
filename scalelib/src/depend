@@ -37,14 +37,14 @@ scale_calendar.o: common/scale_calendar.F90 $(inc_index) $(DEPENDLIB) scale_prec
 scale_comm.o: atmos-les/communication/scale_comm.F90 $(inc_index) $(DEPENDLIB) scale_const.o scale_grid_index.o scale_precision.o scale_process.o scale_prof.o scale_stdio.o scale_tracer.o
 scale_const.o: common/scale_const.F90 $(inc_index) $(DEPENDLIB) scale_precision.o scale_process.o scale_stdio.o
 scale_cpl_atmos_land.o: coupler/scale_cpl_atmos_land.F90 $(inc_index) $(DEPENDLIB) scale_cpl_atmos_land_bulk.o scale_cpl_atmos_land_const.o scale_grid_index.o scale_precision.o scale_process.o scale_stdio.o
-scale_cpl_atmos_land_bulk.o: coupler/scale_cpl_atmos_land_bulk.F90 $(inc_index) $(DEPENDLIB) scale_atmos_sub_saturation.o scale_const.o scale_cpl_sub_bulkcoef.o scale_grid_index.o scale_grid_real.o scale_landuse.o scale_precision.o scale_process.o scale_stdio.o
+scale_cpl_atmos_land_bulk.o: coupler/scale_cpl_atmos_land_bulk.F90 $(inc_index) $(DEPENDLIB) scale_atmos_sub_saturation.o scale_const.o scale_cpl_sub_bulkflux.o scale_grid_index.o scale_grid_real.o scale_landuse.o scale_precision.o scale_process.o scale_stdio.o
 scale_cpl_atmos_land_const.o: coupler/scale_cpl_atmos_land_const.F90 $(inc_index) $(DEPENDLIB) scale_const.o scale_grid_index.o scale_grid_real.o scale_precision.o scale_process.o scale_stdio.o scale_time.o
 scale_cpl_atmos_ocean.o: coupler/scale_cpl_atmos_ocean.F90 $(inc_index) $(DEPENDLIB) scale_cpl_atmos_ocean_bulk.o scale_cpl_atmos_ocean_const.o scale_grid_index.o scale_precision.o scale_process.o scale_stdio.o
-scale_cpl_atmos_ocean_bulk.o: coupler/scale_cpl_atmos_ocean_bulk.F90 $(inc_index) $(DEPENDLIB) scale_atmos_sub_saturation.o scale_const.o scale_cpl_sub_bulkcoef.o scale_grid_index.o scale_grid_real.o scale_landuse.o scale_precision.o scale_process.o scale_stdio.o
+scale_cpl_atmos_ocean_bulk.o: coupler/scale_cpl_atmos_ocean_bulk.F90 $(inc_index) $(DEPENDLIB) scale_atmos_sub_saturation.o scale_const.o scale_cpl_sub_bulkflux.o scale_grid_index.o scale_grid_real.o scale_landuse.o scale_precision.o scale_process.o scale_stdio.o
 scale_cpl_atmos_ocean_const.o: coupler/scale_cpl_atmos_ocean_const.F90 $(inc_index) $(DEPENDLIB) scale_const.o scale_grid_index.o scale_grid_real.o scale_precision.o scale_process.o scale_stdio.o scale_time.o
 scale_cpl_atmos_urban.o: coupler/scale_cpl_atmos_urban.F90 $(inc_index) $(DEPENDLIB) scale_cpl_atmos_urban_bulk.o scale_grid_index.o scale_precision.o scale_process.o scale_stdio.o scale_urban_grid_index.o
 scale_cpl_atmos_urban_bulk.o: coupler/scale_cpl_atmos_urban_bulk.F90 $(inc_index) $(DEPENDLIB) scale_const.o scale_grid_index.o scale_precision.o scale_process.o scale_stdio.o scale_time.o scale_urban_grid_index.o
-scale_cpl_sub_bulkcoef.o: coupler/scale_cpl_sub_bulkcoef.F90 $(inc_index) $(DEPENDLIB) scale_const.o scale_precision.o scale_process.o scale_stdio.o
+scale_cpl_sub_bulkflux.o: coupler/scale_cpl_sub_bulkflux.F90 $(inc_index) $(DEPENDLIB) scale_const.o scale_precision.o scale_process.o scale_stdio.o
 scale_debug.o: common/scale_debug.F90 $(inc_index) $(DEPENDLIB) scale_const.o scale_precision.o scale_process.o scale_prof.o scale_stdio.o
 scale_external_io.o: io/scale_external_io.F90 $(inc_index) $(DEPENDLIB) scale_grid_index.o scale_precision.o scale_process.o scale_stdio.o
 scale_fileio.o: io/scale_fileio.F90 $(inc_index) $(DEPENDLIB) scale_const.o scale_grid_cartesian.o scale_grid_index.o scale_land_grid.o scale_land_grid_index.o scale_precision.o scale_process.o scale_prof.o scale_stdio.o scale_time.o scale_urban_grid.o scale_urban_grid_index.o
@@ -125,7 +125,7 @@ MODS =	\
 	scale_cpl_atmos_ocean_const.mod	\
 	scale_cpl_atmos_urban.mod	\
 	scale_cpl_atmos_urban_bulk.mod	\
-	scale_cpl_bulkcoef.mod	\
+	scale_cpl_bulkflux.mod	\
 	scale_debug.mod	\
 	scale_external_io.mod	\
 	scale_fileio.mod	\
