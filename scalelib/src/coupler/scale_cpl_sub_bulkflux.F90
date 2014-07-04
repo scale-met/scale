@@ -290,6 +290,9 @@ contains
       EPSTvap => CONST_EPSTvap
     implicit none
 
+    ! parameter
+    real(RP), parameter :: Pt = 0.95_RP ! turbulent Prandtl number
+
     ! argument
     real(RP), intent(out) :: Ustar ! friction velocity [m/s]
     real(RP), intent(out) :: Tstar ! friction temperature [K]
@@ -353,14 +356,14 @@ contains
       ! unstable condition
       UabsUS  = max( sqrt( Ua**2 + Va**2 + (WSCF*Wstar)**2 ), Uabs_min )
       UstarUS = KARMAN / ( log(Za/Z0M) - fm_unstable(Za,L) + fm_unstable(Z0M,L) ) * UabsUS
-      TstarUS = KARMAN / ( log(Za/Z0H) - fh_unstable(Za,L) + fh_unstable(Z0H,L) ) * ( Ta - Ts*(Pa/Ps)**RovCP )
-      QstarUS = KARMAN / ( log(Za/Z0E) - fh_unstable(Za,L) + fh_unstable(Z0E,L) ) * ( Qa - Qs )
+      TstarUS = KARMAN / ( log(Za/Z0H) - fh_unstable(Za,L) + fh_unstable(Z0H,L) ) / Pt * ( Ta - Ts*(Pa/Ps)**RovCP )
+      QstarUS = KARMAN / ( log(Za/Z0E) - fh_unstable(Za,L) + fh_unstable(Z0E,L) ) / Pt * ( Qa - Qs )
 
       ! stable condition
       UabsS  = max( sqrt( Ua**2 + Va**2 ), Uabs_min )
       UstarS = KARMAN / ( log(Za/Z0M) - fm_stable(Za,L) + fm_stable(Z0M,L) ) * UabsS
-      TstarS = KARMAN / ( log(Za/Z0H) - fh_stable(Za,L) + fh_stable(Z0H,L) ) * ( Ta - Ts*(Pa/Ps)**RovCP )
-      QstarS = KARMAN / ( log(Za/Z0E) - fh_stable(Za,L) + fh_stable(Z0E,L) ) * ( Qa - Qs )
+      TstarS = KARMAN / ( log(Za/Z0H) - fh_stable(Za,L) + fh_stable(Z0H,L) ) / Pt * ( Ta - Ts*(Pa/Ps)**RovCP )
+      QstarS = KARMAN / ( log(Za/Z0E) - fh_stable(Za,L) + fh_stable(Z0E,L) ) / Pt * ( Qa - Qs )
 
       sw = 0.5_RP - sign( 0.5_RP, L ) ! if unstable, sw = 1
 
@@ -378,13 +381,13 @@ contains
       ! unstable condition
       dUabsUS  = max( sqrt( Ua**2 + Va**2 + (WSCF*dWstar)**2 ), Uabs_min )
       dUstarUS = KARMAN / ( log(Za/Z0M) - fm_unstable(Za,L+dL) + fm_unstable(Z0M,L+dL) ) * dUabsUS
-      dTstarUS = KARMAN / ( log(Za/Z0H) - fh_unstable(Za,L+dL) + fh_unstable(Z0H,L+dL) ) * ( Ta - Ts*(Pa/Ps)**RovCP )
-      dQstarUS = KARMAN / ( log(Za/Z0E) - fh_unstable(Za,L+dL) + fh_unstable(Z0E,L+dL) ) * ( Qa - Qs )
+      dTstarUS = KARMAN / ( log(Za/Z0H) - fh_unstable(Za,L+dL) + fh_unstable(Z0H,L+dL) ) / Pt * ( Ta - Ts*(Pa/Ps)**RovCP )
+      dQstarUS = KARMAN / ( log(Za/Z0E) - fh_unstable(Za,L+dL) + fh_unstable(Z0E,L+dL) ) / Pt * ( Qa - Qs )
       ! stable condition
       dUabsS  = max( sqrt( Ua**2 + Va**2 ), Uabs_min )
       dUstarS = KARMAN / ( log(Za/Z0M) - fm_stable(Za,L+dL) + fm_stable(Z0M,L+dL) ) * dUabsS
-      dTstarS = KARMAN / ( log(Za/Z0H) - fh_stable(Za,L+dL) + fh_stable(Z0H,L+dL) ) * ( Ta - Ts*(Pa/Ps)**RovCP )
-      dQstarS = KARMAN / ( log(Za/Z0E) - fh_stable(Za,L+dL) + fh_stable(Z0E,L+dL) ) * ( Qa - Qs )
+      dTstarS = KARMAN / ( log(Za/Z0H) - fh_stable(Za,L+dL) + fh_stable(Z0H,L+dL) ) / Pt * ( Ta - Ts*(Pa/Ps)**RovCP )
+      dQstarS = KARMAN / ( log(Za/Z0E) - fh_stable(Za,L+dL) + fh_stable(Z0E,L+dL) ) / Pt * ( Qa - Qs )
 
       sw = 0.5_RP - sign( 0.5_RP, L+dL ) ! if unstable, sw = 1
 
@@ -436,12 +439,12 @@ contains
 
     R = min( Z/L, 0.0_RP )
 
-    !! Wilson (2001)
-    !fm_unstable = 3.0_RP * log( ( 1.0_RP + sqrt( 1.0_RP + 3.6_RP * R**(2.0_RP/3.0_RP) ) ) * 0.5_RP )
+    ! Wilson (2001)
+    fm_unstable = 3.0_RP * log( ( 1.0_RP + sqrt( 1.0_RP + 3.6_RP * (-R)**(2.0_RP/3.0_RP) ) ) * 0.5_RP )
 
-    ! Paulson (1974); Dyer (1974)
-    r4R = ( 1.0_RP - 16.0_RP * R )**0.25_RP
-    fm_unstable = log( ( 1.0_RP + r4R )**2 * ( 1.0_RP + r4R * r4R ) * 0.125_RP ) - 2.0_RP * atan( r4R ) + PI * 0.5_RP
+    !! Paulson (1974); Dyer (1974)
+    !r4R = ( 1.0_RP - 16.0_RP * R )**0.25_RP
+    !fm_unstable = log( ( 1.0_RP + r4R )**2 * ( 1.0_RP + r4R * r4R ) * 0.125_RP ) - 2.0_RP * atan( r4R ) + PI * 0.5_RP
 
     return
   end function fm_unstable
@@ -464,11 +467,11 @@ contains
 
     R = min( Z/L, 0.0_RP )
 
-    !! Wilson (2001)
-    !fh_unstable = 3.0_RP * log( ( 1.0_RP + sqrt( 1.0_RP + 7.9_RP * R**(2.0_RP/3.0_RP) ) ) * 0.5_RP )
+    ! Wilson (2001)
+    fh_unstable = 3.0_RP * log( ( 1.0_RP + sqrt( 1.0_RP + 7.9_RP * (-R)**(2.0_RP/3.0_RP) ) ) * 0.5_RP )
 
-    ! Paulson (1974); Dyer (1974)
-    fh_unstable = 2.0_RP * log( ( 1.0_RP + sqrt( 1.0_RP - 16.0_RP * R ) ) * 0.5_RP )
+    !! Paulson (1974); Dyer (1974)
+    !fh_unstable = 2.0_RP * log( ( 1.0_RP + sqrt( 1.0_RP - 16.0_RP * R ) ) * 0.5_RP )
 
     return
   end function fh_unstable
