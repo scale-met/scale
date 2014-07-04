@@ -27,6 +27,7 @@
 !! @li      2014-06-25 (S.Shima) [rev] Bugfix: dx_sdm, dy_sdm, dxiv_sdn, dyiv_sdm restored
 !! @li      2014-06-26 (S.Shima) [rev] sdm_getrklu and sdm_z2rk are separated
 !! @li      2014-06-27 (S.Shima) [rev] sd data output functionality added
+!! @li      2014-07-04 (S.Shima) [rev] Removed comment outputs for debugging
 !<
 !-------------------------------------------------------------------------------
 #include "macro_thermodyn.h"
@@ -1141,12 +1142,10 @@ contains
       end if
 
       !### position of super-droplets in horizontal ###!
-      if( IO_L ) write(IO_FID_LOG,*) sdx_s2c(4)
       do n=1,sdnum_s2c
          sdx_s2c(n) = xmax_sdm * sdx_s2c(n)+GRID_FX(IS-1)
          sdy_s2c(n) = ymax_sdm * sdy_s2c(n)+GRID_FY(JS-1)
       end do
-      if( IO_L ) write(IO_FID_LOG,*) sdx_s2c(4),xmax_sdm
 
       !### position of super-droplets in vertical ###!
       !! valid super-droplets

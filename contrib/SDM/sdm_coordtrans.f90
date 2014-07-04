@@ -15,6 +15,7 @@
 !! @par History
 !! @li      2014-06-26 (S.Shima) [new] Separated from scale_atmos_phy_mp_sdm.F90
 !! @li      2014-06-27 (S.Shima) [rev] sdm_rk2z, sdm_x2ri, sdm_y2rj added
+!! @li      2014-07-04 (S.Shima) [rev] sdm_x2ri, sdm_y2rj modified to reduce dependency.
 !!
 !<
 !-------------------------------------------------------------------------------
@@ -333,7 +334,7 @@ contains
 !!$            exit jloop
 !!$           endif
 !!$         enddo jloop
-         rj=sd_rj(n)
+         rj = sd_rj(n)
 
 !         iXm = floor(ri-0.5d0)
          iXm = floor(ri+0.5d0) ! Face to Center conversion
@@ -402,14 +403,14 @@ contains
     
     ! Work variables
     integer :: i,n    ! index
+    integer :: error
     
     ! Get horizontal index[i/real] of super-droplets
+    error=0
     do n=1,sd_num
        
        if((sd_x(n)<GRID_FX(IS-1)).or.(sd_x(n)>GRID_FX(IE))) then
-!          if( IO_L ) write(IO_FID_LOG,*) 'ERROR: sd_x out of regions',sd_x(n),n,GRID_FX(IS-1),GRID_FX(IE)
-          if( IO_L ) write(IO_FID_LOG,*) 'ERROR: sd_x out of regions'
-          call PRC_MPIstop
+          error=1
        end if
        
        !### get horizontal face index(real) of super-droplets ###!
@@ -420,6 +421,12 @@ contains
           endif
        enddo iloop
     end do
+
+    if(error==1)then
+       if( IO_L ) write(IO_FID_LOG,*) 'ERROR: sd_x out of region'
+       call PRC_MPIstop
+    end if
+
     return
   end subroutine sdm_x2ri
   !-----------------------------------------------------------------------------
@@ -438,13 +445,14 @@ contains
     
     ! Work variables
     integer :: j,n    ! index
-    
+    integer :: error
+
     ! Get horizontal index[i/real] of super-droplets
+    error=0
     do n=1,sd_num
        
        if((sd_y(n)<GRID_FY(JS-1)).or.(sd_y(n)>GRID_FY(JE))) then
-          if( IO_L ) write(IO_FID_LOG,*) 'ERROR: sd_y out of region'
-          call PRC_MPIstop
+          error=1
        end if
        
        !### get horizontal face index(real) of super-droplets ###!
@@ -455,6 +463,12 @@ contains
           endif
        enddo jloop
     end do
+
+    if(error==1)then
+       if( IO_L ) write(IO_FID_LOG,*) 'ERROR: sd_y out of region'
+       call PRC_MPIstop
+    end if
+
     return
   end subroutine sdm_y2rj
 end module m_sdm_coordtrans
