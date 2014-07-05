@@ -128,6 +128,18 @@ contains
 
     allocate(sd_dtmp1(1:sdnum_s2c))
 
+!    allocate( j31(KA,IA,JA) )
+!    allocate( j32(KA,IA,JA) )
+!    allocate( jcb(KA,IA,JA) )
+!    allocate( jcb8w(KA,IA,JA) )
+!    allocate( mf(IA,JA) )
+    allocate( dxiv_sdm(IA) )
+    allocate( dyiv_sdm(JA) )
+!    allocate( dziv_sdm(KA) )
+    allocate( dx_sdm(IA) )
+    allocate( dy_sdm(JA) )
+!    allocate( dz_sdm(KA) )
+
     ! Initialize allocated array
     rhod_crs(:,:,:) = 0.0_RP
     rhoc_sdm(:,:,:) = 0.0_RP
@@ -195,17 +207,17 @@ contains
     enddo
     enddo
 
-    ! Check the evaluation of Jacobian later.
-    do k = 1, KA
-    do i = 1, IA
-    do j = 1, JA
-      j31(k,i,j) = GTRANS_J13G(k,i,j,I_XYZ) / GTRANS_GSQRT(k,i,j,I_XYZ)
-      j32(k,i,j) = GTRANS_J23G(k,i,j,I_XYZ) / GTRANS_GSQRT(k,i,j,I_XYZ)
-      jcb(k,i,j) = GTRANS_GSQRT(k,i,j,I_XYZ)
-      jcb8w(k,i,j) = GTRANS_GSQRT(k,i,j,I_XYW)
-    enddo
-    enddo
-    enddo
+!!$    ! Check the evaluation of Jacobian later.
+!!$    do k = 1, KA
+!!$    do i = 1, IA
+!!$    do j = 1, JA
+!!$      j31(k,i,j) = GTRANS_J13G(k,i,j,I_XYZ) / GTRANS_GSQRT(k,i,j,I_XYZ)
+!!$      j32(k,i,j) = GTRANS_J23G(k,i,j,I_XYZ) / GTRANS_GSQRT(k,i,j,I_XYZ)
+!!$!      jcb(k,i,j) = GTRANS_GSQRT(k,i,j,I_XYZ)
+!!$!      jcb8w(k,i,j) = GTRANS_GSQRT(k,i,j,I_XYW)
+!!$    enddo
+!!$    enddo
+!!$    enddo
 
     return
 

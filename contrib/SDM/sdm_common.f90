@@ -318,8 +318,8 @@ module m_sdm_common
                     0.0_RP, 0.0_RP, 0.0_RP, 0.0_RP, 0.0_RP, &
                     0.0_RP, 0.0_RP, 0.0_RP, 0.0_RP, 0.0_RP, &
                     0.0_RP, 0.0_RP, 0.0_RP, 0.0_RP, 0.0_RP  /
-  real(RP), allocatable, save  :: zph_crs(:,:,:), dxiv_sdm(:), dyiv_sdm(:), dziv_sdm(:)
-  real(RP), allocatable, save  :: dx_sdm(:), dy_sdm(:), dz_sdm(:)   ! Dx, Dy, Dz for SDM (normally they are equal to those of SCALE)
+  real(RP), allocatable, save  :: zph_crs(:,:,:), dxiv_sdm(:), dyiv_sdm(:)!, dziv_sdm(:)
+  real(RP), allocatable, save  :: dx_sdm(:), dy_sdm(:)!, dz_sdm(:)   ! Dx, Dy, Dz for SDM (normally they are equal to those of SCALE)
 !  integer, parameter :: nqw = QQA
   integer, save :: sdfmnum_s2c
   real(RP), save:: sdininum_s2c
@@ -338,11 +338,11 @@ module m_sdm_common
   real(RP), save :: sdm_dtcol  ! time step of {stochastic coalescence} process
   real(RP), save :: sdm_dtadv  ! time step of {motion of super-droplets} process
 !  real(RP), allocatable, save :: qwtr_crs(:,:,:,:)
-  real(RP), allocatable, save :: j31(:,:,:) ! z-x components of Jacobian
-  real(RP), allocatable, save :: j32(:,:,:) ! z-y components of Jacobian
-  real(RP), allocatable, save :: jcb(:,:,:) ! Jacobian at scalar points
-  real(RP), allocatable, save :: jcb8w(:,:,:) ! Jacobian at w points
-  real(RP), allocatable, save :: mf(:,:)  ! Map scale factors
+!  real(RP), allocatable, save :: j31(:,:,:) ! z-x components of Jacobian
+!  real(RP), allocatable, save :: j32(:,:,:) ! z-y components of Jacobian
+!  real(RP), allocatable, save :: jcb(:,:,:) ! Jacobian at scalar points
+!  real(RP), allocatable, save :: jcb8w(:,:,:) ! Jacobian at w points
+!  real(RP), allocatable, save :: mf(:,:)  ! Map scale factors
   integer,  allocatable, save :: KMIN1(:), IMIN1(:), JMIN1(:)
   integer,  allocatable, save :: KPLS1(:), IPLS1(:), JPLS1(:)
   integer, save :: nclstp(0:3)

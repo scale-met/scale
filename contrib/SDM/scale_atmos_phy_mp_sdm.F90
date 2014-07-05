@@ -189,25 +189,6 @@ contains
        call PRC_MPIstop
     endif
 
-    allocate( j31(KA,IA,JA) )
-    allocate( j32(KA,IA,JA) )
-    allocate( jcb(KA,IA,JA) )
-    allocate( jcb8w(KA,IA,JA) )
-    allocate( mf(IA,JA) )
-    allocate( KMIN1(KA) )
-    allocate( IMIN1(IA) )
-    allocate( JMIN1(JA) )
-    allocate( KPLS1(KA) )
-    allocate( IPLS1(IA) )
-    allocate( JPLS1(JA) )
-    allocate( zph_crs(KA,IA,JA) )
-    allocate( dxiv_sdm(IA) )
-    allocate( dyiv_sdm(JA) )
-    allocate( dziv_sdm(KA) )
-    allocate( dx_sdm(IA) )
-    allocate( dy_sdm(JA) )
-    allocate( dz_sdm(KA) )
-
     buffact = 0.0_RP
     do k = KS, KE
       buffact = max( buffact,CBFZ(k) )
@@ -240,6 +221,13 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) 'ERROR: terrain following coordinate is not yet supported!'
        call PRC_MPIstop
     end if
+
+    allocate( KMIN1(KA) )
+    allocate( IMIN1(IA) )
+    allocate( JMIN1(JA) )
+    allocate( KPLS1(KA) )
+    allocate( IPLS1(IA) )
+    allocate( JPLS1(JA) )
 
     do k = 2, KA
       KMIN1(k) = k-1
@@ -468,14 +456,10 @@ contains
 !!$    dx_sdm(1:IA) = FDX(1:IA)
 !!$    dy_sdm(1:JA) = FDY(1:JA)
 !!$    dz_sdm(1:KA) = FDZ(1:KA)
-    dx_sdm(1:IA) = DX
-    dy_sdm(1:JA) = DY
-    dz_sdm(1:KA) = DZ
-    dxiv_sdm(1:IA) = 1.0_RP / dx_sdm(1:IA)
-    dyiv_sdm(1:JA) = 1.0_RP / dy_sdm(1:JA)
-    dziv_sdm(1:KA) = 1.0_RP / dz_sdm(1:KA)
     xmax_sdm = GRID_FX(IE)-GRID_FX(IS-1)
     ymax_sdm = GRID_FY(JE)-GRID_FY(JS-1)
+
+    allocate( zph_crs(KA,IA,JA) )
 
     !--- set number of super droplet etc...
     call sdm_numset(              &
@@ -489,6 +473,13 @@ contains
       ni_s2c, nj_s2c, nk_s2c, zph_crs )
 
     call sdm_allocinit
+
+    dx_sdm(1:IA) = DX
+    dy_sdm(1:JA) = DY
+!    dz_sdm(1:KA) = DZ
+    dxiv_sdm(1:IA) = 1.0_RP / dx_sdm(1:IA)
+    dyiv_sdm(1:JA) = 1.0_RP / dy_sdm(1:JA)
+!    dziv_sdm(1:KA) = 1.0_RP / dz_sdm(1:KA)
 
     return
   end subroutine ATMOS_PHY_MP_sdm_setup
@@ -538,24 +529,24 @@ contains
        sdm_rk2z
 
     implicit none
-    real(RP), intent(inout) :: DENS(KA,IA,JA)
-    real(RP), intent(inout) :: MOMZ(KA,IA,JA)
+    real(RP), intent(inout) :: DENS(KA,IA,JA)        !! Density [kg/m3]
+    real(RP), intent(inout) :: MOMZ(KA,IA,JA)        !! Momentum [kg/s/m2]
     real(RP), intent(inout) :: MOMX(KA,IA,JA)
     real(RP), intent(inout) :: MOMY(KA,IA,JA)
-    real(RP), intent(inout) :: RHOT(KA,IA,JA)
-    real(RP), intent(inout) :: QTRC(KA,IA,JA,QAD)
+    real(RP), intent(inout) :: RHOT(KA,IA,JA)        !! DENS * POTT [K*kg/m3]
+    real(RP), intent(inout) :: QTRC(KA,IA,JA,QAD)    !! Ratio of mass of tracer to total mass[kg/kg]
 
     real(RP):: dtcl(1:5) ! 1-3 : Time interval of cloud micro physics at current processed time
                          ! 4   : Time interval to form super droplets as aerosol
                          ! 5   : Time interval to adjust number of super droplets in each grid
-    real(RP) :: rst_crs(KA,IA,JA)  ! Base state density x Jacobian
+!    real(RP) :: rst_crs(KA,IA,JA)  ! Base state density x Jacobian
     real(RP) :: pbr_crs(KA,IA,JA)  ! Base state pressure
     real(RP) :: ptbr_crs(KA,IA,JA) ! Base state potential temperature
     real(RP) :: ppf_crs(KA,IA,JA)  ! Pressure perturbation at future
-    real(RP) :: uf_crs(KA,IA,JA)   ! u components of velocity at future
-    real(RP) :: vf_crs(KA,IA,JA)   ! v components of velocity at future
-    real(RP) :: wf_crs(KA,IA,JA)   ! w components of velocity at future
-    real(RP) :: wcf_crs(KA,IA,JA)  ! zeta components of contravariant velocity at future
+!!$    real(RP) :: uf_crs(KA,IA,JA)   ! u components of velocity at future
+!!$    real(RP) :: vf_crs(KA,IA,JA)   ! v components of velocity at future
+!!$    real(RP) :: wf_crs(KA,IA,JA)   ! w components of velocity at future
+!!$!    real(RP) :: wcf_crs(KA,IA,JA)  ! zeta components of contravariant velocity at future
     real(RP) :: ptpf_crs(KA,IA,JA) ! Potential temperature perturbation at future
     real(RP) :: qvf_crs(KA,IA,JA)  ! Water vapor mixing ratio at future
     real(RP) :: prr_crs(IA,JA,1:2) ! Precipitation and accumulation for rain
@@ -607,7 +598,7 @@ contains
 !                      dx_sdm,dy_sdm,dz_sdm,               &
 !                      nqw,jcb,                            &
 !                      qwtr_crs,zph_crs,                   &
-                      jcb,                                &
+!                      jcb,                                &
                       zph_crs,                            &
                       sdasl_s2c, sdx_s2c, sdy_s2c,        &
                       sdz_s2c, sdr_s2c,                   &
@@ -628,13 +619,15 @@ contains
     dtcl(4) =  sdm_aslfmdt
     dtcl(5) =  sdm_nadjdt
 
-    ! Convert
-    mf(:,:) = 1.0_RP
+    ! Evaluate the diagnostic fluid variables needed for SDM from SCALE intrinsic variables
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    !! Legacy code. Temporarily used for now but finally removed
+!    mf(:,:) = 1.0_RP
     QDRY(:,:,:) = 1.0_RP
     do k = 1, KA
     do i = 1, IA
     do j = 1, JA
-      rst_crs(k,i,j) = DENS(k,i,j) * jcb(k,i,j)
+!      rst_crs(k,i,j) = DENS(k,i,j) * jcb(k,i,j)
       ptbr_crs(k,i,j) = RHOT(k,i,j) / DENS(k,i,j)
       do iq = QQS, QQE
         QDRY(k,i,j) = QDRY(k,i,j) - QTRC(k,i,j,iq)
@@ -653,19 +646,44 @@ contains
     enddo
     enddo
     enddo
-     jcb8w(KA,:,:) = GTRANS_GSQRT(KA-1,:,:,I_XYW)
-     jcb(KA,:,:) = GTRANS_GSQRT(KA-1,:,:,I_XYW)
-    do k = 1, KA
-    do i = 1, IA
-    do j = 1, JA
-      uf_crs(k,i,j) = 2.0_RP * MOMX(k,i,j) / ( DENS(k,i,j)+DENS(k,IMIN1(i),j) )
-      vf_crs(k,i,j) = 2.0_RP * MOMY(k,i,j) / ( DENS(k,i,j)+DENS(k,i,JMIN1(j)) )
-      wf_crs(k,i,j) = 2.0_RP * MOMZ(k,i,j) / ( DENS(k,i,j)+DENS(KMIN1(k),i,j) )
-      wcf_crs(k,i,j) = 2.0_RP * MOMZ(k,i,j) * jcb8w(k,i,j) / ( DENS(k,i,j)+DENS(KMIN1(k),i,j) )
-    enddo
-    enddo
-    enddo
+!     jcb8w(KA,:,:) = GTRANS_GSQRT(KA-1,:,:,I_XYW)
+!     jcb(KA,:,:) = GTRANS_GSQRT(KA-1,:,:,I_XYW)
+!!$    do k = 1, KA
+!!$    do i = 1, IA
+!!$    do j = 1, JA
+!!$      uf_crs(k,i,j) = 2.0_RP * MOMX(k,i,j) / ( DENS(k,i,j)+DENS(k,IMIN1(i),j) )
+!!$      vf_crs(k,i,j) = 2.0_RP * MOMY(k,i,j) / ( DENS(k,i,j)+DENS(k,i,JMIN1(j)) )
+!!$      wf_crs(k,i,j) = 2.0_RP * MOMZ(k,i,j) / ( DENS(k,i,j)+DENS(KMIN1(k),i,j) )
+!!$!      wcf_crs(k,i,j) = 2.0_RP * MOMZ(k,i,j) * jcb8w(k,i,j) / ( DENS(k,i,j)+DENS(KMIN1(k),i,j) )
+!!$    enddo
+!!$    enddo
+!!$    enddo
+    ! -----
+    ! Perform super-droplets method (SDM)
+    !== get the exner function at future ==!
+    call getexner(pbr_crs,ppf_crs,exnr_crs,rtmp4)
+    !== get the zeta components of contravariant velocity ==!
+    !== at future                                         ==!
+!     call phy2cnt(idsthopt,idtrnopt,idmpopt,idmfcopt,idoneopt,    &
+!                  ni,nj,nk,j31,j32,jcb8w,mf,                      &
+!                  uf_crs,vf_crs,wf_crs,wcf_crs,rtmp4,rtmp5,rtmp6)
 
+    ! Get dry air density at the start of SDM.
+    call sdm_getrhod(pbr_crs,ptbr_crs,ppf_crs,ptpf_crs,       &
+                       qvf_crs,rhod_crs)
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    !! Refactored code here. The legacy code above are now being refactored to this part.
+    !!! SCALE intrinsic variables 
+    !! DENS:               Density [kg/m3]
+    !! MOMZ,MOMX,MOMY:     Momentum [kg/s/m2]
+    !! RHOT:               DENS * POTT [K*kg/m3]
+    !! QTRC(KA,IA,JA,QAD): Ratio of mass of tracer to total mass[kg/kg]
+
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+    ! after removing OMP support, this should be also omitted.
+    ! Finally, bufsiz1 = bufsiz and bufsiz2 = bndsdmdim, and these should be determined once in sdm_numset or somewhere and should be stored as common variables
     bufsiz1 = nint( sdininum_s2c*(real(sdm_extbuf)*1.E-2_RP) )
     bufsiz1 = nomp * ( int((bufsiz1-1)/nomp) + 1 ) !! being multiple number to 'nomp'
     bufsiz2 = 8 + sdnumasl_s2c    !! n,x,y,rk,u,v,wc(vz),r,asl
@@ -686,25 +704,15 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) 'ERROR: sdm_dmpvar>1 not supported for now. Set sdm_dmpvar=1 (Output Super Droplet Data in ASCII)'
     end if
 
-    ! -----
-    ! Perform super-droplets method (SDM)
-    !== get the exner function at future ==!
-    call getexner(pbr_crs,ppf_crs,exnr_crs,rtmp4)
-
-    !== get the zeta components of contravariant velocity ==!
-    !== at future                                         ==!
-!     call phy2cnt(idsthopt,idtrnopt,idmpopt,idmfcopt,idoneopt,    &
-!                  ni,nj,nk,j31,j32,jcb8w,mf,                      &
-!                  uf_crs,vf_crs,wf_crs,wcf_crs,rtmp4,rtmp5,rtmp6)
-
     !== run SDM at future ==!
-     call sdm_calc(sdm_calvar,sdm_mvexchg,dtcl(1:3), sdm_aslset,  &
-                   jcb,rst_crs,exnr_crs,pbr_crs,ptbr_crs,         &
-                   uf_crs,vf_crs,wcf_crs,ppf_crs,ptpf_crs,qvf_crs,&
+     call sdm_calc(MOMX,MOMY,MOMZ,DENS,                           & 
+                   sdm_calvar,sdm_mvexchg,dtcl(1:3), sdm_aslset,  &
+                   exnr_crs,pbr_crs,ptbr_crs,         &
+                   ppf_crs,ptpf_crs,qvf_crs,&
                    prr_crs,zph_crs,rhod_crs,                      &
                    lsdmup,ni_s2c,nj_s2c,nk_s2c,                   &
                    sdnum_s2c,sdnumasl_s2c,                        &
-                   sdn_s2c,sdx_s2c,sdy_s2c,sdrk_s2c,              &
+                   sdn_s2c,sdx_s2c,sdy_s2c,sdri_s2c,sdrj_s2c,sdrk_s2c,              &
                    sdu_s2c,sdv_s2c,sdvz_s2c,sdr_s2c,sdasl_s2c,    &
                    sdrkl_s2c,sdrku_s2c,                           &
                    rng_s2c,rand_s2c,sortid_s2c,sortkey_s2c,       &
@@ -820,7 +828,7 @@ contains
 !                         dx_sdm,dy_sdm,dz_sdm,               &
 !                         nqw,jcb,                            &
 !                         qwtr_crs,zph_crs,                   &
-                         jcb,                                &
+!                         jcb,                                &
                          zph_crs,                            &
                          sdasl_s2c, sdx_s2c, sdy_s2c,        &
                          sdz_s2c, sdr_s2c,                   &
@@ -862,7 +870,7 @@ contains
       real(RP),intent(in) :: sdm_zlower   ! Lower limitaion of initial SDs position
       real(RP),intent(in) :: sdm_zupper   ! Upper limitaion of initial SDs position
 !      integer, intent(in) :: nqw       ! Number of water hydrometeor array
-      real(RP),intent(in) :: jcb(KA,IA,JA)      ! Jacobian at scalar points
+!      real(RP),intent(in) :: jcb(KA,IA,JA)      ! Jacobian at scalar points
       real(RP),intent(in) :: zph_crs(KA,IA,JA)  ! z physical coordinates
 !      real(RP),intent(in) :: dx_sdm ! Grid distance in x direction for SDM
 !      real(RP),intent(in) :: dy_sdm ! Grid distance in y direction for SDM
@@ -1221,7 +1229,7 @@ contains
       end if
 
       call sdm_getvz(sthopt,trnopt,                              &
-                     jcb,pbr_crs,ptbr_crs,                       &
+                     pbr_crs,ptbr_crs,                       &
                      pp_crs,ptp_crs,rhod_crs,                    &
                      sdnum_s2c,sdx_s2c,sdy_s2c,sdrk_s2c,sdr_s2c, &
                      sdvz_s2c,sd_itmp1,sd_itmp2,sd_itmp3,'motion')
@@ -1536,10 +1544,10 @@ contains
   end subroutine sdm_condevp
   !-----------------------------------------------------------------------------
   subroutine sdm_getvz(sthopt,trnopt,                       &
-                       jcb,pbr,ptbr,pp,ptp,rhod,            &
+                       pbr,ptbr,pp,ptp,rhod,            &
                        sd_num,sd_x,sd_y,sd_rk,sd_r,sd_vz,   &
                        ilist_s,ilist_m,ilist_l,ptype        )
-
+! evaluate the terminal velocities
      use scale_grid, only: &
       FX => GRID_FX, &
       FY => GRID_FY
@@ -1554,7 +1562,7 @@ contains
       ! Input variables
       integer, intent(in) :: trnopt ! Unique index of trnopt in namelist table
       integer, intent(in) :: sthopt ! Unique index of sthopt in namelist table
-      real(RP), intent(in) :: jcb(KA,IA,JA)  ! Jacobian at scalar points
+!      real(RP), intent(in) :: jcb(KA,IA,JA)  ! Jacobian at scalar points
       real(RP), intent(in) :: pbr(KA,IA,JA)  ! Base state pressure
       real(RP), intent(in) :: ptbr(KA,IA,JA) ! Base state potential temperature
       real(RP), intent(in) :: pp(KA,IA,JA)  ! Pressure perturbation
@@ -1567,7 +1575,7 @@ contains
       real(RP), intent(in) :: sd_r(1:sd_num)  ! equivalent radius of super-droplets
       character(len=6), intent(in) :: ptype             ! process type : 'motion process' or 'stochastic coalescence process'
       ! Output variables
-      real(RP), intent(out) :: sd_vz(1:sd_num)! terminal velocity of super-droplets
+      real(RP), intent(out) :: sd_vz(1:sd_num)! terminal velocity of super-droplets in real space
       integer, intent(out) :: ilist_s(1:int(sd_num/nomp),1:nomp)  ! buffer for list vectorization
       integer, intent(out) :: ilist_m(1:int(sd_num/nomp),1:nomp)  ! buffer for list vectorization
       integer, intent(out) :: ilist_l(1:int(sd_num/nomp),1:nomp)  ! buffer for list vectorization
@@ -1595,7 +1603,7 @@ contains
 
       ! Work variables
       real(RP) :: sd_dia    ! diameter[cm] of super-droplets
-      real(RP) :: sd_jcb    ! jacobian[-] at the location of super-droplets
+!      real(RP) :: sd_jcb    ! jacobian[-] at the location of super-droplets
       real(RP) :: sd_l      ! mean free path[cm] of air molecules at the location of super-droplets
       real(RP) :: sd_p      ! pressure[hPa] at the location of super-droplets
       real(RP) :: sd_pt     ! potential temperature[K] at the location of super-droplets
@@ -1859,27 +1867,31 @@ contains
 
                      sd_vz(n) = c1 * csc * sd_dia * sd_dia
 
-                     !== convert contravariant terminal velocity ==!
+                     sd_vz(n) = sd_vz(n) * cm2m
 
-                     if( trnopt==0 .and. sthopt==0 ) then
+                     ! sd_vz is terminal velocity in real space
 
-                        sd_vz(n) = sd_vz(n) * cm2m
-
-                     else
-
-                        !! jacobian
-
-                        sd_jcb = jcb(iZm,iXm,iYm) * ( SXp * SYp * SZp ) &
-                               + jcb(iZm,iXp,iYm) * ( SXm * SYp * SZp ) &
-                               + jcb(iZm,iXm,iYp) * ( SXp * SYm * SZp ) &
-                               + jcb(iZm,iXp,iYp) * ( SXm * SYm * SZp ) &
-                               + jcb(iZp,iXm,iYm) * ( SXp * SYp * SZm ) &
-                               + jcb(iZp,iXp,iYm) * ( SXm * SYp * SZm ) &
-                               + jcb(iZp,iXm,iYp) * ( SXp * SYm * SZm ) &
-                               + jcb(iZp,iXp,iYp) * ( SXm * SYm * SZm )
-                        sd_vz(n) = (sd_vz(n)/sd_jcb) * cm2m
-
-                     end if
+!!$                     !== convert contravariant terminal velocity ==!
+!!$
+!!$                     if( trnopt==0 .and. sthopt==0 ) then
+!!$
+!!$                        sd_vz(n) = sd_vz(n) * cm2m
+!!$
+!!$                     else
+!!$
+!!$                        !! jacobian
+!!$
+!!$                        sd_jcb = jcb(iZm,iXm,iYm) * ( SXp * SYp * SZp ) &
+!!$                               + jcb(iZm,iXp,iYm) * ( SXm * SYp * SZp ) &
+!!$                               + jcb(iZm,iXm,iYp) * ( SXp * SYm * SZp ) &
+!!$                               + jcb(iZm,iXp,iYp) * ( SXm * SYm * SZp ) &
+!!$                               + jcb(iZp,iXm,iYm) * ( SXp * SYp * SZm ) &
+!!$                               + jcb(iZp,iXp,iYm) * ( SXm * SYp * SZm ) &
+!!$                               + jcb(iZp,iXm,iYp) * ( SXp * SYm * SZm ) &
+!!$                               + jcb(iZp,iXp,iYp) * ( SXm * SYm * SZm )
+!!$                        sd_vz(n) = (sd_vz(n)/sd_jcb) * cm2m
+!!$
+!!$                     end if
 
                   end do
 
@@ -2045,28 +2057,30 @@ contains
 
                      sd_vz(n) = (sd_visco*nre)/(sd_rd*sd_dia)
 
-                     !== convert contravariant terminal velocity ==!
+                     sd_vz(n) = sd_vz(n) * cm2m
 
-                     if( trnopt==0 .and. sthopt==0 ) then
-
-                        sd_vz(n) = sd_vz(n) * cm2m
-
-                     else
-
-                        !! jacobian
-
-                        sd_jcb = jcb(iZm,iXm,iYm) * ( SXp * SYp * SZp ) &
-                               + jcb(iZm,iXp,iYm) * ( SXm * SYp * SZp ) &
-                               + jcb(iZm,iXm,iYp) * ( SXp * SYm * SZp ) &
-                               + jcb(iZm,iXp,iYp) * ( SXm * SYm * SZp ) &
-                               + jcb(iZp,iXm,iYm) * ( SXp * SYp * SZm ) &
-                               + jcb(iZp,iXp,iYm) * ( SXm * SYp * SZm ) &
-                               + jcb(iZp,iXm,iYp) * ( SXp * SYm * SZm ) &
-                               + jcb(iZp,iXp,iYp) * ( SXm * SYm * SZm )
-
-                        sd_vz(n) = (sd_vz(n)/sd_jcb) * cm2m
-
-                     end if
+!!$                     !== convert contravariant terminal velocity ==!
+!!$
+!!$                     if( trnopt==0 .and. sthopt==0 ) then
+!!$
+!!$                        sd_vz(n) = sd_vz(n) * cm2m
+!!$
+!!$                     else
+!!$
+!!$                        !! jacobian
+!!$
+!!$                        sd_jcb = jcb(iZm,iXm,iYm) * ( SXp * SYp * SZp ) &
+!!$                               + jcb(iZm,iXp,iYm) * ( SXm * SYp * SZp ) &
+!!$                               + jcb(iZm,iXm,iYp) * ( SXp * SYm * SZp ) &
+!!$                               + jcb(iZm,iXp,iYp) * ( SXm * SYm * SZp ) &
+!!$                               + jcb(iZp,iXm,iYm) * ( SXp * SYp * SZm ) &
+!!$                               + jcb(iZp,iXp,iYm) * ( SXm * SYp * SZm ) &
+!!$                               + jcb(iZp,iXm,iYp) * ( SXp * SYm * SZm ) &
+!!$                               + jcb(iZp,iXp,iYp) * ( SXm * SYm * SZm )
+!!$
+!!$                        sd_vz(n) = (sd_vz(n)/sd_jcb) * cm2m
+!!$
+!!$                     end if
 
                   end do
 
@@ -2251,27 +2265,29 @@ contains
 
                      sd_vz(n) = (sd_visco*nre)/(sd_rd*sd_dia)
 
-                     !== convert contravariant terminal velocity ==!
+                     sd_vz(n) = sd_vz(n) * cm2m
 
-                     if( trnopt==0 .and. sthopt==0 ) then
-
-                        sd_vz(n) = sd_vz(n) * cm2m
-
-                     else
-
-                        !! jacobian
-
-                        sd_jcb = jcb(iZm,iXm,iYm) * ( SXp * SYp * SZp ) &
-                               + jcb(iZm,iXp,iYm) * ( SXm * SYp * SZp ) &
-                               + jcb(iZm,iXm,iYp) * ( SXp * SYm * SZp ) &
-                               + jcb(iZm,iXp,iYp) * ( SXm * SYm * SZp ) &
-                               + jcb(iZp,iXm,iYm) * ( SXp * SYp * SZm ) &
-                               + jcb(iZp,iXp,iYm) * ( SXm * SYp * SZm ) &
-                               + jcb(iZp,iXm,iYp) * ( SXp * SYm * SZm ) &
-                               + jcb(iZp,iXp,iYp) * ( SXm * SYm * SZm )
-
-                        sd_vz(n) = (sd_vz(n)/sd_jcb) * cm2m
-                    end if
+!!$                     !== convert contravariant terminal velocity ==!
+!!$
+!!$                     if( trnopt==0 .and. sthopt==0 ) then
+!!$
+!!$                        sd_vz(n) = sd_vz(n) * cm2m
+!!$
+!!$                     else
+!!$
+!!$                        !! jacobian
+!!$
+!!$                        sd_jcb = jcb(iZm,iXm,iYm) * ( SXp * SYp * SZp ) &
+!!$                               + jcb(iZm,iXp,iYm) * ( SXm * SYp * SZp ) &
+!!$                               + jcb(iZm,iXm,iYp) * ( SXp * SYm * SZp ) &
+!!$                               + jcb(iZm,iXp,iYp) * ( SXm * SYm * SZp ) &
+!!$                               + jcb(iZp,iXm,iYm) * ( SXp * SYp * SZm ) &
+!!$                               + jcb(iZp,iXp,iYm) * ( SXm * SYp * SZm ) &
+!!$                               + jcb(iZp,iXm,iYp) * ( SXp * SYm * SZm ) &
+!!$                               + jcb(iZp,iXp,iYp) * ( SXm * SYm * SZm )
+!!$
+!!$                        sd_vz(n) = (sd_vz(n)/sd_jcb) * cm2m
+!!$                    end if
 
                   end do
 
@@ -2363,19 +2379,21 @@ contains
 
                      sd_vz(n) = c1 * csc * sd_dia * sd_dia
 
-                     !== convert contravariant terminal velocity ==!
+                     sd_vz(n) = sd_vz(n) * cm2m
 
-                     if( trnopt==0 .and. sthopt==0 ) then
-
-                        sd_vz(n) = sd_vz(n) * cm2m
-
-                     else
-
-                        !! jacobian
-
-                        sd_vz(n) = (sd_vz(n)/jcb(k,i,j)) * cm2m
-
-                     end if
+!!$                     !== convert contravariant terminal velocity ==!
+!!$
+!!$                     if( trnopt==0 .and. sthopt==0 ) then
+!!$
+!!$                        sd_vz(n) = sd_vz(n) * cm2m
+!!$
+!!$                     else
+!!$
+!!$                        !! jacobian
+!!$
+!!$                        sd_vz(n) = (sd_vz(n)/jcb(k,i,j)) * cm2m
+!!$
+!!$                     end if
 
                   end do
 
@@ -2485,19 +2503,21 @@ contains
 
                      sd_vz(n) = (sd_visco*nre)/(sd_rd*sd_dia)
 
-                     !== convert contravariant terminal velocity ==!
+                     sd_vz(n) = sd_vz(n) * cm2m
 
-                     if( trnopt==0 .and. sthopt==0 ) then
-
-                        sd_vz(n) = sd_vz(n) * cm2m
-
-                     else
-
-                        !! jacobian
-
-                        sd_vz(n) = (sd_vz(n)/jcb(k,i,j)) * cm2m
-
-                     end if
+!!$                     !== convert contravariant terminal velocity ==!
+!!$
+!!$                     if( trnopt==0 .and. sthopt==0 ) then
+!!$
+!!$                        sd_vz(n) = sd_vz(n) * cm2m
+!!$
+!!$                     else
+!!$
+!!$                        !! jacobian
+!!$
+!!$                        sd_vz(n) = (sd_vz(n)/jcb(k,i,j)) * cm2m
+!!$
+!!$                     end if
 
                   end do
 
@@ -2626,19 +2646,21 @@ contains
 
                      sd_vz(n) = (sd_visco*nre)/(sd_rd*sd_dia)
 
-                     !== convert contravariant terminal velocity ==!
+                     sd_vz(n) = sd_vz(n) * cm2m
 
-                     if( trnopt==0 .and. sthopt==0 ) then
-
-                        sd_vz(n) = sd_vz(n) * cm2m
-
-                     else
-
-                        !! jacobian
-
-                        sd_vz(n) = (sd_vz(n)/jcb(k,i,j)) * cm2m
-
-                     end if
+!!$                     !== convert contravariant terminal velocity ==!
+!!$
+!!$                     if( trnopt==0 .and. sthopt==0 ) then
+!!$
+!!$                        sd_vz(n) = sd_vz(n) * cm2m
+!!$
+!!$                     else
+!!$
+!!$                        !! jacobian
+!!$
+!!$                        sd_vz(n) = (sd_vz(n)/jcb(k,i,j)) * cm2m
+!!$
+!!$                     end if
 
                   end do
 
@@ -2653,6 +2675,9 @@ contains
       if( .not. doprecipitation ) then
          sd_vz(:) = 0.0_RP
       endif
+
+      ! temporary for test
+      sd_vz(:) = 10.0_RP
 
     return
   end subroutine sdm_getvz
@@ -3224,12 +3249,13 @@ contains
     return
   end subroutine getexner
   !-----------------------------------------------------------------------------
-  subroutine sdm_calc(sdm_calvar,sdm_mvexchg,dtcl, sdm_aslset,    &
-                      jcb,rst_crs,exnr_crs,                       &
-                      pbr_crs,ptbr_crs,u_crs,v_crs,wc_crs,pp_crs, &
+  subroutine sdm_calc(MOMX,MOMY,MOMZ,DENS,                           & 
+                      sdm_calvar,sdm_mvexchg,dtcl, sdm_aslset,    &
+                      exnr_crs,                       &
+                      pbr_crs,ptbr_crs,pp_crs, &
                       ptp_crs,qv_crs,prec_crs,zph_crs,rhod_crs,   &
                       lsdmup,ni_sdm,nj_sdm,nk_sdm,                &
-                      sd_num,sd_numasl,sd_n,sd_x,sd_y,sd_rk,      &
+                      sd_num,sd_numasl,sd_n,sd_x,sd_y,sd_ri,sd_rj,sd_rk,      &
                       sd_u,sd_v,sd_vz,sd_r,sd_asl,sd_rkl,sd_rku,  &
                       sd_rng,sd_rand,sort_id,sort_key,sort_freq,  &
 !                      sd_rand,sort_id,sort_key,sort_freq,         &
@@ -3243,13 +3269,17 @@ contains
        PRC_MPIstop
    use scale_time, only: &
        dt => TIME_DTSEC_ATMOS_PHY_MP
+   real(RP), intent(inout) :: DENS(KA,IA,JA)        !! Density [kg/m3]
+   real(RP), intent(inout) :: MOMZ(KA,IA,JA)        !! Momentum [kg/s/m2]
+   real(RP), intent(inout) :: MOMX(KA,IA,JA)
+   real(RP), intent(inout) :: MOMY(KA,IA,JA)
    ! Input variables
    logical,  intent(in) :: sdm_calvar(3)
    integer,  intent(in) :: sdm_aslset
    integer,  intent(in) :: sdm_mvexchg
    real(RP), intent(in) :: dtcl(1:3)    ! Time interval of cloud micro physics
-   real(RP), intent(in) :: jcb(KA,IA,JA)      ! Jacobian at scalar points
-   real(RP), intent(in) :: rst_crs(KA,IA,JA)  ! Base state density x Jacobian
+!   real(RP), intent(in) :: jcb(KA,IA,JA)      ! Jacobian at scalar points
+!   real(RP), intent(in) :: rst_crs(KA,IA,JA)  ! Base state density x Jacobian
    real(RP), intent(in) :: exnr_crs(KA,IA,JA) ! exner function
    real(RP), intent(in) :: pbr_crs(KA,IA,JA)  ! Base state pressure
    real(RP), intent(in) :: ptbr_crs(KA,IA,JA) ! Base state potential temperature
@@ -3269,10 +3299,12 @@ contains
    integer(DP), intent(inout) :: sd_n(1:sd_num)    ! multiplicity of super-droplets
    real(RP), intent(inout) :: sd_x(1:sd_num)  ! x-coordinate of super-droplets
    real(RP), intent(inout) :: sd_y(1:sd_num)  ! y-coordinate of super-droplets
+   real(RP), intent(inout) :: sd_ri(1:sd_num) ! face index-i(real) of super-droplets
+   real(RP), intent(inout) :: sd_rj(1:sd_num) ! face index-j(real) of super-droplets
    real(RP), intent(inout) :: sd_rk(1:sd_num) ! index[k/real] of super-droplets in vertical
    real(RP), intent(inout) :: sd_u(1:sd_num)  ! x-components velocity of super-droplets
    real(RP), intent(inout) :: sd_v(1:sd_num)  ! y-components velocity of super-droplets
-   real(RP), intent(inout) :: sd_vz(1:sd_num) ! terminal velocity of super-droplets /zeta components contravariant velocity of super-droplets
+   real(RP), intent(inout) :: sd_vz(1:sd_num) ! terminal velocity of super-droplets /z velocity of super-droplets
    real(RP), intent(inout) :: sd_r(1:sd_num)  ! equivalent radius of super-droplets
    real(RP), intent(inout) :: sd_asl(1:sd_num,1:sd_numasl) ! aerosol mass of super-droplets
    type(c_rng_uniform_mt), intent(inout) :: sd_rng ! random number generator
@@ -3281,9 +3313,6 @@ contains
    integer, intent(inout) :: sort_key(1:sd_num) ! sort key
    integer, intent(inout) :: sort_freq(1:ni_sdm*nj_sdm*nk_sdm+1) ! number of super-droplets in each grid
    integer, intent(inout) :: sort_tag(1:ni_sdm*nj_sdm*nk_sdm+2)  ! accumulated number of super-droplets in each grid
-   real(RP), intent(inout) :: u_crs(KA,IA,JA)  ! x-component velocity
-   real(RP), intent(inout) :: v_crs(KA,IA,JA)  ! y-component velocity
-   real(RP), intent(inout) :: wc_crs(KA,IA,JA) ! zeta components of contravariant velocity
    real(RP), intent(inout) :: ptp_crs(KA,IA,JA)! Potential temperature perturbation
    real(RP), intent(inout) :: qv_crs(KA,IA,JA) ! Water vapor mixing ratio
    real(RP), intent(inout) :: prec_crs(IA,JA,1:2)! [1]:precipitation and [2]:accumlation
@@ -3311,6 +3340,10 @@ contains
    ! Work variables
    integer :: t, n     ! index
    integer :: k,i,j     ! index
+   real(RP) :: u_scale(KA,IA,JA)   ! u components of velocity
+   real(RP) :: v_scale(KA,IA,JA)   ! v components of velocity
+   real(RP) :: w_scale(KA,IA,JA)   ! w components of velocity
+
    !---------------------------------------------------------------------
 
       ! Initialize and rename variables
@@ -3321,11 +3354,6 @@ contains
       istep_adv = nclstp(3)                !! motion of super-droplets
 
       lsdmup = .false.
-
-      ! Get dry air density at the start of SDM.
-
-      call sdm_getrhod(pbr_crs,ptbr_crs,pp_crs,ptp_crs,       &
-                       qv_crs,rhod_crs)
 
       ! Calculate super-droplets process.
       !   1 : condensation / evaporation
@@ -3381,7 +3409,7 @@ contains
             ! get the terminal velocity of super-droplets
 
             call sdm_getvz(sthopt,trnopt,                      &
-                           jcb,pbr_crs,ptbr_crs,               &
+                           pbr_crs,ptbr_crs,               &
                            pp_crs,ptp_crs,rhod_crs,            &
                            sd_num,sd_x,sd_y,sd_rk,sd_r,sd_vz,  &
                            sd_itmp1,sd_itmp2,sd_itmp3,'coales' )
@@ -3428,15 +3456,25 @@ contains
 
             ! get the terminal velocity of super-droplets
             call sdm_getvz(sthopt,trnopt,                      &
-                           jcb,pbr_crs,ptbr_crs,               &
+                           pbr_crs,ptbr_crs,               &
                            pp_crs,ptp_crs,rhod_crs,            &
                            sd_num,sd_x,sd_y,sd_rk,sd_r,sd_vz,  &
                            sd_itmp1,sd_itmp2,sd_itmp3,'motion' )
 
             ! get the moving velocity of super-droplets
 
-            call sdm_getvel(u_crs,v_crs,wc_crs,                   &
-                            sd_num,sd_x,sd_y,sd_rk,sd_u,sd_v,sd_vz)
+            do k = 1, KA
+            do i = 1, IA
+            do j = 1, JA
+               u_scale(k,i,j) = 2.0_RP * MOMX(k,i,j) / ( DENS(k,i,j)+DENS(k,IMIN1(i),j) )
+               v_scale(k,i,j) = 2.0_RP * MOMY(k,i,j) / ( DENS(k,i,j)+DENS(k,i,JMIN1(j)) )
+               w_scale(k,i,j) = 2.0_RP * MOMZ(k,i,j) / ( DENS(k,i,j)+DENS(KMIN1(k),i,j) )
+            enddo
+            enddo
+            enddo
+
+            call sdm_getvel(u_scale,v_scale,w_scale,                   &
+                            sd_num,sd_x,sd_y,sd_ri,sd_rj,sd_rk,sd_u,sd_v,sd_vz)
 
             ! get the momentum of super-droplets after moving.
 
@@ -3457,7 +3495,7 @@ contains
             end if
 
             ! { motion } in SDM
-            call sdm_move(dziv_sdm,sdm_dtadv,                         &
+            call sdm_move(sdm_dtadv,                         &
                           sd_num,sd_u,sd_v,sd_vz,sd_x,sd_y,sd_rk)
 
             ! lateral boundary routine in SDM
@@ -4845,27 +4883,31 @@ contains
   !-----------------------------------------------------------------------------
 
   !-----------------------------------------------------------------------------
-  subroutine sdm_getvel(u_crs,v_crs,wc_crs,              &
-                        sd_num,sd_x,sd_y,sd_rk,sd_u,sd_v,sd_vzwc)
+  subroutine sdm_getvel(u_scale,v_scale,w_scale,              &
+                        sd_num,sd_x,sd_y,sd_ri,sd_rj,sd_rk,sd_u,sd_v,sd_vzw)
       use scale_grid, only: &
            FX => GRID_FX, &
            FY => GRID_FY
+      use m_sdm_coordtrans, only: &
+           sdm_x2ri, sdm_y2rj
       ! Input variables
-      real(RP), intent(in) :: u_crs(KA,IA,JA) ! x-component velocity
-      real(RP), intent(in) :: v_crs(KA,IA,JA) ! y-component velocity
-      real(RP), intent(in) :: wc_crs(KA,IA,JA) ! zeta components of contravariant velocity
+      real(RP), intent(in) :: u_scale(KA,IA,JA) ! x-component velocity
+      real(RP), intent(in) :: v_scale(KA,IA,JA) ! y-component velocity
+      real(RP), intent(in) :: w_scale(KA,IA,JA) ! zeta components of contravariant velocity
       integer, intent(in) :: sd_num  ! number of super-droplets
       real(RP), intent(in) :: sd_x(1:sd_num) ! x-coordinate of super-droplets
       real(RP), intent(in) :: sd_y(1:sd_num) ! y-coordinate of super-droplets
       real(RP), intent(in) :: sd_rk(1:sd_num) ! index[k/real] of super-droplets
       ! Input and output variables
-      real(RP), intent(inout) :: sd_vzwc(1:sd_num)  ! terminal velocity [in] / zeta components of contravariant velocity [out] of super-droplets
+      real(RP), intent(inout) :: sd_vzw(1:sd_num)  ! terminal velocity [in] / z velocity [out] of super-droplets
       ! Output variables
+      real(RP), intent(out) :: sd_ri(1:sd_num) ! face index-i(real) of super-droplets
+      real(RP), intent(out) :: sd_rj(1:sd_num) ! face index-j(real) of super-droplets
       real(RP), intent(out) :: sd_u(1:sd_num) ! x-direction velocity of super-droplets
       real(RP), intent(out) :: sd_v(1:sd_num) ! y-direction velocity of super-droplets
       ! Work variables
       real(RP) :: sd_vz ! terminal velocity of super-droplets
-      real(RP) :: sd_wc ! zeta components of contravariant velocity of super-droplets
+      real(RP) :: sd_w  ! z velocity of super-droplets
       real(RP) :: ri    ! real index [i] of super-droplets
       real(RP) :: rj    ! real index [j] of super-droplets
       real(RP) :: rk    ! real index [k] of super-droplets
@@ -4883,9 +4925,11 @@ contains
       integer :: iZp    ! index for inteporation
       integer :: n, i, j,k      ! index
     !-------------------------------------------------------------------
-    ! Get the required namelist variables.
-
     ! The advection process of Super-Droplets.
+
+      call sdm_x2ri(sd_num,sd_x,sd_ri)
+      call sdm_y2rj(sd_num,sd_y,sd_rj)
+
       do n=1,sd_num
 
          !### skip invalid super-droplets ###!
@@ -4896,18 +4940,20 @@ contains
 
 !         ri = sd_x(n) * real(dxiv_sdm,kind=r8) + 2.d0
 !         rj = sd_y(n) * real(dyiv_sdm,kind=r8) + 2.d0
-         iloop: do i = IS, IE
-           if( sd_x(n) < ( FX(i)-FX(IS-1) ) ) then
-            ri = real(i-1,kind=RP) + real( ( sd_x(n)-( FX(i-1)-FX(IS-1) ) ) / ( FX(i)-FX(i-1) ) )
-            exit iloop
-           endif
-         enddo iloop
-         jloop: do j = JS, JE
-           if( sd_y(n) < ( FY(j)-FY(JS-1) ) ) then
-            rj = real(j-1,kind=RP) + real( ( sd_y(n)-( FY(j-1)-FY(JS-1) ) ) / ( FY(j)-FY(j-1) ) )
-            exit jloop
-           endif
-         enddo jloop
+!!$         iloop: do i = IS, IE
+!!$           if( sd_x(n) < ( FX(i)-FX(IS-1) ) ) then
+!!$            ri = real(i-1,kind=RP) + real( ( sd_x(n)-( FX(i-1)-FX(IS-1) ) ) / ( FX(i)-FX(i-1) ) )
+!!$            exit iloop
+!!$           endif
+!!$         enddo iloop
+!!$         jloop: do j = JS, JE
+!!$           if( sd_y(n) < ( FY(j)-FY(JS-1) ) ) then
+!!$            rj = real(j-1,kind=RP) + real( ( sd_y(n)-( FY(j-1)-FY(JS-1) ) ) / ( FY(j)-FY(j-1) ) )
+!!$            exit jloop
+!!$           endif
+!!$         enddo jloop
+         ri = sd_ri(n)
+         rj = sd_rj(n)
          rk = sd_rk(n)
 
          !### x-velocity at the position of super-droplets ###!
@@ -4929,14 +4975,14 @@ contains
          sZm = (rk-0.50_RP) - real(iZm,kind=RP)
          sZp = 1.0_RP - sZm
 
-         sd_u(n) = u_crs(iZm,iXm,iYm) * ( SXp * SYp * SZp )             &
-                 + u_crs(iZm,iXp,iYm) * ( SXm * SYp * SZp )             &
-                 + u_crs(iZm,iXm,iYp) * ( SXp * SYm * SZp )             &
-                 + u_crs(iZm,iXp,iYp) * ( SXm * SYm * SZp )             &
-                 + u_crs(iZp,iXm,iYm) * ( SXp * SYp * SZm )             &
-                 + u_crs(iZp,iXp,iYm) * ( SXm * SYp * SZm )             &
-                 + u_crs(iZp,iXm,iYp) * ( SXp * SYm * SZm )             &
-                 + u_crs(iZp,iXp,iYp) * ( SXm * SYm * SZm )
+         sd_u(n) = u_scale(iZm,iXm,iYm) * ( SXp * SYp * SZp )             &
+                 + u_scale(iZm,iXp,iYm) * ( SXm * SYp * SZp )             &
+                 + u_scale(iZm,iXm,iYp) * ( SXp * SYm * SZp )             &
+                 + u_scale(iZm,iXp,iYp) * ( SXm * SYm * SZp )             &
+                 + u_scale(iZp,iXm,iYm) * ( SXp * SYp * SZm )             &
+                 + u_scale(iZp,iXp,iYm) * ( SXm * SYp * SZm )             &
+                 + u_scale(iZp,iXm,iYp) * ( SXp * SYm * SZm )             &
+                 + u_scale(iZp,iXp,iYp) * ( SXm * SYm * SZm )
 
          !### y-velocity at the position of super-droplets ###!
 
@@ -4958,16 +5004,16 @@ contains
          sZm = (rk-0.50_RP) - real(iZm,kind=RP)
          sZp = 1.0_RP - sZm
 
-         sd_v(n) = v_crs(iZm,iXm,iYm) * ( SXp * SYp * SZp )             &
-                 + v_crs(iZm,iXp,iYm) * ( SXm * SYp * SZp )             &
-                 + v_crs(iZm,iXm,iYp) * ( SXp * SYm * SZp )             &
-                 + v_crs(iZm,iXp,iYp) * ( SXm * SYm * SZp )             &
-                 + v_crs(iZp,iXm,iYm) * ( SXp * SYp * SZm )             &
-                 + v_crs(iZp,iXp,iYm) * ( SXm * SYp * SZm )             &
-                 + v_crs(iZp,iXm,iYp) * ( SXp * SYm * SZm )             &
-                 + v_crs(iZp,iXp,iYp) * ( SXm * SYm * SZm )
+         sd_v(n) = v_scale(iZm,iXm,iYm) * ( SXp * SYp * SZp )             &
+                 + v_scale(iZm,iXp,iYm) * ( SXm * SYp * SZp )             &
+                 + v_scale(iZm,iXm,iYp) * ( SXp * SYm * SZp )             &
+                 + v_scale(iZm,iXp,iYp) * ( SXm * SYm * SZp )             &
+                 + v_scale(iZp,iXm,iYm) * ( SXp * SYp * SZm )             &
+                 + v_scale(iZp,iXp,iYm) * ( SXm * SYp * SZm )             &
+                 + v_scale(iZp,iXm,iYp) * ( SXp * SYm * SZm )             &
+                 + v_scale(iZp,iXp,iYp) * ( SXm * SYm * SZm )
 
-         !### zeta components of contravariant velocity ###!
+         !### z velocity ###!
          !### at the position of super-droplets         ###!
 
 !         iXm = floor(ri-0.50_RP)
@@ -4989,63 +5035,63 @@ contains
          sZm = rk - real(iZm,kind=RP)
          sZp = 1.0_RP - sZm
 
-         sd_wc = wc_crs(iZm,iXm,iYm) * ( SXp * SYp * SZp )              &
-               + wc_crs(iZm,iXp,iYm) * ( SXm * SYp * SZp )              &
-               + wc_crs(iZm,iXm,iYp) * ( SXp * SYm * SZp )              &
-               + wc_crs(iZm,iXp,iYp) * ( SXm * SYm * SZp )              &
-               + wc_crs(iZp,iXm,iYm) * ( SXp * SYp * SZm )              &
-               + wc_crs(iZp,iXp,iYm) * ( SXm * SYp * SZm )              &
-               + wc_crs(iZp,iXm,iYp) * ( SXp * SYm * SZm )              &
-               + wc_crs(iZp,iXp,iYp) * ( SXm * SYm * SZm )
+         sd_w = w_scale(iZm,iXm,iYm) * ( SXp * SYp * SZp )              &
+               + w_scale(iZm,iXp,iYm) * ( SXm * SYp * SZp )              &
+               + w_scale(iZm,iXm,iYp) * ( SXp * SYm * SZp )              &
+               + w_scale(iZm,iXp,iYp) * ( SXm * SYm * SZp )              &
+               + w_scale(iZp,iXm,iYm) * ( SXp * SYp * SZm )              &
+               + w_scale(iZp,iXp,iYm) * ( SXm * SYp * SZm )              &
+               + w_scale(iZp,iXm,iYp) * ( SXp * SYm * SZm )              &
+               + w_scale(iZp,iXp,iYp) * ( SXm * SYm * SZm )
 
          ! the impact of terminal veloicty
 
-         sd_vz = sd_vzwc(n)
+         sd_vz = sd_vzw(n)
 
-         sd_vzwc(n) = sd_wc - sd_vz
+         sd_vzw(n) = sd_w - sd_vz
       end do
 
 
     return
   end subroutine sdm_getvel
   !----------------------------------------------------------------------------
-  subroutine sdm_move(dziv_sdm,sdm_dtadv,                      &
-                        sd_num,sd_u,sd_v,sd_wc,sd_x,sd_y,sd_rk)
-
+  subroutine sdm_move(sdm_dtadv,                      &
+                        sd_num,sd_u,sd_v,sd_vz,sd_x,sd_y,sd_rk)
+    use scale_grid, only: &
+         DZ 
+    
      ! Input variables
 
-     real(RP), intent(in) :: dziv_sdm(KA) ! Inverse of dz_sdm
      real(RP), intent(in) :: sdm_dtadv ! time step of {motion of super-droplets} process
      integer, intent(in) :: sd_num ! number of super-droplets
      real(RP), intent(in) :: sd_u(1:sd_num) ! x-direction velocity of super-droplets
      real(RP), intent(in) :: sd_v(1:sd_num) ! y-direction velocity of super-droplets
-     real(RP), intent(in) :: sd_wc(1:sd_num) ! zeta components of contravariant velocity of super-droplets
+     real(RP), intent(in) :: sd_vz(1:sd_num) ! z velocity of super-droplets
      ! Input and output variables
      real(RP), intent(inout) :: sd_x(1:sd_num)  ! x-coordinate of super-droplets
      real(RP), intent(inout) :: sd_y(1:sd_num)  ! y-coordinate of super-droplets
      real(RP), intent(inout) :: sd_rk(1:sd_num) ! index[k/real] of super-droplets
      ! Work variables
      integer :: n           ! index
-     real(RP) :: tmpi
+     real(RP) :: dz_inv
      !---------------------------------------------------------------------
-      ! The advection process of Super-Droplets.
+     ! The advection process of Super-Droplets.
 
-      do n=1,sd_num
+     ! now only support uniform grid
+     dz_inv=1.0_RP/DZ
+     do n=1,sd_num
 
-         !### skip invalid super-droplets ###!
+        !### skip invalid super-droplets ###!
 
-         if( sd_rk(n)<VALID2INVALID ) cycle
+        if( sd_rk(n)<VALID2INVALID ) cycle
 
-         !### move super-droplets (explicit) ###!
-         sd_x(n)  = sd_x(n)  + sd_u(n)  * real(sdm_dtadv,kind=RP)
-         sd_y(n)  = sd_y(n)  + sd_v(n)  * real(sdm_dtadv,kind=RP)
-         sd_rk(n) = sd_rk(n) + 0.1_RP * real(sdm_dtadv,kind=RP)
-!!$         sd_rk(n) = sd_rk(n) + sd_wc(n) * real(sdm_dtadv,kind=RP)       &
-!!$                                        * real(dziv_sdm(int(sd_rk(n))),kind=RP)
-!!$!                                        * real(dziv_sdm(floor(sd_rk(n))),kind=RP)
-      enddo
+        !### move super-droplets (explicit) ###!
+        sd_x(n)  = sd_x(n)  + sd_u(n)  * real(sdm_dtadv,kind=RP)
+        sd_y(n)  = sd_y(n)  + sd_v(n)  * real(sdm_dtadv,kind=RP)
+        sd_rk(n) = sd_rk(n) + sd_vz(n) * real(sdm_dtadv,kind=RP) * dz_inv
+     enddo
 
-    return
+     return
   end subroutine sdm_move
   !----------------------------------------------------------------------------
   subroutine sdm_boundry(wbc,ebc,sbc,nbc,                         &
@@ -6727,7 +6773,7 @@ contains
   subroutine sdm_aslform(sdm_calvar,sdm_aslset,                   &
                          sdm_aslfmsdnc,sdm_sdnmlvol,              &
                          sdm_zupper,sdm_zlower,dtcl,              &
-                         jcb_crs,pbr_crs,ptbr_crs,pp_crs,         &
+                         pbr_crs,ptbr_crs,pp_crs,         &
                          ptp_crs,qv_crs,zph_crs,rhod_crs,         &
                          sd_num,sd_numasl,sd_n,sd_x,sd_y,sd_z,    &
                          sd_rk,sd_u,sd_v,sd_vz,sd_r,sd_asl,       &
@@ -6748,7 +6794,7 @@ contains
       real(RP),intent(in) :: sdm_zlower    ! Lower limitaion of initial droplet's position
       real(RP),intent(in) :: sdm_zupper    ! Upper limitaion of initial droplet's position
       real(RP),intent(in) :: dtcl(1:5)     ! Time interval of cloud micro physics
-      real(RP), intent(in) :: jcb_crs(KA,IA,JA)   ! Jacobian at scalar points
+!      real(RP), intent(in) :: jcb_crs(KA,IA,JA)   ! Jacobian at scalar points
       real(RP), intent(in) :: pbr_crs(KA,IA,JA)   ! Base state pressure
       real(RP), intent(in) :: ptbr_crs(KA,IA,JA)  ! Base state potential temperature
       real(RP), intent(in) :: pp_crs(KA,IA,JA)    ! Pressure perturbation
@@ -6894,7 +6940,7 @@ contains
      ! Set terminal velocity of super-droplets
 
       call sdm_getvz(sthopt,trnopt,                                   &
-                     jcb_crs,pbr_crs,ptbr_crs,                        &
+                     pbr_crs,ptbr_crs,                        &
                      pp_crs,ptp_crs,rhod_crs,                         &
                      sd_fmnum,sd_fmx,sd_fmy,sd_fmrk,sd_fmr,sd_fmvz,   &
                      sd_itmp1(1:sd_fmnum,1),sd_itmp2(1:sd_fmnum,1),   &
@@ -7695,7 +7741,6 @@ contains
          end if
 
       end do
-
     return
   end subroutine sdm_jdginvdv
   !----------------------------------------------------------------------------

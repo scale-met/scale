@@ -16,6 +16,7 @@
 !! @li      2014-06-26 (S.Shima) [new] Separated from scale_atmos_phy_mp_sdm.F90
 !! @li      2014-06-27 (S.Shima) [rev] sdm_rk2z, sdm_x2ri, sdm_y2rj added
 !! @li      2014-07-04 (S.Shima) [rev] sdm_x2ri, sdm_y2rj modified to reduce dependency.
+!! @li      2014-07-05 (S.Shima) [rev] sdm_x2ri, sdm_y2rj optimized for uniform grid temporarily. Bugfix of sdm_getrklu.
 !!
 !<
 !-------------------------------------------------------------------------------
@@ -23,7 +24,7 @@ module m_sdm_coordtrans
 
   implicit none
   private
-  public :: sdm_getrklu, sdm_z2rk, sdm_rk2z
+  public :: sdm_getrklu, sdm_x2ri, sdm_y2rj, sdm_z2rk, sdm_rk2z
 
 contains
   subroutine sdm_rk2z(sd_num,sd_x,sd_y,sd_rk,sd_z,sd_ri,sd_rj)
@@ -172,7 +173,7 @@ contains
 
          zph_u = REAL_FZ(k+1,i,j)
          zph_l = REAL_FZ(k,i,j)
-         zph_s = REAL_FZ(KS,i,j)
+         zph_s = REAL_FZ(KS-1,i,j)
 
          !### get vertical index of 'sdm_zlower' ###!
 
@@ -256,7 +257,6 @@ contains
 
 !      knum_sdm = min( nk-3, (floor(rkumax)+1)-2 )
       knum_sdm = min( KE-KS+1, (floor(rkumax)+1)-KS+1 )
-
     return
   end subroutine sdm_getrklu
   !-----------------------------------------------------------------------------
@@ -390,7 +390,7 @@ contains
   !-----------------------------------------------------------------------------
   subroutine sdm_x2ri(sd_num,sd_x,sd_ri)
     use scale_grid, only: &
-         GRID_FX
+         GRID_FX, DX
     use scale_grid_index
     use scale_precision
     use scale_stdio
@@ -404,7 +404,11 @@ contains
     ! Work variables
     integer :: i,n    ! index
     integer :: error
-    
+
+    ! only for uniform grid. temporarily used
+    real(RP) :: dx_inv
+    dx_inv=1.0_RP/DX
+
     ! Get horizontal index[i/real] of super-droplets
     error=0
     do n=1,sd_num
@@ -414,12 +418,17 @@ contains
        end if
        
        !### get horizontal face index(real) of super-droplets ###!
-       iloop: do i = IS, IE
-          if( sd_x(n) < GRID_FX(i) ) then
-             sd_ri(n) = real(i-1,kind=RP) + ( sd_x(n)-GRID_FX(i-1) ) / ( GRID_FX(i)-GRID_FX(i-1) )
-             exit iloop
-          endif
-       enddo iloop
+! not used temporarily
+!!$       iloop: do i = IS, IE
+!!$          if( sd_x(n) < GRID_FX(i) ) then
+!!$             sd_ri(n) = real(i-1,kind=RP) + ( sd_x(n)-GRID_FX(i-1) ) / ( GRID_FX(i)-GRID_FX(i-1) )
+!!$             exit iloop
+!!$          endif
+!!$       enddo iloop
+
+       ! only for uniform grid. temporarily used
+       sd_ri(n) = real((IS-1),kind=RP) + (sd_x(n)-GRID_FX(IS-1))*dx_inv
+
     end do
 
     if(error==1)then
@@ -432,7 +441,7 @@ contains
   !-----------------------------------------------------------------------------
   subroutine sdm_y2rj(sd_num,sd_y,sd_rj)
     use scale_grid, only: &
-         GRID_FY
+         GRID_FY,DY
     use scale_grid_index
     use scale_precision
     use scale_stdio
@@ -447,6 +456,10 @@ contains
     integer :: j,n    ! index
     integer :: error
 
+    ! only for uniform grid. temporarily used
+    real(RP) :: dy_inv
+    dy_inv=1.0_RP/DY
+
     ! Get horizontal index[i/real] of super-droplets
     error=0
     do n=1,sd_num
@@ -456,12 +469,18 @@ contains
        end if
        
        !### get horizontal face index(real) of super-droplets ###!
-       jloop: do j = JS, JE
-          if( sd_y(n) < GRID_FY(j) ) then
-             sd_rj(n) = real(j-1,kind=RP) + ( sd_y(n)-GRID_FY(j-1) ) / ( GRID_FY(j)-GRID_FY(j-1) )
-             exit jloop
-          endif
-       enddo jloop
+! not used temporarily
+!!$       jloop: do j = JS, JE
+!!$          if( sd_y(n) < GRID_FY(j) ) then
+!!$             sd_rj(n) = real(j-1,kind=RP) + ( sd_y(n)-GRID_FY(j-1) ) / ( GRID_FY(j)-GRID_FY(j-1) )
+!!$             exit jloop
+!!$          endif
+!!$       enddo jloop
+!!$    end do
+
+       ! only for uniform grid. temporarily used
+       sd_rj(n) = real((JS-1),kind=RP) + (sd_y(n)-GRID_FY(JS-1))*dy_inv
+
     end do
 
     if(error==1)then
