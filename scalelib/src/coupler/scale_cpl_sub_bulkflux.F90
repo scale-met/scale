@@ -284,6 +284,7 @@ contains
       Z0H,     & ! (in)
       Z0E      ) ! (in)
     use scale_const, only: &
+      EPS     => CONST_EPS,     &
       GRAV    => CONST_GRAV,    &
       KARMAN  => CONST_KARMAN,  &
       RovCP   => CONST_RovCP,   &
@@ -401,13 +402,13 @@ contains
       ! calculate d(residual)/dL
       dres = ( (L+dL) - dUstar**2 * Ta / ( KARMAN * GRAV * dTstar ) - res ) / dL
 
-      ! update Obukhov length
-      L = L - res / dres
-
-      if( abs( res ) < res_min ) then
+      if( abs( res ) < res_min .or. dres < EPS ) then
         ! finish iteration
         exit
       end if
+
+      ! update Obukhov length
+      L = L - res / dres
 
     end do
 
@@ -442,6 +443,9 @@ contains
     ! Wilson (2001)
     fm_unstable = 3.0_RP * log( ( 1.0_RP + sqrt( 1.0_RP + 3.6_RP * (-R)**(2.0_RP/3.0_RP) ) ) * 0.5_RP )
 
+    ! If you want to run with the original Beljaars scheme (Beljaars and Holtslag 1994),
+    ! you should comment out the above line (Wilson 2001) and uncomment the below lines (Paulson 1974; Dyer 1974).
+    !
     !! Paulson (1974); Dyer (1974)
     !r4R = ( 1.0_RP - 16.0_RP * R )**0.25_RP
     !fm_unstable = log( ( 1.0_RP + r4R )**2 * ( 1.0_RP + r4R * r4R ) * 0.125_RP ) - 2.0_RP * atan( r4R ) + PI * 0.5_RP
@@ -470,6 +474,9 @@ contains
     ! Wilson (2001)
     fh_unstable = 3.0_RP * log( ( 1.0_RP + sqrt( 1.0_RP + 7.9_RP * (-R)**(2.0_RP/3.0_RP) ) ) * 0.5_RP )
 
+    ! If you want to run with the original Beljaars scheme (Beljaars and Holtslag 1994),
+    ! you should comment out the above line (Wilson 2001) and uncomment the below lines (Paulson 1974; Dyer 1974).
+    !
     !! Paulson (1974); Dyer (1974)
     !fh_unstable = 2.0_RP * log( ( 1.0_RP + sqrt( 1.0_RP - 16.0_RP * R ) ) * 0.5_RP )
 

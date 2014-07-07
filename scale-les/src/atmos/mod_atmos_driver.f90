@@ -427,7 +427,7 @@ contains
                           SFC_PRES (:,:)    ) ! [OUT]
 
     ! planetary boundary layer
-    ATM_PBL(:,:) = 1.0E+3_RP ! tentative
+    ATM_PBL(:,:) = 1.0E+2_RP ! tentative
 
     if ( CPL_sw ) then
        call COMM_vars8( ATM_PBL   (:,:), 1 )
