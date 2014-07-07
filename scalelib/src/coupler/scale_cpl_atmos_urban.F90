@@ -61,6 +61,7 @@ module scale_cpl_atmos_urban
         LHFLX,   & ! (out)
         GHFLX,   & ! (out)
         LSOLAR,  & ! (in)
+        PRES,    & ! (in)
         TMPA,    & ! (in)
         QA,      & ! (in)
         UA,      & ! (in)
@@ -112,6 +113,7 @@ module scale_cpl_atmos_urban
        real(RP), intent(out) :: GHFLX
 
        logical,  intent(in) :: LSOLAR
+       real(RP), intent(in) :: PRES
        real(RP), intent(in) :: TMPA
        real(RP), intent(in) :: QA
        real(RP), intent(in) :: UA

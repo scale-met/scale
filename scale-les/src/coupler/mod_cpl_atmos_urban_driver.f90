@@ -208,6 +208,7 @@ contains
                        ATM_FLX_LH  (i,j),   & ! [OUT]
                        URB_FLX_heat(i,j),   & ! [OUT]
                        LSOLAR,              & ! [IN]
+                       SFC_PRES    (i,j),   & ! [IN]
                        ATM_TEMP    (i,j),   & ! [IN]
                        ATM_QV      (i,j),   & ! [IN]
                        Uabs,                & ! [IN]
