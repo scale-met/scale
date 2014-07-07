@@ -322,6 +322,7 @@ contains
         LH,      & ! (out)
         GHFLX,   & ! (out)
         LSOLAR,  & ! (in)
+        PRES,    & ! (in)
         TA,      & ! (in)
         QA,      & ! (in)
         UA,      & ! (in)
@@ -337,6 +338,7 @@ contains
     use scale_process, only: &
        PRC_MPIstop
     use scale_const, only: &
+       D2R    => CONST_D2R,     &    ! degree to radian  
        KARMAN => CONST_KARMAN,  &    ! AK : kalman constant  [-]
        PI     => CONST_PI,      &    ! PI : pi               [-]
        CPdry  => CONST_CPdry,   &    ! CPP : heat capacity of dry air [J/K/kg]
@@ -355,6 +357,7 @@ contains
     logical, intent(in) :: LSOLAR  ! logical   [true=both, false=SSG only]
 
     !-- Input variables from Coupler to Urban
+    real(RP), intent(in)    :: PRES ! Surface Pressure [Pa]
     real(RP), intent(in)    :: TA   ! temp at 1st atmospheric level          [K]
     real(RP), intent(in)    :: QA   ! specific humidity at 1st atmospheric level  [kg/kg]
     real(RP), intent(in)    :: UA   ! wind speed at 1st atmospheric level    [m/s]
@@ -405,19 +408,19 @@ contains
     real(RP), intent(out)   :: GHR, GHB, GHG
 
     !-- parameters
-    real(RP), parameter    :: CP  = 0.24_RP     ! heat capacity of dry air  [cgs unit]
-    real(RP), parameter    :: EL  = 583.0_RP    ! latent heat of vaporation [cgs unit]
-    real(RP), parameter    :: SIG = 8.17E-11_RP ! stefun bolzman constant   [cgs unit]
-    real(RP), parameter    :: SRATIO = 0.75_RP  ! ratio between direct/total solar [-]
-    real(RP), parameter    :: TFa      = 0.5_RP      ! factor a in Tomita (2009) 
-    real(RP), parameter    :: TFb      = 1.1_RP      ! factor b in Tomita (2009) 
-    real(RP), parameter    :: redf_min = 1.0E-2_RP   ! minimum reduced factor
-    real(RP), parameter    :: redf_max = 1.0_RP      ! maximum reduced factor
+    real(RP), parameter     :: CP  = 0.24_RP     ! heat capacity of dry air  [cgs unit]
+    real(RP), parameter     :: EL  = 583.0_RP    ! latent heat of vaporation [cgs unit]
+    real(RP), parameter     :: SIG = 8.17E-11_RP ! stefun bolzman constant   [cgs unit]
+    real(RP), parameter     :: SRATIO = 0.75_RP  ! ratio between direct/total solar [-]
+    real(RP), parameter     :: TFa      = 0.5_RP      ! factor a in Tomita (2009) 
+    real(RP), parameter     :: TFb      = 1.1_RP      ! factor b in Tomita (2009) 
+    real(RP), parameter     :: redf_min = 1.0E-2_RP   ! minimum reduced factor
+    real(RP), parameter     :: redf_max = 1.0_RP      ! maximum reduced factor
 
     !-- Local variables
     logical  :: SHADOW = .false.
-           ! [true=consider svf and shadow effects, false=consider svf effect
-           ! only]
+           !  true  = consider svf and shadow effects,
+           !  false = consider svf effect only
 
     real(RP) :: LON,LAT  ! longitude [deg], latitude [deg]
     integer  :: tloc     ! local time (1-24h)
@@ -444,7 +447,7 @@ contains
     real(RP) :: RAINT
     real(RP) :: ROFFR, ROFFB, ROFFG ! runoff [kg/m2]
 
-    real(RP) :: PS         ! Surface Pressure [hPa]
+    real(RP) :: PS         ! Surface Pressure [Pa]
     real(RP) :: TAV        ! Vertial Temperature [K]
     real(RP) :: qmix       ! mixing ratio [kg/kg]
     real(RP) :: ES
@@ -511,20 +514,21 @@ contains
     !-----------------------------------------------------------
 
     ! local time
-    ! tloc=mod(int(OMG/PI*180./15.+12.+0.5 ),24)
-    LAT=XLAT/PI*180.0_RP
-    LON=XLON/PI*180.0_RP
+    LAT = XLAT / D2R
+    LON = XLON / D2R
 
-    tloc = mod( (int(TIME/(60.0_RP*60.0_RP)) + int(LON/15.0_RP)),24 )
-    dsec = mod(TIME,3600.0_RP)
+    tloc = mod( (int(TIME/3600.0_RP) + int(LON/15.0_RP)),24 )
+    dsec = mod(TIME,3600.0_RP) / 3600.0_RP 
     if(tloc==0) tloc = 24
     ! print *,'tloc',TIME,tloc,XLON,XLAT,LON,LAT
 
     ! Calculate AH data at LST
      if(tloc==24)then
-       tahdiurnal = (ahdiurnal(tloc)*(3600.0_RP-dsec)+ahdiurnal(1)*dsec)/3600.0_RP
+       tahdiurnal = ( (1.0_RP-dsec) * ahdiurnal(tloc  ) &
+                    + (       dsec) * ahdiurnal(1)      )
      else
-       tahdiurnal = (ahdiurnal(tloc)*(3600.0_RP-dsec)+ahdiurnal(tloc+1)*dsec)/3600.0_RP
+       tahdiurnal = ( (1.0_RP-dsec) * ahdiurnal(tloc  ) &
+                    + (       dsec) * ahdiurnal(tloc+1) )
      endif
      AH_t  = AH  * tahdiurnal
      ALH_t = ALH * tahdiurnal
@@ -635,11 +639,11 @@ contains
 
     qmix = QA / ( 1.0_RP - QA )
     TAV = TA * ( 1.0_RP + 0.61_RP * qmix )
-    PS  = RHOO * Rdry * TAV / 100.0_RP ! [hPa]
+    !PS  = RHOO * Rdry * TAV / 100.0_RP ! [hPa]
+    PS   =  PRES / 100.0_RP               ! [hPa]
 
     ! TR  Solving Non-Linear Equation by Newton-Rapson
 
-    ! TRP = 350.0_RP
 
     redf   = 1.0_RP
     oldF   = 1.0E+5_RP
@@ -695,6 +699,16 @@ contains
       if( abs(F) < 0.000001_RP .AND. abs(DTR) < 0.000001_RP ) exit
 
     end do
+
+    !print *,IA,JA
+    !if(IA==3.and.JA==3)then  ! adachi
+    ! print *,'Tomita',redf,DFDT,abs(F),abs(oldF)
+    ! print *,'roof',TIME,TR,SR,RR,HR,ELER,G0R
+    ! print *,'HR  ',TIME,HR,RHO,CHR,UA,(TRP-TA)
+    ! print *,'ELER',TIME,ELER,RHO,CHR,UA,BETR,(QS0R-QA)
+    ! print *,'G0R ',TIME,G0R,AKSR,(TRP-TRL(1)),DZR(1)
+    ! print *,'F   ',TIME,iteration-1,abs(F),abs(DTR)
+    !endif
 
     !print *,'roof',tloc,SR,RR,HR,ELER,G0R
     !print *,'HR  ',TIME,HR,RHO,CHR,UA,(TRP-TA)
@@ -1068,7 +1082,9 @@ contains
        WATER = WATER + RAIN
        ROFF  = max(0.0_RP, WATER-STRG)
        WATER = WATER - max(0.0_RP, WATER-STRG)
-       BET   = WATER / STRG
+       BET   = min ( WATER / STRG, 1.0_RP)
+    !   BET   = min ( WATER / STRG, 0.35_RP)
+    !   BET   = max ( WATER / STRG, 0.1_RP)
     endif
 
 !    print *,BET, RAIN, WATER, STRG, ROFF
