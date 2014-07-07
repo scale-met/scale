@@ -133,6 +133,10 @@ contains
     intrinsic shape
     !---------------------------------------------------------------------------
 
+    allocate( tc_urb(IA,JA) )
+    allocate( qc_urb(IA,JA) )
+    allocate( uc_urb(IA,JA) )
+
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[realinput]/Categ[Setup]'
 
@@ -235,10 +239,6 @@ contains
     allocate( qv(KA,IA,JA) )
     allocate( qc(KA,IA,JA) )
     allocate( dz(KA,IA,JA) )
-
-    allocate( tc_urb(IA,JA) )
-    allocate( qc_urb(IA,JA) )
-    allocate( uc_urb(IA,JA) )
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[realinput]/Categ[Input]'
@@ -359,7 +359,7 @@ contains
 
     call ATMOS_PHY_RD_vars_external_in( phy_rd_init_value )
 
-    k = 1
+    k = KS
     do j = JS, JE
     do i = IS, IE
        tc_urb(i,j) = temp(k,i,j)
@@ -376,10 +376,6 @@ contains
     deallocate( temp )
     deallocate( qv )
     deallocate( qc )
-
-    deallocate( tc_urb )
-    deallocate( qc_urb )
-    deallocate( uc_urb )
 
     return
   end subroutine ParentAtomInput
