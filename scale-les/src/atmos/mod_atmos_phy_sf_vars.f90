@@ -59,7 +59,7 @@ module mod_atmos_phy_sf_vars
   real(RP), public, allocatable :: ATMOS_PHY_SF_SFC_PRES  (:,:)   ! surface atmosphere pressure [Pa]
 
   real(RP), public, allocatable :: ATMOS_PHY_SF_SFC_TEMP  (:,:)   ! surface skin temperature             [K]
-  real(RP), public, allocatable :: ATMOS_PHY_SF_SFC_albedo(:,:,:) ! surface albedo, land only            [0-1]
+  real(RP), public, allocatable :: ATMOS_PHY_SF_SFC_albedo(:,:,:) ! surface albedo                       [0-1]
   real(RP), public, allocatable :: ATMOS_PHY_SF_SFC_Z0    (:,:)   ! surface roughness length, ocean only [m]
 
 !  real(RP), public, allocatable :: ATMOS_PHY_SF_SFLX_QEMIS(:,:,:) ! tracer emission   flux [kg/m2/s]

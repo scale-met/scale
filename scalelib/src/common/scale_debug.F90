@@ -88,7 +88,8 @@ contains
        current_file, &
        current_line  )
     use scale_process, only: &
-       PRC_MPIstop
+       PRC_MPIstop, &
+       PRC_myrank
     implicit none
 
     real(RP),         intent(in) :: var(:)
@@ -121,7 +122,8 @@ contains
 !       if( IO_L ) write(IO_FID_LOG,,*) 'xxx invalid value:', trim(varname), '(', k, ')=', var(k)
 !       if( IO_L ) write(IO_FID_LOG,,*) 'xxx in file:', trim(current_file), ', at line:', current_line
 
-       write(*,*) 'xxx invalid value:', trim(varname), '(', k, ')=', var(k)
+       write(*,*) 'xxx invalid value:', trim(varname), &
+                  '(', PRC_myrank, ',', k, ')=', var(k)
        write(*,*) 'xxx in file:', trim(current_file), ', at line:', current_line
 
        call PRC_MPIstop
@@ -142,7 +144,8 @@ contains
        current_file, &
        current_line  )
     use scale_process, only: &
-       PRC_MPIstop
+       PRC_MPIstop, &
+       PRC_myrank
     implicit none
 
     real(RP),         intent(in) :: var(:,:)
@@ -181,7 +184,8 @@ contains
 !       if( IO_L ) write(IO_FID_LOG,,*) 'xxx invalid value:', trim(varname), '(', k, ',', i, ')=', var(k,i)
 !       if( IO_L ) write(IO_FID_LOG,,*) 'xxx in file:', trim(current_file), ', at line:', current_line
 
-       write(*,*) 'xxx invalid value:', trim(varname), '(', k, ',', i, ')=', var(k,i)
+       write(*,*) 'xxx invalid value:', trim(varname), &
+                  '(', PRC_myrank, ',', k, ',', i, ')=', var(k,i)
        write(*,*) 'xxx in file:', trim(current_file), ', at line:', current_line
 
        call PRC_MPIstop
@@ -202,7 +206,8 @@ contains
        current_file, &
        current_line  )
     use scale_process, only: &
-       PRC_MPIstop
+       PRC_MPIstop, &
+       PRC_myrank
     implicit none
 
     real(RP),         intent(in) :: var(:,:,:)
@@ -247,7 +252,8 @@ contains
 !       if( IO_L ) write(IO_FID_LOG,,*) 'xxx invalid value:', trim(varname), '(', k, ',', i, ',', j, ')=', var(k,i,j)
 !       if( IO_L ) write(IO_FID_LOG,,*) 'xxx in file:', trim(current_file), ', at line:', current_line
 
-       write(*,*) 'xxx invalid value:', trim(varname), '(', k, ',', i, ',', j, ')=', var(k,i,j)
+       write(*,*) 'xxx invalid value:', trim(varname), &
+                  '(', PRC_myrank, ',', k, ',', i, ',', j, ')=', var(k,i,j)
        write(*,*) 'xxx in file:', trim(current_file), ', at line:', current_line
 
        call PRC_MPIstop
