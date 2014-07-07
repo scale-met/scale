@@ -4193,6 +4193,21 @@ enddo
                               mdlid,             &
                               INITIAL_STEP       )
 
+    do j = JS, JE
+    do i = IS, IE
+       SFLX_rain   (i,j) = 0.0_RP
+       SFLX_snow   (i,j) = 0.0_RP
+       SFLX_LW_up  (i,j) = 0.0_RP
+       SFLX_LW_dn  (i,j) = 0.0_RP
+       SFLX_SW_up  (i,j) = 0.0_RP
+       SFLX_SW_dn  (i,j) = 0.0_RP
+       TOAFLX_LW_up(i,j) = 0.0_RP
+       TOAFLX_LW_dn(i,j) = 0.0_RP
+       TOAFLX_SW_up(i,j) = 0.0_RP
+       TOAFLX_SW_dn(i,j) = 0.0_RP
+    enddo
+    enddo
+
     return
   end subroutine MKINIT_real
 
