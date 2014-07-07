@@ -677,10 +677,16 @@ contains
   !-----------------------------------------------------------------------------
   !> Input from External I/O
   subroutine URBAN_vars_external_in( &
-       ts_urb_in )
+       ts_urb_in,     &
+       tc_urb_in,     &
+       qc_urb_in,     &
+       uc_urb_in      )
     implicit none
 
     real(RP), intent(in) :: ts_urb_in(IA,JA)
+    real(RP), intent(in) :: tc_urb_in(IA,JA)
+    real(RP), intent(in) :: qc_urb_in(IA,JA)
+    real(RP), intent(in) :: uc_urb_in(IA,JA)
     integer :: i
     !---------------------------------------------------------------------------
 
@@ -691,6 +697,10 @@ contains
     TR_URB(:,:) = ts_urb_in(:,:)
     TB_URB(:,:) = ts_urb_in(:,:)
     TG_URB(:,:) = ts_urb_in(:,:)
+
+    TC_URB(:,:) = tc_urb_in(:,:)
+    QC_URB(:,:) = qc_urb_in(:,:)
+    UC_URB(:,:) = uc_urb_in(:,:)
 
     do i=UKS, UKE
        TRL_URB(i,:,:) = ts_urb_in(:,:)

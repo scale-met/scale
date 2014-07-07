@@ -104,6 +104,10 @@ module mod_realinput
   integer, private :: interp_search_divnum = 10
   logical, private :: wrfout = .false.  ! file type switch (wrfout or wrfrst)
 
+  real(RP), private, allocatable :: tc_urb(:,:) ! input data for urban models (canopy temp)
+  real(RP), private, allocatable :: qc_urb(:,:) ! input data for urban models (canopy vapor)
+  real(RP), private, allocatable :: uc_urb(:,:) ! input data for urban models (canopy wind speed)
+
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -232,6 +236,10 @@ contains
     allocate( qc(KA,IA,JA) )
     allocate( dz(KA,IA,JA) )
 
+    allocate( tc_urb(IA,JA) )
+    allocate( qc_urb(IA,JA) )
+    allocate( uc_urb(IA,JA) )
+
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[realinput]/Categ[Input]'
 
@@ -351,6 +359,15 @@ contains
 
     call ATMOS_PHY_RD_vars_external_in( phy_rd_init_value )
 
+    k = 1
+    do j = JS, JE
+    do i = IS, IE
+       tc_urb(i,j) = temp(k,i,j)
+       qc_urb(i,j) = qv(k,i,j)
+       uc_urb(i,j) = sqrt( u(k,i,j)**2.0_RP + v(k,i,j)**2.0_RP )
+    enddo
+    enddo
+
     deallocate( w )
     deallocate( u )
     deallocate( v )
@@ -359,6 +376,10 @@ contains
     deallocate( temp )
     deallocate( qv )
     deallocate( qc )
+
+    deallocate( tc_urb )
+    deallocate( qc_urb )
+    deallocate( uc_urb )
 
     return
   end subroutine ParentAtomInput
@@ -602,7 +623,7 @@ contains
     call LAND_vars_external_in( tg, strg, lst, albg )
 
     ! Write out: Urban
-    call URBAN_vars_external_in( ust )
+    call URBAN_vars_external_in( ust, tc_urb, qc_urb, uc_urb )
 
     ! Input to PHY_SF Container
     call ATMOS_PHY_SF_vars_external_in( skint, albw(:,:,I_LW), albw(:,:,I_SW), z0w )
@@ -1147,6 +1168,7 @@ contains
     real(RP), allocatable :: lcz_3D(:,:,:)
     real(RP), allocatable :: hfact(:,:,:)
     real(RP), allocatable :: vfact(:,:,:,:,:)
+
     integer, allocatable :: igrd(:,:,:)
     integer, allocatable :: jgrd(:,:,:)
     integer, allocatable :: kgrd(:,:,:,:,:)
