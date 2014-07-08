@@ -105,7 +105,9 @@ contains
        REAL_BASEPOINT_LON, &
        REAL_BASEPOINT_LAT
     use scale_landuse, only: &
-       LANDUSE_frac_land
+       LANDUSE_fact_ocean, &
+       LANDUSE_fact_land,  &
+       LANDUSE_fact_urban
     use scale_time, only: &
        dt_RD => TIME_DTSEC_ATMOS_PHY_RD, &
        TIME_NOWDATE
@@ -185,14 +187,16 @@ contains
                                  LAT   (:,:),    & ! [IN]
                                  TIME_NOWDATE(:) ) ! [IN]
 
-       call ATMOS_PHY_RD( DENS, RHOT, QTRC,  & ! [IN]
-                          REAL_CZ, REAL_FZ,  & ! [IN]
-                          LANDUSE_frac_land, & ! [IN]
-                          SFC_TEMP,          & ! [IN]
-                          SFC_albedo,        & ! [IN]
-                          solins, cosSZA,    & ! [IN]
-                          flux_rad,          & ! [OUT]
-                          flux_rad_top       ) ! [OUT]
+       call ATMOS_PHY_RD( DENS, RHOT, QTRC,   & ! [IN]
+                          REAL_CZ, REAL_FZ,   & ! [IN]
+                          LANDUSE_fact_ocean, & ! [IN]
+                          LANDUSE_fact_land,  & ! [IN]
+                          LANDUSE_fact_urban, & ! [IN]
+                          SFC_TEMP,           & ! [IN]
+                          SFC_albedo,         & ! [IN]
+                          solins, cosSZA,     & ! [IN]
+                          flux_rad,           & ! [OUT]
+                          flux_rad_top        ) ! [OUT]
 
        ! apply radiative flux convergence -> heating rate
        call RD_heating( flux_rad (:,:,:,:,:), & ! [IN]

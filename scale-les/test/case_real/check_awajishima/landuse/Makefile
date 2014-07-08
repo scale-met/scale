@@ -20,10 +20,10 @@ BINNAME     = NONE
 PPCONF      = pp.conf
 INITCONF    = NONE
 RUNCONF     = NONE
-TPROC       = 6
+TPROC       = 24
 
 # required data (parameters,distributed files)
-DATDIR      = $(abspath /data2/scale_database/landuse/LU100M/Products)
+DATDIR      = $(abspath /work/yashiro/SCALE/input_database/landuse/LU100M/Products)
 DATPARAM    =
 DATDISTS    =
 

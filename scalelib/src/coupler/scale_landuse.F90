@@ -31,6 +31,10 @@ module scale_landuse
   !
   !++ Public parameters & variables
   !
+  real(RP), public, allocatable :: LANDUSE_fact_ocean(:,:) !< ocean factor
+  real(RP), public, allocatable :: LANDUSE_fact_land (:,:) !< land  factor
+  real(RP), public, allocatable :: LANDUSE_fact_urban(:,:) !< urban factor
+
   real(RP), public, allocatable :: LANDUSE_frac_land (:,:) !< land  fraction
   real(RP), public, allocatable :: LANDUSE_frac_lake (:,:) !< lake  fraction
   real(RP), public, allocatable :: LANDUSE_frac_urban(:,:) !< urban fraction
@@ -39,7 +43,7 @@ module scale_landuse
   integer,  public              :: LANDUSE_PFT_nmax   = 4   !< number of plant functional type(PFT)
 
   real(RP), public, allocatable :: LANDUSE_frac_PFT (:,:,:) !< fraction of PFT for each mosaic
-  integer,  public, allocatable :: LANDUSE_index_PFT(:,:,:) !< index    of PFT for each mosaic
+  integer,  public, allocatable :: LANDUSE_index_PFT(:,:,:) !< index of PFT for each mosaic
 
   !-----------------------------------------------------------------------------
   !
@@ -120,6 +124,14 @@ contains
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** Assume all grids are ocean'
     endif
+
+    ! make factors
+    allocate( LANDUSE_fact_ocean(IA,JA) )
+    allocate( LANDUSE_fact_land (IA,JA) )
+    allocate( LANDUSE_fact_urban(IA,JA) )
+    LANDUSE_fact_ocean(:,:) = ( 1.0_RP - LANDUSE_frac_land(:,:) )
+    LANDUSE_fact_land (:,:) = (          LANDUSE_frac_land(:,:) ) * ( 1.0_RP - LANDUSE_frac_urban(:,:) )
+    LANDUSE_fact_urban(:,:) = (          LANDUSE_frac_land(:,:) ) * (          LANDUSE_frac_urban(:,:) )
 
     return
   end subroutine LANDUSE_setup

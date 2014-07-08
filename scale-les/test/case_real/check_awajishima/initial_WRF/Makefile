@@ -14,16 +14,16 @@ CODE_DIR    = .
 ORG_SRCS    =
 
 # parameters for run
-PPNAME      = scale-les_pp
-INITNAME    = NONE
+PPNAME      = NONE
+INITNAME    = scale-les_init
 BINNAME     = NONE
-PPCONF      = pp.conf
-INITCONF    = NONE
+PPCONF      = NONE
+INITCONF    = init.conf
 RUNCONF     = NONE
 TPROC       = 24
 
 # required data (parameters,distributed files)
-DATDIR      = $(abspath /work/yashiro/SCALE/input_database/topo/DEM50M/Products)
+DATDIR      = $(abspath /work/yashiro/SCALE/input_database/WRF_output/kenshi_gtopo30_case1)
 DATPARAM    =
 DATDISTS    =
 

@@ -50,7 +50,7 @@ contains
     use scale_process, only: &
        PRC_MPIstop
     use scale_landuse, only: &
-       LANDUSE_frac_land
+       LANDUSE_fact_ocean
     use scale_cpl_bulkflux, only: &
        CPL_bulkflux_setup
     implicit none
@@ -90,7 +90,7 @@ contains
 
     do j = 1, JA
     do i = 1, IA
-      if( ( 1.0_RP - LANDUSE_frac_land(i,j) ) > 0.0_RP ) then
+      if( LANDUSE_fact_ocean(i,j) > 0.0_RP ) then
         is_FLX(i,j) = .true.
       else
         is_FLX(i,j) = .false.

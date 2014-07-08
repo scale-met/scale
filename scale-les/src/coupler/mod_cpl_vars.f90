@@ -374,87 +374,78 @@ contains
   !-----------------------------------------------------------------------------
   subroutine CPL_vars_merge
     use scale_landuse, only: &
-       frac_land  => LANDUSE_frac_land,  &
-       frac_lake  => LANDUSE_frac_lake,  &
-       frac_urban => LANDUSE_frac_urban, &
-       frac_PFT   => LANDUSE_frac_PFT
+       fact_ocean => LANDUSE_fact_ocean, &
+       fact_land  => LANDUSE_fact_land,  &
+       fact_urban => LANDUSE_fact_urban
     use scale_statistics, only: &
        STATISTICS_checktotal, &
        STAT_total
     implicit none
-
-    real(RP) :: factOcn(IA,JA)
-    real(RP) :: factLnd(IA,JA)
-    real(RP) :: factUrb(IA,JA)
 
     real(RP) :: total ! dummy
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Coupler: Merge values of surface submodel'
 
-    factOcn(:,:) = ( 1.0_RP - frac_land(:,:) )
-    factLnd(:,:) = (          frac_land(:,:) ) * ( 1.0_RP - frac_urban(:,:) )
-    factUrb(:,:) = (          frac_land(:,:) ) * (          frac_urban(:,:) )
+    CPL_Merged_SFC_TEMP(:,:)     = fact_ocean(:,:) * CPL_fromOcn_SFC_TEMP  (:,:) &
+                                 + fact_land (:,:) * CPL_fromLnd_SFC_TEMP  (:,:) &
+                                 + fact_urban(:,:) * CPL_fromUrb_SFC_TEMP  (:,:)
 
-    CPL_Merged_SFC_TEMP(:,:)     = factOcn(:,:) * CPL_fromOcn_SFC_TEMP  (:,:) &
-                                 + factLnd(:,:) * CPL_fromLnd_SFC_TEMP  (:,:) &
-                                 + factUrb(:,:) * CPL_fromUrb_SFC_TEMP  (:,:)
+    CPL_Merged_SFC_albedo(:,:,I_LW) = fact_ocean(:,:) * CPL_fromOcn_SFC_albedo(:,:,I_LW) &
+                                    + fact_land (:,:) * CPL_fromLnd_SFC_albedo(:,:,I_LW) &
+                                    + fact_urban(:,:) * CPL_fromLnd_SFC_albedo(:,:,I_LW)  ! tentative
 
-    CPL_Merged_SFC_albedo(:,:,I_LW) = factOcn(:,:) * CPL_fromOcn_SFC_albedo(:,:,I_LW) &
-                                    + factLnd(:,:) * CPL_fromLnd_SFC_albedo(:,:,I_LW) &
-                                    + factUrb(:,:) * CPL_fromLnd_SFC_albedo(:,:,I_LW)  ! tentative
+    CPL_Merged_SFC_albedo(:,:,I_SW) = fact_ocean(:,:) * CPL_fromOcn_SFC_albedo(:,:,I_SW) &
+                                    + fact_land (:,:) * CPL_fromLnd_SFC_albedo(:,:,I_SW) &
+                                    + fact_urban(:,:) * CPL_fromLnd_SFC_albedo(:,:,I_SW)  ! tentative
 
-    CPL_Merged_SFC_albedo(:,:,I_SW) = factOcn(:,:) * CPL_fromOcn_SFC_albedo(:,:,I_SW) &
-                                    + factLnd(:,:) * CPL_fromLnd_SFC_albedo(:,:,I_SW) &
-                                    + factUrb(:,:) * CPL_fromLnd_SFC_albedo(:,:,I_SW)  ! tentative
+    CPL_Merged_FLX_MW(:,:) = fact_ocean(:,:) * CPL_AtmOcn_ATM_FLX_MW  (:,:) &
+                           + fact_land (:,:) * CPL_AtmLnd_ATM_FLX_MW  (:,:) &
+                           + fact_urban(:,:) * CPL_AtmLnd_ATM_FLX_MW  (:,:) ! tentative
 
-    CPL_Merged_FLX_MW(:,:) = factOcn(:,:) * CPL_AtmOcn_ATM_FLX_MW  (:,:) &
-                           + factLnd(:,:) * CPL_AtmLnd_ATM_FLX_MW  (:,:) &
-                           + factUrb(:,:) * CPL_AtmUrb_ATM_FLX_MW  (:,:)
+    CPL_Merged_FLX_MU(:,:) = fact_ocean(:,:) * CPL_AtmOcn_ATM_FLX_MU  (:,:) &
+                           + fact_land (:,:) * CPL_AtmLnd_ATM_FLX_MU  (:,:) &
+                           + fact_urban(:,:) * CPL_AtmLnd_ATM_FLX_MU  (:,:) ! tentative
 
-    CPL_Merged_FLX_MU(:,:) = factOcn(:,:) * CPL_AtmOcn_ATM_FLX_MU  (:,:) &
-                           + factLnd(:,:) * CPL_AtmLnd_ATM_FLX_MU  (:,:) &
-                           + factUrb(:,:) * CPL_AtmUrb_ATM_FLX_MU  (:,:)
+    CPL_Merged_FLX_MV(:,:) = fact_ocean(:,:) * CPL_AtmOcn_ATM_FLX_MV  (:,:) &
+                           + fact_land (:,:) * CPL_AtmLnd_ATM_FLX_MV  (:,:) &
+                           + fact_urban(:,:) * CPL_AtmLnd_ATM_FLX_MV  (:,:) ! tentative
 
-    CPL_Merged_FLX_MV(:,:) = factOcn(:,:) * CPL_AtmOcn_ATM_FLX_MV  (:,:) &
-                           + factLnd(:,:) * CPL_AtmLnd_ATM_FLX_MV  (:,:) &
-                           + factUrb(:,:) * CPL_AtmUrb_ATM_FLX_MV  (:,:)
+    CPL_Merged_FLX_SH(:,:) = fact_ocean(:,:) * CPL_AtmOcn_ATM_FLX_SH  (:,:) &
+                           + fact_land (:,:) * CPL_AtmLnd_ATM_FLX_SH  (:,:) &
+                           + fact_urban(:,:) * CPL_AtmUrb_ATM_FLX_SH  (:,:)
 
-    CPL_Merged_FLX_SH(:,:) = factOcn(:,:) * CPL_AtmOcn_ATM_FLX_SH  (:,:) &
-                           + factLnd(:,:) * CPL_AtmLnd_ATM_FLX_SH  (:,:) &
-                           + factUrb(:,:) * CPL_AtmUrb_ATM_FLX_SH  (:,:)
+    CPL_Merged_FLX_LH(:,:) = fact_ocean(:,:) * CPL_AtmOcn_ATM_FLX_LH  (:,:) &
+                           + fact_land (:,:) * CPL_AtmLnd_ATM_FLX_LH  (:,:) &
+                           + fact_urban(:,:) * CPL_AtmUrb_ATM_FLX_LH  (:,:)
 
-    CPL_Merged_FLX_LH(:,:) = factOcn(:,:) * CPL_AtmOcn_ATM_FLX_LH  (:,:) &
-                           + factLnd(:,:) * CPL_AtmLnd_ATM_FLX_LH  (:,:) &
-                           + factUrb(:,:) * CPL_AtmUrb_ATM_FLX_LH  (:,:)
+    CPL_Merged_FLX_QV(:,:) = fact_ocean(:,:) * CPL_AtmOcn_ATM_FLX_evap(:,:) &
+                           + fact_land (:,:) * CPL_AtmLnd_ATM_FLX_evap(:,:) &
+                           + fact_urban(:,:) * CPL_AtmUrb_ATM_FLX_evap(:,:)
 
-    CPL_Merged_FLX_QV(:,:) = factOcn(:,:) * CPL_AtmOcn_ATM_FLX_evap(:,:) &
-                           + factLnd(:,:) * CPL_AtmLnd_ATM_FLX_evap(:,:) &
-                           + factUrb(:,:) * CPL_AtmUrb_ATM_FLX_evap(:,:)
+    CPL_Merged_Z0M   (:,:) = fact_ocean(:,:) * CPL_fromOcn_SFC_Z0M  (:,:) &
+                           + fact_land (:,:) * CPL_fromLnd_SFC_Z0M  (:,:) &
+                           + fact_urban(:,:) * CPL_fromLnd_SFC_Z0M  (:,:)   ! tentative
 
-    CPL_Merged_Z0M   (:,:) = factOcn(:,:) * CPL_fromOcn_SFC_Z0M  (:,:) &
-                           + factLnd(:,:) * CPL_fromLnd_SFC_Z0M  (:,:) &
-                           + factUrb(:,:) * CPL_fromLnd_SFC_Z0M  (:,:)   ! tentative
+    CPL_Merged_U10   (:,:) = fact_ocean(:,:) * CPL_AtmOcn_ATM_U10     (:,:) &
+                           + fact_land (:,:) * CPL_AtmLnd_ATM_U10     (:,:) &
+                           + fact_urban(:,:) * CPL_AtmLnd_ATM_U10     (:,:) ! tentative
 
-    CPL_Merged_U10   (:,:) = factOcn(:,:) * CPL_AtmOcn_ATM_U10     (:,:) &
-                           + factLnd(:,:) * CPL_AtmLnd_ATM_U10     (:,:) &
-                           + factUrb(:,:) * CPL_AtmUrb_ATM_U10     (:,:)
+    CPL_Merged_V10   (:,:) = fact_ocean(:,:) * CPL_AtmOcn_ATM_V10     (:,:) &
+                           + fact_land (:,:) * CPL_AtmLnd_ATM_V10     (:,:) &
+                           + fact_urban(:,:) * CPL_AtmLnd_ATM_V10     (:,:) ! tentative
 
-    CPL_Merged_V10   (:,:) = factOcn(:,:) * CPL_AtmOcn_ATM_V10     (:,:) &
-                           + factLnd(:,:) * CPL_AtmLnd_ATM_V10     (:,:) &
-                           + factUrb(:,:) * CPL_AtmUrb_ATM_V10     (:,:)
+    CPL_Merged_T2    (:,:) = fact_ocean(:,:) * CPL_AtmOcn_ATM_T2      (:,:) &
+                           + fact_land (:,:) * CPL_AtmLnd_ATM_T2      (:,:) &
+                           + fact_urban(:,:) * CPL_AtmLnd_ATM_T2      (:,:) ! tentative
 
-    CPL_Merged_T2    (:,:) = factOcn(:,:) * CPL_AtmOcn_ATM_T2      (:,:) &
-                           + factLnd(:,:) * CPL_AtmLnd_ATM_T2      (:,:) &
-                           + factUrb(:,:) * CPL_AtmUrb_ATM_T2      (:,:)
+    CPL_Merged_Q2    (:,:) = fact_ocean(:,:) * CPL_AtmOcn_ATM_Q2      (:,:) &
+                           + fact_land (:,:) * CPL_AtmLnd_ATM_Q2      (:,:) &
+                           + fact_urban(:,:) * CPL_AtmLnd_ATM_Q2      (:,:) ! tentative
 
-    CPL_Merged_Q2    (:,:) = factOcn(:,:) * CPL_AtmOcn_ATM_Q2      (:,:) &
-                           + factLnd(:,:) * CPL_AtmLnd_ATM_Q2      (:,:) &
-                           + factUrb(:,:) * CPL_AtmUrb_ATM_Q2      (:,:)
-
-    CPL_Merged_FLX_heat(:,:) = factOcn(:,:) * CPL_AtmOcn_OCN_FLX_heat(:,:) &
-                             + factLnd(:,:) * CPL_AtmLnd_LND_FLX_heat(:,:) &
-                             + factUrb(:,:) * CPL_AtmUrb_URB_FLX_heat(:,:)
+    CPL_Merged_FLX_heat(:,:) = fact_ocean(:,:) * CPL_AtmOcn_OCN_FLX_heat(:,:) &
+                             + fact_land (:,:) * CPL_AtmLnd_LND_FLX_heat(:,:) &
+                             + fact_urban(:,:) * CPL_AtmUrb_URB_FLX_heat(:,:)
 
     if ( STATISTICS_checktotal ) then
        call STAT_total( total, CPL_Merged_SFC_TEMP  (:,:),      'SFC_TEMP  ' )
