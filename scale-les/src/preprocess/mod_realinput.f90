@@ -427,7 +427,7 @@ contains
     te = numsteps
     ta = numsteps
 
-    allocate( atmos_boundary_var(KA,IA,JA,ta,5) )
+    allocate( atmos_boundary_var(KA,IA,JA,ta,6) )
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[realinput]/Categ[Boundary]'
@@ -437,6 +437,7 @@ contains
     atmos_boundary_var(:,:,:,:,I_BND_VELY) = CONST_UNDEF
     atmos_boundary_var(:,:,:,:,I_BND_VELX) = CONST_UNDEF
     atmos_boundary_var(:,:,:,:,I_BND_POTT) = CONST_UNDEF
+    atmos_boundary_var(:,:,:,:,I_BND_DENS) = CONST_UNDEF
     atmos_boundary_var(:,:,:,:,I_BND_QV  ) = CONST_UNDEF
 
     do n = ts, te
@@ -447,6 +448,7 @@ contains
        atmos_boundary_var(k,i,j,n,I_BND_VELX) = 2.0_RP * MOMX(k,i,j,n) / ( DENS(k,i+1,j,n) + DENS(k,i,j,n) )
        atmos_boundary_var(k,i,j,n,I_BND_VELY) = 2.0_RP * MOMY(k,i,j,n) / ( DENS(k,i,j+1,n) + DENS(k,i,j,n) )
        atmos_boundary_var(k,i,j,n,I_BND_POTT) = RHOT(k,i,j,n) / DENS(k,i,j,n)
+       atmos_boundary_var(k,i,j,n,I_BND_DENS) = DENS(k,i,j,n)
        atmos_boundary_var(k,i,j,n,I_BND_QV  ) = QTRC(k,i,j,I_QV,n)
     enddo
     enddo
@@ -498,6 +500,11 @@ contains
        call FILEIO_write( atmos_boundary_var(:,:,:,:,I_BND_POTT),        &
                           basename, title,                               &
                           'POTT', 'Reference PT', 'K', 'ZXYT',           &
+                          atmos_boundary_out_dtype, update_dt, timetarg=n )
+
+       call FILEIO_write( atmos_boundary_var(:,:,:,:,I_BND_DENS),        &
+                          basename, title,                               &
+                          'DENS', 'Reference Density', 'kg/m3', 'ZXYT',  &
                           atmos_boundary_out_dtype, update_dt, timetarg=n )
 
        call FILEIO_write( atmos_boundary_var(:,:,:,:,I_BND_QV),           &

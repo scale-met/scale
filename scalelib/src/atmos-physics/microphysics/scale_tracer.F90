@@ -44,7 +44,8 @@ module scale_tracer
   integer, public, parameter :: I_BND_VELX = 2 ! reference velocity (x) [m/s]
   integer, public, parameter :: I_BND_VELY = 3 ! reference velocity (y) [m/s]
   integer, public, parameter :: I_BND_POTT = 4 ! reference potential temperature [K]
-  integer, public, parameter :: I_BND_QV   = 5 ! reference water vapor [kg/kg]
+  integer, public, parameter :: I_BND_DENS = 5 ! reference density     [kg/m3]
+  integer, public, parameter :: I_BND_QV   = 6 ! reference water vapor [kg/kg]
 
 #ifdef TRACER
 #define EXTM(name) scale_tracer_ ## name ## .f90
