@@ -20,10 +20,10 @@ BINNAME     = NONE
 PPCONF      = NONE
 INITCONF    = init.conf
 RUNCONF     = NONE
-TPROC       = 540
+TPROC       = 144
 
 # required data (parameters,distributed files)
-DATDIR      = $(abspath ../../../../../../../input_database/WRF_output/kenshi_gtopo30_case1)
+DATDIR      = $(abspath /work/yashiro/SCALE/input_database/WRF_output/kenshi_gtopo30_case2)
 DATPARAM    =
 DATDISTS    =
 
