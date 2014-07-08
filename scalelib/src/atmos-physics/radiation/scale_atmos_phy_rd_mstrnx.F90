@@ -354,7 +354,9 @@ contains
   subroutine ATMOS_PHY_RD_mstrnx( &
        DENS, RHOT, QTRC,      &
        CZ, FZ,                &
-       frac_land,             &
+       fact_ocean,            &
+       fact_land,             &
+       fact_urban,            &
        temp_sfc, albedo_land, &
        solins, cosSZA,        &
        flux_rad,              &
@@ -383,7 +385,9 @@ contains
     real(RP), intent(in)  :: QTRC        (KA,IA,JA,QA)
     real(RP), intent(in)  :: CZ          (  KA,IA,JA)    ! UNUSED
     real(RP), intent(in)  :: FZ          (0:KA,IA,JA)
-    real(RP), intent(in)  :: frac_land   (IA,JA)
+    real(RP), intent(in)  :: fact_ocean  (IA,JA)
+    real(RP), intent(in)  :: fact_land   (IA,JA)
+    real(RP), intent(in)  :: fact_urban  (IA,JA)
     real(RP), intent(in)  :: temp_sfc    (IA,JA)
     real(RP), intent(in)  :: albedo_land (IA,JA,2)
     real(RP), intent(in)  :: solins      (IA,JA)
@@ -609,7 +613,9 @@ contains
                          I_MPAE2RD         (:),        & ! [IN]
                          cldfrac_merge     (:,:,:),    & ! [IN]
                          albedo_land       (:,:,:),    & ! [IN]
-                         frac_land         (:,:),      & ! [IN]
+                         fact_ocean        (:,:),      & ! [IN]
+                         fact_land         (:,:),      & ! [IN]
+                         fact_urban        (:,:),      & ! [IN]
                          flux_rad_merge    (:,:,:,:,:) ) ! [OUT]
 
     ! return to grid coordinate of LES domain
@@ -964,7 +970,9 @@ contains
        aero2ptype,   &
        cldfrac,      &
        albedo_land,  &
-       frac_land,    &
+       fact_ocean,   &
+       fact_land,    &
+       fact_urban,   &
        rflux         )
     use scale_const, only: &
        GRAV => CONST_GRAV, &
@@ -996,7 +1004,9 @@ contains
     integer,  intent(in)  :: aero2ptype  (naero)
     real(RP), intent(in)  :: cldfrac     (kmax,imax,jmax)
     real(RP), intent(in)  :: albedo_land (imax,jmax,2)
-    real(RP), intent(in)  :: frac_land   (imax,jmax)
+    real(RP), intent(in)  :: fact_ocean  (imax,jmax)
+    real(RP), intent(in)  :: fact_land   (imax,jmax)
+    real(RP), intent(in)  :: fact_urban  (imax,jmax)
     real(RP), intent(out) :: rflux       (kmax+1,imax,jmax,2,2)
 
     ! for P-T fitting
@@ -1057,7 +1067,7 @@ contains
 
     !$acc data pcopy(rflux) &
     !$acc& pcopyin(solins, cosSZA, rhodz, pres, temp, temph, temp_sfc, gas, cfc) &
-    !$acc& pcopyin(aerosol_conc, aerosol_radi, aero2ptype, cldfrac, albedo_land, frac_land) &
+    !$acc& pcopyin(aerosol_conc, aerosol_radi, aero2ptype, cldfrac, albedo_land, fact_ocean, fact_land, fact_urban) &
     !$acc& create(dz_std, logP, logT, indexP, factP, factT32, factT21, indexR, factR) &
     !$acc& create(tauGAS, tauPR, omgPR, optparam, albedo_sfc, albedo_ocean, tau_column) &
     !$acc& create(bbar, bbarh, b_sfc) &
@@ -1427,13 +1437,14 @@ contains
                                 tau_column  (:,:,icloud),   & ! [IN]
                                 albedo_ocean(:,:,:,icloud) )  ! [OUT]
 
-          !$acc kernels pcopy(albedo_sfc) pcopyin(frac_land, albedo_ocean, albedo_land) async(0)
+          !$acc kernels pcopy(albedo_sfc) pcopyin(fact_ocean, fact_land, fact_urban, albedo_ocean, albedo_land) async(0)
           !$acc loop gang vector(4)
           do j = JS, JE
           !$acc loop gang vector(32)
           do i = IS, IE
-             albedo_sfc(i,j,icloud) = ( 1.0_RP-frac_land(i,j) ) * albedo_ocean(i,j,irgn,icloud) &
-                                    + (        frac_land(i,j) ) * albedo_land (i,j,irgn)
+             albedo_sfc(i,j,icloud) = fact_ocean(i,j) * albedo_ocean(i,j,irgn,icloud) &
+                                    + fact_land (i,j) * albedo_land (i,j,irgn) &
+                                    + fact_urban(i,j) * albedo_land (i,j,irgn) ! tentative
           enddo
           enddo
           !$acc end kernels

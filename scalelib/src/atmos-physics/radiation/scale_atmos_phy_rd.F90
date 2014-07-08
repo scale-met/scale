@@ -46,7 +46,9 @@ module scale_atmos_phy_rd
      subroutine rd( &
           DENS, RHOT, QTRC,      &
           CZ, FZ,                &
-          frac_land,             &
+          fact_ocean,            &
+          fact_land,             &
+          fact_urban,            &
           temp_sfc, albedo_land, &
           solins, cosSZA,        &
           flux_rad,              &
@@ -61,7 +63,9 @@ module scale_atmos_phy_rd
        real(RP), intent(in)  :: QTRC        (KA,IA,JA,QA)
        real(RP), intent(in)  :: CZ          (  KA,IA,JA)    ! UNUSED
        real(RP), intent(in)  :: FZ          (0:KA,IA,JA)
-       real(RP), intent(in)  :: frac_land   (IA,JA)
+       real(RP), intent(in)  :: fact_ocean  (IA,JA)
+       real(RP), intent(in)  :: fact_land   (IA,JA)
+       real(RP), intent(in)  :: fact_urban  (IA,JA)
        real(RP), intent(in)  :: temp_sfc    (IA,JA)
        real(RP), intent(in)  :: albedo_land (IA,JA,2)
        real(RP), intent(in)  :: solins      (IA,JA)
