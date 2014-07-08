@@ -240,8 +240,8 @@ contains
     integer,  intent(in)    :: ND_ORDER
     real(RP), intent(in)    :: ND_SFC_FACT
     logical,  intent(in)    :: ND_USE_RS
-    real(RP), intent(in)    :: DAMP_var  (KA,IA,JA,5)
-    real(RP), intent(in)    :: DAMP_alpha(KA,IA,JA,5)
+    real(RP), intent(in)    :: DAMP_var  (KA,IA,JA,6)
+    real(RP), intent(in)    :: DAMP_alpha(KA,IA,JA,6)
     real(RP), intent(in)    :: divdmp_coef
 
     logical,  intent(in)    :: FLAG_FCT_RHO
@@ -367,32 +367,37 @@ contains
        do j = JS, JE
        do i = IS, IE
           do k = KS, KE
-             DENS_t(k,i,j) = DENS_tp(k,i,j) ! tendency from physical step
+             DENS_t(k,i,j) = DENS_tp(k,i,j) & ! tendency from physical step
+                           - DAMP_alpha(k,i,j,I_BND_DENS) &
+                           * ( DENS(k,i,j) - DAMP_var(k,i,j,I_BND_DENS) )                                          ! rayleigh damping
           enddo
 
           do k = KS, KE-1
              MOMZ_t(k,i,j) = MOMZ_tp(k,i,j) & ! tendency from physical step
                            - DAMP_alpha(k,i,j,I_BND_VELZ) &
-                           * ( MOMZ(k,i,j) - DAMP_var(k,i,j,I_BND_VELZ) * 0.5_RP * ( DENS(k+1,i,j)+DENS(k,i,j) ) ) ! rayleigh damping
+                           * ( MOMZ(k,i,j) - DAMP_var(k,i,j,I_BND_VELZ) * 0.5_RP * ( DAMP_var(k+1,i,j,I_BND_DENS)+DAMP_var(k,i,j,I_BND_DENS) ) ) ! rayleigh damping
+                           !* ( MOMZ(k,i,j) - DAMP_var(k,i,j,I_BND_VELZ) * 0.5_RP * ( DENS(k+1,i,j)+DENS(k,i,j) ) ) ! rayleigh damping
           enddo
           MOMZ_t(KE,i,j) = 0.0_RP
 
           do k = KS, KE
              MOMX_t(k,i,j) = MOMX_tp(k,i,j) & ! tendency from physical step
                            - DAMP_alpha(k,i,j,I_BND_VELX) &
-                           * ( MOMX(k,i,j) - DAMP_var(k,i,j,I_BND_VELX) * 0.5_RP * ( DENS(k,i+1,j)+DENS(k,i,j) ) ) ! rayleigh damping
+                           * ( MOMX(k,i,j) - DAMP_var(k,i,j,I_BND_VELX) * 0.5_RP * ( DAMP_var(k,i+1,j,I_BND_DENS)+DAMP_var(k,i,j,I_BND_DENS) ) ) ! rayleigh damping
+                           !* ( MOMX(k,i,j) - DAMP_var(k,i,j,I_BND_VELX) * 0.5_RP * ( DENS(k,i+1,j)+DENS(k,i,j) ) ) ! rayleigh damping
           enddo
 
           do k = KS, KE
              MOMY_t(k,i,j) = MOMY_tp(k,i,j) & ! tendency from physical step
                            - DAMP_alpha(k,i,j,I_BND_VELY) &
-                           * ( MOMY(k,i,j) - DAMP_var(k,i,j,I_BND_VELY) * 0.5_RP * ( DENS(k,i,j+1)+DENS(k,i,j) ) ) ! rayleigh damping
+                           * ( MOMY(k,i,j) - DAMP_var(k,i,j,I_BND_VELY) * 0.5_RP * ( DAMP_var(k,i,j+1,I_BND_DENS)+DAMP_var(k,i,j,I_BND_DENS) ) ) ! rayleigh damping
+                           !* ( MOMY(k,i,j) - DAMP_var(k,i,j,I_BND_VELY) * 0.5_RP * ( DENS(k,i,j+1)+DENS(k,i,j) ) ) ! rayleigh damping
           enddo
 
           do k = KS, KE
              RHOT_t(k,i,j) = RHOT_tp(k,i,j) & ! tendency from physical step
                            - DAMP_alpha(k,i,j,I_BND_POTT) &
-                           * ( RHOT(k,i,j) - DAMP_var(k,i,j,I_BND_POTT) * DENS(k,i,j) )                            ! rayleigh damping
+                           * ( RHOT(k,i,j) - DAMP_var(k,i,j,I_BND_POTT) * DAMP_var(k,i,j,I_BND_DENS) )                            ! rayleigh damping
           enddo
 
           DENS_t(   1:KS-1,i,j) = 0.0_RP
