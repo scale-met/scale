@@ -43,8 +43,9 @@ module scale_cpl_atmos_land_bulk
   !-----------------------------------------------------------------------------
   integer,  private :: nmax = 100 ! maximum iteration number
 
-  real(RP), private :: res_min = 1.0E+0_RP ! minimum number of residual
-  real(RP), private :: dTS     = 1.0E-8_RP ! delta surface temp.
+  real(RP), private :: res_min  = 1.0E+0_RP ! minimum number of residual
+  real(RP), private :: dres_lim = 1.0E+2_RP ! limit factor of d(residual)/dTS
+  real(RP), private :: dTS      = 1.0E-8_RP ! delta surface temp.
 
   logical, allocatable, private :: is_FLX(:,:) ! is atmos-land coupler run?
 
@@ -55,7 +56,7 @@ contains
     use scale_process, only: &
        PRC_MPIstop
     use scale_landuse, only: &
-       LANDUSE_frac_land
+       LANDUSE_fact_land
     use scale_cpl_bulkflux, only: &
        CPL_bulkflux_setup
     implicit none
@@ -64,11 +65,13 @@ contains
 
     integer  :: CPL_AtmLnd_bulk_nmax
     real(RP) :: CPL_AtmLnd_bulk_res_min
+    real(RP) :: CPL_AtmLnd_bulk_dres_lim
     real(RP) :: CPL_AtmLnd_bulk_dTS
 
     NAMELIST / PARAM_CPL_ATMLND_BULK / &
-       CPL_AtmLnd_bulk_nmax,    &
-       CPL_AtmLnd_bulk_res_min, &
+       CPL_AtmLnd_bulk_nmax,     &
+       CPL_AtmLnd_bulk_res_min,  &
+       CPL_AtmLnd_bulk_dres_lim, &
        CPL_AtmLnd_bulk_dTS
 
     integer :: i, j
@@ -83,9 +86,10 @@ contains
        call PRC_MPIstop
     endif
 
-    CPL_AtmLnd_bulk_nmax    = nmax
-    CPL_AtmLnd_bulk_res_min = res_min
-    CPL_AtmLnd_bulk_dTS     = dTS
+    CPL_AtmLnd_bulk_nmax     = nmax
+    CPL_AtmLnd_bulk_res_min  = res_min
+    CPL_AtmLnd_bulk_dres_lim = dres_lim
+    CPL_AtmLnd_bulk_dTS      = dTS
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -98,16 +102,17 @@ contains
     endif
     if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_CPL_ATMLND_BULK)
 
-    nmax    = CPL_AtmLnd_bulk_nmax
-    res_min = CPL_AtmLnd_bulk_res_min
-    dTS     = CPL_AtmLnd_bulk_dTS
+    nmax     = CPL_AtmLnd_bulk_nmax
+    res_min  = CPL_AtmLnd_bulk_res_min
+    dres_lim = CPL_AtmLnd_bulk_dres_lim
+    dTS      = CPL_AtmLnd_bulk_dTS
 
     !--- judge to run atmos-land coupler
     allocate( is_FLX(IA,JA) )
 
     do j = 1, JA
     do i = 1, IA
-      if( LANDUSE_frac_land(i,j) > 0.0_RP ) then
+      if( LANDUSE_fact_land(i,j) > 0.0_RP ) then
         is_FLX(i,j) = .true.
       else
         is_FLX(i,j) = .false.
@@ -305,6 +310,11 @@ contains
                - dSHFLX - dLHFLX + dGHFLX
 
           if( LST_UPDATE ) then
+            if( ( abs(dres) * dres_lim ) < abs(res) ) then
+              ! stop iteration
+              exit
+            end if
+
             if( redf < 0.0_RP ) then
               redf = 1.0_RP
             end if
