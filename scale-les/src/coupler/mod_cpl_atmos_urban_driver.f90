@@ -222,14 +222,6 @@ contains
                        LON         (i,j),   & ! [IN]
                        LAT         (i,j)    ) ! [IN]
 
-        ! tentative treatment
-        ATM_FLX_MW(i,j) = 0.0_RP
-        ATM_FLX_MU(i,j) = 0.0_RP
-        ATM_FLX_MV(i,j) = 0.0_RP
-        ATM_U10   (i,j) = 0.0_RP
-        ATM_V10   (i,j) = 0.0_RP
-        ATM_T2    (i,j) = 0.0_RP
-        ATM_Q2    (i,j) = 0.0_RP
     enddo
     enddo
 
