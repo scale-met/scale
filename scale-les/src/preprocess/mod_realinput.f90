@@ -55,7 +55,7 @@ module mod_realinput
      I_LW   => CONST_I_LW,   &
      CONST_UNDEF
   use scale_atmos_hydrostatic, only: &
-     HYDROSTATIC_buildrho_atmos  => ATMOS_HYDROSTATIC_buildrho_atmos
+     HYDROSTATIC_buildrho        => ATMOS_HYDROSTATIC_buildrho
   use scale_external_io
   use scale_land_grid_index
   use scale_land_grid, only: &
@@ -218,16 +218,22 @@ contains
     integer,          intent(in)  :: step     ! initial file number
     logical,          intent(in)  :: serial   ! read by a serial process
 
-    real(RP), allocatable :: W(:,:,:)
-    real(RP), allocatable :: U(:,:,:)
-    real(RP), allocatable :: V(:,:,:)
-    real(RP), allocatable :: POTT(:,:,:)
+    real(RP) :: W(KA,IA,JA)
+    real(RP) :: U(KA,IA,JA)
+    real(RP) :: V(KA,IA,JA)
+    real(RP) :: POTT(KA,IA,JA)
 
-    real(RP), allocatable :: PRES(:,:,:)
-    real(RP), allocatable :: TEMP(:,:,:)
-    real(RP), allocatable :: QV(:,:,:)
-    real(RP), allocatable :: QC(:,:,:)
-    real(RP), allocatable :: dz(:,:,:)
+    real(RP) :: PRES(KA,IA,JA)
+    real(RP) :: TEMP(KA,IA,JA)
+    real(RP) :: QV(KA,IA,JA)
+    real(RP) :: QC(KA,IA,JA)
+
+    real(RP) :: temp_sfc(1,IA,JA)
+    real(RP) :: pott_sfc(1,IA,JA)
+    real(RP) :: pres_sfc(1,IA,JA)
+    real(RP) :: qv_sfc(1,IA,JA)
+    real(RP) :: qc_sfc(1,IA,JA)
+    real(RP) :: dz(KA,IA,JA)
 
     real(RP) :: phy_rd_init_value = 0.D0
 
@@ -235,16 +241,6 @@ contains
 
     intrinsic shape
     !---------------------------------------------------------------------------
-
-    allocate( w(KA,IA,JA) )
-    allocate( u(KA,IA,JA) )
-    allocate( v(KA,IA,JA) )
-    allocate( pott(KA,IA,JA) )
-    allocate( pres(KA,IA,JA) )
-    allocate( temp(KA,IA,JA) )
-    allocate( qv(KA,IA,JA) )
-    allocate( qc(KA,IA,JA) )
-    allocate( dz(KA,IA,JA) )
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[realinput]/Categ[Input]'
@@ -269,6 +265,8 @@ contains
                              v(:,:,:),            &
                              pott(:,:,:),         &
                              qtrc(:,:,:,:),       &
+                             pres_sfc(1,:,:),     &
+                             pott_sfc(1,:,:),     &
                              basename_org,        &
                              dims(:),             &
                              mdlid,               &
@@ -322,13 +320,19 @@ contains
     enddo
 
     ! make density & pressure profile in moist condition
-    call HYDROSTATIC_buildrho_atmos( dens(:,:,:), & ! [INOUT]
-                                     temp(:,:,:), & ! [OUT]
-                                     pres(:,:,:), & ! [OUT]
-                                     pott(:,:,:), & ! [IN]
-                                     qv  (:,:,:), & ! [IN]
-                                     qc  (:,:,:), & ! [IN]
-                                     dz  (:,:,:)  ) ! [IN]
+    qv_sfc(1,:,:) = qv(KS,:,:)
+    qc_sfc(1,:,:) = qc(KS,:,:)
+    call HYDROSTATIC_buildrho( dens(:,:,:), & ! [OUT]
+                               temp(:,:,:), & ! [OUT]
+                               pres(:,:,:), & ! [OUT]
+                               pott(:,:,:), & ! [IN]
+                               qv  (:,:,:), & ! [IN]
+                               qc  (:,:,:), & ! [IN]
+                               temp_sfc(:,:,:), & ! [OUT]
+                               pres_sfc(:,:,:), & ! [IN]
+                               pott_sfc(:,:,:), & ! [IN]
+                               qv_sfc  (:,:,:), & ! [IN]
+                               qc_sfc  (:,:,:)  ) ! [IN]
 
     call COMM_vars8( dens(:,:,:), 1 )
     call COMM_wait ( dens(:,:,:), 1 )
@@ -375,15 +379,6 @@ contains
        uc_urb(i,j) = sqrt( u(k,i,j)**2.0_RP + v(k,i,j)**2.0_RP )
     enddo
     enddo
-
-    deallocate( w )
-    deallocate( u )
-    deallocate( v )
-    deallocate( pott )
-    deallocate( pres )
-    deallocate( temp )
-    deallocate( qv )
-    deallocate( qc )
 
     return
   end subroutine ParentAtomInput
@@ -549,40 +544,24 @@ contains
     logical,          intent(in) :: serial   ! read by a serial process
     logical,          intent(in) :: no_add_input
 
-    real(RP), allocatable :: tg(:,:,:)
-    real(RP), allocatable :: strg(:,:,:)
-    real(RP), allocatable :: roff(:,:)
-    real(RP), allocatable :: qvef(:,:)
-    real(RP), allocatable :: tw(:,:)
-    real(RP), allocatable :: lst(:,:)
-    real(RP), allocatable :: ust(:,:)
-    real(RP), allocatable :: sst(:,:)
-    real(RP), allocatable :: albw(:,:,:)
-    real(RP), allocatable :: albg(:,:,:)
-    real(RP), allocatable :: z0w(:,:)
-    real(RP), allocatable :: skint(:,:)
-    real(RP), allocatable :: skinw(:,:)
-    real(RP), allocatable :: snowq(:,:)
-    real(RP), allocatable :: snowt(:,:)
+    real(RP) :: tg(LKMAX,IA,JA)
+    real(RP) :: strg(LKMAX,IA,JA)
+    real(RP) :: roff(IA,JA)
+    real(RP) :: qvef(IA,JA)
+    real(RP) :: tw(IA,JA) 
+    real(RP) :: lst(IA,JA)
+    real(RP) :: ust(IA,JA)
+    real(RP) :: sst(IA,JA)
+    real(RP) :: albw(IA,JA,2)
+    real(RP) :: albg(IA,JA,2)
+    real(RP) :: z0w(IA,JA)
+    real(RP) :: skint(IA,JA)
+    real(RP) :: skinw(IA,JA)
+    real(RP) :: snowq(IA,JA)
+    real(RP) :: snowt(IA,JA)
 
     intrinsic shape
     !---------------------------------------------------------------------------
-
-    allocate( tg(LKMAX,IA,JA)   )
-    allocate( strg(LKMAX,IA,JA) )
-    allocate( roff(IA,JA)       )
-    allocate( qvef(IA,JA)       )
-    allocate( tw(IA,JA)         )
-    allocate( lst(IA,JA)        )
-    allocate( ust(IA,JA)        )
-    allocate( sst(IA,JA)        )
-    allocate( albw(IA,JA,2)     )
-    allocate( albg(IA,JA,2)     )
-    allocate( z0w(IA,JA)        )
-    allocate( skint(IA,JA)      )
-    allocate( skinw(IA,JA)      )
-    allocate( snowq(IA,JA)      )
-    allocate( snowt(IA,JA)      )
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[realinput]/Categ[Input-LndOcn]'
@@ -635,22 +614,6 @@ contains
 
     ! Input to PHY_SF Container
     call ATMOS_PHY_SF_vars_external_in( skint, albw(:,:,I_LW), albw(:,:,I_SW), z0w )
-
-    deallocate( tg    )
-    deallocate( strg  )
-    deallocate( roff  )
-    deallocate( qvef  )
-    deallocate( tw    )
-    deallocate( lst   )
-    deallocate( ust   )
-    deallocate( sst   )
-    deallocate( albw  )
-    deallocate( albg  )
-    deallocate( z0w   )
-    deallocate( skint )
-    deallocate( skinw )
-    deallocate( snowq )
-    deallocate( snowt )
 
     return
   end subroutine ParentLndOcnUrbInput
@@ -831,6 +794,8 @@ contains
       v,             & ! (out)
       pott,          & ! (out)
       qtrc,          & ! (out)
+      psfc,          & ! (out)
+      th2m,          & ! (out)
       basename,      & ! (in)
       dims,          & ! (in)
       mdlid,         & ! (in)
@@ -846,6 +811,8 @@ contains
     real(RP),         intent(out)  :: v(:,:,:)
     real(RP),         intent(out)  :: pott(:,:,:)
     real(RP),         intent(out)  :: qtrc(:,:,:,:)
+    real(RP),         intent(out)  :: psfc(:,:)
+    real(RP),         intent(out)  :: th2m(:,:)
     character(LEN=*), intent( in) :: basename
     character(LEN=*), intent( in) :: mptype_org
     integer,          intent( in)  :: mdlid
@@ -869,6 +836,8 @@ contains
     real(RP), allocatable :: LONV_ORG(:,:,:)
     real(RP), allocatable :: GEOF_ORG(:,:,:,:)
     real(RP), allocatable :: GEOH_ORG(:,:,:,:)
+    real(RP), allocatable :: PSFC_ORG(:,:,:)
+    real(RP), allocatable :: TH2M_ORG(:,:,:)
 
     real(RP), allocatable :: AQ_CV(:) !< CV for each hydrometeors [J/kg/K]
 
@@ -917,6 +886,8 @@ contains
     allocate( v_org(dims(1),dims(2),dims(6),tcount) )
     allocate( pott_org(dims(1),dims(2),dims(3),tcount) )
     allocate( qtrc_org(dims(1),dims(2),dims(3),tcount,QA) )
+    allocate( psfc_org(dims(2),dims(3),tcount) )
+    allocate( th2m_org(dims(2),dims(3),tcount) )
     allocate( lat_org(dims(2),dims(3),tcount) )
     allocate( lon_org(dims(2),dims(3),tcount) )
     allocate( latu_org(dims(5),dims(3),tcount) )
@@ -1079,6 +1050,17 @@ contains
     endif
     deallocate( dummy_4D )
 
+    allocate( dummy_3D(dims(2),dims(3),tcount) )
+    if( do_read ) then
+       call ExternalFileRead( dummy_3D(:,:,:),                           &
+                      BASENAME, "PSFC", step, tcount, myrank, mdlid, single=.true. )
+       psfc_org(:,:,:) = dummy_3D(:,:,:)
+       call ExternalFileRead( dummy_3D(:,:,:),                           &
+                      BASENAME, "TH2",  step, tcount, myrank, mdlid, single=.true. )
+       th2m_org(:,:,:) = dummy_3D(:,:,:)
+    endif
+    deallocate( dummy_3D )
+
     if( serial ) then
        call COMM_bcast( p_org, dims(1),dims(2),dims(3),tcount )
        call COMM_bcast( pbase_org, dims(1),dims(2),dims(3),tcount )
@@ -1099,6 +1081,8 @@ contains
        call COMM_bcast( lonv_org(:,:,:), dims(2),dims(6),tcount )
 
        call COMM_bcast( geof_org(:,:,:,:), dims(4),dims(2),dims(3),tcount )
+       call COMM_bcast( psfc_org(:,:,:), dims(2),dims(3),tcount )
+       call COMM_bcast( th2m_org(:,:,:), dims(2),dims(3),tcount )
     endif
 
     do n = 1, tcount
@@ -1156,8 +1140,9 @@ contains
     end do
 
     ! make initial condition by interpolation
-    call LatLonZ_Interpolation_Linear( dens,w,u,v,pott,qtrc,                               &
+    call LatLonZ_Interpolation_Linear( dens,w,u,v,pott,qtrc,psfc,th2m,                     &
                                        dens_org,w_org,u_org,v_org,pott_org,qtrc_org,        &
+                                       psfc_org,th2m_org,                                   &
                                        lat_org,lon_org,latu_org,lonu_org,latv_org,lonv_org, &
                                        geof_org,geoh_org,dims,tcount,step )
 
@@ -1178,6 +1163,8 @@ contains
     deallocate( lonv_org )
     deallocate( geoh_org )
     deallocate( geof_org )
+    deallocate( psfc_org )
+    deallocate( th2m_org )
 
     deallocate( AQ_CV )
 
@@ -1611,12 +1598,16 @@ contains
       v,             & ! (out)
       pott,          & ! (out)
       qtrc,          & ! (out)
+      psfc,          & ! (out)
+      th2m,          & ! (out)
       dens_org,      & ! (in)
       w_org,         & ! (in)
       u_org,         & ! (in)
       v_org,         & ! (in)
       pott_org,      & ! (in)
       qtrc_org,      & ! (in)
+      psfc_org,      & ! (in)
+      th2m_org,      & ! (in)
       lat_org,       & ! (in)
       lon_org,       & ! (in)
       latu_org,      & ! (in)
@@ -1637,12 +1628,16 @@ contains
     real(RP), intent(out)  :: v(:,:,:)
     real(RP), intent(out)  :: pott(:,:,:)
     real(RP), intent(out)  :: qtrc(:,:,:,:)
+    real(RP), intent(out)  :: psfc(:,:)
+    real(RP), intent(out)  :: th2m(:,:)
     real(RP), intent( in)  :: dens_org(:,:,:,:)
     real(RP), intent( in)  :: w_org(:,:,:,:)
     real(RP), intent( in)  :: u_org(:,:,:,:)
     real(RP), intent( in)  :: v_org(:,:,:,:)
     real(RP), intent( in)  :: pott_org(:,:,:,:)
     real(RP), intent( in)  :: qtrc_org(:,:,:,:,:)
+    real(RP), intent( in)  :: psfc_org(:,:,:)
+    real(RP), intent( in)  :: th2m_org(:,:,:)
     real(RP), intent( in)  :: lat_org(:,:,:)
     real(RP), intent( in)  :: lon_org(:,:,:)
     real(RP), intent( in)  :: latu_org(:,:,:)
@@ -1703,6 +1698,18 @@ contains
                           + qtrc_org(kgrd(k,i,j,3,2),igrd(i,j,3),jgrd(i,j,3),n,iq) * hfact(i,j,3) * vfact(k,i,j,3,2)
        enddo
     enddo
+    enddo
+    enddo
+
+    do j = JS-1, JE+1
+    do i = IS-1, IE+1
+       psfc(i,j) =    psfc_org(igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) &
+                    + psfc_org(igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) &
+                    + psfc_org(igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3)
+
+       th2m(i,j)  =   th2m_org(igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) &
+                    + th2m_org(igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) &
+                    + th2m_org(igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3)
     enddo
     enddo
 
