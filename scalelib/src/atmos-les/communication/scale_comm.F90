@@ -50,6 +50,7 @@ module scale_comm
   public :: COMM_horizontal_mean
   public :: COMM_horizontal_max
   public :: COMM_gather
+  public :: COMM_bcast
 
   interface COMM_vars
      module procedure COMM_vars_2D
@@ -75,6 +76,12 @@ module scale_comm
      module procedure COMM_gather_2D
      module procedure COMM_gather_3D
   end interface COMM_gather
+
+  interface COMM_bcast
+     module procedure COMM_bcast_2D
+     module procedure COMM_bcast_3D
+     module procedure COMM_bcast_4D
+  end interface COMM_bcast
 
   !-----------------------------------------------------------------------------
   !
@@ -2264,6 +2271,90 @@ contains
 
     return
   end subroutine COMM_gather_3D
+
+  !-----------------------------------------------------------------------------
+  !> Broadcast data for whole process value in 2D field
+  subroutine COMM_bcast_2D( var, gIA, gJA )
+    use scale_process, only: &
+       PRC_master
+    implicit none
+
+    real(RP), intent(inout) :: var(:,:)  !< broadcast buffer (gIA,gJA)
+    integer,  intent(in)    :: gIA       !< dimension size of x
+    integer,  intent(in)    :: gJA       !< dimension size of y
+
+    integer :: counts
+    integer :: ierr
+    !---------------------------------------------------------------------------
+
+    counts = gIA * gJA
+
+    call MPI_BCAST( var(:,:),       &
+                     counts,         &
+                     COMM_datatype,  &
+                     PRC_master,     &
+                     MPI_COMM_WORLD, &
+                     ierr            )
+
+    return
+  end subroutine COMM_bcast_2D
+
+  !-----------------------------------------------------------------------------
+  !> Broadcast data for whole process value in 3D field
+  subroutine COMM_bcast_3D( var, gIA, gJA, gKA )
+    use scale_process, only: &
+       PRC_master
+    implicit none
+
+    real(RP), intent(inout) :: var(:,:,:)  !< broadcast buffer(gIA,gJA,gKA)
+    integer,  intent(in)    :: gIA         !< dimension size of x
+    integer,  intent(in)    :: gJA         !< dimension size of y
+    integer,  intent(in)    :: gKA         !< dimension size of z
+
+    integer :: counts
+    integer :: ierr
+    !---------------------------------------------------------------------------
+
+    counts = gIA * gJA * gKA
+
+    call MPI_BCAST( var(:,:,:),     &
+                     counts,         &
+                     COMM_datatype,  &
+                     PRC_master,     &
+                     MPI_COMM_WORLD, &
+                     ierr            )
+
+    return
+  end subroutine COMM_bcast_3D
+
+  !-----------------------------------------------------------------------------
+  !> Broadcast data for whole process value in 4D field
+  subroutine COMM_bcast_4D( var, gIA, gJA, gKA, gTime )
+    use scale_process, only: &
+       PRC_master
+    implicit none
+
+    real(RP), intent(inout) :: var(:,:,:,:) !< broadcast buffer(gIA,gJA,gKA,gTime)
+    integer,  intent(in)    :: gIA          !< dimension size of x
+    integer,  intent(in)    :: gJA          !< dimension size of y
+    integer,  intent(in)    :: gKA          !< dimension size of z
+    integer,  intent(in)    :: gTime        !< dimension size of time
+
+    integer :: counts
+    integer :: ierr
+    !---------------------------------------------------------------------------
+
+    counts = gIA * gJA * gKA * gTime
+
+    call MPI_BCAST( var(:,:,:,:),   &
+                     counts,         &
+                     COMM_datatype,  &
+                     PRC_master,     &
+                     MPI_COMM_WORLD, &
+                     ierr            )
+
+    return
+  end subroutine COMM_bcast_4D
 
 end module scale_comm
 !-------------------------------------------------------------------------------

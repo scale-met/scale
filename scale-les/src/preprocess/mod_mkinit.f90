@@ -4055,8 +4055,11 @@ enddo
     character(len=H_LONG) :: FILETYPE_ORG       = ''
     character(len=H_LONG) :: BASENAME_BOUNDARY  = 'boundary_real'
     character(len=H_LONG) :: BOUNDARY_TITLE     = 'SCALE-LES BOUNDARY CONDITION for REAL CASE'
-    real(DP)              :: BOUNDARY_UPDATE_DT = 0.0_DP ! inteval time of boudary data update [s]
-    logical               :: WRF_FILE_TYPE      = .true.  ! wrf filetype: T=wrfout, F=wrfrst
+    real(DP)              :: BOUNDARY_UPDATE_DT  = 0.0_DP ! inteval time of boudary data update [s]
+    logical               :: WRF_FILE_TYPE       = .true.  ! wrf filetype: T=wrfout, F=wrfrst
+    logical               :: SERIAL_PROC_READ    = .true.  ! read by one MPI process and broadcast
+    logical               :: NO_ADDITIONAL_INPUT = .false. ! no additional information
+
 
     NAMELIST / PARAM_MKINIT_REAL / &
          INITIAL_STEP,        &
@@ -4067,7 +4070,9 @@ enddo
          BOUNDARY_TITLE,      &
          BOUNDARY_UPDATE_DT,  &
          INTERP_SERC_DIV_NUM, &
-         WRF_FILE_TYPE
+         WRF_FILE_TYPE,       &
+         SERIAL_PROC_READ,    &
+         NO_ADDITIONAL_INPUT
 
     character(len=H_LONG) :: BASENAME_WITHNUM  = ''
     character(len=5)      :: NUM               = ''
@@ -4137,7 +4142,8 @@ enddo
                              dims(:),             &
                              timelen,             &
                              mdlid,               &
-                             INITIAL_STEP         )
+                             INITIAL_STEP,        &
+                             SERIAL_PROC_READ     )
     enddo
 
     !--- input initial data
@@ -4188,10 +4194,12 @@ enddo
     write(NUM,'(I5.5)') n-1
     BASENAME_WITHNUM = trim(BASENAME_ORG)//"_"//NUM
     call ParentLndOcnUrbInput( BASENAME_WITHNUM, &
-                              dims,              &
-                              timelen,           &
-                              mdlid,             &
-                              INITIAL_STEP       )
+                              dims,               &
+                              timelen,            &
+                              mdlid,              &
+                              INITIAL_STEP,       &
+                              SERIAL_PROC_READ,   &
+                              NO_ADDITIONAL_INPUT )
 
     do j = JS, JE
     do i = IS, IE
