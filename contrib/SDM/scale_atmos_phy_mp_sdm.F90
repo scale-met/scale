@@ -28,6 +28,7 @@
 !! @li      2014-06-26 (S.Shima) [rev] sdm_getrklu and sdm_z2rk are separated
 !! @li      2014-06-27 (S.Shima) [rev] sd data output functionality added
 !! @li      2014-07-04 (S.Shima) [rev] Removed comment outputs for debugging
+!! @li      2014-07-09 (S.Shima) [rev] Subroutines related to boundary conditions and MPI communications are totally revised
 !<
 !-------------------------------------------------------------------------------
 #include "macro_thermodyn.h"
@@ -113,8 +114,10 @@ contains
        REAL_FZ
     use scale_grid, only: &
 !!$       CDZ => GRID_CDZ,   &
-!!$       CDX => GRID_CDX,   &
-!!$       CDY => GRID_CDY,   &
+         GRID_CDX,   &
+         GRID_CDY,   &
+         GRID_RCDX,   &
+         GRID_RCDY,   &
 !!$       CZ  => GRID_CZ,    &
 !!$       FZ  => GRID_FZ,    &
 !!$       FDX => GRID_FDX,   &
@@ -131,6 +134,12 @@ contains
        TOPO_Zsfc
     implicit none
     character(len=H_SHORT), intent(in) :: MP_TYPE
+
+    logical :: PRC_PERIODIC_X = .true. !< periodic condition or not (X)?
+    logical :: PRC_PERIODIC_Y = .true. !< periodic condition or not (Y)?
+    namelist / PARAM_PRC / &
+         PRC_PERIODIC_X, &
+         PRC_PERIODIC_Y
 
     NAMELIST / PARAM_ATMOS_PHY_MP / &
        docondensation, &
@@ -221,7 +230,6 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) 'ERROR: terrain following coordinate is not yet supported!'
        call PRC_MPIstop
     end if
-
     allocate( KMIN1(KA) )
     allocate( IMIN1(IA) )
     allocate( JMIN1(JA) )
@@ -255,6 +263,17 @@ contains
     enddo
     JPLS1(JA) = JA
 
+    if( (PRC_PERIODIC_X /= .true.) .or. (PRC_PERIODIC_Y /= .true.))then
+       if( IO_L ) write(IO_FID_LOG,*) 'ERROR: Only periodic B.C. is supported!'
+       if( IO_L ) write(IO_FID_LOG,*) 'ERROR: Set PRC_PERIODIC_X=PRC_PERIODIC_Y=.true.'
+       call PRC_MPIstop
+    else
+       wbc=1
+       ebc=1
+       sbc=1
+       nbc=1
+    end if
+
     nsub  = max( PRC_nmax,1 )
     nisub = max( PRC_NUM_X,1 )
     njsub = max( PRC_NUM_Y,1 )
@@ -262,13 +281,13 @@ contains
     !--- set process next to the process
     dstw_sub = PRC_next(PRC_W)
     dste_sub = PRC_next(PRC_E)
-    srcw_sub = PRC_next(PRC_E)
-    srce_sub = PRC_next(PRC_W)
+    srcw_sub = PRC_next(PRC_W)
+    srce_sub = PRC_next(PRC_E)
 
     dsts_sub = PRC_next(PRC_S)
     dstn_sub = PRC_next(PRC_N)
-    srcs_sub = PRC_next(PRC_N)
-    srcn_sub = PRC_next(PRC_S)
+    srcs_sub = PRC_next(PRC_S)
+    srcn_sub = PRC_next(PRC_N)
 
     tag  = 0
 
@@ -474,12 +493,10 @@ contains
 
     call sdm_allocinit
 
-    dx_sdm(1:IA) = DX
-    dy_sdm(1:JA) = DY
-!    dz_sdm(1:KA) = DZ
-    dxiv_sdm(1:IA) = 1.0_RP / dx_sdm(1:IA)
-    dyiv_sdm(1:JA) = 1.0_RP / dy_sdm(1:JA)
-!    dziv_sdm(1:KA) = 1.0_RP / dz_sdm(1:KA)
+    dx_sdm(1:IA) = GRID_CDX(1:IA)
+    dy_sdm(1:JA) = GRID_CDY(1:JA)
+    dxiv_sdm(1:IA) = GRID_RCDX(1:IA)
+    dyiv_sdm(1:JA) = GRID_RCDY(1:JA)
 
     return
   end subroutine ATMOS_PHY_MP_sdm_setup
@@ -549,7 +566,7 @@ contains
 !!$!    real(RP) :: wcf_crs(KA,IA,JA)  ! zeta components of contravariant velocity at future
     real(RP) :: ptpf_crs(KA,IA,JA) ! Potential temperature perturbation at future
     real(RP) :: qvf_crs(KA,IA,JA)  ! Water vapor mixing ratio at future
-    real(RP) :: prr_crs(IA,JA,1:2) ! Precipitation and accumulation for rain
+!!$    real(RP) :: prr_crs(IA,JA,1:2) ! Precipitation and accumulation for rain
     real(RP) :: rtmp4(KA,IA,JA)    ! Temporary array
     real(RP) :: rtmp5(KA,IA,JA)    ! Temporary array
     real(RP) :: rtmp6(KA,IA,JA)    ! Temporary array
@@ -604,6 +621,7 @@ contains
                       sdz_s2c, sdr_s2c,                   &
                       sdrk_s2c, sdvz_s2c,                 &
                       sdrkl_s2c, sdrku_s2c                )
+         prr_crs(1:IA,1:JA,1:2)=0.0_RP
       end if
     endif
 
@@ -812,6 +830,7 @@ contains
 !!$    enddo
 !!$    enddo
 
+!! Are these correct? Let's check later.
     call HIST_in( rhoa_sdm(:,:,:), 'RAERO', 'aerosol mass conc.', 'kg/m3', dt)
     call HIST_in( prr_crs(:,:,1), 'RAIN', 'surface rain rate', 'kg/m2/s', dt)
     call HIST_in( prr_crs(:,:,1), 'PREC', 'surface precipitation rate', 'kg/m2/s', dt)
@@ -1662,6 +1681,11 @@ contains
 
       integer :: i, j, k, n, m   ! index
       !---------------------------------------------------------------------
+      if( .not. doprecipitation ) then
+         sd_vz(:) = 0.0_RP
+         return
+      endif
+
       ! Initialize
 
       tlist_s = 0
@@ -2672,12 +2696,8 @@ contains
 
       end if
 
-      if( .not. doprecipitation ) then
-         sd_vz(:) = 0.0_RP
-      endif
-
       ! temporary for test
-      sd_vz(:) = 10.0_RP
+      sd_vz(:) = 1.0_RP
 
     return
   end subroutine sdm_getvz
@@ -2732,6 +2752,10 @@ contains
       !-------------------------------------------------------------------
 
       ! Get dry air density
+
+      ! bug hides in this subroutine
+      ! not used for now
+      return
 
       call sdm_getrhod(pbr_crs,ptbr_crs,pp_crs,ptp_crs,        &
                        qv_crs,rhod_crs)
@@ -3508,7 +3532,7 @@ contains
 
             ! judge super-droplets as invalid or valid in vartical
 
-            call sdm_jdginvdv(sd_rkl,sd_rku,sd_num,sd_x,sd_y,sd_rk)
+            call sdm_jdginvdv(sd_rkl,sd_rku,sd_num,sd_x,sd_y,sd_ri,sd_rj,sd_rk)
 
             ! convert the impact of { exchange momentum } to
             ! {u,v,w} in CReSS
@@ -3544,8 +3568,8 @@ contains
 
       call sdm_sd2prec(dt,                                &
                        prec_crs,                          &
-                       sd_num,sd_n,sd_x,sd_y,sd_r,sd_rk,  &
-                       sd_itmp1,crs_val1c)
+                       sd_num,sd_n,sd_x,sd_y,sd_r,sd_ri,sd_rj,sd_rk,  &
+                       sd_itmp1(1:sd_num,1),crs_val1c(1,1:IA,1:JA))
 
 ! -----
 
@@ -4927,8 +4951,8 @@ contains
     !-------------------------------------------------------------------
     ! The advection process of Super-Droplets.
 
-      call sdm_x2ri(sd_num,sd_x,sd_ri)
-      call sdm_y2rj(sd_num,sd_y,sd_rj)
+      call sdm_x2ri(sd_num,sd_x,sd_ri,sd_rk)
+      call sdm_y2rj(sd_num,sd_y,sd_rj,sd_rk)
 
       do n=1,sd_num
 
@@ -5086,8 +5110,11 @@ contains
         if( sd_rk(n)<VALID2INVALID ) cycle
 
         !### move super-droplets (explicit) ###!
-        sd_x(n)  = sd_x(n)  + sd_u(n)  * real(sdm_dtadv,kind=RP)
-        sd_y(n)  = sd_y(n)  + sd_v(n)  * real(sdm_dtadv,kind=RP)
+!        sd_x(n)  = sd_x(n)  + sd_u(n)  * real(sdm_dtadv,kind=RP)
+!        sd_y(n)  = sd_y(n)  + sd_v(n)  * real(sdm_dtadv,kind=RP)
+!       for testing boundary check and MPI comm
+        sd_x(n)  = sd_x(n)  + (sd_u(n)-1.0_RP)  * real(sdm_dtadv,kind=RP)
+        sd_y(n)  = sd_y(n)  + (sd_v(n)+1.0_RP)  * real(sdm_dtadv,kind=RP)
         sd_rk(n) = sd_rk(n) + sd_vz(n) * real(sdm_dtadv,kind=RP) * dz_inv
      enddo
 
@@ -5096,10 +5123,17 @@ contains
   !----------------------------------------------------------------------------
   subroutine sdm_boundry(wbc,ebc,sbc,nbc,                         &
                          sd_num,sd_numasl,sd_n,sd_x,sd_y,sd_rk,   &
-                         sd_u,sd_v,sd_vzwc,sd_r,sd_asl,           &
+                         sd_u,sd_v,sd_vz,sd_r,sd_asl,           &
                          bufsiz1,bufsiz2,sd_itmp1,rbuf,sbuf)
+!!$     use scale_process, only: &
+!!$       mype => PRC_myrank
      use scale_process, only: &
+       PRC_MPIstop, &
        mype => PRC_myrank
+     use scale_grid, only: &
+          GRID_FX, &
+          GRID_FY
+
       ! Input variables
       integer, intent(in) :: wbc ! Option for west boundary conditions
       integer, intent(in) :: ebc ! Option for east boundary conditions
@@ -5117,7 +5151,7 @@ contains
       real(RP), intent(inout) :: sd_rk(1:sd_num) ! index[k/real] of super-droplets in vertical
       real(RP), intent(inout) :: sd_u(1:sd_num)  ! x-components velocity of super-droplets
       real(RP), intent(inout) :: sd_v(1:sd_num)  ! y-components velocity of super-droplets
-      real(RP), intent(inout) :: sd_vzwc(1:sd_num) ! terminal velocity of super-droplets / zeta components contravariant velocity of super-droplets
+      real(RP), intent(inout) :: sd_vz(1:sd_num) ! terminal velocity of super-droplets
       real(RP), intent(inout) :: sd_r(1:sd_num) ! equivalent radius of super-droplets
       real(RP), intent(inout) :: sd_asl(1:sd_num,1:sd_numasl) ! aerosol mass of super-droplets
       real(DP), intent(inout) :: rbuf(1:bufsiz1,1:bufsiz2,1:2)
@@ -5136,22 +5170,25 @@ contains
       integer :: n     ! index
      !---------------------------------------------------------------------
 
+      if( (wbc/=1).or.(ebc/=1).or.(sbc/=1).or.(nbc/=1))then
+         if( IO_L ) write(IO_FID_LOG,*) 'ERROR: Only periodic B.C. is supported!'
+         if( IO_L ) write(IO_FID_LOG,*) 'ERROR: Set PRC_PERIODIC_X=PRC_PERIODIC_Y=.true.'
+         call PRC_MPIstop
+      end if
+
+!!$      write(*,*)mype,PRC_nmax
+!!$      write(*,*)PRC_next(1:4)
+!!$      stop
+
       ! Initialize
       stat = 0
 
-      ! Set the lateral boundary condition of super-droplets in x direction
-
-      !### Set the non-intra-subgroup periodic boundary ###!
-      !### conditions                                   ###!
-
-!      if( (wbc/=-1.or.ebc/=-1) .or. (nisub/=1) ) then
-      if( nisub/=1 ) then
-
+      ! Set the boundary condition of super-droplets in x direction
+      if( nisub>=2 ) then
          !== Exchange the value horizontally in x direction ==!
-         !== between sub domain                             ==!
 
          call sdm_putbufsx(wbc,ebc,sd_num,sd_numasl,              &
-                           sd_n,sd_x,sd_y,sd_rk,sd_u,sd_v,sd_vzwc,    &
+                           sd_n,sd_x,sd_y,sd_rk,sd_u,sd_v,sd_vz,    &
                            sd_r,sd_asl,                               &
                            bufsiz1,bufsiz2,stat,sd_itmp1,sbuf)
 
@@ -5159,80 +5196,70 @@ contains
          call sdm_shiftsx(wbc,ebc,bufsiz1,bufsiz2,sbuf,rbuf)
 
          call sdm_getbufsx(wbc,ebc,sd_num,sd_numasl,              &
-                           sd_n,sd_x,sd_y,sd_rk,sd_u,sd_v,sd_vzwc,    &
+                           sd_n,sd_x,sd_y,sd_rk,sd_u,sd_v,sd_vz,    &
                            sd_r,sd_asl,                               &
                            bufsiz1,bufsiz2,stat,sd_itmp1,rbuf)
 
+      else if((wbc==1).and.(ebc==1).and.(nisub==1))then
+         !### Apply periodic boundary condition
+         do n=1,sd_num
+            if( sd_rk(n)>VALID2INVALID ) then
+               if( sd_x(n)>=GRID_FX(IE) )then
+                  sd_x(n) = sd_x(n)-GRID_FX(IE)+GRID_FX(IS-1)
+               else if( sd_x(n)<GRID_FX(IS-1) )then
+                  sd_x(n) = sd_x(n)-GRID_FX(IS-1)+GRID_FX(IE)
+               end if
+            end if
+         end do
       end if
 
-      !### Modify the position of inflow super-droplets ###!
-      !### in all boundary conditions                   ###!
-
-      do n=1,sd_num
-         if( sd_rk(n)>VALID2INVALID ) then
-            sd_x(n) = mod( xmax_sdm + sd_x(n), xmax_sdm )
-         end if
-      end do
-
-      ! Set the lateral boundary condition of super-droplets in y direction
-      !### Set the non-intra-subgroup periodic boundary ###!
-      !### conditions                                   ###!
-
-!      if( (sbc/=-1.or.nbc/=-1) .or. (njsub/=1) ) then
-      if( njsub/=1 ) then
-
+      ! Set the boundary condition of super-droplets in y direction
+      if( njsub>=2 ) then
          !== Exchange the value horizontally in y direction ==!
-         !== between sub domain                             ==!
 
          call sdm_putbufsy(sbc,nbc,sd_num,sd_numasl,              &
-                           sd_n,sd_x,sd_y,sd_rk,sd_u,sd_v,sd_vzwc,    &
+                           sd_n,sd_x,sd_y,sd_rk,sd_u,sd_v,sd_vz,    &
                            sd_r,sd_asl,                               &
                            bufsiz1,bufsiz2,stat,sd_itmp1,sbuf)
+
          ! In case of exsiting outflow super-droplets
          call sdm_shiftsy(sbc,nbc,bufsiz1,bufsiz2,sbuf,rbuf)
 
          call sdm_getbufsy(sbc,nbc,sd_num,sd_numasl,              &
-                           sd_n,sd_x,sd_y,sd_rk,sd_u,sd_v,sd_vzwc,    &
+                           sd_n,sd_x,sd_y,sd_rk,sd_u,sd_v,sd_vz,    &
                            sd_r,sd_asl,                               &
                            bufsiz1,bufsiz2,stat,sd_itmp1,rbuf)
 
+      else if((nbc==1).and.(sbc==1).and.(njsub==1))then
+         !### Apply periodic boundary condition
+         do n=1,sd_num
+            if( sd_rk(n)>VALID2INVALID ) then
+               if( sd_y(n)>=GRID_FY(JE) )then
+                  sd_y(n) = sd_y(n)-GRID_FY(JE)+GRID_FY(JS-1)
+               else if( sd_y(n)<GRID_FY(IS-1) )then
+                  sd_y(n) = sd_y(n)-GRID_FY(JS-1)+GRID_FY(JE)
+               end if
+            end if
+         end do
       end if
-
-      !### Modify the position of inflow super-droplets ###!
-      !### in all boundary conditions                   ###!
-
-      do n=1,sd_num
-         if( sd_rk(n)>VALID2INVALID ) then
-            sd_y(n) = mod( ymax_sdm + sd_y(n), ymax_sdm )
-         end if
-      end do
 
       ! Check send/receive error of super-droplets
-!      call chkerr(stat)
-      if( stat == 0 ) then
-        stat = mype+1
-      else
-        stat = -mype-1
-      endif
-
-      if( stat<0 .and. mype==-stat-1 .and. IO_L ) then
-!DBG     write(*,*)
-         write(IO_FID_LOG,'(2a)')"  ### [SDM] : send/receive error ", &
-     &                  "of super-droplets ###"
-!DBG     write(*,*)
+      if( stat /= 0 ) then
+         ! Does this work?? Can mype>=1 can write a message to the LOG file?
+         if( IO_L ) write(IO_FID_LOG,*)"  ### [SDM] : send/receive error of super-droplets at MPI rank=", &
+              &         mype," ###"
+         call PRC_MPIstop
       end if
-
-!      call cpondpe   !--- do nothing
 
     return
   end subroutine sdm_boundry
   !----------------------------------------------------------------------------
   subroutine sdm_putbufsx(wbc,ebc,sd_num,sd_numasl,         &
-                          sd_n,sd_x,sd_y,sd_rk,sd_u,sd_v,sd_vzwc, &
+                          sd_n,sd_x,sd_y,sd_rk,sd_u,sd_v,sd_vz, &
                           sd_r,sd_asl,                            &
                           bufsiz1,bufsiz2,stat,ilist,sbufx)
-     use scale_process, only: &
-       mype  => PRC_myrank
+     use scale_grid, only: &
+         GRID_FX
       ! Input variables
       integer, intent(in) :: wbc    ! Option for west boundary conditions
       integer, intent(in) :: ebc    ! Option for east boundaty conditions
@@ -5242,7 +5269,7 @@ contains
       real(RP), intent(in) :: sd_y(1:sd_num)    ! y-coordinate of super-droplets
       real(RP), intent(inout) :: sd_u(1:sd_num) ! x-components velocity of super-droplets
       real(RP), intent(inout) :: sd_v(1:sd_num) ! y-components velocity of super-droplets
-      real(RP), intent(inout) :: sd_vzwc(1:sd_num) ! terminal velocity of super-droplets / zeta components contravariant velocity of super-droplets
+      real(RP), intent(inout) :: sd_vz(1:sd_num) ! terminal velocity of super-droplets
       real(RP), intent(in) :: sd_r(1:sd_num) ! equivalent radius of super-droplets
       real(RP), intent(in) :: sd_asl(1:sd_num,1:sd_numasl) ! aerosol mass of super-droplets
       integer, intent(in) :: bufsiz1  ! buffer size for MPI
@@ -5257,7 +5284,7 @@ contains
                        ! dim02 = 1 - ( 8 + sd_numasl )
                        !    : n,x,y,rk,u,v,wc(vz),r,asl(1:sd_numasl)
                        ! dim03 = 1 : west, 2: east
-      integer, intent(out) :: ilist(1:int(sd_num/nomp),1:nomp)
+      integer, intent(out) :: ilist(1:sd_num)
                        ! buffer for list vectorization
 
       ! Work variables for OpenMP
@@ -5278,27 +5305,21 @@ contains
       integer :: nasl, ne, nw     ! index
      !---------------------------------------------------------------------
 
-     ! Initialize
-
-      maxesend = 0
-      maxwsend = 0
+      ! Initialize
       tesend = 0
       twsend = 0
+      
+      sbufx(1:bufsiz1,1:bufsiz2,1:2) = INVALID
 
-      do np=1,nomp
-         nesend(np) = 0
-         nwsend(np) = 0
-      end do
-
-      do n=1,bufsiz1*bufsiz2*2
-
-         k = int( (n-1)/(bufsiz1*bufsiz2) ) + 1
-         j = int( ( (n-1)-(k-1)*(bufsiz1*bufsiz2) )/bufsiz1 ) + 1
-         i = (n-1) - (j-1)*bufsiz1 - (k-1)*(bufsiz1*bufsiz2) + 1
-
-         sbufx(i,j,k) = INVALID
-
-      end do
+!!$      do n=1,bufsiz1*bufsiz2*2
+!!$
+!!$         k = int( (n-1)/(bufsiz1*bufsiz2) ) + 1
+!!$         j = int( ( (n-1)-(k-1)*(bufsiz1*bufsiz2) )/bufsiz1 ) + 1
+!!$         i = (n-1) - (j-1)*bufsiz1 - (k-1)*(bufsiz1*bufsiz2) + 1
+!!$
+!!$         sbufx(i,j,k) = INVALID
+!!$
+!!$      end do
 
       ! Put the sending buffer in x direction.
 
@@ -5307,188 +5328,219 @@ contains
          !### Fill in the sending buffer with the value ###!
          !### in the west halo regions.                 ###!
 
-            !== intra-subgroup periodic boundary conditions ==!
-            !! get number and index of outflowed super-droplet
-            do np=1,nomp
+         !== periodic boundary conditions ==!
+         !! get number and index of outflowed super-droplet
 
-               sd_str = int(sd_num/nomp)*(np-1) + 1
-               sd_end = int(sd_num/nomp)*np
-               wcnt   = 0
+         wcnt   = 0
+         do n=1,sd_num
+            if( sd_x(n)<GRID_FX(IS-1) .and. sd_rk(n)>VALID2INVALID ) then
+               wcnt = wcnt + 1
+               ilist(wcnt) = n
+            end if
+         end do
+         twsend  = wcnt
+!!$            do np=1,nomp
+!!$
+!!$               sd_str = int(sd_num/nomp)*(np-1) + 1
+!!$               sd_end = int(sd_num/nomp)*np
+!!$               wcnt   = 0
+!!$
+!!$               do n=sd_str,sd_end
+!!$                  if( sd_x(n)<0.0_RP .and. sd_rk(n)>VALID2INVALID ) then
+!!$                     wcnt = wcnt + 1
+!!$                     ilist(wcnt,np) = n
+!!$                  end if
+!!$               end do
+!!$
+!!$               nwsend(np) = wcnt
+!!$               maxwsend   = wcnt     !! max in all
+!!$               twsend     = wcnt
+!!$
+!!$            end do
 
-               do n=sd_str,sd_end
-                  if( sd_x(n)<0.0_RP .and. sd_rk(n)>VALID2INVALID ) then
-                     wcnt = wcnt + 1
-                     ilist(wcnt,np) = n
-                  end if
-               end do
+         !! check send buffer
+         if( stat==0 .and. (twsend>bufsiz1) ) then
+            stat = -1
+         end if
 
-               nwsend(np) = wcnt
-               maxwsend   = wcnt     !! max in all
-               twsend     = wcnt
+         !! send data
+         if( twsend>0 ) then
+            do m=1,twsend
+               n = ilist(m)
+
+               ! multiplicity should be sent directly. Modify this later
+               sbufx(m,1,1) = real(sd_n(n),kind=DP) + 1.E-3_DP
+               
+               sbufx(m,2,1) = sd_x(n)-GRID_FX(IS-1)
+               sbufx(m,3,1) = sd_y(n)
+               sbufx(m,4,1) = sd_rk(n)
+               sbufx(m,5,1) = sd_u(n)
+               sbufx(m,6,1) = sd_v(n)
+               sbufx(m,7,1) = sd_vz(n)
+               sbufx(m,8,1) = sd_r(n)
 
             end do
 
-            !! check send buffer
-            if( stat==0 .and.                                           &
-               (twsend>bufsiz1 .or. maxwsend>int(bufsiz1/nomp)) ) then
-               stat = -1
-            end if
+            do nasl=1,sd_numasl
+               do m=1,twsend
+                  n = ilist(m)
 
-            !! send data
-            if( twsend>0 ) then
-               do np=1,nomp
-
-                  if( nwsend(np)>0 ) then
-
-                     do nw=1,min(nwsend(np),int(bufsiz1/nomp))
-
-                        m = int(bufsiz1/nomp)*(np-1) + nw
-                        n = ilist(nw,np)
-
-                        sbufx(m,1,1) = real(sd_n(n),kind=DP) + 1.E-3_DP
-                        sbufx(m,2,1) = sd_x(n)
-                        sbufx(m,3,1) = sd_y(n)
-                        sbufx(m,4,1) = sd_rk(n)
-                        sbufx(m,5,1) = sd_u(n)
-                        sbufx(m,6,1) = sd_v(n)
-                        sbufx(m,7,1) = sd_vzwc(n)
-                        sbufx(m,8,1) = sd_r(n)
-
-                     end do
-
-                  end if
+                  sbufx(m,8+nasl,1) = sd_asl(n,nasl)
 
                end do
-
-               do nasl=1,sd_numasl
-                  do np=1,nomp
-
-                     if( nwsend(np)>0 ) then
-                        do nw=1,min(nwsend(np),int(bufsiz1/nomp))
-
-                           m = int(bufsiz1/nomp)*(np-1) + nw
-                           n = ilist(nw,np)
-
-                           sbufx(m,8+nasl,1) = sd_asl(n,nasl)
-
-                        end do
-
-                     end if
-
-                  end do
-               end do
-
-               !== convert to invalid ==!
-
-               do np=1,nomp
-
-                  if( nwsend(np)>0 ) then
-                     do nw=1,nwsend(np)
-                        n = ilist(nw,np)
-                        sd_rk(n) = INVALID
-                     end do
-
-                  end if
-
-               end do
-
-            end if
+            end do
+            
+            !== convert to invalid ==!
+            do m=1,twsend
+               n = ilist(m)
+               
+               sd_rk(n) = INVALID
+            end do
+         end if
 
 
          !### Fill in the sending buffer with the value ###!
          !### in the east halo regions                  ###!
 
-            !== intra-subgroup periodic boundary conditions ==!
+         !== periodic boundary conditions ==!
+         !! get number and index of outflowed super-droplet
 
-            !! get number and index of outflowed super-droplet
+         ecnt   = 0
+         do n=1,sd_num
+            if( sd_x(n)>=GRID_FX(IE) .and. sd_rk(n)>VALID2INVALID ) then
+               ecnt = ecnt + 1
+               ilist(ecnt) = n
+            end if
+         end do
+         tesend  = ecnt
 
-            do np=1,nomp
+         !! check send buffer
+         if( stat==0 .and. (tesend>bufsiz1) ) then
+            stat = -1
+         end if
 
-               sd_str = int(sd_num/nomp)*(np-1) + 1
-               sd_end = int(sd_num/nomp)*np
-               ecnt   = 0
+         !! send data
+         if( tesend>0 ) then
+            do m=1,tesend
+               n = ilist(m)
 
-               do n=sd_str,sd_end
-                  if( sd_x(n)>xmax_sdm .and.                            &
-                                        sd_rk(n)>VALID2INVALID ) then
-                     ecnt = ecnt + 1
-                     ilist(ecnt,np) = n
-                  end if
-               end do
-
-               nesend(np) = ecnt
-               maxesend   = ecnt     !! max in all
-               tesend     = ecnt
+               ! multiplicity should be sent directly. Modify this later
+               sbufx(m,1,2) = real(sd_n(n),kind=DP) + 1.E-3_DP
+               
+               sbufx(m,2,2) = sd_x(n)-GRID_FX(IE)
+               sbufx(m,3,2) = sd_y(n)
+               sbufx(m,4,2) = sd_rk(n)
+               sbufx(m,5,2) = sd_u(n)
+               sbufx(m,6,2) = sd_v(n)
+               sbufx(m,7,2) = sd_vz(n)
+               sbufx(m,8,2) = sd_r(n)
 
             end do
 
-            !! check send buffer
-            if( stat==0 .and.                                           &
-               (tesend>bufsiz1 .or. maxesend>int(bufsiz1/nomp)) ) then
-               stat = -1
-            end if
+            do nasl=1,sd_numasl
+               do m=1,tesend
+                  n = ilist(m)
 
-            !! send data
-            if( tesend>0 ) then
-
-               do np=1,nomp
-
-                  if( nesend(np)>0 ) then
-
-                     do ne=1,min(nesend(np),int(bufsiz1/nomp))
-
-                        m = int(bufsiz1/nomp)*(np-1) + ne
-                        n = ilist(ne,np)
-
-                        sbufx(m,1,2) = real(sd_n(n),kind=DP) + 1.E-3_DP
-                        sbufx(m,2,2) = sd_x(n)
-                        sbufx(m,3,2) = sd_y(n)
-                        sbufx(m,4,2) = sd_rk(n)
-                        sbufx(m,5,2) = sd_u(n)
-                        sbufx(m,6,2) = sd_v(n)
-                        sbufx(m,7,2) = sd_vzwc(n)
-                        sbufx(m,8,2) = sd_r(n)
-
-                     end do
-
-                  end if
+                  sbufx(m,8+nasl,2) = sd_asl(n,nasl)
 
                end do
+            end do
+            
+            !== convert to invalid ==!
+            do m=1,tesend
+               n = ilist(m)
+               
+               sd_rk(n) = INVALID
+            end do
+         end if
 
-               do nasl=1,sd_numasl
-
-                  do np=1,nomp
-
-                     if( nesend(np)>0 ) then
-                        do ne=1,min(nesend(np),int(bufsiz1/nomp))
-
-                           m = int(bufsiz1/nomp)*(np-1) + ne
-                           n = ilist(ne,np)
-
-                           sbufx(m,8+nasl,2) = sd_asl(n,nasl)
-
-                        end do
-
-                     end if
-
-                  end do
-               end do
-
-               !== convert to invalid ==!
-
-               do np=1,nomp
-
-                  if( nesend(np)>0 ) then
-                     do ne=1,nesend(np)
-                        n = ilist(ne,np)
-                        sd_rk(n) = INVALID
-                     end do
-
-                  end if
-
-               end do
-
-            end if
+!!$            do np=1,nomp
+!!$
+!!$               sd_str = int(sd_num/nomp)*(np-1) + 1
+!!$               sd_end = int(sd_num/nomp)*np
+!!$               ecnt   = 0
+!!$
+!!$               do n=sd_str,sd_end
+!!$                  if( sd_x(n)>xmax_sdm .and.                            &
+!!$                                        sd_rk(n)>VALID2INVALID ) then
+!!$                     ecnt = ecnt + 1
+!!$                     ilist(ecnt,np) = n
+!!$                  end if
+!!$               end do
+!!$
+!!$               nesend(np) = ecnt
+!!$               maxesend   = ecnt     !! max in all
+!!$               tesend     = ecnt
+!!$
+!!$            end do
+!!$
+!!$            !! check send buffer
+!!$            if( stat==0 .and.                                           &
+!!$               (tesend>bufsiz1 .or. maxesend>int(bufsiz1/nomp)) ) then
+!!$               stat = -1
+!!$            end if
+!!$
+!!$            !! send data
+!!$            if( tesend>0 ) then
+!!$
+!!$               do np=1,nomp
+!!$
+!!$                  if( nesend(np)>0 ) then
+!!$
+!!$                     do ne=1,min(nesend(np),int(bufsiz1/nomp))
+!!$
+!!$                        m = int(bufsiz1/nomp)*(np-1) + ne
+!!$                        n = ilist(ne,np)
+!!$
+!!$                        sbufx(m,1,2) = real(sd_n(n),kind=DP) + 1.E-3_DP
+!!$                        sbufx(m,2,2) = sd_x(n)
+!!$                        sbufx(m,3,2) = sd_y(n)
+!!$                        sbufx(m,4,2) = sd_rk(n)
+!!$                        sbufx(m,5,2) = sd_u(n)
+!!$                        sbufx(m,6,2) = sd_v(n)
+!!$                        sbufx(m,7,2) = sd_vz(n)
+!!$                        sbufx(m,8,2) = sd_r(n)
+!!$
+!!$                     end do
+!!$
+!!$                  end if
+!!$
+!!$               end do
+!!$
+!!$               do nasl=1,sd_numasl
+!!$
+!!$                  do np=1,nomp
+!!$
+!!$                     if( nesend(np)>0 ) then
+!!$                        do ne=1,min(nesend(np),int(bufsiz1/nomp))
+!!$
+!!$                           m = int(bufsiz1/nomp)*(np-1) + ne
+!!$                           n = ilist(ne,np)
+!!$
+!!$                           sbufx(m,8+nasl,2) = sd_asl(n,nasl)
+!!$
+!!$                        end do
+!!$
+!!$                     end if
+!!$
+!!$                  end do
+!!$               end do
+!!$
+!!$               !== convert to invalid ==!
+!!$
+!!$               do np=1,nomp
+!!$
+!!$                  if( nesend(np)>0 ) then
+!!$                     do ne=1,nesend(np)
+!!$                        n = ilist(ne,np)
+!!$                        sd_rk(n) = INVALID
+!!$                     end do
+!!$
+!!$                  end if
+!!$
+!!$               end do
+!!$
+!!$            end if
 
 
       end if
@@ -5532,16 +5584,16 @@ contains
      !------------------------------------------------------------------
 
       ! Initialize
-
-      do n=1,bufsiz1*bufsiz2*2
-
-         k = int( (n-1)/(bufsiz1*bufsiz2) ) + 1
-         j = int( ( (n-1)-(k-1)*(bufsiz1*bufsiz2) )/bufsiz1 ) + 1
-         i = (n-1) - (j-1)*bufsiz1 - (k-1)*(bufsiz1*bufsiz2) + 1
-
-         rbufx(i,j,k) = INVALID
-
-      end do
+      rbufx(1:bufsiz1,1:bufsiz2,1:2)=INVALID
+!!$      do n=1,bufsiz1*bufsiz2*2
+!!$
+!!$         k = int( (n-1)/(bufsiz1*bufsiz2) ) + 1
+!!$         j = int( ( (n-1)-(k-1)*(bufsiz1*bufsiz2) )/bufsiz1 ) + 1
+!!$         i = (n-1) - (j-1)*bufsiz1 - (k-1)*(bufsiz1*bufsiz2) + 1
+!!$
+!!$         rbufx(i,j,k) = INVALID
+!!$
+!!$      end do
 
       ! Exchange the value in x direction.
 
@@ -5551,10 +5603,6 @@ contains
 
          siz = bufsiz1 * bufsiz2
 
-         !### Incliment the message tag ###!
-
-         tag = tag + 1
-
          !### Set the processor element number for sending ###!
          !### distination and receiving source             ###!
 
@@ -5563,10 +5611,23 @@ contains
          srcw = srcw_sub
          srce = srce_sub
 
-         !### Call the sending and receiving MPI function ###!
+         !### Incliment the message tag ###!
+
+         tag = tag + 1
+
+         !### Call the sending and receiving MPI function (towards west)###!
 
          call mpi_isend(sbufx(1,1,1),siz,MPI_DOUBLE_PRECISION,dstw,tag, &
                         MPI_COMM_WORLD,statsw,ierr)
+
+         call mpi_irecv(rbufx(1,1,1),siz,MPI_DOUBLE_PRECISION,srce,tag, &
+                        MPI_COMM_WORLD,statre,ierr)
+
+         !### Incliment the message tag ###!
+
+         tag = tag + 1
+
+         !### Call the sending and receiving MPI function (towards east)###!
 
          call mpi_isend(sbufx(1,1,2),siz,MPI_DOUBLE_PRECISION,dste,tag, &
                         MPI_COMM_WORLD,statse,ierr)
@@ -5574,8 +5635,6 @@ contains
          call mpi_irecv(rbufx(1,1,2),siz,MPI_DOUBLE_PRECISION,srcw,tag, &
                         MPI_COMM_WORLD,statrw,ierr)
 
-         call mpi_irecv(rbufx(1,1,1),siz,MPI_DOUBLE_PRECISION,srce,tag, &
-                        MPI_COMM_WORLD,statre,ierr)
 
          !### Call the waiting MPI function ###!
 
@@ -5590,9 +5649,11 @@ contains
   end subroutine sdm_shiftsx
   !--------------------------------------------------------------------------
   subroutine sdm_getbufsx(wbc,ebc,sd_num,sd_numasl,         &
-                          sd_n,sd_x,sd_y,sd_rk,sd_u,sd_v,sd_vzwc, &
+                          sd_n,sd_x,sd_y,sd_rk,sd_u,sd_v,sd_vz, &
                           sd_r,sd_asl,                            &
                           bufsiz1,bufsiz2,stat,ilist,rbufx)
+     use scale_grid, only: &
+         GRID_FX
       ! Input variables
       integer, intent(in) :: wbc       ! Option for west boundary conditions
       integer, intent(in) :: ebc       ! Option for east boundaty conditions
@@ -5613,11 +5674,11 @@ contains
       real(RP), intent(inout) :: sd_rk(1:sd_num) ! index[k/real] of super-droplets
       real(RP), intent(inout) :: sd_u(1:sd_num)  ! x-components velocity of super-droplets
       real(RP), intent(inout) :: sd_v(1:sd_num)  ! y-components velocity of super-droplets
-      real(RP), intent(inout) :: sd_vzwc(1:sd_num) ! terminal velocity of super-droplets / zeta components contravariant velocity of super-droplets
+      real(RP), intent(inout) :: sd_vz(1:sd_num) ! terminal velocity of super-droplets
       real(RP), intent(inout) :: sd_r(1:sd_num)  ! equivalent radius of super-droplets
       real(RP), intent(inout) :: sd_asl(1:sd_num,1:sd_numasl) ! aerosol mass of super-droplets
       ! Output variable
-      integer, intent(out) :: ilist(1:int(sd_num/nomp),1:nomp) ! buffer for list vectorization
+      integer, intent(out) :: ilist(1:sd_num) ! buffer for list vectorization
       ! Work variables for OpenMP
       integer :: sd_str           ! index of divided loop by OpenMP
       integer :: sd_end           ! index of divided loop by OpenMP
@@ -5667,202 +5728,246 @@ contains
 
       if( nisub>=2 ) then
 
-         !### Fill in the west halo regions ###!
-         !### with the received value       ###!
+         ! Get the receiving buffer sent toward the west
 
-            !== intra-subgroup periodic boundary conditions ==!
-            !! send buffer size
-            do np=1,nomp
+         !== periodic boundary conditions ==!
+         !! check the num of sent sd
+         do n=1,bufsiz1
+            if( rbufx(n,4,1)>VALID2INVALID ) then
+               twsend = twsend + 1
+            end if
+         end do
 
-               sd_str = int(bufsiz1/nomp)*(np-1) + 1
-               sd_end = int(bufsiz1/nomp)*np
+!!$            do np=1,nomp
+!!$
+!!$               sd_str = int(bufsiz1/nomp)*(np-1) + 1
+!!$               sd_end = int(bufsiz1/nomp)*np
+!!$
+!!$               do n=sd_str,sd_end
+!!$                  if( rbufx(n,1,1)>VALID2INVALID ) then
+!!$                     nwsend(np) = nwsend(np) + 1
+!!$                  end if
+!!$               end do
+!!$
+!!$               maxwsend = nwsend(np)     !! max in all
+!!$               twsend   = nwsend(np)
+!!$
+!!$            end do
 
-               do n=sd_str,sd_end
-                  if( rbufx(n,1,1)>VALID2INVALID ) then
-                     nwsend(np) = nwsend(np) + 1
-                  end if
-               end do
+         !! check the num of acceptable sd
+         wcnt   = 0
+         do n=1,sd_num
+            if( sd_rk(n)<VALID2INVALID ) then
+               wcnt = wcnt + 1
+               ilist(wcnt) = n
+            end if
+         end do
+         twrecv = wcnt
 
-               maxwsend = nwsend(np)     !! max in all
-               twsend   = nwsend(np)
+!!$            do np=1,nomp
+!!$
+!!$               sd_str = int(sd_num/nomp)*(np-1) + 1
+!!$               sd_end = int(sd_num/nomp)*np
+!!$               wcnt   = 0
+!!$
+!!$               do n=sd_str,sd_end
+!!$                  if( sd_rk(n)<VALID2INVALID ) then
+!!$                     wcnt = wcnt + 1
+!!$                     ilist(wcnt,np) = n
+!!$                  end if
+!!$               end do
+!!$
+!!$               nwrecv(np) = wcnt
+!!$               minwrecv   = wcnt     !! min in all
+!!$               twrecv     = wcnt
+!!$
+!!$            end do
 
+         !! check send/receive
+         if( stat==0 .and.                                           &
+              &         (twrecv<twsend)) then
+            stat = -1
+         end if
+
+         !! send/receive
+         if( twrecv>0 .and. twsend>0 ) then
+            do m=1,twsend
+               n = ilist(m)
+               
+               sd_n(n)    = floor(rbufx(m,1,1),kind=DP)
+               sd_x(n)    = rbufx(m,2,1)+GRID_FX(IE)
+               sd_y(n)    = rbufx(m,3,1)
+               sd_rk(n)   = rbufx(m,4,1)
+               sd_u(n)    = rbufx(m,5,1)
+               sd_v(n)    = rbufx(m,6,1)
+               sd_vz(n) = rbufx(m,7,1)
+               sd_r(n)    = rbufx(m,8,1)
+               
             end do
 
-            do np=1,nomp
+            do nasl=1,sd_numasl
+               do m=1,twsend
+                  n = ilist(m)
 
-               sd_str = int(sd_num/nomp)*(np-1) + 1
-               sd_end = int(sd_num/nomp)*np
-               wcnt   = 0
-
-               do n=sd_str,sd_end
-                  if( sd_rk(n)<VALID2INVALID ) then
-                     wcnt = wcnt + 1
-                     ilist(wcnt,np) = n
-                  end if
+                  sd_asl(n,nasl) = rbufx(m,8+nasl,1)
+                  
                end do
+            end do
+         end if
 
-               nwrecv(np) = wcnt
-               minwrecv   = wcnt     !! min in all
-               twrecv     = wcnt
 
+         ! Get the receiving buffer sent toward the east
+
+         !== periodic boundary conditions ==!
+         !! check the num of sent sd
+         do n=1,bufsiz1
+            if( rbufx(n,4,2)>VALID2INVALID ) then
+               tesend = tesend + 1
+            end if
+         end do
+
+         !! check the num of acceptable sd
+         ecnt   = 0
+         do n=1,sd_num
+            if( sd_rk(n)<VALID2INVALID ) then
+               ecnt = ecnt + 1
+               ilist(ecnt) = n
+            end if
+         end do
+         terecv = ecnt
+
+         !! check send/receive
+         if( stat==0 .and.                                           &
+              &         (terecv<tesend)) then
+            stat = -1
+         end if
+
+         !! send/receive
+         if( terecv>0 .and. tesend>0 ) then
+            do m=1,tesend
+               n = ilist(m)
+               
+               sd_n(n)    = floor(rbufx(m,1,2),kind=DP)
+               sd_x(n)    = rbufx(m,2,2)+GRID_FX(IS-1)
+               sd_y(n)    = rbufx(m,3,2)
+               sd_rk(n)   = rbufx(m,4,2)
+               sd_u(n)    = rbufx(m,5,2)
+               sd_v(n)    = rbufx(m,6,2)
+               sd_vz(n) = rbufx(m,7,2)
+               sd_r(n)    = rbufx(m,8,2)
+               
             end do
 
-            !! check send/receive
-            if( stat==0 .and.                                           &
-     &         (twrecv<twsend .or. minwrecv<maxwsend) ) then
-               stat = -1
-            end if
+            do nasl=1,sd_numasl
+               do m=1,tesend
+                  n = ilist(m)
 
-            !! send/receive
-
-            if( twrecv>0 .and. twsend>0 ) then
-
-               do np=1,nomp
-
-                  if( nwrecv(np)>0 .and. nwsend(np)>0 ) then
-                     do nw=1,min(nwrecv(np),nwsend(np))
-
-                        m = int(bufsiz1/nomp)*(np-1) + nw
-                        n = ilist(nw,np)
-
-                        sd_n(n)    = floor(rbufx(m,1,1),kind=DP)
-                        sd_x(n)    = rbufx(m,2,1)
-                        sd_y(n)    = rbufx(m,3,1)
-                        sd_rk(n)   = rbufx(m,4,1)
-                        sd_u(n)    = rbufx(m,5,1)
-                        sd_v(n)    = rbufx(m,6,1)
-                        sd_vzwc(n) = rbufx(m,7,1)
-                        sd_r(n)    = rbufx(m,8,1)
-
-                     end do
-
-                  end if
-
+                  sd_asl(n,nasl) = rbufx(m,8+nasl,2)
+                  
                end do
-
-               do nasl=1,sd_numasl
-
-                  do np=1,nomp
-
-                     if( nwrecv(np)>0 .and. nwsend(np)>0 ) then
-                        do nw=1,min(nwrecv(np),nwsend(np))
-
-                           m = int(bufsiz1/nomp)*(np-1) + nw
-                           n = ilist(nw,np)
-
-                           sd_asl(n,nasl) = rbufx(m,8+nasl,1)
-
-                        end do
-
-                     end if
-
-                  end do
-
-               end do
-
-            end if
-
-
-         !### Fill in the east halo regions ###!
-         !### with the received value       ###!
-
-            !== intra-subgroup periodic boundary conditions ==!
-
-            !! send buffer size
-
-            do np=1,nomp
-
-               sd_str = int(bufsiz1/nomp)*(np-1) + 1
-               sd_end = int(bufsiz1/nomp)*np
-
-               do n=sd_str,sd_end
-                  if( rbufx(n,1,2)>VALID2INVALID ) then
-                     nesend(np) = nesend(np) + 1
-                  end if
-               end do
-
-               maxesend = nesend(np)     !! max in all
-               tesend   = nesend(np)
-
             end do
+         end if
 
-            !! receptible buffer size (invalid super-droplets)
-
-            do np=1,nomp
-
-               sd_str = int(sd_num/nomp)*(np-1) + 1
-               sd_end = int(sd_num/nomp)*np
-               ecnt   = 0
-
-               do n=sd_str,sd_end
-                  if( sd_rk(n)<VALID2INVALID ) then
-                     ecnt = ecnt + 1
-                     ilist(ecnt,np) = n
-                  end if
-               end do
-
-               nerecv(np) = ecnt
-               minerecv   = ecnt     !! min in all
-               terecv     = ecnt
-
-            end do
-
-            !! check send/receive
-
-            if( stat==0 .and.                                           &
-               (terecv<tesend .or. minerecv<maxesend) ) then
-               stat = -1
-            end if
-
-            !! send/receive
-
-            if( terecv>0 .and. tesend>0 ) then
-
-               do np=1,nomp
-
-                  if( nerecv(np)>0 .and. nesend(np)>0 ) then
-
-                     do ne=1,min(nerecv(np),nesend(np))
-
-                        m = int(bufsiz1/nomp)*(np-1) + ne
-                        n = ilist(ne,np)
-
-                        sd_n(n)    = floor(rbufx(m,1,2),kind=DP)
-                        sd_x(n)    = rbufx(m,2,2)
-                        sd_y(n)    = rbufx(m,3,2)
-                        sd_rk(n)   = rbufx(m,4,2)
-                        sd_u(n)    = rbufx(m,5,2)
-                        sd_v(n)    = rbufx(m,6,2)
-                        sd_vzwc(n) = rbufx(m,7,2)
-                        sd_r(n)    = rbufx(m,8,2)
-
-                     end do
-
-                  end if
-
-               end do
-
-               do nasl=1,sd_numasl
-
-                  do np=1,nomp
-
-                     if( nerecv(np)>0 .and. nesend(np)>0 ) then
-                        do ne=1,min(nerecv(np),nesend(np))
-
-                           m = int(bufsiz1/nomp)*(np-1) + ne
-                           n = ilist(ne,np)
-
-                           sd_asl(n,nasl) = rbufx(m,8+nasl,2)
-
-                        end do
-
-                     end if
-
-                  end do
-
-               end do
-
-            end if
+!!$         !### Fill in the east halo regions ###!
+!!$         !### with the received value       ###!
+!!$
+!!$            !== intra-subgroup periodic boundary conditions ==!
+!!$
+!!$            !! send buffer size
+!!$
+!!$            do np=1,nomp
+!!$
+!!$               sd_str = int(bufsiz1/nomp)*(np-1) + 1
+!!$               sd_end = int(bufsiz1/nomp)*np
+!!$
+!!$               do n=sd_str,sd_end
+!!$                  if( rbufx(n,1,2)>VALID2INVALID ) then
+!!$                     nesend(np) = nesend(np) + 1
+!!$                  end if
+!!$               end do
+!!$
+!!$               maxesend = nesend(np)     !! max in all
+!!$               tesend   = nesend(np)
+!!$
+!!$            end do
+!!$
+!!$            !! receptible buffer size (invalid super-droplets)
+!!$
+!!$            do np=1,nomp
+!!$
+!!$               sd_str = int(sd_num/nomp)*(np-1) + 1
+!!$               sd_end = int(sd_num/nomp)*np
+!!$               ecnt   = 0
+!!$
+!!$               do n=sd_str,sd_end
+!!$                  if( sd_rk(n)<VALID2INVALID ) then
+!!$                     ecnt = ecnt + 1
+!!$                     ilist(ecnt,np) = n
+!!$                  end if
+!!$               end do
+!!$
+!!$               nerecv(np) = ecnt
+!!$               minerecv   = ecnt     !! min in all
+!!$               terecv     = ecnt
+!!$
+!!$            end do
+!!$
+!!$            !! check send/receive
+!!$
+!!$            if( stat==0 .and.                                           &
+!!$               (terecv<tesend .or. minerecv<maxesend) ) then
+!!$               stat = -1
+!!$            end if
+!!$
+!!$            !! send/receive
+!!$
+!!$            if( terecv>0 .and. tesend>0 ) then
+!!$
+!!$               do np=1,nomp
+!!$
+!!$                  if( nerecv(np)>0 .and. nesend(np)>0 ) then
+!!$
+!!$                     do ne=1,min(nerecv(np),nesend(np))
+!!$
+!!$                        m = int(bufsiz1/nomp)*(np-1) + ne
+!!$                        n = ilist(ne,np)
+!!$
+!!$                        sd_n(n)    = floor(rbufx(m,1,2),kind=DP)
+!!$                        sd_x(n)    = rbufx(m,2,2)
+!!$                        sd_y(n)    = rbufx(m,3,2)
+!!$                        sd_rk(n)   = rbufx(m,4,2)
+!!$                        sd_u(n)    = rbufx(m,5,2)
+!!$                        sd_v(n)    = rbufx(m,6,2)
+!!$                        sd_vz(n) = rbufx(m,7,2)
+!!$                        sd_r(n)    = rbufx(m,8,2)
+!!$
+!!$                     end do
+!!$
+!!$                  end if
+!!$
+!!$               end do
+!!$
+!!$               do nasl=1,sd_numasl
+!!$
+!!$                  do np=1,nomp
+!!$
+!!$                     if( nerecv(np)>0 .and. nesend(np)>0 ) then
+!!$                        do ne=1,min(nerecv(np),nesend(np))
+!!$
+!!$                           m = int(bufsiz1/nomp)*(np-1) + ne
+!!$                           n = ilist(ne,np)
+!!$
+!!$                           sd_asl(n,nasl) = rbufx(m,8+nasl,2)
+!!$
+!!$                        end do
+!!$
+!!$                     end if
+!!$
+!!$                  end do
+!!$
+!!$               end do
+!!$
+!!$            end if
 
       end if
 
@@ -5870,11 +5975,11 @@ contains
   end subroutine sdm_getbufsx
   !----------------------------------------------------------------------------
   subroutine sdm_putbufsy(sbc,nbc,sd_num,sd_numasl,         &
-                          sd_n,sd_x,sd_y,sd_rk,sd_u,sd_v,sd_vzwc, &
+                          sd_n,sd_x,sd_y,sd_rk,sd_u,sd_v,sd_vz, &
                           sd_r,sd_asl,                            &
                           bufsiz1,bufsiz2,stat,ilist,sbufy)
-      use scale_process, only: &
-          mype  => PRC_myrank
+    use scale_grid, only: &
+          GRID_FY
       ! Input variables
       integer, intent(in) :: sbc   ! Option for west boundary conditions
       integer, intent(in) :: nbc   ! Option for east boundaty conditions
@@ -5884,7 +5989,7 @@ contains
       real(RP), intent(in) :: sd_x(1:sd_num) ! x-coordinate of super-droplets
       real(RP), intent(inout) :: sd_u(1:sd_num) ! x-components velocity of super-droplets
       real(RP), intent(inout) :: sd_v(1:sd_num) ! y-components velocity of super-droplets
-      real(RP), intent(inout) :: sd_vzwc(1:sd_num) ! terminal velocity of super-droplets / zeta components contravariant velocity of super-droplets
+      real(RP), intent(inout) :: sd_vz(1:sd_num) ! terminal velocity of super-droplets
       real(RP), intent(in) :: sd_r(1:sd_num)  ! equivalent radius of super-droplets
       real(RP), intent(in) :: sd_asl(1:sd_num,1:sd_numasl)  ! aerosol mass of super-droplets
       integer, intent(in) :: bufsiz1  ! buffer size for MPI
@@ -5899,7 +6004,7 @@ contains
                        ! dim02 = 1 - ( 8 + sd_numasl )
                        !    : n,x,y,rk,u,v,wc(vz),r,asl(1:sd_numasl)
                        ! dim03 = 1 : south, 2: north
-      integer, intent(out) :: ilist(1:int(sd_num/nomp),1:nomp)  ! buffer for list vectorization
+      integer, intent(out) :: ilist(1:sd_num)  ! buffer for list vectorization
       ! Work variables for OpenMP
       integer :: sd_str           ! index of divided loop by OpenMP
       integer :: sd_end           ! index of divided loop by OpenMP
@@ -5918,220 +6023,128 @@ contains
     !---------------------------------------------------------------------
 
 
-    ! Initialize
-
-      maxssend = 0
-      maxnsend = 0
-
+      ! Initialize
       tssend = 0
       tnsend = 0
 
-      do np=1,nomp
-         nssend(np) = 0
-         nnsend(np) = 0
-      end do
+      sbufy(1:bufsiz1,1:bufsiz2,1:2) = INVALID
 
-      do n=1,bufsiz1*bufsiz2*2
-
-         k = int( (n-1)/(bufsiz1*bufsiz2) ) + 1
-         j = int( ( (n-1)-(k-1)*(bufsiz1*bufsiz2) )/bufsiz1 ) + 1
-         i = (n-1) - (j-1)*bufsiz1 - (k-1)*(bufsiz1*bufsiz2) + 1
-
-         sbufy(i,j,k) = INVALID
-
-      end do
-
-     ! Put the sending buffer in y direction.
+      ! Put the sending buffer in y direction.
 
       if( njsub>=2 ) then
 
          !### Fill in the sending buffer with the value ###!
          !### in the south halo regions.                ###!
 
-            !== intra-subgroup periodic boundary conditions ==!
-            !! get number and index of outflowed super-droplet
+         !== periodic boundary conditions ==!
+         !! get number and index of outflowed super-droplet
 
-            do np=1,nomp
+         scnt   = 0
+         do n=1,sd_num
+            if( sd_y(n)<GRID_FY(JS-1) .and. sd_rk(n)>VALID2INVALID ) then
+               scnt = scnt + 1
+               ilist(scnt) = n
+            end if
+         end do
+         tssend  = scnt
 
-               sd_str = int(sd_num/nomp)*(np-1) + 1
-               sd_end = int(sd_num/nomp)*np
-               scnt   = 0
+         !! check send buffer
+         if( stat==0 .and.                                           &
+              &         (tssend>bufsiz1) ) then
+            stat = -1
+         end if
 
-               do n=sd_str,sd_end
-                  if( sd_y(n)<0.0_RP .and. sd_rk(n)>VALID2INVALID ) then
-                     scnt = scnt + 1
-                     ilist(scnt,np) = n
-                  end if
-               end do
+         !! send data
+         if( tssend>0 ) then
+            do m=1,tssend
+               n = ilist(m)
 
-               nssend(np) = scnt
-               maxssend   = scnt     !! max in all
-               tssend     = scnt
+               ! multiplicity should be sent directly. Modify this later
+               sbufy(m,1,1) = real(sd_n(n),kind=DP) + 1.E-3_DP
+               
+               sbufy(m,2,1) = sd_x(n)
+               sbufy(m,3,1) = sd_y(n)-GRID_FY(JS-1)
+               sbufy(m,4,1) = sd_rk(n)
+               sbufy(m,5,1) = sd_u(n)
+               sbufy(m,6,1) = sd_v(n)
+               sbufy(m,7,1) = sd_vz(n)
+               sbufy(m,8,1) = sd_r(n)
 
             end do
 
-            !! check send buffer
+            do nasl=1,sd_numasl
+               do m=1,tssend
+                  n = ilist(m)
 
-            if( stat==0 .and.                                           &
-     &         (tssend>bufsiz1 .or. maxssend>int(bufsiz1/nomp)) ) then
-               stat = -1
-            end if
-
-            if( tssend>0 ) then
-               do np=1,nomp
-
-                  if( nssend(np)>0 ) then
-
-                     do ns=1,min(nssend(np),int(bufsiz1/nomp))
-
-                        m = int(bufsiz1/nomp)*(np-1) + ns
-                        n = ilist(ns,np)
-
-                        sbufy(m,1,1) = real(sd_n(n),kind=DP) + 1.E-3_DP
-                        sbufy(m,2,1) = sd_x(n)
-                        sbufy(m,3,1) = sd_y(n)
-                        sbufy(m,4,1) = sd_rk(n)
-                        sbufy(m,5,1) = sd_u(n)
-                        sbufy(m,6,1) = sd_v(n)
-                        sbufy(m,7,1) = sd_vzwc(n)
-                        sbufy(m,8,1) = sd_r(n)
-
-                     end do
-
-                  end if
+                  sbufy(m,8+nasl,1) = sd_asl(n,nasl)
 
                end do
+            end do
+            
+            !== convert to invalid ==!
+            do m=1,tssend
+               n = ilist(m)
+               
+               sd_rk(n) = INVALID
+            end do
+         end if
 
-               do nasl=1,sd_numasl
-                  do np=1,nomp
-
-                     if( nssend(np)>0 ) then
-                        do ns=1,min(nssend(np),int(bufsiz1/nomp))
-
-                           m = int(bufsiz1/nomp)*(np-1) + ns
-                           n = ilist(ns,np)
-
-                           sbufy(m,8+nasl,1) = sd_asl(n,nasl)
-
-                        end do
-
-                     end if
-
-                  end do
-               end do
-
-
-               !== convert to invalid ==!
-               do np=1,nomp
-
-                  if( nssend(np)>0 ) then
-                     do ns=1,nssend(np)
-                        n = ilist(ns,np)
-                        sd_rk(n) = INVALID
-                     end do
-
-                  end if
-
-               end do
-
-            end if
 
          !### Fill in the sending buffer with the value ###!
          !### in the north halo regions                 ###!
 
-            !== intra-subgroup periodic boundary conditions ==!
+         !== periodic boundary conditions ==!
+         !! get number and index of outflowed super-droplet
+         
+         ncnt   = 0
+         do n=1,sd_num
+            if( sd_y(n)>=GRID_FY(JE) .and. sd_rk(n)>VALID2INVALID ) then
+               ncnt = ncnt + 1
+               ilist(ncnt) = n
+            end if
+         end do
+         tnsend  = ncnt
 
-            !! get number and index of outflowed super-droplet
+         !! check send buffer
+         if( stat==0 .and.                                           &
+              &         (tnsend>bufsiz1) ) then
+            stat = -1
+         end if
 
-            do np=1,nomp
+         !! send data
+         if( tnsend>0 ) then
+            do m=1,tnsend
+               n = ilist(m)
 
-               sd_str = int(sd_num/nomp)*(np-1) + 1
-               sd_end = int(sd_num/nomp)*np
-               ncnt   = 0
-
-               do n=sd_str,sd_end
-                  if( sd_y(n)>ymax_sdm .and.                            &
-     &                                  sd_rk(n)>VALID2INVALID ) then
-                     ncnt = ncnt + 1
-                     ilist(ncnt,np) = n
-                  end if
-               end do
-
-               nnsend(np) = ncnt
-               maxnsend   = ncnt     !! max in all
-               tnsend     = ncnt
+               ! multiplicity should be sent directly. Modify this later
+               sbufy(m,1,2) = real(sd_n(n),kind=DP) + 1.E-3_DP
+               
+               sbufy(m,2,2) = sd_x(n)
+               sbufy(m,3,2) = sd_y(n)-GRID_FY(JE)
+               sbufy(m,4,2) = sd_rk(n)
+               sbufy(m,5,2) = sd_u(n)
+               sbufy(m,6,2) = sd_v(n)
+               sbufy(m,7,2) = sd_vz(n)
+               sbufy(m,8,2) = sd_r(n)
 
             end do
 
-            !! check send buffer
+            do nasl=1,sd_numasl
+               do m=1,tnsend
+                  n = ilist(m)
 
-            if( stat==0 .and.                                           &
-     &         (tnsend>bufsiz1 .or. maxnsend>int(bufsiz1/nomp)) ) then
-               stat = -1
-            end if
-
-            !! send data
-
-            if( tnsend>0 ) then
-
-               do np=1,nomp
-
-                  if( nnsend(np)>0 ) then
-
-                     do nn=1,min(nnsend(np),int(bufsiz1/nomp))
-
-                        m = int(bufsiz1/nomp)*(np-1) + nn
-                        n = ilist(nn,np)
-
-                        sbufy(m,1,2) = real(sd_n(n),kind=DP) + 1.E-3_DP
-                        sbufy(m,2,2) = sd_x(n)
-                        sbufy(m,3,2) = sd_y(n)
-                        sbufy(m,4,2) = sd_rk(n)
-                        sbufy(m,5,2) = sd_u(n)
-                        sbufy(m,6,2) = sd_v(n)
-                        sbufy(m,7,2) = sd_vzwc(n)
-                        sbufy(m,8,2) = sd_r(n)
-
-                     end do
-
-                  end if
+                  sbufy(m,8+nasl,2) = sd_asl(n,nasl)
 
                end do
-
-               do nasl=1,sd_numasl
-
-                  do np=1,nomp
-
-                     if( nnsend(np)>0 ) then
-                        do nn=1,min(nnsend(np),int(bufsiz1/nomp))
-
-                           m = int(bufsiz1/nomp)*(np-1) + nn
-                           n = ilist(nn,np)
-
-                           sbufy(m,8+nasl,2) = sd_asl(n,nasl)
-
-                        end do
-
-                     end if
-
-                  end do
-               end do
-
-
-               !== convert to invalid ==!
-
-               do np=1,nomp
-
-                  if( nnsend(np)>0 ) then
-                     do nn=1,nnsend(np)
-                        n = ilist(nn,np)
-                        sd_rk(n) = INVALID
-                     end do
-
-                  end if
-               end do
-
-            end if
+            end do
+            
+            !== convert to invalid ==!
+            do m=1,tnsend
+               n = ilist(m)
+               
+               sd_rk(n) = INVALID
+            end do
+         end if
 
       end if
 
@@ -6181,16 +6194,7 @@ contains
       !--------------------------------------------------------------------
 
       ! Initialize
-
-      do n=1,bufsiz1*bufsiz2*2
-
-         k = int( (n-1)/(bufsiz1*bufsiz2) ) + 1
-         j = int( ( (n-1)-(k-1)*(bufsiz1*bufsiz2) )/bufsiz1 ) + 1
-         i = (n-1) - (j-1)*bufsiz1 - (k-1)*(bufsiz1*bufsiz2) + 1
-
-         rbufy(i,j,k) = INVALID
-
-      end do
+      rbufy(1:bufsiz1,1:bufsiz2,1:2)=INVALID
 
       ! Exchange the value in y direction.
 
@@ -6200,10 +6204,6 @@ contains
 
          siz = bufsiz1 * bufsiz2
 
-         !### Incliment the message tag ###!
-
-         tag = tag + 1
-
          !### Set the processor element number for sending ###!
          !### distination and receiving source             ###!
 
@@ -6212,47 +6212,29 @@ contains
          srcs = srcs_sub
          srcn = srcn_sub
 
-         ! modify the send/receive signal in non-intra-subgroup
-         ! periodic boundary conditions
+         !### Incliment the message tag ###!
 
-!         if( sbc/=-1 ) then
-!
-!            if( jsub==0 ) then
-!              dsts = mpi_proc_null
-!            end if
-!
-!            if( jsub==(njsub-1) ) then
-!              srcs = mpi_proc_null
-!            end if
-!
-!         end if
-!
-!         if( nbc/=-1 ) then
-!
-!            if( jsub==(njsub-1) ) then
-!              dstn = mpi_proc_null
-!            end if
-!
-!            if( jsub==0 ) then
-!              srcn = mpi_proc_null
-!            end if
-!
-!         end if
-!
+         tag = tag + 1
+         
          !### Call the sending and receiving MPI function ###!
 
          call mpi_isend(sbufy(1,1,1),siz,MPI_DOUBLE_PRECISION,dsts,tag, &
                         MPI_COMM_WORLD,statss,ierr)
+
+         call mpi_irecv(rbufy(1,1,1),siz,MPI_DOUBLE_PRECISION,srcn,tag, &
+                        MPI_COMM_WORLD,statrn,ierr)
+
+         !### Incliment the message tag ###!
+
+         tag = tag + 1
+         
+         !### Call the sending and receiving MPI function ###!
 
          call mpi_isend(sbufy(1,1,2),siz,MPI_DOUBLE_PRECISION,dstn,tag, &
                         MPI_COMM_WORLD,statsn,ierr)
 
          call mpi_irecv(rbufy(1,1,2),siz,MPI_DOUBLE_PRECISION,srcs,tag, &
                         MPI_COMM_WORLD,statrs,ierr)
-
-         call mpi_irecv(rbufy(1,1,1),siz,MPI_DOUBLE_PRECISION,srcn,tag, &
-                        MPI_COMM_WORLD,statrn,ierr)
-
 
          !### Call the waiting MPI function ###!
 
@@ -6267,9 +6249,11 @@ contains
   end subroutine sdm_shiftsy
   !----------------------------------------------------------------------------
   subroutine sdm_getbufsy(sbc,nbc,sd_num,sd_numasl,         &
-                          sd_n,sd_x,sd_y,sd_rk,sd_u,sd_v,sd_vzwc, &
+                          sd_n,sd_x,sd_y,sd_rk,sd_u,sd_v,sd_vz, &
                           sd_r,sd_asl,                            &
                           bufsiz1,bufsiz2,stat,ilist,rbufy)
+    use scale_grid, only: &
+         GRID_FY
       ! Input variables
       integer, intent(in) :: sbc       ! Option for south boundary conditions
       integer, intent(in) :: nbc       ! Option for north boundaty conditions
@@ -6291,11 +6275,11 @@ contains
       real(RP), intent(inout) :: sd_rk(1:sd_num) ! index[k/real] of super-droplets
       real(RP), intent(inout) :: sd_u(1:sd_num)  ! x-components velocity of super-droplets
       real(RP), intent(inout) :: sd_v(1:sd_num)  ! y-components velocity of super-droplets
-      real(RP), intent(inout) :: sd_vzwc(1:sd_num) ! terminal velocity of super-droplets/ zeta components contravariant velocity of super-droplets
+      real(RP), intent(inout) :: sd_vz(1:sd_num) ! terminal velocity of super-droplets
       real(RP), intent(inout) :: sd_r(1:sd_num)  ! equivalent radius of super-droplets
       real(RP), intent(inout) :: sd_asl(1:sd_num,1:sd_numasl)  ! aerosol mass of super-droplets
       ! Output variable
-      integer, intent(out) :: ilist(1:int(sd_num/nomp),1:nomp)  ! buffer for list vectorization
+      integer, intent(out) :: ilist(1:sd_num)  ! buffer for list vectorization
       ! Work variables for OpenMP
       integer :: sd_str           ! index of divided loop by OpenMP
       integer :: sd_end           ! index of divided loop by OpenMP
@@ -6346,204 +6330,109 @@ contains
 
       if( njsub>=2 ) then
 
-         !### Fill in the south halo regions ###!
-         !### with the received value        ###!
+         ! Get the receiving buffer sent toward the south
+         
+         !== periodic boundary conditions ==!
+         !! check the num of sent sd
+         do n=1,bufsiz1
+            if( rbufy(n,4,1)>VALID2INVALID ) then
+               tssend = tssend + 1
+            end if
+         end do
 
-            !== intra-subgroup periodic boundary conditions ==!
-            !! send buffer size
+         !! check the num of acceptable sd
+         scnt   = 0
+         do n=1,sd_num
+            if( sd_rk(n)<VALID2INVALID ) then
+               scnt = scnt + 1
+               ilist(scnt) = n
+            end if
+         end do
+         tsrecv = scnt
 
-            do np=1,nomp
+         !! check send/receive
+         if( stat==0 .and.                                           &
+              (tsrecv<tssend) ) then
+            stat = -1
+         end if
 
-               sd_str = int(bufsiz1/nomp)*(np-1) + 1
-               sd_end = int(bufsiz1/nomp)*np
-
-               do n=sd_str,sd_end
-                  if( rbufy(n,1,1)>VALID2INVALID ) then
-                     nssend(np) = nssend(np) + 1
-                  end if
-               end do
-
-               maxssend = nssend(np)     !! max in all
-               tssend   = nssend(np)
-
+         !! send/receive
+         if( tsrecv>0 .and. tssend>0 ) then
+            do m=1,tssend
+               n = ilist(m)
+               
+               sd_n(n)    = floor(rbufy(m,1,1),kind=DP)
+               sd_x(n)    = rbufy(m,2,1)+GRID_FY(JE)
+               sd_y(n)    = rbufy(m,3,1)
+               sd_rk(n)   = rbufy(m,4,1)
+               sd_u(n)    = rbufy(m,5,1)
+               sd_v(n)    = rbufy(m,6,1)
+               sd_vz(n) = rbufy(m,7,1)
+               sd_r(n)    = rbufy(m,8,1)
+               
             end do
 
-            !! receptible buffer size (invalid super-droplets)
+            do nasl=1,sd_numasl
+               do m=1,tssend
+                  n = ilist(m)
 
-            do np=1,nomp
-
-               sd_str = int(sd_num/nomp)*(np-1) + 1
-               sd_end = int(sd_num/nomp)*np
-               scnt   = 0
-
-               do n=sd_str,sd_end
-                  if( sd_rk(n)<VALID2INVALID ) then
-                     scnt = scnt + 1
-                     ilist(scnt,np) = n
-                  end if
+                  sd_asl(n,nasl) = rbufy(m,8+nasl,1)
+                  
                end do
+            end do
+         end if
 
-               nsrecv(np) = scnt
-               minsrecv   = scnt     !! min in all
-               tsrecv     = scnt
+         ! Get the receiving buffer sent toward the north
 
+         !== periodic boundary conditions ==!
+         !! check the num of sent sd
+         do n=1,bufsiz1
+            if( rbufy(n,4,2)>VALID2INVALID ) then
+               tnsend = tnsend + 1
+            end if
+         end do
+         
+         !! check the num of acceptable sd
+         ncnt   = 0
+         do n=1,sd_num
+            if( sd_rk(n)<VALID2INVALID ) then
+               ncnt = ncnt + 1
+               ilist(ncnt) = n
+            end if
+         end do
+         tnrecv = ncnt
+
+         !! check send/receive
+         if( stat==0 .and.                                           &
+              &         (tnrecv<tnsend) ) then
+            stat = -1
+         end if
+
+         !! send/receive
+         if( tnrecv>0 .and. tnsend>0 ) then
+            do m=1,tnsend
+               n = ilist(m)
+               
+               sd_n(n)    = floor(rbufy(m,1,2),kind=DP)
+               sd_x(n)    = rbufy(m,2,2)
+               sd_y(n)    = rbufy(m,3,2)+GRID_FY(JS-1)
+               sd_rk(n)   = rbufy(m,4,2)
+               sd_u(n)    = rbufy(m,5,2)
+               sd_v(n)    = rbufy(m,6,2)
+               sd_vz(n) = rbufy(m,7,2)
+               sd_r(n)    = rbufy(m,8,2)
+               
             end do
 
-            !! check send/receive
+            do nasl=1,sd_numasl
+               do m=1,tnsend
+                  n = ilist(m)
 
-            if( stat==0 .and.                                           &
-               (tsrecv<tssend .or. minsrecv<maxssend) ) then
-               stat = -1
-            end if
-
-            !! send/receive
-
-            if( tsrecv>0 .and. tssend>0 ) then
-               do np=1,nomp
-
-                  if( nsrecv(np)>0 .and. nssend(np)>0 ) then
-                     do ns=1,min(nsrecv(np),nssend(np))
-
-                        m = int(bufsiz1/nomp)*(np-1) + ns
-                        n = ilist(ns,np)
-
-                        sd_n(n)    = floor(rbufy(m,1,1),kind=DP)
-                        sd_x(n)    = rbufy(m,2,1)
-                        sd_y(n)    = rbufy(m,3,1)
-                        sd_rk(n)   = rbufy(m,4,1)
-                        sd_u(n)    = rbufy(m,5,1)
-                        sd_v(n)    = rbufy(m,6,1)
-                        sd_vzwc(n) = rbufy(m,7,1)
-                        sd_r(n)    = rbufy(m,8,1)
-
-                     end do
-
-                  end if
-
+                  sd_asl(n,nasl) = rbufy(m,8+nasl,2)
+                  
                end do
-
-               do nasl=1,sd_numasl
-
-                  do np=1,nomp
-
-                     if( nsrecv(np)>0 .and. nssend(np)>0 ) then
-                        do ns=1,min(nsrecv(np),nssend(np))
-
-                           m = int(bufsiz1/nomp)*(np-1) + ns
-                           n = ilist(ns,np)
-
-                           sd_asl(n,nasl) = rbufy(m,8+nasl,1)
-
-                        end do
-
-                     end if
-
-                  end do
-
-               end do
-
-            end if
-
-         !### Fill in the north halo regions ###!
-         !### with the received value        ###!
-
-            !== intra-subgroup periodic boundary conditions ==!
-            !! send buffer size
-
-            do np=1,nomp
-
-               sd_str = int(bufsiz1/nomp)*(np-1) + 1
-               sd_end = int(bufsiz1/nomp)*np
-
-               do n=sd_str,sd_end
-                  if( rbufy(n,1,2)>VALID2INVALID ) then
-                     nnsend(np) = nnsend(np) + 1
-                  end if
-               end do
-
-               maxnsend = nnsend(np)     !! max in all
-               tnsend   = nnsend(np)
-
             end do
-
-            !! receptible buffer size (invalid super-droplets)
-
-            do np=1,nomp
-
-               sd_str = int(sd_num/nomp)*(np-1) + 1
-               sd_end = int(sd_num/nomp)*np
-               ncnt   = 0
-
-               do n=sd_str,sd_end
-                  if( sd_rk(n)<VALID2INVALID ) then
-                     ncnt = ncnt + 1
-                     ilist(ncnt,np) = n
-                  end if
-               end do
-
-               nnrecv(np) = ncnt
-               minnrecv   = ncnt     !! min in all
-               tnrecv     = ncnt
-
-            end do
-
-            !! check send/receive
-
-            if( stat==0 .and.                                           &
-     &         (tnrecv<tnsend .or. minnrecv<maxnsend) ) then
-               stat = -1
-            end if
-
-            !! send/receive
-
-            if( tnrecv>0 .and. tnsend>0 ) then
-
-               do np=1,nomp
-
-                  if( nnrecv(np)>0 .and. nnsend(np)>0 ) then
-
-                     do nn=1,min(nnrecv(np),nnsend(np))
-
-                        m = int(bufsiz1/nomp)*(np-1) + nn
-                        n = ilist(nn,np)
-
-                        sd_n(n)    = floor(rbufy(m,1,2),kind=DP)
-                        sd_x(n)    = rbufy(m,2,2)
-                        sd_y(n)    = rbufy(m,3,2)
-                        sd_rk(n)   = rbufy(m,4,2)
-                        sd_u(n)    = rbufy(m,5,2)
-                        sd_v(n)    = rbufy(m,6,2)
-                        sd_vzwc(n) = rbufy(m,7,2)
-                        sd_r(n)    = rbufy(m,8,2)
-
-                     end do
-
-                  end if
-
-               end do
-
-               do nasl=1,sd_numasl
-
-                  do np=1,nomp
-
-                     if( nnrecv(np)>0 .and. nnsend(np)>0 ) then
-                        do nn=1,min(nnrecv(np),nnsend(np))
-
-                           m = int(bufsiz1/nomp)*(np-1) + nn
-                           n = ilist(nn,np)
-
-                           sd_asl(n,nasl) = rbufy(m,8+nasl,2)
-
-                        end do
-
-                     end if
-
-                  end do
-
-               end do
-
-            end if
-
+         end if
       end if
 
     return
@@ -6551,11 +6440,14 @@ contains
   !----------------------------------------------------------------------------
   subroutine sdm_sd2prec(dtb_crs,                        &
                          prec,sd_num,sd_n,sd_x,sd_y,     &
-                         sd_r,sd_rk,ilist,pr_sdm)
+                         sd_r,sd_ri,sd_rj,sd_rk,ilist,pr_sdm)
 
-      use scale_grid, only: &
-          FX => GRID_FX, &
-          FY => GRID_FY
+!!$      use scale_grid, only: &
+!!$          FX => GRID_FX, &
+!!$          FY => GRID_FY
+      use m_sdm_coordtrans, only: &
+           sdm_x2ri, sdm_y2rj
+
       ! Input variables
       real(RP), intent(in) :: dtb_crs
       integer, intent(in) :: sd_num  ! number of super-droplets
@@ -6564,12 +6456,15 @@ contains
       real(RP), intent(in) :: sd_y(1:sd_num) ! y-coordinate of super-droplets
       real(RP), intent(in) :: sd_r(1:sd_num) ! equivalent radius of super-droplets
       ! Input and output variables
-
+      real(RP), intent(out) :: sd_ri(1:sd_num)   ! index-i(real) of super-droplets
+      real(RP), intent(out) :: sd_rj(1:sd_num)   ! index-j(real) of super-droplets
       real(RP), intent(inout) :: sd_rk(1:sd_num) ! index[k/real] of super-droplets
       real(RP), intent(inout) :: prec(IA,JA,1:2) ! precipitation and accumlation
       ! Output variables
-      real(RP), intent(out) :: pr_sdm(KA,IA,JA) ! temporary buffer of CReSS dimension
-      integer, intent(out) :: ilist(1:int(sd_num/nomp),1:nomp) ! buffer for list vectorization
+!      real(RP), intent(out) :: pr_sdm(KA,IA,JA) ! temporary buffer of CReSS dimension
+      real(RP), intent(out) :: pr_sdm(1:IA,1:JA) ! temporary buffer of CReSS dimension
+!      integer, intent(out) :: ilist(1:int(sd_num/nomp),1:nomp) ! buffer for list vectorization
+      integer, intent(out) :: ilist(1:sd_num) ! buffer for list vectorization
       ! Work variables for OpenMP
       integer :: sd_str        ! index of divided loop by OpenMP
       integer :: sd_end        ! index of divided loop by OpenMP
@@ -6590,87 +6485,113 @@ contains
     !-------------------------------------------------------------------
 
     ! Initialize
+      dtbiv = 1.0d0 / dtb_crs
+      dcoef(1:IA,1:JA)=0.0d0
      do i = IS, IE
      do j = JS, JE
-      dcoef(i,j) = F_THRD * ONE_PI / real(dx_sdm(i)*dy_sdm(j),kind=RP)
-      dtbiv = 1.e0 / dtb_crs
+!!$      dcoef(i,j) = F_THRD * ONE_PI / real(dx_sdm(i)*dy_sdm(j),kind=RP)
+      dcoef(i,j) = F_THRD * ONE_PI * dxiv_sdm(i) * dyiv_sdm(j)
 !      idx_sdm = 10_i8 * floor( 1.e4*(dx_sdm+1.e-5), kind=i8 )
 !      idy_sdm = 10_i8 * floor( 1.e4*(dy_sdm+1.e-5), kind=i8 )
      enddo
      enddo
 
-      tlist = 0
-
-      do np=1,nomp
-         nlist(np) = 0
-      end do
+!!$      tlist = 0
+!!$
+!!$      do np=1,nomp
+!!$         nlist(np) = 0
+!!$      end do
 
 !      do j=0,nj+1
 !      do i=0,ni+1
       do j=1,JA
       do i=1,IA
-         pr_sdm(i,j,1) = 0.d0
+         pr_sdm(i,j) = 0.d0
       end do
       end do
 
       ! Get index list for compressing buffer.
-      do np=1,nomp
-
-         sd_str = int(sd_num/nomp)*(np-1) + 1
-         sd_end = int(sd_num/nomp)*np
-         cnt    = 0
-
-         do n=sd_str,sd_end
-            if( sd_rk(n)<VALID2INVALID .and. &
-                sd_rk(n)>PREC2INVALID ) then
-               cnt = cnt + 1
-               ilist(cnt,np) = n
-            end if
-         end do
-
-         nlist(np) = cnt
-         tlist     = cnt
-
+      cnt=0
+      do n=1,sd_num
+         if( sd_rk(n)<VALID2INVALID .and. &
+              sd_rk(n)>PREC2INVALID ) then
+            cnt = cnt + 1
+            ilist(cnt) = n
+         end if
       end do
+!!$      do np=1,nomp
+!!$
+!!$         sd_str = int(sd_num/nomp)*(np-1) + 1
+!!$         sd_end = int(sd_num/nomp)*np
+!!$         cnt    = 0
+!!$
+!!$         do n=sd_str,sd_end
+!!$            if( sd_rk(n)<VALID2INVALID .and. &
+!!$                sd_rk(n)>PREC2INVALID ) then
+!!$               cnt = cnt + 1
+!!$               ilist(cnt,np) = n
+!!$            end if
+!!$         end do
+!!$
+!!$         nlist(np) = cnt
+!!$         tlist     = cnt
+!!$
+!!$      end do
 
       ! Get precipitation
+      if( cnt>0 ) then
+         !### get horizontal face index(real) of super-droplets ###!
+         call sdm_x2ri(sd_num,sd_x,sd_ri,sd_rk)
+         call sdm_y2rj(sd_num,sd_y,sd_rj,sd_rk)
 
-      if( tlist>0 ) then
+         do m=1,cnt
+            n=ilist(m)
+            i=floor(sd_ri(n))+1
+            j=floor(sd_rj(n))+1
 
-         !## count voulme of super-droplets ###!
-         do np=1,nomp
+            pr_sdm(i,j) = pr_sdm(i,j)                         &
+                         + sd_r(n) * sd_r(n) * sd_r(n)           &
+                         * real(sd_n(n),kind=RP)
 
-            if( nlist(np)>0 ) then
-
-               do m=1,nlist(np)
-
-                  n = ilist(m,np)
-
-!                  i = int( floor( sd_x(n)*1.d5, kind=i8 )/idx_sdm ) + 2
-!                  j = int( floor( sd_y(n)*1.d5, kind=i8 )/idy_sdm ) + 2
-                  do ix = IS, IE
-                   if( sd_x(n) <= ( FX(ix)-FX(IS-1) ) ) then
-                    i = ix
-                    exit
-                   endif
-                  enddo
-                  do jy = JS, JE
-                   if( sd_y(n) <= ( FY(jy)-FY(JS-1) ) ) then
-                    j = jy
-                    exit
-                   endif
-                  enddo
-                  pr_sdm(i,j,1) = pr_sdm(i,j,1)                         &
-                                + sd_r(n) * sd_r(n) * sd_r(n)           &
-                                * real(sd_n(n),kind=RP)
-
-                  sd_rk(n) = INVALID     !! convert to invalid
-
-               end do
-
-            end if
-
+            sd_rk(n) = INVALID     !! convert to invalid
          end do
+
+!!$      if( tlist>0 ) then
+!!$
+!!$         !## count voulme of super-droplets ###!
+!!$         do np=1,nomp
+!!$
+!!$            if( nlist(np)>0 ) then
+!!$
+!!$               do m=1,nlist(np)
+!!$
+!!$                  n = ilist(m,np)
+!!$
+!!$!                  i = int( floor( sd_x(n)*1.d5, kind=i8 )/idx_sdm ) + 2
+!!$!                  j = int( floor( sd_y(n)*1.d5, kind=i8 )/idy_sdm ) + 2
+!!$                  do ix = IS, IE
+!!$                   if( sd_x(n) <= ( FX(ix)-FX(IS-1) ) ) then
+!!$                    i = ix
+!!$                    exit
+!!$                   endif
+!!$                  enddo
+!!$                  do jy = JS, JE
+!!$                   if( sd_y(n) <= ( FY(jy)-FY(JS-1) ) ) then
+!!$                    j = jy
+!!$                    exit
+!!$                   endif
+!!$                  enddo
+!!$                  pr_sdm(i,j) = pr_sdm(i,j)                         &
+!!$                                + sd_r(n) * sd_r(n) * sd_r(n)           &
+!!$                                * real(sd_n(n),kind=RP)
+!!$
+!!$                  sd_rk(n) = INVALID     !! convert to invalid
+!!$
+!!$               end do
+!!$
+!!$            end if
+!!$
+!!$         end do
 
          !### convert super-droplets to precipitation ###!
 
@@ -6679,7 +6600,7 @@ contains
          do j=1,JA
          do i=1,IA
 
-            dtmp = real( pr_sdm(i,j,1) * dcoef(i,j) )
+            dtmp = real( pr_sdm(i,j) * dcoef(i,j) )
 
             !! rain fall rate
             prec(i,j,1) = dtmp * dtbiv
@@ -7606,12 +7527,15 @@ contains
     return
   end subroutine sdm_sdadd
   !----------------------------------------------------------------------------
-  subroutine sdm_jdginvdv(sd_rkl,sd_rku,sd_num,sd_x,sd_y,sd_rk)
+  subroutine sdm_jdginvdv(sd_rkl,sd_rku,sd_num,sd_x,sd_y,sd_ri,sd_rj,sd_rk)
 
       use scale_grid, only: &
           FX => GRID_FX, &
           CZ => GRID_CX, &
           FY => GRID_FY
+      use m_sdm_coordtrans, only: &
+           sdm_x2ri, sdm_y2rj
+
       ! Input variables
       real(RP), intent(in) :: sd_rkl(IA,JA)  ! index[k/real] at 'sdm_zlower'
       real(RP), intent(in) :: sd_rku(IA,JA)  ! index[k/real] at 'sdm_zupper
@@ -7619,6 +7543,8 @@ contains
       ! Input and output variables
       real(RP), intent(inout) :: sd_x(1:sd_num)  ! x-coordinate of super-droplets
       real(RP), intent(inout) :: sd_y(1:sd_num)  ! y-coordinate of super-droplets
+      real(RP), intent(out) :: sd_ri(1:sd_num)   ! index-i(real) of super-droplets
+      real(RP), intent(out) :: sd_rj(1:sd_num)   ! index-j(real) of super-droplets
       real(RP), intent(inout) :: sd_rk(1:sd_num) ! index[k/real] of super-droplets
       ! Work variables
 
@@ -7640,6 +7566,10 @@ contains
       integer :: n, i, j     ! index
      !---------------------------------------------------------------------
 
+      !### get horizontal face index(real) of super-droplets ###!
+      call sdm_x2ri(sd_num,sd_x,sd_ri,sd_rk)
+      call sdm_y2rj(sd_num,sd_y,sd_rj,sd_rk)
+
      ! Judge super-droplets as invalid one or valid one in vertical
       do n=1,sd_num
 
@@ -7651,35 +7581,40 @@ contains
 
          if( sd_rk(n)>=rkumin ) then
 
-            !! update horizontal index after moving
-
+            ri = sd_ri(n)
+            rj = sd_rj(n)
 !            ri = sd_x(n) * real(dxiv_sdm,kind=r8) + 2.d0
 !            rj = sd_y(n) * real(dyiv_sdm,kind=r8) + 2.d0
-            iloop1: do i = IS, IE
-             if( sd_x(n) < ( FX(i)-FX(IS-1) ) ) then
-              ri = real(i-1,kind=RP) + real( ( sd_x(n)-( FX(i-1)-FX(IS-1) ) ) / ( FX(i)-FX(i-1) ) )
-              exit iloop1
-             endif
-            enddo iloop1
-            jloop1: do j = JS, JE
-             if( sd_y(n) < ( FY(j)-FY(JS-1) ) ) then
-              rj = real(j-1,kind=RP) + real( ( sd_y(n)-( FY(j-1)-FY(JS-1) ) ) / ( FY(j)-FY(j-1) ) )
-              exit jloop1
-             endif
-            enddo jloop1
+!!$            iloop1: do i = IS, IE
+!!$             if( sd_x(n) < ( FX(i)-FX(IS-1) ) ) then
+!!$              ri = real(i-1,kind=RP) + real( ( sd_x(n)-( FX(i-1)-FX(IS-1) ) ) / ( FX(i)-FX(i-1) ) )
+!!$              exit iloop1
+!!$             endif
+!!$            enddo iloop1
+!!$            jloop1: do j = JS, JE
+!!$             if( sd_y(n) < ( FY(j)-FY(JS-1) ) ) then
+!!$              rj = real(j-1,kind=RP) + real( ( sd_y(n)-( FY(j-1)-FY(JS-1) ) ) / ( FY(j)-FY(j-1) ) )
+!!$              exit jloop1
+!!$             endif
+!!$            enddo jloop1
 
+            !! Interpolation in certer grid
 !            iXm = floor(ri-0.50_RP)
-            iXm = floor(ri)
+!!$            iXm = floor(ri)
+            iXm = floor(ri+0.5d0) !! real index in face grid to center grid
             iXp = iXm + 1
 !            sXm = (ri-0.50_RP) - real(iXm,kind=RP)
-            sXm = ri - real(iXm,kind=RP)
+!!$            sXm = ri - real(iXm,kind=RP)
+            sXm = (ri+0.5d0) - real(iXm,kind=RP)
             sXp = 1.0_RP - sXm
 
 !            iYm = floor(rj-0.50_RP)
-            iYm = floor(rj)
+!!$            iYm = floor(rj)
+            iYm = floor(rj+0.5d0)
             iYp = iYm + 1
 !            sYm = (rj-0.50_RP) - real(iYm,kind=RP)
-            sYm = rj - real(iYm,kind=RP)
+!!$            sYm = rj - real(iYm,kind=RP)
+            sYm = (rj+0.5d0) - real(iYm,kind=RP)
             sYp = 1.0_RP - sYm
 
             rku = sd_rku(iXm,iYm) * ( SXp * SYp )                       &
@@ -7697,36 +7632,19 @@ contains
          !### from lower boundary                 ###!
 
          if( sd_rk(n)<=rklmax ) then
+            
+            ri = sd_ri(n)
+            rj = sd_rj(n)
 
-            !! update horizontal index after moving
-
-!            ri = sd_x(n) * real(dxiv_sdm,kind=r8) + 2.d0
-!            rj = sd_y(n) * real(dyiv_sdm,kind=r8) + 2.d0
-            iloop2: do i = IS, IE
-             if( sd_x(n) < ( FX(i)-FX(IS-1) ) ) then
-              ri = real(i-1,kind=RP) + real( ( sd_x(n)-( FX(i-1)-FX(IS-1) ) ) / ( FX(i)-FX(i-1) ) )
-              exit iloop2
-             endif
-            enddo iloop2
-            jloop2: do j = JS, JE
-             if( sd_y(n) < ( FY(j)-FY(JS-1) ) ) then
-              rj = real(j-1,kind=RP) + real( ( sd_y(n)-( FY(j-1)-FY(JS-1) ) ) / ( FY(j)-FY(j-1) ) )
-              exit jloop2
-             endif
-            enddo jloop2
-
-!            iXm = floor(ri-0.50_RP)
-            iXm = floor(ri)
+            !! Interpolation in certer grid
+            iXm = floor(ri+0.5d0) !! real index in face grid to center grid
             iXp = iXm + 1
-!            sXm = (ri-0.50_RP) - real(iXm,kind=RP)
-            sXm = ri - real(iXm,kind=RP)
+            sXm = (ri+0.5d0) - real(iXm,kind=RP)
             sXp = 1.0_RP - sXm
 
-!            iYm = floor(rj-0.50_RP)
-            iYm = floor(rj)
+            iYm = floor(rj+0.5d0)
             iYp = iYm + 1
-!            sYm = (rj-0.50_RP) - real(iYm,kind=RP)
-            sYm = rj - real(iYm,kind=RP)
+            sYm = (rj+0.5d0) - real(iYm,kind=RP)
             sYp = 1.0_RP - sYm
 
             rkl = sd_rkl(iXm,iYm) * ( SXp * SYp )                       &

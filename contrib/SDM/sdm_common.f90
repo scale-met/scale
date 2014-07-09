@@ -318,6 +318,7 @@ module m_sdm_common
                     0.0_RP, 0.0_RP, 0.0_RP, 0.0_RP, 0.0_RP, &
                     0.0_RP, 0.0_RP, 0.0_RP, 0.0_RP, 0.0_RP, &
                     0.0_RP, 0.0_RP, 0.0_RP, 0.0_RP, 0.0_RP  /
+  real(RP), allocatable, save  :: prr_crs(:,:,:) ! prr_crs(IA,JA,1:2) Precipitation and accumulation for rain
   real(RP), allocatable, save  :: zph_crs(:,:,:), dxiv_sdm(:), dyiv_sdm(:)!, dziv_sdm(:)
   real(RP), allocatable, save  :: dx_sdm(:), dy_sdm(:)!, dz_sdm(:)   ! Dx, Dy, Dz for SDM (normally they are equal to those of SCALE)
 !  integer, parameter :: nqw = QQA

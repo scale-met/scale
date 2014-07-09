@@ -67,8 +67,8 @@ contains
     integer :: k, n, i, j    ! index
 
     !### get horizontal face index(real) of super-droplets ###!
-    call sdm_x2ri(sd_num,sd_x,sd_ri)
-    call sdm_y2rj(sd_num,sd_y,sd_rj)
+    call sdm_x2ri(sd_num,sd_x,sd_ri,sd_rk)
+    call sdm_y2rj(sd_num,sd_y,sd_rj,sd_rk)
 
     do n=1,sd_num
 
@@ -302,8 +302,8 @@ contains
    !-------------------------------------------------------------------
       ! -----
       !### get horizontal face index(real) of super-droplets ###!
-      call sdm_x2ri(sd_num,sd_x,sd_ri)
-      call sdm_y2rj(sd_num,sd_y,sd_rj)
+      call sdm_x2ri(sd_num,sd_x,sd_ri,sd_rk)
+      call sdm_y2rj(sd_num,sd_y,sd_rj,sd_rk)
 
       ! Get vertical index[k/real] of super-droplets
       do n=1,sd_num
@@ -336,6 +336,7 @@ contains
 !!$         enddo jloop
          rj = sd_rj(n)
 
+         ! Interpolation in center grid
 !         iXm = floor(ri-0.5d0)
          iXm = floor(ri+0.5d0) ! Face to Center conversion
          iXp = iXm + 1
@@ -388,7 +389,7 @@ contains
     return
   end subroutine sdm_z2rk
   !-----------------------------------------------------------------------------
-  subroutine sdm_x2ri(sd_num,sd_x,sd_ri)
+  subroutine sdm_x2ri(sd_num,sd_x,sd_ri,sd_rk)
     use scale_grid, only: &
          GRID_FX, DX
     use scale_grid_index
@@ -396,10 +397,13 @@ contains
     use scale_stdio
     use scale_process, only: &
          PRC_MPIstop
+    use m_sdm_common, only: &
+         VALID2INVALID
 
     integer, intent(in) :: sd_num       ! number of super-droplets
     real(RP), intent(in) :: sd_x(1:sd_num)   ! x-coordinate of super-droplets
     real(RP), intent(out) :: sd_ri(1:sd_num) ! index-i(real) of super-droplets
+    real(RP), intent(in) :: sd_rk(1:sd_num) ! index-k(real) of super-droplets
     
     ! Work variables
     integer :: i,n    ! index
@@ -413,6 +417,8 @@ contains
     error=0
     do n=1,sd_num
        
+       if( sd_rk(n)<VALID2INVALID ) cycle
+                
        if((sd_x(n)<GRID_FX(IS-1)).or.(sd_x(n)>GRID_FX(IE))) then
           error=1
        end if
@@ -439,7 +445,7 @@ contains
     return
   end subroutine sdm_x2ri
   !-----------------------------------------------------------------------------
-  subroutine sdm_y2rj(sd_num,sd_y,sd_rj)
+  subroutine sdm_y2rj(sd_num,sd_y,sd_rj,sd_rk)
     use scale_grid, only: &
          GRID_FY,DY
     use scale_grid_index
@@ -447,10 +453,13 @@ contains
     use scale_stdio
     use scale_process, only: &
          PRC_MPIstop
+    use m_sdm_common, only: &
+         VALID2INVALID
 
     integer, intent(in) :: sd_num       ! number of super-droplets
     real(RP), intent(in) :: sd_y(1:sd_num)   ! y-coordinate of super-droplets
     real(RP), intent(out) :: sd_rj(1:sd_num) ! index-j(real) of super-droplets
+    real(RP), intent(in) :: sd_rk(1:sd_num) ! index-k(real) of super-droplets
     
     ! Work variables
     integer :: j,n    ! index
@@ -464,6 +473,8 @@ contains
     error=0
     do n=1,sd_num
        
+       if( sd_rk(n)<VALID2INVALID ) cycle
+
        if((sd_y(n)<GRID_FY(JS-1)).or.(sd_y(n)>GRID_FY(JE))) then
           error=1
        end if

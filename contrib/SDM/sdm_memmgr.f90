@@ -128,6 +128,7 @@ contains
 
     allocate(sd_dtmp1(1:sdnum_s2c))
 
+    allocate( prr_crs(IA,JA,1:2) )
 !    allocate( j31(KA,IA,JA) )
 !    allocate( j32(KA,IA,JA) )
 !    allocate( jcb(KA,IA,JA) )
