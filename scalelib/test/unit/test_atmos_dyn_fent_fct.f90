@@ -3,6 +3,7 @@ module test_atmos_dyn_fent_fct
   !-----------------------------------------------------------------------------
   use scale_precision
   use scale_grid_index
+  use scale_index
   use scale_tracer
   use scale_atmos_dyn, only: &
      ATMOS_DYN
@@ -159,8 +160,8 @@ contains
   allocate( REF_qv  (KA,IA,JA) )
   allocate( REF_pres(KA,IA,JA) )
 
-  allocate( DAMP_var(KA,IA,JA,5) )
-  allocate( DAMP_alpha(KA,IA,JA,5) )
+  allocate( DAMP_var(KA,IA,JA,I_BND_SIZE) )
+  allocate( DAMP_alpha(KA,IA,JA,I_BND_SIZE) )
 
   allocate( PHI(KA,IA,JA) )
   allocate( GSQRT(KA,IA,JA,7) )
