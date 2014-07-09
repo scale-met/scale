@@ -52,7 +52,7 @@ module mod_cnvtopo
   !++ Private parameters & variables
   !
   real(RP), private :: CNVTOPO_smooth_maxslope
-
+  character(len=H_SHORT), private :: CNVTOPO_smooth_type = 'GAUSSIAN'
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -73,7 +73,8 @@ contains
 
     NAMELIST / PARAM_CNVTOPO / &
        CNVTOPO_name,            &
-       CNVTOPO_smooth_maxslope
+       CNVTOPO_smooth_maxslope, &
+       CNVTOPO_smooth_type
 
     real(RP) :: minslope, DZDX, DZDY
 
@@ -500,6 +501,8 @@ contains
   subroutine CNVTOPO_smooth
     use scale_const, only: &
        D2R => CONST_D2R
+    use scale_process, only: &
+       PRC_MPIstop
     use scale_grid, only: &
        GRID_FDX, &
        GRID_FDY
@@ -520,14 +523,15 @@ contains
 
     character(len=H_SHORT) :: varname(1)
 
-    integer,parameter :: itelim = 10
+    integer,parameter :: itelim = 100
 
     integer :: ite
     integer :: k, i, j
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Apply smoothing. Slope limit = ', CNVTOPO_smooth_maxslope
+    if( IO_L ) write(IO_FID_LOG,*) '*** Apply smoothing. Slope limit    = ', CNVTOPO_smooth_maxslope
+    if( IO_L ) write(IO_FID_LOG,*) '***                  Smoothing type = ', CNVTOPO_smooth_type
 
     ! digital filter
     do ite = 1, itelim
@@ -560,20 +564,38 @@ contains
        varname(1) = "DZsfc_DY"
        call STAT_detail( DZsfc_DY(:,:,:,:), varname(:) )
 
-       ! 3 by 3 gaussian filter
-       do j = JS, JE
-       do i = IS, IE
-          TOPO_Zsfc(i,j) = ( 0.2500_RP * TOPO_Zsfc(i  ,j  ) &
-                           + 0.1250_RP * TOPO_Zsfc(i-1,j  ) &
-                           + 0.1250_RP * TOPO_Zsfc(i+1,j  ) &
-                           + 0.1250_RP * TOPO_Zsfc(i  ,j-1) &
-                           + 0.1250_RP * TOPO_Zsfc(i  ,j+1) &
-                           + 0.0625_RP * TOPO_Zsfc(i-1,j-1) &
-                           + 0.0625_RP * TOPO_Zsfc(i+1,j-1) &
-                           + 0.0625_RP * TOPO_Zsfc(i-1,j+1) &
-                           + 0.0625_RP * TOPO_Zsfc(i+1,j+1) )
-       enddo
-       enddo
+       select case ( CNVTOPO_smooth_type )
+       case ( 'GAUSSIAN' )
+          ! 3 by 3 gaussian filter
+          do j = JS, JE
+          do i = IS, IE
+             TOPO_Zsfc(i,j) = ( 0.2500_RP * TOPO_Zsfc(i  ,j  ) &
+                              + 0.1250_RP * TOPO_Zsfc(i-1,j  ) &
+                              + 0.1250_RP * TOPO_Zsfc(i+1,j  ) &
+                              + 0.1250_RP * TOPO_Zsfc(i  ,j-1) &
+                              + 0.1250_RP * TOPO_Zsfc(i  ,j+1) &
+                              + 0.0625_RP * TOPO_Zsfc(i-1,j-1) &
+                              + 0.0625_RP * TOPO_Zsfc(i+1,j-1) &
+                              + 0.0625_RP * TOPO_Zsfc(i-1,j+1) &
+                              + 0.0625_RP * TOPO_Zsfc(i+1,j+1) )
+          enddo
+          enddo
+       case ( 'LAPLACIAN' )
+          do j = JS, JE
+          do i = IS, IE
+             TOPO_Zsfc(i,j) = TOPO_Zsfc(i,j) &
+                            + ( TOPO_Zsfc(i-1,j  ) &
+                              + TOPO_Zsfc(i+1,j  ) &
+                              + TOPO_Zsfc(i  ,j-1) &
+                              + TOPO_Zsfc(i  ,j+1) &
+                              - TOPO_Zsfc(i  ,j  ) * 4.0_RP ) &
+                            * 0.1_RP
+          enddo
+          enddo
+       case default
+          write(*,*) 'xxx Invalid smoothing type'
+          call PRC_MPIstop
+       end select
 
     enddo
 
