@@ -20,7 +20,7 @@ BINNAME     = scale-les
 PPCONF      = NONE
 INITCONF    = NONE
 RUNCONF     = run.conf
-TPROC       = 144
+TPROC       = 36
 
 # required data (parameters,distributed files)
 DATDIR      = ../../../data

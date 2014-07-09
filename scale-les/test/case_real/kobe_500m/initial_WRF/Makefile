@@ -20,7 +20,7 @@ BINNAME     = NONE
 PPCONF      = NONE
 INITCONF    = init.conf
 RUNCONF     = NONE
-TPROC       = 144
+TPROC       = 36
 
 # required data (parameters,distributed files)
 DATDIR      = $(abspath /work/yashiro/SCALE/input_database/WRF_output/kenshi_gtopo30_case2)
