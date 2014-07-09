@@ -636,7 +636,7 @@ int32_t file_write_data( int32_t  vid,        // (in)
   varid = vars[vid]->varid;
   if ( vars[vid]->t != NULL ) { // have time dimension
     if ( vars[vid]->t->count < 0 ||  // first time
-	 fabs(t_end - vars[vid]->t->t) > EPS ) { // time goes next step
+	 t_end > vars[vid]->t->t + EPS ) { // time goes next step
       vars[vid]->t->count += 1;
       vars[vid]->t->t = t_end;
       size_t index[2];
@@ -646,8 +646,27 @@ int32_t file_write_data( int32_t  vid,        // (in)
       CHECK_ERROR( nc_put_var1_double(ncid, vars[vid]->t->bndsid, index, &t_start) );
       index[1] = 1;
       CHECK_ERROR( nc_put_var1_double(ncid, vars[vid]->t->bndsid, index, &t_end) );
+      vars[vid]->start[0] = vars[vid]->t->count;
+    } else {
+      size_t nt = vars[vid]->t->count + 1;
+      double t[nt];
+      size_t s[1];
+      int flag, n;
+      s[0] = 0;
+      CHECK_ERROR( nc_get_vara_double(ncid, vars[vid]->t->varid, s, &nt, t) );
+      flag = 1;
+      for(n=0;n<nt;n++) {
+	if ( fabs(t[n]-t_end) < EPS ) {
+	  vars[vid]->start[0] = n;
+	  flag = 0;
+	  break;
+	}
+      }
+      if ( flag ) {
+	fprintf(stderr, "cannot find time\n");
+	return ERROR_CODE;
+      }
     }
-    vars[vid]->start[0] = vars[vid]->t->count;
   }
 
   switch (precision) {
