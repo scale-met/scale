@@ -24,6 +24,7 @@ module mod_atmos_vars
   use scale_prof
   use scale_debug
   use scale_grid_index
+  use scale_index
   use scale_tracer
   !-----------------------------------------------------------------------------
   implicit none

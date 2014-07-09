@@ -42,6 +42,7 @@ module scale_atmos_dyn
   use scale_stdio
   use scale_prof
   use scale_grid_index
+  use scale_index
   use scale_tracer
 
 #ifdef DEBUG
@@ -171,7 +172,13 @@ contains
     use scale_const, only: &
        Rdry   => CONST_Rdry,  &
        Rvap   => CONST_Rvap,  &
-       CVdry  => CONST_CVdry
+       CVdry  => CONST_CVdry, &
+       epsilon => CONST_EPS
+    use scale_process, only: &
+       PRC_NUM_X, &
+       PRC_NUM_Y, &
+       PRC_2Drank, &
+       PRC_myrank
     use scale_comm, only: &
        COMM_vars8, &
        COMM_wait
@@ -298,6 +305,8 @@ contains
 
     real(RP) :: dt
 
+    real(RP) :: sw
+
     integer  :: IIS, IIE
     integer  :: JJS, JJE
     integer  :: i, j, k, iq, step
@@ -374,30 +383,27 @@ contains
 
           do k = KS, KE-1
              MOMZ_t(k,i,j) = MOMZ_tp(k,i,j) & ! tendency from physical step
-                           - DAMP_alpha(k,i,j,I_BND_VELZ) &
-                           * ( MOMZ(k,i,j) - DAMP_var(k,i,j,I_BND_VELZ) * 0.5_RP * ( DAMP_var(k+1,i,j,I_BND_DENS)+DAMP_var(k,i,j,I_BND_DENS) ) ) ! rayleigh damping
-                           !* ( MOMZ(k,i,j) - DAMP_var(k,i,j,I_BND_VELZ) * 0.5_RP * ( DENS(k+1,i,j)+DENS(k,i,j) ) ) ! rayleigh damping
+                           - DAMP_alpha(k,i,j,I_BND_MOMZ) &
+                           * ( MOMZ(k,i,j) - DAMP_var(k,i,j,I_BND_MOMZ) ) ! rayleigh damping
           enddo
           MOMZ_t(KE,i,j) = 0.0_RP
 
           do k = KS, KE
              MOMX_t(k,i,j) = MOMX_tp(k,i,j) & ! tendency from physical step
-                           - DAMP_alpha(k,i,j,I_BND_VELX) &
-                           * ( MOMX(k,i,j) - DAMP_var(k,i,j,I_BND_VELX) * 0.5_RP * ( DAMP_var(k,i+1,j,I_BND_DENS)+DAMP_var(k,i,j,I_BND_DENS) ) ) ! rayleigh damping
-                           !* ( MOMX(k,i,j) - DAMP_var(k,i,j,I_BND_VELX) * 0.5_RP * ( DENS(k,i+1,j)+DENS(k,i,j) ) ) ! rayleigh damping
+                           - DAMP_alpha(k,i,j,I_BND_MOMX) &
+                           * ( MOMX(k,i,j) - DAMP_var(k,i,j,I_BND_MOMX) ) ! rayleigh damping
           enddo
 
           do k = KS, KE
              MOMY_t(k,i,j) = MOMY_tp(k,i,j) & ! tendency from physical step
-                           - DAMP_alpha(k,i,j,I_BND_VELY) &
-                           * ( MOMY(k,i,j) - DAMP_var(k,i,j,I_BND_VELY) * 0.5_RP * ( DAMP_var(k,i,j+1,I_BND_DENS)+DAMP_var(k,i,j,I_BND_DENS) ) ) ! rayleigh damping
-                           !* ( MOMY(k,i,j) - DAMP_var(k,i,j,I_BND_VELY) * 0.5_RP * ( DENS(k,i,j+1)+DENS(k,i,j) ) ) ! rayleigh damping
+                           - DAMP_alpha(k,i,j,I_BND_MOMY) &
+                           * ( MOMY(k,i,j) - DAMP_var(k,i,j,I_BND_MOMY) ) ! rayleigh damping
           enddo
 
           do k = KS, KE
              RHOT_t(k,i,j) = RHOT_tp(k,i,j) & ! tendency from physical step
-                           - DAMP_alpha(k,i,j,I_BND_POTT) &
-                           * ( RHOT(k,i,j) - DAMP_var(k,i,j,I_BND_POTT) * DAMP_var(k,i,j,I_BND_DENS) )                            ! rayleigh damping
+                           - DAMP_alpha(k,i,j,I_BND_RHOT) &
+                           * ( RHOT(k,i,j) - DAMP_var(k,i,j,I_BND_RHOT) ) ! rayleigh damping
           enddo
 
           DENS_t(   1:KS-1,i,j) = 0.0_RP
@@ -549,6 +555,111 @@ contains
        call COMM_wait ( MOMX(:,:,:), 3 )
        call COMM_wait ( MOMY(:,:,:), 4 )
        call COMM_wait ( RHOT(:,:,:), 5 )
+
+       if ( PRC_2Drank(PRC_myrank,1) == 0 ) then ! for western boundary
+          do j = 1, JA
+          do i = IS, IS+IHALO
+          do k = 1, KA
+             sw = sign(0.5_RP, DAMP_alpha(k,i,j,I_BND_DENS) - epsilon) + 0.5_RP
+             DENS(k,i,j) = DENS(k,i,j) * ( 1.0_RP - sw ) &
+                         + DAMP_var(k,i,j,I_BND_DENS) * sw
+             sw = sign(0.5_RP, DAMP_alpha(k,i,j,I_BND_MOMZ) - epsilon) + 0.5_RP
+             MOMZ(k,i,j) = MOMZ(k,i,j) * ( 1.0_RP - sw ) &
+                         + DAMP_var(k,i,j,I_BND_MOMZ) * sw
+             sw = sign(0.5_RP, DAMP_alpha(k,i,j,I_BND_MOMX) - epsilon) + 0.5_RP
+             MOMX(k,i,j) = MOMX(k,i,j) * ( 1.0_RP - sw ) &
+                         + DAMP_var(k,i,j,I_BND_MOMX) * sw
+             sw = sign(0.5_RP, DAMP_alpha(k,i,j,I_BND_MOMY) - epsilon) + 0.5_RP
+             MOMY(k,i,j) = MOMY(k,i,j) * ( 1.0_RP - sw ) &
+                         + DAMP_var(k,i,j,I_BND_MOMY) * sw
+             sw = sign(0.5_RP, DAMP_alpha(k,i,j,I_BND_RHOT) - epsilon) + 0.5_RP
+             RHOT(k,i,j) = RHOT(k,i,j) * ( 1.0_RP - sw ) &
+                         + DAMP_var(k,i,j,I_BND_RHOT) * sw
+             sw = sign(0.5_RP, DAMP_alpha(k,i,j,I_BND_QV  ) - epsilon) + 0.5_RP
+             QTRC(k,i,j,I_QV) = QTRC(k,i,j,I_QV) * ( 1.0_RP - sw ) &
+                         + DAMP_var(k,i,j,I_BND_QV  ) * sw
+          end do
+          end do
+          end do
+       end if
+       if ( PRC_2Drank(PRC_myrank,1) == PRC_NUM_X-1 ) then ! for eastern boundary
+          do j = 1, JA
+          do i = IE-IHALO, IE
+          do k = 1, KA
+             sw = sign(0.5_RP, DAMP_alpha(k,i,j,I_BND_DENS) - epsilon) + 0.5_RP
+             DENS(k,i,j) = DENS(k,i,j) * ( 1.0_RP - sw ) &
+                         + DAMP_var(k,i,j,I_BND_DENS) * sw
+             sw = sign(0.5_RP, DAMP_alpha(k,i,j,I_BND_MOMZ) - epsilon) + 0.5_RP
+             MOMZ(k,i,j) = MOMZ(k,i,j) * ( 1.0_RP - sw ) &
+                         + DAMP_var(k,i,j,I_BND_MOMZ) * sw
+             sw = sign(0.5_RP, DAMP_alpha(k,i,j,I_BND_MOMX) - epsilon) + 0.5_RP
+             MOMX(k,i,j) = MOMX(k,i,j) * ( 1.0_RP - sw ) &
+                         + DAMP_var(k,i,j,I_BND_MOMX) * sw
+             sw = sign(0.5_RP, DAMP_alpha(k,i,j,I_BND_MOMY) - epsilon) + 0.5_RP
+             MOMY(k,i,j) = MOMY(k,i,j) * ( 1.0_RP - sw ) &
+                         + DAMP_var(k,i,j,I_BND_MOMY) * sw
+             sw = sign(0.5_RP, DAMP_alpha(k,i,j,I_BND_RHOT) - epsilon) + 0.5_RP
+             RHOT(k,i,j) = RHOT(k,i,j) * ( 1.0_RP - sw ) &
+                         + DAMP_var(k,i,j,I_BND_RHOT) * sw
+             sw = sign(0.5_RP, DAMP_alpha(k,i,j,I_BND_QV  ) - epsilon) + 0.5_RP
+             QTRC(k,i,j,I_QV) = QTRC(k,i,j,I_QV) * ( 1.0_RP - sw ) &
+                         + DAMP_var(k,i,j,I_BND_QV) * sw
+          end do
+          end do
+          end do
+       end if
+       if ( PRC_2Drank(PRC_myrank,2) == 0 ) then ! for sourthern boundary
+          do j = JS, JS+JHALO
+          do i = 1, IA
+          do k = 1, KA
+             sw = sign(0.5_RP, DAMP_alpha(k,i,j,I_BND_DENS) - epsilon) + 0.5_RP
+             DENS(k,i,j) = DENS(k,i,j) * ( 1.0_RP - sw ) &
+                         + DAMP_var(k,i,j,I_BND_DENS) * sw
+             sw = sign(0.5_RP, DAMP_alpha(k,i,j,I_BND_MOMZ) - epsilon) + 0.5_RP
+             MOMZ(k,i,j) = MOMZ(k,i,j) * ( 1.0_RP - sw ) &
+                         + DAMP_var(k,i,j,I_BND_MOMZ) * sw
+             sw = sign(0.5_RP, DAMP_alpha(k,i,j,I_BND_MOMX) - epsilon) + 0.5_RP
+             MOMX(k,i,j) = MOMX(k,i,j) * ( 1.0_RP - sw ) &
+                         + DAMP_var(k,i,j,I_BND_MOMX) * sw
+             sw = sign(0.5_RP, DAMP_alpha(k,i,j,I_BND_MOMY) - epsilon) + 0.5_RP
+             MOMY(k,i,j) = MOMY(k,i,j) * ( 1.0_RP - sw ) &
+                         + DAMP_var(k,i,j,I_BND_MOMY) * sw
+             sw = sign(0.5_RP, DAMP_alpha(k,i,j,I_BND_RHOT) - epsilon) + 0.5_RP
+             RHOT(k,i,j) = RHOT(k,i,j) * ( 1.0_RP - sw ) &
+                         + DAMP_var(k,i,j,I_BND_RHOT) * sw
+             sw = sign(0.5_RP, DAMP_alpha(k,i,j,I_BND_QV  ) - epsilon) + 0.5_RP
+             QTRC(k,i,j,I_QV) = QTRC(k,i,j,I_QV) * ( 1.0_RP - sw ) &
+                         + DAMP_var(k,i,j,I_BND_QV) * sw
+          end do
+          end do
+          end do
+       end if
+       if ( PRC_2Drank(PRC_myrank,2) == PRC_NUM_Y-1 ) then ! for northern boundary
+          do j = JE-JHALO, JE
+          do i = 1, IA
+          do k = 1, KA
+             sw = sign(0.5_RP, DAMP_alpha(k,i,j,I_BND_DENS) - epsilon) + 0.5_RP
+             DENS(k,i,j) = DENS(k,i,j) * ( 1.0_RP - sw ) &
+                         + DAMP_var(k,i,j,I_BND_DENS) * sw
+             sw = sign(0.5_RP, DAMP_alpha(k,i,j,I_BND_MOMZ) - epsilon) + 0.5_RP
+             MOMZ(k,i,j) = MOMZ(k,i,j) * ( 1.0_RP - sw ) &
+                         + DAMP_var(k,i,j,I_BND_MOMZ) * sw
+             sw = sign(0.5_RP, DAMP_alpha(k,i,j,I_BND_MOMX) - epsilon) + 0.5_RP
+             MOMX(k,i,j) = MOMX(k,i,j) * ( 1.0_RP - sw ) &
+                         + DAMP_var(k,i,j,I_BND_MOMX) * sw
+             sw = sign(0.5_RP, DAMP_alpha(k,i,j,I_BND_MOMY) - epsilon) + 0.5_RP
+             MOMY(k,i,j) = MOMY(k,i,j) * ( 1.0_RP - sw ) &
+                         + DAMP_var(k,i,j,I_BND_MOMY) * sw
+             sw = sign(0.5_RP, DAMP_alpha(k,i,j,I_BND_RHOT) - epsilon) + 0.5_RP
+             RHOT(k,i,j) = RHOT(k,i,j) * ( 1.0_RP - sw ) &
+                         + DAMP_var(k,i,j,I_BND_RHOT) * sw
+             sw = sign(0.5_RP, DAMP_alpha(k,i,j,I_BND_QV  ) - epsilon) + 0.5_RP
+             QTRC(k,i,j,I_QV) = QTRC(k,i,j,I_QV) * ( 1.0_RP - sw ) &
+                         + DAMP_var(k,i,j,I_BND_QV) * sw
+          end do
+          end do
+          end do
+       end if
 
        if ( USE_AVERAGE ) then
           DENS_av(:,:,:) = DENS_av(:,:,:) + DENS(:,:,:)

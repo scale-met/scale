@@ -26,6 +26,7 @@ module mod_realinput
      lat_v => REAL_LATY,  &
      cz    => REAL_CZ,    &
      fz    => REAL_FZ
+  use scale_index
   use scale_tracer
   use gtool_file_h
   use gtool_file, only: &
@@ -414,106 +415,97 @@ contains
     integer,          intent(in)   :: initstep ! initial step
 
     character(len=H_MID)  :: atmos_boundary_out_dtype = 'DEFAULT'  !< REAL4 or REAL8
-    real(RP), allocatable :: atmos_boundary_var(:,:,:,:,:)         !> reference container (with HALO)
+    real(RP), allocatable :: buffer(:,:,:,:)
 
-    integer :: k, i, j, n, iv
-    integer :: ts, te, ta
+    integer :: k, i, j, n
+    integer :: ts, te
     integer :: timetarg
-
-    intrinsic shape
     !---------------------------------------------------------------------------
 
     ts = initstep
     te = numsteps
-    ta = numsteps
 
-    allocate( atmos_boundary_var(KA,IA,JA,ta,6) )
+    allocate( buffer(KA,IA,JA,te-ts+1) )
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[realinput]/Categ[Boundary]'
 
-    ! copy from "ATMOS_BOUNDARY_setinitval/scale_atmos_boundary" //-------
-    atmos_boundary_var(:,:,:,:,I_BND_VELZ) = CONST_UNDEF
-    atmos_boundary_var(:,:,:,:,I_BND_VELY) = CONST_UNDEF
-    atmos_boundary_var(:,:,:,:,I_BND_VELX) = CONST_UNDEF
-    atmos_boundary_var(:,:,:,:,I_BND_POTT) = CONST_UNDEF
-    atmos_boundary_var(:,:,:,:,I_BND_DENS) = CONST_UNDEF
-    atmos_boundary_var(:,:,:,:,I_BND_QV  ) = CONST_UNDEF
+    call FILEIO_write( DENS(:,:,:,ts:te),                            &
+                       basename, title,                              &
+                       'DENS', 'Reference Density', 'kg/m3', 'ZXYT', &
+                       atmos_boundary_out_dtype, update_dt           )
 
     do n = ts, te
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       atmos_boundary_var(k,i,j,n,I_BND_VELZ) = 2.0_RP * MOMZ(k,i,j,n) / ( DENS(k+1,i,j,n) + DENS(k,i,j,n) )
-       atmos_boundary_var(k,i,j,n,I_BND_VELX) = 2.0_RP * MOMX(k,i,j,n) / ( DENS(k,i+1,j,n) + DENS(k,i,j,n) )
-       atmos_boundary_var(k,i,j,n,I_BND_VELY) = 2.0_RP * MOMY(k,i,j,n) / ( DENS(k,i,j+1,n) + DENS(k,i,j,n) )
-       atmos_boundary_var(k,i,j,n,I_BND_POTT) = RHOT(k,i,j,n) / DENS(k,i,j,n)
-       atmos_boundary_var(k,i,j,n,I_BND_DENS) = DENS(k,i,j,n)
-       atmos_boundary_var(k,i,j,n,I_BND_QV  ) = QTRC(k,i,j,I_QV,n)
-    enddo
-    enddo
-    enddo
-    enddo
-
-    ! fill KHALO
-    do n = ts, te
-    do iv = I_BND_VELZ, I_BND_QV
-    do j  = JS, JE
-    do i  = IS, IE
-       atmos_boundary_var(   1:KS-1,i,j,n,iv) = atmos_boundary_var(KS,i,j,n,iv)
-       atmos_boundary_var(KE+1:KA,  i,j,n,iv) = atmos_boundary_var(KE,i,j,n,iv)
-    enddo
-    enddo
-    enddo
-    enddo
-
-    ! fill IHALO & JHALO
-    do n = ts, te
-    do iv = I_BND_VELZ, I_BND_QV
-       call COMM_vars( atmos_boundary_var(:,:,:,n,iv), iv )
-    enddo
-    enddo
+       buffer(k,i,j,n-ts+1) = 2.0_RP * MOMZ(k,i,j,n) / ( DENS(k+1,i,j,n) + DENS(k,i,j,n) )
+    end do
+    end do
+    end do
+    end do
+    call FILEIO_write( buffer,                                        &
+                       basename, title,                               &
+                       'VELZ', 'Reference Velocity w', 'm/s', 'ZXYT', &
+                       atmos_boundary_out_dtype, update_dt            )
 
     do n = ts, te
-    do iv = I_BND_VELZ, I_BND_QV
-       call COMM_wait( atmos_boundary_var(:,:,:,n,iv), iv )
-    enddo
-    enddo
-    !--------//
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       buffer(k,i,j,n-ts+1) = 2.0_RP * MOMX(k,i,j,n) / ( DENS(k,i+1,j,n) + DENS(k,i,j,n) )
+    end do
+    end do
+    end do
+    end do
+    call FILEIO_write( buffer,                                        &
+                       basename, title,                               &
+                       'VELX', 'Reference Velocity u', 'm/s', 'ZXYT', &
+                       atmos_boundary_out_dtype, update_dt            )
 
     do n = ts, te
-       call FILEIO_write( atmos_boundary_var(:,:,:,:,I_BND_VELZ),        &
-                          basename, title,                               &
-                          'VELZ', 'Reference Velocity w', 'm/s', 'ZXYT', &
-                          atmos_boundary_out_dtype, update_dt, timetarg=n )
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       buffer(k,i,j,n-ts+1) = 2.0_RP * MOMY(k,i,j,n) / ( DENS(k,i,j+1,n) + DENS(k,i,j,n) )
+    end do
+    end do
+    end do
+    end do
+    call FILEIO_write( buffer,                                        &
+                       basename, title,                               &
+                       'VELY', 'Reference Velocity y', 'm/s', 'ZXYT', &
+                       atmos_boundary_out_dtype, update_dt            )
 
-       call FILEIO_write( atmos_boundary_var(:,:,:,:,I_BND_VELX),        &
-                          basename, title,                               &
-                          'VELX', 'Reference Velocity u', 'm/s', 'ZXYT', &
-                          atmos_boundary_out_dtype, update_dt, timetarg=n )
+    do n = ts, te
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       buffer(k,i,j,n-ts+1) = RHOT(k,i,j,n) / DENS(k,i,j,n)
+    end do
+    end do
+    end do
+    end do
+    call FILEIO_write( buffer,                                        &
+                       basename, title,                               &
+                       'POTT', 'Reference PT', 'K', 'ZXYT',           &
+                       atmos_boundary_out_dtype, update_dt            )
 
-       call FILEIO_write( atmos_boundary_var(:,:,:,:,I_BND_VELY),        &
-                          basename, title,                               &
-                          'VELY', 'Reference Velocity y', 'm/s', 'ZXYT', &
-                          atmos_boundary_out_dtype, update_dt, timetarg=n )
+    do n = ts, te
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       buffer(k,i,j,n-ts+1) = QTRC(k,i,j,I_QV,n)
+    end do
+    end do
+    end do
+    end do
+    call FILEIO_write( buffer,                                         &
+                       basename, title,                                &
+                       'QV', 'Reference water vapor', 'kg/kg', 'ZXYT', &
+                       atmos_boundary_out_dtype, update_dt             )
 
-       call FILEIO_write( atmos_boundary_var(:,:,:,:,I_BND_POTT),        &
-                          basename, title,                               &
-                          'POTT', 'Reference PT', 'K', 'ZXYT',           &
-                          atmos_boundary_out_dtype, update_dt, timetarg=n )
-
-       call FILEIO_write( atmos_boundary_var(:,:,:,:,I_BND_DENS),        &
-                          basename, title,                               &
-                          'DENS', 'Reference Density', 'kg/m3', 'ZXYT',  &
-                          atmos_boundary_out_dtype, update_dt, timetarg=n )
-
-       call FILEIO_write( atmos_boundary_var(:,:,:,:,I_BND_QV),           &
-                          basename, title,                                &
-                          'QV', 'Reference water vapor', 'kg/kg', 'ZXYT', &
-                          atmos_boundary_out_dtype, update_dt, timetarg=n )
-    enddo
-
-    deallocate( atmos_boundary_var )
+    deallocate( buffer )
 
     return
   end subroutine ParentAtomBoundary
