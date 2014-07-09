@@ -20,10 +20,10 @@ BINNAME     = NONE
 PPCONF      = pp.conf
 INITCONF    = NONE
 RUNCONF     = NONE
-TPROC       = 540
+TPROC       = 36
 
 # required data (parameters,distributed files)
-DATDIR      = $(abspath ../../../../../../../input_database/topo/DEM50M/Products)
+DATDIR      = $(abspath /work/yashiro/SCALE/input_database/topo/DEM50M/Products)
 DATPARAM    =
 DATDISTS    =
 

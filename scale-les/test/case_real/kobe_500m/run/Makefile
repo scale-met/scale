@@ -15,19 +15,19 @@ ORG_SRCS    =
 
 # parameters for run
 PPNAME      = NONE
-INITNAME    = scale-les_init
-BINNAME     = NONE
+INITNAME    = NONE
+BINNAME     = scale-les
 PPCONF      = NONE
-INITCONF    = init.conf
-RUNCONF     = NONE
+INITCONF    = NONE
+RUNCONF     = run.conf
 TPROC       = 36
 
 # required data (parameters,distributed files)
-DATDIR      = $(abspath /work/yashiro/SCALE/input_database/WRF_output/kenshi_gtopo30_case2)
-DATPARAM    =
-DATDISTS    =
+DATDIR      = ../../../data
+DATPARAM    = rad/PARAG.29,rad/PARAPC.29,rad/VARDATA.RM29,rad/cira.nc,rad/MIPAS/day.atm,rad/MIPAS/equ.atm,rad/MIPAS/sum.atm,rad/MIPAS/win.atm
+DATDISTS    = ../topo/topo,../landuse/landuse,../initial_WRF/boundary,../initial_WRF/init_00000000000.000
 
 
 
 # build, makedir, run, jobshell, allclean, clean is inside of common Makefile
-include ../../Makefile.pp.common
+include $(TESTDIR)/Makefile.common
