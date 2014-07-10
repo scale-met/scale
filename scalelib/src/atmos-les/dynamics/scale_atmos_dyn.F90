@@ -74,13 +74,6 @@ module scale_atmos_dyn
   !
   !++ Private parameters & variables
   !
-  real(RP), private, allocatable :: CNZ3(:,:,:)
-  real(RP), private, allocatable :: CNX3(:,:,:)
-  real(RP), private, allocatable :: CNY3(:,:,:)
-  real(RP), private, allocatable :: CNZ4(:,:,:)
-  real(RP), private, allocatable :: CNX4(:,:,:)
-  real(RP), private, allocatable :: CNY4(:,:,:)
-
   real(RP), private, allocatable :: CORIOLI(:,:)            ! coriolis term
 
   !-----------------------------------------------------------------------------
@@ -89,13 +82,9 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine ATMOS_DYN_setup( &
-       DIFF4,            &
        DYN_TYPE,         &
        CDZ, CDX, CDY,    &
        FDZ, FDX, FDY,    &
-       ND_ORDER,         &
-       ND_COEF,          &
-       DT,               &
        enable_coriolis,  &
        lat               )
     use scale_process, only: &
@@ -103,12 +92,11 @@ contains
     use scale_const, only: &
        OHM => CONST_OHM
     use scale_atmos_dyn_common, only: &
-       ATMOS_DYN_numfilter_setup
+       ATMOS_DYN_filter_setup
     use scale_atmos_dyn_rk, only: &
        ATMOS_DYN_rk_setup
     implicit none
 
-    real(RP),               intent(out) :: DIFF4
     character(len=H_SHORT), intent(in)  :: DYN_TYPE
     real(RP),               intent(in)  :: CDZ(KA)
     real(RP),               intent(in)  :: CDX(IA)
@@ -116,28 +104,14 @@ contains
     real(RP),               intent(in)  :: FDZ(KA-1)
     real(RP),               intent(in)  :: FDX(IA-1)
     real(RP),               intent(in)  :: FDY(JA-1)
-    integer,                intent(in)  :: ND_ORDER
-    real(RP),               intent(in)  :: ND_COEF
-    real(RP),               intent(in)  :: DT
     logical ,               intent(in)  :: enable_coriolis
     real(RP),               intent(in)  :: lat(IA,JA)
     !---------------------------------------------------------------------------
 
-    allocate( CNZ3(3,KA,2) )
-    allocate( CNX3(3,IA,2) )
-    allocate( CNY3(3,JA,2) )
-    allocate( CNZ4(5,KA,2) )
-    allocate( CNX4(5,IA,2) )
-    allocate( CNY4(5,JA,2) )
-
     allocate( CORIOLI(IA,JA) )
 
     ! numerical diffusion
-    call ATMOS_DYN_numfilter_setup( DIFF4,                              & ! [OUT]
-                                    CNZ3, CNX3, CNY3, CNZ4, CNX4, CNY4, & ! [OUT]
-                                    CDZ, CDX, CDY, FDZ, FDX, FDY,       & ! [IN]
-                                    ND_ORDER, ND_COEF,                  & ! [IN]
-                                    DT                                  ) ! [IN]
+    call ATMOS_DYN_filter_setup( CDZ, CDX, CDY, FDZ, FDX, FDY ) ! (in)
 
     ! coriolis parameter
     if ( enable_coriolis ) then
@@ -163,7 +137,7 @@ contains
        J13G, J23G, J33G,                                     &
        AQ_CV,                                                &
        REF_dens, REF_pott, REF_qv, REF_pres,                 &
-       DIFF4, ND_ORDER, ND_SFC_FACT, ND_USE_RS,              &
+       ND_COEF, ND_ORDER, ND_SFC_FACT, ND_USE_RS,            &
        DAMP_var, DAMP_alpha,                                 &
        divdmp_coef,                                          &
        FLAG_FCT_RHO, FLAG_FCT_MOMENTUM, FLAG_FCT_T,          &
@@ -191,6 +165,7 @@ contains
        FACT_F,                     &
        ATMOS_DYN_numfilter_coef,   &
        ATMOS_DYN_numfilter_coef_q, &
+       ATMOS_DYN_filter_tend,      &
        ATMOS_DYN_fct
     use scale_atmos_dyn_rk, only: &
        ATMOS_DYN_rk
@@ -242,7 +217,7 @@ contains
     real(RP), intent(in)    :: REF_pott(KA,IA,JA)
     real(RP), intent(in)    :: REF_qv  (KA,IA,JA)
     real(RP), intent(in)    :: REF_pres(KA,IA,JA)   !< reference pressure
-    real(RP), intent(in)    :: DIFF4
+    real(RP), intent(in)    :: ND_COEF
     integer,  intent(in)    :: ND_ORDER
     real(RP), intent(in)    :: ND_SFC_FACT
     logical,  intent(in)    :: ND_USE_RS
@@ -289,6 +264,9 @@ contains
     real(RP) :: QDRY (KA,IA,JA) ! dry air
     real(RP) :: Rtot (KA,IA,JA) ! total R
     real(RP) :: CVtot(KA,IA,JA) ! total CV
+
+    real(RP) :: diff(KA,IA,JA)
+    real(RP) :: damp_t(KA,IA,JA)
 
     real(RP) :: num_diff  (KA,IA,JA,5,3)
     real(RP) :: num_diff_q(KA,IA,JA,3)
@@ -370,39 +348,108 @@ contains
        !-----< prepare tendency >-----
 
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+       do j = JS-1, JE+2
+       do i = IS-1, IE+2
+       do k = KS, KE
+          diff(k,i,j) = DENS(k,i,j) - DAMP_var(k,i,j,I_BND_DENS)
+       enddo
+       enddo
+       enddo
+       call ATMOS_DYN_filter_tend( damp_t, diff, rcdz, rcdx, rcdy, 0, 0, 0 )
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JS, JE
        do i = IS, IE
-          do k = KS, KE
-             DENS_t(k,i,j) = DENS_tp(k,i,j) & ! tendency from physical step
-                           - DAMP_alpha(k,i,j,I_BND_DENS) &
-                           * ( DENS(k,i,j) - DAMP_var(k,i,j,I_BND_DENS) )                                          ! rayleigh damping
-          enddo
+       do k = KS, KE
+          DENS_t(k,i,j) = DENS_tp(k,i,j) & ! tendency from physical step
+                        + DAMP_alpha(k,i,j,I_BND_DENS) * ( damp_t(k,i,j) * 0.2_RP & ! laplacian type damping
+                                                         - diff(k,i,j) ) ! rayleigh damping
+       enddo
+       enddo
+       enddo
 
-          do k = KS, KE-1
-             MOMZ_t(k,i,j) = MOMZ_tp(k,i,j) & ! tendency from physical step
-                           - DAMP_alpha(k,i,j,I_BND_MOMZ) &
-                           * ( MOMZ(k,i,j) - DAMP_var(k,i,j,I_BND_MOMZ) ) ! rayleigh damping
-          enddo
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+       do j = JS-1, JE+2
+       do i = IS-1, IE+2
+       do k = KS, KE-1
+          diff(k,i,j) = MOMZ(k,i,j) - DAMP_var(k,i,j,I_BND_MOMZ)
+       enddo
+       enddo
+       enddo
+       call ATMOS_DYN_filter_tend( damp_t, diff, rfdz, rcdx, rcdy, 1, 0, 0 )
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE-1
+          MOMZ_t(k,i,j) = MOMZ_tp(k,i,j) & ! tendency from physical step
+                        + DAMP_alpha(k,i,j,I_BND_MOMZ) * ( damp_t(k,i,j) * 0.2_RP & ! laplacian type damping
+                                                         - diff(k,i,j) ) ! rayleigh damping
+       enddo
+       enddo
+       enddo
+       do j = JS, JE
+       do i = IS, IE
           MOMZ_t(KE,i,j) = 0.0_RP
+       enddo
+       enddo
 
-          do k = KS, KE
-             MOMX_t(k,i,j) = MOMX_tp(k,i,j) & ! tendency from physical step
-                           - DAMP_alpha(k,i,j,I_BND_MOMX) &
-                           * ( MOMX(k,i,j) - DAMP_var(k,i,j,I_BND_MOMX) ) ! rayleigh damping
-          enddo
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+       do j = JS-1, JE+2
+       do i = IS-2, IE+1
+       do k = KS, KE
+          diff(k,i,j) = MOMX(k,i,j) - DAMP_var(k,i,j,I_BND_MOMX)
+       enddo
+       enddo
+       enddo
+       call ATMOS_DYN_filter_tend( damp_t, diff, rcdz, rfdx, rcdy, 0, 1, 0 )
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          MOMX_t(k,i,j) = MOMX_tp(k,i,j) & ! tendency from physical step
+                        + DAMP_alpha(k,i,j,I_BND_MOMX) * ( damp_t(k,i,j) * 0.2_RP & ! laplacian type damping
+                                                         - diff(k,i,j) ) ! rayleigh damping
+       enddo
+       enddo
+       enddo
 
-          do k = KS, KE
-             MOMY_t(k,i,j) = MOMY_tp(k,i,j) & ! tendency from physical step
-                           - DAMP_alpha(k,i,j,I_BND_MOMY) &
-                           * ( MOMY(k,i,j) - DAMP_var(k,i,j,I_BND_MOMY) ) ! rayleigh damping
-          enddo
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+       do j = JS-2, JE+1
+       do i = IS-1, IE+2
+       do k = KS, KE
+          diff(k,i,j) = MOMY(k,i,j) - DAMP_var(k,i,j,I_BND_MOMY)
+       enddo
+       enddo
+       enddo
+       call ATMOS_DYN_filter_tend( damp_t, diff, rcdz, rcdx, rfdy, 0, 0, 1 )
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          MOMY_t(k,i,j) = MOMY_tp(k,i,j) & ! tendency from physical step
+                        + DAMP_alpha(k,i,j,I_BND_MOMY) * ( damp_t(k,i,j) * 0.2_RP & ! laplacian type damping
+                                                         - diff(k,i,j) ) ! rayleigh damping
+       enddo
+       enddo
+       enddo
 
-          do k = KS, KE
-             RHOT_t(k,i,j) = RHOT_tp(k,i,j) & ! tendency from physical step
-                           - DAMP_alpha(k,i,j,I_BND_RHOT) &
-                           * ( RHOT(k,i,j) - DAMP_var(k,i,j,I_BND_RHOT) ) ! rayleigh damping
-          enddo
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+       do j = JS-1, JE+2
+       do i = IS-1, IE+2
+       do k = KS, KE
+          diff(k,i,j) = RHOT(k,i,j) - DAMP_var(k,i,j,I_BND_RHOT)
+       enddo
+       enddo
+       enddo
+       call ATMOS_DYN_filter_tend( damp_t, diff, rcdz, rcdx, rcdy, 0, 0, 0 )
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          RHOT_t(k,i,j) = RHOT_tp(k,i,j) & ! tendency from physical step
+                        + DAMP_alpha(k,i,j,I_BND_RHOT) * ( damp_t(k,i,j) * 0.2_RP & ! laplacian type damping
+                                                         - diff(k,i,j) ) ! rayleigh damping
+       enddo
+       enddo
+       enddo
 
+       do j = JS, JE
+       do i = IS, IE
           DENS_t(   1:KS-1,i,j) = 0.0_RP
           MOMZ_t(   1:KS-1,i,j) = 0.0_RP
           MOMX_t(   1:KS-1,i,j) = 0.0_RP
@@ -429,15 +476,15 @@ contains
 
        !-----< prepare numerical diffusion coefficient >-----
 
-       if ( DIFF4 == 0.0_RP ) then
+       if ( ND_COEF == 0.0_RP ) then
           num_diff(:,:,:,:,:) = 0.0_RP
        else
+          dt = real(DTSEC,kind=RP)
           call ATMOS_DYN_numfilter_coef( num_diff(:,:,:,:,:),                    & ! [OUT]
                                          DENS, MOMZ, MOMX, MOMY, RHOT,           & ! [IN]
-                                         CNZ3, CNX3, CNY3, CNZ4, CNX4, CNY4,     & ! [IN]
-                                         CDZ, CDX, CDY, FDZ, FDX, FDY,           & ! [IN]
+                                         CDZ, CDX, CDY, FDZ, FDX, FDY, dt,       & ! [IN]
                                          REF_dens, REF_pott,                     & ! [IN]
-                                         DIFF4, ND_ORDER, ND_SFC_FACT, ND_USE_RS ) ! [IN]
+                                         ND_COEF, ND_ORDER, ND_SFC_FACT, ND_USE_RS ) ! [IN]
        endif
 
        !------------------------------------------------------------------------
@@ -624,12 +671,22 @@ contains
 
        if ( iq == I_QV ) then
           !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+          do j = JS-1, JE+2
+          do i = IS-1, IE+2
+          do k = KS, KE
+             diff(k,i,j) = QTRC(k,i,j,iq) - DAMP_var(k,i,j,I_BND_QV)
+          enddo
+          enddo
+          enddo
+          call ATMOS_DYN_filter_tend( damp_t, diff, rcdz, rcdx, rcdy, 0, 0, 0 )
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           do j = JS, JE
           do i = IS, IE
           do k = KS, KE
-             RHOQ_t(k,i,j) = QTRC_tp(k,i,j,I_QV) & ! tendency from physical step
-                           - DAMP_alpha(k,i,j,I_BND_QV) &
-                           * ( QTRC(k,i,j,iq) - DAMP_var(k,i,j,I_BND_QV) ) * DENS00(k,i,j) ! rayleigh damping
+             RHOQ_t(k,i,j) = ( QTRC_tp(k,i,j,I_QV) & ! tendency from physical step
+                             + DAMP_alpha(k,i,j,I_BND_QV) * ( damp_t(k,i,j) * 0.2_RP & ! laplacian type damping
+                                                            - diff(k,i,j) ) & ! rayleigh damping
+                             ) * DENS00(k,i,j)
           enddo
           enddo
           enddo
@@ -653,15 +710,14 @@ contains
        call COMM_vars8( RHOQ_t(:,:,:), 5+iq )
        call COMM_wait ( RHOQ_t(:,:,:), 5+iq )
 
-       if ( DIFF4 == 0.0_RP ) then
+       if ( ND_COEF == 0.0_RP ) then
           num_diff_q(:,:,:,:) = 0.0_RP
        else
           call ATMOS_DYN_numfilter_coef_q( num_diff_q(:,:,:,:),                    & ! [OUT]
                                            DENS, QTRC(:,:,:,iq),                   & ! [IN]
-                                           CNZ3, CNX3, CNY3, CNZ4, CNX4, CNY4,     & ! [IN]
-                                           CDZ, CDX, CDY,                          & ! [IN]
+                                           CDZ, CDX, CDY, DT,                      & ! [IN]
                                            REF_qv, iq,                             & ! [IN]
-                                           DIFF4, ND_ORDER, ND_SFC_FACT, ND_USE_RS ) ! [IN]
+                                           ND_COEF, ND_ORDER, ND_SFC_FACT, ND_USE_RS ) ! [IN]
        endif
 
        do JJS = JS, JE, JBLOCK
@@ -912,7 +968,7 @@ contains
     integer :: i, j, k, iq
 
     do j = j0, j1
-    do i = i1, j1
+    do i = i0, i1
     do k = KS, KE
        sw = sign(0.5_RP, DAMP_alpha(k,i,j,I_BND_QV  ) - epsilon) + 0.5_RP
        QTRC(k,i,j,I_QV) = QTRC(k,i,j,I_QV) * ( 1.0_RP - sw ) &

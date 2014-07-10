@@ -78,7 +78,6 @@ module test_atmos_dyn_fent_fct
 
   real(RP), allocatable :: AQ_CV(:)
 
-  real(RP) :: DIFF4
   integer  :: nd_order
   real(RP) :: nd_coef
   real(RP) :: nd_sfc_fact
@@ -183,10 +182,8 @@ contains
   end do
 
   DYN_TYPE = "HEVE"
-  call ATMOS_DYN_setup( DIFF4,                              & ! (out)
-                        DYN_TYPE,                           & ! (in)
+  call ATMOS_DYN_setup( DYN_TYPE,                           & ! (in)
                         CDZ, CDX, CDY, FDZ, FDX, FDY,       & ! (in)
-                        nd_order, nd_coef, 1.0_RP,          & ! (in)
                         .false., lat                        ) ! (in)
 
   do k = KS+1, KE
@@ -279,7 +276,7 @@ subroutine test_undef
           PHI, GSQRT, J13G, J23G, J33G,                & ! (in)
           AQ_CV,                                       & ! (in)
           REF_dens, REF_pott, REF_qv, REF_pres,        & ! (in)
-          DIFF4, nd_order, nd_sfc_fact, nd_use_rs,     & ! (in)
+          nd_coef, nd_order, nd_sfc_fact, nd_use_rs,   & ! (in)
           DAMP_var, DAMP_alpha,                        & ! (in)
           divdmp_coef,                                 & ! (in)
           flag_fct_rho, flag_fct_momentum, flag_fct_t, & ! (in)
@@ -328,7 +325,7 @@ subroutine test_const
        PHI, GSQRT, J13G, J23G, J33G,                & ! (in)
        AQ_CV,                                       & ! (in)
        REF_dens, REF_pott, REF_qv, REF_pres,        & ! (in)
-       DIFF4, nd_order, nd_sfc_fact, nd_use_rs,     & ! (in)
+       nd_coef, nd_order, nd_sfc_fact, nd_use_rs,   & ! (in)
        DAMP_var, DAMP_alpha,                        & ! (in)
        divdmp_coef,                                 & ! (in)
        flag_fct_rho, flag_fct_momentum, flag_fct_t, & ! (in)
@@ -427,7 +424,7 @@ subroutine test_conserve
          PHI, GSQRT, J13G, J23G, J33G,                & ! (in)
          AQ_CV,                                       & ! (in)
          REF_dens, REF_pott, REF_qv, REF_pres,        & ! (in)
-         DIFF4, nd_order, nd_sfc_fact, nd_use_rs,     & ! (in)
+         nd_coef, nd_order, nd_sfc_fact, nd_use_rs,   & ! (in)
          DAMP_var, DAMP_alpha,                        & ! (in)
          divdmp_coef,                                 & ! (in)
          flag_fct_rho, flag_fct_momentum, flag_fct_t, & ! (in)

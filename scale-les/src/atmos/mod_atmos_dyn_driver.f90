@@ -50,7 +50,6 @@ module mod_atmos_dyn_driver
   real(RP), private :: ATMOS_DYN_numerical_diff_coef         = 1.0E-4_RP ! nondimensional numerical diffusion
   real(RP), private :: ATMOS_DYN_numerical_diff_sfc_fact     = 1.0_RP
   logical , private :: ATMOS_DYN_numerical_diff_use_refstate = .true.
-  real(RP), private :: ATMOS_DYN_DIFF4                                   ! for numerical filter
 
   ! Coriolis force
   logical,  private :: ATMOS_DYN_enable_coriolis = .false.               ! enable coriolis force?
@@ -121,13 +120,9 @@ contains
 
        DT = real(TIME_DTSEC_ATMOS_DYN,kind=RP)
 
-       call ATMOS_DYN_setup( ATMOS_DYN_DIFF4,                & ! [OUT]
-                             ATMOS_DYN_TYPE,                 & ! [IN]
+       call ATMOS_DYN_setup( ATMOS_DYN_TYPE,                 & ! [IN]
                              GRID_CDZ, GRID_CDX, GRID_CDY,   & ! [IN]
                              GRID_FDZ, GRID_FDX, GRID_FDY,   & ! [IN]
-                             ATMOS_DYN_numerical_diff_order, & ! [IN]
-                             ATMOS_DYN_numerical_diff_coef,  & ! [IN]
-                             DT,                             & ! [IN]
                              ATMOS_DYN_enable_coriolis,      & ! [IN]
                              REAL_LAT                        ) ! [IN]
     endif
@@ -220,7 +215,7 @@ contains
          ATMOS_REFSTATE_pott,                                  & ! [IN]
          ATMOS_REFSTATE_qv,                                    & ! [IN]
          ATMOS_REFSTATE_pres,                                  & ! [IN]
-         ATMOS_DYN_DIFF4,                                      & ! [IN]
+         ATMOS_DYN_numerical_diff_coef,                        & ! [IN]
          ATMOS_DYN_numerical_diff_order,                       & ! [IN]
          ATMOS_DYN_numerical_diff_sfc_fact,                    & ! [IN]
          ATMOS_DYN_numerical_diff_use_refstate,                & ! [IN]
