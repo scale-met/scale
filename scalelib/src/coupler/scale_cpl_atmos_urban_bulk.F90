@@ -38,6 +38,8 @@ module scale_cpl_atmos_urban_bulk
   !++ Private procedure
   !
   private :: canopy_wind
+  private :: cal_beta
+  private :: cal_psi
   private :: mos
   private :: multi_layer
   private :: urban_param_setup
@@ -290,51 +292,57 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine CPL_AtmUrb_bulk( &
-        TR,      & ! (inout)
-        TB,      & ! (inout)
-        TG,      & ! (inout)
-        TC,      & ! (inout)
-        QC,      & ! (inout)
-        UC,      & ! (inout)
-        TRL,     & ! (inout)
-        TBL,     & ! (inout)
-        TGL,     & ! (inout)
-        RAINR,   & ! (inout)
-        RAINB,   & ! (inout)
-        RAING,   & ! (inout)
-        ROFF,    & ! (inout)
-        TS,      & ! (out)
-        SHR,     & ! (out)
-        SHB,     & ! (out)
-        SHG,     & ! (out)
-        LHR,     & ! (out)
-        LHB,     & ! (out)
-        LHG,     & ! (out)
-        GHR,     & ! (out)
-        GHB,     & ! (out)
-        GHG,     & ! (out)
-        RNR,     & ! (out)
-        RNB,     & ! (out)
-        RNG,     & ! (out)
-        RTS,     & ! (out)
-        RN,      & ! (out)
-        SH,      & ! (out)
-        LH,      & ! (out)
-        GHFLX,   & ! (out)
-        LSOLAR,  & ! (in)
-        PRES,    & ! (in)
-        TA,      & ! (in)
-        QA,      & ! (in)
-        UA,      & ! (in)
-        U1,      & ! (in)
-        V1,      & ! (in)
-        ZA,      & ! (in)
-        SSG,     & ! (in)
-        LLG,     & ! (in)
-        RAIN,    & ! (in)
-        RHOO,    & ! (in)
-        XLON,    & ! (in)
-        XLAT     ) ! (in)
+        TR,           & ! (inout)
+        TB,           & ! (inout)
+        TG,           & ! (inout)
+        TC,           & ! (inout)
+        QC,           & ! (inout)
+        UC,           & ! (inout)
+        TRL,          & ! (inout)
+        TBL,          & ! (inout)
+        TGL,          & ! (inout)
+        RAINR,        & ! (inout)
+        RAINB,        & ! (inout)
+        RAING,        & ! (inout)
+        ROFF,         & ! (inout)
+        ALBD_LW_grid, & ! (out)
+        ALBD_SW_grid, & ! (out)
+        TS,           & ! (out)
+        SHR,          & ! (out)
+        SHB,          & ! (out)
+        SHG,          & ! (out)
+        LHR,          & ! (out)
+        LHB,          & ! (out)
+        LHG,          & ! (out)
+        GHR,          & ! (out)
+        GHB,          & ! (out)
+        GHG,          & ! (out)
+        RNR,          & ! (out)
+        RNB,          & ! (out)
+        RNG,          & ! (out)
+        RTS,          & ! (out)
+        RN,           & ! (out)
+        SH,           & ! (out)
+        LH,           & ! (out)
+        GHFLX,        & ! (out)
+        U10,          & ! (out)
+        V10,          & ! (out)
+        T2,           & ! (out)
+        Q2,           & ! (out)
+        LSOLAR,       & ! (in)
+        PRES,         & ! (in)
+        TA,           & ! (in)
+        QA,           & ! (in)
+        UA,           & ! (in)
+        U1,           & ! (in)
+        V1,           & ! (in)
+        ZA,           & ! (in)
+        SSG,          & ! (in)
+        LLG,          & ! (in)
+        RAIN,         & ! (in)
+        RHOO,         & ! (in)
+        XLON,         & ! (in)
+        XLAT          ) ! (in)
     use scale_process, only: &
        PRC_MPIstop
     use scale_const, only: &
@@ -385,7 +393,7 @@ contains
     real(RP), intent(inout) :: TB   ! building wall temperature     [K]
     real(RP), intent(inout) :: TG   ! road temperature              [K]
     real(RP), intent(inout) :: TC   ! urban-canopy air temperature  [K]
-    real(RP), intent(inout) :: QC   ! urban-canopy air mixing ratio [kg/kg]
+    real(RP), intent(inout) :: QC   ! urban-canopy air specific humidity [kg/kg]
     real(RP), intent(inout) :: UC   ! diagnostic canopy wind        [m/s]
     real(RP), intent(inout) :: TRL(UKS:UKE)  ! layer temperature [K]
     real(RP), intent(inout) :: TBL(UKS:UKE)  ! layer temperature [K]
@@ -396,12 +404,18 @@ contains
     real(RP), intent(inout) :: ROFF  ! runoff from urban        [kg/m2]
 
     !-- Output variables from Urban to Coupler
+    real(RP), intent(out)   :: ALBD_SW_grid  ! grid mean of surface albedo for SW
+    real(RP), intent(out)   :: ALBD_LW_grid  ! grid mean of surface albedo for LW ( 1-emiss )
     real(RP), intent(out)   :: TS     ! Diagnostic surface temperature   [K]
     real(RP), intent(out)   :: RTS    ! radiative surface temperature    [K]
     real(RP), intent(out)   :: SH     ! sensible heat flux               [W/m/m]
     real(RP), intent(out)   :: LH     ! latent heat flux                 [W/m/m]
     real(RP), intent(out)   :: GHFLX  ! heat flux into the ground        [W/m/m]
-    real(RP), intent(out)   :: RN     ! net radition                [W/m/m]
+    real(RP), intent(out)   :: RN     ! net radition                     [W/m/m]
+    real(RP), intent(out)   :: U10    ! U wind at 10m                    [m/s]
+    real(RP), intent(out)   :: V10    ! V wind at 10m                    [m/s]
+    real(RP), intent(out)   :: T2     ! air temperature at 2m            [K]
+    real(RP), intent(out)   :: Q2     ! specific humidity at 2m          [kg/kg]
     real(RP), intent(out)   :: RNR, RNB, RNG
     real(RP), intent(out)   :: SHR, SHB, SHG
     real(RP), intent(out)   :: LHR, LHB, LHG
@@ -452,14 +466,14 @@ contains
     real(RP) :: qmix       ! mixing ratio [kg/kg]
     real(RP) :: ES
 
-    real(RP) :: LUP, LDN, RUP, ALBD_LW_grid
-    real(RP) :: SUP, SDN, ALBD_SW_grid
+    real(RP) :: LUP, LDN, RUP
+    real(RP) :: SUP, SDN
 
     real(RP) :: LNET, SNET, FLXUV, FLXTH, FLXHUM, FLXG
     real(RP) :: SW     ! shortwave radition           [W/m/m]
     real(RP) :: LW     ! longwave radition           [W/m/m]
-    real(RP) :: PSIM   ! similality stability shear function for momentum
-    real(RP) :: PSIH   ! similality stability shear function for heat
+    real(RP) :: psim,psim2,psim10   ! similality stability shear function for momentum
+    real(RP) :: psih,psih2,psih10   ! similality stability shear function for heat
 
     ! for shadow effect model
     ! real(RP) :: HOUI1, HOUI2, HOUI3, HOUI4, HOUI5, HOUI6, HOUI7, HOUI8
@@ -504,8 +518,7 @@ contains
     real(RP) :: DG0BDTB,  DG0BDTG,  DG0GDTG,  DG0GDTB
     real(RP) :: DTB, DTG, DTC
 
-    real(RP) :: XXX, X, Z0, Z0H, CD, CH, CHU
-    real(RP) :: PSIX, PSIT, PSIX2, PSIT2, PSIX10, PSIT10
+    real(RP) :: XXX, X, CD, CH, CHU, XXX2, XXX10
 
     integer  :: iteration, K
 
@@ -520,7 +533,6 @@ contains
     tloc = mod( (int(TIME/3600.0_RP) + int(LON/15.0_RP)),24 )
     dsec = mod(TIME,3600.0_RP) / 3600.0_RP 
     if(tloc==0) tloc = 24
-    ! print *,'tloc',TIME,tloc,XLON,XLAT,LON,LAT
 
     ! Calculate AH data at LST
      if(tloc==24)then
@@ -532,9 +544,6 @@ contains
      endif
      AH_t  = AH  * tahdiurnal
      ALH_t = ALH * tahdiurnal
-    ! AH_t  = AH  * ahdiurnal(tloc)
-    ! ALH_t = ALH * ahdiurnal(tloc)
-
 
     !if(dsec==0.) print *,'tloc',tloc,SSG,RHOO,QA,TA
 
@@ -974,8 +983,11 @@ contains
     RIBC = ( GRAV * 2.0_RP / (TA+TSP) ) * (TA-TSP) * (Z+Z0C) / (UA*UA)
 
     call mos(XXX,ALPHAC,CD,BHC,RIBC,Z,Z0C,UA,TA,TS,RHO)
+
     CHU = (ALPHAC / CP / RHO) * (CPdry * RHOO)  ! [cgs -> MKS]
     TS = TA + SH / CHU    ! surface potential temp (flux temp)
+    !CHU = (ALPHAC / CP / RHO) * (LH0 * RHOO)  ! [cgs -> MKS]
+    !QS = QA + LH/CHU   ! surface humidity
 
 !    CH = ALPHAC / RHO / CP / UA
 !    print *,'total    ',TS, CH,SH/CPdry/RHOO*CP*RHO*100.,(SH/CPdry/RHOO*CP*RHO*100.)/RHO/CP/CH/UA/100.0_RP,TA
@@ -990,13 +1002,38 @@ contains
     RTS = ( RUP / STB / ( 1.0_RP-ALBD_LW_grid) )**0.25
 
     !-----------------------------------------------------------
+    !  diagnostic grid average U10, V10, T2, Q2 from urban
+    !  Below method would be better to be improved. This is tentative method.
+    !-----------------------------------------------------------
+
+    call cal_psi(XXX,psim,psih)
+
+    XXX2 = (2.0_RP/Z) * XXX
+    call cal_psi(XXX2,psim2,psih2)
+
+    XXX10 = (10.0_RP/Z) * XXX
+    call cal_psi(XXX10,psim10,psih10)
+ 
+    !U10 = U1 * ((log(10.0_RP/Z0C)-psim10)/(log(Z/Z0C)-psim))  ! u at 10 m [m/s]
+    !V10 = V1 * ((log(10.0_RP/Z0C)-psim10)/(log(Z/Z0C)-psim))  ! v at 10 m [m/s]
+    U10 = U1 * log(10.0_RP/Z0C) / log(Z/Z0C)
+    V10 = V1 * log(10.0_RP/Z0C) / log(Z/Z0C)
+
+    T2  = RTS + (TA-RTS)*((log(2.0_RP/Z0HC)-psih2)/(log(Z/Z0HC)-psih))
+    ! Q2 = QS + (QA-QS)*((log(2.0_RP/Z0HC)-psih2)/(log(Z/Z0HC)-psih))  ! humidity at 2 m [-]
+    ! Q2  = QA * ((log(2.0_RP/Z0HC)-psih2)/(log(Z/Z0HC)-psih))  ! humidity at 2 m [-]
+    Q2 = QC
+
+    !print *,'U10,V10,T2,Q2,QC',U10,V10,T2,Q2,QC
+
+    !-----------------------------------------------------------
     ! add anthropogenic heat fluxes
     !-----------------------------------------------------------
 
-    FLXTH  = FLXTH + AH_t/RHOO/CPdry
+    FLXTH  = FLXTH  + AH_t/RHOO/CPdry
     FLXHUM = FLXHUM + ALH_t/RHOO/LH0
-    SH = FLXTH  * RHOO * CPdry               ! Sensible heat flux          [W/m/m]
-    LH = FLXHUM * RHOO * LH0                 ! Latent heat flux            [W/m/m]
+    SH     = FLXTH  * RHOO * CPdry               ! Sensible heat flux          [W/m/m]
+    LH     = FLXHUM * RHOO * LH0                 ! Latent heat flux            [W/m/m]
 
     !-----------------------------------------------------------
     !  calculate temperature in building/road
@@ -1007,34 +1044,6 @@ contains
     call multi_layer(UKE,BOUND,G0R,CAPR,AKSR,TRL,DZR,DELT,TRLEND)
     call multi_layer(UKE,BOUND,G0B,CAPB,AKSB,TBL,DZB,DELT,TBLEND)
     call multi_layer(UKE,BOUND,G0G,CAPG,AKSG,TGL,DZG,DELT,TGLEND)
-
-!-----
-!    Z0  = Z0C
-!    Z0H = Z0HC
-!    Z   = ZA - ZDC
-!
-!    XXX = KARMAN * GRAV * Z * TST / TA / UST / UST ! M-O theory (z/L)
-!
-!    if( XXX >=  1.0_RP ) XXX =  1.0_RP
-!    if( XXX <= -5.0_RP ) XXX = -5.0_RP
-!
-!    if( XXX > 0.0_RP ) then
-!      PSIM = -5.0_RP * XXX
-!      PSIH = -5.0_RP * XXX
-!    else
-!      X    = ( 1.0_RP - 16.0_RP * XXX )**0.25_RP
-!      PSIM = 2.0_RP * log((1.0_RP+X)/2.0_RP) + log((1.0_RP+X*X)/2.0_RP) - 2.0_RP*atan(X) + PI/2.0_RP
-!      PSIH = 2.0_RP * log((1.0_RP+X*X)/2.0_RP)
-!    end if
-!
-!    CD = KARMAN**2.0_RP / ( LOG(Z/Z0) - PSIM )**2
-!
-!    CH = 0.4_RP**2 / ( LOG(Z/Z0) - PSIM ) / ( LOG(Z/Z0H) - PSIH )
-!    TS = TA + FLXTH / CH / UA   ! surface potential temp (flux temp)
-!
-    !   TS = TA + FLXTH/CHS    ! surface potential temp (flux temp)
-    !   QS = QA + FLXHUM/CHS   ! surface humidity
-    !   TS = (LW/STB/0.88)**0.25       ! Radiative temperature [K]
 
     return
   end subroutine CPL_AtmUrb_bulk
@@ -1087,10 +1096,34 @@ contains
     !   BET   = max ( WATER / STRG, 0.1_RP)
     endif
 
-!    print *,BET, RAIN, WATER, STRG, ROFF
-
     return
   end subroutine cal_beta
+
+  !-----------------------------------------------------------------------------
+  subroutine cal_psi(zeta,psim,psih)
+    use scale_const, only: &
+       PI     => CONST_PI
+    implicit none
+
+    real(RP), intent(inout) :: zeta  ! z/L 
+    real(RP), intent(out)   :: psim
+    real(RP), intent(out)   :: psih
+    real(RP)                :: X
+
+    if( zeta >=  1.0_RP ) zeta =  1.0_RP
+    if( zeta <= -5.0_RP ) zeta = -5.0_RP
+
+    if( zeta > 0.0_RP ) then
+      psim = -5.0_RP * zeta
+      psih = -5.0_RP * zeta
+    else
+      X    = ( 1.0_RP - 16.0_RP * zeta )**0.25_RP
+      psim = 2.0_RP * log((1.0_RP+X)/2.0_RP) + log((1.0_RP+X*X)/2.0_RP) - 2.0_RP*atan(X) + PI/2.0_RP
+      psih = 2.0_RP * log((1.0_RP+X*X)/2.0_RP)
+    end if
+
+    return
+  end subroutine cal_psi
 
   !-----------------------------------------------------------------------------
   subroutine mos(XXX,ALPHA,CD,B1,RIB,Z,Z0,UA,TA,TSF,RHO)
