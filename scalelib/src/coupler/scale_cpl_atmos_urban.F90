@@ -29,51 +29,57 @@ module scale_cpl_atmos_urban
 
   abstract interface
      subroutine cau( &
-        TR_URB,  & ! (inout)
-        TB_URB,  & ! (inout)
-        TG_URB,  & ! (inout)
-        TC_URB,  & ! (inout)
-        QC_URB,  & ! (inout)
-        UC_URB,  & ! (inout)
-        TRL_URB, & ! (inout)
-        TBL_URB, & ! (inout)
-        TGL_URB, & ! (inout)
+        TR_URB,    & ! (inout)
+        TB_URB,    & ! (inout)
+        TG_URB,    & ! (inout)
+        TC_URB,    & ! (inout)
+        QC_URB,    & ! (inout)
+        UC_URB,    & ! (inout)
+        TRL_URB,   & ! (inout)
+        TBL_URB,   & ! (inout)
+        TGL_URB,   & ! (inout)
         RAINR_URB, & ! (inout)
         RAINB_URB, & ! (inout)
         RAING_URB, & ! (inout)
         ROFF_URB,  & ! (inout)
-        TS_URB,  & ! (out)
-        SHR_URB, & ! (out)
-        SHB_URB, & ! (out)
-        SHG_URB, & ! (out)
-        LHR_URB, & ! (out)
-        LHB_URB, & ! (out)
-        LHG_URB, & ! (out)
-        GHR_URB, & ! (out)
-        GHB_URB, & ! (out)
-        GHG_URB, & ! (out)
-        RnR_URB, & ! (out)
-        RnB_URB, & ! (out)
-        RnG_URB, & ! (out)
-        UST,     & ! (out)
-        RN,      & ! (out)
-        SHFLX,   & ! (out)
-        LHFLX,   & ! (out)
-        GHFLX,   & ! (out)
-        LSOLAR,  & ! (in)
-        PRES,    & ! (in)
-        TMPA,    & ! (in)
-        QA,      & ! (in)
-        UA,      & ! (in)
-        U1,      & ! (in)
-        V1,      & ! (in)
-        Z1,      & ! (in)
-        SWD,     & ! (in)
-        LWD,     & ! (in)
-        PREC,    & ! (in)
-        DENS,    & ! (in)
-        LON,     & ! (in)
-        LAT      ) ! (in)
+        ALBD_LW,   & ! (out)
+        ALBD_SW,   & ! (out)
+        TS_URB,    & ! (out)
+        SHR_URB,   & ! (out)
+        SHB_URB,   & ! (out)
+        SHG_URB,   & ! (out)
+        LHR_URB,   & ! (out)
+        LHB_URB,   & ! (out)
+        LHG_URB,   & ! (out)
+        GHR_URB,   & ! (out)
+        GHB_URB,   & ! (out)
+        GHG_URB,   & ! (out)
+        RnR_URB,   & ! (out)
+        RnB_URB,   & ! (out)
+        RnG_URB,   & ! (out)
+        UST,       & ! (out)
+        RN,        & ! (out)
+        SHFLX,     & ! (out)
+        LHFLX,     & ! (out)
+        GHFLX,     & ! (out)
+        U10,       & ! (out)
+        V10,       & ! (out)
+        T2,        & ! (out)
+        Q2,        & ! (out)
+        LSOLAR,    & ! (in)
+        PRES,      & ! (in)
+        TMPA,      & ! (in)
+        QA,        & ! (in)
+        UA,        & ! (in)
+        U1,        & ! (in)
+        V1,        & ! (in)
+        Z1,        & ! (in)
+        SWD,       & ! (in)
+        LWD,       & ! (in)
+        PREC,      & ! (in)
+        DENS,      & ! (in)
+        LON,       & ! (in)
+        LAT        ) ! (in)
        use scale_precision
        use scale_grid_index
        use scale_urban_grid_index
@@ -93,6 +99,8 @@ module scale_cpl_atmos_urban
        real(RP), intent(inout) :: RAING_URB
        real(RP), intent(inout) :: ROFF_URB
 
+       real(RP), intent(out) :: ALBD_LW
+       real(RP), intent(out) :: ALBD_SW
        real(RP), intent(out) :: TS_URB
        real(RP), intent(out) :: SHR_URB
        real(RP), intent(out) :: SHB_URB
@@ -111,6 +119,10 @@ module scale_cpl_atmos_urban
        real(RP), intent(out) :: SHFLX
        real(RP), intent(out) :: LHFLX
        real(RP), intent(out) :: GHFLX
+       real(RP), intent(out) :: U10
+       real(RP), intent(out) :: V10
+       real(RP), intent(out) :: T2
+       real(RP), intent(out) :: Q2
 
        logical,  intent(in) :: LSOLAR
        real(RP), intent(in) :: PRES
@@ -174,3 +186,4 @@ contains
   end subroutine CPL_AtmUrb_setup
 
 end module scale_cpl_atmos_urban
+
