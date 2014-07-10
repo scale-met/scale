@@ -81,9 +81,9 @@ module scale_atmos_boundary
   real(RP),              private :: ATMOS_BOUNDARY_FRACZ        =   1.0_RP ! fraction of boundary region for dumping (z) [0-1]
   real(RP),              private :: ATMOS_BOUNDARY_FRACX        =   1.0_RP ! fraction of boundary region for dumping (x) [0-1]
   real(RP),              private :: ATMOS_BOUNDARY_FRACY        =   1.0_RP ! fraction of boundary region for dumping (y) [0-1]
-  real(RP),              private :: ATMOS_BOUNDARY_tauz         =  60.0_RP ! maximum value for damping tau (z) [s]
-  real(RP),              private :: ATMOS_BOUNDARY_taux         =  60.0_RP ! maximum value for damping tau (x) [s]
-  real(RP),              private :: ATMOS_BOUNDARY_tauy         =  60.0_RP ! maximum value for damping tau (y) [s]
+  real(RP),              private :: ATMOS_BOUNDARY_tauz                    ! maximum value for damping tau (z) [s]
+  real(RP),              private :: ATMOS_BOUNDARY_taux                    ! maximum value for damping tau (x) [s]
+  real(RP),              private :: ATMOS_BOUNDARY_tauy                    ! maximum value for damping tau (y) [s]
 
   real(RP),              private, allocatable :: ATMOS_BOUNDARY_var_ref  (:,:,:,:,:) !> reference container (with HALO)
   real(RP),              private, allocatable :: ATMOS_BOUNDARY_increment(:,:,:,:)   !> damping coefficient [0-1]
@@ -109,6 +109,8 @@ contains
        PRC_MPIstop
     use scale_const, only: &
        CONST_UNDEF
+    use scale_time, only: &
+       DT => TIME_DTSEC
     implicit none
 
     real(RP), intent(in) :: DENS(KA,IA,JA)
@@ -153,6 +155,10 @@ contains
     allocate( ATMOS_BOUNDARY_alpha(KA,IA,JA,I_BND_SIZE) )
     ATMOS_BOUNDARY_var  (:,:,:,:) = CONST_UNDEF
     ATMOS_BOUNDARY_alpha(:,:,:,:) = 0.0_RP
+
+    ATMOS_BOUNDARY_tauz = DT * 10.0_RP
+    ATMOS_BOUNDARY_taux = DT * 10.0_RP
+    ATMOS_BOUNDARY_tauy = DT * 10.0_RP
 
     !--- read namelist
     rewind(IO_FID_CONF)
