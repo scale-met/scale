@@ -1045,8 +1045,11 @@ contains
     allocate( dummy_4D(dims(4),dims(2),dims(3),tcount) )
     if( do_read ) then
        call ExternalFileRead( dummy_4D(:,:,:,:),                           &
-                      BASENAME, "PHB",     step, tcount, myrank, mdlid, single=.true., zstag=.true. )
+                      BASENAME, "PHB", step, tcount, myrank, mdlid, single=.true., zstag=.true. )
        geof_org(:,:,:,:) = dummy_4D(:,:,:,:)
+       call ExternalFileRead( dummy_4D(:,:,:,:),                           &
+                      BASENAME, "PH",  step, tcount, myrank, mdlid, single=.true., zstag=.true. )
+       geof_org(:,:,:,:) = geof_org(:,:,:,:) + dummy_4D(:,:,:,:)
     endif
     deallocate( dummy_4D )
 
