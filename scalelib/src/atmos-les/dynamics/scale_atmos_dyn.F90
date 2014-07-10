@@ -558,7 +558,7 @@ contains
 
        if ( PRC_2Drank(PRC_myrank,1) == 0 ) then ! for western boundary
           do j = 1, JA
-          do i = IS, IS+IHALO
+          do i = IS, IS+IHALO-1
           do k = 1, KA
              sw = sign(0.5_RP, DAMP_alpha(k,i,j,I_BND_DENS) - epsilon) + 0.5_RP
              DENS(k,i,j) = DENS(k,i,j) * ( 1.0_RP - sw ) &
@@ -584,7 +584,7 @@ contains
        end if
        if ( PRC_2Drank(PRC_myrank,1) == PRC_NUM_X-1 ) then ! for eastern boundary
           do j = 1, JA
-          do i = IE-IHALO, IE
+          do i = IE-IHALO+1, IE
           do k = 1, KA
              sw = sign(0.5_RP, DAMP_alpha(k,i,j,I_BND_DENS) - epsilon) + 0.5_RP
              DENS(k,i,j) = DENS(k,i,j) * ( 1.0_RP - sw ) &
@@ -609,7 +609,7 @@ contains
           end do
        end if
        if ( PRC_2Drank(PRC_myrank,2) == 0 ) then ! for sourthern boundary
-          do j = JS, JS+JHALO
+          do j = JS, JS+JHALO-1
           do i = 1, IA
           do k = 1, KA
              sw = sign(0.5_RP, DAMP_alpha(k,i,j,I_BND_DENS) - epsilon) + 0.5_RP
@@ -635,7 +635,7 @@ contains
           end do
        end if
        if ( PRC_2Drank(PRC_myrank,2) == PRC_NUM_Y-1 ) then ! for northern boundary
-          do j = JE-JHALO, JE
+          do j = JE-JHALO+1, JE
           do i = 1, IA
           do k = 1, KA
              sw = sign(0.5_RP, DAMP_alpha(k,i,j,I_BND_DENS) - epsilon) + 0.5_RP
