@@ -868,7 +868,7 @@ contains
     integer :: i, j, k
 
     do j = j0, j1
-    do i = i1, j1
+    do i = i0, i1
     do k = KS, KE
        sw = sign(0.5_RP, DAMP_alpha(k,i,j,I_BND_DENS) - epsilon) + 0.5_RP
        DENS(k,i,j) = DENS(k,i,j) * ( 1.0_RP - sw ) &
