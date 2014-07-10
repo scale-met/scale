@@ -172,8 +172,7 @@ contains
     use scale_const, only: &
        Rdry   => CONST_Rdry,  &
        Rvap   => CONST_Rvap,  &
-       CVdry  => CONST_CVdry, &
-       epsilon => CONST_EPS
+       CVdry  => CONST_CVdry
     use scale_process, only: &
        PRC_NUM_X, &
        PRC_NUM_Y, &
@@ -304,8 +303,6 @@ contains
     real(RP) :: qflx_anti(KA,IA,JA,3)  ! anti-diffusive flux
 
     real(RP) :: dt
-
-    real(RP) :: sw
 
     integer  :: IIS, IIE
     integer  :: JJS, JJE
@@ -530,6 +527,27 @@ contains
                           REF_pres, REF_dens,                               & ! (in)
                           dt                                                ) ! (in)
 
+       if ( PRC_2Drank(PRC_myrank,1) == 0 ) then ! for western boundary
+          call set_boundary_dyn( &
+               DENS, MOMZ, MOMX, MOMY, RHOT, & ! (inout)
+               DAMP_var, DAMP_alpha, IS, IS+IHALO-1, JS, JE ) ! (in)
+       end if
+       if ( PRC_2Drank(PRC_myrank,1) == PRC_NUM_X-1 ) then ! for eastern boundary
+          call set_boundary_dyn( &
+               DENS, MOMZ, MOMX, MOMY, RHOT, & ! (inout)
+               DAMP_var, DAMP_alpha, IE-IHALO+1, IE, JS, JE ) ! (in)
+       end if
+       if ( PRC_2Drank(PRC_myrank,2) == 0 ) then ! for sourthern boundary
+          call set_boundary_dyn( &
+               DENS, MOMZ, MOMX, MOMY, RHOT, & ! (inout)
+               DAMP_var, DAMP_alpha, IS, IE, JS, JS+JHALO-1 ) ! (in)
+       end if
+       if ( PRC_2Drank(PRC_myrank,2) == PRC_NUM_Y-1 ) then ! for northern boundary
+          call set_boundary_dyn( &
+               DENS, MOMZ, MOMX, MOMY, RHOT, & ! (inout)
+               DAMP_var, DAMP_alpha, IS, IE, JE-JHALO+1, JE ) ! (in)
+       end if
+
        do j  = JS, JE
        do i  = IS, IE
           DENS(   1:KS-1,i,j) = DENS(KS,i,j)
@@ -556,110 +574,6 @@ contains
        call COMM_wait ( MOMY(:,:,:), 4 )
        call COMM_wait ( RHOT(:,:,:), 5 )
 
-       if ( PRC_2Drank(PRC_myrank,1) == 0 ) then ! for western boundary
-          do j = 1, JA
-          do i = IS, IS+IHALO-1
-          do k = 1, KA
-             sw = sign(0.5_RP, DAMP_alpha(k,i,j,I_BND_DENS) - epsilon) + 0.5_RP
-             DENS(k,i,j) = DENS(k,i,j) * ( 1.0_RP - sw ) &
-                         + DAMP_var(k,i,j,I_BND_DENS) * sw
-             sw = sign(0.5_RP, DAMP_alpha(k,i,j,I_BND_MOMZ) - epsilon) + 0.5_RP
-             MOMZ(k,i,j) = MOMZ(k,i,j) * ( 1.0_RP - sw ) &
-                         + DAMP_var(k,i,j,I_BND_MOMZ) * sw
-             sw = sign(0.5_RP, DAMP_alpha(k,i,j,I_BND_MOMX) - epsilon) + 0.5_RP
-             MOMX(k,i,j) = MOMX(k,i,j) * ( 1.0_RP - sw ) &
-                         + DAMP_var(k,i,j,I_BND_MOMX) * sw
-             sw = sign(0.5_RP, DAMP_alpha(k,i,j,I_BND_MOMY) - epsilon) + 0.5_RP
-             MOMY(k,i,j) = MOMY(k,i,j) * ( 1.0_RP - sw ) &
-                         + DAMP_var(k,i,j,I_BND_MOMY) * sw
-             sw = sign(0.5_RP, DAMP_alpha(k,i,j,I_BND_RHOT) - epsilon) + 0.5_RP
-             RHOT(k,i,j) = RHOT(k,i,j) * ( 1.0_RP - sw ) &
-                         + DAMP_var(k,i,j,I_BND_RHOT) * sw
-             sw = sign(0.5_RP, DAMP_alpha(k,i,j,I_BND_QV  ) - epsilon) + 0.5_RP
-             QTRC(k,i,j,I_QV) = QTRC(k,i,j,I_QV) * ( 1.0_RP - sw ) &
-                         + DAMP_var(k,i,j,I_BND_QV  ) * sw
-          end do
-          end do
-          end do
-       end if
-       if ( PRC_2Drank(PRC_myrank,1) == PRC_NUM_X-1 ) then ! for eastern boundary
-          do j = 1, JA
-          do i = IE-IHALO+1, IE
-          do k = 1, KA
-             sw = sign(0.5_RP, DAMP_alpha(k,i,j,I_BND_DENS) - epsilon) + 0.5_RP
-             DENS(k,i,j) = DENS(k,i,j) * ( 1.0_RP - sw ) &
-                         + DAMP_var(k,i,j,I_BND_DENS) * sw
-             sw = sign(0.5_RP, DAMP_alpha(k,i,j,I_BND_MOMZ) - epsilon) + 0.5_RP
-             MOMZ(k,i,j) = MOMZ(k,i,j) * ( 1.0_RP - sw ) &
-                         + DAMP_var(k,i,j,I_BND_MOMZ) * sw
-             sw = sign(0.5_RP, DAMP_alpha(k,i,j,I_BND_MOMX) - epsilon) + 0.5_RP
-             MOMX(k,i,j) = MOMX(k,i,j) * ( 1.0_RP - sw ) &
-                         + DAMP_var(k,i,j,I_BND_MOMX) * sw
-             sw = sign(0.5_RP, DAMP_alpha(k,i,j,I_BND_MOMY) - epsilon) + 0.5_RP
-             MOMY(k,i,j) = MOMY(k,i,j) * ( 1.0_RP - sw ) &
-                         + DAMP_var(k,i,j,I_BND_MOMY) * sw
-             sw = sign(0.5_RP, DAMP_alpha(k,i,j,I_BND_RHOT) - epsilon) + 0.5_RP
-             RHOT(k,i,j) = RHOT(k,i,j) * ( 1.0_RP - sw ) &
-                         + DAMP_var(k,i,j,I_BND_RHOT) * sw
-             sw = sign(0.5_RP, DAMP_alpha(k,i,j,I_BND_QV  ) - epsilon) + 0.5_RP
-             QTRC(k,i,j,I_QV) = QTRC(k,i,j,I_QV) * ( 1.0_RP - sw ) &
-                         + DAMP_var(k,i,j,I_BND_QV) * sw
-          end do
-          end do
-          end do
-       end if
-       if ( PRC_2Drank(PRC_myrank,2) == 0 ) then ! for sourthern boundary
-          do j = JS, JS+JHALO-1
-          do i = 1, IA
-          do k = 1, KA
-             sw = sign(0.5_RP, DAMP_alpha(k,i,j,I_BND_DENS) - epsilon) + 0.5_RP
-             DENS(k,i,j) = DENS(k,i,j) * ( 1.0_RP - sw ) &
-                         + DAMP_var(k,i,j,I_BND_DENS) * sw
-             sw = sign(0.5_RP, DAMP_alpha(k,i,j,I_BND_MOMZ) - epsilon) + 0.5_RP
-             MOMZ(k,i,j) = MOMZ(k,i,j) * ( 1.0_RP - sw ) &
-                         + DAMP_var(k,i,j,I_BND_MOMZ) * sw
-             sw = sign(0.5_RP, DAMP_alpha(k,i,j,I_BND_MOMX) - epsilon) + 0.5_RP
-             MOMX(k,i,j) = MOMX(k,i,j) * ( 1.0_RP - sw ) &
-                         + DAMP_var(k,i,j,I_BND_MOMX) * sw
-             sw = sign(0.5_RP, DAMP_alpha(k,i,j,I_BND_MOMY) - epsilon) + 0.5_RP
-             MOMY(k,i,j) = MOMY(k,i,j) * ( 1.0_RP - sw ) &
-                         + DAMP_var(k,i,j,I_BND_MOMY) * sw
-             sw = sign(0.5_RP, DAMP_alpha(k,i,j,I_BND_RHOT) - epsilon) + 0.5_RP
-             RHOT(k,i,j) = RHOT(k,i,j) * ( 1.0_RP - sw ) &
-                         + DAMP_var(k,i,j,I_BND_RHOT) * sw
-             sw = sign(0.5_RP, DAMP_alpha(k,i,j,I_BND_QV  ) - epsilon) + 0.5_RP
-             QTRC(k,i,j,I_QV) = QTRC(k,i,j,I_QV) * ( 1.0_RP - sw ) &
-                         + DAMP_var(k,i,j,I_BND_QV) * sw
-          end do
-          end do
-          end do
-       end if
-       if ( PRC_2Drank(PRC_myrank,2) == PRC_NUM_Y-1 ) then ! for northern boundary
-          do j = JE-JHALO+1, JE
-          do i = 1, IA
-          do k = 1, KA
-             sw = sign(0.5_RP, DAMP_alpha(k,i,j,I_BND_DENS) - epsilon) + 0.5_RP
-             DENS(k,i,j) = DENS(k,i,j) * ( 1.0_RP - sw ) &
-                         + DAMP_var(k,i,j,I_BND_DENS) * sw
-             sw = sign(0.5_RP, DAMP_alpha(k,i,j,I_BND_MOMZ) - epsilon) + 0.5_RP
-             MOMZ(k,i,j) = MOMZ(k,i,j) * ( 1.0_RP - sw ) &
-                         + DAMP_var(k,i,j,I_BND_MOMZ) * sw
-             sw = sign(0.5_RP, DAMP_alpha(k,i,j,I_BND_MOMX) - epsilon) + 0.5_RP
-             MOMX(k,i,j) = MOMX(k,i,j) * ( 1.0_RP - sw ) &
-                         + DAMP_var(k,i,j,I_BND_MOMX) * sw
-             sw = sign(0.5_RP, DAMP_alpha(k,i,j,I_BND_MOMY) - epsilon) + 0.5_RP
-             MOMY(k,i,j) = MOMY(k,i,j) * ( 1.0_RP - sw ) &
-                         + DAMP_var(k,i,j,I_BND_MOMY) * sw
-             sw = sign(0.5_RP, DAMP_alpha(k,i,j,I_BND_RHOT) - epsilon) + 0.5_RP
-             RHOT(k,i,j) = RHOT(k,i,j) * ( 1.0_RP - sw ) &
-                         + DAMP_var(k,i,j,I_BND_RHOT) * sw
-             sw = sign(0.5_RP, DAMP_alpha(k,i,j,I_BND_QV  ) - epsilon) + 0.5_RP
-             QTRC(k,i,j,I_QV) = QTRC(k,i,j,I_QV) * ( 1.0_RP - sw ) &
-                         + DAMP_var(k,i,j,I_BND_QV) * sw
-          end do
-          end do
-          end do
-       end if
 
        if ( USE_AVERAGE ) then
           DENS_av(:,:,:) = DENS_av(:,:,:) + DENS(:,:,:)
@@ -899,6 +813,27 @@ contains
 
     enddo ! scalar quantities loop
 
+    if ( PRC_2Drank(PRC_myrank,1) == 0 ) then ! for western boundary
+       call set_boundary_qtrc( &
+            QTRC, & ! (inout)
+            DAMP_var, DAMP_alpha, dt, IS, IS+IHALO-1, JS, JE ) ! (in)
+    end if
+    if ( PRC_2Drank(PRC_myrank,1) == PRC_NUM_X-1 ) then ! for eastern boundary
+       call set_boundary_qtrc( &
+            QTRC, & ! (inout)
+            DAMP_var, DAMP_alpha, dt, IE-IHALO+1, IE, JS, JE ) ! (in)
+    end if
+    if ( PRC_2Drank(PRC_myrank,2) == 0 ) then ! for sourthern boundary
+       call set_boundary_qtrc( &
+            QTRC, & ! (inout)
+            DAMP_var, DAMP_alpha, dt, IS, IE, JS, JS+JHALO-1 ) ! (in)
+    end if
+    if ( PRC_2Drank(PRC_myrank,2) == PRC_NUM_Y-1 ) then ! for northern boundary
+       call set_boundary_qtrc( &
+            QTRC, & ! (inout)
+            DAMP_var, DAMP_alpha, dt, IS, IE, JE-JHALO+1, JE ) ! (in)
+    end if
+
     do iq = 1, QA
        call COMM_vars8( QTRC(:,:,:,iq), iq )
     enddo
@@ -909,5 +844,97 @@ contains
 
     return
   end subroutine ATMOS_DYN
+
+  subroutine set_boundary_dyn( &
+       DENS, MOMZ, MOMX, MOMY, RHOT, &
+       DAMP_var, DAMP_alpha, &
+       i0, i1, j0, j1 )
+    use scale_const, only: &
+         epsilon => CONST_EPS
+    implicit none
+    real(RP), intent(inout) :: DENS(KA,IA,JA)
+    real(RP), intent(inout) :: MOMZ(KA,IA,JA)
+    real(RP), intent(inout) :: MOMX(KA,IA,JA)
+    real(RP), intent(inout) :: MOMY(KA,IA,JA)
+    real(RP), intent(inout) :: RHOT(KA,IA,JA)
+    real(RP), intent(in)    :: DAMP_var  (KA,IA,JA,I_BND_SIZE)
+    real(RP), intent(in)    :: DAMP_alpha(KA,IA,JA,I_BND_SIZE)
+    integer,  intent(in)    :: i0
+    integer,  intent(in)    :: i1
+    integer,  intent(in)    :: j0
+    integer,  intent(in)    :: j1
+
+    real(RP) :: sw
+    integer :: i, j, k
+
+    do j = j0, j1
+    do i = i1, j1
+    do k = KS, KE
+       sw = sign(0.5_RP, DAMP_alpha(k,i,j,I_BND_DENS) - epsilon) + 0.5_RP
+       DENS(k,i,j) = DENS(k,i,j) * ( 1.0_RP - sw ) &
+                   + DAMP_var(k,i,j,I_BND_DENS) * sw
+       sw = sign(0.5_RP, DAMP_alpha(k,i,j,I_BND_MOMZ) - epsilon) + 0.5_RP
+       MOMZ(k,i,j) = MOMZ(k,i,j) * ( 1.0_RP - sw ) &
+                   + DAMP_var(k,i,j,I_BND_MOMZ) * sw
+       sw = sign(0.5_RP, DAMP_alpha(k,i,j,I_BND_MOMX) - epsilon) + 0.5_RP
+       MOMX(k,i,j) = MOMX(k,i,j) * ( 1.0_RP - sw ) &
+                   + DAMP_var(k,i,j,I_BND_MOMX) * sw
+       sw = sign(0.5_RP, DAMP_alpha(k,i,j,I_BND_MOMY) - epsilon) + 0.5_RP
+       MOMY(k,i,j) = MOMY(k,i,j) * ( 1.0_RP - sw ) &
+                   + DAMP_var(k,i,j,I_BND_MOMY) * sw
+       sw = sign(0.5_RP, DAMP_alpha(k,i,j,I_BND_RHOT) - epsilon) + 0.5_RP
+       RHOT(k,i,j) = RHOT(k,i,j) * ( 1.0_RP - sw ) &
+                   + DAMP_var(k,i,j,I_BND_RHOT) * sw
+    end do
+    end do
+    end do
+
+    return
+  end subroutine set_boundary_dyn
+
+  subroutine set_boundary_qtrc( &
+       QTRC, &
+       DAMP_var, DAMP_alpha, &
+       dt, i0, i1, j0, j1 )
+    use scale_const, only: &
+         epsilon => CONST_EPS
+    implicit none
+    real(RP), intent(inout) :: QTRC(KA,IA,JA,QA)
+    real(RP), intent(in)    :: DAMP_var  (KA,IA,JA,I_BND_SIZE)
+    real(RP), intent(in)    :: DAMP_alpha(KA,IA,JA,I_BND_SIZE)
+    real(RP), intent(in)    :: dt
+    integer,  intent(in)    :: i0
+    integer,  intent(in)    :: i1
+    integer,  intent(in)    :: j0
+    integer,  intent(in)    :: j1
+
+    real(RP) :: sw
+    integer :: i, j, k, iq
+
+    do j = j0, j1
+    do i = i1, j1
+    do k = KS, KE
+       sw = sign(0.5_RP, DAMP_alpha(k,i,j,I_BND_QV  ) - epsilon) + 0.5_RP
+       QTRC(k,i,j,I_QV) = QTRC(k,i,j,I_QV) * ( 1.0_RP - sw ) &
+                   + DAMP_var(k,i,j,I_BND_QV  ) * sw
+    end do
+    end do
+    end do
+
+    do iq = 1, QA
+       if (iq==I_QV) cycle
+       do j = j0, j1
+       do i = i1, j1
+       do k = KS, KE
+          QTRC(k,i,j,iq) = QTRC(k,i,j,iq) &
+               - DAMP_alpha(k,i,j,I_BND_QV) * QTRC(k,i,j,iq) * dt
+       end do
+       end do
+       end do
+    end do
+
+    return
+  end subroutine set_boundary_qtrc
+
 
 end module scale_atmos_dyn
