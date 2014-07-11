@@ -8,7 +8,7 @@ dir='/home/ryoshida/scale/data/case2'
 ftype='out'
 domain='2'
 #
-dt=120
+dt=360
 #
 # set start date (UTC)
 #
