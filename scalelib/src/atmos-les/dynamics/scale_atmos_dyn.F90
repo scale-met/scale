@@ -986,7 +986,7 @@ contains
     do iq = 1, QA
        if (iq==I_QV) cycle
        do j = j0, j1
-       do i = i1, j1
+       do i = i0, i1
        do k = KS, KE
           sw = sign(0.5_RP, MOM(k,i,j)*dir) + 0.5_RP
           QTRC(k,i,j,iq) = QTRC(k,i,j,iq) * sw
