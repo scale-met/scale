@@ -165,10 +165,11 @@ contains
        FACT_F,                     &
        ATMOS_DYN_numfilter_coef,   &
        ATMOS_DYN_numfilter_coef_q, &
-       ATMOS_DYN_filter_tend,      &
        ATMOS_DYN_fct
     use scale_atmos_dyn_rk, only: &
        ATMOS_DYN_rk
+    use scale_atmos_boundary, only: &
+       BND_SMOOTHER_FACT => ATMOS_BOUNDARY_SMOOTHER_FACT
     implicit none
 
     real(RP), intent(inout) :: DENS(KA,IA,JA)
@@ -355,14 +356,15 @@ contains
        enddo
        enddo
        enddo
-       call ATMOS_DYN_filter_tend( damp_t, diff, rcdz, rcdx, rcdy, 0, 0, 0 )
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
           DENS_t(k,i,j) = DENS_tp(k,i,j) & ! tendency from physical step
-                        + DAMP_alpha(k,i,j,I_BND_DENS) * ( damp_t(k,i,j) * 0.2_RP & ! laplacian type damping
-                                                         - diff(k,i,j) ) ! rayleigh damping
+                        - DAMP_alpha(k,i,j,I_BND_DENS) &
+                        * ( diff(k,i,j) & ! rayleigh damping
+                          - ( diff(k,i-1,j) + diff(k,i+1,j) + diff(k,i,j-1) + diff(k,i,j+1) - diff(k,i,j)*4.0_RP ) &
+                          * 0.125_RP * BND_SMOOTHER_FACT ) ! horizontal smoother
        enddo
        enddo
        enddo
@@ -375,13 +377,11 @@ contains
        enddo
        enddo
        enddo
-       call ATMOS_DYN_filter_tend( damp_t, diff, rfdz, rcdx, rcdy, 1, 0, 0 )
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE-1
           MOMZ_t(k,i,j) = MOMZ_tp(k,i,j) & ! tendency from physical step
-                        + DAMP_alpha(k,i,j,I_BND_MOMZ) * ( damp_t(k,i,j) * 0.2_RP & ! laplacian type damping
-                                                         - diff(k,i,j) ) ! rayleigh damping
+                        - DAMP_alpha(k,i,j,I_BND_MOMZ) * diff(k,i,j) ! rayleigh damping
        enddo
        enddo
        enddo
@@ -399,13 +399,14 @@ contains
        enddo
        enddo
        enddo
-       call ATMOS_DYN_filter_tend( damp_t, diff, rcdz, rfdx, rcdy, 0, 1, 0 )
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
           MOMX_t(k,i,j) = MOMX_tp(k,i,j) & ! tendency from physical step
-                        + DAMP_alpha(k,i,j,I_BND_MOMX) * ( damp_t(k,i,j) * 0.2_RP & ! laplacian type damping
-                                                         - diff(k,i,j) ) ! rayleigh damping
+                        - DAMP_alpha(k,i,j,I_BND_MOMX) &
+                        * ( diff(k,i,j) & ! rayleigh damping
+                          - ( diff(k,i-1,j) + diff(k,i+1,j) + diff(k,i,j-1) + diff(k,i,j+1) - diff(k,i,j)*4.0_RP ) &
+                          * 0.125_RP * BND_SMOOTHER_FACT ) ! horizontal smoother
        enddo
        enddo
        enddo
@@ -418,13 +419,14 @@ contains
        enddo
        enddo
        enddo
-       call ATMOS_DYN_filter_tend( damp_t, diff, rcdz, rcdx, rfdy, 0, 0, 1 )
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
           MOMY_t(k,i,j) = MOMY_tp(k,i,j) & ! tendency from physical step
-                        + DAMP_alpha(k,i,j,I_BND_MOMY) * ( damp_t(k,i,j) * 0.2_RP & ! laplacian type damping
-                                                         - diff(k,i,j) ) ! rayleigh damping
+                        - DAMP_alpha(k,i,j,I_BND_MOMY) &
+                        * ( diff(k,i,j) & ! rayleigh damping
+                          - ( diff(k,i-1,j) + diff(k,i+1,j) + diff(k,i,j-1) + diff(k,i,j+1) - diff(k,i,j)*4.0_RP ) &
+                          * 0.125_RP * BND_SMOOTHER_FACT ) ! horizontal smoother
        enddo
        enddo
        enddo
@@ -437,13 +439,14 @@ contains
        enddo
        enddo
        enddo
-       call ATMOS_DYN_filter_tend( damp_t, diff, rcdz, rcdx, rcdy, 0, 0, 0 )
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
           RHOT_t(k,i,j) = RHOT_tp(k,i,j) & ! tendency from physical step
-                        + DAMP_alpha(k,i,j,I_BND_RHOT) * ( damp_t(k,i,j) * 0.2_RP & ! laplacian type damping
-                                                         - diff(k,i,j) ) ! rayleigh damping
+                        - DAMP_alpha(k,i,j,I_BND_RHOT) &
+                        * ( diff(k,i,j) & ! rayleigh damping
+                          - ( diff(k,i-1,j) + diff(k,i+1,j) + diff(k,i,j-1) + diff(k,i,j+1) - diff(k,i,j)*4.0_RP ) &
+                          * 0.125_RP * BND_SMOOTHER_FACT ) ! horizontal smoother
        enddo
        enddo
        enddo
@@ -576,22 +579,22 @@ contains
 
        if ( PRC_2Drank(PRC_myrank,1) == 0 ) then ! for western boundary
           call set_boundary_dyn( &
-               DENS, MOMZ, MOMX, MOMY, RHOT, & ! (inout)
+               DENS, MOMX, MOMY, RHOT, & ! (inout)
                DAMP_var, DAMP_alpha, IS, IS+IHALO-1, JS, JE ) ! (in)
        end if
        if ( PRC_2Drank(PRC_myrank,1) == PRC_NUM_X-1 ) then ! for eastern boundary
           call set_boundary_dyn( &
-               DENS, MOMZ, MOMX, MOMY, RHOT, & ! (inout)
+               DENS, MOMX, MOMY, RHOT, & ! (inout)
                DAMP_var, DAMP_alpha, IE-IHALO+1, IE, JS, JE ) ! (in)
        end if
        if ( PRC_2Drank(PRC_myrank,2) == 0 ) then ! for sourthern boundary
           call set_boundary_dyn( &
-               DENS, MOMZ, MOMX, MOMY, RHOT, & ! (inout)
+               DENS, MOMX, MOMY, RHOT, & ! (inout)
                DAMP_var, DAMP_alpha, IS, IE, JS, JS+JHALO-1 ) ! (in)
        end if
        if ( PRC_2Drank(PRC_myrank,2) == PRC_NUM_Y-1 ) then ! for northern boundary
           call set_boundary_dyn( &
-               DENS, MOMZ, MOMX, MOMY, RHOT, & ! (inout)
+               DENS, MOMX, MOMY, RHOT, & ! (inout)
                DAMP_var, DAMP_alpha, IS, IE, JE-JHALO+1, JE ) ! (in)
        end if
 
@@ -678,15 +681,16 @@ contains
           enddo
           enddo
           enddo
-          call ATMOS_DYN_filter_tend( damp_t, diff, rcdz, rcdx, rcdy, 0, 0, 0 )
           !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           do j = JS, JE
           do i = IS, IE
           do k = KS, KE
              RHOQ_t(k,i,j) = ( QTRC_tp(k,i,j,I_QV) & ! tendency from physical step
-                             + DAMP_alpha(k,i,j,I_BND_QV) * ( damp_t(k,i,j) * 0.2_RP & ! laplacian type damping
-                                                            - diff(k,i,j) ) & ! rayleigh damping
-                             ) * DENS00(k,i,j)
+                        - DAMP_alpha(k,i,j,I_BND_QV) &
+                        * ( diff(k,i,j) & ! rayleigh damping
+                          - ( diff(k,i-1,j) + diff(k,i+1,j) + diff(k,i,j-1) + diff(k,i,j+1) - diff(k,i,j)*4.0_RP ) &
+                          * 0.125_RP * BND_SMOOTHER_FACT ) & ! horizontal smoother
+                          ) * DENS00(k,i,j)
           enddo
           enddo
           enddo
@@ -872,22 +876,26 @@ contains
     if ( PRC_2Drank(PRC_myrank,1) == 0 ) then ! for western boundary
        call set_boundary_qtrc( &
             QTRC, & ! (inout)
-            DAMP_var, DAMP_alpha, dt, IS, IS+IHALO-1, JS, JE ) ! (in)
+            DAMP_var, DAMP_alpha, MOMX, & ! (in)
+            -1.0_RP, dt, IS, IS+IHALO-1, JS, JE ) ! (in)
     end if
     if ( PRC_2Drank(PRC_myrank,1) == PRC_NUM_X-1 ) then ! for eastern boundary
        call set_boundary_qtrc( &
             QTRC, & ! (inout)
-            DAMP_var, DAMP_alpha, dt, IE-IHALO+1, IE, JS, JE ) ! (in)
+            DAMP_var, DAMP_alpha, MOMX, & ! (in)
+            1.0_RP, dt, IE-IHALO+1, IE, JS, JE ) ! (in)
     end if
     if ( PRC_2Drank(PRC_myrank,2) == 0 ) then ! for sourthern boundary
        call set_boundary_qtrc( &
             QTRC, & ! (inout)
-            DAMP_var, DAMP_alpha, dt, IS, IE, JS, JS+JHALO-1 ) ! (in)
+            DAMP_var, DAMP_alpha, MOMY, & ! (in)
+            -1.0_RP, dt, IS, IE, JS, JS+JHALO-1 ) ! (in)
     end if
     if ( PRC_2Drank(PRC_myrank,2) == PRC_NUM_Y-1 ) then ! for northern boundary
        call set_boundary_qtrc( &
             QTRC, & ! (inout)
-            DAMP_var, DAMP_alpha, dt, IS, IE, JE-JHALO+1, JE ) ! (in)
+            DAMP_var, DAMP_alpha, MOMY, & ! (in)
+            1.0_RP, dt, IS, IE, JE-JHALO+1, JE ) ! (in)
     end if
 
     do iq = 1, QA
@@ -902,14 +910,13 @@ contains
   end subroutine ATMOS_DYN
 
   subroutine set_boundary_dyn( &
-       DENS, MOMZ, MOMX, MOMY, RHOT, &
+       DENS, MOMX, MOMY, RHOT, &
        DAMP_var, DAMP_alpha, &
        i0, i1, j0, j1 )
     use scale_const, only: &
          epsilon => CONST_EPS
     implicit none
     real(RP), intent(inout) :: DENS(KA,IA,JA)
-    real(RP), intent(inout) :: MOMZ(KA,IA,JA)
     real(RP), intent(inout) :: MOMX(KA,IA,JA)
     real(RP), intent(inout) :: MOMY(KA,IA,JA)
     real(RP), intent(inout) :: RHOT(KA,IA,JA)
@@ -929,9 +936,6 @@ contains
        sw = sign(0.5_RP, DAMP_alpha(k,i,j,I_BND_DENS) - epsilon) + 0.5_RP
        DENS(k,i,j) = DENS(k,i,j) * ( 1.0_RP - sw ) &
                    + DAMP_var(k,i,j,I_BND_DENS) * sw
-       sw = sign(0.5_RP, DAMP_alpha(k,i,j,I_BND_MOMZ) - epsilon) + 0.5_RP
-       MOMZ(k,i,j) = MOMZ(k,i,j) * ( 1.0_RP - sw ) &
-                   + DAMP_var(k,i,j,I_BND_MOMZ) * sw
        sw = sign(0.5_RP, DAMP_alpha(k,i,j,I_BND_MOMX) - epsilon) + 0.5_RP
        MOMX(k,i,j) = MOMX(k,i,j) * ( 1.0_RP - sw ) &
                    + DAMP_var(k,i,j,I_BND_MOMX) * sw
@@ -950,14 +954,16 @@ contains
 
   subroutine set_boundary_qtrc( &
        QTRC, &
-       DAMP_var, DAMP_alpha, &
-       dt, i0, i1, j0, j1 )
+       DAMP_var, DAMP_alpha, MOM, &
+       dir, dt, i0, i1, j0, j1 )
     use scale_const, only: &
          epsilon => CONST_EPS
     implicit none
     real(RP), intent(inout) :: QTRC(KA,IA,JA,QA)
     real(RP), intent(in)    :: DAMP_var  (KA,IA,JA,I_BND_SIZE)
     real(RP), intent(in)    :: DAMP_alpha(KA,IA,JA,I_BND_SIZE)
+    real(RP), intent(in)    :: MOM(KA,IA,JA)
+    real(RP), intent(in)    :: dir
     real(RP), intent(in)    :: dt
     integer,  intent(in)    :: i0
     integer,  intent(in)    :: i1
@@ -982,8 +988,8 @@ contains
        do j = j0, j1
        do i = i1, j1
        do k = KS, KE
-          QTRC(k,i,j,iq) = QTRC(k,i,j,iq) &
-               - DAMP_alpha(k,i,j,I_BND_QV) * QTRC(k,i,j,iq) * dt
+          sw = sign(0.5_RP, MOM(k,i,j)*dir) + 0.5_RP
+          QTRC(k,i,j,iq) = QTRC(k,i,j,iq) * sw
        end do
        end do
        end do
