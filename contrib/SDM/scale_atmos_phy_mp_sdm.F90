@@ -29,6 +29,7 @@
 !! @li      2014-06-27 (S.Shima) [rev] sd data output functionality added
 !! @li      2014-07-04 (S.Shima) [rev] Removed comment outputs for debugging
 !! @li      2014-07-09 (S.Shima) [rev] Subroutines related to boundary conditions and MPI communications are totally revised
+!! @li      2014-07-11 (S.Shima) [rev] Subroutines related to sdm_getvz are revised. Many bug fixes.
 !<
 !-------------------------------------------------------------------------------
 #include "macro_thermodyn.h"
@@ -596,6 +597,13 @@ contains
     real(RP) :: crs_dtmp5(KA,IA,JA), crs_dtmp6(KA,IA,JA)
     integer  :: n, s, k, i, j, iq         ! index
     logical, save ::  TIME_DO_RANDOM_restart = .false.
+
+    real(RP)::tmp_pres, tmp_temp
+
+    real(RP) :: pres_scale(KA,IA,JA)  ! Pressure
+    real(RP) :: rhod_scale(KA,IA,JA) ! dry air density
+    real(RP) :: t_scale(KA,IA,JA)    ! Temperature
+
     !---------------------------------------------------------------------------
 
     if( sd_first ) then
@@ -630,7 +638,7 @@ contains
     ! -----
     ! Initialize
     if( .not. sdm_calvar(1) .and. &
-        .not. sdm_calvar(2) .and. &
+       .not. sdm_calvar(2) .and. &
         .not. sdm_calvar(3)       ) return
 
     dtcl(1:3) = sdm_dtcmph(1:3)
@@ -714,6 +722,15 @@ contains
              int(1.E+3_RP*(sdm_dmpitva+0.00010_RP))) == 0 ) then
        if( IO_L ) write(IO_FID_LOG,*) ' *** Output Super Droplet Data in ASCII'
        call sdm_rk2z(sdnum_s2c,sdx_s2c,sdy_s2c,sdrk_s2c,sdz_s2c,sdri_s2c,sdrj_s2c)
+!!$       ! for testing sdm_getvz
+!!$       ppf_crs(:,:,:) = 0.0_RP; ptpf_crs(:,:,:) = 0.0_RP
+!!$       tmp_pres=50000.0_RP; tmp_temp=263.15_RP
+!!$       pbr_crs(:,:,:) = tmp_pres; rhod_crs(:,:,:) = tmp_pres/tmp_temp/Rdry; ptbr_crs(:,:,:) = tmp_temp*(P00/tmp_pres)**(Rdry/CPdry)
+       call sdm_rho_qtrc2rhod(DENS,QTRC,rhod_scale)
+       call sdm_rhot_qtrc2p_t(RHOT,QTRC,DENS,pres_scale,t_scale)
+       call sdm_getvz(pres_scale,rhod_scale,t_scale,            &
+                           sdnum_s2c,sdx_s2c,sdy_s2c,sdri_s2c,sdrj_s2c,sdrk_s2c,sdr_s2c,sdvz_s2c,  &
+                           sd_itmp1,sd_itmp2,sd_itmp3,'motion' )
        call sdm_outasci(TIME_NOWSEC,                               &
                         sdnum_s2c,sdnumasl_s2c,                    &
                         sdn_s2c,sdx_s2c,sdy_s2c,sdz_s2c,sdr_s2c,sdasl_s2c,sdvz_s2c, &
@@ -723,7 +740,7 @@ contains
     end if
 
     !== run SDM at future ==!
-     call sdm_calc(MOMX,MOMY,MOMZ,DENS,                           & 
+     call sdm_calc(MOMX,MOMY,MOMZ,DENS,RHOT,QTRC,                 & 
                    sdm_calvar,sdm_mvexchg,dtcl(1:3), sdm_aslset,  &
                    exnr_crs,pbr_crs,ptbr_crs,         &
                    ppf_crs,ptpf_crs,qvf_crs,&
@@ -774,7 +791,8 @@ contains
 !!$         mod(10*int(1.E+2_RP*(TIME_NOWSEC+0.0010_RP)), &
 !!$             int(1.E+3_RP*(dtcl(4)+0.00010_RP))) == 0 ) then
 !!$
-!!$        call sdm_aslform(sdm_calvar,sdm_aslset,                      &
+!!$        call sdm_aslform(DENS,RHOT,QTRC,                             &   
+!!$                         sdm_calvar,sdm_aslset,                      &
 !!$                         sdm_aslfmsdnc,sdm_sdnmlvol,                 &
 !!$                         sdm_zupper,sdm_zlower,dtcl,                 &
 !!$                         jcb,pbr_crs,ptbr_crs,ppf_crs,               &
@@ -921,6 +939,10 @@ contains
       real(RP) :: QDRY(KA,IA,JA),  CPovCV(KA,IA,JA)
       real(RP) :: crs_dtmp1(KA,IA,JA), crs_dtmp2(KA,IA,JA)
       integer :: sd_str, sd_end, sd_valid
+
+      real(RP) :: pres_scale(KA,IA,JA)  ! Pressure
+      real(RP) :: rhod_scale(KA,IA,JA) ! dry air density
+      real(RP) :: t_scale(KA,IA,JA)    ! Temperature
      !---------------------------------------------------------------------
 
       ! conversion of SCALE variables to CReSS variables: ptbr ptp pbr pp rhod qv 
@@ -1226,7 +1248,12 @@ contains
       do n=1,sdnum_s2c
 !ORG     sdr_s2c(n) = 1.0e-5 * ( log(1.0/(1.0-sdr_s2c(n))) )**O_THRD
 !ORG     sdr_s2c(n) = 1.0d-8
-         sdr_s2c(n) = 1.0E-15_RP
+
+! temporary for test
+!!$         sdr_s2c(n) = 1.0E-15_RP
+         sdr_s2c(n) = 3.0E-3_RP*sdr_s2c(n)
+!         sdr_s2c(n) = exp((log(3.0E-3_RP)-log(1.0E-7_RP))*sdr_s2c(n)+log(1.0E-7_RP))
+         
       end do
 
       !### index[k/real] of super-droplets               ###!
@@ -1247,10 +1274,10 @@ contains
 
       end if
 
-      call sdm_getvz(sthopt,trnopt,                              &
-                     pbr_crs,ptbr_crs,                       &
-                     pp_crs,ptp_crs,rhod_crs,                    &
-                     sdnum_s2c,sdx_s2c,sdy_s2c,sdrk_s2c,sdr_s2c, &
+      call sdm_rho_qtrc2rhod(DENS,QTRC,rhod_scale)
+      call sdm_rhot_qtrc2p_t(RHOT,QTRC,DENS,pres_scale,t_scale)
+      call sdm_getvz(pres_scale,rhod_scale,t_scale,                    &
+                     sdnum_s2c,sdx_s2c,sdy_s2c,sdri_s2c,sdrj_s2c,sdrk_s2c,sdr_s2c, &
                      sdvz_s2c,sd_itmp1,sd_itmp2,sd_itmp3,'motion')
       ! -----
       ! Convert super-droplets to mixing ratio of water hydrometeor
@@ -1562,9 +1589,8 @@ contains
     return
   end subroutine sdm_condevp
   !-----------------------------------------------------------------------------
-  subroutine sdm_getvz(sthopt,trnopt,                       &
-                       pbr,ptbr,pp,ptp,rhod,            &
-                       sd_num,sd_x,sd_y,sd_rk,sd_r,sd_vz,   &
+  subroutine sdm_getvz(pres,rhod,temp,            &
+                       sd_num,sd_x,sd_y,sd_ri,sd_rj,sd_rk,sd_r,sd_vz,   &
                        ilist_s,ilist_m,ilist_l,ptype        )
 ! evaluate the terminal velocities
      use scale_grid, only: &
@@ -1578,26 +1604,31 @@ contains
       t0 => CONST_TEM00, &
       cp => CONST_CPdry, &
       rd => CONST_Rdry
+      use m_sdm_coordtrans, only: &
+           sdm_x2ri, sdm_y2rj
       ! Input variables
-      integer, intent(in) :: trnopt ! Unique index of trnopt in namelist table
-      integer, intent(in) :: sthopt ! Unique index of sthopt in namelist table
+!!$      integer, intent(in) :: trnopt ! Unique index of trnopt in namelist table
+!!$      integer, intent(in) :: sthopt ! Unique index of sthopt in namelist table
 !      real(RP), intent(in) :: jcb(KA,IA,JA)  ! Jacobian at scalar points
-      real(RP), intent(in) :: pbr(KA,IA,JA)  ! Base state pressure
-      real(RP), intent(in) :: ptbr(KA,IA,JA) ! Base state potential temperature
-      real(RP), intent(in) :: pp(KA,IA,JA)  ! Pressure perturbation
-      real(RP), intent(in) :: ptp(KA,IA,JA) ! Potential temperature perturbation
+      real(RP), intent(in) :: pres(KA,IA,JA)  ! Pressure
+!!$      real(RP), intent(in) :: ptbr(KA,IA,JA) ! Base state potential temperature
+!!$      real(RP), intent(in) :: pp(KA,IA,JA)  ! Pressure perturbation
+!!$      real(RP), intent(in) :: ptp(KA,IA,JA) ! Potential temperature perturbation
       real(RP), intent(in) :: rhod(KA,IA,JA) ! dry air density
+      real(RP), intent(in) :: temp(KA,IA,JA) ! temperature
       integer, intent(in) :: sd_num  ! number of super-droplets
       real(RP), intent(in) :: sd_x(1:sd_num)  ! x-coordinate of super-droplets
       real(RP), intent(in) :: sd_y(1:sd_num)  ! y-coordinate of super-droplets
+      real(RP), intent(out) :: sd_ri(1:sd_num)! index[i/real] of super-droplets
+      real(RP), intent(out) :: sd_rj(1:sd_num)! index[j/real] of super-droplets
       real(RP), intent(in) :: sd_rk(1:sd_num) ! index[k/real] of super-droplets
       real(RP), intent(in) :: sd_r(1:sd_num)  ! equivalent radius of super-droplets
       character(len=6), intent(in) :: ptype             ! process type : 'motion process' or 'stochastic coalescence process'
       ! Output variables
       real(RP), intent(out) :: sd_vz(1:sd_num)! terminal velocity of super-droplets in real space
-      integer, intent(out) :: ilist_s(1:int(sd_num/nomp),1:nomp)  ! buffer for list vectorization
-      integer, intent(out) :: ilist_m(1:int(sd_num/nomp),1:nomp)  ! buffer for list vectorization
-      integer, intent(out) :: ilist_l(1:int(sd_num/nomp),1:nomp)  ! buffer for list vectorization
+      integer, intent(out) :: ilist_s(1:sd_num)  ! buffer for list vectorization
+      integer, intent(out) :: ilist_m(1:sd_num)  ! buffer for list vectorization
+      integer, intent(out) :: ilist_l(1:sd_num)  ! buffer for list vectorization
 
       ! Internal shared variables
 !      real(RP) :: dxiv_sdm   ! Inverse of dx_sdm
@@ -1667,9 +1698,9 @@ contains
       integer :: iZm             ! index for inteporation
       integer :: iZp             ! index for inteporation
 
-      integer :: nlist_s(1:nomp) ! list number for small
-      integer :: nlist_m(1:nomp) ! list number for middle
-      integer :: nlist_l(1:nomp) ! list number for large
+!!$      integer :: nlist_s(1:nomp) ! list number for small
+!!$      integer :: nlist_m(1:nomp) ! list number for middle
+!!$      integer :: nlist_l(1:nomp) ! list number for large
 
       integer :: tlist_s         ! total list number for small
       integer :: tlist_m         ! total list number for middle
@@ -1686,6 +1717,9 @@ contains
          return
       endif
 
+      call sdm_x2ri(sd_num,sd_x,sd_ri,sd_rk)
+      call sdm_y2rj(sd_num,sd_y,sd_rj,sd_rk)
+
       ! Initialize
 
       tlist_s = 0
@@ -1696,60 +1730,42 @@ contains
       rddvcp = real(rd,kind=RP)/real(cp,kind=RP)
 
       ! Get index list for compressing buffer.
-      do np=1,nomp
-         nlist_s(np) = 0
-         nlist_m(np) = 0
-         nlist_l(np) = 0
+      scnt = 0
+      mcnt = 0
+      lcnt = 0      
+      do n=1,sd_num
+         if( sd_rk(n)<VALID2INVALID ) cycle
+         
+         sd_dia = 2.0_RP * sd_r(n) * m2cm   !! diameter [m=>cm]
+         
+         if( sd_dia<=1.9E-3_RP ) then
+
+            !== small cloud droplets ==!
+            
+            scnt = scnt + 1
+            ilist_s(scnt) = n
+
+         else if( sd_dia>1.9E-3_RP .and. sd_dia<=1.07E-1_RP ) then
+
+            !== large cloud droplets and small raindrops ==!
+            
+            mcnt = mcnt + 1
+            ilist_m(mcnt) = n
+            
+         else
+            
+            !== raindrops ==!
+            
+            lcnt = lcnt + 1
+            ilist_l(lcnt) = n
+            
+         end if
+         
       end do
 
-      do np=1,nomp
-         sd_str = int(sd_num/nomp)*(np-1) + 1
-         sd_end = int(sd_num/nomp)*np
-
-         scnt = 0
-         mcnt = 0
-         lcnt = 0
-
-         do n=sd_str,sd_end
-
-            if( sd_rk(n)<VALID2INVALID ) cycle
-
-            sd_dia = 2.0_RP * sd_r(n) * m2cm   !! diameter [m=>cm]
-
-            if( sd_dia<=1.9E-3_RP ) then
-
-               !== small cloud droplets ==!
-
-               scnt = scnt + 1
-               ilist_s(scnt,np) = n
-
-            else if( sd_dia>1.9E-3_RP .and. sd_dia<=1.07E-1_RP ) then
-
-               !== large cloud droplets and small raindrops ==!
-
-               mcnt = mcnt + 1
-               ilist_m(mcnt,np) = n
-
-            else
-
-               !== raindrops ==!
-
-               lcnt = lcnt + 1
-               ilist_l(lcnt,np) = n
-
-            end if
-
-         end do
-
-         nlist_s(np) = scnt
-         nlist_m(np) = mcnt
-         nlist_l(np) = lcnt
-
-         tlist_s = scnt
-         tlist_m = mcnt
-         tlist_l = lcnt
-
-      end do
+      tlist_s = scnt
+      tlist_m = mcnt
+      tlist_l = lcnt
 
       ! Calculate terminal velocity of super-droplets
 
@@ -1759,48 +1775,68 @@ contains
 
          if( tlist_s>0 ) then
 
-            do np=1,nomp
+!!$            do np=1,nomp
+!!$
+!!$               if( nlist_s(np)>0 ) then
+!!$
+!!$                  do m=1,nlist_s(np)
 
-               if( nlist_s(np)>0 ) then
-
-                  do m=1,nlist_s(np)
-
-                     n = ilist_s(m,np)
+            do m=1,tlist_s
+               n = ilist_s(m)
 
                      !== real index at the location of droplets ==!
 
 !                     ri = sd_x(n) * real(dxiv_sdm,kind=RP) + 2.0_RP
 !                     rj = sd_y(n) * real(dyiv_sdm,kind=RP) + 2.0_RP
-                     do i = IS, IE
-                      if( sd_x(n) < ( FX(i)-FX(IS-1) ) ) then
-                       ri = real(i-1,kind=RP) + ( sd_x(n)-( FX(i-1)-FX(IS-1) ) )/( FX(i)-FX(i-1) )
-                       exit
-                      endif
-                     enddo
-                     do j = JS, JE
-                      if( sd_y(n) < ( FY(j)-FY(JS-1) ) ) then
-                       rj = real(j-1,kind=RP) + ( sd_y(n)-( FY(j-1)-FY(JS-1) ) )/( FY(j)-FY(j-1) )
-                       exit
-                      endif
-                     enddo
+!!$                     do i = IS, IE
+!!$                      if( sd_x(n) < ( FX(i)-FX(IS-1) ) ) then
+!!$                       ri = real(i-1,kind=RP) + ( sd_x(n)-( FX(i-1)-FX(IS-1) ) )/( FX(i)-FX(i-1) )
+!!$                       exit
+!!$                      endif
+!!$                     enddo
+!!$                     do j = JS, JE
+!!$                      if( sd_y(n) < ( FY(j)-FY(JS-1) ) ) then
+!!$                       rj = real(j-1,kind=RP) + ( sd_y(n)-( FY(j-1)-FY(JS-1) ) )/( FY(j)-FY(j-1) )
+!!$                       exit
+!!$                      endif
+!!$                     enddo
+                     ri = sd_ri(n)
+                     rj = sd_rj(n)
                      rk = sd_rk(n)
-!                     iXm = floor(ri-0.50_RP)
-                     iXm = floor(ri)
-                     iXp = iXm + 1
-!                     sXm = (ri-0.50_RP) - real(iXm,kind=RP)
-                     sXm = ri - real(iXm,kind=RP)
-                     sXp = 1.0_RP - sXm
-!                     iYm = floor(rj-0.50_RP)
-                     iYm = floor(rj)
-                     iYp = iYm + 1
-!                     sYm = (rj-0.50_RP) - real(iYm,kind=RP)
-                     sYm = rj - real(iYm,kind=RP)
-                     sYp = 1.d0 - sYm
 
-                     iZm = floor(rk-0.50_RP)
+                     !! Interpolation in certer grid
+                     iXm = floor(ri+0.5_RP)
+                     iXp = iXm + 1
+                     sXm = (ri+0.5_RP) - real(iXm,kind=RP)
+                     sXp = 1.0_RP - sXm
+
+                     iYm = floor(rj+0.5_RP)
+                     iYp = iYm + 1
+                     sYm = (rj+0.5_RP) - real(iYm,kind=RP)
+                     sYp = 1.0_RP - sYm
+
+                     iZm = floor(rk+0.50_RP)
                      iZp = iZm + 1
-                     sZm = (rk-0.50_RP) - real(iZm,kind=RP)
+                     sZm = (rk+0.5_RP) - real(iZm,kind=RP)
                      sZp = 1.0_RP - sZm
+
+!!$!                     iXm = floor(ri-0.50_RP)
+!!$                     iXm = floor(ri)
+!!$                     iXp = iXm + 1
+!!$!                     sXm = (ri-0.50_RP) - real(iXm,kind=RP)
+!!$                     sXm = ri - real(iXm,kind=RP)
+!!$                     sXp = 1.0_RP - sXm
+!!$!                     iYm = floor(rj-0.50_RP)
+!!$                     iYm = floor(rj)
+!!$                     iYp = iYm + 1
+!!$!                     sYm = (rj-0.50_RP) - real(iYm,kind=RP)
+!!$                     sYm = rj - real(iYm,kind=RP)
+!!$                     sYp = 1.d0 - sYm
+!!$
+!!$                     iZm = floor(rk-0.50_RP)
+!!$                     iZp = iZm + 1
+!!$                     sZm = (rk-0.50_RP) - real(iZm,kind=RP)
+!!$                     sZp = 1.0_RP - sZm
 
                      !== diameter[cm] of droplets ==!
 
@@ -1823,47 +1859,48 @@ contains
 
                      !== pressure ==!
 
-                     sd_p  = ( pbr(iZm,iXm,iYm) + pp(iZm,iXm,iYm) )     &
-                           * ( SXp * SYp * SZp )                        &
-                           + ( pbr(iZm,iXp,iYm) + pp(iZm,iXp,iYm) )     &
-                           * ( SXm * SYp * SZp )                        &
-                           + ( pbr(iZm,iXm,iYp) + pp(iZm,iXm,iYp) )     &
-                           * ( SXp * SYm * SZp )                        &
-                           + ( pbr(iZm,iXp,iYp) + pp(iZm,iXp,iYp) )     &
-                           * ( SXm * SYm * SZp )                        &
-                           + ( pbr(iZp,iXm,iYm) + pp(iZp,iXm,iYm) )     &
-                           * ( SXp * SYp * SZm )                        &
-                           + ( pbr(iZp,iXp,iYm) + pp(iZp,iXp,iYm) )     &
-                           * ( SXm * SYp * SZm )                        &
-                           + ( pbr(iZp,iXm,iYp) + pp(iZp,iXm,iYp) )     &
-                           * ( SXp * SYm * SZm )                        &
-                           + ( pbr(iZp,iXp,iYp) + pp(iZp,iXp,iYp) )     &
-                           * ( SXm * SYm * SZm )
+                     sd_p  = pres(iZm,iXm,iYm) * ( SXp * SYp * SZp )    &
+                           + pres(iZm,iXp,iYm) * ( SXm * SYp * SZp )    &
+                           + pres(iZm,iXm,iYp) * ( SXp * SYm * SZp )    &
+                           + pres(iZm,iXp,iYp) * ( SXm * SYm * SZp )    &
+                           + pres(iZp,iXm,iYm) * ( SXp * SYp * SZm )    &
+                           + pres(iZp,iXp,iYm) * ( SXm * SYp * SZm )    &
+                           + pres(iZp,iXm,iYp) * ( SXp * SYm * SZm )    &
+                           + pres(iZp,iXp,iYp) * ( SXm * SYm * SZm )
 
                      sd_p  = sd_p * pa2hpa
 
-                     !== potential temperarure ==!
-
-                     sd_pt = ( ptbr(iZm,iXm,iYm) + ptp(iZm,iXm,iYm) )   &
-                           * ( SXp * SYp * SZp )                        &
-                           + ( ptbr(iZm,iXp,iYm) + ptp(iZm,iXp,iYm) )   &
-                           * ( SXm * SYp * SZp )                        &
-                           + ( ptbr(iZm,iXm,iYp) + ptp(iZm,iXm,iYp) )   &
-                           * ( SXp * SYm * SZp )                        &
-                           + ( ptbr(iZm,iXp,iYp) + ptp(iZm,iXp,iYp) )   &
-                           * ( SXm * SYm * SZp )                        &
-                           + ( ptbr(iZp,iXm,iYm) + ptp(iZp,iXm,iYm) )   &
-                           * ( SXp * SYp * SZm )                        &
-                           + ( ptbr(iZp,iXp,iYm) + ptp(iZp,iXp,iYm) )   &
-                           * ( SXm * SYp * SZm )                        &
-                           + ( ptbr(iZp,iXm,iYp) + ptp(iZp,iXm,iYp) )   &
-                           * ( SXp * SYm * SZm )                        &
-                           + ( ptbr(iZp,iXp,iYp) + ptp(iZp,iXp,iYp) )   &
-                           * ( SXm * SYm * SZm )
+!!$                     !== potential temperarure ==!
+!!$
+!!$                     sd_pt = ( ptbr(iZm,iXm,iYm) + ptp(iZm,iXm,iYm) )   &
+!!$                           * ( SXp * SYp * SZp )                        &
+!!$                           + ( ptbr(iZm,iXp,iYm) + ptp(iZm,iXp,iYm) )   &
+!!$                           * ( SXm * SYp * SZp )                        &
+!!$                           + ( ptbr(iZm,iXm,iYp) + ptp(iZm,iXm,iYp) )   &
+!!$                           * ( SXp * SYm * SZp )                        &
+!!$                           + ( ptbr(iZm,iXp,iYp) + ptp(iZm,iXp,iYp) )   &
+!!$                           * ( SXm * SYm * SZp )                        &
+!!$                           + ( ptbr(iZp,iXm,iYm) + ptp(iZp,iXm,iYm) )   &
+!!$                           * ( SXp * SYp * SZm )                        &
+!!$                           + ( ptbr(iZp,iXp,iYm) + ptp(iZp,iXp,iYm) )   &
+!!$                           * ( SXm * SYp * SZm )                        &
+!!$                           + ( ptbr(iZp,iXm,iYp) + ptp(iZp,iXm,iYp) )   &
+!!$                           * ( SXp * SYm * SZm )                        &
+!!$                           + ( ptbr(iZp,iXp,iYp) + ptp(iZp,iXp,iYp) )   &
+!!$                           * ( SXm * SYm * SZm )
 
                      !== temperarure ==!
 
-                     sd_t = sd_pt * exp( rddvcp * log(p0iv*sd_p) )
+!!$                     sd_t = sd_pt * exp( rddvcp * log(p0iv*sd_p) )
+
+                     sd_t =  temp(iZm,iXm,iYm) * ( SXp * SYp * SZp )                        &
+                           + temp(iZm,iXp,iYm) * ( SXm * SYp * SZp )                        &
+                           + temp(iZm,iXm,iYp) * ( SXp * SYm * SZp )                        &
+                           + temp(iZm,iXp,iYp) * ( SXm * SYm * SZp )                        &
+                           + temp(iZp,iXm,iYm) * ( SXp * SYp * SZm )                        &
+                           + temp(iZp,iXp,iYm) * ( SXm * SYp * SZm )                        &
+                           + temp(iZp,iXm,iYp) * ( SXp * SYm * SZm )                        &
+                           + temp(iZp,iXp,iYp) * ( SXm * SYm * SZm )
 
                      !== dynamic viscosity (Pruppacher & Klett,1997) ==!
 
@@ -1921,56 +1958,73 @@ contains
 
                end if
 
-            end do
-
-         end if
-
          !### large cloud droplets and small raindrops ###!
 
          if( tlist_m>0 ) then
-            do np=1,nomp
+!!$            do np=1,nomp
+!!$
+!!$               if( nlist_m(np)>0 ) then
+!!$
+!!$                  do m=1,nlist_m(np)
 
-               if( nlist_m(np)>0 ) then
+            do m=1,tlist_m
+               n = ilist_m(m)
 
-                  do m=1,nlist_m(np)
-
-                     n = ilist_m(m,np)
-
-                     !== real index at the location of droplets ==!
-!                     ri = sd_x(n) * real(dxiv_sdm,kind=RP) + 2.0_RP
-!                     rj = sd_y(n) * real(dyiv_sdm,kind=RP) + 2.0_RP
-                     do i = IS, IE
-                      if( sd_x(n) < ( FX(i)-FX(IS-1) ) ) then
-                       ri = real(i-1,kind=RP) + ( sd_x(n)-( FX(i-1)-FX(IS-1) ) )/( FX(i)-FX(i-1) )
-                       exit
-                      endif
-                     enddo
-                     do j = JS, JE
-                      if( sd_y(n) < ( FY(j)-FY(JS-1) ) ) then
-                       rj = real(j-1,kind=RP) + ( sd_y(n)-( FY(j-1)-FY(JS-1) ) )/( FY(j)-FY(j-1) )
-                       exit
-                      endif
-                     enddo
+                     ri = sd_ri(n)
+                     rj = sd_rj(n)
                      rk = sd_rk(n)
 
-!                     iXm = floor(ri-0.50_RP)
-                     iXm = floor(ri)
+                     !! Interpolation in certer grid
+                     iXm = floor(ri+0.5_RP)
                      iXp = iXm + 1
-!                     sXm = (ri-0.50_RP) - real(iXm,kind=RP)
-                     sXm = ri - real(iXm,kind=RP)
+                     sXm = (ri+0.5_RP) - real(iXm,kind=RP)
                      sXp = 1.0_RP - sXm
 
-!                     iYm = floor(rj-0.50_RP)
-                     iYm = floor(rj)
+                     iYm = floor(rj+0.5_RP)
                      iYp = iYm + 1
-!                     sYm = (rj-0.50_RP) - real(iYm,kind=RP)
-                     sYm = rj - real(iYm,kind=RP)
+                     sYm = (rj+0.5_RP) - real(iYm,kind=RP)
                      sYp = 1.0_RP - sYm
 
-                     iZm = floor(rk-0.50_RP)
+                     iZm = floor(rk+0.50_RP)
                      iZp = iZm + 1
-                     sZm = (rk-0.50_RP) - real(iZm,kind=RP)
+                     sZm = (rk+0.5_RP) - real(iZm,kind=RP)
                      sZp = 1.0_RP - sZm
+
+!!$                     !== real index at the location of droplets ==!
+!!$!                     ri = sd_x(n) * real(dxiv_sdm,kind=RP) + 2.0_RP
+!!$!                     rj = sd_y(n) * real(dyiv_sdm,kind=RP) + 2.0_RP
+!!$                     do i = IS, IE
+!!$                      if( sd_x(n) < ( FX(i)-FX(IS-1) ) ) then
+!!$                       ri = real(i-1,kind=RP) + ( sd_x(n)-( FX(i-1)-FX(IS-1) ) )/( FX(i)-FX(i-1) )
+!!$                       exit
+!!$                      endif
+!!$                     enddo
+!!$                     do j = JS, JE
+!!$                      if( sd_y(n) < ( FY(j)-FY(JS-1) ) ) then
+!!$                       rj = real(j-1,kind=RP) + ( sd_y(n)-( FY(j-1)-FY(JS-1) ) )/( FY(j)-FY(j-1) )
+!!$                       exit
+!!$                      endif
+!!$                     enddo
+!!$                     rk = sd_rk(n)
+!!$
+!!$!                     iXm = floor(ri-0.50_RP)
+!!$                     iXm = floor(ri)
+!!$                     iXp = iXm + 1
+!!$!                     sXm = (ri-0.50_RP) - real(iXm,kind=RP)
+!!$                     sXm = ri - real(iXm,kind=RP)
+!!$                     sXp = 1.0_RP - sXm
+!!$
+!!$!                     iYm = floor(rj-0.50_RP)
+!!$                     iYm = floor(rj)
+!!$                     iYp = iYm + 1
+!!$!                     sYm = (rj-0.50_RP) - real(iYm,kind=RP)
+!!$                     sYm = rj - real(iYm,kind=RP)
+!!$                     sYp = 1.0_RP - sYm
+!!$
+!!$                     iZm = floor(rk-0.50_RP)
+!!$                     iZp = iZm + 1
+!!$                     sZm = (rk-0.50_RP) - real(iZm,kind=RP)
+!!$                     sZp = 1.0_RP - sZm
 
                      !== diameter[cm] of droplets ==!
                      sd_dia = 2.0_RP * sd_r(n) * m2cm
@@ -1992,47 +2046,48 @@ contains
 
                      !== pressure ==!
 
-                     sd_p  = ( pbr(iZm,iXm,iYm) + pp(iZm,iXm,iYm) )     &
-                           * ( SXp * SYp * SZp )                        &
-                           + ( pbr(iZm,iXp,iYm) + pp(iZm,iXp,iYm) )     &
-                           * ( SXm * SYp * SZp )                        &
-                           + ( pbr(iZm,iXm,iYp) + pp(iZm,iXm,iYp) )     &
-                           * ( SXp * SYm * SZp )                        &
-                           + ( pbr(iZm,iXp,iYp) + pp(iZm,iXp,iYp) )     &
-                           * ( SXm * SYm * SZp )                        &
-                           + ( pbr(iZp,iXm,iYm) + pp(iZp,iXm,iYm) )     &
-                           * ( SXp * SYp * SZm )                        &
-                           + ( pbr(iZp,iXp,iYm) + pp(iZp,iXp,iYm) )     &
-                           * ( SXm * SYp * SZm )                        &
-                           + ( pbr(iZp,iXm,iYp) + pp(iZp,iXm,iYp) )     &
-                           * ( SXp * SYm * SZm )                        &
-                           + ( pbr(iZp,iXp,iYp) + pp(iZp,iXp,iYp) )     &
-                           * ( SXm * SYm * SZm )
+                     sd_p  = pres(iZm,iXm,iYm) * ( SXp * SYp * SZp )    &
+                           + pres(iZm,iXp,iYm) * ( SXm * SYp * SZp )    &
+                           + pres(iZm,iXm,iYp) * ( SXp * SYm * SZp )    &
+                           + pres(iZm,iXp,iYp) * ( SXm * SYm * SZp )    &
+                           + pres(iZp,iXm,iYm) * ( SXp * SYp * SZm )    &
+                           + pres(iZp,iXp,iYm) * ( SXm * SYp * SZm )    &
+                           + pres(iZp,iXm,iYp) * ( SXp * SYm * SZm )    &
+                           + pres(iZp,iXp,iYp) * ( SXm * SYm * SZm )
 
                      sd_p  = sd_p * pa2hpa
 
-                     !== potential temperarure ==!
-
-                     sd_pt = ( ptbr(iZm,iXm,iYm) + ptp(iZm,iXm,iYm) )   &
-                           * ( SXp * SYp * SZp )                        &
-                           + ( ptbr(iZm,iXp,iYm) + ptp(iZm,iXp,iYm) )   &
-                           * ( SXm * SYp * SZp )                        &
-                           + ( ptbr(iZm,iXm,iYp) + ptp(iZm,iXm,iYp) )   &
-                           * ( SXp * SYm * SZp )                        &
-                           + ( ptbr(iZm,iXp,iYp) + ptp(iZm,iXp,iYp) )   &
-                           * ( SXm * SYm * SZp )                        &
-                           + ( ptbr(iZp,iXm,iYm) + ptp(iZp,iXm,iYm) )   &
-                           * ( SXp * SYp * SZm )                        &
-                           + ( ptbr(iZp,iXp,iYm) + ptp(iZp,iXp,iYm) )   &
-                           * ( SXm * SYp * SZm )                        &
-                           + ( ptbr(iZp,iXm,iYp) + ptp(iZp,iXm,iYp) )   &
-                           * ( SXp * SYm * SZm )                        &
-                           + ( ptbr(iZp,iXp,iYp) + ptp(iZp,iXp,iYp) )   &
-                           * ( SXm * SYm * SZm )
+!!$                     !== potential temperarure ==!
+!!$
+!!$                     sd_pt = ( ptbr(iZm,iXm,iYm) + ptp(iZm,iXm,iYm) )   &
+!!$                           * ( SXp * SYp * SZp )                        &
+!!$                           + ( ptbr(iZm,iXp,iYm) + ptp(iZm,iXp,iYm) )   &
+!!$                           * ( SXm * SYp * SZp )                        &
+!!$                           + ( ptbr(iZm,iXm,iYp) + ptp(iZm,iXm,iYp) )   &
+!!$                           * ( SXp * SYm * SZp )                        &
+!!$                           + ( ptbr(iZm,iXp,iYp) + ptp(iZm,iXp,iYp) )   &
+!!$                           * ( SXm * SYm * SZp )                        &
+!!$                           + ( ptbr(iZp,iXm,iYm) + ptp(iZp,iXm,iYm) )   &
+!!$                           * ( SXp * SYp * SZm )                        &
+!!$                           + ( ptbr(iZp,iXp,iYm) + ptp(iZp,iXp,iYm) )   &
+!!$                           * ( SXm * SYp * SZm )                        &
+!!$                           + ( ptbr(iZp,iXm,iYp) + ptp(iZp,iXm,iYp) )   &
+!!$                           * ( SXp * SYm * SZm )                        &
+!!$                           + ( ptbr(iZp,iXp,iYp) + ptp(iZp,iXp,iYp) )   &
+!!$                           * ( SXm * SYm * SZm )
 
                      !== temperarure ==!
 
-                     sd_t = sd_pt * exp( rddvcp * log(p0iv*sd_p) )
+!!$                     sd_t = sd_pt * exp( rddvcp * log(p0iv*sd_p) )
+
+                     sd_t =  temp(iZm,iXm,iYm) * ( SXp * SYp * SZp )                        &
+                           + temp(iZm,iXp,iYm) * ( SXm * SYp * SZp )                        &
+                           + temp(iZm,iXm,iYp) * ( SXp * SYm * SZp )                        &
+                           + temp(iZm,iXp,iYp) * ( SXm * SYm * SZp )                        &
+                           + temp(iZp,iXm,iYm) * ( SXp * SYp * SZm )                        &
+                           + temp(iZp,iXp,iYm) * ( SXm * SYp * SZm )                        &
+                           + temp(iZp,iXm,iYp) * ( SXp * SYm * SZm )                        &
+                           + temp(iZp,iXp,iYp) * ( SXm * SYm * SZm )
 
                      !== dynamic viscosity (Pruppacher & Klett,1997) ==!
 
@@ -2110,58 +2165,75 @@ contains
 
                end if
 
-            end do
-
-         end if
-
          !### raindrops ###!
 
          if( tlist_l>0 ) then
 
-            do np=1,nomp
+!!$            do np=1,nomp
+!!$
+!!$               if( nlist_l(np)>0 ) then
+!!$
+!!$                  do m=1,nlist_l(np)
 
-               if( nlist_l(np)>0 ) then
+            do m=1,tlist_l
+               n = ilist_l(m)
 
-                  do m=1,nlist_l(np)
-
-                     n = ilist_l(m,np)
-
-                     !== real index at the location of droplets ==!
-
-!                     ri = sd_x(n) * real(dxiv_sdm,kind=RP) + 2.0_RP
-!                     rj = sd_y(n) * real(dyiv_sdm,kind=RP) + 2.0_RP
-                     do i = IS, IE
-                      if( sd_x(n) < ( FX(i)-FX(IS-1) ) ) then
-                       ri = real(i-1,kind=RP) + ( sd_x(n)-( FX(i-1)-FX(IS-1) ) )/( FX(i)-FX(i-1) )
-                       exit
-                      endif
-                     enddo
-                     do j = JS, JE
-                      if( sd_y(n) < ( FY(j)-FY(JS-1) ) ) then
-                       rj = real(j-1,kind=RP) + ( sd_y(n)-( FY(j-1)-FY(JS-1) ) )/( FY(j)-FY(j-1) )
-                       exit
-                      endif
-                     enddo
+                     ri = sd_ri(n)
+                     rj = sd_rj(n)
                      rk = sd_rk(n)
 
-!                     iXm = floor(ri-0.50_RP)
-                     iXm = floor(ri)
+                     !! Interpolation in certer grid
+                     iXm = floor(ri+0.5_RP)
                      iXp = iXm + 1
-!                     sXm = (ri-0.50_RP) - real(iXm,kind=RP)
-                     sXm = ri - real(iXm,kind=RP)
+                     sXm = (ri+0.5_RP) - real(iXm,kind=RP)
                      sXp = 1.0_RP - sXm
 
-!                     iYm = floor(rj-0.50_RP)
-                     iYm = floor(rj)
+                     iYm = floor(rj+0.5_RP)
                      iYp = iYm + 1
-!                     sYm = (rj-0.50_RP) - real(iYm,kind=RP)
-                     sYm = rj - real(iYm,kind=RP)
+                     sYm = (rj+0.5_RP) - real(iYm,kind=RP)
                      sYp = 1.0_RP - sYm
 
-                     iZm = floor(rk-0.50_RP)
+                     iZm = floor(rk+0.50_RP)
                      iZp = iZm + 1
-                     sZm = (rk-0.50_RP) - real(iZm,kind=RP)
+                     sZm = (rk+0.5_RP) - real(iZm,kind=RP)
                      sZp = 1.0_RP - sZm
+
+!!$                     !== real index at the location of droplets ==!
+!!$
+!!$!                     ri = sd_x(n) * real(dxiv_sdm,kind=RP) + 2.0_RP
+!!$!                     rj = sd_y(n) * real(dyiv_sdm,kind=RP) + 2.0_RP
+!!$                     do i = IS, IE
+!!$                      if( sd_x(n) < ( FX(i)-FX(IS-1) ) ) then
+!!$                       ri = real(i-1,kind=RP) + ( sd_x(n)-( FX(i-1)-FX(IS-1) ) )/( FX(i)-FX(i-1) )
+!!$                       exit
+!!$                      endif
+!!$                     enddo
+!!$                     do j = JS, JE
+!!$                      if( sd_y(n) < ( FY(j)-FY(JS-1) ) ) then
+!!$                       rj = real(j-1,kind=RP) + ( sd_y(n)-( FY(j-1)-FY(JS-1) ) )/( FY(j)-FY(j-1) )
+!!$                       exit
+!!$                      endif
+!!$                     enddo
+!!$                     rk = sd_rk(n)
+!!$
+!!$!                     iXm = floor(ri-0.50_RP)
+!!$                     iXm = floor(ri)
+!!$                     iXp = iXm + 1
+!!$!                     sXm = (ri-0.50_RP) - real(iXm,kind=RP)
+!!$                     sXm = ri - real(iXm,kind=RP)
+!!$                     sXp = 1.0_RP - sXm
+!!$
+!!$!                     iYm = floor(rj-0.50_RP)
+!!$                     iYm = floor(rj)
+!!$                     iYp = iYm + 1
+!!$!                     sYm = (rj-0.50_RP) - real(iYm,kind=RP)
+!!$                     sYm = rj - real(iYm,kind=RP)
+!!$                     sYp = 1.0_RP - sYm
+!!$
+!!$                     iZm = floor(rk-0.50_RP)
+!!$                     iZp = iZm + 1
+!!$                     sZm = (rk-0.50_RP) - real(iZm,kind=RP)
+!!$                     sZp = 1.0_RP - sZm
 
                      !== diameter[cm] of droplets ==!
 
@@ -2183,47 +2255,48 @@ contains
 
                      !== pressure ==!
 
-                     sd_p  = ( pbr(iZm,iXm,iYm) + pp(iZm,iXm,iYm) )     &
-                           * ( SXp * SYp * SZp )                        &
-                           + ( pbr(iZm,iXp,iYm) + pp(iZm,iXp,iYm) )     &
-                           * ( SXm * SYp * SZp )                        &
-                           + ( pbr(iZm,iXm,iYp) + pp(iZm,iXm,iYp) )     &
-                           * ( SXp * SYm * SZp )                        &
-                           + ( pbr(iZm,iXp,iYp) + pp(iZm,iXp,iYp) )     &
-                           * ( SXm * SYm * SZp )                        &
-                           + ( pbr(iZp,iXm,iYm) + pp(iZp,iXm,iYm) )     &
-                           * ( SXp * SYp * SZm )                        &
-                           + ( pbr(iZp,iXp,iYm) + pp(iZp,iXp,iYm) )     &
-                           * ( SXm * SYp * SZm )                        &
-                           + ( pbr(iZp,iXm,iYp) + pp(iZp,iXm,iYp) )     &
-                           * ( SXp * SYm * SZm )                        &
-                           + ( pbr(iZp,iXp,iYp) + pp(iZp,iXp,iYp) )     &
-                           * ( SXm * SYm * SZm )
+                     sd_p  = pres(iZm,iXm,iYm) * ( SXp * SYp * SZp )    &
+                           + pres(iZm,iXp,iYm) * ( SXm * SYp * SZp )    &
+                           + pres(iZm,iXm,iYp) * ( SXp * SYm * SZp )    &
+                           + pres(iZm,iXp,iYp) * ( SXm * SYm * SZp )    &
+                           + pres(iZp,iXm,iYm) * ( SXp * SYp * SZm )    &
+                           + pres(iZp,iXp,iYm) * ( SXm * SYp * SZm )    &
+                           + pres(iZp,iXm,iYp) * ( SXp * SYm * SZm )    &
+                           + pres(iZp,iXp,iYp) * ( SXm * SYm * SZm )
 
                      sd_p  = sd_p * pa2hpa
 
-                     !== potential temperarure ==!
-
-                     sd_pt = ( ptbr(iZm,iXm,iYm) + ptp(iZm,iXm,iYm) )   &
-                           * ( SXp * SYp * SZp )                        &
-                           + ( ptbr(iZm,iXp,iYm) + ptp(iZm,iXp,iYm) )   &
-                           * ( SXm * SYp * SZp )                        &
-                           + ( ptbr(iZm,iXm,iYp) + ptp(iZm,iXm,iYp) )   &
-                           * ( SXp * SYm * SZp )                        &
-                           + ( ptbr(iZm,iXp,iYp) + ptp(iZm,iXp,iYp) )   &
-                           * ( SXm * SYm * SZp )                        &
-                           + ( ptbr(iZp,iXm,iYm) + ptp(iZp,iXm,iYm) )   &
-                           * ( SXp * SYp * SZm )                        &
-                           + ( ptbr(iZp,iXp,iYm) + ptp(iZp,iXp,iYm) )   &
-                           * ( SXm * SYp * SZm )                        &
-                           + ( ptbr(iZp,iXm,iYp) + ptp(iZp,iXm,iYp) )   &
-                           * ( SXp * SYm * SZm )                        &
-                           + ( ptbr(iZp,iXp,iYp) + ptp(iZp,iXp,iYp) )   &
-                           * ( SXm * SYm * SZm )
+!!$                     !== potential temperarure ==!
+!!$
+!!$                     sd_pt = ( ptbr(iZm,iXm,iYm) + ptp(iZm,iXm,iYm) )   &
+!!$                           * ( SXp * SYp * SZp )                        &
+!!$                           + ( ptbr(iZm,iXp,iYm) + ptp(iZm,iXp,iYm) )   &
+!!$                           * ( SXm * SYp * SZp )                        &
+!!$                           + ( ptbr(iZm,iXm,iYp) + ptp(iZm,iXm,iYp) )   &
+!!$                           * ( SXp * SYm * SZp )                        &
+!!$                           + ( ptbr(iZm,iXp,iYp) + ptp(iZm,iXp,iYp) )   &
+!!$                           * ( SXm * SYm * SZp )                        &
+!!$                           + ( ptbr(iZp,iXm,iYm) + ptp(iZp,iXm,iYm) )   &
+!!$                           * ( SXp * SYp * SZm )                        &
+!!$                           + ( ptbr(iZp,iXp,iYm) + ptp(iZp,iXp,iYm) )   &
+!!$                           * ( SXm * SYp * SZm )                        &
+!!$                           + ( ptbr(iZp,iXm,iYp) + ptp(iZp,iXm,iYp) )   &
+!!$                           * ( SXp * SYm * SZm )                        &
+!!$                           + ( ptbr(iZp,iXp,iYp) + ptp(iZp,iXp,iYp) )   &
+!!$                           * ( SXm * SYm * SZm )
 
                      !== temperarure ==!
 
-                     sd_t = sd_pt * exp( rddvcp * log(p0iv*sd_p) )
+!!$                     sd_t = sd_pt * exp( rddvcp * log(p0iv*sd_p) )
+
+                     sd_t =  temp(iZm,iXm,iYm) * ( SXp * SYp * SZp )                        &
+                           + temp(iZm,iXp,iYm) * ( SXm * SYp * SZp )                        &
+                           + temp(iZm,iXm,iYp) * ( SXp * SYm * SZp )                        &
+                           + temp(iZm,iXp,iYp) * ( SXm * SYm * SZp )                        &
+                           + temp(iZp,iXm,iYm) * ( SXp * SYp * SZm )                        &
+                           + temp(iZp,iXp,iYm) * ( SXm * SYp * SZm )                        &
+                           + temp(iZp,iXm,iYp) * ( SXp * SYm * SZm )                        &
+                           + temp(iZp,iXp,iYp) * ( SXm * SYm * SZm )
 
                      !== dynamic viscosity (Pruppacher & Klett,1997) ==!
 
@@ -2317,44 +2390,51 @@ contains
 
                end if
 
-            end do
-
-         end if
-
       else if( ptype .eq. 'coales' ) then
 
          !### small cloud droplets ###!
 
          if( tlist_s>0 ) then
 
-            do np=1,nomp
+!!$            do np=1,nomp
+!!$
+!!$               if( nlist_s(np)>0 ) then
+!!$
+!!$                  do m=1,nlist_s(np)
 
-               if( nlist_s(np)>0 ) then
+            do m=1,tlist_s
+               n = ilist_s(m)
 
-                  do m=1,nlist_s(np)
+                     ri = sd_ri(n)
+                     rj = sd_rj(n)
+                     rk = sd_rk(n)
 
-                     n = ilist_s(m,np)
+                     !! coversion to center grid index
+                     !! No interpolation 
+                     i = floor(ri)+1
+                     j = floor(rj)+1
+                     k = floor(rk)+1
 
-                     !== real index at the location of droplets ==!
-
-!                     ri = sd_x(n) * real(dxiv_sdm,kind=RP) + 2.0_RP
-!                     rj = sd_y(n) * real(dyiv_sdm,kind=RP) + 2.0_RP
-                     do i = IS, IE
-                      if( sd_x(n) < ( FX(i)-FX(IS-1) ) ) then
-                       ri = real(i-1,kind=RP) + ( sd_x(n)-( FX(i-1)-FX(IS-1) ) )/( FX(i)-FX(i-1) )
-                       exit
-                      endif
-                     enddo
-                     do j = JS, JE
-                      if( sd_y(n) < ( FY(j)-FY(JS-1) ) ) then
-                       rj = real(j-1,kind=RP) + ( sd_y(n)-( FY(j-1)-FY(JS-1) ) )/( FY(j)-FY(j-1) )
-                       exit
-                      endif
-                     enddo
-
-                     i  = floor(ri)
-                     j  = floor(rj)
-                     k  = floor(sd_rk(n))
+!!$                     !== real index at the location of droplets ==!
+!!$
+!!$!                     ri = sd_x(n) * real(dxiv_sdm,kind=RP) + 2.0_RP
+!!$!                     rj = sd_y(n) * real(dyiv_sdm,kind=RP) + 2.0_RP
+!!$                     do i = IS, IE
+!!$                      if( sd_x(n) < ( FX(i)-FX(IS-1) ) ) then
+!!$                       ri = real(i-1,kind=RP) + ( sd_x(n)-( FX(i-1)-FX(IS-1) ) )/( FX(i)-FX(i-1) )
+!!$                       exit
+!!$                      endif
+!!$                     enddo
+!!$                     do j = JS, JE
+!!$                      if( sd_y(n) < ( FY(j)-FY(JS-1) ) ) then
+!!$                       rj = real(j-1,kind=RP) + ( sd_y(n)-( FY(j-1)-FY(JS-1) ) )/( FY(j)-FY(j-1) )
+!!$                       exit
+!!$                      endif
+!!$                     enddo
+!!$
+!!$                     i  = floor(ri)
+!!$                     j  = floor(rj)
+!!$                     k  = floor(sd_rk(n))
 
                      !== diameter[cm] of droplets ==!
 
@@ -2368,15 +2448,18 @@ contains
 
                      !== pressure ==!
 
-                     sd_p = ( pbr(k,i,j) + pp(k,i,j) ) * pa2hpa
+                     sd_p = pres(k,i,j) * pa2hpa
 
-                     !== potential temperarure ==!
-
-                     sd_pt = ptbr(k,i,j) + ptp(k,i,j)
+!!$                     !== potential temperarure ==!
+!!$
+!!$                     sd_pt = ptbr(k,i,j) + ptp(k,i,j)
 
                      !== temperarure ==!
 
-                     sd_t = sd_pt * exp( rddvcp * log(p0iv*sd_p) )
+!!$                     sd_t = sd_pt * exp( rddvcp * log(p0iv*sd_p) )
+                     
+                     sd_t = temp(k,i,j)
+
                      !== dynamic viscosity (Pruppacher & Klett,1997) ==!
 
                      tdeg = sd_t - t0     !! [K] => [degC]
@@ -2423,41 +2506,48 @@ contains
 
                end if
 
-            end do
-
-         end if
-
          !### large cloud droplets and small raindrops ###!
 
          if( tlist_m>0 ) then
 
-            do np=1,nomp
-               if( nlist_m(np)>0 ) then
+!!$            do np=1,nomp
+!!$               if( nlist_m(np)>0 ) then
+!!$
+!!$                  do m=1,nlist_m(np)
 
-                  do m=1,nlist_m(np)
+            do m=1,tlist_m
+               n = ilist_m(m)
 
-                     n = ilist_m(m,np)
+                     ri = sd_ri(n)
+                     rj = sd_rj(n)
+                     rk = sd_rk(n)
 
-                     !== real index at the location of droplets ==!
+                     !! coversion to center grid index
+                     !! No interpolation 
+                     i = floor(ri)+1
+                     j = floor(rj)+1
+                     k = floor(rk)+1
 
-!                     ri = sd_x(n) * real(dxiv_sdm,kind=RP) + 2.0_RP
-!                     rj = sd_y(n) * real(dyiv_sdm,kind=RP) + 2.0_RP
-                     do i = IS, IE
-                      if( sd_x(n) < ( FX(i)-FX(IS-1) ) ) then
-                       ri = real(i-1,kind=RP) + ( sd_x(n)-( FX(i-1)-FX(IS-1) ) )/( FX(i)-FX(i-1) )
-                       exit
-                      endif
-                     enddo
-                     do j = JS, JE
-                      if( sd_y(n) < ( FY(j)-FY(JS-1) ) ) then
-                       rj = real(j-1,kind=RP) + ( sd_y(n)-( FY(j-1)-FY(JS-1) ) )/( FY(j)-FY(j-1) )
-                       exit
-                      endif
-                     enddo
-
-                     i  = floor(ri)
-                     j  = floor(rj)
-                     k  = floor(sd_rk(n))
+!!$                     !== real index at the location of droplets ==!
+!!$
+!!$!                     ri = sd_x(n) * real(dxiv_sdm,kind=RP) + 2.0_RP
+!!$!                     rj = sd_y(n) * real(dyiv_sdm,kind=RP) + 2.0_RP
+!!$                     do i = IS, IE
+!!$                      if( sd_x(n) < ( FX(i)-FX(IS-1) ) ) then
+!!$                       ri = real(i-1,kind=RP) + ( sd_x(n)-( FX(i-1)-FX(IS-1) ) )/( FX(i)-FX(i-1) )
+!!$                       exit
+!!$                      endif
+!!$                     enddo
+!!$                     do j = JS, JE
+!!$                      if( sd_y(n) < ( FY(j)-FY(JS-1) ) ) then
+!!$                       rj = real(j-1,kind=RP) + ( sd_y(n)-( FY(j-1)-FY(JS-1) ) )/( FY(j)-FY(j-1) )
+!!$                       exit
+!!$                      endif
+!!$                     enddo
+!!$
+!!$                     i  = floor(ri)
+!!$                     j  = floor(rj)
+!!$                     k  = floor(sd_rk(n))
 
                      !== diameter[cm] of droplets ==!
 
@@ -2471,15 +2561,17 @@ contains
 
                      !== pressure ==!
 
-                     sd_p = ( pbr(k,i,j) + pp(k,i,j) ) * pa2hpa
+                     sd_p = pres(k,i,j) * pa2hpa
 
-                     !== potential temperarure ==!
-
-                     sd_pt = ptbr(k,i,j) + ptp(k,i,j)
+!!$                     !== potential temperarure ==!
+!!$
+!!$                     sd_pt = ptbr(k,i,j) + ptp(k,i,j)
 
                      !== temperarure ==!
 
-                     sd_t = sd_pt * exp( rddvcp * log(p0iv*sd_p) )
+!!$                     sd_t = sd_pt * exp( rddvcp * log(p0iv*sd_p) )
+
+                     sd_t = temp(k,i,j)
 
                      !== dynamic viscosity (Pruppacher & Klett,1997) ==!
 
@@ -2547,41 +2639,48 @@ contains
 
                end if
 
-            end do
-
-         end if
-
          !### raindrops ###!
 
          if( tlist_l>0 ) then
 
-            do np=1,nomp
+!!$            do np=1,nomp
+!!$
+!!$               if( nlist_l(np)>0 ) then
+!!$
+!!$                  do m=1,nlist_l(np)
 
-               if( nlist_l(np)>0 ) then
+            do m=1,tlist_l
+               n = ilist_l(m)
 
-                  do m=1,nlist_l(np)
+                     ri = sd_ri(n)
+                     rj = sd_rj(n)
+                     rk = sd_rk(n)
 
-                     n = ilist_l(m,np)
+                     !! coversion to center grid index
+                     !! No interpolation 
+                     i = floor(ri)+1
+                     j = floor(rj)+1
+                     k = floor(rk)+1
 
-                     !== real index at the location of droplets ==!
-!                     ri = sd_x(n) * real(dxiv_sdm,kind=RP) + 2.0_RP
-!                     rj = sd_y(n) * real(dyiv_sdm,kind=RP) + 2.0_RP
-                     do i = IS, IE
-                      if( sd_x(n) < ( FX(i)-FX(IS-1) ) ) then
-                       ri = real(i-1,kind=RP) + ( sd_x(n)-( FX(i-1)-FX(IS-1) ) )/( FX(i)-FX(i-1) )
-                       exit
-                      endif
-                     enddo
-                     do j = JS, JE
-                      if( sd_y(n) < ( FY(j)-FY(JS-1) ) ) then
-                       rj = real(j-1,kind=RP) + ( sd_y(n)-( FY(j-1)-FY(JS-1) ) )/( FY(j)-FY(j-1) )
-                       exit
-                      endif
-                     enddo
-
-                     i  = floor(ri)
-                     j  = floor(rj)
-                     k  = floor(sd_rk(n))
+!!$                     !== real index at the location of droplets ==!
+!!$!                     ri = sd_x(n) * real(dxiv_sdm,kind=RP) + 2.0_RP
+!!$!                     rj = sd_y(n) * real(dyiv_sdm,kind=RP) + 2.0_RP
+!!$                     do i = IS, IE
+!!$                      if( sd_x(n) < ( FX(i)-FX(IS-1) ) ) then
+!!$                       ri = real(i-1,kind=RP) + ( sd_x(n)-( FX(i-1)-FX(IS-1) ) )/( FX(i)-FX(i-1) )
+!!$                       exit
+!!$                      endif
+!!$                     enddo
+!!$                     do j = JS, JE
+!!$                      if( sd_y(n) < ( FY(j)-FY(JS-1) ) ) then
+!!$                       rj = real(j-1,kind=RP) + ( sd_y(n)-( FY(j-1)-FY(JS-1) ) )/( FY(j)-FY(j-1) )
+!!$                       exit
+!!$                      endif
+!!$                     enddo
+!!$
+!!$                     i  = floor(ri)
+!!$                     j  = floor(rj)
+!!$                     k  = floor(sd_rk(n))
 
                      !== diameter[cm] of droplets ==!
 
@@ -2595,15 +2694,17 @@ contains
 
                      !== pressure ==!
 
-                     sd_p = ( pbr(k,i,j) + pp(k,i,j) ) * pa2hpa
+                     sd_p = pres(k,i,j) * pa2hpa
 
-                     !== potential temperarure ==!
-
-                     sd_pt = ptbr(k,i,j) + ptp(k,i,j)
+!!$                     !== potential temperarure ==!
+!!$
+!!$                     sd_pt = ptbr(k,i,j) + ptp(k,i,j)
 
                      !== temperarure ==!
 
-                     sd_t = sd_pt * exp( rddvcp * log(p0iv*sd_p) )
+!!$                     sd_t = sd_pt * exp( rddvcp * log(p0iv*sd_p) )
+
+                     sd_t = temp(k,i,j)
 
                      !== dynamic viscosity (Pruppacher & Klett,1997) ==!
 
@@ -2690,14 +2791,7 @@ contains
 
                end if
 
-            end do
-
-         end if
-
-      end if
-
-      ! temporary for test
-      sd_vz(:) = 1.0_RP
+            end if
 
     return
   end subroutine sdm_getvz
@@ -3273,7 +3367,7 @@ contains
     return
   end subroutine getexner
   !-----------------------------------------------------------------------------
-  subroutine sdm_calc(MOMX,MOMY,MOMZ,DENS,                           & 
+  subroutine sdm_calc(MOMX,MOMY,MOMZ,DENS,RHOT,QTRC,              & 
                       sdm_calvar,sdm_mvexchg,dtcl, sdm_aslset,    &
                       exnr_crs,                       &
                       pbr_crs,ptbr_crs,pp_crs, &
@@ -3293,10 +3387,14 @@ contains
        PRC_MPIstop
    use scale_time, only: &
        dt => TIME_DTSEC_ATMOS_PHY_MP
+   use scale_tracer, only: &
+       QAD => QA
    real(RP), intent(inout) :: DENS(KA,IA,JA)        !! Density [kg/m3]
    real(RP), intent(inout) :: MOMZ(KA,IA,JA)        !! Momentum [kg/s/m2]
    real(RP), intent(inout) :: MOMX(KA,IA,JA)
    real(RP), intent(inout) :: MOMY(KA,IA,JA)
+   real(RP), intent(inout) :: RHOT(KA,IA,JA)        !! DENS * POTT [K*kg/m3]
+   real(RP), intent(inout) :: QTRC(KA,IA,JA,QAD)    !! Ratio of mass of tracer to total mass[kg/kg]
    ! Input variables
    logical,  intent(in) :: sdm_calvar(3)
    integer,  intent(in) :: sdm_aslset
@@ -3367,7 +3465,9 @@ contains
    real(RP) :: u_scale(KA,IA,JA)   ! u components of velocity
    real(RP) :: v_scale(KA,IA,JA)   ! v components of velocity
    real(RP) :: w_scale(KA,IA,JA)   ! w components of velocity
-
+   real(RP) :: pres_scale(KA,IA,JA)  ! Pressure
+   real(RP) :: rhod_scale(KA,IA,JA) ! dry air density
+   real(RP) :: t_scale(KA,IA,JA)    ! Temperature
    !---------------------------------------------------------------------
 
       ! Initialize and rename variables
@@ -3432,10 +3532,12 @@ contains
 
             ! get the terminal velocity of super-droplets
 
-            call sdm_getvz(sthopt,trnopt,                      &
-                           pbr_crs,ptbr_crs,               &
-                           pp_crs,ptp_crs,rhod_crs,            &
-                           sd_num,sd_x,sd_y,sd_rk,sd_r,sd_vz,  &
+            call sdm_rho_qtrc2rhod(DENS,QTRC,rhod_scale)
+!            call sdm_rho_rhot2pt(DENS,RHOT,ptbr_scale)
+            call sdm_rhot_qtrc2p_t(RHOT,QTRC,DENS,pres_scale,t_scale)
+
+            call sdm_getvz(pres_scale,rhod_scale,t_scale,            &
+                           sd_num,sd_x,sd_y,sd_ri,sd_rj,sd_rk,sd_r,sd_vz,  &
                            sd_itmp1,sd_itmp2,sd_itmp3,'coales' )
             ! { coalescence } in SDM
 
@@ -3479,23 +3581,16 @@ contains
             end if
 
             ! get the terminal velocity of super-droplets
-            call sdm_getvz(sthopt,trnopt,                      &
-                           pbr_crs,ptbr_crs,               &
-                           pp_crs,ptp_crs,rhod_crs,            &
-                           sd_num,sd_x,sd_y,sd_rk,sd_r,sd_vz,  &
+            call sdm_rho_qtrc2rhod(DENS,QTRC,rhod_scale)
+            call sdm_rhot_qtrc2p_t(RHOT,QTRC,DENS,pres_scale,t_scale)
+
+            call sdm_getvz(pres_scale,rhod_scale,t_scale,            &
+                           sd_num,sd_x,sd_y,sd_ri,sd_rj,sd_rk,sd_r,sd_vz,  &
                            sd_itmp1,sd_itmp2,sd_itmp3,'motion' )
 
             ! get the moving velocity of super-droplets
 
-            do k = 1, KA
-            do i = 1, IA
-            do j = 1, JA
-               u_scale(k,i,j) = 2.0_RP * MOMX(k,i,j) / ( DENS(k,i,j)+DENS(k,IMIN1(i),j) )
-               v_scale(k,i,j) = 2.0_RP * MOMY(k,i,j) / ( DENS(k,i,j)+DENS(k,i,JMIN1(j)) )
-               w_scale(k,i,j) = 2.0_RP * MOMZ(k,i,j) / ( DENS(k,i,j)+DENS(KMIN1(k),i,j) )
-            enddo
-            enddo
-            enddo
+            call sdm_rho_mom2uvw(DENS,MOMX,MOMY,MOMZ,u_scale,v_scale,w_scale)
 
             call sdm_getvel(u_scale,v_scale,w_scale,                   &
                             sd_num,sd_x,sd_y,sd_ri,sd_rj,sd_rk,sd_u,sd_v,sd_vz)
@@ -3576,6 +3671,131 @@ contains
     return
   end subroutine sdm_calc
   !-----------------------------------------------------------------------------
+  subroutine sdm_rhot_qtrc2p_t(rhot,qtrc,dens,p,t)
+    use scale_const, only: &
+         P00 => CONST_PRE00, &
+         Rdry => CONST_Rdry, &
+         Rvap => CONST_Rvap, &
+         CPdry => CONST_CPdry
+    use scale_atmos_thermodyn, only: &
+         CPw => AQ_CP
+    use scale_tracer, only: &
+         QAD => QA
+    ! Input variables
+    real(RP), intent(in) :: rhot(KA,IA,JA)        !! DENS * POTT [K*kg/m3]
+    real(RP), intent(in) :: qtrc(KA,IA,JA,QAD)    !! Ratio of mass of tracer to total mass[kg/kg]
+    real(RP), intent(in) :: dens(KA,IA,JA)        !! Density [kg/m3]
+    ! Output variables
+    real(RP), intent(out) :: p(KA,IA,JA)          !  Pressure [Pa]
+    real(RP), intent(out) :: t(KA,IA,JA)          !  Temperature [K]
+
+    real(RP) :: qdry(KA,IA,JA)
+    real(RP) :: rtot(KA,IA,JA)
+    real(RP) :: cptot(KA,IA,JA)
+    real(RP) :: cpovcv(KA,IA,JA)
+    integer :: i, j, k, iq  ! index
+ !---------------------------------------------------------------------
+
+    qdry(:,:,:) = 1.0_RP
+    do k = 1, KA
+    do i = 1, IA
+    do j = 1, JA
+      do iq = QQS, QQE
+        qdry(k,i,j) = qdry(k,i,j) - qtrc(k,i,j,iq)
+      enddo
+      rtot (k,i,j) = Rdry * qdry(k,i,j) + Rvap * qtrc(k,i,j,I_QV)
+      cptot(k,i,j) = CPdry * qdry(k,i,j)
+      do iq = QQS, QQE
+        cptot(k,i,j) = cptot(k,i,j) + qtrc(k,i,j,iq) * CPw(iq)
+      enddo
+      cpovcv(k,i,j) = cptot(k,i,j) / ( cptot(k,i,j) - rtot(k,i,j) )
+
+      p(k,i,j) = P00 * ( rhot(k,i,j) * rtot(k,i,j) / P00 )**cpovcv(k,i,j)
+      t(k,i,j) = (rhot(k,i,j)/dens(k,i,j)) * (p(k,i,j)/P00)**(rtot(k,i,j)/cptot(k,i,j))
+    enddo
+    enddo
+    enddo
+
+    return
+  end subroutine sdm_rhot_qtrc2p_t
+  !-----------------------------------------------------------------------------
+  subroutine sdm_rho_rhot2pt(dens,rhot,pt)
+    ! Input variables
+    real(RP), intent(in) :: dens(KA,IA,JA)        !! Density [kg/m3]
+    real(RP), intent(in) :: rhot(KA,IA,JA)        !! DENS * POTT [K*kg/m3]
+    ! Output variables
+    real(RP), intent(out) :: pt(KA,IA,JA)          !  Potential temperature [K]
+
+    integer :: i, j, k  ! index
+ !---------------------------------------------------------------------
+
+    do k = 1, KA
+    do i = 1, IA
+    do j = 1, JA
+       pt(k,i,j) = RHOT(k,i,j) / DENS(k,i,j)
+    enddo
+    enddo
+    enddo
+
+    return
+  end subroutine sdm_rho_rhot2pt
+  !-----------------------------------------------------------------------------
+  subroutine sdm_rho_qtrc2rhod(dens,qtrc,rhod)
+    use scale_tracer, only: &
+         QAD => QA
+    ! Input variables
+    real(RP), intent(in) :: dens(KA,IA,JA)        !! Density [kg/m3]
+    real(RP), intent(in) :: qtrc(KA,IA,JA,QAD)    !! Ratio of mass of tracer to total mass[kg/kg]
+    ! Output variables
+    real(RP), intent(out) :: rhod(KA,IA,JA)  ! Density of dry air [kg/m3]
+
+    real(RP) :: qdry(KA,IA,JA)
+    integer :: i, j, k,iq  ! index
+ !---------------------------------------------------------------------
+
+    qdry(:,:,:) = 1.0_RP
+    do k = 1, KA
+    do i = 1, IA
+    do j = 1, JA
+      do iq = QQS, QQE
+        qdry(k,i,j) = qdry(k,i,j) - qtrc(k,i,j,iq)
+      enddo
+      rhod(k,i,j) = dens(k,i,j)*qdry(k,i,j)
+    enddo
+    enddo
+    enddo
+
+    return
+  end subroutine sdm_rho_qtrc2rhod
+  !-----------------------------------------------------------------------------
+  subroutine sdm_rho_mom2uvw(dens,momx,momy,momz,u,v,w)
+    ! Input variables
+    real(RP), intent(in)  :: dens(KA,IA,JA) ! Density [kg/m3]
+    real(RP), intent(in)  :: momx(KA,IA,JA) ! Momentum [kg/s/m2]
+    real(RP), intent(in)  :: momy(KA,IA,JA) 
+    real(RP), intent(in)  :: momz(KA,IA,JA) 
+    ! Output variables
+    real(RP), intent(out) :: u(KA,IA,JA)  ! wind velocity [m/s]
+    real(RP), intent(out) :: v(KA,IA,JA)  ! 
+    real(RP), intent(out) :: w(KA,IA,JA)  ! 
+
+    integer :: i, j, k  ! index
+ !---------------------------------------------------------------------
+
+    do k = 1, KA
+    do i = 1, IA
+    do j = 1, JA
+       u(k,i,j) = 2.0_RP * momx(k,i,j) / ( dens(k,i,j)+dens(k,i+1,j) )
+       v(k,i,j) = 2.0_RP * momy(k,i,j) / ( dens(k,i,j)+dens(k,i,j+1) )
+       w(k,i,j) = 2.0_RP * momz(k,i,j) / ( dens(k,i,j)+dens(k+1,i,j) )
+    enddo
+    enddo
+    enddo
+
+    return
+  end subroutine sdm_rho_mom2uvw
+  !-----------------------------------------------------------------------------
+
   subroutine sdm_sd2rhow(zph_crs,rhow_sdm,sd_num,sd_n,            &
                          sd_x,sd_y,sd_r,sd_rk,sd_rkl,sd_rku,      &
                          liqw_sdm,ilist)
@@ -6691,7 +6911,8 @@ contains
 !    return
 !  end subroutine sdm_commucrs
   !----------------------------------------------------------------------------
-  subroutine sdm_aslform(sdm_calvar,sdm_aslset,                   &
+  subroutine sdm_aslform(DENS,RHOT,QTRC,                          &   
+                         sdm_calvar,sdm_aslset,                   &
                          sdm_aslfmsdnc,sdm_sdnmlvol,              &
                          sdm_zupper,sdm_zlower,dtcl,              &
                          pbr_crs,ptbr_crs,pp_crs,         &
@@ -6705,9 +6926,14 @@ contains
 !                         sort_freq,sort_tag,                      &
                          sort_tag0,sd_itmp1,sd_itmp2,sd_itmp3)
 
+    use scale_tracer, only: &
+         QAD => QA
     use m_sdm_coordtrans, only: sdm_z2rk
 
       ! Input variables
+    real(RP), intent(in) :: DENS(KA,IA,JA)        !! Density [kg/m3]
+    real(RP), intent(in) :: RHOT(KA,IA,JA)        !! DENS * POTT [K*kg/m3]
+    real(RP), intent(in) :: QTRC(KA,IA,JA,QAD)    !! Ratio of mass of tracer to total mass[kg/kg]
       logical, intent(in) :: sdm_calvar(3) ! Control flag of calculation using SDM
       integer, intent(in) :: sdm_aslset    ! Option for aerosol species
       real(RP),intent(in) :: sdm_sdnmlvol  ! Normal volume for number concentration of super droplets
@@ -6769,6 +6995,10 @@ contains
       integer :: innum         ! temporary
       integer :: id_invd       ! index
       integer :: k, n
+
+      real(RP) :: pres_scale(KA,IA,JA)  ! Pressure
+      real(RP) :: rhod_scale(KA,IA,JA) ! dry air density
+      real(RP) :: t_scale(KA,IA,JA)    ! Temperature
     !---------------------------------------------------------------------
 
       ! Check active
@@ -6860,10 +7090,11 @@ contains
 
      ! Set terminal velocity of super-droplets
 
-      call sdm_getvz(sthopt,trnopt,                                   &
-                     pbr_crs,ptbr_crs,                        &
-                     pp_crs,ptp_crs,rhod_crs,                         &
-                     sd_fmnum,sd_fmx,sd_fmy,sd_fmrk,sd_fmr,sd_fmvz,   &
+      call sdm_rho_qtrc2rhod(DENS,QTRC,rhod_scale)
+      call sdm_rhot_qtrc2p_t(RHOT,QTRC,DENS,pres_scale,t_scale)
+
+      call sdm_getvz(pres_scale,rhod_scale,t_scale,                         &
+                     sd_fmnum,sd_fmx,sd_fmy,sd_fmri,sd_fmrj,sd_fmrk,sd_fmr,sd_fmvz,   &
                      sd_itmp1(1:sd_fmnum,1),sd_itmp2(1:sd_fmnum,1),   &
                      sd_itmp3(1:sd_fmnum,1),'motion')
 
