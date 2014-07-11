@@ -30,6 +30,7 @@
 !! @li      2014-07-04 (S.Shima) [rev] Removed comment outputs for debugging
 !! @li      2014-07-09 (S.Shima) [rev] Subroutines related to boundary conditions and MPI communications are totally revised
 !! @li      2014-07-11 (S.Shima) [rev] Subroutines related to sdm_getvz are revised. Many bug fixes.
+!! @li      2014-07-11 (S.Shima) [rev] Subroutines for conversion between fluid variables are separated into module m_sdm_fluidconv
 !<
 !-------------------------------------------------------------------------------
 #include "macro_thermodyn.h"
@@ -545,6 +546,8 @@ contains
        sdm_outasci
     use m_sdm_coordtrans, only: &
        sdm_rk2z
+    use m_sdm_fluidconv, only: &
+       sdm_rhot_qtrc2p_t, sdm_rho_rhot2pt, sdm_rho_mom2uvw, sdm_rho_qtrc2rhod
 
     implicit none
     real(RP), intent(inout) :: DENS(KA,IA,JA)        !! Density [kg/m3]
@@ -891,6 +894,8 @@ contains
       use m_sdm_coordtrans, only: &
         sdm_getrklu, &
         sdm_z2rk
+      use m_sdm_fluidconv, only: &
+        sdm_rhot_qtrc2p_t, sdm_rho_rhot2pt, sdm_rho_mom2uvw, sdm_rho_qtrc2rhod
 
       real(RP), intent(in) :: DENS(KA,IA,JA) ! Density     [kg/m3]
       real(RP), intent(in) :: RHOT(KA,IA,JA) ! DENS * POTT [K*kg/m3]
@@ -3389,6 +3394,8 @@ contains
        dt => TIME_DTSEC_ATMOS_PHY_MP
    use scale_tracer, only: &
        QAD => QA
+   use m_sdm_fluidconv, only: &
+        sdm_rhot_qtrc2p_t, sdm_rho_rhot2pt, sdm_rho_mom2uvw, sdm_rho_qtrc2rhod
    real(RP), intent(inout) :: DENS(KA,IA,JA)        !! Density [kg/m3]
    real(RP), intent(inout) :: MOMZ(KA,IA,JA)        !! Momentum [kg/s/m2]
    real(RP), intent(inout) :: MOMX(KA,IA,JA)
@@ -3533,7 +3540,6 @@ contains
             ! get the terminal velocity of super-droplets
 
             call sdm_rho_qtrc2rhod(DENS,QTRC,rhod_scale)
-!            call sdm_rho_rhot2pt(DENS,RHOT,ptbr_scale)
             call sdm_rhot_qtrc2p_t(RHOT,QTRC,DENS,pres_scale,t_scale)
 
             call sdm_getvz(pres_scale,rhod_scale,t_scale,            &
@@ -3670,131 +3676,6 @@ contains
 
     return
   end subroutine sdm_calc
-  !-----------------------------------------------------------------------------
-  subroutine sdm_rhot_qtrc2p_t(rhot,qtrc,dens,p,t)
-    use scale_const, only: &
-         P00 => CONST_PRE00, &
-         Rdry => CONST_Rdry, &
-         Rvap => CONST_Rvap, &
-         CPdry => CONST_CPdry
-    use scale_atmos_thermodyn, only: &
-         CPw => AQ_CP
-    use scale_tracer, only: &
-         QAD => QA
-    ! Input variables
-    real(RP), intent(in) :: rhot(KA,IA,JA)        !! DENS * POTT [K*kg/m3]
-    real(RP), intent(in) :: qtrc(KA,IA,JA,QAD)    !! Ratio of mass of tracer to total mass[kg/kg]
-    real(RP), intent(in) :: dens(KA,IA,JA)        !! Density [kg/m3]
-    ! Output variables
-    real(RP), intent(out) :: p(KA,IA,JA)          !  Pressure [Pa]
-    real(RP), intent(out) :: t(KA,IA,JA)          !  Temperature [K]
-
-    real(RP) :: qdry(KA,IA,JA)
-    real(RP) :: rtot(KA,IA,JA)
-    real(RP) :: cptot(KA,IA,JA)
-    real(RP) :: cpovcv(KA,IA,JA)
-    integer :: i, j, k, iq  ! index
- !---------------------------------------------------------------------
-
-    qdry(:,:,:) = 1.0_RP
-    do k = 1, KA
-    do i = 1, IA
-    do j = 1, JA
-      do iq = QQS, QQE
-        qdry(k,i,j) = qdry(k,i,j) - qtrc(k,i,j,iq)
-      enddo
-      rtot (k,i,j) = Rdry * qdry(k,i,j) + Rvap * qtrc(k,i,j,I_QV)
-      cptot(k,i,j) = CPdry * qdry(k,i,j)
-      do iq = QQS, QQE
-        cptot(k,i,j) = cptot(k,i,j) + qtrc(k,i,j,iq) * CPw(iq)
-      enddo
-      cpovcv(k,i,j) = cptot(k,i,j) / ( cptot(k,i,j) - rtot(k,i,j) )
-
-      p(k,i,j) = P00 * ( rhot(k,i,j) * rtot(k,i,j) / P00 )**cpovcv(k,i,j)
-      t(k,i,j) = (rhot(k,i,j)/dens(k,i,j)) * (p(k,i,j)/P00)**(rtot(k,i,j)/cptot(k,i,j))
-    enddo
-    enddo
-    enddo
-
-    return
-  end subroutine sdm_rhot_qtrc2p_t
-  !-----------------------------------------------------------------------------
-  subroutine sdm_rho_rhot2pt(dens,rhot,pt)
-    ! Input variables
-    real(RP), intent(in) :: dens(KA,IA,JA)        !! Density [kg/m3]
-    real(RP), intent(in) :: rhot(KA,IA,JA)        !! DENS * POTT [K*kg/m3]
-    ! Output variables
-    real(RP), intent(out) :: pt(KA,IA,JA)          !  Potential temperature [K]
-
-    integer :: i, j, k  ! index
- !---------------------------------------------------------------------
-
-    do k = 1, KA
-    do i = 1, IA
-    do j = 1, JA
-       pt(k,i,j) = RHOT(k,i,j) / DENS(k,i,j)
-    enddo
-    enddo
-    enddo
-
-    return
-  end subroutine sdm_rho_rhot2pt
-  !-----------------------------------------------------------------------------
-  subroutine sdm_rho_qtrc2rhod(dens,qtrc,rhod)
-    use scale_tracer, only: &
-         QAD => QA
-    ! Input variables
-    real(RP), intent(in) :: dens(KA,IA,JA)        !! Density [kg/m3]
-    real(RP), intent(in) :: qtrc(KA,IA,JA,QAD)    !! Ratio of mass of tracer to total mass[kg/kg]
-    ! Output variables
-    real(RP), intent(out) :: rhod(KA,IA,JA)  ! Density of dry air [kg/m3]
-
-    real(RP) :: qdry(KA,IA,JA)
-    integer :: i, j, k,iq  ! index
- !---------------------------------------------------------------------
-
-    qdry(:,:,:) = 1.0_RP
-    do k = 1, KA
-    do i = 1, IA
-    do j = 1, JA
-      do iq = QQS, QQE
-        qdry(k,i,j) = qdry(k,i,j) - qtrc(k,i,j,iq)
-      enddo
-      rhod(k,i,j) = dens(k,i,j)*qdry(k,i,j)
-    enddo
-    enddo
-    enddo
-
-    return
-  end subroutine sdm_rho_qtrc2rhod
-  !-----------------------------------------------------------------------------
-  subroutine sdm_rho_mom2uvw(dens,momx,momy,momz,u,v,w)
-    ! Input variables
-    real(RP), intent(in)  :: dens(KA,IA,JA) ! Density [kg/m3]
-    real(RP), intent(in)  :: momx(KA,IA,JA) ! Momentum [kg/s/m2]
-    real(RP), intent(in)  :: momy(KA,IA,JA) 
-    real(RP), intent(in)  :: momz(KA,IA,JA) 
-    ! Output variables
-    real(RP), intent(out) :: u(KA,IA,JA)  ! wind velocity [m/s]
-    real(RP), intent(out) :: v(KA,IA,JA)  ! 
-    real(RP), intent(out) :: w(KA,IA,JA)  ! 
-
-    integer :: i, j, k  ! index
- !---------------------------------------------------------------------
-
-    do k = 1, KA
-    do i = 1, IA
-    do j = 1, JA
-       u(k,i,j) = 2.0_RP * momx(k,i,j) / ( dens(k,i,j)+dens(k,i+1,j) )
-       v(k,i,j) = 2.0_RP * momy(k,i,j) / ( dens(k,i,j)+dens(k,i,j+1) )
-       w(k,i,j) = 2.0_RP * momz(k,i,j) / ( dens(k,i,j)+dens(k+1,i,j) )
-    enddo
-    enddo
-    enddo
-
-    return
-  end subroutine sdm_rho_mom2uvw
-  !-----------------------------------------------------------------------------
 
   subroutine sdm_sd2rhow(zph_crs,rhow_sdm,sd_num,sd_n,            &
                          sd_x,sd_y,sd_r,sd_rk,sd_rkl,sd_rku,      &
@@ -6929,6 +6810,8 @@ contains
     use scale_tracer, only: &
          QAD => QA
     use m_sdm_coordtrans, only: sdm_z2rk
+    use m_sdm_fluidconv, only: &
+         sdm_rhot_qtrc2p_t, sdm_rho_rhot2pt, sdm_rho_mom2uvw, sdm_rho_qtrc2rhod
 
       ! Input variables
     real(RP), intent(in) :: DENS(KA,IA,JA)        !! Density [kg/m3]

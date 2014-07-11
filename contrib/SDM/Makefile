@@ -13,6 +13,7 @@ include $(TOPDIR)/Mkinclude
 LIBNAME = libsdm.a 
 
 MODS	= \
+	  m_sdm_fluidconv.mod \
 	  m_sdm_io.mod \
 	  m_sdm_coordtrans.mod \
 	  m_sdm_memmgr.mod \
@@ -20,6 +21,7 @@ MODS	= \
 	  m_sdm_common.mod
 
 OBJS	= \
+	  sdm_fluidconv.o \
 	  sdm_io.o \
 	  sdm_coordtrans.o \
 	  sdm_memmgr.o \
@@ -41,6 +43,14 @@ instmodules:	makemodules
 	install $(MODS) $(MODDIR)
 
 makemodules: $(OBJS)
+
+sdm_fluidconv.o: sdm_fluidconv.f90 \
+	$(BUILD_DIR)/scale_grid_index.o \
+	$(BUILD_DIR)/scale_const.o \
+	$(BUILD_DIR)/scale_atmos_sub_thermodyn.o \
+	$(BUILD_DIR)/scale_tracer.o \
+	$(BUILD_DIR)/scale_precision.o
+	$(FC) $(FFLAGS) -I$(BUILD_DIR) -I$(MODDIR) -o $@ -c $<
 
 sdm_io.o: sdm_io.f90 \
 	$(BUILD_DIR)/scale_process.o \
