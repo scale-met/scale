@@ -573,23 +573,31 @@ contains
 
        if ( PRC_2Drank(PRC_myrank,1) == 0 ) then ! for western boundary
           call set_boundary_dyn( &
-               DENS, MOMX, MOMY, RHOT, & ! (inout)
-               DAMP_var, DAMP_alpha, IS, IS+IHALO-1, JS, JE ) ! (in)
+               DENS, MOMZ, MOMX, MOMY, RHOT, & ! (inout)
+               DAMP_var, DAMP_alpha, & ! (in)
+               MOMX, -1.0_RP, & ! (inout)
+               IS, IE, JE-JHALO+1, JE ) ! (in)
        end if
        if ( PRC_2Drank(PRC_myrank,1) == PRC_NUM_X-1 ) then ! for eastern boundary
           call set_boundary_dyn( &
-               DENS, MOMX, MOMY, RHOT, & ! (inout)
-               DAMP_var, DAMP_alpha, IE-IHALO+1, IE, JS, JE ) ! (in)
+               DENS, MOMZ, MOMX, MOMY, RHOT, & ! (inout)
+               DAMP_var, DAMP_alpha, & ! (in)
+               MOMX, 1.0_RP, & ! (inout)
+               IS, IE, JE-JHALO+1, JE ) ! (in)
        end if
        if ( PRC_2Drank(PRC_myrank,2) == 0 ) then ! for sourthern boundary
           call set_boundary_dyn( &
-               DENS, MOMX, MOMY, RHOT, & ! (inout)
-               DAMP_var, DAMP_alpha, IS, IE, JS, JS+JHALO-1 ) ! (in)
+               DENS, MOMZ, MOMX, MOMY, RHOT, & ! (inout)
+               DAMP_var, DAMP_alpha, & ! (in)
+               MOMY, -1.0_RP, & ! (inout)
+               IS, IE, JE-JHALO+1, JE ) ! (in)
        end if
        if ( PRC_2Drank(PRC_myrank,2) == PRC_NUM_Y-1 ) then ! for northern boundary
           call set_boundary_dyn( &
-               DENS, MOMX, MOMY, RHOT, & ! (inout)
-               DAMP_var, DAMP_alpha, IS, IE, JE-JHALO+1, JE ) ! (in)
+               DENS, MOMZ, MOMX, MOMY, RHOT, & ! (inout)
+               DAMP_var, DAMP_alpha, & ! (in)
+               MOMY, 1.0_RP, & ! (inout)
+               IS, IE, JE-JHALO+1, JE ) ! (in)
        end if
 
        do j  = JS, JE
@@ -904,18 +912,22 @@ contains
   end subroutine ATMOS_DYN
 
   subroutine set_boundary_dyn( &
-       DENS, MOMX, MOMY, RHOT, &
+       DENS, MOMZ, MOMX, MOMY, RHOT, &
        DAMP_var, DAMP_alpha, &
+       MOM, dir, &
        i0, i1, j0, j1 )
     use scale_const, only: &
          epsilon => CONST_EPS
     implicit none
     real(RP), intent(inout) :: DENS(KA,IA,JA)
+    real(RP), intent(inout) :: MOMZ(KA,IA,JA)
     real(RP), intent(inout) :: MOMX(KA,IA,JA)
     real(RP), intent(inout) :: MOMY(KA,IA,JA)
     real(RP), intent(inout) :: RHOT(KA,IA,JA)
     real(RP), intent(in)    :: DAMP_var  (KA,IA,JA,I_BND_SIZE)
     real(RP), intent(in)    :: DAMP_alpha(KA,IA,JA,I_BND_SIZE)
+    real(RP), intent(in)    :: MOM(KA,IA,JA)
+    real(RP), intent(in)    :: dir
     integer,  intent(in)    :: i0
     integer,  intent(in)    :: i1
     integer,  intent(in)    :: j0
@@ -939,6 +951,8 @@ contains
        sw = sign(0.5_RP, DAMP_alpha(k,i,j,I_BND_RHOT) - epsilon) + 0.5_RP
        RHOT(k,i,j) = RHOT(k,i,j) * ( 1.0_RP - sw ) &
                    + DAMP_var(k,i,j,I_BND_RHOT) * sw
+       sw = sign(0.5_RP, MOM(k,i,j)*dir) + 0.5_RP
+       MOMZ(k,i,j) = MOMZ(k,i,j) * sw
     end do
     end do
     end do
