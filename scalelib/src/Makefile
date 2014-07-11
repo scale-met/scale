@@ -145,6 +145,7 @@ makesdm: $(BUILD_DIR)/scale_precision.o \
 	$(BUILD_DIR)/scale_const.o \
 	$(BUILD_DIR)/scale_grid_index.o \
 	$(BUILD_DIR)/scale_topography.o \
+	$(BUILD_DIR)/scale_grid_cartesian.o \
 	$(BUILD_DIR)/scale_grid_real.o \
 	$(BUILD_DIR)/scale_gridtrans.o \
 	$(BUILD_DIR)/scale_process.o \

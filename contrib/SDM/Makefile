@@ -13,6 +13,7 @@ include $(TOPDIR)/Mkinclude
 LIBNAME = libsdm.a 
 
 MODS	= \
+	  m_sdm_boundary.mod \
 	  m_sdm_fluidconv.mod \
 	  m_sdm_io.mod \
 	  m_sdm_coordtrans.mod \
@@ -21,6 +22,7 @@ MODS	= \
 	  m_sdm_common.mod
 
 OBJS	= \
+	  sdm_boundary.o \
 	  sdm_fluidconv.o \
 	  sdm_io.o \
 	  sdm_coordtrans.o \
@@ -44,7 +46,18 @@ instmodules:	makemodules
 
 makemodules: $(OBJS)
 
+sdm_boundary.o: sdm_boundary.f90 \
+	sdm_coordtrans.o \
+	sdm_common.o \
+	$(BUILD_DIR)/scale_process.o \
+	$(BUILD_DIR)/scale_stdio.o \
+	$(BUILD_DIR)/scale_precision.o \
+	$(BUILD_DIR)/scale_grid_index.o \
+	$(BUILD_DIR)/scale_grid_cartesian.o
+	$(FC) $(FFLAGS) -I$(BUILD_DIR) -I$(MODDIR) -o $@ -c $<
+
 sdm_fluidconv.o: sdm_fluidconv.f90 \
+	$(BUILD_DIR)/scale_grid_cartesian.o
 	$(BUILD_DIR)/scale_grid_index.o \
 	$(BUILD_DIR)/scale_const.o \
 	$(BUILD_DIR)/scale_atmos_sub_thermodyn.o \
@@ -64,6 +77,7 @@ sdm_coordtrans.o: sdm_coordtrans.f90 \
 	$(BUILD_DIR)/scale_process.o \
 	$(BUILD_DIR)/scale_grid_index.o \
 	$(BUILD_DIR)/scale_grid_real.o \
+	$(BUILD_DIR)/scale_grid_cartesian.o \
 	$(BUILD_DIR)/scale_precision.o
 	$(FC) $(FFLAGS) -I$(BUILD_DIR) -I$(MODDIR) -o $@ -c $<
 
