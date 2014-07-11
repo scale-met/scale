@@ -220,7 +220,7 @@ contains
        endif
 
        if ( ATMOS_BOUNDARY_IN_BASENAME /= '' ) then
-          call ATMOS_BOUNDARY_initialize
+          call ATMOS_BOUNDARY_initialize( DENS )
        else
           write(*,*) 'xxx You need specify ATMOS_BOUNDARY_IN_BASENAME'
           call PRC_MPIstop
@@ -629,7 +629,7 @@ contains
                           'DENS', 'Reference Density', 'kg/m3', 'ZXY',           &
                           ATMOS_BOUNDARY_OUT_DTYPE                               )
     end if
-    if ( ATMOS_BOUNDARY_USE_DENS ) then
+    if ( ATMOS_BOUNDARY_USE_DENS .or. ATMOS_BOUNDARY_TYPE == 'REAL' ) then
        call FILEIO_write( ATMOS_BOUNDARY_alpha(:,:,:,I_BND_DENS),                &
                           ATMOS_BOUNDARY_OUT_BASENAME, ATMOS_BOUNDARY_OUT_TITLE, &
                           'ALPHA_DENS', 'Alpha for dens', '1', 'ZXY',            &
@@ -648,7 +648,7 @@ contains
                           ATMOS_BOUNDARY_OUT_DTYPE                               )
     endif
 
-    if ( ATMOS_BOUNDARY_USE_VELX ) then
+    if ( ATMOS_BOUNDARY_USE_VELX .or. ATMOS_BOUNDARY_TYPE == 'REAL' ) then
        buffer = ATMOS_BOUNDARY_var(:,:,:,I_BND_MOMX) / ATMOS_BOUNDARY_var(:,:,:,I_BND_DENS)
        call FILEIO_write( buffer, &
                           ATMOS_BOUNDARY_OUT_BASENAME, ATMOS_BOUNDARY_OUT_TITLE, &
@@ -660,7 +660,7 @@ contains
                           ATMOS_BOUNDARY_OUT_DTYPE                               )
     endif
 
-    if ( ATMOS_BOUNDARY_USE_VELY ) then
+    if ( ATMOS_BOUNDARY_USE_VELY .or. ATMOS_BOUNDARY_TYPE == 'REAL' ) then
        buffer = ATMOS_BOUNDARY_var(:,:,:,I_BND_MOMY) / ATMOS_BOUNDARY_var(:,:,:,I_BND_DENS)
        call FILEIO_write( buffer, &
                           ATMOS_BOUNDARY_OUT_BASENAME, ATMOS_BOUNDARY_OUT_TITLE, &
@@ -672,7 +672,7 @@ contains
                           ATMOS_BOUNDARY_OUT_DTYPE                               )
     endif
 
-    if ( ATMOS_BOUNDARY_USE_POTT ) then
+    if ( ATMOS_BOUNDARY_USE_POTT .or. ATMOS_BOUNDARY_TYPE == 'REAL' ) then
        buffer = ATMOS_BOUNDARY_var(:,:,:,I_BND_RHOT) / ATMOS_BOUNDARY_var(:,:,:,I_BND_DENS)
        call FILEIO_write( buffer, &
                           ATMOS_BOUNDARY_OUT_BASENAME, ATMOS_BOUNDARY_OUT_TITLE, &
@@ -684,7 +684,7 @@ contains
                           ATMOS_BOUNDARY_OUT_DTYPE                               )
     endif
 
-    if ( ATMOS_BOUNDARY_USE_QV   ) then
+    if ( ATMOS_BOUNDARY_USE_QV .or. ATMOS_BOUNDARY_TYPE == 'REAL' ) then
        call FILEIO_write( ATMOS_BOUNDARY_var(:,:,:,I_BND_QV),                    &
                           ATMOS_BOUNDARY_OUT_BASENAME, ATMOS_BOUNDARY_OUT_TITLE, &
                           'QV', 'Reference water vapor', 'kg/kg', 'ZXY',         &
@@ -727,7 +727,7 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Initialize boundary value for real case experiment
-  subroutine ATMOS_BOUNDARY_initialize
+  subroutine ATMOS_BOUNDARY_initialize( DENS )
     use gtool_file, only: &
        FileRead
     use scale_process, only: &
@@ -739,6 +739,7 @@ contains
        TIME_DTSEC,  &
        TIME_NOWSEC
     implicit none
+    real(RP), intent(in) :: DENS(KA,IA,JA)
 
     real(RP) :: reference_atmos(KMAX,IMAX,JMAX) !> restart file (no HALO)
 
@@ -753,9 +754,6 @@ contains
     boundary_timestep = 1
     call FileRead( reference_atmos(:,:,:), bname, 'DENS', boundary_timestep, PRC_myrank )
     ATMOS_BOUNDARY_var_ref(KS:KE,IS:IE,JS:JE,I_BND_DENS,1) = reference_atmos(1:KMAX,1:IMAX,1:JMAX)
-    call FileRead( reference_atmos(:,:,:), bname, 'VELZ', boundary_timestep, PRC_myrank )
-    ATMOS_BOUNDARY_var_ref(KS:KE,IS:IE,JS:JE,I_BND_MOMZ,1) = reference_atmos(1:KMAX,1:IMAX,1:JMAX) &
-         * ATMOS_BOUNDARY_var_ref(KS:KE,IS:IE,JS:JE,I_BND_DENS,1)
     call FileRead( reference_atmos(:,:,:), bname, 'VELX', boundary_timestep, PRC_myrank )
     ATMOS_BOUNDARY_var_ref(KS:KE,IS:IE,JS:JE,I_BND_MOMX,1) = reference_atmos(1:KMAX,1:IMAX,1:JMAX) &
          * ATMOS_BOUNDARY_var_ref(KS:KE,IS:IE,JS:JE,I_BND_DENS,1)
@@ -771,9 +769,6 @@ contains
     boundary_timestep = 2
     call FileRead( reference_atmos(:,:,:), bname, 'DENS', boundary_timestep, PRC_myrank )
     ATMOS_BOUNDARY_var_ref(KS:KE,IS:IE,JS:JE,I_BND_DENS,2) = reference_atmos(1:KMAX,1:IMAX,1:JMAX)
-    call FileRead( reference_atmos(:,:,:), bname, 'VELZ', boundary_timestep, PRC_myrank )
-    ATMOS_BOUNDARY_var_ref(KS:KE,IS:IE,JS:JE,I_BND_MOMZ,2) = reference_atmos(1:KMAX,1:IMAX,1:JMAX) &
-         * ATMOS_BOUNDARY_var_ref(KS:KE,IS:IE,JS:JE,I_BND_DENS,2)
     call FileRead( reference_atmos(:,:,:), bname, 'VELX', boundary_timestep, PRC_myrank )
     ATMOS_BOUNDARY_var_ref(KS:KE,IS:IE,JS:JE,I_BND_MOMX,2) = reference_atmos(1:KMAX,1:IMAX,1:JMAX) &
          * ATMOS_BOUNDARY_var_ref(KS:KE,IS:IE,JS:JE,I_BND_DENS,2)
@@ -809,17 +804,22 @@ contains
 
     ! set boundary data and time increment
     do iv = 1, I_BND_SIZE
-    do j  = 1, JA
-    do i  = 1, IA
-    do k  = 1, KA
-       ATMOS_BOUNDARY_var      (k,i,j,iv) = ATMOS_BOUNDARY_var_ref(k,i,j,iv,1)
-       ATMOS_BOUNDARY_increment(k,i,j,iv) = ( ATMOS_BOUNDARY_var_ref(k,i,j,iv,2) &
-                                            - ATMOS_BOUNDARY_var_ref(k,i,j,iv,1) ) &
-                                            / ( ATMOS_BOUNDARY_UPDATE_DT / TIME_DTSEC )
+       if ( I_BND_SIZE == I_MOMZ ) cycle
+       do j  = 1, JA
+       do i  = 1, IA
+       do k  = 1, KA
+          ATMOS_BOUNDARY_var      (k,i,j,iv) = ATMOS_BOUNDARY_var_ref(k,i,j,iv,1)
+          ATMOS_BOUNDARY_increment(k,i,j,iv) = ( ATMOS_BOUNDARY_var_ref(k,i,j,iv,2) &
+                                               - ATMOS_BOUNDARY_var_ref(k,i,j,iv,1) ) &
+                                               / ( ATMOS_BOUNDARY_UPDATE_DT / TIME_DTSEC )
+       enddo
+       enddo
+       enddo
     enddo
-    enddo
-    enddo
-    enddo
+
+    if ( ATMOS_BOUNDARY_USE_VELZ ) then
+       ATMOS_BOUNDARY_var(KS:KE,IS:IE,JS:JE,I_BND_MOMZ) = ATMOS_BOUNDARY_VALUE_VELZ * DENS(KS:KE,IS:IE,JS:JE)
+    end if
 
     last_updated = TIME_NOWSEC
 
@@ -856,17 +856,21 @@ contains
           call ATMOS_BOUNDARY_updatefile
 
           do iv = 1, I_BND_SIZE
-          do j  = 1, JA
-          do i  = 1, IA
-          do k  = 1, KA
-             ATMOS_BOUNDARY_var      (k,i,j,iv) = ATMOS_BOUNDARY_var_ref(k,i,j,iv,1)
-             ATMOS_BOUNDARY_increment(k,i,j,iv) = ( ATMOS_BOUNDARY_var_ref(k,i,j,iv,2) &
-                                                  - ATMOS_BOUNDARY_var_ref(k,i,j,iv,1) ) &
-                                                / ( ATMOS_BOUNDARY_UPDATE_DT / TIME_DTSEC )
+             if ( I_BND_SIZE == I_MOMZ ) cycle
+             do j  = 1, JA
+             do i  = 1, IA
+             do k  = 1, KA
+                ATMOS_BOUNDARY_var      (k,i,j,iv) = ATMOS_BOUNDARY_var_ref(k,i,j,iv,1)
+                ATMOS_BOUNDARY_increment(k,i,j,iv) = ( ATMOS_BOUNDARY_var_ref(k,i,j,iv,2) &
+                                                     - ATMOS_BOUNDARY_var_ref(k,i,j,iv,1) ) &
+                                                   / ( ATMOS_BOUNDARY_UPDATE_DT / TIME_DTSEC )
+             enddo
+             enddo
+             enddo
           enddo
-          enddo
-          enddo
-          enddo
+
+          ATMOS_BOUNDARY_var(KS:KE,IS:IE,JS:JE,I_BND_MOMZ) = ATMOS_BOUNDARY_VALUE_VELZ * DENS(KS:KE,IS:IE,JS:JE)
+
 
           last_updated = TIME_NOWSEC
        else
