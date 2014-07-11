@@ -370,18 +370,12 @@ contains
        enddo
 
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       do j = JS-1, JE+2
-       do i = IS-1, IE+2
-       do k = KS, KE-1
-          diff(k,i,j) = MOMZ(k,i,j) - DAMP_var(k,i,j,I_BND_MOMZ)
-       enddo
-       enddo
-       enddo
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE-1
           MOMZ_t(k,i,j) = MOMZ_tp(k,i,j) & ! tendency from physical step
-                        - DAMP_alpha(k,i,j,I_BND_MOMZ) * diff(k,i,j) ! rayleigh damping
+                        - DAMP_alpha(k,i,j,I_BND_MOMZ) &
+                        * ( MOMZ(k,i,j) - DAMP_var(k,i,j,I_BND_MOMZ) ) ! rayleigh damping
        enddo
        enddo
        enddo

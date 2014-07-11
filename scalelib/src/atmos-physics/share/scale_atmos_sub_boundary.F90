@@ -424,71 +424,64 @@ contains
 
 
        if ( ATMOS_BOUNDARY_TYPE == 'REAL' ) then
+          ATMOS_BOUNDARY_alpha(k,i,j,I_BND_MOMZ) = alpha_z2
           if ( ATMOS_BOUNDARY_USE_DENS ) then
              ATMOS_BOUNDARY_alpha(k,i,j,I_BND_DENS) = max( alpha_z1, alpha_x1, alpha_y1 )
           else
-             ATMOS_BOUNDARY_alpha(:,:,:,I_BND_DENS) = max( alpha_x1, alpha_y1 )
-          endif
-          if ( ATMOS_BOUNDARY_USE_VELZ ) then
-             ATMOS_BOUNDARY_alpha(k,i,j,I_BND_MOMZ) = alpha_z2
-          else
-             ATMOS_BOUNDARY_alpha(:,:,:,I_BND_MOMZ) = 0.0_RP
+             ATMOS_BOUNDARY_alpha(k,i,j,I_BND_DENS) = max( alpha_x1, alpha_y1 )
           endif
           if ( ATMOS_BOUNDARY_USE_VELX ) then
              ATMOS_BOUNDARY_alpha(k,i,j,I_BND_MOMX) = max( alpha_z1, alpha_x2, alpha_y1 )
           else
-             ATMOS_BOUNDARY_alpha(:,:,:,I_BND_MOMX) = max( alpha_x2, alpha_y1 )
+             ATMOS_BOUNDARY_alpha(k,i,j,I_BND_MOMX) = max( alpha_x2, alpha_y1 )
           endif
           if ( ATMOS_BOUNDARY_USE_VELY ) then
              ATMOS_BOUNDARY_alpha(k,i,j,I_BND_MOMY) = max( alpha_z1, alpha_x1, alpha_y2 )
           else
-             ATMOS_BOUNDARY_alpha(:,:,:,I_BND_MOMY) = max( alpha_x1, alpha_y2 )
+             ATMOS_BOUNDARY_alpha(k,i,j,I_BND_MOMY) = max( alpha_x1, alpha_y2 )
           endif
           if ( ATMOS_BOUNDARY_USE_POTT ) then
              ATMOS_BOUNDARY_alpha(k,i,j,I_BND_RHOT) = max( alpha_z1, alpha_x1, alpha_y1 )
           else
-             ATMOS_BOUNDARY_alpha(:,:,:,I_BND_RHOT) = max( alpha_x1, alpha_y1 )
+             ATMOS_BOUNDARY_alpha(k,i,j,I_BND_RHOT) = max( alpha_x1, alpha_y1 )
           endif
           if ( ATMOS_BOUNDARY_USE_QV   ) then
              ATMOS_BOUNDARY_alpha(k,i,j,I_BND_QV  ) = max( alpha_z1, alpha_x1, alpha_y1 )
           else
-             ATMOS_BOUNDARY_alpha(:,:,:,I_BND_QV  ) = max( alpha_x1, alpha_y1 )
+             ATMOS_BOUNDARY_alpha(k,i,j,I_BND_QV  ) = max( alpha_x1, alpha_y1 )
           endif
        else
-          if ( ATMOS_BOUNDARY_USE_DENS ) then
-             ATMOS_BOUNDARY_alpha(k,i,j,I_BND_DENS) = max( alpha_z1, alpha_x1, alpha_y1 )
-          else
-             ATMOS_BOUNDARY_alpha(:,:,:,I_BND_DENS) = 0.0_RP
-          endif
-          if ( ATMOS_BOUNDARY_USE_VELZ ) then
-             ATMOS_BOUNDARY_alpha(k,i,j,I_BND_MOMZ) = max( alpha_z2, alpha_x1, alpha_y1 )
-          else
-             ATMOS_BOUNDARY_alpha(:,:,:,I_BND_MOMZ) = 0.0_RP
-          endif
-          if ( ATMOS_BOUNDARY_USE_VELX ) then
-             ATMOS_BOUNDARY_alpha(k,i,j,I_BND_MOMX) = max( alpha_z1, alpha_x2, alpha_y1 )
-          else
-             ATMOS_BOUNDARY_alpha(:,:,:,I_BND_MOMX) = 0.0_RP
-          endif
-          if ( ATMOS_BOUNDARY_USE_VELY ) then
-             ATMOS_BOUNDARY_alpha(k,i,j,I_BND_MOMY) = max( alpha_z1, alpha_x1, alpha_y2 )
-          else
-             ATMOS_BOUNDARY_alpha(:,:,:,I_BND_MOMY) = 0.0_RP
-          endif
-          if ( ATMOS_BOUNDARY_USE_POTT ) then
-             ATMOS_BOUNDARY_alpha(k,i,j,I_BND_RHOT) = max( alpha_z1, alpha_x1, alpha_y1 )
-          else
-             ATMOS_BOUNDARY_alpha(:,:,:,I_BND_RHOT) = 0.0_RP
-          endif
-          if ( ATMOS_BOUNDARY_USE_QV   ) then
-             ATMOS_BOUNDARY_alpha(k,i,j,I_BND_QV  ) = max( alpha_z1, alpha_x1, alpha_y1 )
-          else
-             ATMOS_BOUNDARY_alpha(:,:,:,I_BND_QV  ) = 0.0_RP
-          endif
+          ATMOS_BOUNDARY_alpha(k,i,j,I_BND_DENS) = max( alpha_z1, alpha_x1, alpha_y1 )
+          ATMOS_BOUNDARY_alpha(k,i,j,I_BND_MOMZ) = max( alpha_z2, alpha_x1, alpha_y1 )
+          ATMOS_BOUNDARY_alpha(k,i,j,I_BND_MOMX) = max( alpha_z1, alpha_x2, alpha_y1 )
+          ATMOS_BOUNDARY_alpha(k,i,j,I_BND_MOMY) = max( alpha_z1, alpha_x1, alpha_y2 )
+          ATMOS_BOUNDARY_alpha(k,i,j,I_BND_RHOT) = max( alpha_z1, alpha_x1, alpha_y1 )
+          ATMOS_BOUNDARY_alpha(k,i,j,I_BND_QV  ) = max( alpha_z1, alpha_x1, alpha_y1 )
        end if
     enddo
     enddo
     enddo
+
+    if ( .NOT. ATMOS_BOUNDARY_USE_VELZ ) then
+       ATMOS_BOUNDARY_alpha(:,:,:,I_BND_MOMZ) = 0.0_RP
+    end if
+    if ( .NOT. ATMOS_BOUNDARY_TYPE == 'REAL' ) then
+       if ( .NOT. ATMOS_BOUNDARY_USE_DENS ) then
+          ATMOS_BOUNDARY_alpha(:,:,:,I_BND_DENS) = 0.0_RP
+       end if
+       if ( .NOT. ATMOS_BOUNDARY_USE_VELX ) then
+          ATMOS_BOUNDARY_alpha(:,:,:,I_BND_MOMX) = 0.0_RP
+       end if
+       if ( .NOT. ATMOS_BOUNDARY_USE_VELY ) then
+          ATMOS_BOUNDARY_alpha(:,:,:,I_BND_MOMY) = 0.0_RP
+       end if
+       if ( .NOT. ATMOS_BOUNDARY_USE_POTT ) then
+          ATMOS_BOUNDARY_alpha(:,:,:,I_BND_RHOT) = 0.0_RP
+       end if
+       if ( .NOT. ATMOS_BOUNDARY_USE_QV ) then
+          ATMOS_BOUNDARY_alpha(:,:,:,I_BND_QV  ) = 0.0_RP
+       end if
+    end if
 
 
     call ATMOS_BOUNDARY_alpha_fillhalo
@@ -928,9 +921,6 @@ contains
 
     call FileRead( reference_atmos(:,:,:), bname, 'DENS', boundary_timestep, PRC_myrank )
     ATMOS_BOUNDARY_var_ref(KS:KE,IS:IE,JS:JE,I_BND_DENS,2) = reference_atmos(1:KMAX,1:IMAX,1:JMAX)
-    call FileRead( reference_atmos(:,:,:), bname, 'VELZ', boundary_timestep, PRC_myrank )
-    ATMOS_BOUNDARY_var_ref(KS:KE,IS:IE,JS:JE,I_BND_MOMZ,2) = reference_atmos(1:KMAX,1:IMAX,1:JMAX) &
-         * ATMOS_BOUNDARY_var_ref(KS:KE,IS:IE,JS:JE,I_BND_DENS,2)
     call FileRead( reference_atmos(:,:,:), bname, 'VELX', boundary_timestep, PRC_myrank )
     ATMOS_BOUNDARY_var_ref(KS:KE,IS:IE,JS:JE,I_BND_MOMX,2) = reference_atmos(1:KMAX,1:IMAX,1:JMAX) &
          * ATMOS_BOUNDARY_var_ref(KS:KE,IS:IE,JS:JE,I_BND_DENS,2)
