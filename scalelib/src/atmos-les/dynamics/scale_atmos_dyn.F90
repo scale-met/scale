@@ -575,19 +575,19 @@ contains
           call set_boundary_dyn( &
                DENS, MOMZ, MOMX, MOMY, RHOT, & ! (inout)
                DAMP_var, DAMP_alpha, & ! (in)
-               IS, IE, JE-JHALO+1, JE ) ! (in)
+               IS, IS+IHALO-1, JS, JE ) ! (in)
        end if
        if ( PRC_2Drank(PRC_myrank,1) == PRC_NUM_X-1 ) then ! for eastern boundary
           call set_boundary_dyn( &
                DENS, MOMZ, MOMX, MOMY, RHOT, & ! (inout)
                DAMP_var, DAMP_alpha, & ! (in)
-               IS, IE, JE-JHALO+1, JE ) ! (in)
+               IE-IHALO+1, IE, JS, JE ) ! (in)
        end if
        if ( PRC_2Drank(PRC_myrank,2) == 0 ) then ! for sourthern boundary
           call set_boundary_dyn( &
                DENS, MOMZ, MOMX, MOMY, RHOT, & ! (inout)
                DAMP_var, DAMP_alpha, & ! (in)
-               IS, IE, JE-JHALO+1, JE ) ! (in)
+               IS, IE, JS, JS+JHALO-1 ) ! (in)
        end if
        if ( PRC_2Drank(PRC_myrank,2) == PRC_NUM_Y-1 ) then ! for northern boundary
           call set_boundary_dyn( &
@@ -935,6 +935,7 @@ contains
        sw = sign(0.5_RP, DAMP_alpha(k,i,j,I_BND_DENS) - epsilon) + 0.5_RP
        DENS(k,i,j) = DENS(k,i,j) * ( 1.0_RP - sw ) &
                    + DAMP_var(k,i,j,I_BND_DENS) * sw
+       MOMZ(k,i,j) = MOMZ(k,i,j) * ( 1.0_RP - sw )
        sw = sign(0.5_RP, DAMP_alpha(k,i,j,I_BND_MOMX) - epsilon) + 0.5_RP
        MOMX(k,i,j) = MOMX(k,i,j) * ( 1.0_RP - sw ) &
                    + DAMP_var(k,i,j,I_BND_MOMX) * sw
@@ -944,7 +945,6 @@ contains
        sw = sign(0.5_RP, DAMP_alpha(k,i,j,I_BND_RHOT) - epsilon) + 0.5_RP
        RHOT(k,i,j) = RHOT(k,i,j) * ( 1.0_RP - sw ) &
                    + DAMP_var(k,i,j,I_BND_RHOT) * sw
-       MOMZ(k,i,j) = 0.0_RP
     end do
     end do
     end do
