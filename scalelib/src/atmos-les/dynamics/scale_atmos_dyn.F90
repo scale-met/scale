@@ -575,28 +575,24 @@ contains
           call set_boundary_dyn( &
                DENS, MOMZ, MOMX, MOMY, RHOT, & ! (inout)
                DAMP_var, DAMP_alpha, & ! (in)
-               MOMX, -1.0_RP, & ! (inout)
                IS, IE, JE-JHALO+1, JE ) ! (in)
        end if
        if ( PRC_2Drank(PRC_myrank,1) == PRC_NUM_X-1 ) then ! for eastern boundary
           call set_boundary_dyn( &
                DENS, MOMZ, MOMX, MOMY, RHOT, & ! (inout)
                DAMP_var, DAMP_alpha, & ! (in)
-               MOMX, 1.0_RP, & ! (inout)
                IS, IE, JE-JHALO+1, JE ) ! (in)
        end if
        if ( PRC_2Drank(PRC_myrank,2) == 0 ) then ! for sourthern boundary
           call set_boundary_dyn( &
                DENS, MOMZ, MOMX, MOMY, RHOT, & ! (inout)
                DAMP_var, DAMP_alpha, & ! (in)
-               MOMY, -1.0_RP, & ! (inout)
                IS, IE, JE-JHALO+1, JE ) ! (in)
        end if
        if ( PRC_2Drank(PRC_myrank,2) == PRC_NUM_Y-1 ) then ! for northern boundary
           call set_boundary_dyn( &
                DENS, MOMZ, MOMX, MOMY, RHOT, & ! (inout)
                DAMP_var, DAMP_alpha, & ! (in)
-               MOMY, 1.0_RP, & ! (inout)
                IS, IE, JE-JHALO+1, JE ) ! (in)
        end if
 
@@ -914,7 +910,6 @@ contains
   subroutine set_boundary_dyn( &
        DENS, MOMZ, MOMX, MOMY, RHOT, &
        DAMP_var, DAMP_alpha, &
-       MOM, dir, &
        i0, i1, j0, j1 )
     use scale_const, only: &
          epsilon => CONST_EPS
@@ -926,8 +921,6 @@ contains
     real(RP), intent(inout) :: RHOT(KA,IA,JA)
     real(RP), intent(in)    :: DAMP_var  (KA,IA,JA,I_BND_SIZE)
     real(RP), intent(in)    :: DAMP_alpha(KA,IA,JA,I_BND_SIZE)
-    real(RP), intent(in)    :: MOM(KA,IA,JA)
-    real(RP), intent(in)    :: dir
     integer,  intent(in)    :: i0
     integer,  intent(in)    :: i1
     integer,  intent(in)    :: j0
@@ -951,8 +944,7 @@ contains
        sw = sign(0.5_RP, DAMP_alpha(k,i,j,I_BND_RHOT) - epsilon) + 0.5_RP
        RHOT(k,i,j) = RHOT(k,i,j) * ( 1.0_RP - sw ) &
                    + DAMP_var(k,i,j,I_BND_RHOT) * sw
-       sw = sign(0.5_RP, MOM(k,i,j)*dir) + 0.5_RP
-       MOMZ(k,i,j) = MOMZ(k,i,j) * sw
+       MOMZ(k,i,j) = 0.0_RP
     end do
     end do
     end do
