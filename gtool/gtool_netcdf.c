@@ -207,7 +207,7 @@ int32_t file_get_datainfo( datainfo_t *dinfo,   // (out)
     // time_end
     CHECK_ERROR( nc_inq_dimname(ncid, tdim, name) );
     CHECK_ERROR( nc_inq_varid(ncid, name, &varid) );
-    idx[0] = step;
+    idx[0] = step - 1;
     CHECK_ERROR( nc_get_var1_double(ncid, varid, idx, &(dinfo->time_end)) );
     // time_start
     strcat(name, "_bnds");
