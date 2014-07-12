@@ -825,6 +825,8 @@ contains
        DENS )
     use scale_process, only: &
        PRC_MPIstop
+    use scale_const, only: &
+       epsilon => CONST_EPS
     use scale_time, only: &
        TIME_DTSEC, &
        TIME_NOWSEC
@@ -843,7 +845,7 @@ contains
 
        integrated_sec = TIME_NOWSEC - last_updated
 
-       if ( integrated_sec >= ATMOS_BOUNDARY_UPDATE_DT ) then
+       if ( integrated_sec >= ATMOS_BOUNDARY_UPDATE_DT - epsilon ) then
           boundary_timestep = boundary_timestep + 1
 
           call ATMOS_BOUNDARY_updatefile
@@ -865,7 +867,7 @@ contains
           ATMOS_BOUNDARY_var(KS:KE,IS:IE,JS:JE,I_BND_MOMZ) = ATMOS_BOUNDARY_VALUE_VELZ * DENS(KS:KE,IS:IE,JS:JE)
 
 
-          last_updated = TIME_NOWSEC
+          last_updated = last_updated + ATMOS_BOUNDARY_UPDATE_DT
        else
           do iv = 1, I_BND_SIZE
           if ( iv==I_BND_MOMZ ) cycle
@@ -907,6 +909,8 @@ contains
 
     integer :: i, j, k, iv
     !---------------------------------------------------------------------------
+
+    if (IO_L) write(IO_FID_LOG,*)"*** Atmos Boundary: read from boundary file(timestep=", boundary_timestep, ")"
 
     bname = ATMOS_BOUNDARY_IN_BASENAME
 
