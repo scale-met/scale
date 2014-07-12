@@ -2370,7 +2370,7 @@ contains
                             pbr_crs,ptbr_crs,pp_crs,ptp_crs,            &
                             zph_crs,                                    &
                             ni_sdm,nj_sdm,nk_sdm,sd_num,sd_numasl,      &
-                            sd_n,sd_x,sd_y,sd_r,sd_asl,sd_vz,sd_rk,     &
+                            sd_n,sd_x,sd_y,sd_r,sd_asl,sd_vz,sd_ri,sd_rj,sd_rk,     &
                             sort_id,sort_key,sort_freq,sort_tag,        &
                             sd_rng,sd_rand,                             &
 !                            sd_rand,                                    &
@@ -2749,7 +2749,7 @@ contains
                         sdm_dtcol,pbr_crs,ptbr_crs,            &
                         pp_crs,ptp_crs,zph_crs,                &
                         ni_sdm,nj_sdm,nk_sdm,sd_num,sd_numasl, &
-                        sd_n,sd_x,sd_y,sd_r,sd_asl,sd_vz,sd_rk,&
+                        sd_n,sd_x,sd_y,sd_r,sd_asl,sd_vz,sd_ri,sd_rj,sd_rk,&
                         sort_id,sort_key,sort_freq,sort_tag,   &
                         sd_rng,sd_rand,                        &
 !                        sd_rand,                               &
@@ -2767,6 +2767,8 @@ contains
          rd => CONST_Rdry,  &    ! Gas Constant of dry air [J/K/kg]
          cp => CONST_CPdry, &
          p0 => CONST_PRE00       ! Reference Pressure [Pa]
+      use m_sdm_coordtrans, only: &
+           sdm_x2ri, sdm_y2rj
       !  Input variables
       integer, intent(in) :: sdm_colkrnl   ! Kernel type for coalescence process
       integer, intent(in) :: sdm_colbrwn   ! Control flag of Brownian Coagulation and Scavenging process
@@ -2796,6 +2798,8 @@ contains
       integer(DP), intent(inout) :: sd_n(1:sd_num) ! multiplicity of super-droplets
       real(RP), intent(inout) :: sd_r(1:sd_num)  ! equivalent radius of super-droplets
       real(RP), intent(inout) :: sd_asl(1:sd_num,1:sd_numasl) ! aerosol mass of super-droplets
+      real(RP), intent(inout) :: sd_ri(1:sd_num) ! index[i/real] of super-droplets
+      real(RP), intent(inout) :: sd_rj(1:sd_num) ! index[j/real] of super-droplets
       real(RP), intent(inout) :: sd_rk(1:sd_num) ! index[k/real] of super-droplets
       ! Output variables
       integer, intent(out) :: sort_tag0(1:ni_sdm*nj_sdm*nk_sdm+2)  ! = sort_tag(n) - 1
@@ -2882,7 +2886,11 @@ contains
       integer :: ix, jy
 !--------------------------------------------------------------------
 
+      call sdm_x2ri(sd_num,sd_x,sd_ri,sd_rk)
+      call sdm_y2rj(sd_num,sd_y,sd_rj,sd_rk)
+
       ! Initialize
+      ! ni_sdm=IE-IS+1, nj_sdm=JE-JS+1, knum_sdm=floor(rkumax)+1)-KS+1
       gnum = ni_sdm * nj_sdm * knum_sdm
 
 !      idx_sdm = 10_i8 * floor( 1.e4*(dx_sdm+1.e-5), kind=i8 )
@@ -2892,7 +2900,7 @@ contains
       iexced   = 1   !! check for memory size of int*8
 
       !### aerosol type ###!
-
+      ! why we need sd_aslrho? Isn't it same to sdm_aslrho?? Check later
       do n=1,22
          sd_aslrho(n) = 1.0_RP
       end do
