@@ -47,6 +47,8 @@ module mod_cpl_atmos_urban_driver
   !++ Private parameters & variables
   !
   !-----------------------------------------------------------------------------
+  logical, allocatable, private :: is_FLX(:,:) ! is urban coupler run?
+
 contains
   !-----------------------------------------------------------------------------
   subroutine CPL_AtmUrb_driver_setup
@@ -55,13 +57,31 @@ contains
        CPL_TYPE_AtmUrb
     use scale_cpl_atmos_urban, only: &
        CPL_AtmUrb_setup
+   use scale_landuse, only: &
+       LANDUSE_fact_urban
     implicit none
+
+    integer :: i, j
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[DRIVER] / Categ[CPL AtmUrb] / Origin[SCALE-LES]'
 
     if ( CPL_sw_AtmUrb ) then
+
+       !--- judge to run atmos-urban coupler
+       allocate( is_FLX(IA,JA) )
+
+       do j = 1, JA
+       do i = 1, IA
+         if( LANDUSE_fact_urban(i,j) > 0.0_RP ) then
+           is_FLX(i,j) = .true.
+         else
+           is_FLX(i,j) = .false.
+         end if
+       end do
+       end do
+
 
        call CPL_AtmUrb_setup( CPL_TYPE_AtmUrb )
 
@@ -174,60 +194,62 @@ contains
     do j = 1, JA
     do i = 1, IA
 
-      Uabs = sqrt( ATM_U(i,j)**2 + ATM_V(i,j)**2 + ATM_W(i,j)**2 )
-     
-      call CPL_AtmUrb( TR_URB      (i,j),   & ! [INOUT]
-                       TB_URB      (i,j),   & ! [INOUT]
-                       TG_URB      (i,j),   & ! [INOUT]
-                       TC_URB      (i,j),   & ! [INOUT]
-                       QC_URB      (i,j),   & ! [INOUT]
-                       UC_URB      (i,j),   & ! [INOUT]
-                       TRL_URB     (:,i,j), & ! [INOUT]
-                       TBL_URB     (:,i,j), & ! [INOUT]
-                       TGL_URB     (:,i,j), & ! [INOUT]
-                       RAINR_URB   (i,j),   & ! [INOUT]
-                       RAINB_URB   (i,j),   & ! [INOUT]
-                       RAING_URB   (i,j),   & ! [INOUT]
-                       ROFF_URB    (i,j),   & ! [INOUT]
-                       SFC_albedo  (i,j,I_LW), & ! [INOUT]
-                       SFC_albedo  (i,j,I_SW), & ! [INOUT]
-                       TS_URB      (i,j),   & ! [OUT]
-                       SHR_URB     (i,j),   & ! [OUT]
-                       SHB_URB     (i,j),   & ! [OUT]
-                       SHG_URB     (i,j),   & ! [OUT]
-                       LHR_URB     (i,j),   & ! [OUT]
-                       LHB_URB     (i,j),   & ! [OUT]
-                       LHG_URB     (i,j),   & ! [OUT]
-                       GHR_URB     (i,j),   & ! [OUT]
-                       GHB_URB     (i,j),   & ! [OUT]
-                       GHG_URB     (i,j),   & ! [OUT]
-                       RnR_URB     (i,j),   & ! [OUT]
-                       RnB_URB     (i,j),   & ! [OUT]
-                       RnG_URB     (i,j),   & ! [OUT]
-                       SFC_TEMP    (i,j),   & ! [OUT]
-                       Rngrd_URB   (i,j),   & ! [OUT]
-                       ATM_FLX_SH  (i,j),   & ! [OUT]
-                       ATM_FLX_LH  (i,j),   & ! [OUT]
-                       URB_FLX_heat(i,j),   & ! [OUT]
-                       ATM_U10     (i,j),   & ! [OUT]
-                       ATM_V10     (i,j),   & ! [OUT]
-                       ATM_T2      (i,j),   & ! [OUT]
-                       ATM_Q2      (i,j),   & ! [OUT]
-                       LSOLAR,              & ! [IN]
-                       SFC_PRES    (i,j),   & ! [IN]
-                       ATM_TEMP    (i,j),   & ! [IN]
-                       ATM_QV      (i,j),   & ! [IN]
-                       Uabs,                & ! [IN]
-                       ATM_U       (i,j),   & ! [IN]
-                       ATM_V       (i,j),   & ! [IN]
-                       Z1          (i,j),   & ! [IN]
-                       FLX_SW_dn   (i,j),   & ! [IN]
-                       FLX_LW_dn   (i,j),   & ! [IN]
-                       FLX_precip  (i,j),   & ! [IN]
-                       ATM_DENS    (i,j),   & ! [IN]
-                       LON         (i,j),   & ! [IN]
-                       LAT         (i,j)    ) ! [IN]
+      if( is_FLX(i,j) ) then
 
+        Uabs = sqrt( ATM_U(i,j)**2 + ATM_V(i,j)**2 + ATM_W(i,j)**2 )
+     
+        call CPL_AtmUrb( TR_URB      (i,j),   & ! [INOUT]
+                         TB_URB      (i,j),   & ! [INOUT]
+                         TG_URB      (i,j),   & ! [INOUT]
+                         TC_URB      (i,j),   & ! [INOUT]
+                         QC_URB      (i,j),   & ! [INOUT]
+                         UC_URB      (i,j),   & ! [INOUT]
+                         TRL_URB     (:,i,j), & ! [INOUT]
+                         TBL_URB     (:,i,j), & ! [INOUT]
+                         TGL_URB     (:,i,j), & ! [INOUT]
+                         RAINR_URB   (i,j),   & ! [INOUT]
+                         RAINB_URB   (i,j),   & ! [INOUT]
+                         RAING_URB   (i,j),   & ! [INOUT]
+                         ROFF_URB    (i,j),   & ! [INOUT]
+                         SFC_albedo  (i,j,I_LW), & ! [INOUT]
+                         SFC_albedo  (i,j,I_SW), & ! [INOUT]
+                         TS_URB      (i,j),   & ! [OUT]
+                         SHR_URB     (i,j),   & ! [OUT]
+                         SHB_URB     (i,j),   & ! [OUT]
+                         SHG_URB     (i,j),   & ! [OUT]
+                         LHR_URB     (i,j),   & ! [OUT]
+                         LHB_URB     (i,j),   & ! [OUT]
+                         LHG_URB     (i,j),   & ! [OUT]
+                         GHR_URB     (i,j),   & ! [OUT]
+                         GHB_URB     (i,j),   & ! [OUT]
+                         GHG_URB     (i,j),   & ! [OUT]
+                         RnR_URB     (i,j),   & ! [OUT]
+                         RnB_URB     (i,j),   & ! [OUT]
+                         RnG_URB     (i,j),   & ! [OUT]
+                         SFC_TEMP    (i,j),   & ! [OUT]
+                         Rngrd_URB   (i,j),   & ! [OUT]
+                         ATM_FLX_SH  (i,j),   & ! [OUT]
+                         ATM_FLX_LH  (i,j),   & ! [OUT]
+                         URB_FLX_heat(i,j),   & ! [OUT]
+                         ATM_U10     (i,j),   & ! [OUT]
+                         ATM_V10     (i,j),   & ! [OUT]
+                         ATM_T2      (i,j),   & ! [OUT]
+                         ATM_Q2      (i,j),   & ! [OUT]
+                         LSOLAR,              & ! [IN]
+                         SFC_PRES    (i,j),   & ! [IN]
+                         ATM_TEMP    (i,j),   & ! [IN]
+                         ATM_QV      (i,j),   & ! [IN]
+                         Uabs,                & ! [IN]
+                         ATM_U       (i,j),   & ! [IN]
+                         ATM_V       (i,j),   & ! [IN]
+                         Z1          (i,j),   & ! [IN]
+                         FLX_SW_dn   (i,j),   & ! [IN]
+                         FLX_LW_dn   (i,j),   & ! [IN]
+                         FLX_precip  (i,j),   & ! [IN]
+                         ATM_DENS    (i,j),   & ! [IN]
+                         LON         (i,j),   & ! [IN]
+                         LAT         (i,j)    ) ! [IN]
+      endif
     enddo
     enddo
 
