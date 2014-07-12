@@ -35,6 +35,7 @@
 !! @li      2014-07-11 (S.Shima) [rev] Motion (advection/sedimentation/precipitation) related subroutines are separated into the module m_sdm_motion
 !! @li      2014-07-12 (S.Shima) [rev] Add comments concerning when to diagnose QC and QR
 !! @li      2014-07-12 (S.Shima) [rev] BUG of random number initialization removed
+!! @li      2014-07-12 (S.Shima) [rev] sdm_sort repaired
 !<
 !-------------------------------------------------------------------------------
 #include "macro_thermodyn.h"
@@ -818,7 +819,7 @@ contains
 !!$                         jcb,pbr_crs,ptbr_crs,ppf_crs,               &
 !!$                         ptpf_crs,qvf_crs,zph_crs,rhod_crs,          &
 !!$                         sdnum_s2c,sdnumasl_s2c,sdn_s2c,sdx_s2c,     &
-!!$                         sdy_s2c,sdz_s2c,sdrk_s2c,sdu_s2c,           &
+!!$                         sdy_s2c,sdz_s2c,sdri_s2c,sdrj_s2c,sdrk_s2c,sdu_s2c,           &
 !!$                         sdv_s2c,sdvz_s2c,sdr_s2c,sdasl_s2c,         &
 !!$                         sdfmnum_s2c,sdn_fm,sdx_fm,sdy_fm,sdz_fm,    &
 !!$                         sdri_fm,sdrj_fm,sdrk_fm,sdvz_fm,sdr_fm,sdasl_fm,            &
@@ -844,7 +845,7 @@ contains
 !!$       call sdm_adjsdnum(sdm_nadjvar,ni_s2c,nj_s2c,nk_s2c,          &
 !!$                         sdnum_s2c,sdnumasl_s2c,sd_nc,              &
 !!$                         sdn_s2c,sdx_s2c,sdy_s2c,sdr_s2c,           &
-!!$                         sdasl_s2c,sdvz_s2c,sdrk_s2c,               &
+!!$                         sdasl_s2c,sdvz_s2c,sdri_s2c,sdrj_s2c,sdrk_s2c,               &
 !!$                         sortid_s2c,sortkey_s2c,sortfreq_s2c,       &
 !!$                         sorttag_s2c,rng_s2c,rand_s2c,                &
 !!$!                         sorttag_s2c,rand_s2c,                      &
@@ -2945,7 +2946,7 @@ contains
 
     ! Sorting super-droplets.
 
-      call sdm_sort(ni_sdm,nj_sdm,nk_sdm,sd_num,sd_n,sd_x,sd_y,sd_rk,   &
+      call sdm_sort(ni_sdm,nj_sdm,nk_sdm,sd_num,sd_n,sd_ri,sd_rj,sd_rk,   &
                     sort_id,sort_key,sort_freq,sort_tag,'valid')
 
     ! Initialize
@@ -4088,7 +4089,7 @@ contains
                          pbr_crs,ptbr_crs,pp_crs,         &
                          ptp_crs,qv_crs,zph_crs,rhod_crs,         &
                          sd_num,sd_numasl,sd_n,sd_x,sd_y,sd_z,    &
-                         sd_rk,sd_u,sd_v,sd_vz,sd_r,sd_asl,       &
+                         sd_ri,sd_rj,sd_rk,sd_u,sd_v,sd_vz,sd_r,sd_asl,       &
                          sd_fmnum,sd_fmn,sd_fmx,sd_fmy,sd_fmz,    &
                          sd_fmri,sd_fmrj,sd_fmrk,sd_fmvz,sd_fmr,sd_fmasl,         &
                          ni_sdm,nj_sdm,nk_sdm,sort_id,sort_key,   &
@@ -4103,6 +4104,8 @@ contains
          sdm_rhot_qtrc2p_t, sdm_rho_rhot2pt, sdm_rho_mom2uvw, sdm_rho_qtrc2rhod
     use m_sdm_motion, only: &
          sdm_getvz
+    use m_sdm_coordtrans, only: &
+         sdm_x2ri, sdm_y2rj
 
       ! Input variables
     real(RP), intent(in) :: DENS(KA,IA,JA)        !! Density [kg/m3]
@@ -4134,6 +4137,8 @@ contains
       real(RP), intent(inout) :: sd_x(1:sd_num)      ! x-coordinate of super-droplets
       real(RP), intent(inout) :: sd_y(1:sd_num)      ! y-coordinate of super-droplets
       real(RP), intent(inout) :: sd_z(1:sd_num)      ! z-coordinate of super-droplets
+      real(RP), intent(inout) :: sd_ri(1:sd_num)     ! index[i/real] of super-droplets
+      real(RP), intent(inout) :: sd_rj(1:sd_num)     ! index[j/real] of super-droplets
       real(RP), intent(inout) :: sd_rk(1:sd_num)     ! index[k/real] of super-droplets
       real(RP), intent(inout) :: sd_u(1:sd_num)      ! x-components velocity of super-droplets
       real(RP), intent(inout) :: sd_v(1:sd_num)      ! y-components velocity of super-droplets
@@ -4175,12 +4180,15 @@ contains
       real(RP) :: t_scale(KA,IA,JA)    ! Temperature
     !---------------------------------------------------------------------
 
+      call sdm_x2ri(sd_num,sd_x,sd_ri,sd_rk)
+      call sdm_y2rj(sd_num,sd_y,sd_rj,sd_rk)
+
       ! Check active
 
       if( abs(sdm_aslset)<10 ) return
       ! Sorting valid super-droplets
 
-      call sdm_sort(ni_sdm,nj_sdm,nk_sdm,sd_num,sd_n,sd_x,sd_y,sd_rk,   &
+      call sdm_sort(ni_sdm,nj_sdm,nk_sdm,sd_num,sd_n,sd_ri,sd_rj,sd_rk,   &
                     sort_id,sort_key,sort_freq,sort_tag,'valid')
 
       max_key = ni_sdm * nj_sdm * knum_sdm + 1
@@ -4318,7 +4326,7 @@ contains
   end subroutine sdm_aslform
   !----------------------------------------------------------------------------
   subroutine sdm_sort(ni_sdm,nj_sdm,nk_sdm,                       &
-                      sd_num,sd_n,sd_x,sd_y,sd_rk,                &
+                      sd_num,sd_n,sd_ri,sd_rj,sd_rk,                &
                       sort_id,sort_key,sort_freq,sort_tag,jdgtype)
 !      use m_gadg_algorithm, only: &
 !          gadg_count_sort
@@ -4331,8 +4339,8 @@ contains
       integer, intent(in) :: nk_sdm  ! SDM model dimension in z direction
       integer, intent(in) :: sd_num  ! number of super-droplets
       integer(DP), intent(in) :: sd_n(1:sd_num)   ! multiplicity of super-droplets
-      real(RP), intent(in) :: sd_x(1:sd_num)   ! x-coordinate of super-droplets
-      real(RP), intent(in) :: sd_y(1:sd_num)   ! y-coordinate of super-droplets
+      real(RP), intent(in) :: sd_ri(1:sd_num)  ! index[i/real] of super-droplets
+      real(RP), intent(in) :: sd_rj(1:sd_num)  ! index[j/real] of super-droplets
       real(RP), intent(in) :: sd_rk(1:sd_num)  ! index[k/real] of super-droplets
       character(len=5), intent(in) :: jdgtype   ! flag for sorting
       ! Output variables
@@ -4364,32 +4372,39 @@ contains
 
             if( sd_rk(n)>VALID2INVALID ) then
 
-               !! get index of super-droplets in physical domain
-               !! of CReSS
-!               i = int( floor( sd_x(n)*1.d5, kind=i8 )/idx_sdm )
-!               j = int( floor( sd_y(n)*1.d5, kind=i8 )/idy_sdm )
-               do ix = IS, IE
-                   if( sd_x(n) <= ( FX(ix)-FX(IS-1) ) ) then
-                    i = ix
-                    exit
-                   endif
-               enddo
-               do jy = JS, JE
-                   if( sd_y(n) <= ( FY(jy)-FY(JS-1) ) ) then
-                    j = jy
-                    exit
-                   endif
-               enddo
-!               k = floor( sd_rk(n) ) - 2
-               k = floor( sd_rk(n) ) - KS + 1
+!!$               !! get index of super-droplets in physical domain
+!!$               !! of CReSS
+!!$!               i = int( floor( sd_x(n)*1.d5, kind=i8 )/idx_sdm )
+!!$!               j = int( floor( sd_y(n)*1.d5, kind=i8 )/idy_sdm )
+!!$               do ix = IS, IE
+!!$                   if( sd_x(n) <= ( FX(ix)-FX(IS-1) ) ) then
+!!$                    i = ix
+!!$                    exit
+!!$                   endif
+!!$               enddo
+!!$               do jy = JS, JE
+!!$                   if( sd_y(n) <= ( FY(jy)-FY(JS-1) ) ) then
+!!$                    j = jy
+!!$                    exit
+!!$                   endif
+!!$               enddo
 
-               !=========================================
-               !--- k-index of SCALE start from 1 but
-               !--- that of CRess start from 0
-               !=========================================
-!               adr = ni_sdm*nj_sdm*k &
-               adr = ni_sdm*nj_sdm*(k-1) &
-                   + ni_sdm*(j-JS+1) + (i-IS+1) + 1
+               ! i \in {0,...,ni_sdm-1}, j \in {0,...,nj_sdm-1}, k \in {0,...,knum_sdm-1}
+               i = floor(sd_ri(n)) - (IS-1) 
+               j = floor(sd_rj(n)) - (JS-1)
+               k = floor(sd_rk(n)) - (KS-1)
+!               k = floor( sd_rk(n) ) - 2
+!               k = floor( sd_rk(n) ) - KS + 1
+
+!!$               !=========================================
+!!$               !--- k-index of SCALE start from 1 but
+!!$               !--- that of CRess start from 0
+!!$               !=========================================
+!!$!               adr = ni_sdm*nj_sdm*k &
+!!$               adr = ni_sdm*nj_sdm*(k-1) &
+!!$                   + ni_sdm*(j-JS+1) + (i-IS+1) + 1
+               ! adr \in {1,...,max_key-1}+{max_key} 
+               adr = ni_sdm*nj_sdm*k + ni_sdm*j + i + 1
 
             else
 
@@ -4409,33 +4424,11 @@ contains
 
             if( sd_rk(n)>VALID2INVALID .and. sd_n(n)>1 ) then
 
-               !! get index of super-droplets in physical domain
-               !! of CReSS
+               i = floor(sd_ri(n)) - (IS-1) 
+               j = floor(sd_rj(n)) - (JS-1)
+               k = floor(sd_rk(n)) - (KS-1)
 
-!               i = int( floor( sd_x(n)*1.d5, kind=i8 )/idx_sdm )
-!               j = int( floor( sd_y(n)*1.d5, kind=i8 )/idy_sdm )
-               do ix = IS, IE
-                   if( sd_x(n) <= ( FX(ix)-FX(IS-1)) ) then
-                    i = ix
-                    exit
-                   endif
-               enddo
-               do jy = JS, JE
-                   if( sd_y(n) <= ( FY(jy)-FY(JS-1) ) ) then
-                    j = jy
-                    exit
-                   endif
-               enddo
-!               k = floor( sd_rk(n) ) - 2
-               k = floor( sd_rk(n) ) - KS + 1
-
-               !=========================================
-               !--- k-index of SCALE start from 1 but
-               !--- that of CRess start from 0
-               !=========================================
-!               adr = ni_sdm*nj_sdm*k +ni_sdm*j+i+1
-               adr = ni_sdm*nj_sdm*(k-1) &
-                   + ni_sdm*(j-JS+1) + (i-IS+1) + 1
+               adr = ni_sdm*nj_sdm*k + ni_sdm*j + i + 1
 
             else
 
@@ -4468,7 +4461,7 @@ contains
   !----------------------------------------------------------------------------
   subroutine sdm_adjsdnum(sdm_nadjvar,ni_sdm,nj_sdm,nk_sdm,    &
                           sd_num,sd_numasl,sd_nc,                 &
-                          sd_n,sd_x,sd_y,sd_r,sd_asl,sd_vz,sd_rk, &
+                          sd_n,sd_x,sd_y,sd_r,sd_asl,sd_vz,sd_ri,sd_rj,sd_rk, &
                           sort_id,sort_key,sort_freq,sort_tag,    &
                           sd_rng,sd_rand,                         &
 !                          sd_rand,                                &
@@ -4496,6 +4489,8 @@ contains
       real(RP), intent(inout) :: sd_r(1:sd_num)  ! equivalent radius of super-droplets
       real(RP), intent(inout) :: sd_asl(1:sd_num,1:sd_numasl) ! aerosol mass of super-droplets
       real(RP), intent(inout) :: sd_vz(1:sd_num) ! terminal velocity of super-droplets
+      real(RP), intent(inout) :: sd_ri(1:sd_num) ! index[i/real] of super-droplets
+      real(RP), intent(inout) :: sd_rj(1:sd_num) ! index[j/real] of super-droplets
       real(RP), intent(inout) :: sd_rk(1:sd_num) ! index[k/real] of super-droplets
       ! Output variables
       integer, intent(out) :: sdm_itmp1(1:ni_sdm*nj_sdm*nk_sdm+2)  ! temporary array of SDM dimension
@@ -4517,7 +4512,7 @@ contains
 
          sdnum_upr = floor( RATE4REMOVE * sd_nc )
          call sdm_sdremove(ni_sdm,nj_sdm,nk_sdm,                        &
-                           sdnum_upr,sd_num,sd_n,sd_x,sd_y,sd_rk,       &
+                           sdnum_upr,sd_num,sd_n,sd_x,sd_y,sd_ri,sd_rj,sd_rk,       &
                            sort_id,sort_key,sort_freq,sort_tag,         &
                            sd_rng,sd_rand,                              &
 !                           sd_rand,                                     &
@@ -4533,7 +4528,7 @@ contains
 
          call sdm_sdadd(ni_sdm,nj_sdm,nk_sdm,                           &
                         sdnum_lwr,sd_num,sd_numasl,                     &
-                        sd_n,sd_x,sd_y,sd_r,sd_asl,sd_vz,sd_rk,         &
+                        sd_n,sd_x,sd_y,sd_r,sd_asl,sd_vz,sd_ri,sd_rj,sd_rk,         &
                         sort_id,sort_key,sort_freq,sort_tag,            &
                         sd_rng,sd_rand,                                 &
 !                        sd_rand,                                        &
@@ -4571,7 +4566,7 @@ contains
   end subroutine sdm_adjsdnum
   !----------------------------------------------------------------------------
   subroutine sdm_sdremove(ni_sdm,nj_sdm,nk_sdm,                   &
-                          sdnum_upr,sd_num,sd_n,sd_x,sd_y,sd_rk,  &
+                          sdnum_upr,sd_num,sd_n,sd_x,sd_y,sd_ri,sd_rj,sd_rk,  &
                           sort_id,sort_key,sort_freq,sort_tag,    &
                           sd_rng,sd_rand,                         &
 !                          sd_rand,                                &
@@ -4579,6 +4574,8 @@ contains
 
 !      use m_gadg_algorithm, only: &
 !          gadg_count_sort
+    use m_sdm_coordtrans, only: &
+         sdm_x2ri, sdm_y2rj
       ! Input variables
       integer, intent(in) :: ni_sdm  ! SDM model dimension in x direction
       integer, intent(in) :: nj_sdm  ! SDM model dimension in y direction
@@ -4595,6 +4592,8 @@ contains
       integer(DP), intent(inout) :: sd_n(1:sd_num)  ! multiplicity of super-droplets
       real(RP), intent(inout) :: sd_x(1:sd_num)     ! x-coordinate of super-droplets
       real(RP), intent(inout) :: sd_y(1:sd_num)     ! y-coordinate of super-droplets
+      real(RP), intent(inout) :: sd_ri(1:sd_num)    ! index[i/real] of super-droplets
+      real(RP), intent(inout) :: sd_rj(1:sd_num)    ! index[j/real] of super-droplets
       real(RP), intent(inout) :: sd_rk(1:sd_num)    ! index[k/real] of super-droplets
       ! Output variables
       integer, intent(out) :: sort_tag0(1:ni_sdm*nj_sdm*nk_sdm+2)  ! = sort_tag(n) - 1
@@ -4613,6 +4612,9 @@ contains
       integer :: ip, m, n, s, t            ! index
      !---------------------------------------------------------------------
 
+      call sdm_x2ri(sd_num,sd_x,sd_ri,sd_rk)
+      call sdm_y2rj(sd_num,sd_y,sd_rj,sd_rk)
+
       ! Initialize
 
       gnum = ni_sdm * nj_sdm * knum_sdm
@@ -4621,7 +4623,7 @@ contains
 
       ! Sorting valid super-droplets
 
-      call sdm_sort(ni_sdm,nj_sdm,nk_sdm,sd_num,sd_n,sd_x,sd_y,sd_rk,   &
+      call sdm_sort(ni_sdm,nj_sdm,nk_sdm,sd_num,sd_n,sd_ri,sd_rj,sd_rk,   &
                     sort_id,sort_key,sort_freq,sort_tag,'valid')
 
       ! Initialize
@@ -4711,13 +4713,15 @@ contains
   !----------------------------------------------------------------------------
   subroutine sdm_sdadd(ni_sdm,nj_sdm,nk_sdm,                      &
                        sdnum_lwr,sd_num,sd_numasl,                &
-                       sd_n,sd_x,sd_y,sd_r,sd_asl,sd_vz,sd_rk,    &
+                       sd_n,sd_x,sd_y,sd_r,sd_asl,sd_vz,sd_ri,sd_rj,sd_rk,    &
                        sort_id,sort_key,sort_freq,sort_tag,       &
                        sd_rng,sd_rand,                            &
 !                       sd_rand,                                   &
                        sort_tag0,fsort_id,isd_perm)
 !      use m_gadg_algorithm, only: &
 !          gadg_count_sort
+    use m_sdm_coordtrans, only: &
+         sdm_x2ri, sdm_y2rj
       ! Input variables
       integer, intent(in) :: ni_sdm ! SDM model dimension in x direction
       integer, intent(in) :: nj_sdm ! SDM model dimension in y direction
@@ -4738,6 +4742,8 @@ contains
       real(RP), intent(inout) :: sd_r(1:sd_num)    ! equivalent radius of super-droplets
       real(RP), intent(inout) :: sd_asl(1:sd_num,1:sd_numasl)  ! aerosol mass of super-droplets
       real(RP), intent(inout) :: sd_vz(1:sd_num)   ! terminal velocity of super-droplets
+      real(RP), intent(inout) :: sd_ri(1:sd_num)   ! index[i/real] of super-droplets
+      real(RP), intent(inout) :: sd_rj(1:sd_num)   ! index[j/real] of super-droplets
       real(RP), intent(inout) :: sd_rk(1:sd_num)   ! index[k/real] of super-droplets
       ! Output variables
       integer, intent(out) :: sort_tag0(1:ni_sdm*nj_sdm*nk_sdm+2) ! = sort_tag(n) - 1
@@ -4762,6 +4768,9 @@ contains
       integer :: m, n, q, s, t ! index
      !---------------------------------------------------------------------
 
+      call sdm_x2ri(sd_num,sd_x,sd_ri,sd_rk)
+      call sdm_y2rj(sd_num,sd_y,sd_rj,sd_rk)
+
       ! Initialize
       gnum = ni_sdm * nj_sdm * knum_sdm
       freq_max = 1
@@ -4772,7 +4781,7 @@ contains
 
       !### valid droplets ###!
 
-      call sdm_sort(ni_sdm,nj_sdm,nk_sdm,sd_num,sd_n,sd_x,sd_y,sd_rk,   &
+      call sdm_sort(ni_sdm,nj_sdm,nk_sdm,sd_num,sd_n,sd_ri,sd_rj,sd_rk,   &
                     sort_id,sort_key,sort_freq,sort_tag,'valid')
 
       !### valid droplets that multiplicity is over 2 ###!
@@ -4783,7 +4792,7 @@ contains
          sort_freq_valid(n) = sort_freq(n)
       end do
 
-      call sdm_sort(ni_sdm,nj_sdm,nk_sdm,sd_num,sd_n,sd_x,sd_y,sd_rk,   &
+      call sdm_sort(ni_sdm,nj_sdm,nk_sdm,sd_num,sd_n,sd_ri,sd_rj,sd_rk,   &
                     sort_id,sort_key,sort_freq,sort_tag,'multi')
 
       ! Initialize
