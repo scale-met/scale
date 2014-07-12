@@ -34,6 +34,7 @@
 !! @li      2014-07-11 (S.Shima) [rev] Subroutines to impose boundary conditions are separated into module m_sdm_boundary
 !! @li      2014-07-11 (S.Shima) [rev] Motion (advection/sedimentation/precipitation) related subroutines are separated into the module m_sdm_motion
 !! @li      2014-07-12 (S.Shima) [rev] Add comments concerning when to diagnose QC and QR
+!! @li      2014-07-12 (S.Shima) [rev] BUG of random number initialization removed
 !<
 !-------------------------------------------------------------------------------
 #include "macro_thermodyn.h"
@@ -1123,7 +1124,6 @@ contains
       do k=1,sdnumasl_s2c
          call gen_rand_array( rng_s2c, sd_dtmp1 )
          do n=1,sdnum_s2c
-            sd_dtmp1(n) = sd_dtmp1(n)-0.5_RP
             sdasl_s2c(n,k) = sd_dtmp1(n)
          end do
       end do
@@ -2983,9 +2983,6 @@ contains
     ! Get random number using random number generator
 
       call gen_rand_array( sd_rng, sd_rand )
-      do n=1,sdnum_s2c
-       sd_rand(n) = sd_rand(n)-0.5_RP
-      enddo
 
     ! Get random permutation layout of super-droplets in each grid
 
@@ -2995,9 +2992,6 @@ contains
     ! Get random number using random number generator
 
       call gen_rand_array( sd_rng, sd_rand )
-      do n=1,sdnum_s2c
-       sd_rand(n) = sd_rand(n)-0.5_RP
-      enddo
 
     ! Select a pair of super-droples in random permutation layout
 
@@ -4200,19 +4194,10 @@ contains
       call gen_rand_array( sd_rng, sd_fmy  )
       call gen_rand_array( sd_rng, sd_fmz  )
       call gen_rand_array( sd_rng, sd_fmvz )
-      do n=1,sd_fmnum
-       sd_fmx(n) = sd_fmx(n)-0.5_RP
-       sd_fmy(n) = sd_fmy(n)-0.5_RP
-       sd_fmz(n) = sd_fmz(n)-0.5_RP
-       sd_fmvz(n) = sd_fmvz(n)-0.5_RP
-      enddo
 
       do k=1,sd_numasl
 
          call gen_rand_array( sd_rng, sd_fmr )
-         do n=1,sd_fmnum
-          sd_fmx(n) = sd_fmx(n)-0.5_RP
-         enddo
 
          do n=1,sd_fmnum
             sd_fmasl(n,k) = sd_fmr(n)   !! sd_fmr : temporary
@@ -4656,9 +4641,6 @@ contains
       ! Get random number using random number generator
 
       call gen_rand_array( sd_rng, sd_rand )
-      do n=1,sd_num
-       sd_rand(n) = sd_rand(n)-0.5_RP
-      enddo
 
       ! Get random permutation layout of super-droplets in each grid
 
@@ -4829,9 +4811,6 @@ contains
       ! Get random number using random number generator
 
       call gen_rand_array( sd_rng, sd_rand )
-      do n=1,sd_num
-       sd_rand(n) = sd_rand(n)-0.5_RP
-      enddo
 
       ! Get random permutation layout of super-droplets in each grid
 
