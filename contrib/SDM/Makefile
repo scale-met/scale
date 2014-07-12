@@ -13,6 +13,8 @@ include $(TOPDIR)/Mkinclude
 LIBNAME = libsdm.a 
 
 MODS	= \
+	  m_sdm_coalescence.mod \
+	  m_sdm_idutil.mod \
 	  m_sdm_motion.mod \
 	  m_sdm_boundary.mod \
 	  m_sdm_fluidconv.mod \
@@ -23,6 +25,8 @@ MODS	= \
 	  m_sdm_common.mod
 
 OBJS	= \
+	  sdm_coalescence.o \
+	  sdm_idutil.o \
 	  sdm_motion.o \
 	  sdm_boundary.o \
 	  sdm_fluidconv.o \
@@ -47,6 +51,24 @@ instmodules:	makemodules
 	install $(MODS) $(MODDIR)
 
 makemodules: $(OBJS)
+
+sdm_coalescence.o: sdm_coalescence.f90 \
+	sdm_common.o \
+	sdm_coordtrans.o \
+	sdm_idutil.o \
+	$(BUILD_DIR)/scale_grid_index.o \
+	$(BUILD_DIR)/scale_const.o \
+	$(BUILD_DIR)/scale_precision.o \
+	$(MODDIR)/rng_uniform_mt.mod \
+	$(MODDIR)/gadg_algorithm.mod
+	$(FC) $(FFLAGS) -I$(BUILD_DIR) -I$(MODDIR) -o $@ -c $<
+
+sdm_idutil.o: sdm_idutil.f90 \
+	sdm_common.o \
+	$(BUILD_DIR)/scale_grid_index.o \
+	$(BUILD_DIR)/scale_precision.o \
+	$(MODDIR)/gadg_algorithm.mod
+	$(FC) $(FFLAGS) -I$(BUILD_DIR) -I$(MODDIR) -o $@ -c $<
 
 sdm_motion.o: sdm_motion.f90 \
 	sdm_common.o \
