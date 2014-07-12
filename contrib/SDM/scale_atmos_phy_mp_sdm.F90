@@ -37,6 +37,7 @@
 !! @li      2014-07-12 (S.Shima) [rev] BUG of random number initialization removed
 !! @li      2014-07-12 (S.Shima) [rev] sdm_sort repaired
 !! @li      2014-07-12 (S.Shima) [rev] sdm_coales repaired
+!! @li      2014-07-12 (S.Shima) [rev] sdm_coales tuned for FX
 !<
 !-------------------------------------------------------------------------------
 #include "macro_thermodyn.h"
@@ -2885,6 +2886,10 @@ contains
       integer :: i, j, k, m, n, s   ! index
       integer :: t, tc, tp          ! index
       integer :: ix, jy
+
+      integer :: sort_tag0m
+      integer :: sort_freqm
+      integer :: icptc, icptp
 !--------------------------------------------------------------------
 
       call sdm_x2ri(sd_num,sd_x,sd_ri,sd_rk)
@@ -3004,26 +3009,39 @@ contains
 
     ! Select a pair of super-droples in random permutation layout
 
-      do n=1,hfreq_max
+!!$      do n=1,hfreq_max
+!!$
+!!$         do t=fsort_tag(n*2),fsort_tag(freq_max+1)-1
+!!$
+!!$            m = fsort_id(t)
 
-         do t=fsort_tag(n*2),fsort_tag(freq_max+1)-1
+      do m=1,gnum
+         if( sort_freq(m) <= 1 ) cycle
+         sort_tag0m = sort_tag0(m)
+         sort_freqm = sort_freq(m)
 
-            m = fsort_id(t)
+         do n=1,sort_freqm/2
 
             in1 = 2 * n
             in2 = in1 - 1
 
             !### select pair of super-droplets in each grid ###!
 
-            in3 = sd_perm( sort_tag0(m) + in1 )
-            in4 = sd_perm( sort_tag0(m) + in2 )
+!!$            in3 = sd_perm( sort_tag0(m) + in1 )
+!!$            in4 = sd_perm( sort_tag0(m) + in2 )
+            in3 = sd_perm( sort_tag0m + in1 )
+            in4 = sd_perm( sort_tag0m + in2 )
 
             !### set the random index ###!
-            tc = sort_tag0(m) + n
-            tp = tc + int(sort_freq(m)/2)
+!!$            tc = sort_tag0(m) + n
+            tc = sort_tag0m + n
+!!$            tp = tc + int(sort_freq(m)/2)
+            tp = tc + int(sort_freqm/2)
 
-            icp(tc) = sort_id( sort_tag0(m) + in3 )
-            icp(tp) = sort_id( sort_tag0(m) + in4 )
+!!$            icp(tc) = sort_id( sort_tag0(m) + in3 )
+!!$            icp(tp) = sort_id( sort_tag0(m) + in4 )
+            icp(tc) = sort_id( sort_tag0m + in3 )
+            icp(tp) = sort_id( sort_tag0m + in4 )
 
          end do
 
@@ -3036,17 +3054,31 @@ contains
       if( sdm_colkrnl==0 ) then
 
          !### Golovin's kernel (m^3/s?) ###!
-         do n=1,hfreq_max
+!!$         do n=1,hfreq_max
+!!$
+!!$            do t=fsort_tag(n*2),fsort_tag(freq_max+1)-1
+!!$
+!!$               m = fsort_id(t)
+!!$
+!!$               tc = sort_tag0(m) + n
+!!$               tp = tc + int(sort_freq(m)/2)
 
-            do t=fsort_tag(n*2),fsort_tag(freq_max+1)-1
+         do m=1,gnum
+            if( sort_freq(m) <= 1 ) cycle
 
-               m = fsort_id(t)
+            sort_tag0m = sort_tag0(m)
+            sort_freqm = sort_freq(m)
 
-               tc = sort_tag0(m) + n
-               tp = tc + int(sort_freq(m)/2)
+            do n=1,sort_freqm/2
 
-               sd_r1 = sd_r(icp(tc))
-               sd_r2 = sd_r(icp(tp))
+               tc = sort_tag0m + n
+               tp = tc + sort_freqm/2
+
+               icptc = icp(tc)
+               icptp = icp(tp)
+
+               sd_r1 = sd_r(icptc)
+               sd_r2 = sd_r(icptp)
 
                c_rate(tc) = 1500.0_RP * 1.333333_RP * ONE_PI              &
                           * ( sd_r1*sd_r1*sd_r1 + sd_r2*sd_r2*sd_r2 )
@@ -3059,17 +3091,31 @@ contains
 
          !### Long's kernel (m^2)  ###!
 
-         do n=1,hfreq_max
+!!$         do n=1,hfreq_max
+!!$
+!!$            do t=fsort_tag(n*2),fsort_tag(freq_max+1)-1
+!!$
+!!$               m = fsort_id(t)
+!!$
+!!$               tc = sort_tag0(m) + n
+!!$               tp = tc + int(sort_freq(m)/2)
 
-            do t=fsort_tag(n*2),fsort_tag(freq_max+1)-1
+         do m=1,gnum
+            if( sort_freq(m) <= 1 ) cycle
 
-               m = fsort_id(t)
+            sort_tag0m = sort_tag0(m)
+            sort_freqm = sort_freq(m)
 
-               tc = sort_tag0(m) + n
-               tp = tc + int(sort_freq(m)/2)
+            do n=1,sort_freqm/2
 
-               sd_r1 = max( sd_r(icp(tc)), sd_r(icp(tp)) )  !! large
-               sd_r2 = min( sd_r(icp(tc)), sd_r(icp(tp)) )  !! small
+               tc = sort_tag0m + n
+               tp = tc + sort_freqm/2
+
+               icptc = icp(tc)
+               icptp = icp(tp)
+
+               sd_r1 = max( sd_r(icptc), sd_r(icptp) )  !! large
+               sd_r2 = min( sd_r(icptc), sd_r(icptp) )  !! small
 
                if( sd_r1 <= 5.E-5_RP ) then
                   c_rate(tc) = 4.5E+8_RP * ( sd_r1*sd_r1 )                 &
@@ -3090,17 +3136,31 @@ contains
 
          !### Hall's kernel (m^2) ###!
 
-         do n=1,hfreq_max
+!!$         do n=1,hfreq_max
+!!$
+!!$            do t=fsort_tag(n*2),fsort_tag(freq_max+1)-1
+!!$
+!!$               m = fsort_id(t)
+!!$
+!!$               tc = sort_tag0(m) + n
+!!$               tp = tc + int(sort_freq(m)/2)
 
-            do t=fsort_tag(n*2),fsort_tag(freq_max+1)-1
+         do m=1,gnum
+            if( sort_freq(m) <= 1 ) cycle
 
-               m = fsort_id(t)
+            sort_tag0m = sort_tag0(m)
+            sort_freqm = sort_freq(m)
 
-               tc = sort_tag0(m) + n
-               tp = tc + int(sort_freq(m)/2)
+            do n=1,sort_freqm/2
 
-               sd_r1 = max( sd_r(icp(tc)), sd_r(icp(tp)) )  !! large
-               sd_r2 = min( sd_r(icp(tc)), sd_r(icp(tp)) )  !! small
+               tc = sort_tag0m + n
+               tp = tc + sort_freqm/2
+
+               icptc = icp(tc)
+               icptp = icp(tp)
+
+               sd_r1 = max( sd_r(icptc), sd_r(icptp) )  !! large
+               sd_r2 = min( sd_r(icptc), sd_r(icptp) )  !! small
 
                rq    = sd_r2 / sd_r1
                sd_r1 = sd_r1 * m2micro    !! [m] => [micro-m]
@@ -3226,16 +3286,30 @@ contains
       else if( sdm_colkrnl==3 ) then
 
          !### no coalescence effeciency hydrodynamic kernel (m^2) ###!
-         do n=1,hfreq_max
+!!$         do n=1,hfreq_max
+!!$
+!!$            do t=fsort_tag(n*2),fsort_tag(freq_max+1)-1
+!!$
+!!$               m = fsort_id(t)
+!!$
+!!$               tc = sort_tag0(m) + n
+!!$               tp = tc + sort_freq(m)/2
 
-            do t=fsort_tag(n*2),fsort_tag(freq_max+1)-1
+         do m=1,gnum
+            if( sort_freq(m) <= 1 ) cycle
 
-               m = fsort_id(t)
+            sort_tag0m = sort_tag0(m)
+            sort_freqm = sort_freq(m)
 
-               tc = sort_tag0(m) + n
-               tp = tc + sort_freq(m)/2
+            do n=1,sort_freqm/2
 
-               sumr = sd_r(icp(tc)) + sd_r(icp(tp))
+               tc = sort_tag0m + n
+               tp = tc + sort_freqm/2
+
+               icptc = icp(tc)
+               icptp = icp(tp)
+
+               sumr = sd_r(icptc) + sd_r(icptp)
 
                c_rate(tc) = ONE_PI * (sumr*sumr)
 
@@ -3250,12 +3324,26 @@ contains
       if( sdm_colkrnl==0 ) then
 
          !### Golovin's kernel [-] ###!
-         do n=1,hfreq_max
-            do t=fsort_tag(n*2),fsort_tag(freq_max+1)-1
-               m = fsort_id(t)
+!!$         do n=1,hfreq_max
+!!$            do t=fsort_tag(n*2),fsort_tag(freq_max+1)-1
+!!$               m = fsort_id(t)
+!!$
+!!$               tc = sort_tag0(m) + n
+!!$               tp = tc + sort_freq(m)/2
+!!$
+         do m=1,gnum
+            if( sort_freq(m) <= 1 ) cycle
 
-               tc = sort_tag0(m) + n
-               tp = tc + sort_freq(m)/2
+            sort_tag0m = sort_tag0(m)
+            sort_freqm = sort_freq(m)
+
+            do n=1,sort_freqm/2
+
+               tc = sort_tag0m + n
+               tp = tc + sort_freqm/2
+
+               icptc = icp(tc)
+               icptp = icp(tp)
 
                !! Get location of Super-Droplets
 
@@ -3276,9 +3364,9 @@ contains
 !!$               k = floor( sd_rk(icp(tc)) )
 
                ! index in center grid
-               i = floor(sd_ri(icp(tc)))+1
-               j = floor(sd_rj(icp(tc)))+1
-               k = floor(sd_rk(icp(tc)))+1
+               i = floor(sd_ri(icptc))+1
+               j = floor(sd_rj(icptc))+1
+               k = floor(sd_rk(icptc))+1
 
 !!$               ivvol(k,i,j) = 1.0_RP / real(dx_sdm(i)*dy_sdm(j),kind=RP)               &
 !!$                                     / real(zph_crs(k+1,i,j)-zph_crs(k,i,j),kind=RP)
@@ -3295,23 +3383,37 @@ contains
          !### Long's kernel, Hall's kernel,       ###!
          !### no col_effi hydrodynamic kernel [-] ###!
 
-         do n=1,hfreq_max
+!!$         do n=1,hfreq_max
+!!$
+!!$            do t=fsort_tag(n*2),fsort_tag(freq_max+1)-1
+!!$
+!!$               m = fsort_id(t)
+!!$
+!!$               tc = sort_tag0(m) + n
+!!$               tp = tc + sort_freq(m)/2
 
-            do t=fsort_tag(n*2),fsort_tag(freq_max+1)-1
+         do m=1,gnum
+            if( sort_freq(m) <= 1 ) cycle
 
-               m = fsort_id(t)
+            sort_tag0m = sort_tag0(m)
+            sort_freqm = sort_freq(m)
 
-               tc = sort_tag0(m) + n
-               tp = tc + sort_freq(m)/2
+            do n=1,sort_freqm/2
 
-               dvz = abs( sd_vz(icp(tc)) - sd_vz(icp(tp)) )
+               tc = sort_tag0m + n
+               tp = tc + sort_freqm/2
+
+               icptc = icp(tc)
+               icptp = icp(tp)
+
+               dvz = abs( sd_vz(icptc) - sd_vz(icptp) )
 
                !! Get location of Super-Droplets
 
                ! index in center grid
-               i = floor(sd_ri(icp(tc)))+1
-               j = floor(sd_rj(icp(tc)))+1
-               k = floor(sd_rk(icp(tc)))+1
+               i = floor(sd_ri(icptc))+1
+               j = floor(sd_rj(icptc))+1
+               k = floor(sd_rk(icptc))+1
 
                ivvol(k,i,j) = 1.0_RP * dxiv_sdm(i) * dyiv_sdm(j) &
                                      / (zph_crs(k,i,j)-zph_crs(k-1,i,j))
@@ -3329,21 +3431,35 @@ contains
      ! (Seinfeld & Pandis,2006)" 
      ! This is mechanisim is effective for droplets less than micrometer-size ( below 1um )
       if( sdm_colbrwn>0 ) then
-        do n=1,hfreq_max
+!!$        do n=1,hfreq_max
+!!$
+!!$          do t=fsort_tag(n*2),fsort_tag(freq_max+1)-1
+!!$
+!!$            m = fsort_id(t)
+!!$
+!!$            tc = sort_tag0(m) + n
+!!$            tp = tc + sort_freq(m)/2
+!!$
+         do m=1,gnum
+            if( sort_freq(m) <= 1 ) cycle
 
-          do t=fsort_tag(n*2),fsort_tag(freq_max+1)-1
+            sort_tag0m = sort_tag0(m)
+            sort_freqm = sort_freq(m)
 
-            m = fsort_id(t)
+            do n=1,sort_freqm/2
 
-            tc = sort_tag0(m) + n
-            tp = tc + sort_freq(m)/2
+               tc = sort_tag0m + n
+               tp = tc + sort_freqm/2
+
+               icptc = icp(tc)
+               icptp = icp(tp)
 
             !### information of super-droplets ###
 
             !! radius of water parts in droplets
 
-            sd_rw1 = sd_r(icp(tc))    !! [m]
-            sd_rw2 = sd_r(icp(tp))
+            sd_rw1 = sd_r(icptc)    !! [m]
+            sd_rw2 = sd_r(icptp)
 
             !! mass and volume of aerosol parts in droplets
 
@@ -3356,13 +3472,13 @@ contains
 
                s = idx_nasl(k)
 
-               sd_tmasl1 = sd_tmasl1 + sd_asl(icp(tc),s) * dmask(k)
-               sd_tmasl2 = sd_tmasl2 + sd_asl(icp(tp),s) * dmask(k)
+               sd_tmasl1 = sd_tmasl1 + sd_asl(icptc,s) * dmask(k)
+               sd_tmasl2 = sd_tmasl2 + sd_asl(icptp,s) * dmask(k)
 
                sd_tvasl1 = sd_tvasl1                                    &
-                         + sd_asl(icp(tc),s)/sd_aslrho(s) * dmask(k)
+                         + sd_asl(icptc,s)/sd_aslrho(s) * dmask(k)
                sd_tvasl2 = sd_tvasl2                                    &
-                         + sd_asl(icp(tp),s)/sd_aslrho(s) * dmask(k)
+                         + sd_asl(icptp,s)/sd_aslrho(s) * dmask(k)
 
             end do
 
@@ -3385,9 +3501,9 @@ contains
             !### location of super-droplets ###
 
             ! index in center grid
-            i = floor(sd_ri(icp(tc)))+1
-            j = floor(sd_rj(icp(tc)))+1
-            k = floor(sd_rk(icp(tc)))+1
+            i = floor(sd_ri(icptc))+1
+            j = floor(sd_rj(icptc))+1
+            k = floor(sd_rk(icptc))+1
 
             ivvol(k,i,j) = 1.0_RP * dxiv_sdm(i) * dyiv_sdm(j) &
                  / (zph_crs(k,i,j)-zph_crs(k-1,i,j))
@@ -3462,17 +3578,31 @@ contains
 
      ! Get total effective collision of droplets
 
-      do n=1,hfreq_max
-         do t=fsort_tag(n*2),fsort_tag(freq_max+1)-1
+!!$      do n=1,hfreq_max
+!!$         do t=fsort_tag(n*2),fsort_tag(freq_max+1)-1
+!!$
+!!$            m = fsort_id(t)
+!!$
+!!$            tc = sort_tag0(m) + n
+!!$            tp = tc + sort_freq(m)/2
+!!$
+      do m=1,gnum
+         if( sort_freq(m) <= 1 ) cycle
 
-            m = fsort_id(t)
+         sort_tag0m = sort_tag0(m)
+         sort_freqm = sort_freq(m)
 
-            tc = sort_tag0(m) + n
-            tp = tc + sort_freq(m)/2
+         do n=1,sort_freqm/2
 
-            sd_nmax  = max( sd_n(icp(tc)), sd_n(icp(tp)) )
+            tc = sort_tag0m + n
+            tp = tc + sort_freqm/2
+
+            icptc = icp(tc)
+            icptp = icp(tp)
+
+            sd_nmax  = max( sd_n(icptc), sd_n(icptp) )
                                ! maximum multiplicity
-            ipremium = sort_freq(m) - 1 + iand(sort_freq(m),1)
+            ipremium = sort_freqm - 1 + iand(sort_freqm,1)
                                ! IAND(sort_freq(i),1) => even:0, odd:1
 
             c_rate(tc) = c_rate(tc) * real( sd_nmax*ipremium, kind=RP )
@@ -3480,13 +3610,28 @@ contains
       end do
 
      ! Stochastic coalescence process.
-      do n=1,hfreq_max
-         do t=fsort_tag(n*2),fsort_tag(freq_max+1)-1
+!!$      do n=1,hfreq_max
+!!$         do t=fsort_tag(n*2),fsort_tag(freq_max+1)-1
+!!$
+!!$            m = fsort_id(t)
+!!$
+!!$            tc = sort_tag0(m) + n
+!!$            tp = tc + sort_freq(m)/2
 
-            m = fsort_id(t)
+      do m=1,gnum
+         if( sort_freq(m) <= 1 ) cycle
 
-            tc = sort_tag0(m) + n
-            tp = tc + sort_freq(m)/2
+         sort_tag0m = sort_tag0(m)
+         sort_freqm = sort_freq(m)
+
+         do n=1,sort_freqm/2
+
+            tc = sort_tag0m + n
+            tp = tc + sort_freqm/2
+
+            icptc = icp(tc)
+            icptp = icp(tp)
+
             !### set coalescence count ###!
             sd_ncol = int( c_rate(tc), kind=RP )
             frac = c_rate(tc) - real( sd_ncol, kind=RP )
@@ -3501,37 +3646,37 @@ contains
 
             !### coalescence procudure ###!
 
-            if( sd_n(icp(tc)) > sd_n(icp(tp)) ) then
+            if( sd_n(icptc) > sd_n(icptp) ) then
 
-               sd_n1  = sd_n( icp(tc) )
-               sd_r1  = sd_r( icp(tc) )
-               sd_rk1 = sd_rk( icp(tc) )
+               sd_n1  = sd_n( icptc )
+               sd_r1  = sd_r( icptc )
+               sd_rk1 = sd_rk( icptc )
                sd_m1  = sd_r1 * sd_r1 * sd_r1
 
-               sd_n2  = sd_n( icp(tp) )
-               sd_r2  = sd_r( icp(tp) )
+               sd_n2  = sd_n( icptp )
+               sd_r2  = sd_r( icptp )
                sd_m2  = sd_r2 * sd_r2 * sd_r2
 
                do k=1,22
                   s = idx_nasl(k)
-                  sd_asl1(s) = sd_asl( icp(tc),s )
-                  sd_asl2(s) = sd_asl( icp(tp),s )
+                  sd_asl1(s) = sd_asl( icptc,s )
+                  sd_asl2(s) = sd_asl( icptp,s )
                end do
 
             else
 
-               sd_n1  = sd_n( icp(tp) )
-               sd_r1  = sd_r( icp(tp) )
-               sd_rk1 = sd_rk( icp(tp) )
+               sd_n1  = sd_n( icptp )
+               sd_r1  = sd_r( icptp )
+               sd_rk1 = sd_rk( icptp )
                sd_m1  = sd_r1 * sd_r1 * sd_r1
 
-               sd_n2  = sd_n( icp(tc) )
-               sd_r2  = sd_r( icp(tc) )
+               sd_n2  = sd_n( icptc )
+               sd_r2  = sd_r( icptc )
                sd_m2  = sd_r2 * sd_r2 * sd_r2
                do k=1,22
                   s = idx_nasl(k)
-                  sd_asl1(s) = sd_asl( icp(tp),s )
-                  sd_asl2(s) = sd_asl( icp(tc),s )
+                  sd_asl1(s) = sd_asl( icptp,s )
+                  sd_asl2(s) = sd_asl( icptc,s )
                end do
 
             end if
@@ -3590,33 +3735,33 @@ contains
 !!$               cycle
 !!$            end if
 
-            if( sd_n(icp(tc)) > sd_n(icp(tp)) ) then
-               sd_n( icp(tc) )  = sd_n1
-               sd_r( icp(tc) )  = sd_r1
-               sd_rk( icp(tc) ) = sd_rk1
+            if( sd_n(icptc) > sd_n(icptp) ) then
+               sd_n( icptc )  = sd_n1
+               sd_r( icptc )  = sd_r1
+               sd_rk( icptc ) = sd_rk1
 
-               sd_n( icp(tp) )  = sd_n2
-               sd_r( icp(tp) )  = sd_r2
+               sd_n( icptp )  = sd_n2
+               sd_r( icptp )  = sd_r2
 
                do k=1,22
                   s = idx_nasl(k)
-                  sd_asl( icp(tc),s ) = sd_asl1(s)
-                  sd_asl( icp(tp),s ) = sd_asl2(s)
+                  sd_asl( icptc,s ) = sd_asl1(s)
+                  sd_asl( icptp,s ) = sd_asl2(s)
                end do
 
             else
 
-               sd_n( icp(tp) )  = sd_n1
-               sd_r( icp(tp) )  = sd_r1
-               sd_rk( icp(tp) ) = sd_rk1
+               sd_n( icptp )  = sd_n1
+               sd_r( icptp )  = sd_r1
+               sd_rk( icptp ) = sd_rk1
 
-               sd_n( icp(tc) )  = sd_n2
-               sd_r( icp(tc) )  = sd_r2
+               sd_n( icptc )  = sd_n2
+               sd_r( icptc )  = sd_r2
 
                do k=1,22
                   s = idx_nasl(k)
-                  sd_asl( icp(tp),s ) = sd_asl1(s)
-                  sd_asl( icp(tc),s ) = sd_asl2(s)
+                  sd_asl( icptp,s ) = sd_asl1(s)
+                  sd_asl( icptc,s ) = sd_asl2(s)
                end do
 
             end if
