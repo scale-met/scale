@@ -30,7 +30,7 @@ contains
     use scale_grid_index, only: &
          IA,JA,KA
     use scale_tracer, only: &
-         QAD => QA, QQS, QQE
+         QAD => QA, QQS, QQE, I_QV
     ! Input variables
     real(RP), intent(in) :: dens(KA,IA,JA)        !! Density [kg/m3]
     real(RP), intent(in) :: qtrc(KA,IA,JA,QAD)    !! Ratio of mass of tracer to total mass[kg/kg]
@@ -45,10 +45,12 @@ contains
     do k = 1, KA
     do i = 1, IA
     do j = 1, JA
-      do iq = QQS, QQE
-        qdry(k,i,j) = qdry(k,i,j) - qtrc(k,i,j,iq)
-      enddo
-      rhod(k,i,j) = dens(k,i,j)*qdry(k,i,j)
+!!$      do iq = QQS, QQE
+!!$        qdry(k,i,j) = qdry(k,i,j) - qtrc(k,i,j,iq)
+!!$      enddo
+       ! rho = rho_d + rho_v  when the SDM is used
+       qdry(k,i,j) = qdry(k,i,j) - qtrc(k,i,j,I_QV)
+       rhod(k,i,j) = dens(k,i,j)*qdry(k,i,j)
     enddo
     enddo
     enddo
@@ -142,14 +144,17 @@ contains
     do k = 1, KA
     do i = 1, IA
     do j = 1, JA
-      do iq = QQS, QQE
-        qdry(k,i,j) = qdry(k,i,j) - qtrc(k,i,j,iq)
-      enddo
+!!$      do iq = QQS, QQE
+!!$        qdry(k,i,j) = qdry(k,i,j) - qtrc(k,i,j,iq)
+!!$      enddo
+      ! rho = rho_d + rho_v  when the SDM is used
+      qdry(k,i,j) = qdry(k,i,j) - qtrc(k,i,j,I_QV)
       rtot (k,i,j) = Rdry * qdry(k,i,j) + Rvap * qtrc(k,i,j,I_QV)
       cptot(k,i,j) = CPdry * qdry(k,i,j)
-      do iq = QQS, QQE
-        cptot(k,i,j) = cptot(k,i,j) + qtrc(k,i,j,iq) * CPw(iq)
-      enddo
+!!$      do iq = QQS, QQE
+!!$        cptot(k,i,j) = cptot(k,i,j) + qtrc(k,i,j,iq) * CPw(iq)
+!!$      enddo
+      cptot(k,i,j) = cptot(k,i,j) + qtrc(k,i,j,I_QV) * CPw(I_QV)
       cpovcv(k,i,j) = cptot(k,i,j) / ( cptot(k,i,j) - rtot(k,i,j) )
 
       p(k,i,j) = P00 * ( rhot(k,i,j) * rtot(k,i,j) / P00 )**cpovcv(k,i,j)

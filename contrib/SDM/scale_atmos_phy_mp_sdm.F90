@@ -33,6 +33,7 @@
 !! @li      2014-07-11 (S.Shima) [rev] Subroutines for conversion between fluid variables are separated into module m_sdm_fluidconv
 !! @li      2014-07-11 (S.Shima) [rev] Subroutines to impose boundary conditions are separated into module m_sdm_boundary
 !! @li      2014-07-11 (S.Shima) [rev] Motion (advection/sedimentation/precipitation) related subroutines are separated into the module m_sdm_motion
+!! @li      2014-07-12 (S.Shima) [rev] Add comments concerning when to diagnose QC and QR
 !<
 !-------------------------------------------------------------------------------
 #include "macro_thermodyn.h"
@@ -234,6 +235,8 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) 'ERROR: terrain following coordinate is not yet supported!'
        call PRC_MPIstop
     end if
+
+!! Are these used??
     allocate( KMIN1(KA) )
     allocate( IMIN1(IA) )
     allocate( JMIN1(JA) )
@@ -612,6 +615,14 @@ contains
 
     !---------------------------------------------------------------------------
 
+    ! QTRC except QV (and QDRY) are diagnosed from super-droplets
+    ! To make this doubly sure, reset QTRC to zero
+    do iq = QQS, QQE
+       if(iq /= I_QV) then
+          QTRC(:,:,:,iq) = 0.0_RP
+       end if
+    end do
+
     if( sd_first ) then
       sd_first = .false.
       if( IO_L ) write(IO_FID_LOG,*) '*** S.D.: setup'
@@ -713,7 +724,6 @@ contains
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-
     ! after removing OMP support, this should be also omitted.
     ! Finally, bufsiz1 = bufsiz and bufsiz2 = bndsdmdim, and these should be determined once in sdm_numset or somewhere and should be stored as common variables
     bufsiz1 = nint( sdininum_s2c*(real(sdm_extbuf)*1.E-2_RP) )
@@ -779,6 +789,9 @@ contains
 
 !     call sdm_sd2qcqr(nqw,pbr_crs,ptbr_crs,                         &
 !                      ppf_crs,ptpf_crs,qvf_crs,qwtrf_crs,zph_crs,   &
+     ! We need to rethink whether it's okay to evaluate QC QR here
+     ! For example, when we diagnose pressure or rhod during the dynamical process, 
+     ! qc and qr should be 0 because they are not included in the total density
      call sdm_sd2qcqr(pbr_crs,ptbr_crs,                             &
                       ppf_crs,ptpf_crs,qvf_crs,zph_crs,             &
                       lsdmup,sdnum_s2c,sdn_s2c,sdx_s2c,sdy_s2c,     &
@@ -1297,6 +1310,9 @@ contains
 
 !      call sdm_sd2qcqr(nqw,pbr_crs,ptbr_crs,                            &
 !                       pp_crs,ptp_crs,qv_crs,qwtr_crs,zph_crs,          &
+      ! We need to rethink whether it's okay to evaluate QC QR here
+      ! For example, when we diagnose pressure or rhod during the dynamical process, 
+      ! qc and qr should be 0 because they are not included in the total density
       call sdm_sd2qcqr(pbr_crs,ptbr_crs,                                &
                        pp_crs,ptp_crs,qv_crs,zph_crs,                   &
                        lsdmup,sdnum_s2c,sdn_s2c,sdx_s2c,sdy_s2c,        &
