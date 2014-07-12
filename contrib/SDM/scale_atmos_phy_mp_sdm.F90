@@ -36,6 +36,7 @@
 !! @li      2014-07-12 (S.Shima) [rev] Add comments concerning when to diagnose QC and QR
 !! @li      2014-07-12 (S.Shima) [rev] BUG of random number initialization removed
 !! @li      2014-07-12 (S.Shima) [rev] sdm_sort repaired
+!! @li      2014-07-12 (S.Shima) [rev] sdm_coales repaired
 !<
 !-------------------------------------------------------------------------------
 #include "macro_thermodyn.h"
@@ -2368,7 +2369,7 @@ contains
 
             call sdm_coales(sdm_colkrnl,sdm_colbrwn,sdm_aslset,         &
                             sdm_aslrho,sdm_dtcol,                       &
-                            pbr_crs,ptbr_crs,pp_crs,ptp_crs,            &
+                            pres_scale, t_scale,                        &
                             zph_crs,                                    &
                             ni_sdm,nj_sdm,nk_sdm,sd_num,sd_numasl,      &
                             sd_n,sd_x,sd_y,sd_r,sd_asl,sd_vz,sd_ri,sd_rj,sd_rk,     &
@@ -2747,8 +2748,9 @@ contains
   !-----------------------------------------------------------------------------
   subroutine sdm_coales(sdm_colkrnl,sdm_colbrwn,               &
                         sdm_aslset,sdm_aslrho,                 &
-                        sdm_dtcol,pbr_crs,ptbr_crs,            &
-                        pp_crs,ptp_crs,zph_crs,                &
+                        sdm_dtcol,            &
+                        pres_scale, t_scale,                   &
+                        zph_crs,                &
                         ni_sdm,nj_sdm,nk_sdm,sd_num,sd_numasl, &
                         sd_n,sd_x,sd_y,sd_r,sd_asl,sd_vz,sd_ri,sd_rj,sd_rk,&
                         sort_id,sort_key,sort_freq,sort_tag,   &
@@ -2776,10 +2778,8 @@ contains
       integer, intent(in) :: sdm_aslset    ! Control flag to set species and way of chemical material as water-soluble aerosol
       real(RP),intent(in) :: sdm_aslrho(20)! User specified density of chemical material contained as water-soluble aerosol in super droplets
       real(RP), intent(in) :: sdm_dtcol   ! tims step of {stochastic coalescence} process
-      real(RP), intent(in) :: pbr_crs(KA,IA,JA) ! Base state pressure
-      real(RP), intent(in) :: ptbr_crs(KA,IA,JA) ! Base state potential temperature
-      real(RP), intent(in) :: pp_crs(KA,IA,JA) ! Pressure perturbation
-      real(RP), intent(in) :: ptp_crs(KA,IA,JA) ! Potential temperature perturbation
+      real(RP), intent(in) :: pres_scale(KA,IA,JA)  ! Pressure
+      real(RP), intent(in) :: t_scale(KA,IA,JA)    ! Temperature
       real(RP), intent(in) :: zph_crs(KA,IA,JA) ! z physical coordinate
       integer, intent(in) :: ni_sdm  ! SDM model dimension in x direction
       integer, intent(in) :: nj_sdm  ! SDM model dimension in y direction
@@ -2864,8 +2864,8 @@ contains
       real(RP) :: p       ! temporary
       real(RP) :: q       ! temporary
 
-      integer(DP) :: idx_sdm  ! integer of 'dx_sdm'
-      integer(DP) :: idy_sdm  ! integer of 'dy_sdm'
+!!$      integer(DP) :: idx_sdm  ! integer of 'dx_sdm'
+!!$      integer(DP) :: idy_sdm  ! integer of 'dy_sdm'
 
       integer(DP) :: sd_nmax  ! maximum multiplicity
       integer(DP) :: sd_n1    ! multiplicity of super-droplets with large multiplicity
@@ -2878,7 +2878,7 @@ contains
 
 
       integer :: gnum          ! grid number
-      integer :: iexced        ! temporary
+!!$      integer :: iexced        ! temporary
 
       integer :: in1, in2, in3, in4 ! index
       integer :: irr, iqq           ! index of coef.
@@ -2898,7 +2898,7 @@ contains
 !      idy_sdm = 10_i8 * floor( 1.e4*(dy_sdm+1.e-5), kind=i8 )
 
       freq_max = 1
-      iexced   = 1   !! check for memory size of int*8
+!!$      iexced   = 1   !! check for memory size of int*8
 
       !### aerosol type ###!
       ! why we need sd_aslrho? Isn't it same to sdm_aslrho?? Check later
@@ -3029,8 +3029,9 @@ contains
 
       end do
 
-     ! Get effective collision of droplets that exceed micrometer-size
-     ! ( over 10um )
+!!$     ! Get effective collision of droplets that exceed micrometer-size
+!!$     ! ( over 10um )
+     ! Get effective collision probability for "Gravitational Settling" 
 
       if( sdm_colkrnl==0 ) then
 
@@ -3260,22 +3261,30 @@ contains
 
 !               i = int( floor(sd_x(icp(tc))*1.d5,kind=i8)/idx_sdm ) + 2
 !               j = int( floor(sd_y(icp(tc))*1.d5,kind=i8)/idy_sdm ) + 2
-               do ix = IS, IE
-                if( sd_x(n) <= ( FX(ix)-FX(IS-1) ) ) then
-                 i = ix
-                 exit
-                endif
-               enddo
-               do jy = JS, JE
-                if( sd_y(n) <= ( FY(jy)-FY(JS-1) ) ) then
-                 j = jy
-                 exit
-                endif
-               enddo
-               k = floor( sd_rk(icp(tc)) )
+!!$               do ix = IS, IE
+!!$                if( sd_x(n) <= ( FX(ix)-FX(IS-1) ) ) then
+!!$                 i = ix
+!!$                 exit
+!!$                endif
+!!$               enddo
+!!$               do jy = JS, JE
+!!$                if( sd_y(n) <= ( FY(jy)-FY(JS-1) ) ) then
+!!$                 j = jy
+!!$                 exit
+!!$                endif
+!!$               enddo
+!!$               k = floor( sd_rk(icp(tc)) )
 
-               ivvol(k,i,j) = 1.0_RP / real(dx_sdm(i)*dy_sdm(j),kind=RP)               &
-                                     / real(zph_crs(k+1,i,j)-zph_crs(k,i,j),kind=RP)
+               ! index in center grid
+               i = floor(sd_ri(icp(tc)))+1
+               j = floor(sd_rj(icp(tc)))+1
+               k = floor(sd_rk(icp(tc)))+1
+
+!!$               ivvol(k,i,j) = 1.0_RP / real(dx_sdm(i)*dy_sdm(j),kind=RP)               &
+!!$                                     / real(zph_crs(k+1,i,j)-zph_crs(k,i,j),kind=RP)
+
+               ivvol(k,i,j) = 1.0_RP * dxiv_sdm(i) * dyiv_sdm(j) &
+                                     / (zph_crs(k,i,j)-zph_crs(k-1,i,j))
 
                c_rate(tc) = c_rate(tc) * real(sdm_dtcol,kind=RP) * ivvol(k,i,j)
             end do
@@ -3299,23 +3308,13 @@ contains
 
                !! Get location of Super-Droplets
 
-!               i = int( floor(sd_x(icp(tc))*1.d5,kind=i8)/idx_sdm ) + 2
-!               j = int( floor(sd_y(icp(tc))*1.d5,kind=i8)/idy_sdm ) + 2
-               do ix = IS, IE
-                if( sd_x(n) <= ( FX(ix)-FX(IS-1) ) ) then
-                 i = ix
-                 exit
-                endif
-               enddo
-               do jy = JS, JE
-                if( sd_y(n) <= ( FY(jy)-FY(JS-1) ) ) then
-                 j = jy
-                 exit
-                endif
-               enddo
-               k = floor( sd_rk(icp(tc)) )
-               ivvol(k,i,j) = 1.0_RP / real(dx_sdm(i)*dy_sdm(j),kind=RP)               &
-                                     / real(zph_crs(k+1,i,j)-zph_crs(k,i,j),kind=RP)
+               ! index in center grid
+               i = floor(sd_ri(icp(tc)))+1
+               j = floor(sd_rj(icp(tc)))+1
+               k = floor(sd_rk(icp(tc)))+1
+
+               ivvol(k,i,j) = 1.0_RP * dxiv_sdm(i) * dyiv_sdm(j) &
+                                     / (zph_crs(k,i,j)-zph_crs(k-1,i,j))
 
                c_rate(tc) = c_rate(tc) * real(sdm_dtcol,kind=RP)        &
                           * ivvol(k,i,j) * dvz
@@ -3327,8 +3326,8 @@ contains
       end if
 
      ! Get effective collision for "Brownian Coagulation and Scavenging
-     ! (Seinfeld & Pandis,2006)" of droplets less than
-     ! micrometer-size ( below 1um )
+     ! (Seinfeld & Pandis,2006)" 
+     ! This is mechanisim is effective for droplets less than micrometer-size ( below 1um )
       if( sdm_colbrwn>0 ) then
         do n=1,hfreq_max
 
@@ -3385,27 +3384,20 @@ contains
 
             !### location of super-droplets ###
 
-!            i = int( floor(sd_x(icp(tc))*1.d5,kind=i8)/idx_sdm ) + 2
-!            j = int( floor(sd_y(icp(tc))*1.d5,kind=i8)/idy_sdm ) + 2
-            do ix = IS, IE
-             if( sd_x(n) <= ( FX(ix)-FX(IS-1) ) ) then
-              i = ix
-              exit
-             endif
-            enddo
-            do jy = JS, JE
-             if( sd_y(n) <= ( FY(jy)-FY(JS-1) ) ) then
-              j = jy
-              exit
-             endif
-            enddo
-            k = floor( sd_rk(icp(tc)) )
+            ! index in center grid
+            i = floor(sd_ri(icp(tc)))+1
+            j = floor(sd_rj(icp(tc)))+1
+            k = floor(sd_rk(icp(tc)))+1
 
-            ivvol(k,i,j) = 1.0_RP / real(dx_sdm(i)*dy_sdm(j),kind=RP)             &
-                                  / real(zph_crs(k+1,i,j)-zph_crs(k,i,j),kind=RP)
-            pt_crs = ptbr_crs(k,i,j) + ptp_crs(k,i,j)
-            p_crs  = pbr_crs(k,i,j)  + pp_crs(k,i,j)      !! [Pa]
-            t_crs  = pt_crs * exp((rd/cp)*log(p_crs/p0))  !! [K]
+            ivvol(k,i,j) = 1.0_RP * dxiv_sdm(i) * dyiv_sdm(j) &
+                 / (zph_crs(k,i,j)-zph_crs(k-1,i,j))
+
+!!$            pt_crs = ptbr_crs(k,i,j) + ptp_crs(k,i,j)
+!!$            p_crs  = pbr_crs(k,i,j)  + pp_crs(k,i,j)      !! [Pa]
+!!$            t_crs  = pt_crs * exp((rd/cp)*log(p_crs/p0))  !! [K]
+
+            p_crs = pres_scale(k,i,j) !! [Pa]
+            t_crs = t_scale(k,i,j)    !! [K]
 
             !### dynamic viscosity [Pa*s]  ###!
             !### (Pruppacher & Klett,1997) ###!
@@ -3582,7 +3574,7 @@ contains
                end do
 
                !! invalid by collisions between SDs with
-               !! same muliplicity
+               !! sd_n1=sd_n2*sd_ncol and sd_n2=1
 
                if( sd_n1==0 ) then
                   sd_rk1 = INVALID
@@ -3590,12 +3582,13 @@ contains
 
             end if
 
-            !! check muliplicity
-
-            if( sd_n1>(2.0_RP**63._RP) .or. sd_n2>(2.0_RP**63._RP) ) then
-               iexced = -1
-               cycle
-            end if
+            !! This never happens
+!!$            !! check muliplicity
+!!$
+!!$            if( sd_n1>(2.0_RP**63._RP) .or. sd_n2>(2.0_RP**63._RP) ) then
+!!$               iexced = -1
+!!$               cycle
+!!$            end if
 
             if( sd_n(icp(tc)) > sd_n(icp(tp)) ) then
                sd_n( icp(tc) )  = sd_n1
@@ -3632,9 +3625,9 @@ contains
 
       end do
 
-      if( iexced<0 ) then
-        call PRC_MPIstop
-      end if
+!!$      if( iexced<0 ) then
+!!$        call PRC_MPIstop
+!!$      end if
 
      ! Deallocate
       deallocate( fsort_tag  )
