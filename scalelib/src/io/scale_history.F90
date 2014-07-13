@@ -73,15 +73,19 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine HIST_setup
+    use gtool_history, only: &
+       HistoryInit
     use scale_process, only: &
        PRC_master, &
        PRC_myrank, &
        PRC_2Drank
-    use gtool_history, only: &
-       HistoryInit
+    use scale_time, only: &
+       TIME_OFFSET_YEAR
     implicit none
 
     character(len=H_MID) :: HISTORY_H_TITLE = 'SCALE-LES HISTORY OUTPUT' !< title of the output file
+    character(len=H_SHORT) :: HISTORY_T_UNITS = 'seconds'
+    character(len=H_MID)   :: HISTORY_T_SINCE = ''
 
     integer :: rankidx(2)
     !---------------------------------------------------------------------------
@@ -94,6 +98,11 @@ contains
     rankidx(1) = PRC_2Drank(PRC_myrank, 1)
     rankidx(2) = PRC_2Drank(PRC_myrank, 2)
 
+    if ( TIME_OFFSET_YEAR > 0 ) then
+       HISTORY_T_SINCE = '0000-01-01 00:00:00'
+       write(HISTORY_T_SINCE(1:4),'(i4)') TIME_OFFSET_YEAR
+    end if
+
     call HistoryInit( HISTORY_H_TITLE,           &
                       H_SOURCE,                  &
                       H_INSTITUTE,               &
@@ -101,7 +110,9 @@ contains
                       PRC_master,                &
                       PRC_myrank,                &
                       rankidx,                   &
-                      namelist_fid = IO_FID_CONF )
+                      namelist_fid = IO_FID_CONF, &
+                      time_units = HISTORY_T_UNITS, &
+                      time_since = HISTORY_T_SINCE )
 
     call HIST_put_axes
 

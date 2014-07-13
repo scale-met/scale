@@ -140,6 +140,7 @@ module gtool_history
   character(len=File_HMID) :: HISTORY_SOURCE
   character(len=File_HMID) :: HISTORY_INSTITUTION
   character(len=File_HMID) :: HISTORY_TIME_UNITS
+  character(len=File_HMID) :: HISTORY_TIME_SINCE
 
   integer, parameter         :: History_req_limit = 1000 !> number limit for history item request
   character(len=File_HLONG)  :: History_req_basename(History_req_limit)
@@ -184,6 +185,7 @@ contains
        title, source, institution,                         & ! (in)
        array_size,                                         & ! (in)
        master, myrank, rankidx,                            & ! (in)
+       time_units, time_since,                             & ! (in) optional
        default_basename,                                   & ! (in) optional
        default_tinterval, default_tunit, default_taverage, & ! (in) optional
        default_zinterp,                                    & ! (in) optional
@@ -205,6 +207,8 @@ contains
     integer,          intent(in)           :: master
     integer,          intent(in)           :: myrank
     integer,          intent(in)           :: rankidx(:)
+    character(len=*), intent(in), optional :: time_units
+    character(len=*), intent(in), optional :: time_since
     character(len=*), intent(in), optional :: default_basename
     real(DP)        , intent(in), optional :: default_tinterval
     character(len=*), intent(in), optional :: default_tunit
@@ -226,6 +230,7 @@ contains
          HISTORY_SOURCE,            &
          HISTORY_INSTITUTION,       &
          HISTORY_TIME_UNITS,        &
+         HISTORY_TIME_SINCE,        &
          HISTORY_DEFAULT_BASENAME,  &
          HISTORY_DEFAULT_TINTERVAL, &
          HISTORY_DEFAULT_TUNIT,     &
@@ -265,7 +270,16 @@ contains
     HISTORY_TITLE       = title
     HISTORY_SOURCE      = source
     HISTORY_INSTITUTION = institution
-    HISTORY_TIME_UNITS  = 'sec'
+    if ( present(time_since) ) then
+       HISTORY_TIME_UNITS  = time_units
+    else
+       HISTORY_TIME_UNITS  = 'seconds'
+    endif
+    if ( present(time_since) ) then
+       HISTORY_TIME_SINCE = time_since
+    else
+       HISTORY_TIME_SINCE = ''
+    endif
     if ( present(default_basename) ) then
        HISTORY_DEFAULT_BASENAME = default_basename
     endif
@@ -436,6 +450,7 @@ contains
     logical,          intent(out), optional :: zinterp
     logical,          intent(out), optional :: existed
 
+    character(len=File_HMID) :: tunits
     logical :: fileexisted
     integer :: id
     integer :: nmax, reqid
@@ -467,11 +482,16 @@ contains
              id = History_id_count
 
              ! new file registration
+             if ( HISTORY_TIME_SINCE == '' ) then
+                tunits = HISTORY_TIME_UNITS
+             else
+                tunits = trim(HISTORY_TIME_UNITS)//' since '//trim(HISTORY_TIME_SINCE)
+             end if
              call FileCreate(History_fid(id), fileexisted,              & ! (out)
                   trim(History_req_basename(reqid)),                    & ! (in)
                   HISTORY_TITLE, HISTORY_SOURCE, HISTORY_INSTITUTION,   & ! (in)
                   History_master, History_myrank, History_rankidx,      & ! (in)
-                  time_units = HISTORY_TIME_UNITS                       & ! (in)
+                  time_units = tunits                                   & ! (in)
                   )
 
              if ( present(options) ) then

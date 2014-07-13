@@ -143,7 +143,7 @@ contains
     logical,          intent( in), optional :: single
     logical,          intent( in), optional :: append
 
-    character(len=File_HSHORT) :: time_units_
+    character(len=File_HMID) :: time_units_
     logical :: single_
     integer :: mode
     integer :: error
@@ -153,7 +153,7 @@ contains
     if ( present(time_units) ) then
        time_units_ = time_units
     else
-       time_units_ = 'sec'
+       time_units_ = 'seconds'
     end if
 
     mpi_myrank = myrank
