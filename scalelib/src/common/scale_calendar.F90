@@ -110,19 +110,22 @@ contains
        absday, &
        abssec, &
        ymdhms, &
-       subsec  )
+       subsec, &
+       oyear   )
     implicit none
 
     integer,  intent(out) :: absday    !< absolute day
     real(DP), intent(out) :: abssec    !< absolute second
     integer,  intent(in)  :: ymdhms(6) !< date
     real(DP), intent(in)  :: subsec    !< subsecond
+    integer,  intent(in), optional :: oyear     !< offset year
     !---------------------------------------------------------------------------
 
     call CALENDAR_ymd2absday( absday,          & ! [OUT]
                               ymdhms(I_year),  & ! [IN]
                               ymdhms(I_month), & ! [IN]
-                              ymdhms(I_day)    ) ! [IN]
+                              ymdhms(I_day),   & ! [IN]
+                              oyear            ) ! [IN]
 
     call CALENDAR_hms2abssec( abssec,          & ! [OUT]
                               ymdhms(I_hour),  & ! [IN]
@@ -139,19 +142,22 @@ contains
        ymdhms, &
        subsec, &
        absday, &
-       abssec  )
+       abssec, &
+       oyear   )
     implicit none
 
     integer,  intent(out) :: ymdhms(6) !< date
     real(DP), intent(out) :: subsec    !< subsecond
     integer,  intent(in)  :: absday    !< absolute day
     real(DP), intent(in)  :: abssec    !< absolute second
+    integer,  intent(in)  :: oyear     !< offset year
     !---------------------------------------------------------------------------
 
     call CALENDAR_absday2ymd( ymdhms(I_year),  & ! [OUT]
                               ymdhms(I_month), & ! [OUT]
                               ymdhms(I_day),   & ! [OUT]
-                              absday           ) ! [IN]
+                              absday,          & ! [IN]
+                              oyear            ) ! [IN]
 
     call CALENDAR_abssec2hms( ymdhms(I_hour),  & ! [OUT]
                               ymdhms(I_min),   & ! [OUT]
@@ -168,25 +174,35 @@ contains
        absday, &
        gyear,  &
        gmonth, &
-       gday    )
+       gday,   &
+       oyear   )
     implicit none
 
     integer, intent(out) :: absday !< absolute day
     integer, intent(in)  :: gyear  !< year
     integer, intent(in)  :: gmonth !< month
     integer, intent(in)  :: gday   !< day
+    integer, intent(in), optional :: oyear  !< offset year
 
+    integer :: oyear_ = 0
     integer :: yearday, monthday
     integer :: m, ileap
     !---------------------------------------------------------------------------
 
+    if ( present(oyear) ) then
+       oyear_ = oyear
+    end if
+
     yearday = int( CALENDAR_DOI ) * ( gyear )         &
-            + int( real(gyear-1,kind=DP) /   4.0_DP ) &
-            - int( real(gyear-1,kind=DP) / 100.0_DP ) &
-            + int( real(gyear-1,kind=DP) / 400.0_DP )
+            + int( real(gyear+oyear_-1,kind=DP) /   4.0_DP ) &
+            - int( real(gyear+oyear_-1,kind=DP) / 100.0_DP ) &
+            + int( real(gyear+oyear_-1,kind=DP) / 400.0_DP ) &
+            - int( real(oyear_-1,kind=DP) /   4.0_DP ) &
+            + int( real(oyear_-1,kind=DP) / 100.0_DP ) &
+            - int( real(oyear_-1,kind=DP) / 400.0_DP )
 
     ileap = I_nonleapyear
-    if( checkleap(gyear) ) ileap = I_leapyear
+    if( checkleap(gyear+oyear_) ) ileap = I_leapyear
 
     monthday = 0
     do m = 1, gmonth-1
@@ -204,13 +220,15 @@ contains
        gyear,  &
        gmonth, &
        gday,   &
-       absday  )
+       absday, &
+       oyear   )
     implicit none
 
     integer, intent(out) :: gyear  !< year
     integer, intent(out) :: gmonth !< month
     integer, intent(out) :: gday   !< day
     integer, intent(in)  :: absday !< absolute day
+    integer, intent(in)  :: oyear  !< offset year
 
     integer :: checkday
     integer :: i, ileap
@@ -218,22 +236,22 @@ contains
 
     gyear = int( real(absday,kind=DP) / 366.0_DP ) ! first guess
     do i = 1, 1000
-       call CALENDAR_ymd2absday( checkday, gyear+1, 1, 1 )
+       call CALENDAR_ymd2absday( checkday, gyear+1, 1, 1, oyear )
        if( absday < checkday ) exit
        gyear = gyear + 1
     enddo
 
     ileap = I_nonleapyear
-    if( checkleap(gyear) ) ileap = I_leapyear
+    if( checkleap(gyear+oyear) ) ileap = I_leapyear
 
     gmonth = 1
     do i = 1, 1000
-       call CALENDAR_ymd2absday( checkday, gyear, gmonth, dayofmonth(gmonth,ileap) )
+       call CALENDAR_ymd2absday( checkday, gyear, gmonth, dayofmonth(gmonth,ileap), oyear )
        if( absday <= checkday ) exit
        gmonth = gmonth + 1
     enddo
 
-    call CALENDAR_ymd2absday( checkday, gyear, gmonth, 1 )
+    call CALENDAR_ymd2absday( checkday, gyear, gmonth, 1, oyear )
     gday = absday - checkday + 1
 
     return
@@ -398,12 +416,14 @@ contains
   !-----------------------------------------------------------------------------
   !> Calc number of day
   subroutine CALENDAR_ymdhms2nd( &
-       nd,    &
-       ymdhms )
+       nd,     &
+       ymdhms, &
+       oyear   )
     implicit none
 
     real(DP), intent(out) :: nd        !< # of day from Jan 1st
     integer,  intent(in)  :: ymdhms(6) !< date
+    integer,  intent(in)  :: oyear     !< offset year
 
     integer :: absday, absday_jan1
     !---------------------------------------------------------------------------
@@ -411,12 +431,14 @@ contains
     call CALENDAR_ymd2absday( absday,          & ! [OUT]
                               ymdhms(I_year),  & ! [IN]
                               ymdhms(I_month), & ! [IN]
-                              ymdhms(I_day)    ) ! [IN]
+                              ymdhms(I_day),   & ! [IN]
+                              oyear            ) ! [IN]
 
     call CALENDAR_ymd2absday( absday_jan1,     & ! [OUT]
                               ymdhms(I_year),  & ! [IN]
                               1,               & ! [IN]
-                              1                ) ! [IN]
+                              1,               & ! [IN]
+                              oyear            ) ! [IN]
 
     nd = absday - absday_jan1 + 1.0_DP
 
@@ -426,12 +448,14 @@ contains
   !-----------------------------------------------------------------------------
   !> Calc modified julian day number (MJD), epoch time is 1858/11/17 00:00:00 UT
   subroutine CALENDAR_ymdhms2mjd( &
-       mjd,   &
-       ymdhms )
+       mjd,    &
+       ymdhms, &
+       oyear   )
     implicit none
 
     real(DP), intent(out) :: mjd       !< modified julian day number (MJD)
     integer,  intent(in)  :: ymdhms(6) !< date in gregorian calendar
+    integer,  intent(in)  :: oyear     !< offset year
 
     integer :: y, m, mjd_day
     !---------------------------------------------------------------------------
@@ -445,11 +469,11 @@ contains
        m = ymdhms(I_month)
     endif
 
-    mjd_day = int( 365.25_DP * y )                & ! year
-            + int( y/400.0_DP ) - int( y/100_DP ) & ! leap year
-            + int( 30.59_DP * m-2 )               & ! month
-            + ymdhms(I_day)                       & ! day
-            + 678912                                ! constant
+    mjd_day = int( 365.25_DP * (y+oyear) )                        & ! year
+            + int( (y+oyear)/400.0_DP ) - int( (y+oyear)/100_DP ) & ! leap year
+            + int( 30.59_DP * m-2 )                               & ! month
+            + ymdhms(I_day)                                       & ! day
+            + 678912                                              ! constant
 
     mjd     = real(mjd_day,kind=DP)       & ! day
             + ymdhms(I_hour) /    24.0_DP & ! hour

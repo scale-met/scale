@@ -57,6 +57,7 @@ module scale_time
   real(DP), public :: TIME_DTSEC_CPL            !< time interval of coupler calc.         [sec]
   real(DP), public :: TIME_DTSEC_CPL_RESTART    !< time interval of coupler restart       [sec]
 
+  integer,  public :: TIME_OFFSET_YEAR          !< time offset [year]
   integer,  public :: TIME_NOWDATE(6)           !< current time [YYYY MM DD HH MM SS]
   real(DP), public :: TIME_NOWMS                !< subsecond part of current time [millisec]
   integer,  public :: TIME_NOWDAY               !< absolute day of current time [day]
@@ -417,10 +418,13 @@ contains
 
     !--- calculate time
     TIME_STARTMS = TIME_STARTMS * 1.E-3_DP
+    TIME_OFFSET_YEAR = TIME_STARTDATE(1)
+    TIME_STARTDATE(1) = 0
     call CALENDAR_date2daysec( TIME_STARTDAY,     & ! [OUT]
                                TIME_STARTSEC,     & ! [OUT]
                                TIME_STARTDATE(:), & ! [IN]
-                               TIME_STARTMS       ) ! [IN]
+                               TIME_STARTMS,      & ! [IN]
+                               TIME_OFFSET_YEAR   ) ! [IN]
 
     TIME_NOWDATE(:) = TIME_STARTDATE(:)
     TIME_NOWMS      = TIME_STARTMS
@@ -442,16 +446,17 @@ contains
     call CALENDAR_daysec2date( TIME_ENDDATE(:), & ! [OUT]
                                TIME_ENDMS,      & ! [OUT]
                                TIME_ENDDAY,     & ! [IN]
-                               TIME_ENDSEC      ) ! [IN]
+                               TIME_ENDSEC,     & ! [IN]
+                               TIME_OFFSET_YEAR ) ! [IN]
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** Date/time setting ***'
     if( IO_L ) write(IO_FID_LOG,'(1x,A,I4.4,A,I2.2,A,I2.2,A,I2.2,A,I2.2,A,I2.2,A,F6.3)') '*** START Date     : ', &
-         TIME_STARTDATE(1),'/',TIME_STARTDATE(2),'/',TIME_STARTDATE(3),' ',  &
+         TIME_STARTDATE(1)+TIME_OFFSET_YEAR,'/',TIME_STARTDATE(2),'/',TIME_STARTDATE(3),' ',  &
          TIME_STARTDATE(4),':',TIME_STARTDATE(5),':',TIME_STARTDATE(6),' +', &
          TIME_STARTMS
     if( IO_L ) write(IO_FID_LOG,'(1x,A,I4.4,A,I2.2,A,I2.2,A,I2.2,A,I2.2,A,I2.2,A,F6.3)') '*** END   Date     : ', &
-         TIME_ENDDATE(1),'/',TIME_ENDDATE(2),'/',TIME_ENDDATE(3),' ',  &
+         TIME_ENDDATE(1)+TIME_OFFSET_YEAR,'/',TIME_ENDDATE(2),'/',TIME_ENDDATE(3),' ',  &
          TIME_ENDDATE(4),':',TIME_ENDDATE(5),':',TIME_ENDDATE(6),' +', &
          TIME_ENDMS
 
@@ -632,7 +637,7 @@ contains
     endif
 
     if( IO_L ) write(IO_FID_LOG,'(1x,A,I4.4,A,I2.2,A,I2.2,A,I2.2,A,I2.2,A,I2.2,A,F6.3,A,I6,A,I6)') &
-               '*** TIME: ', TIME_NOWDATE(1),'/',TIME_NOWDATE(2),'/',TIME_NOWDATE(3),' ', &
+               '*** TIME: ', TIME_NOWDATE(1)+TIME_OFFSET_YEAR,'/',TIME_NOWDATE(2),'/',TIME_NOWDATE(3),' ', &
                              TIME_NOWDATE(4),':',TIME_NOWDATE(5),':',TIME_NOWDATE(6),' +', &
                              TIME_NOWMS,' STEP:',TIME_NOWSTEP, '/', TIME_NSTEP
 
@@ -665,7 +670,8 @@ contains
     call CALENDAR_daysec2date( TIME_NOWDATE(:), & ! [OUT]
                                TIME_NOWMS,      & ! [OUT]
                                TIME_NOWDAY,     & ! [IN]
-                               TIME_NOWSEC      ) ! [IN]
+                               TIME_NOWSEC,     & ! [IN]
+                               TIME_OFFSET_YEAR ) ! [IN]
 
     TIME_NOWSTEP = TIME_NOWSTEP + 1
 
