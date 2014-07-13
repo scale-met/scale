@@ -40,6 +40,7 @@
 !! @li      2014-07-12 (S.Shima) [rev] sdm_coales tuned for FX
 !! @li      2014-07-12 (S.Shima) [rev] sdm_sort and sdm_getperm are separated into the module m_sdm_idutil
 !! @li      2014-07-12 (S.Shima) [rev] sdm_coales is separated into the module m_sdm_coalescence
+!! @li      2014-07-13 (S.Shima) [rev] sdm_condevp repaired
 !<
 !-------------------------------------------------------------------------------
 #include "macro_thermodyn.h"
@@ -615,7 +616,7 @@ contains
 
     real(RP)::tmp_pres, tmp_temp
 
-    real(RP) :: pres_scale(KA,IA,JA)  ! Pressure
+    real(RP) :: pres_scale(KA,IA,JA) ! Pressure
     real(RP) :: rhod_scale(KA,IA,JA) ! dry air density
     real(RP) :: t_scale(KA,IA,JA)    ! Temperature
 
@@ -798,15 +799,15 @@ contains
      ! We need to rethink whether it's okay to evaluate QC QR here
      ! For example, when we diagnose pressure or rhod during the dynamical process, 
      ! qc and qr should be 0 because they are not included in the total density
-     call sdm_sd2qcqr(pbr_crs,ptbr_crs,                             &
-                      ppf_crs,ptpf_crs,qvf_crs,zph_crs,             &
-                      lsdmup,sdnum_s2c,sdn_s2c,sdx_s2c,sdy_s2c,     &
-                      sdr_s2c,sdrk_s2c,sdrkl_s2c,sdrku_s2c,         &
-                      rhod_crs,rhoc_sdm,rhor_sdm,                   &
-                      !--- Y.Sato add ---
-                      rhoa_sdm, sdnumasl_s2c, sdasl_s2c,            &
-                      !--- Y.Sato add ---
-                      sd_itmp1,sd_itmp2,crs_dtmp1,crs_dtmp2)
+!!$     call sdm_sd2qcqr(pbr_crs,ptbr_crs,                             &
+!!$                      ppf_crs,ptpf_crs,qvf_crs,zph_crs,             &
+!!$                      lsdmup,sdnum_s2c,sdn_s2c,sdx_s2c,sdy_s2c,     &
+!!$                      sdr_s2c,sdrk_s2c,sdrkl_s2c,sdrku_s2c,         &
+!!$                      rhod_crs,rhoc_sdm,rhor_sdm,                   &
+!!$                      !--- Y.Sato add ---
+!!$                      rhoa_sdm, sdnumasl_s2c, sdasl_s2c,            &
+!!$                      !--- Y.Sato add ---
+!!$                      sd_itmp1,sd_itmp2,crs_dtmp1,crs_dtmp2)
 
 
 ! not supported yet. S.Shima
@@ -1273,6 +1274,12 @@ contains
 !!$         end do
 !!$      end do
 
+      !### index[k/real] of super-droplets               ###!
+      !### modify position[z] of invalid super-droplets  ###!
+      call sdm_z2rk(sdm_zlower,sdm_zupper,            &
+                        sdnum_s2c,sdx_s2c,sdy_s2c,sdz_s2c,sdri_s2c,sdrj_s2c,sdrk_s2c )
+
+      !### initial equivalent radius                     ###!
       do n=1,sdnum_s2c
 !ORG     sdr_s2c(n) = 1.0e-5 * ( log(1.0/(1.0-sdr_s2c(n))) )**O_THRD
 !ORG     sdr_s2c(n) = 1.0d-8
@@ -1283,30 +1290,26 @@ contains
 !         sdr_s2c(n) = exp((log(3.0E-3_RP)-log(1.0E-7_RP))*sdr_s2c(n)+log(1.0E-7_RP))
          
       end do
-
-      !### index[k/real] of super-droplets               ###!
-      !### modify position[z] of invalid super-droplets  ###!
-      call sdm_z2rk(sdm_zlower,sdm_zupper,            &
-                        sdnum_s2c,sdx_s2c,sdy_s2c,sdz_s2c,sdri_s2c,sdrj_s2c,sdrk_s2c )
-
-      !### terminal velocity                            ###!
       !### ( at only condensation/evaporation process ) ###!
       if( sdm_calvar(1) ) then
 
+         call sdm_rhot_qtrc2p_t(RHOT,QTRC,DENS,pres_scale,t_scale)
+
          call sdm_condevp(sdm_aslset,                                   &
                           sdm_aslmw,sdm_aslion,sdm_dtevl,               &
-                          pbr_crs,ptbr_crs,pp_crs,ptp_crs,              &
-                          qv_crs,                                       &
+                          pres_scale,t_scale,QTRC(:,:,:,I_QV),          &
                           sdnum_s2c,sdnumasl_s2c,sdx_s2c,sdy_s2c,       &
-                          sdr_s2c,sdasl_s2c,sdrk_s2c)
+                          sdr_s2c,sdasl_s2c,sdri_s2c,sdrj_s2c,sdrk_s2c)
 
       end if
 
-      call sdm_rho_qtrc2rhod(DENS,QTRC,rhod_scale)
-      call sdm_rhot_qtrc2p_t(RHOT,QTRC,DENS,pres_scale,t_scale)
-      call sdm_getvz(pres_scale,rhod_scale,t_scale,                    &
-                     sdnum_s2c,sdx_s2c,sdy_s2c,sdri_s2c,sdrj_s2c,sdrk_s2c,sdr_s2c, &
-                     sdvz_s2c,sd_itmp1,sd_itmp2,sd_itmp3,'motion')
+      !### diagnose terminal velocity (no need evaluate them here) ###!
+!!$      call sdm_rho_qtrc2rhod(DENS,QTRC,rhod_scale)
+!!$      call sdm_rhot_qtrc2p_t(RHOT,QTRC,DENS,pres_scale,t_scale)
+!!$      call sdm_getvz(pres_scale,rhod_scale,t_scale,                    &
+!!$                     sdnum_s2c,sdx_s2c,sdy_s2c,sdri_s2c,sdrj_s2c,sdrk_s2c,sdr_s2c, &
+!!$                     sdvz_s2c,sd_itmp1,sd_itmp2,sd_itmp3,'motion')
+
       ! -----
       ! Convert super-droplets to mixing ratio of water hydrometeor
       ! in each grid
@@ -1318,15 +1321,15 @@ contains
       ! We need to rethink whether it's okay to evaluate QC QR here
       ! For example, when we diagnose pressure or rhod during the dynamical process, 
       ! qc and qr should be 0 because they are not included in the total density
-      call sdm_sd2qcqr(pbr_crs,ptbr_crs,                                &
-                       pp_crs,ptp_crs,qv_crs,zph_crs,                   &
-                       lsdmup,sdnum_s2c,sdn_s2c,sdx_s2c,sdy_s2c,        &
-                       sdr_s2c,sdrk_s2c,sdrkl_s2c,sdrku_s2c,            &
-                       rhod_crs,rhoc_sdm,rhor_sdm,                      &
-                       !--- Y.Sato add ---
-                       rhoa_sdm,  sdnumasl_s2c, sdasl_s2c,              &
-                       !--- Y.Sato add ---
-                       sd_itmp1,sd_itmp2,crs_dtmp1,crs_dtmp2            )
+!!$      call sdm_sd2qcqr(pbr_crs,ptbr_crs,                                &
+!!$                       pp_crs,ptp_crs,qv_crs,zph_crs,                   &
+!!$                       lsdmup,sdnum_s2c,sdn_s2c,sdx_s2c,sdy_s2c,        &
+!!$                       sdr_s2c,sdrk_s2c,sdrkl_s2c,sdrku_s2c,            &
+!!$                       rhod_crs,rhoc_sdm,rhor_sdm,                      &
+!!$                       !--- Y.Sato add ---
+!!$                       rhoa_sdm,  sdnumasl_s2c, sdasl_s2c,              &
+!!$                       !--- Y.Sato add ---
+!!$                       sd_itmp1,sd_itmp2,crs_dtmp1,crs_dtmp2            )
 
 !      do k = 1, KA
 !      do i = 1, IA
@@ -1361,10 +1364,9 @@ contains
   !-----------------------------------------------------------------------------
   subroutine sdm_condevp(sdm_aslset,                     &
                          sdm_aslmw,sdm_aslion,sdm_dtevl, &
-                         pbr_crs,ptbr_crs,pp_crs,        &
-                         ptp_crs,qv_crs,                 &
+                         pres_scale,t_scale,qv_scale, &
                          sd_num,sd_numasl,sd_x,sd_y,     &
-                         sd_r,sd_asl, sd_rk              )
+                         sd_r,sd_asl,sd_ri,sd_rj,sd_rk              )
 
       use scale_const, only: &
          cp   => CONST_CPdry, &
@@ -1375,21 +1377,23 @@ contains
       use scale_grid, only: &
          FX => GRID_FX, &
          FY => GRID_FY
+      use m_sdm_coordtrans, only: &
+           sdm_x2ri, sdm_y2rj
       ! Input variables
       integer,  intent(in) :: sdm_aslset
       real(RP), intent(in) :: sdm_aslmw(20)
       real(RP), intent(in) :: sdm_aslion(20)
       real(RP), intent(in) :: sdm_dtevl  ! tims step of {condensation/evaporation} process
-      real(RP), intent(in) :: ptbr_crs(KA,IA,JA) ! Base state potential temperature
-      real(RP), intent(in) :: ptp_crs(KA,IA,JA)  ! Potential temperature perturbation
-      real(RP), intent(in) :: pbr_crs(KA,IA,JA)  ! Base state pressure
-      real(RP), intent(in) :: pp_crs(KA,IA,JA)   ! Pressure perturbation
-      real(RP), intent(in) :: qv_crs(KA,IA,JA)   ! Water vapor mixing ratio
+      real(RP), intent(in) :: pres_scale(KA,IA,JA) ! Pressure
+      real(RP), intent(in) :: t_scale(KA,IA,JA) ! Temperature
+      real(RP), intent(in) :: qv_scale(KA,IA,JA)   ! Water vapor mixing ratio
       integer,  intent(in) :: sd_num      ! number of super-droplets
       integer,  intent(in) :: sd_numasl   ! number of kind of chemical material contained as water-soluble aerosol in super droplets
       real(RP), intent(in) :: sd_x(1:sd_num) ! x-coordinate of super-droplets
       real(RP), intent(in) :: sd_y(1:sd_num) ! y-coordinate of super-droplets
       real(RP), intent(inout) :: sd_asl(1:sd_num,1:sd_numasl) ! aerosol mass of super-droplets
+      real(RP), intent(inout) :: sd_ri(1:sd_num)   ! index[i/real] of super-droplets
+      real(RP), intent(inout) :: sd_rj(1:sd_num)   ! index[j/real] of super-droplets
       real(RP), intent(in) :: sd_rk(1:sd_num)   ! index[k/real] of super-droplets
       ! Input and output variables
       real(RP), intent(inout) :: sd_r(1:sd_num) ! equivalent radius of super-droplets
@@ -1404,7 +1408,6 @@ contains
       real(RP) :: dmask(1:22)  ! mask for vactorization
       real(RP) :: p_sd      ! pressure of the grid contained the SD
       real(RP) :: t_sd      ! temperature of the grid contained the SD
-      real(RP) :: pt_sd     ! potential temperature of the grid contained the SD.
       real(RP) :: qv_sd     ! water-vapor of the grid contained the SD
       real(RP) :: qvs_sd    ! Saturation mixing ratio of the grid contained the SD.
       real(RP) :: es_sd     ! Saturation vapor pressure of the grid contained the SD.
@@ -1440,6 +1443,9 @@ contains
       real(RP), parameter :: epsva = 0.622_RP   ! Molecular weight ratio of vapor/air
       real(RP) :: tmpd
      !---------------------------------------------------------------------
+      
+      call sdm_x2ri(sd_num,sd_x,sd_ri,sd_rk)
+      call sdm_y2rj(sd_num,sd_y,sd_rj,sd_rk)
 
       rddvcp = real(rd,kind=RP)/real(cp,kind=RP)
 
@@ -1510,29 +1516,32 @@ contains
          if( sd_rk(n)<VALID2INVALID ) cycle
 
          !### Get the location and variables of Super-Droplets ###!
-         iloop : do ix = IS, IE
-          if( sd_x(n) <= ( FX(ix)-FX(IS-1) ) ) then
-           i = ix
-           exit iloop
-          endif
-         enddo iloop
-         jloop : do jy = JS, JE
-          if( sd_y(n) <= ( FY(jy)-FY(JS-1) ) ) then
-           j = jy
-           exit jloop
-          endif
-         enddo jloop
-!         i = int( floor( sd_x(n)*1.d5, kind=i8 )/idx_sdm ) + 2
-!         j = int( floor( sd_y(n)*1.d5, kind=i8 )/idy_sdm ) + 2
-         k = floor( sd_rk(n) )
+!!$         iloop : do ix = IS, IE
+!!$          if( sd_x(n) <= ( FX(ix)-FX(IS-1) ) ) then
+!!$           i = ix
+!!$           exit iloop
+!!$          endif
+!!$         enddo iloop
+!!$         jloop : do jy = JS, JE
+!!$          if( sd_y(n) <= ( FY(jy)-FY(JS-1) ) ) then
+!!$           j = jy
+!!$           exit jloop
+!!$          endif
+!!$         enddo jloop
+!!$!         i = int( floor( sd_x(n)*1.d5, kind=i8 )/idx_sdm ) + 2
+!!$!         j = int( floor( sd_y(n)*1.d5, kind=i8 )/idy_sdm ) + 2
+!!$         k = floor( sd_rk(n) )
 
-         p_sd  = real( pbr_crs(k,i,j) + pp_crs(k,i,j), kind=RP )
-         pt_sd = real( ptbr_crs(k,i,j) + ptp_crs(k,i,j), kind=RP )
-         qv_sd = real( qv_crs(k,i,j), kind=RP )
+         i = floor(sd_ri(n))+1
+         j = floor(sd_rj(n))+1
+         k = floor(sd_rk(n))+1
+
+         p_sd  = pres_scale(k,i,j)
+         t_sd  = t_scale(k,i,j)
+         qv_sd = qv_scale(k,i,j)
 
          !### Calculate degree of super-saturation ###!
 
-         t_sd   = pt_sd * exp( rddvcp*log(p_sd/real(p0,kind=RP)) )
          ivt_sd = 1.0_RP / t_sd
 
          a = 1.0_RP / ( t_sd - 35.860_RP )
@@ -2325,34 +2334,36 @@ contains
 
             lsdmup = .true.
 
-            ! get density of liquid-water(qw) before process-1
-
-            call sdm_sd2rhow(zph_crs,crs_val1p,                       &
-                             sd_num,sd_n,sd_x,sd_y,sd_r,sd_rk,        &
-                             sd_rkl,sd_rku,crs_val2p,sd_itmp1)
+!!$            ! get density of liquid-water(qw) before process-1
+!!$
+!!$            call sdm_sd2rhow(zph_crs,crs_val1p,                       &
+!!$                             sd_num,sd_n,sd_x,sd_y,sd_r,sd_rk,        &
+!!$                             sd_rkl,sd_rku,crs_val2p,sd_itmp1)
 
             ! { condensation/evaporation } in SDM
+            !! diagnose necessary fluid variables
+            call sdm_rhot_qtrc2p_t(RHOT,QTRC,DENS,pres_scale,t_scale)
+
             call sdm_condevp(sdm_aslset,            &
                              sdm_aslmw,sdm_aslion,sdm_dtevl,      &
-                             pbr_crs,ptbr_crs,pp_crs,             &
-                             ptp_crs, qv_crs,                     &
+                             pres_scale,t_scale,QTRC(:,:,:,I_QV), &
                              sd_num,sd_numasl,sd_x,sd_y,sd_r,sd_asl,&
-                             sd_rk)
+                             sd_ri,sd_rj,sd_rk)
 
-            ! get density of liquid-water(qw) after process-1
-            call sdm_sd2rhow(zph_crs,crs_val1c,                       &
-                             sd_num,sd_n,sd_x,sd_y,sd_r,sd_rk,        &
-                             sd_rkl,sd_rku,crs_val2c,sd_itmp1)
-
-            ! convert the impact of { condensation/evaporation } to
-            ! {qv,ptp} in CReSS
-            call sdm_sd2qvptp(ptp_crs,qv_crs,exnr_crs,         &
-                              rhod_crs,crs_val1p,crs_val1c)
-
-            ! update dry air density
-
-            call sdm_getrhod(pbr_crs,ptbr_crs,pp_crs,ptp_crs,  &
-                             qv_crs,rhod_crs)
+!!$            ! get density of liquid-water(qw) after process-1
+!!$            call sdm_sd2rhow(zph_crs,crs_val1c,                       &
+!!$                             sd_num,sd_n,sd_x,sd_y,sd_r,sd_rk,        &
+!!$                             sd_rkl,sd_rku,crs_val2c,sd_itmp1)
+!!$
+!!$            ! convert the impact of { condensation/evaporation } to
+!!$            ! {qv,ptp} in CReSS
+!!$            call sdm_sd2qvptp(ptp_crs,qv_crs,exnr_crs,         &
+!!$                              rhod_crs,crs_val1p,crs_val1c)
+!!$
+!!$            ! update dry air density
+!!$
+!!$            call sdm_getrhod(pbr_crs,ptbr_crs,pp_crs,ptp_crs,  &
+!!$                             qv_crs,rhod_crs)
 
          end if
          !=== 2 : stochastic coalescence ===!
@@ -2476,10 +2487,19 @@ contains
 
       end do
 
-      if( .not. lsdmup ) return
+    ! Convert super-droplets to precipitation
 
+      call sdm_sd2prec(dt,                                &
+                       prec_crs,                          &
+                       sd_num,sd_n,sd_x,sd_y,sd_r,sd_ri,sd_rj,sd_rk,  &
+                       sd_itmp1(1:sd_num,1),crs_val1c(1,1:IA,1:JA))
+
+
+      ! Update of the HALO region. Rethink carefully later
       ! Communicate CReSS variables to the neighbor node in horizontal
       ! after running SDM
+
+!!$      if( .not. lsdmup ) return
 
 !      call sdm_commucrs(ni,nj,nk,ptp_crs)
 !      call sdm_commucrs(ni,nj,nk,qv_crs)
@@ -2489,13 +2509,6 @@ contains
 !         call sdm_commucrs(ni,nj,nk,v_crs)
 !         call sdm_commucrs(ni,nj,nk,wc_crs)
 !      end if
-
-    ! Convert super-droplets to precipitation
-
-      call sdm_sd2prec(dt,                                &
-                       prec_crs,                          &
-                       sd_num,sd_n,sd_x,sd_y,sd_r,sd_ri,sd_rj,sd_rk,  &
-                       sd_itmp1(1:sd_num,1),crs_val1c(1,1:IA,1:JA))
 
 ! -----
 
@@ -3362,12 +3375,13 @@ contains
       ! Set radius of super-droplets
       if( sdm_calvar(1) ) then
 
+         call sdm_rhot_qtrc2p_t(RHOT,QTRC,DENS,pres_scale,t_scale)
+
          call sdm_condevp(sdm_aslset,                              &
                           sdm_aslmw,sdm_aslion,sdm_dtevl,           &
-                          pbr_crs,ptbr_crs,pp_crs,ptp_crs,          &
-                          qv_crs,                                       &
+                          pres_scale,t_scale,QTRC(:,:,:,I_QV),      &
                           sd_fmnum,sd_numasl,sd_fmx,sd_fmy,sd_fmr,      &
-                          sd_fmasl,sd_fmrk)
+                          sd_fmasl,sd_fmri,sd_fmrj,sd_fmrk)
 
       end if
 
