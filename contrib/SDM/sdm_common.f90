@@ -14,6 +14,7 @@
 !!
 !! @par History
 !! @li      2014-06-13 (S.Shima) [new] Separated common variables from scale_atmos_phy_mp_sdm.F90
+!! @li      2014-07-14 (S.Shima) [rev] Removed unused variables: KMIN,KPLS,...,
 !!
 !<
 !-------------------------------------------------------------------------------
@@ -89,10 +90,10 @@ module m_sdm_common
   real(RP), allocatable, save :: sdr_fm(:)       ! equivalent radius of super-droplets
   real(RP), allocatable, save :: sdvz_fm(:)      ! terminal velocity of super-droplets zeta components of contravariant velocity
   real(RP), allocatable, save :: sdasl_fm(:,:)   ! aerosol mass of super-droplets formed by gas-to-particle conversion
-  real(RP), allocatable, save :: rhod_crs(:,:,:) ! dry air density
-  real(RP), allocatable, save :: rhoc_sdm(:,:,:) ! density of cloud water
-  real(RP), allocatable, save :: rhor_sdm(:,:,:) ! density of rain water
-  real(RP), allocatable, save :: rhoa_sdm(:,:,:) ! density of aerosol
+!!$  real(RP), allocatable, save :: rhod_crs(:,:,:) ! dry air density
+!!$  real(RP), allocatable, save :: rhoc_sdm(:,:,:) ! density of cloud water
+!!$  real(RP), allocatable, save :: rhor_sdm(:,:,:) ! density of rain water
+!!$  real(RP), allocatable, save :: rhoa_sdm(:,:,:) ! density of aerosol
   real(RP), allocatable, save :: rand_s2c(:)
   integer, allocatable, save :: sortid_s2c(:)
   integer, allocatable, save :: sortfreq_s2c(:)
@@ -344,8 +345,8 @@ module m_sdm_common
 !  real(RP), allocatable, save :: jcb(:,:,:) ! Jacobian at scalar points
 !  real(RP), allocatable, save :: jcb8w(:,:,:) ! Jacobian at w points
 !  real(RP), allocatable, save :: mf(:,:)  ! Map scale factors
-  integer,  allocatable, save :: KMIN1(:), IMIN1(:), JMIN1(:)
-  integer,  allocatable, save :: KPLS1(:), IPLS1(:), JPLS1(:)
+!!$  integer,  allocatable, save :: KMIN1(:), IMIN1(:), JMIN1(:)
+!!$  integer,  allocatable, save :: KPLS1(:), IPLS1(:), JPLS1(:)
   integer, save :: nclstp(0:3)
 
   logical, save :: docondensation = .true.

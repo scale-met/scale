@@ -14,6 +14,7 @@
 !!
 !! @par History
 !! @li      2014-07-14 (S.Shima) [new] Separated from scale_atmos_phy_mp_sdm.F90
+!! @li      2014-07-14 (S.Shima) [rev] sdm_sd2prec added
 !!
 !<
 !-------------------------------------------------------------------------------
@@ -22,9 +23,108 @@ module m_sdm_sd2fluid
 
   implicit none
   private
-  public :: sdm_sd2rhow, sdm_sd2rhocr, sdm_sd2qcqr
+  public :: sdm_sd2prec, sdm_sd2rhow, sdm_sd2rhocr, sdm_sd2qcqr
 
 contains
+  subroutine sdm_sd2prec(dtb_crs,                        &
+       prec,sd_num,sd_n,sd_x,sd_y,     &
+       sd_r,sd_ri,sd_rj,sd_rk,ilist,pr_sdm)
+    use scale_grid_index, only: &
+         IA,JA,KA,IS,IE,JS,JE,KS,KE
+    use m_sdm_common, only: &
+         F_THRD, ONE_PI, dxiv_sdm, dyiv_sdm, VALID2INVALID, PREC2INVALID,INVALID
+    use m_sdm_coordtrans, only: &
+         sdm_x2ri, sdm_y2rj
+    ! Input variables
+    real(RP), intent(in) :: dtb_crs
+    integer, intent(in) :: sd_num  ! number of super-droplets
+    integer(DP), intent(in) :: sd_n(1:sd_num) ! multiplicity of super-droplets
+    real(RP), intent(in) :: sd_x(1:sd_num) ! x-coordinate of super-droplets
+    real(RP), intent(in) :: sd_y(1:sd_num) ! y-coordinate of super-droplets
+    real(RP), intent(in) :: sd_r(1:sd_num) ! equivalent radius of super-droplets
+    ! Input and output variables
+    real(RP), intent(out) :: sd_ri(1:sd_num)   ! index-i(real) of super-droplets
+    real(RP), intent(out) :: sd_rj(1:sd_num)   ! index-j(real) of super-droplets
+    real(RP), intent(inout) :: sd_rk(1:sd_num) ! index[k/real] of super-droplets
+    real(RP), intent(inout) :: prec(IA,JA,1:2) ! precipitation and accumlation
+    ! Output variables
+    real(RP), intent(out) :: pr_sdm(1:IA,1:JA) ! temporary buffer of CReSS dimension
+    integer, intent(out) :: ilist(1:sd_num) ! buffer for list vectorization
+    ! Work variables
+    real(RP) :: dcoef(IA,JA) ! coef.
+    real(RP) :: dtmp         ! temporary variables
+    real(RP) :: dtbiv        ! 1.e0 / time step
+
+    integer :: tlist              ! total list number
+    integer :: cnt                ! counter
+
+    integer :: i, j, m, n ! index
+    !-------------------------------------------------------------------
+
+    ! Initialize
+    dtbiv = 1.0d0 / dtb_crs
+    dcoef(1:IA,1:JA)=0.0d0
+    do i = IS, IE
+    do j = JS, JE
+       dcoef(i,j) = F_THRD * ONE_PI * dxiv_sdm(i) * dyiv_sdm(j)
+    enddo
+    enddo
+
+    do j=1,JA
+    do i=1,IA
+       pr_sdm(i,j) = 0.d0
+    end do
+    end do
+
+    ! Get index list for compressing buffer.
+    cnt=0
+    do n=1,sd_num
+       if( sd_rk(n)<VALID2INVALID .and. &
+            sd_rk(n)>PREC2INVALID ) then
+          cnt = cnt + 1
+          ilist(cnt) = n
+       end if
+    end do
+
+    ! Get precipitation
+    if( cnt>0 ) then
+       !### get horizontal face index(real) of super-droplets ###!
+       call sdm_x2ri(sd_num,sd_x,sd_ri,sd_rk)
+       call sdm_y2rj(sd_num,sd_y,sd_rj,sd_rk)
+
+       do m=1,cnt
+          n=ilist(m)
+          i=floor(sd_ri(n))+1
+          j=floor(sd_rj(n))+1
+
+          pr_sdm(i,j) = pr_sdm(i,j)                         &
+               + sd_r(n) * sd_r(n) * sd_r(n)           &
+               * real(sd_n(n),kind=RP)
+
+          sd_rk(n) = INVALID     !! convert to invalid
+       end do
+
+       !### convert super-droplets to precipitation ###!
+
+       do j=1,JA
+       do i=1,IA
+
+          dtmp = real( pr_sdm(i,j) * dcoef(i,j) )
+
+          !! rain fall rate
+          prec(i,j,1) = dtmp * dtbiv
+
+          !! accumulation
+          prec(i,j,2) = prec(i,j,2) + dtmp
+          
+       end do
+       end do
+
+    end if
+
+    return
+  end subroutine sdm_sd2prec
+  !-----------------------------------------------------------------------------
   subroutine sdm_sd2qcqr(DENS,QC,QR,        &
        zph_crs,           &
        sd_num,sd_n,sd_x,sd_y,sd_r,sd_ri,sd_rj,sd_rk, &

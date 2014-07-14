@@ -14,6 +14,7 @@
 !!
 !! @par History
 !! @li      2014-06-23 (S.Shima) [new] Separated from scale_atmos_phy_mp_sdm.F90
+!! @li      2014-07-14 (S.Shima) [rev] Removed unused variables
 !!
 !<
 !-------------------------------------------------------------------------------
@@ -108,10 +109,10 @@ contains
     allocate(sortfreq_s2c(1:ni_s2c*nj_s2c*nk_s2c+1))
     allocate(sorttag_s2c(1:ni_s2c*nj_s2c*nk_s2c+2))
     ! These CReSS related variables should not be used for SCALE. Remove these in the near future.
-    allocate(rhod_crs(KA,IA,JA))
-    allocate(rhoc_sdm(KA,IA,JA))
-    allocate(rhor_sdm(KA,IA,JA))
-    allocate(rhoa_sdm(KA,IA,JA))
+!!$    allocate(rhod_crs(KA,IA,JA))
+!!$    allocate(rhoc_sdm(KA,IA,JA))
+!!$    allocate(rhor_sdm(KA,IA,JA))
+!!$    allocate(rhoa_sdm(KA,IA,JA))
 
     bufsiz = nint( sdininum_s2c )
     bufsiz = nint( real(bufsiz) * ( real(sdm_extbuf)*1.E-2_RP) )
@@ -142,10 +143,10 @@ contains
 !    allocate( dz_sdm(KA) )
 
     ! Initialize allocated array
-    rhod_crs(:,:,:) = 0.0_RP
-    rhoc_sdm(:,:,:) = 0.0_RP
-    rhor_sdm(:,:,:) = 0.0_RP
-    rhoa_sdm(:,:,:) = 0.0_RP
+!!$    rhod_crs(:,:,:) = 0.0_RP
+!!$    rhoc_sdm(:,:,:) = 0.0_RP
+!!$    rhor_sdm(:,:,:) = 0.0_RP
+!!$    rhoa_sdm(:,:,:) = 0.0_RP
     do n = 1, sdnum_s2c
        sortid_s2c(n) = 0
        sortkey_s2c(n) = 0

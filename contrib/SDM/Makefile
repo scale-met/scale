@@ -57,6 +57,7 @@ instmodules:	makemodules
 makemodules: $(OBJS)
 
 sdm_condensation_water.o: sdm_condensation_water.f90 \
+	sdm_coordtrans.o \
 	sdm_common.o \
 	sdm_fluidconv.o \
 	$(BUILD_DIR)/scale_tracer.o \

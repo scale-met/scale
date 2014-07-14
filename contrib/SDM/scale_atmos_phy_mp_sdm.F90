@@ -47,6 +47,7 @@
 !! @li      2014-07-14 (S.Shima) [rev] sdm_condevp tuned for FX (use compile option -Kocl -Kprefetch_indirect)
 !! @li      2014-07-14 (S.Shima) [rev] sdm_sd2rhow, sdm_sd2rhocr, sdm_sd2qcqr are separated into m_sdm_sd2fluid
 !! @li      2014-07-14 (S.Shima) [rev] sdm_condevp,sdm_condevp_updatefluid are separated into m_sdm_condensation_water
+!! @li      2014-07-14 (S.Shima) [rev] Removed unused subroutines, variables
 !<
 !-------------------------------------------------------------------------------
 #include "macro_thermodyn.h"
@@ -248,40 +249,6 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) 'ERROR: terrain following coordinate is not yet supported!'
        call PRC_MPIstop
     end if
-
-!! Are these used??
-    allocate( KMIN1(KA) )
-    allocate( IMIN1(IA) )
-    allocate( JMIN1(JA) )
-    allocate( KPLS1(KA) )
-    allocate( IPLS1(IA) )
-    allocate( JPLS1(JA) )
-
-    do k = 2, KA
-      KMIN1(k) = k-1
-    enddo
-    KMIN1(1) = 1
-    do i = 2, IA
-      IMIN1(i) = i-1
-    enddo
-    IMIN1(1) = 1
-    do j = 2, JA
-      JMIN1(j) = j-1
-    enddo
-    JMIN1(1) = 1
-
-    do k = 1, KA-1
-      KPLS1(k) = k+1
-    enddo
-    KPLS1(KA) = KA
-    do i = 1, IA-1
-      IPLS1(i) = i+1
-    enddo
-    IPLS1(IA) = IA
-    do j = 1, JA-1
-      JPLS1(j) = j+1
-    enddo
-    JPLS1(JA) = JA
 
     if( (PRC_PERIODIC_X /= .true.) .or. (PRC_PERIODIC_Y /= .true.))then
        if( IO_L ) write(IO_FID_LOG,*) 'ERROR: Only periodic B.C. is supported!'
@@ -582,21 +549,21 @@ contains
                          ! 4   : Time interval to form super droplets as aerosol
                          ! 5   : Time interval to adjust number of super droplets in each grid
 !    real(RP) :: rst_crs(KA,IA,JA)  ! Base state density x Jacobian
-    real(RP) :: pbr_crs(KA,IA,JA)  ! Base state pressure
-    real(RP) :: ptbr_crs(KA,IA,JA) ! Base state potential temperature
-    real(RP) :: ppf_crs(KA,IA,JA)  ! Pressure perturbation at future
+!!$    real(RP) :: pbr_crs(KA,IA,JA)  ! Base state pressure
+!!$    real(RP) :: ptbr_crs(KA,IA,JA) ! Base state potential temperature
+!!$    real(RP) :: ppf_crs(KA,IA,JA)  ! Pressure perturbation at future
 !!$    real(RP) :: uf_crs(KA,IA,JA)   ! u components of velocity at future
 !!$    real(RP) :: vf_crs(KA,IA,JA)   ! v components of velocity at future
 !!$    real(RP) :: wf_crs(KA,IA,JA)   ! w components of velocity at future
 !!$!    real(RP) :: wcf_crs(KA,IA,JA)  ! zeta components of contravariant velocity at future
-    real(RP) :: ptpf_crs(KA,IA,JA) ! Potential temperature perturbation at future
-    real(RP) :: qvf_crs(KA,IA,JA)  ! Water vapor mixing ratio at future
+!!$    real(RP) :: ptpf_crs(KA,IA,JA) ! Potential temperature perturbation at future
+!!$    real(RP) :: qvf_crs(KA,IA,JA)  ! Water vapor mixing ratio at future
 !!$    real(RP) :: prr_crs(IA,JA,1:2) ! Precipitation and accumulation for rain
     real(RP) :: rtmp4(KA,IA,JA)    ! Temporary array
     real(RP) :: rtmp5(KA,IA,JA)    ! Temporary array
     real(RP) :: rtmp6(KA,IA,JA)    ! Temporary array
     ! Output variables
-    real(RP) :: exnr_crs(KA,IA,JA) ! Exner function
+!!$    real(RP) :: exnr_crs(KA,IA,JA) ! Exner function
     integer :: bufsiz1      ! Buffer size for MPI
     integer :: bufsiz2      ! Buffer size for MPI
     ! Work variables
@@ -627,8 +594,8 @@ contains
     real(RP) :: pres_scale(KA,IA,JA) ! Pressure
     real(RP) :: rhod_scale(KA,IA,JA) ! dry air density
     real(RP) :: t_scale(KA,IA,JA)    ! Temperature
-    real(RP) :: qc_scale(KA,IA,JA)   ! qc = rhoc/(rhod+rhov)
-    real(RP) :: qr_scale(KA,IA,JA)   ! qr = rhor/(rhod+rhov)
+    real(RP) :: rhoc_scale(KA,IA,JA) ! cloud water density
+    real(RP) :: rhor_scale(KA,IA,JA) ! rain water density
 
     !---------------------------------------------------------------------------
 
@@ -679,68 +646,6 @@ contains
     dtcl(4) =  sdm_aslfmdt
     dtcl(5) =  sdm_nadjdt
 
-    ! Evaluate the diagnostic fluid variables needed for SDM from SCALE intrinsic variables
-!!$    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!$    !! Legacy code. Temporarily used for now but finally removed
-!!$!    mf(:,:) = 1.0_RP
-!!$    QDRY(:,:,:) = 1.0_RP
-!!$    do k = 1, KA
-!!$    do i = 1, IA
-!!$    do j = 1, JA
-!!$!      rst_crs(k,i,j) = DENS(k,i,j) * jcb(k,i,j)
-!!$      ptbr_crs(k,i,j) = RHOT(k,i,j) / DENS(k,i,j)
-!!$      do iq = QQS, QQE
-!!$        QDRY(k,i,j) = QDRY(k,i,j) - QTRC(k,i,j,iq)
-!!$      enddo
-!!$      RTOT (k,i,j) = Rdry * QDRY(k,i,j) + Rvap * QTRC(k,i,j,I_QV)
-!!$      CPTOT(k,i,j) = CPdry * QDRY(k,i,j)
-!!$      do iq = QQS, QQE
-!!$        CPTOT(k,i,j) = CPTOT(k,i,j) + QTRC(k,i,j,iq) * CPw(iq)
-!!$      enddo
-!!$      CPovCV(k,i,j) = CPTOT(k,i,j) / ( CPTOT(k,i,j) - RTOT(k,i,j) )
-!!$      pbr_crs(k,i,j) = P00 * ( RHOT(k,i,j) * RTOT(k,i,j) / P00 )**CPovCV(k,i,j)
-!!$      ppf_crs(k,i,j) = 0.0_RP
-!!$      ptpf_crs(k,i,j) = 0.0_RP
-!!$      qvf_crs(k,i,j) = QTRC(k,i,j,I_QV)
-!!$      QTRC(k,i,j,I_QC:I_QR) = 0.0_RP
-!!$    enddo
-!!$    enddo
-!!$    enddo
-!     jcb8w(KA,:,:) = GTRANS_GSQRT(KA-1,:,:,I_XYW)
-!     jcb(KA,:,:) = GTRANS_GSQRT(KA-1,:,:,I_XYW)
-!!$    do k = 1, KA
-!!$    do i = 1, IA
-!!$    do j = 1, JA
-!!$      uf_crs(k,i,j) = 2.0_RP * MOMX(k,i,j) / ( DENS(k,i,j)+DENS(k,IMIN1(i),j) )
-!!$      vf_crs(k,i,j) = 2.0_RP * MOMY(k,i,j) / ( DENS(k,i,j)+DENS(k,i,JMIN1(j)) )
-!!$      wf_crs(k,i,j) = 2.0_RP * MOMZ(k,i,j) / ( DENS(k,i,j)+DENS(KMIN1(k),i,j) )
-!!$!      wcf_crs(k,i,j) = 2.0_RP * MOMZ(k,i,j) * jcb8w(k,i,j) / ( DENS(k,i,j)+DENS(KMIN1(k),i,j) )
-!!$    enddo
-!!$    enddo
-!!$    enddo
-    ! -----
-    ! Perform super-droplets method (SDM)
-    !== get the exner function at future ==!
-!    call getexner(pbr_crs,ppf_crs,exnr_crs,rtmp4)
-    !== get the zeta components of contravariant velocity ==!
-    !== at future                                         ==!
-!     call phy2cnt(idsthopt,idtrnopt,idmpopt,idmfcopt,idoneopt,    &
-!                  ni,nj,nk,j31,j32,jcb8w,mf,                      &
-!                  uf_crs,vf_crs,wf_crs,wcf_crs,rtmp4,rtmp5,rtmp6)
-
-    ! Get dry air density at the start of SDM.
-!    call sdm_getrhod(pbr_crs,ptbr_crs,ppf_crs,ptpf_crs,       &
-!                       qvf_crs,rhod_crs)
-    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    !! Refactored code here. The legacy code above are now being refactored to this part.
-    !!! SCALE intrinsic variables 
-    !! DENS:               Density [kg/m3]
-    !! MOMZ,MOMX,MOMY:     Momentum [kg/s/m2]
-    !! RHOT:               DENS * POTT [K*kg/m3]
-    !! QTRC(KA,IA,JA,QAD): Ratio of mass of tracer to total mass[kg/kg]
-
-    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
     ! after removing OMP support, this should be also omitted.
     ! Finally, bufsiz1 = bufsiz and bufsiz2 = bndsdmdim, and these should be determined once in sdm_numset or somewhere and should be stored as common variables
     bufsiz1 = nint( sdininum_s2c*(real(sdm_extbuf)*1.E-2_RP) )
@@ -775,9 +680,10 @@ contains
     !== run SDM at future ==!
      call sdm_calc(MOMX,MOMY,MOMZ,DENS,RHOT,QTRC,                 & 
                    sdm_calvar,sdm_mvexchg,dtcl(1:3), sdm_aslset,  &
-                   exnr_crs,pbr_crs,ptbr_crs,         &
-                   ppf_crs,ptpf_crs,qvf_crs,&
-                   prr_crs,zph_crs,rhod_crs,                      &
+!!$                   exnr_crs,pbr_crs,ptbr_crs,         &
+!!$                   ppf_crs,ptpf_crs,qvf_crs,&
+!!$                   prr_crs,zph_crs,rhod_crs,                      &
+                   prr_crs,zph_crs,                      &
                    lsdmup,ni_s2c,nj_s2c,nk_s2c,                   &
                    sdnum_s2c,sdnumasl_s2c,                        &
                    sdn_s2c,sdx_s2c,sdy_s2c,sdri_s2c,sdrj_s2c,sdrk_s2c,              &
@@ -811,20 +717,8 @@ contains
                       zph_crs,             &
                       sdnum_s2c,sdn_s2c,sdx_s2c,sdy_s2c,     &
                       sdr_s2c,sdri_s2c,sdrj_s2c,sdrk_s2c,sdrkl_s2c,sdrku_s2c,         &
-                      rhoc_sdm,rhor_sdm,                   &
+                      rhoc_scale,rhor_scale,                   &
                       sd_itmp1,sd_itmp2,crs_dtmp1,crs_dtmp2)
-!     call sdm_sd2qcqr(nqw,pbr_crs,ptbr_crs,                         &
-!                      ppf_crs,ptpf_crs,qvf_crs,qwtrf_crs,zph_crs,   &
-!!$     call sdm_sd2qcqr(pbr_crs,ptbr_crs,                             &
-!!$                      ppf_crs,ptpf_crs,qvf_crs,zph_crs,             &
-!!$                      lsdmup,sdnum_s2c,sdn_s2c,sdx_s2c,sdy_s2c,     &
-!!$                      sdr_s2c,sdrk_s2c,sdrkl_s2c,sdrku_s2c,         &
-!!$                      rhod_crs,rhoc_sdm,rhor_sdm,                   &
-!!$                      !--- Y.Sato add ---
-!!$                      rhoa_sdm, sdnumasl_s2c, sdasl_s2c,            &
-!!$                      !--- Y.Sato add ---
-!!$                      sd_itmp1,sd_itmp2,crs_dtmp1,crs_dtmp2)
-
 
 ! not supported yet. S.Shima
 !!$     ! Aerosol formation process of super-droplets
@@ -873,22 +767,6 @@ contains
 !!$                         sdm_itmp1,sdm_itmp2,sd_itmp1)
 !!$
 !!$      end if
-
-! No feedback to atmosphere for debugging.
-!!$    !--- update MOMENTUM, RHOT, and QV
-!!$    do k = 1, KA
-!!$    do i = 1, IA
-!!$    do j = 1, JA
-!!$      RHOT(k,i,j) = ( ptbr_crs(k,i,j)+ptpf_crs(k,i,j) ) * DENS(k,i,j)
-!!$!      MOMX(k,i,j) = uf_crs(k,i,j) * 0.5_RP * ( DENS(k,i,j)+DENS(k,IPLS1(i),j) )
-!!$!      MOMY(k,i,j) = vf_crs(k,i,j) * 0.5_RP * ( DENS(k,i,j)+DENS(k,i,JPLS1(j)) )
-!!$!      MOMZ(k,i,j) = wcf_crs(k,i,j) * 0.5_RP * ( DENS(k,i,j)+DENS(KPLS1(k),i,j) ) / jcb8w(k,i,j)
-!!$      QTRC(k,i,j,I_QV) = qvf_crs(k,i,j)
-!!$      QTRC(k,i,j,I_QC) = rhoc_sdm(k,i,j) / DENS(k,i,j)
-!!$      QTRC(k,i,j,I_QR) = rhor_sdm(k,i,j) / DENS(k,i,j)
-!!$    enddo
-!!$    enddo
-!!$    enddo
 
 !! Are these correct? Let's check later.
 !!$    call HIST_in( rhoa_sdm(:,:,:), 'RAERO', 'aerosol mass conc.', 'kg/m3', dt)
@@ -974,52 +852,54 @@ contains
       real(RP),intent(inout) :: sdrku_s2c(IA,JA)
       ! Work variables
 !      real(RP) :: rbr_crs(KA,IA,JA)   ! density ! not used
-      real(RP) :: ptbr_crs(KA,IA,JA)  ! potential temperature
-      real(RP) :: ptp_crs(KA,IA,JA)   ! Potential temperature perturbation
-      real(RP) :: pbr_crs(KA,IA,JA)   ! pressure
-      real(RP) :: pp_crs(KA,IA,JA)    ! Pressure perturbation
-      real(RP) :: qv_crs(KA,IA,JA)    ! Water vapor mixing ratio
+!!$      real(RP) :: ptbr_crs(KA,IA,JA)  ! potential temperature
+!!$      real(RP) :: ptp_crs(KA,IA,JA)   ! Potential temperature perturbation
+!!$      real(RP) :: pbr_crs(KA,IA,JA)   ! pressure
+!!$      real(RP) :: pp_crs(KA,IA,JA)    ! Pressure perturbation
+!!$      real(RP) :: qv_crs(KA,IA,JA)    ! Water vapor mixing ratio
       real(RP) :: n0                            ! number of real droplets per unit volume and per aerosol radius
       real(RP) :: dry_r                         ! aerosol radius
       real(RP) :: delta1, delta2, sdn_tmp       ! temporary
       logical :: lsdmup                         ! flag for updating water hydrometeor by SDM
       integer :: iexced, sdnum_tmp1, sdnum_tmp2 ! temporary
       integer :: i, j, k, n, iq, np             ! index
-      real(RP) :: CPTOT(KA,IA,JA), RTOT(KA,IA,JA)
-      real(RP) :: QDRY(KA,IA,JA),  CPovCV(KA,IA,JA)
+!!$      real(RP) :: CPTOT(KA,IA,JA), RTOT(KA,IA,JA)
+!!$      real(RP) :: QDRY(KA,IA,JA),  CPovCV(KA,IA,JA)
       real(RP) :: crs_dtmp1(KA,IA,JA), crs_dtmp2(KA,IA,JA)
       integer :: sd_str, sd_end, sd_valid
 
       real(RP) :: pres_scale(KA,IA,JA)  ! Pressure
       real(RP) :: rhod_scale(KA,IA,JA) ! dry air density
       real(RP) :: t_scale(KA,IA,JA)    ! Temperature
+      real(RP) :: rhoc_scale(KA,IA,JA) ! cloud water density
+      real(RP) :: rhor_scale(KA,IA,JA) ! rain water density
      !---------------------------------------------------------------------
 
       ! conversion of SCALE variables to CReSS variables: ptbr ptp pbr pp rhod qv 
       ! This part will be omitted in the future.
-      CPTOT(:,:,:) = 0.0_RP
-      QDRY(:,:,:) = 1.0_RP
-      do k = 1, KA
-      do i = 1, IA
-      do j = 1, JA
-        ptbr_crs(k,i,j) = RHOT(k,i,j) / DENS(k,i,j)
-        do iq = QQS, QQE
-          QDRY(k,i,j) = QDRY(k,i,j) - QTRC(k,i,j,iq)
-        enddo
-        rhod_crs(k,i,j) = DENS(k,i,j) * QDRY(k,i,j) ! dry air density
-        RTOT (k,i,j) = Rdry * QDRY(k,i,j) + Rvap * QTRC(k,i,j,I_QV)
-        CPTOT(k,i,j) = CPdry * QDRY(k,i,j)
-        do iq = QQS, QQE
-         CPTOT(k,i,j) = CPTOT(k,i,j) + QTRC(k,i,j,iq) * CPw(iq)
-        enddo
-        CPovCV(k,i,j) = CPTOT(k,i,j) / ( CPTOT(k,i,j) - RTOT(k,i,j) )
-        pbr_crs(k,i,j) = P00 * ( RHOT(k,i,j) * RTOT(k,i,j) / P00 )**CPovCV(k,i,j)
-        pp_crs(k,i,j) = 0.0_RP
-        ptp_crs(k,i,j) = 0.0_RP
-        qv_crs(k,i,j) = QTRC(k,i,j,I_QV) ! Be careful. The definition of qv is different. (SCALE: qv=rhov/rho, CReSS: qv=rhov/rhod)
-      enddo
-      enddo
-      enddo
+!!$      CPTOT(:,:,:) = 0.0_RP
+!!$      QDRY(:,:,:) = 1.0_RP
+!!$      do k = 1, KA
+!!$      do i = 1, IA
+!!$      do j = 1, JA
+!!$        ptbr_crs(k,i,j) = RHOT(k,i,j) / DENS(k,i,j)
+!!$        do iq = QQS, QQE
+!!$          QDRY(k,i,j) = QDRY(k,i,j) - QTRC(k,i,j,iq)
+!!$        enddo
+!!$        rhod_crs(k,i,j) = DENS(k,i,j) * QDRY(k,i,j) ! dry air density
+!!$        RTOT (k,i,j) = Rdry * QDRY(k,i,j) + Rvap * QTRC(k,i,j,I_QV)
+!!$        CPTOT(k,i,j) = CPdry * QDRY(k,i,j)
+!!$        do iq = QQS, QQE
+!!$         CPTOT(k,i,j) = CPTOT(k,i,j) + QTRC(k,i,j,iq) * CPw(iq)
+!!$        enddo
+!!$        CPovCV(k,i,j) = CPTOT(k,i,j) / ( CPTOT(k,i,j) - RTOT(k,i,j) )
+!!$        pbr_crs(k,i,j) = P00 * ( RHOT(k,i,j) * RTOT(k,i,j) / P00 )**CPovCV(k,i,j)
+!!$        pp_crs(k,i,j) = 0.0_RP
+!!$        ptp_crs(k,i,j) = 0.0_RP
+!!$        qv_crs(k,i,j) = QTRC(k,i,j,I_QV) ! Be careful. The definition of qv is different. (SCALE: qv=rhov/rho, CReSS: qv=rhov/rhod)
+!!$      enddo
+!!$      enddo
+!!$      enddo
 
       if( .not. sdm_calvar(1) .and. &
           .not. sdm_calvar(2) .and. &
@@ -1337,32 +1217,8 @@ contains
                        zph_crs,                   &
                        sdnum_s2c,sdn_s2c,sdx_s2c,sdy_s2c,        &
                        sdr_s2c,sdri_s2c,sdrj_s2c,sdrk_s2c,sdrkl_s2c,sdrku_s2c,            &
-                       rhoc_sdm,rhor_sdm,                      &
+                       rhoc_scale,rhor_scale,                      &
                        sd_itmp1,sd_itmp2,crs_dtmp1,crs_dtmp2            )
-
-!      call sdm_sd2qcqr(nqw,pbr_crs,ptbr_crs,                            &
-!                       pp_crs,ptp_crs,qv_crs,qwtr_crs,zph_crs,          &
-      ! We need to rethink whether it's okay to evaluate QC QR here
-      ! For example, when we diagnose pressure or rhod during the dynamical process, 
-      ! qc and qr should be 0 because they are not included in the total density
-!!$      call sdm_sd2qcqr(pbr_crs,ptbr_crs,                                &
-!!$                       pp_crs,ptp_crs,qv_crs,zph_crs,                   &
-!!$                       lsdmup,sdnum_s2c,sdn_s2c,sdx_s2c,sdy_s2c,        &
-!!$                       sdr_s2c,sdrk_s2c,sdrkl_s2c,sdrku_s2c,            &
-!!$                       rhod_crs,rhoc_sdm,rhor_sdm,                      &
-!!$                       !--- Y.Sato add ---
-!!$                       rhoa_sdm,  sdnumasl_s2c, sdasl_s2c,              &
-!!$                       !--- Y.Sato add ---
-!!$                       sd_itmp1,sd_itmp2,crs_dtmp1,crs_dtmp2            )
-
-!      do k = 1, KA
-!      do i = 1, IA
-!      do j = 1, JA
-!         QTRC(k,i,j,I_QC) = rhoc_sdm(k,i,j) / DENS(k,i,j)
-!         QTRC(k,i,j,I_QR) = rhor_sdm(k,i,j) / DENS(k,i,j)
-!      enddo
-!      enddo
-!      enddo
 
       ! Output logfile about SDM
       if( mype==0 ) then
@@ -1386,51 +1242,12 @@ contains
 
   end subroutine sdm_iniset
   !-----------------------------------------------------------------------------
-
-  !-----------------------------------------------------------------------------
-  subroutine getexner(pbr,pp,pi,p)
-
-  use scale_const, only: &
-      rd => CONST_Rdry, &
-      cp => CONST_CPdry, &
-      p0 => CONST_PRE00
-  implicit none
-  ! Input variables
-  real(RP),intent(in) :: pbr(KA,IA,JA)  ! Base state pressure
-  real(RP),intent(in) :: pp(KA,IA,JA)   ! Pressure perturbation
-  ! Output variables
-  real(RP),intent(out) :: p(KA,IA,JA)   ! Pressure
-  real(RP),intent(out) :: pi(KA,IA,JA)  ! Exner function
-  ! Internal shared variables
-  real(RP) :: rddvcp      ! rd / cp
-  real(RP) :: p0iv        ! 1.0 / p0
-  ! Internal private variables
-  integer :: i, j, k        ! Array index in x direction
-  !--------------------------------------------------------------------
-  ! Set the common used variables.
-   rddvcp=rd/cp
-   p0iv=1.e0/p0
-
-!   do k=1,nk-1
-!   do j=1,nj-1
-!   do i=1,ni-1
-   do k=KS-1,KE+1
-   do j=JS-1,JE+1
-   do i=IS-1,IE+1
-     p(k,i,j)=pbr(k,i,j)+pp(k,i,j)
-     pi(k,i,j)=exp(rddvcp*log(p0iv*p(k,i,j)))
-   end do
-   end do
-   end do
-
-    return
-  end subroutine getexner
-  !-----------------------------------------------------------------------------
   subroutine sdm_calc(MOMX,MOMY,MOMZ,DENS,RHOT,QTRC,              & 
                       sdm_calvar,sdm_mvexchg,dtcl, sdm_aslset,    &
-                      exnr_crs,                       &
-                      pbr_crs,ptbr_crs,pp_crs, &
-                      ptp_crs,qv_crs,prec_crs,zph_crs,rhod_crs,   &
+!!$                      exnr_crs,                       &
+!!$                      pbr_crs,ptbr_crs,pp_crs, &
+!!$                      ptp_crs,qv_crs,prec_crs,zph_crs,rhod_crs,   &
+                      prec_crs,zph_crs,   &
                       lsdmup,ni_sdm,nj_sdm,nk_sdm,                &
                       sd_num,sd_numasl,sd_n,sd_x,sd_y,sd_ri,sd_rj,sd_rk,      &
                       sd_u,sd_v,sd_vz,sd_r,sd_asl,sd_rkl,sd_rku,  &
@@ -1454,7 +1271,7 @@ contains
    use m_sdm_fluidconv, only: &
         sdm_rhot_qtrc2p_t, sdm_rho_rhot2pt, sdm_rho_mom2uvw, sdm_rho_qtrc2rhod
    use m_sdm_sd2fluid, only: &
-        sdm_sd2rhow
+        sdm_sd2rhow, sdm_sd2prec
    use m_sdm_boundary, only: &
         sdm_jdginvdv, sdm_boundary
     use m_sdm_motion, only: &
@@ -1476,10 +1293,10 @@ contains
    real(RP), intent(in) :: dtcl(1:3)    ! Time interval of cloud micro physics
 !   real(RP), intent(in) :: jcb(KA,IA,JA)      ! Jacobian at scalar points
 !   real(RP), intent(in) :: rst_crs(KA,IA,JA)  ! Base state density x Jacobian
-   real(RP), intent(in) :: exnr_crs(KA,IA,JA) ! exner function
-   real(RP), intent(in) :: pbr_crs(KA,IA,JA)  ! Base state pressure
-   real(RP), intent(in) :: ptbr_crs(KA,IA,JA) ! Base state potential temperature
-   real(RP), intent(in) :: pp_crs(KA,IA,JA)   ! Pressure perturbation
+!!$   real(RP), intent(in) :: exnr_crs(KA,IA,JA) ! exner function
+!!$   real(RP), intent(in) :: pbr_crs(KA,IA,JA)  ! Base state pressure
+!!$   real(RP), intent(in) :: ptbr_crs(KA,IA,JA) ! Base state potential temperature
+!!$   real(RP), intent(in) :: pp_crs(KA,IA,JA)   ! Pressure perturbation
    real(RP), intent(in) :: zph_crs(KA,IA,JA)  ! z physical coordinates
    integer, intent(in) :: ni_sdm                    ! SDM model dimension in x direction
    integer, intent(in) :: nj_sdm                    ! SDM model dimension in y direction
@@ -1491,7 +1308,7 @@ contains
    integer, intent(in) :: bufsiz1       ! buffer size for MPI
    integer, intent(in) :: bufsiz2       ! buffer size for MPI
    ! Input and output variables
-   real(RP), intent(inout) :: rhod_crs(KA,IA,JA)  ! dry air density
+!!$   real(RP), intent(inout) :: rhod_crs(KA,IA,JA)  ! dry air density
    integer(DP), intent(inout) :: sd_n(1:sd_num)    ! multiplicity of super-droplets
    real(RP), intent(inout) :: sd_x(1:sd_num)  ! x-coordinate of super-droplets
    real(RP), intent(inout) :: sd_y(1:sd_num)  ! y-coordinate of super-droplets
@@ -1509,8 +1326,8 @@ contains
    integer, intent(inout) :: sort_key(1:sd_num) ! sort key
    integer, intent(inout) :: sort_freq(1:ni_sdm*nj_sdm*nk_sdm+1) ! number of super-droplets in each grid
    integer, intent(inout) :: sort_tag(1:ni_sdm*nj_sdm*nk_sdm+2)  ! accumulated number of super-droplets in each grid
-   real(RP), intent(inout) :: ptp_crs(KA,IA,JA)! Potential temperature perturbation
-   real(RP), intent(inout) :: qv_crs(KA,IA,JA) ! Water vapor mixing ratio
+!!$   real(RP), intent(inout) :: ptp_crs(KA,IA,JA)! Potential temperature perturbation
+!!$   real(RP), intent(inout) :: qv_crs(KA,IA,JA) ! Water vapor mixing ratio
    real(RP), intent(inout) :: prec_crs(IA,JA,1:2)! [1]:precipitation and [2]:accumlation
    real(DP), intent(inout) :: rbuf(1:bufsiz1,1:bufsiz2,1:2) ! reciving buffer for MPI
    real(DP), intent(inout) :: sbuf(1:bufsiz1,1:bufsiz2,1:2) ! sending buffer for MPI
@@ -1598,16 +1415,6 @@ contains
             call COMM_wait ( RHOT(:,:,:), 1 )
             call COMM_wait ( QTRC(:,:,:,I_QV), 2 )
             call COMM_wait ( DENS(:,:,:), 3 )
-
-!!$            ! convert the impact of { condensation/evaporation } to
-!!$            ! {qv,ptp} in CReSS
-!!$            call sdm_condevp_updatefluid(ptp_crs,qv_crs,exnr_crs,         &
-!!$                              rhod_crs,crs_val1p,crs_val1c)
-!!$
-!!$            ! update dry air density
-!!$
-!!$            call sdm_getrhod(pbr_crs,ptbr_crs,pp_crs,ptp_crs,  &
-!!$                             qv_crs,rhod_crs)
 
          end if
          !=== 2 : stochastic coalescence ===!
@@ -1735,81 +1542,9 @@ contains
                        sd_num,sd_n,sd_x,sd_y,sd_r,sd_ri,sd_rj,sd_rk,  &
                        sd_itmp1(1:sd_num,1),crs_val1c(1,1:IA,1:JA))
 
-      ! Communicate CReSS variables to the neighbor node in horizontal
-      ! after running SDM
-
-!!$      if( .not. lsdmup ) return
-
-!      call sdm_commucrs(ni,nj,nk,ptp_crs)
-!      call sdm_commucrs(ni,nj,nk,qv_crs)
-
-!      if( sdm_mvexchg>0 ) then
-!         call sdm_commucrs(ni,nj,nk,u_crs)
-!         call sdm_commucrs(ni,nj,nk,v_crs)
-!         call sdm_commucrs(ni,nj,nk,wc_crs)
-!      end if
-
-! -----
-
     return
   end subroutine sdm_calc
 !---------------------------------------------------------------------------------------
-  !-----------------------------------------------------------------------------
-  subroutine sdm_getrhod(pbr_crs,ptbr_crs,pp_crs,ptp_crs,&
-                         qv_crs,rhod_crs)
-    use scale_const, only: &
-      rd => CONST_Rdry,  &
-      cp => CONST_CPdry, &
-      p0 => CONST_PRE00       ! Reference Pressure [Pa]
-    ! Input variables
-    real(RP), intent(in)  :: pbr_crs(KA,IA,JA)  ! Base state pressure
-    real(RP), intent(in)  :: ptbr_crs(KA,IA,JA) ! Base state potential temperature
-    real(RP), intent(in)  :: pp_crs(KA,IA,JA)   ! Pressure perturbation
-    real(RP), intent(in)  :: ptp_crs(KA,IA,JA)  ! Potential temperature perturbation
-    real(RP), intent(in)  :: qv_crs(KA,IA,JA)   ! Water vapor mixing ratio
-    ! Output variables
-    real(RP), intent(out) :: rhod_crs(KA,IA,JA)  ! dry air densitiy
-    ! Work variables
-    real(RP) :: rddvcp    ! rd / cp
-    real(RP) :: p_crs     ! pressure
-    real(RP) :: pt_crs    ! potential temperature
-    real(RP):: t_crs     ! temperature
-    real(RP):: tv_crs    ! virtual temperature
-    integer :: i, j, k, n  ! index
-    real(RP), parameter :: epsav = 1.60770_RP   ! Molecular weight ratio of vapor/air
- !---------------------------------------------------------------------
- ! Set constant variable
-    rddvcp = rd / cp
-
- ! Get dry air density.
-!    do k=2,nk-1
-!    do n=0,(ni-1)*(nj-1)-1
-    do k=KS,KE+1
-    do n=1,(IE+1)*(JE+1)-1
-         !### loop coupling for vectorization ###!
-!         i = mod(n,ni-1) + 1        !! do j=1,nj-1
-!         j = (n-(i-1))/(ni-1) + 1   !! do i=1,ni-1
-         i = mod(n,IE+1) + 1        !! do j=1,nj-1
-         j = (n-(i-1))/(IE+1) + 1   !! do i=1,ni-1
-         pt_crs = ptbr_crs(k,i,j) + ptp_crs(k,i,j)
-         p_crs  = pbr_crs(k,i,j)  + pp_crs(k,i,j)
-         t_crs  = pt_crs * exp(rddvcp*log(p_crs/p0))  !! pt => t
-         !! Get virtual temperature
-         tv_crs = t_crs                                                 &
-                * (1.e0+epsav*qv_crs(k,i,j))/(1.e0+qv_crs(k,i,j))
-
-         rhod_crs(k,i,j) = real( (p_crs/(tv_crs*rd))                    &
-                                       /(1.e0+qv_crs(k,i,j)), kind=RP )
-
-!DBG     rhod_crs(i,j,k) = real( p_crs / (tv_crs*rd), kind=r8 )
-                                   !! density of moist air (rhod+rhov)
-    end do
-    end do
-
-    return
-  end subroutine sdm_getrhod
-  !-----------------------------------------------------------------------------
-  !-----------------------------------------------------------------------------
 !  subroutine sdm_sd2momnt(ni,nj,nk,zph_crs,mu_sdm,mv_sdm,mw_sdm,  &
 !                          sd_num,sd_n,sd_x,sd_y,sd_rk,            &
 !                          sd_u,sd_v,sd_wc,sd_r,ilist)
@@ -1995,259 +1730,6 @@ contains
 !  end subroutine sdm_sd2momnt
   !-----------------------------------------------------------------------------
 
-  !-----------------------------------------------------------------------------
-  subroutine sdm_sd2prec(dtb_crs,                        &
-                         prec,sd_num,sd_n,sd_x,sd_y,     &
-                         sd_r,sd_ri,sd_rj,sd_rk,ilist,pr_sdm)
-
-!!$      use scale_grid, only: &
-!!$          FX => GRID_FX, &
-!!$          FY => GRID_FY
-      use m_sdm_coordtrans, only: &
-           sdm_x2ri, sdm_y2rj
-
-      ! Input variables
-      real(RP), intent(in) :: dtb_crs
-      integer, intent(in) :: sd_num  ! number of super-droplets
-      integer(DP), intent(in) :: sd_n(1:sd_num) ! multiplicity of super-droplets
-      real(RP), intent(in) :: sd_x(1:sd_num) ! x-coordinate of super-droplets
-      real(RP), intent(in) :: sd_y(1:sd_num) ! y-coordinate of super-droplets
-      real(RP), intent(in) :: sd_r(1:sd_num) ! equivalent radius of super-droplets
-      ! Input and output variables
-      real(RP), intent(out) :: sd_ri(1:sd_num)   ! index-i(real) of super-droplets
-      real(RP), intent(out) :: sd_rj(1:sd_num)   ! index-j(real) of super-droplets
-      real(RP), intent(inout) :: sd_rk(1:sd_num) ! index[k/real] of super-droplets
-      real(RP), intent(inout) :: prec(IA,JA,1:2) ! precipitation and accumlation
-      ! Output variables
-!      real(RP), intent(out) :: pr_sdm(KA,IA,JA) ! temporary buffer of CReSS dimension
-      real(RP), intent(out) :: pr_sdm(1:IA,1:JA) ! temporary buffer of CReSS dimension
-!      integer, intent(out) :: ilist(1:int(sd_num/nomp),1:nomp) ! buffer for list vectorization
-      integer, intent(out) :: ilist(1:sd_num) ! buffer for list vectorization
-      ! Work variables for OpenMP
-      integer :: sd_str        ! index of divided loop by OpenMP
-      integer :: sd_end        ! index of divided loop by OpenMP
-      integer :: np            ! index for OpenMP
-      ! Work variables
-      real(RP) :: dcoef(IA,JA) ! coef.
-      real(RP) :: dtmp         ! temporary variables
-      real(RP) :: dtbiv        ! 1.e0 / time step
-
-!      integer(kind=i8) :: idx_sdm   ! integer of 'dx_sdm'
-!      integer(kind=i8) :: idy_sdm   ! integer of 'dy_sdm'
-
-      integer :: nlist(1:nomp)      ! list number
-      integer :: tlist              ! total list number
-      integer :: cnt                ! counter
-
-      integer :: i, j, m, n, ix, jy ! index
-    !-------------------------------------------------------------------
-
-    ! Initialize
-      dtbiv = 1.0d0 / dtb_crs
-      dcoef(1:IA,1:JA)=0.0d0
-     do i = IS, IE
-     do j = JS, JE
-!!$      dcoef(i,j) = F_THRD * ONE_PI / real(dx_sdm(i)*dy_sdm(j),kind=RP)
-      dcoef(i,j) = F_THRD * ONE_PI * dxiv_sdm(i) * dyiv_sdm(j)
-!      idx_sdm = 10_i8 * floor( 1.e4*(dx_sdm+1.e-5), kind=i8 )
-!      idy_sdm = 10_i8 * floor( 1.e4*(dy_sdm+1.e-5), kind=i8 )
-     enddo
-     enddo
-
-!!$      tlist = 0
-!!$
-!!$      do np=1,nomp
-!!$         nlist(np) = 0
-!!$      end do
-
-!      do j=0,nj+1
-!      do i=0,ni+1
-      do j=1,JA
-      do i=1,IA
-         pr_sdm(i,j) = 0.d0
-      end do
-      end do
-
-      ! Get index list for compressing buffer.
-      cnt=0
-      do n=1,sd_num
-         if( sd_rk(n)<VALID2INVALID .and. &
-              sd_rk(n)>PREC2INVALID ) then
-            cnt = cnt + 1
-            ilist(cnt) = n
-         end if
-      end do
-!!$      do np=1,nomp
-!!$
-!!$         sd_str = int(sd_num/nomp)*(np-1) + 1
-!!$         sd_end = int(sd_num/nomp)*np
-!!$         cnt    = 0
-!!$
-!!$         do n=sd_str,sd_end
-!!$            if( sd_rk(n)<VALID2INVALID .and. &
-!!$                sd_rk(n)>PREC2INVALID ) then
-!!$               cnt = cnt + 1
-!!$               ilist(cnt,np) = n
-!!$            end if
-!!$         end do
-!!$
-!!$         nlist(np) = cnt
-!!$         tlist     = cnt
-!!$
-!!$      end do
-
-      ! Get precipitation
-      if( cnt>0 ) then
-         !### get horizontal face index(real) of super-droplets ###!
-         call sdm_x2ri(sd_num,sd_x,sd_ri,sd_rk)
-         call sdm_y2rj(sd_num,sd_y,sd_rj,sd_rk)
-
-         do m=1,cnt
-            n=ilist(m)
-            i=floor(sd_ri(n))+1
-            j=floor(sd_rj(n))+1
-
-            pr_sdm(i,j) = pr_sdm(i,j)                         &
-                         + sd_r(n) * sd_r(n) * sd_r(n)           &
-                         * real(sd_n(n),kind=RP)
-
-            sd_rk(n) = INVALID     !! convert to invalid
-         end do
-
-!!$      if( tlist>0 ) then
-!!$
-!!$         !## count voulme of super-droplets ###!
-!!$         do np=1,nomp
-!!$
-!!$            if( nlist(np)>0 ) then
-!!$
-!!$               do m=1,nlist(np)
-!!$
-!!$                  n = ilist(m,np)
-!!$
-!!$!                  i = int( floor( sd_x(n)*1.d5, kind=i8 )/idx_sdm ) + 2
-!!$!                  j = int( floor( sd_y(n)*1.d5, kind=i8 )/idy_sdm ) + 2
-!!$                  do ix = IS, IE
-!!$                   if( sd_x(n) <= ( FX(ix)-FX(IS-1) ) ) then
-!!$                    i = ix
-!!$                    exit
-!!$                   endif
-!!$                  enddo
-!!$                  do jy = JS, JE
-!!$                   if( sd_y(n) <= ( FY(jy)-FY(JS-1) ) ) then
-!!$                    j = jy
-!!$                    exit
-!!$                   endif
-!!$                  enddo
-!!$                  pr_sdm(i,j) = pr_sdm(i,j)                         &
-!!$                                + sd_r(n) * sd_r(n) * sd_r(n)           &
-!!$                                * real(sd_n(n),kind=RP)
-!!$
-!!$                  sd_rk(n) = INVALID     !! convert to invalid
-!!$
-!!$               end do
-!!$
-!!$            end if
-!!$
-!!$         end do
-
-         !### convert super-droplets to precipitation ###!
-
-!         do j=0,nj+1
-!         do i=0,ni+1
-         do j=1,JA
-         do i=1,IA
-
-            dtmp = real( pr_sdm(i,j) * dcoef(i,j) )
-
-            !! rain fall rate
-            prec(i,j,1) = dtmp * dtbiv
-
-            !! accumulation
-            prec(i,j,2) = prec(i,j,2) + dtmp
-
-         end do
-         end do
-
-      end if
-
-    return
-  end subroutine sdm_sd2prec
-  !----------------------------------------------------------------------------
-!  subroutine sdm_commucrs(ni,nj,nk,val)
-!    ! Input variables
-!
-!    integer, intent(in) :: ni    ! Model dimension in x direction
-!    integer, intent(in) :: nj    ! Model dimension in y direction
-!    integer, intent(in) :: nk    ! Model dimension in z direction
-!
-!    ! Input and output variable
-!
-!    real(RP), intent(inout) ::  val(0:ni+1,0:nj+1,1:nk)
-!                                   ! Optional scalar variable
-
-!-----7--------------------------------------------------------------7--
-
-! Exchange the value horizontally.
-
-      !### Exchange the value horizontally between sub domain ###
-
-      !== x direction ==!
-
-!      call s_putbufsx(idwbc,idebc,'all',2,ni-2,ni,nj,nk,val,1,1,sbuf)
-!
-!      call s_shiftsx(idwbc,idebc,'all',nj,nk,1,sbuf,rbuf)
-!
-!      call s_getbufsx(idwbc,idebc,'all',1,ni-1,ni,nj,nk,val,1,1,rbuf)
-!
-!      !== y direction ==!
-!
-!      call s_putbufsy(idsbc,idnbc,'all',2,nj-2,ni,nj,nk,val,1,1,sbuf)
-!
-!      call s_shiftsy(idsbc,idnbc,'all',ni,nk,1,sbuf,rbuf)
-!
-!      call s_getbufsy(idsbc,idnbc,'all',1,nj-1,ni,nj,nk,val,1,1,rbuf)
-
-
-      !### Exchange the value horizontally between grouped domain ###!
-
-!      !== x direction ==!
-
-!     call s_putbufgx(idwbc,idebc,'all',2,ni-2,ni,nj,nk,val,1,1,sbuf)
-!
-!      call s_shiftgx(idwbc,idebc,'all',nj,nk,1,sbuf,rbuf)
-!
-!      call s_getbufgx(idwbc,idebc,'all',1,ni-1,ni,nj,nk,val,1,1,rbuf)
-
-      !== y direction ==!
-
-!      call s_putbufgy(idsbc,idnbc,'all',2,nj-2,ni,nj,nk,val,1,1,sbuf)
-!
-!      call s_shiftgy(idsbc,idnbc,'all',ni,nk,1,sbuf,rbuf)
-!
-!      call s_getbufgy(idsbc,idnbc,'all',1,nj-1,ni,nj,nk,val,1,1,rbuf)
-
-      !== x direction again ( for L-corner ) ==!
-!
-!      call s_putbufgx(idwbc,idebc,'all',2,ni-2,ni,nj,nk,val,1,1,sbuf)
-!
-!      call s_shiftgx(idwbc,idebc,'all',nj,nk,1,sbuf,rbuf)
-!
-!      call s_getbufgx(idwbc,idebc,'all',1,ni-1,ni,nj,nk,val,1,1,rbuf)
-
-
-!      !### Set the periodic boundary conditions ###!
-
-!      call bcycle(idwbc,idebc,idsbc,idnbc,                              &
-!     &            2,1,ni-2,ni-1,2,1,nj-2,nj-1,ni,nj,nk,val)
-
-
-      !### Set the boundary conditions at the four corners ###!
-
-!      call bc4news(idwbc,idebc,idsbc,idnbc,1,ni-1,1,nj-1,ni,nj,nk,val)
-
-!    return
-!  end subroutine sdm_commucrs
   !----------------------------------------------------------------------------
   subroutine sdm_aslform(DENS,RHOT,QTRC,                          &   
                          sdm_calvar,sdm_aslset,                   &
