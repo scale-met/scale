@@ -57,7 +57,8 @@ contains
   !> Setup
   subroutine ATMOS_driver_setup
     use scale_time, only: &
-       TIME_NOWDATE
+       TIME_NOWDATE,    &
+       TIME_OFFSET_YEAR
     use mod_atmos_vars, only: &
        DENS,    &
        MOMZ,    &
@@ -103,7 +104,7 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '*** Setup each atmospheric components...'
 
     !--- setup solar insolation
-    call ATMOS_SOLARINS_setup( TIME_NOWDATE(1) )
+    call ATMOS_SOLARINS_setup( TIME_NOWDATE(1)+TIME_OFFSET_YEAR )
 
     call ATMOS_REFSTATE_setup( DENS, RHOT, QTRC ) ! (in)
 
