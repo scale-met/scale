@@ -13,6 +13,7 @@ include $(TOPDIR)/Mkinclude
 LIBNAME = libsdm.a 
 
 MODS	= \
+	  m_sdm_sd2fluid.mod \
 	  m_sdm_coalescence.mod \
 	  m_sdm_idutil.mod \
 	  m_sdm_motion.mod \
@@ -25,6 +26,7 @@ MODS	= \
 	  m_sdm_common.mod
 
 OBJS	= \
+	  sdm_sd2fluid.o \
 	  sdm_coalescence.o \
 	  sdm_idutil.o \
 	  sdm_motion.o \
@@ -51,6 +53,13 @@ instmodules:	makemodules
 	install $(MODS) $(MODDIR)
 
 makemodules: $(OBJS)
+
+sdm_sd2fluid.o: sdm_sd2fluid.f90 \
+	sdm_common.o \
+	sdm_coordtrans.o \
+	$(BUILD_DIR)/scale_const.o \
+	$(BUILD_DIR)/scale_precision.o
+	$(FC) $(FFLAGS) -I$(BUILD_DIR) -I$(MODDIR) -o $@ -c $<
 
 sdm_coalescence.o: sdm_coalescence.f90 \
 	sdm_common.o \
