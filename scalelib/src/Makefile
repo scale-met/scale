@@ -139,6 +139,7 @@ makegtool:
 
 ifeq ($(SDM),-D_SDM)
 makesdm: $(BUILD_DIR)/scale_precision.o \
+	$(BUILD_DIR)/scale_comm.o \
 	$(BUILD_DIR)/scale_atmos_sub_thermodyn.o \
 	$(BUILD_DIR)/scale_tracer.o \
 	$(BUILD_DIR)/scale_stdio.o \

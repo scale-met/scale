@@ -37,12 +37,14 @@
 !! @li      2014-07-12 (S.Shima) [rev] BUG of random number initialization removed
 !! @li      2014-07-12 (S.Shima) [rev] sdm_sort repaired
 !! @li      2014-07-12 (S.Shima) [rev] sdm_coales repaired
-!! @li      2014-07-12 (S.Shima) [rev] sdm_coales tuned for FX
+!! @li      2014-07-12 (S.Shima) [rev] sdm_coales tuned for FX (use compile option -Kprefetch_indirect)
 !! @li      2014-07-12 (S.Shima) [rev] sdm_sort and sdm_getperm are separated into the module m_sdm_idutil
 !! @li      2014-07-12 (S.Shima) [rev] sdm_coales is separated into the module m_sdm_coalescence
 !! @li      2014-07-13 (S.Shima) [rev] sdm_condevp repaired
 !! @li      2014-07-13 (S.Shima) [rev] sdm_sd2qcqr, sdm_sd2rhocr repaired
 !! @li      2014-07-14 (S.Shima) [rev] sdm_condevp_updatefluid created modifying and repairing sdm_sd2qvptp
+!! @li      2014-07-14 (S.Shima) [rev] Update HALO after call sdm_condevp_updatefluid
+!! @li      2014-07-14 (S.Shima) [rev] sdm_condevp tuned for FX (use compile option -Kocl -Kprefetch_indirect)
 !<
 !-------------------------------------------------------------------------------
 #include "macro_thermodyn.h"
@@ -1581,6 +1583,7 @@ contains
 
          eq_b = 0.0_RP
 
+!OCL UNROLL('full'),NOSWP  
          do t=1,22
 
             s = idx_nasl(t)
@@ -1617,6 +1620,7 @@ contains
 
          rdi = new_rd
 
+!OCL FRECIPRO,UNROLL
          do it=1,itr_max
 
             ! Considering Kohler-curve (R.R.Rogers)
@@ -2248,6 +2252,9 @@ contains
        dt => TIME_DTSEC_ATMOS_PHY_MP
    use scale_tracer, only: &
        QAD => QA
+   use scale_comm, only: &
+        COMM_vars8, &
+        COMM_wait
    use m_sdm_fluidconv, only: &
         sdm_rhot_qtrc2p_t, sdm_rho_rhot2pt, sdm_rho_mom2uvw, sdm_rho_qtrc2rhod
    use m_sdm_boundary, only: &
@@ -2361,7 +2368,7 @@ contains
             lsdmup = .true.
 
             ! get density of liquid-water(qw) before process-1
-            !! here cres_val1p is the rhow
+            !! cres_val1p is the rhow before condevp
             call sdm_sd2rhow(zph_crs,crs_val1p,                       &
                              sd_num,sd_n,sd_x,sd_y,sd_r,sd_ri,sd_rj,sd_rk,        &
                              sd_rkl,sd_rku,crs_val2p,sd_itmp1)
@@ -2369,7 +2376,7 @@ contains
             ! { condensation/evaporation } in SDM
             !! diagnose necessary fluid variables
             call sdm_rhot_qtrc2p_t(RHOT,QTRC,DENS,pres_scale,t_scale)
-
+            !! update the equivalent radius of SDs
             call sdm_condevp(sdm_aslset,            &
                              sdm_aslmw,sdm_aslion,sdm_dtevl,      &
                              pres_scale,t_scale,QTRC(:,:,:,I_QV), &
@@ -2377,13 +2384,20 @@ contains
                              sd_ri,sd_rj,sd_rk)
 
             ! get density of liquid-water(qw) after process-1
-            !! here cres_val1c is the rhow
+            !! here cres_val1c is the rhow after condevp
             call sdm_sd2rhow(zph_crs,crs_val1c,                       &
                              sd_num,sd_n,sd_x,sd_y,sd_r,sd_ri,sd_rj,sd_rk,        &
                              sd_rkl,sd_rku,crs_val2c,sd_itmp1)
 
             ! exchange the vapor and heat to fluid variables
             call sdm_condevp_updatefluid(RHOT,QTRC,DENS,crs_val1p,crs_val1c)
+            !! update the HALO region of the fluid variables
+            call COMM_vars8( RHOT(:,:,:), 1 )
+            call COMM_vars8( QTRC(:,:,:,I_QV), 2 )
+            call COMM_vars8( DENS(:,:,:), 3 )
+            call COMM_wait ( RHOT(:,:,:), 1 )
+            call COMM_wait ( QTRC(:,:,:,I_QV), 2 )
+            call COMM_wait ( DENS(:,:,:), 3 )
 
 !!$            ! convert the impact of { condensation/evaporation } to
 !!$            ! {qv,ptp} in CReSS
@@ -2404,15 +2418,15 @@ contains
             lsdmup = .true.
 
             ! get the terminal velocity of super-droplets
-
+            !! diagnose necessary fluid variables
             call sdm_rho_qtrc2rhod(DENS,QTRC,rhod_scale)
             call sdm_rhot_qtrc2p_t(RHOT,QTRC,DENS,pres_scale,t_scale)
-
+            !! evaluate the terminal velocity
             call sdm_getvz(pres_scale,rhod_scale,t_scale,            &
                            sd_num,sd_x,sd_y,sd_ri,sd_rj,sd_rk,sd_r,sd_vz,  &
                            sd_itmp1,sd_itmp2,sd_itmp3,'coales' )
-            ! { coalescence } in SDM
 
+            ! { coalescence } in SDM
             call sdm_coales(sdm_colkrnl,sdm_colbrwn,sdm_aslset,         &
                             sdm_aslrho,sdm_dtcol,                       &
                             pres_scale, t_scale,                        &
@@ -2428,7 +2442,6 @@ contains
 
          end if
 
-
          !=== 3 : motion of super-droplets ===!
 
          if( sdm_calvar(3) .and.                                 &
@@ -2437,9 +2450,8 @@ contains
             lsdmup = .true.
 
             ! get the momentum of super-droplets before moving.
-
             if( sdm_mvexchg>0 ) then
-              write(*,*) "sdm_mvexchg>1 is not applied"
+              write(*,*) "sdm_mvexchg>1 cannot be applied"
               call PRC_MPIstop
 !               call sdm_sd2momnt(ni,nj,nk,zph_crs,                    &
 !                                 crs_val1p,crs_val2p,crs_val3p,       &
@@ -2453,24 +2465,24 @@ contains
             end if
 
             ! get the terminal velocity of super-droplets
+            !! diagnose necessary fluid variables
             call sdm_rho_qtrc2rhod(DENS,QTRC,rhod_scale)
             call sdm_rhot_qtrc2p_t(RHOT,QTRC,DENS,pres_scale,t_scale)
-
+            !! evaluate the terminal velocity
             call sdm_getvz(pres_scale,rhod_scale,t_scale,            &
                            sd_num,sd_x,sd_y,sd_ri,sd_rj,sd_rk,sd_r,sd_vz,  &
                            sd_itmp1,sd_itmp2,sd_itmp3,'motion' )
 
             ! get the moving velocity of super-droplets
-
+            !! diagnose necessary fluid variables
             call sdm_rho_mom2uvw(DENS,MOMX,MOMY,MOMZ,u_scale,v_scale,w_scale)
-
+            !! evaluate the velocity of each SD
             call sdm_getvel(u_scale,v_scale,w_scale,                   &
                             sd_num,sd_x,sd_y,sd_ri,sd_rj,sd_rk,sd_u,sd_v,sd_vz)
 
             ! get the momentum of super-droplets after moving.
-
             if( sdm_mvexchg>0 ) then
-              write(*,*) "sdm_mvexchg>1 is not applied"
+              write(*,*) "sdm_mvexchg>1 cannnot be applied"
               call PRC_MPIstop
 
 !               call s_sdm_sd2momnt(iddx_sdm,iddy_sdm,                   &
@@ -2486,26 +2498,25 @@ contains
             end if
 
             ! { motion } in SDM
+            !! evaluate the motion eq.
             call sdm_move(sdm_dtadv,                         &
                           sd_num,sd_u,sd_v,sd_vz,sd_x,sd_y,sd_rk)
 
             ! lateral boundary routine in SDM
-            ! judge super-droplets as invalid or valid in horizontal
-
+            !! judge super-droplets as invalid or valid in horizontal
+            !! do MPI communication to send/receiv SDs
             call sdm_boundary(wbc,ebc,sbc,nbc,                           &
                              sd_num,sd_numasl,sd_n,sd_x,sd_y,sd_rk,     &
                              sd_u,sd_v,sd_vz,sd_r,sd_asl,               &
                              bufsiz1,bufsiz2,sd_itmp1,rbuf,sbuf)
 
             ! judge super-droplets as invalid or valid in vartical
-
             call sdm_jdginvdv(sd_rkl,sd_rku,sd_num,sd_x,sd_y,sd_ri,sd_rj,sd_rk)
 
             ! convert the impact of { exchange momentum } to
             ! {u,v,w} in CReSS
-
             if( sdm_mvexchg>0 ) then
-              write(*,*) "sdm_mvexchg>1 is not applied"
+              write(*,*) "sdm_mvexchg>1 cannot be applied"
               call PRC_MPIstop
 !               call sdm_sd2uvw(ni,nj,nk,rst_crs,u_crs,v_crs,wc_crs,     &
 !     &                         crs_val1p,crs_val2p,crs_val3p,           &
@@ -2524,8 +2535,6 @@ contains
                        sd_num,sd_n,sd_x,sd_y,sd_r,sd_ri,sd_rj,sd_rk,  &
                        sd_itmp1(1:sd_num,1),crs_val1c(1,1:IA,1:JA))
 
-
-      ! Update of the HALO region. Rethink carefully later
       ! Communicate CReSS variables to the neighbor node in horizontal
       ! after running SDM
 
