@@ -48,7 +48,7 @@
 
 typedef struct {
   int ncid;
-  char time_units[File_HSHORT+1];
+  char time_units[File_HMID+1];
   int deflate_level;
 } fileinfo_t;
 
