@@ -14,6 +14,7 @@
 !!
 !! @par History
 !! @li      2014-07-11 (S.Shima) [new] Separated from scale_atmos_phy_mp_sdm.F90
+!! @li      2014-07-14 (S.Shima) [rev] sdm_rhot_qtrc2cpexnr added
 !!
 !<
 !-------------------------------------------------------------------------------
@@ -21,7 +22,7 @@ module m_sdm_fluidconv
 
   implicit none
   private
-  public :: sdm_rhot_qtrc2p_t, sdm_rho_rhot2pt, sdm_rho_mom2uvw, sdm_rho_qtrc2rhod
+  public :: sdm_rhot_qtrc2p_t, sdm_rho_rhot2pt, sdm_rho_mom2uvw, sdm_rho_qtrc2rhod,sdm_rhot_qtrc2cpexnr
 
 contains
   !-----------------------------------------------------------------------------
@@ -165,4 +166,46 @@ contains
 
     return
   end subroutine sdm_rhot_qtrc2p_t
+  !---------------------------------------------------------------------
+  subroutine sdm_rhot_qtrc2cpexnr(rhot,qtrc,dens,cpexnr)
+    use scale_precision
+    use scale_grid_index, only: &
+         IA,JA,KA
+    use scale_const, only: &
+         P00 => CONST_PRE00, &
+         Rdry => CONST_Rdry, &
+         Rvap => CONST_Rvap, &
+         CPdry => CONST_CPdry
+    use scale_atmos_thermodyn, only: &
+         CPw => AQ_CP
+    use scale_tracer, only: &
+         I_QV, QAD => QA
+    ! Input variables
+    real(RP), intent(in) :: rhot(KA,IA,JA)        !! DENS * POTT [K*kg/m3]
+    real(RP), intent(in) :: qtrc(KA,IA,JA,QAD)    !! Ratio of mass of tracer to total mass[kg/kg]
+    real(RP), intent(in) :: dens(KA,IA,JA)        !! Density [kg/m3]
+    ! Output variables
+    real(RP), intent(out) :: cpexnr(KA,IA,JA)     !  cp*exner_function
+
+    real(RP) :: qdry(KA,IA,JA)
+    real(RP) :: rtot(KA,IA,JA)
+    real(RP) :: cptot(KA,IA,JA)
+    integer :: i, j, k, iq  ! index
+    !---------------------------------------------------------------------
+
+    qdry(:,:,:) = 1.0_RP
+    do k = 1, KA
+    do i = 1, IA
+    do j = 1, JA
+       qdry(k,i,j) = qdry(k,i,j) - qtrc(k,i,j,I_QV)
+       rtot (k,i,j) = Rdry * qdry(k,i,j) + Rvap * qtrc(k,i,j,I_QV)
+       cptot(k,i,j) = CPdry * qdry(k,i,j)
+       cptot(k,i,j) = cptot(k,i,j) + qtrc(k,i,j,I_QV) * CPw(I_QV)
+       cpexnr(k,i,j) = cptot(k,i,j)*(rhot(k,i,j)*rtot(k,i,j)/P00)**(-rtot(k,i,j)/(cptot(k,i,j)-rtot(k,i,j)))
+    enddo
+    enddo
+    enddo
+
+    return
+  end subroutine sdm_rhot_qtrc2cpexnr
 end module m_sdm_fluidconv

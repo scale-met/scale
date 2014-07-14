@@ -41,6 +41,8 @@
 !! @li      2014-07-12 (S.Shima) [rev] sdm_sort and sdm_getperm are separated into the module m_sdm_idutil
 !! @li      2014-07-12 (S.Shima) [rev] sdm_coales is separated into the module m_sdm_coalescence
 !! @li      2014-07-13 (S.Shima) [rev] sdm_condevp repaired
+!! @li      2014-07-13 (S.Shima) [rev] sdm_sd2qcqr, sdm_sd2rhocr repaired
+!! @li      2014-07-14 (S.Shima) [rev] sdm_condevp_updatefluid created modifying and repairing sdm_sd2qvptp
 !<
 !-------------------------------------------------------------------------------
 #include "macro_thermodyn.h"
@@ -619,6 +621,8 @@ contains
     real(RP) :: pres_scale(KA,IA,JA) ! Pressure
     real(RP) :: rhod_scale(KA,IA,JA) ! dry air density
     real(RP) :: t_scale(KA,IA,JA)    ! Temperature
+    real(RP) :: qc_scale(KA,IA,JA)   ! qc = rhoc/(rhod+rhov)
+    real(RP) :: qr_scale(KA,IA,JA)   ! qr = rhor/(rhod+rhov)
 
     !---------------------------------------------------------------------------
 
@@ -670,32 +674,32 @@ contains
     dtcl(5) =  sdm_nadjdt
 
     ! Evaluate the diagnostic fluid variables needed for SDM from SCALE intrinsic variables
-    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    !! Legacy code. Temporarily used for now but finally removed
-!    mf(:,:) = 1.0_RP
-    QDRY(:,:,:) = 1.0_RP
-    do k = 1, KA
-    do i = 1, IA
-    do j = 1, JA
-!      rst_crs(k,i,j) = DENS(k,i,j) * jcb(k,i,j)
-      ptbr_crs(k,i,j) = RHOT(k,i,j) / DENS(k,i,j)
-      do iq = QQS, QQE
-        QDRY(k,i,j) = QDRY(k,i,j) - QTRC(k,i,j,iq)
-      enddo
-      RTOT (k,i,j) = Rdry * QDRY(k,i,j) + Rvap * QTRC(k,i,j,I_QV)
-      CPTOT(k,i,j) = CPdry * QDRY(k,i,j)
-      do iq = QQS, QQE
-        CPTOT(k,i,j) = CPTOT(k,i,j) + QTRC(k,i,j,iq) * CPw(iq)
-      enddo
-      CPovCV(k,i,j) = CPTOT(k,i,j) / ( CPTOT(k,i,j) - RTOT(k,i,j) )
-      pbr_crs(k,i,j) = P00 * ( RHOT(k,i,j) * RTOT(k,i,j) / P00 )**CPovCV(k,i,j)
-      ppf_crs(k,i,j) = 0.0_RP
-      ptpf_crs(k,i,j) = 0.0_RP
-      qvf_crs(k,i,j) = QTRC(k,i,j,I_QV)
-      QTRC(k,i,j,I_QC:I_QR) = 0.0_RP
-    enddo
-    enddo
-    enddo
+!!$    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!$    !! Legacy code. Temporarily used for now but finally removed
+!!$!    mf(:,:) = 1.0_RP
+!!$    QDRY(:,:,:) = 1.0_RP
+!!$    do k = 1, KA
+!!$    do i = 1, IA
+!!$    do j = 1, JA
+!!$!      rst_crs(k,i,j) = DENS(k,i,j) * jcb(k,i,j)
+!!$      ptbr_crs(k,i,j) = RHOT(k,i,j) / DENS(k,i,j)
+!!$      do iq = QQS, QQE
+!!$        QDRY(k,i,j) = QDRY(k,i,j) - QTRC(k,i,j,iq)
+!!$      enddo
+!!$      RTOT (k,i,j) = Rdry * QDRY(k,i,j) + Rvap * QTRC(k,i,j,I_QV)
+!!$      CPTOT(k,i,j) = CPdry * QDRY(k,i,j)
+!!$      do iq = QQS, QQE
+!!$        CPTOT(k,i,j) = CPTOT(k,i,j) + QTRC(k,i,j,iq) * CPw(iq)
+!!$      enddo
+!!$      CPovCV(k,i,j) = CPTOT(k,i,j) / ( CPTOT(k,i,j) - RTOT(k,i,j) )
+!!$      pbr_crs(k,i,j) = P00 * ( RHOT(k,i,j) * RTOT(k,i,j) / P00 )**CPovCV(k,i,j)
+!!$      ppf_crs(k,i,j) = 0.0_RP
+!!$      ptpf_crs(k,i,j) = 0.0_RP
+!!$      qvf_crs(k,i,j) = QTRC(k,i,j,I_QV)
+!!$      QTRC(k,i,j,I_QC:I_QR) = 0.0_RP
+!!$    enddo
+!!$    enddo
+!!$    enddo
 !     jcb8w(KA,:,:) = GTRANS_GSQRT(KA-1,:,:,I_XYW)
 !     jcb(KA,:,:) = GTRANS_GSQRT(KA-1,:,:,I_XYW)
 !!$    do k = 1, KA
@@ -711,7 +715,7 @@ contains
     ! -----
     ! Perform super-droplets method (SDM)
     !== get the exner function at future ==!
-    call getexner(pbr_crs,ppf_crs,exnr_crs,rtmp4)
+!    call getexner(pbr_crs,ppf_crs,exnr_crs,rtmp4)
     !== get the zeta components of contravariant velocity ==!
     !== at future                                         ==!
 !     call phy2cnt(idsthopt,idtrnopt,idmpopt,idmfcopt,idoneopt,    &
@@ -719,8 +723,8 @@ contains
 !                  uf_crs,vf_crs,wf_crs,wcf_crs,rtmp4,rtmp5,rtmp6)
 
     ! Get dry air density at the start of SDM.
-    call sdm_getrhod(pbr_crs,ptbr_crs,ppf_crs,ptpf_crs,       &
-                       qvf_crs,rhod_crs)
+!    call sdm_getrhod(pbr_crs,ptbr_crs,ppf_crs,ptpf_crs,       &
+!                       qvf_crs,rhod_crs)
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     !! Refactored code here. The legacy code above are now being refactored to this part.
     !!! SCALE intrinsic variables 
@@ -744,16 +748,16 @@ contains
          mod(10*int(1.E+2_RP*(TIME_NOWSEC+0.0010_RP)), &
              int(1.E+3_RP*(sdm_dmpitva+0.00010_RP))) == 0 ) then
        if( IO_L ) write(IO_FID_LOG,*) ' *** Output Super Droplet Data in ASCII'
+       !! Evaluate diagnostic variables
+       !!! z
        call sdm_rk2z(sdnum_s2c,sdx_s2c,sdy_s2c,sdrk_s2c,sdz_s2c,sdri_s2c,sdrj_s2c)
-!!$       ! for testing sdm_getvz
-!!$       ppf_crs(:,:,:) = 0.0_RP; ptpf_crs(:,:,:) = 0.0_RP
-!!$       tmp_pres=50000.0_RP; tmp_temp=263.15_RP
-!!$       pbr_crs(:,:,:) = tmp_pres; rhod_crs(:,:,:) = tmp_pres/tmp_temp/Rdry; ptbr_crs(:,:,:) = tmp_temp*(P00/tmp_pres)**(Rdry/CPdry)
+       !!! terminal velocity vz
        call sdm_rho_qtrc2rhod(DENS,QTRC,rhod_scale)
        call sdm_rhot_qtrc2p_t(RHOT,QTRC,DENS,pres_scale,t_scale)
        call sdm_getvz(pres_scale,rhod_scale,t_scale,            &
                            sdnum_s2c,sdx_s2c,sdy_s2c,sdri_s2c,sdrj_s2c,sdrk_s2c,sdr_s2c,sdvz_s2c,  &
                            sd_itmp1,sd_itmp2,sd_itmp3,'motion' )
+       !! Output
        call sdm_outasci(TIME_NOWSEC,                               &
                         sdnum_s2c,sdnumasl_s2c,                    &
                         sdn_s2c,sdx_s2c,sdy_s2c,sdz_s2c,sdr_s2c,sdasl_s2c,sdvz_s2c, &
@@ -792,13 +796,19 @@ contains
 !                     rtmp4,rtmp5,rtmp6)
 !     end if
 
-     !== convert super-droplets to {qc,qr} at future ==!
-
+     !== Diagnose QC and QR from super-droplets ==!
+     !! note that when SDM is used QC := rhoc/(rhod+rhov), QR := rhor/(rhod+rhov)
+     !! We need to rethink whether it's okay to evaluate QC QR here
+     !! For example, when we diagnose pressure or rhod during the dynamical process, 
+     !! qc and qr should be 0 because they are not included in the total density
+     call sdm_sd2qcqr(DENS,QTRC(:,:,:,I_QC),QTRC(:,:,:,I_QR),                             &
+                      zph_crs,             &
+                      lsdmup,sdnum_s2c,sdn_s2c,sdx_s2c,sdy_s2c,     &
+                      sdr_s2c,sdri_s2c,sdrj_s2c,sdrk_s2c,sdrkl_s2c,sdrku_s2c,         &
+                      rhoc_sdm,rhor_sdm,                   &
+                      sd_itmp1,sd_itmp2,crs_dtmp1,crs_dtmp2)
 !     call sdm_sd2qcqr(nqw,pbr_crs,ptbr_crs,                         &
 !                      ppf_crs,ptpf_crs,qvf_crs,qwtrf_crs,zph_crs,   &
-     ! We need to rethink whether it's okay to evaluate QC QR here
-     ! For example, when we diagnose pressure or rhod during the dynamical process, 
-     ! qc and qr should be 0 because they are not included in the total density
 !!$     call sdm_sd2qcqr(pbr_crs,ptbr_crs,                             &
 !!$                      ppf_crs,ptpf_crs,qvf_crs,zph_crs,             &
 !!$                      lsdmup,sdnum_s2c,sdn_s2c,sdx_s2c,sdy_s2c,     &
@@ -875,7 +885,7 @@ contains
 !!$    enddo
 
 !! Are these correct? Let's check later.
-    call HIST_in( rhoa_sdm(:,:,:), 'RAERO', 'aerosol mass conc.', 'kg/m3', dt)
+!!$    call HIST_in( rhoa_sdm(:,:,:), 'RAERO', 'aerosol mass conc.', 'kg/m3', dt)
     call HIST_in( prr_crs(:,:,1), 'RAIN', 'surface rain rate', 'kg/m2/s', dt)
     call HIST_in( prr_crs(:,:,1), 'PREC', 'surface precipitation rate', 'kg/m2/s', dt)
 
@@ -924,7 +934,7 @@ contains
 
       real(RP), intent(in) :: DENS(KA,IA,JA) ! Density     [kg/m3]
       real(RP), intent(in) :: RHOT(KA,IA,JA) ! DENS * POTT [K*kg/m3]
-      real(RP), intent(in) :: QTRC(KA,IA,JA,QAD) ! ratio of mass of tracer to total mass[kg/kg]
+      real(RP), intent(inout) :: QTRC(KA,IA,JA,QAD) ! ratio of mass of tracer to total mass[kg/kg]
       character(len=H_LONG), intent(in) :: RANDOM_IN_BASENAME
       integer, intent(in) :: fid_random_i
       real(RP),intent(in) :: xmax_sdm, ymax_sdm
@@ -1281,12 +1291,13 @@ contains
 
       !### initial equivalent radius                     ###!
       do n=1,sdnum_s2c
+         sdr_s2c(n) = 1.0E-15_RP
+
 !ORG     sdr_s2c(n) = 1.0e-5 * ( log(1.0/(1.0-sdr_s2c(n))) )**O_THRD
 !ORG     sdr_s2c(n) = 1.0d-8
 
 ! temporary for test
-!!$         sdr_s2c(n) = 1.0E-15_RP
-         sdr_s2c(n) = 3.0E-3_RP*sdr_s2c(n)
+!         sdr_s2c(n) = 3.0E-3_RP*sdr_s2c(n)
 !         sdr_s2c(n) = exp((log(3.0E-3_RP)-log(1.0E-7_RP))*sdr_s2c(n)+log(1.0E-7_RP))
          
       end do
@@ -1310,11 +1321,15 @@ contains
 !!$                     sdnum_s2c,sdx_s2c,sdy_s2c,sdri_s2c,sdrj_s2c,sdrk_s2c,sdr_s2c, &
 !!$                     sdvz_s2c,sd_itmp1,sd_itmp2,sd_itmp3,'motion')
 
-      ! -----
-      ! Convert super-droplets to mixing ratio of water hydrometeor
-      ! in each grid
-
-      lsdmup = .true.
+      !### Diagnose QC and QR from super-droplets ###!
+      !! note that when SDM is used QC := rhoc/(rhod+rhov), QR := rhor/(rhod+rhov)
+      lsdmup = .true. ! switch whether to calculate qcqr below
+      call sdm_sd2qcqr(DENS,QTRC(:,:,:,I_QC),QTRC(:,:,:,I_QR),          &
+                       zph_crs,                   &
+                       lsdmup,sdnum_s2c,sdn_s2c,sdx_s2c,sdy_s2c,        &
+                       sdr_s2c,sdri_s2c,sdrj_s2c,sdrk_s2c,sdrkl_s2c,sdrku_s2c,            &
+                       rhoc_sdm,rhor_sdm,                      &
+                       sd_itmp1,sd_itmp2,crs_dtmp1,crs_dtmp2            )
 
 !      call sdm_sd2qcqr(nqw,pbr_crs,ptbr_crs,                            &
 !                       pp_crs,ptp_crs,qv_crs,qwtr_crs,zph_crs,          &
@@ -1631,22 +1646,17 @@ contains
   !-----------------------------------------------------------------------------
 !  subroutine sdm_sd2qcqr(nqw,pbr_crs,ptbr_crs,                    &
 !                         pp_crs,ptp_crs,qv_crs,qwtr_crs,zph_crs,  &
-  subroutine sdm_sd2qcqr(pbr_crs,ptbr_crs,                        &
-                         pp_crs,ptp_crs,qv_crs,zph_crs,           &
-                         lsdmup,sd_num,sd_n,sd_x,sd_y,sd_r,sd_rk, &
+  subroutine sdm_sd2qcqr(DENS,QC,QR,        &
+                         zph_crs,           &
+                         lsdmup,sd_num,sd_n,sd_x,sd_y,sd_r,sd_ri,sd_rj,sd_rk, &
                          sd_rkl,sd_rku,                           &
-                         rhod_crs,rhoc_sdm,rhor_sdm,              &
-                         !--- Y.Sato add ---
-                         rhoa_sdm, sd_numasl, sd_nasl,            &
-                         !--- Y.Sato add ---
+                         rhoc_sdm,rhor_sdm,              &
                          sd_itmp1,sd_itmp2,crs_dtmp1,crs_dtmp2    )
       ! Input variables
 !      integer, intent(in) :: nqw ! Number of water hydrometeor array
-      real(RP), intent(in) :: pbr_crs(KA,IA,JA)  ! Base state pressure
-      real(RP), intent(in) :: ptbr_crs(KA,IA,JA) ! Base state potential temperature
-      real(RP), intent(in) :: pp_crs(KA,IA,JA)   ! Pressure perturbation
-      real(RP), intent(in) :: ptp_crs(KA,IA,JA)  ! Potential temperature perturbation
-      real(RP), intent(in) :: qv_crs(KA,IA,JA)   ! Water vapor mixing ratio
+      real(RP), intent(in) :: DENS(KA,IA,JA) ! Density     [kg/m3]
+      real(RP), intent(out):: QC(KA,IA,JA)   ! rhoc/rho
+      real(RP), intent(out):: QR(KA,IA,JA)   ! rhor/rho
       real(RP), intent(in) :: zph_crs(KA,IA,JA)  ! z physical coordinate
       logical, intent(in) :: lsdmup    ! flag for updating water hydrometeor by SDM
       integer, intent(in) :: sd_num    ! number of super-droplets
@@ -1654,20 +1664,14 @@ contains
       real(RP), intent(in) :: sd_x(1:sd_num)      ! x-coordinate of super-droplets
       real(RP), intent(in) :: sd_y(1:sd_num)      ! y-coordinate of super-droplets
       real(RP), intent(in) :: sd_r(1:sd_num)      ! equivalent radius of super-droplets
+      real(RP), intent(inout) :: sd_ri(1:sd_num)     ! index[i/real] of super-droplets
+      real(RP), intent(inout) :: sd_rj(1:sd_num)     ! index[j/real] of super-droplets
       real(RP), intent(in) :: sd_rk(1:sd_num)     ! index[k/real] of super-droplets
       real(RP), intent(in) :: sd_rkl(IA,JA)  ! lower boundary index[k/real] at scalar point in SDM calculation area
       real(RP), intent(in) :: sd_rku(IA,JA)  ! upper boundary index[k/real] at scalar point in SDM calculation area
-      !--- Y.Sato add ---
-      integer, intent(in) :: sd_numasl    ! number of super-droplets
-      real(RP), intent(in) :: sd_nasl(1:sd_num,1:sd_numasl)     ! index[k/real] of super-droplets
-      !--- Y.Sato add ---
       ! Input and output variables
-      real(RP), intent(inout) :: rhod_crs(KA,IA,JA)   ! dry air density
       real(RP), intent(inout) :: rhoc_sdm(KA,IA,JA)   ! density of cloud water
       real(RP), intent(inout) :: rhor_sdm(KA,IA,JA)   ! density of rain water
-      !--- Y.Sato add ---
-      real(RP), intent(inout) :: rhoa_sdm(KA,IA,JA)   ! density of rain water
-      !--- Y.Sato add ---
       ! Output variables
 !      real(RP), intent(out) :: qwtr_crs(KA,IA,JA,1:nqw)        ! water hydrometeor
       real(RP), intent(out) :: crs_dtmp1(KA,IA,JA)    ! temporary buffer of CReSS dimension
@@ -1678,15 +1682,16 @@ contains
       integer :: n, i, j, k   ! index
       !-------------------------------------------------------------------
 
-      ! Get dry air density
+!!$      ! Get dry air density
+!!$
+!!$      ! bug hides in this subroutine
+!!$      ! not used for now
+!!$      return
+!!$
+!!$      call sdm_getrhod(pbr_crs,ptbr_crs,pp_crs,ptp_crs,        &
+!!$                       qv_crs,rhod_crs)
 
-      ! bug hides in this subroutine
-      ! not used for now
-      return
-
-      call sdm_getrhod(pbr_crs,ptbr_crs,pp_crs,ptp_crs,        &
-                       qv_crs,rhod_crs)
-
+      
       ! Get density of water hydrometeor
 
       if( lsdmup ) then
@@ -1697,16 +1702,21 @@ contains
 
          call sdm_sd2rhocr(sdm_rqc2qr,                          &
                            zph_crs,rhoc_sdm,rhor_sdm,           &
-                           sd_num,sd_n,sd_x,sd_y,sd_r,sd_rk,    &
+                           sd_num,sd_n,sd_x,sd_y,sd_r,sd_ri,sd_rj,sd_rk,    &
                            sd_rkl,sd_rku,                       &
-                           !--- Y.Sato add ---
-                           sd_numasl,sd_nasl,rhoa_sdm,          &
-                           !--- Y.Sato add ---
                            crs_dtmp1,crs_dtmp2,sd_itmp1,sd_itmp2)
 
-      end if
+         ! Convert water hydrometeor density to mixing ratio
+         do k=KS,KE
+         do j=JS,JE
+         do i=IS,IE
+            QC(k,i,j) = rhoc_sdm(k,i,j)/DENS(k,i,j)
+            QR(k,i,j) = rhor_sdm(k,i,j)/DENS(k,i,j)
+         end do
+         end do
+         end do
 
-      ! Convert water hydrometeor density to mixing ratio
+      end if
 
 !      do k=2,nk-1
 !      do j=1,nj-1
@@ -1719,6 +1729,7 @@ contains
 !      end do
 !      end do
 !      end do
+      
 
     return
   end subroutine sdm_sd2qcqr
@@ -1727,11 +1738,11 @@ contains
   !-----------------------------------------------------------------------------
    subroutine sdm_sd2rhocr(sdm_rqc2qr,                        &
                            zph_crs,rhoc_sdm,rhor_sdm,         &
-                           sd_num, sd_n,sd_x,sd_y,sd_r,sd_rk, &
+                           sd_num, sd_n,sd_x,sd_y,sd_r,sd_ri,sd_rj,sd_rk, &
                            sd_rkl,sd_rku,                     &
-                           !--- Y.Sato add ---
-                           sd_numasl,sd_nasl,rhoa_sdm,        &
-                           !--- Y.Sato add ---
+!!$                           !--- Y.Sato add ---
+!!$                           sd_numasl,sd_nasl,rhoa_sdm,        &
+!!$                           !--- Y.Sato add --
                            liqc_sdm,liqr_sdm,ilist_c,ilist_r)
 
      use scale_grid, only: &
@@ -1739,7 +1750,9 @@ contains
       FY => GRID_FY
      use scale_const, only: &
       rw => CONST_DWATR
-
+     use m_sdm_coordtrans, only: &
+          sdm_x2ri, sdm_y2rj
+     
       ! Input variables
       real(RP),intent(in) :: sdm_rqc2qr          ! Threshould between qc and qr [m]
       real(RP),intent(in) :: zph_crs(KA,IA,JA)   ! z physical coordinate
@@ -1748,23 +1761,25 @@ contains
       real(RP), intent(in) :: sd_x(1:sd_num)     ! x-coordinate of super-droplets
       real(RP), intent(in) :: sd_y(1:sd_num)     ! y-coordinate of super-droplets
       real(RP), intent(in) :: sd_r(1:sd_num)     ! equivalent radius of super-droplets
+      real(RP), intent(inout) :: sd_ri(1:sd_num) ! index[i/real] of super-droplets
+      real(RP), intent(inout) :: sd_rj(1:sd_num) ! index[j/real] of super-droplets
       real(RP), intent(in) :: sd_rk(1:sd_num)    ! index[k/real] of super-droplets
       real(RP), intent(in) :: sd_rkl(IA,JA)      ! lower boundary index[k/real] at scalar point in SDM calculation area
       real(RP), intent(in) :: sd_rku(IA,JA)      ! upper boundary index[k/real] at scalar point in SDM calculation area
-      !--- Y.Sato add ---
-      integer, intent(in) :: sd_numasl           ! Number of aeorosol species
-      real(RP), intent(in):: sd_nasl(1:sd_num,1:sd_numasl)  ! multiplicity of super-droplets
-      !--- Y.Sato add ---
+!!$      !--- Y.Sato add ---
+!!$      integer, intent(in) :: sd_numasl           ! Number of aeorosol species
+!!$      real(RP), intent(in):: sd_nasl(1:sd_num,1:sd_numasl)  ! multiplicity of super-droplets
+!!$      !--- Y.Sato add ---
       ! Output variables
       real(RP), intent(out) :: rhoc_sdm(KA,IA,JA)  ! densitiy of cloud water
       real(RP), intent(out) :: rhor_sdm(KA,IA,JA)  ! densitiy of rain water
       real(RP), intent(out) :: liqc_sdm(KA,IA,JA)  ! liquid cloud water of super-droplets
       real(RP), intent(out) :: liqr_sdm(KA,IA,JA)  ! liquid rain water of super-droplets
-      !--- Y.Sato add ---
-      real(RP), intent(out) :: rhoa_sdm(KA,IA,JA)  ! densitiy of
-      !--- Y.Sato add ---
-      integer, intent(out) :: ilist_c(1:int(sd_num/nomp),1:nomp)  ! buffer for list vectorization
-      integer, intent(out) :: ilist_r(1:int(sd_num/nomp),1:nomp)  ! buffer for list vectorization
+!!$      !--- Y.Sato add ---
+!!$      real(RP), intent(out) :: rhoa_sdm(KA,IA,JA)  ! densitiy of
+!!$      !--- Y.Sato add ---
+      integer, intent(out) :: ilist_c(1:sd_num)  ! buffer for list vectorization
+      integer, intent(out) :: ilist_r(1:sd_num)  ! buffer for list vectorization
       ! Work variables for OpenMP
       integer :: sd_str             ! index of divided loop by OpenMP
       integer :: sd_end             ! index of divided loop by OpenMP
@@ -1772,17 +1787,17 @@ contains
       ! Work variables
       real(RP) :: dcoef(KA,IA,JA)   ! coef.
       real(RP) :: drate             ! temporary
-      integer :: nlist_c(1:nomp)    ! list number
-      integer :: nlist_r(1:nomp)    ! list number
-      integer :: nlist_a(1:nomp)    ! list number
-      real(RP):: liqa_sdm(KA,IA,JA)  ! liquid rain water of super-droplets
-      integer :: ilist_a(1:int(sd_num/nomp),1:nomp)  ! buffer for list vectorization
+!!$      integer :: nlist_c(1:nomp)    ! list number
+!!$      integer :: nlist_r(1:nomp)    ! list number
+!!$      integer :: nlist_a(1:nomp)    ! list number
+!      real(RP):: liqa_sdm(KA,IA,JA)  ! liquid rain water of super-droplets
+!      integer :: ilist_a(1:sd_num)  ! buffer for list vectorization
       integer :: tlist_c            ! total list number for cloud
       integer :: tlist_r            ! total list number for rain
-      integer :: tlist_a            ! total list number for aerosol
+!      integer :: tlist_a            ! total list number for aerosol
       integer :: ccnt               ! counter
       integer :: rcnt               ! counter
-      integer :: acnt               ! counter
+!      integer :: acnt               ! counter
       integer :: i, ix              ! index
       integer :: j, jy              ! index
       integer :: k                  ! index
@@ -1793,11 +1808,16 @@ contains
 
 !-----7--------------------------------------------------------------7--
 
+      call sdm_x2ri(sd_num,sd_x,sd_ri,sd_rk)
+      call sdm_y2rj(sd_num,sd_y,sd_rj,sd_rk)
+
      ! Initialize
       do k = 1, KA
       do i = 1, IA
       do j = 1, JA
-       dcoef(k,i,j) = rw * F_THRD * ONE_PI / real(dx_sdm(i)*dy_sdm(j),kind=RP)
+       dcoef(k,i,j) = rw * F_THRD * ONE_PI * dxiv_sdm(i) * dyiv_sdm(j) &
+                                           / (zph_crs(k,i,j)-zph_crs(k-1,i,j))
+!       dcoef(k,i,j) = rw * F_THRD * ONE_PI / real(dx_sdm(i)*dy_sdm(j),kind=RP)
 !       idx_sdm = 10_i8 * floor( 1.e4*(dx_sdm+1.e-5), kind=i8 )
 !       idy_sdm = 10_i8 * floor( 1.e4*(dy_sdm+1.e-5), kind=i8 )
       enddo
@@ -1806,43 +1826,48 @@ contains
 
       tlist_c = 0
       tlist_r = 0
-      tlist_a = 0
+!      tlist_a = 0
 
-      do np=1,nomp
-         nlist_c(np) = 0
-         nlist_r(np) = 0
-         nlist_a(np) = 0
-      end do
+!!$      do np=1,nomp
+!!$         nlist_c(np) = 0
+!!$         nlist_r(np) = 0
+!!$         nlist_a(np) = 0
+!!$      end do
 
 !      do k=1,nk
 !      do j=0,nj+1
 !      do i=0,ni+1
-      do k=2,KA
+      do k=1,KA
       do j=1,JA
       do i=1,IA
          liqc_sdm(k,i,j) = 0.0_RP
          liqr_sdm(k,i,j) = 0.0_RP
-         liqa_sdm(k,i,j) = 0.0_RP
+!         liqa_sdm(k,i,j) = 0.0_RP
          rhoc_sdm(k,i,j) = 0.0_RP
          rhor_sdm(k,i,j) = 0.0_RP
-         rhoa_sdm(k,i,j) = 0.0_RP
+!         rhoa_sdm(k,i,j) = 0.0_RP
       end do
       end do
       end do
 ! -----
 
 ! Get index list for compressing buffer.
-      do np=1,nomp
+!!$      do np=1,nomp
+!!$
+!!$         sd_str = int(sd_num/nomp)*(np-1) + 1
+!!$         sd_end = int(sd_num/nomp)*np
+!!$
+!!$         ccnt = 0
+!!$         rcnt = 0
+!!$         acnt = 0
+!!$
+!!$         do n=sd_str,sd_end
 
-         sd_str = int(sd_num/nomp)*(np-1) + 1
-         sd_end = int(sd_num/nomp)*np
+      ccnt = 0
+      rcnt = 0
+!      acnt = 0
 
-         ccnt = 0
-         rcnt = 0
-         acnt = 0
-
-         do n=sd_str,sd_end
-
+      do n=1,sd_num
             if( sd_rk(n)<VALID2INVALID ) cycle
 
             if( sd_r(n)<real(sdm_rqc2qr,kind=RP) ) then
@@ -1850,31 +1875,29 @@ contains
                !### cloud-water ###!
 
                ccnt = ccnt + 1
-               ilist_c(ccnt,np) = n
-               acnt = acnt + 1
-               ilist_a(acnt,np) = n
+               ilist_c(ccnt) = n
+!!$               acnt = acnt + 1
+!!$               ilist_a(acnt,np) = n
 
             else
 
                !### rain-water ###!
                rcnt = rcnt + 1
-               ilist_r(rcnt,np) = n
-               acnt = acnt + 1
-               ilist_a(acnt,np) = n
+               ilist_r(rcnt) = n
+!!$               acnt = acnt + 1
+!!$               ilist_a(acnt,np) = n
 
             end if
 
          end do
 
-         nlist_c(np) = ccnt
-         nlist_r(np) = rcnt
-         nlist_a(np) = acnt
+!!$         nlist_c(np) = ccnt
+!!$         nlist_r(np) = rcnt
+!!$         nlist_a(np) = acnt
 
          tlist_c = ccnt
          tlist_r = rcnt
-         tlist_a = acnt
-
-      end do
+!!$         tlist_a = acnt
 
      ! Get density of cloud-water and rain-water.
 
@@ -1882,40 +1905,43 @@ contains
 
       if( tlist_c>0 ) then
 
-         do np=1,nomp
+!!$         do np=1,nomp
+!!$
+!!$            if( nlist_c(np)>0 ) then
+!!$
+!!$               do m=1,nlist_c(np)
+!!$
+!!$                  n = ilist_c(m,np)
 
-            if( nlist_c(np)>0 ) then
-
-               do m=1,nlist_c(np)
-
-                  n = ilist_c(m,np)
+         do m=1,tlist_c
+            n = ilist_c(m)
 
 !                  i = int( floor( sd_x(n)*1.d5, kind=i8 )/idx_sdm ) + 2
 !                  j = int( floor( sd_y(n)*1.d5, kind=i8 )/idy_sdm ) + 2
-                  do ix = IS, IE
-                   if( sd_x(n) <= ( FX(ix)-FX(IS-1) ) ) then
-                    i = ix
-                    exit
-                   endif
-                  enddo
-                  do jy = JS, JE
-                   if( sd_y(n) <= ( FY(jy)-FY(JS-1) ) ) then
-                    j = jy
-                    exit
-                   endif
-                  enddo
-                  k = floor( sd_rk(n) )
+!!$                  do ix = IS, IE
+!!$                   if( sd_x(n) <= ( FX(ix)-FX(IS-1) ) ) then
+!!$                    i = ix
+!!$                    exit
+!!$                   endif
+!!$                  enddo
+!!$                  do jy = JS, JE
+!!$                   if( sd_y(n) <= ( FY(jy)-FY(JS-1) ) ) then
+!!$                    j = jy
+!!$                    exit
+!!$                   endif
+!!$                  enddo
+!!$                  k = floor( sd_rk(n) )
+
+            i = floor(sd_ri(n))+1
+            j = floor(sd_rj(n))+1
+            k = floor(sd_rk(n))+1
 
                   liqc_sdm(k,i,j) = liqc_sdm(k,i,j)                     &
                                   + sd_r(n) * sd_r(n) * sd_r(n)         &
                                   * real(sd_n(n),kind=RP)
-                  liqa_sdm(k,i,j) = liqa_sdm(k,i,j)                     &
-                                    + real(sd_n(n),kind=RP)
+!!$                  liqa_sdm(k,i,j) = liqa_sdm(k,i,j)                     &
+!!$                                    + real(sd_n(n),kind=RP)
                end do
-
-            end if
-
-         end do
 
          !=== adjust cloud-water in verical boundary. ===!
 
@@ -1953,11 +1979,10 @@ contains
 !         do k=2,nk-1
 !         do j=1,nj-1
 !         do i=1,ni-1
-         do k=KS, KE+1
-         do j=JS-1, JE+1
-         do i=IS-1, IE+1
-            rhoc_sdm(k,i,j) = liqc_sdm(k,i,j) * dcoef(k,i,j)       &
-                            / real(zph_crs(k+1,i,j)-zph_crs(k,i,j),kind=RP)
+         do k=KS,KE
+         do j=JS,JE
+         do i=IS,IE
+            rhoc_sdm(k,i,j) = liqc_sdm(k,i,j) * dcoef(k,i,j)
 !            rhoa_sdm(k,i,j) = liqa_sdm(k,i,j) * dcoef(k,i,j)       &
 !                            / real(zph_crs(k+1,i,j)-zph_crs(k,i,j),kind=RP)
 
@@ -1972,38 +1997,41 @@ contains
 
       if( tlist_r>0 ) then
 
-         do np=1,nomp
+!!$         do np=1,nomp
+!!$
+!!$            if( nlist_r(np)>0 ) then
+!!$
+!!$               do m=1,nlist_r(np)
+!!$
+!!$                  n = ilist_r(m,np)
 
-            if( nlist_r(np)>0 ) then
-
-               do m=1,nlist_r(np)
-
-                  n = ilist_r(m,np)
+         do m=1,tlist_r
+            n = ilist_r(m)
 
 !                  i = int( floor( sd_x(n)*1.d5, kind=i8 )/idx_sdm ) + 2
 !                  j = int( floor( sd_y(n)*1.d5, kind=i8 )/idy_sdm ) + 2
-                  do ix = IS, IE
-                   if( sd_x(n) <= ( FX(ix)-FX(IS-1) ) ) then
-                    i = ix
-                    exit
-                   endif
-                  enddo
-                  do jy = JS, JE
-                   if( sd_y(n) <= ( FY(jy)-FY(JS-1) ) ) then
-                    j = jy
-                    exit
-                   endif
-                  enddo
-                  k = floor( sd_rk(n) )
+!!$                  do ix = IS, IE
+!!$                   if( sd_x(n) <= ( FX(ix)-FX(IS-1) ) ) then
+!!$                    i = ix
+!!$                    exit
+!!$                   endif
+!!$                  enddo
+!!$                  do jy = JS, JE
+!!$                   if( sd_y(n) <= ( FY(jy)-FY(JS-1) ) ) then
+!!$                    j = jy
+!!$                    exit
+!!$                   endif
+!!$                  enddo
+!!$                  k = floor( sd_rk(n) )
+
+            i = floor(sd_ri(n))+1
+            j = floor(sd_rj(n))+1
+            k = floor(sd_rk(n))+1
 
                   liqr_sdm(k,i,j) = liqr_sdm(k,i,j)                     &
                                   + sd_r(n) * sd_r(n) * sd_r(n)         &
                                   * real(sd_n(n),kind=RP)
                end do
-
-            end if
-
-         end do
 
          !=== adjust rain-water in verical boundary. ===!
 
@@ -2042,12 +2070,11 @@ contains
 !         do k=2,nk-1
 !         do j=1,nj-1
 !         do i=1,ni-1
-         do k=KS,KE+1
-         do j=JS-1,JE+1
-         do i=IS-1,IE+1
+         do k=KS,KE
+         do j=JS,JE
+         do i=IS,IE
 
-            rhor_sdm(k,i,j) = liqr_sdm(k,i,j) * dcoef(k,i,j)      &
-                    / real(zph_crs(k+1,i,j)-zph_crs(k,i,j),kind=RP)
+            rhor_sdm(k,i,j) = liqr_sdm(k,i,j) * dcoef(k,i,j)
 
          end do
          end do
@@ -2056,96 +2083,95 @@ contains
 
       end if
 
-      !### in-cloud-aerosol ###!
-
-      if( tlist_a>0 ) then
-
-         do np=1,nomp
-
-            if( nlist_a(np)>0 ) then
-
-               do m=1,nlist_a(np)
-
-                  n = ilist_a(m,np)
-
-!                  i = int( floor( sd_x(n)*1.d5, kind=i8 )/idx_sdm ) + 2
-!                  j = int( floor( sd_y(n)*1.d5, kind=i8 )/idy_sdm ) + 2
-                  do ix = IS, IE
-                   if( sd_x(n) <= ( FX(ix)-FX(IS-1) ) ) then
-                    i = ix
-                    exit
-                   endif
-                  enddo
-                  do jy = JS, JE
-                   if( sd_y(n) <= ( FY(jy)-FY(JS-1) ) ) then
-                    j = jy
-                    exit
-                   endif
-                  enddo
-                  k = floor( sd_rk(n) )
-
-                  do mm = 1, sd_numasl
-                    liqa_sdm(k,i,j) = liqa_sdm(k,i,j)                     &
-                                    + real(sd_nasl(n,mm),kind=RP)
-                  enddo
-!                    liqa_sdm(k,i,j) = liqa_sdm(k,i,j)                     &
-!                                    + real(sd_n(n),kind=RP)
-               end do
-
-            end if
-
-         end do
-
-
-        !=== adjust in-cloud-aeorosl in verical boundary. ===!
-
-!         do j=2,nj-2
-!         do i=2,ni-2
-         do j=JS, JE
-         do i=IS, IE
-
-            !! at lower boundary
-
-            kl    = floor(sd_rkl(i,j))
-            drate = real(kl+1,kind=RP) - sd_rkl(i,j)
-
-            if( drate<0.50_RP ) then
-               liqa_sdm(kl,i,j) = 0.0_RP           !! <50% in share
-            else
-               liqa_sdm(kl,i,j) = liqa_sdm(kl,i,j)/drate
-            end if
-
-            !! at upper boundary
-
-            ku    = floor(sd_rku(i,j))
-            drate = sd_rku(i,j) - real(ku,kind=RP)
-
-            if( drate<0.50_RP ) then
-               liqa_sdm(ku,i,j) = 0.0_RP           !! <50% in share
-            else
-               liqa_sdm(ku,i,j) = liqa_sdm(ku,i,j)/drate
-            end if
-
-         end do
-         end do
-
-         !=== convert super-droplets to density of rain-water. ===!
-
-!         do k=2,nk-1
-!         do j=1,nj-1
-!         do i=1,ni-1
-         do k=KS,KE+1
-         do j=JS-1,JE+1
-         do i=IS-1,IE+1
-
-            rhoa_sdm(k,i,j) = liqa_sdm(k,i,j) * dcoef(k,i,j)      &
-                    / real(zph_crs(k+1,i,j)-zph_crs(k,i,j),kind=RP)
-
-         end do
-         end do
-         end do
-
-      end if
+!!$      !### in-cloud-aerosol ###!
+!!$
+!!$      if( tlist_a>0 ) then
+!!$
+!!$         do np=1,nomp
+!!$
+!!$            if( nlist_a(np)>0 ) then
+!!$
+!!$               do m=1,nlist_a(np)
+!!$
+!!$                  n = ilist_a(m,np)
+!!$
+!!$!                  i = int( floor( sd_x(n)*1.d5, kind=i8 )/idx_sdm ) + 2
+!!$!                  j = int( floor( sd_y(n)*1.d5, kind=i8 )/idy_sdm ) + 2
+!!$                  do ix = IS, IE
+!!$                   if( sd_x(n) <= ( FX(ix)-FX(IS-1) ) ) then
+!!$                    i = ix
+!!$                    exit
+!!$                   endif
+!!$                  enddo
+!!$                  do jy = JS, JE
+!!$                   if( sd_y(n) <= ( FY(jy)-FY(JS-1) ) ) then
+!!$                    j = jy
+!!$                    exit
+!!$                   endif
+!!$                  enddo
+!!$                  k = floor( sd_rk(n) )
+!!$
+!!$                  do mm = 1, sd_numasl
+!!$                    liqa_sdm(k,i,j) = liqa_sdm(k,i,j)                     &
+!!$                                    + real(sd_nasl(n,mm),kind=RP)
+!!$                  enddo
+!!$!                    liqa_sdm(k,i,j) = liqa_sdm(k,i,j)                     &
+!!$!                                    + real(sd_n(n),kind=RP)
+!!$               end do
+!!$
+!!$            end if
+!!$
+!!$         end do
+!!$
+!!$
+!!$        !=== adjust in-cloud-aeorosl in verical boundary. ===!
+!!$
+!!$!         do j=2,nj-2
+!!$!         do i=2,ni-2
+!!$         do j=JS, JE
+!!$         do i=IS, IE
+!!$
+!!$            !! at lower boundary
+!!$
+!!$            kl    = floor(sd_rkl(i,j))
+!!$            drate = real(kl+1,kind=RP) - sd_rkl(i,j)
+!!$
+!!$            if( drate<0.50_RP ) then
+!!$               liqa_sdm(kl,i,j) = 0.0_RP           !! <50% in share
+!!$            else
+!!$               liqa_sdm(kl,i,j) = liqa_sdm(kl,i,j)/drate
+!!$            end if
+!!$
+!!$            !! at upper boundary
+!!$
+!!$            ku    = floor(sd_rku(i,j))
+!!$            drate = sd_rku(i,j) - real(ku,kind=RP)
+!!$
+!!$            if( drate<0.50_RP ) then
+!!$               liqa_sdm(ku,i,j) = 0.0_RP           !! <50% in share
+!!$            else
+!!$               liqa_sdm(ku,i,j) = liqa_sdm(ku,i,j)/drate
+!!$            end if
+!!$
+!!$         end do
+!!$         end do
+!!$
+!!$         !=== convert super-droplets to density of rain-water. ===!
+!!$
+!!$!         do k=2,nk-1
+!!$!         do j=1,nj-1
+!!$!         do i=1,ni-1
+!!$         do k=KS,KE+1
+!!$         do j=JS-1,JE+1
+!!$         do i=IS-1,IE+1
+!!$
+!!$            rhoa_sdm(k,i,j) = liqa_sdm(k,i,j) * dcoef(k,i,j)
+!!$
+!!$         end do
+!!$         end do
+!!$         end do
+!!$
+!!$      end if
 
 !do k=KS,KE
 !do j=JS,JE
@@ -2334,11 +2360,11 @@ contains
 
             lsdmup = .true.
 
-!!$            ! get density of liquid-water(qw) before process-1
-!!$
-!!$            call sdm_sd2rhow(zph_crs,crs_val1p,                       &
-!!$                             sd_num,sd_n,sd_x,sd_y,sd_r,sd_rk,        &
-!!$                             sd_rkl,sd_rku,crs_val2p,sd_itmp1)
+            ! get density of liquid-water(qw) before process-1
+            !! here cres_val1p is the rhow
+            call sdm_sd2rhow(zph_crs,crs_val1p,                       &
+                             sd_num,sd_n,sd_x,sd_y,sd_r,sd_ri,sd_rj,sd_rk,        &
+                             sd_rkl,sd_rku,crs_val2p,sd_itmp1)
 
             ! { condensation/evaporation } in SDM
             !! diagnose necessary fluid variables
@@ -2350,14 +2376,18 @@ contains
                              sd_num,sd_numasl,sd_x,sd_y,sd_r,sd_asl,&
                              sd_ri,sd_rj,sd_rk)
 
-!!$            ! get density of liquid-water(qw) after process-1
-!!$            call sdm_sd2rhow(zph_crs,crs_val1c,                       &
-!!$                             sd_num,sd_n,sd_x,sd_y,sd_r,sd_rk,        &
-!!$                             sd_rkl,sd_rku,crs_val2c,sd_itmp1)
-!!$
+            ! get density of liquid-water(qw) after process-1
+            !! here cres_val1c is the rhow
+            call sdm_sd2rhow(zph_crs,crs_val1c,                       &
+                             sd_num,sd_n,sd_x,sd_y,sd_r,sd_ri,sd_rj,sd_rk,        &
+                             sd_rkl,sd_rku,crs_val2c,sd_itmp1)
+
+            ! exchange the vapor and heat to fluid variables
+            call sdm_condevp_updatefluid(RHOT,QTRC,DENS,crs_val1p,crs_val1c)
+
 !!$            ! convert the impact of { condensation/evaporation } to
 !!$            ! {qv,ptp} in CReSS
-!!$            call sdm_sd2qvptp(ptp_crs,qv_crs,exnr_crs,         &
+!!$            call sdm_condevp_updatefluid(ptp_crs,qv_crs,exnr_crs,         &
 !!$                              rhod_crs,crs_val1p,crs_val1c)
 !!$
 !!$            ! update dry air density
@@ -2516,13 +2546,12 @@ contains
   end subroutine sdm_calc
 !---------------------------------------------------------------------------------------
   subroutine sdm_sd2rhow(zph_crs,rhow_sdm,sd_num,sd_n,            &
-                         sd_x,sd_y,sd_r,sd_rk,sd_rkl,sd_rku,      &
+                         sd_x,sd_y,sd_r,sd_ri,sd_rj,sd_rk,sd_rkl,sd_rku,      &
                          liqw_sdm,ilist)
      use scale_const, only: &
       rw => CONST_DWATR
-     use scale_grid, only: &
-       FX => GRID_FX, &
-       FY => GRID_FY
+     use m_sdm_coordtrans, only: &
+       sdm_x2ri, sdm_y2rj
      ! Input variables
 !      integer, intent(in) :: id_dx_sdm
 !      integer, intent(in) :: id_dy_sdm  ! Unique index of dy_sdm in namelist table
@@ -2532,13 +2561,15 @@ contains
       real(RP), intent(in) :: sd_x(1:sd_num) ! x-coordinate of super-droplets
       real(RP), intent(in) :: sd_y(1:sd_num) ! y-coordinate of super-droplets
       real(RP), intent(in) :: sd_r(1:sd_num) ! equivalent radius of super-droplets
+      real(RP), intent(inout) :: sd_ri(1:sd_num)! index[i/real] of super-droplets
+      real(RP), intent(inout) :: sd_rj(1:sd_num)! index[j/real] of super-droplets
       real(RP), intent(in) :: sd_rk(1:sd_num)! index[k/real] of super-droplets
       real(RP), intent(in) :: sd_rkl(IA,JA) ! lower boundary index[k/real] at scalar point in SDM calculation area
       real(RP), intent(in) :: sd_rku(IA,JA) ! upper boundary index[k/real] at scalar point in SDM calculation area
       ! Output variables
       real(RP), intent(out) :: rhow_sdm(KA,IA,JA) ! densitiy of liquid water
       real(RP), intent(out) :: liqw_sdm(KA,IA,JA) ! liquid water of super-droplets
-      integer, intent(out) :: ilist(1:int(sd_num/nomp),1:nomp)   ! buffer for list vectorization
+      integer, intent(out) :: ilist(1:sd_num)   ! buffer for list vectorization
       ! Work variables for OpenMP
       integer :: sd_str        ! index of divided loop by OpenMP
       integer :: sd_end        ! index of divided loop by OpenMP
@@ -2548,30 +2579,35 @@ contains
       real(RP) :: drate        ! temporary
 !      integer(kind=i8) :: idx_sdm   ! integer of 'dx_sdm'
 !      integer(kind=i8) :: idy_sdm   ! integer of 'dy_sdm'
-      integer :: nlist(1:nomp)      ! list number
+!      integer :: nlist(1:nomp)      ! list number
       integer :: cnt                ! counter
       integer :: i, j, k, kl, ku, m, n, ix, jy    ! index
+      integer :: tlist
      !--------------------------------------------------------------------
+      call sdm_x2ri(sd_num,sd_x,sd_ri,sd_rk)
+      call sdm_y2rj(sd_num,sd_y,sd_rj,sd_rk)
 
       ! Initialize
       do k = 1, KA
       do i = 1, IA
       do j = 1, JA
-       dcoef(k,i,j) = rw * F_THRD * ONE_PI / real(dx_sdm(i)*dy_sdm(j),kind=RP)
+         dcoef(k,i,j) = rw * F_THRD * ONE_PI * dxiv_sdm(i) * dyiv_sdm(j) &
+                                           / (zph_crs(k,i,j)-zph_crs(k-1,i,j))
+!       dcoef(k,i,j) = rw * F_THRD * ONE_PI / real(dx_sdm(i)*dy_sdm(j),kind=RP)
 !      idx_sdm = 10_i8 * floor( 1.e4*(dx_sdm+1.e-5), kind=i8 )
 !      idy_sdm = 10_i8 * floor( 1.e4*(dy_sdm+1.e-5), kind=i8 )
       enddo
       enddo
       enddo
 
-      do np=1,nomp
-         nlist(np) = 0
-      end do
+!!$      do np=1,nomp
+!!$         nlist(np) = 0
+!!$      end do
 
 !      do k=1,nk
 !      do j=0,nj+1
 !      do i=0,ni+1
-      do k=2,KA
+      do k=1,KA
       do j=1,JA
       do i=1,IA
          liqw_sdm(k,i,j) = 0.0_RP
@@ -2582,51 +2618,55 @@ contains
 
 
       ! Get index list for compressing buffer.
-      do np=1,nomp
-
-         sd_str = int(sd_num/nomp)*(np-1) + 1
-         sd_end = int(sd_num/nomp)*np
-         cnt    = 0
-
-         do n=sd_str,sd_end
+!!$      do np=1,nomp
+!!$
+!!$         sd_str = int(sd_num/nomp)*(np-1) + 1
+!!$         sd_end = int(sd_num/nomp)*np
+!!$         cnt    = 0
+!!$
+!!$         do n=sd_str,sd_end
+      cnt =0
+      do n=1,sd_num
              if( sd_rk(n)>VALID2INVALID ) then
                cnt = cnt + 1
-               ilist(cnt,np) = n
+               ilist(cnt) = n
             end if
          end do
 
-         nlist(np) = cnt
-
-      end do
+         tlist = cnt
 
       ! Get density of liquid-water.
       !### count voulme of super-droplets ###!
-      do np=1,nomp
-         if( nlist(np)>0 ) then
-            do m=1,nlist(np)
-               n = ilist(m,np)
-!               i = int( floor( sd_x(n)*1.d5, kind=i8 )/idx_sdm ) + 2
-!               j = int( floor( sd_y(n)*1.d5, kind=i8 )/idy_sdm ) + 2
-               do ix = IS, IE
-                if( sd_x(n) <= ( FX(ix)-FX(IS-1) ) ) then
-                 i = ix
-                 exit
-                endif
-               enddo
-               do jy = IS, JE
-                if( sd_y(n) <= ( FY(jy)-FY(JS-1) ) ) then
-                 j = jy
-                 exit
-                endif
-               enddo
-               k = floor( sd_rk(n) )
+!!$      do np=1,nomp
+!!$         if( nlist(np)>0 ) then
+!!$            do m=1,nlist(np)
+
+         do m=1,tlist
+            n = ilist(m)
+!!$!               i = int( floor( sd_x(n)*1.d5, kind=i8 )/idx_sdm ) + 2
+!!$!               j = int( floor( sd_y(n)*1.d5, kind=i8 )/idy_sdm ) + 2
+!!$               do ix = IS, IE
+!!$                if( sd_x(n) <= ( FX(ix)-FX(IS-1) ) ) then
+!!$                 i = ix
+!!$                 exit
+!!$                endif
+!!$               enddo
+!!$               do jy = IS, JE
+!!$                if( sd_y(n) <= ( FY(jy)-FY(JS-1) ) ) then
+!!$                 j = jy
+!!$                 exit
+!!$                endif
+!!$               enddo
+!!$               k = floor( sd_rk(n) )
+
+            i = floor(sd_ri(n))+1
+            j = floor(sd_rj(n))+1
+            k = floor(sd_rk(n))+1
 
                liqw_sdm(k,i,j) = liqw_sdm(k,i,j)                        &
      &                         + sd_r(n) * sd_r(n) * sd_r(n)            &
      &                         * real(sd_n(n),kind=RP)
             end do
-         end if
-      end do
 
       ! Adjust liquid-water in verical boundary.
 !      do j=2,nj-2
@@ -2657,11 +2697,10 @@ contains
 !      do k=2,nk-1
 !      do j=1,nj-1
 !      do i=1,ni-1
-      do k=KS,KE+1
-      do j=JS-1,JE+1
-      do i=IS-1,IE+1
-         rhow_sdm(k,i,j) = liqw_sdm(k,i,j) * dcoef(k,i,j)             &
-                         / real(zph_crs(k+1,i,j)-zph_crs(k,i,j),kind=RP)
+      do k=KS,KE
+      do j=JS,JE
+      do i=IS,IE
+         rhow_sdm(k,i,j) = liqw_sdm(k,i,j) * dcoef(k,i,j)
       end do
       end do
       end do
@@ -2670,45 +2709,66 @@ contains
     return
   end subroutine sdm_sd2rhow
   !-----------------------------------------------------------------------------
-  subroutine sdm_sd2qvptp(ptp_crs,qv_crs,exnr_crs,       &
-                          rhod_crs,rhowp_sdm,rhowc_sdm)
+  subroutine sdm_condevp_updatefluid(RHOT,QTRC,DENS,rhowp_sdm,rhowc_sdm)
      use scale_const, only: &
          cp => CONST_CPdry
+     use scale_tracer, only: &
+         I_QV,QAD=>QA
+     use scale_grid_index, only: &
+         IA,JA,KA,IS,IE,JS,JE,KS,KE
+     use m_sdm_fluidconv, only: &
+          sdm_rhot_qtrc2cpexnr
      ! Input variables
-     real(RP), intent(in) :: exnr_crs(KA,IA,JA) ! Exner function
-     real(RP), intent(in) :: rhod_crs(KA,IA,JA) ! dry air density
      real(RP), intent(in) :: rhowp_sdm(KA,IA,JA) ! density of liquid water at preveous step
      real(RP), intent(in) :: rhowc_sdm(KA,IA,JA) ! density of liquid water at current step
      ! Output variables
-     real(RP), intent(inout) :: ptp_crs(KA,IA,JA) ! Potential temperature perturbation
-     real(RP), intent(inout) :: qv_crs(KA,IA,JA)  ! Water vapor mixing ratio
+     real(RP), intent(inout) :: RHOT(KA,IA,JA)        !! DENS * POTT [K*kg/m3]
+     real(RP), intent(inout) :: QTRC(KA,IA,JA,QAD)    !! Ratio of mass of tracer to total mass[kg/kg]
+     real(RP), intent(inout) :: DENS(KA,IA,JA)        !! Density [kg/m3]
      ! Work variables
-     real(RP) :: sv ! the source term of water vapor associated with condenstation/evaporation process.
+     real(RP) :: rhov(KA,IA,JA),cpexnr(KA,IA,JA)
+     real(RP) :: delta_rhow, dens_old
      integer :: i, j, k ! index
   !-------------------------------------------------------------------7--
-  ! Input the impact of cloud physics using SDM to CReSS.
-!      do k=2,nk-1
-!      do j=1,nj-1
-!      do i=1,ni-1
-      do k=KS,KE+1
-      do j=JS-1,JE+1
-      do i=IS-1,IE+1
-         sv = -(rhowc_sdm(k,i,j)-rhowp_sdm(k,i,j))/rhod_crs(k,i,j)
-!if( qv_crs(k,i,j) + real(sv) < 0.0_RP ) then
-! write(*,*) k,i,j, qv_crs(k,i,j), sv
-!endif
-!         qv_crs(k,i,j)  = qv_crs(k,i,j) + real(sv)
-!ORG     qv_crs(i,j,k)  = max( qv_crs(i,j,k) + real(sv), 1.e-8 )
-         qv_crs(k,i,j)  = max( qv_crs(k,i,j) + real(sv), 1.E-8_RP )
-         ptp_crs(k,i,j) = ptp_crs(k,i,j)                                &
-                        - real( LatHet*sv ) / ( cp*exnr_crs(k,i,j) )
-      end do
-      end do
-      end do
+     
+     ! exchange vapor
+    do k = 1, KA
+    do i = 1, IA
+    do j = 1, JA
+       rhov(k,i,j)=DENS(k,i,j)*QTRC(k,i,j,I_QV)
+    end do
+    end do
+    end do
+    
+    do k=KS,KE
+    do j=JS,JE
+    do i=IS,IE
+       delta_rhow = rhowc_sdm(k,i,j)-rhowp_sdm(k,i,j)
+       dens_old = DENS(k,i,j)
 
+       DENS(k,i,j) = DENS(k,i,j) - delta_rhow
+       rhov(k,i,j) = rhov(k,i,j) - delta_rhow
+       QTRC(k,i,j,I_QV) = rhov(k,i,j) / DENS(k,i,j)
+       RHOT(k,i,j) = RHOT(k,i,j) * (DENS(k,i,j)/dens_old)  
+    end do
+    end do
+    end do
+
+     ! exchange heat
+    call sdm_rhot_qtrc2cpexnr(RHOT,QTRC,DENS,cpexnr)
+
+    do k=KS,KE
+    do j=JS,JE
+    do i=IS,IE
+       delta_rhow = rhowc_sdm(k,i,j)-rhowp_sdm(k,i,j)
+
+       RHOT(k,i,j) = RHOT(k,i,j) + LatHet*delta_rhow / cpexnr(k,i,j)  
+    end do
+    end do
+    end do
 
     return
-  end subroutine sdm_sd2qvptp
+  end subroutine sdm_condevp_updatefluid
   !-----------------------------------------------------------------------------
   subroutine sdm_getrhod(pbr_crs,ptbr_crs,pp_crs,ptp_crs,&
                          qv_crs,rhod_crs)
