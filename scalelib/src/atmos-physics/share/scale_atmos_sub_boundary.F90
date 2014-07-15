@@ -730,7 +730,7 @@ contains
        COMM_wait
     use scale_time, only: &
        TIME_DTSEC,  &
-       TIME_NOWSEC
+       TIME_NOWDAYSEC
     implicit none
     real(RP), intent(in) :: DENS(KA,IA,JA)
 
@@ -814,7 +814,7 @@ contains
        ATMOS_BOUNDARY_var(KS:KE,IS:IE,JS:JE,I_BND_MOMZ) = ATMOS_BOUNDARY_VALUE_VELZ * DENS(KS:KE,IS:IE,JS:JE)
     end if
 
-    last_updated = TIME_NOWSEC
+    last_updated = TIME_NOWDAYSEC
 
     return
   end subroutine ATMOS_BOUNDARY_initialize
@@ -829,7 +829,7 @@ contains
        epsilon => CONST_EPS
     use scale_time, only: &
        TIME_DTSEC, &
-       TIME_NOWSEC
+       TIME_NOWDAYSEC
     implicit none
     real(RP), intent(in) :: DENS(KA,IA,JA)
 
@@ -843,7 +843,7 @@ contains
 
     else if ( ATMOS_BOUNDARY_TYPE == 'REAL' ) then
 
-       integrated_sec = TIME_NOWSEC - last_updated
+       integrated_sec = TIME_NOWDAYSEC - last_updated
 
        if ( integrated_sec >= ATMOS_BOUNDARY_UPDATE_DT - epsilon ) then
           boundary_timestep = boundary_timestep + 1
@@ -900,7 +900,7 @@ contains
        COMM_vars8, &
        COMM_wait
     use scale_time, only: &
-       TIME_NOWSEC
+       TIME_NOWDAYSEC
     implicit none
 
     real(RP) :: reference_atmos(KMAX,IMAX,JMAX) !> restart file (no HALO)
