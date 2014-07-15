@@ -160,8 +160,6 @@ contains
         Z0M,        & ! (in)
         Z0H,        & ! (in)
         Z0E         ) ! (in)
-    use scale_process, only: &
-       PRC_MPIstop
     use scale_const, only: &
       CPdry  => CONST_CPdry, &
       STB    => CONST_STB,   &
@@ -360,8 +358,8 @@ contains
 
         if( n > nmax ) then
           ! not converged and stop program
-          if( IO_L ) write(IO_FID_LOG,*) 'Error: surface tempearture is not converged.'
-          call PRC_MPIstop
+          if( IO_L ) write(IO_FID_LOG,*) 'Warning: surface tempearture is not converged.'
+          if( IO_L ) write(IO_FID_LOG,*) 'Residual [W/m2]', res
         end if
 
       else
