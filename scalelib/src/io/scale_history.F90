@@ -344,6 +344,7 @@ contains
        desc,    &
        unit,    &
        ndim,    &
+       dt,      &
        xdim,    &
        ydim,    &
        zdim     )
@@ -358,6 +359,7 @@ contains
     character(len=*), intent(in)  :: unit    !< unit         of the item
     integer,          intent(in)  :: ndim    !< dimension    of the item
 
+    real(DP),         intent(in),optional  :: dt   !< update time interval
     character(len=*), intent(in), optional :: xdim
     character(len=*), intent(in), optional :: ydim
     character(len=*), intent(in), optional :: zdim
@@ -425,6 +427,7 @@ contains
                              dims(1:ndim),      & ! [IN]
                              desc,              & ! [IN]
                              unit,              & ! [IN]
+                             dt,                & ! [IN]
                              itemid  = itemid,  & ! [OUT]
                              zinterp = zinterp, & ! [OUT]
                              existed = existed  ) ! [OUT]
@@ -657,6 +660,7 @@ contains
     call HIST_reg( itemid,              & ! [OUT]
                    zinterp,             & ! [OUT]
                    item, desc, unit, 1, & ! [IN]
+                   dt = dt,             & ! [IN]
                    zdim = zd            ) ! [IN]
 
     call HIST_put( itemid, var, dt ) ! [IN]
@@ -698,6 +702,7 @@ contains
     call HIST_reg( itemid,              & ! [OUT]
                    zinterp,             & ! [OUT]
                    item, desc, unit, 2, & ! [IN]
+                   dt = dt,             & ! [IN]
                    xdim = xd, ydim = yd ) ! [IN]
 
     call HIST_put( itemid, var, dt ) ! [IN]
@@ -743,6 +748,7 @@ contains
     call HIST_reg( itemid,                       & ! [OUT]
                    zinterp,                      & ! [OUT]
                    item, desc, unit, 3,          & ! [IN]
+                   dt = dt,                      & ! [IN]
                    xdim = xd, ydim = yd, zdim=zd ) ! [IN]
 
     call HIST_put( itemid, var, dt, zinterp,     & ! [IN]

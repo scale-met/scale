@@ -260,6 +260,8 @@ contains
        dens_i => CONST_DICE
     use scale_specfunc, only: &
        SF_gamma
+    use scale_time, only: &
+       TIME_DTSEC_ATMOS_PHY_MP
     use scale_history, only: &
        HIST_reg
     implicit none
@@ -395,7 +397,7 @@ contains
 
     ! detailed tendency monitor
     do ip = 1, w_nmax
-       call HIST_reg( w_histid(ip), w_zinterp(ip), w_name(ip), w_desc(ip), w_unit(ip), ndim=3 )
+       call HIST_reg( w_histid(ip), w_zinterp(ip), w_name(ip), w_desc(ip), w_unit(ip), ndim=3, dt = TIME_DTSEC_ATMOS_PHY_MP )
     enddo
 
     return

@@ -2,7 +2,7 @@
 #include "gtool_file.h"
 
 #define RMISS -9.9999e+30
-#define EPS 1e-10
+#define TEPS 1e-6
 
 #define CHECK_ERROR(status)					\
   {								\
@@ -583,8 +583,10 @@ int32_t file_add_variable( int32_t *vid,     // (out)
 	strcat(coord, dims[i]);
       }
     }
-    if ( ndims > n && strlen(coord)+6 < File_HMID)
-      strcat(coord, " time");
+    if ( ndims > n && strlen(coord)+6 < File_HMID) {
+      strcat(coord, " ");
+      strcat(coord, vars[nvar]->t->name);
+    }
     CHECK_ERROR( nc_put_att_text(ncid, varid, "coordinates", strlen(coord), coord) );
   }
 
@@ -636,7 +638,7 @@ int32_t file_write_data( int32_t  vid,        // (in)
   varid = vars[vid]->varid;
   if ( vars[vid]->t != NULL ) { // have time dimension
     if ( vars[vid]->t->count < 0 ||  // first time
-	 t_end > vars[vid]->t->t + EPS ) { // time goes next step
+	 t_end > vars[vid]->t->t + TEPS ) { // time goes next step
       vars[vid]->t->count += 1;
       vars[vid]->t->t = t_end;
       size_t index[2];
@@ -655,15 +657,19 @@ int32_t file_write_data( int32_t  vid,        // (in)
       s[0] = 0;
       CHECK_ERROR( nc_get_vara_double(ncid, vars[vid]->t->varid, s, &nt, t) );
       flag = 1;
-      for(n=0;n<nt;n++) {
-	if ( fabs(t[n]-t_end) < EPS ) {
+      for(n=nt-1;n>=0;n--) {
+	if ( fabs(t[n]-t_end) < TEPS ) {
 	  vars[vid]->start[0] = n;
 	  flag = 0;
 	  break;
 	}
       }
       if ( flag ) {
-	fprintf(stderr, "cannot find time\n");
+	fprintf(stderr, "cannot find time: %f\n", t_end);
+	fprintf(stderr, "  time count is : %d, last time is: %f, diff is: %e\n", vars[vid]->t->count < 0, vars[vid]->t->t, vars[vid]->t->t-t_end);
+	fprintf(stderr, "  time is: ");
+	for (n=0;n<nt;n++) fprintf(stderr, "%f, ", t[n]);
+	fprintf(stderr, "\n");
 	return ERROR_CODE;
       }
     }

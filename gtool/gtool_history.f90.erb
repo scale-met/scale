@@ -420,6 +420,7 @@ contains
       dims,    &
       desc,    &
       units,   &
+      dt,      &
       options, &
       itemid,  &
       zinterp, &
@@ -437,6 +438,7 @@ contains
     character(len=*), intent( in) :: dims(:)
     character(len=*), intent( in) :: desc
     character(len=*), intent( in) :: units
+    real(DP),         intent( in), optional :: dt !< update time interval
     character(len=*), intent( in), optional :: options ! 'filetype1:key1=val1&filetype2:key2=val2&...'
     integer,          intent(out), optional :: itemid
     logical,          intent(out), optional :: zinterp
@@ -486,74 +488,83 @@ contains
                   time_units = tunits                                   & ! (in)
                   )
 
-             if ( present(options) ) then
-                ic = -1 ! index of ':'
-                ie = -1 ! index of '='
-                is = 1  ! start index
-                lo = len_trim(options)
-                do m = 1, lo+1
-                   if ( m == lo+1 .or. options(m:m) == '&' ) then
-                      if ( ic == -1 .or. ie == -1 ) then
-                         call Log('E', 'xxx option is invalid: ' // trim(options))
+             if ( .not. fileexisted ) then
+                if ( present(options) ) then
+                   ic = -1 ! index of ':'
+                   ie = -1 ! index of '='
+                   is = 1  ! start index
+                   lo = len_trim(options)
+                   do m = 1, lo+1
+                      if ( m == lo+1 .or. options(m:m) == '&' ) then
+                         if ( ic == -1 .or. ie == -1 ) then
+                            call Log('E', 'xxx option is invalid: ' // trim(options))
+                         endif
+                         call FileSetOption(History_fid(id),        & ! (in)
+                              options(is:ic-1),                     & ! (in)
+                              options(ic+1:ie-1), options(ie+1:m-1) ) ! (in)
+                         ic = -1
+                         ie = -1
+                         is = m + 1
+                      else if ( options(m:m) == ':' ) then
+                         ic = m
+                      else if ( options(m:m) == '=' ) then
+                         ie = m
                       endif
-                      call FileSetOption(History_fid(id),        & ! (in)
-                           options(is:ic-1),                     & ! (in)
-                           options(ic+1:ie-1), options(ie+1:m-1) ) ! (in)
-                      ic = -1
-                      ie = -1
-                      is = m + 1
-                   else if ( options(m:m) == ':' ) then
-                      ic = m
-                   else if ( options(m:m) == '=' ) then
-                      ie = m
-                   endif
+                   enddo
+                endif
+
+                do m = 1, History_axis_count
+                   call FilePutAxis( &
+                        History_fid(id),                             & ! (in)
+                        History_axis(m)%name,  History_axis(m)%desc, & ! (in)
+                        History_axis(m)%units, History_axis(m)%dim,  & ! (in)
+                        History_axis(m)%type,  History_axis(m)%var   ) ! (in)
                 enddo
-             endif
 
-             do m = 1, History_axis_count
-                call FilePutAxis( &
-                     History_fid(id),                             & ! (in)
-                     History_axis(m)%name,  History_axis(m)%desc, & ! (in)
-                     History_axis(m)%units, History_axis(m)%dim,  & ! (in)
-                     History_axis(m)%type,  History_axis(m)%var   ) ! (in)
-             enddo
+                do m = 1, History_assoc_count
+                   call FilePutAssociatedCoordinates( &
+                        History_fid(id),                                 & ! (in)
+                        History_assoc(m)%name, History_assoc(m)%desc,    & ! (in)
+                        History_assoc(m)%units,                          & ! (in)
+                        History_assoc(m)%dims(1:History_assoc(m)%ndims), & ! (in)
+                        History_assoc(m)%type, History_assoc(m)%var      ) ! (in)
+                enddo
 
+             end if
 
-             do m = 1, History_assoc_count
-                call FilePutAssociatedCoordinates( &
-                     History_fid(id),                                 & ! (in)
-                     History_assoc(m)%name,  History_assoc(m)%desc,   & ! (in)
-                     History_assoc(m)%units,                          & ! (in)
-                     History_assoc(m)%dims(1:History_assoc(m)%ndims), & ! (in)
-                     History_assoc(m)%type,  History_assoc(m)%var     ) ! (in)
-             enddo
-
-
-             call FileAddVariable(History_vid(id), & ! (out)
-                  History_fid(id),                 & ! (in)
-                  varname, desc, units, dims,      & ! (in)
-                  History_req_dtype  (reqid),      & ! (in)
-                  History_req_tintsec(reqid),      & ! (in)
-                  History_req_tavg   (reqid)       & ! (in)
-                  )
-
-             do m = 1, History_axis_count
-                if ( History_axis(m)%down ) then
-                   call FileSetTAttr( &
-                        History_fid(id), History_axis(m)%name, &
-                        "positive", "down" )
-                end if
-             end do
 
              History_item   (id) = varname
 
-             History_tintsec(id) = History_req_tintsec(reqid)
+             if ( present(dt) ) then
+                History_tintsec(id) = max(History_req_tintsec(reqid), dt)
+             else
+                History_tintsec(id) = History_req_tintsec(reqid)
+             end if
              History_tavg   (id) = History_req_tavg   (reqid)
              History_zinterp(id) = History_req_zinterp(reqid)
 
              History_varsum(:,id) =  0.D0
              History_tstrsec (id) = -1.D0
              History_tsumsec (id) =  0.D0
+
+             call FileAddVariable( &
+                  History_vid(id),            & ! (out)
+                  History_fid(id),            & ! (in)
+                  varname, desc, units, dims, & ! (in)
+                  History_req_dtype(reqid),   & ! (in)
+                  History_tintsec(id),        & ! (in)
+                  History_tavg   (id)         & ! (in)
+                  )
+
+             if ( .not. fileexisted ) then
+                do m = 1, History_axis_count
+                   if ( History_axis(m)%down ) then
+                      call FileSetTAttr( &
+                           History_fid(id), History_axis(m)%name, &
+                           "positive", "down" )
+                   end if
+                end do
+             end if
 
              write(message,*) '*** [HIST] Item registration No.= ', id
              call Log('I', message)
