@@ -270,7 +270,7 @@ contains
     HISTORY_TITLE       = title
     HISTORY_SOURCE      = source
     HISTORY_INSTITUTION = institution
-    if ( present(time_since) ) then
+    if ( present(time_units) ) then
        HISTORY_TIME_UNITS  = time_units
     else
        HISTORY_TIME_UNITS  = 'seconds'
