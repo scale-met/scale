@@ -4048,8 +4048,8 @@ enddo
     use mod_realinput
     implicit none
 
-    integer               :: INITIAL_STEP        = 1
-    integer               :: NUMBER_OF_FILES     = 1   ! assume that one file includes one time step
+    integer               :: NUMBER_OF_FILES     = 1
+    integer               :: NUMBER_OF_TSTEPS    = 1   ! num of time steps in one file
     integer               :: INTERP_SERC_DIV_NUM = 10  ! num of dividing blocks in interpolation search
     character(len=H_LONG) :: BASENAME_ORG       = ''
     character(len=H_LONG) :: FILETYPE_ORG       = ''
@@ -4062,8 +4062,8 @@ enddo
 
 
     NAMELIST / PARAM_MKINIT_REAL / &
-         INITIAL_STEP,        &
          NUMBER_OF_FILES,     &
+         NUMBER_OF_TSTEPS,    &
          BASENAME_ORG,        &
          FILETYPE_ORG,        &
          BASENAME_BOUNDARY,   &
@@ -4086,14 +4086,17 @@ enddo
 
     integer :: mdlid
     integer :: dims(7)  ! 1-3: normal, 4-6: staggerd, 7: soil-layer
+    integer :: totaltimesteps = 1
     integer :: timelen = 1
     integer :: ierr
 
-    integer :: k, i, j, iq, n
+    integer :: k, i, j, iq, n, ns, ne, l, ll
+    logical :: initial_loop
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Real Case]/Categ[MKINIT]'
+
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_MKINIT_REAL,iostat=ierr)
@@ -4110,51 +4113,65 @@ enddo
        call PRC_MPIstop
     endif
 
+    initial_loop = .true.
+    totaltimesteps = NUMBER_OF_FILES * NUMBER_OF_TSTEPS
+
     BASENAME_WITHNUM = trim(BASENAME_ORG)//"_00000"
-    call ParentAtomSetup( dims(:), timelen, mdlid,           & ![OUT]
+    call ParentAtomSetup( dims(:), timelen, mdlid,          & ![OUT]
                           BASENAME_WITHNUM, FILETYPE_ORG,    & ![IN]
                           INTERP_SERC_DIV_NUM, WRF_FILE_TYPE ) ![IN]
 
-    if ( timelen /= 1 ) then
-       write(*,*) 'xxx Multiple Time Steps Found in Original File!'
-       call PRC_MPIstop
+    if( NUMBER_OF_TSTEPS /= timelen ) then
+       if( IO_L ) write(IO_FID_LOG,*) '+++ WARNING: NUMBER_OF_TSTEP is not match with timesteps derived from the file.'
     endif
 
-    allocate( dens_org(KA,IA,JA,NUMBER_OF_FILES) )
-    allocate( momz_org(KA,IA,JA,NUMBER_OF_FILES) )
-    allocate( momx_org(KA,IA,JA,NUMBER_OF_FILES) )
-    allocate( momy_org(KA,IA,JA,NUMBER_OF_FILES) )
-    allocate( rhot_org(KA,IA,JA,NUMBER_OF_FILES) )
-    allocate( qtrc_org(KA,IA,JA,QA,NUMBER_OF_FILES) )
+    allocate( dens_org(KA,IA,JA,totaltimesteps   ) )
+    allocate( momz_org(KA,IA,JA,totaltimesteps   ) )
+    allocate( momx_org(KA,IA,JA,totaltimesteps   ) )
+    allocate( momy_org(KA,IA,JA,totaltimesteps   ) )
+    allocate( rhot_org(KA,IA,JA,totaltimesteps   ) )
+    allocate( qtrc_org(KA,IA,JA,totaltimesteps,QA) )
 
     !--- read external file
     do n = 1, NUMBER_OF_FILES
        write(NUM,'(I5.5)') n-1
        BASENAME_WITHNUM = trim(BASENAME_ORG)//"_"//NUM
        if( IO_L ) write(IO_FID_LOG,*) '+++ Target File Name: ',trim(BASENAME_WITHNUM)
-       call ParentAtomInput( DENS_ORG(:,:,:,n),   &
-                             MOMZ_ORG(:,:,:,n),   &
-                             MOMX_ORG(:,:,:,n),   &
-                             MOMY_ORG(:,:,:,n),   &
-                             RHOT_ORG(:,:,:,n),   &
-                             QTRC_ORG(:,:,:,:,n), &
-                             BASENAME_WITHNUM,    &
-                             dims(:),             &
-                             timelen,             &
-                             mdlid,               &
-                             INITIAL_STEP,        &
-                             SERIAL_PROC_READ     )
+       if( IO_L ) write(IO_FID_LOG,*) '    Time Steps in One File: ', NUMBER_OF_TSTEPS
+
+       if( NUMBER_OF_TSTEPS > 1 ) then
+          ns = NUMBER_OF_TSTEPS * (n - 1) + 1
+          ne = ns + (NUMBER_OF_TSTEPS - 1)
+       else
+          ns = n
+          ne = n
+       endif
+
+       call ParentAtomInput( DENS_org(:,:,:,ns:ne),    &
+                              MOMZ_org(:,:,:,ns:ne),    &
+                              MOMX_org(:,:,:,ns:ne),    &
+                              MOMY_org(:,:,:,ns:ne),    &
+                              RHOT_org(:,:,:,ns:ne),    &
+                              QTRC_org(:,:,:,ns:ne,:),  &
+                              BASENAME_WITHNUM,         &
+                              dims(:),                  &
+                              mdlid,                    &
+                              NUMBER_OF_TSTEPS,         &
+                              initial_loop,             &
+                              SERIAL_PROC_READ          )
+
+       if( initial_loop ) initial_loop = .false.
     enddo
 
     !--- input initial data
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       DENS(k,i,j) = DENS_ORG(k,i,j,INITIAL_STEP)
-       MOMZ(k,i,j) = MOMZ_ORG(k,i,j,INITIAL_STEP)
-       MOMX(k,i,j) = MOMX_ORG(k,i,j,INITIAL_STEP)
-       MOMY(k,i,j) = MOMY_ORG(k,i,j,INITIAL_STEP)
-       RHOT(k,i,j) = RHOT_ORG(k,i,j,INITIAL_STEP)
+       DENS(k,i,j) = DENS_ORG(k,i,j,1)
+       MOMZ(k,i,j) = MOMZ_ORG(k,i,j,1)
+       MOMX(k,i,j) = MOMX_ORG(k,i,j,1)
+       MOMY(k,i,j) = MOMY_ORG(k,i,j,1)
+       RHOT(k,i,j) = RHOT_ORG(k,i,j,1)
     enddo
     enddo
     enddo
@@ -4163,7 +4180,7 @@ enddo
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       QTRC(k,i,j,iq) = QTRC_ORG(k,i,j,iq,INITIAL_STEP)
+       QTRC(k,i,j,iq) = QTRC_ORG(k,i,j,1,iq)
     enddo
     enddo
     enddo
@@ -4176,18 +4193,10 @@ enddo
                              MOMY_ORG(:,:,:,:),   &
                              RHOT_ORG(:,:,:,:),   &
                              QTRC_ORG(:,:,:,:,:), &
-                             NUMBER_OF_FILES,     &
-                             INITIAL_STEP,        &
+                             totaltimesteps,      &
                              BOUNDARY_UPDATE_DT,  &
                              BASENAME_BOUNDARY,   &
                              BOUNDARY_TITLE       )
-
-    deallocate( dens_org )
-    deallocate( momz_org )
-    deallocate( momx_org )
-    deallocate( momy_org )
-    deallocate( rhot_org )
-    deallocate( qtrc_org )
 
     !--- read/write initial data for bottom boundary models
     n = 1
@@ -4195,9 +4204,8 @@ enddo
     BASENAME_WITHNUM = trim(BASENAME_ORG)//"_"//NUM
     call ParentLndOcnUrbInput( BASENAME_WITHNUM, &
                               dims,               &
-                              timelen,            &
+                              1,                  &
                               mdlid,              &
-                              INITIAL_STEP,       &
                               SERIAL_PROC_READ,   &
                               NO_ADDITIONAL_INPUT )
 
@@ -4215,6 +4223,13 @@ enddo
        TOAFLX_SW_dn(i,j) = 0.0_RP
     enddo
     enddo
+
+    deallocate( dens_org )
+    deallocate( momz_org )
+    deallocate( momx_org )
+    deallocate( momy_org )
+    deallocate( rhot_org )
+    deallocate( qtrc_org )
 
     return
   end subroutine MKINIT_real

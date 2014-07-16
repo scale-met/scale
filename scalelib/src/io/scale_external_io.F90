@@ -160,8 +160,8 @@ contains
       var,           & ! (out)
       basename,      & ! (in)
       varname,       & ! (in)
-      step,          & ! (in)
-      tcount,        & ! (in)
+      ts,          & ! (in)
+      te,        & ! (in)
       myrank,        & ! (in)
       mdlid,         & ! (in)
       nx,            & ! (in)
@@ -173,8 +173,8 @@ contains
     real(SP),         intent(out)            :: var(:,:)
     character(LEN=*), intent( in)           :: basename
     character(LEN=*), intent( in)           :: varname
-    integer,          intent( in)            :: step
-    integer,          intent( in)            :: tcount
+    integer,          intent( in)            :: ts
+    integer,          intent( in)            :: te
     integer,          intent( in)            :: myrank
     integer,          intent( in)            :: mdlid
     integer,          intent( in)            :: nx
@@ -185,12 +185,15 @@ contains
     integer :: status
     integer :: precis
 
+    integer :: tcount
     character(len=H_LONG) :: fname = ''
     logical :: single_ = .false.
 
     intrinsic size
     intrinsic shape
     !---------------------------------------------------------------------------
+
+    tcount = te - ts + 1
 
     if ( present(single) ) then
        single_ = single
@@ -216,7 +219,7 @@ contains
        call PRC_MPIstop
     endif
 
-    status = nf90_get_var( ncid, varid, var_org(:,:), start = (/ 1,step /), &
+    status = nf90_get_var( ncid, varid, var_org(:,:), start = (/ 1,ts /), &
                             count = (/ nx,tcount /) )
     if (status .ne. nf90_noerr) call handle_err(status)
 
@@ -233,8 +236,8 @@ contains
       var,           & ! (out)
       basename,      & ! (in)
       varname,       & ! (in)
-      step,          & ! (in)
-      tcount,        & ! (in)
+      ts,          & ! (in)
+      te,        & ! (in)
       myrank,        & ! (in)
       mdlid,         & ! (in)
       nx,            & ! (in)
@@ -246,8 +249,8 @@ contains
     real(DP),         intent(out)            :: var(:,:)
     character(LEN=*), intent( in)           :: basename
     character(LEN=*), intent( in)           :: varname
-    integer,          intent( in)            :: step
-    integer,          intent( in)            :: tcount
+    integer,          intent( in)            :: ts
+    integer,          intent( in)            :: te
     integer,          intent( in)            :: myrank
     integer,          intent( in)            :: mdlid
     integer,          intent( in)            :: nx
@@ -258,12 +261,15 @@ contains
     integer :: status
     integer :: precis
 
+    integer :: tcount
     character(len=H_LONG) :: fname = ''
     logical :: single_ = .false.
 
     intrinsic size
     intrinsic shape
     !---------------------------------------------------------------------------
+
+    tcount = te - ts + 1
 
     if ( present(single) ) then
        single_ = single
@@ -289,7 +295,7 @@ contains
        call PRC_MPIstop
     endif
 
-    status = nf90_get_var( ncid, varid, var_org(:,:), start = (/ 1,step /), &
+    status = nf90_get_var( ncid, varid, var_org(:,:), start = (/ 1,ts /), &
                             count = (/ nx,tcount /) )
     if (status .ne. nf90_noerr) call handle_err(status)
 
@@ -306,8 +312,8 @@ contains
       var,           & ! (out)
       basename,      & ! (in)
       varname,       & ! (in)
-      step,          & ! (in)
-      tcount,        & ! (in)
+      ts,          & ! (in)
+      te,        & ! (in)
       myrank,        & ! (in)
       mdlid,         & ! (in)
       single,        & ! (in) optional
@@ -320,8 +326,8 @@ contains
     real(SP),         intent(out)            :: var(:,:,:)
     character(LEN=*), intent( in)           :: basename
     character(LEN=*), intent( in)           :: varname
-    integer,          intent( in)            :: step
-    integer,          intent( in)            :: tcount
+    integer,          intent( in)            :: ts
+    integer,          intent( in)            :: te
     integer,          intent( in)            :: myrank
     integer,          intent( in)            :: mdlid
     logical,          intent( in), optional :: single
@@ -335,12 +341,15 @@ contains
     integer :: nx, ny
     integer :: dims(7)
 
+    integer :: tcount
     character(len=H_LONG) :: fname = ''
     logical :: single_ = .false.
 
     intrinsic size
     intrinsic shape
     !---------------------------------------------------------------------------
+
+    tcount = te - ts + 1
 
     if ( present(single) ) then
        single_ = single
@@ -375,7 +384,7 @@ contains
        call PRC_MPIstop
     endif
 
-    status = nf90_get_var( ncid, varid, var_org(:,:,:), start = (/ 1,1,step /), &
+    status = nf90_get_var( ncid, varid, var_org(:,:,:), start = (/ 1,1,ts /), &
                             count = (/ nx,ny,tcount /) )
     if (status .ne. nf90_noerr) call handle_err(status)
 
@@ -392,8 +401,8 @@ contains
       var,           & ! (out)
       basename,      & ! (in)
       varname,       & ! (in)
-      step,          & ! (in)
-      tcount,        & ! (in)
+      ts,          & ! (in)
+      te,        & ! (in)
       myrank,        & ! (in)
       mdlid,         & ! (in)
       single,        & ! (in) optional
@@ -406,8 +415,8 @@ contains
     real(DP),         intent(out)            :: var(:,:,:)
     character(LEN=*), intent( in)           :: basename
     character(LEN=*), intent( in)           :: varname
-    integer,          intent( in)            :: step
-    integer,          intent( in)            :: tcount
+    integer,          intent( in)            :: ts
+    integer,          intent( in)            :: te
     integer,          intent( in)            :: myrank
     integer,          intent( in)            :: mdlid
     logical,          intent( in), optional :: single
@@ -421,12 +430,15 @@ contains
     integer :: nx, ny
     integer :: dims(7)
 
+    integer :: tcount
     character(len=H_LONG) :: fname = ''
     logical :: single_ = .false.
 
     intrinsic size
     intrinsic shape
     !---------------------------------------------------------------------------
+
+    tcount = te - ts + 1
 
     if ( present(single) ) then
        single_ = single
@@ -461,7 +473,7 @@ contains
        call PRC_MPIstop
     endif
 
-    status = nf90_get_var( ncid, varid, var_org(:,:,:), start = (/ 1,1,step /), &
+    status = nf90_get_var( ncid, varid, var_org(:,:,:), start = (/ 1,1,ts /), &
                             count = (/ nx,ny,tcount /) )
     if (status .ne. nf90_noerr) call handle_err(status)
 
@@ -478,8 +490,8 @@ contains
       var,           & ! (out)
       basename,      & ! (in)
       varname,       & ! (in)
-      step,          & ! (in)
-      tcount,        & ! (in)
+      ts,          & ! (in)
+      te,        & ! (in)
       myrank,        & ! (in)
       mdlid,         & ! (in)
       single,        & ! (in) optional
@@ -494,8 +506,8 @@ contains
     real(SP),         intent(out)            :: var(:,:,:,:)
     character(LEN=*), intent( in)           :: basename
     character(LEN=*), intent( in)           :: varname
-    integer,          intent( in)            :: step
-    integer,          intent( in)            :: tcount
+    integer,          intent( in)            :: ts
+    integer,          intent( in)            :: te
     integer,          intent( in)            :: myrank
     integer,          intent( in)            :: mdlid
     logical,          intent( in), optional :: single
@@ -511,12 +523,15 @@ contains
     integer :: nx, ny, nz
     integer :: dims(7)
 
+    integer :: tcount
     character(len=H_LONG) :: fname = ''
     logical :: single_ = .false.
 
     intrinsic size
     intrinsic shape
     !---------------------------------------------------------------------------
+
+    tcount = te - ts + 1
 
     if ( present(single) ) then
        single_ = single
@@ -558,7 +573,7 @@ contains
        call PRC_MPIstop
     endif
 
-    status = nf90_get_var( ncid, varid, var_org(:,:,:,:), start = (/ 1,1,1,step /), &
+    status = nf90_get_var( ncid, varid, var_org(:,:,:,:), start = (/ 1,1,1,ts /), &
                             count = (/ nx,ny,nz,tcount /) )
     if (status .ne. nf90_noerr) call handle_err(status)
 
@@ -575,8 +590,8 @@ contains
       var,           & ! (out)
       basename,      & ! (in)
       varname,       & ! (in)
-      step,          & ! (in)
-      tcount,        & ! (in)
+      ts,          & ! (in)
+      te,        & ! (in)
       myrank,        & ! (in)
       mdlid,         & ! (in)
       single,        & ! (in) optional
@@ -591,8 +606,8 @@ contains
     real(DP),         intent(out)            :: var(:,:,:,:)
     character(LEN=*), intent( in)           :: basename
     character(LEN=*), intent( in)           :: varname
-    integer,          intent( in)            :: step
-    integer,          intent( in)            :: tcount
+    integer,          intent( in)            :: ts
+    integer,          intent( in)            :: te
     integer,          intent( in)            :: myrank
     integer,          intent( in)            :: mdlid
     logical,          intent( in), optional :: single
@@ -608,12 +623,15 @@ contains
     integer :: nx, ny, nz
     integer :: dims(7)
 
+    integer :: tcount
     character(len=H_LONG) :: fname = ''
     logical :: single_ = .false.
 
     intrinsic size
     intrinsic shape
     !---------------------------------------------------------------------------
+
+    tcount = te - ts + 1
 
     if ( present(single) ) then
        single_ = single
@@ -655,7 +673,7 @@ contains
        call PRC_MPIstop
     endif
 
-    status = nf90_get_var( ncid, varid, var_org(:,:,:,:), start = (/ 1,1,1,step /), &
+    status = nf90_get_var( ncid, varid, var_org(:,:,:,:), start = (/ 1,1,1,ts /), &
                             count = (/ nx,ny,nz,tcount /) )
     if (status .ne. nf90_noerr) call handle_err(status)
 
