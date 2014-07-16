@@ -62,7 +62,7 @@ fi
 if [ ! ${DATDISTS[0]} = "" ]; then
    for f in ${DATDISTS[@]}
    do
-      if [ -f ${f}.pe000000 ]; then
+      if [ -f ${f}.pe000000.nc ]; then
          echo "#PJM --stgin  'rank=* ${f}.pe%06r.nc %r:./'" >> ./run.sh
       else
          echo "datafile does not found! : ${f}.pe000000.nc"
