@@ -23,6 +23,6 @@ mpirun -np 1 ./scale-les  run.restartA.conf  || exit
 mpirun -np 1 ./scale-les  run.restartB.conf  || exit
 
 # check
-ruby diff.rb restart0_00000000002.400.pe000000.nc restartB_00000000002.400.pe000000.nc
+ruby diff.rb restart0_*.nc restartB_*.nc
 
 ################################################################################
