@@ -42,7 +42,12 @@ module mod_urban_vars
   !
   !++ Public parameters & variables
   !
-  logical, public :: URBAN_RESTART_OUTPUT = .false. !< output restart file?
+  logical,               public :: URBAN_RESTART_OUTPUT       = .false.         !< output restart file?
+
+  character(len=H_LONG), public :: URBAN_RESTART_IN_BASENAME  = ''              !< basename of the restart file
+  character(len=H_LONG), public :: URBAN_RESTART_OUT_BASENAME = ''              !< basename of the output file
+  character(len=H_MID),  public :: URBAN_RESTART_OUT_TITLE    = 'URBAN restart' !< title    of the output file
+  character(len=H_MID),  public :: URBAN_RESTART_OUT_DTYPE    = 'DEFAULT'       !< REAL4 or REAL8
 
   ! prognostic variables
   real(RP), public, allocatable :: URBAN_TEMP      (:,:)   !< temperature at uppermost urban canopy [K]
@@ -93,11 +98,6 @@ module mod_urban_vars
   !
   !++ Private parameters & variables
   !
-  character(len=H_LONG),  private :: URBAN_RESTART_IN_BASENAME  = ''              !< basename of the restart file
-  character(len=H_LONG),  private :: URBAN_RESTART_OUT_BASENAME = ''              !< basename of the output file
-  character(len=H_MID),   private :: URBAN_RESTART_OUT_TITLE    = 'URBAN restart' !< title    of the output file
-  character(len=H_MID),   private :: URBAN_RESTART_OUT_DTYPE    = 'DEFAULT'       !< REAL4 or REAL8
-
   logical,                private :: URBAN_VARS_CHECKRANGE      = .false.
 
   integer,                private, parameter :: VMAX = 27

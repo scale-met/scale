@@ -38,7 +38,12 @@ module mod_atmos_phy_sf_vars
   !
   !++ Public parameters & variables
   !
-  logical,  public :: ATMOS_PHY_SF_RESTART_OUTPUT = .false. !< output restart file?
+  logical,               public :: ATMOS_PHY_SF_RESTART_OUTPUT       = .false.                !< output restart file?
+
+  character(len=H_LONG), public :: ATMOS_PHY_SF_RESTART_IN_BASENAME  = ''                     !< basename of the restart file
+  character(len=H_LONG), public :: ATMOS_PHY_SF_RESTART_OUT_BASENAME = ''                     !< basename of the output file
+  character(len=H_MID),  public :: ATMOS_PHY_SF_RESTART_OUT_TITLE    = 'ATMOS_PHY_SF restart' !< title    of the output file
+  character(len=H_MID),  public :: ATMOS_PHY_SF_RESTART_OUT_DTYPE    = 'DEFAULT'              !< REAL4 or REAL8
 
   real(RP), public, allocatable :: ATMOS_PHY_SF_DENS_t(:,:)   ! tendency DENS [    kg/m3/s]
   real(RP), public, allocatable :: ATMOS_PHY_SF_MOMZ_t(:,:)   ! tendency MOMZ [m/s*kg/m3/s]
@@ -74,11 +79,6 @@ module mod_atmos_phy_sf_vars
   !
   !++ Private parameters & variables
   !
-  character(len=H_LONG),  private :: ATMOS_PHY_SF_RESTART_IN_BASENAME  = ''                     !< basename of the restart file
-  character(len=H_LONG),  private :: ATMOS_PHY_SF_RESTART_OUT_BASENAME = ''                     !< basename of the output file
-  character(len=H_MID),   private :: ATMOS_PHY_SF_RESTART_OUT_TITLE    = 'ATMOS_PHY_SF restart' !< title    of the output file
-  character(len=H_MID),   private :: ATMOS_PHY_SF_RESTART_OUT_DTYPE    = 'DEFAULT'              !< REAL4 or REAL8
-
   integer,                private, parameter :: VMAX = 4       !< number of the variables
   integer,                private, parameter :: I_SFC_TEMP      = 1
   integer,                private, parameter :: I_SFC_albedo_LW = 2

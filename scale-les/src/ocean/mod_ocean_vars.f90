@@ -41,7 +41,12 @@ module mod_ocean_vars
   !
   !++ Public parameters & variables
   !
-  logical, public :: OCEAN_RESTART_OUTPUT = .false. !< output restart file?
+  logical,               public :: OCEAN_RESTART_OUTPUT       = .false.         !< output restart file?
+
+  character(len=H_LONG), public :: OCEAN_RESTART_IN_BASENAME  = ''              !< basename of the input file
+  character(len=H_LONG), public :: OCEAN_RESTART_OUT_BASENAME = ''              !< basename of the output file
+  character(len=H_MID),  public :: OCEAN_RESTART_OUT_TITLE    = 'OCEAN restart' !< title    of the output file
+  character(len=H_MID),  public :: OCEAN_RESTART_OUT_DTYPE    = 'DEFAULT'       !< REAL4 or REAL8
 
   ! prognostic variables
   real(RP), public, allocatable :: OCEAN_TEMP      (:,:)   !< temperature at uppermost ocean layer (SST)  [K]
@@ -62,11 +67,6 @@ module mod_ocean_vars
   !
   !++ Private parameters & variables
   !
-  character(len=H_LONG),  private :: OCEAN_RESTART_IN_BASENAME  = ''              !< basename of the input file
-  character(len=H_LONG),  private :: OCEAN_RESTART_OUT_BASENAME = ''              !< basename of the output file
-  character(len=H_MID),   private :: OCEAN_RESTART_OUT_TITLE    = 'OCEAN restart' !< title    of the output file
-  character(len=H_MID),   private :: OCEAN_RESTART_OUT_DTYPE    = 'DEFAULT'       !< REAL4 or REAL8
-
   logical,                private :: OCEAN_VARS_CHECKRANGE      = .false.
 
   integer,                private, parameter :: VMAX = 5       !< number of the variables

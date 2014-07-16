@@ -19,6 +19,7 @@ DEPENDLIB = $(LIBDIR)/libscale.a $(LIBDIR)/libgtool.a $(LIBDIR)/libdcutils.a
 
 VPATH = $(BUILD_DIR): \
         include:      \
+        admin:        \
         atmos:        \
         ocean:        \
         land:         \
@@ -77,7 +78,8 @@ OBJS =	\
 	mod_mkinit.o                 \
 	mod_convert.o                \
 	mod_cnvtopo.o                \
-	mod_cnvlanduse.o
+	mod_cnvlanduse.o             \
+	mod_admin_restart.o
 
 
 
@@ -118,6 +120,20 @@ $(BINDIR)/$(PPNAME)   : $(BUILD_DIR)/$(PPNAME).o   $(patsubst %,$(BUILD_DIR)/%,$
 $(BUILD_DIR)/$(BINNAME).o  : $(BINNAME).f90  $(DEPENDLIB) $(patsubst %,$(BUILD_DIR)/%,$(OBJS)) $(BUILD_DIR)/mod_user.o
 $(BUILD_DIR)/$(INITNAME).o : $(INITNAME).f90 $(DEPENDLIB) $(patsubst %,$(BUILD_DIR)/%,$(OBJS)) $(BUILD_DIR)/mod_user.o
 $(BUILD_DIR)/$(PPNAME).o   : $(PPNAME).f90   $(DEPENDLIB) $(patsubst %,$(BUILD_DIR)/%,$(OBJS)) $(BUILD_DIR)/mod_user.o
+
+$(BUILD_DIR)/mod_admin_restart.o          : mod_admin_restart.f90 $(DEPENDLIB) \
+                                            mod_atmos_vars.o        \
+                                            mod_atmos_dyn_vars.o    \
+                                            mod_atmos_phy_ae_vars.o \
+                                            mod_atmos_phy_ch_vars.o \
+                                            mod_atmos_phy_cp_vars.o \
+                                            mod_atmos_phy_mp_vars.o \
+                                            mod_atmos_phy_rd_vars.o \
+                                            mod_atmos_phy_sf_vars.o \
+                                            mod_atmos_phy_tb_vars.o \
+                                            mod_ocean_vars.o        \
+                                            mod_land_vars.o         \
+                                            mod_urban_vars.o        \
 
 $(BUILD_DIR)/mod_atmos_admin.o            : mod_atmos_admin.f90       $(DEPENDLIB)
 
