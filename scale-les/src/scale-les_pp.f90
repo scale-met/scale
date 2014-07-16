@@ -73,6 +73,8 @@ program scaleles_pp
   use scale_atmos_saturation, only: &
      ATMOS_SATURATION_setup
 
+  use mod_admin_restart, only: &
+     ADMIN_restart_setup
   use mod_atmos_vars, only: &
      ATMOS_vars_setup
   use mod_ocean_vars, only: &
@@ -161,6 +163,8 @@ program scaleles_pp
   ! setup Z-ZS interpolation factor (uses in History)
   call INTERP_setup
 
+  ! setup restart
+  call ADMIN_restart_setup
   ! setup statistics
   call STAT_setup
   ! setup history I/O

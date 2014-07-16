@@ -123,7 +123,7 @@ module scale_time
   real(DP), private :: TIME_RES_CPL           = 0.0_DP
   real(DP), private :: TIME_RES_CPL_RESTART   = 0.0_DP
 
-  real(DP), private, parameter :: eps = 1.E-10_DP !> epsilon for timesec
+  real(DP), private, parameter :: eps = 1.E-6_DP !> epsilon for timesec
 
   !-----------------------------------------------------------------------------
 contains

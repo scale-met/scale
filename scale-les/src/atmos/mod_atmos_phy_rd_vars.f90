@@ -38,7 +38,12 @@ module mod_atmos_phy_rd_vars
   !
   !++ Public parameters & variables
   !
-  logical,  public :: ATMOS_PHY_RD_RESTART_OUTPUT = .false. !< output restart file?
+  logical,  public              :: ATMOS_PHY_RD_RESTART_OUTPUT       = .false.                !< output restart file?
+
+  character(len=H_LONG), public :: ATMOS_PHY_RD_RESTART_IN_BASENAME  = ''                     !< basename of the restart file
+  character(len=H_LONG), public :: ATMOS_PHY_RD_RESTART_OUT_BASENAME = ''                     !< basename of the output file
+  character(len=H_MID),  public :: ATMOS_PHY_RD_RESTART_OUT_TITLE    = 'ATMOS_PHY_RD restart' !< title    of the output file
+  character(len=H_MID),  public :: ATMOS_PHY_RD_RESTART_OUT_DTYPE    = 'DEFAULT'              !< REAL4 or REAL8
 
   real(RP), public, allocatable :: ATMOS_PHY_RD_RHOT_t(:,:,:)   ! tendency RHOT [K*kg/m3/s]
 
@@ -60,11 +65,6 @@ module mod_atmos_phy_rd_vars
   !
   !++ Private parameters & variables
   !
-  character(len=H_LONG),  private :: ATMOS_PHY_RD_RESTART_IN_BASENAME  = ''                     !< basename of the restart file
-  character(len=H_LONG),  private :: ATMOS_PHY_RD_RESTART_OUT_BASENAME = ''                     !< basename of the output file
-  character(len=H_MID),   private :: ATMOS_PHY_RD_RESTART_OUT_TITLE    = 'ATMOS_PHY_RD restart' !< title    of the output file
-  character(len=H_MID),   private :: ATMOS_PHY_RD_RESTART_OUT_DTYPE    = 'DEFAULT'              !< REAL4 or REAL8
-
   integer,                private, parameter :: VMAX = 8       !< number of the variables
   integer,                private, parameter :: I_SFLX_LW_up   = 1
   integer,                private, parameter :: I_SFLX_LW_dn   = 2

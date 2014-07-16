@@ -37,6 +37,13 @@ module mod_atmos_dyn_vars
   !
   !++ Public parameters & variables
   !
+  logical,               public :: ATMOS_DYN_RESTART_OUTPUT       = .false.             !< output restart file?
+
+  character(len=H_LONG), public :: ATMOS_DYN_RESTART_IN_BASENAME  = ''                  !< basename of the restart file
+  character(len=H_LONG), public :: ATMOS_DYN_RESTART_OUT_BASENAME = ''                  !< basename of the output file
+  character(len=H_MID),  public :: ATMOS_DYN_RESTART_OUT_TITLE    = 'ATMOS_DYN restart' !< title    of the output file
+  character(len=H_MID),  public :: ATMOS_DYN_RESTART_OUT_DTYPE    = 'DEFAULT'           !< REAL4 or REAL8
+
   real(RP), public, allocatable :: ATMOS_DYN_DUM(:,:,:) ! dummy array
 
   !-----------------------------------------------------------------------------
@@ -47,12 +54,6 @@ module mod_atmos_dyn_vars
   !
   !++ Private parameters & variables
   !
-  logical,                private :: ATMOS_DYN_RESTART_OUTPUT       = .false.             !< output restart file?
-  character(len=H_LONG),  private :: ATMOS_DYN_RESTART_IN_BASENAME  = ''                  !< basename of the restart file
-  character(len=H_LONG),  private :: ATMOS_DYN_RESTART_OUT_BASENAME = ''                  !< basename of the output file
-  character(len=H_MID),   private :: ATMOS_DYN_RESTART_OUT_TITLE    = 'ATMOS_DYN restart' !< title    of the output file
-  character(len=H_MID),   private :: ATMOS_DYN_RESTART_OUT_DTYPE    = 'DEFAULT'           !< REAL4 or REAL8
-
   integer,                private, parameter :: VMAX = 1       !< number of the variables
   character(len=H_SHORT), private            :: VAR_NAME(VMAX) !< name  of the variables
   character(len=H_MID),   private            :: VAR_DESC(VMAX) !< desc. of the variables

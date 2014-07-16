@@ -47,8 +47,17 @@ module mod_atmos_vars
   !
   !++ Public parameters & variables
   !
-  logical, public :: ATMOS_RESTART_OUTPUT = .false. !< output restart file?
-  logical, public :: ATMOS_RESTART_CHECK  = .false. !< check value consistency?
+  logical,               public :: ATMOS_RESTART_OUTPUT           = .false.         !< output restart file?
+  logical,               public :: ATMOS_RESTART_CHECK            = .false.         !< check value consistency?
+
+  character(len=H_LONG), public :: ATMOS_RESTART_IN_BASENAME      = ''              !< basename of the restart file
+  character(len=H_LONG), public :: ATMOS_RESTART_OUT_BASENAME     = ''              !< basename of the output file
+  character(len=H_MID),  public :: ATMOS_RESTART_OUT_TITLE        = 'ATMOS restart' !< title    of the output file
+  character(len=H_MID),  public :: ATMOS_RESTART_OUT_DTYPE        = 'DEFAULT'       !< REAL4 or REAL8
+  logical,               public :: ATMOS_RESTART_IN_ALLOWMISSINGQ = .false.
+
+  character(len=H_LONG), public :: ATMOS_RESTART_CHECK_BASENAME   = 'restart_check'
+  real(RP),              public :: ATMOS_RESTART_CHECK_CRITERION  = 1.E-6_RP
 
   ! prognostic variables
   real(RP), public, target, allocatable :: DENS(:,:,:)   ! Density     [kg/m3]
@@ -96,15 +105,6 @@ module mod_atmos_vars
   !
   !++ Private parameters & variables
   !
-  character(len=H_LONG),  private :: ATMOS_RESTART_IN_BASENAME      = ''              !< basename of the restart file
-  character(len=H_LONG),  private :: ATMOS_RESTART_OUT_BASENAME     = ''              !< basename of the output file
-  character(len=H_MID),   private :: ATMOS_RESTART_OUT_TITLE        = 'ATMOS restart' !< title    of the output file
-  character(len=H_MID),   private :: ATMOS_RESTART_OUT_DTYPE        = 'DEFAULT'       !< REAL4 or REAL8
-  logical,                private :: ATMOS_RESTART_IN_ALLOWMISSINGQ = .false.
-
-  character(len=H_LONG),  private :: ATMOS_RESTART_CHECK_BASENAME   = 'restart_check'
-  real(RP),               private :: ATMOS_RESTART_CHECK_CRITERION  = 1.E-6_RP
-
   logical,                private :: ATMOS_VARS_CHECKRANGE          = .false.
 
   integer,                private, parameter :: VMAX   = 5       !< number of the variables

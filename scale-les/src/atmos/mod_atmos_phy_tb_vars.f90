@@ -37,6 +37,13 @@ module mod_atmos_phy_tb_vars
   !
   !++ Public parameters & variables
   !
+  logical,               public :: ATMOS_PHY_TB_RESTART_OUTPUT       = .false.                !< output restart file?
+
+  character(len=H_LONG), public :: ATMOS_PHY_TB_RESTART_IN_BASENAME  = ''                     !< basename of the restart file
+  character(len=H_LONG), public :: ATMOS_PHY_TB_RESTART_OUT_BASENAME = ''                     !< basename of the output file
+  character(len=H_MID),  public :: ATMOS_PHY_TB_RESTART_OUT_TITLE    = 'ATMOS_PHY_TB restart' !< title    of the output file
+  character(len=H_MID),  public :: ATMOS_PHY_TB_RESTART_OUT_DTYPE    = 'DEFAULT'              !< REAL4 or REAL8
+
   real(RP), public, allocatable :: ATMOS_PHY_TB_MOMZ_t(:,:,:)   ! tendency MOMZ [kg/m2/s2]
   real(RP), public, allocatable :: ATMOS_PHY_TB_MOMX_t(:,:,:)   ! tendency MOMX [kg/m2/s2]
   real(RP), public, allocatable :: ATMOS_PHY_TB_MOMY_t(:,:,:)   ! tendency MOMY [kg/m2/s2]
@@ -54,12 +61,6 @@ module mod_atmos_phy_tb_vars
   !
   !++ Private parameters & variables
   !
-  logical,                private :: ATMOS_PHY_TB_RESTART_OUTPUT       = .false.                !< output restart file?
-  character(len=H_LONG),  private :: ATMOS_PHY_TB_RESTART_IN_BASENAME  = ''                     !< basename of the restart file
-  character(len=H_LONG),  private :: ATMOS_PHY_TB_RESTART_OUT_BASENAME = ''                     !< basename of the output file
-  character(len=H_MID),   private :: ATMOS_PHY_TB_RESTART_OUT_TITLE    = 'ATMOS_PHY_TB restart' !< title    of the output file
-  character(len=H_MID),   private :: ATMOS_PHY_TB_RESTART_OUT_DTYPE    = 'DEFAULT'              !< REAL4 or REAL8
-
   integer,                private, parameter :: VMAX = 2       !< number of the variables
   integer,                private, parameter :: I_TKE = 1
   integer,                private, parameter :: I_NU  = 2

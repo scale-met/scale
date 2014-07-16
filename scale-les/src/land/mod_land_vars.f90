@@ -42,7 +42,12 @@ module mod_land_vars
   !
   !++ Public parameters & variables
   !
-  logical, public :: LAND_RESTART_OUTPUT = .false. !< output restart file?
+  logical,               public :: LAND_RESTART_OUTPUT       = .false.        !< output restart file?
+
+  character(len=H_LONG), public :: LAND_RESTART_IN_BASENAME  = ''             !< basename of the restart file
+  character(len=H_LONG), public :: LAND_RESTART_OUT_BASENAME = ''             !< basename of the output file
+  character(len=H_MID),  public :: LAND_RESTART_OUT_TITLE    = 'LAND restart' !< title    of the output file
+  character(len=H_MID),  public :: LAND_RESTART_OUT_DTYPE    = 'DEFAULT'      !< REAL4 or REAL8
 
   ! prognostic variables
   real(RP), public, allocatable :: LAND_TEMP      (:,:,:) !< temperature of each soil layer [K]
@@ -78,11 +83,6 @@ module mod_land_vars
   !
   !++ Private parameters & variables
   !
-  character(len=H_LONG),  private :: LAND_RESTART_IN_BASENAME  = ''             !< basename of the restart file
-  character(len=H_LONG),  private :: LAND_RESTART_OUT_BASENAME = ''             !< basename of the output file
-  character(len=H_MID),   private :: LAND_RESTART_OUT_TITLE    = 'LAND restart' !< title    of the output file
-  character(len=H_MID),   private :: LAND_RESTART_OUT_DTYPE    = 'DEFAULT'      !< REAL4 or REAL8
-
   logical,                private :: LAND_VARS_CHECKRANGE      = .false.
 
   integer,                private, parameter :: VMAX            = 5 !< number of the variables

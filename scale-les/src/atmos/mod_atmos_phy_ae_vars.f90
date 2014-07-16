@@ -37,6 +37,13 @@ module mod_atmos_phy_ae_vars
   !
   !++ Public parameters & variables
   !
+  logical,               public :: ATMOS_PHY_AE_RESTART_OUTPUT       = .false.                !< output restart file?
+
+  character(len=H_LONG), public :: ATMOS_PHY_AE_RESTART_IN_BASENAME  = ''                     !< basename of the restart file
+  character(len=H_LONG), public :: ATMOS_PHY_AE_RESTART_OUT_BASENAME = ''                     !< basename of the output file
+  character(len=H_MID),  public :: ATMOS_PHY_AE_RESTART_OUT_TITLE    = 'ATMOS_PHY_AE restart' !< title    of the output file
+  character(len=H_MID),  public :: ATMOS_PHY_AE_RESTART_OUT_DTYPE    = 'DEFAULT'              !< REAL4 or REAL8
+
   real(RP), public, allocatable :: ATMOS_PHY_AE_QTRC_t(:,:,:,:) ! tendency QTRC [kg/kg/s]
 
   real(RP), public, allocatable :: ATMOS_PHY_AE_CCN(:,:,:) ! cloud condensation nuclei [/m3]
@@ -49,12 +56,6 @@ module mod_atmos_phy_ae_vars
   !
   !++ Private parameters & variables
   !
-  logical,                private :: ATMOS_PHY_AE_RESTART_OUTPUT       = .false.                !< output restart file?
-  character(len=H_LONG),  private :: ATMOS_PHY_AE_RESTART_IN_BASENAME  = ''                     !< basename of the restart file
-  character(len=H_LONG),  private :: ATMOS_PHY_AE_RESTART_OUT_BASENAME = ''                     !< basename of the output file
-  character(len=H_MID),   private :: ATMOS_PHY_AE_RESTART_OUT_TITLE    = 'ATMOS_PHY_AE restart' !< title    of the output file
-  character(len=H_MID),   private :: ATMOS_PHY_AE_RESTART_OUT_DTYPE    = 'DEFAULT'              !< REAL4 or REAL8
-
   integer,                private, parameter :: VMAX = 1       !< number of the variables
   integer,                private, parameter :: I_CCN = 1
 
