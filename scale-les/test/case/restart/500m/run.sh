@@ -17,9 +17,12 @@ ln -svf ../../../data/rad/MIPAS/sum.atm .
 ln -svf ../../../data/rad/MIPAS/win.atm .
 
 # run
-mpirun -np 1 /data1/tyamaura/scale/scale-les/test/case/restart/500m/scale-les_init init.conf || exit
-mpirun -np 1 /data1/tyamaura/scale/scale-les/test/case/restart/500m/scale-les  run.restart0.conf  || exit
-mpirun -np 1 /data1/tyamaura/scale/scale-les/test/case/restart/500m/scale-les  run.restartA.conf  || exit
-mpirun -np 1 /data1/tyamaura/scale/scale-les/test/case/restart/500m/scale-les  run.restartB.conf  || exit
+mpirun -np 1 ./scale-les_init init.conf || exit
+mpirun -np 1 ./scale-les  run.restart0.conf  || exit
+mpirun -np 1 ./scale-les  run.restartA.conf  || exit
+mpirun -np 1 ./scale-les  run.restartB.conf  || exit
+
+# check
+ruby diff.rb restart0_00000000002.400.pe000000.nc restartB_00000000002.400.pe000000.nc
 
 ################################################################################

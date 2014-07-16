@@ -1162,6 +1162,15 @@ contains
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE
        do i = IIS, IIE
+#ifdef DEBUG
+       call CHECK( __LINE__, phi(KE,i,j) )
+       call CHECK( __LINE__, phi(KE-1,i,j) )
+       call CHECK( __LINE__, phi(KE-2,i,j) )
+#endif
+          diff_z(KE-1,i,j) = ( + CNZ3(1,KE  ,1+KO) * phi(KE-1,i,j) &
+                               - CNZ3(2,KE  ,1+KO) * phi(KE  ,i,j) * (1-KO) &
+                               + CNZ3(3,KE  ,1+KO) * phi(KE-1,i,j) &
+                               - CNZ3(1,KE-1,1+KO) * phi(KE-2,i,j) )
           diff_z(KE+2,i,j) = 0.0_RP
        end do
        end do
@@ -1183,15 +1192,6 @@ contains
     !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
     do j = JJS, JJE
     do i = IIS, IIE
-#ifdef DEBUG
-       call CHECK( __LINE__, phi(KE,i,j) )
-       call CHECK( __LINE__, phi(KE-1,i,j) )
-       call CHECK( __LINE__, phi(KE-2,i,j) )
-#endif
-       diff_z(KE-1+KO,i,j) = ( + CNZ3(1,KE  ,1+KO) * phi(KE-1,i,j) &
-                               - CNZ3(2,KE  ,1+KO) * phi(KE  ,i,j) * (1-KO) &
-                               + CNZ3(3,KE  ,1+KO) * phi(KE-1,i,j) &
-                               - CNZ3(1,KE-1,1+KO) * phi(KE-2,i,j) )
        diff_z(KE  +KO,i,j) = - diff_z(KE-1+KO,i,j)
        diff_z(KE+1+KO,i,j) = - diff_z(KE-2+KO,i,j)
     enddo
@@ -1224,7 +1224,7 @@ contains
     !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
     do j = JJS-JO, JJE-JO
     do i = IIS, IIE
-    do k = KS, KE
+    do k = KS, KE-KO
 #ifdef DEBUG
        call CHECK( __LINE__, phi(k,i,j+2) )
        call CHECK( __LINE__, phi(k,i,j+1) )

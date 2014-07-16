@@ -231,6 +231,9 @@ contains
        call PRC_MPIstop
     endif
 
+    call ATMOS_REFSTATE_calc3D
+
+
     return
   end subroutine ATMOS_REFSTATE_read
 
