@@ -94,8 +94,10 @@ module scale_atmos_boundary
   real(RP),              private, allocatable :: ATMOS_BOUNDARY_increment(:,:,:,:)   !> damping coefficient [0-1]
 
   real(DP),              private :: ATMOS_BOUNDARY_UPDATE_DT    = 0.0_DP   ! inteval time of boudary data update [s]
+  integer,               private :: ATMOS_BOUNDARY_START_DATE(6) = (/ -9999, 0, 0, 0, 0, 0 /) ! boundary initial date
 
   real(DP),              private :: last_updated      =  -999.0_DP
+  real(DP),              private :: integrated_sec    = 0.0_DP
   integer,               private :: boundary_timestep = 0
   logical,               private :: ATMOS_BOUNDARY_LINEARZ      = .false.  ! linear or non-linear profile of relax region
 
@@ -149,6 +151,7 @@ contains
        ATMOS_BOUNDARY_taux,         &
        ATMOS_BOUNDARY_tauy,         &
        ATMOS_BOUNDARY_UPDATE_DT,    &
+       ATMOS_BOUNDARY_START_DATE, &
        ATMOS_BOUNDARY_LINEARZ
 
     integer :: ierr
@@ -729,12 +732,30 @@ contains
        COMM_vars8, &
        COMM_wait
     use scale_time, only: &
-       TIME_DTSEC,  &
+       TIME_NOWDATE,      &
+       TIME_OFFSET_YEAR,  &
+       TIME_DTSEC,        &
        TIME_NOWDAYSEC
+    use scale_calendar, only: &
+       CALENDAR_date2daysec,    &
+       CALENDAR_combine_daysec
     implicit none
     real(RP), intent(in) :: DENS(KA,IA,JA)
 
     real(RP) :: reference_atmos(KMAX,IMAX,JMAX) !> restart file (no HALO)
+
+    integer :: run_time_startdate(6)
+    integer :: run_time_startday
+    real(RP) :: run_time_startsec
+    real(RP) :: run_time_startms
+    real(RP) :: run_time_nowdaysec
+    integer :: boundary_time_startday
+    real(RP) :: boundary_time_startsec
+    real(RP) :: boundary_time_startms
+    real(RP) :: boundary_time_initdaysec
+    real(RP) :: boundary_diff_daysec
+    real(RP) :: boundary_inc_offset
+    integer  :: fillgaps_steps
 
     character(len=H_LONG) :: bname
 
@@ -742,9 +763,43 @@ contains
     !---------------------------------------------------------------------------
 
     bname = ATMOS_BOUNDARY_IN_BASENAME
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,I5.4,A,I2.2,A,I2.2,A,I2.2,A,I2.2,A,I2.2)') '*** BOUNDARY START Date     : ', &
+         ATMOS_BOUNDARY_START_DATE(1),'/',ATMOS_BOUNDARY_START_DATE(2),'/',ATMOS_BOUNDARY_START_DATE(3),' ',  &
+         ATMOS_BOUNDARY_START_DATE(4),':',ATMOS_BOUNDARY_START_DATE(5),':',ATMOS_BOUNDARY_START_DATE(6)
 
+    if ( ATMOS_BOUNDARY_START_DATE(1) == -9999 ) then
+       boundary_timestep = 1
+       boundary_inc_offset = 0.D0
+       fillgaps_steps = 0
+    else
+       !--- recalculate time of the run [no offset]
+       run_time_startms = 0.0_DP
+       run_time_startdate(:) = TIME_NOWDATE(:)
+       run_time_startdate(1) = TIME_OFFSET_YEAR
+       call CALENDAR_date2daysec( run_time_startday,     & ! [OUT]
+                                  run_time_startsec,     & ! [OUT]
+                                  run_time_startdate(:), & ! [IN]
+                                  run_time_startms       ) ! [IN]
+       run_time_nowdaysec  = CALENDAR_combine_daysec( run_time_startday, run_time_startsec )
+
+       !--- calculate time of the initial step in boundary file [no offset]
+       boundary_time_startms = 0.0_DP
+       call CALENDAR_date2daysec( boundary_time_startday,      & ! [OUT]
+                                  boundary_time_startsec,       & ! [OUT]
+                                  ATMOS_BOUNDARY_START_DATE(:), & ! [IN]
+                                  boundary_time_startms         ) ! [IN]
+       boundary_time_initdaysec  = CALENDAR_combine_daysec( boundary_time_startday, boundary_time_startsec )
+
+       boundary_diff_daysec = run_time_nowdaysec - boundary_time_initdaysec
+       boundary_timestep = 1 + int( boundary_diff_daysec / ATMOS_BOUNDARY_UPDATE_DT )
+       boundary_inc_offset = mod( boundary_diff_daysec, ATMOS_BOUNDARY_UPDATE_DT )
+       fillgaps_steps = int( boundary_inc_offset / TIME_DTSEC )
+    endif
+
+    if( IO_L ) write(IO_FID_LOG,*) '+++ BOUNDARY TIMESTEP NUMBER FOR INIT:', boundary_timestep
+    if( IO_L ) write(IO_FID_LOG,*) '+++ BOUNDARY INCREMENT OFFSET:', boundary_inc_offset
+    if( IO_L ) write(IO_FID_LOG,*) '+++ BOUNDARY FILLGAPS STEPS:', fillgaps_steps
     ! read boundary data from input file
-    boundary_timestep = 1
     call FileRead( reference_atmos(:,:,:), bname, 'DENS', boundary_timestep, PRC_myrank )
     ATMOS_BOUNDARY_var_ref(KS:KE,IS:IE,JS:JE,I_BND_DENS,1) = reference_atmos(1:KMAX,1:IMAX,1:JMAX)
     call FileRead( reference_atmos(:,:,:), bname, 'VELX', boundary_timestep, PRC_myrank )
@@ -759,7 +814,7 @@ contains
     call FileRead( reference_atmos(:,:,:), bname, 'QV',   boundary_timestep, PRC_myrank )
     ATMOS_BOUNDARY_var_ref(KS:KE,IS:IE,JS:JE,I_BND_QV  ,1) = reference_atmos(1:KMAX,1:IMAX,1:JMAX)
 
-    boundary_timestep = 2
+    boundary_timestep = boundary_timestep + 1
     call FileRead( reference_atmos(:,:,:), bname, 'DENS', boundary_timestep, PRC_myrank )
     ATMOS_BOUNDARY_var_ref(KS:KE,IS:IE,JS:JE,I_BND_DENS,2) = reference_atmos(1:KMAX,1:IMAX,1:JMAX)
     call FileRead( reference_atmos(:,:,:), bname, 'VELX', boundary_timestep, PRC_myrank )
@@ -797,7 +852,7 @@ contains
 
     ! set boundary data and time increment
     do iv = 1, I_BND_SIZE
-       if ( iv == I_BND_MOMZ ) cycle
+       if ( I_BND_SIZE == I_MOMZ ) cycle
        do j  = 1, JA
        do i  = 1, IA
        do k  = 1, KA
@@ -810,11 +865,23 @@ contains
        enddo
     enddo
 
+    ! fill in gaps of the offset
+    do iv = 1, I_BND_SIZE
+    if ( iv==I_BND_MOMZ ) cycle
+    do j  = 1, JA
+    do i  = 1, IA
+    do k  = 1, KA
+       ATMOS_BOUNDARY_var(k,i,j,iv) = ATMOS_BOUNDARY_var(k,i,j,iv) + ATMOS_BOUNDARY_increment(k,i,j,iv) * dble(fillgaps_steps)
+    enddo
+    enddo
+    enddo
+    enddo
+
     if ( ATMOS_BOUNDARY_USE_VELZ ) then
        ATMOS_BOUNDARY_var(KS:KE,IS:IE,JS:JE,I_BND_MOMZ) = ATMOS_BOUNDARY_VALUE_VELZ * DENS(KS:KE,IS:IE,JS:JE)
     end if
 
-    last_updated = TIME_NOWDAYSEC
+    last_updated = TIME_NOWDAYSEC - boundary_inc_offset
 
     return
   end subroutine ATMOS_BOUNDARY_initialize
@@ -833,7 +900,6 @@ contains
     implicit none
     real(RP), intent(in) :: DENS(KA,IA,JA)
 
-    real(DP) :: integrated_sec
     integer  :: i, j, k, iv
     !---------------------------------------------------------------------------
 
@@ -851,7 +917,7 @@ contains
           call ATMOS_BOUNDARY_updatefile
 
           do iv = 1, I_BND_SIZE
-             if ( iv == I_BND_MOMZ ) cycle
+             if ( I_BND_SIZE == I_MOMZ ) cycle
              do j  = 1, JA
              do i  = 1, IA
              do k  = 1, KA
@@ -865,7 +931,6 @@ contains
           enddo
 
           ATMOS_BOUNDARY_var(KS:KE,IS:IE,JS:JE,I_BND_MOMZ) = ATMOS_BOUNDARY_VALUE_VELZ * DENS(KS:KE,IS:IE,JS:JE)
-
 
           last_updated = last_updated + ATMOS_BOUNDARY_UPDATE_DT
        else
