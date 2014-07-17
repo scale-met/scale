@@ -70,7 +70,7 @@ contains
 
        call LAND_PHY_bucket_setup( LAND_TYPE )
 
-       call LAND_PHY_driver( .true., .false. )
+       call LAND_PHY_driver( update_flag=.true., history_flag=.false. )
 
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** this component is never called.'
