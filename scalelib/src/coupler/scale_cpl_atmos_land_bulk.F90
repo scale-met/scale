@@ -217,6 +217,8 @@ contains
     real(RP), intent(in) :: Z0E   (IA,JA) ! roughness length for vapor [m]
 
     ! works
+    logical  :: continue_iteration ! does iteration continue?
+
     real(RP) :: res    ! residual
     real(RP) :: dres   ! d(residual)/dLST
     real(RP) :: oldres ! residual in previous step
@@ -231,6 +233,8 @@ contains
 
     integer :: i, j, n
     !---------------------------------------------------------------------------
+
+    continue_iteration = LST_UPDATE
 
     do j = 1, JA
     do i = 1, IA
@@ -268,9 +272,9 @@ contains
           YMFLX(i,j) = -RHOA(i,j) * Ustar**2 / Uabs * VA(i,j)
           ZMFLX(i,j) = -RHOA(i,j) * Ustar**2 / Uabs * WA(i,j)
 
-          SHFLX (i,j) = -CPdry * RHOA(i,j) * Ustar * Tstar
-          LHFLX (i,j) = -LH0   * RHOA(i,j) * Ustar * Qstar * QVEF(i,j)
-          GHFLX (i,j) = -2.0_RP * TCS(i,j) * ( LST(i,j) - TG(i,j)  ) / DZG(i,j)
+          SHFLX(i,j) = -CPdry * RHOA(i,j) * Ustar * Tstar
+          LHFLX(i,j) = -LH0   * RHOA(i,j) * Ustar * Qstar * QVEF(i,j)
+          GHFLX(i,j) = -2.0_RP * TCS(i,j) * ( LST(i,j) - TG(i,j)  ) / DZG(i,j)
 
           ! calculation for residual
           res = ( 1.0_RP - ALB_SW(i,j) ) * SWD(i,j) &
@@ -307,9 +311,9 @@ contains
           dres = -4.0_RP * ( 1.0_RP - ALB_LW(i,j) ) * STB * LST(i,j)**3 &
                - dSHFLX - dLHFLX + dGHFLX
 
-          if( LST_UPDATE ) then
+          if( continue_iteration ) then
             if( ( abs(dres) * dres_lim ) < abs(res) ) then
-              ! stop iteration
+              ! stop iteration to prevent numerical error
               exit
             end if
 
@@ -338,7 +342,7 @@ contains
 
             if( abs(res) < res_min ) then
               ! iteration converged
-              exit
+              continue_iteration = .false.
             end if
 
           else
