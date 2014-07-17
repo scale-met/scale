@@ -797,7 +797,7 @@ contains
 
     ! set boundary data and time increment
     do iv = 1, I_BND_SIZE
-       if ( I_BND_SIZE == I_MOMZ ) cycle
+       if ( iv == I_BND_MOMZ ) cycle
        do j  = 1, JA
        do i  = 1, IA
        do k  = 1, KA
@@ -851,7 +851,7 @@ contains
           call ATMOS_BOUNDARY_updatefile
 
           do iv = 1, I_BND_SIZE
-             if ( I_BND_SIZE == I_MOMZ ) cycle
+             if ( iv == I_BND_MOMZ ) cycle
              do j  = 1, JA
              do i  = 1, IA
              do k  = 1, KA
