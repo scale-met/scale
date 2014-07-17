@@ -104,12 +104,13 @@ OBJS = $(scale_rdma)	\
 	scale_grid_index.o	\
 	scale_grid_real.o	\
 	scale_gridtrans.o	\
-	scale_land_grid.o	\
-	scale_land_grid_index.o	\
-	scale_urban_grid.o	\
-	scale_urban_grid_index.o	\
 	scale_history.o	\
 	scale_intepolation.o	\
+	scale_land_grid.o	\
+	scale_land_grid_index.o	\
+	scale_land_phy.o	\
+	scale_land_phy_bucket.o	\
+	scale_land_phy_matsiro.o	\
 	scale_landuse.o	\
 	scale_mapproj.o	\
 	scale_monitor.o	\
@@ -128,7 +129,9 @@ OBJS = $(scale_rdma)	\
 	scale_tracer_kessler.o	\
 	scale_tracer_sn14.o	\
 	scale_tracer_suzuki10.o	\
-	scale_tracer_tomita08.o
+	scale_tracer_tomita08.o	\
+	scale_urban_grid.o	\
+	scale_urban_grid_index.o
 
 
 

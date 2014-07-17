@@ -47,7 +47,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine LAND_driver_setup
-    use mod_land_phy_bucket, only: &
+    use mod_land_phy_driver, only: &
        LAND_PHY_driver_setup
     implicit none
     !---------------------------------------------------------------------------
@@ -74,7 +74,7 @@ contains
        LAND_WATER_t,     &
        LAND_vars_total,  &
        LAND_vars_history
-    use mod_land_phy_bucket, only: &
+    use mod_land_phy_driver, only: &
        LAND_PHY_driver
     implicit none
 

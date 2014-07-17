@@ -26,7 +26,7 @@ scale_atmos_phy_tb_dns.o: atmos-physics/turbulence/scale_atmos_phy_tb_dns.F90 $(
 scale_atmos_phy_tb_dummy.o: atmos-physics/turbulence/scale_atmos_phy_tb_dummy.F90 $(inc_index) $(DEPENDLIB) scale_grid_index.o scale_precision.o scale_process.o scale_prof.o scale_stdio.o scale_tracer.o
 scale_atmos_phy_tb_smg.o: atmos-physics/turbulence/scale_atmos_phy_tb_smg.F90 $(inc_index) $(DEPENDLIB) scale_const.o scale_debug.o scale_grid_cartesian.o scale_grid_index.o scale_gridtrans.o scale_precision.o scale_process.o scale_prof.o scale_stdio.o scale_tracer.o
 scale_atmos_sub_bottom.o: atmos-physics/share/scale_atmos_sub_bottom.F90 $(inc_index) $(DEPENDLIB) scale_const.o scale_grid_index.o scale_precision.o scale_prof.o scale_stdio.o scale_tracer.o
-scale_atmos_sub_boundary.o: atmos-physics/share/scale_atmos_sub_boundary.F90 $(inc_index) $(DEPENDLIB) scale_comm.o scale_const.o scale_fileio.o scale_grid_cartesian.o scale_grid_index.o scale_index.o scale_precision.o scale_process.o scale_prof.o scale_stdio.o scale_time.o scale_tracer.o
+scale_atmos_sub_boundary.o: atmos-physics/share/scale_atmos_sub_boundary.F90 $(inc_index) $(DEPENDLIB) scale_calendar.o scale_comm.o scale_const.o scale_fileio.o scale_grid_cartesian.o scale_grid_index.o scale_index.o scale_precision.o scale_process.o scale_prof.o scale_stdio.o scale_time.o scale_tracer.o
 scale_atmos_sub_hydrostatic.o: atmos-physics/share/scale_atmos_sub_hydrostatic.F90 $(inc_index) $(DEPENDLIB) scale_comm.o scale_const.o scale_grid_cartesian.o scale_grid_index.o scale_grid_real.o scale_precision.o scale_process.o scale_prof.o scale_stdio.o
 scale_atmos_sub_profile.o: atmos-physics/share/scale_atmos_sub_profile.F90 $(inc_index) $(DEPENDLIB) scale_const.o scale_grid_index.o scale_precision.o scale_prof.o scale_stdio.o
 scale_atmos_sub_refstate.o: atmos-physics/share/scale_atmos_sub_refstate.F90 $(inc_index) $(DEPENDLIB) scale_atmos_sub_hydrostatic.o scale_atmos_sub_profile.o scale_atmos_sub_saturation.o scale_atmos_sub_thermodyn.o scale_comm.o scale_const.o scale_fileio.o scale_grid_cartesian.o scale_grid_index.o scale_grid_real.o scale_intepolation.o scale_precision.o scale_process.o scale_prof.o scale_stdio.o scale_time.o scale_tracer.o
@@ -57,6 +57,9 @@ scale_index.o: common/scale_index.F90 $(inc_index) $(DEPENDLIB) scale_stdio.o
 scale_intepolation.o: atmos-les/grid/scale_intepolation.F90 $(inc_index) $(DEPENDLIB) scale_const.o scale_grid_cartesian.o scale_grid_index.o scale_grid_real.o scale_precision.o scale_prof.o scale_stdio.o scale_topography.o
 scale_land_grid.o: land/grid/scale_land_grid.F90 $(inc_index) $(DEPENDLIB) scale_grid_index.o scale_land_grid_index.o scale_precision.o scale_process.o scale_prof.o scale_stdio.o
 scale_land_grid_index.o: land/grid/scale_land_grid_index.F90 $(inc_index) $(DEPENDLIB) scale_precision.o scale_process.o scale_prof.o scale_stdio.o
+scale_land_phy.o: land/scale_land_phy.F90 $(inc_index) $(DEPENDLIB) scale_grid_index.o scale_land_grid_index.o scale_land_phy_bucket.o scale_land_phy_matsiro.o scale_precision.o scale_process.o scale_prof.o scale_stdio.o
+scale_land_phy_bucket.o: land/scale_land_phy_bucket.F90 $(inc_index) $(DEPENDLIB) scale_const.o scale_debug.o scale_grid_index.o scale_land_grid_index.o scale_precision.o scale_process.o scale_prof.o scale_stdio.o scale_time.o
+scale_land_phy_matsiro.o: land/scale_land_phy_matsiro.F90 $(inc_index) $(DEPENDLIB) scale_debug.o scale_grid_index.o scale_land_grid_index.o scale_precision.o scale_process.o scale_prof.o scale_stdio.o
 scale_landuse.o: coupler/scale_landuse.F90 $(inc_index) $(DEPENDLIB) scale_comm.o scale_fileio.o scale_grid_index.o scale_precision.o scale_process.o scale_prof.o scale_stdio.o
 scale_mapproj.o: atmos-les/grid/scale_mapproj.F90 $(inc_index) $(DEPENDLIB) scale_const.o scale_grid_index.o scale_precision.o scale_process.o scale_prof.o scale_stdio.o
 scale_monitor.o: io/scale_monitor.F90 $(inc_index) $(DEPENDLIB) scale_grid_index.o scale_precision.o scale_process.o scale_prof.o scale_statistics.o scale_stdio.o scale_time.o
@@ -139,6 +142,9 @@ MODS =	\
 	scale_interpolation.mod	\
 	scale_land_grid.mod	\
 	scale_land_grid_index.mod	\
+	scale_land_phy.mod	\
+	scale_land_phy_bucket.mod	\
+	scale_land_phy_matsiro.mod	\
 	scale_landuse.mod	\
 	scale_mapproj.mod	\
 	scale_monitor.mod	\
