@@ -39,6 +39,8 @@ module scale_atmos_phy_rd_profile
   !
   !++ Public parameters & variables
   !
+  logical, public :: ATMOS_PHY_RD_PROFILE_use_climatology = .true. !< use climatology?
+
   !-----------------------------------------------------------------------------
   !
   !++ Private procedure
@@ -57,7 +59,7 @@ module scale_atmos_phy_rd_profile
   !++ Private parameters & variables
   !
   real(RP),              private :: PROFILE_TOA = 100.0_RP              !< top of atmosphere [km]
-  logical,               private :: PROFILE_use_climatology = .true.    !< use climatology?
+  integer,               private :: PROFILE_fixed_date(6)   = -1        !< fix reference date for climatology?
   character(len=H_LONG), private :: PROFILE_CIRA86_fname    = "cira.nc" !< file (CIRA86,netCDF format)
   character(len=H_LONG), private :: PROFILE_MIPAS2001_dir   = "."       !< dir  (MIPAS2001,ASCII format)
   character(len=H_LONG), private :: PROFILE_USER_fname      = ""        !< file (user,ASCII format)
@@ -130,7 +132,7 @@ contains
     implicit none
 
     real(RP)              :: ATMOS_PHY_RD_PROFILE_TOA
-    logical               :: ATMOS_PHY_RD_PROFILE_use_climatology
+    integer               :: ATMOS_PHY_RD_PROFILE_fixed_date(6)
     character(len=H_LONG) :: ATMOS_PHY_RD_PROFILE_CIRA86_IN_FILENAME
     character(len=H_LONG) :: ATMOS_PHY_RD_PROFILE_MIPAS2001_IN_BASENAME
     character(len=H_LONG) :: ATMOS_PHY_RD_PROFILE_USER_IN_FILENAME
@@ -138,6 +140,7 @@ contains
     namelist / PARAM_ATMOS_PHY_RD_PROFILE / &
        ATMOS_PHY_RD_PROFILE_TOA,                   &
        ATMOS_PHY_RD_PROFILE_use_climatology,       &
+       ATMOS_PHY_RD_PROFILE_fixed_date,            &
        ATMOS_PHY_RD_PROFILE_CIRA86_IN_FILENAME,    &
        ATMOS_PHY_RD_PROFILE_MIPAS2001_IN_BASENAME, &
        ATMOS_PHY_RD_PROFILE_USER_IN_FILENAME,      &
@@ -151,7 +154,7 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '+++ climatological profile'
 
     ATMOS_PHY_RD_PROFILE_TOA                   = PROFILE_TOA
-    ATMOS_PHY_RD_PROFILE_use_climatology       = PROFILE_use_climatology
+    ATMOS_PHY_RD_PROFILE_fixed_date(:)         = PROFILE_fixed_date(:)
     ATMOS_PHY_RD_PROFILE_CIRA86_IN_FILENAME    = PROFILE_CIRA86_fname
     ATMOS_PHY_RD_PROFILE_MIPAS2001_IN_BASENAME = PROFILE_MIPAS2001_dir
     ATMOS_PHY_RD_PROFILE_USER_IN_FILENAME      = PROFILE_USER_fname
@@ -169,12 +172,12 @@ contains
     if( IO_L ) write(IO_FID_LOG,nml=PARAM_ATMOS_PHY_RD_PROFILE)
 
     PROFILE_TOA             = ATMOS_PHY_RD_PROFILE_TOA
-    PROFILE_use_climatology = ATMOS_PHY_RD_PROFILE_use_climatology
+    PROFILE_fixed_date(:)   = ATMOS_PHY_RD_PROFILE_fixed_date(:)
     PROFILE_CIRA86_fname    = ATMOS_PHY_RD_PROFILE_CIRA86_IN_FILENAME
     PROFILE_MIPAS2001_dir   = ATMOS_PHY_RD_PROFILE_MIPAS2001_IN_BASENAME
     PROFILE_USER_fname      = ATMOS_PHY_RD_PROFILE_USER_IN_FILENAME
 
-    if ( PROFILE_use_climatology ) then
+    if ( ATMOS_PHY_RD_PROFILE_use_climatology ) then
 
        call PROFILE_setup_CIRA86
 
@@ -192,9 +195,9 @@ contains
     use scale_process, only: &
        PRC_MPIstop
     use scale_const, only: &
-         CONST_D2R
+       CONST_D2R
     use scale_calendar, only: &
-         CALENDAR_date2daysec
+       CALENDAR_date2daysec
     implicit none
 
     integer  :: status, ncid, varid, dimid ! for netCDF
@@ -538,7 +541,7 @@ contains
        aerosol_radi, &
        cldfrac       )
     use scale_const, only: &
-         GRAV  => CONST_GRAV
+       GRAV  => CONST_GRAV
     implicit none
 
     integer,  intent(in)  :: kmax                     !< Number of layer
@@ -560,10 +563,18 @@ contains
     real(RP), intent(out) :: aerosol_radi(kmax,naero) !< cloud/aerosol effective radius    [cm]
     real(RP), intent(out) :: cldfrac     (kmax)       !< cloud fraction    [0-1]
 
-    integer  :: k
+    integer :: date(6) !< used date
+
+    integer :: k
     !---------------------------------------------------------------------------
 
-    if ( PROFILE_use_climatology ) then
+    if ( ATMOS_PHY_RD_PROFILE_use_climatology ) then
+
+       if ( minval(PROFILE_fixed_date(:)) > 0 ) then
+          date(:) = PROFILE_fixed_date(:)
+       else
+          date(:) = now_date(:)
+       endif
 
        call PROFILE_read_climatology( kmax,     & ! [IN]
                                       ngas,     & ! [IN]

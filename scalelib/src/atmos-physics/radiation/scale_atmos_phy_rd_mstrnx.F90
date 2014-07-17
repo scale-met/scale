@@ -366,6 +366,10 @@ contains
        Mdry => CONST_Mdry, &
        Mvap => CONST_Mvap, &
        PPM  => CONST_PPM
+    use scale_time, only: &
+       TIME_NOWDATE
+    use scale_grid_real, only: &
+       REAL_BASEPOINT_LAT
     use scale_atmos_thermodyn, only: &
        THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres
     use scale_atmos_saturation, only: &
@@ -378,6 +382,9 @@ contains
     use scale_atmos_phy_ae, only: &
        AE_EffectiveRadius => ATMOS_PHY_AE_EffectiveRadius, &
        AE_DENS
+    use scale_atmos_phy_rd_profile, only: &
+       RD_PROFILE_read            => ATMOS_PHY_RD_PROFILE_read, &
+       RD_PROFILE_use_climatology => ATMOS_PHY_RD_PROFILE_use_climatology
     implicit none
 
     real(RP), intent(in)  :: DENS        (KA,IA,JA)
@@ -458,6 +465,29 @@ contains
 
     call MP_Mixingratio( MP_Qe(:,:,:,:), & ! [OUT]
                          QTRC (:,:,:,:)  ) ! [IN]
+
+    ! marge basic profile and value in LES domain
+
+    if ( RD_PROFILE_use_climatology ) then
+       call RD_PROFILE_read( RD_KMAX,                & ! [IN]
+                             MSTRN_ngas,             & ! [IN]
+                             MSTRN_ncfc,             & ! [IN]
+                             RD_naero,               & ! [IN]
+                             REAL_BASEPOINT_LAT,     & ! [IN]
+                             TIME_NOWDATE   (:),     & ! [IN]
+                             RD_zh          (:),     & ! [IN]
+                             RD_z           (:),     & ! [IN]
+                             RD_rhodz       (:),     & ! [OUT]
+                             RD_pres        (:),     & ! [OUT]
+                             RD_presh       (:),     & ! [OUT]
+                             RD_temp        (:),     & ! [OUT]
+                             RD_temph       (:),     & ! [OUT]
+                             RD_gas         (:,:),   & ! [OUT]
+                             RD_cfc         (:,:),   & ! [OUT]
+                             RD_aerosol_conc(:,:),   & ! [OUT]
+                             RD_aerosol_radi(:,:),   & ! [OUT]
+                             RD_cldfrac     (:)      ) ! [OUT]
+    endif
 
     ! marge basic profile and value in LES domain
 
