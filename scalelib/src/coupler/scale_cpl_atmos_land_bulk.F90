@@ -234,8 +234,6 @@ contains
     integer :: i, j, n
     !---------------------------------------------------------------------------
 
-    continue_iteration = LST_UPDATE
-
     do j = 1, JA
     do i = 1, IA
 
@@ -243,6 +241,8 @@ contains
         ! calculate surface flux
         redf   = 1.0_RP
         oldres = 1.0E+5_RP
+
+        continue_iteration = LST_UPDATE
 
         ! modified Newton-Raphson method (Tomita 2009)
         do n = 1, nmax
