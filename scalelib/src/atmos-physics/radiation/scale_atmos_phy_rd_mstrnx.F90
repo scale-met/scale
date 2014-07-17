@@ -363,6 +363,7 @@ contains
        flux_rad_top           )
 !       Jval                            )
     use scale_const, only: &
+       EPS  => CONST_EPS, &
        Mdry => CONST_Mdry, &
        Mvap => CONST_Mvap, &
        PPM  => CONST_PPM
@@ -427,6 +428,8 @@ contains
 
     ! output
     real(RP) :: flux_rad_merge(RD_KMAX+1,IA,JA,2,2)
+
+    real(RP) :: zerosw
 
     integer :: ihydro, iaero
     integer :: RD_k, k, i, j, v
@@ -538,8 +541,8 @@ contains
     do i = IS, IE
        do RD_k = RD_KADD+1, RD_KMAX
           k = KS + RD_KMAX - RD_k ! reverse axis
-
-          gas_merge(RD_k,i,j,1) = QTRC(k,i,j,I_QV) / Mvap * Mdry / PPM ! [PPM]
+          zerosw = sign(0.5_RP, QTRC(k,i,j,I_QV)-EPS) + 0.5_RP
+          gas_merge(RD_k,i,j,1) = QTRC(k,i,j,I_QV) / Mvap * Mdry / PPM * zerosw ! [PPM]
        enddo
     enddo
     enddo
@@ -1811,7 +1814,8 @@ contains
     !$acc& create(Tdir, x_R, x_T, x_Em, x_Ep)
 
     !$acc kernels pcopyin(cosSZA0) pcopy(cosSZA) async(0)
-    cosSZA(:,:) = max( cosSZA0(:,:), RD_cosSZA_min )
+    cosSZA(IS:IE,JS:IE) = max( cosSZA0(IS:IE,JS:JE), RD_cosSZA_min )
+!    cosSZA(:,:) = max( cosSZA0(:,:), RD_cosSZA_min ) ! this may raise a floating exception for value in halo
     !$acc end kernels
 
 !OCL SERIAL
