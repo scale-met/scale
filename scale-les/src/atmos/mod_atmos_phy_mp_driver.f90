@@ -170,11 +170,11 @@ contains
        do j  = JS, JE
        do i  = IS, IE
        do k  = KS, KE
-          DENS_t_MP(k,i,j) = DENS0(k,i,j) - DENS(k,i,j)
-          MOMZ_t_MP(k,i,j) = MOMZ0(k,i,j) - MOMZ(k,i,j)
-          MOMX_t_MP(k,i,j) = MOMX0(k,i,j) - MOMX(k,i,j)
-          MOMY_t_MP(k,i,j) = MOMY0(k,i,j) - MOMY(k,i,j)
-          RHOT_t_MP(k,i,j) = RHOT0(k,i,j) - RHOT(k,i,j)
+          DENS_t_MP(k,i,j) = ( DENS0(k,i,j) - DENS(k,i,j) ) / dt_MP
+          MOMZ_t_MP(k,i,j) = ( MOMZ0(k,i,j) - MOMZ(k,i,j) ) / dt_MP
+          MOMX_t_MP(k,i,j) = ( MOMX0(k,i,j) - MOMX(k,i,j) ) / dt_MP
+          MOMY_t_MP(k,i,j) = ( MOMY0(k,i,j) - MOMY(k,i,j) ) / dt_MP
+          RHOT_t_MP(k,i,j) = ( RHOT0(k,i,j) - RHOT(k,i,j) ) / dt_MP
        enddo
        enddo
        enddo
@@ -183,7 +183,7 @@ contains
        do j  = JS, JE
        do i  = IS, IE
        do k  = KS, KE
-          QTRC_t_MP(k,i,j,iq) = QTRC0(k,i,j,iq) - QTRC(k,i,j,iq)
+          QTRC_t_MP(k,i,j,iq) = ( QTRC0(k,i,j,iq) - QTRC(k,i,j,iq) ) / dt_MP
        enddo
        enddo
        enddo

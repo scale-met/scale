@@ -116,7 +116,7 @@ contains
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       RHOT_t(k,i,j) = ( RHOT1(k,i,j)-RHOT(k,i,j) ) / dt
+       RHOT_t(k,i,j) = ( RHOT1(k,i,j) - RHOT(k,i,j) ) / dt
     enddo
     enddo
     enddo
