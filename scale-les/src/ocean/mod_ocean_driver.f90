@@ -45,7 +45,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine OCEAN_driver_setup
-    use mod_ocean_phy_slab, only: &
+    use mod_ocean_phy_driver, only: &
        OCEAN_PHY_driver_setup
 !    use mod_ocean_frc_nudge, only: &
 !       OCEAN_FRC_driver_setup
@@ -74,7 +74,7 @@ contains
        OCEAN_TEMP_t,      &
        OCEAN_vars_total,  &
        OCEAN_vars_history
-    use mod_ocean_phy_slab, only: &
+    use mod_ocean_phy_driver, only: &
        OCEAN_PHY_driver
 !    use mod_ocean_forcing, only: &
 !       OCEAN_forcing

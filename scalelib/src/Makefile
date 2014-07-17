@@ -114,6 +114,8 @@ OBJS = $(scale_rdma)	\
 	scale_landuse.o	\
 	scale_mapproj.o	\
 	scale_monitor.o	\
+	scale_ocean_phy.o	\
+	scale_ocean_phy_slab.o	\
 	scale_ocean_sub_roughness.o	\
 	scale_precision.o	\
 	scale_process.o	\

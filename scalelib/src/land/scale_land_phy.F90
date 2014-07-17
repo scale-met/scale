@@ -25,7 +25,7 @@ module scale_land_phy
   public :: LAND_PHY_setup
 
   abstract interface
-     subroutine land( &
+     subroutine lnd( &
           LAND_TEMP,         &
           LAND_WATER,        &
           LAND_WaterLimit,   &
@@ -55,9 +55,9 @@ module scale_land_phy
        real(RP), intent(in)  :: CDZ              (LKMAX)
        real(RP), intent(out) :: LAND_TEMP_t      (LKMAX,IA,JA)
        real(RP), intent(out) :: LAND_WATER_t     (LKMAX,IA,JA)
-     end subroutine land
+     end subroutine lnd
   end interface
-  procedure(land), pointer :: LAND_PHY => NULL()
+  procedure(lnd), pointer :: LAND_PHY => NULL()
   public :: LAND_PHY
 
   !-----------------------------------------------------------------------------
@@ -81,10 +81,10 @@ contains
        PRC_MPIstop
 #define EXTM(pre, name, post) pre ## name ## post
 #define NAME(pre, name, post) EXTM(pre, name, post)
-#ifdef RD
-    use NAME(scale_land_phy_, LAND,), only: &
-       NAME(LAND_PHY_, LAND, _setup), &
-       NAME(LAND_PHY_, LAND,)
+#ifdef LND
+    use NAME(scale_land_phy_, LND,), only: &
+       NAME(LAND_PHY_, LND, _setup), &
+       NAME(LAND_PHY_, LND,)
 #else
     use scale_land_phy_bucket, only: &
        LAND_PHY_bucket_setup, &
