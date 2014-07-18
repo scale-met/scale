@@ -26,6 +26,7 @@ module mod_user
   use scale_time, only: &
      TIME_DTSEC
   use scale_atmos_boundary, only: &
+     ATMOS_BOUNDARY_alpha, &
      ATMOS_BOUNDARY_var
   use mod_atmos_vars
   use scale_history, only: &
@@ -112,15 +113,15 @@ contains
     allocate( DENS_tend(KA,0:NUM_RELAX_GRIDS) )
     allocate( U_tend   (   0:NUM_RELAX_GRIDS) )
 
-    do k = KS, KE
+    do k = 1, KA
        DENS_INIT(k) = DENS(k,IS,JS)
        POTT_INIT(k) = POTT(k,IS,JS)
-       VELX_INIT(k) = MOMX(k,IS,JS) / ( DENS(k,IS,JS)+DENS(k+1,IS,JS) ) * 2.0_RP
+       VELX_INIT(k) = MOMX(k,IS,JS) / ( DENS(k,IS,JS)+DENS(k,IS+1,JS) ) * 2.0_RP
     enddo
 
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
+    do j = 1, JA
+    do i = 1, IA
+    do k = 1, KA
        ATMOS_BOUNDARY_var(k,i,j,I_BND_DENS) = DENS_INIT(k)
        ATMOS_BOUNDARY_var(k,i,j,I_BND_VELX) = UINIT
        ATMOS_BOUNDARY_var(k,i,j,I_BND_POTT) = POTT_INIT(k)
@@ -128,7 +129,17 @@ contains
     enddo
     enddo
 
-    do k = KS, KE
+    do j = 1, JA
+    do i = 1, IA
+    do k = 2, KA
+      ATMOS_BOUNDARY_alpha(k,i,j,I_BND_DENS) = ATMOS_BOUNDARY_alpha(1,i,j,I_BND_DENS)
+      ATMOS_BOUNDARY_alpha(k,i,j,I_BND_VELX) = ATMOS_BOUNDARY_alpha(1,i,j,I_BND_VELX)
+      ATMOS_BOUNDARY_alpha(k,i,j,I_BND_POTT) = ATMOS_BOUNDARY_alpha(1,i,j,I_BND_POTT)
+    enddo
+    enddo
+    enddo
+
+    do k = 1, KA
        UACCEL_per_grid = (UEND - UINIT) / dble( NUM_RELAX_GRIDS )
     enddo
 
@@ -138,7 +149,7 @@ contains
        U_tend(i) = U_tend(i-1) + UACCEL_per_grid
 
        if ( CONST_MOMX ) then
-          do k = KS, KE
+          do k = 1, KA
              DENS_tend(k,i) = ((UINIT*DENS_INIT(k)) / (UINIT + U_tend(i))) - DENS_INIT(k)
           enddo
        else
@@ -183,7 +194,7 @@ contains
     front_posi = front_posi + UEND * TIME_DTSEC
     if( IO_L ) write(IO_FID_LOG,*) '*** front position', front_posi
 
-    if ( front_posi > 0.0_RP .and. front_posi < GRID_FX(IE) ) then
+    if ( front_posi > 0.0_RP .and. front_posi < GRID_FX(IA) ) then
        mini = 9.999D10
        do i = 1, IA
           diff = GRID_FX(i) - front_posi
@@ -201,21 +212,21 @@ contains
 
        ii = front_grid
        do i = 1, NUM_RELAX_GRIDS
-       do k = KS, KE
-       do j = JS, JE
+       do k = 1, KA
+       do j = 1, JA
           ATMOS_BOUNDARY_var(k,ii,j,I_BND_DENS) = DENS_INIT(k) + (DENS_tend(k,i-1)*fact_A + DENS_tend(k,i)*fact_B)
           ATMOS_BOUNDARY_var(k,ii,j,I_BND_POTT) = POTT_INIT(k)
           ATMOS_BOUNDARY_var(k,ii,j,I_BND_VELX) = UINIT + (U_tend(i-1)*fact_A + U_tend(i)*fact_B)
        enddo
        enddo
        ii = ii - 1
-       if ( ii < IS ) exit
+       if ( ii < 1 ) exit
        enddo
 
-       if ( ii > IS ) then
-          do j = JS, JE
-          do i = ii, IS, -1
-          do k = KS, KE
+       if ( ii > 1 ) then
+          do j = 1, JA
+          do i = ii, 1, -1
+          do k = 1, KA
              ATMOS_BOUNDARY_var(k,i,j,I_BND_DENS) = DENS_INIT(k) + DENS_tend(k,NUM_RELAX_GRIDS)
              ATMOS_BOUNDARY_var(k,i,j,I_BND_POTT) = POTT_INIT(k)
              ATMOS_BOUNDARY_var(k,i,j,I_BND_VELX) = UINIT + U_tend(NUM_RELAX_GRIDS)
@@ -225,9 +236,9 @@ contains
        endif
 
     elseif ( front_posi > GRID_FX(IE) ) then
-          do j = JS, JE
-          do i = IS, IE
-          do k = KS, KE
+          do j = 1, JA
+          do i = 1, IA
+          do k = 1, KA
              ATMOS_BOUNDARY_var(k,i,j,I_BND_DENS) = DENS_INIT(k) + DENS_tend(k,NUM_RELAX_GRIDS)
              ATMOS_BOUNDARY_var(k,i,j,I_BND_POTT) = POTT_INIT(k)
              ATMOS_BOUNDARY_var(k,i,j,I_BND_VELX) = UEND

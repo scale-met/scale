@@ -58,6 +58,11 @@ module scale_process
   integer, public, parameter :: PRC_SW = 7       !< [node direction] southwest
   integer, public, parameter :: PRC_SE = 8       !< [node direction] southeast
 
+  logical, public            :: PRC_HAS_W
+  logical, public            :: PRC_HAS_N
+  logical, public            :: PRC_HAS_E
+  logical, public            :: PRC_HAS_S
+
   !-----------------------------------------------------------------------------
   !
   !++ Private procedure
@@ -398,13 +403,17 @@ contains
        call MPI_CART_SHIFT(iptbl,1,1,PRC_next(PRC_W),PRC_next(PRC_E),ierr) ! next rank search Left/Right
 
        ! get neighbor_coordinates
-       if( PRC_next(PRC_W) /= MPI_PROC_NULL ) call MPI_CART_COORDS(iptbl,PRC_next(PRC_W),2,coords_W,ierr)
-       if( PRC_next(PRC_N) /= MPI_PROC_NULL ) call MPI_CART_COORDS(iptbl,PRC_next(PRC_N),2,coords_N,ierr)
-       if( PRC_next(PRC_E) /= MPI_PROC_NULL ) call MPI_CART_COORDS(iptbl,PRC_next(PRC_E),2,coords_E,ierr)
-       if( PRC_next(PRC_S) /= MPI_PROC_NULL ) call MPI_CART_COORDS(iptbl,PRC_next(PRC_S),2,coords_S,ierr)
+       PRC_HAS_W = PRC_next(PRC_W) /= MPI_PROC_NULL
+       if( PRC_HAS_W ) call MPI_CART_COORDS(iptbl,PRC_next(PRC_W),2,coords_W,ierr)
+       PRC_HAS_N = PRC_next(PRC_N) /= MPI_PROC_NULL
+       if( PRC_HAS_N ) call MPI_CART_COORDS(iptbl,PRC_next(PRC_N),2,coords_N,ierr)
+       PRC_HAS_E = PRC_next(PRC_E) /= MPI_PROC_NULL
+       if( PRC_HAS_E ) call MPI_CART_COORDS(iptbl,PRC_next(PRC_E),2,coords_E,ierr)
+       PRC_HAS_S = PRC_next(PRC_S) /= MPI_PROC_NULL
+       if( PRC_HAS_S ) call MPI_CART_COORDS(iptbl,PRC_next(PRC_S),2,coords_S,ierr)
        ! next rank search NorthWest
-       if (      PRC_next(PRC_N) == MPI_PROC_NULL &
-            .OR. PRC_next(PRC_W) == MPI_PROC_NULL ) then
+       if (      .not. PRC_HAS_N &
+            .OR. .not. PRC_HAS_W ) then
           PRC_next(PRC_NW) = MPI_PROC_NULL
        else
           next_coords(1) = coords_N(1)
@@ -412,8 +421,8 @@ contains
           call MPI_CART_RANK(iptbl, next_coords, PRC_next(PRC_NW), ierr)
        endif
        ! next rank search NorthEast
-       if (      PRC_next(PRC_N) == MPI_PROC_NULL &
-            .OR. PRC_next(PRC_E) == MPI_PROC_NULL ) then
+       if (      .not. PRC_HAS_N &
+            .OR. .not. PRC_HAS_E ) then
           PRC_next(PRC_NE) = MPI_PROC_NULL
        else
           next_coords(1) = coords_N(1)
@@ -421,8 +430,8 @@ contains
           call MPI_CART_RANK(iptbl, next_coords, PRC_next(PRC_NE), ierr)
        endif
        ! next rank search SouthWest
-       if (      PRC_next(PRC_S) == MPI_PROC_NULL &
-            .OR. PRC_next(PRC_W) == MPI_PROC_NULL ) then
+       if (      .not. PRC_HAS_S &
+            .OR. .not. PRC_HAS_W ) then
           PRC_next(PRC_SW) = MPI_PROC_NULL
        else
           next_coords(1) = coords_S(1)
@@ -430,8 +439,8 @@ contains
           call MPI_CART_RANK(iptbl, next_coords, PRC_next(PRC_SW), ierr)
        endif
        ! next rank search SouthEast
-       if (      PRC_next(PRC_S) == MPI_PROC_NULL &
-            .OR. PRC_next(PRC_E) == MPI_PROC_NULL ) then
+       if (      .not. PRC_HAS_S &
+            .OR. .not. PRC_HAS_E ) then
           PRC_next(PRC_SE) = MPI_PROC_NULL
        else
           next_coords(1) = coords_S(1)

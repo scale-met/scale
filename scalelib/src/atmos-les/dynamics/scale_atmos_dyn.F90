@@ -148,10 +148,10 @@ contains
        Rvap   => CONST_Rvap,  &
        CVdry  => CONST_CVdry
     use scale_process, only: &
-       PRC_NUM_X, &
-       PRC_NUM_Y, &
-       PRC_2Drank, &
-       PRC_myrank
+       PRC_HAS_E, &
+       PRC_HAS_W, &
+       PRC_HAS_N, &
+       PRC_HAS_S
     use scale_comm, only: &
        COMM_vars8, &
        COMM_wait
@@ -371,7 +371,7 @@ contains
 
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JS-1, JE+2
-       do i = IS-2, IE+1
+       do i = IS-1, IE+2
        do k = KS, KE-1
           diff(k,i,j) = MOMZ(k,i,j) - DAMP_var(k,i,j,I_BND_VELZ) * ( DENS(k,i,j)+DENS(k+1,i,j) ) * 0.5_RP
        enddo
@@ -581,28 +581,28 @@ contains
                           REF_pres, REF_dens,                               & ! (in)
                           dt                                                ) ! (in)
 
-       if ( PRC_2Drank(PRC_myrank,1) == 0 ) then ! for western boundary
+       if ( .not. PRC_HAS_W ) then ! for western boundary
           call set_boundary_dyn( &
                DENS, MOMZ, MOMX, MOMY, RHOT, & ! (inout)
                DAMP_var, DAMP_alpha, & ! (in)
                I_BND_VELX, -1, 0, 1, 0, & ! (in)
                IS, IS+IHALO-1, JS, JE ) ! (in)
        end if
-       if ( PRC_2Drank(PRC_myrank,1) == PRC_NUM_X-1 ) then ! for eastern boundary
+       if ( .not. PRC_HAS_E ) then ! for eastern boundary
           call set_boundary_dyn( &
                DENS, MOMZ, MOMX, MOMY, RHOT, & ! (inout)
                DAMP_var, DAMP_alpha, & ! (in)
                I_BND_VELX, 0, 0, -1, 0, & ! (in)
                IE-IHALO+1, IE, JS, JE ) ! (in)
        end if
-       if ( PRC_2Drank(PRC_myrank,2) == 0 ) then ! for sourthern boundary
+       if ( .not. PRC_HAS_S ) then ! for sourthern boundary
           call set_boundary_dyn( &
                DENS, MOMZ, MOMX, MOMY, RHOT, & ! (inout)
                DAMP_var, DAMP_alpha, & ! (in)
                I_BND_VELY, 0, -1, 0, 1, & ! (in)
                IS, IE, JS, JS+JHALO-1 ) ! (in)
        end if
-       if ( PRC_2Drank(PRC_myrank,2) == PRC_NUM_Y-1 ) then ! for northern boundary
+       if ( .not. PRC_HAS_N ) then ! for northern boundary
           call set_boundary_dyn( &
                DENS, MOMZ, MOMX, MOMY, RHOT, & ! (inout)
                DAMP_var, DAMP_alpha, & ! (in)
@@ -635,7 +635,6 @@ contains
        call COMM_wait ( MOMX(:,:,:), 3 )
        call COMM_wait ( MOMY(:,:,:), 4 )
        call COMM_wait ( RHOT(:,:,:), 5 )
-
 
        if ( USE_AVERAGE ) then
           DENS_av(:,:,:) = DENS_av(:,:,:) + DENS(:,:,:)
@@ -879,34 +878,35 @@ contains
        enddo
        enddo
 
+
        if ( USE_AVERAGE ) then
           QTRC_av(:,:,:,iq) = QTRC(:,:,:,iq)
        endif
 
     enddo ! scalar quantities loop
 
-    if ( PRC_2Drank(PRC_myrank,1) == 0 ) then ! for western boundary
+    if ( .not. PRC_HAS_W ) then ! for western boundary
        call set_boundary_qtrc( &
             QTRC, & ! (inout)
             DAMP_var, DAMP_alpha, & ! (in)
             MOMX, -1, 0, 1, 0, & ! (in)
             dt, IS, IS+IHALO-1, JS, JE ) ! (in)
     end if
-    if ( PRC_2Drank(PRC_myrank,1) == PRC_NUM_X-1 ) then ! for eastern boundary
+    if ( .not. PRC_HAS_E ) then ! for eastern boundary
        call set_boundary_qtrc( &
             QTRC, & ! (inout)
             DAMP_var, DAMP_alpha, & ! (in)
             MOMX, 0, 0, -1, 0, & ! (in)
             dt, IE-IHALO+1, IE, JS, JE ) ! (in)
     end if
-    if ( PRC_2Drank(PRC_myrank,2) == 0 ) then ! for sourthern boundary
+    if ( .not. PRC_HAS_S ) then ! for sourthern boundary
        call set_boundary_qtrc( &
             QTRC, & ! (inout)
             DAMP_var, DAMP_alpha, & ! (in)
             MOMY, 0, -1, 0, 1, & ! (in)
             dt, IS, IE, JS, JS+JHALO-1 ) ! (in)
     end if
-    if ( PRC_2Drank(PRC_myrank,2) == PRC_NUM_Y-1 ) then ! for northern boundary
+    if ( .not. PRC_HAS_N ) then ! for northern boundary
        call set_boundary_qtrc( &
             QTRC, & ! (inout)
             DAMP_var, DAMP_alpha, & ! (in)
