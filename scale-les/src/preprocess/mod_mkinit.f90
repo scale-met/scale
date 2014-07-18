@@ -3890,6 +3890,7 @@ enddo
        URB_GRND_LAYER_TEMP
 
     integer :: ierr
+    integer :: i, j
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -4047,17 +4048,18 @@ enddo
     use mod_realinput
     implicit none
 
-    integer               :: NUMBER_OF_FILES     = 1
-    integer               :: NUMBER_OF_TSTEPS    = 1   ! num of time steps in one file
-    integer               :: INTERP_SERC_DIV_NUM = 10  ! num of dividing blocks in interpolation search
-    character(len=H_LONG) :: BASENAME_ORG       = ''
-    character(len=H_LONG) :: FILETYPE_ORG       = ''
-    character(len=H_LONG) :: BASENAME_BOUNDARY  = 'boundary_real'
-    character(len=H_LONG) :: BOUNDARY_TITLE     = 'SCALE-LES BOUNDARY CONDITION for REAL CASE'
-    real(DP)              :: BOUNDARY_UPDATE_DT  = 0.0_DP ! inteval time of boudary data update [s]
-    logical               :: WRF_FILE_TYPE       = .true.  ! wrf filetype: T=wrfout, F=wrfrst
-    logical               :: SERIAL_PROC_READ    = .true.  ! read by one MPI process and broadcast
-    logical               :: NO_ADDITIONAL_INPUT = .false. ! no additional information
+    integer                  :: NUMBER_OF_FILES     = 1
+    integer                  :: NUMBER_OF_TSTEPS    = 1   ! num of time steps in one file
+    integer                  :: INTERP_SERC_DIV_NUM = 10  ! num of dividing blocks in interpolation search
+    character(len=H_LONG)   :: BASENAME_ORG       = ''
+    character(len=H_LONG)   :: FILETYPE_ORG       = ''
+    character(len=H_LONG)   :: BASENAME_BOUNDARY  = 'boundary_real'
+    character(len=H_LONG)   :: BOUNDARY_TITLE     = 'SCALE-LES BOUNDARY CONDITION for REAL CASE'
+    character(len=H_SHORT)  :: PARENT_MP_TYPE     = 'single'  ! microphysics type of the parent model (single or double)
+    real(DP)                 :: BOUNDARY_UPDATE_DT  = 0.0_DP   ! inteval time of boudary data update [s]
+    logical                  :: WRF_FILE_TYPE       = .true.  ! wrf filetype: T=wrfout, F=wrfrst
+    logical                  :: SERIAL_PROC_READ    = .true.  ! read by one MPI process and broadcast
+    logical                  :: NO_ADDITIONAL_INPUT = .false. ! no additional information
 
 
     NAMELIST / PARAM_MKINIT_REAL / &
@@ -4069,6 +4071,7 @@ enddo
          BOUNDARY_TITLE,      &
          BOUNDARY_UPDATE_DT,  &
          INTERP_SERC_DIV_NUM, &
+         PARENT_MP_TYPE,      &
          WRF_FILE_TYPE,       &
          SERIAL_PROC_READ,    &
          NO_ADDITIONAL_INPUT
@@ -4089,7 +4092,7 @@ enddo
     integer :: timelen = 1
     integer :: ierr
 
-    integer :: k, i, j, iq, n, ns, ne
+    integer :: k, i, j, iq, n, ns, ne, l, ll
     logical :: initial_loop
     !---------------------------------------------------------------------------
 
@@ -4155,6 +4158,7 @@ enddo
                               BASENAME_WITHNUM,         &
                               dims(:),                  &
                               mdlid,                    &
+                              PARENT_MP_TYPE,           &
                               NUMBER_OF_TSTEPS,         &
                               initial_loop,             &
                               SERIAL_PROC_READ          )
