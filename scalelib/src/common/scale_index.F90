@@ -36,10 +36,10 @@ module scale_index
   integer, public, parameter :: I_QTRC     = 6
 
   integer, public, parameter :: I_BND_DENS = 1 ! reference density     [kg/m3]
-  integer, public, parameter :: I_BND_MOMZ = 2 ! reference momentum (z) [m/s]
-  integer, public, parameter :: I_BND_MOMX = 3 ! reference momentum (x) [m/s]
-  integer, public, parameter :: I_BND_MOMY = 4 ! reference momentum (y) [m/s]
-  integer, public, parameter :: I_BND_RHOT = 5 ! reference mass-weighted potential temperature [K]
+  integer, public, parameter :: I_BND_VELZ = 2 ! reference momentum (z) [m/s]
+  integer, public, parameter :: I_BND_VELX = 3 ! reference momentum (x) [m/s]
+  integer, public, parameter :: I_BND_VELY = 4 ! reference momentum (y) [m/s]
+  integer, public, parameter :: I_BND_POTT = 5 ! reference mass-weighted potential temperature [K]
   integer, public, parameter :: I_BND_QV   = 6 ! reference water vapor [kg/kg]
 
   integer, public, parameter :: I_BND_SIZE = 6 ! size of array for reference quantities

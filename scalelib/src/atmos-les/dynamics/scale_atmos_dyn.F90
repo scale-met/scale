@@ -362,7 +362,7 @@ contains
        do k = KS, KE
           DENS_t(k,i,j) = DENS_tp(k,i,j) & ! tendency from physical step
                         - DAMP_alpha(k,i,j,I_BND_DENS) &
-                        * ( diff(k,i,j) & ! rayleigh damping
+                        * ( &
                           - ( diff(k,i-1,j) + diff(k,i+1,j) + diff(k,i,j-1) + diff(k,i,j+1) - diff(k,i,j)*4.0_RP ) &
                           * 0.125_RP * BND_SMOOTHER_FACT ) ! horizontal smoother
        enddo
@@ -370,12 +370,22 @@ contains
        enddo
 
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+       do j = JS-1, JE+2
+       do i = IS-2, IE+1
+       do k = KS, KE-1
+          diff(k,i,j) = MOMZ(k,i,j) - DAMP_var(k,i,j,I_BND_VELZ) * ( DENS(k,i,j)+DENS(k+1,i,j) ) * 0.5_RP
+       enddo
+       enddo
+       enddo
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE-1
           MOMZ_t(k,i,j) = MOMZ_tp(k,i,j) & ! tendency from physical step
-                        - DAMP_alpha(k,i,j,I_BND_MOMZ) &
-                        * ( MOMZ(k,i,j) - DAMP_var(k,i,j,I_BND_MOMZ) ) ! rayleigh damping
+                        - DAMP_alpha(k,i,j,I_BND_VELZ) &
+                        * ( diff(k,i,j) & ! rayleigh damping
+                          - ( diff(k,i-1,j) + diff(k,i+1,j) + diff(k,i,j-1) + diff(k,i,j+1) - diff(k,i,j)*4.0_RP ) &
+                          * 0.125_RP * BND_SMOOTHER_FACT ) ! horizontal smoother
        enddo
        enddo
        enddo
@@ -389,7 +399,7 @@ contains
        do j = JS-1, JE+2
        do i = IS-2, IE+1
        do k = KS, KE
-          diff(k,i,j) = MOMX(k,i,j) - DAMP_var(k,i,j,I_BND_MOMX)
+          diff(k,i,j) = MOMX(k,i,j) - DAMP_var(k,i,j,I_BND_VELX) * ( DENS(k,i,j)+DENS(k,i+1,j) ) * 0.5_RP
        enddo
        enddo
        enddo
@@ -397,7 +407,7 @@ contains
        do i = IS, IE
        do k = KS, KE
           MOMX_t(k,i,j) = MOMX_tp(k,i,j) & ! tendency from physical step
-                        - DAMP_alpha(k,i,j,I_BND_MOMX) &
+                        - DAMP_alpha(k,i,j,I_BND_VELX) &
                         * ( diff(k,i,j) & ! rayleigh damping
                           - ( diff(k,i-1,j) + diff(k,i+1,j) + diff(k,i,j-1) + diff(k,i,j+1) - diff(k,i,j)*4.0_RP ) &
                           * 0.125_RP * BND_SMOOTHER_FACT ) ! horizontal smoother
@@ -409,7 +419,7 @@ contains
        do j = JS-2, JE+1
        do i = IS-1, IE+2
        do k = KS, KE
-          diff(k,i,j) = MOMY(k,i,j) - DAMP_var(k,i,j,I_BND_MOMY)
+          diff(k,i,j) = MOMY(k,i,j) - DAMP_var(k,i,j,I_BND_VELY) * ( DENS(k,i,j)+DENS(k,i,j+1) ) * 0.5_RP
        enddo
        enddo
        enddo
@@ -417,7 +427,7 @@ contains
        do i = IS, IE
        do k = KS, KE
           MOMY_t(k,i,j) = MOMY_tp(k,i,j) & ! tendency from physical step
-                        - DAMP_alpha(k,i,j,I_BND_MOMY) &
+                        - DAMP_alpha(k,i,j,I_BND_VELY) &
                         * ( diff(k,i,j) & ! rayleigh damping
                           - ( diff(k,i-1,j) + diff(k,i+1,j) + diff(k,i,j-1) + diff(k,i,j+1) - diff(k,i,j)*4.0_RP ) &
                           * 0.125_RP * BND_SMOOTHER_FACT ) ! horizontal smoother
@@ -429,7 +439,7 @@ contains
        do j = JS-1, JE+2
        do i = IS-1, IE+2
        do k = KS, KE
-          diff(k,i,j) = RHOT(k,i,j) - DAMP_var(k,i,j,I_BND_RHOT)
+          diff(k,i,j) = RHOT(k,i,j) - DAMP_var(k,i,j,I_BND_POTT) * DENS(k,i,j)
        enddo
        enddo
        enddo
@@ -437,7 +447,7 @@ contains
        do i = IS, IE
        do k = KS, KE
           RHOT_t(k,i,j) = RHOT_tp(k,i,j) & ! tendency from physical step
-                        - DAMP_alpha(k,i,j,I_BND_RHOT) &
+                        - DAMP_alpha(k,i,j,I_BND_POTT) &
                         * ( diff(k,i,j) & ! rayleigh damping
                           - ( diff(k,i-1,j) + diff(k,i+1,j) + diff(k,i,j-1) + diff(k,i,j+1) - diff(k,i,j)*4.0_RP ) &
                           * 0.125_RP * BND_SMOOTHER_FACT ) ! horizontal smoother
@@ -947,21 +957,21 @@ contains
     do j = j0, j1
     do i = i0, i1
     do k = KS, KE
+       sw2 = sign(0.5_RP, MOM(k,i+ib,j+jb)*dir) + 0.5_RP ! 0:inflow, 1:outflow 
        sw = sign(0.5_RP, DAMP_alpha(k,i,j,I_BND_DENS) - epsilon) + 0.5_RP
-       DENS(k,i,j) = DENS(k,i,j) * ( 1.0_RP - sw ) &
-                   + DAMP_var(k,i,j,I_BND_DENS) * sw
-       sw2 = sign(0.5_RP, MOM(k,i+ib,j+jb)*dir) + 0.5_RP
+!       DENS(k,i,j) = DENS(k,i,j) * ( 1.0_RP - sw ) &
+!                   + DAMP_var(k,i,j,I_BND_DENS) * sw
        MOMZ(k,i,j) = MOMZ(k,i,j) * ( 1.0_RP - sw ) &
                    + MOMZ(k,i+iu,j+ju) * sw2 * sw
-       sw = sign(0.5_RP, DAMP_alpha(k,i,j,I_BND_MOMX) - epsilon) + 0.5_RP
+       sw = sign(0.5_RP, DAMP_alpha(k,i,j,I_BND_VELX) - epsilon) + 0.5_RP
        MOMX(k,i,j) = MOMX(k,i,j) * ( 1.0_RP - sw ) &
-                   + DAMP_var(k,i,j,I_BND_MOMX) * sw
-       sw = sign(0.5_RP, DAMP_alpha(k,i,j,I_BND_MOMY) - epsilon) + 0.5_RP
+                   + DAMP_var(k,i,j,I_BND_VELX) * ( DENS(k,i,j)+DENS(k,i+1,j) ) * 0.5_RP * sw
+       sw = sign(0.5_RP, DAMP_alpha(k,i,j,I_BND_VELY) - epsilon) + 0.5_RP
        MOMY(k,i,j) = MOMY(k,i,j) * ( 1.0_RP - sw ) &
-                   + DAMP_var(k,i,j,I_BND_MOMY) * sw
-       sw = sign(0.5_RP, DAMP_alpha(k,i,j,I_BND_RHOT) - epsilon) + 0.5_RP
+                   + DAMP_var(k,i,j,I_BND_VELY) * ( DENS(k,i,j)+DENS(k,i,j+1) ) * 0.5_RP * sw
+       sw = sign(0.5_RP, DAMP_alpha(k,i,j,I_BND_POTT) - epsilon) + 0.5_RP
        RHOT(k,i,j) = RHOT(k,i,j) * ( 1.0_RP - sw ) &
-                   + DAMP_var(k,i,j,I_BND_RHOT) * sw
+                   + DAMP_var(k,i,j,I_BND_POTT) * DENS(k,i,j) * sw
     end do
     end do
     end do

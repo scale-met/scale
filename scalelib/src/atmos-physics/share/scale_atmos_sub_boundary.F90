@@ -182,11 +182,11 @@ contains
 
     if ( ATMOS_BOUNDARY_TYPE == 'CONST' ) then
 
-       call ATMOS_BOUNDARY_generate( DENS ) ! [IN]
+       call ATMOS_BOUNDARY_generate
 
        call ATMOS_BOUNDARY_setalpha
 
-       ATMOS_BOUNDARY_UPDATE_FLAG = .true.
+       ATMOS_BOUNDARY_UPDATE_FLAG = .false.
 
     elseif ( ATMOS_BOUNDARY_TYPE == 'INIT' ) then
 
@@ -427,26 +427,26 @@ contains
 
 
        if ( ATMOS_BOUNDARY_TYPE == 'REAL' ) then
-          ATMOS_BOUNDARY_alpha(k,i,j,I_BND_MOMZ) = alpha_z2
+          ATMOS_BOUNDARY_alpha(k,i,j,I_BND_VELZ) = alpha_z2
           if ( ATMOS_BOUNDARY_USE_DENS ) then
              ATMOS_BOUNDARY_alpha(k,i,j,I_BND_DENS) = max( alpha_z1, alpha_x1, alpha_y1 )
           else
              ATMOS_BOUNDARY_alpha(k,i,j,I_BND_DENS) = max( alpha_x1, alpha_y1 )
           endif
           if ( ATMOS_BOUNDARY_USE_VELX ) then
-             ATMOS_BOUNDARY_alpha(k,i,j,I_BND_MOMX) = max( alpha_z1, alpha_x2, alpha_y1 )
+             ATMOS_BOUNDARY_alpha(k,i,j,I_BND_VELX) = max( alpha_z1, alpha_x2, alpha_y1 )
           else
-             ATMOS_BOUNDARY_alpha(k,i,j,I_BND_MOMX) = max( alpha_x2, alpha_y1 )
+             ATMOS_BOUNDARY_alpha(k,i,j,I_BND_VELX) = max( alpha_x2, alpha_y1 )
           endif
           if ( ATMOS_BOUNDARY_USE_VELY ) then
-             ATMOS_BOUNDARY_alpha(k,i,j,I_BND_MOMY) = max( alpha_z1, alpha_x1, alpha_y2 )
+             ATMOS_BOUNDARY_alpha(k,i,j,I_BND_VELY) = max( alpha_z1, alpha_x1, alpha_y2 )
           else
-             ATMOS_BOUNDARY_alpha(k,i,j,I_BND_MOMY) = max( alpha_x1, alpha_y2 )
+             ATMOS_BOUNDARY_alpha(k,i,j,I_BND_VELY) = max( alpha_x1, alpha_y2 )
           endif
           if ( ATMOS_BOUNDARY_USE_POTT ) then
-             ATMOS_BOUNDARY_alpha(k,i,j,I_BND_RHOT) = max( alpha_z1, alpha_x1, alpha_y1 )
+             ATMOS_BOUNDARY_alpha(k,i,j,I_BND_POTT) = max( alpha_z1, alpha_x1, alpha_y1 )
           else
-             ATMOS_BOUNDARY_alpha(k,i,j,I_BND_RHOT) = max( alpha_x1, alpha_y1 )
+             ATMOS_BOUNDARY_alpha(k,i,j,I_BND_POTT) = max( alpha_x1, alpha_y1 )
           endif
           if ( ATMOS_BOUNDARY_USE_QV   ) then
              ATMOS_BOUNDARY_alpha(k,i,j,I_BND_QV  ) = max( alpha_z1, alpha_x1, alpha_y1 )
@@ -455,10 +455,10 @@ contains
           endif
        else
           ATMOS_BOUNDARY_alpha(k,i,j,I_BND_DENS) = max( alpha_z1, alpha_x1, alpha_y1 )
-          ATMOS_BOUNDARY_alpha(k,i,j,I_BND_MOMZ) = max( alpha_z2, alpha_x1, alpha_y1 )
-          ATMOS_BOUNDARY_alpha(k,i,j,I_BND_MOMX) = max( alpha_z1, alpha_x2, alpha_y1 )
-          ATMOS_BOUNDARY_alpha(k,i,j,I_BND_MOMY) = max( alpha_z1, alpha_x1, alpha_y2 )
-          ATMOS_BOUNDARY_alpha(k,i,j,I_BND_RHOT) = max( alpha_z1, alpha_x1, alpha_y1 )
+          ATMOS_BOUNDARY_alpha(k,i,j,I_BND_VELZ) = max( alpha_z2, alpha_x1, alpha_y1 )
+          ATMOS_BOUNDARY_alpha(k,i,j,I_BND_VELX) = max( alpha_z1, alpha_x2, alpha_y1 )
+          ATMOS_BOUNDARY_alpha(k,i,j,I_BND_VELY) = max( alpha_z1, alpha_x1, alpha_y2 )
+          ATMOS_BOUNDARY_alpha(k,i,j,I_BND_POTT) = max( alpha_z1, alpha_x1, alpha_y1 )
           ATMOS_BOUNDARY_alpha(k,i,j,I_BND_QV  ) = max( alpha_z1, alpha_x1, alpha_y1 )
        end if
     enddo
@@ -466,20 +466,20 @@ contains
     enddo
 
     if ( .NOT. ATMOS_BOUNDARY_USE_VELZ ) then
-       ATMOS_BOUNDARY_alpha(:,:,:,I_BND_MOMZ) = 0.0_RP
+       ATMOS_BOUNDARY_alpha(:,:,:,I_BND_VELZ) = 0.0_RP
     end if
     if ( .NOT. ATMOS_BOUNDARY_TYPE == 'REAL' ) then
        if ( .NOT. ATMOS_BOUNDARY_USE_DENS ) then
           ATMOS_BOUNDARY_alpha(:,:,:,I_BND_DENS) = 0.0_RP
        end if
        if ( .NOT. ATMOS_BOUNDARY_USE_VELX ) then
-          ATMOS_BOUNDARY_alpha(:,:,:,I_BND_MOMX) = 0.0_RP
+          ATMOS_BOUNDARY_alpha(:,:,:,I_BND_VELX) = 0.0_RP
        end if
        if ( .NOT. ATMOS_BOUNDARY_USE_VELY ) then
-          ATMOS_BOUNDARY_alpha(:,:,:,I_BND_MOMY) = 0.0_RP
+          ATMOS_BOUNDARY_alpha(:,:,:,I_BND_VELY) = 0.0_RP
        end if
        if ( .NOT. ATMOS_BOUNDARY_USE_POTT ) then
-          ATMOS_BOUNDARY_alpha(:,:,:,I_BND_RHOT) = 0.0_RP
+          ATMOS_BOUNDARY_alpha(:,:,:,I_BND_POTT) = 0.0_RP
        end if
        if ( .NOT. ATMOS_BOUNDARY_USE_QV ) then
           ATMOS_BOUNDARY_alpha(:,:,:,I_BND_QV  ) = 0.0_RP
@@ -514,10 +514,10 @@ contains
     do i = IS, IE
     do k = KS, KE
        ATMOS_BOUNDARY_var(k,i,j,I_BND_DENS) = DENS(k,i,j)
-       ATMOS_BOUNDARY_var(k,i,j,I_BND_MOMZ) = MOMZ(k,i,j)
-       ATMOS_BOUNDARY_var(k,i,j,I_BND_MOMX) = MOMX(k,i,j)
-       ATMOS_BOUNDARY_var(k,i,j,I_BND_MOMY) = MOMY(k,i,j)
-       ATMOS_BOUNDARY_var(k,i,j,I_BND_RHOT) = RHOT(k,i,j)
+       ATMOS_BOUNDARY_var(k,i,j,I_BND_VELZ) = MOMZ(k,i,j) / ( DENS(k,i,j)+DENS(k+1,i,j) ) * 2.0_RP
+       ATMOS_BOUNDARY_var(k,i,j,I_BND_VELX) = MOMX(k,i,j) / ( DENS(k,i,j)+DENS(k+1,i,j) ) * 2.0_RP
+       ATMOS_BOUNDARY_var(k,i,j,I_BND_VELY) = MOMY(k,i,j) / ( DENS(k,i,j)+DENS(k+1,i,j) ) * 2.0_RP
+       ATMOS_BOUNDARY_var(k,i,j,I_BND_POTT) = RHOT(k,i,j) / DENS(k,i,j)
        ATMOS_BOUNDARY_var(k,i,j,I_BND_QV  ) = QTRC(k,i,j,I_QV)
     enddo
     enddo
@@ -562,34 +562,30 @@ contains
 
     if ( ATMOS_BOUNDARY_USE_VELZ ) then
        call FileRead( reference_atmos(:,:,:), bname, 'VELZ', 1, PRC_myrank )
-       ATMOS_BOUNDARY_var(KS:KE,IS:IE,JS:JE,I_BND_MOMZ) = reference_atmos(1:KMAX,1:IMAX,1:JMAX) &
-            * ATMOS_BOUNDARY_var(KS:KE,IS:IE,JS:JE,I_BND_DENS)
+       ATMOS_BOUNDARY_var(KS:KE,IS:IE,JS:JE,I_BND_VELZ) = reference_atmos(1:KMAX,1:IMAX,1:JMAX)
        call FileRead( reference_atmos(:,:,:), bname, 'ALPHA_VELZ', 1, PRC_myrank )
-       ATMOS_BOUNDARY_alpha(KS:KE,IS:IE,JS:JE,I_BND_MOMZ) = reference_atmos(1:KMAX,1:IMAX,1:JMAX)
+       ATMOS_BOUNDARY_alpha(KS:KE,IS:IE,JS:JE,I_BND_VELZ) = reference_atmos(1:KMAX,1:IMAX,1:JMAX)
     endif
 
     if ( ATMOS_BOUNDARY_USE_VELX ) then
        call FileRead( reference_atmos(:,:,:), bname, 'VELX', 1, PRC_myrank )
-       ATMOS_BOUNDARY_var(KS:KE,IS:IE,JS:JE,I_BND_MOMX) = reference_atmos(1:KMAX,1:IMAX,1:JMAX) &
-            * ATMOS_BOUNDARY_var(KS:KE,IS:IE,JS:JE,I_BND_DENS)
+       ATMOS_BOUNDARY_var(KS:KE,IS:IE,JS:JE,I_BND_VELX) = reference_atmos(1:KMAX,1:IMAX,1:JMAX)
        call FileRead( reference_atmos(:,:,:), bname, 'ALPHA_VELX', 1, PRC_myrank )
-       ATMOS_BOUNDARY_alpha(KS:KE,IS:IE,JS:JE,I_BND_MOMX) = reference_atmos(1:KMAX,1:IMAX,1:JMAX)
+       ATMOS_BOUNDARY_alpha(KS:KE,IS:IE,JS:JE,I_BND_VELX) = reference_atmos(1:KMAX,1:IMAX,1:JMAX)
     endif
 
     if ( ATMOS_BOUNDARY_USE_VELY ) then
        call FileRead( reference_atmos(:,:,:), bname, 'VELY', 1, PRC_myrank )
-       ATMOS_BOUNDARY_var(KS:KE,IS:IE,JS:JE,I_BND_MOMY) = reference_atmos(1:KMAX,1:IMAX,1:JMAX) &
-            * ATMOS_BOUNDARY_var(KS:KE,IS:IE,JS:JE,I_BND_DENS)
+       ATMOS_BOUNDARY_var(KS:KE,IS:IE,JS:JE,I_BND_VELY) = reference_atmos(1:KMAX,1:IMAX,1:JMAX)
        call FileRead( reference_atmos(:,:,:), bname, 'ALPHA_VELY', 1, PRC_myrank )
-       ATMOS_BOUNDARY_alpha(KS:KE,IS:IE,JS:JE,I_BND_MOMY) = reference_atmos(1:KMAX,1:IMAX,1:JMAX)
+       ATMOS_BOUNDARY_alpha(KS:KE,IS:IE,JS:JE,I_BND_VELY) = reference_atmos(1:KMAX,1:IMAX,1:JMAX)
     endif
 
     if ( ATMOS_BOUNDARY_USE_POTT ) then
        call FileRead( reference_atmos(:,:,:), bname, 'POTT', 1, PRC_myrank )
-       ATMOS_BOUNDARY_var(KS:KE,IS:IE,JS:JE,I_BND_RHOT) = reference_atmos(1:KMAX,1:IMAX,1:JMAX) &
-            * ATMOS_BOUNDARY_var(KS:KE,IS:IE,JS:JE,I_BND_DENS)
+       ATMOS_BOUNDARY_var(KS:KE,IS:IE,JS:JE,I_BND_POTT) = reference_atmos(1:KMAX,1:IMAX,1:JMAX)
        call FileRead( reference_atmos(:,:,:), bname, 'ALPHA_POTT', 1, PRC_myrank )
-       ATMOS_BOUNDARY_alpha(KS:KE,IS:IE,JS:JE,I_BND_RHOT) = reference_atmos(1:KMAX,1:IMAX,1:JMAX)
+       ATMOS_BOUNDARY_alpha(KS:KE,IS:IE,JS:JE,I_BND_POTT) = reference_atmos(1:KMAX,1:IMAX,1:JMAX)
     endif
 
     if ( ATMOS_BOUNDARY_USE_QV   ) then
@@ -633,48 +629,44 @@ contains
     endif
 
     if ( ATMOS_BOUNDARY_USE_VELZ ) then
-       buffer = ATMOS_BOUNDARY_var(:,:,:,I_BND_MOMZ) / ATMOS_BOUNDARY_var(:,:,:,I_BND_DENS)
-       call FILEIO_write( buffer, &
+       call FILEIO_write( ATMOS_BOUNDARY_var(:,:,:,I_BND_VELZ), &
                           ATMOS_BOUNDARY_OUT_BASENAME, ATMOS_BOUNDARY_OUT_TITLE, &
                           'VELZ', 'Reference Velocity w', 'm/s', 'ZXY',          &
                           ATMOS_BOUNDARY_OUT_DTYPE                               )
-       call FILEIO_write( ATMOS_BOUNDARY_alpha(:,:,:,I_BND_MOMZ),                &
+       call FILEIO_write( ATMOS_BOUNDARY_alpha(:,:,:,I_BND_VELZ),                &
                           ATMOS_BOUNDARY_OUT_BASENAME, ATMOS_BOUNDARY_OUT_TITLE, &
                           'ALPHA_VELZ', 'Alpha for w', '1', 'ZXY',               &
                           ATMOS_BOUNDARY_OUT_DTYPE                               )
     endif
 
     if ( ATMOS_BOUNDARY_USE_VELX .or. ATMOS_BOUNDARY_TYPE == 'REAL' ) then
-       buffer = ATMOS_BOUNDARY_var(:,:,:,I_BND_MOMX) / ATMOS_BOUNDARY_var(:,:,:,I_BND_DENS)
-       call FILEIO_write( buffer, &
+       call FILEIO_write( ATMOS_BOUNDARY_var(:,:,:,I_BND_VELX), &
                           ATMOS_BOUNDARY_OUT_BASENAME, ATMOS_BOUNDARY_OUT_TITLE, &
                           'VELX', 'Reference Velocity u', 'm/s', 'ZXY',          &
                           ATMOS_BOUNDARY_OUT_DTYPE                               )
-       call FILEIO_write( ATMOS_BOUNDARY_alpha(:,:,:,I_BND_MOMX),                &
+       call FILEIO_write( ATMOS_BOUNDARY_alpha(:,:,:,I_BND_VELX),                &
                           ATMOS_BOUNDARY_OUT_BASENAME, ATMOS_BOUNDARY_OUT_TITLE, &
                           'ALPHA_VELX', 'Alpha for u', '1', 'ZXY',               &
                           ATMOS_BOUNDARY_OUT_DTYPE                               )
     endif
 
     if ( ATMOS_BOUNDARY_USE_VELY .or. ATMOS_BOUNDARY_TYPE == 'REAL' ) then
-       buffer = ATMOS_BOUNDARY_var(:,:,:,I_BND_MOMY) / ATMOS_BOUNDARY_var(:,:,:,I_BND_DENS)
-       call FILEIO_write( buffer, &
+       call FILEIO_write( ATMOS_BOUNDARY_var(:,:,:,I_BND_VELY), &
                           ATMOS_BOUNDARY_OUT_BASENAME, ATMOS_BOUNDARY_OUT_TITLE, &
                           'VELY', 'Reference Velocity y', 'm/s', 'ZXY',          &
                           ATMOS_BOUNDARY_OUT_DTYPE                               )
-       call FILEIO_write( ATMOS_BOUNDARY_alpha(:,:,:,I_BND_MOMY),                &
+       call FILEIO_write( ATMOS_BOUNDARY_alpha(:,:,:,I_BND_VELY),                &
                           ATMOS_BOUNDARY_OUT_BASENAME, ATMOS_BOUNDARY_OUT_TITLE, &
                           'ALPHA_VELY', 'Alpha for v', '1', 'ZXY',               &
                           ATMOS_BOUNDARY_OUT_DTYPE                               )
     endif
 
     if ( ATMOS_BOUNDARY_USE_POTT .or. ATMOS_BOUNDARY_TYPE == 'REAL' ) then
-       buffer = ATMOS_BOUNDARY_var(:,:,:,I_BND_RHOT) / ATMOS_BOUNDARY_var(:,:,:,I_BND_DENS)
-       call FILEIO_write( buffer, &
+       call FILEIO_write( ATMOS_BOUNDARY_var(:,:,:,I_BND_POTT), &
                           ATMOS_BOUNDARY_OUT_BASENAME, ATMOS_BOUNDARY_OUT_TITLE, &
                           'POTT', 'Reference PT', 'K', 'ZXY',                    &
                           ATMOS_BOUNDARY_OUT_DTYPE                               )
-       call FILEIO_write( ATMOS_BOUNDARY_alpha(:,:,:,I_BND_RHOT),                &
+       call FILEIO_write( ATMOS_BOUNDARY_alpha(:,:,:,I_BND_POTT),                &
                           ATMOS_BOUNDARY_OUT_BASENAME, ATMOS_BOUNDARY_OUT_TITLE, &
                           'ALPHA_POTT', 'Alpha for PT', '1', 'ZXY',              &
                           ATMOS_BOUNDARY_OUT_DTYPE                               )
@@ -696,9 +688,10 @@ contains
 
   !-----------------------------------------------------------------------------
   !> generate boundary data
-  subroutine ATMOS_BOUNDARY_generate( DENS )
+  subroutine ATMOS_BOUNDARY_generate
+    use scale_atmos_refstate, only: &
+         ATMOS_REFSTATE_dens
     implicit none
-    real(RP), intent(in) :: DENS(KA,IA,JA)
 
     integer :: i, j, k, iv
     !---------------------------------------------------------------------------
@@ -706,11 +699,11 @@ contains
     do j = 1, JA
     do i = 1, IA
     do k = 1, KA
-       ATMOS_BOUNDARY_var(k,i,j,I_BND_DENS) = DENS(k,i,j)
-       ATMOS_BOUNDARY_var(k,i,j,I_BND_MOMZ) = ATMOS_BOUNDARY_VALUE_VELZ * DENS(k,i,j)
-       ATMOS_BOUNDARY_var(k,i,j,I_BND_MOMY) = ATMOS_BOUNDARY_VALUE_VELY * DENS(k,i,j)
-       ATMOS_BOUNDARY_var(k,i,j,I_BND_MOMX) = ATMOS_BOUNDARY_VALUE_VELX * DENS(k,i,j)
-       ATMOS_BOUNDARY_var(k,i,j,I_BND_RHOT) = ATMOS_BOUNDARY_VALUE_POTT * DENS(k,i,j)
+       ATMOS_BOUNDARY_var(k,i,j,I_BND_DENS) = ATMOS_REFSTATE_DENS(k,i,j)
+       ATMOS_BOUNDARY_var(k,i,j,I_BND_VELZ) = ATMOS_BOUNDARY_VALUE_VELZ
+       ATMOS_BOUNDARY_var(k,i,j,I_BND_VELY) = ATMOS_BOUNDARY_VALUE_VELY
+       ATMOS_BOUNDARY_var(k,i,j,I_BND_VELX) = ATMOS_BOUNDARY_VALUE_VELX
+       ATMOS_BOUNDARY_var(k,i,j,I_BND_POTT) = ATMOS_BOUNDARY_VALUE_POTT
        ATMOS_BOUNDARY_var(k,i,j,I_BND_QV  ) = ATMOS_BOUNDARY_VALUE_QV
     enddo
     enddo
@@ -803,14 +796,11 @@ contains
     call FileRead( reference_atmos(:,:,:), bname, 'DENS', boundary_timestep, PRC_myrank )
     ATMOS_BOUNDARY_var_ref(KS:KE,IS:IE,JS:JE,I_BND_DENS,1) = reference_atmos(1:KMAX,1:IMAX,1:JMAX)
     call FileRead( reference_atmos(:,:,:), bname, 'VELX', boundary_timestep, PRC_myrank )
-    ATMOS_BOUNDARY_var_ref(KS:KE,IS:IE,JS:JE,I_BND_MOMX,1) = reference_atmos(1:KMAX,1:IMAX,1:JMAX) &
-         * ATMOS_BOUNDARY_var_ref(KS:KE,IS:IE,JS:JE,I_BND_DENS,1)
+    ATMOS_BOUNDARY_var_ref(KS:KE,IS:IE,JS:JE,I_BND_VELX,1) = reference_atmos(1:KMAX,1:IMAX,1:JMAX)
     call FileRead( reference_atmos(:,:,:), bname, 'VELY', boundary_timestep, PRC_myrank )
-    ATMOS_BOUNDARY_var_ref(KS:KE,IS:IE,JS:JE,I_BND_MOMY,1) = reference_atmos(1:KMAX,1:IMAX,1:JMAX) &
-         * ATMOS_BOUNDARY_var_ref(KS:KE,IS:IE,JS:JE,I_BND_DENS,1)
+    ATMOS_BOUNDARY_var_ref(KS:KE,IS:IE,JS:JE,I_BND_VELY,1) = reference_atmos(1:KMAX,1:IMAX,1:JMAX)
     call FileRead( reference_atmos(:,:,:), bname, 'POTT', boundary_timestep, PRC_myrank )
-    ATMOS_BOUNDARY_var_ref(KS:KE,IS:IE,JS:JE,I_BND_RHOT,1) = reference_atmos(1:KMAX,1:IMAX,1:JMAX) &
-         * ATMOS_BOUNDARY_var_ref(KS:KE,IS:IE,JS:JE,I_BND_DENS,1)
+    ATMOS_BOUNDARY_var_ref(KS:KE,IS:IE,JS:JE,I_BND_POTT,1) = reference_atmos(1:KMAX,1:IMAX,1:JMAX)
     call FileRead( reference_atmos(:,:,:), bname, 'QV',   boundary_timestep, PRC_myrank )
     ATMOS_BOUNDARY_var_ref(KS:KE,IS:IE,JS:JE,I_BND_QV  ,1) = reference_atmos(1:KMAX,1:IMAX,1:JMAX)
 
@@ -818,14 +808,11 @@ contains
     call FileRead( reference_atmos(:,:,:), bname, 'DENS', boundary_timestep, PRC_myrank )
     ATMOS_BOUNDARY_var_ref(KS:KE,IS:IE,JS:JE,I_BND_DENS,2) = reference_atmos(1:KMAX,1:IMAX,1:JMAX)
     call FileRead( reference_atmos(:,:,:), bname, 'VELX', boundary_timestep, PRC_myrank )
-    ATMOS_BOUNDARY_var_ref(KS:KE,IS:IE,JS:JE,I_BND_MOMX,2) = reference_atmos(1:KMAX,1:IMAX,1:JMAX) &
-         * ATMOS_BOUNDARY_var_ref(KS:KE,IS:IE,JS:JE,I_BND_DENS,2)
+    ATMOS_BOUNDARY_var_ref(KS:KE,IS:IE,JS:JE,I_BND_VELX,2) = reference_atmos(1:KMAX,1:IMAX,1:JMAX)
     call FileRead( reference_atmos(:,:,:), bname, 'VELY', boundary_timestep, PRC_myrank )
-    ATMOS_BOUNDARY_var_ref(KS:KE,IS:IE,JS:JE,I_BND_MOMY,2) = reference_atmos(1:KMAX,1:IMAX,1:JMAX) &
-         * ATMOS_BOUNDARY_var_ref(KS:KE,IS:IE,JS:JE,I_BND_DENS,2)
+    ATMOS_BOUNDARY_var_ref(KS:KE,IS:IE,JS:JE,I_BND_VELY,2) = reference_atmos(1:KMAX,1:IMAX,1:JMAX)
     call FileRead( reference_atmos(:,:,:), bname, 'POTT', boundary_timestep, PRC_myrank )
-    ATMOS_BOUNDARY_var_ref(KS:KE,IS:IE,JS:JE,I_BND_RHOT,2) = reference_atmos(1:KMAX,1:IMAX,1:JMAX) &
-         * ATMOS_BOUNDARY_var_ref(KS:KE,IS:IE,JS:JE,I_BND_DENS,2)
+    ATMOS_BOUNDARY_var_ref(KS:KE,IS:IE,JS:JE,I_BND_POTT,2) = reference_atmos(1:KMAX,1:IMAX,1:JMAX)
     call FileRead( reference_atmos(:,:,:), bname, 'QV',   boundary_timestep, PRC_myrank )
     ATMOS_BOUNDARY_var_ref(KS:KE,IS:IE,JS:JE,I_BND_QV  ,2) = reference_atmos(1:KMAX,1:IMAX,1:JMAX)
 
@@ -867,7 +854,7 @@ contains
 
     ! fill in gaps of the offset
     do iv = 1, I_BND_SIZE
-    if ( iv==I_BND_MOMZ ) cycle
+    if ( iv==I_BND_VELZ ) cycle
     do j  = 1, JA
     do i  = 1, IA
     do k  = 1, KA
@@ -878,7 +865,7 @@ contains
     enddo
 
     if ( ATMOS_BOUNDARY_USE_VELZ ) then
-       ATMOS_BOUNDARY_var(KS:KE,IS:IE,JS:JE,I_BND_MOMZ) = ATMOS_BOUNDARY_VALUE_VELZ * DENS(KS:KE,IS:IE,JS:JE)
+       ATMOS_BOUNDARY_var(KS:KE,IS:IE,JS:JE,I_BND_VELZ) = ATMOS_BOUNDARY_VALUE_VELZ
     end if
 
     last_updated = TIME_NOWDAYSEC - boundary_inc_offset
@@ -888,8 +875,7 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Update boundary value with a constant time increment
-  subroutine ATMOS_BOUNDARY_update( &
-       DENS )
+  subroutine ATMOS_BOUNDARY_update
     use scale_process, only: &
        PRC_MPIstop
     use scale_const, only: &
@@ -898,16 +884,11 @@ contains
        TIME_DTSEC, &
        TIME_NOWDAYSEC
     implicit none
-    real(RP), intent(in) :: DENS(KA,IA,JA)
 
     integer  :: i, j, k, iv
     !---------------------------------------------------------------------------
 
-    if ( ATMOS_BOUNDARY_TYPE == 'CONST' ) then
-
-       call ATMOS_BOUNDARY_generate( DENS )
-
-    else if ( ATMOS_BOUNDARY_TYPE == 'REAL' ) then
+    if ( ATMOS_BOUNDARY_TYPE == 'REAL' ) then
 
        integrated_sec = TIME_NOWDAYSEC - last_updated
 
@@ -917,7 +898,7 @@ contains
           call ATMOS_BOUNDARY_updatefile
 
           do iv = 1, I_BND_SIZE
-             if ( I_BND_SIZE == I_MOMZ ) cycle
+             if ( iv == I_BND_VELZ ) cycle
              do j  = 1, JA
              do i  = 1, IA
              do k  = 1, KA
@@ -930,12 +911,10 @@ contains
              enddo
           enddo
 
-          ATMOS_BOUNDARY_var(KS:KE,IS:IE,JS:JE,I_BND_MOMZ) = ATMOS_BOUNDARY_VALUE_VELZ * DENS(KS:KE,IS:IE,JS:JE)
-
           last_updated = last_updated + ATMOS_BOUNDARY_UPDATE_DT
        else
           do iv = 1, I_BND_SIZE
-          if ( iv==I_BND_MOMZ ) cycle
+          if ( iv==I_BND_VELZ ) cycle
           do j  = 1, JA
           do i  = 1, IA
           do k  = 1, KA
@@ -992,14 +971,11 @@ contains
     call FileRead( reference_atmos(:,:,:), bname, 'DENS', boundary_timestep, PRC_myrank )
     ATMOS_BOUNDARY_var_ref(KS:KE,IS:IE,JS:JE,I_BND_DENS,2) = reference_atmos(1:KMAX,1:IMAX,1:JMAX)
     call FileRead( reference_atmos(:,:,:), bname, 'VELX', boundary_timestep, PRC_myrank )
-    ATMOS_BOUNDARY_var_ref(KS:KE,IS:IE,JS:JE,I_BND_MOMX,2) = reference_atmos(1:KMAX,1:IMAX,1:JMAX) &
-         * ATMOS_BOUNDARY_var_ref(KS:KE,IS:IE,JS:JE,I_BND_DENS,2)
+    ATMOS_BOUNDARY_var_ref(KS:KE,IS:IE,JS:JE,I_BND_VELX,2) = reference_atmos(1:KMAX,1:IMAX,1:JMAX)
     call FileRead( reference_atmos(:,:,:), bname, 'VELY', boundary_timestep, PRC_myrank )
-    ATMOS_BOUNDARY_var_ref(KS:KE,IS:IE,JS:JE,I_BND_MOMY,2) = reference_atmos(1:KMAX,1:IMAX,1:JMAX) &
-         * ATMOS_BOUNDARY_var_ref(KS:KE,IS:IE,JS:JE,I_BND_DENS,2)
+    ATMOS_BOUNDARY_var_ref(KS:KE,IS:IE,JS:JE,I_BND_VELY,2) = reference_atmos(1:KMAX,1:IMAX,1:JMAX)
     call FileRead( reference_atmos(:,:,:), bname, 'POTT', boundary_timestep, PRC_myrank )
-    ATMOS_BOUNDARY_var_ref(KS:KE,IS:IE,JS:JE,I_BND_RHOT,2) = reference_atmos(1:KMAX,1:IMAX,1:JMAX) &
-         * ATMOS_BOUNDARY_var_ref(KS:KE,IS:IE,JS:JE,I_BND_DENS,2)
+    ATMOS_BOUNDARY_var_ref(KS:KE,IS:IE,JS:JE,I_BND_POTT,2) = reference_atmos(1:KMAX,1:IMAX,1:JMAX)
     call FileRead( reference_atmos(:,:,:), bname, 'QV',   boundary_timestep, PRC_myrank )
     ATMOS_BOUNDARY_var_ref(KS:KE,IS:IE,JS:JE,I_BND_QV  ,2) = reference_atmos(1:KMAX,1:IMAX,1:JMAX)
 
