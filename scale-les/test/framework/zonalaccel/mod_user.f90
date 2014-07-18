@@ -122,11 +122,8 @@ contains
     do i = IS, IE
     do k = KS, KE
        ATMOS_BOUNDARY_var(k,i,j,I_BND_DENS) = DENS_INIT(k)
-       ATMOS_BOUNDARY_var(k,i,j,I_BND_VELZ) = 0.0_RP
        ATMOS_BOUNDARY_var(k,i,j,I_BND_VELX) = UINIT
-       ATMOS_BOUNDARY_var(k,i,j,I_BND_VELY) = 0.0_RP
        ATMOS_BOUNDARY_var(k,i,j,I_BND_POTT) = POTT_INIT(k)
-       ATMOS_BOUNDARY_var(k,i,j,I_BND_QV  ) = 0.0_RP
     enddo
     enddo
     enddo
