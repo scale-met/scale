@@ -200,13 +200,15 @@ contains
   subroutine OCEAN_vars_restart_read
     use scale_fileio, only: &
        FILEIO_read
+    use mod_ocean_admin, only: &
+       OCEAN_sw
     implicit none
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** Input restart file (OCEAN) ***'
 
-    if ( OCEAN_RESTART_IN_BASENAME /= '' ) then
+    if ( OCEAN_sw .and. OCEAN_RESTART_IN_BASENAME /= '' ) then
        if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(OCEAN_RESTART_IN_BASENAME)
 
        call FILEIO_read( OCEAN_TEMP(:,:),                                                   & ! [OUT]
@@ -237,6 +239,8 @@ contains
        TIME_gettimelabel
     use scale_fileio, only: &
        FILEIO_write
+    use mod_ocean_admin, only: &
+       OCEAN_sw
     use mod_cpl_admin, only: &
        CPL_sw_AtmOcn
     use mod_cpl_vars, only: &
@@ -247,7 +251,7 @@ contains
     character(len=H_LONG) :: basename
     !---------------------------------------------------------------------------
 
-    if ( OCEAN_RESTART_OUT_BASENAME /= '' ) then
+    if ( OCEAN_sw .and. OCEAN_RESTART_OUT_BASENAME /= '' ) then
 
        if ( CPL_sw_AtmOcn ) then
           call CPL_getOcn_restart( OCEAN_SFC_TEMP  (:,:),   & ! [OUT]

@@ -447,6 +447,8 @@ contains
   subroutine URBAN_vars_restart_read
     use scale_fileio, only: &
        FILEIO_read
+    use mod_urban_admin, only: &
+       URBAN_sw
     implicit none
 
     integer :: i, j, v
@@ -455,7 +457,7 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** Input restart file (URBAN) ***'
 
-    if ( URBAN_RESTART_IN_BASENAME /= '' ) then
+    if ( URBAN_sw .and. URBAN_RESTART_IN_BASENAME /= '' ) then
        if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(URBAN_RESTART_IN_BASENAME)
 
        call FILEIO_read( TR_URB(:,:),                                      & ! [OUT]
@@ -508,13 +510,15 @@ contains
        TIME_gettimelabel
     use scale_fileio, only: &
        FILEIO_write
+    use mod_urban_admin, only: &
+       URBAN_sw
     implicit none
 
     character(len=15)     :: timelabel
     character(len=H_LONG) :: basename
     !---------------------------------------------------------------------------
 
-    if ( URBAN_RESTART_OUT_BASENAME /= '' ) then
+    if ( URBAN_sw .and. URBAN_RESTART_OUT_BASENAME /= '' ) then
 
        call TIME_gettimelabel( timelabel )
        write(basename,'(A,A,A)') trim(URBAN_RESTART_OUT_BASENAME), '_', trim(timelabel)
