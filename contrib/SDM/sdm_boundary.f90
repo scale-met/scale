@@ -15,6 +15,7 @@
 !! @par History
 !! @li      2014-07-11 (S.Shima) [new] Separated from scale_atmos_phy_mp_sdm.F90
 !! @li      2014-07-18 (Y.Sato)  [mod] Modify the output message in sdm_boundary
+!! @li      2014-07-18 (Y.Sato)  [mod] Modify a bug in sdm_getbufsy
 !!
 !<
 !-------------------------------------------------------------------------------
@@ -1087,8 +1088,8 @@ contains
              n = ilist(m)
 
              sd_n(n)    = floor(rbufy(m,1,1),kind=DP)
-             sd_x(n)    = rbufy(m,2,1)+GRID_FY(JE)
-             sd_y(n)    = rbufy(m,3,1)
+             sd_x(n)    = rbufy(m,2,1)
+             sd_y(n)    = rbufy(m,3,1)+GRID_FY(JE)
              sd_rk(n)   = rbufy(m,4,1)
              sd_u(n)    = rbufy(m,5,1)
              sd_v(n)    = rbufy(m,6,1)
