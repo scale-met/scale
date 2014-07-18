@@ -79,14 +79,24 @@ program scaleles_init
 
   use mod_admin_restart, only: &
      ADMIN_restart_setup
+  use mod_atmos_admin, only: &
+     ATMOS_admin_setup
   use mod_atmos_vars, only: &
      ATMOS_vars_setup
+  use mod_ocean_admin, only: &
+     OCEAN_admin_setup
   use mod_ocean_vars, only: &
      OCEAN_vars_setup
+  use mod_land_admin, only: &
+     LAND_admin_setup
   use mod_land_vars, only: &
      LAND_vars_setup
+  use mod_urban_admin, only: &
+     URBAN_admin_setup
   use mod_urban_vars, only: &
      URBAN_vars_setup
+  use mod_cpl_admin, only: &
+     CPL_admin_setup
   use mod_cpl_vars, only: &
      CPL_vars_setup
   use mod_mktopo, only: &
@@ -181,6 +191,13 @@ program scaleles_init
   call ATMOS_HYDROSTATIC_setup
   call ATMOS_THERMODYN_setup
   call ATMOS_SATURATION_setup
+
+  ! setup submodel administrator
+  call ATMOS_admin_setup
+  call OCEAN_admin_setup
+  call LAND_admin_setup
+  call URBAN_admin_setup
+  call CPL_admin_setup
 
   ! setup variable container
   call ATMOS_vars_setup

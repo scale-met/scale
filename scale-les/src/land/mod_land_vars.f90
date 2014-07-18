@@ -291,13 +291,15 @@ contains
   subroutine LAND_vars_restart_read
     use scale_fileio, only: &
        FILEIO_read
+    use mod_land_admin, only: &
+       LAND_sw
     implicit none
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** Input restart file (LAND) ***'
 
-    if ( LAND_RESTART_IN_BASENAME /= '' ) then
+    if ( LAND_sw .and. LAND_RESTART_IN_BASENAME /= '' ) then
        if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(LAND_RESTART_IN_BASENAME)
 
        call FILEIO_read( LAND_TEMP (:,:,:),                                                & ! [OUT]
@@ -328,6 +330,8 @@ contains
        TIME_gettimelabel
     use scale_fileio, only: &
        FILEIO_write
+    use mod_land_admin, only: &
+       LAND_sw
     use mod_cpl_admin, only: &
        CPL_sw_AtmLnd
     use mod_cpl_vars, only: &
@@ -338,7 +342,7 @@ contains
     character(len=H_LONG) :: basename
     !---------------------------------------------------------------------------
 
-    if ( LAND_RESTART_OUT_BASENAME /= '' ) then
+    if ( LAND_sw .and. LAND_RESTART_OUT_BASENAME /= '' ) then
 
        if ( CPL_sw_AtmLnd ) then
           call CPL_getLnd_restart( LAND_SFC_TEMP  (:,:),  & ! [OUT]
