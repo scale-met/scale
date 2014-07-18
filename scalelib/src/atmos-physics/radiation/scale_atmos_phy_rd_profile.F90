@@ -576,20 +576,20 @@ contains
           date(:) = now_date(:)
        endif
 
-       call PROFILE_read_climatology( kmax,     & ! [IN]
-                                      ngas,     & ! [IN]
-                                      ncfc,     & ! [IN]
-                                      naero,    & ! [IN]
-                                      lat,      & ! [IN], tentative treatment
-                                      now_date, & ! [IN]
-                                      zh,       & ! [IN]
-                                      z,        & ! [IN]
-                                      pres,     & ! [OUT]
-                                      presh,    & ! [OUT]
-                                      temp,     & ! [OUT]
-                                      temph,    & ! [OUT]
-                                      gas,      & ! [OUT]
-                                      cfc       ) ! [OUT]
+       call PROFILE_read_climatology( kmax,  & ! [IN]
+                                      ngas,  & ! [IN]
+                                      ncfc,  & ! [IN]
+                                      naero, & ! [IN]
+                                      lat,   & ! [IN], tentative treatment
+                                      date,  & ! [IN]
+                                      zh,    & ! [IN]
+                                      z,     & ! [IN]
+                                      pres,  & ! [OUT]
+                                      presh, & ! [OUT]
+                                      temp,  & ! [OUT]
+                                      temph, & ! [OUT]
+                                      gas,   & ! [OUT]
+                                      cfc    ) ! [OUT]
 
     else
 
