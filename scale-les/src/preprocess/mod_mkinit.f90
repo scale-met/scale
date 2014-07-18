@@ -3890,7 +3890,6 @@ enddo
        URB_GRND_LAYER_TEMP
 
     integer :: ierr
-    integer :: i, j
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -4090,7 +4089,7 @@ enddo
     integer :: timelen = 1
     integer :: ierr
 
-    integer :: k, i, j, iq, n, ns, ne, l, ll
+    integer :: k, i, j, iq, n, ns, ne
     logical :: initial_loop
     !---------------------------------------------------------------------------
 

@@ -109,8 +109,6 @@ contains
     use mod_cnvlanduse, only: &
        CNVLANDUSE
     implicit none
-
-    integer :: i, j
     !---------------------------------------------------------------------------
 
     if ( CONVERT_TYPE == I_IGNORE ) then

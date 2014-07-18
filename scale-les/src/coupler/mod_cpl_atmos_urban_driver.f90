@@ -109,7 +109,6 @@ contains
        ATM_V      => CPL_fromAtm_ATM_V,      &
        ATM_W      => CPL_fromAtm_ATM_W,      &
        ATM_TEMP   => CPL_fromAtm_ATM_TEMP,   &
-       ATM_PRES   => CPL_fromAtm_ATM_PRES,   &
        ATM_QV     => CPL_fromAtm_ATM_QV,     &
        SFC_PRES   => CPL_fromAtm_SFC_PRES,   &
        FLX_precip => CPL_fromAtm_FLX_precip, &
@@ -164,7 +163,7 @@ contains
        RAINB_URB, &
        RAING_URB, &
        ROFF_URB,  &
-       Rngrd_URB 
+       Rngrd_URB
 
     implicit none
 
@@ -197,7 +196,7 @@ contains
       if( is_FLX(i,j) ) then
 
         Uabs = max( sqrt( ATM_U(i,j)**2 + ATM_V(i,j)**2 + ATM_W(i,j)**2 ), 0.1_RP)
-     
+
         call CPL_AtmUrb( TR_URB      (i,j),   & ! [INOUT]
                          TB_URB      (i,j),   & ! [INOUT]
                          TG_URB      (i,j),   & ! [INOUT]
@@ -250,7 +249,7 @@ contains
                          LON         (i,j),   & ! [IN]
                          LAT         (i,j)    ) ! [IN]
       else
-          ! not calculate surface flux                                                             
+          ! not calculate surface flux
           TS_URB      (i,j) =  SFC_TEMP(i,j)
           SHR_URB     (i,j) = 0.0_RP
           SHB_URB     (i,j) = 0.0_RP

@@ -104,8 +104,6 @@ contains
     use scale_landuse, only: &
        LANDUSE_write
     implicit none
-
-    integer :: i, j
     !---------------------------------------------------------------------------
 
     if ( CNVLANDUSE_TYPE == I_IGNORE ) then
@@ -141,14 +139,6 @@ contains
   subroutine CNVLANDUSE_USGS
     use scale_process, only: &
        PRC_MPIstop
-    use scale_landuse, only: &
-       LANDUSE_frac_land,  &
-       LANDUSE_frac_lake,  &
-       LANDUSE_frac_urban, &
-       LANDUSE_frac_PFT,   &
-       LANDUSE_index_PFT,  &
-       LANDUSE_PFT_mosaic, &
-       LANDUSE_PFT_nmax
     implicit none
 
     character(len=H_LONG) :: LANDUSE_USGS_IN_CATALOGUE = ''      !< metadata files for USGS
@@ -159,7 +149,6 @@ contains
        LANDUSE_USGS_IN_DIR
 
     integer :: ierr
-    integer :: i, j
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)

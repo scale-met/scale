@@ -376,8 +376,6 @@ contains
   !-----------------------------------------------------------------------------
   !> Set surface boundary condition (ATM->CPL)
   subroutine ATMOS_SURFACE_SET( setup )
-    use scale_const, only: &
-       RovCP => CONST_RovCP
     use scale_topography, only: &
        TOPO_Zsfc
     use scale_comm, only: &
@@ -415,7 +413,6 @@ contains
 
     ! works
     real(RP) :: ATM_PBL (IA,JA)
-    real(RP) :: SFC_TEMP(IA,JA)
     !---------------------------------------------------------------------------
 
     ! update surface density, surface pressure

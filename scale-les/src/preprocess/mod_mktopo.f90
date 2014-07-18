@@ -114,13 +114,9 @@ contains
   !-----------------------------------------------------------------------------
   !> Driver
   subroutine MKTOPO
-    use scale_const, only: &
-       CONST_UNDEF8
     use scale_topography, only: &
        TOPO_write
     implicit none
-
-    integer :: i, j
     !---------------------------------------------------------------------------
 
     if ( MKTOPO_TYPE == I_IGNORE ) then

@@ -247,8 +247,6 @@ contains
        STAT_total
     implicit none
 
-    character(len=H_SHORT) :: TRC_NAME
-
     real(RP) :: total
     !---------------------------------------------------------------------------
 

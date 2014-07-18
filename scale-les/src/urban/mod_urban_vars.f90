@@ -450,8 +450,6 @@ contains
     use mod_urban_admin, only: &
        URBAN_sw
     implicit none
-
-    integer :: i, j, v
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
