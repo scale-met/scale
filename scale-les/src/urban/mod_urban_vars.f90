@@ -448,8 +448,6 @@ contains
     use scale_fileio, only: &
        FILEIO_read
     implicit none
-
-    integer :: i, j, v
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)

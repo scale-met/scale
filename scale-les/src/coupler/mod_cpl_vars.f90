@@ -185,9 +185,6 @@ contains
     use scale_const, only: &
        UNDEF => CONST_UNDEF
     implicit none
-
-    integer :: ierr
-    integer :: ip
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -393,12 +390,12 @@ contains
 
     CPL_Merged_SFC_albedo(:,:,I_LW) = fact_ocean(:,:) * CPL_fromOcn_SFC_albedo(:,:,I_LW) &
                                     + fact_land (:,:) * CPL_fromLnd_SFC_albedo(:,:,I_LW) &
-                                    + fact_urban(:,:) * CPL_fromUrb_SFC_albedo(:,:,I_LW)  
+                                    + fact_urban(:,:) * CPL_fromUrb_SFC_albedo(:,:,I_LW)
     !                                + fact_urban(:,:) * CPL_fromLnd_SFC_albedo(:,:,I_LW)  ! tentative
 
     CPL_Merged_SFC_albedo(:,:,I_SW) = fact_ocean(:,:) * CPL_fromOcn_SFC_albedo(:,:,I_SW) &
                                     + fact_land (:,:) * CPL_fromLnd_SFC_albedo(:,:,I_SW) &
-                                    + fact_urban(:,:) * CPL_fromUrb_SFC_albedo(:,:,I_SW) 
+                                    + fact_urban(:,:) * CPL_fromUrb_SFC_albedo(:,:,I_SW)
     !                                + fact_urban(:,:) * CPL_fromLnd_SFC_albedo(:,:,I_SW)  ! tentative
 
     CPL_Merged_FLX_MW(:,:) = fact_ocean(:,:) * CPL_AtmOcn_ATM_FLX_MW  (:,:) &
@@ -431,22 +428,22 @@ contains
 
     CPL_Merged_U10   (:,:) = fact_ocean(:,:) * CPL_AtmOcn_ATM_U10     (:,:) &
                            + fact_land (:,:) * CPL_AtmLnd_ATM_U10     (:,:) &
-                           + fact_urban(:,:) * CPL_AtmUrb_ATM_U10     (:,:) 
+                           + fact_urban(:,:) * CPL_AtmUrb_ATM_U10     (:,:)
     !                       + fact_urban(:,:) * CPL_AtmLnd_ATM_U10     (:,:) ! tentative
 
     CPL_Merged_V10   (:,:) = fact_ocean(:,:) * CPL_AtmOcn_ATM_V10     (:,:) &
                            + fact_land (:,:) * CPL_AtmLnd_ATM_V10     (:,:) &
-                           + fact_urban(:,:) * CPL_AtmUrb_ATM_V10     (:,:) 
+                           + fact_urban(:,:) * CPL_AtmUrb_ATM_V10     (:,:)
     !                       + fact_urban(:,:) * CPL_AtmLnd_ATM_V10     (:,:) ! tentative
 
     CPL_Merged_T2    (:,:) = fact_ocean(:,:) * CPL_AtmOcn_ATM_T2      (:,:) &
                            + fact_land (:,:) * CPL_AtmLnd_ATM_T2      (:,:) &
-                           + fact_urban(:,:) * CPL_AtmUrb_ATM_T2     (:,:) 
+                           + fact_urban(:,:) * CPL_AtmUrb_ATM_T2     (:,:)
     !                       + fact_urban(:,:) * CPL_AtmLnd_ATM_T2      (:,:) ! tentative
 
     CPL_Merged_Q2    (:,:) = fact_ocean(:,:) * CPL_AtmOcn_ATM_Q2      (:,:) &
                            + fact_land (:,:) * CPL_AtmLnd_ATM_Q2      (:,:) &
-                           + fact_urban(:,:) * CPL_AtmUrb_ATM_Q2      (:,:) 
+                           + fact_urban(:,:) * CPL_AtmUrb_ATM_Q2      (:,:)
     !                       + fact_urban(:,:) * CPL_AtmLnd_ATM_Q2      (:,:) ! tentative
 
     CPL_Merged_FLX_heat(:,:) = fact_ocean(:,:) * CPL_AtmOcn_OCN_FLX_heat(:,:) &

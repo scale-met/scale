@@ -194,8 +194,6 @@ contains
 
     character(len=15)     :: timelabel
     character(len=H_LONG) :: basename
-
-    integer :: n
     !---------------------------------------------------------------------------
 
     if ( ATMOS_DYN_RESTART_OUT_BASENAME /= '' ) then

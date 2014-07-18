@@ -692,16 +692,12 @@ contains
     use scale_process, only: &
        PRC_MPIstop
     use scale_const, only: &
-       GRAV  => CONST_GRAV, &
-       CVdry => CONST_CVdry
-    use scale_grid_real, only: &
-       REAL_CZ
+       GRAV  => CONST_GRAV
     use scale_fileio, only: &
        FILEIO_read
     use scale_atmos_thermodyn, only: &
        THERMODYN_qd        => ATMOS_THERMODYN_qd,        &
-       THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres, &
-       CVw                 => AQ_CV
+       THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres
     use mod_atmos_admin, only: &
        ATMOS_USE_AVERAGE, &
        ATMOS_sw_dyn,      &
@@ -730,22 +726,7 @@ contains
        ATMOS_PHY_CP_vars_restart_read
     implicit none
 
-    real(RP) :: W(KA,IA,JA) ! velocity w at cell center [m/s]
-    real(RP) :: U(KA,IA,JA) ! velocity u at cell center [m/s]
-    real(RP) :: V(KA,IA,JA) ! velocity v at cell center [m/s]
-
-    real(RP) :: QDRY(KA,IA,JA) ! dry air     [kg/kg]
-    real(RP) :: PRES(KA,IA,JA) ! pressure    [Pa]
-    real(RP) :: TEMP(KA,IA,JA) ! temperature [K]
-
-    real(RP) :: ENGT(KA,IA,JA) ! total     energy [J/m3]
-    real(RP) :: ENGP(KA,IA,JA) ! potential energy [J/m3]
-    real(RP) :: ENGK(KA,IA,JA) ! kinetic   energy [J/m3]
-    real(RP) :: ENGI(KA,IA,JA) ! internal  energy [J/m3]
-
-    real(RP) :: RHOQ(KA,IA,JA)
-
-    integer :: i, j, k, iq
+    integer  :: iq
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -1083,7 +1064,6 @@ contains
     real(RP) :: ENGK  (KA,IA,JA) ! kinetic   energy [J/m3]
     real(RP) :: ENGI  (KA,IA,JA) ! internal  energy [J/m3]
 
-    real(RP) :: RHOQ  (KA,IA,JA)
     real(RP) :: QSAT  (KA,IA,JA)
     real(RP) :: UH    (KA,IA,JA)
     real(RP) :: VH    (KA,IA,JA)
@@ -1708,57 +1688,14 @@ contains
   !-----------------------------------------------------------------------------
   !> Calc diagnostic variables
   subroutine ATMOS_vars_diagnostics
-    use scale_const, only: &
-       GRAV   => CONST_GRAV,   &
-       CVdry  => CONST_CVdry
-    use scale_grid_real, only: &
-       REAL_CZ
     use scale_comm, only: &
        COMM_vars8, &
        COMM_wait
-    use scale_statistics, only: &
-       STATISTICS_checktotal, &
-       STAT_total
-    use scale_monitor, only: &
-       MONIT_put, &
-       MONIT_in
     use scale_atmos_thermodyn, only: &
-       THERMODYN_qd        => ATMOS_THERMODYN_qd,        &
-       THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres, &
-       CVw => AQ_CV
-    use mod_atmos_phy_mp_vars, only: &
-       SFLX_rain => ATMOS_PHY_MP_SFLX_rain, &
-       SFLX_snow => ATMOS_PHY_MP_SFLX_snow
-    use mod_atmos_phy_rd_vars, only: &
-       SFLX_LW_up   => ATMOS_PHY_RD_SFLX_LW_up,   &
-       SFLX_LW_dn   => ATMOS_PHY_RD_SFLX_LW_dn,   &
-       SFLX_SW_up   => ATMOS_PHY_RD_SFLX_SW_up,   &
-       SFLX_SW_dn   => ATMOS_PHY_RD_SFLX_SW_dn,   &
-       TOAFLX_LW_up => ATMOS_PHY_RD_TOAFLX_LW_up, &
-       TOAFLX_LW_dn => ATMOS_PHY_RD_TOAFLX_LW_dn, &
-       TOAFLX_SW_up => ATMOS_PHY_RD_TOAFLX_SW_up, &
-       TOAFLX_SW_dn => ATMOS_PHY_RD_TOAFLX_SW_dn
-    use mod_atmos_phy_sf_vars, only: &
-       SFLX_SH   => ATMOS_PHY_SF_SFLX_SH, &
-       SFLX_LH   => ATMOS_PHY_SF_SFLX_LH, &
-       SFLX_QTRC => ATMOS_PHY_SF_SFLX_QTRC
+       THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres
     implicit none
 
-    real(RP) :: QDRY(KA,IA,JA) ! dry air         [kg/kg]
-    real(RP) :: RHOQ(KA,IA,JA) ! DENS * tracer   [kg/m3]
-    real(RP) :: PRCP(IA,JA)    ! rain + snow     [kg/m2/s]
-
-    real(RP) :: ENGT(KA,IA,JA) ! total     energy [J/m3]
-    real(RP) :: ENGP(KA,IA,JA) ! potential energy [J/m3]
-    real(RP) :: ENGK(KA,IA,JA) ! kinetic   energy [J/m3]
-    real(RP) :: ENGI(KA,IA,JA) ! internal  energy [J/m3]
-
-    real(RP) :: ENGFLXT      (IA,JA) ! total flux             [J/m2/s]
-    real(RP) :: SFLX_RD_net  (IA,JA) ! net SFC radiation flux [J/m2/s]
-    real(RP) :: TOAFLX_RD_net(IA,JA) ! net TOA radiation flux [J/m2/s]
-
-    real(RP) :: total ! dummy
-    integer  :: k, i, j, iq
+    integer  :: k, i, j
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Calc diagnostics'
@@ -1879,7 +1816,6 @@ contains
     real(RP)               :: WORK (KA,IA,JA,3)
     character(len=H_SHORT) :: WNAME(3)
 
-    real(RP) :: total ! dummy
     integer  :: k, i, j, iq
     !---------------------------------------------------------------------------
 

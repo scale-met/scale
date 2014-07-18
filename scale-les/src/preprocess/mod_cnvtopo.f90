@@ -61,7 +61,6 @@ contains
     use scale_process, only: &
        PRC_MPIstop
     use scale_const, only: &
-       UNDEF => CONST_UNDEF, &
        D2R   => CONST_D2R
     use scale_grid, only: &
        GRID_CDZ, &
@@ -79,8 +78,7 @@ contains
     real(RP) :: minslope, DZDX, DZDY
 
     integer :: ierr
-    integer :: k, i, j
-    !---------------------------------------------------------------------------
+    integer :: k
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -135,8 +133,6 @@ contains
     use scale_topography, only: &
        TOPO_write
     implicit none
-
-    integer :: i, j
     !---------------------------------------------------------------------------
 
     if ( CNVTOPO_TYPE == I_IGNORE ) then
@@ -177,8 +173,6 @@ contains
   subroutine CNVTOPO_GTOPO30
     use scale_process, only: &
        PRC_MPIstop
-    use scale_topography, only: &
-       TOPO_Zsfc
     implicit none
 
     character(len=H_LONG) :: TOPO_GTOPO30_IN_CATALOGUE = ''      !< metadata files for GTOPO30
@@ -189,7 +183,6 @@ contains
        TOPO_GTOPO30_IN_DIR
 
     integer :: ierr
-    integer :: i, j
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -526,7 +519,7 @@ contains
     integer,parameter :: itelim = 100
 
     integer :: ite
-    integer :: k, i, j
+    integer :: i, j
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)

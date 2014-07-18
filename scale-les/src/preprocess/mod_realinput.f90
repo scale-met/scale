@@ -522,7 +522,7 @@ contains
     real(RP) :: strg(LKMAX,IA,JA)
     real(RP) :: roff(IA,JA)
     real(RP) :: qvef(IA,JA)
-    real(RP) :: tw(IA,JA) 
+    real(RP) :: tw(IA,JA)
     real(RP) :: lst(IA,JA)
     real(RP) :: ust(IA,JA)
     real(RP) :: sst(IA,JA)
@@ -886,10 +886,10 @@ contains
     if( do_read ) then
        call ExternalFileRead( dummy_4D(:,:,:,:),                             &
                       BASENAME, "P",  ts, te, myrank, mdlid, single=.true. )
-       p_org(:,:,:,:) = dummy_4D(:,:,:,:)
+       p_org(:,:,:,:) = real(dummy_4D(:,:,:,:),kind=RP)
        call ExternalFileRead( dummy_4D(:,:,:,:),                         &
                       BASENAME, "PB", ts, te, myrank, mdlid, single=.true. )
-       pbase_org(:,:,:,:) = dummy_4D(:,:,:,:)
+       pbase_org(:,:,:,:) = real(dummy_4D(:,:,:,:),kind=RP)
     endif
 
     if ( wrfout ) then
@@ -900,7 +900,7 @@ contains
     if( do_read ) then
        call ExternalFileRead( dummy_4D(:,:,:,:),                          &
                       BASENAME, varname_wrf,  ts, te, myrank, mdlid, single=.true. )
-       pott_org(:,:,:,:) = dummy_4D(:,:,:,:)
+       pott_org(:,:,:,:) = real(dummy_4D(:,:,:,:),kind=RP)
     endif
     deallocate( dummy_4D )
 
@@ -913,7 +913,7 @@ contains
     if( do_read ) then
        call ExternalFileRead( dummy_4D(:,:,:,:),                             &
                       BASENAME, varname_wrf,  ts, te, myrank, mdlid, single=.true., zstag=.true. )
-       w_org(:,:,:,:) = dummy_4D(:,:,:,:)
+       w_org(:,:,:,:) = real(dummy_4D(:,:,:,:),kind=RP)
     endif
     deallocate( dummy_4D )
     allocate( dummy_4D(dims(1),dims(5),dims(3),te) )
@@ -925,7 +925,7 @@ contains
     if( do_read ) then
        call ExternalFileRead( dummy_4D(:,:,:,:),                             &
                       BASENAME, varname_wrf,  ts, te, myrank, mdlid, single=.true., xstag=.true. )
-       u_org(:,:,:,:) = dummy_4D(:,:,:,:)
+       u_org(:,:,:,:) = real(dummy_4D(:,:,:,:),kind=RP)
     endif
     deallocate( dummy_4D )
     allocate( dummy_4D(dims(1),dims(2),dims(6),te) )
@@ -937,7 +937,7 @@ contains
     if( do_read ) then
        call ExternalFileRead( dummy_4D(:,:,:,:),                             &
                       BASENAME, varname_wrf,  ts, te, myrank, mdlid, single=.true., ystag=.true. )
-       v_org(:,:,:,:) = dummy_4D(:,:,:,:)
+       v_org(:,:,:,:) = real(dummy_4D(:,:,:,:),kind=RP)
     endif
     deallocate( dummy_4D )
 
@@ -978,7 +978,7 @@ contains
        iq_all = I_NG
     endif
 
-    qtrc_org(:,:,:,:,:) = dummy_5D(:,:,:,:,:)
+    qtrc_org(:,:,:,:,:) = real(dummy_5D(:,:,:,:,:),kind=RP)
     deallocate( dummy_5D )
 
 
@@ -987,30 +987,30 @@ contains
     if( do_read ) then
        call ExternalFileRead( dummy_3D(:,:,:),                             &
                       BASENAME, "XLAT",    ts, te, myrank, mdlid, single=.true. )
-       lat_org(:,:,:) = dummy_3D(:,:,:) * d2r
+       lat_org(:,:,:) = real(dummy_3D(:,:,:),kind=RP) * d2r
        call ExternalFileRead( dummy_3D(:,:,:),                             &
                       BASENAME, "XLONG",   ts, te, myrank, mdlid, single=.true. )
-       lon_org(:,:,:) = dummy_3D(:,:,:) * d2r
+       lon_org(:,:,:) = real(dummy_3D(:,:,:),kind=RP) * d2r
     endif
     deallocate( dummy_3D )
     allocate( dummy_3D(dims(5),dims(3),te) )
     if( do_read ) then
        call ExternalFileRead( dummy_3D(:,:,:),                             &
                       BASENAME, "XLAT_U",  ts, te, myrank, mdlid, single=.true., xstag=.true. )
-       latu_org(:,:,:) = dummy_3D(:,:,:) * d2r
+       latu_org(:,:,:) = real(dummy_3D(:,:,:),kind=RP) * d2r
        call ExternalFileRead( dummy_3D(:,:,:),                             &
                       BASENAME, "XLONG_U", ts, te, myrank, mdlid, single=.true., xstag=.true. )
-       lonu_org(:,:,:) = dummy_3D(:,:,:) * d2r
+       lonu_org(:,:,:) = real(dummy_3D(:,:,:),kind=RP) * d2r
     endif
     deallocate( dummy_3D )
     allocate( dummy_3D(dims(2),dims(6),te) )
     if( do_read ) then
     call ExternalFileRead( dummy_3D(:,:,:),                             &
                    BASENAME, "XLAT_V",  ts, te, myrank, mdlid, single=.true., ystag=.true. )
-    latv_org(:,:,:) = dummy_3D(:,:,:) * d2r
+    latv_org(:,:,:) = real(dummy_3D(:,:,:),kind=RP) * d2r
     call ExternalFileRead( dummy_3D(:,:,:),                             &
                    BASENAME, "XLONG_V", ts, te, myrank, mdlid, single=.true., ystag=.true. )
-    lonv_org(:,:,:) = dummy_3D(:,:,:) * d2r
+    lonv_org(:,:,:) = real(dummy_3D(:,:,:),kind=RP) * d2r
     endif
     deallocate( dummy_3D )
 
@@ -1018,7 +1018,7 @@ contains
     if( do_read ) then
        call ExternalFileRead( dummy_4D(:,:,:,:),                           &
                       BASENAME, "PHB", ts, te, myrank, mdlid, single=.true., zstag=.true. )
-       geof_org(:,:,:,:) = dummy_4D(:,:,:,:)
+       geof_org(:,:,:,:) = real(dummy_4D(:,:,:,:),kind=RP)
        call ExternalFileRead( dummy_4D(:,:,:,:),                           &
                       BASENAME, "PH",  ts, te, myrank, mdlid, single=.true., zstag=.true. )
        geof_org(:,:,:,:) = geof_org(:,:,:,:) + dummy_4D(:,:,:,:)
@@ -1029,10 +1029,10 @@ contains
     if( do_read ) then
        call ExternalFileRead( dummy_3D(:,:,:),                           &
                       BASENAME, "PSFC", ts, te, myrank, mdlid, single=.true. )
-       psfc_org(:,:,:) = dummy_3D(:,:,:)
+       psfc_org(:,:,:) = real(dummy_3D(:,:,:),kind=RP)
        call ExternalFileRead( dummy_3D(:,:,:),                           &
                       BASENAME, "TH2",  ts, te, myrank, mdlid, single=.true. )
-       th2m_org(:,:,:) = dummy_3D(:,:,:)
+       th2m_org(:,:,:) = real(dummy_3D(:,:,:),kind=RP)
     endif
     deallocate( dummy_3D )
 
@@ -1254,22 +1254,22 @@ contains
     if( do_read ) then
        call ExternalFileRead( dummy_3D(:,:,:),                             &
                       BASENAME, "XLAT",    1, tcount, myrank, mdlid, single=.true. )
-       lat_org(:,:,:) = dummy_3D(:,:,:) * d2r
+       lat_org(:,:,:) = real(dummy_3D(:,:,:),kind=RP) * d2r
        call ExternalFileRead( dummy_3D(:,:,:),                             &
                       BASENAME, "XLONG",   1, tcount, myrank, mdlid, single=.true. )
-       lon_org(:,:,:) = dummy_3D(:,:,:) * d2r
+       lon_org(:,:,:) = real(dummy_3D(:,:,:),kind=RP) * d2r
        call ExternalFileRead( dummy_2D(:,:),                               &
                       BASENAME, "ZS",      1, tcount, myrank, mdlid, dims(7), single=.true. )
        do n = 1, tcount
        do j = 1, dims(3)
        do i = 1, dims(2)
-          zs_org(:,i,j,n) = dummy_2D(:,n)
+          zs_org(:,i,j,n) = real(dummy_2D(:,n),kind=RP)
        enddo
        enddo
        enddo
        call ExternalFileRead( dummy_2D(:,:),                               &
                       BASENAME, "DZS",      1, tcount, myrank, mdlid, dims(7), single=.true. )
-       dzs_org(:,:) = dummy_2D(:,:)
+       dzs_org(:,:) = real(dummy_2D(:,:),kind=RP)
     endif
 
     if( serial ) then
@@ -1292,7 +1292,7 @@ contains
     if( do_read ) then
        call ExternalFileRead( dummy_4D(:,:,:,:),                             &
                       BASENAME, "TSLB",  1, tcount, myrank, mdlid, single=.true., landgrid=.true. )
-       org_4D(:,:,:,:) = dummy_4D(:,:,:,:)
+       org_4D(:,:,:,:) = real(dummy_4D(:,:,:,:),kind=RP)
     endif
     if( serial ) call COMM_bcast( org_4D(:,:,:,:), dims(7),dims(2),dims(3),tcount )
     n = 1
@@ -1317,7 +1317,7 @@ contains
        do n = 1, tcount
        do j = 1, dims(3)
        do i = 1, dims(2)
-          org_3D(i,j,n) = dummy_3D(i,j,n) * 1000.0_DP * dwatr
+          org_3D(i,j,n) = real(dummy_3D(i,j,n),kind=RP) * 1000.0_DP * dwatr
        enddo
        enddo
        enddo
@@ -1344,7 +1344,7 @@ contains
     if( do_read ) then
        call ExternalFileRead( dummy_3D(:,:,:),                             &
                       BASENAME, "SST",  1, tcount, myrank, mdlid, single=.true. )
-       org_3D(:,:,:) = dummy_3D(:,:,:)
+       org_3D(:,:,:) = real(dummy_3D(:,:,:),kind=RP)
     endif
     if( serial ) call COMM_bcast( org_3D(:,:,:), dims(2),dims(3),tcount )
     n = 1
@@ -1360,7 +1360,7 @@ contains
     if( do_read ) then
        call ExternalFileRead( dummy_3D(:,:,:),                             &
                       BASENAME, "TSK",  1, tcount, myrank, mdlid, single=.true. )
-       org_3D(:,:,:) = dummy_3D(:,:,:)
+       org_3D(:,:,:) = real(dummy_3D(:,:,:),kind=RP)
     endif
     if( serial ) call COMM_bcast( org_3D(:,:,:), dims(2),dims(3),tcount )
     n = 1
@@ -1379,7 +1379,7 @@ contains
     if( do_read ) then
        call ExternalFileRead( dummy_3D(:,:,:),                             &
                       BASENAME, "ALBEDO",  1, tcount, myrank, mdlid, single=.true. )
-       org_3D(:,:,:) = dummy_3D(:,:,:)
+       org_3D(:,:,:) = real(dummy_3D(:,:,:),kind=RP)
     endif
     if( serial ) call COMM_bcast( org_3D(:,:,:), dims(2),dims(3),tcount )
     n = 1
@@ -1422,7 +1422,7 @@ contains
        if( do_read ) then
           call ExternalFileRead( dummy_3D(:,:,:),                             &
                          BASENAME, "ZNT",  1, tcount, myrank, mdlid, single=.true. )
-          org_3D(:,:,:) = dummy_3D(:,:,:)
+          org_3D(:,:,:) = real(dummy_3D(:,:,:),kind=RP)
        endif
        if( serial ) call COMM_bcast( org_3D(:,:,:), dims(2),dims(3),tcount )
        n = 1
@@ -1443,7 +1443,7 @@ contains
     if( do_read ) then
        call ExternalFileRead( dummy_3D(:,:,:),                             &
                       BASENAME, "SNOW",  1, tcount, myrank, mdlid, single=.true. )
-       org_3D(:,:,:) = dummy_3D(:,:,:)
+       org_3D(:,:,:) = real(dummy_3D(:,:,:),kind=RP)
     endif
     if( serial ) call COMM_bcast( org_3D(:,:,:), dims(2),dims(3),tcount )
     n = 1
@@ -1465,7 +1465,7 @@ contains
           do n = 1, tcount
           do j = 1, dims(3)
           do i = 1, dims(2)
-             org_3D(i,j,n) = dummy_3D(i,j,n) + TEM00
+             org_3D(i,j,n) = real(dummy_3D(i,j,n),kind=RP) + TEM00
           enddo
           enddo
           enddo

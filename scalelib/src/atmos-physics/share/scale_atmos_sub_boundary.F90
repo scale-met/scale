@@ -496,8 +496,6 @@ contains
   !> Read boundary data
   subroutine ATMOS_BOUNDARY_setinitval( &
        DENS, MOMZ, MOMX, MOMY, RHOT, QTRC )
-    use scale_const, only: &
-       CONST_UNDEF
     implicit none
 
     real(RP), intent(in) :: DENS(KA,IA,JA)
@@ -507,7 +505,7 @@ contains
     real(RP), intent(in) :: RHOT(KA,IA,JA)
     real(RP), intent(in) :: QTRC(KA,IA,JA,QA)
 
-    integer :: i, j, k, iv
+    integer :: i, j, k
     !---------------------------------------------------------------------------
 
     do j = JS, JE
@@ -540,8 +538,6 @@ contains
     real(RP) :: reference_atmos(KMAX,IMAX,JMAX) !> restart file (no HALO)
 
     character(len=H_LONG) :: bname
-
-    integer :: iv, i, j
     !---------------------------------------------------------------------------
 
     bname = ATMOS_BOUNDARY_IN_BASENAME
@@ -607,6 +603,7 @@ contains
     use scale_fileio, only: &
        FILEIO_write
     implicit none
+
     real(RP) :: buffer(KA,IA,JA)
     !---------------------------------------------------------------------------
 
@@ -693,7 +690,7 @@ contains
          ATMOS_REFSTATE_dens
     implicit none
 
-    integer :: i, j, k, iv
+    integer :: i, j, k
     !---------------------------------------------------------------------------
 
     do j = 1, JA
@@ -943,8 +940,6 @@ contains
     use scale_comm, only: &
        COMM_vars8, &
        COMM_wait
-    use scale_time, only: &
-       TIME_NOWDAYSEC
     implicit none
 
     real(RP) :: reference_atmos(KMAX,IMAX,JMAX) !> restart file (no HALO)

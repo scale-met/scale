@@ -130,9 +130,6 @@ contains
   subroutine URBAN_PHY_ucm_setup( URBAN_TYPE )
     use scale_process, only: &
        PRC_MPIstop
-    use scale_const, only: &
-       DWATR => CONST_DWATR, &
-       CL    => CONST_CL
     implicit none
 
     character(len=*), intent(in) :: URBAN_TYPE

@@ -45,7 +45,6 @@ program scaleles
      TIME_DOLAND_restart,  &
      TIME_DOURBAN_restart, &
      TIME_DOOCEAN_restart, &
-     TIME_DOCPL_restart,   &
      TIME_DOend
   use scale_grid_index, only: &
      GRID_INDEX_setup

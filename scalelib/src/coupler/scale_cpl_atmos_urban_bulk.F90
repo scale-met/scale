@@ -51,38 +51,38 @@ module scale_cpl_atmos_urban_bulk
   !-----------------------------------------------------------------------------
   !
   ! from namelist
-  real(RP), private :: ZR         = 10.0       ! roof level ( building height) [m]
-  real(RP), private :: roof_width =  9.0       ! roof level ( building height) [m]
-  real(RP), private :: road_width = 11.0       ! roof level ( building height) [m]
-  real(RP), private :: SIGMA_ZED  =  1.0       ! Standard deviation of roof height [m]
-  real(RP), private :: AH         = 17.5       ! Sensible Anthropogenic heat [W/m^2]
-  real(RP), private :: ALH        = 0.0        ! Latent Anthropogenic heat [W/m^2]
-  real(RP), private :: BETR       = 0.0        ! Evaporation efficiency of roof [-]
-  real(RP), private :: BETB       = 0.0        !                        of building [-]
-  real(RP), private :: BETG       = 0.0        !                        of ground [-]
-  real(RP), private :: STRGR      = 0.0        ! rain strage on roof [-]
-  real(RP), private :: STRGB      = 0.0        !             on building [-]
-  real(RP), private :: STRGG      = 0.0        !             on ground [-]
-  real(RP), private :: CAPR       = 1.2E6      ! heat capacity of roof [J m-3 K]
-  real(RP), private :: CAPB       = 1.2E6      !  ( units converted in code
-  real(RP), private :: CAPG       = 1.2E6      !            to [ cal cm{-3} deg{-1} ] )
-  real(RP), private :: AKSR       = 2.28       ! thermal conductivity of roof, wall, and ground [W m-1 K]
-  real(RP), private :: AKSB       = 2.28       !  ( units converted in code
-  real(RP), private :: AKSG       = 2.28       !            to [ cal cm{-1} s{-1} deg{-1} ] )
-  real(RP), private :: ALBR       = 0.2        ! surface albedo of roof
-  real(RP), private :: ALBB       = 0.2        ! surface albedo of wall
-  real(RP), private :: ALBG       = 0.2        ! surface albedo of ground
-  real(RP), private :: EPSR       = 0.90       ! Surface emissivity of roof
-  real(RP), private :: EPSB       = 0.90       ! Surface emissivity of wall
-  real(RP), private :: EPSG       = 0.90       ! Surface emissivity of ground
-  real(RP), private :: Z0R        = 0.01       ! roughness length for momentum of building roof
-  real(RP), private :: Z0B        = 0.0001     ! roughness length for momentum of building wall
-  real(RP), private :: Z0G        = 0.01       ! roughness length for momentum of ground
-  real(RP), private :: TRLEND     = 293.00     ! lower boundary condition of roof temperature [K]
-  real(RP), private :: TBLEND     = 293.00     ! lower boundary condition of wall temperature [K]
-  real(RP), private :: TGLEND     = 293.00     ! lower boundary condition of ground temperature [K]
-  integer , private :: BOUND      = 1          ! Boundary Condition for Roof, Wall, Ground Layer Temp
-                                                     !       [1: Zero-Flux, 2: T = Constant]
+  real(RP), private :: ZR         =   10.0_RP ! roof level ( building height) [m]
+  real(RP), private :: roof_width =    9.0_RP ! roof level ( building height) [m]
+  real(RP), private :: road_width =   11.0_RP ! roof level ( building height) [m]
+  real(RP), private :: SIGMA_ZED  =    1.0_RP ! Standard deviation of roof height [m]
+  real(RP), private :: AH         =   17.5_RP ! Sensible Anthropogenic heat [W/m^2]
+  real(RP), private :: ALH        =    0.0_RP ! Latent Anthropogenic heat [W/m^2]
+  real(RP), private :: BETR       =    0.0_RP ! Evaporation efficiency of roof [-]
+  real(RP), private :: BETB       =    0.0_RP !                        of building [-]
+  real(RP), private :: BETG       =    0.0_RP !                        of ground [-]
+  real(RP), private :: STRGR      =    0.0_RP ! rain strage on roof [-]
+  real(RP), private :: STRGB      =    0.0_RP !             on building [-]
+  real(RP), private :: STRGG      =    0.0_RP !             on ground [-]
+  real(RP), private :: CAPR       =  1.2E6_RP ! heat capacity of roof [J m-3 K]
+  real(RP), private :: CAPB       =  1.2E6_RP !  ( units converted in code
+  real(RP), private :: CAPG       =  1.2E6_RP !            to [ cal cm{-3} deg{-1} ] )
+  real(RP), private :: AKSR       =   2.28_RP ! thermal conductivity of roof, wall, and ground [W m-1 K]
+  real(RP), private :: AKSB       =   2.28_RP !  ( units converted in code
+  real(RP), private :: AKSG       =   2.28_RP !            to [ cal cm{-1} s{-1} deg{-1} ] )
+  real(RP), private :: ALBR       =    0.2_RP ! surface albedo of roof
+  real(RP), private :: ALBB       =    0.2_RP ! surface albedo of wall
+  real(RP), private :: ALBG       =    0.2_RP ! surface albedo of ground
+  real(RP), private :: EPSR       =   0.90_RP ! Surface emissivity of roof
+  real(RP), private :: EPSB       =   0.90_RP ! Surface emissivity of wall
+  real(RP), private :: EPSG       =   0.90_RP ! Surface emissivity of ground
+  real(RP), private :: Z0R        =   0.01_RP ! roughness length for momentum of building roof
+  real(RP), private :: Z0B        = 0.0001_RP ! roughness length for momentum of building wall
+  real(RP), private :: Z0G        =   0.01_RP ! roughness length for momentum of ground
+  real(RP), private :: TRLEND     = 293.00_RP ! lower boundary condition of roof temperature [K]
+  real(RP), private :: TBLEND     = 293.00_RP ! lower boundary condition of wall temperature [K]
+  real(RP), private :: TGLEND     = 293.00_RP ! lower boundary condition of ground temperature [K]
+  integer , private :: BOUND      = 1         ! Boundary Condition for Roof, Wall, Ground Layer Temp
+                                              !       [1: Zero-Flux, 2: T = Constant]
   ! calculate in subroutine urban_param_set
   real(RP), private :: R                       ! Normalized roof wight (eq. building coverage ratio)
   real(RP), private :: RW                      ! (= 1 - R)
@@ -346,7 +346,7 @@ contains
     use scale_process, only: &
        PRC_MPIstop
     use scale_const, only: &
-       D2R    => CONST_D2R,     &    ! degree to radian  
+       D2R    => CONST_D2R,     &    ! degree to radian
        KARMAN => CONST_KARMAN,  &    ! AK : kalman constant  [-]
        PI     => CONST_PI,      &    ! PI : pi               [-]
        CPdry  => CONST_CPdry,   &    ! CPP : heat capacity of dry air [J/K/kg]
@@ -426,8 +426,8 @@ contains
     real(RP), parameter     :: EL  = 583.0_RP    ! latent heat of vaporation [cgs unit]
     real(RP), parameter     :: SIG = 8.17E-11_RP ! stefun bolzman constant   [cgs unit]
     real(RP), parameter     :: SRATIO = 0.75_RP  ! ratio between direct/total solar [-]
-    real(RP), parameter     :: TFa      = 0.5_RP      ! factor a in Tomita (2009) 
-    real(RP), parameter     :: TFb      = 1.1_RP      ! factor b in Tomita (2009) 
+    real(RP), parameter     :: TFa      = 0.5_RP      ! factor a in Tomita (2009)
+    real(RP), parameter     :: TFb      = 1.1_RP      ! factor b in Tomita (2009)
     real(RP), parameter     :: redf_min = 1.0E-2_RP   ! minimum reduced factor
     real(RP), parameter     :: redf_max = 1.0_RP      ! maximum reduced factor
 
@@ -531,7 +531,7 @@ contains
     LON = XLON / D2R
 
     tloc = mod( (int(TIME/3600.0_RP) + int(LON/15.0_RP)),24 )
-    dsec = mod(TIME,3600.0_RP) / 3600.0_RP 
+    dsec = mod(TIME,3600.0_RP) / 3600.0_RP
     if(tloc==0) tloc = 24
 
     ! Calculate AH data at LST
@@ -690,20 +690,20 @@ contains
       !TRP      = TR
 
       !!! Tomita(2009)
-      if( redf < 0.0_RP ) then
-      	  redf = 1.0_RP
-      end if
-      if( abs(F) > abs(oldF) ) then
-          redf = max( TFa*redf, redf_min )
+      if ( redf < 0.0_RP ) then
+         redf = 1.0_RP
+      endif
+      if ( abs(F) > abs(oldF) ) then
+         redf = max( TFa*redf, redf_min )
       else
-	  redf = min( TFb*redf, redf_max )
+         redf = min( TFb*redf, redf_max )
       end if
-      if( DFDT > 0.0_RP ) then
-      	  redf = -1.0_RP
-      end if
+      if ( DFDT > 0.0_RP ) then
+         redf = -1.0_RP
+      endif
       TR       = TRP + redf * DTR
       TRP      = TR
-      oldF     = F      
+      oldF     = F
 
       if( abs(F) < 0.000001_RP .AND. abs(DTR) < 0.000001_RP ) exit
 
@@ -1013,7 +1013,7 @@ contains
 
     XXX10 = (10.0_RP/Z) * XXX
     call cal_psi(XXX10,psim10,psih10)
- 
+
     !U10 = U1 * ((log(10.0_RP/Z0C)-psim10)/(log(Z/Z0C)-psim))  ! u at 10 m [m/s]
     !V10 = V1 * ((log(10.0_RP/Z0C)-psim10)/(log(Z/Z0C)-psim))  ! v at 10 m [m/s]
     U10 = U1 * log(10.0_RP/Z0C) / log(Z/Z0C)
@@ -1105,7 +1105,7 @@ contains
        PI     => CONST_PI
     implicit none
 
-    real(RP), intent(inout) :: zeta  ! z/L 
+    real(RP), intent(inout) :: zeta  ! z/L
     real(RP), intent(out)   :: psim
     real(RP), intent(out)   :: psih
     real(RP)                :: X
