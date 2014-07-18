@@ -198,17 +198,17 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '*** Input restart file (ATMOS_PHY_TB) ***'
 
     if ( ATMOS_PHY_TB_RESTART_IN_BASENAME /= '' ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(ATMOS_PHY_TB_RESTART_IN_BASENAME)
-
-       call FILEIO_read( ATMOS_PHY_TB_TKE(:,:,:),                                     & ! [OUT]
-                         ATMOS_PHY_TB_RESTART_IN_BASENAME, VAR_NAME(1), 'ZXY', step=1 ) ! [IN]
-       call FILEIO_read( ATMOS_PHY_TB_NU (:,:,:),                                     & ! [OUT]
-                         ATMOS_PHY_TB_RESTART_IN_BASENAME, VAR_NAME(2), 'ZXY', step=1 ) ! [IN]
-
-       call ATMOS_PHY_TB_vars_fillhalo
-
-       call STAT_total( total, ATMOS_PHY_TB_TKE(:,:,:), VAR_NAME(1) )
-       call STAT_total( total, ATMOS_PHY_TB_NU (:,:,:), VAR_NAME(2) )
+!       if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(ATMOS_PHY_TB_RESTART_IN_BASENAME)
+!
+!       call FILEIO_read( ATMOS_PHY_TB_TKE(:,:,:),                                     & ! [OUT]
+!                         ATMOS_PHY_TB_RESTART_IN_BASENAME, VAR_NAME(1), 'ZXY', step=1 ) ! [IN]
+!       call FILEIO_read( ATMOS_PHY_TB_NU (:,:,:),                                     & ! [OUT]
+!                         ATMOS_PHY_TB_RESTART_IN_BASENAME, VAR_NAME(2), 'ZXY', step=1 ) ! [IN]
+!
+!       call ATMOS_PHY_TB_vars_fillhalo
+!
+!       call STAT_total( total, ATMOS_PHY_TB_TKE(:,:,:), VAR_NAME(1) )
+!       call STAT_total( total, ATMOS_PHY_TB_NU (:,:,:), VAR_NAME(2) )
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** restart file for ATMOS_PHY_TB is not specified.'
     endif
@@ -231,17 +231,17 @@ contains
 
     if ( ATMOS_PHY_TB_RESTART_OUT_BASENAME /= '' ) then
 
-       call TIME_gettimelabel( timelabel )
-       write(basename,'(A,A,A)') trim(ATMOS_PHY_TB_RESTART_OUT_BASENAME), '_', trim(timelabel)
-
-       if( IO_L ) write(IO_FID_LOG,*)
-       if( IO_L ) write(IO_FID_LOG,*) '*** Output restart file (ATMOS_PHY_TB) ***'
-       if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(basename)
-
-       call FILEIO_write( ATMOS_PHY_TB_TKE(:,:,:), basename,            ATMOS_PHY_TB_RESTART_OUT_TITLE, & ! [IN]
-                          VAR_NAME(1), VAR_DESC(1), VAR_UNIT(1), 'ZXY', ATMOS_PHY_TB_RESTART_OUT_DTYPE  ) ! [IN]
-       call FILEIO_write( ATMOS_PHY_TB_NU (:,:,:), basename,            ATMOS_PHY_TB_RESTART_OUT_TITLE, & ! [IN]
-                          VAR_NAME(2), VAR_DESC(2), VAR_UNIT(2), 'ZXY', ATMOS_PHY_TB_RESTART_OUT_DTYPE  ) ! [IN]
+!       call TIME_gettimelabel( timelabel )
+!       write(basename,'(A,A,A)') trim(ATMOS_PHY_TB_RESTART_OUT_BASENAME), '_', trim(timelabel)
+!
+!       if( IO_L ) write(IO_FID_LOG,*)
+!       if( IO_L ) write(IO_FID_LOG,*) '*** Output restart file (ATMOS_PHY_TB) ***'
+!       if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(basename)
+!
+!       call FILEIO_write( ATMOS_PHY_TB_TKE(:,:,:), basename,            ATMOS_PHY_TB_RESTART_OUT_TITLE, & ! [IN]
+!                          VAR_NAME(1), VAR_DESC(1), VAR_UNIT(1), 'ZXY', ATMOS_PHY_TB_RESTART_OUT_DTYPE  ) ! [IN]
+!       call FILEIO_write( ATMOS_PHY_TB_NU (:,:,:), basename,            ATMOS_PHY_TB_RESTART_OUT_TITLE, & ! [IN]
+!                          VAR_NAME(2), VAR_DESC(2), VAR_UNIT(2), 'ZXY', ATMOS_PHY_TB_RESTART_OUT_DTYPE  ) ! [IN]
 
     endif
 

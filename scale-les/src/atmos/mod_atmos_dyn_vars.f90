@@ -168,14 +168,14 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '*** Input restart file (ATMOS_DYN) ***'
 
     if ( ATMOS_DYN_RESTART_IN_BASENAME /= '' ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(ATMOS_DYN_RESTART_IN_BASENAME)
-
-       call FILEIO_read( ATMOS_DYN_DUM(:,:,:),                                     & ! [OUT]
-                         ATMOS_DYN_RESTART_IN_BASENAME, VAR_NAME(1), 'ZXY', step=1 ) ! [IN]
-
-       call ATMOS_DYN_vars_fillhalo
-
-       call STAT_total( total, ATMOS_DYN_DUM(:,:,:), VAR_NAME(1) )
+!       if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(ATMOS_DYN_RESTART_IN_BASENAME)
+!
+!       call FILEIO_read( ATMOS_DYN_DUM(:,:,:),                                     & ! [OUT]
+!                         ATMOS_DYN_RESTART_IN_BASENAME, VAR_NAME(1), 'ZXY', step=1 ) ! [IN]
+!
+!       call ATMOS_DYN_vars_fillhalo
+!
+!       call STAT_total( total, ATMOS_DYN_DUM(:,:,:), VAR_NAME(1) )
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** restart file for ATMOS_DYN is not specified.'
     endif
@@ -200,15 +200,15 @@ contains
 
     if ( ATMOS_DYN_RESTART_OUT_BASENAME /= '' ) then
 
-       call TIME_gettimelabel( timelabel )
-       write(basename,'(A,A,A)') trim(ATMOS_DYN_RESTART_OUT_BASENAME), '_', trim(timelabel)
-
-       if( IO_L ) write(IO_FID_LOG,*)
-       if( IO_L ) write(IO_FID_LOG,*) '*** Output restart file (ATMOS_DYN) ***'
-       if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(basename)
-
-       call FILEIO_write( ATMOS_DYN_DUM(:,:,:), basename,               ATMOS_DYN_RESTART_OUT_TITLE, & ! [IN]
-                          VAR_NAME(1), VAR_DESC(1), VAR_UNIT(1), 'ZXY', ATMOS_DYN_RESTART_OUT_DTYPE  ) ! [IN]
+!       call TIME_gettimelabel( timelabel )
+!       write(basename,'(A,A,A)') trim(ATMOS_DYN_RESTART_OUT_BASENAME), '_', trim(timelabel)
+!
+!       if( IO_L ) write(IO_FID_LOG,*)
+!       if( IO_L ) write(IO_FID_LOG,*) '*** Output restart file (ATMOS_DYN) ***'
+!       if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(basename)
+!
+!       call FILEIO_write( ATMOS_DYN_DUM(:,:,:), basename,               ATMOS_DYN_RESTART_OUT_TITLE, & ! [IN]
+!                          VAR_NAME(1), VAR_DESC(1), VAR_UNIT(1), 'ZXY', ATMOS_DYN_RESTART_OUT_DTYPE  ) ! [IN]
 
     endif
 
