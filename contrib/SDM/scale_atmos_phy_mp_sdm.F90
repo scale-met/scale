@@ -48,6 +48,10 @@
 !! @li      2014-07-14 (S.Shima) [rev] sdm_sd2rhow, sdm_sd2rhocr, sdm_sd2qcqr are separated into m_sdm_sd2fluid
 !! @li      2014-07-14 (S.Shima) [rev] sdm_condevp,sdm_condevp_updatefluid are separated into m_sdm_condensation_water
 !! @li      2014-07-14 (S.Shima) [rev] Removed unused subroutines, variables
+!! @li      2014-07-18 (Y.Sato)  [mod] modify the modules to calculate variable forradiation
+!! @li      2014-07-18 (Y.Sato)  [add] Add history output for QTRC_sdm and input 0 to QTRC at the end of ATMOS_PHY_MP_sdm
+!! @li      2014-07-18 (Y.Sato)  [mod] modify way to determine whether the grid stretch or not
+!! @li      2014-07-18 (Y.Sato)  [add] Add ATMOS_PHY_MP_DENS, which is used in radiation code
 !<
 !-------------------------------------------------------------------------------
 #include "macro_thermodyn.h"
@@ -117,6 +121,8 @@ contains
        PRC_S,       &
        PRC_N,       &
        mype => PRC_myrank, &
+!!       PRC_PERIODIC_X, &
+!!       PRC_PERIODIC_Y, &
        PRC_master
     use scale_const, only: &
        PI     => CONST_PI,    &
@@ -137,6 +143,7 @@ contains
          GRID_CDY,   &
          GRID_RCDX,   &
          GRID_RCDY,   &
+         GRID_CDZ,   &
 !!$       CZ  => GRID_CZ,    &
 !!$       FZ  => GRID_FZ,    &
 !!$       FDX => GRID_FDX,   &
@@ -144,9 +151,9 @@ contains
 !!$       FDZ => GRID_FDZ,   & 
        GRID_FX,    &
        GRID_FY,    &
-       CBFZ => GRID_CBFZ, &
-       CBFX => GRID_CBFX, &
-       CBFY => GRID_CBFY, &
+!!       CBFZ => GRID_CBFZ, &
+!!       CBFX => GRID_CBFX, &
+!!       CBFY => GRID_CBFY, &
        ISG, IEG, JSG, JEG,&
        DX,DY,DZ
     use scale_topography, only: &
@@ -156,7 +163,10 @@ contains
 
     logical :: PRC_PERIODIC_X = .true. !< periodic condition or not (X)?
     logical :: PRC_PERIODIC_Y = .true. !< periodic condition or not (Y)?
-    namelist / PARAM_PRC / &
+
+    NAMELIST / PARAM_PRC / &
+         PRC_NUM_X, &
+         PRC_NUM_Y, &
          PRC_PERIODIC_X, &
          PRC_PERIODIC_Y
 
@@ -217,25 +227,36 @@ contains
        call PRC_MPIstop
     endif
 
+    rewind(IO_FID_CONF)
+    read(IO_FID_CONF,nml=PARAM_PRC,iostat=ierr)
+
+    if( ierr < 0 ) then !--- missing
+       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+    elseif( ierr > 0 ) then !--- fatal error
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_PRC. in SDM Check!'
+       call PRC_MPIstop
+    endif
+    if( IO_L ) write(IO_FID_LOG,nml=PARAM_PRC)
+
     buffact = 0.0_RP
     do k = KS, KE
-      buffact = max( buffact,CBFZ(k) )
+      buffact = max( buffact,GRID_CDZ(k)/DZ )
     enddo
     do j = JS, JE
-      buffact = max( buffact,CBFY(j) )
+      buffact = max( buffact,GRID_CDY(j)/DY )
     enddo
     do i = IS, IE
-      buffact = max( buffact,CBFX(i) )
+      buffact = max( buffact,GRID_CDX(i)/DX )
     enddo
 
-    if( buffact > 0.0_RP ) then
+    if( buffact /= 1.0_RP ) then
        sthopt = 1
-    elseif( buffact == 0.0_RP ) then
+    elseif( buffact == 1.0_RP ) then
        sthopt = 0
     endif
 
     if(sthopt==1) then
-       if( IO_L ) write(IO_FID_LOG,*) 'ERROR: stretched coordinate is not yet supported!'
+       if( IO_L ) write(IO_FID_LOG,*) 'ERROR: stretched coordinate is not yet supported!', buffact
        call PRC_MPIstop
     end if
 
@@ -485,6 +506,8 @@ contains
     dxiv_sdm(1:IA) = GRID_RCDX(1:IA)
     dyiv_sdm(1:JA) = GRID_RCDY(1:JA)
 
+    ATMOS_PHY_MP_DENS(I_mp_QC) = dens_w ! hydrometeor density [kg/m3]=[g/L]
+
     return
   end subroutine ATMOS_PHY_MP_sdm_setup
   !-----------------------------------------------------------------------------
@@ -639,7 +662,7 @@ contains
     ! -----
     ! Initialize
     if( .not. sdm_calvar(1) .and. &
-       .not. sdm_calvar(2) .and. &
+        .not. sdm_calvar(2) .and. &
         .not. sdm_calvar(3)       ) return
 
     dtcl(1:3) = sdm_dtcmph(1:3)
@@ -768,10 +791,24 @@ contains
 !!$
 !!$      end if
 
+    do k = KS, KE
+    do i = IS, IE
+    do j = JS, JE
+        QTRC_sdm(k,i,j,1) = QTRC(k,i,j,I_QC)
+        QTRC_sdm(k,i,j,2) = QTRC(k,i,j,I_QR)
+        QTRC_sdm(k,i,j,3) = QTRC(k,i,j,I_QC)+QTRC(k,i,j,I_QR)
+        QTRC(k,i,j,I_QC:I_QR) = 0.0_RP
+    enddo
+    enddo
+    enddo
+
 !! Are these correct? Let's check later.
 !!$    call HIST_in( rhoa_sdm(:,:,:), 'RAERO', 'aerosol mass conc.', 'kg/m3', dt)
     call HIST_in( prr_crs(:,:,1), 'RAIN', 'surface rain rate', 'kg/m2/s', dt)
     call HIST_in( prr_crs(:,:,1), 'PREC', 'surface precipitation rate', 'kg/m2/s', dt)
+    call HIST_in( QTRC_sdm(:,:,:,1), 'QC_sd', 'mixing ratio of cloud in SDM', 'kg/kg', dt)
+    call HIST_in( QTRC_sdm(:,:,:,2), 'QR_sd', 'mixing ratio of rain in SDM', 'kg/kg', dt)
+    call HIST_in( QTRC_sdm(:,:,:,3), 'QHYD_sd', 'mixing ratio of liquid in SDM', 'kg/kg', dt)
 
     return
   end subroutine ATMOS_PHY_MP_sdm
@@ -2541,50 +2578,123 @@ contains
        Re,    &
        QTRC0, &
        DENS0  )
+    use m_sdm_coordtrans, only: &
+       sdm_x2ri, sdm_y2rj
     implicit none
 
     real(RP), intent(out) :: Re   (KA,IA,JA,MP_QA) ! effective radius
     real(RP), intent(in)  :: QTRC0(KA,IA,JA,QA)    ! tracer mass concentration [kg/kg]
     real(RP), intent(in)  :: DENS0(KA,IA,JA)       ! density                   [kg/m3]
-!
-!    real(RP) :: dens
-!    real(RP) :: q(QA)
-!    real(RP) :: RLMDr, RLMDs, RLMDg
 
-!    real(RP) :: zerosw
-!    integer  :: k, i, j, iq
+    real(RP) :: sum3(KA,IA,JA), sum2(KA,IA,JA)
+    real(RP) :: drate             ! temporary
+    integer  :: k, i, j
+    integer  :: tlist_l            ! total list number for cloud
+    integer  :: lcnt               ! counter
+    integer  :: kl                 ! index
+    integer  :: ku                 ! index
+    integer  :: m, n               ! index
+    integer  :: ilist_l(1:sdnum_s2c)
     !---------------------------------------------------------------------------
+    !-- reset
+    Re(:,:,:,:) = 0.0_RP
+    sum3(:,:,:) = 0.0_RP
+    sum2(:,:,:) = 0.0_RP
 
-!    Re(:,:,:,I_mp_QC) =   8.E-6_RP
-!    Re(:,:,:,I_mp_QI) =  20.E-6_RP
+    call sdm_x2ri(sdnum_s2c,sdx_s2c,sdri_s2c,sdrk_s2c)
+    call sdm_y2rj(sdnum_s2c,sdy_s2c,sdrj_s2c,sdrk_s2c)
 
     ! Effective radius is defined by r3m/r2m=1.5/lambda.
+    ! dcoef is cancelled by the division of sum3/sum2
 !    do j  = JS, JE
 !    do i  = IS, IE
 !    do k  = KS, KE
-!       ! store to work
-!       dens = DENS0(k,i,j)
-!       do iq = I_QV, I_QG
-!          q(iq) = QTRC0(k,i,j,iq)
-!       enddo
+!       dcoef(k,i,j) = dxiv_sdm(i) * dyiv_sdm(j) / (zph_crs(k,i,j)-zph_crs(k-1,i,j))
+!    enddo
+!    enddo
+!    enddo
 
-       ! slope parameter lambda
-!       zerosw = 0.5_RP - sign(0.5_RP, q(I_QR) - 1.E-12_RP )
-!       RLMDr = sqrt(sqrt( dens * q(I_QR) / ( Ar * N0r * GAM_1br ) + zerosw )) * ( 1.0_RP - zerosw )
-!
-!       zerosw = 0.5_RP - sign(0.5_RP, q(I_QS) - 1.E-12_RP )
-!       RLMDs = sqrt(sqrt( dens * q(I_QS) / ( As * N0s * GAM_1bs ) + zerosw )) * ( 1.0_RP - zerosw )
-!
-!       zerosw = 0.5_RP - sign(0.5_RP, q(I_QG) - 1.E-12_RP )
-!       RLMDg = sqrt(sqrt( dens * q(I_QG) / ( Ag * N0g * GAM_1bg ) + zerosw )) * ( 1.0_RP - zerosw )
-!
-!       Re(k,i,j,I_mp_QR) = RLMDr * 1.5_RP
-!       Re(k,i,j,I_mp_QS) = RLMDs * 1.5_RP
-!       Re(k,i,j,I_mp_QG) = RLMDg * 1.5_RP
-!    enddo
-!    enddo
-!    enddo
-!
+    tlist_l = 0
+
+    lcnt = 0
+
+    do n=1,sdnum_s2c
+
+       if( sdrk_s2c(n)<VALID2INVALID ) cycle
+
+       lcnt = lcnt + 1
+       ilist_l(lcnt) = n
+
+    end do
+
+    tlist_l = lcnt
+
+    if( tlist_l>0 ) then
+
+       do m=1,tlist_l
+          n = ilist_l(m)
+
+          i = floor(sdri_s2c(n))+1
+          j = floor(sdrj_s2c(n))+1
+          k = floor(sdrk_s2c(n))+1
+
+          sum3(k,i,j) = sum3(k,i,j)            &
+               + sdr_s2c(n) * sdr_s2c(n) * sdr_s2c(n)   &
+               * real(sdn_s2c(n),kind=RP)
+          sum2(k,i,j) = sum2(k,i,j)            &
+               + sdr_s2c(n) * sdr_s2c(n)             &
+               * real(sdn_s2c(n),kind=RP)
+       end do
+
+       !=== adjust cloud-water in verical boundary. ===!
+
+       do j=JS, JE
+       do i=IS, IE
+
+          !! at lower boundary
+
+          kl    = floor(sdrkl_s2c(i,j))
+          drate = real(kl+1,kind=RP) - sdrkl_s2c(i,j)
+          if( drate<0.50_RP ) then
+             sum3(kl,i,j) = 0.0_RP           !! <50% in share
+             sum2(kl,i,j) = 0.0_RP           !! <50% in share
+          else
+             sum3(kl,i,j) = sum3(kl,i,j)/drate
+             sum2(kl,i,j) = sum2(kl,i,j)/drate
+          end if
+
+          !! at upper boundary
+
+          ku    = floor(sdrku_s2c(i,j))
+          drate = sdrku_s2c(i,j) - real(ku,kind=RP)
+
+          if( drate<0.50_RP ) then
+             sum3(ku,i,j) = 0.0_RP           !! <50% in share
+             sum2(ku,i,j) = 0.0_RP           !! <50% in share
+          else
+             sum3(ku,i,j) = sum3(ku,i,j)/drate
+             sum2(ku,i,j) = sum2(ku,i,j)/drate
+          end if
+
+       end do
+       end do
+
+       !=== convert super-droplets to density of cloud-water. ===!
+
+       do k=KS,KE
+       do j=JS,JE
+       do i=IS,IE
+          if( sum2(k,i,j) == 0.0_RP ) then
+           Re(k,i,j,I_mp_QC) = sum3(k,i,j)/sum2(k,i,j)
+          else
+           Re(k,i,j,I_mp_QC) = 0.0_RP
+          endif
+       end do
+       end do
+       end do
+
+    end if
+
     return
   end subroutine ATMOS_PHY_MP_sdm_EffectiveRadius
   !-----------------------------------------------------------------------------
@@ -2598,23 +2708,23 @@ contains
 
     real(RP), intent(out) :: cldfrac(KA,IA,JA)
     real(RP), intent(in)  :: QTRC   (KA,IA,JA,QA)
-!
-!    real(RP) :: qhydro
-!    integer  :: k, i, j, iq
-!    !---------------------------------------------------------------------------
-!
-!    do j  = JS, JE
-!    do i  = IS, IE
-!    do k  = KS, KE
-!       qhydro = 0.D0
-!       do iq = 1, MP_QA
-!          qhydro = qhydro + QTRC(k,i,j,I_MP2ALL(iq))
-!       enddo
-!       cldfrac(k,i,j) = 0.5_RP + sign(0.5_RP,qhydro-EPS)
-!    enddo
-!    enddo
-!    enddo
-!
+
+    real(RP) :: qhydro
+    integer  :: k, i, j, iq
+    !---------------------------------------------------------------------------
+
+    do j  = JS, JE
+    do i  = IS, IE
+    do k  = KS, KE
+       qhydro = 0.0_RP
+       do iq = 1, 2
+          qhydro = qhydro + QTRC_sdm(k,i,j,iq)
+       enddo
+       cldfrac(k,i,j) = 0.5_RP + sign(0.5_RP,qhydro-EPS)
+    enddo
+    enddo
+    enddo
+
     return
   end subroutine ATMOS_PHY_MP_sdm_CloudFraction
   !-----------------------------------------------------------------------------
@@ -2622,10 +2732,8 @@ contains
   subroutine ATMOS_PHY_MP_sdm_Mixingratio( &
        Qe,    &
        QTRC0  )
-    use scale_const, only: &
-       EPS => CONST_EPS
     use scale_tracer, only: &
-       QAD => QA, &
+       QAD => QA , &
        MP_QAD => MP_QA
     implicit none
 
@@ -2635,9 +2743,10 @@ contains
     integer  :: ihydro
     !---------------------------------------------------------------------------
 
-    do ihydro = 1, MP_QA
-       Qe(:,:,:,ihydro) = QTRC0(:,:,:,I_MP2ALL(ihydro))
-    enddo
+!!    do ihydro = 1, 2
+!!       Qe(:,:,:,I_mp_QC) = QTRC_sdm(:,:,:,1)+QTRC_sdm(:,:,:,2)
+!!    enddo
+    Qe(:,:,:,I_mp_QC) = QTRC_sdm(:,:,:,1)+QTRC_sdm(:,:,:,2)
 
     return
   end subroutine ATMOS_PHY_MP_sdm_Mixingratio

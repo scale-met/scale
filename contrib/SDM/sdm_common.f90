@@ -15,6 +15,7 @@
 !! @par History
 !! @li      2014-06-13 (S.Shima) [new] Separated common variables from scale_atmos_phy_mp_sdm.F90
 !! @li      2014-07-14 (S.Shima) [rev] Removed unused variables: KMIN,KPLS,...,
+!! @li      2014-07-18 (Y.Sato)  [add] add QTRC_sdm
 !!
 !<
 !-------------------------------------------------------------------------------
@@ -108,6 +109,7 @@ module m_sdm_common
   integer, allocatable, save :: sd_itmp2(:,:)
   integer, allocatable, save :: sd_itmp3(:,:)
   real(RP), allocatable, save :: sd_dtmp1(:)
+  real(RP), allocatable, save :: QTRC_sdm(:,:,:,:)
   !------------------------------------------------------------------------------
   !
   !++ Basic variable for SDM

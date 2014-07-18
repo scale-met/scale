@@ -60,10 +60,11 @@ sdm_condensation_water.o: sdm_condensation_water.f90 \
 	sdm_coordtrans.o \
 	sdm_common.o \
 	sdm_fluidconv.o \
+        $(BUILD_DIR)/scale_atmos_sub_saturation.o \
 	$(BUILD_DIR)/scale_tracer.o \
 	$(BUILD_DIR)/scale_const.o \
 	$(BUILD_DIR)/scale_grid_index.o \
-	$(BUILD_DIR)/scale_precision.o
+	$(BUILD_DIR)/scale_precision.o 
 	$(FC) $(FFLAGS) -I$(BUILD_DIR) -I$(MODDIR) -o $@ -c $<
 
 sdm_sd2fluid.o: sdm_sd2fluid.f90 \

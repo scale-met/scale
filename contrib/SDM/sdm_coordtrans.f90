@@ -35,8 +35,7 @@ contains
          GRID_FY
     use scale_grid_real, only: &
          REAL_FZ
-
-    use sdm_common, only: &
+    use m_sdm_common, only: &
          VALID2INVALID, INVALID
 
     implicit none

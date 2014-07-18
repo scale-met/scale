@@ -15,6 +15,7 @@
 !! @par History
 !! @li      2014-06-23 (S.Shima) [new] Separated from scale_atmos_phy_mp_sdm.F90
 !! @li      2014-07-14 (S.Shima) [rev] Removed unused variables
+!! @li      2014-07-18 (Y.Sato)  [add] add QTRC_sdm
 !!
 !<
 !-------------------------------------------------------------------------------
@@ -33,6 +34,9 @@ contains
        GTRANS_J13G,  &
        GTRANS_J23G,  &
        GTRANS_J33G
+!!    Use if category of hydrometeor increase
+!!    use scale_tracer, only: &
+!!       QA
     use scale_grid_index, only: &
          IE,IS,KE,KS,JE,JS,IA,KA,JA ! S:start, E: end of active grids. A: num of grids including HALO.
     use m_sdm_common
@@ -142,7 +146,11 @@ contains
     allocate( dy_sdm(JA) )
 !    allocate( dz_sdm(KA) )
 
+!!    allocate(QTRC_sdm(KA,IA,JA,QA))
+    allocate(QTRC_sdm(KA,IA,JA,2))
+
     ! Initialize allocated array
+    QTRC_sdm(:,:,:,:) = 0.0_RP
 !!$    rhod_crs(:,:,:) = 0.0_RP
 !!$    rhoc_sdm(:,:,:) = 0.0_RP
 !!$    rhor_sdm(:,:,:) = 0.0_RP

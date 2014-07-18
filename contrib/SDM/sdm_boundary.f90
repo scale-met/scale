@@ -14,6 +14,7 @@
 !!
 !! @par History
 !! @li      2014-07-11 (S.Shima) [new] Separated from scale_atmos_phy_mp_sdm.F90
+!! @li      2014-07-18 (Y.Sato)  [mod] Modify the output message in sdm_boundary
 !!
 !<
 !-------------------------------------------------------------------------------
@@ -267,7 +268,7 @@ contains
     ! Check send/receive error of super-droplets
     if( stat /= 0 ) then
        ! Does this work?? Can mype>=1 write a message to the LOG file?
-       if( IO_L ) write(IO_FID_LOG,*)"  ### [SDM] : send/receive error of super-droplets at MPI rank=", &
+       write(*,*)"  ### [SDM] : send/receive error of super-droplets at MPI rank=", &
             &         mype," ###"
        call PRC_MPIstop
     end if
@@ -530,7 +531,6 @@ contains
 
        call mpi_irecv(rbufx(1,1,2),siz,MPI_DOUBLE_PRECISION,srcw,tag, &
             MPI_COMM_WORLD,statrw,ierr)
-
 
        !### Call the waiting MPI function ###!
 
