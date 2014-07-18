@@ -259,10 +259,10 @@ program scaleles
   call CPL_vars_setup
 
   ! read restart data
-  call ATMOS_vars_restart_read
-  call OCEAN_vars_restart_read
-  call LAND_vars_restart_read
-  call URBAN_vars_restart_read
+  if( ATMOS_do ) call ATMOS_vars_restart_read
+  if( OCEAN_do ) call OCEAN_vars_restart_read
+  if( LAND_do  ) call LAND_vars_restart_read
+  if( URBAN_do ) call URBAN_vars_restart_read
 
   ! calc diagnostics
   call ATMOS_vars_diagnostics

@@ -703,7 +703,15 @@ contains
        THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres, &
        CVw                 => AQ_CV
     use mod_atmos_admin, only: &
-       ATMOS_USE_AVERAGE
+    　  ATMOS_USE_AVERAGE, &
+    　  ATMOS_sw_dyn,      &
+    　  ATMOS_sw_phy_mp,   &
+    　  ATMOS_sw_phy_ae,   &
+    　  ATMOS_sw_phy_ch,   &
+    　  ATMOS_sw_phy_rd,   &
+    　  ATMOS_sw_phy_sf,   &
+    　  ATMOS_sw_phy_tb,   &
+    　  ATMOS_sw_phy_cp
     use mod_atmos_dyn_vars, only: &
        ATMOS_DYN_vars_restart_read
     use mod_atmos_phy_mp_vars, only: &
@@ -779,14 +787,14 @@ contains
        QTRC_av(:,:,:,:) = QTRC(:,:,:,:)
     endif
 
-    call ATMOS_DYN_vars_restart_read
-    call ATMOS_PHY_MP_vars_restart_read
-    call ATMOS_PHY_AE_vars_restart_read
-    call ATMOS_PHY_CH_vars_restart_read
-    call ATMOS_PHY_RD_vars_restart_read
-    call ATMOS_PHY_SF_vars_restart_read
-    call ATMOS_PHY_TB_vars_restart_read
-    call ATMOS_PHY_CP_vars_restart_read
+    if( ATMOS_sw_dyn )    call ATMOS_DYN_vars_restart_read
+    if( ATMOS_sw_phy_mp ) call ATMOS_PHY_MP_vars_restart_read
+    if( ATMOS_sw_phy_ae ) call ATMOS_PHY_AE_vars_restart_read
+    if( ATMOS_sw_phy_ch ) call ATMOS_PHY_CH_vars_restart_read
+    if( ATMOS_sw_phy_rd ) call ATMOS_PHY_RD_vars_restart_read
+    if( ATMOS_sw_phy_sf ) call ATMOS_PHY_SF_vars_restart_read
+    if( ATMOS_sw_phy_tb ) call ATMOS_PHY_TB_vars_restart_read
+    if( ATMOS_sw_phy_cp ) call ATMOS_PHY_CP_vars_restart_read
 
     return
   end subroutine ATMOS_vars_restart_read
@@ -853,14 +861,14 @@ contains
 
     endif
 
-    call ATMOS_DYN_vars_restart_write
-    call ATMOS_PHY_MP_vars_restart_write
-    call ATMOS_PHY_AE_vars_restart_write
-    call ATMOS_PHY_CH_vars_restart_write
-    call ATMOS_PHY_RD_vars_restart_write
-    call ATMOS_PHY_SF_vars_restart_write
-    call ATMOS_PHY_TB_vars_restart_write
-    call ATMOS_PHY_CP_vars_restart_write
+    if( ATMOS_sw_dyn )    call ATMOS_DYN_vars_restart_write
+    if( ATMOS_sw_phy_mp ) call ATMOS_PHY_MP_vars_restart_write
+    if( ATMOS_sw_phy_ae ) call ATMOS_PHY_AE_vars_restart_write
+    if( ATMOS_sw_phy_ch ) call ATMOS_PHY_CH_vars_restart_write
+    if( ATMOS_sw_phy_rd ) call ATMOS_PHY_RD_vars_restart_write
+    if( ATMOS_sw_phy_sf ) call ATMOS_PHY_SF_vars_restart_write
+    if( ATMOS_sw_phy_tb ) call ATMOS_PHY_TB_vars_restart_write
+    if( ATMOS_sw_phy_cp ) call ATMOS_PHY_CP_vars_restart_write
 
     return
   end subroutine ATMOS_vars_restart_write
