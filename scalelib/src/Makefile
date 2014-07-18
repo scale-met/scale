@@ -140,6 +140,8 @@ OBJS = $(scale_rdma)	\
 all:
 	$(MAKE) makedir
 	@echo;echo "Entering scalelib..."; echo "Current version is " $(LIBVERSION)
+	$(MAKE) -C $(DCUTILSDIR)
+	$(MAKE) -C $(GTOOLDIR)
 	$(MAKE) $(LIBDIR)/$(LIBNAME)
 	$(MAKE) modules
 	@echo "Complete making scalelib."
