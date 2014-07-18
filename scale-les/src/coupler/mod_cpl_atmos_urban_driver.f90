@@ -196,7 +196,7 @@ contains
 
       if( is_FLX(i,j) ) then
 
-        Uabs = sqrt( ATM_U(i,j)**2 + ATM_V(i,j)**2 + ATM_W(i,j)**2 )
+        Uabs = max( sqrt( ATM_U(i,j)**2 + ATM_V(i,j)**2 + ATM_W(i,j)**2 ), 0.1)
      
         call CPL_AtmUrb( TR_URB      (i,j),   & ! [INOUT]
                          TB_URB      (i,j),   & ! [INOUT]
@@ -249,6 +249,30 @@ contains
                          ATM_DENS    (i,j),   & ! [IN]
                          LON         (i,j),   & ! [IN]
                          LAT         (i,j)    ) ! [IN]
+      else
+          ! not calculate surface flux                                                             
+          TS_URB      (i,j) =  SFC_TEMP(i,j)
+          SHR_URB     (i,j) = 0.0_RP
+          SHB_URB     (i,j) = 0.0_RP
+          SHG_URB     (i,j) = 0.0_RP
+          LHR_URB     (i,j) = 0.0_RP
+          LHB_URB     (i,j) = 0.0_RP
+          LHG_URB     (i,j) = 0.0_RP
+          GHR_URB     (i,j) = 0.0_RP
+          GHB_URB     (i,j) = 0.0_RP
+          GHG_URB     (i,j) = 0.0_RP
+          RnR_URB     (i,j) = 0.0_RP
+          RnB_URB     (i,j) = 0.0_RP
+          RnG_URB     (i,j) = 0.0_RP
+          Rngrd_URB   (i,j) = 0.0_RP
+          ATM_FLX_SH  (i,j) = 0.0_RP
+          ATM_FLX_LH  (i,j) = 0.0_RP
+          URB_FLX_heat(i,j) = 0.0_RP
+          ATM_U10     (i,j) = 0.0_RP
+          ATM_V10     (i,j) = 0.0_RP
+          ATM_T2      (i,j) = 0.0_RP
+          ATM_Q2      (i,j) = 0.0_RP
+          SFC_TEMP    (i,j) = 300.0_RP
       endif
     enddo
     enddo
