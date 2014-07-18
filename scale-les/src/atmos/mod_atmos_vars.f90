@@ -703,15 +703,15 @@ contains
        THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres, &
        CVw                 => AQ_CV
     use mod_atmos_admin, only: &
-    　  ATMOS_USE_AVERAGE, &
-    　  ATMOS_sw_dyn,      &
-    　  ATMOS_sw_phy_mp,   &
-    　  ATMOS_sw_phy_ae,   &
-    　  ATMOS_sw_phy_ch,   &
-    　  ATMOS_sw_phy_rd,   &
-    　  ATMOS_sw_phy_sf,   &
-    　  ATMOS_sw_phy_tb,   &
-    　  ATMOS_sw_phy_cp
+       ATMOS_USE_AVERAGE, &
+       ATMOS_sw_dyn,      &
+       ATMOS_sw_phy_mp,   &
+       ATMOS_sw_phy_ae,   &
+       ATMOS_sw_phy_ch,   &
+       ATMOS_sw_phy_rd,   &
+       ATMOS_sw_phy_sf,   &
+       ATMOS_sw_phy_tb,   &
+       ATMOS_sw_phy_cp
     use mod_atmos_dyn_vars, only: &
        ATMOS_DYN_vars_restart_read
     use mod_atmos_phy_mp_vars, only: &
@@ -806,6 +806,15 @@ contains
        TIME_gettimelabel
     use scale_fileio, only: &
        FILEIO_write
+    use mod_atmos_admin, only: &
+       ATMOS_sw_dyn,      &
+       ATMOS_sw_phy_mp,   &
+       ATMOS_sw_phy_ae,   &
+       ATMOS_sw_phy_ch,   &
+       ATMOS_sw_phy_rd,   &
+       ATMOS_sw_phy_sf,   &
+       ATMOS_sw_phy_tb,   &
+       ATMOS_sw_phy_cp
     use mod_atmos_dyn_vars, only: &
        ATMOS_DYN_vars_restart_write
     use mod_atmos_phy_mp_vars, only: &
