@@ -196,7 +196,7 @@ contains
 
       if( is_FLX(i,j) ) then
 
-        Uabs = max( sqrt( ATM_U(i,j)**2 + ATM_V(i,j)**2 + ATM_W(i,j)**2 ), 0.1)
+        Uabs = max( sqrt( ATM_U(i,j)**2 + ATM_V(i,j)**2 + ATM_W(i,j)**2 ), 0.1_RP)
      
         call CPL_AtmUrb( TR_URB      (i,j),   & ! [INOUT]
                          TB_URB      (i,j),   & ! [INOUT]
