@@ -103,6 +103,8 @@ contains
        STAT_total
     use scale_cpl_atmos_urban, only: &
        CPL_AtmUrb
+    use scale_cpl_atmos_urban_bulk, only: &
+       CPL_AtmUrb_bulk_restart
     use mod_cpl_vars, only: &
        ATM_DENS   => CPL_fromAtm_ATM_DENS,   &
        ATM_U      => CPL_fromAtm_ATM_U,      &
@@ -184,14 +186,20 @@ contains
     !real(RP) :: QMA                 ! mixing ratio at the lowest atmospheric level  [kg/kg]
     real(RP) :: Uabs                ! wind speed at the lowest atmospheric level    [m/s]
     integer  :: i, j
+    integer  :: ii, jj
 
     real(RP) :: total ! dummy
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Coupler: Atmos-Urban'
 
-    do j = 1, JA
-    do i = 1, IA
+    ii = int( real(IA)/2. )  ! center grid of X
+    jj = int( real(JA)/2. )  ! center grid of Y
+
+    if ( sfc_temp_update ) then  ! temperature update
+
+      do j = 1, JA
+      do i = 1, IA
 
       if( is_FLX(i,j) ) then
 
@@ -246,11 +254,12 @@ contains
                          FLX_LW_dn   (i,j),   & ! [IN]
                          FLX_precip  (i,j),   & ! [IN]
                          ATM_DENS    (i,j),   & ! [IN]
-                         LON         (i,j),   & ! [IN]
-                         LAT         (i,j)    ) ! [IN]
+                         LON         (ii,jj),   & ! [IN]
+                         LAT         (ii,jj)    ) ! [IN]
+          TS_URB      (i,j) = SFC_TEMP (i,j)
       else
           ! not calculate surface flux
-          TS_URB      (i,j) =  SFC_TEMP(i,j)
+          TS_URB      (i,j) = SFC_TEMP(i,j)
           SHR_URB     (i,j) = 0.0_RP
           SHB_URB     (i,j) = 0.0_RP
           SHG_URB     (i,j) = 0.0_RP
@@ -273,8 +282,97 @@ contains
           ATM_Q2      (i,j) = 0.0_RP
           SFC_TEMP    (i,j) = 300.0_RP
       endif
-    enddo
-    enddo
+      enddo
+      enddo
+
+    else  ! temperature not update
+
+      do j = 1, JA
+      do i = 1, IA
+
+      if( is_FLX(i,j) ) then
+
+         Uabs = max( sqrt( ATM_U(i,j)**2 + ATM_V(i,j)**2 + ATM_W(i,j)**2 ), 0.1_RP)
+     
+         call CPL_AtmUrb_bulk_restart(  &
+                          TR_URB      (i,j),   & ! [IN]
+                          TB_URB      (i,j),   & ! [IN]
+                          TG_URB      (i,j),   & ! [IN]
+                          TC_URB      (i,j),   & ! [IN]
+                          QC_URB      (i,j),   & ! [IN]
+                          UC_URB      (i,j),   & ! [IN]
+                          TRL_URB     (:,i,j), & ! [IN]
+                          TBL_URB     (:,i,j), & ! [IN]
+                          TGL_URB     (:,i,j), & ! [IN]
+                          RAINR_URB   (i,j),   & ! [IN]
+                          RAINB_URB   (i,j),   & ! [IN]
+                          RAING_URB   (i,j),   & ! [IN]
+                          SFC_albedo  (i,j,I_LW), & ! [INOUT]
+                          SFC_albedo  (i,j,I_SW), & ! [INOUT]
+                          SHR_URB     (i,j),   & ! [OUT]
+                          SHB_URB     (i,j),   & ! [OUT]
+                          SHG_URB     (i,j),   & ! [OUT]
+                          LHR_URB     (i,j),   & ! [OUT]
+                          LHB_URB     (i,j),   & ! [OUT]
+                          LHG_URB     (i,j),   & ! [OUT]
+                          GHR_URB     (i,j),   & ! [OUT]
+                          GHB_URB     (i,j),   & ! [OUT]
+                          GHG_URB     (i,j),   & ! [OUT]
+                          RnR_URB     (i,j),   & ! [OUT]
+                          RnB_URB     (i,j),   & ! [OUT]
+                          RnG_URB     (i,j),   & ! [OUT]
+                          SFC_TEMP    (i,j),   & ! [OUT]
+                          Rngrd_URB   (i,j),   & ! [OUT]
+                          ATM_FLX_SH  (i,j),   & ! [OUT]
+                          ATM_FLX_LH  (i,j),   & ! [OUT]
+                          URB_FLX_heat(i,j),   & ! [OUT]
+                          ATM_U10     (i,j),   & ! [OUT]
+                          ATM_V10     (i,j),   & ! [OUT]
+                          ATM_T2      (i,j),   & ! [OUT]
+                          ATM_Q2      (i,j),   & ! [OUT]
+                          LSOLAR,              & ! [IN]
+                          SFC_PRES    (i,j),   & ! [IN]
+                          ATM_TEMP    (i,j),   & ! [IN]
+                          ATM_QV      (i,j),   & ! [IN]
+                          Uabs,                & ! [IN]
+                          ATM_U       (i,j),   & ! [IN]
+                          ATM_V       (i,j),   & ! [IN]
+                          Z1          (i,j),   & ! [IN]
+                          FLX_SW_dn   (i,j),   & ! [IN]
+                          FLX_LW_dn   (i,j),   & ! [IN]
+                          ATM_DENS    (i,j),   & ! [IN]
+                          LON         (ii,jj), & ! [IN]
+                          LAT         (ii,jj)  ) ! [IN]
+           TS_URB      (i,j) = SFC_TEMP (i,j)
+      else
+           ! not calculate surface flux                                             
+           TS_URB      (i,j) = SFC_TEMP(i,j)
+           SHR_URB     (i,j) = 0.0_RP
+           SHB_URB     (i,j) = 0.0_RP
+           SHG_URB     (i,j) = 0.0_RP
+           LHR_URB     (i,j) = 0.0_RP
+           LHB_URB     (i,j) = 0.0_RP
+           LHG_URB     (i,j) = 0.0_RP
+           GHR_URB     (i,j) = 0.0_RP
+           GHB_URB     (i,j) = 0.0_RP
+           GHG_URB     (i,j) = 0.0_RP
+           RnR_URB     (i,j) = 0.0_RP
+           RnB_URB     (i,j) = 0.0_RP
+           RnG_URB     (i,j) = 0.0_RP
+           Rngrd_URB   (i,j) = 0.0_RP
+           ATM_FLX_SH  (i,j) = 0.0_RP
+           ATM_FLX_LH  (i,j) = 0.0_RP
+           URB_FLX_heat(i,j) = 0.0_RP
+           ATM_U10     (i,j) = 0.0_RP
+           ATM_V10     (i,j) = 0.0_RP
+           ATM_T2      (i,j) = 0.0_RP
+           ATM_Q2      (i,j) = 0.0_RP
+           SFC_TEMP    (i,j) = 300.0_RP
+      endif
+      enddo
+      enddo
+
+    endif
 
     ! temporal average flux
     CPL_AtmUrb_ATM_FLX_MW  (:,:) = ( CPL_AtmUrb_ATM_FLX_MW  (:,:) * CNT_AtmUrb + ATM_FLX_MW(:,:)     ) / ( CNT_AtmUrb + 1.0_RP )

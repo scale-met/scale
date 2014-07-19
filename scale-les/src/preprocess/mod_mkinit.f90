@@ -138,10 +138,11 @@ module mod_mkinit
   integer, public, parameter :: I_BUBBLECOUPLE  = 21
 
   integer, public, parameter :: I_SEABREEZE     = 22
+  integer, public, parameter :: I_HEATISLAND    = 23
 
-  integer, public, parameter :: I_DYCOMS2_RF02_DNS = 23
+  integer, public, parameter :: I_DYCOMS2_RF02_DNS = 24
 
-  integer, public, parameter :: I_REAL          = 24
+  integer, public, parameter :: I_REAL          = 25
 
   !-----------------------------------------------------------------------------
   !
@@ -173,6 +174,7 @@ module mod_mkinit
   private :: MKINIT_oceancouple
   private :: MKINIT_urbancouple
   private :: MKINIT_seabreeze
+  private :: MKINIT_heatisland
 
   private :: MKINIT_DYCOMS2_RF02_DNS
 
@@ -313,6 +315,8 @@ contains
        call BUBBLE_setup
     case('SEABREEZE')
        MKINIT_TYPE = I_SEABREEZE
+    case('HEATISLAND')
+       MKINIT_TYPE = I_HEATISLAND
     case('DYCOMS2_RF02_DNS')
        MKINIT_TYPE = I_DYCOMS2_RF02_DNS
     case('REAL')
@@ -441,6 +445,9 @@ contains
       case(I_SEABREEZE)
          call MKINIT_planestate
          call MKINIT_seabreeze
+      case(I_HEATISLAND)
+         call MKINIT_planestate
+         call MKINIT_heatisland
       case(I_DYCOMS2_RF02_DNS)
          call MKINIT_DYCOMS2_RF02_DNS
       case(I_REAL)
@@ -4041,6 +4048,160 @@ enddo
 
     return
   end subroutine MKINIT_seabreeze
+
+  !-----------------------------------------------------------------------------
+  !> Make initial state ( heat island )
+  subroutine MKINIT_heatisland
+    use scale_process, only: &
+       PRC_NUM_X
+    use scale_landuse, only: &
+       LANDUSE_frac_land,    &
+       LANDUSE_frac_urban
+    use mod_land_vars, only: &
+       I_ThermalCond,   &
+       I_HeatCapacity,  &
+       I_Z0M,           &
+       LAND_TEMP,       &
+       LAND_WATER,      &
+       LAND_SFC_TEMP,   &
+       LAND_SFC_albedo, &
+       LAND_PROPERTY   
+    use mod_urban_vars, only: &
+       TR_URB,  &
+       TB_URB,  &
+       TG_URB,  &
+       TC_URB,  &
+       QC_URB,  &
+       UC_URB,  &
+       TS_URB,  &
+       TRL_URB, &
+       TBL_URB, &
+       TGL_URB
+    implicit none
+
+    ! Flux from Atmosphere
+    real(RP) :: FLX_rain          = 0.0_RP ! surface rain flux                         [kg/m2/s]
+    real(RP) :: FLX_snow          = 0.0_RP ! surface snow flux                         [kg/m2/s]
+    real(RP) :: FLX_LW_dn         = 0.0_RP ! surface downwad long-wave  radiation flux [J/m2/s]
+    real(RP) :: FLX_SW_dn         = 0.0_RP ! surface downwad short-wave radiation flux [J/m2/s]
+    ! Land state
+    real(RP) :: LND_TEMP                   ! soil temperature           [K]
+    real(RP) :: LND_WATER         = 0.0_RP ! soil moisture              [m3/m3]
+    real(RP) :: LND_SFC_TEMP               ! land skin temperature      [K]
+    real(RP) :: LND_SFC_albedo_LW = 0.0_RP ! land surface albedo for LW [0-1]
+    real(RP) :: LND_SFC_albedo_SW = 0.0_RP ! land surface albedo for SW [0-1]
+    real(RP) :: LND_SFC_ThermalCond        ! land thermal conductivity  [W/m/K]
+    real(RP) :: LND_SFC_HeatCapa           ! land heat capacity         [J/m3/K]
+    real(RP) :: LND_SFC_Z0                 ! land roughness length      [m]
+    
+    ! urban state
+    real(RP) :: URB_ROOF_TEMP          ! Surface temperature of roof [K]
+    real(RP) :: URB_BLDG_TEMP          ! Surface temperature of building [K
+    real(RP) :: URB_GRND_TEMP          ! Surface temperature of ground [K]
+    real(RP) :: URB_CNPY_TEMP          ! Diagnostic canopy air temperature
+    real(RP) :: URB_CNPY_HMDT = 0.0_RP ! Diagnostic canopy humidity [-]
+    real(RP) :: URB_CNPY_WIND = 0.0_RP ! Diagnostic canopy wind [m/s]
+    real(RP) :: URB_ROOF_LAYER_TEMP    ! temperature in layer of roof [K]
+    real(RP) :: URB_BLDG_LAYER_TEMP    ! temperature in layer of building [
+    real(RP) :: URB_GRND_LAYER_TEMP 
+
+    NAMELIST / PARAM_MKINIT_HEATISLAND / &
+       FLX_rain,            &
+       FLX_snow,            &
+       FLX_LW_dn,           &
+       FLX_SW_dn,           &
+       LND_TEMP,            &
+       LND_WATER,           &
+       LND_SFC_TEMP,        &
+       LND_SFC_albedo_LW,   &
+       LND_SFC_albedo_SW,   &
+       LND_SFC_ThermalCond, &
+       LND_SFC_HeatCapa,    &
+       LND_SFC_Z0,          &
+       URB_ROOF_TEMP,       &
+       URB_BLDG_TEMP,       &
+       URB_GRND_TEMP,       &
+       URB_CNPY_TEMP,       &
+       URB_CNPY_HMDT,       &
+       URB_CNPY_WIND,       &
+       URB_ROOF_LAYER_TEMP, &
+       URB_BLDG_LAYER_TEMP, &
+       URB_GRND_LAYER_TEMP
+
+    real(RP) :: dist
+
+    integer  :: ierr
+    integer  :: i, j
+    !---------------------------------------------------------------------------
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Heat island]/Categ[MKINIT]'
+
+    LND_TEMP  = THETAstd
+    URB_ROOF_TEMP       = THETAstd
+    URB_BLDG_TEMP       = THETAstd
+    URB_GRND_TEMP       = THETAstd
+    URB_CNPY_TEMP       = THETAstd
+    URB_ROOF_LAYER_TEMP = THETAstd
+    URB_BLDG_LAYER_TEMP = THETAstd
+    URB_GRND_LAYER_TEMP = THETAstd
+
+    !--- read namelist
+    rewind(IO_FID_CONF)
+    read(IO_FID_CONF,nml=PARAM_MKINIT_HEATISLAND,iostat=ierr)
+    if( ierr < 0 ) then !--- missing
+       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+    elseif( ierr > 0 ) then !--- fatal error
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_HEATISLAND. Check!'
+       call PRC_MPIstop
+    endif
+    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_HEATISLAND)
+
+    ! make surface, land, and ocean conditions
+    SFLX_rain (:,:) = FLX_rain
+    SFLX_snow (:,:) = FLX_snow
+    SFLX_LW_dn(:,:) = FLX_LW_dn
+    SFLX_SW_dn(:,:) = FLX_SW_dn
+
+    LAND_TEMP       (:,:,:)              = LND_TEMP
+    LAND_WATER      (:,:,:)              = LND_WATER
+    LAND_SFC_TEMP   (:,:)                = LND_SFC_TEMP
+    LAND_SFC_albedo (:,:,I_LW)           = LND_SFC_albedo_LW
+    LAND_SFC_albedo (:,:,I_SW)           = LND_SFC_albedo_SW
+    LAND_PROPERTY   (:,:,I_ThermalCond)  = LND_SFC_ThermalCond
+    LAND_PROPERTY   (:,:,I_HeatCapacity) = LND_SFC_HeatCapa
+    LAND_PROPERTY   (:,:,I_Z0M)          = LND_SFC_z0
+
+    TR_URB (:,:)   = URB_ROOF_TEMP
+    TB_URB (:,:)   = URB_BLDG_TEMP
+    TG_URB (:,:)   = URB_GRND_TEMP
+    TC_URB (:,:)   = URB_CNPY_TEMP
+    QC_URB (:,:)   = URB_CNPY_HMDT
+    UC_URB (:,:)   = URB_CNPY_WIND
+    TS_URB (:,:)   = URB_CNPY_TEMP
+    TRL_URB(:,:,:) = URB_ROOF_LAYER_TEMP
+    TBL_URB(:,:,:) = URB_BLDG_LAYER_TEMP
+    TGL_URB(:,:,:) = URB_GRND_LAYER_TEMP
+
+    ! 1/9 size of domain
+    dist = ( GRID_CXG(IMAX*PRC_NUM_X) - GRID_CXG(1) ) / 9.0_RP
+
+    ! make landuse conditions
+    do j = JS, JE
+    do i = IS, IE
+       if (       GRID_CX(i) >= dist * 4.0_RP &
+            .AND. GRID_CX(i) <  dist * 5.0_RP ) then
+          LANDUSE_frac_land(i,j)  = 1.0_RP
+          LANDUSE_frac_urban(i,j) = 1.0_RP
+       else
+          LANDUSE_frac_land(i,j)  = 1.0_RP
+          LANDUSE_frac_urban(i,j) = 0.0_RP
+       endif
+    enddo
+    enddo
+
+    return
+  end subroutine MKINIT_heatisland
 
   !-----------------------------------------------------------------------------
   !> Make initial state ( real case )

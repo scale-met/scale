@@ -27,6 +27,7 @@ module scale_cpl_atmos_urban_bulk
   !++ Public procedure
   !
   public :: CPL_AtmUrb_bulk_setup
+  public :: CPL_AtmUrb_bulk_restart
   public :: CPL_AtmUrb_bulk
 
   !-----------------------------------------------------------------------------
@@ -291,6 +292,483 @@ contains
   end subroutine CPL_AtmUrb_bulk_setup
 
   !-----------------------------------------------------------------------------
+  subroutine CPL_AtmUrb_bulk_restart( &
+        TR,           & ! (in)
+        TB,           & ! (in)
+        TG,           & ! (in)
+        TC,           & ! (in)
+        QC,           & ! (in)
+        UC,           & ! (in)
+        TRL,          & ! (in)
+        TBL,          & ! (in)
+        TGL,          & ! (in)
+        RAINR,        & ! (in)
+        RAINB,        & ! (in)
+        RAING,        & ! (in)
+        ALBD_LW_grid, & ! (out)
+        ALBD_SW_grid, & ! (out)
+        SHR,          & ! (out)
+        SHB,          & ! (out)
+        SHG,          & ! (out)
+        LHR,          & ! (out)
+        LHB,          & ! (out)
+        LHG,          & ! (out)
+        GHR,          & ! (out)
+        GHB,          & ! (out)
+        GHG,          & ! (out)
+        RNR,          & ! (out)
+        RNB,          & ! (out)
+        RNG,          & ! (out)
+        RTS,          & ! (out)
+        RN,           & ! (out)
+        SH,           & ! (out)
+        LH,           & ! (out)
+        GHFLX,        & ! (out)
+        U10,          & ! (out)
+        V10,          & ! (out)
+        T2,           & ! (out)
+        Q2,           & ! (out)
+        LSOLAR,       & ! (in)
+        PRES,         & ! (in)
+        TA,           & ! (in)
+        QA,           & ! (in)
+        UA,           & ! (in)
+        U1,           & ! (in)
+        V1,           & ! (in)
+        ZA,           & ! (in)
+        SSG,          & ! (in)
+        LLG,          & ! (in)
+        RHOO,         & ! (in)
+        XLON,         & ! (in)
+        XLAT          ) ! (in)
+    use scale_process, only: &
+       PRC_MPIstop
+    use scale_const, only: &
+       D2R    => CONST_D2R,     &    ! degree to radian  
+       KARMAN => CONST_KARMAN,  &    ! AK : kalman constant  [-]
+       PI     => CONST_PI,      &    ! PI : pi               [-]
+       CPdry  => CONST_CPdry,   &    ! CPP : heat capacity of dry air [J/K/kg]
+       LH0    => CONST_LH0,     &    ! ELL : latent heat of vaporization [J/kg]
+       GRAV   => CONST_GRAV,    &    !< gravitational constant [m/s2]
+       Rdry   => CONST_Rdry,    &    !< specific gas constant (dry) [J/kg/K]
+       Rvap   => CONST_Rvap,    &    !< gas constant (water vapor) [J/kg/K]
+       STB    => CONST_STB,     &    !< stefan-Boltzman constant [MKS unit]
+       TEM00  => CONST_TEM00         !< temperature reference (0 degree C) [K]
+    use scale_time, only:       &
+       TIME => TIME_NOWSEC,      &   !< absolute sec
+       DELT => TIME_DTSEC_URBAN      !< time interval of urban step [sec]
+    implicit none
+
+    !-- configuration variables
+    logical, intent(in) :: LSOLAR  ! logical   [true=both, false=SSG only]
+
+    !-- Input variables from Coupler to Urban
+    real(RP), intent(in)    :: PRES ! Surface Pressure [Pa]
+    real(RP), intent(in)    :: TA   ! temp at 1st atmospheric level          [K]
+    real(RP), intent(in)    :: QA   ! specific humidity at 1st atmospheric level  [kg/kg]
+    real(RP), intent(in)    :: UA   ! wind speed at 1st atmospheric level    [m/s]
+    real(RP), intent(in)    :: U1   ! u at 1st atmospheric level             [m/s]
+    real(RP), intent(in)    :: V1   ! v at 1st atmospheric level             [m/s]
+    real(RP), intent(in)    :: ZA   ! height of 1st atmospheric level        [m]
+    real(RP), intent(in)    :: SSG  ! downward total short wave radiation    [W/m/m]
+    real(RP), intent(in)    :: LLG  ! downward long wave radiation           [W/m/m]
+
+    real(RP), intent(in)    :: RHOO ! air density                            [kg/m^3]
+    real(RP), intent(in)    :: XLAT !< latitude  [rad,-pi,pi]
+    real(RP), intent(in)    :: XLON !< longitude [rad,0-2pi]
+
+    !-- In/Out variables from/to Coupler to/from Urban
+    real(RP), intent(in) :: TR   ! roof temperature              [K]
+    real(RP), intent(in) :: TB   ! building wall temperature     [K]
+    real(RP), intent(in) :: TG   ! road temperature              [K]
+    real(RP), intent(in) :: TC   ! urban-canopy air temperature  [K]
+    real(RP), intent(in) :: QC   ! urban-canopy air specific humidity [kg/kg]
+    real(RP), intent(in) :: UC   ! diagnostic canopy wind        [m/s]
+    real(RP), intent(in) :: TRL(UKS:UKE)  ! layer temperature [K]
+    real(RP), intent(in) :: TBL(UKS:UKE)  ! layer temperature [K]
+    real(RP), intent(in) :: TGL(UKS:UKE)  ! layer temperature [K]
+    real(RP), intent(in) :: RAINR ! rain amount in storage on roof     [kg/m2]
+    real(RP), intent(in) :: RAINB ! rain amount in storage on building [kg/m2]
+    real(RP), intent(in) :: RAING ! rain amount in storage on road     [kg/m2]
+
+    !-- Output variables from Urban to Coupler
+    real(RP), intent(out)   :: ALBD_SW_grid  ! grid mean of surface albedo for SW
+    real(RP), intent(out)   :: ALBD_LW_grid  ! grid mean of surface albedo for LW ( 1-emiss )
+    real(RP), intent(out)   :: RTS    ! radiative surface temperature    [K]
+    real(RP), intent(out)   :: SH     ! sensible heat flux               [W/m/m]
+    real(RP), intent(out)   :: LH     ! latent heat flux                 [W/m/m]
+    real(RP), intent(out)   :: GHFLX  ! heat flux into the ground        [W/m/m]
+    real(RP), intent(out)   :: RN     ! net radition                     [W/m/m]
+    real(RP), intent(out)   :: U10    ! U wind at 10m                    [m/s]
+    real(RP), intent(out)   :: V10    ! V wind at 10m                    [m/s]
+    real(RP), intent(out)   :: T2     ! air temperature at 2m            [K]
+    real(RP), intent(out)   :: Q2     ! specific humidity at 2m          [kg/kg]
+    real(RP), intent(out)   :: RNR, RNB, RNG
+    real(RP), intent(out)   :: SHR, SHB, SHG
+    real(RP), intent(out)   :: LHR, LHB, LHG
+    real(RP), intent(out)   :: GHR, GHB, GHG
+
+    !-- parameters
+    real(RP), parameter     :: CP  = 0.24_RP     ! heat capacity of dry air  [cgs unit]
+    real(RP), parameter     :: EL  = 583.0_RP    ! latent heat of vaporation [cgs unit]
+    real(RP), parameter     :: SIG = 8.17E-11_RP ! stefun bolzman constant   [cgs unit]
+    real(RP), parameter     :: SRATIO = 0.75_RP  ! ratio between direct/total solar [-]
+
+    !-- Local variables
+    logical  :: SHADOW = .false.
+           !  true  = consider svf and shadow effects,
+           !  false = consider svf effect only
+
+    real(RP) :: LON,LAT  ! longitude [deg], latitude [deg]
+    integer  :: tloc     ! local time (1-24h)
+    real(RP) :: dsec     ! second [s]
+    real(RP) :: tahdiurnal ! temporal AH diurnal profile
+    real(RP) :: AH_t     ! Sensible Anthropogenic heat [W/m^2]
+    real(RP) :: ALH_t    ! Latent Anthropogenic heat [W/m^2]
+
+    real(RP) :: SSGD     ! downward direct short wave radiation   [W/m/m]
+    real(RP) :: SSGQ     ! downward diffuse short wave radiation  [W/m/m]
+
+    real(RP) :: W, VFGS, VFGW, VFWG, VFWS, VFWW
+    real(RP) :: SX, SD, SQ, RX
+    real(RP) :: RHO
+
+    real(RP) :: UST, TST, QST
+
+    real(RP) :: PS         ! Surface Pressure [Pa]
+    real(RP) :: ES
+
+    real(RP) :: LUP, LDN, RUP
+    real(RP) :: SUP, SDN
+
+    real(RP) :: LNET, SNET, FLXUV, FLXTH, FLXHUM, FLXG
+    real(RP) :: SW                  ! shortwave radition          [W/m/m]
+    real(RP) :: LW                  ! longwave radition           [W/m/m]
+    real(RP) :: psim,psim2,psim10   ! similality stability shear function for momentum
+    real(RP) :: psih,psih2,psih10   ! similality stability shear function for heat
+
+    ! for shadow effect model
+    ! real(RP) :: HOUI1, HOUI2, HOUI3, HOUI4, HOUI5, HOUI6, HOUI7, HOUI8
+    ! real(RP) :: SLX, SLX1, SLX2, SLX3, SLX4, SLX5, SLX6, SLX7, SLX8
+    ! real(RP) :: THEATAZ    ! Solar Zenith Angle [rad]
+    ! real(RP) :: THEATAS    ! = PI/2. - THETAZ
+    ! real(RP) :: FAI        ! Latitude [rad]
+
+    real(RP) :: SR, SB, SG, RR, RB, RG
+    real(RP) :: SR1, SB1, SB2, SG1, SG2
+    real(RP) :: RB1, RB2, RG1, RG2
+    real(RP) :: HR, ELER, G0R, FLXTHR, FLXHUMR
+    real(RP) :: HB, ELEB, G0B, FLXTHB, FLXHUMB
+    real(RP) :: HG, ELEG, G0G, FLXTHG, FLXHUMG
+
+    real(RP) :: Z
+    real(RP) :: QS0R
+    real(RP) :: QS0B
+    real(RP) :: QS0G
+
+    real(RP) :: RIBR, XXXR, BHR, ALPHAR, CHR, CDR
+    real(RP) :: RIBC, XXXC, BHC
+    real(RP) :: ALPHAC, ALPHAB, ALPHAG
+    real(RP) :: CHC, CHB, CHG, CDC
+
+    real(RP) :: XXX, X, CD, CH, CHU, XXX2, XXX10
+
+
+    !-----------------------------------------------------------
+    ! Set parameters
+    !-----------------------------------------------------------
+
+    ! local time
+    LAT = XLAT / D2R
+    LON = XLON / D2R
+
+    tloc = mod( (int(TIME/3600.0_RP) + int(LON/15.0_RP)),24 )
+    dsec = mod(TIME,3600.0_RP) / 3600.0_RP
+    if(tloc==0) tloc = 24
+
+    ! Calculate AH data at LST
+     if(tloc==24)then
+       tahdiurnal = ( (1.0_RP-dsec) * ahdiurnal(tloc  ) &
+                    + (       dsec) * ahdiurnal(1)      )
+     else
+       tahdiurnal = ( (1.0_RP-dsec) * ahdiurnal(tloc  ) &
+                    + (       dsec) * ahdiurnal(tloc+1) )
+     endif
+     AH_t  = AH  * tahdiurnal
+     ALH_t = ALH * tahdiurnal
+
+    !if(.NOT.LSOLAR) then   ! Radiation scheme does not have SSGD and SSGQ.
+      SSGD = SRATIO * SSG
+      SSGQ = SSG - SSGD
+    !endif
+
+    W    = 2.0_RP * 1.0_RP * HGT
+    VFGS = SVF
+    VFGW = 1.0_RP - SVF
+    VFWG = ( 1.0_RP - SVF ) * ( 1.0_RP - R ) / W
+    VFWS = VFWG
+    VFWW = 1.0_RP - 2.0_RP * VFWG
+
+    !--- Convert unit from MKS to cgs
+
+    SX  = (SSGD+SSGQ) / 697.7_RP / 60.0_RP  ! downward short wave radition [ly/min]
+    SD  = SSGD        / 697.7_RP / 60.0_RP  ! downward direct short wave radiation
+    SQ  = SSGQ        / 697.7_RP / 60.0_RP  ! downward diffuse short wave radiation
+    RX  = LLG         / 697.7_RP / 60.0_RP  ! downward long wave radiation
+    RHO = RHOO * 0.001_RP                   ! air density at first atmospheric level
+
+
+    !--- calculate canopy wind
+
+    !call canopy_wind(ZA, UA, UC)
+
+    !-----------------------------------------------------------
+    ! Radiation : Net Short Wave Radiation at roof/wall/road
+    !-----------------------------------------------------------
+
+    if( SSG > 0.0_RP ) then !  SSG is downward short
+
+      ! currently we use no shadow effect model
+      !!     IF(.NOT.SHADOW) THEN              ! no shadow effects model
+
+      SR1  = SX * ( 1.0_RP - ALBR )
+      SG1  = SX * VFGS * ( 1.0_RP - ALBG )
+      SB1  = SX * VFWS * ( 1.0_RP - ALBB )
+      SG2  = SB1 * ALBB / ( 1.0_RP - ALBB ) * VFGW * ( 1.0_RP - ALBG )
+      SB2  = SG1 * ALBG / ( 1.0_RP - ALBG ) * VFWG * ( 1.0_RP - ALBB )
+
+      SR   = SR1
+      SG   = SG1 + SG2
+      SB   = SB1 + SB2
+      SNET = R * SR + W * SB + RW * SG
+
+    else
+
+      SR   = 0.0_RP
+      SG   = 0.0_RP
+      SB   = 0.0_RP
+      SNET = 0.0_RP
+
+    end if
+
+
+    !-----------------------------------------------------------
+    ! Set evaporation efficiency on roof/wall/road
+    !-----------------------------------------------------------
+
+    if ( STRGR == 0.0_RP ) then
+       BETR = 0.0_RP
+    else
+       BETR = min ( RAINR / STRGR, 1.0_RP)
+    endif
+    if ( STRGB == 0.0_RP ) then
+       BETB = 0.0_RP
+    else
+       BETB = min ( RAINB / STRGB, 1.0_RP)
+    endif
+    if ( STRGG == 0.0_RP ) then
+       BETG = 0.0_RP
+    else
+       BETG = min ( RAING / STRGG, 1.0_RP)
+    endif
+
+    !-----------------------------------------------------------
+    ! Energy balance on roof/wall/road surface
+    !-----------------------------------------------------------
+
+    !--- Roof
+
+    Z    = ZA - ZDC
+    BHR  = LOG(Z0R/Z0HR) / 0.4_RP
+    RIBR = ( GRAV * 2.0_RP / (TA+TR) ) * (TA-TR) * (Z+Z0R) / (UA*UA)
+
+    call mos(XXXR,ALPHAR,CDR,BHR,RIBR,Z,Z0R,UA,TA,TR,RHO)
+    CHR  = ALPHAR / RHO / CP / UA
+
+    PS   = PRES / 100.0_RP               ! [hPa]
+    ES   = 6.11_RP * exp( ( LH0/Rvap) * (TR-TEM00) / (TEM00*TR) )
+    QS0R = 0.622_RP * ES / ( PS - 0.378_RP * ES )
+
+    RR   = EPSR * ( RX - SIG * (TR**4) / 60.0_RP )
+    HR   = RHO * CP * CHR * UA * (TR-TA) * 100.0_RP
+    ELER = RHO * EL * CHR * UA * BETR * (QS0R-QA) * 100.0_RP
+    G0R  = AKSR * (TR-TRL(1)) / (DZR(1)/2.0_RP)
+
+    !--- Wall and Road
+
+    Z    = ZA - ZDC
+    BHC  = LOG(Z0C/Z0HC) / 0.4_RP
+    RIBC = ( GRAV * 2.0_RP / (TA+TC) ) * (TA-TC) * (Z+Z0C) / (UA*UA)
+
+    call mos(XXXC,ALPHAC,CDC,BHC,RIBC,Z,Z0C,UA,TA,TC,RHO)
+
+    ! empirical form
+    ALPHAB = RHO * CP * ( 6.15_RP + 4.18_RP * UC ) / 1200.0_RP
+    if( UC > 5.0_RP ) ALPHAB = RHO * CP * ( 7.51_RP * UC**0.78_RP ) / 1200.0_RP
+
+    ALPHAG = RHO * CP * ( 6.15_RP + 4.18_RP * UC ) / 1200.0_RP
+    if( UC > 5.0_RP ) ALPHAG = RHO * CP * ( 7.51_RP * UC**0.78_RP ) / 1200.0_RP
+
+    CHC = ALPHAC / RHO / CP / UA
+    CHB = ALPHAB / RHO / CP / UC
+    CHG = ALPHAG / RHO / CP / UC
+
+    RG1      = EPSG * ( RX * VFGS                             &
+                      + EPSB * VFGW * SIG * TB**4 / 60.0_RP  &
+                      - SIG * TG**4 / 60.0_RP                )
+    RB1      = EPSB * ( RX * VFWS         &
+                      + EPSG * VFWG * SIG * TG**4 / 60.0_RP &
+                      + EPSB * VFWW * SIG * TB**4 / 60.0_RP &
+                      - SIG * TB**4 / 60.0_RP               )
+
+    RG2      = EPSG * ( (1.0_RP-EPSB) * VFGW * VFWS * RX                                            &
+                      + (1.0_RP-EPSB) * VFGW * VFWG * EPSG * SIG * TG**4 /60.0_RP                   &
+                      + EPSB * (1.0_RP-EPSB) * VFGW * VFWW * SIG * TB**4 / 60.0_RP )
+    RB2      = EPSB * ( (1.0_RP-EPSG) * VFWG * VFGS * RX                                                           &
+                      + (1.0_RP-EPSG) * EPSB * VFGW * VFWG * SIG * (TB**4) / 60.0_RP                               &
+                      + (1.0_RP-EPSB) * VFWS * VFWW * RX                                                           &
+                      + (1.0_RP-EPSB) * VFWG * VFWW * SIG * EPSG * TG**4 / 60.0_RP                                 &
+                      + EPSB * (1.0_RP-EPSB) * VFWW * (1.0_RP-2.0_RP*VFWS) * SIG * TB**4 / 60.0_RP )
+
+    RG       = RG1 + RG2
+    RB       = RB1 + RB2
+
+
+    ES   = 6.11_RP * exp( (LH0/Rvap) * (TB-TEM00) / (TEM00*TB) )
+    QS0B = 0.622_RP * ES / ( PS - 0.378_RP * ES )
+
+    HB   = RHO * CP * CHB * UC * (TB-TC) * 100.0_RP
+    ELEB = RHO * EL * CHB * UC * BETB * (QS0B-QC) * 100.0_RP
+    G0B  = AKSB * (TB-TBL(1)) / (DZB(1)/2.0_RP)
+
+    ES   = 6.11_RP * exp( (LH0/Rvap) * (TG-TEM00) / (TEM00*TG) )
+    QS0G = 0.622_RP * ES / ( PS - 0.378_RP * ES )
+
+    HG   = RHO * CP * CHG * UC * (TG-TC) * 100.0_RP
+    ELEG = RHO * EL * CHG * UC * BETG * (QS0G-QC) * 100.0_RP
+    G0G  = AKSG * (TG-TGL(1)) / (DZG(1)/2.0_RP)
+
+
+    FLXTHR  = HR / RHO / CP / 100.0_RP
+    FLXHUMR = ELER / RHO / EL / 100.0_RP
+    FLXTHB  = HB / RHO / CP / 100.0_RP
+    FLXHUMB = ELEB / RHO / EL / 100.0_RP
+    FLXTHG  = HG / RHO / CP / 100.0_RP
+    FLXHUMG = ELEG / RHO / EL / 100.0_RP
+
+    !-----------------------------------------------------------
+    ! Total Fluxes from Urban Canopy
+    !-----------------------------------------------------------
+
+    FLXUV  = ( R*CDR + RW*CDC ) * UA * UA
+!    FLXTH  = ( R*FLXTHR  + W*FLXTHB  + RW*FLXTHG ) + AH_t/RHOO/CPdry
+!    FLXHUM = ( R*FLXHUMR + W*FLXHUMB + RW*FLXHUMG ) + ALH_t/RHOO/LH0
+    FLXTH  = ( R*FLXTHR  + W*FLXTHB  + RW*FLXTHG ) 
+    FLXHUM = ( R*FLXHUMR + W*FLXHUMB + RW*FLXHUMG )
+    FLXG   = ( R*G0R + W*G0B + RW*G0G )
+    LNET   = R*RR + W*RB + RW*RG
+
+    !-----------------------------------------------------------
+    ! Grid average
+    !-----------------------------------------------------------
+    !--- shortwave radiation
+    SDN =  R + W * (VFWS + VFGS * ALBG * VFWG)  + RW * (VFGS + VFWS * ALBB * VFGW)
+    SUP =  R * ALBR  &
+         + W * ( VFWS* ALBB + VFGS * ALBG * VFWG *ALBB ) &
+         + RW * ( VFGS * ALBG + VFWS * ALBB * VFGW *ALBG )
+
+    ALBD_SW_grid = SUP / SDN
+
+    !--- longwave radiation
+    LDN =  R + W*VFWS + RW*VFGS
+    LUP =  R * (1.0_RP-EPSR) &
+         + W*( (1.0_RP-EPSB*VFWW)*(1.0_RP-EPSB)*VFWS - EPSB*VFWG*(1.0_RP-EPSG)*VFGS )  &
+         + RW*( (1.0_RP-EPSG)*VFGS - EPSG*(1.0_RP-VFGS)*(1.0_RP-EPSB)*VFWS )
+
+    RUP = (LDN - LUP) * RX - LNET
+    ALBD_LW_grid = LUP / LDN
+
+
+    !-----------------------------------------------------------
+    ! Convert Unit: FLUXES and u* T* q*  [cgs] --> [MKS]
+    !-----------------------------------------------------------
+
+    SH = FLXTH  * RHOO * CPdry               ! Sensible heat flux          [W/m/m]
+    LH = FLXHUM * RHOO * LH0                 ! Latent heat flux            [W/m/m]
+    LW = LLG - ( LNET * 697.7_RP * 60.0_RP ) ! Upward longwave radiation   [W/m/m]
+    SW = SSG - ( SNET * 697.7_RP * 60.0_RP ) ! Upward shortwave radiation  [W/m/m]
+
+    GHFLX  = -FLXG * 697.7_RP * 60.0_RP          ! [W/m/m]
+
+    RN = (SNET+LNET) * 697.7_RP * 60.0_RP    ! Net radiation [W/m/m]
+
+    RUP = RUP * 697.7_RP * 60.0_RP        ! Upward longwave = sig*T**4 [W/m/m]
+
+    SHR = FLXTHR * RHOO * CPdry           ! Sensible heat flux on roof [W/m/m]
+    SHB = FLXTHB * RHOO * CPdry           ! Sensible heat flux on wall [W/m/m]
+    SHG = FLXTHG * RHOO * CPdry           ! Sensible heat flux on road [W/m/m]
+    LHR = FLXHUMR * RHOO * LH0           ! Latent heat flux on road [W/m/m]
+    LHB = FLXHUMB * RHOO * LH0           ! Latent heat flux on wall [W/m/m]
+    LHG = FLXHUMG * RHOO * LH0           ! Latent heat flux on road [W/m/m]
+    GHR = -1.0_RP * G0R * 697.7_RP * 60.0_RP          ! Ground heat flux on roof [W/m/m]
+    GHB = -1.0_RP * G0B * 697.7_RP * 60.0_RP          ! Ground heat flux on wall [W/m/m]
+    GHG = -1.0_RP * G0G * 697.7_RP * 60.0_RP          ! Ground heat flux on road [W/m/m]
+    RNR = (SR + RR) * 697.7_RP * 60.0_RP     ! Net radiation on roof [W/m/m]
+    RNB = (SB + RB) * 697.7_RP * 60.0_RP     ! Net radiation on building [W/m/m]
+    RNG = (SG + RG) * 697.7_RP * 60.0_RP     ! Net radiation on ground [W/m/m]
+
+    UST = sqrt( FLXUV )                      ! u* [m/s]
+    TST = -FLXTH / UST                       ! T* [K]
+    QST = -FLXHUM / UST                      ! q* [-]
+
+    !-----------------------------------------------------------
+    !  diagnostic GRID AVERAGED TS from upward logwave
+    !-----------------------------------------------------------
+
+    RTS = ( RUP / STB / ( 1.0_RP-ALBD_LW_grid) )**0.25
+
+    !-----------------------------------------------------------
+    !  diagnostic grid average U10, V10, T2, Q2 from urban
+    !  Below method would be better to be improved. This is tentative method.
+    !-----------------------------------------------------------
+
+    call cal_psi(XXX,psim,psih)
+
+    XXX2 = (2.0_RP/Z) * XXX
+    call cal_psi(XXX2,psim2,psih2)
+
+    XXX10 = (10.0_RP/Z) * XXX
+    call cal_psi(XXX10,psim10,psih10)
+ 
+    !U10 = U1 * ((log(10.0_RP/Z0C)-psim10)/(log(Z/Z0C)-psim))  ! u at 10 m [m/s]
+    !V10 = V1 * ((log(10.0_RP/Z0C)-psim10)/(log(Z/Z0C)-psim))  ! v at 10 m [m/s]
+    U10 = U1 * log(10.0_RP/Z0C) / log(Z/Z0C)
+    V10 = V1 * log(10.0_RP/Z0C) / log(Z/Z0C)
+
+    T2  = RTS + (TA-RTS)*((log(2.0_RP/Z0HC)-psih2)/(log(Z/Z0HC)-psih))
+    ! Q2 = QS + (QA-QS)*((log(2.0_RP/Z0HC)-psih2)/(log(Z/Z0HC)-psih))  ! humidity at 2 m [-]
+    ! Q2  = QA * ((log(2.0_RP/Z0HC)-psih2)/(log(Z/Z0HC)-psih))  ! humidity at 2 m [-]OB
+    Q2 = QC
+
+    !print *,'U10,V10,T2,Q2,QC',U10,V10,T2,Q2,QC
+
+    !-----------------------------------------------------------
+    ! add anthropogenic heat fluxes
+    !-----------------------------------------------------------
+
+    !print *,"1",dsec,AH_t,FLXTH,SH
+
+    FLXTH  = FLXTH  + AH_t/RHOO/CPdry
+    FLXHUM = FLXHUM + ALH_t/RHOO/LH0
+    SH     = FLXTH  * RHOO * CPdry               ! Sensible heat flux          [W/m/m]
+    LH     = FLXHUM * RHOO * LH0                 ! Latent heat flux            [W/m/m]
+
+    !print *,"2",dsec,AH_t,FLXTH,SH
+
+    return
+  end subroutine CPL_AtmUrb_bulk_restart
+
+  !-----------------------------------------------------------------------------
   subroutine CPL_AtmUrb_bulk( &
         TR,           & ! (inout)
         TB,           & ! (inout)
@@ -531,7 +1009,7 @@ contains
     LON = XLON / D2R
 
     tloc = mod( (int(TIME/3600.0_RP) + int(LON/15.0_RP)),24 )
-    dsec = mod(TIME,3600.0_RP) / 3600.0_RP
+    dsec = mod(TIME,3600.0_RP) / 3600.0_RP 
     if(tloc==0) tloc = 24
 
     ! Calculate AH data at LST
@@ -636,7 +1114,9 @@ contains
     ! Energy balance on roof/wall/road surface
     !-----------------------------------------------------------
 
-    !--- Roof
+    !--------------------------------------------------
+    !   Roof
+    !--------------------------------------------------
 
     Z    = ZA - ZDC
     BHR  = LOG(Z0R/Z0HR) / 0.4_RP
@@ -725,13 +1205,37 @@ contains
     !print *,'G0R ',TIME,G0R,AKSR,(TRP-TRL(1)),DZR(1)
     !print *,'F   ',iteration-1,abs(F),abs(DTR)
 
+    !-----------------------------------------
+    !!  calculate temperature in building/road
+    !!  multi-layer heat equation model
+    !!  Solving Heat Equation by Tri Diagonal Matrix Algorithm
+    !-----------------------------------------
+
+    call multi_layer(UKE,BOUND,G0R,CAPR,AKSR,TRL,DZR,DELT,TRLEND)
+
+    !--- update only fluxes ----
+    RIBR = ( GRAV * 2.0_RP / (TA+TR) ) * (TA-TR) * (Z+Z0R) / (UA*UA)
+    call mos(XXXR,ALPHAR,CDR,BHR,RIBR,Z,Z0R,UA,TA,TR,RHO)
+    CHR = ALPHAR / RHO / CP / UA
+    
+    ES       = 6.11_RP * exp( ( LH0/Rvap) * (TR-TEM00) / (TEM00*TR) )
+    QS0R     = 0.622_RP * ES / ( PS - 0.378_RP * ES )
+
+    RR       = EPSR * ( RX - SIG * (TR**4) / 60.0_RP )
+    HR       = RHO * CP * CHR * UA * (TR-TA) * 100.0_RP
+    ELER     = RHO * EL * CHR * UA * BETR * (QS0R-QA) * 100.0_RP
+    G0R      = AKSR * (TR-TRL(1)) / (DZR(1)/2.0_RP)
+    !----
+
     FLXTHR  = HR / RHO / CP / 100.0_RP
     FLXHUMR = ELER / RHO / EL / 100.0_RP
 
     !!--- calculate the rain amount remaining on the surface
     RAINR = max(0.0_RP, RAINR-(ELER/EL)*DELT*10.0_RP)   ! from cgs to MKS [kg/m/m = mm]
 
-    !--- Wall and Road
+    !--------------------------------------------------
+    !   Wall and Road
+    !--------------------------------------------------
 
     Z    = ZA - ZDC
     BHC  = LOG(Z0C/Z0HC) / 0.4_RP
@@ -881,6 +1385,55 @@ contains
 
     end do
 
+    !-----------------------------------------------------------
+    !  calculate temperature in building/road
+    !  multi-layer heat equation model
+    !  Solving Heat Equation by Tri Diagonal Matrix Algorithm
+    !-----------------------------------------------------------
+
+    call multi_layer(UKE,BOUND,G0B,CAPB,AKSB,TBL,DZB,DELT,TBLEND)
+    call multi_layer(UKE,BOUND,G0G,CAPG,AKSG,TGL,DZG,DELT,TGLEND)
+
+    !--- update only fluxes ----
+    RIBC = ( GRAV * 2.0_RP / (TA+TC) ) * (TA-TC) * (Z+Z0C) / (UA*UA)
+    call mos(XXXC,ALPHAC,CDC,BHC,RIBC,Z,Z0C,UA,TA,TC,RHO)
+
+    RG1      = EPSG * ( RX * VFGS                             &
+                      + EPSB * VFGW * SIG * TB**4 / 60.0_RP  &
+                      - SIG * TG**4 / 60.0_RP                )
+    RB1      = EPSB * ( RX * VFWS         &
+                      + EPSG * VFWG * SIG * TG**4 / 60.0_RP &
+                      + EPSB * VFWW * SIG * TB**4 / 60.0_RP &
+                      - SIG * TB**4 / 60.0_RP               )
+
+    RG2      = EPSG * ( (1.0_RP-EPSB) * VFGW * VFWS * RX                                            &
+                      + (1.0_RP-EPSB) * VFGW * VFWG * EPSG * SIG * TG**4 /60.0_RP                   &
+                      + EPSB * (1.0_RP-EPSB) * VFGW * VFWW * SIG * TB**4 / 60.0_RP )
+    RB2      = EPSB * ( (1.0_RP-EPSG) * VFWG * VFGS * RX                                                           &
+                      + (1.0_RP-EPSG) * EPSB * VFGW * VFWG * SIG * (TB**4) / 60.0_RP                               &
+                      + (1.0_RP-EPSB) * VFWS * VFWW * RX                                                           &
+                      + (1.0_RP-EPSB) * VFWG * VFWW * SIG * EPSG * TG**4 / 60.0_RP                                 &
+                      + EPSB * (1.0_RP-EPSB) * VFWW * (1.0_RP-2.0_RP*VFWS) * SIG * TB**4 / 60.0_RP )
+
+    RG       = RG1 + RG2
+    RB       = RB1 + RB2
+
+    ES   = 6.11_RP * exp( (LH0/Rvap) * (TB-TEM00) / (TEM00*TB) )
+    QS0B = 0.622_RP * ES / ( PS - 0.378_RP * ES )
+
+    HB   = RHO * CP * CHB * UC * (TB-TC) * 100.0_RP
+    ELEB = RHO * EL * CHB * UC * BETB * (QS0B-QC) * 100.0_RP
+    G0B  = AKSB * (TB-TBL(1)) / (DZB(1)/2.0_RP)
+
+    ES   = 6.11_RP * exp( (LH0/Rvap) * (TG-TEM00) / (TEM00*TG) )
+    QS0G = 0.622_RP * ES / ( PS - 0.378_RP * ES )
+
+    HG   = RHO * CP * CHG * UC * (TG-TC) * 100.0_RP
+    ELEG = RHO * EL * CHG * UC * BETG * (QS0G-QC) * 100.0_RP
+    G0G  = AKSG * (TG-TGL(1)) / (DZG(1)/2.0_RP)
+    !----
+
+
     FLXTHB  = HB / RHO / CP / 100.0_RP
     FLXHUMB = ELEB / RHO / EL / 100.0_RP
     FLXTHG  = HG / RHO / CP / 100.0_RP
@@ -1013,7 +1566,7 @@ contains
 
     XXX10 = (10.0_RP/Z) * XXX
     call cal_psi(XXX10,psim10,psih10)
-
+ 
     !U10 = U1 * ((log(10.0_RP/Z0C)-psim10)/(log(Z/Z0C)-psim))  ! u at 10 m [m/s]
     !V10 = V1 * ((log(10.0_RP/Z0C)-psim10)/(log(Z/Z0C)-psim))  ! v at 10 m [m/s]
     U10 = U1 * log(10.0_RP/Z0C) / log(Z/Z0C)
@@ -1030,20 +1583,14 @@ contains
     ! add anthropogenic heat fluxes
     !-----------------------------------------------------------
 
+    !print *,"3",dsec,AH_t,FLXTH,SH
+
     FLXTH  = FLXTH  + AH_t/RHOO/CPdry
     FLXHUM = FLXHUM + ALH_t/RHOO/LH0
     SH     = FLXTH  * RHOO * CPdry               ! Sensible heat flux          [W/m/m]
     LH     = FLXHUM * RHOO * LH0                 ! Latent heat flux            [W/m/m]
 
-    !-----------------------------------------------------------
-    !  calculate temperature in building/road
-    !  multi-layer heat equation model
-    !  Solving Heat Equation by Tri Diagonal Matrix Algorithm
-    !-----------------------------------------------------------
-
-    call multi_layer(UKE,BOUND,G0R,CAPR,AKSR,TRL,DZR,DELT,TRLEND)
-    call multi_layer(UKE,BOUND,G0B,CAPB,AKSB,TBL,DZB,DELT,TBLEND)
-    call multi_layer(UKE,BOUND,G0G,CAPG,AKSG,TGL,DZG,DELT,TGLEND)
+    !print *,"4",dsec,AH_t,FLXTH,SH
 
     return
   end subroutine CPL_AtmUrb_bulk
