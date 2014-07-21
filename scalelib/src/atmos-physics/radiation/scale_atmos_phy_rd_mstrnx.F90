@@ -1814,7 +1814,7 @@ contains
     !$acc& create(Tdir, x_R, x_T, x_Em, x_Ep)
 
     !$acc kernels pcopyin(cosSZA0) pcopy(cosSZA) async(0)
-    cosSZA(IS:IE,JS:IE) = max( cosSZA0(IS:IE,JS:JE), RD_cosSZA_min )
+    cosSZA(IS:IE,JS:JE) = max( cosSZA0(IS:IE,JS:JE), RD_cosSZA_min )
 !    cosSZA(:,:) = max( cosSZA0(:,:), RD_cosSZA_min ) ! this may raise a floating exception for value in halo
     !$acc end kernels
 
