@@ -206,7 +206,7 @@ contains
 
     real(RP) :: Ustar(IA,JA)
     real(RP) :: Uabs (IA,JA)
-    real(RP) :: U10M (IA,JA)
+    real(RP) :: U10M
 
     integer  :: ite
     integer  :: i, j
@@ -222,11 +222,11 @@ contains
     do ite = 1, itelim
        do j = 1, JA
        do i = 1, IA
-          Ustar(i,j) = KARMAN * Uabs(i,j) / log( Z1(i,j)/Z0M(i,j) )
-          U10M (i,j) = Ustar(i,j) / KARMAN * log( 10.0_RP/Z0M(i,j) )
+          Ustar(i,j) = max( KARMAN * Uabs(i,j) / log( Z1(i,j)/Z0M(i,j) ), OCEAN_roughness_Ustar_min )
+          U10M = Ustar(i,j) / KARMAN * log( 10.0_RP/Z0M(i,j) )
 
-          if ( U10M(i,j) <= 12.5_RP ) then
-             Z0M(i,j) = 0.0185_RP * Ustar(i,j)**2 / GRAV
+          if ( U10M <= 12.5_RP ) then
+             Z0M(i,j) = max( 0.0185_RP * Ustar(i,j)**2 / GRAV, OCEAN_roughness_Z0M_min )
           else
              Z0M(i,j) = 1.0E-3_RP * ( 0.085_RP * (  -0.56_RP*Ustar(i,j)**2 &
                                                  + 20.255_RP*Ustar(i,j)    &
@@ -240,7 +240,7 @@ contains
     !  Fairall et al. (2003) JCLI, vol. 16, 571-591. Eq. (28)
     do j = 1, JA
     do i = 1, IA
-       Z0H(i,j) = min( 5.5E-5_RP * ( Z0M(i,j) * Ustar(i,j) / visck )**(-0.6_RP), 1.1E-4_RP )
+       Z0H(i,j) = min( 5.5E-5_RP / ( Z0M(i,j) * Ustar(i,j) / visck )**0.6_RP, 1.1E-4_RP )
        Z0E(i,j) = Z0H(i,j)
     enddo
     enddo
