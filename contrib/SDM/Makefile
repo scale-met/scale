@@ -138,6 +138,7 @@ sdm_coordtrans.o: sdm_coordtrans.f90 \
 
 sdm_memmgr.o: sdm_memmgr.f90 \
 	sdm_common.o \
+	$(BUILD_DIR)/scale_tracer.o \
 	$(BUILD_DIR)/scale_grid_index.o \
 	$(BUILD_DIR)/scale_gridtrans.o
 	$(FC) $(FFLAGS) -I$(BUILD_DIR) -I$(MODDIR) -o $@ -c $<
