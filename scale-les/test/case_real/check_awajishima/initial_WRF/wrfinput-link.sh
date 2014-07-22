@@ -4,18 +4,18 @@
 #   2009/10/26 --- Ryuji Yoshida.
 #   2014/07/08 --- Tsuyoshi Yamaura
 #-----------------------------------------
-dir='/home/ryoshida/scale/data/case2'
+dir='/data2/scale_database/WRF_output/kobe_case2/500m'
 ftype='out'
 domain='2'
 #
-dt=360
+dt=600
 #
 # set start date (UTC)
 #
 start_year='2011'
 start_month='09'
 start_day='19'
-start_hour='13'
+start_hour='20'
 start_min='00'
 start_sec='00'
 #
@@ -23,8 +23,8 @@ start_sec='00'
 #
 end_year='2011'
 end_month='09'
-end_day='19'
-end_hour='19'
+end_day='20'
+end_hour='02'
 end_min='00'
 end_sec='00'
 #
@@ -46,8 +46,8 @@ do
   sec=`date -u -d "@${unix_sec}" +%S`
 
   fmtd_fn=`printf "%05d" $fn`
-  ln -sf ${dir}/wrf${ftype}_d0${domain}_${year}-${month}-${day}_${hour}\:${min}\:${sec} \
-             ./wrf${ftype}_d0${domain}_${year}-${month}_${fmtd_fn}
+  ln -svf ${dir}/wrf${ftype}_d0${domain}_${year}-${month}-${day}_${hour}\:${min}\:${sec} \
+               ./wrf${ftype}_d0${domain}_${year}-${month}_${fmtd_fn}
 
   fn=`expr ${fn} \+ 1`
   unix_sec=`expr ${unix_sec} \+ ${dt}`
