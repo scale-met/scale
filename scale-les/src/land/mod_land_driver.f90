@@ -98,6 +98,15 @@ contains
     enddo
     enddo
 
+    !########## Negative Fixer ##########
+    do j = JS, JE
+    do i = IS, IE
+    do k = LKS, LKE
+       LAND_WATER(k,i,j) = max( LAND_WATER(k,i,j), 0.0_RP )
+    enddo
+    enddo
+    enddo
+
     call LAND_vars_total
 
     !########## Put Surface Boundary to coupler ##########
