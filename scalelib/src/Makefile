@@ -111,6 +111,7 @@ OBJS = $(scale_rdma)	\
 	scale_land_phy.o	\
 	scale_land_phy_bucket.o	\
 	scale_land_phy_matsiro.o	\
+	scale_land_sub_matrix.o	\
 	scale_landuse.o	\
 	scale_mapproj.o	\
 	scale_monitor.o	\
