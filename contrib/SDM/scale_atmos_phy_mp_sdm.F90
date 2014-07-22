@@ -48,10 +48,17 @@
 !! @li      2014-07-14 (S.Shima) [rev] sdm_sd2rhow, sdm_sd2rhocr, sdm_sd2qcqr are separated into m_sdm_sd2fluid
 !! @li      2014-07-14 (S.Shima) [rev] sdm_condevp,sdm_condevp_updatefluid are separated into m_sdm_condensation_water
 !! @li      2014-07-14 (S.Shima) [rev] Removed unused subroutines, variables
-!! @li      2014-07-18 (Y.Sato)  [mod] modify the modules to calculate variable forradiation
+!! @li      2014-07-18 (Y.Sato)  [mod] Modify the modules to calculate variable forradiation
 !! @li      2014-07-18 (Y.Sato)  [add] Add history output for QTRC_sdm and input 0 to QTRC at the end of ATMOS_PHY_MP_sdm
-!! @li      2014-07-18 (Y.Sato)  [mod] modify way to determine whether the grid stretch or not
+!! @li      2014-07-18 (Y.Sato)  [mod] Modify a way to determine whether the grid stretch or not
 !! @li      2014-07-18 (Y.Sato)  [add] Add ATMOS_PHY_MP_DENS, which is used in radiation code
+!! @li      2014-07-22 (Y.Sato)  [mod] Modify the way to determine whether the grid stretch or not
+!! @li      2014-07-22 (Y.Sato)  [mod] Modify the way to determine whether the lateral boundary is periodic or not
+!! @li      2014-07-22 (Y.Sato)  [mod] Modify to write error information to normal output
+!! @li      2014-07-22 (Y.Sato)  [mod] Modify bugs to calculate variable for radiation process
+!! @li      2014-07-22 (Y.Sato)  [mod] Modify timing for assigning to QTRC_sdm and clear QTRC(2:QA)
+!! @li      2014-07-22 (Y.Sato)  [mod] Modify the definition of kl and ku for calculating drate
+!! @li      2014-07-22 (Y.Sato)  [mod] Modify the order of loop in a part
 !<
 !-------------------------------------------------------------------------------
 #include "macro_thermodyn.h"
@@ -121,8 +128,6 @@ contains
        PRC_S,       &
        PRC_N,       &
        mype => PRC_myrank, &
-!!       PRC_PERIODIC_X, &
-!!       PRC_PERIODIC_Y, &
        PRC_master
     use scale_const, only: &
        PI     => CONST_PI,    &
@@ -160,15 +165,6 @@ contains
        TOPO_Zsfc
     implicit none
     character(len=H_SHORT), intent(in) :: MP_TYPE
-
-    logical :: PRC_PERIODIC_X = .true. !< periodic condition or not (X)?
-    logical :: PRC_PERIODIC_Y = .true. !< periodic condition or not (Y)?
-
-    NAMELIST / PARAM_PRC / &
-         PRC_NUM_X, &
-         PRC_NUM_Y, &
-         PRC_PERIODIC_X, &
-         PRC_PERIODIC_Y
 
     NAMELIST / PARAM_ATMOS_PHY_MP / &
        docondensation, &
@@ -223,20 +219,9 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '*** Super Droplet Method'
 
     if ( MP_TYPE /= 'SDM' ) then
-       if ( IO_L ) write(IO_FID_LOG,*) 'xxx ATMOS_TYPE_PHY_MP is not SDM. Check!'
+       write(*,*) 'xxx ATMOS_TYPE_PHY_MP is not SDM. Check!'
        call PRC_MPIstop
     endif
-
-    rewind(IO_FID_CONF)
-    read(IO_FID_CONF,nml=PARAM_PRC,iostat=ierr)
-
-    if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
-    elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_PRC. in SDM Check!'
-       call PRC_MPIstop
-    endif
-    if( IO_L ) write(IO_FID_LOG,nml=PARAM_PRC)
 
     buffact = 0.0_RP
     do k = KS, KE
@@ -249,14 +234,14 @@ contains
       buffact = max( buffact,GRID_CDX(i)/DX )
     enddo
 
-    if( buffact /= 1.0_RP ) then
+    if( buffact < 1.0_RP .or. buffact > 1.0_RP ) then
        sthopt = 1
-    elseif( buffact == 1.0_RP ) then
+    else
        sthopt = 0
     endif
 
     if(sthopt==1) then
-       if( IO_L ) write(IO_FID_LOG,*) 'ERROR: stretched coordinate is not yet supported!', buffact
+       write(*,*) 'ERROR: stretched coordinate is not yet supported!', buffact
        call PRC_MPIstop
     end if
 
@@ -267,13 +252,14 @@ contains
     endif
 
     if(trnopt==2) then
-       if( IO_L ) write(IO_FID_LOG,*) 'ERROR: terrain following coordinate is not yet supported!'
+       write(*,*) 'ERROR: terrain following coordinate is not yet supported!'
        call PRC_MPIstop
     end if
 
-    if( (PRC_PERIODIC_X /= .true.) .or. (PRC_PERIODIC_Y /= .true.))then
-       if( IO_L ) write(IO_FID_LOG,*) 'ERROR: Only periodic B.C. is supported!'
-       if( IO_L ) write(IO_FID_LOG,*) 'ERROR: Set PRC_PERIODIC_X=PRC_PERIODIC_Y=.true.'
+    !--- if the lateral boundary is not periodic, PRC_next has negative value
+    if( minval( PRC_next,1 ) < 0 ) then
+       write(*,*) 'ERROR: Only periodic B.C. is supported!'
+       write(*,*) 'ERROR: Set PRC_PERIODIC_X=PRC_PERIODIC_Y=.true.'
        call PRC_MPIstop
     else
        wbc=1
@@ -298,10 +284,6 @@ contains
     srcn_sub = PRC_next(PRC_N)
 
     tag  = 0
-
-! Why overwritten? sdm_zlower and sdm_zupper are defined in run.conf and should not be altered.
-!    sdm_zlower = CZ(KS)
-!    sdm_zupper = CZ(KE)
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -385,26 +367,26 @@ contains
      if(  ( (sdm_dtcmph(1) <= 0.0_RP) .and. docondensation   )   .or. &
          ( (sdm_dtcmph(2) <= 0.0_RP) .and. doautoconversion )   .or. &
          ( (sdm_dtcmph(3) <= 0.0_RP) .and. domovement       )        ) then
-       if ( IO_L ) write(IO_FID_LOG,*) 'ERROR: sdm_dtcmph(1:3) have to be positive'
+       write(*,*) 'ERROR: sdm_dtcmph(1:3) have to be positive'
        call PRC_MPIstop
      end if
 
     ! check whether dt (dt of mp) is larger than sdm_dtcmph(i).
     if( (dt < sdm_dtcmph(1)) .or. (dt < sdm_dtcmph(2)) .or. (dt < sdm_dtcmph(3)) ) then
-       if ( IO_L ) write(IO_FID_LOG,*) 'ERROR: For now, sdm_dtcmph should be smaller than TIME_DTSEC_ATMOS_PHY_MP'
+       write(*,*) 'ERROR: For now, sdm_dtcmph should be smaller than TIME_DTSEC_ATMOS_PHY_MP'
        call PRC_MPIstop
     end if
 
     ! aerosol nucleation and sd number adjustment functions are not supported yet
     if ( (abs(sdm_aslset) >= 10) .or. (sdm_nadjvar /= 0)) then
-       if ( IO_L ) write(IO_FID_LOG,*) 'ERROR: aerosol nucleation and sd number adjustment functions are not supported yet'
-       if ( IO_L ) write(IO_FID_LOG,*) 'ERROR: set sdm_aslset < 10 and sdm_nadjvar =0'
+       write(*,*) 'ERROR: aerosol nucleation and sd number adjustment functions are not supported yet'
+       write(*,*) 'ERROR: set sdm_aslset < 10 and sdm_nadjvar =0'
        call PRC_MPIstop
     end if
 
     ! rigorous momentum exchange function is not supported yet
     if ( sdm_mvexchg /= 0) then
-       if ( IO_L ) write(IO_FID_LOG,*) 'ERROR: Momentum exchange not yet supported. set sdm_mvexchg = 0'
+       write(*,*) 'ERROR: Momentum exchange not yet supported. set sdm_mvexchg = 0'
        call PRC_MPIstop
     end if
 
@@ -412,7 +394,7 @@ contains
        nclstp(1)=10*int(1.E+2_RP*(dt+0.0010_RP))            &
             /int(1.E+3_RP*(sdm_dtcmph(1)+0.00010_RP))
        if(mod(10*int(1.E+2_RP*(dt+0.0010_RP)),int(1.E+3_RP*(sdm_dtcmph(1)+0.00010_RP))) /= 0) then 
-          if ( IO_L ) write(IO_FID_LOG,*) 'ERROR: sdm_dtcmph should be submultiple of TIME_DTSEC_ATMOS_PHY_MP'
+          write(*,*) 'ERROR: sdm_dtcmph should be submultiple of TIME_DTSEC_ATMOS_PHY_MP'
           call PRC_MPIstop
        end if
     else
@@ -423,7 +405,7 @@ contains
        nclstp(2)=10*int(1.E+2_RP*(dt+0.0010_RP))            &
             /int(1.E+3_RP*(sdm_dtcmph(2)+0.00010_RP))
        if(mod(10*int(1.E+2_RP*(dt+0.0010_RP)),int(1.E+3_RP*(sdm_dtcmph(2)+0.00010_RP))) /= 0) then 
-          if ( IO_L ) write(IO_FID_LOG,*) 'ERROR: sdm_dtcmph should be submultiple of TIME_DTSEC_ATMOS_PHY_MP'
+          write(*,*) 'ERROR: sdm_dtcmph should be submultiple of TIME_DTSEC_ATMOS_PHY_MP'
           call PRC_MPIstop
        end if
     else
@@ -434,7 +416,7 @@ contains
        nclstp(3)=10*int(1.E+2_RP*(dt+0.0010_RP))            &
             /int(1.E+3_RP*(sdm_dtcmph(3)+0.00010_RP))
        if(mod(10*int(1.E+2_RP*(dt+0.0010_RP)),int(1.E+3_RP*(sdm_dtcmph(3)+0.00010_RP))) /= 0) then 
-          if ( IO_L ) write(IO_FID_LOG,*) 'ERROR: sdm_dtcmph should be submultiple of TIME_DTSEC_ATMOS_PHY_MP'
+          write(*,*) 'ERROR: sdm_dtcmph should be submultiple of TIME_DTSEC_ATMOS_PHY_MP'
           call PRC_MPIstop
        end if
     else
@@ -473,7 +455,7 @@ contains
     end do
     !! if igcd>1, it meanst dt is not the least common multiple of sdm_dtcmph(i) that satisfies sdm_dtcmph(i)<= dt
     if( igcd > 1)then
-       if ( IO_L ) write(IO_FID_LOG,*) 'ERROR: TIME_DTSEC_ATMOS_PHY_MP should be the least comon multiple of sdm_dtcmph(1:3) that are smaller than TIME_DTSEC_ATMOS_PHY_MP'
+       write(*,*) 'ERROR: TIME_DTSEC_ATMOS_PHY_MP should be the least comon multiple of sdm_dtcmph(1:3) that are smaller than TIME_DTSEC_ATMOS_PHY_MP'
        call PRC_MPIstop
     end if
 
@@ -619,6 +601,7 @@ contains
     real(RP) :: t_scale(KA,IA,JA)    ! Temperature
     real(RP) :: rhoc_scale(KA,IA,JA) ! cloud water density
     real(RP) :: rhor_scale(KA,IA,JA) ! rain water density
+    real(RP) :: QHYD_sdm(KA,IA,JA)
 
     !---------------------------------------------------------------------------
 
@@ -697,7 +680,7 @@ contains
                         sdn_s2c,sdx_s2c,sdy_s2c,sdz_s2c,sdr_s2c,sdasl_s2c,sdvz_s2c, &
                         sdm_dmpnskip)
     else if(sdm_dmpvar>1)then
-       if( IO_L ) write(IO_FID_LOG,*) 'ERROR: sdm_dmpvar>1 not supported for now. Set sdm_dmpvar=1 (Output Super Droplet Data in ASCII)'
+       write(*,*) 'ERROR: sdm_dmpvar>1 not supported for now. Set sdm_dmpvar=1 (Output Super Droplet Data in ASCII)'
     end if
 
     !== run SDM at future ==!
@@ -736,11 +719,11 @@ contains
      !! We need to rethink whether it's okay to evaluate QC QR here
      !! For example, when we diagnose pressure or rhod during the dynamical process, 
      !! qc and qr should be 0 because they are not included in the total density
-     call sdm_sd2qcqr(DENS,QTRC(:,:,:,I_QC),QTRC(:,:,:,I_QR),                             &
-                      zph_crs,             &
-                      sdnum_s2c,sdn_s2c,sdx_s2c,sdy_s2c,     &
-                      sdr_s2c,sdri_s2c,sdrj_s2c,sdrk_s2c,sdrkl_s2c,sdrku_s2c,         &
-                      rhoc_scale,rhor_scale,                   &
+     call sdm_sd2qcqr(DENS,QTRC_sdm(:,:,:,I_QC),QTRC_sdm(:,:,:,I_QR),        &
+                      zph_crs,                                               &
+                      sdnum_s2c,sdn_s2c,sdx_s2c,sdy_s2c,                     &
+                      sdr_s2c,sdri_s2c,sdrj_s2c,sdrk_s2c,sdrkl_s2c,sdrku_s2c,&
+                      rhoc_scale,rhor_scale,                                 &
                       sd_itmp1,sd_itmp2,crs_dtmp1,crs_dtmp2)
 
 ! not supported yet. S.Shima
@@ -794,10 +777,7 @@ contains
     do k = KS, KE
     do i = IS, IE
     do j = JS, JE
-        QTRC_sdm(k,i,j,1) = QTRC(k,i,j,I_QC)
-        QTRC_sdm(k,i,j,2) = QTRC(k,i,j,I_QR)
-        QTRC_sdm(k,i,j,3) = QTRC(k,i,j,I_QC)+QTRC(k,i,j,I_QR)
-        QTRC(k,i,j,I_QC:I_QR) = 0.0_RP
+        QHYD_sdm(k,i,j) = QTRC_sdm(k,i,j,I_QC)+QTRC_sdm(k,i,j,I_QR)
     enddo
     enddo
     enddo
@@ -806,9 +786,9 @@ contains
 !!$    call HIST_in( rhoa_sdm(:,:,:), 'RAERO', 'aerosol mass conc.', 'kg/m3', dt)
     call HIST_in( prr_crs(:,:,1), 'RAIN', 'surface rain rate', 'kg/m2/s', dt)
     call HIST_in( prr_crs(:,:,1), 'PREC', 'surface precipitation rate', 'kg/m2/s', dt)
-    call HIST_in( QTRC_sdm(:,:,:,1), 'QC_sd', 'mixing ratio of cloud in SDM', 'kg/kg', dt)
-    call HIST_in( QTRC_sdm(:,:,:,2), 'QR_sd', 'mixing ratio of rain in SDM', 'kg/kg', dt)
-    call HIST_in( QTRC_sdm(:,:,:,3), 'QHYD_sd', 'mixing ratio of liquid in SDM', 'kg/kg', dt)
+    call HIST_in( QTRC_sdm(:,:,:,I_QC), 'QC_sd', 'mixing ratio of cloud in SDM', 'kg/kg', dt)
+    call HIST_in( QTRC_sdm(:,:,:,I_QR), 'QR_sd', 'mixing ratio of rain in SDM', 'kg/kg', dt)
+    call HIST_in( QHYD_sdm(:,:,:), 'QHYD_sd', 'mixing ratio of liquid in SDM', 'kg/kg', dt)
 
     return
   end subroutine ATMOS_PHY_MP_sdm
@@ -1152,7 +1132,7 @@ contains
       end do
 
       if( iexced<0 ) then
-         if( IO_L ) write(IO_FID_LOG,*) "sdm_iniset, exceeded"
+         write(*,*) "sdm_iniset, exceeded"
          call PRC_MPIstop
       end if
 
@@ -1455,7 +1435,6 @@ contains
 
          end if
          !=== 2 : stochastic coalescence ===!
-
          if( sdm_calvar(2) .and.                                 &
              mod(t,istep_sdm/istep_col)==0 .and. sdm_dtcol>0.d0 ) then
 
@@ -2646,15 +2625,15 @@ contains
                * real(sdn_s2c(n),kind=RP)
        end do
 
-       !=== adjust cloud-water in verical boundary. ===!
+       !=== correction at the verical boundary ===!
 
        do j=JS, JE
        do i=IS, IE
 
           !! at lower boundary
 
-          kl    = floor(sdrkl_s2c(i,j))
-          drate = real(kl+1,kind=RP) - sdrkl_s2c(i,j)
+          kl    = floor(sdrkl_s2c(i,j))+1
+          drate = real(kl,kind=RP) - sdrkl_s2c(i,j)
           if( drate<0.50_RP ) then
              sum3(kl,i,j) = 0.0_RP           !! <50% in share
              sum2(kl,i,j) = 0.0_RP           !! <50% in share
@@ -2665,8 +2644,8 @@ contains
 
           !! at upper boundary
 
-          ku    = floor(sdrku_s2c(i,j))
-          drate = sdrku_s2c(i,j) - real(ku,kind=RP)
+          ku    = floor(sdrku_s2c(i,j))+1
+          drate = sdrku_s2c(i,j) - real(ku-1,kind=RP)
 
           if( drate<0.50_RP ) then
              sum3(ku,i,j) = 0.0_RP           !! <50% in share
@@ -2682,12 +2661,12 @@ contains
        !=== convert super-droplets to density of cloud-water. ===!
 
        do k=KS,KE
-       do j=JS,JE
        do i=IS,IE
+       do j=JS,JE
           if( sum2(k,i,j) == 0.0_RP ) then
-           Re(k,i,j,I_mp_QC) = sum3(k,i,j)/sum2(k,i,j)
-          else
            Re(k,i,j,I_mp_QC) = 0.0_RP
+          else
+           Re(k,i,j,I_mp_QC) = sum3(k,i,j)/sum2(k,i,j)
           endif
        end do
        end do
@@ -2713,11 +2692,11 @@ contains
     integer  :: k, i, j, iq
     !---------------------------------------------------------------------------
 
-    do j  = JS, JE
-    do i  = IS, IE
     do k  = KS, KE
+    do i  = IS, IE
+    do j  = JS, JE
        qhydro = 0.0_RP
-       do iq = 1, 2
+       do iq = QQS, QQE 
           qhydro = qhydro + QTRC_sdm(k,i,j,iq)
        enddo
        cldfrac(k,i,j) = 0.5_RP + sign(0.5_RP,qhydro-EPS)
@@ -2746,7 +2725,7 @@ contains
 !!    do ihydro = 1, 2
 !!       Qe(:,:,:,I_mp_QC) = QTRC_sdm(:,:,:,1)+QTRC_sdm(:,:,:,2)
 !!    enddo
-    Qe(:,:,:,I_mp_QC) = QTRC_sdm(:,:,:,1)+QTRC_sdm(:,:,:,2)
+    Qe(:,:,:,I_mp_QC) = QTRC_sdm(:,:,:,I_QC)+QTRC_sdm(:,:,:,I_QR)
 
     return
   end subroutine ATMOS_PHY_MP_sdm_Mixingratio

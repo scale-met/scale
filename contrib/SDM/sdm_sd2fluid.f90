@@ -15,6 +15,7 @@
 !! @par History
 !! @li      2014-07-14 (S.Shima) [new] Separated from scale_atmos_phy_mp_sdm.F90
 !! @li      2014-07-14 (S.Shima) [rev] sdm_sd2prec added
+!! @li      2014-07-22 (Y.Sato ) [mod] modify the definition of kl and ku for calculating drate
 !!
 !<
 !-------------------------------------------------------------------------------
@@ -313,8 +314,8 @@ contains
 
           !! at lower boundary
           
-          kl    = floor(sd_rkl(i,j))
-          drate = real(kl+1,kind=RP) - sd_rkl(i,j)
+          kl    = floor(sd_rkl(i,j))+1
+          drate = real(kl,kind=RP) - sd_rkl(i,j)
           if( drate<0.50_RP ) then
              liqc_sdm(kl,i,j) = 0.0_RP           !! <50% in share
           else
@@ -323,8 +324,8 @@ contains
 
           !! at upper boundary
 
-          ku    = floor(sd_rku(i,j))
-          drate = sd_rku(i,j) - real(ku,kind=RP)
+          ku    = floor(sd_rku(i,j))+1
+          drate = sd_rku(i,j) - real(ku-1,kind=RP)
 
           if( drate<0.50_RP ) then
              liqc_sdm(ku,i,j) = 0.0_RP           !! <50% in share
@@ -371,8 +372,8 @@ contains
 
           !! at lower boundary
           
-          kl    = floor(sd_rkl(i,j))
-          drate = real(kl+1,kind=RP) - sd_rkl(i,j)
+          kl    = floor(sd_rkl(i,j))+1
+          drate = real(kl,kind=RP) - sd_rkl(i,j)
 
           if( drate<0.5d0 ) then
              liqr_sdm(kl,i,j) = 0.e0           !! <50% in share
@@ -382,8 +383,8 @@ contains
 
           !! at upper boundary
 
-          ku    = floor(sd_rku(i,j))
-          drate = sd_rku(i,j) - real(ku,kind=RP)
+          ku    = floor(sd_rku(i,j))+1
+          drate = sd_rku(i,j) - real(ku-1,kind=RP)
 
           if( drate<0.5d0 ) then
              liqr_sdm(ku,i,j) = 0.e0           !! <50% in share
@@ -494,8 +495,8 @@ contains
     do j=JS,JE
     do i=IS,IE
        !! at lower boundary
-       kl    = floor(sd_rkl(i,j))
-       drate = real(kl+1,kind=RP) - sd_rkl(i,j)
+       kl    = floor(sd_rkl(i,j))+1
+       drate = real(kl,kind=RP) - sd_rkl(i,j)
        if( drate<0.50_RP ) then
           liqw_sdm(kl,i,j) = 0.0_RP           !! <50% in share
        else
@@ -503,8 +504,8 @@ contains
        end if
 
        !! at upper boundary
-       ku    = floor(sd_rku(i,j))
-       drate = sd_rku(i,j) - real(ku,kind=RP)
+       ku    = floor(sd_rku(i,j))+1
+       drate = sd_rku(i,j) - real(ku-1,kind=RP)
        if( drate<0.50_RP ) then
           liqw_sdm(ku,i,j) = 0.0_RP           !! <50% in share
        else
