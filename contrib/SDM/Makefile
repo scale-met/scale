@@ -64,15 +64,15 @@ sdm_condensation_water.o: sdm_condensation_water.f90 \
 	$(BUILD_DIR)/scale_tracer.o \
 	$(BUILD_DIR)/scale_const.o \
 	$(BUILD_DIR)/scale_grid_index.o \
-	$(BUILD_DIR)/scale_precision.o 
-	$(FC) $(FFLAGS) -I$(BUILD_DIR) -I$(MODDIR) -o $@ -c $<
+	$(BUILD_DIR)/scale_precision.o
+	$(FC) $(FFLAGS) -I$(BUILD_DIR) -I$(MODDIR) -I$(DCUTILSDIR) -I$(GTOOLDIR) -I$(MTDIR) -I$(GAGETRYDIR) -I$(SDMDIR) -o $@ -c $<
 
 sdm_sd2fluid.o: sdm_sd2fluid.f90 \
 	sdm_common.o \
 	sdm_coordtrans.o \
 	$(BUILD_DIR)/scale_const.o \
 	$(BUILD_DIR)/scale_precision.o
-	$(FC) $(FFLAGS) -I$(BUILD_DIR) -I$(MODDIR) -o $@ -c $<
+	$(FC) $(FFLAGS) -I$(BUILD_DIR) -I$(MODDIR) -I$(DCUTILSDIR) -I$(GTOOLDIR) -I$(MTDIR) -I$(GAGETRYDIR) -I$(SDMDIR) -o $@ -c $<
 
 sdm_coalescence.o: sdm_coalescence.f90 \
 	sdm_common.o \
@@ -83,14 +83,14 @@ sdm_coalescence.o: sdm_coalescence.f90 \
 	$(BUILD_DIR)/scale_precision.o \
 	$(MODDIR)/rng_uniform_mt.mod \
 	$(MODDIR)/gadg_algorithm.mod
-	$(FC) $(FFLAGS) -I$(BUILD_DIR) -I$(MODDIR) -o $@ -c $<
+	$(FC) $(FFLAGS) -I$(BUILD_DIR) -I$(MODDIR) -I$(DCUTILSDIR) -I$(GTOOLDIR) -I$(MTDIR) -I$(GAGETRYDIR) -I$(SDMDIR) -o $@ -c $<
 
 sdm_idutil.o: sdm_idutil.f90 \
 	sdm_common.o \
 	$(BUILD_DIR)/scale_grid_index.o \
 	$(BUILD_DIR)/scale_precision.o \
 	$(MODDIR)/gadg_algorithm.mod
-	$(FC) $(FFLAGS) -I$(BUILD_DIR) -I$(MODDIR) -o $@ -c $<
+	$(FC) $(FFLAGS) -I$(BUILD_DIR) -I$(MODDIR) -I$(DCUTILSDIR) -I$(GTOOLDIR) -I$(MTDIR) -I$(GAGETRYDIR) -I$(SDMDIR) -o $@ -c $<
 
 sdm_motion.o: sdm_motion.f90 \
 	sdm_common.o \
@@ -99,7 +99,7 @@ sdm_motion.o: sdm_motion.f90 \
 	$(BUILD_DIR)/scale_grid_index.o \
 	$(BUILD_DIR)/scale_grid_cartesian.o \
 	$(BUILD_DIR)/scale_precision.o
-	$(FC) $(FFLAGS) -I$(BUILD_DIR) -I$(MODDIR) -o $@ -c $<
+	$(FC) $(FFLAGS) -I$(BUILD_DIR) -I$(MODDIR) -I$(DCUTILSDIR) -I$(GTOOLDIR) -I$(MTDIR) -I$(GAGETRYDIR) -I$(SDMDIR) -o $@ -c $<
 
 sdm_boundary.o: sdm_boundary.f90 \
 	sdm_coordtrans.o \
@@ -109,7 +109,7 @@ sdm_boundary.o: sdm_boundary.f90 \
 	$(BUILD_DIR)/scale_precision.o \
 	$(BUILD_DIR)/scale_grid_index.o \
 	$(BUILD_DIR)/scale_grid_cartesian.o
-	$(FC) $(FFLAGS) -I$(BUILD_DIR) -I$(MODDIR) -o $@ -c $<
+	$(FC) $(FFLAGS) -I$(BUILD_DIR) -I$(MODDIR) -I$(DCUTILSDIR) -I$(GTOOLDIR) -I$(MTDIR) -I$(GAGETRYDIR) -I$(SDMDIR) -o $@ -c $<
 
 sdm_fluidconv.o: sdm_fluidconv.f90 \
 	$(BUILD_DIR)/scale_grid_cartesian.o \
@@ -118,13 +118,13 @@ sdm_fluidconv.o: sdm_fluidconv.f90 \
 	$(BUILD_DIR)/scale_atmos_sub_thermodyn.o \
 	$(BUILD_DIR)/scale_tracer.o \
 	$(BUILD_DIR)/scale_precision.o
-	$(FC) $(FFLAGS) -I$(BUILD_DIR) -I$(MODDIR) -o $@ -c $<
+	$(FC) $(FFLAGS) -I$(BUILD_DIR) -I$(MODDIR) -I$(DCUTILSDIR) -I$(GTOOLDIR) -I$(MTDIR) -I$(GAGETRYDIR) -I$(SDMDIR) -o $@ -c $<
 
 sdm_io.o: sdm_io.f90 \
 	$(BUILD_DIR)/scale_process.o \
 	$(BUILD_DIR)/scale_precision.o \
 	$(BUILD_DIR)/scale_stdio.o
-	$(FC) $(FFLAGS) -I$(BUILD_DIR) -I$(MODDIR) -o $@ -c $<
+	$(FC) $(FFLAGS) -I$(BUILD_DIR) -I$(MODDIR) -I$(DCUTILSDIR) -I$(GTOOLDIR) -I$(MTDIR) -I$(GAGETRYDIR) -I$(SDMDIR) -o $@ -c $<
 
 sdm_coordtrans.o: sdm_coordtrans.f90 \
 	sdm_common.o \
@@ -134,14 +134,14 @@ sdm_coordtrans.o: sdm_coordtrans.f90 \
 	$(BUILD_DIR)/scale_grid_real.o \
 	$(BUILD_DIR)/scale_grid_cartesian.o \
 	$(BUILD_DIR)/scale_precision.o
-	$(FC) $(FFLAGS) -I$(BUILD_DIR) -I$(MODDIR) -o $@ -c $<
+	$(FC) $(FFLAGS) -I$(BUILD_DIR) -I$(MODDIR) -I$(DCUTILSDIR) -I$(GTOOLDIR) -I$(MTDIR) -I$(GAGETRYDIR) -I$(SDMDIR) -o $@ -c $<
 
 sdm_memmgr.o: sdm_memmgr.f90 \
 	sdm_common.o \
 	$(BUILD_DIR)/scale_tracer.o \
 	$(BUILD_DIR)/scale_grid_index.o \
 	$(BUILD_DIR)/scale_gridtrans.o
-	$(FC) $(FFLAGS) -I$(BUILD_DIR) -I$(MODDIR) -o $@ -c $<
+	$(FC) $(FFLAGS) -I$(BUILD_DIR) -I$(MODDIR) -I$(DCUTILSDIR) -I$(GTOOLDIR) -I$(MTDIR) -I$(GAGETRYDIR) -I$(SDMDIR) -o $@ -c $<
 
 sdm_numset.o: sdm_numset.f90 \
 	sdm_common.o \
@@ -149,14 +149,14 @@ sdm_numset.o: sdm_numset.f90 \
 	$(BUILD_DIR)/scale_grid_index.o \
 	$(BUILD_DIR)/scale_topography.o \
 	$(BUILD_DIR)/scale_grid_real.o 
-	$(FC) $(FFLAGS) -I$(BUILD_DIR) -I$(MODDIR) -o $@ -c $<
+	$(FC) $(FFLAGS) -I$(BUILD_DIR) -I$(MODDIR) -I$(DCUTILSDIR) -I$(GTOOLDIR) -I$(MTDIR) -I$(GAGETRYDIR) -I$(SDMDIR) -o $@ -c $<
 
 sdm_common.o: sdm_common.f90 \
 	$(BUILD_DIR)/scale_precision.o \
 	$(BUILD_DIR)/scale_stdio.o \
 	$(BUILD_DIR)/scale_const.o \
 	$(MODDIR)/rng_uniform_mt.mod
-	$(FC) $(FFLAGS) -I$(BUILD_DIR) -I$(MODDIR) -o $@ -c $<
+	$(FC) $(FFLAGS) -I$(BUILD_DIR) -I$(MODDIR) -I$(DCUTILSDIR) -I$(GTOOLDIR) -I$(MTDIR) -I$(GAGETRYDIR) -I$(SDMDIR) -o $@ -c $<
 
 clean:
 	rm -f $(MODS)
