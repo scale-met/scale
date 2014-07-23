@@ -217,8 +217,6 @@ contains
     real(RP), intent(in) :: Z0E   (IA,JA) ! roughness length for vapor [m]
 
     ! works
-    logical  :: continue_iteration ! does iteration continue?
-
     real(RP) :: res    ! residual
     real(RP) :: dres   ! d(residual)/dLST
     real(RP) :: oldres ! residual in previous step
@@ -229,7 +227,6 @@ contains
     real(RP) :: Qstar, dQstar ! friction mixing rate [kg/kg]
     real(RP) :: Uabs, dUabs ! modified absolute velocity [m/s]
     real(RP) :: SQV, dSQV ! saturation water vapor mixing ratio at surface [kg/kg]
-    real(RP) :: dSHFLX, dLHFLX, dGHFLX
 
     integer :: i, j, n
     !---------------------------------------------------------------------------
@@ -238,80 +235,71 @@ contains
     do i = 1, IA
 
       if( is_FLX(i,j) ) then
-        ! calculate surface flux
-        redf   = 1.0_RP
-        oldres = 1.0E+5_RP
 
-        continue_iteration = LST_UPDATE
+        if( LST_UPDATE ) then
 
-        ! modified Newton-Raphson method (Tomita 2009)
-        do n = 1, nmax
-          ! saturation at the surface
-          call qsat( SQV, LST(i,j), PRSS(i,j) )
+          redf   = 1.0_RP
+          oldres = 1.0E+5_RP
 
-          call CPL_bulkflux( &
-              Ustar,     & ! (out)
-              Tstar,     & ! (out)
-              Qstar,     & ! (out)
-              Uabs,      & ! (out)
-              TMPA(i,j), & ! (in)
-              LST (i,j), & ! (in)
-              PRSA(i,j), & ! (in)
-              PRSS(i,j), & ! (in)
-              QVA (i,j), & ! (in)
-              SQV,       & ! (in)
-              UA  (i,j), & ! (in)
-              VA  (i,j), & ! (in)
-              Z1  (i,j), & ! (in)
-              PBL (i,j), & ! (in)
-              Z0M (i,j), & ! (in)
-              Z0H (i,j), & ! (in)
-              Z0E (i,j)  ) ! (in)
+          ! modified Newton-Raphson method (Tomita 2009)
+          do n = 1, nmax
 
-          XMFLX(i,j) = -RHOA(i,j) * Ustar**2 / Uabs * UA(i,j)
-          YMFLX(i,j) = -RHOA(i,j) * Ustar**2 / Uabs * VA(i,j)
-          ZMFLX(i,j) = -RHOA(i,j) * Ustar**2 / Uabs * WA(i,j)
+            call qsat( SQV, LST(i,j), PRSS(i,j) )
 
-          SHFLX(i,j) = -CPdry * RHOA(i,j) * Ustar * Tstar
-          LHFLX(i,j) = -LH0   * RHOA(i,j) * Ustar * Qstar * QVEF(i,j)
-          GHFLX(i,j) = -2.0_RP * TCS(i,j) * ( LST(i,j) - TG(i,j)  ) / DZG(i,j)
+            call CPL_bulkflux( &
+                Ustar,     & ! (out)
+                Tstar,     & ! (out)
+                Qstar,     & ! (out)
+                Uabs,      & ! (out)
+                TMPA(i,j), & ! (in)
+                LST (i,j), & ! (in)
+                PRSA(i,j), & ! (in)
+                PRSS(i,j), & ! (in)
+                QVA (i,j), & ! (in)
+                SQV,       & ! (in)
+                UA  (i,j), & ! (in)
+                VA  (i,j), & ! (in)
+                Z1  (i,j), & ! (in)
+                PBL (i,j), & ! (in)
+                Z0M (i,j), & ! (in)
+                Z0H (i,j), & ! (in)
+                Z0E (i,j)  ) ! (in)
 
-          ! calculation for residual
-          res = ( 1.0_RP - ALB_SW(i,j) ) * SWD(i,j) &
-              + ( 1.0_RP - ALB_LW(i,j) ) * ( LWD(i,j) - STB * LST(i,j)**4 ) &
-              - SHFLX(i,j) - LHFLX(i,j) + GHFLX(i,j)
+            ! calculation for residual
+            res = ( 1.0_RP - ALB_SW(i,j) ) * SWD(i,j) &
+                + ( 1.0_RP - ALB_LW(i,j) ) * ( LWD(i,j) - STB * LST(i,j)**4 ) &
+                + CPdry * RHOA(i,j) * Ustar * Tstar &
+                + LH0   * RHOA(i,j) * Ustar * Qstar * QVEF(i,j) &
+                - 2.0_RP * TCS(i,j) * ( LST(i,j) - TG(i,j)  ) / DZG(i,j)
 
-          ! d(saturation) at the surface
-          call qsat( dSQV, LST(i,j)+dTS, PRSS(i,j) )
+            ! d(saturation) at the surface
+            call qsat( dSQV, LST(i,j)+dTS, PRSS(i,j) )
 
-          call CPL_bulkflux( &
-              dUstar,          & ! (out)
-              dTstar,          & ! (out)
-              dQstar,          & ! (out)
-              dUabs,           & ! (out)
-              TMPA(i,j),       & ! (in)
-              LST (i,j) + dTS, & ! (in)
-              PRSA(i,j),       & ! (in)
-              PRSS(i,j),       & ! (in)
-              QVA (i,j),       & ! (in)
-              dSQV,            & ! (in)
-              UA  (i,j),       & ! (in)
-              VA  (i,j),       & ! (in)
-              Z1  (i,j),       & ! (in)
-              PBL (i,j),       & ! (in)
-              Z0M (i,j),       & ! (in)
-              Z0H (i,j),       & ! (in)
-              Z0E (i,j)        ) ! (in)
+            call CPL_bulkflux( &
+                dUstar,          & ! (out)
+                dTstar,          & ! (out)
+                dQstar,          & ! (out)
+                dUabs,           & ! (out)
+                TMPA(i,j),       & ! (in)
+                LST (i,j) + dTS, & ! (in)
+                PRSA(i,j),       & ! (in)
+                PRSS(i,j),       & ! (in)
+                QVA (i,j),       & ! (in)
+                dSQV,            & ! (in)
+                UA  (i,j),       & ! (in)
+                VA  (i,j),       & ! (in)
+                Z1  (i,j),       & ! (in)
+                PBL (i,j),       & ! (in)
+                Z0M (i,j),       & ! (in)
+                Z0H (i,j),       & ! (in)
+                Z0E (i,j)        ) ! (in)
 
-          dSHFLX  = -CPdry  * RHOA(i,j) * ( (dUstar-Ustar)/dTS * Tstar + Ustar * (dTstar-Tstar)/dTS )
-          dLHFLX  = -LH0    * RHOA(i,j) * ( (dUstar-Ustar)/dTS * Qstar + Ustar * (dQstar-Qstar)/dTS ) * QVEF(i,j)
-          dGHFLX  = -2.0_RP * TCS(i,j) / DZG(i,j)
+            ! calculation for d(residual)/dLST
+            dres = -4.0_RP * ( 1.0_RP - ALB_LW(i,j) ) * STB * LST(i,j)**3 &
+                 + CPdry  * RHOA(i,j) * ( (dUstar-Ustar)/dTS * Tstar + Ustar * (dTstar-Tstar)/dTS ) &
+                 + LH0    * RHOA(i,j) * ( (dUstar-Ustar)/dTS * Qstar + Ustar * (dQstar-Qstar)/dTS ) * QVEF(i,j) &
+                 - 2.0_RP * TCS(i,j) / DZG(i,j)
 
-          ! calculation for d(residual)/dLST
-          dres = -4.0_RP * ( 1.0_RP - ALB_LW(i,j) ) * STB * LST(i,j)**3 &
-               - dSHFLX - dLHFLX + dGHFLX
-
-          if( continue_iteration ) then
             if( ( abs(dres) * dres_lim ) < abs(res) ) then
               ! stop iteration to prevent numerical error
               exit
@@ -334,37 +322,68 @@ contains
             ! update surface temperature
             LST(i,j) = LST(i,j) - redf * res / dres
 
-            ! put residual in ground heat flux
-            GHFLX(i,j) = GHFLX(i,j) - res
-
             ! save residual in this step
             oldres = res
 
             if( abs(res) < res_min ) then
               ! iteration converged
-              continue_iteration = .false.
+              exit
             end if
 
-          else
-            ! get surface flux without LST updating
-            exit
+          end do
+
+          if( n > nmax ) then
+            ! not converged and stop program
+            if( IO_L ) write(IO_FID_LOG,*) 'Warning: surface tempearture is not converged.'
+            if( IO_L ) write(IO_FID_LOG,*) 'Residual [W/m2]', res
           end if
 
-        end do
+        end if
 
-        ! diagnositc variables
+        ! calculate surface flux
+        call qsat( SQV, LST(i,j), PRSS(i,j) )
+
+        call CPL_bulkflux( &
+            Ustar,     & ! (out)
+            Tstar,     & ! (out)
+            Qstar,     & ! (out)
+            Uabs,      & ! (out)
+            TMPA(i,j), & ! (in)
+            LST (i,j), & ! (in)
+            PRSA(i,j), & ! (in)
+            PRSS(i,j), & ! (in)
+            QVA (i,j), & ! (in)
+            SQV,       & ! (in)
+            UA  (i,j), & ! (in)
+            VA  (i,j), & ! (in)
+            Z1  (i,j), & ! (in)
+            PBL (i,j), & ! (in)
+            Z0M (i,j), & ! (in)
+            Z0H (i,j), & ! (in)
+            Z0E (i,j)  ) ! (in)
+
+        XMFLX(i,j) = -RHOA(i,j) * Ustar**2 / Uabs * UA(i,j)
+        YMFLX(i,j) = -RHOA(i,j) * Ustar**2 / Uabs * VA(i,j)
+        ZMFLX(i,j) = -RHOA(i,j) * Ustar**2 / Uabs * WA(i,j)
+        SHFLX(i,j) = -CPdry * RHOA(i,j) * Ustar * Tstar
+        LHFLX(i,j) = -LH0   * RHOA(i,j) * Ustar * Qstar * QVEF(i,j)
+        GHFLX(i,j) = -2.0_RP * TCS(i,j) * ( LST(i,j) - TG(i,j)  ) / DZG(i,j)
+
+        ! calculation for residual
+        res = ( 1.0_RP - ALB_SW(i,j) ) * SWD(i,j) &
+            + ( 1.0_RP - ALB_LW(i,j) ) * ( LWD(i,j) - STB * LST(i,j)**4 ) &
+            - SHFLX(i,j) - LHFLX(i,j) + GHFLX(i,j)
+
+        ! put residual in ground heat flux
+        GHFLX(i,j) = GHFLX(i,j) - res
+
+        ! diagnostic variables
         U10(i,j) = UA (i,j) * log( 10.0_RP / Z0M(i,j) ) / log( Z1(i,j) / Z0M(i,j) )
         V10(i,j) = VA (i,j) * log( 10.0_RP / Z0M(i,j) ) / log( Z1(i,j) / Z0M(i,j) )
         T2 (i,j) = LST(i,j) + ( TMPA(i,j) - LST(i,j) ) * ( log(  2.0_RP / Z0M(i,j) ) * log(  2.0_RP / Z0H(i,j) ) ) &
                                                        / ( log( Z1(i,j) / Z0M(i,j) ) * log( Z1(i,j) / Z0H(i,j) ) )
         Q2 (i,j) = SQV      + (  QVA(i,j) - SQV      ) * ( log(  2.0_RP / Z0M(i,j) ) * log(  2.0_RP / Z0E(i,j) ) ) &
                                                        / ( log( Z1(i,j) / Z0M(i,j) ) * log( Z1(i,j) / Z0E(i,j) ) )
-
-        if( n > nmax ) then
-          ! not converged and stop program
-          if( IO_L ) write(IO_FID_LOG,*) 'Warning: surface tempearture is not converged.'
-          if( IO_L ) write(IO_FID_LOG,*) 'Residual [W/m2]', res
-        end if
 
       else
         ! not calculate surface flux
