@@ -1168,7 +1168,7 @@ contains
        call CHECK( __LINE__, phi(KE-2,i,j) )
 #endif
           diff_z(KE-1,i,j) = ( + CNZ3(1,KE  ,1+KO) * phi(KE-1,i,j) &
-                               - CNZ3(2,KE  ,1+KO) * phi(KE  ,i,j) * (1-KO) &
+                               - CNZ3(2,KE  ,1+KO) * phi(KE  ,i,j) &
                                + CNZ3(3,KE  ,1+KO) * phi(KE-1,i,j) &
                                - CNZ3(1,KE-1,1+KO) * phi(KE-2,i,j) )
           diff_z(KE+2,i,j) = 0.0_RP
@@ -1186,6 +1186,9 @@ contains
           diff_z(KE-1,i,j) = ( - CNZ3(2,KE-1,2) * phi(KE-1,i,j) &
                                + CNZ3(3,KE-1,2) * phi(KE-2,i,j) &
                                - CNZ3(1,KE-2,2) * phi(KE-3,i,j) )
+          diff_z(KE  ,i,j) = ( + CNZ3(1,KE  ,2) * phi(KE-1,i,j) &
+                               + CNZ3(3,KE  ,2) * phi(KE-1,i,j) &
+                               - CNZ3(1,KE-1,2) * phi(KE-2,i,j) )
        end do
        end do
     end if
