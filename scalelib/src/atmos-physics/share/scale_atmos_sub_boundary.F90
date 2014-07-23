@@ -862,7 +862,7 @@ contains
     enddo
 
     if ( ATMOS_BOUNDARY_USE_VELZ ) then
-       ATMOS_BOUNDARY_var(KS:KE,IS:IE,JS:JE,I_BND_VELZ) = ATMOS_BOUNDARY_VALUE_VELZ
+       ATMOS_BOUNDARY_var(:,:,:,I_BND_VELZ) = ATMOS_BOUNDARY_VALUE_VELZ
     end if
 
     last_updated = TIME_NOWDAYSEC - boundary_inc_offset

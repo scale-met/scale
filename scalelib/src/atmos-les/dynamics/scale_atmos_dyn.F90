@@ -370,8 +370,8 @@ contains
        enddo
 
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       do j = JS-1, JE+2
-       do i = IS-1, IE+2
+       do j = JS-1, JE+1
+       do i = IS-1, IE+1
        do k = KS, KE-1
           diff(k,i,j) = MOMZ(k,i,j) - DAMP_var(k,i,j,I_BND_VELZ) * ( DENS(k,i,j)+DENS(k+1,i,j) ) * 0.5_RP
        enddo
