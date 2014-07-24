@@ -49,6 +49,16 @@ contains
   subroutine USER_setup
     use scale_process, only: &
        PRC_MPIstop
+    use mod_atmos_admin, only: &
+       ATMOS_do,          &
+       ATMOS_sw_dyn,      &
+       ATMOS_sw_phy_mp,   &
+       ATMOS_sw_phy_ae,   &
+       ATMOS_sw_phy_ch,   &
+       ATMOS_sw_phy_rd,   &
+       ATMOS_sw_phy_sf,   &
+       ATMOS_sw_phy_tb,   &
+       ATMOS_sw_phy_cp
     implicit none
 
     namelist / PARAM_USER / &
@@ -72,7 +82,17 @@ contains
     if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_USER)
 
     if( IO_L ) write(IO_FID_LOG,*)
-    !if( IO_L ) write(IO_FID_LOG,*) '*** With rain? : ', with_rain
+
+    ! atmosphric model set to off
+       ATMOS_do         = .false.
+       ATMOS_sw_dyn     = .false.
+       ATMOS_sw_phy_mp  = .false.
+       ATMOS_sw_phy_ae  = .false.
+       ATMOS_sw_phy_ch  = .false.
+       ATMOS_sw_phy_rd  = .false.
+       ATMOS_sw_phy_sf  = .false.
+       ATMOS_sw_phy_tb  = .false.
+       ATMOS_sw_phy_cp  = .false.
 
     return
   end subroutine USER_setup
