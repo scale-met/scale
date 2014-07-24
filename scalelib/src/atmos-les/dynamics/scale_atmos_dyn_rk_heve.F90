@@ -91,7 +91,7 @@ contains
        RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,          &
        PHI, GSQRT, J13G, J23G, J33G,                &
        REF_pres, REF_dens,                          &
-       dtrk                                         )
+       dtrk, dt                                     )
     use scale_const, only: &
        GRAV   => CONST_GRAV,   &
        P00    => CONST_PRE00,  &
@@ -172,6 +172,7 @@ contains
     real(RP), intent(in)  :: REF_dens(KA,IA,JA)   !< reference density
 
     real(RP), intent(in)  :: dtrk
+    real(RP), intent(in)  :: dt
 
     ! diagnostic variables
     real(RP) :: PRES (KA,IA,JA) ! pressure [Pa]

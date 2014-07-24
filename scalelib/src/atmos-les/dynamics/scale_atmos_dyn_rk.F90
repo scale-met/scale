@@ -51,7 +51,7 @@ module scale_atmos_dyn_rk
           RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,          &
           PHI, GSQRT, J13G, J23G, J33G,                &
           REF_pres, REF_dens,                          &
-          dtrk                                         )
+          dtrk, dt                                     )
        use scale_precision
        use scale_grid_index
        real(RP), intent(out) :: DENS_RK(KA,IA,JA)   ! prognostic variables
@@ -110,6 +110,7 @@ module scale_atmos_dyn_rk
        real(RP), intent(in)  :: REF_dens(KA,IA,JA)   !< reference density
 
        real(RP), intent(in)  :: dtrk
+       real(RP), intent(in)  :: dt
      end subroutine rk
   end interface
   procedure(rk), pointer :: ATMOS_DYN_rk => NULL()

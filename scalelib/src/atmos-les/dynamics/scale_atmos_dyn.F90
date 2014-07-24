@@ -170,6 +170,10 @@ contains
        ATMOS_DYN_rk
     use scale_atmos_boundary, only: &
        BND_SMOOTHER_FACT => ATMOS_BOUNDARY_SMOOTHER_FACT
+#ifdef HIST_TEND
+    use scale_history, only: &
+       HIST_in
+#endif
     implicit none
 
     real(RP), intent(inout) :: DENS(KA,IA,JA)
@@ -267,7 +271,10 @@ contains
     real(RP) :: CVtot(KA,IA,JA) ! total CV
 
     real(RP) :: diff(KA,IA,JA)
+    real(RP) :: damp
+#ifdef HIST_TEND
     real(RP) :: damp_t(KA,IA,JA)
+#endif
 
     real(RP) :: num_diff  (KA,IA,JA,5,3)
     real(RP) :: num_diff_q(KA,IA,JA,3)
@@ -282,6 +289,7 @@ contains
     real(RP) :: qflx_anti(KA,IA,JA,3)  ! anti-diffusive flux
 
     real(RP) :: dt
+    real(RP) :: dtrk
 
     integer  :: IIS, IIE
     integer  :: JJS, JJE
@@ -360,14 +368,20 @@ contains
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
+          damp = - DAMP_alpha(k,i,j,I_BND_DENS) * ( &
+               - ( diff(k,i-1,j) + diff(k,i+1,j) + diff(k,i,j-1) + diff(k,i,j+1) - diff(k,i,j)*4.0_RP ) &
+               * 0.125_RP * BND_SMOOTHER_FACT ) ! horizontal smoother
           DENS_t(k,i,j) = DENS_tp(k,i,j) & ! tendency from physical step
-                        - DAMP_alpha(k,i,j,I_BND_DENS) &
-                        * ( &
-                          - ( diff(k,i-1,j) + diff(k,i+1,j) + diff(k,i,j-1) + diff(k,i,j+1) - diff(k,i,j)*4.0_RP ) &
-                          * 0.125_RP * BND_SMOOTHER_FACT ) ! horizontal smoother
+                        + damp
+#ifdef HIST_TEND
+          damp_t(k,i,j) = damp
+#endif
        enddo
        enddo
        enddo
+#ifdef HIST_TEND
+       call HIST_in(damp_t, 'DENS_t_damp', 'tendency of dencity due to rayleigh damping', 'kg/m3/s', DTSEC_ATMOS_DYN)
+#endif
 
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JS-1, JE+1
@@ -381,11 +395,15 @@ contains
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE-1
+          damp = - DAMP_alpha(k,i,j,I_BND_VELZ) &
+               * ( diff(k,i,j) & ! rayleigh damping
+                 - ( diff(k,i-1,j) + diff(k,i+1,j) + diff(k,i,j-1) + diff(k,i,j+1) - diff(k,i,j)*4.0_RP ) &
+                 * 0.125_RP * BND_SMOOTHER_FACT ) ! horizontal smoother
           MOMZ_t(k,i,j) = MOMZ_tp(k,i,j) & ! tendency from physical step
-                        - DAMP_alpha(k,i,j,I_BND_VELZ) &
-                        * ( diff(k,i,j) & ! rayleigh damping
-                          - ( diff(k,i-1,j) + diff(k,i+1,j) + diff(k,i,j-1) + diff(k,i,j+1) - diff(k,i,j)*4.0_RP ) &
-                          * 0.125_RP * BND_SMOOTHER_FACT ) ! horizontal smoother
+                        + damp
+#ifdef HIST_TEND
+          damp_t(k,i,j) = damp
+#endif
        enddo
        enddo
        enddo
@@ -394,6 +412,9 @@ contains
           MOMZ_t(KE,i,j) = 0.0_RP
        enddo
        enddo
+#ifdef HIST_TEND
+       call HIST_in(damp_t, 'MOMZ_t_damp', 'tendency of momentum z due to rayleigh damping', 'kg/m2/s2', DTSEC_ATMOS_DYN, zdim='half')
+#endif
 
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JS-1, JE+2
@@ -406,14 +427,21 @@ contains
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
+          damp = - DAMP_alpha(k,i,j,I_BND_VELX) &
+                 * ( diff(k,i,j) & ! rayleigh damping
+                   - ( diff(k,i-1,j) + diff(k,i+1,j) + diff(k,i,j-1) + diff(k,i,j+1) - diff(k,i,j)*4.0_RP ) &
+                   * 0.125_RP * BND_SMOOTHER_FACT ) ! horizontal smoother
           MOMX_t(k,i,j) = MOMX_tp(k,i,j) & ! tendency from physical step
-                        - DAMP_alpha(k,i,j,I_BND_VELX) &
-                        * ( diff(k,i,j) & ! rayleigh damping
-                          - ( diff(k,i-1,j) + diff(k,i+1,j) + diff(k,i,j-1) + diff(k,i,j+1) - diff(k,i,j)*4.0_RP ) &
-                          * 0.125_RP * BND_SMOOTHER_FACT ) ! horizontal smoother
+                        + damp
+#ifdef HIST_TEND
+          damp_t(k,i,j) = damp
+#endif
        enddo
        enddo
        enddo
+#ifdef HIST_TEND
+       call HIST_in(damp_t, 'MOMX_t_damp', 'tendency of momentum x due to rayleigh damping', 'kg/m2/s2', DTSEC_ATMOS_DYN, xdim='half')
+#endif
 
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JS-2, JE+1
@@ -426,14 +454,21 @@ contains
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
+          damp = - DAMP_alpha(k,i,j,I_BND_VELY) &
+                 * ( diff(k,i,j) & ! rayleigh damping
+                   - ( diff(k,i-1,j) + diff(k,i+1,j) + diff(k,i,j-1) + diff(k,i,j+1) - diff(k,i,j)*4.0_RP ) &
+                   * 0.125_RP * BND_SMOOTHER_FACT ) ! horizontal smoother
           MOMY_t(k,i,j) = MOMY_tp(k,i,j) & ! tendency from physical step
-                        - DAMP_alpha(k,i,j,I_BND_VELY) &
-                        * ( diff(k,i,j) & ! rayleigh damping
-                          - ( diff(k,i-1,j) + diff(k,i+1,j) + diff(k,i,j-1) + diff(k,i,j+1) - diff(k,i,j)*4.0_RP ) &
-                          * 0.125_RP * BND_SMOOTHER_FACT ) ! horizontal smoother
+                        + damp
+#ifdef HIST_TEND
+          damp_t(k,i,j) = damp
+#endif
        enddo
        enddo
        enddo
+#ifdef HIST_TEND
+       call HIST_in(damp_t, 'MOMY_t_damp', 'tendency of momentum y due to rayleigh damping', 'kg/m2/s2', DTSEC_ATMOS_DYN, ydim='half')
+#endif
 
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JS-1, JE+2
@@ -446,14 +481,22 @@ contains
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
+          damp = - DAMP_alpha(k,i,j,I_BND_POTT) &
+                 * ( diff(k,i,j) & ! rayleigh damping
+                   - ( diff(k,i-1,j) + diff(k,i+1,j) + diff(k,i,j-1) + diff(k,i,j+1) - diff(k,i,j)*4.0_RP ) &
+                   * 0.125_RP * BND_SMOOTHER_FACT ) ! horizontal smoother
           RHOT_t(k,i,j) = RHOT_tp(k,i,j) & ! tendency from physical step
-                        - DAMP_alpha(k,i,j,I_BND_POTT) &
-                        * ( diff(k,i,j) & ! rayleigh damping
-                          - ( diff(k,i-1,j) + diff(k,i+1,j) + diff(k,i,j-1) + diff(k,i,j+1) - diff(k,i,j)*4.0_RP ) &
-                          * 0.125_RP * BND_SMOOTHER_FACT ) ! horizontal smoother
+                        + damp
+#ifdef HIST_TEND
+          damp_t(k,i,j) = damp
+#endif
        enddo
        enddo
        enddo
+#ifdef HIST_TEND
+       call HIST_in(damp_t, 'RHOT_t_damp', 'tendency of rho*theta temperature due to rayleigh damping', &
+            'K kg/m3/s', DTSEC_ATMOS_DYN)
+#endif
 
        do j = JS, JE
        do i = IS, IE
@@ -481,12 +524,13 @@ contains
        call COMM_wait ( MOMY_t(:,:,:), 4 )
        call COMM_wait ( RHOT_t(:,:,:), 5 )
 
+       dt = real(DTSEC_ATMOS_DYN,kind=RP)
+
        !-----< prepare numerical diffusion coefficient >-----
 
        if ( ND_COEF == 0.0_RP ) then
           num_diff(:,:,:,:,:) = 0.0_RP
        else
-          dt = real(DTSEC_ATMOS_DYN,kind=RP)
           call ATMOS_DYN_numfilter_coef( num_diff(:,:,:,:,:),                    & ! [OUT]
                                          DENS, MOMZ, MOMX, MOMY, RHOT,           & ! [IN]
                                          CDZ, CDX, CDY, FDZ, FDX, FDY, dt,       & ! [IN]
@@ -507,7 +551,7 @@ contains
 
        !##### RK1 : PROG0,PROG->PROG_RK1 #####
 
-       dt = real(DTSEC_ATMOS_DYN,kind=RP) / 3.0_RP
+       dtrk = real(DTSEC_ATMOS_DYN,kind=RP) / 3.0_RP
 
        call ATMOS_DYN_rk( DENS_RK1, MOMZ_RK1, MOMX_RK1, MOMY_RK1, RHOT_RK1, & ! (out)
                           mflx_hi,                                          & ! (out)
@@ -521,7 +565,7 @@ contains
                           RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,               & ! (in)
                           PHI, GSQRT, J13G, J23G, J33G,                     & ! (in)
                           REF_pres, REF_dens,                               & ! (in)
-                          dt                                                ) ! (in)
+                          dtrk, dt                                          ) ! (in)
 
        call COMM_vars8( DENS_RK1(:,:,:), 1 )
        call COMM_vars8( MOMZ_RK1(:,:,:), 2 )
@@ -536,7 +580,7 @@ contains
 
        !##### RK2 : PROG0,PROG_RK2->PROG_RK3 #####
 
-       dt = real(DTSEC_ATMOS_DYN,kind=RP) / 2.0_RP
+       dtrk = real(DTSEC_ATMOS_DYN,kind=RP) / 2.0_RP
 
        call ATMOS_DYN_rk( DENS_RK2, MOMZ_RK2, MOMX_RK2, MOMY_RK2, RHOT_RK2, & ! (out)
                           mflx_hi,                                          & ! (out)
@@ -550,7 +594,7 @@ contains
                           RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,               & ! (in)
                           PHI, GSQRT, J13G, J23G, J33G,                     & ! (in)
                           REF_pres, REF_dens,                               & ! (in)
-                          dt                                                ) ! (in)
+                          dtrk, dt                                          ) ! (in)
 
        call COMM_vars8( DENS_RK2(:,:,:), 1 )
        call COMM_vars8( MOMZ_RK2(:,:,:), 2 )
@@ -565,7 +609,7 @@ contains
 
        !##### RK3 : PROG0,PROG_RK3->PROG #####
 
-       dt = real(DTSEC_ATMOS_DYN,kind=RP)
+       dtrk = real(DTSEC_ATMOS_DYN,kind=RP)
 
        call ATMOS_DYN_rk( DENS,     MOMZ,     MOMX,     MOMY,     RHOT,     & ! (out)
                           mflx_hi,                                          & ! (out)
@@ -579,7 +623,7 @@ contains
                           RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,               & ! (in)
                           PHI, GSQRT, J13G, J23G, J33G,                     & ! (in)
                           REF_pres, REF_dens,                               & ! (in)
-                          dt                                                ) ! (in)
+                          dtrk, dt                                          ) ! (in)
 
        if ( .not. PRC_HAS_W ) then ! for western boundary
           call set_boundary_dyn( &
@@ -696,15 +740,21 @@ contains
           do j = JS, JE
           do i = IS, IE
           do k = KS, KE
+             damp = - DAMP_alpha(k,i,j,I_BND_QV) &
+                    * ( diff(k,i,j) & ! rayleigh damping
+                      - ( diff(k,i-1,j) + diff(k,i+1,j) + diff(k,i,j-1) + diff(k,i,j+1) - diff(k,i,j)*4.0_RP ) &
+                      * 0.125_RP * BND_SMOOTHER_FACT ) ! horizontal smoother
              RHOQ_t(k,i,j) = ( QTRC_tp(k,i,j,I_QV) & ! tendency from physical step
-                        - DAMP_alpha(k,i,j,I_BND_QV) &
-                        * ( diff(k,i,j) & ! rayleigh damping
-                          - ( diff(k,i-1,j) + diff(k,i+1,j) + diff(k,i,j-1) + diff(k,i,j+1) - diff(k,i,j)*4.0_RP ) &
-                          * 0.125_RP * BND_SMOOTHER_FACT ) & ! horizontal smoother
-                          ) * DENS00(k,i,j)
+                           + damp ) * DENS00(k,i,j)
+#ifdef HIST_TEND
+             damp_t(k,i,j) = damp
+#endif
           enddo
           enddo
           enddo
+#ifdef HIST_TEND
+          call HIST_in(damp_t, 'QV_t_damp', 'tendency of specific humidity due to rayleigh damping', 'kg/kg/s', DTSEC )
+#endif
        else
           !$omp parallel do private(i,j,k,iq) OMP_SCHEDULE_ collapse(2)
           do j = JS, JE
@@ -890,28 +940,28 @@ contains
             QTRC, & ! (inout)
             DAMP_var, DAMP_alpha, & ! (in)
             MOMX, -1, 0, 1, 0, & ! (in)
-            dt, IS, IS+IHALO-1, JS, JE ) ! (in)
+            IS, IS+IHALO-1, JS, JE ) ! (in)
     end if
     if ( .not. PRC_HAS_E ) then ! for eastern boundary
        call set_boundary_qtrc( &
             QTRC, & ! (inout)
             DAMP_var, DAMP_alpha, & ! (in)
             MOMX, 0, 0, -1, 0, & ! (in)
-            dt, IE-IHALO+1, IE, JS, JE ) ! (in)
+            IE-IHALO+1, IE, JS, JE ) ! (in)
     end if
     if ( .not. PRC_HAS_S ) then ! for sourthern boundary
        call set_boundary_qtrc( &
             QTRC, & ! (inout)
             DAMP_var, DAMP_alpha, & ! (in)
             MOMY, 0, -1, 0, 1, & ! (in)
-            dt, IS, IE, JS, JS+JHALO-1 ) ! (in)
+            IS, IE, JS, JS+JHALO-1 ) ! (in)
     end if
     if ( .not. PRC_HAS_N ) then ! for northern boundary
        call set_boundary_qtrc( &
             QTRC, & ! (inout)
             DAMP_var, DAMP_alpha, & ! (in)
             MOMY, 0, 0, 0, -1, & ! (in)
-            dt, IS, IE, JE-JHALO+1, JE ) ! (in)
+            IS, IE, JE-JHALO+1, JE ) ! (in)
     end if
 
     do iq = 1, QA
@@ -1021,7 +1071,7 @@ contains
        QTRC, &
        DAMP_var, DAMP_alpha, &
        MOM, ib, jb, iu, ju, &
-       dt, i0, i1, j0, j1 )
+       i0, i1, j0, j1 )
     use scale_const, only: &
          epsilon => CONST_EPS
     implicit none
@@ -1033,7 +1083,6 @@ contains
     integer,  intent(in)    :: jb
     integer,  intent(in)    :: iu
     integer,  intent(in)    :: ju
-    real(RP), intent(in)    :: dt
     integer,  intent(in)    :: i0
     integer,  intent(in)    :: i1
     integer,  intent(in)    :: j0

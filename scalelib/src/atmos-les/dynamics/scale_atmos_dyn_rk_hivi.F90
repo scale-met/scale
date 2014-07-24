@@ -147,7 +147,7 @@ contains
     RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,          &
     PHI, GSQRT, J13G, J23G, J33G,                &
     REF_pres, REF_dens,                          &
-    dtrk                                         )
+    dtrk, dt                                     )
     use scale_const, only: &
 #ifdef DRY
        Rdry   => CONST_Rdry,   &
@@ -232,6 +232,7 @@ contains
     real(RP), intent(in)  :: REF_dens(KA,IA,JA)   !< reference density
 
     real(RP), intent(in)  :: dtrk
+    real(RP), intent(in)  :: dt
 
 
     ! diagnostic variables (work space)
