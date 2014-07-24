@@ -15,6 +15,7 @@
 !! @par History
 !! @li      2014-07-11 (S.Shima) [new] Separated from scale_atmos_phy_mp_sdm.F90
 !! @li      2014-07-18 (Y.Sato)  [rev] Change Teten's formula to SATURATION library of SCALE Library 
+!! @li      2014-07-24 (Y.Sato)  [mod] Modify a bug relating to the revision on 2014/07/18
 !!
 !<
 !-------------------------------------------------------------------------------
@@ -41,7 +42,8 @@ contains
     use scale_grid_index, only: &
          IA,JA,KA
     use scale_atmos_saturation, only: &
-        ATMOS_SATURATION_pres2qsat_liq 
+        ATMOS_SATURATION_pres2qsat_liq, &
+        ATMOS_SATURATION_psat_liq
     use m_sdm_coordtrans, only: &
          sdm_x2ri, sdm_y2rj
     use m_sdm_common, only: &
@@ -204,7 +206,9 @@ contains
 
        !! When ice phase is implemented ss_ice should be also implement
 !!$       call ATMOS_SATURATION_pres2qsat_ice( qvsi_sd,t_sd,p_sd )
+!!$       call ATMOS_SATURATION_psat_ice( esi_sd,t_sd )
        call ATMOS_SATURATION_pres2qsat_liq( qvs_sd,t_sd,p_sd )
+       call ATMOS_SATURATION_psat_liq( es_sd,t_sd )
        ss_sd  = qv_sd / qvs_sd          !! degree of super-saturation
 
        !### Set parameters for growth EQ. of the radius ###!

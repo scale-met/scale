@@ -15,6 +15,7 @@
 !! @par History
 !! @li      2014-07-11 (S.Shima) [new] Separated from scale_atmos_phy_mp_sdm.F90
 !! @li      2014-07-14 (S.Shima) [rev] sdm_rhot_qtrc2cpexnr added
+!! @li      2014-07-24 (Y.Sato)  [mod] Modify bugs accessing upper/lower boundary
 !!
 !<
 !-------------------------------------------------------------------------------
@@ -62,7 +63,7 @@ contains
   subroutine sdm_rho_mom2uvw(dens,momx,momy,momz,u,v,w)
     use scale_precision
     use scale_grid_index, only: &
-         IA,JA,KA
+         IA,IS,IE,JA,JS,JE,KA,KS,KE
     ! Input variables
     real(RP), intent(in)  :: dens(KA,IA,JA) ! Density [kg/m3]
     real(RP), intent(in)  :: momx(KA,IA,JA) ! Momentum [kg/s/m2]
@@ -76,9 +77,9 @@ contains
     integer :: i, j, k  ! index
     !---------------------------------------------------------------------
 
-    do k = 1, KA
-    do i = 1, IA
-    do j = 1, JA
+    do k = KS, KE
+    do i = IS, IE
+    do j = JS, JE
        u(k,i,j) = 2.0_RP * momx(k,i,j) / ( dens(k,i,j)+dens(k,i+1,j) )
        v(k,i,j) = 2.0_RP * momy(k,i,j) / ( dens(k,i,j)+dens(k,i,j+1) )
        w(k,i,j) = 2.0_RP * momz(k,i,j) / ( dens(k,i,j)+dens(k+1,i,j) )

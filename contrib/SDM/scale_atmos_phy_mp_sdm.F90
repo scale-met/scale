@@ -59,6 +59,7 @@
 !! @li      2014-07-22 (Y.Sato)  [mod] Modify timing for assigning to QTRC_sdm and clear QTRC(2:QA)
 !! @li      2014-07-22 (Y.Sato)  [mod] Modify the definition of kl and ku for calculating drate
 !! @li      2014-07-22 (Y.Sato)  [mod] Modify the order of loop in a part
+!! @li      2014-07-24 (Y.Sato)  [mod] Modify a bug for restart
 !<
 !-------------------------------------------------------------------------------
 #include "macro_thermodyn.h"
@@ -535,6 +536,7 @@ contains
     use m_sdm_io, only: &
        sdm_outasci
     use m_sdm_coordtrans, only: &
+       sdm_getrklu, &
        sdm_rk2z
     use m_sdm_fluidconv, only: &
        sdm_rhot_qtrc2p_t, sdm_rho_rhot2pt, sdm_rho_mom2uvw, sdm_rho_qtrc2rhod
@@ -617,6 +619,8 @@ contains
       sd_first = .false.
       if( IO_L ) write(IO_FID_LOG,*) '*** S.D.: setup'
       if( sd_rest_flg_in ) then
+         call sdm_getrklu(sdm_zlower,sdm_zupper,      &
+                          sdrkl_s2c,sdrku_s2c)
          !---- read restart file
          call ATMOS_PHY_MP_sdm_restart_in
       else

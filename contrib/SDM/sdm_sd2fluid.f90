@@ -15,7 +15,8 @@
 !! @par History
 !! @li      2014-07-14 (S.Shima) [new] Separated from scale_atmos_phy_mp_sdm.F90
 !! @li      2014-07-14 (S.Shima) [rev] sdm_sd2prec added
-!! @li      2014-07-22 (Y.Sato ) [mod] modify the definition of kl and ku for calculating drate
+!! @li      2014-07-22 (Y.Sato ) [mod] Modify the definition of kl and ku for calculating drate
+!! @li      2014-07-24 (Y.Sato ) [mod] Modify bugs accessing upper/lower boundary
 !!
 !<
 !-------------------------------------------------------------------------------
@@ -239,9 +240,9 @@ contains
     call sdm_y2rj(sd_num,sd_y,sd_rj,sd_rk)
     
     ! Initialize
-    do k = 1, KA
-    do i = 1, IA
-    do j = 1, JA
+    do k = KS, KE
+    do i = IS, IE
+    do j = JS, JE
        dcoef(k,i,j) = rw * F_THRD * ONE_PI * dxiv_sdm(i) * dyiv_sdm(j) &
             / (zph_crs(k,i,j)-zph_crs(k-1,i,j))
     enddo
@@ -448,9 +449,9 @@ contains
     call sdm_y2rj(sd_num,sd_y,sd_rj,sd_rk)
 
     ! Initialize
-    do k = 1, KA
-    do i = 1, IA
-    do j = 1, JA
+    do k = KS, KE
+    do i = IS, IE
+    do j = JS, JE
        dcoef(k,i,j) = rw * F_THRD * ONE_PI * dxiv_sdm(i) * dyiv_sdm(j) &
             / (zph_crs(k,i,j)-zph_crs(k-1,i,j))
     enddo
