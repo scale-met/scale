@@ -40,7 +40,7 @@ OBJS	= \
 	  sdm_numset.o \
 	  sdm_common.o
 
-all:	$(LIBDIR)/$(LIBNAME) instmodules
+all:	$(LIBDIR)/$(LIBNAME) makemodules
 
 $(LIBDIR)/$(LIBNAME):	$(LIBNAME)
 	mkdir -p $(LIBDIR)
@@ -49,10 +49,6 @@ $(LIBDIR)/$(LIBNAME):	$(LIBNAME)
 $(LIBNAME): $(OBJS)
 	$(AR) r $@ $?
 	$(RANLIB) $@
-
-instmodules:	makemodules
-	mkdir -p $(MODDIR)
-	install $(MODS) $(MODDIR)
 
 makemodules: $(OBJS)
 
@@ -81,15 +77,15 @@ sdm_coalescence.o: sdm_coalescence.f90 \
 	$(BUILD_DIR)/scale_grid_index.o \
 	$(BUILD_DIR)/scale_const.o \
 	$(BUILD_DIR)/scale_precision.o \
-	$(MODDIR)/rng_uniform_mt.mod \
-	$(MODDIR)/gadg_algorithm.mod
+	$(MTDIR)/rng_uniform_mt.mod \
+	$(GAGETRYDIR)/gadg_algorithm.mod
 	$(FC) $(FFLAGS) -I$(BUILD_DIR) -I$(MODDIR) -I$(DCUTILSDIR) -I$(GTOOLDIR) -I$(MTDIR) -I$(GAGETRYDIR) -I$(SDMDIR) -o $@ -c $<
 
 sdm_idutil.o: sdm_idutil.f90 \
 	sdm_common.o \
 	$(BUILD_DIR)/scale_grid_index.o \
 	$(BUILD_DIR)/scale_precision.o \
-	$(MODDIR)/gadg_algorithm.mod
+	$(GAGETRYDIR)/gadg_algorithm.mod
 	$(FC) $(FFLAGS) -I$(BUILD_DIR) -I$(MODDIR) -I$(DCUTILSDIR) -I$(GTOOLDIR) -I$(MTDIR) -I$(GAGETRYDIR) -I$(SDMDIR) -o $@ -c $<
 
 sdm_motion.o: sdm_motion.f90 \
@@ -155,7 +151,7 @@ sdm_common.o: sdm_common.f90 \
 	$(BUILD_DIR)/scale_precision.o \
 	$(BUILD_DIR)/scale_stdio.o \
 	$(BUILD_DIR)/scale_const.o \
-	$(MODDIR)/rng_uniform_mt.mod
+	$(MTDIR)/rng_uniform_mt.mod
 	$(FC) $(FFLAGS) -I$(BUILD_DIR) -I$(MODDIR) -I$(DCUTILSDIR) -I$(GTOOLDIR) -I$(MTDIR) -I$(GAGETRYDIR) -I$(SDMDIR) -o $@ -c $<
 
 clean:

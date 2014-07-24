@@ -28,7 +28,7 @@ FPX3    = perl tools/fpx3 -I.
 .inc_fpx3.inc:
 	$(FPX3) $< > $@
 
-all:	$(LIBDIR)/$(LIBNAME) instmodules
+all:	$(LIBDIR)/$(LIBNAME) makemodules
 
 $(LIBDIR)/$(LIBNAME):	$(LIBNAME)
 	mkdir -p $(LIBDIR)
@@ -37,10 +37,6 @@ $(LIBDIR)/$(LIBNAME):	$(LIBNAME)
 $(LIBNAME):	$(OBJECTS)
 	$(AR) r $@ $?
 	$(RANLIB) $@
-
-instmodules:   makemodules
-	mkdir -p $(MODDIR)
-	install $(MODULES) $(MODDIR)
 
 makemodules: $(OBJECTS)
 

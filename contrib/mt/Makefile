@@ -18,7 +18,7 @@ MODS	= \
 OBJS	= \
 	  rng_uniform_mt.o
 
-all:	$(LIBDIR)/$(LIBNAME) instmodules
+all:	$(LIBDIR)/$(LIBNAME) makemodules
 
 $(LIBDIR)/$(LIBNAME):	$(LIBNAME)
 	mkdir -p $(LIBDIR)
@@ -27,10 +27,6 @@ $(LIBDIR)/$(LIBNAME):	$(LIBNAME)
 $(LIBNAME): $(OBJS)
 	$(AR) r $@ $?
 	$(RANLIB) $@
-
-instmodules:	makemodules
-	mkdir -p $(MODDIR)
-	install $(MODS) $(MODDIR)
 
 makemodules: $(OBJS)
 
