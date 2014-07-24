@@ -16,6 +16,7 @@
 !! @li      2014-07-11 (S.Shima) [new] Separated from scale_atmos_phy_mp_sdm.F90
 !! @li      2014-07-14 (S.Shima) [rev] sdm_rhot_qtrc2cpexnr added
 !! @li      2014-07-24 (Y.Sato)  [mod] Modify bugs accessing upper/lower boundary
+!! @li      2014-07-25 (Y.Sato)  [mod] Modify a bug in sdm_rho_mom2uvw
 !!
 !<
 !-------------------------------------------------------------------------------
@@ -77,9 +78,9 @@ contains
     integer :: i, j, k  ! index
     !---------------------------------------------------------------------
 
-    do k = KS, KE
-    do i = IS, IE
-    do j = JS, JE
+    do k = KS-1, KE
+    do i = IS-1, IE
+    do j = JS-1, JE
        u(k,i,j) = 2.0_RP * momx(k,i,j) / ( dens(k,i,j)+dens(k,i+1,j) )
        v(k,i,j) = 2.0_RP * momy(k,i,j) / ( dens(k,i,j)+dens(k,i,j+1) )
        w(k,i,j) = 2.0_RP * momz(k,i,j) / ( dens(k,i,j)+dens(k+1,i,j) )
