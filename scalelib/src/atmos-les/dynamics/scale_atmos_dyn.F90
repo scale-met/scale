@@ -486,7 +486,7 @@ contains
        if ( ND_COEF == 0.0_RP ) then
           num_diff(:,:,:,:,:) = 0.0_RP
        else
-          dt = real(DTSEC,kind=RP)
+          dt = real(DTSEC_ATMOS_DYN,kind=RP)
           call ATMOS_DYN_numfilter_coef( num_diff(:,:,:,:,:),                    & ! [OUT]
                                          DENS, MOMZ, MOMX, MOMY, RHOT,           & ! [IN]
                                          CDZ, CDX, CDY, FDZ, FDX, FDY, dt,       & ! [IN]
