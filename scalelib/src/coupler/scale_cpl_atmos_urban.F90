@@ -42,15 +42,17 @@ module scale_cpl_atmos_urban
         RAINB_URB, & ! (inout)
         RAING_URB, & ! (inout)
         ROFF_URB,  & ! (inout)
+        AH_URB,    & ! (inout)
+        ALH_URB,   & ! (inout)
         ALBD_LW,   & ! (out)
         ALBD_SW,   & ! (out)
         TS_URB,    & ! (out)
         SHR_URB,   & ! (out)
         SHB_URB,   & ! (out)
         SHG_URB,   & ! (out)
-        LHR_URB,   & ! (out)
-        LHB_URB,   & ! (out)
-        LHG_URB,   & ! (out)
+        LHR_URB,   & ! (inout)
+        LHB_URB,   & ! (inout)
+        LHG_URB,   & ! (inout)
         GHR_URB,   & ! (out)
         GHB_URB,   & ! (out)
         GHG_URB,   & ! (out)
@@ -98,6 +100,8 @@ module scale_cpl_atmos_urban
        real(RP), intent(inout) :: RAINB_URB
        real(RP), intent(inout) :: RAING_URB
        real(RP), intent(inout) :: ROFF_URB
+       real(RP), intent(inout) :: AH_URB
+       real(RP), intent(inout) :: ALH_URB
 
        real(RP), intent(out) :: ALBD_LW
        real(RP), intent(out) :: ALBD_SW

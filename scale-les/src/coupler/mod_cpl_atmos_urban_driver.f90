@@ -165,7 +165,9 @@ contains
        RAINB_URB, &
        RAING_URB, &
        ROFF_URB,  &
-       Rngrd_URB
+       Rngrd_URB, &
+       AH_URB,    &
+       ALH_URB
 
     implicit none
 
@@ -218,15 +220,17 @@ contains
                          RAINB_URB   (i,j),   & ! [INOUT]
                          RAING_URB   (i,j),   & ! [INOUT]
                          ROFF_URB    (i,j),   & ! [INOUT]
+                         AH_URB      (i,j),   & ! [INOUT]
+                         ALH_URB     (i,j),   & ! [INOUT]
                          SFC_albedo  (i,j,I_LW), & ! [INOUT]
                          SFC_albedo  (i,j,I_SW), & ! [INOUT]
                          TS_URB      (i,j),   & ! [OUT]
                          SHR_URB     (i,j),   & ! [OUT]
                          SHB_URB     (i,j),   & ! [OUT]
                          SHG_URB     (i,j),   & ! [OUT]
-                         LHR_URB     (i,j),   & ! [OUT]
-                         LHB_URB     (i,j),   & ! [OUT]
-                         LHG_URB     (i,j),   & ! [OUT]
+                         LHR_URB     (i,j),   & ! [INOUT]
+                         LHB_URB     (i,j),   & ! [INOUT]
+                         LHG_URB     (i,j),   & ! [INOUT]
                          GHR_URB     (i,j),   & ! [OUT]
                          GHB_URB     (i,j),   & ! [OUT]
                          GHG_URB     (i,j),   & ! [OUT]
@@ -258,7 +262,7 @@ contains
                          LAT         (ii,jj)    ) ! [IN]
           TS_URB      (i,j) = SFC_TEMP (i,j)
       else
-          ! not calculate surface flux
+          ! not calculate urban scheme
           TS_URB      (i,j) = SFC_TEMP(i,j)
           SHR_URB     (i,j) = 0.0_RP
           SHB_URB     (i,j) = 0.0_RP
@@ -272,6 +276,8 @@ contains
           RnR_URB     (i,j) = 0.0_RP
           RnB_URB     (i,j) = 0.0_RP
           RnG_URB     (i,j) = 0.0_RP
+          AH_URB      (i,j) = 0.0_RP
+          ALH_URB     (i,j) = 0.0_RP
           Rngrd_URB   (i,j) = 0.0_RP
           ATM_FLX_SH  (i,j) = 0.0_RP
           ATM_FLX_LH  (i,j) = 0.0_RP
@@ -307,6 +313,8 @@ contains
                           RAINR_URB   (i,j),   & ! [IN]
                           RAINB_URB   (i,j),   & ! [IN]
                           RAING_URB   (i,j),   & ! [IN]
+                          AH_URB      (i,j),   & ! [IN]
+                          ALH_URB     (i,j),   & ! [IN]
                           SFC_albedo  (i,j,I_LW), & ! [INOUT]
                           SFC_albedo  (i,j,I_SW), & ! [INOUT]
                           SHR_URB     (i,j),   & ! [OUT]
@@ -359,6 +367,8 @@ contains
            RnR_URB     (i,j) = 0.0_RP
            RnB_URB     (i,j) = 0.0_RP
            RnG_URB     (i,j) = 0.0_RP
+           AH_URB      (i,j) = 0.0_RP
+           ALH_URB     (i,j) = 0.0_RP
            Rngrd_URB   (i,j) = 0.0_RP
            ATM_FLX_SH  (i,j) = 0.0_RP
            ATM_FLX_LH  (i,j) = 0.0_RP

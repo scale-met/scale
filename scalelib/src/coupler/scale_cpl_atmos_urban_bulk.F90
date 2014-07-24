@@ -305,6 +305,8 @@ contains
         RAINR,        & ! (in)
         RAINB,        & ! (in)
         RAING,        & ! (in)
+        AH_t,         & ! (in)
+        ALH_t,        & ! (in)
         ALBD_LW_grid, & ! (out)
         ALBD_SW_grid, & ! (out)
         SHR,          & ! (out)
@@ -355,7 +357,7 @@ contains
        STB    => CONST_STB,     &    !< stefan-Boltzman constant [MKS unit]
        TEM00  => CONST_TEM00         !< temperature reference (0 degree C) [K]
     use scale_time, only:       &
-       TIME => TIME_NOWSEC,      &   !< absolute sec
+       NOWDATE => TIME_NOWDATE, &    !< current time [YYYY MM DD HH MM SS]
        DELT => TIME_DTSEC_URBAN      !< time interval of urban step [sec]
     implicit none
 
@@ -390,6 +392,8 @@ contains
     real(RP), intent(in) :: RAINR ! rain amount in storage on roof     [kg/m2]
     real(RP), intent(in) :: RAINB ! rain amount in storage on building [kg/m2]
     real(RP), intent(in) :: RAING ! rain amount in storage on road     [kg/m2]
+    real(RP), intent(in) :: AH_t     ! Sensible Anthropogenic heat [W/m^2]
+    real(RP), intent(in) :: ALH_t    ! Latent Anthropogenic heat [W/m^2]
 
     !-- Output variables from Urban to Coupler
     real(RP), intent(out)   :: ALBD_SW_grid  ! grid mean of surface albedo for SW
@@ -423,8 +427,6 @@ contains
     integer  :: tloc     ! local time (1-24h)
     real(RP) :: dsec     ! second [s]
     real(RP) :: tahdiurnal ! temporal AH diurnal profile
-    real(RP) :: AH_t     ! Sensible Anthropogenic heat [W/m^2]
-    real(RP) :: ALH_t    ! Latent Anthropogenic heat [W/m^2]
 
     real(RP) :: SSGD     ! downward direct short wave radiation   [W/m/m]
     real(RP) :: SSGQ     ! downward diffuse short wave radiation  [W/m/m]
@@ -482,20 +484,23 @@ contains
     LAT = XLAT / D2R
     LON = XLON / D2R
 
-    tloc = mod( (int(TIME/3600.0_RP) + int(LON/15.0_RP)),24 )
-    dsec = mod(TIME,3600.0_RP) / 3600.0_RP
-    if(tloc==0) tloc = 24
+    !tloc = mod((NOWDATE(4) + int(LON/15.0_RP)),24 )
+    !dsec = real(NOWDATE(5)*60.0_RP + NOWDATE(6)) / 3600.0_RP 
+    !if(tloc==0) tloc = 24
 
     ! Calculate AH data at LST
-     if(tloc==24)then
-       tahdiurnal = ( (1.0_RP-dsec) * ahdiurnal(tloc  ) &
-                    + (       dsec) * ahdiurnal(1)      )
-     else
-       tahdiurnal = ( (1.0_RP-dsec) * ahdiurnal(tloc  ) &
-                    + (       dsec) * ahdiurnal(tloc+1) )
-     endif
-     AH_t  = AH  * tahdiurnal
-     ALH_t = ALH * tahdiurnal
+    ! if(tloc==24)then
+    !   tahdiurnal = ( (1.0_RP-dsec) * ahdiurnal(tloc  ) &
+    !                + (       dsec) * ahdiurnal(1)      )
+    ! else
+    !   tahdiurnal = ( (1.0_RP-dsec) * ahdiurnal(tloc  ) &
+    !                + (       dsec) * ahdiurnal(tloc+1) )
+    ! endif
+    ! AH_t  = AH  * tahdiurnal
+    ! ALH_t = ALH * tahdiurnal
+
+    !print *,"AH_URB ",dsec, AH_t, AH*tahdiurnal
+    !print *,"ALH_URB",dsec, ALH_t, ALH*tahdiurnal
 
     !if(.NOT.LSOLAR) then   ! Radiation scheme does not have SSGD and SSGQ.
       SSGD = SRATIO * SSG
@@ -519,7 +524,6 @@ contains
 
 
     !--- calculate canopy wind
-
     !call canopy_wind(ZA, UA, UC)
 
     !-----------------------------------------------------------
@@ -555,7 +559,7 @@ contains
     !-----------------------------------------------------------
     ! Set evaporation efficiency on roof/wall/road
     !-----------------------------------------------------------
-
+    
     if ( STRGR == 0.0_RP ) then
        BETR = 0.0_RP
     else
@@ -756,14 +760,10 @@ contains
     ! add anthropogenic heat fluxes
     !-----------------------------------------------------------
 
-    !print *,"1",dsec,AH_t,FLXTH,SH
-
     FLXTH  = FLXTH  + AH_t/RHOO/CPdry
     FLXHUM = FLXHUM + ALH_t/RHOO/LH0
     SH     = FLXTH  * RHOO * CPdry               ! Sensible heat flux          [W/m/m]
     LH     = FLXHUM * RHOO * LH0                 ! Latent heat flux            [W/m/m]
-
-    !print *,"2",dsec,AH_t,FLXTH,SH
 
     return
   end subroutine CPL_AtmUrb_bulk_restart
@@ -783,15 +783,17 @@ contains
         RAINB,        & ! (inout)
         RAING,        & ! (inout)
         ROFF,         & ! (inout)
+        AH_t,         & ! (inout)
+        ALH_t,        & ! (inout)
         ALBD_LW_grid, & ! (out)
         ALBD_SW_grid, & ! (out)
         TS,           & ! (out)
         SHR,          & ! (out)
         SHB,          & ! (out)
         SHG,          & ! (out)
-        LHR,          & ! (out)
-        LHB,          & ! (out)
-        LHG,          & ! (out)
+        LHR,          & ! (inout)
+        LHB,          & ! (inout)
+        LHG,          & ! (inout)
         GHR,          & ! (out)
         GHB,          & ! (out)
         GHG,          & ! (out)
@@ -835,8 +837,8 @@ contains
        STB    => CONST_STB,     &    !< stefan-Boltzman constant [MKS unit]
        TEM00  => CONST_TEM00         !< temperature reference (0 degree C) [K]
     use scale_time, only:       &
-       TIME => TIME_NOWSEC,      &   !< absolute sec
-       DELT => TIME_DTSEC_URBAN      !< time interval of urban step [sec]
+       NOWDATE => TIME_NOWDATE, &    !< current time [YYYY MM DD HH MM SS]
+       DELT    => TIME_DTSEC_URBAN   !< time interval of urban step [sec]
     implicit none
 
     !-- configuration variables
@@ -880,6 +882,8 @@ contains
     real(RP), intent(inout) :: RAINB ! rain amount in storage on building [kg/m2]
     real(RP), intent(inout) :: RAING ! rain amount in storage on road     [kg/m2]
     real(RP), intent(inout) :: ROFF  ! runoff from urban        [kg/m2]
+    real(RP), intent(inout) :: AH_t  ! Sensible Anthropogenic heat [W/m^2]
+    real(RP), intent(inout) :: ALH_t ! Latent Anthropogenic heat [W/m^2]
 
     !-- Output variables from Urban to Coupler
     real(RP), intent(out)   :: ALBD_SW_grid  ! grid mean of surface albedo for SW
@@ -896,7 +900,7 @@ contains
     real(RP), intent(out)   :: Q2     ! specific humidity at 2m          [kg/kg]
     real(RP), intent(out)   :: RNR, RNB, RNG
     real(RP), intent(out)   :: SHR, SHB, SHG
-    real(RP), intent(out)   :: LHR, LHB, LHG
+    real(RP), intent(inout) :: LHR, LHB, LHG
     real(RP), intent(out)   :: GHR, GHB, GHG
 
     !-- parameters
@@ -917,9 +921,8 @@ contains
     real(RP) :: LON,LAT  ! longitude [deg], latitude [deg]
     integer  :: tloc     ! local time (1-24h)
     real(RP) :: dsec     ! second [s]
+    real(RP) :: TIME     ! absorute part of current time
     real(RP) :: tahdiurnal ! temporal AH diurnal profile
-    real(RP) :: AH_t     ! Sensible Anthropogenic heat [W/m^2]
-    real(RP) :: ALH_t    ! Latent Anthropogenic heat [W/m^2]
 
     real(RP) :: SSGD     ! downward direct short wave radiation   [W/m/m]
     real(RP) :: SSGQ     ! downward diffuse short wave radiation  [W/m/m]
@@ -1008,8 +1011,12 @@ contains
     LAT = XLAT / D2R
     LON = XLON / D2R
 
-    tloc = mod( (int(TIME/3600.0_RP) + int(LON/15.0_RP)),24 )
-    dsec = mod(TIME,3600.0_RP) / 3600.0_RP 
+    TIME = real(NOWDATE(4)*3600.0_RP + NOWDATE(5)*60.0_RP + NOWDATE(6))
+    !tloc = mod((int(TIME/3600.0_RP) + int(LON/15.0_RP)),24 )
+    !dsec = mod(TIME,3600.0_RP) / 3600.0_RP 
+
+    tloc = mod((NOWDATE(4) + int(LON/15.0_RP)),24 )
+    dsec = real(NOWDATE(5)*60.0_RP + NOWDATE(6)) / 3600.0_RP 
     if(tloc==0) tloc = 24
 
     ! Calculate AH data at LST
@@ -1098,6 +1105,15 @@ contains
     ! Set evaporation efficiency on roof/wall/road
     !-----------------------------------------------------------
 
+    !!--- calculate rain amount remaining on the surface
+    !RAINR = max(0.0_RP, RAINR-(ELER/EL)*DELT*10.0_RP)   ! from cgs to MKS [kg/m/m = mm]
+    !RAINB = max(0.0_RP, RAINB-(ELEB/EL)*DELT*10.0_RP)   ! from cgs to MKS [kg/m/m = mm]
+    !RAING = max(0.0_RP, RAING-(ELEG/EL)*DELT*10.0_RP)   ! from cgs to MKS [kg/m/m = mm]
+    RAINR = max(0.0_RP, RAINR-(LHR/LH0)*DELT)   ! [kg/m/m = mm]
+    RAINB = max(0.0_RP, RAINB-(LHB/LH0)*DELT)   ! [kg/m/m = mm]
+    RAING = max(0.0_RP, RAING-(LHG/LH0)*DELT)   ! [kg/m/m = mm]
+
+    !!--- calculate evaporation efficiency
     RAINT = RAIN * DELT  !!! check [kg/m2/s -> kg/m2 ?]
 
     call cal_beta(BETR, RAINT, RAINR, STRGR, ROFFR)
@@ -1230,8 +1246,8 @@ contains
     FLXTHR  = HR / RHO / CP / 100.0_RP
     FLXHUMR = ELER / RHO / EL / 100.0_RP
 
-    !!--- calculate the rain amount remaining on the surface
-    RAINR = max(0.0_RP, RAINR-(ELER/EL)*DELT*10.0_RP)   ! from cgs to MKS [kg/m/m = mm]
+    !!!--- calculate the rain amount remaining on the surface
+    !RAINR = max(0.0_RP, RAINR-(ELER/EL)*DELT*10.0_RP)   ! from cgs to MKS [kg/m/m = mm]
 
     !--------------------------------------------------
     !   Wall and Road
@@ -1439,12 +1455,11 @@ contains
     FLXTHG  = HG / RHO / CP / 100.0_RP
     FLXHUMG = ELEG / RHO / EL / 100.0_RP
 
-    !!--- calculate the rain amount remaining on the surface
-    RAINB = max(0.0_RP, RAINB-(ELEB/EL)*DELT*10.0_RP)   ! from cgs to MKS [kg/m/m = mm]
+    !!!--- calculate rain amount remaining on the surface
+    !RAINB = max(0.0_RP, RAINB-(ELEB/EL)*DELT*10.0_RP)   ! from cgs to MKS [kg/m/m = mm]
 
-    !!--- calculate the rain amount remaining on the surface
-    RAING = max(0.0_RP, RAING-(ELEG/EL)*DELT*10.0_RP)   ! from cgs to MKS [kg/m/m = mm]
-
+    !!!--- calculate rain amount remaining on the surface
+    !RAING = max(0.0_RP, RAING-(ELEG/EL)*DELT*10.0_RP)   ! from cgs to MKS [kg/m/m = mm]
 
     !-----------------------------------------------------------
     ! Total Fluxes from Urban Canopy
@@ -1457,13 +1472,6 @@ contains
     FLXHUM = ( R*FLXHUMR + W*FLXHUMB + RW*FLXHUMG )
     FLXG   = ( R*G0R + W*G0B + RW*G0G )
     LNET   = R*RR + W*RB + RW*RG
-
-!    print *,'SNET  ',SNET
-!    print *,'LNET  ',LNET
-!    print *,'FLXTH ',FLXTH*RHO*CP*100.0_RP
-!    print *,'FLXHUM',FLXHUM*RHO*EL*100.0
-!    print *,'FLXG  ',FLXG
-!    print *, SNET+LNET-FLXTH*RHO*CP*100.0_RP-FLXHUM*RHO*EL*100.0_RP-FLXG
 
     !-----------------------------------------------------------
     ! Grid average
@@ -1589,8 +1597,6 @@ contains
     FLXHUM = FLXHUM + ALH_t/RHOO/LH0
     SH     = FLXTH  * RHOO * CPdry               ! Sensible heat flux          [W/m/m]
     LH     = FLXHUM * RHOO * LH0                 ! Latent heat flux            [W/m/m]
-
-    !print *,"4",dsec,AH_t,FLXTH,SH
 
     return
   end subroutine CPL_AtmUrb_bulk
