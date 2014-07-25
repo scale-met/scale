@@ -25,10 +25,12 @@ FFLAGS_DEBUG = -fpp3 -O0 -m64                       \
 SDM = -D_SDM
 
 FC     = mpiifort
-FFLAGS = $(FFLAGS_FAST) $(SDM)
-#FFLAGS = $(FFLAGS_DEBUG) $(SDM)
+#FFLAGS = $(FFLAGS_FAST) $(SDM)
+FFLAGS = $(FFLAGS_DEBUG) $(SDM)
 
 FFLAGS_DYN ?= $(FFLAGS)
+
+FFLAGS_SDM ?= $(FFLAGS)
 
 ifneq ($(DISABLE_VEC),)
       FFLAGS += -no-vec

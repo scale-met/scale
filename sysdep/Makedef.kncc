@@ -15,6 +15,8 @@ FFLAGS = -mmic -fpp3 -g -O3 -parallel -openmp -assume byterecl -ftz -heap-arrays
 # compiler flag for scale_atmos_dyn_fent_pdfct
 FFLAGS_DYN ?= $(FFLAGS)
 
+FFLAGS_SDM ?= $(FFLAGS)
+
 # C compiler
 CC     = mpiicc
 CFLAGS = -O3 -ftz -mmic -g -O3 -parallel -openmp

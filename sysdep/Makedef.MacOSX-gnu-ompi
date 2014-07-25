@@ -28,6 +28,8 @@ FFLAGS = $(FFLAGS_FAST) $(SDM)
 
 FFLAGS_DYN = $(FFLAGS)
 
+FFLAGS_SDM ?= $(FFLAGS)
+
 MODDIROPT ?= -J
 
 CC     = mpicc

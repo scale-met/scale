@@ -37,6 +37,8 @@ FFLAGS = $(FFLAGS_FAST) $(SDM)
 
 FFLAGS_DYN = $(FFLAGS)
 
+FFLAGS_SDM ?= $(FFLAGS)
+
 ifneq ($(ENABLE_PAPI),)
       FFLAGS += -D_PAPI_
       PAPI_INCLUDE = -I$(PAPI)/include

@@ -39,6 +39,9 @@ FFLAGS = $(FFLAGS_FAST) $(PERF_MONIT) $(RDMA)
 
 FFLAGS_DYN ?= $(FFLAGS) -Knoprefetch,loop_nofission,loop_nofusion,nounroll,parallel_strong -Ksimd=2
 
+FFLAGS_SDM ?= $(FFLAGS) -Kprefetch_indirect
+#FFLAGS_SDM ?= $(FFLAGS)
+
 MODDIROPT ?= -M
 
 CC     = mpifccpx

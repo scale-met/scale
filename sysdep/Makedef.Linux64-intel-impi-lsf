@@ -24,6 +24,8 @@ FFLAGS = $(FFLAGS_FAST)
 
 FFLAGS_DYN ?= $(FFLAGS)
 
+FFLAGS_SDM ?= $(FFLAGS)
+
 ifneq ($(DISABLE_VEC),)
       FFLAGS += -no-vec
 endif

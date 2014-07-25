@@ -35,6 +35,8 @@ FFLAGS = $(FFLAGS_FAST) $(PERF_MONIT) -D__ES2 $(SDM)
 
 FFLAGS_DYN ?= $(FFLAGS)
 
+FFLAGS_SDM ?= $(FFLAGS)
+
 MODDIROPT ?= -to
 
 CC     = sxmpic++

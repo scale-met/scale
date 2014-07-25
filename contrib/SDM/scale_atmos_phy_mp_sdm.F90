@@ -60,6 +60,8 @@
 !! @li      2014-07-22 (Y.Sato)  [mod] Modify the definition of kl and ku for calculating drate
 !! @li      2014-07-22 (Y.Sato)  [mod] Modify the order of loop in a part
 !! @li      2014-07-24 (Y.Sato)  [mod] Modify a bug for restart
+!! @li      2014-07-25 (Y.Sato)  [rev] Move sdm_getrklu from sdm_iniset to ATMOS_PHY_MP_sdm_setup
+!! @li      2014-07-25 (Y.Sato)  [rev] Add COMM_var, and COMM_wait for filling u_scale, v_scale, and w_scale
 !<
 !-------------------------------------------------------------------------------
 #include "macro_thermodyn.h"
@@ -164,6 +166,8 @@ contains
        DX,DY,DZ
     use scale_topography, only: &
        TOPO_Zsfc
+    use m_sdm_coordtrans, only: &
+       sdm_getrklu
     implicit none
     character(len=H_SHORT), intent(in) :: MP_TYPE
 
@@ -484,6 +488,10 @@ contains
 
     call sdm_allocinit
 
+    !### Get index[k/real] at "sdm_zlower" and "sdm_zupper"  ###!
+    call sdm_getrklu(sdm_zlower,sdm_zupper,      &
+                     sdrkl_s2c,sdrku_s2c)
+
     dx_sdm(1:IA) = GRID_CDX(1:IA)
     dy_sdm(1:JA) = GRID_CDY(1:JA)
     dxiv_sdm(1:IA) = GRID_RCDX(1:IA)
@@ -536,7 +544,6 @@ contains
     use m_sdm_io, only: &
        sdm_outasci
     use m_sdm_coordtrans, only: &
-       sdm_getrklu, &
        sdm_rk2z
     use m_sdm_fluidconv, only: &
        sdm_rhot_qtrc2p_t, sdm_rho_rhot2pt, sdm_rho_mom2uvw, sdm_rho_qtrc2rhod
@@ -619,8 +626,6 @@ contains
       sd_first = .false.
       if( IO_L ) write(IO_FID_LOG,*) '*** S.D.: setup'
       if( sd_rest_flg_in ) then
-         call sdm_getrklu(sdm_zlower,sdm_zupper,      &
-                          sdrkl_s2c,sdrku_s2c)
          !---- read restart file
          call ATMOS_PHY_MP_sdm_restart_in
       else
@@ -830,7 +835,6 @@ contains
         GRID_FX,    &
         GRID_FY
       use m_sdm_coordtrans, only: &
-        sdm_getrklu, &
         sdm_z2rk
       use m_sdm_fluidconv, only: &
         sdm_rhot_qtrc2p_t, sdm_rho_rhot2pt, sdm_rho_mom2uvw, sdm_rho_qtrc2rhod
@@ -925,10 +929,6 @@ contains
       if( .not. sdm_calvar(1) .and. &
           .not. sdm_calvar(2) .and. &
           .not. sdm_calvar(3)        ) return
-
-      !### Get index[k/real] at "sdm_zlower" and "sdm_zupper"  ###!
-      call sdm_getrklu(sdm_zlower,sdm_zupper,      &
-                       sdrkl_s2c,sdrku_s2c)
 
 !!$      !### Get base state density ###!
 !!$!      do k=1,nk
@@ -1503,6 +1503,14 @@ contains
             ! get the moving velocity of super-droplets
             !! diagnose necessary fluid variables
             call sdm_rho_mom2uvw(DENS,MOMX,MOMY,MOMZ,u_scale,v_scale,w_scale)
+            !! update the HALO region of the fluid variables
+            call COMM_vars8( u_scale(:,:,:), 1 )
+            call COMM_vars8( v_scale(:,:,:), 2 )
+            call COMM_vars8( w_scale(:,:,:), 3 )
+            call COMM_wait ( u_scale(:,:,:), 1 )
+            call COMM_wait ( v_scale(:,:,:), 2 )
+            call COMM_wait ( w_scale(:,:,:), 3 )
+
             !! evaluate the velocity of each SD
             call sdm_getvel(u_scale,v_scale,w_scale,                   &
                             sd_num,sd_x,sd_y,sd_ri,sd_rj,sd_rk,sd_u,sd_v,sd_vz)
