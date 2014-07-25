@@ -27,3 +27,6 @@ DATDISTS    =
 
 # build, makedir, run, jobshell, allclean, clean is inside of common Makefile
 include $(TESTDIR)/Makefile.common
+
+jobshell:
+	cp -f run.sh.template run.sh

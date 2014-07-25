@@ -61,6 +61,7 @@ module scale_landuse
   character(len=H_MID),  private :: LANDUSE_OUT_DTYPE    = 'DEFAULT'           !< REAL4 or REAL8
   logical,               private :: LANDUSE_AllLand      = .false.
   logical,               private :: LANDUSE_AllUrban     = .false.
+  logical,               private :: LANDUSE_MosaicWorld  = .false.
 
   !-----------------------------------------------------------------------------
 contains
@@ -78,7 +79,8 @@ contains
        LANDUSE_PFT_mosaic,   &
        LANDUSE_PFT_nmax,     &
        LANDUSE_AllLand,      &
-       LANDUSE_AllUrban
+       LANDUSE_AllUrban,     &
+       LANDUSE_MosaicWorld
 
     integer :: ierr
     !---------------------------------------------------------------------------
@@ -121,6 +123,10 @@ contains
        LANDUSE_frac_land (:,:) = 1.0_RP
        if( IO_L ) write(IO_FID_LOG,*) '*** Assume all lands are urban'
        LANDUSE_frac_urban(:,:) = 1.0_RP
+    elseif( LANDUSE_MosaicWorld ) then
+       if( IO_L ) write(IO_FID_LOG,*) '*** Assume all grids have ocean, land, and urban'
+       LANDUSE_frac_land (:,:) = 0.5_RP
+       LANDUSE_frac_urban(:,:) = 0.5_RP
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** Assume all grids are ocean'
     endif
