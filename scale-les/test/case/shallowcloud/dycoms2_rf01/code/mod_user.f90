@@ -21,6 +21,7 @@ module mod_user
   use scale_prof
   use scale_grid_index
   use scale_tracer
+  use scale_index
   !-----------------------------------------------------------------------------
   implicit none
   private
