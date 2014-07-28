@@ -91,6 +91,7 @@ module mod_cpl_vars
   real(RP), public, allocatable :: CPL_fromLnd_LND_BETA  (:,:)   ! efficiency of evaporation [0-1]
 
   ! Input form urban model
+  real(RP), public, allocatable :: CPL_fromUrb_SFC_Z0M   (:,:)   ! (first time only) roughness length for momemtum [m]
   real(RP), public, allocatable :: CPL_fromUrb_SFC_TEMP  (:,:)   ! (first time only) surface skin temperature [K]
   real(RP), public, allocatable :: CPL_fromUrb_SFC_albedo(:,:,:) ! (first time only) surface albedo           [0-1]
 
@@ -243,8 +244,10 @@ contains
     CPL_fromLnd_LND_TEMP  (:,:) = UNDEF
     CPL_fromLnd_LND_BETA  (:,:) = UNDEF
 
+    allocate( CPL_fromUrb_SFC_Z0M   (IA,JA) )
     allocate( CPL_fromUrb_SFC_TEMP  (IA,JA) )
     allocate( CPL_fromUrb_SFC_albedo(IA,JA,2) )
+    CPL_fromUrb_SFC_Z0M   (:,:) = UNDEF
     CPL_fromUrb_SFC_TEMP  (:,:) = UNDEF
     CPL_fromUrb_SFC_albedo(:,:,2) = UNDEF
 
@@ -399,14 +402,17 @@ contains
     CPL_Merged_FLX_MW(:,:) = fact_ocean(:,:) * CPL_AtmOcn_ATM_FLX_MW  (:,:) &
                            + fact_land (:,:) * CPL_AtmLnd_ATM_FLX_MW  (:,:) &
                            + fact_urban(:,:) * CPL_AtmLnd_ATM_FLX_MW  (:,:) ! tentative
+    !                       + fact_urban(:,:) * CPL_AtmUrb_ATM_FLX_MW  (:,:)
 
     CPL_Merged_FLX_MU(:,:) = fact_ocean(:,:) * CPL_AtmOcn_ATM_FLX_MU  (:,:) &
                            + fact_land (:,:) * CPL_AtmLnd_ATM_FLX_MU  (:,:) &
                            + fact_urban(:,:) * CPL_AtmLnd_ATM_FLX_MU  (:,:) ! tentative
+    !                       + fact_urban(:,:) * CPL_AtmUrb_ATM_FLX_MU  (:,:)
 
     CPL_Merged_FLX_MV(:,:) = fact_ocean(:,:) * CPL_AtmOcn_ATM_FLX_MV  (:,:) &
                            + fact_land (:,:) * CPL_AtmLnd_ATM_FLX_MV  (:,:) &
                            + fact_urban(:,:) * CPL_AtmLnd_ATM_FLX_MV  (:,:) ! tentative
+    !                       + fact_urban(:,:) * CPL_AtmUrb_ATM_FLX_MV  (:,:)
 
     CPL_Merged_FLX_SH(:,:) = fact_ocean(:,:) * CPL_AtmOcn_ATM_FLX_SH  (:,:) &
                            + fact_land (:,:) * CPL_AtmLnd_ATM_FLX_SH  (:,:) &
@@ -423,6 +429,7 @@ contains
     CPL_Merged_Z0M   (:,:) = fact_ocean(:,:) * CPL_fromOcn_SFC_Z0M  (:,:) &
                            + fact_land (:,:) * CPL_fromLnd_SFC_Z0M  (:,:) &
                            + fact_urban(:,:) * CPL_fromLnd_SFC_Z0M  (:,:)   ! tentative
+    !                       + fact_urban(:,:) * CPL_fromUrb_SFC_Z0M  (:,:)
 
     CPL_Merged_U10   (:,:) = fact_ocean(:,:) * CPL_AtmOcn_ATM_U10     (:,:) &
                            + fact_land (:,:) * CPL_AtmLnd_ATM_U10     (:,:) &

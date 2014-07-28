@@ -29,6 +29,7 @@ module scale_cpl_atmos_urban_bulk
   public :: CPL_AtmUrb_bulk_setup
   public :: CPL_AtmUrb_bulk_restart
   public :: CPL_AtmUrb_bulk
+  public :: CPL_AtmUrb_bulk_momentum
 
   !-----------------------------------------------------------------------------
   !
@@ -107,6 +108,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine CPL_AtmUrb_bulk_setup( CPL_TYPE_AtmUrb )
+    use scale_cpl_bulkflux, only: &
+       CPL_bulkflux_setup
     use scale_process, only: &
        PRC_MPIstop
     implicit none
@@ -288,6 +291,9 @@ contains
     ! set other urban parameters
     call urban_param_setup
 
+    ! set up bulk coefficient function
+    call CPL_bulkflux_setup
+
     return
   end subroutine CPL_AtmUrb_bulk_setup
 
@@ -380,20 +386,20 @@ contains
     real(RP), intent(in)    :: XLON !< longitude [rad,0-2pi]
 
     !-- In/Out variables from/to Coupler to/from Urban
-    real(RP), intent(in) :: TR   ! roof temperature              [K]
-    real(RP), intent(in) :: TB   ! building wall temperature     [K]
-    real(RP), intent(in) :: TG   ! road temperature              [K]
-    real(RP), intent(in) :: TC   ! urban-canopy air temperature  [K]
-    real(RP), intent(in) :: QC   ! urban-canopy air specific humidity [kg/kg]
-    real(RP), intent(in) :: UC   ! diagnostic canopy wind        [m/s]
-    real(RP), intent(in) :: TRL(UKS:UKE)  ! layer temperature [K]
-    real(RP), intent(in) :: TBL(UKS:UKE)  ! layer temperature [K]
-    real(RP), intent(in) :: TGL(UKS:UKE)  ! layer temperature [K]
-    real(RP), intent(in) :: RAINR ! rain amount in storage on roof     [kg/m2]
-    real(RP), intent(in) :: RAINB ! rain amount in storage on building [kg/m2]
-    real(RP), intent(in) :: RAING ! rain amount in storage on road     [kg/m2]
-    real(RP), intent(in) :: AH_t     ! Sensible Anthropogenic heat [W/m^2]
-    real(RP), intent(in) :: ALH_t    ! Latent Anthropogenic heat [W/m^2]
+    real(RP), intent(in)    :: TR   ! roof temperature              [K]
+    real(RP), intent(in)    :: TB   ! building wall temperature     [K]
+    real(RP), intent(in)    :: TG   ! road temperature              [K]
+    real(RP), intent(in)    :: TC   ! urban-canopy air temperature  [K]
+    real(RP), intent(in)    :: QC   ! urban-canopy air specific humidity [kg/kg]
+    real(RP), intent(in)    :: UC   ! diagnostic canopy wind        [m/s]
+    real(RP), intent(in)    :: TRL(UKS:UKE)  ! layer temperature [K]
+    real(RP), intent(in)    :: TBL(UKS:UKE)  ! layer temperature [K]
+    real(RP), intent(in)    :: TGL(UKS:UKE)  ! layer temperature [K]
+    real(RP), intent(in)    :: RAINR ! rain amount in storage on roof     [kg/m2]
+    real(RP), intent(in)    :: RAINB ! rain amount in storage on building [kg/m2]
+    real(RP), intent(in)    :: RAING ! rain amount in storage on road     [kg/m2]
+    real(RP), intent(in)    :: AH_t     ! Sensible Anthropogenic heat [W/m^2]
+    real(RP), intent(in)    :: ALH_t    ! Latent Anthropogenic heat [W/m^2]
 
     !-- Output variables from Urban to Coupler
     real(RP), intent(out)   :: ALBD_SW_grid  ! grid mean of surface albedo for SW
@@ -1600,6 +1606,90 @@ contains
 
     return
   end subroutine CPL_AtmUrb_bulk
+
+  !-----------------------------------------------------------------------------
+  subroutine CPL_AtmUrb_bulk_momentum( &
+        XMFLX,      & ! (out)
+        YMFLX,      & ! (out)
+        ZMFLX,      & ! (out)
+        Z0M,        & ! (out)
+        ZA,         & ! (in)
+        RHOA,       & ! (in)
+        UA,         & ! (in)
+        VA,         & ! (in)
+        WA,         & ! (in)
+        TMPA,       & ! (in)
+        PRSA,       & ! (in)
+        QVA,        & ! (in)
+        PBL,        & ! (in)
+        PRSS,       & ! (in)
+        RTS         ) ! (in)
+    use scale_atmos_saturation, only: &
+       qsat => ATMOS_SATURATION_pres2qsat_all
+    use scale_cpl_bulkflux, only: &
+       CPL_bulkflux
+    use scale_process, only: &
+       PRC_MPIstop
+    implicit none
+
+    ! arguments
+    real(RP), intent(out) :: XMFLX  ! x-momentum flux at the surface [kg/m2/s]
+    real(RP), intent(out) :: YMFLX  ! y-momentum flux at the surface [kg/m2/s]
+    real(RP), intent(out) :: ZMFLX  ! z-momentum flux at the surface [kg/m2/s]
+    real(RP), intent(out) :: Z0M    ! roughness length for momentum [m]
+
+    real(RP), intent(in)  :: RTS    ! radiative surface temperature [K]
+    real(RP), intent(in)  :: RHOA   ! density at the lowest atmospheric layer [kg/m3]
+    real(RP), intent(in)  :: ZA     ! height at the lowest atmospheric layer [m/s]
+    real(RP), intent(in)  :: UA     ! velocity u at the lowest atmospheric layer [m/s]
+    real(RP), intent(in)  :: VA     ! velocity v at the lowest atmospheric layer [m/s]
+    real(RP), intent(in)  :: WA     ! velocity w at the lowest atmospheric layer [m/s]
+    real(RP), intent(in)  :: TMPA   ! temperature at the lowest atmospheric layer [K]
+    real(RP), intent(in)  :: PRSA   ! pressure at the lowest atmospheric layer [Pa]
+    real(RP), intent(in)  :: QVA    ! ratio of water vapor mass to total mass at the lowest atmospheric layer [kg/kg]
+    real(RP), intent(in)  :: PBL    ! the top of atmospheric mixing layer [m]
+    real(RP), intent(in)  :: PRSS   ! pressure at the surface [Pa]
+
+    ! works
+    real(RP) :: Ustar ! friction velocity [m]
+    real(RP) :: Tstar ! friction temperature [K]
+    real(RP) :: Qstar ! friction mixing rate [kg/kg]
+    real(RP) :: Uabs  ! modified absolute velocity [m/s]
+    real(RP) :: QVS   ! saturation water vapor mixing ratio at surface [kg/kg]
+
+    integer :: i, j, n
+    !---------------------------------------------------------------------------
+
+        ! saturation at the surface
+        call qsat( QVS, RTS, PRSS )
+
+        call CPL_bulkflux( &
+            Ustar,     & ! (out)
+            Tstar,     & ! (out)
+            Qstar,     & ! (out)
+            Uabs,      & ! (out)
+            TMPA,      & ! (in)
+            RTS,       & ! (in)
+            PRSA,      & ! (in)
+            PRSS,      & ! (in)
+            QVA,       & ! (in)
+            QVS,       & ! (in)
+            UA,        & ! (in)
+            VA,        & ! (in)
+            ZA,        & ! (in)
+            PBL,       & ! (in)
+            Z0C,       & ! (in)
+            Z0HC,      & ! (in)
+            Z0HC       ) ! (in)
+
+        XMFLX  = -RHOA * Ustar**2 / Uabs * UA
+        YMFLX  = -RHOA * Ustar**2 / Uabs * VA
+        ZMFLX  = -RHOA * Ustar**2 / Uabs * WA
+
+        Z0M = Z0C
+
+    return
+  end subroutine CPL_AtmUrb_bulk_momentum
 
   !-----------------------------------------------------------------------------
   subroutine canopy_wind(ZA, UA, UC)
