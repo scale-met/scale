@@ -1492,6 +1492,8 @@ contains
     real(RP), intent(out) :: cldfrac(KA,IA,JA)
     real(RP), intent(in)  :: QTRC   (KA,IA,JA,QAD)
 
+    real(RP) :: qcriteria = 0.005E-3 ! 0.005g/kg, Tompkins & Craig
+
     real(RP) :: qhydro
     integer  :: k, i, j, iq
     !---------------------------------------------------------------------------
@@ -1503,7 +1505,7 @@ contains
        do iq = 1, MP_QA
           qhydro = qhydro + QTRC(k,i,j,I_MP2ALL(iq))
        enddo
-       cldfrac(k,i,j) = 0.5_RP + sign(0.5_RP,qhydro-EPS)
+       cldfrac(k,i,j) = 0.5_RP + sign(0.5_RP,qhydro-qcriteria)
     enddo
     enddo
     enddo
@@ -1524,7 +1526,7 @@ contains
 
     real(RP), intent(out) :: Re   (KA,IA,JA,MP_QAD) ! effective radius
     real(RP), intent(in)  :: QTRC0(KA,IA,JA,QAD)    ! tracer mass concentration [kg/kg]
-    real(RP), intent(in)  :: DENS0(KA,IA,JA)       ! density                   [kg/m3]
+    real(RP), intent(in)  :: DENS0(KA,IA,JA)        ! density                   [kg/m3]
 
     real(RP) :: dens
     real(RP) :: q(QA)
