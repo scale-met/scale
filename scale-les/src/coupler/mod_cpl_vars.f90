@@ -401,18 +401,15 @@ contains
 
     CPL_Merged_FLX_MW(:,:) = fact_ocean(:,:) * CPL_AtmOcn_ATM_FLX_MW  (:,:) &
                            + fact_land (:,:) * CPL_AtmLnd_ATM_FLX_MW  (:,:) &
-                           + fact_urban(:,:) * CPL_AtmLnd_ATM_FLX_MW  (:,:) ! tentative
-    !                       + fact_urban(:,:) * CPL_AtmUrb_ATM_FLX_MW  (:,:)
+                           + fact_urban(:,:) * CPL_AtmUrb_ATM_FLX_MW  (:,:)
 
     CPL_Merged_FLX_MU(:,:) = fact_ocean(:,:) * CPL_AtmOcn_ATM_FLX_MU  (:,:) &
                            + fact_land (:,:) * CPL_AtmLnd_ATM_FLX_MU  (:,:) &
-                           + fact_urban(:,:) * CPL_AtmLnd_ATM_FLX_MU  (:,:) ! tentative
-    !                       + fact_urban(:,:) * CPL_AtmUrb_ATM_FLX_MU  (:,:)
+                           + fact_urban(:,:) * CPL_AtmUrb_ATM_FLX_MU  (:,:)
 
     CPL_Merged_FLX_MV(:,:) = fact_ocean(:,:) * CPL_AtmOcn_ATM_FLX_MV  (:,:) &
                            + fact_land (:,:) * CPL_AtmLnd_ATM_FLX_MV  (:,:) &
-                           + fact_urban(:,:) * CPL_AtmLnd_ATM_FLX_MV  (:,:) ! tentative
-    !                       + fact_urban(:,:) * CPL_AtmUrb_ATM_FLX_MV  (:,:)
+                           + fact_urban(:,:) * CPL_AtmUrb_ATM_FLX_MV  (:,:)
 
     CPL_Merged_FLX_SH(:,:) = fact_ocean(:,:) * CPL_AtmOcn_ATM_FLX_SH  (:,:) &
                            + fact_land (:,:) * CPL_AtmLnd_ATM_FLX_SH  (:,:) &
@@ -428,8 +425,7 @@ contains
 
     CPL_Merged_Z0M   (:,:) = fact_ocean(:,:) * CPL_fromOcn_SFC_Z0M  (:,:) &
                            + fact_land (:,:) * CPL_fromLnd_SFC_Z0M  (:,:) &
-                           + fact_urban(:,:) * CPL_fromLnd_SFC_Z0M  (:,:)   ! tentative
-    !                       + fact_urban(:,:) * CPL_fromUrb_SFC_Z0M  (:,:)
+                           + fact_urban(:,:) * CPL_fromUrb_SFC_Z0M  (:,:)
 
     CPL_Merged_U10   (:,:) = fact_ocean(:,:) * CPL_AtmOcn_ATM_U10     (:,:) &
                            + fact_land (:,:) * CPL_AtmLnd_ATM_U10     (:,:) &
