@@ -1193,9 +1193,10 @@ contains
 
              ir = MSTRN_nradius - 1
              indexR(k,i,j,iaero) = ir
-             factR (k,i,j,iaero) = ( radmode(iptype,ir+1) - aerosol_radi(k,i,j,iaero) ) &
-                                 / ( radmode(iptype,ir+1) - radmode(iptype,ir)        ) &
-                                 + 1.0_RP
+             ! [Note] Extrapolation sometimes makes unexpected value
+             !factR (k,i,j,iaero) = ( aerosol_radi(k,i,j,iaero) - radmode(iptype,ir) ) &
+             !                    / ( radmode(iptype,ir+1)      - radmode(iptype,ir) )
+             factR (k,i,j,iaero) = 1.0_RP
 
           else
              !$acc loop seq
@@ -1438,6 +1439,8 @@ contains
              g(k,i,j,0,icloud) = 1.0_RP
              g(k,i,j,1,icloud) = optparam(k,i,j,3,icloud) * ( 1.0_RP-zerosw ) / ( omgPR(k,i,j,icloud)+zerosw )
              g(k,i,j,2,icloud) = optparam(k,i,j,4,icloud) * ( 1.0_RP-zerosw ) / ( omgPR(k,i,j,icloud)+zerosw )
+             !g(k,i,j,1,icloud) = max( optparam(k,i,j,3,icloud) * ( 1.0_RP-zerosw ) / ( omgPR(k,i,j,icloud)+zerosw ), 0.0_RP )
+             !g(k,i,j,2,icloud) = max( optparam(k,i,j,4,icloud) * ( 1.0_RP-zerosw ) / ( omgPR(k,i,j,icloud)+zerosw ), 0.0_RP )
           enddo
           enddo
           enddo
@@ -1496,11 +1499,14 @@ contains
              !$acc loop gang vector(32)
              do k = 1, kmax
                 tau(k,i,j,icloud) = tauGAS(k,i,j,ich) + tauPR(k,i,j,icloud)
+                !tau(k,i,j,icloud) = max( tauGAS(k,i,j,ich) + tauPR(k,i,j,icloud), 0.0_RP )
 
                 zerosw = 0.5_RP - sign( 0.5_RP, tau(k,i,j,icloud)-RD_EPS ) ! if tau < EPS, zerosw = 1
 
                 omg(k,i,j,icloud) = ( 1.0_RP-zerosw ) * omgPR(k,i,j,icloud) / ( tau(k,i,j,icloud)-zerosw ) &
                                   + (        zerosw ) * 1.0_RP
+
+                !omg(k,i,j,icloud) = min( max( omg(k,i,j,icloud), 0.0_RP ), 1.0_RP )
              enddo
              enddo
              enddo
@@ -1866,6 +1872,8 @@ contains
           !--- X, Y
           X     =  ( 1.0_RP - W_irgn * ( Ppls - Pmns ) ) / M_irgn
           Y     =  ( 1.0_RP - W_irgn * ( Ppls + Pmns ) ) / M_irgn
+          !X     =  max( ( 1.0_RP - W_irgn * ( Ppls - Pmns ) ) / M_irgn, 1.E-30 )
+          !Y     =  max( ( 1.0_RP - W_irgn * ( Ppls + Pmns ) ) / M_irgn, 1.E-30 )
           lamda = sqrt(X*Y)
           E     = exp(-lamda*tau_new)
 
