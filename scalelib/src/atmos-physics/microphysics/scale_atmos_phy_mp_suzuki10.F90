@@ -2955,9 +2955,11 @@ call STOP_COLLECTION("MICROPHYSICS")
        MP_QAD => MP_QA
     implicit none
 
-    real(RP), intent(out) :: Re   (KA,IA,JA,MP_QAD) ! effective radius
+    real(RP), intent(out) :: Re   (KA,IA,JA,MP_QAD) ! effective radius          [cm]
     real(RP), intent(in)  :: QTRC0(KA,IA,JA,QAD)    ! tracer mass concentration [kg/kg]
     real(RP), intent(in)  :: DENS0(KA,IA,JA)        ! density                   [kg/m3]
+
+    real(RP), parameter :: um2cm = 100.0_RP
 
     real(RP) :: sum2(KA,IA,JA,MP_QA), sum3(KA,IA,JA,MP_QA)
     integer  :: i, j, k, iq, ihydro
@@ -2984,7 +2986,7 @@ call STOP_COLLECTION("MICROPHYSICS")
       sum3(k,i,j,ihydro) = 0.5_RP + sign(0.5_RP,sum3(k,i,j,ihydro)-EPS)
 
       if( sum2(k,i,j,ihydro) /= 0.0_RP ) then
-       Re(k,i,j,ihydro) = sum3(k,i,j,ihydro) / sum2(k,i,j,ihydro)
+       Re(k,i,j,ihydro) = sum3(k,i,j,ihydro) / sum2(k,i,j,ihydro) * um2cm
       else
        Re(k,i,j,ihydro) = 0.0_RP
       endif

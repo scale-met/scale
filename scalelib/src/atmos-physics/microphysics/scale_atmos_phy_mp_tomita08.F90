@@ -1524,7 +1524,7 @@ contains
        MP_QAD => MP_QA
     implicit none
 
-    real(RP), intent(out) :: Re   (KA,IA,JA,MP_QAD) ! effective radius
+    real(RP), intent(out) :: Re   (KA,IA,JA,MP_QAD) ! effective radius          [cm]
     real(RP), intent(in)  :: QTRC0(KA,IA,JA,QAD)    ! tracer mass concentration [kg/kg]
     real(RP), intent(in)  :: DENS0(KA,IA,JA)        ! density                   [kg/m3]
 
@@ -1532,12 +1532,14 @@ contains
     real(RP) :: q(QA)
     real(RP) :: RLMDr, RLMDs, RLMDg
 
+    real(RP), parameter :: um2cm = 100.0_RP
+
     real(RP) :: zerosw
     integer  :: k, i, j, iq
     !---------------------------------------------------------------------------
 
-    Re(:,:,:,I_mp_QC) =   8.E-6_RP
-    Re(:,:,:,I_mp_QI) =  20.E-6_RP
+    Re(:,:,:,I_mp_QC) =   8.E-6_RP * um2cm
+    Re(:,:,:,I_mp_QI) =  20.E-6_RP * um2cm
 
     ! Effective radius is defined by r3m/r2m=1.5/lambda.
     do j  = JS, JE
@@ -1559,9 +1561,9 @@ contains
        zerosw = 0.5_RP - sign(0.5_RP, q(I_QG) - 1.E-12_RP )
        RLMDg = sqrt(sqrt( dens * q(I_QG) / ( Ag * N0g * GAM_1bg ) + zerosw )) * ( 1.0_RP - zerosw )
 
-       Re(k,i,j,I_mp_QR) = RLMDr * 1.5_RP
-       Re(k,i,j,I_mp_QS) = RLMDs * 1.5_RP
-       Re(k,i,j,I_mp_QG) = RLMDg * 1.5_RP
+       Re(k,i,j,I_mp_QR) = RLMDr * 1.5_RP * um2cm
+       Re(k,i,j,I_mp_QS) = RLMDs * 1.5_RP * um2cm
+       Re(k,i,j,I_mp_QG) = RLMDg * 1.5_RP * um2cm
     enddo
     enddo
     enddo

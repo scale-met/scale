@@ -4642,9 +4642,9 @@ contains
        MP_QAD => MP_QA
     implicit none
 
-    real(RP), intent(out) :: Re   (KA,IA,JA,MP_QAD) ! effective radius
+    real(RP), intent(out) :: Re   (KA,IA,JA,MP_QAD) ! effective radius          [cm]
     real(RP), intent(in)  :: QTRC0(KA,IA,JA,QAD)    ! tracer mass concentration [kg/kg]
-    real(RP), intent(in)  :: DENS0(KA,IA,JA)       ! density                   [kg/m3]
+    real(RP), intent(in)  :: DENS0(KA,IA,JA)        ! density                   [kg/m3]
 
     ! mass concentration[kg/m3] and mean particle mass[kg]
     real(RP) :: xc(KA,IA,JA)
@@ -4665,6 +4665,7 @@ contains
     real(RP) :: coef_Fuetal1998
     ! r2m_min is minimum value(moment of 1 particle with 1 micron)
     real(RP), parameter :: r2m_min=1.E-12_RP
+    real(RP), parameter :: um2cm = 100.0_RP
 
     real(RP) :: limitsw, zerosw
     integer :: k, i, j
@@ -4699,7 +4700,7 @@ contains
     do k = KS, KE
        rc = 0.5_RP * dc_ave(k,i,j)
        limitsw = 0.5_RP + sign(0.5_RP, rc-rmin_re )
-       Re(k,i,j,I_mp_QC) = coef_re(I_QC) * rc * limitsw
+       Re(k,i,j,I_mp_QC) = coef_re(I_QC) * rc * limitsw * um2cm
     enddo
     enddo
     enddo
@@ -4710,7 +4711,7 @@ contains
     do k = KS, KE
        rr = 0.5_RP * dr_ave(k,i,j)
        limitsw = 0.5_RP + sign(0.5_RP, rr-rmin_re )
-       Re(k,i,j,I_mp_QR) = coef_re(I_QR) * rr * limitsw
+       Re(k,i,j,I_mp_QR) = coef_re(I_QR) * rr * limitsw * um2cm
     enddo
     enddo
     enddo
@@ -4742,7 +4743,7 @@ contains
     do i = IS, IE
     do k = KS, KE
        zerosw = 0.5_RP - sign(0.5_RP, ri2m(k,i,j) - r2m_min )
-       Re(k,i,j,I_mp_QI) = ri3m(k,i,j) / ( ri2m(k,i,j) + zerosw ) * ( 1.0_RP - zerosw )
+       Re(k,i,j,I_mp_QI) = ri3m(k,i,j) / ( ri2m(k,i,j) + zerosw ) * ( 1.0_RP - zerosw ) * um2cm
     enddo
     enddo
     enddo
@@ -4752,7 +4753,7 @@ contains
     do i = IS, IE
     do k = KS, KE
        zerosw = 0.5_RP - sign(0.5_RP, rs2m(k,i,j) - r2m_min )
-       Re(k,i,j,I_mp_QS) = rs3m(k,i,j) / ( rs2m(k,i,j) + zerosw ) * ( 1.0_RP - zerosw )
+       Re(k,i,j,I_mp_QS) = rs3m(k,i,j) / ( rs2m(k,i,j) + zerosw ) * ( 1.0_RP - zerosw ) * um2cm
     enddo
     enddo
     enddo
@@ -4762,7 +4763,7 @@ contains
     do i = IS, IE
     do k = KS, KE
        zerosw = 0.5_RP - sign(0.5_RP, rg2m(k,i,j) - r2m_min )
-       Re(k,i,j,I_mp_QG) = rg3m(k,i,j) / ( rg2m(k,i,j) + zerosw ) * ( 1.0_RP - zerosw )
+       Re(k,i,j,I_mp_QG) = rg3m(k,i,j) / ( rg2m(k,i,j) + zerosw ) * ( 1.0_RP - zerosw ) * um2cm
     enddo
     enddo
     enddo
