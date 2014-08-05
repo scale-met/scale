@@ -1009,10 +1009,11 @@ contains
     do j = j0-jb, j1-jb
     do i = i0-ib, i1-ib
     do k = KS, KE
-       sw2 = sign(0.5_RP, DAMP_var(k,i,j,bnd_xy)*dir) + 0.5_RP ! 0:inflow, 1:outflow 
        sw = sign(0.5_RP, DAMP_alpha(k,i,j,I_BND_DENS) - epsilon) + 0.5_RP
-!       DENS(k,i,j) = DENS(k,i,j) * ( 1.0_RP - sw ) &
-!                   + DAMP_var(k,i,j,I_BND_DENS) * sw
+       sw2 = sign(0.5_RP, DAMP_var(k,i,j,bnd_xy)*dir) + 0.5_RP ! 0:inflow, 1:outflow 
+       DENS(k,i,j) = DENS(k,i,j) * ( 1.0_RP - sw ) &
+                   + DENS(k,i+iu,j+ju) * sw2 * sw &
+                   + DAMP_var(k,i,j,I_BND_DENS) * ( 1.0_RP - sw2 ) * sw
        MOMZ(k,i,j) = MOMZ(k,i,j) * ( 1.0_RP - sw ) &
                    + MOMZ(k,i+iu,j+ju) * sw2 * sw
        sw = sign(0.5_RP, DAMP_alpha(k,i,j,I_BND_POTT) - epsilon) + 0.5_RP
@@ -1021,7 +1022,7 @@ contains
     end do
     end do
     end do
-    if ( ib==-1 ) then
+    if ( ib==-1 ) then ! western boundary
        do j = j0, j1
        do k = KS, KE
           sw = sign(0.5_RP, DAMP_alpha(k,i0,j,I_BND_DENS) - epsilon) + 0.5_RP
@@ -1035,7 +1036,7 @@ contains
        end do
        end do
     end if
-    if ( jb==-1 ) then
+    if ( jb==-1 ) then ! southern boundary
        do i = i0, i1
        do k = KS, KE
           sw = sign(0.5_RP, DAMP_alpha(k,i,j0,I_BND_DENS) - epsilon) + 0.5_RP
