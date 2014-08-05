@@ -54,8 +54,8 @@ module scale_atmos_phy_mp_tomita08
   !
   !++ Private parameters & variables
   !
-  logical,  private :: MP_donegative_fixer = .true. ! apply negative fixer?
-  logical,  private :: MP_doprecipitation  = .true. ! apply sedimentation (precipitation)?
+  logical,  private :: MP_donegative_fixer = .true.  ! apply negative fixer?
+  logical,  private :: MP_doprecipitation  = .true.  ! apply sedimentation (precipitation)?
 
   real(RP), private            :: dens00 = 1.28_RP !< standard density [kg/m3]
 
@@ -112,6 +112,8 @@ module scale_atmos_phy_mp_tomita08
   real(RP), private, parameter   :: Nc_lnd = 2000.0_RP !< number concentration of cloud water (land)  [1/cc]
   real(RP), private, parameter   :: Nc_ocn =   50.0_RP !< number concentration of cloud water (ocean) [1/cc]
   real(RP), private, allocatable :: Nc_def(:,:)        !< number concentration of cloud water         [1/cc]
+
+  real(RP), private            :: sw_raut_kk = 0.0_RP     !< switch for berry & k-k scheme
 
   real(RP), private            :: beta_saut  =  6.E-3_RP  !< auto-conversion factor beta  for ice
   real(RP), private            :: gamma_saut = 60.E-3_RP  !< auto-conversion factor gamma for ice
@@ -268,16 +270,18 @@ contains
 
     character(len=*), intent(in) :: MP_TYPE
 
-    real(RP) :: autoconv_nc = Nc_ocn !< number concentration of cloud water [1/cc]
+    real(RP) :: autoconv_nc    = Nc_ocn  !< number concentration of cloud water [1/cc]
+    logical  :: autoconv_usekk = .false. !< use k-k scheme for auto-conversion
 
     NAMELIST / PARAM_ATMOS_PHY_MP / &
        MP_doprecipitation, &
        MP_donegative_fixer
 
     NAMELIST / PARAM_ATMOS_PHY_MP_TOMITA08 / &
-       autoconv_nc, &
-       dens_s,      &
-       dens_g,      &
+       autoconv_nc,    &
+       autoconv_usekk, &
+       dens_s,         &
+       dens_g,         &
        debug
 
     integer :: ierr
@@ -337,8 +341,10 @@ contains
     if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_ATMOS_PHY_MP_TOMITA08)
 
     if ( IO_L ) write(IO_FID_LOG,*)
-    if ( IO_L ) write(IO_FID_LOG,*) '*** density of the snow    [kg/m3]: ', dens_s
-    if ( IO_L ) write(IO_FID_LOG,*) '*** density of the graupel [kg/m3]: ', dens_g
+    if ( IO_L ) write(IO_FID_LOG,*) '*** density of the snow    [kg/m3] : ', dens_s
+    if ( IO_L ) write(IO_FID_LOG,*) '*** density of the graupel [kg/m3] : ', dens_g
+    if ( IO_L ) write(IO_FID_LOG,*) '*** Nc for auto-conversion [num/m3]: ', autoconv_nc
+    if ( IO_L ) write(IO_FID_LOG,*) '*** Use k-k scheme?                : ', autoconv_usekk
 
     ATMOS_PHY_MP_DENS(I_mp_QC) = dens_w
     ATMOS_PHY_MP_DENS(I_mp_QR) = dens_w
@@ -392,6 +398,12 @@ contains
        Nc_def(i,j) = autoconv_nc
     enddo
     enddo
+
+    if ( autoconv_usekk ) then
+       sw_raut_kk = 1.0_RP
+    else
+       sw_raut_kk = 0.0_RP
+    endif
 
     w_desc(:) = w_name(:)
 
@@ -603,6 +615,7 @@ contains
     real(RP) :: Esi_mod, Egs_mod    !< modified accretion efficiency
     real(RP) :: rhoqc               !< rho * qc
     real(RP) :: Nc(KA,IA,JA)        !< Number concentration of cloud water [1/cc]
+    real(RP) :: Praut_berry, Praut_kk !< auto-conversion term by berry & k-k scheme
     real(RP) :: Dc                  !< relative variance
     real(RP) :: betai, betas        !< sticky parameter for auto-conversion
     real(RP) :: Da                  !< thermal diffusion coefficient of air
@@ -804,7 +817,12 @@ contains
        ! [Praut] auto-conversion rate from cloud water to rain
        rhoqc = dens * q(I_QC) * 1000.0_RP ! [g/m3]
        Dc    = 0.146_RP - 5.964E-2_RP * log( Nc(k,i,j) / 2000.0_RP )
-       w(I_Praut,ijk) = Rdens * 1.67E-5_RP * rhoqc * rhoqc / ( 5.0_RP + 3.66E-2_RP * Nc(k,i,j) / ( Dc * rhoqc + EPS ) )
+       Praut_berry    = Rdens * 1.67E-5_RP * rhoqc * rhoqc / ( 5.0_RP + 3.66E-2_RP * Nc(k,i,j) / ( Dc * rhoqc + EPS ) )
+
+       Praut_kk       = 1350.0_RP * q(I_QC) ** (2.47) * Nc(k,i,j) ** (-1.79)
+
+       w(I_Praut,ijk) = ( 1.0_RP - sw_raut_kk ) * Praut_berry &
+                      + (          sw_raut_kk ) * Praut_kk
 
        ! [Psaut] auto-conversion rate from cloud ice to snow
        betai = min( beta_saut, beta_saut * exp( gamma_saut * temc ) )
