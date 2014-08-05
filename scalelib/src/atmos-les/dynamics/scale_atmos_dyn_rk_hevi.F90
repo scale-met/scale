@@ -212,12 +212,14 @@ contains
     real(RP) :: qflx_hi(KA,IA,JA,3)
     real(RP) :: qflx_J (KA,IA,JA)
 
-    real(RP) :: advc ! advection
+    real(RP) :: advch ! horizontal advection
+    real(RP) :: advcv ! vertical advection
     real(RP) :: div  ! divergence damping
     real(RP) :: pg   ! pressure gradient force
     real(RP) :: cf   ! colioris force
 #ifdef HIST_TEND
-    real(RP) :: advc_t(KA,IA,JA,5)
+    real(RP) :: advch_t(KA,IA,JA,5)
+    real(RP) :: advcv_t(KA,IA,JA,5)
     real(RP) :: ddiv_t(KA,IA,JA,3)
     real(RP) :: pg_t(KA,IA,JA,3)
     real(RP) :: cf_t(KA,IA,JA,2)
@@ -508,12 +510,12 @@ contains
           call CHECK( __LINE__, mflx_hi(k  ,i  ,j-1,YDIR) )
           call CHECK( __LINE__, DENS_t(k,i,j) )
 #endif
-          advc = - ( ( mflx_hi(k,i,j,ZDIR)-mflx_hi(k-1,i  ,j,  ZDIR) ) * RCDZ(k) &
-                   + ( mflx_hi(k,i,j,XDIR)-mflx_hi(k  ,i-1,j,  XDIR) ) * RCDX(i) &
-                   + ( mflx_hi(k,i,j,YDIR)-mflx_hi(k  ,i,  j-1,YDIR) ) * RCDY(j) ) / GSQRT(k,i,j,I_XYZ) ! divergence
-          Sr(k,i,j) =  advc + DENS_t(k,i,j)
+          advch = - ( ( mflx_hi(k,i,j,ZDIR)-mflx_hi(k-1,i  ,j,  ZDIR) ) * RCDZ(k) &
+                    + ( mflx_hi(k,i,j,XDIR)-mflx_hi(k  ,i-1,j,  XDIR) ) * RCDX(i) &
+                    + ( mflx_hi(k,i,j,YDIR)-mflx_hi(k  ,i,  j-1,YDIR) ) * RCDY(j) ) / GSQRT(k,i,j,I_XYZ)
+          Sr(k,i,j) =  advch + DENS_t(k,i,j)
 #ifdef HIST_TEND
-          if ( lhist ) advc_t(k,i,j,I_DENS) = advc
+          if ( lhist ) advch_t(k,i,j,I_DENS) = advch
 #endif
        enddo
        enddo
@@ -711,16 +713,17 @@ contains
           call CHECK( __LINE__, MOMZ0(k,i,j) )
           call CHECK( __LINE__, MOMZ_t(k,i,j) )
 #endif
-          advc = - ( ( qflx_hi(k+1,i,j,ZDIR) - qflx_hi(k,i  ,j  ,ZDIR) ) * RFDZ(k) &
-                   + ( qflx_J (k+1,i,j)      - qflx_J (k,i  ,j  )      ) * RFDZ(k) &
-                   + ( qflx_hi(k  ,i,j,XDIR) - qflx_hi(k,i-1,j  ,XDIR) ) * RCDX(i) &
-                   + ( qflx_hi(k  ,i,j,YDIR) - qflx_hi(k,i  ,j-1,YDIR) ) * RCDY(j) &
-                   ) / GSQRT(k,i,j,I_XYW)
+          advcv = -   ( qflx_hi(k+1,i,j,ZDIR) - qflx_hi(k,i  ,j  ,ZDIR) ) * RFDZ(k)
+          advch = - ( ( qflx_J (k+1,i,j)      - qflx_J (k,i  ,j  )      ) * RFDZ(k) &
+                    + ( qflx_hi(k  ,i,j,XDIR) - qflx_hi(k,i-1,j  ,XDIR) ) * RCDX(i) &
+                    + ( qflx_hi(k  ,i,j,YDIR) - qflx_hi(k,i  ,j-1,YDIR) ) * RCDY(j) &
+                   )
           div = divdmp_coef * dtrk  * ( DDIV(k+1,i,j)-DDIV(k,i,j) ) * FDZ(k) ! divergence damping
-          Sw(k,i,j) = advc + div + MOMZ_t(k,i,j)
+          Sw(k,i,j) = ( advcv + advch ) / GSQRT(k,i,j,I_XYW) + div + MOMZ_t(k,i,j)
 #ifdef HIST_TEND
           if ( lhist ) then
-             advc_t(k,i,j,I_MOMZ) = advc
+             advcv_t(k,i,j,I_MOMZ) = advcv / GSQRT(k,i,j,I_XYW)
+             advch_t(k,i,j,I_MOMZ) = advch / GSQRT(k,i,j,I_XYW)
              ddiv_t(k,i,j,1) = div
           end if
 #endif
@@ -831,12 +834,14 @@ contains
           call CHECK( __LINE__, qflx_hi(k  ,i  ,j-1,YDIR) )
           call CHECK( __LINE__, RHOT_t(k,i,j) )
 #endif
-          advc = - ( ( qflx_hi(k,i,j,ZDIR) - qflx_hi(k-1,i  ,j  ,ZDIR) ) * RCDZ(k) &
-                   + ( qflx_hi(k,i,j,XDIR) - qflx_hi(k  ,i-1,j  ,XDIR) ) * RCDX(i) &
-                   + ( qflx_hi(k,i,j,YDIR) - qflx_hi(k  ,i  ,j-1,YDIR) ) * RCDY(j) ) / GSQRT(k,i,j,I_XYZ)
-          St(k,i,j) = advc + RHOT_t(k,i,j)
+          advch = - ( ( qflx_hi(k,i,j,ZDIR) - qflx_hi(k-1,i  ,j  ,ZDIR) ) * RCDZ(k) &
+                    + ( qflx_hi(k,i,j,XDIR) - qflx_hi(k  ,i-1,j  ,XDIR) ) * RCDX(i) &
+                    + ( qflx_hi(k,i,j,YDIR) - qflx_hi(k  ,i  ,j-1,YDIR) ) * RCDY(j) ) / GSQRT(k,i,j,I_XYZ)
+          St(k,i,j) = advch + RHOT_t(k,i,j)
 #ifdef HIST_TEND
-          if ( lhist ) advc_t(k,i,j,I_RHOT) = advc
+          if ( lhist ) then
+             advch_t(k,i,j,I_RHOT) = advch / GSQRT(k,i,j,I_XYZ)
+          end if
 #endif
        enddo
        enddo
@@ -929,43 +934,43 @@ contains
 
           ! density
           do k = KS+1, KE-1
-             advc = - J33G * ( C(k-KS+1) - C(k-KS) ) * RCDZ(k) / GSQRT(k,i,j,I_XYZ)
-             DENS_RK(k,i,j) = DENS0(k,i,j) + dtrk * ( advc + Sr(k,i,j) )
+             advcv = - J33G * ( C(k-KS+1) - C(k-KS) ) * RCDZ(k) / GSQRT(k,i,j,I_XYZ)
+             DENS_RK(k,i,j) = DENS0(k,i,j) + dtrk * ( advcv + Sr(k,i,j) )
 #ifdef HIST_TEND
-             if ( lhist ) advc_t(k,i,j,I_DENS) = advc_t(k,i,j,I_DENS) + advc
+             if ( lhist ) advcv_t(k,i,j,I_DENS) = advcv
 #endif
           end do
-          advc = - J33G * C(1) * RCDZ(KS) / GSQRT(KS,i,j,I_XYZ) ! C(0) = 0
-          DENS_RK(KS,i,j) = DENS0(KS,i,j) + dtrk * ( advc + Sr(KS,i,j) )
+          advcv = - J33G * C(1) * RCDZ(KS) / GSQRT(KS,i,j,I_XYZ) ! C(0) = 0
+          DENS_RK(KS,i,j) = DENS0(KS,i,j) + dtrk * ( advcv + Sr(KS,i,j) )
 #ifdef HIST_TEND
-          if ( lhist ) advc_t(KS,i,j,I_DENS) = advc_t(KS,i,j,I_DENS) + advc
+          if ( lhist ) advcv_t(KS,i,j,I_DENS) = advcv
 #endif
-          advc = J33G * C(KE-KS) * RCDZ(KE) / GSQRT(KE,i,j,I_XYZ) ! C(KE-KS+1) = 0
-          DENS_RK(KE,i,j) = DENS0(KE,i,j) + dtrk * ( advc + Sr(KE,i,j) )
+          advcv = J33G * C(KE-KS) * RCDZ(KE) / GSQRT(KE,i,j,I_XYZ) ! C(KE-KS+1) = 0
+          DENS_RK(KE,i,j) = DENS0(KE,i,j) + dtrk * ( advcv + Sr(KE,i,j) )
 #ifdef HIST_TEND
-          if ( lhist ) advc_t(KE,i,j,I_DENS) = advc_t(KE,i,j,I_DENS) + advc
+          if ( lhist ) advcv_t(KE,i,j,I_DENS) = advcv
 #endif
 
           ! rho*theta
           do k = KS+1, KE-1
-             advc = - ( C(k-KS+1) * PT(k) - C(k-KS) * PT(k-1) ) &
+             advcv = - ( C(k-KS+1) * PT(k) - C(k-KS) * PT(k-1) ) &
                   * J33G * RCDZ(k) / GSQRT(k,i,j,I_XYZ)
-             RHOT_RK(k,i,j) = RHOT0(k,i,j) + dtrk * ( advc + St(k,i,j) )
+             RHOT_RK(k,i,j) = RHOT0(k,i,j) + dtrk * ( advcv + St(k,i,j) )
 #ifdef HIST_TEND
-             if ( lhist ) advc_t(k,i,j,I_RHOT) = advc_t(k,i,j,I_RHOT) + advc
+             if ( lhist ) advcv_t(k,i,j,I_RHOT) = advcv
 #endif
           end do
-          advc = - C(1) * PT(KS) & ! C(0) = 0
+          advcv = - C(1) * PT(KS) & ! C(0) = 0
                * J33G * RCDZ(KS) / GSQRT(KS,i,j,I_XYZ)
-          RHOT_RK(KS,i,j) = RHOT0(KS,i,j) + dtrk * ( advc + St(KS,i,j) )
+          RHOT_RK(KS,i,j) = RHOT0(KS,i,j) + dtrk * ( advcv + St(KS,i,j) )
 #ifdef HIST_TEND
-          if ( lhist ) advc_t(KS,i,j,I_RHOT) = advc_t(KS,i,j,I_RHOT) + advc
+          if ( lhist ) advcv_t(KS,i,j,I_RHOT) = advcv
 #endif
-          advc = C(KE-KS) * PT(KE-1) & ! C(KE-KS+1) = 0
+          advcv = C(KE-KS) * PT(KE-1) & ! C(KE-KS+1) = 0
                * J33G * RCDZ(KE) / GSQRT(KE,i,j,I_XYZ)
-          RHOT_RK(KE,i,j) = RHOT0(KE,i,j) + dtrk * ( advc + St(KE,i,j) )
+          RHOT_RK(KE,i,j) = RHOT0(KE,i,j) + dtrk * ( advcv + St(KE,i,j) )
 #ifdef HIST_TEND
-          if ( lhist ) advc_t(KE,i,j,I_RHOT) = advc_t(KE,i,j,I_RHOT) + advc
+          if ( lhist ) advcv_t(KE,i,j,I_RHOT) = advcv
 #endif
 
 
@@ -1169,10 +1174,10 @@ contains
           call CHECK( __LINE__, DDIV(k,i  ,j) )
           call CHECK( __LINE__, MOMX0(k,i,j) )
 #endif
-          advc = - ( ( qflx_hi(k,i  ,j,ZDIR) - qflx_hi(k-1,i,j  ,ZDIR) ) * RCDZ(k) &
-                   + ( qflx_J (k,i  ,j)      - qflx_J (k-1,i,j)        ) * RCDZ(k) &
-                   + ( qflx_hi(k,i+1,j,XDIR) - qflx_hi(k  ,i,j  ,XDIR) ) * RFDX(i) &
-                   + ( qflx_hi(k,i  ,j,YDIR) - qflx_hi(k  ,i,j-1,YDIR) ) * RCDY(j) )
+          advcv = -   ( qflx_hi(k,i  ,j,ZDIR) - qflx_hi(k-1,i,j  ,ZDIR) ) * RCDZ(k)
+          advch = - ( ( qflx_J (k,i  ,j)      - qflx_J (k-1,i,j)        ) * RCDZ(k) &
+                    + ( qflx_hi(k,i+1,j,XDIR) - qflx_hi(k  ,i,j  ,XDIR) ) * RFDX(i) &
+                    + ( qflx_hi(k,i  ,j,YDIR) - qflx_hi(k  ,i,j-1,YDIR) ) * RCDY(j) )
           pg = - ( GSQRT(k,i+1,j,I_XYZ) * DPRES(k,i+1,j) &
                  - GSQRT(k,i  ,j,I_XYZ) * DPRES(k,i  ,j) ) * RFDX(i) &
                - ( J13G(k+1,i,j,I_UYZ) * ( DPRES(k+1,i+1,j)+DPRES(k+1,i,j) ) &
@@ -1183,10 +1188,11 @@ contains
              * ( VELY(k,i,j)+VELY(k,i+1,j)+VELY(k,i,j-1)+VELY(k,i+1,j-1) ) ! coriolis force
           div = divdmp_coef * dtrk * ( DDIV(k,i+1,j)-DDIV(k,i,j) ) * FDX(i) ! divergence damping
           MOMX_RK(k,i,j) = MOMX0(k,i,j) &
-               + dtrk * ( ( advc + pg ) / GSQRT(k,i,j,I_UYZ) + cf + div + MOMX_t(k,i,j) )
+               + dtrk * ( ( advcv + advch + pg ) / GSQRT(k,i,j,I_UYZ) + cf + div + MOMX_t(k,i,j) )
 #ifdef HIST_TEND
           if ( lhist ) then
-             advc_t(k,i,j,I_MOMX) = advc / GSQRT(k,i,j,I_UYZ)
+             advcv_t(k,i,j,I_MOMX) = advch / GSQRT(k,i,j,I_UYZ)
+             advch_t(k,i,j,I_MOMX) = advcv / GSQRT(k,i,j,I_UYZ)
              pg_t(k,i,j,2) = pg / GSQRT(k,i,j,I_UYZ)
              cf_t(k,i,j,1) = cf
              ddiv_t(k,i,j,2) = div
@@ -1382,10 +1388,10 @@ contains
           call CHECK( __LINE__, MOMY_t(k,i,j) )
           call CHECK( __LINE__, MOMY0(k,i,j) )
 #endif
-          advc = - ( ( qflx_hi(k,i,j  ,ZDIR) - qflx_hi(k-1,i  ,j,ZDIR) ) * RCDZ(k) &
-                   + ( qflx_J (k,i,j  )      - qflx_J (k-1,i  ,j)      ) * RCDZ(k) &
-                   + ( qflx_hi(k,i,j  ,XDIR) - qflx_hi(k  ,i-1,j,XDIR) ) * RCDX(i) &
-                   + ( qflx_hi(k,i,j+1,YDIR) - qflx_hi(k  ,i  ,j,YDIR) ) * RFDY(j) )
+          advcv = -   ( qflx_hi(k,i,j  ,ZDIR) - qflx_hi(k-1,i  ,j,ZDIR) ) * RCDZ(k)
+          advch = - ( ( qflx_J (k,i,j  )      - qflx_J (k-1,i  ,j)      ) * RCDZ(k) &
+                    + ( qflx_hi(k,i,j  ,XDIR) - qflx_hi(k  ,i-1,j,XDIR) ) * RCDX(i) &
+                    + ( qflx_hi(k,i,j+1,YDIR) - qflx_hi(k  ,i  ,j,YDIR) ) * RFDY(j) )
           pg = - ( GSQRT(k,i,j+1,I_XYZ) * DPRES(k,i,j+1) &
                  - GSQRT(k,i,j  ,I_XYZ) * DPRES(k,i,j  ) ) * RFDY(j) &
                - ( J23G(k+1,i,j,I_XVZ) * ( DPRES(k+1,i,j+1)+DPRES(k+1,i,j) ) &
@@ -1396,10 +1402,11 @@ contains
                            * ( VELX(k,i,j+1)+VELX(k,i,j)+VELX(k,i-1,j+1)+VELX(k,i-1,j) ) ! coriolis force
           div = divdmp_coef * dtrk * ( DDIV(k,i,j+1)-DDIV(k,i,j) ) * FDY(j) ! divergence damping
           MOMY_RK(k,i,j) = MOMY0(k,i,j) &
-                         + dtrk * ( ( advc + pg ) / GSQRT(k,i,j,I_XVZ) + cf + div + MOMY_t(k,i,j) )
+                         + dtrk * ( ( advcv + advch + pg ) / GSQRT(k,i,j,I_XVZ) + cf + div + MOMY_t(k,i,j) )
 #ifdef HIST_TEND
           if ( lhist ) then
-             advc_t(k,i,j,I_MOMY) = advc / GSQRT(k,i,j,I_XYZ)
+             advcv_t(k,i,j,I_MOMY) = advcv / GSQRT(k,i,j,I_XYZ)
+             advch_t(k,i,j,I_MOMY) = advch / GSQRT(k,i,j,I_XYZ)
              pg_t(k,i,j,3) = pg / GSQRT(k,i,j,I_XYZ)
              cf_t(k,i,j,2) = cf
              ddiv_t(k,i,j,3) = div
@@ -1417,17 +1424,26 @@ contains
 
 #ifdef HIST_TEND
     if ( lhist ) then
-       call HIST_in(advc_t(:,:,:,I_DENS), 'DENS_t_advc', 'tendency of dencity due to advection', 'kg/m3/s', dt )
-       call HIST_in(advc_t(:,:,:,I_MOMZ), 'MOMZ_t_advc', 'tendency of momentum z due to advection', 'kg/m2/s2', dt )
-       call HIST_in(advc_t(:,:,:,I_MOMX), 'MOMX_t_advc', 'tendency of momentum x due to advection', 'kg/m2/s2', dt )
-       call HIST_in(advc_t(:,:,:,I_MOMY), 'MOMY_t_advc', 'tendency of momentum y due to advection', 'kg/m2/s2', dt )
-       call HIST_in(advc_t(:,:,:,I_RHOT), 'RHOT_t_advc', 'tendency of rho*theta due to advection', 'K kg/m3/s', dt )
+       call HIST_in(advcv_t(:,:,:,I_DENS), 'DENS_t_advcv', 'tendency of dencity due to vertical advection', 'kg/m3/s', dt )
+       call HIST_in(advcv_t(:,:,:,I_MOMZ), 'MOMZ_t_advcv', 'tendency of momentum z due to vertical advection', 'kg/m2/s2', dt )
+       call HIST_in(advcv_t(:,:,:,I_MOMX), 'MOMX_t_advcv', 'tendency of momentum x due to vertical advection', 'kg/m2/s2', dt )
+       call HIST_in(advcv_t(:,:,:,I_MOMY), 'MOMY_t_advcv', 'tendency of momentum y due to vertical advection', 'kg/m2/s2', dt )
+       call HIST_in(advcv_t(:,:,:,I_RHOT), 'RHOT_t_advcv', 'tendency of rho*theta due to vertical advection', 'K kg/m3/s', dt )
+
+       call HIST_in(advch_t(:,:,:,I_DENS), 'DENS_t_advch', 'tendency of dencity due to horizontal advection', 'kg/m3/s', dt )
+       call HIST_in(advch_t(:,:,:,I_MOMZ), 'MOMZ_t_advch', 'tendency of momentum z due to horizontal advection', 'kg/m2/s2', dt )
+       call HIST_in(advch_t(:,:,:,I_MOMX), 'MOMX_t_advch', 'tendency of momentum x due to horizontal advection', 'kg/m2/s2', dt )
+       call HIST_in(advch_t(:,:,:,I_MOMY), 'MOMY_t_advch', 'tendency of momentum y due to horizontal advection', 'kg/m2/s2', dt )
+       call HIST_in(advch_t(:,:,:,I_RHOT), 'RHOT_t_advch', 'tendency of rho*theta due to horizontal advection', 'K kg/m3/s', dt )
+
        call HIST_in(pg_t(:,:,:,1), 'MOMZ_t_pg', 'tendency of momentum z due to pressure gradient', 'kg/m2/s2', dt )
        call HIST_in(pg_t(:,:,:,2), 'MOMX_t_pg', 'tendency of momentum x due to pressure gradient', 'kg/m2/s2', dt )
        call HIST_in(pg_t(:,:,:,3), 'MOMY_t_pg', 'tendency of momentum y due to pressure gradient', 'kg/m2/s2', dt )
+
        call HIST_in(ddiv_t(:,:,:,1), 'MOMZ_t_ddiv', 'tendency of momentum z due to divergence damping', 'kg/m2/s2', dt )
        call HIST_in(ddiv_t(:,:,:,2), 'MOMX_t_ddiv', 'tendency of momentum x due to divergence damping', 'kg/m2/s2', dt )
        call HIST_in(ddiv_t(:,:,:,3), 'MOMY_t_ddiv', 'tendency of momentum y due to divergence damping', 'kg/m2/s2', dt )
+
        call HIST_in(cf_t(:,:,:,1), 'MOMX_t_cf', 'tendency of momentum x due to coliolis force', 'kg/m2/s2', dt )
        call HIST_in(cf_t(:,:,:,2), 'MOMY_t_cf', 'tendency of momentum y due to coliolis force', 'kg/m2/s2', dt )
     end if
