@@ -71,7 +71,7 @@ contains
        MOMX_tp, &
        MOMY_tp, &
        RHOT_tp, &
-       QTRC_tp
+       RHOQ_tp
     use scale_atmos_solarins, only: &
        ATMOS_SOLARINS_setup
     use scale_atmos_refstate, only: &
@@ -126,7 +126,7 @@ contains
     MOMX_tp(:,:,:)   = 0.0_RP
     MOMY_tp(:,:,:)   = 0.0_RP
     RHOT_tp(:,:,:)   = 0.0_RP
-    QTRC_tp(:,:,:,:) = 0.0_RP
+    RHOQ_tp(:,:,:,:) = 0.0_RP
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** Finish setup of each atmospheric components.'
@@ -176,7 +176,7 @@ contains
        MOMX_tp,                &
        MOMY_tp,                &
        RHOT_tp,                &
-       QTRC_tp
+       RHOQ_tp
     use mod_atmos_dyn_driver, only: &
        ATMOS_DYN_driver
     use mod_atmos_phy_mp_driver, only: &
@@ -283,7 +283,7 @@ contains
     MOMX_tp(:,:,:)   = 0.0_RP
     MOMY_tp(:,:,:)   = 0.0_RP
     RHOT_tp(:,:,:)   = 0.0_RP
-    QTRC_tp(:,:,:,:) = 0.0_RP
+    RHOQ_tp(:,:,:,:) = 0.0_RP
 
     return
   end subroutine ATMOS_driver

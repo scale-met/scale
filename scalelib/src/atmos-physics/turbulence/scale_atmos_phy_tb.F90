@@ -46,7 +46,7 @@ module scale_atmos_phy_tb
   abstract interface
      subroutine tb( &
        qflx_sgs_momz, qflx_sgs_momx, qflx_sgs_momy, & ! (out)
-       qflx_sgs_rhot, qflx_sgs_qtrc,                & ! (out)
+       qflx_sgs_rhot, qflx_sgs_rhoq,                & ! (out)
        tke, nu_C, Ri, Pr,                           & ! (out) diagnostic variables
        MOMZ, MOMX, MOMY, RHOT, DENS, QTRC,          & ! (in)
        GSQRT, J13G, J23G, J33G                      ) ! (in)
@@ -58,7 +58,7 @@ module scale_atmos_phy_tb
        real(RP), intent(out) :: qflx_sgs_momx(KA,IA,JA,3)
        real(RP), intent(out) :: qflx_sgs_momy(KA,IA,JA,3)
        real(RP), intent(out) :: qflx_sgs_rhot(KA,IA,JA,3)
-       real(RP), intent(out) :: qflx_sgs_qtrc(KA,IA,JA,QA,3)
+       real(RP), intent(out) :: qflx_sgs_rhoq(KA,IA,JA,QA,3)
 
        real(RP), intent(out) :: tke (KA,IA,JA) ! TKE
        real(RP), intent(out) :: nu_C(KA,IA,JA) ! eddy viscosity (center)

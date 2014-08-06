@@ -87,7 +87,7 @@ module mod_atmos_vars
   real(RP), public, allocatable :: MOMX_tp(:,:,:)
   real(RP), public, allocatable :: MOMY_tp(:,:,:)
   real(RP), public, allocatable :: RHOT_tp(:,:,:)
-  real(RP), public, allocatable :: QTRC_tp(:,:,:,:)
+  real(RP), public, allocatable :: RHOQ_tp(:,:,:,:)
 
   ! diagnostic variables
   real(RP), public, allocatable :: TEMP(:,:,:)   ! temperature [K]
@@ -290,7 +290,7 @@ contains
     allocate( MOMX_tp(KA,IA,JA)    )
     allocate( MOMY_tp(KA,IA,JA)    )
     allocate( RHOT_tp(KA,IA,JA)    )
-    allocate( QTRC_tp(KA,IA,JA,QA) )
+    allocate( RHOQ_tp(KA,IA,JA,QA) )
 
     allocate( TEMP(KA,IA,JA) )
     allocate( PRES(KA,IA,JA) )

@@ -105,14 +105,14 @@ contains
        MOMX_t => MOMX_tp, &
        MOMY_t => MOMY_tp, &
        RHOT_t => RHOT_tp, &
-       QTRC_t => QTRC_tp
+       RHOQ_t => RHOQ_tp
     use mod_atmos_phy_mp_vars, only: &
        DENS_t_MP => ATMOS_PHY_MP_DENS_t,    &
        MOMZ_t_MP => ATMOS_PHY_MP_MOMZ_t,    &
        MOMX_t_MP => ATMOS_PHY_MP_MOMX_t,    &
        MOMY_t_MP => ATMOS_PHY_MP_MOMY_t,    &
        RHOT_t_MP => ATMOS_PHY_MP_RHOT_t,    &
-       QTRC_t_MP => ATMOS_PHY_MP_QTRC_t,    &
+       RHOQ_t_MP => ATMOS_PHY_MP_RHOQ_t,    &
        SFLX_rain => ATMOS_PHY_MP_SFLX_rain, &
        SFLX_snow => ATMOS_PHY_MP_SFLX_snow
     implicit none
@@ -128,7 +128,6 @@ contains
     real(RP) :: QTRC0(KA,IA,JA,QA)
 
     real(RP) :: precip(IA,JA)
-    real(RP) :: RHOQ(KA,IA,JA)
     real(RP) :: total ! dummy
 
     integer :: k, i, j, iq
@@ -183,7 +182,8 @@ contains
        do j  = JS, JE
        do i  = IS, IE
        do k  = KS, KE
-          QTRC_t_MP(k,i,j,iq) = ( QTRC0(k,i,j,iq) - QTRC(k,i,j,iq) ) / dt_MP
+          RHOQ_t_MP(k,i,j,iq) = ( QTRC0(k,i,j,iq) * DENS0(k,i,j) &
+                                - QTRC (k,i,j,iq) * DENS (k,i,j) ) / dt_MP
        enddo
        enddo
        enddo
@@ -217,7 +217,7 @@ contains
     do j  = JS, JE
     do i  = IS, IE
     do k  = KS, KE
-       QTRC_t(k,i,j,iq) = QTRC_t(k,i,j,iq) + QTRC_t_MP(k,i,j,iq)
+       RHOQ_t(k,i,j,iq) = RHOQ_t(k,i,j,iq) + RHOQ_t_MP(k,i,j,iq)
     enddo
     enddo
     enddo
@@ -231,9 +231,7 @@ contains
        call STAT_total( total, RHOT_t_MP(:,:,:), 'RHOT_t_MP' )
 
        do iq = 1, QA
-          RHOQ(:,:,:) = DENS(:,:,:) * QTRC_t_MP(:,:,:,iq)
-
-          call STAT_total( total, RHOQ(:,:,:), trim(AQ_NAME(iq))//'_t_MP' )
+          call STAT_total( total, RHOQ_t_MP(:,:,:,iq), trim(AQ_NAME(iq))//'_t_MP' )
        enddo
     endif
 

@@ -180,7 +180,7 @@ contains
        MOMX_tp, &
        MOMY_tp, &
        RHOT_tp, &
-       QTRC_tp
+       RHOQ_tp
     use scale_atmos_thermodyn, only: &
        AQ_CV
     use scale_atmos_refstate, only: &
@@ -202,7 +202,7 @@ contains
        call ATMOS_DYN( &
          DENS, MOMZ, MOMX, MOMY, RHOT, QTRC,                   & ! [INOUT]
          DENS_av, MOMZ_av, MOMX_av, MOMY_av, RHOT_av, QTRC_av, & ! [INOUT]
-         DENS_tp, MOMZ_tp, MOMX_tp, MOMY_tp, RHOT_tp, QTRC_tp, & ! [IN]
+         DENS_tp, MOMZ_tp, MOMX_tp, MOMY_tp, RHOT_tp, RHOQ_tp, & ! [IN]
          GRID_CDZ,  GRID_CDX,  GRID_CDY,                       & ! [IN]
          GRID_FDZ,  GRID_FDX,  GRID_FDY,                       & ! [IN]
          GRID_RCDZ, GRID_RCDX, GRID_RCDY,                      & ! [IN]

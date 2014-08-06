@@ -147,7 +147,7 @@ contains
        MOMX_t => MOMX_tp, &
        MOMY_t => MOMY_tp, &
        RHOT_t => RHOT_tp, &
-       QTRC_t => QTRC_tp
+       RHOQ_t => RHOQ_tp
     use mod_atmos_phy_rd_vars, only: &
        SFLX_LW_dn => ATMOS_PHY_RD_SFLX_LW_dn, &
        SFLX_SW_dn => ATMOS_PHY_RD_SFLX_SW_dn
@@ -157,7 +157,7 @@ contains
        MOMX_t_SF  => ATMOS_PHY_SF_MOMX_t,     &
        MOMY_t_SF  => ATMOS_PHY_SF_MOMY_t,     &
        RHOT_t_SF  => ATMOS_PHY_SF_RHOT_t,     &
-       QTRC_t_SF  => ATMOS_PHY_SF_QTRC_t,     &
+       RHOQ_t_SF  => ATMOS_PHY_SF_RHOQ_t,     &
        SFC_DENS   => ATMOS_PHY_SF_SFC_DENS,   &
        SFC_PRES   => ATMOS_PHY_SF_SFC_PRES,   &
        SFC_TEMP   => ATMOS_PHY_SF_SFC_TEMP,   &
@@ -185,7 +185,6 @@ contains
     real(RP) :: Q2    (IA,JA) !  2m Vapor  [kg/kg]
 
     real(RP) :: beta(IA,JA)
-    real(RP) :: RHOQ(IA,JA)
     real(RP) :: total ! dummy
 
     integer :: i, j, iq
@@ -278,7 +277,7 @@ contains
        do i  = IS, IE
           DENS_t_SF(i,j)    = DENS_t_SF(i,j) &
                             + SFLX_QTRC(i,j,iq) * RCDZ(KS) / GSQRT(KS,i,j,I_XYZ)
-          QTRC_t_SF(i,j,iq) = SFLX_QTRC(i,j,iq) * RCDZ(KS) / GSQRT(KS,i,j,I_XYZ)
+          RHOQ_t_SF(i,j,iq) = SFLX_QTRC(i,j,iq) * DENS(KS,i,j) * RCDZ(KS) / GSQRT(KS,i,j,I_XYZ)
        enddo
        enddo
        enddo
@@ -303,7 +302,7 @@ contains
     do iq = I_QV, I_QV
     do j  = JS, JE
     do i  = IS, IE
-       QTRC_t(KS,i,j,iq) = QTRC_t(KS,i,j,iq) + QTRC_t_SF(i,j,iq)
+       RHOQ_t(KS,i,j,iq) = RHOQ_t(KS,i,j,iq) + RHOQ_t_SF(i,j,iq)
     enddo
     enddo
     enddo
@@ -316,9 +315,7 @@ contains
        call STAT_total( total, RHOT_t_SF(:,:), 'RHOT_t_SF' )
 
        do iq = I_QV, I_QV
-          RHOQ(:,:) = DENS(KS,:,:) * QTRC_t_SF(:,:,iq)
-
-          call STAT_total( total, RHOQ(:,:), trim(AQ_NAME(iq))//'_t_SF' )
+          call STAT_total( total, RHOQ_t_SF(:,:,iq), trim(AQ_NAME(iq))//'_t_SF' )
        enddo
     endif
 

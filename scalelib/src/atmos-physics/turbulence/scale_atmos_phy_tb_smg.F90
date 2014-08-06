@@ -168,7 +168,7 @@ contains
   !-----------------------------------------------------------------------------
   subroutine ATMOS_PHY_TB_smg( &
        qflx_sgs_momz, qflx_sgs_momx, qflx_sgs_momy, &
-       qflx_sgs_rhot, qflx_sgs_qtrc,                &
+       qflx_sgs_rhot, qflx_sgs_rhoq,                &
        tke, nu, Ri, Pr,                             &
        MOMZ, MOMX, MOMY, RHOT, DENS, QTRC,          &
        GSQRT, J13G, J23G, J33G                      )
@@ -199,7 +199,7 @@ contains
     real(RP), intent(out) :: qflx_sgs_momx(KA,IA,JA,3)
     real(RP), intent(out) :: qflx_sgs_momy(KA,IA,JA,3)
     real(RP), intent(out) :: qflx_sgs_rhot(KA,IA,JA,3)
-    real(RP), intent(out) :: qflx_sgs_qtrc(KA,IA,JA,QA,3)
+    real(RP), intent(out) :: qflx_sgs_rhoq(KA,IA,JA,QA,3)
 
     real(RP), intent(out) :: tke(KA,IA,JA) ! TKE
     real(RP), intent(out) :: nu (KA,IA,JA) ! eddy viscosity (center)
@@ -257,7 +257,7 @@ contains
     qflx_sgs_momx(:,:,:,:)   = UNDEF
     qflx_sgs_momy(:,:,:,:)   = UNDEF
     qflx_sgs_rhot(:,:,:,:)   = UNDEF
-    qflx_sgs_qtrc(:,:,:,:,:) = UNDEF
+    qflx_sgs_rhoq(:,:,:,:,:) = UNDEF
 
     nu (:,:,:) = UNDEF
     tke(:,:,:) = UNDEF
@@ -1892,7 +1892,7 @@ contains
        call CHECK( __LINE__, QTRC(k,i,j,iq) )
        call CHECK( __LINE__, RFDZ(k) )
 #endif
-          qflx_sgs_qtrc(k,i,j,iq,ZDIR) = - 0.25_RP & ! 1/2/2
+          qflx_sgs_rhoq(k,i,j,iq,ZDIR) = - 0.25_RP & ! 1/2/2
                * ( DENS(k,i,j)+DENS(k+1,i,j) ) &
                * ( nu(k,i,j)/Pr(k,i,j) + nu(k+1,i,j)/Pr(k+1,i,j) ) &
                * ( QTRC(k+1,i,j,iq)-QTRC(k,i,j,iq) ) * RFDZ(k) * J33G / GSQRT(k,i,j,I_XYW)
@@ -1904,8 +1904,8 @@ contains
 #endif
        do j = JJS, JJE
        do i = IIS, IIE
-          qflx_sgs_qtrc(KS-1,i,j,iq,ZDIR) = 0.0_RP
-          qflx_sgs_qtrc(KE  ,i,j,iq,ZDIR) = 0.0_RP
+          qflx_sgs_rhoq(KS-1,i,j,iq,ZDIR) = 0.0_RP
+          qflx_sgs_rhoq(KE  ,i,j,iq,ZDIR) = 0.0_RP
        enddo
        enddo
 #ifdef DEBUG
@@ -1925,7 +1925,7 @@ contains
        call CHECK( __LINE__, QTRC(k,i,j,iq) )
        call CHECK( __LINE__, RFDX(i) )
 #endif
-          qflx_sgs_qtrc(k,i,j,iq,XDIR) = - 0.25_RP & ! 1/2/2
+          qflx_sgs_rhoq(k,i,j,iq,XDIR) = - 0.25_RP & ! 1/2/2
                * ( DENS(k,i,j)+DENS(k,i+1,j) ) &
                * ( nu(k,i,j)/Pr(k,i,j) + nu(k,i+1,j)/Pr(k,i+1,j) ) &
                * ( &
@@ -1952,7 +1952,7 @@ contains
        call CHECK( __LINE__, QTRC(KS,i,j,iq) )
        call CHECK( __LINE__, RFDX(i) )
 #endif
-          qflx_sgs_qtrc(KS,i,j,iq,XDIR) = - 0.25_RP & ! 1/2/2
+          qflx_sgs_rhoq(KS,i,j,iq,XDIR) = - 0.25_RP & ! 1/2/2
                * ( DENS(KS,i,j)+DENS(KS,i+1,j) ) &
                * ( nu(KS,i,j)/Pr(KS,i,j) + nu(KS,i+1,j)/Pr(KS,i+1,j) ) &
                * ( &
@@ -1962,7 +1962,7 @@ contains
                    - J13G(KS  ,i,j,I_UYZ) * ( QTRC(KS  ,i+1,j,iq)+QTRC(KS  ,i,j,iq) ) &
                    ) * 0.5_RP * RFDZ(KS) &
                ) / GSQRT(KS,i,j,I_UYZ)
-          qflx_sgs_qtrc(KE,i,j,iq,XDIR) = - 0.25_RP & ! 1/2/2
+          qflx_sgs_rhoq(KE,i,j,iq,XDIR) = - 0.25_RP & ! 1/2/2
                * ( DENS(KE,i,j)+DENS(KE,i+1,j) ) &
                * ( nu(KE,i,j)/Pr(KE,i,j) + nu(KE,i+1,j)/Pr(KE,i+1,j) ) &
                * ( &
@@ -1990,7 +1990,7 @@ contains
        call CHECK( __LINE__, QTRC(k,i,j,iq) )
        call CHECK( __LINE__, RFDY(j) )
 #endif
-          qflx_sgs_qtrc(k,i,j,iq,YDIR) = - 0.25_RP &
+          qflx_sgs_rhoq(k,i,j,iq,YDIR) = - 0.25_RP &
                * ( DENS(k,i,j)+DENS(k,i,j+1) ) &
                * ( nu(k,i,j)/Pr(k,i,j) + nu(k,i,j+1)/Pr(k,i,j+1) ) &
                * ( &
@@ -2017,7 +2017,7 @@ contains
        call CHECK( __LINE__, QTRC(KS,i,j,iq) )
        call CHECK( __LINE__, RFDY(j) )
 #endif
-          qflx_sgs_qtrc(KS,i,j,iq,YDIR) = - 0.25_RP &
+          qflx_sgs_rhoq(KS,i,j,iq,YDIR) = - 0.25_RP &
                * ( DENS(KS,i,j)+DENS(KS,i,j+1) ) &
                * ( nu(KS,i,j)/Pr(KS,i,j) + nu(KS,i,j+1)/Pr(KS,i,j+1) ) &
                * ( &
@@ -2027,7 +2027,7 @@ contains
                      - J23G(KS  ,i,j,I_XVZ) * ( QTRC(KS  ,i,j+1,iq)+QTRC(KS  ,i,j,iq) ) &
                      ) * 0.5_RP * RFDZ(KS) &
                ) / GSQRT(KS,i,j,I_XVZ)
-          qflx_sgs_qtrc(KE,i,j,iq,YDIR) = - 0.25_RP &
+          qflx_sgs_rhoq(KE,i,j,iq,YDIR) = - 0.25_RP &
                * ( DENS(KE,i,j)+DENS(KE,i,j+1) ) &
                * ( nu(KE,i,j)/Pr(KE,i,j) + nu(KE,i,j+1)/Pr(KE,i,j+1) ) &
                * ( &

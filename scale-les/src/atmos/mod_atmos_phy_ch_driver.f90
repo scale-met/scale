@@ -93,16 +93,15 @@ contains
        MOMY,              &
        RHOT,              &
        QTRC,              &
-       QTRC_t => QTRC_tp
+       RHOQ_t => RHOQ_tp
     use mod_atmos_phy_ch_vars, only: &
-       QTRC_t_CH => ATMOS_PHY_CH_QTRC_t, &
+       RHOQ_t_CH => ATMOS_PHY_CH_RHOQ_t, &
        O3        => ATMOS_PHY_CH_O3
     implicit none
 
     logical, intent(in) :: update_flag
     logical, intent(in) :: history_flag
 
-    real(RP) :: RHOQ(KA,IA,JA)
     real(RP) :: total ! dummy
 
     integer  :: k, i, j, iq
@@ -116,11 +115,11 @@ contains
 !                          MOMY,          & ! [IN]
 !                          RHOT,          & ! [IN]
 !                          QTRC,          & ! [IN]
-!                          QTRC_t_CH,     & ! [INOUT]
+!                          RHOQ_t_CH,     & ! [INOUT]
 !                          O3             ) ! [INOUT]
 
        ! tentative!
-       QTRC_t_CH(:,:,:,:) = 0.0_RP
+       RHOQ_t_CH(:,:,:,:) = 0.0_RP
        O3       (:,:,:)   = 0.0_RP
 
        if ( history_flag ) then
@@ -133,7 +132,7 @@ contains
     do j  = JS, JE
     do i  = IS, IE
     do k  = KS, KE
-       QTRC_t(k,i,j,iq) = QTRC_t(k,i,j,iq) + QTRC_t_CH(k,i,j,iq)
+       RHOQ_t(k,i,j,iq) = RHOQ_t(k,i,j,iq) + RHOQ_t_CH(k,i,j,iq)
     enddo
     enddo
     enddo
@@ -141,9 +140,7 @@ contains
 
     if ( STATISTICS_checktotal ) then
        do iq = 1, QA
-          RHOQ(:,:,:) = DENS(:,:,:) * QTRC_t_CH(:,:,:,iq)
-
-          call STAT_total( total, RHOQ(:,:,:), trim(AQ_NAME(iq))//'_t_CH' )
+          call STAT_total( total, RHOQ_t_CH(:,:,:,iq), trim(AQ_NAME(iq))//'_t_CH' )
        enddo
     endif
 

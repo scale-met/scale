@@ -106,7 +106,7 @@ contains
   !-----------------------------------------------------------------------------
   subroutine ATMOS_PHY_TB_dns( &
        qflx_sgs_MOMZ, qflx_sgs_MOMX, qflx_sgs_MOMY, &
-       qflx_sgs_rhot, qflx_sgs_qtrc,                &
+       qflx_sgs_rhot, qflx_sgs_rhoq,                &
        tke, nu, Ri, Pr,                             &
        MOMZ, MOMX, MOMY, RHOT, DENS, QTRC,          &
        GSQRT, J13G, J23G, J33G                      )
@@ -137,7 +137,7 @@ contains
     real(RP), intent(out) :: qflx_sgs_MOMX(KA,IA,JA,3)
     real(RP), intent(out) :: qflx_sgs_MOMY(KA,IA,JA,3)
     real(RP), intent(out) :: qflx_sgs_rhot(KA,IA,JA,3)
-    real(RP), intent(out) :: qflx_sgs_qtrc(KA,IA,JA,QA,3)
+    real(RP), intent(out) :: qflx_sgs_rhoq(KA,IA,JA,QA,3)
 
     real(RP), intent(out) :: tke(KA,IA,JA) ! TKE
     real(RP), intent(out) :: nu (KA,IA,JA) ! eddy viscosity (center)
@@ -169,7 +169,7 @@ contains
     qflx_sgs_MOMX(:,:,:,:)   = UNDEF
     qflx_sgs_MOMY(:,:,:,:)   = UNDEF
     qflx_sgs_rhot(:,:,:,:)   = UNDEF
-    qflx_sgs_qtrc(:,:,:,:,:) = UNDEF
+    qflx_sgs_rhoq(:,:,:,:,:) = UNDEF
 
     POTT(:,:,:) = UNDEF
 #endif
@@ -354,15 +354,15 @@ contains
        do j = JJS, JJE
        do i = IIS, IIE
        do k = KS, KE-1
-          qflx_sgs_qtrc(k,i,j,iq,ZDIR) = -0.5_RP * ( DENS(k+1,i,j)+DENS(k,i,j) ) &
+          qflx_sgs_rhoq(k,i,j,iq,ZDIR) = -0.5_RP * ( DENS(k+1,i,j)+DENS(k,i,j) ) &
                                        * ATMOS_PHY_TB_DNS_MU * ( QTRC(k+1,i,j,iq)-QTRC(k,i,j,iq) ) * RFDZ(k)
        enddo
        enddo
        enddo
        do j = JJS, JJE
        do i = IIS, IIE
-          qflx_sgs_qtrc(KS-1,i,j,iq,ZDIR) = 0.0_RP
-          qflx_sgs_qtrc(KE  ,i,j,iq,ZDIR) = 0.0_RP
+          qflx_sgs_rhoq(KS-1,i,j,iq,ZDIR) = 0.0_RP
+          qflx_sgs_rhoq(KE  ,i,j,iq,ZDIR) = 0.0_RP
        enddo
        enddo
 
@@ -370,7 +370,7 @@ contains
        do j = JJS,   JJE
        do i = IIS-1, IIE
        do k = KS,   KE
-          qflx_sgs_qtrc(k,i,j,iq,XDIR) = -0.5_RP * ( DENS(k,i+1,j)+DENS(k,i,j) ) &
+          qflx_sgs_rhoq(k,i,j,iq,XDIR) = -0.5_RP * ( DENS(k,i+1,j)+DENS(k,i,j) ) &
                                        * ATMOS_PHY_TB_DNS_MU * ( QTRC(k,i+1,j,iq)-QTRC(k,i,j,iq) ) * RFDX(i)
        enddo
        enddo
@@ -380,7 +380,7 @@ contains
        do j = JJS-1, JJE
        do i = IIS,   IIE
        do k = KS,   KE
-          qflx_sgs_qtrc(k,i,j,iq,YDIR) = -0.5_RP * ( DENS(k,i,j+1)+DENS(k,i,j) ) &
+          qflx_sgs_rhoq(k,i,j,iq,YDIR) = -0.5_RP * ( DENS(k,i,j+1)+DENS(k,i,j) ) &
                                        * ATMOS_PHY_TB_DNS_MU * ( QTRC(k,i,j+1,iq)-QTRC(k,i,j,iq) ) * RFDY(j)
        enddo
        enddo

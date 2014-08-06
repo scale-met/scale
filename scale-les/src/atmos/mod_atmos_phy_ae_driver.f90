@@ -94,9 +94,9 @@ contains
        MOMY,              &
        RHOT,              &
        QTRC,              &
-       QTRC_t => QTRC_tp
+       RHOQ_t => RHOQ_tp
     use mod_atmos_phy_ae_vars, only: &
-       QTRC_t_AE => ATMOS_PHY_AE_QTRC_t, &
+       RHOQ_t_AE => ATMOS_PHY_AE_RHOQ_t, &
        CCN       => ATMOS_PHY_AE_CCN
     implicit none
 
@@ -105,7 +105,6 @@ contains
 
     real(RP) :: QTRC0(KA,IA,JA,QA)
 
-    real(RP) :: RHOQ(KA,IA,JA)
     real(RP) :: total ! dummy
 
     integer  :: k, i, j, iq
@@ -134,7 +133,7 @@ contains
        do j  = JS, JE
        do i  = IS, IE
        do k  = KS, KE
-          QTRC_t_AE(k,i,j,iq) = QTRC0(k,i,j,iq) - QTRC(k,i,j,iq)
+          RHOQ_t_AE(k,i,j,iq) = ( QTRC0(k,i,j,iq) - QTRC(k,i,j,iq) ) * DENS(k,i,j)
        enddo
        enddo
        enddo
@@ -153,7 +152,7 @@ contains
     do j  = JS, JE
     do i  = IS, IE
     do k  = KS, KE
-       QTRC_t(k,i,j,iq) = QTRC_t(k,i,j,iq) + QTRC_t_AE(k,i,j,iq)
+       RHOQ_t(k,i,j,iq) = RHOQ_t(k,i,j,iq) + RHOQ_t_AE(k,i,j,iq)
     enddo
     enddo
     enddo
@@ -161,9 +160,7 @@ contains
 
     if ( STATISTICS_checktotal ) then
        do iq = 1, QA
-          RHOQ(:,:,:) = DENS(:,:,:) * QTRC_t_AE(:,:,:,iq)
-
-          call STAT_total( total, RHOQ(:,:,:), trim(AQ_NAME(iq))//'_t_AE' )
+          call STAT_total( total, RHOQ_t_AE(:,:,:,iq), trim(AQ_NAME(iq))//'_t_AE' )
        enddo
     endif
 

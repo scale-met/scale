@@ -130,7 +130,7 @@ contains
   subroutine ATMOS_DYN( &
        DENS,    MOMZ,    MOMX,    MOMY,    RHOT,    QTRC,    &
        DENS_av, MOMZ_av, MOMX_av, MOMY_av, RHOT_av, QTRC_av, &
-       DENS_tp, MOMZ_tp, MOMX_tp, MOMY_tp, RHOT_tp, QTRC_tp, &
+       DENS_tp, MOMZ_tp, MOMX_tp, MOMY_tp, RHOT_tp, RHOQ_tp, &
        CDZ, CDX, CDY, FDZ, FDX, FDY,                         &
        RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,                   &
        PHI, GSQRT,                                           &
@@ -195,7 +195,7 @@ contains
     real(RP), intent(in)    :: MOMX_tp(KA,IA,JA)
     real(RP), intent(in)    :: MOMY_tp(KA,IA,JA)
     real(RP), intent(in)    :: RHOT_tp(KA,IA,JA)
-    real(RP), intent(in)    :: QTRC_tp(KA,IA,JA,QA)
+    real(RP), intent(in)    :: RHOQ_tp(KA,IA,JA,QA)
 
     real(RP), intent(in)    :: CDZ (KA)
     real(RP), intent(in)    :: CDX (IA)
@@ -241,7 +241,6 @@ contains
     integer , intent(in)    :: NSTEP_ATMOS_DYN
 
     ! for time integartion
-    real(RP) :: DENS00  (KA,IA,JA) ! saved density before small step loop
     real(RP) :: DENS0   (KA,IA,JA) ! prognostic variables (+0   step)
     real(RP) :: MOMZ0   (KA,IA,JA) !
     real(RP) :: MOMX0   (KA,IA,JA) !
@@ -299,7 +298,6 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '*** Dynamics step: ', NSTEP_ATMOS_DYN, ' small steps'
 
 #ifdef DEBUG
-    DENS00  (:,:,:) = UNDEF
     DENS0   (:,:,:) = UNDEF
     MOMZ0   (:,:,:) = UNDEF
     MOMX0   (:,:,:) = UNDEF
@@ -324,8 +322,6 @@ contains
     qflx_hi(:,:,:,:) = UNDEF
     qflx_lo(:,:,:,:) = UNDEF
 #endif
-
-    DENS00(:,:,:) = DENS(:,:,:)
 
     if ( USE_AVERAGE ) then
        DENS_av(:,:,:) = 0.0_RP
@@ -692,6 +688,12 @@ contains
        mflx_av(:,:,:,:) = mflx_av(:,:,:,:) + mflx_hi(:,:,:,:)
 #endif
 
+       do iq = 1, QA
+          QTRC(:,:,:,iq) = ( QTRC(:,:,:,iq) * DENS0(:,:,:) &
+                           + RHOQ_tp(:,:,:,iq) * dt &
+                           ) / DENS(:,:,:)
+       end do
+
     enddo ! dynamical steps
 
     if ( USE_AVERAGE ) then
@@ -744,8 +746,7 @@ contains
                     * ( diff(k,i,j) & ! rayleigh damping
                       - ( diff(k,i-1,j) + diff(k,i+1,j) + diff(k,i,j-1) + diff(k,i,j+1) - diff(k,i,j)*4.0_RP ) &
                       * 0.125_RP * BND_SMOOTHER_FACT ) ! horizontal smoother
-             RHOQ_t(k,i,j) = ( QTRC_tp(k,i,j,I_QV) & ! tendency from physical step
-                           + damp ) * DENS00(k,i,j)
+             RHOQ_t(k,i,j) = damp * DENS(k,i,j)
 #ifdef HIST_TEND
              damp_t(k,i,j) = damp
 #endif
@@ -760,7 +761,7 @@ contains
           do j = JS, JE
           do i = IS, IE
           do k = KS, KE
-             RHOQ_t(k,i,j) = QTRC_tp(k,i,j,iq) * DENS00(k,i,j)
+             RHOQ_t(k,i,j) = 0.0_RP
           enddo
           enddo
           enddo
@@ -879,7 +880,7 @@ contains
        do j = JS-1, JE+1
        do i = IS-1, IE+1
        do k = KS, KE
-          RHOQ(k,i,j) = QTRC(k,i,j,iq) * DENS00(k,i,j)
+          RHOQ(k,i,j) = QTRC(k,i,j,iq) * DENS(k,i,j)
        enddo
        enddo
        enddo

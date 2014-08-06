@@ -44,7 +44,7 @@ module mod_atmos_phy_ch_vars
   character(len=H_MID),  public :: ATMOS_PHY_CH_RESTART_OUT_TITLE    = 'ATMOS_PHY_CH restart' !< title    of the output file
   character(len=H_MID),  public :: ATMOS_PHY_CH_RESTART_OUT_DTYPE    = 'DEFAULT'              !< REAL4 or REAL8
 
-  real(RP), public, allocatable :: ATMOS_PHY_CH_QTRC_t(:,:,:,:) ! tendency QTRC [kg/kg/s]
+  real(RP), public, allocatable :: ATMOS_PHY_CH_RHOQ_t(:,:,:,:) ! tendency QTRC [kg/kg/s]
 
   real(RP), public, allocatable :: ATMOS_PHY_CH_O3(:,:,:) ! ozone [PPM]
 
@@ -92,8 +92,8 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[VARS] / Categ[ATMOS_PHY_CH] / Origin[SCALE-LES]'
 
-    allocate( ATMOS_PHY_CH_QTRC_t(KA,IA,JA,QA) )
-    ATMOS_PHY_CH_QTRC_t(:,:,:,:) = UNDEF
+    allocate( ATMOS_PHY_CH_RHOQ_t(KA,IA,JA,QA) )
+    ATMOS_PHY_CH_RHOQ_t(:,:,:,:) = UNDEF
 
     allocate( ATMOS_PHY_CH_O3(KA,IA,JA) )
     ATMOS_PHY_CH_O3(:,:,:) = UNDEF

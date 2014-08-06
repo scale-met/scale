@@ -50,7 +50,7 @@ module mod_atmos_phy_sf_vars
   real(RP), public, allocatable :: ATMOS_PHY_SF_MOMX_t(:,:)   ! tendency MOMX [m/s*kg/m3/s]
   real(RP), public, allocatable :: ATMOS_PHY_SF_MOMY_t(:,:)   ! tendency MOMY [m/s*kg/m3/s]
   real(RP), public, allocatable :: ATMOS_PHY_SF_RHOT_t(:,:)   ! tendency RHOT [K  *kg/m3/s]
-  real(RP), public, allocatable :: ATMOS_PHY_SF_QTRC_t(:,:,:) ! tendency QTRC [    kg/kg/s]
+  real(RP), public, allocatable :: ATMOS_PHY_SF_RHOQ_t(:,:,:) ! tendency rho*QTRC [    kg/kg/s]
 
   ! surface flux (upward positive)
   real(RP), public, allocatable :: ATMOS_PHY_SF_SFLX_MW   (:,:)   ! z-momentum flux (area center) [m/s*kg/m2/s]
@@ -139,13 +139,13 @@ contains
     allocate( ATMOS_PHY_SF_MOMX_t(IA,JA)    )
     allocate( ATMOS_PHY_SF_MOMY_t(IA,JA)    )
     allocate( ATMOS_PHY_SF_RHOT_t(IA,JA)    )
-    allocate( ATMOS_PHY_SF_QTRC_t(IA,JA,QA) )
+    allocate( ATMOS_PHY_SF_RHOQ_t(IA,JA,QA) )
     ATMOS_PHY_SF_DENS_t(:,:)   = UNDEF
     ATMOS_PHY_SF_MOMZ_t(:,:)   = UNDEF
     ATMOS_PHY_SF_MOMX_t(:,:)   = UNDEF
     ATMOS_PHY_SF_MOMY_t(:,:)   = UNDEF
     ATMOS_PHY_SF_RHOT_t(:,:)   = UNDEF
-    ATMOS_PHY_SF_QTRC_t(:,:,:) = UNDEF
+    ATMOS_PHY_SF_RHOQ_t(:,:,:) = UNDEF
 
     allocate( ATMOS_PHY_SF_SFLX_MW   (IA,JA)    )
     allocate( ATMOS_PHY_SF_SFLX_MU   (IA,JA)    )

@@ -97,20 +97,19 @@ contains
        MOMX_t => MOMX_tp, &
        MOMY_t => MOMY_tp, &
        RHOT_t => RHOT_tp, &
-       QTRC_t => QTRC_tp
+       RHOQ_t => RHOQ_tp
     use mod_atmos_phy_cp_vars, only: &
        MOMZ_t_CP      => ATMOS_PHY_CP_MOMZ_t,        &
        MOMX_t_CP      => ATMOS_PHY_CP_MOMX_t,        &
        MOMY_t_CP      => ATMOS_PHY_CP_MOMY_t,        &
        RHOT_t_CP      => ATMOS_PHY_CP_RHOT_t,        &
-       QTRC_t_CP      => ATMOS_PHY_CP_QTRC_t,        &
+       RHOQ_t_CP      => ATMOS_PHY_CP_RHOQ_t,        &
        MFLX_cloudbase => ATMOS_PHY_CP_MFLX_cloudbase
     implicit none
 
     logical, intent(in) :: update_flag
     logical, intent(in) :: history_flag
 
-    real(RP) :: RHOQ(KA,IA,JA)
     real(RP) :: total ! dummy
 
     integer  :: k, i, j, iq
@@ -128,7 +127,7 @@ contains
 !                          MOMX_t_CP,     & ! [INOUT]
 !                          MOMY_t_CP,     & ! [INOUT]
 !                          RHOT_t_CP,     & ! [INOUT]
-!                          QTRC_t_CP,     & ! [INOUT]
+!                          RHOQ_t_CP,     & ! [INOUT]
 !                          MFLX_cloudbase ) ! [INOUT]
 
        ! tentative!
@@ -136,7 +135,7 @@ contains
        MOMX_t_CP(:,:,:)    = 0.0_RP
        MOMY_t_CP(:,:,:)    = 0.0_RP
        RHOT_t_CP(:,:,:)    = 0.0_RP
-       QTRC_t_CP(:,:,:,:)  = 0.0_RP
+       RHOQ_t_CP(:,:,:,:)  = 0.0_RP
        MFLX_cloudbase(:,:) = 0.0_RP
 
        if ( history_flag ) then
@@ -161,7 +160,7 @@ contains
     do j  = JS, JE
     do i  = IS, IE
     do k  = KS, KE
-       QTRC_t(k,i,j,iq) = QTRC_t(k,i,j,iq) + QTRC_t_CP(k,i,j,iq)
+       RHOQ_t(k,i,j,iq) = RHOQ_t(k,i,j,iq) + RHOQ_t_CP(k,i,j,iq)
     enddo
     enddo
     enddo
@@ -174,9 +173,7 @@ contains
        call STAT_total( total, RHOT_t_CP(:,:,:), 'RHOT_t_CP' )
 
        do iq = 1, QA
-          RHOQ(:,:,:) = DENS(:,:,:) * QTRC_t_CP(:,:,:,iq)
-
-          call STAT_total( total, RHOQ(:,:,:), trim(AQ_NAME(iq))//'_t_CP' )
+          call STAT_total( total, RHOQ_t_CP(:,:,:,iq), trim(AQ_NAME(iq))//'_t_CP' )
        enddo
     endif
 

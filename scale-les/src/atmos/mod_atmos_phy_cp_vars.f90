@@ -48,7 +48,7 @@ module mod_atmos_phy_cp_vars
   real(RP), public, allocatable :: ATMOS_PHY_CP_MOMX_t(:,:,:)   ! tendency MOMX [kg/m2/s2]
   real(RP), public, allocatable :: ATMOS_PHY_CP_MOMY_t(:,:,:)   ! tendency MOMY [kg/m2/s2]
   real(RP), public, allocatable :: ATMOS_PHY_CP_RHOT_t(:,:,:)   ! tendency RHOT [K*kg/m3/s]
-  real(RP), public, allocatable :: ATMOS_PHY_CP_QTRC_t(:,:,:,:) ! tendency QTRC [kg/kg/s]
+  real(RP), public, allocatable :: ATMOS_PHY_CP_RHOQ_t(:,:,:,:) ! tendency rho*QTRC [kg/kg/s]
 
   real(RP), public, allocatable :: ATMOS_PHY_CP_MFLX_cloudbase(:,:) ! cloud base mass flux [kg/m2/s]
 
@@ -100,12 +100,12 @@ contains
     allocate( ATMOS_PHY_CP_MOMX_t(KA,IA,JA)    )
     allocate( ATMOS_PHY_CP_MOMY_t(KA,IA,JA)    )
     allocate( ATMOS_PHY_CP_RHOT_t(KA,IA,JA)    )
-    allocate( ATMOS_PHY_CP_QTRC_t(KA,IA,JA,QA) )
+    allocate( ATMOS_PHY_CP_RHOQ_t(KA,IA,JA,QA) )
     ATMOS_PHY_CP_MOMZ_t(:,:,:)   = UNDEF
     ATMOS_PHY_CP_MOMX_t(:,:,:)   = UNDEF
     ATMOS_PHY_CP_MOMY_t(:,:,:)   = UNDEF
     ATMOS_PHY_CP_RHOT_t(:,:,:)   = UNDEF
-    ATMOS_PHY_CP_QTRC_t(:,:,:,:) = UNDEF
+    ATMOS_PHY_CP_RHOQ_t(:,:,:,:) = UNDEF
 
     allocate( ATMOS_PHY_CP_MFLX_cloudbase(IA,JA) )
     ATMOS_PHY_CP_MFLX_cloudbase(:,:) = UNDEF
