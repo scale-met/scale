@@ -295,7 +295,19 @@ contains
        TIME_DTSEC
     use scale_history, only: &
        HIST_in
+    use scale_topography, only: &
+       TOPO_Zsfc
+    use scale_grid_real, only: &
+       REAL_CZ, &
+       REAL_Z1
+    use scale_atmos_bottom, only: &
+       BOTTOM_estimate => ATMOS_BOTTOM_estimate
+    use mod_atmos_vars, only: &
+       DENS, &
+       PRES
     use mod_atmos_phy_sf_vars, only: &
+       SFC_DENS   => ATMOS_PHY_SF_SFC_DENS,   &
+       SFC_PRES   => ATMOS_PHY_SF_SFC_PRES,   &
        SFC_TEMP   => ATMOS_PHY_SF_SFC_TEMP,   &
        SFC_albedo => ATMOS_PHY_SF_SFC_albedo, &
        SFC_Z0     => ATMOS_PHY_SF_SFC_Z0,     &
@@ -364,10 +376,22 @@ contains
     endif
 
     if ( .NOT. setup ) then
+       ! calculate surface density, surface pressure
+       call BOTTOM_estimate( DENS     (:,:,:), & ! [IN]
+                             PRES     (:,:,:), & ! [IN]
+                             REAL_CZ  (:,:,:), & ! [IN]
+                             TOPO_Zsfc(:,:),   & ! [IN]
+                             REAL_Z1  (:,:),   & ! [IN]
+                             SFC_DENS (:,:),   & ! [OUT]
+                             SFC_PRES (:,:)    ) ! [OUT]
+
+       call HIST_in( SFC_DENS  (:,:),      'SFC_DENS',   'surface atmospheric density',       'kg/m3', TIME_DTSEC )
+       call HIST_in( SFC_PRES  (:,:),      'SFC_PRES',   'surface atmospheric pressure',      'Pa',    TIME_DTSEC )
+
        ! if coupler is disabled, SFC_TEMP, SFC_albedo is set in ATMOS_PHY_SF_vars
-       call HIST_in( SFC_TEMP  (:,:),      'SFC_TEMP',   'surface skin temperature (merged)', 'K',    TIME_DTSEC )
-       call HIST_in( SFC_albedo(:,:,I_LW), 'SFC_ALB_LW', 'surface albedo (longwave, merged)', '0-1',  TIME_DTSEC )
-       call HIST_in( SFC_albedo(:,:,I_SW), 'SFC_ALB_SW', 'surface albedo (shortwave,merged)', '0-1',  TIME_DTSEC )
+       call HIST_in( SFC_TEMP  (:,:),      'SFC_TEMP',   'surface skin temperature (merged)', 'K',     TIME_DTSEC )
+       call HIST_in( SFC_albedo(:,:,I_LW), 'SFC_ALB_LW', 'surface albedo (longwave, merged)', '0-1',   TIME_DTSEC )
+       call HIST_in( SFC_albedo(:,:,I_SW), 'SFC_ALB_SW', 'surface albedo (shortwave,merged)', '0-1',   TIME_DTSEC )
     endif
 
     return
