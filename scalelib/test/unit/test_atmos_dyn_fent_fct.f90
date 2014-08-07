@@ -9,9 +9,13 @@ module test_atmos_dyn_fent_fct
      ATMOS_DYN
   use dc_test, only: &
      AssertEqual, &
+     AssertGreaterThan, &
      AssertLessThan
   use scale_stdio, only: &
-       H_SHORT
+     H_SHORT
+  use scale_comm, only: &
+     COMM_vars8, &
+     COMM_wait
   use scale_grid, only: &
        CZ   => GRID_CZ,   &
        FZ   => GRID_FZ,   &
@@ -96,7 +100,7 @@ module test_atmos_dyn_fent_fct
   character(len=H_SHORT) :: DYN_TYPE
 
   integer :: k, i, j, iq
-  character(len=7) :: message
+  character(len=11) :: message
   !-----------------------------------------------------------------------------
 contains
 
@@ -224,6 +228,10 @@ contains
   call test_const
 
   call test_conserve
+
+  call test_cwc
+
+  call test_fctminmax
 
 end subroutine test_atmos_dyn_fent_fct_run
 !=============================================================================
@@ -364,9 +372,6 @@ subroutine test_const
 end subroutine test_const
 
 subroutine test_conserve
-  use scale_comm, only: &
-     COMM_vars8, &
-     COMM_wait
 
   real(RP) :: total_o, total
 
@@ -441,7 +446,7 @@ subroutine test_conserve
   end do
   end do
   end do
-  call AssertEqual("DENS", total_o, total, RP*2-2, 10)
+  call AssertEqual("DENS", total_o, total, RP*2-2, -10)
 
   total_o = 0.0_RP
   total = 0.0_RP
@@ -453,7 +458,7 @@ subroutine test_conserve
   end do
   end do
   end do
-  call AssertEqual("MOMX", total_o, total, RP*2-2, 10)
+  call AssertEqual("MOMX", total_o, total, RP*2-2, -10)
 
   total_o = 0.0_RP
   total = 0.0_RP
@@ -465,7 +470,7 @@ subroutine test_conserve
   end do
   end do
   end do
-  call AssertEqual("MOMY", total_o, total, RP*2-2, 10)
+  call AssertEqual("MOMY", total_o, total, RP*2-2, -10)
 
   total_o = 0.0_RP
   total = 0.0_RP
@@ -477,7 +482,7 @@ subroutine test_conserve
   end do
   end do
   end do
-  call AssertEqual("RHOT", total_o, total, RP*2-2, 10)
+  call AssertEqual("RHOT", total_o, total, RP*2-2, -10)
 
   message = "iq = ??"
   do iq = 1, QA
@@ -492,11 +497,165 @@ subroutine test_conserve
      end do
      end do
      end do
-     call AssertEqual(message, total_o, total, RP*2-2, 10)
+     call AssertEqual(message, total_o, total, RP*2-2, -10)
   end do
 
 end subroutine test_conserve
 
+subroutine test_cwc
+  real(RP), parameter :: POTT = 300._RP
+  real(RP), parameter :: Q = 0.01_RP
+  real(RP) :: answer(KA,IA,JA)
+
+  write(*,*) "Test CWC"
+
+  call random_number(DENS)
+  DENS(:,:,:) = DENS(:,:,:)*0.1 + 1.0_RP
+  call random_number(MOMZ)
+  call random_number(MOMX)
+  call random_number(MOMY)
+
+  RHOT(:,:,:) = POTT * DENS(:,:,:)
+  QTRC(:,:,:,:) = Q
+
+  REF_dens(:,:,:) = 1.0_RP
+  REF_pott(:,:,:) = POTT
+  REF_qv(:,:,:)   = Q
+  REF_pres(:,:,:) = 1000._RP
+
+  DAMP_var  (:,:,:,:) = -9.999E30_RP
+  DAMP_alpha(:,:,:,:) = 0.0_RP
+
+  call COMM_vars8( DENS(:,:,:), 1 )
+  call COMM_vars8( MOMZ(:,:,:), 2 )
+  call COMM_vars8( MOMX(:,:,:), 3 )
+  call COMM_vars8( MOMY(:,:,:), 4 )
+  call COMM_vars8( RHOT(:,:,:), 5 )
+  call COMM_wait ( DENS(:,:,:), 1 )
+  call COMM_wait ( MOMZ(:,:,:), 2 )
+  call COMM_wait ( MOMX(:,:,:), 3 )
+  call COMM_wait ( MOMY(:,:,:), 4 )
+  call COMM_wait ( RHOT(:,:,:), 5 )
+
+  do iq = 1, QA
+     call COMM_vars8( QTRC(:,:,:,iq), iq )
+  enddo
+  do iq = 1, QA
+     call COMM_wait ( QTRC(:,:,:,iq), iq )
+  enddo
+
+  call ATMOS_DYN( &
+       DENS, MOMZ, MOMX, MOMY, RHOT, QTRC,          & ! (inout)
+       DENS_av, MOMZ_av, MOMX_av, MOMY_av, RHOT_av, QTRC_av, & ! (out)
+       DENS_tp, MOMZ_tp, MOMX_tp, MOMY_tp, RHOT_tp, QTRC_tp, & ! (in)
+       CDZ, CDX, CDY, FDZ, FDX, FDY,                & ! (in)
+       RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,          & ! (in)
+       PHI, GSQRT, J13G, J23G, J33G,                & ! (in)
+       AQ_CV,                                       & ! (in)
+       REF_dens, REF_pott, REF_qv, REF_pres,        & ! (in)
+       nd_coef, nd_coef, nd_order, nd_sfc_fact, nd_use_rs, & ! (in)
+       DAMP_var, DAMP_alpha,                        & ! (in)
+       divdmp_coef,                                 & ! (in)
+       flag_fct_rho, flag_fct_momentum, flag_fct_t, & ! (in)
+       .false.,                                     & ! (in)
+       1.0_DP, 1.0_DP, 1                            ) ! (in)
+
+  answer(:,:,:) = POTT
+  call AssertEqual("POTT", answer(KS:KE,IS:IE,JS:JE), RHOT(KS:KE,IS:IE,JS:JE)/DENS(KS:KE,IS:IE,JS:JE), RP*2-2, -10)
+
+  answer(:,:,:) = Q
+  message = "iq = ??"
+  do iq = 1, QA
+     write(message(6:7), "(i2)") iq
+     call AssertEqual(message, answer(KS:KE,IS:IE,JS:JE), QTRC(KS:KE,IS:IE,JS:JE,iq), RP*2-2, -10)
+  end do
+
+end subroutine test_cwc
+
+subroutine test_fctminmax
+  real(RP), parameter :: POTT_MAX = 350_RP
+  real(RP), parameter :: POTT_MIN = 300_RP
+  real(RP), parameter :: Q_MAX = 0.1_RP
+  real(RP), parameter :: Q_MIN = 0_RP
+  real(RP) :: MINMAX(KA,IA,JA)
+  real(RP) :: epsilon
+  integer :: k, i, j
+
+  epsilon = 0.1_RP**(RP*2-2)
+
+  write(*,*) "Test FCT"
+
+  call random_number(DENS)
+  DENS(:,:,:) = DENS(:,:,:)*0.1 + 1.0_RP
+  call random_number(MOMZ)
+  call random_number(MOMX)
+  call random_number(MOMY)
+
+  RHOT(:,:,:) = POTT_MIN * DENS(:,:,:)
+  QTRC(:,:,:,:) = Q_MIN
+  do j = JS, JS+JMAX/2
+  do i = IS, IS+IMAX/2
+  do k = KS, KS+KMAX/2
+     RHOT(k,i,j) = POTT_MAX * DENS(k,i,j)
+     QTRC(k,i,j,:) = Q_MAX
+  end do
+  end do
+  end do
+
+  REF_dens(:,:,:) = 1.0_RP
+  REF_pott(:,:,:) = POTT_MIN
+  REF_qv(:,:,:)   = Q_MIN
+  REF_pres(:,:,:) = 1000._RP
+
+  DAMP_var  (:,:,:,:) = -9.999E30_RP
+  DAMP_alpha(:,:,:,:) = 0.0_RP
+
+  call COMM_vars8( DENS(:,:,:), 1 )
+  call COMM_vars8( MOMZ(:,:,:), 2 )
+  call COMM_vars8( MOMX(:,:,:), 3 )
+  call COMM_vars8( MOMY(:,:,:), 4 )
+  call COMM_vars8( RHOT(:,:,:), 5 )
+  call COMM_wait ( DENS(:,:,:), 1 )
+  call COMM_wait ( MOMZ(:,:,:), 2 )
+  call COMM_wait ( MOMX(:,:,:), 3 )
+  call COMM_wait ( MOMY(:,:,:), 4 )
+  call COMM_wait ( RHOT(:,:,:), 5 )
+
+  do iq = 1, QA
+     call COMM_vars8( QTRC(:,:,:,iq), iq )
+  enddo
+  do iq = 1, QA
+     call COMM_wait ( QTRC(:,:,:,iq), iq )
+  enddo
+
+  call ATMOS_DYN( &
+       DENS, MOMZ, MOMX, MOMY, RHOT, QTRC,          & ! (inout)
+       DENS_av, MOMZ_av, MOMX_av, MOMY_av, RHOT_av, QTRC_av, & ! (out)
+       DENS_tp, MOMZ_tp, MOMX_tp, MOMY_tp, RHOT_tp, QTRC_tp, & ! (in)
+       CDZ, CDX, CDY, FDZ, FDX, FDY,                & ! (in)
+       RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,          & ! (in)
+       PHI, GSQRT, J13G, J23G, J33G,                & ! (in)
+       AQ_CV,                                       & ! (in)
+       REF_dens, REF_pott, REF_qv, REF_pres,        & ! (in)
+       0.0_RP, 0.0_RP, nd_order, nd_sfc_fact, nd_use_rs, & ! (in)
+       DAMP_var, DAMP_alpha,                        & ! (in)
+       divdmp_coef,                                 & ! (in)
+       flag_fct_rho, flag_fct_momentum, flag_fct_t, & ! (in)
+       .false.,                                     & ! (in)
+       1.0_DP, 1.0_DP, 1                            ) ! (in)
+
+  message = "iq = ??"
+  do iq = 1, QA
+     write(message(6:7), "(i2)") iq
+     write(message(9:11),"(a3)") "MAX"
+     MINMAX(:,:,:) = Q_MAX * ( 1_RP + epsilon )
+     call AssertLessThan(message, MINMAX(KS:KE,IS:IE,JS:JE), QTRC(KS:KE,IS:IE,JS:JE,iq))
+     write(message(9:11),"(a3)") "MIN"
+     MINMAX(:,:,:) = Q_MIN - epsilon
+     call AssertGreaterThan(message, MINMAX(KS:KE,IS:IE,JS:JE), QTRC(KS:KE,IS:IE,JS:JE,iq))
+  end do
+
+end subroutine test_fctminmax
 
 
 ! private

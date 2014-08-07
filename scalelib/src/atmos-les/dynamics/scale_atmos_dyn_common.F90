@@ -1378,7 +1378,7 @@ contains
   !> Flux Correction Transport Limiter
   subroutine ATMOS_DYN_fct( &
        qflx_anti,           &
-       phi_in, DENS,        &
+       phi_in, DENS0, DENS, &
        qflx_hi, qflx_lo,    &
        rdz, rdx, rdy,       &
        GSQRT, dt            )
@@ -1396,7 +1396,8 @@ contains
     real(RP), intent(out) :: qflx_anti(KA,IA,JA,3)
 
     real(RP), intent(in) :: phi_in(KA,IA,JA) ! physical quantity
-    real(RP), intent(in) :: DENS(KA,IA,JA)
+    real(RP), intent(in) :: DENS0(KA,IA,JA)
+    real(RP), intent(in) :: DENS (KA,IA,JA)
 
     real(RP), intent(in) :: qflx_hi(KA,IA,JA,3)
     real(RP), intent(in) :: qflx_lo(KA,IA,JA,3)
@@ -1511,11 +1512,11 @@ contains
           call CHECK( __LINE__, qflx_lo(k  ,i  ,j  ,YDIR) )
           call CHECK( __LINE__, qflx_lo(k  ,i  ,j-1,YDIR) )
 #endif
-          phi_lo(k,i,j) = phi_in(k,i,j) &
+          phi_lo(k,i,j) = ( phi_in(k,i,j) * DENS0(k,i,j) &
                + dt * ( - ( ( qflx_lo(k,i,j,ZDIR)-qflx_lo(k-1,i  ,j  ,ZDIR) ) * RDZ(k) &
                           + ( qflx_lo(k,i,j,XDIR)-qflx_lo(k  ,i-1,j  ,XDIR) ) * RDX(i) &
-                          + ( qflx_lo(k,i,j,YDIR)-qflx_lo(k  ,i  ,j-1,YDIR) ) * RDY(j) ) &
-                      ) / ( GSQRT(k,i,j) * DENS(k,i,j) )
+                          + ( qflx_lo(k,i,j,YDIR)-qflx_lo(k  ,i  ,j-1,YDIR) ) * RDY(j) ) / GSQRT(k,i,j) ) &
+                      ) / DENS(k,i,j)
        enddo
        enddo
        enddo
@@ -1671,14 +1672,14 @@ contains
                       phi_lo(KS  ,i  ,j-1) )
           qmin = min( phi_in(KS  ,i  ,j  ), &
                       phi_in(KS+1,i  ,j  ), &
-                      phi_in(KS  ,i-1,j  ), &
                       phi_in(KS  ,i+1,j  ), &
+                      phi_in(KS  ,i-1,j  ), &
                       phi_in(KS  ,i  ,j+1), &
                       phi_in(KS  ,i  ,j-1), &
                       phi_lo(KS  ,i  ,j  ), &
                       phi_lo(KS+1,i  ,j  ), &
-                      phi_lo(KS  ,i-1,j  ), &
                       phi_lo(KS  ,i+1,j  ), &
+                      phi_lo(KS  ,i-1,j  ), &
                       phi_lo(KS  ,i  ,j+1), &
                       phi_lo(KS  ,i  ,j-1) )
           qjmns(KS,i,j) = ( phi_lo(KS,i,j) - qmin ) * DENS(KS,i,j)

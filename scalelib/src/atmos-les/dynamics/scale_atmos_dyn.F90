@@ -242,6 +242,7 @@ contains
     integer , intent(in)    :: NSTEP_ATMOS_DYN
 
     ! for time integartion
+    real(RP) :: DENS00  (KA,IA,JA) ! saved density before small step loop
     real(RP) :: DENS0   (KA,IA,JA) ! prognostic variables (+0   step)
     real(RP) :: MOMZ0   (KA,IA,JA) !
     real(RP) :: MOMX0   (KA,IA,JA) !
@@ -298,6 +299,7 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '*** Dynamics step: ', NSTEP_ATMOS_DYN, ' small steps'
 
 #ifdef DEBUG
+    DENS00  (:,:,:) = UNDEF
     DENS0   (:,:,:) = UNDEF
     MOMZ0   (:,:,:) = UNDEF
     MOMX0   (:,:,:) = UNDEF
@@ -320,6 +322,8 @@ contains
     qflx_hi(:,:,:,:) = UNDEF
     qflx_lo(:,:,:,:) = UNDEF
 #endif
+
+    DENS00(:,:,:) = DENS(:,:,:)
 
     if ( USE_AVERAGE ) then
        DENS_av(:,:,:) = 0.0_RP
@@ -687,9 +691,8 @@ contains
 #endif
 
        do iq = 1, QA
-          QTRC(:,:,:,iq) = ( QTRC(:,:,:,iq) * DENS0(:,:,:) &
-                           + RHOQ_tp(:,:,:,iq) * dt &
-                           ) / DENS(:,:,:)
+          QTRC(:,:,:,iq) = QTRC(:,:,:,iq) &
+                         + RHOQ_tp(:,:,:,iq) * dt / DENS00(k,i,j)
        end do
 
     enddo ! dynamical steps
@@ -744,7 +747,7 @@ contains
                     * ( diff(k,i,j) & ! rayleigh damping
                       - ( diff(k,i-1,j) + diff(k,i+1,j) + diff(k,i,j-1) + diff(k,i,j+1) - diff(k,i,j)*4.0_RP ) &
                       * 0.125_RP * BND_SMOOTHER_FACT ) ! horizontal smoother
-             RHOQ_t(k,i,j) = damp * DENS(k,i,j)
+             RHOQ_t(k,i,j) = damp * DENS00(k,i,j)
 #ifdef HIST_TEND
              damp_t(k,i,j) = damp
 #endif
@@ -778,7 +781,7 @@ contains
           num_diff_q(:,:,:,:) = 0.0_RP
        else
           call ATMOS_DYN_numfilter_coef_q( num_diff_q(:,:,:,:),                    & ! [OUT]
-                                           DENS, QTRC(:,:,:,iq),                   & ! [IN]
+                                           DENS00, QTRC(:,:,:,iq),                 & ! [IN]
                                            CDZ, CDX, CDY, DT,                      & ! [IN]
                                            REF_qv, iq,                             & ! [IN]
                                            ND_COEF_Q, ND_ORDER, ND_SFC_FACT, ND_USE_RS ) ! [IN]
@@ -874,11 +877,11 @@ contains
        enddo
        enddo
 
-       call ATMOS_DYN_fct( qflx_anti,             & ! (out)
-                           QTRC(:,:,:,iq), DENS,  & ! (in)
-                           qflx_hi, qflx_lo,      & ! (in)
-                           RCDZ, RCDX, RCDY,      & ! (in)
-                           GSQRT(:,:,:,I_XYZ), dt ) ! (in)
+       call ATMOS_DYN_fct( qflx_anti,                    & ! (out)
+                           QTRC(:,:,:,iq), DENS00, DENS, & ! (in)
+                           qflx_hi, qflx_lo,             & ! (in)
+                           RCDZ, RCDX, RCDY,             & ! (in)
+                           GSQRT(:,:,:,I_XYZ), dt        ) ! (in)
 
        do JJS = JS, JE, JBLOCK
        JJE = JJS+JBLOCK-1
@@ -889,14 +892,14 @@ contains
           do j = JJS, JJE
           do i = IIS, IIE
           do k = KS, KE
-             QTRC(k,i,j,iq) = QTRC(k,i,j,iq) &
+             QTRC(k,i,j,iq) = ( QTRC(k,i,j,iq) * DENS00(k,i,j) &
                             + dt * ( - ( ( qflx_hi(k  ,i  ,j  ,ZDIR) - qflx_anti(k  ,i  ,j  ,ZDIR) &
                                          - qflx_hi(k-1,i  ,j  ,ZDIR) + qflx_anti(k-1,i  ,j  ,ZDIR) ) * RCDZ(k) &
                                        + ( qflx_hi(k  ,i  ,j  ,XDIR) - qflx_anti(k  ,i  ,j  ,XDIR) &
                                          - qflx_hi(k  ,i-1,j  ,XDIR) + qflx_anti(k  ,i-1,j  ,XDIR) ) * RCDX(i) &
                                        + ( qflx_hi(k  ,i  ,j  ,YDIR) - qflx_anti(k  ,i  ,j  ,YDIR) &
                                          - qflx_hi(k  ,i  ,j-1,YDIR) + qflx_anti(k  ,i  ,j-1,YDIR) ) * RCDY(j) ) / GSQRT(k,i,j,I_XYZ) &
-                              + RHOQ_t(k,i,j) ) / DENS(k,i,j)
+                              + RHOQ_t(k,i,j) ) ) / DENS(k,i,j)
           enddo
           enddo
           enddo

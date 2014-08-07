@@ -194,6 +194,7 @@ contains
 #ifndef NO_FCT_DYN
     real(RP) :: qflx_lo  (KA,IA,JA,3)
     real(RP) :: qflx_anti(KA,IA,JA,3)
+    real(RP) :: DENS0_uvw(KA,IA,JA)
     real(RP) :: DENS_uvw (KA,IA,JA)
     real(RP) :: one(KA,IA,JA)
 #endif
@@ -556,7 +557,7 @@ contains
     if ( FLAG_FCT_RHO ) then
        one = 1.0_RP
        call ATMOS_DYN_fct( qflx_anti,               & ! (out)
-                           DENS0, one,              & ! (in)
+                           DENS0, one, one,         & ! (in)
                            mflx_hi, qflx_lo,        & ! (in)
                            RCDZ, RCDX, RCDY,        & ! (in)
                            GSQRT(:,:,:,I_XYZ), dtrk ) ! (in)
@@ -581,9 +582,9 @@ contains
              call CHECK( __LINE__, qflx_anti(k  ,i  ,j-1,YDIR) )
 #endif
              DENS_RK(k,i,j) = DENS_RK(k,i,j) &
-                            + dtrk * ( - ( ( qflx_anti(k,i,j,ZDIR) - qflx_anti(k-1,i  ,j  ,ZDIR) ) * RCDZ(k) &
-                                         + ( qflx_anti(k,i,j,XDIR) - qflx_anti(k  ,i-1,j  ,XDIR) ) * RCDX(i) &
-                                         + ( qflx_anti(k,i,j,YDIR) - qflx_anti(k  ,i  ,j-1,YDIR) ) * RCDY(j) ) )
+                            + dtrk * ( ( ( qflx_anti(k,i,j,ZDIR) - qflx_anti(k-1,i  ,j  ,ZDIR) ) * RCDZ(k) &
+                                       + ( qflx_anti(k,i,j,XDIR) - qflx_anti(k  ,i-1,j  ,XDIR) ) * RCDX(i) &
+                                       + ( qflx_anti(k,i,j,YDIR) - qflx_anti(k  ,i  ,j-1,YDIR) ) * RCDY(j) ) )
           enddo
           enddo
           enddo
@@ -603,7 +604,7 @@ contains
           call CHECK( __LINE__, mflx_hi(k,i,j,ZDIR) )
           call CHECK( __LINE__, qflx_anti(k,i,j,ZDIR) )
 #endif
-          mflx_hi(k,i,j,ZDIR) = mflx_hi(k,i,j,ZDIR) + qflx_anti(k,i,j,ZDIR)
+          mflx_hi(k,i,j,ZDIR) = mflx_hi(k,i,j,ZDIR) - qflx_anti(k,i,j,ZDIR)
        enddo
        enddo
        enddo
@@ -619,7 +620,7 @@ contains
           call CHECK( __LINE__, mflx_hi(k,i,j,XDIR) )
           call CHECK( __LINE__, qflx_anti(k,i,j,XDIR) )
 #endif
-          mflx_hi(k,i,j,XDIR) = mflx_hi(k,i,j,XDIR) + qflx_anti(k,i,j,XDIR)
+          mflx_hi(k,i,j,XDIR) = mflx_hi(k,i,j,XDIR) - qflx_anti(k,i,j,XDIR)
        enddo
        enddo
        enddo
@@ -635,7 +636,7 @@ contains
           call CHECK( __LINE__, mflx_hi(k,i,j,YDIR) )
           call CHECK( __LINE__, qflx_anti(k,i,j,YDIR) )
 #endif
-          mflx_hi(k,i,j,YDIR) = mflx_hi(k,i,j,YDIR) + qflx_anti(k,i,j,YDIR)
+          mflx_hi(k,i,j,YDIR) = mflx_hi(k,i,j,YDIR) - qflx_anti(k,i,j,YDIR)
        enddo
        enddo
        enddo
@@ -1033,6 +1034,9 @@ contains
 
     if ( FLAG_FCT_MOMENTUM ) then
 
+       call COMM_vars8( DENS_RK, 1 )
+       call COMM_wait ( DENS_RK, 1 )
+
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -1044,7 +1048,8 @@ contains
        do j = JS-1, JE+1
        do i = IS-1, IE+1
        do k = KS, KE-1
-          DENS_uvw(k,i,j) = 0.5_RP * ( DENS0(k,i,j) + DENS0(k+1,i,j) )
+          DENS0_uvw(k,i,j) = 0.5_RP * ( DENS0(k,i,j) + DENS0(k+1,i,j) )
+          DENS_uvw(k,i,j) = 0.5_RP * ( DENS_RK(k,i,j) + DENS_RK(k+1,i,j) )
        end do
        end do
        end do
@@ -1052,15 +1057,16 @@ contains
        do j = JS-1, JE+1
        do i = IS-1, IE+1
           DENS_uvw(KE,i,j) = DENS_uvw(KE-1,i,j)
+          DENS0_uvw(KE,i,j) = DENS0_uvw(KE-1,i,j)
           VELZ(KE,i,j) = 0.0_RP
        end do
        end do
 
-       call ATMOS_DYN_fct( qflx_anti,               & ! (out)
-                           VELZ, DENS_uvw,          & ! (in)
-                           qflx_hi, qflx_lo,        & ! (in)
-                           RFDZ, RCDX, RCDY,        & ! (in)
-                           GSQRT(:,:,:,I_XYW), dtrk ) ! (in)
+       call ATMOS_DYN_fct( qflx_anti,                 & ! (out)
+                           VELZ, DENS0_uvw, DENS_uvw, & ! (in)
+                           qflx_hi, qflx_lo,          & ! (in)
+                           RFDZ, RCDX, RCDY,          & ! (in)
+                           GSQRT(:,:,:,I_XYW), dtrk   ) ! (in)
 
        do JJS = JS, JE, JBLOCK
        JJE = JJS+JBLOCK-1
@@ -1073,9 +1079,9 @@ contains
           do i = IIS, IIE
           do k = KS, KE-1
              MOMZ_RK(k,i,j) = MOMZ_RK(k,i,j) &
-                            + dtrk * ( - ( ( qflx_anti(k,i,j,ZDIR) - qflx_anti(k-1,i  ,j  ,ZDIR) ) * RFDZ(k) &
-                                         + ( qflx_anti(k,i,j,XDIR) - qflx_anti(k  ,i-1,j  ,XDIR) ) * RCDX(i) &
-                                         + ( qflx_anti(k,i,j,YDIR) - qflx_anti(k  ,i  ,j-1,YDIR) ) * RCDY(j) ) ) / GSQRT(k,i,j,I_XYW)
+                            + dtrk * ( ( ( qflx_anti(k,i,j,ZDIR) - qflx_anti(k-1,i  ,j  ,ZDIR) ) * RFDZ(k) &
+                                       + ( qflx_anti(k,i,j,XDIR) - qflx_anti(k  ,i-1,j  ,XDIR) ) * RCDX(i) &
+                                       + ( qflx_anti(k,i,j,YDIR) - qflx_anti(k  ,i  ,j-1,YDIR) ) * RCDY(j) ) ) / GSQRT(k,i,j,I_XYW)
           enddo
           enddo
           enddo
@@ -1444,16 +1450,17 @@ contains
        do j = JS-1, JE+1
        do i = IS-1, IE+1
        do k = KS, KE
-          DENS_uvw(k,i,j) = 0.5_RP * ( DENS0(k,i,j) + DENS0(k,i+1,j) )
+          DENS0_uvw(k,i,j) = 0.5_RP * ( DENS0(k,i,j) + DENS0(k,i+1,j) )
+          DENS_uvw(k,i,j)  = 0.5_RP * ( DENS_RK(k,i,j) + DENS_RK(k,i+1,j) )
        end do
        end do
        end do
 
-       call ATMOS_DYN_fct( qflx_anti,               & ! (out)
-                           VELX, DENS_uvw,          & ! (in)
-                           qflx_hi, qflx_lo,        & ! (in)
-                           RCDZ, RFDX, RCDY,        & ! (in)
-                           GSQRT(:,:,:,I_UYZ), dtrk ) ! (in)
+       call ATMOS_DYN_fct( qflx_anti,                 & ! (out)
+                           VELX, DENS0_uvw, DENS_uvw, & ! (in)
+                           qflx_hi, qflx_lo,          & ! (in)
+                           RCDZ, RFDX, RCDY,          & ! (in)
+                           GSQRT(:,:,:,I_UYZ), dtrk   ) ! (in)
 
        do JJS = JS, JE, JBLOCK
        JJE = JJS+JBLOCK-1
@@ -1475,9 +1482,9 @@ contains
              call CHECK( __LINE__, qflx_anti(k  ,i  ,j-1,YDIR) )
 #endif
              MOMX_RK(k,i,j) = MOMX_RK(k,i,j) &
-                            + dtrk * ( - ( ( qflx_anti(k,i,j,ZDIR) - qflx_anti(k-1,i  ,j  ,ZDIR) ) * RCDZ(k) &
-                                         + ( qflx_anti(k,i,j,XDIR) - qflx_anti(k  ,i-1,j  ,XDIR) ) * RFDX(i) &
-                                         + ( qflx_anti(k,i,j,YDIR) - qflx_anti(k  ,i  ,j-1,YDIR) ) * RCDY(j) ) ) / GSQRT(k,i,j,I_UYZ)
+                            + dtrk * ( ( ( qflx_anti(k,i,j,ZDIR) - qflx_anti(k-1,i  ,j  ,ZDIR) ) * RCDZ(k) &
+                                       + ( qflx_anti(k,i,j,XDIR) - qflx_anti(k  ,i-1,j  ,XDIR) ) * RFDX(i) &
+                                       + ( qflx_anti(k,i,j,YDIR) - qflx_anti(k  ,i  ,j-1,YDIR) ) * RCDY(j) ) ) / GSQRT(k,i,j,I_UYZ)
           enddo
           enddo
           enddo
@@ -1870,16 +1877,17 @@ contains
        do j = JS-1, JE+1
        do i = IS-1, IE+1
        do k = KS, KE
-          DENS_uvw(k,i,j) = 0.5_RP * ( DENS0(k,i,j) + DENS0(k,i,j+1) )
+          DENS0_uvw(k,i,j) = 0.5_RP * ( DENS0(k,i,j) + DENS0(k,i,j+1) )
+          DENS_uvw(k,i,j) = 0.5_RP * ( DENS_RK(k,i,j) + DENS_RK(k,i,j+1) )
        end do
        end do
        end do
 
-       call ATMOS_DYN_fct( qflx_anti,               & ! (out)
-                           VELY, DENS_uvw,          & ! (in)
-                           qflx_hi, qflx_lo,        & ! (in)
-                           RCDZ, RCDX, RFDY,        & ! (in)
-                           GSQRT(:,:,:,I_XVZ), dtrk ) ! (in)
+       call ATMOS_DYN_fct( qflx_anti,                 & ! (out)
+                           VELY, DENS0_uvw, DENS_uvw, & ! (in)
+                           qflx_hi, qflx_lo,          & ! (in)
+                           RCDZ, RCDX, RFDY,          & ! (in)
+                           GSQRT(:,:,:,I_XVZ), dtrk   ) ! (in)
 
        do JJS = JS, JE, JBLOCK
        JJE = JJS+JBLOCK-1
@@ -1901,9 +1909,9 @@ contains
              call CHECK( __LINE__, qflx_anti(k  ,i  ,j-1,YDIR) )
 #endif
              MOMY_RK(k,i,j) = MOMY_RK(k,i,j) &
-                            + dtrk * ( - ( ( qflx_anti(k,i,j,ZDIR) - qflx_anti(k-1,i  ,j  ,ZDIR) ) * RCDZ(k) &
-                                         + ( qflx_anti(k,i,j,XDIR) - qflx_anti(k  ,i-1,j  ,XDIR) ) * RCDX(i) &
-                                         + ( qflx_anti(k,i,j,YDIR) - qflx_anti(k  ,i  ,j-1,YDIR) ) * RFDY(j) ) ) / GSQRT(k,i,j,I_XVZ)
+                            + dtrk * ( ( ( qflx_anti(k,i,j,ZDIR) - qflx_anti(k-1,i  ,j  ,ZDIR) ) * RCDZ(k) &
+                                       + ( qflx_anti(k,i,j,XDIR) - qflx_anti(k  ,i-1,j  ,XDIR) ) * RCDX(i) &
+                                       + ( qflx_anti(k,i,j,YDIR) - qflx_anti(k  ,i  ,j-1,YDIR) ) * RFDY(j) ) ) / GSQRT(k,i,j,I_XVZ)
           enddo
           enddo
           enddo
@@ -2065,16 +2073,29 @@ contains
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
 
+    enddo
+    enddo
+
 #ifndef NO_FCT_DYN
-       if ( FLAG_FCT_T ) then
 
-          call COMM_vars8( mflx_hi(:,:,:,ZDIR), 1 )
-          call COMM_vars8( mflx_hi(:,:,:,XDIR), 2 )
-          call COMM_vars8( mflx_hi(:,:,:,YDIR), 3 )
-          call COMM_wait ( mflx_hi(:,:,:,ZDIR), 1 )
-          call COMM_wait ( mflx_hi(:,:,:,XDIR), 2 )
-          call COMM_wait ( mflx_hi(:,:,:,YDIR), 3 )
+    if ( FLAG_FCT_T ) then
 
+       call COMM_vars8( mflx_hi(:,:,:,ZDIR), 1 )
+       call COMM_vars8( mflx_hi(:,:,:,XDIR), 2 )
+       call COMM_vars8( mflx_hi(:,:,:,YDIR), 3 )
+       call COMM_wait ( mflx_hi(:,:,:,ZDIR), 1 )
+       call COMM_wait ( mflx_hi(:,:,:,XDIR), 2 )
+       call COMM_wait ( mflx_hi(:,:,:,YDIR), 3 )
+
+       if ( .not. FLAG_FCT_MOMENTUM ) then
+          call COMM_vars8( DENS_RK, 1 )
+          call COMM_wait ( DENS_RK, 1 )
+       end if
+
+       do JJS = JS, JE, JBLOCK
+       JJE = JJS+JBLOCK-1
+       do IIS = IS, IE, IBLOCK
+       IIE = IIS+IBLOCK-1
           ! monotonic flux
           ! at (x, y, interface)
           !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
@@ -2142,16 +2163,20 @@ contains
           k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
 
-       endif
-#endif
+       enddo
+       enddo
 
-    enddo
-    enddo
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+       do j = JS-1, JE+1
+       do i = IS-1, IE+1
+       do k = KS, KE
+          POTT(k,i,j) = RHOT0(k,i,j) / DENS0(k,i,j)
+       enddo
+       enddo
+       enddo
 
-#ifndef NO_FCT_DYN
-    if ( FLAG_FCT_T ) then
        call ATMOS_DYN_fct( qflx_anti,               & ! (out)
-                           POTT, DENS0,             &
+                           POTT, DENS0, DENS_RK,    & ! (out)
                            qflx_hi, qflx_lo,        & ! (in)
                            RCDZ, RCDX, RCDY,        & ! (in)
                            GSQRT(:,:,:,I_XYZ), dtrk ) ! (in)
@@ -2176,9 +2201,9 @@ contains
              call CHECK( __LINE__, qflx_anti(k  ,i  ,j-1,YDIR) )
 #endif
              RHOT_RK(k,i,j) = RHOT_RK(k,i,j) &
-                            + dtrk * ( - ( ( qflx_anti(k,i,j,ZDIR) - qflx_anti(k-1,i  ,j  ,ZDIR) ) * RCDZ(k) &
-                                         + ( qflx_anti(k,i,j,XDIR) - qflx_anti(k  ,i-1,j  ,XDIR) ) * RCDX(i) &
-                                         + ( qflx_anti(k,i,j,YDIR) - qflx_anti(k  ,i  ,j-1,YDIR) ) * RCDY(j) ) ) / GSQRT(k,i,j,I_XYZ)
+                            + dtrk * ( ( qflx_anti(k,i,j,ZDIR) - qflx_anti(k-1,i  ,j  ,ZDIR) ) * RCDZ(k) &
+                                     + ( qflx_anti(k,i,j,XDIR) - qflx_anti(k  ,i-1,j  ,XDIR) ) * RCDX(i) &
+                                     + ( qflx_anti(k,i,j,YDIR) - qflx_anti(k  ,i  ,j-1,YDIR) ) * RCDY(j) ) / GSQRT(k,i,j,I_XYZ)
           enddo
           enddo
           enddo
