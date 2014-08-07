@@ -249,7 +249,7 @@ contains
          MOMX_tp, &
          MOMY_tp, &
          RHOT_tp, &
-         QTRC_tp
+         RHOQ_tp
     use scale_grid, only: &
          RCDZ => GRID_RCDZ, &
          RFDZ => GRID_RFDZ, &
@@ -464,7 +464,7 @@ contains
              do j = JJS, JJE
              do i = IIS, IIE
              do k = KS, KE-1
-                QTRC_tp(k,i,j,iq) = QTRC_tp(k,i,j,iq) &
+                RHOQ_tp(k,i,j,iq) = RHOQ_tp(k,i,j,iq) &
                      + QV_LS(k,1) * Q_rate(k,i,j,iq) &
                      - MOMZ_LS(k,1) * ( QTRC(k+1,i,j,iq) - QTRC(k,i,j,iq) ) * RFDZ(k)
              enddo
@@ -473,7 +473,7 @@ contains
              !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
              do j = JJS, JJE
              do i = IIS, IIE
-                QTRC_tp(KE,i,j,iq) = QTRC_tp(KE,i,j,iq) &
+                RHOQ_tp(KE,i,j,iq) = RHOQ_tp(KE,i,j,iq) &
                      + QV_LS(KE,1) * Q_rate(KE,i,j,iq) &
                      - MOMZ_LS(KE,1) * ( QTRC(KE,i,j,iq) - QTRC(KE-1,i,j,iq) ) * RFDZ(KE-1)
              enddo
