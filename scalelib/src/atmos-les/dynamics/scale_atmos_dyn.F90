@@ -279,7 +279,6 @@ contains
     real(RP) :: num_diff_q(KA,IA,JA,3)
 
     ! For tracer advection
-    real(RP) :: RHOQ     (KA,IA,JA)    ! rho(previous) * phi(previous)
     real(RP) :: RHOQ_t   (KA,IA,JA)    ! tendency
     real(RP) :: mflx_hi(KA,IA,JA,3)  ! rho * vel(x,y,z) @ (u,v,w)-face high order
     real(RP) :: mflx_av(KA,IA,JA,3)  ! rho * vel(x,y,z) @ (u,v,w)-face average
@@ -313,8 +312,6 @@ contains
     MOMX_RK2(:,:,:) = UNDEF
     MOMY_RK2(:,:,:) = UNDEF
     RHOT_RK2(:,:,:) = UNDEF
-
-    RHOQ    (:,:,:) = UNDEF
 
     num_diff (:,:,:,:,:) = UNDEF
 
@@ -876,19 +873,11 @@ contains
        enddo
        enddo
 
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       do j = JS-1, JE+1
-       do i = IS-1, IE+1
-       do k = KS, KE
-          RHOQ(k,i,j) = QTRC(k,i,j,iq) * DENS(k,i,j)
-       enddo
-       enddo
-       enddo
-
-       call ATMOS_DYN_fct( qflx_anti,              & ! (out)
-                           RHOQ, qflx_hi, qflx_lo, & ! (in)
-                           RCDZ, RCDX, RCDY,       & ! (in)
-                           GSQRT, dt               ) ! (in)
+       call ATMOS_DYN_fct( qflx_anti,             & ! (out)
+                           QTRC(:,:,:,iq), DENS,  & ! (in)
+                           qflx_hi, qflx_lo,      & ! (in)
+                           RCDZ, RCDX, RCDY,      & ! (in)
+                           GSQRT(:,:,:,I_XYZ), dt ) ! (in)
 
        do JJS = JS, JE, JBLOCK
        JJE = JJS+JBLOCK-1
@@ -899,16 +888,14 @@ contains
           do j = JJS, JJE
           do i = IIS, IIE
           do k = KS, KE
-             QTRC(k,i,j,iq) = ( RHOQ(k,i,j) &
-                              + dt * ( - ( ( qflx_hi(k  ,i  ,j  ,ZDIR) + qflx_anti(k  ,i  ,j  ,ZDIR) &
-                                           - qflx_hi(k-1,i  ,j  ,ZDIR) - qflx_anti(k-1,i  ,j  ,ZDIR) ) * RCDZ(k) &
-                                         + ( qflx_hi(k  ,i  ,j  ,XDIR) + qflx_anti(k  ,i  ,j  ,XDIR) &
-                                           - qflx_hi(k  ,i-1,j  ,XDIR) - qflx_anti(k  ,i-1,j  ,XDIR) ) * RCDX(i) &
-                                         + ( qflx_hi(k  ,i  ,j  ,YDIR) + qflx_anti(k  ,i  ,j  ,YDIR) &
-                                           - qflx_hi(k  ,i  ,j-1,YDIR) - qflx_anti(k  ,i  ,j-1,YDIR) ) * RCDY(j) ) &
-                                     ) / GSQRT(k,i,j,I_XYZ) &
-                              + dt * RHOQ_t(k,i,j) &
-                              ) / DENS(k,i,j)
+             QTRC(k,i,j,iq) = QTRC(k,i,j,iq) &
+                            + dt * ( - ( ( qflx_hi(k  ,i  ,j  ,ZDIR) - qflx_anti(k  ,i  ,j  ,ZDIR) &
+                                         - qflx_hi(k-1,i  ,j  ,ZDIR) + qflx_anti(k-1,i  ,j  ,ZDIR) ) * RCDZ(k) &
+                                       + ( qflx_hi(k  ,i  ,j  ,XDIR) - qflx_anti(k  ,i  ,j  ,XDIR) &
+                                         - qflx_hi(k  ,i-1,j  ,XDIR) + qflx_anti(k  ,i-1,j  ,XDIR) ) * RCDX(i) &
+                                       + ( qflx_hi(k  ,i  ,j  ,YDIR) - qflx_anti(k  ,i  ,j  ,YDIR) &
+                                         - qflx_hi(k  ,i  ,j-1,YDIR) + qflx_anti(k  ,i  ,j-1,YDIR) ) * RCDY(j) ) / GSQRT(k,i,j,I_XYZ) &
+                              + RHOQ_t(k,i,j) ) / DENS(k,i,j)
           enddo
           enddo
           enddo

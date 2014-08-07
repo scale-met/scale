@@ -191,8 +191,12 @@ contains
 
     ! flux
     real(RP) :: qflx_hi  (KA,IA,JA,3)
+#ifndef NO_FCT_DYN
     real(RP) :: qflx_lo  (KA,IA,JA,3)
     real(RP) :: qflx_anti(KA,IA,JA,3)
+    real(RP) :: DENS_uvw (KA,IA,JA)
+    real(RP) :: one(KA,IA,JA)
+#endif
 
     real(RP) :: sw
 
@@ -550,10 +554,12 @@ contains
     enddo
 
     if ( FLAG_FCT_RHO ) then
+       one = 1.0_RP
        call ATMOS_DYN_fct( qflx_anti,               & ! (out)
-                           DENS0, mflx_hi, qflx_lo, & ! (in)
+                           DENS0, one,              & ! (in)
+                           mflx_hi, qflx_lo,        & ! (in)
                            RCDZ, RCDX, RCDY,        & ! (in)
-                           GSQRT, dtrk              ) ! (in)
+                           GSQRT(:,:,:,I_XYZ), dtrk ) ! (in)
 
        do JJS = JS, JE, JBLOCK
        JJE = JJS+JBLOCK-1
@@ -1027,10 +1033,34 @@ contains
 
     if ( FLAG_FCT_MOMENTUM ) then
 
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          qflx_hi(k,i,j,ZDIR) = qflx_hi(k,i,j,ZDIR) + qflx_J13(k,i,j) + qflx_J23(k,i,j)
+       end do
+       end do
+       end do
+
+       do j = JS-1, JE+1
+       do i = IS-1, IE+1
+       do k = KS, KE-1
+          DENS_uvw(k,i,j) = 0.5_RP * ( DENS0(k,i,j) + DENS0(k+1,i,j) )
+       end do
+       end do
+       end do
+
+       do j = JS-1, JE+1
+       do i = IS-1, IE+1
+          DENS_uvw(KE,i,j) = DENS_uvw(KE-1,i,j)
+          VELZ(KE,i,j) = 0.0_RP
+       end do
+       end do
+
        call ATMOS_DYN_fct( qflx_anti,               & ! (out)
-                           MOMZ0, qflx_hi, qflx_lo, & ! (in)
+                           VELZ, DENS_uvw,          & ! (in)
+                           qflx_hi, qflx_lo,        & ! (in)
                            RFDZ, RCDX, RCDY,        & ! (in)
-                           GSQRT, dtrk              ) ! (in)
+                           GSQRT(:,:,:,I_XYW), dtrk ) ! (in)
 
        do JJS = JS, JE, JBLOCK
        JJE = JJS+JBLOCK-1
@@ -1045,7 +1075,7 @@ contains
              MOMZ_RK(k,i,j) = MOMZ_RK(k,i,j) &
                             + dtrk * ( - ( ( qflx_anti(k,i,j,ZDIR) - qflx_anti(k-1,i  ,j  ,ZDIR) ) * RFDZ(k) &
                                          + ( qflx_anti(k,i,j,XDIR) - qflx_anti(k  ,i-1,j  ,XDIR) ) * RCDX(i) &
-                                         + ( qflx_anti(k,i,j,YDIR) - qflx_anti(k  ,i  ,j-1,YDIR) ) * RCDY(j) ) )
+                                         + ( qflx_anti(k,i,j,YDIR) - qflx_anti(k  ,i  ,j-1,YDIR) ) * RCDY(j) ) ) / GSQRT(k,i,j,I_XYW)
           enddo
           enddo
           enddo
@@ -1403,10 +1433,27 @@ contains
 
     if ( FLAG_FCT_MOMENTUM ) then
 
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          qflx_hi(k,i,j,ZDIR) = qflx_hi(k,i,j,ZDIR) + qflx_J13(k,i,j) + qflx_J23(k,i,j)
+       end do
+       end do
+       end do
+
+       do j = JS-1, JE+1
+       do i = IS-1, IE+1
+       do k = KS, KE
+          DENS_uvw(k,i,j) = 0.5_RP * ( DENS0(k,i,j) + DENS0(k,i+1,j) )
+       end do
+       end do
+       end do
+
        call ATMOS_DYN_fct( qflx_anti,               & ! (out)
-                           MOMX0, qflx_hi, qflx_lo, & ! (in)
+                           VELX, DENS_uvw,          & ! (in)
+                           qflx_hi, qflx_lo,        & ! (in)
                            RCDZ, RFDX, RCDY,        & ! (in)
-                           GSQRT, dtrk              ) ! (in)
+                           GSQRT(:,:,:,I_UYZ), dtrk ) ! (in)
 
        do JJS = JS, JE, JBLOCK
        JJE = JJS+JBLOCK-1
@@ -1430,7 +1477,7 @@ contains
              MOMX_RK(k,i,j) = MOMX_RK(k,i,j) &
                             + dtrk * ( - ( ( qflx_anti(k,i,j,ZDIR) - qflx_anti(k-1,i  ,j  ,ZDIR) ) * RCDZ(k) &
                                          + ( qflx_anti(k,i,j,XDIR) - qflx_anti(k  ,i-1,j  ,XDIR) ) * RFDX(i) &
-                                         + ( qflx_anti(k,i,j,YDIR) - qflx_anti(k  ,i  ,j-1,YDIR) ) * RCDY(j) ) )
+                                         + ( qflx_anti(k,i,j,YDIR) - qflx_anti(k  ,i  ,j-1,YDIR) ) * RCDY(j) ) ) / GSQRT(k,i,j,I_UYZ)
           enddo
           enddo
           enddo
@@ -1812,10 +1859,27 @@ contains
 
     if ( FLAG_FCT_MOMENTUM ) then
 
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          qflx_hi(k,i,j,ZDIR) = qflx_hi(k,i,j,ZDIR) + qflx_J13(k,i,j) + qflx_J23(k,i,j)
+       end do
+       end do
+       end do
+
+       do j = JS-1, JE+1
+       do i = IS-1, IE+1
+       do k = KS, KE
+          DENS_uvw(k,i,j) = 0.5_RP * ( DENS0(k,i,j) + DENS0(k,i,j+1) )
+       end do
+       end do
+       end do
+
        call ATMOS_DYN_fct( qflx_anti,               & ! (out)
-                           MOMY0, qflx_hi, qflx_lo, & ! (in)
+                           VELY, DENS_uvw,          & ! (in)
+                           qflx_hi, qflx_lo,        & ! (in)
                            RCDZ, RCDX, RFDY,        & ! (in)
-                           GSQRT, dtrk              ) ! (in)
+                           GSQRT(:,:,:,I_XVZ), dtrk ) ! (in)
 
        do JJS = JS, JE, JBLOCK
        JJE = JJS+JBLOCK-1
@@ -1839,7 +1903,7 @@ contains
              MOMY_RK(k,i,j) = MOMY_RK(k,i,j) &
                             + dtrk * ( - ( ( qflx_anti(k,i,j,ZDIR) - qflx_anti(k-1,i  ,j  ,ZDIR) ) * RCDZ(k) &
                                          + ( qflx_anti(k,i,j,XDIR) - qflx_anti(k  ,i-1,j  ,XDIR) ) * RCDX(i) &
-                                         + ( qflx_anti(k,i,j,YDIR) - qflx_anti(k  ,i  ,j-1,YDIR) ) * RFDY(j) ) )
+                                         + ( qflx_anti(k,i,j,YDIR) - qflx_anti(k  ,i  ,j-1,YDIR) ) * RFDY(j) ) ) / GSQRT(k,i,j,I_XVZ)
           enddo
           enddo
           enddo
@@ -2087,9 +2151,10 @@ contains
 #ifndef NO_FCT_DYN
     if ( FLAG_FCT_T ) then
        call ATMOS_DYN_fct( qflx_anti,               & ! (out)
-                           RHOT0, qflx_hi, qflx_lo, & ! (in)
+                           POTT, DENS0,             &
+                           qflx_hi, qflx_lo,        & ! (in)
                            RCDZ, RCDX, RCDY,        & ! (in)
-                           GSQRT, dtrk              ) ! (in)
+                           GSQRT(:,:,:,I_XYZ), dtrk ) ! (in)
 
        do JJS = JS, JE, JBLOCK
        JJE = JJS+JBLOCK-1
@@ -2113,7 +2178,7 @@ contains
              RHOT_RK(k,i,j) = RHOT_RK(k,i,j) &
                             + dtrk * ( - ( ( qflx_anti(k,i,j,ZDIR) - qflx_anti(k-1,i  ,j  ,ZDIR) ) * RCDZ(k) &
                                          + ( qflx_anti(k,i,j,XDIR) - qflx_anti(k  ,i-1,j  ,XDIR) ) * RCDX(i) &
-                                         + ( qflx_anti(k,i,j,YDIR) - qflx_anti(k  ,i  ,j-1,YDIR) ) * RCDY(j) ) )
+                                         + ( qflx_anti(k,i,j,YDIR) - qflx_anti(k  ,i  ,j-1,YDIR) ) * RCDY(j) ) ) / GSQRT(k,i,j,I_XYZ)
           enddo
           enddo
           enddo
