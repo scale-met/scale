@@ -137,7 +137,7 @@ contains
        J13G, J23G, J33G,                                     &
        AQ_CV,                                                &
        REF_dens, REF_pott, REF_qv, REF_pres,                 &
-       ND_COEF, ND_ORDER, ND_SFC_FACT, ND_USE_RS,            &
+       ND_COEF, ND_COEF_Q, ND_ORDER, ND_SFC_FACT, ND_USE_RS, &
        DAMP_var, DAMP_alpha,                                 &
        divdmp_coef,                                          &
        FLAG_FCT_RHO, FLAG_FCT_MOMENTUM, FLAG_FCT_T,          &
@@ -223,6 +223,7 @@ contains
     real(RP), intent(in)    :: REF_qv  (KA,IA,JA)
     real(RP), intent(in)    :: REF_pres(KA,IA,JA)   !< reference pressure
     real(RP), intent(in)    :: ND_COEF
+    real(RP), intent(in)    :: ND_COEF_Q
     integer,  intent(in)    :: ND_ORDER
     real(RP), intent(in)    :: ND_SFC_FACT
     logical,  intent(in)    :: ND_USE_RS
@@ -773,14 +774,14 @@ contains
        call COMM_vars8( RHOQ_t(:,:,:), 5+iq )
        call COMM_wait ( RHOQ_t(:,:,:), 5+iq )
 
-       if ( ND_COEF == 0.0_RP ) then
+       if ( ND_COEF_Q == 0.0_RP ) then
           num_diff_q(:,:,:,:) = 0.0_RP
        else
           call ATMOS_DYN_numfilter_coef_q( num_diff_q(:,:,:,:),                    & ! [OUT]
                                            DENS, QTRC(:,:,:,iq),                   & ! [IN]
                                            CDZ, CDX, CDY, DT,                      & ! [IN]
                                            REF_qv, iq,                             & ! [IN]
-                                           ND_COEF, ND_ORDER, ND_SFC_FACT, ND_USE_RS ) ! [IN]
+                                           ND_COEF_Q, ND_ORDER, ND_SFC_FACT, ND_USE_RS ) ! [IN]
        endif
 
        do JJS = JS, JE, JBLOCK

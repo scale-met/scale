@@ -48,6 +48,7 @@ module mod_atmos_dyn_driver
   ! numerical filter
   integer,  private :: ATMOS_DYN_numerical_diff_order        = 1
   real(RP), private :: ATMOS_DYN_numerical_diff_coef         = 1.0E-4_RP ! nondimensional numerical diffusion
+  real(RP), private :: ATMOS_DYN_numerical_diff_coef_q       = 1.0E-1_RP ! nondimensional numerical diffusion for tracer
   real(RP), private :: ATMOS_DYN_numerical_diff_sfc_fact     = 1.0_RP
   logical , private :: ATMOS_DYN_numerical_diff_use_refstate = .true.
 
@@ -90,6 +91,7 @@ contains
     NAMELIST / PARAM_ATMOS_DYN / &
        ATMOS_DYN_numerical_diff_order,        &
        ATMOS_DYN_numerical_diff_coef,         &
+       ATMOS_DYN_numerical_diff_coef_q,       &
        ATMOS_DYN_numerical_diff_sfc_fact,     &
        ATMOS_DYN_numerical_diff_use_refstate, &
        ATMOS_DYN_enable_coriolis,             &
@@ -216,6 +218,7 @@ contains
          ATMOS_REFSTATE_qv,                                    & ! [IN]
          ATMOS_REFSTATE_pres,                                  & ! [IN]
          ATMOS_DYN_numerical_diff_coef,                        & ! [IN]
+         ATMOS_DYN_numerical_diff_coef_q,                      & ! [IN]
          ATMOS_DYN_numerical_diff_order,                       & ! [IN]
          ATMOS_DYN_numerical_diff_sfc_fact,                    & ! [IN]
          ATMOS_DYN_numerical_diff_use_refstate,                & ! [IN]
