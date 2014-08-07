@@ -109,9 +109,9 @@ module scale_cpl_atmos_urban
        real(RP), intent(out) :: SHR_URB
        real(RP), intent(out) :: SHB_URB
        real(RP), intent(out) :: SHG_URB
-       real(RP), intent(out) :: LHR_URB
-       real(RP), intent(out) :: LHB_URB
-       real(RP), intent(out) :: LHG_URB
+       real(RP), intent(inout) :: LHR_URB
+       real(RP), intent(inout) :: LHB_URB
+       real(RP), intent(inout) :: LHG_URB
        real(RP), intent(out) :: GHR_URB
        real(RP), intent(out) :: GHB_URB
        real(RP), intent(out) :: GHG_URB
