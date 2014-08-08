@@ -691,8 +691,10 @@ contains
 #endif
 
        do iq = 1, QA
-          QTRC(:,:,:,iq) = QTRC(:,:,:,iq) &
-                         + RHOQ_tp(:,:,:,iq) * dt / DENS00(:,:,:)
+          QTRC(:,:,:,iq) = max( &
+                         QTRC(:,:,:,iq) + RHOQ_tp(:,:,:,iq) * dt / DENS00(:,:,:), &
+                         0.0_RP )
+          ! TODO: mass and energy conservation should be considered
        end do
 
     enddo ! dynamical steps
