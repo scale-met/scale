@@ -104,6 +104,10 @@ contains
        REAL_LAT,           &
        REAL_BASEPOINT_LON, &
        REAL_BASEPOINT_LAT
+    use scale_const, only: &
+       PRE00 => CONST_PRE00, &
+       Rdry  => CONST_Rdry,  &
+       CPdry => CONST_CPdry
     use scale_landuse, only: &
        LANDUSE_fact_ocean, &
        LANDUSE_fact_land,  &
@@ -116,11 +120,18 @@ contains
        STAT_total
     use scale_history, only: &
        HIST_in
+    use mod_atmos_admin, only: &
+       ATMOS_PHY_RD_TYPE
     use scale_atmos_solarins, only: &
        SOLARINS_fixedlatlon => ATMOS_SOLARINS_fixedlatlon, &
        SOLARINS_insolation  => ATMOS_SOLARINS_insolation
     use scale_atmos_phy_rd, only: &
        ATMOS_PHY_RD
+    !use scale_atmos_phy_rd_rrtm, only: &
+    !   RRTMLWRAD,      &
+    !   cal_cldfra
+    use scale_atmos_phy_rd_mm5sw, only: &
+       SWRAD
     use scale_atmos_phy_rd_common, only: &
        RD_heating => ATMOS_PHY_RD_heating, &
        I_SW, &
@@ -128,6 +139,8 @@ contains
        I_dn, &
        I_up
     use mod_atmos_vars, only: &
+       TEMP,              &
+       PRES,              &
        DENS,              &
        RHOT,              &
        QTRC,              &
@@ -165,6 +178,35 @@ contains
     real(RP) :: LON   (IA,JA)
     real(RP) :: LAT   (IA,JA)
 
+    ! for WRF radiation scheme added by Adachi    
+    real(RP) :: CLDFRA3D  (IA,KA,JA)
+    real(RP) :: RTHRATENLW(IA,KA,JA)
+    real(RP) :: RTHRATENSW(IA,KA,JA)
+    real(RP) :: SDOWN3D   (IA,KA,JA)  ! downward short wave flux (W/m2)
+    real(RP) :: GLW  (IA,JA)          ! downward long wave flux at ground surface (W/m^2)
+    real(RP) :: GSW  (IA,JA)          ! net short wave flux at ground surface (W/m2)
+    real(RP) :: OLR  (IA,JA)
+    real(RP) :: EMISS(IA,JA)
+    real(RP) :: TSK  (IA,JA)
+
+    real(RP) :: p8w(IA,KA,JA), P3D(IA,KA,JA), PI3D(IA,KA,JA),DZ8W(IA,KA,JA)
+    real(RP) :: T3D(IA,KA,JA), t8w(IA,KA,JA), RHO3D(IA,KA,JA)
+    real(RP) :: QV3D(IA,KA,JA),QC3D(IA,KA,JA),QR3D(IA,KA,JA)
+    real(RP) :: QI3D(IA,KA,JA),QS3D(IA,KA,JA),QG3D(IA,KA,JA)
+    logical  :: F_QV,F_QC,F_QR,F_QI,F_QS,F_QG
+    integer  :: icloud
+    logical  :: warm_rain
+
+    real(RP) :: fact1,fact2
+
+    !  GMT     ! Greenwich Mean Time Hour of model start (hour)
+    !  JULDAY  ! the initial day (Julian day)
+    !  xtime   ! time since simulation start (min)
+    !  declin  ! solar declination angle (rad) 
+    !  SOLCON  ! solar constant (W/m^2)
+    !  RADFRQ=radt ! 
+    !  DEGRAD      ! conversion factor for degrees to radians (pi/180.) (rad/deg)                
+
     real(RP) :: total ! dummy
 
     integer :: k, i, j
@@ -187,50 +229,42 @@ contains
                                  LAT   (:,:),    & ! [IN]
                                  TIME_NOWDATE(:) ) ! [IN]
 
-       call ATMOS_PHY_RD( DENS, RHOT, QTRC,   & ! [IN]
-                          REAL_CZ, REAL_FZ,   & ! [IN]
-                          LANDUSE_fact_ocean, & ! [IN]
-                          LANDUSE_fact_land,  & ! [IN]
-                          LANDUSE_fact_urban, & ! [IN]
-                          SFC_TEMP,           & ! [IN]
-                          SFC_albedo,         & ! [IN]
-                          solins, cosSZA,     & ! [IN]
-                          flux_rad,           & ! [OUT]
-                          flux_rad_top        ) ! [OUT]
+       select case ( ATMOS_PHY_RD_TYPE )
+       case ( 'MSTRNX' )
+         call ATMOS_PHY_RD( DENS, RHOT, QTRC,   & ! [IN]
+                            REAL_CZ, REAL_FZ,   & ! [IN]
+                            LANDUSE_fact_ocean, & ! [IN]
+                            LANDUSE_fact_land,  & ! [IN]
+                            LANDUSE_fact_urban, & ! [IN]
+                            SFC_TEMP,           & ! [IN]
+                            SFC_albedo,         & ! [IN]
+                            solins, cosSZA,     & ! [IN]
+                            flux_rad,           & ! [OUT]
+                            flux_rad_top        ) ! [OUT]
 
-       ! apply radiative flux convergence -> heating rate
-       call RD_heating( flux_rad (:,:,:,:,:), & ! [IN]
-                        RHOT     (:,:,:),     & ! [IN]
-                        QTRC     (:,:,:,:),   & ! [IN]
-                        REAL_FZ  (:,:,:),     & ! [IN]
-                        dt_RD,                & ! [IN]
-                        TEMP_t   (:,:,:,:),   & ! [OUT]
-                        RHOT_t_RD(:,:,:)      ) ! [OUT]
+         ! apply radiative flux convergence -> heating rate
+         call RD_heating( flux_rad (:,:,:,:,:), & ! [IN]
+                          RHOT     (:,:,:),     & ! [IN]
+                          QTRC     (:,:,:,:),   & ! [IN]
+                          REAL_FZ  (:,:,:),     & ! [IN]
+                          dt_RD,                & ! [IN]
+                          TEMP_t   (:,:,:,:),   & ! [OUT]
+                          RHOT_t_RD(:,:,:)      ) ! [OUT]
 
-       do j = JS, JE
-       do i = IS, IE
-          SFLX_LW_up(i,j) = flux_rad(KS-1,i,j,I_LW,I_up)
-          SFLX_LW_dn(i,j) = flux_rad(KS-1,i,j,I_LW,I_dn)
-          SFLX_SW_up(i,j) = flux_rad(KS-1,i,j,I_SW,I_up)
-          SFLX_SW_dn(i,j) = flux_rad(KS-1,i,j,I_SW,I_dn)
 
-          TOAFLX_LW_up(i,j) = flux_rad(KE,i,j,I_LW,I_up)
-          TOAFLX_LW_dn(i,j) = flux_rad(KE,i,j,I_LW,I_dn)
-          TOAFLX_SW_up(i,j) = flux_rad(KE,i,j,I_SW,I_up)
-          TOAFLX_SW_dn(i,j) = flux_rad(KE,i,j,I_SW,I_dn)
-       enddo
-       enddo
-
-       if ( history_flag ) then
-
-          call HIST_in( solins(:,:), 'SOLINS', 'solar insolation',        'W/m2', dt_RD )
-          call HIST_in( cosSZA(:,:), 'COSZ',   'cos(solar zenith angle)', '0-1',  dt_RD )
-
-          call HIST_in( SFLX_LW_up(:,:), 'SFLX_LW_up', 'upward   surface longwave  radiation', 'W/m2', dt_RD )
-          call HIST_in( SFLX_LW_dn(:,:), 'SFLX_LW_dn', 'downward surface longwave  radiation', 'W/m2', dt_RD )
-          call HIST_in( SFLX_SW_up(:,:), 'SFLX_SW_up', 'upward   surface shortwave radiation', 'W/m2', dt_RD )
-          call HIST_in( SFLX_SW_dn(:,:), 'SFLX_SW_dn', 'downward surface shortwave radiation', 'W/m2', dt_RD )
-
+          do j = JS, JE
+          do i = IS, IE
+             SFLX_LW_up(i,j) = flux_rad(KS-1,i,j,I_LW,I_up)
+             SFLX_LW_dn(i,j) = flux_rad(KS-1,i,j,I_LW,I_dn)
+             SFLX_SW_up(i,j) = flux_rad(KS-1,i,j,I_SW,I_up)
+             SFLX_SW_dn(i,j) = flux_rad(KS-1,i,j,I_SW,I_dn)
+ 
+             TOAFLX_LW_up(i,j) = flux_rad(KE,i,j,I_LW,I_up)
+             TOAFLX_LW_dn(i,j) = flux_rad(KE,i,j,I_LW,I_dn)
+             TOAFLX_SW_up(i,j) = flux_rad(KE,i,j,I_SW,I_up)
+             TOAFLX_SW_dn(i,j) = flux_rad(KE,i,j,I_SW,I_dn)
+          enddo
+          enddo
           do j = JS, JE
           do i = IS, IE
           do k = KS, KE
@@ -246,6 +280,221 @@ contains
           enddo
           enddo
           enddo
+          do j = JS, JE
+          do i = IS, IE
+             flux_rad_sfc(i,j,I_LW) = flux_rad(KS-1,i,j,I_LW,I_up)-flux_rad(KS-1,i,j,I_LW,I_dn)
+             flux_rad_sfc(i,j,I_SW) = flux_rad(KS-1,i,j,I_SW,I_up)-flux_rad(KS-1,i,j,I_SW,I_dn)
+          enddo
+          enddo
+
+
+       case ( 'WRF' )
+
+         call ATMOS_PHY_RD( DENS, RHOT, QTRC,   & ! [IN]
+                            REAL_CZ, REAL_FZ,   & ! [IN]
+                            LANDUSE_fact_ocean, & ! [IN]
+                            LANDUSE_fact_land,  & ! [IN]
+                            LANDUSE_fact_urban, & ! [IN]
+                            SFC_TEMP,           & ! [IN]
+                            SFC_albedo,         & ! [IN]
+                            solins, cosSZA,     & ! [IN]
+                            flux_rad,           & ! [OUT]
+                            flux_rad_top        ) ! [OUT]
+
+         ! apply radiative flux convergence -> heating rate
+         call RD_heating( flux_rad (:,:,:,:,:), & ! [IN]
+                          RHOT     (:,:,:),     & ! [IN]
+                          QTRC     (:,:,:,:),   & ! [IN]
+                          REAL_FZ  (:,:,:),     & ! [IN]
+                          dt_RD,                & ! [IN]
+                          TEMP_t   (:,:,:,:),   & ! [OUT]
+                          RHOT_t_RD(:,:,:)      ) ! [OUT]
+
+          do j = JS, JE
+          do i = IS, IE
+             SFLX_LW_up(i,j) = flux_rad(KS-1,i,j,I_LW,I_up)
+             SFLX_LW_dn(i,j) = flux_rad(KS-1,i,j,I_LW,I_dn)
+             SFLX_SW_up(i,j) = 0.0_RP
+             SFLX_SW_dn(i,j) = 0.0_RP
+ 
+             TOAFLX_LW_up(i,j) = flux_rad(KE,i,j,I_LW,I_up)
+             TOAFLX_LW_dn(i,j) = flux_rad(KE,i,j,I_LW,I_dn)
+             TOAFLX_SW_up(i,j) = 0.0_RP
+             TOAFLX_SW_dn(i,j) = 0.0_RP
+          enddo
+          enddo
+          do j = JS, JE
+          do i = IS, IE
+          do k = KS, KE
+             flux_net(k,i,j,I_LW) = 0.5_RP * ( ( flux_rad(k-1,i,j,I_LW,I_up) - flux_rad(k-1,i,j,I_LW,I_dn) ) &
+                                             + ( flux_rad(k  ,i,j,I_LW,I_up) - flux_rad(k  ,i,j,I_LW,I_dn) ) )
+             flux_net(k,i,j,I_SW) = 0.0_RP
+             flux_up (k,i,j,I_LW) = 0.5_RP * ( flux_rad(k-1,i,j,I_LW,I_up) + flux_rad(k,i,j,I_LW,I_up) )
+             flux_up (k,i,j,I_SW) = 0.0_RP
+             flux_dn (k,i,j,I_LW) = 0.5_RP * ( flux_rad(k-1,i,j,I_LW,I_dn) + flux_rad(k,i,j,I_LW,I_dn) )
+             flux_dn (k,i,j,I_SW) = 0.0_RP
+          enddo
+          enddo
+          enddo
+          do j = JS, JE
+          do i = IS, IE
+             flux_rad_sfc(i,j,I_LW) = flux_rad(KS-1,i,j,I_LW,I_up)-flux_rad(KS-1,i,j,I_LW,I_dn)
+             flux_rad_sfc(i,j,I_SW) = 0.0_RP
+          enddo
+          enddo
+
+         if( history_flag ) then
+
+          EMISS(:,:) = 1.0_RP-SFC_albedo(:,:,I_LW)
+          TSK(:,:)   = SFC_TEMP(:,:)
+          icloud = 1
+          warm_rain = .false.
+          F_QV = .true.
+          F_QC = .true.
+          F_QR = .true.
+          F_QI = .true.
+          F_QS = .true.
+          F_QG = .true.
+
+          do j=1,JA
+          do i=1,IA
+          do k=1,KA
+           QV3D (i,k,j) = QTRC(k,i,j,I_QV) 
+           QC3D (i,k,j) = QTRC(k,i,j,I_QC)
+           QR3D (i,k,j) = QTRC(k,i,j,I_QR)
+           QI3D (i,k,j) = QTRC(k,i,j,I_QI)
+           QS3D (i,k,j) = QTRC(k,i,j,I_QS)
+           QG3D (i,k,j) = QTRC(k,i,j,I_QG)
+           P3D  (i,k,j) = PRES(k,i,j)                        ! pressure (Pa)
+           PI3D (i,k,j) = (PRES(k,i,j)/PRE00)**(Rdry/CPdry)  ! exner function (dimensionless)
+           DZ8W (i,k,j) = REAL_FZ(k,i,j)-REAL_FZ(k-1,i,j)    ! dz between full levels(m)
+           T3D  (i,k,j) = TEMP(k,i,j)                        ! temperature (K)
+           RHO3D(i,k,j) = DENS(k,i,j)                        ! density (kg/m^3)
+          enddo
+          do k=1,KA-1
+             fact1 = ( REAL_FZ(k,i,j) - REAL_CZ(k,i,j) ) / ( REAL_CZ(k+1,i,j) - REAL_CZ(k,i,j) )
+             fact2 = ( REAL_CZ(k+1,i,j) - REAL_FZ(k,i,j) ) / ( REAL_CZ(k+1,i,j) - REAL_CZ(k,i,j) )
+             p8w (i,k,j) = PRES(k,i,j)*fact2 + PRES(k+1,i,j)*fact1  ! pressure at full levels (Pa)
+             t8w (i,k,j) = TEMP(k,i,j)*fact2 + TEMP(k+1,i,j)*fact1  ! temperature at full levels (K)
+          enddo
+             k=KA
+             fact1 = ( REAL_CZ(k,i,j) - REAL_CZ(k-1,i,j) )
+             fact2 = ( REAL_FZ(k,i,j) - REAL_CZ(k-1,i,j) )
+             p8w (i,k,j) = PRES(k,i,j) + (PRES(k,i,j)-PRES(k-1,i,j))/fact1*fact2  ! pressure at full levels (Pa)
+             t8w (i,k,j) = TEMP(k,i,j) + (TEMP(k,i,j)-TEMP(k-1,i,j))/fact1*fact2  ! temperature at full levels (K)
+          enddo
+          enddo
+
+         !call cal_cldfra(CLDFRA3D,                   & ! out
+         !                QC3D,QI3D,F_QC,F_QI)        & ! in
+
+         !call RRTMLWRAD(                             &
+         !          RTHRATENLW,GLW,OLR,               & ! INOUT
+         !         ,EMISS                             & ! IN
+         !         ,p8w,P3D,PI3D,                     &
+         !         ,DZ8W,TSK,T3D,t8w,RHO3D,           & 
+         !         ,icloud,warm_rain                  &
+         !         ,QV3D                              &
+         !         ,QC3D                              &
+         !         ,QR3D                              &
+         !         ,QI3D                              &
+         !         ,QS3D                              &
+         !         ,QG3D                              &
+         !         ,CLDFRA3D                          &
+         !         ,F_QV,F_QC,F_QR,F_QI,F_QS,F_QG     )
+
+         CALL SWRAD(dt_RD,RTHRATENSW,SDOWN3D,GSW,          &                  
+                   LAT,LON,SFC_albedo(:,:,I_SW),           &
+                   RHO3D,T3D,P3D,PI3D,DZ8W,                &
+                   solins,cosSZA,                          &
+                   QV3D,QC3D,QR3D,QI3D,QS3D,QG3D,          &
+                   F_QV,F_QC,F_QR,F_QI,F_QS,F_QG,          &
+                   icloud,warm_rain                       )
+
+                ! do j = JS, JE
+                ! do i = IS, IE
+                !   if(i==20.and.j==20)then
+                !     print *,dt_RD,RTHRATENSW(20,KS,20),SDOWN3D(20,KS-1,20),GSW(20,20)
+                !     print *,SFC_albedo(20,20,I_SW)
+                !     print *,RHO3D(20,KS,20),T3D(20,KS,20),P3D(20,KS,20),PI3D(20,KS,20),DZ8W(20,KS,20)
+                !     print *,QV3D(20,KS,20),QC3D(20,KS,20),QR3D(20,KS,20),QI3D(20,KS,20),QS3D(20,KS,20),QG3D(20,KS,20)
+                !   endif
+                ! enddo
+                ! enddo
+
+                 do j = JS, JE
+                 do i = IS, IE
+                     flux_rad_sfc(i,j,I_SW)    = GSW(i,j)
+                 do k = KS-1, KE
+                     flux_rad(:,:,:,I_SW,I_up) = 0.0_RP
+                     flux_rad(k,i,j,I_SW,I_dn) = SDOWN3D(i,k,j)
+                 enddo
+                 do k = 1,KS-2
+                     flux_rad(k,i,j,I_SW,I_dn) = SDOWN3D(i,KS-1,j)
+                 enddo
+                 do k = KE+1,KA
+                     flux_rad(k,i,j,I_SW,I_dn) = SDOWN3D(i,KE,j)
+                 enddo
+                 enddo
+                 enddo
+          else
+                 RTHRATENLW(:,:,:) = 0.0_RP
+                 RTHRATENSW(:,:,:) = 0.0_RP
+          endif
+
+
+
+          do j = JS, JE
+          do i = IS, IE
+            !SFLX_LW_up(i,j) = flux_rad(KS-1,i,j,I_LW,I_up)  ! mstrx
+            !SFLX_LW_dn(i,j) = flux_rad(KS-1,i,j,I_LW,I_dn)  ! mstrx
+            !SFLX_SW_up(i,j) = flux_rad(KS-1,i,j,I_SW,I_up)
+            SFLX_SW_up(i,j) = flux_rad(KS-1,i,j,I_SW,I_dn)*SFC_albedo(i,j,I_SW)
+            SFLX_SW_dn(i,j) = flux_rad(KS-1,i,j,I_SW,I_dn)
+
+            !TOAFLX_LW_up(i,j) = flux_rad(KE,i,j,I_LW,I_up)  ! mstrx
+            !TOAFLX_LW_dn(i,j) = flux_rad(KE,i,j,I_LW,I_dn)  ! mstrx
+            !TOAFLX_SW_up(i,j) = flux_rad(KE,i,j,I_SW,I_up)  ! will be 0
+            !TOAFLX_SW_dn(i,j) = flux_rad(KE,i,j,I_SW,I_dn)
+          enddo
+          enddo
+          do j = JS, JE
+          do i = IS, IE
+          do k = KS, KE
+             !flux_net(k,i,j,I_LW) = 0.5_RP * ( ( flux_rad(k-1,i,j,I_LW,I_up) - flux_rad(k-1,i,j,I_LW,I_dn) ) &
+             !                                + ( flux_rad(k  ,i,j,I_LW,I_up) - flux_rad(k  ,i,j,I_LW,I_dn) ) )
+             !flux_net(k,i,j,I_SW) = 0.5_RP * ( ( flux_rad(k-1,i,j,I_SW,I_up) - flux_rad(k-1,i,j,I_SW,I_dn) ) &
+             !                                + ( flux_rad(k  ,i,j,I_SW,I_up) - flux_rad(k  ,i,j,I_SW,I_dn) ) )
+             flux_net(k,i,j,I_SW) = 0.0_RP
+             !flux_up (k,i,j,I_LW) = 0.5_RP * ( flux_rad(k-1,i,j,I_LW,I_up) + flux_rad(k,i,j,I_LW,I_up) )
+             !flux_up (k,i,j,I_SW) = 0.5_RP * ( flux_rad(k-1,i,j,I_SW,I_up) + flux_rad(k,i,j,I_SW,I_up) )
+             flux_up (k,i,j,I_SW) = 0.0_RP
+             !flux_dn (k,i,j,I_LW) = 0.5_RP * ( flux_rad(k-1,i,j,I_LW,I_dn) + flux_rad(k,i,j,I_LW,I_dn) )
+             flux_dn (k,i,j,I_SW) = 0.5_RP * ( flux_rad(k-1,i,j,I_SW,I_dn) + flux_rad(k,i,j,I_SW,I_dn) )
+          enddo
+          enddo
+          enddo
+          do j = JS, JE
+          do i = IS, IE
+             !flux_rad_sfc(i,j,I_LW) = flux_rad(KS-1,i,j,I_LW,I_up)-flux_rad(KS-1,i,j,I_LW,I_dn)
+             !flux_rad_sfc(i,j,I_SW) = flux_rad(KS-1,i,j,I_SW,I_up)-flux_rad(KS-1,i,j,I_SW,I_dn)
+             flux_rad_sfc(i,j,I_SW) = flux_rad(KS-1,i,j,I_SW,I_dn)*SFC_albedo(i,j,I_SW)-flux_rad(KS-1,i,j,I_SW,I_dn)
+          enddo
+          enddo
+
+       end select
+
+
+       if ( history_flag ) then
+
+          call HIST_in( solins(:,:), 'SOLINS', 'solar insolation',        'W/m2', dt_RD )
+          call HIST_in( cosSZA(:,:), 'COSZ',   'cos(solar zenith angle)', '0-1',  dt_RD )
+
+          call HIST_in( SFLX_LW_up(:,:), 'SFLX_LW_up', 'upward   surface longwave  radiation', 'W/m2', dt_RD )
+          call HIST_in( SFLX_LW_dn(:,:), 'SFLX_LW_dn', 'downward surface longwave  radiation', 'W/m2', dt_RD )
+          call HIST_in( SFLX_SW_up(:,:), 'SFLX_SW_up', 'upward   surface shortwave radiation', 'W/m2', dt_RD )
+          call HIST_in( SFLX_SW_dn(:,:), 'SFLX_SW_dn', 'downward surface shortwave radiation', 'W/m2', dt_RD )
+
           call HIST_in( flux_net(:,:,:,I_LW), 'RADFLUX_LW',  'net radiation flux(LW)', 'W/m2', dt_RD )
           call HIST_in( flux_net(:,:,:,I_SW), 'RADFLUX_SW',  'net radiation flux(SW)', 'W/m2', dt_RD )
           call HIST_in( flux_up (:,:,:,I_LW), 'RADFLUX_LWUP', 'up radiation flux(LW)', 'W/m2', dt_RD )
@@ -255,12 +504,7 @@ contains
 
           call HIST_in( flux_rad_top(:,:,I_LW), 'OLR', 'TOA     longwave  radiation', 'W/m2', dt_RD )
           call HIST_in( flux_rad_top(:,:,I_SW), 'OSR', 'TOA     shortwave radiation', 'W/m2', dt_RD )
-          do j = JS, JE
-          do i = IS, IE
-             flux_rad_sfc(i,j,I_LW) = flux_rad(KS-1,i,j,I_LW,I_up)-flux_rad(KS-1,i,j,I_LW,I_dn)
-             flux_rad_sfc(i,j,I_SW) = flux_rad(KS-1,i,j,I_SW,I_up)-flux_rad(KS-1,i,j,I_SW,I_dn)
-          enddo
-          enddo
+
           call HIST_in( flux_rad_sfc(:,:,I_LW), 'SLR', 'Surface longwave  radiation', 'W/m2', dt_RD )
           call HIST_in( flux_rad_sfc(:,:,I_SW), 'SSR', 'Surface shortwave radiation', 'W/m2', dt_RD )
 

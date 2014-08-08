@@ -95,6 +95,11 @@ contains
        ATMOS_PHY_RD_mstrnx_setup, &
        ATMOS_PHY_RD_mstrnx
 #endif
+    use scale_atmos_phy_rd_mm5sw, only: &
+       swinit
+    !use scale_atmos_phy_rd_rrtm, only: &
+    !   rriminit
+ 
     implicit none
 
     character(len=*), intent(in) :: RD_TYPE
@@ -104,6 +109,11 @@ contains
     case ( 'MSTRNX' )
        call ATMOS_PHY_RD_mstrnx_setup( RD_TYPE )
        ATMOS_PHY_RD => ATMOS_PHY_RD_mstrnx
+    case ( 'WRF' )
+       call ATMOS_PHY_RD_mstrnx_setup( 'MSTRNX' )
+       call swinit
+       ATMOS_PHY_RD => ATMOS_PHY_RD_mstrnx
+       !call rrtminit
     case default
        write(*,*) 'xxx invalid Radiation type(', trim(RD_TYPE), '). CHECK!'
        call PRC_MPIstop
