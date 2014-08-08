@@ -692,7 +692,7 @@ contains
 
        do iq = 1, QA
           QTRC(:,:,:,iq) = QTRC(:,:,:,iq) &
-                         + RHOQ_tp(:,:,:,iq) * dt / DENS00(k,i,j)
+                         + RHOQ_tp(:,:,:,iq) * dt / DENS00(:,:,:)
        end do
 
     enddo ! dynamical steps
