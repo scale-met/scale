@@ -1425,27 +1425,27 @@ contains
 #ifdef HIST_TEND
     if ( lhist ) then
        call HIST_in(advcv_t(:,:,:,I_DENS), 'DENS_t_advcv', 'tendency of dencity due to vertical advection', 'kg/m3/s', dt )
-       call HIST_in(advcv_t(:,:,:,I_MOMZ), 'MOMZ_t_advcv', 'tendency of momentum z due to vertical advection', 'kg/m2/s2', dt )
-       call HIST_in(advcv_t(:,:,:,I_MOMX), 'MOMX_t_advcv', 'tendency of momentum x due to vertical advection', 'kg/m2/s2', dt )
-       call HIST_in(advcv_t(:,:,:,I_MOMY), 'MOMY_t_advcv', 'tendency of momentum y due to vertical advection', 'kg/m2/s2', dt )
+       call HIST_in(advcv_t(:,:,:,I_MOMZ), 'MOMZ_t_advcv', 'tendency of momentum z due to vertical advection', 'kg/m2/s2', dt, zdim='half' )
+       call HIST_in(advcv_t(:,:,:,I_MOMX), 'MOMX_t_advcv', 'tendency of momentum x due to vertical advection', 'kg/m2/s2', dt, xdim='half' )
+       call HIST_in(advcv_t(:,:,:,I_MOMY), 'MOMY_t_advcv', 'tendency of momentum y due to vertical advection', 'kg/m2/s2', dt, ydim='half' )
        call HIST_in(advcv_t(:,:,:,I_RHOT), 'RHOT_t_advcv', 'tendency of rho*theta due to vertical advection', 'K kg/m3/s', dt )
 
        call HIST_in(advch_t(:,:,:,I_DENS), 'DENS_t_advch', 'tendency of dencity due to horizontal advection', 'kg/m3/s', dt )
-       call HIST_in(advch_t(:,:,:,I_MOMZ), 'MOMZ_t_advch', 'tendency of momentum z due to horizontal advection', 'kg/m2/s2', dt )
-       call HIST_in(advch_t(:,:,:,I_MOMX), 'MOMX_t_advch', 'tendency of momentum x due to horizontal advection', 'kg/m2/s2', dt )
-       call HIST_in(advch_t(:,:,:,I_MOMY), 'MOMY_t_advch', 'tendency of momentum y due to horizontal advection', 'kg/m2/s2', dt )
+       call HIST_in(advch_t(:,:,:,I_MOMZ), 'MOMZ_t_advch', 'tendency of momentum z due to horizontal advection', 'kg/m2/s2', dt, zdim='half' )
+       call HIST_in(advch_t(:,:,:,I_MOMX), 'MOMX_t_advch', 'tendency of momentum x due to horizontal advection', 'kg/m2/s2', dt, xdim='half' )
+       call HIST_in(advch_t(:,:,:,I_MOMY), 'MOMY_t_advch', 'tendency of momentum y due to horizontal advection', 'kg/m2/s2', dt, ydim='half' )
        call HIST_in(advch_t(:,:,:,I_RHOT), 'RHOT_t_advch', 'tendency of rho*theta due to horizontal advection', 'K kg/m3/s', dt )
 
-       call HIST_in(pg_t(:,:,:,1), 'MOMZ_t_pg', 'tendency of momentum z due to pressure gradient', 'kg/m2/s2', dt )
-       call HIST_in(pg_t(:,:,:,2), 'MOMX_t_pg', 'tendency of momentum x due to pressure gradient', 'kg/m2/s2', dt )
-       call HIST_in(pg_t(:,:,:,3), 'MOMY_t_pg', 'tendency of momentum y due to pressure gradient', 'kg/m2/s2', dt )
+       call HIST_in(pg_t(:,:,:,1), 'MOMZ_t_pg', 'tendency of momentum z due to pressure gradient', 'kg/m2/s2', dt, zdim='half' )
+       call HIST_in(pg_t(:,:,:,2), 'MOMX_t_pg', 'tendency of momentum x due to pressure gradient', 'kg/m2/s2', dt, xdim='half' )
+       call HIST_in(pg_t(:,:,:,3), 'MOMY_t_pg', 'tendency of momentum y due to pressure gradient', 'kg/m2/s2', dt, ydim='half' )
 
-       call HIST_in(ddiv_t(:,:,:,1), 'MOMZ_t_ddiv', 'tendency of momentum z due to divergence damping', 'kg/m2/s2', dt )
-       call HIST_in(ddiv_t(:,:,:,2), 'MOMX_t_ddiv', 'tendency of momentum x due to divergence damping', 'kg/m2/s2', dt )
-       call HIST_in(ddiv_t(:,:,:,3), 'MOMY_t_ddiv', 'tendency of momentum y due to divergence damping', 'kg/m2/s2', dt )
+       call HIST_in(ddiv_t(:,:,:,1), 'MOMZ_t_ddiv', 'tendency of momentum z due to divergence damping', 'kg/m2/s2', dt, zdim='half' )
+       call HIST_in(ddiv_t(:,:,:,2), 'MOMX_t_ddiv', 'tendency of momentum x due to divergence damping', 'kg/m2/s2', dt, xdim='half' )
+       call HIST_in(ddiv_t(:,:,:,3), 'MOMY_t_ddiv', 'tendency of momentum y due to divergence damping', 'kg/m2/s2', dt, ydim='half' )
 
-       call HIST_in(cf_t(:,:,:,1), 'MOMX_t_cf', 'tendency of momentum x due to coliolis force', 'kg/m2/s2', dt )
-       call HIST_in(cf_t(:,:,:,2), 'MOMY_t_cf', 'tendency of momentum y due to coliolis force', 'kg/m2/s2', dt )
+       call HIST_in(cf_t(:,:,:,1), 'MOMX_t_cf', 'tendency of momentum x due to coliolis force', 'kg/m2/s2', dt, xdim='half' )
+       call HIST_in(cf_t(:,:,:,2), 'MOMY_t_cf', 'tendency of momentum y due to coliolis force', 'kg/m2/s2', dt, ydim='half' )
     end if
 #endif
 
