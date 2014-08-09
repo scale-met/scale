@@ -102,7 +102,7 @@ module gtool_file
   integer,                   private, parameter :: File_nvar_max  = 512  ! number limit of variables
   integer,                   private, parameter :: File_nstep_max = 2500 ! number limit of time step
 
-  character(LEN=File_HLONG), private,      save :: File_bname_list(File_nfile_max)
+  character(LEN=File_HLONG), private,      save :: File_fname_list(File_nfile_max)
   integer,                   private,      save :: File_fid_list  (File_nfile_max)
   integer,                   private,      save :: File_fid_count = 1
   character(LEN=File_HLONG), private,      save :: File_vname_list  (File_nvar_max)
@@ -1702,8 +1702,7 @@ contains
     if ( error == SUCCESS_CODE ) then
        write(message, '(1x,A,i3)') '*** [File] File Close : NO.', n
        call Log('I', message)
-       call FileMakeFname(fname,trim(File_bname_list(n)),'pe',mpi_myrank,6)
-       call Log('I', '*** closed filename: ' // trim(fname))
+       call Log('I', '*** closed filename: ' // trim(File_fname_list(n)))
     else if ( error /= ALREADY_CLOSED_CODE ) then
        call Log('E', 'xxx failed to close file')
     end if
@@ -1711,7 +1710,7 @@ contains
     do n = 1, File_fid_count-1
        if ( File_fid_list(n) == fid ) then
           File_fid_list(n) = -1
-          File_bname_list(n) = ''
+          File_fname_list(n) = ''
        end if
     end do
 
@@ -1785,23 +1784,23 @@ contains
     integer :: error
     !---------------------------------------------------------------------------
 
-    !--- search existing file
-    fid = -1
-    do n = 1, File_fid_count-1
-       if ( basename==File_bname_list(n) ) fid = File_fid_list(n)
-    enddo
-
-    if ( fid >= 0 ) then
-       existed = .true.
-       return
-    end if
-
     !--- register new file and open
     if ( single ) then
        fname = trim(basename)//'.peall'
     else
        call FileMakeFname(fname,trim(basename),'pe',mpi_myrank,6)
     endif
+
+    !--- search existing file
+    fid = -1
+    do n = 1, File_fid_count-1
+       if ( fname==File_fname_list(n) ) fid = File_fid_list(n)
+    enddo
+
+    if ( fid >= 0 ) then
+       existed = .true.
+       return
+    end if
 
     call file_open( fid, & ! (out)
          fname, mode,    & ! (in)
@@ -1815,7 +1814,7 @@ contains
     write(message,*) '*** filename: ', trim(fname)
     call Log("I", message)
 
-    File_bname_list(File_fid_count) = trim(basename)
+    File_fname_list(File_fid_count) = trim(fname)
     File_fid_list  (File_fid_count) = fid
     File_fid_count                  = File_fid_count + 1
 
