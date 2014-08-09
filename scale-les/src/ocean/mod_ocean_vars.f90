@@ -302,10 +302,38 @@ contains
     !---------------------------------------------------------------------------
 
     if ( OCEAN_VARS_CHECKRANGE ) then
-       call VALCHECK( OCEAN_TEMP(:,:), 0.0_RP, 1000.0_RP, VAR_NAME(I_TEMP), __FILE__, __LINE__ )
+       call VALCHECK( OCEAN_TEMP      (:,:),      0.0_RP, 1000.0_RP, VAR_NAME(I_TEMP),          __FILE__, __LINE__ )
+       call VALCHECK( OCEAN_SFC_TEMP  (:,:),      0.0_RP, 1000.0_RP, VAR_NAME(I_SFC_TEMP),      __FILE__, __LINE__ )
+       call VALCHECK( OCEAN_SFC_albedo(:,:,I_LW), 0.0_RP,    2.0_RP, VAR_NAME(I_SFC_albedo_LW), __FILE__, __LINE__ )
+       call VALCHECK( OCEAN_SFC_albedo(:,:,I_SW), 0.0_RP,    2.0_RP, VAR_NAME(I_SFC_albedo_SW), __FILE__, __LINE__ )
+       call VALCHECK( OCEAN_SFC_Z0    (:,:),      0.0_RP, 1000.0_RP, VAR_NAME(I_SFC_Z0),        __FILE__, __LINE__ )
     endif
 
-    call HIST_in( OCEAN_TEMP(:,:), VAR_NAME(I_TEMP), VAR_DESC(I_TEMP), VAR_UNIT(I_TEMP), TIME_DTSEC_OCEAN )
+    call HIST_in( OCEAN_TEMP(:,:),  &
+                  VAR_NAME(I_TEMP), &
+                  VAR_DESC(I_TEMP), &
+                  VAR_UNIT(I_TEMP), &
+                  TIME_DTSEC_OCEAN  )
+    call HIST_in( OCEAN_SFC_TEMP(:,:),  &
+                  VAR_NAME(I_SFC_TEMP), &
+                  VAR_DESC(I_SFC_TEMP), &
+                  VAR_UNIT(I_SFC_TEMP), &
+                  TIME_DTSEC_OCEAN      )
+    call HIST_in( OCEAN_SFC_albedo(:,:,I_LW),  &
+                  VAR_NAME(I_SFC_albedo_LW),   &
+                  VAR_DESC(I_SFC_albedo_LW),   &
+                  VAR_UNIT(I_SFC_albedo_LW),   &
+                  TIME_DTSEC_OCEAN             )
+    call HIST_in( OCEAN_SFC_albedo(:,:,I_SW),  &
+                  VAR_NAME(I_SFC_albedo_SW),   &
+                  VAR_DESC(I_SFC_albedo_SW),   &
+                  VAR_UNIT(I_SFC_albedo_SW),   &
+                  TIME_DTSEC_OCEAN             )
+    call HIST_in( OCEAN_SFC_Z0(:,:),  &
+                  VAR_NAME(I_SFC_Z0), &
+                  VAR_DESC(I_SFC_Z0), &
+                  VAR_UNIT(I_SFC_Z0), &
+                  TIME_DTSEC_OCEAN    )
 
     return
   end subroutine OCEAN_vars_history
