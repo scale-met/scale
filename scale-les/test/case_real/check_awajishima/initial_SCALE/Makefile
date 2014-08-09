@@ -34,5 +34,5 @@ include $(TESTDIR)/Makefile.common
 
 # special execute
 run: jobshell
-	$(JOBSUB) wrfinput-link.sh
+	$(JOBSUB) link.input.sh
 	$(JOBSUB) run.sh
