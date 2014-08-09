@@ -102,9 +102,9 @@ OBJS = $(scale_rdma)	\
 	scale_fileio.o	\
 	scale_grid_cartesian.o	\
 	scale_grid_index.o	\
+	scale_grid_nest.o	\
 	scale_grid_real.o	\
 	scale_gridtrans.o	\
-        scale_grid_nest.o       \
 	scale_history.o	\
 	scale_intepolation.o	\
 	scale_land_grid.o	\

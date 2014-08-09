@@ -251,14 +251,14 @@ contains
        allocate( mine (4, 2         ) )
        allocate( whole(4, 2*PRC_nmax) )
 
-       mine(I_NW,I_LON) = REAL_LON(IS,JE)/D2R
-       mine(I_NE,I_LON) = REAL_LON(IE,JE)/D2R
-       mine(I_SW,I_LON) = REAL_LON(IS,JS)/D2R
-       mine(I_SE,I_LON) = REAL_LON(IE,JS)/D2R
-       mine(I_NW,I_LAT) = REAL_LAT(IS,JE)/D2R
-       mine(I_NE,I_LAT) = REAL_LAT(IE,JE)/D2R
-       mine(I_SW,I_LAT) = REAL_LAT(IS,JS)/D2R
-       mine(I_SE,I_LAT) = REAL_LAT(IE,JS)/D2R
+       mine(I_NW,I_LON) = REAL_LONXY(IS-1,JE  )/D2R
+       mine(I_NE,I_LON) = REAL_LONXY(IE  ,JE  )/D2R
+       mine(I_SW,I_LON) = REAL_LONXY(IS-1,JS-1)/D2R
+       mine(I_SE,I_LON) = REAL_LONXY(IE  ,JS-1)/D2R
+       mine(I_NW,I_LAT) = REAL_LATXY(IS-1,JE  )/D2R
+       mine(I_NE,I_LAT) = REAL_LATXY(IE  ,JE  )/D2R
+       mine(I_SW,I_LAT) = REAL_LATXY(IS-1,JS-1)/D2R
+       mine(I_SE,I_LAT) = REAL_LATXY(IE  ,JS-1)/D2R
 
        call COMM_gather( whole, mine, 4, 2 )
 
@@ -278,9 +278,9 @@ contains
 
           do i = 1, PRC_nmax
              write(fid,*,iostat=ierr) i, whole(I_NW,I_LON+2*(i-1)), whole(I_NE,I_LON+2*(i-1)), & ! LON: NW, NE
-                                          whole(I_SW,I_LON+2*(i-1)), whole(I_SE,I_LON+2*(i-1)), & ! LON: SW, SE
-                                          whole(I_NW,I_LAT+2*(i-1)), whole(I_NE,I_LAT+2*(i-1)), & ! LAT: NW, NE
-                                          whole(I_SW,I_LAT+2*(i-1)), whole(I_SE,I_LAT+2*(i-1))    ! LAT: SW, SE
+                                         whole(I_SW,I_LON+2*(i-1)), whole(I_SE,I_LON+2*(i-1)), & ! LON: SW, SE
+                                         whole(I_NW,I_LAT+2*(i-1)), whole(I_NE,I_LAT+2*(i-1)), & ! LAT: NW, NE
+                                         whole(I_SW,I_LAT+2*(i-1)), whole(I_SE,I_LAT+2*(i-1))    ! LAT: SW, SE
              if ( ierr /= 0 ) exit
           enddo
           close(fid)
