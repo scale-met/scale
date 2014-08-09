@@ -41,6 +41,8 @@ program scaleles_init
      GRID_INDEX_setup
   use scale_grid, only: &
      GRID_setup
+  use scale_grid_nest, only: &
+     NEST_setup
   use scale_land_grid_index, only: &
      LAND_GRID_INDEX_setup
   use scale_land_grid, only: &
@@ -184,6 +186,9 @@ program scaleles_init
   call STAT_setup
   ! setup history I/O
   call HIST_setup
+
+  ! setup nesting grid
+  call NEST_setup
 
 
 

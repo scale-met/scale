@@ -72,7 +72,7 @@ module mod_realinput
   public :: ParentAtomSetup
   public :: ParentAtomInput
   public :: ParentAtomBoundary
-  public :: ParentLndOcnUrbInput
+  public :: ParentSurfaceInput
 
   !-----------------------------------------------------------------------------
   !
@@ -84,8 +84,8 @@ module mod_realinput
   !
   private :: InputAtomSCALE
   private :: InputAtomWRF
-  !private :: InputLndOcnSCALE
-  !private :: InputLndOcnWRF
+  private :: InputSurfaceSCALE
+  private :: InputSurfaceWRF
   private :: LatLonZ_Interpolation_Linear
   private :: latlonz_interporation_fact
   private :: haversine
@@ -148,9 +148,8 @@ contains
     case('SCALE-LES')
        if( IO_L ) write(IO_FID_LOG,*) '+++ Real Case/Atom Input File Type: SCALE-LES'
        mdlid = iSCALE
-       call FileGetShape( dims(:),                            &
-                           BASENAME_ORG, "DENS", myrank, single=.true. )
-       timelen = 1   !temtative approach
+       dims(:) = 0 ! unused
+       timelen = 1 !temtative approach
 
     case('WRF-ARW')
        if( IO_L ) write(IO_FID_LOG,*) '+++ Real Case/Atom Input File Type: WRF-ARW'
@@ -222,21 +221,21 @@ contains
     logical,          intent(in)  :: initial_loop     ! initial loop
     logical,          intent(in)  :: serial           ! read by a serial process
 
-    real(RP) :: W(KA,IA,JA,timelen)
-    real(RP) :: U(KA,IA,JA,timelen)
-    real(RP) :: V(KA,IA,JA,timelen)
+    real(RP) :: W   (KA,IA,JA,timelen)
+    real(RP) :: U   (KA,IA,JA,timelen)
+    real(RP) :: V   (KA,IA,JA,timelen)
     real(RP) :: POTT(KA,IA,JA,timelen)
 
     real(RP) :: PRES(KA,IA,JA,timelen)
     real(RP) :: TEMP(KA,IA,JA,timelen)
-    real(RP) :: QV(KA,IA,JA,timelen)
-    real(RP) :: QC(KA,IA,JA,timelen)
+    real(RP) :: QV  (KA,IA,JA,timelen)
+    real(RP) :: QC  (KA,IA,JA,timelen)
 
     real(RP) :: temp_sfc(1,IA,JA,timelen)
     real(RP) :: pott_sfc(1,IA,JA,timelen)
     real(RP) :: pres_sfc(1,IA,JA,timelen)
-    real(RP) :: qv_sfc(1,IA,JA,timelen)
-    real(RP) :: qc_sfc(1,IA,JA,timelen)
+    real(RP) :: qv_sfc  (1,IA,JA,timelen)
+    real(RP) :: qc_sfc  (1,IA,JA,timelen)
 
     real(RP) :: phy_rd_init_value = 0.D0
 
@@ -259,40 +258,41 @@ contains
     case ("SN14")
        mptype_run = 'double'
     case ("SUZUKI10")
-        write(*,*) 'xxx Unsupported TRACER_TYPE (', trim(TRACER_TYPE), '). Check!'
-        call PRC_MPIstop
+       mptype_run = 'double'
+    case default
+       write(*,*) 'xxx Unsupported TRACER_TYPE (', trim(TRACER_TYPE), '). Check!'
+       call PRC_MPIstop
     end select
 
-    if( mdlid == iSCALE )then      !TYPE: SCALE-LES
-       !call InputAtomSCALE( dens(:,:,:,:),         &
-       !                      w(:,:,:,:),            &
-       !                      u(:,:,:,:),            &
-       !                      v(:,:,:,:),            &
-       !                      pott(:,:,:,:),         &
-       !                      qtrc(:,:,:,:,:),       &
-       !                      basename_org,        &
-       !                      dims(:),             &
-       !                      step )
-       write(*,*) 'xxx NOT WORK YET: InputAtomSCALE'
-       call PRC_MPIstop
+    if( mdlid == iSCALE ) then ! TYPE: SCALE-LES
+       call InputAtomSCALE( dens    (:,:,:,:),   &
+                            w       (:,:,:,:),   &
+                            u       (:,:,:,:),   &
+                            v       (:,:,:,:),   &
+                            pott    (:,:,:,:),   &
+                            qtrc    (:,:,:,:,:), &
+                            pres_sfc(1,:,:,:),   &
+                            pott_sfc(1,:,:,:),   &
+                            basename_org,        &
+                            timelen              )
 
-    elseif( mdlid == iWRFARW )then !TYPE: WRF-ARW
-       call InputAtomWRF(   dens(:,:,:,:),       &
-                             w(:,:,:,:),          &
-                             u(:,:,:,:),          &
-                             v(:,:,:,:),          &
-                             pott(:,:,:,:),       &
-                             qtrc(:,:,:,:,:),     &
-                             pres_sfc(1,:,:,:),   &
-                             pott_sfc(1,:,:,:),   &
-                             basename_org,        &
-                             dims(:),             &
-                             mdlid,               &
-                             mptype_run,          &
-                             mptype_parent,       &
-                             1,                   &  !suffix of start time: ts
-                             timelen,             &  !suffix of end time: te
-                             serial               )
+    elseif( mdlid == iWRFARW ) then ! TYPE: WRF-ARW
+       call InputAtomWRF( dens    (:,:,:,:),   &
+                          w       (:,:,:,:),   &
+                          u       (:,:,:,:),   &
+                          v       (:,:,:,:),   &
+                          pott    (:,:,:,:),   &
+                          qtrc    (:,:,:,:,:), &
+                          pres_sfc(1,:,:,:),   &
+                          pott_sfc(1,:,:,:),   &
+                          basename_org,        &
+                          dims(:),             &
+                          mdlid,               &
+                          mptype_run,          &
+                          mptype_parent,       &
+                          1,                   &  !suffix of start time: ts
+                          timelen,             &  !suffix of end time: te
+                          serial               )
     endif
 
 
@@ -337,12 +337,12 @@ contains
     ! make density & pressure profile in moist condition
     qv_sfc(1,:,:,tim) = qv(KS,:,:,tim)
     qc_sfc(1,:,:,tim) = qc(KS,:,:,tim)
-    call HYDROSTATIC_buildrho( dens(:,:,:,tim), & ! [OUT]
-                               temp(:,:,:,tim), & ! [OUT]
-                               pres(:,:,:,tim), & ! [OUT]
-                               pott(:,:,:,tim), & ! [IN]
-                               qv  (:,:,:,tim), & ! [IN]
-                               qc  (:,:,:,tim), & ! [IN]
+    call HYDROSTATIC_buildrho( dens    (:,:,:,tim), & ! [OUT]
+                               temp    (:,:,:,tim), & ! [OUT]
+                               pres    (:,:,:,tim), & ! [OUT]
+                               pott    (:,:,:,tim), & ! [IN]
+                               qv      (:,:,:,tim), & ! [IN]
+                               qc      (:,:,:,tim), & ! [IN]
                                temp_sfc(:,:,:,tim), & ! [OUT]
                                pres_sfc(:,:,:,tim), & ! [IN]
                                pott_sfc(:,:,:,tim), & ! [IN]
@@ -511,7 +511,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Land&Ocean Data Read/Write
   !-----------------------------------------------------------------------------
-  subroutine ParentLndOcnUrbInput( &
+  subroutine ParentSurfaceInput( &
       basename_org, &
       dims,         &
       timelen,      &
@@ -538,17 +538,17 @@ contains
     logical,          intent(in) :: serial   ! read by a serial process
     logical,          intent(in) :: no_add_input
 
-    real(RP) :: tg(LKMAX,IA,JA)
-    real(RP) :: strg(LKMAX,IA,JA)
-    real(RP) :: roff(IA,JA)
-    real(RP) :: qvef(IA,JA)
-    real(RP) :: tw(IA,JA) 
-    real(RP) :: lst(IA,JA)
-    real(RP) :: ust(IA,JA)
-    real(RP) :: sst(IA,JA)
-    real(RP) :: albw(IA,JA,2)
-    real(RP) :: albg(IA,JA,2)
-    real(RP) :: z0w(IA,JA)
+    real(RP) :: tg   (LKMAX,IA,JA)
+    real(RP) :: strg (LKMAX,IA,JA)
+    real(RP) :: roff (IA,JA)
+    real(RP) :: qvef (IA,JA)
+    real(RP) :: tw   (IA,JA) 
+    real(RP) :: lst  (IA,JA)
+    real(RP) :: ust  (IA,JA)
+    real(RP) :: sst  (IA,JA)
+    real(RP) :: albw (IA,JA,2)
+    real(RP) :: albg (IA,JA,2)
+    real(RP) :: z0w  (IA,JA)
     real(RP) :: skint(IA,JA)
     real(RP) :: skinw(IA,JA)
     real(RP) :: snowq(IA,JA)
@@ -558,7 +558,7 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[realinput]/Categ[Input-LndOcn]'
+    if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[realinput]/Categ[Input-Surface]'
 
     if( LKMAX < 4 )then
        write(*,*) 'xxx LKMAX less than 4: ', LKMAX
@@ -567,33 +567,44 @@ contains
     endif
 
     ! Read Data
-    if( mdlid == iSCALE )then      !TYPE: SCALE-LES
-       !
-       ! under construction
-       !
-       write(*,*) 'xxx NOT WORK YET: InputLndOcnSCALE'
-       call PRC_MPIstop
-    elseif( mdlid == iWRFARW )then !TYPE: WRF-ARW
-       call InputLndOcnWRF( tg(:,:,:),        &
-                             strg(:,:,:),      &
-                             roff(:,:),        &
-                             qvef(:,:),        &
-                             tw(:,:),          &
-                             lst(:,:),         &
-                             ust(:,:),         &
-                             sst(:,:),         &
-                             albw(:,:,:),      &
-                             albg(:,:,:),      &
-                             z0w(:,:),         &
-                             skint(:,:),       &
-                             skinw(:,:),       &
-                             snowq(:,:),       &
-                             snowt(:,:),       &
-                             basename_org,     &
-                             dims(:),          &
-                             mdlid,            &
-                             serial,           &
-                             no_add_input      )
+    if( mdlid == iSCALE ) then ! TYPE: SCALE-LES
+       call InputSurfaceSCALE( tg   (:,:,:), &
+                               strg (:,:,:), &
+                               roff (:,:),   &
+                               qvef (:,:),   &
+                               tw   (:,:),   &
+                               lst  (:,:),   &
+                               ust  (:,:),   &
+                               sst  (:,:),   &
+                               albw (:,:,:), &
+                               albg (:,:,:), &
+                               z0w  (:,:),   &
+                               skint(:,:),   &
+                               skinw(:,:),   &
+                               snowq(:,:),   &
+                               snowt(:,:),   &
+                               basename_org  )
+    elseif( mdlid == iWRFARW ) then ! TYPE: WRF-ARW
+       call InputSurfaceWRF( tg   (:,:,:), &
+                             strg (:,:,:), &
+                             roff (:,:),   &
+                             qvef (:,:),   &
+                             tw   (:,:),   &
+                             lst  (:,:),   &
+                             ust  (:,:),   &
+                             sst  (:,:),   &
+                             albw (:,:,:), &
+                             albg (:,:,:), &
+                             z0w  (:,:),   &
+                             skint(:,:),   &
+                             skinw(:,:),   &
+                             snowq(:,:),   &
+                             snowt(:,:),   &
+                             basename_org, &
+                             dims(:),      &
+                             mdlid,        &
+                             serial,       &
+                             no_add_input  )
     endif
 
     ! Write out: Ocean
@@ -609,175 +620,355 @@ contains
     call ATMOS_PHY_SF_vars_external_in( skint, albw(:,:,I_LW), albw(:,:,I_SW), z0w )
 
     return
-  end subroutine ParentLndOcnUrbInput
+  end subroutine ParentSurfaceInput
 
   !-----------------------------------------------------------------------------
   !> Individual Procedures
   !-----------------------------------------------------------------------------
-  subroutine InputAtomScale( &
+  subroutine InputAtomSCALE( &
       dens,          & ! (out)
       w,             & ! (out)
       u,             & ! (out)
       v,             & ! (out)
       pott,          & ! (out)
       qtrc,          & ! (out)
+      psfc,          & ! (out)
+      tsfc,          & ! (out)
       basename_org,  & ! (in)
-      dims,          & ! (in)
       step           & ! (in)
       )
+    use scale_const, only: &
+       D2R => CONST_D2R
+    use scale_grid_nest, only: &
+       PARENT_KMAX,     &
+       PARENT_IMAX,     &
+       PARENT_JMAX,     &
+       NEST_TILE_NUM_X, &
+       NEST_TILE_NUM_Y, &
+       NEST_TILE_ID
     implicit none
 
-    real(RP),         intent(out)           :: dens(:,:,:)
-    real(RP),         intent(out)           :: w(:,:,:)
-    real(RP),         intent(out)           :: u(:,:,:)
-    real(RP),         intent(out)           :: v(:,:,:)
-    real(RP),         intent(out)           :: pott(:,:,:)
-    real(RP),         intent(out)           :: qtrc(:,:,:,:)
-    character(LEN=*), intent( in)          :: basename_org
-    integer,          intent( in)           :: dims(:)
-    integer,          intent( in)           :: step
+    real(RP),         intent(out) :: dens(:,:,:,:)
+    real(RP),         intent(out) :: w   (:,:,:,:)
+    real(RP),         intent(out) :: u   (:,:,:,:)
+    real(RP),         intent(out) :: v   (:,:,:,:)
+    real(RP),         intent(out) :: pott(:,:,:,:)
+    real(RP),         intent(out) :: qtrc(:,:,:,:,:)
+    real(RP),         intent(out) :: psfc(:,:,:)
+    real(RP),         intent(out) :: tsfc(:,:,:)
+    character(LEN=*), intent(in)  :: basename_org
+    integer,          intent(in)  :: step
 
-    real(RP), allocatable :: DENS_ORG(:,:,:)
-    real(RP), allocatable :: MOMZ_ORG(:,:,:)
-    real(RP), allocatable :: MOMX_ORG(:,:,:)
-    real(RP), allocatable :: MOMY_ORG(:,:,:)
-    real(RP), allocatable :: RHOT_ORG(:,:,:)
-    real(RP), allocatable :: POTT_ORG(:,:,:)
-    real(RP), allocatable :: QTRC_ORG(:,:,:,:)
+    ! work
+    real(RP), allocatable :: read2D(:,:)
+    real(RP), allocatable :: read3D(:,:,:)
 
-    real(RP), allocatable :: W_ORG(:,:,:)
-    real(RP), allocatable :: U_ORG(:,:,:)
-    real(RP), allocatable :: V_ORG(:,:,:)
+    real(RP), allocatable :: LON_ORG (:,:,:)
+    real(RP), allocatable :: LAT_ORG (:,:,:)
+    real(RP), allocatable :: LONU_ORG(:,:,:)
+    real(RP), allocatable :: LATU_ORG(:,:,:)
+    real(RP), allocatable :: LONV_ORG(:,:,:)
+    real(RP), allocatable :: LATV_ORG(:,:,:)
+    real(RP), allocatable :: GEOH_ORG(:,:,:,:)
+    real(RP), allocatable :: GEOF_ORG(:,:,:,:)
 
-    integer :: k, i, j, iq
+    real(RP), allocatable :: DENS_ORG(:,:,:,:)
+    real(RP), allocatable :: MOMZ_ORG(:,:,:,:)
+    real(RP), allocatable :: MOMX_ORG(:,:,:,:)
+    real(RP), allocatable :: MOMY_ORG(:,:,:,:)
+    real(RP), allocatable :: RHOT_ORG(:,:,:,:)
+    real(RP), allocatable :: POTT_ORG(:,:,:,:)
+    real(RP), allocatable :: QTRC_ORG(:,:,:,:,:)
+    real(RP), allocatable :: PSFC_ORG(:,:,:)
+    real(RP), allocatable :: TSFC_ORG(:,:,:)
+
+    real(RP), allocatable :: W_ORG(:,:,:,:)
+    real(RP), allocatable :: U_ORG(:,:,:,:)
+    real(RP), allocatable :: V_ORG(:,:,:,:)
+
+    integer :: dims(6) ! 1-3: cell center [z,x,y], 4-6: staggered [z,x,y]
+    integer :: KALL, IALL, JALL
+    integer :: rank
+
+    integer :: k, i, j, n, iq
+    integer :: xloc, yloc
+    integer :: xs, xe
+    integer :: ys, ye
 
     !logical :: single_ = .false.
 
     intrinsic shape
     !---------------------------------------------------------------------------
 
-    allocate( dens_org(dims(1),dims(2),dims(3)) )
-    allocate( momz_org(dims(1),dims(2),dims(3)) )
-    allocate( momx_org(dims(1),dims(2),dims(3)) )
-    allocate( momy_org(dims(1),dims(2),dims(3)) )
-    allocate( rhot_org(dims(1),dims(2),dims(3)) )
-    allocate( pott_org(dims(1),dims(2),dims(3)) )
-    allocate( qtrc_org(dims(1),dims(2),dims(3),QA) )
+    KALL = PARENT_KMAX
+    IALL = PARENT_IMAX * NEST_TILE_NUM_X
+    JALL = PARENT_JMAX * NEST_TILE_NUM_Y
 
-    allocate( w_org(dims(1),dims(2),dims(3)) )
-    allocate( u_org(dims(1),dims(2),dims(3)) )
-    allocate( v_org(dims(1),dims(2),dims(3)) )
+    allocate( read2D( PARENT_IMAX, PARENT_JMAX              ) )
+    allocate( read3D( PARENT_IMAX, PARENT_JMAX, PARENT_KMAX ) )
 
-    ! Need allocation for grid information of parent model (indicated as ORG)
+    allocate( lon_org (       IALL, JALL, step )    )
+    allocate( lat_org (       IALL, JALL, step )    )
+    allocate( lonu_org(       IALL, JALL, step )    )
+    allocate( latu_org(       IALL, JALL, step )    )
+    allocate( lonv_org(       IALL, JALL, step )    )
+    allocate( latv_org(       IALL, JALL, step )    )
+    allocate( geoh_org( KALL, IALL, JALL, step )    )
+    allocate( geof_org( KALL, IALL, JALL, step )    )
+
+    allocate( dens_org( KALL, IALL, JALL, step )    )
+    allocate( momz_org( KALL, IALL, JALL, step )    )
+    allocate( momx_org( KALL, IALL, JALL, step )    )
+    allocate( momy_org( KALL, IALL, JALL, step )    )
+    allocate( rhot_org( KALL, IALL, JALL, step )    )
+    allocate( pott_org( KALL, IALL, JALL, step )    )
+    allocate( qtrc_org( KALL, IALL, JALL, step, QA) )
+    allocate( psfc_org(       IALL, JALL, step )    )
+    allocate( tsfc_org(       IALL, JALL, step )    )
+
+    allocate( w_org   ( KALL, IALL, JALL, step )    )
+    allocate( u_org   ( KALL, IALL, JALL, step )    )
+    allocate( v_org   ( KALL, IALL, JALL, step )    )
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[realinput]/Categ[InputSCALE]'
 
-    call FileRead( dens_org(:,:,:),                          &
-                   BASENAME_ORG, "DENS", step, myrank, single=.true. )
-    call FileRead( momz_org(:,:,:),                          &
-                   BASENAME_ORG, "MOMZ", step, myrank, single=.true. )
-    call FileRead( momx_org(:,:,:),                          &
-                   BASENAME_ORG, "MOMX", step, myrank, single=.true. )
-    call FileRead( momy_org(:,:,:),                          &
-                   BASENAME_ORG, "MOMY", step, myrank, single=.true. )
-    call FileRead( rhot_org(:,:,:),                          &
-                   BASENAME_ORG, "RHOT", step, myrank, single=.true. )
-    do iq = 1, QA
-       call FileRead( qtrc_org(:,:,:,iq),                            &
-                      BASENAME_ORG, AQ_NAME(iq), step, myrank, single=.true. )
+    do i = 1, size( NEST_TILE_ID(:) )
+       ! read data from split files
+       rank = NEST_TILE_ID(i)
+
+       xloc = mod( i-1, NEST_TILE_NUM_X ) + 1
+       yloc = int( real(i-1) / real(NEST_TILE_NUM_X) ) + 1
+
+       xs = PARENT_IMAX * (xloc-1) + 1
+       xe = PARENT_IMAX * xloc
+       ys = PARENT_JMAX * (yloc-1) + 1
+       ye = PARENT_JMAX * yloc
+
+       call FileRead( read2D(:,:),   BASENAME_ORG, "lon",        1, rank )
+       lon_org (xs:xe,ys:ye,1)  = read2D(:,:) * D2R
+
+       call FileRead( read2D(:,:),   BASENAME_ORG, "lat",        1, rank )
+       lat_org (xs:xe,ys:ye,1)  = read2D(:,:) * D2R
+
+       call FileRead( read2D(:,:),   BASENAME_ORG, "lon_uy",     1, rank )
+       lonu_org (xs:xe,ys:ye,1) = read2D(:,:) * D2R
+
+       call FileRead( read2D(:,:),   BASENAME_ORG, "lat_uy",     1, rank )
+       latu_org (xs:xe,ys:ye,1) = read2D(:,:) * D2R
+
+       call FileRead( read2D(:,:),   BASENAME_ORG, "lon_xv",     1, rank )
+       lonv_org (xs:xe,ys:ye,1) = read2D(:,:) * D2R
+
+       call FileRead( read2D(:,:),   BASENAME_ORG, "lat_xv",     1, rank )
+       latv_org (xs:xe,ys:ye,1) = read2D(:,:) * D2R
+
+       call FileRead( read3D(:,:,:), BASENAME_ORG, "height",     1, rank )
+       do k = 1, KALL
+         geoh_org(k,xs:xe,ys:ye,1) = read3D(:,:,k)
+       end do
+
+       call FileRead( read3D(:,:,:), BASENAME_ORG, "height_xyw", 1, rank )
+       do k = 1, KALL
+         geof_org(k,xs:xe,ys:ye,1) = read3D(:,:,k)
+       end do
+
+       do n = 1, step
+         call FileRead( read3D(:,:,:), BASENAME_ORG, "DENS", n, rank )
+         do k = 1, KALL
+           dens_org(k,xs:xe,ys:ye,n) = read3D(:,:,k)
+         end do
+       end do
+
+       do n = 1, step
+         call FileRead( read3D(:,:,:), BASENAME_ORG, "MOMZ", n, rank )
+         do k = 1, KALL
+           momz_org(k,xs:xe,ys:ye,n) = read3D(:,:,k)
+         end do
+       end do
+
+       do n = 1, step
+         call FileRead( read3D(:,:,:), BASENAME_ORG, "MOMX", n, rank )
+         do k = 1, KALL
+           momx_org(k,xs:xe,ys:ye,n) = read3D(:,:,k)
+         end do
+       end do
+
+       do n = 1, step
+         call FileRead( read3D(:,:,:), BASENAME_ORG, "MOMY", n, rank )
+         do k = 1, KALL
+           momy_org(k,xs:xe,ys:ye,n) = read3D(:,:,k)
+         end do
+       end do
+
+       do n = 1, step
+         call FileRead( read3D(:,:,:), BASENAME_ORG, "RHOT", n, rank )
+         do k = 1, KALL
+           rhot_org(k,xs:xe,ys:ye,n) = read3D(:,:,k)
+         end do
+       end do
+
+       do iq = 1, QA
+         do n = 1, step
+           call FileRead( read3D(:,:,:), BASENAME_ORG, AQ_NAME(iq), n, rank )
+           do k = 1, KALL
+             qtrc_org(k,xs:xe,ys:ye,n,iq) = read3D(:,:,k)
+           end do
+         end do
+       end do
+
+       do n = 1, step
+         call FileRead( read2D(:,:), BASENAME_ORG, "SFC_PRES", n, rank )
+         psfc_org(xs:xe,ys:ye,n) = read2D(:,:)
+       end do
+
+       do n = 1, step
+         call FileRead( read2D(:,:), BASENAME_ORG, "SFC_TEMP", n, rank )
+         tsfc_org(xs:xe,ys:ye,n) = read2D(:,:)
+       end do
+
+    end do
+
+    ! make dimension
+    dims(1) = KALL ! z center
+    dims(2) = IALL ! x center
+    dims(3) = JALL ! y center
+    dims(4) = KALL ! z staggered
+    dims(5) = IALL ! x staggered
+    dims(6) = JALL ! y staggered
+
+    ! fill all step
+    do n = 1, step
+      lon_org (:,:,n)   = lon_org (:,:,1)
+      lat_org (:,:,n)   = lat_org (:,:,1)
+      lonu_org(:,:,n)   = lonu_org(:,:,1)
+      latu_org(:,:,n)   = latu_org(:,:,1)
+      lonv_org(:,:,n)   = lonv_org(:,:,1)
+      latv_org(:,:,n)   = latv_org(:,:,1)
+      geoh_org(:,:,:,n) = geoh_org(:,:,:,1)
+      geof_org(:,:,:,n) = geof_org(:,:,:,1)
     end do
 
     ! convert from momentum to velocity
-    do j = 1, dims(3)
-    do i = 1, dims(2)
-    do k = 1, dims(1)-1
-       w_org(k,i,j) = 2.0_RP * momz_org(k,i,j) / ( dens_org(k+1,i,j) + dens_org(k,i,j) )
+    do n = 1, step
+    do j = 1, JALL
+    do i = 1, IALL
+    do k = 1, KALL-1
+       w_org(k,i,j,n) = 2.0_RP * momz_org(k,i,j,n) / ( dens_org(k+1,i,j,n) + dens_org(k,i,j,n) )
     end do
     end do
     end do
-    do j = 1, dims(3)
-    do i = 1, dims(2)
-       w_org(dims(1),i,j) = 0.0_RP
     end do
-    end do
-
-    do j = 1, dims(3)
-    do i = 1, dims(2)-1
-    do k = 1, dims(1)
-       u_org(k,i,j) = 2.0_RP * momx_org(k,i,j) / ( dens_org(k,i+1,j) + dens_org(k,i,j) )
-    end do
-    end do
-    end do
-    do j = 1, dims(3)
-    do k = 1, dims(1)
-       u_org(k,dims(2),j) = 2.0_RP * momx_org(k,dims(2),j) / ( dens_org(k,1,j) + dens_org(k,dims(2),j) )
-    end do
-    end do
-
-    do j = 1, dims(3)-1
-    do i = 1, dims(2)
-    do k = 1, dims(1)
-       v_org(k,i,j) = 2.0_RP * momy_org(k,i,j) / ( dens_org(k,i,j+1) + dens_org(k,i,j) )
-    end do
-    end do
-    end do
-    do i = 1, dims(2)
-    do k = 1, dims(1)
-       v_org(k,i,dims(3)) = 2.0_RP * momy_org(k,i,dims(3)) / ( dens_org(k,i,1) + dens_org(k,i,dims(3)) )
-    end do
-    end do
-
-    do j = 1, dims(3)
-    do i = 1, dims(2)
-    do k = 1, dims(1)
-       pott_org(k,i,j) = rhot_org(k,i,j) / dens_org(k,i,j)
+    do n = 1, step
+    do j = 1, JALL
+    do i = 1, IALL
+       w_org(KALL,i,j,n) = 0.0_RP
     end do
     end do
     end do
 
-    do j = 1, dims(3)
-    do i = 1, dims(2)
-    do k = 1, dims(1)
-       dens_org(k,i,j) = log( dens_org(k,i,j) )
+    do n = 1, step
+    do j = 1, JALL
+    do i = 1, IALL-1
+    do k = 1, KALL
+       u_org(k,i,j,n) = 2.0_RP * momx_org(k,i,j,n) / ( dens_org(k,i+1,j,n) + dens_org(k,i,j,n) )
+    end do
+    end do
+    end do
+    end do
+    do n = 1, step
+    do j = 1, JALL
+    do k = 1, KALL
+       u_org(k,IALL,j,n) = momx_org(k,IALL,j,n) / dens_org(k,IALL,j,n)
     end do
     end do
     end do
 
-    !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-    ! Create Interpolation system here
-    ! ----------------------------------
-    ! tentatively dummy copy
-    do j = 1, dims(3)
-    do i = 1, dims(2)
-    do k = 1, dims(1)
-       dens(k,i,j) = dens_org(k,i,j)
-       w(k,i,j) = w_org(k,i,j)
-       u(k,i,j) = u_org(k,i,j)
-       v(k,i,j) = v_org(k,i,j)
-       pott(k,i,j) = pott_org(k,i,j)
+    do n = 1, step
+    do j = 1, JALL-1
+    do i = 1, IALL
+    do k = 1, KALL
+       v_org(k,i,j,n) = 2.0_RP * momy_org(k,i,j,n) / ( dens_org(k,i,j+1,n) + dens_org(k,i,j,n) )
+    end do
+    end do
+    end do
+    end do
+    do n = 1, step
+    do i = 1, IALL
+    do k = 1, KALL
+       v_org(k,i,JALL,n) = momy_org(k,i,JALL,n) / dens_org(k,i,JALL,n)
+    end do
+    end do
+    end do
 
-       do iq = 1, QA
-          qtrc(k,i,j,iq) = qtrc_org(k,i,j,iq)
-       end do
+    do n = 1, step
+    do j = 1, JALL
+    do i = 1, IALL
+    do k = 1, KALL
+       pott_org(k,i,j,n) = rhot_org(k,i,j,n) / dens_org(k,i,j,n)
+       dens_org(k,i,j,n) = log( dens_org(k,i,j,n) )
     end do
     end do
     end do
-    !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+    end do
+
+    ! make initial condition by interpolation
+    call LatLonZ_Interpolation_Linear( dens    (:,:,:,:),   &
+                                       w       (:,:,:,:),   &
+                                       u       (:,:,:,:),   &
+                                       v       (:,:,:,:),   &
+                                       pott    (:,:,:,:),   &
+                                       qtrc    (:,:,:,:,:), &
+                                       psfc    (:,:,:),     &
+                                       tsfc    (:,:,:),     &
+                                       dens_org(:,:,:,:),   &
+                                       w_org   (:,:,:,:),   &
+                                       u_org   (:,:,:,:),   &
+                                       v_org   (:,:,:,:),   &
+                                       pott_org(:,:,:,:),   &
+                                       qtrc_org(:,:,:,:,:), &
+                                       psfc_org(:,:,:),     &
+                                       tsfc_org(:,:,:),     &
+                                       lat_org (:,:,:),     &
+                                       lon_org (:,:,:),     &
+                                       latu_org(:,:,:),     &
+                                       lonu_org(:,:,:),     &
+                                       latv_org(:,:,:),     &
+                                       lonv_org(:,:,:),     &
+                                       geof_org(:,:,:,:),   &
+                                       geoh_org(:,:,:,:),   &
+                                       dims    (:),         &
+                                       1,                   &
+                                       step                 )
+
+    deallocate( read2D )
+    deallocate( read3D )
+
+    deallocate( lon_org  )
+    deallocate( lat_org  )
+    deallocate( lonu_org )
+    deallocate( latu_org )
+    deallocate( lonv_org )
+    deallocate( latv_org )
+    deallocate( geoh_org )
+    deallocate( geof_org )
 
     deallocate( dens_org )
     deallocate( momz_org )
     deallocate( momx_org )
     deallocate( momy_org )
     deallocate( rhot_org )
-    deallocate( qtrc_org )
-    deallocate( w_org )
-    deallocate( u_org )
-    deallocate( v_org )
     deallocate( pott_org )
+    deallocate( qtrc_org )
+    deallocate( psfc_org )
+    deallocate( tsfc_org )
+
+    deallocate( w_org    )
+    deallocate( u_org    )
+    deallocate( v_org    )
 
     return
-  end subroutine InputAtomScale
+  end subroutine InputAtomSCALE
 
   !-----------------------------------------------------------------------------
   subroutine InputAtomWRF( &
@@ -798,6 +989,8 @@ contains
       te,            & ! (in)
       serial         & ! (in)
       )
+    use scale_const, only: &
+       D2R => CONST_D2R
     implicit none
 
     real(RP),         intent(out)  :: dens(:,:,:,:)
@@ -848,7 +1041,6 @@ contains
     real(RP) :: RovCP
     real(RP) :: temp
     real(RP) :: t0 = 300.0_RP  ! Defined in WRF
-    real(RP) :: d2r
 
     integer :: n, k, i, j, iq, iqw, iq_all
     character(len=H_MID)  :: varname_wrf
@@ -856,8 +1048,6 @@ contains
 
     intrinsic shape
     !---------------------------------------------------------------------------
-
-    d2r = pi / 180.0_RP
 
     allocate( AQ_CV(QQA) )
     AQ_CV(I_QV) = CVvap
@@ -1193,7 +1383,333 @@ contains
   end subroutine InputAtomWRF
 
   !-----------------------------------------------------------------------------
-  subroutine InputLndOcnWRF( &
+  subroutine InputSurfaceSCALE( &
+      tg,          & ! (out)
+      strg,        & ! (out)
+      roff,        & ! (out)
+      qvef,        & ! (out)
+      tw,          & ! (out)
+      lst,         & ! (out)
+      ust,         & ! (out)
+      sst,         & ! (out)
+      albw,        & ! (out)
+      albg,        & ! (out)
+      z0w,         & ! (out)
+      skint,       & ! (out)
+      skinw,       & ! (out)
+      snowq,       & ! (out)
+      snowt,       & ! (out)
+      basename_org ) ! (in)
+    use scale_const, only: &
+       D2R   => CONST_D2R,   &
+       TEM00 => CONST_TEM00
+    use scale_grid_nest, only: &
+       PARENT_KMAX,     &
+       PARENT_IMAX,     &
+       PARENT_JMAX,     &
+       PARENT_LKMAX,    &
+       NEST_TILE_NUM_X, &
+       NEST_TILE_NUM_Y, &
+       NEST_TILE_ID
+    implicit none
+
+    real(RP), intent(out) :: tg   (:,:,:)
+    real(RP), intent(out) :: strg (:,:,:)
+    real(RP), intent(out) :: roff (:,:)
+    real(RP), intent(out) :: qvef (:,:)
+    real(RP), intent(out) :: tw   (:,:)
+    real(RP), intent(out) :: lst  (:,:)
+    real(RP), intent(out) :: ust  (:,:)
+    real(RP), intent(out) :: sst  (:,:)
+    real(RP), intent(out) :: albw (:,:,:)
+    real(RP), intent(out) :: albg (:,:,:)
+    real(RP), intent(out) :: z0w  (:,:)
+    real(RP), intent(out) :: skint(:,:)
+    real(RP), intent(out) :: skinw(:,:)
+    real(RP), intent(out) :: snowq(:,:)
+    real(RP), intent(out) :: snowt(:,:)
+
+    character(LEN=*), intent(in) :: basename_org
+
+    ! work
+    real(RP), allocatable :: read1D(:)
+    real(RP), allocatable :: read2D(:,:)
+    real(RP), allocatable :: read3D(:,:,:)
+
+    real(RP), allocatable :: lon_org(:,:,:)
+    real(RP), allocatable :: lat_org(:,:,:)
+    real(RP), allocatable :: lz_org (:,:,:,:)
+
+    real(RP), allocatable :: tg_org   (:,:,:)
+    real(RP), allocatable :: strg_org (:,:,:)
+    real(RP), allocatable :: tw_org   (:,:)
+    real(RP), allocatable :: lst_org  (:,:)
+    real(RP), allocatable :: ust_org  (:,:)
+    real(RP), allocatable :: sst_org  (:,:)
+    real(RP), allocatable :: albw_org (:,:,:)
+    real(RP), allocatable :: albg_org (:,:,:)
+    real(RP), allocatable :: z0w_org  (:,:)
+    real(RP), allocatable :: skint_org(:,:)
+    real(RP), allocatable :: skinw_org(:,:)
+    real(RP), allocatable :: snowq_org(:,:)
+    real(RP), allocatable :: snowt_org(:,:)
+
+    real(RP), allocatable :: hfact(:,:,:)
+    real(RP), allocatable :: vfact(:,:,:,:,:)
+
+    integer, allocatable :: igrd(:,:,:)
+    integer, allocatable :: jgrd(:,:,:)
+    integer, allocatable :: kgrd(:,:,:,:,:)
+
+    real(RP) :: lcz_3D(LKMAX,IA,JA)
+
+    integer :: KALL, IALL, JALL
+    integer :: rank
+
+    integer :: k, i, j, n
+    integer :: xloc, yloc
+    integer :: xs, xe
+    integer :: ys, ye
+    !---------------------------------------------------------------------------
+
+    KALL = PARENT_LKMAX
+    IALL = PARENT_IMAX * NEST_TILE_NUM_X
+    JALL = PARENT_JMAX * NEST_TILE_NUM_Y
+
+    allocate( read1D(                           PARENT_LKMAX ) )
+    allocate( read2D( PARENT_IMAX, PARENT_JMAX               ) )
+    allocate( read3D( PARENT_IMAX, PARENT_JMAX, PARENT_LKMAX ) )
+
+    allocate( lon_org(       IALL, JALL, 1 ) )
+    allocate( lat_org(       IALL, JALL, 1 ) )
+    allocate( lz_org ( KALL, IALL, JALL, 1 ) )
+
+    allocate( tg_org   ( KALL, IALL, JALL    ) )
+    allocate( strg_org ( KALL, IALL, JALL    ) )
+    allocate( tw_org   (       IALL, JALL    ) )
+    allocate( lst_org  (       IALL, JALL    ) )
+    allocate( ust_org  (       IALL, JALL    ) )
+    allocate( sst_org  (       IALL, JALL    ) )
+    allocate( albw_org (       IALL, JALL, 2 ) )
+    allocate( albg_org (       IALL, JALL, 2 ) )
+    allocate( z0w_org  (       IALL, JALL    ) )
+    allocate( skint_org(       IALL, JALL    ) )
+    allocate( skinw_org(       IALL, JALL    ) )
+    allocate( snowq_org(       IALL, JALL    ) )
+    allocate( snowt_org(       IALL, JALL    ) )
+
+    allocate( hfact(        IA, JA, itp_nh         ) )
+    allocate( vfact( LKMAX, IA, JA, itp_nh, itp_nv ) )
+    allocate( igrd (        IA, JA, itp_nh         ) )
+    allocate( jgrd (        IA, JA, itp_nh         ) )
+    allocate( kgrd ( LKMAX, IA, JA, itp_nh, itp_nv ) )
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[realinput]/Categ[InputSCALE-Surface]'
+
+    do i = 1, size( NEST_TILE_ID(:) )
+       ! read data from split files
+       rank = NEST_TILE_ID(i)
+
+       xloc = mod( i-1, NEST_TILE_NUM_X ) + 1
+       yloc = int( real(i-1) / real(NEST_TILE_NUM_X) ) + 1
+
+       xs = PARENT_IMAX * (xloc-1) + 1
+       xe = PARENT_IMAX * xloc
+       ys = PARENT_JMAX * (yloc-1) + 1
+       ye = PARENT_JMAX * yloc
+
+       call FileRead( read2D(:,:), BASENAME_ORG, "lon", 1, rank )
+       lon_org(xs:xe,ys:ye,1) = read2D(:,:) * D2R
+
+       call FileRead( read2D(:,:), BASENAME_ORG, "lat", 1, rank )
+       lat_org(xs:xe,ys:ye,1) = read2D(:,:) * D2R
+
+       call FileRead( read1D(:),   BASENAME_ORG, "lz",  1, rank )
+       lz_org(:,1,1,1) = read1D(:)
+
+       call FileRead( read3D(:,:,:), BASENAME_ORG, "LAND_TEMP",  1, rank )
+       do k = 1, KALL
+         tg_org(k,xs:xe,ys:ye) = read3D(:,:,k)
+       end do
+
+       call FileRead( read3D(:,:,:), BASENAME_ORG, "LAND_WATER", 1, rank )
+       do k = 1, KALL
+         strg_org(k,xs:xe,ys:ye) = read3D(:,:,k)
+       end do
+
+       call FileRead( read2D(:,:), BASENAME_ORG, "OCEAN_TEMP",     1, rank )
+       tw_org(xs:xe,ys:ye) = read2D(:,:)
+
+       call FileRead( read2D(:,:), BASENAME_ORG, "LAND_SFC_TEMP",  1, rank )
+       lst_org(xs:xe,ys:ye) = read2D(:,:)
+
+       call FileRead( read2D(:,:), BASENAME_ORG, "TS_URB",         1, rank )
+       ust_org(xs:xe,ys:ye) = read2D(:,:)
+
+       call FileRead( read2D(:,:), BASENAME_ORG, "OCEAN_SFC_TEMP", 1, rank )
+       sst_org(xs:xe,ys:ye) = read2D(:,:)
+
+       call FileRead( read2D(:,:), BASENAME_ORG, "OCEAN_ALB_LW",   1, rank )
+       albw_org(xs:xe,ys:ye,1) = read2D(:,:)
+
+       call FileRead( read2D(:,:), BASENAME_ORG, "OCEAN_ALB_SW",   1, rank )
+       albw_org(xs:xe,ys:ye,2) = read2D(:,:)
+
+       call FileRead( read2D(:,:), BASENAME_ORG, "LAND_ALB_LW",    1, rank )
+       albg_org(xs:xe,ys:ye,1) = read2D(:,:)
+
+       call FileRead( read2D(:,:), BASENAME_ORG, "LAND_ALB_SW",    1, rank )
+       albg_org(xs:xe,ys:ye,2) = read2D(:,:)
+
+       call FileRead( read2D(:,:), BASENAME_ORG, "OCEAN_SFC_Z0",   1, rank )
+       z0w_org(xs:xe,ys:ye) = read2D(:,:)
+
+       call FileRead( read2D(:,:), BASENAME_ORG, "SFC_TEMP",       1, rank )
+       skint_org(xs:xe,ys:ye) = read2D(:,:)
+
+    end do
+
+    ! fill grid data
+    do j = 1, JALL
+    do i = 1, IALL
+      lz_org(:,i,j,1) = lz_org(:,1,1,1)
+    end do
+    end do
+
+    do j = 1, JA
+    do i = 1, IA
+      lcz_3D(:,i,j) = LCZ(:)
+    enddo
+    enddo
+
+    ! tentative process
+    skinw_org(:,:) = 0.0_RP
+    snowq_org(:,:) = 0.0_RP
+    snowt_org(:,:) = TEM00
+
+    call latlonz_interporation_fact( hfact  (:,:,:),     & ! [OUT]
+                                     vfact  (:,:,:,:,:), & ! [OUT]
+                                     kgrd   (:,:,:,:,:), & ! [OUT]
+                                     igrd   (:,:,:),     & ! [OUT]
+                                     jgrd   (:,:,:),     & ! [OUT]
+                                     lcz_3D (:,:,:),     & ! [IN]
+                                     LAT    (:,:),       & ! [IN]
+                                     LON    (:,:),       & ! [IN]
+                                     lz_org (:,:,:,:),   & ! [IN]
+                                     lat_org(:,:,:),     & ! [IN]
+                                     lon_org(:,:,:),     & ! [IN]
+                                     KALL, IALL, JALL,   & ! [IN]
+                                     1,                  & ! [IN]
+                                     landgrid=.true.     ) ! [IN]
+
+    ! interpolation
+    do j = JS-1, JE+1
+    do i = IS-1, IE+1
+    do k = 1, LKMAX-1
+       tg  (k,i,j) = tg_org  (kgrd(k,i,j,1,1),igrd(i,j,1),jgrd(i,j,1)) * hfact(i,j,1) * vfact(k,i,j,1,1) &
+                   + tg_org  (kgrd(k,i,j,2,1),igrd(i,j,2),jgrd(i,j,2)) * hfact(i,j,2) * vfact(k,i,j,2,1) &
+                   + tg_org  (kgrd(k,i,j,3,1),igrd(i,j,3),jgrd(i,j,3)) * hfact(i,j,3) * vfact(k,i,j,3,1) &
+                   + tg_org  (kgrd(k,i,j,1,2),igrd(i,j,1),jgrd(i,j,1)) * hfact(i,j,1) * vfact(k,i,j,1,2) &
+                   + tg_org  (kgrd(k,i,j,2,2),igrd(i,j,2),jgrd(i,j,2)) * hfact(i,j,2) * vfact(k,i,j,2,2) &
+                   + tg_org  (kgrd(k,i,j,3,2),igrd(i,j,3),jgrd(i,j,3)) * hfact(i,j,3) * vfact(k,i,j,3,2)
+       strg(k,i,j) = strg_org(kgrd(k,i,j,1,1),igrd(i,j,1),jgrd(i,j,1)) * hfact(i,j,1) * vfact(k,i,j,1,1) &
+                   + strg_org(kgrd(k,i,j,2,1),igrd(i,j,2),jgrd(i,j,2)) * hfact(i,j,2) * vfact(k,i,j,2,1) &
+                   + strg_org(kgrd(k,i,j,3,1),igrd(i,j,3),jgrd(i,j,3)) * hfact(i,j,3) * vfact(k,i,j,3,1) &
+                   + strg_org(kgrd(k,i,j,1,2),igrd(i,j,1),jgrd(i,j,1)) * hfact(i,j,1) * vfact(k,i,j,1,2) &
+                   + strg_org(kgrd(k,i,j,2,2),igrd(i,j,2),jgrd(i,j,2)) * hfact(i,j,2) * vfact(k,i,j,2,2) &
+                   + strg_org(kgrd(k,i,j,3,2),igrd(i,j,3),jgrd(i,j,3)) * hfact(i,j,3) * vfact(k,i,j,3,2)
+    enddo
+    enddo
+    enddo
+    do j = JS-1, JE+1
+    do i = IS-1, IE+1
+       tg  (LKMAX,i,j) = tg  (LKMAX-1,i,j)
+       strg(LKMAX,i,j) = strg(LKMAX-1,i,j)
+    enddo
+    enddo
+
+    roff(:,:) = 0.0_RP ! not necessary
+    qvef(:,:) = 0.0_RP ! not necessary
+
+    do j = JS-1, JE+1
+    do i = IS-1, IE+1
+       tw   (i,j) = tw_org   (igrd(i,j,1),jgrd(i,j,1)) * hfact(i,j,1) &
+                  + tw_org   (igrd(i,j,2),jgrd(i,j,2)) * hfact(i,j,2) &
+                  + tw_org   (igrd(i,j,3),jgrd(i,j,3)) * hfact(i,j,3)
+       sst  (i,j) = sst_org  (igrd(i,j,1),jgrd(i,j,1)) * hfact(i,j,1) &
+                  + sst_org  (igrd(i,j,2),jgrd(i,j,2)) * hfact(i,j,2) &
+                  + sst_org  (igrd(i,j,3),jgrd(i,j,3)) * hfact(i,j,3)
+       z0w  (i,j) = z0w_org  (igrd(i,j,1),jgrd(i,j,1)) * hfact(i,j,1) &
+                  + z0w_org  (igrd(i,j,2),jgrd(i,j,2)) * hfact(i,j,2) &
+                  + z0w_org  (igrd(i,j,3),jgrd(i,j,3)) * hfact(i,j,3)
+       lst  (i,j) = lst_org  (igrd(i,j,1),jgrd(i,j,1)) * hfact(i,j,1) &
+                  + lst_org  (igrd(i,j,2),jgrd(i,j,2)) * hfact(i,j,2) &
+                  + lst_org  (igrd(i,j,3),jgrd(i,j,3)) * hfact(i,j,3)
+       ust  (i,j) = ust_org  (igrd(i,j,1),jgrd(i,j,1)) * hfact(i,j,1) &
+                  + ust_org  (igrd(i,j,2),jgrd(i,j,2)) * hfact(i,j,2) &
+                  + ust_org  (igrd(i,j,3),jgrd(i,j,3)) * hfact(i,j,3)
+       skint(i,j) = skint_org(igrd(i,j,1),jgrd(i,j,1)) * hfact(i,j,1) &
+                  + skint_org(igrd(i,j,2),jgrd(i,j,2)) * hfact(i,j,2) &
+                  + skint_org(igrd(i,j,3),jgrd(i,j,3)) * hfact(i,j,3)
+       skinw(i,j) = skinw_org(igrd(i,j,1),jgrd(i,j,1)) * hfact(i,j,1) &
+                  + skinw_org(igrd(i,j,2),jgrd(i,j,2)) * hfact(i,j,2) &
+                  + skinw_org(igrd(i,j,3),jgrd(i,j,3)) * hfact(i,j,3)
+       snowq(i,j) = snowq_org(igrd(i,j,1),jgrd(i,j,1)) * hfact(i,j,1) &
+                  + snowq_org(igrd(i,j,2),jgrd(i,j,2)) * hfact(i,j,2) &
+                  + snowq_org(igrd(i,j,3),jgrd(i,j,3)) * hfact(i,j,3)
+       snowt(i,j) = snowt_org(igrd(i,j,1),jgrd(i,j,1)) * hfact(i,j,1) &
+                  + snowt_org(igrd(i,j,2),jgrd(i,j,2)) * hfact(i,j,2) &
+                  + snowt_org(igrd(i,j,3),jgrd(i,j,3)) * hfact(i,j,3)
+    enddo
+    enddo
+
+    do n = 1, 2 ! 1:LW, 2:SW
+    do j = JS-1, JE+1
+    do i = IS-1, IE+1
+       albw(i,j,n) = albw_org(igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) &
+                   + albw_org(igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) &
+                   + albw_org(igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3)
+       albg(i,j,n) = albg_org(igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) &
+                   + albg_org(igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) &
+                   + albg_org(igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3)
+    enddo
+    enddo
+    enddo
+
+    deallocate( read1D )
+    deallocate( read2D )
+    deallocate( read3D )
+
+    deallocate( lon_org )
+    deallocate( lat_org )
+    deallocate( lz_org  )
+
+    deallocate( tg_org    )
+    deallocate( strg_org  )
+    deallocate( tw_org    )
+    deallocate( lst_org   )
+    deallocate( ust_org   )
+    deallocate( sst_org   )
+    deallocate( albw_org  )
+    deallocate( albg_org  )
+    deallocate( z0w_org   )
+    deallocate( skint_org )
+    deallocate( skinw_org )
+    deallocate( snowq_org )
+    deallocate( snowt_org )
+
+    deallocate( hfact )
+    deallocate( vfact )
+    deallocate( igrd  )
+    deallocate( jgrd  )
+    deallocate( kgrd  )
+
+    return
+  end subroutine InputSurfaceSCALE
+
+  !-----------------------------------------------------------------------------
+  subroutine InputSurfaceWRF( &
       tg,          & ! (out)
       strg,        & ! (out)
       roff,        & ! (out)
@@ -1295,7 +1811,7 @@ contains
     endif
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[realinput]/Categ[InputWRF-LndOcn]'
+    if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[realinput]/Categ[InputWRF-Surface]'
 
     if( do_read ) then
        call ExternalFileRead( dummy_3D(:,:,:),                             &
@@ -1546,7 +2062,7 @@ contains
     deallocate( kgrd )
 
     return
-  end subroutine InputLndOcnWRF
+  end subroutine InputSurfaceWRF
 
   !-----------------------------------------------------------------------------
   subroutine LatLonZ_Interpolation_Linear( &
@@ -1737,26 +2253,27 @@ contains
       nx,         & ! (in)
       ny,         & ! (in)
       step,       & ! (in)
-      landgrid    & ! (in)
-      )
+      landgrid    ) ! (in)
     implicit none
 
-    real(RP),           intent(out)  :: hfact(:,:,:)
-    real(RP),           intent(out)  :: vfact(:,:,:,:,:)
-    integer,           intent(out)  :: kgrd(:,:,:,:,:)
-    integer,           intent(out)  :: igrd(:,:,:)
-    integer,           intent(out)  :: jgrd(:,:,:)
-    real(RP),           intent( in)  :: myhgt(:,:,:)
-    real(RP),           intent( in)  :: mylat(:,:)
-    real(RP),           intent( in)  :: mylon(:,:)
-    real(RP),           intent( in)  :: inhgt(:,:,:,:)
-    real(RP),           intent( in)  :: inlat(:,:,:)
-    real(RP),           intent( in)  :: inlon(:,:,:)
-    integer,            intent( in)  :: nz
-    integer,            intent( in)  :: nx
-    integer,            intent( in)  :: ny
-    integer,            intent( in)  :: step
-    logical, optional, intent( in)  :: landgrid
+    real(RP), intent(out) :: hfact(:,:,:)
+    real(RP), intent(out) :: vfact(:,:,:,:,:)
+    integer,  intent(out) :: kgrd (:,:,:,:,:)
+    integer,  intent(out) :: igrd (:,:,:)
+    integer,  intent(out) :: jgrd (:,:,:)
+
+    real(RP), intent(in)  :: myhgt(:,:,:)
+    real(RP), intent(in)  :: mylat(:,:)
+    real(RP), intent(in)  :: mylon(:,:)
+    real(RP), intent(in)  :: inhgt(:,:,:,:)
+    real(RP), intent(in)  :: inlat(:,:,:)
+    real(RP), intent(in)  :: inlon(:,:,:)
+    integer,  intent(in)  :: nz
+    integer,  intent(in)  :: nx
+    integer,  intent(in)  :: ny
+    integer,  intent(in)  :: step
+
+    logical,  intent(in), optional :: landgrid
 
     real(RP) :: distance
     real(RP) :: denom
