@@ -392,12 +392,40 @@ contains
     !---------------------------------------------------------------------------
 
     if ( LAND_VARS_CHECKRANGE ) then
-       call VALCHECK( LAND_TEMP (:,:,:), 0.0_RP, 1000.0_RP, VAR_NAME(I_TEMP) , __FILE__, __LINE__ )
-       call VALCHECK( LAND_WATER(:,:,:), 0.0_RP, 1000.0_RP, VAR_NAME(I_WATER), __FILE__, __LINE__ )
+       call VALCHECK( LAND_TEMP      (:,:,:),    0.0_RP, 1000.0_RP, VAR_NAME(I_TEMP),          __FILE__, __LINE__ )
+       call VALCHECK( LAND_WATER     (:,:,:),    0.0_RP, 1000.0_RP, VAR_NAME(I_WATER),         __FILE__, __LINE__ )
+       call VALCHECK( LAND_SFC_TEMP  (:,:),      0.0_RP, 1000.0_RP, VAR_NAME(I_SFC_TEMP),      __FILE__, __LINE__ )
+       call VALCHECK( LAND_SFC_albedo(:,:,I_LW), 0.0_RP,    2.0_RP, VAR_NAME(I_SFC_albedo_LW), __FILE__, __LINE__ )
+       call VALCHECK( LAND_SFC_albedo(:,:,I_SW), 0.0_RP,    2.0_RP, VAR_NAME(I_SFC_albedo_SW), __FILE__, __LINE__ )
     endif
 
-    call HIST_in( LAND_TEMP (:,:,:), VAR_NAME(I_TEMP),  VAR_DESC(I_TEMP),  VAR_UNIT(I_TEMP),  TIME_DTSEC_LAND, zdim='land' )
-    call HIST_in( LAND_WATER(:,:,:), VAR_NAME(I_WATER), VAR_DESC(I_WATER), VAR_UNIT(I_WATER), TIME_DTSEC_LAND, zdim='land' )
+    call HIST_in( LAND_TEMP(:,:,:), &
+                  VAR_NAME(I_TEMP), &
+                  VAR_DESC(I_TEMP), &
+                  VAR_UNIT(I_TEMP), &
+                  TIME_DTSEC_LAND,  &
+                  zdim='land'       )
+    call HIST_in( LAND_WATER(:,:,:), &
+                  VAR_NAME(I_WATER), &
+                  VAR_DESC(I_WATER), &
+                  VAR_UNIT(I_WATER), &
+                  TIME_DTSEC_LAND,   &
+                  zdim='land'        )
+    call HIST_in( LAND_SFC_TEMP(:,:),   &
+                  VAR_NAME(I_SFC_TEMP), &
+                  VAR_DESC(I_SFC_TEMP), &
+                  VAR_UNIT(I_SFC_TEMP), &
+                  TIME_DTSEC_LAND       )
+    call HIST_in( LAND_SFC_albedo(:,:,I_LW), &
+                  VAR_NAME(I_SFC_albedo_LW), &
+                  VAR_DESC(I_SFC_albedo_LW), &
+                  VAR_UNIT(I_SFC_albedo_LW), &
+                  TIME_DTSEC_LAND            )
+    call HIST_in( LAND_SFC_albedo(:,:,I_SW), &
+                  VAR_NAME(I_SFC_albedo_SW), &
+                  VAR_DESC(I_SFC_albedo_SW), &
+                  VAR_UNIT(I_SFC_albedo_SW), &
+                  TIME_DTSEC_LAND            )
 
     return
   end subroutine LAND_vars_history

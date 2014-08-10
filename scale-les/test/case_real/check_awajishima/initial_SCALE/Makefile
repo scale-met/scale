@@ -20,12 +20,12 @@ BINNAME     = NONE
 PPCONF      = NONE
 INITCONF    = init.conf
 RUNCONF     = NONE
-TPROC       = 9
+TPROC       = 24
 
 # required data (parameters,distributed files)
 DATDIR      = ../../../data
 DATPARAM    = rad/PARAG.29,rad/PARAPC.29,rad/VARDATA.RM29,rad/cira.nc,rad/MIPAS/day.atm,rad/MIPAS/equ.atm,rad/MIPAS/sum.atm,rad/MIPAS/win.atm
-DATDISTS    = ../topo/topo,../landuse/landuse
+DATDISTS    = /data2/converted_data/check_awajishima/topo/topo,/data2/converted_data/check_awajishima/landuse/landuse
 
 
 
@@ -34,5 +34,5 @@ include $(TESTDIR)/Makefile.common
 
 # special execute
 run: jobshell
-	$(JOBSUB) wrfinput-link.sh
+	$(JOBSUB) link.input.sh
 	$(JOBSUB) run.sh

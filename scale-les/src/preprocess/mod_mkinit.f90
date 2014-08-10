@@ -4279,8 +4279,16 @@ enddo
     initial_loop = .true.
     totaltimesteps = NUMBER_OF_FILES * NUMBER_OF_TSTEPS
 
-    BASENAME_WITHNUM = trim(BASENAME_ORG)//"_00000"
-    call ParentAtomSetup( dims(:), timelen, mdlid,          & ![OUT]
+    if     ( FILETYPE_ORG == 'WRF-ARW' ) then
+      BASENAME_WITHNUM = trim(BASENAME_ORG)//"_00000"
+    else if( FILETYPE_ORG == 'SCALE-LES' ) then
+      BASENAME_WITHNUM = trim(BASENAME_ORG)
+    else
+      write(*,*) ' xxx Unsupported FILE TYPE:', trim(FILETYPE_ORG)
+      call PRC_MPIstop
+    end if
+
+    call ParentAtomSetup( dims(:), timelen, mdlid,           & ![OUT]
                           BASENAME_WITHNUM, FILETYPE_ORG,    & ![IN]
                           INTERP_SERC_DIV_NUM, WRF_FILE_TYPE ) ![IN]
 
@@ -4298,7 +4306,16 @@ enddo
     !--- read external file
     do n = 1, NUMBER_OF_FILES
        write(NUM,'(I5.5)') n-1
-       BASENAME_WITHNUM = trim(BASENAME_ORG)//"_"//NUM
+
+       if     ( FILETYPE_ORG == 'WRF-ARW' ) then
+         BASENAME_WITHNUM = trim(BASENAME_ORG)//"_"//NUM
+       else if( FILETYPE_ORG == 'SCALE-LES' ) then
+         BASENAME_WITHNUM = trim(BASENAME_ORG)
+       else
+         write(*,*) ' xxx Unsupported FILE TYPE:', trim(FILETYPE_ORG)
+         call PRC_MPIstop
+       end if
+
        if( IO_L ) write(IO_FID_LOG,*) '+++ Target File Name: ',trim(BASENAME_WITHNUM)
        if( IO_L ) write(IO_FID_LOG,*) '    Time Steps in One File: ', NUMBER_OF_TSTEPS
 
@@ -4311,18 +4328,18 @@ enddo
        endif
 
        call ParentAtomInput( DENS_org(:,:,:,ns:ne),    &
-                              MOMZ_org(:,:,:,ns:ne),    &
-                              MOMX_org(:,:,:,ns:ne),    &
-                              MOMY_org(:,:,:,ns:ne),    &
-                              RHOT_org(:,:,:,ns:ne),    &
-                              QTRC_org(:,:,:,ns:ne,:),  &
-                              BASENAME_WITHNUM,         &
-                              dims(:),                  &
-                              mdlid,                    &
-                              PARENT_MP_TYPE,           &
-                              NUMBER_OF_TSTEPS,         &
-                              initial_loop,             &
-                              SERIAL_PROC_READ          )
+                             MOMZ_org(:,:,:,ns:ne),    &
+                             MOMX_org(:,:,:,ns:ne),    &
+                             MOMY_org(:,:,:,ns:ne),    &
+                             RHOT_org(:,:,:,ns:ne),    &
+                             QTRC_org(:,:,:,ns:ne,:),  &
+                             BASENAME_WITHNUM,         &
+                             dims(:),                  &
+                             mdlid,                    &
+                             PARENT_MP_TYPE,           &
+                             NUMBER_OF_TSTEPS,         &
+                             initial_loop,             &
+                             SERIAL_PROC_READ          )
 
        if( initial_loop ) initial_loop = .false.
     enddo
@@ -4365,13 +4382,22 @@ enddo
     !--- read/write initial data for bottom boundary models
     n = 1
     write(NUM,'(I5.5)') n-1
-    BASENAME_WITHNUM = trim(BASENAME_ORG)//"_"//NUM
-    call ParentLndOcnUrbInput( BASENAME_WITHNUM, &
-                              dims,               &
-                              1,                  &
-                              mdlid,              &
-                              SERIAL_PROC_READ,   &
-                              NO_ADDITIONAL_INPUT )
+
+    if     ( FILETYPE_ORG == 'WRF-ARW' ) then
+      BASENAME_WITHNUM = trim(BASENAME_ORG)//"_"//NUM
+    else if( FILETYPE_ORG == 'SCALE-LES' ) then
+      BASENAME_WITHNUM = trim(BASENAME_ORG)
+    else
+      write(*,*) ' xxx Unsupported FILE TYPE:', trim(FILETYPE_ORG)
+      call PRC_MPIstop
+    end if
+
+    call ParentSurfaceInput( BASENAME_WITHNUM,   &
+                             dims,               &
+                             1,                  &
+                             mdlid,              &
+                             SERIAL_PROC_READ,   &
+                             NO_ADDITIONAL_INPUT )
 
     do j = JS, JE
     do i = IS, IE
