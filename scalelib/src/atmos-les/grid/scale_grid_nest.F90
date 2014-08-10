@@ -211,14 +211,14 @@ contains
           exit ! exit loop
        endif
     enddo
-    if ( hit == .false. ) then
+    if ( .NOT. hit ) then
        if( IO_L ) write(*,*) 'xxx domain mismatch between parent and daughter: SW search'
        call PRC_MPIstop
     endif
 
     !--- NE search
     hit = .false.
-    do i = 1, PARENT_PRC_nmax 
+    do i = 1, PARENT_PRC_nmax
        if ( corner_loc(I_NE,I_LON) >= latlon_catalog(i,I_SW,I_LON) .and. &
             corner_loc(I_NE,I_LON) <  latlon_catalog(i,I_NE,I_LON) .and. &
             corner_loc(I_NE,I_LAT) >= latlon_catalog(i,I_SW,I_LAT) .and. &
@@ -229,7 +229,7 @@ contains
           exit ! exit loop
        endif
     enddo
-    if ( hit == .false. ) then
+    if ( .NOT. hit ) then
        if( IO_L ) write(*,*) 'xxx domain mismatch between parent and daughter: NE search'
        call PRC_MPIstop
     endif

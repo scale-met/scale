@@ -900,7 +900,8 @@ contains
                                        + ( qflx_hi(k  ,i  ,j  ,XDIR) - qflx_anti(k  ,i  ,j  ,XDIR) &
                                          - qflx_hi(k  ,i-1,j  ,XDIR) + qflx_anti(k  ,i-1,j  ,XDIR) ) * RCDX(i) &
                                        + ( qflx_hi(k  ,i  ,j  ,YDIR) - qflx_anti(k  ,i  ,j  ,YDIR) &
-                                         - qflx_hi(k  ,i  ,j-1,YDIR) + qflx_anti(k  ,i  ,j-1,YDIR) ) * RCDY(j) ) / GSQRT(k,i,j,I_XYZ) &
+                                         - qflx_hi(k  ,i  ,j-1,YDIR) + qflx_anti(k  ,i  ,j-1,YDIR) ) * RCDY(j) &
+                                       ) / GSQRT(k,i,j,I_XYZ) &
                               + RHOQ_t(k,i,j) ) ) / DENS(k,i,j)
           enddo
           enddo
@@ -1004,7 +1005,7 @@ contains
     do i = i0-ib, i1-ib
     do k = KS, KE
        sw = sign(0.5_RP, DAMP_alpha(k,i,j,I_BND_DENS) - epsilon) + 0.5_RP
-       sw2 = sign(0.5_RP, DAMP_var(k,i,j,bnd_xy)*dir) + 0.5_RP ! 0:inflow, 1:outflow 
+       sw2 = sign(0.5_RP, DAMP_var(k,i,j,bnd_xy)*dir) + 0.5_RP ! 0:inflow, 1:outflow
        DENS(k,i,j) = DENS(k,i,j) * ( 1.0_RP - sw ) &
                    + ( DENS(k,i+ju,j+iu) + DENS(k,i-ju,j-iu) + DENS(k,i,j)*2.0_RP ) * 0.25_RP * sw ! smoothing
 !                   + DENS(k,i+iu,j+ju) * sw2 * sw &
