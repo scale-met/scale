@@ -369,9 +369,9 @@ contains
       sw = 0.5_RP - sign( 0.5_RP, L ) ! if unstable, sw = 1
 
       Uabs  = ( sw ) * UabsUS  + ( 1.0_RP-sw ) * UabsS
-      Ustar = ( sw ) * UstarUS + ( 1.0_RP-sw ) * UstarS 
-      Tstar = ( sw ) * TstarUS + ( 1.0_RP-sw ) * TstarS 
-      Qstar = ( sw ) * QstarUS + ( 1.0_RP-sw ) * QstarS 
+      Ustar = ( sw ) * UstarUS + ( 1.0_RP-sw ) * UstarS
+      Tstar = ( sw ) * TstarUS + ( 1.0_RP-sw ) * TstarS
+      Qstar = ( sw ) * QstarUS + ( 1.0_RP-sw ) * QstarS
 
       ! update free convection velocity scale
       Wstar = ( -PBL * GRAV / Ta * Ustar * Tstar )**(1.0_RP/3.0_RP)
@@ -392,9 +392,9 @@ contains
 
       sw = 0.5_RP - sign( 0.5_RP, L+dL ) ! if unstable, sw = 1
 
-      dUstar = ( sw ) * dUstarUS + ( 1.0_RP-sw ) * dUstarS 
-      dTstar = ( sw ) * dTstarUS + ( 1.0_RP-sw ) * dTstarS 
-      dQstar = ( sw ) * dQstarUS + ( 1.0_RP-sw ) * dQstarS 
+      dUstar = ( sw ) * dUstarUS + ( 1.0_RP-sw ) * dUstarS
+      dTstar = ( sw ) * dTstarUS + ( 1.0_RP-sw ) * dTstarS
+      dQstar = ( sw ) * dQstarUS + ( 1.0_RP-sw ) * dQstarS
 
       ! update d(free convection velocity scale)
       dWstar = ( -PBL * GRAV / Ta * dUstar * dTstar )**(1.0_RP/3.0_RP)
