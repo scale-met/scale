@@ -373,8 +373,8 @@ contains
       Tstar = ( sw ) * TstarUS + ( 1.0_RP-sw ) * TstarS
       Qstar = ( sw ) * QstarUS + ( 1.0_RP-sw ) * QstarS
 
-      ! update free convection velocity scale
-      Wstar = ( -PBL * GRAV / Ta * Ustar * Tstar )**(1.0_RP/3.0_RP)
+      ! update free convection velocity scale (unstable condition only)
+      Wstar = ( -PBL * GRAV / Ta * Ustar * Tstar * sw )**(1.0_RP/3.0_RP)
 
       ! calculate residual
       res = L - Ustar**2 * Ta / ( KARMAN * GRAV * Tstar )
@@ -396,8 +396,8 @@ contains
       dTstar = ( sw ) * dTstarUS + ( 1.0_RP-sw ) * dTstarS
       dQstar = ( sw ) * dQstarUS + ( 1.0_RP-sw ) * dQstarS
 
-      ! update d(free convection velocity scale)
-      dWstar = ( -PBL * GRAV / Ta * dUstar * dTstar )**(1.0_RP/3.0_RP)
+      ! update d(free convection velocity scale) (unstable condition only)
+      dWstar = ( -PBL * GRAV / Ta * dUstar * dTstar * sw )**(1.0_RP/3.0_RP)
 
       ! calculate d(residual)/dL
       dres = ( (L+dL) - dUstar**2 * Ta / ( KARMAN * GRAV * dTstar ) - res ) / dL
