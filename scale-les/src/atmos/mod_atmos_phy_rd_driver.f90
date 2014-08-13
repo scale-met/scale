@@ -411,16 +411,6 @@ contains
                    F_QV,F_QC,F_QR,F_QI,F_QS,F_QG,          &
                    icloud,warm_rain                       )
 
-                ! do j = JS, JE
-                ! do i = IS, IE
-                !   if(i==20.and.j==20)then
-                !     print *,dt_RD,RTHRATENSW(20,KS,20),SDOWN3D(20,KS-1,20),GSW(20,20)
-                !     print *,SFC_albedo(20,20,I_SW)
-                !     print *,RHO3D(20,KS,20),T3D(20,KS,20),P3D(20,KS,20),PI3D(20,KS,20),DZ8W(20,KS,20)
-                !     print *,QV3D(20,KS,20),QC3D(20,KS,20),QR3D(20,KS,20),QI3D(20,KS,20),QS3D(20,KS,20),QG3D(20,KS,20)
-                !   endif
-                ! enddo
-                ! enddo
 
                  do j = JS, JE
                  do i = IS, IE
@@ -455,7 +445,7 @@ contains
             !TOAFLX_LW_up(i,j) = flux_rad(KE,i,j,I_LW,I_up)  ! mstrx
             !TOAFLX_LW_dn(i,j) = flux_rad(KE,i,j,I_LW,I_dn)  ! mstrx
             !TOAFLX_SW_up(i,j) = flux_rad(KE,i,j,I_SW,I_up)  ! will be 0
-            !TOAFLX_SW_dn(i,j) = flux_rad(KE,i,j,I_SW,I_dn)
+            TOAFLX_SW_dn(i,j) = flux_rad(KE,i,j,I_SW,I_dn)
           enddo
           enddo
           do j = JS, JE
@@ -494,6 +484,11 @@ contains
           call HIST_in( SFLX_LW_dn(:,:), 'SFLX_LW_dn', 'downward surface longwave  radiation', 'W/m2', dt_RD )
           call HIST_in( SFLX_SW_up(:,:), 'SFLX_SW_up', 'upward   surface shortwave radiation', 'W/m2', dt_RD )
           call HIST_in( SFLX_SW_dn(:,:), 'SFLX_SW_dn', 'downward surface shortwave radiation', 'W/m2', dt_RD )
+
+          call HIST_in( TOAFLX_LW_up(:,:), 'TOAFLX_LW_up', 'TOA upward   longwave radiation', 'W/m2', dt_RD )
+          call HIST_in( TOAFLX_LW_dn(:,:), 'TOAFLX_LW_dn', 'TOA downward longwave radiation', 'W/m2', dt_RD )
+          call HIST_in( TOAFLX_SW_up(:,:), 'TOAFLX_SW_up', 'TOA upward   shortwave radiation', 'W/m2', dt_RD )
+          call HIST_in( TOAFLX_SW_dn(:,:), 'TOAFLX_SW_dn', 'TOA downward shortwave radiation', 'W/m2', dt_RD )
 
           call HIST_in( flux_net(:,:,:,I_LW), 'RADFLUX_LW',  'net radiation flux(LW)', 'W/m2', dt_RD )
           call HIST_in( flux_net(:,:,:,I_SW), 'RADFLUX_SW',  'net radiation flux(SW)', 'W/m2', dt_RD )
