@@ -145,11 +145,11 @@ contains
          endif
 
          do i = 1, PARENT_PRC_nmax
-            read(fid,*,iostat=ierr) parent_id, &
-                                    latlon_catalog(i,I_NW,I_LON), latlon_catalog(i,I_NE,I_LON), & ! LON: NW, NE
-                                    latlon_catalog(i,I_SW,I_LON), latlon_catalog(i,I_SE,I_LON), & ! LON: SW, SE
-                                    latlon_catalog(i,I_NW,I_LAT), latlon_catalog(i,I_NE,I_LAT), & ! LAT: NW, NE
-                                    latlon_catalog(i,I_SW,I_LAT), latlon_catalog(i,I_SE,I_LAT)    ! LAT: SW, SE
+            read(fid,'(i8,8f32.24)',iostat=ierr) parent_id, &
+                                                 latlon_catalog(i,I_NW,I_LON), latlon_catalog(i,I_NE,I_LON), & ! LON: NW, NE
+                                                 latlon_catalog(i,I_SW,I_LON), latlon_catalog(i,I_SE,I_LON), & ! LON: SW, SE
+                                                 latlon_catalog(i,I_NW,I_LAT), latlon_catalog(i,I_NE,I_LAT), & ! LAT: NW, NE
+                                                 latlon_catalog(i,I_SW,I_LAT), latlon_catalog(i,I_SE,I_LAT)    ! LAT: SW, SE
             if ( i /= parent_id ) then
                if( IO_L ) write(*,*) 'xxx internal error: parent mpi id'
                call PRC_MPIstop
@@ -174,12 +174,11 @@ contains
   !-----------------------------------------------------------------------------
   !> Solve relationship between ParentDomain & Daughter Domain
   subroutine NEST_domain_relate
+    use scale_const, only: &
+       EPS => CONST_EPS
     use scale_process, only: &
        PRC_MPIstop
     implicit none
-
-    real(RP), parameter :: EPS_LON = 1.E-12_RP
-    real(RP), parameter :: EPS_LAT = 1.E-12_RP
 
     logical :: hit
 
@@ -208,8 +207,8 @@ contains
             corner_loc(I_SW,I_LAT) > latlon_catalog(i,I_SW,I_LAT) .and. &
             corner_loc(I_SW,I_LON) < latlon_catalog(i,I_NE,I_LON) .and. &
             corner_loc(I_SW,I_LAT) < latlon_catalog(i,I_NE,I_LAT) .or.  &
-            abs( corner_loc(I_SW,I_LON) - latlon_catalog(i,I_SW,I_LON) ) < EPS_LON .and. &
-            abs( corner_loc(I_SW,I_LAT) - latlon_catalog(i,I_SW,I_LAT) ) < EPS_LAT       ) then
+            abs( corner_loc(I_SW,I_LON) - latlon_catalog(i,I_SW,I_LON) ) < EPS .and. &
+            abs( corner_loc(I_SW,I_LAT) - latlon_catalog(i,I_SW,I_LAT) ) < EPS       ) then
 
           pd_sw_tile = i-1 ! MPI process number starts from zero
           hit = .true.
@@ -228,8 +227,8 @@ contains
             corner_loc(I_NE,I_LAT) > latlon_catalog(i,I_SW,I_LAT) .and. &
             corner_loc(I_NE,I_LON) < latlon_catalog(i,I_NE,I_LON) .and. &
             corner_loc(I_NE,I_LAT) < latlon_catalog(i,I_NE,I_LAT) .or.  &
-            abs( corner_loc(I_NE,I_LON) - latlon_catalog(i,I_NE,I_LON) ) < EPS_LON .and. &
-            abs( corner_loc(I_NE,I_LAT) - latlon_catalog(i,I_NE,I_LAT) ) < EPS_LAT       ) then
+            abs( corner_loc(I_NE,I_LON) - latlon_catalog(i,I_NE,I_LON) ) < EPS .and. &
+            abs( corner_loc(I_NE,I_LAT) - latlon_catalog(i,I_NE,I_LAT) ) < EPS       ) then
 
           pd_ne_tile = i-1 ! MPI process number starts from zero
           hit = .true.
