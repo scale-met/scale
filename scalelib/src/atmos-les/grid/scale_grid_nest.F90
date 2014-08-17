@@ -178,6 +178,9 @@ contains
        PRC_MPIstop
     implicit none
 
+    real(RP), parameter :: EPS_LON = 1.E-12_RP
+    real(RP), parameter :: EPS_LAT = 1.E-12_RP
+
     logical :: hit
 
     integer, allocatable :: pd_tile_num(:,:)
@@ -201,10 +204,12 @@ contains
     !--- SW search
     hit = .false.
     do i = 1, PARENT_PRC_nmax
-       if ( corner_loc(I_SW,I_LON) >= latlon_catalog(i,I_SW,I_LON) .and. &
-            corner_loc(I_SW,I_LON) <  latlon_catalog(i,I_NE,I_LON) .and. &
-            corner_loc(I_SW,I_LAT) >= latlon_catalog(i,I_SW,I_LAT) .and. &
-            corner_loc(I_SW,I_LAT) <  latlon_catalog(i,I_NE,I_LAT)       ) then
+       if ( corner_loc(I_SW,I_LON) > latlon_catalog(i,I_SW,I_LON) .and. &
+            corner_loc(I_SW,I_LAT) > latlon_catalog(i,I_SW,I_LAT) .and. &
+            corner_loc(I_SW,I_LON) < latlon_catalog(i,I_NE,I_LON) .and. &
+            corner_loc(I_SW,I_LAT) < latlon_catalog(i,I_NE,I_LAT) .or.  &
+            abs( corner_loc(I_SW,I_LON) - latlon_catalog(i,I_SW,I_LON) ) < EPS_LON .and. &
+            abs( corner_loc(I_SW,I_LAT) - latlon_catalog(i,I_SW,I_LAT) ) < EPS_LAT       ) then
 
           pd_sw_tile = i-1 ! MPI process number starts from zero
           hit = .true.
@@ -219,10 +224,12 @@ contains
     !--- NE search
     hit = .false.
     do i = 1, PARENT_PRC_nmax
-       if ( corner_loc(I_NE,I_LON) >= latlon_catalog(i,I_SW,I_LON) .and. &
-            corner_loc(I_NE,I_LON) <  latlon_catalog(i,I_NE,I_LON) .and. &
-            corner_loc(I_NE,I_LAT) >= latlon_catalog(i,I_SW,I_LAT) .and. &
-            corner_loc(I_NE,I_LAT) <  latlon_catalog(i,I_NE,I_LAT)       ) then
+       if ( corner_loc(I_NE,I_LON) > latlon_catalog(i,I_SW,I_LON) .and. &
+            corner_loc(I_NE,I_LAT) > latlon_catalog(i,I_SW,I_LAT) .and. &
+            corner_loc(I_NE,I_LON) < latlon_catalog(i,I_NE,I_LON) .and. &
+            corner_loc(I_NE,I_LAT) < latlon_catalog(i,I_NE,I_LAT) .or.  &
+            abs( corner_loc(I_NE,I_LON) - latlon_catalog(i,I_NE,I_LON) ) < EPS_LON .and. &
+            abs( corner_loc(I_NE,I_LAT) - latlon_catalog(i,I_NE,I_LAT) ) < EPS_LAT       ) then
 
           pd_ne_tile = i-1 ! MPI process number starts from zero
           hit = .true.
