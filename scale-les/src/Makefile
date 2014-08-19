@@ -36,6 +36,14 @@ else
 endif
 
 OBJS =	\
+	mod_urban_admin.o            \
+	mod_urban_vars.o             \
+	mod_cpl_admin.o              \
+	mod_cpl_vars.o               \
+	mod_cpl_atmos_land_driver.o  \
+	mod_cpl_atmos_urban_driver.o \
+	mod_cpl_atmos_ocean_driver.o \
+	mod_cpl_driver.o             \
 	mod_atmos_admin.o            \
 	mod_atmos_dyn_vars.o         \
 	mod_atmos_phy_mp_vars.o      \
@@ -63,22 +71,14 @@ OBJS =	\
 	mod_land_vars.o              \
 	mod_land_phy_driver.o        \
 	mod_land_driver.o            \
-	mod_urban_admin.o            \
-	mod_urban_vars.o             \
 	mod_urban_phy_ucm.o          \
 	mod_urban_driver.o           \
-	mod_cpl_admin.o              \
-	mod_cpl_vars.o               \
-	mod_cpl_atmos_land_driver.o  \
-	mod_cpl_atmos_urban_driver.o \
-	mod_cpl_atmos_ocean_driver.o \
-	mod_cpl_driver.o             \
 	mod_mktopo.o                 \
 	mod_realinput.o              \
 	mod_mkinit.o                 \
-	mod_convert.o                \
 	mod_cnvtopo.o                \
 	mod_cnvlanduse.o             \
+	mod_convert.o                \
 	mod_admin_restart.o
 
 
