@@ -143,6 +143,7 @@ contains
     Rtot, CVtot, CORIOLI,                        &
     num_diff, divdmp_coef,                       &
     FLAG_FCT_RHO, FLAG_FCT_MOMENTUM, FLAG_FCT_T, &
+    FLAG_FCT_ALONG_STREAM,                       &
     CDZ, FDZ, FDX, FDY,                          &
     RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,          &
     PHI, GSQRT, J13G, J23G, J33G,                &
@@ -211,6 +212,7 @@ contains
     logical,  intent(in) :: FLAG_FCT_RHO
     logical,  intent(in) :: FLAG_FCT_MOMENTUM
     logical,  intent(in) :: FLAG_FCT_T
+    logical,  intent(in) :: FLAG_FCT_ALONG_STREAM
 
     real(RP), intent(in) :: CDZ(KA)
     real(RP), intent(in) :: FDZ(KA-1)

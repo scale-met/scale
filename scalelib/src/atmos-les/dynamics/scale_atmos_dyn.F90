@@ -141,6 +141,7 @@ contains
        DAMP_var, DAMP_alpha,                                 &
        divdmp_coef,                                          &
        FLAG_FCT_RHO, FLAG_FCT_MOMENTUM, FLAG_FCT_T,          &
+       FLAG_FCT_ALONG_STREAM,                                &
        USE_AVERAGE,                                          &
        DTSEC, DTSEC_ATMOS_DYN, NSTEP_ATMOS_DYN               )
     use scale_const, only: &
@@ -234,6 +235,7 @@ contains
     logical,  intent(in)    :: FLAG_FCT_RHO
     logical,  intent(in)    :: FLAG_FCT_MOMENTUM
     logical,  intent(in)    :: FLAG_FCT_T
+    logical,  intent(in)    :: FLAG_FCT_ALONG_STREAM
 
     logical,  intent(in)    :: USE_AVERAGE
 
@@ -559,6 +561,7 @@ contains
                           Rtot, CVtot, CORIOLI,                             & ! (in)
                           num_diff, divdmp_coef,                            & ! (in)
                           FLAG_FCT_RHO, FLAG_FCT_MOMENTUM, FLAG_FCT_T,      & ! (in)
+                          FLAG_FCT_ALONG_STREAM,                            & ! (in)
                           CDZ, FDZ, FDX, FDY,                               & ! (in)
                           RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,               & ! (in)
                           PHI, GSQRT, J13G, J23G, J33G,                     & ! (in)
@@ -588,6 +591,7 @@ contains
                           Rtot, CVtot, CORIOLI,                             & ! (in)
                           num_diff, divdmp_coef,                            & ! (in)
                           FLAG_FCT_RHO, FLAG_FCT_MOMENTUM, FLAG_FCT_T,      & ! (in)
+                          FLAG_FCT_ALONG_STREAM,                            & ! (in)
                           CDZ, FDZ, FDX, FDY,                               & ! (in)
                           RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,               & ! (in)
                           PHI, GSQRT, J13G, J23G, J33G,                     & ! (in)
@@ -617,6 +621,7 @@ contains
                           Rtot, CVtot, CORIOLI,                             & ! (in)
                           num_diff, divdmp_coef,                            & ! (in)
                           FLAG_FCT_RHO, FLAG_FCT_MOMENTUM, FLAG_FCT_T,      & ! (in)
+                          FLAG_FCT_ALONG_STREAM,                            & ! (in)
                           CDZ, FDZ, FDX, FDY,                               & ! (in)
                           RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,               & ! (in)
                           PHI, GSQRT, J13G, J23G, J33G,                     & ! (in)
@@ -882,8 +887,10 @@ contains
        call ATMOS_DYN_fct( qflx_anti,                    & ! (out)
                            QTRC(:,:,:,iq), DENS00, DENS, & ! (in)
                            qflx_hi, qflx_lo,             & ! (in)
+                           mflx_hi,                      & ! (in)
                            RCDZ, RCDX, RCDY,             & ! (in)
-                           GSQRT(:,:,:,I_XYZ), dt        ) ! (in)
+                           GSQRT(:,:,:,I_XYZ), dt,       & ! (in)
+                           FLAG_FCT_ALONG_STREAM         ) ! (in)
 
        do JJS = JS, JE, JBLOCK
        JJE = JJS+JBLOCK-1

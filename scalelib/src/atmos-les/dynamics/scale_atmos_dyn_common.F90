@@ -1380,8 +1380,9 @@ contains
        qflx_anti,           &
        phi_in, DENS0, DENS, &
        qflx_hi, qflx_lo,    &
+       mflx_hi,             &
        rdz, rdx, rdy,       &
-       GSQRT, dt            )
+       GSQRT, dt, flag_vect )
     use scale_const, only: &
        UNDEF => CONST_UNDEF, &
        IUNDEF => CONST_UNDEF2, &
@@ -1401,6 +1402,7 @@ contains
 
     real(RP), intent(in) :: qflx_hi(KA,IA,JA,3)
     real(RP), intent(in) :: qflx_lo(KA,IA,JA,3)
+    real(RP), intent(in) :: mflx_hi(KA,IA,JA,3)
 
     real(RP), intent(in) :: RDZ(:)
     real(RP), intent(in) :: RDX(:)
@@ -1409,6 +1411,8 @@ contains
     real(RP), intent(in) :: GSQRT(KA,IA,JA) !< vertical metrics {G}^1/2
 
     real(RP), intent(in) :: dt
+
+    logical(RP), intent(in) :: flag_vect
 
     ! work for FCT
     real(RP) :: phi_lo(KA,IA,JA)
@@ -1421,6 +1425,11 @@ contains
 
     real(RP) :: qmin, qmax
     real(RP) :: zerosw, dirsw
+
+    real(RP) :: rw, ru, rv
+    real(RP) :: qa_in, qb_in
+    real(RP) :: qa_lo, qb_lo
+    real(RP) :: x, y
 
     integer :: k, i, j, ijs
     integer :: IIS, IIE, JJS, JJE
@@ -1574,6 +1583,585 @@ contains
 
        !--- calc allowable range or quantity change by antidiffusive flux
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+
+       if (flag_vect) then
+
+       do j = JJS, JJE
+       do i = IIS, IIE
+       do k = KS+1, KE-1
+          rw = (mflx_hi(k,i,j,ZDIR)+mflx_hi(k-1,i  ,j  ,ZDIR)) * RDZ(k) ! rho * w / dz
+          ru = (mflx_hi(k,i,j,XDIR)+mflx_hi(k  ,i-1,j  ,XDIR)) * RDX(i) ! rho * u / dx
+          rv = (mflx_hi(k,i,j,YDIR)+mflx_hi(k  ,i  ,j-1,YDIR)) * RDY(j) ! rho * v / dy
+          if ( abs(ru) .ge. abs(rv) .and. abs(ru) .ge. abs(rw) ) then
+             x = rv / ru
+             y = rw / ru
+             if ( x .ge. 0.0_RP ) then
+                if ( y .ge. 0.0_RP ) then
+                   qa_in = ( phi_in(k  ,i+1,j  ) * (1.0_RP-x) &
+                           + phi_in(k  ,i+1,j+1) * x ) * (1.0_RP-y) &
+                         + ( phi_in(k+1,i+1,j  ) * (1.0_RP-x) &
+                           + phi_in(k+1,i+1,j+1) * x ) * y
+                   qb_in = ( phi_in(k  ,i-1,j  ) * (1.0_RP-x) &
+                           + phi_in(k  ,i-1,j-1) * x ) * (1.0_RP-y) &
+                         + ( phi_in(k-1,i-1,j  ) * (1.0_RP-x) &
+                           + phi_in(k-1,i-1,j-1) * x ) * y
+                   qa_lo = ( phi_lo(k  ,i+1,j  ) * (1.0_RP-x) &
+                           + phi_lo(k  ,i+1,j+1) * x ) * (1.0_RP-y) &
+                         + ( phi_lo(k+1,i+1,j  ) * (1.0_RP-x) &
+                           + phi_lo(k+1,i+1,j+1) * x ) * y
+                   qb_lo = ( phi_lo(k  ,i-1,j  ) * (1.0_RP-x) &
+                           + phi_lo(k  ,i-1,j-1) * x ) * (1.0_RP-y) &
+                         + ( phi_lo(k-1,i-1,j  ) * (1.0_RP-x) &
+                           + phi_lo(k-1,i-1,j-1) * x ) * y
+                else ! y < 0
+                   y = -y
+                   qa_in = ( phi_in(k  ,i+1,j  ) * (1.0_RP-x) &
+                           + phi_in(k  ,i+1,j+1) * x ) * (1.0_RP-y) &
+                         + ( phi_in(k-1,i+1,j  ) * (1.0_RP-x) &
+                           + phi_in(k-1,i+1,j+1) * x ) * y
+                   qb_in = ( phi_in(k  ,i-1,j  ) * (1.0_RP-x) &
+                           + phi_in(k  ,i-1,j-1) * x ) * (1.0_RP-y) &
+                         + ( phi_in(k+1,i-1,j  ) * (1.0_RP-x) &
+                           + phi_in(k+1,i-1,j-1) * x ) * y
+                   qa_lo = ( phi_lo(k  ,i+1,j  ) * (1.0_RP-x) &
+                           + phi_lo(k  ,i+1,j+1) * x ) * (1.0_RP-y) &
+                         + ( phi_lo(k-1,i+1,j  ) * (1.0_RP-x) &
+                           + phi_lo(k-1,i+1,j+1) * x ) * y
+                   qb_lo = ( phi_lo(k  ,i-1,j  ) * (1.0_RP-x) &
+                           + phi_lo(k  ,i-1,j-1) * x ) * (1.0_RP-y) &
+                         + ( phi_lo(k+1,i-1,j  ) * (1.0_RP-x) &
+                           + phi_lo(k+1,i-1,j-1) * x ) * y
+                end if
+             else ! x < 0
+                x = -x
+                if ( y .ge. 0.0_RP ) then
+                   qa_in = ( phi_in(k  ,i+1,j  ) * (1.0_RP-x) &
+                           + phi_in(k  ,i+1,j-1) * x ) * (1.0_RP-y) &
+                         + ( phi_in(k+1,i+1,j  ) * (1.0_RP-x) &
+                           + phi_in(k+1,i+1,j-1) * x ) * y
+                   qb_in = ( phi_in(k  ,i-1,j  ) * (1.0_RP-x) &
+                           + phi_in(k  ,i-1,j+1) * x ) * (1.0_RP-y) &
+                         + ( phi_in(k-1,i-1,j  ) * (1.0_RP-x) &
+                           + phi_in(k-1,i-1,j+1) * x ) * y
+                   qa_lo = ( phi_lo(k  ,i+1,j  ) * (1.0_RP-x) &
+                           + phi_lo(k  ,i+1,j-1) * x ) * (1.0_RP-y) &
+                         + ( phi_lo(k+1,i+1,j  ) * (1.0_RP-x) &
+                           + phi_lo(k+1,i+1,j-1) * x ) * y
+                   qb_lo = ( phi_lo(k  ,i-1,j  ) * (1.0_RP-x) &
+                           + phi_lo(k  ,i-1,j+1) * x ) * (1.0_RP-y) &
+                         + ( phi_lo(k-1,i-1,j  ) * (1.0_RP-x) &
+                           + phi_lo(k-1,i-1,j+1) * x ) * y
+                else ! y < 0
+                   y = -y
+                   qa_in = ( phi_in(k  ,i+1,j  ) * (1.0_RP-x) &
+                           + phi_in(k  ,i+1,j-1) * x ) * (1.0_RP-y) &
+                         + ( phi_in(k-1,i+1,j  ) * (1.0_RP-x) &
+                           + phi_in(k-1,i+1,j-1) * x ) * y
+                   qb_in = ( phi_in(k  ,i-1,j  ) * (1.0_RP-x) &
+                           + phi_in(k  ,i-1,j+1) * x ) * (1.0_RP-y) &
+                         + ( phi_in(k+1,i-1,j  ) * (1.0_RP-x) &
+                           + phi_in(k+1,i-1,j+1) * x ) * y
+                   qa_lo = ( phi_lo(k  ,i+1,j  ) * (1.0_RP-x) &
+                           + phi_lo(k  ,i+1,j-1) * x ) * (1.0_RP-y) &
+                         + ( phi_lo(k-1,i+1,j  ) * (1.0_RP-x) &
+                           + phi_lo(k-1,i+1,j-1) * x ) * y
+                   qb_lo = ( phi_lo(k  ,i-1,j  ) * (1.0_RP-x) &
+                           + phi_lo(k  ,i-1,j+1) * x ) * (1.0_RP-y) &
+                         + ( phi_lo(k+1,i-1,j  ) * (1.0_RP-x) &
+                           + phi_lo(k+1,i-1,j+1) * x ) * y
+                end if
+             end if
+          else if ( abs(rv) .ge. abs(ru) .and. abs(rv) .ge. abs(rw) ) then
+             x = rw / rv
+             y = ru / rv
+             if ( x .ge. 0.0_RP ) then
+                if ( y .ge. 0.0_RP ) then
+                   qa_in = ( phi_in(k  ,i  ,j+1) * (1.0_RP-x) &
+                           + phi_in(k+1,i  ,j+1) * x ) * (1.0_RP-y) &
+                         + ( phi_in(k  ,i+1,j+1) * (1.0_RP-x) &
+                           + phi_in(k+1,i+1,j+1) * x ) * y
+                   qb_in = ( phi_in(k  ,i  ,j-1) * (1.0_RP-x) &
+                           + phi_in(k-1,i  ,j-1) * x ) * (1.0_RP-y) &
+                         + ( phi_in(k  ,i-1,j-1) * (1.0_RP-x) &
+                           + phi_in(k-1,i-1,j-1) * x ) * y
+                   qa_lo = ( phi_lo(k  ,i  ,j+1) * (1.0_RP-x) &
+                           + phi_lo(k+1,i  ,j+1) * x ) * (1.0_RP-y) &
+                         + ( phi_lo(k  ,i+1,j+1) * (1.0_RP-x) &
+                           + phi_lo(k+1,i+1,j+1) * x ) * y
+                   qb_lo = ( phi_lo(k  ,i  ,j-1) * (1.0_RP-x) &
+                           + phi_lo(k-1,i  ,j-1) * x ) * (1.0_RP-y) &
+                         + ( phi_lo(k  ,i-1,j-1) * (1.0_RP-x) &
+                           + phi_lo(k-1,i-1,j-1) * x ) * y
+                else ! y < 0
+                   y = -y
+                   qa_in = ( phi_in(k  ,i  ,j+1) * (1.0_RP-x) &
+                           + phi_in(k+1,i  ,j+1) * x ) * (1.0_RP-y) &
+                         + ( phi_in(k  ,i-1,j+1) * (1.0_RP-x) &
+                           + phi_in(k+1,i-1,j+1) * x ) * y
+                   qb_in = ( phi_in(k  ,i  ,j-1) * (1.0_RP-x) &
+                           + phi_in(k-1,i  ,j-1) * x ) * (1.0_RP-y) &
+                         + ( phi_in(k  ,i+1,j-1) * (1.0_RP-x) &
+                           + phi_in(k-1,i+1,j-1) * x ) * y
+                   qa_lo = ( phi_lo(k  ,i  ,j+1) * (1.0_RP-x) &
+                           + phi_lo(k+1,i  ,j+1) * x ) * (1.0_RP-y) &
+                         + ( phi_lo(k  ,i-1,j+1) * (1.0_RP-x) &
+                           + phi_lo(k+1,i-1,j+1) * x ) * y
+                   qb_lo = ( phi_lo(k  ,i  ,j-1) * (1.0_RP-x) &
+                           + phi_lo(k-1,i  ,j-1) * x ) * (1.0_RP-y) &
+                         + ( phi_lo(k  ,i+1,j-1) * (1.0_RP-x) &
+                           + phi_lo(k-1,i+1,j-1) * x ) * y
+                end if
+             else ! x < 0
+                x = -x
+                if ( y .ge. 0.0_RP ) then
+                   qa_in = ( phi_in(k  ,i  ,j+1) * (1.0_RP-x) &
+                           + phi_in(k-1,i  ,j+1) * x ) * (1.0_RP-y) &
+                         + ( phi_in(k  ,i+1,j+1) * (1.0_RP-x) &
+                           + phi_in(k-1,i+1,j+1) * x ) * y
+                   qb_in = ( phi_in(k  ,i  ,j-1) * (1.0_RP-x) &
+                           + phi_in(k+1,i  ,j-1) * x ) * (1.0_RP-y) &
+                         + ( phi_in(k  ,i-1,j-1) * (1.0_RP-x) &
+                           + phi_in(k+1,i-1,j-1) * x ) * y
+                   qa_lo = ( phi_lo(k  ,i  ,j+1) * (1.0_RP-x) &
+                           + phi_lo(k-1,i  ,j+1) * x ) * (1.0_RP-y) &
+                         + ( phi_lo(k  ,i+1,j+1) * (1.0_RP-x) &
+                           + phi_lo(k-1,i+1,j+1) * x ) * y
+                   qb_lo = ( phi_lo(k  ,i  ,j-1) * (1.0_RP-x) &
+                           + phi_lo(k+1,i  ,j-1) * x ) * (1.0_RP-y) &
+                         + ( phi_lo(k  ,i-1,j-1) * (1.0_RP-x) &
+                           + phi_lo(k+1,i-1,j-1) * x ) * y
+                else ! y < 0
+                   y = -y
+                   qa_in = ( phi_in(k  ,i  ,j+1) * (1.0_RP-x) &
+                           + phi_in(k-1,i  ,j+1) * x ) * (1.0_RP-y) &
+                         + ( phi_in(k  ,i-1,j+1) * (1.0_RP-x) &
+                           + phi_in(k-1,i-1,j-1) * x ) * y
+                   qb_in = ( phi_in(k  ,i  ,j-1) * (1.0_RP-x) &
+                           + phi_in(k+1,i  ,j-1) * x ) * (1.0_RP-y) &
+                         + ( phi_in(k  ,i+1,j-1) * (1.0_RP-x) &
+                           + phi_in(k+1,i+1,j-1) * x ) * y
+                   qa_lo = ( phi_lo(k  ,i  ,j+1) * (1.0_RP-x) &
+                           + phi_lo(k-1,i  ,j+1) * x ) * (1.0_RP-y) &
+                         + ( phi_lo(k  ,i-1,j+1) * (1.0_RP-x) &
+                           + phi_lo(k-1,i-1,j+1) * x ) * y
+                   qb_lo = ( phi_lo(k  ,i  ,j-1) * (1.0_RP-x) &
+                           + phi_lo(k+1,i  ,j-1) * x ) * (1.0_RP-y) &
+                         + ( phi_lo(k  ,i+1,j-1) * (1.0_RP-x) &
+                           + phi_lo(k+1,i+1,j-1) * x ) * y
+                end if
+             end if
+          else
+             x = ru / rw
+             y = rv / rw
+             if ( x .ge. 0.0_RP ) then
+                if ( y .ge. 0.0_RP ) then
+                   qa_in = ( phi_in(k+1,i  ,j  ) * (1.0_RP-x) &
+                           + phi_in(k+1,i+1,j  ) * x ) * (1.0_RP-y) &
+                         + ( phi_in(k+1,i  ,j+1) * (1.0_RP-x) &
+                           + phi_in(k+1,i+1,j+1) * x ) * y
+                   qb_in = ( phi_in(k-1 ,i  ,j  ) * (1.0_RP-x) &
+                           + phi_in(k-1,i-1,j  ) * x ) * (1.0_RP-y) &
+                         + ( phi_in(k-1 ,i  ,j-1) * (1.0_RP-x) &
+                           + phi_in(k-1,i-1,j-1) * x ) * y
+                   qa_lo = ( phi_lo(k+1,i  ,j  ) * (1.0_RP-x) &
+                           + phi_lo(k+1,i+1,j  ) * x ) * (1.0_RP-y) &
+                         + ( phi_lo(k+1,i  ,j+1) * (1.0_RP-x) &
+                           + phi_lo(k+1,i+1,j+1) * x ) * y
+                   qb_lo = ( phi_lo(k-1,i  ,j  ) * (1.0_RP-x) &
+                           + phi_lo(k-1,i-1,j  ) * x ) * (1.0_RP-y) &
+                         + ( phi_lo(k-1,i  ,j-1) * (1.0_RP-x) &
+                           + phi_lo(k-1,i-1,j-1) * x ) * y
+                else ! y < 0
+                   y = -y
+                   qa_in = ( phi_in(k+1,i  ,j  ) * (1.0_RP-x) &
+                           + phi_in(k+1,i+1,j  ) * x ) * (1.0_RP-y) &
+                         + ( phi_in(k+1,i  ,j-1) * (1.0_RP-x) &
+                           + phi_in(k+1,i+1,j-1) * x ) * y
+                   qb_in = ( phi_in(k-1,i  ,j  ) * (1.0_RP-x) &
+                           + phi_in(k-1,i-1,j  ) * x ) * (1.0_RP-y) &
+                         + ( phi_in(k-1,i  ,j+1) * (1.0_RP-x) &
+                           + phi_in(k-1,i-1,j+1) * x ) * y
+                   qa_lo = ( phi_lo(k+1,i  ,j  ) * (1.0_RP-x) &
+                           + phi_lo(k+1,i+1,j  ) * x ) * (1.0_RP-y) &
+                         + ( phi_lo(k+1,i  ,j-1) * (1.0_RP-x) &
+                           + phi_lo(k+1,i+1,j-1) * x ) * y
+                   qb_lo = ( phi_lo(k-1,i  ,j  ) * (1.0_RP-x) &
+                           + phi_lo(k-1,i-1,j  ) * x ) * (1.0_RP-y) &
+                         + ( phi_lo(k-1,i  ,j+1) * (1.0_RP-x) &
+                           + phi_lo(k-1,i-1,j+1) * x ) * y
+                end if
+             else ! x < 0
+                x = -x
+                if ( y .ge. 0.0_RP ) then
+                   qa_in = ( phi_in(k+1,i  ,j  ) * (1.0_RP-x) &
+                           + phi_in(k+1,i-1,j  ) * x ) * (1.0_RP-y) &
+                         + ( phi_in(k+1,i  ,j+1) * (1.0_RP-x) &
+                           + phi_in(k+1,i-1,j+1) * x ) * y
+                   qb_in = ( phi_in(k-1,i  ,j  ) * (1.0_RP-x) &
+                           + phi_in(k-1,i+1,j  ) * x ) * (1.0_RP-y) &
+                         + ( phi_in(k-1,i  ,j-1) * (1.0_RP-x) &
+                           + phi_in(k-1,i+1,j-1) * x ) * y
+                   qa_lo = ( phi_lo(k+1,i  ,j  ) * (1.0_RP-x) &
+                           + phi_lo(k+1,i-1,j  ) * x ) * (1.0_RP-y) &
+                         + ( phi_lo(k+1,i  ,j+1) * (1.0_RP-x) &
+                           + phi_lo(k+1,i-1,j+1) * x ) * y
+                   qb_lo = ( phi_lo(k-1,i  ,j  ) * (1.0_RP-x) &
+                           + phi_lo(k-1,i+1,j  ) * x ) * (1.0_RP-y) &
+                         + ( phi_lo(k-1,i  ,j-1) * (1.0_RP-x) &
+                           + phi_lo(k-1,i+1,j-1) * x ) * y
+                else ! y < 0
+                   y = -y
+                   qa_in = ( phi_in(k+1,i  ,j  ) * (1.0_RP-x) &
+                           + phi_in(k+1,i-1,j  ) * x ) * (1.0_RP-y) &
+                         + ( phi_in(k+1,i  ,j-1) * (1.0_RP-x) &
+                           + phi_in(k+1,i-1,j-1) * x ) * y
+                   qb_in = ( phi_in(k-1,i  ,j  ) * (1.0_RP-x) &
+                           + phi_in(k-1,i+1,j  ) * x ) * (1.0_RP-y) &
+                         + ( phi_in(k-1,i  ,j+1) * (1.0_RP-x) &
+                           + phi_in(k-1,i+1,j+1) * x ) * y
+                   qa_lo = ( phi_lo(k+1,i  ,j  ) * (1.0_RP-x) &
+                           + phi_lo(k+1,i-1,j  ) * x ) * (1.0_RP-y) &
+                         + ( phi_lo(k+1,i  ,j-1) * (1.0_RP-x) &
+                           + phi_lo(k+1,i-1,j-1) * x ) * y
+                   qb_lo = ( phi_lo(k-1,i  ,j  ) * (1.0_RP-x) &
+                           + phi_lo(k-1,i+1,j  ) * x ) * (1.0_RP-y) &
+                         + ( phi_lo(k-1,i  ,j+1) * (1.0_RP-x) &
+                           + phi_lo(k-1,i+1,j+1) * x ) * y
+                end if
+             end if
+          end if
+          qmax = max( &
+               phi_in(k,i,j), qa_in, qb_in, &
+               phi_lo(k,i,j), qa_lo, qb_lo  )
+          qmin = min( &
+               phi_in(k,i,j), qa_in, qb_in, &
+               phi_lo(k,i,j), qa_lo, qb_lo  )
+          qjpls(k,i,j) = ( qmax - phi_lo(k,i,j) ) * DENS(k,i,j)
+          qjmns(k,i,j) = ( phi_lo(k,i,j) - qmin ) * DENS(k,i,j)
+       end do
+       end do
+       end do
+
+       do j = JJS, JJE
+       do i = IIS, IIE
+          k = KS
+          rw = mflx_hi(k,i,j,ZDIR) * RDZ(k) ! rho * w / dz
+          ru = (mflx_hi(k,i,j,XDIR)+mflx_hi(k  ,i-1,j  ,XDIR)) * RDX(i) ! rho * u / dx
+          rv = (mflx_hi(k,i,j,YDIR)+mflx_hi(k  ,i  ,j-1,YDIR)) * RDY(j) ! rho * v / dy
+          if ( abs(ru) .ge. abs(rv) .and. abs(ru) .ge. abs(rw) ) then
+             x = rv / ru
+             y = rw / ru
+             if ( x .ge. 0.0_RP ) then
+                if ( y .ge. 0.0_RP ) then
+                   qa_in = ( phi_in(k  ,i+1,j  ) * (1.0_RP-x) &
+                           + phi_in(k  ,i+1,j+1) * x ) * (1.0_RP-y) &
+                         + ( phi_in(k+1,i+1,j  ) * (1.0_RP-x) &
+                           + phi_in(k+1,i+1,j+1) * x ) * y
+                   qa_lo = ( phi_lo(k  ,i+1,j  ) * (1.0_RP-x) &
+                           + phi_lo(k  ,i+1,j+1) * x ) * (1.0_RP-y) &
+                         + ( phi_lo(k+1,i+1,j  ) * (1.0_RP-x) &
+                           + phi_lo(k+1,i+1,j+1) * x ) * y
+                else ! y < 0
+                   y = -y
+                   qa_in = ( phi_in(k  ,i-1,j  ) * (1.0_RP-x) &
+                           + phi_in(k  ,i-1,j-1) * x ) * (1.0_RP-y) &
+                         + ( phi_in(k+1,i-1,j  ) * (1.0_RP-x) &
+                           + phi_in(k+1,i-1,j-1) * x ) * y
+                   qa_lo = ( phi_lo(k  ,i-1,j  ) * (1.0_RP-x) &
+                           + phi_lo(k  ,i-1,j-1) * x ) * (1.0_RP-y) &
+                         + ( phi_lo(k+1,i-1,j  ) * (1.0_RP-x) &
+                           + phi_lo(k+1,i-1,j-1) * x ) * y
+                end if
+             else ! x < 0
+                x = -x
+                if ( y .ge. 0.0_RP ) then
+                   qa_in = ( phi_in(k  ,i+1,j  ) * (1.0_RP-x) &
+                           + phi_in(k  ,i+1,j-1) * x ) * (1.0_RP-y) &
+                         + ( phi_in(k+1,i+1,j  ) * (1.0_RP-x) &
+                           + phi_in(k+1,i+1,j-1) * x ) * y
+                   qa_lo = ( phi_lo(k  ,i+1,j  ) * (1.0_RP-x) &
+                           + phi_lo(k  ,i+1,j-1) * x ) * (1.0_RP-y) &
+                         + ( phi_lo(k+1,i+1,j  ) * (1.0_RP-x) &
+                           + phi_lo(k+1,i+1,j-1) * x ) * y
+                else ! y < 0
+                   y = -y
+                   qa_in = ( phi_in(k  ,i-1,j  ) * (1.0_RP-x) &
+                           + phi_in(k  ,i-1,j+1) * x ) * (1.0_RP-y) &
+                         + ( phi_in(k+1,i-1,j  ) * (1.0_RP-x) &
+                           + phi_in(k+1,i-1,j+1) * x ) * y
+                   qa_lo = ( phi_lo(k  ,i-1,j  ) * (1.0_RP-x) &
+                           + phi_lo(k  ,i-1,j+1) * x ) * (1.0_RP-y) &
+                         + ( phi_lo(k+1,i-1,j  ) * (1.0_RP-x) &
+                           + phi_lo(k+1,i-1,j+1) * x ) * y
+                end if
+             end if
+          else if ( abs(rv) .ge. abs(ru) .and. abs(rv) .ge. abs(rw) ) then
+             x = rw / rv
+             y = ru / rv
+             if ( x .ge. 0.0_RP ) then
+                if ( y .ge. 0.0_RP ) then
+                   qa_in = ( phi_in(k  ,i  ,j+1) * (1.0_RP-x) &
+                           + phi_in(k+1,i  ,j+1) * x ) * (1.0_RP-y) &
+                         + ( phi_in(k  ,i+1,j+1) * (1.0_RP-x) &
+                           + phi_in(k+1,i+1,j+1) * x ) * y
+                   qa_lo = ( phi_lo(k  ,i  ,j+1) * (1.0_RP-x) &
+                           + phi_lo(k+1,i  ,j+1) * x ) * (1.0_RP-y) &
+                         + ( phi_lo(k  ,i+1,j+1) * (1.0_RP-x) &
+                           + phi_lo(k+1,i+1,j+1) * x ) * y
+                else ! y < 0
+                   y = -y
+                   qa_in = ( phi_in(k  ,i  ,j+1) * (1.0_RP-x) &
+                           + phi_in(k+1,i  ,j+1) * x ) * (1.0_RP-y) &
+                         + ( phi_in(k  ,i-1,j+1) * (1.0_RP-x) &
+                           + phi_in(k+1,i-1,j+1) * x ) * y
+                   qa_lo = ( phi_lo(k  ,i  ,j+1) * (1.0_RP-x) &
+                           + phi_lo(k+1,i  ,j+1) * x ) * (1.0_RP-y) &
+                         + ( phi_lo(k  ,i-1,j+1) * (1.0_RP-x) &
+                           + phi_lo(k+1,i-1,j+1) * x ) * y
+                end if
+             else ! x < 0
+                x = -x
+                if ( y .ge. 0.0_RP ) then
+                   qa_in = ( phi_in(k  ,i  ,j-1) * (1.0_RP-x) &
+                           + phi_in(k+1,i  ,j-1) * x ) * (1.0_RP-y) &
+                         + ( phi_in(k  ,i-1,j-1) * (1.0_RP-x) &
+                           + phi_in(k+1,i-1,j-1) * x ) * y
+                   qa_lo = ( phi_lo(k  ,i  ,j-1) * (1.0_RP-x) &
+                           + phi_lo(k+1,i  ,j-1) * x ) * (1.0_RP-y) &
+                         + ( phi_lo(k  ,i-1,j-1) * (1.0_RP-x) &
+                           + phi_lo(k+1,i-1,j-1) * x ) * y
+                else ! y < 0
+                   y = -y
+                   qa_in = ( phi_in(k  ,i  ,j-1) * (1.0_RP-x) &
+                           + phi_in(k+1,i  ,j-1) * x ) * (1.0_RP-y) &
+                         + ( phi_in(k  ,i+1,j-1) * (1.0_RP-x) &
+                           + phi_in(k+1,i+1,j-1) * x ) * y
+                   qa_lo = ( phi_lo(k  ,i  ,j-1) * (1.0_RP-x) &
+                           + phi_lo(k+1,i  ,j-1) * x ) * (1.0_RP-y) &
+                         + ( phi_lo(k  ,i+1,j-1) * (1.0_RP-x) &
+                           + phi_lo(k+1,i+1,j-1) * x ) * y
+                end if
+             end if
+          else
+             x = ru / rw
+             y = rv / rw
+             if ( x .ge. 0.0_RP ) then
+                if ( y .ge. 0.0_RP ) then
+                   qa_in = ( phi_in(k+1,i  ,j  ) * (1.0_RP-x) &
+                           + phi_in(k+1,i+1,j  ) * x ) * (1.0_RP-y) &
+                         + ( phi_in(k+1,i  ,j+1) * (1.0_RP-x) &
+                           + phi_in(k+1,i+1,j+1) * x ) * y
+                   qa_lo = ( phi_lo(k+1,i  ,j  ) * (1.0_RP-x) &
+                           + phi_lo(k+1,i+1,j  ) * x ) * (1.0_RP-y) &
+                         + ( phi_lo(k+1,i  ,j+1) * (1.0_RP-x) &
+                           + phi_lo(k+1,i+1,j+1) * x ) * y
+                else ! y < 0
+                   y = -y
+                   qa_in = ( phi_in(k+1,i  ,j  ) * (1.0_RP-x) &
+                           + phi_in(k+1,i+1,j  ) * x ) * (1.0_RP-y) &
+                         + ( phi_in(k+1,i  ,j-1) * (1.0_RP-x) &
+                           + phi_in(k+1,i+1,j-1) * x ) * y
+                   qa_lo = ( phi_lo(k+1,i  ,j  ) * (1.0_RP-x) &
+                           + phi_lo(k+1,i+1,j  ) * x ) * (1.0_RP-y) &
+                         + ( phi_lo(k+1,i  ,j-1) * (1.0_RP-x) &
+                           + phi_lo(k+1,i+1,j-1) * x ) * y
+                end if
+             else ! x < 0
+                x = -x
+                if ( y .ge. 0.0_RP ) then
+                   qa_in = ( phi_in(k+1,i  ,j  ) * (1.0_RP-x) &
+                           + phi_in(k+1,i-1,j  ) * x ) * (1.0_RP-y) &
+                         + ( phi_in(k+1,i  ,j+1) * (1.0_RP-x) &
+                           + phi_in(k+1,i-1,j+1) * x ) * y
+                   qa_lo = ( phi_lo(k+1,i  ,j  ) * (1.0_RP-x) &
+                           + phi_lo(k+1,i-1,j  ) * x ) * (1.0_RP-y) &
+                         + ( phi_lo(k+1,i  ,j+1) * (1.0_RP-x) &
+                           + phi_lo(k+1,i-1,j+1) * x ) * y
+                else ! y < 0
+                   y = -y
+                   qa_in = ( phi_in(k+1,i  ,j  ) * (1.0_RP-x) &
+                           + phi_in(k+1,i-1,j  ) * x ) * (1.0_RP-y) &
+                         + ( phi_in(k+1,i  ,j-1) * (1.0_RP-x) &
+                           + phi_in(k+1,i-1,j-1) * x ) * y
+                   qa_lo = ( phi_lo(k+1,i  ,j  ) * (1.0_RP-x) &
+                           + phi_lo(k+1,i-1,j  ) * x ) * (1.0_RP-y) &
+                         + ( phi_lo(k+1,i  ,j-1) * (1.0_RP-x) &
+                           + phi_lo(k+1,i-1,j-1) * x ) * y
+                end if
+             end if
+          end if
+          qmax = max( &
+               phi_in(k,i,j), qa_in, &
+               phi_lo(k,i,j), qa_lo )
+          qmin = min( &
+               phi_in(k,i,j), qa_in, &
+               phi_lo(k,i,j), qa_lo )
+          qjpls(k,i,j) = ( qmax - phi_lo(k,i,j) ) * DENS(k,i,j)
+          qjmns(k,i,j) = ( phi_lo(k,i,j) - qmin ) * DENS(k,i,j)
+       end do
+       end do
+
+       do j = JJS, JJE
+       do i = IIS, IIE
+          k = KE
+          rw = mflx_hi(k-1,i,j,ZDIR) * RDZ(k) ! rho * w / dz
+          ru = (mflx_hi(k,i,j,XDIR)+mflx_hi(k  ,i-1,j  ,YDIR)) * RDX(i) ! rho * u / dx
+          rv = (mflx_hi(k,i,j,YDIR)+mflx_hi(k  ,i  ,j-1,YDIR)) * RDY(j) ! rho * v / dy
+          if ( abs(ru) .ge. abs(rv) .and. abs(ru) .ge. abs(rw) ) then
+             x = rv / ru
+             y = rw / ru
+             if ( x .ge. 0.0_RP ) then
+                if ( y .ge. 0.0_RP ) then
+                   qa_in = ( phi_in(k  ,i-1,j  ) * (1.0_RP-x) &
+                           + phi_in(k  ,i-1,j-1) * x ) * (1.0_RP-y) &
+                         + ( phi_in(k-1,i-1,j  ) * (1.0_RP-x) &
+                           + phi_in(k-1,i-1,j-1) * x ) * y
+                   qa_lo = ( phi_lo(k  ,i-1,j  ) * (1.0_RP-x) &
+                           + phi_lo(k  ,i-1,j-1) * x ) * (1.0_RP-y) &
+                         + ( phi_lo(k-1,i-1,j  ) * (1.0_RP-x) &
+                           + phi_lo(k-1,i-1,j-1) * x ) * y
+                else ! y < 0
+                   y = -y
+                   qa_in = ( phi_in(k  ,i+1,j  ) * (1.0_RP-x) &
+                           + phi_in(k  ,i+1,j+1) * x ) * (1.0_RP-y) &
+                         + ( phi_in(k-1,i+1,j  ) * (1.0_RP-x) &
+                           + phi_in(k-1,i+1,j+1) * x ) * y
+                   qa_lo = ( phi_lo(k  ,i+1,j  ) * (1.0_RP-x) &
+                           + phi_lo(k  ,i+1,j+1) * x ) * (1.0_RP-y) &
+                         + ( phi_lo(k-1,i+1,j  ) * (1.0_RP-x) &
+                           + phi_lo(k-1,i+1,j+1) * x ) * y
+                end if
+             else ! x < 0
+                x = -x
+                if ( y .ge. 0.0_RP ) then
+                   qa_in = ( phi_in(k  ,i-1,j  ) * (1.0_RP-x) &
+                           + phi_in(k  ,i-1,j+1) * x ) * (1.0_RP-y) &
+                         + ( phi_in(k-1,i-1,j  ) * (1.0_RP-x) &
+                           + phi_in(k-1,i-1,j+1) * x ) * y
+                   qa_lo = ( phi_lo(k  ,i-1,j  ) * (1.0_RP-x) &
+                           + phi_lo(k  ,i-1,j+1) * x ) * (1.0_RP-y) &
+                         + ( phi_lo(k-1,i-1,j  ) * (1.0_RP-x) &
+                           + phi_lo(k-1,i-1,j+1) * x ) * y
+                else ! y < 0
+                   y = -y
+                   qa_in = ( phi_in(k  ,i+1,j  ) * (1.0_RP-x) &
+                           + phi_in(k  ,i+1,j-1) * x ) * (1.0_RP-y) &
+                         + ( phi_in(k-1,i+1,j  ) * (1.0_RP-x) &
+                           + phi_in(k-1,i+1,j-1) * x ) * y
+                   qa_lo = ( phi_lo(k  ,i+1,j  ) * (1.0_RP-x) &
+                           + phi_lo(k  ,i+1,j-1) * x ) * (1.0_RP-y) &
+                         + ( phi_lo(k-1,i+1,j  ) * (1.0_RP-x) &
+                           + phi_lo(k-1,i+1,j-1) * x ) * y
+                end if
+             end if
+          else if ( abs(rv) .ge. abs(ru) .and. abs(rv) .ge. abs(rw) ) then
+             x = rw / rv
+             y = ru / rv
+             if ( x .ge. 0.0_RP ) then
+                if ( y .ge. 0.0_RP ) then
+                   qa_in = ( phi_in(k  ,i  ,j-1) * (1.0_RP-x) &
+                           + phi_in(k-1,i  ,j-1) * x ) * (1.0_RP-y) &
+                         + ( phi_in(k  ,i-1,j-1) * (1.0_RP-x) &
+                           + phi_in(k-1,i-1,j-1) * x ) * y
+                   qa_lo = ( phi_lo(k  ,i  ,j-1) * (1.0_RP-x) &
+                           + phi_lo(k-1,i  ,j-1) * x ) * (1.0_RP-y) &
+                         + ( phi_lo(k  ,i-1,j-1) * (1.0_RP-x) &
+                           + phi_lo(k-1,i-1,j-1) * x ) * y
+                else ! y < 0
+                   y = -y
+                   qa_in = ( phi_in(k  ,i  ,j-1) * (1.0_RP-x) &
+                           + phi_in(k-1,i  ,j-1) * x ) * (1.0_RP-y) &
+                         + ( phi_in(k  ,i+1,j-1) * (1.0_RP-x) &
+                           + phi_in(k-1,i+1,j-1) * x ) * y
+                   qa_lo = ( phi_lo(k  ,i  ,j-1) * (1.0_RP-x) &
+                           + phi_lo(k-1,i  ,j-1) * x ) * (1.0_RP-y) &
+                         + ( phi_lo(k  ,i+1,j-1) * (1.0_RP-x) &
+                           + phi_lo(k-1,i+1,j-1) * x ) * y
+                end if
+             else ! x < 0
+                x = -x
+                if ( y .ge. 0.0_RP ) then
+                   qa_in = ( phi_in(k  ,i  ,j+1) * (1.0_RP-x) &
+                           + phi_in(k-1,i  ,j+1) * x ) * (1.0_RP-y) &
+                         + ( phi_in(k  ,i+1,j+1) * (1.0_RP-x) &
+                           + phi_in(k-1,i+1,j+1) * x ) * y
+                   qa_lo = ( phi_lo(k  ,i  ,j+1) * (1.0_RP-x) &
+                           + phi_lo(k-1,i  ,j+1) * x ) * (1.0_RP-y) &
+                         + ( phi_lo(k  ,i+1,j+1) * (1.0_RP-x) &
+                           + phi_lo(k-1,i+1,j+1) * x ) * y
+                else ! y < 0
+                   y = -y
+                   qa_in = ( phi_in(k  ,i  ,j+1) * (1.0_RP-x) &
+                           + phi_in(k-1,i  ,j+1) * x ) * (1.0_RP-y) &
+                         + ( phi_in(k  ,i-1,j+1) * (1.0_RP-x) &
+                           + phi_in(k-1,i-1,j-1) * x ) * y
+                   qa_lo = ( phi_lo(k  ,i  ,j+1) * (1.0_RP-x) &
+                           + phi_lo(k-1,i  ,j+1) * x ) * (1.0_RP-y) &
+                         + ( phi_lo(k  ,i-1,j+1) * (1.0_RP-x) &
+                           + phi_lo(k-1,i-1,j+1) * x ) * y
+                end if
+             end if
+          else
+             x = ru / rw
+             y = rv / rw
+             if ( x .ge. 0.0_RP ) then
+                if ( y .ge. 0.0_RP ) then
+                   qa_in = ( phi_in(k-1 ,i  ,j  ) * (1.0_RP-x) &
+                           + phi_in(k-1,i-1,j  ) * x ) * (1.0_RP-y) &
+                         + ( phi_in(k-1 ,i  ,j-1) * (1.0_RP-x) &
+                           + phi_in(k-1,i-1,j-1) * x ) * y
+                   qa_lo = ( phi_lo(k-1,i  ,j  ) * (1.0_RP-x) &
+                           + phi_lo(k-1,i-1,j  ) * x ) * (1.0_RP-y) &
+                         + ( phi_lo(k-1,i  ,j-1) * (1.0_RP-x) &
+                           + phi_lo(k-1,i-1,j-1) * x ) * y
+                else ! y < 0
+                   y = -y
+                   qa_in = ( phi_in(k-1,i  ,j  ) * (1.0_RP-x) &
+                           + phi_in(k-1,i-1,j  ) * x ) * (1.0_RP-y) &
+                         + ( phi_in(k-1,i  ,j+1) * (1.0_RP-x) &
+                           + phi_in(k-1,i-1,j+1) * x ) * y
+                   qa_lo = ( phi_lo(k-1,i  ,j  ) * (1.0_RP-x) &
+                           + phi_lo(k-1,i-1,j  ) * x ) * (1.0_RP-y) &
+                         + ( phi_lo(k-1,i  ,j+1) * (1.0_RP-x) &
+                           + phi_lo(k-1,i-1,j+1) * x ) * y
+                end if
+             else ! x < 0
+                x = -x
+                if ( y .ge. 0.0_RP ) then
+                   qa_in = ( phi_in(k-1,i  ,j  ) * (1.0_RP-x) &
+                           + phi_in(k-1,i+1,j  ) * x ) * y &
+                         + ( phi_in(k-1,i  ,j-1) * (1.0_RP-x) &
+                           + phi_in(k-1,i+1,j-1) * x ) * y
+                   qa_lo = ( phi_lo(k-1,i  ,j  ) * (1.0_RP-x) &
+                           + phi_lo(k-1,i+1,j  ) * x ) * y &
+                         + ( phi_lo(k-1,i  ,j-1) * (1.0_RP-x) &
+                           + phi_lo(k-1,i+1,j-1) * x ) * y
+                else ! y < 0
+                   y = -y
+                   qa_in = ( phi_in(k-1,i  ,j  ) * (1.0_RP-x) &
+                           + phi_in(k-1,i+1,j  ) * x ) * (1.0_RP-y) &
+                         + ( phi_in(k-1,i  ,j+1) * (1.0_RP-x) &
+                           + phi_in(k-1,i+1,j+1) * x ) * y
+                   qa_lo = ( phi_lo(k-1,i  ,j  ) * (1.0_RP-x) &
+                           + phi_lo(k-1,i+1,j  ) * x ) * (1.0_RP-y) &
+                         + ( phi_lo(k-1,i  ,j+1) * (1.0_RP-x) &
+                           + phi_lo(k-1,i+1,j+1) * x ) * y
+                end if
+             end if
+          end if
+          qmax = max( &
+               phi_in(k,i,j), qa_in, &
+               phi_lo(k,i,j), qa_lo )
+          qmin = min( &
+               phi_in(k,i,j), qa_in, &
+               phi_lo(k,i,j), qa_lo )
+          qjpls(k,i,j) = ( qmax - phi_lo(k,i,j) ) * DENS(k,i,j)
+          qjmns(k,i,j) = ( phi_lo(k,i,j) - qmin ) * DENS(k,i,j)
+       end do
+       end do
+
+       else
+
        do j = JJS, JJE
        do i = IIS, IIE
        do k = KS+1, KE-1
@@ -1716,6 +2304,7 @@ contains
 #ifdef DEBUG
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
+       end if
 
        !--- incoming flux limitation factor [0-1]
        !$omp parallel do private(i,j,k,zerosw) OMP_SCHEDULE_ collapse(2)

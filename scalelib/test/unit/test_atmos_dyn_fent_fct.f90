@@ -92,6 +92,7 @@ module test_atmos_dyn_fent_fct
   logical  :: flag_fct_rho      = .true.
   logical  :: flag_fct_momentum = .true.
   logical  :: flag_fct_t        = .true.
+  logical  :: flag_fct_along_stream = .true.
 
   real(RP), allocatable :: ZERO(:,:,:)
 
@@ -288,6 +289,7 @@ subroutine test_undef
           DAMP_var, DAMP_alpha,                        & ! (in)
           divdmp_coef,                                 & ! (in)
           flag_fct_rho, flag_fct_momentum, flag_fct_t, & ! (in)
+          flag_fct_along_stream,                       & ! (in)
           .false.,                                     & ! (in)
           1.0_DP, 1.0_DP, 1                            ) ! (in)
   end do
@@ -337,6 +339,7 @@ subroutine test_const
        DAMP_var, DAMP_alpha,                        & ! (in)
        divdmp_coef,                                 & ! (in)
        flag_fct_rho, flag_fct_momentum, flag_fct_t, & ! (in)
+       flag_fct_along_stream,                       & ! (in)
        .false.,                                     & ! (in)
        1.0_DP, 1.0_DP, 1                            ) ! (in)
 
@@ -433,6 +436,7 @@ subroutine test_conserve
          DAMP_var, DAMP_alpha,                        & ! (in)
          divdmp_coef,                                 & ! (in)
          flag_fct_rho, flag_fct_momentum, flag_fct_t, & ! (in)
+         flag_fct_along_stream,                       & ! (in)
          .true.,                                      & ! (in)
          1.0_RP, 1.0_DP, 1                            ) ! (in)
 
@@ -557,6 +561,7 @@ subroutine test_cwc
        DAMP_var, DAMP_alpha,                        & ! (in)
        divdmp_coef,                                 & ! (in)
        flag_fct_rho, flag_fct_momentum, flag_fct_t, & ! (in)
+       flag_fct_along_stream,                       & ! (in)
        .false.,                                     & ! (in)
        1.0_DP, 1.0_DP, 1                            ) ! (in)
 
@@ -641,6 +646,7 @@ subroutine test_fctminmax
        DAMP_var, DAMP_alpha,                        & ! (in)
        divdmp_coef,                                 & ! (in)
        flag_fct_rho, flag_fct_momentum, flag_fct_t, & ! (in)
+       flag_fct_along_stream,                       & ! (in)
        .false.,                                     & ! (in)
        1.0_DP, 1.0_DP, 1                            ) ! (in)
 

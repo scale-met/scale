@@ -48,7 +48,7 @@ module mod_atmos_dyn_driver
   ! numerical filter
   integer,  private :: ATMOS_DYN_numerical_diff_order        = 1
   real(RP), private :: ATMOS_DYN_numerical_diff_coef         = 1.0E-4_RP ! nondimensional numerical diffusion
-  real(RP), private :: ATMOS_DYN_numerical_diff_coef_q       = 1.0E-1_RP ! nondimensional numerical diffusion for tracer
+  real(RP), private :: ATMOS_DYN_numerical_diff_coef_q       = 1.0E-4_RP ! nondimensional numerical diffusion for tracer
   real(RP), private :: ATMOS_DYN_numerical_diff_sfc_fact     = 1.0_RP
   logical , private :: ATMOS_DYN_numerical_diff_use_refstate = .true.
 
@@ -62,6 +62,7 @@ module mod_atmos_dyn_driver
   logical,  private :: ATMOS_DYN_FLAG_FCT_rho      = .false.
   logical,  private :: ATMOS_DYN_FLAG_FCT_momentum = .false.
   logical,  private :: ATMOS_DYN_FLAG_FCT_T        = .false.
+  logical,  private :: ATMOS_DYN_FLAG_FCT_along_stream = .true.
 
   !-----------------------------------------------------------------------------
 contains
@@ -98,7 +99,8 @@ contains
        ATMOS_DYN_divdmp_coef,                 &
        ATMOS_DYN_FLAG_FCT_rho,                &
        ATMOS_DYN_FLAG_FCT_momentum,           &
-       ATMOS_DYN_FLAG_FCT_T
+       ATMOS_DYN_FLAG_FCT_T,                  &
+       ATMOS_DYN_FLAG_FCT_along_stream
 
     real(RP) :: DT
     integer  :: ierr
@@ -228,6 +230,7 @@ contains
          ATMOS_DYN_FLAG_FCT_rho,                               & ! [IN]
          ATMOS_DYN_FLAG_FCT_momentum,                          & ! [IN]
          ATMOS_DYN_FLAG_FCT_T,                                 & ! [IN]
+         ATMOS_DYN_FLAG_FCT_along_stream,                      & ! [IN]
          ATMOS_USE_AVERAGE,                                    & ! [IN]
          TIME_DTSEC,                                           & ! [IN]
          TIME_DTSEC_ATMOS_DYN,                                 & ! [IN]

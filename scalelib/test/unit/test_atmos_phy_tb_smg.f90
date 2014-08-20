@@ -311,7 +311,7 @@ subroutine test_double
   call AssertEqual("qflx_sgs_momy", FOUR(KS:KE,IS:IE,JS:JE,:), work(KS:KE,IS:IE,JS:JE,:))
   message = "iq = ??"
   do iq = 1, QA
-     where(qflx_sgs_qtrc2(:,:,:,iq,:) .ne. 0.0_RP) work = qflx_sgs_qtrc2(:,:,:,iq,:) / qflx_sgs_qtrc(:,:,:,iq,:)
+     where(qflx_sgs_qtrc(:,:,:,iq,:) .ne. 0.0_RP) work = qflx_sgs_qtrc2(:,:,:,iq,:) / qflx_sgs_qtrc(:,:,:,iq,:)
      where(qflx_sgs_qtrc2(:,:,:,iq,:) .eq. 0.0_RP) work = 4.0_RP
      write(message(6:7), "(i2)") iq
      call AssertEqual(message, FOUR(KS:KE,IS:IE,JS:JE,:), work(KS:KE,IS:IE,JS:JE,:))

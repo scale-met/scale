@@ -87,6 +87,7 @@ contains
        Rtot, CVtot, CORIOLI,                        &
        num_diff, divdmp_coef,                       &
        FLAG_FCT_RHO, FLAG_FCT_MOMENTUM, FLAG_FCT_T, &
+       FLAG_FCT_ALONG_STREAM,                       &
        CDZ, FDZ, FDX, FDY,                          &
        RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,          &
        PHI, GSQRT, J13G, J23G, J33G,                &
@@ -151,6 +152,7 @@ contains
     logical,  intent(in)  :: FLAG_FCT_RHO
     logical,  intent(in)  :: FLAG_FCT_MOMENTUM
     logical,  intent(in)  :: FLAG_FCT_T
+    logical,  intent(in)  :: FLAG_FCT_ALONG_STREAM
 
     real(RP), intent(in)  :: CDZ (KA)
     real(RP), intent(in)  :: FDZ (KA-1)
@@ -559,8 +561,10 @@ contains
        call ATMOS_DYN_fct( qflx_anti,               & ! (out)
                            DENS0, one, one,         & ! (in)
                            mflx_hi, qflx_lo,        & ! (in)
+                           mflx_hi,                 & ! (in)
                            RCDZ, RCDX, RCDY,        & ! (in)
-                           GSQRT(:,:,:,I_XYZ), dtrk ) ! (in)
+                           GSQRT(:,:,:,I_XYZ), dtrk,& ! (in)
+                           FLAG_FCT_ALONG_STREAM    ) ! (in)
 
        do JJS = JS, JE, JBLOCK
        JJE = JJS+JBLOCK-1
@@ -1065,8 +1069,10 @@ contains
        call ATMOS_DYN_fct( qflx_anti,                 & ! (out)
                            VELZ, DENS0_uvw, DENS_uvw, & ! (in)
                            qflx_hi, qflx_lo,          & ! (in)
+                           mflx_hi,                   & ! (in)
                            RFDZ, RCDX, RCDY,          & ! (in)
-                           GSQRT(:,:,:,I_XYW), dtrk   ) ! (in)
+                           GSQRT(:,:,:,I_XYW), dtrk,  & ! (in)
+                           FLAG_FCT_ALONG_STREAM      ) ! (in)
 
        do JJS = JS, JE, JBLOCK
        JJE = JJS+JBLOCK-1
@@ -1459,8 +1465,10 @@ contains
        call ATMOS_DYN_fct( qflx_anti,                 & ! (out)
                            VELX, DENS0_uvw, DENS_uvw, & ! (in)
                            qflx_hi, qflx_lo,          & ! (in)
+                           mflx_hi,                   & ! (in)
                            RCDZ, RFDX, RCDY,          & ! (in)
-                           GSQRT(:,:,:,I_UYZ), dtrk   ) ! (in)
+                           GSQRT(:,:,:,I_UYZ), dtrk,  & ! (in)
+                           FLAG_FCT_ALONG_STREAM      ) ! (in)
 
        do JJS = JS, JE, JBLOCK
        JJE = JJS+JBLOCK-1
@@ -1886,8 +1894,10 @@ contains
        call ATMOS_DYN_fct( qflx_anti,                 & ! (out)
                            VELY, DENS0_uvw, DENS_uvw, & ! (in)
                            qflx_hi, qflx_lo,          & ! (in)
+                           mflx_hi,                   & ! (in)
                            RCDZ, RCDX, RFDY,          & ! (in)
-                           GSQRT(:,:,:,I_XVZ), dtrk   ) ! (in)
+                           GSQRT(:,:,:,I_XVZ), dtrk,  & ! (in)
+                           FLAG_FCT_ALONG_STREAM      ) ! (in)
 
        do JJS = JS, JE, JBLOCK
        JJE = JJS+JBLOCK-1
@@ -2178,8 +2188,10 @@ contains
        call ATMOS_DYN_fct( qflx_anti,               & ! (out)
                            POTT, DENS0, DENS_RK,    & ! (out)
                            qflx_hi, qflx_lo,        & ! (in)
+                           mflx_hi,                 & ! (in)
                            RCDZ, RCDX, RCDY,        & ! (in)
-                           GSQRT(:,:,:,I_XYZ), dtrk ) ! (in)
+                           GSQRT(:,:,:,I_XYZ), dtrk,& ! (in)
+                           FLAG_FCT_ALONG_STREAM    ) ! (in)
 
        do JJS = JS, JE, JBLOCK
        JJE = JJS+JBLOCK-1
