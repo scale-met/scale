@@ -884,7 +884,8 @@ contains
 
     do j = JS, JE
     do i = IS, IE
-       solins(i,j) = ATMOS_SOLARINS_constant * Re_factor * max(cosSZA(i,j),0.0_RP)
+!       solins(i,j) = ATMOS_SOLARINS_constant * Re_factor * max(cosSZA(i,j),0.0_RP)
+       solins(i,j) = ATMOS_SOLARINS_constant * Re_factor * ( 0.5_RP + sign(0.5_RP,cosSZA(i,j)) )
     enddo
     enddo
 
