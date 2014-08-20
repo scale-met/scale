@@ -4218,8 +4218,8 @@ enddo
     character(len=H_LONG)    :: BOUNDARY_TITLE      = 'SCALE-LES BOUNDARY CONDITION for REAL CASE'
     character(len=H_SHORT)   :: PARENT_MP_TYPE      = 'single'  ! microphysics type of the parent model (single or double)
     real(RP)                 :: BOUNDARY_UPDATE_DT  = 0.0_RP    ! inteval time of boudary data update [s]
-    logical                  :: WRF_FILE_TYPE       = .true.    ! wrf filetype: T=wrfout, F=wrfrst
-    logical                  :: SERIAL_PROC_READ    = .true.    ! read by one MPI process and broadcast
+    logical                  :: WRF_FILE_TYPE       = .false.   ! wrf filetype: T=wrfout, F=wrfrst
+    logical                  :: SERIAL_PROC_READ    = .false.   ! read by one MPI process and broadcast
     logical                  :: NO_ADDITIONAL_INPUT = .false.   ! no additional information
 
 
@@ -4290,16 +4290,15 @@ enddo
                           BASENAME_WITHNUM, FILETYPE_ORG,    & ![IN]
                           INTERP_SERC_DIV_NUM, WRF_FILE_TYPE ) ![IN]
 
-    if( NUMBER_OF_TSTEPS /= timelen ) then
-       if( IO_L ) write(IO_FID_LOG,*) '+++ WARNING: NUMBER_OF_TSTEP is not match with timesteps derived from the file.'
-    endif
-
     allocate( dens_org(KA,IA,JA,totaltimesteps   ) )
     allocate( momz_org(KA,IA,JA,totaltimesteps   ) )
     allocate( momx_org(KA,IA,JA,totaltimesteps   ) )
     allocate( momy_org(KA,IA,JA,totaltimesteps   ) )
     allocate( rhot_org(KA,IA,JA,totaltimesteps   ) )
     allocate( qtrc_org(KA,IA,JA,totaltimesteps,QA) )
+
+    ! initialize QTRC
+    qtrc_org(:,:,:,:,:) = 0.0_RP
 
     !--- read external file
     do n = 1, NUMBER_OF_FILES
