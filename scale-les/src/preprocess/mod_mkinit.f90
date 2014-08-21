@@ -4218,6 +4218,7 @@ enddo
     character(len=H_LONG)    :: BOUNDARY_TITLE      = 'SCALE-LES BOUNDARY CONDITION for REAL CASE'
     character(len=H_SHORT)   :: PARENT_MP_TYPE      = 'single'  ! microphysics type of the parent model (single or double)
     real(RP)                 :: BOUNDARY_UPDATE_DT  = 0.0_RP    ! inteval time of boudary data update [s]
+    logical                  :: USE_FILE_DENSITY    = .false.   ! use density data from files
     logical                  :: WRF_FILE_TYPE       = .false.   ! wrf filetype: T=wrfout, F=wrfrst
     logical                  :: SERIAL_PROC_READ    = .false.   ! read by one MPI process and broadcast
     logical                  :: NO_ADDITIONAL_INPUT = .false.   ! no additional information
@@ -4226,12 +4227,13 @@ enddo
     NAMELIST / PARAM_MKINIT_REAL / &
          NUMBER_OF_FILES,     &
          NUMBER_OF_TSTEPS,    &
+         INTERP_SERC_DIV_NUM, &
          BASENAME_ORG,        &
          FILETYPE_ORG,        &
          BASENAME_BOUNDARY,   &
          BOUNDARY_TITLE,      &
          BOUNDARY_UPDATE_DT,  &
-         INTERP_SERC_DIV_NUM, &
+         USE_FILE_DENSITY,    &
          PARENT_MP_TYPE,      &
          WRF_FILE_TYPE,       &
          SERIAL_PROC_READ,    &
@@ -4297,9 +4299,6 @@ enddo
     allocate( rhot_org(KA,IA,JA,totaltimesteps   ) )
     allocate( qtrc_org(KA,IA,JA,totaltimesteps,QA) )
 
-    ! initialize QTRC
-    qtrc_org(:,:,:,:,:) = 0.0_RP
-
     !--- read external file
     do n = 1, NUMBER_OF_FILES
        write(NUM,'(I5.5)') n-1
@@ -4331,6 +4330,7 @@ enddo
                              RHOT_org(:,:,:,ns:ne),    &
                              QTRC_org(:,:,:,ns:ne,:),  &
                              BASENAME_WITHNUM,         &
+                             USE_FILE_DENSITY,         &
                              dims(:),                  &
                              mdlid,                    &
                              PARENT_MP_TYPE,           &
@@ -4347,16 +4347,10 @@ enddo
        MOMX(k,i,j) = MOMX_ORG(k,i,j,1)
        MOMY(k,i,j) = MOMY_ORG(k,i,j,1)
        RHOT(k,i,j) = RHOT_ORG(k,i,j,1)
-    enddo
-    enddo
-    enddo
 
-    do iq = 1, QA
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       QTRC(k,i,j,iq) = QTRC_ORG(k,i,j,1,iq)
-    enddo
+       do iq = 1, QA
+          QTRC(k,i,j,iq) = QTRC_ORG(k,i,j,1,iq)
+       enddo
     enddo
     enddo
     enddo

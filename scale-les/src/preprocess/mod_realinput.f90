@@ -174,18 +174,19 @@ contains
   !-----------------------------------------------------------------------------
   !> Atmosphere Data Read
   subroutine ParentAtomInput( &
-      dens,           &
-      momz,           &
-      momx,           &
-      momy,           &
-      rhot,           &
-      qtrc,           &
-      basename_org,   &
-      dims,           &
-      mdlid,          &
-      mptype_parent,  &    
-      timelen,        &
-      serial          )
+      dens,             &
+      momz,             &
+      momx,             &
+      momy,             &
+      rhot,             &
+      qtrc,             &
+      basename_org,     &
+      use_file_density, &
+      dims,             &
+      mdlid,            &
+      mptype_parent,    &    
+      timelen,          &
+      serial            )
     implicit none
 
     real(RP),         intent(out) :: dens(:,:,:,:)
@@ -195,6 +196,7 @@ contains
     real(RP),         intent(out) :: rhot(:,:,:,:)
     real(RP),         intent(out) :: qtrc(:,:,:,:,:)
     character(LEN=*), intent(in)  :: basename_org
+    logical,          intent(in)  :: use_file_density ! use density data from files
     integer,          intent(in)  :: dims(:)
     integer,          intent(in)  :: mdlid            ! model type id
     character(LEN=*), intent(in)  :: mptype_parent    ! microphysics type of the parent model (single or double)
@@ -232,6 +234,7 @@ contains
                             rhot    (:,:,:,:),   &
                             qtrc    (:,:,:,:,:), &
                             basename_org,        &
+                            use_file_density,    &
                             1,                   &  ! start time
                             timelen              )  ! end time
 
@@ -534,15 +537,16 @@ contains
   !> Individual Procedures
   !-----------------------------------------------------------------------------
   subroutine InputAtomSCALE( &
-      dens,          & ! (out)
-      momz,          & ! (out)
-      momx,          & ! (out)
-      momy,          & ! (out)
-      rhot,          & ! (out)
-      qtrc,          & ! (out)
-      basename_org,  & ! (in)
-      start_step,    & ! (in)
-      end_step       ) ! (in)
+      dens,             & ! (out)
+      momz,             & ! (out)
+      momx,             & ! (out)
+      momy,             & ! (out)
+      rhot,             & ! (out)
+      qtrc,             & ! (out)
+      basename_org,     & ! (in)
+      use_file_density, & ! (in)
+      start_step,       & ! (in)
+      end_step          ) ! (in)
     use scale_const, only: &
        D2R => CONST_D2R
     use scale_comm, only: &
@@ -556,7 +560,7 @@ contains
        NEST_TILE_NUM_Y, &
        NEST_TILE_ID
     use scale_atmos_hydrostatic, only: &
-       HYDROSTATIC_buildrho => ATMOS_HYDROSTATIC_buildrho
+       HYDROSTATIC_buildrho_bytemp => ATMOS_HYDROSTATIC_buildrho_bytemp
     implicit none
 
     real(RP),         intent(out) :: dens(:,:,:,:)
@@ -566,6 +570,7 @@ contains
     real(RP),         intent(out) :: rhot(:,:,:,:)
     real(RP),         intent(out) :: qtrc(:,:,:,:,:)
     character(LEN=*), intent(in)  :: basename_org
+    logical,          intent(in)  :: use_file_density
     integer,          intent(in)  :: start_step
     integer,          intent(in)  :: end_step
 
@@ -573,21 +578,42 @@ contains
     real(RP), allocatable :: read2D(:,:)
     real(RP), allocatable :: read3D(:,:,:)
 
-    real(RP), allocatable :: LON_ORG (:,:,:)
-    real(RP), allocatable :: LAT_ORG (:,:,:)
-    real(RP), allocatable :: LONU_ORG(:,:,:)
-    real(RP), allocatable :: LATU_ORG(:,:,:)
-    real(RP), allocatable :: LONV_ORG(:,:,:)
-    real(RP), allocatable :: LATV_ORG(:,:,:)
-    real(RP), allocatable :: GEOH_ORG(:,:,:,:)
-    real(RP), allocatable :: GEOF_ORG(:,:,:,:)
+    real(RP), allocatable :: lon_org (:,:,:)
+    real(RP), allocatable :: lat_org (:,:,:)
+    real(RP), allocatable :: lonu_org(:,:,:)
+    real(RP), allocatable :: latu_org(:,:,:)
+    real(RP), allocatable :: lonv_org(:,:,:)
+    real(RP), allocatable :: latv_org(:,:,:)
+    real(RP), allocatable :: geoh_org(:,:,:,:)
+    real(RP), allocatable :: geof_org(:,:,:,:)
 
-    real(RP), allocatable :: DENS_ORG(:,:,:,:)
-    real(RP), allocatable :: MOMZ_ORG(:,:,:,:)
-    real(RP), allocatable :: MOMX_ORG(:,:,:,:)
-    real(RP), allocatable :: MOMY_ORG(:,:,:,:)
-    real(RP), allocatable :: RHOT_ORG(:,:,:,:)
-    real(RP), allocatable :: QTRC_ORG(:,:,:,:,:)
+    real(RP), allocatable :: dens_org(:,:,:,:)
+    real(RP), allocatable :: momz_org(:,:,:,:)
+    real(RP), allocatable :: momx_org(:,:,:,:)
+    real(RP), allocatable :: momy_org(:,:,:,:)
+    real(RP), allocatable :: rhot_org(:,:,:,:)
+    real(RP), allocatable :: qtrc_org(:,:,:,:,:)
+
+    real(RP), allocatable :: velw_org(:,:,:,:)
+    real(RP), allocatable :: velu_org(:,:,:,:)
+    real(RP), allocatable :: velv_org(:,:,:,:)
+    real(RP), allocatable :: pott_org(:,:,:,:)
+
+    real(RP), allocatable :: psfc_org(:,:,:)
+    real(RP), allocatable :: tsfc_org(:,:,:)
+
+    real(RP) :: velw(KA,IA,JA,start_step:end_step)
+    real(RP) :: velu(KA,IA,JA,start_step:end_step)
+    real(RP) :: velv(KA,IA,JA,start_step:end_step)
+    real(RP) :: pott(KA,IA,JA,start_step:end_step)
+    real(RP) :: pres(KA,IA,JA,start_step:end_step)
+    real(RP) :: temp(KA,IA,JA,start_step:end_step)
+
+    real(RP) :: pott_sfc(1,IA,JA,start_step:end_step)
+    real(RP) :: pres_sfc(1,IA,JA,start_step:end_step)
+    real(RP) :: temp_sfc(1,IA,JA,start_step:end_step)
+    real(RP) :: qv_sfc  (1,IA,JA,start_step:end_step)
+    real(RP) :: qc_sfc  (1,IA,JA,start_step:end_step)
 
     real(RP) :: hfact(   IA,JA,itp_nh       )
     real(RP) :: vfact(KA,IA,JA,itp_nh,itp_nv)
@@ -627,6 +653,14 @@ contains
     allocate( momy_org( KALL, IALL, JALL, start_step:end_step )    )
     allocate( rhot_org( KALL, IALL, JALL, start_step:end_step )    )
     allocate( qtrc_org( KALL, IALL, JALL, start_step:end_step, QA) )
+
+    allocate( velw_org( KALL, IALL, JALL, start_step:end_step )    )
+    allocate( velu_org( KALL, IALL, JALL, start_step:end_step )    )
+    allocate( velv_org( KALL, IALL, JALL, start_step:end_step )    )
+    allocate( pott_org( KALL, IALL, JALL, start_step:end_step )    )
+
+    allocate( psfc_org(       IALL, JALL, start_step:end_step )    )
+    allocate( tsfc_org(       IALL, JALL, start_step:end_step )    )
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[realinput]/Categ[InputSCALE]'
@@ -715,6 +749,18 @@ contains
          end do
        end do
 
+       if( use_file_density == .false. ) then ! make density
+         do n = start_step, end_step
+           call FileRead( read2D(:,:), BASENAME_ORG, "SFC_PRES", n, rank )
+           psfc_org(xs:xe,ys:ye,n) = read2D(:,:)
+         end do
+
+         do n = start_step, end_step
+           call FileRead( read2D(:,:), BASENAME_ORG, "SFC_TEMP", n, rank )
+           tsfc_org(xs:xe,ys:ye,n) = read2D(:,:)
+         end do
+       end if
+
     end do
 
     ! fill all step
@@ -729,12 +775,145 @@ contains
       geof_org(:,:,:,n) = geof_org(:,:,:,1)
     end do
 
-    ! use logarithmic density to interpolate more accurately
+    ! for vector (w) points
+    call latlonz_interporation_fact( hfact   (:,:,:),     & ! [OUT]
+                                     vfact   (:,:,:,:,:), & ! [OUT]
+                                     kgrd    (:,:,:,:,:), & ! [OUT]
+                                     igrd    (:,:,:),     & ! [OUT]
+                                     jgrd    (:,:,:),     & ! [OUT]
+                                     FZ      (:,:,:),     & ! [IN]
+                                     LAT     (:,:),       & ! [IN]
+                                     LON     (:,:),       & ! [IN]
+                                     geof_org(:,:,:,:),   & ! [IN]
+                                     lat_org (:,:,:),     & ! [IN]
+                                     lon_org (:,:,:),     & ! [IN]
+                                     KALL, IALL, JALL,    & ! [IN]
+                                     start_step           ) ! [IN]
+
+    ! convert from momentum to velocity
     do n = start_step, end_step
     do j = 1, JALL
     do i = 1, IALL
+    do k = 1, KALL-1
+       velw_org(k,i,j,n) = momz_org(k,i,j,n) / ( dens_org(k+1,i,j,n) + dens_org(k,i,j,n) ) * 2.0_RP
+    end do
+    end do
+    end do
+    end do
+    do n = start_step, end_step
+    do j = 1, JALL
+    do i = 1, IALL
+       velw_org(KALL,i,j,n) = 0.0_RP
+    end do
+    end do
+    end do
+
+    do n = start_step, end_step
+    do j = JS-1, JE+1
+    do i = IS-1, IE+1
+    do k = KS-1, KE+1
+       velw(k,i,j,n) = velw_org(kgrd(k,i,j,1,1),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,1) &
+                     + velw_org(kgrd(k,i,j,2,1),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,1) &
+                     + velw_org(kgrd(k,i,j,3,1),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,1) &
+                     + velw_org(kgrd(k,i,j,1,2),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,2) &
+                     + velw_org(kgrd(k,i,j,2,2),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,2) &
+                     + velw_org(kgrd(k,i,j,3,2),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,2)
+    end do
+    end do
+    end do
+    end do
+
+    ! for vector (u) points
+    call latlonz_interporation_fact( hfact   (:,:,:),     & ! [OUT]
+                                     vfact   (:,:,:,:,:), & ! [OUT]
+                                     kgrd    (:,:,:,:,:), & ! [OUT]
+                                     igrd    (:,:,:),     & ! [OUT]
+                                     jgrd    (:,:,:),     & ! [OUT]
+                                     CZ      (:,:,:),     & ! [IN]
+                                     LAT     (:,:),       & ! [IN]
+                                     LONX    (:,:),       & ! [IN]
+                                     geoh_org(:,:,:,:),   & ! [IN]
+                                     latu_org(:,:,:),     & ! [IN]
+                                     lonu_org(:,:,:),     & ! [IN]
+                                     KALL, IALL, JALL,    & ! [IN]
+                                     start_step           ) ! [IN]
+
+    ! convert from momentum to velocity
+    do n = start_step, end_step
+    do j = 1, JALL
+    do i = 1, IALL-1
     do k = 1, KALL
-       dens_org(k,i,j,n) = log( dens_org(k,i,j,n) )
+       velu_org(k,i,j,n) = momx_org(k,i,j,n) / ( dens_org(k,i+1,j,n) + dens_org(k,i,j,n) ) * 2.0_RP
+    end do
+    end do
+    end do
+    end do
+    do n = start_step, end_step
+    do j = 1, JALL
+    do k = 1, KALL
+       velu_org(k,IALL,j,n) = momx_org(k,IALL,j,n) / dens_org(k,IALL,j,n)
+    end do
+    end do
+    end do
+
+    do n = start_step, end_step
+    do j = JS-1, JE+1
+    do i = IS-1, IE+1
+    do k = KS-1, KE+1
+       velu(k,i,j,n) = velu_org(kgrd(k,i,j,1,1),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,1) &
+                     + velu_org(kgrd(k,i,j,2,1),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,1) &
+                     + velu_org(kgrd(k,i,j,3,1),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,1) &
+                     + velu_org(kgrd(k,i,j,1,2),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,2) &
+                     + velu_org(kgrd(k,i,j,2,2),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,2) &
+                     + velu_org(kgrd(k,i,j,3,2),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,2)
+    end do
+    end do
+    end do
+    end do
+
+    ! for vector (v) points
+    call latlonz_interporation_fact( hfact   (:,:,:),     & ! [OUT]
+                                     vfact   (:,:,:,:,:), & ! [OUT]
+                                     kgrd    (:,:,:,:,:), & ! [OUT]
+                                     igrd    (:,:,:),     & ! [OUT]
+                                     jgrd    (:,:,:),     & ! [OUT]
+                                     CZ      (:,:,:),     & ! [IN]
+                                     LATY    (:,:),       & ! [IN]
+                                     LON     (:,:),       & ! [IN]
+                                     geoh_org(:,:,:,:),   & ! [IN]
+                                     latv_org(:,:,:),     & ! [IN]
+                                     lonv_org(:,:,:),     & ! [IN]
+                                     KALL, IALL, JALL,    & ! [IN]
+                                     start_step           ) ! [IN]
+
+    ! convert from momentum to velocity
+    do n = start_step, end_step
+    do j = 1, JALL-1
+    do i = 1, IALL
+    do k = 1, KALL
+       velv_org(k,i,j,n) = momy_org(k,i,j,n) / ( dens_org(k,i,j+1,n) + dens_org(k,i,j,n) ) * 2.0_RP
+    end do
+    end do
+    end do
+    end do
+    do n = start_step, end_step
+    do i = 1, IALL
+    do k = 1, KALL
+       velv_org(k,i,JALL,n) = momy_org(k,i,JALL,n) / dens_org(k,i,JALL,n)
+    end do
+    end do
+    end do
+
+    do n = start_step, end_step
+    do j = JS-1, JE+1
+    do i = IS-1, IE+1
+    do k = KS-1, KE+1
+       velv(k,i,j,n) = velv_org(kgrd(k,i,j,1,1),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,1) &
+                     + velv_org(kgrd(k,i,j,2,1),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,1) &
+                     + velv_org(kgrd(k,i,j,3,1),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,1) &
+                     + velv_org(kgrd(k,i,j,1,2),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,2) &
+                     + velv_org(kgrd(k,i,j,2,2),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,2) &
+                     + velv_org(kgrd(k,i,j,3,2),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,2)
     end do
     end do
     end do
@@ -756,22 +935,30 @@ contains
                                      start_step           ) ! [IN]
 
     do n = start_step, end_step
+    do j = 1, JALL
+    do i = 1, IALL
+    do k = 1, KALL
+       pott_org(k,i,j,n) = rhot_org(k,i,j,n) / dens_org(k,i,j,n)
+       dens_org(k,i,j,n) = log( dens_org(k,i,j,n) )
+
+       do iq = 1, QA
+          qtrc_org(k,i,j,n,iq) = max( qtrc_org(k,i,j,n,iq), 0.0_RP )
+       end do
+    end do
+    end do
+    end do
+    end do
+
+    do n = start_step, end_step
     do j = JS-1, JE+1
     do i = IS-1, IE+1
     do k = KS-1, KE+1
-       dens(k,i,j,n) = exp( dens_org(kgrd(k,i,j,1,1),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,1) &
-                          + dens_org(kgrd(k,i,j,2,1),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,1) &
-                          + dens_org(kgrd(k,i,j,3,1),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,1) &
-                          + dens_org(kgrd(k,i,j,1,2),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,2) &
-                          + dens_org(kgrd(k,i,j,2,2),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,2) &
-                          + dens_org(kgrd(k,i,j,3,2),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,2) )
-
-       rhot(k,i,j,n) = rhot_org(kgrd(k,i,j,1,1),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,1) &
-                     + rhot_org(kgrd(k,i,j,2,1),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,1) &
-                     + rhot_org(kgrd(k,i,j,3,1),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,1) &
-                     + rhot_org(kgrd(k,i,j,1,2),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,2) &
-                     + rhot_org(kgrd(k,i,j,2,2),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,2) &
-                     + rhot_org(kgrd(k,i,j,3,2),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,2)
+       pott(k,i,j,n) = pott_org(kgrd(k,i,j,1,1),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,1) &
+                     + pott_org(kgrd(k,i,j,2,1),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,1) &
+                     + pott_org(kgrd(k,i,j,3,1),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,1) &
+                     + pott_org(kgrd(k,i,j,1,2),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,2) &
+                     + pott_org(kgrd(k,i,j,2,2),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,2) &
+                     + pott_org(kgrd(k,i,j,3,2),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,2)
 
        do iq = 1, QA
           qtrc(k,i,j,n,iq) = qtrc_org(kgrd(k,i,j,1,1),igrd(i,j,1),jgrd(i,j,1),n,iq) * hfact(i,j,1) * vfact(k,i,j,1,1) &
@@ -786,91 +973,64 @@ contains
     end do
     end do
 
-    ! for vector (w) points
-    call latlonz_interporation_fact( hfact   (:,:,:),     & ! [OUT]
-                                     vfact   (:,:,:,:,:), & ! [OUT]
-                                     kgrd    (:,:,:,:,:), & ! [OUT]
-                                     igrd    (:,:,:),     & ! [OUT]
-                                     jgrd    (:,:,:),     & ! [OUT]
-                                     FZ      (:,:,:),     & ! [IN]
-                                     LAT     (:,:),       & ! [IN]
-                                     LON     (:,:),       & ! [IN]
-                                     geof_org(:,:,:,:),   & ! [IN]
-                                     lat_org (:,:,:),     & ! [IN]
-                                     lon_org (:,:,:),     & ! [IN]
-                                     KALL, IALL, JALL,    & ! [IN]
-                                     start_step           ) ! [IN]
+    if( use_file_density ) then
+       ! use logarithmic density to interpolate more accurately
+       do n = start_step, end_step
+       do j = JS-1, JE+1
+       do i = IS-1, IE+1
+       do k = KS-1, KE+1
+          dens(k,i,j,n) = exp( dens_org(kgrd(k,i,j,1,1),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,1) &
+                             + dens_org(kgrd(k,i,j,2,1),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,1) &
+                             + dens_org(kgrd(k,i,j,3,1),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,1) &
+                             + dens_org(kgrd(k,i,j,1,2),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,2) &
+                             + dens_org(kgrd(k,i,j,2,2),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,2) &
+                             + dens_org(kgrd(k,i,j,3,2),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,2) )
+       end do
+       end do
+       end do
+       end do
+    else
+       ! make density in moist condition
+       do n = start_step, end_step
+          do j = JS-1, JE+1
+          do i = IS-1, IE+1
+             pres_sfc(1,i,j,n) = psfc_org(igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) &
+                               + psfc_org(igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) &
+                               + psfc_org(igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3)
+             temp_sfc(1,i,j,n) = tsfc_org(igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) &
+                               + tsfc_org(igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) &
+                               + tsfc_org(igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3)
+          end do
+          end do
+
+          qv_sfc(1,:,:,n) = qtrc(KS,:,:,n,I_QV)
+          qc_sfc(1,:,:,n) = qtrc(KS,:,:,n,I_QC)
+
+          call HYDROSTATIC_buildrho_bytemp( dens    (:,:,:,n),      & ! [OUT]
+                                            temp    (:,:,:,n),      & ! [OUT]
+                                            pres    (:,:,:,n),      & ! [OUT]
+                                            pott    (:,:,:,n),      & ! [IN]
+                                            qtrc    (:,:,:,n,I_QV), & ! [IN]
+                                            qtrc    (:,:,:,n,I_QC), & ! [IN]
+                                            pott_sfc(:,:,:,n),      & ! [OUT]
+                                            pres_sfc(:,:,:,n),      & ! [IN]
+                                            temp_sfc(:,:,:,n),      & ! [IN]
+                                            qv_sfc  (:,:,:,n),      & ! [IN]
+                                            qc_sfc  (:,:,:,n)       ) ! [IN]
+
+          call COMM_vars8( dens(:,:,:,n), 1 )
+          call COMM_wait ( dens(:,:,:,n), 1 )
+       end do
+    end if
 
     do n = start_step, end_step
-    do j = JS-1, JE+1
-    do i = IS-1, IE+1
-    do k = KS-1, KE+1
-       momz(k,i,j,n) = momz_org(kgrd(k,i,j,1,1),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,1) &
-                     + momz_org(kgrd(k,i,j,2,1),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,1) &
-                     + momz_org(kgrd(k,i,j,3,1),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,1) &
-                     + momz_org(kgrd(k,i,j,1,2),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,2) &
-                     + momz_org(kgrd(k,i,j,2,2),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,2) &
-                     + momz_org(kgrd(k,i,j,3,2),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,2)
-    end do
-    end do
-    end do
-    end do
-
-    ! for vector (u) points
-    call latlonz_interporation_fact( hfact   (:,:,:),     & ! [OUT]
-                                     vfact   (:,:,:,:,:), & ! [OUT]
-                                     kgrd    (:,:,:,:,:), & ! [OUT]
-                                     igrd    (:,:,:),     & ! [OUT]
-                                     jgrd    (:,:,:),     & ! [OUT]
-                                     CZ      (:,:,:),     & ! [IN]
-                                     LAT     (:,:),       & ! [IN]
-                                     LONX    (:,:),       & ! [IN]
-                                     geoh_org(:,:,:,:),   & ! [IN]
-                                     latu_org(:,:,:),     & ! [IN]
-                                     lonu_org(:,:,:),     & ! [IN]
-                                     KALL, IALL, JALL,    & ! [IN]
-                                     start_step           ) ! [IN]
-
-    do n = start_step, end_step
-    do j = JS-1, JE+1
-    do i = IS-1, IE+1
-    do k = KS-1, KE+1
-       momx(k,i,j,n) = momx_org(kgrd(k,i,j,1,1),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,1) &
-                     + momx_org(kgrd(k,i,j,2,1),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,1) &
-                     + momx_org(kgrd(k,i,j,3,1),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,1) &
-                     + momx_org(kgrd(k,i,j,1,2),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,2) &
-                     + momx_org(kgrd(k,i,j,2,2),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,2) &
-                     + momx_org(kgrd(k,i,j,3,2),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,2)
-    end do
-    end do
-    end do
-    end do
-
-    ! for vector (v) points
-    call latlonz_interporation_fact( hfact   (:,:,:),     & ! [OUT]
-                                     vfact   (:,:,:,:,:), & ! [OUT]
-                                     kgrd    (:,:,:,:,:), & ! [OUT]
-                                     igrd    (:,:,:),     & ! [OUT]
-                                     jgrd    (:,:,:),     & ! [OUT]
-                                     CZ      (:,:,:),     & ! [IN]
-                                     LATY    (:,:),       & ! [IN]
-                                     LON     (:,:),       & ! [IN]
-                                     geoh_org(:,:,:,:),   & ! [IN]
-                                     latv_org(:,:,:),     & ! [IN]
-                                     lonv_org(:,:,:),     & ! [IN]
-                                     KALL, IALL, JALL,    & ! [IN]
-                                     start_step           ) ! [IN]
-
-    do n = start_step, end_step
-    do j = JS-1, JE+1
-    do i = IS-1, IE+1
-    do k = KS-1, KE+1
-       momy(k,i,j,n) = momy_org(kgrd(k,i,j,1,1),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,1) &
-                     + momy_org(kgrd(k,i,j,2,1),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,1) &
-                     + momy_org(kgrd(k,i,j,3,1),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,1) &
-                     + momy_org(kgrd(k,i,j,1,2),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,2) &
-                     + momy_org(kgrd(k,i,j,2,2),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,2) &
-                     + momy_org(kgrd(k,i,j,3,2),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,2)
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       momz(k,i,j,n) = velw(k,i,j,n) * ( dens(k+1,i  ,j  ,n) + dens(k,i,j,n) ) * 0.5_RP
+       momx(k,i,j,n) = velu(k,i,j,n) * ( dens(k  ,i+1,j  ,n) + dens(k,i,j,n) ) * 0.5_RP
+       momy(k,i,j,n) = velv(k,i,j,n) * ( dens(k  ,i  ,j+1,n) + dens(k,i,j,n) ) * 0.5_RP
+       rhot(k,i,j,n) = pott(k,i,j,n) * dens(k,i,j,n)
     end do
     end do
     end do

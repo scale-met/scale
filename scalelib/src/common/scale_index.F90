@@ -44,7 +44,4 @@ module scale_index
 
   integer, public, parameter :: I_BND_SIZE = 6 ! size of array for reference quantities
 
-  character(len=H_SHORT), public :: REF_NAME(I_BND_SIZE)
-  data REF_NAME / 'DENS_ref','VELZ_ref','VELX_ref','VELY_ref','POTT_ref','QV_ref' /
-
 end module scale_index
