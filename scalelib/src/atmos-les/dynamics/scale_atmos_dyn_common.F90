@@ -1738,7 +1738,7 @@ contains
                    qa_in = ( phi_in(k  ,i  ,j+1) * (1.0_RP-x) &
                            + phi_in(k-1,i  ,j+1) * x ) * (1.0_RP-y) &
                          + ( phi_in(k  ,i-1,j+1) * (1.0_RP-x) &
-                           + phi_in(k-1,i-1,j-1) * x ) * y
+                           + phi_in(k-1,i-1,j+1) * x ) * y
                    qb_in = ( phi_in(k  ,i  ,j-1) * (1.0_RP-x) &
                            + phi_in(k+1,i  ,j-1) * x ) * (1.0_RP-y) &
                          + ( phi_in(k  ,i+1,j-1) * (1.0_RP-x) &
@@ -2103,7 +2103,7 @@ contains
                    qa_in = ( phi_in(k  ,i  ,j+1) * (1.0_RP-x) &
                            + phi_in(k-1,i  ,j+1) * x ) * (1.0_RP-y) &
                          + ( phi_in(k  ,i-1,j+1) * (1.0_RP-x) &
-                           + phi_in(k-1,i-1,j-1) * x ) * y
+                           + phi_in(k-1,i-1,j+1) * x ) * y
                    qa_lo = ( phi_lo(k  ,i  ,j+1) * (1.0_RP-x) &
                            + phi_lo(k-1,i  ,j+1) * x ) * (1.0_RP-y) &
                          + ( phi_lo(k  ,i-1,j+1) * (1.0_RP-x) &
