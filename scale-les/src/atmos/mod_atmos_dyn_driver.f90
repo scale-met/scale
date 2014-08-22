@@ -193,8 +193,18 @@ contains
        ATMOS_REFSTATE_qv,   &
        ATMOS_REFSTATE_pres
     use scale_atmos_boundary, only: &
-       ATMOS_BOUNDARY_var,   &
-       ATMOS_BOUNDARY_alpha
+       ATMOS_BOUNDARY_DENS,       &
+       ATMOS_BOUNDARY_VELZ,       &
+       ATMOS_BOUNDARY_VELX,       &
+       ATMOS_BOUNDARY_VELY,       &
+       ATMOS_BOUNDARY_POTT,       &
+       ATMOS_BOUNDARY_QTRC,       &
+       ATMOS_BOUNDARY_alpha_DENS, &
+       ATMOS_BOUNDARY_alpha_VELZ, &
+       ATMOS_BOUNDARY_alpha_VELX, &
+       ATMOS_BOUNDARY_alpha_VELY, &
+       ATMOS_BOUNDARY_alpha_POTT, &
+       ATMOS_BOUNDARY_alpha_QTRC
     use scale_atmos_dyn, only: &
        ATMOS_DYN
     implicit none
@@ -224,8 +234,18 @@ contains
          ATMOS_DYN_numerical_diff_order,                       & ! [IN]
          ATMOS_DYN_numerical_diff_sfc_fact,                    & ! [IN]
          ATMOS_DYN_numerical_diff_use_refstate,                & ! [IN]
-         ATMOS_BOUNDARY_var,                                   & ! [IN]
-         ATMOS_BOUNDARY_alpha,                                 & ! [IN]
+         ATMOS_BOUNDARY_DENS,                                  & ! [IN]
+         ATMOS_BOUNDARY_VELZ,                                  & ! [IN]
+         ATMOS_BOUNDARY_VELX,                                  & ! [IN]
+         ATMOS_BOUNDARY_VELY,                                  & ! [IN]
+         ATMOS_BOUNDARY_POTT,                                  & ! [IN]
+         ATMOS_BOUNDARY_QTRC,                                  & ! [IN]
+         ATMOS_BOUNDARY_alpha_DENS,                            & ! [IN]
+         ATMOS_BOUNDARY_alpha_VELZ,                            & ! [IN]
+         ATMOS_BOUNDARY_alpha_VELX,                            & ! [IN]
+         ATMOS_BOUNDARY_alpha_VELY,                            & ! [IN]
+         ATMOS_BOUNDARY_alpha_POTT,                            & ! [IN]
+         ATMOS_BOUNDARY_alpha_QTRC,                            & ! [IN]
          ATMOS_DYN_divdmp_coef,                                & ! [IN]
          ATMOS_DYN_FLAG_FCT_rho,                               & ! [IN]
          ATMOS_DYN_FLAG_FCT_momentum,                          & ! [IN]

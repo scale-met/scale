@@ -128,22 +128,23 @@ contains
   !-----------------------------------------------------------------------------
   !> Dynamical Process
   subroutine ATMOS_DYN( &
-       DENS,    MOMZ,    MOMX,    MOMY,    RHOT,    QTRC,    &
-       DENS_av, MOMZ_av, MOMX_av, MOMY_av, RHOT_av, QTRC_av, &
-       DENS_tp, MOMZ_tp, MOMX_tp, MOMY_tp, RHOT_tp, RHOQ_tp, &
-       CDZ, CDX, CDY, FDZ, FDX, FDY,                         &
-       RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,                   &
-       PHI, GSQRT,                                           &
-       J13G, J23G, J33G,                                     &
-       AQ_CV,                                                &
-       REF_dens, REF_pott, REF_qv, REF_pres,                 &
-       ND_COEF, ND_COEF_Q, ND_ORDER, ND_SFC_FACT, ND_USE_RS, &
-       DAMP_var, DAMP_alpha,                                 &
-       divdmp_coef,                                          &
-       FLAG_FCT_RHO, FLAG_FCT_MOMENTUM, FLAG_FCT_T,          &
-       FLAG_FCT_ALONG_STREAM,                                &
-       USE_AVERAGE,                                          &
-       DTSEC, DTSEC_ATMOS_DYN, NSTEP_ATMOS_DYN               )
+       DENS,    MOMZ,    MOMX,    MOMY,    RHOT,    QTRC,                                                    &
+       DENS_av, MOMZ_av, MOMX_av, MOMY_av, RHOT_av, QTRC_av,                                                 &
+       DENS_tp, MOMZ_tp, MOMX_tp, MOMY_tp, RHOT_tp, RHOQ_tp,                                                 &
+       CDZ, CDX, CDY, FDZ, FDX, FDY,                                                                         &
+       RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,                                                                   &
+       PHI, GSQRT,                                                                                           &
+       J13G, J23G, J33G,                                                                                     &
+       AQ_CV,                                                                                                &
+       REF_dens, REF_pott, REF_qv, REF_pres,                                                                 &
+       ND_COEF, ND_COEF_Q, ND_ORDER, ND_SFC_FACT, ND_USE_RS,                                                 &
+       DAMP_DENS,       DAMP_VELZ,       DAMP_VELX,       DAMP_VELY,       DAMP_POTT,       DAMP_QTRC,       &
+       DAMP_alpha_DENS, DAMP_alpha_VELZ, DAMP_alpha_VELX, DAMP_alpha_VELY, DAMP_alpha_POTT, DAMP_alpha_QTRC, &
+       divdmp_coef,                                                                                          &
+       FLAG_FCT_RHO, FLAG_FCT_MOMENTUM, FLAG_FCT_T,                                                          &
+       FLAG_FCT_ALONG_STREAM,                                                                                &
+       USE_AVERAGE,                                                                                          &
+       DTSEC, DTSEC_ATMOS_DYN, NSTEP_ATMOS_DYN                                                               )
     use scale_const, only: &
        Rdry   => CONST_Rdry,  &
        Rvap   => CONST_Rvap,  &
@@ -170,6 +171,7 @@ contains
     use scale_atmos_dyn_rk, only: &
        ATMOS_DYN_rk
     use scale_atmos_boundary, only: &
+       BND_QA, &
        BND_SMOOTHER_FACT => ATMOS_BOUNDARY_SMOOTHER_FACT
 #ifdef HIST_TEND
     use scale_history, only: &
@@ -228,8 +230,21 @@ contains
     integer,  intent(in)    :: ND_ORDER
     real(RP), intent(in)    :: ND_SFC_FACT
     logical,  intent(in)    :: ND_USE_RS
-    real(RP), intent(in)    :: DAMP_var  (KA,IA,JA,6)
-    real(RP), intent(in)    :: DAMP_alpha(KA,IA,JA,6)
+
+    real(RP), intent(in)    :: DAMP_DENS(KA,IA,JA)
+    real(RP), intent(in)    :: DAMP_VELZ(KA,IA,JA)
+    real(RP), intent(in)    :: DAMP_VELX(KA,IA,JA)
+    real(RP), intent(in)    :: DAMP_VELY(KA,IA,JA)
+    real(RP), intent(in)    :: DAMP_POTT(KA,IA,JA)
+    real(RP), intent(in)    :: DAMP_QTRC(KA,IA,JA,BND_QA)
+
+    real(RP), intent(in)    :: DAMP_alpha_DENS(KA,IA,JA)
+    real(RP), intent(in)    :: DAMP_alpha_VELZ(KA,IA,JA)
+    real(RP), intent(in)    :: DAMP_alpha_VELX(KA,IA,JA)
+    real(RP), intent(in)    :: DAMP_alpha_VELY(KA,IA,JA)
+    real(RP), intent(in)    :: DAMP_alpha_POTT(KA,IA,JA)
+    real(RP), intent(in)    :: DAMP_alpha_QTRC(KA,IA,JA,BND_QA)
+
     real(RP), intent(in)    :: divdmp_coef
 
     logical,  intent(in)    :: FLAG_FCT_RHO
@@ -360,7 +375,7 @@ contains
        do j = JS-1, JE+2
        do i = IS-1, IE+2
        do k = KS, KE
-          diff(k,i,j) = DENS(k,i,j) - DAMP_var(k,i,j,I_BND_DENS)
+          diff(k,i,j) = DENS(k,i,j) - DAMP_DENS(k,i,j)
        enddo
        enddo
        enddo
@@ -368,7 +383,7 @@ contains
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
-          damp = - DAMP_alpha(k,i,j,I_BND_DENS) * ( &
+          damp = - DAMP_alpha_DENS(k,i,j) * ( &
                - ( diff(k,i-1,j) + diff(k,i+1,j) + diff(k,i,j-1) + diff(k,i,j+1) - diff(k,i,j)*4.0_RP ) &
                * 0.125_RP * BND_SMOOTHER_FACT ) ! horizontal smoother
           DENS_t(k,i,j) = DENS_tp(k,i,j) & ! tendency from physical step
@@ -387,7 +402,7 @@ contains
        do j = JS-1, JE+1
        do i = IS-1, IE+1
        do k = KS, KE-1
-          diff(k,i,j) = MOMZ(k,i,j) - DAMP_var(k,i,j,I_BND_VELZ) * ( DENS(k,i,j)+DENS(k+1,i,j) ) * 0.5_RP
+          diff(k,i,j) = MOMZ(k,i,j) - DAMP_VELZ(k,i,j) * ( DENS(k,i,j)+DENS(k+1,i,j) ) * 0.5_RP
        enddo
        enddo
        enddo
@@ -395,7 +410,7 @@ contains
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE-1
-          damp = - DAMP_alpha(k,i,j,I_BND_VELZ) &
+          damp = - DAMP_alpha_VELZ(k,i,j) &
                * ( diff(k,i,j) & ! rayleigh damping
                  - ( diff(k,i-1,j) + diff(k,i+1,j) + diff(k,i,j-1) + diff(k,i,j+1) - diff(k,i,j)*4.0_RP ) &
                  * 0.125_RP * BND_SMOOTHER_FACT ) ! horizontal smoother
@@ -420,14 +435,14 @@ contains
        do j = JS-1, JE+2
        do i = IS-2, IE+1
        do k = KS, KE
-          diff(k,i,j) = MOMX(k,i,j) - DAMP_var(k,i,j,I_BND_VELX) * ( DENS(k,i,j)+DENS(k,i+1,j) ) * 0.5_RP
+          diff(k,i,j) = MOMX(k,i,j) - DAMP_VELX(k,i,j) * ( DENS(k,i,j)+DENS(k,i+1,j) ) * 0.5_RP
        enddo
        enddo
        enddo
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
-          damp = - DAMP_alpha(k,i,j,I_BND_VELX) &
+          damp = - DAMP_alpha_VELX(k,i,j) &
                  * ( diff(k,i,j) & ! rayleigh damping
                    - ( diff(k,i-1,j) + diff(k,i+1,j) + diff(k,i,j-1) + diff(k,i,j+1) - diff(k,i,j)*4.0_RP ) &
                    * 0.125_RP * BND_SMOOTHER_FACT ) ! horizontal smoother
@@ -447,14 +462,14 @@ contains
        do j = JS-2, JE+1
        do i = IS-1, IE+2
        do k = KS, KE
-          diff(k,i,j) = MOMY(k,i,j) - DAMP_var(k,i,j,I_BND_VELY) * ( DENS(k,i,j)+DENS(k,i,j+1) ) * 0.5_RP
+          diff(k,i,j) = MOMY(k,i,j) - DAMP_VELY(k,i,j) * ( DENS(k,i,j)+DENS(k,i,j+1) ) * 0.5_RP
        enddo
        enddo
        enddo
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
-          damp = - DAMP_alpha(k,i,j,I_BND_VELY) &
+          damp = - DAMP_alpha_VELY(k,i,j) &
                  * ( diff(k,i,j) & ! rayleigh damping
                    - ( diff(k,i-1,j) + diff(k,i+1,j) + diff(k,i,j-1) + diff(k,i,j+1) - diff(k,i,j)*4.0_RP ) &
                    * 0.125_RP * BND_SMOOTHER_FACT ) ! horizontal smoother
@@ -474,14 +489,14 @@ contains
        do j = JS-1, JE+2
        do i = IS-1, IE+2
        do k = KS, KE
-          diff(k,i,j) = RHOT(k,i,j) - DAMP_var(k,i,j,I_BND_POTT) * DENS(k,i,j)
+          diff(k,i,j) = RHOT(k,i,j) - DAMP_POTT(k,i,j) * DENS(k,i,j)
        enddo
        enddo
        enddo
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
-          damp = - DAMP_alpha(k,i,j,I_BND_POTT) &
+          damp = - DAMP_alpha_POTT(k,i,j) &
                  * ( diff(k,i,j) & ! rayleigh damping
                    - ( diff(k,i-1,j) + diff(k,i+1,j) + diff(k,i,j-1) + diff(k,i,j+1) - diff(k,i,j)*4.0_RP ) &
                    * 0.125_RP * BND_SMOOTHER_FACT ) ! horizontal smoother
@@ -631,29 +646,37 @@ contains
        if ( .not. PRC_HAS_W ) then ! for western boundary
           call set_boundary_dyn( &
                DENS, MOMZ, MOMX, MOMY, RHOT, & ! (inout)
-               DAMP_var, DAMP_alpha, & ! (in)
-               I_BND_VELX, -1, 0, 1, 0, & ! (in)
+               DAMP_DENS, DAMP_VELX, DAMP_VELY, DAMP_POTT, & ! (in)
+               DAMP_alpha_DENS, DAMP_alpha_VELX, DAMP_alpha_VELY, DAMP_alpha_POTT, & ! (in)
+               DAMP_VELX, & ! (in)
+               -1, 0, 1, 0, & ! (in)
                IS, IS+IHALO-1, JS, JE ) ! (in)
        end if
        if ( .not. PRC_HAS_E ) then ! for eastern boundary
           call set_boundary_dyn( &
                DENS, MOMZ, MOMX, MOMY, RHOT, & ! (inout)
-               DAMP_var, DAMP_alpha, & ! (in)
-               I_BND_VELX, 0, 0, -1, 0, & ! (in)
+               DAMP_DENS, DAMP_VELX, DAMP_VELY, DAMP_POTT, & ! (in)
+               DAMP_alpha_DENS, DAMP_alpha_VELX, DAMP_alpha_VELY, DAMP_alpha_POTT, & ! (in)
+               DAMP_VELX, & ! (in)
+               0, 0, -1, 0, & ! (in)
                IE-IHALO+1, IE, JS, JE ) ! (in)
        end if
        if ( .not. PRC_HAS_S ) then ! for sourthern boundary
           call set_boundary_dyn( &
                DENS, MOMZ, MOMX, MOMY, RHOT, & ! (inout)
-               DAMP_var, DAMP_alpha, & ! (in)
-               I_BND_VELY, 0, -1, 0, 1, & ! (in)
+               DAMP_DENS, DAMP_VELX, DAMP_VELY, DAMP_POTT, & ! (in)
+               DAMP_alpha_DENS, DAMP_alpha_VELX, DAMP_alpha_VELY, DAMP_alpha_POTT, & ! (in)
+               DAMP_VELY, & ! (in)
+               0, -1, 0, 1, & ! (in)
                IS, IE, JS, JS+JHALO-1 ) ! (in)
        end if
        if ( .not. PRC_HAS_N ) then ! for northern boundary
           call set_boundary_dyn( &
                DENS, MOMZ, MOMX, MOMY, RHOT, & ! (inout)
-               DAMP_var, DAMP_alpha, & ! (in)
-               I_BND_VELY, 0, 0, 0, -1, & ! (in)
+               DAMP_DENS, DAMP_VELX, DAMP_VELY, DAMP_POTT, & ! (in)
+               DAMP_alpha_DENS, DAMP_alpha_VELX, DAMP_alpha_VELY, DAMP_alpha_POTT, & ! (in)
+               DAMP_VELY, & ! (in)
+               0, 0, 0, -1, & ! (in)
                IS, IE, JE-JHALO+1, JE ) ! (in)
        end if
 
@@ -737,12 +760,12 @@ contains
     !------------------------------------------------------------------------
     do iq = 1, QA
 
-       if ( iq == I_QV ) then
+       if ( iq <= BND_QA ) then
           !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           do j = JS-1, JE+2
           do i = IS-1, IE+2
           do k = KS, KE
-             diff(k,i,j) = QTRC(k,i,j,iq) - DAMP_var(k,i,j,I_BND_QV)
+             diff(k,i,j) = QTRC(k,i,j,iq) - DAMP_QTRC(k,i,j,iq)
           enddo
           enddo
           enddo
@@ -750,7 +773,7 @@ contains
           do j = JS, JE
           do i = IS, IE
           do k = KS, KE
-             damp = - DAMP_alpha(k,i,j,I_BND_QV) &
+             damp = - DAMP_alpha_QTRC(k,i,j,iq) &
                     * ( diff(k,i,j) & ! rayleigh damping
                       - ( diff(k,i-1,j) + diff(k,i+1,j) + diff(k,i,j-1) + diff(k,i,j+1) - diff(k,i,j)*4.0_RP ) &
                       * 0.125_RP * BND_SMOOTHER_FACT ) ! horizontal smoother
@@ -762,7 +785,8 @@ contains
           enddo
           enddo
 #ifdef HIST_TEND
-          call HIST_in(damp_t, 'QV_t_damp', 'tendency of specific humidity due to rayleigh damping', 'kg/kg/s', DTSEC )
+          call HIST_in( damp_t, trim(AQ_NAME(iq))//'_t_damp', &
+                        'tendency of '//trim(AQ_NAME(iq))//' due to rayleigh damping', 'kg/kg/s', DTSEC )
 #endif
        else
           !$omp parallel do private(i,j,k,iq) OMP_SCHEDULE_ collapse(2)
@@ -940,28 +964,28 @@ contains
     if ( .not. PRC_HAS_W ) then ! for western boundary
        call set_boundary_qtrc( &
             QTRC, & ! (inout)
-            DAMP_var, DAMP_alpha, & ! (in)
+            DAMP_QTRC, DAMP_alpha_QTRC, & ! (in)
             MOMX, -1, 0, 1, 0, & ! (in)
             IS, IS+IHALO-1, JS, JE ) ! (in)
     end if
     if ( .not. PRC_HAS_E ) then ! for eastern boundary
        call set_boundary_qtrc( &
             QTRC, & ! (inout)
-            DAMP_var, DAMP_alpha, & ! (in)
+            DAMP_QTRC, DAMP_alpha_QTRC, & ! (in)
             MOMX, 0, 0, -1, 0, & ! (in)
             IE-IHALO+1, IE, JS, JE ) ! (in)
     end if
     if ( .not. PRC_HAS_S ) then ! for sourthern boundary
        call set_boundary_qtrc( &
             QTRC, & ! (inout)
-            DAMP_var, DAMP_alpha, & ! (in)
+            DAMP_QTRC, DAMP_alpha_QTRC, & ! (in)
             MOMY, 0, -1, 0, 1, & ! (in)
             IS, IE, JS, JS+JHALO-1 ) ! (in)
     end if
     if ( .not. PRC_HAS_N ) then ! for northern boundary
        call set_boundary_qtrc( &
             QTRC, & ! (inout)
-            DAMP_var, DAMP_alpha, & ! (in)
+            DAMP_QTRC, DAMP_alpha_QTRC, & ! (in)
             MOMY, 0, 0, 0, -1, & ! (in)
             IS, IE, JE-JHALO+1, JE ) ! (in)
     end if
@@ -979,20 +1003,32 @@ contains
 
   subroutine set_boundary_dyn( &
        DENS, MOMZ, MOMX, MOMY, RHOT, &
-       DAMP_var, DAMP_alpha, &
-       bnd_xy, ib, jb, iu, ju, &
+       DAMP_DENS, DAMP_VELX, DAMP_VELY, DAMP_POTT, &
+       DAMP_alpha_DENS, DAMP_alpha_VELX, DAMP_alpha_VELY, DAMP_alpha_POTT, &
+       DAMP_flow, &
+       ib, jb, iu, ju, &
        i0, i1, j0, j1 )
     use scale_const, only: &
-         epsilon => CONST_EPS
+       EPS => CONST_EPS
     implicit none
     real(RP), intent(inout) :: DENS(KA,IA,JA)
     real(RP), intent(inout) :: MOMZ(KA,IA,JA)
     real(RP), intent(inout) :: MOMX(KA,IA,JA)
     real(RP), intent(inout) :: MOMY(KA,IA,JA)
     real(RP), intent(inout) :: RHOT(KA,IA,JA)
-    real(RP), intent(in)    :: DAMP_var  (KA,IA,JA,I_BND_SIZE)
-    real(RP), intent(in)    :: DAMP_alpha(KA,IA,JA,I_BND_SIZE)
-    integer,  intent(in)    :: bnd_xy
+
+    real(RP), intent(in)    :: DAMP_DENS(KA,IA,JA)
+    real(RP), intent(in)    :: DAMP_VELX(KA,IA,JA)
+    real(RP), intent(in)    :: DAMP_VELY(KA,IA,JA)
+    real(RP), intent(in)    :: DAMP_POTT(KA,IA,JA)
+
+    real(RP), intent(in)    :: DAMP_alpha_DENS(KA,IA,JA)
+    real(RP), intent(in)    :: DAMP_alpha_VELX(KA,IA,JA)
+    real(RP), intent(in)    :: DAMP_alpha_VELY(KA,IA,JA)
+    real(RP), intent(in)    :: DAMP_alpha_POTT(KA,IA,JA)
+
+    real(RP), intent(in)    :: DAMP_flow(KA,IA,JA)
+
     integer,  intent(in)    :: ib
     integer,  intent(in)    :: jb
     integer,  intent(in)    :: iu
@@ -1011,29 +1047,29 @@ contains
     do j = j0-jb, j1-jb
     do i = i0-ib, i1-ib
     do k = KS, KE
-       sw = sign(0.5_RP, DAMP_alpha(k,i,j,I_BND_DENS) - epsilon) + 0.5_RP
-       sw2 = sign(0.5_RP, DAMP_var(k,i,j,bnd_xy)*dir) + 0.5_RP ! 0:inflow, 1:outflow
+       sw = sign(0.5_RP, DAMP_alpha_DENS(k,i,j) - EPS) + 0.5_RP
+       sw2 = sign(0.5_RP, DAMP_flow(k,i,j)*dir) + 0.5_RP ! 0:inflow, 1:outflow
        DENS(k,i,j) = DENS(k,i,j) * ( 1.0_RP - sw ) &
                    + ( DENS(k,i+ju,j+iu) + DENS(k,i-ju,j-iu) + DENS(k,i,j)*2.0_RP ) * 0.25_RP * sw ! smoothing
 !                   + DENS(k,i+iu,j+ju) * sw2 * sw &
-!                   + DAMP_var(k,i,j,I_BND_DENS) * ( 1.0_RP - sw2 ) * sw
+!                   + DAMP_DENS(k,i,j) * ( 1.0_RP - sw2 ) * sw
        MOMZ(k,i,j) = MOMZ(k,i,j) * ( 1.0_RP - sw ) &
                    + MOMZ(k,i+iu,j+ju) * sw2 * sw
-       sw = sign(0.5_RP, DAMP_alpha(k,i,j,I_BND_POTT) - epsilon) + 0.5_RP
+       sw = sign(0.5_RP, DAMP_alpha_POTT(k,i,j) - EPS) + 0.5_RP
        RHOT(k,i,j) = RHOT(k,i,j) * ( 1.0_RP - sw ) &
-                   + DAMP_var(k,i,j,I_BND_POTT) * DENS(k,i,j) * sw
+                   + DAMP_POTT(k,i,j) * DENS(k,i,j) * sw
     end do
     end do
     end do
     if ( ib==-1 ) then ! western boundary
        do j = j0, j1
        do k = KS, KE
-          sw = sign(0.5_RP, DAMP_alpha(k,i0,j,I_BND_DENS) - epsilon) + 0.5_RP
+          sw = sign(0.5_RP, DAMP_alpha_DENS(k,i0,j) - EPS) + 0.5_RP
           DENS(k,i0,j) = DENS(k,i0,j) * ( 1.0_RP - sw ) &
                        + DENS(k,i0+iu,j) * sw
           MOMZ(k,i0,j) = MOMZ(k,i0,j) * ( 1.0_RP - sw ) &
                        + MOMZ(k,i0+iu,j) * sw
-          sw = sign(0.5_RP, DAMP_alpha(k,i0,j,I_BND_POTT) - epsilon) + 0.5_RP
+          sw = sign(0.5_RP, DAMP_alpha_POTT(k,i0,j) - EPS) + 0.5_RP
           RHOT(k,i0,j) = RHOT(k,i0,j) * ( 1.0_RP - sw ) &
                        + RHOT(k,i0+iu,j) * sw
        end do
@@ -1042,12 +1078,12 @@ contains
     if ( jb==-1 ) then ! southern boundary
        do i = i0, i1
        do k = KS, KE
-          sw = sign(0.5_RP, DAMP_alpha(k,i,j0,I_BND_DENS) - epsilon) + 0.5_RP
+          sw = sign(0.5_RP, DAMP_alpha_DENS(k,i,j0) - EPS) + 0.5_RP
           DENS(k,i,j0) = DENS(k,i,j0) * ( 1.0_RP - sw ) &
                        + DENS(k,i,j0+ju) * sw
           MOMZ(k,i,j0) = MOMZ(k,i,j0) * ( 1.0_RP - sw ) &
                        + MOMZ(k,i,j0+ju) * sw
-          sw = sign(0.5_RP, DAMP_alpha(k,i,j0,I_BND_POTT) - epsilon) + 0.5_RP
+          sw = sign(0.5_RP, DAMP_alpha_POTT(k,i,j0) - EPS) + 0.5_RP
           RHOT(k,i,j0) = RHOT(k,i,j0) * ( 1.0_RP - sw ) &
                        + RHOT(k,i,j0+ju) * sw
        end do
@@ -1058,12 +1094,12 @@ contains
     do j = j0, j1
     do i = i0, i1
     do k = KS, KE
-       sw = sign(0.5_RP, DAMP_alpha(k,i,j,I_BND_VELX) - epsilon) + 0.5_RP
+       sw = sign(0.5_RP, DAMP_alpha_VELX(k,i,j) - EPS) + 0.5_RP
        MOMX(k,i,j) = MOMX(k,i,j) * ( 1.0_RP - sw ) &
-                   + DAMP_var(k,i,j,I_BND_VELX) * ( DENS(k,i,j)+DENS(k,i+1,j) ) * 0.5_RP * sw
-       sw = sign(0.5_RP, DAMP_alpha(k,i,j,I_BND_VELY) - epsilon) + 0.5_RP
+                   + DAMP_VELX(k,i,j) * ( DENS(k,i,j)+DENS(k,i+1,j) ) * 0.5_RP * sw
+       sw = sign(0.5_RP, DAMP_alpha_VELY(k,i,j) - EPS) + 0.5_RP
        MOMY(k,i,j) = MOMY(k,i,j) * ( 1.0_RP - sw ) &
-                   + DAMP_var(k,i,j,I_BND_VELY) * ( DENS(k,i,j)+DENS(k,i,j+1) ) * 0.5_RP * sw
+                   + DAMP_VELY(k,i,j) * ( DENS(k,i,j)+DENS(k,i,j+1) ) * 0.5_RP * sw
     end do
     end do
     end do
@@ -1073,15 +1109,17 @@ contains
 
   subroutine set_boundary_qtrc( &
        QTRC, &
-       DAMP_var, DAMP_alpha, &
+       DAMP_QTRC, DAMP_alpha_QTRC, &
        MOM, ib, jb, iu, ju, &
        i0, i1, j0, j1 )
     use scale_const, only: &
-         epsilon => CONST_EPS
+       EPS => CONST_EPS
+    use scale_atmos_boundary, only: &
+       BND_QA
     implicit none
     real(RP), intent(inout) :: QTRC(KA,IA,JA,QA)
-    real(RP), intent(in)    :: DAMP_var  (KA,IA,JA,I_BND_SIZE)
-    real(RP), intent(in)    :: DAMP_alpha(KA,IA,JA,I_BND_SIZE)
+    real(RP), intent(in)    :: DAMP_QTRC      (KA,IA,JA,BND_QA)
+    real(RP), intent(in)    :: DAMP_alpha_QTRC(KA,IA,JA,BND_QA)
     real(RP), intent(in)    :: MOM(KA,IA,JA)
     integer,  intent(in)    :: ib
     integer,  intent(in)    :: jb
@@ -1101,19 +1139,18 @@ contains
     do j = j0-jb, j1-jb
     do i = i0-ib, i1-ib
     do k = KS, KE
-       sw = sign(0.5_RP, DAMP_alpha(k,i,j,I_BND_QV  ) - epsilon) + 0.5_RP
+       sw = sign(0.5_RP, DAMP_alpha_QTRC(k,i,j,I_QV) - EPS) + 0.5_RP
        QTRC(k,i,j,I_QV) = QTRC(k,i,j,I_QV) * ( 1.0_RP - sw ) &
-                   + DAMP_var(k,i,j,I_BND_QV  ) * sw
+                        + DAMP_QTRC(k,i,j,I_QV) * sw
     end do
     end do
     end do
 
-    do iq = 1, QA
-       if (iq==I_QV) cycle
+    do iq = 2, QA
        do j = j0-jb, j1-jb
        do i = i0-ib, i1-ib
        do k = KS, KE
-          sw = sign(0.5_RP, DAMP_alpha(k,i,j,I_BND_QV  ) - epsilon) + 0.5_RP
+          sw = sign(0.5_RP, DAMP_alpha_QTRC(k,i,j,I_QV) - EPS) + 0.5_RP
           sw2 = sign(0.5_RP, MOM(k,i-ib,j-jb)*dir) + 0.5_RP
           QTRC(k,i,j,iq) = QTRC(k,i,j,iq) * ( 1.0_RP - sw ) &
                          + QTRC(k,i+iu,j+ju,iq) * sw * sw2
@@ -1126,7 +1163,7 @@ contains
        if ( ib==-1 ) then
           do j = j0, j1
           do k = KS, KE
-             sw = sign(0.5_RP, DAMP_alpha(k,i0,j,I_BND_QV  ) - epsilon) + 0.5_RP
+             sw = sign(0.5_RP, DAMP_alpha_QTRC(k,i0,j,I_QV) - EPS) + 0.5_RP
              QTRC(k,i0,j,iq) = QTRC(k,i0,j,iq) * ( 1.0_RP - sw ) &
                              + QTRC(k,i0+iu,j,iq) * sw
           end do
@@ -1135,7 +1172,7 @@ contains
        if ( jb==-1 ) then
           do i = i0, i1
           do k = KS, KE
-             sw = sign(0.5_RP, DAMP_alpha(k,i,j0,I_BND_QV  ) - epsilon) + 0.5_RP
+             sw = sign(0.5_RP, DAMP_alpha_QTRC(k,i,j0,I_QV) - EPS) + 0.5_RP
              QTRC(k,i,j0,iq) = QTRC(k,i,j0,iq) * ( 1.0_RP - sw ) &
                              + QTRC(k,i,j0+ju,iq) * sw
           end do
@@ -1145,6 +1182,5 @@ contains
 
     return
   end subroutine set_boundary_qtrc
-
 
 end module scale_atmos_dyn
