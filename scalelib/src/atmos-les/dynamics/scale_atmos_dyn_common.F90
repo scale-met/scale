@@ -1589,10 +1589,13 @@ contains
        do j = JJS, JJE
        do i = IIS, IIE
        do k = KS+1, KE-1
-          rw = (mflx_hi(k,i,j,ZDIR)+mflx_hi(k-1,i  ,j  ,ZDIR)) * RDZ(k) ! rho * w / dz
-          ru = (mflx_hi(k,i,j,XDIR)+mflx_hi(k  ,i-1,j  ,XDIR)) * RDX(i) ! rho * u / dx
-          rv = (mflx_hi(k,i,j,YDIR)+mflx_hi(k  ,i  ,j-1,YDIR)) * RDY(j) ! rho * v / dy
-          if ( abs(ru) .ge. abs(rv) .and. abs(ru) .ge. abs(rw) ) then
+          rw = (mflx_hi(k,i,j,ZDIR)+mflx_hi(k-1,i  ,j  ,ZDIR)) * RDZ(k) ! 2 * rho * w / dz
+          ru = (mflx_hi(k,i,j,XDIR)+mflx_hi(k  ,i-1,j  ,XDIR)) * RDX(i) ! 2 * rho * u / dx
+          rv = (mflx_hi(k,i,j,YDIR)+mflx_hi(k  ,i  ,j-1,YDIR)) * RDY(j) ! 2 * rho * v / dy
+          if ( abs(ru) < EPSILON .and. abs(rv) < EPSILON .and. abs(rw) < EPSILON ) then
+             qa_in = phi_in(k,i,j)
+             qa_lo = phi_lo(k,i,j)
+          elseif ( abs(ru) .ge. abs(rv) .and. abs(ru) .ge. abs(rw) ) then
              x = rv / ru
              y = rw / ru
              if ( x .ge. 0.0_RP ) then
@@ -1848,7 +1851,10 @@ contains
           rw = mflx_hi(k,i,j,ZDIR) * RDZ(k) ! rho * w / dz
           ru = (mflx_hi(k,i,j,XDIR)+mflx_hi(k  ,i-1,j  ,XDIR)) * RDX(i) ! rho * u / dx
           rv = (mflx_hi(k,i,j,YDIR)+mflx_hi(k  ,i  ,j-1,YDIR)) * RDY(j) ! rho * v / dy
-          if ( abs(ru) .ge. abs(rv) .and. abs(ru) .ge. abs(rw) ) then
+          if ( abs(ru) < EPSILON .and. abs(rv) < EPSILON .and. abs(rw) < EPSILON ) then
+             qa_in = phi_in(k,i,j)
+             qa_lo = phi_lo(k,i,j)
+          else if ( abs(ru) .ge. abs(rv) .and. abs(ru) .ge. abs(rw) ) then
              x = rv / ru
              y = rw / ru
              if ( x .ge. 0.0_RP ) then
@@ -2007,7 +2013,10 @@ contains
           rw = mflx_hi(k-1,i,j,ZDIR) * RDZ(k) ! rho * w / dz
           ru = (mflx_hi(k,i,j,XDIR)+mflx_hi(k  ,i-1,j  ,YDIR)) * RDX(i) ! rho * u / dx
           rv = (mflx_hi(k,i,j,YDIR)+mflx_hi(k  ,i  ,j-1,YDIR)) * RDY(j) ! rho * v / dy
-          if ( abs(ru) .ge. abs(rv) .and. abs(ru) .ge. abs(rw) ) then
+          if ( abs(ru) < EPSILON .and. abs(rv) < EPSILON .and. abs(rw) < EPSILON ) then
+             qa_in = phi_in(k,i,j)
+             qa_lo = phi_lo(k,i,j)
+          else if ( abs(ru) .ge. abs(rv) .and. abs(ru) .ge. abs(rw) ) then
              x = rv / ru
              y = rw / ru
              if ( x .ge. 0.0_RP ) then
