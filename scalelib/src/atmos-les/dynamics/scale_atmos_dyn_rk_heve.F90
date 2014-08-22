@@ -734,10 +734,9 @@ contains
 #endif
           qflx_hi(KS-1,i,j,ZDIR) = 0.0_RP ! k = KS
 
-          qflx_hi(KS  ,i,j,ZDIR) = J33G &
-                                 * 0.5_RP * ( MOMZ(KS+1,i,j)+MOMZ(KS  ,i,j) ) / DENS(KS+1,i,j) & ! [x,y,w->x,y,z]
-                                 * ( FACT_N * ( MOMZ(KS+1,i,j)+MOMZ(KS  ,i,j) ) &
-                                   + FACT_F * ( MOMZ(KS+2,i,j)                ) ) &              ! {x,y,w->x,y,z}
+          qflx_hi(KS  ,i,j,ZDIR) = J33G * 0.25_RP &
+                                 * ( MOMZ(KS+1,i,j)+MOMZ(KS  ,i,j) ) / DENS(KS+1,i,j) & ! [x,y,w->x,y,z]
+                                 * ( MOMZ(KS+1,i,j)+MOMZ(KS  ,i,j) ) &                  ! {x,y,w->x,y,z}
                                  + GSQRT(KS+1,i,j,I_XYZ) * num_diff(KS+1,i,j,I_MOMZ,ZDIR) ! k = KS+1
 
           ! if w>0; min(f,w*dz/dt)
@@ -745,10 +744,9 @@ contains
           sw = sign( 1.0_RP, MOMZ(KS,i,j) )
           qflx_hi(KS  ,i,j,ZDIR) = sw * min( sw*qflx_hi(KS,i,j,ZDIR), sw*MOMZ(KS,i,j)*GSQRT(KS,i,j,I_XYZ)*FDZ(KS)/dtrk )
 
-          qflx_hi(KE-2,i,j,ZDIR) = J33G &
-                                 * 0.5_RP * ( MOMZ(KE-1,i,j)+MOMZ(KE-2,i,j) ) / DENS(KE-1,i,j) & ! [x,y,w->x,y,z]
-                                 * ( FACT_N * ( MOMZ(KE-1,i,j)+MOMZ(KE-2,i,j) ) &
-                                   + FACT_F * (                MOMZ(KE-3,i,j) ) ) &              ! {x,y,w->x,y,z}
+          qflx_hi(KE-2,i,j,ZDIR) = J33G * 0.25_RP &
+                                 * ( MOMZ(KE-1,i,j)+MOMZ(KE-2,i,j) ) / DENS(KE-1,i,j) & ! [x,y,w->x,y,z]
+                                 * ( MOMZ(KE-1,i,j)+MOMZ(KE-2,i,j) ) &                  ! {x,y,w->x,y,z}
                                  + GSQRT(KE-1,i,j,I_XYZ) * num_diff(KE-1,i,j,I_MOMZ,ZDIR) ! k = KE-1
 
           qflx_hi(KE-1,i,j,ZDIR) = 0.0_RP ! k = KE
