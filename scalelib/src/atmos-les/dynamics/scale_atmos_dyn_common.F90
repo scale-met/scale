@@ -1412,7 +1412,7 @@ contains
 
     real(RP), intent(in) :: dt
 
-    logical(RP), intent(in) :: flag_vect
+    logical, intent(in) :: flag_vect
 
     ! work for FCT
     real(RP) :: phi_lo(KA,IA,JA)
@@ -1759,9 +1759,9 @@ contains
                            + phi_in(k+1,i+1,j  ) * x ) * (1.0_RP-y) &
                          + ( phi_in(k+1,i  ,j+1) * (1.0_RP-x) &
                            + phi_in(k+1,i+1,j+1) * x ) * y
-                   qb_in = ( phi_in(k-1 ,i  ,j  ) * (1.0_RP-x) &
+                   qb_in = ( phi_in(k-1,i  ,j  ) * (1.0_RP-x) &
                            + phi_in(k-1,i-1,j  ) * x ) * (1.0_RP-y) &
-                         + ( phi_in(k-1 ,i  ,j-1) * (1.0_RP-x) &
+                         + ( phi_in(k-1,i  ,j-1) * (1.0_RP-x) &
                            + phi_in(k-1,i-1,j-1) * x ) * y
                    qa_lo = ( phi_lo(k+1,i  ,j  ) * (1.0_RP-x) &
                            + phi_lo(k+1,i+1,j  ) * x ) * (1.0_RP-y) &
