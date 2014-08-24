@@ -584,7 +584,7 @@ contains
     CPL_fromAtm_ATM_U     (:,:) = ATM_U     (:,:)
     CPL_fromAtm_ATM_V     (:,:) = ATM_V     (:,:)
     CPL_fromAtm_ATM_DENS  (:,:) = ATM_DENS  (:,:)
-    CPL_fromAtm_ATM_QV    (:,:) = ATM_QTRC  (:,:,1)
+    CPL_fromAtm_ATM_QV    (:,:) = ATM_QTRC  (:,:,I_QV)
     CPL_fromAtm_ATM_PBL   (:,:) = ATM_PBL   (:,:)
     CPL_fromAtm_SFC_PRES  (:,:) = SFC_PRES  (:,:)
     CPL_fromAtm_FLX_LW_dn (:,:) = SFLX_LW_dn(:,:)
