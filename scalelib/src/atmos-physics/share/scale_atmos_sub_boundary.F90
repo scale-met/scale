@@ -181,10 +181,24 @@ contains
     integer :: ierr
     !---------------------------------------------------------------------------
 
-    BND_QA = 1 ! tentative
-
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Boundary]/Categ[ATMOS]'
+
+    !--- read namelist
+    rewind(IO_FID_CONF)
+    read(IO_FID_CONF,nml=PARAM_ATMOS_BOUNDARY,iostat=ierr)
+    if( ierr < 0 ) then !--- missing
+       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+    elseif( ierr > 0 ) then !--- fatal error
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_BOUNDARY. Check!'
+       call PRC_MPIstop
+    endif
+    if( IO_LNML) write(IO_FID_LOG,nml=PARAM_ATMOS_BOUNDARY)
+
+    BND_QA = 1
+    if( ATMOS_BOUNDARY_USE_QHYD ) then
+       BND_QA = QA
+    end if
 
     allocate( ATMOS_BOUNDARY_DENS(KA,IA,JA) )
     allocate( ATMOS_BOUNDARY_VELZ(KA,IA,JA) )
@@ -215,17 +229,6 @@ contains
     ATMOS_BOUNDARY_tauz = DT * 10.0_RP
     ATMOS_BOUNDARY_taux = DT * 10.0_RP
     ATMOS_BOUNDARY_tauy = DT * 10.0_RP
-
-    !--- read namelist
-    rewind(IO_FID_CONF)
-    read(IO_FID_CONF,nml=PARAM_ATMOS_BOUNDARY,iostat=ierr)
-    if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
-    elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_BOUNDARY. Check!'
-       call PRC_MPIstop
-    endif
-    if( IO_LNML) write(IO_FID_LOG,nml=PARAM_ATMOS_BOUNDARY)
 
     if ( ATMOS_BOUNDARY_TYPE == 'CONST' ) then
 
@@ -813,7 +816,7 @@ contains
                           ATMOS_BOUNDARY_OUT_DTYPE                               )
     endif
 
-    if ( ATMOS_BOUNDARY_USE_QHYD .or. ATMOS_BOUNDARY_TYPE == 'REAL' ) then
+    if ( ATMOS_BOUNDARY_USE_QHYD ) then
        do iq = 2, BND_QA
           call FILEIO_write( ATMOS_BOUNDARY_QTRC(:,:,:,iq),                                &
                              ATMOS_BOUNDARY_OUT_BASENAME, ATMOS_BOUNDARY_OUT_TITLE,        &
