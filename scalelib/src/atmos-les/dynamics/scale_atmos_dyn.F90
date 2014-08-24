@@ -696,9 +696,17 @@ contains
 #endif
 
        do iq = 1, QA
-          QTRC(:,:,:,iq) = max( &
-                         QTRC(:,:,:,iq) + RHOQ_tp(:,:,:,iq) * dt / DENS00(:,:,:), &
-                         0.0_RP )
+          do j = JS, JE
+          do i = IS, IE
+          do k = KS, KE
+             QTRC(k,i,j,iq) = max( QTRC(k,i,j,iq) + RHOQ_tp(k,i,j,iq) * dt / DENS00(k,i,j), 0.0_RP )
+          end do
+          end do
+          end do
+
+          call COMM_vars8( QTRC(:,:,:,iq), 6 )
+          call COMM_wait ( QTRC(:,:,:,iq), 6 )
+
           ! TODO: mass and energy conservation should be considered
        end do
 
