@@ -375,7 +375,8 @@ contains
        do j = JS-1, JE+2
        do i = IS-1, IE+2
        do k = KS, KE
-          diff(k,i,j) = DENS(k,i,j) - DAMP_DENS(k,i,j)
+          diff(k,i,j) = DENS(k,i,j)
+!          diff(k,i,j) = DENS(k,i,j) - DAMP_DENS(k,i,j)
        enddo
        enddo
        enddo
@@ -650,7 +651,7 @@ contains
                DAMP_alpha_DENS, DAMP_alpha_VELX, DAMP_alpha_VELY, DAMP_alpha_POTT, & ! (in)
                DAMP_VELX, & ! (in)
                -1, 0, 1, 0, & ! (in)
-               IS, IS+IHALO-1, JS, JE ) ! (in)
+               IS+IHALO-1, IS, JS, JE ) ! (in)
        end if
        if ( .not. PRC_HAS_E ) then ! for eastern boundary
           call set_boundary_dyn( &
@@ -668,7 +669,7 @@ contains
                DAMP_alpha_DENS, DAMP_alpha_VELX, DAMP_alpha_VELY, DAMP_alpha_POTT, & ! (in)
                DAMP_VELY, & ! (in)
                0, -1, 0, 1, & ! (in)
-               IS, IE, JS, JS+JHALO-1 ) ! (in)
+               IS, IE, JS+JHALO-1, JS ) ! (in)
        end if
        if ( .not. PRC_HAS_N ) then ! for northern boundary
           call set_boundary_dyn( &
@@ -974,7 +975,7 @@ contains
             QTRC, & ! (inout)
             DAMP_QTRC, DAMP_alpha_QTRC, & ! (in)
             MOMX, -1, 0, 1, 0, & ! (in)
-            IS, IS+IHALO-1, JS, JE ) ! (in)
+            IS+IHALO-1, IS, JS, JE ) ! (in)
     end if
     if ( .not. PRC_HAS_E ) then ! for eastern boundary
        call set_boundary_qtrc( &
@@ -988,7 +989,7 @@ contains
             QTRC, & ! (inout)
             DAMP_QTRC, DAMP_alpha_QTRC, & ! (in)
             MOMY, 0, -1, 0, 1, & ! (in)
-            IS, IE, JS, JS+JHALO-1 ) ! (in)
+            IS, IE, JS+JHALO-1, JS ) ! (in)
     end if
     if ( .not. PRC_HAS_N ) then ! for northern boundary
        call set_boundary_qtrc( &
@@ -1037,10 +1038,10 @@ contains
 
     real(RP), intent(in)    :: DAMP_flow(KA,IA,JA)
 
-    integer,  intent(in)    :: ib
-    integer,  intent(in)    :: jb
-    integer,  intent(in)    :: iu
-    integer,  intent(in)    :: ju
+    integer,  intent(in)    :: ib ! W:-1, E: 0, S: 0, N: 0
+    integer,  intent(in)    :: jb ! W: 0, E: 0, S:-1, N: 0
+    integer,  intent(in)    :: iu ! W: 1, E:-1, S: 0, N: 0
+    integer,  intent(in)    :: ju ! W: 0, E: 0, S: 1, N:-1
     integer,  intent(in)    :: i0
     integer,  intent(in)    :: i1
     integer,  intent(in)    :: j0
@@ -1052,13 +1053,13 @@ contains
 
     dir = sign(1.0_RP, REAL(ib+jb,RP)) ! dir = -1 if ib==-1 .or. jb==-1
 
-    do j = j0-jb, j1-jb
-    do i = i0-ib, i1-ib
+    do j = j0-jb, j1-jb, -ju+abs(iu)
+    do i = i0-ib, i1-ib, -iu+abs(ju)
     do k = KS, KE
        sw = sign(0.5_RP, DAMP_alpha_DENS(k,i,j) - EPS) + 0.5_RP
        sw2 = sign(0.5_RP, DAMP_flow(k,i,j)*dir) + 0.5_RP ! 0:inflow, 1:outflow
        DENS(k,i,j) = DENS(k,i,j) * ( 1.0_RP - sw ) &
-                   + ( DENS(k,i+ju,j+iu) + DENS(k,i-ju,j-iu) + DENS(k,i,j)*2.0_RP ) * 0.25_RP * sw ! smoothing
+                   + DENS(k,i+iu,j+ju) * sw
 !                   + DENS(k,i+iu,j+ju) * sw2 * sw &
 !                   + DAMP_DENS(k,i,j) * ( 1.0_RP - sw2 ) * sw
        MOMZ(k,i,j) = MOMZ(k,i,j) * ( 1.0_RP - sw ) &
@@ -1069,48 +1070,61 @@ contains
     end do
     end do
     end do
-    if ( ib==-1 ) then ! western boundary
-       do j = j0, j1
-       do k = KS, KE
-          sw = sign(0.5_RP, DAMP_alpha_DENS(k,i0,j) - EPS) + 0.5_RP
-          DENS(k,i0,j) = DENS(k,i0,j) * ( 1.0_RP - sw ) &
-                       + DENS(k,i0+iu,j) * sw
-          MOMZ(k,i0,j) = MOMZ(k,i0,j) * ( 1.0_RP - sw ) &
-                       + MOMZ(k,i0+iu,j) * sw
-          sw = sign(0.5_RP, DAMP_alpha_POTT(k,i0,j) - EPS) + 0.5_RP
-          RHOT(k,i0,j) = RHOT(k,i0,j) * ( 1.0_RP - sw ) &
-                       + RHOT(k,i0+iu,j) * sw
-       end do
-       end do
-    end if
-    if ( jb==-1 ) then ! southern boundary
-       do i = i0, i1
-       do k = KS, KE
-          sw = sign(0.5_RP, DAMP_alpha_DENS(k,i,j0) - EPS) + 0.5_RP
-          DENS(k,i,j0) = DENS(k,i,j0) * ( 1.0_RP - sw ) &
-                       + DENS(k,i,j0+ju) * sw
-          MOMZ(k,i,j0) = MOMZ(k,i,j0) * ( 1.0_RP - sw ) &
-                       + MOMZ(k,i,j0+ju) * sw
-          sw = sign(0.5_RP, DAMP_alpha_POTT(k,i,j0) - EPS) + 0.5_RP
-          RHOT(k,i,j0) = RHOT(k,i,j0) * ( 1.0_RP - sw ) &
-                       + RHOT(k,i,j0+ju) * sw
-       end do
-       end do
-    end if
 
-
-    do j = j0, j1
-    do i = i0, i1
+    do j = j0-jb, j1-jb, -ju+abs(iu)
+    do i = i0,    i1,    -iu+abs(ju)
     do k = KS, KE
        sw = sign(0.5_RP, DAMP_alpha_VELX(k,i,j) - EPS) + 0.5_RP
        MOMX(k,i,j) = MOMX(k,i,j) * ( 1.0_RP - sw ) &
                    + DAMP_VELX(k,i,j) * ( DENS(k,i,j)+DENS(k,i+1,j) ) * 0.5_RP * sw
+    end do
+    end do
+    end do
+
+    do j = j0,    j1,    -ju+abs(iu)
+    do i = i0-ib, i1-ib, -iu+abs(ju)
+    do k = KS, KE
        sw = sign(0.5_RP, DAMP_alpha_VELY(k,i,j) - EPS) + 0.5_RP
        MOMY(k,i,j) = MOMY(k,i,j) * ( 1.0_RP - sw ) &
                    + DAMP_VELY(k,i,j) * ( DENS(k,i,j)+DENS(k,i,j+1) ) * 0.5_RP * sw
     end do
     end do
     end do
+
+    if ( ib==-1 ) then ! western boundary
+       do j = j0, j1
+       do k = KS, KE
+          sw = sign(0.5_RP, DAMP_alpha_DENS(k,i1,j) - EPS) + 0.5_RP
+          DENS(k,i1,j) = DENS(k,i1,j) * ( 1.0_RP - sw ) &
+                       + DENS(k,i1+iu,j) * sw
+          MOMZ(k,i1,j) = MOMZ(k,i1,j) * ( 1.0_RP - sw ) &
+                       + MOMZ(k,i1+iu,j) * sw
+          sw = sign(0.5_RP, DAMP_alpha_POTT(k,i1,j) - EPS) + 0.5_RP
+          RHOT(k,i1,j) = RHOT(k,i1,j) * ( 1.0_RP - sw ) &
+                       + RHOT(k,i1+iu,j) * sw
+          sw = sign(0.5_RP, DAMP_alpha_VELY(k,i1,j) - EPS) + 0.5_RP
+          MOMY(k,i1,j) = MOMY(k,i1,j) * ( 1.0_RP - sw ) &
+                       + MOMY(k,i1+iu,j) * sw
+       end do
+       end do
+    end if
+    if ( jb==-1 ) then ! southern boundary
+       do i = i0, i1
+       do k = KS, KE
+          sw = sign(0.5_RP, DAMP_alpha_DENS(k,i,j1) - EPS) + 0.5_RP
+          DENS(k,i,j1) = DENS(k,i,j1) * ( 1.0_RP - sw ) &
+                       + DENS(k,i,j1+ju) * sw
+          MOMZ(k,i,j1) = MOMZ(k,i,j1) * ( 1.0_RP - sw ) &
+                       + MOMZ(k,i,j1+ju) * sw
+          sw = sign(0.5_RP, DAMP_alpha_POTT(k,i,j1) - EPS) + 0.5_RP
+          RHOT(k,i,j1) = RHOT(k,i,j1) * ( 1.0_RP - sw ) &
+                       + RHOT(k,i,j1+ju) * sw
+          sw = sign(0.5_RP, DAMP_alpha_VELX(k,i,j1) - EPS) + 0.5_RP
+          MOMX(k,i,j1) = MOMX(k,i,j1) * ( 1.0_RP - sw ) &
+                       + MOMX(k,i,j1+ju) * sw
+       end do
+       end do
+    end if
 
     return
   end subroutine set_boundary_dyn
@@ -1144,8 +1158,8 @@ contains
 
     dir = sign(1.0_RP, REAL(ib+jb,RP)) ! dir = -1 if ib==-1 .or. jb==-1
 
-    do j = j0-jb, j1-jb
-    do i = i0-ib, i1-ib
+    do j = j0-jb, j1-jb, -ju+abs(iu)
+    do i = i0-ib, i1-ib, -iu+abs(ju)
     do k = KS, KE
        sw = sign(0.5_RP, DAMP_alpha_QTRC(k,i,j,I_QV) - EPS) + 0.5_RP
        QTRC(k,i,j,I_QV) = QTRC(k,i,j,I_QV) * ( 1.0_RP - sw ) &
@@ -1155,8 +1169,8 @@ contains
     end do
 
     do iq = 2, QA
-       do j = j0-jb, j1-jb
-       do i = i0-ib, i1-ib
+       do j = j0-jb, j1-jb, -ju+abs(iu)
+       do i = i0-ib, i1-ib, -iu+abs(ju)
        do k = KS, KE
           sw = sign(0.5_RP, DAMP_alpha_QTRC(k,i,j,I_QV) - EPS) + 0.5_RP
           sw2 = sign(0.5_RP, MOM(k,i-ib,j-jb)*dir) + 0.5_RP
@@ -1171,18 +1185,18 @@ contains
        if ( ib==-1 ) then
           do j = j0, j1
           do k = KS, KE
-             sw = sign(0.5_RP, DAMP_alpha_QTRC(k,i0,j,I_QV) - EPS) + 0.5_RP
-             QTRC(k,i0,j,iq) = QTRC(k,i0,j,iq) * ( 1.0_RP - sw ) &
-                             + QTRC(k,i0+iu,j,iq) * sw
+             sw = sign(0.5_RP, DAMP_alpha_QTRC(k,i1,j,I_QV) - EPS) + 0.5_RP
+             QTRC(k,i1,j,iq) = QTRC(k,i1,j,iq) * ( 1.0_RP - sw ) &
+                             + QTRC(k,i1+iu,j,iq) * sw
           end do
           end do
        end if
        if ( jb==-1 ) then
           do i = i0, i1
           do k = KS, KE
-             sw = sign(0.5_RP, DAMP_alpha_QTRC(k,i,j0,I_QV) - EPS) + 0.5_RP
-             QTRC(k,i,j0,iq) = QTRC(k,i,j0,iq) * ( 1.0_RP - sw ) &
-                             + QTRC(k,i,j0+ju,iq) * sw
+             sw = sign(0.5_RP, DAMP_alpha_QTRC(k,i,j1,I_QV) - EPS) + 0.5_RP
+             QTRC(k,i,j1,iq) = QTRC(k,i,j1,iq) * ( 1.0_RP - sw ) &
+                             + QTRC(k,i,j1+ju,iq) * sw
           end do
           end do
        end if
