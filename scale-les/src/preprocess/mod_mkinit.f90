@@ -4212,26 +4212,28 @@ enddo
     integer                  :: NUMBER_OF_FILES     = 1
     integer                  :: NUMBER_OF_TSTEPS    = 1   ! num of time steps in one file
     integer                  :: INTERP_SERC_DIV_NUM = 10  ! num of dividing blocks in interpolation search
-    character(len=H_LONG)   :: BASENAME_ORG       = ''
-    character(len=H_LONG)   :: FILETYPE_ORG       = ''
-    character(len=H_LONG)   :: BASENAME_BOUNDARY  = 'boundary_real'
-    character(len=H_LONG)   :: BOUNDARY_TITLE     = 'SCALE-LES BOUNDARY CONDITION for REAL CASE'
-    character(len=H_SHORT)  :: PARENT_MP_TYPE     = 'single'  ! microphysics type of the parent model (single or double)
-    real(DP)                 :: BOUNDARY_UPDATE_DT  = 0.0_DP   ! inteval time of boudary data update [s]
-    logical                  :: WRF_FILE_TYPE       = .true.  ! wrf filetype: T=wrfout, F=wrfrst
-    logical                  :: SERIAL_PROC_READ    = .true.  ! read by one MPI process and broadcast
-    logical                  :: NO_ADDITIONAL_INPUT = .false. ! no additional information
+    character(len=H_LONG)    :: BASENAME_ORG        = ''
+    character(len=H_LONG)    :: FILETYPE_ORG        = ''
+    character(len=H_LONG)    :: BASENAME_BOUNDARY   = 'boundary_real'
+    character(len=H_LONG)    :: BOUNDARY_TITLE      = 'SCALE-LES BOUNDARY CONDITION for REAL CASE'
+    character(len=H_SHORT)   :: PARENT_MP_TYPE      = 'single'  ! microphysics type of the parent model (single or double)
+    real(RP)                 :: BOUNDARY_UPDATE_DT  = 0.0_RP    ! inteval time of boudary data update [s]
+    logical                  :: USE_FILE_DENSITY    = .false.   ! use density data from files
+    logical                  :: WRF_FILE_TYPE       = .false.   ! wrf filetype: T=wrfout, F=wrfrst
+    logical                  :: SERIAL_PROC_READ    = .false.   ! read by one MPI process and broadcast
+    logical                  :: NO_ADDITIONAL_INPUT = .false.   ! no additional information
 
 
     NAMELIST / PARAM_MKINIT_REAL / &
          NUMBER_OF_FILES,     &
          NUMBER_OF_TSTEPS,    &
+         INTERP_SERC_DIV_NUM, &
          BASENAME_ORG,        &
          FILETYPE_ORG,        &
          BASENAME_BOUNDARY,   &
          BOUNDARY_TITLE,      &
          BOUNDARY_UPDATE_DT,  &
-         INTERP_SERC_DIV_NUM, &
+         USE_FILE_DENSITY,    &
          PARENT_MP_TYPE,      &
          WRF_FILE_TYPE,       &
          SERIAL_PROC_READ,    &
@@ -4254,7 +4256,6 @@ enddo
     integer :: ierr
 
     integer :: k, i, j, iq, n, ns, ne, l, ll
-    logical :: initial_loop
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -4271,12 +4272,11 @@ enddo
     endif
     if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_REAL)
 
-    if ( BOUNDARY_UPDATE_DT <= 0 ) then
+    if ( BOUNDARY_UPDATE_DT <= 0.0_RP ) then
        write(*,*) 'xxx BOUNDARY_UPDATE_DT is necessary in real case preprocess'
        call PRC_MPIstop
     endif
 
-    initial_loop = .true.
     totaltimesteps = NUMBER_OF_FILES * NUMBER_OF_TSTEPS
 
     if     ( FILETYPE_ORG == 'WRF-ARW' ) then
@@ -4291,10 +4291,6 @@ enddo
     call ParentAtomSetup( dims(:), timelen, mdlid,           & ![OUT]
                           BASENAME_WITHNUM, FILETYPE_ORG,    & ![IN]
                           INTERP_SERC_DIV_NUM, WRF_FILE_TYPE ) ![IN]
-
-    if( NUMBER_OF_TSTEPS /= timelen ) then
-       if( IO_L ) write(IO_FID_LOG,*) '+++ WARNING: NUMBER_OF_TSTEP is not match with timesteps derived from the file.'
-    endif
 
     allocate( dens_org(KA,IA,JA,totaltimesteps   ) )
     allocate( momz_org(KA,IA,JA,totaltimesteps   ) )
@@ -4334,14 +4330,12 @@ enddo
                              RHOT_org(:,:,:,ns:ne),    &
                              QTRC_org(:,:,:,ns:ne,:),  &
                              BASENAME_WITHNUM,         &
+                             USE_FILE_DENSITY,         &
                              dims(:),                  &
                              mdlid,                    &
                              PARENT_MP_TYPE,           &
                              NUMBER_OF_TSTEPS,         &
-                             initial_loop,             &
                              SERIAL_PROC_READ          )
-
-       if( initial_loop ) initial_loop = .false.
     enddo
 
     !--- input initial data
@@ -4353,16 +4347,10 @@ enddo
        MOMX(k,i,j) = MOMX_ORG(k,i,j,1)
        MOMY(k,i,j) = MOMY_ORG(k,i,j,1)
        RHOT(k,i,j) = RHOT_ORG(k,i,j,1)
-    enddo
-    enddo
-    enddo
 
-    do iq = 1, QA
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       QTRC(k,i,j,iq) = QTRC_ORG(k,i,j,1,iq)
-    enddo
+       do iq = 1, QA
+          QTRC(k,i,j,iq) = QTRC_ORG(k,i,j,1,iq)
+       enddo
     enddo
     enddo
     enddo
@@ -4392,12 +4380,18 @@ enddo
       call PRC_MPIstop
     end if
 
-    call ParentSurfaceInput( BASENAME_WITHNUM,   &
-                             dims,               &
-                             1,                  &
-                             mdlid,              &
-                             SERIAL_PROC_READ,   &
-                             NO_ADDITIONAL_INPUT )
+    call ParentSurfaceInput( DENS_ORG(:,:,:,:),   &
+                             MOMZ_ORG(:,:,:,:),   &
+                             MOMX_ORG(:,:,:,:),   &
+                             MOMY_ORG(:,:,:,:),   &
+                             RHOT_ORG(:,:,:,:),   &
+                             QTRC_ORG(:,:,:,:,:), &
+                             BASENAME_WITHNUM,    &
+                             dims,                &
+                             1,                   &
+                             mdlid,               &
+                             SERIAL_PROC_READ,    &
+                             NO_ADDITIONAL_INPUT  )
 
     do j = JS, JE
     do i = IS, IE
