@@ -195,9 +195,10 @@ contains
     endif
     if( IO_LNML) write(IO_FID_LOG,nml=PARAM_ATMOS_BOUNDARY)
 
-    BND_QA = 1
     if( ATMOS_BOUNDARY_USE_QHYD ) then
        BND_QA = QA
+    else
+       BND_QA = 1
     end if
 
     allocate( ATMOS_BOUNDARY_DENS(KA,IA,JA) )
@@ -925,7 +926,7 @@ contains
 
        !--- calculate time of the initial step in boundary file [no offset]
        boundary_time_startms = 0.0_DP
-       call CALENDAR_date2daysec( boundary_time_startday,      & ! [OUT]
+       call CALENDAR_date2daysec( boundary_time_startday,       & ! [OUT]
                                   boundary_time_startsec,       & ! [OUT]
                                   ATMOS_BOUNDARY_START_DATE(:), & ! [IN]
                                   boundary_time_startms         ) ! [IN]
@@ -997,6 +998,7 @@ contains
        do iq = 1, BND_QA
           ATMOS_BOUNDARY_ref_QTRC(   1:KS-1,i,j,iq,1) = ATMOS_BOUNDARY_ref_QTRC(KS,i,j,iq,1)
           ATMOS_BOUNDARY_ref_QTRC(KE+1:KA,  i,j,iq,1) = ATMOS_BOUNDARY_ref_QTRC(KE,i,j,iq,1)
+
           ATMOS_BOUNDARY_ref_QTRC(   1:KS-1,i,j,iq,2) = ATMOS_BOUNDARY_ref_QTRC(KS,i,j,iq,2)
           ATMOS_BOUNDARY_ref_QTRC(KE+1:KA,  i,j,iq,2) = ATMOS_BOUNDARY_ref_QTRC(KE,i,j,iq,2)
        end do
