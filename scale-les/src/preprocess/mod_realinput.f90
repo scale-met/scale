@@ -371,9 +371,9 @@ contains
        end do
        end do
        end do
-       call FILEIO_write( buffer, basename, title,                                     &
-                          AQ_NAME(iq), 'Reference '//AQ_DESC(iq), AQ_UNIT(iq), 'ZXYT', &
-                          atmos_boundary_out_dtype, update_dt                          )
+       call FILEIO_write( buffer, basename, title,                                 &
+                          AQ_NAME(iq), 'Reference '//AQ_NAME(iq), 'kg/kg', 'ZXYT', &
+                          atmos_boundary_out_dtype, update_dt                      )
     end do
 
     deallocate( buffer )
@@ -448,7 +448,11 @@ contains
     real(RP) :: qc_urb(IA,JA)
     real(RP) :: uc_urb(IA,JA)
 
-    integer :: i, j
+    real(RP) :: init_dens(KA,IA,JA)
+    real(RP) :: init_rhot(KA,IA,JA)
+    real(RP) :: init_qtrc(KA,IA,JA,QA)
+
+    integer :: k, i, j, iq
 
     intrinsic shape
     !---------------------------------------------------------------------------
@@ -503,11 +507,23 @@ contains
                              no_add_input  )
     endif
 
-    call THERMODYN_temp_pres( temp(:,:,:),     & ! [OUT]
-                              pres(:,:,:),     & ! [OUT]
-                              dens(:,:,:,1),   & ! [IN]
-                              rhot(:,:,:,1),   & ! [IN]
-                              qtrc(:,:,:,:,1)  ) ! [IN]
+    do j = 1, JA
+    do i = 1, IA
+    do k = 1, KA
+       init_dens(k,i,j) = dens(k,i,j,1)
+       init_rhot(k,i,j) = rhot(k,i,j,1)
+       do iq = 1, QA
+          init_qtrc(k,i,j,iq) = qtrc(k,i,j,1,iq)
+       end do
+    end do
+    end do
+    end do
+
+    call THERMODYN_temp_pres( temp     (:,:,:),   & ! [OUT]
+                              pres     (:,:,:),   & ! [OUT]
+                              init_dens(:,:,:),   & ! [IN]
+                              init_rhot(:,:,:),   & ! [IN]
+                              init_qtrc(:,:,:,:)  ) ! [IN]
 
     do j = JS, JE
     do i = IS, IE
@@ -560,6 +576,7 @@ contains
        NEST_TILE_NUM_Y, &
        NEST_TILE_ID
     use scale_atmos_hydrostatic, only: &
+       HYDROSTATIC_buildrho        => ATMOS_HYDROSTATIC_buildrho,        &
        HYDROSTATIC_buildrho_bytemp => ATMOS_HYDROSTATIC_buildrho_bytemp
     implicit none
 
@@ -749,7 +766,7 @@ contains
          end do
        end do
 
-       if( use_file_density == .false. ) then ! make density
+       if( .NOT. use_file_density ) then ! make density
          do n = start_step, end_step
            call FileRead( read2D(:,:), BASENAME_ORG, "SFC_PRES", n, rank )
            psfc_org(xs:xe,ys:ye,n) = read2D(:,:)
@@ -1006,6 +1023,8 @@ contains
           qv_sfc(1,:,:,n) = qtrc(KS,:,:,n,I_QV)
           qc_sfc(1,:,:,n) = qtrc(KS,:,:,n,I_QC)
 
+          ! density is not equal between buildrho and buildrho_bytemp
+          ! require surface potential temp.
           call HYDROSTATIC_buildrho_bytemp( dens    (:,:,:,n),      & ! [OUT]
                                             temp    (:,:,:,n),      & ! [OUT]
                                             pres    (:,:,:,n),      & ! [OUT]
@@ -1017,6 +1036,19 @@ contains
                                             temp_sfc(:,:,:,n),      & ! [IN]
                                             qv_sfc  (:,:,:,n),      & ! [IN]
                                             qc_sfc  (:,:,:,n)       ) ! [IN]
+
+          ! remake density
+          call HYDROSTATIC_buildrho( dens    (:,:,:,n),      & ! [OUT]
+                                     temp    (:,:,:,n),      & ! [OUT]
+                                     pres    (:,:,:,n),      & ! [OUT]
+                                     pott    (:,:,:,n),      & ! [IN]
+                                     qtrc    (:,:,:,n,I_QV), & ! [IN]
+                                     qtrc    (:,:,:,n,I_QC), & ! [IN]
+                                     temp_sfc(:,:,:,n),      & ! [OUT]
+                                     pres_sfc(:,:,:,n),      & ! [IN]
+                                     pott_sfc(:,:,:,n),      & ! [IN]
+                                     qv_sfc  (:,:,:,n),      & ! [IN]
+                                     qc_sfc  (:,:,:,n)       ) ! [IN]
 
           call COMM_vars8( dens(:,:,:,n), 1 )
           call COMM_wait ( dens(:,:,:,n), 1 )
