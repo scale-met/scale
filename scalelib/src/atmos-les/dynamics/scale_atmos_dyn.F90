@@ -1050,6 +1050,7 @@ contains
     real(RP) :: dir
     real(RP) :: sw, sw2
     integer :: i, j, k
+    !---------------------------------------------------------------------------
 
     dir = sign(1.0_RP, REAL(ib+jb,RP)) ! dir = -1 if ib==-1 .or. jb==-1
 
@@ -1154,37 +1155,54 @@ contains
     real(RP) :: dir
     real(RP) :: sw, sw2
     integer :: i, j, k, iq
+    !---------------------------------------------------------------------------
 
-    dir = sign(1.0_RP, REAL(ib+jb,RP)) ! dir = -1 if ib==-1 .or. jb==-1
+    if( BND_QA == I_QV ) then
+       ! QV forcing only at boundary
+       dir = sign(1.0_RP, REAL(ib+jb,RP)) ! dir = -1 if ib==-1 .or. jb==-1
 
-    do j = j0-jb, j1-jb, -ju+abs(iu)
-    do i = i0-ib, i1-ib, -iu+abs(ju)
-    do k = KS, KE
-       sw = sign(0.5_RP, DAMP_alpha_QTRC(k,i,j,I_QV) - EPS) + 0.5_RP
-       QTRC(k,i,j,I_QV) = QTRC(k,i,j,I_QV) * ( 1.0_RP - sw ) &
-                        + DAMP_QTRC(k,i,j,I_QV) * sw
-    end do
-    end do
-    end do
-
-    do iq = 2, QA
        do j = j0-jb, j1-jb, -ju+abs(iu)
        do i = i0-ib, i1-ib, -iu+abs(ju)
        do k = KS, KE
           sw = sign(0.5_RP, DAMP_alpha_QTRC(k,i,j,I_QV) - EPS) + 0.5_RP
-          sw2 = sign(0.5_RP, MOM(k,i-ib,j-jb)*dir) + 0.5_RP
-          QTRC(k,i,j,iq) = QTRC(k,i,j,iq) * ( 1.0_RP - sw ) &
-                         + QTRC(k,i+iu,j+ju,iq) * sw * sw2
+          QTRC(k,i,j,I_QV) = QTRC(k,i,j,I_QV) * ( 1.0_RP - sw ) &
+                           + DAMP_QTRC(k,i,j,I_QV) * sw
        end do
        end do
        end do
-    end do
+
+       do iq = 2, QA
+          do j = j0-jb, j1-jb, -ju+abs(iu)
+          do i = i0-ib, i1-ib, -iu+abs(ju)
+          do k = KS, KE
+             sw = sign(0.5_RP, DAMP_alpha_QTRC(k,i,j,iq) - EPS) + 0.5_RP
+             sw2 = sign(0.5_RP, MOM(k,i-ib,j-jb)*dir) + 0.5_RP
+             QTRC(k,i,j,iq) = QTRC(k,i,j,iq) * ( 1.0_RP - sw ) &
+                            + QTRC(k,i+iu,j+ju,iq) * sw * sw2
+          end do
+          end do
+          end do
+       end do
+    else
+       ! ALL QTRC forcing at boundary
+       do iq = 1, QA
+          do j = j0-jb, j1-jb, -ju+abs(iu)
+          do i = i0-ib, i1-ib, -iu+abs(ju)
+          do k = KS, KE
+             sw = sign(0.5_RP, DAMP_alpha_QTRC(k,i,j,iq) - EPS) + 0.5_RP
+             QTRC(k,i,j,iq) = QTRC(k,i,j,iq) * ( 1.0_RP - sw ) &
+                            + DAMP_QTRC(k,i,j,iq) * sw
+          end do
+          end do
+          end do
+       end do
+    end if
 
     do iq = 1, QA
        if ( ib==-1 ) then
           do j = j0, j1
           do k = KS, KE
-             sw = sign(0.5_RP, DAMP_alpha_QTRC(k,i1,j,I_QV) - EPS) + 0.5_RP
+             sw = sign(0.5_RP, DAMP_alpha_QTRC(k,i1,j,iq) - EPS) + 0.5_RP
              QTRC(k,i1,j,iq) = QTRC(k,i1,j,iq) * ( 1.0_RP - sw ) &
                              + QTRC(k,i1+iu,j,iq) * sw
           end do
@@ -1193,7 +1211,7 @@ contains
        if ( jb==-1 ) then
           do i = i0, i1
           do k = KS, KE
-             sw = sign(0.5_RP, DAMP_alpha_QTRC(k,i,j1,I_QV) - EPS) + 0.5_RP
+             sw = sign(0.5_RP, DAMP_alpha_QTRC(k,i,j1,iq) - EPS) + 0.5_RP
              QTRC(k,i,j1,iq) = QTRC(k,i,j1,iq) * ( 1.0_RP - sw ) &
                              + QTRC(k,i,j1+ju,iq) * sw
           end do
