@@ -198,7 +198,7 @@ contains
     if( ATMOS_BOUNDARY_USE_QHYD ) then
        BND_QA = QA
     else
-       BND_QA = 1
+       BND_QA = I_QV
     end if
 
     allocate( ATMOS_BOUNDARY_DENS(KA,IA,JA) )
@@ -819,10 +819,10 @@ contains
 
     if ( ATMOS_BOUNDARY_USE_QHYD ) then
        do iq = 2, BND_QA
-          call FILEIO_write( ATMOS_BOUNDARY_QTRC(:,:,:,iq),                                &
-                             ATMOS_BOUNDARY_OUT_BASENAME, ATMOS_BOUNDARY_OUT_TITLE,        &
-                             AQ_NAME(iq), 'Reference '//trim(AQ_NAME(iq)), 'kg/kg', 'ZXY', &
-                             ATMOS_BOUNDARY_OUT_DTYPE                                      )
+          call FILEIO_write( ATMOS_BOUNDARY_QTRC(:,:,:,iq),                                    &
+                             ATMOS_BOUNDARY_OUT_BASENAME, ATMOS_BOUNDARY_OUT_TITLE,            &
+                             AQ_NAME(iq), 'Reference '//trim(AQ_NAME(iq)), AQ_UNIT(iq), 'ZXY', &
+                             ATMOS_BOUNDARY_OUT_DTYPE                                          )
           call FILEIO_write( ATMOS_BOUNDARY_alpha_QTRC(:,:,:,iq),                                      &
                              ATMOS_BOUNDARY_OUT_BASENAME, ATMOS_BOUNDARY_OUT_TITLE,                    &
                              'ALPHA_'//trim(AQ_NAME(iq)), 'Alpha for '//trim(AQ_NAME(iq)), '1', 'ZXY', &

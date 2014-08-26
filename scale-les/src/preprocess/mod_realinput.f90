@@ -371,9 +371,9 @@ contains
        end do
        end do
        end do
-       call FILEIO_write( buffer, basename, title,                                 &
-                          AQ_NAME(iq), 'Reference '//AQ_NAME(iq), 'kg/kg', 'ZXYT', &
-                          atmos_boundary_out_dtype, update_dt                      )
+       call FILEIO_write( buffer, basename, title,                                           &
+                          AQ_NAME(iq), 'Reference '//trim(AQ_NAME(iq)), AQ_UNIT(iq), 'ZXYT', &
+                          atmos_boundary_out_dtype, update_dt                                )
     end do
 
     deallocate( buffer )
