@@ -1059,9 +1059,8 @@ contains
        sw = sign(0.5_RP, DAMP_alpha_DENS(k,i,j) - EPS) + 0.5_RP
        sw2 = sign(0.5_RP, DAMP_flow(k,i,j)*dir) + 0.5_RP ! 0:inflow, 1:outflow
        DENS(k,i,j) = DENS(k,i,j) * ( 1.0_RP - sw ) &
-                   + DENS(k,i+iu,j+ju) * sw
-!                   + DENS(k,i+iu,j+ju) * sw2 * sw &
-!                   + DAMP_DENS(k,i,j) * ( 1.0_RP - sw2 ) * sw
+!                   + ( DENS(k,i+ju,j+iu) + DENS(k,i-ju,j-iu) + DENS(k,i,j)*2.0_RP ) * 0.25_RP * sw ! smoothing
+                   + DAMP_DENS(k,i,j) * sw
        MOMZ(k,i,j) = MOMZ(k,i,j) * ( 1.0_RP - sw ) &
                    + MOMZ(k,i+iu,j+ju) * sw2 * sw
        sw = sign(0.5_RP, DAMP_alpha_POTT(k,i,j) - EPS) + 0.5_RP
