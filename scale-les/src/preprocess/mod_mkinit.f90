@@ -22,6 +22,7 @@
 !! @li      2013-02-25 (H.Yashiro)  [mod] ISA profile
 !! @li      2014-03-27 (A.Noda)     [mod] add DYCOMS2_RF02_DNS
 !! @li      2014-04-28 (R.Yoshida)  [add] real case experiment
+!! @li      2014-08-26 (A.Noda)     [mod] add GRAYZONE
 !!
 !<
 !-------------------------------------------------------------------------------
@@ -144,6 +145,8 @@ module mod_mkinit
 
   integer, public, parameter :: I_REAL          = 25
 
+  integer, public, parameter :: I_GRAYZONE      = 26
+
   !-----------------------------------------------------------------------------
   !
   !++ Private procedure
@@ -179,6 +182,8 @@ module mod_mkinit
   private :: MKINIT_DYCOMS2_RF02_DNS
 
   private :: MKINIT_real
+
+  private :: MKINIT_grayzone
 
   !-----------------------------------------------------------------------------
   !
@@ -321,6 +326,8 @@ contains
        MKINIT_TYPE = I_DYCOMS2_RF02_DNS
     case('REAL')
        MKINIT_TYPE = I_REAL
+    case('GRAYZONE')
+       MKINIT_TYPE = I_GRAYZONE
     case default
        write(*,*) ' xxx Unsupported TYPE:', trim(MKINIT_initname)
        call PRC_MPIstop
@@ -452,6 +459,8 @@ contains
          call MKINIT_DYCOMS2_RF02_DNS
       case(I_REAL)
          call MKINIT_real
+      case(I_GRAYZONE)
+         call MKINIT_grayzone
       case default
          write(*,*) ' xxx Unsupported TYPE:', MKINIT_TYPE
          call PRC_MPIstop
@@ -4417,6 +4426,227 @@ enddo
 
     return
   end subroutine MKINIT_real
+
+  !-----------------------------------------------------------------------------  
+  !> Make initial state for grayzone experiment
+  subroutine MKINIT_grayzone
+    implicit none
+
+    character(len=H_LONG) :: ENV_IN_SOUNDING_file = ''
+    ! Bubble
+    real(RP) :: PERTURB_AMP = 0.0_RP
+    integer  :: RANDOM_LIMIT = 0
+    integer  :: RANDOM_FLAG  = 0       ! 0 -> no perturbation
+                                       ! 1 -> petrurbation for pt
+                                       ! 2 -> perturbation for u, v, w
+
+    NAMELIST / PARAM_MKINIT_GRAYZONE / &
+       ENV_IN_SOUNDING_file, &
+      PERTURB_AMP,     &
+       RANDOM_LIMIT,    &
+       RANDOM_FLAG
+    integer, parameter :: EXP_klim = 100
+    integer            :: EXP_kmax
+
+    real(RP) :: SFC_THETA            ! surface potential temperature [K]
+    real(RP) :: SFC_PRES             ! surface pressure [hPa]
+    real(RP) :: SFC_QV               ! surface watervapor [g/kg]
+
+    real(RP) :: EXP_z   (EXP_klim+1) ! height      [m]
+    real(RP) :: EXP_pott(EXP_klim+1) ! potential temperature [K]
+    real(RP) :: EXP_qv  (EXP_klim+1) ! water vapor [g/kg]
+    real(RP) :: EXP_u   (EXP_klim+1) ! velocity u  [m/s]
+    real(RP) :: EXP_v   (EXP_klim+1) ! velocity v  [m/s]
+
+    real(RP) :: fact1, fact2
+
+    integer :: ierr, fid
+    integer :: k, i, j, kref
+    !---------------------------------------------------------------------------
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[GRAYZONE]/Categ[INIT]'
+
+    !--- read namelist
+    rewind(IO_FID_CONF)
+    read(IO_FID_CONF,nml=PARAM_MKINIT_GRAYZONE,iostat=ierr)
+
+    if( ierr < 0 ) then !--- missing
+       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+    elseif( ierr > 0 ) then !--- fatal error
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_GRAYZONE. Check!'
+       call PRC_MPIstop
+    endif
+    if( IO_L ) write(IO_FID_LOG,nml=PARAM_MKINIT_GRAYZONE)
+
+    !--- prepare sounding profile
+    if( IO_L ) write(IO_FID_LOG,*) '+++ Input sounding file:', trim(ENV_IN_SOUNDING_file)
+    fid = IO_get_available_fid()
+    open( fid,                                 &
+          file   = trim(ENV_IN_SOUNDING_file), &
+          form   = 'formatted',                &
+          status = 'old',                      &
+          iostat = ierr                        )
+
+       if ( ierr /= 0 ) then
+          if( IO_L ) write(*,*) 'xxx Input file not found!'
+       endif
+
+       !--- read sounding file till end
+       read(fid,*) SFC_PRES, SFC_THETA, SFC_QV
+
+       if( IO_L ) write(IO_FID_LOG,*) '+++ Surface pressure [hPa]',     SFC_PRES
+       if( IO_L ) write(IO_FID_LOG,*) '+++ Surface pot. temp  [K]',     SFC_THETA
+       if( IO_L ) write(IO_FID_LOG,*) '+++ Surface water vapor [g/kg]', SFC_QV
+
+       do k = 2, EXP_klim
+          read(fid,*,iostat=ierr) EXP_z(k), EXP_pott(k), EXP_qv(k), EXP_u(k), EXP_v(k)
+          if ( ierr /= 0 ) exit
+       enddo
+
+       EXP_kmax = k - 1
+    close(fid)
+
+    ! Boundary
+    EXP_z   (1)          = 0.0_RP
+    EXP_pott(1)          = SFC_THETA
+    EXP_qv  (1)          = SFC_QV
+    EXP_u   (1)          = EXP_u   (2)
+    EXP_v   (1)          = EXP_v   (2)
+    EXP_z   (EXP_kmax+1) = 100.E3_RP
+    EXP_pott(EXP_kmax+1) = EXP_pott(EXP_kmax)
+    EXP_qv  (EXP_kmax+1) = EXP_qv  (EXP_kmax)
+    EXP_u   (EXP_kmax+1) = EXP_u   (EXP_kmax)
+    EXP_v   (EXP_kmax+1) = EXP_v   (EXP_kmax)
+
+    do k = 1, EXP_kmax+1
+       EXP_qv(k) = EXP_qv(k) * 1.E-3_RP ! [g/kg]->[kg/kg]
+    enddo
+
+    ! calc in dry condition
+    pres_sfc(1,1,1) = SFC_PRES * 1.E2_RP ! [hPa]->[Pa]
+    pott_sfc(1,1,1) = SFC_THETA
+    qv_sfc  (1,1,1) = SFC_QV * 1.E-3_RP ! [g/kg]->[kg/kg]
+    qc_sfc  (1,1,1) = 0.0_RP
+
+    !--- linear interpolate to model grid
+    do k = KS, KE
+       qc(k,1,1) = 0.0_RP
+
+       do kref = 2, EXP_kmax+1
+          if (       GRID_CZ(k) >  EXP_z(kref-1) &
+               .AND. GRID_CZ(k) <= EXP_z(kref  ) ) then
+
+             fact1 = ( EXP_z(kref) - GRID_CZ(k)   ) / ( EXP_z(kref)-EXP_z(kref-1) )
+             fact2 = ( GRID_CZ(k) - EXP_z(kref-1) ) / ( EXP_z(kref)-EXP_z(kref-1) )
+
+             pott(k,1,1) = EXP_pott(kref-1) * fact1 &
+                         + EXP_pott(kref  ) * fact2
+             qv  (k,1,1) = EXP_qv  (kref-1) * fact1 &
+                         + EXP_qv  (kref  ) * fact2
+             velx(k,1,1) = EXP_u   (kref-1) * fact1 &
+                         + EXP_u   (kref  ) * fact2
+             vely(k,1,1) = EXP_v   (kref-1) * fact1 &
+                         + EXP_v   (kref  ) * fact2
+          endif
+       enddo
+    enddo
+
+    ! make density & pressure profile in moist condition
+    call HYDROSTATIC_buildrho( DENS    (:,1,1), & ! [OUT]
+                               temp    (:,1,1), & ! [OUT]
+                               pres    (:,1,1), & ! [OUT]
+                               pott    (:,1,1), & ! [IN]
+                               qv      (:,1,1), & ! [IN]
+                               qc      (:,1,1), & ! [IN]
+                               temp_sfc(1,1,1), & ! [OUT]
+                               pres_sfc(1,1,1), & ! [IN]
+                               pott_sfc(1,1,1), & ! [IN]
+                               qv_sfc  (1,1,1), & ! [IN]
+                               qc_sfc  (1,1,1)  ) ! [IN]
+
+!   do j = JS, JE
+!   do i = IS, IE
+    do j = 1, ja
+    do i = 1, ia
+    do k = KS, KE
+       DENS(k,i,j) = DENS(k,1,1)
+!      MOMZ(k,i,j) = 0.0_RP
+!      MOMX(k,i,j) = DENS(k,1,1) * velx(k,1,1)
+!      MOMY(k,i,j) = DENS(k,1,1) * vely(k,1,1)
+
+!      RHOT(k,i,j) = DENS(k,1,1) * pott(k,1,1)
+
+       QTRC(k,i,j,I_QV) = qv(k,1,1)
+    enddo
+    enddo
+    enddo
+
+    do j  = JS, JE
+    do i  = IS, IE
+       DENS(   1:KS-1,i,j) = DENS(KS,i,j)
+       DENS(KE+1:KA,  i,j) = DENS(KE,i,j)
+    enddo
+    enddo
+
+    call RANDOM_get(rndm) ! make random
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       if ( RANDOM_FLAG == 2 .and. k <= RANDOM_LIMIT ) then ! below initial cloud top
+          MOMZ(k,i,j) = ( 2.0_RP * ( rndm(k,i,j)-0.5_RP ) * PERTURB_AMP ) &
+                      * 0.5_RP * ( DENS(k+1,i,j) + DENS(k,i,j) )
+       else
+          MOMZ(k,i,j) = 0.0_RP
+       endif
+    enddo
+    enddo
+    enddo
+
+    call RANDOM_get(rndm) ! make random
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       if ( RANDOM_FLAG == 2 .AND. k <= RANDOM_LIMIT ) then ! below initial cloud top
+          MOMX(k,i,j) = ( velx(k,1,1) + 2.0_RP * ( rndm(k,i,j)-0.5_RP ) * PERTURB_AMP ) &
+                      * 0.5_RP * ( DENS(k,i+1,j) + DENS(k,i,j) )
+       else
+          MOMX(k,i,j) = velx(k,1,1) * 0.5_RP * ( DENS(k,i+1,j) + DENS(k,i,j) )
+       endif
+    enddo
+    enddo
+    enddo
+
+    call RANDOM_get(rndm) ! make random
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       if ( RANDOM_FLAG == 2 .AND. k <= RANDOM_LIMIT ) then ! below initial cloud top
+          MOMY(k,i,j) = ( vely(k,1,1) + 2.0_RP * ( rndm(k,i,j)-0.5_RP ) * PERTURB_AMP ) &
+                      * 0.5_RP * ( DENS(k,i,j+1) + DENS(k,i,j) )
+       else
+          MOMY(k,i,j) = vely(k,1,1) * 0.5_RP * ( DENS(k,i,j+1) + DENS(k,i,j) )
+       endif
+    enddo
+    enddo
+    enddo
+
+    call RANDOM_get(rndm) ! make random
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       if ( RANDOM_FLAG == 1 .and. k <= RANDOM_LIMIT ) then ! below initial cloud top
+          RHOT(k,i,j) = ( pott(k,1,1) + 2.0_RP * ( rndm(k,i,j)-0.5_RP ) * PERTURB_AMP ) &
+                      * DENS(k,i,j)
+       else
+          RHOT(k,i,j) = pott(k,1,1) * DENS(k,i,j)
+       endif
+    enddo
+    enddo
+    enddo
+
+    return
+  end subroutine MKINIT_grayzone
 
 end module mod_mkinit
 !-------------------------------------------------------------------------------

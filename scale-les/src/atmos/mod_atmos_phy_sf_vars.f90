@@ -9,6 +9,7 @@
 !! @par History
 !! @li      2012-03-27 (H.Yashiro)  [new]
 !! @li      2013-08-31 (T.Yamaura)  [mod]
+!! @li      2014-08-28 (A.Noda)     [mod] input of ATMOS_PHY_SF_SFC_{TEMP,albedo}
 !<
 !-------------------------------------------------------------------------------
 module mod_atmos_phy_sf_vars
@@ -167,8 +168,8 @@ contains
     allocate( ATMOS_PHY_SF_SFC_Z0    (IA,JA)    )
     ATMOS_PHY_SF_SFC_DENS  (:,:)   = UNDEF
     ATMOS_PHY_SF_SFC_PRES  (:,:)   = UNDEF
-    ATMOS_PHY_SF_SFC_TEMP  (:,:)   = UNDEF
-    ATMOS_PHY_SF_SFC_albedo(:,:,:) = UNDEF
+!   ATMOS_PHY_SF_SFC_TEMP  (:,:)   = UNDEF ! [del] 2014/8/28 A.Noda
+!   ATMOS_PHY_SF_SFC_albedo(:,:,:) = UNDEF ! [del] 2014/8/28 A.Noda
     ATMOS_PHY_SF_SFC_Z0    (:,:)   = UNDEF
 
     ATMOS_PHY_SF_DEFAULT_SFC_TEMP   = UNDEF
@@ -184,6 +185,10 @@ contains
        call PRC_MPIstop
     endif
     if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_ATMOS_PHY_SF_VARS)
+
+    ! [add] 2014/08/28 A.Noda
+    ATMOS_PHY_SF_SFC_TEMP  (:,:)   = ATMOS_PHY_SF_DEFAULT_SFC_TEMP
+    ATMOS_PHY_SF_SFC_albedo(:,:,:) = ATMOS_PHY_SF_DEFAULT_SFC_albedo
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** [ATMOS_PHY_SF] prognostic/diagnostic variables'
