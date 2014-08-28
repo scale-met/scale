@@ -363,7 +363,6 @@ contains
        STB    => CONST_STB,     &    !< stefan-Boltzman constant [MKS unit]
        TEM00  => CONST_TEM00         !< temperature reference (0 degree C) [K]
     use scale_time, only:       &
-       NOWDATE => TIME_NOWDATE, &    !< current time [YYYY MM DD HH MM SS]
        DELT => TIME_DTSEC_URBAN      !< time interval of urban step [sec]
     implicit none
 
@@ -371,57 +370,54 @@ contains
     logical, intent(in) :: LSOLAR  ! logical   [true=both, false=SSG only]
 
     !-- Input variables from Coupler to Urban
-    real(RP), intent(in)    :: PRES ! Surface Pressure [Pa]
-    real(RP), intent(in)    :: TA   ! temp at 1st atmospheric level          [K]
-    real(RP), intent(in)    :: QA   ! specific humidity at 1st atmospheric level  [kg/kg]
-    real(RP), intent(in)    :: UA   ! wind speed at 1st atmospheric level    [m/s]
-    real(RP), intent(in)    :: U1   ! u at 1st atmospheric level             [m/s]
-    real(RP), intent(in)    :: V1   ! v at 1st atmospheric level             [m/s]
-    real(RP), intent(in)    :: ZA   ! height of 1st atmospheric level        [m]
-    real(RP), intent(in)    :: SSG  ! downward total short wave radiation    [W/m/m]
-    real(RP), intent(in)    :: LLG  ! downward long wave radiation           [W/m/m]
+    real(RP), intent(in)    :: PRES    ! Surface Pressure [Pa]
+    real(RP), intent(in)    :: TA      ! temp at 1st atmospheric level          [K]
+    real(RP), intent(in)    :: QA      ! specific humidity at 1st atmospheric level  [kg/kg]
+    real(RP), intent(in)    :: UA      ! wind speed at 1st atmospheric level    [m/s]
+    real(RP), intent(in)    :: U1      ! u at 1st atmospheric level             [m/s]
+    real(RP), intent(in)    :: V1      ! v at 1st atmospheric level             [m/s]
+    real(RP), intent(in)    :: ZA      ! height of 1st atmospheric level        [m]
+    real(RP), intent(in)    :: SSG     ! downward total short wave radiation    [W/m/m]
+    real(RP), intent(in)    :: LLG     ! downward long wave radiation           [W/m/m]
 
-    real(RP), intent(in)    :: RHOO ! air density                            [kg/m^3]
-    real(RP), intent(in)    :: XLAT !< latitude  [rad,-pi,pi]
-    real(RP), intent(in)    :: XLON !< longitude [rad,0-2pi]
+    real(RP), intent(in)    :: RHOO    ! air density                            [kg/m^3]
+    real(RP), intent(in)    :: XLAT    !< latitude  [rad,-pi,pi]
+    real(RP), intent(in)    :: XLON    !< longitude [rad,0-2pi]
 
     !-- In/Out variables from/to Coupler to/from Urban
-    real(RP), intent(in)    :: TR   ! roof temperature              [K]
-    real(RP), intent(in)    :: TB   ! building wall temperature     [K]
-    real(RP), intent(in)    :: TG   ! road temperature              [K]
-    real(RP), intent(in)    :: TC   ! urban-canopy air temperature  [K]
-    real(RP), intent(in)    :: QC   ! urban-canopy air specific humidity [kg/kg]
-    real(RP), intent(in)    :: UC   ! diagnostic canopy wind        [m/s]
+    real(RP), intent(in)    :: TR      ! roof temperature              [K]
+    real(RP), intent(in)    :: TB      ! building wall temperature     [K]
+    real(RP), intent(in)    :: TG      ! road temperature              [K]
+    real(RP), intent(in)    :: TC      ! urban-canopy air temperature  [K]
+    real(RP), intent(in)    :: QC      ! urban-canopy air specific humidity [kg/kg]
+    real(RP), intent(in)    :: UC      ! diagnostic canopy wind        [m/s]
     real(RP), intent(in)    :: TRL(UKS:UKE)  ! layer temperature [K]
     real(RP), intent(in)    :: TBL(UKS:UKE)  ! layer temperature [K]
     real(RP), intent(in)    :: TGL(UKS:UKE)  ! layer temperature [K]
-    real(RP), intent(in)    :: RAINR ! rain amount in storage on roof     [kg/m2]
-    real(RP), intent(in)    :: RAINB ! rain amount in storage on building [kg/m2]
-    real(RP), intent(in)    :: RAING ! rain amount in storage on road     [kg/m2]
-    real(RP), intent(in)    :: AH_t     ! Sensible Anthropogenic heat [W/m^2]
-    real(RP), intent(in)    :: ALH_t    ! Latent Anthropogenic heat [W/m^2]
+    real(RP), intent(in)    :: RAINR   ! rain amount in storage on roof     [kg/m2]
+    real(RP), intent(in)    :: RAINB   ! rain amount in storage on building [kg/m2]
+    real(RP), intent(in)    :: RAING   ! rain amount in storage on road     [kg/m2]
+    real(RP), intent(in)    :: AH_t    ! Sensible Anthropogenic heat [W/m^2]
+    real(RP), intent(in)    :: ALH_t   ! Latent Anthropogenic heat [W/m^2]
 
     !-- Output variables from Urban to Coupler
     real(RP), intent(out)   :: ALBD_SW_grid  ! grid mean of surface albedo for SW
     real(RP), intent(out)   :: ALBD_LW_grid  ! grid mean of surface albedo for LW ( 1-emiss )
-    real(RP), intent(out)   :: RTS    ! radiative surface temperature    [K]
-    real(RP), intent(out)   :: SH     ! sensible heat flux               [W/m/m]
-    real(RP), intent(out)   :: LH     ! latent heat flux                 [W/m/m]
-    real(RP), intent(out)   :: GHFLX  ! heat flux into the ground        [W/m/m]
-    real(RP), intent(out)   :: RN     ! net radition                     [W/m/m]
-    real(RP), intent(out)   :: U10    ! U wind at 10m                    [m/s]
-    real(RP), intent(out)   :: V10    ! V wind at 10m                    [m/s]
-    real(RP), intent(out)   :: T2     ! air temperature at 2m            [K]
-    real(RP), intent(out)   :: Q2     ! specific humidity at 2m          [kg/kg]
+    real(RP), intent(out)   :: RTS           ! radiative surface temperature    [K]
+    real(RP), intent(out)   :: SH            ! sensible heat flux               [W/m/m]
+    real(RP), intent(out)   :: LH            ! latent heat flux                 [W/m/m]
+    real(RP), intent(out)   :: GHFLX         ! heat flux into the ground        [W/m/m]
+    real(RP), intent(out)   :: RN            ! net radition                     [W/m/m]
+    real(RP), intent(out)   :: U10           ! U wind at 10m                    [m/s]
+    real(RP), intent(out)   :: V10           ! V wind at 10m                    [m/s]
+    real(RP), intent(out)   :: T2            ! air temperature at 2m            [K]
+    real(RP), intent(out)   :: Q2            ! specific humidity at 2m          [kg/kg]
     real(RP), intent(out)   :: RNR, RNB, RNG
     real(RP), intent(out)   :: SHR, SHB, SHG
     real(RP), intent(out)   :: LHR, LHB, LHG
     real(RP), intent(out)   :: GHR, GHB, GHG
 
     !-- parameters
-    real(RP), parameter     :: CP  = 0.24_RP     ! heat capacity of dry air  [cgs unit]
-    real(RP), parameter     :: EL  = 583.0_RP    ! latent heat of vaporation [cgs unit]
-    real(RP), parameter     :: SIG = 8.17E-11_RP ! stefun bolzman constant   [cgs unit]
     real(RP), parameter     :: SRATIO = 0.75_RP  ! ratio between direct/total solar [-]
 
     !-- Local variables
@@ -429,17 +425,13 @@ contains
            !  true  = consider svf and shadow effects,
            !  false = consider svf effect only
 
-    real(RP) :: LON,LAT  ! longitude [deg], latitude [deg]
-    integer  :: tloc     ! local time (1-24h)
-    real(RP) :: dsec     ! second [s]
-    real(RP) :: tahdiurnal ! temporal AH diurnal profile
+    real(RP) :: LON, LAT  ! longitude [deg], latitude [deg]
 
-    real(RP) :: SSGD     ! downward direct short wave radiation   [W/m/m]
-    real(RP) :: SSGQ     ! downward diffuse short wave radiation  [W/m/m]
+    real(RP) :: SSGD      ! downward direct short wave radiation   [W/m/m]
+    real(RP) :: SSGQ      ! downward diffuse short wave radiation  [W/m/m]
 
     real(RP) :: W, VFGS, VFGW, VFWG, VFWS, VFWW
-    real(RP) :: SX, SD, SQ, RX
-    real(RP) :: RHO
+    real(RP) :: SX, RX
 
     real(RP) :: UST, TST, QST
 
@@ -449,9 +441,7 @@ contains
     real(RP) :: LUP, LDN, RUP
     real(RP) :: SUP, SDN
 
-    real(RP) :: LNET, SNET, FLXUV, FLXTH, FLXHUM, FLXG
-    real(RP) :: SW                  ! shortwave radition          [W/m/m]
-    real(RP) :: LW                  ! longwave radition           [W/m/m]
+    real(RP) :: LNET, SNET, FLXUV
     real(RP) :: psim,psim2,psim10   ! similality stability shear function for momentum
     real(RP) :: psih,psih2,psih10   ! similality stability shear function for heat
 
@@ -463,11 +453,8 @@ contains
     ! real(RP) :: FAI        ! Latitude [rad]
 
     real(RP) :: SR, SB, SG, RR, RB, RG
-    real(RP) :: SR1, SB1, SB2, SG1, SG2
+    real(RP) :: SB1, SB2, SG1, SG2
     real(RP) :: RB1, RB2, RG1, RG2
-    real(RP) :: HR, ELER, G0R, FLXTHR, FLXHUMR
-    real(RP) :: HB, ELEB, G0B, FLXTHB, FLXHUMB
-    real(RP) :: HG, ELEG, G0G, FLXTHG, FLXHUMG
 
     real(RP) :: Z
     real(RP) :: QS0R
@@ -481,86 +468,56 @@ contains
 
     real(RP) :: XXX, X, CD, CH, CHU, XXX2, XXX10
 
-
     !-----------------------------------------------------------
     ! Set parameters
     !-----------------------------------------------------------
 
-    ! local time
-    LAT = XLAT / D2R
-    LON = XLON / D2R
+     ! local time
+     LAT = XLAT / D2R
+     LON = XLON / D2R
 
-    !tloc = mod((NOWDATE(4) + int(LON/15.0_RP)),24 )
-    !dsec = real(NOWDATE(5)*60.0_RP + NOWDATE(6)) / 3600.0_RP 
-    !if(tloc==0) tloc = 24
+     !if(.NOT.LSOLAR) then   ! Radiation scheme does not have SSGD and SSGQ.
+       SSGD = SRATIO * SSG   ! downward direct short wave radiation
+       SSGQ = SSG - SSGD     ! downward diffuse short wave radiation
+     !endif
 
-    ! Calculate AH data at LST
-    ! if(tloc==24)then
-    !   tahdiurnal = ( (1.0_RP-dsec) * ahdiurnal(tloc  ) &
-    !                + (       dsec) * ahdiurnal(1)      )
-    ! else
-    !   tahdiurnal = ( (1.0_RP-dsec) * ahdiurnal(tloc  ) &
-    !                + (       dsec) * ahdiurnal(tloc+1) )
-    ! endif
-    ! AH_t  = AH  * tahdiurnal
-    ! ALH_t = ALH * tahdiurnal
+     W    = 2.0_RP * 1.0_RP * HGT
+     VFGS = SVF
+     VFGW = 1.0_RP - SVF
+     VFWG = ( 1.0_RP - SVF ) * ( 1.0_RP - R ) / W
+     VFWS = VFWG
+     VFWW = 1.0_RP - 2.0_RP * VFWG
 
-    !print *,"AH_URB ",dsec, AH_t, AH*tahdiurnal
-    !print *,"ALH_URB",dsec, ALH_t, ALH*tahdiurnal
-
-    !if(.NOT.LSOLAR) then   ! Radiation scheme does not have SSGD and SSGQ.
-      SSGD = SRATIO * SSG
-      SSGQ = SSG - SSGD
-    !endif
-
-    W    = 2.0_RP * 1.0_RP * HGT
-    VFGS = SVF
-    VFGW = 1.0_RP - SVF
-    VFWG = ( 1.0_RP - SVF ) * ( 1.0_RP - R ) / W
-    VFWS = VFWG
-    VFWW = 1.0_RP - 2.0_RP * VFWG
-
-    !--- Convert unit from MKS to cgs
-
-    SX  = (SSGD+SSGQ) / 697.7_RP / 60.0_RP  ! downward short wave radition [ly/min]
-    SD  = SSGD        / 697.7_RP / 60.0_RP  ! downward direct short wave radiation
-    SQ  = SSGQ        / 697.7_RP / 60.0_RP  ! downward diffuse short wave radiation
-    RX  = LLG         / 697.7_RP / 60.0_RP  ! downward long wave radiation
-    RHO = RHOO * 0.001_RP                   ! air density at first atmospheric level
-
-
-    !--- calculate canopy wind
-    !call canopy_wind(ZA, UA, UC)
+     SX  = (SSGD+SSGQ)   ! downward short wave radition [W/m2]
+     RX  = LLG           ! downward long wave radiation
 
     !-----------------------------------------------------------
     ! Radiation : Net Short Wave Radiation at roof/wall/road
     !-----------------------------------------------------------
 
-    if( SSG > 0.0_RP ) then !  SSG is downward short
+     if( SSG > 0.0_RP ) then !  SSG is downward short
 
       ! currently we use no shadow effect model
       !!     IF(.NOT.SHADOW) THEN              ! no shadow effects model
 
-      SR1  = SX * ( 1.0_RP - ALBR )
       SG1  = SX * VFGS * ( 1.0_RP - ALBG )
       SB1  = SX * VFWS * ( 1.0_RP - ALBB )
       SG2  = SB1 * ALBB / ( 1.0_RP - ALBB ) * VFGW * ( 1.0_RP - ALBG )
       SB2  = SG1 * ALBG / ( 1.0_RP - ALBG ) * VFWG * ( 1.0_RP - ALBB )
 
-      SR   = SR1
+      SR   = SX * ( 1.0_RP - ALBR )
       SG   = SG1 + SG2
       SB   = SB1 + SB2
       SNET = R * SR + W * SB + RW * SG
 
-    else
+     else
 
       SR   = 0.0_RP
       SG   = 0.0_RP
       SB   = 0.0_RP
       SNET = 0.0_RP
 
-    end if
-
+     end if
 
     !-----------------------------------------------------------
     ! Set evaporation efficiency on roof/wall/road
@@ -592,17 +549,17 @@ contains
     BHR  = LOG(Z0R/Z0HR) / 0.4_RP
     RIBR = ( GRAV * 2.0_RP / (TA+TR) ) * (TA-TR) * (Z+Z0R) / (UA*UA)
 
-    call mos(XXXR,ALPHAR,CDR,BHR,RIBR,Z,Z0R,UA,TA,TR,RHO)
-    CHR  = ALPHAR / RHO / CP / UA
+    call mos(XXXR,ALPHAR,CDR,BHR,RIBR,Z,Z0R,UA,TA,TR,RHOO)
+    CHR  = ALPHAR / RHOO / CPdry / UA
 
     PS   = PRES / 100.0_RP               ! [hPa]
     ES   = 6.11_RP * exp( ( LH0/Rvap) * (TR-TEM00) / (TEM00*TR) )
     QS0R = 0.622_RP * ES / ( PS - 0.378_RP * ES )
 
-    RR   = EPSR * ( RX - SIG * (TR**4) / 60.0_RP )
-    HR   = RHO * CP * CHR * UA * (TR-TA) * 100.0_RP
-    ELER = RHO * EL * CHR * UA * BETR * (QS0R-QA) * 100.0_RP
-    G0R  = AKSR * (TR-TRL(1)) / (DZR(1)/2.0_RP)
+    RR   = EPSR * ( RX - STB * (TR**4) )
+    SHR  = RHOO * CPdry * CHR * UA * (TR-TA)
+    LHR  = RHOO * LH0 * CHR * UA * BETR * (QS0R-QA)
+    GHR  = AKSR * (TR-TRL(1)) / (DZR(1)/2.0_RP)
 
     !--- Wall and Road
 
@@ -610,166 +567,128 @@ contains
     BHC  = LOG(Z0C/Z0HC) / 0.4_RP
     RIBC = ( GRAV * 2.0_RP / (TA+TC) ) * (TA-TC) * (Z+Z0C) / (UA*UA)
 
-    call mos(XXXC,ALPHAC,CDC,BHC,RIBC,Z,Z0C,UA,TA,TC,RHO)
+    call mos(XXXC,ALPHAC,CDC,BHC,RIBC,Z,Z0C,UA,TA,TC,RHOO)
 
     ! empirical form
-    ALPHAB = RHO * CP * ( 6.15_RP + 4.18_RP * UC ) / 1200.0_RP
-    if( UC > 5.0_RP ) ALPHAB = RHO * CP * ( 7.51_RP * UC**0.78_RP ) / 1200.0_RP
+    ALPHAB = RHOO * CPdry * ( 6.15_RP + 4.18_RP * UC ) / 1200.0_RP
+    if( UC > 5.0_RP ) ALPHAB = RHOO * CPdry * ( 7.51_RP * UC**0.78_RP ) / 1200.0_RP
 
-    ALPHAG = RHO * CP * ( 6.15_RP + 4.18_RP * UC ) / 1200.0_RP
-    if( UC > 5.0_RP ) ALPHAG = RHO * CP * ( 7.51_RP * UC**0.78_RP ) / 1200.0_RP
+    ALPHAG = RHOO * CPdry * ( 6.15_RP + 4.18_RP * UC ) / 1200.0_RP
+    if( UC > 5.0_RP ) ALPHAG = RHOO * CPdry * ( 7.51_RP * UC**0.78_RP ) / 1200.0_RP
 
-    CHC = ALPHAC / RHO / CP / UA
-    CHB = ALPHAB / RHO / CP / UC
-    CHG = ALPHAG / RHO / CP / UC
+    CHC = ALPHAC / RHOO / CPdry / UA
+    CHB = ALPHAB / RHOO / CPdry / UC
+    CHG = ALPHAG / RHOO / CPdry / UC
 
-    RG1      = EPSG * ( RX * VFGS                             &
-                      + EPSB * VFGW * SIG * TB**4 / 60.0_RP  &
-                      - SIG * TG**4 / 60.0_RP                )
-    RB1      = EPSB * ( RX * VFWS         &
-                      + EPSG * VFWG * SIG * TG**4 / 60.0_RP &
-                      + EPSB * VFWW * SIG * TB**4 / 60.0_RP &
-                      - SIG * TB**4 / 60.0_RP               )
+    RG1      = EPSG * ( RX * VFGS                   &
+                      + EPSB * VFGW * STB * TB**4   &
+                      - STB * TG**4                )
+    RB1      = EPSB * ( RX * VFWS                   &
+                      + EPSG * VFWG * STB * TG**4   &
+                      + EPSB * VFWW * STB * TB**4   &
+                      - STB * TB**4                )
 
-    RG2      = EPSG * ( (1.0_RP-EPSB) * VFGW * VFWS * RX                                            &
-                      + (1.0_RP-EPSB) * VFGW * VFWG * EPSG * SIG * TG**4 /60.0_RP                   &
-                      + EPSB * (1.0_RP-EPSB) * VFGW * VFWW * SIG * TB**4 / 60.0_RP )
-    RB2      = EPSB * ( (1.0_RP-EPSG) * VFWG * VFGS * RX                                                           &
-                      + (1.0_RP-EPSG) * EPSB * VFGW * VFWG * SIG * (TB**4) / 60.0_RP                               &
-                      + (1.0_RP-EPSB) * VFWS * VFWW * RX                                                           &
-                      + (1.0_RP-EPSB) * VFWG * VFWW * SIG * EPSG * TG**4 / 60.0_RP                                 &
-                      + EPSB * (1.0_RP-EPSB) * VFWW * (1.0_RP-2.0_RP*VFWS) * SIG * TB**4 / 60.0_RP )
+    RG2      = EPSG * ( (1.0_RP-EPSB) * VFGW * VFWS * RX                  &
+                      + (1.0_RP-EPSB) * VFGW * VFWG * EPSG * STB * TG**4  &
+                      + EPSB * (1.0_RP-EPSB) * VFGW * VFWW * STB * TB**4  )
+    RB2      = EPSB * ( (1.0_RP-EPSG) * VFWG * VFGS * RX                                  &
+                      + (1.0_RP-EPSG) * EPSB * VFGW * VFWG * STB * TB**4                  &
+                      + (1.0_RP-EPSB) * VFWS * VFWW * RX                                  &
+                      + (1.0_RP-EPSB) * VFWG * VFWW * STB * EPSG * TG**4                  &
+                      + EPSB * (1.0_RP-EPSB) * VFWW * (1.0_RP-2.0_RP*VFWS) * STB * TB**4  )
 
     RG       = RG1 + RG2
     RB       = RB1 + RB2
 
-
     ES   = 6.11_RP * exp( (LH0/Rvap) * (TB-TEM00) / (TEM00*TB) )
     QS0B = 0.622_RP * ES / ( PS - 0.378_RP * ES )
 
-    HB   = RHO * CP * CHB * UC * (TB-TC) * 100.0_RP
-    ELEB = RHO * EL * CHB * UC * BETB * (QS0B-QC) * 100.0_RP
-    G0B  = AKSB * (TB-TBL(1)) / (DZB(1)/2.0_RP)
+    SHB  = RHOO * CPdry * CHB * UC * (TB-TC)
+    LHB  = RHOO * LH0 * CHB * UC * BETB * (QS0B-QC)
+    GHB  = AKSB * (TB-TBL(1)) / (DZB(1)/2.0_RP)
 
     ES   = 6.11_RP * exp( (LH0/Rvap) * (TG-TEM00) / (TEM00*TG) )
     QS0G = 0.622_RP * ES / ( PS - 0.378_RP * ES )
 
-    HG   = RHO * CP * CHG * UC * (TG-TC) * 100.0_RP
-    ELEG = RHO * EL * CHG * UC * BETG * (QS0G-QC) * 100.0_RP
-    G0G  = AKSG * (TG-TGL(1)) / (DZG(1)/2.0_RP)
-
-
-    FLXTHR  = HR / RHO / CP / 100.0_RP
-    FLXHUMR = ELER / RHO / EL / 100.0_RP
-    FLXTHB  = HB / RHO / CP / 100.0_RP
-    FLXHUMB = ELEB / RHO / EL / 100.0_RP
-    FLXTHG  = HG / RHO / CP / 100.0_RP
-    FLXHUMG = ELEG / RHO / EL / 100.0_RP
+    SHG  = RHOO * CPdry * CHG * UC * (TG-TC)
+    LHG  = RHOO * LH0 * CHG * UC * BETG * (QS0G-QC)
+    GHG  = AKSG * (TG-TGL(1)) / (DZG(1)/2.0_RP)
 
     !-----------------------------------------------------------
     ! Total Fluxes from Urban Canopy
     !-----------------------------------------------------------
 
-    FLXUV  = ( R*CDR + RW*CDC ) * UA * UA
-!    FLXTH  = ( R*FLXTHR  + W*FLXTHB  + RW*FLXTHG ) + AH_t/RHOO/CPdry
-!    FLXHUM = ( R*FLXHUMR + W*FLXHUMB + RW*FLXHUMG ) + ALH_t/RHOO/LH0
-    FLXTH  = ( R*FLXTHR  + W*FLXTHB  + RW*FLXTHG ) 
-    FLXHUM = ( R*FLXHUMR + W*FLXHUMB + RW*FLXHUMG )
-    FLXG   = ( R*G0R + W*G0B + RW*G0G )
-    LNET   = R*RR + W*RB + RW*RG
+     FLXUV  = ( R*CDR + RW*CDC ) * UA * UA
+     SH     =  R*SHR  + W*SHB  + RW*SHG               ! Sensible heat flux [W/m/m]
+     LH     =  R*LHR  + W*LHB  + RW*LHG               ! Latent heat flux [W/m/m]
+     GHFLX  =  -1.0_RP * ( R*GHR + W*GHB + RW*GHG )
+     LNET   =  R*RR   + W*RB   + RW*RG
 
     !-----------------------------------------------------------
-    ! Grid average
+    ! Net Radiation and surface albedo
     !-----------------------------------------------------------
-    !--- shortwave radiation
-    SDN =  R + W * (VFWS + VFGS * ALBG * VFWG)  + RW * (VFGS + VFWS * ALBB * VFGW)
-    SUP =  R * ALBR  &
-         + W * ( VFWS* ALBB + VFGS * ALBG * VFWG *ALBB ) &
-         + RW * ( VFGS * ALBG + VFWS * ALBB * VFGW *ALBG )
+     RNR = SR + RR        ! Net radiation on roof [W/m/m]
+     RNB = SB + RB        ! Net radiation on building [W/m/m]
+     RNG = SG + RG        ! Net radiation on ground [W/m/m]
 
-    ALBD_SW_grid = SUP / SDN
+     RN = (SNET+LNET)     ! Net radiation [W/m/m]
 
-    !--- longwave radiation
-    LDN =  R + W*VFWS + RW*VFGS
-    LUP =  R * (1.0_RP-EPSR) &
-         + W*( (1.0_RP-EPSB*VFWW)*(1.0_RP-EPSB)*VFWS - EPSB*VFWG*(1.0_RP-EPSG)*VFGS )  &
-         + RW*( (1.0_RP-EPSG)*VFGS - EPSG*(1.0_RP-VFGS)*(1.0_RP-EPSB)*VFWS )
+     !--- shortwave radiation
+     SDN =  R + W * (VFWS + VFGS * ALBG * VFWG)  + RW * (VFGS + VFWS * ALBB * VFGW)
+     SUP =  R  * ALBR  &
+          + W  * ( VFWS* ALBB + VFGS * ALBG * VFWG *ALBB ) &
+          + RW * ( VFGS * ALBG + VFWS * ALBB * VFGW *ALBG )
 
-    RUP = (LDN - LUP) * RX - LNET
-    ALBD_LW_grid = LUP / LDN
+     ALBD_SW_grid = SUP / SDN
 
+     !--- longwave radiation
+     LDN =  R + W*VFWS + RW*VFGS
+     LUP =  R  * (1.0_RP-EPSR) &
+          + W  * ( (1.0_RP-EPSB*VFWW)*(1.0_RP-EPSB)*VFWS - EPSB*VFWG*(1.0_RP-EPSG)*VFGS )  &
+          + RW * ( (1.0_RP-EPSG)*VFGS - EPSG*(1.0_RP-VFGS)*(1.0_RP-EPSB)*VFWS )
 
-    !-----------------------------------------------------------
-    ! Convert Unit: FLUXES and u* T* q*  [cgs] --> [MKS]
-    !-----------------------------------------------------------
+     RUP = (LDN - LUP) * RX - LNET
+     ALBD_LW_grid = LUP / LDN
 
-    SH = FLXTH  * RHOO * CPdry               ! Sensible heat flux          [W/m/m]
-    LH = FLXHUM * RHOO * LH0                 ! Latent heat flux            [W/m/m]
-    LW = LLG - ( LNET * 697.7_RP * 60.0_RP ) ! Upward longwave radiation   [W/m/m]
-    SW = SSG - ( SNET * 697.7_RP * 60.0_RP ) ! Upward shortwave radiation  [W/m/m]
-
-    GHFLX  = -FLXG * 697.7_RP * 60.0_RP          ! [W/m/m]
-
-    RN = (SNET+LNET) * 697.7_RP * 60.0_RP    ! Net radiation [W/m/m]
-
-    RUP = RUP * 697.7_RP * 60.0_RP        ! Upward longwave = sig*T**4 [W/m/m]
-
-    SHR = FLXTHR * RHOO * CPdry           ! Sensible heat flux on roof [W/m/m]
-    SHB = FLXTHB * RHOO * CPdry           ! Sensible heat flux on wall [W/m/m]
-    SHG = FLXTHG * RHOO * CPdry           ! Sensible heat flux on road [W/m/m]
-    LHR = FLXHUMR * RHOO * LH0           ! Latent heat flux on road [W/m/m]
-    LHB = FLXHUMB * RHOO * LH0           ! Latent heat flux on wall [W/m/m]
-    LHG = FLXHUMG * RHOO * LH0           ! Latent heat flux on road [W/m/m]
-    GHR = -1.0_RP * G0R * 697.7_RP * 60.0_RP          ! Ground heat flux on roof [W/m/m]
-    GHB = -1.0_RP * G0B * 697.7_RP * 60.0_RP          ! Ground heat flux on wall [W/m/m]
-    GHG = -1.0_RP * G0G * 697.7_RP * 60.0_RP          ! Ground heat flux on road [W/m/m]
-    RNR = (SR + RR) * 697.7_RP * 60.0_RP     ! Net radiation on roof [W/m/m]
-    RNB = (SB + RB) * 697.7_RP * 60.0_RP     ! Net radiation on building [W/m/m]
-    RNG = (SG + RG) * 697.7_RP * 60.0_RP     ! Net radiation on ground [W/m/m]
-
-    UST = sqrt( FLXUV )                      ! u* [m/s]
-    TST = -FLXTH / UST                       ! T* [K]
-    QST = -FLXHUM / UST                      ! q* [-]
+     UST = sqrt( FLXUV )              ! u* [m/s]
+     TST = -SH / RHOO / CPdry / UST   ! T* [K]
+     QST = -LH / RHOO / LH0 / UST     ! q* [-]
 
     !-----------------------------------------------------------
     !  diagnostic GRID AVERAGED TS from upward logwave
     !-----------------------------------------------------------
 
-    RTS = ( RUP / STB / ( 1.0_RP-ALBD_LW_grid) )**0.25
+     RTS = ( RUP / STB / ( 1.0_RP-ALBD_LW_grid) )**0.25
 
     !-----------------------------------------------------------
     !  diagnostic grid average U10, V10, T2, Q2 from urban
     !  Below method would be better to be improved. This is tentative method.
     !-----------------------------------------------------------
 
-    call cal_psi(XXX,psim,psih)
+     call cal_psi(XXX,psim,psih)
 
-    XXX2 = (2.0_RP/Z) * XXX
-    call cal_psi(XXX2,psim2,psih2)
+     XXX2 = (2.0_RP/Z) * XXX
+     call cal_psi(XXX2,psim2,psih2)
 
-    XXX10 = (10.0_RP/Z) * XXX
-    call cal_psi(XXX10,psim10,psih10)
+     XXX10 = (10.0_RP/Z) * XXX
+     call cal_psi(XXX10,psim10,psih10)
  
-    !U10 = U1 * ((log(10.0_RP/Z0C)-psim10)/(log(Z/Z0C)-psim))  ! u at 10 m [m/s]
-    !V10 = V1 * ((log(10.0_RP/Z0C)-psim10)/(log(Z/Z0C)-psim))  ! v at 10 m [m/s]
-    U10 = U1 * log(10.0_RP/Z0C) / log(Z/Z0C)
-    V10 = V1 * log(10.0_RP/Z0C) / log(Z/Z0C)
+     !U10 = U1 * ((log(10.0_RP/Z0C)-psim10)/(log(Z/Z0C)-psim))  ! u at 10 m [m/s]
+     !V10 = V1 * ((log(10.0_RP/Z0C)-psim10)/(log(Z/Z0C)-psim))  ! v at 10 m [m/s]
+     U10 = U1 * log(10.0_RP/Z0C) / log(Z/Z0C)
+     V10 = V1 * log(10.0_RP/Z0C) / log(Z/Z0C)
 
-    T2  = RTS + (TA-RTS)*((log(2.0_RP/Z0HC)-psih2)/(log(Z/Z0HC)-psih))
-    ! Q2 = QS + (QA-QS)*((log(2.0_RP/Z0HC)-psih2)/(log(Z/Z0HC)-psih))  ! humidity at 2 m [-]
-    ! Q2  = QA * ((log(2.0_RP/Z0HC)-psih2)/(log(Z/Z0HC)-psih))  ! humidity at 2 m [-]OB
-    Q2 = QC
-
-    !print *,'U10,V10,T2,Q2,QC',U10,V10,T2,Q2,QC
+     T2  = RTS + (TA-RTS)*((log(2.0_RP/Z0HC)-psih2)/(log(Z/Z0HC)-psih))
+     ! Q2 = QS + (QA-QS)*((log(2.0_RP/Z0HC)-psih2)/(log(Z/Z0HC)-psih))  ! humidity at 2 m [-]
+     ! Q2  = QA * ((log(2.0_RP/Z0HC)-psih2)/(log(Z/Z0HC)-psih))  ! humidity at 2 m [-]OB
+     Q2 = QC
 
     !-----------------------------------------------------------
-    ! add anthropogenic heat fluxes
+    ! Add anthropogenic heat fluxes
     !-----------------------------------------------------------
 
-    FLXTH  = FLXTH  + AH_t/RHOO/CPdry
-    FLXHUM = FLXHUM + ALH_t/RHOO/LH0
-    SH     = FLXTH  * RHOO * CPdry               ! Sensible heat flux          [W/m/m]
-    LH     = FLXHUM * RHOO * LH0                 ! Latent heat flux            [W/m/m]
+     SH     = SH + AH_t     ! Sensible heat flux  [W/m/m]
+     LH     = LH + ALH_t    ! Latent heat flux    [W/m/m]
 
     return
   end subroutine CPL_AtmUrb_bulk_restart
@@ -910,9 +829,6 @@ contains
     real(RP), intent(out)   :: GHR, GHB, GHG
 
     !-- parameters
-    real(RP), parameter     :: CP  = 0.24_RP     ! heat capacity of dry air  [cgs unit]
-    real(RP), parameter     :: EL  = 583.0_RP    ! latent heat of vaporation [cgs unit]
-    real(RP), parameter     :: SIG = 8.17E-11_RP ! stefun bolzman constant   [cgs unit]
     real(RP), parameter     :: SRATIO = 0.75_RP  ! ratio between direct/total solar [-]
     real(RP), parameter     :: TFa      = 0.5_RP      ! factor a in Tomita (2009)
     real(RP), parameter     :: TFb      = 1.1_RP      ! factor b in Tomita (2009)
@@ -934,8 +850,7 @@ contains
     real(RP) :: SSGQ     ! downward diffuse short wave radiation  [W/m/m]
 
     real(RP) :: W, VFGS, VFGW, VFWG, VFWS, VFWW
-    real(RP) :: SX, SD, SQ, RX
-    real(RP) :: RHO
+    real(RP) :: SX, RX 
 
     real(RP) :: TRP = 350.0_RP   ! TRP: at previous time step [K]
     real(RP) :: TBP = 350.0_RP   ! TBP: at previous time step [K]
@@ -949,14 +864,12 @@ contains
     real(RP) :: ROFFR, ROFFB, ROFFG ! runoff [kg/m2]
 
     real(RP) :: PS         ! Surface Pressure [Pa]
-    real(RP) :: TAV        ! Vertial Temperature [K]
-    real(RP) :: qmix       ! mixing ratio [kg/kg]
     real(RP) :: ES
 
     real(RP) :: LUP, LDN, RUP
     real(RP) :: SUP, SDN
 
-    real(RP) :: LNET, SNET, FLXUV, FLXTH, FLXHUM, FLXG
+    real(RP) :: LNET, SNET, FLXUV
     real(RP) :: SW     ! shortwave radition           [W/m/m]
     real(RP) :: LW     ! longwave radition           [W/m/m]
     real(RP) :: psim,psim2,psim10   ! similality stability shear function for momentum
@@ -972,9 +885,9 @@ contains
     real(RP) :: SR, SB, SG, RR, RB, RG
     real(RP) :: SR1, SB1, SB2, SG1, SG2
     real(RP) :: RB1, RB2, RG1, RG2
-    real(RP) :: HR, ELER, G0R, FLXTHR, FLXHUMR
-    real(RP) :: HB, ELEB, G0B, FLXTHB, FLXHUMB
-    real(RP) :: HG, ELEG, G0G, FLXTHG, FLXHUMG
+    real(RP) :: HR, ELER, G0R
+    real(RP) :: HB, ELEB, G0B
+    real(RP) :: HG, ELEG, G0G
 
     real(RP) :: Z
     real(RP) :: QS0R, DQS0RDTR, DESDT
@@ -1018,9 +931,6 @@ contains
     LON = XLON / D2R
 
     TIME = real(NOWDATE(4)*3600.0_RP + NOWDATE(5)*60.0_RP + NOWDATE(6))
-    !tloc = mod((int(TIME/3600.0_RP) + int(LON/15.0_RP)),24 )
-    !dsec = mod(TIME,3600.0_RP) / 3600.0_RP 
-
     tloc = mod((NOWDATE(4) + int(LON/15.0_RP)),24 )
     dsec = real(NOWDATE(5)*60.0_RP + NOWDATE(6)) / 3600.0_RP 
     if(tloc==0) tloc = 24
@@ -1045,8 +955,8 @@ contains
     endif
 
     !if(.NOT.LSOLAR) then   ! Radiation scheme does not have SSGD and SSGQ.
-      SSGD = SRATIO * SSG
-      SSGQ = SSG - SSGD
+      SSGD = SRATIO * SSG   ! downward direct short wave radiation
+      SSGQ = SSG - SSGD     ! downward diffuse short wave radiation
     !endif
 
     W    = 2.0_RP * 1.0_RP * HGT
@@ -1056,13 +966,8 @@ contains
     VFWS = VFWG
     VFWW = 1.0_RP - 2.0_RP * VFWG
 
-    !--- Convert unit from MKS to cgs
-
-    SX  = (SSGD+SSGQ) / 697.7_RP / 60.0_RP  ! downward short wave radition [ly/min]
-    SD  = SSGD        / 697.7_RP / 60.0_RP  ! downward direct short wave radiation
-    SQ  = SSGQ        / 697.7_RP / 60.0_RP  ! downward diffuse short wave radiation
-    RX  = LLG         / 697.7_RP / 60.0_RP  ! downward long wave radiation
-    RHO = RHOO * 0.001_RP                   ! air density at first atmospheric level
+    SX  = (SSGD+SSGQ)   ! downward short wave radition [W/m/m]
+    RX  = LLG           ! downward long wave radiation
 
     !--- Renew surface and layer temperatures
 
@@ -1112,9 +1017,6 @@ contains
     !-----------------------------------------------------------
 
     !!--- calculate rain amount remaining on the surface
-    !RAINR = max(0.0_RP, RAINR-(ELER/EL)*DELT*10.0_RP)   ! from cgs to MKS [kg/m/m = mm]
-    !RAINB = max(0.0_RP, RAINB-(ELEB/EL)*DELT*10.0_RP)   ! from cgs to MKS [kg/m/m = mm]
-    !RAING = max(0.0_RP, RAING-(ELEG/EL)*DELT*10.0_RP)   ! from cgs to MKS [kg/m/m = mm]
     RAINR = max(0.0_RP, RAINR-(LHR/LH0)*DELT)   ! [kg/m/m = mm]
     RAINB = max(0.0_RP, RAINB-(LHB/LH0)*DELT)   ! [kg/m/m = mm]
     RAING = max(0.0_RP, RAING-(LHG/LH0)*DELT)   ! [kg/m/m = mm]
@@ -1144,17 +1046,12 @@ contains
     BHR  = LOG(Z0R/Z0HR) / 0.4_RP
     RIBR = ( GRAV * 2.0_RP / (TA+TRP) ) * (TA-TRP) * (Z+Z0R) / (UA*UA)
 
-    call mos(XXXR,ALPHAR,CDR,BHR,RIBR,Z,Z0R,UA,TA,TRP,RHO)
+    call mos(XXXR,ALPHAR,CDR,BHR,RIBR,Z,Z0R,UA,TA,TRP,RHOO)
+    CHR = ALPHAR / RHOO / CPdry / UA
 
-    CHR = ALPHAR / RHO / CP / UA
-
-    qmix = QA / ( 1.0_RP - QA )
-    TAV = TA * ( 1.0_RP + 0.61_RP * qmix )
-    !PS  = RHOO * Rdry * TAV / 100.0_RP ! [hPa]
     PS   =  PRES / 100.0_RP               ! [hPa]
 
     ! TR  Solving Non-Linear Equation by Newton-Rapson
-
 
     redf   = 1.0_RP
     oldF   = 1.0E+5_RP
@@ -1163,24 +1060,24 @@ contains
 
       ! update of CHR using updated TRP
       RIBR = ( GRAV * 2.0_RP / (TA+TRP) ) * (TA-TRP) * (Z+Z0R) / (UA*UA)
-      call mos(XXXR,ALPHAR,CDR,BHR,RIBR,Z,Z0R,UA,TA,TRP,RHO)
-      CHR = ALPHAR / RHO / CP / UA
+      call mos(XXXR,ALPHAR,CDR,BHR,RIBR,Z,Z0R,UA,TA,TRP,RHOO)
+      CHR = ALPHAR / RHOO / CPdry / UA
 
       ES       = 6.11_RP * exp( ( LH0/Rvap) * (TRP-TEM00) / (TEM00*TRP) )
       DESDT    = (LH0/Rvap) * ES / (TRP**2)
       QS0R     = 0.622_RP * ES / ( PS - 0.378_RP * ES )
       DQS0RDTR = DESDT * 0.622_RP * PS / ( ( PS - 0.378_RP * ES )**2 )
 
-      RR       = EPSR * ( RX - SIG * (TRP**4) / 60.0_RP )
-      HR       = RHO * CP * CHR * UA * (TRP-TA) * 100.0_RP
-      ELER     = RHO * EL * CHR * UA * BETR * (QS0R-QA) * 100.0_RP
+      RR       = EPSR * ( RX - STB * (TRP**4)  )
+      HR       = RHOO * CPdry * CHR * UA * (TRP-TA)
+      ELER     = RHOO * LH0 * CHR * UA * BETR * (QS0R-QA)
       G0R      = AKSR * (TRP-TRL(1)) / (DZR(1)/2.0_RP)
 
       F        = SR + RR - HR - ELER - G0R
 
-      DRRDTR   = ( -4.0_RP * EPSR * SIG * TRP**3 ) / 60.0_RP
-      DHRDTR   = RHO * CP * CHR * UA * 100.0_RP
-      DELERDTR = RHO * EL * CHR * UA * BETR * DQS0RDTR * 100.0_RP
+      DRRDTR   = ( -4.0_RP * EPSR * STB * TRP**3 )
+      DHRDTR   = RHOO * CPdry * CHR * UA
+      DELERDTR = RHOO * LH0 * CHR * UA * BETR * DQS0RDTR
       DG0RDTR  = 2.0_RP * AKSR / DZR(1)
 
       DFDT     = DRRDTR - DHRDTR - DELERDTR - DG0RDTR
@@ -1228,32 +1125,25 @@ contains
     !print *,'F   ',iteration-1,abs(F),abs(DTR)
 
     !-----------------------------------------
-    !!  calculate temperature in building/road
-    !!  multi-layer heat equation model
-    !!  Solving Heat Equation by Tri Diagonal Matrix Algorithm
+    !  calculate temperature in building/road
+    !  multi-layer heat equation model
+    !  Solving Heat Equation by Tri Diagonal Matrix Algorithm
     !-----------------------------------------
 
     call multi_layer(UKE,BOUND,G0R,CAPR,AKSR,TRL,DZR,DELT,TRLEND)
 
     !--- update only fluxes ----
     RIBR = ( GRAV * 2.0_RP / (TA+TR) ) * (TA-TR) * (Z+Z0R) / (UA*UA)
-    call mos(XXXR,ALPHAR,CDR,BHR,RIBR,Z,Z0R,UA,TA,TR,RHO)
-    CHR = ALPHAR / RHO / CP / UA
+    call mos(XXXR,ALPHAR,CDR,BHR,RIBR,Z,Z0R,UA,TA,TR,RHOO)
+    CHR = ALPHAR / RHOO / CPdry / UA
     
     ES       = 6.11_RP * exp( ( LH0/Rvap) * (TR-TEM00) / (TEM00*TR) )
     QS0R     = 0.622_RP * ES / ( PS - 0.378_RP * ES )
 
-    RR       = EPSR * ( RX - SIG * (TR**4) / 60.0_RP )
-    HR       = RHO * CP * CHR * UA * (TR-TA) * 100.0_RP
-    ELER     = RHO * EL * CHR * UA * BETR * (QS0R-QA) * 100.0_RP
+    RR       = EPSR * ( RX - STB * (TR**4) )
+    HR       = RHOO * CPdry * CHR * UA * (TR-TA)
+    ELER     = RHOO * LH0 * CHR * UA * BETR * (QS0R-QA)
     G0R      = AKSR * (TR-TRL(1)) / (DZR(1)/2.0_RP)
-    !----
-
-    FLXTHR  = HR / RHO / CP / 100.0_RP
-    FLXHUMR = ELER / RHO / EL / 100.0_RP
-
-    !!!--- calculate the rain amount remaining on the surface
-    !RAINR = max(0.0_RP, RAINR-(ELER/EL)*DELT*10.0_RP)   ! from cgs to MKS [kg/m/m = mm]
 
     !--------------------------------------------------
     !   Wall and Road
@@ -1263,18 +1153,18 @@ contains
     BHC  = LOG(Z0C/Z0HC) / 0.4_RP
     RIBC = ( GRAV * 2.0_RP / (TA+TCP) ) * (TA-TCP) * (Z+Z0C) / (UA*UA)
 
-    call mos(XXXC,ALPHAC,CDC,BHC,RIBC,Z,Z0C,UA,TA,TCP,RHO)
+    call mos(XXXC,ALPHAC,CDC,BHC,RIBC,Z,Z0C,UA,TA,TCP,RHOO)
 
     ! empirical form
-    ALPHAB = RHO * CP * ( 6.15_RP + 4.18_RP * UC ) / 1200.0_RP
-    if( UC > 5.0_RP ) ALPHAB = RHO * CP * ( 7.51_RP * UC**0.78_RP ) / 1200.0_RP
+    ALPHAB = RHOO * CPdry * ( 6.15_RP + 4.18_RP * UC ) / 1200.0_RP
+    if( UC > 5.0_RP ) ALPHAB = RHOO * CPdry * ( 7.51_RP * UC**0.78_RP ) / 1200.0_RP
 
-    ALPHAG = RHO * CP * ( 6.15_RP + 4.18_RP * UC ) / 1200.0_RP
-    if( UC > 5.0_RP ) ALPHAG = RHO * CP * ( 7.51_RP * UC**0.78_RP ) / 1200.0_RP
+    ALPHAG = RHOO * CPdry * ( 6.15_RP + 4.18_RP * UC ) / 1200.0_RP
+    if( UC > 5.0_RP ) ALPHAG = RHOO * CPdry * ( 7.51_RP * UC**0.78_RP ) / 1200.0_RP
 
-    CHC = ALPHAC / RHO / CP / UA
-    CHB = ALPHAB / RHO / CP / UC
-    CHG = ALPHAG / RHO / CP / UC
+    CHC = ALPHAC / RHOO / CPdry / UA
+    CHB = ALPHAB / RHOO / CPdry / UC
+    CHG = ALPHAG / RHOO / CPdry / UC
 
 
     ! TB,TG  Solving Non-Linear Simultaneous Equation by Newton-Rapson
@@ -1283,7 +1173,7 @@ contains
 
       ! update of CHC using updated TCP
       RIBC = ( GRAV * 2.0_RP / (TA+TCP) ) * (TA-TCP) * (Z+Z0C) / (UA*UA)
-      call mos(XXXC,ALPHAC,CDC,BHC,RIBC,Z,Z0C,UA,TA,TCP,RHO)
+      call mos(XXXC,ALPHAC,CDC,BHC,RIBC,Z,Z0C,UA,TA,TCP,RHOO)
 
       ES       = 6.11_RP * exp( (LH0/Rvap) * (TBP-TEM00) / (TEM00*TBP) )
       DESDT    = (LH0/Rvap) * ES / (TBP**2)
@@ -1295,72 +1185,72 @@ contains
       QS0G     = 0.622_RP * ES / ( PS - 0.378_RP * ES )
       DQS0GDTG = DESDT * 0.622_RP * PS / ( ( PS - 0.378_RP * ES )**2 )
 
-      RG1      = EPSG * ( RX * VFGS                             &
-                        + EPSB * VFGW * SIG * TBP**4 / 60.0_RP  &
-                        - SIG * TGP**4 / 60.0_RP                )
+      RG1      = EPSG * ( RX * VFGS                   &
+                        + EPSB * VFGW * STB * TBP**4  &
+                        - STB * TGP**4                )
 
-      RB1      = EPSB * ( RX * VFWS         &
-                        + EPSG * VFWG * SIG * TGP**4 / 60.0_RP &
-                        + EPSB * VFWW * SIG * TBP**4 / 60.0_RP &
-                        - SIG * TBP**4 / 60.0_RP               )
+      RB1      = EPSB * ( RX * VFWS                   &
+                        + EPSG * VFWG * STB * TGP**4  &
+                        + EPSB * VFWW * STB * TBP**4  &
+                        - STB * TBP**4                )
 
-      RG2      = EPSG * ( (1.0_RP-EPSB) * VFGW * VFWS * RX                                            &
-                        + (1.0_RP-EPSB) * VFGW * VFWG * EPSG * SIG * TGP**4 /60.0_RP                  &
-                        + EPSB * (1.0_RP-EPSB) * VFGW * VFWW * SIG * TBP**4 / 60.0_RP )
+      RG2      = EPSG * ( (1.0_RP-EPSB) * VFGW * VFWS * RX                   &
+                        + (1.0_RP-EPSB) * VFGW * VFWG * EPSG * STB * TGP**4  &
+                        + EPSB * (1.0_RP-EPSB) * VFGW * VFWW * STB * TBP**4  )
 
-!      RB2      = EPSB * ( (1.0_RP-EPSG) * VFWG * VFGS * RX                                                            &
-!                        + (1.0_RP-EPSG) * EPSB * VFGW * VFWG * SIG * (TBP**4) / 60.0_RP                               &
-!                        + (1.0_RP-EPSB) * VFWS * (1.0_RP-2.0_RP*VFWS) * RX                                            &
-!!                       + (1.0_RP-EPSB) * VFWG * (1.0_RP-2.0_RP*VFWS) * EPSG * SIG * EPSG * TGP**4 / 60.0_RP          &
-!                        + EPSB * (1.0_RP-EPSB) * (1.0_RP-2.0_RP*VFWS) * (1.0_RP-2.0_RP*VFWS) * SIG * TBP**4 / 60.0_RP )
+      !RB2      = EPSB * ( (1.0_RP-EPSG) * VFWG * VFGS * RX                                                            &
+      !                  + (1.0_RP-EPSG) * EPSB * VFGW * VFWG * SIG * (TBP**4) / 60.0_RP                               &
+      !                  + (1.0_RP-EPSB) * VFWS * (1.0_RP-2.0_RP*VFWS) * RX                                            &
+      !!                 + (1.0_RP-EPSB) * VFWG * (1.0_RP-2.0_RP*VFWS) * EPSG * SIG * EPSG * TGP**4 / 60.0_RP          &
+      !                  + EPSB * (1.0_RP-EPSB) * (1.0_RP-2.0_RP*VFWS) * (1.0_RP-2.0_RP*VFWS) * SIG * TBP**4 / 60.0_RP )
 
-      RB2      = EPSB * ( (1.0_RP-EPSG) * VFWG * VFGS * RX                                                            &
-                        + (1.0_RP-EPSG) * EPSB * VFGW * VFWG * SIG * (TBP**4) / 60.0_RP                               &
-                        + (1.0_RP-EPSB) * VFWS * VFWW * RX                                                            &
-                        + (1.0_RP-EPSB) * VFWG * VFWW * SIG * EPSG * TGP**4 / 60.0_RP                                 &
-                        + EPSB * (1.0_RP-EPSB) * VFWW * (1.0_RP-2.0_RP*VFWS) * SIG * TBP**4 / 60.0_RP )
+      RB2      = EPSB * ( (1.0_RP-EPSG) * VFWG * VFGS * RX                                   &
+                        + (1.0_RP-EPSG) * EPSB * VFGW * VFWG * STB * TBP**4                  &
+                        + (1.0_RP-EPSB) * VFWS * VFWW * RX                                   &
+                        + (1.0_RP-EPSB) * VFWG * VFWW * STB * EPSG * TGP**4                  &
+                        + EPSB * (1.0_RP-EPSB) * VFWW * (1.0_RP-2.0_RP*VFWS) * STB * TBP**4  )
 
       RG       = RG1 + RG2
       RB       = RB1 + RB2
 
 
-      DRBDTB1  = EPSB * ( 4.0_RP * EPSB * SIG * TBP**3 * VFWW - 4.0_RP * SIG * TBP**3 ) / 60.0_RP
-      DRBDTG1  = EPSB * ( 4.0_RP * EPSG * SIG * TGP**3 * VFWG ) / 60.0_RP
-      DRBDTB2  = EPSB * ( 4.0_RP * (1.0_RP-EPSG) * EPSB * SIG * TBP**3 * VFGW * VFWG &
-                        + 4.0_RP * EPSB * (1.0_RP-EPSB) * SIG * TBP**3 * VFWW * VFWW ) / 60.0_RP
-      DRBDTG2  = EPSB * ( 4.0_RP * (1.0_RP-EPSB) * EPSG * SIG * TGP**3 * VFWG * VFWW ) / 60.0_RP
+      DRBDTB1  = EPSB * ( 4.0_RP * EPSB * STB * TBP**3 * VFWW - 4.0_RP * STB * TBP**3 )
+      DRBDTG1  = EPSB * ( 4.0_RP * EPSG * STB * TGP**3 * VFWG )
+      DRBDTB2  = EPSB * ( 4.0_RP * (1.0_RP-EPSG) * EPSB * STB * TBP**3 * VFGW * VFWG &
+                        + 4.0_RP * EPSB * (1.0_RP-EPSB) * STB * TBP**3 * VFWW * VFWW )
+      DRBDTG2  = EPSB * ( 4.0_RP * (1.0_RP-EPSB) * EPSG * STB * TGP**3 * VFWG * VFWW )
 
-      DRGDTB1  = EPSG * ( 4.0_RP * EPSB * SIG * TBP**3 * VFGW ) / 60.0_RP
-      DRGDTG1  = EPSG * ( -4.0_RP * SIG * TGP**3 ) / 60.0_RP
-      DRGDTB2  = EPSG * ( 4.0_RP * EPSB * (1.0_RP-EPSB) * SIG * TBP**3 * VFWW * VFGW ) / 60.0_RP
-      DRGDTG2  = EPSG * ( 4.0_RP * (1.0_RP-EPSB) * EPSG * SIG * TGP**3 * VFWG * VFGW ) / 60.0_RP
+      DRGDTB1  = EPSG * ( 4.0_RP * EPSB * STB * TBP**3 * VFGW )
+      DRGDTG1  = EPSG * ( -4.0_RP * STB * TGP**3 )
+      DRGDTB2  = EPSG * ( 4.0_RP * EPSB * (1.0_RP-EPSB) * STB * TBP**3 * VFWW * VFGW )
+      DRGDTG2  = EPSG * ( 4.0_RP * (1.0_RP-EPSB) * EPSG * STB * TGP**3 * VFWG * VFGW )
 
       DRBDTB   = DRBDTB1 + DRBDTB2
       DRBDTG   = DRBDTG1 + DRBDTG2
       DRGDTB   = DRGDTB1 + DRGDTB2
       DRGDTG   = DRGDTG1 + DRGDTG2
 
-      HB       = RHO * CP * CHB * UC * (TBP-TCP) * 100.0_RP
-      HG       = RHO * CP * CHG * UC * (TGP-TCP) * 100.0_RP
+      HB       = RHOO * CPdry * CHB * UC * (TBP-TCP)
+      HG       = RHOO * CPdry * CHG * UC * (TGP-TCP)
 
       DTCDTB   = W  * ALPHAB / ( RW*ALPHAC + RW*ALPHAG + W*ALPHAB )
       DTCDTG   = RW * ALPHAG / ( RW*ALPHAC + RW*ALPHAG + W*ALPHAB )
 
-      DHBDTB   = RHO * CP * CHB * UC * (1.0_RP-DTCDTB) * 100.0_RP
-      DHBDTG   = RHO * CP * CHB * UC * (0.0_RP-DTCDTG) * 100.0_RP
-      DHGDTG   = RHO * CP * CHG * UC * (1.0_RP-DTCDTG) * 100.0_RP
-      DHGDTB   = RHO * CP * CHG * UC * (0.0_RP-DTCDTB) * 100.0_RP
+      DHBDTB   = RHOO * CPdry * CHB * UC * (1.0_RP-DTCDTB)
+      DHBDTG   = RHOO * CPdry * CHB * UC * (0.0_RP-DTCDTG)
+      DHGDTG   = RHOO * CPdry * CHG * UC * (1.0_RP-DTCDTG)
+      DHGDTB   = RHOO * CPdry * CHG * UC * (0.0_RP-DTCDTB)
 
-      ELEB     = RHO * EL * CHB * UC * BETB * (QS0B-QCP) * 100.0_RP
-      ELEG     = RHO * EL * CHG * UC * BETG * (QS0G-QCP) * 100.0_RP
+      ELEB     = RHOO * LH0 * CHB * UC * BETB * (QS0B-QCP)
+      ELEG     = RHOO * LH0 * CHG * UC * BETG * (QS0G-QCP)
 
       DQCDTB   = W  * ALPHAB * BETB * DQS0BDTB / ( RW*ALPHAC + RW*ALPHAG*BETG + W*ALPHAB*BETB )
       DQCDTG   = RW * ALPHAG * BETG * DQS0GDTG / ( RW*ALPHAC + RW*ALPHAG*BETG + W*ALPHAB*BETB )
 
-      DELEBDTB = RHO * EL * CHB * UC * BETB * (DQS0BDTB-DQCDTB) * 100.0_RP
-      DELEBDTG = RHO * EL * CHB * UC * BETB * (0.0_RP-DQCDTG) * 100.0_RP
-      DELEGDTG = RHO * EL * CHG * UC * BETG * (DQS0GDTG-DQCDTG) * 100.0_RP
-      DELEGDTB = RHO * EL * CHG * UC * BETG * (0.0_RP-DQCDTB) * 100.0_RP
+      DELEBDTB = RHOO * LH0 * CHB * UC * BETB * (DQS0BDTB-DQCDTB)
+      DELEBDTG = RHOO * LH0 * CHB * UC * BETB * (0.0_RP-DQCDTG)
+      DELEGDTG = RHOO * LH0 * CHG * UC * BETG * (DQS0GDTG-DQCDTG)
+      DELEGDTB = RHOO * LH0 * CHG * UC * BETG * (0.0_RP-DQCDTB)
 
       G0B      = AKSB * (TBP-TBL(1)) / (DZB(1)/2.0_RP)
       G0G      = AKSG * (TGP-TGL(1)) / (DZG(1)/2.0_RP)
@@ -1413,78 +1303,68 @@ contains
     !  Solving Heat Equation by Tri Diagonal Matrix Algorithm
     !-----------------------------------------------------------
 
-    call multi_layer(UKE,BOUND,G0B,CAPB,AKSB,TBL,DZB,DELT,TBLEND)
-    call multi_layer(UKE,BOUND,G0G,CAPG,AKSG,TGL,DZG,DELT,TGLEND)
+     call multi_layer(UKE,BOUND,G0B,CAPB,AKSB,TBL,DZB,DELT,TBLEND)
+     call multi_layer(UKE,BOUND,G0G,CAPG,AKSG,TGL,DZG,DELT,TGLEND)
 
     !--- update only fluxes ----
-    RIBC = ( GRAV * 2.0_RP / (TA+TC) ) * (TA-TC) * (Z+Z0C) / (UA*UA)
-    call mos(XXXC,ALPHAC,CDC,BHC,RIBC,Z,Z0C,UA,TA,TC,RHO)
+     RIBC = ( GRAV * 2.0_RP / (TA+TC) ) * (TA-TC) * (Z+Z0C) / (UA*UA)
+     call mos(XXXC,ALPHAC,CDC,BHC,RIBC,Z,Z0C,UA,TA,TC,RHOO)
 
-    RG1      = EPSG * ( RX * VFGS                             &
-                      + EPSB * VFGW * SIG * TB**4 / 60.0_RP  &
-                      - SIG * TG**4 / 60.0_RP                )
-    RB1      = EPSB * ( RX * VFWS         &
-                      + EPSG * VFWG * SIG * TG**4 / 60.0_RP &
-                      + EPSB * VFWW * SIG * TB**4 / 60.0_RP &
-                      - SIG * TB**4 / 60.0_RP               )
+     RG1      = EPSG * ( RX * VFGS                  &
+                       + EPSB * VFGW * STB * TB**4  &
+                       - STB * TG**4                )
+     RB1      = EPSB * ( RX * VFWS                  &
+                       + EPSG * VFWG * STB * TG**4  &
+                       + EPSB * VFWW * STB * TB**4  &
+                       - STB * TB**4                )
 
-    RG2      = EPSG * ( (1.0_RP-EPSB) * VFGW * VFWS * RX                                            &
-                      + (1.0_RP-EPSB) * VFGW * VFWG * EPSG * SIG * TG**4 /60.0_RP                   &
-                      + EPSB * (1.0_RP-EPSB) * VFGW * VFWW * SIG * TB**4 / 60.0_RP )
-    RB2      = EPSB * ( (1.0_RP-EPSG) * VFWG * VFGS * RX                                                           &
-                      + (1.0_RP-EPSG) * EPSB * VFGW * VFWG * SIG * (TB**4) / 60.0_RP                               &
-                      + (1.0_RP-EPSB) * VFWS * VFWW * RX                                                           &
-                      + (1.0_RP-EPSB) * VFWG * VFWW * SIG * EPSG * TG**4 / 60.0_RP                                 &
-                      + EPSB * (1.0_RP-EPSB) * VFWW * (1.0_RP-2.0_RP*VFWS) * SIG * TB**4 / 60.0_RP )
+     RG2      = EPSG * ( (1.0_RP-EPSB) * VFGW * VFWS * RX                  &
+                       + (1.0_RP-EPSB) * VFGW * VFWG * EPSG * STB * TG**4  &
+                       + EPSB * (1.0_RP-EPSB) * VFGW * VFWW * STB * TB**4  )
+     RB2      = EPSB * ( (1.0_RP-EPSG) * VFWG * VFGS * RX                                 &
+                       + (1.0_RP-EPSG) * EPSB * VFGW * VFWG * STB * TB**4                 &
+                       + (1.0_RP-EPSB) * VFWS * VFWW * RX                                 &
+                       + (1.0_RP-EPSB) * VFWG * VFWW * STB * EPSG * TG**4                 &
+                       + EPSB * (1.0_RP-EPSB) * VFWW * (1.0_RP-2.0_RP*VFWS) * STB * TB**4 )
 
-    RG       = RG1 + RG2
-    RB       = RB1 + RB2
+     RG       = RG1 + RG2
+     RB       = RB1 + RB2
 
-    ES   = 6.11_RP * exp( (LH0/Rvap) * (TB-TEM00) / (TEM00*TB) )
-    QS0B = 0.622_RP * ES / ( PS - 0.378_RP * ES )
+     ES   = 6.11_RP * exp( (LH0/Rvap) * (TB-TEM00) / (TEM00*TB) )
+     QS0B = 0.622_RP * ES / ( PS - 0.378_RP * ES )
 
-    HB   = RHO * CP * CHB * UC * (TB-TC) * 100.0_RP
-    ELEB = RHO * EL * CHB * UC * BETB * (QS0B-QC) * 100.0_RP
-    G0B  = AKSB * (TB-TBL(1)) / (DZB(1)/2.0_RP)
+     HB   = RHOO * CPdry * CHB * UC * (TB-TC)
+     ELEB = RHOO * LH0 * CHB * UC * BETB * (QS0B-QC)
+     G0B  = AKSB * (TB-TBL(1)) / (DZB(1)/2.0_RP)
 
-    ES   = 6.11_RP * exp( (LH0/Rvap) * (TG-TEM00) / (TEM00*TG) )
-    QS0G = 0.622_RP * ES / ( PS - 0.378_RP * ES )
+     ES   = 6.11_RP * exp( (LH0/Rvap) * (TG-TEM00) / (TEM00*TG) )
+     QS0G = 0.622_RP * ES / ( PS - 0.378_RP * ES )
 
-    HG   = RHO * CP * CHG * UC * (TG-TC) * 100.0_RP
-    ELEG = RHO * EL * CHG * UC * BETG * (QS0G-QC) * 100.0_RP
-    G0G  = AKSG * (TG-TGL(1)) / (DZG(1)/2.0_RP)
-    !----
-
-
-    FLXTHB  = HB / RHO / CP / 100.0_RP
-    FLXHUMB = ELEB / RHO / EL / 100.0_RP
-    FLXTHG  = HG / RHO / CP / 100.0_RP
-    FLXHUMG = ELEG / RHO / EL / 100.0_RP
-
-    !!!--- calculate rain amount remaining on the surface
-    !RAINB = max(0.0_RP, RAINB-(ELEB/EL)*DELT*10.0_RP)   ! from cgs to MKS [kg/m/m = mm]
-
-    !!!--- calculate rain amount remaining on the surface
-    !RAING = max(0.0_RP, RAING-(ELEG/EL)*DELT*10.0_RP)   ! from cgs to MKS [kg/m/m = mm]
+     HG   = RHOO * CPdry * CHG * UC * (TG-TC)
+     ELEG = RHOO * LH0 * CHG * UC * BETG * (QS0G-QC)
+     G0G  = AKSG * (TG-TGL(1)) / (DZG(1)/2.0_RP)
 
     !-----------------------------------------------------------
     ! Total Fluxes from Urban Canopy
     !-----------------------------------------------------------
 
     FLXUV  = ( R*CDR + RW*CDC ) * UA * UA
-!    FLXTH  = ( R*FLXTHR  + W*FLXTHB  + RW*FLXTHG ) + AH_t/RHOO/CPdry
-!    FLXHUM = ( R*FLXHUMR + W*FLXHUMB + RW*FLXHUMG ) + ALH_t/RHOO/LH0
-    FLXTH  = ( R*FLXTHR  + W*FLXTHB  + RW*FLXTHG )
-    FLXHUM = ( R*FLXHUMR + W*FLXHUMB + RW*FLXHUMG )
-    FLXG   = ( R*G0R + W*G0B + RW*G0G )
+    SH  = ( R*HR   + W*HB   + RW*HG )              ! Sensible heat flux   [W/m/m]
+    LH  = ( R*ELER + W*ELEB + RW*ELEG )            ! Latent heat flux     [W/m/m]
+    GHFLX  = -1.0_RP * ( R*G0R + W*G0B + RW*G0G )
     LNET   = R*RR + W*RB + RW*RG
 
     !-----------------------------------------------------------
     ! Grid average
     !-----------------------------------------------------------
+
+    LW = LLG -  LNET    ! Upward longwave radiation   [W/m/m]
+    SW = SSG -  SNET    ! Upward shortwave radiation  [W/m/m]
+    RN = (SNET+LNET)    ! Net radiation [W/m/m]
+
     !--- shortwave radiation
     SDN =  R + W * (VFWS + VFGS * ALBG * VFWG)  + RW * (VFGS + VFWS * ALBB * VFGW)
-    SUP =  R * ALBR  &
+    SUP =  R * ALBR                                      &
          + W * ( VFWS* ALBB + VFGS * ALBG * VFWG *ALBB ) &
          + RW * ( VFGS * ALBG + VFWS * ALBB * VFGW *ALBG )
 
@@ -1492,54 +1372,39 @@ contains
 
     !--- longwave radiation
     LDN = R + W*VFWS + RW*VFGS
-    LUP =  R * (1.0_RP-EPSR) &
+    LUP =  R * (1.0_RP-EPSR)                                                           &
          + W*( (1.0_RP-EPSB*VFWW)*(1.0_RP-EPSB)*VFWS - EPSB*VFWG*(1.0_RP-EPSG)*VFGS )  &
          + RW*( (1.0_RP-EPSG)*VFGS - EPSG*(1.0_RP-VFGS)*(1.0_RP-EPSB)*VFWS )
 
     RUP = (LDN - LUP) * RX - LNET
     ALBD_LW_grid = LUP / LDN
 
-!
-!    RUP =  R * (EPSR * SIG * (TR**4) / 60.0_RP) &
-!          + W * (EPSB*SIG*(TB**4)/60.0_RP - EPSB*EPSG*VFWG*SIG*(TG**4)/60.0_RP - EPSB*EPSB*VFWW*SIG*(TB**4)/60.0_RP   &
-!                 - EPSB *(1.0_RP-EPSG) * EPSB * VFGW * VFWG * SIG * (TB**4) / 60.0_RP                                 &
-!                 - EPSB *(1.0_RP-EPSB) * VFWG * VFWW * SIG * EPSG * (TG**4) / 60.0_RP                                 &
-!                 - EPSB * EPSB * (1.0_RP-EPSB) * VFWW * VFWW * SIG * (TB**4) / 60.0_RP )                              &
-!          + RW * (EPSG*SIG*(TG**4)/60.0_RP - EPSG * EPSB * VFGW * SIG * (TB**4) / 60.0_RP                             &
-!                 - EPSG * (1.0_RP-EPSB) * (1.0_RP-SVF) * VFWG * EPSG * SIG * TG**4 /60.0_RP                           &
-!                 - EPSG * EPSB * (1.0_RP-EPSB) * (1.0_RP-SVF) * VFWW * SIG * TB**4 / 60.0_RP )
-!
-    !-----------------------------------------------------------
-    ! Convert Unit: FLUXES and u* T* q*  [cgs] --> [MKS]
-    !-----------------------------------------------------------
 
-    SH = FLXTH  * RHOO * CPdry               ! Sensible heat flux          [W/m/m]
-    LH = FLXHUM * RHOO * LH0                 ! Latent heat flux            [W/m/m]
-    LW = LLG - ( LNET * 697.7_RP * 60.0_RP ) ! Upward longwave radiation   [W/m/m]
-    SW = SSG - ( SNET * 697.7_RP * 60.0_RP ) ! Upward shortwave radiation  [W/m/m]
+    ! RUP =  R * (EPSR * STB * TR**4 ) &
+    !      + W * (EPSB*STB*(TB**4) - EPSB*EPSG*VFWG*STB*(TG**4) - EPSB*EPSB*VFWW*STB*(TB**4)  &
+    !           - EPSB *(1.0_RP-EPSG) * EPSB * VFGW * VFWG * STB * (TB**4)         &
+    !           - EPSB *(1.0_RP-EPSB) * VFWG * VFWW * STB * EPSG * (TG**4)         &
+    !           - EPSB * EPSB * (1.0_RP-EPSB) * VFWW * VFWW * STB * (TB**4) )      &
+    !      + RW * (EPSG*STB*(TG**4) - EPSG * EPSB * VFGW * STB * (TB**4)             &
+    !           - EPSG * EPSB * (1.0_RP-EPSB) * (1.0_RP-SVF) * VFWW * STB * TB**4  )
 
-    GHFLX  = -FLXG * 697.7_RP * 60.0_RP          ! [W/m/m]
 
-    RN = (SNET+LNET) * 697.7_RP * 60.0_RP    ! Net radiation [W/m/m]
+    SHR = HR             ! Sensible heat flux on roof [W/m/m]
+    SHB = HB             ! Sensible heat flux on wall [W/m/m]
+    SHG = HG             ! Sensible heat flux on road [W/m/m]
+    LHR = ELER           ! Latent heat flux on road [W/m/m]
+    LHB = ELEB           ! Latent heat flux on wall [W/m/m]
+    LHG = ELEG           ! Latent heat flux on road [W/m/m]
+    GHR = -1.0_RP * G0R  ! Ground heat flux on roof [W/m/m]
+    GHB = -1.0_RP * G0B  ! Ground heat flux on wall [W/m/m]
+    GHG = -1.0_RP * G0G  ! Ground heat flux on road [W/m/m]
+    RNR = SR + RR        ! Net radiation on roof [W/m/m]
+    RNB = SB + RB        ! Net radiation on building [W/m/m]
+    RNG = SG + RG        ! Net radiation on ground [W/m/m]
 
-    RUP = RUP * 697.7_RP * 60.0_RP        ! Upward longwave = sig*T**4 [W/m/m]
-
-    SHR = FLXTHR * RHOO * CPdry           ! Sensible heat flux on roof [W/m/m]
-    SHB = FLXTHB * RHOO * CPdry           ! Sensible heat flux on wall [W/m/m]
-    SHG = FLXTHG * RHOO * CPdry           ! Sensible heat flux on road [W/m/m]
-    LHR = FLXHUMR * RHOO * LH0           ! Latent heat flux on road [W/m/m]
-    LHB = FLXHUMB * RHOO * LH0           ! Latent heat flux on wall [W/m/m]
-    LHG = FLXHUMG * RHOO * LH0           ! Latent heat flux on road [W/m/m]
-    GHR = -1.0_RP * G0R * 697.7_RP * 60.0_RP          ! Ground heat flux on roof [W/m/m]
-    GHB = -1.0_RP * G0B * 697.7_RP * 60.0_RP          ! Ground heat flux on wall [W/m/m]
-    GHG = -1.0_RP * G0G * 697.7_RP * 60.0_RP          ! Ground heat flux on road [W/m/m]
-    RNR = (SR + RR) * 697.7_RP * 60.0_RP     ! Net radiation on roof [W/m/m]
-    RNB = (SB + RB) * 697.7_RP * 60.0_RP     ! Net radiation on building [W/m/m]
-    RNG = (SG + RG) * 697.7_RP * 60.0_RP     ! Net radiation on ground [W/m/m]
-
-    UST = sqrt( FLXUV )                      ! u* [m/s]
-    TST = -FLXTH / UST                       ! T* [K]
-    QST = -FLXHUM / UST                      ! q* [-]
+    UST = sqrt( FLXUV )             ! u* [m/s]
+    TST = -SH / RHOO / CPdry / UST  ! T* [K]
+    QST = -LH / RHOO / LH0 / UST    ! q* [-]
 
     !-----------------------------------------------------------
     !  diagnostic GRID AVERAGED TS from heat flux
@@ -1549,18 +1414,12 @@ contains
     BHC  = LOG(Z0C/Z0HC) / 0.4_RP
     RIBC = ( GRAV * 2.0_RP / (TA+TSP) ) * (TA-TSP) * (Z+Z0C) / (UA*UA)
 
-    call mos(XXX,ALPHAC,CD,BHC,RIBC,Z,Z0C,UA,TA,TS,RHO)
+    call mos(XXX,ALPHAC,CD,BHC,RIBC,Z,Z0C,UA,TA,TS,RHOO)
 
-    CHU = (ALPHAC / CP / RHO) * (CPdry * RHOO)  ! [cgs -> MKS]
+    CHU = ALPHAC   ! [cgs -> MKS]
     TS = TA + SH / CHU    ! surface potential temp (flux temp)
     !CHU = (ALPHAC / CP / RHO) * (LH0 * RHOO)  ! [cgs -> MKS]
     !QS = QA + LH/CHU   ! surface humidity
-
-!    CH = ALPHAC / RHO / CP / UA
-!    print *,'total    ',TS, CH,SH/CPdry/RHOO*CP*RHO*100.,(SH/CPdry/RHOO*CP*RHO*100.)/RHO/CP/CH/UA/100.0_RP,TA
-!    print *,'roof     ',TR,CHR,HR,HR/RHO/CP/CHR/UA/100.0_RP,TA
-!    print *,'building ',TB,CHB,HB,HB/RHO/CP/CHB/UC/100.0_RP,TC
-!    print *,'ground   ',TG,CHG,HG,HG/RHO/CP/CHG/UC/100.0_RP,TC
 
     !-----------------------------------------------------------
     !  diagnostic GRID AVERAGED TS from upward logwave
@@ -1591,18 +1450,12 @@ contains
     ! Q2  = QA * ((log(2.0_RP/Z0HC)-psih2)/(log(Z/Z0HC)-psih))  ! humidity at 2 m [-]
     Q2 = QC
 
-    !print *,'U10,V10,T2,Q2,QC',U10,V10,T2,Q2,QC
-
     !-----------------------------------------------------------
     ! add anthropogenic heat fluxes
     !-----------------------------------------------------------
 
-    !print *,"3",dsec,AH_t,FLXTH,SH
-
-    FLXTH  = FLXTH  + AH_t/RHOO/CPdry
-    FLXHUM = FLXHUM + ALH_t/RHOO/LH0
-    SH     = FLXTH  * RHOO * CPdry               ! Sensible heat flux          [W/m/m]
-    LH     = FLXHUM * RHOO * LH0                 ! Latent heat flux            [W/m/m]
+    SH     = SH + AH_t           ! Sensible heat flux          [W/m/m]
+    LH     = LH + ALH_t          ! Latent heat flux            [W/m/m]
 
     return
   end subroutine CPL_AtmUrb_bulk
@@ -1771,6 +1624,10 @@ contains
   !-----------------------------------------------------------------------------
   subroutine mos(XXX,ALPHA,CD,B1,RIB,Z,Z0,UA,TA,TSF,RHO)
 
+    use scale_const, only: &
+       KARMAN => CONST_KARMAN,  & ! AK : kalman constant  [-]
+       CPdry  => CONST_CPdry      ! CPP : heat capacity of dry air [J/K/kg]
+
     !  XXX:   z/L (requires iteration by Newton-Rapson method)
     !  B1:    Stanton number
     !  PSIM:  = PSIX of LSM
@@ -1778,7 +1635,6 @@ contains
 
     implicit none
 
-    real(RP), parameter     :: CP = 0.24_RP
     real(RP), intent(in)    :: B1, Z, Z0, UA, TA, TSF, RHO
     real(RP), intent(out)   :: ALPHA, CD
     real(RP), intent(inout) :: XXX, RIB
@@ -1851,7 +1707,7 @@ contains
     TS = 0.4_RP * (TA-TSF) / PSIH       ! T*
 
     CD    = US * US / UA**2                 ! CD
-    ALPHA = RHO * CP * 0.4_RP * US / PSIH   ! RHO*CP*CH*U
+    ALPHA = RHO * CPdry * 0.4_RP * US / PSIH   ! RHO*CP*CH*U
 
     return
   end subroutine mos
@@ -1950,16 +1806,16 @@ contains
     ! DZG(4)       = 0.75 ! [m]
 
     ! convert unit
-    DZR(UKS:UKE) = DZR(UKS:UKE) * 100.0_RP ! [m]-->[cm]
-    DZB(UKS:UKE) = DZB(UKS:UKE) * 100.0_RP ! [m]-->[cm]
-    DZG(UKS:UKE) = DZG(UKS:UKE) * 100.0_RP ! [m]-->[cm]
+    !DZR(UKS:UKE) = DZR(UKS:UKE) * 100.0_RP ! [m]-->[cm]
+    !DZB(UKS:UKE) = DZB(UKS:UKE) * 100.0_RP ! [m]-->[cm]
+    !DZG(UKS:UKE) = DZG(UKS:UKE) * 100.0_RP ! [m]-->[cm]
 
-    CAPR = CAPR * ( 1.0_RP / 4.1868_RP ) * 1.E-6_RP   ! [J/m^3/K] --> [cal/cm^3/deg]
-    CAPB = CAPB * ( 1.0_RP / 4.1868_RP ) * 1.E-6_RP   ! [J/m^3/K] --> [cal/cm^3/deg]
-    CAPG = CAPG * ( 1.0_RP / 4.1868_RP ) * 1.E-6_RP   ! [J/m^3/K] --> [cal/cm^3/deg]
-    AKSR = AKSR * ( 1.0_RP / 4.1868_RP ) * 1.E-2_RP   ! [J/m/s/K] --> [cal/cm/s/deg]
-    AKSB = AKSB * ( 1.0_RP / 4.1868_RP ) * 1.E-2_RP   ! [J/m/s/K] --> [cal/cm/s/deg]
-    AKSG = AKSG * ( 1.0_RP / 4.1868_RP ) * 1.E-2_RP   ! [J/m/s/K] --> [cal/cm/s/deg]
+    !CAPR = CAPR * ( 1.0_RP / 4.1868_RP ) * 1.E-6_RP   ! [J/m^3/K] --> [cal/cm^3/deg]
+    !CAPB = CAPB * ( 1.0_RP / 4.1868_RP ) * 1.E-6_RP   ! [J/m^3/K] --> [cal/cm^3/deg]
+    !CAPG = CAPG * ( 1.0_RP / 4.1868_RP ) * 1.E-6_RP   ! [J/m^3/K] --> [cal/cm^3/deg]
+    !AKSR = AKSR * ( 1.0_RP / 4.1868_RP ) * 1.E-2_RP   ! [J/m/s/K] --> [cal/cm/s/deg]
+    !AKSB = AKSB * ( 1.0_RP / 4.1868_RP ) * 1.E-2_RP   ! [J/m/s/K] --> [cal/cm/s/deg]
+    !AKSG = AKSG * ( 1.0_RP / 4.1868_RP ) * 1.E-2_RP   ! [J/m/s/K] --> [cal/cm/s/deg]
 
     ! set up other urban parameters
     Z0HR = 0.1_RP * Z0R
