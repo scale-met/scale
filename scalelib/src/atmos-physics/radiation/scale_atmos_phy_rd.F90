@@ -71,7 +71,7 @@ module scale_atmos_phy_rd
        real(RP), intent(in)  :: solins      (IA,JA)
        real(RP), intent(in)  :: cosSZA      (IA,JA)
        real(RP), intent(out) :: flux_rad    (KA,IA,JA,2,2)
-       real(RP), intent(out) :: flux_rad_top(IA,JA,2)
+       real(RP), intent(out) :: flux_rad_top(IA,JA,2,2)
      end subroutine rd
   end interface
   procedure(rd), pointer :: ATMOS_PHY_RD => NULL()
@@ -99,7 +99,7 @@ contains
        swinit
     !use scale_atmos_phy_rd_rrtm, only: &
     !   rriminit
- 
+
     implicit none
 
     character(len=*), intent(in) :: RD_TYPE
