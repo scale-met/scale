@@ -129,6 +129,11 @@ contains
     case('BULK')
        call ATMOS_PHY_SF_bulk_setup( SF_TYPE )
        ATMOS_PHY_SF => ATMOS_PHY_SF_bulk
+    case('OFF', 'COUPLE')
+       ! do nothing
+    case default
+       write(*,*) 'xxx ATMPS_PHY_SF_TYPE is invalid'
+       call PRC_MPIstop
     end select
 
     return

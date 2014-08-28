@@ -71,7 +71,7 @@ contains
     real(RP), intent(in) :: CDZ(KA)
     real(RP), intent(in) :: CDX(IA)
     real(RP), intent(in) :: CDY(JA)
-    real(RP), intent(in) :: CZ (KA)
+    real(RP), intent(in) :: CZ (KA,IA,JA)
 
     NAMELIST / PARAM_ATMOS_PHY_TB_DNS / &
          ATMOS_PHY_TB_DNS_NU, &
@@ -109,7 +109,8 @@ contains
        qflx_sgs_rhot, qflx_sgs_rhoq,                &
        tke, nu, Ri, Pr,                             &
        MOMZ, MOMX, MOMY, RHOT, DENS, QTRC,          &
-       GSQRT, J13G, J23G, J33G                      )
+       SFLX_MW, SFLX_MU, SFLX_MV, SFLX_SH,          &
+       GSQRT, J13G, J23G, J33G, dt                  )
     use scale_const, only: &
        GRAV => CONST_GRAV
     use scale_grid, only: &
@@ -139,7 +140,7 @@ contains
     real(RP), intent(out) :: qflx_sgs_rhot(KA,IA,JA,3)
     real(RP), intent(out) :: qflx_sgs_rhoq(KA,IA,JA,QA,3)
 
-    real(RP), intent(out) :: tke(KA,IA,JA) ! TKE
+    real(RP), intent(inout) :: tke(KA,IA,JA) ! TKE
     real(RP), intent(out) :: nu (KA,IA,JA) ! eddy viscosity (center)
     real(RP), intent(out) :: Pr (KA,IA,JA) ! Prantle number
     real(RP), intent(out) :: Ri (KA,IA,JA) ! Richardson number
@@ -151,10 +152,16 @@ contains
     real(RP), intent(in)  :: DENS(KA,IA,JA)
     real(RP), intent(in)  :: QTRC(KA,IA,JA,QA)
 
+    real(RP), intent(in)  :: SFLX_MW(IA,JA)
+    real(RP), intent(in)  :: SFLX_MU(IA,JA)
+    real(RP), intent(in)  :: SFLX_MV(IA,JA)
+    real(RP), intent(in)  :: SFLX_SH(IA,JA)
+
     real(RP), intent(in)  :: GSQRT   (KA,IA,JA,7) !< vertical metrics {G}^1/2
     real(RP), intent(in)  :: J13G    (KA,IA,JA,7) !< (1,3) element of Jacobian matrix
     real(RP), intent(in)  :: J23G    (KA,IA,JA,7) !< (1,3) element of Jacobian matrix
     real(RP), intent(in)  :: J33G                 !< (3,3) element of Jacobian matrix
+    real(RP), intent(in)  :: dt
 
     real(RP) :: POTT(KA,IA,JA)
 

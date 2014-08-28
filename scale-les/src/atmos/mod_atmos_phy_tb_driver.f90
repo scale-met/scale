@@ -51,8 +51,9 @@ contains
     use scale_grid, only: &
        CDZ => GRID_CDZ, &
        CDX => GRID_CDX, &
-       CDY => GRID_CDY, &
-       CZ  => GRID_CZ
+       CDY => GRID_CDY
+    use scale_grid_real, only: &
+       CZ  => REAL_CZ
     use mod_atmos_admin, only: &
        ATMOS_PHY_TB_TYPE, &
        ATMOS_sw_phy_tb
@@ -120,6 +121,9 @@ contains
     use scale_statistics, only: &
        STATISTICS_checktotal, &
        STAT_total
+    use scale_comm, only: &
+       COMM_vars8, &
+       COMM_wait
     use scale_history, only: &
        HIST_in
     use scale_atmos_phy_tb, only: &
@@ -144,6 +148,11 @@ contains
        RHOQ_t_TB => ATMOS_PHY_TB_RHOQ_t, &
        TKE       => ATMOS_PHY_TB_TKE,    &
        NU        => ATMOS_PHY_TB_NU
+    use mod_atmos_phy_sf_vars, only: &
+       SFLX_MW => ATMOS_PHY_SF_SFLX_MW, &
+       SFLX_MU => ATMOS_PHY_SF_SFLX_MU, &
+       SFLX_MV => ATMOS_PHY_SF_SFLX_MV, &
+       SFLX_SH => ATMOS_PHY_SF_SFLX_SH
     implicit none
 
     logical, intent(in) :: update_flag
@@ -184,10 +193,18 @@ contains
                           RHOT_av,   & ! [IN]
                           DENS_av,   & ! [IN]
                           QTRC_av,   & ! [IN]
+                          SFLX_MW,   & ! [IN]
+                          SFLX_MU,   & ! [IN]
+                          SFLX_MV,   & ! [IN]
+                          SFLX_SH,   & ! [IN]
                           GSQRT,     & ! [IN]
                           J13G,      & ! [IN]
                           J23G,      & ! [IN]
-                          J33G       ) ! [IN]
+                          J33G,      & ! [IN]
+                          dt_TB      ) ! [IN]
+
+       call COMM_vars8( TKE(:,:,:), 1 )
+       call COMM_wait ( TKE(:,:,:), 1 )
 
        do JJS = JS, JE, JBLOCK
        JJE = JJS+JBLOCK-1
@@ -452,6 +469,36 @@ contains
              call HIST_in( QFLX_RHOQ(:,:,:,I_QV,ZDIR), 'SGS_ZFLX_QV', 'SGS Z FLUX of QV', 'kg/m2/s', dt_TB, zdim='half')
              call HIST_in( QFLX_RHOQ(:,:,:,I_QV,XDIR), 'SGS_XFLX_QV', 'SGS X FLUX of QV', 'kg/m2/s', dt_TB, xdim='half')
              call HIST_in( QFLX_RHOQ(:,:,:,I_QV,YDIR), 'SGS_YFLX_QV', 'SGS Y FLUX of QV', 'kg/m2/s', dt_TB, ydim='half')
+          endif
+
+          if ( I_QC > 0 ) then
+             call HIST_in( QFLX_RHOQ(:,:,:,I_QC,ZDIR), 'SGS_ZFLX_QC', 'SGS Z FLUX of QC', 'kg/m2/s', dt_TB, zdim='half')
+             call HIST_in( QFLX_RHOQ(:,:,:,I_QC,XDIR), 'SGS_XFLX_QC', 'SGS X FLUX of QC', 'kg/m2/s', dt_TB, xdim='half')
+             call HIST_in( QFLX_RHOQ(:,:,:,I_QC,YDIR), 'SGS_YFLX_QC', 'SGS Y FLUX of QC', 'kg/m2/s', dt_TB, ydim='half')
+          endif
+
+          if ( I_QR > 0 ) then
+             call HIST_in( QFLX_RHOQ(:,:,:,I_QR,ZDIR), 'SGS_ZFLX_QR', 'SGS Z FLUX of QR', 'kg/m2/s', dt_TB, zdim='half')
+             call HIST_in( QFLX_RHOQ(:,:,:,I_QR,XDIR), 'SGS_XFLX_QR', 'SGS X FLUX of QR', 'kg/m2/s', dt_TB, xdim='half')
+             call HIST_in( QFLX_RHOQ(:,:,:,I_QR,YDIR), 'SGS_YFLX_QR', 'SGS Y FLUX of QR', 'kg/m2/s', dt_TB, ydim='half')
+          endif
+
+          if ( I_QI > 0 ) then
+             call HIST_in( QFLX_RHOQ(:,:,:,I_QI,ZDIR), 'SGS_ZFLX_QI', 'SGS Z FLUX of QI', 'kg/m2/s', dt_TB, zdim='half')
+             call HIST_in( QFLX_RHOQ(:,:,:,I_QI,XDIR), 'SGS_XFLX_QI', 'SGS X FLUX of QI', 'kg/m2/s', dt_TB, xdim='half')
+             call HIST_in( QFLX_RHOQ(:,:,:,I_QI,YDIR), 'SGS_YFLX_QI', 'SGS Y FLUX of QI', 'kg/m2/s', dt_TB, ydim='half')
+          endif
+
+          if ( I_QS > 0 ) then
+             call HIST_in( QFLX_RHOQ(:,:,:,I_QS,ZDIR), 'SGS_ZFLX_QS', 'SGS Z FLUX of QS', 'kg/m2/s', dt_TB, zdim='half')
+             call HIST_in( QFLX_RHOQ(:,:,:,I_QS,XDIR), 'SGS_XFLX_QS', 'SGS X FLUX of QS', 'kg/m2/s', dt_TB, xdim='half')
+             call HIST_in( QFLX_RHOQ(:,:,:,I_QS,YDIR), 'SGS_YFLX_QS', 'SGS Y FLUX of QS', 'kg/m2/s', dt_TB, ydim='half')
+          endif
+
+          if ( I_QG > 0 ) then
+             call HIST_in( QFLX_RHOQ(:,:,:,I_QG,ZDIR), 'SGS_ZFLX_QG', 'SGS Z FLUX of QG', 'kg/m2/s', dt_TB, zdim='half')
+             call HIST_in( QFLX_RHOQ(:,:,:,I_QG,XDIR), 'SGS_XFLX_QG', 'SGS X FLUX of QG', 'kg/m2/s', dt_TB, xdim='half')
+             call HIST_in( QFLX_RHOQ(:,:,:,I_QG,YDIR), 'SGS_YFLX_QG', 'SGS Y FLUX of QG', 'kg/m2/s', dt_TB, ydim='half')
           endif
 
        endif
