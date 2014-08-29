@@ -404,7 +404,7 @@ module scale_atmos_phy_rd_mm5sw
       SDOWN=0.0
       bext340=5.E-6_RP
       bexth2o=5.E-6_RP
-      SOLTOP=solins
+      SOLTOP = solins
 
       !XT24=MOD(XTIME+RADFRQ*0.5,1440.)
       !TLOCTM=GMT+XT24/60.+XLONG/15.
@@ -458,8 +458,9 @@ module scale_atmos_phy_rd_mm5sw
 !
       XMU=CSZA
       ! SDOWN(1)=SOLTOP*XMU !adachi
-      !SDOWN(kts)=SOLTOP*XMU
-      SDOWN(kts)=solins
+
+      SDOWN(kts)=SOLTOP * max(cosSZA,0.0_RP)
+
 !     SET WW (G/M**2) LIQUID WATER PATH INTEGRATED DOWN
 !     SET UV (G/M**2) WATER VAPOR PATH INTEGRATED DOWN
       WW=0.
