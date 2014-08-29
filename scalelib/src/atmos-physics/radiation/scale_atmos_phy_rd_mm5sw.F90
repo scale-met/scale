@@ -67,7 +67,7 @@ module scale_atmos_phy_rd_mm5sw
        Rdry  => CONST_Rdry, & ! 287.
        CPdry => CONST_CPdry   ! 1004.6
     use scale_atmos_solarins, only: &
-       SOLARINS => ATMOS_SOLARINS_constant ! 1360.xxx (W/m2) 
+       SOLARINS => ATMOS_SOLARINS_constant ! 1360.xxx (W/m2)
 !------------------------------------------------------------------
    IMPLICIT NONE
 !------------------------------------------------------------------
@@ -81,7 +81,7 @@ module scale_atmos_phy_rd_mm5sw
    real(RP), INTENT(IN)      :: rho_phy(IA,KA,JA)
    real(RP), INTENT(IN)      :: P3D(IA,KA,JA),  &
                                 T3D(IA,KA,JA),  &
-                                pi3D(IA,KA,JA), &     
+                                pi3D(IA,KA,JA), &
                                 dz8w(IA,KA,JA)
    real(RP), INTENT(IN)      :: solins(IA,JA),cosSZA(IA,JA)
    real(RP), OPTIONAL, INTENT(IN) :: QV3D (IA,KA,JA), &
@@ -96,13 +96,13 @@ module scale_atmos_phy_rd_mm5sw
    LOGICAL,  INTENT(IN   )        :: warm_rain
 
    !real, INTENT(IN    )          :: RADFRQ,DEGRAD,XTIME,DECLIN
-                                 
+
 
    integer   :: its,ite,jts,jte,kts,kte
    real(RP)  ::  R, CP, G, SOLCON
- 
+
 ! LOCAL VARS
- 
+
    real(RP), DIMENSION( KS:KE ) :: TTEN1D, &
                                    RHO01D, &
                                    P1D, &
@@ -114,7 +114,7 @@ module scale_atmos_phy_rd_mm5sw
                                    QI1D, &
                                    QS1D, &
                                    QG1D
-                                   
+
    real(RP)                     :: SDOWN1D(KS:KE+1)
 !
    real(RP) :: XLAT0,XLONG0,ALB0,GSW0,cosSZA0,solins0
@@ -127,7 +127,7 @@ module scale_atmos_phy_rd_mm5sw
 
 !------------------------------------------------------------------
 
-   R  = Rdry 
+   R  = Rdry
    CP = CPdry
    G  = GRAV
    SOLCON = SOLARINS
@@ -139,7 +139,7 @@ module scale_atmos_phy_rd_mm5sw
    j_loop: DO J=jts,jte
    i_loop: DO I=its,ite
 
-! reverse vars 
+! reverse vars
          DO K=KS,KE
             QV1D(K)=0.
             QC1D(K)=0.
@@ -167,7 +167,7 @@ module scale_atmos_phy_rd_mm5sw
          !      aer_water1(k) = pm2_5_water(i,nk,j)
          !   ENDDO
          !ELSE
-             do k=KS,KE 
+             do k=KS,KE
                aer_dry1(k)   = 0.0
                aer_water1(k) = 0.0
              enddo
@@ -179,7 +179,7 @@ module scale_atmos_phy_rd_mm5sw
                   !NK=kme-1-K+kms
                   NK=KE-(k-KS)
                   QV1D(K)=QV3D(I,NK,J)
-                  QV1D(K)=max(0.,QV1D(K))
+                  QV1D(K)=max(0.0_RP,QV1D(K))
                ENDDO
             ENDIF
          ENDIF
@@ -190,7 +190,7 @@ module scale_atmos_phy_rd_mm5sw
                   !NK=kme-1-K+kms
                   NK=KE-(k-KS)
                   QC1D(K)=QC3D(I,NK,J)
-                  QC1D(K)=max(0.,QC1D(K))
+                  QC1D(K)=max(0.0_RP,QC1D(K))
                enddo
             ENDIF
          ENDIF
@@ -201,7 +201,7 @@ module scale_atmos_phy_rd_mm5sw
                   !NK=kme-1-K+kms
                   NK=KE-(k-KS)
                   QR1D(K)=QR3D(I,NK,J)
-                  QR1D(K)=max(0.,QR1D(K))
+                  QR1D(K)=max(0.0_RP,QR1D(K))
                enddo
             ENDIF
          ENDIF
@@ -218,7 +218,7 @@ module scale_atmos_phy_rd_mm5sw
                !NK=kme-1-K+kms
                 NK=KE-(k-KS)
                 QI1D(K)=QI3D(I,NK,J)
-                QI1D(K)=max(0.,QI1D(K))
+                QI1D(K)=max(0.0_RP,QI1D(K))
             enddo
          ELSE
             IF (.not. warm_rain) THEN
@@ -235,11 +235,11 @@ module scale_atmos_phy_rd_mm5sw
 
          IF (PRESENT(F_QS) .AND. PRESENT(QS3D)) THEN
             IF (F_QS) THEN
-               do k=KS,KE       
+               do k=KS,KE
                  !NK=kme-1-K+kms
                   NK=KE-(k-KS)
                   QS1D(K)=QS3D(I,NK,J)
-                  QS1D(K)=max(0.,QS1D(K))
+                  QS1D(K)=max(0.0_RP,QS1D(K))
                enddo
             ENDIF
          ENDIF
@@ -250,7 +250,7 @@ module scale_atmos_phy_rd_mm5sw
                  !NK=kme-1-K+kms
                   NK=KE-(k-KS)
                   QG1D(K)=QG3D(I,NK,J)
-                  QG1D(K)=max(0.,QG1D(K))
+                  QG1D(K)=max(0.0_RP,QG1D(K))
                enddo
             ENDIF
          ENDIF
@@ -278,7 +278,7 @@ module scale_atmos_phy_rd_mm5sw
 !            if(k==kte)then
 !               NK=KA-1-(K+1)+1
 !	       SDOWN3D(I,K+1,J)=SDOWN1D(NK)
-!            endif 
+!            endif
 !         ENDDO
 
          do k=KS,KE
@@ -292,7 +292,7 @@ module scale_atmos_phy_rd_mm5sw
             !print *,KS,KE,K,"<=",NK
 !
    ENDDO i_loop
-   ENDDO j_loop                                          
+   ENDDO j_loop
 
    return
    END SUBROUTINE SWRAD
@@ -309,7 +309,7 @@ module scale_atmos_phy_rd_mm5sw
     use scale_time, only:       &
        NOWDATE => TIME_NOWDATE    !< current time [YYYY MM DD HH MM SS]
     use scale_const, only: &
-       D2R    => CONST_D2R         ! degree to radian  
+       D2R    => CONST_D2R         ! degree to radian
     use scale_calendar, only: &
          CALENDAR_getDayOfYear,  &
          CALENDAR_ymd2absday,    &
@@ -324,7 +324,7 @@ module scale_atmos_phy_rd_mm5sw
 !     CHANGES:
 !       REDUCE EFFECTS OF ICE CLOUDS AND PRECIP ON LIQUID WATER PATH
 !       ADD EFFECT OF GRAUPEL
-!------------------------------------------------------------------  
+!------------------------------------------------------------------
   IMPLICIT NONE
 
   INTEGER, INTENT(IN ) ::                 kts,kte
@@ -373,19 +373,19 @@ module scale_atmos_phy_rd_mm5sw
    real(RP) :: DayOfYear
 !------------------------------------------------------------------
 
-      DATA ALBTAB/0.,0.,0.,0., &
-           69.,58.,40.,15.,    &
-           90.,80.,70.,60.,    &
-           94.,90.,82.,78.,    &
-           96.,92.,85.,80./
+      DATA ALBTAB/0.0,0.0,0.0,0.0, &
+           69.0,58.0,40.0,15.0,    &
+           90.0,80.0,70.0,60.0,    &
+           94.0,90.0,82.0,78.0,    &
+           96.0,92.0,85.0,80.0/
 
-      DATA ABSTAB/0.,0.,0.,0., &
-           0.,2.5,4.,5.,       &
-           0.,2.6,7.,10.,      &
-           0.,3.3,10.,14.,     &
-           0.,3.7,10.,15./
+      DATA ABSTAB/0.0,0.0,0.0,0.0, &
+           0.0,2.5,4.0,5.0,       &
+           0.0,2.6,7.0,10.0,      &
+           0.0,3.3,10.0,14.0,     &
+           0.0,3.7,10.0,15.0/
 
-      DATA XMUVAL/0.,0.2,0.5,1.0/
+      DATA XMUVAL/0.0,0.2,0.5,1.0/
 
       real(RP) :: bext340, absc, alba, alw, csza,dabsa,dsca,dabs
       real(RP) :: bexth2o, dscld, ff,oldalb,oldabs,oldabc
@@ -429,7 +429,7 @@ module scale_atmos_phy_rd_mm5sw
 
       CSZA=cosSZA
 
-!     RETURN IF NIGHT        
+!     RETURN IF NIGHT
       IF(CSZA .LE. 1.0E-9_RP)GOTO 7
 !
       DO K=kts, kte
@@ -458,7 +458,7 @@ module scale_atmos_phy_rd_mm5sw
 !
       XMU=CSZA
       ! SDOWN(1)=SOLTOP*XMU !adachi
-      !SDOWN(kts)=SOLTOP*XMU 
+      !SDOWN(kts)=SOLTOP*XMU
       SDOWN(kts)=solins
 !     SET WW (G/M**2) LIQUID WATER PATH INTEGRATED DOWN
 !     SET UV (G/M**2) WATER VAPOR PATH INTEGRATED DOWN
@@ -492,7 +492,7 @@ module scale_atmos_phy_rd_mm5sw
          beta=0.4*(1.0-XMU)+0.1
 !     CSSCA - CLEAR-SKY SCATTERING SET FROM NAMELIST SWRAD_SCAT
          XSCA=(cssca*XATP(K)+beta*aer_dry1(K)*bext340*DZ(K) &
-              +beta*aer_water1(K)*bexth2o*DZ(K))/XMU   
+              +beta*aer_water1(K)*bexth2o*DZ(K))/XMU
 
 !     LAYER VAPOR ABSORPTION DONE FIRST
       !   XABS=(TOTABS-OLDABS)*(SDOWN(1)-DSCLD-DSCA-DABSA)/SDOWN(K)
@@ -587,20 +587,20 @@ module scale_atmos_phy_rd_mm5sw
 ! Correction factor for sloping topography; the diffuse fraction of solar radiation is assumed to be unaffected by the slope
 !        corr_fac = diffuse_frac + (1-diffuse_frac)*csza_slp/csza
 !
-! 140	continue   
+! 140	continue
 !
-!        GSW=(1.-ALBEDO)*SDOWN(kte+1)*corr_fac 
-!        
+!        GSW=(1.-ALBEDO)*SDOWN(kte+1)*corr_fac
+!
 !      endif
 !    ENDIF
 
       !print *,"A1",TTEN(KE),SDOWN(KE),GSW,ALBEDO,cosSZA
       !print *,"A2",QV(KE),QC(KE),QR(KE),QI(KE),QS(KE),QG(KE)
-      !print *,"A3",T(KE),P(KE),RHO0(KE),DZ(KE)                     
+      !print *,"A3",T(KE),P(KE),RHO0(KE),DZ(KE)
       !print *,"A4",R,CP,G,solins
       !print *,"A5",XXLAT,XXLON,XXLAT/D2R,XXLON/D2R
       !print *,"A6",ICLOUD,aer_dry1(KE),aer_water1(KE)
-      !print *,"A7",kts,kte                 
+      !print *,"A7",kts,kte
 
     7 CONTINUE
       return
@@ -611,7 +611,7 @@ module scale_atmos_phy_rd_mm5sw
 !--------------------------------------------------------------------
    IMPLICIT NONE
 !--------------------------------------------------------------------
-!   LOGICAL , INTENT(IN)           :: allowed_to_read 
+!   LOGICAL , INTENT(IN)           :: allowed_to_read
 !   INTEGER , INTENT(IN)           :: ids, ide, jds, jde, kds, kde,  &
 !                                     ims, ime, jms, jme, kms, kme,  &
 !                                     its, ite, jts, jte, kts, kte

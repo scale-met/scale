@@ -1192,14 +1192,21 @@ contains
              factR (k,i,j,iaero) = ( aerosol_radi(k,i,j,iaero) - radmode(iptype,ir) ) &
                                  / ( radmode(iptype,ir+1)      - radmode(iptype,ir) )
 
-          elseif( aerosol_radi(k,i,j,iaero) > radmode(iptype,MSTRN_nradius) ) then ! extrapolation
+          elseif( aerosol_radi(k,i,j,iaero) > radmode(iptype,MSTRN_nradius) * 3.0_RP ) then ! fixed value
+             ! [Note] Extrapolation sometimes makes unexpected value
+             ! if effective radius is 3 times larger than maximum value of table,
+             ! optical thickness is set to zero. This treatment is Ad Hoc.
 
              ir = MSTRN_nradius
              indexR(k,i,j,iaero) = ir
-             ! [Note] Extrapolation sometimes makes unexpected value
-             !factR (k,i,j,iaero) = ( aerosol_radi(k,i,j,iaero) - radmode(iptype,ir) ) &
-             !                    / ( radmode(iptype,ir+1)      - radmode(iptype,ir) )
              factR (k,i,j,iaero) = 1.0_RP
+
+          elseif( aerosol_radi(k,i,j,iaero) > radmode(iptype,MSTRN_nradius) ) then ! extrapolation
+
+             ir = MSTRN_nradius-1
+             indexR(k,i,j,iaero) = ir
+             factR (k,i,j,iaero) = ( aerosol_radi(k,i,j,iaero) - radmode(iptype,ir) ) &
+                                 / ( radmode(iptype,ir+1)      - radmode(iptype,ir) )
 
           else
              !$acc loop seq
