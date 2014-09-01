@@ -23,7 +23,7 @@ RUNCONF     = NONE
 TPROC       = 36
 
 # required data (parameters,distributed files)
-DATDIR      = $(abspath /work/yashiro/SCALE/input_database/topo/DEM50M/Products)
+DATDIR      = $(abspath /data2/scale_database/topo/DEM50M/Products)
 DATPARAM    =
 DATDISTS    =
 

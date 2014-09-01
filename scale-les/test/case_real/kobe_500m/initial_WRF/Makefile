@@ -23,11 +23,16 @@ RUNCONF     = NONE
 TPROC       = 36
 
 # required data (parameters,distributed files)
-DATDIR      = $(abspath /work/yashiro/SCALE/input_database/WRF_output/kenshi_gtopo30_case2)
-DATPARAM    =
-DATDISTS    =
+DATDIR      = ../../../data
+DATPARAM    = rad/PARAG.29,rad/PARAPC.29,rad/VARDATA.RM29,rad/cira.nc,rad/MIPAS/day.atm,rad/MIPAS/equ.atm,rad/MIPAS/sum.atm,rad/MIPAS/win.atm
+DATDISTS    = ../topo/topo,../landuse/landuse
 
 
 
 # build, makedir, run, jobshell, allclean, clean is inside of common Makefile
-include ../../Makefile.pp.common
+include $(TESTDIR)/Makefile.common
+
+# special execute
+run: jobshell
+	$(JOBSUB) wrfinput-link.sh
+	$(JOBSUB) run.sh
