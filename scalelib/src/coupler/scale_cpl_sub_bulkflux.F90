@@ -79,8 +79,8 @@ module scale_cpl_bulkflux
   !
   !++ Private procedure
   !
-  private :: CPL_bulkflux_uno
-  private :: CPL_bulkflux_default
+  private :: CPL_bulkflux_u95
+  private :: CPL_bulkflux_b91w01
   private :: fm_unstable
   private :: fh_unstable
   private :: fm_stable
@@ -90,7 +90,7 @@ module scale_cpl_bulkflux
   !
   !++ Private parameters & variables
   !
-  character(len=H_SHORT), private :: bulkflux_TYPE = ''
+  character(len=H_SHORT), private :: bulkflux_TYPE = 'B91W01'
 
   real(RP), private :: WSCF = 1.2E+0_RP ! empirical scaling factor of Wstar (Beljaars 1994)
 
@@ -155,16 +155,21 @@ contains
 
     select case( bulkflux_TYPE )
     case ( 'U95' )
-       CPL_bulkflux => CPL_bulkflux_uno
+       CPL_bulkflux => CPL_bulkflux_u95
+    case ( 'B91W01' )
+       CPL_bulkflux => CPL_bulkflux_b91w01
     case default
-       CPL_bulkflux => CPL_bulkflux_default
+       write(*,*) ' xxx Unsupported TYPE. STOP'
+       call PRC_MPIstop
     end select
 
     return
   end subroutine CPL_bulkflux_setup
 
   !-----------------------------------------------------------------------------
-  subroutine CPL_bulkflux_uno( &
+  ! ref. Uno et al. (1995)
+  !-----------------------------------------------------------------------------
+  subroutine CPL_bulkflux_u95( &
       Ustar,   & ! (out)
       Tstar,   & ! (out)
       Qstar,   & ! (out)
@@ -262,10 +267,17 @@ contains
     Qstar = C0 * fh * q0qe / tPrn * Uabs / Ustar * ( Qa - Qs )
 
     return
-  end subroutine CPL_bulkflux_uno
+  end subroutine CPL_bulkflux_u95
 
   !-----------------------------------------------------------------------------
-  subroutine CPL_bulkflux_default( &
+  !
+  ! refs. Beljaars (1991) and Wilson (2001)
+  !
+  ! If you want to run with the original Beljaars scheme (Beljaars and Holtslag 1994),
+  ! you should fix the stability functions (fm_unstable, fh_unstable, fm_stable, and fh_stable).
+  !
+  !-----------------------------------------------------------------------------
+  subroutine CPL_bulkflux_b91w01( &
       Ustar,   & ! (out)
       Tstar,   & ! (out)
       Qstar,   & ! (out)
@@ -413,11 +425,11 @@ contains
     end do
 
     if( n > nmax ) then
-      if( IO_L ) write(IO_FID_LOG,*) 'Warning: reach maximum iteration in the function of CPL_bulkflux_default.'
+      if( IO_L ) write(IO_FID_LOG,*) 'Warning: reach maximum iteration in the function of CPL_bulkflux_b91w01.'
     end if
 
     return
-  end subroutine CPL_bulkflux_default
+  end subroutine CPL_bulkflux_b91w01
 
   !-----------------------------------------------------------------------------
   ! stability function for momemtum in unstable condition
