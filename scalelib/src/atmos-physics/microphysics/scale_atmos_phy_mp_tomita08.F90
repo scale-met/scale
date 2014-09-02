@@ -348,7 +348,7 @@ contains
 
     ATMOS_PHY_MP_DENS(I_mp_QC) = dens_w
     ATMOS_PHY_MP_DENS(I_mp_QR) = dens_w
-    ATMOS_PHY_MP_DENS(I_mp_QI) = dens_i
+    ATMOS_PHY_MP_DENS(I_mp_QI) = 500.0_RP ! dens_i
     ATMOS_PHY_MP_DENS(I_mp_QS) = dens_s
     ATMOS_PHY_MP_DENS(I_mp_QG) = dens_g
 
