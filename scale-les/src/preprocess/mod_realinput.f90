@@ -83,8 +83,8 @@ module mod_realinput
   private :: InputAtomWRF
   private :: InputSurfaceSCALE
   private :: InputSurfaceWRF
-  private :: LatLonZ_Interpolation_Linear
   private :: latlonz_interporation_fact
+  private :: diagnose_number_concentration
   private :: haversine
 
   !-----------------------------------------------------------------------------
@@ -143,8 +143,7 @@ contains
     case('WRF-ARW')
        if( IO_L ) write(IO_FID_LOG,*) '+++ Real Case/Atom Input File Type: WRF-ARW'
        mdlid = iWRFARW
-       call ExternalFileGetShape( dims(:), timelen, mdlid,        &
-                                   BASENAME_ORG, myrank, single=.true. )
+       call ExternalFileGetShape( dims(:), timelen, mdlid, BASENAME_ORG, myrank, single=.true. )
        if ( wrf_file_type_in ) then
           wrfout = .true.
           if( IO_L ) write(IO_FID_LOG,*) '+++ WRF-ARW FILE-TYPE: WRF History Output'
@@ -576,8 +575,9 @@ contains
        NEST_TILE_NUM_Y, &
        NEST_TILE_ID
     use scale_atmos_hydrostatic, only: &
-       HYDROSTATIC_buildrho        => ATMOS_HYDROSTATIC_buildrho,        &
-       HYDROSTATIC_buildrho_bytemp => ATMOS_HYDROSTATIC_buildrho_bytemp
+       HYDROSTATIC_buildrho => ATMOS_HYDROSTATIC_buildrho
+    use scale_atmos_thermodyn, only: &
+       THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres
     implicit none
 
     real(RP),         intent(out) :: dens(:,:,:,:)
@@ -615,16 +615,15 @@ contains
     real(RP), allocatable :: velu_org(:,:,:,:)
     real(RP), allocatable :: velv_org(:,:,:,:)
     real(RP), allocatable :: pott_org(:,:,:,:)
-
-    real(RP), allocatable :: psfc_org(:,:,:)
-    real(RP), allocatable :: tsfc_org(:,:,:)
+    real(RP), allocatable :: temp_org(:,:,:,:)
+    real(RP), allocatable :: pres_org(:,:,:,:)
 
     real(RP) :: velw(KA,IA,JA,start_step:end_step)
     real(RP) :: velu(KA,IA,JA,start_step:end_step)
     real(RP) :: velv(KA,IA,JA,start_step:end_step)
     real(RP) :: pott(KA,IA,JA,start_step:end_step)
-    real(RP) :: pres(KA,IA,JA,start_step:end_step)
     real(RP) :: temp(KA,IA,JA,start_step:end_step)
+    real(RP) :: pres(KA,IA,JA,start_step:end_step)
 
     real(RP) :: pott_sfc(1,IA,JA,start_step:end_step)
     real(RP) :: pres_sfc(1,IA,JA,start_step:end_step)
@@ -675,9 +674,8 @@ contains
     allocate( velu_org( KALL, IALL, JALL, start_step:end_step )    )
     allocate( velv_org( KALL, IALL, JALL, start_step:end_step )    )
     allocate( pott_org( KALL, IALL, JALL, start_step:end_step )    )
-
-    allocate( psfc_org(       IALL, JALL, start_step:end_step )    )
-    allocate( tsfc_org(       IALL, JALL, start_step:end_step )    )
+    allocate( temp_org( KALL, IALL, JALL, start_step:end_step )    )
+    allocate( pres_org( KALL, IALL, JALL, start_step:end_step )    )
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[realinput]/Categ[InputSCALE]'
@@ -765,18 +763,6 @@ contains
            end do
          end do
        end do
-
-       if( .NOT. use_file_density ) then ! make density
-         do n = start_step, end_step
-           call FileRead( read2D(:,:), BASENAME_ORG, "SFC_PRES", n, rank )
-           psfc_org(xs:xe,ys:ye,n) = read2D(:,:)
-         end do
-
-         do n = start_step, end_step
-           call FileRead( read2D(:,:), BASENAME_ORG, "SFC_TEMP", n, rank )
-           tsfc_org(xs:xe,ys:ye,n) = read2D(:,:)
-         end do
-       end if
 
     end do
 
@@ -955,12 +941,19 @@ contains
     do j = 1, JALL
     do i = 1, IALL
     do k = 1, KALL
-       pott_org(k,i,j,n) = rhot_org(k,i,j,n) / dens_org(k,i,j,n)
-       dens_org(k,i,j,n) = log( dens_org(k,i,j,n) )
-
        do iq = 1, QA
           qtrc_org(k,i,j,n,iq) = max( qtrc_org(k,i,j,n,iq), 0.0_RP )
        end do
+
+       ! diagnose temp and pres
+       call THERMODYN_temp_pres( temp_org(k,i,j,n),   & ! [OUT]
+                                 pres_org(k,i,j,n),   & ! [OUT]
+                                 dens_org(k,i,j,n),   & ! [IN]
+                                 rhot_org(k,i,j,n),   & ! [IN]
+                                 qtrc_org(k,i,j,n,:)  ) ! [IN]
+
+       pott_org(k,i,j,n) = rhot_org(k,i,j,n) / dens_org(k,i,j,n)
+       dens_org(k,i,j,n) = log( dens_org(k,i,j,n) )
     end do
     end do
     end do
@@ -976,6 +969,13 @@ contains
                      + pott_org(kgrd(k,i,j,1,2),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,2) &
                      + pott_org(kgrd(k,i,j,2,2),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,2) &
                      + pott_org(kgrd(k,i,j,3,2),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,2)
+
+       pres(k,i,j,n) = pres_org(kgrd(k,i,j,1,1),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,1) &
+                     + pres_org(kgrd(k,i,j,2,1),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,1) &
+                     + pres_org(kgrd(k,i,j,3,1),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,1) &
+                     + pres_org(kgrd(k,i,j,1,2),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,2) &
+                     + pres_org(kgrd(k,i,j,2,2),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,2) &
+                     + pres_org(kgrd(k,i,j,3,2),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,2)
 
        do iq = 1, QA
           qtrc(k,i,j,n,iq) = qtrc_org(kgrd(k,i,j,1,1),igrd(i,j,1),jgrd(i,j,1),n,iq) * hfact(i,j,1) * vfact(k,i,j,1,1) &
@@ -1009,35 +1009,13 @@ contains
     else
        ! make density in moist condition
        do n = start_step, end_step
-          do j = JS-1, JE+1
-          do i = IS-1, IE+1
-             pres_sfc(1,i,j,n) = psfc_org(igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) &
-                               + psfc_org(igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) &
-                               + psfc_org(igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3)
-             temp_sfc(1,i,j,n) = tsfc_org(igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) &
-                               + tsfc_org(igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) &
-                               + tsfc_org(igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3)
-          end do
-          end do
 
-          qv_sfc(1,:,:,n) = qtrc(KS,:,:,n,I_QV)
-          qc_sfc(1,:,:,n) = qtrc(KS,:,:,n,I_QC)
+          ! estimate values at the lowest level
+          pres_sfc(1,:,:,n) = pres(KS,:,:,n)
+          pott_sfc(1,:,:,n) = pott(KS,:,:,n)
+          qv_sfc  (1,:,:,n) = qtrc(KS,:,:,n,I_QV)
+          qc_sfc  (1,:,:,n) = qtrc(KS,:,:,n,I_QC)
 
-          ! density is not equal between buildrho and buildrho_bytemp
-          ! require surface potential temp.
-          call HYDROSTATIC_buildrho_bytemp( dens    (:,:,:,n),      & ! [OUT]
-                                            temp    (:,:,:,n),      & ! [OUT]
-                                            pres    (:,:,:,n),      & ! [OUT]
-                                            pott    (:,:,:,n),      & ! [IN]
-                                            qtrc    (:,:,:,n,I_QV), & ! [IN]
-                                            qtrc    (:,:,:,n,I_QC), & ! [IN]
-                                            pott_sfc(:,:,:,n),      & ! [OUT]
-                                            pres_sfc(:,:,:,n),      & ! [IN]
-                                            temp_sfc(:,:,:,n),      & ! [IN]
-                                            qv_sfc  (:,:,:,n),      & ! [IN]
-                                            qc_sfc  (:,:,:,n)       ) ! [IN]
-
-          ! remake density
           call HYDROSTATIC_buildrho( dens    (:,:,:,n),      & ! [OUT]
                                      temp    (:,:,:,n),      & ! [OUT]
                                      pres    (:,:,:,n),      & ! [OUT]
@@ -1113,6 +1091,8 @@ contains
        COMM_wait
     use scale_atmos_hydrostatic, only: &
        HYDROSTATIC_buildrho => ATMOS_HYDROSTATIC_buildrho
+    use scale_atmos_thermodyn, only: &
+       THERMODYN_pott => ATMOS_THERMODYN_pott
     implicit none
 
     real(RP),         intent(out)  :: dens(:,:,:,:)
@@ -1130,459 +1110,454 @@ contains
     integer,          intent(in)   :: te      ! suffix of end time
     logical,          intent(in)   :: serial  ! read by a serial process
 
-    real(RP), allocatable :: DENS_ORG(:,:,:,:)
-    real(RP), allocatable :: P_ORG(:,:,:,:)
-    real(RP), allocatable :: PBASE_ORG(:,:,:,:)
-    real(RP), allocatable :: W_ORG(:,:,:,:)
-    real(RP), allocatable :: U_ORG(:,:,:,:)
-    real(RP), allocatable :: V_ORG(:,:,:,:)
-    real(RP), allocatable :: POTT_ORG(:,:,:,:)
-    real(RP), allocatable :: QTRC_ORG(:,:,:,:,:)
-    real(RP), allocatable :: LAT_ORG(:,:,:)
-    real(RP), allocatable :: LON_ORG(:,:,:)
-    real(RP), allocatable :: LATU_ORG(:,:,:)
-    real(RP), allocatable :: LONU_ORG(:,:,:)
-    real(RP), allocatable :: LATV_ORG(:,:,:)
-    real(RP), allocatable :: LONV_ORG(:,:,:)
-    real(RP), allocatable :: GEOF_ORG(:,:,:,:)
-    real(RP), allocatable :: GEOH_ORG(:,:,:,:)
-    real(RP), allocatable :: PSFC_ORG(:,:,:)
-    real(RP), allocatable :: TH2M_ORG(:,:,:)
+    ! Defined parameters in WRF
+    real(RP), parameter :: t0  = 300.0_RP
+    real(RP), parameter :: p0  = 1000.0E+2_RP
+    real(RP), parameter :: Rd  = 287.04_RP
+    real(RP), parameter :: Cp  = 7.0_RP * Rd / 2.0_RP
+    real(RP), parameter :: RCP = Rd / Cp
 
-    real(RP), allocatable :: AQ_CV(:) !< CV for each hydrometeors [J/kg/K]
+    real(SP), allocatable :: read_xy (:,:,:)
+    real(SP), allocatable :: read_uy (:,:,:)
+    real(SP), allocatable :: read_xv (:,:,:)
+    real(SP), allocatable :: read_zxy(:,:,:,:)
+    real(SP), allocatable :: read_wxy(:,:,:,:)
+    real(SP), allocatable :: read_zuy(:,:,:,:)
+    real(SP), allocatable :: read_zxv(:,:,:,:)
 
-    real(SP), allocatable :: dummy_3D(:,:,:)     ! for WRF restart file
-    real(SP), allocatable :: dummy_4D(:,:,:,:)   ! for WRF restart file
-    real(SP), allocatable :: dummy_5D(:,:,:,:,:) ! for WRF restart file
+    real(RP), allocatable :: velw_org(:,:,:,:)
+    real(RP), allocatable :: velu_org(:,:,:,:)
+    real(RP), allocatable :: velv_org(:,:,:,:)
+    real(RP), allocatable :: pott_org(:,:,:,:)
+    real(RP), allocatable :: temp_org(:,:,:,:)
+    real(RP), allocatable :: pres_org(:,:,:,:)
+    real(RP), allocatable :: p_org   (:,:,:,:)
+    real(RP), allocatable :: pb_org  (:,:,:,:)
+    real(RP), allocatable :: qtrc_org(:,:,:,:,:)
 
-    real(RP) :: W   (KA,IA,JA,te)
-    real(RP) :: U   (KA,IA,JA,te)
-    real(RP) :: V   (KA,IA,JA,te)
-    real(RP) :: POTT(KA,IA,JA,te)
+    real(RP), allocatable :: ph_org  (:,:,:,:)
+    real(RP), allocatable :: phb_org (:,:,:,:)
+    real(RP), allocatable :: geof_org(:,:,:,:)
+    real(RP), allocatable :: geoh_org(:,:,:,:)
+    real(RP), allocatable :: lat_org (:,:,:)
+    real(RP), allocatable :: lon_org (:,:,:)
+    real(RP), allocatable :: latu_org(:,:,:)
+    real(RP), allocatable :: lonu_org(:,:,:)
+    real(RP), allocatable :: latv_org(:,:,:)
+    real(RP), allocatable :: lonv_org(:,:,:)
 
-    real(RP) :: PRES(KA,IA,JA,te)
-    real(RP) :: TEMP(KA,IA,JA,te)
-    real(RP) :: QV  (KA,IA,JA,te)
-    real(RP) :: QC  (KA,IA,JA,te)
+    real(RP) :: velw(KA,IA,JA,ts:te)
+    real(RP) :: velu(KA,IA,JA,ts:te)
+    real(RP) :: velv(KA,IA,JA,ts:te)
+    real(RP) :: pott(KA,IA,JA,ts:te)
+    real(RP) :: temp(KA,IA,JA,ts:te)
+    real(RP) :: pres(KA,IA,JA,ts:te)
 
-    real(RP) :: temp_sfc(1,IA,JA,te)
-    real(RP) :: pott_sfc(1,IA,JA,te)
-    real(RP) :: pres_sfc(1,IA,JA,te)
-    real(RP) :: qv_sfc  (1,IA,JA,te)
-    real(RP) :: qc_sfc  (1,IA,JA,te)
+    real(RP) :: pott_sfc(1,IA,JA,ts:te)
+    real(RP) :: temp_sfc(1,IA,JA,ts:te)
+    real(RP) :: pres_sfc(1,IA,JA,ts:te)
+    real(RP) :: qv_sfc  (1,IA,JA,ts:te)
+    real(RP) :: qc_sfc  (1,IA,JA,ts:te)
 
-    real(RP) :: qdry
-    real(RP) :: CVtot
-    real(RP) :: Rtot
-    real(RP) :: RovCP
-    real(RP) :: tem
-    real(RP) :: t0 = 300.0_RP  ! Defined in WRF
+    real(RP) :: hfact(   IA,JA,itp_nh       )
+    real(RP) :: vfact(KA,IA,JA,itp_nh,itp_nv)
 
-    integer :: n, k, i, j, iq, iqw, iq_all
-    character(len=H_MID)  :: varname_wrf
-    logical :: do_read
+    integer :: igrd(   IA,JA,itp_nh       )
+    integer :: jgrd(   IA,JA,itp_nh       )
+    integer :: kgrd(KA,IA,JA,itp_nh,itp_nv)
 
-    intrinsic shape
+    integer :: n, k, i, j, iq
+
+    character(len=H_MID) :: varname_T
+    character(len=H_MID) :: varname_W
+    character(len=H_MID) :: varname_U
+    character(len=H_MID) :: varname_V
     !---------------------------------------------------------------------------
 
-    allocate( AQ_CV(QQA) )
-    AQ_CV(I_QV) = CVvap
-    if ( QWS /= 0 ) then
-       do n = QWS, QWE
-          AQ_CV(n) = CL
-       enddo
-    endif
-    if ( QIS /= 0 ) then
-       do n = QIS, QIE
-          AQ_CV(n) = CI
-       enddo
-    endif
-
-    allocate( p_org(dims(1),dims(2),dims(3),te) )
-    allocate( pbase_org(dims(1),dims(2),dims(3),te) )
-    allocate( dens_org(dims(1),dims(2),dims(3),te) )
-    allocate( w_org(dims(4),dims(2),dims(3),te) )
-    allocate( u_org(dims(1),dims(5),dims(3),te) )
-    allocate( v_org(dims(1),dims(2),dims(6),te) )
-    allocate( pott_org(dims(1),dims(2),dims(3),te) )
-    allocate( qtrc_org(dims(1),dims(2),dims(3),te,QA) )
-    allocate( psfc_org(dims(2),dims(3),te) )
-    allocate( th2m_org(dims(2),dims(3),te) )
-    allocate( lat_org(dims(2),dims(3),te) )
-    allocate( lon_org(dims(2),dims(3),te) )
-    allocate( latu_org(dims(5),dims(3),te) )
-    allocate( lonu_org(dims(5),dims(3),te) )
-    allocate( latv_org(dims(2),dims(6),te) )
-    allocate( lonv_org(dims(2),dims(6),te) )
-    allocate( geoh_org(dims(1),dims(2),dims(3),te) )
-    allocate( geof_org(dims(4),dims(2),dims(3),te) )
-
-    if( serial ) then
-       if( myrank == PRC_master ) then
-          do_read = .true.
-       else
-          do_read = .false.
-       endif
+    if ( wrfout ) then
+       varname_T = "T"
+       varname_W = "W"
+       varname_U = "U"
+       varname_V = "V"
     else
-       do_read = .true.
+       varname_T = "T_1"
+       varname_W = "W_1"
+       varname_U = "U_1"
+       varname_V = "V_1"
     endif
+
+    allocate( read_xy  (dims(2),dims(3),        ts:te)    )
+    allocate( read_uy  (dims(5),dims(3),        ts:te)    )
+    allocate( read_xv  (dims(2),dims(6),        ts:te)    )
+    allocate( read_zxy (dims(1),dims(2),dims(3),ts:te)    )
+    allocate( read_wxy (dims(4),dims(2),dims(3),ts:te)    )
+    allocate( read_zuy (dims(1),dims(5),dims(3),ts:te)    )
+    allocate( read_zxv (dims(1),dims(2),dims(6),ts:te)    )
+
+    allocate( velw_org (dims(4),dims(2),dims(3),ts:te)    )
+    allocate( velu_org (dims(1),dims(5),dims(3),ts:te)    )
+    allocate( velv_org (dims(1),dims(2),dims(6),ts:te)    )
+    allocate( pott_org (dims(1),dims(2),dims(3),ts:te)    )
+    allocate( temp_org (dims(1),dims(2),dims(3),ts:te)    )
+    allocate( pres_org (dims(1),dims(2),dims(3),ts:te)    )
+    allocate( p_org    (dims(1),dims(2),dims(3),ts:te)    )
+    allocate( pb_org   (dims(1),dims(2),dims(3),ts:te)    )
+    allocate( qtrc_org (dims(1),dims(2),dims(3),ts:te,QA) )
+
+    allocate( ph_org   (dims(4),dims(2),dims(3),ts:te)    )
+    allocate( phb_org  (dims(4),dims(2),dims(3),ts:te)    )
+    allocate( geof_org (dims(4),dims(2),dims(3),ts:te)    )
+    allocate( geoh_org (dims(1),dims(2),dims(3),ts:te)    )
+    allocate( lat_org  (dims(2),dims(3),        ts:te)    )
+    allocate( lon_org  (dims(2),dims(3),        ts:te)    )
+    allocate( latu_org (dims(5),dims(3),        ts:te)    )
+    allocate( lonu_org (dims(5),dims(3),        ts:te)    )
+    allocate( latv_org (dims(2),dims(6),        ts:te)    )
+    allocate( lonv_org (dims(2),dims(6),        ts:te)    )
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[realinput]/Categ[InputWRF]'
 
-    allocate( dummy_4D(dims(1),dims(2),dims(3),te) )
-    if( do_read ) then
-       call ExternalFileRead( dummy_4D(:,:,:,:),                             &
-                      BASENAME, "P",  ts, te, myrank, mdlid, single=.true. )
-       p_org(:,:,:,:) = dummy_4D(:,:,:,:)
-       call ExternalFileRead( dummy_4D(:,:,:,:),                         &
-                      BASENAME, "PB", ts, te, myrank, mdlid, single=.true. )
-       pbase_org(:,:,:,:) = dummy_4D(:,:,:,:)
-    endif
+    if( .NOT. serial .or. myrank == PRC_master ) then
+       call ExternalFileRead( read_xy(:,:,:),    BASENAME, "XLAT",    ts, te, myrank, mdlid, single=.true.               )
+       lat_org (:,:,:) = real( read_xy(:,:,:), kind=RP ) * D2R
 
-    if ( wrfout ) then
-       varname_wrf = "T"
-    else
-       varname_wrf = "T_1"
-    endif
-    if( do_read ) then
-       call ExternalFileRead( dummy_4D(:,:,:,:),                          &
-                      BASENAME, varname_wrf,  ts, te, myrank, mdlid, single=.true. )
-       pott_org(:,:,:,:) = dummy_4D(:,:,:,:)
-    endif
-    deallocate( dummy_4D )
+       call ExternalFileRead( read_xy(:,:,:),    BASENAME, "XLONG",   ts, te, myrank, mdlid, single=.true.               )
+       lon_org (:,:,:) = real( read_xy(:,:,:), kind=RP ) * D2R
 
-    allocate( dummy_4D(dims(4),dims(2),dims(3),te) )
-    if ( wrfout ) then
-       varname_wrf = "W"
-    else
-       varname_wrf = "W_1"
-    endif
-    if( do_read ) then
-       call ExternalFileRead( dummy_4D(:,:,:,:),                             &
-                      BASENAME, varname_wrf,  ts, te, myrank, mdlid, single=.true., zstag=.true. )
-       w_org(:,:,:,:) = dummy_4D(:,:,:,:)
-    endif
-    deallocate( dummy_4D )
-    allocate( dummy_4D(dims(1),dims(5),dims(3),te) )
-    if ( wrfout ) then
-       varname_wrf = "U"
-    else
-       varname_wrf = "U_1"
-    endif
-    if( do_read ) then
-       call ExternalFileRead( dummy_4D(:,:,:,:),                             &
-                      BASENAME, varname_wrf,  ts, te, myrank, mdlid, single=.true., xstag=.true. )
-       u_org(:,:,:,:) = dummy_4D(:,:,:,:)
-    endif
-    deallocate( dummy_4D )
-    allocate( dummy_4D(dims(1),dims(2),dims(6),te) )
-    if ( wrfout ) then
-       varname_wrf = "V"
-    else
-       varname_wrf = "V_1"
-    endif
-    if( do_read ) then
-       call ExternalFileRead( dummy_4D(:,:,:,:),                             &
-                      BASENAME, varname_wrf,  ts, te, myrank, mdlid, single=.true., ystag=.true. )
-       v_org(:,:,:,:) = dummy_4D(:,:,:,:)
-    endif
-    deallocate( dummy_4D )
+       call ExternalFileRead( read_uy(:,:,:),    BASENAME, "XLAT_U",  ts, te, myrank, mdlid, single=.true., xstag=.true. )
+       latu_org(:,:,:) = real( read_uy(:,:,:), kind=RP ) * D2R
 
-    allocate( dummy_5D(dims(1),dims(2),dims(3),te,QA) )
-    dummy_5D(:,:,:,:,:) = 0.0_SP
-    if( do_read ) then
-       call ExternalFileRead( dummy_5D(:,:,:,:,I_QV),                     &
-                      BASENAME, "QVAPOR", ts, te, myrank, mdlid, single=.true. )
-    endif
+       call ExternalFileRead( read_uy(:,:,:),    BASENAME, "XLONG_U", ts, te, myrank, mdlid, single=.true., xstag=.true. )
+       lonu_org(:,:,:) = real( read_uy(:,:,:), kind=RP ) * D2R
 
-    if( trim(mptype_run)/='dry' )then
-       if( do_read ) then
-          call ExternalFileRead( dummy_5D(:,:,:,:,I_QC),                     &
-                         BASENAME, "QCLOUD", ts, te, myrank, mdlid, single=.true. )
-          call ExternalFileRead( dummy_5D(:,:,:,:,I_QR),                     &
-                         BASENAME, "QRAIN",  ts, te, myrank, mdlid, single=.true. )
-          call ExternalFileRead( dummy_5D(:,:,:,:,I_QI),                     &
-                         BASENAME, "QICE",   ts, te, myrank, mdlid, single=.true. )
-          call ExternalFileRead( dummy_5D(:,:,:,:,I_QS),                     &
-                         BASENAME, "QSNOW",  ts, te, myrank, mdlid, single=.true. )
-          call ExternalFileRead( dummy_5D(:,:,:,:,I_QG),                     &
-                         BASENAME, "QGRAUP", ts, te, myrank, mdlid, single=.true. )
+       call ExternalFileRead( read_xv(:,:,:),    BASENAME, "XLAT_V",  ts, te, myrank, mdlid, single=.true., ystag=.true. )
+       latv_org(:,:,:) = real( read_xv(:,:,:), kind=RP ) * D2R
+
+       call ExternalFileRead( read_xv(:,:,:),    BASENAME, "XLONG_V", ts, te, myrank, mdlid, single=.true., ystag=.true. )
+       lonv_org(:,:,:) = real( read_xv(:,:,:), kind=RP ) * D2R
+
+       call ExternalFileRead( read_wxy(:,:,:,:), BASENAME, "PH",      ts, te, myrank, mdlid, single=.true., zstag=.true. )
+       ph_org  (:,:,:,:) = real( read_wxy(:,:,:,:), kind=RP )
+
+       call ExternalFileRead( read_wxy(:,:,:,:), BASENAME, "PHB",     ts, te, myrank, mdlid, single=.true., zstag=.true. )
+       phb_org (:,:,:,:) = real( read_wxy(:,:,:,:), kind=RP )
+
+       call ExternalFileRead( read_zxy(:,:,:,:), BASENAME, "P",       ts, te, myrank, mdlid, single=.true.               )
+       p_org   (:,:,:,:) = real( read_zxy(:,:,:,:), kind=RP )
+
+       call ExternalFileRead( read_zxy(:,:,:,:), BASENAME, "PB",      ts, te, myrank, mdlid, single=.true.               )
+       pb_org  (:,:,:,:) = real( read_zxy(:,:,:,:), kind=RP )
+
+       call ExternalFileRead( read_zxy(:,:,:,:), BASENAME, varname_T, ts, te, myrank, mdlid, single=.true.               )
+       pott_org(:,:,:,:) = real( read_zxy(:,:,:,:), kind=RP )
+
+       call ExternalFileRead( read_wxy(:,:,:,:), BASENAME, varname_W, ts, te, myrank, mdlid, single=.true., zstag=.true. )
+       velw_org(:,:,:,:) = real( read_wxy(:,:,:,:), kind=RP )
+
+       call ExternalFileRead( read_zuy(:,:,:,:), BASENAME, varname_U, ts, te, myrank, mdlid, single=.true., xstag=.true. )
+       velu_org(:,:,:,:) = real( read_zuy(:,:,:,:), kind=RP )
+
+       call ExternalFileRead( read_zxv(:,:,:,:), BASENAME, varname_V, ts, te, myrank, mdlid, single=.true., ystag=.true. )
+       velv_org(:,:,:,:) = real( read_zxv(:,:,:,:), kind=RP )
+
+       call ExternalFileRead( read_zxy(:,:,:,:), BASENAME, "QVAPOR",  ts, te, myrank, mdlid, single=.true. )
+       qtrc_org(:,:,:,:,I_QV) = real( read_zxy(:,:,:,:), kind=RP )
+
+       if( trim(mptype_parent)/='dry' ) then
+          call ExternalFileRead( read_zxy(:,:,:,:), BASENAME, "QCLOUD", ts, te, myrank, mdlid, single=.true. )
+          qtrc_org(:,:,:,:,I_QC) = real( read_zxy(:,:,:,:), kind=RP )
+
+          call ExternalFileRead( read_zxy(:,:,:,:), BASENAME, "QRAIN",  ts, te, myrank, mdlid, single=.true. )
+          qtrc_org(:,:,:,:,I_QR) = real( read_zxy(:,:,:,:), kind=RP )
+
+          call ExternalFileRead( read_zxy(:,:,:,:), BASENAME, "QICE",   ts, te, myrank, mdlid, single=.true. )
+          qtrc_org(:,:,:,:,I_QI) = real( read_zxy(:,:,:,:), kind=RP )
+
+          call ExternalFileRead( read_zxy(:,:,:,:), BASENAME, "QSNOW",  ts, te, myrank, mdlid, single=.true. )
+          qtrc_org(:,:,:,:,I_QS) = real( read_zxy(:,:,:,:), kind=RP )
+
+          call ExternalFileRead( read_zxy(:,:,:,:), BASENAME, "QGRAUP", ts, te, myrank, mdlid, single=.true. )
+          qtrc_org(:,:,:,:,I_QG) = real( read_zxy(:,:,:,:), kind=RP )
+       endif
+
+       if( trim(mptype_parent)=='double' ) then
+          call ExternalFileRead( read_zxy(:,:,:,:), BASENAME, "NC",     ts, te, myrank, mdlid, single=.true. )
+          qtrc_org(:,:,:,:,I_NC) = real( read_zxy(:,:,:,:), kind=RP )
+
+          call ExternalFileRead( read_zxy(:,:,:,:), BASENAME, "NR",     ts, te, myrank, mdlid, single=.true. )
+          qtrc_org(:,:,:,:,I_NR) = real( read_zxy(:,:,:,:), kind=RP )
+
+          call ExternalFileRead( read_zxy(:,:,:,:), BASENAME, "NI",     ts, te, myrank, mdlid, single=.true. )
+          qtrc_org(:,:,:,:,I_NI) = real( read_zxy(:,:,:,:), kind=RP )
+
+          call ExternalFileRead( read_zxy(:,:,:,:), BASENAME, "NS",     ts, te, myrank, mdlid, single=.true. )
+          qtrc_org(:,:,:,:,I_NS) = real( read_zxy(:,:,:,:), kind=RP )
+
+          call ExternalFileRead( read_zxy(:,:,:,:), BASENAME, "NG",     ts, te, myrank, mdlid, single=.true. )
+          qtrc_org(:,:,:,:,I_NG) = real( read_zxy(:,:,:,:), kind=RP )
+       endif
+
+       do n = ts, te
+       do j = 1, dims(3)
+       do i = 1, dims(2)
+       do k = 1, dims(1)
+          pres_org(k,i,j,n) = p_org(k,i,j,n) + pb_org(k,i,j,n)
+          temp_org(k,i,j,n) = ( pott_org(k,i,j,n) + t0 ) * ( pres_org(k,i,j,n) / p0 )**RCP
+
+          do iq = 1, QA
+             qtrc_org(k,i,j,n,iq) = max( qtrc_org(k,i,j,n,iq), 0.0_RP )
+          end do
+       end do
+       end do
+       end do
+       end do
+
+       ! convert to geopotential height to use as real height in WRF
+       do n = ts, te
+       do j = 1, dims(3)
+       do i = 1, dims(2)
+       do k = 1, dims(4)
+          geof_org(k,i,j,n) = ( ph_org(k,i,j,n) + phb_org(k,i,j,n) ) / grav
+       end do
+       end do
+       end do
+       end do
+
+       if( trim(mptype_run)=='double' .and. trim(mptype_parent)=='single' )then
+          if( IO_L ) write(IO_FID_LOG,*) '--- Diagnose Number Concentration from Mixing Ratio'
+          call diagnose_number_concentration( qtrc_org(:,:,:,:,:) ) ! [inout]
        endif
     endif
-
-    if( trim(mptype_run)=='dry' )then
-       iq_all = I_QV
-    elseif( trim(mptype_run)=='single' )then
-       iq_all = I_QG
-    elseif( trim(mptype_run)=='double' )then
-       iq_all = I_NG
-
-       if( trim(mptype_parent)=='double' )then
-          if( do_read ) then
-             call ExternalFileRead( dummy_5D(:,:,:,:,I_NC),                     &
-                            BASENAME, "NC", ts, te, myrank, mdlid, single=.true. )
-             call ExternalFileRead( dummy_5D(:,:,:,:,I_NR),                     &
-                            BASENAME, "NR", ts, te, myrank, mdlid, single=.true. )
-             call ExternalFileRead( dummy_5D(:,:,:,:,I_NI),                     &
-                            BASENAME, "NI", ts, te, myrank, mdlid, single=.true. )
-             call ExternalFileRead( dummy_5D(:,:,:,:,I_NS),                     &
-                            BASENAME, "NS", ts, te, myrank, mdlid, single=.true. )
-             call ExternalFileRead( dummy_5D(:,:,:,:,I_NG),                     &
-                            BASENAME, "NG", ts, te, myrank, mdlid, single=.true. )
-          endif
-       endif
-    endif
-
-    qtrc_org(:,:,:,:,:) = dummy_5D(:,:,:,:,:)
-    deallocate( dummy_5D )
-
-    do iq = I_QV, iq_all
-    do n = ts, te
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       qtrc_org(k,i,j,n,iq) = max( qtrc_org(k,i,j,n,iq), 0.0_RP )
-    enddo
-    enddo
-    enddo
-    enddo
-    enddo
-
-    if( trim(mptype_run)=='double' .and. trim(mptype_parent)=='single' )then
-       if( IO_L ) write(IO_FID_LOG,*) '--- Diagnose Number Concentration from Mixing Ratio'
-       call diagnose_number_concentration( qtrc_org(:,:,:,:,:) ) ! [inout]
-    endif
-
-
-    allocate( dummy_3D(dims(2),dims(3),te) )
-    if( do_read ) then
-       call ExternalFileRead( dummy_3D(:,:,:),                             &
-                      BASENAME, "XLAT",    ts, te, myrank, mdlid, single=.true. )
-       lat_org(:,:,:) = dummy_3D(:,:,:) * d2r
-       call ExternalFileRead( dummy_3D(:,:,:),                             &
-                      BASENAME, "XLONG",   ts, te, myrank, mdlid, single=.true. )
-       lon_org(:,:,:) = dummy_3D(:,:,:) * d2r
-    endif
-    deallocate( dummy_3D )
-    allocate( dummy_3D(dims(5),dims(3),te) )
-    if( do_read ) then
-       call ExternalFileRead( dummy_3D(:,:,:),                             &
-                      BASENAME, "XLAT_U",  ts, te, myrank, mdlid, single=.true., xstag=.true. )
-       latu_org(:,:,:) = dummy_3D(:,:,:) * d2r
-       call ExternalFileRead( dummy_3D(:,:,:),                             &
-                      BASENAME, "XLONG_U", ts, te, myrank, mdlid, single=.true., xstag=.true. )
-       lonu_org(:,:,:) = dummy_3D(:,:,:) * d2r
-    endif
-    deallocate( dummy_3D )
-    allocate( dummy_3D(dims(2),dims(6),te) )
-    if( do_read ) then
-    call ExternalFileRead( dummy_3D(:,:,:),                             &
-                   BASENAME, "XLAT_V",  ts, te, myrank, mdlid, single=.true., ystag=.true. )
-    latv_org(:,:,:) = dummy_3D(:,:,:) * d2r
-    call ExternalFileRead( dummy_3D(:,:,:),                             &
-                   BASENAME, "XLONG_V", ts, te, myrank, mdlid, single=.true., ystag=.true. )
-    lonv_org(:,:,:) = dummy_3D(:,:,:) * d2r
-    endif
-    deallocate( dummy_3D )
-
-    allocate( dummy_4D(dims(4),dims(2),dims(3),te) )
-    if( do_read ) then
-       call ExternalFileRead( dummy_4D(:,:,:,:),                           &
-                      BASENAME, "PHB", ts, te, myrank, mdlid, single=.true., zstag=.true. )
-       geof_org(:,:,:,:) = dummy_4D(:,:,:,:)
-       call ExternalFileRead( dummy_4D(:,:,:,:),                           &
-                      BASENAME, "PH",  ts, te, myrank, mdlid, single=.true., zstag=.true. )
-       geof_org(:,:,:,:) = geof_org(:,:,:,:) + dummy_4D(:,:,:,:)
-    endif
-    deallocate( dummy_4D )
-
-    allocate( dummy_3D(dims(2),dims(3),te) )
-    if( do_read ) then
-       call ExternalFileRead( dummy_3D(:,:,:),                           &
-                      BASENAME, "PSFC", ts, te, myrank, mdlid, single=.true. )
-       psfc_org(:,:,:) = dummy_3D(:,:,:)
-       call ExternalFileRead( dummy_3D(:,:,:),                           &
-                      BASENAME, "TH2",  ts, te, myrank, mdlid, single=.true. )
-       th2m_org(:,:,:) = dummy_3D(:,:,:)
-    endif
-    deallocate( dummy_3D )
 
     if( serial ) then
-       call COMM_bcast( p_org, dims(1),dims(2),dims(3),te )
-       call COMM_bcast( pbase_org, dims(1),dims(2),dims(3),te )
-       call COMM_bcast( pott_org, dims(1),dims(2),dims(3),te )
-       call COMM_bcast( w_org, dims(4),dims(2),dims(3),te )
-       call COMM_bcast( u_org, dims(1),dims(5),dims(3),te )
-       call COMM_bcast( v_org, dims(1),dims(2),dims(6),te )
+       call COMM_bcast( geof_org(:,:,:,:), dims(4),dims(2),dims(3),te )
+       call COMM_bcast( lat_org (:,:,:),   dims(2),dims(3),        te )
+       call COMM_bcast( lon_org (:,:,:),   dims(2),dims(3),        te )
+       call COMM_bcast( latu_org(:,:,:),   dims(5),dims(3),        te )
+       call COMM_bcast( lonu_org(:,:,:),   dims(5),dims(3),        te )
+       call COMM_bcast( latv_org(:,:,:),   dims(2),dims(6),        te )
+       call COMM_bcast( lonv_org(:,:,:),   dims(2),dims(6),        te )
 
-       do iq = I_QV, iq_all
+       call COMM_bcast( velw_org(:,:,:,:), dims(4),dims(2),dims(3),te )
+       call COMM_bcast( velu_org(:,:,:,:), dims(1),dims(5),dims(3),te )
+       call COMM_bcast( velv_org(:,:,:,:), dims(1),dims(2),dims(6),te )
+       call COMM_bcast( temp_org(:,:,:,:), dims(1),dims(2),dims(3),te )
+       call COMM_bcast( pres_org(:,:,:,:), dims(1),dims(2),dims(3),te )
+
+       do iq = 1, QA
           call COMM_bcast( qtrc_org(:,:,:,:,iq), dims(1),dims(2),dims(3),te )
        enddo
-
-       call COMM_bcast( lat_org(:,:,:), dims(2),dims(3),te )
-       call COMM_bcast( lon_org(:,:,:), dims(2),dims(3),te )
-       call COMM_bcast( latu_org(:,:,:), dims(5),dims(3),te )
-       call COMM_bcast( lonu_org(:,:,:), dims(5),dims(3),te )
-       call COMM_bcast( latv_org(:,:,:), dims(2),dims(6),te )
-       call COMM_bcast( lonv_org(:,:,:), dims(2),dims(6),te )
-
-       call COMM_bcast( geof_org(:,:,:,:), dims(4),dims(2),dims(3),te )
-       call COMM_bcast( psfc_org(:,:,:), dims(2),dims(3),te )
-       call COMM_bcast( th2m_org(:,:,:), dims(2),dims(3),te )
     endif
 
-    do n = 1, te
-    do j = 1, dims(3)
-    do i = 1, dims(2)
-    do k = 1, dims(1)
-       p_org(k,i,j,n) = pbase_org(k,i,j,n) + p_org(k,i,j,n)
-       pott_org(k,i,j,n) = pott_org(k,i,j,n) + t0
-    end do
-    end do
-    end do
-    end do
-
-    ! convert to geopotential height to use as real height in WRF
-    do n = 1, te
-    do j = 1, dims(3)
-    do i = 1, dims(2)
-    do k = 1, dims(1)
-       geof_org(k,i,j,n) = geof_org(k,i,j,n) / grav
-    end do
-    end do
-    end do
-    end do
     ! make half level of geopotential height from face level
-    do n = 1, te
-    do j = 1, dims(3)
-    do i = 1, dims(2)
-    do k = 1, dims(1)
-       geoh_org(k,i,j,n) = (geof_org(k,i,j,n) + geof_org(k+1,i,j,n))*0.5_RP
-    end do
-    end do
-    end do
-    end do
-
-    ! calc dens
     do n = ts, te
     do j = 1, dims(3)
     do i = 1, dims(2)
     do k = 1, dims(1)
-       qdry  = 1.0_RP
-       CVtot = 0.0_RP
-       do iqw = QQS, QQE
-          qdry  = qdry  - qtrc_org(k,i,j,n,iqw)
-          CVtot = CVtot + qtrc_org(k,i,j,n,iqw) * AQ_CV(iqw)
-       enddo
-       CVtot = CVdry * qdry + CVtot
-       Rtot  = Rdry  * qdry + Rvap * qtrc_org(k,i,j,n,I_QV)
-       RovCP = Rtot / ( CVtot + Rtot )
-       tem   = pott_org(k,i,j,n) * ( p_org(k,i,j,n) / PRE00 )**RovCP
-
-       dens_org(k,i,j,n) = p_org(k,i,j,n) / ( Rtot * tem )
+       geoh_org(k,i,j,n) = ( geof_org(k,i,j,n) + geof_org(k+1,i,j,n) ) * 0.5_RP
     end do
     end do
     end do
     end do
-
-    ! make initial condition by interpolation
-    call LatLonZ_Interpolation_Linear( dens,w,u,v,pott,qtrc,pres_sfc(1,:,:,:),pott_sfc(1,:,:,:), &
-                                       dens_org,w_org,u_org,v_org,pott_org,qtrc_org,        &
-                                       psfc_org,th2m_org,                                   &
-                                       lat_org,lon_org,latu_org,lonu_org,latv_org,lonv_org, &
-                                       geof_org,geoh_org,dims,ts,te )
 
     do n = ts, te !--- time loop
 
-      if ( I_QV > 0 ) then
-         do j = JS, JE
-         do i = IS, IE
-         do k = KS, KE
-            qv(k,i,j,n) = qtrc(k,i,j,n,I_QV)
-         end do
-         end do
-         end do
-      else
-         do j = JS, JE
-         do i = IS, IE
-         do k = KS, KE
-            qv(k,i,j,n) = 0.0_RP
-         end do
-         end do
-         end do
-      end if
+       ! for vector (w) points
+       call latlonz_interporation_fact( hfact   (:,:,:),           & ! [OUT]
+                                        vfact   (:,:,:,:,:),       & ! [OUT]
+                                        kgrd    (:,:,:,:,:),       & ! [OUT]
+                                        igrd    (:,:,:),           & ! [OUT]
+                                        jgrd    (:,:,:),           & ! [OUT]
+                                        FZ      (:,:,:),           & ! [IN]
+                                        LAT     (:,:),             & ! [IN]
+                                        LON     (:,:),             & ! [IN]
+                                        geof_org(:,:,:,:),         & ! [IN]
+                                        lat_org (:,:,:),           & ! [IN]
+                                        lon_org (:,:,:),           & ! [IN]
+                                        dims(4), dims(2), dims(3), & ! [IN]
+                                        n                          ) ! [IN]
 
-      if ( I_QC > 0 ) then
-         do j = JS, JE
-         do i = IS, IE
-         do k = KS, KE
-            qc(k,i,j,n) = qtrc(k,i,j,n,I_QC)
-         end do
-         end do
-         end do
-      else
-         do j = JS, JE
-         do i = IS, IE
-         do k = KS, KE
-            qc(k,i,j,n) = 0.0_RP
-         end do
-         end do
-         end do
-      end if
+       do j = JS-1, JE+1
+       do i = IS-1, IE+1
+       do k = KS-1, KE+1
+          velw(k,i,j,n) = velw_org(kgrd(k,i,j,1,1),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,1) &
+                        + velw_org(kgrd(k,i,j,2,1),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,1) &
+                        + velw_org(kgrd(k,i,j,3,1),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,1) &
+                        + velw_org(kgrd(k,i,j,1,2),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,2) &
+                        + velw_org(kgrd(k,i,j,2,2),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,2) &
+                        + velw_org(kgrd(k,i,j,3,2),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,2)
+       end do
+       end do
+       end do
 
-      ! make density & pressure profile in moist condition
-      qv_sfc(1,:,:,n) = qv(KS,:,:,n)
-      qc_sfc(1,:,:,n) = qc(KS,:,:,n)
-      call HYDROSTATIC_buildrho( dens    (:,:,:,n), & ! [OUT]
-                                 temp    (:,:,:,n), & ! [OUT]
-                                 pres    (:,:,:,n), & ! [OUT]
-                                 pott    (:,:,:,n), & ! [IN]
-                                 qv      (:,:,:,n), & ! [IN]
-                                 qc      (:,:,:,n), & ! [IN]
-                                 temp_sfc(:,:,:,n), & ! [OUT]
-                                 pres_sfc(:,:,:,n), & ! [IN]
-                                 pott_sfc(:,:,:,n), & ! [IN]
-                                 qv_sfc  (:,:,:,n), & ! [IN]
-                                 qc_sfc  (:,:,:,n)  ) ! [IN]
+       ! for vector (u) points
+       call latlonz_interporation_fact( hfact   (:,:,:),           & ! [OUT]
+                                        vfact   (:,:,:,:,:),       & ! [OUT]
+                                        kgrd    (:,:,:,:,:),       & ! [OUT]
+                                        igrd    (:,:,:),           & ! [OUT]
+                                        jgrd    (:,:,:),           & ! [OUT]
+                                        CZ      (:,:,:),           & ! [IN]
+                                        LAT     (:,:),             & ! [IN]
+                                        LONX    (:,:),             & ! [IN]
+                                        geoh_org(:,:,:,:),         & ! [IN]
+                                        latu_org(:,:,:),           & ! [IN]
+                                        lonu_org(:,:,:),           & ! [IN]
+                                        dims(1), dims(2), dims(3), & ! [IN] ! dims(5) wasn't used to keep consistency with geoh_org
+                                        n                          ) ! [IN]
 
-      call COMM_vars8( dens(:,:,:,n), 1 )
-      call COMM_wait ( dens(:,:,:,n), 1 )
+       do j = JS-1, JE+1
+       do i = IS-1, IE+1
+       do k = KS-1, KE+1
+          velu(k,i,j,n) = velu_org(kgrd(k,i,j,1,1),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,1) &
+                        + velu_org(kgrd(k,i,j,2,1),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,1) &
+                        + velu_org(kgrd(k,i,j,3,1),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,1) &
+                        + velu_org(kgrd(k,i,j,1,2),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,2) &
+                        + velu_org(kgrd(k,i,j,2,2),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,2) &
+                        + velu_org(kgrd(k,i,j,3,2),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,2)
+       end do
+       end do
+       end do
 
-      do j = JS, JE
-      do i = IS, IE
-      do k = KS, KE
-         momz(k,i,j,n) = 0.5_RP * w(k,i,j,n) * ( dens(k+1,  i,  j,n) + dens(k,i,j,n) )
-         momx(k,i,j,n) = 0.5_RP * u(k,i,j,n) * ( dens(k,  i+1,  j,n) + dens(k,i,j,n) )
-         momy(k,i,j,n) = 0.5_RP * v(k,i,j,n) * ( dens(k,    i,j+1,n) + dens(k,i,j,n) )
-         rhot(k,i,j,n) = pott(k,i,j,n) * dens(k,i,j,n)
-      enddo
-      enddo
-      enddo
+       ! for vector (v) points
+       call latlonz_interporation_fact( hfact   (:,:,:),           & ! [OUT]
+                                        vfact   (:,:,:,:,:),       & ! [OUT]
+                                        kgrd    (:,:,:,:,:),       & ! [OUT]
+                                        igrd    (:,:,:),           & ! [OUT]
+                                        jgrd    (:,:,:),           & ! [OUT]
+                                        CZ      (:,:,:),           & ! [IN]
+                                        LATY    (:,:),             & ! [IN]
+                                        LON     (:,:),             & ! [IN]
+                                        geoh_org(:,:,:,:),         & ! [IN]
+                                        latv_org(:,:,:),           & ! [IN]
+                                        lonv_org(:,:,:),           & ! [IN]
+                                        dims(1), dims(2), dims(3), & ! [IN] ! dims(6) wasn't used to keep consistency with geoh_org
+                                        n                          ) ! [IN]
 
-    enddo !--- time loop
+       do j = JS-1, JE+1
+       do i = IS-1, IE+1
+       do k = KS-1, KE+1
+          velv(k,i,j,n) = velv_org(kgrd(k,i,j,1,1),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,1) &
+                        + velv_org(kgrd(k,i,j,2,1),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,1) &
+                        + velv_org(kgrd(k,i,j,3,1),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,1) &
+                        + velv_org(kgrd(k,i,j,1,2),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,2) &
+                        + velv_org(kgrd(k,i,j,2,2),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,2) &
+                        + velv_org(kgrd(k,i,j,3,2),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,2)
+       end do
+       end do
+       end do
 
-    deallocate( p_org )
-    deallocate( pbase_org )
-    deallocate( dens_org )
-    deallocate( w_org )
-    deallocate( u_org )
-    deallocate( v_org )
+       ! for scalar points
+       call latlonz_interporation_fact( hfact   (:,:,:),           & ! [OUT]
+                                        vfact   (:,:,:,:,:),       & ! [OUT]
+                                        kgrd    (:,:,:,:,:),       & ! [OUT]
+                                        igrd    (:,:,:),           & ! [OUT]
+                                        jgrd    (:,:,:),           & ! [OUT]
+                                        CZ      (:,:,:),           & ! [IN]
+                                        LAT     (:,:),             & ! [IN]
+                                        LON     (:,:),             & ! [IN]
+                                        geoh_org(:,:,:,:),         & ! [IN]
+                                        lat_org (:,:,:),           & ! [IN]
+                                        lon_org (:,:,:),           & ! [IN]
+                                        dims(1), dims(2), dims(3), & ! [IN]
+                                        n                          ) ! [IN]
+
+       do j = JS-1, JE+1
+       do i = IS-1, IE+1
+       do k = KS-1, KE+1
+          temp(k,i,j,n) = temp_org(kgrd(k,i,j,1,1),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,1) &
+                        + temp_org(kgrd(k,i,j,2,1),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,1) &
+                        + temp_org(kgrd(k,i,j,3,1),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,1) &
+                        + temp_org(kgrd(k,i,j,1,2),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,2) &
+                        + temp_org(kgrd(k,i,j,2,2),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,2) &
+                        + temp_org(kgrd(k,i,j,3,2),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,2)
+
+          pres(k,i,j,n) = pres_org(kgrd(k,i,j,1,1),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,1) &
+                        + pres_org(kgrd(k,i,j,2,1),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,1) &
+                        + pres_org(kgrd(k,i,j,3,1),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,1) &
+                        + pres_org(kgrd(k,i,j,1,2),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,2) &
+                        + pres_org(kgrd(k,i,j,2,2),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,2) &
+                        + pres_org(kgrd(k,i,j,3,2),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,2)
+
+          do iq = 1, QA
+             qtrc(k,i,j,n,iq) = qtrc_org(kgrd(k,i,j,1,1),igrd(i,j,1),jgrd(i,j,1),n,iq) * hfact(i,j,1) * vfact(k,i,j,1,1) &
+                              + qtrc_org(kgrd(k,i,j,2,1),igrd(i,j,2),jgrd(i,j,2),n,iq) * hfact(i,j,2) * vfact(k,i,j,2,1) &
+                              + qtrc_org(kgrd(k,i,j,3,1),igrd(i,j,3),jgrd(i,j,3),n,iq) * hfact(i,j,3) * vfact(k,i,j,3,1) &
+                              + qtrc_org(kgrd(k,i,j,1,2),igrd(i,j,1),jgrd(i,j,1),n,iq) * hfact(i,j,1) * vfact(k,i,j,1,2) &
+                              + qtrc_org(kgrd(k,i,j,2,2),igrd(i,j,2),jgrd(i,j,2),n,iq) * hfact(i,j,2) * vfact(k,i,j,2,2) &
+                              + qtrc_org(kgrd(k,i,j,3,2),igrd(i,j,3),jgrd(i,j,3),n,iq) * hfact(i,j,3) * vfact(k,i,j,3,2)
+          end do
+
+          call THERMODYN_pott( pott(k,i,j,n),  & ! [OUT]
+                               temp(k,i,j,n),  & ! [IN]
+                               pres(k,i,j,n),  & ! [IN]
+                               qtrc(k,i,j,n,:) ) ! [IN]
+       end do
+       end do
+       end do
+
+       ! make density & pressure profile in moist condition
+       pott_sfc(1,:,:,n) = pott(KS,:,:,n)
+       pres_sfc(1,:,:,n) = pres(KS,:,:,n)
+       qv_sfc  (1,:,:,n) = qtrc(KS,:,:,n,I_QV)
+       qc_sfc  (1,:,:,n) = qtrc(KS,:,:,n,I_QC)
+
+       call HYDROSTATIC_buildrho( dens    (:,:,:,n),      & ! [OUT]
+                                  temp    (:,:,:,n),      & ! [OUT]
+                                  pres    (:,:,:,n),      & ! [OUT]
+                                  pott    (:,:,:,n),      & ! [IN]
+                                  qtrc    (:,:,:,n,I_QV), & ! [IN]
+                                  qtrc    (:,:,:,n,I_QC), & ! [IN]
+                                  temp_sfc(:,:,:,n),      & ! [OUT]
+                                  pres_sfc(:,:,:,n),      & ! [IN]
+                                  pott_sfc(:,:,:,n),      & ! [IN]
+                                  qv_sfc  (:,:,:,n),      & ! [IN]
+                                  qc_sfc  (:,:,:,n)       ) ! [IN]
+
+       call COMM_vars8( dens(:,:,:,n), 1 )
+       call COMM_wait ( dens(:,:,:,n), 1 )
+
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          momz(k,i,j,n) = 0.5_RP * velw(k,i,j,n) * ( dens(k+1,  i,  j,n) + dens(k,i,j,n) )
+          momx(k,i,j,n) = 0.5_RP * velu(k,i,j,n) * ( dens(k,  i+1,  j,n) + dens(k,i,j,n) )
+          momy(k,i,j,n) = 0.5_RP * velv(k,i,j,n) * ( dens(k,    i,j+1,n) + dens(k,i,j,n) )
+          rhot(k,i,j,n) = pott(k,i,j,n) * dens(k,i,j,n)
+       end do
+       end do
+       end do
+
+    end do !--- time loop
+
+    deallocate( read_xy  )
+    deallocate( read_uy  )
+    deallocate( read_xv  )
+    deallocate( read_zxy )
+    deallocate( read_wxy )
+    deallocate( read_zuy )
+    deallocate( read_zxv )
+
+    deallocate( velw_org )
+    deallocate( velu_org )
+    deallocate( velv_org )
     deallocate( pott_org )
+    deallocate( temp_org )
+    deallocate( pres_org )
+    deallocate( p_org    )
+    deallocate( pb_org   )
     deallocate( qtrc_org )
 
-    deallocate( lat_org )
-    deallocate( lon_org )
+    deallocate( ph_org   )
+    deallocate( phb_org  )
+    deallocate( geof_org )
+    deallocate( geoh_org )
+    deallocate( lat_org  )
+    deallocate( lon_org  )
     deallocate( latu_org )
     deallocate( lonu_org )
     deallocate( latv_org )
     deallocate( lonv_org )
-    deallocate( geoh_org )
-    deallocate( geof_org )
-    deallocate( psfc_org )
-    deallocate( th2m_org )
-
-    deallocate( AQ_CV )
 
     return
   end subroutine InputAtomWRF
@@ -2268,178 +2243,6 @@ contains
 
     return
   end subroutine InputSurfaceWRF
-
-  !-----------------------------------------------------------------------------
-  subroutine LatLonZ_Interpolation_Linear( &
-      dens,          & ! (out)
-      w,             & ! (out)
-      u,             & ! (out)
-      v,             & ! (out)
-      pott,          & ! (out)
-      qtrc,          & ! (out)
-      psfc,          & ! (out)
-      th2m,          & ! (out)
-      dens_org,      & ! (in)
-      w_org,         & ! (in)
-      u_org,         & ! (in)
-      v_org,         & ! (in)
-      pott_org,      & ! (in)
-      qtrc_org,      & ! (in)
-      psfc_org,      & ! (in)
-      th2m_org,      & ! (in)
-      lat_org,       & ! (in)
-      lon_org,       & ! (in)
-      latu_org,      & ! (in)
-      lonu_org,      & ! (in)
-      latv_org,      & ! (in)
-      lonv_org,      & ! (in)
-      geof_org,      & ! (in)
-      geoh_org,      & ! (in)
-      dims,          & ! (in)
-      ts,            & ! (in)
-      te             & ! (in)
-      )
-    implicit none
-
-    real(RP), intent(out)  :: dens(:,:,:,:)
-    real(RP), intent(out)  :: w(:,:,:,:)
-    real(RP), intent(out)  :: u(:,:,:,:)
-    real(RP), intent(out)  :: v(:,:,:,:)
-    real(RP), intent(out)  :: pott(:,:,:,:)
-    real(RP), intent(out)  :: qtrc(:,:,:,:,:)
-    real(RP), intent(out)  :: psfc(:,:,:)
-    real(RP), intent(out)  :: th2m(:,:,:)
-    real(RP), intent( in)  :: dens_org(:,:,:,:)
-    real(RP), intent( in)  :: w_org(:,:,:,:)
-    real(RP), intent( in)  :: u_org(:,:,:,:)
-    real(RP), intent( in)  :: v_org(:,:,:,:)
-    real(RP), intent( in)  :: pott_org(:,:,:,:)
-    real(RP), intent( in)  :: qtrc_org(:,:,:,:,:)
-    real(RP), intent( in)  :: psfc_org(:,:,:)
-    real(RP), intent( in)  :: th2m_org(:,:,:)
-    real(RP), intent( in)  :: lat_org(:,:,:)
-    real(RP), intent( in)  :: lon_org(:,:,:)
-    real(RP), intent( in)  :: latu_org(:,:,:)
-    real(RP), intent( in)  :: lonu_org(:,:,:)
-    real(RP), intent( in)  :: latv_org(:,:,:)
-    real(RP), intent( in)  :: lonv_org(:,:,:)
-    real(RP), intent( in)  :: geof_org(:,:,:,:)
-    real(RP), intent( in)  :: geoh_org(:,:,:,:)
-    integer,  intent( in)  :: dims(:)
-    integer,  intent( in)  :: ts
-    integer,  intent( in)  :: te
-
-    real(RP) :: hfact(IA,JA,itp_nh)
-    real(RP) :: vfact(KA,IA,JA,itp_nh,itp_nv)
-    integer :: igrd(IA,JA,itp_nh)
-    integer :: jgrd(IA,JA,itp_nh)
-    integer :: kgrd(KA,IA,JA,itp_nh,itp_nv)
-
-    integer :: n, k, i, j, iq
-
-    intrinsic shape
-    !---------------------------------------------------------------------------
-
-    do n=ts, te !--- time loop
-
-    ! for scalar points
-    call latlonz_interporation_fact( hfact,vfact,kgrd,igrd,jgrd,cz,lat,lon, &
-                                      geoh_org,lat_org,lon_org,dims(1),dims(2),dims(3),n )
-
-    do j = JS-1, JE+1
-    do i = IS-1, IE+1
-    do k = KS-1, KE+1
-       dens(k,i,j,n) =  dens_org(kgrd(k,i,j,1,1),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,1) &
-                      + dens_org(kgrd(k,i,j,2,1),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,1) &
-                      + dens_org(kgrd(k,i,j,3,1),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,1) &
-                      + dens_org(kgrd(k,i,j,1,2),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,2) &
-                      + dens_org(kgrd(k,i,j,2,2),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,2) &
-                      + dens_org(kgrd(k,i,j,3,2),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,2)
-
-       pott(k,i,j,n) =  pott_org(kgrd(k,i,j,1,1),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,1) &
-                      + pott_org(kgrd(k,i,j,2,1),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,1) &
-                      + pott_org(kgrd(k,i,j,3,1),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,1) &
-                      + pott_org(kgrd(k,i,j,1,2),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,2) &
-                      + pott_org(kgrd(k,i,j,2,2),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,2) &
-                      + pott_org(kgrd(k,i,j,3,2),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,2)
-
-       do iq = 1, QA
-          qtrc(k,i,j,n,iq) =  qtrc_org(kgrd(k,i,j,1,1),igrd(i,j,1),jgrd(i,j,1),n,iq) * hfact(i,j,1) * vfact(k,i,j,1,1) &
-                            + qtrc_org(kgrd(k,i,j,2,1),igrd(i,j,2),jgrd(i,j,2),n,iq) * hfact(i,j,2) * vfact(k,i,j,2,1) &
-                            + qtrc_org(kgrd(k,i,j,3,1),igrd(i,j,3),jgrd(i,j,3),n,iq) * hfact(i,j,3) * vfact(k,i,j,3,1) &
-                            + qtrc_org(kgrd(k,i,j,1,2),igrd(i,j,1),jgrd(i,j,1),n,iq) * hfact(i,j,1) * vfact(k,i,j,1,2) &
-                            + qtrc_org(kgrd(k,i,j,2,2),igrd(i,j,2),jgrd(i,j,2),n,iq) * hfact(i,j,2) * vfact(k,i,j,2,2) &
-                            + qtrc_org(kgrd(k,i,j,3,2),igrd(i,j,3),jgrd(i,j,3),n,iq) * hfact(i,j,3) * vfact(k,i,j,3,2)
-       enddo
-    enddo
-    enddo
-    enddo
-
-    do j = JS-1, JE+1
-    do i = IS-1, IE+1
-       psfc(i,j,n) =    psfc_org(igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) &
-                      + psfc_org(igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) &
-                      + psfc_org(igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3)
-
-       th2m(i,j,n)  =   th2m_org(igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) &
-                      + th2m_org(igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) &
-                      + th2m_org(igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3)
-    enddo
-    enddo
-    ! for vector (u) points
-    call latlonz_interporation_fact( hfact,vfact,kgrd,igrd,jgrd,cz,lat,lonx, &
-                                      geoh_org,latu_org,lonu_org,dims(1),dims(2),dims(3),n )
-    !                                 dims(5) wasn't used to keep consistency with geoh_org
-    do j = JS-1, JE+1
-    do i = IS-1, IE+1
-    do k = KS-1, KE+1
-       u(k,i,j,n) =  u_org(kgrd(k,i,j,1,1),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,1) &
-                   + u_org(kgrd(k,i,j,2,1),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,1) &
-                   + u_org(kgrd(k,i,j,3,1),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,1) &
-                   + u_org(kgrd(k,i,j,1,2),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,2) &
-                   + u_org(kgrd(k,i,j,2,2),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,2) &
-                   + u_org(kgrd(k,i,j,3,2),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,2)
-    enddo
-    enddo
-    enddo
-
-    ! for vector (v) points
-    call latlonz_interporation_fact( hfact,vfact,kgrd,igrd,jgrd,cz,laty,lon, &
-                                      geoh_org,latv_org,lonv_org,dims(1),dims(2),dims(3),n )
-    !                                 dims(6) wasn't used to keep consistency with geoh_org
-    do j = JS-1, JE+1
-    do i = IS-1, IE+1
-    do k = KS-1, KE+1
-       v(k,i,j,n) =  v_org(kgrd(k,i,j,1,1),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,1) &
-                   + v_org(kgrd(k,i,j,2,1),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,1) &
-                   + v_org(kgrd(k,i,j,3,1),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,1) &
-                   + v_org(kgrd(k,i,j,1,2),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,2) &
-                   + v_org(kgrd(k,i,j,2,2),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,2) &
-                   + v_org(kgrd(k,i,j,3,2),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,2)
-    enddo
-    enddo
-    enddo
-
-    ! for vector (w) points
-    call latlonz_interporation_fact( hfact,vfact,kgrd,igrd,jgrd,fz,lat,lon, &
-                                      geof_org,lat_org,lon_org,dims(4),dims(2),dims(3),n )
-    do j = JS-1, JE+1
-    do i = IS-1, IE+1
-    do k = KS-1, KE+1
-       w(k,i,j,n) =  w_org(kgrd(k,i,j,1,1),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,1) &
-                   + w_org(kgrd(k,i,j,2,1),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,1) &
-                   + w_org(kgrd(k,i,j,3,1),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,1) &
-                   + w_org(kgrd(k,i,j,1,2),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,2) &
-                   + w_org(kgrd(k,i,j,2,2),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,2) &
-                   + w_org(kgrd(k,i,j,3,2),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,2)
-    enddo
-    enddo
-    enddo
-
-    enddo !--- time loop
-
-    return
-  end subroutine LatLonZ_Interpolation_Linear
 
   !-----------------------------------------------------------------------------
   subroutine latlonz_interporation_fact( &
