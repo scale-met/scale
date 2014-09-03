@@ -47,10 +47,9 @@ module scale_atmos_phy_tb_dummy
 contains
   !-----------------------------------------------------------------------------
   subroutine ATMOS_PHY_TB_dummy_setup( &
-       TYPE_TB, &
-       CDZ, CDX, CDY,   &
-       FDZ, FDX, FDY,   &
-       CZ, FZ )
+       TYPE_TB,       &
+       CDZ, CDX, CDY, &
+       CZ             )
     use scale_process, only: &
        PRC_MPIstop
     implicit none
@@ -60,11 +59,7 @@ contains
     real(RP), intent(in) :: CDZ(KA)
     real(RP), intent(in) :: CDX(IA)
     real(RP), intent(in) :: CDY(JA)
-    real(RP), intent(in) :: FDZ(KA-1)
-    real(RP), intent(in) :: FDX(IA-1)
-    real(RP), intent(in) :: FDY(JA-1)
-    real(RP), intent(in) :: CZ(KA)
-    real(RP), intent(in) :: FZ(0:KA)
+    real(RP), intent(in) :: CZ (KA,IA,JA)
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Turbulence Dummy'
@@ -81,8 +76,11 @@ contains
   subroutine ATMOS_PHY_TB_dummy( &
        qflx_sgs_momz, qflx_sgs_momx, qflx_sgs_momy, & ! (out)
        qflx_sgs_rhot, qflx_sgs_rhoq,                & ! (out)
-       tke, nu_C, Ri, Pr,                           & ! (out) diagnostic variables
-       MOMZ, MOMX, MOMY, RHOT, DENS, QTRC           ) ! (in)
+       tke,                                         & ! (inout) diagnostic variables
+       nu_C, Ri, Pr,                                & ! (out) diagnostic variables
+       MOMZ, MOMX, MOMY, RHOT, DENS, QTRC,          & ! (in)
+       sflx_mw, sflx_mu, sflx_mv, sflx_sh,          & ! (in)
+       GSQRT, J13G, J23G, J33G                      ) ! (in)
     implicit none
 
     ! SGS flux
@@ -92,7 +90,8 @@ contains
     real(RP), intent(out) :: qflx_sgs_rhot(KA,IA,JA,3)
     real(RP), intent(out) :: qflx_sgs_rhoq(KA,IA,JA,QA,3)
 
-    real(RP), intent(out) :: tke (KA,IA,JA) ! TKE
+    real(RP), intent(inout) :: tke (KA,IA,JA) ! TKE
+
     real(RP), intent(out) :: nu_C(KA,IA,JA) ! eddy viscosity (center)
     real(RP), intent(out) :: Pr  (KA,IA,JA) ! Prantle number
     real(RP), intent(out) :: Ri  (KA,IA,JA) ! Richardson number
@@ -103,6 +102,16 @@ contains
     real(RP), intent(in)  :: RHOT(KA,IA,JA)
     real(RP), intent(in)  :: DENS(KA,IA,JA)
     real(RP), intent(in)  :: QTRC(KA,IA,JA,QA)
+
+    real(RP), intent(in)  :: sflx_mw(IA,JA)
+    real(RP), intent(in)  :: sflx_mu(IA,JA)
+    real(RP), intent(in)  :: sflx_mv(IA,JA)
+    real(RP), intent(in)  :: sflx_sh(IA,JA)
+
+    real(RP), intent(in)  :: GSQRT(KA,IA,JA,7) !< vertical metrics {G}^1/2
+    real(RP), intent(in)  :: J13G (KA,IA,JA,7) !< (1,3) element of Jacobian matrix
+    real(RP), intent(in)  :: J23G (KA,IA,JA,7) !< (1,3) element of Jacobian matrix
+    real(RP), intent(in)  :: J33G                 !< (3,3) element of Jacobian matrix
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Turbulence(dummy)'
