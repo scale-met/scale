@@ -22,6 +22,7 @@ module mod_user
   use scale_grid_index
   use scale_tracer
   use scale_index
+  use scale_land_grid_index
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -54,6 +55,8 @@ module mod_user
   real(RP), parameter :: qv_ini(K_ini) = &
        (/ 0.0025_RP, 0.0025_RP, 0.0025_RP, 0.0025_RP, 0.005_RP, &
           0.0030_RP, 0.0020_RP, 0.0015_RP, 0.0000_RP, 0.000_RP /)
+
+  real(RP), parameter :: BETA = 0.025_RP
 
   real(RP) :: Ps = 0.972E5_RP
   real(RP) :: Ug =  3.0_RP
@@ -162,6 +165,10 @@ contains
     use scale_time, only: &
          NOWSEC => TIME_NOWSEC, &
          dt     => TIME_DTSEC
+    use mod_land_vars, only: &
+         I_WaterCritical, &
+         LAND_WATER, &
+         LAND_PROPERTY
     implicit none
     real(RP) :: f, fdt
     real(RP) :: dudt, dvdt
@@ -189,6 +196,8 @@ contains
     end do
 
     call set_tg( NOWSEC )
+
+    LAND_WATER(LKS,:,:) = BETA * LAND_PROPERTY(:,:,I_WaterCritical)
 
     return
   end subroutine USER_step
