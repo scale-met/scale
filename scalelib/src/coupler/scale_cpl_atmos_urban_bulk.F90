@@ -2,8 +2,8 @@
 !> module COUPLER / Atmosphere-Urban Surface fluxes
 !!
 !! @par Description
-!!          Surface flux between atmosphere and urban
-!!          based on Urban Canopy Model (Kusaka et al. 2000)
+!!          Surface fluxes between atmosphere and urban
+!!          calculated by Urban Canopy Model (Kusaka et al. 2000, BLM)
 !!
 !! @author Team SCALE
 !!
@@ -461,10 +461,10 @@ contains
     real(RP) :: QS0B
     real(RP) :: QS0G
 
-    real(RP) :: RIBR, XXXR, BHR, ALPHAR, CHR, CDR
+    real(RP) :: RIBR, XXXR, BHR, CDR
     real(RP) :: RIBC, XXXC, BHC
-    real(RP) :: ALPHAC, ALPHAB, ALPHAG
-    real(RP) :: CHC, CHB, CHG, CDC
+    real(RP) :: ALPHAR, ALPHAB, ALPHAG, ALPHAC
+    real(RP) :: CHR, CHB, CHG, CHC, CDC
 
     real(RP) :: XXX, X, CD, CH, CHU, XXX2, XXX10
 
@@ -549,8 +549,7 @@ contains
     BHR  = LOG(Z0R/Z0HR) / 0.4_RP
     RIBR = ( GRAV * 2.0_RP / (TA+TR) ) * (TA-TR) * (Z+Z0R) / (UA*UA)
 
-    call mos(XXXR,ALPHAR,CDR,BHR,RIBR,Z,Z0R,UA,TA,TR,RHOO)
-    CHR  = ALPHAR / RHOO / CPdry / UA
+    call mos(XXXR,CHR,CDR,BHR,RIBR,Z,Z0R,UA,TA,TR,RHOO)
 
     PS   = PRES / 100.0_RP               ! [hPa]
     ES   = 6.11_RP * exp( ( LH0/Rvap) * (TR-TEM00) / (TEM00*TR) )
@@ -559,7 +558,8 @@ contains
     RR   = EPSR * ( RX - STB * (TR**4) )
     SHR  = RHOO * CPdry * CHR * UA * (TR-TA)
     LHR  = RHOO * LH0 * CHR * UA * BETR * (QS0R-QA)
-    GHR  = AKSR * (TR-TRL(1)) / (DZR(1)/2.0_RP)
+    !GHR  = AKSR * (TR-TRL(1)) / (DZR(1)/2.0_RP)
+    GHR = SR + RR - SHR - LHR
 
     !--- Wall and Road
 
@@ -567,7 +567,9 @@ contains
     BHC  = LOG(Z0C/Z0HC) / 0.4_RP
     RIBC = ( GRAV * 2.0_RP / (TA+TC) ) * (TA-TC) * (Z+Z0C) / (UA*UA)
 
-    call mos(XXXC,ALPHAC,CDC,BHC,RIBC,Z,Z0C,UA,TA,TC,RHOO)
+    !call mos(XXXC,ALPHAC,CDC,BHC,RIBC,Z,Z0C,UA,TA,TC,RHOO)
+    !CHC = ALPHAC / RHOO / CPdry / UA
+    call mos(XXXC,CHC,CDC,BHC,RIBC,Z,Z0C,UA,TA,TC,RHOO)
 
     ! empirical form
     ALPHAB = RHOO * CPdry * ( 6.15_RP + 4.18_RP * UC ) / 1200.0_RP
@@ -576,7 +578,6 @@ contains
     ALPHAG = RHOO * CPdry * ( 6.15_RP + 4.18_RP * UC ) / 1200.0_RP
     if( UC > 5.0_RP ) ALPHAG = RHOO * CPdry * ( 7.51_RP * UC**0.78_RP ) / 1200.0_RP
 
-    CHC = ALPHAC / RHOO / CPdry / UA
     CHB = ALPHAB / RHOO / CPdry / UC
     CHG = ALPHAG / RHOO / CPdry / UC
 
@@ -829,7 +830,7 @@ contains
     real(RP), intent(out)   :: GHR, GHB, GHG
 
     !-- parameters
-    real(RP), parameter     :: SRATIO = 0.75_RP  ! ratio between direct/total solar [-]
+    real(RP), parameter     :: SRATIO   = 0.75_RP     ! ratio between direct/total solar [-]
     real(RP), parameter     :: TFa      = 0.5_RP      ! factor a in Tomita (2009)
     real(RP), parameter     :: TFb      = 1.1_RP      ! factor b in Tomita (2009)
     real(RP), parameter     :: redf_min = 1.0E-2_RP   ! minimum reduced factor
@@ -894,10 +895,10 @@ contains
     real(RP) :: QS0B, DQS0BDTB
     real(RP) :: QS0G, DQS0GDTG
 
-    real(RP) :: RIBR, XXXR, BHR, ALPHAR, CHR, CDR
+    real(RP) :: RIBR, XXXR, BHR, CDR
     real(RP) :: RIBC, XXXC, BHC
-    real(RP) :: ALPHAC, ALPHAB, ALPHAG
-    real(RP) :: CHC, CHB, CHG, CDC
+    real(RP) :: ALPHAR, ALPHAB, ALPHAG, ALPHAC
+    real(RP) :: CHR, CHB, CHG, CHC, CDC
     real(RP) :: TC1, TC2, QC1, QC2
 
     real(RP) :: oldF,oldGF      ! residual in previous step
@@ -946,8 +947,6 @@ contains
      AH_t  = AH  * tahdiurnal
      ALH_t = ALH * tahdiurnal
 
-    !if(dsec==0.) print *,'tloc',tloc,SSG,RHOO,QA,TA
-
     if( ZDC+Z0C+2.0_RP >= ZA) then
       if( IO_L ) write(IO_FID_LOG,*) 'ZDC + Z0C + 2m is larger than the 1st WRF level' // &
                                      'Stop in subroutine urban - change ZDC and Z0C'
@@ -982,6 +981,30 @@ contains
 
     call canopy_wind(ZA, UA, UC)
 
+
+    !-----------------------------------------------------------
+    ! Set evaporation efficiency on roof/wall/road
+    !-----------------------------------------------------------
+
+    !!--- calculate rain amount remaining on the surface
+    RAINR = max(0.0_RP, RAINR-(LHR/LH0)*DELT)   ! [kg/m/m = mm]
+    RAINB = max(0.0_RP, RAINB-(LHB/LH0)*DELT)   ! [kg/m/m = mm]
+    RAING = max(0.0_RP, RAING-(LHG/LH0)*DELT)   ! [kg/m/m = mm]
+
+    !!--- calculate evaporation efficiency
+    RAINT = RAIN * DELT  !!! check [kg/m2/s -> kg/m2 ?]
+
+    call cal_beta(BETR, RAINT, RAINR, STRGR, ROFFR)
+    call cal_beta(BETB, RAINT, RAINB, STRGB, ROFFB)
+    call cal_beta(BETG, RAINT, RAING, STRGG, ROFFG)
+
+    ROFF = ROFF + (R-0.05_RP)*ROFFR     &
+                + 0.1_RP*ROFFB          &
+                + (RW-0.05_RP)*ROFFG
+
+    !print *, TIME, BETR, BETB, BETG, ROFF
+
+
     !-----------------------------------------------------------
     ! Radiation : Net Short Wave Radiation at roof/wall/road
     !-----------------------------------------------------------
@@ -1011,29 +1034,6 @@ contains
 
     end if
 
-
-    !-----------------------------------------------------------
-    ! Set evaporation efficiency on roof/wall/road
-    !-----------------------------------------------------------
-
-    !!--- calculate rain amount remaining on the surface
-    RAINR = max(0.0_RP, RAINR-(LHR/LH0)*DELT)   ! [kg/m/m = mm]
-    RAINB = max(0.0_RP, RAINB-(LHB/LH0)*DELT)   ! [kg/m/m = mm]
-    RAING = max(0.0_RP, RAING-(LHG/LH0)*DELT)   ! [kg/m/m = mm]
-
-    !!--- calculate evaporation efficiency
-    RAINT = RAIN * DELT  !!! check [kg/m2/s -> kg/m2 ?]
-
-    call cal_beta(BETR, RAINT, RAINR, STRGR, ROFFR)
-    call cal_beta(BETB, RAINT, RAINB, STRGB, ROFFB)
-    call cal_beta(BETG, RAINT, RAING, STRGG, ROFFG)
-
-    ROFF = ROFF + (R-0.05_RP)*ROFFR     &
-                + 0.1_RP*ROFFB          &
-                + (RW-0.05_RP)*ROFFG
-
-    !print *, TIME, BETR, BETB, BETG, ROFF
-
     !-----------------------------------------------------------
     ! Energy balance on roof/wall/road surface
     !-----------------------------------------------------------
@@ -1046,83 +1046,82 @@ contains
     BHR  = LOG(Z0R/Z0HR) / 0.4_RP
     RIBR = ( GRAV * 2.0_RP / (TA+TRP) ) * (TA-TRP) * (Z+Z0R) / (UA*UA)
 
-    call mos(XXXR,ALPHAR,CDR,BHR,RIBR,Z,Z0R,UA,TA,TRP,RHOO)
-    CHR = ALPHAR / RHOO / CPdry / UA
+    call mos(XXXR,CHR,CDR,BHR,RIBR,Z,Z0R,UA,TA,TRP,RHOO)
 
     PS   =  PRES / 100.0_RP               ! [hPa]
 
     ! TR  Solving Non-Linear Equation by Newton-Rapson
 
-    redf   = 1.0_RP
-    oldF   = 1.0E+5_RP
+    !redf   = 1.0_RP
+    !oldF   = 1.0E+5_RP
 
-    do iteration = 1, 20
+    !do iteration = 1, 20
 
       ! update of CHR using updated TRP
-      RIBR = ( GRAV * 2.0_RP / (TA+TRP) ) * (TA-TRP) * (Z+Z0R) / (UA*UA)
-      call mos(XXXR,ALPHAR,CDR,BHR,RIBR,Z,Z0R,UA,TA,TRP,RHOO)
-      CHR = ALPHAR / RHOO / CPdry / UA
+      !RIBR = ( GRAV * 2.0_RP / (TA+TRP) ) * (TA-TRP) * (Z+Z0R) / (UA*UA)
+      !!call mos(XXXR,ALPHAR,CDR,BHR,RIBR,Z,Z0R,UA,TA,TRP,RHOO)
+      !!CHR = ALPHAR / RHOO / CPdry / UA
+      !call mos(XXXR,CHR,CDR,BHR,RIBR,Z,Z0R,UA,TA,TRP,RHOO)
 
+      !ES       = 6.11_RP * exp( ( LH0/Rvap) * (TRP-TEM00) / (TEM00*TRP) )
+      !DESDT    = (LH0/Rvap) * ES / (TRP**2)
+      !QS0R     = 0.622_RP * ES / ( PS - 0.378_RP * ES )
+      !DQS0RDTR = DESDT * 0.622_RP * PS / ( ( PS - 0.378_RP * ES )**2 )
+
+      !RR       = EPSR * ( RX - STB * (TRP**4)  )
+      !HR       = RHOO * CPdry * CHR * UA * (TRP-TA)
+      !ELER     = RHOO * LH0 * CHR * UA * BETR * (QS0R-QA)
+      !G0R      = AKSR * (TRP-TRL(1)) / (DZR(1)/2.0_RP)
+
+      !F        = SR + RR - HR - ELER - G0R
+
+      !DRRDTR   = ( -4.0_RP * EPSR * STB * TRP**3 )
+      !DHRDTR   = RHOO * CPdry * CHR * UA
+      !DELERDTR = RHOO * LH0 * CHR * UA * BETR * DQS0RDTR
+      !DG0RDTR  = 2.0_RP * AKSR / DZR(1)
+
+      !DFDT     = DRRDTR - DHRDTR - DELERDTR - DG0RDTR
+
+      !DTR      = -1.0_RP * F / DFDT
+
+      !!DTR      = F / DFDT
+      !!TR       = TRP - DTR
+      !!TRP      = TR
+
+      !!! Tomita(2009)
+      !if ( redf < 0.0_RP ) then
+      !   redf = 1.0_RP
+      !endif
+      !if ( abs(F) > abs(oldF) ) then
+      !   redf = max( TFa*redf, redf_min )
+      !else
+      !   redf = min( TFb*redf, redf_max )
+      !end if
+      !if ( DFDT > 0.0_RP ) then
+      !   redf = -1.0_RP
+      !endif
+      !TR       = TRP + redf * DTR
+      !TRP      = TR
+      !oldF     = F
+
+      !if( abs(F) < 0.000001_RP .AND. abs(DTR) < 0.000001_RP ) exit
+
+    !end do
+
+     ! new scheme
+      RIBR = ( GRAV * 2.0_RP / (TA+TRP) ) * (TA-TRP) * (Z+Z0R) / (UA*UA)
+      call mos(XXXR,CHR,CDR,BHR,RIBR,Z,Z0R,UA,TA,TRP,RHOO)
+
+      PS   =  PRES / 100.0_RP               ! [hPa]
       ES       = 6.11_RP * exp( ( LH0/Rvap) * (TRP-TEM00) / (TEM00*TRP) )
-      DESDT    = (LH0/Rvap) * ES / (TRP**2)
       QS0R     = 0.622_RP * ES / ( PS - 0.378_RP * ES )
-      DQS0RDTR = DESDT * 0.622_RP * PS / ( ( PS - 0.378_RP * ES )**2 )
 
       RR       = EPSR * ( RX - STB * (TRP**4)  )
       HR       = RHOO * CPdry * CHR * UA * (TRP-TA)
       ELER     = RHOO * LH0 * CHR * UA * BETR * (QS0R-QA)
-      G0R      = AKSR * (TRP-TRL(1)) / (DZR(1)/2.0_RP)
+      !G0R      = AKSR * (TRP-TRL(1)) / (DZR(1)/2.0_RP)
 
-      F        = SR + RR - HR - ELER - G0R
-
-      DRRDTR   = ( -4.0_RP * EPSR * STB * TRP**3 )
-      DHRDTR   = RHOO * CPdry * CHR * UA
-      DELERDTR = RHOO * LH0 * CHR * UA * BETR * DQS0RDTR
-      DG0RDTR  = 2.0_RP * AKSR / DZR(1)
-
-      DFDT     = DRRDTR - DHRDTR - DELERDTR - DG0RDTR
-
-      DTR      = -1.0_RP * F / DFDT
-
-      !DTR      = F / DFDT
-      !TR       = TRP - DTR
-      !TRP      = TR
-
-      !!! Tomita(2009)
-      if ( redf < 0.0_RP ) then
-         redf = 1.0_RP
-      endif
-      if ( abs(F) > abs(oldF) ) then
-         redf = max( TFa*redf, redf_min )
-      else
-         redf = min( TFb*redf, redf_max )
-      end if
-      if ( DFDT > 0.0_RP ) then
-         redf = -1.0_RP
-      endif
-      TR       = TRP + redf * DTR
-      TRP      = TR
-      oldF     = F
-
-      if( abs(F) < 0.000001_RP .AND. abs(DTR) < 0.000001_RP ) exit
-
-    end do
-
-    !print *,IA,JA
-    !if(IA==3.and.JA==3)then  ! adachi
-    ! print *,'Tomita',redf,DFDT,abs(F),abs(oldF)
-    ! print *,'roof',TIME,TR,SR,RR,HR,ELER,G0R
-    ! print *,'HR  ',TIME,HR,RHO,CHR,UA,(TRP-TA)
-    ! print *,'ELER',TIME,ELER,RHO,CHR,UA,BETR,(QS0R-QA)
-    ! print *,'G0R ',TIME,G0R,AKSR,(TRP-TRL(1)),DZR(1)
-    ! print *,'F   ',TIME,iteration-1,abs(F),abs(DTR)
-    !endif
-
-    !print *,'roof',tloc,SR,RR,HR,ELER,G0R
-    !print *,'HR  ',TIME,HR,RHO,CHR,UA,(TRP-TA)
-    !print *,'ELER',TIME,ELER,RHO,CHR,UA,BETR,(QS0R-QA)
-    !print *,'G0R ',TIME,G0R,AKSR,(TRP-TRL(1)),DZR(1)
-    !print *,'F   ',iteration-1,abs(F),abs(DTR)
+      G0R      = SR + RR - HR - ELER
 
     !-----------------------------------------
     !  calculate temperature in building/road
@@ -1131,11 +1130,11 @@ contains
     !-----------------------------------------
 
     call multi_layer(UKE,BOUND,G0R,CAPR,AKSR,TRL,DZR,DELT,TRLEND)
+    TR = TRL(1)
 
     !--- update only fluxes ----
     RIBR = ( GRAV * 2.0_RP / (TA+TR) ) * (TA-TR) * (Z+Z0R) / (UA*UA)
-    call mos(XXXR,ALPHAR,CDR,BHR,RIBR,Z,Z0R,UA,TA,TR,RHOO)
-    CHR = ALPHAR / RHOO / CPdry / UA
+    call mos(XXXR,CHR,CDR,BHR,RIBR,Z,Z0R,UA,TA,TR,RHOO)
     
     ES       = 6.11_RP * exp( ( LH0/Rvap) * (TR-TEM00) / (TEM00*TR) )
     QS0R     = 0.622_RP * ES / ( PS - 0.378_RP * ES )
@@ -1143,7 +1142,8 @@ contains
     RR       = EPSR * ( RX - STB * (TR**4) )
     HR       = RHOO * CPdry * CHR * UA * (TR-TA)
     ELER     = RHOO * LH0 * CHR * UA * BETR * (QS0R-QA)
-    G0R      = AKSR * (TR-TRL(1)) / (DZR(1)/2.0_RP)
+    !G0R      = AKSR * (TR-TRL(1)) / (DZR(1)/2.0_RP)
+    G0R = SR + RR - HR - ELER
 
     !--------------------------------------------------
     !   Wall and Road
@@ -1153,7 +1153,9 @@ contains
     BHC  = LOG(Z0C/Z0HC) / 0.4_RP
     RIBC = ( GRAV * 2.0_RP / (TA+TCP) ) * (TA-TCP) * (Z+Z0C) / (UA*UA)
 
-    call mos(XXXC,ALPHAC,CDC,BHC,RIBC,Z,Z0C,UA,TA,TCP,RHOO)
+    !call mos(XXXC,ALPHAC,CDC,BHC,RIBC,Z,Z0C,UA,TA,TCP,RHOO)
+    !CHC = ALPHAC / RHOO / CPdry / UA
+    call mos(XXXC,CHC,CDC,BHC,RIBC,Z,Z0C,UA,TA,TCP,RHOO)
 
     ! empirical form
     ALPHAB = RHOO * CPdry * ( 6.15_RP + 4.18_RP * UC ) / 1200.0_RP
@@ -1162,28 +1164,153 @@ contains
     ALPHAG = RHOO * CPdry * ( 6.15_RP + 4.18_RP * UC ) / 1200.0_RP
     if( UC > 5.0_RP ) ALPHAG = RHOO * CPdry * ( 7.51_RP * UC**0.78_RP ) / 1200.0_RP
 
-    CHC = ALPHAC / RHOO / CPdry / UA
     CHB = ALPHAB / RHOO / CPdry / UC
     CHG = ALPHAG / RHOO / CPdry / UC
 
 
     ! TB,TG  Solving Non-Linear Simultaneous Equation by Newton-Rapson
 
-    do iteration = 1, 20
+    !do iteration = 1, 20
+    !
+    !  ! update of CHC using updated TCP
+    !  RIBC = ( GRAV * 2.0_RP / (TA+TCP) ) * (TA-TCP) * (Z+Z0C) / (UA*UA)
+    !  !call mos(XXXC,ALPHAC,CDC,BHC,RIBC,Z,Z0C,UA,TA,TCP,RHOO)
+    !  call mos(XXXC,CHC,CDC,BHC,RIBC,Z,Z0C,UA,TA,TCP,RHOO)
+    !  ALPHAC = CHC * RHOO * CPdry * UA
+    !
+    !  ES       = 6.11_RP * exp( (LH0/Rvap) * (TBP-TEM00) / (TEM00*TBP) )
+    !  DESDT    = (LH0/Rvap) * ES / (TBP**2)
+    !  QS0B     = 0.622_RP * ES / ( PS - 0.378_RP * ES )
+    !  DQS0BDTB = DESDT * 0.622_RP * PS / ( ( PS - 0.378_RP * ES )**2 )
+    !
+    !  ES       = 6.11_RP * exp( (LH0/Rvap) * (TGP-TEM00) / (TEM00*TGP) )
+    !  DESDT    = (LH0/Rvap) * ES / (TGP**2)
+    !  QS0G     = 0.622_RP * ES / ( PS - 0.378_RP * ES )
+    !  DQS0GDTG = DESDT * 0.622_RP * PS / ( ( PS - 0.378_RP * ES )**2 )
+    !
+    !  RG1      = EPSG * ( RX * VFGS                   &
+    !                    + EPSB * VFGW * STB * TBP**4  &
+    !                    - STB * TGP**4                )
+    !
+    !  RB1      = EPSB * ( RX * VFWS                   &
+    !                    + EPSG * VFWG * STB * TGP**4  &
+    !                    + EPSB * VFWW * STB * TBP**4  &
+    !                    - STB * TBP**4                )
+    !
+    !  RG2      = EPSG * ( (1.0_RP-EPSB) * VFGW * VFWS * RX                   &
+    !                    + (1.0_RP-EPSB) * VFGW * VFWG * EPSG * STB * TGP**4  &
+    !                    + EPSB * (1.0_RP-EPSB) * VFGW * VFWW * STB * TBP**4  )
+    !
+    !  !RB2      = EPSB * ( (1.0_RP-EPSG) * VFWG * VFGS * RX                                                            &
+    !  !                  + (1.0_RP-EPSG) * EPSB * VFGW * VFWG * SIG * (TBP**4) / 60.0_RP                               &
+    !  !                  + (1.0_RP-EPSB) * VFWS * (1.0_RP-2.0_RP*VFWS) * RX                                            &
+    !  !!                 + (1.0_RP-EPSB) * VFWG * (1.0_RP-2.0_RP*VFWS) * EPSG * SIG * EPSG * TGP**4 / 60.0_RP          &
+    !  !                  + EPSB * (1.0_RP-EPSB) * (1.0_RP-2.0_RP*VFWS) * (1.0_RP-2.0_RP*VFWS) * SIG * TBP**4 / 60.0_RP )
+    !
+    !  RB2      = EPSB * ( (1.0_RP-EPSG) * VFWG * VFGS * RX                                   &
+    !                    + (1.0_RP-EPSG) * EPSB * VFGW * VFWG * STB * TBP**4                  &
+    !                    + (1.0_RP-EPSB) * VFWS * VFWW * RX                                   &
+    !                    + (1.0_RP-EPSB) * VFWG * VFWW * STB * EPSG * TGP**4                  &
+    !                    + EPSB * (1.0_RP-EPSB) * VFWW * (1.0_RP-2.0_RP*VFWS) * STB * TBP**4  )
+    !
+    !  RG       = RG1 + RG2
+    !  RB       = RB1 + RB2
+    !
+    !
+    !  DRBDTB1  = EPSB * ( 4.0_RP * EPSB * STB * TBP**3 * VFWW - 4.0_RP * STB * TBP**3 )
+    !  DRBDTG1  = EPSB * ( 4.0_RP * EPSG * STB * TGP**3 * VFWG )
+    !  DRBDTB2  = EPSB * ( 4.0_RP * (1.0_RP-EPSG) * EPSB * STB * TBP**3 * VFGW * VFWG &
+    !                    + 4.0_RP * EPSB * (1.0_RP-EPSB) * STB * TBP**3 * VFWW * VFWW )
+    !  DRBDTG2  = EPSB * ( 4.0_RP * (1.0_RP-EPSB) * EPSG * STB * TGP**3 * VFWG * VFWW )
+    !
+    !  DRGDTB1  = EPSG * ( 4.0_RP * EPSB * STB * TBP**3 * VFGW )
+    !  DRGDTG1  = EPSG * ( -4.0_RP * STB * TGP**3 )
+    !  DRGDTB2  = EPSG * ( 4.0_RP * EPSB * (1.0_RP-EPSB) * STB * TBP**3 * VFWW * VFGW )
+    !  DRGDTG2  = EPSG * ( 4.0_RP * (1.0_RP-EPSB) * EPSG * STB * TGP**3 * VFWG * VFGW )
+    !
+    !  DRBDTB   = DRBDTB1 + DRBDTB2
+    !  DRBDTG   = DRBDTG1 + DRBDTG2
+    !  DRGDTB   = DRGDTB1 + DRGDTB2
+    !  DRGDTG   = DRGDTG1 + DRGDTG2
+    !
+    !  HB       = RHOO * CPdry * CHB * UC * (TBP-TCP)
+    !  HG       = RHOO * CPdry * CHG * UC * (TGP-TCP)
+    !
+    !  DTCDTB   = W  * ALPHAB / ( RW*ALPHAC + RW*ALPHAG + W*ALPHAB )
+    !  DTCDTG   = RW * ALPHAG / ( RW*ALPHAC + RW*ALPHAG + W*ALPHAB )
+    !
+    !  DHBDTB   = RHOO * CPdry * CHB * UC * (1.0_RP-DTCDTB)
+    !  DHBDTG   = RHOO * CPdry * CHB * UC * (0.0_RP-DTCDTG)
+    !  DHGDTG   = RHOO * CPdry * CHG * UC * (1.0_RP-DTCDTG)
+    !  DHGDTB   = RHOO * CPdry * CHG * UC * (0.0_RP-DTCDTB)
+    !
+    !  ELEB     = RHOO * LH0 * CHB * UC * BETB * (QS0B-QCP)
+    !  ELEG     = RHOO * LH0 * CHG * UC * BETG * (QS0G-QCP)
+    !
+    !  DQCDTB   = W  * ALPHAB * BETB * DQS0BDTB / ( RW*ALPHAC + RW*ALPHAG*BETG + W*ALPHAB*BETB )
+    !  DQCDTG   = RW * ALPHAG * BETG * DQS0GDTG / ( RW*ALPHAC + RW*ALPHAG*BETG + W*ALPHAB*BETB )
+    !
+    !  DELEBDTB = RHOO * LH0 * CHB * UC * BETB * (DQS0BDTB-DQCDTB)
+    !  DELEBDTG = RHOO * LH0 * CHB * UC * BETB * (0.0_RP-DQCDTG)
+    !  DELEGDTG = RHOO * LH0 * CHG * UC * BETG * (DQS0GDTG-DQCDTG)
+    !  DELEGDTB = RHOO * LH0 * CHG * UC * BETG * (0.0_RP-DQCDTB)
+    !
+    !  G0B      = AKSB * (TBP-TBL(1)) / (DZB(1)/2.0_RP)
+    !  G0G      = AKSG * (TGP-TGL(1)) / (DZG(1)/2.0_RP)
+    !
+    !  DG0BDTB  = 2.0_RP * AKSB / DZB(1)
+    !  DG0BDTG  = 0.0_RP
+    !  DG0GDTG  = 2.0_RP * AKSG / DZG(1)
+    !  DG0GDTB  = 0.0_RP
+    !
+    !  F        = SB + RB - HB - ELEB - G0B
+    !  FX       = DRBDTB - DHBDTB - DELEBDTB - DG0BDTB
+    !  FY       = DRBDTG - DHBDTG - DELEBDTG - DG0BDTG
+    !
+    !  GF       = SG + RG - HG - ELEG - G0G
+    !  GX       = DRGDTB - DHGDTB - DELEGDTB - DG0GDTB
+    !  GY       = DRGDTG - DHGDTG - DELEGDTG - DG0GDTG
+    !
+    !  DTB      = ( GF*FY - F*GY ) / ( FX*GY - GX*FY )
+    !  DTG      = -( GF + GX*DTB ) / GY
+    !
+    !  TB       = TBP + DTB
+    !  TG       = TGP + DTG
+    !
+    !  TBP      = TB
+    !  TGP      = TG
+    ! 
+    !  TC1      = RW*ALPHAC + RW*ALPHAG + W*ALPHAB
+    !  TC2      = RW*ALPHAC*TA + RW*ALPHAG*TGP + W*ALPHAB*TBP
+    !  TC       = TC2 / TC1
+    !
+    !  QC1      = RW*ALPHAC + RW*ALPHAG*BETG + W*ALPHAB*BETB
+    !  QC2      = RW*ALPHAC*QA + RW*ALPHAG*BETG*QS0G + W*ALPHAB*BETB*QS0B
+    !  QC       = QC2 / QC1
+    !
+    !  DTC      = TCP - TC
+    !  TCP      = TC
+    !  QCP      = QC
+    !
+    !  if( abs(F)   < 0.000001_RP .and. &
+    !      abs(DTB) < 0.000001_RP .and. &
+    !      abs(GF)  < 0.000001_RP .and. &
+    !      abs(DTG) < 0.000001_RP .and. &
+    !      abs(DTC) < 0.000001_RP       ) exit
+    !
+    ! end do
 
-      ! update of CHC using updated TCP
+
+    ! new scheme
+    ! update of CHC using updated TCP
       RIBC = ( GRAV * 2.0_RP / (TA+TCP) ) * (TA-TCP) * (Z+Z0C) / (UA*UA)
-      call mos(XXXC,ALPHAC,CDC,BHC,RIBC,Z,Z0C,UA,TA,TCP,RHOO)
+      ALPHAC = CHC * RHOO * CPdry * UA
 
       ES       = 6.11_RP * exp( (LH0/Rvap) * (TBP-TEM00) / (TEM00*TBP) )
-      DESDT    = (LH0/Rvap) * ES / (TBP**2)
       QS0B     = 0.622_RP * ES / ( PS - 0.378_RP * ES )
-      DQS0BDTB = DESDT * 0.622_RP * PS / ( ( PS - 0.378_RP * ES )**2 )
 
       ES       = 6.11_RP * exp( (LH0/Rvap) * (TGP-TEM00) / (TEM00*TGP) )
-      DESDT    = (LH0/Rvap) * ES / (TGP**2)
       QS0G     = 0.622_RP * ES / ( PS - 0.378_RP * ES )
-      DQS0GDTG = DESDT * 0.622_RP * PS / ( ( PS - 0.378_RP * ES )**2 )
 
       RG1      = EPSG * ( RX * VFGS                   &
                         + EPSB * VFGW * STB * TBP**4  &
@@ -1197,13 +1324,7 @@ contains
       RG2      = EPSG * ( (1.0_RP-EPSB) * VFGW * VFWS * RX                   &
                         + (1.0_RP-EPSB) * VFGW * VFWG * EPSG * STB * TGP**4  &
                         + EPSB * (1.0_RP-EPSB) * VFGW * VFWW * STB * TBP**4  )
-
-      !RB2      = EPSB * ( (1.0_RP-EPSG) * VFWG * VFGS * RX                                                            &
-      !                  + (1.0_RP-EPSG) * EPSB * VFGW * VFWG * SIG * (TBP**4) / 60.0_RP                               &
-      !                  + (1.0_RP-EPSB) * VFWS * (1.0_RP-2.0_RP*VFWS) * RX                                            &
-      !!                 + (1.0_RP-EPSB) * VFWG * (1.0_RP-2.0_RP*VFWS) * EPSG * SIG * EPSG * TGP**4 / 60.0_RP          &
-      !                  + EPSB * (1.0_RP-EPSB) * (1.0_RP-2.0_RP*VFWS) * (1.0_RP-2.0_RP*VFWS) * SIG * TBP**4 / 60.0_RP )
-
+    
       RB2      = EPSB * ( (1.0_RP-EPSG) * VFWG * VFGS * RX                                   &
                         + (1.0_RP-EPSG) * EPSB * VFGW * VFWG * STB * TBP**4                  &
                         + (1.0_RP-EPSB) * VFWS * VFWW * RX                                   &
@@ -1213,89 +1334,15 @@ contains
       RG       = RG1 + RG2
       RB       = RB1 + RB2
 
-
-      DRBDTB1  = EPSB * ( 4.0_RP * EPSB * STB * TBP**3 * VFWW - 4.0_RP * STB * TBP**3 )
-      DRBDTG1  = EPSB * ( 4.0_RP * EPSG * STB * TGP**3 * VFWG )
-      DRBDTB2  = EPSB * ( 4.0_RP * (1.0_RP-EPSG) * EPSB * STB * TBP**3 * VFGW * VFWG &
-                        + 4.0_RP * EPSB * (1.0_RP-EPSB) * STB * TBP**3 * VFWW * VFWW )
-      DRBDTG2  = EPSB * ( 4.0_RP * (1.0_RP-EPSB) * EPSG * STB * TGP**3 * VFWG * VFWW )
-
-      DRGDTB1  = EPSG * ( 4.0_RP * EPSB * STB * TBP**3 * VFGW )
-      DRGDTG1  = EPSG * ( -4.0_RP * STB * TGP**3 )
-      DRGDTB2  = EPSG * ( 4.0_RP * EPSB * (1.0_RP-EPSB) * STB * TBP**3 * VFWW * VFGW )
-      DRGDTG2  = EPSG * ( 4.0_RP * (1.0_RP-EPSB) * EPSG * STB * TGP**3 * VFWG * VFGW )
-
-      DRBDTB   = DRBDTB1 + DRBDTB2
-      DRBDTG   = DRBDTG1 + DRBDTG2
-      DRGDTB   = DRGDTB1 + DRGDTB2
-      DRGDTG   = DRGDTG1 + DRGDTG2
-
       HB       = RHOO * CPdry * CHB * UC * (TBP-TCP)
-      HG       = RHOO * CPdry * CHG * UC * (TGP-TCP)
-
-      DTCDTB   = W  * ALPHAB / ( RW*ALPHAC + RW*ALPHAG + W*ALPHAB )
-      DTCDTG   = RW * ALPHAG / ( RW*ALPHAC + RW*ALPHAG + W*ALPHAB )
-
-      DHBDTB   = RHOO * CPdry * CHB * UC * (1.0_RP-DTCDTB)
-      DHBDTG   = RHOO * CPdry * CHB * UC * (0.0_RP-DTCDTG)
-      DHGDTG   = RHOO * CPdry * CHG * UC * (1.0_RP-DTCDTG)
-      DHGDTB   = RHOO * CPdry * CHG * UC * (0.0_RP-DTCDTB)
-
       ELEB     = RHOO * LH0 * CHB * UC * BETB * (QS0B-QCP)
+    !  G0B      = AKSB * (TBP-TBL(1)) / (DZB(1)/2.0_RP)
+      G0B      =  SB + RB - HB - ELEB
+
+      HG       = RHOO * CPdry * CHG * UC * (TGP-TCP)
       ELEG     = RHOO * LH0 * CHG * UC * BETG * (QS0G-QCP)
-
-      DQCDTB   = W  * ALPHAB * BETB * DQS0BDTB / ( RW*ALPHAC + RW*ALPHAG*BETG + W*ALPHAB*BETB )
-      DQCDTG   = RW * ALPHAG * BETG * DQS0GDTG / ( RW*ALPHAC + RW*ALPHAG*BETG + W*ALPHAB*BETB )
-
-      DELEBDTB = RHOO * LH0 * CHB * UC * BETB * (DQS0BDTB-DQCDTB)
-      DELEBDTG = RHOO * LH0 * CHB * UC * BETB * (0.0_RP-DQCDTG)
-      DELEGDTG = RHOO * LH0 * CHG * UC * BETG * (DQS0GDTG-DQCDTG)
-      DELEGDTB = RHOO * LH0 * CHG * UC * BETG * (0.0_RP-DQCDTB)
-
-      G0B      = AKSB * (TBP-TBL(1)) / (DZB(1)/2.0_RP)
-      G0G      = AKSG * (TGP-TGL(1)) / (DZG(1)/2.0_RP)
-
-      DG0BDTB  = 2.0_RP * AKSB / DZB(1)
-      DG0BDTG  = 0.0_RP
-      DG0GDTG  = 2.0_RP * AKSG / DZG(1)
-      DG0GDTB  = 0.0_RP
-
-      F        = SB + RB - HB - ELEB - G0B
-      FX       = DRBDTB - DHBDTB - DELEBDTB - DG0BDTB
-      FY       = DRBDTG - DHBDTG - DELEBDTG - DG0BDTG
-
-      GF       = SG + RG - HG - ELEG - G0G
-      GX       = DRGDTB - DHGDTB - DELEGDTB - DG0GDTB
-      GY       = DRGDTG - DHGDTG - DELEGDTG - DG0GDTG
-
-      DTB      = ( GF*FY - F*GY ) / ( FX*GY - GX*FY )
-      DTG      = -( GF + GX*DTB ) / GY
-
-      TB       = TBP + DTB
-      TG       = TGP + DTG
-
-      TBP      = TB
-      TGP      = TG
-
-      TC1      = RW*ALPHAC + RW*ALPHAG + W*ALPHAB
-      TC2      = RW*ALPHAC*TA + RW*ALPHAG*TGP + W*ALPHAB*TBP
-      TC       = TC2 / TC1
-
-      QC1      = RW*ALPHAC + RW*ALPHAG*BETG + W*ALPHAB*BETB
-      QC2      = RW*ALPHAC*QA + RW*ALPHAG*BETG*QS0G + W*ALPHAB*BETB*QS0B
-      QC       = QC2 / QC1
-
-      DTC      = TCP - TC
-      TCP      = TC
-      QCP      = QC
-
-      if( abs(F)   < 0.000001_RP .and. &
-          abs(DTB) < 0.000001_RP .and. &
-          abs(GF)  < 0.000001_RP .and. &
-          abs(DTG) < 0.000001_RP .and. &
-          abs(DTC) < 0.000001_RP       ) exit
-
-    end do
+    !  G0G      = AKSG * (TGP-TGL(1)) / (DZG(1)/2.0_RP)
+      G0G      = SG + RG - HG - ELEG
 
     !-----------------------------------------------------------
     !  calculate temperature in building/road
@@ -1306,10 +1353,22 @@ contains
      call multi_layer(UKE,BOUND,G0B,CAPB,AKSB,TBL,DZB,DELT,TBLEND)
      call multi_layer(UKE,BOUND,G0G,CAPG,AKSG,TGL,DZG,DELT,TGLEND)
 
-    !--- update only fluxes ----
-     RIBC = ( GRAV * 2.0_RP / (TA+TC) ) * (TA-TC) * (Z+Z0C) / (UA*UA)
-     call mos(XXXC,ALPHAC,CDC,BHC,RIBC,Z,Z0C,UA,TA,TC,RHOO)
+     TB = TBL(1)
+     TG = TGL(1)
 
+     ES   = 6.11_RP * exp( (LH0/Rvap) * (TB-TEM00) / (TEM00*TB) )
+     QS0B = 0.622_RP * ES / ( PS - 0.378_RP * ES )
+     ES   = 6.11_RP * exp( (LH0/Rvap) * (TG-TEM00) / (TEM00*TG) )
+     QS0G = 0.622_RP * ES / ( PS - 0.378_RP * ES )
+
+     TC1      = RW*ALPHAC + RW*ALPHAG + W*ALPHAB
+     TC2      = RW*ALPHAC*TA + RW*ALPHAG*TG + W*ALPHAB*TB
+     TC       = TC2 / TC1    
+     QC1      = RW*ALPHAC + RW*ALPHAG*BETG + W*ALPHAB*BETB
+     QC2      = RW*ALPHAC*QA + RW*ALPHAG*BETG*QS0G + W*ALPHAB*BETB*QS0B
+     QC       = QC2 / QC1
+
+    !--- update only fluxes ----
      RG1      = EPSG * ( RX * VFGS                  &
                        + EPSB * VFGW * STB * TB**4  &
                        - STB * TG**4                )
@@ -1330,19 +1389,15 @@ contains
      RG       = RG1 + RG2
      RB       = RB1 + RB2
 
-     ES   = 6.11_RP * exp( (LH0/Rvap) * (TB-TEM00) / (TEM00*TB) )
-     QS0B = 0.622_RP * ES / ( PS - 0.378_RP * ES )
-
      HB   = RHOO * CPdry * CHB * UC * (TB-TC)
      ELEB = RHOO * LH0 * CHB * UC * BETB * (QS0B-QC)
-     G0B  = AKSB * (TB-TBL(1)) / (DZB(1)/2.0_RP)
-
-     ES   = 6.11_RP * exp( (LH0/Rvap) * (TG-TEM00) / (TEM00*TG) )
-     QS0G = 0.622_RP * ES / ( PS - 0.378_RP * ES )
+     !G0B  = AKSB * (TB-TBL(1)) / (DZB(1)/2.0_RP)
+     G0B  =  SB + RB - HB - ELEB
 
      HG   = RHOO * CPdry * CHG * UC * (TG-TC)
      ELEG = RHOO * LH0 * CHG * UC * BETG * (QS0G-QC)
-     G0G  = AKSG * (TG-TGL(1)) / (DZG(1)/2.0_RP)
+     !G0G  = AKSG * (TG-TGL(1)) / (DZG(1)/2.0_RP)
+     G0G  = SG + RG - HG - ELEG
 
     !-----------------------------------------------------------
     ! Total Fluxes from Urban Canopy
@@ -1414,12 +1469,10 @@ contains
     BHC  = LOG(Z0C/Z0HC) / 0.4_RP
     RIBC = ( GRAV * 2.0_RP / (TA+TSP) ) * (TA-TSP) * (Z+Z0C) / (UA*UA)
 
-    call mos(XXX,ALPHAC,CD,BHC,RIBC,Z,Z0C,UA,TA,TS,RHOO)
+    call mos(XXX,CHC,CD,BHC,RIBC,Z,Z0C,UA,TA,TS,RHOO)
 
-    CHU = ALPHAC   ! [cgs -> MKS]
-    TS = TA + SH / CHU    ! surface potential temp (flux temp)
-    !CHU = (ALPHAC / CP / RHO) * (LH0 * RHOO)  ! [cgs -> MKS]
-    !QS = QA + LH/CHU   ! surface humidity
+    TS = TA + SH / CHC / RHOO / Cpdry / UA ! surface potential temp (flux temp)
+    !QS = QA + LH / CHC   ! surface humidity
 
     !-----------------------------------------------------------
     !  diagnostic GRID AVERAGED TS from upward logwave
@@ -1622,7 +1675,7 @@ contains
   end subroutine cal_psi
 
   !-----------------------------------------------------------------------------
-  subroutine mos(XXX,ALPHA,CD,B1,RIB,Z,Z0,UA,TA,TSF,RHO)
+  subroutine mos(XXX,CH,CD,B1,RIB,Z,Z0,UA,TA,TSF,RHO)
 
     use scale_const, only: &
        KARMAN => CONST_KARMAN,  & ! AK : kalman constant  [-]
@@ -1636,7 +1689,7 @@ contains
     implicit none
 
     real(RP), intent(in)    :: B1, Z, Z0, UA, TA, TSF, RHO
-    real(RP), intent(out)   :: ALPHA, CD
+    real(RP), intent(out)   :: CD, CH
     real(RP), intent(inout) :: XXX, RIB
     real(RP)                :: XXX0, X, X0, FAIH, DPSIM, DPSIH
     real(RP)                :: F, DF, XXXP, US, TS, AL, XKB, DD, PSIM, PSIH
@@ -1706,8 +1759,9 @@ contains
     if( US <= 0.01_RP ) US = 0.01_RP
     TS = 0.4_RP * (TA-TSF) / PSIH       ! T*
 
-    CD    = US * US / UA**2                 ! CD
-    ALPHA = RHO * CPdry * 0.4_RP * US / PSIH   ! RHO*CP*CH*U
+    CD    = US * US / UA**2             ! CD
+    CH    = 0.4_RP * US / PSIH / UA     ! CH
+    !ALPHA = RHO * CPdry * 0.4_RP * US / PSIH  ! RHO*CP*CH*U
 
     return
   end subroutine mos
@@ -1798,24 +1852,12 @@ contains
     SVF  = 0.0_RP
 
     ! Thickness of roof, building wall, ground layers
-    ! DZR(UKS:UKE) = 0.05 ! [m]
-    ! DZB(UKS:UKE) = 0.05 ! [m]
-    ! DZG(1)       = 0.05 ! [m]
-    ! DZG(2)       = 0.25 ! [m]
-    ! DZG(3)       = 0.50 ! [m]
-    ! DZG(4)       = 0.75 ! [m]
-
-    ! convert unit
-    !DZR(UKS:UKE) = DZR(UKS:UKE) * 100.0_RP ! [m]-->[cm]
-    !DZB(UKS:UKE) = DZB(UKS:UKE) * 100.0_RP ! [m]-->[cm]
-    !DZG(UKS:UKE) = DZG(UKS:UKE) * 100.0_RP ! [m]-->[cm]
-
-    !CAPR = CAPR * ( 1.0_RP / 4.1868_RP ) * 1.E-6_RP   ! [J/m^3/K] --> [cal/cm^3/deg]
-    !CAPB = CAPB * ( 1.0_RP / 4.1868_RP ) * 1.E-6_RP   ! [J/m^3/K] --> [cal/cm^3/deg]
-    !CAPG = CAPG * ( 1.0_RP / 4.1868_RP ) * 1.E-6_RP   ! [J/m^3/K] --> [cal/cm^3/deg]
-    !AKSR = AKSR * ( 1.0_RP / 4.1868_RP ) * 1.E-2_RP   ! [J/m/s/K] --> [cal/cm/s/deg]
-    !AKSB = AKSB * ( 1.0_RP / 4.1868_RP ) * 1.E-2_RP   ! [J/m/s/K] --> [cal/cm/s/deg]
-    !AKSG = AKSG * ( 1.0_RP / 4.1868_RP ) * 1.E-2_RP   ! [J/m/s/K] --> [cal/cm/s/deg]
+     DZR(UKS:UKE) = 0.05 ! [m]
+     DZB(UKS:UKE) = 0.05 ! [m]
+     DZG(1)       = 0.05 ! [m]
+     DZG(2)       = 0.25 ! [m]
+     DZG(3)       = 0.50 ! [m]
+     DZG(4)       = 0.75 ! [m]
 
     ! set up other urban parameters
     Z0HR = 0.1_RP * Z0R
