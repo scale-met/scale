@@ -1017,7 +1017,7 @@ contains
 #endif
 
           ! at (u, y, interface)
-          !$omp parallel do private(i,j,k,vel) OMP_SCHEDULE_ collapse(2)
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           do j = JJS-1, JJE+1
           do i = IIS-2, IIE+1
           do k = KS, KE-1
@@ -1184,7 +1184,7 @@ contains
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
 
-       !$omp parallel do private(i,j,k,vel) OMP_SCHEDULE_ collapse(2)
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE
        do i = IIS, IIE
 #ifdef DEBUG
