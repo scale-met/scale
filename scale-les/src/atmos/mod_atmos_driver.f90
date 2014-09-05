@@ -203,7 +203,7 @@ contains
 
     !########## Lateral/Top Boundary Condition ###########
     if ( ATMOS_BOUNDARY_UPDATE_FLAG ) then
-       call ATMOS_BOUNDARY_update
+       call ATMOS_BOUNDARY_update( DENS, MOMX, MOMY, RHOT, QTRC ) ! (in)
     endif
 
     !########## Get Surface Boundary Condition from coupler ##########
