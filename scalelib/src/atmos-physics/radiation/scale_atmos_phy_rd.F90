@@ -71,7 +71,7 @@ module scale_atmos_phy_rd
        real(RP), intent(in)  :: solins      (IA,JA)
        real(RP), intent(in)  :: cosSZA      (IA,JA)
        real(RP), intent(out) :: flux_rad    (KA,IA,JA,2,2)
-       real(RP), intent(out) :: flux_rad_top(IA,JA,2)
+       real(RP), intent(out) :: flux_rad_top(IA,JA,2,2)
      end subroutine rd
   end interface
   procedure(rd), pointer :: ATMOS_PHY_RD => NULL()
@@ -95,6 +95,8 @@ contains
        ATMOS_PHY_RD_mstrnx_setup, &
        ATMOS_PHY_RD_mstrnx
 #endif
+    use scale_atmos_phy_rd_mm5sw, only: &
+       swinit
     implicit none
 
     character(len=*), intent(in) :: RD_TYPE
@@ -104,6 +106,10 @@ contains
     case ( 'MSTRNX' )
        call ATMOS_PHY_RD_mstrnx_setup( RD_TYPE )
        ATMOS_PHY_RD => ATMOS_PHY_RD_mstrnx
+    case ( 'WRF' )
+       call ATMOS_PHY_RD_mstrnx_setup( 'MSTRNX' )
+       ATMOS_PHY_RD => ATMOS_PHY_RD_mstrnx
+       call swinit
     case default
        write(*,*) 'xxx invalid Radiation type(', trim(RD_TYPE), '). CHECK!'
        call PRC_MPIstop

@@ -401,7 +401,7 @@ contains
     real(RP), intent(in)  :: solins      (IA,JA)
     real(RP), intent(in)  :: cosSZA      (IA,JA)
     real(RP), intent(out) :: flux_rad    (KA,IA,JA,2,2)
-    real(RP), intent(out) :: flux_rad_top(IA,JA,2)
+    real(RP), intent(out) :: flux_rad_top(IA,JA,2,2)
 !    real(RP), intent(out) :: Jval        (KA,IA,JA,CH_QA_photo)
 
     real(RP) :: temp   (KA,IA,JA)
@@ -667,8 +667,10 @@ contains
 
     do j = JS, JE
     do i = IS, IE
-       flux_rad_top(i,j,I_LW) = flux_rad_merge(1,i,j,I_LW,I_up)-flux_rad_merge(1,i,j,I_LW,I_dn)
-       flux_rad_top(i,j,I_SW) = flux_rad_merge(1,i,j,I_SW,I_up)-flux_rad_merge(1,i,j,I_SW,I_dn)
+       flux_rad_top(i,j,I_LW,I_up) = flux_rad_merge(1,i,j,I_LW,I_up)
+       flux_rad_top(i,j,I_LW,I_dn) = flux_rad_merge(1,i,j,I_LW,I_dn)
+       flux_rad_top(i,j,I_SW,I_up) = flux_rad_merge(1,i,j,I_SW,I_up)
+       flux_rad_top(i,j,I_SW,I_dn) = flux_rad_merge(1,i,j,I_SW,I_dn)
     enddo
     enddo
 
@@ -827,8 +829,9 @@ contains
     allocate( sfc     (MSTRN_nsfc,   MSTRN_nband) )
     allocate( rayleigh(              MSTRN_nband) )
 
-    allocate( qmol    (                           MSTRN_nmoment,MSTRN_nband) )
-    allocate( q       (MSTRN_nradius,MSTRN_nptype,MSTRN_nmoment,MSTRN_nband) )
+    allocate( qmol    (                             MSTRN_nmoment,MSTRN_nband) )
+    allocate( q       (MSTRN_nradius+1,MSTRN_nptype,MSTRN_nmoment,MSTRN_nband) )
+    q(MSTRN_nradius+1,:,:,:) = 0.D0 ! dummy for extrapolation
 
     open( fid,                                     &
           file   = trim(MSTRN_AEROPARA_INPUTFILE), &
@@ -896,7 +899,7 @@ contains
              read(fid,*) qmol(im,iw)
              ! for aerosol scattering phase function
              do iptype = 1, nptype
-                read(fid,*) q(:,iptype,im,iw)
+                read(fid,*) q(1:MSTRN_nradius,iptype,im,iw)
              enddo
           enddo
 
@@ -1190,12 +1193,11 @@ contains
                                  / ( radmode(iptype,ir+1)      - radmode(iptype,ir) )
 
           elseif( aerosol_radi(k,i,j,iaero) > radmode(iptype,MSTRN_nradius) ) then ! extrapolation
-
-             ir = MSTRN_nradius - 1
-             indexR(k,i,j,iaero) = ir
              ! [Note] Extrapolation sometimes makes unexpected value
-             !factR (k,i,j,iaero) = ( aerosol_radi(k,i,j,iaero) - radmode(iptype,ir) ) &
-             !                    / ( radmode(iptype,ir+1)      - radmode(iptype,ir) )
+             ! optical thickness is set to zero. This treatment is Ad Hoc.
+
+             ir = MSTRN_nradius
+             indexR(k,i,j,iaero) = ir
              factR (k,i,j,iaero) = 1.0_RP
 
           else

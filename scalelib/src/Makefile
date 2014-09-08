@@ -68,6 +68,7 @@ OBJS = $(scale_rdma)	\
 	scale_atmos_phy_rd.o	\
 	scale_atmos_phy_rd_common.o	\
 	scale_atmos_phy_rd_mstrnx.o	\
+	scale_atmos_phy_rd_mm5sw.o	\
 	scale_atmos_phy_rd_profile.o	\
 	scale_atmos_phy_sf.o	\
 	scale_atmos_phy_sf_bulkcoef.o	\

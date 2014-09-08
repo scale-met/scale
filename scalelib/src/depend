@@ -13,8 +13,9 @@ scale_atmos_phy_mp_kessler.o: atmos-physics/microphysics/scale_atmos_phy_mp_kess
 scale_atmos_phy_mp_sn14.o: atmos-physics/microphysics/scale_atmos_phy_mp_sn14.F90 $(inc_index) $(DEPENDLIB) scale_atmos_phy_mp_common.o scale_atmos_sub_saturation.o scale_atmos_sub_thermodyn.o scale_const.o scale_grid_cartesian.o scale_grid_index.o scale_precision.o scale_process.o scale_prof.o scale_specfunc.o scale_stdio.o scale_time.o scale_tracer.o scale_tracer_sn14.o
 scale_atmos_phy_mp_suzuki10.o: atmos-physics/microphysics/scale_atmos_phy_mp_suzuki10.F90 $(inc_index) $(DEPENDLIB) scale_atmos_phy_mp_common.o scale_atmos_sub_saturation.o scale_atmos_sub_thermodyn.o scale_comm.o scale_const.o scale_grid_cartesian.o scale_grid_index.o scale_history.o scale_precision.o scale_process.o scale_prof.o scale_random.o scale_stdio.o scale_time.o scale_tracer.o scale_tracer_suzuki10.o
 scale_atmos_phy_mp_tomita08.o: atmos-physics/microphysics/scale_atmos_phy_mp_tomita08.F90 $(inc_index) $(DEPENDLIB) scale_atmos_phy_mp_common.o scale_atmos_sub_saturation.o scale_atmos_sub_thermodyn.o scale_const.o scale_grid_index.o scale_history.o scale_precision.o scale_process.o scale_prof.o scale_specfunc.o scale_stdio.o scale_time.o scale_tracer.o scale_tracer_tomita08.o
-scale_atmos_phy_rd.o: atmos-physics/radiation/scale_atmos_phy_rd.F90 $(inc_index) $(DEPENDLIB) scale_atmos_phy_rd_mstrnx.o scale_grid_index.o scale_precision.o scale_process.o scale_prof.o scale_stdio.o scale_tracer.o
+scale_atmos_phy_rd.o: atmos-physics/radiation/scale_atmos_phy_rd.F90 $(inc_index) $(DEPENDLIB) scale_atmos_phy_rd_mm5sw.o scale_atmos_phy_rd_mstrnx.o scale_grid_index.o scale_precision.o scale_process.o scale_prof.o scale_stdio.o scale_tracer.o
 scale_atmos_phy_rd_common.o: atmos-physics/radiation/scale_atmos_phy_rd_common.F90 $(inc_index) $(DEPENDLIB) scale_atmos_sub_thermodyn.o scale_grid_index.o scale_precision.o scale_prof.o scale_stdio.o scale_tracer.o
+scale_atmos_phy_rd_mm5sw.o: atmos-physics/radiation/scale_atmos_phy_rd_mm5sw.F90 $(inc_index) $(DEPENDLIB) scale_atmos_phy_rd_common.o scale_atmos_sub_solarins.o scale_calendar.o scale_const.o scale_grid_index.o scale_precision.o scale_prof.o scale_stdio.o scale_time.o scale_tracer.o
 scale_atmos_phy_rd_mstrnx.o: atmos-physics/radiation/scale_atmos_phy_rd_mstrnx.F90 $(inc_index) $(DEPENDLIB) scale_atmos_phy_ae.o scale_atmos_phy_mp.o scale_atmos_phy_rd_common.o scale_atmos_phy_rd_profile.o scale_atmos_sub_saturation.o scale_atmos_sub_thermodyn.o scale_const.o scale_grid_index.o scale_grid_real.o scale_precision.o scale_process.o scale_prof.o scale_stdio.o scale_time.o scale_tracer.o
 scale_atmos_phy_rd_profile.o: atmos-physics/radiation/scale_atmos_phy_rd_profile.F90 $(inc_index) $(DEPENDLIB) scale_calendar.o scale_const.o scale_grid_cartesian.o scale_grid_index.o scale_precision.o scale_process.o scale_prof.o scale_stdio.o
 scale_atmos_phy_sf.o: atmos-physics/surfaceflux/scale_atmos_phy_sf.F90 $(inc_index) $(DEPENDLIB) scale_atmos_phy_sf_bulk.o scale_atmos_phy_sf_const.o scale_grid_index.o scale_precision.o scale_process.o scale_prof.o scale_stdio.o scale_tracer.o
@@ -108,6 +109,7 @@ MODS =	\
 	scale_atmos_phy_mp_tomita08.mod	\
 	scale_atmos_phy_rd.mod	\
 	scale_atmos_phy_rd_common.mod	\
+	scale_atmos_phy_rd_mm5sw.mod	\
 	scale_atmos_phy_rd_mstrnx.mod	\
 	scale_atmos_phy_rd_profile.mod	\
 	scale_atmos_phy_sf.mod	\
