@@ -87,7 +87,8 @@ module scale_comm
   !
   !++ Public parameters & variables
   !
-  integer, public :: COMM_datatype !< datatype of variable
+  integer, public :: COMM_datatype   !< datatype of variable
+  integer, public :: COMM_world      !< communication world ID
 
   !-----------------------------------------------------------------------------
   !
@@ -103,7 +104,6 @@ module scale_comm
 #endif
 
   logical,  private              :: COMM_IsAllPeriodic  !< periodic boundary condition?
-  integer,  private              :: COMM_world          !< communication world ID
 
   integer,  private              :: COMM_size3D_WE      !< 3D data size (W/E    HALO, 4/8-direction comm.)
   integer,  private              :: COMM_size3D_NS4     !< 3D data size (N/S    HALO,   4-direction comm.)

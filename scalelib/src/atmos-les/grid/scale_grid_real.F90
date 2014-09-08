@@ -60,6 +60,8 @@ module scale_grid_real
   real(RP), public, allocatable :: REAL_AREA(:,:)      !< horizontal area [m2]
   real(RP), public, allocatable :: REAL_VOL (:,:,:)    !< control volume  [m3]
 
+  real(RP), public, allocatable :: REAL_DOMAIN_CATALOGUE(:,:,:) !< domain latlon catalogue [rad]
+
   real(RP), public :: REAL_TOTAREA                     !< total area   (local) [m2]
   real(RP), public :: REAL_TOTVOL                      !< total volume (local) [m3]
 
@@ -81,6 +83,7 @@ contains
   !> Setup
   subroutine REAL_setup
     use scale_process, only: &
+       PRC_nmax,    &
        PRC_MPIstop
     use scale_mapproj, only: &
        MPRJ_setup
@@ -111,6 +114,8 @@ contains
 
     allocate( REAL_AREA(   IA,JA) )
     allocate( REAL_VOL (KA,IA,JA) )
+
+    allocate( REAL_DOMAIN_CATALOGUE(PRC_nmax,4,2) )
 
     ! setup map projection
     call MPRJ_setup
@@ -176,7 +181,8 @@ contains
        PRC_nmax,             &
        PRC_MPIstop
     use scale_comm, only: &
-       COMM_gather
+       COMM_gather,  &
+       COMM_bcast
     implicit none
 
     real(RP), allocatable :: mine(:,:)    !< send buffer of lon-lat [deg]
@@ -247,23 +253,23 @@ contains
                                 'SW(',REAL_LON(IS,JS)/D2R,',',REAL_LAT(IS,JS)/D2R,')-', &
                                 'SE(',REAL_LON(IE,JS)/D2R,',',REAL_LAT(IE,JS)/D2R,')'
 
-    if( DOMAIN_CATALOGUE_OUTPUT ) then
-       allocate( mine (4, 2         ) )
-       allocate( whole(4, 2*PRC_nmax) )
 
-       mine(I_NW,I_LON) = REAL_LONXY(IS-1,JE  )/D2R
-       mine(I_NE,I_LON) = REAL_LONXY(IE  ,JE  )/D2R
-       mine(I_SW,I_LON) = REAL_LONXY(IS-1,JS-1)/D2R
-       mine(I_SE,I_LON) = REAL_LONXY(IE  ,JS-1)/D2R
-       mine(I_NW,I_LAT) = REAL_LATXY(IS-1,JE  )/D2R
-       mine(I_NE,I_LAT) = REAL_LATXY(IE  ,JE  )/D2R
-       mine(I_SW,I_LAT) = REAL_LATXY(IS-1,JS-1)/D2R
-       mine(I_SE,I_LAT) = REAL_LATXY(IE  ,JS-1)/D2R
+    allocate( mine (4, 2         ) )
+    allocate( whole(4, 2*PRC_nmax) )
 
-       call COMM_gather( whole, mine, 4, 2 )
+    mine(I_NW,I_LON) = REAL_LONXY(IS-1,JE  )/D2R
+    mine(I_NE,I_LON) = REAL_LONXY(IE  ,JE  )/D2R
+    mine(I_SW,I_LON) = REAL_LONXY(IS-1,JS-1)/D2R
+    mine(I_SE,I_LON) = REAL_LONXY(IE  ,JS-1)/D2R
+    mine(I_NW,I_LAT) = REAL_LATXY(IS-1,JE  )/D2R
+    mine(I_NE,I_LAT) = REAL_LATXY(IE  ,JE  )/D2R
+    mine(I_SW,I_LAT) = REAL_LATXY(IS-1,JS-1)/D2R
+    mine(I_SE,I_LAT) = REAL_LATXY(IE  ,JS-1)/D2R
 
-       if( PRC_myrank == PRC_master )then
+    call COMM_gather( whole, mine, 4, 2 ) ! everytime do for online nesting
 
+    if( PRC_myrank == PRC_master )then
+       if( DOMAIN_CATALOGUE_OUTPUT ) then
           fid = IO_get_available_fid()
           open( fid,                                    &
                 file   = trim(DOMAIN_CATALOGUE_FNAME), &
@@ -276,7 +282,7 @@ contains
              call PRC_MPIstop
           endif
 
-          do i = 1, PRC_nmax
+          do i = 1, PRC_nmax ! for offline nesting
              write(fid,'(i8,8f32.24)',iostat=ierr) i, whole(I_NW,I_LON+2*(i-1)), whole(I_NE,I_LON+2*(i-1)), & ! LON: NW, NE
                                                       whole(I_SW,I_LON+2*(i-1)), whole(I_SE,I_LON+2*(i-1)), & ! LON: SW, SE
                                                       whole(I_NW,I_LAT+2*(i-1)), whole(I_NE,I_LAT+2*(i-1)), & ! LAT: NW, NE
@@ -286,7 +292,19 @@ contains
           close(fid)
        endif
 
+       do i = 1, PRC_nmax ! for online nesting
+          REAL_DOMAIN_CATALOGUE(i,I_NW,I_LON) = whole(I_NW,I_LON+2*(i-1)) ! LON: NW
+          REAL_DOMAIN_CATALOGUE(i,I_NE,I_LON) = whole(I_NE,I_LON+2*(i-1)) ! LON: NE
+          REAL_DOMAIN_CATALOGUE(i,I_SW,I_LON) = whole(I_SW,I_LON+2*(i-1)) ! LON: SW
+          REAL_DOMAIN_CATALOGUE(i,I_SE,I_LON) = whole(I_SE,I_LON+2*(i-1)) ! LON: SE
+          REAL_DOMAIN_CATALOGUE(i,I_NW,I_LAT) = whole(I_NW,I_LAT+2*(i-1)) ! LAT: NW
+          REAL_DOMAIN_CATALOGUE(i,I_NE,I_LAT) = whole(I_NE,I_LAT+2*(i-1)) ! LAT: NE
+          REAL_DOMAIN_CATALOGUE(i,I_SW,I_LAT) = whole(I_SW,I_LAT+2*(i-1)) ! LAT: SW
+          REAL_DOMAIN_CATALOGUE(i,I_SE,I_LAT) = whole(I_SE,I_LAT+2*(i-1)) ! LAT: SE
+       enddo
     endif
+
+    call COMM_bcast( REAL_DOMAIN_CATALOGUE, PRC_nmax, 4, 2 )
 
     return
   end subroutine REAL_calc_latlon
