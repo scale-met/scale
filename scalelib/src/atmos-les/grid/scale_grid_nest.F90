@@ -217,9 +217,9 @@ contains
     implicit none
 
     !< metadata files for lat-lon domain for all processes
-    character(len=H_LONG) :: LATLON_CATALOGUE_FNAME = 'latlon_domain_catalogue.txt' 
-    character(len=H_MID) :: cmd  = './scale-les'
-    character(20) :: argv(2) = (/ 'run.conf', ' ' /)
+    character(len=H_LONG) :: LATLON_CATALOGUE_FNAME = 'latlon_domain_catalogue.txt'
+    character(len=H_MID)  :: cmd                    = './scale-les'
+    character(20)         :: argv(2)
 
     integer :: i
     integer :: fid, ierr
@@ -247,6 +247,9 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[NEST]/Categ[GRID]'
+
+    argv(1) = 'run.conf'
+    argv(2) = ''
 
     NEST_HANDLING_NUM = 0
     NEST_Filiation(:) = 0
@@ -1412,12 +1415,18 @@ contains
                 do j = DATR_JS-1, DATR_JE+1
                 do i = DATR_IS-1, DATR_IE+1
                 do k = DATR_KS-1, DATR_KE+1
-                   dvar(k,i,j) = buffer_ref_3D(kgrd(k,i,j,1,1,ig),igrd(i,j,1,ig),jgrd(i,j,1,ig)) * hfact(i,j,1,ig) * vfact(k,i,j,1,1,ig) &
-                               + buffer_ref_3D(kgrd(k,i,j,2,1,ig),igrd(i,j,2,ig),jgrd(i,j,2,ig)) * hfact(i,j,2,ig) * vfact(k,i,j,2,1,ig) &
-                               + buffer_ref_3D(kgrd(k,i,j,3,1,ig),igrd(i,j,3,ig),jgrd(i,j,3,ig)) * hfact(i,j,3,ig) * vfact(k,i,j,3,1,ig) &
-                               + buffer_ref_3D(kgrd(k,i,j,1,2,ig),igrd(i,j,1,ig),jgrd(i,j,1,ig)) * hfact(i,j,1,ig) * vfact(k,i,j,1,2,ig) &
-                               + buffer_ref_3D(kgrd(k,i,j,2,2,ig),igrd(i,j,2,ig),jgrd(i,j,2,ig)) * hfact(i,j,2,ig) * vfact(k,i,j,2,2,ig) &
-                               + buffer_ref_3D(kgrd(k,i,j,3,2,ig),igrd(i,j,3,ig),jgrd(i,j,3,ig)) * hfact(i,j,3,ig) * vfact(k,i,j,3,2,ig)
+                   dvar(k,i,j) = buffer_ref_3D(kgrd(k,i,j,1,1,ig),igrd(i,j,1,ig),jgrd(i,j,1,ig)) &
+                               * hfact(i,j,1,ig) * vfact(k,i,j,1,1,ig)                           &
+                               + buffer_ref_3D(kgrd(k,i,j,2,1,ig),igrd(i,j,2,ig),jgrd(i,j,2,ig)) &
+                               * hfact(i,j,2,ig) * vfact(k,i,j,2,1,ig)                           &
+                               + buffer_ref_3D(kgrd(k,i,j,3,1,ig),igrd(i,j,3,ig),jgrd(i,j,3,ig)) &
+                               * hfact(i,j,3,ig) * vfact(k,i,j,3,1,ig)                           &
+                               + buffer_ref_3D(kgrd(k,i,j,1,2,ig),igrd(i,j,1,ig),jgrd(i,j,1,ig)) &
+                               * hfact(i,j,1,ig) * vfact(k,i,j,1,2,ig)                           &
+                               + buffer_ref_3D(kgrd(k,i,j,2,2,ig),igrd(i,j,2,ig),jgrd(i,j,2,ig)) &
+                               * hfact(i,j,2,ig) * vfact(k,i,j,2,2,ig)                           &
+                               + buffer_ref_3D(kgrd(k,i,j,3,2,ig),igrd(i,j,3,ig),jgrd(i,j,3,ig)) &
+                               * hfact(i,j,3,ig) * vfact(k,i,j,3,2,ig)
                 end do
                 end do
                 end do
@@ -1430,12 +1439,18 @@ contains
                 do j = DATR_JS-1, DATR_JE+1
                 do i = DATR_IS-1, DATR_IE+1
                 do k = DATR_KS-1, DATR_KE+1
-                   dvar(k,i,j) = exp( buffer_ref_3D(kgrd(k,i,j,1,1,ig),igrd(i,j,1,ig),jgrd(i,j,1,ig)) * hfact(i,j,1,ig) * vfact(k,i,j,1,1,ig) &
-                                    + buffer_ref_3D(kgrd(k,i,j,2,1,ig),igrd(i,j,2,ig),jgrd(i,j,2,ig)) * hfact(i,j,2,ig) * vfact(k,i,j,2,1,ig) &
-                                    + buffer_ref_3D(kgrd(k,i,j,3,1,ig),igrd(i,j,3,ig),jgrd(i,j,3,ig)) * hfact(i,j,3,ig) * vfact(k,i,j,3,1,ig) &
-                                    + buffer_ref_3D(kgrd(k,i,j,1,2,ig),igrd(i,j,1,ig),jgrd(i,j,1,ig)) * hfact(i,j,1,ig) * vfact(k,i,j,1,2,ig) &
-                                    + buffer_ref_3D(kgrd(k,i,j,2,2,ig),igrd(i,j,2,ig),jgrd(i,j,2,ig)) * hfact(i,j,2,ig) * vfact(k,i,j,2,2,ig) &
-                                    + buffer_ref_3D(kgrd(k,i,j,3,2,ig),igrd(i,j,3,ig),jgrd(i,j,3,ig)) * hfact(i,j,3,ig) * vfact(k,i,j,3,2,ig) )
+                   dvar(k,i,j) = exp( buffer_ref_3D(kgrd(k,i,j,1,1,ig),igrd(i,j,1,ig),jgrd(i,j,1,ig)) &
+                                    * hfact(i,j,1,ig) * vfact(k,i,j,1,1,ig)                           &
+                                    + buffer_ref_3D(kgrd(k,i,j,2,1,ig),igrd(i,j,2,ig),jgrd(i,j,2,ig)) &
+                                    * hfact(i,j,2,ig) * vfact(k,i,j,2,1,ig)                           &
+                                    + buffer_ref_3D(kgrd(k,i,j,3,1,ig),igrd(i,j,3,ig),jgrd(i,j,3,ig)) &
+                                    * hfact(i,j,3,ig) * vfact(k,i,j,3,1,ig)                           &
+                                    + buffer_ref_3D(kgrd(k,i,j,1,2,ig),igrd(i,j,1,ig),jgrd(i,j,1,ig)) &
+                                    * hfact(i,j,1,ig) * vfact(k,i,j,1,2,ig)                           &
+                                    + buffer_ref_3D(kgrd(k,i,j,2,2,ig),igrd(i,j,2,ig),jgrd(i,j,2,ig)) &
+                                    * hfact(i,j,2,ig) * vfact(k,i,j,2,2,ig)                           &
+                                    + buffer_ref_3D(kgrd(k,i,j,3,2,ig),igrd(i,j,3,ig),jgrd(i,j,3,ig)) &
+                                    * hfact(i,j,3,ig) * vfact(k,i,j,3,2,ig) )
                 end do
                 end do
                 end do
@@ -1450,12 +1465,18 @@ contains
              do j = DATR_JS-1, DATR_JE+1
              do i = DATR_IS-1, DATR_IE+1
              do k = DATR_KS-1, DATR_KE+1
-                dvar(k,i,j) = buffer_ref_3DF(kgrd(k,i,j,1,1,ig),igrd(i,j,1,ig),jgrd(i,j,1,ig)) * hfact(i,j,1,ig) * vfact(k,i,j,1,1,ig) &
-                            + buffer_ref_3DF(kgrd(k,i,j,2,1,ig),igrd(i,j,2,ig),jgrd(i,j,2,ig)) * hfact(i,j,2,ig) * vfact(k,i,j,2,1,ig) &
-                            + buffer_ref_3DF(kgrd(k,i,j,3,1,ig),igrd(i,j,3,ig),jgrd(i,j,3,ig)) * hfact(i,j,3,ig) * vfact(k,i,j,3,1,ig) &
-                            + buffer_ref_3DF(kgrd(k,i,j,1,2,ig),igrd(i,j,1,ig),jgrd(i,j,1,ig)) * hfact(i,j,1,ig) * vfact(k,i,j,1,2,ig) &
-                            + buffer_ref_3DF(kgrd(k,i,j,2,2,ig),igrd(i,j,2,ig),jgrd(i,j,2,ig)) * hfact(i,j,2,ig) * vfact(k,i,j,2,2,ig) &
-                            + buffer_ref_3DF(kgrd(k,i,j,3,2,ig),igrd(i,j,3,ig),jgrd(i,j,3,ig)) * hfact(i,j,3,ig) * vfact(k,i,j,3,2,ig)
+                dvar(k,i,j) = buffer_ref_3DF(kgrd(k,i,j,1,1,ig),igrd(i,j,1,ig),jgrd(i,j,1,ig)) &
+                            * hfact(i,j,1,ig) * vfact(k,i,j,1,1,ig)                            &
+                            + buffer_ref_3DF(kgrd(k,i,j,2,1,ig),igrd(i,j,2,ig),jgrd(i,j,2,ig)) &
+                            * hfact(i,j,2,ig) * vfact(k,i,j,2,1,ig)                            &
+                            + buffer_ref_3DF(kgrd(k,i,j,3,1,ig),igrd(i,j,3,ig),jgrd(i,j,3,ig)) &
+                            * hfact(i,j,3,ig) * vfact(k,i,j,3,1,ig)                            &
+                            + buffer_ref_3DF(kgrd(k,i,j,1,2,ig),igrd(i,j,1,ig),jgrd(i,j,1,ig)) &
+                            * hfact(i,j,1,ig) * vfact(k,i,j,1,2,ig)                            &
+                            + buffer_ref_3DF(kgrd(k,i,j,2,2,ig),igrd(i,j,2,ig),jgrd(i,j,2,ig)) &
+                            * hfact(i,j,2,ig) * vfact(k,i,j,2,2,ig)                            &
+                            + buffer_ref_3DF(kgrd(k,i,j,3,2,ig),igrd(i,j,3,ig),jgrd(i,j,3,ig)) &
+                            * hfact(i,j,3,ig) * vfact(k,i,j,3,2,ig)
              end do
              end do
              end do
