@@ -54,10 +54,10 @@ contains
        ATMOS_PHY_RD_TYPE, &
        ATMOS_sw_phy_rd
     use mod_atmos_phy_rd_vars, only: &
-       SFLX_LW_up   => ATMOS_PHY_RD_SFLX_LW_up,   &
-       SFLX_LW_dn   => ATMOS_PHY_RD_SFLX_LW_dn,   &
-       SFLX_SW_up   => ATMOS_PHY_RD_SFLX_SW_up,   &
-       SFLX_SW_dn   => ATMOS_PHY_RD_SFLX_SW_dn,   &
+       SFCFLX_LW_up => ATMOS_PHY_RD_SFLX_LW_up,   &
+       SFCFLX_LW_dn => ATMOS_PHY_RD_SFLX_LW_dn,   &
+       SFCFLX_SW_up => ATMOS_PHY_RD_SFLX_SW_up,   &
+       SFCFLX_SW_dn => ATMOS_PHY_RD_SFLX_SW_dn,   &
        TOAFLX_LW_up => ATMOS_PHY_RD_TOAFLX_LW_up, &
        TOAFLX_LW_dn => ATMOS_PHY_RD_TOAFLX_LW_dn, &
        TOAFLX_SW_up => ATMOS_PHY_RD_TOAFLX_SW_up, &
@@ -80,10 +80,10 @@ contains
 
        if( IO_L ) write(IO_FID_LOG,*) '*** this component is never called.'
        if( IO_L ) write(IO_FID_LOG,*) '*** radiation fluxes are set to zero.'
-       SFLX_LW_up  (:,:) = 0.0_RP
-       SFLX_LW_dn  (:,:) = 0.0_RP
-       SFLX_SW_up  (:,:) = 0.0_RP
-       SFLX_SW_dn  (:,:) = 0.0_RP
+       SFCFLX_LW_up(:,:) = 0.0_RP
+       SFCFLX_LW_dn(:,:) = 0.0_RP
+       SFCFLX_SW_up(:,:) = 0.0_RP
+       SFCFLX_SW_dn(:,:) = 0.0_RP
        TOAFLX_LW_up(:,:) = 0.0_RP
        TOAFLX_LW_dn(:,:) = 0.0_RP
        TOAFLX_SW_up(:,:) = 0.0_RP
@@ -147,10 +147,10 @@ contains
        SFC_albedo => ATMOS_PHY_SF_SFC_albedo
     use mod_atmos_phy_rd_vars, only: &
        RHOT_t_RD    => ATMOS_PHY_RD_RHOT_t,       &
-       SFLX_LW_up   => ATMOS_PHY_RD_SFLX_LW_up,   &
-       SFLX_LW_dn   => ATMOS_PHY_RD_SFLX_LW_dn,   &
-       SFLX_SW_up   => ATMOS_PHY_RD_SFLX_SW_up,   &
-       SFLX_SW_dn   => ATMOS_PHY_RD_SFLX_SW_dn,   &
+       SFCFLX_LW_up => ATMOS_PHY_RD_SFLX_LW_up,   &
+       SFCFLX_LW_dn => ATMOS_PHY_RD_SFLX_LW_dn,   &
+       SFCFLX_SW_up => ATMOS_PHY_RD_SFLX_SW_up,   &
+       SFCFLX_SW_dn => ATMOS_PHY_RD_SFLX_SW_dn,   &
        TOAFLX_LW_up => ATMOS_PHY_RD_TOAFLX_LW_up, &
        TOAFLX_LW_dn => ATMOS_PHY_RD_TOAFLX_LW_dn, &
        TOAFLX_SW_up => ATMOS_PHY_RD_TOAFLX_SW_up, &
@@ -160,16 +160,15 @@ contains
     logical, intent(in) :: update_flag
     logical, intent(in) :: history_flag
 
-    real(RP) :: TEMP_t(KA,IA,JA,3)
+    real(RP) :: TEMP_t      (KA,IA,JA,3)
+    real(RP) :: flux_rad    (KA,IA,JA,2,2)
+    real(RP) :: flux_rad_top(   IA,JA,2,2)
 
-    real(RP) :: flux_rad(KA,IA,JA,2,2)
-    real(RP) :: flux_net(KA,IA,JA,2)
-    real(RP) :: flux_up (KA,IA,JA,2)
-    real(RP) :: flux_dn (KA,IA,JA,2)
-
-    real(RP) :: flux_rad_top(IA,JA,2,2)
-    real(RP) :: flux_rad_top_net(IA,JA,2)
-    real(RP) :: flux_rad_sfc_net(IA,JA,2)
+    real(RP) :: flux_up     (KA,IA,JA,2)
+    real(RP) :: flux_dn     (KA,IA,JA,2)
+    real(RP) :: flux_net    (KA,IA,JA,2)
+    real(RP) :: flux_net_toa(   IA,JA,2)
+    real(RP) :: flux_net_sfc(   IA,JA,2)
 
     real(RP) :: solins(IA,JA)
     real(RP) :: cosSZA(IA,JA)
@@ -239,41 +238,41 @@ contains
 
        do j = JS, JE
        do i = IS, IE
-          SFLX_LW_up(i,j) = flux_rad(KS-1,i,j,I_LW,I_up)
-          SFLX_LW_dn(i,j) = flux_rad(KS-1,i,j,I_LW,I_dn)
-          SFLX_SW_up(i,j) = flux_rad(KS-1,i,j,I_SW,I_up)
-          SFLX_SW_dn(i,j) = flux_rad(KS-1,i,j,I_SW,I_dn)
+          SFCFLX_LW_up(i,j)      = flux_rad(KS-1,i,j,I_LW,I_up)
+          SFCFLX_LW_dn(i,j)      = flux_rad(KS-1,i,j,I_LW,I_dn)
+          SFCFLX_SW_up(i,j)      = flux_rad(KS-1,i,j,I_SW,I_up)
+          SFCFLX_SW_dn(i,j)      = flux_rad(KS-1,i,j,I_SW,I_dn)
 
-          TOAFLX_LW_up(i,j) = flux_rad_top(i,j,I_LW,I_up)
-          TOAFLX_LW_dn(i,j) = flux_rad_top(i,j,I_LW,I_dn)
-          TOAFLX_SW_up(i,j) = flux_rad_top(i,j,I_SW,I_up)
-          TOAFLX_SW_dn(i,j) = flux_rad_top(i,j,I_SW,I_dn)
-       enddo
-       enddo
-
-          flux_rad_top_net(i,j,I_LW) = flux_rad_top(i,j,I_LW,I_up) - flux_rad_top(i,j,I_LW,I_dn)
-          flux_rad_top_net(i,j,I_SW) = flux_rad_top(i,j,I_SW,I_up) - flux_rad_top(i,j,I_SW,I_dn)
-
-       do j = JS, JE
-       do i = IS, IE
-          do k = KS, KE
-             flux_net(k,i,j,I_LW) = 0.5_RP * ( ( flux_rad(k-1,i,j,I_LW,I_up) - flux_rad(k-1,i,j,I_LW,I_dn) ) &
-                                             + ( flux_rad(k  ,i,j,I_LW,I_up) - flux_rad(k  ,i,j,I_LW,I_dn) ) )
-             flux_net(k,i,j,I_SW) = 0.5_RP * ( ( flux_rad(k-1,i,j,I_SW,I_up) - flux_rad(k-1,i,j,I_SW,I_dn) ) &
-                                             + ( flux_rad(k  ,i,j,I_SW,I_up) - flux_rad(k  ,i,j,I_SW,I_dn) ) )
-
-             flux_up (k,i,j,I_LW) = 0.5_RP * ( flux_rad(k-1,i,j,I_LW,I_up) + flux_rad(k,i,j,I_LW,I_up) )
-             flux_up (k,i,j,I_SW) = 0.5_RP * ( flux_rad(k-1,i,j,I_SW,I_up) + flux_rad(k,i,j,I_SW,I_up) )
-             flux_dn (k,i,j,I_LW) = 0.5_RP * ( flux_rad(k-1,i,j,I_LW,I_dn) + flux_rad(k,i,j,I_LW,I_dn) )
-             flux_dn (k,i,j,I_SW) = 0.5_RP * ( flux_rad(k-1,i,j,I_SW,I_dn) + flux_rad(k,i,j,I_SW,I_dn) )
-          enddo
+          flux_net_sfc(i,j,I_LW) = flux_rad(KS-1,i,j,I_LW,I_up) - flux_rad(KS-1,i,j,I_LW,I_dn)
+          flux_net_sfc(i,j,I_SW) = flux_rad(KS-1,i,j,I_SW,I_up) - flux_rad(KS-1,i,j,I_SW,I_dn)
        enddo
        enddo
 
        do j = JS, JE
        do i = IS, IE
-          flux_rad_sfc_net(i,j,I_LW) = flux_rad(KS-1,i,j,I_LW,I_up) - flux_rad(KS-1,i,j,I_LW,I_dn)
-          flux_rad_sfc_net(i,j,I_SW) = flux_rad(KS-1,i,j,I_SW,I_up) - flux_rad(KS-1,i,j,I_SW,I_dn)
+          TOAFLX_LW_up(i,j)      = flux_rad_top(i,j,I_LW,I_up)
+          TOAFLX_LW_dn(i,j)      = flux_rad_top(i,j,I_LW,I_dn)
+          TOAFLX_SW_up(i,j)      = flux_rad_top(i,j,I_SW,I_up)
+          TOAFLX_SW_dn(i,j)      = flux_rad_top(i,j,I_SW,I_dn)
+
+          flux_net_toa(i,j,I_LW) = flux_rad_top(i,j,I_LW,I_up) - flux_rad_top(i,j,I_LW,I_dn)
+          flux_net_toa(i,j,I_SW) = flux_rad_top(i,j,I_SW,I_up) - flux_rad_top(i,j,I_SW,I_dn)
+       enddo
+       enddo
+
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          flux_net(k,i,j,I_LW) = 0.5_RP * ( ( flux_rad(k-1,i,j,I_LW,I_up) - flux_rad(k-1,i,j,I_LW,I_dn) ) &
+                                          + ( flux_rad(k  ,i,j,I_LW,I_up) - flux_rad(k  ,i,j,I_LW,I_dn) ) )
+          flux_net(k,i,j,I_SW) = 0.5_RP * ( ( flux_rad(k-1,i,j,I_SW,I_up) - flux_rad(k-1,i,j,I_SW,I_dn) ) &
+                                          + ( flux_rad(k  ,i,j,I_SW,I_up) - flux_rad(k  ,i,j,I_SW,I_dn) ) )
+
+          flux_up (k,i,j,I_LW) = 0.5_RP * ( flux_rad(k-1,i,j,I_LW,I_up) + flux_rad(k,i,j,I_LW,I_up) )
+          flux_up (k,i,j,I_SW) = 0.5_RP * ( flux_rad(k-1,i,j,I_SW,I_up) + flux_rad(k,i,j,I_SW,I_up) )
+          flux_dn (k,i,j,I_LW) = 0.5_RP * ( flux_rad(k-1,i,j,I_LW,I_dn) + flux_rad(k,i,j,I_LW,I_dn) )
+          flux_dn (k,i,j,I_SW) = 0.5_RP * ( flux_rad(k-1,i,j,I_SW,I_dn) + flux_rad(k,i,j,I_SW,I_dn) )
+       enddo
        enddo
        enddo
 
@@ -335,7 +334,7 @@ contains
 
              do j = JS, JE
              do i = IS, IE
-                flux_rad_sfc_net(i,j,I_SW) = GSW(i,j)
+                flux_net_sfc(i,j,I_SW) = GSW(i,j)
                 do k = KS-1, KE
                    flux_rad(k,i,j,I_SW,I_up) = 0.0_RP
                    flux_rad(k,i,j,I_SW,I_dn) = SDOWN3D(i,k,j)
@@ -353,8 +352,8 @@ contains
 
              do j = JS, JE
              do i = IS, IE
-                SFLX_SW_up(i,j) = flux_rad(KS-1,i,j,I_SW,I_dn) * SFC_albedo(i,j,I_SW)
-                SFLX_SW_dn(i,j) = flux_rad(KS-1,i,j,I_SW,I_dn)
+                SFCFLX_SW_up(i,j) = flux_rad(KS-1,i,j,I_SW,I_dn) * SFC_albedo(i,j,I_SW)
+                SFCFLX_SW_dn(i,j) = flux_rad(KS-1,i,j,I_SW,I_dn)
 
                 TOAFLX_SW_up(i,j) = 0.0_RP
                 TOAFLX_SW_dn(i,j) = flux_rad(KE,i,j,I_SW,I_dn) ! sometimes TOA altitude is very low
@@ -363,7 +362,7 @@ contains
 
              do j = JS, JE
              do i = IS, IE
-                flux_rad_top_net(i,j,I_SW) = 0.0_RP
+                flux_net_toa(i,j,I_SW) = 0.0_RP
                 do k = KS, KE
                    flux_net(k,i,j,I_SW) = 0.0_RP
                    flux_up (k,i,j,I_SW) = 0.0_RP
@@ -374,7 +373,7 @@ contains
 
              do j = JS, JE
              do i = IS, IE
-                flux_rad_sfc_net(i,j,I_SW) = flux_rad(KS-1,i,j,I_SW,I_dn)*SFC_albedo(i,j,I_SW)-flux_rad(KS-1,i,j,I_SW,I_dn)
+                flux_net_sfc(i,j,I_SW) = flux_rad(KS-1,i,j,I_SW,I_dn)*SFC_albedo(i,j,I_SW)-flux_rad(KS-1,i,j,I_SW,I_dn)
              enddo
              enddo
           endif
@@ -387,28 +386,27 @@ contains
           call HIST_in( solins(:,:), 'SOLINS', 'solar insolation',        'W/m2', dt_RD )
           call HIST_in( cosSZA(:,:), 'COSZ',   'cos(solar zenith angle)', '0-1',  dt_RD )
 
-          call HIST_in( SFLX_LW_up(:,:), 'SFLX_LW_up', 'upward   surface longwave  radiation', 'W/m2', dt_RD )
-          call HIST_in( SFLX_LW_dn(:,:), 'SFLX_LW_dn', 'downward surface longwave  radiation', 'W/m2', dt_RD )
-          call HIST_in( SFLX_SW_up(:,:), 'SFLX_SW_up', 'upward   surface shortwave radiation', 'W/m2', dt_RD )
-          call HIST_in( SFLX_SW_dn(:,:), 'SFLX_SW_dn', 'downward surface shortwave radiation', 'W/m2', dt_RD )
+          call HIST_in( SFCFLX_LW_up(:,:), 'SFLX_LW_up',   'SFC upward   longwave  radiation flux', 'W/m2', dt_RD )
+          call HIST_in( SFCFLX_LW_dn(:,:), 'SFLX_LW_dn',   'SFC downward longwave  radiation flux', 'W/m2', dt_RD )
+          call HIST_in( SFCFLX_SW_up(:,:), 'SFLX_SW_up',   'SFC upward   shortwave radiation flux', 'W/m2', dt_RD )
+          call HIST_in( SFCFLX_SW_dn(:,:), 'SFLX_SW_dn',   'SFC downward shortwave radiation flux', 'W/m2', dt_RD )
 
-          call HIST_in( TOAFLX_LW_up(:,:), 'TOAFLX_LW_up', 'TOA upward   longwave radiation', 'W/m2', dt_RD )
-          call HIST_in( TOAFLX_LW_dn(:,:), 'TOAFLX_LW_dn', 'TOA downward longwave radiation', 'W/m2', dt_RD )
-          call HIST_in( TOAFLX_SW_up(:,:), 'TOAFLX_SW_up', 'TOA upward   shortwave radiation', 'W/m2', dt_RD )
-          call HIST_in( TOAFLX_SW_dn(:,:), 'TOAFLX_SW_dn', 'TOA downward shortwave radiation', 'W/m2', dt_RD )
+          call HIST_in( TOAFLX_LW_up(:,:), 'TOAFLX_LW_up', 'TOA upward   longwave  radiation flux', 'W/m2', dt_RD )
+          call HIST_in( TOAFLX_LW_dn(:,:), 'TOAFLX_LW_dn', 'TOA downward longwave  radiation flux', 'W/m2', dt_RD )
+          call HIST_in( TOAFLX_SW_up(:,:), 'TOAFLX_SW_up', 'TOA upward   shortwave radiation flux', 'W/m2', dt_RD )
+          call HIST_in( TOAFLX_SW_dn(:,:), 'TOAFLX_SW_dn', 'TOA downward shortwave radiation flux', 'W/m2', dt_RD )
 
-          call HIST_in( flux_net(:,:,:,I_LW), 'RADFLUX_LW',  'net radiation flux(LW)', 'W/m2', dt_RD )
-          call HIST_in( flux_net(:,:,:,I_SW), 'RADFLUX_SW',  'net radiation flux(SW)', 'W/m2', dt_RD )
-          call HIST_in( flux_up (:,:,:,I_LW), 'RADFLUX_LWUP', 'up radiation flux(LW)', 'W/m2', dt_RD )
-          call HIST_in( flux_up (:,:,:,I_SW), 'RADFLUX_SWUP', 'up radiation flux(SW)', 'W/m2', dt_RD )
-          call HIST_in( flux_dn (:,:,:,I_LW), 'RADFLUX_LWDN', 'dn radiation flux(LW)', 'W/m2', dt_RD )
-          call HIST_in( flux_dn (:,:,:,I_SW), 'RADFLUX_SWDN', 'dn radiation flux(SW)', 'W/m2', dt_RD )
+          call HIST_in( flux_net_sfc(:,:,I_LW), 'SLR', 'SFC net longwave  radiation flux', 'W/m2', dt_RD )
+          call HIST_in( flux_net_sfc(:,:,I_SW), 'SSR', 'SFC net shortwave radiation flux', 'W/m2', dt_RD )
+          call HIST_in( flux_net_toa(:,:,I_LW), 'OLR', 'TOA net longwave  radiation flux', 'W/m2', dt_RD )
+          call HIST_in( flux_net_toa(:,:,I_SW), 'OSR', 'TOA net shortwave radiation flux', 'W/m2', dt_RD )
 
-          call HIST_in( flux_rad_top_net(:,:,I_LW), 'OLR', 'TOA     longwave  radiation', 'W/m2', dt_RD )
-          call HIST_in( flux_rad_top_net(:,:,I_SW), 'OSR', 'TOA     shortwave radiation', 'W/m2', dt_RD )
-
-          call HIST_in( flux_rad_sfc_net(:,:,I_LW), 'SLR', 'Surface longwave  radiation', 'W/m2', dt_RD )
-          call HIST_in( flux_rad_sfc_net(:,:,I_SW), 'SSR', 'Surface shortwave radiation', 'W/m2', dt_RD )
+          call HIST_in( flux_up (:,:,:,I_LW), 'RADFLUX_LWUP', 'upward   longwave  radiation flux', 'W/m2', dt_RD )
+          call HIST_in( flux_dn (:,:,:,I_LW), 'RADFLUX_LWDN', 'downward longwave  radiation flux', 'W/m2', dt_RD )
+          call HIST_in( flux_net(:,:,:,I_LW), 'RADFLUX_LW',   'net      longwave  radiation flux', 'W/m2', dt_RD )
+          call HIST_in( flux_up (:,:,:,I_SW), 'RADFLUX_SWUP', 'upward   shortwave radiation flux', 'W/m2', dt_RD )
+          call HIST_in( flux_dn (:,:,:,I_SW), 'RADFLUX_SWDN', 'downward shortwave radiation flux', 'W/m2', dt_RD )
+          call HIST_in( flux_net(:,:,:,I_SW), 'RADFLUX_SW',   'net      shortwave radiation flux', 'W/m2', dt_RD )
 
           call HIST_in( TEMP_t(:,:,:,I_LW), 'TEMP_t_rd_LW', 'tendency of temp in rd(LW)', 'K/day', dt_RD )
           call HIST_in( TEMP_t(:,:,:,I_SW), 'TEMP_t_rd_SW', 'tendency of temp in rd(SW)', 'K/day', dt_RD )
@@ -421,8 +419,8 @@ contains
 
           do j = JS, JE
           do i = IS, IE
-             SFLX_SW_up(i,j) = flux_rad(KS-1,i,j,I_SW,I_up)
-             SFLX_SW_dn(i,j) = flux_rad(KS-1,i,j,I_SW,I_dn)
+             SFCFLX_SW_up(i,j) = flux_rad(KS-1,i,j,I_SW,I_up)
+             SFCFLX_SW_dn(i,j) = flux_rad(KS-1,i,j,I_SW,I_dn)
 
              TOAFLX_SW_up(i,j) = flux_rad_top(i,j,I_SW,I_up) ! mstrnx
              TOAFLX_SW_dn(i,j) = flux_rad_top(i,j,I_SW,I_dn) ! mstrnx
