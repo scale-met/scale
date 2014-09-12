@@ -4,9 +4,9 @@
 #   2009/10/26 --- Ryuji Yoshida.
 #   2014/07/08 --- Tsuyoshi Yamaura
 #-----------------------------------------
-dir='/data2/scale_database/WRF_output/kobe_case2/500m'
+dir='/data2/scale_database/WRF_output/kobe_case1/2.5km'
 ftype='out'
-domain='2'
+domain='1'
 #
 dt=600
 #
@@ -14,8 +14,8 @@ dt=600
 #
 start_year='2011'
 start_month='09'
-start_day='19'
-start_hour='20'
+start_day='07'
+start_hour='00'
 start_min='00'
 start_sec='00'
 #
@@ -23,8 +23,8 @@ start_sec='00'
 #
 end_year='2011'
 end_month='09'
-end_day='20'
-end_hour='02'
+end_day='07'
+end_hour='06'
 end_min='00'
 end_sec='00'
 #
