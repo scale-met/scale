@@ -120,7 +120,7 @@ contains
     endif
     if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_ATMOS_HYDROSTATIC)
 
-    criteria = CONST_EPS * 5
+    criteria = sqrt( CONST_EPS )
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** use lapse rate for estimation of surface temperature? : ', HYDROSTATIC_uselapserate
