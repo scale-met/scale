@@ -1,0 +1,64 @@
+%\documentclass{book}
+%\usepackage{amsmath}
+%\begin{document}
+
+\chapter{Map factor}
+\label{chap: map factor}
+{\bf \Large 
+\begin{tabular}{ccc}
+\hline
+  Corresponding author & : & Seiya Nishizawa\\
+\hline
+\end{tabular}
+}
+
+\newcommand{\pd}[2]{\frac{\partial #1}{\partial #2}}
+
+
+\section{Map factor}
+A orthogonal rectangular coordinate $(x, y, z)$.
+A orthogonal curvilinear coordinate $(\xi, \eta, \zeta)$.
+
+\begin{equation}
+  g_{ij} = \pd{x_j}{\xi_i}\pd{x_i}{\xi_j} = \delta_{ij}.
+\end{equation}
+
+Map factor $m, n$.
+\begin{align}
+  g_{11} &= 1/m, \\
+  g_{22} &= 1/n,\\
+  g_{33} &= 1.
+\end{align}
+
+\section{Governing equations}
+\begin{align}
+  u &= \frac{1}{m}\frac{d \xi}{dt}, \\
+  v &= \frac{1}{n}\frac{d \eta}{dt}, \\
+  w &= \frac{d \zeta}{dt}, \\
+\end{align}
+
+The continuous equation
+\begin{equation}
+  \pd{\rho}{t} + mn\pd{}{\xi}\frac{\rho u}{n} + mn\pd{}{\eta}\frac{\rho v}{m} + \pd{}{\zeta}\rho w = 0
+\end{equation}
+
+The momentum equations
+\begin{align}
+  \pd{\rho u}{t} &+ mn\pd{}{\xi}\frac{\rho uu}{n} + mn\pd{}{\eta}\frac{\rho uv}{m} + \pd{}{\zeta}\rho uw \\
+  &- f\rho v - mn \rho v\left\{v\pd{}{\xi}\left(\frac{1}{n}\right) - u\pd{}{\eta}\left(\frac{1}{m}\right)\right\} + \rho\frac{uw}{a} = -m\pd{p}{\xi}, \\
+  \pd{\rho v}{t} &+ mn\pd{}{\xi}\frac{\rho uv}{n} + mn\pd{}{\eta}\frac{\rho vv}{m} + \pd{}{\zeta}\rho vw \\
+  &+f\rho u - mn \rho u\left\{v\pd{}{\xi}\left(\frac{1}{n}\right) - u\pd{}{\eta}\left(\frac{1}{m}\right)\right\} + \rho\frac{vw}{a} = -n\pd{p}{\eta}, \\
+  \pd{\rho w}{t} &+ mn\pd{}{\xi}\frac{\rho uw}{n} + mn\pd{}{\eta}\frac{\rho vw}{m} + \pd{}{\zeta}\rho ww -\rho \frac{u^2+v^2}{a} = -\pd{p}{\zeta} -\rho g.
+\end{align}
+
+The thermodynamical and tracer equations
+\begin{equation}
+  \pd{\rho \phi}{t} + mn\pd{}{\xi}\frac{\rho u\phi}{n} + mn\pd{}{\eta}\frac{\rho v\phi}{m} + \pd{\rho w\phi}{\zeta} = 0.
+\end{equation}
+
+Divergence
+\begin{equation}
+  \Delta\cdot\vec{u} = mn\pd{}{\xi}\frac{u}{n} + mn\pd{}{\eta}\frac{v}{m} + \pd{}{\zeta} w
+\end{equation}
+
+%\end{document}
