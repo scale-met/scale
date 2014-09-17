@@ -80,7 +80,7 @@ contains
        nu_C, Ri, Pr,                                & ! (out) diagnostic variables
        MOMZ, MOMX, MOMY, RHOT, DENS, QTRC,          & ! (in)
        sflx_mw, sflx_mu, sflx_mv, sflx_sh,          & ! (in)
-       GSQRT, J13G, J23G, J33G                      ) ! (in)
+       GSQRT, J13G, J23G, J33G, MAPF, dt            ) ! (in)
     implicit none
 
     ! SGS flux
@@ -111,7 +111,9 @@ contains
     real(RP), intent(in)  :: GSQRT(KA,IA,JA,7) !< vertical metrics {G}^1/2
     real(RP), intent(in)  :: J13G (KA,IA,JA,7) !< (1,3) element of Jacobian matrix
     real(RP), intent(in)  :: J23G (KA,IA,JA,7) !< (1,3) element of Jacobian matrix
-    real(RP), intent(in)  :: J33G                 !< (3,3) element of Jacobian matrix
+    real(RP), intent(in)  :: J33G              !< (3,3) element of Jacobian matrix
+    real(RP), intent(in)  :: MAPF (IA,JA,2,4)  !< map factorp
+    real(RP), intent(in)  :: dt
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Turbulence(dummy)'

@@ -105,7 +105,7 @@ contains
     FLAG_FCT_ALONG_STREAM,                       &
     CDZ, FDZ, FDX, FDY,                          &
     RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,          &
-    PHI, GSQRT, J13G, J23G, J33G,                &
+    PHI, GSQRT, J13G, J23G, J33G, MAPF,          &
     REF_pres, REF_dens,                          &
     dtrk, dt                                     )
     use scale_const, only: &
@@ -135,7 +135,11 @@ contains
        I_XVW, &
        I_UYZ, &
        I_XVZ, &
-       I_UVZ
+       I_UVZ, &
+       I_XY , &
+       I_UY , &
+       I_XV , &
+       I_UV
 #ifdef HIST_TEND
     use scale_history, only: &
        HIST_in
@@ -195,6 +199,7 @@ contains
     real(RP), intent(in)  :: J13G    (KA,IA,JA,7) !< (1,3) element of Jacobian matrix
     real(RP), intent(in)  :: J23G    (KA,IA,JA,7) !< (2,3) element of Jacobian matrix
     real(RP), intent(in)  :: J33G                 !< (3,3) element of Jacobian matrix
+    real(RP), intent(in)  :: MAPF    (IA,JA,2,4)  !< map factor
     real(RP), intent(in)  :: REF_pres(KA,IA,JA)   !< reference pressure
     real(RP), intent(in)  :: REF_dens(KA,IA,JA)   !< reference density
 
@@ -224,7 +229,7 @@ contains
     real(RP) :: advcv_t(KA,IA,JA,5)
     real(RP) :: ddiv_t(KA,IA,JA,3)
     real(RP) :: pg_t(KA,IA,JA,3)
-    real(RP) :: cf_t(KA,IA,JA,2)
+    real(RP) :: cf_t(KA,IA,JA,3)
     logical  :: lhist
 #endif
 
@@ -296,7 +301,8 @@ contains
           call CHECK( __LINE__, DENS(k,i  ,j) )
           call CHECK( __LINE__, DENS(k,i+1,j) )
 #endif
-          VELX(k,i,j) = 2.0_RP * MOMX(k,i,j) / ( DENS(k,i+1,j)+DENS(k,i,j) )
+          VELX(k,i,j) = 2.0_RP * MOMX(k,i,j) &
+                      / ( ( DENS(k,i+1,j) + DENS(k,i  ,j) ) * MAPF(i,j,2,I_UY) )
        enddo
        enddo
        enddo
@@ -313,7 +319,8 @@ contains
           call CHECK( __LINE__, DENS(k,i,j  ) )
           call CHECK( __LINE__, DENS(k,i,j+1) )
 #endif
-          VELY(k,i,j) = 2.0_RP * MOMY(k,i,j) / ( DENS(k,i,j+1)+DENS(k,i,j) )
+          VELY(k,i,j) = 2.0_RP * MOMY(k,i,j) &
+                      / ( ( DENS(k,i,j+1)+DENS(k,i,j) ) * MAPF(i,j,1,I_XV) )
        enddo
        enddo
        enddo
@@ -389,8 +396,9 @@ contains
           call CHECK( __LINE__, MOMY(k  ,i  ,j-1) )
 #endif
             DDIV(k,i,j) = ( MOMZ(k,i,j) - MOMZ(k-1,i  ,j  ) ) * RCDZ(k) &
-                        + ( MOMX(k,i,j) - MOMX(k  ,i-1,j  ) ) * RCDX(i) &
-                        + ( MOMY(k,i,j) - MOMY(k  ,i  ,j-1) ) * RCDY(j)
+                        + MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) &
+                        * ( ( MOMX(k,i,j)/MAPF(i,j,2,I_UY) - MOMX(k,i-1,j)/MAPF(i-1,j,2,I_UY) ) * RCDX(i) &
+                          + ( MOMY(k,i,j)/MAPF(i,j,1,I_XV) - MOMY(k,i,j-1)/MAPF(i,j-1,1,I_XV) ) * RCDY(j) )
        enddo
        enddo
        enddo
@@ -412,12 +420,14 @@ contains
           call CHECK( __LINE__, MOMY(KE  ,i  ,j  ) )
           call CHECK( __LINE__, MOMY(KE  ,i  ,j-1) )
 #endif
-            DDIV(KS,i,j) = ( MOMZ(KS,i,j)                      ) * RCDZ(KS) &
-                         + ( MOMX(KS,i,j) - MOMX(KS  ,i-1,j  ) ) * RCDX(i) &
-                         + ( MOMY(KS,i,j) - MOMY(KS  ,i  ,j-1) ) * RCDY(j)
-            DDIV(KE,i,j) = (              - MOMZ(KE-1,i  ,j  ) ) * RCDZ(KE) &
-                         + ( MOMX(KE,i,j) - MOMX(KE  ,i-1,j  ) ) * RCDX(i) &
-                         + ( MOMY(KE,i,j) - MOMY(KE  ,i  ,j-1) ) * RCDY(j)
+            DDIV(KS,i,j) = ( MOMZ(KS,i,j)                     ) * RCDZ(KS) &
+                        + MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) &
+                        * ( ( MOMX(KS,i,j)/MAPF(i,j,2,I_UY) - MOMX(KS,i-1,j)/MAPF(i-1,j,2,I_UY) ) * RCDX(i) &
+                          + ( MOMY(KS,i,j)/MAPF(i,j,1,I_XV) - MOMY(KS,i,j-1)/MAPF(i,j-1,1,I_XV) ) * RCDY(j) )
+            DDIV(KE,i,j) = (             - MOMZ(KE-1,i  ,j  ) ) * RCDZ(KE) &
+                        + MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) &
+                        * ( ( MOMX(KE,i,j)/MAPF(i,j,2,I_UY) - MOMX(KE,i-1,j)/MAPF(i-1,j,2,I_UY) )* RCDX(i) &
+                          + ( MOMY(KE,i,j)/MAPF(i,j,1,I_XV) - MOMY(KE,i,j-1)/MAPF(i,j-1,1,I_XV) ) * RCDY(j) )
        enddo
        enddo
 #ifdef DEBUG
@@ -441,10 +451,12 @@ contains
           call CHECK( __LINE__, MOMY(k  ,i,j) )
           call CHECK( __LINE__, MOMY(k  ,i,j-1) )
 #endif
-          mflx_hi(k,i,j,ZDIR) = J13G(k,i,j,I_XYW) * 0.25_RP * ( MOMX(k+1,i,j)+MOMX(k+1,i-1,j) &
-                                                              + MOMX(k  ,i,j)+MOMX(k  ,i-1,j) ) &
-                              + J23G(k,i,j,I_XYW) * 0.25_RP * ( MOMY(k+1,i,j)+MOMY(k+1,i,j-1) &
-                                                              + MOMY(k  ,i,j)+MOMY(k  ,i,j-1) ) &
+          mflx_hi(k,i,j,ZDIR) = J13G(k,i,j,I_XYW) * 0.25_RP / MAPF(i,j,2,I_XY) &
+                              * ( MOMX(k+1,i,j)+MOMX(k+1,i-1,j) &
+                                + MOMX(k  ,i,j)+MOMX(k  ,i-1,j) ) &
+                              + J23G(k,i,j,I_XYW) * 0.25_RP / MAPF(i,j,1,I_XY) &
+                              * ( MOMY(k+1,i,j)+MOMY(k+1,i,j-1) &
+                                + MOMY(k  ,i,j)+MOMY(k  ,i,j-1) ) &
                               + GSQRT(k,i,j,I_XYW) * num_diff(k,i,j,I_DENS,ZDIR)
        enddo
        enddo
@@ -472,7 +484,7 @@ contains
           call CHECK( __LINE__, MOMX(k,i,j) )
           call CHECK( __LINE__, num_diff(k,i,j,I_DENS,XDIR) )
 #endif
-          mflx_hi(k,i,j,XDIR) = GSQRT(k,i,j,I_UYZ) &
+          mflx_hi(k,i,j,XDIR) = GSQRT(k,i,j,I_UYZ) / MAPF(i,j,2,I_UY) &
                * ( MOMX(k,i,j) + num_diff(k,i,j,I_DENS,XDIR) )
        enddo
        enddo
@@ -490,7 +502,7 @@ contains
           call CHECK( __LINE__, MOMY(k,i,j) )
           call CHECK( __LINE__, num_diff(k,i,j,I_DENS,YDIR) )
 #endif
-          mflx_hi(k,i,j,YDIR) = GSQRT(k,i,j,I_XVZ) &
+          mflx_hi(k,i,j,YDIR) = GSQRT(k,i,j,I_XVZ) / MAPF(i,j,1,I_XV) &
                * ( MOMY(k,i,j) + num_diff(k,i,j,I_DENS,YDIR) )
        enddo
        enddo
@@ -514,7 +526,8 @@ contains
 #endif
           advch = - ( ( mflx_hi(k,i,j,ZDIR)-mflx_hi(k-1,i  ,j,  ZDIR) ) * RCDZ(k) &
                     + ( mflx_hi(k,i,j,XDIR)-mflx_hi(k  ,i-1,j,  XDIR) ) * RCDX(i) &
-                    + ( mflx_hi(k,i,j,YDIR)-mflx_hi(k  ,i,  j-1,YDIR) ) * RCDY(j) ) / GSQRT(k,i,j,I_XYZ)
+                    + ( mflx_hi(k,i,j,YDIR)-mflx_hi(k  ,i,  j-1,YDIR) ) * RCDY(j) ) &
+                * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ)
           Sr(k,i,j) =  advch + DENS_t(k,i,j)
 #ifdef HIST_TEND
           if ( lhist ) advch_t(k,i,j,I_DENS) = advch
@@ -718,14 +731,16 @@ contains
           advcv = -   ( qflx_hi(k+1,i,j,ZDIR) - qflx_hi(k,i  ,j  ,ZDIR) ) * RFDZ(k)
           advch = - ( ( qflx_J (k+1,i,j)      - qflx_J (k,i  ,j  )      ) * RFDZ(k) &
                     + ( qflx_hi(k  ,i,j,XDIR) - qflx_hi(k,i-1,j  ,XDIR) ) * RCDX(i) &
-                    + ( qflx_hi(k  ,i,j,YDIR) - qflx_hi(k,i  ,j-1,YDIR) ) * RCDY(j) &
-                   )
+                    + ( qflx_hi(k  ,i,j,YDIR) - qflx_hi(k,i  ,j-1,YDIR) ) * RCDY(j) ) &
+                  * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY)
+          cf = 0.0_RP
           div = divdmp_coef * dtrk  * ( DDIV(k+1,i,j)-DDIV(k,i,j) ) * FDZ(k) ! divergence damping
           Sw(k,i,j) = ( advcv + advch ) / GSQRT(k,i,j,I_XYW) + div + MOMZ_t(k,i,j)
 #ifdef HIST_TEND
           if ( lhist ) then
              advcv_t(k,i,j,I_MOMZ) = advcv / GSQRT(k,i,j,I_XYW)
              advch_t(k,i,j,I_MOMZ) = advch / GSQRT(k,i,j,I_XYW)
+             cf_t(k,i,j,1) = cf
              ddiv_t(k,i,j,1) = div
           end if
 #endif
@@ -838,11 +853,12 @@ contains
 #endif
           advch = - ( ( qflx_hi(k,i,j,ZDIR) - qflx_hi(k-1,i  ,j  ,ZDIR) ) * RCDZ(k) &
                     + ( qflx_hi(k,i,j,XDIR) - qflx_hi(k  ,i-1,j  ,XDIR) ) * RCDX(i) &
-                    + ( qflx_hi(k,i,j,YDIR) - qflx_hi(k  ,i  ,j-1,YDIR) ) * RCDY(j) ) / GSQRT(k,i,j,I_XYZ)
+                    + ( qflx_hi(k,i,j,YDIR) - qflx_hi(k  ,i  ,j-1,YDIR) ) * RCDY(j) ) &
+                  * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ)
           St(k,i,j) = advch + RHOT_t(k,i,j)
 #ifdef HIST_TEND
           if ( lhist ) then
-             advch_t(k,i,j,I_RHOT) = advch / GSQRT(k,i,j,I_XYZ)
+             advch_t(k,i,j,I_RHOT) = advch
           end if
 #endif
        enddo
@@ -912,7 +928,8 @@ contains
 
           ! z-momentum flux
           do k = KS, KE-1
-             mflx_hi(k,i,j,ZDIR) = mflx_hi(k,i,j,ZDIR) + J33G * C(k-KS+1)
+             mflx_hi(k,i,j,ZDIR) = mflx_hi(k,i,j,ZDIR) * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) &
+                                 + J33G * C(k-KS+1)
           end do
 
           ! z-momentum
@@ -925,7 +942,8 @@ contains
           ! for debug (change to explicit integration)
           do k = KS, KE-1
              C(k-KS+1) = MOMZ(k,i,j)
-             mflx_hi(k,i,j,ZDIR) = mflx_hi(k,i,j,ZDIR) + J33G * MOMZ(k,i,j)
+             mflx_hi(k,i,j,ZDIR) = mflx_hi(k,i,j,ZDIR) * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) &
+                                 + J33G * MOMZ(k,i,j)
              MOMZ_RK(k,i,j) = MOMZ0(k,i,j) &
                   + dtrk*( &
                   - J33G * ( DPRES(k+1,i,j)-DPRES(k,i,j) ) * RFDZ(k) / GSQRT(k,i,j,i_XYW) &
@@ -1076,7 +1094,6 @@ contains
                                                 + VELY(k+1,i  ,j-1)+VELY(k,i  ,j-1) ) ) &
                * ( FACT_N * ( MOMX(k+1,i,j)+MOMX(k  ,i,j) ) &
                  + FACT_F * ( MOMX(k+2,i,j)+MOMX(k-1,i,j) ) )
-
        enddo
        enddo
        enddo
@@ -1091,7 +1108,7 @@ contains
                                                  + VELY(KS+1,i  ,j-1)+VELY(KS,i  ,j-1) ) ) &
                * 0.5_RP * ( MOMX(KS+1,i,j)+MOMX(KS,i,j) )
           qflx_J(KE-1,i,j) = &
-               ( J13G(KE-1,i,j,I_UYW) * 0.5_RP    * ( VELX(KE,i,j)+VELX(KE-1,i,j) ) &
+               ( J13G(KE-1,i,j,I_UYW) * 0.5_RP   * ( VELX(KE,i,j)+VELX(KE-1,i,j) ) &
                + J23G(KE-1,i,j,I_UYW) * 0.125_RP * ( VELY(KE,i+1,j  )+VELY(KE-1,i+1,j  ) &
                                                    + VELY(KE,i  ,j  )+VELY(KE-1,i  ,j  ) &
                                                    + VELY(KE,i+1,j-1)+VELY(KE-1,i+1,j-1) &
@@ -1179,16 +1196,24 @@ contains
           advcv = -   ( qflx_hi(k,i  ,j,ZDIR) - qflx_hi(k-1,i,j  ,ZDIR) ) * RCDZ(k)
           advch = - ( ( qflx_J (k,i  ,j)      - qflx_J (k-1,i,j)        ) * RCDZ(k) &
                     + ( qflx_hi(k,i+1,j,XDIR) - qflx_hi(k  ,i,j  ,XDIR) ) * RFDX(i) &
-                    + ( qflx_hi(k,i  ,j,YDIR) - qflx_hi(k  ,i,j-1,YDIR) ) * RCDY(j) )
-          pg = - ( GSQRT(k,i+1,j,I_XYZ) * DPRES(k,i+1,j) &
-                 - GSQRT(k,i  ,j,I_XYZ) * DPRES(k,i  ,j) ) * RFDX(i) &
-               - ( J13G(k+1,i,j,I_UYZ) * ( DPRES(k+1,i+1,j)+DPRES(k+1,i,j) ) &
-                 - J13G(k-1,i,j,I_UYZ) * ( DPRES(k-1,i+1,j)+DPRES(k-1,i,j) ) ) &
-                 * 0.5_RP / ( FDZ(k+1)+FDZ(k) ) ! pressure gradient force
-          cf = 0.0625_RP * ( CORIOLI(1,i,j)+CORIOLI(1,i+1,j) ) &
-             * ( DENS(k,i,j)+DENS(k,i+1,j) ) &
-             * ( VELY(k,i,j)+VELY(k,i+1,j)+VELY(k,i,j-1)+VELY(k,i+1,j-1) ) ! coriolis force
-          div = divdmp_coef * dtrk * ( DDIV(k,i+1,j)-DDIV(k,i,j) ) * FDX(i) ! divergence damping
+                    + ( qflx_hi(k,i  ,j,YDIR) - qflx_hi(k  ,i,j-1,YDIR) ) * RCDY(j) ) &
+                * MAPF(i,j,1,I_UY) * MAPF(i,j,2,I_UY)
+          pg = - ( ( GSQRT(k,i+1,j,I_XYZ) * DPRES(k,i+1,j) &
+                   - GSQRT(k,i  ,j,I_XYZ) * DPRES(k,i  ,j) ) * RFDX(i) &
+                 + ( J13G(k+1,i,j,I_UYZ) * ( DPRES(k+1,i+1,j)+DPRES(k+1,i,j) ) &
+                   - J13G(k-1,i,j,I_UYZ) * ( DPRES(k-1,i+1,j)+DPRES(k-1,i,j) ) ) &
+                   * 0.5_RP / ( FDZ(k+1)+FDZ(k) ) ) * MAPF(i,j,1,I_UY) ! pressure gradient force
+          cf = 0.125_RP * ( CORIOLI(1,i,j)+CORIOLI(1,i+1,j) ) &
+                        * ( MOMY(k,i,j)+MOMY(k,i+1,j)+MOMY(k,i,j-1)+MOMY(k,i+1,j-1) ) & ! coriolis force
+             + 0.25_RP * MAPF(i,j,1,I_UY) * MAPF(i,j,2,I_UY) &
+             * ( MOMY(k,i,j) + MOMY(k,i,j-1) + MOMY(k,i+1,j) + MOMY(k,i+1,j-1) )&
+             * ( ( MOMY(k,i,j) + MOMY(k,i,j-1) + MOMY(k,i+1,j) + MOMY(k,i+1,j-1) ) * 0.25_RP &
+                 * ( 1.0_RP/MAPF(i+1,j,2,I_XY) - 1.0_RP/MAPF(i,j,2,I_XY) ) * RCDX(i) &
+               - MOMX(k,i,j) &
+                 * ( 1.0_RP/MAPF(i,j,1,I_UV) - 1.0_RP/MAPF(i,j-1,1,I_UV) ) * RFDY(j) ) &
+             * 0.5_RP / ( DENS(k,i+1,j) + DENS(k,i,j) ) ! metric term
+          div = divdmp_coef * dtrk * ( DDIV(k,i+1,j)/MAPF(i+1,j,2,I_XY) - DDIV(k,i,j)/MAPF(i,j,1,I_XY) ) &
+              * MAPF(i,j,1,I_UY) * MAPF(i,j,2,I_UY) * FDX(i) ! divergence damping
           MOMX_RK(k,i,j) = MOMX0(k,i,j) &
                + dtrk * ( ( advcv + advch + pg ) / GSQRT(k,i,j,I_UYZ) + cf + div + MOMX_t(k,i,j) )
 #ifdef HIST_TEND
@@ -1196,7 +1221,7 @@ contains
              advcv_t(k,i,j,I_MOMX) = advch / GSQRT(k,i,j,I_UYZ)
              advch_t(k,i,j,I_MOMX) = advcv / GSQRT(k,i,j,I_UYZ)
              pg_t(k,i,j,2) = pg / GSQRT(k,i,j,I_UYZ)
-             cf_t(k,i,j,1) = cf
+             cf_t(k,i,j,2) = cf
              ddiv_t(k,i,j,2) = div
           end if
 #endif
@@ -1393,24 +1418,33 @@ contains
           advcv = -   ( qflx_hi(k,i,j  ,ZDIR) - qflx_hi(k-1,i  ,j,ZDIR) ) * RCDZ(k)
           advch = - ( ( qflx_J (k,i,j  )      - qflx_J (k-1,i  ,j)      ) * RCDZ(k) &
                     + ( qflx_hi(k,i,j  ,XDIR) - qflx_hi(k  ,i-1,j,XDIR) ) * RCDX(i) &
-                    + ( qflx_hi(k,i,j+1,YDIR) - qflx_hi(k  ,i  ,j,YDIR) ) * RFDY(j) )
-          pg = - ( GSQRT(k,i,j+1,I_XYZ) * DPRES(k,i,j+1) &
-                 - GSQRT(k,i,j  ,I_XYZ) * DPRES(k,i,j  ) ) * RFDY(j) &
-               - ( J23G(k+1,i,j,I_XVZ) * ( DPRES(k+1,i,j+1)+DPRES(k+1,i,j) ) &
-                 - J23G(k-1,i,j,I_XVZ) * ( DPRES(k-1,i,j+1)+DPRES(k-1,i,j) ) ) &
-                 * 0.5_RP / ( FDZ(k+1)+FDZ(k) ) ! pressure gradient force
-          cf = - 0.0625_RP * ( CORIOLI(1,i  ,j+1)+CORIOLI(1,i  ,j) ) &
-                           * ( DENS(k,i,j+1)+DENS(k,i,j) ) &
-                           * ( VELX(k,i,j+1)+VELX(k,i,j)+VELX(k,i-1,j+1)+VELX(k,i-1,j) ) ! coriolis force
-          div = divdmp_coef * dtrk * ( DDIV(k,i,j+1)-DDIV(k,i,j) ) * FDY(j) ! divergence damping
+                    + ( qflx_hi(k,i,j+1,YDIR) - qflx_hi(k  ,i  ,j,YDIR) ) * RFDY(j) ) &
+                  * MAPF(i,j,1,I_XV) * MAPF(i,j,2,I_XV)
+          pg = - ( ( GSQRT(k,i,j+1,I_XYZ) * DPRES(k,i,j+1) &
+                   - GSQRT(k,i,j  ,I_XYZ) * DPRES(k,i,j  ) ) * RFDY(j) &
+                 + ( J23G(k+1,i,j,I_XVZ) * ( DPRES(k+1,i,j+1)+DPRES(k+1,i,j) ) &
+                   - J23G(k-1,i,j,I_XVZ) * ( DPRES(k-1,i,j+1)+DPRES(k-1,i,j) ) ) &
+                   * 0.5_RP / ( FDZ(k+1)+FDZ(k) ) ) &
+               * MAPF(i,j,2,I_XV) ! pressure gradient force
+          cf = - 0.125_RP * ( CORIOLI(1,i  ,j+1)+CORIOLI(1,i  ,j) ) &
+                          * ( MOMX(k,i,j+1)+MOMX(k,i,j)+MOMX(k,i-1,j+1)+MOMX(k,i-1,j) ) & ! coriolis force
+             - 0.25_RP * MAPF(i,j,1,I_XV) * MAPF(i,j,2,I_XV) * GSQRT(k,i,j,I_XVZ) &
+             * ( MOMX(k,i,j) + MOMX(k,i-1,j) + MOMX(k,i,j+1) + MOMX(k,i-1,j+1) )&
+             * ( MOMY(k,i,j) &
+                 * ( 1.0_RP/MAPF(i,j,2,I_UV) - 1.0_RP/MAPF(i-1,j,2,I_UV) ) * RCDX(i) &
+               - 0.25_RP * ( MOMX(k,i,j)+MOMX(k,i-1,j)+MOMX(k,i,j+1)+MOMX(k,i-1,j+1) ) &
+                 * ( 1.0_RP/MAPF(i,j+1,1,I_XY) - 1.0_RP/MAPF(i,j,1,I_XY) ) * RFDY(j) ) &
+             * 2.0_RP / ( DENS(k,i+1,j) + DENS(k,i,j) ) ! metoric term
+          div = divdmp_coef * dtrk * ( DDIV(k,i,j+1)/MAPF(i,j+1,1,I_XY) - DDIV(k,i,j)/MAPF(i,j,1,I_XY) ) &
+              * MAPF(i,j,1,I_XV) * MAPF(i,j,2,I_XV) * FDY(j) ! divergence damping
           MOMY_RK(k,i,j) = MOMY0(k,i,j) &
                          + dtrk * ( ( advcv + advch + pg ) / GSQRT(k,i,j,I_XVZ) + cf + div + MOMY_t(k,i,j) )
 #ifdef HIST_TEND
           if ( lhist ) then
-             advcv_t(k,i,j,I_MOMY) = advcv / GSQRT(k,i,j,I_XYZ)
-             advch_t(k,i,j,I_MOMY) = advch / GSQRT(k,i,j,I_XYZ)
-             pg_t(k,i,j,3) = pg / GSQRT(k,i,j,I_XYZ)
-             cf_t(k,i,j,2) = cf
+             advcv_t(k,i,j,I_MOMY) = advcv / GSQRT(k,i,j,I_XVZ)
+             advch_t(k,i,j,I_MOMY) = advch / GSQRT(k,i,j,I_XVZ)
+             pg_t(k,i,j,3) = pg / GSQRT(k,i,j,I_XVZ)
+             cf_t(k,i,j,3) = cf
              ddiv_t(k,i,j,3) = div
           end if
 #endif
@@ -1446,8 +1480,9 @@ contains
        call HIST_in(ddiv_t(:,:,:,2), 'MOMX_t_ddiv', 'tendency of momentum x due to divergence damping', 'kg/m2/s2', dt, xdim='half' )
        call HIST_in(ddiv_t(:,:,:,3), 'MOMY_t_ddiv', 'tendency of momentum y due to divergence damping', 'kg/m2/s2', dt, ydim='half' )
 
-       call HIST_in(cf_t(:,:,:,1), 'MOMX_t_cf', 'tendency of momentum x due to coliolis force', 'kg/m2/s2', dt, xdim='half' )
-       call HIST_in(cf_t(:,:,:,2), 'MOMY_t_cf', 'tendency of momentum y due to coliolis force', 'kg/m2/s2', dt, ydim='half' )
+       call HIST_in(cf_t(:,:,:,1), 'MOMZ_t_cf', 'tendency of momentum z due to coliolis force', 'kg/m2/s2', dt, zdim='half' )
+       call HIST_in(cf_t(:,:,:,2), 'MOMX_t_cf', 'tendency of momentum x due to coliolis force', 'kg/m2/s2', dt, xdim='half' )
+       call HIST_in(cf_t(:,:,:,3), 'MOMY_t_cf', 'tendency of momentum y due to coliolis force', 'kg/m2/s2', dt, ydim='half' )
     end if
 #endif
 

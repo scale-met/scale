@@ -160,7 +160,8 @@ contains
        GTRANS_GSQRT, &
        GTRANS_J13G,  &
        GTRANS_J23G,  &
-       GTRANS_J33G
+       GTRANS_J33G,  &
+       GTRANS_MAPF
     use scale_history, only: &
        HIST_in
     use mod_atmos_admin, only: &
@@ -223,7 +224,7 @@ contains
          GRID_RFDZ, GRID_RFDX, GRID_RFDY,                      & ! [IN]
          REAL_PHI,                                             & ! [IN]
          GTRANS_GSQRT,                                         & ! [IN]
-         GTRANS_J13G, GTRANS_J23G, GTRANS_J33G,                & ! [IN]
+         GTRANS_J13G, GTRANS_J23G, GTRANS_J33G, GTRANS_MAPF,   & ! [IN]
          AQ_CV,                                                & ! [IN]
          ATMOS_REFSTATE_dens,                                  & ! [IN]
          ATMOS_REFSTATE_pott,                                  & ! [IN]

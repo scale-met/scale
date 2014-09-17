@@ -110,7 +110,7 @@ contains
        tke, nu, Ri, Pr,                             &
        MOMZ, MOMX, MOMY, RHOT, DENS, QTRC,          &
        SFLX_MW, SFLX_MU, SFLX_MV, SFLX_SH,          &
-       GSQRT, J13G, J23G, J33G, dt                  )
+       GSQRT, J13G, J23G, J33G, MAPF, dt            )
     use scale_const, only: &
        GRAV => CONST_GRAV
     use scale_grid, only: &
@@ -130,7 +130,10 @@ contains
        I_XVW, &
        I_UYZ, &
        I_XVZ, &
-       I_UVZ
+       I_XY,  &
+       I_UY,  &
+       I_XV,  &
+       I_UV
     implicit none
 
     ! SGS flux
@@ -161,6 +164,7 @@ contains
     real(RP), intent(in)  :: J13G    (KA,IA,JA,7) !< (1,3) element of Jacobian matrix
     real(RP), intent(in)  :: J23G    (KA,IA,JA,7) !< (1,3) element of Jacobian matrix
     real(RP), intent(in)  :: J33G                 !< (3,3) element of Jacobian matrix
+    real(RP), intent(in)  :: MAPF    (IA,JA,2,4)  !< map factor
     real(RP), intent(in)  :: dt
 
     real(RP) :: POTT(KA,IA,JA)
@@ -222,7 +226,7 @@ contains
        do j = JJS,   JJE
        do i = IIS-1, IIE
        do k = KS, KE-1
-          qflx_sgs_MOMZ(k,i,j,XDIR) = -ATMOS_PHY_TB_DNS_NU * ( MOMZ(k,i+1,j)-MOMZ(k,i,j) ) * RFDX(i)
+          qflx_sgs_MOMZ(k,i,j,XDIR) = -ATMOS_PHY_TB_DNS_NU * ( MOMZ(k,i+1,j)-MOMZ(k,i,j) ) * RFDX(i) * MAPF(i,j,1,I_XY)
        enddo
        enddo
        enddo
@@ -231,7 +235,7 @@ contains
        do j = JJS-1, JJE
        do i = IIS,   IIE
        do k = KS, KE-1
-          qflx_sgs_MOMZ(k,i,j,YDIR) = -ATMOS_PHY_TB_DNS_NU * ( MOMZ(k,i,j+1)-MOMZ(k,i,j) ) * RFDY(j)
+          qflx_sgs_MOMZ(k,i,j,YDIR) = -ATMOS_PHY_TB_DNS_NU * ( MOMZ(k,i,j+1)-MOMZ(k,i,j) ) * RFDY(j) * MAPF(i,j,2,I_XY)
        enddo
        enddo
        enddo
@@ -257,7 +261,7 @@ contains
        do j = JJS, JJE
        do i = IIS, IIE+1
        do k = KS, KE
-          qflx_sgs_MOMX(k,i,j,XDIR) = -ATMOS_PHY_TB_DNS_NU * ( MOMX(k,i,j)-MOMX(k,i-1,j) ) * RCDX(i)
+          qflx_sgs_MOMX(k,i,j,XDIR) = -ATMOS_PHY_TB_DNS_NU * ( MOMX(k,i,j)-MOMX(k,i-1,j) ) * RCDX(i) * MAPF(i,j,1,I_UY)
        enddo
        enddo
        enddo
@@ -266,7 +270,7 @@ contains
        do j = JJS-1, JJE
        do i = IIS,   IIE
        do k = KS, KE
-          qflx_sgs_MOMX(k,i,j,YDIR) = -ATMOS_PHY_TB_DNS_NU * ( MOMX(k,i,j+1)-MOMX(k,i,j) ) * RFDY(j)
+          qflx_sgs_MOMX(k,i,j,YDIR) = -ATMOS_PHY_TB_DNS_NU * ( MOMX(k,i,j+1)-MOMX(k,i,j) ) * RFDY(j) * MAPF(i,j,2,I_UY)
        enddo
        enddo
        enddo
@@ -293,7 +297,7 @@ contains
        do j = JJS,   JJE
        do i = IIS-1, IIE
        do k = KS, KE
-          qflx_sgs_MOMY(k,i,j,XDIR) = -ATMOS_PHY_TB_DNS_NU * ( MOMY(k,i+1,j)-MOMY(k,i,j) ) * RFDX(i)
+          qflx_sgs_MOMY(k,i,j,XDIR) = -ATMOS_PHY_TB_DNS_NU * ( MOMY(k,i+1,j)-MOMY(k,i,j) ) * RFDX(i) * MAPF(i,j,1,I_XV)
        enddo
        enddo
        enddo
@@ -302,7 +306,7 @@ contains
        do j = JJS, JJE+1
        do i = IIS, IIE
        do k = KS, KE
-          qflx_sgs_MOMY(k,i,j,YDIR) = -ATMOS_PHY_TB_DNS_NU * ( MOMY(k,i,j)-MOMY(k,i,j-1) ) * RCDY(j)
+          qflx_sgs_MOMY(k,i,j,YDIR) = -ATMOS_PHY_TB_DNS_NU * ( MOMY(k,i,j)-MOMY(k,i,j-1) ) * RCDY(j) * MAPF(i,j,2,I_XV)
        enddo
        enddo
        enddo
@@ -331,7 +335,7 @@ contains
        do i = IIS-1, IIE
        do k = KS, KE
           qflx_sgs_rhot(k,i,j,XDIR) = -0.5_RP * ( DENS(k,i+1,j)+DENS(k,i,j) ) &
-                                    * ATMOS_PHY_TB_DNS_MU * ( POTT(k,i+1,j)-POTT(k,i,j) ) * RFDX(i)
+                                    * ATMOS_PHY_TB_DNS_MU * ( POTT(k,i+1,j)-POTT(k,i,j) ) * RFDX(i) * MAPF(i,j,1,I_XY)
        enddo
        enddo
        enddo
@@ -341,7 +345,7 @@ contains
        do i = IIS,   IIE
        do k = KS, KE
           qflx_sgs_rhot(k,i,j,YDIR) = -0.5_RP * ( DENS(k,i,j+1)+DENS(k,i,j) ) &
-                                    * ATMOS_PHY_TB_DNS_MU * ( POTT(k,i,j+1)-POTT(k,i,j) ) * RFDY(j)
+                                    * ATMOS_PHY_TB_DNS_MU * ( POTT(k,i,j+1)-POTT(k,i,j) ) * RFDY(j) * MAPF(i,j,2,I_XY)
        enddo
        enddo
        enddo
@@ -378,7 +382,7 @@ contains
        do i = IIS-1, IIE
        do k = KS,   KE
           qflx_sgs_rhoq(k,i,j,iq,XDIR) = -0.5_RP * ( DENS(k,i+1,j)+DENS(k,i,j) ) &
-                                       * ATMOS_PHY_TB_DNS_MU * ( QTRC(k,i+1,j,iq)-QTRC(k,i,j,iq) ) * RFDX(i)
+                                       * ATMOS_PHY_TB_DNS_MU * ( QTRC(k,i+1,j,iq)-QTRC(k,i,j,iq) ) * RFDX(i) * MAPF(i,j,1,I_XY)
        enddo
        enddo
        enddo
@@ -388,7 +392,7 @@ contains
        do i = IIS,   IIE
        do k = KS,   KE
           qflx_sgs_rhoq(k,i,j,iq,YDIR) = -0.5_RP * ( DENS(k,i,j+1)+DENS(k,i,j) ) &
-                                       * ATMOS_PHY_TB_DNS_MU * ( QTRC(k,i,j+1,iq)-QTRC(k,i,j,iq) ) * RFDY(j)
+                                       * ATMOS_PHY_TB_DNS_MU * ( QTRC(k,i,j+1,iq)-QTRC(k,i,j,iq) ) * RFDY(j) * MAPF(i,j,2,I_XY)
        enddo
        enddo
        enddo

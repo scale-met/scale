@@ -50,7 +50,9 @@ module scale_gridtrans
   integer,  public :: I_UVZ = 7 ! at (u,v,z)
 
   integer,  public :: I_XY  = 1 ! at (x,y)
-  integer,  public :: I_XV  = 2 ! at (x,v)
+  integer,  public :: I_UY  = 2 ! at (u,y)
+  integer,  public :: I_XV  = 3 ! at (x,v)
+  integer,  public :: I_UV  = 4 ! at (u,v)
 
   !-----------------------------------------------------------------------------
   !
@@ -98,7 +100,7 @@ contains
     endif
     if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_GTRANS)
 
-    allocate( GTRANS_MAPF (IA,JA,2,2) )
+    allocate( GTRANS_MAPF (IA,JA,2,4) )
 
     allocate( GTRANS_GSQRT(KA,IA,JA,7) )
     allocate( GTRANS_J13G (KA,IA,JA,7) )
@@ -122,8 +124,10 @@ contains
     use scale_mapproj, only: &
        MPRJ_mapfactor
     use scale_grid_real, only: &
-       REAL_LAT, &
-       REAL_LATY
+       REAL_LAT,  &
+       REAL_LATX, &
+       REAL_LATY, &
+       REAL_LATXY
     implicit none
 
     integer :: i, j
@@ -131,8 +135,10 @@ contains
 
     do j = 1, JA
     do i = 1, IA
-       call MPRJ_mapfactor( REAL_LAT (i,j), GTRANS_MAPF(i,j,1,I_XY), GTRANS_MAPF (i,j,2,I_XY))
-       call MPRJ_mapfactor( REAL_LATY(i,j), GTRANS_MAPF(i,j,1,I_XV), GTRANS_MAPF (i,j,2,I_XV))
+       call MPRJ_mapfactor( REAL_LAT  (i,j), GTRANS_MAPF(i,j,1,I_XY), GTRANS_MAPF (i,j,2,I_XY))
+       call MPRJ_mapfactor( REAL_LATX (i,j), GTRANS_MAPF(i,j,1,I_UY), GTRANS_MAPF (i,j,2,I_UY))
+       call MPRJ_mapfactor( REAL_LATY (i,j), GTRANS_MAPF(i,j,1,I_XV), GTRANS_MAPF (i,j,2,I_XV))
+       call MPRJ_mapfactor( REAL_LATXY(i,j), GTRANS_MAPF(i,j,1,I_UV), GTRANS_MAPF (i,j,2,I_UV))
     enddo
     enddo
 
@@ -355,14 +361,22 @@ contains
        if( IO_L ) write(IO_FID_LOG,*)
        if( IO_L ) write(IO_FID_LOG,*) '*** Output metrics file ***'
 
-       call FILEIO_write( GTRANS_MAPF(:,:,1,1),          GTRANS_OUT_BASENAME, GTRANS_OUT_TITLE, & ! [IN]
+       call FILEIO_write( GTRANS_MAPF(:,:,1,I_XY),          GTRANS_OUT_BASENAME, GTRANS_OUT_TITLE, & ! [IN]
                           'MAPF_X_XY', 'Map factor x-dir at XY', 'NIL', 'XY', GTRANS_OUT_DTYPE  ) ! [IN]
-       call FILEIO_write( GTRANS_MAPF(:,:,2,1),          GTRANS_OUT_BASENAME, GTRANS_OUT_TITLE, & ! [IN]
+       call FILEIO_write( GTRANS_MAPF(:,:,2,I_XY),          GTRANS_OUT_BASENAME, GTRANS_OUT_TITLE, & ! [IN]
                           'MAPF_Y_XY', 'Map factor y-dir at XY', 'NIL', 'XY', GTRANS_OUT_DTYPE  ) ! [IN]
-       call FILEIO_write( GTRANS_MAPF(:,:,1,2),          GTRANS_OUT_BASENAME, GTRANS_OUT_TITLE, & ! [IN]
+       call FILEIO_write( GTRANS_MAPF(:,:,1,I_UY),          GTRANS_OUT_BASENAME, GTRANS_OUT_TITLE, & ! [IN]
+                          'MAPF_X_UY', 'Map factor x-dir at UY', 'NIL', 'UY', GTRANS_OUT_DTYPE  ) ! [IN]
+       call FILEIO_write( GTRANS_MAPF(:,:,2,I_UY),          GTRANS_OUT_BASENAME, GTRANS_OUT_TITLE, & ! [IN]
+                          'MAPF_Y_UY', 'Map factor y-dir at UY', 'NIL', 'UY', GTRANS_OUT_DTYPE  ) ! [IN]
+       call FILEIO_write( GTRANS_MAPF(:,:,1,I_XV),          GTRANS_OUT_BASENAME, GTRANS_OUT_TITLE, & ! [IN]
                           'MAPF_X_XV', 'Map factor x-dir at XV', 'NIL', 'XY', GTRANS_OUT_DTYPE  ) ! [IN]
-       call FILEIO_write( GTRANS_MAPF(:,:,2,2),          GTRANS_OUT_BASENAME, GTRANS_OUT_TITLE, & ! [IN]
+       call FILEIO_write( GTRANS_MAPF(:,:,2,I_XV),          GTRANS_OUT_BASENAME, GTRANS_OUT_TITLE, & ! [IN]
                           'MAPF_Y_XV', 'Map factor y-dir at XV', 'NIL', 'XY', GTRANS_OUT_DTYPE  ) ! [IN]
+       call FILEIO_write( GTRANS_MAPF(:,:,1,I_UV),          GTRANS_OUT_BASENAME, GTRANS_OUT_TITLE, & ! [IN]
+                          'MAPF_X_UV', 'Map factor x-dir at UV', 'NIL', 'UY', GTRANS_OUT_DTYPE  ) ! [IN]
+       call FILEIO_write( GTRANS_MAPF(:,:,2,I_UV),          GTRANS_OUT_BASENAME, GTRANS_OUT_TITLE, & ! [IN]
+                          'MAPF_Y_UV', 'Map factor y-dir at UV', 'NIL', 'UY', GTRANS_OUT_DTYPE  ) ! [IN]
 
 !
 !    allocate( GTRANS_GSQRT(KA,IA,JA,7) )

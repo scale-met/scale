@@ -773,6 +773,30 @@ contains
        dim1_E   = IE
        dim2_S   = JS
        dim2_E   = JE
+    elseif ( axistype == 'UY' ) then
+       dims = (/'xh','y'/)
+       dim1_max = IMAX
+       dim2_max = JMAX
+       dim1_S   = IS
+       dim1_E   = IE
+       dim2_S   = JS
+       dim2_E   = JE
+    elseif ( axistype == 'XV' ) then
+       dims = (/'x','yh'/)
+       dim1_max = IMAX
+       dim2_max = JMAX
+       dim1_S   = IS
+       dim1_E   = IE
+       dim2_S   = JS
+       dim2_E   = JE
+    elseif ( axistype == 'UV' ) then
+       dims = (/'xh','yh'/)
+       dim1_max = IMAX
+       dim2_max = JMAX
+       dim1_S   = IS
+       dim1_E   = IE
+       dim2_S   = JS
+       dim2_E   = JE
     elseif( axistype == 'ZX' ) then
        dims = (/'z','x'/)
        dim1_max = KMAX

@@ -1382,7 +1382,8 @@ contains
        qflx_hi, qflx_lo,    &
        mflx_hi,             &
        rdz, rdx, rdy,       &
-       GSQRT, dt, flag_vect )
+       GSQRT, MAPF, dt,     &
+       flag_vect )
     use scale_const, only: &
        UNDEF => CONST_UNDEF, &
        IUNDEF => CONST_UNDEF2, &
@@ -1409,6 +1410,7 @@ contains
     real(RP), intent(in) :: RDY(:)
 
     real(RP), intent(in) :: GSQRT(KA,IA,JA) !< vertical metrics {G}^1/2
+    real(RP), intent(in) :: MAPF(IA,JA,2)   !< map factor
 
     real(RP), intent(in) :: dt
 
@@ -1524,7 +1526,7 @@ contains
           phi_lo(k,i,j) = ( phi_in(k,i,j) * DENS0(k,i,j) &
                + dt * ( - ( ( qflx_lo(k,i,j,ZDIR)-qflx_lo(k-1,i  ,j  ,ZDIR) ) * RDZ(k) &
                           + ( qflx_lo(k,i,j,XDIR)-qflx_lo(k  ,i-1,j  ,XDIR) ) * RDX(i) &
-                          + ( qflx_lo(k,i,j,YDIR)-qflx_lo(k  ,i  ,j-1,YDIR) ) * RDY(j) ) / GSQRT(k,i,j) ) &
+                          + ( qflx_lo(k,i,j,YDIR)-qflx_lo(k  ,i  ,j-1,YDIR) ) * RDY(j) ) * MAPF(i,j,1) * MAPF(i,j,2) / GSQRT(k,i,j) ) &
                       ) / DENS(k,i,j)
        enddo
        enddo
@@ -1549,7 +1551,7 @@ contains
           pjpls(k,i,j) = dt * ( ( max(0.0_RP,qflx_anti(k-1,i  ,j  ,ZDIR)) - min(0.0_RP,qflx_anti(k,i,j,ZDIR)) ) * RDZ(k) &
                               + ( max(0.0_RP,qflx_anti(k  ,i-1,j  ,XDIR)) - min(0.0_RP,qflx_anti(k,i,j,XDIR)) ) * RDX(i) &
                               + ( max(0.0_RP,qflx_anti(k  ,i  ,j-1,YDIR)) - min(0.0_RP,qflx_anti(k,i,j,YDIR)) ) * RDY(j) &
-                              ) / GSQRT(k,i,j)
+                              ) * MAPF(i,j,1) * MAPF(i,j,2) / GSQRT(k,i,j)
        enddo
        enddo
        enddo
@@ -1573,7 +1575,7 @@ contains
           pjmns(k,i,j) = dt * ( ( max(0.0_RP,qflx_anti(k,i,j,ZDIR)) - min(0.0_RP,qflx_anti(k-1,i  ,j  ,ZDIR)) ) * RDZ(k) &
                               + ( max(0.0_RP,qflx_anti(k,i,j,XDIR)) - min(0.0_RP,qflx_anti(k  ,i-1,j  ,XDIR)) ) * RDX(i) &
                               + ( max(0.0_RP,qflx_anti(k,i,j,YDIR)) - min(0.0_RP,qflx_anti(k  ,i  ,j-1,YDIR)) ) * RDY(j) &
-                              ) / GSQRT(k,i,j)
+                              ) * MAPF(i,j,1) * MAPF(i,j,2) / GSQRT(k,i,j)
        enddo
        enddo
        enddo
