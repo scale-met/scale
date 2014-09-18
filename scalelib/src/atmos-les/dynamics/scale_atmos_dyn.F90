@@ -300,12 +300,12 @@ contains
     real(RP) :: num_diff_q(KA,IA,JA,3)
 
     ! For tracer advection
-    real(RP) :: RHOQ_t   (KA,IA,JA)    ! tendency
-    real(RP) :: mflx_hi(KA,IA,JA,3)  ! rho * vel(x,y,z) @ (u,v,w)-face high order
-    real(RP) :: mflx_av(KA,IA,JA,3)  ! rho * vel(x,y,z) @ (u,v,w)-face average
-    real(RP) :: qflx_hi  (KA,IA,JA,3)  ! rho * vel(x,y,z) * phi @ (u,v,w)-face high order
-    real(RP) :: qflx_lo  (KA,IA,JA,3)  ! rho * vel(x,y,z) * phi,  monotone flux
-    real(RP) :: qflx_anti(KA,IA,JA,3)  ! anti-diffusive flux
+    real(RP) :: RHOQ_t   (KA,IA,JA)       ! tendency
+    real(RP) :: mflx_hi  (KA,IA,JA,3)     ! rho * vel(x,y,z) @ (u,v,w)-face high order
+    real(RP) :: mflx_av  (KA,IA,JA,3)     ! rho * vel(x,y,z) @ (u,v,w)-face average
+    real(RP) :: qflx_hi  (KA,IA,JA,3,QA)  ! rho * vel(x,y,z) * phi @ (u,v,w)-face high order
+    real(RP) :: qflx_lo  (KA,IA,JA,3,QA)  ! rho * vel(x,y,z) * phi,  monotone flux
+    real(RP) :: qflx_anti(KA,IA,JA,3,QA)  ! anti-diffusive flux
 
     real(RP) :: dt
     real(RP) :: dtrk
@@ -338,8 +338,9 @@ contains
     num_diff (:,:,:,:,:) = UNDEF
 
     mflx_hi(:,:,:,:) = UNDEF
-    qflx_hi(:,:,:,:) = UNDEF
-    qflx_lo(:,:,:,:) = UNDEF
+
+    qflx_hi(:,:,:,:,:) = UNDEF
+    qflx_lo(:,:,:,:,:) = UNDEF
 #endif
 
     DENS00(:,:,:) = DENS(:,:,:)
@@ -649,8 +650,10 @@ contains
        if ( .not. PRC_HAS_W ) then ! for western boundary
           call set_boundary_dyn( &
                DENS, MOMZ, MOMX, MOMY, RHOT, & ! (inout)
-               DAMP_DENS, DAMP_VELX, DAMP_VELY, DAMP_POTT, & ! (in)
-               DAMP_alpha_DENS, DAMP_alpha_VELX, DAMP_alpha_VELY, DAMP_alpha_POTT, & ! (in)
+               mflx_hi, GSQRT, dt, & ! (in)
+               RCDZ, RCDX, RCDY, & ! (in)
+               DAMP_DENS, DAMP_VELZ, DAMP_VELX, DAMP_VELY, DAMP_POTT, & ! (in)
+               DAMP_alpha_DENS, DAMP_alpha_VELZ, DAMP_alpha_VELX, DAMP_alpha_VELY, DAMP_alpha_POTT, & ! (in)
                DAMP_VELX, & ! (in)
                -1, 0, 1, 0, & ! (in)
                IS+IHALO-1, IS, JS, JE ) ! (in)
@@ -658,8 +661,10 @@ contains
        if ( .not. PRC_HAS_E ) then ! for eastern boundary
           call set_boundary_dyn( &
                DENS, MOMZ, MOMX, MOMY, RHOT, & ! (inout)
-               DAMP_DENS, DAMP_VELX, DAMP_VELY, DAMP_POTT, & ! (in)
-               DAMP_alpha_DENS, DAMP_alpha_VELX, DAMP_alpha_VELY, DAMP_alpha_POTT, & ! (in)
+               mflx_hi, GSQRT, dt, & ! (in)
+               RCDZ, RCDX, RCDY, & ! (in)
+               DAMP_DENS, DAMP_VELZ, DAMP_VELX, DAMP_VELY, DAMP_POTT, & ! (in)
+               DAMP_alpha_DENS, DAMP_alpha_VELZ, DAMP_alpha_VELX, DAMP_alpha_VELY, DAMP_alpha_POTT, & ! (in)
                DAMP_VELX, & ! (in)
                0, 0, -1, 0, & ! (in)
                IE-IHALO+1, IE, JS, JE ) ! (in)
@@ -667,8 +672,10 @@ contains
        if ( .not. PRC_HAS_S ) then ! for sourthern boundary
           call set_boundary_dyn( &
                DENS, MOMZ, MOMX, MOMY, RHOT, & ! (inout)
-               DAMP_DENS, DAMP_VELX, DAMP_VELY, DAMP_POTT, & ! (in)
-               DAMP_alpha_DENS, DAMP_alpha_VELX, DAMP_alpha_VELY, DAMP_alpha_POTT, & ! (in)
+               mflx_hi, GSQRT, dt, & ! (in)
+               RCDZ, RCDX, RCDY, & ! (in)
+               DAMP_DENS, DAMP_VELZ, DAMP_VELX, DAMP_VELY, DAMP_POTT, & ! (in)
+               DAMP_alpha_DENS, DAMP_alpha_VELZ, DAMP_alpha_VELX, DAMP_alpha_VELY, DAMP_alpha_POTT, & ! (in)
                DAMP_VELY, & ! (in)
                0, -1, 0, 1, & ! (in)
                IS, IE, JS+JHALO-1, JS ) ! (in)
@@ -676,8 +683,10 @@ contains
        if ( .not. PRC_HAS_N ) then ! for northern boundary
           call set_boundary_dyn( &
                DENS, MOMZ, MOMX, MOMY, RHOT, & ! (inout)
-               DAMP_DENS, DAMP_VELX, DAMP_VELY, DAMP_POTT, & ! (in)
-               DAMP_alpha_DENS, DAMP_alpha_VELX, DAMP_alpha_VELY, DAMP_alpha_POTT, & ! (in)
+               mflx_hi, GSQRT, dt, & ! (in)
+               RCDZ, RCDX, RCDY, & ! (in)
+               DAMP_DENS, DAMP_VELZ, DAMP_VELX, DAMP_VELY, DAMP_POTT, & ! (in)
+               DAMP_alpha_DENS, DAMP_alpha_VELZ, DAMP_alpha_VELX, DAMP_alpha_VELY, DAMP_alpha_POTT, & ! (in)
                DAMP_VELY, & ! (in)
                0, 0, 0, -1, & ! (in)
                IS, IE, JE-JHALO+1, JE ) ! (in)
@@ -838,12 +847,12 @@ contains
           do j = JJS-1, JJE+1
           do i = IIS-1, IIE+1
           do k = KS+1, KE-2
-             qflx_lo(k,i,j,ZDIR) = 0.5_RP * (     mflx_hi(k,i,j,ZDIR)  * ( QTRC(k+1,i,j,iq)+QTRC(k,i,j,iq) ) &
-                                            - abs(mflx_hi(k,i,j,ZDIR)) * ( QTRC(k+1,i,j,iq)-QTRC(k,i,j,iq) ) )
+             qflx_lo(k,i,j,ZDIR,iq) = 0.5_RP * (     mflx_hi(k,i,j,ZDIR)  * ( QTRC(k+1,i,j,iq)+QTRC(k,i,j,iq) ) &
+                                               - abs(mflx_hi(k,i,j,ZDIR)) * ( QTRC(k+1,i,j,iq)-QTRC(k,i,j,iq) ) )
 
-             qflx_hi(k,i,j,ZDIR) = mflx_hi(k,i,j,ZDIR) * ( FACT_N * ( QTRC(k+1,i,j,iq)+QTRC(k  ,i,j,iq) ) &
-                                                         + FACT_F * ( QTRC(k+2,i,j,iq)+QTRC(k-1,i,j,iq) ) ) &
-                                 + GSQRT(k,i,j,I_XYW) * num_diff_q(k,i,j,ZDIR)
+             qflx_hi(k,i,j,ZDIR,iq) = mflx_hi(k,i,j,ZDIR) * ( FACT_N * ( QTRC(k+1,i,j,iq)+QTRC(k  ,i,j,iq) ) &
+                                                            + FACT_F * ( QTRC(k+2,i,j,iq)+QTRC(k-1,i,j,iq) ) ) &
+                                    + GSQRT(k,i,j,I_XYW) * num_diff_q(k,i,j,ZDIR)
           enddo
           enddo
           enddo
@@ -851,26 +860,26 @@ contains
           !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           do j = JJS-1, JJE+1
           do i = IIS-1, IIE+1
-             qflx_lo(KS-1,i,j,ZDIR) = 0.0_RP
-             qflx_lo(KS  ,i,j,ZDIR) = 0.5_RP * (     mflx_hi(KS  ,i,j,ZDIR)  * ( QTRC(KS+1,i,j,iq)+QTRC(KS,i,j,iq) ) &
-                                               - abs(mflx_hi(KS  ,i,j,ZDIR)) * ( QTRC(KS+1,i,j,iq)-QTRC(KS,i,j,iq) ) )
+             qflx_lo(KS-1,i,j,ZDIR,iq) = 0.0_RP
+             qflx_lo(KS  ,i,j,ZDIR,iq) = 0.5_RP * (     mflx_hi(KS  ,i,j,ZDIR)  * ( QTRC(KS+1,i,j,iq)+QTRC(KS,i,j,iq) ) &
+                                                  - abs(mflx_hi(KS  ,i,j,ZDIR)) * ( QTRC(KS+1,i,j,iq)-QTRC(KS,i,j,iq) ) )
 
-             qflx_hi(KS-1,i,j,ZDIR) = 0.0_RP
-             qflx_hi(KS  ,i,j,ZDIR) = 0.5_RP * mflx_hi(KS  ,i,j,ZDIR) * ( QTRC(KS+1,i,j,iq)+QTRC(KS,i,j,iq) ) &
-                                    + GSQRT(k,i,j,I_XYW) * num_diff_q(KS,i,j,ZDIR)
+             qflx_hi(KS-1,i,j,ZDIR,iq) = 0.0_RP
+             qflx_hi(KS  ,i,j,ZDIR,iq) = 0.5_RP * mflx_hi(KS  ,i,j,ZDIR) * ( QTRC(KS+1,i,j,iq)+QTRC(KS,i,j,iq) ) &
+                                       + GSQRT(k,i,j,I_XYW) * num_diff_q(KS,i,j,ZDIR)
           enddo
           enddo
 
           !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           do j = JJS-1, JJE+1
           do i = IIS-1, IIE+1
-             qflx_lo(KE-1,i,j,ZDIR) = 0.5_RP * (     mflx_hi(KE-1,i,j,ZDIR)  * ( QTRC(KE,i,j,iq)+QTRC(KE-1,i,j,iq) ) &
-                                               - abs(mflx_hi(KE-1,i,j,ZDIR)) * ( QTRC(KE,i,j,iq)-QTRC(KE-1,i,j,iq) ) )
-             qflx_lo(KE  ,i,j,ZDIR) = 0.0_RP
+             qflx_lo(KE-1,i,j,ZDIR,iq) = 0.5_RP * (     mflx_hi(KE-1,i,j,ZDIR)  * ( QTRC(KE,i,j,iq)+QTRC(KE-1,i,j,iq) ) &
+                                                  - abs(mflx_hi(KE-1,i,j,ZDIR)) * ( QTRC(KE,i,j,iq)-QTRC(KE-1,i,j,iq) ) )
+             qflx_lo(KE  ,i,j,ZDIR,iq) = 0.0_RP
 
-             qflx_hi(KE-1,i,j,ZDIR) = 0.5_RP * mflx_hi(KE-1,i,j,ZDIR) * ( QTRC(KE,i,j,iq)+QTRC(KE-1,i,j,iq) ) &
-                                    + GSQRT(k,i,j,I_XYW) * num_diff_q(KE-1,i,j,ZDIR)
-             qflx_hi(KE  ,i,j,ZDIR) = 0.0_RP
+             qflx_hi(KE-1,i,j,ZDIR,iq) = 0.5_RP * mflx_hi(KE-1,i,j,ZDIR) * ( QTRC(KE,i,j,iq)+QTRC(KE-1,i,j,iq) ) &
+                                       + GSQRT(k,i,j,I_XYW) * num_diff_q(KE-1,i,j,ZDIR)
+             qflx_hi(KE  ,i,j,ZDIR,iq) = 0.0_RP
           enddo
           enddo
 
@@ -878,8 +887,8 @@ contains
           do j = JJS-1, JJE+1
           do i = IIS-2, IIE+1
           do k = KS, KE
-             qflx_lo(k,i,j,XDIR) = 0.5_RP * (     mflx_hi(k,i,j,XDIR)  * ( QTRC(k,i+1,j,iq)+QTRC(k,i,j,iq) ) &
-                                            - abs(mflx_hi(k,i,j,XDIR)) * ( QTRC(k,i+1,j,iq)-QTRC(k,i,j,iq) ) )
+             qflx_lo(k,i,j,XDIR,iq) = 0.5_RP * (     mflx_hi(k,i,j,XDIR)  * ( QTRC(k,i+1,j,iq)+QTRC(k,i,j,iq) ) &
+                                               - abs(mflx_hi(k,i,j,XDIR)) * ( QTRC(k,i+1,j,iq)-QTRC(k,i,j,iq) ) )
           enddo
           enddo
           enddo
@@ -888,9 +897,9 @@ contains
           do j = JJS,   JJE
           do i = IIS-1, IIE
           do k = KS, KE
-             qflx_hi(k,i,j,XDIR) = mflx_hi(k,i,j,XDIR) * ( FACT_N * ( QTRC(k,i+1,j,iq)+QTRC(k,i  ,j,iq) ) &
-                                                         + FACT_F * ( QTRC(k,i+2,j,iq)+QTRC(k,i-1,j,iq) ) ) &
-                                 + GSQRT(k,i,j,I_UYZ) * num_diff_q(k,i,j,XDIR)
+             qflx_hi(k,i,j,XDIR,iq) = mflx_hi(k,i,j,XDIR) * ( FACT_N * ( QTRC(k,i+1,j,iq)+QTRC(k,i  ,j,iq) ) &
+                                                            + FACT_F * ( QTRC(k,i+2,j,iq)+QTRC(k,i-1,j,iq) ) ) &
+                                    + GSQRT(k,i,j,I_UYZ) * num_diff_q(k,i,j,XDIR)
           enddo
           enddo
           enddo
@@ -899,8 +908,8 @@ contains
           do j = JJS-2, JJE+1
           do i = IIS-1, IIE+1
           do k = KS, KE
-             qflx_lo(k,i,j,YDIR) = 0.5_RP * (     mflx_hi(k,i,j,YDIR)  * ( QTRC(k,i,j+1,iq)+QTRC(k,i,j,iq) ) &
-                                            - abs(mflx_hi(k,i,j,YDIR)) * ( QTRC(k,i,j+1,iq)-QTRC(k,i,j,iq) ) )
+             qflx_lo(k,i,j,YDIR,iq) = 0.5_RP * (     mflx_hi(k,i,j,YDIR)  * ( QTRC(k,i,j+1,iq)+QTRC(k,i,j,iq) ) &
+                                               - abs(mflx_hi(k,i,j,YDIR)) * ( QTRC(k,i,j+1,iq)-QTRC(k,i,j,iq) ) )
           enddo
           enddo
           enddo
@@ -909,9 +918,9 @@ contains
           do j = JJS-1, JJE
           do i = IIS,   IIE
           do k = KS, KE
-             qflx_hi(k,i,j,YDIR) = mflx_hi(k,i,j,YDIR) * ( FACT_N * ( QTRC(k,i,j+1,iq)+QTRC(k,i,j  ,iq) ) &
-                                                         + FACT_F * ( QTRC(k,i,j+2,iq)+QTRC(k,i,j-1,iq) ) ) &
-                                 + GSQRT(k,i,j,I_XVZ) * num_diff_q(k,i,j,YDIR)
+             qflx_hi(k,i,j,YDIR,iq) = mflx_hi(k,i,j,YDIR) * ( FACT_N * ( QTRC(k,i,j+1,iq)+QTRC(k,i,j  ,iq) ) &
+                                                            + FACT_F * ( QTRC(k,i,j+2,iq)+QTRC(k,i,j-1,iq) ) ) &
+                                    + GSQRT(k,i,j,I_XVZ) * num_diff_q(k,i,j,YDIR)
           enddo
           enddo
           enddo
@@ -919,9 +928,10 @@ contains
        enddo
        enddo
 
-       call ATMOS_DYN_fct( qflx_anti,                    & ! (out)
+       call ATMOS_DYN_fct( qflx_anti(:,:,:,:,iq),        & ! (out)
                            QTRC(:,:,:,iq), DENS00, DENS, & ! (in)
-                           qflx_hi, qflx_lo,             & ! (in)
+                           qflx_hi(:,:,:,:,iq),          & ! (in)
+                           qflx_lo(:,:,:,:,iq),          & ! (in)
                            mflx_hi,                      & ! (in)
                            RCDZ, RCDX, RCDY,             & ! (in)
                            GSQRT(:,:,:,I_XYZ),           & ! (in)
@@ -938,12 +948,12 @@ contains
           do i = IIS, IIE
           do k = KS, KE
              QTRC(k,i,j,iq) = ( QTRC(k,i,j,iq) * DENS00(k,i,j) &
-                            + dt * ( - ( ( qflx_hi(k  ,i  ,j  ,ZDIR) - qflx_anti(k  ,i  ,j  ,ZDIR) &
-                                         - qflx_hi(k-1,i  ,j  ,ZDIR) + qflx_anti(k-1,i  ,j  ,ZDIR) ) * RCDZ(k) &
-                                       + ( qflx_hi(k  ,i  ,j  ,XDIR) - qflx_anti(k  ,i  ,j  ,XDIR) &
-                                         - qflx_hi(k  ,i-1,j  ,XDIR) + qflx_anti(k  ,i-1,j  ,XDIR) ) * RCDX(i) &
-                                       + ( qflx_hi(k  ,i  ,j  ,YDIR) - qflx_anti(k  ,i  ,j  ,YDIR) &
-                                         - qflx_hi(k  ,i  ,j-1,YDIR) + qflx_anti(k  ,i  ,j-1,YDIR) ) * RCDY(j) &
+                            + dt * ( - ( ( qflx_hi(k  ,i  ,j  ,ZDIR,iq) - qflx_anti(k  ,i  ,j  ,ZDIR,iq) &
+                                         - qflx_hi(k-1,i  ,j  ,ZDIR,iq) + qflx_anti(k-1,i  ,j  ,ZDIR,iq) ) * RCDZ(k) &
+                                       + ( qflx_hi(k  ,i  ,j  ,XDIR,iq) - qflx_anti(k  ,i  ,j  ,XDIR,iq) &
+                                         - qflx_hi(k  ,i-1,j  ,XDIR,iq) + qflx_anti(k  ,i-1,j  ,XDIR,iq) ) * RCDX(i) &
+                                       + ( qflx_hi(k  ,i  ,j  ,YDIR,iq) - qflx_anti(k  ,i  ,j  ,YDIR,iq) &
+                                         - qflx_hi(k  ,i  ,j-1,YDIR,iq) + qflx_anti(k  ,i  ,j-1,YDIR,iq) ) * RCDY(j) &
                                        ) * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) &
                               + RHOQ_t(k,i,j) ) ) / DENS(k,i,j)
           enddo
@@ -952,12 +962,6 @@ contains
 
        enddo
        enddo
-
-#ifdef DEBUG
-       qflx_lo  (:,:,:,:) = UNDEF
-       qflx_hi  (:,:,:,:) = UNDEF
-       qflx_anti(:,:,:,:) = UNDEF
-#endif
 
        do j  = JS, JE
        do i  = IS, IE
@@ -976,6 +980,9 @@ contains
     if ( .not. PRC_HAS_W ) then ! for western boundary
        call set_boundary_qtrc( &
             QTRC, & ! (inout)
+            DENS, MOMX, MOMY, & ! (in)
+            qflx_hi, qflx_anti, GSQRT, dt, & ! (in)
+            RCDZ, RCDX, RCDY, & ! (in)
             DAMP_QTRC, DAMP_alpha_QTRC, & ! (in)
             MOMX, -1, 0, 1, 0, & ! (in)
             IS+IHALO-1, IS, JS, JE ) ! (in)
@@ -983,6 +990,9 @@ contains
     if ( .not. PRC_HAS_E ) then ! for eastern boundary
        call set_boundary_qtrc( &
             QTRC, & ! (inout)
+            DENS, MOMX, MOMY, & ! (in)
+            qflx_hi, qflx_anti, GSQRT, dt, & ! (in)
+            RCDZ, RCDX, RCDY, & ! (in)
             DAMP_QTRC, DAMP_alpha_QTRC, & ! (in)
             MOMX, 0, 0, -1, 0, & ! (in)
             IE-IHALO+1, IE, JS, JE ) ! (in)
@@ -990,6 +1000,9 @@ contains
     if ( .not. PRC_HAS_S ) then ! for sourthern boundary
        call set_boundary_qtrc( &
             QTRC, & ! (inout)
+            DENS, MOMX, MOMY, & ! (in)
+            qflx_hi, qflx_anti, GSQRT, dt, & ! (in)
+            RCDZ, RCDX, RCDY, & ! (in)
             DAMP_QTRC, DAMP_alpha_QTRC, & ! (in)
             MOMY, 0, -1, 0, 1, & ! (in)
             IS, IE, JS+JHALO-1, JS ) ! (in)
@@ -997,6 +1010,9 @@ contains
     if ( .not. PRC_HAS_N ) then ! for northern boundary
        call set_boundary_qtrc( &
             QTRC, & ! (inout)
+            DENS, MOMX, MOMY, & ! (in)
+            qflx_hi, qflx_anti, GSQRT, dt, & ! (in)
+            RCDZ, RCDX, RCDY, & ! (in)
             DAMP_QTRC, DAMP_alpha_QTRC, & ! (in)
             MOMY, 0, 0, 0, -1, & ! (in)
             IS, IE, JE-JHALO+1, JE ) ! (in)
@@ -1015,26 +1031,43 @@ contains
 
   subroutine set_boundary_dyn( &
        DENS, MOMZ, MOMX, MOMY, RHOT, &
-       DAMP_DENS, DAMP_VELX, DAMP_VELY, DAMP_POTT, &
-       DAMP_alpha_DENS, DAMP_alpha_VELX, DAMP_alpha_VELY, DAMP_alpha_POTT, &
+       mflx_hi, GSQRT, dt, &
+       RCDZ, RCDX, RCDY, &
+       DAMP_DENS, DAMP_VELZ, DAMP_VELX, DAMP_VELY, DAMP_POTT, &
+       DAMP_alpha_DENS, DAMP_alpha_VELZ, DAMP_alpha_VELX, DAMP_alpha_VELY, DAMP_alpha_POTT, &
        DAMP_flow, &
        ib, jb, iu, ju, &
        i0, i1, j0, j1 )
     use scale_const, only: &
        EPS => CONST_EPS
+    use scale_gridtrans, only: &
+       I_XYZ, &
+       I_UYZ, &
+       I_XVZ
     implicit none
+
     real(RP), intent(inout) :: DENS(KA,IA,JA)
     real(RP), intent(inout) :: MOMZ(KA,IA,JA)
     real(RP), intent(inout) :: MOMX(KA,IA,JA)
     real(RP), intent(inout) :: MOMY(KA,IA,JA)
     real(RP), intent(inout) :: RHOT(KA,IA,JA)
 
+    real(RP), intent(in)    :: mflx_hi(KA,IA,JA,3)
+    real(RP), intent(in)    :: GSQRT  (KA,IA,JA,7)
+    real(RP), intent(in)    :: dt
+
+    real(RP), intent(in)    :: RCDZ(KA)
+    real(RP), intent(in)    :: RCDX(IA)
+    real(RP), intent(in)    :: RCDY(JA)
+
     real(RP), intent(in)    :: DAMP_DENS(KA,IA,JA)
+    real(RP), intent(in)    :: DAMP_VELZ(KA,IA,JA)
     real(RP), intent(in)    :: DAMP_VELX(KA,IA,JA)
     real(RP), intent(in)    :: DAMP_VELY(KA,IA,JA)
     real(RP), intent(in)    :: DAMP_POTT(KA,IA,JA)
 
     real(RP), intent(in)    :: DAMP_alpha_DENS(KA,IA,JA)
+    real(RP), intent(in)    :: DAMP_alpha_VELZ(KA,IA,JA)
     real(RP), intent(in)    :: DAMP_alpha_VELX(KA,IA,JA)
     real(RP), intent(in)    :: DAMP_alpha_VELY(KA,IA,JA)
     real(RP), intent(in)    :: DAMP_alpha_POTT(KA,IA,JA)
@@ -1051,20 +1084,39 @@ contains
     integer,  intent(in)    :: j1
 
     real(RP) :: dir
-    real(RP) :: sw, sw2
+    real(RP) :: sw, sw2, sw3, sw4
     integer :: i, j, k
     !---------------------------------------------------------------------------
 
-    dir = sign(1.0_RP, REAL(ib+jb,RP)) ! dir = -1 if ib==-1 .or. jb==-1
+    dir = sign(1.0_RP, real(ib+jb,kind=RP)) ! dir = -1 if ib==-1 .or. jb==-1
+
+    ! lateral boundary flux adjustment
+!    do j = j0-jb+ju, j1-jb+ju, -ju+abs(iu)
+!    do i = i0-ib+iu, i1-ib+iu, -iu+abs(ju)
+    do j = j0-jb, j1-jb, -ju+abs(iu)
+    do i = i0-ib, i1-ib, -iu+abs(ju)
+    do k = KS, KE
+       sw3 = sign(0.5_RP, real(abs(iu),kind=RP) - EPS) + 0.5_RP ! 0:N-S, 1:W-E
+       sw4 = sign(0.5_RP, real(abs(ju),kind=RP) - EPS) + 0.5_RP ! 0:W-E, 1:N-S
+       DENS(k,i,j) = DENS(k,i,j) &
+                   + ( ( DAMP_VELX(k,i+ib,j) * ( DAMP_DENS(k,i+ib+iu,j)+DAMP_DENS(k,i+ib,j) ) &
+                         * 0.5_RP * GSQRT(k,i+ib,j,I_UYZ) &
+                       - mflx_hi(k,i+ib,j,XDIR) ) * RCDX(i) * sw3 &
+                     + ( DAMP_VELY(k,i,j+jb) * ( DAMP_DENS(k,i,j+jb+ju)+DAMP_DENS(k,i,j+jb) ) &
+                         * 0.5_RP * GSQRT(k,i,j+jb,I_XVZ) &
+                       - mflx_hi(k,i,j+jb,YDIR) ) * RCDY(j) * sw4 &
+                     ) * dt / GSQRT(k,i,j,I_XYZ)
+    end do
+    end do
+    end do
 
     do j = j0-jb, j1-jb, -ju+abs(iu)
     do i = i0-ib, i1-ib, -iu+abs(ju)
     do k = KS, KE
        sw = sign(0.5_RP, DAMP_alpha_DENS(k,i,j) - EPS) + 0.5_RP
        sw2 = sign(0.5_RP, DAMP_flow(k,i,j)*dir) + 0.5_RP ! 0:inflow, 1:outflow
-!       DENS(k,i,j) = DENS(k,i,j) * ( 1.0_RP - sw ) &
-!!                   + ( DENS(k,i+ju,j+iu) + DENS(k,i-ju,j-iu) + DENS(k,i,j)*2.0_RP ) * 0.25_RP * sw ! smoothing
-!                   + DAMP_DENS(k,i,j) * sw
+       DENS(k,i,j) = DENS(k,i,j) * ( 1.0_RP - sw ) &
+                   + DAMP_DENS(k,i,j) * sw
        MOMZ(k,i,j) = MOMZ(k,i,j) * ( 1.0_RP - sw ) &
                    + MOMZ(k,i+iu,j+ju) * sw2 * sw
        sw = sign(0.5_RP, DAMP_alpha_POTT(k,i,j) - EPS) + 0.5_RP
@@ -1134,35 +1186,75 @@ contains
 
   subroutine set_boundary_qtrc( &
        QTRC, &
+       DENS, MOMX, MOMY, &
+       qflx_hi, qflx_anti, GSQRT, dt, &
+       RCDZ, RCDX, RCDY, &
        DAMP_QTRC, DAMP_alpha_QTRC, &
        MOM, ib, jb, iu, ju, &
        i0, i1, j0, j1 )
     use scale_const, only: &
        EPS => CONST_EPS
+    use scale_gridtrans, only: &
+       I_XYZ, &
+       I_UYZ, &
+       I_XVZ
     use scale_atmos_boundary, only: &
        BND_QA
     implicit none
     real(RP), intent(inout) :: QTRC(KA,IA,JA,QA)
+
+    real(RP), intent(in)    :: DENS     (KA,IA,JA)
+    real(RP), intent(in)    :: MOMX     (KA,IA,JA)
+    real(RP), intent(in)    :: MOMY     (KA,IA,JA)
+    real(RP), intent(in)    :: qflx_hi  (KA,IA,JA,3,QA)
+    real(RP), intent(in)    :: qflx_anti(KA,IA,JA,3,QA)
+    real(RP), intent(in)    :: GSQRT    (KA,IA,JA,7)
+    real(RP), intent(in)    :: dt
+
+    real(RP), intent(in)    :: RCDZ(KA)
+    real(RP), intent(in)    :: RCDX(IA)
+    real(RP), intent(in)    :: RCDY(JA)
+
     real(RP), intent(in)    :: DAMP_QTRC      (KA,IA,JA,BND_QA)
     real(RP), intent(in)    :: DAMP_alpha_QTRC(KA,IA,JA,BND_QA)
     real(RP), intent(in)    :: MOM(KA,IA,JA)
-    integer,  intent(in)    :: ib
-    integer,  intent(in)    :: jb
-    integer,  intent(in)    :: iu
-    integer,  intent(in)    :: ju
+
+    integer,  intent(in)    :: ib ! W:-1, E: 0, S: 0, N: 0
+    integer,  intent(in)    :: jb ! W: 0, E: 0, S:-1, N: 0
+    integer,  intent(in)    :: iu ! W: 1, E:-1, S: 0, N: 0
+    integer,  intent(in)    :: ju ! W: 0, E: 0, S: 1, N:-1
     integer,  intent(in)    :: i0
     integer,  intent(in)    :: i1
     integer,  intent(in)    :: j0
     integer,  intent(in)    :: j1
 
     real(RP) :: dir
-    real(RP) :: sw, sw2
+    real(RP) :: sw, sw2, sw3, sw4
+
     integer :: i, j, k, iq, iqb
     !---------------------------------------------------------------------------
 
     if( BND_QA == I_QV ) then
        ! QV forcing only at boundary
        dir = sign(1.0_RP, REAL(ib+jb,RP)) ! dir = -1 if ib==-1 .or. jb==-1
+
+!       ! lateral boundary flux adjustment
+!       do j = j0-jb+ju, j1-jb+ju, -ju+abs(iu)
+!       do i = i0-ib+iu, i1-ib+iu, -iu+abs(ju)
+!       do k = KS, KE
+!          sw3 = sign(0.5_RP, real(abs(iu),kind=RP) - EPS) + 0.5_RP ! 0:N-S, 1:W-E
+!          sw4 = sign(0.5_RP, real(abs(ju),kind=RP) - EPS) + 0.5_RP ! 0:W-E, 1:N-S
+!          QTRC(k,i,j,I_QV) = QTRC(k,i,j,I_QV) &
+!                           + ( ( MOMX(k,i+ib,j) * ( DAMP_QTRC(k,i+ib+iu,j,I_QV)+DAMP_QTRC(k,i+ib,j,I_QV) ) &
+!                                 * 0.5_RP * GSQRT(k,i+ib,j,I_UYZ) &
+!                               - qflx_hi(k,i+ib,j,XDIR,I_QV) + qflx_anti(k,i+ib,j,XDIR,I_QV) ) * RCDX(i) * sw3 &
+!                             + ( MOMY(k,i,j+jb) * ( DAMP_QTRC(k,i,j+jb+ju,I_QV)+DAMP_QTRC(k,i,j+jb,I_QV) ) &
+!                                 * 0.5_RP * GSQRT(k,i,j+jb,I_XVZ) &
+!                               - qflx_hi(k,i,j+jb,YDIR,I_QV) + qflx_anti(k,i,j+jb,YDIR,I_QV) ) * RCDY(j) * sw4 &
+!                             ) * dt / GSQRT(k,i,j,I_XYZ) / DENS(k,i,j)
+!       end do
+!       end do
+!       end do
 
        do j = j0-jb, j1-jb, -ju+abs(iu)
        do i = i0-ib, i1-ib, -iu+abs(ju)
@@ -1189,6 +1281,24 @@ contains
     else
        ! ALL QTRC forcing at boundary
        do iq = 1, QA
+!          ! lateral boundary flux adjustment
+!          do j = j0-jb+ju, j1-jb+ju, -ju+abs(iu)
+!          do i = i0-ib+iu, i1-ib+iu, -iu+abs(ju)
+!          do k = KS, KE
+!             sw3 = sign(0.5_RP, real(abs(iu),kind=RP) - EPS) + 0.5_RP ! 0:N-S, 1:W-E
+!             sw4 = sign(0.5_RP, real(abs(ju),kind=RP) - EPS) + 0.5_RP ! 0:W-E, 1:N-S
+!             QTRC(k,i,j,iq) = QTRC(k,i,j,iq) &
+!                            + ( ( MOMX(k,i+ib,j) * ( DAMP_QTRC(k,i+ib+iu,j,iq)+DAMP_QTRC(k,i+ib,j,iq) ) &
+!                                  * 0.5_RP * GSQRT(k,i+ib,j,I_UYZ) &
+!                                - qflx_hi(k,i+ib,j,XDIR,iq) + qflx_anti(k,i+ib,j,XDIR,iq) ) * RCDX(i) * sw3 &
+!                              + ( MOMY(k,i,j+jb) * ( DAMP_QTRC(k,i,j+jb+ju,iq)+DAMP_QTRC(k,i,j+jb,iq) ) &
+!                                  * 0.5_RP * GSQRT(k,i,j+jb,I_XVZ) &
+!                                - qflx_hi(k,i,j+jb,YDIR,iq) + qflx_anti(k,i,j+jb,YDIR,iq) ) * RCDY(j) * sw4 &
+!                              ) * dt / GSQRT(k,i,j,I_XYZ) / DENS(k,i,j)
+!          end do
+!          end do
+!          end do
+
           do j = j0-jb, j1-jb, -ju+abs(iu)
           do i = i0-ib, i1-ib, -iu+abs(ju)
           do k = KS, KE
@@ -1203,7 +1313,7 @@ contains
 
     do iq = 1, QA
        iqb = min(iq, BND_QA)
-       if ( ib==-1 ) then
+       if ( ib==-1 ) then ! western boundary
           do j = j0, j1
           do k = KS, KE
              sw = sign(0.5_RP, DAMP_alpha_QTRC(k,i1,j,iqb) - EPS) + 0.5_RP
@@ -1212,7 +1322,7 @@ contains
           end do
           end do
        end if
-       if ( jb==-1 ) then
+       if ( jb==-1 ) then ! southern boundary
           do i = i0, i1
           do k = KS, KE
              sw = sign(0.5_RP, DAMP_alpha_QTRC(k,i,j1,iqb) - EPS) + 0.5_RP
