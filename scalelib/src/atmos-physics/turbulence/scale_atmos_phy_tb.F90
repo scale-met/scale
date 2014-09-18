@@ -51,7 +51,7 @@ module scale_atmos_phy_tb
        nu_C, Ri, Pr,                                & ! (out) diagnostic variables
        MOMZ, MOMX, MOMY, RHOT, DENS, QTRC,          & ! (in)
        SFLX_MW, SFLX_MU, SFLX_MV, SFLX_SH,          & ! (in)
-       GSQRT, J13G, J23G, J33G, dt                  ) ! (in)
+       GSQRT, J13G, J23G, J33G, MAPF, dt            ) ! (in)
        use scale_precision
        use scale_grid_index
        use scale_tracer
@@ -83,6 +83,7 @@ module scale_atmos_phy_tb
        real(RP), intent(in)  :: J13G    (KA,IA,JA,7) !< (1,3) element of Jacobian matrix
        real(RP), intent(in)  :: J23G    (KA,IA,JA,7) !< (1,3) element of Jacobian matrix
        real(RP), intent(in)  :: J33G                 !< (3,3) element of Jacobian matrix
+       real(RP), intent(in)  :: MAPF    (IA,JA,2,4)  !< map factor
        real(RP), intent(in)  :: dt
      end subroutine tb
   end interface

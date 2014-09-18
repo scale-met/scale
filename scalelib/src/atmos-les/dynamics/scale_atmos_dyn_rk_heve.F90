@@ -90,7 +90,7 @@ contains
        FLAG_FCT_ALONG_STREAM,                       &
        CDZ, FDZ, FDX, FDY,                          &
        RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,          &
-       PHI, GSQRT, J13G, J23G, J33G,                &
+       PHI, GSQRT, J13G, J23G, J33G, MAPF,          &
        REF_pres, REF_dens,                          &
        dtrk, dt                                     )
     use scale_const, only: &
@@ -114,7 +114,10 @@ contains
        I_XVW, &
        I_UYZ, &
        I_XVZ, &
-       I_UVZ
+       I_UVZ, &
+       I_XY,  &
+       I_UY,  &
+       I_XV
 #ifdef HIST_TEND
     use scale_history, only: &
        HIST_in
@@ -174,6 +177,7 @@ contains
     real(RP), intent(in)  :: J13G    (KA,IA,JA,7) !< (1,3) element of Jacobian matrix
     real(RP), intent(in)  :: J23G    (KA,IA,JA,7) !< (2,3) element of Jacobian matrix
     real(RP), intent(in)  :: J33G                 !< (3,3) element of Jacobian matrix
+    real(RP), intent(in)  :: MAPF    (IA,JA,2,4)  !< map factor
     real(RP), intent(in)  :: REF_pres(KA,IA,JA)   !< reference pressure
     real(RP), intent(in)  :: REF_dens(KA,IA,JA)   !< reference density
 
@@ -591,7 +595,8 @@ contains
                            mflx_hi, qflx_lo,        & ! (in)
                            mflx_hi,                 & ! (in)
                            RCDZ, RCDX, RCDY,        & ! (in)
-                           GSQRT(:,:,:,I_XYZ), dtrk,& ! (in)
+                           GSQRT(:,:,:,I_XYZ),      & ! (in)
+                           MAPF(:,:,:,I_XY), dtrk,  & ! (in)
                            FLAG_FCT_ALONG_STREAM    ) ! (in)
 
        do JJS = JS, JE, JBLOCK
@@ -1115,7 +1120,8 @@ contains
                            qflx_hi, qflx_lo,          & ! (in)
                            mflx_hi,                   & ! (in)
                            RFDZ, RCDX, RCDY,          & ! (in)
-                           GSQRT(:,:,:,I_XYW), dtrk,  & ! (in)
+                           GSQRT(:,:,:,I_XYW),        & ! (in)
+                           MAPF(:,:,:,I_XY), dtrk,    & ! (in)
                            FLAG_FCT_ALONG_STREAM      ) ! (in)
 
        do JJS = JS, JE, JBLOCK
@@ -1523,7 +1529,8 @@ contains
                            qflx_hi, qflx_lo,          & ! (in)
                            mflx_hi,                   & ! (in)
                            RCDZ, RFDX, RCDY,          & ! (in)
-                           GSQRT(:,:,:,I_UYZ), dtrk,  & ! (in)
+                           GSQRT(:,:,:,I_UYZ),        & ! (in)
+                           MAPF(:,:,:,I_UY), dtrk,    & ! (in)
                            FLAG_FCT_ALONG_STREAM      ) ! (in)
 
        do JJS = JS, JE, JBLOCK
@@ -1964,7 +1971,8 @@ contains
                            qflx_hi, qflx_lo,          & ! (in)
                            mflx_hi,                   & ! (in)
                            RCDZ, RCDX, RFDY,          & ! (in)
-                           GSQRT(:,:,:,I_XVZ), dtrk,  & ! (in)
+                           GSQRT(:,:,:,I_XVZ),        & ! (in)
+                           MAPF(:,:,:,I_XV), dtrk,    & ! (in)
                            FLAG_FCT_ALONG_STREAM      ) ! (in)
 
        do JJS = JS, JE, JBLOCK
@@ -2264,7 +2272,8 @@ contains
                            qflx_hi, qflx_lo,        & ! (in)
                            mflx_hi,                 & ! (in)
                            RCDZ, RCDX, RCDY,        & ! (in)
-                           GSQRT(:,:,:,I_XYZ), dtrk,& ! (in)
+                           GSQRT(:,:,:,I_XYZ),      & ! (in)
+                           MAPF(:,:,:,I_XY), dtrk,  & ! (in)
                            FLAG_FCT_ALONG_STREAM    ) ! (in)
 
        do JJS = JS, JE, JBLOCK

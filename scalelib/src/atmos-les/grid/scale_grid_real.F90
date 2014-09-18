@@ -42,14 +42,14 @@ module scale_grid_real
   real(RP), public              :: REAL_BASEPOINT_LON  !< position of base point in real world [rad,0-2pi]
   real(RP), public              :: REAL_BASEPOINT_LAT  !< position of base point in real world [rad,-pi,pi]
 
-  real(RP), public, allocatable :: REAL_LONX(:,:)      !< longitude at staggered point (uy) [rad,0-2pi]
-  real(RP), public, allocatable :: REAL_LONY(:,:)      !< longitude at staggered point (xv) [rad,0-2pi]
-  real(RP), public, allocatable :: REAL_LONXY(:,:)      !< longitude at staggered point (uv) [rad,0-2pi]
-  real(RP), public, allocatable :: REAL_LATX(:,:)      !< latitude  at staggered point (uy) [rad,-pi,pi]
-  real(RP), public, allocatable :: REAL_LATY(:,:)      !< latitude  at staggered point (xv) [rad,-pi,pi]
-  real(RP), public, allocatable :: REAL_LATXY(:,:)      !< latitude  at staggered point (uv) [rad,-pi,pi]
-  real(RP), public, allocatable :: REAL_DLON(:,:)      !< delta longitude
-  real(RP), public, allocatable :: REAL_DLAT(:,:)      !< delta latitude
+  real(RP), public, allocatable :: REAL_LONX (:,:)     !< longitude at staggered point (uy) [rad,0-2pi]
+  real(RP), public, allocatable :: REAL_LONY (:,:)     !< longitude at staggered point (xv) [rad,0-2pi]
+  real(RP), public, allocatable :: REAL_LONXY(:,:)     !< longitude at staggered point (uv) [rad,0-2pi]
+  real(RP), public, allocatable :: REAL_LATX (:,:)     !< latitude  at staggered point (uy) [rad,-pi,pi]
+  real(RP), public, allocatable :: REAL_LATY (:,:)     !< latitude  at staggered point (xv) [rad,-pi,pi]
+  real(RP), public, allocatable :: REAL_LATXY(:,:)     !< latitude  at staggered point (uv) [rad,-pi,pi]
+  real(RP), public, allocatable :: REAL_DLON (:,:)     !< delta longitude
+  real(RP), public, allocatable :: REAL_DLAT (:,:)     !< delta latitude
 
   real(RP), public, allocatable :: REAL_Z1  (:,:)      !< Height of the lowermost grid from surface (cell center) [m]
   real(RP), public              :: REAL_ASPECT_MAX     !< maximum aspect ratio of the grid cell
@@ -85,6 +85,9 @@ contains
     use scale_process, only: &
        PRC_nmax,    &
        PRC_MPIstop
+    use scale_grid, only: &
+       GRID_DOMAIN_CENTER_X, &
+       GRID_DOMAIN_CENTER_Y
     use scale_mapproj, only: &
        MPRJ_setup
     use scale_fileio, only: &
@@ -96,16 +99,16 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[REAL]/Categ[GRID]'
 
-    allocate( REAL_LON (IA,JA) )
-    allocate( REAL_LAT (IA,JA) )
-    allocate( REAL_LONX(IA,JA) )
-    allocate( REAL_LONY(IA,JA) )
+    allocate( REAL_LON  (IA,JA) )
+    allocate( REAL_LAT  (IA,JA) )
+    allocate( REAL_LONX (IA,JA) )
+    allocate( REAL_LONY (IA,JA) )
     allocate( REAL_LONXY(IA,JA) )
-    allocate( REAL_LATX(IA,JA) )
-    allocate( REAL_LATY(IA,JA) )
+    allocate( REAL_LATX (IA,JA) )
+    allocate( REAL_LATY (IA,JA) )
     allocate( REAL_LATXY(IA,JA) )
-    allocate( REAL_DLON(IA,JA) )
-    allocate( REAL_DLAT(IA,JA) )
+    allocate( REAL_DLON (IA,JA) )
+    allocate( REAL_DLAT (IA,JA) )
 
     allocate( REAL_CZ (  KA,IA,JA) )
     allocate( REAL_FZ (0:KA,IA,JA) )
@@ -118,7 +121,7 @@ contains
     allocate( REAL_DOMAIN_CATALOGUE(PRC_nmax,4,2) )
 
     ! setup map projection
-    call MPRJ_setup
+    call MPRJ_setup( GRID_DOMAIN_CENTER_X, GRID_DOMAIN_CENTER_Y )
 
     ! calc longitude & latitude
     call REAL_calc_latlon
@@ -165,12 +168,12 @@ contains
   !> Calc longitude & latitude
   subroutine REAL_calc_latlon
     use scale_const, only: &
-       D2R    => CONST_D2R
+       D2R => CONST_D2R
     use scale_grid, only: &
-       CX => GRID_CX, &
-       CY => GRID_CY, &
-       FX => GRID_FX, &
-       FY => GRID_FY
+       GRID_CX, &
+       GRID_CY, &
+       GRID_FX, &
+       GRID_FY
     use scale_mapproj, only: &
        MPRJ_basepoint_lon, &
        MPRJ_basepoint_lat, &
@@ -226,10 +229,10 @@ contains
 
     do j = 1, JA
     do i = 1, IA
-       call MPRJ_xy2lonlat( CX(i), CY(j), REAL_LON (i,j), REAL_LAT (i,j))
-       call MPRJ_xy2lonlat( FX(i), CY(j), REAL_LONX(i,j), REAL_LATX(i,j))
-       call MPRJ_xy2lonlat( CX(i), FY(j), REAL_LONY(i,j), REAL_LATY(i,j))
-       call MPRJ_xy2lonlat( FX(i), FY(j), REAL_LONXY(i,j), REAL_LATXY(i,j))
+       call MPRJ_xy2lonlat( GRID_CX(i), GRID_CY(j), REAL_LON  (i,j), REAL_LAT  (i,j) )
+       call MPRJ_xy2lonlat( GRID_FX(i), GRID_CY(j), REAL_LONX (i,j), REAL_LATX (i,j) )
+       call MPRJ_xy2lonlat( GRID_CX(i), GRID_FY(j), REAL_LONY (i,j), REAL_LATY (i,j) )
+       call MPRJ_xy2lonlat( GRID_FX(i), GRID_FY(j), REAL_LONXY(i,j), REAL_LATXY(i,j) )
     enddo
     enddo
 

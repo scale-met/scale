@@ -34,7 +34,7 @@ module scale_gridtrans
   !
   !++ Public parameters & variables
   !
-  real(RP), public, allocatable :: GTRANS_MAPF (:,:,:)   !< map factor
+  real(RP), public, allocatable :: GTRANS_MAPF (:,:,:,:) !< map factor
 
   real(RP), public, allocatable :: GTRANS_GSQRT(:,:,:,:) !< transformation metrics from Z to Xi, {G}^1/2
   real(RP), public, allocatable :: GTRANS_J13G (:,:,:,:) !< (1,3) element of Jacobian matrix * {G}^1/2
@@ -49,30 +49,58 @@ module scale_gridtrans
   integer,  public :: I_XVZ = 6 ! at (x,v,z)
   integer,  public :: I_UVZ = 7 ! at (u,v,z)
 
+  integer,  public :: I_XY  = 1 ! at (x,y)
+  integer,  public :: I_UY  = 2 ! at (u,y)
+  integer,  public :: I_XV  = 3 ! at (x,v)
+  integer,  public :: I_UV  = 4 ! at (u,v)
+
   !-----------------------------------------------------------------------------
   !
   !++ Private procedure
   !
   private :: GTRANS_mapfactor
   private :: GTRANS_terrainfollowing
+  private :: GTRANS_write
 
   !-----------------------------------------------------------------------------
   !
   !++ Private parameters & variables
   !
+  character(len=H_LONG), private :: GTRANS_OUT_BASENAME = ''                     !< basename of the output file
+  character(len=H_MID),  private :: GTRANS_OUT_TITLE    = 'SCALE-LES TOPOGRAPHY' !< title    of the output file
+  character(len=H_MID),  private :: GTRANS_OUT_DTYPE    = 'DEFAULT'              !< REAL4 or REAL8
+
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine GTRANS_setup
+    use scale_process, only: &
+       PRC_MPIstop
     implicit none
+
+    namelist / PARAM_GTRANS / &
+       GTRANS_OUT_BASENAME, &
+       GTRANS_OUT_DTYPE
+
+    integer :: ierr
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[GRIDTRANS] / Categ[ATMOS-LES GRID] / Origin[SCALElib]'
-    if( IO_L ) write(IO_FID_LOG,*) '*** No namelists.'
 
-    allocate( GTRANS_MAPF (IA,JA,4) )
+    !--- read namelist
+    rewind(IO_FID_CONF)
+    read(IO_FID_CONF,nml=PARAM_GTRANS,iostat=ierr)
+    if( ierr < 0 ) then !--- missing
+       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+    elseif( ierr > 0 ) then !--- fatal error
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_GTRANS. Check!'
+       call PRC_MPIstop
+    endif
+    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_GTRANS)
+
+    allocate( GTRANS_MAPF (IA,JA,2,4) )
 
     allocate( GTRANS_GSQRT(KA,IA,JA,7) )
     allocate( GTRANS_J13G (KA,IA,JA,7) )
@@ -84,14 +112,35 @@ contains
     ! calc metrics for terrain-following coordinate
     call GTRANS_terrainfollowing
 
+    ! output metrics (for debug)
+    call GTRANS_write
+
     return
   end subroutine GTRANS_setup
 
   !-----------------------------------------------------------------------------
   !> Calculate map factor
   subroutine GTRANS_mapfactor
+    use scale_mapproj, only: &
+       MPRJ_mapfactor
+    use scale_grid_real, only: &
+       REAL_LAT,  &
+       REAL_LATX, &
+       REAL_LATY, &
+       REAL_LATXY
     implicit none
+
+    integer :: i, j
     !---------------------------------------------------------------------------
+
+    do j = 1, JA
+    do i = 1, IA
+       call MPRJ_mapfactor( REAL_LAT  (i,j), GTRANS_MAPF(i,j,1,I_XY), GTRANS_MAPF (i,j,2,I_XY))
+       call MPRJ_mapfactor( REAL_LATX (i,j), GTRANS_MAPF(i,j,1,I_UY), GTRANS_MAPF (i,j,2,I_UY))
+       call MPRJ_mapfactor( REAL_LATY (i,j), GTRANS_MAPF(i,j,1,I_XV), GTRANS_MAPF (i,j,2,I_XV))
+       call MPRJ_mapfactor( REAL_LATXY(i,j), GTRANS_MAPF(i,j,1,I_UV), GTRANS_MAPF (i,j,2,I_UV))
+    enddo
+    enddo
 
     return
   end subroutine GTRANS_mapfactor
@@ -298,5 +347,45 @@ contains
 
     return
   end subroutine GTRANS_terrainfollowing
+
+  !-----------------------------------------------------------------------------
+  !> Write metrics
+  subroutine GTRANS_write
+    use scale_fileio, only: &
+       FILEIO_write
+    implicit none
+    !---------------------------------------------------------------------------
+
+    if ( GTRANS_OUT_BASENAME /= '' ) then
+
+       if( IO_L ) write(IO_FID_LOG,*)
+       if( IO_L ) write(IO_FID_LOG,*) '*** Output metrics file ***'
+
+       call FILEIO_write( GTRANS_MAPF(:,:,1,I_XY),          GTRANS_OUT_BASENAME, GTRANS_OUT_TITLE, & ! [IN]
+                          'MAPF_X_XY', 'Map factor x-dir at XY', 'NIL', 'XY', GTRANS_OUT_DTYPE  ) ! [IN]
+       call FILEIO_write( GTRANS_MAPF(:,:,2,I_XY),          GTRANS_OUT_BASENAME, GTRANS_OUT_TITLE, & ! [IN]
+                          'MAPF_Y_XY', 'Map factor y-dir at XY', 'NIL', 'XY', GTRANS_OUT_DTYPE  ) ! [IN]
+       call FILEIO_write( GTRANS_MAPF(:,:,1,I_UY),          GTRANS_OUT_BASENAME, GTRANS_OUT_TITLE, & ! [IN]
+                          'MAPF_X_UY', 'Map factor x-dir at UY', 'NIL', 'UY', GTRANS_OUT_DTYPE  ) ! [IN]
+       call FILEIO_write( GTRANS_MAPF(:,:,2,I_UY),          GTRANS_OUT_BASENAME, GTRANS_OUT_TITLE, & ! [IN]
+                          'MAPF_Y_UY', 'Map factor y-dir at UY', 'NIL', 'UY', GTRANS_OUT_DTYPE  ) ! [IN]
+       call FILEIO_write( GTRANS_MAPF(:,:,1,I_XV),          GTRANS_OUT_BASENAME, GTRANS_OUT_TITLE, & ! [IN]
+                          'MAPF_X_XV', 'Map factor x-dir at XV', 'NIL', 'XY', GTRANS_OUT_DTYPE  ) ! [IN]
+       call FILEIO_write( GTRANS_MAPF(:,:,2,I_XV),          GTRANS_OUT_BASENAME, GTRANS_OUT_TITLE, & ! [IN]
+                          'MAPF_Y_XV', 'Map factor y-dir at XV', 'NIL', 'XY', GTRANS_OUT_DTYPE  ) ! [IN]
+       call FILEIO_write( GTRANS_MAPF(:,:,1,I_UV),          GTRANS_OUT_BASENAME, GTRANS_OUT_TITLE, & ! [IN]
+                          'MAPF_X_UV', 'Map factor x-dir at UV', 'NIL', 'UY', GTRANS_OUT_DTYPE  ) ! [IN]
+       call FILEIO_write( GTRANS_MAPF(:,:,2,I_UV),          GTRANS_OUT_BASENAME, GTRANS_OUT_TITLE, & ! [IN]
+                          'MAPF_Y_UV', 'Map factor y-dir at UV', 'NIL', 'UY', GTRANS_OUT_DTYPE  ) ! [IN]
+
+!
+!    allocate( GTRANS_GSQRT(KA,IA,JA,7) )
+!    allocate( GTRANS_J13G (KA,IA,JA,7) )
+!    allocate( GTRANS_J23G (KA,IA,JA,7) )
+
+    endif
+
+    return
+  end subroutine GTRANS_write
 
 end module scale_gridtrans

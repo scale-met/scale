@@ -42,6 +42,9 @@ module scale_grid
   real(RP), public              :: DX = 500.0_RP !< length in the main region [m]: x
   real(RP), public              :: DY = 500.0_RP !< length in the main region [m]: y
 
+  real(RP), public              :: GRID_DOMAIN_CENTER_X !< center position of global domain [m]: x
+  real(RP), public              :: GRID_DOMAIN_CENTER_Y !< center position of global domain [m]: y
+
   real(RP), public, allocatable :: GRID_CZ  (:)  !< center coordinate [m]: z, local=global
   real(RP), public, allocatable :: GRID_CX  (:)  !< center coordinate [m]: x, local
   real(RP), public, allocatable :: GRID_CY  (:)  !< center coordinate [m]: y, local
@@ -660,6 +663,9 @@ contains
        GRID_RFDY(j) = 1.0_RP / GRID_FDY(j)
     enddo
 
+    GRID_DOMAIN_CENTER_X = 0.5_RP * ( GRID_FXG(0) + GRID_FXG(IAG) )
+    GRID_DOMAIN_CENTER_Y = 0.5_RP * ( GRID_FYG(0) + GRID_FYG(JAG) )
+
     ! report
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*)                '*** Main/buffer Grid (global) :'
@@ -694,6 +700,10 @@ contains
                                                   GRID_FYG(JAG-JHALO-jbuff)*1.E-3_RP, ' -buffer- ', &
                                                   GRID_FYG(JAG-JHALO)      *1.E-3_RP, ' -HALO- ',   &
                                                   GRID_FYG(JAG)            *1.E-3_RP
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*)                '*** Center Position of Grid (global) :'
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,f8.3)')   '  X: ', GRID_DOMAIN_CENTER_X
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,f8.3)')   '  Y: ', GRID_DOMAIN_CENTER_Y
 
     if ( debug ) then
        if( IO_L ) write(IO_FID_LOG,*)

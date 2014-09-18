@@ -134,7 +134,7 @@ contains
        CDZ, CDX, CDY, FDZ, FDX, FDY,                                                                         &
        RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,                                                                   &
        PHI, GSQRT,                                                                                           &
-       J13G, J23G, J33G,                                                                                     &
+       J13G, J23G, J33G, MAPF,                                                                               &
        AQ_CV,                                                                                                &
        REF_dens, REF_pott, REF_qv, REF_pres,                                                                 &
        ND_COEF, ND_COEF_Q, ND_ORDER, ND_SFC_FACT, ND_USE_RS,                                                 &
@@ -161,7 +161,8 @@ contains
        I_XYZ, &
        I_XYW, &
        I_UYZ, &
-       I_XVZ
+       I_XVZ, &
+       I_XY
     use scale_atmos_dyn_common, only: &
        FACT_N,                     &
        FACT_F,                     &
@@ -218,6 +219,7 @@ contains
     real(RP), intent(in)    :: J13G (KA,IA,JA,4) !< (1,3) element of Jacobian matrix
     real(RP), intent(in)    :: J23G (KA,IA,JA,4) !< (2,3) element of Jacobian matrix
     real(RP), intent(in)    :: J33G              !< (3,3) element of Jacobian matrix
+    real(RP), intent(in)    :: MAPF (IA,JA,2,4)  !< map factor
 
     real(RP), intent(in)    :: AQ_CV(QQA)
 
@@ -580,7 +582,7 @@ contains
                           FLAG_FCT_ALONG_STREAM,                            & ! (in)
                           CDZ, FDZ, FDX, FDY,                               & ! (in)
                           RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,               & ! (in)
-                          PHI, GSQRT, J13G, J23G, J33G,                     & ! (in)
+                          PHI, GSQRT, J13G, J23G, J33G, MAPF,               & ! (in)
                           REF_pres, REF_dens,                               & ! (in)
                           dtrk, dt                                          ) ! (in)
 
@@ -610,7 +612,7 @@ contains
                           FLAG_FCT_ALONG_STREAM,                            & ! (in)
                           CDZ, FDZ, FDX, FDY,                               & ! (in)
                           RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,               & ! (in)
-                          PHI, GSQRT, J13G, J23G, J33G,                     & ! (in)
+                          PHI, GSQRT, J13G, J23G, J33G, MAPF,               & ! (in)
                           REF_pres, REF_dens,                               & ! (in)
                           dtrk, dt                                          ) ! (in)
 
@@ -640,7 +642,7 @@ contains
                           FLAG_FCT_ALONG_STREAM,                            & ! (in)
                           CDZ, FDZ, FDX, FDY,                               & ! (in)
                           RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,               & ! (in)
-                          PHI, GSQRT, J13G, J23G, J33G,                     & ! (in)
+                          PHI, GSQRT, J13G, J23G, J33G, MAPF,               & ! (in)
                           REF_pres, REF_dens,                               & ! (in)
                           dtrk, dt                                          ) ! (in)
 
@@ -922,7 +924,8 @@ contains
                            qflx_hi, qflx_lo,             & ! (in)
                            mflx_hi,                      & ! (in)
                            RCDZ, RCDX, RCDY,             & ! (in)
-                           GSQRT(:,:,:,I_XYZ), dt,       & ! (in)
+                           GSQRT(:,:,:,I_XYZ),           & ! (in)
+                           MAPF(:,:,:,I_XY), dt,         & ! (in)
                            FLAG_FCT_ALONG_STREAM         ) ! (in)
 
        do JJS = JS, JE, JBLOCK
@@ -941,7 +944,7 @@ contains
                                          - qflx_hi(k  ,i-1,j  ,XDIR) + qflx_anti(k  ,i-1,j  ,XDIR) ) * RCDX(i) &
                                        + ( qflx_hi(k  ,i  ,j  ,YDIR) - qflx_anti(k  ,i  ,j  ,YDIR) &
                                          - qflx_hi(k  ,i  ,j-1,YDIR) + qflx_anti(k  ,i  ,j-1,YDIR) ) * RCDY(j) &
-                                       ) / GSQRT(k,i,j,I_XYZ) &
+                                       ) * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) &
                               + RHOQ_t(k,i,j) ) ) / DENS(k,i,j)
           enddo
           enddo
@@ -1154,7 +1157,7 @@ contains
 
     real(RP) :: dir
     real(RP) :: sw, sw2
-    integer :: i, j, k, iq
+    integer :: i, j, k, iq, iqb
     !---------------------------------------------------------------------------
 
     if( BND_QA == I_QV ) then
@@ -1175,7 +1178,7 @@ contains
           do j = j0-jb, j1-jb, -ju+abs(iu)
           do i = i0-ib, i1-ib, -iu+abs(ju)
           do k = KS, KE
-             sw = sign(0.5_RP, DAMP_alpha_QTRC(k,i,j,iq) - EPS) + 0.5_RP
+             sw = sign(0.5_RP, DAMP_alpha_QTRC(k,i,j,I_QV) - EPS) + 0.5_RP
              sw2 = sign(0.5_RP, MOM(k,i-ib,j-jb)*dir) + 0.5_RP
              QTRC(k,i,j,iq) = QTRC(k,i,j,iq) * ( 1.0_RP - sw ) &
                             + QTRC(k,i+iu,j+ju,iq) * sw * sw2
@@ -1199,10 +1202,11 @@ contains
     end if
 
     do iq = 1, QA
+       iqb = min(iq, BND_QA)
        if ( ib==-1 ) then
           do j = j0, j1
           do k = KS, KE
-             sw = sign(0.5_RP, DAMP_alpha_QTRC(k,i1,j,iq) - EPS) + 0.5_RP
+             sw = sign(0.5_RP, DAMP_alpha_QTRC(k,i1,j,iqb) - EPS) + 0.5_RP
              QTRC(k,i1,j,iq) = QTRC(k,i1,j,iq) * ( 1.0_RP - sw ) &
                              + QTRC(k,i1+iu,j,iq) * sw
           end do
@@ -1211,7 +1215,7 @@ contains
        if ( jb==-1 ) then
           do i = i0, i1
           do k = KS, KE
-             sw = sign(0.5_RP, DAMP_alpha_QTRC(k,i,j1,iq) - EPS) + 0.5_RP
+             sw = sign(0.5_RP, DAMP_alpha_QTRC(k,i,j1,iqb) - EPS) + 0.5_RP
              QTRC(k,i,j1,iq) = QTRC(k,i,j1,iq) * ( 1.0_RP - sw ) &
                              + QTRC(k,i,j1+ju,iq) * sw
           end do

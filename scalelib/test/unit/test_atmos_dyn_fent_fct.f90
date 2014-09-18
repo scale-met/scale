@@ -79,6 +79,7 @@ module test_atmos_dyn_fent_fct
   real(RP), allocatable :: J13G(:,:,:,:)
   real(RP), allocatable :: J23G(:,:,:,:)
   real(RP) :: J33G
+  real(RP), allocatable :: MAPF(:,:,:,:)
 
   real(RP), allocatable :: AQ_CV(:)
 
@@ -164,13 +165,15 @@ contains
   allocate( REF_qv  (KA,IA,JA) )
   allocate( REF_pres(KA,IA,JA) )
 
-  allocate( DAMP_var(KA,IA,JA,I_BND_SIZE) )
-  allocate( DAMP_alpha(KA,IA,JA,I_BND_SIZE) )
+  allocate( DAMP_var(KA,IA,JA,5+QA) )
+  allocate( DAMP_alpha(KA,IA,JA,5+QA) )
 
   allocate( PHI(KA,IA,JA) )
   allocate( GSQRT(KA,IA,JA,7) )
   allocate( J13G(KA,IA,JA,4) )
   allocate( J23G(KA,IA,JA,4) )
+
+  allocate( MAPF(IA,JA,2,4) )
 
   allocate( AQ_CV(QA) )
 
@@ -211,6 +214,7 @@ contains
   J13G(:,:,:,:) = 0.0_RP
   J23G(:,:,:,:) = 0.0_RP
   J33G          = 1.0_RP
+  MAPF(:,:,:,:) = 1.0_RP
 
   divdmp_coef = 0.0_RP
 
@@ -282,11 +286,13 @@ subroutine test_undef
           DENS_tp, MOMZ_tp, MOMX_tp, MOMY_tp, RHOT_tp, QTRC_tp, & ! (in)
           CDZ, CDX, CDY, FDZ, FDX, FDY,                & ! (in)
           RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,          & ! (in)
-          PHI, GSQRT, J13G, J23G, J33G,                & ! (in)
+          PHI, GSQRT, J13G, J23G, J33G, MAPF,          & ! (in)
           AQ_CV,                                       & ! (in)
           REF_dens, REF_pott, REF_qv, REF_pres,        & ! (in)
           nd_coef, nd_coef, nd_order, nd_sfc_fact, nd_use_rs, & ! (in)
-          DAMP_var, DAMP_alpha,                        & ! (in)
+          DAMP_var(:,:,:,1), DAMP_var(:,:,:,2), DAMP_var(:,:,:,3), DAMP_var(:,:,:,4), DAMP_var(:,:,:,5), DAMP_var(:,:,:,6:6+QA), & ! (in)
+          DAMP_alpha(:,:,:,1), DAMP_alpha(:,:,:,2), DAMP_alpha(:,:,:,3), DAMP_alpha(:,:,:,4), DAMP_alpha(:,:,:,5), & ! (in)
+          DAMP_alpha(:,:,:,6:6+QA),                    & ! (in)
           divdmp_coef,                                 & ! (in)
           flag_fct_rho, flag_fct_momentum, flag_fct_t, & ! (in)
           flag_fct_along_stream,                       & ! (in)
@@ -332,11 +338,13 @@ subroutine test_const
        DENS_tp, MOMZ_tp, MOMX_tp, MOMY_tp, RHOT_tp, QTRC_tp, & ! (in)
        CDZ, CDX, CDY, FDZ, FDX, FDY,                & ! (in)
        RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,          & ! (in)
-       PHI, GSQRT, J13G, J23G, J33G,                & ! (in)
+       PHI, GSQRT, J13G, J23G, J33G, MAPF,          & ! (in)
        AQ_CV,                                       & ! (in)
        REF_dens, REF_pott, REF_qv, REF_pres,        & ! (in)
        nd_coef, nd_coef, nd_order, nd_sfc_fact, nd_use_rs, & ! (in)
-       DAMP_var, DAMP_alpha,                        & ! (in)
+       DAMP_var(:,:,:,1), DAMP_var(:,:,:,2), DAMP_var(:,:,:,3), DAMP_var(:,:,:,4), DAMP_var(:,:,:,5), DAMP_var(:,:,:,6:6+QA), & ! (in)
+       DAMP_alpha(:,:,:,1), DAMP_alpha(:,:,:,2), DAMP_alpha(:,:,:,3), DAMP_alpha(:,:,:,4), DAMP_alpha(:,:,:,5), & ! (in)
+       DAMP_alpha(:,:,:,6:6+QA),                    & ! (in)
        divdmp_coef,                                 & ! (in)
        flag_fct_rho, flag_fct_momentum, flag_fct_t, & ! (in)
        flag_fct_along_stream,                       & ! (in)
@@ -429,11 +437,13 @@ subroutine test_conserve
          DENS_tp, MOMZ_tp, MOMX_tp, MOMY_tp, RHOT_tp, QTRC_tp, & ! (in)
          CDZ, CDX, CDY, FDZ, FDX, FDY,                & ! (in)
          RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,          & ! (in)
-         PHI, GSQRT, J13G, J23G, J33G,                & ! (in)
+         PHI, GSQRT, J13G, J23G, J33G, MAPF,          & ! (in)
          AQ_CV,                                       & ! (in)
          REF_dens, REF_pott, REF_qv, REF_pres,        & ! (in)
          nd_coef, nd_coef, nd_order, nd_sfc_fact, nd_use_rs, & ! (in)
-         DAMP_var, DAMP_alpha,                        & ! (in)
+         DAMP_var(:,:,:,1), DAMP_var(:,:,:,2), DAMP_var(:,:,:,3), DAMP_var(:,:,:,4), DAMP_var(:,:,:,5), DAMP_var(:,:,:,6:6+QA), & ! (in)
+         DAMP_alpha(:,:,:,1), DAMP_alpha(:,:,:,2), DAMP_alpha(:,:,:,3), DAMP_alpha(:,:,:,4), DAMP_alpha(:,:,:,5), & ! (in)
+         DAMP_alpha(:,:,:,6:6+QA),                    & ! (in)
          divdmp_coef,                                 & ! (in)
          flag_fct_rho, flag_fct_momentum, flag_fct_t, & ! (in)
          flag_fct_along_stream,                       & ! (in)
@@ -554,11 +564,13 @@ subroutine test_cwc
        DENS_tp, MOMZ_tp, MOMX_tp, MOMY_tp, RHOT_tp, QTRC_tp, & ! (in)
        CDZ, CDX, CDY, FDZ, FDX, FDY,                & ! (in)
        RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,          & ! (in)
-       PHI, GSQRT, J13G, J23G, J33G,                & ! (in)
+       PHI, GSQRT, J13G, J23G, J33G, MAPF,          & ! (in)
        AQ_CV,                                       & ! (in)
        REF_dens, REF_pott, REF_qv, REF_pres,        & ! (in)
        nd_coef, nd_coef, nd_order, nd_sfc_fact, nd_use_rs, & ! (in)
-       DAMP_var, DAMP_alpha,                        & ! (in)
+       DAMP_var(:,:,:,1), DAMP_var(:,:,:,2), DAMP_var(:,:,:,3), DAMP_var(:,:,:,4), DAMP_var(:,:,:,5), DAMP_var(:,:,:,6:6+QA), & ! (in)
+       DAMP_alpha(:,:,:,1), DAMP_alpha(:,:,:,2), DAMP_alpha(:,:,:,3), DAMP_alpha(:,:,:,4), DAMP_alpha(:,:,:,5), & ! (in)
+       DAMP_alpha(:,:,:,6:6+QA),                    & ! (in)
        divdmp_coef,                                 & ! (in)
        flag_fct_rho, flag_fct_momentum, flag_fct_t, & ! (in)
        flag_fct_along_stream,                       & ! (in)
@@ -639,11 +651,13 @@ subroutine test_fctminmax
        DENS_tp, MOMZ_tp, MOMX_tp, MOMY_tp, RHOT_tp, QTRC_tp, & ! (in)
        CDZ, CDX, CDY, FDZ, FDX, FDY,                & ! (in)
        RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,          & ! (in)
-       PHI, GSQRT, J13G, J23G, J33G,                & ! (in)
+       PHI, GSQRT, J13G, J23G, J33G, MAPF,          & ! (in)
        AQ_CV,                                       & ! (in)
        REF_dens, REF_pott, REF_qv, REF_pres,        & ! (in)
        0.0_RP, 0.0_RP, nd_order, nd_sfc_fact, nd_use_rs, & ! (in)
-       DAMP_var, DAMP_alpha,                        & ! (in)
+       DAMP_var(:,:,:,1), DAMP_var(:,:,:,2), DAMP_var(:,:,:,3), DAMP_var(:,:,:,4), DAMP_var(:,:,:,5), DAMP_var(:,:,:,6:6+QA), & ! (in)
+       DAMP_alpha(:,:,:,1), DAMP_alpha(:,:,:,2), DAMP_alpha(:,:,:,3), DAMP_alpha(:,:,:,4), DAMP_alpha(:,:,:,5), & ! (in)
+       DAMP_alpha(:,:,:,6:6+QA),                    & ! (in)
        divdmp_coef,                                 & ! (in)
        flag_fct_rho, flag_fct_momentum, flag_fct_t, & ! (in)
        flag_fct_along_stream,                       & ! (in)

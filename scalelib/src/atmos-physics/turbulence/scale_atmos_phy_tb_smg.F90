@@ -172,7 +172,7 @@ contains
        tke, nu, Ri, Pr,                             &
        MOMZ, MOMX, MOMY, RHOT, DENS, QTRC,          &
        SFLX_MW, SFLX_MU, SFLX_MV, SFLX_SH,          &
-       GSQRT, J13G, J23G, J33G, dt                  )
+       GSQRT, J13G, J23G, J33G, MAPF, dt            )
     use scale_const, only: &
        GRAV => CONST_GRAV
     use scale_grid, only: &
@@ -192,7 +192,11 @@ contains
        I_XVW, &
        I_UYZ, &
        I_XVZ, &
-       I_UVZ
+       I_UVZ, &
+       I_XY,  &
+       I_UY,  &
+       I_XV,  &
+       I_UV
     implicit none
 
     ! SGS flux
@@ -223,6 +227,7 @@ contains
     real(RP), intent(in)  :: J13G    (KA,IA,JA,7) !< (1,3) element of Jacobian matrix
     real(RP), intent(in)  :: J23G    (KA,IA,JA,7) !< (1,3) element of Jacobian matrix
     real(RP), intent(in)  :: J33G                 !< (3,3) element of Jacobian matrix
+    real(RP), intent(in)  :: MAPF(IA,JA,2,4)      !< map factor
     real(RP), intent(in)  :: dt
 
     ! diagnostic variables
@@ -335,6 +340,7 @@ contains
 #endif
        VELZ_C(KS,i,j) = 0.5_RP * MOMZ(KS,i,j) / DENS(KS,i,j) ! MOMZ(KS-1,i,j) = 0
     enddo
+
     enddo
 #ifdef DEBUG
        i = IUNDEF; j = IUNDEF; k = IUNDEF
@@ -547,7 +553,7 @@ contains
           S31_C(k,i,j) = 0.5_RP * ( &
                  ( GSQRT(k,i+1,j,I_XYZ)*VELZ_C(k,i+1,j) - GSQRT(k,i-1,j,I_XYZ)*VELZ_C(k,i-1,j) ) / ( FDX(i) + FDX(i-1) ) &
                + ( J13G(k,i,j,I_XYW)*VELZ_XY(k,i,j) - J13G(k-1,i,j,I_XYW)*VELZ_XY(k-1,i,j) ) * RCDZ(k) &
-               )
+               ) * MAPF(i,j,1,I_XY)
 
        enddo
        enddo
@@ -576,11 +582,11 @@ contains
           S31_C(KS,i,j) = 0.5_RP * ( &
                  ( GSQRT(KS,i+1,j,I_XYZ)*VELZ_C(KS,i+1,j) - GSQRT(KS,i-1,j,I_XYZ)*VELZ_C(KS,i-1,j) ) / ( FDX(i) + FDX(i-1) ) &
                + ( J13G(KS,i,j,I_XYW)*VELZ_XY(KS,i,j) ) * RCDZ(KS) &
-               )
+               ) * MAPF(i,j,1,I_XY)
           S31_C(KE,i,j) = 0.5_RP * ( &
                  ( GSQRT(KE,i+1,j,I_XYZ)*VELZ_C(KE,i+1,j) - GSQRT(KE,i-1,j,I_XYZ)*VELZ_C(KE,i-1,j) ) / ( FDX(i) + FDX(i-1) ) &
                - ( J13G(KE-1,i,j,I_XYW)*VELZ_XY(KE-1,i,j) ) * RCDZ(KE) &
-               )
+               ) * MAPF(i,j,1,I_XY)
        enddo
        enddo
 #ifdef DEBUG
@@ -599,7 +605,7 @@ contains
           S31_Y(k,i,j) = 0.5_RP * ( &
                  ( GSQRT(k,i+1,j,I_XYW)*VELZ_XY(k,i+1,j) - GSQRT(k,i,j,I_XYW)*VELZ_XY(k,i,j) ) * RFDX(i) &
                + ( J13G(k+1,i,j,I_UYZ)*WORK_X(k+1,i,j) - J13G(k,i,j,I_UYZ)*WORK_X (k,i,j)) * RFDZ(k) &
-               )
+               ) * MAPF(i,j,1,I_UY)
        enddo
        enddo
        enddo
@@ -627,7 +633,7 @@ contains
           S23_C(k,i,j) = 0.5_RP * ( &
                  ( GSQRT(k,i,j+1,I_XYZ)*VELZ_C(k,i,j+1) - GSQRT(k,i,j-1,I_XYZ)*VELZ_C(k,i,j-1) ) / ( FDY(j) + FDY(j-1) ) &
                + ( J23G(k,i,j,I_XYW)*VELZ_XY(k,i,j) - J23G(k-1,i,j,I_XYW)*VELZ_XY(k-1,i,j) ) * RCDZ(k) &
-               )
+               ) * MAPF(i,j,2,I_XY)
        enddo
        enddo
        enddo
@@ -655,11 +661,11 @@ contains
           S23_C(KS,i,j) = 0.5_RP * ( &
                  ( GSQRT(KS,i,j+1,I_XYZ)*VELZ_C(KS,i,j+1) - GSQRT(KS,i,j-1,I_XYZ)*VELZ_C(KS,i,j-1) ) / ( FDY(j) + FDY(j-1) ) &
                + ( J23G(KS,i,j,I_XYW)*VELZ_XY(KS,i,j) ) * RCDZ(KS) &
-               )
+               ) * MAPF(i,j,2,I_XY)
           S23_C(KE,i,j) = 0.5_RP * ( &
                  ( GSQRT(KE,i,j+1,I_XYZ)*VELZ_C(KE,i,j+1) - GSQRT(KE,i,j-1,I_XYZ)*VELZ_C(KE,i,j-1) ) / ( FDY(j) + FDY(j-1) ) &
                - ( J23G(KE-1,i,j,I_XYW)*VELZ_XY(KE-1,i,j) ) * RCDZ(KE) &
-               )
+               ) * MAPF(i,j,2,I_XY)
        enddo
        enddo
 #ifdef DEBUG
@@ -678,7 +684,7 @@ contains
           S23_X(k,i,j) = 0.5_RP * ( &
                  ( GSQRT(k,i,j+1,I_XYW)*VELZ_XY(k,i,j+1) - GSQRT(k,i,j,I_XYW)*VELZ_XY(k,i,j) ) * RFDY(j) &
                + ( J23G(k+1,i,j,I_XVZ)*WORK_Y(k+1,i,j) - J23G(k,i,j,I_XVZ)*WORK_Y (k,i,j) ) * RFDZ(k) &
-               )
+               ) * MAPF(i,j,2,I_XV)
        enddo
        enddo
        enddo
@@ -768,7 +774,7 @@ contains
           S11_C(k,i,j) = ( &
                  ( GSQRT(k,i,j,I_UYZ)*VELX_YZ(k,i,j) - GSQRT(k,i-1,j,I_UYZ)*VELX_YZ(k,i-1,j) ) * RCDX(i) &
                + ( J13G(k,i,j,I_XYW)*WORK_Z(k,i,j) - J13G(k-1,i,j,I_XYW)*WORK_Z(k-1,i,j) ) * RCDZ(k) &
-               ) / GSQRT(k,i,j,I_XYZ)
+               ) * MAPF(i,j,1,I_XY) / GSQRT(k,i,j,I_XYZ)
        enddo
        enddo
        enddo
@@ -801,11 +807,11 @@ contains
           S11_C(KS,i,j) = ( &
                  ( GSQRT(KS,i,j,I_UYZ)*VELX_YZ(KS,i,j) - GSQRT(KS,i-1,j,I_UYZ)*VELX_YZ(KS,i-1,j) ) * RCDX(i) &
                + ( J13G(KS+1,i,j,I_XYZ)*VELX_C(KS+1,i,j) - J13G(KS,i,j,I_XYZ)*VELX_C(KS,i,j) ) * RFDZ(KS) &
-               ) / GSQRT(KS,i,j,I_XYZ)
+               ) * MAPF(i,j,1,I_XY) / GSQRT(KS,i,j,I_XYZ)
           S11_C(KE,i,j) = ( &
                  ( GSQRT(KE,i,j,I_UYZ)*VELX_YZ(KE,i,j) - GSQRT(KE,i-1,j,I_UYZ)*VELX_YZ(KE,i-1,j) ) * RCDX(i) &
                + ( J13G(KE,i,j,I_XYZ)*VELX_C(KE,i,j) - J13G(KE-1,i,j,I_XYZ)*VELX_C(KE-1,i,j) ) * RFDZ(KE-1) &
-               ) / GSQRT(KE,i,j,I_XYZ)
+               ) * MAPF(i,j,1,I_XY) / GSQRT(KE,i,j,I_XYZ)
        enddo
        enddo
 #ifdef DEBUG
@@ -894,7 +900,7 @@ contains
           S12_C(k,i,j) = 0.5_RP * ( &
                  ( GSQRT(k,i,j+1,I_XYZ)*VELX_C(k,i,j+1) - GSQRT(k,i,j-1,I_XYZ)*VELX_C(k,i,j-1) ) / ( FDY(j) + FDY(j-1) ) &
                + ( J23G(k,i,j,I_XYW)*WORK_Z(k,i,j) - J23G(k-1,i,j,I_XYW)*WORK_Z(k-1,i,j) ) * RCDZ(k) &
-               ) / GSQRT(k,i,j,I_XYZ)
+               ) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ)
        enddo
        enddo
        enddo
@@ -928,11 +934,11 @@ contains
           S12_C(KS,i,j) = 0.5_RP * ( &
                  ( GSQRT(KS,i,j+1,I_XYZ)*VELX_C(KS,i,j+1) - GSQRT(KS,i,j-1,I_XYZ)*VELX_C(KS,i,j-1) ) / ( FDY(j) + FDY(j-1) ) &
                + ( J23G(KS+1,i,j,I_XYZ)*VELX_C(KS+1,i,j) - J23G(KS,i,j,I_XYZ)*VELX_C(KS,i,j) ) * RFDZ(KS) &
-               ) / GSQRT(KS,i,j,I_XYZ)
+               ) * MAPF(i,j,2,I_XY) / GSQRT(KS,i,j,I_XYZ)
           S12_C(KE,i,j) = 0.5_RP * ( &
                  ( GSQRT(KE,i,j+1,I_XYZ)*VELX_C(KE,i,j+1) - GSQRT(KE,i,j-1,I_XYZ)*VELX_C(KE,i,j-1) ) / ( FDY(j) + FDY(j-1) ) &
                + ( J23G(KE,i,j,I_XYZ)*VELX_C(KE,i,j) - J23G(KE-1,i,j,I_XYZ)*VELX_C(KE-1,i,j) ) * RFDZ(KE-1) &
-               ) / GSQRT(KE,i,j,I_XYZ)
+               ) * MAPF(i,j,2,I_XY) / GSQRT(KE,i,j,I_XYZ)
        enddo
        enddo
 #ifdef DEBUG
@@ -953,7 +959,7 @@ contains
           S12_Z(k,i,j) = 0.5_RP * ( &
                  ( GSQRT(k,i,j+1,I_UYZ)*VELX_YZ(k,i,j+1) - GSQRT(k,i,j,I_UYZ)*VELX_YZ(k,i,j) ) * RFDY(j) &
                + ( WORK_V(k,i,j) - WORK_V(k-1,i,j) ) * RCDZ(k) &
-               )
+               ) * MAPF(i,j,2,I_UV)
        enddo
        enddo
        enddo
@@ -980,12 +986,12 @@ contains
                  ( GSQRT(KS,i,j+1,I_UYZ)*VELX_YZ(KS,i,j+1) - GSQRT(KS,i,j,I_UYZ)*VELX_YZ(KS,i,j) ) * RFDY(j) &
                + ( J23G(KS+1,i,j,I_UVZ) * ( VELX_YZ(KS+1,i,j) + VELX_YZ(KS+1,i,j+1) ) &
                  - J23G(KS  ,i,j,I_UVZ) * ( VELX_YZ(KS  ,i,j) + VELX_YZ(KS  ,i,j+1) ) ) * RFDZ(KS) &
-               )
+               ) * MAPF(i,j,2,I_UV)
           S12_Z(KE,i,j) = 0.25_RP * ( &
                  ( GSQRT(KE,i,j+1,I_UYZ)*VELX_YZ(KE,i,j+1) - GSQRT(KE,i,j,I_UYZ)*VELX_YZ(KE,i,j) ) * RFDY(j) &
                + ( J23G(KE  ,i,j,I_UVZ) * ( VELX_YZ(KE  ,i,j) + VELX_YZ(KE  ,i,j+1) ) &
                  - J23G(KE-1,i,j,I_UVZ) * ( VELX_YZ(KE-1,i,j) + VELX_YZ(KE-1,i,j+1) ) ) * RFDZ(KE-1) &
-               )
+               ) * MAPF(i,j,2,I_UV)
        enddo
        enddo
 #ifdef DEBUG
@@ -1069,7 +1075,7 @@ contains
           S22_C(k,i,j) = ( &
                  ( GSQRT(k,i,j,I_XVZ)*VELY_ZX(k,i,j) - GSQRT(k,i,j-1,I_XVZ)*VELY_ZX(k,i,j-1) ) * RCDY(j) &
                + ( J23G(k,i,j,I_XYW)*WORK_Z(k,i,j) - J23G(k-1,i,j,I_XYW)*WORK_Z(k-1,i,j) ) * RCDZ(k) &
-               ) / GSQRT(k,i,j,I_XYZ)
+               ) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ)
        enddo
        enddo
        enddo
@@ -1100,11 +1106,11 @@ contains
           S22_C(KS,i,j) = ( &
                  ( GSQRT(KS,i,j,I_XVZ)*VELY_ZX(KS,i,j) - GSQRT(KS,i,j-1,I_XVZ)*VELY_ZX(KS,i,j-1) ) * RCDY(j) &
                + ( J23G(KS+1,i,j,I_XYZ)*VELY_C(KS+1,i,j) - J23G(KS,i,j,I_XYZ)*VELY_C(KS,i,j) ) * RFDZ(KS) &
-               ) / GSQRT(KS,i,j,I_XYZ)
+               ) * MAPF(i,j,2,I_XY) / GSQRT(KS,i,j,I_XYZ)
           S22_C(KE,i,j) = ( &
                  ( GSQRT(KE,i,j,I_XVZ)*VELY_ZX(KE,i,j) - GSQRT(KE,i,j-1,I_XVZ)*VELY_ZX(KE,i,j-1) ) * RCDY(j) &
                + ( J23G(KE,i,j,I_XYZ)*VELY_C(KE,i,j) - J23G(KE-1,i,j,I_XYZ)*VELY_C(KE-1,i,j) ) * RFDZ(KE-1) &
-               ) / GSQRT(KE,i,j,I_XYZ)
+               ) * MAPF(i,j,2,I_XY) / GSQRT(KE,i,j,I_XYZ)
        enddo
        enddo
 #ifdef DEBUG
@@ -1133,7 +1139,7 @@ contains
           S12_C(k,i,j) = ( S12_C(k,i,j) & ! du/dy
                + 0.5_RP * ( &
                      ( GSQRT(k,i+1,j,I_XYZ)*VELY_C(k,i+1,j) - GSQRT(k,i-1,j,I_XYZ)*VELY_C(k,i-1,j) ) / ( FDX(i) + FDX(i-1) ) &
-                   + ( J13G(k,i,j,I_XYW)*WORK_Z(k,i,j) - J13G(k-1,i,j,I_XYW)*WORK_Z(k-1,i,j) ) * RCDZ(k) ) &
+                   + ( J13G(k,i,j,I_XYW)*WORK_Z(k,i,j) - J13G(k-1,i,j,I_XYW)*WORK_Z(k-1,i,j) ) * RCDZ(k) ) * MAPF(i,j,1,I_XY) &
                ) / GSQRT(k,i,j,I_XYZ)
        enddo
        enddo
@@ -1171,11 +1177,13 @@ contains
                + 0.5_RP * ( &
                      ( GSQRT(KS,i+1,j,I_XYZ)*VELY_C(KS,i+1,j) - GSQRT(KS,i-1,j,I_XYZ)*VELY_C(KS,i-1,j) ) / ( FDX(i) + FDX(i-1) ) &
                    + ( J13G(KS+1,i,j,I_XYZ)*VELY_C(KS+1,i,j) - J13G(KS,i,j,I_XYZ)*VELY_C(KS,i,j) ) * RFDZ(KS) ) &
+                 * MAPF(i,j,1,I_XY) &
                ) / GSQRT(KS,i,j,I_XYZ)
           S12_C(KE,i,j) = ( S12_C(KE,i,j) & ! du/dy
                + 0.5_RP * ( &
                      ( GSQRT(KE,i+1,j,I_XYZ)*VELY_C(KE,i+1,j) - GSQRT(KE,i-1,j,I_XYZ)*VELY_C(KE,i-1,j) ) / ( FDX(i) + FDX(i-1) ) &
                    + ( J13G(KE,i,j,I_XYZ)*VELY_C(KE,i,j) - J13G(KE-1,i,j,I_XYZ)*VELY_C(KE-1,i,j) ) * RFDZ(KE-1) ) &
+                 * MAPF(i,j,1,I_XY) &
                ) / GSQRT(KE,i,j,I_XYZ)
        enddo
        enddo
@@ -1197,7 +1205,7 @@ contains
           S12_Z(k,i,j) = ( S12_Z(k,i,j) &
                + 0.5_RP * ( &
                      ( GSQRT(k,i+1,j,I_XVZ)*VELY_ZX(k,i+1,j) - GSQRT(k,i,j,I_XVZ)*VELY_ZX(k,i,j) ) * RFDX(i) &
-                   + ( WORK_V(k,i,j) - WORK_V(k-1,i,j) ) * RCDZ(k) ) &
+                   + ( WORK_V(k,i,j) - WORK_V(k-1,i,j) ) * RCDZ(k) ) * MAPF(i,j,1,I_UV) &
                ) / GSQRT(k,i,j,I_UVZ)
        enddo
        enddo
@@ -1224,13 +1232,13 @@ contains
                + 0.5_RP * ( &
                      ( GSQRT(KS,i+1,j,I_XVZ)*VELY_ZX(KS,i+1,j) - GSQRT(KS,i,j,I_XVZ)*VELY_ZX(KS,i,j) ) * RFDX(i) &
                    + ( J13G(KS+1,i,j,I_UVZ) * ( VELY_ZX(KS+1,i,j) + VELY_ZX(KS+1,i+1,j) ) &
-                     - J13G(KS  ,i,j,I_UVZ) * ( VELY_ZX(KS  ,i,j) + VELY_ZX(KS  ,i+1,j) ) ) * RFDZ(KS) ) &
+                     - J13G(KS  ,i,j,I_UVZ) * ( VELY_ZX(KS  ,i,j) + VELY_ZX(KS  ,i+1,j) ) ) * RFDZ(KS) ) * MAPF(i,j,1,I_UV) &
                ) / GSQRT(KS,i,j,I_UVZ)
           S12_Z(KE,i,j) = ( S12_Z(KE,i,j) &
                + 0.5_RP * ( &
                      ( GSQRT(KE,i+1,j,I_XVZ)*VELY_ZX(KE,i+1,j) - GSQRT(KE,i,j,I_XVZ)*VELY_ZX(KE,i,j) ) * RFDX(i) &
                    + ( J13G(KE  ,i,j,I_UVZ) * ( VELY_ZX(KE  ,i,j) + VELY_ZX(KE  ,i+1,j) ) &
-                     - J13G(KE-1,i,j,I_UVZ) * ( VELY_ZX(KE-1,i,j) + VELY_ZX(KE-1,i+1,j) ) ) * RFDZ(KE-1) ) &
+                     - J13G(KE-1,i,j,I_UVZ) * ( VELY_ZX(KE-1,i,j) + VELY_ZX(KE-1,i+1,j) ) ) * RFDZ(KE-1) ) * MAPF(i,j,1,I_UV) &
                ) / GSQRT(KE,i,j,I_UVZ)
        enddo
        enddo
@@ -1359,8 +1367,8 @@ contains
        call CHECK( __LINE__, RFDZ(KS) )
        call CHECK( __LINE__, S2(KS,i,j) )
 #endif
-          Ri(KS,i,j) = GRAV * ( POTT(KS+1,i,j) - POTT(KS,i,j) ) * J33G &
-               * RFDZ(KS) / (GSQRT(KS,i,j,I_XYZ) * POTT(KS,i,j) * max(S2(KS,i,j),1.0E-20_RP) )
+          Ri(KS,i,j) = GRAV * ( POTT(KS+1,i,j) - POTT(KS,i,j) ) * J33G * RFDZ(KS) &
+               / (GSQRT(KS,i,j,I_XYZ) * POTT(KS,i,j) * max(S2(KS,i,j),1.0E-20_RP) )
        enddo
        enddo
 #ifdef DEBUG
@@ -1374,8 +1382,8 @@ contains
        call CHECK( __LINE__, RFDZ(KE-1) )
        call CHECK( __LINE__, S2(KE,i,j) )
 #endif
-          Ri(KE,i,j) = GRAV * ( POTT(KE,i,j) - POTT(KE-1,i,j) ) * J33G &
-               * RFDZ(KE-1) / (GSQRT(KE,i,j,I_XYZ) * POTT(KE,i,j) * max(S2(KE,i,j),1.0E-20_RP) )
+          Ri(KE,i,j) = GRAV * ( POTT(KE,i,j) - POTT(KE-1,i,j) ) * J33G * RFDZ(KE-1) &
+               / (GSQRT(KE,i,j,I_XYZ) * POTT(KE,i,j) * max(S2(KE,i,j),1.0E-20_RP) )
        enddo
        enddo
 #ifdef DEBUG
@@ -1716,7 +1724,8 @@ contains
           qflx_sgs_rhot(k,i,j,ZDIR) = - 0.25_RP & ! 2/2/2/2
                * ( DENS(k,i,j)+DENS(k+1,i,j) ) &
                * ( nu(k,i,j)/Pr(k,i,j) + nu(k+1,i,j)/Pr(k+1,i,j) ) &
-               * ( POTT(k+1,i,j)-POTT(k,i,j) ) * RFDZ(k) * J33G / GSQRT(k,i,j,I_XYW)
+               * ( POTT(k+1,i,j)-POTT(k,i,j) ) * RFDZ(k) * J33G &
+               / GSQRT(k,i,j,I_XYW)
        enddo
        enddo
        enddo
@@ -1761,7 +1770,7 @@ contains
                    + ( J13G(k+1,i,j,I_UYZ) * ( POTT(k+1,i+1,j)+POTT(k+1,i,j) ) &
                      - J13G(k-1,i,j,I_UYZ) * ( POTT(k-1,i+1,j)+POTT(k-1,i,j) ) &
                      ) * 0.5_RP / ( FDZ(k) + FDZ(k-1) ) &
-                 ) / GSQRT(k,i,j,I_UYZ)
+                 ) * MAPF(i,j,1,I_UY) / GSQRT(k,i,j,I_UYZ)
        enddo
        enddo
        enddo
@@ -1788,7 +1797,7 @@ contains
                    + ( J13G(KS+1,i,j,I_UYZ) * ( POTT(KS+1,i+1,j)+POTT(KS+1,i,j) ) &
                      - J13G(KS  ,i,j,I_UYZ) * ( POTT(KS  ,i+1,j)+POTT(KS  ,i,j) ) &
                      ) * 0.5_RP * RFDZ(KS) &
-                 ) / GSQRT(KS,i,j,I_UYZ)
+                 ) * MAPF(i,j,1,I_UY) / GSQRT(KS,i,j,I_UYZ)
           qflx_sgs_rhot(KE,i,j,XDIR) = - 0.25_RP & ! 1/2/2
                * ( DENS(KE,i,j)+DENS(KE,i+1,j) ) &
                * ( nu(KE,i,j)/Pr(KE,i,j) + nu(KE,i+1,j)/Pr(KE,i+1,j) ) &
@@ -1798,7 +1807,7 @@ contains
                    + ( J13G(KE  ,i,j,I_UYZ) * ( POTT(KE  ,i+1,j)+POTT(KE  ,i,j) ) &
                      - J13G(KE-1,i,j,I_UYZ) * ( POTT(KE-1,i+1,j)+POTT(KE-1,i,j) ) &
                      ) * 0.5_RP * RFDZ(KE-1) &
-                 ) / GSQRT(KE,i,j,I_UYZ)
+                 ) * MAPF(i,j,1,I_UY) / GSQRT(KE,i,j,I_UYZ)
        enddo
        enddo
 #ifdef DEBUG
@@ -1830,7 +1839,7 @@ contains
                  + ( J23G(k+1,i,j,I_XVZ) * ( POTT(k+1,i,j+1)+POTT(k+1,i,j) ) &
                    - J23G(k-1,i,j,I_XVZ) * ( POTT(k-1,i,j+1)+POTT(k-1,i,j) ) &
                    ) * 0.5_RP / ( FDZ(k)+FDZ(k-1) ) &
-               ) / GSQRT(k,i,j,I_XVZ)
+               ) * MAPF(i,j,2,I_XV) / GSQRT(k,i,j,I_XVZ)
        enddo
        enddo
        enddo
@@ -1857,7 +1866,7 @@ contains
                  + ( J23G(KS+1,i,j,I_XVZ) * ( POTT(KS+1,i,j+1)+POTT(KS+1,i,j) ) &
                    - J23G(KS  ,i,j,I_XVZ) * ( POTT(KS  ,i,j+1)+POTT(KS  ,i,j) ) &
                    ) * 0.5_RP * RFDZ(KS) &
-               ) / GSQRT(KS,i,j,I_XVZ)
+               ) * MAPF(i,j,2,I_XV) / GSQRT(KS,i,j,I_XVZ)
           qflx_sgs_rhot(KE,i,j,YDIR) = - 0.25_RP & ! 1/2/2
                * ( DENS(KE,i,j)+DENS(KE,i,j+1) ) &
                * ( nu(KE,i,j)/Pr(KE,i,j) + nu(KE,i,j+1)/Pr(KE,i,j+1) ) &
@@ -1867,7 +1876,7 @@ contains
                  + ( J23G(KE  ,i,j,I_XVZ) * ( POTT(KE  ,i,j+1)+POTT(KE  ,i,j) ) &
                    - J23G(KE-1,i,j,I_XVZ) * ( POTT(KE-1,i,j+1)+POTT(KE-1,i,j) ) &
                    ) * 0.5_RP * RFDZ(KE-1) &
-               ) / GSQRT(KE,i,j,I_XVZ)
+               ) * MAPF(i,j,2,I_XV) / GSQRT(KE,i,j,I_XVZ)
        enddo
        enddo
 #ifdef DEBUG
@@ -1902,7 +1911,8 @@ contains
           qflx_sgs_rhoq(k,i,j,iq,ZDIR) = - 0.25_RP & ! 1/2/2
                * ( DENS(k,i,j)+DENS(k+1,i,j) ) &
                * ( nu(k,i,j)/Pr(k,i,j) + nu(k+1,i,j)/Pr(k+1,i,j) ) &
-               * ( QTRC(k+1,i,j,iq)-QTRC(k,i,j,iq) ) * RFDZ(k) * J33G / GSQRT(k,i,j,I_XYW)
+               * ( QTRC(k+1,i,j,iq)-QTRC(k,i,j,iq) ) * RFDZ(k) * J33G &
+               / GSQRT(k,i,j,I_XYW)
        enddo
        enddo
        enddo
@@ -1968,7 +1978,7 @@ contains
                  + ( J13G(KS+1,i,j,I_UYZ) * ( QTRC(KS+1,i+1,j,iq)+QTRC(KS+1,i,j,iq) ) &
                    - J13G(KS  ,i,j,I_UYZ) * ( QTRC(KS  ,i+1,j,iq)+QTRC(KS  ,i,j,iq) ) &
                    ) * 0.5_RP * RFDZ(KS) &
-               ) / GSQRT(KS,i,j,I_UYZ)
+               ) * MAPF(i,j,1,I_UY) / GSQRT(KS,i,j,I_UYZ)
           qflx_sgs_rhoq(KE,i,j,iq,XDIR) = - 0.25_RP & ! 1/2/2
                * ( DENS(KE,i,j)+DENS(KE,i+1,j) ) &
                * ( nu(KE,i,j)/Pr(KE,i,j) + nu(KE,i+1,j)/Pr(KE,i+1,j) ) &
@@ -1978,7 +1988,7 @@ contains
                  + ( J13G(KE  ,i,j,I_UYZ) * ( QTRC(KE  ,i+1,j,iq)+QTRC(KE  ,i,j,iq) ) &
                    - J13G(KE-1,i,j,I_UYZ) * ( QTRC(KE-1,i+1,j,iq)+QTRC(KE-1,i,j,iq) ) &
                    ) * 0.5_RP * RFDZ(KE-1) &
-               ) / GSQRT(KE,i,j,I_UYZ)
+               ) * MAPF(i,j,1,I_UY) / GSQRT(KE,i,j,I_UYZ)
        enddo
        enddo
 #ifdef DEBUG
@@ -2006,7 +2016,7 @@ contains
                    + ( J23G(k+1,i,j,I_XVZ) * ( QTRC(k+1,i,j+1,iq)+QTRC(k+1,i,j,iq) ) &
                      - J23G(k-1,i,j,I_XVZ) * ( QTRC(k-1,i,j+1,iq)+QTRC(k-1,i,j,iq) ) &
                      ) * 0.5_RP / ( FDZ(k)+FDZ(k-1) ) &
-               ) / GSQRT(k,i,j,I_XVZ)
+               ) * MAPF(i,j,2,I_XV) / GSQRT(k,i,j,I_XVZ)
        enddo
        enddo
        enddo
@@ -2033,7 +2043,7 @@ contains
                    + ( J23G(KS+1,i,j,I_XVZ) * ( QTRC(KS+1,i,j+1,iq)+QTRC(KS+1,i,j,iq) ) &
                      - J23G(KS  ,i,j,I_XVZ) * ( QTRC(KS  ,i,j+1,iq)+QTRC(KS  ,i,j,iq) ) &
                      ) * 0.5_RP * RFDZ(KS) &
-               ) / GSQRT(KS,i,j,I_XVZ)
+               ) * MAPF(i,j,2,I_XV) / GSQRT(KS,i,j,I_XVZ)
           qflx_sgs_rhoq(KE,i,j,iq,YDIR) = - 0.25_RP &
                * ( DENS(KE,i,j)+DENS(KE,i,j+1) ) &
                * ( nu(KE,i,j)/Pr(KE,i,j) + nu(KE,i,j+1)/Pr(KE,i,j+1) ) &
@@ -2043,7 +2053,7 @@ contains
                    + ( J23G(KE  ,i,j,I_XVZ) * ( QTRC(KE  ,i,j+1,iq)+QTRC(KE  ,i,j,iq) ) &
                      - J23G(KE-1,i,j,I_XVZ) * ( QTRC(KE-1,i,j+1,iq)+QTRC(KE-1,i,j,iq) ) &
                      ) * 0.5_RP * RFDZ(KE-1) &
-               ) / GSQRT(KE,i,j,I_XVZ)
+               ) * MAPF(i,j,2,I_XV) / GSQRT(KE,i,j,I_XVZ)
        enddo
        enddo
 #ifdef DEBUG

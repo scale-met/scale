@@ -39,6 +39,14 @@ module test_atmos_phy_tb_smg
   real(RP), allocatable :: J23G(:,:,:,:)
   real(RP) :: J33G
 
+  real(RP), allocatable :: MAPF(:,:,:,:)
+
+  real(RP), allocatable  :: SFLX_MW(:,:)
+  real(RP), allocatable  :: SFLX_MU(:,:)
+  real(RP), allocatable  :: SFLX_MV(:,:)
+  real(RP), allocatable  :: SFLX_SH(:,:)
+
+  real(RP) :: dt
 
 
   real(RP), allocatable :: ZERO(:,:,:,:)
@@ -98,6 +106,13 @@ contains
   allocate( J13G(KA,IA,JA,7) )
   allocate( J23G(KA,IA,JA,7) )
 
+  allocate( MAPF(IA,JA,2,4) )
+
+  allocate( SFLX_MW(IA,JA) )
+  allocate( SFLX_MU(IA,JA) )
+  allocate( SFLX_MV(IA,JA) )
+  allocate( SFLX_SH(IA,JA) )
+
   allocate( ZERO(KA,IA,JA,3) )
 
 
@@ -121,6 +136,8 @@ contains
   J13G(:,:,:,:) = 0.0_RP
   J23G(:,:,:,:) = 0.0_RP
   J33G          = 1.0_RP
+
+  MAPF(:,:,:,:) = 1.0_RP
 
   !########## test ##########
 
@@ -152,7 +169,8 @@ subroutine test_zero
        qflx_sgs_rhot, qflx_sgs_qtrc,           & ! (out)
        tke, nu_C, Ri, Pr,                      & ! (out)
        MOMZ, MOMX, MOMY, RHOT, DENS, QTRC,     & ! (in)
-       GSQRT, J13G, J23G, J33G                 ) ! (in)
+       SFLX_MW, SFLX_MU, SFLX_MV, SFLX_SH,     & ! (in)
+       GSQRT, J13G, J23G, J33G, MAPF, dt       ) ! (in)
 
   call AssertEqual("qflx_sgs_momz", ZERO(KS:KE,IS:IE,JS:JE,:), qflx_sgs_momx(KS:KE,IS:IE,JS:JE,:))
   call AssertEqual("qflx_sgs_momx", ZERO(KS:KE,IS:IE,JS:JE,:), qflx_sgs_momx(KS:KE,IS:IE,JS:JE,:))
@@ -184,7 +202,8 @@ subroutine test_constant
        qflx_sgs_rhot, qflx_sgs_qtrc,           & ! (out)
        tke, nu_C, Ri, Pr,                      & ! (out)
        MOMZ, MOMX, MOMY, RHOT, DENS, QTRC,     & ! (in)
-       GSQRT, J13G, J23G, J33G                 ) ! (in)
+       SFLX_MW, SFLX_MU, SFLX_MV, SFLX_SH,     & ! (in)
+       GSQRT, J13G, J23G, J33G, MAPF, dt       ) ! (in)
 
   call AssertEqual("qflx_sgs_momz", ZERO(KS+1:KE-1,IS:IE,JS:JE,:), qflx_sgs_momz(KS+1:KE-1,IS:IE,JS:JE,:))
   call AssertEqual("qflx_sgs_momx", ZERO(KS+1:KE,IS:IE,JS:JE,:), qflx_sgs_momx(KS+1:KE,IS:IE,JS:JE,:))
@@ -233,7 +252,8 @@ subroutine test_big
        qflx_sgs_rhot, qflx_sgs_qtrc,           & ! (out)
        tke, nu_C, Ri, Pr,                      & ! (out)
        MOMZ, MOMX, MOMY, RHOT, DENS, QTRC,     & ! (in)
-       GSQRT, J13G, J23G, J33G                 ) ! (in)
+       SFLX_MW, SFLX_MU, SFLX_MV, SFLX_SH,     & ! (in)
+       GSQRT, J13G, J23G, J33G, MAPF, dt       ) ! (in)
 
   call AssertLessThan("qflx_sgs_momz", BIG(KS+1:KE-1,IS:IE,JS:JE,:), abs(qflx_sgs_momz(KS+1:KE-1,IS:IE,JS:JE,:)))
   call AssertLessThan("qflx_sgs_momx", BIG(KS:KE,IS:IE,JS:JE,:), abs(qflx_sgs_momx(KS:KE,IS:IE,JS:JE,:)))
@@ -286,7 +306,8 @@ subroutine test_double
        qflx_sgs_rhot, qflx_sgs_qtrc,           & ! (out)
        tke, nu_C, Ri, Pr,                      & ! (out)
        MOMZ, MOMX, MOMY, RHOT, DENS, QTRC,     & ! (in)
-       GSQRT, J13G, J23G, J33G                 ) ! (in)
+       SFLX_MW, SFLX_MU, SFLX_MV, SFLX_SH,     & ! (in)
+       GSQRT, J13G, J23G, J33G, MAPF, dt       ) ! (in)
 
   MOMZ(:,:,:) = MOMZ(:,:,:) * 2.0_RP
   MOMX(:,:,:) = MOMX(:,:,:) * 2.0_RP
@@ -298,7 +319,8 @@ subroutine test_double
        qflx_sgs_rhot2, qflx_sgs_qtrc2,           & ! (out)
        tke, nu_C, Ri, Pr,                      & ! (out)
        MOMZ, MOMX, MOMY, RHOT, DENS, QTRC,     & ! (in)
-       GSQRT, J13G, J23G, J33G                 ) ! (in)
+       SFLX_MW, SFLX_MU, SFLX_MV, SFLX_SH,     & ! (in)
+       GSQRT, J13G, J23G, J33G, MAPF, dt       ) ! (in)
 
 
   call AssertEqual("qflx_sgs_momz", FOUR(KS+1:KME-1,IS:IE,JS:JE,:), &

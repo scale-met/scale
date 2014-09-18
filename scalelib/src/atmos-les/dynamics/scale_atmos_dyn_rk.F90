@@ -50,7 +50,7 @@ module scale_atmos_dyn_rk
           FLAG_FCT_ALONG_STREAM,                       &
           CDZ, FDZ, FDX, FDY,                          &
           RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,          &
-          PHI, GSQRT, J13G, J23G, J33G,                &
+          PHI, GSQRT, J13G, J23G, J33G, MAPF,          &
           REF_pres, REF_dens,                          &
           dtrk, dt                                     )
        use scale_precision
@@ -108,6 +108,7 @@ module scale_atmos_dyn_rk
        real(RP), intent(in)  :: J13G    (KA,IA,JA,7) !< (1,3) element of Jacobian matrix
        real(RP), intent(in)  :: J23G    (KA,IA,JA,7) !< (2,3) element of Jacobian matrix
        real(RP), intent(in)  :: J33G                 !< (3,3) element of Jacobian matrix
+       real(RP), intent(in)  :: MAPF    (IA,JA,2,4)  !< map factor
        real(RP), intent(in)  :: REF_pres(KA,IA,JA)   !< reference pressure
        real(RP), intent(in)  :: REF_dens(KA,IA,JA)   !< reference density
 
