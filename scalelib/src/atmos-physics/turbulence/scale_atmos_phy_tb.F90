@@ -115,6 +115,9 @@ contains
     use scale_atmos_phy_tb_mynn, only: &
        ATMOS_PHY_TB_mynn_setup, &
        ATMOS_PHY_TB_mynn
+    use scale_atmos_phy_tb_hybrid, only: &
+       ATMOS_PHY_TB_hybrid_setup, &
+       ATMOS_PHY_TB_hybrid
     use scale_atmos_phy_tb_dummy, only: &
        ATMOS_PHY_TB_dummy_setup, &
        ATMOS_PHY_TB_dummy
@@ -131,7 +134,6 @@ contains
 
     select case( TB_TYPE )
     case ( 'SMAGORINSKY' )
-
        call ATMOS_PHY_tb_smg_setup( &
             TB_TYPE,       &
             CDZ, CDX, CDY, &
@@ -139,7 +141,6 @@ contains
        ATMOS_PHY_TB => ATMOS_PHY_TB_smg
 
     case ( 'DNS' )
-
        call ATMOS_PHY_tb_dns_setup( &
             TB_TYPE,       &
             CDZ, CDX, CDY, &
@@ -147,12 +148,18 @@ contains
        ATMOS_PHY_TB => ATMOS_PHY_TB_dns
 
     case ( 'MYNN' )
-
        call ATMOS_PHY_tb_mynn_setup( &
             TB_TYPE,       &
             CDZ, CDX, CDY, &
             CZ             )
        ATMOS_PHY_TB => ATMOS_PHY_TB_mynn
+
+    case ('HYBRID')
+       call ATMOS_PHY_tb_hybrid_setup( &
+            TB_TYPE,       &
+            CDZ, CDX, CDY, &
+            CZ             )
+       ATMOS_PHY_TB => ATMOS_PHY_TB_hybrid
 
     case ('OFF')
 

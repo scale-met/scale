@@ -79,6 +79,7 @@ OBJS = $(scale_rdma)	\
 	scale_atmos_phy_tb_smg.o	\
 	scale_atmos_phy_tb_dns.o	\
 	scale_atmos_phy_tb_mynn.o	\
+	scale_atmos_phy_tb_hybrid.o	\
 	scale_atmos_sub_bottom.o	\
 	scale_atmos_sub_boundary.o	\
 	scale_atmos_sub_hydrostatic.o	\
