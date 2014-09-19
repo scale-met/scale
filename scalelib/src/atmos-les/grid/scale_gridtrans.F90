@@ -35,6 +35,7 @@ module scale_gridtrans
   !++ Public parameters & variables
   !
   real(RP), public, allocatable :: GTRANS_MAPF (:,:,:,:) !< map factor
+  real(RP), public, allocatable :: GTRANS_ROTC (:,:,:)   !< rotation coefficient
 
   real(RP), public, allocatable :: GTRANS_GSQRT(:,:,:,:) !< transformation metrics from Z to Xi, {G}^1/2
   real(RP), public, allocatable :: GTRANS_J13G (:,:,:,:) !< (1,3) element of Jacobian matrix * {G}^1/2
@@ -102,12 +103,18 @@ contains
 
     allocate( GTRANS_MAPF (IA,JA,2,4) )
 
+    allocate( GTRANS_ROTC (IA,JA,2) )
+
     allocate( GTRANS_GSQRT(KA,IA,JA,7) )
     allocate( GTRANS_J13G (KA,IA,JA,7) )
     allocate( GTRANS_J23G (KA,IA,JA,7) )
 
+
     ! calc metrics for orthogonal curvelinear coordinate
     call GTRANS_mapfactor
+
+    ! calc coeficient for rotaion of velocity vector
+    call GTRANS_rotcoef
 
     ! calc metrics for terrain-following coordinate
     call GTRANS_terrainfollowing
@@ -133,17 +140,32 @@ contains
     integer :: i, j
     !---------------------------------------------------------------------------
 
-    do j = 1, JA
-    do i = 1, IA
-       call MPRJ_mapfactor( REAL_LAT  (i,j), GTRANS_MAPF(i,j,1,I_XY), GTRANS_MAPF (i,j,2,I_XY))
-       call MPRJ_mapfactor( REAL_LATX (i,j), GTRANS_MAPF(i,j,1,I_UY), GTRANS_MAPF (i,j,2,I_UY))
-       call MPRJ_mapfactor( REAL_LATY (i,j), GTRANS_MAPF(i,j,1,I_XV), GTRANS_MAPF (i,j,2,I_XV))
-       call MPRJ_mapfactor( REAL_LATXY(i,j), GTRANS_MAPF(i,j,1,I_UV), GTRANS_MAPF (i,j,2,I_UV))
-    enddo
-    enddo
+    call MPRJ_mapfactor( REAL_LAT  , GTRANS_MAPF(:,:,1,I_XY), GTRANS_MAPF (:,:,2,I_XY))
+    call MPRJ_mapfactor( REAL_LATX , GTRANS_MAPF(:,:,1,I_UY), GTRANS_MAPF (:,:,2,I_UY))
+    call MPRJ_mapfactor( REAL_LATY , GTRANS_MAPF(:,:,1,I_XV), GTRANS_MAPF (:,:,2,I_XV))
+    call MPRJ_mapfactor( REAL_LATXY, GTRANS_MAPF(:,:,1,I_UV), GTRANS_MAPF (:,:,2,I_UV))
 
     return
   end subroutine GTRANS_mapfactor
+
+  !-----------------------------------------------------------------------------
+  !> Calculate rotation coeffient
+  subroutine GTRANS_rotcoef
+    use scale_mapproj, only: &
+       MPRJ_rotcoef
+    use scale_grid_real, only: &
+       REAL_LON,  &
+       REAL_LAT
+    implicit none
+
+    integer :: i, j
+    !---------------------------------------------------------------------------
+
+    call MPRJ_rotcoef( GTRANS_ROTC,       & ! (out)
+                       REAL_LON, REAL_LAT ) ! (in)
+
+    return
+  end subroutine GTRANS_rotcoef
 
   !-----------------------------------------------------------------------------
   !> Calculate G^1/2 & Jacobian

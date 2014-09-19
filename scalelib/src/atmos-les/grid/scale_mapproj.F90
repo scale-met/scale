@@ -37,6 +37,7 @@ module scale_mapproj
   public :: MPRJ_xy2lonlat
   public :: MPRJ_lonlat2xy
   public :: MPRJ_mapfactor
+  public :: MPRJ_rotcoef
 
   !-----------------------------------------------------------------------------
   !
@@ -72,6 +73,12 @@ module scale_mapproj
   private :: MPRJ_PolarStereographic_mapfactor
   private :: MPRJ_Mercator_mapfactor
   private :: MPRJ_EquidistantCylindrical_mapfactor
+
+  private :: MPRJ_None_rotcoef
+  private :: MPRJ_LambertConformal_rotcoef
+  private :: MPRJ_PolarStereographic_rotcoef
+  private :: MPRJ_Mercator_rotcoef
+  private :: MPRJ_EquidistantCylindrical_rotcoef
 
   !-----------------------------------------------------------------------------
   !
@@ -270,9 +277,9 @@ contains
        PRC_MPIstop
     implicit none
 
-    real(RP), intent(in)  :: lat ! [rad]
-    real(RP), intent(out) :: m1
-    real(RP), intent(out) :: m2
+    real(RP), intent(in)  :: lat(IA,JA) ! [rad]
+    real(RP), intent(out) :: m1 (IA,JA)
+    real(RP), intent(out) :: m2 (IA,JA)
     !---------------------------------------------------------------------------
 
     select case(MPRJ_type)
@@ -293,6 +300,40 @@ contains
 
     return
   end subroutine MPRJ_mapfactor
+
+  !-----------------------------------------------------------------------------
+  !> u(lat,lon) = cos u(x,y) - sin v(x,y)
+  !> v(lat,lon) = sin u(x,y) + cos v(x,y)
+  subroutine MPRJ_rotcoef( &
+       rotc, &
+       lon, lat )
+    use scale_process, only: &
+       PRC_MPIstop
+    implicit none
+
+    real(RP), intent(out) :: rotc(IA,JA,2) !< rotc(:,:,1)->cos, rotc(:,:,2)->sin
+    real(RP), intent(in)  :: lon(IA,JA) ! [rad]
+    real(RP), intent(in)  :: lat(IA,JA) ! [rad]
+    !---------------------------------------------------------------------------
+
+    select case(MPRJ_type)
+    case('NONE')
+       call MPRJ_None_rotcoef( rotc, lon, lat )
+    case('LC')
+       call MPRJ_LambertConformal_rotcoef( rotc, lon, lat )
+    case('PS')
+       call MPRJ_PolarStereographic_rotcoef( rotc, lon, lat )
+    case('MER')
+       call MPRJ_Mercator_rotcoef( rotc, lon, lat )
+    case('EC')
+       call MPRJ_EquidistantCylindrical_rotcoef( rotc, lon, lat )
+    case default
+       write(*,*) ' xxx Unsupported TYPE. STOP'
+       call PRC_MPIstop
+    endselect
+
+    return
+  end subroutine MPRJ_rotcoef
 
   !-----------------------------------------------------------------------------
   !> No projection
@@ -378,9 +419,9 @@ contains
        m2   )
     implicit none
 
-    real(RP), intent(in)  :: lat ! [rad]
-    real(RP), intent(out) :: m1
-    real(RP), intent(out) :: m2
+    real(RP), intent(in)  :: lat(IA,JA) ! [rad]
+    real(RP), intent(out) :: m1 (IA,JA)
+    real(RP), intent(out) :: m2 (IA,JA)
     !---------------------------------------------------------------------------
 
     m1 = 1.0_RP
@@ -388,6 +429,24 @@ contains
 
     return
   end subroutine MPRJ_None_mapfactor
+
+  !-----------------------------------------------------------------------------
+  !> No projection:
+  subroutine MPRJ_None_rotcoef( &
+       rotc, &
+       lon, lat )
+    implicit none
+
+    real(RP), intent(out) :: rotc(IA,JA,2)
+    real(RP), intent(in)  :: lat(IA,JA) ! [rad]
+    real(RP), intent(in)  :: lon(IA,JA) ! [rad]
+    !---------------------------------------------------------------------------
+
+    rotc(:,:,1) = 1.0_RP
+    rotc(:,:,2) = 1.0_RP
+
+    return
+  end subroutine MPRJ_None_rotcoef
 
   !-----------------------------------------------------------------------------
   !> Lambert Conformal projection
@@ -509,20 +568,51 @@ contains
        m2   )
     implicit none
 
-    real(RP), intent(in)  :: lat ! [rad]
-    real(RP), intent(out) :: m1
-    real(RP), intent(out) :: m2
+    real(RP), intent(in)  :: lat(IA,JA) ! [rad]
+    real(RP), intent(out) :: m1 (IA,JA)
+    real(RP), intent(out) :: m2 (IA,JA)
 
     real(RP) :: latrot
+    integer :: i, j
     !---------------------------------------------------------------------------
 
-    latrot = 0.5_RP*PI - lat
+    do j = 1, JA
+    do i = 1, IA
+       latrot = 0.5_RP*PI - lat(i,j)
 
-    m1 = MPRJ_LC_fact / sin(latrot) * MPRJ_LC_c * tan(0.5_RP*latrot)**MPRJ_LC_c
-    m2 = m1
+       m1(i,j) = MPRJ_LC_fact / sin(latrot) * MPRJ_LC_c * tan(0.5_RP*latrot)**MPRJ_LC_c
+       m2(i,j) = m1(i,j)
+    end do
+    end do
 
     return
   end subroutine MPRJ_LambertConformal_mapfactor
+
+  !-----------------------------------------------------------------------------
+  subroutine MPRJ_LambertConformal_rotcoef( &
+       rotc, &
+       lon, lat )
+    implicit none
+
+    real(RP), intent(out) :: rotc(IA,JA,2)
+    real(RP), intent(in)  :: lon(IA,JA) ! [rad]
+    real(RP), intent(in)  :: lat(IA,JA) ! [rad]
+
+    real(RP) :: dlon
+    integer :: i, j
+    !---------------------------------------------------------------------------
+
+    do j = 1, JA
+    do i = 1, IA
+       dlon = lon(i,j) - MPRJ_basepoint_lon * D2R
+       dlon = mod(dlon+2.0_RP*PI,2.0_RP*PI)
+       rotc(i,j,1) =   cos( MPRJ_LC_c * dlon )
+       rotc(i,j,2) = - sin( MPRJ_LC_c * dlon )
+    end do
+    end do
+
+    return
+  end subroutine MPRJ_LambertConformal_rotcoef
 
   !-----------------------------------------------------------------------------
   !> Polar Stereographic projection
@@ -614,7 +704,7 @@ contains
 
     latrot = 0.5_RP*PI - lat
 
-    dist = MPRJ_LC_fact * tan(0.5_RP*latrot)
+    dist = MPRJ_PS_fact * tan(0.5_RP*latrot)
 
     x = MPRJ_pole_x + MPRJ_hemisphere * RADIUS * dist * sin(dlon)
     y = MPRJ_pole_y -                   RADIUS * dist * cos(dlon)
@@ -630,16 +720,48 @@ contains
        m2   )
     implicit none
 
-    real(RP), intent(in)  :: lat ! [rad]
-    real(RP), intent(out) :: m1
-    real(RP), intent(out) :: m2
+    real(RP), intent(in)  :: lat(IA,JA) ! [rad]
+    real(RP), intent(out) :: m1 (IA,JA)
+    real(RP), intent(out) :: m2 (IA,JA)
+
+    integer :: i, j
     !---------------------------------------------------------------------------
 
-    m1 = MPRJ_LC_fact / ( 1.0_RP + sin(lat) )
-    m2 = m1
+    do j = 1, JA
+    do i = 1, IA
+       m1(i,j) = MPRJ_LC_fact / ( 1.0_RP + sin(lat(i,j)) )
+       m2(i,j) = m1(i,j)
+    end do
+    end do
 
     return
   end subroutine MPRJ_PolarStereographic_mapfactor
+
+  !-----------------------------------------------------------------------------
+  subroutine MPRJ_PolarStereographic_rotcoef( &
+       rotc, &
+       lon, lat )
+    implicit none
+
+    real(RP), intent(out) :: rotc(IA,JA,2)
+    real(RP), intent(in)  :: lon(IA,JA) ! [rad]
+    real(RP), intent(in)  :: lat(IA,JA) ! [rad]
+
+    real(RP) :: dlon
+    integer :: i, j
+    !---------------------------------------------------------------------------
+
+    do j = 1, JA
+    do i = 1, IA
+       dlon = lon(i,j) - MPRJ_basepoint_lon * D2R
+       dlon = mod(dlon+2.0_RP*PI,2.0_RP*PI)
+       rotc(i,j,1) =   cos( dlon )
+       rotc(i,j,2) = - sin( dlon )
+    end do
+    end do
+
+    return
+  end subroutine MPRJ_PolarStereographic_rotcoef
 
   !-----------------------------------------------------------------------------
   !> Mercator projection
@@ -692,7 +814,7 @@ contains
     yy = ( y - MPRJ_eq_y ) / RADIUS / MPRJ_M_fact
 
     lon = MPRJ_basepoint_lon * d2r + xx
-    lat = 0.5_RP*PI - 2.0_RP*atan( exp(yy) )
+    lat = 0.5_RP*PI - 2.0_RP*atan( 1.0_RP/exp(yy) )
 
     return
   end subroutine MPRJ_Mercator_xy2lonlat
@@ -719,7 +841,7 @@ contains
 
     latrot = 0.5_RP*PI - lat
 
-    dist = tan(0.5_RP*latrot)
+    dist = 1.0_RP / tan(0.5_RP*latrot)
 
     x = MPRJ_eq_x + RADIUS * MPRJ_M_fact * dlon
     y = MPRJ_eq_y + RADIUS * MPRJ_M_fact * log(dist)
@@ -735,16 +857,38 @@ contains
        m2   )
     implicit none
 
-    real(RP), intent(in)  :: lat ! [rad]
-    real(RP), intent(out) :: m1
-    real(RP), intent(out) :: m2
+    real(RP), intent(in)  :: lat(IA,JA) ! [rad]
+    real(RP), intent(out) :: m1 (IA,JA)
+    real(RP), intent(out) :: m2 (IA,JA)
+    integer :: i, j
     !---------------------------------------------------------------------------
 
-    m1 = MPRJ_M_fact / cos(lat)
-    m2 = m1
+    do j = 1, JA
+    do i = 1, IA
+       m1(i,j) = MPRJ_M_fact / cos(lat(i,j))
+       m2(i,j) = m1(i,j)
+    end do
+    end do
 
     return
   end subroutine MPRJ_Mercator_mapfactor
+
+  !-----------------------------------------------------------------------------
+  subroutine MPRJ_Mercator_rotcoef( &
+       rotc, &
+       lon, lat )
+    implicit none
+
+    real(RP), intent(out) :: rotc(IA,JA,2)
+    real(RP), intent(in)  :: lon(IA,JA) ! [rad]
+    real(RP), intent(in)  :: lat(IA,JA) ! [rad]
+    !---------------------------------------------------------------------------
+
+    rotc(:,:,1) = 1.0_RP
+    rotc(:,:,2) = 0.0_RP
+
+    return
+  end subroutine MPRJ_Mercator_rotcoef
 
   !-----------------------------------------------------------------------------
   !> Equidistant Cylindrical projection
@@ -831,15 +975,37 @@ contains
        m2   )
     implicit none
 
-    real(RP), intent(in)  :: lat ! [rad]
-    real(RP), intent(out) :: m1
-    real(RP), intent(out) :: m2
+    real(RP), intent(in)  :: lat(IA,JA) ! [rad]
+    real(RP), intent(out) :: m1 (IA,JA)
+    real(RP), intent(out) :: m2 (IA,JA)
+    integer :: i, j
     !---------------------------------------------------------------------------
 
-    m1 = MPRJ_EC_fact / cos(lat)
-    m2 = 1.0_RP
+    do j = 1, JA
+    do i = 1, IA
+       m1(i,j) = MPRJ_EC_fact / cos(lat(i,j))
+       m2(i,j) = 1.0_RP
+    end do
+    end do
 
     return
   end subroutine MPRJ_EquidistantCylindrical_mapfactor
+
+  !-----------------------------------------------------------------------------
+  subroutine MPRJ_EquidistantCylindrical_rotcoef( &
+       rotc, &
+       lon, lat )
+    implicit none
+
+    real(RP), intent(out) :: rotc(IA,JA,2)
+    real(RP), intent(in)  :: lon(IA,JA) ! [rad]
+    real(RP), intent(in)  :: lat(IA,JA) ! [rad]
+    !---------------------------------------------------------------------------
+
+    rotc(:,:,1) = 1.0_RP
+    rotc(:,:,2) = 0.0_RP
+
+    return
+  end subroutine MPRJ_EquidistantCylindrical_rotcoef
 
 end module scale_mapproj
