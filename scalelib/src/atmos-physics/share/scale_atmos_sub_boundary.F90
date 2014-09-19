@@ -127,6 +127,7 @@ module scale_atmos_boundary
   integer,               private :: boundary_timestep = 0
   logical,               private :: ATMOS_BOUNDARY_LINEARZ  = .false.  ! linear or non-linear profile of relax region
   logical,               private :: ATMOS_BOUNDARY_ONLINE   = .false.  ! boundary online update by communicate inter-domain
+  logical,               private :: ATMOS_BOUNDARY_ONLINE_MASTER = .false.  ! master domain in communicate inter-domain
   logical,               private :: do_parent_process       = .false.
   logical,               private :: do_daughter_process     = .false.
 
@@ -150,8 +151,8 @@ contains
     use scale_grid_nest, only: &
        USE_NESTING,     &
        OFFLINE,         &
-       ONLINE_PARENT,   &
-       ONLINE_DAUGHTER
+       ONLINE_IAM_PARENT,   &
+       ONLINE_IAM_DAUGHTER
     implicit none
 
     real(RP), intent(in) :: DENS(KA,IA,JA)
@@ -206,7 +207,7 @@ contains
     endif
     if( IO_LNML) write(IO_FID_LOG,nml=PARAM_ATMOS_BOUNDARY)
 
-    if( .not. USE_NESTING ) then
+    if( .NOT. USE_NESTING ) then
        ATMOS_BOUNDARY_ONLINE = .false.
     else
        if( OFFLINE ) then
@@ -301,26 +302,38 @@ contains
        allocate( ATMOS_BOUNDARY_increment_POTT(KA,IA,JA) )
        allocate( ATMOS_BOUNDARY_increment_QTRC(KA,IA,JA,BND_QA) )
 
+       ! setting switches
        do_parent_process   = .false.
        do_daughter_process = .false.
+       ATMOS_BOUNDARY_ONLINE_MASTER = .false.
        if ( ATMOS_BOUNDARY_ONLINE ) then
-          if ( ONLINE_PARENT ) then
+          if ( ONLINE_IAM_PARENT ) then
              do_parent_process = .true.
+             if ( .NOT. ONLINE_IAM_DAUGHTER ) then
+                ATMOS_BOUNDARY_ONLINE_MASTER = .true.
+             endif
           endif
-          if ( ONLINE_DAUGHTER ) then
+          if ( ONLINE_IAM_DAUGHTER ) then
              do_daughter_process = .true.
           endif
        endif
 
-       if ( .NOT. ONLINE_DAUGHTER ) then
+       ! initialize boundary value (reading file or waiting parent domain)
+       if ( .NOT. USE_NESTING ) then ! without nesting
           if ( ATMOS_BOUNDARY_IN_BASENAME /= '' ) then
              call ATMOS_BOUNDARY_initialize
           else
              write(*,*) 'xxx You need specify ATMOS_BOUNDARY_IN_BASENAME'
              call PRC_MPIstop
           endif
-       else
-
+       elseif ( ATMOS_BOUNDARY_ONLINE_MASTER ) then ! with nesting: master domain
+          if ( ATMOS_BOUNDARY_IN_BASENAME /= '' ) then
+             call ATMOS_BOUNDARY_initialize
+          else
+             write(*,*) 'xxx You need specify ATMOS_BOUNDARY_IN_BASENAME'
+             call PRC_MPIstop
+          endif
+       else ! with nesting: not master domain
           call ATMOS_BOUNDARY_initialize_online
        endif
 
@@ -328,7 +341,7 @@ contains
 
        ATMOS_BOUNDARY_UPDATE_FLAG = .true.
 
-       if ( .NOT. ONLINE_DAUGHTER .and. ATMOS_BOUNDARY_UPDATE_DT <= 0.0_DP ) then
+       if ( .NOT. ONLINE_IAM_DAUGHTER .and. ATMOS_BOUNDARY_UPDATE_DT <= 0.0_DP ) then
           write(*,*) 'xxx You need specify ATMOS_BOUNDARY_UPDATE_DT as larger than 0.0'
           call PRC_MPIstop
        endif
@@ -1168,13 +1181,15 @@ contains
        PARENT_DTSEC
     implicit none
 
-    real(RP) :: dummy1_p(PARENT_KA,  PARENT_IA,  PARENT_JA)
-    real(RP) :: dummy2_p(PARENT_KA,  PARENT_IA,  PARENT_JA,  BND_QA)
+    integer, parameter  :: handle = 2
+
+    real(RP) :: dummy1_p(PARENT_KA(handle),  PARENT_IA(handle),  PARENT_JA(handle))
+    real(RP) :: dummy2_p(PARENT_KA(handle),  PARENT_IA(handle),  PARENT_JA(handle),  BND_QA)
 
     integer  :: i, j, k, iq
     !---------------------------------------------------------------------------
 
-    ATMOS_BOUNDARY_UPDATE_DT = PARENT_DTSEC
+    ATMOS_BOUNDARY_UPDATE_DT = PARENT_DTSEC(handle)
 
     dummy1_p(:,:,:)   = 0.0_RP
     dummy2_p(:,:,:,:) = 0.0_RP
@@ -1184,7 +1199,8 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '+++ BOUNDARY TIMESTEP NUMBER FOR INIT:', boundary_timestep
     if( IO_L ) write(IO_FID_LOG,*) '+++ waiting for communication accept from parent domain'
 
-    call NEST_COMM_nestdown( BND_QA,                                 &
+    call NEST_COMM_nestdown( handle,                                 &
+                             BND_QA,                                 &
                              dummy1_p(:,:,:),                        &   !(KA,IA,JA)
                              dummy1_p(:,:,:),                        &   !(KA,IA,JA)
                              dummy1_p(:,:,:),                        &   !(KA,IA,JA)
@@ -1200,7 +1216,8 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '+++ BOUNDARY TIMESTEP NUMBER FOR INIT:', boundary_timestep
     if( IO_L ) write(IO_FID_LOG,*) '+++ waiting for communication accept from parent domain'
 
-    call NEST_COMM_nestdown( BND_QA,                                 &
+    call NEST_COMM_nestdown( handle,                                 &
+                             BND_QA,                                 &
                              dummy1_p(:,:,:),                        &   !(KA,IA,JA)
                              dummy1_p(:,:,:),                        &   !(KA,IA,JA)
                              dummy1_p(:,:,:),                        &   !(KA,IA,JA)
@@ -1346,7 +1363,8 @@ contains
     real(RP), intent(in) :: RHOT(KA,IA,JA)
     real(RP), intent(in) :: QTRC(KA,IA,JA,QA)
 
-    integer  :: i, j, k, iq
+    integer :: handle
+    integer :: i, j, k, iq
     !---------------------------------------------------------------------------
 
     if ( ATMOS_BOUNDARY_TYPE == 'REAL' ) then
@@ -1355,12 +1373,13 @@ contains
           if ( do_daughter_process ) then !online [daughter]
 
              !ATMOS_BOUNDARY_UPDATE_DT = PARENT_DTSEC
+             handle = 2
              integrated_sec = TIME_NOWDAYSEC - last_updated
    
              if ( integrated_sec >= ATMOS_BOUNDARY_UPDATE_DT - EPS ) then
                 boundary_timestep = boundary_timestep + 1
 
-                call ATMOS_BOUNDARY_update_online( DENS,MOMX,MOMY,RHOT,QTRC )
+                call ATMOS_BOUNDARY_update_online( DENS,MOMX,MOMY,RHOT,QTRC,handle )
 
                 do j  = 1, JA
                 do i  = 1, IA
@@ -1413,7 +1432,8 @@ contains
 
           if ( do_parent_process ) then !online [parent]
 
-             call ATMOS_BOUNDARY_update_online( DENS,MOMX,MOMY,RHOT,QTRC )
+             handle = 1
+             call ATMOS_BOUNDARY_update_online( DENS,MOMX,MOMY,RHOT,QTRC,handle )
 
           endif
 
@@ -1585,7 +1605,12 @@ contains
   !-----------------------------------------------------------------------------
   !> Update reference boundary by communicate with parent domain
   subroutine ATMOS_BOUNDARY_update_online ( &
-       DENS, MOMX, MOMY, RHOT, QTRC )
+       DENS,   & ! [in]
+       MOMX,   & ! [in]
+       MOMY,   & ! [in]
+       RHOT,   & ! [in]
+       QTRC,   & ! [in]
+       handle  ) ! [in]
     use scale_process, only: &
        PRC_myrank
     use scale_grid_nest, only: &
@@ -1618,25 +1643,26 @@ contains
     real(RP), intent(in) :: MOMY(KA,IA,JA)
     real(RP), intent(in) :: RHOT(KA,IA,JA)
     real(RP), intent(in) :: QTRC(KA,IA,JA,QA)
+    integer,  intent(in) :: handle
 
-    real(RP) :: dummy1_p(PARENT_KA,  PARENT_IA,  PARENT_JA)
-    real(RP) :: dummy1_d(DAUGHTER_KA,DAUGHTER_IA,DAUGHTER_JA,2)
-    real(RP) :: dummy2_p(PARENT_KA,  PARENT_IA,  PARENT_JA,  BND_QA)
-    real(RP) :: dummy2_d(DAUGHTER_KA,DAUGHTER_IA,DAUGHTER_JA,BND_QA,2)
+    real(RP) :: dummy1_p(PARENT_KA(handle),  PARENT_IA(handle),  PARENT_JA(handle))
+    real(RP) :: dummy1_d(DAUGHTER_KA(handle),DAUGHTER_IA(handle),DAUGHTER_JA(handle),2)
+    real(RP) :: dummy2_p(PARENT_KA(handle),  PARENT_IA(handle),  PARENT_JA(handle),  BND_QA)
+    real(RP) :: dummy2_d(DAUGHTER_KA(handle),DAUGHTER_IA(handle),DAUGHTER_JA(handle),BND_QA,2)
 
     integer :: i, j, k, iq
     !---------------------------------------------------------------------------
-
-    if (IO_L) write(IO_FID_LOG,*)"*** Atmos Boundary: communicate inter-domain (timestep=", boundary_timestep, ")"
 
     dummy1_p(:,:,:)     = 0.0_RP
     dummy1_d(:,:,:,:)   = 0.0_RP
     dummy2_p(:,:,:,:)   = 0.0_RP
     dummy2_d(:,:,:,:,:) = 0.0_RP
 
-    if ( do_parent_process ) then ! [parent]
+    if ( handle == 1 .and. do_parent_process ) then ! [parent]
+       if (IO_L) write(IO_FID_LOG,*)"*** NESTCOMM inter-domain as a PARENT"
 
-       call NEST_COMM_nestdown( BND_QA,                    &
+       call NEST_COMM_nestdown( handle,                    &
+                                BND_QA,                    &
                                 DENS(:,:,:),               &  !(KA,IA,JA)
                                 MOMX(:,:,:),               &  !(KA,IA,JA)
                                 MOMY(:,:,:),               &  !(KA,IA,JA)
@@ -1648,7 +1674,8 @@ contains
                                 dummy1_d(:,:,:,2),         &  !(KA,IA,JA)
                                 dummy2_d(:,:,:,1:BND_QA,2) )  !(KA,IA,JA,QA)
 
-    elseif ( do_daughter_process ) then ! [daughter]
+    elseif ( handle == 2 .and. do_daughter_process ) then ! [daughter]
+       if (IO_L) write(IO_FID_LOG,*)"*** NESTCOMM inter-domain as a DAUGHTER (step=", boundary_timestep, ")"
 
        do j  = 1, JA
        do i  = 1, IA
@@ -1665,7 +1692,8 @@ contains
        end do
        end do
 
-       call NEST_COMM_nestdown( BND_QA,                                 &
+       call NEST_COMM_nestdown( handle,                                 &
+                                BND_QA,                                 &
                                 dummy1_p(:,:,:),                        &   !(KA,IA,JA)
                                 dummy1_p(:,:,:),                        &   !(KA,IA,JA)
                                 dummy1_p(:,:,:),                        &   !(KA,IA,JA)

@@ -39,53 +39,53 @@ module scale_grid_nest
   !
   !++ Public parameters & variables
   !
-  integer,  public              :: NEST_Filiation(10)   !< index of parent-daughter relation
-  integer,  public              :: NEST_HANDLING_NUM    !< parent tile number in y-direction
+  integer,  public              :: NEST_Filiation(10)   !< index of parent-daughter relation (p>0, d<0)
+  integer,  public              :: HANDLING_NUM         !< handing number of nesting relation
   integer,  public              :: NEST_TILE_NUM_X      !< parent tile number in x-direction
   integer,  public              :: NEST_TILE_NUM_Y      !< parent tile number in y-direction
   integer,  public, allocatable :: NEST_TILE_ID(:)      !< parent tile real id
 
-  integer,  public              :: PARENT_KMAX          !< parent max number in z-direction
-  integer,  public              :: PARENT_IMAX          !< parent max number in x-direction
-  integer,  public              :: PARENT_JMAX          !< parent max number in y-direction
-  integer,  public              :: PARENT_KA            !< parent max number in z-direction (with halo)
-  integer,  public              :: PARENT_IA            !< parent max number in x-direction (with halo)
-  integer,  public              :: PARENT_JA            !< parent max number in y-direction (with halo)
-  integer,  public              :: PARENT_LKMAX         !< parent max number in lz-direction
-  real(DP), public              :: PARENT_DTSEC         !< parent DT [sec]
+  integer,  public              :: PARENT_KMAX(2)       !< parent max number in z-direction
+  integer,  public              :: PARENT_IMAX(2)       !< parent max number in x-direction
+  integer,  public              :: PARENT_JMAX(2)       !< parent max number in y-direction
+  integer,  public              :: PARENT_KA(2)         !< parent max number in z-direction (with halo)
+  integer,  public              :: PARENT_IA(2)         !< parent max number in x-direction (with halo)
+  integer,  public              :: PARENT_JA(2)         !< parent max number in y-direction (with halo)
+  integer,  public              :: PARENT_LKMAX(2)      !< parent max number in lz-direction
+  real(DP), public              :: PARENT_DTSEC(2)      !< parent DT [sec]
 
-  integer,  public              :: DAUGHTER_KMAX        !< daughter max number in z-direction
-  integer,  public              :: DAUGHTER_IMAX        !< daughter max number in x-direction
-  integer,  public              :: DAUGHTER_JMAX        !< daughter max number in y-direction
-  integer,  public              :: DAUGHTER_KA          !< daughter max number in z-direction (with halo)
-  integer,  public              :: DAUGHTER_IA          !< daughter max number in x-direction (with halo)
-  integer,  public              :: DAUGHTER_JA          !< daughter max number in y-direction (with halo)
-  integer,  public              :: DAUGHTER_LKMAX       !< daughter max number in lz-direction
-  real(DP), public              :: DAUGHTER_DTSEC       !< daughter DT [sec]
+  integer,  public              :: DAUGHTER_KMAX(2)     !< daughter max number in z-direction
+  integer,  public              :: DAUGHTER_IMAX(2)     !< daughter max number in x-direction
+  integer,  public              :: DAUGHTER_JMAX(2)     !< daughter max number in y-direction
+  integer,  public              :: DAUGHTER_KA(2)       !< daughter max number in z-direction (with halo)
+  integer,  public              :: DAUGHTER_IA(2)       !< daughter max number in x-direction (with halo)
+  integer,  public              :: DAUGHTER_JA(2)       !< daughter max number in y-direction (with halo)
+  integer,  public              :: DAUGHTER_LKMAX(2)    !< daughter max number in lz-direction
+  real(DP), public              :: DAUGHTER_DTSEC(2)    !< daughter DT [sec]
 
-  integer,  public              :: PRNT_KS              !< start index in z-direction in parent
-  integer,  public              :: PRNT_KE              !< end index   in z-direction in parent
-  integer,  public              :: PRNT_IS              !< start index in x-direction in parent
-  integer,  public              :: PRNT_IE              !< end index   in x-direction in parent
-  integer,  public              :: PRNT_JS              !< start index in y-direction in parent
-  integer,  public              :: PRNT_JE              !< end index   in y-direction in parent
+  integer,  public              :: PRNT_KS(2)           !< start index in z-direction in parent
+  integer,  public              :: PRNT_KE(2)           !< end index   in z-direction in parent
+  integer,  public              :: PRNT_IS(2)           !< start index in x-direction in parent
+  integer,  public              :: PRNT_IE(2)           !< end index   in x-direction in parent
+  integer,  public              :: PRNT_JS(2)           !< start index in y-direction in parent
+  integer,  public              :: PRNT_JE(2)           !< end index   in y-direction in parent
 
-  integer,  public              :: DATR_KS              !< start index in z-direction in daughter
-  integer,  public              :: DATR_KE              !< end index   in z-direction in daughter
-  integer,  public              :: DATR_IS              !< start index in x-direction in daughter
-  integer,  public              :: DATR_IE              !< end index   in x-direction in daughter
-  integer,  public              :: DATR_JS              !< start index in y-direction in daughter
-  integer,  public              :: DATR_JE              !< end index   in y-direction in daughter
+  integer,  public              :: DATR_KS(2)           !< start index in z-direction in daughter
+  integer,  public              :: DATR_KE(2)           !< end index   in z-direction in daughter
+  integer,  public              :: DATR_IS(2)           !< start index in x-direction in daughter
+  integer,  public              :: DATR_IE(2)           !< end index   in x-direction in daughter
+  integer,  public              :: DATR_JS(2)           !< start index in y-direction in daughter
+  integer,  public              :: DATR_JE(2)           !< end index   in y-direction in daughter
 
-  integer,  public              :: TILEAL_KA            !< cells of all tiles in z-direction
-  integer,  public              :: TILEAL_IA            !< cells of all tiles in x-direction
-  integer,  public              :: TILEAL_JA            !< cells of all tiles in y-direction
+  integer,  public              :: TILEAL_KA(2)         !< cells of all tiles in z-direction
+  integer,  public              :: TILEAL_IA(2)         !< cells of all tiles in x-direction
+  integer,  public              :: TILEAL_JA(2)         !< cells of all tiles in y-direction
 
-  logical,  public              :: USE_NESTING        = .false.
-  logical,  public              :: OFFLINE            = .true.
-  logical,  public              :: ONLINE_PARENT      = .false.
-  logical,  public              :: ONLINE_DAUGHTER    = .false.
-  integer,  public              :: ONLINE_DOMAIN_NUM  = 1
+  logical,  public              :: USE_NESTING          = .false.
+  logical,  public              :: OFFLINE              = .true.
+  logical,  public              :: ONLINE_IAM_PARENT    = .false.
+  logical,  public              :: ONLINE_IAM_DAUGHTER  = .false.
+  integer,  public              :: ONLINE_DOMAIN_NUM    = 1
 
   !-----------------------------------------------------------------------------
   !
@@ -109,19 +109,28 @@ module scale_grid_nest
   real(RP), private, allocatable :: latlon_catalog(:,:,:)  !< parent latlon catalog [rad]
   real(RP), private              :: corner_loc(4,2)        !< local corner location [rad]
 
-  integer, private               :: PARENT_PRC_NUM_X       !< MPI processes in x-direction in parent
-  integer, private               :: PARENT_PRC_NUM_Y       !< MPI processes in y-direction in parent
-  integer, private               :: PARENT_PRC_nmax        !< MPI total processes in parent
+  integer, private               :: PARENT_PRC_NUM_X(2)    !< MPI processes in x-direction in parent
+  integer, private               :: PARENT_PRC_NUM_Y(2)    !< MPI processes in y-direction in parent
+  integer, private               :: PARENT_PRC_nmax(2)     !< MPI total processes in parent
 
-  integer, private               :: DAUGHTER_PRC_NUM_X     !< MPI processes in x-direction in daughter
-  integer, private               :: DAUGHTER_PRC_NUM_Y     !< MPI processes in y-direction in daughter
-  integer, private               :: DAUGHTER_PRC_nmax      !< MPI total processes in daughter
+  integer, private               :: DAUGHTER_PRC_NUM_X(2)  !< MPI processes in x-direction in daughter
+  integer, private               :: DAUGHTER_PRC_NUM_Y(2)  !< MPI processes in y-direction in daughter
+  integer, private               :: DAUGHTER_PRC_nmax(2)   !< MPI total processes in daughter
 
   integer, private               :: NEST_TILE_ALL          !< NUM of TILEs in the local node
-  integer, private               :: NEST_TILE_ALLMAX       !< MAXNUM of TILEs among whole processes
-  integer, private, allocatable  :: NEST_TILE_LIST(:,:)    !< relationship list in whole system for daughter
+  integer, private               :: NEST_TILE_ALLMAX_p     !< MAXNUM of TILEs among whole processes for parent
+  integer, private               :: NEST_TILE_ALLMAX_d     !< MAXNUM of TILEs among whole processes for daughter
+  integer, private, allocatable  :: NEST_TILE_LIST_p(:,:)  !< relationship list in whole system for parent
+  integer, private, allocatable  :: NEST_TILE_LIST_d(:,:)  !< relationship list in whole system for daughter
   integer, private, allocatable  :: NEST_TILE_LIST_YP(:)   !< yellow-page of daughter targets for parent
   integer, private               :: NUM_YP                 !< page number of yellow-page
+
+  integer, private               :: OFFLINE_PARENT_PRC_NUM_X !< MPI processes in x-direction in parent [for namelist]
+  integer, private               :: OFFLINE_PARENT_PRC_NUM_Y !< MPI processes in y-direction in parent [for namelist]
+  integer, private               :: OFFLINE_PARENT_KMAX    !< parent max number in z-direction [for namelist]
+  integer, private               :: OFFLINE_PARENT_IMAX    !< parent max number in x-direction [for namelist]
+  integer, private               :: OFFLINE_PARENT_JMAX    !< parent max number in y-direction [for namelist]
+  integer, private               :: OFFLINE_PARENT_LKMAX   !< parent max number in lz-direction [for namelist]
 
   integer, parameter :: I_LON    = 1
   integer, parameter :: I_LAT    = 2
@@ -161,7 +170,7 @@ module scale_grid_nest
   real(RP), private, parameter :: large_number_three = 7.777E+15_RP
   integer,  private            :: interp_search_divnum = 10
 
-  integer, private   :: INTERCOMM_ID
+  integer, private   :: INTERCOMM_ID(2)
   integer, private   :: INTERCOMM_PARENT
   integer, private   :: INTERCOMM_DAUGHTER
 
@@ -229,19 +238,19 @@ contains
 
     character(2) :: dom_num
 
-    namelist / PARAM_NEST /    &
-       USE_NESTING,            &
-       PARENT_PRC_NUM_X,       &
-       PARENT_PRC_NUM_Y,       &
-       PARENT_KMAX,            &
-       PARENT_IMAX,            &
-       PARENT_JMAX,            &
-       PARENT_LKMAX,           &
-       LATLON_CATALOGUE_FNAME, &
-       OFFLINE,                &
-       ONLINE_DOMAIN_NUM,      &
-       ONLINE_PARENT,          &
-       ONLINE_DAUGHTER
+    namelist / PARAM_NEST /      &
+       USE_NESTING,              &
+       LATLON_CATALOGUE_FNAME,   &
+       OFFLINE_PARENT_PRC_NUM_X, &
+       OFFLINE_PARENT_PRC_NUM_Y, &
+       OFFLINE_PARENT_KMAX,      &
+       OFFLINE_PARENT_IMAX,      &
+       OFFLINE_PARENT_JMAX,      &
+       OFFLINE_PARENT_LKMAX,     &
+       OFFLINE,                  &
+       ONLINE_DOMAIN_NUM,        &
+       ONLINE_IAM_PARENT,        &
+       ONLINE_IAM_DAUGHTER
 
     !---------------------------------------------------------------------------
 
@@ -251,7 +260,7 @@ contains
     argv(1) = 'run.conf'
     argv(2) = ''
 
-    NEST_HANDLING_NUM = 0
+    HANDLING_NUM = 0
     NEST_Filiation(:) = 0
 
     !--- read namelist
@@ -277,9 +286,16 @@ contains
       corner_loc(I_SE,I_LAT) = REAL_LATXY(IE  ,JS-1) / D2R
 
       if( OFFLINE ) then
+         HANDLING_NUM = 1
+         PARENT_PRC_NUM_X(HANDLING_NUM) = OFFLINE_PARENT_PRC_NUM_X
+         PARENT_PRC_NUM_Y(HANDLING_NUM) = OFFLINE_PARENT_PRC_NUM_Y
+         PARENT_KMAX(HANDLING_NUM)      = OFFLINE_PARENT_KMAX
+         PARENT_IMAX(HANDLING_NUM)      = OFFLINE_PARENT_IMAX
+         PARENT_JMAX(HANDLING_NUM)      = OFFLINE_PARENT_JMAX
+         PARENT_LKMAX(HANDLING_NUM)     = OFFLINE_PARENT_LKMAX
 
-         PARENT_PRC_nmax = PARENT_PRC_NUM_X * PARENT_PRC_NUM_Y
-         allocate( latlon_catalog(PARENT_PRC_nmax,4,2) )
+         PARENT_PRC_nmax(HANDLING_NUM) = PARENT_PRC_NUM_X(HANDLING_NUM) * PARENT_PRC_NUM_Y(HANDLING_NUM)
+         allocate( latlon_catalog(PARENT_PRC_nmax(HANDLING_NUM),4,2) )
 
          !--- read latlon catalogue
          fid = IO_get_available_fid()
@@ -294,7 +310,7 @@ contains
             call PRC_MPIstop
          endif
 
-         do i = 1, PARENT_PRC_nmax
+         do i = 1, PARENT_PRC_nmax(HANDLING_NUM)
             read(fid,'(i8,8f32.24)',iostat=ierr) parent_id, &
                                                  latlon_catalog(i,I_NW,I_LON), latlon_catalog(i,I_NE,I_LON), & ! LON: NW, NE
                                                  latlon_catalog(i,I_SW,I_LON), latlon_catalog(i,I_SE,I_LON), & ! LON: SW, SE
@@ -308,18 +324,21 @@ contains
          enddo
          close(fid)
 
-         call NEST_domain_relate
+         call NEST_domain_relate(HANDLING_NUM)
 
       else ! ONLINE RELATIONSHIP
-         if( ONLINE_PARENT ) then
+         if( IO_L ) write(IO_FID_LOG,'(1x,A)') '*** Setup Online Nesting'
+
+         if( ONLINE_IAM_PARENT ) then ! must do first before daughter processes
          !-------------------------------------------------
-            INTERCOMM_ID = ONLINE_DOMAIN_NUM
-            NEST_Filiation(INTERCOMM_ID) = 1
+            HANDLING_NUM = 1 !HANDLING_NUM + 1
+            INTERCOMM_ID(HANDLING_NUM) = ONLINE_DOMAIN_NUM
+            NEST_Filiation(INTERCOMM_ID(HANDLING_NUM)) = 1
 
             ! Launch Daughter Domain
             write(dom_num,'(I2.2)') ONLINE_DOMAIN_NUM+1
             argv(1) = 'run.d'//dom_num//'.conf'
-            if( IO_L ) write(IO_FID_LOG,'(1x,A,I2,A)') '*** Launch Daughter Domain [INTERCOMM_ID:', INTERCOMM_ID, ' ]'
+            if( IO_L ) write(IO_FID_LOG,'(1x,A,I2,A)') '*** Launch Daughter Domain [INTERCOMM_ID:', INTERCOMM_ID(HANDLING_NUM), ' ]'
             if( IO_L ) write(IO_FID_LOG,'(1x,A,A,A,A)') '*** Launch Command: ', trim(cmd), ' ', trim(argv(1))
             call MPI_COMM_SPAWN( trim(cmd),          &
                                  argv,               &
@@ -331,117 +350,120 @@ contains
                                  errcodes,           &
                                  ierr                )
 
-            call NEST_COMM_ping( INTERCOMM_ID )
+            call NEST_COMM_ping( HANDLING_NUM )
 
-            call NEST_COMM_parentsize( INTERCOMM_ID )
+            call NEST_COMM_parentsize( HANDLING_NUM )
 
-            allocate( latlon_catalog(PARENT_PRC_nmax,4,2) )
-            call NEST_COMM_catalogue( INTERCOMM_ID )
+            call NEST_COMM_catalogue( HANDLING_NUM )
             call MPI_BARRIER(INTERCOMM_DAUGHTER, ierr)
 
-            PARENT_KA   = PARENT_KMAX   + KHALO * 2
-            PARENT_IA   = PARENT_IMAX   + IHALO * 2
-            PARENT_JA   = PARENT_JMAX   + JHALO * 2
-            DAUGHTER_KA = DAUGHTER_KMAX + KHALO * 2
-            DAUGHTER_IA = DAUGHTER_IMAX + IHALO * 2
-            DAUGHTER_JA = DAUGHTER_JMAX + JHALO * 2
-            TILEAL_KA   = 0
-            TILEAL_IA   = 0
-            TILEAL_JA   = 0
+            PARENT_KA(HANDLING_NUM)   = PARENT_KMAX(HANDLING_NUM)   + KHALO * 2
+            PARENT_IA(HANDLING_NUM)   = PARENT_IMAX(HANDLING_NUM)   + IHALO * 2
+            PARENT_JA(HANDLING_NUM)   = PARENT_JMAX(HANDLING_NUM)   + JHALO * 2
+            DAUGHTER_KA(HANDLING_NUM) = DAUGHTER_KMAX(HANDLING_NUM) + KHALO * 2
+            DAUGHTER_IA(HANDLING_NUM) = DAUGHTER_IMAX(HANDLING_NUM) + IHALO * 2
+            DAUGHTER_JA(HANDLING_NUM) = DAUGHTER_JMAX(HANDLING_NUM) + JHALO * 2
+            TILEAL_KA(HANDLING_NUM)   = 0
+            TILEAL_IA(HANDLING_NUM)   = 0
+            TILEAL_JA(HANDLING_NUM)   = 0
 
-            if( IO_L ) write(IO_FID_LOG,'(1x,A)'     ) '***  Informations of Parent Domain'
-            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- PARENT_PRC_nmax   :', PARENT_PRC_nmax
-            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- PARENT_PRC_NUM_X  :', PARENT_PRC_NUM_X
-            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- PARENT_PRC_NUM_Y  :', PARENT_PRC_NUM_Y
-            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- PARENT_KMAX       :', PARENT_KMAX
-            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- PARENT_IMAX       :', PARENT_IMAX
-            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- PARENT_JMAX       :', PARENT_JMAX
-            if( IO_L ) write(IO_FID_LOG,'(1x,A,F9.3)') '***  --- PARENT_DTSEC      :', PARENT_DTSEC
+            if( IO_L ) write(IO_FID_LOG,'(1x,A)'     ) '***  Informations of Parent Domain [me]'
+            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- PARENT_PRC_nmax   :', PARENT_PRC_nmax(HANDLING_NUM)
+            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- PARENT_PRC_NUM_X  :', PARENT_PRC_NUM_X(HANDLING_NUM)
+            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- PARENT_PRC_NUM_Y  :', PARENT_PRC_NUM_Y(HANDLING_NUM)
+            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- PARENT_KMAX       :', PARENT_KMAX(HANDLING_NUM)
+            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- PARENT_IMAX       :', PARENT_IMAX(HANDLING_NUM)
+            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- PARENT_JMAX       :', PARENT_JMAX(HANDLING_NUM)
+            if( IO_L ) write(IO_FID_LOG,'(1x,A,F9.3)') '***  --- PARENT_DTSEC      :', PARENT_DTSEC(HANDLING_NUM)
             if( IO_L ) write(IO_FID_LOG,'(1x,A)'     ) '***  Informations of Daughter Domain'
-            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- DAUGHTER_PRC_nmax :', DAUGHTER_PRC_nmax
-            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- DAUGHTER_PRC_NUM_X:', DAUGHTER_PRC_NUM_X
-            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- DAUGHTER_PRC_NUM_Y:', DAUGHTER_PRC_NUM_Y
-            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- DAUGHTER_KMAX     :', DAUGHTER_KMAX
-            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- DAUGHTER_IMAX     :', DAUGHTER_IMAX
-            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- DAUGHTER_JMAX     :', DAUGHTER_JMAX
-            if( IO_L ) write(IO_FID_LOG,'(1x,A,F9.3)') '***  --- DAUGHTER_DTSEC    :', DAUGHTER_DTSEC
+            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- DAUGHTER_PRC_nmax :', DAUGHTER_PRC_nmax(HANDLING_NUM)
+            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- DAUGHTER_PRC_NUM_X:', DAUGHTER_PRC_NUM_X(HANDLING_NUM)
+            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- DAUGHTER_PRC_NUM_Y:', DAUGHTER_PRC_NUM_Y(HANDLING_NUM)
+            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- DAUGHTER_KMAX     :', DAUGHTER_KMAX(HANDLING_NUM)
+            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- DAUGHTER_IMAX     :', DAUGHTER_IMAX(HANDLING_NUM)
+            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- DAUGHTER_JMAX     :', DAUGHTER_JMAX(HANDLING_NUM)
+            if( IO_L ) write(IO_FID_LOG,'(1x,A,F9.3)') '***  --- DAUGHTER_DTSEC    :', DAUGHTER_DTSEC(HANDLING_NUM)
 
-            call NEST_COMM_setup_nestdown
+            call NEST_COMM_setup_nestdown( HANDLING_NUM )
 
-         elseif( ONLINE_DAUGHTER ) then
+         !---------------------------------- parent routines
+         endif
+
+
+         if( ONLINE_IAM_DAUGHTER ) then
          !-------------------------------------------------
-            INTERCOMM_ID = ONLINE_DOMAIN_NUM - 1
-            NEST_Filiation(INTERCOMM_ID) = -1
-            NEST_HANDLING_NUM = NEST_HANDLING_NUM + 1
+            HANDLING_NUM = 2 !HANDLING_NUM + 1
+            INTERCOMM_ID(HANDLING_NUM) = ONLINE_DOMAIN_NUM - 1
+            NEST_Filiation(INTERCOMM_ID(HANDLING_NUM)) = -1
 
             call MPI_COMM_GET_PARENT( INTERCOMM_PARENT, ierr )
-            if( IO_L ) write(IO_FID_LOG,'(1x,A,I2,A)') '*** Activated Daughter Domain [INTERCOMM_ID:', INTERCOMM_ID, ' ]'
+            if( IO_L ) write(IO_FID_LOG,'(1x,A,I2,A)') '*** Activated Daughter Domain [INTERCOMM_ID:', INTERCOMM_ID(HANDLING_NUM), ' ]'
 
-            call NEST_COMM_ping( INTERCOMM_ID )
+            call NEST_COMM_ping( HANDLING_NUM )
 
-            call NEST_COMM_parentsize( INTERCOMM_ID )
+            call NEST_COMM_parentsize( HANDLING_NUM )
 
-            allocate( latlon_catalog(PARENT_PRC_nmax,4,2) )
-            call NEST_COMM_catalogue( INTERCOMM_ID )
+            allocate( latlon_catalog(PARENT_PRC_nmax(HANDLING_NUM),4,2) )
+            call NEST_COMM_catalogue( HANDLING_NUM )
             call MPI_BARRIER(INTERCOMM_PARENT, ierr)
 
-            call NEST_domain_relate
+            call NEST_domain_relate( HANDLING_NUM )
 
-            PARENT_KA   = PARENT_KMAX   + KHALO * 2
-            PARENT_IA   = PARENT_IMAX   + IHALO * 2
-            PARENT_JA   = PARENT_JMAX   + JHALO * 2
-            DAUGHTER_KA = DAUGHTER_KMAX + KHALO * 2
-            DAUGHTER_IA = DAUGHTER_IMAX + IHALO * 2
-            DAUGHTER_JA = DAUGHTER_JMAX + JHALO * 2
-            TILEAL_KA   = PARENT_KA
-            TILEAL_IA   = PARENT_IA * NEST_TILE_NUM_X
-            TILEAL_JA   = PARENT_JA * NEST_TILE_NUM_Y
+            PARENT_KA(HANDLING_NUM)   = PARENT_KMAX(HANDLING_NUM)   + KHALO * 2
+            PARENT_IA(HANDLING_NUM)   = PARENT_IMAX(HANDLING_NUM)   + IHALO * 2
+            PARENT_JA(HANDLING_NUM)   = PARENT_JMAX(HANDLING_NUM)   + JHALO * 2
+            DAUGHTER_KA(HANDLING_NUM) = DAUGHTER_KMAX(HANDLING_NUM) + KHALO * 2
+            DAUGHTER_IA(HANDLING_NUM) = DAUGHTER_IMAX(HANDLING_NUM) + IHALO * 2
+            DAUGHTER_JA(HANDLING_NUM) = DAUGHTER_JMAX(HANDLING_NUM) + JHALO * 2
+            TILEAL_KA(HANDLING_NUM)   = PARENT_KA(HANDLING_NUM)
+            TILEAL_IA(HANDLING_NUM)   = PARENT_IA(HANDLING_NUM) * NEST_TILE_NUM_X
+            TILEAL_JA(HANDLING_NUM)   = PARENT_JA(HANDLING_NUM) * NEST_TILE_NUM_Y
 
             if( IO_L ) write(IO_FID_LOG,'(1x,A)'     ) '***  Informations of Parent Domain'
-            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- PARENT_PRC_nmax   :', PARENT_PRC_nmax
-            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- PARENT_PRC_NUM_X  :', PARENT_PRC_NUM_X
-            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- PARENT_PRC_NUM_Y  :', PARENT_PRC_NUM_Y
-            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- PARENT_KMAX       :', PARENT_KMAX
-            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- PARENT_IMAX       :', PARENT_IMAX
-            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- PARENT_JMAX       :', PARENT_JMAX
-            if( IO_L ) write(IO_FID_LOG,'(1x,A,F9.3)') '***  --- PARENT_DTSEC      :', PARENT_DTSEC
-            if( IO_L ) write(IO_FID_LOG,'(1x,A)'     ) '***  Informations of Daughter Domain'
-            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- DAUGHTER_PRC_nmax :', DAUGHTER_PRC_nmax
-            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- DAUGHTER_PRC_NUM_X:', DAUGHTER_PRC_NUM_X
-            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- DAUGHTER_PRC_NUM_Y:', DAUGHTER_PRC_NUM_Y
-            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- DAUGHTER_KMAX     :', DAUGHTER_KMAX
-            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- DAUGHTER_IMAX     :', DAUGHTER_IMAX
-            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- DAUGHTER_JMAX     :', DAUGHTER_JMAX
-            if( IO_L ) write(IO_FID_LOG,'(1x,A,F9.3)') '***  --- DAUGHTER_DTSEC    :', DAUGHTER_DTSEC
+            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- PARENT_PRC_nmax   :', PARENT_PRC_nmax(HANDLING_NUM)
+            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- PARENT_PRC_NUM_X  :', PARENT_PRC_NUM_X(HANDLING_NUM)
+            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- PARENT_PRC_NUM_Y  :', PARENT_PRC_NUM_Y(HANDLING_NUM)
+            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- PARENT_KMAX       :', PARENT_KMAX(HANDLING_NUM)
+            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- PARENT_IMAX       :', PARENT_IMAX(HANDLING_NUM)
+            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- PARENT_JMAX       :', PARENT_JMAX(HANDLING_NUM)
+            if( IO_L ) write(IO_FID_LOG,'(1x,A,F9.3)') '***  --- PARENT_DTSEC      :', PARENT_DTSEC(HANDLING_NUM)
+            if( IO_L ) write(IO_FID_LOG,'(1x,A)'     ) '***  Informations of Daughter Domain [me]'
+            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- DAUGHTER_PRC_nmax :', DAUGHTER_PRC_nmax(HANDLING_NUM)
+            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- DAUGHTER_PRC_NUM_X:', DAUGHTER_PRC_NUM_X(HANDLING_NUM)
+            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- DAUGHTER_PRC_NUM_Y:', DAUGHTER_PRC_NUM_Y(HANDLING_NUM)
+            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- DAUGHTER_KMAX     :', DAUGHTER_KMAX(HANDLING_NUM)
+            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- DAUGHTER_IMAX     :', DAUGHTER_IMAX(HANDLING_NUM)
+            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- DAUGHTER_JMAX     :', DAUGHTER_JMAX(HANDLING_NUM)
+            if( IO_L ) write(IO_FID_LOG,'(1x,A,F9.3)') '***  --- DAUGHTER_DTSEC    :', DAUGHTER_DTSEC(HANDLING_NUM)
             if( IO_L ) write(IO_FID_LOG,'(1x,A)'     ) '***  Informations of Target Tiles'
-            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- TILEALL_KA      :', TILEAL_KA
-            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- TILEALL_IA      :', TILEAL_IA
-            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- TILEALL_JA      :', TILEAL_JA
+            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- TILEALL_KA      :', TILEAL_KA(HANDLING_NUM)
+            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- TILEALL_IA      :', TILEAL_IA(HANDLING_NUM)
+            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- TILEALL_JA      :', TILEAL_JA(HANDLING_NUM)
 
-            allocate( buffer_2D  (              PARENT_IA, PARENT_JA ) )
-            allocate( buffer_3D  (   PARENT_KA, PARENT_IA, PARENT_JA ) )
-            allocate( buffer_3DF ( 0:PARENT_KA, PARENT_IA, PARENT_JA ) )
+            allocate( buffer_2D  (              PARENT_IA(HANDLING_NUM), PARENT_JA(HANDLING_NUM) ) )
+            allocate( buffer_3D  (   PARENT_KA(HANDLING_NUM), PARENT_IA(HANDLING_NUM), PARENT_JA(HANDLING_NUM) ) )
+            allocate( buffer_3DF ( 0:PARENT_KA(HANDLING_NUM), PARENT_IA(HANDLING_NUM), PARENT_JA(HANDLING_NUM) ) )
 
-            allocate( buffer_ref_LON (            TILEAL_IA,TILEAL_JA) )
-            allocate( buffer_ref_LONX(            TILEAL_IA,TILEAL_JA) )
-            allocate( buffer_ref_LONY(            TILEAL_IA,TILEAL_JA) )
-            allocate( buffer_ref_LAT (            TILEAL_IA,TILEAL_JA) )
-            allocate( buffer_ref_LATX(            TILEAL_IA,TILEAL_JA) )
-            allocate( buffer_ref_LATY(            TILEAL_IA,TILEAL_JA) )
-            allocate( buffer_ref_CZ  (  PARENT_KA,TILEAL_IA,TILEAL_JA) )
-            allocate( buffer_ref_FZ  (0:PARENT_KA,TILEAL_IA,TILEAL_JA) )
+            allocate( buffer_ref_LON (            TILEAL_IA(HANDLING_NUM),TILEAL_JA(HANDLING_NUM)) )
+            allocate( buffer_ref_LONX(            TILEAL_IA(HANDLING_NUM),TILEAL_JA(HANDLING_NUM)) )
+            allocate( buffer_ref_LONY(            TILEAL_IA(HANDLING_NUM),TILEAL_JA(HANDLING_NUM)) )
+            allocate( buffer_ref_LAT (            TILEAL_IA(HANDLING_NUM),TILEAL_JA(HANDLING_NUM)) )
+            allocate( buffer_ref_LATX(            TILEAL_IA(HANDLING_NUM),TILEAL_JA(HANDLING_NUM)) )
+            allocate( buffer_ref_LATY(            TILEAL_IA(HANDLING_NUM),TILEAL_JA(HANDLING_NUM)) )
+            allocate( buffer_ref_CZ  (  PARENT_KA(HANDLING_NUM),TILEAL_IA(HANDLING_NUM),TILEAL_JA(HANDLING_NUM)) )
+            allocate( buffer_ref_FZ  (0:PARENT_KA(HANDLING_NUM),TILEAL_IA(HANDLING_NUM),TILEAL_JA(HANDLING_NUM)) )
 
-            allocate( buffer_ref_2D  (            TILEAL_IA,TILEAL_JA) )
-            allocate( buffer_ref_3D  (  PARENT_KA,TILEAL_IA,TILEAL_JA) )
-            allocate( buffer_ref_3DF (0:PARENT_KA,TILEAL_IA,TILEAL_JA) )
+            allocate( buffer_ref_2D  (            TILEAL_IA(HANDLING_NUM),TILEAL_JA(HANDLING_NUM)) )
+            allocate( buffer_ref_3D  (  PARENT_KA(HANDLING_NUM),TILEAL_IA(HANDLING_NUM),TILEAL_JA(HANDLING_NUM)) )
+            allocate( buffer_ref_3DF (0:PARENT_KA(HANDLING_NUM),TILEAL_IA(HANDLING_NUM),TILEAL_JA(HANDLING_NUM)) )
 
-            allocate( hfact(            DAUGHTER_IA,DAUGHTER_JA,itp_nh,       itp_ng) )
-            allocate( vfact(DAUGHTER_KA,DAUGHTER_IA,DAUGHTER_JA,itp_nh,itp_nv,itp_ng) )
-            allocate( igrd (            DAUGHTER_IA,DAUGHTER_JA,itp_nh,       itp_ng) )
-            allocate( jgrd (            DAUGHTER_IA,DAUGHTER_JA,itp_nh,       itp_ng) )
-            allocate( kgrd (DAUGHTER_KA,DAUGHTER_IA,DAUGHTER_JA,itp_nh,itp_nv,itp_ng) )
+            allocate( hfact(            DAUGHTER_IA(HANDLING_NUM),DAUGHTER_JA(HANDLING_NUM),itp_nh,       itp_ng) )
+            allocate( vfact(DAUGHTER_KA(HANDLING_NUM),DAUGHTER_IA(HANDLING_NUM),DAUGHTER_JA(HANDLING_NUM),itp_nh,itp_nv,itp_ng) )
+            allocate( igrd (            DAUGHTER_IA(HANDLING_NUM),DAUGHTER_JA(HANDLING_NUM),itp_nh,       itp_ng) )
+            allocate( jgrd (            DAUGHTER_IA(HANDLING_NUM),DAUGHTER_JA(HANDLING_NUM),itp_nh,       itp_ng) )
+            allocate( kgrd (DAUGHTER_KA(HANDLING_NUM),DAUGHTER_IA(HANDLING_NUM),DAUGHTER_JA(HANDLING_NUM),itp_nh,itp_nv,itp_ng) )
 
-            call NEST_COMM_setup_nestdown
+            call NEST_COMM_setup_nestdown( HANDLING_NUM )
 
             ! for scalar points
             call latlonz_interporation_fact( hfact          (:,:,:,I_SCLR),     & ! [OUT]
@@ -455,9 +477,10 @@ contains
                                              buffer_ref_CZ  (:,:,:),            & ! [IN]
                                              buffer_ref_LAT (:,:),              & ! [IN]
                                              buffer_ref_LON (:,:),              & ! [IN]
-                                             TILEAL_KA,                         & ! [IN]
-                                             TILEAL_IA,                         & ! [IN]
-                                             TILEAL_JA                          ) ! [IN]
+                                             TILEAL_KA(HANDLING_NUM),           & ! [IN]
+                                             TILEAL_IA(HANDLING_NUM),           & ! [IN]
+                                             TILEAL_JA(HANDLING_NUM),           & ! [IN]
+                                             HANDLING_NUM                       ) ! [IN]
 
             ! for z staggered points
             call latlonz_interporation_fact( hfact          (:,:,:,I_ZSTG),     & ! [OUT]
@@ -471,9 +494,10 @@ contains
                                              buffer_ref_FZ  (:,:,:),            & ! [IN]
                                              buffer_ref_LAT (:,:),              & ! [IN]
                                              buffer_ref_LON (:,:),              & ! [IN]
-                                             TILEAL_KA,                         & ! [IN]
-                                             TILEAL_IA,                         & ! [IN]
-                                             TILEAL_JA                          ) ! [IN]
+                                             TILEAL_KA(HANDLING_NUM),           & ! [IN]
+                                             TILEAL_IA(HANDLING_NUM),           & ! [IN]
+                                             TILEAL_JA(HANDLING_NUM),           & ! [IN]
+                                             HANDLING_NUM                       ) ! [IN]
 
             ! for x staggered points
             call latlonz_interporation_fact( hfact          (:,:,:,I_XSTG),     & ! [OUT]
@@ -487,9 +511,10 @@ contains
                                              buffer_ref_CZ  (:,:,:),            & ! [IN]
                                              buffer_ref_LATX(:,:),              & ! [IN]
                                              buffer_ref_LONX(:,:),              & ! [IN]
-                                             TILEAL_KA,                         & ! [IN]
-                                             TILEAL_IA,                         & ! [IN]
-                                             TILEAL_JA                          ) ! [IN]
+                                             TILEAL_KA(HANDLING_NUM),           & ! [IN]
+                                             TILEAL_IA(HANDLING_NUM),           & ! [IN]
+                                             TILEAL_JA(HANDLING_NUM),           & ! [IN]
+                                             HANDLING_NUM                       ) ! [IN]
 
             ! for y staggered points
             call latlonz_interporation_fact( hfact          (:,:,:,I_YSTG),     & ! [OUT]
@@ -503,28 +528,38 @@ contains
                                              buffer_ref_CZ  (:,:,:),            & ! [IN]
                                              buffer_ref_LATY(:,:),              & ! [IN]
                                              buffer_ref_LONY(:,:),              & ! [IN]
-                                             TILEAL_KA,                         & ! [IN]
-                                             TILEAL_IA,                         & ! [IN]
-                                             TILEAL_JA                          ) ! [IN]
+                                             TILEAL_KA(HANDLING_NUM),           & ! [IN]
+                                             TILEAL_IA(HANDLING_NUM),           & ! [IN]
+                                             TILEAL_JA(HANDLING_NUM),           & ! [IN]
+                                             HANDLING_NUM                       ) ! [IN]
 
-         !-------------------------------------------------
+         !---------------------------------- daughter routines
          endif
 
-      endif
+         if( IO_L ) write(IO_FID_LOG,'(1x,A,I2)') '*** Number of Related Domains :', HANDLING_NUM
+         if ( HANDLING_NUM > 2 ) then
+            if( IO_L ) write(*,*) 'xxx Too much handing domains (up to 2)'
+            call PRC_MPIstop
+         endif
 
-    endif !USE_NESTING
+      endif !--- OFFLINE or NOT
+
+    endif !--- USE_NESTING
 
     return
   end subroutine NEST_setup
 
   !-----------------------------------------------------------------------------
   !> Solve relationship between ParentDomain & Daughter Domain
-  subroutine NEST_domain_relate
+  subroutine NEST_domain_relate( &
+      HANDLE  )
     use scale_const, only: &
        EPS => CONST_EPS
     use scale_process, only: &
        PRC_MPIstop
     implicit none
+
+    integer, intent(in) :: HANDLE !< id number of nesting relation in this process target
 
     logical :: hit
 
@@ -535,11 +570,11 @@ contains
     integer :: i, j, ii, jj, k
     !---------------------------------------------------------------------------
 
-    allocate( pd_tile_num(0:PARENT_PRC_nmax-1,2) )
+    allocate( pd_tile_num(0:PARENT_PRC_nmax(HANDLE)-1,2) )
 
     k = 0 ! MPI process number starts from zero
-    do j = 1, PARENT_PRC_NUM_Y
-    do i = 1, PARENT_PRC_NUM_X
+    do j = 1, PARENT_PRC_NUM_Y(HANDLE)
+    do i = 1, PARENT_PRC_NUM_X(HANDLE)
        pd_tile_num(k,1) = i
        pd_tile_num(k,2) = j
        k = k + 1
@@ -548,7 +583,7 @@ contains
 
     !--- SW search
     hit = .false.
-    do i = 1, PARENT_PRC_nmax
+    do i = 1, PARENT_PRC_nmax(HANDLE)
        if ( corner_loc(I_SW,I_LON) > latlon_catalog(i,I_SW,I_LON) .and. &
             corner_loc(I_SW,I_LAT) > latlon_catalog(i,I_SW,I_LAT) .and. &
             corner_loc(I_SW,I_LON) < latlon_catalog(i,I_NE,I_LON) .and. &
@@ -568,7 +603,7 @@ contains
 
     !--- NE search
     hit = .false.
-    do i = 1, PARENT_PRC_nmax
+    do i = 1, PARENT_PRC_nmax(HANDLE)
        if ( corner_loc(I_NE,I_LON) > latlon_catalog(i,I_SW,I_LON) .and. &
             corner_loc(I_NE,I_LAT) > latlon_catalog(i,I_SW,I_LAT) .and. &
             corner_loc(I_NE,I_LON) < latlon_catalog(i,I_NE,I_LON) .and. &
@@ -594,7 +629,7 @@ contains
     k = 1
     do j = 1, NEST_TILE_NUM_Y
     do i = 1, NEST_TILE_NUM_X
-       NEST_TILE_ID(k) = pd_sw_tile + (i-1) + PARENT_PRC_NUM_X*(j-1)
+       NEST_TILE_ID(k) = pd_sw_tile + (i-1) + PARENT_PRC_NUM_X(HANDLE)*(j-1)
        k = k + 1
     enddo
     enddo
@@ -605,7 +640,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Get parent domain size
   subroutine NEST_COMM_parentsize( &
-      INTERCOMM_ID  )
+      HANDLE  )
     use scale_process, only: &
        PRC_myrank,  &
        PRC_nmax,    &
@@ -616,22 +651,19 @@ contains
        TIME_DTSEC
     implicit none
 
-    integer, intent(in) :: INTERCOMM_ID !< id of domain-intercommunication
+    integer, intent(in) :: HANDLE !< id number of nesting relation in this process target
 
     real(DP) :: buffer
     integer  :: datapack(12)
-    integer  :: parent, daughter
     integer  :: ireq1, ireq2, ierr1, ierr2, ileng
     integer  :: istatus(MPI_STATUS_SIZE)
     integer  :: tag
     !---------------------------------------------------------------------------
 
-    tag        = INTERCOMM_ID * 100
-    parent     = INTERCOMM_ID
-    daughter   = INTERCOMM_ID + 1
+    tag   = INTERCOMM_ID(HANDLE) * 100
     ileng = 12
 
-    if ( ONLINE_DOMAIN_NUM == parent ) then
+    if ( NEST_Filiation( INTERCOMM_ID(HANDLE) ) > 0 ) then !--- parent
        ! from parent to daughter
        datapack( 1) = PRC_nmax
        datapack( 2) = PRC_NUM_X
@@ -652,19 +684,19 @@ contains
        call MPI_WAIT(ireq1, istatus, ierr1)
        call MPI_WAIT(ireq2, istatus, ierr2)
 
-       PARENT_PRC_nmax  = datapack( 1)
-       PARENT_PRC_NUM_X = datapack( 2)
-       PARENT_PRC_NUM_Y = datapack( 3)
-       PARENT_KMAX      = datapack( 4)
-       PARENT_IMAX      = datapack( 5)
-       PARENT_JMAX      = datapack( 6)
-       PRNT_KS          = datapack( 7)
-       PRNT_KE          = datapack( 8)
-       PRNT_IS          = datapack( 9)
-       PRNT_IE          = datapack(10)
-       PRNT_JS          = datapack(11)
-       PRNT_JE          = datapack(12)
-       PARENT_DTSEC     = buffer
+       PARENT_PRC_nmax(HANDLE)  = datapack( 1)
+       PARENT_PRC_NUM_X(HANDLE) = datapack( 2)
+       PARENT_PRC_NUM_Y(HANDLE) = datapack( 3)
+       PARENT_KMAX(HANDLE)      = datapack( 4)
+       PARENT_IMAX(HANDLE)      = datapack( 5)
+       PARENT_JMAX(HANDLE)      = datapack( 6)
+       PRNT_KS(HANDLE)          = datapack( 7)
+       PRNT_KE(HANDLE)          = datapack( 8)
+       PRNT_IS(HANDLE)          = datapack( 9)
+       PRNT_IE(HANDLE)          = datapack(10)
+       PRNT_JS(HANDLE)          = datapack(11)
+       PRNT_JE(HANDLE)          = datapack(12)
+       PARENT_DTSEC(HANDLE)     = buffer
 
        ! from daughter to parent
        call MPI_IRECV(datapack, ileng, MPI_INTEGER, PRC_myrank, tag+2, INTERCOMM_DAUGHTER, ireq1, ierr1)
@@ -672,40 +704,41 @@ contains
        call MPI_WAIT(ireq1, istatus, ierr1)
        call MPI_WAIT(ireq2, istatus, ierr2)
 
-       DAUGHTER_PRC_nmax  = datapack( 1)
-       DAUGHTER_PRC_NUM_X = datapack( 2)
-       DAUGHTER_PRC_NUM_Y = datapack( 3)
-       DAUGHTER_KMAX      = datapack( 4)
-       DAUGHTER_IMAX      = datapack( 5)
-       DAUGHTER_JMAX      = datapack( 6)
-       DATR_KS            = datapack( 7)
-       DATR_KE            = datapack( 8)
-       DATR_IS            = datapack( 9)
-       DATR_IE            = datapack(10)
-       DATR_JS            = datapack(11)
-       DATR_JE            = datapack(12)
-       DAUGHTER_DTSEC     = buffer
+       DAUGHTER_PRC_nmax(HANDLE)  = datapack( 1)
+       DAUGHTER_PRC_NUM_X(HANDLE) = datapack( 2)
+       DAUGHTER_PRC_NUM_Y(HANDLE) = datapack( 3)
+       DAUGHTER_KMAX(HANDLE)      = datapack( 4)
+       DAUGHTER_IMAX(HANDLE)      = datapack( 5)
+       DAUGHTER_JMAX(HANDLE)      = datapack( 6)
+       DATR_KS(HANDLE)            = datapack( 7)
+       DATR_KE(HANDLE)            = datapack( 8)
+       DATR_IS(HANDLE)            = datapack( 9)
+       DATR_IE(HANDLE)            = datapack(10)
+       DATR_JS(HANDLE)            = datapack(11)
+       DATR_JE(HANDLE)            = datapack(12)
+       DAUGHTER_DTSEC(HANDLE)     = buffer
 
-    elseif ( ONLINE_DOMAIN_NUM == daughter ) then
+
+    elseif ( NEST_Filiation( INTERCOMM_ID(HANDLE) ) < 0 ) then !--- daughter
        ! from parent to daughter
        call MPI_IRECV(datapack, ileng, MPI_INTEGER, PRC_myrank, tag, INTERCOMM_PARENT, ireq1, ierr1)
        call MPI_IRECV(buffer, 1, MPI_DOUBLE_PRECISION, PRC_myrank, tag+1, INTERCOMM_PARENT, ireq2, ierr2)
        call MPI_WAIT(ireq1, istatus, ierr1)
        call MPI_WAIT(ireq2, istatus, ierr2)
 
-       PARENT_PRC_nmax  = datapack( 1)
-       PARENT_PRC_NUM_X = datapack( 2)
-       PARENT_PRC_NUM_Y = datapack( 3)
-       PARENT_KMAX      = datapack( 4)
-       PARENT_IMAX      = datapack( 5)
-       PARENT_JMAX      = datapack( 6)
-       PRNT_KS          = datapack( 7)
-       PRNT_KE          = datapack( 8)
-       PRNT_IS          = datapack( 9)
-       PRNT_IE          = datapack(10)
-       PRNT_JS          = datapack(11)
-       PRNT_JE          = datapack(12)
-       PARENT_DTSEC     = buffer
+       PARENT_PRC_nmax(HANDLE)  = datapack( 1)
+       PARENT_PRC_NUM_X(HANDLE) = datapack( 2)
+       PARENT_PRC_NUM_Y(HANDLE) = datapack( 3)
+       PARENT_KMAX(HANDLE)      = datapack( 4)
+       PARENT_IMAX(HANDLE)      = datapack( 5)
+       PARENT_JMAX(HANDLE)      = datapack( 6)
+       PRNT_KS(HANDLE)          = datapack( 7)
+       PRNT_KE(HANDLE)          = datapack( 8)
+       PRNT_IS(HANDLE)          = datapack( 9)
+       PRNT_IE(HANDLE)          = datapack(10)
+       PRNT_JS(HANDLE)          = datapack(11)
+       PRNT_JE(HANDLE)          = datapack(12)
+       PARENT_DTSEC(HANDLE)     = buffer
 
        ! from daughter to parent
        datapack( 1) = PRC_nmax
@@ -727,19 +760,19 @@ contains
        call MPI_WAIT(ireq1, istatus, ierr1)
        call MPI_WAIT(ireq2, istatus, ierr2)
 
-       DAUGHTER_PRC_nmax  = datapack( 1)
-       DAUGHTER_PRC_NUM_X = datapack( 2)
-       DAUGHTER_PRC_NUM_Y = datapack( 3)
-       DAUGHTER_KMAX      = datapack( 4)
-       DAUGHTER_IMAX      = datapack( 5)
-       DAUGHTER_JMAX      = datapack( 6)
-       DATR_KS            = datapack( 7)
-       DATR_KE            = datapack( 8)
-       DATR_IS            = datapack( 9)
-       DATR_IE            = datapack(10)
-       DATR_JS            = datapack(11)
-       DATR_JE            = datapack(12)
-       DAUGHTER_DTSEC     = buffer
+       DAUGHTER_PRC_nmax(HANDLE)  = datapack( 1)
+       DAUGHTER_PRC_NUM_X(HANDLE) = datapack( 2)
+       DAUGHTER_PRC_NUM_Y(HANDLE) = datapack( 3)
+       DAUGHTER_KMAX(HANDLE)      = datapack( 4)
+       DAUGHTER_IMAX(HANDLE)      = datapack( 5)
+       DAUGHTER_JMAX(HANDLE)      = datapack( 6)
+       DATR_KS(HANDLE)            = datapack( 7)
+       DATR_KE(HANDLE)            = datapack( 8)
+       DATR_IS(HANDLE)            = datapack( 9)
+       DATR_IE(HANDLE)            = datapack(10)
+       DATR_JS(HANDLE)            = datapack(11)
+       DATR_JE(HANDLE)            = datapack(12)
+       DAUGHTER_DTSEC(HANDLE)     = buffer
     else
        if( IO_L ) write(*,*) 'xxx internal error [nest/grid]'
        call PRC_MPIstop
@@ -751,7 +784,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Get parent latlon catalogue
   subroutine NEST_COMM_catalogue( &
-      INTERCOMM_ID  )
+      HANDLE  )
     use scale_process, only: &
        PRC_myrank,  &
        PRC_nmax,    &
@@ -762,25 +795,22 @@ contains
        COMM_datatype
     implicit none
 
-    integer, intent(in) :: INTERCOMM_ID !< id of domain-intercommunication
+    integer, intent(in) :: HANDLE !< id number of nesting relation in this process target
 
-    integer :: parent, daughter
     integer :: ireq, ierr, ileng
     integer :: istatus(MPI_STATUS_SIZE)
     integer :: tag
     !---------------------------------------------------------------------------
 
-    tag        = INTERCOMM_ID * 100
-    parent     = INTERCOMM_ID
-    daughter   = INTERCOMM_ID + 1
+    tag = INTERCOMM_ID(HANDLE) * 100
 
-    if ( ONLINE_DOMAIN_NUM == parent ) then
+    if ( NEST_Filiation( INTERCOMM_ID(HANDLE) ) > 0 ) then !--- parent
        ileng = PRC_nmax * 4 * 2
        call MPI_ISEND(REAL_DOMAIN_CATALOGUE, ileng, COMM_datatype, PRC_myrank, tag, INTERCOMM_DAUGHTER, ireq, ierr)
        call MPI_WAIT(ireq, istatus, ierr)
 
-    elseif ( ONLINE_DOMAIN_NUM == daughter ) then
-       ileng = PARENT_PRC_nmax * 4 * 2
+    elseif ( NEST_Filiation( INTERCOMM_ID(HANDLE) ) < 0 ) then !--- daughter
+       ileng = PARENT_PRC_nmax(HANDLE) * 4 * 2
        call MPI_IRECV(latlon_catalog, ileng, COMM_datatype, PRC_myrank, tag, INTERCOMM_PARENT, ireq, ierr)
        call MPI_WAIT(ireq, istatus, ierr)
 
@@ -795,28 +825,25 @@ contains
   !-----------------------------------------------------------------------------
   !> Check Communication Inter-domains
   subroutine NEST_COMM_ping( &
-      INTERCOMM_ID  )
+      HANDLE  )
     use scale_process, only: &
        PRC_myrank,  &
        PRC_MPIstop
     implicit none
 
-    integer, intent(in) :: INTERCOMM_ID !< id of domain-intercommunication
+    integer, intent(in) :: HANDLE !< id number of nesting relation in this process target
 
     integer :: ping, pong
-    integer :: parent, daughter
     integer :: ireq1, ireq2, ierr1, ierr2
     integer :: istatus(MPI_STATUS_SIZE)
     integer :: tag
     logical :: ping_error
     !---------------------------------------------------------------------------
 
-    tag        = INTERCOMM_ID * 100
-    parent     = INTERCOMM_ID
-    daughter   = INTERCOMM_ID + 1
+    tag        = INTERCOMM_ID(HANDLE) * 100
     ping_error = .false.
 
-    if ( ONLINE_DOMAIN_NUM == parent ) then
+    if ( NEST_Filiation( INTERCOMM_ID(HANDLE) ) > 0 ) then !--- parent
        ping = ONLINE_DOMAIN_NUM
        pong = 0
 
@@ -825,9 +852,9 @@ contains
        call MPI_WAIT(ireq1, istatus, ierr1)
        call MPI_WAIT(ireq2, istatus, ierr2)
 
-       if ( pong /= daughter ) ping_error = .true.
+       if ( pong /= INTERCOMM_ID(HANDLE)+1 ) ping_error = .true.
 
-    elseif ( ONLINE_DOMAIN_NUM == daughter ) then
+    elseif ( NEST_Filiation( INTERCOMM_ID(HANDLE) ) < 0 ) then !--- daughter
        ping = ONLINE_DOMAIN_NUM
        pong = 0
 
@@ -836,7 +863,7 @@ contains
        call MPI_WAIT(ireq1, istatus, ierr1)
        call MPI_WAIT(ireq2, istatus, ierr2)
 
-       if ( pong /= parent ) ping_error = .true.
+       if ( pong /= INTERCOMM_ID(HANDLE) ) ping_error = .true.
 
     else
        if( IO_L ) write(*,*) 'xxx internal error [nest/grid]'
@@ -853,7 +880,8 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Inter-domain communication setup for nestdown
-  subroutine NEST_COMM_setup_nestdown
+  subroutine NEST_COMM_setup_nestdown( &
+      HANDLE  )
     use scale_process, only: &
        PRC_myrank,  &
        PRC_nmax,    &
@@ -865,10 +893,11 @@ contains
        COMM_world
     implicit none
 
+    integer, intent(in) :: HANDLE !< id number of nesting relation in this process target
+
     integer, allocatable :: buffer_LIST(:)
     integer, allocatable :: buffer_ALLLIST(:)
 
-    integer :: parent, daughter
     integer :: ireq, ierr, ileng
     integer :: istatus(MPI_STATUS_SIZE)
     integer :: tag
@@ -876,29 +905,27 @@ contains
     integer :: i, j, k
     !---------------------------------------------------------------------------
 
-    tag        = INTERCOMM_ID * 100
-    parent     = INTERCOMM_ID
-    daughter   = INTERCOMM_ID + 1
+    tag = INTERCOMM_ID(HANDLE) * 100
 
-    if ( ONLINE_DOMAIN_NUM == parent ) then
-    !---------------------------------------------------
+    if ( NEST_Filiation( INTERCOMM_ID(HANDLE) ) > 0 ) then
+    !--------------------------------------------------- parent
 
-       call MPI_IRECV(NEST_TILE_ALLMAX, 1, MPI_INTEGER, PRC_myrank, tag+1, INTERCOMM_DAUGHTER, ireq, ierr)
+       call MPI_IRECV(NEST_TILE_ALLMAX_p, 1, MPI_INTEGER, PRC_myrank, tag+1, INTERCOMM_DAUGHTER, ireq, ierr)
        call MPI_WAIT(ireq, istatus, ierr)
 
-       allocate( NEST_TILE_LIST   (NEST_TILE_ALLMAX,PRC_nmax) )
-       allocate( NEST_TILE_LIST_YP(NEST_TILE_ALLMAX*PRC_nmax) )
+       allocate( NEST_TILE_LIST_p (NEST_TILE_ALLMAX_p,PRC_nmax) )
+       allocate( NEST_TILE_LIST_YP(NEST_TILE_ALLMAX_p*PRC_nmax) )
 
-       ileng = NEST_TILE_ALLMAX*PRC_nmax
-       call MPI_IRECV(NEST_TILE_LIST, ileng, MPI_INTEGER, PRC_myrank, tag+2, INTERCOMM_DAUGHTER, ireq, ierr)
+       ileng = NEST_TILE_ALLMAX_p*PRC_nmax
+       call MPI_IRECV(NEST_TILE_LIST_p, ileng, MPI_INTEGER, PRC_myrank, tag+2, INTERCOMM_DAUGHTER, ireq, ierr)
        call MPI_WAIT(ireq, istatus, ierr)
 
        NEST_TILE_LIST_YP(:) = -1
 
        k = 0
        do j = 1, PRC_nmax
-       do i = 1, NEST_TILE_ALLMAX
-          if ( NEST_TILE_LIST(i,j) == PRC_myrank ) then
+       do i = 1, NEST_TILE_ALLMAX_p
+          if ( NEST_TILE_LIST_p(i,j) == PRC_myrank ) then
              k = k + 1
              NEST_TILE_LIST_YP(k) = j - 1  !rank number is started from 1
           endif
@@ -906,32 +933,34 @@ contains
        enddo
        NUM_YP = k
 
-       if( IO_L ) write(IO_FID_LOG,'(A,I5,A,I5)') "   Num YP =",NUM_YP,"  Num TILE(MAX) =",NEST_TILE_ALLMAX
+       if( IO_L ) write(IO_FID_LOG,'(A,I5,A,I5)') "   Num YP =",NUM_YP,"  Num TILE(MAX) =",NEST_TILE_ALLMAX_p
 
-       call NEST_COMM_importgrid_nestdown
+       call NEST_COMM_importgrid_nestdown( HANDLE )
 
        call MPI_BARRIER(INTERCOMM_DAUGHTER, ierr)
-    elseif ( ONLINE_DOMAIN_NUM == daughter ) then
-    !---------------------------------------------------
+
+
+    elseif ( NEST_Filiation( INTERCOMM_ID(HANDLE) ) < 0 ) then
+    !--------------------------------------------------- daughter
 
        NEST_TILE_ALL = size( NEST_TILE_ID(:) ) ! should be equal to "NEST_TILE_NUM_X*NEST_TILE_NUM_Y"
-       call MPI_Allreduce( NEST_TILE_ALL,    &
-                           NEST_TILE_ALLMAX, &
-                           1,                &
-                           MPI_INTEGER,      &
-                           MPI_MAX,          &
-                           COMM_world,       &
-                           ierr              )
-       if( IO_L ) write(IO_FID_LOG,'(A,I5,A,I5)') "   Num YP =",NEST_TILE_ALL,"  Num TILE(MAX) =",NEST_TILE_ALLMAX
+       call MPI_Allreduce( NEST_TILE_ALL,      &
+                           NEST_TILE_ALLMAX_d, &
+                           1,                  &
+                           MPI_INTEGER,        &
+                           MPI_MAX,            &
+                           COMM_world,         &
+                           ierr                )
+       if( IO_L ) write(IO_FID_LOG,'(A,I5,A,I5)') "   Num YP =",NEST_TILE_ALL,"  Num TILE(MAX) =",NEST_TILE_ALLMAX_d
 
-       call MPI_ISEND(NEST_TILE_ALLMAX, 1, MPI_INTEGER, PRC_myrank, tag+1, INTERCOMM_PARENT, ireq, ierr)
+       call MPI_ISEND(NEST_TILE_ALLMAX_d, 1, MPI_INTEGER, PRC_myrank, tag+1, INTERCOMM_PARENT, ireq, ierr)
        call MPI_WAIT(ireq, istatus, ierr)
 
-       allocate( buffer_LIST   (NEST_TILE_ALLMAX)          )
-       allocate( buffer_ALLLIST(NEST_TILE_ALLMAX*PRC_nmax) )
-       allocate( NEST_TILE_LIST(NEST_TILE_ALLMAX,PRC_nmax) )
+       allocate( buffer_LIST   (NEST_TILE_ALLMAX_d)            )
+       allocate( buffer_ALLLIST(NEST_TILE_ALLMAX_d*PRC_nmax)   )
+       allocate( NEST_TILE_LIST_d(NEST_TILE_ALLMAX_d,PRC_nmax) )
 
-       do i = 1, NEST_TILE_ALLMAX
+       do i = 1, NEST_TILE_ALLMAX_d
           if ( i <= NEST_TILE_ALL ) then
              buffer_LIST(i) = NEST_TILE_ID(i)
           else
@@ -939,7 +968,7 @@ contains
           endif
        enddo
 
-       ileng = NEST_TILE_ALLMAX
+       ileng = NEST_TILE_ALLMAX_d
        call MPI_Allgather( buffer_LIST(:),     &
                            ileng,              &
                            MPI_INTEGER,        &
@@ -950,8 +979,8 @@ contains
                            ierr                )
        k = 1
        do j = 1, PRC_nmax
-       do i = 1, NEST_TILE_ALLMAX
-          NEST_TILE_LIST(i,j) = buffer_ALLLIST(k)
+       do i = 1, NEST_TILE_ALLMAX_d
+          NEST_TILE_LIST_d(i,j) = buffer_ALLLIST(k)
           k = k + 1
        enddo
        enddo
@@ -959,13 +988,15 @@ contains
        deallocate( buffer_LIST    )
        deallocate( buffer_ALLLIST )
 
-       ileng = NEST_TILE_ALLMAX*PRC_nmax
-       call MPI_ISEND(NEST_TILE_LIST, ileng, MPI_INTEGER, PRC_myrank, tag+2, INTERCOMM_PARENT, ireq, ierr)
+       ileng = NEST_TILE_ALLMAX_d*PRC_nmax
+       call MPI_ISEND(NEST_TILE_LIST_d, ileng, MPI_INTEGER, PRC_myrank, tag+2, INTERCOMM_PARENT, ireq, ierr)
        call MPI_WAIT(ireq, istatus, ierr)
 
-       call NEST_COMM_importgrid_nestdown
+       call NEST_COMM_importgrid_nestdown( HANDLE )
 
        call MPI_BARRIER(INTERCOMM_PARENT, ierr)
+
+
     else
     !---------------------------------------------------
        if( IO_L ) write(*,*) 'xxx internal error [nest/grid]'
@@ -982,7 +1013,8 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Grid Data transfer from parent to daughter: nestdown
-  subroutine NEST_COMM_importgrid_nestdown
+  subroutine NEST_COMM_importgrid_nestdown( &
+      HANDLE  )
     use scale_process, only: &
        PRC_myrank,  &
        PRC_nmax,    &
@@ -1000,7 +1032,8 @@ contains
        COMM_datatype
     implicit none
 
-    integer :: parent, daughter
+    integer, intent(in) :: HANDLE !< id number of nesting relation in this process target
+
     integer :: ireq(1000)  ! tentative approach
     integer :: ierr(1000)  ! tentative approach
     integer :: ileng
@@ -1014,128 +1047,128 @@ contains
     integer :: i, j, k, l
     !---------------------------------------------------------------------------
 
-    tagbase    = INTERCOMM_ID * 100
-    parent     = INTERCOMM_ID
-    daughter   = INTERCOMM_ID + 1
-    l          = 0
+    tagbase = INTERCOMM_ID(HANDLE) * 100
+    l       = 0
 
     if( NUM_YP*8 > 1000 .or. NEST_TILE_ALL*8 > 1000 ) then
        write(*,*) 'xxx internal error (overflow number of ireq) [nest/grid]'
        call PRC_MPIstop
     endif
 
-    if ( ONLINE_DOMAIN_NUM == parent ) then
-    !---------------------------------------------------
+    if ( NEST_Filiation( INTERCOMM_ID(HANDLE) ) > 0 ) then
+    !--------------------------------------------------- parent
        do i = 1, NUM_YP
           ! send data to multiple daughter processes
           target_rank = NEST_TILE_LIST_YP(i)
 
           l = l + 1
-          ileng = PARENT_IA * PARENT_JA
+          ileng = PARENT_IA(HANDLE) * PARENT_JA(HANDLE)
           tag = tagbase + tag_lon
           call MPI_ISEND(REAL_LON, ileng, COMM_datatype, target_rank, tag, INTERCOMM_DAUGHTER, ireq(l), ierr(l))
           call MPI_WAIT(ireq(l), istatus, ierr(l))
 
           l = l + 1
-          ileng = PARENT_IA * PARENT_JA
+          ileng = PARENT_IA(HANDLE) * PARENT_JA(HANDLE)
           tag = tagbase + tag_lat
           call MPI_ISEND(REAL_LAT, ileng, COMM_datatype, target_rank, tag, INTERCOMM_DAUGHTER, ireq(l), ierr(l))
           call MPI_WAIT(ireq(l), istatus, ierr(l))
 
           l = l + 1
-          ileng = PARENT_IA * PARENT_JA
+          ileng = PARENT_IA(HANDLE) * PARENT_JA(HANDLE)
           tag = tagbase + tag_lonx
           call MPI_ISEND(REAL_LONX, ileng, COMM_datatype, target_rank, tag, INTERCOMM_DAUGHTER, ireq(l), ierr(l))
           call MPI_WAIT(ireq(l), istatus, ierr(l))
 
           l = l + 1
-          ileng = PARENT_IA * PARENT_JA
+          ileng = PARENT_IA(HANDLE) * PARENT_JA(HANDLE)
           tag = tagbase + tag_latx
           call MPI_ISEND(REAL_LATX, ileng, COMM_datatype, target_rank, tag, INTERCOMM_DAUGHTER, ireq(l), ierr(l))
           call MPI_WAIT(ireq(l), istatus, ierr(l))
 
           l = l + 1
-          ileng = PARENT_IA * PARENT_JA
+          ileng = PARENT_IA(HANDLE) * PARENT_JA(HANDLE)
           tag = tagbase + tag_lony
           call MPI_ISEND(REAL_LONY, ileng, COMM_datatype, target_rank, tag, INTERCOMM_DAUGHTER, ireq(l), ierr(l))
           call MPI_WAIT(ireq(l), istatus, ierr(l))
 
           l = l + 1
-          ileng = PARENT_IA * PARENT_JA
+          ileng = PARENT_IA(HANDLE) * PARENT_JA(HANDLE)
           tag = tagbase + tag_laty
           call MPI_ISEND(REAL_LATY, ileng, COMM_datatype, target_rank, tag, INTERCOMM_DAUGHTER, ireq(l), ierr(l))
           call MPI_WAIT(ireq(l), istatus, ierr(l))
 
           l = l + 1
-          ileng = PARENT_KA * PARENT_IA * PARENT_JA
+          ileng = PARENT_KA(HANDLE) * PARENT_IA(HANDLE) * PARENT_JA(HANDLE)
           tag = tagbase + tag_cz
           call MPI_ISEND(REAL_CZ, ileng, COMM_datatype, target_rank, tag, INTERCOMM_DAUGHTER, ireq(l), ierr(l))
           call MPI_WAIT(ireq(l), istatus, ierr(l))
 
           l = l + 1
-          ileng = (PARENT_KA+1) * PARENT_IA * PARENT_JA
+          ileng = (PARENT_KA(HANDLE)+1) * PARENT_IA(HANDLE) * PARENT_JA(HANDLE)
           tag = tagbase + tag_fz
           call MPI_ISEND(REAL_FZ, ileng, COMM_datatype, target_rank, tag, INTERCOMM_DAUGHTER, ireq(l), ierr(l))
           call MPI_WAIT(ireq(l), istatus, ierr(l))
        enddo
-    elseif ( ONLINE_DOMAIN_NUM == daughter ) then
-    !---------------------------------------------------
+
+
+    elseif ( NEST_Filiation( INTERCOMM_ID(HANDLE) ) < 0 ) then
+    !--------------------------------------------------- daughter
        do i = 1, NEST_TILE_ALL
           ! receive data from multiple parent tiles
-          target_rank = NEST_TILE_LIST(i,PRC_myrank+1)
+          target_rank = NEST_TILE_LIST_d(i,PRC_myrank+1)
 
           xloc = mod( i-1, NEST_TILE_NUM_X ) + 1
           yloc = int( real(i-1) / real(NEST_TILE_NUM_X) ) + 1
 
-          xs = PARENT_IA * (xloc-1) + 1
-          xe = PARENT_IA * xloc
-          ys = PARENT_JA * (yloc-1) + 1
-          ye = PARENT_JA * yloc
+          xs = PARENT_IA(HANDLE) * (xloc-1) + 1
+          xe = PARENT_IA(HANDLE) * xloc
+          ys = PARENT_JA(HANDLE) * (yloc-1) + 1
+          ye = PARENT_JA(HANDLE) * yloc
 
           l = l + 1
-          ileng = PARENT_IA * PARENT_JA
+          ileng = PARENT_IA(HANDLE) * PARENT_JA(HANDLE)
           tag = tagbase + tag_lon
           call MPI_IRECV(buffer_2D, ileng, COMM_datatype, target_rank, tag, INTERCOMM_PARENT, ireq(l), ierr(l))
           call MPI_WAIT(ireq(l), istatus, ierr(l))
           buffer_ref_LON(xs:xe,ys:ye)  = buffer_2D(:,:)
 
           l = l + 1
-          ileng = PARENT_IA * PARENT_JA
+          ileng = PARENT_IA(HANDLE) * PARENT_JA(HANDLE)
           tag = tagbase + tag_lat
           call MPI_IRECV(buffer_2D, ileng, COMM_datatype, target_rank, tag, INTERCOMM_PARENT, ireq(l), ierr(l))
           call MPI_WAIT(ireq(l), istatus, ierr(l))
           buffer_ref_LAT(xs:xe,ys:ye)  = buffer_2D(:,:)
 
           l = l + 1
-          ileng = PARENT_IA * PARENT_JA
+          ileng = PARENT_IA(HANDLE) * PARENT_JA(HANDLE)
           tag = tagbase + tag_lonx
           call MPI_IRECV(buffer_2D, ileng, COMM_datatype, target_rank, tag, INTERCOMM_PARENT, ireq(l), ierr(l))
           call MPI_WAIT(ireq(l), istatus, ierr(l))
           buffer_ref_LONX(xs:xe,ys:ye)  = buffer_2D(:,:)
 
           l = l + 1
-          ileng = PARENT_IA * PARENT_JA
+          ileng = PARENT_IA(HANDLE) * PARENT_JA(HANDLE)
           tag = tagbase + tag_latx
           call MPI_IRECV(buffer_2D, ileng, COMM_datatype, target_rank, tag, INTERCOMM_PARENT, ireq(l), ierr(l))
           call MPI_WAIT(ireq(l), istatus, ierr(l))
           buffer_ref_LATX(xs:xe,ys:ye)  = buffer_2D(:,:)
 
           l = l + 1
-          ileng = PARENT_IA * PARENT_JA
+          ileng = PARENT_IA(HANDLE) * PARENT_JA(HANDLE)
           tag = tagbase + tag_lony
           call MPI_IRECV(buffer_2D, ileng, COMM_datatype, target_rank, tag, INTERCOMM_PARENT, ireq(l), ierr(l))
           call MPI_WAIT(ireq(l), istatus, ierr(l))
           buffer_ref_LONY(xs:xe,ys:ye)  = buffer_2D(:,:)
 
           l = l + 1
-          ileng = PARENT_IA * PARENT_JA
+          ileng = PARENT_IA(HANDLE) * PARENT_JA(HANDLE)
           tag = tagbase + tag_laty
           call MPI_IRECV(buffer_2D, ileng, COMM_datatype, target_rank, tag, INTERCOMM_PARENT, ireq(l), ierr(l))
           call MPI_WAIT(ireq(l), istatus, ierr(l))
           buffer_ref_LATY(xs:xe,ys:ye)  = buffer_2D(:,:)
 
           l = l + 1
-          ileng = PARENT_KA * PARENT_IA * PARENT_JA
+          ileng = PARENT_KA(HANDLE) * PARENT_IA(HANDLE) * PARENT_JA(HANDLE)
           tag = tagbase + tag_cz
           call MPI_IRECV(buffer_3D, ileng, COMM_datatype, target_rank, tag, INTERCOMM_PARENT, ireq(l), ierr(l))
           call MPI_WAIT(ireq(l), istatus, ierr(l))
@@ -1144,7 +1177,7 @@ contains
           enddo
 
           l = l + 1
-          ileng = (PARENT_KA+1) * PARENT_IA * PARENT_JA
+          ileng = (PARENT_KA(HANDLE)+1) * PARENT_IA(HANDLE) * PARENT_JA(HANDLE)
           tag = tagbase + tag_fz
           call MPI_IRECV(buffer_3DF,ileng, COMM_datatype, target_rank, tag, INTERCOMM_PARENT, ireq(l), ierr(l))
           call MPI_WAIT(ireq(l), istatus, ierr(l))
@@ -1152,6 +1185,8 @@ contains
              buffer_ref_FZ(k,xs:xe,ys:ye)  = buffer_3DF(k,:,:)
           enddo
        enddo
+
+
     else
     !---------------------------------------------------
        if( IO_L ) write(*,*) 'xxx internal error [nest/grid]'
@@ -1164,6 +1199,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Boundary data transfer from parent to daughter: nestdown
   subroutine NEST_COMM_nestdown( &
+      HANDLE,              & ! [in   ]
       BND_QA,              & ! [in   ]
       org_DENS,            & ! [in   ]
       org_MOMX,            & ! [in   ]
@@ -1185,25 +1221,26 @@ contains
        COMM_datatype
     implicit none
 
-    integer,  intent(in)    :: BND_QA                                                        !< num of tracer
+    integer,  intent(in)    :: HANDLE        !< id number of nesting relation in this process target
+    integer,  intent(in)    :: BND_QA        !< num of tracer
 
-    real(RP), intent(in   ) :: org_DENS(PARENT_KA,PARENT_IA,PARENT_JA)                       !< (KMAX,IMAX,JMAX)
-    real(RP), intent(in   ) :: org_MOMX(PARENT_KA,PARENT_IA,PARENT_JA)                       !< (KMAX,IMAX,JMAX)
-    real(RP), intent(in   ) :: org_MOMY(PARENT_KA,PARENT_IA,PARENT_JA)                       !< (KMAX,IMAX,JMAX)
-    real(RP), intent(in   ) :: org_RHOT(PARENT_KA,PARENT_IA,PARENT_JA)                       !< (KMAX,IMAX,JMAX)
-    real(RP), intent(in   ) :: org_QTRC(PARENT_KA,PARENT_IA,PARENT_JA,BND_QA)                !< (KMAX,IMAX,JMAX,QA)
-    real(RP), intent(inout) :: interped_ref_DENS(DAUGHTER_KA,DAUGHTER_IA,DAUGHTER_JA)        !< (KMAX,IMAX,JMAX)
-    real(RP), intent(inout) :: interped_ref_VELX(DAUGHTER_KA,DAUGHTER_IA,DAUGHTER_JA)        !< (KMAX,IMAX,JMAX)
-    real(RP), intent(inout) :: interped_ref_VELY(DAUGHTER_KA,DAUGHTER_IA,DAUGHTER_JA)        !< (KMAX,IMAX,JMAX)
-    real(RP), intent(inout) :: interped_ref_POTT(DAUGHTER_KA,DAUGHTER_IA,DAUGHTER_JA)        !< (KMAX,IMAX,JMAX)
-    real(RP), intent(inout) :: interped_ref_QTRC(DAUGHTER_KA,DAUGHTER_IA,DAUGHTER_JA,BND_QA) !< (KMAX,IMAX,JMAX,QA)
+    real(RP), intent(in   ) :: org_DENS(PARENT_KA(HANDLE),PARENT_IA(HANDLE),PARENT_JA(HANDLE))                       
+    real(RP), intent(in   ) :: org_MOMX(PARENT_KA(HANDLE),PARENT_IA(HANDLE),PARENT_JA(HANDLE))                       
+    real(RP), intent(in   ) :: org_MOMY(PARENT_KA(HANDLE),PARENT_IA(HANDLE),PARENT_JA(HANDLE))                       
+    real(RP), intent(in   ) :: org_RHOT(PARENT_KA(HANDLE),PARENT_IA(HANDLE),PARENT_JA(HANDLE))                      
+    real(RP), intent(in   ) :: org_QTRC(PARENT_KA(HANDLE),PARENT_IA(HANDLE),PARENT_JA(HANDLE),BND_QA)        
+
+    real(RP), intent(inout) :: interped_ref_DENS(DAUGHTER_KA(HANDLE),DAUGHTER_IA(HANDLE),DAUGHTER_JA(HANDLE))    
+    real(RP), intent(inout) :: interped_ref_VELX(DAUGHTER_KA(HANDLE),DAUGHTER_IA(HANDLE),DAUGHTER_JA(HANDLE))    
+    real(RP), intent(inout) :: interped_ref_VELY(DAUGHTER_KA(HANDLE),DAUGHTER_IA(HANDLE),DAUGHTER_JA(HANDLE))     
+    real(RP), intent(inout) :: interped_ref_POTT(DAUGHTER_KA(HANDLE),DAUGHTER_IA(HANDLE),DAUGHTER_JA(HANDLE))    
+    real(RP), intent(inout) :: interped_ref_QTRC(DAUGHTER_KA(HANDLE),DAUGHTER_IA(HANDLE),DAUGHTER_JA(HANDLE),BND_QA)
 
     real(RP) :: dummy(1,1,1)
-    real(RP) :: dens (DAUGHTER_KA,  DAUGHTER_IA,DAUGHTER_JA)
-    real(RP) :: work1(DAUGHTER_KA,  DAUGHTER_IA,DAUGHTER_JA)
-    real(RP) :: work2(DAUGHTER_KA+1,DAUGHTER_IA,DAUGHTER_JA)
+    real(RP) :: dens (DAUGHTER_KA(HANDLE),  DAUGHTER_IA(HANDLE),DAUGHTER_JA(HANDLE))
+    real(RP) :: work1(DAUGHTER_KA(HANDLE),  DAUGHTER_IA(HANDLE),DAUGHTER_JA(HANDLE))
+    real(RP) :: work2(DAUGHTER_KA(HANDLE)+1,DAUGHTER_IA(HANDLE),DAUGHTER_JA(HANDLE))
 
-    integer :: parent, daughter
     integer :: ireq, ierr, ileng
     integer :: istatus(MPI_STATUS_SIZE)
     integer :: tag, tagbase
@@ -1215,69 +1252,71 @@ contains
        call PRC_MPIstop
     endif
 
-    tagbase    = INTERCOMM_ID * 100
-    parent     = INTERCOMM_ID
-    daughter   = INTERCOMM_ID + 1
+    tagbase = INTERCOMM_ID(HANDLE) * 100
 
-    if ( ONLINE_DOMAIN_NUM == parent ) then
+    if ( NEST_Filiation( INTERCOMM_ID(HANDLE) ) > 0 ) then
+    !-------------------------------------------------------- parent
        call MPI_BARRIER(INTERCOMM_DAUGHTER, ierr) ![start] inter-domain communication
 
        tag = tagbase + tag_dens
-       call NEST_COMM_intercomm_nestdown( org_DENS, dummy, tag, I_SCLR, .true. )
+       call NEST_COMM_intercomm_nestdown( org_DENS, dummy, tag, I_SCLR, HANDLE, .true. )
 
        tag = tagbase + tag_momx
-       call NEST_COMM_intercomm_nestdown( org_MOMX, dummy, tag, I_XSTG )
+       call NEST_COMM_intercomm_nestdown( org_MOMX, dummy, tag, I_XSTG, HANDLE )
 
        tag = tagbase + tag_momy
-       call NEST_COMM_intercomm_nestdown( org_MOMY, dummy, tag, I_YSTG )
+       call NEST_COMM_intercomm_nestdown( org_MOMY, dummy, tag, I_YSTG, HANDLE )
 
        tag = tagbase + tag_rhot
-       call NEST_COMM_intercomm_nestdown( org_RHOT, dummy, tag, I_SCLR )
+       call NEST_COMM_intercomm_nestdown( org_RHOT, dummy, tag, I_SCLR, HANDLE )
 
        do iq = 1, BND_QA
           tag = tagbase+ tag_qx + iq
-          call NEST_COMM_intercomm_nestdown( org_QTRC(:,:,:,iq), dummy, tag, I_SCLR )
+          call NEST_COMM_intercomm_nestdown( org_QTRC(:,:,:,iq), dummy, tag, I_SCLR, HANDLE )
        enddo
 
        call MPI_BARRIER(INTERCOMM_DAUGHTER, ierr) ![ end ] inter-domain communication
-    elseif ( ONLINE_DOMAIN_NUM == daughter ) then
+
+
+    elseif ( NEST_Filiation( INTERCOMM_ID(HANDLE) ) < 0 ) then
+    !-------------------------------------------------------- daughter
        call MPI_BARRIER(INTERCOMM_PARENT, ierr) ![start] inter-domain communication
 
        tag = tagbase + tag_dens
-       call NEST_COMM_intercomm_nestdown( dummy, dens, tag, I_SCLR, .true. )
-       do j = DATR_JS, DATR_JE
-       do i = DATR_IS, DATR_IE
-       do k = DATR_KS, DATR_KE
+       call NEST_COMM_intercomm_nestdown( dummy, dens, tag, I_SCLR, HANDLE, .true. )
+       do j = DATR_JS(HANDLE), DATR_JE(HANDLE)
+       do i = DATR_IS(HANDLE), DATR_IE(HANDLE)
+       do k = DATR_KS(HANDLE), DATR_KE(HANDLE)
        interped_ref_DENS(k,i,j) = dens(k,i,j)
        enddo
        enddo
        enddo
 
        tag = tagbase + tag_momx
-       call NEST_COMM_intercomm_nestdown( dummy, work1, tag, I_XSTG )
-       do j = DATR_JS, DATR_JE
-       do i = DATR_IS, DATR_IE
-       do k = DATR_KS, DATR_KE
+       call NEST_COMM_intercomm_nestdown( dummy, work1, tag, I_XSTG, HANDLE )
+       do j = DATR_JS(HANDLE), DATR_JE(HANDLE)
+       do i = DATR_IS(HANDLE), DATR_IE(HANDLE)
+       do k = DATR_KS(HANDLE), DATR_KE(HANDLE)
           interped_ref_VELX(k,i,j) = work1(k,i,j) / ( dens(k,i+1,j) + dens(k,i,j) ) * 2.0_RP
        enddo
        enddo
        enddo
 
        tag = tagbase + tag_momy
-       call NEST_COMM_intercomm_nestdown( dummy, work1, tag, I_YSTG )
-       do j = DATR_JS, DATR_JE
-       do i = DATR_IS, DATR_IE
-       do k = DATR_KS, DATR_KE
+       call NEST_COMM_intercomm_nestdown( dummy, work1, tag, I_YSTG, HANDLE )
+       do j = DATR_JS(HANDLE), DATR_JE(HANDLE)
+       do i = DATR_IS(HANDLE), DATR_IE(HANDLE)
+       do k = DATR_KS(HANDLE), DATR_KE(HANDLE)
           interped_ref_VELY(k,i,j) = work1(k,i,j) / ( dens(k,i+1,j) + dens(k,i,j) ) * 2.0_RP
        enddo
        enddo
        enddo
 
        tag = tagbase + tag_rhot
-       call NEST_COMM_intercomm_nestdown( dummy, work1, tag, I_SCLR )
-       do j = DATR_JS, DATR_JE
-       do i = DATR_IS, DATR_IE
-       do k = DATR_KS, DATR_KE
+       call NEST_COMM_intercomm_nestdown( dummy, work1, tag, I_SCLR, HANDLE )
+       do j = DATR_JS(HANDLE), DATR_JE(HANDLE)
+       do i = DATR_IS(HANDLE), DATR_IE(HANDLE)
+       do k = DATR_KS(HANDLE), DATR_KE(HANDLE)
           interped_ref_POTT(k,i,j) = work1(k,i,j) / dens(k,i,j)
        enddo
        enddo
@@ -1285,10 +1324,10 @@ contains
 
        do iq = 1, BND_QA
           tag = tagbase + tag_qx + iq
-          call NEST_COMM_intercomm_nestdown( dummy, work1, tag, I_SCLR )
-          do j = DATR_JS, DATR_JE
-          do i = DATR_IS, DATR_IE
-          do k = DATR_KS, DATR_KE
+          call NEST_COMM_intercomm_nestdown( dummy, work1, tag, I_SCLR, HANDLE )
+          do j = DATR_JS(HANDLE), DATR_JE(HANDLE)
+          do i = DATR_IS(HANDLE), DATR_IE(HANDLE)
+          do k = DATR_KS(HANDLE), DATR_KE(HANDLE)
              interped_ref_QTRC(k,i,j,iq) = work1(k,i,j)
           enddo
           enddo
@@ -1296,6 +1335,8 @@ contains
        enddo
 
        call MPI_BARRIER(INTERCOMM_PARENT, ierr) ![ end ] inter-domain communication
+
+
     else
        if( IO_L ) write(*,*) 'xxx internal error [nest/grid]'
        call PRC_MPIstop
@@ -1311,6 +1352,7 @@ contains
       dvar,      & ! [out]
       tag_var,   & ! [in ]
       id_stag,   & ! [in ]
+      HANDLE,    & ! [in ]
       flag_dens  ) ! [in ]: optional
     use scale_process, only: &
        PRC_myrank,  &
@@ -1324,10 +1366,10 @@ contains
     real(RP), intent(out) :: dvar(:,:,:)          !< variable to daughter domain (1,1,1 / MY_KA,MY_IA,MY_JA)
     integer , intent(in)  :: tag_var              !< communication tag of the variable
     integer , intent(in)  :: id_stag              !< id of staggered grid option
+    integer , intent(in)  :: HANDLE               !< id number of nesting relation in this process target
 
     logical , intent(in), optional  :: flag_dens  !< flag of logarithmic interpolation for density
 
-    integer :: parent, daughter
     integer :: ireq(1000)  ! tentative approach
     integer :: ierr(1000)  ! tentative approach
     integer :: ileng
@@ -1345,9 +1387,7 @@ contains
     logical :: logarithmic = .false.
     !---------------------------------------------------------------------------
 
-    parent   = INTERCOMM_ID
-    daughter = INTERCOMM_ID + 1
-    l        = 0
+    l = 0
 
     logarithmic = .false.
     if ( present(flag_dens) .and. flag_dens ) then
@@ -1369,14 +1409,15 @@ contains
     endif
 
     if ( no_zstag ) then
-       ileng = PARENT_KA * PARENT_IA * PARENT_JA
+       ileng = PARENT_KA(HANDLE) * PARENT_IA(HANDLE) * PARENT_JA(HANDLE)
     else
-       ileng = (PARENT_KA+1) * PARENT_IA * PARENT_JA
+       ileng = (PARENT_KA(HANDLE)+1) * PARENT_IA(HANDLE) * PARENT_JA(HANDLE)
     endif
     tag = tag_var
 
-    if ( ONLINE_DOMAIN_NUM == parent ) then
-    !---------------------------------------------------
+
+    if ( NEST_Filiation( INTERCOMM_ID(HANDLE) ) > 0 ) then
+    !--------------------------------------------------- parent
        do yp = 1, NUM_YP
           ! send data to multiple daughter processes
           target_rank = NEST_TILE_LIST_YP(yp)
@@ -1387,19 +1428,21 @@ contains
 
           dvar(:,:,:) = -1.0_RP  ! input as a dummy value
        enddo
-    elseif ( ONLINE_DOMAIN_NUM == daughter ) then
-    !---------------------------------------------------
+
+
+    elseif ( NEST_Filiation( INTERCOMM_ID(HANDLE) ) < 0 ) then
+    !--------------------------------------------------- daughter
        do yp = 1, NEST_TILE_ALL
           ! receive data from multiple parent tiles
-          target_rank = NEST_TILE_LIST(yp,PRC_myrank+1)
+          target_rank = NEST_TILE_LIST_d(yp,PRC_myrank+1)
 
           xloc = mod( yp-1, NEST_TILE_NUM_X ) + 1
           yloc = int( real(yp-1) / real(NEST_TILE_NUM_X) ) + 1
 
-          xs = PARENT_IA * (xloc-1) + 1
-          xe = PARENT_IA * xloc
-          ys = PARENT_JA * (yloc-1) + 1
-          ye = PARENT_JA * yloc
+          xs = PARENT_IA(HANDLE) * (xloc-1) + 1
+          xe = PARENT_IA(HANDLE) * xloc
+          ys = PARENT_JA(HANDLE) * (yloc-1) + 1
+          ye = PARENT_JA(HANDLE) * yloc
 
           l = l + 1
           if ( no_zstag ) then
@@ -1408,13 +1451,13 @@ contains
 
              if ( .not. logarithmic ) then
                 ! linear interpolation
-                do k = 1, PARENT_KA
-                   buffer_ref_3D(k,xs:xe,ys:ye)  = buffer_3D(k,1:PARENT_IA,1:PARENT_JA)
+                do k = 1, PARENT_KA(HANDLE)
+                   buffer_ref_3D(k,xs:xe,ys:ye)  = buffer_3D(k,1:PARENT_IA(HANDLE),1:PARENT_JA(HANDLE))
                 enddo
 
-                do j = DATR_JS-1, DATR_JE+1
-                do i = DATR_IS-1, DATR_IE+1
-                do k = DATR_KS-1, DATR_KE+1
+                do j = DATR_JS(HANDLE)-1, DATR_JE(HANDLE)+1
+                do i = DATR_IS(HANDLE)-1, DATR_IE(HANDLE)+1
+                do k = DATR_KS(HANDLE)-1, DATR_KE(HANDLE)+1
                    dvar(k,i,j) = buffer_ref_3D(kgrd(k,i,j,1,1,ig),igrd(i,j,1,ig),jgrd(i,j,1,ig)) &
                                * hfact(i,j,1,ig) * vfact(k,i,j,1,1,ig)                           &
                                + buffer_ref_3D(kgrd(k,i,j,2,1,ig),igrd(i,j,2,ig),jgrd(i,j,2,ig)) &
@@ -1432,13 +1475,13 @@ contains
                 end do
              else
                 ! logarithmic weighted interpolation
-                do k = 1, PARENT_KA
-                   buffer_ref_3D(k,xs:xe,ys:ye)  = log( buffer_3D(k,1:PARENT_IA,1:PARENT_JA) )
+                do k = 1, PARENT_KA(HANDLE)
+                   buffer_ref_3D(k,xs:xe,ys:ye)  = log( buffer_3D(k,1:PARENT_IA(HANDLE),1:PARENT_JA(HANDLE)) )
                 enddo
 
-                do j = DATR_JS-1, DATR_JE+1
-                do i = DATR_IS-1, DATR_IE+1
-                do k = DATR_KS-1, DATR_KE+1
+                do j = DATR_JS(HANDLE)-1, DATR_JE(HANDLE)+1
+                do i = DATR_IS(HANDLE)-1, DATR_IE(HANDLE)+1
+                do k = DATR_KS(HANDLE)-1, DATR_KE(HANDLE)+1
                    dvar(k,i,j) = exp( buffer_ref_3D(kgrd(k,i,j,1,1,ig),igrd(i,j,1,ig),jgrd(i,j,1,ig)) &
                                     * hfact(i,j,1,ig) * vfact(k,i,j,1,1,ig)                           &
                                     + buffer_ref_3D(kgrd(k,i,j,2,1,ig),igrd(i,j,2,ig),jgrd(i,j,2,ig)) &
@@ -1458,13 +1501,13 @@ contains
           else
              call MPI_IRECV(buffer_3DF, ileng, COMM_datatype, target_rank, tag, INTERCOMM_PARENT, ireq(l), ierr(l))
              call MPI_WAIT(ireq(l), istatus, ierr(l))
-             do k = 0, PARENT_KA
-                buffer_ref_3DF(k,xs:xe,ys:ye)  = buffer_3DF(k,1:PARENT_IA,1:PARENT_JA)
+             do k = 0, PARENT_KA(HANDLE)
+                buffer_ref_3DF(k,xs:xe,ys:ye)  = buffer_3DF(k,1:PARENT_IA(HANDLE),1:PARENT_JA(HANDLE))
              enddo
 
-             do j = DATR_JS-1, DATR_JE+1
-             do i = DATR_IS-1, DATR_IE+1
-             do k = DATR_KS-1, DATR_KE+1
+             do j = DATR_JS(HANDLE)-1, DATR_JE(HANDLE)+1
+             do i = DATR_IS(HANDLE)-1, DATR_IE(HANDLE)+1
+             do k = DATR_KS(HANDLE)-1, DATR_KE(HANDLE)+1
                 dvar(k,i,j) = buffer_ref_3DF(kgrd(k,i,j,1,1,ig),igrd(i,j,1,ig),jgrd(i,j,1,ig)) &
                             * hfact(i,j,1,ig) * vfact(k,i,j,1,1,ig)                            &
                             + buffer_ref_3DF(kgrd(k,i,j,2,1,ig),igrd(i,j,2,ig),jgrd(i,j,2,ig)) &
@@ -1482,6 +1525,7 @@ contains
              end do
           endif
        enddo
+
 
     else
     !---------------------------------------------------
@@ -1510,6 +1554,7 @@ contains
       nz,         & ! (in)
       nx,         & ! (in)
       ny,         & ! (in)
+      HANDLE,     & ! (in)
       landgrid    ) ! (in)
     implicit none
 
@@ -1528,6 +1573,8 @@ contains
     integer,  intent(in)  :: nz
     integer,  intent(in)  :: nx
     integer,  intent(in)  :: ny
+
+    integer,  intent(in)  :: HANDLE
 
     logical,  intent(in), optional :: landgrid
 
@@ -1550,8 +1597,8 @@ contains
     hfact(:,:,:) = 0.0_RP
     vfact(:,:,:,:,:) = 0.0_RP
 
-    do j = DATR_JS-1, DATR_JE+1
-    do i = DATR_IS-1, DATR_IE+1
+    do j = DATR_JS(HANDLE)-1, DATR_JE(HANDLE)+1
+    do i = DATR_IS(HANDLE)-1, DATR_IE(HANDLE)+1
        ! nearest block search
        iinc = (nx + 1) / interp_search_divnum
        jinc = (ny + 1) / interp_search_divnum
@@ -1613,7 +1660,7 @@ contains
        !if ( lndgrd ) then
        !   kstart = 1;     kend = LKMAX
        !else
-          kstart = DATR_KS-1;  kend = DATR_KE+1
+          kstart = DATR_KS(HANDLE)-1;  kend = DATR_KE(HANDLE)+1
        !endif
        do idx = 1, itp_nh
           ii = igrd(i,j,idx)

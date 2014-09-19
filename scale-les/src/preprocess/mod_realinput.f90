@@ -592,6 +592,8 @@ contains
     integer,          intent(in)  :: start_step
     integer,          intent(in)  :: end_step
 
+    integer, parameter    :: handle = 1
+
     ! work
     real(RP), allocatable :: read2D(:,:)
     real(RP), allocatable :: read3D(:,:,:)
@@ -651,12 +653,12 @@ contains
     integer :: ys, ye
     !---------------------------------------------------------------------------
 
-    KALL = PARENT_KMAX
-    IALL = PARENT_IMAX * NEST_TILE_NUM_X
-    JALL = PARENT_JMAX * NEST_TILE_NUM_Y
+    KALL = PARENT_KMAX(handle)
+    IALL = PARENT_IMAX(handle) * NEST_TILE_NUM_X
+    JALL = PARENT_JMAX(handle) * NEST_TILE_NUM_Y
 
-    allocate( read2D( PARENT_IMAX, PARENT_JMAX              ) )
-    allocate( read3D( PARENT_IMAX, PARENT_JMAX, PARENT_KMAX ) )
+    allocate( read2D( PARENT_IMAX(handle), PARENT_JMAX(handle)                      ) )
+    allocate( read3D( PARENT_IMAX(handle), PARENT_JMAX(handle), PARENT_KMAX(handle) ) )
 
     allocate( lon_org (       IALL, JALL, start_step:end_step )    )
     allocate( lat_org (       IALL, JALL, start_step:end_step )    )
@@ -695,10 +697,10 @@ contains
        xloc = mod( i-1, NEST_TILE_NUM_X ) + 1
        yloc = int( real(i-1) / real(NEST_TILE_NUM_X) ) + 1
 
-       xs = PARENT_IMAX * (xloc-1) + 1
-       xe = PARENT_IMAX * xloc
-       ys = PARENT_JMAX * (yloc-1) + 1
-       ye = PARENT_JMAX * yloc
+       xs = PARENT_IMAX(handle) * (xloc-1) + 1
+       xe = PARENT_IMAX(handle) * xloc
+       ys = PARENT_JMAX(handle) * (yloc-1) + 1
+       ye = PARENT_JMAX(handle) * yloc
 
        call FileRead( read2D(:,:),   BASENAME_ORG, "lon",        1, rank )
        lon_org (xs:xe,ys:ye,1)  = read2D(:,:) * D2R
@@ -1689,6 +1691,8 @@ contains
 
     character(LEN=*), intent(in) :: basename_org
 
+    integer, parameter    :: handle = 1
+
     ! work
     real(RP), allocatable :: read1D(:)
     real(RP), allocatable :: read2D(:,:)
@@ -1730,13 +1734,13 @@ contains
     integer :: ys, ye
     !---------------------------------------------------------------------------
 
-    KALL = PARENT_LKMAX
-    IALL = PARENT_IMAX * NEST_TILE_NUM_X
-    JALL = PARENT_JMAX * NEST_TILE_NUM_Y
+    KALL = PARENT_LKMAX(handle)
+    IALL = PARENT_IMAX(handle) * NEST_TILE_NUM_X
+    JALL = PARENT_JMAX(handle) * NEST_TILE_NUM_Y
 
-    allocate( read1D(                           PARENT_LKMAX ) )
-    allocate( read2D( PARENT_IMAX, PARENT_JMAX               ) )
-    allocate( read3D( PARENT_IMAX, PARENT_JMAX, PARENT_LKMAX ) )
+    allocate( read1D(                                           PARENT_LKMAX(handle) ) )
+    allocate( read2D( PARENT_IMAX(handle), PARENT_JMAX(handle)                       ) )
+    allocate( read3D( PARENT_IMAX(handle), PARENT_JMAX(handle), PARENT_LKMAX(handle) ) )
 
     allocate( lon_org(       IALL, JALL, 1 ) )
     allocate( lat_org(       IALL, JALL, 1 ) )
@@ -1772,10 +1776,10 @@ contains
        xloc = mod( i-1, NEST_TILE_NUM_X ) + 1
        yloc = int( real(i-1) / real(NEST_TILE_NUM_X) ) + 1
 
-       xs = PARENT_IMAX * (xloc-1) + 1
-       xe = PARENT_IMAX * xloc
-       ys = PARENT_JMAX * (yloc-1) + 1
-       ye = PARENT_JMAX * yloc
+       xs = PARENT_IMAX(handle) * (xloc-1) + 1
+       xe = PARENT_IMAX(handle) * xloc
+       ys = PARENT_JMAX(handle) * (yloc-1) + 1
+       ye = PARENT_JMAX(handle) * yloc
 
        call FileRead( read2D(:,:), BASENAME_ORG, "lon", 1, rank )
        lon_org(xs:xe,ys:ye,1) = read2D(:,:) * D2R
