@@ -359,9 +359,9 @@ contains
 !      sdm_zupper = CZ(KE)
 !     endif
 
-    if( sdm_zupper > minval(REAL_FZ(KE,IS:IE,JS:JE)) ) then
-       if( mype == PRC_master )  write(*,*) "sdm_zupper was set to minval(REAL_FZ(KE)) because zupper > minval(REAL_FZ(KE))"
-       sdm_zupper = minval(REAL_FZ(KE,IS:IE,JS:JE))
+    if( sdm_zupper > minval(REAL_FZ(KE-1,IS:IE,JS:JE)) ) then
+       if( mype == PRC_master )  write(*,*) "sdm_zupper was set to minval(REAL_FZ(KE-1)) because zupper > minval(REAL_FZ(KE-1))"
+       sdm_zupper = minval(REAL_FZ(KE-1,IS:IE,JS:JE))
     endif
 
      sdm_dtevl = real( sdm_dtcmph(1),kind=RP )  !! condensation/evaporation
