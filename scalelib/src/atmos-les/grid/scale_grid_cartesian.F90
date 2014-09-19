@@ -702,8 +702,8 @@ contains
                                                   GRID_FYG(JAG)            *1.E-3_RP
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*)                '*** Center Position of Grid (global) :'
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,f8.3)')   '  X: ', GRID_DOMAIN_CENTER_X
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,f8.3)')   '  Y: ', GRID_DOMAIN_CENTER_Y
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,f12.3)')   '  X: ', GRID_DOMAIN_CENTER_X
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,f12.3)')   '  Y: ', GRID_DOMAIN_CENTER_Y
 
     if ( debug ) then
        if( IO_L ) write(IO_FID_LOG,*)
