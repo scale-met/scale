@@ -982,7 +982,7 @@ contains
             QTRC, & ! (inout)
             DENS, MOMX, MOMY, & ! (in)
             qflx_hi, qflx_anti, GSQRT, dt, & ! (in)
-            RCDZ, RCDX, RCDY, & ! (in)
+            RCDZ, RCDX, RCDY, MAPF, & ! (in)
             DAMP_QTRC, DAMP_alpha_QTRC, & ! (in)
             MOMX, -1, 0, 1, 0, & ! (in)
             IS+IHALO-1, IS, JS, JE ) ! (in)
@@ -992,7 +992,7 @@ contains
             QTRC, & ! (inout)
             DENS, MOMX, MOMY, & ! (in)
             qflx_hi, qflx_anti, GSQRT, dt, & ! (in)
-            RCDZ, RCDX, RCDY, & ! (in)
+            RCDZ, RCDX, RCDY, MAPF, & ! (in)
             DAMP_QTRC, DAMP_alpha_QTRC, & ! (in)
             MOMX, 0, 0, -1, 0, & ! (in)
             IE-IHALO+1, IE, JS, JE ) ! (in)
@@ -1002,7 +1002,7 @@ contains
             QTRC, & ! (inout)
             DENS, MOMX, MOMY, & ! (in)
             qflx_hi, qflx_anti, GSQRT, dt, & ! (in)
-            RCDZ, RCDX, RCDY, & ! (in)
+            RCDZ, RCDX, RCDY, MAPF, & ! (in)
             DAMP_QTRC, DAMP_alpha_QTRC, & ! (in)
             MOMY, 0, -1, 0, 1, & ! (in)
             IS, IE, JS+JHALO-1, JS ) ! (in)
@@ -1012,7 +1012,7 @@ contains
             QTRC, & ! (inout)
             DENS, MOMX, MOMY, & ! (in)
             qflx_hi, qflx_anti, GSQRT, dt, & ! (in)
-            RCDZ, RCDX, RCDY, & ! (in)
+            RCDZ, RCDX, RCDY, MAPF, & ! (in)
             DAMP_QTRC, DAMP_alpha_QTRC, & ! (in)
             MOMY, 0, 0, 0, -1, & ! (in)
             IS, IE, JE-JHALO+1, JE ) ! (in)
@@ -1084,34 +1084,35 @@ contains
     integer,  intent(in)    :: j1
 
     real(RP) :: dir
+    real(RP) :: tmpX, tmpY
     real(RP) :: sw, sw2, sw3, sw4
+
     integer :: i, j, k
     !---------------------------------------------------------------------------
 
     dir = sign(1.0_RP, real(ib+jb,kind=RP)) ! dir = -1 if ib==-1 .or. jb==-1
 
     ! lateral boundary flux adjustment
-!    do j = j0-jb+ju, j1-jb+ju, -ju+abs(iu)
-!    do i = i0-ib+iu, i1-ib+iu, -iu+abs(ju)
-    do j = j0-jb, j1-jb, -ju+abs(iu)
-    do i = i0-ib, i1-ib, -iu+abs(ju)
+    do j = j0+ju, j1+ju*2, -ju+abs(iu)
+    do i = i0+iu, i1+iu*2, -iu+abs(ju)
     do k = KS, KE
+       sw = sign(0.5_RP, DAMP_alpha_DENS(k,i,j) - EPS) + 0.5_RP
        sw3 = sign(0.5_RP, real(abs(iu),kind=RP) - EPS) + 0.5_RP ! 0:N-S, 1:W-E
        sw4 = sign(0.5_RP, real(abs(ju),kind=RP) - EPS) + 0.5_RP ! 0:W-E, 1:N-S
+
+       tmpX = DAMP_VELX(k,i+ib,j   ) * ( DAMP_DENS(k,i+ib,j   ) + DAMP_DENS(k,i-ib-iu,j      ) ) * 0.5_RP
+       tmpY = DAMP_VELY(k,i   ,j+jb) * ( DAMP_DENS(k,i,   j+jb) + DAMP_DENS(k,i,      j-jb-ju) ) * 0.5_RP
+
        DENS(k,i,j) = DENS(k,i,j) &
-                   + ( ( DAMP_VELX(k,i+ib,j) * ( DAMP_DENS(k,i+ib+iu,j)+DAMP_DENS(k,i+ib,j) ) &
-                         * 0.5_RP * GSQRT(k,i+ib,j,I_UYZ) &
-                       - mflx_hi(k,i+ib,j,XDIR) ) * RCDX(i) * sw3 &
-                     + ( DAMP_VELY(k,i,j+jb) * ( DAMP_DENS(k,i,j+jb+ju)+DAMP_DENS(k,i,j+jb) ) &
-                         * 0.5_RP * GSQRT(k,i,j+jb,I_XVZ) &
-                       - mflx_hi(k,i,j+jb,YDIR) ) * RCDY(j) * sw4 &
-                     ) * dt / GSQRT(k,i,j,I_XYZ)
+                   + ( ( tmpX * GSQRT(k,i+ib,j,   I_UYZ) - mflx_hi(k,i+ib,j,   XDIR) ) * RCDX(i) * sw3 &
+                     + ( tmpY * GSQRT(k,i,   j+jb,I_XVZ) - mflx_hi(k,i,   j+jb,YDIR) ) * RCDY(j) * sw4 &
+                     ) * dt / GSQRT(k,i,j,I_XYZ) * sw
     end do
     end do
     end do
 
-    do j = j0-jb, j1-jb, -ju+abs(iu)
-    do i = i0-ib, i1-ib, -iu+abs(ju)
+    do j = j0, j1, -ju+abs(iu)
+    do i = i0, i1, -iu+abs(ju)
     do k = KS, KE
        sw = sign(0.5_RP, DAMP_alpha_DENS(k,i,j) - EPS) + 0.5_RP
        sw2 = sign(0.5_RP, DAMP_flow(k,i,j)*dir) + 0.5_RP ! 0:inflow, 1:outflow
@@ -1126,8 +1127,8 @@ contains
     end do
     end do
 
-    do j = j0-jb, j1-jb, -ju+abs(iu)
-    do i = i0,    i1,    -iu+abs(ju)
+    do j = j0,       j1,       -ju+abs(iu)
+    do i = i0+ib+iu, i1+ib+iu, -iu+abs(ju)
     do k = KS, KE
        sw = sign(0.5_RP, DAMP_alpha_VELX(k,i,j) - EPS) + 0.5_RP
        MOMX(k,i,j) = MOMX(k,i,j) * ( 1.0_RP - sw ) &
@@ -1136,8 +1137,8 @@ contains
     end do
     end do
 
-    do j = j0,    j1,    -ju+abs(iu)
-    do i = i0-ib, i1-ib, -iu+abs(ju)
+    do j = j0+jb+ju, j1+jb+ju, -ju+abs(iu)
+    do i = i0,       i1,       -iu+abs(ju)
     do k = KS, KE
        sw = sign(0.5_RP, DAMP_alpha_VELY(k,i,j) - EPS) + 0.5_RP
        MOMY(k,i,j) = MOMY(k,i,j) * ( 1.0_RP - sw ) &
@@ -1146,37 +1147,21 @@ contains
     end do
     end do
 
-    if ( ib==-1 ) then ! western boundary
+    if ( iu==-1 ) then ! eastern boundary
        do j = j0, j1
        do k = KS, KE
-          sw = sign(0.5_RP, DAMP_alpha_DENS(k,i1,j) - EPS) + 0.5_RP
-          DENS(k,i1,j) = DENS(k,i1,j) * ( 1.0_RP - sw ) &
-                       + DENS(k,i1+iu,j) * sw
-          MOMZ(k,i1,j) = MOMZ(k,i1,j) * ( 1.0_RP - sw ) &
-                       + MOMZ(k,i1+iu,j) * sw
-          sw = sign(0.5_RP, DAMP_alpha_POTT(k,i1,j) - EPS) + 0.5_RP
-          RHOT(k,i1,j) = RHOT(k,i1,j) * ( 1.0_RP - sw ) &
-                       + RHOT(k,i1+iu,j) * sw
-          sw = sign(0.5_RP, DAMP_alpha_VELY(k,i1,j) - EPS) + 0.5_RP
-          MOMY(k,i1,j) = MOMY(k,i1,j) * ( 1.0_RP - sw ) &
-                       + MOMY(k,i1+iu,j) * sw
+          sw = sign(0.5_RP, DAMP_alpha_VELX(k,i1,j) - EPS) + 0.5_RP
+          MOMX(k,i1,j) = MOMX(k,i1,j) * ( 1.0_RP - sw ) &
+                       + MOMX(k,i1+iu,j) * sw
        end do
        end do
     end if
-    if ( jb==-1 ) then ! southern boundary
+    if ( ju==-1 ) then ! northern boundary
        do i = i0, i1
        do k = KS, KE
-          sw = sign(0.5_RP, DAMP_alpha_DENS(k,i,j1) - EPS) + 0.5_RP
-          DENS(k,i,j1) = DENS(k,i,j1) * ( 1.0_RP - sw ) &
-                       + DENS(k,i,j1+ju) * sw
-          MOMZ(k,i,j1) = MOMZ(k,i,j1) * ( 1.0_RP - sw ) &
-                       + MOMZ(k,i,j1+ju) * sw
-          sw = sign(0.5_RP, DAMP_alpha_POTT(k,i,j1) - EPS) + 0.5_RP
-          RHOT(k,i,j1) = RHOT(k,i,j1) * ( 1.0_RP - sw ) &
-                       + RHOT(k,i,j1+ju) * sw
-          sw = sign(0.5_RP, DAMP_alpha_VELX(k,i,j1) - EPS) + 0.5_RP
-          MOMX(k,i,j1) = MOMX(k,i,j1) * ( 1.0_RP - sw ) &
-                       + MOMX(k,i,j1+ju) * sw
+          sw = sign(0.5_RP, DAMP_alpha_VELY(k,i,j1) - EPS) + 0.5_RP
+          MOMY(k,i,j1) = MOMY(k,i,j1) * ( 1.0_RP - sw ) &
+                       + MOMY(k,i,j1+ju) * sw
        end do
        end do
     end if
@@ -1188,7 +1173,7 @@ contains
        QTRC, &
        DENS, MOMX, MOMY, &
        qflx_hi, qflx_anti, GSQRT, dt, &
-       RCDZ, RCDX, RCDY, &
+       RCDZ, RCDX, RCDY, MAPF, &
        DAMP_QTRC, DAMP_alpha_QTRC, &
        MOM, ib, jb, iu, ju, &
        i0, i1, j0, j1 )
@@ -1197,7 +1182,8 @@ contains
     use scale_gridtrans, only: &
        I_XYZ, &
        I_UYZ, &
-       I_XVZ
+       I_XVZ, &
+       I_XY
     use scale_atmos_boundary, only: &
        BND_QA
     implicit none
@@ -1214,6 +1200,7 @@ contains
     real(RP), intent(in)    :: RCDZ(KA)
     real(RP), intent(in)    :: RCDX(IA)
     real(RP), intent(in)    :: RCDY(JA)
+    real(RP), intent(in)    :: MAPF(IA,JA,2,4)
 
     real(RP), intent(in)    :: DAMP_QTRC      (KA,IA,JA,BND_QA)
     real(RP), intent(in)    :: DAMP_alpha_QTRC(KA,IA,JA,BND_QA)
@@ -1229,6 +1216,7 @@ contains
     integer,  intent(in)    :: j1
 
     real(RP) :: dir
+    real(RP) :: tmpX, tmpY
     real(RP) :: sw, sw2, sw3, sw4
 
     integer :: i, j, k, iq, iqb
@@ -1238,26 +1226,29 @@ contains
        ! QV forcing only at boundary
        dir = sign(1.0_RP, REAL(ib+jb,RP)) ! dir = -1 if ib==-1 .or. jb==-1
 
-!       ! lateral boundary flux adjustment
-!       do j = j0-jb+ju, j1-jb+ju, -ju+abs(iu)
-!       do i = i0-ib+iu, i1-ib+iu, -iu+abs(ju)
-!       do k = KS, KE
-!          sw3 = sign(0.5_RP, real(abs(iu),kind=RP) - EPS) + 0.5_RP ! 0:N-S, 1:W-E
-!          sw4 = sign(0.5_RP, real(abs(ju),kind=RP) - EPS) + 0.5_RP ! 0:W-E, 1:N-S
-!          QTRC(k,i,j,I_QV) = QTRC(k,i,j,I_QV) &
-!                           + ( ( MOMX(k,i+ib,j) * ( DAMP_QTRC(k,i+ib+iu,j,I_QV)+DAMP_QTRC(k,i+ib,j,I_QV) ) &
-!                                 * 0.5_RP * GSQRT(k,i+ib,j,I_UYZ) &
-!                               - qflx_hi(k,i+ib,j,XDIR,I_QV) + qflx_anti(k,i+ib,j,XDIR,I_QV) ) * RCDX(i) * sw3 &
-!                             + ( MOMY(k,i,j+jb) * ( DAMP_QTRC(k,i,j+jb+ju,I_QV)+DAMP_QTRC(k,i,j+jb,I_QV) ) &
-!                                 * 0.5_RP * GSQRT(k,i,j+jb,I_XVZ) &
-!                               - qflx_hi(k,i,j+jb,YDIR,I_QV) + qflx_anti(k,i,j+jb,YDIR,I_QV) ) * RCDY(j) * sw4 &
-!                             ) * dt / GSQRT(k,i,j,I_XYZ) / DENS(k,i,j)
-!       end do
-!       end do
-!       end do
+       ! lateral boundary flux adjustment
+       do j = j0+ju, j1+ju*2, -ju+abs(iu)
+       do i = i0+iu, i1+iu*2, -iu+abs(ju)
+       do k = KS, KE
+          sw = sign(0.5_RP, DAMP_alpha_QTRC(k,i,j,I_QV) - EPS) + 0.5_RP
+          sw3 = sign(0.5_RP, real(abs(iu),kind=RP) - EPS) + 0.5_RP ! 0:N-S, 1:W-E
+          sw4 = sign(0.5_RP, real(abs(ju),kind=RP) - EPS) + 0.5_RP ! 0:W-E, 1:N-S
 
-       do j = j0-jb, j1-jb, -ju+abs(iu)
-       do i = i0-ib, i1-ib, -iu+abs(ju)
+          tmpX = MOMX(k,i+ib,j   ) * ( DAMP_QTRC(k,i+ib,j,      I_QV)+DAMP_QTRC(k,i-ib-iu,j,   I_QV) ) * 0.5_RP
+          tmpY = MOMY(k,i,   j+jb) * ( DAMP_QTRC(k,i,      j+jb,I_QV)+DAMP_QTRC(k,i,   j-jb-ju,I_QV) ) * 0.5_RP
+
+          QTRC(k,i,j,I_QV) = QTRC(k,i,j,I_QV) &
+                           + ( ( tmpX * GSQRT(k,i+ib,j,I_UYZ) - qflx_hi(k,i+ib,j,XDIR,I_QV) + qflx_anti(k,i+ib,j,XDIR,I_QV) ) &
+                             * RCDX(i) * sw3 &
+                             + ( tmpY * GSQRT(k,i,j+jb,I_XVZ) - qflx_hi(k,i,j+jb,YDIR,I_QV) + qflx_anti(k,i,j+jb,YDIR,I_QV) ) &
+                             * RCDY(j) * sw4 &
+                             ) * dt * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) / DENS(k,i,j) * sw
+       end do
+       end do
+       end do
+
+       do j = j0, j1, -ju+abs(iu)
+       do i = i0, i1, -iu+abs(ju)
        do k = KS, KE
           sw = sign(0.5_RP, DAMP_alpha_QTRC(k,i,j,I_QV) - EPS) + 0.5_RP
           QTRC(k,i,j,I_QV) = QTRC(k,i,j,I_QV) * ( 1.0_RP - sw ) &
@@ -1267,11 +1258,11 @@ contains
        end do
 
        do iq = 2, QA
-          do j = j0-jb, j1-jb, -ju+abs(iu)
-          do i = i0-ib, i1-ib, -iu+abs(ju)
+          do j = j0, j1, -ju+abs(iu)
+          do i = i0, i1, -iu+abs(ju)
           do k = KS, KE
              sw = sign(0.5_RP, DAMP_alpha_QTRC(k,i,j,I_QV) - EPS) + 0.5_RP
-             sw2 = sign(0.5_RP, MOM(k,i-ib,j-jb)*dir) + 0.5_RP
+             sw2 = sign(0.5_RP, MOM(k,i-ib,j-jb)*dir) + 0.5_RP ! 0:inflow, 1:outflow
              QTRC(k,i,j,iq) = QTRC(k,i,j,iq) * ( 1.0_RP - sw ) &
                             + QTRC(k,i+iu,j+ju,iq) * sw * sw2
           end do
@@ -1281,26 +1272,29 @@ contains
     else
        ! ALL QTRC forcing at boundary
        do iq = 1, QA
-!          ! lateral boundary flux adjustment
-!          do j = j0-jb+ju, j1-jb+ju, -ju+abs(iu)
-!          do i = i0-ib+iu, i1-ib+iu, -iu+abs(ju)
-!          do k = KS, KE
-!             sw3 = sign(0.5_RP, real(abs(iu),kind=RP) - EPS) + 0.5_RP ! 0:N-S, 1:W-E
-!             sw4 = sign(0.5_RP, real(abs(ju),kind=RP) - EPS) + 0.5_RP ! 0:W-E, 1:N-S
-!             QTRC(k,i,j,iq) = QTRC(k,i,j,iq) &
-!                            + ( ( MOMX(k,i+ib,j) * ( DAMP_QTRC(k,i+ib+iu,j,iq)+DAMP_QTRC(k,i+ib,j,iq) ) &
-!                                  * 0.5_RP * GSQRT(k,i+ib,j,I_UYZ) &
-!                                - qflx_hi(k,i+ib,j,XDIR,iq) + qflx_anti(k,i+ib,j,XDIR,iq) ) * RCDX(i) * sw3 &
-!                              + ( MOMY(k,i,j+jb) * ( DAMP_QTRC(k,i,j+jb+ju,iq)+DAMP_QTRC(k,i,j+jb,iq) ) &
-!                                  * 0.5_RP * GSQRT(k,i,j+jb,I_XVZ) &
-!                                - qflx_hi(k,i,j+jb,YDIR,iq) + qflx_anti(k,i,j+jb,YDIR,iq) ) * RCDY(j) * sw4 &
-!                              ) * dt / GSQRT(k,i,j,I_XYZ) / DENS(k,i,j)
-!          end do
-!          end do
-!          end do
+          ! lateral boundary flux adjustment
+          do j = j0+ju, j1+ju*2, -ju+abs(iu)
+          do i = i0+iu, i1+iu*2, -iu+abs(ju)
+          do k = KS, KE
+             sw = sign(0.5_RP, DAMP_alpha_QTRC(k,i,j,iq) - EPS) + 0.5_RP
+             sw3 = sign(0.5_RP, real(abs(iu),kind=RP) - EPS) + 0.5_RP ! 0:N-S, 1:W-E
+             sw4 = sign(0.5_RP, real(abs(ju),kind=RP) - EPS) + 0.5_RP ! 0:W-E, 1:N-S
 
-          do j = j0-jb, j1-jb, -ju+abs(iu)
-          do i = i0-ib, i1-ib, -iu+abs(ju)
+             tmpX = MOMX(k,i+ib,j   ) * ( DAMP_QTRC(k,i+ib,j,   iq)+DAMP_QTRC(k,i-ib-iu,j,      iq) ) * 0.5_RP
+             tmpY = MOMY(k,i,   j+jb) * ( DAMP_QTRC(k,i,   j+jb,iq)+DAMP_QTRC(k,i,      j-jb-ju,iq) ) * 0.5_RP
+
+             QTRC(k,i,j,iq) = QTRC(k,i,j,iq) &
+                            + ( ( tmpX * GSQRT(k,i+ib,j,I_UYZ) - qflx_hi(k,i+ib,j,XDIR,iq) + qflx_anti(k,i+ib,j,XDIR,iq) ) &
+                              * RCDX(i) * sw3 &
+                              + ( tmpY * GSQRT(k,i,j+jb,I_XVZ) - qflx_hi(k,i,j+jb,YDIR,iq) + qflx_anti(k,i,j+jb,YDIR,iq) ) &
+                              * RCDY(j) * sw4 &
+                              ) * dt * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) / DENS(k,i,j) * sw
+          end do
+          end do
+          end do
+
+          do j = j0, j1, -ju+abs(iu)
+          do i = i0, i1, -iu+abs(ju)
           do k = KS, KE
              sw = sign(0.5_RP, DAMP_alpha_QTRC(k,i,j,iq) - EPS) + 0.5_RP
              QTRC(k,i,j,iq) = QTRC(k,i,j,iq) * ( 1.0_RP - sw ) &
@@ -1310,28 +1304,6 @@ contains
           end do
        end do
     end if
-
-    do iq = 1, QA
-       iqb = min(iq, BND_QA)
-       if ( ib==-1 ) then ! western boundary
-          do j = j0, j1
-          do k = KS, KE
-             sw = sign(0.5_RP, DAMP_alpha_QTRC(k,i1,j,iqb) - EPS) + 0.5_RP
-             QTRC(k,i1,j,iq) = QTRC(k,i1,j,iq) * ( 1.0_RP - sw ) &
-                             + QTRC(k,i1+iu,j,iq) * sw
-          end do
-          end do
-       end if
-       if ( jb==-1 ) then ! southern boundary
-          do i = i0, i1
-          do k = KS, KE
-             sw = sign(0.5_RP, DAMP_alpha_QTRC(k,i,j1,iqb) - EPS) + 0.5_RP
-             QTRC(k,i,j1,iq) = QTRC(k,i,j1,iq) * ( 1.0_RP - sw ) &
-                             + QTRC(k,i,j1+ju,iq) * sw
-          end do
-          end do
-       end if
-    end do
 
     return
   end subroutine set_boundary_qtrc
