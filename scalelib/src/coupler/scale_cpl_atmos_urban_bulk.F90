@@ -58,19 +58,19 @@ module scale_cpl_atmos_urban_bulk
   real(RP), private :: road_width =   11.0_RP ! roof level ( building height) [m]
   real(RP), private :: SIGMA_ZED  =    1.0_RP ! Standard deviation of roof height [m]
   real(RP), private :: AH         =   17.5_RP ! Sensible Anthropogenic heat [W/m^2]
-  real(RP), private :: ALH        =    0.0_RP ! Latent Anthropogenic heat [W/m^2]
-  real(RP), private :: BETR       =    0.0_RP ! Evaporation efficiency of roof [-]
+  real(RP), private :: ALH        =    0.0_RP ! Latent Anthropogenic heat   [W/m^2]
+  real(RP), private :: BETR       =    0.0_RP ! Evaporation efficiency of roof     [-]
   real(RP), private :: BETB       =    0.0_RP !                        of building [-]
-  real(RP), private :: BETG       =    0.0_RP !                        of ground [-]
-  real(RP), private :: STRGR      =    0.0_RP ! rain strage on roof [-]
-  real(RP), private :: STRGB      =    0.0_RP !             on building [-]
-  real(RP), private :: STRGG      =    0.0_RP !             on ground [-]
-  real(RP), private :: CAPR       =  1.2E6_RP ! heat capacity of roof [J m-3 K]
-  real(RP), private :: CAPB       =  1.2E6_RP !  ( units converted in code
-  real(RP), private :: CAPG       =  1.2E6_RP !            to [ cal cm{-3} deg{-1} ] )
-  real(RP), private :: AKSR       =   2.28_RP ! thermal conductivity of roof, wall, and ground [W m-1 K]
-  real(RP), private :: AKSB       =   2.28_RP !  ( units converted in code
-  real(RP), private :: AKSG       =   2.28_RP !            to [ cal cm{-1} s{-1} deg{-1} ] )
+  real(RP), private :: BETG       =    0.0_RP !                        of ground   [-]
+  real(RP), private :: STRGR      =    0.0_RP ! rain strage on roof     [-]
+  real(RP), private :: STRGB      =    0.0_RP !             on wall     [-]
+  real(RP), private :: STRGG      =    0.0_RP !             on ground   [-]
+  real(RP), private :: CAPR       =  1.2E6_RP ! heat capacity of roof   [J m-3 K]
+  real(RP), private :: CAPB       =  1.2E6_RP !               of wall   [J m-3 K]
+  real(RP), private :: CAPG       =  1.2E6_RP !               of ground [J m-3 K]
+  real(RP), private :: AKSR       =   2.28_RP ! thermal conductivity of roof   [W m-1 K]
+  real(RP), private :: AKSB       =   2.28_RP !                      of wall   [W m-1 K]
+  real(RP), private :: AKSG       =   2.28_RP !                      of ground [W m-1 K] 
   real(RP), private :: ALBR       =    0.2_RP ! surface albedo of roof
   real(RP), private :: ALBB       =    0.2_RP ! surface albedo of wall
   real(RP), private :: ALBG       =    0.2_RP ! surface albedo of ground
@@ -85,7 +85,9 @@ module scale_cpl_atmos_urban_bulk
   real(RP), private :: TGLEND     = 293.00_RP ! lower boundary condition of ground temperature [K]
   integer , private :: BOUND      = 1         ! Boundary Condition for Roof, Wall, Ground Layer Temp
                                               !       [1: Zero-Flux, 2: T = Constant]
-  ! calculate in subroutine urban_param_set
+  real(RP), private :: ahdiurnal(1:24)        ! AH diurnal profile
+
+  ! calculated in subroutine urban_param_set
   real(RP), private :: R                       ! Normalized roof wight (eq. building coverage ratio)
   real(RP), private :: RW                      ! (= 1 - R)
   real(RP), private :: HGT                     ! Normalized building height
@@ -97,12 +99,9 @@ module scale_cpl_atmos_urban_bulk
   real(RP), private :: ZDC                     ! Displacement height [m]
   real(RP), private :: SVF                     ! Sky view factor [-]
 
-  real(RP), private :: ahdiurnal(1:24)         ! AH diurnal profile
-
   real(RP), private, allocatable :: DZR(:)     ! thickness of each roof layer [m]
   real(RP), private, allocatable :: DZB(:)     ! thickness of each building layer [m]
   real(RP), private, allocatable :: DZG(:)     ! thickness of each road layer [m]
-                                                     ! ( units converted in code to [cm] )
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -146,9 +145,9 @@ contains
     real(RP) :: URBAN_UCM_TRLEND
     real(RP) :: URBAN_UCM_TBLEND
     real(RP) :: URBAN_UCM_TGLEND
-    real(RP) :: URBAN_UCM_DZR
-    real(RP) :: URBAN_UCM_DZB
-    real(RP) :: URBAN_UCM_DZG
+    real(RP),allocatable :: URBAN_UCM_DZR(:)
+    real(RP),allocatable :: URBAN_UCM_DZB(:)
+    real(RP),allocatable :: URBAN_UCM_DZG(:)
     integer  :: URBAN_UCM_BOUND
 
     NAMELIST / PARAM_CPL_ATMURB_BULK / &
@@ -190,6 +189,10 @@ contains
     integer :: ierr
     !---------------------------------------------------------------------------
 
+    allocate( URBAN_UCM_DZR(UKS:UKE) )
+    allocate( URBAN_UCM_DZB(UKS:UKE) )
+    allocate( URBAN_UCM_DZG(UKS:UKE) )
+
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[AtmUrb bulk] / Categ[COUPLER] / Origin[SCALElib]'
 
@@ -229,9 +232,9 @@ contains
     URBAN_UCM_TBLEND       = TBLEND
     URBAN_UCM_TGLEND       = TGLEND
     URBAN_UCM_BOUND        = BOUND
-    URBAN_UCM_DZR          = 0.05
-    URBAN_UCM_DZB          = 0.05
-    URBAN_UCM_DZG          = 0.50
+    URBAN_UCM_DZR(UKS:UKE) = 0.05
+    URBAN_UCM_DZB(UKS:UKE) = 0.05
+    URBAN_UCM_DZG(UKS:UKE) = 0.05
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -284,9 +287,9 @@ contains
     allocate( DZB(UKS:UKE) )
     allocate( DZG(UKS:UKE) )
 
-    DZR(UKS:UKE) = URBAN_UCM_DZR
-    DZB(UKS:UKE) = URBAN_UCM_DZB
-    DZG(UKS:UKE) = URBAN_UCM_DZG
+    DZR(UKS:UKE) = URBAN_UCM_DZR(UKS:UKE)
+    DZB(UKS:UKE) = URBAN_UCM_DZB(UKS:UKE)
+    DZG(UKS:UKE) = URBAN_UCM_DZG(UKS:UKE)
 
     ! set other urban parameters
     call urban_param_setup
@@ -436,9 +439,6 @@ contains
 
     real(RP) :: UST, TST, QST
 
-    real(RP) :: PS         ! Surface Pressure [Pa]
-    real(RP) :: ES
-
     real(RP) :: LUP, LDN, RUP
     real(RP) :: SUP, SDN
 
@@ -452,7 +452,6 @@ contains
 
     real(RP) :: Z
     real(RP) :: QS0R,QS0B,QS0G
-    real(RP) :: QVS
 
     real(RP) :: RIBR, XXXR, BHR, CDR
     real(RP) :: ALPHAB, ALPHAG
@@ -542,66 +541,60 @@ contains
     RIBR = ( GRAV * 2.0_RP / (TA+TR) ) * (TA-TR) * (Z+Z0R) / (UA*UA)
     call mos(XXXR,CHR,CDR,BHR,RIBR,Z,Z0R,UA,TA,TR,RHOO)
 
-    !PS   = PRES / 100.0_RP               ! [hPa]
-    !ES   = 6.11_RP * exp( ( LH0/Rvap) * (TR-TEM00) / (TEM00*TR) )
-    !QS0R = 0.622_RP * ES / ( PS - 0.378_RP * ES )
     call qsat( QS0R, TR, PRES )
 
     RR   = EPSR * ( RX - STB * (TR**4) )
     SHR  = RHOO * CPdry * CHR * UA * (TR-TA)
     LHR  = RHOO * LH0 * CHR * UA * BETR * (QS0R-QA)
-    !GHR  = AKSR * (TR-TRL(1)) / (DZR(1)/2.0_RP)
     GHR  = SR + RR - SHR - LHR
 
     !--- Wall and Road
 
     ! empirical form
-    ALPHAB = RHOO * CPdry * ( 6.15_RP + 4.18_RP * UC ) / 1200.0_RP
-    if( UC > 5.0_RP ) ALPHAB = RHOO * CPdry * ( 7.51_RP * UC**0.78_RP ) / 1200.0_RP
+    !ALPHAB = RHOO * CPdry * ( 6.15_RP + 4.18_RP * UC ) / 1200.0_RP
+    !if( UC > 5.0_RP ) ALPHAB = RHOO * CPdry * ( 7.51_RP * UC**0.78_RP ) / 1200.0_RP
+    !ALPHAG = RHOO * CPdry * ( 6.15_RP + 4.18_RP * UC ) / 1200.0_RP
+    !if( UC > 5.0_RP ) ALPHAG = RHOO * CPdry * ( 7.51_RP * UC**0.78_RP ) / 1200.0_RP
 
-    ALPHAG = RHOO * CPdry * ( 6.15_RP + 4.18_RP * UC ) / 1200.0_RP
-    if( UC > 5.0_RP ) ALPHAG = RHOO * CPdry * ( 7.51_RP * UC**0.78_RP ) / 1200.0_RP
+     ALPHAB = 6.15_RP + 4.18_RP * UC 
+     if( UC > 5.0_RP ) ALPHAB = 7.51_RP * (UC**0.78_RP )
+     ALPHAG = 6.15_RP + 4.18_RP * UC 
+     if( UC > 5.0_RP ) ALPHAG = 7.51_RP * (UC**0.78_RP )
 
-    CHB = ALPHAB / RHOO / CPdry / UC
-    CHG = ALPHAG / RHOO / CPdry / UC
+     CHB = ALPHAB / RHOO / CPdry / UC
+     CHG = ALPHAG / RHOO / CPdry / UC
 
-    RG1      = EPSG * ( RX * VFGS                   &
-                      + EPSB * VFGW * STB * TB**4   &
-                      - STB * TG**4                )
-    RB1      = EPSB * ( RX * VFWS                   &
-                      + EPSG * VFWG * STB * TG**4   &
-                      + EPSB * VFWW * STB * TB**4   &
-                      - STB * TB**4                )
+     RG1      = EPSG * ( RX * VFGS                   &
+                       + EPSB * VFGW * STB * TB**4   &
+                       - STB * TG**4                )
+     RB1      = EPSB * ( RX * VFWS                   &
+                       + EPSG * VFWG * STB * TG**4   &
+                       + EPSB * VFWW * STB * TB**4   &
+                       - STB * TB**4                )
 
-    RG2      = EPSG * ( (1.0_RP-EPSB) * VFGW * VFWS * RX                  &
-                      + (1.0_RP-EPSB) * VFGW * VFWG * EPSG * STB * TG**4  &
-                      + EPSB * (1.0_RP-EPSB) * VFGW * VFWW * STB * TB**4  )
-    RB2      = EPSB * ( (1.0_RP-EPSG) * VFWG * VFGS * RX                                  &
-                      + (1.0_RP-EPSG) * EPSB * VFGW * VFWG * STB * TB**4                  &
-                      + (1.0_RP-EPSB) * VFWS * VFWW * RX                                  &
-                      + (1.0_RP-EPSB) * VFWG * VFWW * STB * EPSG * TG**4                  &
-                      + EPSB * (1.0_RP-EPSB) * VFWW * (1.0_RP-2.0_RP*VFWS) * STB * TB**4  )
+     RG2      = EPSG * ( (1.0_RP-EPSB) * VFGW * VFWS * RX                  &
+                       + (1.0_RP-EPSB) * VFGW * VFWG * EPSG * STB * TG**4  &
+                       + EPSB * (1.0_RP-EPSB) * VFGW * VFWW * STB * TB**4  )
+     RB2      = EPSB * ( (1.0_RP-EPSG) * VFWG * VFGS * RX                                  &
+                       + (1.0_RP-EPSG) * EPSB * VFGW * VFWG * STB * TB**4                  &
+                       + (1.0_RP-EPSB) * VFWS * VFWW * RX                                  &
+                       + (1.0_RP-EPSB) * VFWG * VFWW * STB * EPSG * TG**4                  &
+                       + EPSB * (1.0_RP-EPSB) * VFWW * (1.0_RP-2.0_RP*VFWS) * STB * TB**4  )
 
-    RG       = RG1 + RG2
-    RB       = RB1 + RB2
+     RG       = RG1 + RG2
+     RB       = RB1 + RB2
 
-    !ES   = 6.11_RP * exp( (LH0/Rvap) * (TB-TEM00) / (TEM00*TB) )
-    !QS0B = 0.622_RP * ES / ( PS - 0.378_RP * ES )
-    call qsat( QS0B, TB, PRES )
+     call qsat( QS0B, TB, PRES )
 
-    SHB  = RHOO * CPdry * CHB * UC * (TB-TC)
-    LHB  = RHOO * LH0 * CHB * UC * BETB * (QS0B-QC)
-    !GHB  = AKSB * (TB-TBL(1)) / (DZB(1)/2.0_RP)
-    GHB  =  SB + RB - SHB - LHB
+     SHB  = RHOO * CPdry * CHB * UC * (TB-TC)
+     LHB  = RHOO * LH0   * CHB * UC * BETB * (QS0B-QC)
+     GHB  =  SB + RB - SHB - LHB
 
-    !ES   = 6.11_RP * exp( (LH0/Rvap) * (TG-TEM00) / (TEM00*TG) )
-    !QS0G = 0.622_RP * ES / ( PS - 0.378_RP * ES )
-    call qsat( QS0G, TG, PRES )
+     call qsat( QS0G, TG, PRES )
 
-    SHG  = RHOO * CPdry * CHG * UC * (TG-TC)
-    LHG  = RHOO * LH0 * CHG * UC * BETG * (QS0G-QC)
-    !GHG  = AKSG * (TG-TGL(1)) / (DZG(1)/2.0_RP)
-    GHG  =  SG + RG - SHG - LHG
+     SHG  = RHOO * CPdry * CHG * UC * (TG-TC)
+     LHG  = RHOO * LH0   * CHG * UC * BETG * (QS0G-QC)
+     GHG  =  SG + RG - SHG - LHG
 
     !-----------------------------------------------------------
     ! Total Fluxes from Urban Canopy
@@ -619,7 +612,6 @@ contains
      RNR = SR + RR        ! Net radiation on roof [W/m/m]
      RNB = SB + RB        ! Net radiation on building [W/m/m]
      RNG = SG + RG        ! Net radiation on ground [W/m/m]
-
      RN = (SNET+LNET)     ! Net radiation [W/m/m]
 
      !--- shortwave radiation
@@ -740,28 +732,29 @@ contains
     use scale_process, only: &
        PRC_MPIstop
     use scale_const, only: &
+       EPS    => CONST_EPS,     &    ! small number (machine epsilon)
+       PI     => CONST_PI,      &    ! pi               [-]
        D2R    => CONST_D2R,     &    ! degree to radian
-       KARMAN => CONST_KARMAN,  &    ! AK : kalman constant  [-]
-       PI     => CONST_PI,      &    ! PI : pi               [-]
-       CPdry  => CONST_CPdry,   &    ! CPP : heat capacity of dry air [J/K/kg]
-       LH0    => CONST_LH0,     &    ! ELL : latent heat of vaporization [J/kg]
-       GRAV   => CONST_GRAV,    &    !< gravitational constant [m/s2]
-       Rdry   => CONST_Rdry,    &    !< specific gas constant (dry) [J/kg/K]
-       Rvap   => CONST_Rvap,    &    !< gas constant (water vapor) [J/kg/K]
-       STB    => CONST_STB,     &    !< stefan-Boltzman constant [MKS unit]
-       TEM00  => CONST_TEM00         !< temperature reference (0 degree C) [K]
+       KARMAN => CONST_KARMAN,  &    ! Kalman constant  [-]
+       CPdry  => CONST_CPdry,   &    ! Heat capacity of dry air [J/K/kg]       
+       LH0    => CONST_LH0,     &    ! Latent heat of vaporization [J/kg]
+       GRAV   => CONST_GRAV,    &    ! gravitational constant [m/s2]
+       Rdry   => CONST_Rdry,    &    ! specific gas constant (dry) [J/kg/K]
+       Rvap   => CONST_Rvap,    &    ! gas constant (water vapor) [J/kg/K]
+       STB    => CONST_STB,     &    ! stefan-Boltzman constant [MKS unit]
+       TEM00  => CONST_TEM00         ! temperature reference (0 degree C) [K]
     use scale_atmos_saturation, only: &
-       qsat => ATMOS_SATURATION_pres2qsat_all
+       qsat   => ATMOS_SATURATION_pres2qsat_all
     use scale_time, only:       &
-       NOWDATE => TIME_NOWDATE, &    !< current time [YYYY MM DD HH MM SS]
-       DELT    => TIME_DTSEC_URBAN   !< time interval of urban step [sec]
+       NOWDATE => TIME_NOWDATE, &    ! current time [YYYY MM DD HH MM SS]
+       DELT    => TIME_DTSEC_URBAN   ! time interval of urban step [sec]
     implicit none
 
     !-- configuration variables
-    logical, intent(in) :: LSOLAR  ! logical   [true=both, false=SSG only]
+    logical , intent(in)    :: LSOLAR ! logical   [true=both, false=SSG only]
 
     !-- Input variables from Coupler to Urban
-    real(RP), intent(in)    :: PRES ! Surface Pressure [Pa]
+    real(RP), intent(in)    :: PRES ! Surface Pressure                       [Pa]
     real(RP), intent(in)    :: TA   ! temp at 1st atmospheric level          [K]
     real(RP), intent(in)    :: QA   ! specific humidity at 1st atmospheric level  [kg/kg]
     real(RP), intent(in)    :: UA   ! wind speed at 1st atmospheric level    [m/s]
@@ -772,8 +765,8 @@ contains
     real(RP), intent(in)    :: LLG  ! downward long wave radiation           [W/m/m]
     real(RP), intent(in)    :: RAIN ! precipitation flux                     [kg/m2/s]
     real(RP), intent(in)    :: RHOO ! air density                            [kg/m^3]
-    real(RP), intent(in)    :: XLAT !< latitude  [rad,-pi,pi]
-    real(RP), intent(in)    :: XLON !< longitude [rad,0-2pi]
+    real(RP), intent(in)    :: XLAT ! latitude                               [rad,-pi,pi]
+    real(RP), intent(in)    :: XLON ! longitude                              [rad,0-2pi]
 
     !-- In/Out variables from/to Coupler to/from Urban
     real(RP), intent(inout) :: TR   ! roof temperature              [K]
@@ -788,9 +781,9 @@ contains
     real(RP), intent(inout) :: RAINR ! rain amount in storage on roof     [kg/m2]
     real(RP), intent(inout) :: RAINB ! rain amount in storage on building [kg/m2]
     real(RP), intent(inout) :: RAING ! rain amount in storage on road     [kg/m2]
-    real(RP), intent(inout) :: ROFF  ! runoff from urban        [kg/m2]
+    real(RP), intent(inout) :: ROFF  ! runoff from urban           [kg/m2]
     real(RP), intent(inout) :: AH_t  ! Sensible Anthropogenic heat [W/m^2]
-    real(RP), intent(inout) :: ALH_t ! Latent Anthropogenic heat [W/m^2]
+    real(RP), intent(inout) :: ALH_t ! Latent Anthropogenic heat   [W/m^2]
 
     !-- Output variables from Urban to Coupler
     real(RP), intent(out)   :: ALBD_SW_grid  ! grid mean of surface albedo for SW
@@ -811,11 +804,13 @@ contains
     real(RP), intent(out)   :: GHR, GHB, GHG
 
     !-- parameters
-    real(RP), parameter     :: SRATIO   = 0.75_RP     ! ratio between direct/total solar [-]
-    real(RP), parameter     :: TFa      = 0.5_RP      ! factor a in Tomita (2009)
-    real(RP), parameter     :: TFb      = 1.1_RP      ! factor b in Tomita (2009)
-    real(RP), parameter     :: redf_min = 1.0E-2_RP   ! minimum reduced factor
-    real(RP), parameter     :: redf_max = 1.0_RP      ! maximum reduced factor
+    real(RP), parameter     :: SRATIO    = 0.75_RP     ! ratio between direct/total solar [-]
+    real(RP), parameter     :: TFa       = 0.5_RP      ! factor a in Tomita (2009)
+    real(RP), parameter     :: TFb       = 1.1_RP      ! factor b in Tomita (2009)
+    real(RP), parameter     :: redf_min  = 1.0E-2_RP   ! minimum reduced factor
+    real(RP), parameter     :: redf_max  = 1.0_RP      ! maximum reduced factor
+    real(RP), parameter     :: CAP_water = 4.185E6_RP ! Heat capacity of water (15 deg) [J m-3 K]
+    real(RP), parameter     :: AKS_water = 0.59_RP    ! Thermal conductivity of water   [W m-1 K]
 
     !-- Local variables
     logical  :: SHADOW = .false.
@@ -840,20 +835,25 @@ contains
     real(RP) :: TCP = 350.0_RP   ! TCP: at previous time step [K]
     real(RP) :: QCP = 0.01_RP    ! QCP: at previous time step [kg/kg]
     real(RP) :: TSP = 300.0_RP   ! TSP: at previous time step [K]
+    real(RP) :: TRLP(UKS:UKE)    ! Layer temperature at previous step  [K]
+    real(RP) :: TBLP(UKS:UKE)    ! Layer temperature at previous step  [K]
+    real(RP) :: TGLP(UKS:UKE)    ! Layer temperature at previous step  [K]
+    !
+    real(RP) :: RAINRP ! at previous step, rain amount in storage on roof     [kg/m2]
+    real(RP) :: RAINBP ! at previous step, rain amount in storage on building [kg/m2]
+    real(RP) :: RAINGP ! at previous step, rain amount in storage on road     [kg/m2]
+
     real(RP) :: UST, TST, QST
 
     real(RP) :: RAINT
     real(RP) :: ROFFR, ROFFB, ROFFG ! runoff [kg/m2]
 
-    real(RP) :: PS         ! Surface Pressure [Pa]
-    real(RP) :: ES
-
     real(RP) :: LUP, LDN, RUP
     real(RP) :: SUP, SDN
 
     real(RP) :: LNET, SNET, FLXUV
-    real(RP) :: SW     ! shortwave radition           [W/m/m]
-    real(RP) :: LW     ! longwave radition           [W/m/m]
+    real(RP) :: SW                  ! shortwave radition          [W/m/m]
+    real(RP) :: LW                  ! longwave radition           [W/m/m]
     real(RP) :: psim,psim2,psim10   ! similality stability shear function for momentum
     real(RP) :: psih,psih2,psih10   ! similality stability shear function for heat
 
@@ -879,24 +879,14 @@ contains
     real(RP) :: ALPHAR, ALPHAB, ALPHAG, ALPHAC
     real(RP) :: CHR, CHB, CHG, CHC, CDC
     real(RP) :: TC1, TC2, QC1, QC2
+    real(RP) :: QZR, QS
+    real(RP) :: CAPL1, AKSL1
 
     real(RP) :: oldF,oldGF      ! residual in previous step
     real(RP) :: redf,redfg      ! reduced factor
 
-    real(RP) :: F
-    real(RP) :: DRRDTR, DHRDTR, DELERDTR, DG0RDTR
-    real(RP) :: DTR, DFDT
-
-    real(RP) :: FX, FY, GF, GX, GY
-    real(RP) :: DTCDTB, DTCDTG
-    real(RP) :: DQCDTB, DQCDTG
-    real(RP) :: DRBDTB1,  DRBDTG1,  DRBDTB2,  DRBDTG2
-    real(RP) :: DRGDTB1,  DRGDTG1,  DRGDTB2,  DRGDTG2
-    real(RP) :: DRBDTB,   DRBDTG,   DRGDTB,   DRGDTG
-    real(RP) :: DHBDTB,   DHBDTG,   DHGDTB,   DHGDTG
-    real(RP) :: DELEBDTB, DELEBDTG, DELEGDTG, DELEGDTB
-    real(RP) :: DG0BDTB,  DG0BDTG,  DG0GDTG,  DG0GDTB
-    real(RP) :: DTB, DTG, DTC
+    real(RP) :: resi1,resi2     ! residual
+    real(RP) :: G0RP,G0BP,G0GP
 
     real(RP) :: XXX, X, CD, CH, CHU, XXX2, XXX10
 
@@ -906,7 +896,24 @@ contains
     ! Set parameters
     !-----------------------------------------------------------
 
-    ! local time
+    !--- Renew surface and layer temperatures
+
+    TRP = TR
+    TBP = TB
+    TGP = TG
+    TCP = TC
+    QCP = QC
+    TSP = TS
+    !
+    TRLP = TRL
+    TBLP = TBL
+    TGLP = TGL
+    !
+    RAINRP = RAINR
+    RAINBP = RAINB
+    RAINGP = RAING
+
+    !--- local time
     LAT = XLAT / D2R
     LON = XLON / D2R
 
@@ -915,7 +922,7 @@ contains
     dsec = real(NOWDATE(5)*60.0_RP + NOWDATE(6)) / 3600.0_RP 
     if(tloc==0) tloc = 24
 
-    ! Calculate AH data at LST
+    !--- Calculate AH data at LST
      if(tloc==24)then
        tahdiurnal = ( (1.0_RP-dsec) * ahdiurnal(tloc  ) &
                     + (       dsec) * ahdiurnal(1)      )
@@ -947,15 +954,6 @@ contains
     SX  = (SSGD+SSGQ)   ! downward short wave radition [W/m/m]
     RX  = LLG           ! downward long wave radiation
 
-    !--- Renew surface and layer temperatures
-
-    TRP = TR
-    TBP = TB
-    TGP = TG
-    TCP = TC
-    QCP = QC
-    TSP = TS
-
     !--- calculate canopy wind
 
     call canopy_wind(ZA, UA, UC)
@@ -979,15 +977,8 @@ contains
     RAINT = 0.9_RP * ( RAIN * DELT )
     call cal_beta(BETG, RAINT, RAING, STRGG, ROFFG)
 
-    ROFF = ROFF +  R * ROFFR     &
-                + RW * ROFFB     &
-                + RW * ROFFG
-
-    !ROFF = ROFF + (R-0.05_RP)*ROFFR     &
-    !            + 0.1_RP*ROFFB          &
-    !            + (RW-0.05_RP)*ROFFG
-    !print *, TIME, BETR, BETB, BETG, ROFF
-
+    ROFF = ROFF +  R * ROFFR  + RW * ( ROFFB + ROFFG )
+               
     !-----------------------------------------------------------
     ! Radiation : Net Short Wave Radiation at roof/wall/road
     !-----------------------------------------------------------
@@ -1025,102 +1016,55 @@ contains
     !   Roof
     !--------------------------------------------------
 
-    Z    = ZA - ZDC
-    BHR  = LOG(Z0R/Z0HR) / 0.4_RP
-    RIBR = ( GRAV * 2.0_RP / (TA+TRP) ) * (TA-TRP) * (Z+Z0R) / (UA*UA)
-    call mos(XXXR,CHR,CDR,BHR,RIBR,Z,Z0R,UA,TA,TRP,RHOO)
+    ! new scheme
 
-    PS   =  PRES / 100.0_RP               ! [hPa]
+     G0RP = 0.0_RP
+     do iteration = 1, 20
 
-    ! TR  Solving Non-Linear Equation by Newton-Rapson
+      Z    = ZA - ZDC
+      BHR  = LOG(Z0R/Z0HR) / 0.4_RP
+      RIBR = ( GRAV * 2.0_RP / (TA+TR) ) * (TA-TR) * (Z+Z0R) / (UA*UA)
+      call mos(XXXR,CHR,CDR,BHR,RIBR,Z,Z0R,UA,TA,TR,RHOO)
 
-    !redf   = 1.0_RP
-    !oldF   = 1.0E+5_RP
+      call qsat( QS0R, TR, PRES )
 
-    !do iteration = 1, 20
-
-      ! update of CHR using updated TRP
-      !RIBR = ( GRAV * 2.0_RP / (TA+TRP) ) * (TA-TRP) * (Z+Z0R) / (UA*UA)
-      !!call mos(XXXR,ALPHAR,CDR,BHR,RIBR,Z,Z0R,UA,TA,TRP,RHOO)
-      !!CHR = ALPHAR / RHOO / CPdry / UA
-      !call mos(XXXR,CHR,CDR,BHR,RIBR,Z,Z0R,UA,TA,TRP,RHOO)
-
-      !ES       = 6.11_RP * exp( ( LH0/Rvap) * (TRP-TEM00) / (TEM00*TRP) )
-      !DESDT    = (LH0/Rvap) * ES / (TRP**2)
-      !QS0R     = 0.622_RP * ES / ( PS - 0.378_RP * ES )
-      !DQS0RDTR = DESDT * 0.622_RP * PS / ( ( PS - 0.378_RP * ES )**2 )
-
-      !RR       = EPSR * ( RX - STB * (TRP**4)  )
-      !HR       = RHOO * CPdry * CHR * UA * (TRP-TA)
-      !ELER     = RHOO * LH0 * CHR * UA * BETR * (QS0R-QA)
-      !G0R      = AKSR * (TRP-TRL(1)) / (DZR(1)/2.0_RP)
-
-      !F        = SR + RR - HR - ELER - G0R
-
-      !DRRDTR   = ( -4.0_RP * EPSR * STB * TRP**3 )
-      !DHRDTR   = RHOO * CPdry * CHR * UA
-      !DELERDTR = RHOO * LH0 * CHR * UA * BETR * DQS0RDTR
-      !DG0RDTR  = 2.0_RP * AKSR / DZR(1)
-
-      !DFDT     = DRRDTR - DHRDTR - DELERDTR - DG0RDTR
-
-      !DTR      = -1.0_RP * F / DFDT
-
-      !!DTR      = F / DFDT
-      !!TR       = TRP - DTR
-      !!TRP      = TR
-
-      !!! Tomita(2009)
-      !if ( redf < 0.0_RP ) then
-      !   redf = 1.0_RP
-      !endif
-      !if ( abs(F) > abs(oldF) ) then
-      !   redf = max( TFa*redf, redf_min )
-      !else
-      !   redf = min( TFb*redf, redf_max )
-      !end if
-      !if ( DFDT > 0.0_RP ) then
-      !   redf = -1.0_RP
-      !endif
-      !TR       = TRP + redf * DTR
-      !TRP      = TR
-      !oldF     = F
-
-      !if( abs(F) < 0.000001_RP .AND. abs(DTR) < 0.000001_RP ) exit
-
-    !end do
-
-     ! new scheme
-      RIBR = ( GRAV * 2.0_RP / (TA+TRP) ) * (TA-TRP) * (Z+Z0R) / (UA*UA)
-      call mos(XXXR,CHR,CDR,BHR,RIBR,Z,Z0R,UA,TA,TRP,RHOO)
-
-      !PS    =  PRES / 100.0_RP               ! [hPa]
-      !ES    = 6.11_RP * exp( ( LH0/Rvap) * (TRP-TEM00) / (TEM00*TRP) )
-      !QS0R  = 0.622_RP * ES / ( PS - 0.378_RP * ES )
-      call qsat( QS0R, TRP, PRES )
-
-      RR    = EPSR * ( RX - STB * (TRP**4)  )
-      HR    = RHOO * CPdry * CHR * UA * (TRP-TA)
+      RR    = EPSR * ( RX - STB * (TR**4)  )
+      HR    = RHOO * CPdry * CHR * UA * (TR-TA)
       ELER  = RHOO * LH0   * CHR * UA * BETR * (QS0R-QA)
       G0R   = SR + RR - HR - ELER
 
-      !G0R  = AKSR * (TRP-TRL(1)) / (DZR(1)/2.0_RP)
+    ! if(tloc>=10.and.tloc<=11)then
+    !  print *,"HR1  ",TIME,iteration,HR,RHOO*CPdry*CHR*UA,TR,TA
+    !  print *,"ELER1",TIME,iteration,ELER,RHOO*LH0*CHR*UA,BETR,QS0R,QA
+    !  print *,"G0R1 ",TIME,iteration,G0R,SR,RR,-HR,-ELER
+    ! endif
 
-    !-----------------------------------------
-    !  calculate temperature in building/road
-    !  multi-layer heat equation model
-    !  Solving Heat Equation by Tri Diagonal Matrix Algorithm
-    !-----------------------------------------
+    !--- calculate temperature in roof
+    !  if ( STRGR /= 0.0_RP ) then
+    !    CAPL1 = CAP_water * (RAINR / (DZR(1) + RAINR)) + CAPR * (DZR(1) / (DZR(1) + RAINR))
+    !    AKSL1 = AKS_water * (RAINR / (DZR(1) + RAINR)) + AKSR * (DZR(1) / (DZR(1) + RAINR))
+    !  else
+    !    CAPL1 = CAPR
+    !    AKSL1 = AKSR
+    !  endif
 
-    call multi_layer(UKE,BOUND,G0R,CAPR,AKSR,TRL,DZR,DELT,TRLEND)
-    TR = TRL(1)
+      TRL = TRLP
+      call multi_layer(UKE,BOUND,G0R,CAPR,AKSR,TRL,DZR,DELT,TRLEND)
+      !! 1st layer's cap, aks are replaced.
+      !!call multi_layer2(UKE,BOUND,G0R,CAPR,AKSR,TRL,DZR,DELT,TRLEND,CAPL1,AKSL1)
+      TR  = TRL(1)
+
+      resi1  =  abs(G0R - G0RP)
+      G0RP   =  G0R
+
+      if( resi1 < sqrt(EPS) ) exit
+
+     enddo
 
     !--- update only fluxes ----
      RIBR = ( GRAV * 2.0_RP / (TA+TR) ) * (TA-TR) * (Z+Z0R) / (UA*UA)
      call mos(XXXR,CHR,CDR,BHR,RIBR,Z,Z0R,UA,TA,TR,RHOO)
     
-     !ES      = 6.11_RP * exp( ( LH0/Rvap) * (TR-TEM00) / (TEM00*TR) )
-     !QS0R    = 0.622_RP * ES / ( PS - 0.378_RP * ES )
      call qsat( QS0R, TR, PRES )
 
      RR      = EPSR * ( RX - STB * (TR**4) )
@@ -1128,234 +1072,147 @@ contains
      ELER    = RHOO * LH0   * CHR * UA * BETR * (QS0R-QA)
      G0R     = SR + RR - HR - ELER
 
-    !G0R    = AKSR * (TR-TRL(1)) / (DZR(1)/2.0_RP)
+     !if(tloc>=10.and.tloc<=11)then
+     ! print *,"HR2  ",TIME,iteration,HR,RHOO*CPdry*CHR*UA,TR,TA
+     ! print *,"ELER2",TIME,iteration,ELER,RHOO*LH0*CHR*UA,BETR,QS0R,QA
+     ! print *,"G0R2 ",TIME,iteration,G0R,SR,RR,-HR,-ELER
+     !endif
 
     !--------------------------------------------------
     !   Wall and Road
     !--------------------------------------------------
 
-    ! TB,TG  Solving Non-Linear Simultaneous Equation by Newton-Rapson
-
-    !do iteration = 1, 20
-    !
-    !  ! update of CHC using updated TCP
-    !  RIBC = ( GRAV * 2.0_RP / (TA+TCP) ) * (TA-TCP) * (Z+Z0C) / (UA*UA)
-    !  !call mos(XXXC,ALPHAC,CDC,BHC,RIBC,Z,Z0C,UA,TA,TCP,RHOO)
-    !  call mos(XXXC,CHC,CDC,BHC,RIBC,Z,Z0C,UA,TA,TCP,RHOO)
-    !  ALPHAC = CHC * RHOO * CPdry * UA
-    !
-    !  ES       = 6.11_RP * exp( (LH0/Rvap) * (TBP-TEM00) / (TEM00*TBP) )
-    !  DESDT    = (LH0/Rvap) * ES / (TBP**2)
-    !  QS0B     = 0.622_RP * ES / ( PS - 0.378_RP * ES )
-    !  DQS0BDTB = DESDT * 0.622_RP * PS / ( ( PS - 0.378_RP * ES )**2 )
-    !
-    !  ES       = 6.11_RP * exp( (LH0/Rvap) * (TGP-TEM00) / (TEM00*TGP) )
-    !  DESDT    = (LH0/Rvap) * ES / (TGP**2)
-    !  QS0G     = 0.622_RP * ES / ( PS - 0.378_RP * ES )
-    !  DQS0GDTG = DESDT * 0.622_RP * PS / ( ( PS - 0.378_RP * ES )**2 )
-    !
-    !  RG1      = EPSG * ( RX * VFGS                   &
-    !                    + EPSB * VFGW * STB * TBP**4  &
-    !                    - STB * TGP**4                )
-    !
-    !  RB1      = EPSB * ( RX * VFWS                   &
-    !                    + EPSG * VFWG * STB * TGP**4  &
-    !                    + EPSB * VFWW * STB * TBP**4  &
-    !                    - STB * TBP**4                )
-    !
-    !  RG2      = EPSG * ( (1.0_RP-EPSB) * VFGW * VFWS * RX                   &
-    !                    + (1.0_RP-EPSB) * VFGW * VFWG * EPSG * STB * TGP**4  &
-    !                    + EPSB * (1.0_RP-EPSB) * VFGW * VFWW * STB * TBP**4  )
-    !
-    !  !RB2      = EPSB * ( (1.0_RP-EPSG) * VFWG * VFGS * RX                                                            &
-    !  !                  + (1.0_RP-EPSG) * EPSB * VFGW * VFWG * SIG * (TBP**4) / 60.0_RP                               &
-    !  !                  + (1.0_RP-EPSB) * VFWS * (1.0_RP-2.0_RP*VFWS) * RX                                            &
-    !  !!                 + (1.0_RP-EPSB) * VFWG * (1.0_RP-2.0_RP*VFWS) * EPSG * SIG * EPSG * TGP**4 / 60.0_RP          &
-    !  !                  + EPSB * (1.0_RP-EPSB) * (1.0_RP-2.0_RP*VFWS) * (1.0_RP-2.0_RP*VFWS) * SIG * TBP**4 / 60.0_RP )
-    !
-    !  RB2      = EPSB * ( (1.0_RP-EPSG) * VFWG * VFGS * RX                                   &
-    !                    + (1.0_RP-EPSG) * EPSB * VFGW * VFWG * STB * TBP**4                  &
-    !                    + (1.0_RP-EPSB) * VFWS * VFWW * RX                                   &
-    !                    + (1.0_RP-EPSB) * VFWG * VFWW * STB * EPSG * TGP**4                  &
-    !                    + EPSB * (1.0_RP-EPSB) * VFWW * (1.0_RP-2.0_RP*VFWS) * STB * TBP**4  )
-    !
-    !  RG       = RG1 + RG2
-    !  RB       = RB1 + RB2
-    !
-    !
-    !  DRBDTB1  = EPSB * ( 4.0_RP * EPSB * STB * TBP**3 * VFWW - 4.0_RP * STB * TBP**3 )
-    !  DRBDTG1  = EPSB * ( 4.0_RP * EPSG * STB * TGP**3 * VFWG )
-    !  DRBDTB2  = EPSB * ( 4.0_RP * (1.0_RP-EPSG) * EPSB * STB * TBP**3 * VFGW * VFWG &
-    !                    + 4.0_RP * EPSB * (1.0_RP-EPSB) * STB * TBP**3 * VFWW * VFWW )
-    !  DRBDTG2  = EPSB * ( 4.0_RP * (1.0_RP-EPSB) * EPSG * STB * TGP**3 * VFWG * VFWW )
-    !
-    !  DRGDTB1  = EPSG * ( 4.0_RP * EPSB * STB * TBP**3 * VFGW )
-    !  DRGDTG1  = EPSG * ( -4.0_RP * STB * TGP**3 )
-    !  DRGDTB2  = EPSG * ( 4.0_RP * EPSB * (1.0_RP-EPSB) * STB * TBP**3 * VFWW * VFGW )
-    !  DRGDTG2  = EPSG * ( 4.0_RP * (1.0_RP-EPSB) * EPSG * STB * TGP**3 * VFWG * VFGW )
-    !
-    !  DRBDTB   = DRBDTB1 + DRBDTB2
-    !  DRBDTG   = DRBDTG1 + DRBDTG2
-    !  DRGDTB   = DRGDTB1 + DRGDTB2
-    !  DRGDTG   = DRGDTG1 + DRGDTG2
-    !
-    !  HB       = RHOO * CPdry * CHB * UC * (TBP-TCP)
-    !  HG       = RHOO * CPdry * CHG * UC * (TGP-TCP)
-    !
-    !  DTCDTB   = W  * ALPHAB / ( RW*ALPHAC + RW*ALPHAG + W*ALPHAB )
-    !  DTCDTG   = RW * ALPHAG / ( RW*ALPHAC + RW*ALPHAG + W*ALPHAB )
-    !
-    !  DHBDTB   = RHOO * CPdry * CHB * UC * (1.0_RP-DTCDTB)
-    !  DHBDTG   = RHOO * CPdry * CHB * UC * (0.0_RP-DTCDTG)
-    !  DHGDTG   = RHOO * CPdry * CHG * UC * (1.0_RP-DTCDTG)
-    !  DHGDTB   = RHOO * CPdry * CHG * UC * (0.0_RP-DTCDTB)
-    !
-    !  ELEB     = RHOO * LH0 * CHB * UC * BETB * (QS0B-QCP)
-    !  ELEG     = RHOO * LH0 * CHG * UC * BETG * (QS0G-QCP)
-    !
-    !  DQCDTB   = W  * ALPHAB * BETB * DQS0BDTB / ( RW*ALPHAC + RW*ALPHAG*BETG + W*ALPHAB*BETB )
-    !  DQCDTG   = RW * ALPHAG * BETG * DQS0GDTG / ( RW*ALPHAC + RW*ALPHAG*BETG + W*ALPHAB*BETB )
-    !
-    !  DELEBDTB = RHOO * LH0 * CHB * UC * BETB * (DQS0BDTB-DQCDTB)
-    !  DELEBDTG = RHOO * LH0 * CHB * UC * BETB * (0.0_RP-DQCDTG)
-    !  DELEGDTG = RHOO * LH0 * CHG * UC * BETG * (DQS0GDTG-DQCDTG)
-    !  DELEGDTB = RHOO * LH0 * CHG * UC * BETG * (0.0_RP-DQCDTB)
-    !
-    !  G0B      = AKSB * (TBP-TBL(1)) / (DZB(1)/2.0_RP)
-    !  G0G      = AKSG * (TGP-TGL(1)) / (DZG(1)/2.0_RP)
-    !
-    !  DG0BDTB  = 2.0_RP * AKSB / DZB(1)
-    !  DG0BDTG  = 0.0_RP
-    !  DG0GDTG  = 2.0_RP * AKSG / DZG(1)
-    !  DG0GDTB  = 0.0_RP
-    !
-    !  F        = SB + RB - HB - ELEB - G0B
-    !  FX       = DRBDTB - DHBDTB - DELEBDTB - DG0BDTB
-    !  FY       = DRBDTG - DHBDTG - DELEBDTG - DG0BDTG
-    !
-    !  GF       = SG + RG - HG - ELEG - G0G
-    !  GX       = DRGDTB - DHGDTB - DELEGDTB - DG0GDTB
-    !  GY       = DRGDTG - DHGDTG - DELEGDTG - DG0GDTG
-    !
-    !  DTB      = ( GF*FY - F*GY ) / ( FX*GY - GX*FY )
-    !  DTG      = -( GF + GX*DTB ) / GY
-    !
-    !  TB       = TBP + DTB
-    !  TG       = TGP + DTG
-    !
-    !  TBP      = TB
-    !  TGP      = TG
-    ! 
-    !  TC1      = RW*ALPHAC + RW*ALPHAG + W*ALPHAB
-    !  TC2      = RW*ALPHAC*TA + RW*ALPHAG*TGP + W*ALPHAB*TBP
-    !  TC       = TC2 / TC1
-    !
-    !  QC1      = RW*ALPHAC + RW*ALPHAG*BETG + W*ALPHAB*BETB
-    !  QC2      = RW*ALPHAC*QA + RW*ALPHAG*BETG*QS0G + W*ALPHAB*BETB*QS0B
-    !  QC       = QC2 / QC1
-    !
-    !  DTC      = TCP - TC
-    !  TCP      = TC
-    !  QCP      = QC
-    !
-    !  if( abs(F)   < 0.000001_RP .and. &
-    !      abs(DTB) < 0.000001_RP .and. &
-    !      abs(GF)  < 0.000001_RP .and. &
-    !      abs(DTG) < 0.000001_RP .and. &
-    !      abs(DTC) < 0.000001_RP       ) exit
-    !
-    ! end do
-
-
     ! new scheme
-      Z    = ZA - ZDC
-      BHC  = LOG(Z0C/Z0HC) / 0.4_RP
-      RIBC = ( GRAV * 2.0_RP / (TA+TCP) ) * (TA-TCP) * (Z+Z0C) / (UA*UA)
-      call mos(XXXC,CHC,CDC,BHC,RIBC,Z,Z0C,UA,TA,TCP,RHOO)
-      ALPHAC = CHC * RHOO * CPdry * UA
 
     ! empirical form
-      ALPHAB = RHOO * CPdry * ( 6.15_RP + 4.18_RP * UC ) / 1200.0_RP
-      if( UC > 5.0_RP ) ALPHAB = RHOO * CPdry * ( 7.51_RP * UC**0.78_RP ) / 1200.0_RP
-
-      ALPHAG = RHOO * CPdry * ( 6.15_RP + 4.18_RP * UC ) / 1200.0_RP
-      if( UC > 5.0_RP ) ALPHAG = RHOO * CPdry * ( 7.51_RP * UC**0.78_RP ) / 1200.0_RP
-
+      ALPHAB = 6.15_RP + 4.18_RP * UC 
+      if( UC > 5.0_RP ) ALPHAB = 7.51_RP * (UC**0.78_RP )
+      ALPHAG = 6.15_RP + 4.18_RP * UC 
+      if( UC > 5.0_RP ) ALPHAG = 7.51_RP * (UC**0.78_RP )
       CHB = ALPHAB / RHOO / CPdry / UC
       CHG = ALPHAG / RHOO / CPdry / UC
 
-      TC1      = RW*ALPHAC + RW*ALPHAG + W*ALPHAB
-      TC2      = RW*ALPHAC*TA + RW*ALPHAG*TG + W*ALPHAB*TB
-      TC       = TC2 / TC1    
-      QC1      = RW*ALPHAC + RW*ALPHAG*BETG + W*ALPHAB*BETB
-      QC2      = RW*ALPHAC*QA + RW*ALPHAG*BETG*QS0G + W*ALPHAB*BETB*QS0B
-      QC       = QC2 / QC1
+     G0BP = 0.0_RP
+     G0GP = 0.0_RP
+     do iteration = 1, 50
 
-      !ES       = 6.11_RP * exp( (LH0/Rvap) * (TBP-TEM00) / (TEM00*TBP) )
-      !QS0B     = 0.622_RP * ES / ( PS - 0.378_RP * ES )
-      call qsat( QS0B, TBP, PRES )
+      Z    = ZA - ZDC
+      BHC  = LOG(Z0C/Z0HC) / 0.4_RP
+      RIBC = ( GRAV * 2.0_RP / (TA+TC) ) * (TA-TC) * (Z+Z0C) / (UA*UA)
+      call mos(XXXC,CHC,CDC,BHC,RIBC,Z,Z0C,UA,TA,TC,RHOO)
+      ALPHAC = CHC * RHOO * CPdry * UA
 
-      !ES       = 6.11_RP * exp( (LH0/Rvap) * (TGP-TEM00) / (TEM00*TGP) )
-      !QS0G     = 0.622_RP * ES / ( PS - 0.378_RP * ES )
-      call qsat( QS0G, TGP, PRES )
+      call qsat( QS0B, TB, PRES )
+      call qsat( QS0G, TG, PRES )
 
-      RG1      = EPSG * ( RX * VFGS                   &
-                        + EPSB * VFGW * STB * TBP**4  &
-                        - STB * TGP**4                )
-
-      RB1      = EPSB * ( RX * VFWS                   &
-                        + EPSG * VFWG * STB * TGP**4  &
-                        + EPSB * VFWW * STB * TBP**4  &
-                        - STB * TBP**4                )
-
-      RG2      = EPSG * ( (1.0_RP-EPSB) * VFGW * VFWS * RX                   &
-                        + (1.0_RP-EPSB) * VFGW * VFWG * EPSG * STB * TGP**4  &
-                        + EPSB * (1.0_RP-EPSB) * VFGW * VFWW * STB * TBP**4  )
+      !specific humidity at reference height
+      ! QS   = (W*BETB*QS0B+RW*BETG*QS0G)/(W+RW)
+      ! QZR  = QS + (QA-QS)*(log(ZR/Z0HC)/log(ZA/Z0HC)) 
+      ! print *,TIME,QS0B,QS0G,QS,QZR,QA
     
-      RB2      = EPSB * ( (1.0_RP-EPSG) * VFWG * VFGS * RX                                   &
-                        + (1.0_RP-EPSG) * EPSB * VFGW * VFWG * STB * TBP**4                  &
-                        + (1.0_RP-EPSB) * VFWS * VFWW * RX                                   &
-                        + (1.0_RP-EPSB) * VFWG * VFWW * STB * EPSG * TGP**4                  &
-                        + EPSB * (1.0_RP-EPSB) * VFWW * (1.0_RP-2.0_RP*VFWS) * STB * TBP**4  )
+      TC1   = RW*ALPHAC    + RW*ALPHAG    + W*ALPHAB
+      TC2   = RW*ALPHAC*TA + RW*ALPHAG*TG + W*ALPHAB*TB
+      TC    = TC2 / TC1
+      QC1   = RW*(CHC*UA)    + RW*(CHG*BETG*UC)      + W*(CHB*BETB*UC)
+      QC2   = RW*(CHC*UA)*QA + RW*(CHG*BETG*UC)*QS0G + W*(CHB*BETB*UC)*QS0B
+      QC    = QC2 / QC1
+      ! print *,TIME,"QC org",QC
+      !QC1   = RW*(CHC*UA)     + RW*(CHG*BETG*UC)      + W*(CHB*BETB*UC)
+      !QC2   = RW*(CHC*UA)*QZR + RW*(CHG*BETG*UC)*QS0G + W*(CHB*BETB*UC)*QS0B
+      !QC    = QC2 / QC1
+      ! print *,TIME,"QC new",QC
 
-      RG       = RG1 + RG2
-      RB       = RB1 + RB2
 
-      HB       = RHOO * CPdry * CHB * UC * (TBP-TCP)
-      ELEB     = RHOO * LH0   * CHB * UC * BETB * (QS0B-QCP)
-      G0B      = SB + RB - HB - ELEB
-    !  G0B      = AKSB * (TBP-TBL(1)) / (DZB(1)/2.0_RP)
+      RG1   = EPSG * ( RX * VFGS                  &
+                     + EPSB * VFGW * STB * TB**4  &
+                     - STB * TG**4                )
 
-      HG       = RHOO * CPdry * CHG * UC * (TGP-TCP)
-      ELEG     = RHOO * LH0   * CHG * UC * BETG * (QS0G-QCP)
-      G0G      = SG + RG - HG - ELEG
-    !  G0G      = AKSG * (TGP-TGL(1)) / (DZG(1)/2.0_RP)
+      RB1   = EPSB * ( RX * VFWS                  &
+                     + EPSG * VFWG * STB * TG**4  &
+                     + EPSB * VFWW * STB * TB**4  &
+                     - STB * TB**4                )
 
-    !-----------------------------------------------------------
-    !  calculate temperature in building/road
-    !  multi-layer heat equation model
-    !  Solving Heat Equation by Tri Diagonal Matrix Algorithm
-    !-----------------------------------------------------------
+      RG2   = EPSG * ( (1.0_RP-EPSB) * VFGW * VFWS * RX                   &
+                     + (1.0_RP-EPSB) * VFGW * VFWG * EPSG * STB * TG**4  &
+                     + EPSB * (1.0_RP-EPSB) * VFGW * VFWW * STB * TB**4  )
+    
+      RB2   = EPSB * ( (1.0_RP-EPSG) * VFWG * VFGS * RX                                  &
+                     + (1.0_RP-EPSG) * EPSB * VFGW * VFWG * STB * TB**4                  &
+                     + (1.0_RP-EPSB) * VFWS * VFWW * RX                                  &
+                     + (1.0_RP-EPSB) * VFWG * VFWW * STB * EPSG * TG**4                  &
+                     + EPSB * (1.0_RP-EPSB) * VFWW * (1.0_RP-2.0_RP*VFWS) * STB * TB**4  )
 
-     call multi_layer(UKE,BOUND,G0B,CAPB,AKSB,TBL,DZB,DELT,TBLEND)
-     call multi_layer(UKE,BOUND,G0G,CAPG,AKSG,TGL,DZG,DELT,TGLEND)
+      RG    = RG1 + RG2
+      RB    = RB1 + RB2
 
-     TB = TBL(1)
-     TG = TGL(1)
+      HB    = RHOO * CPdry * CHB * UC * (TB-TC)
+      ELEB  = RHOO * LH0   * CHB * UC * BETB * (QS0B-QC)
+      G0B   = SB + RB - HB - ELEB
 
-     !ES   = 6.11_RP * exp( (LH0/Rvap) * (TB-TEM00) / (TEM00*TB) )
-     !QS0B = 0.622_RP * ES / ( PS - 0.378_RP * ES )
-     call qsat( QS0B, TB, PRES )
-     ES   = 6.11_RP * exp( (LH0/Rvap) * (TG-TEM00) / (TEM00*TG) )
-     QS0G = 0.622_RP * ES / ( PS - 0.378_RP * ES )
-     call qsat( QS0G, TG, PRES )
+      HG    = RHOO * CPdry * CHG * UC * (TG-TC)
+      ELEG  = RHOO * LH0   * CHG * UC * BETG * (QS0G-QC)
+      G0G   = SG + RG - HG - ELEG
 
-     TC1      = RW*ALPHAC + RW*ALPHAG + W*ALPHAB
-     TC2      = RW*ALPHAC*TA + RW*ALPHAG*TG + W*ALPHAB*TB
-     TC       = TC2 / TC1    
-     QC1      = RW*ALPHAC + RW*ALPHAG*BETG + W*ALPHAB*BETB
-     QC2      = RW*ALPHAC*QA + RW*ALPHAG*BETG*QS0G + W*ALPHAB*BETB*QS0B
-     QC       = QC2 / QC1
+     !if(tloc>=10.and.tloc<=11)then
+     ! print *,"HG1  ",TIME,iteration,HG,ALPHAG,TG,TC,(TG-TC)
+     ! print *,"ELEB1",TIME,iteration,ELEB,RHOO*LH0*CHB*UC,BETB,QS0B,QC,(QS0B-QC)
+     ! print *,"ELEG1",TIME,iteration,ELEG,RHOO*LH0*CHG*UC,BETG,QS0G,QC,(QS0G-QC)
+     ! print *,"G0G1 ",TIME,iteration,G0G,SG,RG,-HG,-ELEG
+     ! print *,"CH1  ",TIME,iteration,ALPHAB,ALPHAG,ALPHAC
+     !endif
+
+    !--- Heat capacity and Thermal conductivity of 1st layer
+    !                 and calculate temperature in building/road
+     ! if ( STRGB /= 0.0_RP ) then
+     !   CAPL1 = CAP_water * (RAINB / (DZB(1) + RAINB)) + CAPB * (DZB(1) / (DZB(1) + RAINB))
+     !   AKSL1 = AKS_water * (RAINB / (DZB(1) + RAINB)) + AKSB * (DZB(1) / (DZB(1) + RAINB))
+     ! else
+     !   CAPL1 = CAPB
+     !   AKSL1 = AKSB
+     ! endif
+      TBL = TBLP
+      call multi_layer(UKE,BOUND,G0B,CAPB,AKSB,TBL,DZB,DELT,TBLEND)
+      !call multi_layer2(UKE,BOUND,G0B,CAPB,AKSB,TBL,DZB,DELT,TBLEND,CAPL1,AKSL1)
+      TB = TBL(1)
+
+      !if ( STRGG /= 0.0_RP ) then
+      !  CAPL1 = CAP_water * (RAING / (DZG(1) + RAING)) + CAPG * (DZG(1) / (DZG(1) + RAING))
+      !  AKSL1 = AKS_water * (RAING / (DZG(1) + RAING)) + AKSG * (DZG(1) / (DZG(1) + RAING))
+      !else
+      !  CAPL1 = CAPG
+      !  AKSL1 = AKSG
+      !endif
+      TGL = TGLP
+      call multi_layer(UKE,BOUND,G0G,CAPG,AKSG,TGL,DZG,DELT,TGLEND)
+      !call multi_layer2(UKE,BOUND,G0G,CAPG,AKSG,TGL,DZG,DELT,TGLEND,CAPL1,AKSL1)
+      TG = TGL(1)
+
+      call qsat( QS0B, TB, PRES )
+      call qsat( QS0G, TG, PRES )
+
+      !specific humidity at reference height
+      ! QS   = (W*BETB*QS0B+RW*BETG*QS0G)/(W+RW)
+      ! QZR  = QS + (QA-QS)*(log(ZR/Z0HC)/log(ZA/Z0HC)) 
+      ! print *,TIME,QS0B,QS0G,QS,QA
+
+      TC1    =  RW*ALPHAC    + RW*ALPHAG    + W*ALPHAB
+      TC2    =  RW*ALPHAC*TA + RW*ALPHAG*TG + W*ALPHAB*TB
+      TC     =  TC2 / TC1    
+      QC1    =  RW*(CHC*UA)    + RW*(CHG*BETG*UC)      + W*(CHB*BETB*UC)
+      QC2    =  RW*(CHC*UA)*QA + RW*(CHG*BETG*UC)*QS0G + W*(CHB*BETB*UC)*QS0B
+      QC     =  QC2 / QC1
+      !QC1    =  RW*(CHC*UA)     + RW*(CHG*BETG*UC)      + W*(CHB*BETB*UC)
+      !QC2    =  RW*(CHC*UA)*QZR + RW*(CHG*BETG*UC)*QS0G + W*(CHB*BETB*UC)*QS0B
+      !QC     =  QC2 / QC1
+
+      resi1  =  abs(G0B - G0BP)
+      resi2  =  abs(G0G - G0GP)
+      G0BP   =  G0B
+      G0GP   =  G0G
+
+      if( resi1 < sqrt(EPS) .and. resi2 < sqrt(EPS) ) exit
+
+    enddo
 
     !--- update only fluxes ----
      RG1      = EPSG * ( RX * VFGS                  &
@@ -1379,14 +1236,29 @@ contains
      RB       = RB1 + RB2
 
      HB   = RHOO * CPdry * CHB * UC * (TB-TC)
-     ELEB = RHOO * LH0 * CHB * UC * BETB * (QS0B-QC)
-     !G0B  = AKSB * (TB-TBL(1)) / (DZB(1)/2.0_RP)
-     G0B  =  SB + RB - HB - ELEB
+     ELEB = RHOO * LH0   * CHB * UC * BETB * (QS0B-QC)
+     G0B  = SB + RB - HB - ELEB
 
      HG   = RHOO * CPdry * CHG * UC * (TG-TC)
-     ELEG = RHOO * LH0 * CHG * UC * BETG * (QS0G-QC)
-     !G0G  = AKSG * (TG-TGL(1)) / (DZG(1)/2.0_RP)
+     ELEG = RHOO * LH0   * CHG * UC * BETG * (QS0G-QC)
      G0G  = SG + RG - HG - ELEG
+
+     !if(tloc>=10.and.tloc<=11)then
+     !  iteration = 21
+     !  print *,tloc,NOWDATE(4),NOWDATE(5),NOWDATE(6)
+     !  print *,"GH",TIME,iteration,G0B,G0G,TB,TG,TC
+     !  print *,"SH",TIME,iteration,HB,HG
+     !  print *,"LH",TIME,iteration,ELEB,ELEG,QS0B,QS0G,QC,BETB,BETG
+     !  print *,"CAP",TIME,iteration,CAPG,AKSG,CAPL1,AKSL1
+     !endif
+
+     !if(tloc>=10.and.tloc<=11)then
+     ! print *,"HG2  ",HG,ALPHAG,TG,TC,(TG-TC)
+     ! print *,"ELEB2",ELEB,RHOO*LH0*CHB*UC,BETB,QS0B,QC,(QS0B-QC)
+     ! print *,"ELEG2",ELEG,RHOO*LH0*CHG*UC,BETG,QS0G,QC,(QS0G-QC)
+     ! print *,"G0G2 ",G0G,SG,RG,-HG,-ELEG
+     ! print *,"CH2  ",ALPHAB,ALPHAG,ALPHAC
+     !endif
 
     !-----------------------------------------------------------
     ! Total Fluxes from Urban Canopy
@@ -1402,20 +1274,20 @@ contains
     ! Grid average
     !-----------------------------------------------------------
 
-    LW = LLG - LNET    ! Upward longwave radiation   [W/m/m]
-    SW = SSG - SNET    ! Upward shortwave radiation  [W/m/m]
+    LW = LLG - LNET     ! Upward longwave radiation   [W/m/m]
+    SW = SSG - SNET     ! Upward shortwave radiation  [W/m/m]
     RN = (SNET+LNET)    ! Net radiation [W/m/m]
 
     !--- shortwave radiation
     SDN =  R + W * (VFWS + VFGS * ALBG * VFWG)  + RW * (VFGS + VFWS * ALBB * VFGW)
-    SUP =  R * ALBR                                      &
-         + W * ( VFWS* ALBB + VFGS * ALBG * VFWG *ALBB ) &
+    SUP =  R * ALBR                                        &
+         + W *  ( VFWS * ALBB + VFGS * ALBG * VFWG *ALBB ) &
          + RW * ( VFGS * ALBG + VFWS * ALBB * VFGW *ALBG )
 
     ALBD_SW_grid = SUP / SDN
 
     !--- longwave radiation
-    LDN = R + W*VFWS + RW*VFGS
+    LDN =  R + W*VFWS + RW*VFGS
     LUP =  R * (1.0_RP-EPSR)                                                           &
          + W*( (1.0_RP-EPSB*VFWW)*(1.0_RP-EPSB)*VFWS - EPSB*VFWG*(1.0_RP-EPSG)*VFGS )  &
          + RW*( (1.0_RP-EPSG)*VFGS - EPSG*(1.0_RP-VFGS)*(1.0_RP-EPSB)*VFWS )
@@ -1454,11 +1326,10 @@ contains
     !  diagnostic GRID AVERAGED TS from heat flux
     !-----------------------------------------------------------
 
-    Z    = ZA - ZDC
-    BHC  = LOG(Z0C/Z0HC) / 0.4_RP
-    RIBC = ( GRAV * 2.0_RP / (TA+TSP) ) * (TA-TSP) * (Z+Z0C) / (UA*UA)
-
-    call mos(XXX,CHC,CD,BHC,RIBC,Z,Z0C,UA,TA,TS,RHOO)
+    !Z    = ZA - ZDC
+    !BHC  = LOG(Z0C/Z0HC) / 0.4_RP
+    !RIBC = ( GRAV * 2.0_RP / (TA+TSP) ) * (TA-TSP) * (Z+Z0C) / (UA*UA)
+    !call mos(XXX,CHC,CD,BHC,RIBC,Z,Z0C,UA,TA,TS,RHOO)
 
     TS = TA + SH / CHC / RHOO / Cpdry / UA ! surface potential temp (flux temp)
     !QS = QA + LH / CHC   ! surface humidity
@@ -1755,8 +1626,14 @@ contains
     return
   end subroutine mos
 
-  !-----------------------------------------------------------------------------
+  !-------------------------------------------------------------------
   subroutine multi_layer(KM,BOUND,G0,CAP,AKS,TSL,DZ,DELT,TSLEND)
+  !
+  !  calculate temperature in roof/building/road
+  !  multi-layer heat equation model
+  !  Solving Heat Equation by Tri Diagonal Matrix Algorithm
+  !-------------------------------------------------------------------
+
     implicit none
 
     real(RP), intent(in)    :: G0
@@ -1821,6 +1698,80 @@ contains
     return
   end subroutine multi_layer
 
+  !-------------------------------------------------------------------
+  subroutine multi_layer2(KM,BOUND,G0,CAP,AKS,TSL,DZ,DELT,TSLEND,CAP1,AKS1)
+  !
+  !  calculate temperature in roof/building/road
+  !  multi-layer heat equation model
+  !  Solving Heat Equation by Tri Diagonal Matrix Algorithm
+  !-------------------------------------------------------------------
+
+    implicit none
+
+    real(RP), intent(in)    :: G0
+    real(RP), intent(in)    :: CAP
+    real(RP), intent(in)    :: AKS
+    real(RP), intent(in)    :: CAP1      ! for 1st layer
+    real(RP), intent(in)    :: AKS1      ! for 1st layer
+    real(RP), intent(in)    :: DELT      ! Time step [ s ]
+    real(RP), intent(in)    :: TSLEND
+    integer,  intent(in)    :: KM
+    integer,  intent(in)    :: BOUND
+    real(RP), intent(in)    :: DZ(KM)
+    real(RP), intent(inout) :: TSL(KM)
+    real(RP)                :: A(KM), B(KM), C(KM), D(KM), X(KM), P(KM), Q(KM)
+    real(RP)                :: DZEND
+    integer                 :: K
+
+    DZEND = DZ(KM)
+
+    A(1)  = 0.0_RP
+
+    B(1)  = CAP1 * DZ(1) / DELT &
+          + 2.0_RP * AKS1 / (DZ(1)+DZ(2))
+    C(1)  = -2.0_RP * AKS1 / (DZ(1)+DZ(2))
+    D(1)  = CAP1 * DZ(1) / DELT * TSL(1) + G0
+
+    do K = 2, KM-1
+      A(K) = -2.0_RP * AKS / (DZ(K-1)+DZ(K))
+      B(K) = CAP * DZ(K) / DELT + 2.0_RP * AKS / (DZ(K-1)+DZ(K)) + 2.0_RP * AKS / (DZ(K)+DZ(K+1))
+      C(K) = -2.0_RP * AKS / (DZ(K)+DZ(K+1))
+      D(K) = CAP * DZ(K) / DELT * TSL(K)
+    end do
+
+    if( BOUND == 1 ) then ! Flux=0
+      A(KM) = -2.0_RP * AKS / (DZ(KM-1)+DZ(KM))
+      B(KM) = CAP * DZ(KM) / DELT + 2.0_RP * AKS / (DZ(KM-1)+DZ(KM))
+      C(KM) = 0.0_RP
+      D(KM) = CAP * DZ(KM) / DELT * TSL(KM)
+    else ! T=constant
+      A(KM) = -2.0_RP * AKS / (DZ(KM-1)+DZ(KM))
+      B(KM) = CAP * DZ(KM) / DELT + 2.0_RP * AKS / (DZ(KM-1)+DZ(KM)) + 2.0_RP * AKS / (DZ(KM)+DZEND)
+      C(KM) = 0.0_RP
+      D(KM) = CAP * DZ(KM) / DELT * TSL(KM) + 2.0_RP * AKS * TSLEND / (DZ(KM)+DZEND)
+    end if
+
+    P(1) = -C(1) / B(1)
+    Q(1) =  D(1) / B(1)
+
+    do K = 2, KM
+      P(K) = -C(K) / ( A(K) * P(K-1) + B(K) )
+      Q(K) = ( -A(K) * Q(K-1) + D(K) ) / ( A(K) * P(K-1) + B(K) )
+    end do
+
+    X(KM) = Q(KM)
+
+    do K = KM-1, 1, -1
+      X(K) = P(K) * X(K+1) + Q(K)
+    end do
+
+    do K = 1, KM
+      TSL(K) = X(K)
+    enddo
+
+    return
+  end subroutine multi_layer2
+
   !-----------------------------------------------------------------------------
   subroutine urban_param_setup
     implicit none
@@ -1841,9 +1792,9 @@ contains
     SVF  = 0.0_RP
 
     ! Thickness of roof, building wall, ground layers
-     DZR(UKS:UKE) = 0.05 ! [m]
-     DZB(UKS:UKE) = 0.05 ! [m]
-     DZG(UKS:UKE) = 0.05 ! [m]
+     !DZR(UKS:UKE) = 0.05 ! [m]
+     !DZB(UKS:UKE) = 0.05 ! [m]
+     !DZG(UKS:UKE) = 0.05 ! [m]
      !DZG(1)       = 0.05 ! [m]
      !DZG(2)       = 0.25 ! [m]
      !DZG(3)       = 0.50 ! [m]
