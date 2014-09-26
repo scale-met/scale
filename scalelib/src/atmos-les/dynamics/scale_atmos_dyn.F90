@@ -76,6 +76,9 @@ module scale_atmos_dyn
   !
   real(RP), private, allocatable :: CORIOLI(:,:)            ! coriolis term
 
+  real(RP), private, allocatable :: FACT_LBFLX(:)           ! factor of lateral boundary flux adjustment [0-1]
+  integer,  private              :: NUM_LBFLX               ! number of cell adjusting lateral boundary flux
+
   !-----------------------------------------------------------------------------
 contains
 
@@ -86,6 +89,7 @@ contains
        CDZ, CDX, CDY,    &
        FDZ, FDX, FDY,    &
        enable_coriolis,  &
+       adjust_flux_cell, &
        lat               )
     use scale_process, only: &
        PRC_MPIstop
@@ -104,11 +108,19 @@ contains
     real(RP),               intent(in)  :: FDZ(KA-1)
     real(RP),               intent(in)  :: FDX(IA-1)
     real(RP),               intent(in)  :: FDY(JA-1)
-    logical ,               intent(in)  :: enable_coriolis
+    logical,                intent(in)  :: enable_coriolis
+    integer,                intent(in)  :: adjust_flux_cell
     real(RP),               intent(in)  :: lat(IA,JA)
+
+    ! works
+    integer :: n
     !---------------------------------------------------------------------------
 
+    NUM_LBFLX = adjust_flux_cell
+
     allocate( CORIOLI(IA,JA) )
+
+    allocate( FACT_LBFLX(NUM_LBFLX) )
 
     ! numerical diffusion
     call ATMOS_DYN_filter_setup( CDZ, CDX, CDY, FDZ, FDX, FDY ) ! (in)
@@ -119,6 +131,11 @@ contains
     else
        CORIOLI(:,:) = 0.0_RP
     endif
+
+    ! factor of lateral boundary flux adjustment
+    do n = 1, NUM_LBFLX
+      FACT_LBFLX(n) = 1.0_RP / real( n, kind=RP )
+    end do
 
     call ATMOS_DYN_rk_setup( DYN_TYPE )
 
@@ -647,11 +664,10 @@ contains
                           REF_pres, REF_dens,                               & ! (in)
                           dtrk, dt                                          ) ! (in)
 
+       ! set boundary
        if ( .not. PRC_HAS_W ) then ! for western boundary
           call set_boundary_dyn( &
                DENS, MOMZ, MOMX, MOMY, RHOT, & ! (inout)
-               mflx_hi, GSQRT, dt, & ! (in)
-               RCDZ, RCDX, RCDY, & ! (in)
                DAMP_DENS, DAMP_VELZ, DAMP_VELX, DAMP_VELY, DAMP_POTT, & ! (in)
                DAMP_alpha_DENS, DAMP_alpha_VELZ, DAMP_alpha_VELX, DAMP_alpha_VELY, DAMP_alpha_POTT, & ! (in)
                DAMP_VELX, & ! (in)
@@ -661,8 +677,6 @@ contains
        if ( .not. PRC_HAS_E ) then ! for eastern boundary
           call set_boundary_dyn( &
                DENS, MOMZ, MOMX, MOMY, RHOT, & ! (inout)
-               mflx_hi, GSQRT, dt, & ! (in)
-               RCDZ, RCDX, RCDY, & ! (in)
                DAMP_DENS, DAMP_VELZ, DAMP_VELX, DAMP_VELY, DAMP_POTT, & ! (in)
                DAMP_alpha_DENS, DAMP_alpha_VELZ, DAMP_alpha_VELX, DAMP_alpha_VELY, DAMP_alpha_POTT, & ! (in)
                DAMP_VELX, & ! (in)
@@ -672,8 +686,6 @@ contains
        if ( .not. PRC_HAS_S ) then ! for sourthern boundary
           call set_boundary_dyn( &
                DENS, MOMZ, MOMX, MOMY, RHOT, & ! (inout)
-               mflx_hi, GSQRT, dt, & ! (in)
-               RCDZ, RCDX, RCDY, & ! (in)
                DAMP_DENS, DAMP_VELZ, DAMP_VELX, DAMP_VELY, DAMP_POTT, & ! (in)
                DAMP_alpha_DENS, DAMP_alpha_VELZ, DAMP_alpha_VELX, DAMP_alpha_VELY, DAMP_alpha_POTT, & ! (in)
                DAMP_VELY, & ! (in)
@@ -683,13 +695,53 @@ contains
        if ( .not. PRC_HAS_N ) then ! for northern boundary
           call set_boundary_dyn( &
                DENS, MOMZ, MOMX, MOMY, RHOT, & ! (inout)
-               mflx_hi, GSQRT, dt, & ! (in)
-               RCDZ, RCDX, RCDY, & ! (in)
                DAMP_DENS, DAMP_VELZ, DAMP_VELX, DAMP_VELY, DAMP_POTT, & ! (in)
                DAMP_alpha_DENS, DAMP_alpha_VELZ, DAMP_alpha_VELX, DAMP_alpha_VELY, DAMP_alpha_POTT, & ! (in)
                DAMP_VELY, & ! (in)
                0, 0, 0, -1, & ! (in)
                IS, IE, JE-JHALO+1, JE ) ! (in)
+       end if
+
+       ! adjust lateral boundary flux
+       if ( .not. PRC_HAS_W ) then ! for western boundary
+          call adjust_boundary_flux_dyn( &
+               DENS, & ! (inout)
+               mflx_hi, GSQRT, dt, & ! (in)
+               RCDX, RCDY, & ! (in)
+               DAMP_DENS, DAMP_VELX, DAMP_VELY, & ! (in)
+               DAMP_alpha_DENS, & ! (in)
+               -1, 0, 1, 0, & ! (in)
+               IS+IHALO+NUM_LBFLX-1, IS+IHALO, JS, JE ) ! (in)
+       end if
+       if ( .not. PRC_HAS_E ) then ! for eastern boundary
+          call adjust_boundary_flux_dyn( &
+               DENS, & ! (inout)
+               mflx_hi, GSQRT, dt, & ! (in)
+               RCDX, RCDY, & ! (in)
+               DAMP_DENS, DAMP_VELX, DAMP_VELY, & ! (in)
+               DAMP_alpha_DENS, & ! (in)
+               0, 0, -1, 0, & ! (in)
+               IE-IHALO-NUM_LBFLX+1, IE-IHALO, JS, JE ) ! (in)
+       end if
+       if ( .not. PRC_HAS_S ) then ! for sourthern boundary
+          call adjust_boundary_flux_dyn( &
+               DENS, & ! (inout)
+               mflx_hi, GSQRT, dt, & ! (in)
+               RCDX, RCDY, & ! (in)
+               DAMP_DENS, DAMP_VELX, DAMP_VELY, & ! (in)
+               DAMP_alpha_DENS, & ! (in)
+               0, -1, 0, 1, & ! (in)
+               IS, IE, JS+JHALO+NUM_LBFLX-1, JS+JHALO ) ! (in)
+       end if
+       if ( .not. PRC_HAS_N ) then ! for northern boundary
+          call adjust_boundary_flux_dyn( &
+               DENS, & ! (inout)
+               mflx_hi, GSQRT, dt, & ! (in)
+               RCDX, RCDY, & ! (in)
+               DAMP_DENS, DAMP_VELX, DAMP_VELY, & ! (in)
+               DAMP_alpha_DENS, & ! (in)
+               0, 0, 0, -1, & ! (in)
+               IS, IE, JE-JHALO-NUM_LBFLX+1, JE-JHALO ) ! (in)
        end if
 
        do j  = JS, JE
@@ -978,43 +1030,45 @@ contains
     enddo ! scalar quantities loop
 
     if ( .not. PRC_HAS_W ) then ! for western boundary
+       ! set boundary
        call set_boundary_qtrc( &
             QTRC, & ! (inout)
-            DENS, MOMX, MOMY, & ! (in)
-            qflx_hi, qflx_anti, GSQRT, dt, & ! (in)
-            RCDZ, RCDX, RCDY, MAPF, & ! (in)
             DAMP_QTRC, DAMP_alpha_QTRC, & ! (in)
-            MOMX, -1, 0, 1, 0, & ! (in)
+            MOMX, & ! (in)
+            -1, 0, 1, 0, & ! (in)
             IS+IHALO-1, IS, JS, JE ) ! (in)
+!       ! adjust lateral boundary flux
+!       call adjust_boundary_flux_qtrc( &
+!            QTRC, & ! (inout)
+!            DENS, MOMX, MOMY, & ! (in)
+!            qflx_hi, qflx_anti, GSQRT, dt, & ! (in)
+!            RCDX, RCDY, MAPF, & ! (in)
+!            DAMP_QTRC, DAMP_alpha_QTRC, & ! (in)
+!            -1, 0, 1, 0, & ! (in)
+!            IS+IHALO+NUM_LBFLX-1, IS+IHALO, JS, JE ) ! (in)
     end if
     if ( .not. PRC_HAS_E ) then ! for eastern boundary
        call set_boundary_qtrc( &
             QTRC, & ! (inout)
-            DENS, MOMX, MOMY, & ! (in)
-            qflx_hi, qflx_anti, GSQRT, dt, & ! (in)
-            RCDZ, RCDX, RCDY, MAPF, & ! (in)
             DAMP_QTRC, DAMP_alpha_QTRC, & ! (in)
-            MOMX, 0, 0, -1, 0, & ! (in)
+            MOMX, & ! (in)
+            0, 0, -1, 0, & ! (in)
             IE-IHALO+1, IE, JS, JE ) ! (in)
     end if
     if ( .not. PRC_HAS_S ) then ! for sourthern boundary
        call set_boundary_qtrc( &
             QTRC, & ! (inout)
-            DENS, MOMX, MOMY, & ! (in)
-            qflx_hi, qflx_anti, GSQRT, dt, & ! (in)
-            RCDZ, RCDX, RCDY, MAPF, & ! (in)
             DAMP_QTRC, DAMP_alpha_QTRC, & ! (in)
-            MOMY, 0, -1, 0, 1, & ! (in)
+            MOMY, & ! (in)
+            0, -1, 0, 1, & ! (in)
             IS, IE, JS+JHALO-1, JS ) ! (in)
     end if
     if ( .not. PRC_HAS_N ) then ! for northern boundary
        call set_boundary_qtrc( &
             QTRC, & ! (inout)
-            DENS, MOMX, MOMY, & ! (in)
-            qflx_hi, qflx_anti, GSQRT, dt, & ! (in)
-            RCDZ, RCDX, RCDY, MAPF, & ! (in)
             DAMP_QTRC, DAMP_alpha_QTRC, & ! (in)
-            MOMY, 0, 0, 0, -1, & ! (in)
+            MOMY, & ! (in)
+            0, 0, 0, -1, & ! (in)
             IS, IE, JE-JHALO+1, JE ) ! (in)
     end if
 
@@ -1031,8 +1085,6 @@ contains
 
   subroutine set_boundary_dyn( &
        DENS, MOMZ, MOMX, MOMY, RHOT, &
-       mflx_hi, GSQRT, dt, &
-       RCDZ, RCDX, RCDY, &
        DAMP_DENS, DAMP_VELZ, DAMP_VELX, DAMP_VELY, DAMP_POTT, &
        DAMP_alpha_DENS, DAMP_alpha_VELZ, DAMP_alpha_VELX, DAMP_alpha_VELY, DAMP_alpha_POTT, &
        DAMP_flow, &
@@ -1040,10 +1092,6 @@ contains
        i0, i1, j0, j1 )
     use scale_const, only: &
        EPS => CONST_EPS
-    use scale_gridtrans, only: &
-       I_XYZ, &
-       I_UYZ, &
-       I_XVZ
     implicit none
 
     real(RP), intent(inout) :: DENS(KA,IA,JA)
@@ -1051,14 +1099,6 @@ contains
     real(RP), intent(inout) :: MOMX(KA,IA,JA)
     real(RP), intent(inout) :: MOMY(KA,IA,JA)
     real(RP), intent(inout) :: RHOT(KA,IA,JA)
-
-    real(RP), intent(in)    :: mflx_hi(KA,IA,JA,3)
-    real(RP), intent(in)    :: GSQRT  (KA,IA,JA,7)
-    real(RP), intent(in)    :: dt
-
-    real(RP), intent(in)    :: RCDZ(KA)
-    real(RP), intent(in)    :: RCDX(IA)
-    real(RP), intent(in)    :: RCDY(JA)
 
     real(RP), intent(in)    :: DAMP_DENS(KA,IA,JA)
     real(RP), intent(in)    :: DAMP_VELZ(KA,IA,JA)
@@ -1084,32 +1124,12 @@ contains
     integer,  intent(in)    :: j1
 
     real(RP) :: dir
-    real(RP) :: tmpX, tmpY
-    real(RP) :: sw, sw2, sw3, sw4
+    real(RP) :: sw, sw2
 
     integer :: i, j, k
     !---------------------------------------------------------------------------
 
     dir = sign(1.0_RP, real(ib+jb,kind=RP)) ! dir = -1 if ib==-1 .or. jb==-1
-
-    ! lateral boundary flux adjustment
-    do j = j0+ju, j1+ju*2, -ju+abs(iu)
-    do i = i0+iu, i1+iu*2, -iu+abs(ju)
-    do k = KS, KE
-       sw = sign(0.5_RP, DAMP_alpha_DENS(k,i,j) - EPS) + 0.5_RP
-       sw3 = sign(0.5_RP, real(abs(iu),kind=RP) - EPS) + 0.5_RP ! 0:N-S, 1:W-E
-       sw4 = sign(0.5_RP, real(abs(ju),kind=RP) - EPS) + 0.5_RP ! 0:W-E, 1:N-S
-
-       tmpX = DAMP_VELX(k,i+ib,j   ) * ( DAMP_DENS(k,i+ib,j   ) + DAMP_DENS(k,i-ib-iu,j      ) ) * 0.5_RP
-       tmpY = DAMP_VELY(k,i   ,j+jb) * ( DAMP_DENS(k,i,   j+jb) + DAMP_DENS(k,i,      j-jb-ju) ) * 0.5_RP
-
-       DENS(k,i,j) = DENS(k,i,j) &
-                   + ( ( tmpX * GSQRT(k,i+ib,j,   I_UYZ) - mflx_hi(k,i+ib,j,   XDIR) ) * RCDX(i) * sw3 &
-                     + ( tmpY * GSQRT(k,i,   j+jb,I_XVZ) - mflx_hi(k,i,   j+jb,YDIR) ) * RCDY(j) * sw4 &
-                     ) * dt / GSQRT(k,i,j,I_XYZ) * sw
-    end do
-    end do
-    end do
 
     do j = j0, j1, -ju+abs(iu)
     do i = i0, i1, -iu+abs(ju)
@@ -1117,7 +1137,7 @@ contains
        sw = sign(0.5_RP, DAMP_alpha_DENS(k,i,j) - EPS) + 0.5_RP
        sw2 = sign(0.5_RP, DAMP_flow(k,i,j)*dir) + 0.5_RP ! 0:inflow, 1:outflow
        DENS(k,i,j) = DENS(k,i,j) * ( 1.0_RP - sw ) &
-                   + DAMP_DENS(k,i,j) * sw
+                   + DENS(k,i+iu,j+ju) * sw
        MOMZ(k,i,j) = MOMZ(k,i,j) * ( 1.0_RP - sw ) &
                    + MOMZ(k,i+iu,j+ju) * sw2 * sw
        sw = sign(0.5_RP, DAMP_alpha_POTT(k,i,j) - EPS) + 0.5_RP
@@ -1171,39 +1191,20 @@ contains
 
   subroutine set_boundary_qtrc( &
        QTRC, &
-       DENS, MOMX, MOMY, &
-       qflx_hi, qflx_anti, GSQRT, dt, &
-       RCDZ, RCDX, RCDY, MAPF, &
        DAMP_QTRC, DAMP_alpha_QTRC, &
-       MOM, ib, jb, iu, ju, &
+       MOM, &
+       ib, jb, iu, ju, &
        i0, i1, j0, j1 )
     use scale_const, only: &
        EPS => CONST_EPS
-    use scale_gridtrans, only: &
-       I_XYZ, &
-       I_UYZ, &
-       I_XVZ, &
-       I_XY
     use scale_atmos_boundary, only: &
        BND_QA
     implicit none
     real(RP), intent(inout) :: QTRC(KA,IA,JA,QA)
 
-    real(RP), intent(in)    :: DENS     (KA,IA,JA)
-    real(RP), intent(in)    :: MOMX     (KA,IA,JA)
-    real(RP), intent(in)    :: MOMY     (KA,IA,JA)
-    real(RP), intent(in)    :: qflx_hi  (KA,IA,JA,3,QA)
-    real(RP), intent(in)    :: qflx_anti(KA,IA,JA,3,QA)
-    real(RP), intent(in)    :: GSQRT    (KA,IA,JA,7)
-    real(RP), intent(in)    :: dt
-
-    real(RP), intent(in)    :: RCDZ(KA)
-    real(RP), intent(in)    :: RCDX(IA)
-    real(RP), intent(in)    :: RCDY(JA)
-    real(RP), intent(in)    :: MAPF(IA,JA,2,4)
-
     real(RP), intent(in)    :: DAMP_QTRC      (KA,IA,JA,BND_QA)
     real(RP), intent(in)    :: DAMP_alpha_QTRC(KA,IA,JA,BND_QA)
+
     real(RP), intent(in)    :: MOM(KA,IA,JA)
 
     integer,  intent(in)    :: ib ! W:-1, E: 0, S: 0, N: 0
@@ -1216,36 +1217,14 @@ contains
     integer,  intent(in)    :: j1
 
     real(RP) :: dir
-    real(RP) :: tmpX, tmpY
-    real(RP) :: sw, sw2, sw3, sw4
+    real(RP) :: sw, sw2
 
-    integer :: i, j, k, iq, iqb
+    integer :: i, j, k, iq
     !---------------------------------------------------------------------------
 
     if( BND_QA == I_QV ) then
        ! QV forcing only at boundary
        dir = sign(1.0_RP, REAL(ib+jb,RP)) ! dir = -1 if ib==-1 .or. jb==-1
-
-       ! lateral boundary flux adjustment
-       do j = j0+ju, j1+ju*2, -ju+abs(iu)
-       do i = i0+iu, i1+iu*2, -iu+abs(ju)
-       do k = KS, KE
-          sw = sign(0.5_RP, DAMP_alpha_QTRC(k,i,j,I_QV) - EPS) + 0.5_RP
-          sw3 = sign(0.5_RP, real(abs(iu),kind=RP) - EPS) + 0.5_RP ! 0:N-S, 1:W-E
-          sw4 = sign(0.5_RP, real(abs(ju),kind=RP) - EPS) + 0.5_RP ! 0:W-E, 1:N-S
-
-          tmpX = MOMX(k,i+ib,j   ) * ( DAMP_QTRC(k,i+ib,j,      I_QV)+DAMP_QTRC(k,i-ib-iu,j,   I_QV) ) * 0.5_RP
-          tmpY = MOMY(k,i,   j+jb) * ( DAMP_QTRC(k,i,      j+jb,I_QV)+DAMP_QTRC(k,i,   j-jb-ju,I_QV) ) * 0.5_RP
-
-          QTRC(k,i,j,I_QV) = QTRC(k,i,j,I_QV) &
-                           + ( ( tmpX * GSQRT(k,i+ib,j,I_UYZ) - qflx_hi(k,i+ib,j,XDIR,I_QV) + qflx_anti(k,i+ib,j,XDIR,I_QV) ) &
-                             * RCDX(i) * sw3 &
-                             + ( tmpY * GSQRT(k,i,j+jb,I_XVZ) - qflx_hi(k,i,j+jb,YDIR,I_QV) + qflx_anti(k,i,j+jb,YDIR,I_QV) ) &
-                             * RCDY(j) * sw4 &
-                             ) * dt * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) / DENS(k,i,j) * sw
-       end do
-       end do
-       end do
 
        do j = j0, j1, -ju+abs(iu)
        do i = i0, i1, -iu+abs(ju)
@@ -1272,27 +1251,6 @@ contains
     else
        ! ALL QTRC forcing at boundary
        do iq = 1, QA
-          ! lateral boundary flux adjustment
-          do j = j0+ju, j1+ju*2, -ju+abs(iu)
-          do i = i0+iu, i1+iu*2, -iu+abs(ju)
-          do k = KS, KE
-             sw = sign(0.5_RP, DAMP_alpha_QTRC(k,i,j,iq) - EPS) + 0.5_RP
-             sw3 = sign(0.5_RP, real(abs(iu),kind=RP) - EPS) + 0.5_RP ! 0:N-S, 1:W-E
-             sw4 = sign(0.5_RP, real(abs(ju),kind=RP) - EPS) + 0.5_RP ! 0:W-E, 1:N-S
-
-             tmpX = MOMX(k,i+ib,j   ) * ( DAMP_QTRC(k,i+ib,j,   iq)+DAMP_QTRC(k,i-ib-iu,j,      iq) ) * 0.5_RP
-             tmpY = MOMY(k,i,   j+jb) * ( DAMP_QTRC(k,i,   j+jb,iq)+DAMP_QTRC(k,i,      j-jb-ju,iq) ) * 0.5_RP
-
-             QTRC(k,i,j,iq) = QTRC(k,i,j,iq) &
-                            + ( ( tmpX * GSQRT(k,i+ib,j,I_UYZ) - qflx_hi(k,i+ib,j,XDIR,iq) + qflx_anti(k,i+ib,j,XDIR,iq) ) &
-                              * RCDX(i) * sw3 &
-                              + ( tmpY * GSQRT(k,i,j+jb,I_XVZ) - qflx_hi(k,i,j+jb,YDIR,iq) + qflx_anti(k,i,j+jb,YDIR,iq) ) &
-                              * RCDY(j) * sw4 &
-                              ) * dt * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) / DENS(k,i,j) * sw
-          end do
-          end do
-          end do
-
           do j = j0, j1, -ju+abs(iu)
           do i = i0, i1, -iu+abs(ju)
           do k = KS, KE
@@ -1307,5 +1265,171 @@ contains
 
     return
   end subroutine set_boundary_qtrc
+
+  subroutine adjust_boundary_flux_dyn( &
+       DENS, &
+       mflx_hi, GSQRT, dt, &
+       RCDX, RCDY, &
+       DAMP_DENS, DAMP_VELX, DAMP_VELY, &
+       DAMP_alpha_DENS, &
+       ib, jb, iu, ju, &
+       i0, i1, j0, j1 )
+    use scale_const, only: &
+       EPS => CONST_EPS
+    use scale_gridtrans, only: &
+       I_XYZ, &
+       I_UYZ, &
+       I_XVZ
+    implicit none
+
+    real(RP), intent(inout) :: DENS(KA,IA,JA)
+
+    real(RP), intent(in)    :: mflx_hi(KA,IA,JA,3)
+    real(RP), intent(in)    :: GSQRT  (KA,IA,JA,7)
+    real(RP), intent(in)    :: dt
+
+    real(RP), intent(in)    :: RCDX(IA)
+    real(RP), intent(in)    :: RCDY(JA)
+
+    real(RP), intent(in)    :: DAMP_DENS(KA,IA,JA)
+    real(RP), intent(in)    :: DAMP_VELX(KA,IA,JA)
+    real(RP), intent(in)    :: DAMP_VELY(KA,IA,JA)
+
+    real(RP), intent(in)    :: DAMP_alpha_DENS(KA,IA,JA)
+
+    integer,  intent(in)    :: ib ! W:-1, E: 0, S: 0, N: 0
+    integer,  intent(in)    :: jb ! W: 0, E: 0, S:-1, N: 0
+    integer,  intent(in)    :: iu ! W: 1, E:-1, S: 0, N: 0
+    integer,  intent(in)    :: ju ! W: 0, E: 0, S: 1, N:-1
+    integer,  intent(in)    :: i0
+    integer,  intent(in)    :: i1
+    integer,  intent(in)    :: j0
+    integer,  intent(in)    :: j1
+
+    real(RP) :: tmpX, tmpY
+    real(RP) :: sw
+    real(RP) :: fc
+
+    integer :: i, j, k
+    !---------------------------------------------------------------------------
+
+    do j = j0, j1, -ju+abs(iu)
+    do i = i0, i1, -iu+abs(ju)
+    do k = KS, KE
+       sw = sign(0.5_RP, DAMP_alpha_DENS(k,i,j) - EPS) + 0.5_RP
+       fc = FACT_LBFLX( (i-i1+1)*abs(iu) + (j-j1+1)*abs(ju) )
+
+       tmpX = DAMP_VELX(k,i+ib,j   ) * ( DAMP_DENS(k,i+ib,j   ) + DAMP_DENS(k,i-ib-iu,j      ) ) * 0.5_RP
+       tmpY = DAMP_VELY(k,i,   j+jb) * ( DAMP_DENS(k,i,   j+jb) + DAMP_DENS(k,i,      j-jb-ju) ) * 0.5_RP
+
+       DENS(k,i,j) = DENS(k,i,j) &
+                   + ( ( tmpX * GSQRT(k,i+ib,j,   I_UYZ) - mflx_hi(k,i+ib,j,   XDIR) ) * RCDX(i) * real(iu,kind=RP) &
+                     + ( tmpY * GSQRT(k,i,   j+jb,I_XVZ) - mflx_hi(k,i,   j+jb,YDIR) ) * RCDY(j) * real(ju,kind=RP) &
+                     ) * dt / GSQRT(k,i,j,I_XYZ) * sw !* fc
+    end do
+    end do
+    end do
+
+    return
+  end subroutine adjust_boundary_flux_dyn
+
+  subroutine adjust_boundary_flux_qtrc( &
+       QTRC, &
+       DENS, MOMX, MOMY, &
+       qflx_hi, qflx_anti, GSQRT, dt, &
+       RCDX, RCDY, MAPF, &
+       DAMP_QTRC, DAMP_alpha_QTRC, &
+       ib, jb, iu, ju, &
+       i0, i1, j0, j1 )
+    use scale_const, only: &
+       EPS => CONST_EPS
+    use scale_gridtrans, only: &
+       I_XYZ, &
+       I_UYZ, &
+       I_XVZ, &
+       I_XY
+    use scale_atmos_boundary, only: &
+       BND_QA
+    implicit none
+    real(RP), intent(inout) :: QTRC(KA,IA,JA,QA)
+
+    real(RP), intent(in)    :: DENS     (KA,IA,JA)
+    real(RP), intent(in)    :: MOMX     (KA,IA,JA)
+    real(RP), intent(in)    :: MOMY     (KA,IA,JA)
+    real(RP), intent(in)    :: qflx_hi  (KA,IA,JA,3,QA)
+    real(RP), intent(in)    :: qflx_anti(KA,IA,JA,3,QA)
+    real(RP), intent(in)    :: GSQRT    (KA,IA,JA,7)
+    real(RP), intent(in)    :: dt
+
+    real(RP), intent(in)    :: RCDX(IA)
+    real(RP), intent(in)    :: RCDY(JA)
+    real(RP), intent(in)    :: MAPF(IA,JA,2,4)
+
+    real(RP), intent(in)    :: DAMP_QTRC      (KA,IA,JA,BND_QA)
+    real(RP), intent(in)    :: DAMP_alpha_QTRC(KA,IA,JA,BND_QA)
+
+    integer,  intent(in)    :: ib ! W:-1, E: 0, S: 0, N: 0
+    integer,  intent(in)    :: jb ! W: 0, E: 0, S:-1, N: 0
+    integer,  intent(in)    :: iu ! W: 1, E:-1, S: 0, N: 0
+    integer,  intent(in)    :: ju ! W: 0, E: 0, S: 1, N:-1
+    integer,  intent(in)    :: i0
+    integer,  intent(in)    :: i1
+    integer,  intent(in)    :: j0
+    integer,  intent(in)    :: j1
+
+    real(RP) :: tmpX, tmpY
+    real(RP) :: sw, sw2, sw3
+
+    integer :: i, j, k, iq, iqb
+    !---------------------------------------------------------------------------
+
+    if( BND_QA == I_QV ) then
+       ! QV forcing only at boundary
+       do j = j0+ju, j0+ju, -ju+abs(iu)
+       do i = i0+iu, i0+iu, -iu+abs(ju)
+       do k = KS, KE
+          sw = sign(0.5_RP, DAMP_alpha_QTRC(k,i,j,I_QV) - EPS) + 0.5_RP
+          sw2 = sign(0.5_RP, real(abs(iu),kind=RP) - EPS) + 0.5_RP ! 0:N-S, 1:W-E
+          sw3 = sign(0.5_RP, real(abs(ju),kind=RP) - EPS) + 0.5_RP ! 0:W-E, 1:N-S
+
+          tmpX = MOMX(k,i+ib,j   ) * ( DAMP_QTRC(k,i+ib,j,      I_QV)+DAMP_QTRC(k,i-ib-iu,j,   I_QV) ) * 0.5_RP
+          tmpY = MOMY(k,i,   j+jb) * ( DAMP_QTRC(k,i,      j+jb,I_QV)+DAMP_QTRC(k,i,   j-jb-ju,I_QV) ) * 0.5_RP
+
+          QTRC(k,i,j,I_QV) = QTRC(k,i,j,I_QV) &
+                           + ( ( tmpX * GSQRT(k,i+ib,j,I_UYZ) - qflx_hi(k,i+ib,j,XDIR,I_QV) + qflx_anti(k,i+ib,j,XDIR,I_QV) ) &
+                             * RCDX(i) * sw2 &
+                             + ( tmpY * GSQRT(k,i,j+jb,I_XVZ) - qflx_hi(k,i,j+jb,YDIR,I_QV) + qflx_anti(k,i,j+jb,YDIR,I_QV) ) &
+                             * RCDY(j) * sw3 &
+                             ) * dt * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) / DENS(k,i,j) * sw
+       end do
+       end do
+       end do
+    else
+       ! ALL QTRC forcing at boundary
+       do iq = 1, QA
+          do j = j0+ju, j0+ju, -ju+abs(iu)
+          do i = i0+iu, i0+iu, -iu+abs(ju)
+          do k = KS, KE
+             sw = sign(0.5_RP, DAMP_alpha_QTRC(k,i,j,iq) - EPS) + 0.5_RP
+             sw2 = sign(0.5_RP, real(abs(iu),kind=RP) - EPS) + 0.5_RP ! 0:N-S, 1:W-E
+             sw3 = sign(0.5_RP, real(abs(ju),kind=RP) - EPS) + 0.5_RP ! 0:W-E, 1:N-S
+
+             tmpX = MOMX(k,i+ib,j   ) * ( DAMP_QTRC(k,i+ib,j,   iq)+DAMP_QTRC(k,i-ib-iu,j,      iq) ) * 0.5_RP
+             tmpY = MOMY(k,i,   j+jb) * ( DAMP_QTRC(k,i,   j+jb,iq)+DAMP_QTRC(k,i,      j-jb-ju,iq) ) * 0.5_RP
+
+             QTRC(k,i,j,iq) = QTRC(k,i,j,iq) &
+                            + ( ( tmpX * GSQRT(k,i+ib,j,I_UYZ) - qflx_hi(k,i+ib,j,XDIR,iq) + qflx_anti(k,i+ib,j,XDIR,iq) ) &
+                              * RCDX(i) * sw2 &
+                              + ( tmpY * GSQRT(k,i,j+jb,I_XVZ) - qflx_hi(k,i,j+jb,YDIR,iq) + qflx_anti(k,i,j+jb,YDIR,iq) ) &
+                              * RCDY(j) * sw3 &
+                              ) * dt * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) / DENS(k,i,j) * sw
+          end do
+          end do
+          end do
+       end do
+    end if
+
+    return
+  end subroutine adjust_boundary_flux_qtrc
 
 end module scale_atmos_dyn

@@ -64,6 +64,9 @@ module mod_atmos_dyn_driver
   logical,  private :: ATMOS_DYN_FLAG_FCT_T        = .false.
   logical,  private :: ATMOS_DYN_FLAG_FCT_along_stream = .true.
 
+  ! lateral boundary flux adjustment
+  integer,  private :: ATMOS_DYN_adjust_flux_cell  = 1                   ! number of cells adjusting lateral boundary flux
+
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -100,7 +103,8 @@ contains
        ATMOS_DYN_FLAG_FCT_rho,                &
        ATMOS_DYN_FLAG_FCT_momentum,           &
        ATMOS_DYN_FLAG_FCT_T,                  &
-       ATMOS_DYN_FLAG_FCT_along_stream
+       ATMOS_DYN_FLAG_FCT_along_stream,       &
+       ATMOS_DYN_adjust_flux_cell
 
     real(RP) :: DT
     integer  :: ierr
@@ -128,6 +132,7 @@ contains
                              GRID_CDZ, GRID_CDX, GRID_CDY,   & ! [IN]
                              GRID_FDZ, GRID_FDX, GRID_FDY,   & ! [IN]
                              ATMOS_DYN_enable_coriolis,      & ! [IN]
+                             ATMOS_DYN_adjust_flux_cell,     & ! [IN]
                              REAL_LAT                        ) ! [IN]
     endif
 
