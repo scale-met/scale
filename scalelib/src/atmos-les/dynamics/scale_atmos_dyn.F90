@@ -706,7 +706,7 @@ contains
        if ( .not. PRC_HAS_W ) then ! for western boundary
           call adjust_boundary_flux_dyn( &
                DENS, & ! (inout)
-               mflx_hi, GSQRT, dt, & ! (in)
+               mflx_hi, GSQRT, MAPF, dt, & ! (in)
                RCDX, RCDY, & ! (in)
                DAMP_DENS, DAMP_VELX, DAMP_VELY, & ! (in)
                DAMP_alpha_DENS, & ! (in)
@@ -716,7 +716,7 @@ contains
        if ( .not. PRC_HAS_E ) then ! for eastern boundary
           call adjust_boundary_flux_dyn( &
                DENS, & ! (inout)
-               mflx_hi, GSQRT, dt, & ! (in)
+               mflx_hi, GSQRT, MAPF, dt, & ! (in)
                RCDX, RCDY, & ! (in)
                DAMP_DENS, DAMP_VELX, DAMP_VELY, & ! (in)
                DAMP_alpha_DENS, & ! (in)
@@ -726,7 +726,7 @@ contains
        if ( .not. PRC_HAS_S ) then ! for sourthern boundary
           call adjust_boundary_flux_dyn( &
                DENS, & ! (inout)
-               mflx_hi, GSQRT, dt, & ! (in)
+               mflx_hi, GSQRT, MAPF, dt, & ! (in)
                RCDX, RCDY, & ! (in)
                DAMP_DENS, DAMP_VELX, DAMP_VELY, & ! (in)
                DAMP_alpha_DENS, & ! (in)
@@ -736,7 +736,7 @@ contains
        if ( .not. PRC_HAS_N ) then ! for northern boundary
           call adjust_boundary_flux_dyn( &
                DENS, & ! (inout)
-               mflx_hi, GSQRT, dt, & ! (in)
+               mflx_hi, GSQRT, MAPF, dt, & ! (in)
                RCDX, RCDY, & ! (in)
                DAMP_DENS, DAMP_VELX, DAMP_VELY, & ! (in)
                DAMP_alpha_DENS, & ! (in)
@@ -1268,7 +1268,7 @@ contains
 
   subroutine adjust_boundary_flux_dyn( &
        DENS, &
-       mflx_hi, GSQRT, dt, &
+       mflx_hi, GSQRT, MAPF, dt, &
        RCDX, RCDY, &
        DAMP_DENS, DAMP_VELX, DAMP_VELY, &
        DAMP_alpha_DENS, &
@@ -1279,13 +1279,17 @@ contains
     use scale_gridtrans, only: &
        I_XYZ, &
        I_UYZ, &
-       I_XVZ
+       I_XVZ, &
+       I_XY,  &
+       I_UY,  &
+       I_XV
     implicit none
 
     real(RP), intent(inout) :: DENS(KA,IA,JA)
 
     real(RP), intent(in)    :: mflx_hi(KA,IA,JA,3)
     real(RP), intent(in)    :: GSQRT  (KA,IA,JA,7)
+    real(RP), intent(in)    :: MAPF   (IA,JA,2,4)
     real(RP), intent(in)    :: dt
 
     real(RP), intent(in)    :: RCDX(IA)
@@ -1322,10 +1326,13 @@ contains
        tmpX = DAMP_VELX(k,i+ib,j   ) * ( DAMP_DENS(k,i+ib,j   ) + DAMP_DENS(k,i-ib-iu,j      ) ) * 0.5_RP
        tmpY = DAMP_VELY(k,i,   j+jb) * ( DAMP_DENS(k,i,   j+jb) + DAMP_DENS(k,i,      j-jb-ju) ) * 0.5_RP
 
+       tmpX = tmpX * GSQRT(k,i+ib,j,   I_UYZ) / MAPF(i+ib,j,   2,I_UY)
+       tmpY = tmpY * GSQRT(k,i,   j+jb,I_XVZ) / MAPF(i,   j+jb,1,I_XV)
+
        DENS(k,i,j) = DENS(k,i,j) &
-                   + ( ( tmpX * GSQRT(k,i+ib,j,   I_UYZ) - mflx_hi(k,i+ib,j,   XDIR) ) * RCDX(i) * real(iu,kind=RP) &
-                     + ( tmpY * GSQRT(k,i,   j+jb,I_XVZ) - mflx_hi(k,i,   j+jb,YDIR) ) * RCDY(j) * real(ju,kind=RP) &
-                     ) * dt / GSQRT(k,i,j,I_XYZ) * sw !* fc
+                   + ( ( tmpX - mflx_hi(k,i+ib,j,   XDIR) ) * RCDX(i) * real(iu,kind=RP) &
+                     + ( tmpY - mflx_hi(k,i,   j+jb,YDIR) ) * RCDY(j) * real(ju,kind=RP) &
+                     ) * dt * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) * sw !* fc
     end do
     end do
     end do
