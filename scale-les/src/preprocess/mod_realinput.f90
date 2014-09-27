@@ -93,8 +93,8 @@ module mod_realinput
   !
   integer, private, parameter :: iSCALE  = 1
   integer, private, parameter :: iWRFARW = 2
-  integer, private, parameter :: iJMAMSM = 3
-  integer, private, parameter :: iNICAM  = 4
+  integer, private, parameter :: iNICAM  = 3
+  integer, private, parameter :: iJMAMSM = 4
 
   real(RP), private, parameter :: large_number_one   = 9.999E+15_RP
   real(RP), private, parameter :: large_number_two   = 8.888E+15_RP
@@ -127,6 +127,7 @@ contains
     integer,          intent(in)  :: search_divnum_in
     logical,          intent(in)  :: wrf_file_type_in
 
+    integer :: dims_ncm(4)
     intrinsic shape
     !---------------------------------------------------------------------------
 
@@ -152,11 +153,23 @@ contains
           if( IO_L ) write(IO_FID_LOG,*) '+++ WRF-ARW FILE-TYPE: WRF Restart'
        endif
 
+    case('NICAM-NETCDF')
+       if( IO_L ) write(IO_FID_LOG,*) '+++ Real Case/Atom Input File Type: NICAM-NETCDF'
+       mdlid = iNICAM
+       call FileGetShape( dims_ncm(:), "ms_pres", "ms_pres", 1, single=.true. )
+       timelen = dims_ncm(4)
+       dims(:) = 0
+       dims(1) = dims_ncm(1)
+       dims(2) = dims_ncm(2)
+       dims(3) = dims_ncm(3)
+       dims(4) = dims_ncm(1) ! nicam lat-lon data doesn't have staggered grid system
+       dims(5) = dims_ncm(2) ! nicam lat-lon data doesn't have staggered grid system
+       dims(6) = dims_ncm(3) ! nicam lat-lon data doesn't have staggered grid system
+       dims(7) = 5           ! vertical grid of land model [tentative]
+
     !case('JMA-MSM')
 
     !case('NCEP-FNL')
-
-    !case('NICAM')
 
     case default
        write(*,*) ' xxx Unsupported FILE TYPE:', trim(filetype)
@@ -252,6 +265,19 @@ contains
                           1,                   &  !suffix of start time: ts
                           timelen,             &  !suffix of end time: te
                           serial               )
+
+    elseif( mdlid == iNICAM ) then ! TYPE: NICAM-NETCDF
+       call InputAtomNICAM( dens    (:,:,:,:),   &
+                            momz    (:,:,:,:),   &
+                            momx    (:,:,:,:),   &
+                            momy    (:,:,:,:),   &
+                            rhot    (:,:,:,:),   &
+                            qtrc    (:,:,:,:,:), &
+                            basename_org,        &
+                            dims(:),             &
+                            1,                   &  ! start time
+                            timelen              )  ! end time
+
     endif
 
     return
@@ -504,6 +530,24 @@ contains
                              mdlid,        &
                              serial,       &
                              no_add_input  )
+    elseif( mdlid == iNICAM ) then ! TYPE: NICAM-NETCDF
+       call InputSurfaceNICAM( tg   (:,:,:), &
+                               strg (:,:,:), &
+                               roff (:,:),   &
+                               qvef (:,:),   &
+                               tw   (:,:),   &
+                               lst  (:,:),   &
+                               ust  (:,:),   &
+                               sst  (:,:),   &
+                               albw (:,:,:), &
+                               albg (:,:,:), &
+                               z0w  (:,:),   &
+                               skint(:,:),   &
+                               skinw(:,:),   &
+                               snowq(:,:),   &
+                               snowt(:,:),   &
+                               basename_org, &
+                               dims(:)       )
     endif
 
     do j = 1, JA
@@ -1642,6 +1686,383 @@ contains
     return
   end subroutine InputAtomWRF
 
+
+  !-----------------------------------------------------------------------------
+  !> Individual Procedures
+  !-----------------------------------------------------------------------------
+  subroutine InputAtomNICAM( &
+      dens,             & ! (out)
+      momz,             & ! (out)
+      momx,             & ! (out)
+      momy,             & ! (out)
+      rhot,             & ! (out)
+      qtrc,             & ! (out)
+      basename_org,     & ! (in)
+      dims,             & ! (in)
+      start_step,       & ! (in)
+      end_step          ) ! (in)
+    use scale_const, only: &
+       D2R => CONST_D2R
+    use scale_comm, only: &
+       COMM_vars8, &
+       COMM_wait
+    use scale_atmos_hydrostatic, only: &
+       HYDROSTATIC_buildrho => ATMOS_HYDROSTATIC_buildrho
+    use scale_atmos_thermodyn, only: &
+       THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres, &
+       THERMODYN_pott      => ATMOS_THERMODYN_pott
+    implicit none
+
+    real(RP),         intent(out) :: dens(:,:,:,:)
+    real(RP),         intent(out) :: momz(:,:,:,:)
+    real(RP),         intent(out) :: momx(:,:,:,:)
+    real(RP),         intent(out) :: momy(:,:,:,:)
+    real(RP),         intent(out) :: rhot(:,:,:,:)
+    real(RP),         intent(out) :: qtrc(:,:,:,:,:)
+    character(LEN=*), intent(in)  :: basename_org
+    integer,          intent(in)  :: dims(:)
+    integer,          intent(in)  :: start_step
+    integer,          intent(in)  :: end_step
+
+    ! work
+    real(SP), allocatable :: read1DX(:)
+    real(SP), allocatable :: read1DY(:)
+    real(SP), allocatable :: read1DZ(:)
+    real(SP), allocatable :: read3DT(:,:,:,:)
+    real(SP), allocatable :: read4D (:,:,:,:)
+
+    real(RP), allocatable :: lon_org (:,:,:)
+    real(RP), allocatable :: lat_org (:,:,:)
+    real(RP), allocatable :: hgt_org(:,:,:,:)
+
+    real(RP), allocatable :: tsfc_org(:,:,:)
+    real(RP), allocatable :: psfc_org(:,:,:)
+    real(RP), allocatable :: qsfc_org(:,:,:,:)
+
+    real(RP), allocatable :: velx_org(:,:,:,:)
+    real(RP), allocatable :: vely_org(:,:,:,:)
+    real(RP), allocatable :: temp_org(:,:,:,:)
+    real(RP), allocatable :: pres_org(:,:,:,:)
+    real(RP), allocatable :: qtrc_org(:,:,:,:,:)
+
+    real(RP) :: velz(KA,IA,JA,start_step:end_step)
+    real(RP) :: velx(KA,IA,JA,start_step:end_step)
+    real(RP) :: vely(KA,IA,JA,start_step:end_step)
+    real(RP) :: pott(KA,IA,JA,start_step:end_step)
+    real(RP) :: temp(KA,IA,JA,start_step:end_step)
+    real(RP) :: pres(KA,IA,JA,start_step:end_step)
+
+    real(RP) :: pott_sfc(1,IA,JA,start_step:end_step)
+    real(RP) :: pres_sfc(1,IA,JA,start_step:end_step)
+    real(RP) :: temp_sfc(1,IA,JA,start_step:end_step)
+    real(RP) :: qtrc_sfc(1,IA,JA,start_step:end_step,QA)
+
+    real(RP) :: hfact(   IA,JA,itp_nh       )
+    real(RP) :: vfact(KA,IA,JA,itp_nh,itp_nv)
+
+    integer :: igrd(   IA,JA,itp_nh       )
+    integer :: jgrd(   IA,JA,itp_nh       )
+    integer :: kgrd(KA,IA,JA,itp_nh,itp_nv)
+
+    integer :: QA_NCM = 1
+
+    integer :: k, i, j, n, iq, ierr
+    integer :: nt
+    logical :: do_read
+    !---------------------------------------------------------------------------
+
+    nt = end_step - start_step + 1
+
+    if( myrank == PRC_master ) then
+       do_read = .true.
+    else
+       do_read = .false.
+    endif
+
+    if( do_read ) then
+       allocate( read1DX( dims(1)                       ) )
+       allocate( read1DY( dims(2)                       ) )
+       allocate( read1DZ( dims(3)                       ) )
+       allocate( read3DT( 1,       dims(1), dims(2), nt ) )
+       allocate( read4D ( dims(3), dims(1), dims(2), nt ) )
+    endif
+
+    allocate( lon_org(           dims(1), dims(2), start_step:end_step ) )
+    allocate( lat_org(           dims(1), dims(2), start_step:end_step ) )
+    allocate( hgt_org( dims(3),  dims(1), dims(2), start_step:end_step ) )
+
+    allocate( tsfc_org(          dims(1), dims(2), start_step:end_step ) )
+    allocate( psfc_org(          dims(1), dims(2), start_step:end_step ) )
+    allocate( qsfc_org(          dims(1), dims(2), start_step:end_step, QA_NCM) )
+    allocate( velx_org( dims(3), dims(1), dims(2), start_step:end_step ) )
+    allocate( vely_org( dims(3), dims(1), dims(2), start_step:end_step ) )
+    allocate( temp_org( dims(3), dims(1), dims(2), start_step:end_step ) )
+    allocate( pres_org( dims(3), dims(1), dims(2), start_step:end_step ) )
+    allocate( qtrc_org( dims(3), dims(1), dims(2), start_step:end_step, QA_NCM) )
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[realinput]/Categ[InputNICAM]'
+
+    if( do_read ) then
+       call FileRead( read1DX(:), "ms_pres", "lon", start_step, 1, single=.true. )
+       do j = 1, dims(2)
+          lon_org (:,j,start_step)  = read1DX(:) * D2R
+       enddo
+
+       call FileRead( read1DY(:), "ms_pres", "lat", start_step, 1, single=.true. )
+       do i = 1, dims(1)
+          lat_org (i,:,start_step)  = read1DY(:) * D2R
+       enddo
+
+       call FileRead( read1DZ(:), "ms_pres", "lev", start_step, 1, single=.true. )
+       do j = 1, dims(2)
+       do i = 1, dims(1)
+          hgt_org(:,i,j,start_step) = read1DZ(:)
+       end do
+       end do
+
+       ! time copy
+       do n = start_step+1, end_step
+          lon_org (  :,:,n) = lon_org (  :,:,start_step)
+          lat_org (  :,:,n) = lat_org (  :,:,start_step)
+          hgt_org (:,:,:,n) = hgt_org (:,:,:,start_step)
+       enddo
+    endif
+    call COMM_bcast( lat_org (:,:,:),                 dims(2), dims(3), nt )
+    call COMM_bcast( lon_org (:,:,:),                 dims(2), dims(3), nt )
+    call COMM_bcast( hgt_org (:,:,:,:),      dims(1), dims(2), dims(3), nt )
+
+    call latlonz_interporation_fact( hfact   (:,:,:),           & ! [OUT]
+                                     vfact   (:,:,:,:,:),       & ! [OUT]
+                                     kgrd    (:,:,:,:,:),       & ! [OUT]
+                                     igrd    (:,:,:),           & ! [OUT]
+                                     jgrd    (:,:,:),           & ! [OUT]
+                                     CZ      (:,:,:),           & ! [IN]
+                                     LAT     (:,:),             & ! [IN]
+                                     LON     (:,:),             & ! [IN]
+                                     hgt_org (:,:,:,:),         & ! [IN]
+                                     lat_org (:,:,:),           & ! [IN]
+                                     lon_org (:,:,:),           & ! [IN]
+                                     dims(3), dims(1), dims(2), & ! [IN]
+                                     start_step                 ) ! [IN]
+    deallocate( lon_org  )
+    deallocate( lat_org  )
+    deallocate( hgt_org  )
+
+    if( do_read ) then
+       call ExternalFileRead( read4D(:,:,:,:), "ms_pres", "ms_pres", start_step, end_step, myrank, iNICAM, single=.true. )
+       pres_org(:,:,:,:) = real( read4D(:,:,:,:), kind=RP )
+    endif
+    call COMM_bcast( pres_org(:,:,:,:),      dims(1), dims(2), dims(3), nt )
+
+    do n = start_step, end_step
+    do j = JS-1, JE+1
+    do i = IS-1, IE+1
+    do k = KS-1, KE+1
+       pres(k,i,j,n) = pres_org(kgrd(k,i,j,1,1),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,1) &
+                     + pres_org(kgrd(k,i,j,2,1),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,1) &
+                     + pres_org(kgrd(k,i,j,3,1),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,1) &
+                     + pres_org(kgrd(k,i,j,1,2),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,2) &
+                     + pres_org(kgrd(k,i,j,2,2),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,2) &
+                     + pres_org(kgrd(k,i,j,3,2),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,2)
+    end do
+    end do
+    end do
+    end do
+    deallocate( pres_org )
+
+    if( do_read ) then
+       ! [scale-offset]
+       call ExternalFileReadOffset( read4D(:,:,:,:), "ms_tem", "ms_tem", start_step, end_step, myrank, iNICAM, single=.true. )
+       temp_org(:,:,:,:) = real( read4D(:,:,:,:), kind=RP )
+    endif
+    call COMM_bcast( temp_org(:,:,:,:),      dims(1), dims(2), dims(3), nt )
+
+    do n = start_step, end_step
+    do j = JS-1, JE+1
+    do i = IS-1, IE+1
+    do k = KS-1, KE+1
+       temp(k,i,j,n) = temp_org(kgrd(k,i,j,1,1),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,1) &
+                     + temp_org(kgrd(k,i,j,2,1),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,1) &
+                     + temp_org(kgrd(k,i,j,3,1),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,1) &
+                     + temp_org(kgrd(k,i,j,1,2),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,2) &
+                     + temp_org(kgrd(k,i,j,2,2),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,2) &
+                     + temp_org(kgrd(k,i,j,3,2),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,2)
+    end do
+    end do
+    end do
+    end do
+    deallocate( temp_org )
+
+    if( do_read ) then
+       ! [scale-offset]
+       call ExternalFileReadOffset( read4D(:,:,:,:), "ms_u", "ms_u", start_step, end_step, myrank, iNICAM, single=.true. )
+       velx_org(:,:,:,:) = real( read4D(:,:,:,:), kind=RP )
+    endif
+    call COMM_bcast( velx_org(:,:,:,:),      dims(1), dims(2), dims(3), nt )
+
+    do n = start_step, end_step
+    do j = JS-1, JE+1
+    do i = IS-1, IE+1
+    do k = KS-1, KE+1
+       velx(k,i,j,n) = velx_org(kgrd(k,i,j,1,1),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,1) &
+                     + velx_org(kgrd(k,i,j,2,1),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,1) &
+                     + velx_org(kgrd(k,i,j,3,1),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,1) &
+                     + velx_org(kgrd(k,i,j,1,2),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,2) &
+                     + velx_org(kgrd(k,i,j,2,2),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,2) &
+                     + velx_org(kgrd(k,i,j,3,2),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,2)
+    end do
+    end do
+    end do
+    end do
+    deallocate( velx_org )
+
+    if( do_read ) then
+       ! [scale-offset]
+       call ExternalFileReadOffset( read4D(:,:,:,:), "ms_v", "ms_v", start_step, end_step, myrank, iNICAM, single=.true. )
+       vely_org(:,:,:,:) = real( read4D(:,:,:,:), kind=RP )
+    endif
+    call COMM_bcast( vely_org(:,:,:,:),      dims(1), dims(2), dims(3), nt )
+
+    do n = start_step, end_step
+    do j = JS-1, JE+1
+    do i = IS-1, IE+1
+    do k = KS-1, KE+1
+       vely(k,i,j,n) = vely_org(kgrd(k,i,j,1,1),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,1) &
+                     + vely_org(kgrd(k,i,j,2,1),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,1) &
+                     + vely_org(kgrd(k,i,j,3,1),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,1) &
+                     + vely_org(kgrd(k,i,j,1,2),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,2) &
+                     + vely_org(kgrd(k,i,j,2,2),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,2) &
+                     + vely_org(kgrd(k,i,j,3,2),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,2)
+    end do
+    end do
+    end do
+    end do
+    deallocate( vely_org )
+
+    velz(:,:,:,:)   = 0.0_RP ! cold initialize for vertical velocity
+
+    if( do_read ) then
+       call ExternalFileRead( read4D(:,:,:,:), "ms_qv", "ms_qv", start_step, end_step, myrank, iNICAM, single=.true. )
+       qtrc_org(:,:,:,:,I_QV) = real( read4D(:,:,:,:), kind=RP )
+    endif
+    call COMM_bcast( qtrc_org(:,:,:,:,I_QV), dims(1), dims(2), dims(3), nt )
+
+    qtrc(:,:,:,:,:) = 0.0_RP ! cold initialize for hydrometeor
+    do n = start_step, end_step
+    do j = JS-1, JE+1
+    do i = IS-1, IE+1
+    do k = KS-1, KE+1
+       qtrc(k,i,j,n,I_QV) = qtrc_org(kgrd(k,i,j,1,1),igrd(i,j,1),jgrd(i,j,1),n,I_QV) * hfact(i,j,1) * vfact(k,i,j,1,1) &
+                          + qtrc_org(kgrd(k,i,j,2,1),igrd(i,j,2),jgrd(i,j,2),n,I_QV) * hfact(i,j,2) * vfact(k,i,j,2,1) &
+                          + qtrc_org(kgrd(k,i,j,3,1),igrd(i,j,3),jgrd(i,j,3),n,I_QV) * hfact(i,j,3) * vfact(k,i,j,3,1) &
+                          + qtrc_org(kgrd(k,i,j,1,2),igrd(i,j,1),jgrd(i,j,1),n,I_QV) * hfact(i,j,1) * vfact(k,i,j,1,2) &
+                          + qtrc_org(kgrd(k,i,j,2,2),igrd(i,j,2),jgrd(i,j,2),n,I_QV) * hfact(i,j,2) * vfact(k,i,j,2,2) &
+                          + qtrc_org(kgrd(k,i,j,3,2),igrd(i,j,3),jgrd(i,j,3),n,I_QV) * hfact(i,j,3) * vfact(k,i,j,3,2)
+    end do
+    end do
+    end do
+    end do
+    deallocate( qtrc_org )
+
+    do n = start_step, end_step
+    do j = JS-1, JE+1
+    do i = IS-1, IE+1
+    do k = KS-1, KE+1
+          call THERMODYN_pott( pott(k,i,j,n),  & ! [OUT]
+                               temp(k,i,j,n),  & ! [IN]
+                               pres(k,i,j,n),  & ! [IN]
+                               qtrc(k,i,j,n,:) ) ! [IN]
+    end do
+    end do
+    end do
+    end do
+
+    if( do_read ) then
+       ! [scale-offset]
+       call ExternalFileReadOffset( read3DT(:,:,:,:), "ss_slp", "ss_slp", start_step, end_step, myrank, iNICAM, single=.true. )
+       psfc_org(:,:,:) = real( read3DT(1,:,:,:), kind=RP )
+
+       call ExternalFileRead( read3DT(:,:,:,:), "ss_t2m", "ss_t2m", start_step, end_step, myrank, iNICAM, single=.true. )
+       tsfc_org(:,:,:) = real( read3DT(1,:,:,:), kind=RP )
+
+       call ExternalFileRead( read3DT(:,:,:,:), "ss_q2m", "ss_q2m", start_step, end_step, myrank, iNICAM, single=.true. )
+       qsfc_org(:,:,:,I_QV) = real( read3DT(1,:,:,:), kind=RP )
+    endif
+    call COMM_bcast( psfc_org(:,:,:),                 dims(2), dims(3), nt )
+    call COMM_bcast( tsfc_org(:,:,:),                 dims(2), dims(3), nt )
+    call COMM_bcast( qsfc_org(:,:,:,I_QV),            dims(2), dims(3), nt )
+
+    if( do_read ) then
+       deallocate( read1DX )
+       deallocate( read1DY )
+       deallocate( read1DZ )
+       deallocate( read3DT )
+       deallocate( read4D  )
+    endif
+
+    do n = start_step, end_step
+    do j = JS-1, JE+1
+    do i = IS-1, IE+1
+       pres_sfc(1,i,j,n) = psfc_org(igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) &
+                         + psfc_org(igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) &
+                         + psfc_org(igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3)
+
+       temp_sfc(1,i,j,n) = tsfc_org(igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) &
+                         + tsfc_org(igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) &
+                         + tsfc_org(igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3)
+
+       ! interpolate QV (=Q2) only: other QTRC are set zero
+       qtrc_sfc(1,i,j,n,:)    = 0.0_RP
+       qtrc_sfc(1,i,j,n,I_QV) = qsfc_org(igrd(i,j,1),jgrd(i,j,1),n,I_QV) * hfact(i,j,1) &
+                              + qsfc_org(igrd(i,j,2),jgrd(i,j,2),n,I_QV) * hfact(i,j,2) &
+                              + qsfc_org(igrd(i,j,3),jgrd(i,j,3),n,I_QV) * hfact(i,j,3)
+
+       call THERMODYN_pott( pott_sfc(1,i,j,n),  & ! [OUT]
+                            temp_sfc(1,i,j,n),  & ! [IN]
+                            pres_sfc(1,i,j,n),  & ! [IN]
+                            qtrc_sfc(1,i,j,n,:) ) ! [IN]
+    end do
+    end do
+    end do
+    deallocate( psfc_org )
+    deallocate( tsfc_org )
+    deallocate( qsfc_org )
+
+    do n = start_step, end_step
+       ! make density in moist condition
+       call HYDROSTATIC_buildrho( dens    (:,:,:,n),      & ! [OUT]
+                                  temp    (:,:,:,n),      & ! [OUT]
+                                  pres    (:,:,:,n),      & ! [OUT]
+                                  pott    (:,:,:,n),      & ! [IN]
+                                  qtrc    (:,:,:,n,I_QV), & ! [IN]
+                                  qtrc    (:,:,:,n,I_QC), & ! [IN]
+                                  temp_sfc(:,:,:,n),      & ! [OUT]
+                                  pres_sfc(:,:,:,n),      & ! [IN]
+                                  pott_sfc(:,:,:,n),      & ! [IN]
+                                  qtrc_sfc(:,:,:,n,I_QV), & ! [IN]
+                                  qtrc_sfc(:,:,:,n,I_QC)  ) ! [IN]
+
+       call COMM_vars8( dens(:,:,:,n), 1 )
+       call COMM_wait ( dens(:,:,:,n), 1 )
+    end do
+
+    do n = start_step, end_step
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       momz(k,i,j,n) = velz(k,i,j,n) * ( dens(k+1,i  ,j  ,n) + dens(k,i,j,n) ) * 0.5_RP
+       momx(k,i,j,n) = velx(k,i,j,n) * ( dens(k  ,i+1,j  ,n) + dens(k,i,j,n) ) * 0.5_RP
+       momy(k,i,j,n) = vely(k,i,j,n) * ( dens(k  ,i  ,j+1,n) + dens(k,i,j,n) ) * 0.5_RP
+       rhot(k,i,j,n) = pott(k,i,j,n) * dens(k,i,j,n)
+    end do
+    end do
+    end do
+    end do
+
+    return
+  end subroutine InputAtomNICAM
+
   !-----------------------------------------------------------------------------
   subroutine InputSurfaceSCALE( &
       tg,          & ! (out)
@@ -2325,6 +2746,335 @@ contains
 
     return
   end subroutine InputSurfaceWRF
+
+  !-----------------------------------------------------------------------------
+  subroutine InputSurfaceNICAM( &
+      tg,          & ! (out)
+      strg,        & ! (out)
+      roff,        & ! (out)
+      qvef,        & ! (out)
+      tw,          & ! (out)
+      lst,         & ! (out)
+      ust,         & ! (out)
+      sst,         & ! (out)
+      albw,        & ! (out)
+      albg,        & ! (out)
+      z0w,         & ! (out)
+      skint,       & ! (out)
+      skinw,       & ! (out)
+      snowq,       & ! (out)
+      snowt,       & ! (out)
+      basename,    & ! (in)
+      dims         ) ! (in)
+    use scale_const, only: &
+       D2R   => CONST_D2R,   &
+       TEM00 => CONST_TEM00
+    implicit none
+
+    real(RP), intent(out) :: tg   (:,:,:)
+    real(RP), intent(out) :: strg (:,:,:)
+    real(RP), intent(out) :: roff (:,:)
+    real(RP), intent(out) :: qvef (:,:)
+    real(RP), intent(out) :: tw   (:,:)
+    real(RP), intent(out) :: lst  (:,:)
+    real(RP), intent(out) :: ust  (:,:)
+    real(RP), intent(out) :: sst  (:,:)
+    real(RP), intent(out) :: albw (:,:,:)
+    real(RP), intent(out) :: albg (:,:,:)
+    real(RP), intent(out) :: z0w  (:,:)
+    real(RP), intent(out) :: skint(:,:)
+    real(RP), intent(out) :: skinw(:,:)
+    real(RP), intent(out) :: snowq(:,:)
+    real(RP), intent(out) :: snowt(:,:)
+
+    character(LEN=*), intent(in) :: basename
+    integer,          intent(in) :: dims(:)
+
+    ! [imported] NICAM/nhm/physics/mod_land_driver.f90 ---------------
+    real(RP) :: glevm5 (1:6) &
+         = (/ 0.000  , 0.050  , 0.250  , 1.000  , 2.000  , 4.000  /)
+    real(RP) :: wlevm5 (1:6) &
+         = (/ 0.000  , 0.050  , 0.250  , 1.000  , 2.000  , 4.000  /)
+    ! ----------------------------------------------------------------
+
+    ! work
+    real(RP), allocatable :: read1DX(:)
+    real(RP), allocatable :: read1DY(:)
+    real(RP), allocatable :: read3DT(:,:,:,:)
+    real(4 ), allocatable :: read3DS(:,:,:,:)
+    real(RP), allocatable :: read4D (:,:,:,:)
+
+    real(RP), allocatable :: lon_org(:,:,:)
+    real(RP), allocatable :: lat_org(:,:,:)
+    real(RP), allocatable :: lz_org (:,:,:,:)
+
+    real(RP), allocatable :: tg_org   (:,:,:)
+    real(RP), allocatable :: strg_org (:,:,:)
+    real(RP), allocatable :: tw_org   (:,:)
+    real(RP), allocatable :: lst_org  (:,:)
+    real(RP), allocatable :: ust_org  (:,:)
+    real(RP), allocatable :: sst_org  (:,:)
+    real(RP), allocatable :: ice_org  (:,:)
+    real(RP), allocatable :: albw_org (:,:,:)
+    real(RP), allocatable :: albg_org (:,:,:)
+    real(RP), allocatable :: z0w_org  (:,:)
+    real(RP), allocatable :: skint_org(:,:)
+    real(RP), allocatable :: skinw_org(:,:)
+    real(RP), allocatable :: snowq_org(:,:)
+    real(RP), allocatable :: snowt_org(:,:)
+
+    real(RP), allocatable :: hfact(:,:,:)
+    real(RP), allocatable :: vfact(:,:,:,:,:)
+
+    integer,  allocatable :: igrd(:,:,:)
+    integer,  allocatable :: jgrd(:,:,:)
+    integer,  allocatable :: kgrd(:,:,:,:,:)
+
+    real(RP) :: lcz_3D(LKMAX,IA,JA)
+
+    integer :: start_step
+    integer :: end_step
+    integer :: k, i, j, n, nt
+
+    logical :: do_read
+    !---------------------------------------------------------------------------
+
+    ! read data for initial condition
+    start_step = 1
+    end_step   = 1
+    nt = end_step - start_step + 1
+
+    if( myrank == PRC_master ) then
+       do_read = .true.
+    else
+       do_read = .false.
+    endif
+
+    if( do_read ) then
+       allocate( read1DX( dims(1)                        ) )
+       allocate( read1DY( dims(2)                        ) )
+       allocate( read3DT( 1,       dims(1), dims(2), nt  ) )
+       allocate( read3DS( 1,       dims(1), dims(2), nt  ) )
+       allocate( read4D ( dims(7), dims(1), dims(2), nt  ) )
+    endif
+
+    allocate( lon_org(          dims(1), dims(2), nt  ) )
+    allocate( lat_org(          dims(1), dims(2), nt  ) )
+    allocate( lz_org ( dims(7), dims(1), dims(2), nt  ) )
+
+    allocate( tg_org   ( dims(7), dims(1), dims(2)    ) )
+    allocate( strg_org ( dims(7), dims(1), dims(2)    ) )
+    allocate( tw_org   (          dims(1), dims(2)    ) )
+    allocate( lst_org  (          dims(1), dims(2)    ) )
+    allocate( ust_org  (          dims(1), dims(2)    ) )
+    allocate( sst_org  (          dims(1), dims(2)    ) )
+    allocate( ice_org  (          dims(1), dims(2)    ) )
+    allocate( albw_org (          dims(1), dims(2), 2 ) )
+    allocate( albg_org (          dims(1), dims(2), 2 ) )
+    allocate( z0w_org  (          dims(1), dims(2)    ) )
+    allocate( skint_org(          dims(1), dims(2)    ) )
+    allocate( skinw_org(          dims(1), dims(2)    ) )
+    allocate( snowq_org(          dims(1), dims(2)    ) )
+    allocate( snowt_org(          dims(1), dims(2)    ) )
+
+    allocate( hfact(          dims(1), dims(2), itp_nh         ) )
+    allocate( vfact( dims(7), dims(1), dims(2), itp_nh, itp_nv ) )
+    allocate( igrd (          dims(1), dims(2), itp_nh         ) )
+    allocate( jgrd (          dims(1), dims(2), itp_nh         ) )
+    allocate( kgrd ( dims(7), dims(1), dims(2), itp_nh, itp_nv ) )
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[realinput]/Categ[InputNICAM-Surface]'
+
+    if( do_read ) then
+       call FileRead( read1DX(:), "la_tg", "lon", start_step, 1, single=.true. )
+       do j = 1, dims(2)
+          lon_org (:,j,start_step)  = read1DX(:) * D2R
+       enddo
+
+       call FileRead( read1DY(:), "la_tg", "lat", start_step, 1, single=.true. )
+       do i = 1, dims(1)
+          lat_org (i,:,start_step)  = read1DY(:) * D2R
+       enddo
+
+       do j = 1, dims(2)
+       do i = 1, dims(1)
+       do k = 1, dims(7)
+          lz_org(k,i,j,start_step) = glevm5(k) + (glevm5(k+1) - glevm5(k))*0.5_RP
+       enddo
+       enddo
+       enddo
+    endif
+    call COMM_bcast( lat_org (:,:,:),            dims(2), dims(3), nt )
+    call COMM_bcast( lon_org (:,:,:),            dims(2), dims(3), nt )
+    call COMM_bcast( lz_org  (:,:,:,:), dims(7), dims(2), dims(3), nt )
+
+    do j = 1, JA
+    do i = 1, IA
+      lcz_3D(:,i,j) = LCZ(:)
+    enddo
+    enddo
+
+    call latlonz_interporation_fact( hfact  (:,:,:),            & ! [OUT]
+                                     vfact  (:,:,:,:,:),        & ! [OUT]
+                                     kgrd   (:,:,:,:,:),        & ! [OUT]
+                                     igrd   (:,:,:),            & ! [OUT]
+                                     jgrd   (:,:,:),            & ! [OUT]
+                                     lcz_3D (:,:,:),            & ! [IN]
+                                     LAT    (:,:),              & ! [IN]
+                                     LON    (:,:),              & ! [IN]
+                                     lz_org (:,:,:,:),          & ! [IN]
+                                     lat_org(:,:,:),            & ! [IN]
+                                     lon_org(:,:,:),            & ! [IN]
+                                     dims(7), dims(1), dims(2), & ! [IN]
+                                     1,                         & ! [IN]
+                                     landgrid=.true.            ) ! [IN]
+    deallocate( lon_org )
+    deallocate( lat_org )
+    deallocate( lz_org  )
+
+    if( do_read ) then
+       ! [scale-offset]
+       call ExternalFileReadOffset( read4D(:,:,:,:), "la_tg", "la_tg", start_step, end_step, myrank, iNICAM, single=.true. )
+       tg_org(:,:,:) = real( read4D(:,:,:,1), kind=RP )
+
+       ! [scale-offset]
+       call ExternalFileReadOffset( read4D(:,:,:,:), "la_wg", "la_wg", start_step, end_step, myrank, iNICAM, single=.true. )
+       strg_org(:,:,:) = real( read4D(:,:,:,1), kind=RP )
+
+       call ExternalFileRead( read3DS(:,:,:,:), "ss_tem_sfc", "ss_tem_sfc", start_step, end_step, myrank, iNICAM, single=.true. )
+       lst_org(:,:) = real( read3DS(1,:,:,1), kind=RP )
+
+       ! [scale-offset]
+       call ExternalFileReadOffset( read3DT(:,:,:,:), "oa_sst", "oa_sst", start_step, end_step, myrank, iNICAM, single=.true. )
+       sst_org(:,:) = real( read3DT(1,:,:,1), kind=RP )
+
+       !call ExternalFileRead( read3DS(:,:,:,:), "oa_ice", "oa_ice", start_step, end_step, myrank, iNICAM, single=.true. )
+       !ice_org(:,:) = real( read3DS(1,:,:,1), kind=RP )
+
+       deallocate( read1DX )
+       deallocate( read1DY )
+       deallocate( read3DT )
+       deallocate( read3DS )
+       deallocate( read4D  )
+    endif
+
+    call COMM_bcast( tg_org  (:,:,:),   dims(7), dims(2), dims(3)     )
+    call COMM_bcast( strg_org(:,:,:),   dims(7), dims(2), dims(3)     )
+    call COMM_bcast( lst_org (:,:),              dims(2), dims(3)     )
+    call COMM_bcast( sst_org (:,:),              dims(2), dims(3)     )
+    !call COMM_bcast( ice_org (:,:),              dims(2), dims(3)     )
+
+    ! cold start approach
+    skint_org(:,:)   = lst_org(:,:)
+    skinw_org(:,:)   = 0.0_RP
+    snowq_org(:,:)   = 0.0_RP
+    snowt_org(:,:)   = TEM00
+    tw_org   (:,:)   = sst_org(:,:)
+    ust_org  (:,:)   = lst_org(:,:)
+    albw_org (:,:,1) = 0.10_RP
+    albw_org (:,:,2) = 0.10_RP
+    albg_org (:,:,1) = 0.22_RP
+    albg_org (:,:,2) = 0.22_RP
+    z0w_org  (:,:)   = 0.01_RP
+
+    ! interpolation
+    do j = JS-1, JE+1
+    do i = IS-1, IE+1
+    do k = 1, LKMAX-1
+       tg  (k,i,j) = tg_org  (kgrd(k,i,j,1,1),igrd(i,j,1),jgrd(i,j,1)) * hfact(i,j,1) * vfact(k,i,j,1,1) &
+                   + tg_org  (kgrd(k,i,j,2,1),igrd(i,j,2),jgrd(i,j,2)) * hfact(i,j,2) * vfact(k,i,j,2,1) &
+                   + tg_org  (kgrd(k,i,j,3,1),igrd(i,j,3),jgrd(i,j,3)) * hfact(i,j,3) * vfact(k,i,j,3,1) &
+                   + tg_org  (kgrd(k,i,j,1,2),igrd(i,j,1),jgrd(i,j,1)) * hfact(i,j,1) * vfact(k,i,j,1,2) &
+                   + tg_org  (kgrd(k,i,j,2,2),igrd(i,j,2),jgrd(i,j,2)) * hfact(i,j,2) * vfact(k,i,j,2,2) &
+                   + tg_org  (kgrd(k,i,j,3,2),igrd(i,j,3),jgrd(i,j,3)) * hfact(i,j,3) * vfact(k,i,j,3,2)
+       strg(k,i,j) = strg_org(kgrd(k,i,j,1,1),igrd(i,j,1),jgrd(i,j,1)) * hfact(i,j,1) * vfact(k,i,j,1,1) &
+                   + strg_org(kgrd(k,i,j,2,1),igrd(i,j,2),jgrd(i,j,2)) * hfact(i,j,2) * vfact(k,i,j,2,1) &
+                   + strg_org(kgrd(k,i,j,3,1),igrd(i,j,3),jgrd(i,j,3)) * hfact(i,j,3) * vfact(k,i,j,3,1) &
+                   + strg_org(kgrd(k,i,j,1,2),igrd(i,j,1),jgrd(i,j,1)) * hfact(i,j,1) * vfact(k,i,j,1,2) &
+                   + strg_org(kgrd(k,i,j,2,2),igrd(i,j,2),jgrd(i,j,2)) * hfact(i,j,2) * vfact(k,i,j,2,2) &
+                   + strg_org(kgrd(k,i,j,3,2),igrd(i,j,3),jgrd(i,j,3)) * hfact(i,j,3) * vfact(k,i,j,3,2)
+    enddo
+    enddo
+    enddo
+    do j = JS-1, JE+1
+    do i = IS-1, IE+1
+       tg  (LKMAX,i,j) = tg  (LKMAX-1,i,j)
+       strg(LKMAX,i,j) = strg(LKMAX-1,i,j)
+    enddo
+    enddo
+    deallocate( tg_org    )
+    deallocate( strg_org  )
+
+    roff(:,:) = 0.0_RP ! not necessary
+    qvef(:,:) = 0.0_RP ! not necessary
+
+    do j = JS-1, JE+1
+    do i = IS-1, IE+1
+       tw   (i,j) = tw_org   (igrd(i,j,1),jgrd(i,j,1)) * hfact(i,j,1) &
+                  + tw_org   (igrd(i,j,2),jgrd(i,j,2)) * hfact(i,j,2) &
+                  + tw_org   (igrd(i,j,3),jgrd(i,j,3)) * hfact(i,j,3)
+       sst  (i,j) = sst_org  (igrd(i,j,1),jgrd(i,j,1)) * hfact(i,j,1) &
+                  + sst_org  (igrd(i,j,2),jgrd(i,j,2)) * hfact(i,j,2) &
+                  + sst_org  (igrd(i,j,3),jgrd(i,j,3)) * hfact(i,j,3)
+       z0w  (i,j) = z0w_org  (igrd(i,j,1),jgrd(i,j,1)) * hfact(i,j,1) &
+                  + z0w_org  (igrd(i,j,2),jgrd(i,j,2)) * hfact(i,j,2) &
+                  + z0w_org  (igrd(i,j,3),jgrd(i,j,3)) * hfact(i,j,3)
+       lst  (i,j) = lst_org  (igrd(i,j,1),jgrd(i,j,1)) * hfact(i,j,1) &
+                  + lst_org  (igrd(i,j,2),jgrd(i,j,2)) * hfact(i,j,2) &
+                  + lst_org  (igrd(i,j,3),jgrd(i,j,3)) * hfact(i,j,3)
+       ust  (i,j) = ust_org  (igrd(i,j,1),jgrd(i,j,1)) * hfact(i,j,1) &
+                  + ust_org  (igrd(i,j,2),jgrd(i,j,2)) * hfact(i,j,2) &
+                  + ust_org  (igrd(i,j,3),jgrd(i,j,3)) * hfact(i,j,3)
+       skint(i,j) = skint_org(igrd(i,j,1),jgrd(i,j,1)) * hfact(i,j,1) &
+                  + skint_org(igrd(i,j,2),jgrd(i,j,2)) * hfact(i,j,2) &
+                  + skint_org(igrd(i,j,3),jgrd(i,j,3)) * hfact(i,j,3)
+       skinw(i,j) = skinw_org(igrd(i,j,1),jgrd(i,j,1)) * hfact(i,j,1) &
+                  + skinw_org(igrd(i,j,2),jgrd(i,j,2)) * hfact(i,j,2) &
+                  + skinw_org(igrd(i,j,3),jgrd(i,j,3)) * hfact(i,j,3)
+       snowq(i,j) = snowq_org(igrd(i,j,1),jgrd(i,j,1)) * hfact(i,j,1) &
+                  + snowq_org(igrd(i,j,2),jgrd(i,j,2)) * hfact(i,j,2) &
+                  + snowq_org(igrd(i,j,3),jgrd(i,j,3)) * hfact(i,j,3)
+       snowt(i,j) = snowt_org(igrd(i,j,1),jgrd(i,j,1)) * hfact(i,j,1) &
+                  + snowt_org(igrd(i,j,2),jgrd(i,j,2)) * hfact(i,j,2) &
+                  + snowt_org(igrd(i,j,3),jgrd(i,j,3)) * hfact(i,j,3)
+    enddo
+    enddo
+
+    do n = 1, 2 ! 1:LW, 2:SW
+    do j = JS-1, JE+1
+    do i = IS-1, IE+1
+       albw(i,j,n) = albw_org(igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) &
+                   + albw_org(igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) &
+                   + albw_org(igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3)
+       albg(i,j,n) = albg_org(igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) &
+                   + albg_org(igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) &
+                   + albg_org(igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3)
+    enddo
+    enddo
+    enddo
+
+    deallocate( tw_org    )
+    deallocate( lst_org   )
+    deallocate( ust_org   )
+    deallocate( sst_org   )
+    deallocate( ice_org   )
+    deallocate( albw_org  )
+    deallocate( albg_org  )
+    deallocate( z0w_org   )
+    deallocate( skint_org )
+    deallocate( skinw_org )
+    deallocate( snowq_org )
+    deallocate( snowt_org )
+
+    deallocate( hfact )
+    deallocate( vfact )
+    deallocate( igrd  )
+    deallocate( jgrd  )
+    deallocate( kgrd  )
+
+    return
+  end subroutine InputSurfaceNICAM
 
   !-----------------------------------------------------------------------------
   subroutine latlonz_interporation_fact( &

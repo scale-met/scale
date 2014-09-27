@@ -32,6 +32,7 @@ module scale_external_io
   !
   public :: ExternalFileGetShape
   public :: ExternalFileRead
+  public :: ExternalFileReadOffset
 
   interface ExternalFileRead
      module procedure ExternalFileRead2DRealSP
@@ -41,6 +42,15 @@ module scale_external_io
      module procedure ExternalFileRead4DRealSP
      module procedure ExternalFileRead4DRealDP
   end interface ExternalFileRead
+
+  interface ExternalFileReadOffset
+     !module procedure ExternalFileRead2DRealSP
+     !module procedure ExternalFileRead2DRealDP
+     module procedure ExternalFileReadOffset3DRealSP
+     module procedure ExternalFileReadOffset3DRealDP
+     module procedure ExternalFileReadOffset4DRealSP
+     module procedure ExternalFileReadOffset4DRealDP
+  end interface ExternalFileReadOffset
 
   !-----------------------------------------------------------------------------
   !
@@ -70,8 +80,9 @@ module scale_external_io
   !
   integer, private, parameter :: iSCALE  = 1  ! use gtool, coz it's not external
   integer, private, parameter :: iWRFARW = 2
-  integer, private, parameter :: iJMAMSM = 3
-  integer, private, parameter :: iNICAM  = 4
+  integer, private, parameter :: iNICAM  = 3
+  integer, private, parameter :: iJMAMSM = 4
+
 
   !-----------------------------------------------------------------------------
 contains
@@ -687,6 +698,441 @@ contains
     return
   end subroutine ExternalFileRead4DRealDP
 
+  subroutine ExternalFileReadOffset3DRealSP( &
+      var,           & ! (out)
+      basename,      & ! (in)
+      varname,       & ! (in)
+      ts,            & ! (in)
+      te,            & ! (in)
+      myrank,        & ! (in)
+      mdlid,         & ! (in)
+      single,        & ! (in) optional
+      xstag,         & ! (in) optional
+      ystag          & ! (in) optional
+      )
+    use netcdf  ![external lib]
+    implicit none
+
+    real(SP),         intent(out)            :: var(:,:,:)
+    character(LEN=*), intent( in)           :: basename
+    character(LEN=*), intent( in)           :: varname
+    integer,          intent( in)            :: ts
+    integer,          intent( in)            :: te
+    integer,          intent( in)            :: myrank
+    integer,          intent( in)            :: mdlid
+    logical,          intent( in), optional :: single
+    logical,          intent( in), optional :: xstag
+    logical,          intent( in), optional :: ystag
+
+    real(SP),   allocatable :: var_org(:,:,:)
+    integer(2), allocatable :: short(:,:,:)
+
+    real(4) :: scale_factor, add_offset
+
+    integer :: ncid, varid
+    integer :: status
+    integer :: precis
+    integer :: nx, ny
+    integer :: dims(7)
+
+    integer :: tcount
+    character(len=H_LONG) :: fname = ''
+    logical :: single_ = .false.
+
+    intrinsic size
+    intrinsic shape
+    !---------------------------------------------------------------------------
+
+    tcount = te - ts + 1
+
+    if ( present(single) ) then
+       single_ = single
+    else
+       single_ = .false.
+    endif
+
+    call ExternalFileMakeFname( fname,mdlid,basename,myrank,single_ )
+
+    status = nf90_open( trim(fname), nf90_nowrite, ncid )
+    if (status .ne. nf90_noerr) call handle_err(status)
+
+    ! retrieve dimension size in data original order
+    call ExternalTakeDimension( dims(:),ncid,mdlid )
+    nx = dims(1)
+    if ( present(xstag) .and. xstag ) then
+       nx = dims(4)
+    endif
+    ny = dims(2)
+    if ( present(ystag) .and. ystag ) then
+       ny = dims(5)
+    endif
+    allocate( var_org(nx,ny,tcount) )
+    allocate( short  (nx,ny,tcount) )
+
+    status = nf90_inq_varid( ncid, trim(varname), varid )
+    if (status .ne. nf90_noerr) call handle_err(status)
+
+    status = nf90_get_att(ncid, varid, "scale_factor", scale_factor)
+    if (status .ne. nf90_noerr) call handle_err(status)
+
+    status = nf90_get_att(ncid, varid, "add_offset", add_offset)
+    if (status .ne. nf90_noerr) call handle_err(status)
+
+    status = nf90_inquire_variable( ncid, varid, xtype=precis )
+    if(status /= nf90_NoErr) call handle_err(status)
+    if(precis /= NF90_SHORT) then
+       write(*,*) 'xxx Internal Error: [scale_external_io]/[ExternalFileReadOffset4DSP]'
+       call PRC_MPIstop
+    endif
+
+    status = nf90_get_var( ncid, varid, short(:,:,:), start = (/ 1,1,ts /), &
+                            count = (/ nx,ny,tcount /) )
+    if (status .ne. nf90_noerr) call handle_err(status)
+
+    var_org(:,:,:) = real( short(:,:,:) )*scale_factor + add_offset
+
+    status = nf90_close(ncid) 
+    if (status .ne. nf90_noerr) call handle_err(status)
+
+    call ConvertArrayOrder( var,var_org,tcount,nx,ny )
+
+    deallocate( var_org )
+    deallocate( short )
+
+    return
+  end subroutine ExternalFileReadOffset3DRealSP
+  subroutine ExternalFileReadOffset3DRealDP( &
+      var,           & ! (out)
+      basename,      & ! (in)
+      varname,       & ! (in)
+      ts,            & ! (in)
+      te,            & ! (in)
+      myrank,        & ! (in)
+      mdlid,         & ! (in)
+      single,        & ! (in) optional
+      xstag,         & ! (in) optional
+      ystag          & ! (in) optional
+      )
+    use netcdf  ![external lib]
+    implicit none
+
+    real(DP),         intent(out)            :: var(:,:,:)
+    character(LEN=*), intent( in)           :: basename
+    character(LEN=*), intent( in)           :: varname
+    integer,          intent( in)            :: ts
+    integer,          intent( in)            :: te
+    integer,          intent( in)            :: myrank
+    integer,          intent( in)            :: mdlid
+    logical,          intent( in), optional :: single
+    logical,          intent( in), optional :: xstag
+    logical,          intent( in), optional :: ystag
+
+    real(DP),   allocatable :: var_org(:,:,:)
+    integer(2), allocatable :: short(:,:,:)
+
+    real(4) :: scale_factor, add_offset
+
+    integer :: ncid, varid
+    integer :: status
+    integer :: precis
+    integer :: nx, ny
+    integer :: dims(7)
+
+    integer :: tcount
+    character(len=H_LONG) :: fname = ''
+    logical :: single_ = .false.
+
+    intrinsic size
+    intrinsic shape
+    !---------------------------------------------------------------------------
+
+    tcount = te - ts + 1
+
+    if ( present(single) ) then
+       single_ = single
+    else
+       single_ = .false.
+    endif
+
+    call ExternalFileMakeFname( fname,mdlid,basename,myrank,single_ )
+
+    status = nf90_open( trim(fname), nf90_nowrite, ncid )
+    if (status .ne. nf90_noerr) call handle_err(status)
+
+    ! retrieve dimension size in data original order
+    call ExternalTakeDimension( dims(:),ncid,mdlid )
+    nx = dims(1)
+    if ( present(xstag) .and. xstag ) then
+       nx = dims(4)
+    endif
+    ny = dims(2)
+    if ( present(ystag) .and. ystag ) then
+       ny = dims(5)
+    endif
+    allocate( var_org(nx,ny,tcount) )
+    allocate( short  (nx,ny,tcount) )
+
+    status = nf90_inq_varid( ncid, trim(varname), varid )
+    if (status .ne. nf90_noerr) call handle_err(status)
+
+    status = nf90_get_att(ncid, varid, "scale_factor", scale_factor)
+    if (status .ne. nf90_noerr) call handle_err(status)
+
+    status = nf90_get_att(ncid, varid, "add_offset", add_offset)
+    if (status .ne. nf90_noerr) call handle_err(status)
+
+    status = nf90_inquire_variable( ncid, varid, xtype=precis )
+    if(status /= nf90_NoErr) call handle_err(status)
+    if(precis /= NF90_SHORT) then
+       write(*,*) 'xxx Internal Error: [scale_external_io]/[ExternalFileReadOffset4DSP]'
+       call PRC_MPIstop
+    endif
+
+    status = nf90_get_var( ncid, varid, short(:,:,:), start = (/ 1,1,ts /), &
+                            count = (/ nx,ny,tcount /) )
+    if (status .ne. nf90_noerr) call handle_err(status)
+
+    var_org(:,:,:) = real( short(:,:,:) )*scale_factor + add_offset
+
+    status = nf90_close(ncid) 
+    if (status .ne. nf90_noerr) call handle_err(status)
+
+    call ConvertArrayOrder( var,var_org,tcount,nx,ny )
+
+    deallocate( var_org )
+    deallocate( short )
+
+    return
+  end subroutine ExternalFileReadOffset3DRealDP
+  subroutine ExternalFileReadOffset4DRealSP( &
+      var,           & ! (out)
+      basename,      & ! (in)
+      varname,       & ! (in)
+      ts,            & ! (in)
+      te,            & ! (in)
+      myrank,        & ! (in)
+      mdlid,         & ! (in)
+      single,        & ! (in) optional
+      xstag,         & ! (in) optional
+      ystag,         & ! (in) optional
+      zstag,         & ! (in) optional
+      landgrid       & ! (in) optional
+      )
+    use netcdf  ![external lib]
+    implicit none
+
+    real(SP),         intent(out)            :: var(:,:,:,:)
+    character(LEN=*), intent( in)           :: basename
+    character(LEN=*), intent( in)           :: varname
+    integer,          intent( in)            :: ts
+    integer,          intent( in)            :: te
+    integer,          intent( in)            :: myrank
+    integer,          intent( in)            :: mdlid
+    logical,          intent( in), optional :: single
+    logical,          intent( in), optional :: xstag
+    logical,          intent( in), optional :: ystag
+    logical,          intent( in), optional :: zstag
+    logical,          intent( in), optional :: landgrid
+
+    real(SP),   allocatable :: var_org(:,:,:,:)
+    integer(2), allocatable :: short(:,:,:,:)
+
+    real(4) :: scale_factor, add_offset
+
+    integer :: ncid, varid
+    integer :: status
+    integer :: precis
+    integer :: nx, ny, nz
+    integer :: dims(7)
+
+    integer :: tcount
+    character(len=H_LONG) :: fname = ''
+    logical :: single_ = .false.
+
+    intrinsic size
+    intrinsic shape
+    !---------------------------------------------------------------------------
+
+    tcount = te - ts + 1
+
+    if ( present(single) ) then
+       single_ = single
+    else
+       single_ = .false.
+    endif
+
+    call ExternalFileMakeFname( fname,mdlid,basename,myrank,single_ )
+
+    status = nf90_open( trim(fname), nf90_nowrite, ncid )
+    if (status .ne. nf90_noerr) call handle_err(status)
+
+    ! retrieve dimension size in data original order
+    call ExternalTakeDimension( dims(:),ncid,mdlid )
+    nx = dims(1)
+    if ( present(xstag) .and. xstag ) then
+       nx = dims(4)
+    endif
+    ny = dims(2)
+    if ( present(ystag) .and. ystag ) then
+       ny = dims(5)
+    endif
+    nz = dims(3)
+    if ( present(zstag) .and. zstag ) then
+       nz = dims(6)
+    endif
+    if ( present(landgrid) .and. landgrid ) then
+       nz = dims(7)
+    endif
+    allocate( var_org(nx,ny,nz,tcount) )
+    allocate( short  (nx,ny,nz,tcount) )
+
+    status = nf90_inq_varid( ncid, trim(varname), varid )
+    if (status .ne. nf90_noerr) call handle_err(status)
+
+    status = nf90_get_att(ncid, varid, "scale_factor", scale_factor)
+    if (status .ne. nf90_noerr) call handle_err(status)
+
+    status = nf90_get_att(ncid, varid, "add_offset", add_offset)
+    if (status .ne. nf90_noerr) call handle_err(status)
+
+    status = nf90_inquire_variable( ncid, varid, xtype=precis )
+    if(status /= nf90_NoErr) call handle_err(status)
+    if(precis /= NF90_SHORT) then
+       write(*,*) 'xxx Internal Error: [scale_external_io]/[ExternalFileReadOffset4DSP]'
+       call PRC_MPIstop
+    endif
+
+    status = nf90_get_var( ncid, varid, short(:,:,:,:), start = (/ 1,1,1,ts /), &
+                            count = (/ nx,ny,nz,tcount /) )
+    if (status .ne. nf90_noerr) call handle_err(status)
+
+    var_org(:,:,:,:) = real( short(:,:,:,:) )*scale_factor + add_offset
+
+    status = nf90_close(ncid) 
+    if (status .ne. nf90_noerr) call handle_err(status)
+
+    call ConvertArrayOrder( var,var_org,tcount,nz,nx,ny )
+
+    deallocate( var_org )
+    deallocate( short )
+
+    return
+  end subroutine ExternalFileReadOffset4DRealSP
+  subroutine ExternalFileReadOffset4DRealDP( &
+      var,           & ! (out)
+      basename,      & ! (in)
+      varname,       & ! (in)
+      ts,            & ! (in)
+      te,            & ! (in)
+      myrank,        & ! (in)
+      mdlid,         & ! (in)
+      single,        & ! (in) optional
+      xstag,         & ! (in) optional
+      ystag,         & ! (in) optional
+      zstag,         & ! (in) optional
+      landgrid       & ! (in) optional
+      )
+    use netcdf  ![external lib]
+    implicit none
+
+    real(DP),         intent(out)            :: var(:,:,:,:)
+    character(LEN=*), intent( in)            :: basename
+    character(LEN=*), intent( in)            :: varname
+    integer,          intent( in)            :: ts
+    integer,          intent( in)            :: te
+    integer,          intent( in)            :: myrank
+    integer,          intent( in)            :: mdlid
+    logical,          intent( in), optional :: single
+    logical,          intent( in), optional :: xstag
+    logical,          intent( in), optional :: ystag
+    logical,          intent( in), optional :: zstag
+    logical,          intent( in), optional :: landgrid
+
+    real(DP),   allocatable :: var_org(:,:,:,:)
+    integer(2), allocatable :: short(:,:,:,:)
+
+    real(4) :: scale_factor, add_offset
+
+    integer :: ncid, varid
+    integer :: status
+    integer :: precis
+    integer :: nx, ny, nz
+    integer :: dims(7)
+
+    integer :: tcount
+    character(len=H_LONG) :: fname = ''
+    logical :: single_ = .false.
+
+    intrinsic size
+    intrinsic shape
+    !---------------------------------------------------------------------------
+
+    tcount = te - ts + 1
+
+    if ( present(single) ) then
+       single_ = single
+    else
+       single_ = .false.
+    endif
+
+    call ExternalFileMakeFname( fname,mdlid,basename,myrank,single_ )
+
+    status = nf90_open( trim(fname), nf90_nowrite, ncid )
+    if (status .ne. nf90_noerr) call handle_err(status)
+
+    ! retrieve dimension size in data original order
+    call ExternalTakeDimension( dims(:),ncid,mdlid )
+    nx = dims(1)
+    if ( present(xstag) .and. xstag ) then
+       nx = dims(4)
+    endif
+    ny = dims(2)
+    if ( present(ystag) .and. ystag ) then
+       ny = dims(5)
+    endif
+    nz = dims(3)
+    if ( present(zstag) .and. zstag ) then
+       nz = dims(6)
+    endif
+    if ( present(landgrid) .and. landgrid ) then
+       nz = dims(7)
+    endif
+    allocate( var_org(nx,ny,nz,tcount) )
+    allocate( short  (nx,ny,nz,tcount) )
+
+    status = nf90_inq_varid( ncid, trim(varname), varid )
+    if (status .ne. nf90_noerr) call handle_err(status)
+
+    status = nf90_get_att(ncid, varid, "scale_factor", scale_factor)
+    if (status .ne. nf90_noerr) call handle_err(status)
+
+    status = nf90_get_att(ncid, varid, "add_offset", add_offset)
+    if (status .ne. nf90_noerr) call handle_err(status)
+
+    status = nf90_inquire_variable( ncid, varid, xtype=precis )
+    if(status /= nf90_NoErr) call handle_err(status)
+    if(precis /= NF90_SHORT) then
+       write(*,*) 'xxx Internal Error: [scale_external_io]/[ExternalFileReadOffset4DSP]'
+       call PRC_MPIstop
+    endif
+
+    status = nf90_get_var( ncid, varid, short(:,:,:,:), start = (/ 1,1,1,ts /), &
+                            count = (/ nx,ny,nz,tcount /) )
+    if (status .ne. nf90_noerr) call handle_err(status)
+
+    var_org(:,:,:,:) = real( short(:,:,:,:) )*scale_factor + add_offset
+
+    status = nf90_close(ncid) 
+    if (status .ne. nf90_noerr) call handle_err(status)
+
+    call ConvertArrayOrder( var,var_org,tcount,nz,nx,ny )
+
+    deallocate( var_org )
+    deallocate( short )
+
+    return
+  end subroutine ExternalFileReadOffset4DRealDP
+
   !-----------------------------------------------------------------------------
   ! ExternalMakeFName
   !-----------------------------------------------------------------------------
@@ -714,6 +1160,12 @@ contains
           fname = trim(basename)
        else
           call FileMakeFname(fname,trim(basename),'_',myrank,4)
+       endif
+    elseif( mdlid == iNICAM )then      !TYPE: NICAM-NETCDF
+       if ( single ) then
+          fname = trim(basename)//'.peall.nc'
+       else
+          call FileMakeFname(fname,trim(basename),'anl.pe',myrank,6)
        endif
     !elseif( mdlid == iJMAMSM )then      !TYPE: JMA-MSM
     !   if ( single ) then
@@ -766,6 +1218,15 @@ contains
        status = nf90_inquire_dimension( ncid, dimid,len=dims(6) )
        status = nf90_inq_dimid( ncid, "soil_layers_stag", dimid )
        status = nf90_inquire_dimension( ncid, dimid,len=dims(7) )
+
+    elseif( mdlid == iNICAM )then   !MODEL ID: NICAM-NETCDF
+       status = nf90_inq_dimid( ncid, "lon", dimid )
+       status = nf90_inquire_dimension( ncid, dimid,len=dims(1) )
+       status = nf90_inq_dimid( ncid, "lat", dimid )
+       status = nf90_inquire_dimension( ncid, dimid,len=dims(2) )
+       status = nf90_inq_dimid( ncid, "lev", dimid )
+       status = nf90_inquire_dimension( ncid, dimid,len=dims(3) )
+
     else
        write(*,*) 'xxx This external file format is not supported, Sorry.'
        call PRC_MPIstop

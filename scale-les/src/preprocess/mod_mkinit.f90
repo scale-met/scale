@@ -4212,221 +4212,6 @@ enddo
     return
   end subroutine MKINIT_heatisland
 
-  !-----------------------------------------------------------------------------
-  !> Make initial state ( real case )
-  subroutine MKINIT_real
-    use mod_realinput
-    implicit none
-
-    integer                  :: NUMBER_OF_FILES     = 1
-    integer                  :: NUMBER_OF_TSTEPS    = 1   ! num of time steps in one file
-    integer                  :: INTERP_SERC_DIV_NUM = 10  ! num of dividing blocks in interpolation search
-    character(len=H_LONG)    :: BASENAME_ORG        = ''
-    character(len=H_LONG)    :: FILETYPE_ORG        = ''
-    character(len=H_LONG)    :: BASENAME_BOUNDARY   = 'boundary_real'
-    character(len=H_LONG)    :: BOUNDARY_TITLE      = 'SCALE-LES BOUNDARY CONDITION for REAL CASE'
-    character(len=H_SHORT)   :: PARENT_MP_TYPE      = 'single'  ! microphysics type of the parent model (single or double)
-    real(RP)                 :: BOUNDARY_UPDATE_DT  = 0.0_RP    ! inteval time of boudary data update [s]
-    logical                  :: USE_FILE_DENSITY    = .false.   ! use density data from files
-    logical                  :: WRF_FILE_TYPE       = .false.   ! wrf filetype: T=wrfout, F=wrfrst
-    logical                  :: SERIAL_PROC_READ    = .false.   ! read by one MPI process and broadcast
-    logical                  :: NO_ADDITIONAL_INPUT = .false.   ! no additional information
-
-
-    NAMELIST / PARAM_MKINIT_REAL / &
-         NUMBER_OF_FILES,     &
-         NUMBER_OF_TSTEPS,    &
-         INTERP_SERC_DIV_NUM, &
-         BASENAME_ORG,        &
-         FILETYPE_ORG,        &
-         BASENAME_BOUNDARY,   &
-         BOUNDARY_TITLE,      &
-         BOUNDARY_UPDATE_DT,  &
-         USE_FILE_DENSITY,    &
-         PARENT_MP_TYPE,      &
-         WRF_FILE_TYPE,       &
-         SERIAL_PROC_READ,    &
-         NO_ADDITIONAL_INPUT
-
-    character(len=H_LONG) :: BASENAME_WITHNUM  = ''
-    character(len=5)      :: NUM               = ''
-
-    real(RP), allocatable :: DENS_ORG(:,:,:,:)
-    real(RP), allocatable :: MOMZ_ORG(:,:,:,:)
-    real(RP), allocatable :: MOMX_ORG(:,:,:,:)
-    real(RP), allocatable :: MOMY_ORG(:,:,:,:)
-    real(RP), allocatable :: RHOT_ORG(:,:,:,:)
-    real(RP), allocatable :: QTRC_ORG(:,:,:,:,:)
-
-    integer :: mdlid
-    integer :: dims(7)  ! 1-3: normal, 4-6: staggerd, 7: soil-layer
-    integer :: totaltimesteps = 1
-    integer :: timelen = 1
-    integer :: ierr
-
-    integer :: k, i, j, iq, n, ns, ne, l, ll
-    !---------------------------------------------------------------------------
-
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Real Case]/Categ[MKINIT]'
-
-    !--- read namelist
-    rewind(IO_FID_CONF)
-    read(IO_FID_CONF,nml=PARAM_MKINIT_REAL,iostat=ierr)
-    if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
-    elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_REAL. Check!'
-       call PRC_MPIstop
-    endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_REAL)
-
-    if ( BOUNDARY_UPDATE_DT <= 0.0_RP ) then
-       write(*,*) 'xxx BOUNDARY_UPDATE_DT is necessary in real case preprocess'
-       call PRC_MPIstop
-    endif
-
-    totaltimesteps = NUMBER_OF_FILES * NUMBER_OF_TSTEPS
-
-    if     ( FILETYPE_ORG == 'WRF-ARW' ) then
-      BASENAME_WITHNUM = trim(BASENAME_ORG)//"_00000"
-    else if( FILETYPE_ORG == 'SCALE-LES' ) then
-      BASENAME_WITHNUM = trim(BASENAME_ORG)
-    else
-      write(*,*) ' xxx Unsupported FILE TYPE:', trim(FILETYPE_ORG)
-      call PRC_MPIstop
-    end if
-
-    call ParentAtomSetup( dims(:), timelen, mdlid,           & ![OUT]
-                          BASENAME_WITHNUM, FILETYPE_ORG,    & ![IN]
-                          INTERP_SERC_DIV_NUM, WRF_FILE_TYPE ) ![IN]
-
-    allocate( dens_org(KA,IA,JA,totaltimesteps   ) )
-    allocate( momz_org(KA,IA,JA,totaltimesteps   ) )
-    allocate( momx_org(KA,IA,JA,totaltimesteps   ) )
-    allocate( momy_org(KA,IA,JA,totaltimesteps   ) )
-    allocate( rhot_org(KA,IA,JA,totaltimesteps   ) )
-    allocate( qtrc_org(KA,IA,JA,totaltimesteps,QA) )
-
-    !--- read external file
-    do n = 1, NUMBER_OF_FILES
-       write(NUM,'(I5.5)') n-1
-
-       if     ( FILETYPE_ORG == 'WRF-ARW' ) then
-         BASENAME_WITHNUM = trim(BASENAME_ORG)//"_"//NUM
-       else if( FILETYPE_ORG == 'SCALE-LES' ) then
-         BASENAME_WITHNUM = trim(BASENAME_ORG)
-       else
-         write(*,*) ' xxx Unsupported FILE TYPE:', trim(FILETYPE_ORG)
-         call PRC_MPIstop
-       end if
-
-       if( IO_L ) write(IO_FID_LOG,*) '+++ Target File Name: ',trim(BASENAME_WITHNUM)
-       if( IO_L ) write(IO_FID_LOG,*) '    Time Steps in One File: ', NUMBER_OF_TSTEPS
-
-       if( NUMBER_OF_TSTEPS > 1 ) then
-          ns = NUMBER_OF_TSTEPS * (n - 1) + 1
-          ne = ns + (NUMBER_OF_TSTEPS - 1)
-       else
-          ns = n
-          ne = n
-       endif
-
-       call ParentAtomInput( DENS_org(:,:,:,ns:ne),    &
-                             MOMZ_org(:,:,:,ns:ne),    &
-                             MOMX_org(:,:,:,ns:ne),    &
-                             MOMY_org(:,:,:,ns:ne),    &
-                             RHOT_org(:,:,:,ns:ne),    &
-                             QTRC_org(:,:,:,ns:ne,:),  &
-                             BASENAME_WITHNUM,         &
-                             USE_FILE_DENSITY,         &
-                             dims(:),                  &
-                             mdlid,                    &
-                             PARENT_MP_TYPE,           &
-                             NUMBER_OF_TSTEPS,         &
-                             SERIAL_PROC_READ          )
-    enddo
-
-    !--- input initial data
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       DENS(k,i,j) = DENS_ORG(k,i,j,1)
-       MOMZ(k,i,j) = MOMZ_ORG(k,i,j,1)
-       MOMX(k,i,j) = MOMX_ORG(k,i,j,1)
-       MOMY(k,i,j) = MOMY_ORG(k,i,j,1)
-       RHOT(k,i,j) = RHOT_ORG(k,i,j,1)
-
-       do iq = 1, QA
-          QTRC(k,i,j,iq) = QTRC_ORG(k,i,j,1,iq)
-       enddo
-    enddo
-    enddo
-    enddo
-
-    !--- output boundary data
-    call ParentAtomBoundary( DENS_ORG(:,:,:,:),   &
-                             MOMZ_ORG(:,:,:,:),   &
-                             MOMX_ORG(:,:,:,:),   &
-                             MOMY_ORG(:,:,:,:),   &
-                             RHOT_ORG(:,:,:,:),   &
-                             QTRC_ORG(:,:,:,:,:), &
-                             totaltimesteps,      &
-                             BOUNDARY_UPDATE_DT,  &
-                             BASENAME_BOUNDARY,   &
-                             BOUNDARY_TITLE       )
-
-    !--- read/write initial data for bottom boundary models
-    n = 1
-    write(NUM,'(I5.5)') n-1
-
-    if     ( FILETYPE_ORG == 'WRF-ARW' ) then
-      BASENAME_WITHNUM = trim(BASENAME_ORG)//"_"//NUM
-    else if( FILETYPE_ORG == 'SCALE-LES' ) then
-      BASENAME_WITHNUM = trim(BASENAME_ORG)
-    else
-      write(*,*) ' xxx Unsupported FILE TYPE:', trim(FILETYPE_ORG)
-      call PRC_MPIstop
-    end if
-
-    call ParentSurfaceInput( DENS_ORG(:,:,:,:),   &
-                             MOMZ_ORG(:,:,:,:),   &
-                             MOMX_ORG(:,:,:,:),   &
-                             MOMY_ORG(:,:,:,:),   &
-                             RHOT_ORG(:,:,:,:),   &
-                             QTRC_ORG(:,:,:,:,:), &
-                             BASENAME_WITHNUM,    &
-                             dims,                &
-                             1,                   &
-                             mdlid,               &
-                             SERIAL_PROC_READ,    &
-                             NO_ADDITIONAL_INPUT  )
-
-    do j = JS, JE
-    do i = IS, IE
-       SFLX_rain   (i,j) = 0.0_RP
-       SFLX_snow   (i,j) = 0.0_RP
-       SFLX_LW_up  (i,j) = 0.0_RP
-       SFLX_LW_dn  (i,j) = 0.0_RP
-       SFLX_SW_up  (i,j) = 0.0_RP
-       SFLX_SW_dn  (i,j) = 0.0_RP
-       TOAFLX_LW_up(i,j) = 0.0_RP
-       TOAFLX_LW_dn(i,j) = 0.0_RP
-       TOAFLX_SW_up(i,j) = 0.0_RP
-       TOAFLX_SW_dn(i,j) = 0.0_RP
-    enddo
-    enddo
-
-    deallocate( dens_org )
-    deallocate( momz_org )
-    deallocate( momx_org )
-    deallocate( momy_org )
-    deallocate( rhot_org )
-    deallocate( qtrc_org )
-
-    return
-  end subroutine MKINIT_real
-
   !-----------------------------------------------------------------------------  
   !> Make initial state for grayzone experiment
   subroutine MKINIT_grayzone
@@ -4647,6 +4432,236 @@ enddo
 
     return
   end subroutine MKINIT_grayzone
+
+
+  !-----------------------------------------------------------------------------
+  !> Make initial state ( real case )
+  subroutine MKINIT_real
+    use mod_realinput
+    implicit none
+
+    integer                  :: NUMBER_OF_FILES     = 1
+    integer                  :: NUMBER_OF_TSTEPS    = 1   ! num of time steps in one file
+    integer                  :: INTERP_SERC_DIV_NUM = 10  ! num of dividing blocks in interpolation search
+    character(len=H_LONG)    :: BASENAME_ORG        = ''
+    character(len=H_LONG)    :: FILETYPE_ORG        = ''
+    character(len=H_LONG)    :: BASENAME_BOUNDARY   = 'boundary_real'
+    character(len=H_LONG)    :: BOUNDARY_TITLE      = 'SCALE-LES BOUNDARY CONDITION for REAL CASE'
+    character(len=H_SHORT)   :: PARENT_MP_TYPE      = 'single'  ! microphysics type of the parent model (single or double)
+    real(RP)                 :: BOUNDARY_UPDATE_DT  = 0.0_RP    ! inteval time of boudary data update [s]
+    logical                  :: USE_FILE_DENSITY    = .false.   ! use density data from files
+    logical                  :: WRF_FILE_TYPE       = .false.   ! wrf filetype: T=wrfout, F=wrfrst
+    logical                  :: SERIAL_PROC_READ    = .false.   ! read by one MPI process and broadcast
+    logical                  :: NO_ADDITIONAL_INPUT = .false.   ! no additional information
+
+
+    NAMELIST / PARAM_MKINIT_REAL / &
+         NUMBER_OF_FILES,     &
+         NUMBER_OF_TSTEPS,    &
+         INTERP_SERC_DIV_NUM, &
+         BASENAME_ORG,        &
+         FILETYPE_ORG,        &
+         BASENAME_BOUNDARY,   &
+         BOUNDARY_TITLE,      &
+         BOUNDARY_UPDATE_DT,  &
+         USE_FILE_DENSITY,    &
+         PARENT_MP_TYPE,      &
+         WRF_FILE_TYPE,       &
+         SERIAL_PROC_READ,    &
+         NO_ADDITIONAL_INPUT
+
+    character(len=H_LONG) :: BASENAME_WITHNUM  = ''
+    character(len=5)      :: NUM               = ''
+
+    real(RP), allocatable :: DENS_ORG(:,:,:,:)
+    real(RP), allocatable :: MOMZ_ORG(:,:,:,:)
+    real(RP), allocatable :: MOMX_ORG(:,:,:,:)
+    real(RP), allocatable :: MOMY_ORG(:,:,:,:)
+    real(RP), allocatable :: RHOT_ORG(:,:,:,:)
+    real(RP), allocatable :: QTRC_ORG(:,:,:,:,:)
+
+    integer :: mdlid
+    integer :: dims(7) ! dims 1-3: normal, 4-6: staggerd, 7: soil-layer
+
+    integer :: totaltimesteps = 1
+    integer :: timelen = 1
+    integer :: ierr
+
+    integer :: k, i, j, iq, n, ns, ne, l, ll
+    !---------------------------------------------------------------------------
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Real Case]/Categ[MKINIT]'
+
+    !--- read namelist
+    rewind(IO_FID_CONF)
+    read(IO_FID_CONF,nml=PARAM_MKINIT_REAL,iostat=ierr)
+    if( ierr < 0 ) then !--- missing
+       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+    elseif( ierr > 0 ) then !--- fatal error
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_REAL. Check!'
+       call PRC_MPIstop
+    endif
+    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_REAL)
+
+    if ( BOUNDARY_UPDATE_DT <= 0.0_RP ) then
+       write(*,*) 'xxx BOUNDARY_UPDATE_DT is necessary in real case preprocess'
+       call PRC_MPIstop
+    endif
+
+    totaltimesteps = NUMBER_OF_FILES * NUMBER_OF_TSTEPS
+
+    if     ( FILETYPE_ORG == 'WRF-ARW' ) then
+      BASENAME_WITHNUM = trim(BASENAME_ORG)//"_00000"
+    else if( FILETYPE_ORG == 'SCALE-LES' ) then
+      BASENAME_WITHNUM = trim(BASENAME_ORG)
+    else if( FILETYPE_ORG == 'NICAM-NETCDF' ) then
+      BASENAME_WITHNUM = trim(BASENAME_ORG)
+    else
+      write(*,*) ' xxx Unsupported FILE TYPE:', trim(FILETYPE_ORG)
+      call PRC_MPIstop
+    end if
+
+    call ParentAtomSetup( dims(:), timelen, mdlid,           & ![OUT]
+                          BASENAME_WITHNUM, FILETYPE_ORG,    & ![IN]
+                          INTERP_SERC_DIV_NUM, WRF_FILE_TYPE ) ![IN]
+
+    if ( FILETYPE_ORG == 'NICAM-NETCDF' ) then
+       NUMBER_OF_FILES  = 1
+       NUMBER_OF_TSTEPS = timelen
+       totaltimesteps = NUMBER_OF_FILES * NUMBER_OF_TSTEPS
+    endif
+
+    allocate( dens_org(KA,IA,JA,totaltimesteps   ) )
+    allocate( momz_org(KA,IA,JA,totaltimesteps   ) )
+    allocate( momx_org(KA,IA,JA,totaltimesteps   ) )
+    allocate( momy_org(KA,IA,JA,totaltimesteps   ) )
+    allocate( rhot_org(KA,IA,JA,totaltimesteps   ) )
+    allocate( qtrc_org(KA,IA,JA,totaltimesteps,QA) )
+
+    !--- read external file
+    do n = 1, NUMBER_OF_FILES
+       write(NUM,'(I5.5)') n-1
+
+       if     ( FILETYPE_ORG == 'WRF-ARW' ) then
+         BASENAME_WITHNUM = trim(BASENAME_ORG)//"_"//NUM
+       else if( FILETYPE_ORG == 'SCALE-LES' ) then
+         BASENAME_WITHNUM = trim(BASENAME_ORG)
+       else if( FILETYPE_ORG == 'NICAM-NETCDF' ) then
+         BASENAME_WITHNUM = trim(BASENAME_ORG)
+       else
+         write(*,*) ' xxx Unsupported FILE TYPE:', trim(FILETYPE_ORG)
+         call PRC_MPIstop
+       end if
+
+       if( IO_L ) write(IO_FID_LOG,*) '+++ Target File Name: ',trim(BASENAME_WITHNUM)
+       if( IO_L ) write(IO_FID_LOG,*) '    Time Steps in One File: ', NUMBER_OF_TSTEPS
+
+       if( NUMBER_OF_TSTEPS > 1 ) then
+          ns = NUMBER_OF_TSTEPS * (n - 1) + 1
+          ne = ns + (NUMBER_OF_TSTEPS - 1)
+       else
+          ns = n
+          ne = n
+       endif
+
+       call ParentAtomInput( DENS_org(:,:,:,ns:ne),    &
+                             MOMZ_org(:,:,:,ns:ne),    &
+                             MOMX_org(:,:,:,ns:ne),    &
+                             MOMY_org(:,:,:,ns:ne),    &
+                             RHOT_org(:,:,:,ns:ne),    &
+                             QTRC_org(:,:,:,ns:ne,:),  &
+                             BASENAME_WITHNUM,         &
+                             USE_FILE_DENSITY,         &
+                             dims(:),                  &
+                             mdlid,                    &
+                             PARENT_MP_TYPE,           &
+                             NUMBER_OF_TSTEPS,         &
+                             SERIAL_PROC_READ          )
+    enddo
+
+    !--- input initial data
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       DENS(k,i,j) = DENS_ORG(k,i,j,1)
+       MOMZ(k,i,j) = MOMZ_ORG(k,i,j,1)
+       MOMX(k,i,j) = MOMX_ORG(k,i,j,1)
+       MOMY(k,i,j) = MOMY_ORG(k,i,j,1)
+       RHOT(k,i,j) = RHOT_ORG(k,i,j,1)
+
+       do iq = 1, QA
+          QTRC(k,i,j,iq) = QTRC_ORG(k,i,j,1,iq)
+       enddo
+    enddo
+    enddo
+    enddo
+
+    !--- output boundary data
+    call ParentAtomBoundary( DENS_ORG(:,:,:,:),   &
+                             MOMZ_ORG(:,:,:,:),   &
+                             MOMX_ORG(:,:,:,:),   &
+                             MOMY_ORG(:,:,:,:),   &
+                             RHOT_ORG(:,:,:,:),   &
+                             QTRC_ORG(:,:,:,:,:), &
+                             totaltimesteps,      &
+                             BOUNDARY_UPDATE_DT,  &
+                             BASENAME_BOUNDARY,   &
+                             BOUNDARY_TITLE       )
+
+    !--- read/write initial data for bottom boundary models
+    n = 1
+    write(NUM,'(I5.5)') n-1
+
+    if     ( FILETYPE_ORG == 'WRF-ARW' ) then
+      BASENAME_WITHNUM = trim(BASENAME_ORG)//"_"//NUM
+    else if( FILETYPE_ORG == 'SCALE-LES' ) then
+      BASENAME_WITHNUM = trim(BASENAME_ORG)
+    else if( FILETYPE_ORG == 'NICAM-NETCDF' ) then
+      BASENAME_WITHNUM = trim(BASENAME_ORG)
+    else
+      write(*,*) ' xxx Unsupported FILE TYPE:', trim(FILETYPE_ORG)
+      call PRC_MPIstop
+    end if
+
+    call ParentSurfaceInput( DENS_ORG(:,:,:,:),   &
+                             MOMZ_ORG(:,:,:,:),   &
+                             MOMX_ORG(:,:,:,:),   &
+                             MOMY_ORG(:,:,:,:),   &
+                             RHOT_ORG(:,:,:,:),   &
+                             QTRC_ORG(:,:,:,:,:), &
+                             BASENAME_WITHNUM,    &
+                             dims,                &
+                             1,                   &
+                             mdlid,               &
+                             SERIAL_PROC_READ,    &
+                             NO_ADDITIONAL_INPUT  )
+
+    do j = JS, JE
+    do i = IS, IE
+       SFLX_rain   (i,j) = 0.0_RP
+       SFLX_snow   (i,j) = 0.0_RP
+       SFLX_LW_up  (i,j) = 0.0_RP
+       SFLX_LW_dn  (i,j) = 0.0_RP
+       SFLX_SW_up  (i,j) = 0.0_RP
+       SFLX_SW_dn  (i,j) = 0.0_RP
+       TOAFLX_LW_up(i,j) = 0.0_RP
+       TOAFLX_LW_dn(i,j) = 0.0_RP
+       TOAFLX_SW_up(i,j) = 0.0_RP
+       TOAFLX_SW_dn(i,j) = 0.0_RP
+    enddo
+    enddo
+
+    deallocate( dens_org )
+    deallocate( momz_org )
+    deallocate( momx_org )
+    deallocate( momy_org )
+    deallocate( rhot_org )
+    deallocate( qtrc_org )
+
+    return
+  end subroutine MKINIT_real
+
 
 end module mod_mkinit
 !-------------------------------------------------------------------------------
