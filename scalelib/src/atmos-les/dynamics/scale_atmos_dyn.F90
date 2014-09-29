@@ -664,44 +664,6 @@ contains
                           REF_pres, REF_dens,                               & ! (in)
                           dtrk, dt                                          ) ! (in)
 
-       ! set boundary
-       if ( .not. PRC_HAS_W ) then ! for western boundary
-          call set_boundary_dyn( &
-               DENS, MOMZ, MOMX, MOMY, RHOT, & ! (inout)
-               DAMP_DENS, DAMP_VELZ, DAMP_VELX, DAMP_VELY, DAMP_POTT, & ! (in)
-               DAMP_alpha_DENS, DAMP_alpha_VELZ, DAMP_alpha_VELX, DAMP_alpha_VELY, DAMP_alpha_POTT, & ! (in)
-               DAMP_VELX, & ! (in)
-               -1, 0, 1, 0, & ! (in)
-               IS+IHALO-1, IS, JS, JE ) ! (in)
-       end if
-       if ( .not. PRC_HAS_E ) then ! for eastern boundary
-          call set_boundary_dyn( &
-               DENS, MOMZ, MOMX, MOMY, RHOT, & ! (inout)
-               DAMP_DENS, DAMP_VELZ, DAMP_VELX, DAMP_VELY, DAMP_POTT, & ! (in)
-               DAMP_alpha_DENS, DAMP_alpha_VELZ, DAMP_alpha_VELX, DAMP_alpha_VELY, DAMP_alpha_POTT, & ! (in)
-               DAMP_VELX, & ! (in)
-               0, 0, -1, 0, & ! (in)
-               IE-IHALO+1, IE, JS, JE ) ! (in)
-       end if
-       if ( .not. PRC_HAS_S ) then ! for sourthern boundary
-          call set_boundary_dyn( &
-               DENS, MOMZ, MOMX, MOMY, RHOT, & ! (inout)
-               DAMP_DENS, DAMP_VELZ, DAMP_VELX, DAMP_VELY, DAMP_POTT, & ! (in)
-               DAMP_alpha_DENS, DAMP_alpha_VELZ, DAMP_alpha_VELX, DAMP_alpha_VELY, DAMP_alpha_POTT, & ! (in)
-               DAMP_VELY, & ! (in)
-               0, -1, 0, 1, & ! (in)
-               IS, IE, JS+JHALO-1, JS ) ! (in)
-       end if
-       if ( .not. PRC_HAS_N ) then ! for northern boundary
-          call set_boundary_dyn( &
-               DENS, MOMZ, MOMX, MOMY, RHOT, & ! (inout)
-               DAMP_DENS, DAMP_VELZ, DAMP_VELX, DAMP_VELY, DAMP_POTT, & ! (in)
-               DAMP_alpha_DENS, DAMP_alpha_VELZ, DAMP_alpha_VELX, DAMP_alpha_VELY, DAMP_alpha_POTT, & ! (in)
-               DAMP_VELY, & ! (in)
-               0, 0, 0, -1, & ! (in)
-               IS, IE, JE-JHALO+1, JE ) ! (in)
-       end if
-
        ! adjust lateral boundary flux
        if ( .not. PRC_HAS_W ) then ! for western boundary
           call adjust_boundary_flux_dyn( &
@@ -742,6 +704,44 @@ contains
                DAMP_alpha_DENS, & ! (in)
                0, 0, 0, -1, & ! (in)
                IS, IE, JE-JHALO-NUM_LBFLX+1, JE-JHALO ) ! (in)
+       end if
+
+       ! set boundary
+       if ( .not. PRC_HAS_W ) then ! for western boundary
+          call set_boundary_dyn( &
+               DENS, MOMZ, MOMX, MOMY, RHOT, & ! (inout)
+               DAMP_DENS, DAMP_VELZ, DAMP_VELX, DAMP_VELY, DAMP_POTT, & ! (in)
+               DAMP_alpha_DENS, DAMP_alpha_VELZ, DAMP_alpha_VELX, DAMP_alpha_VELY, DAMP_alpha_POTT, & ! (in)
+               DAMP_VELX, & ! (in)
+               -1, 0, 1, 0, & ! (in)
+               IS+IHALO-1, IS, JS, JE ) ! (in)
+       end if
+       if ( .not. PRC_HAS_E ) then ! for eastern boundary
+          call set_boundary_dyn( &
+               DENS, MOMZ, MOMX, MOMY, RHOT, & ! (inout)
+               DAMP_DENS, DAMP_VELZ, DAMP_VELX, DAMP_VELY, DAMP_POTT, & ! (in)
+               DAMP_alpha_DENS, DAMP_alpha_VELZ, DAMP_alpha_VELX, DAMP_alpha_VELY, DAMP_alpha_POTT, & ! (in)
+               DAMP_VELX, & ! (in)
+               0, 0, -1, 0, & ! (in)
+               IE-IHALO+1, IE, JS, JE ) ! (in)
+       end if
+       if ( .not. PRC_HAS_S ) then ! for sourthern boundary
+          call set_boundary_dyn( &
+               DENS, MOMZ, MOMX, MOMY, RHOT, & ! (inout)
+               DAMP_DENS, DAMP_VELZ, DAMP_VELX, DAMP_VELY, DAMP_POTT, & ! (in)
+               DAMP_alpha_DENS, DAMP_alpha_VELZ, DAMP_alpha_VELX, DAMP_alpha_VELY, DAMP_alpha_POTT, & ! (in)
+               DAMP_VELY, & ! (in)
+               0, -1, 0, 1, & ! (in)
+               IS, IE, JS+JHALO-1, JS ) ! (in)
+       end if
+       if ( .not. PRC_HAS_N ) then ! for northern boundary
+          call set_boundary_dyn( &
+               DENS, MOMZ, MOMX, MOMY, RHOT, & ! (inout)
+               DAMP_DENS, DAMP_VELZ, DAMP_VELX, DAMP_VELY, DAMP_POTT, & ! (in)
+               DAMP_alpha_DENS, DAMP_alpha_VELZ, DAMP_alpha_VELX, DAMP_alpha_VELY, DAMP_alpha_POTT, & ! (in)
+               DAMP_VELY, & ! (in)
+               0, 0, 0, -1, & ! (in)
+               IS, IE, JE-JHALO+1, JE ) ! (in)
        end if
 
        do j  = JS, JE
@@ -1137,7 +1137,7 @@ contains
        sw = sign(0.5_RP, DAMP_alpha_DENS(k,i,j) - EPS) + 0.5_RP
        sw2 = sign(0.5_RP, DAMP_flow(k,i,j)*dir) + 0.5_RP ! 0:inflow, 1:outflow
        DENS(k,i,j) = DENS(k,i,j) * ( 1.0_RP - sw ) &
-                   + DENS(k,i+iu,j+ju) * sw
+                   + DAMP_DENS(k,i,j) * sw
        MOMZ(k,i,j) = MOMZ(k,i,j) * ( 1.0_RP - sw ) &
                    + MOMZ(k,i+iu,j+ju) * sw2 * sw
        sw = sign(0.5_RP, DAMP_alpha_POTT(k,i,j) - EPS) + 0.5_RP
@@ -1332,7 +1332,7 @@ contains
        DENS(k,i,j) = DENS(k,i,j) &
                    + ( ( tmpX - mflx_hi(k,i+ib,j,   XDIR) ) * RCDX(i) * real(iu,kind=RP) &
                      + ( tmpY - mflx_hi(k,i,   j+jb,YDIR) ) * RCDY(j) * real(ju,kind=RP) &
-                     ) * dt * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) * sw !* fc
+                     ) * dt * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) * fc * sw
     end do
     end do
     end do
