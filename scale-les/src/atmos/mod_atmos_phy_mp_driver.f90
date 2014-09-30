@@ -68,7 +68,7 @@ contains
        call ATMOS_PHY_MP_setup( ATMOS_PHY_MP_TYPE )
 
        ! run once (only for the diagnostic value)
-       !call ATMOS_PHY_MP_driver( .true., .false. )
+       call ATMOS_PHY_MP_driver( .true., .false. )
 
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** this component is never called.'
@@ -164,7 +164,8 @@ contains
                           RHOT0    (:,:,:),   & ! [INOUT]
                           QTRC0    (:,:,:,:), & ! [INOUT]
                           SFLX_rain(:,:),     & ! [OUT]
-                          SFLX_snow(:,:)      ) ! [OUT]
+                          SFLX_snow(:,:),     & ! [OUT]
+                          history_flag        ) ! [OUT]
 
        do j  = JS, JE
        do i  = IS, IE
