@@ -1211,15 +1211,15 @@ contains
                  * ( 1.0_RP/MAPF(i+1,j,2,I_XY) - 1.0_RP/MAPF(i,j,2,I_XY) ) * RCDX(i) &
                - MOMX(k,i,j) &
                  * ( 1.0_RP/MAPF(i,j,1,I_UV) - 1.0_RP/MAPF(i,j-1,1,I_UV) ) * RFDY(j) ) &
-             * 0.5_RP / ( DENS(k,i+1,j) + DENS(k,i,j) ) ! metric term
+             * 2.0_RP / ( DENS(k,i+1,j) + DENS(k,i,j) ) ! metric term
           div = divdmp_coef * dtrk * ( DDIV(k,i+1,j)/MAPF(i+1,j,2,I_XY) - DDIV(k,i,j)/MAPF(i,j,1,I_XY) ) &
               * MAPF(i,j,1,I_UY) * MAPF(i,j,2,I_UY) * FDX(i) ! divergence damping
           MOMX_RK(k,i,j) = MOMX0(k,i,j) &
                + dtrk * ( ( advcv + advch + pg ) / GSQRT(k,i,j,I_UYZ) + cf + div + MOMX_t(k,i,j) )
 #ifdef HIST_TEND
           if ( lhist ) then
-             advcv_t(k,i,j,I_MOMX) = advch / GSQRT(k,i,j,I_UYZ)
-             advch_t(k,i,j,I_MOMX) = advcv / GSQRT(k,i,j,I_UYZ)
+             advcv_t(k,i,j,I_MOMX) = advcv / GSQRT(k,i,j,I_UYZ)
+             advch_t(k,i,j,I_MOMX) = advch / GSQRT(k,i,j,I_UYZ)
              pg_t(k,i,j,2) = pg / GSQRT(k,i,j,I_UYZ)
              cf_t(k,i,j,2) = cf
              ddiv_t(k,i,j,2) = div
