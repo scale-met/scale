@@ -8,22 +8,26 @@ PWD         = $(shell pwd)
 TOPDIR      = $(abspath ../../../../..)
 TESTDIR     = ../../..
 
-# for build
-index      = 500m40x40x40
-precision  = real8
-dynamics   = heve
-tracer     = dry
-sfcflx     = const
-turbulence = dummy
-radiation  = dummy
 
-# for run
-INITNAME  = scale-les_pp
-BINNAME   = dummy
-INITCONF  = pp.conf
-RUNCONF   = dummy
-TPROC     = 16
+# user-defined source files
+CODE_DIR    = .
+ORG_SRCS    =
+
+# parameters for run
+PPNAME      = scale-les_pp
+INITNAME    = NONE
+BINNAME     = NONE
+PPCONF      = pp.conf
+INITCONF    = NONE
+RUNCONF     = NONE
+TPROC       = 16
+
+# required data (parameters,distributed files)
+DATDIR      = $(abspath /data2/scale_database/landuse/LU100M/Products)
+DATPARAM    =
+DATDISTS    =
+
 
 
 # build, makedir, run, jobshell, allclean, clean is inside of common Makefile
-include $(TESTDIR)/Makefile.common
+include ../../Makefile.pp.common

@@ -173,16 +173,58 @@ contains
   subroutine CNVTOPO_GTOPO30
     use scale_process, only: &
        PRC_MPIstop
+    use scale_const, only: &
+       RADIUS => CONST_RADIUS, &
+       EPS    => CONST_EPS,    &
+       D2R    => CONST_D2R
+    use scale_topography, only: &
+       TOPO_Zsfc
+    use scale_grid_real, only: &
+       REAL_LATY, &
+       REAL_LONX
     implicit none
 
-    character(len=H_LONG) :: TOPO_GTOPO30_IN_CATALOGUE = ''      !< metadata files for GTOPO30
-    character(len=H_LONG) :: TOPO_GTOPO30_IN_DIR       = ''      !< directory contains GTOPO30 files (GrADS format)
+    character(len=H_LONG) :: GTOPO30_IN_CATALOGUE = ''      !< metadata files for GTOPO30
+    character(len=H_LONG) :: GTOPO30_IN_DIR       = ''      !< directory contains GTOPO30 files (GrADS format)
 
     NAMELIST / PARAM_CNVTOPO_GTOPO30 / &
-       TOPO_GTOPO30_IN_CATALOGUE, &
-       TOPO_GTOPO30_IN_DIR
+       GTOPO30_IN_CATALOGUE, &
+       GTOPO30_IN_DIR
 
-    integer :: ierr
+    ! data catalogue list
+    integer, parameter    :: TILE_nlim = 100
+    integer               :: TILE_nmax
+    real(RP)              :: TILE_LATS (TILE_nlim)
+    real(RP)              :: TILE_LATE (TILE_nlim)
+    real(RP)              :: TILE_LONS (TILE_nlim)
+    real(RP)              :: TILE_LONE (TILE_nlim)
+    character(len=H_LONG) :: TILE_fname(TILE_nlim)
+
+    ! GTOPO30 data
+    integer(2) :: TILE_HEIGHT_i(4800,6000)
+    real(RP) :: TILE_HEIGHT(4800,6000)
+    real(RP) :: TILE_LATH  (0:6000)
+    real(RP) :: TILE_LONH  (0:4800)
+    real(RP) :: TILE_DLAT, TILE_DLON
+    real(RP) :: area, area_fraction
+
+    integer  :: iloc   (4800)
+    integer  :: jloc   (6000)
+    real(RP) :: ifrac_l(4800) ! fraction for iloc
+    real(RP) :: jfrac_b(6000) ! fraction for jloc
+
+
+    real(RP) :: DOMAIN_LATS, DOMAIN_LATE
+    real(RP) :: DOMAIN_LONS, DOMAIN_LONE
+    real(RP) :: area_sum(IA,JA)
+
+    character(len=H_LONG) :: fname
+
+    real(RP) :: zerosw
+    logical  :: hit_lat, hit_lon
+    integer  :: index
+    integer  :: fid, ierr
+    integer  :: i, j, ii, jj, t
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -197,6 +239,178 @@ contains
        call PRC_MPIstop
     endif
     if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_CNVTOPO_GTOPO30)
+
+    DOMAIN_LATS = minval(REAL_LATY(:,:)) / D2R ! [rad->deg]
+    DOMAIN_LATE = maxval(REAL_LATY(:,:)) / D2R ! [rad->deg]
+    DOMAIN_LONS = minval(REAL_LONX(:,:)) / D2R ! [rad->deg]
+    DOMAIN_LONE = maxval(REAL_LONX(:,:)) / D2R ! [rad->deg]
+
+    !---< READ from external files >---
+
+    fname = trim(GTOPO30_IN_DIR)//'/'//trim(GTOPO30_IN_CATALOGUE)
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '+++ Input catalogue file:', trim(fname)
+
+    fid = IO_get_available_fid()
+    open( fid,                  &
+          file   = trim(fname), &
+          form   = 'formatted', &
+          status = 'old',       &
+          iostat = ierr         )
+
+       if ( ierr /= 0 ) then
+          write(*,*) 'xxx catalogue file not found!'
+          call PRC_MPIstop
+       endif
+
+       do t = 1, TILE_nlim
+          read(fid,*,iostat=ierr) index, TILE_LATS(t), TILE_LATE(t), & ! South->North
+                                         TILE_LONS(t), TILE_LONE(t), & ! WEST->EAST
+                                         TILE_fname(t)
+          if ( ierr /= 0 ) exit
+       enddo
+
+       TILE_nmax = t - 1
+    close(fid)
+
+    do t = 1, TILE_nmax
+       hit_lat = .false.
+       hit_lon = .false.
+
+       if (      ( TILE_LATS(t) >= DOMAIN_LATS  .AND. TILE_LATS(t) < DOMAIN_LATE  ) &
+            .OR. ( TILE_LATE(t) >= DOMAIN_LATS  .AND. TILE_LATE(t) < DOMAIN_LATE  ) ) then
+          hit_lat = .true.
+       endif
+
+       if (      ( DOMAIN_LATS  >= TILE_LATS(t) .AND. DOMAIN_LATS  < TILE_LATE(t) ) &
+            .OR. ( DOMAIN_LATE  >= TILE_LATS(t) .AND. DOMAIN_LATE  < TILE_LATE(t) ) ) then
+          hit_lat = .true.
+       endif
+
+       if (      ( TILE_LONS(t) >= DOMAIN_LONS  .AND. TILE_LONS(t) < DOMAIN_LONE  ) &
+            .OR. ( TILE_LONE(t) >= DOMAIN_LONS  .AND. TILE_LONE(t) < DOMAIN_LONE  ) ) then
+          hit_lon = .true.
+       endif
+
+       if (      ( DOMAIN_LONS  >= TILE_LONS(t) .AND. DOMAIN_LONS  < TILE_LONE(t) ) &
+            .OR. ( DOMAIN_LONE  >= TILE_LONS(t) .AND. DOMAIN_LONE  < TILE_LONE(t) ) ) then
+          hit_lon = .true.
+       endif
+
+       if ( hit_lat .AND. hit_lon ) then
+          fname = trim(GTOPO30_IN_DIR)//'/'//trim(TILE_fname(t))
+
+          if( IO_L ) write(IO_FID_LOG,*)
+          if( IO_L ) write(IO_FID_LOG,*) '+++ Input data      file :', trim(fname)
+          if( IO_L ) write(IO_FID_LOG,*)
+          if( IO_L ) write(IO_FID_LOG,*) '*** Domain(LAT):', DOMAIN_LATS, DOMAIN_LATE
+          if( IO_L ) write(IO_FID_LOG,*) '***       (LON):', DOMAIN_LONS, DOMAIN_LONE
+          if( IO_L ) write(IO_FID_LOG,*) '*** Tile  (LAT):', TILE_LATS(t), TILE_LATE(t)
+          if( IO_L ) write(IO_FID_LOG,*) '***       (LON):', TILE_LONS(t), TILE_LONE(t)
+
+          TILE_DLAT = 30.0_RP / 60.0_RP / 60.0_RP * D2R
+          TILE_DLON = 30.0_RP / 60.0_RP / 60.0_RP * D2R
+          if( IO_L ) write(IO_FID_LOG,*)
+          if( IO_L ) write(IO_FID_LOG,*) '*** TILE_DLAT  :', TILE_DLAT
+          if( IO_L ) write(IO_FID_LOG,*) '*** TILE_DLON  :', TILE_DLON
+
+          fid = IO_get_available_fid()
+          open( fid,                    &
+                file   = trim(fname),   &
+                form   = 'unformatted', &
+                access = 'direct',      &
+                status = 'old',         &
+                recl   = 4800*6000*2,   &
+                iostat = ierr           )
+
+             if ( ierr /= 0 ) then
+                write(*,*) 'xxx data file not found!'
+                call PRC_MPIstop
+             endif
+
+             read(fid,rec=1) TILE_HEIGHT_i(:,:)
+          close(fid)
+
+          TILE_LATH(0) = TILE_LATS(t) * D2R
+          do jj = 1, 6000
+             TILE_LATH(jj) = TILE_LATH(jj-1) + TILE_DLAT
+!             if( IO_L ) write(IO_FID_LOG,*) jj, TILE_LATH(jj)
+          enddo
+
+          TILE_LONH(0) = TILE_LONS(t) * D2R
+          do ii = 1, 4800
+             TILE_LONH(ii) = TILE_LONH(ii-1) + TILE_DLON
+!             if( IO_L ) write(IO_FID_LOG,*) ii, TILE_LONH(ii)
+          enddo
+
+          ! match and calc fraction
+          i = IS
+          do jj = 1, 6000
+             jloc   (jj) = 1 ! Z_sfc(1,1) is used for dummy grid
+             jfrac_b(jj) = 1.0_RP
+
+             do j = JS, JE
+                if (       TILE_LATH(jj-1) >= REAL_LATY(i,j-1) &
+                     .AND. TILE_LATH(jj-1) <  REAL_LATY(i,j  ) ) then
+
+                   jloc   (jj) = j
+                   jfrac_b(jj) = min( REAL_LATY(i,j)-TILE_LATH(jj-1), TILE_DLAT ) / TILE_DLAT
+
+                endif
+             enddo
+          enddo
+
+          j = JS
+          do ii = 1, 4800
+             iloc   (ii) = 1 ! Z_sfc(1,1) is used for dummy grid
+             ifrac_l(ii) = 1.0_RP
+
+             do i = IS, IE
+                if (       TILE_LONH(ii-1) >= REAL_LONX(i-1,j) &
+                     .AND. TILE_LONH(ii-1) <  REAL_LONX(i  ,j) ) then
+
+                   iloc   (ii) = i
+                   ifrac_l(ii) = min( REAL_LONX(i,j)-TILE_LONH(ii-1), TILE_DLON ) / TILE_DLON
+
+                endif
+             enddo
+          enddo
+
+          do jj = 1, 6000
+          do ii = 1, 4800
+             area = RADIUS * RADIUS * TILE_DLON * ( sin(TILE_LATH(jj))-sin(TILE_LATH(jj-1)) )
+
+             TILE_HEIGHT(ii,jj) = max( real(TILE_HEIGHT_i(ii,6000-jj+1),kind=RP), 0.0_RP ) ! reverse y-axis
+!             if( IO_L ) write(IO_FID_LOG,*) ii, jj, area, iloc(ii), jloc(jj), ifrac_l(ii), jfrac_b(jj), TILE_HEIGHT(ii,jj)
+
+             area_fraction = (       ifrac_l(ii)) * (       jfrac_b(jj)) * area
+             area_sum (iloc(ii)  ,jloc(jj)  ) = area_sum (iloc(ii)  ,jloc(jj)  ) + area_fraction
+             TOPO_Zsfc(iloc(ii)  ,jloc(jj)  ) = TOPO_Zsfc(iloc(ii)  ,jloc(jj)  ) + area_fraction * TILE_HEIGHT(ii,jj)
+
+             area_fraction = (1.0_RP-ifrac_l(ii)) * (       jfrac_b(jj)) * area
+             area_sum (iloc(ii)+1,jloc(jj)  ) = area_sum (iloc(ii)+1,jloc(jj)  ) + area_fraction
+             TOPO_Zsfc(iloc(ii)+1,jloc(jj)  ) = TOPO_Zsfc(iloc(ii)+1,jloc(jj)  ) + area_fraction * TILE_HEIGHT(ii,jj)
+
+             area_fraction = (       ifrac_l(ii)) * (1.0_RP-jfrac_b(jj)) * area
+             area_sum (iloc(ii)  ,jloc(jj)+1) = area_sum (iloc(ii)  ,jloc(jj)+1) + area_fraction
+             TOPO_Zsfc(iloc(ii)  ,jloc(jj)+1) = TOPO_Zsfc(iloc(ii)  ,jloc(jj)+1) + area_fraction * TILE_HEIGHT(ii,jj)
+
+             area_fraction = (1.0_RP-ifrac_l(ii)) * (1.0_RP-jfrac_b(jj)) * area
+             area_sum (iloc(ii)+1,jloc(jj)+1) = area_sum (iloc(ii)+1,jloc(jj)+1) + area_fraction
+             TOPO_Zsfc(iloc(ii)+1,jloc(jj)+1) = TOPO_Zsfc(iloc(ii)+1,jloc(jj)+1) + area_fraction * TILE_HEIGHT(ii,jj)
+          enddo
+          enddo
+
+       endif
+    enddo ! tile loop
+
+    do j = JS, JE
+    do i = IS, IE
+       zerosw = 0.5_RP - sign( 0.5_RP, area_sum(i,j)-EPS )
+       TOPO_Zsfc(i,j) = TOPO_Zsfc(i,j) * ( 1.0_RP-zerosw ) / ( area_sum(i,j)-zerosw )
+    enddo
+    enddo
 
     return
   end subroutine CNVTOPO_GTOPO30
@@ -279,10 +493,10 @@ contains
     enddo
     enddo
 
-    DOMAIN_LATS = REAL_LATY(IS,JS-1) / D2R ! [rad->deg]
-    DOMAIN_LATE = REAL_LATY(IE,JE  ) / D2R ! [rad->deg]
-    DOMAIN_LONS = REAL_LONX(IS-1,JS) / D2R ! [rad->deg]
-    DOMAIN_LONE = REAL_LONX(IE  ,JE) / D2R ! [rad->deg]
+    DOMAIN_LATS = minval(REAL_LATY(:,:)) / D2R ! [rad->deg]
+    DOMAIN_LATE = maxval(REAL_LATY(:,:)) / D2R ! [rad->deg]
+    DOMAIN_LONS = minval(REAL_LONX(:,:)) / D2R ! [rad->deg]
+    DOMAIN_LONE = maxval(REAL_LONX(:,:)) / D2R ! [rad->deg]
 
     !---< READ from external files >---
 

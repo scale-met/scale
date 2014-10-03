@@ -280,10 +280,10 @@ contains
     enddo
     enddo
 
-    DOMAIN_LATS = REAL_LATY(IS,JS-1) / D2R ! [rad->deg]
-    DOMAIN_LATE = REAL_LATY(IE,JE  ) / D2R ! [rad->deg]
-    DOMAIN_LONS = REAL_LONX(IS-1,JS) / D2R ! [rad->deg]
-    DOMAIN_LONE = REAL_LONX(IE  ,JE) / D2R ! [rad->deg]
+    DOMAIN_LATS = minval(REAL_LATY(:,:)) / D2R ! [rad->deg]
+    DOMAIN_LATE = maxval(REAL_LATY(:,:)) / D2R ! [rad->deg]
+    DOMAIN_LONS = minval(REAL_LONX(:,:)) / D2R ! [rad->deg]
+    DOMAIN_LONE = maxval(REAL_LONX(:,:)) / D2R ! [rad->deg]
 
     !---< READ from external files >---
 
