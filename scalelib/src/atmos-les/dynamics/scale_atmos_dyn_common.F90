@@ -1524,10 +1524,11 @@ contains
           call CHECK( __LINE__, qflx_lo(k  ,i  ,j-1,YDIR) )
 #endif
           phi_lo(k,i,j) = ( phi_in(k,i,j) * DENS0(k,i,j) &
-               + dt * ( - ( ( qflx_lo(k,i,j,ZDIR)-qflx_lo(k-1,i  ,j  ,ZDIR) ) * RDZ(k) &
-                          + ( qflx_lo(k,i,j,XDIR)-qflx_lo(k  ,i-1,j  ,XDIR) ) * RDX(i) &
-                          + ( qflx_lo(k,i,j,YDIR)-qflx_lo(k  ,i  ,j-1,YDIR) ) * RDY(j) ) * MAPF(i,j,1) * MAPF(i,j,2) / GSQRT(k,i,j) ) &
-                      ) / DENS(k,i,j)
+                          + dt * ( - ( ( qflx_lo(k,i,j,ZDIR)-qflx_lo(k-1,i  ,j  ,ZDIR) ) * RDZ(k) &
+                                     + ( qflx_lo(k,i,j,XDIR)-qflx_lo(k  ,i-1,j  ,XDIR) ) * RDX(i) &
+                                     + ( qflx_lo(k,i,j,YDIR)-qflx_lo(k  ,i  ,j-1,YDIR) ) * RDY(j) &
+                                     ) * MAPF(i,j,1) * MAPF(i,j,2) / GSQRT(k,i,j)                 ) &
+                          ) / DENS(k,i,j)
        enddo
        enddo
        enddo

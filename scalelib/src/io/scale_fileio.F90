@@ -774,7 +774,7 @@ contains
        dim2_S   = JS
        dim2_E   = JE
     elseif ( axistype == 'UY' ) then
-       dims = (/'xh','y'/)
+       dims = (/'xh','y '/)
        dim1_max = IMAX
        dim2_max = JMAX
        dim1_S   = IS
@@ -782,7 +782,7 @@ contains
        dim2_S   = JS
        dim2_E   = JE
     elseif ( axistype == 'XV' ) then
-       dims = (/'x','yh'/)
+       dims = (/'x ','yh'/)
        dim1_max = IMAX
        dim2_max = JMAX
        dim1_S   = IS
