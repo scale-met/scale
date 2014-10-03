@@ -563,7 +563,7 @@ contains
     end do
 
     call THERMODYN_temp_pres( temp     (:,:,:),   & ! [OUT]
-                              pres     (:,:,:),   & ! [OUT]
+                              pres     (:,:,:),   & ! [OUT] not used
                               init_dens(:,:,:),   & ! [IN]
                               init_rhot(:,:,:),   & ! [IN]
                               init_qtrc(:,:,:,:)  ) ! [IN]
@@ -1724,7 +1724,7 @@ contains
     integer,          intent(in)  :: start_step
     integer,          intent(in)  :: end_step
 
-    ! work
+    !> work
     real(SP), allocatable :: read1DX(:)
     real(SP), allocatable :: read1DY(:)
     real(SP), allocatable :: read1DZ(:)
@@ -1734,6 +1734,7 @@ contains
     real(RP), allocatable :: lon_org (:,:,:)
     real(RP), allocatable :: lat_org (:,:,:)
     real(RP), allocatable :: hgt_org(:,:,:,:)
+    real(RP), allocatable :: hgt_op1(:,:,:,:)
 
     real(RP), allocatable :: tsfc_org(:,:,:)
     real(RP), allocatable :: psfc_org(:,:,:)
@@ -1764,14 +1765,24 @@ contains
     integer :: jgrd(   IA,JA,itp_nh       )
     integer :: kgrd(KA,IA,JA,itp_nh,itp_nv)
 
-    integer :: QA_NCM = 1
+    real(RP) :: sw
+    real(RP) :: Rtot
+    real(RP) :: wgt_up, wgt_bt
 
-    integer :: k, i, j, n, iq, ierr
+    integer :: step_fixed = 1
+    integer :: bottom, upper
+    integer :: QA_NCM = 1
+    integer :: dims3p1
+
+    integer :: k, i, j, n
+    integer :: kk, kks, kke
+    integer :: iq, ierr
     integer :: nt
-    logical :: do_read
+    logical :: do_read, lack_of_val
     !---------------------------------------------------------------------------
 
     nt = end_step - start_step + 1
+    dims3p1 = dims(3) + 1
 
     if( myrank == PRC_master ) then
        do_read = .true.
@@ -1787,50 +1798,45 @@ contains
        allocate( read4D ( dims(3), dims(1), dims(2), nt ) )
     endif
 
-    allocate( lon_org(           dims(1), dims(2), start_step:end_step ) )
-    allocate( lat_org(           dims(1), dims(2), start_step:end_step ) )
-    allocate( hgt_org( dims(3),  dims(1), dims(2), start_step:end_step ) )
+    allocate( lon_org(           dims(1), dims(2), step_fixed ) )
+    allocate( lat_org(           dims(1), dims(2), step_fixed ) )
+    allocate( hgt_org( dims(3),  dims(1), dims(2), step_fixed ) )
+    allocate( hgt_op1( dims3p1,  dims(1), dims(2), step_fixed ) )
 
     allocate( tsfc_org(          dims(1), dims(2), start_step:end_step ) )
     allocate( psfc_org(          dims(1), dims(2), start_step:end_step ) )
     allocate( qsfc_org(          dims(1), dims(2), start_step:end_step, QA_NCM) )
     allocate( velx_org( dims(3), dims(1), dims(2), start_step:end_step ) )
     allocate( vely_org( dims(3), dims(1), dims(2), start_step:end_step ) )
-    allocate( temp_org( dims(3), dims(1), dims(2), start_step:end_step ) )
-    allocate( pres_org( dims(3), dims(1), dims(2), start_step:end_step ) )
+    allocate( temp_org( dims3p1, dims(1), dims(2), start_step:end_step ) )
+    allocate( pres_org( dims3p1, dims(1), dims(2), start_step:end_step ) )
     allocate( qtrc_org( dims(3), dims(1), dims(2), start_step:end_step, QA_NCM) )
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[realinput]/Categ[InputNICAM]'
 
+    ! normal vertical grid arrangement
     if( do_read ) then
-       call FileRead( read1DX(:), "ms_pres", "lon", start_step, 1, single=.true. )
+       call FileRead( read1DX(:), "ms_pres", "lon", step_fixed, 1, single=.true. )
        do j = 1, dims(2)
-          lon_org (:,j,start_step)  = read1DX(:) * D2R
+          lon_org (:,j,step_fixed)  = read1DX(:) * D2R
        enddo
 
-       call FileRead( read1DY(:), "ms_pres", "lat", start_step, 1, single=.true. )
+       call FileRead( read1DY(:), "ms_pres", "lat", step_fixed, 1, single=.true. )
        do i = 1, dims(1)
-          lat_org (i,:,start_step)  = read1DY(:) * D2R
+          lat_org (i,:,step_fixed)  = read1DY(:) * D2R
        enddo
 
-       call FileRead( read1DZ(:), "ms_pres", "lev", start_step, 1, single=.true. )
+       call FileRead( read1DZ(:), "ms_pres", "lev", step_fixed, 1, single=.true. )
        do j = 1, dims(2)
        do i = 1, dims(1)
-          hgt_org(:,i,j,start_step) = read1DZ(:)
+          hgt_org(:,i,j,step_fixed) = read1DZ(:)
        end do
        end do
-
-       ! time copy
-       do n = start_step+1, end_step
-          lon_org (  :,:,n) = lon_org (  :,:,start_step)
-          lat_org (  :,:,n) = lat_org (  :,:,start_step)
-          hgt_org (:,:,:,n) = hgt_org (:,:,:,start_step)
-       enddo
     endif
-    call COMM_bcast( lat_org (:,:,:),                 dims(2), dims(3), nt )
-    call COMM_bcast( lon_org (:,:,:),                 dims(2), dims(3), nt )
-    call COMM_bcast( hgt_org (:,:,:,:),      dims(1), dims(2), dims(3), nt )
+    call COMM_bcast( lat_org (:,:,:),                 dims(1), dims(2), step_fixed )
+    call COMM_bcast( lon_org (:,:,:),                 dims(1), dims(2), step_fixed )
+    call COMM_bcast( hgt_org (:,:,:,:),      dims(3), dims(1), dims(2), step_fixed )
 
     call latlonz_interporation_fact( hfact   (:,:,:),           & ! [OUT]
                                      vfact   (:,:,:,:,:),       & ! [OUT]
@@ -1844,62 +1850,15 @@ contains
                                      lat_org (:,:,:),           & ! [IN]
                                      lon_org (:,:,:),           & ! [IN]
                                      dims(3), dims(1), dims(2), & ! [IN]
-                                     start_step                 ) ! [IN]
-    deallocate( lon_org  )
-    deallocate( lat_org  )
+                                     step_fixed                 ) ! [IN]
     deallocate( hgt_org  )
 
     if( do_read ) then
-       call ExternalFileRead( read4D(:,:,:,:), "ms_pres", "ms_pres", start_step, end_step, myrank, iNICAM, single=.true. )
-       pres_org(:,:,:,:) = real( read4D(:,:,:,:), kind=RP )
-    endif
-    call COMM_bcast( pres_org(:,:,:,:),      dims(1), dims(2), dims(3), nt )
-
-    do n = start_step, end_step
-    do j = JS-1, JE+1
-    do i = IS-1, IE+1
-    do k = KS-1, KE+1
-       pres(k,i,j,n) = pres_org(kgrd(k,i,j,1,1),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,1) &
-                     + pres_org(kgrd(k,i,j,2,1),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,1) &
-                     + pres_org(kgrd(k,i,j,3,1),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,1) &
-                     + pres_org(kgrd(k,i,j,1,2),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,2) &
-                     + pres_org(kgrd(k,i,j,2,2),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,2) &
-                     + pres_org(kgrd(k,i,j,3,2),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,2)
-    end do
-    end do
-    end do
-    end do
-    deallocate( pres_org )
-
-    if( do_read ) then
-       ! [scale-offset]
-       call ExternalFileReadOffset( read4D(:,:,:,:), "ms_tem", "ms_tem", start_step, end_step, myrank, iNICAM, single=.true. )
-       temp_org(:,:,:,:) = real( read4D(:,:,:,:), kind=RP )
-    endif
-    call COMM_bcast( temp_org(:,:,:,:),      dims(1), dims(2), dims(3), nt )
-
-    do n = start_step, end_step
-    do j = JS-1, JE+1
-    do i = IS-1, IE+1
-    do k = KS-1, KE+1
-       temp(k,i,j,n) = temp_org(kgrd(k,i,j,1,1),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,1) &
-                     + temp_org(kgrd(k,i,j,2,1),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,1) &
-                     + temp_org(kgrd(k,i,j,3,1),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,1) &
-                     + temp_org(kgrd(k,i,j,1,2),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,2) &
-                     + temp_org(kgrd(k,i,j,2,2),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,2) &
-                     + temp_org(kgrd(k,i,j,3,2),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,2)
-    end do
-    end do
-    end do
-    end do
-    deallocate( temp_org )
-
-    if( do_read ) then
-       ! [scale-offset]
+       !> [scale-offset]
        call ExternalFileReadOffset( read4D(:,:,:,:), "ms_u", "ms_u", start_step, end_step, myrank, iNICAM, single=.true. )
        velx_org(:,:,:,:) = real( read4D(:,:,:,:), kind=RP )
     endif
-    call COMM_bcast( velx_org(:,:,:,:),      dims(1), dims(2), dims(3), nt )
+    call COMM_bcast( velx_org(:,:,:,:),      dims(3), dims(1), dims(2), nt )
 
     do n = start_step, end_step
     do j = JS-1, JE+1
@@ -1918,11 +1877,11 @@ contains
     deallocate( velx_org )
 
     if( do_read ) then
-       ! [scale-offset]
+       !> [scale-offset]
        call ExternalFileReadOffset( read4D(:,:,:,:), "ms_v", "ms_v", start_step, end_step, myrank, iNICAM, single=.true. )
        vely_org(:,:,:,:) = real( read4D(:,:,:,:), kind=RP )
     endif
-    call COMM_bcast( vely_org(:,:,:,:),      dims(1), dims(2), dims(3), nt )
+    call COMM_bcast( vely_org(:,:,:,:),      dims(3), dims(1), dims(2), nt )
 
     do n = start_step, end_step
     do j = JS-1, JE+1
@@ -1940,15 +1899,27 @@ contains
     end do
     deallocate( vely_org )
 
-    velz(:,:,:,:)   = 0.0_RP ! cold initialize for vertical velocity
+    velz(:,:,:,:)   = 0.0_RP !> cold initialize for vertical velocity
 
     if( do_read ) then
        call ExternalFileRead( read4D(:,:,:,:), "ms_qv", "ms_qv", start_step, end_step, myrank, iNICAM, single=.true. )
        qtrc_org(:,:,:,:,I_QV) = real( read4D(:,:,:,:), kind=RP )
-    endif
-    call COMM_bcast( qtrc_org(:,:,:,:,I_QV), dims(1), dims(2), dims(3), nt )
 
-    qtrc(:,:,:,:,:) = 0.0_RP ! cold initialize for hydrometeor
+       do n = start_step, end_step
+       do j = 1, dims(2)
+       do i = 1, dims(1)
+       do k = 1, dims(3)
+          !> --fix negative value
+          sw = sign(0.5_RP, qtrc_org(k,i,j,n,I_QV)) + 0.5_RP
+          qtrc_org(k,i,j,n,I_QV) = qtrc_org(k,i,j,n,I_QV) * sw
+       enddo
+       enddo
+       enddo
+       enddo
+    endif
+    call COMM_bcast( qtrc_org(:,:,:,:,I_QV), dims(3), dims(1), dims(2), nt )
+
+    qtrc(:,:,:,:,:) = 0.0_RP !> cold initialize for hydrometeor
     do n = start_step, end_step
     do j = JS-1, JE+1
     do i = IS-1, IE+1
@@ -1965,6 +1936,233 @@ contains
     end do
     deallocate( qtrc_org )
 
+    if( do_read ) then
+       !> [scale-offset]
+       call ExternalFileReadOffset( read3DT(:,:,:,:), "ss_slp", "ss_slp", start_step, end_step, myrank, iNICAM, single=.true. )
+       psfc_org(:,:,:) = real( read3DT(1,:,:,:), kind=RP )
+
+       call ExternalFileRead( read3DT(:,:,:,:), "ss_t2m", "ss_t2m", start_step, end_step, myrank, iNICAM, single=.true. )
+       tsfc_org(:,:,:) = real( read3DT(1,:,:,:), kind=RP )
+
+       call ExternalFileRead( read3DT(:,:,:,:), "ss_q2m", "ss_q2m", start_step, end_step, myrank, iNICAM, single=.true. )
+       qsfc_org(:,:,:,I_QV) = real( read3DT(1,:,:,:), kind=RP )
+    endif
+    call COMM_bcast( psfc_org(:,:,:),                 dims(1), dims(2), nt )
+    call COMM_bcast( tsfc_org(:,:,:),                 dims(1), dims(2), nt )
+    call COMM_bcast( qsfc_org(:,:,:,I_QV),            dims(1), dims(2), nt )
+
+    do n = start_step, end_step
+    do j = JS-1, JE+1
+    do i = IS-1, IE+1
+       pres_sfc(1,i,j,n) = psfc_org(igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) &
+                         + psfc_org(igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) &
+                         + psfc_org(igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3)
+
+       temp_sfc(1,i,j,n) = tsfc_org(igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) &
+                         + tsfc_org(igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) &
+                         + tsfc_org(igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3)
+
+       !> QTRC_sfc are set zero, except for QV; set q2.
+       qtrc_sfc(1,i,j,n,:)    = 0.0_RP
+       qtrc_sfc(1,i,j,n,I_QV) = qsfc_org(igrd(i,j,1),jgrd(i,j,1),n,I_QV) * hfact(i,j,1) &
+                              + qsfc_org(igrd(i,j,2),jgrd(i,j,2),n,I_QV) * hfact(i,j,2) &
+                              + qsfc_org(igrd(i,j,3),jgrd(i,j,3),n,I_QV) * hfact(i,j,3)
+       sw = sign(0.5_RP, qtrc_sfc(1,i,j,n,I_QV)) + 0.5_RP
+       qtrc_sfc(1,i,j,n,I_QV) = qtrc_sfc(1,i,j,n,I_QV) * sw !> --fix negative value
+
+       call THERMODYN_pott( pott_sfc(1,i,j,n),  & ! [OUT]
+                            temp_sfc(1,i,j,n),  & ! [IN]
+                            pres_sfc(1,i,j,n),  & ! [IN]
+                            qtrc_sfc(1,i,j,n,:) ) ! [IN]
+    end do
+    end do
+    end do
+
+    ! vertical grid arrangement combined with surface
+    if( do_read ) then
+       do j = 1, dims(2)
+       do i = 1, dims(1)
+          hgt_op1(1,i,j,step_fixed) = 0.0_RP !bottom level is 0 [m]
+          do k = 2, dims3p1
+             hgt_op1(k,i,j,step_fixed) = read1DZ(k-1)
+          enddo
+       end do
+       end do
+    endif
+    call COMM_bcast( hgt_op1(:,:,:,:), dims3p1, dims(1), dims(2), step_fixed )
+
+    call latlonz_interporation_fact( hfact   (:,:,:),           & ! [OUT]
+                                     vfact   (:,:,:,:,:),       & ! [OUT]
+                                     kgrd    (:,:,:,:,:),       & ! [OUT]
+                                     igrd    (:,:,:),           & ! [OUT]
+                                     jgrd    (:,:,:),           & ! [OUT]
+                                     CZ      (:,:,:),           & ! [IN]
+                                     LAT     (:,:),             & ! [IN]
+                                     LON     (:,:),             & ! [IN]
+                                     hgt_op1 (:,:,:,:),         & ! [IN]
+                                     lat_org (:,:,:),           & ! [IN]
+                                     lon_org (:,:,:),           & ! [IN]
+                                     dims3p1, dims(1), dims(2), & ! [IN]
+                                     step_fixed                 ) ! [IN]
+
+    if( do_read ) then
+       call ExternalFileRead( read4D(:,:,:,:), "ms_pres", "ms_pres", start_step, end_step, myrank, iNICAM, single=.true. )
+       pres_org(1,:,:,:) = psfc_org(:,:,:)
+       do n = start_step, end_step
+       do j = 1, dims(2)
+       do i = 1, dims(1)
+       do k = 2, dims3p1
+          pres_org(k,i,j,n) = real( read4D(k-1,i,j,n), kind=RP )
+       enddo
+       enddo
+       enddo
+       enddo
+
+       ! interpolate using SLP (fill lacked data)
+       do n = start_step, end_step
+       do j = 1, dims(2)
+       do i = 1, dims(1)
+          lack_of_val = .false.
+
+          do k = 2, dims3p1
+             if ( pres_org(k,i,j,n) <= 0.0_RP ) then
+                if ( .NOT. lack_of_val ) kks = k
+                kke = k
+                lack_of_val = .true.
+             endif
+          enddo
+
+          bottom = 1
+          upper  = kke + 1
+          if ( lack_of_val ) then
+             do k = kks, kke
+                wgt_bt = (hgt_op1(upper,i,j,1) - hgt_op1(k,     i,j,1)) / ((hgt_op1(upper,i,j,1) - hgt_op1(bottom,i,j,1)))
+                wgt_up = (hgt_op1(k,    i,j,1) - hgt_op1(bottom,i,j,1)) / ((hgt_op1(upper,i,j,1) - hgt_op1(bottom,i,j,1)))
+                pres_org(k,i,j,n) = exp( log(pres_org(bottom,i,j,n))*wgt_bt + log(pres_org(kke+1,i,j,n))*wgt_up )
+             enddo
+          endif
+       enddo
+       enddo
+       enddo
+    endif
+    call COMM_bcast( pres_org(:,:,:,:), dims3p1, dims(1), dims(2), nt )
+
+    do n = start_step, end_step
+    do j = JS-1, JE+1
+    do i = IS-1, IE+1
+    do k = KS-1, KE+1
+       pres(k,i,j,n) = pres_org(kgrd(k,i,j,1,1),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,1) &
+                     + pres_org(kgrd(k,i,j,2,1),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,1) &
+                     + pres_org(kgrd(k,i,j,3,1),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,1) &
+                     + pres_org(kgrd(k,i,j,1,2),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,2) &
+                     + pres_org(kgrd(k,i,j,2,2),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,2) &
+                     + pres_org(kgrd(k,i,j,3,2),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,2)
+    end do
+    end do
+    end do
+    end do
+    deallocate( pres_org )
+
+    ! vertical grid arrangement combined with 2m height
+    if( do_read ) then
+       do j = 1, dims(2)
+       do i = 1, dims(1)
+          hgt_op1(1,i,j,step_fixed) = 2.0_RP !bottom level is 2 [m]
+          do k = 2, dims3p1
+             hgt_op1(k,i,j,step_fixed) = read1DZ(k-1)
+          enddo
+       end do
+       end do
+    endif
+    call COMM_bcast( hgt_op1(:,:,:,:), dims3p1, dims(1), dims(2), step_fixed )
+
+    call latlonz_interporation_fact( hfact   (:,:,:),           & ! [OUT]
+                                     vfact   (:,:,:,:,:),       & ! [OUT]
+                                     kgrd    (:,:,:,:,:),       & ! [OUT]
+                                     igrd    (:,:,:),           & ! [OUT]
+                                     jgrd    (:,:,:),           & ! [OUT]
+                                     CZ      (:,:,:),           & ! [IN]
+                                     LAT     (:,:),             & ! [IN]
+                                     LON     (:,:),             & ! [IN]
+                                     hgt_op1 (:,:,:,:),         & ! [IN]
+                                     lat_org (:,:,:),           & ! [IN]
+                                     lon_org (:,:,:),           & ! [IN]
+                                     dims3p1, dims(1), dims(2), & ! [IN]
+                                     step_fixed                 ) ! [IN]
+    deallocate( lon_org  )
+    deallocate( lat_org  )
+
+    if( do_read ) then
+       !> [scale-offset]
+       call ExternalFileReadOffset( read4D(:,:,:,:), "ms_tem", "ms_tem", start_step, end_step, myrank, iNICAM, single=.true. )
+       temp_org(1,:,:,:) = tsfc_org(:,:,:)
+       do n = start_step, end_step
+       do j = 1, dims(2)
+       do i = 1, dims(1)
+       do k = 2, dims3p1
+          temp_org(k,i,j,n) = real( read4D(k-1,i,j,n), kind=RP )
+       enddo
+       enddo
+       enddo
+       enddo
+
+       ! interpolate using T2m (fill lacked data)
+       do n = start_step, end_step
+       do j = 1, dims(2)
+       do i = 1, dims(1)
+          lack_of_val = .false.
+
+          do k = 2, dims3p1
+             if ( temp_org(k,i,j,n) <= 0.0_RP ) then
+                if ( .NOT. lack_of_val ) kks = k
+                kke = k
+                lack_of_val = .true.
+             endif
+          enddo
+
+          bottom = 1
+          upper  = kke + 1
+          if ( lack_of_val ) then
+             do k = kks, kke
+                wgt_bt = (hgt_op1(upper,i,j,1) - hgt_op1(k,     i,j,1)) / ((hgt_op1(upper,i,j,1) - hgt_op1(bottom,i,j,1)))
+                wgt_up = (hgt_op1(k,    i,j,1) - hgt_op1(bottom,i,j,1)) / ((hgt_op1(upper,i,j,1) - hgt_op1(bottom,i,j,1)))
+                temp_org(k,i,j,n) = temp_org(bottom,i,j,n)*wgt_bt + temp_org(kke+1,i,j,n)*wgt_up
+             enddo
+          endif
+       enddo
+       enddo
+       enddo
+    endif
+    call COMM_bcast( temp_org(:,:,:,:), dims3p1, dims(1), dims(2), nt )
+
+    do n = start_step, end_step
+    do j = JS-1, JE+1
+    do i = IS-1, IE+1
+    do k = KS-1, KE+1
+       temp(k,i,j,n) = temp_org(kgrd(k,i,j,1,1),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,1) &
+                     + temp_org(kgrd(k,i,j,2,1),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,1) &
+                     + temp_org(kgrd(k,i,j,3,1),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,1) &
+                     + temp_org(kgrd(k,i,j,1,2),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,2) &
+                     + temp_org(kgrd(k,i,j,2,2),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,2) &
+                     + temp_org(kgrd(k,i,j,3,2),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,2)
+    end do
+    end do
+    end do
+    end do
+    deallocate( temp_org )
+    deallocate( psfc_org )
+    deallocate( tsfc_org )
+    deallocate( qsfc_org )
+    deallocate( hgt_op1  )
+
+    if( do_read ) then
+       deallocate( read1DX )
+       deallocate( read1DY )
+       deallocate( read1DZ )
+       deallocate( read3DT )
+       deallocate( read4D  )
+    endif
+
     do n = start_step, end_step
     do j = JS-1, JE+1
     do i = IS-1, IE+1
@@ -1978,71 +2176,19 @@ contains
     end do
     end do
 
-    if( do_read ) then
-       ! [scale-offset]
-       call ExternalFileReadOffset( read3DT(:,:,:,:), "ss_slp", "ss_slp", start_step, end_step, myrank, iNICAM, single=.true. )
-       psfc_org(:,:,:) = real( read3DT(1,:,:,:), kind=RP )
-
-       call ExternalFileRead( read3DT(:,:,:,:), "ss_t2m", "ss_t2m", start_step, end_step, myrank, iNICAM, single=.true. )
-       tsfc_org(:,:,:) = real( read3DT(1,:,:,:), kind=RP )
-
-       call ExternalFileRead( read3DT(:,:,:,:), "ss_q2m", "ss_q2m", start_step, end_step, myrank, iNICAM, single=.true. )
-       qsfc_org(:,:,:,I_QV) = real( read3DT(1,:,:,:), kind=RP )
-    endif
-    call COMM_bcast( psfc_org(:,:,:),                 dims(2), dims(3), nt )
-    call COMM_bcast( tsfc_org(:,:,:),                 dims(2), dims(3), nt )
-    call COMM_bcast( qsfc_org(:,:,:,I_QV),            dims(2), dims(3), nt )
-
-    if( do_read ) then
-       deallocate( read1DX )
-       deallocate( read1DY )
-       deallocate( read1DZ )
-       deallocate( read3DT )
-       deallocate( read4D  )
-    endif
-
     do n = start_step, end_step
-    do j = JS-1, JE+1
-    do i = IS-1, IE+1
-       pres_sfc(1,i,j,n) = psfc_org(igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) &
-                         + psfc_org(igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) &
-                         + psfc_org(igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3)
-
-       temp_sfc(1,i,j,n) = tsfc_org(igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) &
-                         + tsfc_org(igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) &
-                         + tsfc_org(igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3)
-
-       ! interpolate QV (=Q2) only: other QTRC are set zero
-       qtrc_sfc(1,i,j,n,:)    = 0.0_RP
-       qtrc_sfc(1,i,j,n,I_QV) = qsfc_org(igrd(i,j,1),jgrd(i,j,1),n,I_QV) * hfact(i,j,1) &
-                              + qsfc_org(igrd(i,j,2),jgrd(i,j,2),n,I_QV) * hfact(i,j,2) &
-                              + qsfc_org(igrd(i,j,3),jgrd(i,j,3),n,I_QV) * hfact(i,j,3)
-
-       call THERMODYN_pott( pott_sfc(1,i,j,n),  & ! [OUT]
-                            temp_sfc(1,i,j,n),  & ! [IN]
-                            pres_sfc(1,i,j,n),  & ! [IN]
-                            qtrc_sfc(1,i,j,n,:) ) ! [IN]
-    end do
-    end do
-    end do
-    deallocate( psfc_org )
-    deallocate( tsfc_org )
-    deallocate( qsfc_org )
-
-    do n = start_step, end_step
-       ! make density in moist condition
+       !> make density in moist condition
        call HYDROSTATIC_buildrho( dens    (:,:,:,n),      & ! [OUT]
-                                  temp    (:,:,:,n),      & ! [OUT]
-                                  pres    (:,:,:,n),      & ! [OUT]
+                                  temp    (:,:,:,n),      & ! [OUT] not-used
+                                  pres    (:,:,:,n),      & ! [OUT] not-used
                                   pott    (:,:,:,n),      & ! [IN]
                                   qtrc    (:,:,:,n,I_QV), & ! [IN]
                                   qtrc    (:,:,:,n,I_QC), & ! [IN]
-                                  temp_sfc(:,:,:,n),      & ! [OUT]
+                                  temp_sfc(:,:,:,n),      & ! [OUT] not-used
                                   pres_sfc(:,:,:,n),      & ! [IN]
                                   pott_sfc(:,:,:,n),      & ! [IN]
                                   qtrc_sfc(:,:,:,n,I_QV), & ! [IN]
                                   qtrc_sfc(:,:,:,n,I_QC)  ) ! [IN]
-
        call COMM_vars8( dens(:,:,:,n), 1 )
        call COMM_wait ( dens(:,:,:,n), 1 )
     end do
@@ -2905,9 +3051,9 @@ contains
        enddo
        enddo
     endif
-    call COMM_bcast( lat_org (:,:,:),            dims(2), dims(3), nt )
-    call COMM_bcast( lon_org (:,:,:),            dims(2), dims(3), nt )
-    call COMM_bcast( lz_org  (:,:,:,:), dims(7), dims(2), dims(3), nt )
+    call COMM_bcast( lat_org (:,:,:),            dims(1), dims(2), nt )
+    call COMM_bcast( lon_org (:,:,:),            dims(1), dims(2), nt )
+    call COMM_bcast( lz_org  (:,:,:,:), dims(7), dims(1), dims(2), nt )
 
     do j = 1, JA
     do i = 1, IA
@@ -2959,11 +3105,11 @@ contains
        deallocate( read4D  )
     endif
 
-    call COMM_bcast( tg_org  (:,:,:),   dims(7), dims(2), dims(3)     )
-    call COMM_bcast( strg_org(:,:,:),   dims(7), dims(2), dims(3)     )
-    call COMM_bcast( lst_org (:,:),              dims(2), dims(3)     )
-    call COMM_bcast( sst_org (:,:),              dims(2), dims(3)     )
-    !call COMM_bcast( ice_org (:,:),              dims(2), dims(3)     )
+    call COMM_bcast( tg_org  (:,:,:),   dims(7), dims(1), dims(2)     )
+    call COMM_bcast( strg_org(:,:,:),   dims(7), dims(1), dims(2)     )
+    call COMM_bcast( lst_org (:,:),              dims(1), dims(2)     )
+    call COMM_bcast( sst_org (:,:),              dims(1), dims(2)     )
+    !call COMM_bcast( ice_org (:,:),              dims(1), dims(2)     )
 
     ! cold start approach
     skint_org(:,:)   = lst_org(:,:)
