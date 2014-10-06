@@ -223,11 +223,15 @@ clean:
 
 
 .SUFFIXES:
-.SUFFIXES: .o .f90 .c
+.SUFFIXES: .o .f90 .c .mod
 
 $(BUILD_DIR)/%.o : %.f90
 	$(FC) $(FFLAGS) $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(VERSION)\" -I$(BUILD_DIR) -I$(DCUTILSDIR) -I$(GTOOLDIR) -I$(MODDIR) -I$(SCALELIBDIR)/include -I$(SCALELESDIR)/include $(PAPI_INCLUDE) -o $@ -c $< $(MODDIROPT) $(BUILD_DIR)
 $(BUILD_DIR)/%.o : %.c
 	$(CC) $(CFLAGS) -o $@ -c $< $(MODDIROPT) $(BUILD_DIR)
+
+%.mod: %.f90
+	make $(patsubst %.f90,%.o,$<)
+
 
 .PHONY: clean dcutils gtool scalelib
