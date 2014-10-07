@@ -847,6 +847,15 @@ contains
       geof_org(:,:,:,n) = geof_org(:,:,:,1)
     end do
 
+    call check_domain_compatibility( lon_org(:,:,1),  lat_org(:,:,1),  geoh_org(:,:,:,1), &
+                                     LON(:,:),        LAT(:,:),        CZ(:,:,:) )
+    call check_domain_compatibility( lonu_org(:,:,1), latu_org(:,:,1), geoh_org(:,:,:,1), &
+                                     LONX(:,:),       LAT(:,:),        CZ(:,:,:), skip_z=.true. )
+    call check_domain_compatibility( lonv_org(:,:,1), latv_org(:,:,1), geoh_org(:,:,:,1), &
+                                     LON(:,:),        LATY(:,:),       CZ(:,:,:), skip_z=.true. )
+    call check_domain_compatibility( lon_org(:,:,1),  lat_org(:,:,1),  geof_org(:,:,:,1), &
+                                     LON(:,:),        LAT(:,:),        FZ(:,:,:), skip_x=.true., skip_y=.true. )
+
     ! for vector (w) points
     call latlonz_interporation_fact( hfact   (:,:,:),     & ! [OUT]
                                      vfact   (:,:,:,:,:), & ! [OUT]
@@ -1467,6 +1476,15 @@ contains
     end do
     end do
 
+    call check_domain_compatibility( lon_org(:,:,1),  lat_org(:,:,1),  geoh_org(:,:,:,1), &
+                                     LON(:,:),        LAT(:,:),        CZ(:,:,:) )
+    call check_domain_compatibility( lonu_org(:,:,1), latu_org(:,:,1), geoh_org(:,:,:,1), &
+                                     LONX(:,:),       LAT(:,:),        CZ(:,:,:), skip_z=.true. )
+    call check_domain_compatibility( lonv_org(:,:,1), latv_org(:,:,1), geoh_org(:,:,:,1), &
+                                     LON(:,:),        LATY(:,:),       CZ(:,:,:), skip_z=.true. )
+    call check_domain_compatibility( lon_org(:,:,1),  lat_org(:,:,1),  geof_org(:,:,:,1), &
+                                     LON(:,:),        LAT(:,:),        FZ(:,:,:), skip_x=.true., skip_y=.true. )
+
     do n = ts, te !--- time loop
 
        ! for vector (w) points
@@ -1837,6 +1855,15 @@ contains
     call COMM_bcast( lat_org (:,:,:),                 dims(1), dims(2), step_fixed )
     call COMM_bcast( lon_org (:,:,:),                 dims(1), dims(2), step_fixed )
     call COMM_bcast( hgt_org (:,:,:,:),      dims(3), dims(1), dims(2), step_fixed )
+
+    call check_domain_compatibility( lon_org(:,:,1),  lat_org(:,:,1),  hgt_org(:,:,:,1), &
+                                     LON(:,:),        LAT(:,:),        CZ(:,:,:) )
+    call check_domain_compatibility( lon_org(:,:,1),  lat_org(:,:,1),  hgt_org(:,:,:,1), &
+                                     LONX(:,:),       LAT(:,:),        CZ(:,:,:), skip_y=.true., skip_z=.true. )
+    call check_domain_compatibility( lon_org(:,:,1),  lat_org(:,:,1),  hgt_org(:,:,:,1), &
+                                     LON(:,:),        LATY(:,:),       CZ(:,:,:), skip_x=.true., skip_z=.true. )
+    call check_domain_compatibility( lon_org(:,:,1),  lat_org(:,:,1),  hgt_org(:,:,:,1), &
+                                     LON(:,:),        LAT(:,:),        FZ(:,:,:), skip_x=.true., skip_y=.true. )
 
     call latlonz_interporation_fact( hfact   (:,:,:),           & ! [OUT]
                                      vfact   (:,:,:,:,:),       & ! [OUT]
@@ -3407,6 +3434,106 @@ contains
 
     return
   end subroutine diagnose_number_concentration
+
+  !-----------------------------------------------------------------------------
+  subroutine check_domain_compatibility( &
+      lon_org,     & ! (in)
+      lat_org,     & ! (in)
+      lev_org,     & ! (in)
+      lon_loc,     & ! (in)
+      lat_loc,     & ! (in)
+      lev_loc,     & ! (in)
+      skip_x,      & ! (in)
+      skip_y,      & ! (in)
+      skip_z       ) ! (in)
+    implicit none
+    real(RP), intent(in) :: lon_org(:,:)
+    real(RP), intent(in) :: lat_org(:,:)
+    real(RP), intent(in) :: lev_org(:,:,:)
+    real(RP), intent(in) :: lon_loc(:,:)
+    real(RP), intent(in) :: lat_loc(:,:)
+    real(RP), intent(in) :: lev_loc(:,:,:)
+    logical,  intent(in), optional :: skip_x
+    logical,  intent(in), optional :: skip_y
+    logical,  intent(in), optional :: skip_z
+
+    real(RP) :: max_ref, min_ref
+    real(RP) :: max_loc, min_loc
+
+    logical :: do_xdirec
+    logical :: do_ydirec
+    logical :: do_zdirec
+    !---------------------------------------------------------------------------
+
+    do_xdirec = .true.
+    if ( present(skip_x) .and. skip_x ) then
+       do_xdirec = .false.
+    endif
+
+    do_ydirec = .true.
+    if ( present(skip_y) .and. skip_y ) then
+       do_ydirec = .false.
+    endif
+
+    do_zdirec = .true.
+    if ( present(skip_z) .and. skip_z ) then
+       do_zdirec = .false.
+    endif
+
+    if ( do_xdirec ) then
+       max_ref = maxval( lon_org(:,:) )
+       min_ref = minval( lon_org(:,:) )
+       max_loc = maxval( lon_loc(:,:) )
+       min_loc = minval( lon_loc(:,:) )
+
+       if ( max_ref < max_loc .or. min_ref > min_loc ) then
+          write(*,*) 'xxx ERROR: REQUESTED DOMAIN IS TOO MUCH BROAD'
+          write(*,*) 'xxx -- LONGITUDINAL direction over the limit'
+          write(*,*) 'xxx -- reference max: ', max_ref
+          write(*,*) 'xxx -- reference min: ', min_ref
+          write(*,*) 'xxx --     local max: ', max_loc
+          write(*,*) 'xxx --     local min: ', min_loc
+          call PRC_MPIstop
+       endif
+    endif
+
+    if ( do_ydirec ) then
+       max_ref = maxval( lat_org(:,:) )
+       min_ref = minval( lat_org(:,:) )
+       max_loc = maxval( lat_loc(:,:) )
+       min_loc = minval( lat_loc(:,:) )
+
+       if ( max_ref < max_loc .or. min_ref > min_loc ) then
+          write(*,*) 'xxx ERROR: REQUESTED DOMAIN IS TOO MUCH BROAD'
+          write(*,*) 'xxx -- LATITUDINAL direction over the limit'
+          write(*,*) 'xxx -- reference max: ', max_ref
+          write(*,*) 'xxx -- reference min: ', min_ref
+          write(*,*) 'xxx --     local max: ', max_loc
+          write(*,*) 'xxx --     local min: ', min_loc
+          call PRC_MPIstop
+       endif
+    endif
+
+    if ( do_zdirec ) then
+       max_ref = maxval( lev_org(:,:,:) )
+       !min_ref = minval( lev_org(:,:,:) )
+       max_loc = maxval( lev_loc(:,:,:) ) ! HALO + 1
+       !min_loc = minval( lev_loc(3:KA,:,:) ) ! HALO + 1
+
+       if ( max_ref < max_loc ) then
+       !if ( max_ref < max_loc .or. min_ref > min_loc ) then
+          write(*,*) 'xxx ERROR: REQUESTED DOMAIN IS TOO MUCH BROAD'
+          write(*,*) 'xxx -- VERTICAL direction over the limit'
+          write(*,*) 'xxx -- reference max: ', max_ref
+          !write(*,*) 'xxx -- reference min: ', min_ref
+          write(*,*) 'xxx --     local max: ', max_loc
+          !write(*,*) 'xxx --     local min: ', min_loc
+          call PRC_MPIstop
+       endif
+    endif
+
+    return
+  end subroutine check_domain_compatibility
 
   !-----------------------------------------------------------------------------
   ! Haversine Formula (from R.W. Sinnott, "Virtues of the Haversine",
