@@ -326,6 +326,8 @@ contains
     real(RP) :: tflx_lb(KA,IA,JA,3)
     real(RP) :: mflx_lb_total
     real(RP) :: allmflx_lb_total
+    real(RP) :: mflx_lb_horizontal(KA)
+    real(RP) :: allmflx_lb_horizontal(KA,IA,JA)
 
     real(RP) :: mass_tmp(KA,IA,JA)
     real(RP) :: mass_total
@@ -851,7 +853,9 @@ contains
           end do
        end if
 
-       mflx_lb_total = 0.0_RP
+       mflx_lb_total                = 0.0_RP
+       mflx_lb_horizontal(:)        = 0.0_RP
+       allmflx_lb_horizontal(:,:,:) = 0.0_RP
 
        if ( .not. PRC_HAS_W ) then ! for western boundary
           i = IS+2
@@ -860,6 +864,8 @@ contains
             sw = sign(0.5_RP, DAMP_alpha_DENS(k,i,j) - EPS) + 0.5_RP
             mflx_lb_total = mflx_lb_total + mflx_lb(k,i-1,j,XDIR) * RCDX(i) * vol(k,i,j) &
                                           * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) * dt * sw
+            mflx_lb_horizontal(k) = mflx_lb_horizontal(k) + mflx_lb(k,i-1,j,XDIR) * RCDX(i) * vol(k,i,j) &
+                                                          * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) * dt * sw
           end do
           end do
        end if
@@ -870,6 +876,8 @@ contains
             sw = sign(0.5_RP, DAMP_alpha_DENS(k,i,j) - EPS) + 0.5_RP
             mflx_lb_total = mflx_lb_total - mflx_lb(k,i,j,XDIR) * RCDX(i) * vol(k,i,j) &
                                           * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) * dt * sw
+            mflx_lb_horizontal(k) = mflx_lb_horizontal(k) - mflx_lb(k,i,j,XDIR) * RCDX(i) * vol(k,i,j) &
+                                                          * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) * dt * sw
           end do
           end do
        end if
@@ -880,6 +888,8 @@ contains
             sw = sign(0.5_RP, DAMP_alpha_DENS(k,i,j) - EPS) + 0.5_RP
             mflx_lb_total = mflx_lb_total + mflx_lb(k,i,j-1,YDIR) * RCDY(j) * vol(k,i,j) &
                                           * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) * dt * sw
+            mflx_lb_horizontal(k) = mflx_lb_horizontal(k) + mflx_lb(k,i,j-1,YDIR) * RCDY(j) * vol(k,i,j) &
+                                                          * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) * dt * sw
           end do
           end do
        end if
@@ -890,6 +900,8 @@ contains
             sw = sign(0.5_RP, DAMP_alpha_DENS(k,i,j) - EPS) + 0.5_RP
             mflx_lb_total = mflx_lb_total - mflx_lb(k,i,j,YDIR) * RCDY(j) * vol(k,i,j) &
                                           * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) * dt * sw
+            mflx_lb_horizontal(k) = mflx_lb_horizontal(k) - mflx_lb(k,i,j,YDIR) * RCDY(j) * vol(k,i,j) &
+                                                          * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) * dt * sw
           end do
           end do
        end if
@@ -917,7 +929,6 @@ contains
                            MPI_SUM,              &
                            MPI_COMM_WORLD,       &
                            ierr                  )
-
        if( IO_L ) write(IO_FID_LOG,'(A,1x,i1,1x,2PE24.17)') 'total mflx_lb:', step, allmflx_lb_total
 
        call MPI_Allreduce( mass_total,           &
@@ -927,7 +938,6 @@ contains
                            MPI_SUM,              &
                            MPI_COMM_WORLD,       &
                            ierr                  )
-
        if( IO_L ) write(IO_FID_LOG,'(A,1x,i1,1x,2PE24.17)') 'total mass   :', step, allmass_total
 
        call MPI_Allreduce( mass_total2,          &
@@ -937,7 +947,6 @@ contains
                            MPI_SUM,              &
                            MPI_COMM_WORLD,       &
                            ierr                  )
-
        if( IO_L ) write(IO_FID_LOG,'(A,1x,i1,1x,2PE24.17)') 'total mass2  :', step, allmass_total2
 
        call MPI_Allreduce( pott_total,           &
@@ -947,7 +956,6 @@ contains
                            MPI_SUM,              &
                            MPI_COMM_WORLD,       &
                            ierr                  )
-
        if( IO_L ) write(IO_FID_LOG,'(A,1x,i1,1x,2PE24.17)') 'total pott   :', step, allpott_total
 
        call MPI_Allreduce( pott_total2,          &
@@ -957,8 +965,27 @@ contains
                            MPI_SUM,              &
                            MPI_COMM_WORLD,       &
                            ierr                  )
-
        if( IO_L ) write(IO_FID_LOG,'(A,1x,i1,1x,2PE24.17)') 'total pott2  :', step, allpott_total2
+
+       i = IS; j = JS ! dummy
+       do k = KS, KE
+          call MPI_Allreduce( mflx_lb_horizontal(k),        &
+                              allmflx_lb_horizontal(k,i,j), &
+                              1,                            &
+                              COMM_datatype,                &
+                              MPI_SUM,                      &
+                              MPI_COMM_WORLD,               &
+                              ierr                          )
+       end do
+       do j = JS+1, JE
+       do i = IS+1, IE
+       do k = KS, KE
+          allmflx_lb_horizontal(k,i,j) = allmflx_lb_horizontal(k,IS,JS)
+       end do
+       end do
+       end do
+       call HIST_in(allmflx_lb_horizontal(:,:,:), 'ALLMOM_lb_hz', 'horizontally total momentum flux from lateral boundary', &
+                                                  'kg/m2/s', dt                                                             )
 
        do j  = JS, JE
        do i  = IS, IE
