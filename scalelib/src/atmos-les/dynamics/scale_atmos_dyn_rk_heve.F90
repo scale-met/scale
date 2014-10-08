@@ -80,7 +80,7 @@ contains
   !> Runge-Kutta loop
   subroutine ATMOS_DYN_rk_heve( &
        DENS_RK, MOMZ_RK, MOMX_RK, MOMY_RK, RHOT_RK, &
-       mflx_hi,                                     &
+       mflx_hi, tflx_hi,                            &
        DENS0,   MOMZ0,   MOMX0,   MOMY0,   RHOT0,   &
        DENS,    MOMZ,    MOMX,    MOMY,    RHOT,    &
        DENS_t,  MOMZ_t,  MOMX_t,  MOMY_t,  RHOT_t,  &
@@ -131,6 +131,7 @@ contains
     real(RP), intent(out) :: RHOT_RK(KA,IA,JA)   !
 
     real(RP), intent(out) :: mflx_hi(KA,IA,JA,3) ! mass flux
+    real(RP), intent(out) :: tflx_hi(KA,IA,JA,3) ! internal energy flux
 
     real(RP), intent(in),target :: DENS0(KA,IA,JA) ! prognostic variables at previous dynamical time step
     real(RP), intent(in),target :: MOMZ0(KA,IA,JA) !
@@ -204,6 +205,8 @@ contains
 #ifndef NO_FCT_DYN
     real(RP) :: qflx_lo  (KA,IA,JA,3)
     real(RP) :: qflx_anti(KA,IA,JA,3)
+    real(RP) :: tflx_lo  (KA,IA,JA,3)
+    real(RP) :: tflx_anti(KA,IA,JA,3)
     real(RP) :: DENS0_uvw(KA,IA,JA)
     real(RP) :: DENS_uvw (KA,IA,JA)
     real(RP) :: one(KA,IA,JA)
@@ -240,11 +243,14 @@ contains
     DPRES(:,:,:) = UNDEF
 
     mflx_hi(:,:,:,:) = UNDEF
+    tflx_hi(:,:,:,:) = UNDEF
     qflx_hi(:,:,:,:) = UNDEF
 
 #ifndef NO_FCT_DYN
     qflx_lo  (:,:,:,:) = UNDEF
     qflx_anti(:,:,:,:) = UNDEF
+    tflx_lo  (:,:,:,:) = UNDEF
+    tflx_anti(:,:,:,:) = UNDEF
 #endif
 #endif
 
@@ -2044,7 +2050,7 @@ contains
           call CHECK( __LINE__, POTT(k+2,i,j) )
           call CHECK( __LINE__, num_diff(k,i,j,I_RHOT,ZDIR) )
 #endif
-          qflx_hi(k,i,j,ZDIR) = mflx_hi(k,i,j,ZDIR) &
+          tflx_hi(k,i,j,ZDIR) = mflx_hi(k,i,j,ZDIR) &
                               * ( FACT_N * ( POTT(k+1,i,j)+POTT(k  ,i,j) ) &
                                 + FACT_F * ( POTT(k+2,i,j)+POTT(k-1,i,j) ) ) & ! [{x,y,z->x,y,w}]
                               + GSQRT(k,i,j,I_XYW) * num_diff(k,i,j,I_RHOT,ZDIR)
@@ -2068,12 +2074,12 @@ contains
           call CHECK( __LINE__, POTT(KE  ,i,j) )
           call CHECK( __LINE__, num_diff(KE-1,i,j,I_RHOT,ZDIR) )
 #endif
-          qflx_hi(KS-1,i,j,ZDIR) = 0.0_RP
-          qflx_hi(KS  ,i,j,ZDIR) = mflx_hi(KS  ,i,j,ZDIR) * 0.5_RP * ( POTT(KS+1,i,j)+POTT(KS,i,j) ) &
+          tflx_hi(KS-1,i,j,ZDIR) = 0.0_RP
+          tflx_hi(KS  ,i,j,ZDIR) = mflx_hi(KS  ,i,j,ZDIR) * 0.5_RP * ( POTT(KS+1,i,j)+POTT(KS,i,j) ) &
                                  + GSQRT(KS  ,i,j,I_XYW) * num_diff(KS  ,i,j,I_RHOT,ZDIR)
-          qflx_hi(KE-1,i,j,ZDIR) = mflx_hi(KE-1,i,j,ZDIR) * 0.5_RP * ( POTT(KE,i,j)+POTT(KE-1,i,j) ) &
+          tflx_hi(KE-1,i,j,ZDIR) = mflx_hi(KE-1,i,j,ZDIR) * 0.5_RP * ( POTT(KE,i,j)+POTT(KE-1,i,j) ) &
                                  + GSQRT(KE-1,i,j,I_XYW) * num_diff(KE-1,i,j,I_RHOT,ZDIR)
-          qflx_hi(KE  ,i,j,ZDIR) = 0.0_RP
+          tflx_hi(KE  ,i,j,ZDIR) = 0.0_RP
        enddo
        enddo
 #ifdef DEBUG
@@ -2094,7 +2100,7 @@ contains
           call CHECK( __LINE__, POTT(k,i+1,j) )
           call CHECK( __LINE__, num_diff(k,i,j,I_RHOT,XDIR) )
 #endif
-          qflx_hi(k,i,j,XDIR) = mflx_hi(k,i,j,XDIR) &
+          tflx_hi(k,i,j,XDIR) = mflx_hi(k,i,j,XDIR) &
                               * ( FACT_N * ( POTT(k,i+1,j)+POTT(k,i  ,j) ) &
                                 + FACT_F * ( POTT(k,i+2,j)+POTT(k,i-1,j) ) ) & ! [{x,y,z->u,y,z}]
                               + GSQRT(k,i,j,I_UYZ) * num_diff(k,i,j,I_RHOT,XDIR)
@@ -2119,7 +2125,7 @@ contains
           call CHECK( __LINE__, POTT(k,i,j+2) )
           call CHECK( __LINE__, num_diff(k,i,j,I_RHOT,YDIR) )
 #endif
-          qflx_hi(k,i,j,YDIR) = mflx_hi(k,i,j,YDIR) &
+          tflx_hi(k,i,j,YDIR) = mflx_hi(k,i,j,YDIR) &
                               * ( FACT_N * ( POTT(k,i,j+1)+POTT(k,i,j  ) ) &
                                 + FACT_F * ( POTT(k,i,j+2)+POTT(k,i,j-1) ) ) & ! [{x,y,z->x,v,z}]
                               + GSQRT(k,i,j,I_XVZ) * num_diff(k,i,j,I_RHOT,YDIR)
@@ -2137,18 +2143,18 @@ contains
        do i = IIS, IIE
        do k = KS, KE
 #ifdef DEBUG
-          call CHECK( __LINE__, qflx_hi(k  ,i  ,j  ,ZDIR) )
-          call CHECK( __LINE__, qflx_hi(k-1,i  ,j  ,ZDIR) )
-          call CHECK( __LINE__, qflx_hi(k  ,i  ,j  ,XDIR) )
-          call CHECK( __LINE__, qflx_hi(k  ,i-1,j  ,XDIR) )
-          call CHECK( __LINE__, qflx_hi(k  ,i  ,j  ,YDIR) )
-          call CHECK( __LINE__, qflx_hi(k  ,i  ,j-1,YDIR) )
+          call CHECK( __LINE__, tflx_hi(k  ,i  ,j  ,ZDIR) )
+          call CHECK( __LINE__, tflx_hi(k-1,i  ,j  ,ZDIR) )
+          call CHECK( __LINE__, tflx_hi(k  ,i  ,j  ,XDIR) )
+          call CHECK( __LINE__, tflx_hi(k  ,i-1,j  ,XDIR) )
+          call CHECK( __LINE__, tflx_hi(k  ,i  ,j  ,YDIR) )
+          call CHECK( __LINE__, tflx_hi(k  ,i  ,j-1,YDIR) )
           call CHECK( __LINE__, RHOT_t(k,i,j) )
           call CHECK( __LINE__, RHOT0(k,i,j) )
 #endif
-          advcv = - ( qflx_hi(k,i,j,ZDIR) - qflx_hi(k-1,i  ,j  ,ZDIR) ) * RCDZ(k)
-          advch = - ( qflx_hi(k,i,j,XDIR) - qflx_hi(k  ,i-1,j  ,XDIR) ) * RCDX(i) &
-                  - ( qflx_hi(k,i,j,YDIR) - qflx_hi(k  ,i  ,j-1,YDIR) ) * RCDY(j)
+          advcv = - ( tflx_hi(k,i,j,ZDIR) - tflx_hi(k-1,i  ,j  ,ZDIR) ) * RCDZ(k)
+          advch = - ( tflx_hi(k,i,j,XDIR) - tflx_hi(k  ,i-1,j  ,XDIR) ) * RCDX(i) &
+                  - ( tflx_hi(k,i,j,YDIR) - tflx_hi(k  ,i  ,j-1,YDIR) ) * RCDY(j)
           RHOT_RK(k,i,j) = RHOT0(k,i,j) &
                          + dtrk * ( ( advcv + advch ) / GSQRT(k,i,j,I_XYZ) &
                                   + RHOT_t(k,i,j) )
@@ -2199,7 +2205,7 @@ contains
              call CHECK( __LINE__, POTT(k  ,i,j) )
              call CHECK( __LINE__, POTT(k+1,i,j) )
 #endif
-             qflx_lo(k,i,j,ZDIR) = 0.5_RP * (     mflx_hi(k,i,j,ZDIR)  * ( POTT(k+1,i,j)+POTT(k,i,j) ) &
+             tflx_lo(k,i,j,ZDIR) = 0.5_RP * (     mflx_hi(k,i,j,ZDIR)  * ( POTT(k+1,i,j)+POTT(k,i,j) ) &
                                             - abs(mflx_hi(k,i,j,ZDIR)) * ( POTT(k+1,i,j)-POTT(k,i,j) ) )
           enddo
           enddo
@@ -2208,8 +2214,8 @@ contains
           !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           do j = JJS-1, JJE+1
           do i = IIS-1, IIE+1
-             qflx_lo(KS-1,i,j,ZDIR) = 0.0_RP
-             qflx_lo(KE  ,i,j,ZDIR) = 0.0_RP
+             tflx_lo(KS-1,i,j,ZDIR) = 0.0_RP
+             tflx_lo(KE  ,i,j,ZDIR) = 0.0_RP
           enddo
           enddo
 
@@ -2227,7 +2233,7 @@ contains
              call CHECK( __LINE__, POTT(k,i  ,j) )
              call CHECK( __LINE__, POTT(k,i+1,j) )
 #endif
-             qflx_lo(k,i,j,XDIR) = 0.5_RP * (     mflx_hi(k,i,j,XDIR)  * ( POTT(k,i+1,j)+POTT(k,i,j) ) &
+             tflx_lo(k,i,j,XDIR) = 0.5_RP * (     mflx_hi(k,i,j,XDIR)  * ( POTT(k,i+1,j)+POTT(k,i,j) ) &
                                             - abs(mflx_hi(k,i,j,XDIR)) * ( POTT(k,i+1,j)-POTT(k,i,j) ) )
           enddo
           enddo
@@ -2246,7 +2252,7 @@ contains
              call CHECK( __LINE__, POTT(k,i,j  ) )
              call CHECK( __LINE__, POTT(k,i,j+1) )
 #endif
-             qflx_lo(k,i,j,YDIR) = 0.5_RP * (     mflx_hi(k,i,j,YDIR)  * ( POTT(k,i,j+1)+POTT(k,i,j) ) &
+             tflx_lo(k,i,j,YDIR) = 0.5_RP * (     mflx_hi(k,i,j,YDIR)  * ( POTT(k,i,j+1)+POTT(k,i,j) ) &
                                             - abs(mflx_hi(k,i,j,YDIR)) * ( POTT(k,i,j+1)-POTT(k,i,j) ) )
           enddo
           enddo
@@ -2267,9 +2273,9 @@ contains
        enddo
        enddo
 
-       call ATMOS_DYN_fct( qflx_anti,               & ! (out)
+       call ATMOS_DYN_fct( tflx_anti,               & ! (out)
                            POTT, DENS0, DENS_RK,    & ! (out)
-                           qflx_hi, qflx_lo,        & ! (in)
+                           tflx_hi, tflx_lo,        & ! (in)
                            mflx_hi,                 & ! (in)
                            RCDZ, RCDX, RCDY,        & ! (in)
                            GSQRT(:,:,:,I_XYZ),      & ! (in)
@@ -2288,17 +2294,17 @@ contains
           do k = KS, KE
 #ifdef DEBUG
              call CHECK( __LINE__, RHOT_RK(k,i,j) )
-             call CHECK( __LINE__, qflx_anti(k  ,i  ,j  ,ZDIR) )
-             call CHECK( __LINE__, qflx_anti(k-1,i  ,j  ,ZDIR) )
-             call CHECK( __LINE__, qflx_anti(k  ,i  ,j  ,XDIR) )
-             call CHECK( __LINE__, qflx_anti(k  ,i-1,j  ,XDIR) )
-             call CHECK( __LINE__, qflx_anti(k  ,i  ,j  ,YDIR) )
-             call CHECK( __LINE__, qflx_anti(k  ,i  ,j-1,YDIR) )
+             call CHECK( __LINE__, tflx_anti(k  ,i  ,j  ,ZDIR) )
+             call CHECK( __LINE__, tflx_anti(k-1,i  ,j  ,ZDIR) )
+             call CHECK( __LINE__, tflx_anti(k  ,i  ,j  ,XDIR) )
+             call CHECK( __LINE__, tflx_anti(k  ,i-1,j  ,XDIR) )
+             call CHECK( __LINE__, tflx_anti(k  ,i  ,j  ,YDIR) )
+             call CHECK( __LINE__, tflx_anti(k  ,i  ,j-1,YDIR) )
 #endif
              RHOT_RK(k,i,j) = RHOT_RK(k,i,j) &
-                            + dtrk * ( ( qflx_anti(k,i,j,ZDIR) - qflx_anti(k-1,i  ,j  ,ZDIR) ) * RCDZ(k) &
-                                     + ( qflx_anti(k,i,j,XDIR) - qflx_anti(k  ,i-1,j  ,XDIR) ) * RCDX(i) &
-                                     + ( qflx_anti(k,i,j,YDIR) - qflx_anti(k  ,i  ,j-1,YDIR) ) * RCDY(j) ) / GSQRT(k,i,j,I_XYZ)
+                            + dtrk * ( ( tflx_anti(k,i,j,ZDIR) - tflx_anti(k-1,i  ,j  ,ZDIR) ) * RCDZ(k) &
+                                     + ( tflx_anti(k,i,j,XDIR) - tflx_anti(k  ,i-1,j  ,XDIR) ) * RCDX(i) &
+                                     + ( tflx_anti(k,i,j,YDIR) - tflx_anti(k  ,i  ,j-1,YDIR) ) * RCDY(j) ) / GSQRT(k,i,j,I_XYZ)
           enddo
           enddo
           enddo

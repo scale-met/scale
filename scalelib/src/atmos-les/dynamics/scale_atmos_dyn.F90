@@ -317,6 +317,7 @@ contains
     real(RP) :: RHOQ_t   (KA,IA,JA)       ! tendency
     real(RP) :: mflx_hi  (KA,IA,JA,3)     ! rho * vel(x,y,z) @ (u,v,w)-face high order
     real(RP) :: mflx_av  (KA,IA,JA,3)     ! rho * vel(x,y,z) @ (u,v,w)-face average
+    real(RP) :: tflx_hi  (KA,IA,JA,3)     ! rho * theta * vel(x,y,z) @ (u,v,w)-face high order
     real(RP) :: qflx_hi  (KA,IA,JA,3,QA)  ! rho * vel(x,y,z) * phi @ (u,v,w)-face high order
     real(RP) :: qflx_lo  (KA,IA,JA,3,QA)  ! rho * vel(x,y,z) * phi,  monotone flux
     real(RP) :: qflx_anti(KA,IA,JA,3,QA)  ! anti-diffusive flux
@@ -379,6 +380,7 @@ contains
     num_diff (:,:,:,:,:) = UNDEF
 
     mflx_hi(:,:,:,:) = UNDEF
+    tflx_hi(:,:,:,:) = UNDEF
 
     qflx_hi(:,:,:,:,:) = UNDEF
     qflx_lo(:,:,:,:,:) = UNDEF
@@ -615,7 +617,7 @@ contains
        dtrk = real(DTSEC_ATMOS_DYN,kind=RP) / 3.0_RP
 
        call ATMOS_DYN_rk( DENS_RK1, MOMZ_RK1, MOMX_RK1, MOMY_RK1, RHOT_RK1, & ! (out)
-                          mflx_hi,                                          & ! (out)
+                          mflx_hi,  tflx_hi,                                & ! (out)
                           DENS0,    MOMZ0,    MOMX0,    MOMY0,    RHOT0,    & ! (in)
                           DENS,     MOMZ,     MOMX,     MOMY,     RHOT,     & ! (in)
                           DENS_t,   MOMZ_t,   MOMX_t,   MOMY_t,   RHOT_t,   & ! (in)
@@ -645,7 +647,7 @@ contains
        dtrk = real(DTSEC_ATMOS_DYN,kind=RP) / 2.0_RP
 
        call ATMOS_DYN_rk( DENS_RK2, MOMZ_RK2, MOMX_RK2, MOMY_RK2, RHOT_RK2, & ! (out)
-                          mflx_hi,                                          & ! (out)
+                          mflx_hi,  tflx_hi,                                & ! (out)
                           DENS0,    MOMZ0,    MOMX0,    MOMY0,    RHOT0,    & ! (in)
                           DENS_RK1, MOMZ_RK1, MOMX_RK1, MOMY_RK1, RHOT_RK1, & ! (in)
                           DENS_t,   MOMZ_t,   MOMX_t,   MOMY_t,   RHOT_t,   & ! (in)
@@ -675,7 +677,7 @@ contains
        dtrk = real(DTSEC_ATMOS_DYN,kind=RP)
 
        call ATMOS_DYN_rk( DENS,     MOMZ,     MOMX,     MOMY,     RHOT,     & ! (out)
-                          mflx_hi,                                          & ! (out)
+                          mflx_hi,  tflx_hi,                                & ! (out)
                           DENS0,    MOMZ0,    MOMX0,    MOMY0,    RHOT0,    & ! (in)
                           DENS_RK2, MOMZ_RK2, MOMX_RK2, MOMY_RK2, RHOT_RK2, & ! (in)
                           DENS_t,   MOMZ_t,   MOMX_t,   MOMY_t,   RHOT_t,   & ! (in)
@@ -697,7 +699,7 @@ contains
        if ( .not. PRC_HAS_W ) then ! for western boundary
           call adjust_boundary_flux_dyn( &
                DENS, RHOT, mflx_lb, tflx_lb, & ! (inout)
-               mflx_hi, num_diff, GSQRT, MAPF, dt, & ! (in)
+               mflx_hi, tflx_hi, num_diff, GSQRT, MAPF, dt, & ! (in)
                RCDX, RCDY, & ! (in)
                DAMP_DENS, DAMP_VELX, DAMP_VELY, DAMP_POTT, & ! (in)
                DAMP_alpha_DENS, & ! (in)
@@ -707,7 +709,7 @@ contains
        if ( .not. PRC_HAS_E ) then ! for eastern boundary
           call adjust_boundary_flux_dyn( &
                DENS, RHOT, mflx_lb, tflx_lb, & ! (inout)
-               mflx_hi, num_diff, GSQRT, MAPF, dt, & ! (in)
+               mflx_hi, tflx_hi, num_diff, GSQRT, MAPF, dt, & ! (in)
                RCDX, RCDY, & ! (in)
                DAMP_DENS, DAMP_VELX, DAMP_VELY, DAMP_POTT, & ! (in)
                DAMP_alpha_DENS, & ! (in)
@@ -717,7 +719,7 @@ contains
        if ( .not. PRC_HAS_S ) then ! for sourthern boundary
           call adjust_boundary_flux_dyn( &
                DENS, RHOT, mflx_lb, tflx_lb, & ! (inout)
-               mflx_hi, num_diff, GSQRT, MAPF, dt, & ! (in)
+               mflx_hi, tflx_hi, num_diff, GSQRT, MAPF, dt, & ! (in)
                RCDX, RCDY, & ! (in)
                DAMP_DENS, DAMP_VELX, DAMP_VELY, DAMP_POTT, & ! (in)
                DAMP_alpha_DENS, & ! (in)
@@ -727,7 +729,7 @@ contains
        if ( .not. PRC_HAS_N ) then ! for northern boundary
           call adjust_boundary_flux_dyn( &
                DENS, RHOT, mflx_lb, tflx_lb, & ! (inout)
-               mflx_hi, num_diff, GSQRT, MAPF, dt, & ! (in)
+               mflx_hi, tflx_hi, num_diff, GSQRT, MAPF, dt, & ! (in)
                RCDX, RCDY, & ! (in)
                DAMP_DENS, DAMP_VELX, DAMP_VELY, DAMP_POTT, & ! (in)
                DAMP_alpha_DENS, & ! (in)
@@ -1502,7 +1504,7 @@ contains
 
   subroutine adjust_boundary_flux_dyn( &
        DENS, RHOT, mflx_lb, tflx_lb, &
-       mflx_hi, num_diff, GSQRT, MAPF, dt, &
+       mflx_hi, tflx_hi, num_diff, GSQRT, MAPF, dt, &
        RCDX, RCDY, &
        DAMP_DENS, DAMP_VELX, DAMP_VELY, DAMP_POTT, &
        DAMP_alpha_DENS, &
@@ -1530,6 +1532,7 @@ contains
     real(RP), intent(inout) :: tflx_lb(KA,IA,JA,3)
 
     real(RP), intent(in)    :: mflx_hi (KA,IA,JA,3)
+    real(RP), intent(in)    :: tflx_hi (KA,IA,JA,3)
     real(RP), intent(in)    :: num_diff(KA,IA,JA,5,3)
     real(RP), intent(in)    :: GSQRT   (KA,IA,JA,7)
     real(RP), intent(in)    :: MAPF    (IA,JA,2,4)
@@ -1554,28 +1557,11 @@ contains
     integer,  intent(in)    :: j0
     integer,  intent(in)    :: j1
 
-    real(RP) :: tflx_hi(KA,IA,JA,3)
     real(RP) :: DAMP_RHOT(KA,IA,JA)
     real(RP) :: sw
 
     integer :: i, j, k
     !---------------------------------------------------------------------------
-
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       tflx_hi(k,i,j,XDIR) = mflx_hi(k,i,j,XDIR) &
-                           * ( FACT_N * ( RHOT(k,i+1,j)/DENS(k,i+1,j) + RHOT(k,i  ,j)/DENS(k,i  ,j) ) &
-                             + FACT_F * ( RHOT(k,i+2,j)/DENS(k,i+1,j) + RHOT(k,i-1,j)/DENS(k,i-1,j) ) ) &
-                           + GSQRT(k,i,j,I_UYZ) * num_diff(k,i,j,I_RHOT,XDIR)
-       tflx_hi(k,i,j,YDIR) = mflx_hi(k,i,j,YDIR) &
-                           * ( FACT_N * ( RHOT(k,i,j+1)/DENS(k,i,j+1) + RHOT(k,i,j  )/DENS(k,i,j  ) ) &
-                             + FACT_F * ( RHOT(k,i,j+2)/DENS(k,i,j+2) + RHOT(k,i,j-1)/DENS(k,i,j-1) ) ) &
-                           + GSQRT(k,i,j,I_XVZ) * num_diff(k,i,j,I_RHOT,YDIR)
-
-    end do
-    end do
-    end do
 
     do j = j0, j1, -ju+abs(iu)
     do i = i0, i1, -iu+abs(ju)
