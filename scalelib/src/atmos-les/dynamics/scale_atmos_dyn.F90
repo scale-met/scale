@@ -325,6 +325,8 @@ contains
     ! lateral boundary flux
     real(RP) :: mflx_lb(KA,IA,JA,3)
     real(RP) :: tflx_lb(KA,IA,JA,3)
+    real(RP) :: qflx_lb(KA,IA,JA,3,QA)
+
     real(RP) :: mflx_lb_total
     real(RP) :: allmflx_lb_total
     real(RP) :: mflx_lb_horizontal(KA)
@@ -421,8 +423,8 @@ contains
        do j = JS-1, JE+2
        do i = IS-1, IE+2
        do k = KS, KE
-!          diff(k,i,j) = DENS(k,i,j)
-!!          diff(k,i,j) = DENS(k,i,j) - DAMP_DENS(k,i,j)
+          diff(k,i,j) = DENS(k,i,j)
+!          diff(k,i,j) = DENS(k,i,j) - DAMP_DENS(k,i,j)
        enddo
        enddo
        enddo
@@ -430,11 +432,11 @@ contains
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
-!          damp = - DAMP_alpha_DENS(k,i,j) * ( &
-!               - ( diff(k,i-1,j) + diff(k,i+1,j) + diff(k,i,j-1) + diff(k,i,j+1) - diff(k,i,j)*4.0_RP ) &
-!               * 0.125_RP * BND_SMOOTHER_FACT ) ! horizontal smoother
-!          DENS_t(k,i,j) = DENS_tp(k,i,j) & ! tendency from physical step
-!                        + damp
+          damp = - DAMP_alpha_DENS(k,i,j) * ( &
+               - ( diff(k,i-1,j) + diff(k,i+1,j) + diff(k,i,j-1) + diff(k,i,j+1) - diff(k,i,j)*4.0_RP ) &
+               * 0.125_RP * BND_SMOOTHER_FACT ) ! horizontal smoother
+          DENS_t(k,i,j) = DENS_tp(k,i,j) & ! tendency from physical step
+                        + damp
           DENS_t(k,i,j) = 0.0_RP
 #ifdef HIST_TEND
           damp_t(k,i,j) = damp
@@ -443,7 +445,8 @@ contains
        enddo
        enddo
 #ifdef HIST_TEND
-       call HIST_in(damp_t, 'DENS_t_damp', 'tendency of dencity due to rayleigh damping', 'kg/m3/s', DTSEC_ATMOS_DYN)
+       call HIST_in(damp_t, 'DENS_t_damp', 'tendency of dencity due to rayleigh damping', &
+                            'kg/m3/s', DTSEC_ATMOS_DYN)
 #endif
 
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
@@ -476,7 +479,8 @@ contains
        enddo
        enddo
 #ifdef HIST_TEND
-       call HIST_in(damp_t, 'MOMZ_t_damp', 'tendency of momentum z due to rayleigh damping', 'kg/m2/s2', DTSEC_ATMOS_DYN, zdim='half')
+       call HIST_in(damp_t, 'MOMZ_t_damp', 'tendency of momentum z due to rayleigh damping', &
+                            'kg/m2/s2', DTSEC_ATMOS_DYN, zdim='half')
 #endif
 
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
@@ -503,7 +507,8 @@ contains
        enddo
        enddo
 #ifdef HIST_TEND
-       call HIST_in(damp_t, 'MOMX_t_damp', 'tendency of momentum x due to rayleigh damping', 'kg/m2/s2', DTSEC_ATMOS_DYN, xdim='half')
+       call HIST_in(damp_t, 'MOMX_t_damp', 'tendency of momentum x due to rayleigh damping', &
+                            'kg/m2/s2', DTSEC_ATMOS_DYN, xdim='half')
 #endif
 
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
@@ -530,7 +535,8 @@ contains
        enddo
        enddo
 #ifdef HIST_TEND
-       call HIST_in(damp_t, 'MOMY_t_damp', 'tendency of momentum y due to rayleigh damping', 'kg/m2/s2', DTSEC_ATMOS_DYN, ydim='half')
+       call HIST_in(damp_t, 'MOMY_t_damp', 'tendency of momentum y due to rayleigh damping', &
+                            'kg/m2/s2', DTSEC_ATMOS_DYN, ydim='half')
 #endif
 
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
@@ -558,7 +564,7 @@ contains
        enddo
 #ifdef HIST_TEND
        call HIST_in(damp_t, 'RHOT_t_damp', 'tendency of rho*theta temperature due to rayleigh damping', &
-            'K kg/m3/s', DTSEC_ATMOS_DYN)
+                            'K kg/m3/s', DTSEC_ATMOS_DYN)
 #endif
 
        do j = JS, JE
@@ -699,7 +705,7 @@ contains
        if ( .not. PRC_HAS_W ) then ! for western boundary
           call adjust_boundary_flux_dyn( &
                DENS, RHOT, mflx_lb, tflx_lb, & ! (inout)
-               mflx_hi, tflx_hi, num_diff, GSQRT, MAPF, dt, & ! (in)
+               mflx_hi, tflx_hi, GSQRT, MAPF, dt, & ! (in)
                RCDX, RCDY, & ! (in)
                DAMP_DENS, DAMP_VELX, DAMP_VELY, DAMP_POTT, & ! (in)
                DAMP_alpha_DENS, & ! (in)
@@ -709,7 +715,7 @@ contains
        if ( .not. PRC_HAS_E ) then ! for eastern boundary
           call adjust_boundary_flux_dyn( &
                DENS, RHOT, mflx_lb, tflx_lb, & ! (inout)
-               mflx_hi, tflx_hi, num_diff, GSQRT, MAPF, dt, & ! (in)
+               mflx_hi, tflx_hi, GSQRT, MAPF, dt, & ! (in)
                RCDX, RCDY, & ! (in)
                DAMP_DENS, DAMP_VELX, DAMP_VELY, DAMP_POTT, & ! (in)
                DAMP_alpha_DENS, & ! (in)
@@ -719,7 +725,7 @@ contains
        if ( .not. PRC_HAS_S ) then ! for sourthern boundary
           call adjust_boundary_flux_dyn( &
                DENS, RHOT, mflx_lb, tflx_lb, & ! (inout)
-               mflx_hi, tflx_hi, num_diff, GSQRT, MAPF, dt, & ! (in)
+               mflx_hi, tflx_hi, GSQRT, MAPF, dt, & ! (in)
                RCDX, RCDY, & ! (in)
                DAMP_DENS, DAMP_VELX, DAMP_VELY, DAMP_POTT, & ! (in)
                DAMP_alpha_DENS, & ! (in)
@@ -729,7 +735,7 @@ contains
        if ( .not. PRC_HAS_N ) then ! for northern boundary
           call adjust_boundary_flux_dyn( &
                DENS, RHOT, mflx_lb, tflx_lb, & ! (inout)
-               mflx_hi, tflx_hi, num_diff, GSQRT, MAPF, dt, & ! (in)
+               mflx_hi, tflx_hi, GSQRT, MAPF, dt, & ! (in)
                RCDX, RCDY, & ! (in)
                DAMP_DENS, DAMP_VELX, DAMP_VELY, DAMP_POTT, & ! (in)
                DAMP_alpha_DENS, & ! (in)
@@ -738,19 +744,19 @@ contains
        end if
 
 #ifdef HIST_TEND
-       call HIST_in(mflx_lb(:,:,:,ZDIR), 'MOMZ_t_lb', 'momentum flux of z-direction from lateral boundary', &
-                                         'kg/m2/s', dt, zdim='half'                                         )
-       call HIST_in(mflx_lb(:,:,:,XDIR), 'MOMX_t_lb', 'momentum flux of x-direction from lateral boundary', &
-                                         'kg/m2/s', dt, xdim='half'                                         )
-       call HIST_in(mflx_lb(:,:,:,YDIR), 'MOMY_t_lb', 'momentum flux of y-direction from lateral boundary', &
-                                         'kg/m2/s', dt, ydim='half'                                         )
+       call HIST_in(mflx_lb(:,:,:,ZDIR), 'MOMZ_lb', 'momentum flux of z-direction from lateral boundary', &
+                                         'kg/m2/s', dt, zdim='half'                                       )
+       call HIST_in(mflx_lb(:,:,:,XDIR), 'MOMX_lb', 'momentum flux of x-direction from lateral boundary', &
+                                         'kg/m2/s', dt, xdim='half'                                       )
+       call HIST_in(mflx_lb(:,:,:,YDIR), 'MOMY_lb', 'momentum flux of y-direction from lateral boundary', &
+                                         'kg/m2/s', dt, ydim='half'                                       )
 
-       call HIST_in(tflx_lb(:,:,:,ZDIR), 'RHTZ_t_lb', 'potential temperature flux of z-direction from lateral boundary', &
-                                         'K*kg/m2/s', dt, zdim='half'                                                    )
-       call HIST_in(tflx_lb(:,:,:,XDIR), 'RHTX_t_lb', 'potential temperature flux of x-direction from lateral boundary', &
-                                         'K*kg/m2/s', dt, xdim='half'                                                    )
-       call HIST_in(tflx_lb(:,:,:,YDIR), 'RHTY_t_lb', 'potential temperature flux of y-direction from lateral boundary', &
-                                         'K*kg/m2/s', dt, ydim='half'                                                    )
+       call HIST_in(tflx_lb(:,:,:,ZDIR), 'RHTZ_lb', 'potential temperature flux of z-direction from lateral boundary', &
+                                         'K*kg/m2/s', dt, zdim='half'                                                  )
+       call HIST_in(tflx_lb(:,:,:,XDIR), 'RHTX_lb', 'potential temperature flux of x-direction from lateral boundary', &
+                                         'K*kg/m2/s', dt, xdim='half'                                                  )
+       call HIST_in(tflx_lb(:,:,:,YDIR), 'RHTY_lb', 'potential temperature flux of y-direction from lateral boundary', &
+                                         'K*kg/m2/s', dt, ydim='half'                                                  )
 #endif
 
        ! set boundary
@@ -791,203 +797,203 @@ contains
                IS, IE, JE-JHALO+1, JE ) ! (in)
        end if
 
-       do j = JS, JE
-       do i = IS, IE
-       do k = KS, KE  
-          mass_tmp (k,i,j) = DENS     (k,i,j) * vol(k,i,j)
-          mass_tmp2(k,i,j) = DAMP_DENS(k,i,j) * vol(k,i,j)
-          pott_tmp (k,i,j) = RHOT     (k,i,j) / DENS(k,i,j)
-          pott_tmp2(k,i,j) = DAMP_POTT(k,i,j)
-       end do
-       end do
-       end do
-
-       if ( .not. PRC_HAS_W ) then ! for western boundary
-          do j = JS, JE
-          do i = IS, IS+1
-          do k = KS, KE
-             mflx_lb(k,i,j,YDIR) = 0.0_RP
-             mass_tmp (k,i,j) = 0.0_RP
-             mass_tmp2(k,i,j) = 0.0_RP
-             pott_tmp (k,i,j) = 0.0_RP
-             pott_tmp2(k,i,j) = 0.0_RP
-          end do
-          end do
-          end do
-       end if
-       if ( .not. PRC_HAS_E ) then ! for eastern boundary
-          do j = JS, JE
-          do i = IE-1, IE
-          do k = KS, KE
-             mflx_lb(k,i,j,YDIR) = 0.0_RP
-             mass_tmp (k,i,j) = 0.0_RP
-             mass_tmp2(k,i,j) = 0.0_RP
-             pott_tmp (k,i,j) = 0.0_RP
-             pott_tmp2(k,i,j) = 0.0_RP
-          end do
-          end do
-          end do
-       end if
-       if ( .not. PRC_HAS_S ) then ! for sourthern boundary
-          do j = JS, JS+1
-          do i = IS, IE
-          do k = KS, KE
-             mflx_lb(k,i,j,XDIR) = 0.0_RP
-             mass_tmp (k,i,j) = 0.0_RP
-             mass_tmp2(k,i,j) = 0.0_RP
-             pott_tmp (k,i,j) = 0.0_RP
-             pott_tmp2(k,i,j) = 0.0_RP
-          end do
-          end do
-          end do
-       end if
-       if ( .not. PRC_HAS_N ) then ! for northern boundary
-          do j = JE-1, JE
-          do i = IS, IE
-          do k = KS, KE
-             mflx_lb(k,i,j,XDIR) = 0.0_RP
-             mass_tmp (k,i,j) = 0.0_RP
-             mass_tmp2(k,i,j) = 0.0_RP
-             pott_tmp (k,i,j) = 0.0_RP
-             pott_tmp2(k,i,j) = 0.0_RP
-          end do
-          end do
-          end do
-       end if
-
-       mflx_lb_total                = 0.0_RP
-       mflx_lb_horizontal(:)        = 0.0_RP
-       allmflx_lb_horizontal(:,:,:) = 0.0_RP
-
-       if ( .not. PRC_HAS_W ) then ! for western boundary
-          i = IS+2
-          do j = JS, JE
-          do k = KS, KE
-            sw = sign(0.5_RP, DAMP_alpha_DENS(k,i,j) - EPS) + 0.5_RP
-            mflx_lb_total = mflx_lb_total + mflx_lb(k,i-1,j,XDIR) * RCDX(i) * vol(k,i,j) &
-                                          * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) * dt * sw
-            mflx_lb_horizontal(k) = mflx_lb_horizontal(k) + mflx_lb(k,i-1,j,XDIR) * RCDX(i) * vol(k,i,j) &
-                                                          * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) * dt * sw
-          end do
-          end do
-       end if
-       if ( .not. PRC_HAS_E ) then ! for eastern boundary
-          i = IE-2
-          do j = JS, JE
-          do k = KS, KE
-            sw = sign(0.5_RP, DAMP_alpha_DENS(k,i,j) - EPS) + 0.5_RP
-            mflx_lb_total = mflx_lb_total - mflx_lb(k,i,j,XDIR) * RCDX(i) * vol(k,i,j) &
-                                          * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) * dt * sw
-            mflx_lb_horizontal(k) = mflx_lb_horizontal(k) - mflx_lb(k,i,j,XDIR) * RCDX(i) * vol(k,i,j) &
-                                                          * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) * dt * sw
-          end do
-          end do
-       end if
-       if ( .not. PRC_HAS_S ) then ! for sourthern boundary
-          j = JS+2
-          do i = IS, IE
-          do k = KS, KE
-            sw = sign(0.5_RP, DAMP_alpha_DENS(k,i,j) - EPS) + 0.5_RP
-            mflx_lb_total = mflx_lb_total + mflx_lb(k,i,j-1,YDIR) * RCDY(j) * vol(k,i,j) &
-                                          * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) * dt * sw
-            mflx_lb_horizontal(k) = mflx_lb_horizontal(k) + mflx_lb(k,i,j-1,YDIR) * RCDY(j) * vol(k,i,j) &
-                                                          * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) * dt * sw
-          end do
-          end do
-       end if
-       if ( .not. PRC_HAS_N ) then ! for northern boundary
-          j = JE-2
-          do i = IS, IE
-          do k = KS, KE
-            sw = sign(0.5_RP, DAMP_alpha_DENS(k,i,j) - EPS) + 0.5_RP
-            mflx_lb_total = mflx_lb_total - mflx_lb(k,i,j,YDIR) * RCDY(j) * vol(k,i,j) &
-                                          * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) * dt * sw
-            mflx_lb_horizontal(k) = mflx_lb_horizontal(k) - mflx_lb(k,i,j,YDIR) * RCDY(j) * vol(k,i,j) &
-                                                          * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) * dt * sw
-          end do
-          end do
-       end if
-
-       mass_total  = 0.0_RP
-       mass_total2 = 0.0_RP
-       pott_total  = 0.0_RP
-       pott_total2 = 0.0_RP
-
-       do j = JS, JE
-       do i = IS, IE
-       do k = KS, KE
-          mass_total  = mass_total  + mass_tmp (k,i,j)
-          mass_total2 = mass_total2 + mass_tmp2(k,i,j)
-          pott_total  = pott_total  + pott_tmp (k,i,j)
-          pott_total2 = pott_total2 + pott_tmp2(k,i,j)
-       end do
-       end do
-       end do
-
-       call MPI_Allreduce( mflx_lb_total,          &
-                           allmflx_lb_total,       &
-                           1,                    &
-                           COMM_datatype,        &
-                           MPI_SUM,              &
-                           MPI_COMM_WORLD,       &
-                           ierr                  )
-       if( IO_L ) write(IO_FID_LOG,'(A,1x,i1,1x,2PE24.17)') 'total mflx_lb:', step, allmflx_lb_total
-
-       call MPI_Allreduce( mass_total,           &
-                           allmass_total,        &
-                           1,                    &
-                           COMM_datatype,        &
-                           MPI_SUM,              &
-                           MPI_COMM_WORLD,       &
-                           ierr                  )
-       if( IO_L ) write(IO_FID_LOG,'(A,1x,i1,1x,2PE24.17)') 'total mass   :', step, allmass_total
-
-       call MPI_Allreduce( mass_total2,          &
-                           allmass_total2,       &
-                           1,                    &
-                           COMM_datatype,        &
-                           MPI_SUM,              &
-                           MPI_COMM_WORLD,       &
-                           ierr                  )
-       if( IO_L ) write(IO_FID_LOG,'(A,1x,i1,1x,2PE24.17)') 'total mass2  :', step, allmass_total2
-
-       call MPI_Allreduce( pott_total,           &
-                           allpott_total,        &
-                           1,                    &
-                           COMM_datatype,        &
-                           MPI_SUM,              &
-                           MPI_COMM_WORLD,       &
-                           ierr                  )
-       if( IO_L ) write(IO_FID_LOG,'(A,1x,i1,1x,2PE24.17)') 'total pott   :', step, allpott_total
-
-       call MPI_Allreduce( pott_total2,          &
-                           allpott_total2,       &
-                           1,                    &
-                           COMM_datatype,        &
-                           MPI_SUM,              &
-                           MPI_COMM_WORLD,       &
-                           ierr                  )
-       if( IO_L ) write(IO_FID_LOG,'(A,1x,i1,1x,2PE24.17)') 'total pott2  :', step, allpott_total2
-
-       i = IS; j = JS ! dummy
-       do k = KS, KE
-          call MPI_Allreduce( mflx_lb_horizontal(k),        &
-                              allmflx_lb_horizontal(k,i,j), &
-                              1,                            &
-                              COMM_datatype,                &
-                              MPI_SUM,                      &
-                              MPI_COMM_WORLD,               &
-                              ierr                          )
-       end do
-       do j = JS+1, JE
-       do i = IS+1, IE
-       do k = KS, KE
-          allmflx_lb_horizontal(k,i,j) = allmflx_lb_horizontal(k,IS,JS)
-       end do
-       end do
-       end do
-       call HIST_in(allmflx_lb_horizontal(:,:,:), 'ALLMOM_lb_hz', 'horizontally total momentum flux from lateral boundary', &
-                                                  'kg/m2/s', dt                                                             )
+!       do j = JS, JE
+!       do i = IS, IE
+!       do k = KS, KE  
+!          mass_tmp (k,i,j) = DENS     (k,i,j) * vol(k,i,j)
+!          mass_tmp2(k,i,j) = DAMP_DENS(k,i,j) * vol(k,i,j)
+!          pott_tmp (k,i,j) = RHOT     (k,i,j) / DENS(k,i,j)
+!          pott_tmp2(k,i,j) = DAMP_POTT(k,i,j)
+!       end do
+!       end do
+!       end do
+!
+!       if ( .not. PRC_HAS_W ) then ! for western boundary
+!          do j = JS, JE
+!          do i = IS, IS+1
+!          do k = KS, KE
+!             mflx_lb(k,i,j,YDIR) = 0.0_RP
+!             mass_tmp (k,i,j) = 0.0_RP
+!             mass_tmp2(k,i,j) = 0.0_RP
+!             pott_tmp (k,i,j) = 0.0_RP
+!             pott_tmp2(k,i,j) = 0.0_RP
+!          end do
+!          end do
+!          end do
+!       end if
+!       if ( .not. PRC_HAS_E ) then ! for eastern boundary
+!          do j = JS, JE
+!          do i = IE-1, IE
+!          do k = KS, KE
+!             mflx_lb(k,i,j,YDIR) = 0.0_RP
+!             mass_tmp (k,i,j) = 0.0_RP
+!             mass_tmp2(k,i,j) = 0.0_RP
+!             pott_tmp (k,i,j) = 0.0_RP
+!             pott_tmp2(k,i,j) = 0.0_RP
+!          end do
+!          end do
+!          end do
+!       end if
+!       if ( .not. PRC_HAS_S ) then ! for sourthern boundary
+!          do j = JS, JS+1
+!          do i = IS, IE
+!          do k = KS, KE
+!             mflx_lb(k,i,j,XDIR) = 0.0_RP
+!             mass_tmp (k,i,j) = 0.0_RP
+!             mass_tmp2(k,i,j) = 0.0_RP
+!             pott_tmp (k,i,j) = 0.0_RP
+!             pott_tmp2(k,i,j) = 0.0_RP
+!          end do
+!          end do
+!          end do
+!       end if
+!       if ( .not. PRC_HAS_N ) then ! for northern boundary
+!          do j = JE-1, JE
+!          do i = IS, IE
+!          do k = KS, KE
+!             mflx_lb(k,i,j,XDIR) = 0.0_RP
+!             mass_tmp (k,i,j) = 0.0_RP
+!             mass_tmp2(k,i,j) = 0.0_RP
+!             pott_tmp (k,i,j) = 0.0_RP
+!             pott_tmp2(k,i,j) = 0.0_RP
+!          end do
+!          end do
+!          end do
+!       end if
+!
+!       mflx_lb_total                = 0.0_RP
+!       mflx_lb_horizontal(:)        = 0.0_RP
+!       allmflx_lb_horizontal(:,:,:) = 0.0_RP
+!
+!       if ( .not. PRC_HAS_W ) then ! for western boundary
+!          i = IS+2
+!          do j = JS, JE
+!          do k = KS, KE
+!            sw = sign(0.5_RP, DAMP_alpha_DENS(k,i,j) - EPS) + 0.5_RP
+!            mflx_lb_total = mflx_lb_total + mflx_lb(k,i-1,j,XDIR) * RCDX(i) * vol(k,i,j) &
+!                                          * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) * dt * sw
+!            mflx_lb_horizontal(k) = mflx_lb_horizontal(k) + mflx_lb(k,i-1,j,XDIR) * RCDX(i) * vol(k,i,j) &
+!                                                          * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) * dt * sw
+!          end do
+!          end do
+!       end if
+!       if ( .not. PRC_HAS_E ) then ! for eastern boundary
+!          i = IE-2
+!          do j = JS, JE
+!          do k = KS, KE
+!            sw = sign(0.5_RP, DAMP_alpha_DENS(k,i,j) - EPS) + 0.5_RP
+!            mflx_lb_total = mflx_lb_total - mflx_lb(k,i,j,XDIR) * RCDX(i) * vol(k,i,j) &
+!                                          * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) * dt * sw
+!            mflx_lb_horizontal(k) = mflx_lb_horizontal(k) - mflx_lb(k,i,j,XDIR) * RCDX(i) * vol(k,i,j) &
+!                                                          * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) * dt * sw
+!          end do
+!          end do
+!       end if
+!       if ( .not. PRC_HAS_S ) then ! for sourthern boundary
+!          j = JS+2
+!          do i = IS, IE
+!          do k = KS, KE
+!            sw = sign(0.5_RP, DAMP_alpha_DENS(k,i,j) - EPS) + 0.5_RP
+!            mflx_lb_total = mflx_lb_total + mflx_lb(k,i,j-1,YDIR) * RCDY(j) * vol(k,i,j) &
+!                                          * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) * dt * sw
+!            mflx_lb_horizontal(k) = mflx_lb_horizontal(k) + mflx_lb(k,i,j-1,YDIR) * RCDY(j) * vol(k,i,j) &
+!                                                          * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) * dt * sw
+!          end do
+!          end do
+!       end if
+!       if ( .not. PRC_HAS_N ) then ! for northern boundary
+!          j = JE-2
+!          do i = IS, IE
+!          do k = KS, KE
+!            sw = sign(0.5_RP, DAMP_alpha_DENS(k,i,j) - EPS) + 0.5_RP
+!            mflx_lb_total = mflx_lb_total - mflx_lb(k,i,j,YDIR) * RCDY(j) * vol(k,i,j) &
+!                                          * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) * dt * sw
+!            mflx_lb_horizontal(k) = mflx_lb_horizontal(k) - mflx_lb(k,i,j,YDIR) * RCDY(j) * vol(k,i,j) &
+!                                                          * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) * dt * sw
+!          end do
+!          end do
+!       end if
+!
+!       mass_total  = 0.0_RP
+!       mass_total2 = 0.0_RP
+!       pott_total  = 0.0_RP
+!       pott_total2 = 0.0_RP
+!
+!       do j = JS, JE
+!       do i = IS, IE
+!       do k = KS, KE
+!          mass_total  = mass_total  + mass_tmp (k,i,j)
+!          mass_total2 = mass_total2 + mass_tmp2(k,i,j)
+!          pott_total  = pott_total  + pott_tmp (k,i,j)
+!          pott_total2 = pott_total2 + pott_tmp2(k,i,j)
+!       end do
+!       end do
+!       end do
+!
+!       call MPI_Allreduce( mflx_lb_total,          &
+!                           allmflx_lb_total,       &
+!                           1,                    &
+!                           COMM_datatype,        &
+!                           MPI_SUM,              &
+!                           MPI_COMM_WORLD,       &
+!                           ierr                  )
+!       if( IO_L ) write(IO_FID_LOG,'(A,1x,i1,1x,2PE24.17)') 'total mflx_lb:', step, allmflx_lb_total
+!
+!       call MPI_Allreduce( mass_total,           &
+!                           allmass_total,        &
+!                           1,                    &
+!                           COMM_datatype,        &
+!                           MPI_SUM,              &
+!                           MPI_COMM_WORLD,       &
+!                           ierr                  )
+!       if( IO_L ) write(IO_FID_LOG,'(A,1x,i1,1x,2PE24.17)') 'total mass   :', step, allmass_total
+!
+!       call MPI_Allreduce( mass_total2,          &
+!                           allmass_total2,       &
+!                           1,                    &
+!                           COMM_datatype,        &
+!                           MPI_SUM,              &
+!                           MPI_COMM_WORLD,       &
+!                           ierr                  )
+!       if( IO_L ) write(IO_FID_LOG,'(A,1x,i1,1x,2PE24.17)') 'total mass2  :', step, allmass_total2
+!
+!       call MPI_Allreduce( pott_total,           &
+!                           allpott_total,        &
+!                           1,                    &
+!                           COMM_datatype,        &
+!                           MPI_SUM,              &
+!                           MPI_COMM_WORLD,       &
+!                           ierr                  )
+!       if( IO_L ) write(IO_FID_LOG,'(A,1x,i1,1x,2PE24.17)') 'total pott   :', step, allpott_total
+!
+!       call MPI_Allreduce( pott_total2,          &
+!                           allpott_total2,       &
+!                           1,                    &
+!                           COMM_datatype,        &
+!                           MPI_SUM,              &
+!                           MPI_COMM_WORLD,       &
+!                           ierr                  )
+!       if( IO_L ) write(IO_FID_LOG,'(A,1x,i1,1x,2PE24.17)') 'total pott2  :', step, allpott_total2
+!
+!       i = IS; j = JS ! dummy
+!       do k = KS, KE
+!          call MPI_Allreduce( mflx_lb_horizontal(k),        &
+!                              allmflx_lb_horizontal(k,i,j), &
+!                              1,                            &
+!                              COMM_datatype,                &
+!                              MPI_SUM,                      &
+!                              MPI_COMM_WORLD,               &
+!                              ierr                          )
+!       end do
+!       do j = JS+1, JE
+!       do i = IS+1, IE
+!       do k = KS, KE
+!          allmflx_lb_horizontal(k,i,j) = allmflx_lb_horizontal(k,IS,JS)
+!       end do
+!       end do
+!       end do
+!       call HIST_in(allmflx_lb_horizontal(:,:,:), 'ALLMOM_lb_hz', 'horizontally total momentum flux from lateral boundary', &
+!                                                  'kg/m2/s', dt                                                             )
 
        do j  = JS, JE
        do i  = IS, IE
@@ -1274,6 +1280,65 @@ contains
 
     enddo ! scalar quantities loop
 
+    ! initialize lateral boundary flux
+    qflx_lb(:,:,:,:,:) = 0.0_RP
+
+    ! adjust lateral boundary flux
+    if ( .not. PRC_HAS_W ) then ! for western boundary
+       call adjust_boundary_flux_qtrc( &
+            QTRC, qflx_lb, & ! (inout)
+            DENS, MOMX, MOMY, & ! (in)
+            qflx_hi, qflx_anti, GSQRT, MAPF, dt, & ! (in)
+            RCDX, RCDY, & ! (in)
+            DAMP_QTRC, DAMP_alpha_QTRC, & ! (in)
+            -1, 0, 1, 0, & ! (in)
+            IS+IHALO+NUM_LBFLX-1, IS+IHALO, JS, JE ) ! (in)
+    end if
+    if ( .not. PRC_HAS_E ) then ! for eastern boundary
+       call adjust_boundary_flux_qtrc( &
+            QTRC, qflx_lb, & ! (inout)
+            DENS, MOMX, MOMY, & ! (in)
+            qflx_hi, qflx_anti, GSQRT, MAPF, dt, & ! (in)
+            RCDX, RCDY, & ! (in)
+            DAMP_QTRC, DAMP_alpha_QTRC, & ! (in)
+            0, 0, -1, 0, & ! (in)
+            IE-IHALO-NUM_LBFLX+1, IE-IHALO, JS, JE ) ! (in)
+    end if
+    if ( .not. PRC_HAS_S ) then ! for sourthern boundary
+       call adjust_boundary_flux_qtrc( &
+            QTRC, qflx_lb, & ! (inout)
+            DENS, MOMX, MOMY, & ! (in)
+            qflx_hi, qflx_anti, GSQRT, MAPF, dt, & ! (in)
+            RCDX, RCDY, & ! (in)
+            DAMP_QTRC, DAMP_alpha_QTRC, & ! (in)
+            0, -1, 0, 1, & ! (in)
+            IS, IE, JS+JHALO+NUM_LBFLX-1, JS+JHALO ) ! (in)
+    end if
+    if ( .not. PRC_HAS_N ) then ! for northern boundary
+       call adjust_boundary_flux_qtrc( &
+            QTRC, qflx_lb, & ! (inout)
+            DENS, MOMX, MOMY, & ! (in)
+            qflx_hi, qflx_anti, GSQRT, MAPF, dt, & ! (in)
+            RCDX, RCDY, & ! (in)
+            DAMP_QTRC, DAMP_alpha_QTRC, & ! (in)
+            0, 0, 0, -1, & ! (in)
+            IS, IE, JE-JHALO-NUM_LBFLX+1, JE-JHALO ) ! (in)
+    end if
+
+#ifdef HIST_TEND
+    do iq = 1, QA
+       call HIST_in(qflx_lb(:,:,:,ZDIR,iq), trim(AQ_NAME(iq))//'_lb',                                  &
+                                            trim(AQ_NAME(iq))//'of z-direction from lateral boundary', &
+                                            'kg/m2/s', DTSEC, zdim='half'                              )
+       call HIST_in(qflx_lb(:,:,:,XDIR,iq), trim(AQ_NAME(iq))//'_lb',                                  &
+                                            trim(AQ_NAME(iq))//'of x-direction from lateral boundary', &
+                                            'kg/m2/s', DTSEC, xdim='half'                              )
+       call HIST_in(qflx_lb(:,:,:,YDIR,iq), trim(AQ_NAME(iq))//'_lb',                                  &
+                                            trim(AQ_NAME(iq))//'of y-direction from lateral boundary', &
+                                            'kg/m2/s', DTSEC, ydim='half'                              )
+    end do
+#endif
+
     if ( .not. PRC_HAS_W ) then ! for western boundary
        ! set boundary
        call set_boundary_qtrc( &
@@ -1504,7 +1569,7 @@ contains
 
   subroutine adjust_boundary_flux_dyn( &
        DENS, RHOT, mflx_lb, tflx_lb, &
-       mflx_hi, tflx_hi, num_diff, GSQRT, MAPF, dt, &
+       mflx_hi, tflx_hi, GSQRT, MAPF, dt, &
        RCDX, RCDY, &
        DAMP_DENS, DAMP_VELX, DAMP_VELY, DAMP_POTT, &
        DAMP_alpha_DENS, &
@@ -1525,15 +1590,13 @@ contains
        FACT_F
     implicit none
 
-    real(RP), intent(inout) :: DENS(KA,IA,JA)
-    real(RP), intent(inout) :: RHOT(KA,IA,JA)
-
+    real(RP), intent(inout) :: DENS   (KA,IA,JA)
+    real(RP), intent(inout) :: RHOT   (KA,IA,JA)
     real(RP), intent(inout) :: mflx_lb(KA,IA,JA,3)
     real(RP), intent(inout) :: tflx_lb(KA,IA,JA,3)
 
     real(RP), intent(in)    :: mflx_hi (KA,IA,JA,3)
     real(RP), intent(in)    :: tflx_hi (KA,IA,JA,3)
-    real(RP), intent(in)    :: num_diff(KA,IA,JA,5,3)
     real(RP), intent(in)    :: GSQRT   (KA,IA,JA,7)
     real(RP), intent(in)    :: MAPF    (IA,JA,2,4)
     real(RP), intent(in)    :: dt
@@ -1600,10 +1663,10 @@ contains
   end subroutine adjust_boundary_flux_dyn
 
   subroutine adjust_boundary_flux_qtrc( &
-       QTRC, &
+       QTRC, qflx_lb, &
        DENS, MOMX, MOMY, &
-       qflx_hi, qflx_anti, GSQRT, dt, &
-       RCDX, RCDY, MAPF, &
+       qflx_hi, qflx_anti, GSQRT, MAPF, dt, &
+       RCDX, RCDY, &
        DAMP_QTRC, DAMP_alpha_QTRC, &
        ib, jb, iu, ju, &
        i0, i1, j0, j1 )
@@ -1613,23 +1676,27 @@ contains
        I_XYZ, &
        I_UYZ, &
        I_XVZ, &
-       I_XY
+       I_XY,  &
+       I_UY,  &
+       I_XV
     use scale_atmos_boundary, only: &
        BND_QA
     implicit none
-    real(RP), intent(inout) :: QTRC(KA,IA,JA,QA)
+    real(RP), intent(inout) :: QTRC   (KA,IA,JA,QA)
+    real(RP), intent(inout) :: qflx_lb(KA,IA,JA,3,QA)
 
     real(RP), intent(in)    :: DENS     (KA,IA,JA)
     real(RP), intent(in)    :: MOMX     (KA,IA,JA)
     real(RP), intent(in)    :: MOMY     (KA,IA,JA)
+
     real(RP), intent(in)    :: qflx_hi  (KA,IA,JA,3,QA)
     real(RP), intent(in)    :: qflx_anti(KA,IA,JA,3,QA)
     real(RP), intent(in)    :: GSQRT    (KA,IA,JA,7)
+    real(RP), intent(in)    :: MAPF     (IA,JA,2,4)
     real(RP), intent(in)    :: dt
 
     real(RP), intent(in)    :: RCDX(IA)
     real(RP), intent(in)    :: RCDY(JA)
-    real(RP), intent(in)    :: MAPF(IA,JA,2,4)
 
     real(RP), intent(in)    :: DAMP_QTRC      (KA,IA,JA,BND_QA)
     real(RP), intent(in)    :: DAMP_alpha_QTRC(KA,IA,JA,BND_QA)
@@ -1643,48 +1710,61 @@ contains
     integer,  intent(in)    :: j0
     integer,  intent(in)    :: j1
 
-    real(RP) :: tmpX, tmpY
     real(RP) :: sw
 
-    integer :: i, j, k, iq, iqb
+    integer :: i, j, k, iq
     !---------------------------------------------------------------------------
 
     if( BND_QA == I_QV ) then
        ! QV forcing only at boundary
-       do j = j0+ju, j0+ju, -ju+abs(iu)
-       do i = i0+iu, i0+iu, -iu+abs(ju)
+       do j = j0, j1, -ju+abs(iu)
+       do i = i0, i1, -iu+abs(ju)
        do k = KS, KE
           sw = sign(0.5_RP, DAMP_alpha_QTRC(k,i,j,I_QV) - EPS) + 0.5_RP
 
-          tmpX = MOMX(k,i+ib,j   ) * ( DAMP_QTRC(k,i+ib,j,      I_QV)+DAMP_QTRC(k,i-ib-iu,j,   I_QV) ) * 0.5_RP
-          tmpY = MOMY(k,i,   j+jb) * ( DAMP_QTRC(k,i,      j+jb,I_QV)+DAMP_QTRC(k,i,   j-jb-ju,I_QV) ) * 0.5_RP
+          qflx_lb(k,i1+ib,j,XDIR,I_QV) = MOMX(k,i1+ib,j) &
+                                       * ( DAMP_QTRC(k,i1+ib,j,I_QV) + DAMP_QTRC(k,i1-ib-iu,j,I_QV) ) * 0.5_RP &
+                                       * GSQRT(k,i1+ib,j,I_UYZ) / MAPF(i1+ib,j,2,I_UY) * real( abs(iu), kind=RP )
+          qflx_lb(k,i,j1+jb,YDIR,I_QV) = MOMY(k,i,j1+jb) &
+                                       * ( DAMP_QTRC(k,i,j1+jb,I_QV) + DAMP_QTRC(k,i,j1-jb-ju,I_QV) ) * 0.5_RP &
+                                       * GSQRT(k,i,j1+jb,I_XVZ) / MAPF(i,j1+jb,1,I_XV) * real( abs(ju), kind=RP )
 
           QTRC(k,i,j,I_QV) = QTRC(k,i,j,I_QV) &
-                           + ( ( tmpX * GSQRT(k,i+ib,j,I_UYZ) - qflx_hi(k,i+ib,j,XDIR,I_QV) + qflx_anti(k,i+ib,j,XDIR,I_QV) ) &
-                             * RCDX(i) &
-                             + ( tmpY * GSQRT(k,i,j+jb,I_XVZ) - qflx_hi(k,i,j+jb,YDIR,I_QV) + qflx_anti(k,i,j+jb,YDIR,I_QV) ) &
-                             * RCDY(j) &
-                             ) * dt * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) / DENS(k,i,j) * sw
+                           + dt * ( ( qflx_lb  (k,i1+ib,j,XDIR,I_QV) &
+                                    - qflx_hi  (k,i1+ib,j,XDIR,I_QV) &
+                                    + qflx_anti(k,i1+ib,j,XDIR,I_QV) ) * real(iu,kind=RP) * RCDX(i) &
+                                  + ( qflx_lb  (k,i,j1+jb,YDIR,I_QV) &
+                                    - qflx_hi  (k,i,j1+jb,YDIR,I_QV) &
+                                    + qflx_anti(k,i,j1+jb,YDIR,I_QV) ) * real(ju,kind=RP) * RCDY(j) ) &
+                                * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) &
+                                / DENS(k,i,j) / real( NUM_LBFLX, kind=RP ) * sw
        end do
        end do
        end do
     else
        ! ALL QTRC forcing at boundary
        do iq = 1, QA
-          do j = j0+ju, j0+ju, -ju+abs(iu)
-          do i = i0+iu, i0+iu, -iu+abs(ju)
+          do j = j0, j1, -ju+abs(iu)
+          do i = i0, i1, -iu+abs(ju)
           do k = KS, KE
              sw = sign(0.5_RP, DAMP_alpha_QTRC(k,i,j,iq) - EPS) + 0.5_RP
 
-             tmpX = MOMX(k,i+ib,j   ) * ( DAMP_QTRC(k,i+ib,j,   iq)+DAMP_QTRC(k,i-ib-iu,j,      iq) ) * 0.5_RP
-             tmpY = MOMY(k,i,   j+jb) * ( DAMP_QTRC(k,i,   j+jb,iq)+DAMP_QTRC(k,i,      j-jb-ju,iq) ) * 0.5_RP
+             qflx_lb(k,i1+ib,j,XDIR,iq) = MOMX(k,i1+ib,j) &
+                                        * ( DAMP_QTRC(k,i1+ib,j,iq) + DAMP_QTRC(k,i1-ib-iu,j,iq) ) * 0.5_RP &
+                                        * GSQRT(k,i1+ib,j,I_UYZ) / MAPF(i1+ib,j,2,I_UY) * real( abs(iu), kind=RP )
+             qflx_lb(k,i,j1+jb,YDIR,iq) = MOMY(k,i,j1+jb) &
+                                        * ( DAMP_QTRC(k,i,j1+jb,iq) + DAMP_QTRC(k,i,j1-jb-ju,iq) ) * 0.5_RP &
+                                        * GSQRT(k,i,j1+jb,I_XVZ) / MAPF(i,j1+jb,1,I_XV) * real( abs(ju), kind=RP )
 
              QTRC(k,i,j,iq) = QTRC(k,i,j,iq) &
-                            + ( ( tmpX * GSQRT(k,i+ib,j,I_UYZ) - qflx_hi(k,i+ib,j,XDIR,iq) + qflx_anti(k,i+ib,j,XDIR,iq) ) &
-                              * RCDX(i) &
-                              + ( tmpY * GSQRT(k,i,j+jb,I_XVZ) - qflx_hi(k,i,j+jb,YDIR,iq) + qflx_anti(k,i,j+jb,YDIR,iq) ) &
-                              * RCDY(j) &
-                              ) * dt * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) / DENS(k,i,j) * sw
+                            + dt * ( ( qflx_lb  (k,i1+ib,j,XDIR,iq) &
+                                     - qflx_hi  (k,i1+ib,j,XDIR,iq) &
+                                     + qflx_anti(k,i1+ib,j,XDIR,iq) ) * real(iu,kind=RP) * RCDX(i) &
+                                   + ( qflx_lb  (k,i,j1+jb,YDIR,iq) &
+                                     - qflx_hi  (k,i,j1+jb,YDIR,iq) &
+                                     + qflx_anti(k,i,j1+jb,YDIR,iq) ) * real(ju,kind=RP) * RCDY(j) ) &
+                                 * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) &
+                                 / DENS(k,i,j) / real( NUM_LBFLX, kind=RP ) * sw
           end do
           end do
           end do
