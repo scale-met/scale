@@ -1092,11 +1092,6 @@ contains
 
       call qsat( QS0B, TB, PRES )
       call qsat( QS0G, TG, PRES )
-
-      !specific humidity at reference height
-      ! QS   = (W*BETB*QS0B+RW*BETG*QS0G)/(W+RW)
-      ! QZR  = QS + (QA-QS)*(log(ZR/Z0HC)/log(ZA/Z0HC))
-      ! print *,TIME,QS0B,QS0G,QS,QZR,QA
     
       TC1   = RW*ALPHAC    + RW*ALPHAG    + W*ALPHAB
       TC2   = RW*ALPHAC*TA + RW*ALPHAG*TG + W*ALPHAB*TB
@@ -1104,12 +1099,6 @@ contains
       QC1   = RW*(CHC*UA)    + RW*(CHG*BETG*UC)      + W*(CHB*BETB*UC)
       QC2   = RW*(CHC*UA)*QA + RW*(CHG*BETG*UC)*QS0G + W*(CHB*BETB*UC)*QS0B
       QC    = QC2 / QC1
-      ! print *,TIME,"QC org",QC
-      !QC1   = RW*(CHC*UA)     + RW*(CHG*BETG*UC)      + W*(CHB*BETB*UC)
-      !QC2   = RW*(CHC*UA)*QZR + RW*(CHG*BETG*UC)*QS0G + W*(CHB*BETB*UC)*QS0B
-      !QC    = QC2 / QC1
-      ! print *,TIME,"QC new",QC
-
 
       RG1   = EPSG * ( RX * VFGS                  &
                      + EPSB * VFGW * STB * TB**4  &
@@ -1217,23 +1206,6 @@ contains
      HG   = RHOO * CPdry * CHG * UC * (TG-TC)
      ELEG = RHOO * LH0   * CHG * UC * BETG * (QS0G-QC)
      G0G  = SG + RG - HG - ELEG
-
-     !if(tloc>=10.and.tloc<=11)then
-     !  iteration = 21
-     !  print *,tloc,NOWDATE(4),NOWDATE(5),NOWDATE(6)
-     !  print *,"GH",TIME,iteration,G0B,G0G,TB,TG,TC
-     !  print *,"SH",TIME,iteration,HB,HG
-     !  print *,"LH",TIME,iteration,ELEB,ELEG,QS0B,QS0G,QC,BETB,BETG
-     !  print *,"CAP",TIME,iteration,CAPG,AKSG,CAPL1,AKSL1
-     !endif
-
-     !if(tloc>=10.and.tloc<=11)then
-     ! print *,"HG2  ",HG,ALPHAG,TG,TC,(TG-TC)
-     ! print *,"ELEB2",ELEB,RHOO*LH0*CHB*UC,BETB,QS0B,QC,(QS0B-QC)
-     ! print *,"ELEG2",ELEG,RHOO*LH0*CHG*UC,BETG,QS0G,QC,(QS0G-QC)
-     ! print *,"G0G2 ",G0G,SG,RG,-HG,-ELEG
-     ! print *,"CH2  ",ALPHAB,ALPHAG,ALPHAC
-     !endif
 
     !-----------------------------------------------------------
     ! Total Fluxes from Urban Canopy
