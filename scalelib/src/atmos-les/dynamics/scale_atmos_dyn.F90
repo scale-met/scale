@@ -38,7 +38,6 @@ module scale_atmos_dyn
   !
   !++ used modules
   !
-  use mpi
   use scale_precision
   use scale_stdio
   use scale_prof
@@ -156,7 +155,6 @@ contains
        USE_AVERAGE,                                                                                          &
        DTSEC, DTSEC_ATMOS_DYN, NSTEP_ATMOS_DYN                                                               )
     use scale_const, only: &
-       EPS => CONST_EPS, &
        Rdry   => CONST_Rdry,  &
        Rvap   => CONST_Rvap,  &
        CVdry  => CONST_CVdry
@@ -175,8 +173,6 @@ contains
        I_UYZ, &
        I_XVZ, &
        I_XY
-    use scale_grid_real, only: &
-       vol  => REAL_VOL
     use scale_atmos_dyn_common, only: &
        FACT_N,                     &
        FACT_F,                     &
@@ -326,29 +322,6 @@ contains
     real(RP) :: mflx_lb(KA,IA,JA,3)
     real(RP) :: tflx_lb(KA,IA,JA,3)
     real(RP) :: qflx_lb(KA,IA,JA,3,QA)
-
-    real(RP) :: mflx_lb_total
-    real(RP) :: allmflx_lb_total
-    real(RP) :: mflx_lb_horizontal(KA)
-    real(RP) :: allmflx_lb_horizontal(KA,IA,JA)
-
-    real(RP) :: mass_tmp(KA,IA,JA)
-    real(RP) :: mass_total
-    real(RP) :: allmass_total
-
-    real(RP) :: mass_tmp2(KA,IA,JA)
-    real(RP) :: mass_total2
-    real(RP) :: allmass_total2
-
-    real(RP) :: pott_tmp(KA,IA,JA)
-    real(RP) :: pott_total
-    real(RP) :: allpott_total
-
-    real(RP) :: pott_tmp2(KA,IA,JA)
-    real(RP) :: pott_total2
-    real(RP) :: allpott_total2
-
-    real(RP) :: sw
 
     real(RP) :: dt
     real(RP) :: dtrk
@@ -708,7 +681,6 @@ contains
                mflx_hi, tflx_hi, GSQRT, MAPF, dt, & ! (in)
                RCDX, RCDY, & ! (in)
                DAMP_DENS, DAMP_VELX, DAMP_VELY, DAMP_POTT, & ! (in)
-               DAMP_alpha_DENS, & ! (in)
                -1, 0, 1, 0, & ! (in)
                IS+IHALO+NUM_LBFLX-1, IS+IHALO, JS, JE ) ! (in)
        end if
@@ -718,7 +690,6 @@ contains
                mflx_hi, tflx_hi, GSQRT, MAPF, dt, & ! (in)
                RCDX, RCDY, & ! (in)
                DAMP_DENS, DAMP_VELX, DAMP_VELY, DAMP_POTT, & ! (in)
-               DAMP_alpha_DENS, & ! (in)
                0, 0, -1, 0, & ! (in)
                IE-IHALO-NUM_LBFLX+1, IE-IHALO, JS, JE ) ! (in)
        end if
@@ -728,7 +699,6 @@ contains
                mflx_hi, tflx_hi, GSQRT, MAPF, dt, & ! (in)
                RCDX, RCDY, & ! (in)
                DAMP_DENS, DAMP_VELX, DAMP_VELY, DAMP_POTT, & ! (in)
-               DAMP_alpha_DENS, & ! (in)
                0, -1, 0, 1, & ! (in)
                IS, IE, JS+JHALO+NUM_LBFLX-1, JS+JHALO ) ! (in)
        end if
@@ -738,7 +708,6 @@ contains
                mflx_hi, tflx_hi, GSQRT, MAPF, dt, & ! (in)
                RCDX, RCDY, & ! (in)
                DAMP_DENS, DAMP_VELX, DAMP_VELY, DAMP_POTT, & ! (in)
-               DAMP_alpha_DENS, & ! (in)
                0, 0, 0, -1, & ! (in)
                IS, IE, JE-JHALO-NUM_LBFLX+1, JE-JHALO ) ! (in)
        end if
@@ -796,204 +765,6 @@ contains
                0, 0, 0, -1, & ! (in)
                IS, IE, JE-JHALO+1, JE ) ! (in)
        end if
-
-!       do j = JS, JE
-!       do i = IS, IE
-!       do k = KS, KE  
-!          mass_tmp (k,i,j) = DENS     (k,i,j) * vol(k,i,j)
-!          mass_tmp2(k,i,j) = DAMP_DENS(k,i,j) * vol(k,i,j)
-!          pott_tmp (k,i,j) = RHOT     (k,i,j) / DENS(k,i,j)
-!          pott_tmp2(k,i,j) = DAMP_POTT(k,i,j)
-!       end do
-!       end do
-!       end do
-!
-!       if ( .not. PRC_HAS_W ) then ! for western boundary
-!          do j = JS, JE
-!          do i = IS, IS+1
-!          do k = KS, KE
-!             mflx_lb(k,i,j,YDIR) = 0.0_RP
-!             mass_tmp (k,i,j) = 0.0_RP
-!             mass_tmp2(k,i,j) = 0.0_RP
-!             pott_tmp (k,i,j) = 0.0_RP
-!             pott_tmp2(k,i,j) = 0.0_RP
-!          end do
-!          end do
-!          end do
-!       end if
-!       if ( .not. PRC_HAS_E ) then ! for eastern boundary
-!          do j = JS, JE
-!          do i = IE-1, IE
-!          do k = KS, KE
-!             mflx_lb(k,i,j,YDIR) = 0.0_RP
-!             mass_tmp (k,i,j) = 0.0_RP
-!             mass_tmp2(k,i,j) = 0.0_RP
-!             pott_tmp (k,i,j) = 0.0_RP
-!             pott_tmp2(k,i,j) = 0.0_RP
-!          end do
-!          end do
-!          end do
-!       end if
-!       if ( .not. PRC_HAS_S ) then ! for sourthern boundary
-!          do j = JS, JS+1
-!          do i = IS, IE
-!          do k = KS, KE
-!             mflx_lb(k,i,j,XDIR) = 0.0_RP
-!             mass_tmp (k,i,j) = 0.0_RP
-!             mass_tmp2(k,i,j) = 0.0_RP
-!             pott_tmp (k,i,j) = 0.0_RP
-!             pott_tmp2(k,i,j) = 0.0_RP
-!          end do
-!          end do
-!          end do
-!       end if
-!       if ( .not. PRC_HAS_N ) then ! for northern boundary
-!          do j = JE-1, JE
-!          do i = IS, IE
-!          do k = KS, KE
-!             mflx_lb(k,i,j,XDIR) = 0.0_RP
-!             mass_tmp (k,i,j) = 0.0_RP
-!             mass_tmp2(k,i,j) = 0.0_RP
-!             pott_tmp (k,i,j) = 0.0_RP
-!             pott_tmp2(k,i,j) = 0.0_RP
-!          end do
-!          end do
-!          end do
-!       end if
-!
-!       mflx_lb_total                = 0.0_RP
-!       mflx_lb_horizontal(:)        = 0.0_RP
-!       allmflx_lb_horizontal(:,:,:) = 0.0_RP
-!
-!       if ( .not. PRC_HAS_W ) then ! for western boundary
-!          i = IS+2
-!          do j = JS, JE
-!          do k = KS, KE
-!            sw = sign(0.5_RP, DAMP_alpha_DENS(k,i,j) - EPS) + 0.5_RP
-!            mflx_lb_total = mflx_lb_total + mflx_lb(k,i-1,j,XDIR) * RCDX(i) * vol(k,i,j) &
-!                                          * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) * dt * sw
-!            mflx_lb_horizontal(k) = mflx_lb_horizontal(k) + mflx_lb(k,i-1,j,XDIR) * RCDX(i) * vol(k,i,j) &
-!                                                          * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) * dt * sw
-!          end do
-!          end do
-!       end if
-!       if ( .not. PRC_HAS_E ) then ! for eastern boundary
-!          i = IE-2
-!          do j = JS, JE
-!          do k = KS, KE
-!            sw = sign(0.5_RP, DAMP_alpha_DENS(k,i,j) - EPS) + 0.5_RP
-!            mflx_lb_total = mflx_lb_total - mflx_lb(k,i,j,XDIR) * RCDX(i) * vol(k,i,j) &
-!                                          * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) * dt * sw
-!            mflx_lb_horizontal(k) = mflx_lb_horizontal(k) - mflx_lb(k,i,j,XDIR) * RCDX(i) * vol(k,i,j) &
-!                                                          * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) * dt * sw
-!          end do
-!          end do
-!       end if
-!       if ( .not. PRC_HAS_S ) then ! for sourthern boundary
-!          j = JS+2
-!          do i = IS, IE
-!          do k = KS, KE
-!            sw = sign(0.5_RP, DAMP_alpha_DENS(k,i,j) - EPS) + 0.5_RP
-!            mflx_lb_total = mflx_lb_total + mflx_lb(k,i,j-1,YDIR) * RCDY(j) * vol(k,i,j) &
-!                                          * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) * dt * sw
-!            mflx_lb_horizontal(k) = mflx_lb_horizontal(k) + mflx_lb(k,i,j-1,YDIR) * RCDY(j) * vol(k,i,j) &
-!                                                          * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) * dt * sw
-!          end do
-!          end do
-!       end if
-!       if ( .not. PRC_HAS_N ) then ! for northern boundary
-!          j = JE-2
-!          do i = IS, IE
-!          do k = KS, KE
-!            sw = sign(0.5_RP, DAMP_alpha_DENS(k,i,j) - EPS) + 0.5_RP
-!            mflx_lb_total = mflx_lb_total - mflx_lb(k,i,j,YDIR) * RCDY(j) * vol(k,i,j) &
-!                                          * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) * dt * sw
-!            mflx_lb_horizontal(k) = mflx_lb_horizontal(k) - mflx_lb(k,i,j,YDIR) * RCDY(j) * vol(k,i,j) &
-!                                                          * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) * dt * sw
-!          end do
-!          end do
-!       end if
-!
-!       mass_total  = 0.0_RP
-!       mass_total2 = 0.0_RP
-!       pott_total  = 0.0_RP
-!       pott_total2 = 0.0_RP
-!
-!       do j = JS, JE
-!       do i = IS, IE
-!       do k = KS, KE
-!          mass_total  = mass_total  + mass_tmp (k,i,j)
-!          mass_total2 = mass_total2 + mass_tmp2(k,i,j)
-!          pott_total  = pott_total  + pott_tmp (k,i,j)
-!          pott_total2 = pott_total2 + pott_tmp2(k,i,j)
-!       end do
-!       end do
-!       end do
-!
-!       call MPI_Allreduce( mflx_lb_total,          &
-!                           allmflx_lb_total,       &
-!                           1,                    &
-!                           COMM_datatype,        &
-!                           MPI_SUM,              &
-!                           MPI_COMM_WORLD,       &
-!                           ierr                  )
-!       if( IO_L ) write(IO_FID_LOG,'(A,1x,i1,1x,2PE24.17)') 'total mflx_lb:', step, allmflx_lb_total
-!
-!       call MPI_Allreduce( mass_total,           &
-!                           allmass_total,        &
-!                           1,                    &
-!                           COMM_datatype,        &
-!                           MPI_SUM,              &
-!                           MPI_COMM_WORLD,       &
-!                           ierr                  )
-!       if( IO_L ) write(IO_FID_LOG,'(A,1x,i1,1x,2PE24.17)') 'total mass   :', step, allmass_total
-!
-!       call MPI_Allreduce( mass_total2,          &
-!                           allmass_total2,       &
-!                           1,                    &
-!                           COMM_datatype,        &
-!                           MPI_SUM,              &
-!                           MPI_COMM_WORLD,       &
-!                           ierr                  )
-!       if( IO_L ) write(IO_FID_LOG,'(A,1x,i1,1x,2PE24.17)') 'total mass2  :', step, allmass_total2
-!
-!       call MPI_Allreduce( pott_total,           &
-!                           allpott_total,        &
-!                           1,                    &
-!                           COMM_datatype,        &
-!                           MPI_SUM,              &
-!                           MPI_COMM_WORLD,       &
-!                           ierr                  )
-!       if( IO_L ) write(IO_FID_LOG,'(A,1x,i1,1x,2PE24.17)') 'total pott   :', step, allpott_total
-!
-!       call MPI_Allreduce( pott_total2,          &
-!                           allpott_total2,       &
-!                           1,                    &
-!                           COMM_datatype,        &
-!                           MPI_SUM,              &
-!                           MPI_COMM_WORLD,       &
-!                           ierr                  )
-!       if( IO_L ) write(IO_FID_LOG,'(A,1x,i1,1x,2PE24.17)') 'total pott2  :', step, allpott_total2
-!
-!       i = IS; j = JS ! dummy
-!       do k = KS, KE
-!          call MPI_Allreduce( mflx_lb_horizontal(k),        &
-!                              allmflx_lb_horizontal(k,i,j), &
-!                              1,                            &
-!                              COMM_datatype,                &
-!                              MPI_SUM,                      &
-!                              MPI_COMM_WORLD,               &
-!                              ierr                          )
-!       end do
-!       do j = JS+1, JE
-!       do i = IS+1, IE
-!       do k = KS, KE
-!          allmflx_lb_horizontal(k,i,j) = allmflx_lb_horizontal(k,IS,JS)
-!       end do
-!       end do
-!       end do
-!       call HIST_in(allmflx_lb_horizontal(:,:,:), 'ALLMOM_lb_hz', 'horizontally total momentum flux from lateral boundary', &
-!                                                  'kg/m2/s', dt                                                             )
 
        do j  = JS, JE
        do i  = IS, IE
@@ -1290,7 +1061,7 @@ contains
             DENS, MOMX, MOMY, & ! (in)
             qflx_hi, qflx_anti, GSQRT, MAPF, dt, & ! (in)
             RCDX, RCDY, & ! (in)
-            DAMP_QTRC, DAMP_alpha_QTRC, & ! (in)
+            DAMP_QTRC, & ! (in)
             -1, 0, 1, 0, & ! (in)
             IS+IHALO+NUM_LBFLX-1, IS+IHALO, JS, JE ) ! (in)
     end if
@@ -1300,7 +1071,7 @@ contains
             DENS, MOMX, MOMY, & ! (in)
             qflx_hi, qflx_anti, GSQRT, MAPF, dt, & ! (in)
             RCDX, RCDY, & ! (in)
-            DAMP_QTRC, DAMP_alpha_QTRC, & ! (in)
+            DAMP_QTRC, & ! (in)
             0, 0, -1, 0, & ! (in)
             IE-IHALO-NUM_LBFLX+1, IE-IHALO, JS, JE ) ! (in)
     end if
@@ -1310,7 +1081,7 @@ contains
             DENS, MOMX, MOMY, & ! (in)
             qflx_hi, qflx_anti, GSQRT, MAPF, dt, & ! (in)
             RCDX, RCDY, & ! (in)
-            DAMP_QTRC, DAMP_alpha_QTRC, & ! (in)
+            DAMP_QTRC, & ! (in)
             0, -1, 0, 1, & ! (in)
             IS, IE, JS+JHALO+NUM_LBFLX-1, JS+JHALO ) ! (in)
     end if
@@ -1320,7 +1091,7 @@ contains
             DENS, MOMX, MOMY, & ! (in)
             qflx_hi, qflx_anti, GSQRT, MAPF, dt, & ! (in)
             RCDX, RCDY, & ! (in)
-            DAMP_QTRC, DAMP_alpha_QTRC, & ! (in)
+            DAMP_QTRC, & ! (in)
             0, 0, 0, -1, & ! (in)
             IS, IE, JE-JHALO-NUM_LBFLX+1, JE-JHALO ) ! (in)
     end if
@@ -1572,12 +1343,8 @@ contains
        mflx_hi, tflx_hi, GSQRT, MAPF, dt, &
        RCDX, RCDY, &
        DAMP_DENS, DAMP_VELX, DAMP_VELY, DAMP_POTT, &
-       DAMP_alpha_DENS, &
        ib, jb, iu, ju, &
        i0, i1, j0, j1 )
-    use scale_const, only: &
-       EPS1 => CONST_EPS1, &
-       EPS => CONST_EPS
     use scale_gridtrans, only: &
        I_XYZ, &
        I_UYZ, &
@@ -1585,9 +1352,6 @@ contains
        I_XY,  &
        I_UY,  &
        I_XV
-    use scale_atmos_dyn_common, only: &
-       FACT_N, &
-       FACT_F
     implicit none
 
     real(RP), intent(inout) :: DENS   (KA,IA,JA)
@@ -1609,8 +1373,6 @@ contains
     real(RP), intent(in)    :: DAMP_VELY(KA,IA,JA)
     real(RP), intent(in)    :: DAMP_POTT(KA,IA,JA)
 
-    real(RP), intent(in)    :: DAMP_alpha_DENS(KA,IA,JA)
-
     integer,  intent(in)    :: ib ! W:-1, E: 0, S: 0, N: 0
     integer,  intent(in)    :: jb ! W: 0, E: 0, S:-1, N: 0
     integer,  intent(in)    :: iu ! W: 1, E:-1, S: 0, N: 0
@@ -1621,7 +1383,6 @@ contains
     integer,  intent(in)    :: j1
 
     real(RP) :: DAMP_RHOT(KA,IA,JA)
-    real(RP) :: sw
 
     integer :: i, j, k
     !---------------------------------------------------------------------------
@@ -1629,8 +1390,6 @@ contains
     do j = j0, j1, -ju+abs(iu)
     do i = i0, i1, -iu+abs(ju)
     do k = KS, KE
-       sw = sign(0.5_RP, DAMP_alpha_DENS(k,i,j) - EPS) + 0.5_RP
-
        DAMP_RHOT(k,i1+ib   ,j       ) = DAMP_POTT(k,i1+ib   ,j       ) * DAMP_DENS(k,i1+ib   ,j       )
        DAMP_RHOT(k,i       ,j1+jb   ) = DAMP_POTT(k,i       ,j1+jb   ) * DAMP_DENS(k,i       ,j1+jb   )
        DAMP_RHOT(k,i1-ib-iu,j       ) = DAMP_POTT(k,i1-ib-iu,j       ) * DAMP_DENS(k,i1-ib-iu,j       )
@@ -1649,12 +1408,12 @@ contains
        DENS(k,i,j) = DENS(k,i,j) &
                    + dt * ( ( mflx_lb(k,i1+ib,j    ,XDIR) - mflx_hi(k,i1+ib,j    ,XDIR) ) * real(iu,kind=RP) * RCDX(i) &
                           + ( mflx_lb(k,i    ,j1+jb,YDIR) - mflx_hi(k,i    ,j1+jb,YDIR) ) * real(ju,kind=RP) * RCDY(j) ) &
-                        * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) / real( NUM_LBFLX, kind=RP ) * sw
+                        * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) / real( NUM_LBFLX, kind=RP )
 
        RHOT(k,i,j) = RHOT(k,i,j) &
                    + dt * ( ( tflx_lb(k,i1+ib,j    ,XDIR) - tflx_hi(k,i1+ib,j    ,XDIR) ) * real(iu,kind=RP) * RCDX(i) &
                           + ( tflx_lb(k,i    ,j1+jb,YDIR) - tflx_hi(k,i    ,j1+jb,YDIR) ) * real(ju,kind=RP) * RCDY(j) ) &
-                        * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) / real( NUM_LBFLX, kind=RP ) * sw
+                        * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) / real( NUM_LBFLX, kind=RP )
     end do
     end do
     end do
@@ -1667,11 +1426,9 @@ contains
        DENS, MOMX, MOMY, &
        qflx_hi, qflx_anti, GSQRT, MAPF, dt, &
        RCDX, RCDY, &
-       DAMP_QTRC, DAMP_alpha_QTRC, &
+       DAMP_QTRC, &
        ib, jb, iu, ju, &
        i0, i1, j0, j1 )
-    use scale_const, only: &
-       EPS => CONST_EPS
     use scale_gridtrans, only: &
        I_XYZ, &
        I_UYZ, &
@@ -1699,7 +1456,6 @@ contains
     real(RP), intent(in)    :: RCDY(JA)
 
     real(RP), intent(in)    :: DAMP_QTRC      (KA,IA,JA,BND_QA)
-    real(RP), intent(in)    :: DAMP_alpha_QTRC(KA,IA,JA,BND_QA)
 
     integer,  intent(in)    :: ib ! W:-1, E: 0, S: 0, N: 0
     integer,  intent(in)    :: jb ! W: 0, E: 0, S:-1, N: 0
@@ -1710,8 +1466,6 @@ contains
     integer,  intent(in)    :: j0
     integer,  intent(in)    :: j1
 
-    real(RP) :: sw
-
     integer :: i, j, k, iq
     !---------------------------------------------------------------------------
 
@@ -1720,8 +1474,6 @@ contains
        do j = j0, j1, -ju+abs(iu)
        do i = i0, i1, -iu+abs(ju)
        do k = KS, KE
-          sw = sign(0.5_RP, DAMP_alpha_QTRC(k,i,j,I_QV) - EPS) + 0.5_RP
-
           qflx_lb(k,i1+ib,j,XDIR,I_QV) = MOMX(k,i1+ib,j) &
                                        * ( DAMP_QTRC(k,i1+ib,j,I_QV) + DAMP_QTRC(k,i1-ib-iu,j,I_QV) ) * 0.5_RP &
                                        * GSQRT(k,i1+ib,j,I_UYZ) / MAPF(i1+ib,j,2,I_UY) * real( abs(iu), kind=RP )
@@ -1737,7 +1489,7 @@ contains
                                     - qflx_hi  (k,i,j1+jb,YDIR,I_QV) &
                                     + qflx_anti(k,i,j1+jb,YDIR,I_QV) ) * real(ju,kind=RP) * RCDY(j) ) &
                                 * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) &
-                                / DENS(k,i,j) / real( NUM_LBFLX, kind=RP ) * sw
+                                / DENS(k,i,j) / real( NUM_LBFLX, kind=RP )
        end do
        end do
        end do
@@ -1747,8 +1499,6 @@ contains
           do j = j0, j1, -ju+abs(iu)
           do i = i0, i1, -iu+abs(ju)
           do k = KS, KE
-             sw = sign(0.5_RP, DAMP_alpha_QTRC(k,i,j,iq) - EPS) + 0.5_RP
-
              qflx_lb(k,i1+ib,j,XDIR,iq) = MOMX(k,i1+ib,j) &
                                         * ( DAMP_QTRC(k,i1+ib,j,iq) + DAMP_QTRC(k,i1-ib-iu,j,iq) ) * 0.5_RP &
                                         * GSQRT(k,i1+ib,j,I_UYZ) / MAPF(i1+ib,j,2,I_UY) * real( abs(iu), kind=RP )
@@ -1764,7 +1514,7 @@ contains
                                      - qflx_hi  (k,i,j1+jb,YDIR,iq) &
                                      + qflx_anti(k,i,j1+jb,YDIR,iq) ) * real(ju,kind=RP) * RCDY(j) ) &
                                  * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) &
-                                 / DENS(k,i,j) / real( NUM_LBFLX, kind=RP ) * sw
+                                 / DENS(k,i,j) / real( NUM_LBFLX, kind=RP )
           end do
           end do
           end do
