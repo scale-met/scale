@@ -40,7 +40,7 @@ module scale_atmos_dyn_rk
   abstract interface
      subroutine rk( &
           DENS_RK, MOMZ_RK, MOMX_RK, MOMY_RK, RHOT_RK, &
-          mflx_hi,                                     &
+          mflx_hi, tflx_hi,                            &
           DENS0,   MOMZ0,   MOMX0,   MOMY0,   RHOT0,   &
           DENS,    MOMZ,    MOMX,    MOMY,    RHOT,    &
           DENS_t,  MOMZ_t,  MOMX_t,  MOMY_t,  RHOT_t,  &
@@ -62,6 +62,7 @@ module scale_atmos_dyn_rk
        real(RP), intent(out) :: RHOT_RK(KA,IA,JA)   !
 
        real(RP), intent(out) :: mflx_hi(KA,IA,JA,3) ! mass flux
+       real(RP), intent(out) :: tflx_hi(KA,IA,JA,3) ! internal energy flux
 
        real(RP), intent(in),target :: DENS0(KA,IA,JA) ! prognostic variables at previous dynamical time step
        real(RP), intent(in),target :: MOMZ0(KA,IA,JA) !
