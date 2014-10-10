@@ -48,7 +48,7 @@ module scale_urban_grid
   !
   !++ Private parameters & variables
   !
-  real(RP), private :: UDZ(100)
+  real(RP), private :: UDZ(200)
 
   character(len=H_LONG), private :: URBAN_GRID_IN_BASENAME  = ''
   character(len=H_LONG), private :: URBAN_GRID_OUT_BASENAME = ''

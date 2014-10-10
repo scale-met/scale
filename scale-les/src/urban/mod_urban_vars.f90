@@ -380,6 +380,61 @@ contains
     real(RP) :: tmp3(IA,JA,UKS:UKE)
     !---------------------------------------------------------------------------
 
+    call COMM_vars8( TR_URB(:,:),     1  )
+    call COMM_vars8( TB_URB(:,:),     2  )
+    call COMM_vars8( TG_URB(:,:),     3  )
+    call COMM_vars8( TC_URB(:,:),     4  )
+    call COMM_vars8( QC_URB(:,:),     5  )
+    call COMM_vars8( UC_URB(:,:),     6  )
+    call COMM_vars8( TS_URB(:,:),     7  )
+    call COMM_vars8( SHR_URB(:,:),    8  )
+    call COMM_vars8( SHB_URB(:,:),    9  )
+    call COMM_vars8( SHG_URB(:,:),    10 )
+    call COMM_vars8( LHR_URB(:,:),    11 )
+    call COMM_vars8( LHB_URB(:,:),    12 )
+    call COMM_vars8( LHG_URB(:,:),    13 )
+    call COMM_vars8( GHR_URB(:,:),    14 )
+    call COMM_vars8( GHB_URB(:,:),    15 )
+    call COMM_vars8( GHG_URB(:,:),    16 )
+    call COMM_vars8( RnR_URB(:,:),    17 )
+    call COMM_vars8( RnB_URB(:,:),    18 )
+    call COMM_vars8( RnG_URB(:,:),    19 )
+    call COMM_vars8( RAINR_URB(:,:),  20 )
+    call COMM_vars8( RAINB_URB(:,:),  21 )
+    call COMM_vars8( RAING_URB(:,:),  22 )
+    call COMM_vars8( ROFF_URB(:,:),   23 )
+    call COMM_vars8( Rngrd_URB(:,:),  24 )
+    call COMM_vars8( AH_URB(:,:),     25 )
+    call COMM_vars8( ALH_URB(:,:),    26 )
+
+
+    call COMM_wait ( TR_URB(:,:),     1  )
+    call COMM_wait ( TB_URB(:,:),     2  )
+    call COMM_wait ( TG_URB(:,:),     3  )
+    call COMM_wait ( TC_URB(:,:),     4  )
+    call COMM_wait ( QC_URB(:,:),     5  )
+    call COMM_wait ( UC_URB(:,:),     6  )
+    call COMM_wait ( TS_URB(:,:),     7  )
+    call COMM_wait ( SHR_URB(:,:),    8  )
+    call COMM_wait ( SHB_URB(:,:),    9  )
+    call COMM_wait ( SHG_URB(:,:),    10 )
+    call COMM_wait ( LHR_URB(:,:),    11 )
+    call COMM_wait ( LHB_URB(:,:),    12 )
+    call COMM_wait ( LHG_URB(:,:),    13 )
+    call COMM_wait ( GHR_URB(:,:),    14 )
+    call COMM_wait ( GHB_URB(:,:),    15 )
+    call COMM_wait ( GHG_URB(:,:),    16 )
+    call COMM_wait ( RnR_URB(:,:),    17 )
+    call COMM_wait ( RnB_URB(:,:),    18 )
+    call COMM_wait ( RnG_URB(:,:),    19 )
+    call COMM_wait ( RAINR_URB(:,:),  20 )
+    call COMM_wait ( RAINB_URB(:,:),  21 )
+    call COMM_wait ( RAING_URB(:,:),  22 )
+    call COMM_wait ( ROFF_URB(:,:),   23 )
+    call COMM_wait ( Rngrd_URB(:,:),  24 )
+    call COMM_wait ( AH_URB(:,:),     25 )
+    call COMM_wait ( ALH_URB(:,:),    26 )
+
     do k = UKS, UKE
       tmp1(:,:,k) = TRL_URB(k,:,:)
       tmp2(:,:,k) = TBL_URB(k,:,:)
@@ -387,70 +442,25 @@ contains
     end do
 
     do k = UKS, UKE
-      call COMM_vars8( tmp1(:,:,k), k       )
-      call COMM_vars8( tmp2(:,:,k), k+UKE   )
-      call COMM_vars8( tmp3(:,:,k), k+UKE*2 )
-    end do
-
-    call COMM_vars8( TR_URB(:,:),     1+UKE*3 )
-    call COMM_vars8( TB_URB(:,:),     2+UKE*3 )
-    call COMM_vars8( TG_URB(:,:),     3+UKE*3 )
-    call COMM_vars8( TC_URB(:,:),     4+UKE*3 )
-    call COMM_vars8( QC_URB(:,:),     5+UKE*3 )
-    call COMM_vars8( UC_URB(:,:),     6+UKE*3 )
-    call COMM_vars8( TS_URB(:,:),     7+UKE*3 )
-    call COMM_vars8( SHR_URB(:,:),    8+UKE*3 )
-    call COMM_vars8( SHB_URB(:,:),    9+UKE*3 )
-    call COMM_vars8( SHG_URB(:,:),    10+UKE*3 )
-    call COMM_vars8( LHR_URB(:,:),    11+UKE*3 )
-    call COMM_vars8( LHB_URB(:,:),    12+UKE*3 )
-    call COMM_vars8( LHG_URB(:,:),    13+UKE*3 )
-    call COMM_vars8( GHR_URB(:,:),    14+UKE*3 )
-    call COMM_vars8( GHB_URB(:,:),    15+UKE*3 )
-    call COMM_vars8( GHG_URB(:,:),    16+UKE*3 )
-    call COMM_vars8( RnR_URB(:,:),    17+UKE*3 )
-    call COMM_vars8( RnB_URB(:,:),    18+UKE*3 )
-    call COMM_vars8( RnG_URB(:,:),    19+UKE*3 )
-    call COMM_vars8( RAINR_URB(:,:),  20+UKE*3 )
-    call COMM_vars8( RAINB_URB(:,:),  21+UKE*3 )
-    call COMM_vars8( RAING_URB(:,:),  22+UKE*3 )
-    call COMM_vars8( ROFF_URB(:,:),   23+UKE*3 )
-    call COMM_vars8( Rngrd_URB(:,:),  24+UKE*3 )
-    call COMM_vars8( AH_URB(:,:),     25+UKE*3 )
-    call COMM_vars8( ALH_URB(:,:),    26+UKE*3 )
+      call COMM_vars8( tmp1(:,:,k), k )
+    enddo
+    do k = UKS, UKE
+      call COMM_wait ( tmp1(:,:,k), k )
+    enddo
 
     do k = UKS, UKE
-      call COMM_wait ( tmp1(:,:,k), k       )
-      call COMM_wait ( tmp2(:,:,k), k+UKE   )
-      call COMM_wait ( tmp3(:,:,k), k+UKE*2 )
-    end do
+      call COMM_vars8( tmp2(:,:,k), k )
+    enddo
+    do k = UKS, UKE
+      call COMM_wait ( tmp2(:,:,k), k )
+    enddo
 
-    call COMM_wait ( TR_URB(:,:),     1+UKE*3 )
-    call COMM_wait ( TB_URB(:,:),     2+UKE*3 )
-    call COMM_wait ( TG_URB(:,:),     3+UKE*3 )
-    call COMM_wait ( TC_URB(:,:),     4+UKE*3 )
-    call COMM_wait ( QC_URB(:,:),     5+UKE*3 )
-    call COMM_wait ( UC_URB(:,:),     6+UKE*3 )
-    call COMM_wait ( TS_URB(:,:),     7+UKE*3 )
-    call COMM_wait ( SHR_URB(:,:),    8+UKE*3 )
-    call COMM_wait ( SHB_URB(:,:),    9+UKE*3 )
-    call COMM_wait ( SHG_URB(:,:),    10+UKE*3 )
-    call COMM_wait ( LHR_URB(:,:),    11+UKE*3 )
-    call COMM_wait ( LHB_URB(:,:),    12+UKE*3 )
-    call COMM_wait ( LHG_URB(:,:),    13+UKE*3 )
-    call COMM_wait ( GHR_URB(:,:),    14+UKE*3 )
-    call COMM_wait ( GHB_URB(:,:),    15+UKE*3 )
-    call COMM_wait ( GHG_URB(:,:),    16+UKE*3 )
-    call COMM_wait ( RnR_URB(:,:),    17+UKE*3 )
-    call COMM_wait ( RnB_URB(:,:),    18+UKE*3 )
-    call COMM_wait ( RnG_URB(:,:),    19+UKE*3 )
-    call COMM_wait ( RAINR_URB(:,:),  20+UKE*3 )
-    call COMM_wait ( RAINB_URB(:,:),  21+UKE*3 )
-    call COMM_wait ( RAING_URB(:,:),  22+UKE*3 )
-    call COMM_wait ( ROFF_URB(:,:),   23+UKE*3 )
-    call COMM_wait ( Rngrd_URB(:,:),  24+UKE*3 )
-    call COMM_wait ( AH_URB(:,:),     25+UKE*3 )
-    call COMM_wait ( ALH_URB(:,:),    26+UKE*3 )
+    do k = UKS, UKE
+      call COMM_vars8( tmp3(:,:,k), k )
+    end do
+    do k = UKS, UKE
+      call COMM_wait ( tmp3(:,:,k), k )
+    end do
 
     do k = UKS, UKE
       TRL_URB(k,:,:) = tmp1(:,:,k)
@@ -515,6 +525,7 @@ contains
        call URBAN_vars_fillhalo
 
        call URBAN_vars_total
+
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** restart file for urban is not specified.'
     endif
