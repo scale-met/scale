@@ -123,8 +123,8 @@ contains
     real(RP), intent(in) :: CDY(JA)
     real(RP), intent(in) :: CZ (KA,IA,JA)
 
-    integer :: ATMOS_PHY_TB_HYBRID_LES_DX !< horizontal resolution for LES
-    integer :: ATMOS_PHY_TB_HYBRID_PRM_DX !< horizontal resolution for turbulent parametarization
+    integer :: ATMOS_PHY_TB_HYBRID_LES_DX = 100.0_RP !< horizontal resolution for LES
+    integer :: ATMOS_PHY_TB_HYBRID_PRM_DX = 500.0_RP !< horizontal resolution for turbulent parametarization
     character(len=H_SHORT) :: ATMOS_PHY_TB_HYBRID_LES_TYPE = 'SMAGORINSKY' !< scheme type for LES
     character(len=H_SHORT) :: ATMOS_PHY_TB_HYBRID_PRM_TYPE = 'MYNN'        !< scheme type for turbulent parametarization
 
