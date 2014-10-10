@@ -92,15 +92,21 @@ contains
 
   !-----------------------------------------------------------------------------
   !> HALO Communication
-  subroutine TOPO_fillhalo
+  subroutine TOPO_fillhalo( Zsfc )
     use scale_comm, only: &
        COMM_vars8, &
        COMM_wait
     implicit none
+    real(RP), intent(inout), optional :: Zsfc(IA,JA)
     !---------------------------------------------------------------------------
 
-    call COMM_vars8( TOPO_Zsfc(:,:), 1 )
-    call COMM_wait ( TOPO_Zsfc(:,:), 1 )
+    if ( present(Zsfc) ) then
+       call COMM_vars8( Zsfc(:,:), 1 )
+       call COMM_wait ( Zsfc(:,:), 1 )
+    else
+       call COMM_vars8( TOPO_Zsfc(:,:), 1 )
+       call COMM_wait ( TOPO_Zsfc(:,:), 1 )
+    end if
 
     return
   end subroutine TOPO_fillhalo

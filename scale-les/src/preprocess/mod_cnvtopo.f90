@@ -52,7 +52,9 @@ module mod_cnvtopo
   !++ Private parameters & variables
   !
   real(RP), private :: CNVTOPO_smooth_maxslope
-  character(len=H_SHORT), private :: CNVTOPO_smooth_type = 'GAUSSIAN'
+  real(RP), private :: CNVTOPO_smooth_maxslope_bnd
+  integer, private  :: CNVTOPO_smooth_itelim = 100
+  character(len=H_SHORT), private :: CNVTOPO_smooth_type = 'LAPLACIAN'
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -73,6 +75,8 @@ contains
     NAMELIST / PARAM_CNVTOPO / &
        CNVTOPO_name,            &
        CNVTOPO_smooth_maxslope, &
+       CNVTOPO_smooth_maxslope_bnd, &
+       CNVTOPO_smooth_itelim, &
        CNVTOPO_smooth_type
 
     real(RP) :: minslope, DZDX, DZDY
@@ -92,6 +96,7 @@ contains
     enddo
 
     CNVTOPO_smooth_maxslope = minslope
+    CNVTOPO_smooth_maxslope_bnd = -1.0_RP
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -103,6 +108,10 @@ contains
        call PRC_MPIstop
     endif
     if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_CNVTOPO)
+
+    if ( CNVTOPO_smooth_maxslope_bnd < 0.0_RP ) then
+       CNVTOPO_smooth_maxslope_bnd = CNVTOPO_smooth_maxslope
+    end if
 
     select case(CNVTOPO_name)
     case('NONE')
@@ -128,11 +137,22 @@ contains
   !-----------------------------------------------------------------------------
   !> Driver
   subroutine CNVTOPO
+    use scale_const, only: &
+       PI => CONST_PI
     use scale_process, only: &
        PRC_MPIstop
+    use scale_grid, only: &
+       CBFX => GRID_CBFX, &
+       CBFY => GRID_CBFY
     use scale_topography, only: &
+       TOPO_fillhalo, &
+       TOPO_Zsfc, &
        TOPO_write
     implicit none
+
+    real(RP) :: Zsfc(IA,JA,2)
+    real(RP) :: frac
+    integer :: i, j
     !---------------------------------------------------------------------------
 
     if ( CNVTOPO_TYPE == I_IGNORE ) then
@@ -157,7 +177,25 @@ contains
           call PRC_MPIstop
        endselect
 
-       call CNVTOPO_smooth
+       Zsfc(:,:,1) = TOPO_Zsfc
+       call CNVTOPO_smooth( &
+            Zsfc(:,:,1), & ! (inout)
+            CNVTOPO_smooth_maxslope ) ! (in)
+
+       Zsfc(:,:,2) = Zsfc(:,:,1)
+       call CNVTOPO_smooth( &
+            Zsfc(:,:,2), & ! (inout)
+            CNVTOPO_smooth_maxslope_bnd ) ! (in)
+
+       do j = 1, JA
+       do i = 1, IA
+          frac = sin( max( CBFX(i), CBFY(j) ) * PI * 0.5_RP )
+          TOPO_Zsfc(i,j) = Zsfc(i,j,1) * ( 1.0_RP - frac ) &
+                         + Zsfc(i,j,2) * frac
+       end do
+       end do
+
+       call TOPO_fillhalo
 
        if( IO_L ) write(IO_FID_LOG,*) '++++++ END   CONVERT TOPOGRAPHY DATA ++++++'
 
@@ -705,7 +743,9 @@ contains
 
   !-----------------------------------------------------------------------------
   !> check slope
-  subroutine CNVTOPO_smooth
+  subroutine CNVTOPO_smooth( &
+       Zsfc, &
+       smooth_maxslope )
     use scale_const, only: &
        D2R => CONST_D2R
     use scale_process, only: &
@@ -718,9 +758,11 @@ contains
     use scale_statistics, only: &
        STAT_detail
     use scale_topography, only: &
-       TOPO_fillhalo, &
-       TOPO_Zsfc
+       TOPO_fillhalo
     implicit none
+
+    real(RP), intent(inout) :: Zsfc(IA,JA)
+    real(RP), intent(in)    :: smooth_maxslope
 
     real(RP) :: DZsfc_DX(1,IA,JA,1) ! d(Zsfc)/dx at u-position
     real(RP) :: DZsfc_DY(1,IA,JA,1) ! d(Zsfc)/dy at v-position
@@ -729,8 +771,6 @@ contains
     real(RP) :: maxslope
 
     character(len=H_SHORT) :: varname(1)
-
-    integer,parameter :: itelim = 100
 
     integer :: ite
     integer :: i, j
@@ -741,21 +781,21 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '***                  Smoothing type = ', CNVTOPO_smooth_type
 
     ! digital filter
-    do ite = 1, itelim
+    do ite = 1, CNVTOPO_smooth_itelim+1
        if( IO_L ) write(IO_FID_LOG,*)
        if( IO_L ) write(IO_FID_LOG,*) '*** Smoothing itelation : ', ite
 
-       call TOPO_fillhalo
+       call TOPO_fillhalo( Zsfc )
 
        do j = JS, JE
        do i = IS, IE
-          DZsfc_DX(1,i,j,1) = atan2( ( TOPO_Zsfc(i+1,j)-TOPO_Zsfc(i,j) ), GRID_FDX(i) ) / D2R
+          DZsfc_DX(1,i,j,1) = atan2( ( Zsfc(i+1,j)-Zsfc(i,j) ), GRID_FDX(i) ) / D2R
        enddo
        enddo
 
        do j = JS, JE
        do i = IS, IE
-          DZsfc_DY(1,i,j,1) = atan2( ( TOPO_Zsfc(i,j+1)-TOPO_Zsfc(i,j) ), GRID_FDY(j) ) / D2R
+          DZsfc_DY(1,i,j,1) = atan2( ( Zsfc(i,j+1)-Zsfc(i,j) ), GRID_FDY(j) ) / D2R
        enddo
        enddo
 
@@ -764,7 +804,7 @@ contains
 
        if( IO_L ) write(IO_FID_LOG,*) '*** maximum slope [deg] : ', maxslope
 
-       if( maxslope < CNVTOPO_smooth_maxslope ) exit
+       if( maxslope < smooth_maxslope ) exit
 
        varname(1) = "DZsfc_DX"
        call STAT_detail( DZsfc_DX(:,:,:,:), varname(:) )
@@ -776,27 +816,27 @@ contains
           ! 3 by 3 gaussian filter
           do j = JS, JE
           do i = IS, IE
-             TOPO_Zsfc(i,j) = ( 0.2500_RP * TOPO_Zsfc(i  ,j  ) &
-                              + 0.1250_RP * TOPO_Zsfc(i-1,j  ) &
-                              + 0.1250_RP * TOPO_Zsfc(i+1,j  ) &
-                              + 0.1250_RP * TOPO_Zsfc(i  ,j-1) &
-                              + 0.1250_RP * TOPO_Zsfc(i  ,j+1) &
-                              + 0.0625_RP * TOPO_Zsfc(i-1,j-1) &
-                              + 0.0625_RP * TOPO_Zsfc(i+1,j-1) &
-                              + 0.0625_RP * TOPO_Zsfc(i-1,j+1) &
-                              + 0.0625_RP * TOPO_Zsfc(i+1,j+1) )
+             Zsfc(i,j) = ( 0.2500_RP * Zsfc(i  ,j  ) &
+                         + 0.1250_RP * Zsfc(i-1,j  ) &
+                         + 0.1250_RP * Zsfc(i+1,j  ) &
+                         + 0.1250_RP * Zsfc(i  ,j-1) &
+                         + 0.1250_RP * Zsfc(i  ,j+1) &
+                         + 0.0625_RP * Zsfc(i-1,j-1) &
+                         + 0.0625_RP * Zsfc(i+1,j-1) &
+                         + 0.0625_RP * Zsfc(i-1,j+1) &
+                         + 0.0625_RP * Zsfc(i+1,j+1) )
           enddo
           enddo
        case ( 'LAPLACIAN' )
           do j = JS, JE
           do i = IS, IE
-             TOPO_Zsfc(i,j) = TOPO_Zsfc(i,j) &
-                            + ( TOPO_Zsfc(i-1,j  ) &
-                              + TOPO_Zsfc(i+1,j  ) &
-                              + TOPO_Zsfc(i  ,j-1) &
-                              + TOPO_Zsfc(i  ,j+1) &
-                              - TOPO_Zsfc(i  ,j  ) * 4.0_RP ) &
-                            * 0.1_RP
+             Zsfc(i,j) = Zsfc(i,j) &
+                       + ( Zsfc(i-1,j  ) &
+                         + Zsfc(i+1,j  ) &
+                         + Zsfc(i  ,j-1) &
+                         + Zsfc(i  ,j+1) &
+                         - Zsfc(i  ,j  ) * 4.0_RP ) &
+                       * 0.1_RP
           enddo
           enddo
        case default
@@ -806,7 +846,12 @@ contains
 
     enddo
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** smoothing complete.'
+    if ( ite  > CNVTOPO_smooth_itelim ) then
+       write(*,*) 'xxx not converged'
+       call PRC_MPIstop
+    else
+       if( IO_L ) write(IO_FID_LOG,*) '*** smoothing complete.'
+    end if
 
     varname(1) = "DZsfc_DX"
     call STAT_detail( DZsfc_DX(:,:,:,:), varname(:) )
