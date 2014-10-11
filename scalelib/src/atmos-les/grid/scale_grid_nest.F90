@@ -86,6 +86,7 @@ module scale_grid_nest
   logical,  public              :: ONLINE_IAM_PARENT    = .false.
   logical,  public              :: ONLINE_IAM_DAUGHTER  = .false.
   integer,  public              :: ONLINE_DOMAIN_NUM    = 1
+  integer,  public              :: ONLINE_DAUGHTER_PRC  = 1
 
   !-----------------------------------------------------------------------------
   !
@@ -234,7 +235,7 @@ contains
     integer :: fid, ierr
     integer :: parent_id
     integer :: istatus(MPI_STATUS_SIZE)
-    integer :: errcodes(1:PRC_nmax)
+    integer, allocatable :: errcodes(:)
 
     character(2) :: dom_num
 
@@ -250,7 +251,8 @@ contains
        OFFLINE,                  &
        ONLINE_DOMAIN_NUM,        &
        ONLINE_IAM_PARENT,        &
-       ONLINE_IAM_DAUGHTER
+       ONLINE_IAM_DAUGHTER,      &
+       ONLINE_DAUGHTER_PRC
 
     !---------------------------------------------------------------------------
 
@@ -262,6 +264,7 @@ contains
 
     HANDLING_NUM = 0
     NEST_Filiation(:) = 0
+    ONLINE_DAUGHTER_PRC = PRC_nmax
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -273,6 +276,8 @@ contains
        call PRC_MPIstop
     endif
     if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_NEST)
+
+    allocate ( errcodes(1:ONLINE_DAUGHTER_PRC) )
 
     if( USE_NESTING ) then
 
@@ -340,15 +345,16 @@ contains
             argv(1) = 'run.d'//dom_num//'.conf'
             if( IO_L ) write(IO_FID_LOG,'(1x,A,I2,A)') '*** Launch Daughter Domain [INTERCOMM_ID:', INTERCOMM_ID(HANDLING_NUM), ' ]'
             if( IO_L ) write(IO_FID_LOG,'(1x,A,A,A,A)') '*** Launch Command: ', trim(cmd), ' ', trim(argv(1))
-            call MPI_COMM_SPAWN( trim(cmd),          &
-                                 argv,               &
-                                 PRC_nmax,           &
-                                 MPI_INFO_NULL,      &
-                                 PRC_master,         &
-                                 COMM_world,         &
-                                 INTERCOMM_DAUGHTER, &
-                                 errcodes,           &
-                                 ierr                )
+            if( IO_L ) write(IO_FID_LOG,'(1x,A,A,A,A)') '*** Number of Daughter Processes: ', ONLINE_DAUGHTER_PRC
+            call MPI_COMM_SPAWN( trim(cmd),           &
+                                 argv,                &
+                                 ONLINE_DAUGHTER_PRC, &
+                                 MPI_INFO_NULL,       &
+                                 PRC_master,          &
+                                 COMM_world,          &
+                                 INTERCOMM_DAUGHTER,  &
+                                 errcodes,            &
+                                 ierr                 )
 
             call NEST_COMM_ping( HANDLING_NUM )
 
