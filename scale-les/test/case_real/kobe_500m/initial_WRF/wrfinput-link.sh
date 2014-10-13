@@ -4,7 +4,7 @@
 #   2009/10/26 --- Ryuji Yoshida.
 #   2014/07/08 --- Tsuyoshi Yamaura
 #-----------------------------------------
-dir='/data2/scale_database/WRF_output/kobe_case2/500m'
+dir="${SCALE_DB}/WRF_output/kobe_case2/500m"
 ftype='out'
 domain='2'
 #

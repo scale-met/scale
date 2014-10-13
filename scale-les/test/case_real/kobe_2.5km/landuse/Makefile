@@ -23,7 +23,7 @@ RUNCONF     = NONE
 TPROC       = 9
 
 # required data (parameters,distributed files)
-DATDIR      = $(abspath /data2/scale_database/landuse/LU100M/Products)
+DATDIR      = $(SCALE_DB)/landuse/LU100M/Products
 DATPARAM    =
 DATDISTS    =
 

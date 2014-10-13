@@ -25,7 +25,7 @@ TPROC       = 24
 # required data (parameters,distributed files)
 DATDIR      = ../../../data
 DATPARAM    = rad/PARAG.29,rad/PARAPC.29,rad/VARDATA.RM29,rad/cira.nc,rad/MIPAS/day.atm,rad/MIPAS/equ.atm,rad/MIPAS/sum.atm,rad/MIPAS/win.atm
-DATDISTS    = /data2/converted_data/check_awajishima/topo/topo,/data2/converted_data/check_awajishima/landuse/landuse
+DATDISTS    = ../topo/topo,../landuse/landuse
 
 
 
