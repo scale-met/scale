@@ -38,6 +38,9 @@ module scale_atmos_dyn
   !
   !++ used modules
   !
+#ifdef DEBUG
+  use mpi
+#endif
   use scale_precision
   use scale_stdio
   use scale_prof
@@ -110,9 +113,6 @@ contains
     logical,                intent(in)  :: enable_coriolis
     integer,                intent(in)  :: adjust_flux_cell
     real(RP),               intent(in)  :: lat(IA,JA)
-
-    ! works
-    integer :: n
     !---------------------------------------------------------------------------
 
     NUM_LBFLX = adjust_flux_cell
@@ -164,7 +164,9 @@ contains
        PRC_HAS_N, &
        PRC_HAS_S
     use scale_comm, only: &
+#ifdef DEBUG
        COMM_datatype, &
+#endif
        COMM_vars8, &
        COMM_wait
     use scale_gridtrans, only: &
@@ -173,6 +175,10 @@ contains
        I_UYZ, &
        I_XVZ, &
        I_XY
+#ifdef DEBUG
+    use scale_grid_real, only: &
+       vol => REAL_VOL
+#endif
     use scale_atmos_dyn_common, only: &
        FACT_N,                     &
        FACT_F,                     &
@@ -322,6 +328,14 @@ contains
     real(RP) :: mflx_lb(KA,IA,JA,3)
     real(RP) :: tflx_lb(KA,IA,JA,3)
     real(RP) :: qflx_lb(KA,IA,JA,3,QA)
+#ifdef DEBUG
+    real(RP) :: mass_tmp (KA,IA,JA)
+    real(RP) :: mass_tmp2(KA,IA,JA)
+    real(RP) :: mass_total
+    real(RP) :: mass_total2
+    real(RP) :: allmass_total
+    real(RP) :: allmass_total2
+#endif
 
     real(RP) :: dt
     real(RP) :: dtrk
@@ -329,7 +343,9 @@ contains
     integer  :: IIS, IIE
     integer  :: JJS, JJE
     integer  :: i, j, k, iq, step
-    integer  :: ierr
+#ifdef DEBUG
+    integer :: ierr
+#endif
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Dynamics step: ', NSTEP_ATMOS_DYN, ' small steps'
@@ -765,6 +781,89 @@ contains
                0, 0, 0, -1, & ! (in)
                IS, IE, JE-JHALO+1, JE ) ! (in)
        end if
+
+#ifdef DEBUG
+       ! check total mass in the inner region
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE  
+          mass_tmp (k,i,j) = DENS     (k,i,j) * vol(k,i,j)
+          mass_tmp2(k,i,j) = DAMP_DENS(k,i,j) * vol(k,i,j)
+       end do
+       end do
+       end do
+
+       if ( .not. PRC_HAS_W ) then ! for western boundary
+          do j = JS, JE
+          do i = IS, IS+1
+          do k = KS, KE
+             mass_tmp (k,i,j) = 0.0_RP
+             mass_tmp2(k,i,j) = 0.0_RP
+          end do
+          end do
+          end do
+       end if
+       if ( .not. PRC_HAS_E ) then ! for eastern boundary
+          do j = JS, JE
+          do i = IE-1, IE
+          do k = KS, KE
+             mass_tmp (k,i,j) = 0.0_RP
+             mass_tmp2(k,i,j) = 0.0_RP
+          end do
+          end do
+          end do
+       end if
+       if ( .not. PRC_HAS_S ) then ! for sourthern boundary
+          do j = JS, JS+1
+          do i = IS, IE
+          do k = KS, KE
+             mass_tmp (k,i,j) = 0.0_RP
+             mass_tmp2(k,i,j) = 0.0_RP
+          end do
+          end do
+          end do
+       end if
+       if ( .not. PRC_HAS_N ) then ! for northern boundary
+          do j = JE-1, JE
+          do i = IS, IE
+          do k = KS, KE
+             mass_tmp (k,i,j) = 0.0_RP
+             mass_tmp2(k,i,j) = 0.0_RP
+          end do
+          end do
+          end do
+       end if
+
+       mass_total  = 0.0_RP
+       mass_total2 = 0.0_RP
+
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          mass_total  = mass_total  + mass_tmp (k,i,j)
+          mass_total2 = mass_total2 + mass_tmp2(k,i,j)
+       end do
+       end do
+       end do
+
+       call MPI_Allreduce( mass_total,           &
+                           allmass_total,        &
+                           1,                    &
+                           COMM_datatype,        &
+                           MPI_SUM,              &
+                           MPI_COMM_WORLD,       &
+                           ierr                  )
+       if( IO_L ) write(IO_FID_LOG,'(A,1x,i1,1x,2PE24.17)') 'total mass   :', step, allmass_total
+
+       call MPI_Allreduce( mass_total2,          &
+                           allmass_total2,       &
+                           1,                    &
+                           COMM_datatype,        &
+                           MPI_SUM,              &
+                           MPI_COMM_WORLD,       &
+                           ierr                  )
+       if( IO_L ) write(IO_FID_LOG,'(A,1x,i1,1x,2PE24.17)') 'total mass2  :', step, allmass_total2
+#endif
 
        do j  = JS, JE
        do i  = IS, IE
