@@ -78,6 +78,7 @@ module scale_comm
   end interface COMM_gather
 
   interface COMM_bcast
+     module procedure COMM_bcast_1D
      module procedure COMM_bcast_2D
      module procedure COMM_bcast_3D
      module procedure COMM_bcast_4D
@@ -2271,6 +2272,32 @@ contains
 
     return
   end subroutine COMM_gather_3D
+
+  !-----------------------------------------------------------------------------
+  !> Broadcast data for whole process value in 1D field
+  subroutine COMM_bcast_1D( var, gIA )
+    use scale_process, only: &
+       PRC_master
+    implicit none
+
+    real(RP), intent(inout) :: var(:)  !< broadcast buffer (gIA)
+    integer,  intent(in)    :: gIA       !< dimension size of x
+
+    integer :: counts
+    integer :: ierr
+    !---------------------------------------------------------------------------
+
+    counts = gIA
+
+    call MPI_BCAST( var(:),          &
+                     counts,         &
+                     COMM_datatype,  &
+                     PRC_master,     &
+                     MPI_COMM_WORLD, &
+                     ierr            )
+
+    return
+  end subroutine COMM_bcast_1D
 
   !-----------------------------------------------------------------------------
   !> Broadcast data for whole process value in 2D field

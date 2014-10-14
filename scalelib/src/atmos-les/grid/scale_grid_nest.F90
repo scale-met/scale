@@ -345,7 +345,7 @@ contains
             argv(1) = 'run.d'//dom_num//'.conf'
             if( IO_L ) write(IO_FID_LOG,'(1x,A,I2,A)') '*** Launch Daughter Domain [INTERCOMM_ID:', INTERCOMM_ID(HANDLING_NUM), ' ]'
             if( IO_L ) write(IO_FID_LOG,'(1x,A,A,A,A)') '*** Launch Command: ', trim(cmd), ' ', trim(argv(1))
-            if( IO_L ) write(IO_FID_LOG,'(1x,A,A,A,A)') '*** Number of Daughter Processes: ', ONLINE_DAUGHTER_PRC
+            if( IO_L ) write(IO_FID_LOG,'(1x,A,I5   )') '*** Number of Daughter Processes: ', ONLINE_DAUGHTER_PRC
             call MPI_COMM_SPAWN( trim(cmd),           &
                                  argv,                &
                                  ONLINE_DAUGHTER_PRC, &
@@ -889,6 +889,7 @@ contains
       HANDLE  )
     use scale_process, only: &
        PRC_myrank,  &
+       PRC_master,  &
        PRC_MPIstop
     implicit none
 
@@ -908,10 +909,12 @@ contains
        ping = ONLINE_DOMAIN_NUM
        pong = 0
 
-       call MPI_ISEND(ping, 1, MPI_INTEGER, PRC_myrank, tag+1, INTERCOMM_DAUGHTER, ireq1, ierr1)
-       call MPI_IRECV(pong, 1, MPI_INTEGER, PRC_myrank, tag+2, INTERCOMM_DAUGHTER, ireq2, ierr2)
-       call MPI_WAIT(ireq1, istatus, ierr1)
-       call MPI_WAIT(ireq2, istatus, ierr2)
+       if ( PRC_myrank == PRC_master ) then
+          call MPI_ISEND(ping, 1, MPI_INTEGER, PRC_myrank, tag+1, INTERCOMM_DAUGHTER, ireq1, ierr1)
+          call MPI_IRECV(pong, 1, MPI_INTEGER, PRC_myrank, tag+2, INTERCOMM_DAUGHTER, ireq2, ierr2)
+          call MPI_WAIT(ireq1, istatus, ierr1)
+          call MPI_WAIT(ireq2, istatus, ierr2)
+       endif
 
        if ( pong /= INTERCOMM_ID(HANDLE)+1 ) ping_error = .true.
 
@@ -919,10 +922,12 @@ contains
        ping = ONLINE_DOMAIN_NUM
        pong = 0
 
-       call MPI_ISEND(ping, 1, MPI_INTEGER, PRC_myrank, tag+2, INTERCOMM_PARENT, ireq1, ierr1)
-       call MPI_IRECV(pong, 1, MPI_INTEGER, PRC_myrank, tag+1, INTERCOMM_PARENT, ireq2, ierr2)
-       call MPI_WAIT(ireq1, istatus, ierr1)
-       call MPI_WAIT(ireq2, istatus, ierr2)
+       if ( PRC_myrank == PRC_master ) then
+          call MPI_ISEND(ping, 1, MPI_INTEGER, PRC_myrank, tag+2, INTERCOMM_PARENT, ireq1, ierr1)
+          call MPI_IRECV(pong, 1, MPI_INTEGER, PRC_myrank, tag+1, INTERCOMM_PARENT, ireq2, ierr2)
+          call MPI_WAIT(ireq1, istatus, ierr1)
+          call MPI_WAIT(ireq2, istatus, ierr2)
+       endif
 
        if ( pong /= INTERCOMM_ID(HANDLE) ) ping_error = .true.
 
