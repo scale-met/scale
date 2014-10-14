@@ -78,10 +78,14 @@ module scale_comm
   end interface COMM_gather
 
   interface COMM_bcast
+     module procedure COMM_bcast_SCR
      module procedure COMM_bcast_1D
      module procedure COMM_bcast_2D
      module procedure COMM_bcast_3D
      module procedure COMM_bcast_4D
+     module procedure COMM_bcast_INT_SCR
+     module procedure COMM_bcast_INT_1D
+     module procedure COMM_bcast_INT_2D
   end interface COMM_bcast
 
   !-----------------------------------------------------------------------------
@@ -2274,6 +2278,31 @@ contains
   end subroutine COMM_gather_3D
 
   !-----------------------------------------------------------------------------
+  !> Broadcast data for whole process value in scalar field
+  subroutine COMM_bcast_SCR( var )
+    use scale_process, only: &
+       PRC_master
+    implicit none
+
+    real(RP), intent(inout) :: var  !< broadcast buffer (gIA)
+
+    integer :: counts
+    integer :: ierr
+    !---------------------------------------------------------------------------
+
+    counts = 1
+
+    call MPI_BCAST( var,            &
+                    counts,         &
+                    COMM_datatype,  &
+                    PRC_master,     &
+                    MPI_COMM_WORLD, &
+                    ierr            )
+
+    return
+  end subroutine COMM_bcast_SCR
+
+  !-----------------------------------------------------------------------------
   !> Broadcast data for whole process value in 1D field
   subroutine COMM_bcast_1D( var, gIA )
     use scale_process, only: &
@@ -2382,6 +2411,84 @@ contains
 
     return
   end subroutine COMM_bcast_4D
+
+  !-----------------------------------------------------------------------------
+  !> Broadcast data for whole process value in scalar (integer)
+  subroutine COMM_bcast_INT_SCR( var )
+    use scale_process, only: &
+       PRC_master
+    implicit none
+
+    integer, intent(inout) :: var   !< broadcast buffer (gIA)
+
+    integer :: counts
+    integer :: ierr
+    !---------------------------------------------------------------------------
+
+    counts = 1
+
+    call MPI_BCAST( var,            &
+                    counts,         &
+                    MPI_INTEGER,    &
+                    PRC_master,     &
+                    MPI_COMM_WORLD, &
+                    ierr            )
+
+    return
+  end subroutine COMM_bcast_INT_SCR
+
+  !-----------------------------------------------------------------------------
+  !> Broadcast data for whole process value in 1D field (integer)
+  subroutine COMM_bcast_INT_1D( var, gIA )
+    use scale_process, only: &
+       PRC_master
+    implicit none
+
+    integer, intent(inout) :: var(:)   !< broadcast buffer (gIA)
+    integer, intent(in)    :: gIA      !< dimension size of x
+
+    integer :: counts
+    integer :: ierr
+    !---------------------------------------------------------------------------
+
+    counts = gIA
+
+    call MPI_BCAST( var(:),         &
+                    counts,         &
+                    MPI_INTEGER,    &
+                    PRC_master,     &
+                    MPI_COMM_WORLD, &
+                    ierr            )
+
+    return
+  end subroutine COMM_bcast_INT_1D
+
+  !-----------------------------------------------------------------------------
+  !> Broadcast data for whole process value in 2D field (integer)
+  subroutine COMM_bcast_INT_2D( var, gIA, gJA )
+    use scale_process, only: &
+       PRC_master
+    implicit none
+
+    integer, intent(inout) :: var(:,:)  !< broadcast buffer (gIA,gJA)
+    integer, intent(in)    :: gIA       !< dimension size of x
+    integer, intent(in)    :: gJA       !< dimension size of y
+
+    integer :: counts
+    integer :: ierr
+    !---------------------------------------------------------------------------
+
+    counts = gIA * gJA
+
+    call MPI_BCAST( var(:,:),       &
+                    counts,         &
+                    MPI_INTEGER,    &
+                    PRC_master,     &
+                    MPI_COMM_WORLD, &
+                    ierr            )
+
+    return
+  end subroutine COMM_bcast_INT_2D
 
 end module scale_comm
 !-------------------------------------------------------------------------------
