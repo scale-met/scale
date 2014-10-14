@@ -4516,7 +4516,7 @@ enddo
     else if( FILETYPE_ORG == 'SCALE-LES' ) then
       BASENAME_WITHNUM = trim(BASENAME_ORG)
     else if( FILETYPE_ORG == 'NICAM-NETCDF' ) then
-      BASENAME_WITHNUM = trim(BASENAME_ORG)
+      BASENAME_WITHNUM = trim(BASENAME_ORG)//"_00000"
     else
       write(*,*) ' xxx Unsupported FILE TYPE:', trim(FILETYPE_ORG)
       call PRC_MPIstop
@@ -4527,7 +4527,6 @@ enddo
                           INTERP_SERC_DIV_NUM, WRF_FILE_TYPE ) ![IN]
 
     if ( FILETYPE_ORG == 'NICAM-NETCDF' ) then
-       NUMBER_OF_FILES  = 1
        NUMBER_OF_TSTEPS = timelen
        totaltimesteps = NUMBER_OF_FILES * NUMBER_OF_TSTEPS
     endif
@@ -4548,7 +4547,7 @@ enddo
        else if( FILETYPE_ORG == 'SCALE-LES' ) then
          BASENAME_WITHNUM = trim(BASENAME_ORG)
        else if( FILETYPE_ORG == 'NICAM-NETCDF' ) then
-         BASENAME_WITHNUM = trim(BASENAME_ORG)
+         BASENAME_WITHNUM = trim(BASENAME_ORG)//"_"//NUM
        else
          write(*,*) ' xxx Unsupported FILE TYPE:', trim(FILETYPE_ORG)
          call PRC_MPIstop
@@ -4618,7 +4617,7 @@ enddo
     else if( FILETYPE_ORG == 'SCALE-LES' ) then
       BASENAME_WITHNUM = trim(BASENAME_ORG)
     else if( FILETYPE_ORG == 'NICAM-NETCDF' ) then
-      BASENAME_WITHNUM = trim(BASENAME_ORG)
+      BASENAME_WITHNUM = trim(BASENAME_ORG)//"_"//NUM
     else
       write(*,*) ' xxx Unsupported FILE TYPE:', trim(FILETYPE_ORG)
       call PRC_MPIstop

@@ -131,6 +131,7 @@ contains
     logical,          intent(in)  :: wrf_file_type_in
 
     integer :: dims_ncm(4)
+    character(len=H_LONG) :: basename
     intrinsic shape
     !---------------------------------------------------------------------------
 
@@ -147,7 +148,7 @@ contains
     case('WRF-ARW')
        if( IO_L ) write(IO_FID_LOG,*) '+++ Real Case/Atom Input File Type: WRF-ARW'
        mdlid = iWRFARW
-       call ExternalFileGetShape( dims(:), timelen, mdlid, BASENAME_ORG, myrank, single=.true. )
+       call ExternalFileGetShape( dims(:), timelen, mdlid, basename_org, myrank, single=.true. )
        if ( wrf_file_type_in ) then
           wrfout = .true.
           if( IO_L ) write(IO_FID_LOG,*) '+++ WRF-ARW FILE-TYPE: WRF History Output'
@@ -159,7 +160,8 @@ contains
     case('NICAM-NETCDF')
        if( IO_L ) write(IO_FID_LOG,*) '+++ Real Case/Atom Input File Type: NICAM-NETCDF'
        mdlid = iNICAM
-       call FileGetShape( dims_ncm(:), "ms_pres", "ms_pres", 1, single=.true. )
+       basename = "ms_pres"//trim(basename_org)
+       call FileGetShape( dims_ncm(:), trim(basename), "ms_pres", 1, single=.true. )
        timelen = dims_ncm(4)
        dims(:) = 0
        dims(1) = dims_ncm(1)
@@ -1881,7 +1883,7 @@ contains
       momy,             & ! (out)
       rhot,             & ! (out)
       qtrc,             & ! (out)
-      basename_org,     & ! (in)
+      basename_num,     & ! (in)
       dims,             & ! (in)
       start_step,       & ! (in)
       end_step          ) ! (in)
@@ -1905,7 +1907,7 @@ contains
     real(RP),         intent(out) :: momy(:,:,:,:)
     real(RP),         intent(out) :: rhot(:,:,:,:)
     real(RP),         intent(out) :: qtrc(:,:,:,:,:)
-    character(LEN=*), intent(in)  :: basename_org
+    character(LEN=*), intent(in)  :: basename_num
     integer,          intent(in)  :: dims(:)
     integer,          intent(in)  :: start_step
     integer,          intent(in)  :: end_step
@@ -1968,6 +1970,8 @@ contains
     integer :: iq, ierr
     integer :: nt
     logical :: do_read, lack_of_val
+
+    character(len=H_LONG) :: basename
     !---------------------------------------------------------------------------
 
     nt = end_step - start_step + 1
@@ -2006,17 +2010,18 @@ contains
 
     ! normal vertical grid arrangement
     if( do_read ) then
-       call FileRead( read1DX(:), "ms_pres", "lon", step_fixed, 1, single=.true. )
+       basename = "ms_pres"//trim(basename_num)
+       call FileRead( read1DX(:), trim(basename), "lon", step_fixed, 1, single=.true. )
        do j = 1, dims(2)
           lon_org (:,j,step_fixed)  = read1DX(:) * D2R
        enddo
 
-       call FileRead( read1DY(:), "ms_pres", "lat", step_fixed, 1, single=.true. )
+       call FileRead( read1DY(:), trim(basename), "lat", step_fixed, 1, single=.true. )
        do i = 1, dims(1)
           lat_org (i,:,step_fixed)  = read1DY(:) * D2R
        enddo
 
-       call FileRead( read1DZ(:), "ms_pres", "lev", step_fixed, 1, single=.true. )
+       call FileRead( read1DZ(:), trim(basename), "lev", step_fixed, 1, single=.true. )
        do j = 1, dims(2)
        do i = 1, dims(1)
           hgt_org(:,i,j,step_fixed) = read1DZ(:)
@@ -2053,7 +2058,8 @@ contains
 
     if( do_read ) then
        !> [scale-offset]
-       call ExternalFileReadOffset( read4D(:,:,:,:), "ms_u", "ms_u", start_step, end_step, myrank, iNICAM, single=.true. )
+       basename = "ms_u"//trim(basename_num)
+       call ExternalFileReadOffset( read4D(:,:,:,:), trim(basename), "ms_u", start_step, end_step, myrank, iNICAM, single=.true. )
        velx_org(:,:,:,:) = real( read4D(:,:,:,:), kind=RP )
     endif
     call COMM_bcast( velx_org(:,:,:,:),      dims(3), dims(1), dims(2), nt )
@@ -2076,7 +2082,8 @@ contains
 
     if( do_read ) then
        !> [scale-offset]
-       call ExternalFileReadOffset( read4D(:,:,:,:), "ms_v", "ms_v", start_step, end_step, myrank, iNICAM, single=.true. )
+       basename = "ms_v"//trim(basename_num)
+       call ExternalFileReadOffset( read4D(:,:,:,:), trim(basename), "ms_v", start_step, end_step, myrank, iNICAM, single=.true. )
        vely_org(:,:,:,:) = real( read4D(:,:,:,:), kind=RP )
     endif
     call COMM_bcast( vely_org(:,:,:,:),      dims(3), dims(1), dims(2), nt )
@@ -2152,7 +2159,8 @@ contains
     velz(:,:,:,:)   = 0.0_RP !> cold initialize for vertical velocity
 
     if( do_read ) then
-       call ExternalFileRead( read4D(:,:,:,:), "ms_qv", "ms_qv", start_step, end_step, myrank, iNICAM, single=.true. )
+       basename = "ms_qv"//trim(basename_num)
+       call ExternalFileRead( read4D(:,:,:,:), trim(basename), "ms_qv", start_step, end_step, myrank, iNICAM, single=.true. )
        qtrc_org(:,:,:,:,I_QV) = real( read4D(:,:,:,:), kind=RP )
 
        do n = start_step, end_step
@@ -2188,18 +2196,20 @@ contains
 
     if( do_read ) then
        !> [scale-offset]
-       call ExternalFileReadOffset( read3DT(:,:,:,:), "ss_slp", "ss_slp", start_step, end_step, myrank, iNICAM, single=.true. )
+       basename = "ss_slp"//trim(basename_num)
+       call ExternalFileReadOffset( read3DT(:,:,:,:), trim(basename), "ss_slp", start_step, end_step, myrank, iNICAM, single=.true. )
        psfc_org(:,:,:) = real( read3DT(1,:,:,:), kind=RP )
 
-       call ExternalFileRead( read3DT(:,:,:,:), "ss_t2m", "ss_t2m", start_step, end_step, myrank, iNICAM, single=.true. )
+       basename = "ss_t2m"//trim(basename_num)
+       call ExternalFileRead( read3DT(:,:,:,:), trim(basename), "ss_t2m", start_step, end_step, myrank, iNICAM, single=.true. )
        tsfc_org(:,:,:) = real( read3DT(1,:,:,:), kind=RP )
 
-       call ExternalFileRead( read3DT(:,:,:,:), "ss_q2m", "ss_q2m", start_step, end_step, myrank, iNICAM, single=.true. )
+       basename = "ss_q2m"//trim(basename_num)
+       call ExternalFileRead( read3DT(:,:,:,:), trim(basename), "ss_q2m", start_step, end_step, myrank, iNICAM, single=.true. )
        qsfc_org(:,:,:,I_QV) = real( read3DT(1,:,:,:), kind=RP )
     endif
     call COMM_bcast( psfc_org(:,:,:),                 dims(1), dims(2), nt )
     call COMM_bcast( tsfc_org(:,:,:),                 dims(1), dims(2), nt )
-    call COMM_bcast( qsfc_org(:,:,:,I_QV),            dims(1), dims(2), nt )
 
     do n = start_step, end_step
     do j = JS-1, JE+1
@@ -2256,7 +2266,8 @@ contains
                                      step_fixed                 ) ! [IN]
 
     if( do_read ) then
-       call ExternalFileRead( read4D(:,:,:,:), "ms_pres", "ms_pres", start_step, end_step, myrank, iNICAM, single=.true. )
+       basename = "ms_pres"//trim(basename_num)
+       call ExternalFileRead( read4D(:,:,:,:), trim(basename), "ms_pres", start_step, end_step, myrank, iNICAM, single=.true. )
        pres_org(1,:,:,:) = psfc_org(:,:,:)
        do n = start_step, end_step
        do j = 1, dims(2)
@@ -2344,7 +2355,8 @@ contains
 
     if( do_read ) then
        !> [scale-offset]
-       call ExternalFileReadOffset( read4D(:,:,:,:), "ms_tem", "ms_tem", start_step, end_step, myrank, iNICAM, single=.true. )
+       basename = "ms_tem"//trim(basename_num)
+       call ExternalFileReadOffset( read4D(:,:,:,:), trim(basename), "ms_tem", start_step, end_step, myrank, iNICAM, single=.true. )
        temp_org(1,:,:,:) = tsfc_org(:,:,:)
        do n = start_step, end_step
        do j = 1, dims(2)
@@ -3145,23 +3157,23 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine InputSurfaceNICAM( &
-      tg,          & ! (out)
-      strg,        & ! (out)
-      roff,        & ! (out)
-      qvef,        & ! (out)
-      tw,          & ! (out)
-      lst,         & ! (out)
-      ust,         & ! (out)
-      sst,         & ! (out)
-      albw,        & ! (out)
-      albg,        & ! (out)
-      z0w,         & ! (out)
-      skint,       & ! (out)
-      skinw,       & ! (out)
-      snowq,       & ! (out)
-      snowt,       & ! (out)
-      basename,    & ! (in)
-      dims         ) ! (in)
+      tg,           & ! (out)
+      strg,         & ! (out)
+      roff,         & ! (out)
+      qvef,         & ! (out)
+      tw,           & ! (out)
+      lst,          & ! (out)
+      ust,          & ! (out)
+      sst,          & ! (out)
+      albw,         & ! (out)
+      albg,         & ! (out)
+      z0w,          & ! (out)
+      skint,        & ! (out)
+      skinw,        & ! (out)
+      snowq,        & ! (out)
+      snowt,        & ! (out)
+      basename_num, & ! (in)
+      dims          ) ! (in)
     use scale_const, only: &
        D2R   => CONST_D2R,   &
        TEM00 => CONST_TEM00
@@ -3183,7 +3195,7 @@ contains
     real(RP), intent(out) :: snowq(:,:)
     real(RP), intent(out) :: snowt(:,:)
 
-    character(LEN=*), intent(in) :: basename
+    character(LEN=*), intent(in) :: basename_num
     integer,          intent(in) :: dims(:)
 
     ! [imported] NICAM/nhm/physics/mod_land_driver.f90 ---------------
@@ -3233,6 +3245,8 @@ contains
     integer :: k, i, j, n, nt
 
     logical :: do_read
+
+    character(len=H_LONG) :: basename
     !---------------------------------------------------------------------------
 
     ! read data for initial condition
@@ -3283,12 +3297,13 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[realinput]/Categ[InputNICAM-Surface]'
 
     if( do_read ) then
-       call FileRead( read1DX(:), "la_tg", "lon", start_step, 1, single=.true. )
+       basename = "la_tg"//trim(basename_num)
+       call FileRead( read1DX(:), trim(basename), "lon", start_step, 1, single=.true. )
        do j = 1, dims(2)
           lon_org (:,j,start_step)  = read1DX(:) * D2R
        enddo
 
-       call FileRead( read1DY(:), "la_tg", "lat", start_step, 1, single=.true. )
+       call FileRead( read1DY(:), trim(basename), "lat", start_step, 1, single=.true. )
        do i = 1, dims(1)
           lat_org (i,:,start_step)  = read1DY(:) * D2R
        enddo
@@ -3331,21 +3346,26 @@ contains
 
     if( do_read ) then
        ! [scale-offset]
-       call ExternalFileReadOffset( read4D(:,:,:,:), "la_tg", "la_tg", start_step, end_step, myrank, iNICAM, single=.true. )
+       basename = "la_tg"//trim(basename_num)
+       call ExternalFileReadOffset( read4D(:,:,:,:), trim(basename), "la_tg", start_step, end_step, myrank, iNICAM, single=.true. )
        tg_org(:,:,:) = real( read4D(:,:,:,1), kind=RP )
 
        ! [scale-offset]
-       call ExternalFileReadOffset( read4D(:,:,:,:), "la_wg", "la_wg", start_step, end_step, myrank, iNICAM, single=.true. )
+       basename = "la_wg"//trim(basename_num)
+       call ExternalFileReadOffset( read4D(:,:,:,:), trim(basename), "la_wg", start_step, end_step, myrank, iNICAM, single=.true. )
        strg_org(:,:,:) = real( read4D(:,:,:,1), kind=RP )
 
-       call ExternalFileRead( read3DS(:,:,:,:), "ss_tem_sfc", "ss_tem_sfc", start_step, end_step, myrank, iNICAM, single=.true. )
+       basename = "ss_tem_sfc"//trim(basename_num)
+       call ExternalFileRead( read3DS(:,:,:,:), trim(basename), "ss_tem_sfc", start_step, end_step, myrank, iNICAM, single=.true. )
        lst_org(:,:) = real( read3DS(1,:,:,1), kind=RP )
 
        ! [scale-offset]
-       call ExternalFileReadOffset( read3DT(:,:,:,:), "oa_sst", "oa_sst", start_step, end_step, myrank, iNICAM, single=.true. )
+       basename = "oa_sst"//trim(basename_num)
+       call ExternalFileReadOffset( read3DT(:,:,:,:), trim(basename), "oa_sst", start_step, end_step, myrank, iNICAM, single=.true. )
        sst_org(:,:) = real( read3DT(1,:,:,1), kind=RP )
 
-       !call ExternalFileRead( read3DS(:,:,:,:), "oa_ice", "oa_ice", start_step, end_step, myrank, iNICAM, single=.true. )
+       !basename = "oa_ice"//trim(basename_num)
+       !call ExternalFileRead( read3DS(:,:,:,:), trim(basename), "oa_ice", start_step, end_step, myrank, iNICAM, single=.true. )
        !ice_org(:,:) = real( read3DS(1,:,:,1), kind=RP )
 
        deallocate( read1DX )
