@@ -704,17 +704,20 @@ contains
       HANDLE  )
     use scale_process, only: &
        PRC_myrank,  &
+       PRC_master,  &
        PRC_nmax,    &
        PRC_NUM_X,   &
        PRC_NUM_Y,   &
        PRC_MPIstop
     use scale_time, only: &
        TIME_DTSEC
+    use scale_comm, only: &
+       COMM_bcast
     implicit none
 
     integer, intent(in) :: HANDLE !< id number of nesting relation in this process target
 
-    real(DP) :: buffer
+    real(RP) :: buffer
     integer  :: datapack(12)
     integer  :: ireq1, ireq2, ierr1, ierr2, ileng
     integer  :: istatus(MPI_STATUS_SIZE)
@@ -740,10 +743,12 @@ contains
        datapack(12) = JE
        buffer      = TIME_DTSEC
 
-       call MPI_ISEND(datapack, ileng, MPI_INTEGER, PRC_myrank, tag, INTERCOMM_DAUGHTER, ireq1, ierr1)
-       call MPI_ISEND(buffer, 1, MPI_DOUBLE_PRECISION, PRC_myrank, tag+1, INTERCOMM_DAUGHTER, ireq2, ierr2)
-       call MPI_WAIT(ireq1, istatus, ierr1)
-       call MPI_WAIT(ireq2, istatus, ierr2)
+       if ( PRC_myrank == PRC_master ) then
+          call MPI_ISEND(datapack, ileng, MPI_INTEGER, PRC_myrank, tag, INTERCOMM_DAUGHTER, ireq1, ierr1)
+          call MPI_ISEND(buffer, 1, MPI_DOUBLE_PRECISION, PRC_myrank, tag+1, INTERCOMM_DAUGHTER, ireq2, ierr2)
+          call MPI_WAIT(ireq1, istatus, ierr1)
+          call MPI_WAIT(ireq2, istatus, ierr2)
+       endif
 
        PARENT_PRC_nmax(HANDLE)  = datapack( 1)
        PARENT_PRC_NUM_X(HANDLE) = datapack( 2)
@@ -760,10 +765,14 @@ contains
        PARENT_DTSEC(HANDLE)     = buffer
 
        ! from daughter to parent
-       call MPI_IRECV(datapack, ileng, MPI_INTEGER, PRC_myrank, tag+2, INTERCOMM_DAUGHTER, ireq1, ierr1)
-       call MPI_IRECV(buffer, 1, MPI_DOUBLE_PRECISION, PRC_myrank, tag+3, INTERCOMM_DAUGHTER, ireq2, ierr2)
-       call MPI_WAIT(ireq1, istatus, ierr1)
-       call MPI_WAIT(ireq2, istatus, ierr2)
+       if ( PRC_myrank == PRC_master ) then
+          call MPI_IRECV(datapack, ileng, MPI_INTEGER, PRC_myrank, tag+2, INTERCOMM_DAUGHTER, ireq1, ierr1)
+          call MPI_IRECV(buffer, 1, MPI_DOUBLE_PRECISION, PRC_myrank, tag+3, INTERCOMM_DAUGHTER, ireq2, ierr2)
+          call MPI_WAIT(ireq1, istatus, ierr1)
+          call MPI_WAIT(ireq2, istatus, ierr2)
+       endif
+       call COMM_bcast(datapack, ileng)
+       call COMM_bcast(buffer)
 
        DAUGHTER_PRC_nmax(HANDLE)  = datapack( 1)
        DAUGHTER_PRC_NUM_X(HANDLE) = datapack( 2)
@@ -782,10 +791,14 @@ contains
 
     elseif ( NEST_Filiation( INTERCOMM_ID(HANDLE) ) < 0 ) then !--- daughter
        ! from parent to daughter
-       call MPI_IRECV(datapack, ileng, MPI_INTEGER, PRC_myrank, tag, INTERCOMM_PARENT, ireq1, ierr1)
-       call MPI_IRECV(buffer, 1, MPI_DOUBLE_PRECISION, PRC_myrank, tag+1, INTERCOMM_PARENT, ireq2, ierr2)
-       call MPI_WAIT(ireq1, istatus, ierr1)
-       call MPI_WAIT(ireq2, istatus, ierr2)
+       if ( PRC_myrank == PRC_master ) then
+          call MPI_IRECV(datapack, ileng, MPI_INTEGER, PRC_myrank, tag, INTERCOMM_PARENT, ireq1, ierr1)
+          call MPI_IRECV(buffer, 1, MPI_DOUBLE_PRECISION, PRC_myrank, tag+1, INTERCOMM_PARENT, ireq2, ierr2)
+          call MPI_WAIT(ireq1, istatus, ierr1)
+          call MPI_WAIT(ireq2, istatus, ierr2)
+       endif
+       call COMM_bcast(datapack, ileng)
+       call COMM_bcast(buffer)
 
        PARENT_PRC_nmax(HANDLE)  = datapack( 1)
        PARENT_PRC_NUM_X(HANDLE) = datapack( 2)
@@ -816,10 +829,12 @@ contains
        datapack(12) = JE
        buffer       = TIME_DTSEC
 
-       call MPI_ISEND(datapack, ileng, MPI_INTEGER, PRC_myrank, tag+2, INTERCOMM_PARENT, ireq1, ierr1)
-       call MPI_ISEND(buffer, 1, MPI_DOUBLE_PRECISION, PRC_myrank, tag+3, INTERCOMM_PARENT, ireq2, ierr2)
-       call MPI_WAIT(ireq1, istatus, ierr1)
-       call MPI_WAIT(ireq2, istatus, ierr2)
+       if ( PRC_myrank == PRC_master ) then
+          call MPI_ISEND(datapack, ileng, MPI_INTEGER, PRC_myrank, tag+2, INTERCOMM_PARENT, ireq1, ierr1)
+          call MPI_ISEND(buffer, 1, MPI_DOUBLE_PRECISION, PRC_myrank, tag+3, INTERCOMM_PARENT, ireq2, ierr2)
+          call MPI_WAIT(ireq1, istatus, ierr1)
+          call MPI_WAIT(ireq2, istatus, ierr2)
+       endif
 
        DAUGHTER_PRC_nmax(HANDLE)  = datapack( 1)
        DAUGHTER_PRC_NUM_X(HANDLE) = datapack( 2)
@@ -848,12 +863,14 @@ contains
       HANDLE  )
     use scale_process, only: &
        PRC_myrank,  &
+       PRC_master,  &
        PRC_nmax,    &
        PRC_MPIstop
     use scale_grid_real, only: &
        REAL_DOMAIN_CATALOGUE
     use scale_comm, only: &
-       COMM_datatype
+       COMM_datatype,  &
+       COMM_bcast
     implicit none
 
     integer, intent(in) :: HANDLE !< id number of nesting relation in this process target
@@ -867,14 +884,18 @@ contains
 
     if ( NEST_Filiation( INTERCOMM_ID(HANDLE) ) > 0 ) then !--- parent
        ileng = PRC_nmax * 4 * 2
-       call MPI_ISEND(REAL_DOMAIN_CATALOGUE, ileng, COMM_datatype, PRC_myrank, tag, INTERCOMM_DAUGHTER, ireq, ierr)
-       call MPI_WAIT(ireq, istatus, ierr)
+       if ( PRC_myrank == PRC_master ) then
+          call MPI_ISEND(REAL_DOMAIN_CATALOGUE, ileng, COMM_datatype, PRC_myrank, tag, INTERCOMM_DAUGHTER, ireq, ierr)
+          call MPI_WAIT(ireq, istatus, ierr)
+       endif
 
     elseif ( NEST_Filiation( INTERCOMM_ID(HANDLE) ) < 0 ) then !--- daughter
        ileng = PARENT_PRC_nmax(HANDLE) * 4 * 2
-       call MPI_IRECV(latlon_catalog, ileng, COMM_datatype, PRC_myrank, tag, INTERCOMM_PARENT, ireq, ierr)
-       call MPI_WAIT(ireq, istatus, ierr)
-
+       if ( PRC_myrank == PRC_master ) then
+          call MPI_IRECV(latlon_catalog, ileng, COMM_datatype, PRC_myrank, tag, INTERCOMM_PARENT, ireq, ierr)
+          call MPI_WAIT(ireq, istatus, ierr)
+       endif
+       call COMM_bcast( latlon_catalog, PARENT_PRC_nmax(HANDLE), 4, 2 )
     else
        if( IO_L ) write(*,*) 'xxx internal error [nest/grid]'
        call PRC_MPIstop
@@ -891,6 +912,8 @@ contains
        PRC_myrank,  &
        PRC_master,  &
        PRC_MPIstop
+    use scale_comm, only: &
+       COMM_bcast
     implicit none
 
     integer, intent(in) :: HANDLE !< id number of nesting relation in this process target
@@ -916,6 +939,8 @@ contains
           call MPI_WAIT(ireq2, istatus, ierr2)
        endif
 
+       call COMM_bcast(pong)
+
        if ( pong /= INTERCOMM_ID(HANDLE)+1 ) ping_error = .true.
 
     elseif ( NEST_Filiation( INTERCOMM_ID(HANDLE) ) < 0 ) then !--- daughter
@@ -928,6 +953,8 @@ contains
           call MPI_WAIT(ireq1, istatus, ierr1)
           call MPI_WAIT(ireq2, istatus, ierr2)
        endif
+
+       call COMM_bcast(pong)
 
        if ( pong /= INTERCOMM_ID(HANDLE) ) ping_error = .true.
 
@@ -950,13 +977,15 @@ contains
       HANDLE  )
     use scale_process, only: &
        PRC_myrank,  &
-       PRC_nmax,    &
+       PRC_master,  &
+!       PRC_nmax,    &
        PRC_MPIstop
     use scale_grid_real, only: &
        REAL_DOMAIN_CATALOGUE
     use scale_comm, only: &
        COMM_datatype,  &
-       COMM_world
+       COMM_world,     &
+       COMM_bcast
     implicit none
 
     integer, intent(in) :: HANDLE !< id number of nesting relation in this process target
@@ -976,20 +1005,26 @@ contains
     if ( NEST_Filiation( INTERCOMM_ID(HANDLE) ) > 0 ) then
     !--------------------------------------------------- parent
 
-       call MPI_IRECV(NEST_TILE_ALLMAX_p, 1, MPI_INTEGER, PRC_myrank, tag+1, INTERCOMM_DAUGHTER, ireq, ierr)
-       call MPI_WAIT(ireq, istatus, ierr)
+       if ( PRC_myrank == PRC_master ) then
+          call MPI_IRECV(NEST_TILE_ALLMAX_p, 1, MPI_INTEGER, PRC_myrank, tag+1, INTERCOMM_DAUGHTER, ireq, ierr)
+          call MPI_WAIT(ireq, istatus, ierr)
+       endif
+       call COMM_bcast(NEST_TILE_ALLMAX_p)
 
-       allocate( NEST_TILE_LIST_p (NEST_TILE_ALLMAX_p,PRC_nmax) )
-       allocate( NEST_TILE_LIST_YP(NEST_TILE_ALLMAX_p*PRC_nmax) )
+       allocate( NEST_TILE_LIST_p (NEST_TILE_ALLMAX_p,DAUGHTER_PRC_nmax(HANDLE)) )
+       allocate( NEST_TILE_LIST_YP(NEST_TILE_ALLMAX_p*DAUGHTER_PRC_nmax(HANDLE)) )
 
-       ileng = NEST_TILE_ALLMAX_p*PRC_nmax
-       call MPI_IRECV(NEST_TILE_LIST_p, ileng, MPI_INTEGER, PRC_myrank, tag+2, INTERCOMM_DAUGHTER, ireq, ierr)
-       call MPI_WAIT(ireq, istatus, ierr)
+       ileng = NEST_TILE_ALLMAX_p*DAUGHTER_PRC_nmax(HANDLE)
+       if ( PRC_myrank == PRC_master ) then
+          call MPI_IRECV(NEST_TILE_LIST_p, ileng, MPI_INTEGER, PRC_myrank, tag+2, INTERCOMM_DAUGHTER, ireq, ierr)
+          call MPI_WAIT(ireq, istatus, ierr)
+       endif
+       call COMM_bcast(NEST_TILE_LIST_p, NEST_TILE_ALLMAX_p, DAUGHTER_PRC_nmax(HANDLE))
 
        NEST_TILE_LIST_YP(:) = -1
 
        k = 0
-       do j = 1, PRC_nmax
+       do j = 1, DAUGHTER_PRC_nmax(HANDLE)
        do i = 1, NEST_TILE_ALLMAX_p
           if ( NEST_TILE_LIST_p(i,j) == PRC_myrank ) then
              k = k + 1
@@ -999,7 +1034,7 @@ contains
        enddo
        NUM_YP = k
 
-       if( IO_L ) write(IO_FID_LOG,'(A,I5,A,I5)') "   Num YP =",NUM_YP,"  Num TILE(MAX) =",NEST_TILE_ALLMAX_p
+       if( IO_L ) write(IO_FID_LOG,'(A,I5,A,I5)') "[P]   Num YP =",NUM_YP,"  Num TILE(MAX) =",NEST_TILE_ALLMAX_p
 
        call NEST_COMM_importgrid_nestdown( HANDLE )
 
@@ -1017,14 +1052,16 @@ contains
                            MPI_MAX,            &
                            COMM_world,         &
                            ierr                )
-       if( IO_L ) write(IO_FID_LOG,'(A,I5,A,I5)') "   Num YP =",NEST_TILE_ALL,"  Num TILE(MAX) =",NEST_TILE_ALLMAX_d
+       if( IO_L ) write(IO_FID_LOG,'(A,I5,A,I5)') "[D]   Num YP =",NEST_TILE_ALL,"  Num TILE(MAX) =",NEST_TILE_ALLMAX_d
 
-       call MPI_ISEND(NEST_TILE_ALLMAX_d, 1, MPI_INTEGER, PRC_myrank, tag+1, INTERCOMM_PARENT, ireq, ierr)
-       call MPI_WAIT(ireq, istatus, ierr)
+       if ( PRC_myrank == PRC_master ) then
+          call MPI_ISEND(NEST_TILE_ALLMAX_d, 1, MPI_INTEGER, PRC_myrank, tag+1, INTERCOMM_PARENT, ireq, ierr)
+          call MPI_WAIT(ireq, istatus, ierr)
+       endif
 
        allocate( buffer_LIST   (NEST_TILE_ALLMAX_d)            )
-       allocate( buffer_ALLLIST(NEST_TILE_ALLMAX_d*PRC_nmax)   )
-       allocate( NEST_TILE_LIST_d(NEST_TILE_ALLMAX_d,PRC_nmax) )
+       allocate( buffer_ALLLIST(NEST_TILE_ALLMAX_d*DAUGHTER_PRC_nmax(HANDLE))   )
+       allocate( NEST_TILE_LIST_d(NEST_TILE_ALLMAX_d,DAUGHTER_PRC_nmax(HANDLE)) )
 
        do i = 1, NEST_TILE_ALLMAX_d
           if ( i <= NEST_TILE_ALL ) then
@@ -1044,7 +1081,7 @@ contains
                            COMM_world,         &
                            ierr                )
        k = 1
-       do j = 1, PRC_nmax
+       do j = 1, DAUGHTER_PRC_nmax(HANDLE)
        do i = 1, NEST_TILE_ALLMAX_d
           NEST_TILE_LIST_d(i,j) = buffer_ALLLIST(k)
           k = k + 1
@@ -1054,9 +1091,11 @@ contains
        deallocate( buffer_LIST    )
        deallocate( buffer_ALLLIST )
 
-       ileng = NEST_TILE_ALLMAX_d*PRC_nmax
-       call MPI_ISEND(NEST_TILE_LIST_d, ileng, MPI_INTEGER, PRC_myrank, tag+2, INTERCOMM_PARENT, ireq, ierr)
-       call MPI_WAIT(ireq, istatus, ierr)
+       ileng = NEST_TILE_ALLMAX_d*DAUGHTER_PRC_nmax(HANDLE)
+       if ( PRC_myrank == PRC_master ) then
+          call MPI_ISEND(NEST_TILE_LIST_d, ileng, MPI_INTEGER, PRC_myrank, tag+2, INTERCOMM_PARENT, ireq, ierr)
+          call MPI_WAIT(ireq, istatus, ierr)
+       endif
 
        call NEST_COMM_importgrid_nestdown( HANDLE )
 
