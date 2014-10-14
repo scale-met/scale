@@ -31,8 +31,16 @@ module scale_external_io
   !++ Public procedure
   !
   public :: ExternalFileGetShape
+  public :: ExternalFileGetGlobalAttV
+  public :: ExternalFileGetGlobalAttC
   public :: ExternalFileRead
   public :: ExternalFileReadOffset
+
+  interface ExternalFileGetGlobalAttV
+     module procedure ExternalFileGetGlobalAttVInteger
+     module procedure ExternalFileGetGlobalAttVRealSP
+     module procedure ExternalFileGetGlobalAttVRealDP
+  end interface ExternalFileGetGlobalAttV
 
   interface ExternalFileRead
      module procedure ExternalFileRead2DRealSP
@@ -163,6 +171,250 @@ contains
 
     return
   end subroutine ExternalFileGetShape
+
+  !-----------------------------------------------------------------------------
+  ! ExternalFileGet Global Attribute (value, real, single precision)
+  !-----------------------------------------------------------------------------
+  subroutine ExternalFileGetGlobalAttVInteger( &
+      var,           & ! (out)
+      mdlid,         & ! (in)
+      basename,      & ! (in)
+      attname,       & ! (in)
+      myrank,        & ! (in)
+      single         & ! (in) optional
+      )
+    use netcdf  ![external lib]
+    implicit none
+
+    integer,          intent(out)           :: var(:)
+    integer,          intent( in)           :: mdlid
+    character(LEN=*), intent( in)           :: basename
+    character(LEN=*), intent( in)           :: attname
+    integer,          intent( in)           :: myrank
+    logical,          intent( in), optional :: single
+
+    integer, allocatable :: work(:)
+
+    integer :: status
+    integer :: i, ncid, length
+    character(len=H_LONG) :: fname = ''
+    logical :: single_ = .false.
+
+    intrinsic size
+    intrinsic shape
+    !---------------------------------------------------------------------------
+
+    if ( present(single) ) then
+       single_ = single
+    else
+       single_ = .false.
+    endif
+
+    call ExternalFileMakeFname( fname,mdlid,basename,myrank,single_ )
+
+    status = nf90_open( trim(fname), nf90_nowrite, ncid )
+    if (status .ne. nf90_noerr) call handle_err(status)
+
+    status = nf90_inquire_attribute(ncid, nf90_global, trim(attname), len=length)
+    if (status .ne. nf90_noerr) call handle_err(status)
+
+    allocate( work(length) )
+
+    status = nf90_get_att(ncid, nf90_global, trim(attname), work)
+    if (status .ne. nf90_noerr) call handle_err(status)
+
+    do i = 1, length
+       var(i) = work(i)
+    enddo
+
+    status = nf90_close(ncid) 
+    if (status .ne. nf90_noerr) call handle_err(status)
+    deallocate( work )
+
+    return
+  end subroutine ExternalFileGetGlobalAttVInteger
+
+  !-----------------------------------------------------------------------------
+  ! ExternalFileGet Global Attribute (value, real, single precision)
+  !-----------------------------------------------------------------------------
+  subroutine ExternalFileGetGlobalAttVRealSP( &
+      var,           & ! (out)
+      mdlid,         & ! (in)
+      basename,      & ! (in)
+      attname,       & ! (in)
+      myrank,        & ! (in)
+      single         & ! (in) optional
+      )
+    use netcdf  ![external lib]
+    implicit none
+
+    real(SP),         intent(out)           :: var(:)
+    integer,          intent( in)           :: mdlid
+    character(LEN=*), intent( in)           :: basename
+    character(LEN=*), intent( in)           :: attname
+    integer,          intent( in)           :: myrank
+    logical,          intent( in), optional :: single
+
+    real(SP), allocatable :: work(:)
+
+    integer :: status
+    integer :: i, ncid, length
+    character(len=H_LONG) :: fname = ''
+    logical :: single_ = .false.
+
+    intrinsic size
+    intrinsic shape
+    !---------------------------------------------------------------------------
+
+    if ( present(single) ) then
+       single_ = single
+    else
+       single_ = .false.
+    endif
+
+    call ExternalFileMakeFname( fname,mdlid,basename,myrank,single_ )
+
+    status = nf90_open( trim(fname), nf90_nowrite, ncid )
+    if (status .ne. nf90_noerr) call handle_err(status)
+
+    status = nf90_inquire_attribute(ncid, nf90_global, trim(attname), len=length)
+    if (status .ne. nf90_noerr) call handle_err(status)
+
+    allocate( work(length) )
+
+    status = nf90_get_att(ncid, nf90_global, trim(attname), work)
+    if (status .ne. nf90_noerr) call handle_err(status)
+
+    do i = 1, length
+       var(i) = work(i)
+    enddo
+
+    status = nf90_close(ncid) 
+    if (status .ne. nf90_noerr) call handle_err(status)
+    deallocate( work )
+
+    return
+  end subroutine ExternalFileGetGlobalAttVRealSP
+
+  !-----------------------------------------------------------------------------
+  ! ExternalFileGet Global Attribute (value, real, single precision)
+  !-----------------------------------------------------------------------------
+  subroutine ExternalFileGetGlobalAttVRealDP( &
+      var,           & ! (out)
+      mdlid,         & ! (in)
+      basename,      & ! (in)
+      attname,       & ! (in)
+      myrank,        & ! (in)
+      single         & ! (in) optional
+      )
+    use netcdf  ![external lib]
+    implicit none
+
+    real(DP),         intent(out)           :: var(:)
+    integer,          intent( in)           :: mdlid
+    character(LEN=*), intent( in)           :: basename
+    character(LEN=*), intent( in)           :: attname
+    integer,          intent( in)           :: myrank
+    logical,          intent( in), optional :: single
+
+    real(DP), allocatable :: work(:)
+
+    integer :: status
+    integer :: i, ncid, length
+    character(len=H_LONG) :: fname = ''
+    logical :: single_ = .false.
+
+    intrinsic size
+    intrinsic shape
+    !---------------------------------------------------------------------------
+
+    if ( present(single) ) then
+       single_ = single
+    else
+       single_ = .false.
+    endif
+
+    call ExternalFileMakeFname( fname,mdlid,basename,myrank,single_ )
+
+    status = nf90_open( trim(fname), nf90_nowrite, ncid )
+    if (status .ne. nf90_noerr) call handle_err(status)
+
+    status = nf90_inquire_attribute(ncid, nf90_global, trim(attname), len=length)
+    if (status .ne. nf90_noerr) call handle_err(status)
+
+    allocate( work(length) )
+
+    status = nf90_get_att(ncid, nf90_global, trim(attname), work)
+    if (status .ne. nf90_noerr) call handle_err(status)
+
+    do i = 1, length
+       var(i) = work(i)
+    enddo
+
+    status = nf90_close(ncid) 
+    if (status .ne. nf90_noerr) call handle_err(status)
+    deallocate( work )
+
+    return
+  end subroutine ExternalFileGetGlobalAttVRealDP
+
+  !-----------------------------------------------------------------------------
+  ! ExternalFileGet Global Attribute (character)
+  !-----------------------------------------------------------------------------
+  subroutine ExternalFileGetGlobalAttC( &
+      chr,           & ! (out)
+      mdlid,         & ! (in)
+      basename,      & ! (in)
+      attname,       & ! (in)
+      myrank,        & ! (in)
+      single         & ! (in) optional
+      )
+    use netcdf  ![external lib]
+    implicit none
+
+    character(LEN=*), intent(out)           :: chr(:)
+    integer,          intent( in)           :: mdlid
+    character(LEN=*), intent( in)           :: basename
+    character(LEN=*), intent( in)           :: attname
+    integer,          intent( in)           :: myrank
+    logical,          intent( in), optional :: single
+
+    integer :: status
+    integer :: i, ncid, length
+    character(len=H_LONG) :: fname = ''
+    character(len=80)     :: work
+    logical :: single_ = .false.
+
+    intrinsic size
+    intrinsic shape
+    !---------------------------------------------------------------------------
+
+    if ( present(single) ) then
+       single_ = single
+    else
+       single_ = .false.
+    endif
+
+    call ExternalFileMakeFname( fname,mdlid,basename,myrank,single_ )
+
+    status = nf90_open( trim(fname), nf90_nowrite, ncid )
+    if (status .ne. nf90_noerr) call handle_err(status)
+
+    status = nf90_inquire_attribute(ncid, nf90_global, trim(attname), len=length)
+    if (status .ne. nf90_noerr) call handle_err(status)
+
+    if( len(work) < length ) then
+       write(*,*) 'xxx Not enough space to put attribute values. [externalio/scalelib]'
+       call PRC_MPIstop
+    endif
+
+    status = nf90_get_att(ncid, nf90_global, trim(attname), work)
+    if (status .ne. nf90_noerr) call handle_err(status)
+
+    chr = trim(work)
+
+    return
+  end subroutine ExternalFileGetGlobalAttC
 
   !-----------------------------------------------------------------------------
   !> File Read

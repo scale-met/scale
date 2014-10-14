@@ -105,6 +105,9 @@ module mod_realinput
   integer, private :: interp_search_divnum = 10
   logical, private :: wrfout = .false.  ! file type switch (wrfout or wrfrst)
 
+  integer, parameter :: cosin = 1
+  integer, parameter :: sine  = 2
+
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -623,6 +626,8 @@ contains
     use scale_atmos_thermodyn, only: &
        THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres, &
        THERMODYN_pott      => ATMOS_THERMODYN_pott
+    use scale_gridtrans, only: &
+       rotc => GTRANS_ROTC
     implicit none
 
     real(RP),         intent(out) :: dens(:,:,:,:)
@@ -669,12 +674,15 @@ contains
     real(RP), allocatable :: temp_org(:,:,:,:)
     real(RP), allocatable :: pres_org(:,:,:,:)
 
-    real(RP) :: velz(KA,IA,JA,start_step:end_step)
-    real(RP) :: velx(KA,IA,JA,start_step:end_step)
-    real(RP) :: vely(KA,IA,JA,start_step:end_step)
-    real(RP) :: pott(KA,IA,JA,start_step:end_step)
-    real(RP) :: temp(KA,IA,JA,start_step:end_step)
-    real(RP) :: pres(KA,IA,JA,start_step:end_step)
+    real(RP) :: velz  (KA,IA,JA,start_step:end_step)
+    real(RP) :: velx  (KA,IA,JA,start_step:end_step)
+    real(RP) :: vely  (KA,IA,JA,start_step:end_step)
+    real(RP) :: llvelx(KA,IA,JA,start_step:end_step)
+    real(RP) :: llvely(KA,IA,JA,start_step:end_step)
+    real(RP) :: work  (KA,IA,JA,start_step:end_step)
+    real(RP) :: pott  (KA,IA,JA,start_step:end_step)
+    real(RP) :: temp  (KA,IA,JA,start_step:end_step)
+    real(RP) :: pres  (KA,IA,JA,start_step:end_step)
 
     real(RP) :: pott_sfc(1,IA,JA,start_step:end_step)
     real(RP) :: pres_sfc(1,IA,JA,start_step:end_step)
@@ -941,12 +949,22 @@ contains
     do j = JS-1, JE+1
     do i = IS-1, IE+1
     do k = KS-1, KE+1
-       velx(k,i,j,n) = velx_org(kgrd(k,i,j,1,1),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,1) &
+       work(k,i,j,n) = velx_org(kgrd(k,i,j,1,1),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,1) &
                      + velx_org(kgrd(k,i,j,2,1),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,1) &
                      + velx_org(kgrd(k,i,j,3,1),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,1) &
                      + velx_org(kgrd(k,i,j,1,2),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,2) &
                      + velx_org(kgrd(k,i,j,2,2),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,2) &
                      + velx_org(kgrd(k,i,j,3,2),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,2)
+    end do
+    end do
+    end do
+    end do
+    ! from staggered point to scalar point
+    do n = start_step, end_step
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS-1, KE+1
+       llvelx(k,i,j,n) = ( work(k,i-1,j,n) + work(k,i,j,n) ) * 0.5_RP
     end do
     end do
     end do
@@ -989,7 +1007,7 @@ contains
     do j = JS-1, JE+1
     do i = IS-1, IE+1
     do k = KS-1, KE+1
-       vely(k,i,j,n) = vely_org(kgrd(k,i,j,1,1),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,1) &
+       work(k,i,j,n) = vely_org(kgrd(k,i,j,1,1),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,1) &
                      + vely_org(kgrd(k,i,j,2,1),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,1) &
                      + vely_org(kgrd(k,i,j,3,1),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,1) &
                      + vely_org(kgrd(k,i,j,1,2),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,2) &
@@ -998,6 +1016,67 @@ contains
     end do
     end do
     end do
+    end do
+    ! from staggered point to scalar point
+    do n = start_step, end_step
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS-1, KE+1
+       llvely(k,i,j,n) = ( work(k,i,j-1,n) + work(k,i,j,n) ) * 0.5_RP
+    end do
+    end do
+    end do
+    end do
+
+    do n = start_step, end_step
+       ! convert from latlon coordinate to local mapping (x)
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          work(k,i,j,n) = llvelx(k,i,j,n) * rotc(i,j,cosin) + llvely(k,i,j,n) * rotc(i,j,sine )
+       end do
+       end do
+       end do
+
+       call COMM_vars8( work(:,:,:,n), n )
+       call COMM_wait ( work(:,:,:,n), n )
+
+       ! from scalar point to staggered point
+       do j = JS-1, JE+1
+       do i = IS-1, IE+1
+       do k = KS, KE
+          velx(k,i,j,n) = ( work(k,i+1,j,n) + work(k,i,j,n) ) * 0.5_RP
+       end do
+       end do
+       end do
+
+       velx(KS-1,:,:,n) = 0.0_RP
+       velx(KS-2,:,:,n) = 0.0_RP
+    end do
+
+    do n = start_step, end_step
+       ! convert from latlon coordinate to local mapping (y)
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          work(k,i,j,n) = - llvelx(k,i,j,n) * rotc(i,j,sine ) + llvely(k,i,j,n) * rotc(i,j,cosin)
+       end do
+       end do
+       end do
+
+       call COMM_vars8( work(:,:,:,n), 2 )
+       call COMM_wait ( work(:,:,:,n), 2 )
+
+       do j = JS-1, JE+1
+       do i = IS-1, IE+1
+       do k = KS, KE
+          vely(k,i,j,n) = ( work(k,i+1,j,n) + work(k,i,j,n) ) * 0.5_RP
+       end do
+       end do
+       end do
+
+       vely(KS-1,:,:,n) = 0.0_RP
+       vely(KS-2,:,:,n) = 0.0_RP
     end do
 
     ! for scalar points
@@ -1189,6 +1268,8 @@ contains
        HYDROSTATIC_buildrho => ATMOS_HYDROSTATIC_buildrho
     use scale_atmos_thermodyn, only: &
        THERMODYN_pott => ATMOS_THERMODYN_pott
+    use scale_gridtrans, only: &
+       rotc => GTRANS_ROTC
     implicit none
 
     real(RP),         intent(out)  :: dens(:,:,:,:)
@@ -1231,6 +1312,9 @@ contains
     real(RP), allocatable :: pb_org  (:,:,:,:)
     real(RP), allocatable :: qtrc_org(:,:,:,:,:)
 
+    real(RP), allocatable :: velx_org_onmap(:,:,:,:)
+    real(RP), allocatable :: vely_org_onmap(:,:,:,:)
+
     real(RP), allocatable :: tsfc_org(:,:,:)
     real(RP), allocatable :: psfc_org(:,:,:)
     real(RP), allocatable :: qsfc_org(:,:,:,:)
@@ -1246,12 +1330,15 @@ contains
     real(RP), allocatable :: latv_org(:,:,:)
     real(RP), allocatable :: lonv_org(:,:,:)
 
-    real(RP) :: velz(KA,IA,JA,ts:te)
-    real(RP) :: velx(KA,IA,JA,ts:te)
-    real(RP) :: vely(KA,IA,JA,ts:te)
-    real(RP) :: pott(KA,IA,JA,ts:te)
-    real(RP) :: temp(KA,IA,JA,ts:te)
-    real(RP) :: pres(KA,IA,JA,ts:te)
+    real(RP) :: velz  (KA,IA,JA,ts:te)
+    real(RP) :: velx  (KA,IA,JA,ts:te)
+    real(RP) :: vely  (KA,IA,JA,ts:te)
+    real(RP) :: llvelx(KA,IA,JA,ts:te)
+    real(RP) :: llvely(KA,IA,JA,ts:te)
+    real(RP) :: pott  (KA,IA,JA,ts:te)
+    real(RP) :: temp  (KA,IA,JA,ts:te)
+    real(RP) :: pres  (KA,IA,JA,ts:te)
+    real(RP) :: work  (KA,IA,JA,ts:te)
 
     real(RP) :: pott_sfc(1,IA,JA,ts:te)
     real(RP) :: temp_sfc(1,IA,JA,ts:te)
@@ -1303,6 +1390,9 @@ contains
     allocate( pb_org   (dims(1),dims(2),dims(3),ts:te   ) )
     allocate( qtrc_org (dims(1),dims(2),dims(3),ts:te,QA) )
 
+    allocate( velx_org_onmap (dims(1),dims(5),dims(3),ts:te) )
+    allocate( vely_org_onmap (dims(1),dims(2),dims(6),ts:te) )
+
     allocate( tsfc_org (        dims(2),dims(3),ts:te   ) )
     allocate( psfc_org (        dims(2),dims(3),ts:te   ) )
     allocate( qsfc_org (        dims(2),dims(3),ts:te,QA) )
@@ -1323,22 +1413,22 @@ contains
 
     if( .NOT. serial .or. myrank == PRC_master ) then
        call ExternalFileRead( read_xy(:,:,:),    BASENAME, "XLAT",    ts, te, myrank, mdlid, single=.true.               )
-       lat_org (:,:,:) = real( read_xy(:,:,:), kind=RP ) * D2R
+       lat_org (:,:,:) = real( read_xy(:,:,:), kind=RP )
 
        call ExternalFileRead( read_xy(:,:,:),    BASENAME, "XLONG",   ts, te, myrank, mdlid, single=.true.               )
-       lon_org (:,:,:) = real( read_xy(:,:,:), kind=RP ) * D2R
+       lon_org (:,:,:) = real( read_xy(:,:,:), kind=RP )
 
        call ExternalFileRead( read_uy(:,:,:),    BASENAME, "XLAT_U",  ts, te, myrank, mdlid, single=.true., xstag=.true. )
-       latu_org(:,:,:) = real( read_uy(:,:,:), kind=RP ) * D2R
+       latu_org(:,:,:) = real( read_uy(:,:,:), kind=RP )
 
        call ExternalFileRead( read_uy(:,:,:),    BASENAME, "XLONG_U", ts, te, myrank, mdlid, single=.true., xstag=.true. )
-       lonu_org(:,:,:) = real( read_uy(:,:,:), kind=RP ) * D2R
+       lonu_org(:,:,:) = real( read_uy(:,:,:), kind=RP )
 
        call ExternalFileRead( read_xv(:,:,:),    BASENAME, "XLAT_V",  ts, te, myrank, mdlid, single=.true., ystag=.true. )
-       latv_org(:,:,:) = real( read_xv(:,:,:), kind=RP ) * D2R
+       latv_org(:,:,:) = real( read_xv(:,:,:), kind=RP )
 
        call ExternalFileRead( read_xv(:,:,:),    BASENAME, "XLONG_V", ts, te, myrank, mdlid, single=.true., ystag=.true. )
-       lonv_org(:,:,:) = real( read_xv(:,:,:), kind=RP ) * D2R
+       lonv_org(:,:,:) = real( read_xv(:,:,:), kind=RP )
 
        call ExternalFileRead( read_wxy(:,:,:,:), BASENAME, "PH",      ts, te, myrank, mdlid, single=.true., zstag=.true. )
        ph_org  (:,:,:,:) = real( read_wxy(:,:,:,:), kind=RP )
@@ -1359,10 +1449,10 @@ contains
        velz_org(:,:,:,:) = real( read_wxy(:,:,:,:), kind=RP )
 
        call ExternalFileRead( read_zuy(:,:,:,:), BASENAME, varname_U, ts, te, myrank, mdlid, single=.true., xstag=.true. )
-       velx_org(:,:,:,:) = real( read_zuy(:,:,:,:), kind=RP )
+       velx_org_onmap(:,:,:,:) = real( read_zuy(:,:,:,:), kind=RP )
 
        call ExternalFileRead( read_zxv(:,:,:,:), BASENAME, varname_V, ts, te, myrank, mdlid, single=.true., ystag=.true. )
-       vely_org(:,:,:,:) = real( read_zxv(:,:,:,:), kind=RP )
+       vely_org_onmap(:,:,:,:) = real( read_zxv(:,:,:,:), kind=RP )
 
        call ExternalFileRead( read_xy(:,:,:),    BASENAME, "PSFC",    ts, te, myrank, mdlid, single=.true.               )
        psfc_org (:,:,:) = real( read_xy(:,:,:), kind=RP )
@@ -1435,6 +1525,22 @@ contains
        end do
        end do
        end do
+
+       do n = ts, te
+       do k = 1, dims(1)
+          call wrf_arwpost_calc_uvmet( velx_org      (k,:,:,n), vely_org      (k,:,:,n), &
+                                       velx_org_onmap(k,:,:,n), vely_org_onmap(k,:,:,n), &
+                                       lon_org         (:,:,n), lat_org         (:,:,n), &
+                                       dims(2), dims(3), BASENAME )
+       end do
+       end do
+
+       lat_org (:,:,:) = lat_org (:,:,:) * D2R
+       lon_org (:,:,:) = lon_org (:,:,:) * D2R
+       latu_org(:,:,:) = latu_org(:,:,:) * D2R
+       lonu_org(:,:,:) = lonu_org(:,:,:) * D2R
+       latv_org(:,:,:) = latv_org(:,:,:) * D2R
+       lonv_org(:,:,:) = lonv_org(:,:,:) * D2R
 
        if( trim(mptype_run)=='double' .and. trim(mptype_parent)=='single' )then
           if( IO_L ) write(IO_FID_LOG,*) '--- Diagnose Number Concentration from Mixing Ratio'
@@ -1533,12 +1639,21 @@ contains
        do j = JS-1, JE+1
        do i = IS-1, IE+1
        do k = KS-1, KE+1
-          velx(k,i,j,n) = velx_org(kgrd(k,i,j,1,1),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,1) &
-                        + velx_org(kgrd(k,i,j,2,1),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,1) &
-                        + velx_org(kgrd(k,i,j,3,1),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,1) &
-                        + velx_org(kgrd(k,i,j,1,2),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,2) &
-                        + velx_org(kgrd(k,i,j,2,2),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,2) &
-                        + velx_org(kgrd(k,i,j,3,2),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,2)
+          work(k,i,j,n) = velx_org(kgrd(k,i,j,1,1),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,1) &
+                          + velx_org(kgrd(k,i,j,2,1),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,1) &
+                          + velx_org(kgrd(k,i,j,3,1),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,1) &
+                          + velx_org(kgrd(k,i,j,1,2),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,2) &
+                          + velx_org(kgrd(k,i,j,2,2),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,2) &
+                          + velx_org(kgrd(k,i,j,3,2),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,2)
+       end do
+       end do
+       end do
+
+       ! from staggered point to scalar point
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS-1, KE+1
+          llvelx(k,i,j,n) = ( work(k,i-1,j,n) + work(k,i,j,n) ) * 0.5_RP
        end do
        end do
        end do
@@ -1561,15 +1676,66 @@ contains
        do j = JS-1, JE+1
        do i = IS-1, IE+1
        do k = KS-1, KE+1
-          vely(k,i,j,n) = vely_org(kgrd(k,i,j,1,1),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,1) &
-                        + vely_org(kgrd(k,i,j,2,1),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,1) &
-                        + vely_org(kgrd(k,i,j,3,1),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,1) &
-                        + vely_org(kgrd(k,i,j,1,2),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,2) &
-                        + vely_org(kgrd(k,i,j,2,2),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,2) &
-                        + vely_org(kgrd(k,i,j,3,2),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,2)
+          work(k,i,j,n) = vely_org(kgrd(k,i,j,1,1),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,1) &
+                          + vely_org(kgrd(k,i,j,2,1),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,1) &
+                          + vely_org(kgrd(k,i,j,3,1),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,1) &
+                          + vely_org(kgrd(k,i,j,1,2),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,2) &
+                          + vely_org(kgrd(k,i,j,2,2),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,2) &
+                          + vely_org(kgrd(k,i,j,3,2),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,2)
        end do
        end do
        end do
+
+       ! from staggered point to scalar point
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS-1, KE+1
+          llvely(k,i,j,n) = ( work(k,i,j-1,n) + work(k,i,j,n) ) * 0.5_RP
+       end do
+       end do
+       end do
+
+       ! convert from latlon coordinate to local mapping (x)
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          work(k,i,j,n) = llvelx(k,i,j,n) * rotc(i,j,cosin) + llvely(k,i,j,n) * rotc(i,j,sine )
+       end do
+       end do
+       end do
+       call COMM_vars8( work(:,:,:,n), n )
+       call COMM_wait ( work(:,:,:,n), n )
+       ! from scalar point to staggered point
+       do j = JS-1, JE+1
+       do i = IS-1, IE+1
+       do k = KS, KE
+          velx(k,i,j,n) = ( work(k,i+1,j,n) + work(k,i,j,n) ) * 0.5_RP
+       end do
+       end do
+       end do
+       velx(KS-1,:,:,n) = 0.0_RP
+       velx(KS-2,:,:,n) = 0.0_RP
+
+       ! convert from latlon coordinate to local mapping (y)
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          work(k,i,j,n) = - llvelx(k,i,j,n) * rotc(i,j,sine ) + llvely(k,i,j,n) * rotc(i,j,cosin)
+       end do
+       end do
+       end do
+       call COMM_vars8( work(:,:,:,n), 2 )
+       call COMM_wait ( work(:,:,:,n), 2 )
+       ! from scalar point to staggered point
+       do j = JS-1, JE+1
+       do i = IS-1, IE+1
+       do k = KS, KE
+          vely(k,i,j,n) = ( work(k,i+1,j,n) + work(k,i,j,n) ) * 0.5_RP
+       end do
+       end do
+       end do
+       vely(KS-1,:,:,n) = 0.0_RP
+       vely(KS-2,:,:,n) = 0.0_RP
 
        ! for scalar points
        call latlonz_interporation_fact( hfact   (:,:,:),           & ! [OUT]
@@ -1656,8 +1822,8 @@ contains
                                   qtrc_sfc(:,:,:,n,I_QV), & ! [IN]
                                   qtrc_sfc(:,:,:,n,I_QC)  ) ! [IN]
 
-       call COMM_vars8( dens(:,:,:,n), 1 )
-       call COMM_wait ( dens(:,:,:,n), 1 )
+       call COMM_vars8( dens(:,:,:,n), 3 )
+       call COMM_wait ( dens(:,:,:,n), 3 )
 
        do j = JS, JE
        do i = IS, IE
@@ -1729,6 +1895,8 @@ contains
     use scale_atmos_thermodyn, only: &
        THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres, &
        THERMODYN_pott      => ATMOS_THERMODYN_pott
+    use scale_gridtrans, only: &
+       rotc => GTRANS_ROTC
     implicit none
 
     real(RP),         intent(out) :: dens(:,:,:,:)
@@ -1764,12 +1932,15 @@ contains
     real(RP), allocatable :: pres_org(:,:,:,:)
     real(RP), allocatable :: qtrc_org(:,:,:,:,:)
 
-    real(RP) :: velz(KA,IA,JA,start_step:end_step)
-    real(RP) :: velx(KA,IA,JA,start_step:end_step)
-    real(RP) :: vely(KA,IA,JA,start_step:end_step)
-    real(RP) :: pott(KA,IA,JA,start_step:end_step)
-    real(RP) :: temp(KA,IA,JA,start_step:end_step)
-    real(RP) :: pres(KA,IA,JA,start_step:end_step)
+    real(RP) :: velz  (KA,IA,JA,start_step:end_step)
+    real(RP) :: velx  (KA,IA,JA,start_step:end_step)
+    real(RP) :: vely  (KA,IA,JA,start_step:end_step)
+    real(RP) :: llvelx(KA,IA,JA,start_step:end_step)
+    real(RP) :: llvely(KA,IA,JA,start_step:end_step)
+    real(RP) :: pott  (KA,IA,JA,start_step:end_step)
+    real(RP) :: temp  (KA,IA,JA,start_step:end_step)
+    real(RP) :: pres  (KA,IA,JA,start_step:end_step)
+    real(RP) :: work  (KA,IA,JA,start_step:end_step)
 
     real(RP) :: pott_sfc(1,IA,JA,start_step:end_step)
     real(RP) :: pres_sfc(1,IA,JA,start_step:end_step)
@@ -1891,12 +2062,12 @@ contains
     do j = JS-1, JE+1
     do i = IS-1, IE+1
     do k = KS-1, KE+1
-       velx(k,i,j,n) = velx_org(kgrd(k,i,j,1,1),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,1) &
-                     + velx_org(kgrd(k,i,j,2,1),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,1) &
-                     + velx_org(kgrd(k,i,j,3,1),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,1) &
-                     + velx_org(kgrd(k,i,j,1,2),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,2) &
-                     + velx_org(kgrd(k,i,j,2,2),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,2) &
-                     + velx_org(kgrd(k,i,j,3,2),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,2)
+       llvelx(k,i,j,n) = velx_org(kgrd(k,i,j,1,1),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,1) &
+                       + velx_org(kgrd(k,i,j,2,1),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,1) &
+                       + velx_org(kgrd(k,i,j,3,1),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,1) &
+                       + velx_org(kgrd(k,i,j,1,2),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,2) &
+                       + velx_org(kgrd(k,i,j,2,2),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,2) &
+                       + velx_org(kgrd(k,i,j,3,2),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,2)
     end do
     end do
     end do
@@ -1914,17 +2085,69 @@ contains
     do j = JS-1, JE+1
     do i = IS-1, IE+1
     do k = KS-1, KE+1
-       vely(k,i,j,n) = vely_org(kgrd(k,i,j,1,1),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,1) &
-                     + vely_org(kgrd(k,i,j,2,1),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,1) &
-                     + vely_org(kgrd(k,i,j,3,1),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,1) &
-                     + vely_org(kgrd(k,i,j,1,2),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,2) &
-                     + vely_org(kgrd(k,i,j,2,2),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,2) &
-                     + vely_org(kgrd(k,i,j,3,2),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,2)
+       llvely(k,i,j,n) = vely_org(kgrd(k,i,j,1,1),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,1) &
+                       + vely_org(kgrd(k,i,j,2,1),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,1) &
+                       + vely_org(kgrd(k,i,j,3,1),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,1) &
+                       + vely_org(kgrd(k,i,j,1,2),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,2) &
+                       + vely_org(kgrd(k,i,j,2,2),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,2) &
+                       + vely_org(kgrd(k,i,j,3,2),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,2)
     end do
     end do
     end do
     end do
     deallocate( vely_org )
+
+    do n = start_step, end_step
+       ! convert from latlon coordinate to local mapping (x)
+       do j = JS-1, JE+1
+       do i = IS-1, IE+1
+       do k = KS-1, KE+1
+          work(k,i,j,n) = llvelx(k,i,j,n) * rotc(i,j,cosin) + llvely(k,i,j,n) * rotc(i,j,sine)
+       end do
+       end do
+       end do
+
+       call COMM_vars8( work(:,:,:,n), n )
+       call COMM_wait ( work(:,:,:,n), n )
+
+       ! from scalar point to staggered point
+       do j = JS-1, JE+1
+       do i = IS-1, IE+1
+       do k = KS, KE
+          velx(k,i,j,n) = ( work(k,i+1,j,n) + work(k,i,j,n) ) * 0.5_RP
+       end do
+       end do
+       end do
+
+       velx(KS-1,:,:,n) = 0.0_RP
+       velx(KS-2,:,:,n) = 0.0_RP
+    end do
+
+    do n = start_step, end_step
+       ! convert from latlon coordinate to local mapping (y)
+       do j = JS-1, JE+1
+       do i = IS-1, IE+1
+       do k = KS-1, KE+1
+          work(k,i,j,n) = - llvelx(k,i,j,n) * rotc(i,j,sine) + llvely(k,i,j,n) * rotc(i,j,cosin)
+       end do
+       end do
+       end do
+
+       call COMM_vars8( work(:,:,:,n), n )
+       call COMM_wait ( work(:,:,:,n), n )
+
+       ! from scalar point to staggered point
+       do j = JS-1, JE+1
+       do i = IS-1, IE+1
+       do k = KS, KE
+          vely(k,i,j,n) = ( work(k,i+1,j,n) + work(k,i,j,n) ) * 0.5_RP
+       end do
+       end do
+       end do
+
+       vely(KS-1,:,:,n) = 0.0_RP
+       vely(KS-2,:,:,n) = 0.0_RP
+    end do
 
     velz(:,:,:,:)   = 0.0_RP !> cold initialize for vertical velocity
 
@@ -2216,8 +2439,8 @@ contains
                                   pott_sfc(:,:,:,n),      & ! [IN]
                                   qtrc_sfc(:,:,:,n,I_QV), & ! [IN]
                                   qtrc_sfc(:,:,:,n,I_QC)  ) ! [IN]
-       call COMM_vars8( dens(:,:,:,n), 1 )
-       call COMM_wait ( dens(:,:,:,n), 1 )
+       call COMM_vars8( dens(:,:,:,n), 3 )
+       call COMM_wait ( dens(:,:,:,n), 3 )
     end do
 
     do n = start_step, end_step
@@ -3534,6 +3757,112 @@ contains
 
     return
   end subroutine check_domain_compatibility
+
+  !-----------------------------------------------------------------------------
+  !> convert vector varibles from map-projected grid on wrf model to lat-lon grid
+  !-----------------------------------------------------------------------------
+  subroutine wrf_arwpost_calc_uvmet( &
+      u_latlon,   & ! (out)
+      v_latlon,   & ! (out)
+      u_on_map,   & ! (in)
+      v_on_map,   & ! (in)
+      xlon,       & ! (in)
+      xlat,       & ! (in)
+      nx,         & ! (in)
+      ny,         & ! (in)
+      basename    ) ! (in)
+    use scale_const, only: &
+       D2R => CONST_D2R
+    implicit none
+    real(RP), intent(out) :: u_latlon(:,:)
+    real(RP), intent(out) :: v_latlon(:,:)
+    real(RP), intent(in ) :: u_on_map(:,:)
+    real(RP), intent(in ) :: v_on_map(:,:)
+    real(RP), intent(in ) :: xlon(:,:)
+    real(RP), intent(in ) :: xlat(:,:)
+    integer,  intent(in ) :: nx
+    integer,  intent(in ) :: ny
+
+    character(LEN=*), intent( in) :: basename
+
+    real(RP) :: truelat1, truelat2
+    real(RP) :: stand_lon
+    real(RP) :: diff(nx,ny)
+    real(RP) :: alpha(nx,ny)
+    real(RP) :: cone
+    integer  :: map_proj
+
+    real(RP) :: dum_r(1)
+    integer  :: dum_i(1)
+
+
+    integer  :: i, j
+    !---------------------------------------------------------------------------
+
+    call ExternalFileGetGlobalAttV( dum_i, iWRFARW, BASENAME, "MAP_PROJ",  myrank, single=.true. )
+    map_proj = dum_i(1)
+    call ExternalFileGetGlobalAttV( dum_r, iWRFARW, BASENAME, "TRUELAT1",  myrank, single=.true. )
+    truelat1 = dum_r(1)
+    call ExternalFileGetGlobalAttV( dum_r, iWRFARW, BASENAME, "TRUELAT2",  myrank, single=.true. )
+    truelat2 = dum_r(1)
+    call ExternalFileGetGlobalAttV( dum_r, iWRFARW, BASENAME, "STAND_LON", myrank, single=.true. )
+    stand_lon = dum_r(1)
+
+    ! No need to rotate
+    if ( map_proj .ge. 3 ) then
+       u_latlon(:,:) = u_on_map(:,:)
+       v_latlon(:,:) = v_on_map(:,:)
+    endif
+
+    ! Lambert Conformal mapping
+    cone = 1.0_RP         !  PS
+    if ( map_proj .eq. 1 ) then
+       if ( abs(truelat1-truelat2) .gt. 0.1_RP ) then
+          cone = ( log(cos(truelat1*D2R)) -                 &
+                   log(cos(truelat2*D2R)) )  /              &
+                 ( log(tan((90.0_RP-abs(truelat1))*D2R*0.5_RP )) - &
+                   log(tan((90.0_RP-abs(truelat2))*D2R*0.5_RP )) )
+       else
+          cone = sin( abs(truelat1)*D2R )
+       endif
+    endif
+
+    do j = 1, ny
+    do i = 1, nx
+       diff(i,j) = xlon(i,j) - stand_lon
+    enddo
+    enddo
+
+    do j = 1, ny
+    do i = 1, nx
+       if ( diff(i,j) .gt. 180.0_RP ) then
+          diff(i,j) = diff(i,j) - 360.0_RP
+       endif
+       if ( diff(i,j) .lt. -180.0_RP ) then
+          diff(i,j) = diff(i,j) + 360.0_RP
+       endif
+    enddo
+    enddo
+
+    do j = 1, ny
+    do i = 1, nx
+       if ( xlat(i,j) .lt. 0.0_RP ) then
+          alpha(i,j) = - diff(i,j) * cone * D2R
+       else
+          alpha(i,j) =   diff(i,j) * cone * D2R
+       endif
+    enddo
+    enddo
+
+    do j = 1, ny
+    do i = 1, nx
+       u_latlon(i,j) = v_on_map(i,j)*sin( alpha(i,j) ) + u_on_map(i,j)*cos( alpha(i,j) )
+       v_latlon(i,j) = v_on_map(i,j)*cos( alpha(i,j) ) - u_on_map(i,j)*sin( alpha(i,j) )
+    enddo
+    enddo
+
+    return
+  end subroutine wrf_arwpost_calc_uvmet
 
   !-----------------------------------------------------------------------------
   ! Haversine Formula (from R.W. Sinnott, "Virtues of the Haversine",

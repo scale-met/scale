@@ -443,7 +443,7 @@ contains
     !---------------------------------------------------------------------------
 
     rotc(:,:,1) = 1.0_RP
-    rotc(:,:,2) = 1.0_RP
+    rotc(:,:,2) = 0.0_RP
 
     return
   end subroutine MPRJ_None_rotcoef
