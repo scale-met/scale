@@ -8,7 +8,7 @@ PWD         = $(shell pwd)
 TOPDIR      = $(abspath ../../../../..)
 TESTDIR     = ../../..
 
-ifndef ($(PREPDIR))
+ifndef PREPDIR
 PREPDIR     = ..
 endif
 
