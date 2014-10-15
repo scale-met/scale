@@ -8,6 +8,10 @@ PWD         = $(shell pwd)
 TOPDIR      = $(abspath ../../../../..)
 TESTDIR     = ../../..
 
+ifndef ($(PREPDIR))
+PREPDIR     = ..
+endif
+
 
 # user-defined source files
 CODE_DIR    = .
@@ -25,7 +29,7 @@ TPROC       = 24
 # required data (parameters,distributed files)
 DATDIR      = ../../../data
 DATPARAM    = rad/PARAG.29,rad/PARAPC.29,rad/VARDATA.RM29,rad/cira.nc,rad/MIPAS/day.atm,rad/MIPAS/equ.atm,rad/MIPAS/sum.atm,rad/MIPAS/win.atm
-DATDISTS    = ../topo/topo,../landuse/landuse,../initial_SCALE/boundary,../initial_SCALE/init_00000000000.000
+DATDISTS    = $(PREPDIR)/topo/topo,$(PREPDIR)/landuse/landuse,$(PREPDIR)/initial_SCALE/boundary,$(PREPDIR)/initial_SCALE/init_00000000000.000
 
 
 
