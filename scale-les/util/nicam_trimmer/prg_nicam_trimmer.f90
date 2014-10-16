@@ -249,6 +249,19 @@ program nicam_trimmer
   call nicamwrite_4D( lon_trm, lat_trm, slev, time, trimmed, "ss_q2m", &
                      (/ dims(6), dims(7), 1, dims(5) /), outputdir, .false. )
 
+  !> zonal wind at 10m
+  call nicamread_4D( data_4d, trim(inputdir)//"/"//"ss_u10m", "ss_u10m", &
+                     (/ dims(1), dims(2), 1, dims(5) /), .true. )
+  call trimming_4d( trimmed, data_4d, is, js, ie, je )
+  call nicamwrite_4D( lon_trm, lat_trm, slev, time, trimmed, "ss_u10m", &
+                     (/ dims(6), dims(7), 1, dims(5) /), outputdir, .true. )
+
+  !> meridional wind at 10m
+  call nicamread_4D( data_4d, trim(inputdir)//"/"//"ss_v10m", "ss_v10m", &
+                     (/ dims(1), dims(2), 1, dims(5) /), .true. )
+  call trimming_4d( trimmed, data_4d, is, js, ie, je )
+  call nicamwrite_4D( lon_trm, lat_trm, slev, time, trimmed, "ss_v10m", &
+                     (/ dims(6), dims(7), 1, dims(5) /), outputdir, .true. )
 
   deallocate( data_4d )
   deallocate( trimmed )

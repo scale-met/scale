@@ -355,6 +355,7 @@ contains
     use scale_process, only: &
        PRC_MPIstop
     use scale_const, only: &
+       EPS    => CONST_EPS,     &    ! small number (machine epsilon)
        D2R    => CONST_D2R,     &    ! degree to radian  
        KARMAN => CONST_KARMAN,  &    ! kalman constant  [-]
        PI     => CONST_PI,      &    ! pi               [-]
@@ -556,7 +557,12 @@ contains
     !ALPHAG = RHOO * CPdry * ( 6.15_RP + 4.18_RP * UC ) / 1200.0_RP
     !if( UC > 5.0_RP ) ALPHAG = RHOO * CPdry * ( 7.51_RP * UC**0.78_RP ) / 1200.0_RP
 
-     ALPHAB = 6.15_RP + 4.18_RP * UC 
+     if ( (UC-0.0) < sqrt(EPS) ) then
+       write(*,*) 'UC value is too small. Check!'
+       call PRC_MPIstop
+     endif
+
+     ALPHAB = 6.15_RP + 4.18_RP * UC
      if( UC > 5.0_RP ) ALPHAB = 7.51_RP * (UC**0.78_RP )
      ALPHAG = 6.15_RP + 4.18_RP * UC 
      if( UC > 5.0_RP ) ALPHAG = 7.51_RP * (UC**0.78_RP )
@@ -1426,6 +1432,8 @@ contains
       ZC  = ZA / 2.0_RP
       UC  = UA / 2.0_RP
     endif
+
+    UC = max(UC,0.01)
 
     return
   end subroutine canopy_wind

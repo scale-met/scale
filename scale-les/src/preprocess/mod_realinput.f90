@@ -81,8 +81,10 @@ module mod_realinput
   !
   private :: InputAtomSCALE
   private :: InputAtomWRF
+  private :: InputAtomNICAM
   private :: InputSurfaceSCALE
   private :: InputSurfaceWRF
+  private :: InputSurfaceNICAM
   private :: latlonz_interporation_fact
   private :: diagnose_number_concentration
   private :: haversine
@@ -577,8 +579,8 @@ contains
     do i = IS, IE
        tc_urb(i,j) = temp(KS,i,j)
        qc_urb(i,j) = qtrc(KS,i,j,1,I_QV)
-       uc_urb(i,j) = sqrt( ( momx(KS,i,j,1) / ( dens(KS,i+1,  j,1) + dens(KS,i,j,1) ) * 2.0_RP )**2.0_RP &
-                         + ( momy(KS,i,j,1) / ( dens(KS,  i,j+1,1) + dens(KS,i,j,1) ) * 2.0_RP )**2.0_RP )
+       uc_urb(i,j) = max(sqrt( ( momx(KS,i,j,1) / ( dens(KS,i+1,  j,1) + dens(KS,i,j,1) ) * 2.0_RP )**2.0_RP &
+                             + ( momy(KS,i,j,1) / ( dens(KS,  i,j+1,1) + dens(KS,i,j,1) ) * 2.0_RP )**2.0_RP ), 0.01)
     enddo
     enddo
 
@@ -1888,7 +1890,8 @@ contains
       start_step,       & ! (in)
       end_step          ) ! (in)
     use scale_const, only: &
-       D2R => CONST_D2R
+       D2R => CONST_D2R,   &
+       EPS => CONST_EPS
     use scale_comm, only: &
        COMM_vars8, &
        COMM_wait
@@ -2071,6 +2074,19 @@ contains
     endif
     call COMM_bcast( velx_org(:,:,:,:),      dims(3), dims(1), dims(2), nt )
 
+    ! tentative: missing value => 0.
+    do n = start_step, end_step
+    do j = 1, dims(2)
+    do i = 1, dims(1)
+    do k = 1, dims(3)
+       if( abs(abs(velx_org( k, i, j, n ))-300.0D0) < sqrt(EPS) )then
+           velx_org( k, i, j, n ) = 0.0D0
+       endif
+    end do
+    end do
+    end do
+    end do
+
     do n = start_step, end_step
     do j = JS-1, JE+1
     do i = IS-1, IE+1
@@ -2101,6 +2117,19 @@ contains
        vely_org(:,:,:,:) = real( read4D(:,:,:,:), kind=RP )
     endif
     call COMM_bcast( vely_org(:,:,:,:),      dims(3), dims(1), dims(2), nt )
+
+    ! tentative: missing value => 0.
+    do n = start_step, end_step
+    do j = 1, dims(2)
+    do i = 1, dims(1)
+    do k = 1, dims(3)
+       if( abs(abs(vely_org( k, i, j, n ))-300.0D0) < sqrt(EPS) )then
+           vely_org( k, i, j, n ) = 0.0D0
+       endif
+    end do
+    end do
+    end do
+    end do
 
     do n = start_step, end_step
     do j = JS-1, JE+1
@@ -2173,42 +2202,6 @@ contains
     velz(:,:,:,:)   = 0.0_RP !> cold initialize for vertical velocity
 
     if( do_read ) then
-       basename = "ms_qv"//trim(basename_num)
-       call ExternalFileRead( read4D(:,:,:,:), trim(basename), "ms_qv", start_step, end_step, myrank, iNICAM, single=.true. )
-       qtrc_org(:,:,:,:,I_QV) = real( read4D(:,:,:,:), kind=RP )
-
-       do n = start_step, end_step
-       do j = 1, dims(2)
-       do i = 1, dims(1)
-       do k = 1, dims(3)
-          !> --fix negative value
-          sw = sign(0.5_RP, qtrc_org(k,i,j,n,I_QV)) + 0.5_RP
-          qtrc_org(k,i,j,n,I_QV) = qtrc_org(k,i,j,n,I_QV) * sw
-       enddo
-       enddo
-       enddo
-       enddo
-    endif
-    call COMM_bcast( qtrc_org(:,:,:,:,I_QV), dims(3), dims(1), dims(2), nt )
-
-    qtrc(:,:,:,:,:) = 0.0_RP !> cold initialize for hydrometeor
-    do n = start_step, end_step
-    do j = JS-1, JE+1
-    do i = IS-1, IE+1
-    do k = KS-1, KE+1
-       qtrc(k,i,j,n,I_QV) = qtrc_org(kgrd(k,i,j,1,1),igrd(i,j,1),jgrd(i,j,1),n,I_QV) * hfact(i,j,1) * vfact(k,i,j,1,1) &
-                          + qtrc_org(kgrd(k,i,j,2,1),igrd(i,j,2),jgrd(i,j,2),n,I_QV) * hfact(i,j,2) * vfact(k,i,j,2,1) &
-                          + qtrc_org(kgrd(k,i,j,3,1),igrd(i,j,3),jgrd(i,j,3),n,I_QV) * hfact(i,j,3) * vfact(k,i,j,3,1) &
-                          + qtrc_org(kgrd(k,i,j,1,2),igrd(i,j,1),jgrd(i,j,1),n,I_QV) * hfact(i,j,1) * vfact(k,i,j,1,2) &
-                          + qtrc_org(kgrd(k,i,j,2,2),igrd(i,j,2),jgrd(i,j,2),n,I_QV) * hfact(i,j,2) * vfact(k,i,j,2,2) &
-                          + qtrc_org(kgrd(k,i,j,3,2),igrd(i,j,3),jgrd(i,j,3),n,I_QV) * hfact(i,j,3) * vfact(k,i,j,3,2)
-    end do
-    end do
-    end do
-    end do
-    deallocate( qtrc_org )
-
-    if( do_read ) then
        !> [scale-offset]
        basename = "ss_slp"//trim(basename_num)
        call ExternalFileReadOffset( read3DT(:,:,:,:), &
@@ -2231,6 +2224,7 @@ contains
     endif
     call COMM_bcast( psfc_org(:,:,:),                 dims(1), dims(2), nt )
     call COMM_bcast( tsfc_org(:,:,:),                 dims(1), dims(2), nt )
+    call COMM_bcast( qsfc_org(:,:,:,I_QV),            dims(1), dims(2), nt )
 
     do n = start_step, end_step
     do j = JS-1, JE+1
@@ -2258,6 +2252,55 @@ contains
     end do
     end do
     end do
+
+    if( do_read ) then
+       basename = "ms_qv"//trim(basename_num)
+       call ExternalFileRead( read4D(:,:,:,:), trim(basename), "ms_qv", start_step, end_step, myrank, iNICAM, single=.true. )
+       qtrc_org(:,:,:,:,I_QV) = real( read4D(:,:,:,:), kind=RP )
+    endif
+    call COMM_bcast( qtrc_org(:,:,:,:,I_QV), dims(3), dims(1), dims(2), nt )
+
+       ! tentative: missing value => surface_qv
+       do n = start_step, end_step
+       do j = 1, dims(2)
+       do i = 1, dims(1)
+       do k = 1, dims(3)
+          if( qtrc_org(k,i,j,n,I_QV) < -9.99*10.**10 )then
+             qtrc_org(k,i,j,n,I_QV) = qsfc_org(i,j,n,I_QV)
+          endif
+       end do
+       end do
+       end do
+       end do
+
+       do n = start_step, end_step
+       do j = 1, dims(2)
+       do i = 1, dims(1)
+       do k = 1, dims(3)
+          !> --fix negative value
+          sw = sign(0.5_RP, qtrc_org(k,i,j,n,I_QV)) + 0.5_RP
+          qtrc_org(k,i,j,n,I_QV) = qtrc_org(k,i,j,n,I_QV) * sw
+       enddo
+       enddo
+       enddo
+       enddo
+
+    qtrc(:,:,:,:,:) = 0.0_RP !> cold initialize for hydrometeor
+    do n = start_step, end_step
+    do j = JS-1, JE+1
+    do i = IS-1, IE+1
+    do k = KS-1, KE+1
+       qtrc(k,i,j,n,I_QV) = qtrc_org(kgrd(k,i,j,1,1),igrd(i,j,1),jgrd(i,j,1),n,I_QV) * hfact(i,j,1) * vfact(k,i,j,1,1) &
+                          + qtrc_org(kgrd(k,i,j,2,1),igrd(i,j,2),jgrd(i,j,2),n,I_QV) * hfact(i,j,2) * vfact(k,i,j,2,1) &
+                          + qtrc_org(kgrd(k,i,j,3,1),igrd(i,j,3),jgrd(i,j,3),n,I_QV) * hfact(i,j,3) * vfact(k,i,j,3,1) &
+                          + qtrc_org(kgrd(k,i,j,1,2),igrd(i,j,1),jgrd(i,j,1),n,I_QV) * hfact(i,j,1) * vfact(k,i,j,1,2) &
+                          + qtrc_org(kgrd(k,i,j,2,2),igrd(i,j,2),jgrd(i,j,2),n,I_QV) * hfact(i,j,2) * vfact(k,i,j,2,2) &
+                          + qtrc_org(kgrd(k,i,j,3,2),igrd(i,j,3),jgrd(i,j,3),n,I_QV) * hfact(i,j,3) * vfact(k,i,j,3,2)
+    end do
+    end do
+    end do
+    end do
+    deallocate( qtrc_org )
 
     ! vertical grid arrangement combined with surface
     if( do_read ) then
@@ -2403,7 +2446,7 @@ contains
           lack_of_val = .false.
 
           do k = 2, dims3p1
-             if ( temp_org(k,i,j,n) <= 0.0_RP ) then
+             if ( temp_org(k,i,j,n) <= 50.0_RP ) then
                 if ( .NOT. lack_of_val ) kks = k
                 kke = k
                 lack_of_val = .true.
@@ -3204,7 +3247,8 @@ contains
       dims          ) ! (in)
     use scale_const, only: &
        D2R   => CONST_D2R,   &
-       TEM00 => CONST_TEM00
+       TEM00 => CONST_TEM00, &
+       EPS   => CONST_EPS
     implicit none
 
     real(RP), intent(out) :: tg   (:,:,:)
@@ -3384,6 +3428,17 @@ contains
                                     iNICAM,           &
                                     single=.true.     )
        tg_org(:,:,:) = real( read4D(:,:,:,1), kind=RP )
+     
+       ! tentative: missing value => 298.
+       do k = 1, dims(7)
+       do j = 1, dims(2)
+       do i = 1, dims(1)
+          if( (tg_org(k,i,j)-50.0D0) < sqrt(EPS) )then
+               tg_org(k,i,j) = 298.0D0
+          endif
+       end do
+       end do
+       end do
 
        ! [scale-offset]
        basename = "la_wg"//trim(basename_num)
@@ -3396,6 +3451,18 @@ contains
                                     iNICAM,           &
                                     single=.true.     )
        strg_org(:,:,:) = real( read4D(:,:,:,1), kind=RP )
+
+       ! tentative: missing value => 0.2
+       do k = 1, dims(7)
+       do j = 1, dims(2)
+       do i = 1, dims(1)
+          if( strg_org(k,i,j) < sqrt(EPS) )then
+              strg_org(k,i,j) = 0.2D0
+          endif
+       end do
+       end do
+       end do
+
 
        basename = "ss_tem_sfc"//trim(basename_num)
        call ExternalFileRead( read3DS(:,:,:,:), &

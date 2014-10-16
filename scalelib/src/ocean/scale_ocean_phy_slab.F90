@@ -116,7 +116,10 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Ocean step: Slab'
 
-    if( OCEAN_PHY_SLAB_fixedSST ) return
+    if( OCEAN_PHY_SLAB_fixedSST )then
+       OCEAN_TEMP_t(:,:) = 0.0D0
+       return
+    endif
 
     do j = JS, JE
     do i = IS, IE
