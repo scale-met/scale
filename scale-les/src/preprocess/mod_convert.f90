@@ -39,10 +39,9 @@ module mod_convert
   !
   !++ Private parameters & variables
   !
-  integer, public            :: CONVERT_TYPE = -1
-  integer, public, parameter :: I_IGNORE     =  0
-  integer, public, parameter :: I_CNVTOPO    =  1
-  integer, public, parameter :: I_CNVLANDUSE =  2
+  logical :: CONVERT_NONE    = .false.
+  logical :: CONVERT_TOPO    = .false.
+  logical :: CONVERT_LANDUSE = .false.
 
   !-----------------------------------------------------------------------------
 contains
@@ -57,10 +56,10 @@ contains
        CNVLANDUSE_setup
     implicit none
 
-    character(len=H_SHORT) :: CONVERT_name = 'NONE'
-
     NAMELIST / PARAM_CONVERT / &
-       CONVERT_name
+       CONVERT_NONE,    &
+       CONVERT_TOPO,    &
+       CONVERT_LANDUSE
 
     integer :: ierr
     !---------------------------------------------------------------------------
@@ -79,22 +78,15 @@ contains
     endif
     if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_CONVERT)
 
-    select case(CONVERT_name)
-    case('NONE')
-       CONVERT_TYPE = I_IGNORE
-
-    case('CNVTOPO')
-       CONVERT_TYPE = I_CNVTOPO
+    ! set up TOPO
+    if( CONVERT_TOPO ) then
        call CNVTOPO_setup
+    end if
 
-    case('CNVLANDUSE')
-       CONVERT_TYPE = I_CNVLANDUSE
+    ! set up LANDUSE
+    if( CONVERT_LANDUSE ) then
        call CNVLANDUSE_setup
-
-    case default
-       write(*,*) ' xxx Unsupported TYPE:', trim(CONVERT_name)
-       call PRC_MPIstop
-    endselect
+    end if
 
     return
   end subroutine CONVERT_setup
@@ -111,24 +103,20 @@ contains
     implicit none
     !---------------------------------------------------------------------------
 
-    if ( CONVERT_TYPE == I_IGNORE ) then
+    if ( CONVERT_NONE ) then
        if( IO_L ) write(IO_FID_LOG,*)
        if( IO_L ) write(IO_FID_LOG,*) '++++++ SKIP  CONVERT BOUNDARY DATA ++++++'
     else
        if( IO_L ) write(IO_FID_LOG,*)
        if( IO_L ) write(IO_FID_LOG,*) '++++++ START CONVERT BOUNDARY DATA ++++++'
 
-       select case(CONVERT_TYPE)
-       case(I_CNVTOPO)
+       if( CONVERT_TOPO ) then
           call CNVTOPO
+       end if
 
-       case(I_CNVLANDUSE)
+       if( CONVERT_LANDUSE ) then
           call CNVLANDUSE
-
-       case default
-          write(*,*) ' xxx Unsupported TYPE:', CONVERT_TYPE
-          call PRC_MPIstop
-       endselect
+       end if
 
        if( IO_L ) write(IO_FID_LOG,*) '++++++ END   CONVERT BOUNDARY DATA ++++++'
     endif
