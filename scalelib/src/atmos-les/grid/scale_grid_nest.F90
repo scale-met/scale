@@ -1565,25 +1565,42 @@ contains
 
           l = l + 1
           if ( no_zstag ) then
-             call MPI_IRECV(buffer_3D, ileng, COMM_datatype, target_rank, tag, INTERCOMM_PARENT, ireq(l), ierr(l))
+             call MPI_IRECV( buffer_3D,        &
+                             ileng,            &
+                             COMM_datatype,    &
+                             target_rank,      &
+                             tag,              &
+                             INTERCOMM_PARENT, &
+                             ireq(l),          &
+                             ierr(l)           )
              call MPI_WAIT(ireq(l), istatus, ierr(l))
 
              if ( .not. logarithmic ) then
                 ! linear interpolation
                 do k = 1, PARENT_KA(HANDLE)
-                   buffer_ref_3D(k,xs:xe,ys:ye)  = buffer_3D(k,PRNT_IS(HANDLE):PRNT_IE(HANDLE),PRNT_JS(HANDLE):PRNT_JE(HANDLE))
+                   buffer_ref_3D(k,xs:xe,ys:ye) &
+                  = buffer_3D(k,PRNT_IS(HANDLE):PRNT_IE(HANDLE),PRNT_JS(HANDLE):PRNT_JE(HANDLE))
                 enddo
              else
                 ! logarithmic weighted interpolation
                 do k = 1, PARENT_KA(HANDLE)
-                   buffer_ref_3D(k,xs:xe,ys:ye)  = log( buffer_3D(k,PRNT_IS(HANDLE):PRNT_IE(HANDLE),PRNT_JS(HANDLE):PRNT_JE(HANDLE)) )
+                   buffer_ref_3D(k,xs:xe,ys:ye) &
+                   = log( buffer_3D(k,PRNT_IS(HANDLE):PRNT_IE(HANDLE),PRNT_JS(HANDLE):PRNT_JE(HANDLE)) )
                 enddo
              endif
           else
-             call MPI_IRECV(buffer_3DF, ileng, COMM_datatype, target_rank, tag, INTERCOMM_PARENT, ireq(l), ierr(l))
+             call MPI_IRECV( buffer_3DF,       &
+                             ileng,            &
+                             COMM_datatype,    &
+                             target_rank,      &
+                             tag,              &
+                             INTERCOMM_PARENT, &
+                             ireq(l),          &
+                             ierr(l)           )
              call MPI_WAIT(ireq(l), istatus, ierr(l))
              do k = 0, PARENT_KA(HANDLE)
-                buffer_ref_3DF(k,xs:xe,ys:ye)  = buffer_3DF(k,PRNT_IS(HANDLE):PRNT_IE(HANDLE),PRNT_JS(HANDLE):PRNT_JE(HANDLE))
+                buffer_ref_3DF(k,xs:xe,ys:ye) &
+                = buffer_3DF(k,PRNT_IS(HANDLE):PRNT_IE(HANDLE),PRNT_JS(HANDLE):PRNT_JE(HANDLE))
              enddo
           endif
        enddo ! YP Loop

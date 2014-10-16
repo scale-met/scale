@@ -201,7 +201,7 @@ contains
       use_file_density, &
       dims,             &
       mdlid,            &
-      mptype_parent,    &    
+      mptype_parent,    &
       timelen,          &
       serial            )
     implicit none
@@ -462,7 +462,7 @@ contains
     real(RP) :: strg (LKMAX,IA,JA)
     real(RP) :: roff (IA,JA)
     real(RP) :: qvef (IA,JA)
-    real(RP) :: tw   (IA,JA) 
+    real(RP) :: tw   (IA,JA)
     real(RP) :: lst  (IA,JA)
     real(RP) :: ust  (IA,JA)
     real(RP) :: sst  (IA,JA)
@@ -1381,7 +1381,7 @@ contains
     allocate( read_wxy (dims(4),dims(2),dims(3),ts:te   ) )
     allocate( read_zuy (dims(1),dims(5),dims(3),ts:te   ) )
     allocate( read_zxv (dims(1),dims(2),dims(6),ts:te   ) )
-                                                        
+
     allocate( velz_org (dims(4),dims(2),dims(3),ts:te   ) )
     allocate( velx_org (dims(1),dims(5),dims(3),ts:te   ) )
     allocate( vely_org (dims(1),dims(2),dims(6),ts:te   ) )
@@ -2059,7 +2059,14 @@ contains
     if( do_read ) then
        !> [scale-offset]
        basename = "ms_u"//trim(basename_num)
-       call ExternalFileReadOffset( read4D(:,:,:,:), trim(basename), "ms_u", start_step, end_step, myrank, iNICAM, single=.true. )
+       call ExternalFileReadOffset( read4D(:,:,:,:),  &
+                                    trim(basename),   &
+                                    "ms_u",           &
+                                    start_step,       &
+                                    end_step,         &
+                                    myrank,           &
+                                    iNICAM,           &
+                                    single=.true.     )
        velx_org(:,:,:,:) = real( read4D(:,:,:,:), kind=RP )
     endif
     call COMM_bcast( velx_org(:,:,:,:),      dims(3), dims(1), dims(2), nt )
@@ -2083,7 +2090,14 @@ contains
     if( do_read ) then
        !> [scale-offset]
        basename = "ms_v"//trim(basename_num)
-       call ExternalFileReadOffset( read4D(:,:,:,:), trim(basename), "ms_v", start_step, end_step, myrank, iNICAM, single=.true. )
+       call ExternalFileReadOffset( read4D(:,:,:,:),  &
+                                    trim(basename),   &
+                                    "ms_v",           &
+                                    start_step,       &
+                                    end_step,         &
+                                    myrank,           &
+                                    iNICAM,           &
+                                    single=.true.     )
        vely_org(:,:,:,:) = real( read4D(:,:,:,:), kind=RP )
     endif
     call COMM_bcast( vely_org(:,:,:,:),      dims(3), dims(1), dims(2), nt )
@@ -2197,7 +2211,14 @@ contains
     if( do_read ) then
        !> [scale-offset]
        basename = "ss_slp"//trim(basename_num)
-       call ExternalFileReadOffset( read3DT(:,:,:,:), trim(basename), "ss_slp", start_step, end_step, myrank, iNICAM, single=.true. )
+       call ExternalFileReadOffset( read3DT(:,:,:,:), &
+                                    trim(basename),   &
+                                    "ss_slp",         &
+                                    start_step,       &
+                                    end_step,         &
+                                    myrank,           &
+                                    iNICAM,           &
+                                    single=.true.     )
        psfc_org(:,:,:) = real( read3DT(1,:,:,:), kind=RP )
 
        basename = "ss_t2m"//trim(basename_num)
@@ -2356,7 +2377,14 @@ contains
     if( do_read ) then
        !> [scale-offset]
        basename = "ms_tem"//trim(basename_num)
-       call ExternalFileReadOffset( read4D(:,:,:,:), trim(basename), "ms_tem", start_step, end_step, myrank, iNICAM, single=.true. )
+       call ExternalFileReadOffset( read4D(:,:,:,:),  &
+                                    trim(basename),   &
+                                    "ms_tem",         &
+                                    start_step,       &
+                                    end_step,         &
+                                    myrank,           &
+                                    iNICAM,           &
+                                    single=.true.     )
        temp_org(1,:,:,:) = tsfc_org(:,:,:)
        do n = start_step, end_step
        do j = 1, dims(2)
@@ -3347,21 +3375,49 @@ contains
     if( do_read ) then
        ! [scale-offset]
        basename = "la_tg"//trim(basename_num)
-       call ExternalFileReadOffset( read4D(:,:,:,:), trim(basename), "la_tg", start_step, end_step, myrank, iNICAM, single=.true. )
+       call ExternalFileReadOffset( read4D(:,:,:,:),  &
+                                    trim(basename),   &
+                                    "la_tg",          &
+                                    start_step,       &
+                                    end_step,         &
+                                    myrank,           &
+                                    iNICAM,           &
+                                    single=.true.     )
        tg_org(:,:,:) = real( read4D(:,:,:,1), kind=RP )
 
        ! [scale-offset]
        basename = "la_wg"//trim(basename_num)
-       call ExternalFileReadOffset( read4D(:,:,:,:), trim(basename), "la_wg", start_step, end_step, myrank, iNICAM, single=.true. )
+       call ExternalFileReadOffset( read4D(:,:,:,:),  &
+                                    trim(basename),   &
+                                    "la_wg",          &
+                                    start_step,       &
+                                    end_step,         &
+                                    myrank,           &
+                                    iNICAM,           &
+                                    single=.true.     )
        strg_org(:,:,:) = real( read4D(:,:,:,1), kind=RP )
 
        basename = "ss_tem_sfc"//trim(basename_num)
-       call ExternalFileRead( read3DS(:,:,:,:), trim(basename), "ss_tem_sfc", start_step, end_step, myrank, iNICAM, single=.true. )
+       call ExternalFileRead( read3DS(:,:,:,:), &
+                              trim(basename),   &
+                              "ss_tem_sfc",     &
+                              start_step,       &
+                              end_step,         &
+                              myrank,           &
+                              iNICAM,           &
+                              single=.true.     )
        lst_org(:,:) = real( read3DS(1,:,:,1), kind=RP )
 
        ! [scale-offset]
        basename = "oa_sst"//trim(basename_num)
-       call ExternalFileReadOffset( read3DT(:,:,:,:), trim(basename), "oa_sst", start_step, end_step, myrank, iNICAM, single=.true. )
+       call ExternalFileReadOffset( read3DT(:,:,:,:), &
+                                    trim(basename),   &
+                                    "oa_sst",         &
+                                    start_step,       &
+                                    end_step,         &
+                                    myrank,           &
+                                    iNICAM,           &
+                                    single=.true.     )
        sst_org(:,:) = real( read3DT(1,:,:,1), kind=RP )
 
        !basename = "oa_ice"//trim(basename_num)
