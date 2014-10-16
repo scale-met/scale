@@ -1263,7 +1263,7 @@ contains
 #ifdef DEBUG
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
-       !$omp parallel do private(i,j,k,vel) OMP_SCHEDULE_ collapse(2)
+       !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE
        do i = IIS, IIE
 #ifdef DEBUG

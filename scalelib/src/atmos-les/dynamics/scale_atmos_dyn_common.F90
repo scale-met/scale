@@ -1585,7 +1585,6 @@ contains
 #endif
 
        !--- calc allowable range or quantity change by antidiffusive flux
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
 
        if (flag_vect) then
 

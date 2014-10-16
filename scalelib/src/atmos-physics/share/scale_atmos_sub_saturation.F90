@@ -589,7 +589,7 @@ contains
     integer :: i, j
     !---------------------------------------------------------------------------
 
-    !$omp parallel do private(i,j,k,alpha,psatl,psati,psat) OMP_SCHEDULE_
+    !$omp parallel do private(i,j,alpha,psatl,psati,psat) OMP_SCHEDULE_
     do j = JS, JE
     do i = IS, IE
 
