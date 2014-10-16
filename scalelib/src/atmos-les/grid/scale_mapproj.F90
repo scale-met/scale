@@ -312,8 +312,8 @@ contains
     implicit none
 
     real(RP), intent(out) :: rotc(IA,JA,2) !< rotc(:,:,1)->cos, rotc(:,:,2)->sin
-    real(RP), intent(in)  :: lon(IA,JA) ! [rad]
-    real(RP), intent(in)  :: lat(IA,JA) ! [rad]
+    real(RP), intent(in)  :: lon (IA,JA) ! [rad]
+    real(RP), intent(in)  :: lat (IA,JA) ! [rad]
     !---------------------------------------------------------------------------
 
     select case(MPRJ_type)
@@ -438,8 +438,8 @@ contains
     implicit none
 
     real(RP), intent(out) :: rotc(IA,JA,2)
-    real(RP), intent(in)  :: lat(IA,JA) ! [rad]
-    real(RP), intent(in)  :: lon(IA,JA) ! [rad]
+    real(RP), intent(in)  :: lon (IA,JA) ! [rad]
+    real(RP), intent(in)  :: lat (IA,JA) ! [rad]
     !---------------------------------------------------------------------------
 
     rotc(:,:,1) = 1.0_RP
@@ -522,7 +522,7 @@ contains
     dist = sqrt( xx*xx + yy*yy ) / RADIUS
 
     lon = MPRJ_basepoint_lon * d2r + atan2(MPRJ_hemisphere*xx,yy) / MPRJ_LC_c
-    lon = mod(lon+2.0_RP*PI,2.0_RP*PI)
+    lon = mod( lon+2.0_RP*PI, 2.0_RP*PI )
 
     ! check hemisphere: 1=north, -1=south
     lat = MPRJ_hemisphere * ( 0.5_RP*PI - 2.0_RP*ATAN( (dist/MPRJ_LC_fact)**(1.0_RP/MPRJ_LC_c) ) )
@@ -548,7 +548,7 @@ contains
     !---------------------------------------------------------------------------
 
     dlon = lon - MPRJ_basepoint_lon * D2R
-    dlon = mod(dlon+2.0_RP*PI,2.0_RP*PI)
+    dlon = mod( dlon+2.0_RP*PI, 2.0_RP*PI )
 
     latrot = 0.5_RP*PI - lat
 
@@ -582,8 +582,8 @@ contains
 
        m1(i,j) = MPRJ_LC_fact / sin(latrot) * MPRJ_LC_c * tan(0.5_RP*latrot)**MPRJ_LC_c
        m2(i,j) = m1(i,j)
-    end do
-    end do
+    enddo
+    enddo
 
     return
   end subroutine MPRJ_LambertConformal_mapfactor
@@ -595,8 +595,8 @@ contains
     implicit none
 
     real(RP), intent(out) :: rotc(IA,JA,2)
-    real(RP), intent(in)  :: lon(IA,JA) ! [rad]
-    real(RP), intent(in)  :: lat(IA,JA) ! [rad]
+    real(RP), intent(in)  :: lon (IA,JA) ! [rad]
+    real(RP), intent(in)  :: lat (IA,JA) ! [rad]
 
     real(RP) :: dlon
     integer :: i, j
@@ -605,11 +605,11 @@ contains
     do j = 1, JA
     do i = 1, IA
        dlon = lon(i,j) - MPRJ_basepoint_lon * D2R
-       dlon = mod(dlon+2.0_RP*PI,2.0_RP*PI)
+       dlon = mod( dlon+2.0_RP*PI, 2.0_RP*PI )
        rotc(i,j,1) = cos( MPRJ_LC_c * dlon ) * MPRJ_hemisphere
        rotc(i,j,2) = sin( MPRJ_LC_c * dlon )
-    end do
-    end do
+    enddo
+    enddo
 
     return
   end subroutine MPRJ_LambertConformal_rotcoef
@@ -674,7 +674,7 @@ contains
     dist = sqrt( xx*xx + yy*yy ) / RADIUS
 
     lon = MPRJ_basepoint_lon * d2r + atan2(MPRJ_hemisphere*xx,yy)
-    lon = mod(lon+2.0_RP*PI,2.0_RP*PI)
+    lon = mod( lon+2.0_RP*PI, 2.0_RP*PI )
 
     ! check hemisphere: 1=north, -1=south
     lat = MPRJ_hemisphere * ( 0.5_RP*PI - 2.0_RP*atan(dist/MPRJ_PS_fact) )
@@ -700,7 +700,7 @@ contains
     !---------------------------------------------------------------------------
 
     dlon = lon - MPRJ_basepoint_lon * D2R
-    dlon = mod(dlon+2.0_RP*PI,2.0_RP*PI)
+    dlon = mod( dlon+2.0_RP*PI, 2.0_RP*PI )
 
     latrot = 0.5_RP*PI - lat
 
@@ -731,8 +731,8 @@ contains
     do i = 1, IA
        m1(i,j) = MPRJ_LC_fact / ( 1.0_RP + sin(lat(i,j)) )
        m2(i,j) = m1(i,j)
-    end do
-    end do
+    enddo
+    enddo
 
     return
   end subroutine MPRJ_PolarStereographic_mapfactor
@@ -744,8 +744,8 @@ contains
     implicit none
 
     real(RP), intent(out) :: rotc(IA,JA,2)
-    real(RP), intent(in)  :: lon(IA,JA) ! [rad]
-    real(RP), intent(in)  :: lat(IA,JA) ! [rad]
+    real(RP), intent(in)  :: lon (IA,JA) ! [rad]
+    real(RP), intent(in)  :: lat (IA,JA) ! [rad]
 
     real(RP) :: dlon
     integer :: i, j
@@ -754,11 +754,11 @@ contains
     do j = 1, JA
     do i = 1, IA
        dlon = lon(i,j) - MPRJ_basepoint_lon * D2R
-       dlon = mod(dlon+2.0_RP*PI,2.0_RP*PI)
+       dlon = mod( dlon+2.0_RP*PI, 2.0_RP*PI )
        rotc(i,j,1) = cos( dlon ) * MPRJ_hemisphere
        rotc(i,j,2) = sin( dlon )
-    end do
-    end do
+    enddo
+    enddo
 
     return
   end subroutine MPRJ_PolarStereographic_rotcoef
@@ -769,7 +769,7 @@ contains
     implicit none
 
     real(RP) :: lat0
-    real(RP) :: latrot, dist
+    real(RP) :: dlon, latrot, dist
     !---------------------------------------------------------------------------
 
     lat0 = MPRJ_M_lat * D2R
@@ -777,11 +777,14 @@ contains
     ! pre-calc factor
     MPRJ_M_fact = cos(lat0)
 
+    dlon = MPRJ_basepoint_lon * D2R
+    dlon = mod( dlon+2.0_RP*PI, 2.0_RP*PI )
+
     latrot = 0.5_RP*PI - MPRJ_basepoint_lat * D2R
 
-    dist = tan(0.5_RP*latrot)
+    dist = 1.0_RP / tan(0.5_RP*latrot)
 
-    MPRJ_eq_x = MPRJ_basepoint_x
+    MPRJ_eq_x = MPRJ_basepoint_x - RADIUS * MPRJ_M_fact * dlon
     MPRJ_eq_y = MPRJ_basepoint_y - RADIUS * MPRJ_M_fact * log(dist)
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -813,7 +816,7 @@ contains
     xx = ( x - MPRJ_eq_x ) / RADIUS / MPRJ_M_fact
     yy = ( y - MPRJ_eq_y ) / RADIUS / MPRJ_M_fact
 
-    lon = MPRJ_basepoint_lon * d2r + xx
+    lon = xx
     lat = 0.5_RP*PI - 2.0_RP*atan( 1.0_RP/exp(yy) )
 
     return
@@ -837,7 +840,7 @@ contains
     !---------------------------------------------------------------------------
 
     dlon = lon - MPRJ_basepoint_lon * D2R
-    dlon = mod(dlon+2.0_RP*PI,2.0_RP*PI)
+    dlon = mod( dlon+2.0_RP*PI, 2.0_RP*PI )
 
     latrot = 0.5_RP*PI - lat
 
@@ -867,8 +870,8 @@ contains
     do i = 1, IA
        m1(i,j) = MPRJ_M_fact / cos(lat(i,j))
        m2(i,j) = m1(i,j)
-    end do
-    end do
+    enddo
+    enddo
 
     return
   end subroutine MPRJ_Mercator_mapfactor
@@ -880,8 +883,8 @@ contains
     implicit none
 
     real(RP), intent(out) :: rotc(IA,JA,2)
-    real(RP), intent(in)  :: lon(IA,JA) ! [rad]
-    real(RP), intent(in)  :: lat(IA,JA) ! [rad]
+    real(RP), intent(in)  :: lon (IA,JA) ! [rad]
+    real(RP), intent(in)  :: lat (IA,JA) ! [rad]
     !---------------------------------------------------------------------------
 
     rotc(:,:,1) = 1.0_RP
@@ -896,6 +899,7 @@ contains
     implicit none
 
     real(RP) :: lat0
+    real(RP) :: dlon
     !---------------------------------------------------------------------------
 
     lat0 = MPRJ_EC_lat * D2R
@@ -903,7 +907,10 @@ contains
     ! pre-calc factor
     MPRJ_EC_fact = cos(lat0)
 
-    MPRJ_eq_x = MPRJ_basepoint_x
+    dlon = MPRJ_basepoint_lon * D2R
+    dlon = mod( dlon+2.0_RP*PI, 2.0_RP*PI )
+
+    MPRJ_eq_x = MPRJ_basepoint_x - RADIUS * MPRJ_EC_fact * dlon
     MPRJ_eq_y = MPRJ_basepoint_y - RADIUS * MPRJ_basepoint_lat
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -932,10 +939,10 @@ contains
     real(RP) :: xx, yy, dist
     !---------------------------------------------------------------------------
 
-    xx = ( x - MPRJ_eq_x ) / RADIUS / MPRJ_M_fact
+    xx = ( x - MPRJ_eq_x ) / RADIUS / MPRJ_EC_fact
     yy = ( y - MPRJ_eq_y ) / RADIUS
 
-    lon = MPRJ_basepoint_lon * d2r + xx
+    lon = xx
     lat = yy
 
     return
@@ -959,7 +966,7 @@ contains
     !---------------------------------------------------------------------------
 
     dlon = lon - MPRJ_basepoint_lon * D2R
-    dlon = mod(dlon+2.0_RP*PI,2.0_RP*PI)
+    dlon = mod( dlon+2.0_RP*PI, 2.0_RP*PI )
 
     x = MPRJ_eq_x + RADIUS * MPRJ_EC_fact * dlon
     y = MPRJ_eq_y + RADIUS * lat
@@ -985,8 +992,8 @@ contains
     do i = 1, IA
        m1(i,j) = MPRJ_EC_fact / cos(lat(i,j))
        m2(i,j) = 1.0_RP
-    end do
-    end do
+    enddo
+    enddo
 
     return
   end subroutine MPRJ_EquidistantCylindrical_mapfactor
@@ -998,8 +1005,8 @@ contains
     implicit none
 
     real(RP), intent(out) :: rotc(IA,JA,2)
-    real(RP), intent(in)  :: lon(IA,JA) ! [rad]
-    real(RP), intent(in)  :: lat(IA,JA) ! [rad]
+    real(RP), intent(in)  :: lon (IA,JA) ! [rad]
+    real(RP), intent(in)  :: lat (IA,JA) ! [rad]
     !---------------------------------------------------------------------------
 
     rotc(:,:,1) = 1.0_RP

@@ -14,9 +14,13 @@ CODE_DIR    = .
 ORG_SRCS    =
 
 # parameters for run
+PPNAME      = NONE
+INITNAME    = scale-les_init
+BINNAME     = NONE
+PPCONF      = NONE
 INITCONF    = init.conf
-RUNCONF     = run.conf
-TPROC       = 6
+RUNCONF     = NONE
+TPROC       = 16
 
 # required data (parameters,distributed files)
 DATDIR      = ../../../data
@@ -26,4 +30,4 @@ DATDISTS    =
 
 
 # build, makedir, run, jobshell, allclean, clean is inside of common Makefile
-include $(TESTDIR)/Makefile.common
+include ../../Makefile.pp.common
