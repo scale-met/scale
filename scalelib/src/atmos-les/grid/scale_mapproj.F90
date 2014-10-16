@@ -606,8 +606,8 @@ contains
     do i = 1, IA
        dlon = lon(i,j) - MPRJ_basepoint_lon * D2R
        dlon = mod(dlon+2.0_RP*PI,2.0_RP*PI)
-       rotc(i,j,1) =   cos( MPRJ_LC_c * dlon )
-       rotc(i,j,2) = - sin( MPRJ_LC_c * dlon )
+       rotc(i,j,1) = cos( MPRJ_LC_c * dlon ) * MPRJ_hemisphere
+       rotc(i,j,2) = sin( MPRJ_LC_c * dlon )
     end do
     end do
 
@@ -755,8 +755,8 @@ contains
     do i = 1, IA
        dlon = lon(i,j) - MPRJ_basepoint_lon * D2R
        dlon = mod(dlon+2.0_RP*PI,2.0_RP*PI)
-       rotc(i,j,1) =   cos( dlon )
-       rotc(i,j,2) = - sin( dlon )
+       rotc(i,j,1) = cos( dlon ) * MPRJ_hemisphere
+       rotc(i,j,2) = sin( dlon )
     end do
     end do
 
