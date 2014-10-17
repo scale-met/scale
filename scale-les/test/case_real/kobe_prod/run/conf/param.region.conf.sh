@@ -1,12 +1,12 @@
-#####
-#
-# SCALE-LES mkinit configulation for land-atmosphere coupling test
-#
-#####
+#!/bin/bash
 
-&PARAM_IO
- IO_LOG_BASENAME = 'pp_LOG',
-/
+cat << EOF > conf/param.region.conf
+
+#################################################
+#
+# model configuration: process
+#
+#################################################
 
 &PARAM_PRC
  PRC_NUM_X      = 3,
@@ -15,10 +15,32 @@
  PRC_PERIODIC_Y = .false.,
 /
 
+#################################################
+#
+# model configuration: region
+#
+#################################################
+
 &PARAM_INDEX
  KMAX = 30,
  IMAX = 20,
  JMAX = 20,
+/
+
+&PARAM_LAND_INDEX
+ LKMAX = 5,
+/
+
+&PARAM_URBAN_INDEX
+ UKMAX = 4,
+/
+
+&PARAM_LAND_GRID
+ LDZ = 0.05D0, 0.15D0, 0.30D0, 0.50D0, 1.00D0,
+/
+
+&PARAM_URBAN_GRID
+ UDZ = 0.05D0, 0.15D0, 0.30D0, 0.50D0,
 /
 
 &PARAM_GRID
@@ -35,38 +57,8 @@
  BUFFER_DY = 10000.D0,
 /
 
-&PARAM_TIME
- TIME_STARTDATE             = 0000, 1, 1, 0, 0, 0,
- TIME_STARTMS               = 0.D0,
-/
-
-&PARAM_STATISTICS
- STATISTICS_checktotal     = .true.,
- STATISTICS_use_globalcomm = .true.,
-/
-
-&PARAM_LANDUSE
- LANDUSE_OUT_BASENAME = "landuse",
-/
-
 &PARAM_MAPPROJ
- MPRJ_basepoint_lon = 135.220501D0,
- MPRJ_basepoint_lat =  34.653297D0,
+ MPRJ_basepoint_lon = 134.25D0,
+ MPRJ_basepoint_lat =  34.00D0,
 /
-
-&PARAM_TRACER
- TRACER_TYPE = 'DRY',
-/
-
-&PARAM_CONVERT
- CONVERT_NAME = "CNVLANDUSE",
-/
-
-&PARAM_CNVLANDUSE
- CNVLANDUSE_name = "LU100M",
-/
-
-&PARAM_CNVLANDUSE_LU100M
- LU100M_IN_CATALOGUE = "LU100m_catalogue.txt",
- LU100M_IN_DIR       = "./input",
-/
+EOF
