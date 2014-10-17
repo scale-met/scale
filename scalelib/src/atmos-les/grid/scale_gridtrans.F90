@@ -161,8 +161,9 @@ contains
     integer :: i, j
     !---------------------------------------------------------------------------
 
-    call MPRJ_rotcoef( GTRANS_ROTC,       & ! (out)
-                       REAL_LON, REAL_LAT ) ! (in)
+    call MPRJ_rotcoef( GTRANS_ROTC(:,:,:), & ! [OUT]
+                       REAL_LON   (:,:),   & ! [IN]
+                       REAL_LAT   (:,:)    ) ! [IN]
 
     return
   end subroutine GTRANS_rotcoef
@@ -383,28 +384,27 @@ contains
        if( IO_L ) write(IO_FID_LOG,*)
        if( IO_L ) write(IO_FID_LOG,*) '*** Output metrics file ***'
 
-       call FILEIO_write( GTRANS_MAPF(:,:,1,I_XY),          GTRANS_OUT_BASENAME, GTRANS_OUT_TITLE, & ! [IN]
+       call FILEIO_write( GTRANS_MAPF(:,:,1,I_XY),       GTRANS_OUT_BASENAME, GTRANS_OUT_TITLE, & ! [IN]
                           'MAPF_X_XY', 'Map factor x-dir at XY', 'NIL', 'XY', GTRANS_OUT_DTYPE  ) ! [IN]
-       call FILEIO_write( GTRANS_MAPF(:,:,2,I_XY),          GTRANS_OUT_BASENAME, GTRANS_OUT_TITLE, & ! [IN]
+       call FILEIO_write( GTRANS_MAPF(:,:,2,I_XY),       GTRANS_OUT_BASENAME, GTRANS_OUT_TITLE, & ! [IN]
                           'MAPF_Y_XY', 'Map factor y-dir at XY', 'NIL', 'XY', GTRANS_OUT_DTYPE  ) ! [IN]
-       call FILEIO_write( GTRANS_MAPF(:,:,1,I_UY),          GTRANS_OUT_BASENAME, GTRANS_OUT_TITLE, & ! [IN]
+       call FILEIO_write( GTRANS_MAPF(:,:,1,I_UY),       GTRANS_OUT_BASENAME, GTRANS_OUT_TITLE, & ! [IN]
                           'MAPF_X_UY', 'Map factor x-dir at UY', 'NIL', 'UY', GTRANS_OUT_DTYPE  ) ! [IN]
-       call FILEIO_write( GTRANS_MAPF(:,:,2,I_UY),          GTRANS_OUT_BASENAME, GTRANS_OUT_TITLE, & ! [IN]
+       call FILEIO_write( GTRANS_MAPF(:,:,2,I_UY),       GTRANS_OUT_BASENAME, GTRANS_OUT_TITLE, & ! [IN]
                           'MAPF_Y_UY', 'Map factor y-dir at UY', 'NIL', 'UY', GTRANS_OUT_DTYPE  ) ! [IN]
-       call FILEIO_write( GTRANS_MAPF(:,:,1,I_XV),          GTRANS_OUT_BASENAME, GTRANS_OUT_TITLE, & ! [IN]
+       call FILEIO_write( GTRANS_MAPF(:,:,1,I_XV),       GTRANS_OUT_BASENAME, GTRANS_OUT_TITLE, & ! [IN]
                           'MAPF_X_XV', 'Map factor x-dir at XV', 'NIL', 'XY', GTRANS_OUT_DTYPE  ) ! [IN]
-       call FILEIO_write( GTRANS_MAPF(:,:,2,I_XV),          GTRANS_OUT_BASENAME, GTRANS_OUT_TITLE, & ! [IN]
+       call FILEIO_write( GTRANS_MAPF(:,:,2,I_XV),       GTRANS_OUT_BASENAME, GTRANS_OUT_TITLE, & ! [IN]
                           'MAPF_Y_XV', 'Map factor y-dir at XV', 'NIL', 'XY', GTRANS_OUT_DTYPE  ) ! [IN]
-       call FILEIO_write( GTRANS_MAPF(:,:,1,I_UV),          GTRANS_OUT_BASENAME, GTRANS_OUT_TITLE, & ! [IN]
+       call FILEIO_write( GTRANS_MAPF(:,:,1,I_UV),       GTRANS_OUT_BASENAME, GTRANS_OUT_TITLE, & ! [IN]
                           'MAPF_X_UV', 'Map factor x-dir at UV', 'NIL', 'UY', GTRANS_OUT_DTYPE  ) ! [IN]
-       call FILEIO_write( GTRANS_MAPF(:,:,2,I_UV),          GTRANS_OUT_BASENAME, GTRANS_OUT_TITLE, & ! [IN]
+       call FILEIO_write( GTRANS_MAPF(:,:,2,I_UV),       GTRANS_OUT_BASENAME, GTRANS_OUT_TITLE, & ! [IN]
                           'MAPF_Y_UV', 'Map factor y-dir at UV', 'NIL', 'UY', GTRANS_OUT_DTYPE  ) ! [IN]
 
-!
-!    allocate( GTRANS_GSQRT(KA,IA,JA,7) )
-!    allocate( GTRANS_J13G (KA,IA,JA,7) )
-!    allocate( GTRANS_J23G (KA,IA,JA,7) )
-
+       call FILEIO_write( GTRANS_ROTC(:,:,1),            GTRANS_OUT_BASENAME, GTRANS_OUT_TITLE, & ! [IN]
+                          'ROTC_X',    'Rotation factor x-dir',  'NIL', 'XY', GTRANS_OUT_DTYPE  ) ! [IN]
+       call FILEIO_write( GTRANS_ROTC(:,:,2),            GTRANS_OUT_BASENAME, GTRANS_OUT_TITLE, & ! [IN]
+                          'ROTC_Y',    'Rotation factor y-dir',  'NIL', 'XY', GTRANS_OUT_DTYPE  ) ! [IN]
     endif
 
     return
