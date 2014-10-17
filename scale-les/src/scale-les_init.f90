@@ -97,10 +97,6 @@ program scaleles_init
      URBAN_admin_setup
   use mod_urban_vars, only: &
      URBAN_vars_setup
-  use mod_cpl_admin, only: &
-     CPL_admin_setup
-  use mod_cpl_vars, only: &
-     CPL_vars_setup
   use mod_mktopo, only: &
      MKTOPO_setup, &
      MKTOPO
@@ -202,14 +198,12 @@ program scaleles_init
   call OCEAN_admin_setup
   call LAND_admin_setup
   call URBAN_admin_setup
-  call CPL_admin_setup
 
   ! setup variable container
   call ATMOS_vars_setup
   call OCEAN_vars_setup
   call LAND_vars_setup
   call URBAN_vars_setup
-  call CPL_vars_setup
 
   ! setup mktopo
   call MKTOPO_setup
