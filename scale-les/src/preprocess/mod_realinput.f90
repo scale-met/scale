@@ -580,7 +580,7 @@ contains
        tc_urb(i,j) = temp(KS,i,j)
        qc_urb(i,j) = qtrc(KS,i,j,1,I_QV)
        uc_urb(i,j) = max(sqrt( ( momx(KS,i,j,1) / ( dens(KS,i+1,  j,1) + dens(KS,i,j,1) ) * 2.0_RP )**2.0_RP &
-                             + ( momy(KS,i,j,1) / ( dens(KS,  i,j+1,1) + dens(KS,i,j,1) ) * 2.0_RP )**2.0_RP ), 0.01)
+                             + ( momy(KS,i,j,1) / ( dens(KS,  i,j+1,1) + dens(KS,i,j,1) ) * 2.0_RP )**2.0_RP ), 0.01_RP)
     enddo
     enddo
 

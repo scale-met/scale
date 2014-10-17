@@ -1433,7 +1433,7 @@ contains
       UC  = UA / 2.0_RP
     endif
 
-    UC = max(UC,0.01)
+    UC = max(UC,0.01_RP)
 
     return
   end subroutine canopy_wind
