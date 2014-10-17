@@ -174,7 +174,9 @@ contains
        CDZ  => GRID_CDZ,  &
        FDZ  => GRID_FDZ,  &
        RCDZ => GRID_RCDZ, &
-       RFDZ => GRID_RFDZ
+       RFDZ => GRID_RFDZ, &
+       RCDX => GRID_RCDX, &
+       RCDY => GRID_RCDY
     use scale_grid_real, only: &
        FZ => REAL_FZ
     use scale_atmos_refstate, only: &
@@ -183,7 +185,15 @@ contains
        I_XYZ, &
        I_XYW, &
        I_XVW, &
-       I_UYW
+       I_UYW, &
+       I_UYZ, &
+       I_XVZ, &
+       I_XY, &
+       I_UY, &
+       I_XV
+    use scale_comm, only: &
+       COMM_vars8, &
+       COMM_wait
     implicit none
 
     real(RP), intent(out) :: qflx_sgs_momz(KA,IA,JA,3)
@@ -235,6 +245,7 @@ contains
     real(RP) :: c(KA,IA,JA)
     real(RP) :: d(KA)
     real(RP) :: ap
+    real(RP) :: tke_N(KE_PBL,IA,JA)
 
     real(RP) :: l2q2         !< L^2/q^2
     real(RP) :: q2           !< q^2
@@ -248,6 +259,8 @@ contains
     real(RP) :: rd25         !< 1/D_2.5
     real(RP) :: gh           !< G_H
     
+    real(RP) :: advc
+
     real(RP) :: sw
 
     integer :: k, i, j, iq
@@ -454,6 +467,8 @@ contains
           end do
           end do
           end do
+          call COMM_vars8(tke, 1)
+          call COMM_wait (tke, 1)
        end if
 
        do j = JJS, JJE+1
@@ -731,7 +746,21 @@ contains
           a(KS,i,j) = ap * RCDZ(KS) / ( DENS(KS,i,j) * GSQRT(KS,i,j,I_XYZ) )
           c(KS,i,j) = 0.0_RP
           b(KS,i,j) = - a(KS,i,j) + 1.0_RP + 2.0_RP * dt * q(KS,i,j) / ( B1 * l(KS,i,j) )
-          d(KS) = tke(KS,i,j) + dt * Nu(KS,i,j) * (dudz2(KS,i,j) - n2(KS,i,j)/Pr(KS,i,j))
+          advc =  0.5_RP * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) &
+                * ( ( GSQRT(KS,i  ,j,I_UYZ) * MOMX(KS,i  ,j) * (tke(KS,i+1,j)+tke(KS,i  ,j)) / MAPF(i  ,j,2,I_UY) &
+                    - GSQRT(KS,i-1,j,I_UYZ) * MOMX(KS,i-1,j) * (tke(KS,i  ,j)+tke(KS,i-1,j)) / MAPF(i-1,j,2,I_UY) ) * RCDX(i) &
+                  + ( GSQRT(KS,i,j  ,I_XVZ) * MOMY(KS,i,j  ) * (tke(KS,i,j+1)+tke(i,i,j  )) / MAPF(i,j  ,1,I_XV) &
+                    - GSQRT(KS,i,j-1,I_XVZ) * MOMY(KS,i,j-1) * (tke(KS,i,j  )+tke(i,j,j-1)) / MAPF(i,j-1,1,I_XV) ) * RCDY(j) &
+                  + ( ( J13G(KS+1,i,j,I_XYZ) * (MOMX(KS+1,i,j)+MOMX(KS+1,i-1,j)) * tke(KS+1,i,j) &
+                      - J13G(KS  ,i,j,I_XYZ) * (MOMX(KS  ,i,j)+MOMX(KS  ,i-1,j)) * tke(KS  ,i,j) ) / MAPF(i,j,2,I_XY) &
+                    + ( J23G(KS+1,i,j,I_XYZ) * (MOMY(KS+1,i,j)+MOMY(KS+1,i,j-1)) * tke(KS+1,i,j) &
+                      - J23G(KS  ,i,j,I_XYZ) * (MOMY(KS  ,i,j)+MOMY(KS  ,i,j-1)) * tke(KS  ,i,j) ) / MAPF(i,j,1,I_XY) &
+                    ) * RFDZ(KS) &
+                    + ( J33G * MOMZ(KS  ,i,j) * (tke(KS+1,i,j)+tke(KS  ,i,j)) ) &
+                      * RCDZ(KS) / ( MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) ) &
+                  ) / ( DENS(KS,i,j) * GSQRT(KS,i,j,I_XYZ) )
+          d(KS) = tke(KS,i,j) + dt * ( Nu(KS,i,j) * (dudz2(KS,i,j) - n2(KS,i,j)/Pr(KS,i,j)) &
+                                     - advc )
           do k = KS+1, KE_PBL-1
              c(k,i,j) = ap * RCDZ(k) / ( DENS(k,i,j) * GSQRT(k,i,j,I_XYZ) )
              ap = - dt * 1.5_RP * ( DENS(k  ,i,j)*Nu(k  ,i,j) &
@@ -739,24 +768,62 @@ contains
                 * RFDZ(k) / GSQRT(k,i,j,I_XYW)
              a(k,i,j) = ap * RCDZ(k) / ( DENS(k,i,j) * GSQRT(k,i,j,I_XYZ) )
              b(k,i,j) = - a(k,i,j) - c(k,i,j) + 1.0_RP + 2.0_RP * dt * q(k,i,j) / ( B1 * l(k,i,j) )
-             d(k) = tke(k,i,j) + dt * Nu(k,i,j) * (dudz2(k,i,j) - n2(k,i,j)/Pr(k,i,j))
+             advc =  0.5_RP * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) &
+                * ( ( GSQRT(k,i  ,j,I_UYZ) * MOMX(k,i  ,j) * (tke(k,i+1,j)+tke(k,i  ,j)) / MAPF(i  ,j,2,I_UY) &
+                    - GSQRT(k,i-1,j,I_UYZ) * MOMX(k,i-1,j) * (tke(k,i  ,j)+tke(k,i-1,j)) / MAPF(i-1,j,2,I_UY) ) * RCDX(i) &
+                  + ( GSQRT(k,i,j  ,I_XVZ) * MOMY(k,i,j  ) * (tke(k,i,j+1)+tke(i,i,j  )) / MAPF(i,j  ,1,I_XV) &
+                    - GSQRT(k,i,j-1,I_XVZ) * MOMY(k,i,j-1) * (tke(k,i,j  )+tke(i,j,j-1)) / MAPF(i,j-1,1,I_XV) ) * RCDY(j) &
+                  + ( ( J13G(k+1,i,j,I_XYZ) * (MOMX(k+1,i,j)+MOMX(k+1,i-1,j)) * tke(k+1,i,j) &
+                      - J13G(k-1,i,j,I_XYZ) * (MOMX(k-1,i,j)+MOMX(k-1,i-1,j)) * tke(k-1,i,j) ) / MAPF(i,j,2,I_XY) &
+                    + ( J23G(k+1,i,j,I_XYZ) * (MOMY(k+1,i,j)+MOMY(k+1,i,j-1)) * tke(k+1,i,j) &
+                      - J23G(k-1,i,j,I_XYZ) * (MOMY(k-1,i,j)+MOMY(k-1,i,j-1)) * tke(k-1,i,j) ) / MAPF(i,j,1,I_XY) &
+                    ) / (FDZ(k)+FDZ(k-1)) &
+                    + ( J33G * MOMZ(k  ,i,j) * (tke(k+1,i,j)+tke(k  ,i,j)) &
+                      - J33G * MOMZ(k-1,i,j) * (tke(k  ,i,j)+tke(k-1,i,j)) ) &
+                      * RCDZ(k) / ( MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) ) &
+                  ) / ( DENS(k,i,j) * GSQRT(k,i,j,I_XYZ) )
+             d(k) = tke(k,i,j) &
+                  + dt * ( Nu(k,i,j) * (dudz2(k,i,j) - n2(k,i,j)/Pr(k,i,j)) &
+                         - advc )
           end do
           a(KE_PBL,i,j) = 0.0_RP
           c(KE_PBL,i,j) = ap * RCDZ(KE_PBL) / ( DENS(KE_PBL,i,j) * GSQRT(KE_PBL,i,j,I_XYZ) )
           b(KE_PBL,i,j) = - c(KE_PBL,i,j) + 1.0_RP + 2.0_RP * dt * q(KE_PBL,i,j) / ( B1 * l(KE_PBL,i,j) )
-          d(KE_PBL) = tke(KE_PBL,i,j) + dt * Nu(KE_PBL,i,j) * (dudz2(KE_PBL,i,j) - n2(KE_PBL,i,j)/Pr(KE_PBL,i,j))
+          advc =  0.5_RP * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) &
+               * ( ( GSQRT(KE_PBL,i  ,j,I_UYZ) * MOMX(KE_PBL,i  ,j) * (tke(KE_PBL,i+1,j)+tke(KE_PBL,i  ,j)) / MAPF(i  ,j,2,I_UY) &
+                   - GSQRT(KE_PBL,i-1,j,I_UYZ) * MOMX(KE_PBL,i-1,j) * (tke(KE_PBL,i  ,j)+tke(KE_PBL,i-1,j)) / MAPF(i-1,j,2,I_UY) ) &
+                   * RCDX(i) &
+                 + ( GSQRT(KE_PBL,i,j  ,I_XVZ) * MOMY(KE_PBL,i,j  ) * (tke(KE_PBL,i,j+1)+tke(i,i,j  )) / MAPF(i,j  ,1,I_XV) &
+                   - GSQRT(KE_PBL,i,j-1,I_XVZ) * MOMY(KE_PBL,i,j-1) * (tke(KE_PBL,i,j  )+tke(i,j,j-1)) / MAPF(i,j-1,1,I_XV) ) &
+                   * RCDY(j) &
+                 + ( ( J13G(KE_PBL  ,i,j,I_XYZ) * (MOMX(KE_PBL  ,i,j)+MOMX(KE_PBL  ,i-1,j)) * tke(KE_PBL  ,i,j) &
+                     - J13G(KE_PBL-1,i,j,I_XYZ) * (MOMX(KE_PBL-1,i,j)+MOMX(KE_PBL-1,i-1,j)) * tke(KE_PBL-1,i,j) ) &
+                     / MAPF(i,j,2,I_XY) &
+                   + ( J23G(KE_PBL  ,i,j,I_XYZ) * (MOMY(KE_PBL  ,i,j)+MOMY(KE_PBL  ,i,j-1)) * tke(KE_PBL  ,i,j) &
+                     - J23G(KE_PBL-1,i,j,I_XYZ) * (MOMY(KE_PBL-1,i,j)+MOMY(KE_PBL-1,i,j-1)) * tke(KE_PBL-1,i,j) ) &
+                     / MAPF(i,j,1,I_XY) &
+                   ) * RFDZ(KE_PBL) &
+                   + ( - J33G * MOMZ(KE_PBL-1,i,j) * (tke(KE_PBL  ,i,j)+tke(KE_PBL-1,i,j)) ) &
+                     * RCDZ(KE_PBL) / ( MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) ) &
+                 ) / ( DENS(KE_PBL,i,j) * GSQRT(KE_PBL,i,j,I_XYZ) )
+          d(KE_PBL) = tke(KE_PBL,i,j) + dt * ( Nu(KE_PBL,i,j) * (dudz2(KE_PBL,i,j) - n2(KE_PBL,i,j)/Pr(KE_PBL,i,j)) &
+                                             - advc )
           call diffusion_solver( &
-               tke(:,i,j),       & ! (out)
+               tke_N(:,i,j),     & ! (out)
                a(:,i,j), b(:,i,j), c(:,i,j), d ) ! (in)
-          do k = KS, KE_PBL
-             tke(k,i,j) = max(tke(k,i,j), 1.0E-10_RP)
-          end do
-          do k = KE_PBL+1, KE
-             tke(k,i,j) = 0.0_RP
-          end do
        end do
        end do
+    end do
+    end do
 
+    do j = JS, JE
+    do i = IS, IE
+       do k = KS, KE_PBL
+          tke(k,i,j) = max(tke_N(k,i,j), 1.0E-10_RP)
+       end do
+       do k = KE_PBL+1, KE
+          tke(k,i,j) = 0.0_RP
+       end do
     end do
     end do
 
