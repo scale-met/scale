@@ -261,7 +261,6 @@ contains
     argv(1) = 'run.conf'
     argv(2) = ''
 
-    FORCE_RELATION      = .false.
     HANDLING_NUM        = 0
     NEST_Filiation(:)   = 0
     ONLINE_DAUGHTER_PRC = PRC_nmax
@@ -593,9 +592,9 @@ contains
     hit = .false.
     do i = 1, PARENT_PRC_nmax(HANDLE)
        wid_lon = abs((latlon_catalog(i,I_SW,I_LON) - latlon_catalog(i,I_SE,I_LON)) &
-                      / real( PARENT_IMAX(HANDLE)-1, kind=RP )) * 0.5_RP * relaxation
+                      / real( PARENT_IMAX(HANDLE)-1, kind=RP )) * 0.5_RP
        wid_lat = abs((latlon_catalog(i,I_SW,I_LAT) - latlon_catalog(i,I_NW,I_LAT)) &
-                      / real( PARENT_JMAX(HANDLE)-1, kind=RP )) * 0.5_RP * relaxation
+                      / real( PARENT_JMAX(HANDLE)-1, kind=RP )) * 0.5_RP
 
        if ( corner_loc(I_SW,I_LON) >= latlon_catalog(i,I_SW,I_LON)-wid_lon .and. &
             corner_loc(I_SW,I_LAT) >= latlon_catalog(i,I_SW,I_LAT)-wid_lat .and. &
@@ -629,9 +628,9 @@ contains
     hit = .false.
     do i = 1, PARENT_PRC_nmax(HANDLE)
        wid_lon = abs((latlon_catalog(i,I_NW,I_LON) - latlon_catalog(i,I_NE,I_LON)) &
-                      / real( PARENT_IMAX(HANDLE)-1, kind=RP )) * 0.5_RP * relaxation
+                      / real( PARENT_IMAX(HANDLE)-1, kind=RP )) * 0.5_RP
        wid_lat = abs((latlon_catalog(i,I_SE,I_LAT) - latlon_catalog(i,I_NE,I_LAT)) &
-                      / real( PARENT_JMAX(HANDLE)-1, kind=RP )) * 0.5_RP * relaxation
+                      / real( PARENT_JMAX(HANDLE)-1, kind=RP )) * 0.5_RP
 
        if ( corner_loc(I_NE,I_LON) >= latlon_catalog(i,I_SW,I_LON)-wid_lon .and. &
             corner_loc(I_NE,I_LAT) >= latlon_catalog(i,I_SW,I_LAT)-wid_lat .and. &
