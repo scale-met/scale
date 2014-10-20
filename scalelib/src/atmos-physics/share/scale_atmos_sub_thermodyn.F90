@@ -113,38 +113,78 @@ module scale_atmos_thermodyn
   !
   !++ Private parameters & variables
   !
+  character(len=H_SHORT), private :: ATMOS_THERMODYN_ENERGY_TYPE = 'EXACT' !< internal energy type
+
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine ATMOS_THERMODYN_setup
+    use scale_process, only: &
+       PRC_MPIstop
     implicit none
 
+    NAMELIST / PARAM_ATMOS_THERMODYN / &
+       ATMOS_THERMODYN_ENERGY_TYPE
+
     integer :: n
+    integer :: ierr
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[THERMODYN] / Categ[ATMOS SHARE] / Origin[SCALElib]'
-    if( IO_L ) write(IO_FID_LOG,*) '*** No namelists.'
+
+    !--- read namelist
+    rewind(IO_FID_CONF)
+    read(IO_FID_CONF,nml=PARAM_ATMOS_THERMODYN,iostat=ierr)
+    if( ierr < 0 ) then !--- missing
+       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+    elseif( ierr > 0 ) then !--- fatal error
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_THERMODYN. Check!'
+       call PRC_MPIstop
+    endif
+    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_ATMOS_THERMODYN)
 
     allocate( AQ_CP(QQA) )
     allocate( AQ_CV(QQA) )
 
-    AQ_CP(I_QV) = CPvap
-    AQ_CV(I_QV) = CVvap
+    if ( ATMOS_THERMODYN_ENERGY_TYPE == 'EXACT' ) then
+       AQ_CP(I_QV) = CPvap
+       AQ_CV(I_QV) = CVvap
 
-    if ( QWS /= 0 ) then
-       do n = QWS, QWE
-          AQ_CP(n) = CL
-          AQ_CV(n) = CL
-       enddo
-    endif
+       if ( QWS /= 0 ) then
+          do n = QWS, QWE
+             AQ_CP(n) = CL
+             AQ_CV(n) = CL
+          enddo
+       endif
 
-    if ( QIS /= 0 ) then
-       do n = QIS, QIE
-          AQ_CP(n) = CI
-          AQ_CV(n) = CI
-       enddo
+       if ( QIS /= 0 ) then
+          do n = QIS, QIE
+             AQ_CP(n) = CI
+             AQ_CV(n) = CI
+          enddo
+       endif
+    elseif( ATMOS_THERMODYN_ENERGY_TYPE == 'SIMPLE' ) then
+       AQ_CP(I_QV) = CPdry
+       AQ_CV(I_QV) = CVdry
+
+       if ( QWS /= 0 ) then
+          do n = QWS, QWE
+             AQ_CP(n) = CVdry
+             AQ_CV(n) = CVdry
+          enddo
+       endif
+
+       if ( QIS /= 0 ) then
+          do n = QIS, QIE
+             AQ_CP(n) = CVdry
+             AQ_CV(n) = CVdry
+          enddo
+       endif
+    else
+       write(*,*) 'xxx Not appropriate ATMOS_THERMODYN_ENERGY_TYPE. Check!', trim(ATMOS_THERMODYN_ENERGY_TYPE)
+       call PRC_MPIstop
     endif
 
     return
