@@ -96,14 +96,14 @@ contains
   !-----------------------------------------------------------------------------
   subroutine CPL_AtmUrb_driver( sfc_temp_update )
     use scale_const, only: &
-       LH0   => CONST_LH0
+       LHV => CONST_LHV
     use scale_statistics, only: &
        STATISTICS_checktotal, &
        STAT_total
     use scale_cpl_atmos_urban, only: &
        CPL_AtmUrb
     use scale_cpl_atmos_urban_bulk, only: &
-       CPL_AtmUrb_bulk_restart,    & 
+       CPL_AtmUrb_bulk_restart,    &
        CPL_AtmUrb_bulk_momentum
     use mod_cpl_vars, only: &
        ATM_DENS   => CPL_fromAtm_ATM_DENS,   &
@@ -323,7 +323,7 @@ contains
       if( is_FLX(i,j) ) then
 
         Uabs = max( sqrt( ATM_U(i,j)**2 + ATM_V(i,j)**2 + ATM_W(i,j)**2 ), 0.1_RP)
-     
+
         call CPL_AtmUrb_bulk_restart(  &
                          TR_URB      (i,j),   & ! [IN]
                          TB_URB      (i,j),   & ! [IN]
@@ -395,7 +395,7 @@ contains
                          SFC_PRES    (i,j),      & ! (in)
                          SFC_TEMP    (i,j)       ) ! (in)
       else
-             ! not calculate surface flux                                             
+             ! not calculate surface flux
                          SHR_URB     (i,j) = 0.0_RP
                          SHB_URB     (i,j) = 0.0_RP
                          SHG_URB     (i,j) = 0.0_RP
@@ -435,7 +435,7 @@ contains
     CPL_AtmUrb_ATM_FLX_MV  (:,:) = ( CPL_AtmUrb_ATM_FLX_MV  (:,:) * CNT_AtmUrb + ATM_FLX_MV(:,:)     ) / ( CNT_AtmUrb + 1.0_RP )
     CPL_AtmUrb_ATM_FLX_SH  (:,:) = ( CPL_AtmUrb_ATM_FLX_SH  (:,:) * CNT_AtmUrb + ATM_FLX_SH(:,:)     ) / ( CNT_AtmUrb + 1.0_RP )
     CPL_AtmUrb_ATM_FLX_LH  (:,:) = ( CPL_AtmUrb_ATM_FLX_LH  (:,:) * CNT_AtmUrb + ATM_FLX_LH(:,:)     ) / ( CNT_AtmUrb + 1.0_RP )
-    CPL_AtmUrb_ATM_FLX_evap(:,:) = ( CPL_AtmUrb_ATM_FLX_evap(:,:) * CNT_AtmUrb + ATM_FLX_LH(:,:)/LH0 ) / ( CNT_AtmUrb + 1.0_RP )
+    CPL_AtmUrb_ATM_FLX_evap(:,:) = ( CPL_AtmUrb_ATM_FLX_evap(:,:) * CNT_AtmUrb + ATM_FLX_LH(:,:)/LHV ) / ( CNT_AtmUrb + 1.0_RP )
     CPL_AtmUrb_ATM_U10     (:,:) = ( CPL_AtmUrb_ATM_U10     (:,:) * CNT_AtmUrb + ATM_U10   (:,:)     ) / ( CNT_AtmUrb + 1.0_RP )
     CPL_AtmUrb_ATM_V10     (:,:) = ( CPL_AtmUrb_ATM_V10     (:,:) * CNT_AtmUrb + ATM_V10   (:,:)     ) / ( CNT_AtmUrb + 1.0_RP )
     CPL_AtmUrb_ATM_T2      (:,:) = ( CPL_AtmUrb_ATM_T2      (:,:) * CNT_AtmUrb + ATM_T2    (:,:)     ) / ( CNT_AtmUrb + 1.0_RP )
@@ -443,7 +443,7 @@ contains
 
     CPL_AtmUrb_URB_FLX_heat  (:,:) = ( CPL_AtmUrb_URB_FLX_heat  (:,:) * CNT_Urb + URB_FLX_heat(:,:)     ) / ( CNT_Urb + 1.0_RP )
     CPL_AtmUrb_URB_FLX_precip(:,:) = ( CPL_AtmUrb_URB_FLX_precip(:,:) * CNT_Urb + FLX_precip  (:,:)     ) / ( CNT_Urb + 1.0_RP )
-    CPL_AtmUrb_URB_FLX_evap  (:,:) = ( CPL_AtmUrb_URB_FLX_evap  (:,:) * CNT_Urb - ATM_FLX_LH  (:,:)/LH0 ) / ( CNT_Urb + 1.0_RP )
+    CPL_AtmUrb_URB_FLX_evap  (:,:) = ( CPL_AtmUrb_URB_FLX_evap  (:,:) * CNT_Urb - ATM_FLX_LH  (:,:)/LHV ) / ( CNT_Urb + 1.0_RP )
 
     CNT_AtmUrb = CNT_AtmUrb + 1.0_RP
     CNT_Urb    = CNT_Urb    + 1.0_RP

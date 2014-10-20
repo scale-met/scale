@@ -83,7 +83,7 @@ contains
   !-----------------------------------------------------------------------------
   subroutine CPL_AtmOcn_driver( sfc_temp_update )
     use scale_const, only: &
-       LH0  => CONST_LH0
+       LHV => CONST_LHV
     use scale_statistics, only: &
        STATISTICS_checktotal, &
        STAT_total
@@ -196,7 +196,7 @@ contains
     CPL_AtmOcn_ATM_FLX_MV  (:,:) = ( CPL_AtmOcn_ATM_FLX_MV  (:,:) * CNT_AtmOcn + ATM_FLX_MV(:,:)     ) / ( CNT_AtmOcn + 1.0_RP )
     CPL_AtmOcn_ATM_FLX_SH  (:,:) = ( CPL_AtmOcn_ATM_FLX_SH  (:,:) * CNT_AtmOcn + ATM_FLX_SH(:,:)     ) / ( CNT_AtmOcn + 1.0_RP )
     CPL_AtmOcn_ATM_FLX_LH  (:,:) = ( CPL_AtmOcn_ATM_FLX_LH  (:,:) * CNT_AtmOcn + ATM_FLX_LH(:,:)     ) / ( CNT_AtmOcn + 1.0_RP )
-    CPL_AtmOcn_ATM_FLX_evap(:,:) = ( CPL_AtmOcn_ATM_FLX_evap(:,:) * CNT_AtmOcn + ATM_FLX_LH(:,:)/LH0 ) / ( CNT_AtmOcn + 1.0_RP )
+    CPL_AtmOcn_ATM_FLX_evap(:,:) = ( CPL_AtmOcn_ATM_FLX_evap(:,:) * CNT_AtmOcn + ATM_FLX_LH(:,:)/LHV ) / ( CNT_AtmOcn + 1.0_RP )
     CPL_AtmOcn_ATM_U10     (:,:) = ( CPL_AtmOcn_ATM_U10     (:,:) * CNT_AtmOcn + ATM_U10   (:,:)     ) / ( CNT_AtmOcn + 1.0_RP )
     CPL_AtmOcn_ATM_V10     (:,:) = ( CPL_AtmOcn_ATM_V10     (:,:) * CNT_AtmOcn + ATM_V10   (:,:)     ) / ( CNT_AtmOcn + 1.0_RP )
     CPL_AtmOcn_ATM_T2      (:,:) = ( CPL_AtmOcn_ATM_T2      (:,:) * CNT_AtmOcn + ATM_T2    (:,:)     ) / ( CNT_AtmOcn + 1.0_RP )
@@ -204,7 +204,7 @@ contains
 
     CPL_AtmOcn_OCN_FLX_heat  (:,:) = ( CPL_AtmOcn_OCN_FLX_heat  (:,:) * CNT_Ocn + OCN_FLX_heat(:,:)     ) / ( CNT_Ocn + 1.0_RP )
     CPL_AtmOcn_OCN_FLX_precip(:,:) = ( CPL_AtmOcn_OCN_FLX_precip(:,:) * CNT_Ocn + FLX_precip  (:,:)     ) / ( CNT_Ocn + 1.0_RP )
-    CPL_AtmOcn_OCN_FLX_evap  (:,:) = ( CPL_AtmOcn_OCN_FLX_evap  (:,:) * CNT_Ocn - ATM_FLX_LH  (:,:)/LH0 ) / ( CNT_Ocn + 1.0_RP )
+    CPL_AtmOcn_OCN_FLX_evap  (:,:) = ( CPL_AtmOcn_OCN_FLX_evap  (:,:) * CNT_Ocn - ATM_FLX_LH  (:,:)/LHV ) / ( CNT_Ocn + 1.0_RP )
 
     CNT_AtmOcn = CNT_AtmOcn + 1.0_RP
     CNT_Ocn    = CNT_Ocn    + 1.0_RP

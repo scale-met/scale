@@ -558,7 +558,7 @@ contains
   subroutine ATMOS_REFSTATE_calc3D
     use scale_const, only: &
        Rdry  => CONST_Rdry,  &
-       RovCP => CONST_RovCP, &
+       CPdry => CONST_CPdry, &
        P00   => CONST_PRE00
     use scale_comm, only: &
        COMM_vars8, &
@@ -594,8 +594,11 @@ contains
     real(RP) :: dz_1D
 
     real(RP) :: work(KA,IA,JA)
+    real(RP) :: RovCP
     integer  :: k, i, j
     !---------------------------------------------------------------------------
+
+    RovCP = CPdry / Rdry
 
     !--- potential temperature
     do j = JS, JE

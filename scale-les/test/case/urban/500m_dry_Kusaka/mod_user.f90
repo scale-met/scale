@@ -102,8 +102,8 @@ contains
   subroutine USER_step
    use scale_const, only: &
        D2R   => CONST_D2R,   &
-       TEM00 => CONST_TEM00, & 
-       LH0   => CONST_LH0,   &    ! ELL : latent heat of vaporization [J/kg]
+       TEM00 => CONST_TEM00, &
+       LHV   => CONST_LHV,   &    ! ELL : latent heat of vaporization [J/kg]
        Rvap  => CONST_Rvap        !< gas constant (water vapor) [J/kg/K]
     use scale_grid_real, only: &
        REAL_lon
@@ -176,7 +176,7 @@ contains
 
           SWD (i,j) = ( ( 1.0_RP-dsec ) * SW(tloc  ) &
                       + (        dsec ) * SW(tloc+1) )
-              
+
           TMPA(i,j) = ( ( 1.0_RP-dsec ) * PT(tloc  ) &
                       + (        dsec ) * PT(tloc+1) ) + TEM00
 

@@ -278,7 +278,7 @@ contains
        QTRC0,  &
        DENS0   )
     use scale_const, only: &
-       LHV00 => CONST_LH00
+       LHV => CONST_LHV
     use scale_time, only: &
        dt => TIME_DTSEC_ATMOS_PHY_MP
     use scale_atmos_thermodyn, only: &
@@ -388,7 +388,7 @@ contains
        enddo
 
        do k = KS, KE
-          RHOE_t(k,i,j) = RHOE_t(k,i,j) - dens(k) * ( LHV00 * QTRC_t(k,i,j,I_QV) )
+          RHOE_t(k,i,j) = RHOE_t(k,i,j) - dens(k) * ( LHV * QTRC_t(k,i,j,I_QV) )
        enddo
     enddo
     enddo

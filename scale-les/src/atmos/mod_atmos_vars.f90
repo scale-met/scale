@@ -1003,7 +1003,7 @@ contains
        Rvap  => CONST_Rvap,  &
        CPdry => CONST_CPdry, &
        CVdry => CONST_CVdry, &
-       LH0   => CONST_LH0,   &
+       LHV   => CONST_LHV,   &
        P00   => CONST_PRE00
     use scale_time, only: &
        TIME_DTSEC
@@ -1271,7 +1271,7 @@ contains
        do i = IS, IE
        do k = KS, KE
           POTL(k,i,j) = POTT(k,i,j) &
-                      - LH0 / CPdry * QLIQ(k,i,j) * POTT(k,i,j) / TEMP(k,i,j)
+                      - LHV / CPdry * QLIQ(k,i,j) * POTT(k,i,j) / TEMP(k,i,j)
        enddo
        enddo
        enddo

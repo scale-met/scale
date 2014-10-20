@@ -130,7 +130,7 @@ contains
        Uabs10, U10, V10, T2, Q2                     )
     use scale_const, only: &
        PI   => CONST_PI,   &
-       LH0  => CONST_LH0,  &
+       LHV  => CONST_LHV,  &
        STB  => CONST_STB
     use scale_time, only: &
        TIME_NOWSEC
@@ -232,7 +232,7 @@ contains
     SFLX_QTRC(:,:,:) = 0.0_RP
     do j = JS, JE
     do i = IS, IE
-       SFLX_QTRC(i,j,I_QV) = SFLX_LH(i,j) / LH0
+       SFLX_QTRC(i,j,I_QV) = SFLX_LH(i,j) / LHV
     enddo
     enddo
 

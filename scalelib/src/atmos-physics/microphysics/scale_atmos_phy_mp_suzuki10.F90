@@ -39,21 +39,19 @@ module scale_atmos_phy_mp_suzuki10
   use scale_tracer_suzuki10
   use scale_const, only: &
      pi => CONST_PI, &
-     CONST_CPdry, &
-     CONST_CVdry, &
-     CONST_DWATR, &
-     CONST_GRAV, &
-     CONST_Rvap, &
-     CONST_Rdry, &
-     CONST_LH0, &
-     CONST_LHS0, &
-     CONST_EMELT, &
-     CONST_TEM00, &
-     CONST_TMELT, &
-     CONST_PSAT0, &
-     CONST_PRE00, &
-     CONST_CPovCV, &
-     CONST_RovCP
+     CONST_CPdry,  &
+     CONST_CVdry,  &
+     CONST_DWATR,  &
+     CONST_GRAV,   &
+     CONST_Rvap,   &
+     CONST_Rdry,   &
+     CONST_LHV0,   &
+     CONST_LHS0,   &
+     CONST_EMELT,  &
+     CONST_TEM00,  &
+     CONST_TMELT,  &
+     CONST_PSAT0,  &
+     CONST_PRE00
   use scale_history, only: &
      HIST_in
   !-----------------------------------------------------------------------------
@@ -1220,7 +1218,7 @@ call STOP_COLLECTION("MICROPHYSICS")
   use scale_const, only: &
      cp    => CONST_CPdry, &
      rhow  => CONST_DWATR, &
-     qlevp => CONST_LH0, &
+     qlevp => CONST_LHV, &
      rvap  => CONST_Rvap
   use scale_atmos_saturation, only: &
        pres2qsat_liq => ATMOS_SATURATION_pres2qsat_liq,   &
@@ -1284,7 +1282,7 @@ call STOP_COLLECTION("MICROPHYSICS")
   use scale_const, only: &
      cp    => CONST_CPdry, &
      rhow  => CONST_DWATR, &
-     qlevp => CONST_LH0, &
+     qlevp => CONST_LHV, &
      rvap  => CONST_Rvap
   use scale_atmos_saturation, only: &
        pres2qsat_liq => ATMOS_SATURATION_pres2qsat_liq,   &
@@ -1514,7 +1512,7 @@ call STOP_COLLECTION("MICROPHYSICS")
   use scale_const, only: &
      cp    => CONST_CPdry, &
      rhow  => CONST_DWATR, &
-     qlevp => CONST_LH0, &
+     qlevp => CONST_LHV, &
      rvap  => CONST_Rvap
   use scale_atmos_saturation, only: &
      pres2qsat_liq => ATMOS_SATURATION_pres2qsat_liq,   &
@@ -1635,10 +1633,10 @@ call STOP_COLLECTION("MICROPHYSICS")
         dens, pres,     & !--- in
         gc, qvap, temp  ) !--- inout
   !
-  use scale_const, only : rhow   => CONST_DWATR,  &
-                        qlevp  => CONST_LH0, &
-                        qlsbl  => CONST_LHS0, &
-                        rvap   => CONST_Rvap,  &
+  use scale_const, only : rhow   => CONST_DWATR, &
+                        qlevp  => CONST_LHV,  &
+                        qlsbl  => CONST_LHS,  &
+                        rvap   => CONST_Rvap, &
                         cp     => CONST_CPdry
   use scale_atmos_saturation, only: &
      pres2qsat_liq => ATMOS_SATURATION_pres2qsat_liq,   &
@@ -1772,9 +1770,9 @@ call STOP_COLLECTION("MICROPHYSICS")
         gc, qvap, temp    )!--- inout
   !
   use scale_const, only : rhow   => CONST_DWATR,  &
-                        qlevp  => CONST_LH0, &
-                        qlsbl  => CONST_LHS0, &
-                        rvap   => CONST_Rvap,  &
+                        qlevp  => CONST_LHV,  &
+                        qlsbl  => CONST_LHS,  &
+                        rvap   => CONST_Rvap, &
                         cp     => CONST_CPdry
   use scale_atmos_saturation, only: &
      pres2qsat_liq => ATMOS_SATURATION_pres2qsat_liq,   &
@@ -2220,7 +2218,7 @@ call STOP_COLLECTION("MICROPHYSICS")
   !
   use scale_const, only : rair  => CONST_Rdry,  &
                         rvap  => CONST_Rvap,  &
-                        qlevp => CONST_LH0
+                        qlevp => CONST_LHV
   !
   real(RP), intent(in) :: pres, temp
   real(RP) :: gliq
@@ -2299,7 +2297,7 @@ call STOP_COLLECTION("MICROPHYSICS")
   use scale_const, only: &
      temp0 => CONST_TEM00, &
      esat0 => CONST_PSAT0, &
-     qlevp => CONST_LH0, &
+     qlevp => CONST_LHV,   &
      rvap  => CONST_Rvap
   real(RP), intent(in) :: temp
   real(RP) :: fesatl

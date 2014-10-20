@@ -32,10 +32,6 @@ module scale_atmos_thermodyn
      CPdry => CONST_CPdry, &
      CVdry => CONST_CVdry, &
      Rvap  => CONST_Rvap,  &
-     CPvap => CONST_CPvap, &
-     CVvap => CONST_CVvap, &
-     CL    => CONST_CL,    &
-     CI    => CONST_CI,    &
      PRE00 => CONST_PRE00
   !-----------------------------------------------------------------------------
   implicit none
@@ -113,8 +109,6 @@ module scale_atmos_thermodyn
   !
   !++ Private parameters & variables
   !
-  character(len=H_SHORT), private :: ATMOS_THERMODYN_ENERGY_TYPE = 'EXACT' !< internal energy type
-
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -122,33 +116,24 @@ contains
   subroutine ATMOS_THERMODYN_setup
     use scale_process, only: &
        PRC_MPIstop
+    use scale_const, only: &
+       CPvap          => CONST_CPvap,          &
+       CVvap          => CONST_CVvap,          &
+       CL             => CONST_CL,             &
+       CI             => CONST_CI,             &
+       THERMODYN_TYPE => CONST_THERMODYN_TYPE
     implicit none
 
-    NAMELIST / PARAM_ATMOS_THERMODYN / &
-       ATMOS_THERMODYN_ENERGY_TYPE
-
     integer :: n
-    integer :: ierr
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[THERMODYN] / Categ[ATMOS SHARE] / Origin[SCALElib]'
 
-    !--- read namelist
-    rewind(IO_FID_CONF)
-    read(IO_FID_CONF,nml=PARAM_ATMOS_THERMODYN,iostat=ierr)
-    if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
-    elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_THERMODYN. Check!'
-       call PRC_MPIstop
-    endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_ATMOS_THERMODYN)
-
     allocate( AQ_CP(QQA) )
     allocate( AQ_CV(QQA) )
 
-    if ( ATMOS_THERMODYN_ENERGY_TYPE == 'EXACT' ) then
+    if ( THERMODYN_TYPE == 'EXACT' ) then
        AQ_CP(I_QV) = CPvap
        AQ_CV(I_QV) = CVvap
 
@@ -165,7 +150,7 @@ contains
              AQ_CV(n) = CI
           enddo
        endif
-    elseif( ATMOS_THERMODYN_ENERGY_TYPE == 'SIMPLE' ) then
+    elseif( THERMODYN_TYPE == 'SIMPLE' ) then
        AQ_CP(I_QV) = CPdry
        AQ_CV(I_QV) = CVdry
 
@@ -182,9 +167,6 @@ contains
              AQ_CV(n) = CVdry
           enddo
        endif
-    else
-       write(*,*) 'xxx Not appropriate ATMOS_THERMODYN_ENERGY_TYPE. Check!', trim(ATMOS_THERMODYN_ENERGY_TYPE)
-       call PRC_MPIstop
     endif
 
     return

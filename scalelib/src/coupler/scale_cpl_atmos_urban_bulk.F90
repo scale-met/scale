@@ -70,7 +70,7 @@ module scale_cpl_atmos_urban_bulk
   real(RP), private :: CAPG       =  1.2E6_RP !               of ground [J m-3 K]
   real(RP), private :: AKSR       =   2.28_RP ! thermal conductivity of roof   [W m-1 K]
   real(RP), private :: AKSB       =   2.28_RP !                      of wall   [W m-1 K]
-  real(RP), private :: AKSG       =   2.28_RP !                      of ground [W m-1 K] 
+  real(RP), private :: AKSG       =   2.28_RP !                      of ground [W m-1 K]
   real(RP), private :: ALBR       =    0.2_RP ! surface albedo of roof
   real(RP), private :: ALBB       =    0.2_RP ! surface albedo of wall
   real(RP), private :: ALBG       =    0.2_RP ! surface albedo of ground
@@ -356,11 +356,11 @@ contains
        PRC_MPIstop
     use scale_const, only: &
        EPS    => CONST_EPS,     &    ! small number (machine epsilon)
-       D2R    => CONST_D2R,     &    ! degree to radian  
+       D2R    => CONST_D2R,     &    ! degree to radian
        KARMAN => CONST_KARMAN,  &    ! kalman constant  [-]
        PI     => CONST_PI,      &    ! pi               [-]
        CPdry  => CONST_CPdry,   &    ! heat capacity of dry air [J/K/kg]
-       LH0    => CONST_LH0,     &    ! latent heat of vaporization [J/kg]
+       LHV    => CONST_LHV,     &    ! latent heat of vaporization [J/kg]
        GRAV   => CONST_GRAV,    &    !< gravitational constant [m/s2]
        Rdry   => CONST_Rdry,    &    !< specific gas constant (dry) [J/kg/K]
        Rvap   => CONST_Rvap,    &    !< gas constant (water vapor) [J/kg/K]
@@ -514,7 +514,7 @@ contains
     !-----------------------------------------------------------
     ! Set evaporation efficiency on roof/wall/road
     !-----------------------------------------------------------
-    
+
     if ( STRGR == 0.0_RP ) then
        BETR = 0.0_RP
     else
@@ -546,7 +546,7 @@ contains
 
     RR   = EPSR * ( RX - STB * (TR**4) )
     SHR  = RHOO * CPdry * CHR * UA * (TR-TA)
-    LHR  = RHOO * LH0 * CHR * UA * BETR * (QS0R-QA)
+    LHR  = RHOO * LHV * CHR * UA * BETR * (QS0R-QA)
     GHR  = SR + RR - SHR - LHR
 
     !--- Wall and Road
@@ -564,7 +564,7 @@ contains
 
      ALPHAB = 6.15_RP + 4.18_RP * UC
      if( UC > 5.0_RP ) ALPHAB = 7.51_RP * (UC**0.78_RP )
-     ALPHAG = 6.15_RP + 4.18_RP * UC 
+     ALPHAG = 6.15_RP + 4.18_RP * UC
      if( UC > 5.0_RP ) ALPHAG = 7.51_RP * (UC**0.78_RP )
 
      CHB = ALPHAB / RHOO / CPdry / UC
@@ -593,13 +593,13 @@ contains
      call qsat( QS0B, TB, PRES )
 
      SHB  = RHOO * CPdry * CHB * UC * (TB-TC)
-     LHB  = RHOO * LH0   * CHB * UC * BETB * (QS0B-QC)
+     LHB  = RHOO * LHV   * CHB * UC * BETB * (QS0B-QC)
      GHB  =  SB + RB - SHB - LHB
 
      call qsat( QS0G, TG, PRES )
 
      SHG  = RHOO * CPdry * CHG * UC * (TG-TC)
-     LHG  = RHOO * LH0   * CHG * UC * BETG * (QS0G-QC)
+     LHG  = RHOO * LHV   * CHG * UC * BETG * (QS0G-QC)
      GHG  =  SG + RG - SHG - LHG
 
     !-----------------------------------------------------------
@@ -639,7 +639,7 @@ contains
 
      UST = sqrt( FLXUV )              ! u* [m/s]
      TST = -SH / RHOO / CPdry / UST   ! T* [K]
-     QST = -LH / RHOO / LH0 / UST     ! q* [-]
+     QST = -LH / RHOO / LHV / UST     ! q* [-]
 
     !-----------------------------------------------------------
     !  diagnostic GRID AVERAGED TS from upward logwave
@@ -659,7 +659,7 @@ contains
 
      XXX10 = (10.0_RP/Z) * XXX
      call cal_psi(XXX10,psim10,psih10)
- 
+
      !U10 = U1 * ((log(10.0_RP/Z0C)-psim10)/(log(Z/Z0C)-psim))  ! u at 10 m [m/s]
      !V10 = V1 * ((log(10.0_RP/Z0C)-psim10)/(log(Z/Z0C)-psim))  ! v at 10 m [m/s]
      U10 = U1 * log(10.0_RP/Z0C) / log(Z/Z0C)
@@ -742,8 +742,8 @@ contains
        PI     => CONST_PI,      &    ! pi               [-]
        D2R    => CONST_D2R,     &    ! degree to radian
        KARMAN => CONST_KARMAN,  &    ! Kalman constant  [-]
-       CPdry  => CONST_CPdry,   &    ! Heat capacity of dry air [J/K/kg]       
-       LH0    => CONST_LH0,     &    ! Latent heat of vaporization [J/kg]
+       CPdry  => CONST_CPdry,   &    ! Heat capacity of dry air [J/K/kg]
+       LHV    => CONST_LHV,     &    ! Latent heat of vaporization [J/kg]
        GRAV   => CONST_GRAV,    &    ! gravitational constant [m/s2]
        Rdry   => CONST_Rdry,    &    ! specific gas constant (dry) [J/kg/K]
        Rvap   => CONST_Rvap,    &    ! gas constant (water vapor) [J/kg/K]
@@ -833,7 +833,7 @@ contains
     real(RP) :: SSGQ     ! downward diffuse short wave radiation  [W/m/m]
 
     real(RP) :: W, VFGS, VFGW, VFWG, VFWS, VFWW
-    real(RP) :: SX, RX 
+    real(RP) :: SX, RX
 
     real(RP) :: TRP = 350.0_RP   ! TRP: at previous time step [K]
     real(RP) :: TBP = 350.0_RP   ! TBP: at previous time step [K]
@@ -925,7 +925,7 @@ contains
 
     TIME = real(NOWDATE(4)*3600.0_RP + NOWDATE(5)*60.0_RP + NOWDATE(6))
     tloc = mod((NOWDATE(4) + int(LON/15.0_RP)),24 )
-    dsec = real(NOWDATE(5)*60.0_RP + NOWDATE(6)) / 3600.0_RP 
+    dsec = real(NOWDATE(5)*60.0_RP + NOWDATE(6)) / 3600.0_RP
     if(tloc==0) tloc = 24
 
     !--- Calculate AH data at LST
@@ -969,9 +969,9 @@ contains
     !-----------------------------------------------------------
 
     !!--- calculate rain amount remaining on the surface
-    RAINR = max(0.0_RP, RAINR-(LHR/LH0)*DELT)   ! [kg/m/m = mm]
-    RAINB = max(0.0_RP, RAINB-(LHB/LH0)*DELT)   ! [kg/m/m = mm]
-    RAING = max(0.0_RP, RAING-(LHG/LH0)*DELT)   ! [kg/m/m = mm]
+    RAINR = max(0.0_RP, RAINR-(LHR/LHV)*DELT)   ! [kg/m/m = mm]
+    RAINB = max(0.0_RP, RAINB-(LHB/LHV)*DELT)   ! [kg/m/m = mm]
+    RAING = max(0.0_RP, RAING-(LHG/LHV)*DELT)   ! [kg/m/m = mm]
 
     !!--- calculate evaporation efficiency
     RAINT = 1.0_RP * ( RAIN * DELT )            ! [kg/m2/s -> kg/m2]
@@ -984,7 +984,7 @@ contains
     call cal_beta(BETG, RAINT, RAING, STRGG, ROFFG)
 
     ROFF = ROFF +  R * ROFFR  + RW * ( ROFFB + ROFFG )
-               
+
     !-----------------------------------------------------------
     ! Radiation : Net Short Wave Radiation at roof/wall/road
     !-----------------------------------------------------------
@@ -1036,7 +1036,7 @@ contains
 
       RR    = EPSR * ( RX - STB * (TR**4)  )
       HR    = RHOO * CPdry * CHR * UA * (TR-TA)
-      ELER  = RHOO * LH0   * CHR * UA * BETR * (QS0R-QA)
+      ELER  = RHOO * LHV   * CHR * UA * BETR * (QS0R-QA)
       G0R   = SR + RR - HR - ELER
 
     !--- calculate temperature in roof
@@ -1064,12 +1064,12 @@ contains
     !--- update only fluxes ----
      RIBR = ( GRAV * 2.0_RP / (TA+TR) ) * (TA-TR) * (Z+Z0R) / (UA*UA)
      call mos(XXXR,CHR,CDR,BHR,RIBR,Z,Z0R,UA,TA,TR,RHOO)
-    
+
      call qsat( QS0R, TR, PRES )
 
      RR      = EPSR * ( RX - STB * (TR**4) )
      HR      = RHOO * CPdry * CHR * UA * (TR-TA)
-     ELER    = RHOO * LH0   * CHR * UA * BETR * (QS0R-QA)
+     ELER    = RHOO * LHV   * CHR * UA * BETR * (QS0R-QA)
      G0R     = SR + RR - HR - ELER
 
     !--------------------------------------------------
@@ -1079,9 +1079,9 @@ contains
     ! new scheme
 
     ! empirical form
-      ALPHAB = 6.15_RP + 4.18_RP * UC 
+      ALPHAB = 6.15_RP + 4.18_RP * UC
       if( UC > 5.0_RP ) ALPHAB = 7.51_RP * (UC**0.78_RP )
-      ALPHAG = 6.15_RP + 4.18_RP * UC 
+      ALPHAG = 6.15_RP + 4.18_RP * UC
       if( UC > 5.0_RP ) ALPHAG = 7.51_RP * (UC**0.78_RP )
       CHB = ALPHAB / RHOO / CPdry / UC
       CHG = ALPHAG / RHOO / CPdry / UC
@@ -1098,7 +1098,7 @@ contains
 
       call qsat( QS0B, TB, PRES )
       call qsat( QS0G, TG, PRES )
-    
+
       TC1   = RW*ALPHAC    + RW*ALPHAG    + W*ALPHAB
       TC2   = RW*ALPHAC*TA + RW*ALPHAG*TG + W*ALPHAB*TB
       TC    = TC2 / TC1
@@ -1118,7 +1118,7 @@ contains
       RG2   = EPSG * ( (1.0_RP-EPSB) * VFGW * VFWS * RX                   &
                      + (1.0_RP-EPSB) * VFGW * VFWG * EPSG * STB * TG**4  &
                      + EPSB * (1.0_RP-EPSB) * VFGW * VFWW * STB * TB**4  )
-    
+
       RB2   = EPSB * ( (1.0_RP-EPSG) * VFWG * VFGS * RX                                  &
                      + (1.0_RP-EPSG) * EPSB * VFGW * VFWG * STB * TB**4                  &
                      + (1.0_RP-EPSB) * VFWS * VFWW * RX                                  &
@@ -1129,11 +1129,11 @@ contains
       RB    = RB1 + RB2
 
       HB    = RHOO * CPdry * CHB * UC * (TB-TC)
-      ELEB  = RHOO * LH0   * CHB * UC * BETB * (QS0B-QC)
+      ELEB  = RHOO * LHV   * CHB * UC * BETB * (QS0B-QC)
       G0B   = SB + RB - HB - ELEB
 
       HG    = RHOO * CPdry * CHG * UC * (TG-TC)
-      ELEG  = RHOO * LH0   * CHG * UC * BETG * (QS0G-QC)
+      ELEG  = RHOO * LHV   * CHG * UC * BETG * (QS0G-QC)
       G0G   = SG + RG - HG - ELEG
 
     !--- Heat capacity and Thermal conductivity of 1st layer
@@ -1167,7 +1167,7 @@ contains
 
       TC1    =  RW*ALPHAC    + RW*ALPHAG    + W*ALPHAB
       TC2    =  RW*ALPHAC*TA + RW*ALPHAG*TG + W*ALPHAB*TB
-      TC     =  TC2 / TC1    
+      TC     =  TC2 / TC1
       QC1    =  RW*(CHC*UA)    + RW*(CHG*BETG*UC)      + W*(CHB*BETB*UC)
       QC2    =  RW*(CHC*UA)*QA + RW*(CHG*BETG*UC)*QS0G + W*(CHB*BETB*UC)*QS0B
       QC     =  QC2 / QC1
@@ -1206,11 +1206,11 @@ contains
      RB       = RB1 + RB2
 
      HB   = RHOO * CPdry * CHB * UC * (TB-TC)
-     ELEB = RHOO * LH0   * CHB * UC * BETB * (QS0B-QC)
+     ELEB = RHOO * LHV   * CHB * UC * BETB * (QS0B-QC)
      G0B  = SB + RB - HB - ELEB
 
      HG   = RHOO * CPdry * CHG * UC * (TG-TC)
-     ELEG = RHOO * LH0   * CHG * UC * BETG * (QS0G-QC)
+     ELEG = RHOO * LHV   * CHG * UC * BETG * (QS0G-QC)
      G0G  = SG + RG - HG - ELEG
 
     !-----------------------------------------------------------
@@ -1273,7 +1273,7 @@ contains
 
     UST = sqrt( FLXUV )             ! u* [m/s]
     TST = -SH / RHOO / CPdry / UST  ! T* [K]
-    QST = -LH / RHOO / LH0 / UST    ! q* [-]
+    QST = -LH / RHOO / LHV   / UST    ! q* [-]
 
     !-----------------------------------------------------------
     !  diagnostic GRID AVERAGED TS from heat flux
@@ -1305,7 +1305,7 @@ contains
 
     XXX10 = (10.0_RP/Z) * XXX
     call cal_psi(XXX10,psim10,psih10)
- 
+
     !U10 = U1 * ((log(10.0_RP/Z0C)-psim10)/(log(Z/Z0C)-psim))  ! u at 10 m [m/s]
     !V10 = V1 * ((log(10.0_RP/Z0C)-psim10)/(log(Z/Z0C)-psim))  ! v at 10 m [m/s]
     U10 = U1 * log(10.0_RP/Z0C) / log(Z/Z0C)

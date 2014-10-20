@@ -45,8 +45,7 @@ module mod_mkinit
      Pstd  => CONST_Pstd,  &
      Rdry  => CONST_Rdry,  &
      CPdry => CONST_CPdry, &
-     RovCP => CONST_RovCP, &
-     LH0   => CONST_LH0,   &
+     LHV   => CONST_LHV,   &
      P00   => CONST_PRE00, &
      I_SW  => CONST_I_SW,  &
      I_LW  => CONST_I_LW
@@ -1021,6 +1020,8 @@ contains
        ENV_THETA, &
        BBL_TEMP
 
+    real(RP) :: RovCP
+
     integer :: ierr
     integer :: k, i, j, iq
     !---------------------------------------------------------------------------
@@ -1043,6 +1044,8 @@ contains
        call PRC_MPIstop
     endif
     if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_COLDBUBBLE)
+
+    RovCP = CPdry / Rdry
 
     ! calc in dry condition
     pres_sfc(1,1,1) = SFC_PRES
@@ -1117,6 +1120,8 @@ contains
        ENV_TEMP,  &
        BBL_PRES
 
+    real(RP) :: RovCP
+
     integer :: ierr
     integer :: k, i, j, iq
     !---------------------------------------------------------------------------
@@ -1137,6 +1142,8 @@ contains
        call PRC_MPIstop
     endif
     if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_LAMBWAVE)
+
+    RovCP = CPdry / Rdry
 
     do j = JS, JE
     do i = IS, IE
@@ -2446,7 +2453,7 @@ enddo
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       temp(k,i,j) = temp(k,i,j) + LH0 / CPdry * qc(k,i,j)
+       temp(k,i,j) = temp(k,i,j) + LHV / CPdry * qc(k,i,j)
     enddo
     enddo
     enddo
@@ -2690,7 +2697,7 @@ enddo
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       temp(k,i,j) = temp(k,i,j) + LH0 / CPdry * qc(k,i,j)
+       temp(k,i,j) = temp(k,i,j) + LHV / CPdry * qc(k,i,j)
     enddo
     enddo
     enddo
@@ -2839,6 +2846,7 @@ enddo
     real(RP) :: qall ! QV+QC
     real(RP) :: fact
     real(RP) :: pi2
+    real(RP) :: RovCP
 
     integer :: ierr
     integer :: k, i, j, iq
@@ -2924,10 +2932,11 @@ enddo
                                qc_sfc  (:,:,:)  ) ! [IN]
 
 !write(*,*)'chk4.1'
+    RovCP = CPdry / Rdry
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       pott(k,i,j) = potl(k,i,j) + LH0 / CPdry * qc(k,i,j) * ( P00/pres(k,i,j) )**RovCP
+       pott(k,i,j) = potl(k,i,j) + LHV / CPdry * qc(k,i,j) * ( P00/pres(k,i,j) )**RovCP
     enddo
     enddo
     enddo
@@ -3181,7 +3190,7 @@ enddo
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       temp(k,i,j) = temp(k,i,j) + LH0 / CPdry * qc(k,i,j)
+       temp(k,i,j) = temp(k,i,j) + LHV / CPdry * qc(k,i,j)
     enddo
     enddo
     enddo
@@ -4074,7 +4083,7 @@ enddo
        LAND_WATER,      &
        LAND_SFC_TEMP,   &
        LAND_SFC_albedo, &
-       LAND_PROPERTY   
+       LAND_PROPERTY
     use mod_urban_vars, only: &
        TR_URB,  &
        TB_URB,  &
@@ -4102,7 +4111,7 @@ enddo
     real(RP) :: LND_SFC_ThermalCond        ! land thermal conductivity  [W/m/K]
     real(RP) :: LND_SFC_HeatCapa           ! land heat capacity         [J/m3/K]
     real(RP) :: LND_SFC_Z0                 ! land roughness length      [m]
-    
+
     ! urban state
     real(RP) :: URB_ROOF_TEMP          ! Surface temperature of roof [K]
     real(RP) :: URB_BLDG_TEMP          ! Surface temperature of building [K
@@ -4112,7 +4121,7 @@ enddo
     real(RP) :: URB_CNPY_WIND = 0.0_RP ! Diagnostic canopy wind [m/s]
     real(RP) :: URB_ROOF_LAYER_TEMP    ! temperature in layer of roof [K]
     real(RP) :: URB_BLDG_LAYER_TEMP    ! temperature in layer of building [
-    real(RP) :: URB_GRND_LAYER_TEMP 
+    real(RP) :: URB_GRND_LAYER_TEMP
 
     NAMELIST / PARAM_MKINIT_HEATISLAND / &
        FLX_rain,            &
@@ -4212,7 +4221,7 @@ enddo
     return
   end subroutine MKINIT_heatisland
 
-  !-----------------------------------------------------------------------------  
+  !-----------------------------------------------------------------------------
   !> Make initial state for grayzone experiment
   subroutine MKINIT_grayzone
     implicit none

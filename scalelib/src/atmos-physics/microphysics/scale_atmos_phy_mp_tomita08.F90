@@ -559,9 +559,9 @@ contains
        EPS   => CONST_EPS,   &
        Rvap  => CONST_Rvap,  &
        CL    => CONST_CL,    &
-       LHV00 => CONST_LH00,  &
-       LHF00 => CONST_LHF00, &
-       LHV0  => CONST_LH0,   &
+       LHV   => CONST_LHV,   &
+       LHF   => CONST_LHF,   &
+       LHV0  => CONST_LHV0,  &
        LHS0  => CONST_LHS0,  &
        LHF0  => CONST_LHF0,  &
        TEM00 => CONST_TEM00, &
@@ -1304,10 +1304,10 @@ contains
        QTRC_t(k,i,j,I_QS) = QTRC_t(k,i,j,I_QS) + tend(I_QS,ijk)
        QTRC_t(k,i,j,I_QG) = QTRC_t(k,i,j,I_QG) + tend(I_QG,ijk)
 
-       RHOE_t(k,i,j) = RHOE_t(k,i,j) - DENS0(k,i,j) * ( LHV00 * tend(I_QV,ijk) &
-                                                      - LHF00 * tend(I_QI,ijk) &
-                                                      - LHF00 * tend(I_QS,ijk) &
-                                                      - LHF00 * tend(I_QG,ijk) )
+       RHOE_t(k,i,j) = RHOE_t(k,i,j) - DENS0(k,i,j) * ( LHV * tend(I_QV,ijk) &
+                                                      - LHF * tend(I_QI,ijk) &
+                                                      - LHF * tend(I_QS,ijk) &
+                                                      - LHF * tend(I_QG,ijk) )
 
        QTRC0(k,i,j,I_QV) = QTRC0(k,i,j,I_QV) + QTRC_t(k,i,j,I_QV) * dt
        QTRC0(k,i,j,I_QC) = QTRC0(k,i,j,I_QC) + QTRC_t(k,i,j,I_QC) * dt

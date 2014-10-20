@@ -118,8 +118,8 @@ contains
     use scale_const, only: &
        STB   => CONST_STB,   &
        CPdry => CONST_CPdry, &
-       RovCP => CONST_RovCP, &
-       LH0   => CONST_LH0
+       Rdry  => CONST_Rdry,  &
+       LHV   => CONST_LHV
     use scale_atmos_phy_sf_bulkcoef, only: &
        SF_bulkcoef => ATMOS_PHY_SF_bulkcoef
     use scale_atmos_saturation, only: &
@@ -170,11 +170,13 @@ contains
     real(RP) :: R2H (IA,JA)
     real(RP) :: R2E (IA,JA)
 
-    real(RP) :: Uabs_lim
+    real(RP) :: Uabs_lim, RovCP
     integer  :: i, j
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Surface flux(bulk)'
+
+    RovCP = CPdry / Rdry
 
     do j = JS, JE
     do i = IS, IE
@@ -243,7 +245,7 @@ contains
     do i = IS, IE
        Uabs_lim = min( max( ATM_Uabs(i,j), ATMOS_PHY_SF_U_minE ), ATMOS_PHY_SF_U_maxE )
 
-       SFLX_LH(i,j) = Ce(i,j) * Uabs_lim * SFC_DENS(i,j) * LH0 * SFC_beta(i,j) * ( SFC_QSAT(i,j) - ATM_QTRC(i,j,I_QV) )
+       SFLX_LH(i,j) = Ce(i,j) * Uabs_lim * SFC_DENS(i,j) * LHV * SFC_beta(i,j) * ( SFC_QSAT(i,j) - ATM_QTRC(i,j,I_QV) )
     enddo
     enddo
 
@@ -252,7 +254,7 @@ contains
     SFLX_QTRC(:,:,:) = 0.0_RP
     do j = JS, JE
     do i = IS, IE
-       SFLX_QTRC(i,j,I_QV) = SFLX_LH(i,j) / LH0
+       SFLX_QTRC(i,j,I_QV) = SFLX_LH(i,j) / LHV
     enddo
     enddo
 

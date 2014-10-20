@@ -105,8 +105,8 @@ contains
   !> Driver
   subroutine ATMOS_PHY_SF_driver( update_flag, history_flag )
     use scale_const, only: &
-       CPdry => CONST_CPdry,  &
-       LH0   => CONST_LH0
+       CPdry => CONST_CPdry, &
+       LHV   => CONST_LHV
     use scale_comm, only: &
        COMM_vars8, &
        COMM_wait
@@ -267,7 +267,7 @@ contains
        do j = JS, JE
        do i = IS, IE
           RHOT_t_SF(i,j) = ( SFLX_SH(i,j) / CPdry                             &
-                           + SFLX_LH(i,j) / LH0 * RHOT(KS,i,j) / DENS(KS,i,j) ) * RCDZ(KS) / GSQRT(KS,i,j,I_XYZ)
+                           + SFLX_LH(i,j) / LHV * RHOT(KS,i,j) / DENS(KS,i,j) ) * RCDZ(KS) / GSQRT(KS,i,j,I_XYZ)
        enddo
        enddo
 

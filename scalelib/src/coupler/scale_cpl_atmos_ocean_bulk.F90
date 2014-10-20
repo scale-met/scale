@@ -138,9 +138,9 @@ contains
     use scale_process, only: &
        PRC_MPIstop
     use scale_const, only: &
-      CPdry  => CONST_CPdry, &
-      STB    => CONST_STB,   &
-      LH0    => CONST_LH0
+      CPdry => CONST_CPdry, &
+      STB   => CONST_STB,   &
+      LHV   => CONST_LHV
     use scale_grid_real, only: &
       Z1 => REAL_Z1
     use scale_atmos_saturation, only: &
@@ -232,7 +232,7 @@ contains
         ZMFLX(i,j) = -RHOA(i,j) * Ustar**2 / Uabs * WA(i,j)
 
         SHFLX (i,j) = -CPdry * RHOA(i,j) * Ustar * Tstar
-        LHFLX (i,j) = -LH0   * RHOA(i,j) * Ustar * Qstar
+        LHFLX (i,j) = -LHV   * RHOA(i,j) * Ustar * Qstar
 
         ! calculation for residual
         WHFLX(i,j) = ( 1.0_RP - ALB_SW(i,j) ) * SWD(i,j) * (-1.0_RP) &

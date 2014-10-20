@@ -102,8 +102,8 @@ contains
   subroutine USER_step
    use scale_const, only: &
        D2R   => CONST_D2R,   &
-       TEM00 => CONST_TEM00, & 
-       LH0   => CONST_LH0,   &    ! ELL : latent heat of vaporization [J/kg]
+       TEM00 => CONST_TEM00, &
+       LHV   => CONST_LHV,   &    ! ELL : latent heat of vaporization [J/kg]
        Rvap  => CONST_Rvap        !< gas constant (water vapor) [J/kg/K]
     use scale_grid_real, only: &
        REAL_lon
@@ -153,7 +153,7 @@ contains
     data Wind / 3.4, 3.2, 3.2, 3.2, 3.2, 3.0, 3.8, 3.6, 3.5, 3.6, 4.0, 3.8,    &
                 4.0, 3.9, 4.0, 4.1, 3.7, 3.6, 4.2, 3.9, 3.7, 3.4, 3.8, 4.0, 3.4/
 
-    data Qvapor / 0.018,0.018,0.018,0.018,0.018,0.018,0.017,0.017,0.017,0.018,0.018,0.018,     & 
+    data Qvapor / 0.018,0.018,0.018,0.018,0.018,0.018,0.017,0.017,0.017,0.018,0.018,0.018,     &
                   0.018,0.017,0.017,0.016,0.017,0.018,0.018,0.017,0.018,0.018,0.018,0.018,0.018/
 
     data Rain / 0.0, 0.0, 0.0, 0.0, 0.1, 0.2, 3.0, 0.4, 0.0, 0.0, 0.0, 0.0,     &
@@ -197,7 +197,7 @@ contains
 
           PREC(i,j) = ( ( 1.0_RP-dsec ) * Rain(tloc  ) &
                       + (        dsec ) * Rain(tloc+1) )/3600.0_RP
-            
+
 !          if ( with_rain ) then
 !             if (( tloc >= 1 ).and.( tloc < 10 )) then
 !                PREC(i,j) = 5.0_RP / 3600.0_RP

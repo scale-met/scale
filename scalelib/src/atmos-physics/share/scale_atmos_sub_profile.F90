@@ -23,8 +23,8 @@ module scale_atmos_profile
 
   use scale_const, only: &
      GRAV  => CONST_GRAV,  &
+     CPdry => CONST_CPdry, &
      Rdry  => CONST_Rdry,  &
-     RovCP => CONST_RovCP, &
      P00   => CONST_PRE00
   !-----------------------------------------------------------------------------
   implicit none
@@ -94,11 +94,13 @@ contains
     real(RP) :: temp(KA)
     real(RP) :: pres(KA)
 
-    real(RP) :: gmr ! grav / Rdry
+    real(RP) :: gmr   ! grav / Rdry
+    real(RP) :: RovCP ! CPdry / Rdry
     integer  :: k, i, j, n
     !---------------------------------------------------------------------------
 
-    gmr = GRAV / Rdry
+    gmr   = GRAV / Rdry
+    RovCP = CPdry / Rdry
 
     !--- ISA profile
     temp_isa(1) = temp_sfc
@@ -187,13 +189,15 @@ contains
     real(RP) :: pres(KA)
 
     real(RP) :: gmr ! grav / Rdry
+    real(RP) :: RovCP ! CPdry / Rdry
     integer  :: k, i, j, n
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[PROFILE] / Categ[ATMOS SHARE] / Origin[SCALElib]'
 
-    gmr = GRAV / Rdry
+    gmr   = GRAV / Rdry
+    RovCP = CPdry / Rdry
 
     !--- ISA profile
     do j = JS, JE

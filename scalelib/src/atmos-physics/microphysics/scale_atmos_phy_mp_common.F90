@@ -125,8 +125,8 @@ contains
        QTRC0,  &
        DENS0   )
     use scale_const, only: &
-       LHV00  => CONST_LH00, &
-       LHF00  => CONST_LHF00
+       LHV => CONST_LHV, &
+       LHF => CONST_LHF
     use scale_time, only: &
        dt => TIME_DTSEC_ATMOS_PHY_MP
     use scale_atmos_thermodyn, only: &
@@ -198,7 +198,7 @@ contains
        do i = IS, IE
        do k = KS, KE
           Emoist(k,i,j) = TEMP0(k,i,j) * CVtot(k,i,j) &
-                        + QTRC1(k,i,j,I_QV) * LHV00
+                        + QTRC1(k,i,j,I_QV) * LHV
 
           QSUM1(k,i,j) = QTRC1(k,i,j,I_QV) &
                        + QTRC1(k,i,j,I_QC)
@@ -218,7 +218,7 @@ contains
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
-          TEMP1(k,i,j) = ( Emoist(k,i,j) - QTRC1(k,i,j,I_QV) * LHV00 ) / CVtot(k,i,j)
+          TEMP1(k,i,j) = ( Emoist(k,i,j) - QTRC1(k,i,j,I_QV) * LHV ) / CVtot(k,i,j)
        enddo
        enddo
        enddo
@@ -238,8 +238,8 @@ contains
        do i = IS, IE
        do k = KS, KE
           Emoist(k,i,j) = TEMP0(k,i,j) * CVtot(k,i,j) &
-                        + QTRC1(k,i,j,I_QV) * LHV00   &
-                        - QTRC1(k,i,j,I_QI) * LHF00
+                        + QTRC1(k,i,j,I_QV) * LHV     &
+                        - QTRC1(k,i,j,I_QI) * LHF
 
           QSUM1(k,i,j) = QTRC1(k,i,j,I_QV) &
                        + QTRC1(k,i,j,I_QC) &
@@ -261,7 +261,7 @@ contains
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
-          TEMP1(k,i,j) = ( Emoist(k,i,j) - QTRC1(k,i,j,I_QV) * LHV00 ) / CVtot(k,i,j)
+          TEMP1(k,i,j) = ( Emoist(k,i,j) - QTRC1(k,i,j,I_QV) * LHV ) / CVtot(k,i,j)
        enddo
        enddo
        enddo
@@ -322,7 +322,7 @@ contains
        QDRY0, &
        Emoist )
     use scale_const, only: &
-       LHV00  => CONST_LH00
+       LHV => CONST_LHV
     use scale_process, only: &
        PRC_MPIstop
     use scale_atmos_thermodyn, only: &
@@ -415,7 +415,7 @@ contains
                              q(:),        & ! [IN]
                              QDRY0(k,i,j) ) ! [IN]
 
-          Emoist_new = temp * CVtot + qsatl_new * LHV00
+          Emoist_new = temp * CVtot + qsatl_new * LHV
 
           ! dX/dT
           dqsatl_dT = ( LovR_liq / ( temp*temp ) + CVovR_liq / temp ) * qsatl_new
@@ -425,7 +425,7 @@ contains
           dCVtot_dT = dqsatl_dT * CVw(I_QV) &
                     + dqc_dT    * CVw(I_QC)
 
-          dEmoist_dT = qsatl_new * dCVtot_dT + CVtot + dqsatl_dT * LHV00
+          dEmoist_dT = qsatl_new * dCVtot_dT + CVtot + dqsatl_dT * LHV
 
           dtemp = ( Emoist_new - Emoist(k,i,j) ) / dEmoist_dT
           temp  = temp - dtemp
@@ -463,8 +463,8 @@ contains
        QDRY0, &
        Emoist )
     use scale_const, only: &
-       LHV00  => CONST_LH00,  &
-       LHF00  => CONST_LHF00
+       LHV => CONST_LHV,  &
+       LHF => CONST_LHF
     use scale_process, only: &
        PRC_MPIstop
     use scale_atmos_thermodyn, only: &
@@ -569,7 +569,7 @@ contains
                              q(:),        & ! [IN]
                              QDRY0(k,i,j) ) ! [IN]
 
-          Emoist_new = temp * CVtot + qsat_new * LHV00 - q(I_QI) * LHF00
+          Emoist_new = temp * CVtot + qsat_new * LHV - q(I_QI) * LHF
 
           ! dX/dT
           call SATURATION_dalphadT( dalpha_dT, temp )
@@ -587,7 +587,7 @@ contains
                     + dqc_dT   * CVw(I_QC) &
                     + dqi_dT   * CVw(I_QI)
 
-          dEmoist_dT = temp * dCVtot_dT + CVtot + dqsat_dT * LHV00 - dqi_dT * LHF00
+          dEmoist_dT = temp * dCVtot_dT + CVtot + dqsat_dT * LHV - dqi_dT * LHF
 
           dtemp = ( Emoist_new - Emoist(k,i,j) ) / dEmoist_dT
           temp  = temp - dtemp

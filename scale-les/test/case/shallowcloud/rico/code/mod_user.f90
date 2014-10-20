@@ -266,10 +266,10 @@ contains
          CPdry => CONST_CPdry, &
          Rdry  => CONST_Rdry, &
          Rvap  => CONST_Rvap, &
-         LH0   => CONST_LH0, &
-         P00   => CONST_PRE00 
+         LHV   => CONST_LHV, &
+         P00   => CONST_PRE00
     use scale_atmos_thermodyn, only: &
-         CPw   => AQ_CP 
+         CPw   => AQ_CP
     use scale_history, only: &
          HIST_in
     use scale_time, only: &
@@ -277,7 +277,7 @@ contains
          dtsf =>  TIME_DTSEC_ATMOS_PHY_SF
     use scale_atmos_saturation, only : &
          moist_pres2qsat_liq  => ATMOS_SATURATION_pres2qsat_liq
- 
+
     implicit none
     !---------------------------------------------------------------------------
     real(RP) :: ratesum
@@ -530,12 +530,12 @@ contains
             RovCP  = RTOT / CPTOT
 
             d_PT   = RHOT(k,i,j) / DENS(k,i,j)
-            LWPT = RHOT(k,i,j) / DENS(k,i,j)  &
-                 - ( LH0 / CPdry * QHYD ) * ( P00 / PRES )**RovCP
+            LWPT   = RHOT(k,i,j) / DENS(k,i,j)  &
+                   - ( LHV / CPdry * QHYD ) * ( P00 / PRES )**RovCP
             LWPT_a = LWPT - 2.5_RP / 86400.0_RP ! * dt
-            drhot = ( LWPT_a &
-                 + ( LH0 / CPdry * QHYD ) * ( P00 / PRES )**RovCP &
-                 ) * DENS(k,i,j) - RHOT(k,i,j)
+            drhot  = ( LWPT_a &
+                     + ( LHV / CPdry * QHYD ) * ( P00 / PRES )**RovCP &
+                     ) * DENS(k,i,j) - RHOT(k,i,j)
 
             RHOT_tp(k,i,j) = RHOT_tp(k,i,j) + drhot !/ dt
        enddo
@@ -603,7 +603,7 @@ contains
        SFLX_MOMY(i,j) = - Cm * min( max(Uabs,U_minM), U_maxM ) * MOMY(KS,i,j)
 
        SHFLX(i,j) = SFLX_POTT(i,j) * CPdry
-       LHFLX(i,j) = SFLX_QV  (i,j) * LH0
+       LHFLX(i,j) = SFLX_QV  (i,j) * LHV
 
       enddo
       enddo

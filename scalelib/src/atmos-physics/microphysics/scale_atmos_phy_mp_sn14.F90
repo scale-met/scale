@@ -62,28 +62,28 @@ module scale_atmos_phy_mp_sn14
 
   use scale_tracer_sn14
   use scale_const, only: &
-     GRAV   => CONST_GRAV,    &
-     PI     => CONST_PI,      &
-     UNDEF8 => CONST_UNDEF8,  &
-     Rdry   => CONST_Rdry,    &
-     CPdry  => CONST_CPdry,   &
-     CVdry  => CONST_CVdry,   &
-     P00    => CONST_PRE00,   &
-     T00    => CONST_TEM00,   &
-     Rvap   => CONST_Rvap,    &
-     CPvap  => CONST_CPvap,   &
-     CVvap  => CONST_CVvap,   &
-     CL     => CONST_CL,      &
-     CI     => CONST_CI,      &
-     LHV    => CONST_LH00,    &
-     LHF    => CONST_LHF00,   &
-     LHV0    => CONST_LH0,    &
-     LHF0    => CONST_LHF0,   &
-     LHS0    => CONST_LHS0,   &
-     LHV00    => CONST_LH00,  &
-     LHF00    => CONST_LHF00, &
-     PSAT0  => CONST_PSAT0,   &
-     EMELT  => CONST_EMELT,   &
+     GRAV   => CONST_GRAV,   &
+     PI     => CONST_PI,     &
+     UNDEF8 => CONST_UNDEF8, &
+     Rdry   => CONST_Rdry,   &
+     CPdry  => CONST_CPdry,  &
+     CVdry  => CONST_CVdry,  &
+     P00    => CONST_PRE00,  &
+     T00    => CONST_TEM00,  &
+     Rvap   => CONST_Rvap,   &
+     CPvap  => CONST_CPvap,  &
+     CVvap  => CONST_CVvap,  &
+     CL     => CONST_CL,     &
+     CI     => CONST_CI,     &
+     LHV    => CONST_LHV00,  &
+     LHF    => CONST_LHF00,  &
+     LHV0   => CONST_LHV0,   &
+     LHF0   => CONST_LHF0,   &
+     LHS0   => CONST_LHS0,   &
+     LHV00  => CONST_LHV00,  &
+     LHF00  => CONST_LHF00,  &
+     PSAT0  => CONST_PSAT0,  &
+     EMELT  => CONST_EMELT,  &
      DWATR  => CONST_DWATR
   !-----------------------------------------------------------------------------
   implicit none

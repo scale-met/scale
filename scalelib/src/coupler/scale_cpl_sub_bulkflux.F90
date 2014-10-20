@@ -190,7 +190,8 @@ contains
     use scale_const, only: &
       GRAV   => CONST_GRAV,   &
       KARMAN => CONST_KARMAN, &
-      RovCP  => CONST_RovCP
+      Rdry   => CONST_Rdry,   &
+      CPdry  => CONST_CPdry
     implicit none
 
     ! argument
@@ -224,6 +225,11 @@ contains
     real(RP) :: RiB0, RiB ! bulk Richardson number [no unit]
     real(RP) :: C0 ! initial drag coefficient [no unit]
     real(RP) :: fm, fh, t0th, q0qe
+
+    real(RP) :: RovCP
+    !---------------------------------------------------------------------------
+
+    RovCP = CPdry / Rdry
 
     Uabs = max( sqrt( Ua**2 + Va**2 ), Uabs_min )
 
@@ -296,11 +302,12 @@ contains
       Z0H,     & ! (in)
       Z0E      ) ! (in)
     use scale_const, only: &
-      EPS     => CONST_EPS,     &
-      GRAV    => CONST_GRAV,    &
-      KARMAN  => CONST_KARMAN,  &
-      RovCP   => CONST_RovCP,   &
-      EPSTvap => CONST_EPSTvap
+       GRAV   => CONST_GRAV,   &
+       KARMAN => CONST_KARMAN, &
+       Rdry   => CONST_Rdry,   &
+       CPdry  => CONST_CPdry,  &
+       EPS     => CONST_EPS,   &
+       EPSTvap => CONST_EPSTvap
     implicit none
 
     ! parameter
@@ -347,8 +354,11 @@ contains
     real(RP) :: TstarUS, TstarS, dTstar, dTstarUS, dTstarS
     real(RP) :: QstarUS, QstarS, dQstar, dQstarUS, dQstarS
 
+    real(RP) :: RovCP
     real(RP) :: sw
     !---------------------------------------------------------------------------
+
+    RovCP = CPdry / Rdry
 
     Uabs = max( sqrt( Ua**2 + Va**2 ), Uabs_min )
 

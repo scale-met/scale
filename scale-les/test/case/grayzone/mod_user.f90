@@ -382,7 +382,7 @@ contains
         P00    => CONST_PRE00,  &
         T00    => CONST_TEM00,  &
         CPd    => CONST_CPdry,  &
-        LH0    => CONST_LH0,    &
+        LHV    => CONST_LHV,    &
         EPSvap => CONST_EPSvap, &
         PSAT0  => CONST_PSAT0
     use scale_atmos_thermodyn, only: &
@@ -935,8 +935,8 @@ contains
           !--- saturation at surface
           pres_1d   = P00 * ( RHOT(KS,i,j) * Rtot / P00 )**CPovCV
           temp_1d   = ( RHOT(KS,i,j) / DENS(KS,i,j) ) * ( P00 / pres_1d )**RovCP
-          pres_evap = PSAT0 * exp( LH0/Rvap * ( 1.0_RP/T00 - 1.0_RP/SST(i,j) ) )
-!          pres_evap = PSAT0 * exp( LH0/Rvap * ( 1.0_RP/T00 - 1.0_RP/SST_loc(i,j) )
+          pres_evap = PSAT0 * exp( LHV/Rvap * ( 1.0_RP/T00 - 1.0_RP/SST(i,j) ) )
+!          pres_evap = PSAT0 * exp( LHV/Rvap * ( 1.0_RP/T00 - 1.0_RP/SST_loc(i,j) )
 !          )
 !          qv_evap   = EPSvap * pres_evap / ( pres_1d - pres_evap )
           qv_evap   = EPSvap * pres_evap / P00
@@ -1018,7 +1018,7 @@ contains
             SFLX_POTT(:,:)=( (time_in(t+1)-time_nowsec)*shf_in(t)+(time_nowsec-time_in(t))*shf_in(t+1) )&
                           /( time_in(t+1)-time_in(t) ) / CPd
             SFLX_QV  (:,:)=( (time_in(t+1)-time_nowsec)*lhf_in(t)+(time_nowsec-time_in(t))*lhf_in(t+1) )&
-                          /( time_in(t+1)-time_in(t ))/LH0
+                          /( time_in(t+1)-time_in(t) ) / LHV
           endif
         enddo
         if( time_nowsec>time_in(mstep) )then
@@ -1033,7 +1033,7 @@ contains
 !     call HIST_in( SST_loc(:,:), 'SST','sst','K',dtsf)
       call HIST_in( SST(:,:), 'SST2','sst','K',dtsf)
       call HIST_in( SFLX_POTT(:,:)*CPd, 'SHF','shf','W/m2',dtsf)
-      call HIST_in( SFLX_QV(:,:)*LH0, 'LHF','lhf','W/m2',dtsf)
+      call HIST_in( SFLX_QV(:,:)*LHV, 'LHF','lhf','W/m2',dtsf)
       call HIST_in( SFC_albedo(:,:,1), 'ALBEDO_LW','alblw','-',dtsf)
       call HIST_in( SFC_albedo(:,:,2), 'ALBEDO_SW','albsw','-',dtsf)
 !write(*,*)'chksst2'
@@ -1044,7 +1044,7 @@ contains
       do i = IS, IE
 
        SHFLX(i,j) = SFLX_POTT(i,j) * CPdry
-       LHFLX(i,j) = SFLX_QV  (i,j) * LH0
+       LHFLX(i,j) = SFLX_QV  (i,j) * LHV
 
        RHOT_tp(KS,i,j) = RHOT_tp(KS,i,j) &
             + ( SFLX_POTT(i,j) &

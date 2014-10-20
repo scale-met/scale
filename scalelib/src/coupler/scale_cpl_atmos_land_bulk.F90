@@ -156,9 +156,9 @@ contains
         Z0H,        & ! (in)
         Z0E         ) ! (in)
     use scale_const, only: &
-      CPdry  => CONST_CPdry, &
-      STB    => CONST_STB,   &
-      LH0    => CONST_LH0
+      CPdry => CONST_CPdry, &
+      STB   => CONST_STB,   &
+      LHV   => CONST_LHV
     use scale_grid_real, only: &
       Z1 => REAL_Z1
     use scale_atmos_saturation, only: &
@@ -290,13 +290,13 @@ contains
             res = ( 1.0_RP - ALB_SW(i,j) ) * SWD(i,j) &
                 + ( 1.0_RP - ALB_LW(i,j) ) * ( LWD(i,j) - STB * pLST**4 ) &
                 + CPdry * RHOA(i,j) * Ustar * Tstar &
-                + LH0   * RHOA(i,j) * Ustar * Qstar * QVEF(i,j) &
+                + LHV   * RHOA(i,j) * Ustar * Qstar * QVEF(i,j) &
                 - 2.0_RP * TCS(i,j) * ( pLST - TG(i,j)  ) / DZG(i,j)
 
             ! calculation for d(residual)/dLST
             dres = -4.0_RP * ( 1.0_RP - ALB_LW(i,j) ) * STB * pLST**3 &
                  + CPdry  * RHOA(i,j) * ( (dUstar-Ustar)/dTS0 * Tstar + Ustar * (dTstar-Tstar)/dTS0 ) &
-                 + LH0    * RHOA(i,j) * ( (dUstar-Ustar)/dTS0 * Qstar + Ustar * (dQstar-Qstar)/dTS0 ) * QVEF(i,j) &
+                 + LHV    * RHOA(i,j) * ( (dUstar-Ustar)/dTS0 * Qstar + Ustar * (dQstar-Qstar)/dTS0 ) * QVEF(i,j) &
                  - 2.0_RP * TCS(i,j) / DZG(i,j)
 
             if( abs(dres) * dres_lim < abs(res) ) then
@@ -369,7 +369,7 @@ contains
         YMFLX(i,j) = -RHOA(i,j) * Ustar**2 / Uabs * VA(i,j)
         ZMFLX(i,j) = -RHOA(i,j) * Ustar**2 / Uabs * WA(i,j)
         SHFLX(i,j) = -CPdry * RHOA(i,j) * Ustar * Tstar
-        LHFLX(i,j) = -LH0   * RHOA(i,j) * Ustar * Qstar * QVEF(i,j)
+        LHFLX(i,j) = -LHV   * RHOA(i,j) * Ustar * Qstar * QVEF(i,j)
         GHFLX(i,j) = -2.0_RP * TCS(i,j) * ( LST(i,j) - TG(i,j)  ) / DZG(i,j)
 
         ! calculation for residual
