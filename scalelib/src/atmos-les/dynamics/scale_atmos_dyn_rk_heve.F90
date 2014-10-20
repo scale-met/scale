@@ -54,16 +54,34 @@ module scale_atmos_dyn_rk_heve
   !
   !++ Private parameters & variables
   !
+  integer :: IFS_OFF
+  integer :: JFS_OFF
+#ifdef HIST_TEND
+  real(RP), allocatable :: advch_t(:,:,:,:)
+  real(RP), allocatable :: advcv_t(:,:,:,:)
+  real(RP), allocatable :: ddiv_t(:,:,:,:)
+  real(RP), allocatable :: pg_t(:,:,:,:)
+  real(RP), allocatable :: cf_t(:,:,:,:)
+#endif
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
   !> Setup
-  subroutine ATMOS_DYN_rk_heve_setup( ATMOS_DYN_TYPE )
+  subroutine ATMOS_DYN_rk_heve_setup( &
+       ATMOS_DYN_TYPE, &
+       BND_W, &
+       BND_E, &
+       BND_S, &
+       BND_N  )
     use scale_process, only: &
        PRC_MPIstop
     implicit none
 
     character(len=*), intent(in) :: ATMOS_DYN_TYPE
+    logical, intent(in) :: BND_W
+    logical, intent(in) :: BND_E
+    logical, intent(in) :: BND_S
+    logical, intent(in) :: BND_N
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*) '*** HEVE'
@@ -72,6 +90,27 @@ contains
        write(*,*) 'xxx ATMOS_DYN_TYPE is not HEVE. Check!'
        call PRC_MPIstop
     endif
+
+    IFS_OFF = 1
+    JFS_OFF = 1
+    if ( BND_W ) IFS_OFF = 0
+    if ( BND_S ) JFS_OFF = 0
+
+
+#ifdef HIST_TEND
+    allocate( advch_t(KA,IA,JA,5) )
+    allocate( advcv_t(KA,IA,JA,5) )
+    allocate( ddiv_t(KA,IA,JA,3) )
+    allocate( pg_t(KA,IA,JA,3) )
+    allocate( cf_t(KA,IA,JA,2) )
+
+    advch_t = 0.0_RP
+    advcv_t = 0.0_RP
+    ddiv_t = 0.0_RP
+    pg_t = 0.0_RP
+    cf_t = 0.0_RP
+#endif
+
 
     return
   end subroutine ATMOS_DYN_rk_heve_setup
@@ -92,6 +131,7 @@ contains
        RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,          &
        PHI, GSQRT, J13G, J23G, J33G, MAPF,          &
        REF_pres, REF_dens,                          &
+       BND_W, BND_E, BND_S, BND_N,                  &
        dtrk, dt                                     )
     use scale_const, only: &
        GRAV   => CONST_GRAV,  &
@@ -129,8 +169,8 @@ contains
     real(RP), intent(out) :: MOMY_RK(KA,IA,JA)   !
     real(RP), intent(out) :: RHOT_RK(KA,IA,JA)   !
 
-    real(RP), intent(out) :: mflx_hi(KA,IA,JA,3) ! mass flux
-    real(RP), intent(out) :: tflx_hi(KA,IA,JA,3) ! internal energy flux
+    real(RP), intent(inout) :: mflx_hi(KA,IA,JA,3) ! mass flux
+    real(RP), intent(inout) :: tflx_hi(KA,IA,JA,3) ! internal energy flux
 
     real(RP), intent(in),target :: DENS0(KA,IA,JA) ! prognostic variables at previous dynamical time step
     real(RP), intent(in),target :: MOMZ0(KA,IA,JA) !
@@ -181,6 +221,11 @@ contains
     real(RP), intent(in)  :: REF_pres(KA,IA,JA)   !< reference pressure
     real(RP), intent(in)  :: REF_dens(KA,IA,JA)   !< reference density
 
+    logical,  intent(in)  :: BND_W
+    logical,  intent(in)  :: BND_E
+    logical,  intent(in)  :: BND_S
+    logical,  intent(in)  :: BND_N
+
     real(RP), intent(in)  :: dtrk
     real(RP), intent(in)  :: dt
 
@@ -219,11 +264,6 @@ contains
     real(RP) :: pg   ! pressure gradient force
     real(RP) :: cf   ! colioris force
 #ifdef HIST_TEND
-    real(RP) :: advch_t(KA,IA,JA,5)
-    real(RP) :: advcv_t(KA,IA,JA,5)
-    real(RP) :: ddiv_t(KA,IA,JA,3)
-    real(RP) :: pg_t(KA,IA,JA,3)
-    real(RP) :: cf_t(KA,IA,JA,2)
     logical  :: lhist
 #endif
 
@@ -451,7 +491,7 @@ contains
 
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JJS  , JJE
-       do i = IIS-1, IIE
+       do i = IIS-IFS_OFF, min(IIE,IEH)
        do k = KS, KE
 #ifdef DEBUG
           call CHECK( __LINE__, MOMX(k,i+1,j) )
@@ -470,7 +510,7 @@ contains
        ! at (x, v, z)
 
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       do j = JJS-1, JJE
+       do j = JJS-JFS_OFF, min(JJE,JEH)
        do i = IIS  , IIE
        do k = KS, KE
 #ifdef DEBUG
@@ -598,6 +638,34 @@ contains
     enddo
 
     if ( FLAG_FCT_RHO ) then
+       if ( BND_W ) then
+          do j = JS-1, JE+1
+          do k = KS, KE
+             qflx_lo(k,IS-1,j,XDIR) = mflx_hi(k,IS-1,j,XDIR)
+          end do
+          end do
+       end if
+       if ( BND_E ) then
+          do j = JS-1, JE+1
+          do k = KS, KE
+             qflx_lo(k,IE,j,XDIR) = mflx_hi(k,IE,j,XDIR)
+          end do
+          end do
+       end if
+       if ( BND_S ) then
+          do i = IS-1, IE+1
+          do k = KS, KE
+             qflx_lo(k,i,JS-1,YDIR) = mflx_hi(k,i,JS-1,YDIR)
+          end do
+          end do
+       end if
+       if ( BND_N ) then
+          do i = IS-1, IE+1
+          do k = KS, KE
+             qflx_lo(k,i,JE,YDIR) = mflx_hi(k,i,JE,YDIR)
+          end do
+          end do
+       end if
        one = 1.0_RP
        call ATMOS_DYN_fct( qflx_anti,               & ! (out)
                            DENS0, one, one,         & ! (in)
@@ -660,7 +728,7 @@ contains
 
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JS  , JE
-       do i = IS-1, IE
+       do i = IS-1, IEH
        do k = KS, KE
 #ifdef DEBUG
           call CHECK( __LINE__, mflx_hi(k,i,j,XDIR) )
@@ -675,7 +743,7 @@ contains
 #endif
 
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       do j = JS-1, JE
+       do j = JS-1, JEH
        do i = IS  , IE
        do k = KS, KE
 #ifdef DEBUG
@@ -1097,7 +1165,7 @@ contains
     if ( FLAG_FCT_MOMENTUM ) then
 
        call COMM_vars8( DENS_RK, 1 )
-       call COMM_wait ( DENS_RK, 1 )
+       call COMM_wait ( DENS_RK, 1, .false. )
 
        do j = JS, JE
        do i = IS, IE
@@ -1391,7 +1459,7 @@ contains
 
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE
-       do i = IIS, IIE
+       do i = IIS, min(IIE, IEH)
        do k = KS, KE
 #ifdef DEBUG
           call CHECK( __LINE__, qflx_hi(k  ,i  ,j  ,ZDIR) )
@@ -1550,7 +1618,7 @@ contains
           !--- update momentum(x)
           !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           do j = JJS, JJE
-          do i = IIS, IIE
+          do i = IIS, min(IIE,IEH)
           do k = KS, KE
 #ifdef DEBUG
              call CHECK( __LINE__, MOMX_RK(k,i,j) )
@@ -1827,7 +1895,7 @@ contains
        !-----< update momentum (y) >-----
 
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       do j = JJS, JJE
+       do j = JJS, min(JJE, JEH)
        do i = IIS, IIE
        do k = KS, KE
 #ifdef DEBUG
@@ -1991,7 +2059,7 @@ contains
 
           !--- update momentum(y)
           !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-          do j = JJS, JJE
+          do j = JJS, min(JJE, JEH)
           do i = IIS, IIE
           do k = KS, KE
 #ifdef DEBUG
@@ -2093,7 +2161,7 @@ contains
 
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JJS,   JJE
-       do i = IIS-1, IIE
+       do i = IIS-IFS_OFF, min(IIE,IEH)
        do k = KS, KE
 #ifdef DEBUG
           call CHECK( __LINE__, mflx_hi(k,i,j,XDIR) )
@@ -2117,7 +2185,7 @@ contains
        ! at (x, v, z)
 
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       do j = JJS-1, JJE
+       do j = JJS-JFS_OFF, min(JJE,JEH)
        do i = IIS,   IIE
        do k = KS, KE
 #ifdef DEBUG
@@ -2184,13 +2252,13 @@ contains
        call COMM_vars8( mflx_hi(:,:,:,ZDIR), 1 )
        call COMM_vars8( mflx_hi(:,:,:,XDIR), 2 )
        call COMM_vars8( mflx_hi(:,:,:,YDIR), 3 )
-       call COMM_wait ( mflx_hi(:,:,:,ZDIR), 1 )
-       call COMM_wait ( mflx_hi(:,:,:,XDIR), 2 )
-       call COMM_wait ( mflx_hi(:,:,:,YDIR), 3 )
+       call COMM_wait ( mflx_hi(:,:,:,ZDIR), 1, .false. )
+       call COMM_wait ( mflx_hi(:,:,:,XDIR), 2, .false. )
+       call COMM_wait ( mflx_hi(:,:,:,YDIR), 3, .false. )
 
        if ( .not. FLAG_FCT_MOMENTUM ) then
           call COMM_vars8( DENS_RK, 1 )
-          call COMM_wait ( DENS_RK, 1 )
+          call COMM_wait ( DENS_RK, 1, .false. )
        end if
 
        do JJS = JS, JE, JBLOCK

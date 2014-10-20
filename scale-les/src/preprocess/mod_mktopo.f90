@@ -179,8 +179,8 @@ contains
     endif
     if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKTOPO_FLAT)
 
-    do j = JS, JE
-    do i = IS, IE
+    do j = 1, JA
+    do i = 1, IA
        TOPO_Zsfc(i,j) = FLAT_HEIGHT
     enddo
     enddo
@@ -240,8 +240,8 @@ contains
     endif
 
     ! make bell-shaped mountain
-    do j = JS, JE
-    do i = IS, IE
+    do j = 1, JA
+    do i = 1, IA
 
        dist = ( (CX(i)-CX_offset-BELL_CX)/BELL_RX )**2 &
             + ( (CY(j)-CY_offset-BELL_CY)/BELL_RY )**2
@@ -296,8 +296,8 @@ contains
     if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKTOPO_SCHEAR)
 
     ! make bell-shaped mountain
-    do j = JS, JE
-    do i = IS, IE
+    do j = 1, JA
+    do i = 1, IA
 
        dist = exp( -( (CX(i)-SCHAER_CX)/SCHAER_RX )**2 )
 

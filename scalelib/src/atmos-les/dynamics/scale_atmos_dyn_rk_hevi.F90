@@ -54,12 +54,27 @@ module scale_atmos_dyn_rk_hevi
   !
   integer, private, parameter :: NB = 1
   real(RP), private :: kappa
+
+  integer :: IFS_OFF
+  integer :: JFS_OFF
+#ifdef HIST_TEND
+  real(RP), allocatable :: advch_t(:,:,:,:)
+  real(RP), allocatable :: advcv_t(:,:,:,:)
+  real(RP), allocatable :: ddiv_t(:,:,:,:)
+  real(RP), allocatable :: pg_t(:,:,:,:)
+  real(RP), allocatable :: cf_t(:,:,:,:)
+#endif
   !-----------------------------------------------------------------------------
 
 
 contains
 
-  subroutine ATMOS_DYN_rk_hevi_setup( ATMOS_DYN_TYPE )
+  subroutine ATMOS_DYN_rk_hevi_setup( &
+       ATMOS_DYN_TYPE, &
+       BND_W, &
+       BND_E, &
+       BND_S, &
+       BND_N  )
     use scale_process, only: &
        PRC_MPIstop
 #ifdef DRY
@@ -70,6 +85,10 @@ contains
     implicit none
 
     character(len=*), intent(in) :: ATMOS_DYN_TYPE
+    logical, intent(in) :: BND_W
+    logical, intent(in) :: BND_E
+    logical, intent(in) :: BND_S
+    logical, intent(in) :: BND_N
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*) '*** HEVI'
@@ -89,6 +108,27 @@ contains
     kappa = CPdry / CVdry
 #endif
 
+    IFS_OFF = 1
+    JFS_OFF = 1
+    if ( BND_W ) IFS_OFF = 0
+    if ( BND_S ) JFS_OFF = 0
+
+
+#ifdef HIST_TEND
+    allocate( advch_t(KA,IA,JA,5) )
+    allocate( advcv_t(KA,IA,JA,5) )
+    allocate( ddiv_t(KA,IA,JA,3) )
+    allocate( pg_t(KA,IA,JA,3) )
+    allocate( cf_t(KA,IA,JA,2) )
+
+    advch_t = 0.0_RP
+    advcv_t = 0.0_RP
+    ddiv_t = 0.0_RP
+    pg_t = 0.0_RP
+    cf_t = 0.0_RP
+#endif
+
+
     return
   end subroutine ATMOS_DYN_rk_hevi_setup
 
@@ -107,6 +147,7 @@ contains
     RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,          &
     PHI, GSQRT, J13G, J23G, J33G, MAPF,          &
     REF_pres, REF_dens,                          &
+    BND_W, BND_E, BND_S, BND_N,                  &
     dtrk, dt                                     )
     use scale_const, only: &
 #ifdef DRY
@@ -118,12 +159,6 @@ contains
        IUNDEF => CONST_UNDEF2, &
        GRAV   => CONST_GRAV,   &
        P00    => CONST_PRE00
-    use scale_comm, only: &
-#ifdef _USE_RDMA
-       COMM_rdma_vars8, &
-#endif
-       COMM_vars8, &
-       COMM_wait
     use scale_atmos_dyn_common, only: &
        FACT_N, &
        FACT_F, &
@@ -204,6 +239,11 @@ contains
     real(RP), intent(in)  :: REF_pres(KA,IA,JA)   !< reference pressure
     real(RP), intent(in)  :: REF_dens(KA,IA,JA)   !< reference density
 
+    logical,  intent(in)  :: BND_W
+    logical,  intent(in)  :: BND_E
+    logical,  intent(in)  :: BND_S
+    logical,  intent(in)  :: BND_N
+
     real(RP), intent(in)  :: dtrk
     real(RP), intent(in)  :: dt
 
@@ -259,8 +299,6 @@ contains
     PT(:) = UNDEF
     CPRES(:) = UNDEF
 
-    mflx_hi(:,:,:,:) = UNDEF
-    mflx_hi(KS-1,:,:,ZDIR) = 0.0_RP
 
     qflx_hi(:,:,:,:) = UNDEF
     tflx_hi(:,:,:,:) = UNDEF
@@ -479,7 +517,7 @@ contains
        ! at (u, y, z)
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JJS  , JJE
-       do i = IIS-1, IIE
+       do i = IIS-IFS_OFF, min(IIE,IEH)
        do k = KS, KE
 #ifdef DEBUG
           call CHECK( __LINE__, GSQRT(k,i,j,I_UYZ) )
@@ -496,7 +534,7 @@ contains
 #endif
        ! at (x, v, z)
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       do j = JJS-1, JJE
+       do j = JJS-JFS_OFF, min(JJE,JEH)
        do i = IIS  , IIE
        do k = KS, KE
 #ifdef DEBUG
@@ -796,7 +834,7 @@ contains
        ! at (u, y, z)
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JJS,   JJE
-       do i = IIS-1, IIE
+       do i = IIS-IFS_OFF, min(IIE,IEH)
        do k = KS, KE
 #ifdef DEBUG
           call CHECK( __LINE__, mflx_hi(k,i,j,XDIR) )
@@ -818,7 +856,7 @@ contains
 #endif
        ! at (x, v, z)
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       do j = JJS-1, JJE
+       do j = JJS-JFS_OFF, min(JJE,JEH)
        do i = IIS,   IIE
        do k = KS, KE
 #ifdef DEBUG
@@ -1174,7 +1212,7 @@ contains
        !--- update momentum(x)
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE
-       do i = IIS, IIE
+       do i = IIS, min(IIE,IEH)
        do k = KS, KE
 #ifdef DEBUG
           call CHECK( __LINE__, qflx_hi(k  ,i  ,j  ,ZDIR) )
@@ -1394,7 +1432,7 @@ contains
 
        !--- update momentum(y)
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       do j = JJS, JJE
+       do j = JJS, min(JJE,JEH)
        do i = IIS, IIE
        do k = KS, KE
 #ifdef DEBUG

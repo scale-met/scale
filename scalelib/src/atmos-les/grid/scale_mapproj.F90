@@ -154,6 +154,9 @@ contains
     MPRJ_M_lat       = UNDEF
     MPRJ_EC_lat      = UNDEF
 
+    MPRJ_basepoint_x = DOMAIN_CENTER_X
+    MPRJ_basepoint_y = DOMAIN_CENTER_Y
+
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_MAPPROJ,iostat=ierr)
@@ -167,8 +170,6 @@ contains
     if( IO_L ) write(IO_FID_LOG,nml=PARAM_MAPPROJ)
 
 
-    if( MPRJ_basepoint_x == UNDEF ) MPRJ_basepoint_x = DOMAIN_CENTER_X
-    if( MPRJ_basepoint_y == UNDEF ) MPRJ_basepoint_y = DOMAIN_CENTER_Y
     if( MPRJ_PS_lat      == UNDEF ) MPRJ_PS_lat      = MPRJ_basepoint_lat
     if( MPRJ_M_lat       == UNDEF ) MPRJ_M_lat       = MPRJ_basepoint_lat
     if( MPRJ_EC_lat      == UNDEF ) MPRJ_EC_lat      = MPRJ_basepoint_lat

@@ -81,6 +81,10 @@ module scale_atmos_dyn
 
   integer,  private              :: NUM_LBFLX               ! number of cell adjusting lateral boundary flux
 
+  logical, private :: BND_W
+  logical, private :: BND_E
+  logical, private :: BND_S
+  logical, private :: BND_N
   !-----------------------------------------------------------------------------
 contains
 
@@ -94,7 +98,11 @@ contains
        adjust_flux_cell, &
        lat               )
     use scale_process, only: &
-       PRC_MPIstop
+       PRC_MPIstop, &
+       PRC_HAS_E, &
+       PRC_HAS_W, &
+       PRC_HAS_N, &
+       PRC_HAS_S
     use scale_const, only: &
        OHM => CONST_OHM
     use scale_atmos_dyn_common, only: &
@@ -129,7 +137,14 @@ contains
        CORIOLI(:,:) = 0.0_RP
     endif
 
-    call ATMOS_DYN_rk_setup( DYN_TYPE )
+    BND_W = .not. PRC_HAS_W
+    BND_E = .not. PRC_HAS_E
+    BND_S = .not. PRC_HAS_S
+    BND_N = .not. PRC_HAS_N
+
+    call ATMOS_DYN_rk_setup( &
+         DYN_TYPE, &
+         BND_W, BND_E, BND_S, BND_N )
 
     return
   end subroutine ATMOS_DYN_setup
@@ -159,10 +174,10 @@ contains
        Rvap   => CONST_Rvap,  &
        CVdry  => CONST_CVdry
     use scale_process, only: &
-       PRC_HAS_E, &
        PRC_HAS_W, &
-       PRC_HAS_N, &
-       PRC_HAS_S
+       PRC_HAS_E, &
+       PRC_HAS_S, &
+       PRC_HAS_N
     use scale_comm, only: &
 #ifdef CHECK_MASS
        COMM_datatype, &
@@ -188,6 +203,7 @@ contains
     use scale_atmos_dyn_rk, only: &
        ATMOS_DYN_rk
     use scale_atmos_boundary, only: &
+       BND_POTT => ATMOS_BOUNDARY_POTT, &
        BND_QA, &
        BND_SMOOTHER_FACT => ATMOS_BOUNDARY_SMOOTHER_FACT
 #if defined( HIST_TEND ) || defined( CHECK_MASS )
@@ -320,19 +336,14 @@ contains
     real(RP) :: mflx_hi  (KA,IA,JA,3)     ! rho * vel(x,y,z) @ (u,v,w)-face high order
     real(RP) :: mflx_av  (KA,IA,JA,3)     ! rho * vel(x,y,z) @ (u,v,w)-face average
     real(RP) :: tflx_hi  (KA,IA,JA,3)     ! rho * theta * vel(x,y,z) @ (u,v,w)-face high order
-    real(RP) :: qflx_hi  (KA,IA,JA,3,QA)  ! rho * vel(x,y,z) * phi @ (u,v,w)-face high order
-    real(RP) :: qflx_lo  (KA,IA,JA,3,QA)  ! rho * vel(x,y,z) * phi,  monotone flux
-    real(RP) :: qflx_anti(KA,IA,JA,3,QA)  ! anti-diffusive flux
+    real(RP) :: qflx_hi  (KA,IA,JA,3)  ! rho * vel(x,y,z) * phi @ (u,v,w)-face high order
+    real(RP) :: qflx_lo  (KA,IA,JA,3)  ! rho * vel(x,y,z) * phi,  monotone flux
+    real(RP) :: qflx_anti(KA,IA,JA,3)  ! anti-diffusive flux
 
     ! lateral boundary flux
-    real(RP) :: mflx_lb(KA,IA,JA,3)
-    real(RP) :: tflx_lb(KA,IA,JA,3)
-    real(RP) :: qflx_lb(KA,IA,JA,3,QA)
 #ifdef CHECK_MASS
     real(RP) :: mflx_lb_horizontal(KA)
-    real(RP) :: allmflx_lb_horizontal(KA,IA,JA)
-    real(RP) :: mass_tmp (KA,IA,JA)
-    real(RP) :: mass_tmp2(KA,IA,JA)
+    real(RP) :: allmflx_lb_horizontal(KA)
     real(RP) :: mflx_lb_total
     real(RP) :: mass_total
     real(RP) :: mass_total2
@@ -377,8 +388,8 @@ contains
     mflx_hi(:,:,:,:) = UNDEF
     tflx_hi(:,:,:,:) = UNDEF
 
-    qflx_hi(:,:,:,:,:) = UNDEF
-    qflx_lo(:,:,:,:,:) = UNDEF
+    qflx_hi(:,:,:,:) = UNDEF
+    qflx_lo(:,:,:,:) = UNDEF
 #endif
 
     DENS00(:,:,:) = DENS(:,:,:)
@@ -581,11 +592,11 @@ contains
        call COMM_vars8( MOMX_t(:,:,:), 3 )
        call COMM_vars8( MOMY_t(:,:,:), 4 )
        call COMM_vars8( RHOT_t(:,:,:), 5 )
-       call COMM_wait ( DENS_t(:,:,:), 1 )
-       call COMM_wait ( MOMZ_t(:,:,:), 2 )
-       call COMM_wait ( MOMX_t(:,:,:), 3 )
-       call COMM_wait ( MOMY_t(:,:,:), 4 )
-       call COMM_wait ( RHOT_t(:,:,:), 5 )
+       call COMM_wait ( DENS_t(:,:,:), 1, .false. )
+       call COMM_wait ( MOMZ_t(:,:,:), 2, .false. )
+       call COMM_wait ( MOMX_t(:,:,:), 3, .false. )
+       call COMM_wait ( MOMY_t(:,:,:), 4, .false. )
+       call COMM_wait ( RHOT_t(:,:,:), 5, .false. )
 
        dt = real(DTSEC_ATMOS_DYN,kind=RP)
 
@@ -612,6 +623,51 @@ contains
        MOMY0(:,:,:) = MOMY(:,:,:)
        RHOT0(:,:,:) = RHOT(:,:,:)
 
+       if ( BND_W ) then
+          !$omp parallel do private(j,k) OMP_SCHEDULE_ collapse(2)
+          do j = JS, JE
+          do k = KS, KE
+             mflx_hi(k,IS-1,j,XDIR) = GSQRT(k,IS-1,j,I_UYZ) * MOMX(k,IS-1,j)
+             tflx_hi(k,IS-1,j,XDIR) = mflx_hi(k,IS-1,j,XDIR) &
+                  * ( FACT_N * ( BND_POTT(k,IS  ,j)+BND_POTT(k,IS-1,j) ) &
+                    + FACT_F * ( BND_POTT(k,IS+1,j)+BND_POTT(k,IS-2,j) ) )
+          enddo
+          enddo
+       end if
+       if ( BND_E ) then
+          !$omp parallel do private(j,k) OMP_SCHEDULE_ collapse(2)
+          do j = JS, JE
+          do k = KS, KE
+             mflx_hi(k,IE,j,XDIR) = GSQRT(k,IE,j,I_UYZ) * MOMX(k,IE,j)
+             tflx_hi(k,IE,j,XDIR) = mflx_hi(k,IE,j,XDIR) &
+                  * ( FACT_N * ( BND_POTT(k,IE+1,j)+BND_POTT(k,IE  ,j) ) &
+                    + FACT_F * ( BND_POTT(k,IE+2,j)+BND_POTT(k,IE-1,j) ) )
+          enddo
+          enddo
+       end if
+       if ( BND_S ) then
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+          do i = IS, IE
+          do k = KS, KE
+             mflx_hi(k,i,JS-1,YDIR) = GSQRT(k,i,JS-1,I_XVZ) * MOMY0(k,i,JS-1)
+             tflx_hi(k,i,JS-1,YDIR) = mflx_hi(k,i,JS-1,YDIR) &
+                  * ( FACT_N * ( BND_POTT(k,i,JS  )+BND_POTT(k,i,JS-1) ) &
+                    + FACT_F * ( BND_POTT(k,i,JS+1)+BND_POTT(k,i,JS-2) ) )
+          enddo
+          enddo
+       end if
+       if ( BND_N ) then
+          !$omp parallel do private(i,k) OMP_SCHEDULE_ collapse(2)
+          do i = IS, IE
+          do k = KS, KE
+             mflx_hi(k,i,JE,YDIR) = GSQRT(k,i,JE,I_XVZ) * MOMY0(k,i,JE)
+             tflx_hi(k,i,JE,YDIR) = mflx_hi(k,i,JE,YDIR) &
+                  * ( FACT_N * ( BND_POTT(k,i,JE+1)+BND_POTT(k,i,JE  ) ) &
+                    + FACT_F * ( BND_POTT(k,i,JE+2)+BND_POTT(k,i,JE-1) ) )
+          enddo
+          enddo
+       end if
+
        !##### RK1 : PROG0,PROG->PROG_RK1 #####
 
        dtrk = real(DTSEC_ATMOS_DYN,kind=RP) / 3.0_RP
@@ -629,18 +685,88 @@ contains
                           RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,               & ! (in)
                           PHI, GSQRT, J13G, J23G, J33G, MAPF,               & ! (in)
                           REF_pres, REF_dens,                               & ! (in)
+                          BND_W, BND_E, BND_S, BND_N,                       & ! (in)
                           dtrk, dt                                          ) ! (in)
+
+       if ( BND_W ) then
+          !$omp parallel do private(j,k) OMP_SCHEDULE_ collapse(2)
+          do j = 1, JA
+          do i = 1, IS-1
+          do k = KS, KE
+             DENS_RK1(k,i,j) = DENS0(k,i,j)
+             MOMZ_RK1(k,i,j) = MOMZ0(k,i,j)
+             MOMX_RK1(k,i,j) = MOMX0(k,i,j)
+             MOMY_RK1(k,i,j) = MOMY0(k,i,j)
+             RHOT_RK1(k,i,j) = RHOT0(k,i,j)
+          enddo
+          enddo
+          enddo
+       end if
+       if ( BND_E ) then
+          !$omp parallel do private(j,k) OMP_SCHEDULE_ collapse(2)
+          do j = 1, JA
+          do i = IE+1, IA
+          do k = KS, KE
+             DENS_RK1(k,i,j) = DENS0(k,i,j)
+             MOMZ_RK1(k,i,j) = MOMZ0(k,i,j)
+             MOMX_RK1(k,i,j) = MOMX0(k,i,j)
+             MOMY_RK1(k,i,j) = MOMY0(k,i,j)
+             RHOT_RK1(k,i,j) = RHOT0(k,i,j)
+          enddo
+          enddo
+          enddo
+          !$omp parallel do private(j,k) OMP_SCHEDULE_ collapse(2)
+          do j = 1, JA
+          do k = KS, KE
+             MOMX_RK1(k,IE,j) = MOMX0(k,IE,j)
+          enddo
+          enddo
+       end if
+       if ( BND_S ) then
+          !$omp parallel do private(j,k) OMP_SCHEDULE_ collapse(2)
+          do j = 1, JS-1
+          do i = 1, IA
+          do k = KS, KE
+             DENS_RK1(k,i,j) = DENS0(k,i,j)
+             MOMZ_RK1(k,i,j) = MOMZ0(k,i,j)
+             MOMX_RK1(k,i,j) = MOMX0(k,i,j)
+             MOMY_RK1(k,i,j) = MOMY0(k,i,j)
+             RHOT_RK1(k,i,j) = RHOT0(k,i,j)
+          enddo
+          enddo
+          enddo
+       end if
+       if ( BND_N ) then
+          !$omp parallel do private(j,k) OMP_SCHEDULE_ collapse(2)
+          do j = JE+1, JA
+          do i = 1, IA
+          do k = KS, KE
+             DENS_RK1(k,i,j) = DENS0(k,i,j)
+             MOMZ_RK1(k,i,j) = MOMZ0(k,i,j)
+             MOMX_RK1(k,i,j) = MOMX0(k,i,j)
+             MOMY_RK1(k,i,j) = MOMY0(k,i,j)
+             RHOT_RK1(k,i,j) = RHOT0(k,i,j)
+          enddo
+          enddo
+          enddo
+          !$omp parallel do private(i,k) OMP_SCHEDULE_ collapse(2)
+          do i = 1, IA
+          do k = KS, KE
+             MOMY_RK1(k,i,JE) = MOMY0(k,i,JE)
+          enddo
+          enddo
+       end if
 
        call COMM_vars8( DENS_RK1(:,:,:), 1 )
        call COMM_vars8( MOMZ_RK1(:,:,:), 2 )
        call COMM_vars8( MOMX_RK1(:,:,:), 3 )
        call COMM_vars8( MOMY_RK1(:,:,:), 4 )
        call COMM_vars8( RHOT_RK1(:,:,:), 5 )
-       call COMM_wait ( DENS_RK1(:,:,:), 1 )
-       call COMM_wait ( MOMZ_RK1(:,:,:), 2 )
-       call COMM_wait ( MOMX_RK1(:,:,:), 3 )
-       call COMM_wait ( MOMY_RK1(:,:,:), 4 )
-       call COMM_wait ( RHOT_RK1(:,:,:), 5 )
+       call COMM_wait ( DENS_RK1(:,:,:), 1, .false. )
+       call COMM_wait ( MOMZ_RK1(:,:,:), 2, .false. )
+       call COMM_wait ( MOMX_RK1(:,:,:), 3, .false. )
+       call COMM_wait ( MOMY_RK1(:,:,:), 4, .false. )
+       call COMM_wait ( RHOT_RK1(:,:,:), 5, .false. )
 
        !##### RK2 : PROG0,PROG_RK2->PROG_RK3 #####
 
@@ -659,18 +785,88 @@ contains
                           RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,               & ! (in)
                           PHI, GSQRT, J13G, J23G, J33G, MAPF,               & ! (in)
                           REF_pres, REF_dens,                               & ! (in)
+                          BND_W, BND_E, BND_S, BND_N,                       & ! (in)
                           dtrk, dt                                          ) ! (in)
+
+       if ( BND_W ) then
+          !$omp parallel do private(j,k) OMP_SCHEDULE_ collapse(2)
+          do j = 1, JA
+          do i = 1, IS-1
+          do k = KS, KE
+             DENS_RK2(k,i,j) = DENS0(k,i,j)
+             MOMZ_RK2(k,i,j) = MOMZ0(k,i,j)
+             MOMX_RK2(k,i,j) = MOMX0(k,i,j)
+             MOMY_RK2(k,i,j) = MOMY0(k,i,j)
+             RHOT_RK2(k,i,j) = RHOT0(k,i,j)
+          enddo
+          enddo
+          enddo
+       end if
+       if ( BND_E ) then
+          !$omp parallel do private(j,k) OMP_SCHEDULE_ collapse(2)
+          do j = 1, JA
+          do i = IE+1, IA
+          do k = KS, KE
+             DENS_RK2(k,i,j) = DENS0(k,i,j)
+             MOMZ_RK2(k,i,j) = MOMZ0(k,i,j)
+             MOMX_RK2(k,i,j) = MOMX0(k,i,j)
+             MOMY_RK2(k,i,j) = MOMY0(k,i,j)
+             RHOT_RK2(k,i,j) = RHOT0(k,i,j)
+          enddo
+          enddo
+          enddo
+          !$omp parallel do private(j,k) OMP_SCHEDULE_ collapse(2)
+          do j = 1, JA
+          do k = KS, KE
+             MOMX_RK2(k,IE,j) = MOMX0(k,IE,j)
+          enddo
+          enddo
+       end if
+       if ( BND_S ) then
+          !$omp parallel do private(j,k) OMP_SCHEDULE_ collapse(2)
+          do j = 1, JS-1
+          do i = 1, IA
+          do k = KS, KE
+             DENS_RK2(k,i,j) = DENS0(k,i,j)
+             MOMZ_RK2(k,i,j) = MOMZ0(k,i,j)
+             MOMX_RK2(k,i,j) = MOMX0(k,i,j)
+             MOMY_RK2(k,i,j) = MOMY0(k,i,j)
+             RHOT_RK2(k,i,j) = RHOT0(k,i,j)
+          enddo
+          enddo
+          enddo
+       end if
+       if ( BND_N ) then
+          !$omp parallel do private(j,k) OMP_SCHEDULE_ collapse(2)
+          do j = JE+1, JA
+          do i = 1, IA
+          do k = KS, KE
+             DENS_RK2(k,i,j) = DENS0(k,i,j)
+             MOMZ_RK2(k,i,j) = MOMZ0(k,i,j)
+             MOMX_RK2(k,i,j) = MOMX0(k,i,j)
+             MOMY_RK2(k,i,j) = MOMY0(k,i,j)
+             RHOT_RK2(k,i,j) = RHOT0(k,i,j)
+          enddo
+          enddo
+          enddo
+          !$omp parallel do private(i,k) OMP_SCHEDULE_ collapse(2)
+          do i = 1, IA
+          do k = KS, KE
+             MOMY_RK2(k,i,JE) = MOMY0(k,i,JE)
+          enddo
+          enddo
+       end if
 
        call COMM_vars8( DENS_RK2(:,:,:), 1 )
        call COMM_vars8( MOMZ_RK2(:,:,:), 2 )
        call COMM_vars8( MOMX_RK2(:,:,:), 3 )
        call COMM_vars8( MOMY_RK2(:,:,:), 4 )
        call COMM_vars8( RHOT_RK2(:,:,:), 5 )
-       call COMM_wait ( DENS_RK2(:,:,:), 1 )
-       call COMM_wait ( MOMZ_RK2(:,:,:), 2 )
-       call COMM_wait ( MOMX_RK2(:,:,:), 3 )
-       call COMM_wait ( MOMY_RK2(:,:,:), 4 )
-       call COMM_wait ( RHOT_RK2(:,:,:), 5 )
+       call COMM_wait ( DENS_RK2(:,:,:), 1, .false. )
+       call COMM_wait ( MOMZ_RK2(:,:,:), 2, .false. )
+       call COMM_wait ( MOMX_RK2(:,:,:), 3, .false. )
+       call COMM_wait ( MOMY_RK2(:,:,:), 4, .false. )
+       call COMM_wait ( RHOT_RK2(:,:,:), 5, .false. )
 
        !##### RK3 : PROG0,PROG_RK3->PROG #####
 
@@ -689,205 +885,69 @@ contains
                           RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,               & ! (in)
                           PHI, GSQRT, J13G, J23G, J33G, MAPF,               & ! (in)
                           REF_pres, REF_dens,                               & ! (in)
+                          BND_W, BND_E, BND_S, BND_N,                       & ! (in)
                           dtrk, dt                                          ) ! (in)
 
-       ! initialize lateral boundary flux
-       mflx_lb(:,:,:,:) = 0.0_RP
-       tflx_lb(:,:,:,:) = 0.0_RP
-
-       ! adjust lateral boundary flux
-       if ( .not. PRC_HAS_W ) then ! for western boundary
-          call adjust_boundary_flux_dyn( &
-               DENS, RHOT, mflx_lb, tflx_lb, & ! (inout)
-               mflx_hi, tflx_hi, GSQRT, MAPF, dt, & ! (in)
-               RCDX, RCDY, & ! (in)
-               DAMP_DENS, DAMP_VELX, DAMP_VELY, DAMP_POTT, & ! (in)
-               -1, 0, 1, 0, & ! (in)
-               IS+IHALO+NUM_LBFLX-1, IS+IHALO, JS, JE ) ! (in)
-       end if
-       if ( .not. PRC_HAS_E ) then ! for eastern boundary
-          call adjust_boundary_flux_dyn( &
-               DENS, RHOT, mflx_lb, tflx_lb, & ! (inout)
-               mflx_hi, tflx_hi, GSQRT, MAPF, dt, & ! (in)
-               RCDX, RCDY, & ! (in)
-               DAMP_DENS, DAMP_VELX, DAMP_VELY, DAMP_POTT, & ! (in)
-               0, 0, -1, 0, & ! (in)
-               IE-IHALO-NUM_LBFLX+1, IE-IHALO, JS, JE ) ! (in)
-       end if
-       if ( .not. PRC_HAS_S ) then ! for sourthern boundary
-          call adjust_boundary_flux_dyn( &
-               DENS, RHOT, mflx_lb, tflx_lb, & ! (inout)
-               mflx_hi, tflx_hi, GSQRT, MAPF, dt, & ! (in)
-               RCDX, RCDY, & ! (in)
-               DAMP_DENS, DAMP_VELX, DAMP_VELY, DAMP_POTT, & ! (in)
-               0, -1, 0, 1, & ! (in)
-               IS, IE, JS+JHALO+NUM_LBFLX-1, JS+JHALO ) ! (in)
-       end if
-       if ( .not. PRC_HAS_N ) then ! for northern boundary
-          call adjust_boundary_flux_dyn( &
-               DENS, RHOT, mflx_lb, tflx_lb, & ! (inout)
-               mflx_hi, tflx_hi, GSQRT, MAPF, dt, & ! (in)
-               RCDX, RCDY, & ! (in)
-               DAMP_DENS, DAMP_VELX, DAMP_VELY, DAMP_POTT, & ! (in)
-               0, 0, 0, -1, & ! (in)
-               IS, IE, JE-JHALO-NUM_LBFLX+1, JE-JHALO ) ! (in)
-       end if
-
 #ifdef CHECK_MASS
-       call HIST_in(mflx_lb(:,:,:,ZDIR), 'MOMZ_lb', 'momentum flux of z-direction from lateral boundary', &
+       call HIST_in(mflx_hi(:,:,:,ZDIR), 'MFLXZ', 'momentum flux of z-direction', &
                                          'kg/m2/s', dt, zdim='half'                                       )
-       call HIST_in(mflx_lb(:,:,:,XDIR), 'MOMX_lb', 'momentum flux of x-direction from lateral boundary', &
+       call HIST_in(mflx_hi(:,:,:,XDIR), 'MFLXX', 'momentum flux of x-direction', &
                                          'kg/m2/s', dt, xdim='half'                                       )
-       call HIST_in(mflx_lb(:,:,:,YDIR), 'MOMY_lb', 'momentum flux of y-direction from lateral boundary', &
+       call HIST_in(mflx_hi(:,:,:,YDIR), 'MFLXY', 'momentum flux of y-direction', &
                                          'kg/m2/s', dt, ydim='half'                                       )
 
-       call HIST_in(tflx_lb(:,:,:,ZDIR), 'RHTZ_lb', 'potential temperature flux of z-direction from lateral boundary', &
+       call HIST_in(tflx_hi(:,:,:,ZDIR), 'TFLXZ', 'potential temperature flux of z-direction', &
                                          'K*kg/m2/s', dt, zdim='half'                                                  )
-       call HIST_in(tflx_lb(:,:,:,XDIR), 'RHTX_lb', 'potential temperature flux of x-direction from lateral boundary', &
+       call HIST_in(tflx_hi(:,:,:,XDIR), 'TFLXX', 'potential temperature flux of x-direction', &
                                          'K*kg/m2/s', dt, xdim='half'                                                  )
-       call HIST_in(tflx_lb(:,:,:,YDIR), 'RHTY_lb', 'potential temperature flux of y-direction from lateral boundary', &
+       call HIST_in(tflx_hi(:,:,:,YDIR), 'TFLXY', 'potential temperature flux of y-direction', &
                                          'K*kg/m2/s', dt, ydim='half'                                                  )
-#endif
 
-       ! set boundary
-       if ( .not. PRC_HAS_W ) then ! for western boundary
-          call set_boundary_dyn( &
-               DENS, MOMZ, MOMX, MOMY, RHOT, & ! (inout)
-               DAMP_DENS, DAMP_VELZ, DAMP_VELX, DAMP_VELY, DAMP_POTT, & ! (in)
-               DAMP_alpha_DENS, DAMP_alpha_VELZ, DAMP_alpha_VELX, DAMP_alpha_VELY, DAMP_alpha_POTT, & ! (in)
-               DAMP_VELX, & ! (in)
-               -1, 0, 1, 0, & ! (in)
-               IS+IHALO-1, IS, JS, JE ) ! (in)
-       end if
-       if ( .not. PRC_HAS_E ) then ! for eastern boundary
-          call set_boundary_dyn( &
-               DENS, MOMZ, MOMX, MOMY, RHOT, & ! (inout)
-               DAMP_DENS, DAMP_VELZ, DAMP_VELX, DAMP_VELY, DAMP_POTT, & ! (in)
-               DAMP_alpha_DENS, DAMP_alpha_VELZ, DAMP_alpha_VELX, DAMP_alpha_VELY, DAMP_alpha_POTT, & ! (in)
-               DAMP_VELX, & ! (in)
-               0, 0, -1, 0, & ! (in)
-               IE-IHALO+1, IE, JS, JE ) ! (in)
-       end if
-       if ( .not. PRC_HAS_S ) then ! for sourthern boundary
-          call set_boundary_dyn( &
-               DENS, MOMZ, MOMX, MOMY, RHOT, & ! (inout)
-               DAMP_DENS, DAMP_VELZ, DAMP_VELX, DAMP_VELY, DAMP_POTT, & ! (in)
-               DAMP_alpha_DENS, DAMP_alpha_VELZ, DAMP_alpha_VELX, DAMP_alpha_VELY, DAMP_alpha_POTT, & ! (in)
-               DAMP_VELY, & ! (in)
-               0, -1, 0, 1, & ! (in)
-               IS, IE, JS+JHALO-1, JS ) ! (in)
-       end if
-       if ( .not. PRC_HAS_N ) then ! for northern boundary
-          call set_boundary_dyn( &
-               DENS, MOMZ, MOMX, MOMY, RHOT, & ! (inout)
-               DAMP_DENS, DAMP_VELZ, DAMP_VELX, DAMP_VELY, DAMP_POTT, & ! (in)
-               DAMP_alpha_DENS, DAMP_alpha_VELZ, DAMP_alpha_VELX, DAMP_alpha_VELY, DAMP_alpha_POTT, & ! (in)
-               DAMP_VELY, & ! (in)
-               0, 0, 0, -1, & ! (in)
-               IS, IE, JE-JHALO+1, JE ) ! (in)
-       end if
-
-#ifdef CHECK_MASS
-       ! check total mass in the inner region
-       do j = JS, JE
-       do i = IS, IE
-       do k = KS, KE  
-          mass_tmp (k,i,j) = DENS     (k,i,j) * vol(k,i,j)
-          mass_tmp2(k,i,j) = DAMP_DENS(k,i,j) * vol(k,i,j)
-       end do
-       end do
-       end do
+       mflx_lb_total            = 0.0_RP
+       mflx_lb_horizontal(:)    = 0.0_RP
+       allmflx_lb_horizontal(:) = 0.0_RP
 
        if ( .not. PRC_HAS_W ) then ! for western boundary
-          do j = JS, JE
-          do i = IS, IS+1
-          do k = KS, KE
-             mflx_lb(k,i,j,YDIR) = 0.0_RP
-             mass_tmp (k,i,j) = 0.0_RP
-             mass_tmp2(k,i,j) = 0.0_RP
-          end do
-          end do
-          end do
-       end if
-       if ( .not. PRC_HAS_E ) then ! for eastern boundary
-          do j = JS, JE
-          do i = IE-1, IE
-          do k = KS, KE
-             mflx_lb(k,i,j,YDIR) = 0.0_RP
-             mass_tmp (k,i,j) = 0.0_RP
-             mass_tmp2(k,i,j) = 0.0_RP
-          end do
-          end do
-          end do
-       end if
-       if ( .not. PRC_HAS_S ) then ! for sourthern boundary
-          do j = JS, JS+1
-          do i = IS, IE
-          do k = KS, KE
-             mflx_lb(k,i,j,XDIR) = 0.0_RP
-             mass_tmp (k,i,j) = 0.0_RP
-             mass_tmp2(k,i,j) = 0.0_RP
-          end do
-          end do
-          end do
-       end if
-       if ( .not. PRC_HAS_N ) then ! for northern boundary
-          do j = JE-1, JE
-          do i = IS, IE
-          do k = KS, KE
-             mflx_lb(k,i,j,XDIR) = 0.0_RP
-             mass_tmp (k,i,j) = 0.0_RP
-             mass_tmp2(k,i,j) = 0.0_RP
-          end do
-          end do
-          end do
-       end if
-
-       mflx_lb_total                = 0.0_RP
-       mflx_lb_horizontal(:)        = 0.0_RP
-       allmflx_lb_horizontal(:,:,:) = 0.0_RP
-
-       if ( .not. PRC_HAS_W ) then ! for western boundary
-          i = IS+2
+          i = IS
           do j = JS, JE
           do k = KS, KE
-            mflx_lb_total = mflx_lb_total + mflx_lb(k,i-1,j,XDIR) * RCDX(i) * vol(k,i,j) &
+            mflx_lb_total = mflx_lb_total + mflx_hi(k,i-1,j,XDIR) * RCDX(i) * vol(k,i,j) &
                                           * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) * dt
-            mflx_lb_horizontal(k) = mflx_lb_horizontal(k) + mflx_lb(k,i-1,j,XDIR) * RCDX(i) * vol(k,i,j) &
+            mflx_lb_horizontal(k) = mflx_lb_horizontal(k) + mflx_hi(k,i-1,j,XDIR) * RCDX(i) * vol(k,i,j) &
                                                           * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) * dt
 
           end do
           end do
        end if
        if ( .not. PRC_HAS_E ) then ! for eastern boundary
-          i = IE-2
+          i = IE
           do j = JS, JE
           do k = KS, KE
-            mflx_lb_total = mflx_lb_total - mflx_lb(k,i,j,XDIR) * RCDX(i) * vol(k,i,j) &
+            mflx_lb_total = mflx_lb_total - mflx_hi(k,i,j,XDIR) * RCDX(i) * vol(k,i,j) &
                                           * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) * dt
-            mflx_lb_horizontal(k) = mflx_lb_horizontal(k) - mflx_lb(k,i,j,XDIR) * RCDX(i) * vol(k,i,j) &
+            mflx_lb_horizontal(k) = mflx_lb_horizontal(k) - mflx_hi(k,i,j,XDIR) * RCDX(i) * vol(k,i,j) &
                                                           * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) * dt
           end do
           end do
        end if
        if ( .not. PRC_HAS_S ) then ! for sourthern boundary
-          j = JS+2
+          j = JS
           do i = IS, IE
           do k = KS, KE
-            mflx_lb_total = mflx_lb_total + mflx_lb(k,i,j-1,YDIR) * RCDY(j) * vol(k,i,j) &
+            mflx_lb_total = mflx_lb_total + mflx_hi(k,i,j-1,YDIR) * RCDY(j) * vol(k,i,j) &
                                           * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) * dt
-            mflx_lb_horizontal(k) = mflx_lb_horizontal(k) + mflx_lb(k,i,j-1,YDIR) * RCDY(j) * vol(k,i,j) &
+            mflx_lb_horizontal(k) = mflx_lb_horizontal(k) + mflx_hi(k,i,j-1,YDIR) * RCDY(j) * vol(k,i,j) &
                                                           * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) * dt
           end do
           end do
        end if
        if ( .not. PRC_HAS_N ) then ! for northern boundary
-          j = JE-2
+          j = JE
           do i = IS, IE
           do k = KS, KE
-            mflx_lb_total = mflx_lb_total - mflx_lb(k,i,j,YDIR) * RCDY(j) * vol(k,i,j) &
+            mflx_lb_total = mflx_lb_total - mflx_hi(k,i,j,YDIR) * RCDY(j) * vol(k,i,j) &
                                           * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) * dt
-            mflx_lb_horizontal(k) = mflx_lb_horizontal(k) - mflx_lb(k,i,j,YDIR) * RCDY(j) * vol(k,i,j) &
+            mflx_lb_horizontal(k) = mflx_lb_horizontal(k) - mflx_hi(k,i,j,YDIR) * RCDY(j) * vol(k,i,j) &
                                                           * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) * dt
           end do
           end do
@@ -896,11 +956,12 @@ contains
        mass_total  = 0.0_RP
        mass_total2 = 0.0_RP
 
+       ! check total mass in the inner region
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
-          mass_total  = mass_total  + mass_tmp (k,i,j)
-          mass_total2 = mass_total2 + mass_tmp2(k,i,j)
+          mass_total  = mass_total  + DENS     (k,i,j) * vol(k,i,j)
+          mass_total2 = mass_total2 + DAMP_DENS(k,i,j) * vol(k,i,j)
        end do
        end do
        end do
@@ -932,25 +993,14 @@ contains
                            ierr                  )
        if( IO_L ) write(IO_FID_LOG,'(A,1x,i1,1x,2PE24.17)') 'total mass2  :', step, allmass_total2
 
-       i = IS; j = JS ! dummy
-       do k = KS, KE
-          call MPI_Allreduce( mflx_lb_horizontal(k),        &
-                              allmflx_lb_horizontal(k,i,j), &
-                              1,                            &
-                              COMM_datatype,                &
-                              MPI_SUM,                      &
-                              MPI_COMM_WORLD,               &
-                              ierr                          )
-       end do
-       do j = JS+1, JE
-       do i = IS+1, IE
-       do k = KS, KE
-          allmflx_lb_horizontal(k,i,j) = allmflx_lb_horizontal(k,IS,JS)
-       end do
-       end do
-       end do
-
-       call HIST_in(allmflx_lb_horizontal(:,:,:), 'ALLMOM_lb_hz', 'horizontally total momentum flux from lateral boundary', &
+       call MPI_Allreduce( mflx_lb_horizontal(KS:KE),    &
+                           allmflx_lb_horizontal(KS:KE), &
+                           KMAX,                         &
+                           COMM_datatype,                &
+                           MPI_SUM,                      &
+                           MPI_COMM_WORLD,               &
+                           ierr                          )
+       call HIST_in(allmflx_lb_horizontal(:), 'ALLMOM_lb_hz', 'horizontally total momentum flux from lateral boundary', &
                                                   'kg/m2/s', dt )
 #endif
 
@@ -974,11 +1024,11 @@ contains
        call COMM_vars8( MOMX(:,:,:), 3 )
        call COMM_vars8( MOMY(:,:,:), 4 )
        call COMM_vars8( RHOT(:,:,:), 5 )
-       call COMM_wait ( DENS(:,:,:), 1 )
-       call COMM_wait ( MOMZ(:,:,:), 2 )
-       call COMM_wait ( MOMX(:,:,:), 3 )
-       call COMM_wait ( MOMY(:,:,:), 4 )
-       call COMM_wait ( RHOT(:,:,:), 5 )
+       call COMM_wait ( DENS(:,:,:), 1, .false. )
+       call COMM_wait ( MOMZ(:,:,:), 2, .false. )
+       call COMM_wait ( MOMX(:,:,:), 3, .false. )
+       call COMM_wait ( MOMY(:,:,:), 4, .false. )
+       call COMM_wait ( RHOT(:,:,:), 5, .false. )
 
        if ( USE_AVERAGE ) then
           DENS_av(:,:,:) = DENS_av(:,:,:) + DENS(:,:,:)
@@ -1002,7 +1052,7 @@ contains
           end do
 
           call COMM_vars8( QTRC(:,:,:,iq), 6 )
-          call COMM_wait ( QTRC(:,:,:,iq), 6 )
+          call COMM_wait ( QTRC(:,:,:,iq), 6, .false. )
 
           ! TODO: mass and energy conservation should be considered
        end do
@@ -1029,9 +1079,9 @@ contains
     call COMM_vars8( mflx_hi(:,:,:,ZDIR), 1 )
     call COMM_vars8( mflx_hi(:,:,:,XDIR), 2 )
     call COMM_vars8( mflx_hi(:,:,:,YDIR), 3 )
-    call COMM_wait ( mflx_hi(:,:,:,ZDIR), 1 )
-    call COMM_wait ( mflx_hi(:,:,:,XDIR), 2 )
-    call COMM_wait ( mflx_hi(:,:,:,YDIR), 3 )
+    call COMM_wait ( mflx_hi(:,:,:,ZDIR), 1, .false. )
+    call COMM_wait ( mflx_hi(:,:,:,XDIR), 2, .false. )
+    call COMM_wait ( mflx_hi(:,:,:,YDIR), 3, .false. )
 
     if ( USE_AVERAGE ) then
        QTRC_av(:,:,:,:) = 0.0_RP
@@ -1088,7 +1138,7 @@ contains
        enddo
 
        call COMM_vars8( RHOQ_t(:,:,:), 5+iq )
-       call COMM_wait ( RHOQ_t(:,:,:), 5+iq )
+       call COMM_wait ( RHOQ_t(:,:,:), 5+iq, .false. )
 
        if ( ND_COEF_Q == 0.0_RP ) then
           num_diff_q(:,:,:,:) = 0.0_RP
@@ -1100,6 +1150,48 @@ contains
                                            ND_COEF_Q, ND_ORDER, ND_SFC_FACT, ND_USE_RS ) ! [IN]
        endif
 
+       if ( BND_W ) then
+          !$omp parallel do private(j,k) OMP_SCHEDULE_ collapse(2)
+          do j = JS, JE
+          do k = KS, KE
+             qflx_hi(k,IS-1,j,XDIR) = mflx_hi(k,IS-1,j,XDIR) &
+                  * ( FACT_N * ( DAMP_QTRC(k,IS  ,j,iq)+DAMP_QTRC(k,IS-1,j,iq) ) &
+                    + FACT_F * ( DAMP_QTRC(k,IS+1,j,iq)+DAMP_QTRC(k,IS-2,j,iq) ) )
+          enddo
+          enddo
+       end if
+       if ( BND_E ) then
+          !$omp parallel do private(j,k) OMP_SCHEDULE_ collapse(2)
+          do j = JS, JE
+          do k = KS, KE
+             qflx_hi(k,IE,j,XDIR) = mflx_hi(k,IE,j,XDIR) &
+                  * ( FACT_N * ( DAMP_QTRC(k,IE+1,j,iq)+DAMP_QTRC(k,IE  ,j,iq) ) &
+                    + FACT_F * ( DAMP_QTRC(k,IE+2,j,iq)+DAMP_QTRC(k,IE-1,j,iq) ) )
+          enddo
+          enddo
+       end if
+       if ( BND_S ) then
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+          do i = IS, IE
+          do k = KS, KE
+             mflx_hi(k,i,JS-1,YDIR) = GSQRT(k,i,JS-1,I_XVZ) * MOMY0(k,i,JS-1)
+             tflx_hi(k,i,JS-1,YDIR) = mflx_hi(k,i,JS-1,YDIR) &
+                  * ( FACT_N * ( DAMP_QTRC(k,i,JS  ,iq)+DAMP_QTRC(k,i,JS-1,iq) ) &
+                    + FACT_F * ( DAMP_QTRC(k,i,JS+1,iq)+DAMP_QTRC(k,i,JS-2,iq) ) )
+          enddo
+          enddo
+       end if
+       if ( BND_N ) then
+          !$omp parallel do private(i,k) OMP_SCHEDULE_ collapse(2)
+          do i = IS, IE
+          do k = KS, KE
+             qflx_hi(k,i,JE,YDIR) = mflx_hi(k,i,JE,YDIR) &
+                  * ( FACT_N * ( DAMP_QTRC(k,i,JE+1,iq)+DAMP_QTRC(k,i,JE  ,iq) ) &
+                    + FACT_F * ( DAMP_QTRC(k,i,JE+2,iq)+DAMP_QTRC(k,i,JE-1,iq) ) )
+          enddo
+          enddo
+       end if
+
        do JJS = JS, JE, JBLOCK
        JJE = JJS+JBLOCK-1
        do IIS = IS, IE, IBLOCK
@@ -1109,10 +1201,10 @@ contains
           do j = JJS-1, JJE+1
           do i = IIS-1, IIE+1
           do k = KS+1, KE-2
-             qflx_lo(k,i,j,ZDIR,iq) = 0.5_RP * (     mflx_hi(k,i,j,ZDIR)  * ( QTRC(k+1,i,j,iq)+QTRC(k,i,j,iq) ) &
+             qflx_lo(k,i,j,ZDIR) = 0.5_RP * (     mflx_hi(k,i,j,ZDIR)  * ( QTRC(k+1,i,j,iq)+QTRC(k,i,j,iq) ) &
                                                - abs(mflx_hi(k,i,j,ZDIR)) * ( QTRC(k+1,i,j,iq)-QTRC(k,i,j,iq) ) )
 
-             qflx_hi(k,i,j,ZDIR,iq) = mflx_hi(k,i,j,ZDIR) * ( FACT_N * ( QTRC(k+1,i,j,iq)+QTRC(k  ,i,j,iq) ) &
+             qflx_hi(k,i,j,ZDIR) = mflx_hi(k,i,j,ZDIR) * ( FACT_N * ( QTRC(k+1,i,j,iq)+QTRC(k  ,i,j,iq) ) &
                                                             + FACT_F * ( QTRC(k+2,i,j,iq)+QTRC(k-1,i,j,iq) ) ) &
                                     + GSQRT(k,i,j,I_XYW) * num_diff_q(k,i,j,ZDIR)
           enddo
@@ -1122,12 +1214,12 @@ contains
           !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           do j = JJS-1, JJE+1
           do i = IIS-1, IIE+1
-             qflx_lo(KS-1,i,j,ZDIR,iq) = 0.0_RP
-             qflx_lo(KS  ,i,j,ZDIR,iq) = 0.5_RP * (     mflx_hi(KS  ,i,j,ZDIR)  * ( QTRC(KS+1,i,j,iq)+QTRC(KS,i,j,iq) ) &
+             qflx_lo(KS-1,i,j,ZDIR) = 0.0_RP
+             qflx_lo(KS  ,i,j,ZDIR) = 0.5_RP * (     mflx_hi(KS  ,i,j,ZDIR)  * ( QTRC(KS+1,i,j,iq)+QTRC(KS,i,j,iq) ) &
                                                   - abs(mflx_hi(KS  ,i,j,ZDIR)) * ( QTRC(KS+1,i,j,iq)-QTRC(KS,i,j,iq) ) )
 
-             qflx_hi(KS-1,i,j,ZDIR,iq) = 0.0_RP
-             qflx_hi(KS  ,i,j,ZDIR,iq) = 0.5_RP * mflx_hi(KS  ,i,j,ZDIR) * ( QTRC(KS+1,i,j,iq)+QTRC(KS,i,j,iq) ) &
+             qflx_hi(KS-1,i,j,ZDIR) = 0.0_RP
+             qflx_hi(KS  ,i,j,ZDIR) = 0.5_RP * mflx_hi(KS  ,i,j,ZDIR) * ( QTRC(KS+1,i,j,iq)+QTRC(KS,i,j,iq) ) &
                                        + GSQRT(k,i,j,I_XYW) * num_diff_q(KS,i,j,ZDIR)
           enddo
           enddo
@@ -1135,13 +1227,13 @@ contains
           !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           do j = JJS-1, JJE+1
           do i = IIS-1, IIE+1
-             qflx_lo(KE-1,i,j,ZDIR,iq) = 0.5_RP * (     mflx_hi(KE-1,i,j,ZDIR)  * ( QTRC(KE,i,j,iq)+QTRC(KE-1,i,j,iq) ) &
+             qflx_lo(KE-1,i,j,ZDIR) = 0.5_RP * (     mflx_hi(KE-1,i,j,ZDIR)  * ( QTRC(KE,i,j,iq)+QTRC(KE-1,i,j,iq) ) &
                                                   - abs(mflx_hi(KE-1,i,j,ZDIR)) * ( QTRC(KE,i,j,iq)-QTRC(KE-1,i,j,iq) ) )
-             qflx_lo(KE  ,i,j,ZDIR,iq) = 0.0_RP
+             qflx_lo(KE  ,i,j,ZDIR) = 0.0_RP
 
-             qflx_hi(KE-1,i,j,ZDIR,iq) = 0.5_RP * mflx_hi(KE-1,i,j,ZDIR) * ( QTRC(KE,i,j,iq)+QTRC(KE-1,i,j,iq) ) &
+             qflx_hi(KE-1,i,j,ZDIR) = 0.5_RP * mflx_hi(KE-1,i,j,ZDIR) * ( QTRC(KE,i,j,iq)+QTRC(KE-1,i,j,iq) ) &
                                        + GSQRT(k,i,j,I_XYW) * num_diff_q(KE-1,i,j,ZDIR)
-             qflx_hi(KE  ,i,j,ZDIR,iq) = 0.0_RP
+             qflx_hi(KE  ,i,j,ZDIR) = 0.0_RP
           enddo
           enddo
 
@@ -1149,7 +1241,7 @@ contains
           do j = JJS-1, JJE+1
           do i = IIS-2, IIE+1
           do k = KS, KE
-             qflx_lo(k,i,j,XDIR,iq) = 0.5_RP * (     mflx_hi(k,i,j,XDIR)  * ( QTRC(k,i+1,j,iq)+QTRC(k,i,j,iq) ) &
+             qflx_lo(k,i,j,XDIR) = 0.5_RP * (     mflx_hi(k,i,j,XDIR)  * ( QTRC(k,i+1,j,iq)+QTRC(k,i,j,iq) ) &
                                                - abs(mflx_hi(k,i,j,XDIR)) * ( QTRC(k,i+1,j,iq)-QTRC(k,i,j,iq) ) )
           enddo
           enddo
@@ -1159,18 +1251,19 @@ contains
           do j = JJS,   JJE
           do i = IIS-1, IIE
           do k = KS, KE
-             qflx_hi(k,i,j,XDIR,iq) = mflx_hi(k,i,j,XDIR) * ( FACT_N * ( QTRC(k,i+1,j,iq)+QTRC(k,i  ,j,iq) ) &
+             qflx_hi(k,i,j,XDIR) = mflx_hi(k,i,j,XDIR) * ( FACT_N * ( QTRC(k,i+1,j,iq)+QTRC(k,i  ,j,iq) ) &
                                                             + FACT_F * ( QTRC(k,i+2,j,iq)+QTRC(k,i-1,j,iq) ) ) &
                                     + GSQRT(k,i,j,I_UYZ) * num_diff_q(k,i,j,XDIR)
           enddo
           enddo
           enddo
 
+
           !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           do j = JJS-2, JJE+1
           do i = IIS-1, IIE+1
           do k = KS, KE
-             qflx_lo(k,i,j,YDIR,iq) = 0.5_RP * (     mflx_hi(k,i,j,YDIR)  * ( QTRC(k,i,j+1,iq)+QTRC(k,i,j,iq) ) &
+             qflx_lo(k,i,j,YDIR) = 0.5_RP * (     mflx_hi(k,i,j,YDIR)  * ( QTRC(k,i,j+1,iq)+QTRC(k,i,j,iq) ) &
                                                - abs(mflx_hi(k,i,j,YDIR)) * ( QTRC(k,i,j+1,iq)-QTRC(k,i,j,iq) ) )
           enddo
           enddo
@@ -1180,7 +1273,7 @@ contains
           do j = JJS-1, JJE
           do i = IIS,   IIE
           do k = KS, KE
-             qflx_hi(k,i,j,YDIR,iq) = mflx_hi(k,i,j,YDIR) * ( FACT_N * ( QTRC(k,i,j+1,iq)+QTRC(k,i,j  ,iq) ) &
+             qflx_hi(k,i,j,YDIR) = mflx_hi(k,i,j,YDIR) * ( FACT_N * ( QTRC(k,i,j+1,iq)+QTRC(k,i,j  ,iq) ) &
                                                             + FACT_F * ( QTRC(k,i,j+2,iq)+QTRC(k,i,j-1,iq) ) ) &
                                     + GSQRT(k,i,j,I_XVZ) * num_diff_q(k,i,j,YDIR)
           enddo
@@ -1190,10 +1283,112 @@ contains
        enddo
        enddo
 
-       call ATMOS_DYN_fct( qflx_anti(:,:,:,:,iq),        & ! (out)
+       if ( BND_W ) then
+          if ( iq <= BND_QA ) then
+             !$omp parallel do private(j,k) OMP_SCHEDULE_ collapse(2)
+             do j = JS-1, JE+1
+             do k = KS, KE
+                qflx_hi(k,IS-1,j,XDIR) = mflx_hi(k,IS-1,j,XDIR) &
+                     * ( FACT_N * ( DAMP_QTRC(k,IS  ,j,iq)+DAMP_QTRC(k,IS-1,j,iq) ) &
+                       + FACT_F * ( DAMP_QTRC(k,IS+1,j,iq)+DAMP_QTRC(k,IS-2,j,iq) ) )
+             enddo
+             enddo
+          else
+             !$omp parallel do private(j,k) OMP_SCHEDULE_ collapse(2)
+             do j = JS-1, JE+1
+             do k = KS, KE
+                qflx_hi(k,IS-1,j,XDIR) = 0.0_RP
+             enddo
+             enddo
+          end if
+          do j = JS-1, JE+1
+          do k = KS, KE
+             qflx_lo(k,IS-1,j,XDIR) = qflx_hi(k,IS-1,j,XDIR)
+             qflx_lo(k,IS-2,j,XDIR) = qflx_hi(k,IS-1,j,XDIR)
+          enddo
+          enddo
+       end if
+       if ( BND_E ) then
+          if ( iq <= BND_QA ) then
+             !$omp parallel do private(j,k) OMP_SCHEDULE_ collapse(2)
+             do j = JS-1, JE+1
+             do k = KS, KE
+                qflx_hi(k,IE,j,XDIR) = mflx_hi(k,IE,j,XDIR) &
+                     * ( FACT_N * ( DAMP_QTRC(k,IE+1,j,iq)+DAMP_QTRC(k,IE  ,j,iq) ) &
+                       + FACT_F * ( DAMP_QTRC(k,IE+2,j,iq)+DAMP_QTRC(k,IE-1,j,iq) ) )
+             enddo
+             enddo
+          else
+             !$omp parallel do private(j,k) OMP_SCHEDULE_ collapse(2)
+             do j = JS-1, JE+1
+             do k = KS, KE
+                qflx_hi(k,IE,j,XDIR) = 0.0_RP
+             enddo
+             enddo
+          end if
+          !$omp parallel do private(j,k) OMP_SCHEDULE_ collapse(2)
+          do j = JS-1, JE+1
+          do k = KS, KE
+             qflx_lo(k,IE  ,j,XDIR) = qflx_hi(k,IE,j,XDIR)
+             qflx_lo(k,IE+1,j,XDIR) = qflx_hi(k,IE,j,XDIR)
+          enddo
+          enddo
+       end if
+       if ( BND_S ) then
+          if ( iq <= BND_QA ) then
+             !$omp parallel do private(i,k) OMP_SCHEDULE_ collapse(2)
+             do i = IS-1, IE+1
+             do k = KS, KE
+                qflx_hi(k,i,JS-1,YDIR) = mflx_hi(k,i,JS-1,YDIR) &
+                     * ( FACT_N * ( DAMP_QTRC(k,i,JS  ,iq)+DAMP_QTRC(k,i,JS-1,iq) ) &
+                       + FACT_F * ( DAMP_QTRC(k,i,JS+1,iq)+DAMP_QTRC(k,i,JS-2,iq) ) )
+             enddo
+             enddo
+          else
+             !$omp parallel do private(i,k) OMP_SCHEDULE_ collapse(2)
+             do i = IS-1, IE+1
+             do k = KS, KE
+                qflx_hi(k,i,JS-1,YDIR) = 0.0_RP
+             enddo
+             enddo
+          end if
+          do i = IS-1, IE+1
+          do k = KS, KE
+             qflx_lo(k,i,JS-1,YDIR) = qflx_hi(k,i,JS-1,YDIR)
+             qflx_lo(k,i,JS-2,YDIR) = qflx_hi(k,i,JS-1,YDIR)
+          enddo
+          enddo
+       end if
+       if ( BND_N ) then
+          if ( iq <= BND_QA ) then
+             !$omp parallel do private(i,k) OMP_SCHEDULE_ collapse(2)
+             do i = IS-1, IE+1
+             do k = KS, KE
+                qflx_hi(k,i,JE,YDIR) = mflx_hi(k,i,JE,YDIR) &
+                     * ( FACT_N * ( DAMP_QTRC(k,i,JE+1,iq)+DAMP_QTRC(k,i,JE  ,iq) ) &
+                       + FACT_F * ( DAMP_QTRC(k,i,JE+2,iq)+DAMP_QTRC(k,i,JE-1,iq) ) )
+             enddo
+             enddo
+          else
+             !$omp parallel do private(i,k) OMP_SCHEDULE_ collapse(2)
+             do i = IS-1, IE+1
+             do k = KS, KE
+                qflx_hi(k,i,JE,YDIR) = 0.0_RP
+             enddo
+             enddo
+          end if
+          !$omp parallel do private(i,k) OMP_SCHEDULE_ collapse(2)
+          do i = IS-1, IE+1
+          do k = KS, KE
+             qflx_lo(k,i,JE  ,YDIR) = qflx_hi(k,i,JE,YDIR)
+             qflx_lo(k,i,JE+1,YDIR) = qflx_hi(k,i,JE,YDIR)
+          enddo
+          enddo
+       end if
+
+       call ATMOS_DYN_fct( qflx_anti,                    & ! (out)
                            QTRC(:,:,:,iq), DENS00, DENS, & ! (in)
-                           qflx_hi(:,:,:,:,iq),          & ! (in)
-                           qflx_lo(:,:,:,:,iq),          & ! (in)
+                           qflx_hi, qflx_lo,             & ! (in)
                            mflx_hi,                      & ! (in)
                            RCDZ, RCDX, RCDY,             & ! (in)
                            GSQRT(:,:,:,I_XYZ),           & ! (in)
@@ -1210,12 +1405,12 @@ contains
           do i = IIS, IIE
           do k = KS, KE
              QTRC(k,i,j,iq) = ( QTRC(k,i,j,iq) * DENS00(k,i,j) &
-                            + dt * ( - ( ( qflx_hi(k  ,i  ,j  ,ZDIR,iq) - qflx_anti(k  ,i  ,j  ,ZDIR,iq) &
-                                         - qflx_hi(k-1,i  ,j  ,ZDIR,iq) + qflx_anti(k-1,i  ,j  ,ZDIR,iq) ) * RCDZ(k) &
-                                       + ( qflx_hi(k  ,i  ,j  ,XDIR,iq) - qflx_anti(k  ,i  ,j  ,XDIR,iq) &
-                                         - qflx_hi(k  ,i-1,j  ,XDIR,iq) + qflx_anti(k  ,i-1,j  ,XDIR,iq) ) * RCDX(i) &
-                                       + ( qflx_hi(k  ,i  ,j  ,YDIR,iq) - qflx_anti(k  ,i  ,j  ,YDIR,iq) &
-                                         - qflx_hi(k  ,i  ,j-1,YDIR,iq) + qflx_anti(k  ,i  ,j-1,YDIR,iq) ) * RCDY(j) &
+                            + dt * ( - ( ( qflx_hi(k  ,i  ,j  ,ZDIR) - qflx_anti(k  ,i  ,j  ,ZDIR) &
+                                         - qflx_hi(k-1,i  ,j  ,ZDIR) + qflx_anti(k-1,i  ,j  ,ZDIR) ) * RCDZ(k) &
+                                       + ( qflx_hi(k  ,i  ,j  ,XDIR) - qflx_anti(k  ,i  ,j  ,XDIR) &
+                                         - qflx_hi(k  ,i-1,j  ,XDIR) + qflx_anti(k  ,i-1,j  ,XDIR) ) * RCDX(i) &
+                                       + ( qflx_hi(k  ,i  ,j  ,YDIR) - qflx_anti(k  ,i  ,j  ,YDIR) &
+                                         - qflx_hi(k  ,i  ,j-1,YDIR) + qflx_anti(k  ,i  ,j-1,YDIR) ) * RCDY(j) &
                                        ) * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) &
                               + RHOQ_t(k,i,j) ) ) / DENS(k,i,j)
           enddo
@@ -1239,477 +1434,16 @@ contains
 
     enddo ! scalar quantities loop
 
-    ! initialize lateral boundary flux
-    qflx_lb(:,:,:,:,:) = 0.0_RP
-
-    ! adjust lateral boundary flux
-    if ( .not. PRC_HAS_W ) then ! for western boundary
-       call adjust_boundary_flux_qtrc( &
-            QTRC, qflx_lb, & ! (inout)
-            DENS, MOMX, MOMY, & ! (in)
-            qflx_hi, qflx_anti, GSQRT, MAPF, dt, & ! (in)
-            RCDX, RCDY, & ! (in)
-            DAMP_QTRC, & ! (in)
-            -1, 0, 1, 0, & ! (in)
-            IS+IHALO+NUM_LBFLX-1, IS+IHALO, JS, JE ) ! (in)
-    end if
-    if ( .not. PRC_HAS_E ) then ! for eastern boundary
-       call adjust_boundary_flux_qtrc( &
-            QTRC, qflx_lb, & ! (inout)
-            DENS, MOMX, MOMY, & ! (in)
-            qflx_hi, qflx_anti, GSQRT, MAPF, dt, & ! (in)
-            RCDX, RCDY, & ! (in)
-            DAMP_QTRC, & ! (in)
-            0, 0, -1, 0, & ! (in)
-            IE-IHALO-NUM_LBFLX+1, IE-IHALO, JS, JE ) ! (in)
-    end if
-    if ( .not. PRC_HAS_S ) then ! for sourthern boundary
-       call adjust_boundary_flux_qtrc( &
-            QTRC, qflx_lb, & ! (inout)
-            DENS, MOMX, MOMY, & ! (in)
-            qflx_hi, qflx_anti, GSQRT, MAPF, dt, & ! (in)
-            RCDX, RCDY, & ! (in)
-            DAMP_QTRC, & ! (in)
-            0, -1, 0, 1, & ! (in)
-            IS, IE, JS+JHALO+NUM_LBFLX-1, JS+JHALO ) ! (in)
-    end if
-    if ( .not. PRC_HAS_N ) then ! for northern boundary
-       call adjust_boundary_flux_qtrc( &
-            QTRC, qflx_lb, & ! (inout)
-            DENS, MOMX, MOMY, & ! (in)
-            qflx_hi, qflx_anti, GSQRT, MAPF, dt, & ! (in)
-            RCDX, RCDY, & ! (in)
-            DAMP_QTRC, & ! (in)
-            0, 0, 0, -1, & ! (in)
-            IS, IE, JE-JHALO-NUM_LBFLX+1, JE-JHALO ) ! (in)
-    end if
-
-#ifdef HIST_TEND
-    do iq = 1, QA
-       call HIST_in(qflx_lb(:,:,:,ZDIR,iq), trim(AQ_NAME(iq))//'_lb',                                  &
-                                            trim(AQ_NAME(iq))//'of z-direction from lateral boundary', &
-                                            'kg/m2/s', DTSEC, zdim='half'                              )
-       call HIST_in(qflx_lb(:,:,:,XDIR,iq), trim(AQ_NAME(iq))//'_lb',                                  &
-                                            trim(AQ_NAME(iq))//'of x-direction from lateral boundary', &
-                                            'kg/m2/s', DTSEC, xdim='half'                              )
-       call HIST_in(qflx_lb(:,:,:,YDIR,iq), trim(AQ_NAME(iq))//'_lb',                                  &
-                                            trim(AQ_NAME(iq))//'of y-direction from lateral boundary', &
-                                            'kg/m2/s', DTSEC, ydim='half'                              )
-    end do
-#endif
-
-    if ( .not. PRC_HAS_W ) then ! for western boundary
-       ! set boundary
-       call set_boundary_qtrc( &
-            QTRC, & ! (inout)
-            DAMP_QTRC, DAMP_alpha_QTRC, & ! (in)
-            MOMX, & ! (in)
-            -1, 0, 1, 0, & ! (in)
-            IS+IHALO-1, IS, JS, JE ) ! (in)
-    end if
-    if ( .not. PRC_HAS_E ) then ! for eastern boundary
-       call set_boundary_qtrc( &
-            QTRC, & ! (inout)
-            DAMP_QTRC, DAMP_alpha_QTRC, & ! (in)
-            MOMX, & ! (in)
-            0, 0, -1, 0, & ! (in)
-            IE-IHALO+1, IE, JS, JE ) ! (in)
-    end if
-    if ( .not. PRC_HAS_S ) then ! for sourthern boundary
-       call set_boundary_qtrc( &
-            QTRC, & ! (inout)
-            DAMP_QTRC, DAMP_alpha_QTRC, & ! (in)
-            MOMY, & ! (in)
-            0, -1, 0, 1, & ! (in)
-            IS, IE, JS+JHALO-1, JS ) ! (in)
-    end if
-    if ( .not. PRC_HAS_N ) then ! for northern boundary
-       call set_boundary_qtrc( &
-            QTRC, & ! (inout)
-            DAMP_QTRC, DAMP_alpha_QTRC, & ! (in)
-            MOMY, & ! (in)
-            0, 0, 0, -1, & ! (in)
-            IS, IE, JE-JHALO+1, JE ) ! (in)
-    end if
-
     do iq = 1, QA
        call COMM_vars8( QTRC(:,:,:,iq), iq )
     enddo
     do iq = 1, QA
-       call COMM_wait ( QTRC(:,:,:,iq), iq )
+       call COMM_wait ( QTRC(:,:,:,iq), iq, .false. )
     enddo
 #endif
 
     return
   end subroutine ATMOS_DYN
 
-  subroutine set_boundary_dyn( &
-       DENS, MOMZ, MOMX, MOMY, RHOT, &
-       DAMP_DENS, DAMP_VELZ, DAMP_VELX, DAMP_VELY, DAMP_POTT, &
-       DAMP_alpha_DENS, DAMP_alpha_VELZ, DAMP_alpha_VELX, DAMP_alpha_VELY, DAMP_alpha_POTT, &
-       DAMP_flow, &
-       ib, jb, iu, ju, &
-       i0, i1, j0, j1 )
-    use scale_const, only: &
-       EPS => CONST_EPS
-    implicit none
-
-    real(RP), intent(inout) :: DENS(KA,IA,JA)
-    real(RP), intent(inout) :: MOMZ(KA,IA,JA)
-    real(RP), intent(inout) :: MOMX(KA,IA,JA)
-    real(RP), intent(inout) :: MOMY(KA,IA,JA)
-    real(RP), intent(inout) :: RHOT(KA,IA,JA)
-
-    real(RP), intent(in)    :: DAMP_DENS(KA,IA,JA)
-    real(RP), intent(in)    :: DAMP_VELZ(KA,IA,JA)
-    real(RP), intent(in)    :: DAMP_VELX(KA,IA,JA)
-    real(RP), intent(in)    :: DAMP_VELY(KA,IA,JA)
-    real(RP), intent(in)    :: DAMP_POTT(KA,IA,JA)
-
-    real(RP), intent(in)    :: DAMP_alpha_DENS(KA,IA,JA)
-    real(RP), intent(in)    :: DAMP_alpha_VELZ(KA,IA,JA)
-    real(RP), intent(in)    :: DAMP_alpha_VELX(KA,IA,JA)
-    real(RP), intent(in)    :: DAMP_alpha_VELY(KA,IA,JA)
-    real(RP), intent(in)    :: DAMP_alpha_POTT(KA,IA,JA)
-
-    real(RP), intent(in)    :: DAMP_flow(KA,IA,JA)
-
-    integer,  intent(in)    :: ib ! W:-1, E: 0, S: 0, N: 0
-    integer,  intent(in)    :: jb ! W: 0, E: 0, S:-1, N: 0
-    integer,  intent(in)    :: iu ! W: 1, E:-1, S: 0, N: 0
-    integer,  intent(in)    :: ju ! W: 0, E: 0, S: 1, N:-1
-    integer,  intent(in)    :: i0
-    integer,  intent(in)    :: i1
-    integer,  intent(in)    :: j0
-    integer,  intent(in)    :: j1
-
-    real(RP) :: dir
-    real(RP) :: sw, sw2
-
-    integer :: i, j, k
-    !---------------------------------------------------------------------------
-
-    dir = sign(1.0_RP, real(ib+jb,kind=RP)) ! dir = -1 if ib==-1 .or. jb==-1
-
-    do j = j0, j1, -ju+abs(iu)
-    do i = i0, i1, -iu+abs(ju)
-    do k = KS, KE
-       sw = sign(0.5_RP, DAMP_alpha_DENS(k,i,j) - EPS) + 0.5_RP
-       sw2 = sign(0.5_RP, DAMP_flow(k,i,j)*dir) + 0.5_RP ! 0:inflow, 1:outflow
-       DENS(k,i,j) = DENS(k,i,j) * ( 1.0_RP - sw ) &
-                   + DAMP_DENS(k,i,j) * sw
-       MOMZ(k,i,j) = MOMZ(k,i,j) * ( 1.0_RP - sw ) &
-                   + MOMZ(k,i+iu,j+ju) * sw2 * sw
-       sw = sign(0.5_RP, DAMP_alpha_POTT(k,i,j) - EPS) + 0.5_RP
-       RHOT(k,i,j) = RHOT(k,i,j) * ( 1.0_RP - sw ) &
-                   + DAMP_POTT(k,i,j) * DAMP_DENS(k,i,j) * sw
-    end do
-    end do
-    end do
-
-    do j = j0,       j1,       -ju+abs(iu)
-    do i = i0+ib+iu, i1+ib+iu, -iu+abs(ju)
-    do k = KS, KE
-       sw = sign(0.5_RP, DAMP_alpha_VELX(k,i,j) - EPS) + 0.5_RP
-       MOMX(k,i,j) = MOMX(k,i,j) * ( 1.0_RP - sw ) &
-                   + DAMP_VELX(k,i,j) * ( DENS(k,i,j)+DENS(k,i+1,j) ) * 0.5_RP * sw
-    end do
-    end do
-    end do
-
-    do j = j0+jb+ju, j1+jb+ju, -ju+abs(iu)
-    do i = i0,       i1,       -iu+abs(ju)
-    do k = KS, KE
-       sw = sign(0.5_RP, DAMP_alpha_VELY(k,i,j) - EPS) + 0.5_RP
-       MOMY(k,i,j) = MOMY(k,i,j) * ( 1.0_RP - sw ) &
-                   + DAMP_VELY(k,i,j) * ( DENS(k,i,j)+DENS(k,i,j+1) ) * 0.5_RP * sw
-    end do
-    end do
-    end do
-
-    if ( iu==-1 ) then ! eastern boundary
-       do j = j0, j1
-       do k = KS, KE
-          sw = sign(0.5_RP, DAMP_alpha_VELX(k,i1,j) - EPS) + 0.5_RP
-          MOMX(k,i1,j) = MOMX(k,i1,j) * ( 1.0_RP - sw ) &
-                       + MOMX(k,i1+iu,j) * sw
-       end do
-       end do
-    end if
-    if ( ju==-1 ) then ! northern boundary
-       do i = i0, i1
-       do k = KS, KE
-          sw = sign(0.5_RP, DAMP_alpha_VELY(k,i,j1) - EPS) + 0.5_RP
-          MOMY(k,i,j1) = MOMY(k,i,j1) * ( 1.0_RP - sw ) &
-                       + MOMY(k,i,j1+ju) * sw
-       end do
-       end do
-    end if
-
-    return
-  end subroutine set_boundary_dyn
-
-  subroutine set_boundary_qtrc( &
-       QTRC, &
-       DAMP_QTRC, DAMP_alpha_QTRC, &
-       MOM, &
-       ib, jb, iu, ju, &
-       i0, i1, j0, j1 )
-    use scale_const, only: &
-       EPS => CONST_EPS
-    use scale_atmos_boundary, only: &
-       BND_QA
-    implicit none
-    real(RP), intent(inout) :: QTRC(KA,IA,JA,QA)
-
-    real(RP), intent(in)    :: DAMP_QTRC      (KA,IA,JA,BND_QA)
-    real(RP), intent(in)    :: DAMP_alpha_QTRC(KA,IA,JA,BND_QA)
-
-    real(RP), intent(in)    :: MOM(KA,IA,JA)
-
-    integer,  intent(in)    :: ib ! W:-1, E: 0, S: 0, N: 0
-    integer,  intent(in)    :: jb ! W: 0, E: 0, S:-1, N: 0
-    integer,  intent(in)    :: iu ! W: 1, E:-1, S: 0, N: 0
-    integer,  intent(in)    :: ju ! W: 0, E: 0, S: 1, N:-1
-    integer,  intent(in)    :: i0
-    integer,  intent(in)    :: i1
-    integer,  intent(in)    :: j0
-    integer,  intent(in)    :: j1
-
-    real(RP) :: dir
-    real(RP) :: sw, sw2
-
-    integer :: i, j, k, iq
-    !---------------------------------------------------------------------------
-
-    if( BND_QA == I_QV ) then
-       ! QV forcing only at boundary
-       dir = sign(1.0_RP, REAL(ib+jb,RP)) ! dir = -1 if ib==-1 .or. jb==-1
-
-       do j = j0, j1, -ju+abs(iu)
-       do i = i0, i1, -iu+abs(ju)
-       do k = KS, KE
-          sw = sign(0.5_RP, DAMP_alpha_QTRC(k,i,j,I_QV) - EPS) + 0.5_RP
-          QTRC(k,i,j,I_QV) = QTRC(k,i,j,I_QV) * ( 1.0_RP - sw ) &
-                           + DAMP_QTRC(k,i,j,I_QV) * sw
-       end do
-       end do
-       end do
-
-       do iq = 2, QA
-          do j = j0, j1, -ju+abs(iu)
-          do i = i0, i1, -iu+abs(ju)
-          do k = KS, KE
-             sw = sign(0.5_RP, DAMP_alpha_QTRC(k,i,j,I_QV) - EPS) + 0.5_RP
-             sw2 = sign(0.5_RP, MOM(k,i-ib,j-jb)*dir) + 0.5_RP ! 0:inflow, 1:outflow
-             QTRC(k,i,j,iq) = QTRC(k,i,j,iq) * ( 1.0_RP - sw ) &
-                            + QTRC(k,i+iu,j+ju,iq) * sw * sw2
-          end do
-          end do
-          end do
-       end do
-    else
-       ! ALL QTRC forcing at boundary
-       do iq = 1, QA
-          do j = j0, j1, -ju+abs(iu)
-          do i = i0, i1, -iu+abs(ju)
-          do k = KS, KE
-             sw = sign(0.5_RP, DAMP_alpha_QTRC(k,i,j,iq) - EPS) + 0.5_RP
-             QTRC(k,i,j,iq) = QTRC(k,i,j,iq) * ( 1.0_RP - sw ) &
-                            + DAMP_QTRC(k,i,j,iq) * sw
-          end do
-          end do
-          end do
-       end do
-    end if
-
-    return
-  end subroutine set_boundary_qtrc
-
-  subroutine adjust_boundary_flux_dyn( &
-       DENS, RHOT, mflx_lb, tflx_lb, &
-       mflx_hi, tflx_hi, GSQRT, MAPF, dt, &
-       RCDX, RCDY, &
-       DAMP_DENS, DAMP_VELX, DAMP_VELY, DAMP_POTT, &
-       ib, jb, iu, ju, &
-       i0, i1, j0, j1 )
-    use scale_gridtrans, only: &
-       I_XYZ, &
-       I_UYZ, &
-       I_XVZ, &
-       I_XY,  &
-       I_UY,  &
-       I_XV
-    implicit none
-
-    real(RP), intent(inout) :: DENS   (KA,IA,JA)
-    real(RP), intent(inout) :: RHOT   (KA,IA,JA)
-    real(RP), intent(inout) :: mflx_lb(KA,IA,JA,3)
-    real(RP), intent(inout) :: tflx_lb(KA,IA,JA,3)
-
-    real(RP), intent(in)    :: mflx_hi (KA,IA,JA,3)
-    real(RP), intent(in)    :: tflx_hi (KA,IA,JA,3)
-    real(RP), intent(in)    :: GSQRT   (KA,IA,JA,7)
-    real(RP), intent(in)    :: MAPF    (IA,JA,2,4)
-    real(RP), intent(in)    :: dt
-
-    real(RP), intent(in)    :: RCDX(IA)
-    real(RP), intent(in)    :: RCDY(JA)
-
-    real(RP), intent(in)    :: DAMP_DENS(KA,IA,JA)
-    real(RP), intent(in)    :: DAMP_VELX(KA,IA,JA)
-    real(RP), intent(in)    :: DAMP_VELY(KA,IA,JA)
-    real(RP), intent(in)    :: DAMP_POTT(KA,IA,JA)
-
-    integer,  intent(in)    :: ib ! W:-1, E: 0, S: 0, N: 0
-    integer,  intent(in)    :: jb ! W: 0, E: 0, S:-1, N: 0
-    integer,  intent(in)    :: iu ! W: 1, E:-1, S: 0, N: 0
-    integer,  intent(in)    :: ju ! W: 0, E: 0, S: 1, N:-1
-    integer,  intent(in)    :: i0
-    integer,  intent(in)    :: i1
-    integer,  intent(in)    :: j0
-    integer,  intent(in)    :: j1
-
-    real(RP) :: DAMP_RHOT(KA,IA,JA)
-
-    integer :: i, j, k
-    !---------------------------------------------------------------------------
-
-    do j = j0, j1, -ju+abs(iu)
-    do i = i0, i1, -iu+abs(ju)
-    do k = KS, KE
-       DAMP_RHOT(k,i1+ib   ,j       ) = DAMP_POTT(k,i1+ib   ,j       ) * DAMP_DENS(k,i1+ib   ,j       )
-       DAMP_RHOT(k,i       ,j1+jb   ) = DAMP_POTT(k,i       ,j1+jb   ) * DAMP_DENS(k,i       ,j1+jb   )
-       DAMP_RHOT(k,i1-ib-iu,j       ) = DAMP_POTT(k,i1-ib-iu,j       ) * DAMP_DENS(k,i1-ib-iu,j       )
-       DAMP_RHOT(k,i       ,j1-jb-ju) = DAMP_POTT(k,i       ,j1-jb-ju) * DAMP_DENS(k,i       ,j1-jb-ju)
-
-       mflx_lb(k,i1+ib,j,XDIR) = DAMP_VELX(k,i1+ib,j) * ( DAMP_DENS(k,i1+ib,j) + DAMP_DENS(k,i1-ib-iu,j) ) * 0.5_RP &
-                               * GSQRT(k,i1+ib,j,I_UYZ) / MAPF(i1+ib,j,2,I_UY) * real( abs(iu), kind=RP )
-       mflx_lb(k,i,j1+jb,YDIR) = DAMP_VELY(k,i,j1+jb) * ( DAMP_DENS(k,i,j1+jb) + DAMP_DENS(k,i,j1-jb-ju) ) * 0.5_RP &
-                               * GSQRT(k,i,j1+jb,I_XVZ) / MAPF(i,j1+jb,1,I_XV) * real( abs(ju), kind=RP )
-
-       tflx_lb(k,i1+ib,j,XDIR) = DAMP_VELX(k,i1+ib,j) * ( DAMP_RHOT(k,i1+ib,j) + DAMP_RHOT(k,i1-ib-iu,j) ) * 0.5_RP &
-                               * GSQRT(k,i1+ib,j,I_UYZ) / MAPF(i1+ib,j,2,I_UY) * real( abs(iu), kind=RP )
-       tflx_lb(k,i,j1+jb,YDIR) = DAMP_VELY(k,i,j1+jb) * ( DAMP_RHOT(k,i,j1+jb) + DAMP_RHOT(k,i,j1-jb-ju) ) * 0.5_RP &
-                               * GSQRT(k,i,j1+jb,I_XVZ) / MAPF(i,j1+jb,1,I_XV) * real( abs(ju), kind=RP )
-
-       DENS(k,i,j) = DENS(k,i,j) &
-                   + dt * ( ( mflx_lb(k,i1+ib,j    ,XDIR) - mflx_hi(k,i1+ib,j    ,XDIR) ) * real(iu,kind=RP) * RCDX(i) &
-                          + ( mflx_lb(k,i    ,j1+jb,YDIR) - mflx_hi(k,i    ,j1+jb,YDIR) ) * real(ju,kind=RP) * RCDY(j) ) &
-                        * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) / real( NUM_LBFLX, kind=RP )
-
-       RHOT(k,i,j) = RHOT(k,i,j) &
-                   + dt * ( ( tflx_lb(k,i1+ib,j    ,XDIR) - tflx_hi(k,i1+ib,j    ,XDIR) ) * real(iu,kind=RP) * RCDX(i) &
-                          + ( tflx_lb(k,i    ,j1+jb,YDIR) - tflx_hi(k,i    ,j1+jb,YDIR) ) * real(ju,kind=RP) * RCDY(j) ) &
-                        * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) / real( NUM_LBFLX, kind=RP )
-    end do
-    end do
-    end do
-
-    return
-  end subroutine adjust_boundary_flux_dyn
-
-  subroutine adjust_boundary_flux_qtrc( &
-       QTRC, qflx_lb, &
-       DENS, MOMX, MOMY, &
-       qflx_hi, qflx_anti, GSQRT, MAPF, dt, &
-       RCDX, RCDY, &
-       DAMP_QTRC, &
-       ib, jb, iu, ju, &
-       i0, i1, j0, j1 )
-    use scale_gridtrans, only: &
-       I_XYZ, &
-       I_UYZ, &
-       I_XVZ, &
-       I_XY,  &
-       I_UY,  &
-       I_XV
-    use scale_atmos_boundary, only: &
-       BND_QA
-    implicit none
-    real(RP), intent(inout) :: QTRC   (KA,IA,JA,QA)
-    real(RP), intent(inout) :: qflx_lb(KA,IA,JA,3,QA)
-
-    real(RP), intent(in)    :: DENS     (KA,IA,JA)
-    real(RP), intent(in)    :: MOMX     (KA,IA,JA)
-    real(RP), intent(in)    :: MOMY     (KA,IA,JA)
-
-    real(RP), intent(in)    :: qflx_hi  (KA,IA,JA,3,QA)
-    real(RP), intent(in)    :: qflx_anti(KA,IA,JA,3,QA)
-    real(RP), intent(in)    :: GSQRT    (KA,IA,JA,7)
-    real(RP), intent(in)    :: MAPF     (IA,JA,2,4)
-    real(RP), intent(in)    :: dt
-
-    real(RP), intent(in)    :: RCDX(IA)
-    real(RP), intent(in)    :: RCDY(JA)
-
-    real(RP), intent(in)    :: DAMP_QTRC      (KA,IA,JA,BND_QA)
-
-    integer,  intent(in)    :: ib ! W:-1, E: 0, S: 0, N: 0
-    integer,  intent(in)    :: jb ! W: 0, E: 0, S:-1, N: 0
-    integer,  intent(in)    :: iu ! W: 1, E:-1, S: 0, N: 0
-    integer,  intent(in)    :: ju ! W: 0, E: 0, S: 1, N:-1
-    integer,  intent(in)    :: i0
-    integer,  intent(in)    :: i1
-    integer,  intent(in)    :: j0
-    integer,  intent(in)    :: j1
-
-    integer :: i, j, k, iq
-    !---------------------------------------------------------------------------
-
-    if( BND_QA == I_QV ) then
-       ! QV forcing only at boundary
-       do j = j0, j1, -ju+abs(iu)
-       do i = i0, i1, -iu+abs(ju)
-       do k = KS, KE
-          qflx_lb(k,i1+ib,j,XDIR,I_QV) = MOMX(k,i1+ib,j) &
-                                       * ( DAMP_QTRC(k,i1+ib,j,I_QV) + DAMP_QTRC(k,i1-ib-iu,j,I_QV) ) * 0.5_RP &
-                                       * GSQRT(k,i1+ib,j,I_UYZ) / MAPF(i1+ib,j,2,I_UY) * real( abs(iu), kind=RP )
-          qflx_lb(k,i,j1+jb,YDIR,I_QV) = MOMY(k,i,j1+jb) &
-                                       * ( DAMP_QTRC(k,i,j1+jb,I_QV) + DAMP_QTRC(k,i,j1-jb-ju,I_QV) ) * 0.5_RP &
-                                       * GSQRT(k,i,j1+jb,I_XVZ) / MAPF(i,j1+jb,1,I_XV) * real( abs(ju), kind=RP )
-
-          QTRC(k,i,j,I_QV) = QTRC(k,i,j,I_QV) &
-                           + dt * ( ( qflx_lb  (k,i1+ib,j,XDIR,I_QV) &
-                                    - qflx_hi  (k,i1+ib,j,XDIR,I_QV) &
-                                    + qflx_anti(k,i1+ib,j,XDIR,I_QV) ) * real(iu,kind=RP) * RCDX(i) &
-                                  + ( qflx_lb  (k,i,j1+jb,YDIR,I_QV) &
-                                    - qflx_hi  (k,i,j1+jb,YDIR,I_QV) &
-                                    + qflx_anti(k,i,j1+jb,YDIR,I_QV) ) * real(ju,kind=RP) * RCDY(j) ) &
-                                * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) &
-                                / DENS(k,i,j) / real( NUM_LBFLX, kind=RP )
-       end do
-       end do
-       end do
-    else
-       ! ALL QTRC forcing at boundary
-       do iq = 1, QA
-          do j = j0, j1, -ju+abs(iu)
-          do i = i0, i1, -iu+abs(ju)
-          do k = KS, KE
-             qflx_lb(k,i1+ib,j,XDIR,iq) = MOMX(k,i1+ib,j) &
-                                        * ( DAMP_QTRC(k,i1+ib,j,iq) + DAMP_QTRC(k,i1-ib-iu,j,iq) ) * 0.5_RP &
-                                        * GSQRT(k,i1+ib,j,I_UYZ) / MAPF(i1+ib,j,2,I_UY) * real( abs(iu), kind=RP )
-             qflx_lb(k,i,j1+jb,YDIR,iq) = MOMY(k,i,j1+jb) &
-                                        * ( DAMP_QTRC(k,i,j1+jb,iq) + DAMP_QTRC(k,i,j1-jb-ju,iq) ) * 0.5_RP &
-                                        * GSQRT(k,i,j1+jb,I_XVZ) / MAPF(i,j1+jb,1,I_XV) * real( abs(ju), kind=RP )
-
-             QTRC(k,i,j,iq) = QTRC(k,i,j,iq) &
-                            + dt * ( ( qflx_lb  (k,i1+ib,j,XDIR,iq) &
-                                     - qflx_hi  (k,i1+ib,j,XDIR,iq) &
-                                     + qflx_anti(k,i1+ib,j,XDIR,iq) ) * real(iu,kind=RP) * RCDX(i) &
-                                   + ( qflx_lb  (k,i,j1+jb,YDIR,iq) &
-                                     - qflx_hi  (k,i,j1+jb,YDIR,iq) &
-                                     + qflx_anti(k,i,j1+jb,YDIR,iq) ) * real(ju,kind=RP) * RCDY(j) ) &
-                                 * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) &
-                                 / DENS(k,i,j) / real( NUM_LBFLX, kind=RP )
-          end do
-          end do
-          end do
-       end do
-    end if
-
-    return
-  end subroutine adjust_boundary_flux_qtrc
 
 end module scale_atmos_dyn

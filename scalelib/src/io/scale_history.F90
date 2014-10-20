@@ -68,6 +68,9 @@ module scale_history
   !
   !++ Private parameters & variables
   !
+  integer :: im, jm
+  integer :: ims, ime
+  integer :: jms, jme
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -78,7 +81,11 @@ contains
     use scale_process, only: &
        PRC_master, &
        PRC_myrank, &
-       PRC_2Drank
+       PRC_2Drank, &
+       PRC_HAS_W, &
+       PRC_HAS_E, &
+       PRC_HAS_S, &
+       PRC_HAS_N
     use scale_time, only: &
        TIME_OFFSET_YEAR
     implicit none
@@ -103,10 +110,34 @@ contains
        write(HISTORY_T_SINCE(1:4),'(i4)') TIME_OFFSET_YEAR
     end if
 
+    im = IMAX
+    jm = JMAX
+    ims = IS
+    ime = IE
+    jms = JS
+    jme = JE
+
+    if ( .not. PRC_HAS_W ) then
+       im = im + IHALO
+       ims = 1
+    end if
+    if ( .not. PRC_HAS_E ) then
+       im = im + IHALO
+       ime = IA
+    end if
+    if ( .not. PRC_HAS_S ) then
+       jm = jm + JHALO
+       jms = 1
+    end if
+    if ( .not. PRC_HAS_N ) then
+       jm = jm + JHALO
+       jme = JA
+    end if
+
     call HistoryInit( HISTORY_H_TITLE,           &
                       H_SOURCE,                  &
                       H_INSTITUTE,               &
-                      IMAX*JMAX*KMAX,            &
+                      im*jm*KMAX,                &
                       PRC_master,                &
                       PRC_myrank,                &
                       rankidx,                   &
@@ -177,17 +208,17 @@ contains
        REAL_LATXY
     implicit none
 
-    real(RP)         :: AXIS     (IMAX,JMAX,KMAX)
+    real(RP)         :: AXIS     (im,jm,KMAX)
     character(len=2) :: AXIS_name(3)
 
-    integer :: k
+    integer :: k, i, j
     !---------------------------------------------------------------------------
 
-    call HistoryPutAxis( 'x',   'X',               'm', 'x',   GRID_CX(IS:IE) )
-    call HistoryPutAxis( 'y',   'Y',               'm', 'y',   GRID_CY(JS:JE) )
+    call HistoryPutAxis( 'x',   'X',               'm', 'x',   GRID_CX(ims:ime) )
+    call HistoryPutAxis( 'y',   'Y',               'm', 'y',   GRID_CY(jms:jme) )
     call HistoryPutAxis( 'z',   'Z',               'm', 'z',   GRID_CZ(KS:KE) )
-    call HistoryPutAxis( 'xh',  'X (half level)',  'm', 'xh',  GRID_FX(IS:IE) )
-    call HistoryPutAxis( 'yh',  'Y (half level)',  'm', 'yh',  GRID_FY(JS:JE) )
+    call HistoryPutAxis( 'xh',  'X (half level)',  'm', 'xh',  GRID_FX(ims:ime) )
+    call HistoryPutAxis( 'yh',  'Y (half level)',  'm', 'yh',  GRID_FY(jms:jme) )
     call HistoryPutAxis( 'zh',  'Z (half level)',  'm', 'zh',  GRID_FZ(KS:KE) )
 
     call HistoryPutAxis( 'lz',  'LZ',              'm', 'lz',  GRID_LCZ(LKS:LKE), down=.true. )
@@ -237,97 +268,159 @@ contains
 
     ! associate coordinates
     do k = 1, KMAX
-       AXIS(1:IMAX,1:JMAX,k) = REAL_CZ(k+KS-1,IS:IE,JS:JE)
+       AXIS(1:im,1:jm,k) = REAL_CZ(k+KS-1,ims:ime,jms:jme)
     end do
     AXIS_name(1:3) = (/'x ','y ', 'z '/)
     call HistoryPutAssociatedCoordinates( 'height' , 'height'             ,     &
                                           'm' , AXIS_name(1:3), AXIS(:,:,:) )
 
     do k = 1, KMAX
-       AXIS(1:IMAX,1:JMAX,k) = REAL_FZ(k+KS-1,IS:IE,JS:JE)
+       AXIS(1:im,1:jm,k) = REAL_FZ(k+KS-1,ims:ime,jms:jme)
     end do
     AXIS_name(1:3) = (/'x ','y ', 'zh'/)
     call HistoryPutAssociatedCoordinates( 'height_xyw' , 'height (half level xyw)'             ,     &
                                           'm' , AXIS_name(1:3), AXIS(:,:,:) )
 
     do k = 1, KMAX
-       AXIS(1:IMAX,1:JMAX,k) = ( REAL_CZ(k+KS-1,IS:IE,JS:JE) + REAL_CZ(k+KS-1,IS+1:IE+1,JS:JE) ) * 0.5_RP
+    do j = 1, jm
+    do i = 1, im-1
+       AXIS(i,j,k) = ( REAL_CZ(k+KS-1,ims+i-1,jms+j-1) + REAL_CZ(k+KS-1,ims+i,jms+j-1) ) * 0.5_RP
+    end do
+    end do
+    end do
+    do k = 1, KMAX
+    do j = 1, jm
+       AXIS(im,j,k) = REAL_CZ(k+KS-1,ims+im-1,jms+j-1)
+    end do
     end do
     AXIS_name(1:3) = (/'xh','y ', 'z '/)
     call HistoryPutAssociatedCoordinates( 'height_uyz' , 'height (half level uyz)'             ,     &
                                           'm' , AXIS_name(1:3), AXIS(:,:,:) )
 
     do k = 1, KMAX
-       AXIS(1:IMAX,1:JMAX,k) = ( REAL_CZ(k+KS-1,IS:IE,JS:JE) + REAL_CZ(k+KS-1,IS:IE,JS+1:JE+1) ) * 0.5_RP
+    do j = 1, jm-1
+    do i = 1, im
+       AXIS(i,j,k) = ( REAL_CZ(k+KS-1,ims+i-1,jms+j-1) + REAL_CZ(k+KS-1,ims+i-1,jms+j) ) * 0.5_RP
+    end do
+    end do
+    end do
+    do k = 1, KMAX
+    do i = 1, im
+       AXIS(i,jm,k) = REAL_CZ(k+KS-1,ims+i-1,jms+jm-1)
+    end do
     end do
     AXIS_name(1:3) = (/'x ','yh', 'z '/)
     call HistoryPutAssociatedCoordinates( 'height_xvz' , 'height (half level xvz)'             ,     &
                                           'm' , AXIS_name(1:3), AXIS(:,:,:) )
 
     do k = 1, KMAX
-       AXIS(1:IMAX,1:JMAX,k) = &
-            ( REAL_CZ(k+KS-1,IS:IE    ,JS:JE) + REAL_CZ(k+KS-1,IS:IE    ,JS+1:JE+1) &
-            + REAL_CZ(k+KS-1,IS+1:IE+1,JS:JE) + REAL_CZ(k+KS-1,IS+1:IE+1,JS+1:JE+1) ) * 0.25_RP
+    do j = 1, jm-1
+    do i = 1, im-1
+       AXIS(i,j,k) = ( REAL_CZ(k+KS-1,ims+i-1,jms+j-1) + REAL_CZ(k+KS-1,ims+i  ,jms+j-1) &
+                     + REAL_CZ(k+KS-1,ims+i-1,jms+j  ) + REAL_CZ(k+KS-1,ims+i  ,jms+j  ) ) * 0.25_RP
+    end do
+    end do
+    end do
+    do k = 1, KMAX
+    do i = 1, im
+       AXIS(i,jm,k) = REAL_CZ(k+KS-1,ims+i-1,jms+jm-1)
+    end do
+    end do
+    do k = 1, KMAX
+    do j = 1, jm
+       AXIS(im,j,k) = REAL_CZ(k+KS-1,ims+im-1,jms+j-1)
+    end do
     end do
     AXIS_name(1:3) = (/'xh','yh', 'z '/)
     call HistoryPutAssociatedCoordinates( 'height_uvz' , 'height (half level uvz)'             ,     &
                                           'm' , AXIS_name(1:3), AXIS(:,:,:) )
 
     do k = 1, KMAX
-       AXIS(1:IMAX,1:JMAX,k) = ( REAL_FZ(k+KS-1,IS:IE,JS:JE) + REAL_FZ(k+KS-1,IS+1:IE+1,JS:JE) ) * 0.5_RP
+    do j = 1, jm
+    do i = 1, im-1
+       AXIS(i,j,k) = ( REAL_FZ(k+KS-1,ims+i-1,jms+j-1) + REAL_FZ(k+KS-1,ims+i,jms+j-1) ) * 0.5_RP
+    end do
+    end do
+    end do
+    do k = 1, KMAX
+    do j = 1, jm
+       AXIS(im,j,k) = REAL_FZ(k+KS-1,ims+im-1,jms+j-1)
+    end do
     end do
     AXIS_name(1:3) = (/'xh','y ', 'zh'/)
     call HistoryPutAssociatedCoordinates( 'height_uyw' , 'height (half level uyw)'             ,     &
                                           'm' , AXIS_name(1:3), AXIS(:,:,:) )
 
     do k = 1, KMAX
-       AXIS(1:IMAX,1:JMAX,k) = ( REAL_FZ(k+KS-1,IS:IE,JS:JE) + REAL_FZ(k+KS-1,IS:IE,JS+1:JE+1) ) * 0.5_RP
+    do j = 1, jm-1
+    do i = 1, im
+       AXIS(i,j,k) = ( REAL_FZ(k+KS-1,ims+i-1,jms+j-1) + REAL_FZ(k+KS-1,ims+i-1,jms+j) ) * 0.5_RP
+    end do
+    end do
+    end do
+    do k = 1, KMAX
+    do i = 1, im
+       AXIS(i,jm,k) = REAL_FZ(k+KS-1,ims+i-1,jms+jm-1)
+    end do
     end do
     AXIS_name(1:3) = (/'x ','yh', 'zh'/)
     call HistoryPutAssociatedCoordinates( 'height_xvw' , 'height (half level xvw)'             ,     &
                                           'm' , AXIS_name(1:3), AXIS(:,:,:) )
 
     do k = 1, KMAX
-       AXIS(1:IMAX,1:JMAX,k) = &
-            ( REAL_FZ(k+KS-1,IS:IE    ,JS:JE) + REAL_FZ(k+KS-1,IS:IE    ,JS+1:JE+1) &
-            + REAL_FZ(k+KS-1,IS+1:IE+1,JS:JE) + REAL_FZ(k+KS-1,IS+1:IE+1,JS+1:JE+1) ) * 0.25_RP
+    do j = 1, jm-1
+    do i = 1, im-1
+       AXIS(i,j,k) = ( REAL_FZ(k+KS-1,ims+i-1,jms+j-1) + REAL_FZ(k+KS-1,ims+i  ,jms+j-1) &
+                     + REAL_FZ(k+KS-1,ims+i-1,jms+j  ) + REAL_FZ(k+KS-1,ims+i  ,jms+j  ) ) * 0.25_RP
+    end do
+    end do
+    end do
+    do k = 1, KMAX
+    do i = 1, im
+       AXIS(i,jm,k) = REAL_FZ(k+KS-1,ims+i-1,jms+jm-1)
+    end do
+    end do
+    do k = 1, KMAX
+    do j = 1, jm
+       AXIS(im,j,k) = REAL_FZ(k+KS-1,ims+im-1,jms+j-1)
+    end do
     end do
     AXIS_name(1:3) = (/'xh','yh', 'zh'/)
     call HistoryPutAssociatedCoordinates( 'height_uvw' , 'height (half level uvw)'             ,     &
                                           'm' , AXIS_name(1:3), AXIS(:,:,:) )
 
-    AXIS(1:IMAX,1:JMAX,1) = REAL_LON (IS:IE,JS:JE) / D2R
+    AXIS(1:im,1:jm,1) = REAL_LON (ims:ime,jms:jme) / D2R
     AXIS_name(1:2) = (/'x ','y '/)
     call HistoryPutAssociatedCoordinates( 'lon' , 'longitude'             ,     &
                                           'degrees_east' , AXIS_name(1:2), AXIS(:,:,1) )
 
-    AXIS(1:IMAX,1:JMAX,1) = REAL_LONX(IS:IE,JS:JE) / D2R
+    AXIS(1:im,1:jm,1) = REAL_LONX(ims:ime,jms:jme) / D2R
     AXIS_name(1:2) = (/'xh','y '/)
     call HistoryPutAssociatedCoordinates( 'lon_uy', 'longitude (half level uy)',     &
                                           'degrees_east' , AXIS_name(1:2), AXIS(:,:,1) )
-    AXIS(1:IMAX,1:JMAX,1) = REAL_LONY(IS:IE,JS:JE) / D2R
+    AXIS(1:im,1:jm,1) = REAL_LONY(ims:ime,jms:jme) / D2R
     AXIS_name(1:2) = (/'x ','yh'/)
     call HistoryPutAssociatedCoordinates( 'lon_xv', 'longitude (half level xv)',     &
                                           'degrees_east' , AXIS_name(1:2), AXIS(:,:,1) )
-    AXIS(1:IMAX,1:JMAX,1) = REAL_LONXY(IS:IE,JS:JE) / D2R
+    AXIS(1:im,1:jm,1) = REAL_LONXY(ims:ime,jms:jme) / D2R
     AXIS_name(1:2) = (/'xh','yh'/)
     call HistoryPutAssociatedCoordinates( 'lon_uv', 'longitude (half level uv)',     &
                                           'degrees_east' , AXIS_name(1:2), AXIS(:,:,1) )
 
-    AXIS(1:IMAX,1:JMAX,1) = REAL_LAT (IS:IE,JS:JE) / D2R
+    AXIS(1:im,1:jm,1) = REAL_LAT (ims:ime,jms:jme) / D2R
     AXIS_name(1:2) = (/'x ','y '/)
     call HistoryPutAssociatedCoordinates( 'lat' , 'latitude'              ,     &
                                           'degrees_north', AXIS_name(1:2), AXIS(:,:,1) )
 
-    AXIS(1:IMAX,1:JMAX,1) = REAL_LATX(IS:IE,JS:JE) / D2R
+    AXIS(1:im,1:jm,1) = REAL_LATX(ims:ime,jms:jme) / D2R
     AXIS_name(1:2) = (/'xh','y '/)
     call HistoryPutAssociatedCoordinates( 'lat_uy', 'latitude (half level uy)' ,     &
                                           'degrees_north', AXIS_name(1:2), AXIS(:,:,1) )
-    AXIS(1:IMAX,1:JMAX,1) = REAL_LATY(IS:IE,JS:JE) / D2R
+    AXIS(1:im,1:jm,1) = REAL_LATY(ims:ime,jms:jme) / D2R
     AXIS_name(1:2) = (/'x ','yh'/)
     call HistoryPutAssociatedCoordinates( 'lat_xv', 'latitude (half level xv)' ,     &
                                           'degrees_north', AXIS_name(1:2), AXIS(:,:,1) )
-    AXIS(1:IMAX,1:JMAX,1) = REAL_LATXY(IS:IE,JS:JE) / D2R
+    AXIS(1:im,1:jm,1) = REAL_LATXY(ims:ime,jms:jme) / D2R
     AXIS_name(1:2) = (/'xh','yh'/)
     call HistoryPutAssociatedCoordinates( 'lat_uv', 'latitude (half level uv)' ,     &
                                           'degrees_north', AXIS_name(1:2), AXIS(:,:,1) )
@@ -474,7 +567,10 @@ contains
   subroutine HIST_put_2D( &
       itemid, &
       var,    &
-      dt      )
+      dt,     &
+      nohalo  )
+    use gtool_file, only: &
+       RMISS
     use gtool_history, only: &
        HistoryPut
     implicit none
@@ -483,19 +579,53 @@ contains
     real(RP), intent(in) :: var(:,:) !< value
     real(DP), intent(in) :: dt       !< delta t [sec]
 
-    real(RP) :: var2(IMAX*JMAX)
+    logical, intent(in), optional :: nohalo
+
+    real(RP) :: var2(im*jm)
     integer  :: i, j
+    logical :: nohalo_
     !---------------------------------------------------------------------------
 
     if ( itemid < 0 ) return
 
     call PROF_rapstart('FILE O NetCDF')
 
-    do j = 1, JMAX
-    do i = 1, IMAX
-       var2(i + (j-1)*IMAX) = var(IS+i-1,JS+j-1)
+    do j = 1, jm
+    do i = 1, im
+       var2(i + (j-1)*im) = var(ims+i-1,jms+j-1)
     enddo
     enddo
+
+    nohalo_ = .false.
+    if ( present(nohalo) ) nohalo_ = nohalo
+
+    if ( nohalo_ ) then
+       ! W halo
+       do j = 1, jm
+       do i = 1, IS-ims
+          var2(i + (j-1)*im) = RMISS
+       end do
+       end do
+       ! E halo
+       do j = 1, jm
+       do i = IE-ims+2, ime-ims+1
+          var2(i + (j-1)*im) = RMISS
+       end do
+       end do
+       ! S halo
+       do j = 1, JS-jms
+       do i = 1, im
+          var2(i + (j-1)*im) = RMISS
+       end do
+       end do
+       ! N halo
+       do j = JE-jms+2, jme-jms+1
+       do i = 1, im
+          var2(i + (j-1)*im) = RMISS
+       end do
+       end do
+    end if
+
     call HistoryPut(itemid, var2, dt)
 
     call PROF_rapend  ('FILE O NetCDF')
@@ -512,7 +642,10 @@ contains
       zinterp, &
       xdim,    &
       ydim,    &
-      zdim     )
+      zdim,    &
+      nohalo   )
+    use gtool_file, only: &
+       RMISS
     use gtool_history, only: &
        HistoryPut
     use scale_interpolation, only: &
@@ -529,6 +662,8 @@ contains
     character(len=*), intent(in), optional :: ydim
     character(len=*), intent(in), optional :: zdim
 
+    logical, intent(in), optional :: nohalo
+
     intrinsic shape
     integer :: s(3)
 
@@ -541,6 +676,8 @@ contains
     integer  :: isize, jsize, ksize
     integer  :: iall, jall, kall
     integer  :: istart, jstart, kstart
+
+    logical :: nohalo_
     !---------------------------------------------------------------------------
 
     if ( itemid < 0 ) return
@@ -554,18 +691,22 @@ contains
     if( present(ydim) ) yd = ydim
     if( present(zdim) ) zd = zdim
 
+    nohalo_ = .false.
+    if ( present(nohalo) ) nohalo_ = nohalo
+
+
     ! select dimension
     select case ( xd )
       case default
-        isize  = IMAX
+        isize  = im
         iall   = IA
-        istart = IS
+        istart = ims
     end select
     select case ( yd )
       case default
-        jsize  = JMAX
+        jsize  = jm
         jall   = JA
-        jstart = JS
+        jstart = jms
     end select
     select case ( zd )
       case ('land')
@@ -593,6 +734,34 @@ contains
           var2(i + (j-1)*isize) = var(1,istart+i-1,jstart+j-1)
        enddo
        enddo
+
+       if ( nohalo_ ) then
+          ! W halo
+          do j = 1, jsize
+          do i = 1, IS-ims
+             var2(i + (j-1)*isize) = RMISS
+          end do
+          end do
+          ! E halo
+          do j = 1, jsize
+          do i = IE-ims+2, ime-ims+1
+             var2(i + (j-1)*isize) = RMISS
+          end do
+          end do
+          ! S halo
+          do j = 1, JS-jms
+          do i = 1, isize
+             var2(i + (j-1)*isize) = RMISS
+          end do
+          end do
+          ! N halo
+          do j = JE-jms+2, jme-jms+1
+          do i = 1, isize
+             var2(i + (j-1)*isize) = RMISS
+          end do
+          end do
+       end if
+
        call HistoryPut(itemid, var2(1:isize*jsize), dt)
 
     else
@@ -620,6 +789,41 @@ contains
           enddo
           enddo
        endif
+
+       if ( nohalo_ ) then
+          ! W halo
+          do k = 1, ksize
+          do j = 1, jsize
+          do i = 1, IS-ims
+             var2(i + (j-1)*isize + (k-1)*jsize*isize) = RMISS
+          end do
+          end do
+          end do
+          ! E halo
+          do k = 1, ksize
+          do j = 1, jsize
+          do i = IE-ims+2, ime-ims+1
+             var2(i + (j-1)*isize + (k-1)*jsize*isize) = RMISS
+          end do
+          end do
+          end do
+          ! S halo
+          do k = 1, ksize
+          do j = 1, JS-jms
+          do i = 1, isize
+             var2(i + (j-1)*isize + (k-1)*jsize*isize) = RMISS
+          end do
+          end do
+          end do
+          ! N halo
+          do k = 1, ksize
+          do j = JE-jms+2, jme-jms+1
+          do i = 1, isize
+             var2(i + (j-1)*isize + (k-1)*jsize*isize) = RMISS
+          end do
+          end do
+          end do
+       end if
 
        call HistoryPut(itemid, var2, dt)
 
@@ -677,7 +881,8 @@ contains
        unit, &
        dt,   &
        xdim, &
-       ydim  )
+       ydim, &
+       nohalo )
     implicit none
 
     real(RP),         intent(in) :: var(:,:) !< value
@@ -688,6 +893,8 @@ contains
 
     character(len=*), intent(in), optional :: xdim
     character(len=*), intent(in), optional :: ydim
+
+    logical, intent(in), optional :: nohalo
 
     character(len=16) :: xd, yd
     integer          :: itemid
@@ -705,7 +912,7 @@ contains
                    dt = dt,             & ! [IN]
                    xdim = xd, ydim = yd ) ! [IN]
 
-    call HIST_put( itemid, var, dt ) ! [IN]
+    call HIST_put( itemid, var, dt, nohalo = nohalo ) ! [IN]
 
     return
   end subroutine HIST_in_2D
@@ -720,7 +927,8 @@ contains
        dt,   &
        xdim, &
        ydim, &
-       zdim  )
+       zdim, &
+       nohalo )
     implicit none
 
     real(RP),         intent(in) :: var(:,:,:) !< value
@@ -732,6 +940,8 @@ contains
     character(len=*), intent(in), optional :: xdim
     character(len=*), intent(in), optional :: ydim
     character(len=*), intent(in), optional :: zdim
+
+    logical, intent(in), optional :: nohalo
 
     character(len=16) :: xd, yd, zd
     integer          :: itemid
@@ -751,8 +961,9 @@ contains
                    dt = dt,                      & ! [IN]
                    xdim = xd, ydim = yd, zdim=zd ) ! [IN]
 
-    call HIST_put( itemid, var, dt, zinterp,     & ! [IN]
-                   xdim = xd, ydim = yd, zdim=zd ) ! [IN]
+    call HIST_put( itemid, var, dt, zinterp,      & ! [IN]
+                   xdim = xd, ydim = yd, zdim=zd, & ! [IN]
+                   nohalo = nohalo                ) ! [IN]
 
     return
   end subroutine HIST_in_3D

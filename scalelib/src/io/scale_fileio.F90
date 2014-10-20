@@ -70,14 +70,19 @@ module scale_fileio
   real(RP), private, allocatable :: AXIS_LATY(:,:) ! [deg]
   real(RP), private, allocatable :: AXIS_LATXY(:,:) ! [deg]
 
-  real(RP), private, allocatable :: AXIS_CZ(:,:,:) ! [m]
-  real(RP), private, allocatable :: AXIS_FZ(:,:,:) ! [m]
-
+  integer :: im, jm
+  integer :: ims, ime
+  integer :: jms, jme
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine FILEIO_setup
+    use scale_process, only: &
+       PRC_HAS_W, &
+       PRC_HAS_E, &
+       PRC_HAS_S, &
+       PRC_HAS_N
     implicit none
     !---------------------------------------------------------------------------
 
@@ -89,17 +94,38 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '*** Data source : ', trim(H_SOURCE)
     if( IO_L ) write(IO_FID_LOG,*) '*** Institute   : ', trim(H_INSTITUTE)
 
-    allocate( AXIS_LON (IMAX,JMAX) )
-    allocate( AXIS_LONX(IMAX,JMAX) )
-    allocate( AXIS_LONY(IMAX,JMAX) )
-    allocate( AXIS_LONXY(IMAX,JMAX) )
-    allocate( AXIS_LAT (IMAX,JMAX) )
-    allocate( AXIS_LATX(IMAX,JMAX) )
-    allocate( AXIS_LATY(IMAX,JMAX) )
-    allocate( AXIS_LATXY(IMAX,JMAX) )
+    im = IMAX
+    jm = JMAX
+    ims = IS
+    ime = IE
+    jms = JS
+    jme = JE
 
-    allocate( AXIS_CZ  (  KA,IA,JA) )
-    allocate( AXIS_FZ  (0:KA,IA,JA) )
+    if ( .not. PRC_HAS_W ) then
+       im = im + IHALO
+       ims = 1
+    end if
+    if ( .not. PRC_HAS_E ) then
+       im = im + IHALO
+       ime = IA
+    end if
+    if ( .not. PRC_HAS_S ) then
+       jm = jm + JHALO
+       jms = 1
+    end if
+    if ( .not. PRC_HAS_N ) then
+       jm = jm + JHALO
+       jme = JA
+    end if
+
+    allocate( AXIS_LON (im,jm) )
+    allocate( AXIS_LONX(im,jm) )
+    allocate( AXIS_LONY(im,jm) )
+    allocate( AXIS_LONXY(im,jm) )
+    allocate( AXIS_LAT (im,jm) )
+    allocate( AXIS_LATX(im,jm) )
+    allocate( AXIS_LATY(im,jm) )
+    allocate( AXIS_LATXY(im,jm) )
 
     ! only for register
     call PROF_rapstart('FILE I NetCDF')
@@ -145,17 +171,14 @@ contains
     real(RP), intent(in) :: FZ  (0:KA,IA,JA)
     !---------------------------------------------------------------------------
 
-    AXIS_LON (1:IMAX,1:JMAX) = LON (IS:IE,JS:JE) / D2R
-    AXIS_LONX(1:IMAX,1:JMAX) = LONX(IS:IE,JS:JE) / D2R
-    AXIS_LONY(1:IMAX,1:JMAX) = LONY(IS:IE,JS:JE) / D2R
-    AXIS_LONXY(1:IMAX,1:JMAX) = LONXY(IS:IE,JS:JE) / D2R
-    AXIS_LAT (1:IMAX,1:JMAX) = LAT (IS:IE,JS:JE) / D2R
-    AXIS_LATX(1:IMAX,1:JMAX) = LATX(IS:IE,JS:JE) / D2R
-    AXIS_LATY(1:IMAX,1:JMAX) = LATY(IS:IE,JS:JE) / D2R
-    AXIS_LATXY(1:IMAX,1:JMAX) = LATXY(IS:IE,JS:JE) / D2R
-
-    AXIS_CZ(:,:,:) = CZ(:,:,:)
-    AXIS_FZ(:,:,:) = FZ(:,:,:)
+    AXIS_LON (:,:) = LON (ims:ime,jms:jme) / D2R
+    AXIS_LONX(:,:) = LONX(ims:ime,jms:jme) / D2R
+    AXIS_LONY(:,:) = LONY(ims:ime,jms:jme) / D2R
+    AXIS_LONXY(:,:) = LONXY(ims:ime,jms:jme) / D2R
+    AXIS_LAT (:,:) = LAT (ims:ime,jms:jme) / D2R
+    AXIS_LATX(:,:) = LATX(ims:ime,jms:jme) / D2R
+    AXIS_LATY(:,:) = LATY(ims:ime,jms:jme) / D2R
+    AXIS_LATXY(:,:) = LATXY(ims:ime,jms:jme) / D2R
 
     return
   end subroutine FILEIO_set_coordinates
@@ -213,11 +236,11 @@ contains
     !---------------------------------------------------------------------------
 
     call FilePutAxis( fid, 'z',   'Z',               'm', 'z',   dtype, GRID_CZ(KS:KE) )
-    call FilePutAxis( fid, 'x',   'X',               'm', 'x',   dtype, GRID_CX(IS:IE) )
-    call FilePutAxis( fid, 'y',   'Y',               'm', 'y',   dtype, GRID_CY(JS:JE) )
+    call FilePutAxis( fid, 'x',   'X',               'm', 'x',   dtype, GRID_CX(ims:ime) )
+    call FilePutAxis( fid, 'y',   'Y',               'm', 'y',   dtype, GRID_CY(jms:jme) )
     call FilePutAxis( fid, 'zh',  'Z (half level)',  'm', 'zh',  dtype, GRID_FZ(KS:KE) )
-    call FilePutAxis( fid, 'xh',  'X (half level)',  'm', 'xh',  dtype, GRID_FX(IS:IE) )
-    call FilePutAxis( fid, 'yh',  'Y (half level)',  'm', 'yh',  dtype, GRID_FY(JS:JE) )
+    call FilePutAxis( fid, 'xh',  'X (half level)',  'm', 'xh',  dtype, GRID_FX(ims:ime) )
+    call FilePutAxis( fid, 'yh',  'Y (half level)',  'm', 'yh',  dtype, GRID_FY(jms:jme) )
 
     call FilePutAxis( fid, 'lz',  'LZ',              'm', 'lz',  dtype, GRID_LCZ(LKS:LKE) )
     call FilePutAxis( fid, 'lzh', 'LZ (half level)', 'm', 'lzh', dtype, GRID_LFZ(LKS:LKE) )
@@ -338,13 +361,13 @@ contains
        dim1_S   = KS
        dim1_E   = KE
     elseif( axistype == 'X' ) then
-       dim1_max = IMAX
-       dim1_S   = IS
-       dim1_E   = IE
+       dim1_max = im
+       dim1_S   = ims
+       dim1_E   = ime
     elseif( axistype == 'Y' ) then
-       dim1_max = JMAX
-       dim1_S   = JS
-       dim1_E   = JE
+       dim1_max = jm
+       dim1_S   = jms
+       dim1_E   = jme
     else
        write(*,*) 'xxx unsupported axis type. Check!', trim(axistype), ' item:',trim(varname)
        call PRC_MPIstop
@@ -393,19 +416,19 @@ contains
     if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Read 2D var: ', trim(varname)
 
     if ( axistype == 'XY' ) then
-       dim1_max = IMAX
-       dim2_max = JMAX
-       dim1_S   = IS
-       dim1_E   = IE
-       dim2_S   = JS
-       dim2_E   = JE
+       dim1_max = im
+       dim2_max = jm
+       dim1_S   = ims
+       dim1_E   = ime
+       dim2_S   = jms
+       dim2_E   = jme
     elseif( axistype == 'ZX' ) then
        dim1_max = KMAX
-       dim2_max = IMAX
+       dim2_max = im
        dim1_S   = KS
        dim1_E   = KE
-       dim2_S   = IS
-       dim2_E   = IE
+       dim2_S   = ims
+       dim2_E   = ime
     else
        write(*,*) 'xxx unsupported axis type. Check!', trim(axistype), ' item:',trim(varname)
        call PRC_MPIstop
@@ -456,34 +479,34 @@ contains
 
     if ( axistype == 'ZXY' ) then
        dim1_max = KMAX
-       dim2_max = IMAX
-       dim3_max = JMAX
+       dim2_max = im
+       dim3_max = jm
        dim1_S   = KS
        dim1_E   = KE
-       dim2_S   = IS
-       dim2_E   = IE
-       dim3_S   = JS
-       dim3_E   = JE
+       dim2_S   = ims
+       dim2_E   = ime
+       dim3_S   = jms
+       dim3_E   = jme
     else if ( axistype == 'Land' ) then
        dim1_max = LKMAX
-       dim2_max = IMAX
-       dim3_max = JMAX
+       dim2_max = im
+       dim3_max = jm
        dim1_S   = LKS
        dim1_E   = LKE
-       dim2_S   = IS
-       dim2_E   = IE
-       dim3_S   = JS
-       dim3_E   = JE
+       dim2_S   = ims
+       dim2_E   = ime
+       dim3_S   = jms
+       dim3_E   = jme
     else if ( axistype == 'Urban' ) then
        dim1_max = UKMAX
-       dim2_max = IMAX
-       dim3_max = JMAX
+       dim2_max = im
+       dim3_max = jm
        dim1_S   = UKS
        dim1_E   = UKE
-       dim2_S   = IS
-       dim2_E   = IE
-       dim3_S   = JS
-       dim3_E   = JE
+       dim2_S   = ims
+       dim2_E   = ime
+       dim3_S   = jms
+       dim3_E   = jme
     else
        write(*,*) 'xxx unsupported axis type. Check!', trim(axistype), ' item:',trim(varname)
        call PRC_MPIstop
@@ -535,15 +558,15 @@ contains
 
     if ( axistype == 'ZXYT' ) then
        dim1_max = KMAX
-       dim2_max = IMAX
-       dim3_max = JMAX
+       dim2_max = im
+       dim3_max = jm
        dim4_max = step
        dim1_S   = KS
        dim1_E   = KE
-       dim2_S   = IS
-       dim2_E   = IE
-       dim3_S   = JS
-       dim3_E   = JE
+       dim2_S   = ims
+       dim2_E   = ime
+       dim3_S   = jms
+       dim3_E   = jme
        dim4_S   = 1
        dim4_E   = step
     else
@@ -654,14 +677,14 @@ contains
        dim1_E   = KE
     elseif( axistype == 'X' ) then
        dims = (/'x'/)
-       dim1_max = IMAX
-       dim1_S   = IS
-       dim1_E   = IE
+       dim1_max = im
+       dim1_S   = ims
+       dim1_E   = ime
     elseif( axistype == 'Y' ) then
        dims = (/'y'/)
-       dim1_max = JMAX
-       dim1_S   = JS
-       dim1_E   = JE
+       dim1_max = jm
+       dim1_S   = jms
+       dim1_E   = jme
     else
        write(*,*) 'xxx unsupported axis type. Check!', trim(axistype), ' item:',trim(varname)
        call PRC_MPIstop
@@ -767,44 +790,44 @@ contains
 
     if ( axistype == 'XY' ) then
        dims = (/'x','y'/)
-       dim1_max = IMAX
-       dim2_max = JMAX
-       dim1_S   = IS
-       dim1_E   = IE
-       dim2_S   = JS
-       dim2_E   = JE
+       dim1_max = im
+       dim2_max = jm
+       dim1_S   = ims
+       dim1_E   = ime
+       dim2_S   = jms
+       dim2_E   = jme
     elseif ( axistype == 'UY' ) then
        dims = (/'xh','y '/)
-       dim1_max = IMAX
-       dim2_max = JMAX
-       dim1_S   = IS
-       dim1_E   = IE
-       dim2_S   = JS
-       dim2_E   = JE
+       dim1_max = im
+       dim2_max = jm
+       dim1_S   = ims
+       dim1_E   = ime
+       dim2_S   = jms
+       dim2_E   = jme
     elseif ( axistype == 'XV' ) then
        dims = (/'x ','yh'/)
-       dim1_max = IMAX
-       dim2_max = JMAX
-       dim1_S   = IS
-       dim1_E   = IE
-       dim2_S   = JS
-       dim2_E   = JE
+       dim1_max = im
+       dim2_max = jm
+       dim1_S   = ims
+       dim1_E   = ime
+       dim2_S   = jms
+       dim2_E   = jme
     elseif ( axistype == 'UV' ) then
        dims = (/'xh','yh'/)
-       dim1_max = IMAX
-       dim2_max = JMAX
-       dim1_S   = IS
-       dim1_E   = IE
-       dim2_S   = JS
-       dim2_E   = JE
+       dim1_max = im
+       dim2_max = jm
+       dim1_S   = ims
+       dim1_E   = ime
+       dim2_S   = jms
+       dim2_E   = jme
     elseif( axistype == 'ZX' ) then
        dims = (/'z','x'/)
        dim1_max = KMAX
-       dim2_max = IMAX
+       dim2_max = im
        dim1_S   = KS
        dim1_E   = KE
-       dim2_S   = IS
-       dim2_E   = IE
+       dim2_S   = ims
+       dim2_E   = ime
     else
        write(*,*) 'xxx unsupported axis type. Check!', trim(axistype), ' item:',trim(varname)
        call PRC_MPIstop
@@ -919,69 +942,69 @@ contains
     if ( axistype == 'ZXY' ) then
        dims = (/'z','x','y'/)
        dim1_max = KMAX
-       dim2_max = IMAX
-       dim3_max = JMAX
+       dim2_max = im
+       dim3_max = jm
        dim1_S   = KS
        dim1_E   = KE
-       dim2_S   = IS
-       dim2_E   = IE
-       dim3_S   = JS
-       dim3_E   = JE
+       dim2_S   = ims
+       dim2_E   = ime
+       dim3_S   = jms
+       dim3_E   = jme
     elseif( axistype == 'ZHXY' ) then
        dims = (/'zh','x ','y '/)
        dim1_max = KMAX
-       dim2_max = IMAX
-       dim3_max = JMAX
+       dim2_max = im
+       dim3_max = jm
        dim1_S   = KS
        dim1_E   = KE
-       dim2_S   = IS
-       dim2_E   = IE
-       dim3_S   = JS
-       dim3_E   = JE
+       dim2_S   = ims
+       dim2_E   = ime
+       dim3_S   = jms
+       dim3_E   = jme
     elseif( axistype == 'ZXHY' ) then
        dims = (/'z ','xh','y '/)
        dim1_max = KMAX
-       dim2_max = IMAX
-       dim3_max = JMAX
+       dim2_max = im
+       dim3_max = jm
        dim1_S   = KS
        dim1_E   = KE
-       dim2_S   = IS
-       dim2_E   = IE
-       dim3_S   = JS
-       dim3_E   = JE
+       dim2_S   = ims
+       dim2_E   = ime
+       dim3_S   = jms
+       dim3_E   = jme
     elseif( axistype == 'ZXYH' ) then
        dims = (/'z ','x ','yh'/)
        dim1_max = KMAX
-       dim2_max = IMAX
-       dim3_max = JMAX
+       dim2_max = im
+       dim3_max = jm
        dim1_S   = KS
        dim1_E   = KE
-       dim2_S   = IS
-       dim2_E   = IE
-       dim3_S   = JS
-       dim3_E   = JE
+       dim2_S   = ims
+       dim2_E   = ime
+       dim3_S   = jms
+       dim3_E   = jme
     elseif( axistype == 'Land' ) then
        dims = (/'lz','x ','y '/)
        dim1_max = LKMAX
-       dim2_max = IMAX
-       dim3_max = JMAX
+       dim2_max = im
+       dim3_max = jm
        dim1_S   = LKS
        dim1_E   = LKE
-       dim2_S   = IS
-       dim2_E   = IE
-       dim3_S   = JS
-       dim3_E   = JE
+       dim2_S   = ims
+       dim2_E   = ime
+       dim3_S   = jms
+       dim3_E   = jme
     elseif( axistype == 'Urban' ) then
        dims = (/'uz','x ','y '/)
        dim1_max = UKMAX
-       dim2_max = IMAX
-       dim3_max = JMAX
+       dim2_max = im
+       dim3_max = jm
        dim1_S   = UKS
        dim1_E   = UKE
-       dim2_S   = IS
-       dim2_E   = IE
-       dim3_S   = JS
-       dim3_E   = JE
+       dim2_S   = ims
+       dim2_E   = ime
+       dim3_S   = jms
+       dim3_E   = jme
     else
        write(*,*) 'xxx unsupported axis type. Check!', trim(axistype), ' item:',trim(varname)
        call PRC_MPIstop
@@ -1065,7 +1088,7 @@ contains
     call PROF_rapstart('FILE O NetCDF')
 
     time_interval = timeintv
-    step = size(var(KS,IS,JS,:))
+    step = size(var(KS,ims,jms,:))
 
     rankidx(1) = PRC_2Drank(PRC_myrank,1)
     rankidx(2) = PRC_2Drank(PRC_myrank,2)
@@ -1108,14 +1131,14 @@ contains
     if ( axistype == 'ZXYT' ) then
        dims = (/'z','x','y'/)
        dim1_max = KMAX
-       dim2_max = IMAX
-       dim3_max = JMAX
+       dim2_max = im
+       dim3_max = jm
        dim1_S   = KS
        dim1_E   = KE
-       dim2_S   = IS
-       dim2_E   = IE
-       dim3_S   = JS
-       dim3_E   = JE
+       dim2_S   = ims
+       dim2_E   = ime
+       dim3_S   = jms
+       dim3_E   = jme
     else
        write(*,*) 'xxx unsupported axis type. Check!', trim(axistype), ' item:',trim(varname)
        call PRC_MPIstop

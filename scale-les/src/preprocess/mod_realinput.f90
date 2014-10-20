@@ -342,8 +342,8 @@ contains
                        atmos_boundary_out_dtype, update_dt           )
 
     do n = ts, te
-    do j = JS, JE
-    do i = IS, IE
+    do j = 1, JA
+    do i = 1, IA
     do k = KS, KE
        buffer(k,i,j,n-ts+1) = 2.0_RP * MOMZ(k,i,j,n) / ( DENS(k+1,i,j,n) + DENS(k,i,j,n) )
     end do
@@ -355,8 +355,8 @@ contains
                        atmos_boundary_out_dtype, update_dt      )
 
     do n = ts, te
-    do j = JS, JE
-    do i = IS, IE
+    do j = 1, JA
+    do i = 1, IA
     do k = KS, KE
        buffer(k,i,j,n-ts+1) = 2.0_RP * MOMX(k,i,j,n) / ( DENS(k,i+1,j,n) + DENS(k,i,j,n) )
     end do
@@ -368,8 +368,8 @@ contains
                        atmos_boundary_out_dtype, update_dt      )
 
     do n = ts, te
-    do j = JS, JE
-    do i = IS, IE
+    do j = 1, JA
+    do i = 1, IA
     do k = KS, KE
        buffer(k,i,j,n-ts+1) = 2.0_RP * MOMY(k,i,j,n) / ( DENS(k,i,j+1,n) + DENS(k,i,j,n) )
     end do
@@ -381,8 +381,8 @@ contains
                        atmos_boundary_out_dtype, update_dt      )
 
     do n = ts, te
-    do j = JS, JE
-    do i = IS, IE
+    do j = 1, JA
+    do i = 1, IA
     do k = KS, KE
        buffer(k,i,j,n-ts+1) = RHOT(k,i,j,n) / DENS(k,i,j,n)
     end do
@@ -395,8 +395,8 @@ contains
 
     do iq = 1, QA
        do n = ts, te
-       do j = JS, JE
-       do i = IS, IE
+       do j = 1, JA
+       do i = 1, IA
        do k = KS, KE
           buffer(k,i,j,n-ts+1) = QTRC(k,i,j,n,iq)
        end do
@@ -429,6 +429,9 @@ contains
       mdlid,        &
       serial,       &
       no_add_input  )
+    use scale_comm, only: &
+       COMM_vars8, &
+       COMM_wait
     use mod_ocean_vars, only: &
        OCEAN_vars_restart_write, &
        OCEAN_vars_external_in
@@ -480,8 +483,6 @@ contains
     real(RP) :: qc_urb(IA,JA)
     real(RP) :: uc_urb(IA,JA)
 
-    real(RP) :: init_dens(KA,IA,JA)
-    real(RP) :: init_rhot(KA,IA,JA)
     real(RP) :: init_qtrc(KA,IA,JA,QA)
 
     integer :: k, i, j, iq
@@ -560,29 +561,45 @@ contains
     do j = 1, JA
     do i = 1, IA
     do k = 1, KA
-       init_dens(k,i,j) = dens(k,i,j,1)
-       init_rhot(k,i,j) = rhot(k,i,j,1)
-       do iq = 1, QA
-          init_qtrc(k,i,j,iq) = qtrc(k,i,j,1,iq)
-       end do
+    do iq = 1, QA
+       init_qtrc(k,i,j,iq) = qtrc(k,i,j,1,iq)
+    end do
     end do
     end do
     end do
 
     call THERMODYN_temp_pres( temp     (:,:,:),   & ! [OUT]
                               pres     (:,:,:),   & ! [OUT] not used
-                              init_dens(:,:,:),   & ! [IN]
-                              init_rhot(:,:,:),   & ! [IN]
+                              dens     (:,:,:,1), & ! [IN]
+                              rhot     (:,:,:,1), & ! [IN]
                               init_qtrc(:,:,:,:)  ) ! [IN]
 
-    do j = JS, JE
-    do i = IS, IE
+    do j = 1, JA
+    do i = 1, IA
        tc_urb(i,j) = temp(KS,i,j)
        qc_urb(i,j) = qtrc(KS,i,j,1,I_QV)
+    enddo
+    enddo
+
+    do j = 1, JA-1
+    do i = 1, IA-1
        uc_urb(i,j) = max(sqrt( ( momx(KS,i,j,1) / ( dens(KS,i+1,  j,1) + dens(KS,i,j,1) ) * 2.0_RP )**2.0_RP &
                              + ( momy(KS,i,j,1) / ( dens(KS,  i,j+1,1) + dens(KS,i,j,1) ) * 2.0_RP )**2.0_RP ), 0.01_RP)
     enddo
     enddo
+    do j = 1, JA-1
+       uc_urb(IA,j) = max(sqrt( ( momx(KS,IA,j,1) / dens(KS,IA,j,1) )**2.0_RP &
+                              + ( momy(KS,IA,j,1) / ( dens(KS,IA,j+1,1) + dens(KS,IA,j,1) ) * 2.0_RP )**2.0_RP ), 0.01_RP)
+    enddo
+    do i = 1, IA-1
+       uc_urb(i,JA) = max(sqrt( ( momx(KS,i,JA,1) / ( dens(KS,i+1,JA,1) + dens(KS,i,JA,1) ) * 2.0_RP )**2.0_RP &
+                              + ( momy(KS,i,JA,1) / dens(KS,i,JA,1) )**2.0_RP ), 0.01_RP)
+    enddo
+    uc_urb(IA,JA) = max(sqrt( ( momx(KS,IA,JA,1) / dens(KS,IA,JA,1) )**2.0_RP &
+                            + ( momy(KS,IA,JA,1) / dens(KS,IA,JA,1) )**2.0_RP ), 0.01_RP)
+
+    call COMM_vars8( uc_urb, 1 )
+    call COMM_wait ( uc_urb, 1, .false. )
 
     ! Write out: Ocean
     call OCEAN_vars_external_in( tw, sst, albw, z0w )
@@ -902,8 +919,8 @@ contains
     end do
 
     do n = start_step, end_step
-    do j = JS-1, JE+1
-    do i = IS-1, IE+1
+    do j = 1, JA
+    do i = 1, IA
     do k = KS-1, KE+1
        velz(k,i,j,n) = velz_org(kgrd(k,i,j,1,1),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,1) &
                      + velz_org(kgrd(k,i,j,2,1),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,1) &
@@ -950,8 +967,8 @@ contains
     end do
 
     do n = start_step, end_step
-    do j = JS-1, JE+1
-    do i = IS-1, IE+1
+    do j = 1, JA
+    do i = 1, IA
     do k = KS-1, KE+1
        work(k,i,j,n) = velx_org(kgrd(k,i,j,1,1),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,1) &
                      + velx_org(kgrd(k,i,j,2,1),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,1) &
@@ -965,13 +982,20 @@ contains
     end do
     ! from staggered point to scalar point
     do n = start_step, end_step
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS-1, KE+1
-       llvelx(k,i,j,n) = ( work(k,i-1,j,n) + work(k,i,j,n) ) * 0.5_RP
-    end do
-    end do
-    end do
+       do j = 1, JA
+       do i = 2, IA
+       do k = KS-1, KE+1
+          llvelx(k,i,j,n) = ( work(k,i-1,j,n) + work(k,i,j,n) ) * 0.5_RP
+       end do
+       end do
+       end do
+       do j = 1, JA
+       do k = KS-1, KE+1
+          llvelx(k,1,j,n) = work(k,1,j,n)
+       end do
+       end do
+       call COMM_vars8( llvelx(:,:,:,n), 1 )
+       call COMM_wait ( llvelx(:,:,:,n), 1, .false. )
     end do
 
     ! for vector (v) points
@@ -1008,8 +1032,8 @@ contains
     end do
 
     do n = start_step, end_step
-    do j = JS-1, JE+1
-    do i = IS-1, IE+1
+    do j = 1, JA
+    do i = 1, IA
     do k = KS-1, KE+1
        work(k,i,j,n) = vely_org(kgrd(k,i,j,1,1),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,1) &
                      + vely_org(kgrd(k,i,j,2,1),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,1) &
@@ -1023,64 +1047,79 @@ contains
     end do
     ! from staggered point to scalar point
     do n = start_step, end_step
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS-1, KE+1
-       llvely(k,i,j,n) = ( work(k,i,j-1,n) + work(k,i,j,n) ) * 0.5_RP
-    end do
-    end do
-    end do
+       do j = 2, JA
+       do i = 1, IA
+       do k = KS-1, KE+1
+          llvely(k,i,j,n) = ( work(k,i,j-1,n) + work(k,i,j,n) ) * 0.5_RP
+       end do
+       end do
+       end do
+       do i = 1, IA
+       do k = KS-1, KE+1
+          llvely(k,i,1,n) = work(k,i,1,n)
+       end do
+       end do
+       call COMM_vars8( llvely(:,:,:,n), 1 )
+       call COMM_wait ( llvely(:,:,:,n), 1, .false. )
     end do
 
     do n = start_step, end_step
        ! convert from latlon coordinate to local mapping (x)
-       do j = JS, JE
-       do i = IS, IE
+       do j = 1, JA
+       do i = 1, IA
        do k = KS, KE
           work(k,i,j,n) = llvelx(k,i,j,n) * rotc(i,j,cosin) + llvely(k,i,j,n) * rotc(i,j,sine )
        end do
        end do
        end do
 
-       call COMM_vars8( work(:,:,:,n), n )
-       call COMM_wait ( work(:,:,:,n), n )
-
        ! from scalar point to staggered point
-       do j = JS-1, JE+1
-       do i = IS-1, IE+1
+       do j = 1, JA
+       do i = 1, IA-1
        do k = KS, KE
           velx(k,i,j,n) = ( work(k,i+1,j,n) + work(k,i,j,n) ) * 0.5_RP
        end do
        end do
        end do
-
+       do j = 1, JA
+       do k = KS, KE
+          velx(k,IA,j,n) = work(k,IA,j,n)
+       end do
+       end do
        velx(KS-1,:,:,n) = 0.0_RP
        velx(KS-2,:,:,n) = 0.0_RP
+       call COMM_vars8( velx(:,:,:,n), n )
+       call COMM_wait ( velx(:,:,:,n), n, .false. )
+
     end do
 
     do n = start_step, end_step
        ! convert from latlon coordinate to local mapping (y)
-       do j = JS, JE
-       do i = IS, IE
+       do j = 1, JA
+       do i = 1, IA
        do k = KS, KE
           work(k,i,j,n) = - llvelx(k,i,j,n) * rotc(i,j,sine ) + llvely(k,i,j,n) * rotc(i,j,cosin)
        end do
        end do
        end do
 
-       call COMM_vars8( work(:,:,:,n), 2 )
-       call COMM_wait ( work(:,:,:,n), 2 )
-
-       do j = JS-1, JE+1
-       do i = IS-1, IE+1
+       do j = 1, JA-1
+       do i = 1, IA
        do k = KS, KE
           vely(k,i,j,n) = ( work(k,i,j+1,n) + work(k,i,j,n) ) * 0.5_RP
        end do
        end do
        end do
-
+       do i = 1, IA
+       do k = KS, KE
+          vely(k,i,JA,n) = work(k,i,JA,n)
+       end do
+       end do
        vely(KS-1,:,:,n) = 0.0_RP
        vely(KS-2,:,:,n) = 0.0_RP
+       call COMM_vars8( vely(:,:,:,n), 1 )
+       call COMM_wait ( vely(:,:,:,n), 1, .false. )
+
     end do
 
     ! for scalar points
@@ -1121,8 +1160,8 @@ contains
     end do
 
     do n = start_step, end_step
-    do j = JS-1, JE+1
-    do i = IS-1, IE+1
+    do j = 1, JA
+    do i = 1, IA
     do k = KS-1, KE+1
        pott(k,i,j,n) = pott_org(kgrd(k,i,j,1,1),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,1) &
                      + pott_org(kgrd(k,i,j,2,1),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,1) &
@@ -1154,8 +1193,8 @@ contains
     if( use_file_density ) then
        ! use logarithmic density to interpolate more accurately
        do n = start_step, end_step
-       do j = JS-1, JE+1
-       do i = IS-1, IE+1
+       do j = 1, JA
+       do i = 1, IA
        do k = KS-1, KE+1
           dens(k,i,j,n) = exp( dens_org(kgrd(k,i,j,1,1),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,1) &
                              + dens_org(kgrd(k,i,j,2,1),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,1) &
@@ -1169,8 +1208,8 @@ contains
        end do
     else
        do n = start_step, end_step
-       do j = JS-1, JE+1
-       do i = IS-1, IE+1
+       do j = 1, JA
+       do i = 1, IA
           temp_sfc(1,i,j,n) = tsfc_org(igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) &
                             + tsfc_org(igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) &
                             + tsfc_org(igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3)
@@ -1213,16 +1252,45 @@ contains
     end if
 
     do n = start_step, end_step
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       momz(k,i,j,n) = velz(k,i,j,n) * ( dens(k+1,i  ,j  ,n) + dens(k,i,j,n) ) * 0.5_RP
-       momx(k,i,j,n) = velx(k,i,j,n) * ( dens(k  ,i+1,j  ,n) + dens(k,i,j,n) ) * 0.5_RP
-       momy(k,i,j,n) = vely(k,i,j,n) * ( dens(k  ,i  ,j+1,n) + dens(k,i,j,n) ) * 0.5_RP
-       rhot(k,i,j,n) = pott(k,i,j,n) * dens(k,i,j,n)
-    end do
-    end do
-    end do
+       do j = 1, JA
+       do i = 1, IA
+       do k = KS, KE
+          momz(k,i,j,n) = velz(k,i,j,n) * ( dens(k+1,i  ,j  ,n) + dens(k,i,j,n) ) * 0.5_RP
+          rhot(k,i,j,n) = pott(k,i,j,n) * dens(k,i,j,n)
+       end do
+       end do
+       end do
+       do j = 1, JA
+       do i = 1, IA-1
+       do k = KS, KE
+          momx(k,i,j,n) = velx(k,i,j,n) * ( dens(k  ,i+1,j  ,n) + dens(k,i,j,n) ) * 0.5_RP
+       end do
+       end do
+       end do
+       do j = 1, JA
+       do k = KS, KE
+          momx(k,IA,j,n) = velx(k,IA,j,n) * dens(k,IA,j,n)
+       end do
+       end do
+       call COMM_vars8( momx(:,:,:,n), 1 )
+
+       do j = 1, JA-1
+       do i = 1, IA
+       do k = KS, KE
+          momy(k,i,j,n) = vely(k,i,j,n) * ( dens(k  ,i  ,j+1,n) + dens(k,i,j,n) ) * 0.5_RP
+       end do
+       end do
+       end do
+       do i = 1, IA
+       do k = KS, KE
+          momy(k,i,JA,n) = vely(k,i,JA,n) * dens(k,i,JA,n)
+       end do
+       end do
+       call COMM_vars8( momy(:,:,:,n), 2 )
+
+       call COMM_wait ( momx(:,:,:,n), 1, .false. )
+       call COMM_wait ( momy(:,:,:,n), 2, .false. )
+
     end do
 
     deallocate( read2D )
@@ -1612,8 +1680,8 @@ contains
                                         dims(4), dims(2), dims(3), & ! [IN]
                                         n                          ) ! [IN]
 
-       do j = JS-1, JE+1
-       do i = IS-1, IE+1
+       do j = 1, JA
+       do i = 1, IA
        do k = KS-1, KE+1
           velz(k,i,j,n) = velz_org(kgrd(k,i,j,1,1),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,1) &
                         + velz_org(kgrd(k,i,j,2,1),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,1) &
@@ -1640,8 +1708,8 @@ contains
                                         dims(1), dims(2), dims(3), & ! [IN] ! dims(5) wasn't used to keep consistency with geoh_org
                                         n                          ) ! [IN]
 
-       do j = JS-1, JE+1
-       do i = IS-1, IE+1
+       do j = 1, JA
+       do i = 1, IA
        do k = KS-1, KE+1
           work(k,i,j,n) = velx_org(kgrd(k,i,j,1,1),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,1) &
                           + velx_org(kgrd(k,i,j,2,1),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,1) &
@@ -1654,13 +1722,20 @@ contains
        end do
 
        ! from staggered point to scalar point
-       do j = JS, JE
-       do i = IS, IE
+       do j = 1, JA
+       do i = 2, IA
        do k = KS-1, KE+1
           llvelx(k,i,j,n) = ( work(k,i-1,j,n) + work(k,i,j,n) ) * 0.5_RP
        end do
        end do
        end do
+       do j = 1, JA
+       do k = KS-1, KE+1
+          llvelx(k,1,j,n) = work(k,1,j,n)
+       end do
+       end do
+       call COMM_vars8( llvelx(:,:,:,n), 1 )
+       call COMM_wait ( llvelx(:,:,:,n), 1, .false. )
 
        ! for vector (v) points
        call latlonz_interporation_fact( hfact   (:,:,:),           & ! [OUT]
@@ -1677,8 +1752,8 @@ contains
                                         dims(1), dims(2), dims(3), & ! [IN] ! dims(6) wasn't used to keep consistency with geoh_org
                                         n                          ) ! [IN]
 
-       do j = JS-1, JE+1
-       do i = IS-1, IE+1
+       do j = 1, JA
+       do i = 1, IA
        do k = KS-1, KE+1
           work(k,i,j,n) = vely_org(kgrd(k,i,j,1,1),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,1) &
                           + vely_org(kgrd(k,i,j,2,1),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,1) &
@@ -1691,55 +1766,75 @@ contains
        end do
 
        ! from staggered point to scalar point
-       do j = JS, JE
-       do i = IS, IE
+       do j = 2, JA
+       do i = 1, IA
        do k = KS-1, KE+1
           llvely(k,i,j,n) = ( work(k,i,j-1,n) + work(k,i,j,n) ) * 0.5_RP
        end do
        end do
        end do
+       do i = 1, IA
+       do k = KS-1, KE+1
+          llvely(k,i,1,n) = work(k,i,1,n)
+       end do
+       end do
+       call COMM_vars8( llvely(:,:,:,n), 1 )
+       call COMM_wait ( llvely(:,:,:,n), 1, .false. )
 
        ! convert from latlon coordinate to local mapping (x)
-       do j = JS, JE
-       do i = IS, IE
+       do j = 1, JA
+       do i = 1, IA
        do k = KS, KE
           work(k,i,j,n) = llvelx(k,i,j,n) * rotc(i,j,cosin) + llvely(k,i,j,n) * rotc(i,j,sine )
        end do
        end do
        end do
-       call COMM_vars8( work(:,:,:,n), n )
-       call COMM_wait ( work(:,:,:,n), n )
+
        ! from scalar point to staggered point
-       do j = JS-1, JE+1
-       do i = IS-1, IE+1
+       do j = 1, JA
+       do i = 1, IA-1
        do k = KS, KE
           velx(k,i,j,n) = ( work(k,i+1,j,n) + work(k,i,j,n) ) * 0.5_RP
        end do
        end do
        end do
+       do j = 1, JA
+       do k = KS, KE
+          velx(k,IA,j,n) = work(k,IA,j,n)
+       end do
+       end do
        velx(KS-1,:,:,n) = 0.0_RP
        velx(KS-2,:,:,n) = 0.0_RP
+       call COMM_vars8( velx(:,:,:,n), 1 )
 
        ! convert from latlon coordinate to local mapping (y)
-       do j = JS, JE
-       do i = IS, IE
+       do j = 1, JA
+       do i = 1, IA
        do k = KS, KE
           work(k,i,j,n) = - llvelx(k,i,j,n) * rotc(i,j,sine ) + llvely(k,i,j,n) * rotc(i,j,cosin)
        end do
        end do
        end do
-       call COMM_vars8( work(:,:,:,n), 2 )
-       call COMM_wait ( work(:,:,:,n), 2 )
+
        ! from scalar point to staggered point
-       do j = JS-1, JE+1
-       do i = IS-1, IE+1
+       do j = 1, JA-1
+       do i = 1, IA
        do k = KS, KE
           vely(k,i,j,n) = ( work(k,i,j+1,n) + work(k,i,j,n) ) * 0.5_RP
        end do
        end do
        end do
+       do i = 1, IA
+       do k = KS, KE
+          vely(k,i,JA,n) = work(k,i,JA,n)
+       end do
+       end do
        vely(KS-1,:,:,n) = 0.0_RP
        vely(KS-2,:,:,n) = 0.0_RP
+       call COMM_vars8( vely(:,:,:,n), 2 )
+
+       call COMM_wait ( velx(:,:,:,n), 1 )
+       call COMM_wait ( vely(:,:,:,n), 2 )
 
        ! for scalar points
        call latlonz_interporation_fact( hfact   (:,:,:),           & ! [OUT]
@@ -1756,8 +1851,8 @@ contains
                                         dims(1), dims(2), dims(3), & ! [IN]
                                         n                          ) ! [IN]
 
-       do j = JS-1, JE+1
-       do i = IS-1, IE+1
+       do j = 1, JA
+       do i = 1, IA
        do k = KS-1, KE+1
           temp(k,i,j,n) = temp_org(kgrd(k,i,j,1,1),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,1) &
                         + temp_org(kgrd(k,i,j,2,1),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,1) &
@@ -1790,8 +1885,8 @@ contains
        end do
        end do
 
-       do j = JS-1, JE+1
-       do i = IS-1, IE+1
+       do j = 1, JA
+       do i = 1, IA
           temp_sfc(1,i,j,n) = tsfc_org(igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) &
                             + tsfc_org(igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) &
                             + tsfc_org(igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3)
@@ -1826,19 +1921,48 @@ contains
                                   qtrc_sfc(:,:,:,n,I_QV), & ! [IN]
                                   qtrc_sfc(:,:,:,n,I_QC)  ) ! [IN]
 
-       call COMM_vars8( dens(:,:,:,n), 3 )
-       call COMM_wait ( dens(:,:,:,n), 3 )
+       call COMM_vars8( dens(:,:,:,n), 1 )
+       call COMM_wait ( dens(:,:,:,n), 1 )
 
-       do j = JS, JE
-       do i = IS, IE
+       do j = 1, JA
+       do i = 1, IA
        do k = KS, KE
           momz(k,i,j,n) = 0.5_RP * velz(k,i,j,n) * ( dens(k+1,  i,  j,n) + dens(k,i,j,n) )
-          momx(k,i,j,n) = 0.5_RP * velx(k,i,j,n) * ( dens(k,  i+1,  j,n) + dens(k,i,j,n) )
-          momy(k,i,j,n) = 0.5_RP * vely(k,i,j,n) * ( dens(k,    i,j+1,n) + dens(k,i,j,n) )
           rhot(k,i,j,n) = pott(k,i,j,n) * dens(k,i,j,n)
        end do
        end do
        end do
+
+       do j = 1, JA
+       do i = 1, IA-1
+       do k = KS, KE
+          momx(k,i,j,n) = 0.5_RP * velx(k,i,j,n) * ( dens(k,  i+1,  j,n) + dens(k,i,j,n) )
+       end do
+       end do
+       end do
+       do j = 1, JA
+       do k = KS, KE
+          momx(k,IA,j,n) = momx(k,IA-1,j,n)
+       end do
+       end do
+       call COMM_vars8( momx(:,:,:,n), 1 )
+
+       do j = 1, JA-1
+       do i = 1, IA
+       do k = KS, KE
+          momy(k,i,j,n) = 0.5_RP * vely(k,i,j,n) * ( dens(k,    i,j+1,n) + dens(k,i,j,n) )
+       end do
+       end do
+       end do
+       do i = 1, IA
+       do k = KS, KE
+          momy(k,i,JA,n) = momy(k,i,JA-1,n)
+       end do
+       end do
+       call COMM_vars8( momy(:,:,:,n), 2 )
+
+       call COMM_wait ( momx(:,:,:,n), 1, .false. )
+       call COMM_wait ( momy(:,:,:,n), 2, .false. )
 
     end do !--- time loop
 
@@ -2088,8 +2212,8 @@ contains
     end do
 
     do n = start_step, end_step
-    do j = JS-1, JE+1
-    do i = IS-1, IE+1
+    do j = 1, JA
+    do i = 1, IA
     do k = KS-1, KE+1
        llvelx(k,i,j,n) = velx_org(kgrd(k,i,j,1,1),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,1) &
                        + velx_org(kgrd(k,i,j,2,1),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,1) &
@@ -2132,8 +2256,8 @@ contains
     end do
 
     do n = start_step, end_step
-    do j = JS-1, JE+1
-    do i = IS-1, IE+1
+    do j = 1, JA
+    do i = 1, IA
     do k = KS-1, KE+1
        llvely(k,i,j,n) = vely_org(kgrd(k,i,j,1,1),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,1) &
                        + vely_org(kgrd(k,i,j,2,1),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,1) &
@@ -2149,54 +2273,65 @@ contains
 
     do n = start_step, end_step
        ! convert from latlon coordinate to local mapping (x)
-       do j = JS-1, JE+1
-       do i = IS-1, IE+1
+       do j = 1, JA
+       do i = 1, IA
        do k = KS-1, KE+1
           work(k,i,j,n) = llvelx(k,i,j,n) * rotc(i,j,cosin) + llvely(k,i,j,n) * rotc(i,j,sine)
        end do
        end do
        end do
 
-       call COMM_vars8( work(:,:,:,n), n )
-       call COMM_wait ( work(:,:,:,n), n )
-
        ! from scalar point to staggered point
-       do j = JS-1, JE+1
-       do i = IS-1, IE+1
+       do j = 1, JA
+       do i = 1, IA-1
        do k = KS, KE
           velx(k,i,j,n) = ( work(k,i+1,j,n) + work(k,i,j,n) ) * 0.5_RP
        end do
        end do
        end do
+       do j = 1, JA
+       do k = KS, KE
+          velx(k,IA,j,n) = work(k,IA,j,n)
+       end do
+       end do
 
        velx(KS-1,:,:,n) = 0.0_RP
        velx(KS-2,:,:,n) = 0.0_RP
+
+       call COMM_vars8( velx(:,:,:,n), 1 )
+       call COMM_wait ( velx(:,:,:,n), 1, .false. )
+
     end do
 
     do n = start_step, end_step
        ! convert from latlon coordinate to local mapping (y)
-       do j = JS-1, JE+1
-       do i = IS-1, IE+1
+       do j = 1, JA
+       do i = 1, IA
        do k = KS-1, KE+1
           work(k,i,j,n) = - llvelx(k,i,j,n) * rotc(i,j,sine) + llvely(k,i,j,n) * rotc(i,j,cosin)
        end do
        end do
        end do
 
-       call COMM_vars8( work(:,:,:,n), n )
-       call COMM_wait ( work(:,:,:,n), n )
-
        ! from scalar point to staggered point
-       do j = JS-1, JE+1
-       do i = IS-1, IE+1
+       do j = 1, JA-1
+       do i = 1, IA
        do k = KS, KE
           vely(k,i,j,n) = ( work(k,i,j+1,n) + work(k,i,j,n) ) * 0.5_RP
        end do
        end do
        end do
-
+       do i = 1, IA
+       do k = KS, KE
+          vely(k,i,JA,n) = work(k,i,JA,n)
+       end do
+       end do
        vely(KS-1,:,:,n) = 0.0_RP
        vely(KS-2,:,:,n) = 0.0_RP
+
+       call COMM_vars8( vely(:,:,:,n), 1 )
+       call COMM_wait ( vely(:,:,:,n), 1, .false. )
+
     end do
 
     velz(:,:,:,:)   = 0.0_RP !> cold initialize for vertical velocity
@@ -2227,8 +2362,8 @@ contains
     call COMM_bcast( qsfc_org(:,:,:,I_QV),            dims(1), dims(2), nt )
 
     do n = start_step, end_step
-    do j = JS-1, JE+1
-    do i = IS-1, IE+1
+    do j = 1, JA
+    do i = 1, IA
        pres_sfc(1,i,j,n) = psfc_org(igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) &
                          + psfc_org(igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) &
                          + psfc_org(igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3)
@@ -2287,8 +2422,8 @@ contains
 
     qtrc(:,:,:,:,:) = 0.0_RP !> cold initialize for hydrometeor
     do n = start_step, end_step
-    do j = JS-1, JE+1
-    do i = IS-1, IE+1
+    do j = 1, JA
+    do i = 1, IA
     do k = KS-1, KE+1
        qtrc(k,i,j,n,I_QV) = qtrc_org(kgrd(k,i,j,1,1),igrd(i,j,1),jgrd(i,j,1),n,I_QV) * hfact(i,j,1) * vfact(k,i,j,1,1) &
                           + qtrc_org(kgrd(k,i,j,2,1),igrd(i,j,2),jgrd(i,j,2),n,I_QV) * hfact(i,j,2) * vfact(k,i,j,2,1) &
@@ -2373,8 +2508,8 @@ contains
     call COMM_bcast( pres_org(:,:,:,:), dims3p1, dims(1), dims(2), nt )
 
     do n = start_step, end_step
-    do j = JS-1, JE+1
-    do i = IS-1, IE+1
+    do j = 1, JA
+    do i = 1, IA
     do k = KS-1, KE+1
        pres(k,i,j,n) = pres_org(kgrd(k,i,j,1,1),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,1) &
                      + pres_org(kgrd(k,i,j,2,1),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,1) &
@@ -2469,8 +2604,8 @@ contains
     call COMM_bcast( temp_org(:,:,:,:), dims3p1, dims(1), dims(2), nt )
 
     do n = start_step, end_step
-    do j = JS-1, JE+1
-    do i = IS-1, IE+1
+    do j = 1, JA
+    do i = 1, IA
     do k = KS-1, KE+1
        temp(k,i,j,n) = temp_org(kgrd(k,i,j,1,1),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,1) &
                      + temp_org(kgrd(k,i,j,2,1),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,1) &
@@ -2497,8 +2632,8 @@ contains
     endif
 
     do n = start_step, end_step
-    do j = JS-1, JE+1
-    do i = IS-1, IE+1
+    do j = 1, JA
+    do i = 1, IA
     do k = KS-1, KE+1
           call THERMODYN_pott( pott(k,i,j,n),  & ! [OUT]
                                temp(k,i,j,n),  & ! [IN]
@@ -2527,16 +2662,45 @@ contains
     end do
 
     do n = start_step, end_step
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       momz(k,i,j,n) = velz(k,i,j,n) * ( dens(k+1,i  ,j  ,n) + dens(k,i,j,n) ) * 0.5_RP
-       momx(k,i,j,n) = velx(k,i,j,n) * ( dens(k  ,i+1,j  ,n) + dens(k,i,j,n) ) * 0.5_RP
-       momy(k,i,j,n) = vely(k,i,j,n) * ( dens(k  ,i  ,j+1,n) + dens(k,i,j,n) ) * 0.5_RP
-       rhot(k,i,j,n) = pott(k,i,j,n) * dens(k,i,j,n)
-    end do
-    end do
-    end do
+       do j = 1, JA
+       do i = 1, IA
+       do k = KS, KE
+          momz(k,i,j,n) = velz(k,i,j,n) * ( dens(k+1,i  ,j  ,n) + dens(k,i,j,n) ) * 0.5_RP
+          rhot(k,i,j,n) = pott(k,i,j,n) * dens(k,i,j,n)
+       end do
+       end do
+       end do
+
+       do j = 1, JA
+       do i = 1, IA-1
+       do k = KS, KE
+          momx(k,i,j,n) = velx(k,i,j,n) * ( dens(k  ,i+1,j  ,n) + dens(k,i,j,n) ) * 0.5_RP
+       end do
+       end do
+       end do
+       do j = 1, JA
+       do k = KS, KE
+          momx(k,IA,j,n) = velx(k,i,j,n) * dens(k,i,j,n)
+       end do
+       end do
+       call COMM_vars8( momx(:,:,:,n), 1 )
+       call COMM_wait ( momx(:,:,:,n), 1, .false. )
+
+       do j = 1, JA-1
+       do i = 1, IA
+       do k = KS, KE
+          momy(k,i,j,n) = vely(k,i,j,n) * ( dens(k  ,i  ,j+1,n) + dens(k,i,j,n) ) * 0.5_RP
+       end do
+       end do
+       end do
+       do i = 1, IA
+       do k = KS, KE
+          momy(k,i,JA,n) = vely(k,i,j,n) * dens(k,i,j,n)
+       end do
+       end do
+       call COMM_vars8( momy(:,:,:,n), 1 )
+       call COMM_wait ( momy(:,:,:,n), 1, .false. )
+
     end do
 
     return
@@ -2766,8 +2930,8 @@ contains
                                      landgrid=.true.     ) ! [IN]
 
     ! interpolation
-    do j = JS-1, JE+1
-    do i = IS-1, IE+1
+    do j = 1, JA
+    do i = 1, IA
     do k = 1, LKMAX-1
        tg  (k,i,j) = tg_org  (kgrd(k,i,j,1,1),igrd(i,j,1),jgrd(i,j,1)) * hfact(i,j,1) * vfact(k,i,j,1,1) &
                    + tg_org  (kgrd(k,i,j,2,1),igrd(i,j,2),jgrd(i,j,2)) * hfact(i,j,2) * vfact(k,i,j,2,1) &
@@ -2784,8 +2948,8 @@ contains
     enddo
     enddo
     enddo
-    do j = JS-1, JE+1
-    do i = IS-1, IE+1
+    do j = 1, JA
+    do i = 1, IA
        tg  (LKMAX,i,j) = tg  (LKMAX-1,i,j)
        strg(LKMAX,i,j) = strg(LKMAX-1,i,j)
     enddo
@@ -2794,8 +2958,8 @@ contains
     roff(:,:) = 0.0_RP ! not necessary
     qvef(:,:) = 0.0_RP ! not necessary
 
-    do j = JS-1, JE+1
-    do i = IS-1, IE+1
+    do j = 1, JA
+    do i = 1, IA
        tw   (i,j) = tw_org   (igrd(i,j,1),jgrd(i,j,1)) * hfact(i,j,1) &
                   + tw_org   (igrd(i,j,2),jgrd(i,j,2)) * hfact(i,j,2) &
                   + tw_org   (igrd(i,j,3),jgrd(i,j,3)) * hfact(i,j,3)
@@ -2827,8 +2991,8 @@ contains
     enddo
 
     do n = 1, 2 ! 1:LW, 2:SW
-    do j = JS-1, JE+1
-    do i = IS-1, IE+1
+    do j = 1, JA
+    do i = 1, IA
        albw(i,j,n) = albw_org(igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) &
                    + albw_org(igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) &
                    + albw_org(igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3)
@@ -3020,8 +3184,8 @@ contains
     endif
     if( serial ) call COMM_bcast( org_4D(:,:,:,:), dims(7),dims(2),dims(3),tcount )
     n = 1
-    do j = JS-1, JE+1
-    do i = IS-1, IE+1
+    do j = 1, JA
+    do i = 1, IA
     do k = 1, LKMAX-1  ! interpolation
        tg(k,i,j) =  org_4D(kgrd(k,i,j,1,1),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,1) &
                   + org_4D(kgrd(k,i,j,2,1),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,1) &
@@ -3048,8 +3212,8 @@ contains
     endif
     if( serial ) call COMM_bcast( org_3D(:,:,:), dims(2),dims(3),tcount )
     n = 1
-    do j = JS-1, JE+1
-    do i = IS-1, IE+1
+    do j = 1, JA
+    do i = 1, IA
        roff(i,j) =  org_3D(igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) &
                   + org_3D(igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) &
                   + org_3D(igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3)
@@ -3072,8 +3236,8 @@ contains
     endif
     if( serial ) call COMM_bcast( org_3D(:,:,:), dims(2),dims(3),tcount )
     n = 1
-    do j = JS-1, JE+1
-    do i = IS-1, IE+1
+    do j = 1, JA
+    do i = 1, IA
        tw(i,j) =  org_3D(igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) &
                 + org_3D(igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) &
                 + org_3D(igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3)
@@ -3088,8 +3252,8 @@ contains
     endif
     if( serial ) call COMM_bcast( org_3D(:,:,:), dims(2),dims(3),tcount )
     n = 1
-    do j = JS-1, JE+1
-    do i = IS-1, IE+1
+    do j = 1, JA
+    do i = 1, IA
        lst(i,j) =  org_3D(igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) &
                  + org_3D(igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) &
                  + org_3D(igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3)
@@ -3107,8 +3271,8 @@ contains
     endif
     if( serial ) call COMM_bcast( org_3D(:,:,:), dims(2),dims(3),tcount )
     n = 1
-    do j = JS-1, JE+1
-    do i = IS-1, IE+1
+    do j = 1, JA
+    do i = 1, IA
        albw(i,j,I_SW) =  org_3D(igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) &
                        + org_3D(igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) &
                        + org_3D(igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3)
@@ -3130,8 +3294,8 @@ contains
     endif
     if( serial ) call COMM_bcast( org_3D(:,:,:), dims(2),dims(3),tcount )
     n = 1
-    do j = JS-1, JE+1
-    do i = IS-1, IE+1
+    do j = 1, JA
+    do i = 1, IA
        albw(i,j,I_LW) =  org_3D(igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) &
                        + org_3D(igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) &
                        + org_3D(igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3)
@@ -3150,8 +3314,8 @@ contains
        endif
        if( serial ) call COMM_bcast( org_3D(:,:,:), dims(2),dims(3),tcount )
        n = 1
-       do j = JS-1, JE+1
-       do i = IS-1, IE+1
+       do j = 1, JA
+       do i = 1, IA
           z0w(i,j) =  org_3D(igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) &
                     + org_3D(igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) &
                     + org_3D(igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3)
@@ -3171,8 +3335,8 @@ contains
     endif
     if( serial ) call COMM_bcast( org_3D(:,:,:), dims(2),dims(3),tcount )
     n = 1
-    do j = JS-1, JE+1
-    do i = IS-1, IE+1
+    do j = 1, JA
+    do i = 1, IA
        snowq(i,j) =  org_3D(igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) &
                    + org_3D(igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) &
                    + org_3D(igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3)
@@ -3196,8 +3360,8 @@ contains
        endif
        if( serial ) call COMM_bcast( org_3D(:,:,:), dims(2),dims(3),tcount )
        n = 1
-       do j = JS-1, JE+1
-       do i = IS-1, IE+1
+       do j = 1, JA
+       do i = 1, IA
           snowt(i,j) =  org_3D(igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) &
                       + org_3D(igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) &
                       + org_3D(igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3)
@@ -3518,8 +3682,8 @@ contains
     z0w_org  (:,:)   = 0.01_RP
 
     ! interpolation
-    do j = JS-1, JE+1
-    do i = IS-1, IE+1
+    do j = 1, JA
+    do i = 1, IA
     do k = 1, LKMAX-1
        tg  (k,i,j) = tg_org  (kgrd(k,i,j,1,1),igrd(i,j,1),jgrd(i,j,1)) * hfact(i,j,1) * vfact(k,i,j,1,1) &
                    + tg_org  (kgrd(k,i,j,2,1),igrd(i,j,2),jgrd(i,j,2)) * hfact(i,j,2) * vfact(k,i,j,2,1) &
@@ -3536,8 +3700,8 @@ contains
     enddo
     enddo
     enddo
-    do j = JS-1, JE+1
-    do i = IS-1, IE+1
+    do j = 1, JA
+    do i = 1, IA
        tg  (LKMAX,i,j) = tg  (LKMAX-1,i,j)
        strg(LKMAX,i,j) = strg(LKMAX-1,i,j)
     enddo
@@ -3548,8 +3712,8 @@ contains
     roff(:,:) = 0.0_RP ! not necessary
     qvef(:,:) = 0.0_RP ! not necessary
 
-    do j = JS-1, JE+1
-    do i = IS-1, IE+1
+    do j = 1, JA
+    do i = 1, IA
        tw   (i,j) = tw_org   (igrd(i,j,1),jgrd(i,j,1)) * hfact(i,j,1) &
                   + tw_org   (igrd(i,j,2),jgrd(i,j,2)) * hfact(i,j,2) &
                   + tw_org   (igrd(i,j,3),jgrd(i,j,3)) * hfact(i,j,3)
@@ -3581,8 +3745,8 @@ contains
     enddo
 
     do n = 1, 2 ! 1:LW, 2:SW
-    do j = JS-1, JE+1
-    do i = IS-1, IE+1
+    do j = 1, JA
+    do i = 1, IA
        albw(i,j,n) = albw_org(igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) &
                    + albw_org(igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) &
                    + albw_org(igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3)
@@ -3673,8 +3837,8 @@ contains
     hfact(:,:,:) = 0.0_RP
     vfact(:,:,:,:,:) = 0.0_RP
 
-    do j = JS-1, JE+1
-    do i = IS-1, IE+1
+    do j = 1, JA
+    do i = 1, IA
        ! nearest block search
        iinc = (nx + 1) / interp_search_divnum
        jinc = (ny + 1) / interp_search_divnum

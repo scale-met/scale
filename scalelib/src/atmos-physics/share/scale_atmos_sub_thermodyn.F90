@@ -500,7 +500,7 @@ contains
     !$omp parallel do private(i,j,k,iqw,qdry,pres,Rtot,CVtot,RovCP) OMP_SCHEDULE_ collapse(2)
     do j = 1, JA
     do i = 1, IA
-    do k = 1, KA
+    do k = KS, KE
 
 #ifdef DRY
        CVtot = CVdry
@@ -597,7 +597,7 @@ contains
     !$omp parallel do private(i,j,k,iqw,qdry,Rtot,CVtot,CPovCV) OMP_SCHEDULE_ collapse(2)
     do j = 1, JA
     do i = 1, IA
-    do k = 1, KA
+    do k = KS, KE
 #ifdef DRY
        CVtot = CVdry
        Rtot  = Rdry
@@ -690,7 +690,7 @@ contains
     !$omp parallel do private(i,j,k,iqw,qdry,Rtot,CVtot) OMP_SCHEDULE_ collapse(2)
     do j = 1, JA
     do i = 1, IA
-    do k = 1, KA
+    do k = KS, KE
 #ifdef DRY
        CVtot = CVdry
        Rtot  = Rdry

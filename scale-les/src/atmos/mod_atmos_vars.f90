@@ -630,14 +630,21 @@ contains
 
   !-----------------------------------------------------------------------------
   !> HALO Communication
-  subroutine ATMOS_vars_fillhalo
+  subroutine ATMOS_vars_fillhalo( &
+       FILL_BND )
     use scale_comm, only: &
        COMM_vars8, &
        COMM_wait
     implicit none
 
+    logical, intent(in), optional :: FILL_BND
+
+    logical :: FILL_BND_
     integer :: i, j, iq
     !---------------------------------------------------------------------------
+
+    FILL_BND_ = .false.
+    if ( present(FILL_BND) ) FILL_BND_ = FILL_BND
 
     !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
     do j  = JS, JE
@@ -670,17 +677,17 @@ contains
     call COMM_vars8( MOMX(:,:,:), 3 )
     call COMM_vars8( MOMY(:,:,:), 4 )
     call COMM_vars8( RHOT(:,:,:), 5 )
-    call COMM_wait ( DENS(:,:,:), 1 )
-    call COMM_wait ( MOMZ(:,:,:), 2 )
-    call COMM_wait ( MOMX(:,:,:), 3 )
-    call COMM_wait ( MOMY(:,:,:), 4 )
-    call COMM_wait ( RHOT(:,:,:), 5 )
+    call COMM_wait ( DENS(:,:,:), 1, FILL_BND_ )
+    call COMM_wait ( MOMZ(:,:,:), 2, FILL_BND_ )
+    call COMM_wait ( MOMX(:,:,:), 3, FILL_BND_ )
+    call COMM_wait ( MOMY(:,:,:), 4, FILL_BND_ )
+    call COMM_wait ( RHOT(:,:,:), 5, FILL_BND_ )
 
     do iq = 1, QA
        call COMM_vars8( QTRC(:,:,:,iq), iq )
     enddo
     do iq = 1, QA
-       call COMM_wait ( QTRC(:,:,:,iq), iq )
+       call COMM_wait ( QTRC(:,:,:,iq), iq, FILL_BND_ )
     enddo
 
     return
@@ -1706,33 +1713,43 @@ contains
                               RHOT(:,:,:),  & ! [IN]
                               QTRC(:,:,:,:) ) ! [IN]
 
-    do j = JS, JE
-    do i = IS, IE
+    do j = 1, JA
+    do i = 1, IA
     do k = KS, KE
        W(k,i,j) = 0.5_RP * ( MOMZ(k-1,i,j)+MOMZ(k,i,j) ) / DENS(k,i,j)
     enddo
     enddo
     enddo
 
-    do j = JS, JE
-    do i = IS, IE
+    do j = 1, JA
+    do i = 2, IA
     do k = KS, KE
        U(k,i,j) = 0.5_RP * ( MOMX(k,i-1,j)+MOMX(k,i,j) ) / DENS(k,i,j)
     enddo
     enddo
     enddo
+    do j = 1, JA
+    do k = KS, KE
+       U(k,1,j) = MOMX(k,i,j) / DENS(k,i,j)
+    enddo
+    enddo
 
-    do j = JS, JE
-    do i = IS, IE
+    do j = 2, JA
+    do i = 1, IA
     do k = KS, KE
        V(k,i,j) = 0.5_RP * ( MOMY(k,i,j-1)+MOMY(k,i,j) ) / DENS(k,i,j)
     enddo
     enddo
     enddo
+    do i = 1, IA
+    do k = KS, KE
+       V(k,i,1) = MOMY(k,i,1) / DENS(k,i,j)
+    enddo
+    enddo
 
     !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
-    do j  = JS, JE
-    do i  = IS, IE
+    do j  = 1, JA
+    do i  = 1, IA
        W(   1:KS-1,i,j) = W(KS,i,j)
        U(   1:KS-1,i,j) = U(KS,i,j)
        V(   1:KS-1,i,j) = V(KS,i,j)
@@ -1742,16 +1759,14 @@ contains
     enddo
     enddo
 
-    call COMM_vars8( W(:,:,:), 1 )
-    call COMM_vars8( U(:,:,:), 2 )
-    call COMM_vars8( V(:,:,:), 3 )
-    call COMM_wait ( W(:,:,:), 1 )
-    call COMM_wait ( U(:,:,:), 2 )
-    call COMM_wait ( V(:,:,:), 3 )
+    call COMM_vars8( U(:,:,:), 1 )
+    call COMM_vars8( V(:,:,:), 2 )
+    call COMM_wait ( U(:,:,:), 1, .false. )
+    call COMM_wait ( V(:,:,:), 2, .false. )
 
     do j = 1, JA
     do i = 1, IA
-    do k = 1, KA
+    do k = KS, KE
        POTT(k,i,j) = RHOT(k,i,j) / DENS(k,i,j)
     enddo
     enddo
