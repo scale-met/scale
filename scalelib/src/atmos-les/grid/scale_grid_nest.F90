@@ -197,7 +197,6 @@ module scale_grid_nest
   integer,  private, allocatable :: kgrd (:,:,:,:,:,:)       ! interpolation target grids in z-axis
   integer,  private, allocatable :: igrd (:,:,:,:)           ! interpolation target grids in x-axis
   integer,  private, allocatable :: jgrd (:,:,:,:)           ! interpolation target grids in y-axis
-
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -262,8 +261,8 @@ contains
     argv(1) = 'run.conf'
     argv(2) = ''
 
-    HANDLING_NUM = 0
-    NEST_Filiation(:) = 0
+    HANDLING_NUM        = 0
+    NEST_Filiation(:)   = 0
     ONLINE_DAUGHTER_PRC = PRC_nmax
 
     !--- read namelist
@@ -569,11 +568,10 @@ contains
 
     integer, intent(in) :: HANDLE !< id number of nesting relation in this process target
 
-    logical :: hit
-
+    logical              :: hit = .false.
     integer, allocatable :: pd_tile_num(:,:)
 
-    real(RP) :: eps_lon, eps_lat
+    real(RP) :: wid_lon, wid_lat
     integer  :: pd_sw_tile
     integer  :: pd_ne_tile
     integer  :: i, j, ii, jj, k
@@ -593,26 +591,15 @@ contains
     !--- SW search
     hit = .false.
     do i = 1, PARENT_PRC_nmax(HANDLE)
-       eps_lon = abs((latlon_catalog(i,I_SW,I_LON) - latlon_catalog(i,I_SE,I_LON)) &
-                      / real( PARENT_IMAX(HANDLE), kind=RP )) * 0.5_RP
-       eps_lat = abs((latlon_catalog(i,I_SW,I_LAT) - latlon_catalog(i,I_NW,I_LAT)) &
-                      / real( PARENT_JMAX(HANDLE), kind=RP )) * 0.5_RP
+       wid_lon = abs((latlon_catalog(i,I_SW,I_LON) - latlon_catalog(i,I_SE,I_LON)) &
+                      / real( PARENT_IMAX(HANDLE)-1, kind=RP )) * 0.5_RP
+       wid_lat = abs((latlon_catalog(i,I_SW,I_LAT) - latlon_catalog(i,I_NW,I_LAT)) &
+                      / real( PARENT_JMAX(HANDLE)-1, kind=RP )) * 0.5_RP
 
-       if ( corner_loc(I_SW,I_LON) > latlon_catalog(i,I_SW,I_LON) .and. &
-            corner_loc(I_SW,I_LAT) > latlon_catalog(i,I_SW,I_LAT) .and. &
-            corner_loc(I_SW,I_LON) < latlon_catalog(i,I_NE,I_LON) .and. &
-            corner_loc(I_SW,I_LAT) < latlon_catalog(i,I_NE,I_LAT) &
-            .or.  &
-            abs( corner_loc(I_SW,I_LON) - latlon_catalog(i,I_SW,I_LON) ) < eps_lon .and. &
-            corner_loc(I_SW,I_LAT) > latlon_catalog(i,I_SW,I_LAT) .and. &
-            corner_loc(I_SW,I_LAT) < latlon_catalog(i,I_NE,I_LAT) &
-            .or.  &
-            corner_loc(I_SW,I_LON) > latlon_catalog(i,I_SW,I_LON) .and. &
-            corner_loc(I_SW,I_LON) < latlon_catalog(i,I_NE,I_LON) .and. &
-            abs( corner_loc(I_SW,I_LAT) - latlon_catalog(i,I_SW,I_LAT) ) < eps_lat &
-            .or.  &
-            abs( corner_loc(I_SW,I_LON) - latlon_catalog(i,I_SW,I_LON) ) < eps_lon .and. &
-            abs( corner_loc(I_SW,I_LAT) - latlon_catalog(i,I_SW,I_LAT) ) < eps_lat       ) then
+       if ( corner_loc(I_SW,I_LON) >= latlon_catalog(i,I_SW,I_LON)-wid_lon .and. &
+            corner_loc(I_SW,I_LAT) >= latlon_catalog(i,I_SW,I_LAT)-wid_lat .and. &
+            corner_loc(I_SW,I_LON) <= latlon_catalog(i,I_NE,I_LON)+wid_lon .and. &
+            corner_loc(I_SW,I_LAT) <= latlon_catalog(i,I_NE,I_LAT)+wid_lat        ) then
 
           pd_sw_tile = i-1 ! MPI process number starts from zero
           hit = .true.
@@ -623,6 +610,7 @@ contains
        write(*,*) 'xxx domain mismatch between parent and daughter: SW search'
        write(*,*) '    at rank:', PRC_myrank, ' of domain:', ONLINE_DOMAIN_NUM
        if( IO_L ) write(IO_FID_LOG,'(1x,A)') 'xxx domain mismatch between parent and daughter: SW search'
+       if( IO_L ) write(IO_FID_LOG,*) ' grid width: half width in lat:', wid_lat, ' half width in lon:', wid_lon
        if( IO_L ) write(IO_FID_LOG,'(1x,A,F12.6)') '    daughter local (me): LON=',corner_loc(I_SW,I_LON)
        do i = 1, PARENT_PRC_nmax(HANDLE)
           if( IO_L ) write(IO_FID_LOG,'(1x,A,F12.6,1x,F12.6)') '     parent local SW-NE: LON=', &
@@ -639,26 +627,15 @@ contains
     !--- NE search
     hit = .false.
     do i = 1, PARENT_PRC_nmax(HANDLE)
-       eps_lon = abs((latlon_catalog(i,I_NW,I_LON) - latlon_catalog(i,I_NE,I_LON)) &
-                      / real( PARENT_IMAX(HANDLE), kind=RP )) * 0.5_RP
-       eps_lat = abs((latlon_catalog(i,I_SE,I_LAT) - latlon_catalog(i,I_NE,I_LAT)) &
-                      / real( PARENT_JMAX(HANDLE), kind=RP )) * 0.5_RP
+       wid_lon = abs((latlon_catalog(i,I_NW,I_LON) - latlon_catalog(i,I_NE,I_LON)) &
+                      / real( PARENT_IMAX(HANDLE)-1, kind=RP )) * 0.5_RP
+       wid_lat = abs((latlon_catalog(i,I_SE,I_LAT) - latlon_catalog(i,I_NE,I_LAT)) &
+                      / real( PARENT_JMAX(HANDLE)-1, kind=RP )) * 0.5_RP
 
-       if ( corner_loc(I_NE,I_LON) > latlon_catalog(i,I_SW,I_LON) .and. &
-            corner_loc(I_NE,I_LAT) > latlon_catalog(i,I_SW,I_LAT) .and. &
-            corner_loc(I_NE,I_LON) < latlon_catalog(i,I_NE,I_LON) .and. &
-            corner_loc(I_NE,I_LAT) < latlon_catalog(i,I_NE,I_LAT) &
-            .or.  &
-            abs( corner_loc(I_NE,I_LON) - latlon_catalog(i,I_NE,I_LON) ) < eps_lon .and. &
-            corner_loc(I_NE,I_LAT) > latlon_catalog(i,I_SW,I_LAT) .and. &
-            corner_loc(I_NE,I_LAT) < latlon_catalog(i,I_NE,I_LAT) &
-            .or.  &
-            corner_loc(I_NE,I_LON) > latlon_catalog(i,I_SW,I_LON) .and. &
-            corner_loc(I_NE,I_LON) < latlon_catalog(i,I_NE,I_LON) .and. &
-            abs( corner_loc(I_NE,I_LAT) - latlon_catalog(i,I_NE,I_LAT) ) < eps_lat &
-            .or.  &
-            abs( corner_loc(I_NE,I_LON) - latlon_catalog(i,I_NE,I_LON) ) < eps_lon .and. &
-            abs( corner_loc(I_NE,I_LAT) - latlon_catalog(i,I_NE,I_LAT) ) < eps_lat       ) then
+       if ( corner_loc(I_NE,I_LON) >= latlon_catalog(i,I_SW,I_LON)-wid_lon .and. &
+            corner_loc(I_NE,I_LAT) >= latlon_catalog(i,I_SW,I_LAT)-wid_lat .and. &
+            corner_loc(I_NE,I_LON) <= latlon_catalog(i,I_NE,I_LON)+wid_lon .and. &
+            corner_loc(I_NE,I_LAT) <= latlon_catalog(i,I_NE,I_LAT)+wid_lat        ) then
 
           pd_ne_tile = i-1 ! MPI process number starts from zero
           hit = .true.
@@ -669,6 +646,7 @@ contains
        write(*,*) 'xxx domain mismatch between parent and daughter: NE search'
        write(*,*) '    at rank:', PRC_myrank, ' of domain:', ONLINE_DOMAIN_NUM
        if( IO_L ) write(IO_FID_LOG,'(1x,A)') 'xxx domain mismatch between parent and daughter: NE search'
+       if( IO_L ) write(IO_FID_LOG,*) ' grid width: half width in lat:', wid_lat, ' half width in lon:', wid_lon
        if( IO_L ) write(IO_FID_LOG,'(1x,A,F12.6)') '    daughter local (me): LON=',corner_loc(I_NE,I_LON)
        do i = 1, PARENT_PRC_nmax(HANDLE)
           if( IO_L ) write(IO_FID_LOG,'(1x,A,F12.6,1x,F12.6)') '     parent local SW-NE: LON=', &
@@ -687,10 +665,12 @@ contains
 
     allocate( NEST_TILE_ID( NEST_TILE_NUM_X*NEST_TILE_NUM_Y ) )
 
+    if( IO_L ) write(IO_FID_LOG,'(1x,A)') '*** NEST: target process tile in parent domain'
     k = 1
     do j = 1, NEST_TILE_NUM_Y
     do i = 1, NEST_TILE_NUM_X
        NEST_TILE_ID(k) = pd_sw_tile + (i-1) + PARENT_PRC_NUM_X(HANDLE)*(j-1)
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,I4,A,I6)') '    (', k, ') target mpi-process:', NEST_TILE_ID(k)
        k = k + 1
     enddo
     enddo
