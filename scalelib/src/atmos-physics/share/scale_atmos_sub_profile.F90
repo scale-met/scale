@@ -100,7 +100,7 @@ contains
     !---------------------------------------------------------------------------
 
     gmr   = GRAV / Rdry
-    RovCP = CPdry / Rdry
+    RovCP = Rdry / CPdry
 
     !--- ISA profile
     temp_isa(1) = temp_sfc
@@ -197,7 +197,7 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[PROFILE] / Categ[ATMOS SHARE] / Origin[SCALElib]'
 
     gmr   = GRAV / Rdry
-    RovCP = CPdry / Rdry
+    RovCP = Rdry / CPdry
 
     !--- ISA profile
     do j = JS, JE

@@ -375,10 +375,9 @@ contains
         GRAV   => CONST_GRAV,   &
         KARMAN => CONST_KARMAN, &
         Rdry   => CONST_Rdry,   &
-        Rvap   => CONST_Rvap,   &
-        RovCP  => CONST_RovCP,  &
-        CPovCV => CONST_CPovCV, &
         CPdry  => CONST_CPdry,  &
+        CVdry  => CONST_CVdry,  &
+        Rvap   => CONST_Rvap,   &
         P00    => CONST_PRE00,  &
         T00    => CONST_TEM00,  &
         CPd    => CONST_CPdry,  &
@@ -451,13 +450,15 @@ contains
     real(RP) :: a2
     real(RP) :: Fm, Fh, Psih
     real(RP) :: RiB
-    real(RP) :: qdry, Rtot, pres_1d, temp_1d
+    real(RP) :: qdry, Rtot, RovCP, CPovCV, pres_1d, temp_1d
     real(RP) :: pres_evap ! partial pressure of water vapor at surface [Pa]
     real(RP) :: qv_evap   ! saturation water vapor mixing ratio at surface[kg/kg]
     integer :: iw
 
     !---------------------------------------------------------------------------
 !return ! tmp05
+    RovCP  = Rdry  / CPdry
+    CPovCV = CPdry / CVdry
 
     if ( .not.USER_do ) then
       return

@@ -176,7 +176,7 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Surface flux(bulk)'
 
-    RovCP = CPdry / Rdry
+    RovCP = Rdry / CPdry
 
     do j = JS, JE
     do i = IS, IE

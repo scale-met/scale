@@ -94,12 +94,11 @@ contains
        REF_pres, REF_dens,                          &
        dtrk, dt                                     )
     use scale_const, only: &
-       GRAV   => CONST_GRAV,   &
-       P00    => CONST_PRE00,  &
-#ifdef DRY
-       CPovCV => CONST_CPovCV
-#endif
-       Rdry   => CONST_Rdry
+       GRAV   => CONST_GRAV,  &
+       P00    => CONST_PRE00, &
+       Rdry   => CONST_Rdry,  &
+       CPdry  => CONST_CPdry, &
+       CVdry  => CONST_CVdry
     use scale_comm, only: &
        COMM_vars8, &
        COMM_wait
@@ -226,6 +225,10 @@ contains
     real(RP) :: pg_t(KA,IA,JA,3)
     real(RP) :: cf_t(KA,IA,JA,2)
     logical  :: lhist
+#endif
+
+#ifdef DRY
+    real(RP) :: CPovCV = CPdry / CVdry
 #endif
 
     integer  :: IIS, IIE

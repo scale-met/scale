@@ -229,7 +229,7 @@ contains
     real(RP) :: RovCP
     !---------------------------------------------------------------------------
 
-    RovCP = CPdry / Rdry
+    RovCP = Rdry / CPdry
 
     Uabs = max( sqrt( Ua**2 + Va**2 ), Uabs_min )
 
@@ -358,7 +358,7 @@ contains
     real(RP) :: sw
     !---------------------------------------------------------------------------
 
-    RovCP = CPdry / Rdry
+    RovCP = Rdry / CPdry
 
     Uabs = max( sqrt( Ua**2 + Va**2 ), Uabs_min )
 

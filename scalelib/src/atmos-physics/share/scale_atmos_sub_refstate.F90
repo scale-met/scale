@@ -598,7 +598,7 @@ contains
     integer  :: k, i, j
     !---------------------------------------------------------------------------
 
-    RovCP = CPdry / Rdry
+    RovCP = Rdry / CPdry
 
     !--- potential temperature
     do j = JS, JE

@@ -256,16 +256,15 @@ contains
          CZ   => GRID_CZ, &
          FZ   => GRID_FZ
     use scale_const, only: &
+         Rdry  => CONST_Rdry,  &
          CPdry => CONST_CPdry, &
-         Rdry  => CONST_Rdry, &
-         RovCP => CONST_RovCP, &
-         RovCV => CONST_RovCV, &
+         CVdry => CONST_CVdry, &
          P00   => CONST_PRE00
     use scale_time, only: &
          do_phy_rd => TIME_DOATMOS_PHY_RD, &
          dtrd =>  TIME_DTSEC_ATMOS_PHY_RD
     implicit none
-    !---------------------------------------------------------------------------
+
     real(RP) :: ratesum
 
     real(RP) :: WORK(KA,IA,JA)
@@ -283,9 +282,13 @@ contains
     real(RP) :: dQ, QWSUM
     real(RP) :: TEMP_t(KA,IA,JA)
     real(RP) :: flux_rad(KA,IA,JA)
+    real(RP) :: RovCP, RovCV
 
     integer :: k2
+    !---------------------------------------------------------------------------
 
+    RovCP = Rdry / CPdry
+    RovCV = Rdry / CVdry
 
     do JJS = JS, JE, JBLOCK
     JJE = JJS+JBLOCK-1

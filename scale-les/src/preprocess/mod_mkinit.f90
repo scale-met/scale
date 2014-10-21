@@ -1045,7 +1045,7 @@ contains
     endif
     if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_COLDBUBBLE)
 
-    RovCP = CPdry / Rdry
+    RovCP = Rdry / CPdry
 
     ! calc in dry condition
     pres_sfc(1,1,1) = SFC_PRES
@@ -1143,7 +1143,7 @@ contains
     endif
     if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_LAMBWAVE)
 
-    RovCP = CPdry / Rdry
+    RovCP = Rdry / CPdry
 
     do j = JS, JE
     do i = IS, IE
@@ -2932,7 +2932,7 @@ enddo
                                qc_sfc  (:,:,:)  ) ! [IN]
 
 !write(*,*)'chk4.1'
-    RovCP = CPdry / Rdry
+    RovCP = Rdry / CPdry
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
