@@ -467,54 +467,67 @@ contains
 
     call PROF_rapstart('FILE O NetCDF')
 
-    xh = .false.
-    if ( present(xdim) ) then
-       if ( xdim=='half' ) xh = .true.
-    end if
-    yh = .false.
-    if ( present(ydim) ) then
-       if ( ydim=='half' ) yh = .true.
-    end if
+    if ( ndim == 1 ) then
 
-    if ( xh .and. yh ) then
-       dims(1) = 'lon_uv'
-       dims(2) = 'lat_uv'
-       dims(3) = 'height_uvz'
-    else if ( xh ) then
-       dims(1) = 'lon_uy'
-       dims(2) = 'lat_uy'
-       dims(3) = 'height_uyz'
-    else if ( yh ) then
-       dims(1) = 'lon_xv'
-       dims(2) = 'lat_xv'
-       dims(3) = 'height_xvz'
-    else
-       dims(1) = 'lon'
-       dims(2) = 'lat'
-       dims(3) = 'height'
-    end if
-
-    if ( present(zdim) ) then
-       if ( zdim=='land' ) then
-          dims(3) = 'lz'
-       else if ( zdim=='landhalf' ) then
-          dims(3) = 'lzh'
-       else if ( zdim=='urban' ) then
-          dims(3) = 'uz'
-       else if ( zdim=='urbanhalf' ) then
-          dims(3) = 'uzh'
-       else if ( zdim=='half' ) then
-          if ( xh .and. yh ) then
-             dims(3) = 'height_uvw'
-          else if ( xh ) then
-             dims(3) = 'height_uyw'
-          else if ( yh ) then
-             dims(3) = 'height_xvw'
-          else
-             dims(3) = 'height_xyw'
+       dims(1) = "z"
+       if ( present(zdim) ) then
+          if ( zdim=='half' ) then
+             dims(1) = "zh"
           end if
        end if
-    endif
+
+    else
+
+       xh = .false.
+       if ( present(xdim) ) then
+          if ( xdim=='half' ) xh = .true.
+       end if
+       yh = .false.
+       if ( present(ydim) ) then
+          if ( ydim=='half' ) yh = .true.
+       end if
+
+       if ( xh .and. yh ) then
+          dims(1) = 'lon_uv'
+          dims(2) = 'lat_uv'
+          dims(3) = 'height_uvz'
+       else if ( xh ) then
+          dims(1) = 'lon_uy'
+          dims(2) = 'lat_uy'
+          dims(3) = 'height_uyz'
+       else if ( yh ) then
+          dims(1) = 'lon_xv'
+          dims(2) = 'lat_xv'
+          dims(3) = 'height_xvz'
+       else
+          dims(1) = 'lon'
+          dims(2) = 'lat'
+          dims(3) = 'height'
+       end if
+
+       if ( present(zdim) ) then
+          if ( zdim=='land' ) then
+             dims(3) = 'lz'
+          else if ( zdim=='landhalf' ) then
+             dims(3) = 'lzh'
+          else if ( zdim=='urban' ) then
+             dims(3) = 'uz'
+          else if ( zdim=='urbanhalf' ) then
+             dims(3) = 'uzh'
+          else if ( zdim=='half' ) then
+             if ( xh .and. yh ) then
+                dims(3) = 'height_uvw'
+             else if ( xh ) then
+                dims(3) = 'height_uyw'
+             else if ( yh ) then
+                dims(3) = 'height_xvw'
+             else
+                dims(3) = 'height_xyw'
+             end if
+          end if
+       endif
+
+    end if
 
     call HistoryAddVariable( item,              & ! [IN]
                              dims(1:ndim),      & ! [IN]

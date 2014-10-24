@@ -628,7 +628,7 @@ contains
             tint8, itavg,                                       & ! (in)
             error                                               ) ! (out)
        if ( error /= SUCCESS_CODE ) then
-          call Log('E', 'xxx failed to add variable')
+          call Log('E', 'xxx failed to add variable: '//trim(varname))
        end if
 
        File_vname_list  (File_vid_count) = trim(varname)
@@ -700,7 +700,7 @@ contains
             tint8, itavg,                                       & ! (in)
             error                                               ) ! (out)
        if ( error /= SUCCESS_CODE ) then
-          call Log('E', 'xxx failed to add variable')
+          call Log('E', 'xxx failed to add variable: '//trim(varname))
        end if
 
        File_vname_list  (File_vid_count) = trim(varname)
