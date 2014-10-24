@@ -38,7 +38,7 @@ module scale_atmos_dyn
   !
   !++ used modules
   !
-#ifdef DEBUG
+#ifdef CHECK_MASS
   use mpi
 #endif
   use scale_precision
@@ -164,7 +164,7 @@ contains
        PRC_HAS_N, &
        PRC_HAS_S
     use scale_comm, only: &
-#ifdef DEBUG
+#ifdef CHECK_MASS
        COMM_datatype, &
 #endif
        COMM_vars8, &
@@ -175,7 +175,7 @@ contains
        I_UYZ, &
        I_XVZ, &
        I_XY
-#ifdef DEBUG
+#ifdef CHECK_MASS
     use scale_grid_real, only: &
        vol => REAL_VOL
 #endif
@@ -193,6 +193,11 @@ contains
 #ifdef HIST_TEND
     use scale_history, only: &
        HIST_in
+#elif
+#ifdef CHECK_MASS
+    use scale_history, only: &
+       HIST_in
+#endif
 #endif
     implicit none
 
@@ -328,11 +333,15 @@ contains
     real(RP) :: mflx_lb(KA,IA,JA,3)
     real(RP) :: tflx_lb(KA,IA,JA,3)
     real(RP) :: qflx_lb(KA,IA,JA,3,QA)
-#ifdef DEBUG
+#ifdef CHECK_MASS
+    real(RP) :: mflx_lb_horizontal(KA)
+    real(RP) :: allmflx_lb_horizontal(KA,IA,JA)
     real(RP) :: mass_tmp (KA,IA,JA)
     real(RP) :: mass_tmp2(KA,IA,JA)
+    real(RP) :: mflx_lb_total
     real(RP) :: mass_total
     real(RP) :: mass_total2
+    real(RP) :: allmflx_lb_total
     real(RP) :: allmass_total
     real(RP) :: allmass_total2
 #endif
@@ -343,7 +352,7 @@ contains
     integer  :: IIS, IIE
     integer  :: JJS, JJE
     integer  :: i, j, k, iq, step
-#ifdef DEBUG
+#ifdef CHECK_MASS
     integer :: ierr
 #endif
     !---------------------------------------------------------------------------
@@ -421,9 +430,10 @@ contains
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
-          damp = - DAMP_alpha_DENS(k,i,j) * ( &
-               - ( diff(k,i-1,j) + diff(k,i+1,j) + diff(k,i,j-1) + diff(k,i,j+1) - diff(k,i,j)*4.0_RP ) &
-               * 0.125_RP * BND_SMOOTHER_FACT ) ! horizontal smoother
+          damp = - DAMP_alpha_DENS(k,i,j) &
+               * ( &!diff(k,i,j) & ! rayleigh damping
+                 - ( diff(k,i-1,j) + diff(k,i+1,j) + diff(k,i,j-1) + diff(k,i,j+1) - diff(k,i,j)*4.0_RP ) &
+                 * 0.125_RP * BND_SMOOTHER_FACT ) ! horizontal smoother
           DENS_t(k,i,j) = DENS_tp(k,i,j) & ! tendency from physical step
                         + damp
           DENS_t(k,i,j) = 0.0_RP
@@ -728,7 +738,7 @@ contains
                IS, IE, JE-JHALO-NUM_LBFLX+1, JE-JHALO ) ! (in)
        end if
 
-#ifdef HIST_TEND
+#ifdef CHECK_MASS
        call HIST_in(mflx_lb(:,:,:,ZDIR), 'MOMZ_lb', 'momentum flux of z-direction from lateral boundary', &
                                          'kg/m2/s', dt, zdim='half'                                       )
        call HIST_in(mflx_lb(:,:,:,XDIR), 'MOMX_lb', 'momentum flux of x-direction from lateral boundary', &
@@ -782,7 +792,7 @@ contains
                IS, IE, JE-JHALO+1, JE ) ! (in)
        end if
 
-#ifdef DEBUG
+#ifdef CHECK_MASS
        ! check total mass in the inner region
        do j = JS, JE
        do i = IS, IE
@@ -797,6 +807,7 @@ contains
           do j = JS, JE
           do i = IS, IS+1
           do k = KS, KE
+             mflx_lb(k,i,j,YDIR) = 0.0_RP
              mass_tmp (k,i,j) = 0.0_RP
              mass_tmp2(k,i,j) = 0.0_RP
           end do
@@ -807,6 +818,7 @@ contains
           do j = JS, JE
           do i = IE-1, IE
           do k = KS, KE
+             mflx_lb(k,i,j,YDIR) = 0.0_RP
              mass_tmp (k,i,j) = 0.0_RP
              mass_tmp2(k,i,j) = 0.0_RP
           end do
@@ -817,6 +829,7 @@ contains
           do j = JS, JS+1
           do i = IS, IE
           do k = KS, KE
+             mflx_lb(k,i,j,XDIR) = 0.0_RP
              mass_tmp (k,i,j) = 0.0_RP
              mass_tmp2(k,i,j) = 0.0_RP
           end do
@@ -827,9 +840,60 @@ contains
           do j = JE-1, JE
           do i = IS, IE
           do k = KS, KE
+             mflx_lb(k,i,j,XDIR) = 0.0_RP
              mass_tmp (k,i,j) = 0.0_RP
              mass_tmp2(k,i,j) = 0.0_RP
           end do
+          end do
+          end do
+       end if
+
+       mflx_lb_total                = 0.0_RP
+       mflx_lb_horizontal(:)        = 0.0_RP
+       allmflx_lb_horizontal(:,:,:) = 0.0_RP
+
+       if ( .not. PRC_HAS_W ) then ! for western boundary
+          i = IS+2
+          do j = JS, JE
+          do k = KS, KE
+            mflx_lb_total = mflx_lb_total + mflx_lb(k,i-1,j,XDIR) * RCDX(i) * vol(k,i,j) &
+                                          * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) * dt
+            mflx_lb_horizontal(k) = mflx_lb_horizontal(k) + mflx_lb(k,i-1,j,XDIR) * RCDX(i) * vol(k,i,j) &
+                                                          * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) * dt
+
+          end do
+          end do
+       end if
+       if ( .not. PRC_HAS_E ) then ! for eastern boundary
+          i = IE-2
+          do j = JS, JE
+          do k = KS, KE
+            mflx_lb_total = mflx_lb_total - mflx_lb(k,i,j,XDIR) * RCDX(i) * vol(k,i,j) &
+                                          * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) * dt
+            mflx_lb_horizontal(k) = mflx_lb_horizontal(k) - mflx_lb(k,i,j,XDIR) * RCDX(i) * vol(k,i,j) &
+                                                          * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) * dt
+          end do
+          end do
+       end if
+       if ( .not. PRC_HAS_S ) then ! for sourthern boundary
+          j = JS+2
+          do i = IS, IE
+          do k = KS, KE
+            mflx_lb_total = mflx_lb_total + mflx_lb(k,i,j-1,YDIR) * RCDY(j) * vol(k,i,j) &
+                                          * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) * dt
+            mflx_lb_horizontal(k) = mflx_lb_horizontal(k) + mflx_lb(k,i,j-1,YDIR) * RCDY(j) * vol(k,i,j) &
+                                                          * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) * dt
+          end do
+          end do
+       end if
+       if ( .not. PRC_HAS_N ) then ! for northern boundary
+          j = JE-2
+          do i = IS, IE
+          do k = KS, KE
+            mflx_lb_total = mflx_lb_total - mflx_lb(k,i,j,YDIR) * RCDY(j) * vol(k,i,j) &
+                                          * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) * dt
+            mflx_lb_horizontal(k) = mflx_lb_horizontal(k) - mflx_lb(k,i,j,YDIR) * RCDY(j) * vol(k,i,j) &
+                                                          * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) * dt
           end do
           end do
        end if
@@ -845,6 +909,15 @@ contains
        end do
        end do
        end do
+
+       call MPI_Allreduce( mflx_lb_total,        &
+                           allmflx_lb_total,     &
+                           1,                    &
+                           COMM_datatype,        &
+                           MPI_SUM,              &
+                           MPI_COMM_WORLD,       &
+                           ierr                  )
+       if( IO_L ) write(IO_FID_LOG,'(A,1x,i1,1x,2PE24.17)') 'total mflx_lb:', step, allmflx_lb_total
 
        call MPI_Allreduce( mass_total,           &
                            allmass_total,        &
@@ -863,6 +936,27 @@ contains
                            MPI_COMM_WORLD,       &
                            ierr                  )
        if( IO_L ) write(IO_FID_LOG,'(A,1x,i1,1x,2PE24.17)') 'total mass2  :', step, allmass_total2
+
+       i = IS; j = JS ! dummy
+       do k = KS, KE
+          call MPI_Allreduce( mflx_lb_horizontal(k),        &
+                              allmflx_lb_horizontal(k,i,j), &
+                              1,                            &
+                              COMM_datatype,                &
+                              MPI_SUM,                      &
+                              MPI_COMM_WORLD,               &
+                              ierr                          )
+       end do
+       do j = JS+1, JE
+       do i = IS+1, IE
+       do k = KS, KE
+          allmflx_lb_horizontal(k,i,j) = allmflx_lb_horizontal(k,IS,JS)
+       end do
+       end do
+       end do
+
+       call HIST_in(allmflx_lb_horizontal(:,:,:), 'ALLMOM_lb_hz', 'horizontally total momentum flux from lateral boundary', &
+                                                  'kg/m2/s', dt )
 #endif
 
        do j  = JS, JE
