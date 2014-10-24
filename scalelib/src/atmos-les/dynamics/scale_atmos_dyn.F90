@@ -190,14 +190,9 @@ contains
     use scale_atmos_boundary, only: &
        BND_QA, &
        BND_SMOOTHER_FACT => ATMOS_BOUNDARY_SMOOTHER_FACT
-#ifdef HIST_TEND
+#if defined( HIST_TEND ) || defined( CHECK_MASS )
     use scale_history, only: &
        HIST_in
-#elif
-#ifdef CHECK_MASS
-    use scale_history, only: &
-       HIST_in
-#endif
 #endif
     implicit none
 
