@@ -6,7 +6,8 @@
 #-----------------------------------------
 #dir='/work3/scale/external_data/nicam/amip/trimmed'
 #dir='../../../../util/nicam_trimmer/output'
-dir='/data1/adachi/scale_develop/boundary_v20141015/scale/scale-les/util/nicam_trimmer/output'
+#dir='/data1/adachi/scale_develop/boundary_v20141015/scale/scale-les/util/nicam_trimmer/output'
+dir='/data2/scale_database/NICAM_output'
 ftype='peall'
 #
 dt=86400
@@ -49,24 +50,25 @@ do
 
   fmtd_fn=`printf "%05d" $fn`
 
-  ln -svf ${dir}/${year}${month}${day}/la_tg.nc      ./la_tg_${fmtd_fn}.${ftype}.nc
-  ln -svf ${dir}/${year}${month}${day}/la_wg.nc      ./la_wg_${fmtd_fn}.${ftype}.nc
-  ln -svf ${dir}/${year}${month}${day}/ms_pres.nc    ./ms_pres_${fmtd_fn}.${ftype}.nc
-  ln -svf ${dir}/${year}${month}${day}/ms_qv.nc      ./ms_qv_${fmtd_fn}.${ftype}.nc
+  ln -svf ${dir}/${year}${month}${day}/trimmed/la_tg.nc      ./la_tg_${fmtd_fn}.${ftype}.nc
+  ln -svf ${dir}/${year}${month}${day}/trimmed/la_wg.nc      ./la_wg_${fmtd_fn}.${ftype}.nc
+  ln -svf ${dir}/${year}${month}${day}/trimmed/ms_pres.nc    ./ms_pres_${fmtd_fn}.${ftype}.nc
+  ln -svf ${dir}/${year}${month}${day}/trimmed/ms_qv.nc      ./ms_qv_${fmtd_fn}.${ftype}.nc
   #ln -svf ${dir}/${year}${month}${day}/ms_rh.nc      ./ms_rh_${fmtd_fn}.${ftype}.nc
-  ln -svf ${dir}/${year}${month}${day}/ms_tem.nc     ./ms_tem_${fmtd_fn}.${ftype}.nc
-  ln -svf ${dir}/${year}${month}${day}/ms_u.nc       ./ms_u_${fmtd_fn}.${ftype}.nc
-  ln -svf ${dir}/${year}${month}${day}/ms_v.nc       ./ms_v_${fmtd_fn}.${ftype}.nc
+  ln -svf ${dir}/${year}${month}${day}/trimmed/ms_tem.nc     ./ms_tem_${fmtd_fn}.${ftype}.nc
+  ln -svf ${dir}/${year}${month}${day}/trimmed/ms_u.nc       ./ms_u_${fmtd_fn}.${ftype}.nc
+  ln -svf ${dir}/${year}${month}${day}/trimmed/ms_v.nc       ./ms_v_${fmtd_fn}.${ftype}.nc
   #ln -svf ${dir}/${year}${month}${day}/oa_ice.nc     ./oa_ice_${fmtd_fn}.${ftype}.nc
-  ln -svf ${dir}/${year}${month}${day}/oa_sst.nc     ./oa_sst_${fmtd_fn}.${ftype}.nc
+  ln -svf ${dir}/${year}${month}${day}/trimmed/oa_sst.nc     ./oa_sst_${fmtd_fn}.${ftype}.nc
   #ln -svf ${dir}/${year}${month}${day}/sa_tppn.nc    ./sa_tppn_${fmtd_fn}.${ftype}.nc
-  ln -svf ${dir}/${year}${month}${day}/ss_q2m.nc     ./ss_q2m_${fmtd_fn}.${ftype}.nc
-  ln -svf ${dir}/${year}${month}${day}/ss_slp.nc     ./ss_slp_${fmtd_fn}.${ftype}.nc
-  ln -svf ${dir}/${year}${month}${day}/ss_t2m.nc     ./ss_t2m_${fmtd_fn}.${ftype}.nc
-  ln -svf ${dir}/${year}${month}${day}/ss_tem_sfc.nc ./ss_tem_sfc_${fmtd_fn}.${ftype}.nc
-  ln -svf ${dir}/${year}${month}${day}/ss_u10m.nc    ./ss_u10m_${fmtd_fn}.${ftype}.nc
-  ln -svf ${dir}/${year}${month}${day}/ss_v10m.nc    ./ss_v10m_${fmtd_fn}.${ftype}.nc
+  ln -svf ${dir}/${year}${month}${day}/trimmed/ss_q2m.nc     ./ss_q2m_${fmtd_fn}.${ftype}.nc
+  ln -svf ${dir}/${year}${month}${day}/trimmed/ss_slp.nc     ./ss_slp_${fmtd_fn}.${ftype}.nc
+  ln -svf ${dir}/${year}${month}${day}/trimmed/ss_t2m.nc     ./ss_t2m_${fmtd_fn}.${ftype}.nc
+  ln -svf ${dir}/${year}${month}${day}/trimmed/ss_tem_sfc.nc ./ss_tem_sfc_${fmtd_fn}.${ftype}.nc
+  ln -svf ${dir}/${year}${month}${day}/trimmed/ss_u10m.nc    ./ss_u10m_${fmtd_fn}.${ftype}.nc
+  ln -svf ${dir}/${year}${month}${day}/trimmed/ss_v10m.nc    ./ss_v10m_${fmtd_fn}.${ftype}.nc
 
   fn=`expr ${fn} \+ 1`
   unix_sec=`expr ${unix_sec} \+ ${dt}`
 done
+

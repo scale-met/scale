@@ -12,7 +12,9 @@ program nicam_trimmer
   use scale_precision
   use scale_stdio
   use scale_const, only: &
-     CONST_setup
+     CONST_setup,             &
+     r_in_m => CONST_RADIUS,  &
+     EPS    => CONST_EPS
   use scale_external_io, only: &
 !     ExternalFileGetShape,     &
      ExternalFileRead,         &
@@ -32,6 +34,7 @@ program nicam_trimmer
   integer :: timelen
   integer :: dims(7)
   integer :: dummy(7)
+  character(128) :: landdir
   character(128) :: inputdir
   character(128) :: outputdir
 
@@ -54,8 +57,11 @@ program nicam_trimmer
 
   real(DP), allocatable :: lon_trm(:)
   real(DP), allocatable :: lat_trm(:)
+  real(SP), allocatable :: lsmask(:,:)
   real(SP), allocatable :: data_4d(:,:,:,:)
   real(SP), allocatable :: trimmed(:,:,:,:)
+
+  real(SP), parameter   :: sst_missval=273.1506
 
   real(DP),       parameter :: glevm5(1:6) = (/ 0.000, 0.050, 0.250, 1.000, 2.000, 4.000 /)
   integer,        parameter :: iNICAM  = 3
@@ -70,6 +76,7 @@ program nicam_trimmer
                         kmax,      &
                         lkmax,     &
                         tmax,      &
+                        landdir,   &
                         inputdir,  &
                         outputdir, &
                         start_lon, &
@@ -97,8 +104,9 @@ program nicam_trimmer
   write ( *, * ) "KMAX  : ", kmax
   write ( *, * ) "LKMAX : ", lkmax, " (fixed)"
   write ( *, * ) "TMAX  : ", tmax
-  write ( *, * ) "DATA INPUT DIR  : ", trim(inputdir)
-  write ( *, * ) "DATA OUTPUT DIR : ", trim(outputdir)
+  write ( *, * ) "LANDUSE DATA DIR : ", trim(landdir)
+  write ( *, * ) "DATA INPUT DIR   : ", trim(inputdir)
+  write ( *, * ) "DATA OUTPUT DIR  : ", trim(outputdir)
   write ( *, * ) "--------------------------------------------"
   write ( *, * ) " "
 
@@ -143,6 +151,20 @@ program nicam_trimmer
 
   deallocate( lon )
   deallocate( lat )
+
+  ! landuse
+  allocate( data_4d( dims(1), dims(2), 1, 1 ) )
+  allocate( trimmed( dims(6), dims(7), 1, 1 ) )
+  allocate( lsmask( dims(6), dims(7) ) )
+
+  call nicamread_lsmask( data_4d, trim(landdir)//"/"//"lsmask.grd", "lsmask", &
+                     (/ dims(1), dims(2), 1 ,1/), .false. )
+  call trimming_4d( trimmed, data_4d, is, js, ie, je )
+  lsmask(:,:)=trimmed( :, :, 1, 1 )  ! land fraction (sea=0,land=1)
+  deallocate( data_4d )
+  deallocate( trimmed )
+
+
   allocate( data_4d( dims(1), dims(2), dims(3), dims(5) ) )
   allocate( trimmed( dims(6), dims(7), dims(3), dims(5) ) )
 
@@ -211,9 +233,23 @@ program nicam_trimmer
   call nicamread_4D( data_4d, trim(inputdir)//"/"//"oa_sst", "oa_sst", &
                      (/ dims(1), dims(2), 1, 1 /), .true. )
   call trimming_4d( trimmed, data_4d, is, js, ie, je )
+
+   ! retrieve SST data around coast
+   do j=1,dims(7)
+   do i=1,dims(6)
+      if( abs(lsmask(i,j)-1.0_RP) < EPS )then  ! not land data
+         cycle
+      else
+         trimmed(i,j,1,1)=(trimmed(i,j,1,1)-sst_missval*lsmask(i,j))/(1.0_RP-lsmask(i,j))
+      endif
+   enddo
+   enddo
+
+  ! interpolate data on land
+  call interp_liner_missing (trimmed(:,:,1,1), lsmask, lon_trm, lat_trm ,dims(6), dims(7), sst_missval)
   call nicamwrite_4D( lon_trm, lat_trm, slev, time, trimmed, "oa_sst", &
                      (/ dims(6), dims(7), 1, 1 /), outputdir, .true. )
-
+  
   deallocate( data_4d )
   deallocate( trimmed )
   allocate( data_4d( dims(1), dims(2), 1, dims(5) ) )
@@ -359,6 +395,39 @@ contains
     return
   end subroutine nicamread_4D
 
+  !> read 4-dimension data
+  !---------------------------------------------------------------------------
+  subroutine nicamread_lsmask( &
+      var,         & ! (out)
+      filename,    & ! (in)
+      varname,     & ! (in)
+      dimens,      & ! (in)
+      scoffset     ) ! (in)
+    implicit none
+
+    real(SP),         intent(out) :: var(:,:,:,:)
+    character(LEN=*), intent(in)  :: filename
+    character(LEN=*), intent(in)  :: varname
+    integer,          intent(in)  :: dimens(:)  !1:x, 2:y, 3:z, 4:t
+    logical,          intent(in)  :: scoffset
+
+    integer :: i, j, k, t
+    real(SP),allocatable          :: gdata(:,:)
+    !---------------------------------------------------------------------------
+    allocate( gdata( dimens(1), dimens(2) ) )
+    write ( *, * ) " "
+    write ( *, * ) "open file : ", trim(filename)
+    open (70, file=trim(filename), form='unformatted', access='direct', &
+          recl=dimens(1)*dimens(2)*4, status='old')
+      read(70,rec=1) gdata
+    close(70)
+    var(:,:,dimens(3),dimens(4)) = gdata(:,:)
+
+    write ( *, * ) "Input Value Range"
+    write ( *, * ) "max: ", maxval(var(:,:,:,:)), "min: ", minval(var(:,:,:,:))
+
+    return
+  end subroutine nicamread_lsmask
 
   !> write 4-dimension data
   !---------------------------------------------------------------------------
@@ -567,5 +636,236 @@ contains
 
     return
   end subroutine check_dimension
+
+    !-----------------------------------------------------------------------------
+  subroutine interp_liner_missing( &
+      data,       & ! (inout)
+      lsmask,     & ! (in)
+      inlon,      & ! (in)
+      inlat,      & ! (in)
+      nx,         & ! (in)
+      ny,         & ! (in)
+      missval     ) ! (in)
+    implicit none
+
+    real(SP), intent(inout) :: data(:,:)
+    real(SP), intent(in)    :: lsmask(:,:)
+    real(DP), intent(in)    :: inlon(:)
+    real(DP), intent(in)    :: inlat(:)
+    integer,  intent(in)    :: nx
+    integer,  intent(in)    :: ny
+    real(SP), intent(in)    :: missval
+
+    integer, allocatable    :: imask(:,:),imaskr(:,:)
+    real(SP),allocatable    :: newdata(:,:)
+    integer                 :: flag(8)
+    real(DP)                :: xdist(8)
+    real(SP)                :: ydata(8)
+    real(DP) :: dd
+
+    integer :: i, j, k, ii, jj, kk
+
+    !---------------------------------------------------------------------------
+    allocate( imask(nx,ny),imaskr(nx,ny) )
+    allocate( newdata(nx,ny) )
+    newdata = 0.0_RP
+
+    ! make flag of land/sea
+    do j = 1,ny
+    do i = 1,nx
+       if( abs(lsmask(i,j)-1.0_RP) < EPS )then ! land data
+          imask(i,j) = 1
+       else
+          imask(i,j) = 0
+       endif
+    enddo
+    enddo
+
+    imaskr = imask
+    do kk = 1,20
+    do j = 1,ny
+    do i = 1,nx
+       if(imask(i,j)==0)then  ! sea : not missing value
+           newdata(i,j) = data(i,j)
+           cycle 
+       else
+
+        !-------------------
+        ! missing value
+        !-------------------
+        ! check data of neighbor grid
+        !-------------------
+        ! flag(i,j,4)
+        !-------------------
+        ! 6----7----8
+        ! |    |    |
+        ! 4--(i,j)--5
+        ! |    |    |
+        ! 1----2----3
+        !-------------------
+        flag    = 0
+        xdist   = 0.0_RP
+        ydata   = 0.0_RP
+        if((i==1).and.(j==1))then
+           if(imask(i+1,j  )==0) flag(5)=1
+           if(imask(i,  j+1)==0) flag(7)=1
+           if(imask(i+1,j+1)==0) flag(8)=1
+        else if((i==nx).and.(j==1))then
+           if(imask(i-1,j  )==0) flag(4)=1
+           if(imask(i-1,j+1)==0) flag(6)=1
+           if(imask(i,  j+1)==0) flag(7)=1
+        else if((i==1).and.(j==ny))then
+           if(imask(i,  j-1)==0) flag(2)=1
+           if(imask(i+1,j-1)==0) flag(3)=1
+           if(imask(i+1,j  )==0) flag(5)=1
+        else if((i==nx).and.(j==ny))then
+           if(imask(i-1,j-1)==0) flag(1)=1
+           if(imask(i,  j-1)==0) flag(2)=1
+           if(imask(i-1,j  )==0) flag(4)=1
+        else if(i==1)then
+           if(imask(i,  j-1)==0) flag(2)=1
+           if(imask(i+1,j-1)==0) flag(3)=1
+           if(imask(i+1,j  )==0) flag(5)=1
+           if(imask(i,  j+1)==0) flag(7)=1
+           if(imask(i+1,j+1)==0) flag(8)=1
+        else if(i==nx)then
+           if(imask(i-1,j-1)==0) flag(1)=1
+           if(imask(i,  j-1)==0) flag(2)=1
+           if(imask(i-1,j  )==0) flag(4)=1
+           if(imask(i-1,j+1)==0) flag(6)=1
+           if(imask(i,  j+1)==0) flag(7)=1
+        else if(j==1)then
+           if(imask(i-1,j  )==0) flag(4)=1
+           if(imask(i+1,j  )==0) flag(5)=1
+           if(imask(i-1,j+1)==0) flag(6)=1
+           if(imask(i,  j+1)==0) flag(7)=1
+           if(imask(i+1,j+1)==0) flag(8)=1
+        else if(j==ny)then
+           if(imask(i-1,j-1)==0) flag(1)=1
+           if(imask(i,  j-1)==0) flag(2)=1
+           if(imask(i+1,j-1)==0) flag(3)=1
+           if(imask(i-1,j  )==0) flag(4)=1
+           if(imask(i+1,j  )==0) flag(5)=1
+        else
+           if(imask(i-1,j-1)==0) flag(1)=1
+           if(imask(i,  j-1)==0) flag(2)=1
+           if(imask(i+1,j-1)==0) flag(3)=1
+           if(imask(i-1,j  )==0) flag(4)=1
+           if(imask(i+1,j  )==0) flag(5)=1
+           if(imask(i-1,j+1)==0) flag(6)=1
+           if(imask(i,  j+1)==0) flag(7)=1
+           if(imask(i+1,j+1)==0) flag(8)=1
+        endif
+
+        !if(maxval(flag(:))==1)then 
+        if(sum(flag(:))>=3)then  ! coast grid : interpolate
+           
+           dd = 0.0_RP
+           xdist(:) = 1.0_RP
+           ydata(:) = -999.0_RP
+           if(flag(1)==1)then
+              xdist(1) = haversine( inlat(j),inlon(i),inlat(j-1),inlon(i-1))
+              ydata(1) = data(i-1,j-1)
+           endif
+           if(flag(2)==1)then
+              xdist(2) = haversine( inlat(j),inlon(i),inlat(j-1),inlon(i))
+              ydata(2) = data(i,j-1)
+           endif
+           if(flag(3)==1)then
+              xdist(3) = haversine( inlat(j),inlon(i),inlat(j-1),inlon(i+1))
+              ydata(3) = data(i+1,j-1)
+           endif
+           if(flag(4)==1)then
+              xdist(4) = haversine( inlat(j),inlon(i),inlat(j),inlon(i-1))
+              ydata(4) = data(i-1,j)
+           endif
+           if(flag(5)==1)then
+              xdist(5) = haversine( inlat(j),inlon(i),inlat(j),inlon(i+1))
+              ydata(5) = data(i+1,j)
+           endif
+           if(flag(6)==1)then
+              xdist(6) = haversine( inlat(j),inlon(i),inlat(j+1),inlon(i-1))
+              ydata(6) = data(i-1,j+1)
+           endif
+           if(flag(7)==1)then
+              xdist(7) = haversine( inlat(j),inlon(i),inlat(j+1),inlon(i))
+              ydata(7) = data(i,j+1)
+           endif
+           if(flag(8)==1)then
+              xdist(8) = haversine( inlat(j),inlon(i),inlat(j+1),inlon(i+1))
+              ydata(8) = data(i+1,j+1)
+           endif
+
+
+           dd = (1.0_RP/xdist(1))*real(flag(1)) &
+              + (1.0_RP/xdist(2))*real(flag(2)) &
+              + (1.0_RP/xdist(3))*real(flag(3)) &
+              + (1.0_RP/xdist(4))*real(flag(4)) &
+              + (1.0_RP/xdist(5))*real(flag(5)) &
+              + (1.0_RP/xdist(6))*real(flag(6)) &
+              + (1.0_RP/xdist(7))*real(flag(7)) &
+              + (1.0_RP/xdist(8))*real(flag(8)) 
+
+           newdata(i,j) = (   &
+                   ydata(1) * (1.0_RP/xdist(1))*real(flag(1)) &
+                 + ydata(2) * (1.0_RP/xdist(2))*real(flag(2)) &
+                 + ydata(3) * (1.0_RP/xdist(3))*real(flag(3)) &
+                 + ydata(4) * (1.0_RP/xdist(4))*real(flag(4)) &
+                 + ydata(5) * (1.0_RP/xdist(5))*real(flag(5)) &
+                 + ydata(6) * (1.0_RP/xdist(6))*real(flag(6)) &
+                 + ydata(7) * (1.0_RP/xdist(7))*real(flag(7)) &
+                 + ydata(8) * (1.0_RP/xdist(8))*real(flag(8)) )/dd
+           imaskr(i,j) = 0
+        else
+          newdata(i,j) = data(i,j)
+        endif 
+
+       endif ! sea/land
+
+       if((i==7).and.(j==112))then
+         print *,data(i,j),newdata(i,j),lsmask(i,j),imask(i,j)
+         print *,flag(1),imask(i-1,j-1),lsmask(i-1,j-1),xdist(1),ydata(1)
+         print *,flag(2),imask(i,j-1),lsmask(i,j-1),xdist(2),ydata(2)
+         print *,flag(3),imask(i+1,j-1),lsmask(i+1,j-1),xdist(3),ydata(3)
+         print *,flag(4),imask(i-1,j),lsmask(i-1,j),xdist(4),ydata(4)
+         print *,flag(5),imask(i+1,j),lsmask(i+1,j),xdist(5),ydata(5)
+         print *,flag(6),imask(i-1,j+1),lsmask(i-1,j+1),xdist(6),ydata(6)
+         print *,flag(7),imask(i,j+1),lsmask(i,j+11),xdist(7),ydata(7)
+         print *,flag(8),imask(i+1,j+1),lsmask(i+1,j+11),xdist(8),ydata(8)
+       endif
+    enddo
+    enddo
+
+     imask(:,:) = imaskr(:,:)
+     data(:,:)  = newdata(:,:)
+  
+    enddo
+
+    return
+  end subroutine interp_liner_missing
+
+  !-----------------------------------------------------------------------------
+  ! Haversine Formula (from R.W. Sinnott, "Virtues of the Haversine",
+  ! Sky and Telescope, vol. 68, no. 2, 1984, p. 159):
+  function haversine( &
+      la0,       &
+      lo0,       &
+      la,        &
+      lo )       &
+      result( d )
+    implicit none
+    real(RP), intent(in) :: la0, lo0, la, lo   ! la,la0: Lat, lo,lo0: Lon; [rad]
+    real(RP) :: d, dlon, dlat, work1, work2
+    !---------------------------------------------------------------------------
+
+    ! output unit : [m]
+    dlon = lo0 - lo
+    dlat = la0 - la
+    work1 = (sin(dlat/2.0_RP))**2.0_RP + &
+            cos(la0) * cos(la) * (sin(dlon/2.0_RP))**2.0_RP
+    work2 = 2.0_RP * asin(min( 1.0_RP, sqrt(work1) ))
+    d = r_in_m * work2
+
+  end function haversine
 
 end program nicam_trimmer

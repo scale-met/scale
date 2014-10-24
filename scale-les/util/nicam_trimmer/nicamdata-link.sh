@@ -44,8 +44,7 @@ do
 
 #-----------------------------------------
 idir="/data2/amip/${year}${month}${day}/02560x01280.zorg.torg/"
-#odir="data_source/${year}${month}${day}"
-odir="data_source"
+odir="data_source/${year}${month}${day}"
 index='.peall'
 #-----------------------------------------
 #
