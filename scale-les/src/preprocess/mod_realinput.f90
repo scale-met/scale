@@ -1074,7 +1074,7 @@ contains
        do j = JS-1, JE+1
        do i = IS-1, IE+1
        do k = KS, KE
-          vely(k,i,j,n) = ( work(k,i+1,j,n) + work(k,i,j,n) ) * 0.5_RP
+          vely(k,i,j,n) = ( work(k,i,j+1,n) + work(k,i,j,n) ) * 0.5_RP
        end do
        end do
        end do
@@ -1734,7 +1734,7 @@ contains
        do j = JS-1, JE+1
        do i = IS-1, IE+1
        do k = KS, KE
-          vely(k,i,j,n) = ( work(k,i+1,j,n) + work(k,i,j,n) ) * 0.5_RP
+          vely(k,i,j,n) = ( work(k,i,j+1,n) + work(k,i,j,n) ) * 0.5_RP
        end do
        end do
        end do
@@ -2190,7 +2190,7 @@ contains
        do j = JS-1, JE+1
        do i = IS-1, IE+1
        do k = KS, KE
-          vely(k,i,j,n) = ( work(k,i+1,j,n) + work(k,i,j,n) ) * 0.5_RP
+          vely(k,i,j,n) = ( work(k,i,j+1,n) + work(k,i,j,n) ) * 0.5_RP
        end do
        end do
        end do
