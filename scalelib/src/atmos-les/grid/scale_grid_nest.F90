@@ -53,6 +53,7 @@ module scale_grid_nest
   integer,  public              :: PARENT_JA(2)         !< parent max number in y-direction (with halo)
   integer,  public              :: PARENT_LKMAX(2)      !< parent max number in lz-direction
   real(DP), public              :: PARENT_DTSEC(2)      !< parent DT [sec]
+  integer,  public              :: PARENT_NSTEP(2)      !< parent step [number]
 
   integer,  public              :: DAUGHTER_KMAX(2)     !< daughter max number in z-direction
   integer,  public              :: DAUGHTER_IMAX(2)     !< daughter max number in x-direction
@@ -62,6 +63,7 @@ module scale_grid_nest
   integer,  public              :: DAUGHTER_JA(2)       !< daughter max number in y-direction (with halo)
   integer,  public              :: DAUGHTER_LKMAX(2)    !< daughter max number in lz-direction
   real(DP), public              :: DAUGHTER_DTSEC(2)    !< daughter DT [sec]
+  real(DP), public              :: DAUGHTER_NSTEP(2)    !< daughter steps [number]
 
   integer,  public              :: PRNT_KS(2)           !< start index in z-direction in parent
   integer,  public              :: PRNT_KE(2)           !< end index   in z-direction in parent
@@ -404,6 +406,7 @@ contains
             if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- PARENT_IMAX       :', PARENT_IMAX(HANDLING_NUM)
             if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- PARENT_JMAX       :', PARENT_JMAX(HANDLING_NUM)
             if( IO_L ) write(IO_FID_LOG,'(1x,A,F9.3)') '***  --- PARENT_DTSEC      :', PARENT_DTSEC(HANDLING_NUM)
+            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)  ') '***  --- PARENT_NSTEP      :', PARENT_NSTEP(HANDLING_NUM)
             if( IO_L ) write(IO_FID_LOG,'(1x,A)'     ) '***  Informations of Daughter Domain'
             if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- DAUGHTER_PRC_nmax :', DAUGHTER_PRC_nmax(HANDLING_NUM)
             if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- DAUGHTER_PRC_NUM_X:', DAUGHTER_PRC_NUM_X(HANDLING_NUM)
@@ -412,6 +415,7 @@ contains
             if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- DAUGHTER_IMAX     :', DAUGHTER_IMAX(HANDLING_NUM)
             if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- DAUGHTER_JMAX     :', DAUGHTER_JMAX(HANDLING_NUM)
             if( IO_L ) write(IO_FID_LOG,'(1x,A,F9.3)') '***  --- DAUGHTER_DTSEC    :', DAUGHTER_DTSEC(HANDLING_NUM)
+            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)  ') '***  --- DAUGHTER_NSTEP    :', DAUGHTER_NSTEP(HANDLING_NUM)
 
             call NEST_COMM_setup_nestdown( HANDLING_NUM )
 
@@ -457,6 +461,7 @@ contains
             if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- PARENT_IMAX       :', PARENT_IMAX(HANDLING_NUM)
             if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- PARENT_JMAX       :', PARENT_JMAX(HANDLING_NUM)
             if( IO_L ) write(IO_FID_LOG,'(1x,A,F9.3)') '***  --- PARENT_DTSEC      :', PARENT_DTSEC(HANDLING_NUM)
+            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- PARENT_NSTEP      :', PARENT_NSTEP(HANDLING_NUM)
             if( IO_L ) write(IO_FID_LOG,'(1x,A)'     ) '***  Informations of Daughter Domain [me]'
             if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- DAUGHTER_PRC_nmax :', DAUGHTER_PRC_nmax(HANDLING_NUM)
             if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- DAUGHTER_PRC_NUM_X:', DAUGHTER_PRC_NUM_X(HANDLING_NUM)
@@ -465,6 +470,7 @@ contains
             if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- DAUGHTER_IMAX     :', DAUGHTER_IMAX(HANDLING_NUM)
             if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- DAUGHTER_JMAX     :', DAUGHTER_JMAX(HANDLING_NUM)
             if( IO_L ) write(IO_FID_LOG,'(1x,A,F9.3)') '***  --- DAUGHTER_DTSEC    :', DAUGHTER_DTSEC(HANDLING_NUM)
+            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- DAUGHTER_NSTEP    :', DAUGHTER_NSTEP(HANDLING_NUM)
             if( IO_L ) write(IO_FID_LOG,'(1x,A)'     ) '***  Informations of Target Tiles'
             if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- TILEALL_KA      :', TILEAL_KA(HANDLING_NUM)
             if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- TILEALL_IA      :', TILEAL_IA(HANDLING_NUM)
@@ -715,6 +721,7 @@ contains
        PRC_NUM_Y,   &
        PRC_MPIstop
     use scale_time, only: &
+       TIME_NSTEP, &
        TIME_DTSEC
     use scale_comm, only: &
        COMM_bcast
@@ -723,14 +730,14 @@ contains
     integer, intent(in) :: HANDLE !< id number of nesting relation in this process target
 
     real(RP) :: buffer
-    integer  :: datapack(12)
+    integer  :: datapack(13)
     integer  :: ireq1, ireq2, ierr1, ierr2, ileng
     integer  :: istatus(MPI_STATUS_SIZE)
     integer  :: tag
     !---------------------------------------------------------------------------
 
     tag   = INTERCOMM_ID(HANDLE) * 100
-    ileng = 12
+    ileng = 13
 
     if ( NEST_Filiation( INTERCOMM_ID(HANDLE) ) > 0 ) then !--- parent
        ! from parent to daughter
@@ -746,7 +753,8 @@ contains
        datapack(10) = IE
        datapack(11) = JS
        datapack(12) = JE
-       buffer      = TIME_DTSEC
+       datapack(13) = TIME_NSTEP
+       buffer       = TIME_DTSEC
 
        if ( PRC_myrank == PRC_master ) then
           call MPI_ISEND(datapack, ileng, MPI_INTEGER, PRC_myrank, tag, INTERCOMM_DAUGHTER, ireq1, ierr1)
@@ -767,6 +775,7 @@ contains
        PRNT_IE(HANDLE)          = datapack(10)
        PRNT_JS(HANDLE)          = datapack(11)
        PRNT_JE(HANDLE)          = datapack(12)
+       PARENT_NSTEP(HANDLE)     = datapack(13)
        PARENT_DTSEC(HANDLE)     = buffer
 
        ! from daughter to parent
@@ -791,6 +800,7 @@ contains
        DATR_IE(HANDLE)            = datapack(10)
        DATR_JS(HANDLE)            = datapack(11)
        DATR_JE(HANDLE)            = datapack(12)
+       DAUGHTER_NSTEP(HANDLE)     = datapack(13)
        DAUGHTER_DTSEC(HANDLE)     = buffer
 
 
@@ -817,6 +827,7 @@ contains
        PRNT_IE(HANDLE)          = datapack(10)
        PRNT_JS(HANDLE)          = datapack(11)
        PRNT_JE(HANDLE)          = datapack(12)
+       PARENT_NSTEP(HANDLE)     = datapack(13)
        PARENT_DTSEC(HANDLE)     = buffer
 
        ! from daughter to parent
@@ -832,6 +843,7 @@ contains
        datapack(10) = IE
        datapack(11) = JS
        datapack(12) = JE
+       datapack(13) = TIME_NSTEP
        buffer       = TIME_DTSEC
 
        if ( PRC_myrank == PRC_master ) then
@@ -853,6 +865,7 @@ contains
        DATR_IE(HANDLE)            = datapack(10)
        DATR_JS(HANDLE)            = datapack(11)
        DATR_JE(HANDLE)            = datapack(12)
+       DAUGHTER_NSTEP(HANDLE)     = datapack(13)
        DAUGHTER_DTSEC(HANDLE)     = buffer
     else
        if( IO_L ) write(*,*) 'xxx internal error [nest/grid]'
