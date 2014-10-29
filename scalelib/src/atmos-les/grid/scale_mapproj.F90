@@ -620,7 +620,7 @@ contains
        dlon = lon(i,j) - MPRJ_basepoint_lon * D2R
        if ( dlon >  PI ) dlon = dlon - PI*2.0_RP
        if ( dlon < -PI ) dlon = dlon + PI*2.0_RP
-       alpha = MPRJ_LC_c * dlon * MPRJ_hemisphere
+       alpha = - MPRJ_LC_c * dlon * MPRJ_hemisphere
        rotc(i,j,1) = cos( alpha ) ! cosin
        rotc(i,j,2) = sin( alpha ) ! sine
     enddo
@@ -769,7 +769,7 @@ contains
        dlon = lon(i,j) - MPRJ_basepoint_lon * D2R
        if ( dlon >  PI ) dlon = dlon - PI*2.0_RP
        if ( dlon < -PI ) dlon = dlon + PI*2.0_RP
-       alpha = dlon * MPRJ_hemisphere
+       alpha = - dlon * MPRJ_hemisphere
        rotc(i,j,1) = cos( alpha ) ! cosin
        rotc(i,j,2) = sin( alpha ) ! sine
     enddo
