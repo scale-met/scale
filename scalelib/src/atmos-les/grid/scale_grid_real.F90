@@ -29,6 +29,7 @@ module scale_grid_real
   !
   public :: REAL_setup
   public :: REAL_update_Z
+  public :: REAL_calc_areavol
 
   !-----------------------------------------------------------------------------
   !
@@ -71,7 +72,6 @@ module scale_grid_real
   !
   private :: REAL_calc_latlon
   private :: REAL_calc_Z
-  private :: REAL_calc_areavol
 
   !-----------------------------------------------------------------------------
   !
@@ -130,7 +130,7 @@ contains
     call REAL_calc_Z
 
     ! calc control area & volume
-    call REAL_calc_areavol
+    ! call REAL_calc_areavol ! must be called after GTRANS_setup
 
     ! set latlon and z to fileio module
     call FILEIO_set_coordinates( REAL_LON, REAL_LONX, REAL_LONY, REAL_LONXY, &
@@ -382,36 +382,22 @@ contains
        DZ, &
        DX, &
        DY
+    use scale_gridtrans, only: &
+       MAPF => GTRANS_MAPF, &
+       I_XY
     implicit none
 
     integer :: k, i, j
     !---------------------------------------------------------------------------
 
-    if ( .false. ) then
-       REAL_TOTAREA   = 0.0_RP
-       REAL_AREA(:,:) = 0.0_RP
-       do j = JS, JE
-       do i = IS, IE
-       do k = KS, KE
-          REAL_AREA(i,j) = RADIUS * RADIUS * REAL_DLON(i,j) &
-                         * ( sin( REAL_LAT(i,j)-0.5_RP*REAL_DLAT(i,j) ) &
-                           - sin( REAL_LAT(i,j)+0.5_RP*REAL_DLAT(i,j) ) )
-          REAL_TOTAREA = REAL_TOTAREA + REAL_AREA(i,j)
-       enddo
-       enddo
-       enddo
-    else
-       REAL_TOTAREA   = 0.0_RP
-       REAL_AREA(:,:) = 0.0_RP
-       do j = JS, JE
-       do i = IS, IE
-       do k = KS, KE
-          REAL_AREA(i,j) = DX * DY
-          REAL_TOTAREA = REAL_TOTAREA + REAL_AREA(i,j)
-       enddo
-       enddo
-       enddo
-    endif
+    REAL_TOTAREA   = 0.0_RP
+    REAL_AREA(:,:) = 0.0_RP
+    do j = JS, JE
+    do i = IS, IE
+       REAL_AREA(i,j) = DX * DY / ( MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) )
+       REAL_TOTAREA = REAL_TOTAREA + REAL_AREA(i,j)
+    enddo
+    enddo
 
     REAL_TOTVOL     = 0.0_RP
     REAL_VOL(:,:,:) = 0.0_RP
