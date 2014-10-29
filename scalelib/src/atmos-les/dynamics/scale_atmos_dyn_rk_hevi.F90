@@ -187,8 +187,8 @@ contains
     real(RP), intent(out) :: MOMY_RK(KA,IA,JA)   !
     real(RP), intent(out) :: RHOT_RK(KA,IA,JA)   !
 
-    real(RP), intent(out) :: mflx_hi(KA,IA,JA,3) ! rho * vel(x,y,z)
-    real(RP), intent(out) :: tflx_hi(KA,IA,JA,3) ! rho * theta * vel(x,y,z)
+    real(RP), intent(inout) :: mflx_hi(KA,IA,JA,3) ! rho * vel(x,y,z)
+    real(RP), intent(inout) :: tflx_hi(KA,IA,JA,3) ! rho * theta * vel(x,y,z)
 
     real(RP), intent(in),target :: DENS0(KA,IA,JA) ! prognostic variables
     real(RP), intent(in),target :: MOMZ0(KA,IA,JA) ! at previous dynamical time step

@@ -62,8 +62,8 @@ module scale_atmos_dyn_rk
        real(RP), intent(out) :: MOMY_RK(KA,IA,JA)   !
        real(RP), intent(out) :: RHOT_RK(KA,IA,JA)   !
 
-       real(RP), intent(out) :: mflx_hi(KA,IA,JA,3) ! mass flux
-       real(RP), intent(out) :: tflx_hi(KA,IA,JA,3) ! internal energy flux
+       real(RP), intent(inout) :: mflx_hi(KA,IA,JA,3) ! mass flux
+       real(RP), intent(inout) :: tflx_hi(KA,IA,JA,3) ! internal energy flux
 
        real(RP), intent(in),target :: DENS0(KA,IA,JA) ! prognostic variables at previous dynamical time step
        real(RP), intent(in),target :: MOMZ0(KA,IA,JA) !
