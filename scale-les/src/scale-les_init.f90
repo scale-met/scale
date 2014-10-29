@@ -63,6 +63,7 @@ program scaleles_init
      LANDUSE_setup
   use scale_grid_real, only: &
      REAL_setup,   &
+     REAL_calc_areavol, &
      REAL_update_Z
   use scale_gridtrans, only: &
      GTRANS_setup
@@ -175,6 +176,9 @@ program scaleles_init
   call GTRANS_setup
   ! setup Z-ZS interpolation factor (uses in History)
   call INTERP_setup
+
+  ! calc control area & volume
+  call REAL_calc_areavol
 
   ! setup restart
   call ADMIN_restart_setup

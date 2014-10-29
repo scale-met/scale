@@ -36,6 +36,7 @@ module mod_atmos_driver
   !
   public :: ATMOS_driver_setup
   public :: ATMOS_driver
+  public :: ATMOS_driver_finalize
   public :: ATMOS_SURFACE_GET
   public :: ATMOS_SURFACE_SET
 
@@ -203,7 +204,7 @@ contains
 
     !########## Lateral/Top Boundary Condition ###########
     if ( ATMOS_BOUNDARY_UPDATE_FLAG ) then
-       call ATMOS_BOUNDARY_update( DENS, MOMX, MOMY, RHOT, QTRC ) ! (in)
+       call ATMOS_BOUNDARY_update( DENS, MOMZ, MOMX, MOMY, RHOT, QTRC ) ! (in)
     endif
 
     !########## Get Surface Boundary Condition from coupler ##########
@@ -287,6 +288,29 @@ contains
 
     return
   end subroutine ATMOS_driver
+
+  !-----------------------------------------------------------------------------
+  !> Finalize
+  subroutine ATMOS_driver_finalize
+    use scale_atmos_boundary, only: &
+       ATMOS_BOUNDARY_UPDATE_FLAG, &
+       ATMOS_BOUNDARY_update
+    use mod_atmos_vars, only: &
+       DENS, &
+       MOMZ, &
+       MOMX, &
+       MOMY, &
+       RHOT, &
+       QTRC
+
+    !########## Lateral/Top Boundary Condition ###########
+    if ( ATMOS_BOUNDARY_UPDATE_FLAG ) then
+       ! If this run is parent of online nesting, boundary data must be sent
+       call ATMOS_BOUNDARY_update( DENS, MOMZ, MOMX, MOMY, RHOT, QTRC, .true. ) ! (in)
+    endif
+
+  end subroutine ATMOS_driver_finalize
+
 
   !-----------------------------------------------------------------------------
   !> Get surface boundary condition (CPL2ATM)

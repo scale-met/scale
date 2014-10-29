@@ -494,7 +494,7 @@ contains
     real(RP) :: pott(KA,IA,JA)
     real(RP) :: work(KA,IA,JA)
 
-    integer  :: k
+    integer  :: k, i, j
     !---------------------------------------------------------------------------
 
     if ( TIME_NOWSEC - last_updated >= ATMOS_REFSTATE_UPDATE_DT ) then
@@ -507,7 +507,13 @@ contains
                                  RHOT(:,:,:),  & ! [IN]
                                  QTRC(:,:,:,:) ) ! [IN]
 
-       pott(:,:,:) = RHOT(:,:,:) / DENS(:,:,:)
+       do j = 1, JA
+       do i = 1, IA
+       do k = KS, KE
+          pott(k,i,j) = RHOT(k,i,j) / DENS(k,i,j)
+       end do
+       end do
+       end do
 
        call INTERP_vertical_xi2z( temp(:,:,:), & ! [IN]
                                   work(:,:,:)  ) ! [OUT]

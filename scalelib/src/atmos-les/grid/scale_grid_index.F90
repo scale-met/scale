@@ -63,6 +63,9 @@ module scale_grid_index
   integer, public :: JE          !< end   point of inner domain: y, local
 #endif
 
+  integer, public :: IEH         !< end   point of inner domain: x, local (half level)
+  integer, public :: JEH         !< end   point of inner domain: y, local (half level)
+
   integer, public :: ISG         !< start point of the inner domain: x, global
   integer, public :: IEG         !< end   point of the inner domain: x, global
   integer, public :: JSG         !< start point of the inner domain: y, global
@@ -130,6 +133,9 @@ contains
     IE   = IMAX + IHALO
     JS   = 1    + JHALO
     JE   = JMAX + JHALO
+
+    IEH = IE
+    JEH = JE
 
     if( IBLOCK == -1 ) IBLOCK = IMAX
     if( JBLOCK == -1 ) JBLOCK = JMAX

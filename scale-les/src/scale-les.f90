@@ -71,7 +71,8 @@ program scaleles
   use scale_landuse, only: &
      LANDUSE_setup
   use scale_grid_real, only: &
-     REAL_setup
+     REAL_setup, &
+     REAL_calc_areavol
   use scale_gridtrans, only: &
      GTRANS_setup
   use scale_interpolation, only: &
@@ -109,6 +110,7 @@ program scaleles
   use mod_atmos_driver, only: &
      ATMOS_driver_setup, &
      ATMOS_driver,       &
+     ATMOS_driver_finalize, &
      ATMOS_SURFACE_GET,  &
      ATMOS_SURFACE_SET
   use mod_ocean_admin, only: &
@@ -231,6 +233,9 @@ program scaleles
   ! setup Z-ZS interpolation factor (uses in History)
   call INTERP_setup
 
+  ! calc control area & volume
+  call REAL_calc_areavol
+
   ! setup restart
   call ADMIN_restart_setup
   ! setup statistics
@@ -352,6 +357,8 @@ program scaleles
 #endif
 
   !########## Finalize ##########
+
+  if( ATMOS_do ) call ATMOS_driver_finalize
 
   ! check data
   if( ATMOS_sw_check ) call ATMOS_vars_restart_check

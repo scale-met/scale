@@ -64,6 +64,7 @@ module scale_time
   real(DP), public :: TIME_NOWSEC               !< subday part  of current time [sec]
   real(DP), public :: TIME_NOWDAYSEC            !< second of current time [sec]
   integer,  public :: TIME_NOWSTEP              !< current step [number]
+  integer,  public :: TIME_NSTEP                !< total steps [number]
 
   logical,  public :: TIME_DOATMOS_step         !< execute atmospheric component in this step?
   logical,  public :: TIME_DOATMOS_DYN          !< execute dynamics?
@@ -102,8 +103,6 @@ module scale_time
   real(DP), private :: TIME_ENDMS
   integer,  private :: TIME_ENDDAY
   real(DP), private :: TIME_ENDSEC
-
-  integer,  private :: TIME_NSTEP
 
   real(DP), private :: TIME_RES_ATMOS_DYN     = 0.0_DP
   real(DP), private :: TIME_RES_ATMOS_PHY_CP  = 0.0_DP

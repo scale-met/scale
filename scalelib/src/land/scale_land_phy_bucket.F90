@@ -216,12 +216,13 @@ contains
     ! runoff of soil moisture (vertical sum)
     do j = JS, JE
     do i = IS, IE
-    do k = LKS, LKE
-       LAND_RUNOFF(i,j)   = LAND_RUNOFF(i,j) &
-                          + max( LAND_WATER1(k,i,j)-LAND_WaterLimit(i,j), 0.0_RP ) * CDZ(k) * DWATR
+!       LAND_RUNOFF(i,j) = 0.0_RP
+       do k = LKS, LKE
+!          LAND_RUNOFF(i,j)   = LAND_RUNOFF(i,j) &
+!                             + max( LAND_WATER1(k,i,j)-LAND_WaterLimit(i,j), 0.0_RP ) * CDZ(k) * DWATR
 
-       LAND_WATER1(k,i,j) = min( LAND_WATER1(k,i,j), LAND_WaterLimit(i,j) )
-    enddo
+          LAND_WATER1(k,i,j) = min( LAND_WATER1(k,i,j), LAND_WaterLimit(i,j) )
+       enddo
     enddo
     enddo
 

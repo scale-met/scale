@@ -116,9 +116,6 @@ contains
   subroutine TOPO_read
     use scale_fileio, only: &
        FILEIO_read
-    use scale_comm, only: &
-       COMM_vars8, &
-       COMM_wait
     implicit none
     !---------------------------------------------------------------------------
 

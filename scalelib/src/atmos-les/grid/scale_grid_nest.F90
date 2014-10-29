@@ -53,6 +53,7 @@ module scale_grid_nest
   integer,  public              :: PARENT_JA(2)         !< parent max number in y-direction (with halo)
   integer,  public              :: PARENT_LKMAX(2)      !< parent max number in lz-direction
   real(DP), public              :: PARENT_DTSEC(2)      !< parent DT [sec]
+  integer,  public              :: PARENT_NSTEP(2)      !< parent step [number]
 
   integer,  public              :: DAUGHTER_KMAX(2)     !< daughter max number in z-direction
   integer,  public              :: DAUGHTER_IMAX(2)     !< daughter max number in x-direction
@@ -62,6 +63,7 @@ module scale_grid_nest
   integer,  public              :: DAUGHTER_JA(2)       !< daughter max number in y-direction (with halo)
   integer,  public              :: DAUGHTER_LKMAX(2)    !< daughter max number in lz-direction
   real(DP), public              :: DAUGHTER_DTSEC(2)    !< daughter DT [sec]
+  real(DP), public              :: DAUGHTER_NSTEP(2)    !< daughter steps [number]
 
   integer,  public              :: PRNT_KS(2)           !< start index in z-direction in parent
   integer,  public              :: PRNT_KE(2)           !< end index   in z-direction in parent
@@ -208,7 +210,11 @@ contains
        PRC_nmax,   &
        PRC_master, &
        PRC_myrank, &
-       PRC_MPIstop
+       PRC_MPIstop, &
+       PRC_HAS_W, &
+       PRC_HAS_E, &
+       PRC_HAS_S, &
+       PRC_HAS_N
     use scale_grid_real, only: &
        REAL_LONXY,           &
        REAL_LATXY,           &
@@ -228,6 +234,7 @@ contains
     !< metadata files for lat-lon domain for all processes
     character(len=H_LONG) :: LATLON_CATALOGUE_FNAME = 'latlon_domain_catalogue.txt'
     character(len=H_MID)  :: cmd                    = './scale-les'
+    character(len=H_MID)  :: ONLINE_DAUGHTER_CONF   = ''
     character(20)         :: argv(2)
 
     integer :: i
@@ -235,6 +242,9 @@ contains
     integer :: parent_id
     integer :: istatus(MPI_STATUS_SIZE)
     integer, allocatable :: errcodes(:)
+
+    integer :: ims, ime
+    integer :: jms, jme
 
     character(2) :: dom_num
 
@@ -251,14 +261,15 @@ contains
        ONLINE_DOMAIN_NUM,        &
        ONLINE_IAM_PARENT,        &
        ONLINE_IAM_DAUGHTER,      &
-       ONLINE_DAUGHTER_PRC
+       ONLINE_DAUGHTER_PRC,      &
+       ONLINE_DAUGHTER_CONF
 
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[NEST]/Categ[GRID]'
 
-    argv(1) = 'run.conf'
+!    argv(1) = 'run.conf'
     argv(2) = ''
 
     HANDLING_NUM        = 0
@@ -280,14 +291,25 @@ contains
 
     if( USE_NESTING ) then
 
-      corner_loc(I_NW,I_LON) = REAL_LONXY(IS-1,JE  ) / D2R
-      corner_loc(I_NE,I_LON) = REAL_LONXY(IE  ,JE  ) / D2R
-      corner_loc(I_SW,I_LON) = REAL_LONXY(IS-1,JS-1) / D2R
-      corner_loc(I_SE,I_LON) = REAL_LONXY(IE  ,JS-1) / D2R
-      corner_loc(I_NW,I_LAT) = REAL_LATXY(IS-1,JE  ) / D2R
-      corner_loc(I_NE,I_LAT) = REAL_LATXY(IE  ,JE  ) / D2R
-      corner_loc(I_SW,I_LAT) = REAL_LATXY(IS-1,JS-1) / D2R
-      corner_loc(I_SE,I_LAT) = REAL_LATXY(IE  ,JS-1) / D2R
+       if ( OFFLINE .or. ONLINE_IAM_DAUGHTER ) then
+
+          ims = IS-1
+          ime = IE
+          jms = JS-1
+          jme = JE
+          if ( .not. PRC_HAS_W ) ims = 1
+          if ( .not. PRC_HAS_E ) ime = IA
+          if ( .not. PRC_HAS_S ) jms = 1
+          if ( .not. PRC_HAS_N ) jme = JE
+          corner_loc(I_NW,I_LON) = REAL_LONXY(ims,jme) / D2R
+          corner_loc(I_NE,I_LON) = REAL_LONXY(ime,jme) / D2R
+          corner_loc(I_SW,I_LON) = REAL_LONXY(ims,jms) / D2R
+          corner_loc(I_SE,I_LON) = REAL_LONXY(ime,jms) / D2R
+          corner_loc(I_NW,I_LAT) = REAL_LATXY(ims,jme) / D2R
+          corner_loc(I_NE,I_LAT) = REAL_LATXY(ime,jme) / D2R
+          corner_loc(I_SW,I_LAT) = REAL_LATXY(ims,jms) / D2R
+          corner_loc(I_SE,I_LAT) = REAL_LATXY(ime,jms) / D2R
+       end if
 
       if( OFFLINE ) then
          HANDLING_NUM = 1
@@ -340,8 +362,12 @@ contains
             NEST_Filiation(INTERCOMM_ID(HANDLING_NUM)) = 1
 
             ! Launch Daughter Domain
-            write(dom_num,'(I2.2)') ONLINE_DOMAIN_NUM+1
-            argv(1) = 'run.d'//dom_num//'.conf'
+            if ( ONLINE_DAUGHTER_CONF == '' ) then
+               write(dom_num,'(I2.2)') ONLINE_DOMAIN_NUM+1
+               argv(1) = 'run.d'//dom_num//'.conf'
+            else
+               argv(1) =  ONLINE_DAUGHTER_CONF
+            end if
             if( IO_L ) write(IO_FID_LOG,'(1x,A,I2,A)') '*** Launch Daughter Domain [INTERCOMM_ID:', INTERCOMM_ID(HANDLING_NUM), ' ]'
             if( IO_L ) write(IO_FID_LOG,'(1x,A,A,A,A)') '*** Launch Command: ', trim(cmd), ' ', trim(argv(1))
             if( IO_L ) write(IO_FID_LOG,'(1x,A,I5   )') '*** Number of Daughter Processes: ', ONLINE_DAUGHTER_PRC
@@ -380,6 +406,7 @@ contains
             if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- PARENT_IMAX       :', PARENT_IMAX(HANDLING_NUM)
             if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- PARENT_JMAX       :', PARENT_JMAX(HANDLING_NUM)
             if( IO_L ) write(IO_FID_LOG,'(1x,A,F9.3)') '***  --- PARENT_DTSEC      :', PARENT_DTSEC(HANDLING_NUM)
+            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)  ') '***  --- PARENT_NSTEP      :', PARENT_NSTEP(HANDLING_NUM)
             if( IO_L ) write(IO_FID_LOG,'(1x,A)'     ) '***  Informations of Daughter Domain'
             if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- DAUGHTER_PRC_nmax :', DAUGHTER_PRC_nmax(HANDLING_NUM)
             if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- DAUGHTER_PRC_NUM_X:', DAUGHTER_PRC_NUM_X(HANDLING_NUM)
@@ -388,6 +415,7 @@ contains
             if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- DAUGHTER_IMAX     :', DAUGHTER_IMAX(HANDLING_NUM)
             if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- DAUGHTER_JMAX     :', DAUGHTER_JMAX(HANDLING_NUM)
             if( IO_L ) write(IO_FID_LOG,'(1x,A,F9.3)') '***  --- DAUGHTER_DTSEC    :', DAUGHTER_DTSEC(HANDLING_NUM)
+            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)  ') '***  --- DAUGHTER_NSTEP    :', DAUGHTER_NSTEP(HANDLING_NUM)
 
             call NEST_COMM_setup_nestdown( HANDLING_NUM )
 
@@ -433,6 +461,7 @@ contains
             if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- PARENT_IMAX       :', PARENT_IMAX(HANDLING_NUM)
             if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- PARENT_JMAX       :', PARENT_JMAX(HANDLING_NUM)
             if( IO_L ) write(IO_FID_LOG,'(1x,A,F9.3)') '***  --- PARENT_DTSEC      :', PARENT_DTSEC(HANDLING_NUM)
+            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- PARENT_NSTEP      :', PARENT_NSTEP(HANDLING_NUM)
             if( IO_L ) write(IO_FID_LOG,'(1x,A)'     ) '***  Informations of Daughter Domain [me]'
             if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- DAUGHTER_PRC_nmax :', DAUGHTER_PRC_nmax(HANDLING_NUM)
             if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- DAUGHTER_PRC_NUM_X:', DAUGHTER_PRC_NUM_X(HANDLING_NUM)
@@ -441,6 +470,7 @@ contains
             if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- DAUGHTER_IMAX     :', DAUGHTER_IMAX(HANDLING_NUM)
             if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- DAUGHTER_JMAX     :', DAUGHTER_JMAX(HANDLING_NUM)
             if( IO_L ) write(IO_FID_LOG,'(1x,A,F9.3)') '***  --- DAUGHTER_DTSEC    :', DAUGHTER_DTSEC(HANDLING_NUM)
+            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- DAUGHTER_NSTEP    :', DAUGHTER_NSTEP(HANDLING_NUM)
             if( IO_L ) write(IO_FID_LOG,'(1x,A)'     ) '***  Informations of Target Tiles'
             if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- TILEALL_KA      :', TILEAL_KA(HANDLING_NUM)
             if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- TILEALL_IA      :', TILEAL_IA(HANDLING_NUM)
@@ -470,6 +500,7 @@ contains
             allocate( kgrd (DAUGHTER_KA(HANDLING_NUM),DAUGHTER_IA(HANDLING_NUM),DAUGHTER_JA(HANDLING_NUM),itp_nh,itp_nv,itp_ng) )
 
             call NEST_COMM_setup_nestdown( HANDLING_NUM )
+
 
             ! for scalar points
             call latlonz_interporation_fact( hfact          (:,:,:,I_SCLR),     & ! [OUT]
@@ -690,6 +721,7 @@ contains
        PRC_NUM_Y,   &
        PRC_MPIstop
     use scale_time, only: &
+       TIME_NSTEP, &
        TIME_DTSEC
     use scale_comm, only: &
        COMM_bcast
@@ -698,14 +730,14 @@ contains
     integer, intent(in) :: HANDLE !< id number of nesting relation in this process target
 
     real(RP) :: buffer
-    integer  :: datapack(12)
+    integer  :: datapack(13)
     integer  :: ireq1, ireq2, ierr1, ierr2, ileng
     integer  :: istatus(MPI_STATUS_SIZE)
     integer  :: tag
     !---------------------------------------------------------------------------
 
     tag   = INTERCOMM_ID(HANDLE) * 100
-    ileng = 12
+    ileng = 13
 
     if ( NEST_Filiation( INTERCOMM_ID(HANDLE) ) > 0 ) then !--- parent
        ! from parent to daughter
@@ -721,7 +753,8 @@ contains
        datapack(10) = IE
        datapack(11) = JS
        datapack(12) = JE
-       buffer      = TIME_DTSEC
+       datapack(13) = TIME_NSTEP
+       buffer       = TIME_DTSEC
 
        if ( PRC_myrank == PRC_master ) then
           call MPI_ISEND(datapack, ileng, MPI_INTEGER, PRC_myrank, tag, INTERCOMM_DAUGHTER, ireq1, ierr1)
@@ -742,6 +775,7 @@ contains
        PRNT_IE(HANDLE)          = datapack(10)
        PRNT_JS(HANDLE)          = datapack(11)
        PRNT_JE(HANDLE)          = datapack(12)
+       PARENT_NSTEP(HANDLE)     = datapack(13)
        PARENT_DTSEC(HANDLE)     = buffer
 
        ! from daughter to parent
@@ -766,6 +800,7 @@ contains
        DATR_IE(HANDLE)            = datapack(10)
        DATR_JS(HANDLE)            = datapack(11)
        DATR_JE(HANDLE)            = datapack(12)
+       DAUGHTER_NSTEP(HANDLE)     = datapack(13)
        DAUGHTER_DTSEC(HANDLE)     = buffer
 
 
@@ -792,6 +827,7 @@ contains
        PRNT_IE(HANDLE)          = datapack(10)
        PRNT_JS(HANDLE)          = datapack(11)
        PRNT_JE(HANDLE)          = datapack(12)
+       PARENT_NSTEP(HANDLE)     = datapack(13)
        PARENT_DTSEC(HANDLE)     = buffer
 
        ! from daughter to parent
@@ -807,6 +843,7 @@ contains
        datapack(10) = IE
        datapack(11) = JS
        datapack(12) = JE
+       datapack(13) = TIME_NSTEP
        buffer       = TIME_DTSEC
 
        if ( PRC_myrank == PRC_master ) then
@@ -828,6 +865,7 @@ contains
        DATR_IE(HANDLE)            = datapack(10)
        DATR_JS(HANDLE)            = datapack(11)
        DATR_JE(HANDLE)            = datapack(12)
+       DAUGHTER_NSTEP(HANDLE)     = datapack(13)
        DAUGHTER_DTSEC(HANDLE)     = buffer
     else
        if( IO_L ) write(*,*) 'xxx internal error [nest/grid]'
@@ -1390,10 +1428,10 @@ contains
 
        tag = tagbase + tag_dens
        call NEST_COMM_intercomm_nestdown( dummy, dens, tag, I_SCLR, HANDLE, .true. )
-       do j = DATR_JS(HANDLE), DATR_JE(HANDLE)
-       do i = DATR_IS(HANDLE), DATR_IE(HANDLE)
+       do j = 1, DAUGHTER_JA(HANDLE)
+       do i = 1, DAUGHTER_IA(HANDLE)
        do k = DATR_KS(HANDLE), DATR_KE(HANDLE)
-       interped_ref_DENS(k,i,j) = dens(k,i,j)
+          interped_ref_DENS(k,i,j) = dens(k,i,j)
        enddo
        enddo
        enddo
@@ -1402,8 +1440,8 @@ contains
        call NEST_COMM_intercomm_nestdown( dummy, u_lld, tag, I_XSTG, HANDLE )
        tag = tagbase + tag_momy
        call NEST_COMM_intercomm_nestdown( dummy, v_lld, tag, I_YSTG, HANDLE )
-       do j = DATR_JS(HANDLE), DATR_JE(HANDLE)
-       do i = DATR_IS(HANDLE), DATR_IE(HANDLE)
+       do j = 1, DAUGHTER_JA(HANDLE)
+       do i = 1, DAUGHTER_IA(HANDLE)
        do k = DATR_KS(HANDLE), DATR_KE(HANDLE)
           interped_ref_VELX(k,i,j) =   u_lld(k,i,j) * rotc(i,j,cosin) + v_lld(k,i,j) * rotc(i,j,sine )
           interped_ref_VELY(k,i,j) = - u_lld(k,i,j) * rotc(i,j,sine ) + v_lld(k,i,j) * rotc(i,j,cosin)
@@ -1414,8 +1452,8 @@ contains
 
        tag = tagbase + tag_rhot
        call NEST_COMM_intercomm_nestdown( dummy, work1, tag, I_SCLR, HANDLE )
-       do j = DATR_JS(HANDLE), DATR_JE(HANDLE)
-       do i = DATR_IS(HANDLE), DATR_IE(HANDLE)
+       do j = 1, DAUGHTER_JA(HANDLE)
+       do i = 1, DAUGHTER_IA(HANDLE)
        do k = DATR_KS(HANDLE), DATR_KE(HANDLE)
           interped_ref_POTT(k,i,j) = work1(k,i,j) / dens(k,i,j)
        enddo
@@ -1425,8 +1463,8 @@ contains
        do iq = 1, BND_QA
           tag = tagbase + tag_qx + iq
           call NEST_COMM_intercomm_nestdown( dummy, work1, tag, I_SCLR, HANDLE )
-          do j = DATR_JS(HANDLE), DATR_JE(HANDLE)
-          do i = DATR_IS(HANDLE), DATR_IE(HANDLE)
+          do j = 1, DAUGHTER_JA(HANDLE)
+          do i = 1, DAUGHTER_IA(HANDLE)
           do k = DATR_KS(HANDLE), DATR_KE(HANDLE)
              interped_ref_QTRC(k,i,j,iq) = work1(k,i,j)
           enddo
@@ -1583,13 +1621,12 @@ contains
                 = buffer_3DF(k,PRNT_IS(HANDLE):PRNT_IE(HANDLE),PRNT_JS(HANDLE):PRNT_JE(HANDLE))
              enddo
           endif
-       enddo ! YP Loop
 
           if ( no_zstag ) then
              if ( .not. logarithmic ) then
                 ! linear interpolation
-                do j = DATR_JS(HANDLE), DATR_JE(HANDLE)
-                do i = DATR_IS(HANDLE), DATR_IE(HANDLE)
+                do j = 1, DAUGHTER_JA(HANDLE)
+                do i = 1, DAUGHTER_IA(HANDLE)
                 do k = DATR_KS(HANDLE), DATR_KE(HANDLE)
                    dvar(k,i,j) = buffer_ref_3D(kgrd(k,i,j,1,1,ig),igrd(i,j,1,ig),jgrd(i,j,1,ig)) &
                                * hfact(i,j,1,ig) * vfact(k,i,j,1,1,ig)                           &
@@ -1608,8 +1645,8 @@ contains
                 end do
              else
                 ! logarithmic weighted interpolation
-                do j = DATR_JS(HANDLE), DATR_JE(HANDLE)
-                do i = DATR_IS(HANDLE), DATR_IE(HANDLE)
+                do j = 1, DAUGHTER_JA(HANDLE)
+                do i = 1, DAUGHTER_IA(HANDLE)
                 do k = DATR_KS(HANDLE), DATR_KE(HANDLE)
                    dvar(k,i,j) = exp( buffer_ref_3D(kgrd(k,i,j,1,1,ig),igrd(i,j,1,ig),jgrd(i,j,1,ig)) &
                                     * hfact(i,j,1,ig) * vfact(k,i,j,1,1,ig)                           &
@@ -1629,8 +1666,8 @@ contains
              endif
           else
              ! linear interpolation (z-staggered)
-             do j = DATR_JS(HANDLE), DATR_JE(HANDLE)
-             do i = DATR_IS(HANDLE), DATR_IE(HANDLE)
+             do j = 1, DAUGHTER_JA(HANDLE)
+             do i = 1, DAUGHTER_IA(HANDLE)
              do k = DATR_KS(HANDLE), DATR_KE(HANDLE)
                 dvar(k,i,j) = buffer_ref_3DF(kgrd(k,i,j,1,1,ig),igrd(i,j,1,ig),jgrd(i,j,1,ig)) &
                             * hfact(i,j,1,ig) * vfact(k,i,j,1,1,ig)                            &
@@ -1648,6 +1685,8 @@ contains
              end do
              end do
           endif
+
+       enddo ! YP Loop
 
     else
     !---------------------------------------------------
@@ -1719,11 +1758,11 @@ contains
     hfact(:,:,:) = 0.0_RP
     vfact(:,:,:,:,:) = 0.0_RP
 
-    do j = DATR_JS(HANDLE)-1, DATR_JE(HANDLE)+1
-    do i = DATR_IS(HANDLE)-1, DATR_IE(HANDLE)+1
+    do j = 1, DAUGHTER_JA(HANDLE)
+    do i = 1, DAUGHTER_IA(HANDLE)
        ! nearest block search
-       iinc = (nx + 1) / interp_search_divnum
-       jinc = (ny + 1) / interp_search_divnum
+       iinc = max( (nx + 1) / interp_search_divnum, 1 )
+       jinc = max( (ny + 1) / interp_search_divnum, 1 )
        dist(1) = large_number_one
        jj = 1 + (jinc/2)
        do while (jj <= ny)

@@ -402,9 +402,9 @@ contains
                           'MAPF_Y_UV', 'Map factor y-dir at UV', 'NIL', 'UY', GTRANS_OUT_DTYPE  ) ! [IN]
 
        call FILEIO_write( GTRANS_ROTC(:,:,1),            GTRANS_OUT_BASENAME, GTRANS_OUT_TITLE, & ! [IN]
-                          'ROTC_X',    'Rotation factor x-dir',  'NIL', 'XY', GTRANS_OUT_DTYPE  ) ! [IN]
+                          'ROTC_COS',    'Rotation factor (cosin)',  'NIL', 'XY', GTRANS_OUT_DTYPE  ) ! [IN]
        call FILEIO_write( GTRANS_ROTC(:,:,2),            GTRANS_OUT_BASENAME, GTRANS_OUT_TITLE, & ! [IN]
-                          'ROTC_Y',    'Rotation factor y-dir',  'NIL', 'XY', GTRANS_OUT_DTYPE  ) ! [IN]
+                          'ROTC_SIN',    'Rotation factor (sine)',  'NIL', 'XY', GTRANS_OUT_DTYPE  ) ! [IN]
     endif
 
     return

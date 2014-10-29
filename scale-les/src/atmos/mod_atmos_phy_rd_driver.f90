@@ -383,34 +383,34 @@ contains
 
        if ( history_flag ) then
 
-          call HIST_in( solins(:,:), 'SOLINS', 'solar insolation',        'W/m2', dt_RD )
-          call HIST_in( cosSZA(:,:), 'COSZ',   'cos(solar zenith angle)', '0-1',  dt_RD )
+          call HIST_in( solins(:,:), 'SOLINS', 'solar insolation',        'W/m2', dt_RD, nohalo=.true. )
+          call HIST_in( cosSZA(:,:), 'COSZ',   'cos(solar zenith angle)', '0-1',  dt_RD , nohalo=.true.)
 
-          call HIST_in( SFCFLX_LW_up(:,:), 'SFLX_LW_up',   'SFC upward   longwave  radiation flux', 'W/m2', dt_RD )
-          call HIST_in( SFCFLX_LW_dn(:,:), 'SFLX_LW_dn',   'SFC downward longwave  radiation flux', 'W/m2', dt_RD )
-          call HIST_in( SFCFLX_SW_up(:,:), 'SFLX_SW_up',   'SFC upward   shortwave radiation flux', 'W/m2', dt_RD )
-          call HIST_in( SFCFLX_SW_dn(:,:), 'SFLX_SW_dn',   'SFC downward shortwave radiation flux', 'W/m2', dt_RD )
+          call HIST_in( SFCFLX_LW_up(:,:), 'SFLX_LW_up',   'SFC upward   longwave  radiation flux', 'W/m2', dt_RD, nohalo=.true. )
+          call HIST_in( SFCFLX_LW_dn(:,:), 'SFLX_LW_dn',   'SFC downward longwave  radiation flux', 'W/m2', dt_RD, nohalo=.true. )
+          call HIST_in( SFCFLX_SW_up(:,:), 'SFLX_SW_up',   'SFC upward   shortwave radiation flux', 'W/m2', dt_RD, nohalo=.true. )
+          call HIST_in( SFCFLX_SW_dn(:,:), 'SFLX_SW_dn',   'SFC downward shortwave radiation flux', 'W/m2', dt_RD, nohalo=.true. )
 
-          call HIST_in( TOAFLX_LW_up(:,:), 'TOAFLX_LW_up', 'TOA upward   longwave  radiation flux', 'W/m2', dt_RD )
-          call HIST_in( TOAFLX_LW_dn(:,:), 'TOAFLX_LW_dn', 'TOA downward longwave  radiation flux', 'W/m2', dt_RD )
-          call HIST_in( TOAFLX_SW_up(:,:), 'TOAFLX_SW_up', 'TOA upward   shortwave radiation flux', 'W/m2', dt_RD )
-          call HIST_in( TOAFLX_SW_dn(:,:), 'TOAFLX_SW_dn', 'TOA downward shortwave radiation flux', 'W/m2', dt_RD )
+          call HIST_in( TOAFLX_LW_up(:,:), 'TOAFLX_LW_up', 'TOA upward   longwave  radiation flux', 'W/m2', dt_RD, nohalo=.true. )
+          call HIST_in( TOAFLX_LW_dn(:,:), 'TOAFLX_LW_dn', 'TOA downward longwave  radiation flux', 'W/m2', dt_RD, nohalo=.true. )
+          call HIST_in( TOAFLX_SW_up(:,:), 'TOAFLX_SW_up', 'TOA upward   shortwave radiation flux', 'W/m2', dt_RD, nohalo=.true. )
+          call HIST_in( TOAFLX_SW_dn(:,:), 'TOAFLX_SW_dn', 'TOA downward shortwave radiation flux', 'W/m2', dt_RD, nohalo=.true. )
 
-          call HIST_in( flux_net_sfc(:,:,I_LW), 'SLR', 'SFC net longwave  radiation flux', 'W/m2', dt_RD )
-          call HIST_in( flux_net_sfc(:,:,I_SW), 'SSR', 'SFC net shortwave radiation flux', 'W/m2', dt_RD )
-          call HIST_in( flux_net_toa(:,:,I_LW), 'OLR', 'TOA net longwave  radiation flux', 'W/m2', dt_RD )
-          call HIST_in( flux_net_toa(:,:,I_SW), 'OSR', 'TOA net shortwave radiation flux', 'W/m2', dt_RD )
+          call HIST_in( flux_net_sfc(:,:,I_LW), 'SLR', 'SFC net longwave  radiation flux', 'W/m2', dt_RD, nohalo=.true. )
+          call HIST_in( flux_net_sfc(:,:,I_SW), 'SSR', 'SFC net shortwave radiation flux', 'W/m2', dt_RD, nohalo=.true. )
+          call HIST_in( flux_net_toa(:,:,I_LW), 'OLR', 'TOA net longwave  radiation flux', 'W/m2', dt_RD, nohalo=.true. )
+          call HIST_in( flux_net_toa(:,:,I_SW), 'OSR', 'TOA net shortwave radiation flux', 'W/m2', dt_RD, nohalo=.true. )
 
-          call HIST_in( flux_up (:,:,:,I_LW), 'RADFLUX_LWUP', 'upward   longwave  radiation flux', 'W/m2', dt_RD )
-          call HIST_in( flux_dn (:,:,:,I_LW), 'RADFLUX_LWDN', 'downward longwave  radiation flux', 'W/m2', dt_RD )
-          call HIST_in( flux_net(:,:,:,I_LW), 'RADFLUX_LW',   'net      longwave  radiation flux', 'W/m2', dt_RD )
-          call HIST_in( flux_up (:,:,:,I_SW), 'RADFLUX_SWUP', 'upward   shortwave radiation flux', 'W/m2', dt_RD )
-          call HIST_in( flux_dn (:,:,:,I_SW), 'RADFLUX_SWDN', 'downward shortwave radiation flux', 'W/m2', dt_RD )
-          call HIST_in( flux_net(:,:,:,I_SW), 'RADFLUX_SW',   'net      shortwave radiation flux', 'W/m2', dt_RD )
+          call HIST_in( flux_up (:,:,:,I_LW), 'RADFLUX_LWUP', 'upward   longwave  radiation flux', 'W/m2', dt_RD, nohalo=.true. )
+          call HIST_in( flux_dn (:,:,:,I_LW), 'RADFLUX_LWDN', 'downward longwave  radiation flux', 'W/m2', dt_RD, nohalo=.true. )
+          call HIST_in( flux_net(:,:,:,I_LW), 'RADFLUX_LW',   'net      longwave  radiation flux', 'W/m2', dt_RD, nohalo=.true. )
+          call HIST_in( flux_up (:,:,:,I_SW), 'RADFLUX_SWUP', 'upward   shortwave radiation flux', 'W/m2', dt_RD, nohalo=.true. )
+          call HIST_in( flux_dn (:,:,:,I_SW), 'RADFLUX_SWDN', 'downward shortwave radiation flux', 'W/m2', dt_RD, nohalo=.true. )
+          call HIST_in( flux_net(:,:,:,I_SW), 'RADFLUX_SW',   'net      shortwave radiation flux', 'W/m2', dt_RD, nohalo=.true. )
 
-          call HIST_in( TEMP_t(:,:,:,I_LW), 'TEMP_t_rd_LW', 'tendency of temp in rd(LW)', 'K/day', dt_RD )
-          call HIST_in( TEMP_t(:,:,:,I_SW), 'TEMP_t_rd_SW', 'tendency of temp in rd(SW)', 'K/day', dt_RD )
-          call HIST_in( TEMP_t(:,:,:,3   ), 'TEMP_t_rd',    'tendency of temp in rd',     'K/day', dt_RD )
+          call HIST_in( TEMP_t(:,:,:,I_LW), 'TEMP_t_rd_LW', 'tendency of temp in rd(LW)', 'K/day', dt_RD, nohalo=.true. )
+          call HIST_in( TEMP_t(:,:,:,I_SW), 'TEMP_t_rd_SW', 'tendency of temp in rd(SW)', 'K/day', dt_RD, nohalo=.true. )
+          call HIST_in( TEMP_t(:,:,:,3   ), 'TEMP_t_rd',    'tendency of temp in rd',     'K/day', dt_RD, nohalo=.true. )
        endif
 
        if ( ATMOS_PHY_RD_TYPE ==  'WRF' ) then

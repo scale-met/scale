@@ -52,6 +52,7 @@ module scale_atmos_dyn_rk
           RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,          &
           PHI, GSQRT, J13G, J23G, J33G, MAPF,          &
           REF_pres, REF_dens,                          &
+          BND_W, BND_E, BND_S, BND_N,                  &
           dtrk, dt                                     )
        use scale_precision
        use scale_grid_index
@@ -113,6 +114,11 @@ module scale_atmos_dyn_rk
        real(RP), intent(in)  :: REF_pres(KA,IA,JA)   !< reference pressure
        real(RP), intent(in)  :: REF_dens(KA,IA,JA)   !< reference density
 
+       logical,  intent(in)  :: BND_W
+       logical,  intent(in)  :: BND_E
+       logical,  intent(in)  :: BND_S
+       logical,  intent(in)  :: BND_N
+
        real(RP), intent(in)  :: dtrk
        real(RP), intent(in)  :: dt
      end subroutine rk
@@ -133,7 +139,9 @@ module scale_atmos_dyn_rk
 contains
   !-----------------------------------------------------------------------------
   !> Setup
-  subroutine ATMOS_DYN_rk_setup( ATMOS_DYN_TYPE )
+  subroutine ATMOS_DYN_rk_setup( ATMOS_DYN_TYPE, &
+       BND_W, BND_E, BND_S, BND_N )
+
     use scale_process, only: &
        PRC_MPIstop
     use scale_stdio, only: &
@@ -158,17 +166,24 @@ contains
     implicit none
 
     character(len=*), intent(in) :: ATMOS_DYN_TYPE
+    logical, intent(in) :: BND_W
+    logical, intent(in) :: BND_E
+    logical, intent(in) :: BND_S
+    logical, intent(in) :: BND_N
     !---------------------------------------------------------------------------
 
     select case ( ATMOS_DYN_TYPE )
     case ( 'HEVE' )
-       call ATMOS_DYN_rk_heve_setup( ATMOS_DYN_TYPE )
+       call ATMOS_DYN_rk_heve_setup( ATMOS_DYN_TYPE, &
+            BND_W, BND_E, BND_S, BND_N )
        ATMOS_DYN_rk => ATMOS_DYN_rk_heve
     case ( 'HEVI' )
-       call ATMOS_DYN_rk_hevi_setup( ATMOS_DYN_TYPE )
+       call ATMOS_DYN_rk_hevi_setup( ATMOS_DYN_TYPE, &
+            BND_W, BND_E, BND_S, BND_N )
        ATMOS_DYN_rk => ATMOS_DYN_rk_hevi
     case ( 'HIVI' )
-       call ATMOS_DYN_rk_hivi_setup( ATMOS_DYN_TYPE )
+       call ATMOS_DYN_rk_hivi_setup( ATMOS_DYN_TYPE, &
+            BND_W, BND_E, BND_S, BND_N )
        ATMOS_DYN_rk => ATMOS_DYN_rk_hivi
     case default
        write(*,*) 'xxx ATMOS_DYN_TYPE is invalid'

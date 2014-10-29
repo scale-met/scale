@@ -154,6 +154,9 @@ contains
     MPRJ_M_lat       = UNDEF
     MPRJ_EC_lat      = UNDEF
 
+    MPRJ_basepoint_x = DOMAIN_CENTER_X
+    MPRJ_basepoint_y = DOMAIN_CENTER_Y
+
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_MAPPROJ,iostat=ierr)
@@ -167,8 +170,6 @@ contains
     if( IO_L ) write(IO_FID_LOG,nml=PARAM_MAPPROJ)
 
 
-    if( MPRJ_basepoint_x == UNDEF ) MPRJ_basepoint_x = DOMAIN_CENTER_X
-    if( MPRJ_basepoint_y == UNDEF ) MPRJ_basepoint_y = DOMAIN_CENTER_Y
     if( MPRJ_PS_lat      == UNDEF ) MPRJ_PS_lat      = MPRJ_basepoint_lat
     if( MPRJ_M_lat       == UNDEF ) MPRJ_M_lat       = MPRJ_basepoint_lat
     if( MPRJ_EC_lat      == UNDEF ) MPRJ_EC_lat      = MPRJ_basepoint_lat
@@ -558,6 +559,8 @@ contains
     !---------------------------------------------------------------------------
 
     dlon = lon - MPRJ_basepoint_lon * D2R
+    if ( dlon >  PI ) dlon = dlon - PI*2.0_RP
+    if ( dlon < -PI ) dlon = dlon + PI*2.0_RP
 
     latrot = 0.5_RP*PI - lat
 
@@ -608,14 +611,18 @@ contains
     real(RP), intent(in)  :: lat (IA,JA) ! [rad]
 
     real(RP) :: dlon
+    real(RP) :: alpha
     integer :: i, j
     !---------------------------------------------------------------------------
 
     do j = 1, JA
     do i = 1, IA
        dlon = lon(i,j) - MPRJ_basepoint_lon * D2R
-       rotc(i,j,1) = cos( MPRJ_LC_c * dlon ) * MPRJ_hemisphere
-       rotc(i,j,2) = sin( MPRJ_LC_c * dlon )
+       if ( dlon >  PI ) dlon = dlon - PI*2.0_RP
+       if ( dlon < -PI ) dlon = dlon + PI*2.0_RP
+       alpha = - MPRJ_LC_c * dlon * MPRJ_hemisphere
+       rotc(i,j,1) = cos( alpha ) ! cosin
+       rotc(i,j,2) = sin( alpha ) ! sine
     enddo
     enddo
 
@@ -753,14 +760,18 @@ contains
     real(RP), intent(in)  :: lat (IA,JA) ! [rad]
 
     real(RP) :: dlon
+    real(RP) :: alpha
     integer :: i, j
     !---------------------------------------------------------------------------
 
     do j = 1, JA
     do i = 1, IA
        dlon = lon(i,j) - MPRJ_basepoint_lon * D2R
-       rotc(i,j,1) = cos( dlon ) * MPRJ_hemisphere
-       rotc(i,j,2) = sin( dlon )
+       if ( dlon >  PI ) dlon = dlon - PI*2.0_RP
+       if ( dlon < -PI ) dlon = dlon + PI*2.0_RP
+       alpha = - dlon * MPRJ_hemisphere
+       rotc(i,j,1) = cos( alpha ) ! cosin
+       rotc(i,j,2) = sin( alpha ) ! sine
     enddo
     enddo
 

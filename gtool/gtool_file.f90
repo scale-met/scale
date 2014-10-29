@@ -23,6 +23,9 @@ module gtool_file
   use dc_log, only: &
        Log, &
        LOG_LMSG
+  use dc_types, only: &
+       DP, &
+       SP
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -88,6 +91,7 @@ module gtool_file
   !
   !++ Public parameters & variables
   !
+  real(DP), parameter, public :: RMISS = -9.9999e+30
   !-----------------------------------------------------------------------------
   !
   !++ Private procedures
@@ -96,8 +100,6 @@ module gtool_file
   !
   !++ Private parameters & variables
   !
-  integer,                   private, parameter :: SP = 4 ! single precision
-  integer,                   private, parameter :: DP = 8 ! double precision
   integer,                   private, parameter :: File_nfile_max = 64   ! number limit of file
   integer,                   private, parameter :: File_nvar_max  = 512  ! number limit of variables
   integer,                   private, parameter :: File_nstep_max = 2500 ! number limit of time step
@@ -626,7 +628,7 @@ contains
             tint8, itavg,                                       & ! (in)
             error                                               ) ! (out)
        if ( error /= SUCCESS_CODE ) then
-          call Log('E', 'xxx failed to add variable')
+          call Log('E', 'xxx failed to add variable: '//trim(varname))
        end if
 
        File_vname_list  (File_vid_count) = trim(varname)
@@ -698,7 +700,7 @@ contains
             tint8, itavg,                                       & ! (in)
             error                                               ) ! (out)
        if ( error /= SUCCESS_CODE ) then
-          call Log('E', 'xxx failed to add variable')
+          call Log('E', 'xxx failed to add variable: '//trim(varname))
        end if
 
        File_vname_list  (File_vid_count) = trim(varname)
@@ -1466,6 +1468,7 @@ contains
     real(DP) :: ts, te
 
     integer :: error
+    character(len=100) :: str
     !---------------------------------------------------------------------------
 
     ts = t_start
@@ -1473,7 +1476,8 @@ contains
     call file_write_data( vid, var(:), ts, te, SP, & ! (in)
          error                                     ) ! (out)
     if ( error /= SUCCESS_CODE ) then
-       call Log('E', 'xxx failed to write data')
+       write(str,*) 'xxx failed to write data: ', trim(File_vname_list(vid)), mpi_myrank
+       call Log('E', trim(str))
     end if
 
     return
@@ -1494,6 +1498,7 @@ contains
     real(DP) :: ts, te
 
     integer :: error
+    character(len=100) :: str
     !---------------------------------------------------------------------------
 
     ts = t_start
@@ -1501,7 +1506,8 @@ contains
     call file_write_data( vid, var(:), ts, te, DP, & ! (in)
          error                                     ) ! (out)
     if ( error /= SUCCESS_CODE ) then
-       call Log('E', 'xxx failed to write data')
+       write(str,*) 'xxx failed to write data: ', trim(File_vname_list(vid)), mpi_myrank
+       call Log('E', trim(str))
     end if
 
     return
@@ -1522,6 +1528,7 @@ contains
     real(DP) :: ts, te
 
     integer :: error
+    character(len=100) :: str
     !---------------------------------------------------------------------------
 
     ts = t_start
@@ -1529,7 +1536,8 @@ contains
     call file_write_data( vid, var(:,:), ts, te, SP, & ! (in)
          error                                     ) ! (out)
     if ( error /= SUCCESS_CODE ) then
-       call Log('E', 'xxx failed to write data')
+       write(str,*) 'xxx failed to write data: ', trim(File_vname_list(vid)), mpi_myrank
+       call Log('E', trim(str))
     end if
 
     return
@@ -1550,6 +1558,7 @@ contains
     real(DP) :: ts, te
 
     integer :: error
+    character(len=100) :: str
     !---------------------------------------------------------------------------
 
     ts = t_start
@@ -1557,7 +1566,8 @@ contains
     call file_write_data( vid, var(:,:), ts, te, DP, & ! (in)
          error                                     ) ! (out)
     if ( error /= SUCCESS_CODE ) then
-       call Log('E', 'xxx failed to write data')
+       write(str,*) 'xxx failed to write data: ', trim(File_vname_list(vid)), mpi_myrank
+       call Log('E', trim(str))
     end if
 
     return
@@ -1578,6 +1588,7 @@ contains
     real(DP) :: ts, te
 
     integer :: error
+    character(len=100) :: str
     !---------------------------------------------------------------------------
 
     ts = t_start
@@ -1585,7 +1596,8 @@ contains
     call file_write_data( vid, var(:,:,:), ts, te, SP, & ! (in)
          error                                     ) ! (out)
     if ( error /= SUCCESS_CODE ) then
-       call Log('E', 'xxx failed to write data')
+       write(str,*) 'xxx failed to write data: ', trim(File_vname_list(vid)), mpi_myrank
+       call Log('E', trim(str))
     end if
 
     return
@@ -1606,6 +1618,7 @@ contains
     real(DP) :: ts, te
 
     integer :: error
+    character(len=100) :: str
     !---------------------------------------------------------------------------
 
     ts = t_start
@@ -1613,7 +1626,8 @@ contains
     call file_write_data( vid, var(:,:,:), ts, te, DP, & ! (in)
          error                                     ) ! (out)
     if ( error /= SUCCESS_CODE ) then
-       call Log('E', 'xxx failed to write data')
+       write(str,*) 'xxx failed to write data: ', trim(File_vname_list(vid)), mpi_myrank
+       call Log('E', trim(str))
     end if
 
     return
@@ -1634,6 +1648,7 @@ contains
     real(DP) :: ts, te
 
     integer :: error
+    character(len=100) :: str
     !---------------------------------------------------------------------------
 
     ts = t_start
@@ -1641,7 +1656,8 @@ contains
     call file_write_data( vid, var(:,:,:,:), ts, te, SP, & ! (in)
          error                                     ) ! (out)
     if ( error /= SUCCESS_CODE ) then
-       call Log('E', 'xxx failed to write data')
+       write(str,*) 'xxx failed to write data: ', trim(File_vname_list(vid)), mpi_myrank
+       call Log('E', trim(str))
     end if
 
     return
@@ -1662,6 +1678,7 @@ contains
     real(DP) :: ts, te
 
     integer :: error
+    character(len=100) :: str
     !---------------------------------------------------------------------------
 
     ts = t_start
@@ -1669,7 +1686,8 @@ contains
     call file_write_data( vid, var(:,:,:,:), ts, te, DP, & ! (in)
          error                                     ) ! (out)
     if ( error /= SUCCESS_CODE ) then
-       call Log('E', 'xxx failed to write data')
+       write(str,*) 'xxx failed to write data: ', trim(File_vname_list(vid)), mpi_myrank
+       call Log('E', trim(str))
     end if
 
     return

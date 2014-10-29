@@ -542,8 +542,8 @@ contains
        CY_offset = 0.0_RP
     endif
 
-    do j = JS, JE
-    do i = IS, IE
+    do j = 1, JA
+    do i = 1, IA
     do k = KS, KE
 
        ! make tracer bubble
@@ -1072,8 +1072,8 @@ contains
                                qv_sfc  (1,1,1), & ! [IN]
                                qc_sfc  (1,1,1)  ) ! [IN]
 
-    do j = JS, JE
-    do i = IS, IE
+    do j = 1, JA
+    do i = 1, IA
     do k = KS, KE
        DENS(k,i,j) = DENS(k,1,1)
        MOMZ(k,i,j) = 0.0_RP
@@ -4589,8 +4589,8 @@ enddo
     enddo
 
     !--- input initial data
-    do j = JS, JE
-    do i = IS, IE
+    do j = 1, JA
+    do i = 1, IA
     do k = KS, KE
        DENS(k,i,j) = DENS_ORG(k,i,j,1)
        MOMZ(k,i,j) = MOMZ_ORG(k,i,j,1)
@@ -4645,8 +4645,8 @@ enddo
                              SERIAL_PROC_READ,    &
                              NO_ADDITIONAL_INPUT  )
 
-    do j = JS, JE
-    do i = IS, IE
+    do j = 1, JA
+    do i = 1, IA
        SFLX_rain   (i,j) = 0.0_RP
        SFLX_snow   (i,j) = 0.0_RP
        SFLX_LW_up  (i,j) = 0.0_RP

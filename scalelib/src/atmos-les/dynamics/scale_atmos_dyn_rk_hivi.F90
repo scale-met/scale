@@ -68,7 +68,8 @@ module scale_atmos_dyn_rk_hivi
 
 contains
 
-  subroutine ATMOS_DYN_rk_hivi_setup( ATMOS_DYN_TYPE )
+  subroutine ATMOS_DYN_rk_hivi_setup( ATMOS_DYN_TYPE, &
+       BND_W, BND_E, BND_S, BND_N )
     use scale_process, only: &
        PRC_MPIstop
 #ifdef DRY
@@ -79,6 +80,10 @@ contains
     implicit none
 
     character(len=*), intent(in) :: ATMOS_DYN_TYPE
+    logical, intent(in) :: BND_W
+    logical, intent(in) :: BND_E
+    logical, intent(in) :: BND_S
+    logical, intent(in) :: BND_N
 
     integer :: ierr
 
@@ -148,6 +153,7 @@ contains
     RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,          &
     PHI, GSQRT, J13G, J23G, J33G, MAPF,          &
     REF_pres, REF_dens,                          &
+    BND_W, BND_E, BND_S, BND_N,                  &
     dtrk, dt                                     )
     use scale_const, only: &
 #ifdef DRY
@@ -234,6 +240,11 @@ contains
     real(RP), intent(in)  :: MAPF    (IA,JA,2,4)  !< map factor
     real(RP), intent(in)  :: REF_pres(KA,IA,JA)   !< reference pressure
     real(RP), intent(in)  :: REF_dens(KA,IA,JA)   !< reference density
+
+    logical,  intent(in)  :: BND_W
+    logical,  intent(in)  :: BND_E
+    logical,  intent(in)  :: BND_S
+    logical,  intent(in)  :: BND_N
 
     real(RP), intent(in)  :: dtrk
     real(RP), intent(in)  :: dt
