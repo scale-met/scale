@@ -86,6 +86,7 @@ module scale_comm
      module procedure COMM_bcast_INT_SCR
      module procedure COMM_bcast_INT_1D
      module procedure COMM_bcast_INT_2D
+     module procedure COMM_bcast_LOGICAL_SCR
   end interface COMM_bcast
 
   !-----------------------------------------------------------------------------
@@ -2793,6 +2794,31 @@ contains
 
     return
   end subroutine COMM_bcast_INT_2D
+
+  !-----------------------------------------------------------------------------
+  !> Broadcast data for whole process value in scalar (logical)
+  subroutine COMM_bcast_LOGICAL_SCR( var )
+    use scale_process, only: &
+       PRC_master
+    implicit none
+
+    logical, intent(inout) :: var   !< broadcast buffer
+
+    integer :: counts
+    integer :: ierr
+    !---------------------------------------------------------------------------
+
+    counts = 1
+
+    call MPI_BCAST( var,            &
+                    counts,         &
+                    MPI_LOGICAL,    &
+                    PRC_master,     &
+                    MPI_COMM_WORLD, &
+                    ierr            )
+
+    return
+  end subroutine COMM_bcast_LOGICAL_SCR
 
 end module scale_comm
 !-------------------------------------------------------------------------------

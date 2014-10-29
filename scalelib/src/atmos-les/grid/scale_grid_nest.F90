@@ -89,6 +89,8 @@ module scale_grid_nest
   logical,  public              :: ONLINE_IAM_DAUGHTER  = .false.
   integer,  public              :: ONLINE_DOMAIN_NUM    = 1
   integer,  public              :: ONLINE_DAUGHTER_PRC  = 1
+  logical,  public              :: ONLINE_USE_VELZ      = .false.
+  logical,  public              :: ONLINE_NO_ROTATE     = .false.
 
   !-----------------------------------------------------------------------------
   !
@@ -134,6 +136,9 @@ module scale_grid_nest
   integer, private               :: OFFLINE_PARENT_IMAX    !< parent max number in x-direction [for namelist]
   integer, private               :: OFFLINE_PARENT_JMAX    !< parent max number in y-direction [for namelist]
   integer, private               :: OFFLINE_PARENT_LKMAX   !< parent max number in lz-direction [for namelist]
+  logical, private               :: ONLINE_DAUGHTER_USE_VELZ
+  logical, private               :: ONLINE_DAUGHTER_NO_ROTATE
+
 
   integer, parameter :: I_LON    = 1
   integer, parameter :: I_LAT    = 2
@@ -162,9 +167,9 @@ module scale_grid_nest
   integer, parameter :: tag_cz   = 7
   integer, parameter :: tag_fz   = 8
   integer, parameter :: tag_dens = 9
-  integer, parameter :: tag_momx = 10
-  integer, parameter :: tag_momy = 11
-  integer, parameter :: tag_momz = 12
+  integer, parameter :: tag_momz = 10
+  integer, parameter :: tag_momx = 11
+  integer, parameter :: tag_momy = 12
   integer, parameter :: tag_rhot = 13
   integer, parameter :: tag_qx   = 20
 
@@ -262,7 +267,9 @@ contains
        ONLINE_IAM_PARENT,        &
        ONLINE_IAM_DAUGHTER,      &
        ONLINE_DAUGHTER_PRC,      &
-       ONLINE_DAUGHTER_CONF
+       ONLINE_DAUGHTER_CONF,     &
+       ONLINE_USE_VELZ,          &
+       ONLINE_NO_ROTATE
 
     !---------------------------------------------------------------------------
 
@@ -571,6 +578,8 @@ contains
                                              HANDLING_NUM                       ) ! [IN]
 
          !---------------------------------- daughter routines
+         else
+            ONLINE_USE_VELZ = .false.
          endif
 
          if( IO_L ) write(IO_FID_LOG,'(1x,A,I2)') '*** Number of Related Domains :', HANDLING_NUM
@@ -1054,6 +1063,23 @@ contains
 
        if( IO_L ) write(IO_FID_LOG,'(A,I5,A,I5)') "[P]   Num YP =",NUM_YP,"  Num TILE(MAX) =",NEST_TILE_ALLMAX_p
 
+       if ( PRC_myrank == PRC_master ) then
+          call MPI_IRECV(ONLINE_DAUGHTER_USE_VELZ, 1, MPI_LOGICAL, PRC_myrank, tag+3, INTERCOMM_DAUGHTER, ireq, ierr)
+          call MPI_WAIT(ireq, istatus, ierr)
+       endif
+       call COMM_bcast(ONLINE_DAUGHTER_USE_VELZ)
+
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,L2)') '*** NEST: ONLINE_DAUGHTER_USE_VELZ =', ONLINE_DAUGHTER_USE_VELZ
+
+       if ( PRC_myrank == PRC_master ) then
+          call MPI_IRECV(ONLINE_DAUGHTER_NO_ROTATE, 1, MPI_LOGICAL, PRC_myrank, tag+4, INTERCOMM_DAUGHTER, ireq, ierr)
+          call MPI_WAIT(ireq, istatus, ierr)
+       endif
+       call COMM_bcast(ONLINE_DAUGHTER_NO_ROTATE)
+
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,L2)') '*** NEST: ONLINE_DAUGHTER_NO_ROTATE =', ONLINE_DAUGHTER_NO_ROTATE
+
+
        call NEST_COMM_importgrid_nestdown( HANDLE )
 
        call MPI_BARRIER(INTERCOMM_DAUGHTER, ierr)
@@ -1114,6 +1140,17 @@ contains
           call MPI_ISEND(NEST_TILE_LIST_d, ileng, MPI_INTEGER, PRC_myrank, tag+2, INTERCOMM_PARENT, ireq, ierr)
           call MPI_WAIT(ireq, istatus, ierr)
        endif
+
+       if ( PRC_myrank == PRC_master ) then
+          call MPI_ISEND(ONLINE_USE_VELZ, 1, MPI_LOGICAL, PRC_myrank, tag+3, INTERCOMM_PARENT, ireq, ierr)
+          call MPI_WAIT(ireq, istatus, ierr)
+       endif
+
+       if ( PRC_myrank == PRC_master ) then
+          call MPI_ISEND(ONLINE_NO_ROTATE, 1, MPI_LOGICAL, PRC_myrank, tag+4, INTERCOMM_PARENT, ireq, ierr)
+          call MPI_WAIT(ireq, istatus, ierr)
+       endif
+       call COMM_bcast(ONLINE_DAUGHTER_NO_ROTATE)
 
        call NEST_COMM_importgrid_nestdown( HANDLE )
 
@@ -1325,11 +1362,13 @@ contains
       HANDLE,              & ! [in   ]
       BND_QA,              & ! [in   ]
       org_DENS,            & ! [in   ]
+      org_MOMZ,            & ! [in   ]
       org_MOMX,            & ! [in   ]
       org_MOMY,            & ! [in   ]
       org_RHOT,            & ! [in   ]
       org_QTRC,            & ! [in   ]
       interped_ref_DENS,   & ! [inout]
+      interped_ref_VELZ,   & ! [inout]
       interped_ref_VELX,   & ! [inout]
       interped_ref_VELY,   & ! [inout]
       interped_ref_POTT,   & ! [inout]
@@ -1341,6 +1380,8 @@ contains
     use scale_grid_real, only: &
        REAL_DOMAIN_CATALOGUE
     use scale_comm, only: &
+       COMM_vars8, &
+       COMM_wait,  &
        COMM_datatype
     use scale_gridtrans, only: &
        rotc => GTRANS_ROTC
@@ -1350,12 +1391,14 @@ contains
     integer,  intent(in)    :: BND_QA        !< num of tracer
 
     real(RP), intent(in   ) :: org_DENS(PARENT_KA(HANDLE),PARENT_IA(HANDLE),PARENT_JA(HANDLE))
+    real(RP), intent(in   ) :: org_MOMZ(PARENT_KA(HANDLE),PARENT_IA(HANDLE),PARENT_JA(HANDLE))
     real(RP), intent(in   ) :: org_MOMX(PARENT_KA(HANDLE),PARENT_IA(HANDLE),PARENT_JA(HANDLE))
     real(RP), intent(in   ) :: org_MOMY(PARENT_KA(HANDLE),PARENT_IA(HANDLE),PARENT_JA(HANDLE))
     real(RP), intent(in   ) :: org_RHOT(PARENT_KA(HANDLE),PARENT_IA(HANDLE),PARENT_JA(HANDLE))
     real(RP), intent(in   ) :: org_QTRC(PARENT_KA(HANDLE),PARENT_IA(HANDLE),PARENT_JA(HANDLE),BND_QA)
 
     real(RP), intent(inout) :: interped_ref_DENS(DAUGHTER_KA(HANDLE),DAUGHTER_IA(HANDLE),DAUGHTER_JA(HANDLE))
+    real(RP), intent(inout) :: interped_ref_VELZ(DAUGHTER_KA(HANDLE),DAUGHTER_IA(HANDLE),DAUGHTER_JA(HANDLE))
     real(RP), intent(inout) :: interped_ref_VELX(DAUGHTER_KA(HANDLE),DAUGHTER_IA(HANDLE),DAUGHTER_JA(HANDLE))
     real(RP), intent(inout) :: interped_ref_VELY(DAUGHTER_KA(HANDLE),DAUGHTER_IA(HANDLE),DAUGHTER_JA(HANDLE))
     real(RP), intent(inout) :: interped_ref_POTT(DAUGHTER_KA(HANDLE),DAUGHTER_IA(HANDLE),DAUGHTER_JA(HANDLE))
@@ -1390,26 +1433,41 @@ contains
     !-------------------------------------------------------- parent
        call MPI_BARRIER(INTERCOMM_DAUGHTER, ierr) ![start] inter-domain communication
 
-       do j = PRNT_JS(HANDLE), PRNT_JE(HANDLE)
-       do i = PRNT_IS(HANDLE), PRNT_IE(HANDLE)
-       do k = PRNT_KS(HANDLE), PRNT_KE(HANDLE)
-          u_on_map = org_MOMX(k,i,j) / ( org_DENS(k,i+1,j) + org_DENS(k,i,j) ) * 2.0_RP
-          v_on_map = org_MOMY(k,i,j) / ( org_DENS(k,i,j+1) + org_DENS(k,i,j) ) * 2.0_RP
+       if ( .not. ONLINE_DAUGHTER_NO_ROTATE ) then
+          do j = PRNT_JS(HANDLE), PRNT_JE(HANDLE)
+          do i = PRNT_IS(HANDLE), PRNT_IE(HANDLE)
+          do k = PRNT_KS(HANDLE), PRNT_KE(HANDLE)
+             u_on_map = org_MOMX(k,i,j) / ( org_DENS(k,i+1,j) + org_DENS(k,i,j) ) * 2.0_RP
+             v_on_map = org_MOMY(k,i,j) / ( org_DENS(k,i,j+1) + org_DENS(k,i,j) ) * 2.0_RP
 
-          u_llp(k,i,j) = u_on_map * rotc(i,j,cosin) - v_on_map * rotc(i,j,sine )
-          v_llp(k,i,j) = u_on_map * rotc(i,j,sine ) + v_on_map * rotc(i,j,cosin)
-       enddo
-       enddo
-       enddo
+             u_llp(k,i,j) = u_on_map * rotc(i,j,cosin) - v_on_map * rotc(i,j,sine )
+             v_llp(k,i,j) = u_on_map * rotc(i,j,sine ) + v_on_map * rotc(i,j,cosin)
+          enddo
+          enddo
+          enddo
+       end if
 
        tag = tagbase + tag_dens
        call NEST_COMM_intercomm_nestdown( org_DENS, dummy, tag, I_SCLR, HANDLE, .true. )
 
+       tag = tagbase + tag_momz
+       if ( ONLINE_DAUGHTER_USE_VELZ ) then
+          call NEST_COMM_intercomm_nestdown( org_MOMZ, dummy, tag, I_XSTG, HANDLE )
+       end if
+
        tag = tagbase + tag_momx
-       call NEST_COMM_intercomm_nestdown( u_llp, dummy, tag, I_XSTG, HANDLE )
+       if ( ONLINE_DAUGHTER_NO_ROTATE ) then
+          call NEST_COMM_intercomm_nestdown( org_MOMX, dummy, tag, I_XSTG, HANDLE )
+       else
+          call NEST_COMM_intercomm_nestdown( u_llp, dummy, tag, I_XSTG, HANDLE )
+       end if
 
        tag = tagbase + tag_momy
-       call NEST_COMM_intercomm_nestdown( v_llp, dummy, tag, I_YSTG, HANDLE )
+       if ( ONLINE_DAUGHTER_NO_ROTATE ) then
+          call NEST_COMM_intercomm_nestdown( org_MOMY, dummy, tag, I_YSTG, HANDLE )
+       else
+          call NEST_COMM_intercomm_nestdown( v_llp, dummy, tag, I_YSTG, HANDLE )
+       end if
 
        tag = tagbase + tag_rhot
        call NEST_COMM_intercomm_nestdown( org_RHOT, dummy, tag, I_SCLR, HANDLE )
@@ -1436,19 +1494,61 @@ contains
        enddo
        enddo
 
+       tag = tagbase + tag_momz
+       if ( ONLINE_USE_VELZ ) then
+          call NEST_COMM_intercomm_nestdown( dummy, work1, tag, I_XSTG, HANDLE )
+          do j = 1, DAUGHTER_JA(HANDLE)
+          do i = 1, DAUGHTER_IA(HANDLE)
+          do k = DATR_KS(HANDLE), DATR_KE(HANDLE)-1
+             interped_ref_VELZ(k,i,j) = work1(k,i,j) / ( dens(k,i,j) + dens(k+1,i,j) ) * 2.0_RP
+          enddo
+          enddo
+          enddo
+       end if
+
        tag = tagbase + tag_momx
        call NEST_COMM_intercomm_nestdown( dummy, u_lld, tag, I_XSTG, HANDLE )
        tag = tagbase + tag_momy
        call NEST_COMM_intercomm_nestdown( dummy, v_lld, tag, I_YSTG, HANDLE )
-       do j = 1, DAUGHTER_JA(HANDLE)
-       do i = 1, DAUGHTER_IA(HANDLE)
-       do k = DATR_KS(HANDLE), DATR_KE(HANDLE)
-          interped_ref_VELX(k,i,j) =   u_lld(k,i,j) * rotc(i,j,cosin) + v_lld(k,i,j) * rotc(i,j,sine )
-          interped_ref_VELY(k,i,j) = - u_lld(k,i,j) * rotc(i,j,sine ) + v_lld(k,i,j) * rotc(i,j,cosin)
-
-       enddo
-       enddo
-       enddo
+       if ( ONLINE_NO_ROTATE ) then
+          do j = 1, DAUGHTER_JA(HANDLE)
+          do i = 1, DAUGHTER_IA(HANDLE)-1
+          do k = DATR_KS(HANDLE), DATR_KE(HANDLE)
+             interped_ref_VELX(k,i,j) = u_lld(k,i,j) / ( dens(k,i+1,j) + dens(k,i,j) ) * 2.0_RP
+          enddo
+          enddo
+          enddo
+          do j = 1, DAUGHTER_JA(HANDLE)
+          do k = DATR_KS(HANDLE), DATR_KE(HANDLE)
+             interped_ref_VELX(k,DAUGHTER_IA(HANDLE),j) = u_lld(k,DAUGHTER_IA(HANDLE),j) / dens(k,DAUGHTER_IA(HANDLE),j)
+          enddo
+          enddo
+          call COMM_vars8( interped_ref_VELX, 1 )
+          do j = 1, DAUGHTER_JA(HANDLE)-1
+          do i = 1, DAUGHTER_IA(HANDLE)
+          do k = DATR_KS(HANDLE), DATR_KE(HANDLE)
+             interped_ref_VELY(k,i,j) = v_lld(k,i,j) / ( dens(k,i,j+1) + dens(k,i,j) ) * 2.0_RP
+          enddo
+          enddo
+          enddo
+          do i = 1, DAUGHTER_IA(HANDLE)
+          do k = DATR_KS(HANDLE), DATR_KE(HANDLE)
+             interped_ref_VELY(k,i,DAUGHTER_JA(HANDLE)) = v_lld(k,i,DAUGHTER_JA(HANDLE)) / dens(k,i,DAUGHTER_JA(HANDLE))
+          enddo
+          enddo
+          call COMM_vars8( interped_ref_VELY, 2 )
+          call COMM_wait ( interped_ref_VELX, 1, .false. )
+          call COMM_wait ( interped_ref_VELY, 2, .false. )
+       else
+          do j = 1, DAUGHTER_JA(HANDLE)
+          do i = 1, DAUGHTER_IA(HANDLE)
+          do k = DATR_KS(HANDLE), DATR_KE(HANDLE)
+             interped_ref_VELX(k,i,j) =   u_lld(k,i,j) * rotc(i,j,cosin) + v_lld(k,i,j) * rotc(i,j,sine )
+             interped_ref_VELY(k,i,j) = - u_lld(k,i,j) * rotc(i,j,sine ) + v_lld(k,i,j) * rotc(i,j,cosin)
+          enddo
+          enddo
+          enddo
+       end if
 
        tag = tagbase + tag_rhot
        call NEST_COMM_intercomm_nestdown( dummy, work1, tag, I_SCLR, HANDLE )
