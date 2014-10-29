@@ -153,9 +153,6 @@ contains
     ! calc real height
     call REAL_calc_Z
 
-    ! calc control area & volume
-    call REAL_calc_areavol
-
     ! set latlon and z to fileio module
     call FILEIO_set_coordinates( REAL_LON, REAL_LONX, REAL_LONY, REAL_LONXY, &
                                  REAL_LAT, REAL_LATX, REAL_LATY, REAL_LATXY, &
@@ -375,17 +372,16 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Calc control area/volume
-  subroutine REAL_calc_areavol
+  subroutine REAL_calc_areavol( &
+       MAPF )
     use scale_const, only: &
        RADIUS => CONST_RADIUS
     use scale_grid, only: &
        DZ, &
        DX, &
        DY
-    use scale_gridtrans, only: &
-       MAPF => GTRANS_MAPF, &
-       I_XY
     implicit none
+    real(RP), intent(in) :: MAPF(IA,JA,2)
 
     integer :: k, i, j
     !---------------------------------------------------------------------------
@@ -394,7 +390,7 @@ contains
     REAL_AREA(:,:) = 0.0_RP
     do j = JS, JE
     do i = IS, IE
-       REAL_AREA(i,j) = DX * DY / ( MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) )
+       REAL_AREA(i,j) = DX * DY / ( MAPF(i,j,1) * MAPF(i,j,2) )
        REAL_TOTAREA = REAL_TOTAREA + REAL_AREA(i,j)
     enddo
     enddo
