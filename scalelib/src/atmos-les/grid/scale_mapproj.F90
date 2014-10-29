@@ -559,6 +559,8 @@ contains
     !---------------------------------------------------------------------------
 
     dlon = lon - MPRJ_basepoint_lon * D2R
+    if ( dlon >  PI ) dlon = dlon - PI*2.0_RP
+    if ( dlon < -PI ) dlon = dlon + PI*2.0_RP
 
     latrot = 0.5_RP*PI - lat
 
@@ -609,14 +611,18 @@ contains
     real(RP), intent(in)  :: lat (IA,JA) ! [rad]
 
     real(RP) :: dlon
+    real(RP) :: alpha
     integer :: i, j
     !---------------------------------------------------------------------------
 
     do j = 1, JA
     do i = 1, IA
        dlon = lon(i,j) - MPRJ_basepoint_lon * D2R
-       rotc(i,j,1) = cos( MPRJ_LC_c * dlon ) * MPRJ_hemisphere
-       rotc(i,j,2) = sin( MPRJ_LC_c * dlon )
+       if ( dlon >  PI ) dlon = dlon - PI*2.0_RP
+       if ( dlon < -PI ) dlon = dlon + PI*2.0_RP
+       alpha = MPRJ_LC_c * dlon * MPRJ_hemisphere
+       rotc(i,j,1) = cos( alpha ) ! cosin
+       rotc(i,j,2) = sin( alpha ) ! sine
     enddo
     enddo
 
@@ -754,14 +760,18 @@ contains
     real(RP), intent(in)  :: lat (IA,JA) ! [rad]
 
     real(RP) :: dlon
+    real(RP) :: alpha
     integer :: i, j
     !---------------------------------------------------------------------------
 
     do j = 1, JA
     do i = 1, IA
        dlon = lon(i,j) - MPRJ_basepoint_lon * D2R
-       rotc(i,j,1) = cos( dlon ) * MPRJ_hemisphere
-       rotc(i,j,2) = sin( dlon )
+       if ( dlon >  PI ) dlon = dlon - PI*2.0_RP
+       if ( dlon < -PI ) dlon = dlon + PI*2.0_RP
+       alpha = dlon * MPRJ_hemisphere
+       rotc(i,j,1) = cos( alpha ) ! cosin
+       rotc(i,j,2) = sin( alpha ) ! sine
     enddo
     enddo
 
