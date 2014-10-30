@@ -158,10 +158,12 @@ contains
 
     character(len=H_LONG) :: GLCCv2_IN_CATALOGUE = '' !< metadata files for GLCCv2
     character(len=H_LONG) :: GLCCv2_IN_DIR       = '' !< directory contains GLCCv2 files (GrADS format)
+    real(RP)              :: limit_urban_fraction = 1.0_RP !< fraction limiter for urban area
 
     NAMELIST / PARAM_CNVLANDUSE_GLCCv2 / &
        GLCCv2_IN_CATALOGUE, &
-       GLCCv2_IN_DIR
+       GLCCv2_IN_DIR,       &
+       limit_urban_fraction
 
     ! data catalogue list
     integer, parameter    :: TILE_nlim = 100
@@ -484,6 +486,19 @@ contains
 
     enddo
     enddo
+
+    if ( limit_urban_fraction < 1.0_RP ) then
+       do j = JS, JE
+       do i = IS, IE
+          if ( LANDUSE_frac_urban(i,j) == 1.0_RP ) then ! if no PFT, set to grassland
+             LANDUSE_frac_PFT (i,j,:) = 0.0_RP
+             LANDUSE_frac_PFT (i,j,1) = 1.0_RP
+             LANDUSE_index_PFT(i,j,:) = 2
+          endif
+          LANDUSE_frac_urban(i,j) = min( LANDUSE_frac_urban(i,j), limit_urban_fraction )
+       enddo
+       enddo
+    endif
 
     return
   end subroutine CNVLANDUSE_GLCCv2
