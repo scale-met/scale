@@ -12,12 +12,17 @@ INDIR="../input"
 OUTDIR="../output"
 
 RADDIR="../../../data/rad"
-TOPODIR="/data2/scale_database/topo/DEM50M/Products"
-LANDUSEDIR="/data2/scale_database/landuse/LU100M/Products"
+TOPODIR="/data2/scale_database/topo"
+TOPOTYPE="GTOPO30"
+LANDUSEDIR="/data2/scale_database/landuse"
+LANDUSETYPE="GLCCv2"
 
 BASENAME_ORG="${INDIR}/wrfout_d01_2011-09"
 
 #################################################
+
+mkdir -p ${INDIR}
+mkdir -p ${OUTDIR}
 
 NUM=1
 while [ $NUM -le $NUM_DOMAIN ]
