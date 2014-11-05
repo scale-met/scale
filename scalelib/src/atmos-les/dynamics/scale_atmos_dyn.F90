@@ -437,12 +437,11 @@ contains
        do i = IS, IE
        do k = KS, KE
           damp = - DAMP_alpha_DENS(k,i,j) &
-               * ( &!diff(k,i,j) & ! rayleigh damping
+               * ( diff(k,i,j) & ! rayleigh damping
                  - ( diff(k,i-1,j) + diff(k,i+1,j) + diff(k,i,j-1) + diff(k,i,j+1) - diff(k,i,j)*4.0_RP ) &
                  * 0.125_RP * BND_SMOOTHER_FACT ) ! horizontal smoother
           DENS_t(k,i,j) = DENS_tp(k,i,j) & ! tendency from physical step
                         + damp
-          DENS_t(k,i,j) = 0.0_RP
 #ifdef HIST_TEND
           damp_t(k,i,j) = damp
 #endif

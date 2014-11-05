@@ -638,7 +638,8 @@ contains
           if ( ATMOS_BOUNDARY_USE_DENS ) then
              ATMOS_BOUNDARY_alpha_DENS(k,i,j) = max( alpha_z1, alpha_x1, alpha_y1 )
           else                        
-             ATMOS_BOUNDARY_alpha_DENS(k,i,j) = max( alpha_x1, alpha_y1 )
+             ATMOS_BOUNDARY_alpha_DENS(k,i,j) = 0.0_RP
+!             ATMOS_BOUNDARY_alpha_DENS(k,i,j) = max( alpha_x1, alpha_y1 )
           endif
           if ( ATMOS_BOUNDARY_USE_VELX ) then
              ATMOS_BOUNDARY_alpha_VELX(k,i,j) = max( alpha_z1, alpha_x2, alpha_y1 )
