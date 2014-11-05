@@ -23,8 +23,8 @@ RUNCONF     = NONE
 TPROC       = 9
 
 # required data (parameters,distributed files)
-#DATDIR      = $(abspath /data2/scale_database/topo/DEM50M/Products)
-DATDIR      = $(abspath /data2/scale_database/topo/GTOPO30/Products)
+#DATDIR      = $(SCALE_DB)/topo/DEM50M/Products
+DATDIR      = $(SCALE_DB)/topo/GTOPO30/Products
 DATPARAM    =
 DATDISTS    =
 

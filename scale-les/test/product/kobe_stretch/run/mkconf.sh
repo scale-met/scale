@@ -12,9 +12,9 @@ INDIR="../input"
 OUTDIR="../output"
 
 RADDIR="../../../data/rad"
-TOPODIR="/data2/scale_database/topo"
+TOPODIR="$(SCALE_DB)/topo"
 TOPOTYPE="GTOPO30"
-LANDUSEDIR="/data2/scale_database/landuse"
+LANDUSEDIR="$(SCALE_DB)/landuse"
 LANDUSETYPE="GLCCv2"
 
 BASENAME_ORG="${INDIR}/wrfout_d01_2011-09"
@@ -30,7 +30,7 @@ do
 FNUM=`printf "%02d" $NUM`
 
 #################################################
-# 
+#
 # domain-separated config files
 #
 #################################################
@@ -90,7 +90,7 @@ else
 fi
 
 #################################################
-# 
+#
 # make pp.conf
 #
 #################################################
@@ -111,7 +111,7 @@ cat conf/base.pp.conf \
 rm -f conf/*.conf
 
 #################################################
-# 
+#
 # make init.conf
 #
 #################################################
@@ -134,7 +134,7 @@ cat conf/base.init.conf \
 rm -f conf/*.conf
 
 #################################################
-# 
+#
 # make run.conf
 #
 #################################################
