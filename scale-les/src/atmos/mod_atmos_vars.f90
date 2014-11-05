@@ -299,6 +299,9 @@ contains
     allocate( V   (KA,IA,JA) )
     allocate( POTT(KA,IA,JA) )
 
+    MOMZ(1:KS-1,:,:) = 0.0_RP
+    MOMZ(KE:KA,:,:) = 0.0_RP
+
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_ATMOS_VARS,iostat=ierr)
