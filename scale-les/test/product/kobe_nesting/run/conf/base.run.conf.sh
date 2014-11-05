@@ -16,7 +16,7 @@ cat << EOF > conf/base.run.conf
 &PARAM_TIME
  TIME_STARTDATE             = 2011, 9,19, 6, 0, 0,
  TIME_STARTMS               = 0.D0,
- TIME_DURATION              = 0.1D0,
+ TIME_DURATION              = 6.0D0,
  TIME_DURATION_UNIT         = "HOUR",
  TIME_DT                    = 3.D0,
  TIME_DT_UNIT               = "SEC",

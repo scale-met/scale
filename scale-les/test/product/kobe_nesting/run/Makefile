@@ -21,7 +21,7 @@ BINNAME     = scale-les
 PPCONF      = pp.conf
 INITCONF    = init.conf
 RUNCONF     = run.conf
-TPROC       = 9
+TPROC       = 16
 
 
 # build, makedir, run, jobshell, allclean, clean is inside of common Makefile
