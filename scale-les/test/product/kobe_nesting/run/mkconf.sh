@@ -12,9 +12,9 @@ INDIR="../input"
 OUTDIR="../output"
 
 RADDIR="../../../data/rad"
-TOPODIR="$(SCALE_DB)/topo"
+TOPODIR="${SCALE_DB}/topo"
 TOPOTYPE="GTOPO30"
-LANDUSEDIR="$(SCALE_DB)/landuse"
+LANDUSEDIR="${SCALE_DB}/landuse"
 LANDUSETYPE="GLCCv2"
 
 BASENAME_ORG="${INDIR}/wrfout_d01_2011-09"
