@@ -41,8 +41,8 @@ cat << EOF > conf/base.pp.conf
 /
 
 &PARAM_CNVTOPO_${TOPOTYPE}
- ${TOPOTYPE}_IN_CATALOGUE = "${TOPOTYPE}_catalogue.txt",
- ${TOPOTYPE}_IN_DIR       = "${TOPODIR}/${TOPOTYPE}/Products",
+ ${TOPOTYPE}_IN_CATALOGUE = "${TOPO_IN_CATALOGUE}",
+ ${TOPOTYPE}_IN_DIR       = "${TOPO_IN_DIR}",
 /
 
 &PARAM_CNVLANDUSE
@@ -50,7 +50,7 @@ cat << EOF > conf/base.pp.conf
 /
 
 &PARAM_CNVLANDUSE_${LANDUSETYPE}
- ${LANDUSETYPE}_IN_CATALOGUE = "${LANDUSETYPE}_catalogue.txt",
- ${LANDUSETYPE}_IN_DIR       = "${LANDUSEDIR}/${LANDUSETYPE}/Products",
+ ${LANDUSETYPE}_IN_CATALOGUE = "${LANDUSE_IN_CATALOGUE}",
+ ${LANDUSETYPE}_IN_DIR       = "${LANDUSE_IN_DIR}",
 /
 EOF
