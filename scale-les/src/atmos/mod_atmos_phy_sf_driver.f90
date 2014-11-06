@@ -186,6 +186,7 @@ contains
 
     real(RP) :: beta(IA,JA)
     real(RP) :: total ! dummy
+    real(RP) :: work
 
     integer :: i, j, iq
     !---------------------------------------------------------------------------
@@ -275,9 +276,9 @@ contains
        do iq = I_QV, I_QV
        do j  = JS, JE
        do i  = IS, IE
-          DENS_t_SF(i,j)    = DENS_t_SF(i,j) &
-                            + SFLX_QTRC(i,j,iq) * RCDZ(KS) / GSQRT(KS,i,j,I_XYZ)
-          RHOQ_t_SF(i,j,iq) = SFLX_QTRC(i,j,iq) * DENS(KS,i,j) * RCDZ(KS) / GSQRT(KS,i,j,I_XYZ)
+          work = SFLX_QTRC(i,j,iq) * RCDZ(KS) / GSQRT(KS,i,j,I_XYZ)
+          DENS_t_SF(i,j)    = DENS_t_SF(i,j) + work
+          RHOQ_t_SF(i,j,iq) = work
        enddo
        enddo
        enddo
