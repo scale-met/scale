@@ -79,6 +79,7 @@ contains
     use gtool_history, only: &
        HistoryInit
     use scale_process, only: &
+       PRC_MPIstop, &
        PRC_master, &
        PRC_myrank, &
        PRC_2Drank, &
@@ -100,6 +101,7 @@ contains
          HIST_BND
 
     integer :: rankidx(2)
+    integer :: ierr
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)

@@ -135,7 +135,7 @@ module mod_atmos_vars
   integer, private, allocatable :: AQ_HIST_id(:)
 
   ! history & monitor output of diagnostic variables
-  integer, private, parameter :: AD_nmax = 50 ! number of diagnostic variables for history output
+  integer, private, parameter :: AD_nmax = 51 ! number of diagnostic variables for history output
 
   integer, private, parameter :: I_W     =  1 ! velocity w at cell center
   integer, private, parameter :: I_U     =  2 ! velocity u at cell center
@@ -199,6 +199,8 @@ module mod_atmos_vars
 
   integer, private, parameter :: I_EVAP         = 49
   integer, private, parameter :: I_PRCP         = 50
+
+  integer, private, parameter :: I_DENS_MEAN    = 51
 
   integer, private            :: AD_HIST_id (AD_nmax)
   integer, private            :: AD_PREP_sw (AD_nmax)
@@ -537,35 +539,44 @@ contains
        AD_PREP_sw(I_VOR) = 1
     endif
 
+    if ( AD_PREP_sw(I_DIV) > 0 ) then
+       AD_PREP_sw(I_HDIV) = 1
+    end if
+
     if ( AD_HIST_id(I_DENS_PRIM) > 0 ) then
-       AD_PREP_sw(I_DENS)      = 1
        AD_PREP_sw(I_DENS_PRIM) = 1
+       AD_PREP_sw(I_DENS_MEAN) = 1
     endif
 
     if ( AD_HIST_id(I_W_PRIM) > 0 ) then
        AD_PREP_sw(I_W)      = 1
        AD_PREP_sw(I_W_PRIM) = 1
+       AD_PREP_sw(I_DENS_MEAN) = 1
     endif
 
     if ( AD_HIST_id(I_U_PRIM) > 0 ) then
        AD_PREP_sw(I_U)      = 1
        AD_PREP_sw(I_U_PRIM) = 1
+       AD_PREP_sw(I_DENS_MEAN) = 1
     endif
 
     if ( AD_HIST_id(I_V_PRIM) > 0 ) then
        AD_PREP_sw(I_V)      = 1
        AD_PREP_sw(I_V_PRIM) = 1
+       AD_PREP_sw(I_DENS_MEAN) = 1
     endif
 
     if ( AD_HIST_id(I_POTT_PRIM) > 0 ) then
        AD_PREP_sw(I_POTT)      = 1
        AD_PREP_sw(I_POTT_PRIM) = 1
+       AD_PREP_sw(I_DENS_MEAN) = 1
     endif
 
     if ( AD_HIST_id(I_W_PRIM2) > 0 ) then
        AD_PREP_sw(I_W)       = 1
        AD_PREP_sw(I_W_PRIM)  = 1
        AD_PREP_sw(I_W_PRIM2) = 1
+       AD_PREP_sw(I_DENS_MEAN) = 1
     endif
 
     if ( AD_HIST_id(I_PT_W_PRIM) > 0 ) then
@@ -574,12 +585,14 @@ contains
        AD_PREP_sw(I_POTT)      = 1
        AD_PREP_sw(I_POTT_PRIM) = 1
        AD_PREP_sw(I_PT_W_PRIM) = 1
+       AD_PREP_sw(I_DENS_MEAN) = 1
     endif
 
     if ( AD_HIST_id(I_W_PRIM3) > 0 ) then
        AD_PREP_sw(I_W)       = 1
        AD_PREP_sw(I_W_PRIM)  = 1
        AD_PREP_sw(I_W_PRIM3) = 1
+       AD_PREP_sw(I_DENS_MEAN) = 1
     endif
 
     if ( AD_HIST_id(I_TKE_RS) > 0 ) then
@@ -590,6 +603,7 @@ contains
        AD_PREP_sw(I_U_PRIM) = 1
        AD_PREP_sw(I_V_PRIM) = 1
        AD_PREP_sw(I_TKE_RS) = 1
+       AD_PREP_sw(I_DENS_MEAN) = 1
     endif
 
     if (      AD_HIST_id (I_ENGP) > 0 &
@@ -1068,6 +1082,7 @@ contains
     real(RP) :: PT_W_PRIM(KA,IA,JA) ! resolved scale heat flux       [W/s]
     real(RP) :: W_PRIM3  (KA,IA,JA) ! skewness of w                  [m3/s3]
     real(RP) :: TKE_RS   (KA,IA,JA) ! resolved scale TKE             [m2/s2]
+    real(RP) :: DENS_MEAN(KA)       ! horiz. mean of density         [kg/m3]
 
     real(RP) :: ENGT  (KA,IA,JA) ! total     energy [J/m3]
     real(RP) :: ENGP  (KA,IA,JA) ! potential energy [J/m3]
@@ -1154,8 +1169,8 @@ contains
     endif
 
     if ( AD_PREP_sw(I_QTOT) > 0 ) then
-       do j  = JS, JE
-       do i  = IS, IE
+       do j  = 1, JA
+       do i  = 1, IA
        do k  = KS, KE
           QTOT(k,i,j) = 1.0_RP - QDRY(k,i,j)
        enddo
@@ -1188,8 +1203,8 @@ contains
     endif
 
     if ( AD_PREP_sw(I_LWP) > 0 ) then
-       do j  = JS, JE
-       do i  = IS, IE
+       do j  = 1, JA
+       do i  = 1, IA
           LWP(i,j) = 0.0_RP
           do k  = KS, KE
              LWP(i,j) = LWP(i,j) &
@@ -1200,8 +1215,8 @@ contains
     endif
 
     if ( AD_PREP_sw(I_IWP) > 0 ) then
-       do j  = JS, JE
-       do i  = IS, IE
+       do j  = 1, JA
+       do i  = 1, IA
           IWP(i,j) = 0.0_RP
           do k  = KS, KE
              IWP(i,j) = IWP(i,j) &
@@ -1213,8 +1228,8 @@ contains
 
     if ( AD_PREP_sw(I_RTOT) > 0 ) then
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       do j  = JS, JE
-       do i  = IS, IE
+       do j  = 1, JA
+       do i  = 1, IA
        do k  = KS, KE
           RTOT (k,i,j) = Rdry * QDRY(k,i,j) + Rvap * QTRC(k,i,j,I_QV)
        enddo
@@ -1224,8 +1239,8 @@ contains
 
     if ( AD_PREP_sw(I_CPTOT) > 0 ) then
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       do j  = JS, JE
-       do i  = IS, IE
+       do j  = 1, JA
+       do i  = 1, IA
        do k  = KS, KE
           CPTOT(k,i,j) = CPdry * QDRY(k,i,j)
        enddo
@@ -1234,8 +1249,8 @@ contains
 
        do iq = QQS, QQE
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       do j  = JS, JE
-       do i  = IS, IE
+       do j  = 1, JA
+       do i  = 1, IA
        do k  = KS, KE
           CPTOT(k,i,j) = CPTOT(k,i,j) + QTRC(k,i,j,iq) * CPw(iq)
        enddo
@@ -1244,8 +1259,8 @@ contains
        enddo
 
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       do j  = JS, JE
-       do i  = IS, IE
+       do j  = 1, JA
+       do i  = 1, IA
        do k  = KS, KE
           CPovCV(k,i,j) = CPTOT(k,i,j) / ( CPTOT(k,i,j) - RTOT(k,i,j) )
        enddo
@@ -1277,8 +1292,8 @@ contains
 
     if ( AD_PREP_sw(I_POTL) > 0 ) then
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       do j = JS, JE
-       do i = IS, IE
+       do j = 1, JA
+       do i = 1, IA
        do k = KS, KE
           POTL(k,i,j) = POTT(k,i,j) &
                       - LHV / CPdry * QLIQ(k,i,j) * POTT(k,i,j) / TEMP(k,i,j)
@@ -1292,8 +1307,8 @@ contains
                                       TEMP(:,:,:), & ! [IN]
                                       DENS(:,:,:)  ) ! [IN]
 
-       do j  = JS, JE
-       do i  = IS, IE
+       do j  = 1, JA
+       do i  = 1, IA
        do k  = KS, KE
           RH(k,i,j) = QTRC(k,i,j,I_QV) / QSAT(k,i,j) * 1.0E2_RP
        enddo
@@ -1307,8 +1322,8 @@ contains
                                       DENS(:,:,:)  ) ! [IN]
 
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       do j  = JS, JE
-       do i  = IS, IE
+       do j  = 1, JA
+       do i  = 1, IA
        do k  = KS, KE
           RHL(k,i,j) = QTRC(k,i,j,I_QV) / QSAT(k,i,j) * 1.0E2_RP
        enddo
@@ -1322,8 +1337,8 @@ contains
                                       DENS(:,:,:)  ) ! [IN]
 
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       do j  = JS, JE
-       do i  = IS, IE
+       do j  = 1, JA
+       do i  = 1, IA
        do k  = KS, KE
           RHI(k,i,j) = QTRC(k,i,j,I_QV) / QSAT(k,i,j) * 1.0E2_RP
        enddo
@@ -1332,124 +1347,170 @@ contains
     endif
 
     if ( AD_PREP_sw(I_VOR) > 0 ) then
-       ! at u, v, layer
+       ! at x, v, layer
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       do j = JS-1, JE
-       do i = IS-1, IE
+       do j = 1, JA-1
+       do i = 2, IA
        do k = KS, KE
-          UH(k,i,j) = 2.0_RP * ( MOMX(k,i,j)+MOMX(k,i,j+1) )                             &
-                             / ( DENS(k,i,j)+DENS(k,i+1,j)+DENS(k,i,j+1)+DENS(k,i+1,j+1) )
+          UH(k,i,j) = 0.5_RP * ( MOMX(k,i,j)+MOMX(k,i,j+1)+MOMX(k,i-1,j)+MOMX(k,i-1,j+1) ) &
+                             / ( DENS(k,i,j)+DENS(k,i,j+1) )
        enddo
        enddo
        enddo
 
-       ! at u, v, layer
+       ! at u, y, layer
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       do j = JS-1, JE
-       do i = IS-1, IE
+       do j = 2, JA
+       do i = 1, IA-1
        do k = KS, KE
-          VH(k,i,j) = 2.0_RP * ( MOMY(k,i,j)+MOMY(k,i+1,j) )                             &
-                             / ( DENS(k,i,j)+DENS(k,i+1,j)+DENS(k,i,j+1)+DENS(k,i+1,j+1) )
+          VH(k,i,j) = 0.5_RP * ( MOMY(k,i,j)+MOMY(k,i+1,j)+MOMY(k,i,j-1)+MOMY(k,i+1,j-1) ) &
+                             / ( DENS(k,i,j)+DENS(k,i+1,j) )
        enddo
        enddo
        enddo
 
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       do j = JS, JE
-       do i = IS, IE
+       do j = 2, JA-1
+       do i = 2, IA-1
        do k = KS, KE
-          VOR(k,i,j) = 0.5_RP * ( ( VH(k,i,j  ) - VH(k,i-1,j  ) ) * RCDX(i) &
-                                + ( VH(k,i,j-1) - VH(k,i-1,j-1) ) * RCDX(i) &
-                                - ( UH(k,i  ,j) - UH(k,i  ,j-1) ) * RCDY(j) &
-                                - ( UH(k,i-1,j) - UH(k,i-1,j-1) ) * RCDY(j) )
+          VOR(k,i,j) = ( VH(k,i,j  ) - VH(k,i-1,j  ) ) * RCDX(i) &
+                     - ( UH(k,i  ,j) - UH(k,i  ,j-1) ) * RCDY(j)
        enddo
+       enddo
+       enddo
+
+       !$omp parallel do private(j,k) OMP_SCHEDULE_
+       do j = 1, JA
+       do k = KS, KE
+          VOR(k,1 ,j) = VOR(k,2   ,j)
+          VOR(k,IA,j) = VOR(k,IA-1,j)
+       enddo
+       enddo
+
+       !$omp parallel do private(i,k) OMP_SCHEDULE_
+       do i = 1, IA
+       do k = KS, KE
+          VOR(k,i,1 ) = VOR(k,i,2   )
+          VOR(k,i,JA) = VOR(k,i,JA-1)
        enddo
        enddo
     endif
 
     if ( AD_PREP_sw(I_HDIV) > 0 ) then
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       do j = JS, JE
-       do i = IS, IE
+       do j = 2, JA
+       do i = 2, IA
        do k = KS, KE
           HDIV(k,i,j) = ( MOMX(k,i,j) - MOMX(k  ,i-1,j  ) ) * RCDX(i) &
                       + ( MOMY(k,i,j) - MOMY(k  ,i  ,j-1) ) * RCDY(j)
        enddo
        enddo
        enddo
+       !$omp parallel do private(i,k) OMP_SCHEDULE_
+       do i = 1, IA
+       do k = KS, KE
+          HDIV(k,i,1) = HDIV(k,i,2)
+       enddo
+       enddo
+       !$omp parallel do private(j,k) OMP_SCHEDULE_
+       do j = 1, JA
+       do k = KS, KE
+          HDIV(k,1,j) = HDIV(k,2,j)
+       enddo
+       enddo
     endif
 
     if ( AD_PREP_sw(I_DIV) > 0 ) then
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       do j = JS, JE
-       do i = IS, IE
+       do j = 1, JA
+       do i = 1, IA
        do k = KS, KE
           DIV(k,i,j) = ( MOMZ(k,i,j) - MOMZ(k-1,i  ,j  ) ) * ( REAL_FZ(k,i,j)-REAL_FZ(k-1,i,j) ) &
-                     + ( MOMX(k,i,j) - MOMX(k  ,i-1,j  ) ) * RCDX(i) &
-                     + ( MOMY(k,i,j) - MOMY(k  ,i  ,j-1) ) * RCDY(j)
+                     + HDIV(k,i,j)
        enddo
        enddo
        enddo
     endif
 
     if ( AD_PREP_sw(I_DENS_PRIM) > 0 ) then
-       call COMM_horizontal_mean( mean1d(:), DENS(:,:,:) )
-       do j = JS, JE
-       do i = IS, IE
+       call COMM_horizontal_mean( DENS_MEAN(:), DENS(:,:,:) )
+       do j = 1, JA
+       do i = 1, IA
        do k = KS, KE
-          DENS_PRIM(k,i,j) = DENS(k,i,j) - mean1d(k)
+          DENS_PRIM(k,i,j) = DENS(k,i,j) - DENS_MEAN(k)
        enddo
        enddo
        enddo
     endif
 
     if ( AD_PREP_sw(I_W_PRIM) > 0 ) then
-       call COMM_horizontal_mean( mean1d(:), W(:,:,:) )
-       do j = JS, JE
-       do i = IS, IE
+       do j = 1, JA
+       do i = 1, IA
        do k = KS, KE
-          W_PRIM(k,i,j) = W(k,i,j) - mean1d(k)
+          W_PRIM(k,i,j) = W(k,i,j) * DENS(k,i,j)
+       enddo
+       enddo
+       enddo
+       call COMM_horizontal_mean( mean1d(:), W_PRIM(:,:,:) )
+       do j = 1, JA
+       do i = 1, IA
+       do k = KS, KE
+          W_PRIM(k,i,j) = ( W_PRIM(k,i,j) - mean1d(k) ) / DENS_MEAN(k)
        enddo
        enddo
        enddo
     endif
 
     if ( AD_PREP_sw(I_U_PRIM) > 0 ) then
-       call COMM_horizontal_mean( mean1d(:), U(:,:,:) )
-       do j = JS, JE
-       do i = IS, IE
+       do j = 1, JA
+       do i = 1, IA
        do k = KS, KE
-          U_PRIM(k,i,j) = U(k,i,j) - mean1d(k)
+          U_PRIM(k,i,j) = U(k,i,j) * DENS(k,i,j)
+       enddo
+       enddo
+       enddo
+       call COMM_horizontal_mean( mean1d(:), U_PRIM(:,:,:) )
+       do j = 1, JA
+       do i = 1, IA
+       do k = KS, KE
+          U_PRIM(k,i,j) = ( U_PRIM(k,i,j) - mean1d(k) ) / DENS_MEAN(k)
        enddo
        enddo
        enddo
     endif
 
     if ( AD_PREP_sw(I_V_PRIM) > 0 ) then
-       call COMM_horizontal_mean( mean1d(:), V(:,:,:) )
-       do j = JS, JE
-       do i = IS, IE
+       do j = 1, JA
+       do i = 1, IA
        do k = KS, KE
-          V_PRIM(k,i,j) = V(k,i,j) - mean1d(k)
+          V_PRIM(k,i,j) = V(k,i,j) * DENS(k,i,j)
+       enddo
+       enddo
+       enddo
+       call COMM_horizontal_mean( mean1d(:), V_PRIM(:,:,:) )
+       do j = 1, JA
+       do i = 1, IA
+       do k = KS, KE
+          V_PRIM(k,i,j) = ( V_PRIM(k,i,j) - mean1d(k) ) / DENS_MEAN(k)
        enddo
        enddo
        enddo
     endif
 
     if ( AD_PREP_sw(I_POTT_PRIM) > 0 ) then
-       call COMM_horizontal_mean( mean1d(:), POTT(:,:,:) )
-       do j = JS, JE
-       do i = IS, IE
+       call COMM_horizontal_mean( mean1d(:), RHOT(:,:,:) )
+       do j = 1, JA
+       do i = 1, IA
        do k = KS, KE
-          POTT_PRIM(k,i,j) = POTT(k,i,j) - mean1d(k)
+          POTT_PRIM(k,i,j) = ( RHOT(k,i,j) - mean1d(k) ) / DENS_MEAN(k)
        enddo
        enddo
        enddo
     endif
 
     if ( AD_PREP_sw(I_W_PRIM2) > 0 ) then
-       do j = JS, JE
-       do i = IS, IE
+       do j = 1, JA
+       do i = 1, IA
        do k = KS, KE
           W_PRIM2(k,i,j) = W_PRIM(k,i,j) * W_PRIM(k,i,j)
        enddo
@@ -1458,8 +1519,8 @@ contains
     endif
 
     if ( AD_PREP_sw(I_PT_W_PRIM) > 0 ) then
-       do j = JS, JE
-       do i = IS, IE
+       do j = 1, JA
+       do i = 1, IA
        do k = KS, KE
           PT_W_PRIM(k,i,j) = W_PRIM(k,i,j) * POTT_PRIM(k,i,j) * DENS(k,i,j) * CPdry
        enddo
@@ -1468,8 +1529,8 @@ contains
     endif
 
     if ( AD_PREP_sw(I_W_PRIM3) > 0 ) then
-       do j = JS, JE
-       do i = IS, IE
+       do j = 1, JA
+       do i = 1, IA
        do k = KS, KE
           W_PRIM3(k,i,j) = W_PRIM(k,i,j) * W_PRIM(k,i,j) * W_PRIM(k,i,j)
        enddo
@@ -1478,8 +1539,8 @@ contains
     endif
 
     if ( AD_PREP_sw(I_TKE_RS) > 0 ) then
-       do j = JS, JE
-       do i = IS, IE
+       do j = 1, JA
+       do i = 1, IA
        do k = KS, KE
           TKE_RS(k,i,j) = 0.5_RP * ( W_PRIM(k,i,j) * W_PRIM(k,i,j) &
                                    + U_PRIM(k,i,j) * U_PRIM(k,i,j) &
@@ -1491,8 +1552,8 @@ contains
 
     if ( AD_PREP_sw(I_ENGP) > 0 ) then
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       do j = JS, JE
-       do i = IS, IE
+       do j = 1, JA
+       do i = 1, IA
        do k = KS, KE
           ENGP(k,i,j) = DENS(k,i,j) * GRAV * REAL_CZ(k,i,j)
        enddo
@@ -1502,8 +1563,8 @@ contains
 
     if ( AD_PREP_sw(I_ENGK) > 0 ) then
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       do j = JS, JE
-       do i = IS, IE
+       do j = 1, JA
+       do i = 1, IA
        do k = KS, KE
           ENGK(k,i,j) = 0.5_RP * DENS(k,i,j) * ( W(k,i,j)**2 &
                                                + U(k,i,j)**2 &
@@ -1515,8 +1576,8 @@ contains
 
     if ( AD_PREP_sw(I_ENGI) > 0 ) then
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       do j = JS, JE
-       do i = IS, IE
+       do j = 1, JA
+       do i = 1, IA
        do k = KS, KE
           ENGI(k,i,j) = DENS(k,i,j) * QDRY(k,i,j) * TEMP(k,i,j) * CVdry
        enddo
@@ -1525,8 +1586,8 @@ contains
 
        do iq = QQS, QQE
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(3)
-       do j  = JS, JE
-       do i  = IS, IE
+       do j  = 1, JA
+       do i  = 1, IA
        do k  = KS, KE
           ENGI(k,i,j) = ENGI(k,i,j) &
                       + DENS(k,i,j) * QTRC(k,i,j,iq) * TEMP(k,i,j) * CVw(iq)
@@ -1538,8 +1599,8 @@ contains
 
     if ( AD_PREP_sw(I_ENGT) > 0 ) then
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       do j  = JS, JE
-       do i  = IS, IE
+       do j  = 1, JA
+       do i  = 1, IA
        do k  = KS, KE
           ENGT(k,i,j) = ENGP(k,i,j) + ENGK(k,i,j) + ENGI(k,i,j)
        enddo
@@ -1733,7 +1794,7 @@ contains
     enddo
     do j = 1, JA
     do k = KS, KE
-       U(k,1,j) = MOMX(k,i,j) / DENS(k,i,j)
+       U(k,1,j) = MOMX(k,1,j) / DENS(k,1,j)
     enddo
     enddo
 
@@ -1746,7 +1807,7 @@ contains
     enddo
     do i = 1, IA
     do k = KS, KE
-       V(k,i,1) = MOMY(k,i,1) / DENS(k,i,j)
+       V(k,i,1) = MOMY(k,i,1) / DENS(k,i,1)
     enddo
     enddo
 
