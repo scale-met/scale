@@ -1594,6 +1594,10 @@ contains
              do iq = 1, BND_QA
                 QTRC(k,i,j,iq) = ATMOS_BOUNDARY_QTRC(k,i,j,iq)
              end do
+             do iq = BND_QA+1, QA
+                QTRC(k,i,j,iq) = QTRC(k,IS,j,iq) &
+                               * ( 0.5_RP - sign(0.5_RP, ATMOS_BOUNDARY_VELX(k,IS-1,j)) )
+             end do
           end do
           end do
           end do
@@ -1632,6 +1636,10 @@ contains
              RHOT(k,i,j) = ATMOS_BOUNDARY_POTT(k,i,j) * ATMOS_BOUNDARY_DENS(k,i,j)
              do iq = 1, BND_QA
                 QTRC(k,i,j,iq) = ATMOS_BOUNDARY_QTRC(k,i,j,iq)
+             end do
+             do iq = BND_QA+1, QA
+                QTRC(k,i,j,iq) = QTRC(k,IE,j,iq) &
+                               * ( 0.5_RP + sign(0.5_RP, ATMOS_BOUNDARY_VELX(k,IE,j)) )
              end do
           end do
           end do
@@ -1688,6 +1696,10 @@ contains
              do iq = 1, BND_QA
                 QTRC(k,i,j,iq) = ATMOS_BOUNDARY_QTRC(k,i,j,iq)
              end do
+             do iq = BND_QA+1, QA
+                QTRC(k,i,j,iq) = QTRC(k,i,JS,iq) &
+                               * ( 0.5_RP - sign(0.5_RP, ATMOS_BOUNDARY_VELY(k,i,JS-1)) )
+             end do
           end do
           end do
           end do
@@ -1727,6 +1739,10 @@ contains
              RHOT(k,i,j) = ATMOS_BOUNDARY_POTT(k,i,j) * ATMOS_BOUNDARY_DENS(k,i,j)
              do iq = 1, BND_QA
                 QTRC(k,i,j,iq) = ATMOS_BOUNDARY_QTRC(k,i,j,iq)
+             end do
+             do iq = BND_QA+1, QA
+                QTRC(k,i,j,iq) = QTRC(k,i,JE,iq) &
+                               * ( 0.5_RP + sign(0.5_RP, ATMOS_BOUNDARY_VELY(k,i,JE)) )
              end do
           end do
           end do
