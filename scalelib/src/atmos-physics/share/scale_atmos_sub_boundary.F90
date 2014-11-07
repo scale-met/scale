@@ -1441,7 +1441,7 @@ contains
     end if
 
     UPDATE_NSTEP = nint( ATMOS_BOUNDARY_UPDATE_DT / TIME_DTSEC )
-    if ( UPDATE_NSTEP * TIME_NSTEP /= PARENT_NSTEP(handle) ) then
+    if ( UPDATE_NSTEP * PARENT_NSTEP(handle) /= TIME_NSTEP ) then
        write(*,*) 'xxx NSTEP is not multiple of PARENT_NSTEP'
        call PRC_MPIstop
     end if

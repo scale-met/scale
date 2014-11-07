@@ -96,7 +96,7 @@ program scaleles_make_vgrid
   is = cnst_nlevs_low + 1
   ie = is + nonlinear_nlevs_mid - 1
   do i=is, ie
-     fz(i) = fz(i-1) + fz(i-1)*(nonlinear_rate_mid*1.D-2)
+     fz(i) = fz(i-1) + (fz(i-1)-fz(i-2))*(nonlinear_rate_mid*1.D-2)
      label(i) = "M"
      if( fz(i) > top_height ) then
         write(*,*) "Over Shoot [M]: at",i,fz(i)
@@ -106,7 +106,11 @@ program scaleles_make_vgrid
 
   ! constant layer [upper]
   is = cnst_nlevs_low + nonlinear_nlevs_mid + 1
-  ie = is + cnst_nlevs_upp - 1
+  if ( nonlinear_top ) then
+     ie = is + cnst_nlevs_upp - 1
+  else
+     ie = num_levs
+  endif
   if ( ie >= num_levs ) then
      ie = num_levs
      force_skip = .true.
@@ -128,7 +132,8 @@ program scaleles_make_vgrid
         is = cnst_nlevs_low + nonlinear_nlevs_mid + cnst_nlevs_upp + 1
         ie = num_levs
         do i=is, ie
-           fz(i) = fz(i-1) + cnst_thick_upp - fz(i-1)*(nonlinear_rate_top*1.D-2)
+           work = (fz(i-1)-fz(i-2)) - (fz(i-1)-fz(i-2))*(1.0D0 - nonlinear_rate_top*1.D-2)
+           fz(i) = fz(i-1) + work
            label(i) = "T"
            if( fz(i) > top_height*1.2D0 ) then
               write(*,*) "Over Shoot [T]: at",i,fz(i)
@@ -163,11 +168,11 @@ program scaleles_make_vgrid
   enddo
   close ( 30 )
 
-  !open  (31, file='test.txt', form='formatted', status='replace')
-  !do i=1, num_levs
-  !   write (31,'(1X,I3,2X,F10.4)') i, fz(i)
-  !enddo
-  !close (31)
+  open  (31, file='test.txt', form='formatted', status='replace')
+  do i=1, num_levs
+     write (31,'(1X,I3,2X,F10.4)') i, fz(i)
+  enddo
+  close (31)
 
   stop
   !=============================================================================
