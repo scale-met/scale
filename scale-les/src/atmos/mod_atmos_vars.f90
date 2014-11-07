@@ -1432,8 +1432,11 @@ contains
        enddo
     endif
 
-    if ( AD_PREP_sw(I_DENS_PRIM) > 0 ) then
+    if ( AD_PREP_sw(I_DENS_MEAN) > 0 ) then
        call COMM_horizontal_mean( DENS_MEAN(:), DENS(:,:,:) )
+    end if
+
+    if ( AD_PREP_sw(I_DENS_PRIM) > 0 ) then
        do j = 1, JA
        do i = 1, IA
        do k = KS, KE
