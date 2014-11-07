@@ -79,6 +79,7 @@ contains
     use gtool_history, only: &
        HistoryInit
     use scale_process, only: &
+       PRC_MPIstop, &
        PRC_master, &
        PRC_myrank, &
        PRC_2Drank, &
@@ -94,11 +95,29 @@ contains
     character(len=H_SHORT) :: HISTORY_T_UNITS = 'seconds'
     character(len=H_MID)   :: HISTORY_T_SINCE = ''
 
+    logical :: HIST_BND = .true.
+
+    namelist / PARAM_HIST /      &
+         HIST_BND
+
     integer :: rankidx(2)
+    integer :: ierr
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[HISTORY] / Categ[IO] / Origin[SCALElib]'
+
+    !--- read namelist
+    rewind(IO_FID_CONF)
+    read(IO_FID_CONF,nml=PARAM_HIST,iostat=ierr)
+    if( ierr < 0 ) then !--- missing
+       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+    elseif( ierr > 0 ) then !--- fatal error
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_HIST. Check!'
+       call PRC_MPIstop
+    endif
+    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_HIST)
+
 
     call PROF_rapstart('FILE O NetCDF')
 
@@ -117,21 +136,23 @@ contains
     jms = JS
     jme = JE
 
-    if ( .not. PRC_HAS_W ) then
-       im = im + IHALO
-       ims = 1
-    end if
-    if ( .not. PRC_HAS_E ) then
-       im = im + IHALO
-       ime = IA
-    end if
-    if ( .not. PRC_HAS_S ) then
-       jm = jm + JHALO
-       jms = 1
-    end if
-    if ( .not. PRC_HAS_N ) then
-       jm = jm + JHALO
-       jme = JA
+    if ( HIST_BND ) then
+       if ( .not. PRC_HAS_W ) then
+          im = im + IHALO
+          ims = 1
+       end if
+       if ( .not. PRC_HAS_E ) then
+          im = im + IHALO
+          ime = IA
+       end if
+       if ( .not. PRC_HAS_S ) then
+          jm = jm + JHALO
+          jms = 1
+       end if
+       if ( .not. PRC_HAS_N ) then
+          jm = jm + JHALO
+          jme = JA
+       end if
     end if
 
     call HistoryInit( HISTORY_H_TITLE,           &

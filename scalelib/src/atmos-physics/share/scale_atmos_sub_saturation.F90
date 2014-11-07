@@ -272,8 +272,8 @@ contains
     !---------------------------------------------------------------------------
 
     !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-    do j = JS, JE
-    do i = IS, IE
+    do j = 1, JA
+    do i = 1, IA
     do k = KS, KE
 
        alpha(k,i,j) = ( temp(k,i,j)                  - ATMOS_SATURATION_LLIMIT_TEMP ) &
@@ -360,8 +360,8 @@ contains
     !---------------------------------------------------------------------------
 
     !$omp parallel do private(i,j,k,alpha,psatl,psati) OMP_SCHEDULE_ collapse(2)
-    do j = JS, JE
-    do i = IS, IE
+    do j = 1, JA
+    do i = 1, IA
     do k = KS, KE
 
        alpha = ( temp(k,i,j)                  - ATMOS_SATURATION_LLIMIT_TEMP ) &
@@ -435,8 +435,8 @@ contains
     !---------------------------------------------------------------------------
 
     !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-    do j = JS, JE
-    do i = IS, IE
+    do j = 1, JA
+    do i = 1, IA
     do k = KS, KE
        psat(k,i,j) = PSAT0 * ( temp(k,i,j) * RTEM00 )**CPovR_liq     &
                    * exp( LovR_liq * ( RTEM00 - 1.0_RP/temp(k,i,j) ) )
@@ -499,8 +499,8 @@ contains
     !---------------------------------------------------------------------------
 
     !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-    do j = JS, JE
-    do i = IS, IE
+    do j = 1, JA
+    do i = 1, IA
     do k = KS, KE
        psat(k,i,j) = PSAT0 * ( temp(k,i,j) * RTEM00 )**CPovR_ice     &
                    * exp( LovR_ice * ( RTEM00 - 1.0_RP/temp(k,i,j) ) )
@@ -598,8 +598,8 @@ contains
     !---------------------------------------------------------------------------
 
     !$omp parallel do private(i,j,alpha,psatl,psati,psat) OMP_SCHEDULE_
-    do j = JS, JE
-    do i = IS, IE
+    do j = 1, JA
+    do i = 1, IA
 
        alpha = ( temp(i,j)                    - ATMOS_SATURATION_LLIMIT_TEMP ) &
              / ( ATMOS_SATURATION_ULIMIT_TEMP - ATMOS_SATURATION_LLIMIT_TEMP )
@@ -641,8 +641,8 @@ contains
     !---------------------------------------------------------------------------
 
     !$omp parallel do private(i,j,k,alpha,psatl,psati,psat) OMP_SCHEDULE_ collapse(2)
-    do j = JS, JE
-    do i = IS, IE
+    do j = 1, JA
+    do i = 1, IA
     do k = KS, KE
 
        alpha = ( temp(k,i,j)                  - ATMOS_SATURATION_LLIMIT_TEMP ) &
@@ -734,8 +734,8 @@ contains
     !---------------------------------------------------------------------------
 
     !$omp parallel do private(i,j,k,psat) OMP_SCHEDULE_ collapse(2)
-    do j = JS, JE
-    do i = IS, IE
+    do j = 1, JA
+    do i = 1, IA
     do k = KS, KE
        psat = PSAT0 * ( temp(k,i,j) * RTEM00 )**CPovR_liq     &
             * exp( LovR_liq * ( RTEM00 - 1.0_RP/temp(k,i,j) ) )
@@ -815,8 +815,8 @@ contains
     !---------------------------------------------------------------------------
 
     !$omp parallel do private(i,j,k,psat) OMP_SCHEDULE_ collapse(2)
-    do j = JS, JE
-    do i = IS, IE
+    do j = 1, JA
+    do i = 1, IA
     do k = KS, KE
        psat = PSAT0 * ( temp(k,i,j) * RTEM00 )**CPovR_ice     &
             * exp( LovR_ice * ( RTEM00 - 1.0_RP/temp(k,i,j) ) )
@@ -916,8 +916,8 @@ contains
     !---------------------------------------------------------------------------
 
     !$omp parallel do private(i,j,k,alpha,psatl,psati,psat) OMP_SCHEDULE_ collapse(2)
-    do j = JS, JE
-    do i = IS, IE
+    do j = 1, JA
+    do i = 1, IA
     do k = KS, KE
 
        alpha = ( temp(k,i,j)                  - ATMOS_SATURATION_LLIMIT_TEMP ) &
@@ -1009,8 +1009,8 @@ contains
     !---------------------------------------------------------------------------
 
     !$omp parallel do private(i,j,k,psat) OMP_SCHEDULE_ collapse(2)
-    do j = JS, JE
-    do i = IS, IE
+    do j = 1, JA
+    do i = 1, IA
     do k = KS, KE
        psat = PSAT0 * ( temp(k,i,j) * RTEM00 )**CPovR_liq     &
             * exp( LovR_liq * ( RTEM00 - 1.0_RP/temp(k,i,j) ) )
@@ -1090,8 +1090,8 @@ contains
     !---------------------------------------------------------------------------
 
     !$omp parallel do private(i,j,k,psat) OMP_SCHEDULE_ collapse(2)
-    do j = JS, JE
-    do i = IS, IE
+    do j = 1, JA
+    do i = 1, IA
     do k = KS, KE
        psat = PSAT0 * ( temp(k,i,j) * RTEM00 )**CPovR_ice     &
             * exp( LovR_ice * ( RTEM00 - 1.0_RP/temp(k,i,j) ) )
@@ -1172,8 +1172,8 @@ contains
     !---------------------------------------------------------------------------
 
     !$omp parallel do private(i,j,k,lim1,lim2) OMP_SCHEDULE_ collapse(2)
-    do j = JS, JE
-    do i = IS, IE
+    do j = 1, JA
+    do i = 1, IA
     do k = KS, KE
 
        ! if Tup < temp(k,i,j), dalpha/dT = 0 (no slope)
@@ -1259,8 +1259,8 @@ contains
     RTEM00   = 1.0_RP / TEM00
 
     !$omp parallel do private(i,j,k,TEM,psat,lhv) OMP_SCHEDULE_ collapse(2)
-    do j = JS, JE
-    do i = IS, IE
+    do j = 1, JA
+    do i = 1, IA
 
        do k = KS, KE
           TEM = max( temp(k,i,j), TEM_MIN )
@@ -1308,8 +1308,8 @@ contains
     RTEM00   = 1.0_RP / TEM00
 
     !$omp parallel do private(i,j,k,TEM,psat,den1,den2,lhv) OMP_SCHEDULE_ collapse(2)
-    do j = JS, JE
-    do i = IS, IE
+    do j = 1, JA
+    do i = 1, IA
 
        do k = KS, KE
           TEM = max( temp(k,i,j), TEM_MIN )
@@ -1362,8 +1362,8 @@ contains
     RTEM00   = 1.0_RP / TEM00
 
     !$omp parallel do private(i,j,k,TEM,psat,den1,den2,lhv) OMP_SCHEDULE_ collapse(2)
-    do j = JS, JE
-    do i = IS, IE
+    do j = 1, JA
+    do i = 1, IA
 
        do k = KS, KE
           TEM = max( temp(k,i,j), TEM_MIN )
