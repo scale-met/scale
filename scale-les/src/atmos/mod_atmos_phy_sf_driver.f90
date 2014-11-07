@@ -267,8 +267,7 @@ contains
 
        do j = JS, JE
        do i = IS, IE
-          RHOT_t_SF(i,j) = ( SFLX_SH(i,j) / CPdry                             &
-                           + SFLX_LH(i,j) / LHV * RHOT(KS,i,j) / DENS(KS,i,j) ) * RCDZ(KS) / GSQRT(KS,i,j,I_XYZ)
+          RHOT_t_SF(i,j) = SFLX_SH(i,j) / CPdry * RCDZ(KS) / GSQRT(KS,i,j,I_XYZ)
        enddo
        enddo
 
@@ -280,6 +279,12 @@ contains
           DENS_t_SF(i,j)    = DENS_t_SF(i,j) + work
           RHOQ_t_SF(i,j,iq) = work
        enddo
+       enddo
+       enddo
+
+       do j  = JS, JE
+       do i  = IS, IE
+          RHOT_t_SF(i,j) = RHOT_t_SF(i,j) + DENS_t_SF(i,j) * RHOT(KS,i,j) / DENS(KS,i,j)
        enddo
        enddo
 
