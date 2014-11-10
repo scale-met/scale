@@ -1527,26 +1527,33 @@ contains
        tsfc_org (:,:,:) = real( read_xy(:,:,:), kind=RP )
 
        call ExternalFileRead( read_xy(:,:,:),    BASENAME, "Q2",      ts, te, myrank, mdlid, single=.true.               )
-       qsfc_org (:,:,:,I_QV) = real( read_xy(:,:,:), kind=RP )
+       !convert from mixing ratio [kg/kg] to ratio of mass of tracer to total mass[kg/kg]
+       qsfc_org (:,:,:,I_QV) = real(read_xy(:,:,:),kind=RP)/( 1.0_RP + real(read_xy(:,:,:),kind=RP) )
 
        call ExternalFileRead( read_zxy(:,:,:,:), BASENAME, "QVAPOR",  ts, te, myrank, mdlid, single=.true. )
-       qtrc_org(:,:,:,:,I_QV) = real( read_zxy(:,:,:,:), kind=RP )
+       !convert from mixing ratio [kg/kg] to ratio of mass of tracer to total mass[kg/kg]
+       qtrc_org(:,:,:,:,I_QV) = real(read_zxy(:,:,:,:),kind=RP)/( 1.0_RP + real(read_zxy(:,:,:,:),kind=RP) )
 
        if( trim(mptype_parent)/='dry' ) then
           call ExternalFileRead( read_zxy(:,:,:,:), BASENAME, "QCLOUD", ts, te, myrank, mdlid, single=.true. )
-          qtrc_org(:,:,:,:,I_QC) = real( read_zxy(:,:,:,:), kind=RP )
+          !convert from mixing ratio [kg/kg] to ratio of mass of tracer to total mass[kg/kg]
+          qtrc_org(:,:,:,:,I_QC) = real( read_zxy(:,:,:,:), kind=RP)/( 1.0_RP + real( read_zxy(:,:,:,:), kind=RP) )
 
           call ExternalFileRead( read_zxy(:,:,:,:), BASENAME, "QRAIN",  ts, te, myrank, mdlid, single=.true. )
-          qtrc_org(:,:,:,:,I_QR) = real( read_zxy(:,:,:,:), kind=RP )
+          !convert from mixing ratio [kg/kg] to ratio of mass of tracer to total mass[kg/kg]
+          qtrc_org(:,:,:,:,I_QR) = real( read_zxy(:,:,:,:), kind=RP)/( 1.0_RP + real( read_zxy(:,:,:,:), kind=RP) )
 
           call ExternalFileRead( read_zxy(:,:,:,:), BASENAME, "QICE",   ts, te, myrank, mdlid, single=.true. )
-          qtrc_org(:,:,:,:,I_QI) = real( read_zxy(:,:,:,:), kind=RP )
+          !convert from mixing ratio [kg/kg] to ratio of mass of tracer to total mass[kg/kg]
+          qtrc_org(:,:,:,:,I_QI) = real( read_zxy(:,:,:,:), kind=RP)/( 1.0_RP + real( read_zxy(:,:,:,:), kind=RP) )
 
           call ExternalFileRead( read_zxy(:,:,:,:), BASENAME, "QSNOW",  ts, te, myrank, mdlid, single=.true. )
-          qtrc_org(:,:,:,:,I_QS) = real( read_zxy(:,:,:,:), kind=RP )
+          !convert from mixing ratio [kg/kg] to ratio of mass of tracer to total mass[kg/kg]
+          qtrc_org(:,:,:,:,I_QS) = real( read_zxy(:,:,:,:), kind=RP)/( 1.0_RP + real( read_zxy(:,:,:,:), kind=RP) )
 
           call ExternalFileRead( read_zxy(:,:,:,:), BASENAME, "QGRAUP", ts, te, myrank, mdlid, single=.true. )
-          qtrc_org(:,:,:,:,I_QG) = real( read_zxy(:,:,:,:), kind=RP )
+          !convert from mixing ratio [kg/kg] to ratio of mass of tracer to total mass[kg/kg]
+          qtrc_org(:,:,:,:,I_QG) = real( read_zxy(:,:,:,:), kind=RP)/( 1.0_RP + real( read_zxy(:,:,:,:), kind=RP) )
        endif
 
        if( trim(mptype_parent)=='double' ) then
@@ -2306,7 +2313,8 @@ contains
 
        basename = "ss_q2m"//trim(basename_num)
        call ExternalFileRead( read3DT(:,:,:,:), trim(basename), "ss_q2m", start_step, end_step, myrank, iNICAM, single=.true. )
-       qsfc_org(:,:,:,I_QV) = real( read3DT(1,:,:,:), kind=RP )
+       !convert from mixing ratio [kg/kg] to ratio of mass of tracer to total mass[kg/kg]
+       qsfc_org(:,:,:,I_QV) = real( read3DT(1,:,:,:), kind=RP )/( 1.0_RP + real( read3DT(1,:,:,:), kind=RP ) )
     endif
     call COMM_bcast( psfc_org(:,:,:),                 dims(1), dims(2), nt )
     call COMM_bcast( tsfc_org(:,:,:),                 dims(1), dims(2), nt )
@@ -2342,7 +2350,8 @@ contains
     if( do_read ) then
        basename = "ms_qv"//trim(basename_num)
        call ExternalFileRead( read4D(:,:,:,:), trim(basename), "ms_qv", start_step, end_step, myrank, iNICAM, single=.true. )
-       qtrc_org(:,:,:,:,I_QV) = real( read4D(:,:,:,:), kind=RP )
+       !convert from mixing ratio [kg/kg] to ratio of mass of tracer to total mass[kg/kg]
+       qtrc_org(:,:,:,:,I_QV) = real( read4D(:,:,:,:), kind=RP )/( 1.0_RP + real( read4D(:,:,:,:), kind=RP ) )
     endif
     call COMM_bcast( qtrc_org(:,:,:,:,I_QV), dims(3), dims(1), dims(2), nt )
 
