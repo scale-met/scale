@@ -2313,8 +2313,7 @@ contains
 
        basename = "ss_q2m"//trim(basename_num)
        call ExternalFileRead( read3DT(:,:,:,:), trim(basename), "ss_q2m", start_step, end_step, myrank, iNICAM, single=.true. )
-       !convert from mixing ratio [kg/kg] to ratio of mass of tracer to total mass[kg/kg]
-       qsfc_org(:,:,:,I_QV) = real( read3DT(1,:,:,:), kind=RP )/( 1.0_RP + real( read3DT(1,:,:,:), kind=RP ) )
+       qsfc_org(:,:,:,I_QV) = real( read3DT(1,:,:,:), kind=RP )
     endif
     call COMM_bcast( psfc_org(:,:,:),                 dims(1), dims(2), nt )
     call COMM_bcast( tsfc_org(:,:,:),                 dims(1), dims(2), nt )
@@ -2350,8 +2349,7 @@ contains
     if( do_read ) then
        basename = "ms_qv"//trim(basename_num)
        call ExternalFileRead( read4D(:,:,:,:), trim(basename), "ms_qv", start_step, end_step, myrank, iNICAM, single=.true. )
-       !convert from mixing ratio [kg/kg] to ratio of mass of tracer to total mass[kg/kg]
-       qtrc_org(:,:,:,:,I_QV) = real( read4D(:,:,:,:), kind=RP )/( 1.0_RP + real( read4D(:,:,:,:), kind=RP ) )
+       qtrc_org(:,:,:,:,I_QV) = real( read4D(:,:,:,:), kind=RP )
     endif
     call COMM_bcast( qtrc_org(:,:,:,:,I_QV), dims(3), dims(1), dims(2), nt )
 
