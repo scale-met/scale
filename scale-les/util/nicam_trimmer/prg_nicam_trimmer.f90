@@ -687,7 +687,7 @@ contains
     do i = 1,nx
        if(imask(i,j)==0)then  ! sea : not missing value
            newdata(i,j) = data(i,j)
-           cycle 
+           cycle
        else
 
         !-------------------
@@ -818,21 +818,10 @@ contains
            imaskr(i,j) = 0
         else
           newdata(i,j) = data(i,j)
-        endif 
+        endif
 
        endif ! sea/land
 
-       if((i==7).and.(j==112))then
-         print *,data(i,j),newdata(i,j),lsmask(i,j),imask(i,j)
-         print *,flag(1),imask(i-1,j-1),lsmask(i-1,j-1),xdist(1),ydata(1)
-         print *,flag(2),imask(i,j-1),lsmask(i,j-1),xdist(2),ydata(2)
-         print *,flag(3),imask(i+1,j-1),lsmask(i+1,j-1),xdist(3),ydata(3)
-         print *,flag(4),imask(i-1,j),lsmask(i-1,j),xdist(4),ydata(4)
-         print *,flag(5),imask(i+1,j),lsmask(i+1,j),xdist(5),ydata(5)
-         print *,flag(6),imask(i-1,j+1),lsmask(i-1,j+1),xdist(6),ydata(6)
-         print *,flag(7),imask(i,j+1),lsmask(i,j+11),xdist(7),ydata(7)
-         print *,flag(8),imask(i+1,j+1),lsmask(i+1,j+11),xdist(8),ydata(8)
-       endif
     enddo
     enddo
 

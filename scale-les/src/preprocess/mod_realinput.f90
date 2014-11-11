@@ -86,6 +86,7 @@ module mod_realinput
   private :: InputSurfaceWRF
   private :: InputSurfaceNICAM
   private :: latlonz_interporation_fact
+  private :: interp_sst_inland
   private :: diagnose_number_concentration
   private :: haversine
 
@@ -3044,6 +3045,7 @@ contains
     real(RP), allocatable :: lon_ORG(:,:,:)
     real(RP), allocatable :: zs_org(:,:,:,:)
     real(RP), allocatable :: dzs_org(:,:)
+    real(RP), allocatable :: landmask(:,:)
 
     real(SP), allocatable :: dummy_2D(:,:)       ! for WRF restart file
     real(SP), allocatable :: dummy_3D(:,:,:)     ! for WRF restart file
@@ -3074,6 +3076,7 @@ contains
     allocate( jgrd(IA,JA,itp_nh) )
     allocate( kgrd(LKMAX,IA,JA,itp_nh,itp_nv) )
 
+    allocate( landmask(dims(2),dims(3)) )
     allocate( org_3D(dims(2),dims(3),tcount) )
     allocate( org_4D(dims(7),dims(2),dims(3),tcount) )
     allocate( lat_org(dims(2),dims(3),tcount) )
@@ -3186,6 +3189,20 @@ contains
     ! --- not available; convert method is not found
     qvef(:,:) = 0.0_DP
 
+    ! land mask (1:land, 0:water)
+    if( do_read ) then
+       call ExternalFileRead( dummy_3D(:,:,:),                             &
+                      BASENAME, "LANDMASK",  1, tcount, myrank, mdlid, single=.true. )
+       org_3D(:,:,:) = dummy_3D(:,:,:)
+    endif
+    if( serial ) call COMM_bcast( org_3D(:,:,:), dims(2),dims(3),tcount )
+    n = 1
+    do j = 1, dims(3)
+    do i = 1, dims(2)
+       landmask(i,j) =  org_3D(i,j,n)
+    enddo
+    enddo
+
     ! sea surface temperature [K]
     if( do_read ) then
        call ExternalFileRead( dummy_3D(:,:,:),                             &
@@ -3193,6 +3210,7 @@ contains
        org_3D(:,:,:) = dummy_3D(:,:,:)
     endif
     if( serial ) call COMM_bcast( org_3D(:,:,:), dims(2),dims(3),tcount )
+    call interp_sst_inland(org_3D(:,:,:),landmask,dims(2),dims(3),tcount)
     n = 1
     do j = 1, JA
     do i = 1, IA
@@ -3219,7 +3237,8 @@ contains
     enddo
 
     ust(:,:) = lst(:,:)
-    sst(:,:) = lst(:,:)
+    !sst(:,:) = lst(:,:)
+    sst(:,:) = tw(:,:)
 
     ! ALBEDO [-]
     if( do_read ) then
@@ -3332,6 +3351,7 @@ contains
     deallocate( dummy_4D )
     deallocate( org_3D )
     deallocate( org_4D )
+    deallocate( landmask )
 
     deallocate( lat_org )
     deallocate( lon_org )
@@ -3890,6 +3910,158 @@ contains
 
     return
   end subroutine latlonz_interporation_fact
+
+  !-----------------------------------------------------------------------------
+  subroutine interp_sst_inland( &
+      data,      & ! (inout)
+      lsmask,    & ! (in)
+      nx,        & ! (in)
+      ny,        & ! (in)
+      tcount     & ! (in)
+      )
+    use scale_const, only: &
+       EPS => CONST_EPS
+    implicit none
+    real(RP), intent(inout) :: data(:,:,:)
+    real(RP), intent(in)    :: lsmask(:,:)
+    integer,  intent(in)    :: nx
+    integer,  intent(in)    :: ny
+    integer,  intent(in)    :: tcount
+
+    integer, allocatable    :: imask(:,:),imaskr(:,:)
+    real(RP),allocatable    :: newdata(:,:)
+    real(RP)                :: flag(8)
+    real(RP)                :: ydata(8)
+    real(RP)                :: dd
+
+    integer :: i, j, k, ii, jj, kk ,n
+
+    !---------------------------------------------------------------------------
+    allocate( imask(nx,ny),imaskr(nx,ny) )
+    allocate( newdata(nx,ny)             )
+    newdata = 0.0_RP
+
+    ! make flag of land/sea
+    do j = 1,ny
+    do i = 1,nx
+       if( abs(lsmask(i,j)-1.0_RP) < EPS )then
+          imask(i,j) = 1    ! land data
+       else
+          imask(i,j) = 0    ! sea data
+       endif
+    enddo
+    enddo
+
+    do n = 1,tcount
+
+    imaskr = imask
+    do kk = 1,20
+    do j = 1,ny
+    do i = 1,nx
+       if(imask(i,j)==0)then  ! sea : not missing value
+           newdata(i,j) = data(i,j,n)
+           cycle
+       else
+
+        !-------------------
+        ! missing value
+        !-------------------
+        ! check data of neighbor grid
+        !-------------------
+        ! flag(i,j,4)
+        !-------------------
+        ! 6----7----8
+        ! |    |    |
+        ! 4--(i,j)--5
+        ! |    |    |
+        ! 1----2----3
+        !-------------------
+        flag    = 0.0_RP
+        ydata   = 0.0_RP
+        if((i==1).and.(j==1))then
+           if(imask(i+1,j  )==0) flag(5)=1.0_RP
+           if(imask(i,  j+1)==0) flag(7)=1.0_RP
+           if(imask(i+1,j+1)==0) flag(8)=1.0_RP
+        else if((i==nx).and.(j==1))then
+           if(imask(i-1,j  )==0) flag(4)=1.0_RP
+           if(imask(i-1,j+1)==0) flag(6)=1.0_RP
+           if(imask(i,  j+1)==0) flag(7)=1.0_RP
+        else if((i==1).and.(j==ny))then
+           if(imask(i,  j-1)==0) flag(2)=1.0_RP
+           if(imask(i+1,j-1)==0) flag(3)=1.0_RP
+           if(imask(i+1,j  )==0) flag(5)=1.0_RP
+        else if((i==nx).and.(j==ny))then
+           if(imask(i-1,j-1)==0) flag(1)=1.0_RP
+           if(imask(i,  j-1)==0) flag(2)=1.0_RP
+           if(imask(i-1,j  )==0) flag(4)=1.0_RP
+        else if(i==1)then
+           if(imask(i,  j-1)==0) flag(2)=1.0_RP
+           if(imask(i+1,j-1)==0) flag(3)=1.0_RP
+           if(imask(i+1,j  )==0) flag(5)=1.0_RP
+           if(imask(i,  j+1)==0) flag(7)=1.0_RP
+           if(imask(i+1,j+1)==0) flag(8)=1.0_RP
+        else if(i==nx)then
+           if(imask(i-1,j-1)==0) flag(1)=1.0_RP
+           if(imask(i,  j-1)==0) flag(2)=1.0_RP
+           if(imask(i-1,j  )==0) flag(4)=1.0_RP
+           if(imask(i-1,j+1)==0) flag(6)=1.0_RP
+           if(imask(i,  j+1)==0) flag(7)=1.0_RP
+        else if(j==1)then
+           if(imask(i-1,j  )==0) flag(4)=1.0_RP
+           if(imask(i+1,j  )==0) flag(5)=1.0_RP
+           if(imask(i-1,j+1)==0) flag(6)=1.0_RP
+           if(imask(i,  j+1)==0) flag(7)=1.0_RP
+           if(imask(i+1,j+1)==0) flag(8)=1.0_RP
+        else if(j==ny)then
+           if(imask(i-1,j-1)==0) flag(1)=1.0_RP
+           if(imask(i,  j-1)==0) flag(2)=1.0_RP
+           if(imask(i+1,j-1)==0) flag(3)=1.0_RP
+           if(imask(i-1,j  )==0) flag(4)=1.0_RP
+           if(imask(i+1,j  )==0) flag(5)=1.0_RP
+        else
+           if(imask(i-1,j-1)==0) flag(1)=1.0_RP
+           if(imask(i,  j-1)==0) flag(2)=1.0_RP
+           if(imask(i+1,j-1)==0) flag(3)=1.0_RP
+           if(imask(i-1,j  )==0) flag(4)=1.0_RP
+           if(imask(i+1,j  )==0) flag(5)=1.0_RP
+           if(imask(i-1,j+1)==0) flag(6)=1.0_RP
+           if(imask(i,  j+1)==0) flag(7)=1.0_RP
+           if(imask(i+1,j+1)==0) flag(8)=1.0_RP
+        endif
+
+        if(int(sum(flag(:)))>=3)then  ! coast grid : interpolate
+           dd = 0.0_RP
+           newdata(i,j) = 0.0_RP
+           if(int(flag(1))==1) newdata(i,j) = newdata(i,j) + data(i-1,j-1,n)
+           if(int(flag(2))==1) newdata(i,j) = newdata(i,j) + data(i,j-1,n)
+           if(int(flag(3))==1) newdata(i,j) = newdata(i,j) + data(i+1,j-1,n)
+           if(int(flag(4))==1) newdata(i,j) = newdata(i,j) + data(i-1,j,n)
+           if(int(flag(5))==1) newdata(i,j) = newdata(i,j) + data(i+1,j,n)
+           if(int(flag(6))==1) newdata(i,j) = newdata(i,j) + data(i-1,j+1,n)
+           if(int(flag(7))==1) newdata(i,j) = newdata(i,j) + data(i,j+1,n)
+           if(int(flag(8))==1) newdata(i,j) = newdata(i,j) + data(i+1,j+1,n)
+
+           dd = sum(flag(:))
+           newdata(i,j) = newdata(i,j) / dd
+
+           imaskr(i,j) = 0
+        else
+          newdata(i,j) = data(i,j,n)
+        endif
+
+       endif ! sea/land
+
+    enddo
+    enddo
+
+     imask(:,:) = imaskr(:,:)
+     data(:,:,n)  = newdata(:,:)
+    enddo ! kk
+
+    enddo ! n
+
+    return
+  end subroutine interp_sst_inland
 
   !-----------------------------------------------------------------------------
   subroutine diagnose_number_concentration( &

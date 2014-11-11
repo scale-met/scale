@@ -4,7 +4,7 @@
 #   2009/10/26 --- Ryuji Yoshida.
 #   2014/07/08 --- Tsuyoshi Yamaura
 #-----------------------------------------
-dir="/data0/scale_database/WRF_output/14km_exp/FNL.10hPa"
+dir="${SCALE_DB}/WRF_output/14km_exp/FNL.10hPa"
 ftype='out'
 domain='1'
 #
