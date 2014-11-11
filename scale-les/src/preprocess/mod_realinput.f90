@@ -1527,26 +1527,33 @@ contains
        tsfc_org (:,:,:) = real( read_xy(:,:,:), kind=RP )
 
        call ExternalFileRead( read_xy(:,:,:),    BASENAME, "Q2",      ts, te, myrank, mdlid, single=.true.               )
-       qsfc_org (:,:,:,I_QV) = real( read_xy(:,:,:), kind=RP )
+       !convert from mixing ratio [kg/kg] to ratio of mass of tracer to total mass[kg/kg]
+       qsfc_org (:,:,:,I_QV) = real(read_xy(:,:,:),kind=RP)/( 1.0_RP + real(read_xy(:,:,:),kind=RP) )
 
        call ExternalFileRead( read_zxy(:,:,:,:), BASENAME, "QVAPOR",  ts, te, myrank, mdlid, single=.true. )
-       qtrc_org(:,:,:,:,I_QV) = real( read_zxy(:,:,:,:), kind=RP )
+       !convert from mixing ratio [kg/kg] to ratio of mass of tracer to total mass[kg/kg]
+       qtrc_org(:,:,:,:,I_QV) = real(read_zxy(:,:,:,:),kind=RP)/( 1.0_RP + real(read_zxy(:,:,:,:),kind=RP) )
 
        if( trim(mptype_parent)/='dry' ) then
           call ExternalFileRead( read_zxy(:,:,:,:), BASENAME, "QCLOUD", ts, te, myrank, mdlid, single=.true. )
-          qtrc_org(:,:,:,:,I_QC) = real( read_zxy(:,:,:,:), kind=RP )
+          !convert from mixing ratio [kg/kg] to ratio of mass of tracer to total mass[kg/kg]
+          qtrc_org(:,:,:,:,I_QC) = real( read_zxy(:,:,:,:), kind=RP)/( 1.0_RP + real( read_zxy(:,:,:,:), kind=RP) )
 
           call ExternalFileRead( read_zxy(:,:,:,:), BASENAME, "QRAIN",  ts, te, myrank, mdlid, single=.true. )
-          qtrc_org(:,:,:,:,I_QR) = real( read_zxy(:,:,:,:), kind=RP )
+          !convert from mixing ratio [kg/kg] to ratio of mass of tracer to total mass[kg/kg]
+          qtrc_org(:,:,:,:,I_QR) = real( read_zxy(:,:,:,:), kind=RP)/( 1.0_RP + real( read_zxy(:,:,:,:), kind=RP) )
 
           call ExternalFileRead( read_zxy(:,:,:,:), BASENAME, "QICE",   ts, te, myrank, mdlid, single=.true. )
-          qtrc_org(:,:,:,:,I_QI) = real( read_zxy(:,:,:,:), kind=RP )
+          !convert from mixing ratio [kg/kg] to ratio of mass of tracer to total mass[kg/kg]
+          qtrc_org(:,:,:,:,I_QI) = real( read_zxy(:,:,:,:), kind=RP)/( 1.0_RP + real( read_zxy(:,:,:,:), kind=RP) )
 
           call ExternalFileRead( read_zxy(:,:,:,:), BASENAME, "QSNOW",  ts, te, myrank, mdlid, single=.true. )
-          qtrc_org(:,:,:,:,I_QS) = real( read_zxy(:,:,:,:), kind=RP )
+          !convert from mixing ratio [kg/kg] to ratio of mass of tracer to total mass[kg/kg]
+          qtrc_org(:,:,:,:,I_QS) = real( read_zxy(:,:,:,:), kind=RP)/( 1.0_RP + real( read_zxy(:,:,:,:), kind=RP) )
 
           call ExternalFileRead( read_zxy(:,:,:,:), BASENAME, "QGRAUP", ts, te, myrank, mdlid, single=.true. )
-          qtrc_org(:,:,:,:,I_QG) = real( read_zxy(:,:,:,:), kind=RP )
+          !convert from mixing ratio [kg/kg] to ratio of mass of tracer to total mass[kg/kg]
+          qtrc_org(:,:,:,:,I_QG) = real( read_zxy(:,:,:,:), kind=RP)/( 1.0_RP + real( read_zxy(:,:,:,:), kind=RP) )
        endif
 
        if( trim(mptype_parent)=='double' ) then
