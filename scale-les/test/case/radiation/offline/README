@@ -1,0 +1,61 @@
+This test case conducts offline calculation of radiation scheme using input data. Below variables are required for calculation as input data. The data format of input data is 4-byte binary (grads format).
+
+---------------------------------------------------
+variable,   file name,            coordinate
+---------------------------------------------------
+DENS        input/DENS.grd        model level(3D)
+RHOT        input/RHOT.grd        model level(3D)
+TEMP        input/T.grd           model level(3D)
+PRES        input/PRES.grd        model level(3D)
+QV          input/QV.grd          model level(3D)
+QC          input/QC.grd          model level(3D)
+QR          input/QR.grd          model level(3D)
+QI          input/QI.grd          model level(3D)
+QS          input/QS.grd          model level(3D)
+QG          input/QG.grd          model level(3D)
+SFC_TEMP    input/SFC_TEMP.grd    surface(2D)
+SFC_ALB_LW  input/SFC_ALB_LW.grd  surface(2D)
+SFC_ALB_SW  input/SFC_ALB_SW.grd  surface(2D)
+---------------------------------------------------
+
+
+1) Prepare input data for a radiation scheme. You can use sample programs in "input" directory.
+
+   input/get_inputdata.sh
+   input/make_grads_file.f90
+
+If you use these sample programs, the history file (history.peXXXXXX.nc) must not include output data in boundary region. Namely, please set "HIST_BND" to "false" in run.conf when the calculation for preparing input data were conducted.
+
+&PARAM_HIST
+ HIST_BND = .false.,
+/
+
+
+2) Set below parameters of run.conf and init.conf in this directory according to your input data format. 
+
+&PARAM_INDEX
+ KMAX 
+ IMAX 
+ JMAX 
+/
+
+&PARAM_GRID
+ DX 
+ DY 
+ FZ(:) or DZ
+/
+
+&PARAM_ATMOS
+  ATMOS_PHY_RD_TYPE = "MSTRNX",  or "WRF",
+/
+
+&PARAM_MAPPROJ
+ MPRJ_basepoint_lon
+ MPRJ_basepoint_lat
+/
+
+&PARAM_USER
+ USER_do   = .true.,
+ ITIME     = 1,        #<- record numbar of input data you want to use
+/
+
