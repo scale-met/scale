@@ -4,7 +4,7 @@
 #   2009/10/26 --- Ryuji Yoshida.
 #   2014/07/08 --- Tsuyoshi Yamaura
 #-----------------------------------------
-dir='/work/ryoshida/scale/test/dev1111/scale-les/util/nicam_trimmer/jw06'
+dir='/data2/scale_database/NICAM_output/jw06'
 ftype='peall'
 #
 #-----------------------------------------
