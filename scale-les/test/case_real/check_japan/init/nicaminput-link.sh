@@ -4,9 +4,7 @@
 #   2009/10/26 --- Ryuji Yoshida.
 #   2014/07/08 --- Tsuyoshi Yamaura
 #-----------------------------------------
-dir='/work/ryoshida/scale/initdata/nicam/amip/trimmed'
-#dir='../../../../util/nicam_trimmer/output'
-#dir='/data1/adachi/scale_develop/boundary_v20141015/scale/scale-les/util/nicam_trimmer/output'
+dir='/data2/scale_database/NICAM_output/trimmed'
 ftype='peall'
 #
 dt=86400
