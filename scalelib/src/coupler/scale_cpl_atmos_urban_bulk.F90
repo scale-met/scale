@@ -606,7 +606,8 @@ contains
     ! Total Fluxes from Urban Canopy
     !-----------------------------------------------------------
 
-     FLXUV  = ( R*CDR + RW*CDC ) * UA * UA
+     ! comment out below line to avoid using unintialized value
+     !FLXUV  = ( R*CDR + RW*CDC ) * UA * UA
      SH     =  R*SHR  + W*SHB  + RW*SHG               ! Sensible heat flux [W/m/m]
      LH     =  R*LHR  + W*LHB  + RW*LHG               ! Latent heat flux [W/m/m]
      GHFLX  =  -1.0_RP * ( R*GHR + W*GHB + RW*GHG )
@@ -637,9 +638,10 @@ contains
      RUP = (LDN - LUP) * RX - LNET
      ALBD_LW_grid = LUP / LDN
 
-     UST = sqrt( FLXUV )              ! u* [m/s]
-     TST = -SH / RHOO / CPdry / UST   ! T* [K]
-     QST = -LH / RHOO / LHV / UST     ! q* [-]
+     ! comment out below three lines to avoid using unintialized value
+     !UST = sqrt( FLXUV )              ! u* [m/s]
+     !TST = -SH / RHOO / CPdry / UST   ! T* [K]
+     !QST = -LH / RHOO / LHV / UST     ! q* [-]
 
     !-----------------------------------------------------------
     !  diagnostic GRID AVERAGED TS from upward logwave

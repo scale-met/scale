@@ -1182,45 +1182,80 @@ contains
        endif
 
        if ( BND_W ) then
-          !$omp parallel do private(j,k) OMP_SCHEDULE_ collapse(2)
-          do j = JS, JE
-          do k = KS, KE
-             qflx_hi(k,IS-1,j,XDIR) = mflx_hi(k,IS-1,j,XDIR) &
-                  * ( FACT_N * ( DAMP_QTRC(k,IS  ,j,iq)+DAMP_QTRC(k,IS-1,j,iq) ) &
-                    + FACT_F * ( DAMP_QTRC(k,IS+1,j,iq)+DAMP_QTRC(k,IS-2,j,iq) ) )
-          enddo
-          enddo
+          if ( iq <= BND_QA ) then
+             !$omp parallel do private(j,k) OMP_SCHEDULE_ collapse(2)
+             do j = JS, JE
+             do k = KS, KE
+                qflx_hi(k,IS-1,j,XDIR) = mflx_hi(k,IS-1,j,XDIR) &
+                     * ( FACT_N * ( DAMP_QTRC(k,IS  ,j,iq)+DAMP_QTRC(k,IS-1,j,iq) ) &
+                       + FACT_F * ( DAMP_QTRC(k,IS+1,j,iq)+DAMP_QTRC(k,IS-2,j,iq) ) )
+             enddo
+             enddo
+          else
+             !$omp parallel do private(j,k) OMP_SCHEDULE_ collapse(2)
+             do j = JS, JE
+             do k = KS, KE
+                qflx_hi(k,IS-1,j,XDIR) = 0.0_RP
+             enddo
+             enddo
+          end if
        end if
        if ( BND_E ) then
-          !$omp parallel do private(j,k) OMP_SCHEDULE_ collapse(2)
-          do j = JS, JE
-          do k = KS, KE
-             qflx_hi(k,IE,j,XDIR) = mflx_hi(k,IE,j,XDIR) &
-                  * ( FACT_N * ( DAMP_QTRC(k,IE+1,j,iq)+DAMP_QTRC(k,IE  ,j,iq) ) &
-                    + FACT_F * ( DAMP_QTRC(k,IE+2,j,iq)+DAMP_QTRC(k,IE-1,j,iq) ) )
-          enddo
-          enddo
+          if ( iq <= BND_QA ) then
+             !$omp parallel do private(j,k) OMP_SCHEDULE_ collapse(2)
+             do j = JS, JE
+             do k = KS, KE
+                qflx_hi(k,IE,j,XDIR) = mflx_hi(k,IE,j,XDIR) &
+                     * ( FACT_N * ( DAMP_QTRC(k,IE+1,j,iq)+DAMP_QTRC(k,IE  ,j,iq) ) &
+                       + FACT_F * ( DAMP_QTRC(k,IE+2,j,iq)+DAMP_QTRC(k,IE-1,j,iq) ) )
+             enddo
+             enddo
+          else
+             !$omp parallel do private(j,k) OMP_SCHEDULE_ collapse(2)
+             do j = JS, JE
+             do k = KS, KE
+                qflx_hi(k,IE,j,XDIR) = 0.0_RP
+             enddo
+             enddo
+          end if
        end if
        if ( BND_S ) then
-          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-          do i = IS, IE
-          do k = KS, KE
-             mflx_hi(k,i,JS-1,YDIR) = GSQRT(k,i,JS-1,I_XVZ) * MOMY0(k,i,JS-1)
-             tflx_hi(k,i,JS-1,YDIR) = mflx_hi(k,i,JS-1,YDIR) &
-                  * ( FACT_N * ( DAMP_QTRC(k,i,JS  ,iq)+DAMP_QTRC(k,i,JS-1,iq) ) &
-                    + FACT_F * ( DAMP_QTRC(k,i,JS+1,iq)+DAMP_QTRC(k,i,JS-2,iq) ) )
-          enddo
-          enddo
+          if ( iq <= BND_QA ) then
+             !$omp parallel do private(i,k) OMP_SCHEDULE_ collapse(2)
+             do i = IS, IE
+             do k = KS, KE
+                qflx_hi(k,i,JS-1,YDIR) = mflx_hi(k,i,JS-1,YDIR) &
+                     * ( FACT_N * ( DAMP_QTRC(k,i,JS  ,iq)+DAMP_QTRC(k,i,JS-1,iq) ) &
+                       + FACT_F * ( DAMP_QTRC(k,i,JS+1,iq)+DAMP_QTRC(k,i,JS-2,iq) ) )
+             enddo
+             enddo
+          else
+             !$omp parallel do private(j,k) OMP_SCHEDULE_ collapse(2)
+             do j = JS, JE
+             do k = KS, KE
+                qflx_hi(k,i,JS-1,YDIR) = 0.0_RP
+             enddo
+             enddo
+          end if
        end if
        if ( BND_N ) then
-          !$omp parallel do private(i,k) OMP_SCHEDULE_ collapse(2)
-          do i = IS, IE
-          do k = KS, KE
-             qflx_hi(k,i,JE,YDIR) = mflx_hi(k,i,JE,YDIR) &
-                  * ( FACT_N * ( DAMP_QTRC(k,i,JE+1,iq)+DAMP_QTRC(k,i,JE  ,iq) ) &
-                    + FACT_F * ( DAMP_QTRC(k,i,JE+2,iq)+DAMP_QTRC(k,i,JE-1,iq) ) )
-          enddo
-          enddo
+          if ( iq <= BND_QA ) then
+             !$omp parallel do private(i,k) OMP_SCHEDULE_ collapse(2)
+             do i = IS, IE
+             do k = KS, KE
+                qflx_hi(k,i,JE,YDIR) = mflx_hi(k,i,JE,YDIR) &
+                     * ( FACT_N * ( DAMP_QTRC(k,i,JE+1,iq)+DAMP_QTRC(k,i,JE  ,iq) ) &
+                       + FACT_F * ( DAMP_QTRC(k,i,JE+2,iq)+DAMP_QTRC(k,i,JE-1,iq) ) )
+             enddo
+             enddo
+          else
+             !$omp parallel do private(j,k) OMP_SCHEDULE_ collapse(2)
+             do j = JS, JE
+             do k = KS, KE
+                qflx_hi(k,i,JE,YDIR) = 0.0_RP
+             enddo
+             enddo
+          end if
        end if
 
        do JJS = JS, JE, JBLOCK
