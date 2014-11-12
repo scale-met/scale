@@ -527,10 +527,12 @@ contains
 
     character(len=H_LONG) :: LU100M_IN_CATALOGUE = '' !< metadata files for LU100M
     character(len=H_LONG) :: LU100M_IN_DIR       = '' !< directory contains LU100M files (GrADS format)
+    real(RP)              :: limit_urban_fraction = 1.0_RP !< fraction limiter for urban area
 
     NAMELIST / PARAM_CNVLANDUSE_LU100M / &
        LU100M_IN_CATALOGUE, &
-       LU100M_IN_DIR
+       LU100M_IN_DIR,       &
+       limit_urban_fraction
 
     ! data catalogue list
     integer, parameter    :: TILE_nlim = 1000
@@ -845,6 +847,19 @@ contains
 
     enddo
     enddo
+
+    if ( limit_urban_fraction < 1.0_RP ) then
+       do j = JS, JE
+       do i = IS, IE
+          if ( LANDUSE_frac_urban(i,j) == 1.0_RP ) then ! if no PFT, set to grassland
+             LANDUSE_frac_PFT (i,j,:) = 0.0_RP
+             LANDUSE_frac_PFT (i,j,1) = 1.0_RP
+             LANDUSE_index_PFT(i,j,:) = 2
+          endif
+          LANDUSE_frac_urban(i,j) = min( LANDUSE_frac_urban(i,j), limit_urban_fraction )
+       enddo
+       enddo
+    endif
 
     return
   end subroutine CNVLANDUSE_LU100M
