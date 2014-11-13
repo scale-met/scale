@@ -63,7 +63,7 @@ module scale_grid_nest
   integer,  public              :: DAUGHTER_JA(2)       !< daughter max number in y-direction (with halo)
   integer,  public              :: DAUGHTER_LKMAX(2)    !< daughter max number in lz-direction
   real(DP), public              :: DAUGHTER_DTSEC(2)    !< daughter DT [sec]
-  real(DP), public              :: DAUGHTER_NSTEP(2)    !< daughter steps [number]
+  integer,  public              :: DAUGHTER_NSTEP(2)    !< daughter steps [number]
 
   integer,  public              :: PRNT_KS(2)           !< start index in z-direction in parent
   integer,  public              :: PRNT_KE(2)           !< end index   in z-direction in parent
