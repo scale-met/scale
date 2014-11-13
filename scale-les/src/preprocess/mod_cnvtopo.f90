@@ -278,6 +278,13 @@ contains
     endif
     if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_CNVTOPO_GTOPO30)
 
+    do j = JS, JE
+    do i = IS, IE
+       area_sum (i,j) = 0.0_RP
+       TOPO_Zsfc(i,j) = 0.0_RP
+    enddo
+    enddo
+
     DOMAIN_LATS = minval(REAL_LATY(:,:)) / D2R ! [rad->deg]
     DOMAIN_LATE = maxval(REAL_LATY(:,:)) / D2R ! [rad->deg]
     DOMAIN_LONS = minval(REAL_LONX(:,:)) / D2R ! [rad->deg]
