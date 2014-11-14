@@ -1,0 +1,28 @@
+## 
+## for initial file
+##
+
+  make_grads_initfile.f90 : Interactive use only.
+
+  The program requires following files in the current directory.
+    - init.conf
+    - init_00000000000.000.peXXXXXX.nc 
+
+
+## 
+## for history file
+##
+
+  make_grads_file.f90    : main program
+
+  You can choose interactive mode or silent mode by adding the following option.
+
+   Interactive mode :  " ./convine -i "
+   Silent mode      :  " ./convine -s "
+
+
+  The program requires following files.
+    - ${current directory}/namelist.in    # silent mode only
+    - ${path to directory of history files}/run.conf
+    - ${path to directory of history files}/history.peXXXXXX.nc 
+

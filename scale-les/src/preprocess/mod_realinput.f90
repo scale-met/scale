@@ -3189,7 +3189,7 @@ contains
 
     ! soil liquid water m3 m-3] (no wrfout-default)
     ! --- not available; appropriate convert method is not found
-    strg(:,:,:) = 0.0_DP
+    strg(:,:,:) = 0.15_DP
 
     ! accumulated surface evaporation [kg m-2]
     ! --- not available; convert method is not found
