@@ -749,8 +749,8 @@ contains
           advc =  0.5_RP * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) &
                 * ( ( GSQRT(KS,i  ,j,I_UYZ) * MOMX(KS,i  ,j) * (tke(KS,i+1,j)+tke(KS,i  ,j)) / MAPF(i  ,j,2,I_UY) &
                     - GSQRT(KS,i-1,j,I_UYZ) * MOMX(KS,i-1,j) * (tke(KS,i  ,j)+tke(KS,i-1,j)) / MAPF(i-1,j,2,I_UY) ) * RCDX(i) &
-                  + ( GSQRT(KS,i,j  ,I_XVZ) * MOMY(KS,i,j  ) * (tke(KS,i,j+1)+tke(i,i,j  )) / MAPF(i,j  ,1,I_XV) &
-                    - GSQRT(KS,i,j-1,I_XVZ) * MOMY(KS,i,j-1) * (tke(KS,i,j  )+tke(i,j,j-1)) / MAPF(i,j-1,1,I_XV) ) * RCDY(j) &
+                  + ( GSQRT(KS,i,j  ,I_XVZ) * MOMY(KS,i,j  ) * (tke(KS,i,j+1)+tke(KS,i,j  )) / MAPF(i,j  ,1,I_XV) &
+                    - GSQRT(KS,i,j-1,I_XVZ) * MOMY(KS,i,j-1) * (tke(KS,i,j  )+tke(KS,i,j-1)) / MAPF(i,j-1,1,I_XV) ) * RCDY(j) &
                   + ( ( J13G(KS+1,i,j,I_XYZ) * (MOMX(KS+1,i,j)+MOMX(KS+1,i-1,j)) * tke(KS+1,i,j) &
                       - J13G(KS  ,i,j,I_XYZ) * (MOMX(KS  ,i,j)+MOMX(KS  ,i-1,j)) * tke(KS  ,i,j) ) / MAPF(i,j,2,I_XY) &
                     + ( J23G(KS+1,i,j,I_XYZ) * (MOMY(KS+1,i,j)+MOMY(KS+1,i,j-1)) * tke(KS+1,i,j) &
@@ -771,8 +771,8 @@ contains
              advc =  0.5_RP * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) &
                 * ( ( GSQRT(k,i  ,j,I_UYZ) * MOMX(k,i  ,j) * (tke(k,i+1,j)+tke(k,i  ,j)) / MAPF(i  ,j,2,I_UY) &
                     - GSQRT(k,i-1,j,I_UYZ) * MOMX(k,i-1,j) * (tke(k,i  ,j)+tke(k,i-1,j)) / MAPF(i-1,j,2,I_UY) ) * RCDX(i) &
-                  + ( GSQRT(k,i,j  ,I_XVZ) * MOMY(k,i,j  ) * (tke(k,i,j+1)+tke(i,i,j  )) / MAPF(i,j  ,1,I_XV) &
-                    - GSQRT(k,i,j-1,I_XVZ) * MOMY(k,i,j-1) * (tke(k,i,j  )+tke(i,j,j-1)) / MAPF(i,j-1,1,I_XV) ) * RCDY(j) &
+                  + ( GSQRT(k,i,j  ,I_XVZ) * MOMY(k,i,j  ) * (tke(k,i,j+1)+tke(k,i,j  )) / MAPF(i,j  ,1,I_XV) &
+                    - GSQRT(k,i,j-1,I_XVZ) * MOMY(k,i,j-1) * (tke(k,i,j  )+tke(k,i,j-1)) / MAPF(i,j-1,1,I_XV) ) * RCDY(j) &
                   + ( ( J13G(k+1,i,j,I_XYZ) * (MOMX(k+1,i,j)+MOMX(k+1,i-1,j)) * tke(k+1,i,j) &
                       - J13G(k-1,i,j,I_XYZ) * (MOMX(k-1,i,j)+MOMX(k-1,i-1,j)) * tke(k-1,i,j) ) / MAPF(i,j,2,I_XY) &
                     + ( J23G(k+1,i,j,I_XYZ) * (MOMY(k+1,i,j)+MOMY(k+1,i,j-1)) * tke(k+1,i,j) &
@@ -793,8 +793,8 @@ contains
                * ( ( GSQRT(KE_PBL,i  ,j,I_UYZ) * MOMX(KE_PBL,i  ,j) * (tke(KE_PBL,i+1,j)+tke(KE_PBL,i  ,j)) / MAPF(i  ,j,2,I_UY) &
                    - GSQRT(KE_PBL,i-1,j,I_UYZ) * MOMX(KE_PBL,i-1,j) * (tke(KE_PBL,i  ,j)+tke(KE_PBL,i-1,j)) / MAPF(i-1,j,2,I_UY) ) &
                    * RCDX(i) &
-                 + ( GSQRT(KE_PBL,i,j  ,I_XVZ) * MOMY(KE_PBL,i,j  ) * (tke(KE_PBL,i,j+1)+tke(i,i,j  )) / MAPF(i,j  ,1,I_XV) &
-                   - GSQRT(KE_PBL,i,j-1,I_XVZ) * MOMY(KE_PBL,i,j-1) * (tke(KE_PBL,i,j  )+tke(i,j,j-1)) / MAPF(i,j-1,1,I_XV) ) &
+                 + ( GSQRT(KE_PBL,i,j  ,I_XVZ) * MOMY(KE_PBL,i,j  ) * (tke(KE_PBL,i,j+1)+tke(KE_PBL,i,j  )) / MAPF(i,j  ,1,I_XV) &
+                   - GSQRT(KE_PBL,i,j-1,I_XVZ) * MOMY(KE_PBL,i,j-1) * (tke(KE_PBL,i,j  )+tke(KE_PBL,i,j-1)) / MAPF(i,j-1,1,I_XV) ) &
                    * RCDY(j) &
                  + ( ( J13G(KE_PBL  ,i,j,I_XYZ) * (MOMX(KE_PBL  ,i,j)+MOMX(KE_PBL  ,i-1,j)) * tke(KE_PBL  ,i,j) &
                      - J13G(KE_PBL-1,i,j,I_XYZ) * (MOMX(KE_PBL-1,i,j)+MOMX(KE_PBL-1,i-1,j)) * tke(KE_PBL-1,i,j) ) &
