@@ -357,25 +357,31 @@ contains
 
     do n = ts, te
     do j = 1, JA
-    do i = 1, IA
+    do i = 1, IA-1
     do k = KS, KE
        buffer(k,i,j,n-ts+1) = 2.0_RP * MOMX(k,i,j,n) / ( DENS(k,i+1,j,n) + DENS(k,i,j,n) )
     end do
     end do
     end do
     end do
+    do n = ts, te
+       buffer(:,IA,:,n-ts+1) = buffer(:,IA-1,:,n-ts+1)
+    end do
     call FILEIO_write( buffer, basename, title,                 &
                        'VELX', 'Reference VELX', 'm/s', 'ZXYT', &
                        atmos_boundary_out_dtype, update_dt      )
 
     do n = ts, te
-    do j = 1, JA
+    do j = 1, JA-1
     do i = 1, IA
     do k = KS, KE
        buffer(k,i,j,n-ts+1) = 2.0_RP * MOMY(k,i,j,n) / ( DENS(k,i,j+1,n) + DENS(k,i,j,n) )
     end do
     end do
     end do
+    end do
+    do n = ts, te
+       buffer(:,:,JA,n-ts+1) = buffer(:,:,JA-1,n-ts+1)
     end do
     call FILEIO_write( buffer, basename, title,                 &
                        'VELY', 'Reference VELY', 'm/s', 'ZXYT', &
