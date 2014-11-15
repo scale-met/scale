@@ -1266,13 +1266,14 @@ contains
        DATR_JS,            &
        DATR_JE,            &
        PARENT_DTSEC,       &
-       PARENT_NSTEP
+       PARENT_NSTEP,       &
+       NESTQA => NEST_BND_QA
     implicit none
 
     integer, parameter  :: handle = 2
 
     real(RP) :: dummy1_p(PARENT_KA(handle),  PARENT_IA(handle),  PARENT_JA(handle))
-    real(RP) :: dummy2_p(PARENT_KA(handle),  PARENT_IA(handle),  PARENT_JA(handle),  BND_QA)
+    real(RP) :: dummy2_p(PARENT_KA(handle),  PARENT_IA(handle),  PARENT_JA(handle),  NESTQA)
 
     integer  :: i, j, k, iq
     !---------------------------------------------------------------------------
@@ -1282,44 +1283,51 @@ contains
     dummy1_p(:,:,:)   = 0.0_RP
     dummy2_p(:,:,:,:) = 0.0_RP
 
+    if ( NESTQA > BND_QA ) then
+       write(*,*) 'xxx ERROR: NEST_BND_QA exceeds BND_QA [initialize/ATMOS_BOUNDARY]'
+       write(*,*) 'xxx check consistency between'
+       write(*,*) '    ONLINE_BOUNDARY_USE_QHYD and ATMOS_BOUNDARY_USE_QHYD.'
+       call PRC_MPIstop
+    end if
+
     ! import data from parent domain
     boundary_timestep = 1
     if( IO_L ) write(IO_FID_LOG,*) '+++ BOUNDARY TIMESTEP NUMBER FOR INIT:', boundary_timestep
     if( IO_L ) write(IO_FID_LOG,*) '+++ waiting for communication accept from parent domain'
 
     call NEST_COMM_nestdown( handle,                                 &
-                             BND_QA,                                 &
+                             NESTQA,                                 &
                              dummy1_p(:,:,:),                        &   !(KA,IA,JA)
                              dummy1_p(:,:,:),                        &   !(KA,IA,JA)
                              dummy1_p(:,:,:),                        &   !(KA,IA,JA)
                              dummy1_p(:,:,:),                        &   !(KA,IA,JA)
                              dummy1_p(:,:,:),                        &   !(KA,IA,JA)
-                             dummy2_p(:,:,:,1:BND_QA),               &   !(KA,IA,JA,QA)
+                             dummy2_p(:,:,:,1:NESTQA),               &   !(KA,IA,JA,QA)
                              ATMOS_BOUNDARY_ref_DENS(:,:,:,1),       &   !(KA,IA,JA)
                              ATMOS_BOUNDARY_ref_VELZ(:,:,:,1),       &   !(KA,IA,JA)
                              ATMOS_BOUNDARY_ref_VELX(:,:,:,1),       &   !(KA,IA,JA)
                              ATMOS_BOUNDARY_ref_VELY(:,:,:,1),       &   !(KA,IA,JA)
                              ATMOS_BOUNDARY_ref_POTT(:,:,:,1),       &   !(KA,IA,JA)
-                             ATMOS_BOUNDARY_ref_QTRC(:,:,:,1:BND_QA,1) ) !(KA,IA,JA,QA)
+                             ATMOS_BOUNDARY_ref_QTRC(:,:,:,1:NESTQA,1) ) !(KA,IA,JA,QA)
 
     boundary_timestep = boundary_timestep + 1
     if( IO_L ) write(IO_FID_LOG,*) '+++ BOUNDARY TIMESTEP NUMBER FOR INIT:', boundary_timestep
     if( IO_L ) write(IO_FID_LOG,*) '+++ waiting for communication accept from parent domain'
 
     call NEST_COMM_nestdown( handle,                                 &
-                             BND_QA,                                 &
+                             NESTQA,                                 &
                              dummy1_p(:,:,:),                        &   !(KA,IA,JA)
                              dummy1_p(:,:,:),                        &   !(KA,IA,JA)
                              dummy1_p(:,:,:),                        &   !(KA,IA,JA)
                              dummy1_p(:,:,:),                        &   !(KA,IA,JA)
                              dummy1_p(:,:,:),                        &   !(KA,IA,JA)
-                             dummy2_p(:,:,:,1:BND_QA),               &   !(KA,IA,JA,QA)
+                             dummy2_p(:,:,:,1:NESTQA),               &   !(KA,IA,JA,QA)
                              ATMOS_BOUNDARY_ref_DENS(:,:,:,2),       &   !(KA,IA,JA)
                              ATMOS_BOUNDARY_ref_VELZ(:,:,:,2),       &   !(KA,IA,JA)
                              ATMOS_BOUNDARY_ref_VELX(:,:,:,2),       &   !(KA,IA,JA)
                              ATMOS_BOUNDARY_ref_VELY(:,:,:,2),       &   !(KA,IA,JA)
                              ATMOS_BOUNDARY_ref_POTT(:,:,:,2),       &   !(KA,IA,JA)
-                             ATMOS_BOUNDARY_ref_QTRC(:,:,:,1:BND_QA,2) ) !(KA,IA,JA,QA)
+                             ATMOS_BOUNDARY_ref_QTRC(:,:,:,1:NESTQA,2) ) !(KA,IA,JA,QA)
 
     do j  = 1, JA
     do i  = 1, IA
@@ -1347,7 +1355,7 @@ contains
        ATMOS_BOUNDARY_ref_VELY(KE+1:KA,  i,j,2) = ATMOS_BOUNDARY_ref_VELY(KE,i,j,2)
        ATMOS_BOUNDARY_ref_POTT(KE+1:KA,  i,j,2) = ATMOS_BOUNDARY_ref_POTT(KE,i,j,2)
 
-       do iq = 1, BND_QA
+       do iq = 1, NESTQA
           ATMOS_BOUNDARY_ref_QTRC(   1:KS-1,i,j,iq,1) = ATMOS_BOUNDARY_ref_QTRC(KS,i,j,iq,1)
           ATMOS_BOUNDARY_ref_QTRC(KE+1:KA,  i,j,iq,1) = ATMOS_BOUNDARY_ref_QTRC(KE,i,j,iq,1)
 
@@ -1369,9 +1377,9 @@ contains
     call COMM_vars8( ATMOS_BOUNDARY_ref_VELY(:,:,:,2),  9 )
     call COMM_vars8( ATMOS_BOUNDARY_ref_POTT(:,:,:,2), 10 )
 
-    do iq = 1, BND_QA
+    do iq = 1, NESTQA
        call COMM_vars8( ATMOS_BOUNDARY_ref_QTRC(:,:,:,iq,1), 10+iq        )
-       call COMM_vars8( ATMOS_BOUNDARY_ref_QTRC(:,:,:,iq,2), 10+iq+BND_QA )
+       call COMM_vars8( ATMOS_BOUNDARY_ref_QTRC(:,:,:,iq,2), 10+iq+NESTQA )
     end do
 
     call COMM_wait ( ATMOS_BOUNDARY_ref_DENS(:,:,:,1),  1, .false. )
@@ -1386,9 +1394,9 @@ contains
     call COMM_wait ( ATMOS_BOUNDARY_ref_VELY(:,:,:,2),  9, .false. )
     call COMM_wait ( ATMOS_BOUNDARY_ref_POTT(:,:,:,2), 10, .false. )
 
-    do iq = 1, BND_QA
+    do iq = 1, NESTQA
        call COMM_wait ( ATMOS_BOUNDARY_ref_QTRC(:,:,:,iq,1), 10+iq       , .false. )
-       call COMM_wait ( ATMOS_BOUNDARY_ref_QTRC(:,:,:,iq,2), 10+iq+BND_QA, .false. )
+       call COMM_wait ( ATMOS_BOUNDARY_ref_QTRC(:,:,:,iq,2), 10+iq+NESTQA, .false. )
     end do
 
     ! set boundary data and time increment
@@ -1413,7 +1421,7 @@ contains
                                               - ATMOS_BOUNDARY_ref_POTT(k,i,j,1) ) &
                                             / ( ATMOS_BOUNDARY_UPDATE_DT / TIME_DTSEC )
 
-       do iq = 1, BND_QA
+       do iq = 1, NESTQA
           ATMOS_BOUNDARY_QTRC(k,i,j,iq) = ATMOS_BOUNDARY_ref_QTRC(k,i,j,iq,1)
 
           ATMOS_BOUNDARY_increment_QTRC(k,i,j,iq) = ( ATMOS_BOUNDARY_ref_QTRC(k,i,j,iq,2) &
@@ -1950,7 +1958,8 @@ contains
        DATR_IS,            &
        DATR_IE,            &
        DATR_JS,            &
-       DATR_JE
+       DATR_JE,            &
+       NESTQA => NEST_BND_QA
     use scale_comm, only: &
        COMM_vars8, &
        COMM_wait
@@ -1966,8 +1975,8 @@ contains
 
     real(RP) :: dummy1_p(PARENT_KA(handle),  PARENT_IA(handle),  PARENT_JA(handle))
     real(RP) :: dummy1_d(DAUGHTER_KA(handle),DAUGHTER_IA(handle),DAUGHTER_JA(handle),2)
-    real(RP) :: dummy2_p(PARENT_KA(handle),  PARENT_IA(handle),  PARENT_JA(handle),  BND_QA)
-    real(RP) :: dummy2_d(DAUGHTER_KA(handle),DAUGHTER_IA(handle),DAUGHTER_JA(handle),BND_QA,2)
+    real(RP) :: dummy2_p(PARENT_KA(handle),  PARENT_IA(handle),  PARENT_JA(handle),  NESTQA)
+    real(RP) :: dummy2_d(DAUGHTER_KA(handle),DAUGHTER_IA(handle),DAUGHTER_JA(handle),NESTQA,2)
 
     integer :: i, j, k, iq
     !---------------------------------------------------------------------------
@@ -1981,19 +1990,19 @@ contains
        if (IO_L) write(IO_FID_LOG,*)"*** NESTCOMM inter-domain as a PARENT"
 
        call NEST_COMM_nestdown( handle,                    &
-                                BND_QA,                    &
+                                NESTQA,                    &
                                 DENS(:,:,:),               &  !(KA,IA,JA)
                                 MOMZ(:,:,:),               &  !(KA,IA,JA)
                                 MOMX(:,:,:),               &  !(KA,IA,JA)
                                 MOMY(:,:,:),               &  !(KA,IA,JA)
                                 RHOT(:,:,:),               &  !(KA,IA,JA)
-                                QTRC(:,:,:,1:BND_QA),      &  !(KA,IA,JA,QA)
+                                QTRC(:,:,:,1:NESTQA),      &  !(KA,IA,JA,QA)
                                 dummy1_d(:,:,:,2),         &  !(KA,IA,JA)
                                 dummy1_d(:,:,:,2),         &  !(KA,IA,JA)
                                 dummy1_d(:,:,:,2),         &  !(KA,IA,JA)
                                 dummy1_d(:,:,:,2),         &  !(KA,IA,JA)
                                 dummy1_d(:,:,:,2),         &  !(KA,IA,JA)
-                                dummy2_d(:,:,:,1:BND_QA,2) )  !(KA,IA,JA,QA)
+                                dummy2_d(:,:,:,1:NESTQA,2) )  !(KA,IA,JA,QA)
 
     elseif ( handle == 2 .and. do_daughter_process ) then ! [daughter]
        if (IO_L) write(IO_FID_LOG,*)"*** NESTCOMM inter-domain as a DAUGHTER (step=", boundary_timestep, ")"
@@ -2006,7 +2015,7 @@ contains
           ATMOS_BOUNDARY_ref_VELX(k,i,j,1) = ATMOS_BOUNDARY_ref_VELX(k,i,j,2)
           ATMOS_BOUNDARY_ref_VELY(k,i,j,1) = ATMOS_BOUNDARY_ref_VELY(k,i,j,2)
           ATMOS_BOUNDARY_ref_POTT(k,i,j,1) = ATMOS_BOUNDARY_ref_POTT(k,i,j,2)
-          do iq = 1, BND_QA
+          do iq = 1, NESTQA
              ATMOS_BOUNDARY_ref_QTRC(k,i,j,iq,1) = ATMOS_BOUNDARY_ref_QTRC(k,i,j,iq,2)
           end do
        end do
@@ -2014,19 +2023,19 @@ contains
        end do
 
        call NEST_COMM_nestdown( handle,                                 &
-                                BND_QA,                                 &
+                                NESTQA,                                 &
                                 dummy1_p(:,:,:),                        &   !(KA,IA,JA)
                                 dummy1_p(:,:,:),                        &   !(KA,IA,JA)
                                 dummy1_p(:,:,:),                        &   !(KA,IA,JA)
                                 dummy1_p(:,:,:),                        &   !(KA,IA,JA)
                                 dummy1_p(:,:,:),                        &   !(KA,IA,JA)
-                                dummy2_p(:,:,:,1:BND_QA),               &   !(KA,IA,JA,QA)
+                                dummy2_p(:,:,:,1:NESTQA),               &   !(KA,IA,JA,QA)
                                 ATMOS_BOUNDARY_ref_DENS(:,:,:,2),       &   !(KA,IA,JA)
                                 ATMOS_BOUNDARY_ref_VELZ(:,:,:,2),       &   !(KA,IA,JA)
                                 ATMOS_BOUNDARY_ref_VELX(:,:,:,2),       &   !(KA,IA,JA)
                                 ATMOS_BOUNDARY_ref_VELY(:,:,:,2),       &   !(KA,IA,JA)
                                 ATMOS_BOUNDARY_ref_POTT(:,:,:,2),       &   !(KA,IA,JA)
-                                ATMOS_BOUNDARY_ref_QTRC(:,:,:,1:BND_QA,2) ) !(KA,IA,JA,QA)
+                                ATMOS_BOUNDARY_ref_QTRC(:,:,:,1:NESTQA,2) ) !(KA,IA,JA,QA)
 
        do j  = 1, JA
        do i  = 1, IA
@@ -2042,7 +2051,7 @@ contains
           ATMOS_BOUNDARY_ref_VELY(KE+1:KA,  i,j,2) = ATMOS_BOUNDARY_ref_VELY(KE,i,j,2)
           ATMOS_BOUNDARY_ref_POTT(KE+1:KA,  i,j,2) = ATMOS_BOUNDARY_ref_POTT(KE,i,j,2)
 
-          do iq = 1, BND_QA
+          do iq = 1, NESTQA
              ATMOS_BOUNDARY_ref_QTRC(   1:KS-1,i,j,iq,2) = ATMOS_BOUNDARY_ref_QTRC(KS,i,j,iq,2)
              ATMOS_BOUNDARY_ref_QTRC(KE+1:KA,  i,j,iq,2) = ATMOS_BOUNDARY_ref_QTRC(KE,i,j,iq,2)
           end do
@@ -2055,7 +2064,7 @@ contains
        call COMM_vars8( ATMOS_BOUNDARY_ref_VELY(:,:,:,2), 4 )
        call COMM_vars8( ATMOS_BOUNDARY_ref_POTT(:,:,:,2), 5 )
 
-       do iq = 1, BND_QA
+       do iq = 1, NESTQA
           call COMM_vars8( ATMOS_BOUNDARY_ref_QTRC(:,:,:,iq,2), 5+iq )
        end do
 
@@ -2065,7 +2074,7 @@ contains
        call COMM_wait ( ATMOS_BOUNDARY_ref_VELY(:,:,:,2), 4, .false. )
        call COMM_wait ( ATMOS_BOUNDARY_ref_POTT(:,:,:,2), 5, .false. )
 
-       do iq = 1, BND_QA
+       do iq = 1, NESTQA
           call COMM_wait ( ATMOS_BOUNDARY_ref_QTRC(:,:,:,iq,2), 5+iq, .false. )
        end do
 
