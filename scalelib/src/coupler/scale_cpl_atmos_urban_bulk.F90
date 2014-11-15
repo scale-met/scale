@@ -193,7 +193,7 @@ contains
     allocate( URBAN_UCM_DZB(UKS:UKE) )
     allocate( URBAN_UCM_DZG(UKS:UKE) )
 
-    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) ''
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[AtmUrb bulk] / Categ[COUPLER] / Origin[SCALElib]'
 
     if ( CPL_TYPE_AtmUrb /= 'BULK' ) then

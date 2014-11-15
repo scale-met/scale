@@ -67,7 +67,7 @@ contains
     integer :: k, i, j, kk, kp
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) ''
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[INTERPOLATION] / Categ[ATMOS-LES GRID] / Origin[SCALElib]'
     if( IO_L ) write(IO_FID_LOG,*) '*** No namelists.'
 

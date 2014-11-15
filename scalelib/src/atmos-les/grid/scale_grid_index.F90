@@ -104,12 +104,12 @@ contains
     integer :: ierr
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) ''
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[GRID_INDEX] / Categ[ATMOS-LES GRID] / Origin[SCALElib]'
 
 #ifdef _FIXEDINDEX_
     if( IO_L ) write(IO_FID_LOG,*) '*** No namelists.'
-    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) ''
     if( IO_L ) write(IO_FID_LOG,*) '*** fixed index mode'
 #else
     !--- read namelist

@@ -66,7 +66,7 @@ contains
     integer :: ierr
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) ''
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[AtmOcn bulk] / Categ[COUPLER] / Origin[SCALElib]'
 
     if ( CPL_TYPE_AtmOcn /= 'BULK' ) then

@@ -71,7 +71,7 @@ contains
     integer :: k
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) ''
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[GRID] / Categ[LAND GRID] / Origin[SCALElib]'
 
     LDZ(:) = 0.0_RP
@@ -91,7 +91,7 @@ contains
     allocate( GRID_LFZ (LKS-1:LKE) )
     allocate( GRID_LCDZ(LKS  :LKE) )
 
-    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) ''
     if( IO_L ) write(IO_FID_LOG,*) '*** Land grid information ***'
 
     if ( LAND_GRID_IN_BASENAME /= '' ) then

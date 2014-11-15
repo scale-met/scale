@@ -133,7 +133,7 @@ contains
     integer :: ierr
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) ''
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[GRID] / Categ[ATMOS-LES GRID] / Origin[SCALElib]'
 
     call GRID_allocate

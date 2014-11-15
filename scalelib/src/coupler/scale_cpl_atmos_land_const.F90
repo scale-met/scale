@@ -114,7 +114,7 @@ contains
     CPL_AtmLnd_const_CMTYPE  = CMTYPE
     CPL_AtmLnd_const_DIURNAL = DIURNAL
 
-    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) ''
     if( IO_L ) write(IO_FID_LOG,*) '*** Atmos-Land: constant flux parameter'
 
     if ( CPL_TYPE_AtmLnd /= 'CONST' ) then
