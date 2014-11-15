@@ -132,7 +132,7 @@ contains
     CPL_bulkflux_RiB_min   = RiB_min
     CPL_bulkflux_Wstar_min = Wstar_min
 
-    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) ''
     if( IO_L ) write(IO_FID_LOG,*) '*** Bulk coefficient parameter'
 
     !--- read namelist

@@ -71,7 +71,7 @@ contains
     integer :: k
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) ''
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[GRID] / Categ[URBAN GRID] / Origin[SCALElib]'
 
     UDZ(:) = 0.0_RP
@@ -91,7 +91,7 @@ contains
     allocate( GRID_UFZ (UKS-1:UKE) )
     allocate( GRID_UCDZ(UKS  :UKE) )
 
-    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) ''
     if( IO_L ) write(IO_FID_LOG,*) '*** Urban grid information ***'
 
     if ( URBAN_GRID_IN_BASENAME /= '' ) then

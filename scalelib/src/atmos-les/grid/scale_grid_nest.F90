@@ -22,6 +22,8 @@ module scale_grid_nest
   use scale_stdio
   use scale_prof
   use scale_grid_index
+  use scale_index
+  use scale_tracer
   use scale_const, only: &
      r_in_m => CONST_RADIUS
   !-----------------------------------------------------------------------------
@@ -83,14 +85,17 @@ module scale_grid_nest
   integer,  public              :: TILEAL_IA(2)         !< cells of all tiles in x-direction
   integer,  public              :: TILEAL_JA(2)         !< cells of all tiles in y-direction
 
+  integer,  public              :: NEST_BND_QA = 1      !< number of tracer treated in nesting system
+
   logical,  public              :: USE_NESTING          = .false.
   logical,  public              :: OFFLINE              = .true.
-  logical,  public              :: ONLINE_IAM_PARENT    = .false.
-  logical,  public              :: ONLINE_IAM_DAUGHTER  = .false.
+  logical,  public              :: ONLINE_IAM_PARENT    = .false.   !< a flag to say "I am a parent"
+  logical,  public              :: ONLINE_IAM_DAUGHTER  = .false.   !< a flag to say "I am a daughter"
   integer,  public              :: ONLINE_DOMAIN_NUM    = 1
   integer,  public              :: ONLINE_DAUGHTER_PRC  = 1
   logical,  public              :: ONLINE_USE_VELZ      = .false.
   logical,  public              :: ONLINE_NO_ROTATE     = .false.
+  logical,  public              :: ONLINE_BOUNDARY_USE_QHYD = .false.
 
   !-----------------------------------------------------------------------------
   !
@@ -138,7 +143,6 @@ module scale_grid_nest
   integer, private               :: OFFLINE_PARENT_LKMAX   !< parent max number in lz-direction [for namelist]
   logical, private               :: ONLINE_DAUGHTER_USE_VELZ
   logical, private               :: ONLINE_DAUGHTER_NO_ROTATE
-
 
   integer, parameter :: I_LON    = 1
   integer, parameter :: I_LAT    = 2
@@ -269,11 +273,12 @@ contains
        ONLINE_DAUGHTER_PRC,      &
        ONLINE_DAUGHTER_CONF,     &
        ONLINE_USE_VELZ,          &
-       ONLINE_NO_ROTATE
+       ONLINE_NO_ROTATE,         &
+       ONLINE_BOUNDARY_USE_QHYD
 
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) ''
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[NEST]/Categ[GRID]'
 
 !    argv(1) = 'run.conf'
@@ -361,6 +366,12 @@ contains
 
       else ! ONLINE RELATIONSHIP
          if( IO_L ) write(IO_FID_LOG,'(1x,A)') '*** Setup Online Nesting'
+
+         if( ONLINE_BOUNDARY_USE_QHYD ) then
+            NEST_BND_QA = QA
+         else
+            NEST_BND_QA = I_QV
+         endif
 
          if( ONLINE_IAM_PARENT ) then ! must do first before daughter processes
          !-------------------------------------------------
@@ -739,14 +750,15 @@ contains
     integer, intent(in) :: HANDLE !< id number of nesting relation in this process target
 
     real(RP) :: buffer
-    integer  :: datapack(13)
+    integer  :: datapack(14)
+    integer  :: QA_OTHERSIDE
     integer  :: ireq1, ireq2, ierr1, ierr2, ileng
     integer  :: istatus(MPI_STATUS_SIZE)
     integer  :: tag
     !---------------------------------------------------------------------------
 
     tag   = INTERCOMM_ID(HANDLE) * 100
-    ileng = 13
+    ileng = 14
 
     if ( NEST_Filiation( INTERCOMM_ID(HANDLE) ) > 0 ) then !--- parent
        ! from parent to daughter
@@ -763,6 +775,7 @@ contains
        datapack(11) = JS
        datapack(12) = JE
        datapack(13) = TIME_NSTEP
+       datapack(14) = NEST_BND_QA
        buffer       = TIME_DTSEC
 
        if ( PRC_myrank == PRC_master ) then
@@ -810,6 +823,7 @@ contains
        DATR_JS(HANDLE)            = datapack(11)
        DATR_JE(HANDLE)            = datapack(12)
        DAUGHTER_NSTEP(HANDLE)     = datapack(13)
+       QA_OTHERSIDE               = datapack(14)
        DAUGHTER_DTSEC(HANDLE)     = buffer
 
 
@@ -837,6 +851,7 @@ contains
        PRNT_JS(HANDLE)          = datapack(11)
        PRNT_JE(HANDLE)          = datapack(12)
        PARENT_NSTEP(HANDLE)     = datapack(13)
+       QA_OTHERSIDE             = datapack(14)
        PARENT_DTSEC(HANDLE)     = buffer
 
        ! from daughter to parent
@@ -853,6 +868,7 @@ contains
        datapack(11) = JS
        datapack(12) = JE
        datapack(13) = TIME_NSTEP
+       datapack(14) = NEST_BND_QA
        buffer       = TIME_DTSEC
 
        if ( PRC_myrank == PRC_master ) then
@@ -877,7 +893,13 @@ contains
        DAUGHTER_NSTEP(HANDLE)     = datapack(13)
        DAUGHTER_DTSEC(HANDLE)     = buffer
     else
-       if( IO_L ) write(*,*) 'xxx internal error [nest/grid]'
+       write(*,*) 'xxx internal error [parentsize: nest/grid]'
+       call PRC_MPIstop
+    endif
+
+    if( QA_OTHERSIDE /= NEST_BND_QA ) then
+       write(*,*) 'xxx ERROR: NUMBER of QA are not matched! [parentsize: nest/grid]'
+       write(*,*) 'xxx check a flag of ONLINE_BOUNDARY_USE_QHYD.', QA_OTHERSIDE, NEST_BND_QA
        call PRC_MPIstop
     endif
 
@@ -1479,7 +1501,6 @@ contains
 
        call MPI_BARRIER(INTERCOMM_DAUGHTER, ierr) ![ end ] inter-domain communication
 
-
     elseif ( NEST_Filiation( INTERCOMM_ID(HANDLE) ) < 0 ) then
     !-------------------------------------------------------- daughter
        call MPI_BARRIER(INTERCOMM_PARENT, ierr) ![start] inter-domain communication
@@ -1573,7 +1594,6 @@ contains
        enddo
 
        call MPI_BARRIER(INTERCOMM_PARENT, ierr) ![ end ] inter-domain communication
-
     else
        if( IO_L ) write(*,*) 'xxx internal error [nest/grid]'
        call PRC_MPIstop
@@ -1666,7 +1686,6 @@ contains
           dvar(:,:,:) = -1.0_RP  ! input as a dummy value
        enddo
 
-
     elseif ( NEST_Filiation( INTERCOMM_ID(HANDLE) ) < 0 ) then
     !--------------------------------------------------- daughter
        do yp = 1, NEST_TILE_ALL ! YP Loop
@@ -1683,6 +1702,7 @@ contains
 
           l = l + 1
           if ( no_zstag ) then
+
              call MPI_IRECV( buffer_3D,        &
                              ileng,            &
                              COMM_datatype,    &
