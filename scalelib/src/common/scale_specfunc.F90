@@ -51,7 +51,7 @@ contains
     real(RP)             :: SF_gamma
 
     real(DP), parameter :: LRTP = 0.9189385332046727_DP ! log(sqrt(2*PI))
-    real(DP)            :: Ag, dx
+    real(DP)            :: Ag, dx, work
     !---------------------------------------------------------------------------
 
     dx = real(x, kind=DP)
@@ -66,7 +66,8 @@ contains
        + 9.98436957801957085956266899569E-6_DP / ( dx + 7.0_DP ) &
        + 1.50563273514931155833835577539E-7_DP / ( dx + 8.0_DP )
 
-    SF_gamma = real(exp( LRTP + (dx+0.5_DP)*log(dx+7.5_DP) - (dx+7.5_DP) + log(Ag) ), kind=RP)
+    work = exp( LRTP + (dx+0.5_DP)*log(dx+7.5_DP) - (dx+7.5_DP) + log(Ag) )
+    SF_gamma = real(work, kind=RP)
 
     return
   end function SF_gamma
