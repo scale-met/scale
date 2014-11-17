@@ -33,6 +33,7 @@ module scale_external_io
   public :: ExternalFileGetShape
   public :: ExternalFileGetGlobalAttV
   public :: ExternalFileGetGlobalAttC
+  public :: ExternalFileVarExistence
   public :: ExternalFileRead
   public :: ExternalFileReadOffset
 
@@ -415,6 +416,62 @@ contains
 
     return
   end subroutine ExternalFileGetGlobalAttC
+
+  !-----------------------------------------------------------------------------
+  !> Check Existence of a Variable
+  !-----------------------------------------------------------------------------
+  subroutine ExternalFileVarExistence( &
+      existence,     & ! (out)
+      basename,      & ! (in)
+      varname,       & ! (in)
+      myrank,        & ! (in)
+      mdlid,         & ! (in)
+      single         & ! (in) optional
+      )
+    use netcdf  ![external lib]
+    implicit none
+
+    logical,          intent(out)           :: existence
+    character(LEN=*), intent( in)           :: basename
+    character(LEN=*), intent( in)           :: varname
+    integer,          intent( in)           :: myrank
+    integer,          intent( in)           :: mdlid
+    logical,          intent( in), optional :: single
+
+    integer :: ncid, varid
+    integer :: status
+
+    character(len=H_LONG) :: fname = ''
+    logical :: single_ = .false.
+
+    intrinsic size
+    intrinsic shape
+    !---------------------------------------------------------------------------
+
+    if ( present(single) ) then
+       single_ = single
+    else
+       single_ = .false.
+    endif
+
+    call ExternalFileMakeFname( fname,mdlid,basename,myrank,single_ )
+
+    status = nf90_open( trim(fname), nf90_nowrite, ncid )
+    if (status .ne. nf90_noerr) call handle_err(status)
+
+    status = nf90_inq_varid( ncid, trim(varname), varid )
+    if (status .eq. nf90_noerr) then
+       existence = .true.
+    else
+       existence = .false.
+       if( IO_L ) write(IO_FID_LOG,*) '+++ not exist variable: ', trim(varname)
+    endif
+
+    status = nf90_close(ncid) 
+    if (status .ne. nf90_noerr) call handle_err(status)
+
+    return
+  end subroutine ExternalFileVarExistence
 
   !-----------------------------------------------------------------------------
   !> File Read
