@@ -277,19 +277,19 @@ contains
 #endif
 
     ! for implicit solver
-    real(RP) :: A(KA)
+    real(RP) :: A(KA,IA,JA)
     real(RP) :: B
     real(RP) :: Sr(KA,IA,JA)
     real(RP) :: Sw(KA,IA,JA)
     real(RP) :: St(KA,IA,JA)
-    real(RP) :: PT(KA)
-    real(RP) :: CPRES(KA) ! kappa * PRES / RHOT
+    real(RP) :: PT(KA,IA,JA)
+    real(RP) :: CPRES(KA,IA,JA) ! kappa * PRES / RHOT
     real(RP) :: CPtot(KA,IA,JA)
-    real(RP) :: C(KMAX-1)
+    real(RP) :: C(KMAX-1,IA,JA)
 
-    real(RP) :: F1(KA)
-    real(RP) :: F2(KA)
-    real(RP) :: F3(KA)
+    real(RP) :: F1(KA,IA,JA)
+    real(RP) :: F2(KA,IA,JA)
+    real(RP) :: F3(KA,IA,JA)
 
     integer :: IIS, IIE, JJS, JJE
     integer :: k, i, j
@@ -302,8 +302,8 @@ contains
     POTT(:,:,:) = UNDEF
     DPRES(:,:,:) = UNDEF
 
-    PT(:) = UNDEF
-    CPRES(:) = UNDEF
+    PT(:,:,:) = UNDEF
+    CPRES(:,:,:) = UNDEF
 
 
     qflx_hi(:,:,:,:) = UNDEF
@@ -915,155 +915,229 @@ contains
 #endif
 
        ! implicit solver
-       !$omp parallel do private(i,j,k,PT,CPRES,A,B,C,F1,F2,F3,advcv,pg) OMP_SCHEDULE_ collapse(2)
-!OCL PARALLEL, ARRAY_PRIVATE, TEMP(PT,CPRES,A,B,C,F1,F2,F3,advcv,pg), INDEPENDENT(solve_*), NOALIAS
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE
        do i = IIS, IIE
+       do k = KS+1, KE-2
+          PT(k,i,j) = FACT_N * ( POTT(k+1,i,j) + POTT(k  ,i,j) ) &
+                    + FACT_F * ( POTT(k+2,i,j) + POTT(k-1,i,j) )
+       end do
+       end do
+       end do
+       !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
+       do j = JJS, JJE
+       do i = IIS, IIE
+          PT(KS  ,i,j) = ( POTT(KS+1,i,j) + POTT(KS  ,i,j) ) * 0.5_RP
+          PT(KE-1,i,j) = ( POTT(KE  ,i,j) + POTT(KE-1,i,j) ) * 0.5_RP
+       end do
+       end do
 
-          do k = KS+1, KE-2
-             PT(k) = FACT_N * ( POTT(k+1,i,j) + POTT(k  ,i,j) ) &
-                   + FACT_F * ( POTT(k+2,i,j) + POTT(k-1,i,j) )
-          end do
-          PT(KS  ) = ( POTT(KS+1,i,j) + POTT(KS  ,i,j) ) * 0.5_RP
-          PT(KE-1) = ( POTT(KE  ,i,j) + POTT(KE-1,i,j) ) * 0.5_RP
-
-          do k = KS, KE
-             CPRES(k) = &
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+       do j = JJS, JJE
+       do i = IIS, IIE
+       do k = KS, KE
+          CPRES(k,i,j) = &
 #ifdef DRY
-             kappa        * PRES(k,i,j) /                  RHOT(k,i,j)
+               kappa        * PRES(k,i,j) /                  RHOT(k,i,j)
 #else
-             CPtot(k,i,j) * PRES(k,i,j) / ( CVtot(k,i,j) * RHOT(k,i,j) )
+               CPtot(k,i,j) * PRES(k,i,j) / ( CVtot(k,i,j) * RHOT(k,i,j) )
 #endif
-             A(k) = dtrk**2 * J33G * RCDZ(k) * CPRES(k) * J33G / GSQRT(k,i,j,I_XYZ)
-          end do
-          do k = KS+1, KE-2
-             B = GRAV * dtrk**2 * J33G / ( CDZ(k+1) + CDZ(k) )
-             F1(k) =        - ( PT(k+1) * RFDZ(k) *   A(k+1)       + B ) / GSQRT(k,i,j,I_XYW)
-             F2(k) = 1.0_RP + ( PT(k  ) * RFDZ(k) * ( A(k+1)+A(k) )       ) / GSQRT(k,i,j,I_XYW)
-             F3(k) =        - ( PT(k-1) * RFDZ(k) *          A(k)  - B ) / GSQRT(k,i,j,I_XYW)
-          end do
-          B = GRAV * dtrk**2 * J33G / ( CDZ(KS+1) + CDZ(KS) )
-          F1(KS) =        - ( PT(KS+1) * RFDZ(KS) *   A(KS+1)         + B ) / GSQRT(KS,i,j,I_XYW)
-          F2(KS) = 1.0_RP + ( PT(KS  ) * RFDZ(KS) * ( A(KS+1)+A(KS) )       ) / GSQRT(KS,i,j,I_XYW)
-          B = GRAV * dtrk**2 * J33G / ( CDZ(KE) + CDZ(KE-1) )
-          F2(KE-1) = 1.0_RP + ( PT(KE-1) * RFDZ(KE-1) * ( A(KE)+A(KE-1) )    ) / GSQRT(KE-1,i,j,I_XYW)
-          F3(KE-1) =        - ( PT(KE-2) * RFDZ(KE-1) *         A(KE-1)  - B ) / GSQRT(KE-1,i,j,I_XYW)
+          A(k,i,j) = dtrk**2 * J33G * RCDZ(k) * CPRES(k,i,j) * J33G / GSQRT(k,i,j,I_XYZ)
+       end do
+       end do
+       end do
 
-          do k = KS, KE-1
-             pg = - ( DPRES(k+1,i,j) + CPRES(k+1)*dtrk*St(k+1,i,j) &
-                    - DPRES(k  ,i,j) - CPRES(k  )*dtrk*St(k  ,i,j) ) &
-                    * RFDZ(k) * J33G / GSQRT(k,i,j,I_XYW) &
-                  - 0.5_RP * GRAV &
-                    * ( ( DENS(k+1,i,j) - REF_dens(k+1,i,j) ) &
-                      + ( DENS(k  ,i,j) - REF_dens(k  ,i,j) ) &
-                      + dtrk * ( Sr(k+1,i,j) + Sr(k,i,j) ) )
-             C(k-KS+1) = MOMZ(k,i,j) + dtrk * ( pg + Sw(k,i,j) )
+       !$omp parallel do private(i,j,k,B) OMP_SCHEDULE_ collapse(2)
+       do j = JJS, JJE
+       do i = IIS, IIE
+       do k = KS+1, KE-2
+          B = GRAV * dtrk**2 * J33G / ( CDZ(k+1) + CDZ(k) )
+          F1(k,i,j) =        - ( PT(k+1,i,j) * RFDZ(k) *   A(k+1,i,j)            + B ) / GSQRT(k,i,j,I_XYW)
+          F2(k,i,j) = 1.0_RP + ( PT(k  ,i,j) * RFDZ(k) * ( A(k+1,i,j)+A(k,i,j) )     ) / GSQRT(k,i,j,I_XYW)
+          F3(k,i,j) =        - ( PT(k-1,i,j) * RFDZ(k) *              A(k,i,j)   - B ) / GSQRT(k,i,j,I_XYW)
+       end do
+       end do
+       end do
+       !$omp parallel do private(i,j,B) OMP_SCHEDULE_ collapse(2)
+       do j = JJS, JJE
+       do i = IIS, IIE
+          B = GRAV * dtrk**2 * J33G / ( CDZ(KS+1) + CDZ(KS) )
+          F1(KS,i,j) =        - ( PT(KS+1,i,j) * RFDZ(KS) *   A(KS+1,i,j)             + B ) / GSQRT(KS,i,j,I_XYW)
+          F2(KS,i,j) = 1.0_RP + ( PT(KS  ,i,j) * RFDZ(KS) * ( A(KS+1,i,j)+A(KS,i,j) )     ) / GSQRT(KS,i,j,I_XYW)
+          B = GRAV * dtrk**2 * J33G / ( CDZ(KE) + CDZ(KE-1) )
+          F2(KE-1,i,j) = 1.0_RP + ( PT(KE-1,i,j) * RFDZ(KE-1) * ( A(KE,i,j)+A(KE-1,i,j) )    ) / GSQRT(KE-1,i,j,I_XYW)
+          F3(KE-1,i,j) =        - ( PT(KE-2,i,j) * RFDZ(KE-1) *             A(KE-1,i,j)  - B ) / GSQRT(KE-1,i,j,I_XYW)
+       end do
+       end do
+
+       !$omp parallel do private(i,j,k,pg) OMP_SCHEDULE_ collapse(2)
+       do j = JJS, JJE
+       do i = IIS, IIE
+       do k = KS, KE-1
+          pg = - ( DPRES(k+1,i,j) + CPRES(k+1,i,j)*dtrk*St(k+1,i,j) &
+                 - DPRES(k  ,i,j) - CPRES(k  ,i,j)*dtrk*St(k  ,i,j) ) &
+                 * RFDZ(k) * J33G / GSQRT(k,i,j,I_XYW) &
+               - 0.5_RP * GRAV &
+                 * ( ( DENS(k+1,i,j) - REF_dens(k+1,i,j) ) &
+                   + ( DENS(k  ,i,j) - REF_dens(k  ,i,j) ) &
+                   + dtrk * ( Sr(k+1,i,j) + Sr(k,i,j) ) )
+          C(k-KS+1,i,j) = MOMZ(k,i,j) + dtrk * ( pg + Sw(k,i,j) )
 #if HIST_TEND
-             if ( lhist ) pg_t(k,i,j,1) = pg
+          if ( lhist ) pg_t(k,i,j,1) = pg
 #endif
-          end do
+       end do
+       end do
+       end do
 
 #ifdef HEVI_BICGSTAB
+       !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
+       do j = JJS, JJE
+       do i = IIS, IIE
           call solve_bicgstab( &
-               C,         & ! (inout)
-               F1, F2, F3 ) ! (in)
-
+               C(:,i,j),         & ! (inout)
+               F1(:,i,j), F2(:,i,j), F3(:,i,j) ) ! (in)
+       end do
+       end do
 #elif defined(HEVI_LAPACK)
+       !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
+       do j = JJS, JJE
+       do i = IIS, IIE
           call solve_lapack( &
-               C,        & ! (inout)
+               C(:,i,j),        & ! (inout)
 #ifdef DEBUG
                i, j,      & ! (in)
 #endif
-               F1, F2, F3 ) ! (in)
+               F1(:,i,j), F2(:,i,j), F3(:,i,j) ) ! (in)
+       end do
+       end do
 #else
-          call solve_direct( &
-               C,         & ! (inout)
-               F1, F2, F3 ) ! (in)
+       call solve_direct( &
+            C,          & ! (inout)
+            F1, F2, F3, & ! (in)
+            IIS, IIE, JJS, JJE )
 #endif
 
-          ! z-momentum flux
-          do k = KS, KE-1
-             mflx_hi(k,i,j,ZDIR) = mflx_hi(k,i,j,ZDIR) * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) &
-                                 + J33G * C(k-KS+1)
-          end do
+       ! z-momentum flux
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+       do j = JJS, JJE
+       do i = IIS, IIE
+       do k = KS, KE-1
+          mflx_hi(k,i,j,ZDIR) = mflx_hi(k,i,j,ZDIR) * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) &
+                              + J33G * C(k-KS+1,i,j)
+       end do
+       end do
+       end do
 
-          ! z-momentum
-          do k = KS, KE-1
-             MOMZ_RK(k,i,j) = MOMZ0(k,i,j) &
-                  + ( C(k-KS+1) - MOMZ(k,i,j) )
-          end do
+       ! z-momentum
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+       do j = JJS, JJE
+       do i = IIS, IIE
+       do k = KS, KE-1
+          MOMZ_RK(k,i,j) = MOMZ0(k,i,j) &
+                         + ( C(k-KS+1,i,j) - MOMZ(k,i,j) )
+       end do
+       end do
+       end do
 
 #ifdef DEBUG_HEVI2HEVE
-          ! for debug (change to explicit integration)
-          do k = KS, KE-1
-             C(k-KS+1) = MOMZ(k,i,j)
-             mflx_hi(k,i,j,ZDIR) = mflx_hi(k,i,j,ZDIR) * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) &
-                                 + J33G * MOMZ(k,i,j)
-             MOMZ_RK(k,i,j) = MOMZ0(k,i,j) &
+       ! for debug (change to explicit integration)
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+       do j = JJS, JJE
+       do i = IIS, IIE
+       do k = KS, KE-1
+          C(k-KS+1,i,j) = MOMZ(k,i,j)
+          mflx_hi(k,i,j,ZDIR) = mflx_hi(k,i,j,ZDIR) * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) &
+                              + J33G * MOMZ(k,i,j)
+          MOMZ_RK(k,i,j) = MOMZ0(k,i,j) &
                   + dtrk*( &
                   - J33G * ( DPRES(k+1,i,j)-DPRES(k,i,j) ) * RFDZ(k) / GSQRT(k,i,j,i_XYW) &
                   - 0.5_RP * GRAV * ( (DENS(k,i,j)-REF_dens(k,i,j))+(DENS(k+1,i,j)-REF_dens(k+1,i,j)) ) &
                   + Sw(k,i,j) )
-          end do
+       end do
+       end do
+       end do
 #endif
 
-          ! density
-          do k = KS+1, KE-1
-             advcv = - J33G * ( C(k-KS+1) - C(k-KS) ) * RCDZ(k) / GSQRT(k,i,j,I_XYZ)
-             DENS_RK(k,i,j) = DENS0(k,i,j) + dtrk * ( advcv + Sr(k,i,j) )
+       ! density
+       !$omp parallel do private(i,j,k,advcv) OMP_SCHEDULE_ collapse(2)
+       do j = JJS, JJE
+       do i = IIS, IIE
+       do k = KS+1, KE-1
+          advcv = - J33G * ( C(k-KS+1,i,j) - C(k-KS,i,j) ) * RCDZ(k) / GSQRT(k,i,j,I_XYZ)
+          DENS_RK(k,i,j) = DENS0(k,i,j) + dtrk * ( advcv + Sr(k,i,j) )
 #ifdef HIST_TEND
-             if ( lhist ) advcv_t(k,i,j,I_DENS) = advcv
+          if ( lhist ) advcv_t(k,i,j,I_DENS) = advcv
 #endif
-          end do
-          advcv = - J33G * C(1) * RCDZ(KS) / GSQRT(KS,i,j,I_XYZ) ! C(0) = 0
+       end do
+       end do
+       end do
+       !$omp parallel do private(i,j,B,advcv) OMP_SCHEDULE_ collapse(2)
+       do j = JJS, JJE
+       do i = IIS, IIE
+          advcv = - J33G * C(1,i,j) * RCDZ(KS) / GSQRT(KS,i,j,I_XYZ) ! C(0) = 0
           DENS_RK(KS,i,j) = DENS0(KS,i,j) + dtrk * ( advcv + Sr(KS,i,j) )
 #ifdef HIST_TEND
           if ( lhist ) advcv_t(KS,i,j,I_DENS) = advcv
 #endif
-          advcv = J33G * C(KE-KS) * RCDZ(KE) / GSQRT(KE,i,j,I_XYZ) ! C(KE-KS+1) = 0
+          advcv = J33G * C(KE-KS,i,j) * RCDZ(KE) / GSQRT(KE,i,j,I_XYZ) ! C(KE-KS+1) = 0
           DENS_RK(KE,i,j) = DENS0(KE,i,j) + dtrk * ( advcv + Sr(KE,i,j) )
 #ifdef HIST_TEND
           if ( lhist ) advcv_t(KE,i,j,I_DENS) = advcv
 #endif
+       end do
+       end do
 
-          ! rho*theta
-          do k = KS+1, KE-1
-             advcv = - ( C(k-KS+1) * PT(k) - C(k-KS) * PT(k-1) ) &
-                  * J33G * RCDZ(k) / GSQRT(k,i,j,I_XYZ)
-             RHOT_RK(k,i,j) = RHOT0(k,i,j) + dtrk * ( advcv + St(k,i,j) )
+       ! rho*theta
+       !$omp parallel do private(i,j,k,advcv) OMP_SCHEDULE_ collapse(2)
+       do j = JJS, JJE
+       do i = IIS, IIE
+       do k = KS+1, KE-1
+          advcv = - ( C(k-KS+1,i,j) * PT(k,i,j) - C(k-KS,i,j) * PT(k-1,i,j) ) &
+                * J33G * RCDZ(k) / GSQRT(k,i,j,I_XYZ)
+          RHOT_RK(k,i,j) = RHOT0(k,i,j) + dtrk * ( advcv + St(k,i,j) )
 #ifdef HIST_TEND
-             if ( lhist ) advcv_t(k,i,j,I_RHOT) = advcv
+          if ( lhist ) advcv_t(k,i,j,I_RHOT) = advcv
 #endif
-          end do
-          advcv = - C(1) * PT(KS) & ! C(0) = 0
-               * J33G * RCDZ(KS) / GSQRT(KS,i,j,I_XYZ)
+       end do
+       end do
+       end do
+       !$omp parallel do private(i,j,advcv) OMP_SCHEDULE_ collapse(2)
+       do j = JJS, JJE
+       do i = IIS, IIE
+          advcv = - C(1,i,j) * PT(KS,i,j) & ! C(0) = 0
+                * J33G * RCDZ(KS) / GSQRT(KS,i,j,I_XYZ)
           RHOT_RK(KS,i,j) = RHOT0(KS,i,j) + dtrk * ( advcv + St(KS,i,j) )
 #ifdef HIST_TEND
           if ( lhist ) advcv_t(KS,i,j,I_RHOT) = advcv
 #endif
-          advcv = C(KE-KS) * PT(KE-1) & ! C(KE-KS+1) = 0
+          advcv = C(KE-KS,i,j) * PT(KE-1,i,j) & ! C(KE-KS+1) = 0
                * J33G * RCDZ(KE) / GSQRT(KE,i,j,I_XYZ)
           RHOT_RK(KE,i,j) = RHOT0(KE,i,j) + dtrk * ( advcv + St(KE,i,j) )
 #ifdef HIST_TEND
           if ( lhist ) advcv_t(KE,i,j,I_RHOT) = advcv
 #endif
+       end do
+       end do
 
 
 #ifdef DEBUG
-       call check_equation( &
-            C, &
-            DENS(:,i,j), MOMZ(:,i,j), RHOT(:,i,j), PRES(:,i,j), &
-            Sr(:,i,j), Sw(:,i,j), St(:,i,j), &
-            J33G, GSQRT(:,i,j,:), &
+       !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
+       do j = JJS, JJE
+       do i = IIS, IIE
+          call check_equation( &
+               C(:,i,j), &
+               DENS(:,i,j), MOMZ(:,i,j), RHOT(:,i,j), PRES(:,i,j), &
+               Sr(:,i,j), Sw(:,i,j), St(:,i,j), &
+               J33G, GSQRT(:,i,j,:), &
 #ifdef DRY
-            kappa, &
+               kappa, &
 #else
-            CPtot(:,i,j), CVtot(:,i,j), &
+               CPtot(:,i,j), CVtot(:,i,j), &
 #endif
-            dtrk, i, j )
-#endif
+               dtrk, i, j )
        end do
        end do
+#endif
 
 
 
@@ -1753,37 +1827,53 @@ contains
   end subroutine solve_lapack
 #else
   subroutine solve_direct( &
-       C,        & ! (inout)
-       F1, F2, F3 ) ! (in)
+       C,          & ! (inout)
+       F1, F2, F3, & ! (in)
+       IIS, IIE, JJS, JJE )
 
     use scale_process, only: &
        PRC_MPIstop
     implicit none
-    real(RP), intent(inout) :: C(KMAX-1)
-    real(RP), intent(in)    :: F1(KA)
-    real(RP), intent(in)    :: F2(KA)
-    real(RP), intent(in)    :: F3(KA)
+    real(RP), intent(inout) :: C(KMAX-1,IA,JA)
+    real(RP), intent(in)    :: F1(KA,IA,JA)
+    real(RP), intent(in)    :: F2(KA,IA,JA)
+    real(RP), intent(in)    :: F3(KA,IA,JA)
+    integer,  intent(in)    :: IIS
+    integer,  intent(in)    :: IIE
+    integer,  intent(in)    :: JJS
+    integer,  intent(in)    :: JJE
 
-    real(RP) :: e(KMAX-1)
-    real(RP) :: f(KMAX-1)
+    real(RP) :: e(KMAX-1,IA,JA)
+    real(RP) :: f(KMAX-1,IA,JA)
 
     real(RP) :: rdenom
 
-    integer :: k
+    integer :: k, i, j
 
-    rdenom = 1.0_RP / F2(KS)
-    e(1) = - F1(KS) * rdenom
-    f(1) = C(1) * rdenom
-    do k = 2, KMAX-2
-       rdenom = 1.0_RP / ( F2(k+KS-1) + F3(k+KS-1) * e(k-1) )
-       e(k) = - F1(k+KS-1) * rdenom
-       f(k) = ( C(k) - F3(k+KS-1) * f(k-1) ) * rdenom
+    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+    do j = JJS, JJE
+    do i = IIS, IIE
+       rdenom = 1.0_RP / F2(KS,i,j)
+       e(1,i,j) = - F1(KS,i,j) * rdenom
+       f(1,i,j) = C(1,i,j) * rdenom
+       do k = 2, KMAX-2
+          rdenom = 1.0_RP / ( F2(k+KS-1,i,j) + F3(k+KS-1,i,j) * e(k-1,i,j) )
+          e(k,i,j) = - F1(k+KS-1,i,j) * rdenom
+          f(k,i,j) = ( C(k,i,j) - F3(k+KS-1,i,j) * f(k-1,i,j) ) * rdenom
+       end do
+    end do
     end do
 
     ! C = \rho w
-    C(KMAX-1) = ( C(KMAX-1) - F3(KE-1) * f(KMAX-2) ) / ( F2(KE-1) + F3(KE-1) * e(KMAX-2) ) ! C(KMAX-1) = f(KMAX-1)
-    do k = KMAX-2, 1, -1
-       C(k) = e(k) * C(k+1) + f(k)
+    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+    do j = JJS, JJE
+    do i = IIS, IIE
+       C(KMAX-1,i,j) = ( C(KMAX-1,i,j) - F3(KE-1,i,j) * f(KMAX-2,i,j) ) &
+                     / ( F2(KE-1,i,j) + F3(KE-1,i,j) * e(KMAX-2,i,j) ) ! C(KMAX-1) = f(KMAX-1)
+       do k = KMAX-2, 1, -1
+          C(k,i,j) = e(k,i,j) * C(k+1,i,j) + f(k,i,j)
+       end do
+    end do
     end do
 
     return
