@@ -915,7 +915,8 @@ contains
 #endif
 
        ! implicit solver
-       !$omp parallel do private(i,j,k,PT,A,B,C) OMP_SCHEDULE_ collapse(2)
+       !$omp parallel do private(i,j,k,PT,A,B,C,F1,F2,F3,advcv,pg) OMP_SCHEDULE_ collapse(2)
+       !OCL PARALLEL, ARRAY_PRIVATE(PT,A,C,F1,F2,F3), TEMP(B,advcv,pg), INDEPENDENT(solve_*)
        do j = JJS, JJE
        do i = IIS, IIE
 
@@ -1771,18 +1772,18 @@ contains
     integer :: k
 
     rdenom = 1.0_RP / F2(KS)
-    e(KS) = - F1(KS) * rdenom
-    f(KS) = C(1) * rdenom
-    do k = KS+1, KE-2
-       rdenom = 1.0_RP / ( F2(k) + F3(k) * e(k-1) )
-       e(k) = - F1(k) * rdenom
-       f(k) = ( C(k-KS+1) - F3(k) * f(k-1) ) * rdenom
+    e(1) = - F1(KS) * rdenom
+    f(1) = C(1) * rdenom
+    do k = 2, KMAX-2
+       rdenom = 1.0_RP / ( F2(k+KS-1) + F3(k+KS-1) * e(k-1) )
+       e(k) = - F1(k+KS-1) * rdenom
+       f(k) = ( C(k) - F3(k+KS-1) * f(k-1) ) * rdenom
     end do
 
     ! C = \rho w
-    C(KMAX-1) = ( C(KMAX-1) - F3(KE-1) * f(KE-2) ) / ( F2(KE-1) + F3(KE-1) * e(KE-2) ) ! C(KE-1) = f(KE-1)
-    do k = KE-2, KS, -1
-       C(k-KS+1) = e(k) * C(k-KS+2) + f(k)
+    C(KMAX-1) = ( C(KMAX-1) - F3(KE-1) * f(KMAX-2) ) / ( F2(KE-1) + F3(KE-1) * e(KMAX-2) ) ! C(KMAX-1) = f(KMAX-1)
+    do k = KMAX-2, 1, -1
+       C(k) = e(k) * C(k+1) + f(k)
     end do
 
     return
