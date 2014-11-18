@@ -53,7 +53,8 @@ module mod_cnvtopo
   !
   real(RP), private :: CNVTOPO_smooth_maxslope
   real(RP), private :: CNVTOPO_smooth_maxslope_bnd
-  integer, private  :: CNVTOPO_smooth_itelim = 100
+  logical,  private :: CNVTOPO_smooth_local = .false.
+  integer, private  :: CNVTOPO_smooth_itelim = 1000
   character(len=H_SHORT), private :: CNVTOPO_smooth_type = 'LAPLACIAN'
   !-----------------------------------------------------------------------------
 contains
@@ -76,6 +77,7 @@ contains
        CNVTOPO_name,            &
        CNVTOPO_smooth_maxslope, &
        CNVTOPO_smooth_maxslope_bnd, &
+       CNVTOPO_smooth_local, &
        CNVTOPO_smooth_itelim, &
        CNVTOPO_smooth_type
 
@@ -758,6 +760,8 @@ contains
     use scale_process, only: &
        PRC_MPIstop
     use scale_grid, only: &
+       DX, &
+       DY, &
        GRID_FDX, &
        GRID_FDY
     use scale_comm, only: &
@@ -774,8 +778,15 @@ contains
     real(RP) :: DZsfc_DX(1,IA,JA,1) ! d(Zsfc)/dx at u-position
     real(RP) :: DZsfc_DY(1,IA,JA,1) ! d(Zsfc)/dy at v-position
 
-    real(RP) :: work(IA,JA)
+    real(RP) :: DXL(IA)
+    real(RP) :: DYL(JA)
+
+    real(RP) :: FLX_X(IA,JA)
+    real(RP) :: FLX_Y(IA,JA)
+
+    real(RP) :: slope(IA,JA)
     real(RP) :: maxslope
+    real(RP) :: flag
 
     character(len=H_SHORT) :: varname(1)
 
@@ -784,8 +795,17 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Apply smoothing. Slope limit    = ', CNVTOPO_smooth_maxslope
-    if( IO_L ) write(IO_FID_LOG,*) '***                  Smoothing type = ', CNVTOPO_smooth_type
+    if( IO_L ) write(IO_FID_LOG,*) '*** Apply smoothing. Slope limit       = ', CNVTOPO_smooth_maxslope
+    if( IO_L ) write(IO_FID_LOG,*) '***                  Smoothing type    = ', CNVTOPO_smooth_type
+    if( IO_L ) write(IO_FID_LOG,*) '***                  Smoothing locally = ', CNVTOPO_smooth_local
+
+    if ( CNVTOPO_smooth_local ) then
+       DXL(:) = DX
+       DYL(:) = DY
+    else
+       DXL(:) = GRID_FDX(:)
+       DYL(:) = GRID_FDY(:)
+    end if
 
     ! digital filter
     do ite = 1, CNVTOPO_smooth_itelim+1
@@ -794,20 +814,21 @@ contains
 
        call TOPO_fillhalo( Zsfc )
 
-       do j = JS, JE
-       do i = IS, IE
-          DZsfc_DX(1,i,j,1) = atan2( ( Zsfc(i+1,j)-Zsfc(i,j) ), GRID_FDX(i) ) / D2R
+       do j = 1, JA
+       do i = 1, IA-1
+          DZsfc_DX(1,i,j,1) = atan2( ( Zsfc(i+1,j)-Zsfc(i,j) ), DXL(i) ) / D2R
        enddo
        enddo
+       DZsfc_DY(1,IA,:,1) = 0.0_RP
+       do j = 1, JA-1
+       do i = 1, IA
+          DZsfc_DY(1,i,j,1) = atan2( ( Zsfc(i,j+1)-Zsfc(i,j) ), DYL(j) ) / D2R
+       enddo
+       enddo
+       DZsfc_DY(1,:,JA,1) = 0.0_RP
 
-       do j = JS, JE
-       do i = IS, IE
-          DZsfc_DY(1,i,j,1) = atan2( ( Zsfc(i,j+1)-Zsfc(i,j) ), GRID_FDY(j) ) / D2R
-       enddo
-       enddo
-
-       work(:,:) = max( abs(DZsfc_DX(1,:,:,1)), abs(DZsfc_DY(1,:,:,1)) )
-       call COMM_horizontal_max( maxslope, work(:,:) )
+       slope(:,:) = max( abs(DZsfc_DX(1,:,:,1)), abs(DZsfc_DY(1,:,:,1)) )
+       call COMM_horizontal_max( maxslope, slope(:,:) )
 
        if( IO_L ) write(IO_FID_LOG,*) '*** maximum slope [deg] : ', maxslope
 
@@ -835,15 +856,49 @@ contains
           enddo
           enddo
        case ( 'LAPLACIAN' )
+          do j = JS  , JE
+          do i = IS-1, IE
+             FLX_X(i,j) = Zsfc(i+1,j) - Zsfc(i,j)
+          end do
+          end do
+          do j = JS-1, JE
+          do i = IS  , IE
+             FLX_Y(i,j) = Zsfc(i,j+1) - Zsfc(i,j)
+          end do
+          end do
+          if ( CNVTOPO_smooth_local ) then
+             do j = JS  , JE
+             do i = IS-1, IE
+                flag = 0.5_RP &
+                     + sign(0.5_RP, max( abs(DZsfc_DX(1,i+1,j,1)), &
+                                         abs(DZsfc_DX(1,i  ,j,1)), &
+                                         abs(DZsfc_DX(1,i-1,j,1)) ) &
+                                    - smooth_maxslope )
+                FLX_X(i,j) = FLX_X(i,j) &
+                           * DXL(i) / GRID_FDX(i) &
+                           * flag
+             end do
+             end do
+             do j = JS-1, JE
+             do i = IS  , IE
+                flag = 0.5_RP &
+                     + sign(0.5_RP, max( abs(DZsfc_DY(1,i,j+1,1)), &
+                                         abs(DZsfc_DY(1,i,j  ,1)), &
+                                         abs(DZsfc_DY(1,i,j-1,1)) ) &
+                                    - smooth_maxslope )
+                FLX_Y(i,j) = FLX_Y(i,j) &
+                           * DYL(j) / GRID_FDY(j) &
+                           * flag
+             end do
+             end do
+          end if
+
           do j = JS, JE
           do i = IS, IE
              Zsfc(i,j) = Zsfc(i,j) &
-                       + ( Zsfc(i-1,j  ) &
-                         + Zsfc(i+1,j  ) &
-                         + Zsfc(i  ,j-1) &
-                         + Zsfc(i  ,j+1) &
-                         - Zsfc(i  ,j  ) * 4.0_RP ) &
-                       * 0.1_RP
+                       + ( ( FLX_X(i,j) - FLX_X(i-1,j) ) &
+                         + ( FLX_Y(i,j) - FLX_Y(i,j-1) ) ) &
+                         * 0.1_RP
           enddo
           enddo
        case default
