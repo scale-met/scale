@@ -558,7 +558,7 @@ contains
 #endif
 
        !--- update density
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+       !$omp parallel do private(i,j,k,advch) OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE
        do i = IIS, IIE
        do k = KS, KE
@@ -756,7 +756,7 @@ contains
 #endif
 
        !--- update momentum(z)
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+       !$omp parallel do private(i,j,k,advcv,advch,cf,div) OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE
        do i = IIS, IIE
        do k = KS, KE-1
@@ -884,7 +884,7 @@ contains
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
 
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+       !$omp parallel do private(i,j,k,advch) OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE
        do i = IIS, IIE
        do k = KS, KE
@@ -915,8 +915,8 @@ contains
 #endif
 
        ! implicit solver
-       !$omp parallel do private(i,j,k,PT,A,B,C,F1,F2,F3,advcv,pg) OMP_SCHEDULE_ collapse(2)
-       !OCL PARALLEL, ARRAY_PRIVATE(PT,A,C,F1,F2,F3), TEMP(B,advcv,pg), INDEPENDENT(solve_*)
+       !$omp parallel do private(i,j,k,PT,CPRES,A,B,C,F1,F2,F3,advcv,pg) OMP_SCHEDULE_ collapse(2)
+!OCL PARALLEL, ARRAY_PRIVATE, TEMP(PT,CPRES,A,B,C,F1,F2,F3,advcv,pg), INDEPENDENT(solve_*), NOALIAS
        do j = JJS, JJE
        do i = IIS, IIE
 
@@ -1225,7 +1225,7 @@ contains
 #endif
 
        !--- update momentum(x)
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+       !$omp parallel do private(i,j,k,advch,advcv,pg,cf,div) OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE
        do i = IIS, min(IIE,IEH)
        do k = KS, KE
@@ -1446,7 +1446,7 @@ contains
 #endif
 
        !--- update momentum(y)
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+       !$omp parallel do private(i,j,k,advch,advcv,pg,cf,div) OMP_SCHEDULE_ collapse(2)
        do j = JJS, min(JJE,JEH)
        do i = IIS, IIE
        do k = KS, KE
