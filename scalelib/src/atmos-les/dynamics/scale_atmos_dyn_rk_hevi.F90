@@ -100,8 +100,10 @@ contains
 
 #ifdef HEVI_BICGSTAB
     if ( IO_L ) write(IO_FID_LOG,*) '*** USING Bi-CGSTAB'
-#else
+#elseif HEVI_LAPACK
     if ( IO_L ) write(IO_FID_LOG,*) '*** USING LAPACK'
+#else
+    if ( IO_L ) write(IO_FID_LOG,*) '*** USING DIRECT'
 #endif
 
 #ifdef DRY
@@ -276,7 +278,7 @@ contains
 
     ! for implicit solver
     real(RP) :: A(KA)
-    real(RP) :: B(KA)
+    real(RP) :: B
     real(RP) :: Sr(KA,IA,JA)
     real(RP) :: Sw(KA,IA,JA)
     real(RP) :: St(KA,IA,JA)
@@ -284,6 +286,10 @@ contains
     real(RP) :: CPRES(KA) ! kappa * PRES / RHOT
     real(RP) :: CPtot(KA,IA,JA)
     real(RP) :: C(KMAX-1)
+
+    real(RP) :: F1(KA)
+    real(RP) :: F2(KA)
+    real(RP) :: F3(KA)
 
     integer :: IIS, IIE, JJS, JJE
     integer :: k, i, j
@@ -927,16 +933,21 @@ contains
 #else
              CPtot(k,i,j) * PRES(k,i,j) / ( CVtot(k,i,j) * RHOT(k,i,j) )
 #endif
-          end do
-
-          do k = KS, KE
              A(k) = dtrk**2 * J33G * RCDZ(k) * CPRES(k) * J33G / GSQRT(k,i,j,I_XYZ)
           end do
-          do k = KS, KE
-             B(k) = GRAV * dtrk**2 * J33G / ( CDZ(k+1) + CDZ(k) )
+          do k = KS+1, KE-2
+             B = GRAV * dtrk**2 * J33G / ( CDZ(k+1) + CDZ(k) )
+             F1(k) =        - ( PT(k+1) * RFDZ(k) *   A(k+1)       + B ) / GSQRT(k,i,j,I_XYW)
+             F2(k) = 1.0_RP + ( PT(k  ) * RFDZ(k) * ( A(k+1)+A(k) )       ) / GSQRT(k,i,j,I_XYW)
+             F3(k) =        - ( PT(k-1) * RFDZ(k) *          A(k)  - B ) / GSQRT(k,i,j,I_XYW)
           end do
+          B = GRAV * dtrk**2 * J33G / ( CDZ(KS+1) + CDZ(KS) )
+          F1(KS) =        - ( PT(KS+1) * RFDZ(KS) *   A(KS+1)         + B ) / GSQRT(KS,i,j,I_XYW)
+          F2(KS) = 1.0_RP + ( PT(KS  ) * RFDZ(KS) * ( A(KS+1)+A(KS) )       ) / GSQRT(KS,i,j,I_XYW)
+          B = GRAV * dtrk**2 * J33G / ( CDZ(KE) + CDZ(KE-1) )
+          F2(KE-1) = 1.0_RP + ( PT(KE-1) * RFDZ(KE-1) * ( A(KE)+A(KE-1) )    ) / GSQRT(KE-1,i,j,I_XYW)
+          F3(KE-1) =        - ( PT(KE-2) * RFDZ(KE-1) *         A(KE-1)  - B ) / GSQRT(KE-1,i,j,I_XYW)
 
-          ! vector
           do k = KS, KE-1
              pg = - ( DPRES(k+1,i,j) + CPRES(k+1)*dtrk*St(k+1,i,j) &
                     - DPRES(k  ,i,j) - CPRES(k  )*dtrk*St(k  ,i,j) ) &
@@ -953,17 +964,20 @@ contains
 
 #ifdef HEVI_BICGSTAB
           call solve_bicgstab( &
-               C,                      & ! (inout)
-               A, B, PT,               & ! (in)
-               GSQRT(:,i,j,I_XYW), RFDZ) ! (in)
-#else
+               C,         & ! (inout)
+               F1, F2, F3 ) ! (in)
+
+#elseif HEVI_LAPACK
           call solve_lapack( &
-               C,                       & ! (inout)
-               A, B, PT,                & ! (in)
+               C,        & ! (inout)
 #ifdef DEBUG
-               i, j,                    & ! (in)
+               i, j,      & ! (in)
 #endif
-               GSQRT(:,i,j,I_XYW), RFDZ ) ! (in)
+               F1, F2, F3 ) ! (in)
+#else
+          call solve_direct( &
+               C,         & ! (inout)
+               F1, F2, F3 ) ! (in)
 #endif
 
           ! z-momentum flux
@@ -1531,16 +1545,16 @@ contains
 #ifdef HEVI_BICGSTAB
   subroutine solve_bicgstab( &
        C,        & ! (inout)
-       A, B, PT, & ! (in)
+       F1, F2, F3, & ! (in)
        G, RFDZ   ) ! (in)
 
     use scale_process, only: &
        PRC_MPIstop
     implicit none
     real(RP), intent(inout) :: C(KMAX-1)
-    real(RP), intent(in)    :: A(KA)
-    real(RP), intent(in)    :: B(KA)
-    real(RP), intent(in)    :: PT(KA)
+    real(RP), intent(in)    :: F1(KA)
+    real(RP), intent(in)    :: F2(KA)
+    real(RP), intent(in)    :: F3(KA)
     real(RP), intent(in)    :: G(KA)
     real(RP), intent(in)    :: RFDZ(KA-1)
 
@@ -1565,8 +1579,15 @@ contains
 
     epsilon = 0.1_RP**(RP-1)
 
-    call make_matrix(M,   & ! (out)
-         A, B, PT, G, RFDZ) ! (in)
+    M(3,1) = F1(KS)
+    M(2,1) = F2(KS)
+    do k = KS+1, KE-2
+       M(3,k-KS+1) = F1(k)
+       M(2,k-KS+1) = F2(k)
+       M(1,k-KS+1) = F3(k)
+    enddo
+    M(2,KE-KS) = F2(KE-1)
+    M(1,KE-KS) = F3(KE-1)
 
     norm = 0.0_RP
     do k = 1, KMAX-1
@@ -1642,76 +1663,26 @@ contains
     return
   end subroutine solve_bicgstab
 
-  subroutine make_matrix(M, &
-       A, B, PT, &
-       G, RFDZ)
-    implicit none
-    real(RP), intent(out) :: M(3, KMAX-1)
-    real(RP), intent(in)  :: A(KA)
-    real(RP), intent(in)  :: B(KA)
-    real(RP), intent(in)  :: PT(KA)
-    real(RP), intent(in)  :: G(KA)
-    real(RP), intent(in)  :: RFDZ(KA-1)
-
-    integer :: k
-
-    ! k = KS
-    M(3,1) =        - ( PT(KS+1)*RFDZ(KS)* A(KS+1) + B(KS) ) / G(KS)
-    M(2,1) = 1.0_RP +   PT(KS  )*RFDZ(KS)*(A(KS+1) + A(KS) ) / G(KS)
-    do k = KS+1, KE-2
-       M(3,k-KS+1) =        - ( PT(k+1)*RFDZ(k)* A(k+1) + B(k) ) / G(k)
-       M(2,k-KS+1) = 1.0_RP +   PT(k  )*RFDZ(k)*(A(k+1) + A(k) ) / G(k)
-       M(1,k-KS+1) =        - ( PT(k-1)*RFDZ(k)* A(k  ) - B(k) ) / G(k)
-    enddo
-    ! k = KE-1
-    M(2,KE-KS) = 1.0_RP +   PT(KE-1)*RFDZ(KE-1)*(A(KE  ) + A(KE-1) ) / G(KE-1)
-    M(1,KE-KS) =        - ( PT(KE-2)*RFDZ(KE-1)* A(KE-1) - B(KE-1) ) / G(KE-1)
-
-    return
-  end subroutine make_matrix
-
-  subroutine mul_matrix(V, M, C)
-    implicit none
-    real(RP), intent(out) :: V(KMAX-1)
-    real(RP), intent(in)  :: M(3, KMAX-1)
-    real(RP), intent(in)  :: C(KMAX-1)
-
-    integer :: k
-
-    ! k = KS
-    V(1) = M(3,1)*C(2) + M(2,1)*C(1)
-    do k = 2, KMAX-2
-       V(k) = M(3,k)*C(k+1) + M(2,k)*C(k) + M(1,k)*C(k-1)
-    enddo
-    ! k = KE-1
-    V(KMAX-1) = M(2,KMAX-1)*C(KMAX-1) + M(1,KMAX-1)*C(KMAX-2)
-
-    return
-  end subroutine mul_matrix
-
-#else
+#elseif HEVI_LAPACK
 
   subroutine solve_lapack( &
        C,   & ! (inout)
-       A, B, PT, &
 #ifdef DEBUG
        i, j, &
 #endif
-       G, RFDZ ) ! (in)
+       F1, F2, F3 ) ! (in)
     use scale_process, only: &
          PRC_MPIstop
     implicit none
 
     real(RP), intent(inout) :: C(KMAX-1)
-    real(RP), intent(in)    :: A(KA)
-    real(RP), intent(in)    :: B(KA)
-    real(RP), intent(in)    :: PT(KA)
+    real(RP), intent(in)    :: F1(KA)
+    real(RP), intent(in)    :: F2(KA)
+    real(RP), intent(in)    :: F3(KA)
 #ifdef DEBUG
     integer , intent(in)    :: i
     integer , intent(in)    :: j
 #endif
-    real(RP), intent(in)    :: G(KA)
-    real(RP), intent(in)    :: RFDZ(KA-1)
 
     real(RP) :: M(NB*3+1,KMAX-1)
     integer  :: IPIV(KMAX-1)
@@ -1729,20 +1700,20 @@ contains
     ! band matrix
     do k = KS+1, KE-2
        ! k-1, +1
-       M(NB+1,k-KS+1) =        - ( PT(k)*RFDZ(k-1)*  A(k  ) + B(k-1) ) / G(k-1)
+       M(NB+1,k-KS+1) = F1(k-1)
        ! k, 0
-       M(NB+2,k-KS+1) = 1.0_RP +   PT(k)*RFDZ(k  )*( A(k+1) + A(k  ) ) / G(k)
+       M(NB+2,k-KS+1) = F2(k)
        ! k+1, -1
-       M(NB+3,k-KS+1) =        - ( PT(k)*RFDZ(k+1)*  A(k+1) - B(k+1) ) / G(k+1)
+       M(NB+3,k-KS+1) = F3(k+1)
     end do
     ! KS, 0
-    M(NB+2,1    ) = 1.0_RP +   PT(KS  )*RFDZ(KS  )*( A(KS+1) + A(KS  ) ) / G(KS)
+    M(NB+2,1    ) = F2(KS)
     ! KS+1, -1
-    M(NB+3,1    ) =        - ( PT(KS  )*RFDZ(KS+1)*  A(KS+1) - B(KS+1) ) / G(KS+1)
+    M(NB+3,1    ) = F3(KS+1)
     ! KE-2, +1
-    M(NB+1,KE-KS) =        - ( PT(KE-1)*RFDZ(KE-2)*  A(KE-1) + B(KE-2) ) / G(KE-2)
+    M(NB+1,KE-KS) = F1(KE-2)
     ! KE-1, 0
-    M(NB+2,KE-KS) = 1.0_RP +   PT(KE-1)*RFDZ(KE-1)*( A(KE  ) + A(KE-1) ) / G(KE-1)
+    M(NB+2,KE-KS) = F2(KE-1)
 
 #ifdef DEBUG
           M2(:,:) = 0.0_RP
@@ -1779,6 +1750,44 @@ contains
           end do
 #endif
   end subroutine solve_lapack
+#else
+  subroutine solve_direct( &
+       C,        & ! (inout)
+       F1, F2, F3 ) ! (in)
+
+    use scale_process, only: &
+       PRC_MPIstop
+    implicit none
+    real(RP), intent(inout) :: C(KMAX-1)
+    real(RP), intent(in)    :: F1(KA)
+    real(RP), intent(in)    :: F2(KA)
+    real(RP), intent(in)    :: F3(KA)
+
+    real(RP) :: e(KMAX-1)
+    real(RP) :: f(KMAX-1)
+
+    real(RP) :: rdenom
+
+    integer :: k
+
+    rdenom = 1.0_RP / F2(KS)
+    e(KS) = - F1(KS) * rdenom
+    f(KS) = C(1) * rdenom
+    do k = KS+1, KE-2
+       rdenom = 1.0_RP / ( F2(k) + F3(k) * e(k-1) )
+       e(k) = - F1(k) * rdenom
+       f(k) = ( C(k-KS+1) - F3(k) * f(k-1) ) * rdenom
+    end do
+
+    ! C = \rho w
+    C(KMAX-1) = ( C(KMAX-1) - F3(KE-1) * f(KE-2) ) / ( F2(KE-1) + F3(KE-1) * e(KE-2) ) ! C(KE-1) = f(KE-1)
+    do k = KE-2, KS, -1
+       C(k-KS+1) = e(k) * C(k-KS+2) + f(k)
+    end do
+
+    return
+  end subroutine solve_direct
+
 #endif
 
 #ifdef DEBUG
