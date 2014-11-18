@@ -3185,7 +3185,9 @@ contains
        enddo
        enddo
     else
-       strg(:,:,:) = 0.15_DP
+       ! default value: set as value of forest at 40% of evapolation rate.
+       ! forest is considered as a typical landuse over Japan area.
+       strg(:,:,:) = 0.02_DP
     endif
 
     ! surface runoff [mm]
@@ -3209,27 +3211,6 @@ contains
                   + org_3D(igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3)
     enddo
     enddo
-
-    ! accumulated surface evaporation [kg m-2] (no wrfout-default)
-    call ExternalFileVarExistence( existence, BASENAME, "SFCEVP", myrank, mdlid, single=.true. )
-    if ( existence ) then
-       if( do_read ) then
-          call ExternalFileRead( dummy_3D(:,:,:),                             &
-                         BASENAME, "SFCEVP",  1, tcount, myrank, mdlid, single=.true. )
-          org_3D(:,:,:) = dummy_3D(:,:,:)
-       endif
-       if( serial ) call COMM_bcast( org_3D(:,:,:), dims(2),dims(3),tcount )
-       n = 1
-       do j = 1, JA
-       do i = 1, IA
-          qvef(i,j) =  org_3D(igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) &
-                     + org_3D(igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) &
-                     + org_3D(igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3)
-       enddo
-       enddo
-    else
-       qvef(:,:) = 0.0_DP
-    endif
 
     ! land mask (1:land, 0:water)
     if( do_read ) then
@@ -3281,6 +3262,7 @@ contains
     ust(:,:) = lst(:,:)
     !sst(:,:) = lst(:,:)
     sst(:,:) = tw(:,:)
+    qvef(:,:) = 0.0_DP ! currently not used
 
     ! ALBEDO [-]
     if( do_read ) then
@@ -3643,12 +3625,14 @@ contains
                                     single=.true.     )
        strg_org(:,:,:) = real( read4D(:,:,:,1), kind=RP )
 
-       ! tentative: missing value => 0.2
+       ! tentative: missing value => 0.02
        do k = 1, dims(7)
        do j = 1, dims(2)
        do i = 1, dims(1)
           if( strg_org(k,i,j) < sqrt(EPS) )then
-              strg_org(k,i,j) = 0.2D0
+              ! default value: set as value of forest at 40% of evapolation rate.
+              ! forest is considered as a typical landuse over Japan area.
+              strg_org(k,i,j) = 0.02D0
           endif
        end do
        end do
