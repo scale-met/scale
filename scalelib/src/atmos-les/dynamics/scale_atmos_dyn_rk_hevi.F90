@@ -100,7 +100,7 @@ contains
 
 #ifdef HEVI_BICGSTAB
     if ( IO_L ) write(IO_FID_LOG,*) '*** USING Bi-CGSTAB'
-#elseif HEVI_LAPACK
+#elif defined(HEVI_LAPACK)
     if ( IO_L ) write(IO_FID_LOG,*) '*** USING LAPACK'
 #else
     if ( IO_L ) write(IO_FID_LOG,*) '*** USING DIRECT'
@@ -967,7 +967,7 @@ contains
                C,         & ! (inout)
                F1, F2, F3 ) ! (in)
 
-#elseif HEVI_LAPACK
+#elif defined(HEVI_LAPACK)
           call solve_lapack( &
                C,        & ! (inout)
 #ifdef DEBUG
@@ -1663,7 +1663,7 @@ contains
     return
   end subroutine solve_bicgstab
 
-#elseif HEVI_LAPACK
+#elif defined(HEVI_LAPACK)
 
   subroutine solve_lapack( &
        C,   & ! (inout)
