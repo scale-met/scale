@@ -219,7 +219,7 @@ contains
     logical,          intent(in)  :: use_file_density ! use density data from files
     integer,          intent(in)  :: dims(:)
     integer,          intent(in)  :: mdlid            ! model type id
-    character(LEN=*), intent(in)  :: mptype_parent    ! microphysics type of the parent model (single or double)
+    integer,          intent(in)  :: mptype_parent    ! microphysics type of the parent model (number of classes)
     integer,          intent(in)  :: timelen          ! time steps in one file
     logical,          intent(in)  :: serial           ! read by a serial process
 
@@ -1356,7 +1356,7 @@ contains
     real(RP),         intent(out)  :: qtrc(:,:,:,:,:)
     character(LEN=*), intent(in)   :: basename
     character(LEN=*), intent(in)   :: mptype_run
-    character(LEN=*), intent(in)   :: mptype_parent
+    integer,          intent(in)   :: mptype_parent
     integer,          intent(in)   :: mdlid
     integer,          intent(in)   :: dims(:)
     integer,          intent(in)   :: ts      ! suffix of start time
@@ -1534,11 +1534,12 @@ contains
        !convert from mixing ratio [kg/kg] to ratio of mass of tracer to total mass[kg/kg]
        qsfc_org (:,:,:,I_QV) = real(read_xy(:,:,:),kind=RP)/( 1.0_RP + real(read_xy(:,:,:),kind=RP) )
 
+       qtrc_org(:,:,:,:,:) = 0.0_RP
        call ExternalFileRead( read_zxy(:,:,:,:), BASENAME, "QVAPOR",  ts, te, myrank, mdlid, single=.true. )
        !convert from mixing ratio [kg/kg] to ratio of mass of tracer to total mass[kg/kg]
        qtrc_org(:,:,:,:,I_QV) = real(read_zxy(:,:,:,:),kind=RP)/( 1.0_RP + real(read_zxy(:,:,:,:),kind=RP) )
 
-       if( trim(mptype_parent)/='dry' ) then
+       if( mptype_parent > 0 ) then
           call ExternalFileRead( read_zxy(:,:,:,:), BASENAME, "QCLOUD", ts, te, myrank, mdlid, single=.true. )
           !convert from mixing ratio [kg/kg] to ratio of mass of tracer to total mass[kg/kg]
           qtrc_org(:,:,:,:,I_QC) = real( read_zxy(:,:,:,:), kind=RP)/( 1.0_RP + real( read_zxy(:,:,:,:), kind=RP) )
@@ -1546,7 +1547,9 @@ contains
           call ExternalFileRead( read_zxy(:,:,:,:), BASENAME, "QRAIN",  ts, te, myrank, mdlid, single=.true. )
           !convert from mixing ratio [kg/kg] to ratio of mass of tracer to total mass[kg/kg]
           qtrc_org(:,:,:,:,I_QR) = real( read_zxy(:,:,:,:), kind=RP)/( 1.0_RP + real( read_zxy(:,:,:,:), kind=RP) )
+       endif
 
+       if( mptype_parent > 3 ) then
           call ExternalFileRead( read_zxy(:,:,:,:), BASENAME, "QICE",   ts, te, myrank, mdlid, single=.true. )
           !convert from mixing ratio [kg/kg] to ratio of mass of tracer to total mass[kg/kg]
           qtrc_org(:,:,:,:,I_QI) = real( read_zxy(:,:,:,:), kind=RP)/( 1.0_RP + real( read_zxy(:,:,:,:), kind=RP) )
@@ -1554,13 +1557,15 @@ contains
           call ExternalFileRead( read_zxy(:,:,:,:), BASENAME, "QSNOW",  ts, te, myrank, mdlid, single=.true. )
           !convert from mixing ratio [kg/kg] to ratio of mass of tracer to total mass[kg/kg]
           qtrc_org(:,:,:,:,I_QS) = real( read_zxy(:,:,:,:), kind=RP)/( 1.0_RP + real( read_zxy(:,:,:,:), kind=RP) )
+       endif
 
+       if( mptype_parent > 5 ) then
           call ExternalFileRead( read_zxy(:,:,:,:), BASENAME, "QGRAUP", ts, te, myrank, mdlid, single=.true. )
           !convert from mixing ratio [kg/kg] to ratio of mass of tracer to total mass[kg/kg]
           qtrc_org(:,:,:,:,I_QG) = real( read_zxy(:,:,:,:), kind=RP)/( 1.0_RP + real( read_zxy(:,:,:,:), kind=RP) )
        endif
 
-       if( trim(mptype_parent)=='double' ) then
+       if( mptype_parent > 6 ) then
           call ExternalFileRead( read_zxy(:,:,:,:), BASENAME, "NC",     ts, te, myrank, mdlid, single=.true. )
           qtrc_org(:,:,:,:,I_NC) = real( read_zxy(:,:,:,:), kind=RP )
 
@@ -1603,7 +1608,7 @@ contains
        end do
        end do
 
-       if( trim(mptype_run)=='double' .and. trim(mptype_parent)=='single' )then
+       if( trim(mptype_run)=='double' .and. mptype_parent <= 6 )then
           if( IO_L ) write(IO_FID_LOG,*) '--- Diagnose Number Concentration from Mixing Ratio'
           call diagnose_number_concentration( qtrc_org(:,:,:,:,:) ) ! [inout]
        endif

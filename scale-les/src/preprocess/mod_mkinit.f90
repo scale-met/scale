@@ -4456,7 +4456,8 @@ enddo
     character(len=H_LONG)    :: FILETYPE_ORG        = ''
     character(len=H_LONG)    :: BASENAME_BOUNDARY   = 'boundary_real'
     character(len=H_LONG)    :: BOUNDARY_TITLE      = 'SCALE-LES BOUNDARY CONDITION for REAL CASE'
-    character(len=H_SHORT)   :: PARENT_MP_TYPE      = 'single'  ! microphysics type of the parent model (single or double)
+    integer                  :: PARENT_MP_TYPE      = 6         ! microphysics type of the parent model (number of classes)
+                                                                ! 0: dry, 3:3-class, 5:5-class, 6:6-class, >6:double moment
     real(RP)                 :: BOUNDARY_UPDATE_DT  = 0.0_RP    ! inteval time of boudary data update [s]
     logical                  :: USE_FILE_DENSITY    = .false.   ! use density data from files
     logical                  :: WRF_FILE_TYPE       = .false.   ! wrf filetype: T=wrfout, F=wrfrst
