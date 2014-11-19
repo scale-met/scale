@@ -11,13 +11,30 @@ NUM_DOMAIN=1
 INDIR="../input"
 OUTDIR="../output"
 
-RADDIR="../../../data/rad"
-TOPODIR="${SCALE_DB}/topo"
-TOPOTYPE="GTOPO30"
-LANDUSEDIR="${SCALE_DB}/landuse"
-LANDUSETYPE="GLCCv2"
-
 BASENAME_ORG="${INDIR}/wrfout_d01_2011-09"
+
+TOPOTYPE="DEM50M"
+TOPODIR="${SCALE_DB}/topo"
+TOPO_IN_CATALOGUE="${TOPOTYPE}_catalogue.txt"
+TOPO_IN_DIR="${TOPODIR}/${TOPOTYPE}/Products"
+
+LANDUSETYPE="LU100M"
+LANDUSEDIR="${SCALE_DB}/landuse"
+LANDUSE_IN_CATALOGUE="${LANDUSETYPE}_catalogue.txt"
+LANDUSE_IN_DIR="${LANDUSEDIR}/${LANDUSETYPE}/Products"
+
+RADDIR="../../../data/rad"
+RD_MSTRN_GASPARA_IN_FILENAME="${RADDIR}/PARAG.29"
+RD_MSTRN_AEROPARA_IN_FILENAME="${RADDIR}/PARAPC.29"
+RD_MSTRN_HYGROPARA_IN_FILENAME="${RADDIR}/VARDATA.RM29"
+RD_PROFILE_CIRA86_IN_FILENAME="${RADDIR}/cira.nc"
+RD_PROFILE_MIPAS2001_IN_BASENAME="${RADDIR}/MIPAS"
+
+LANDPARAMDIR="../../../data/land"
+LAND_PROPERTY_IN_FILENAME="${LANDPARAMDIR}/param.bucket.conf"
+
+# for staging
+TRIMDIR=false
 
 #################################################
 
@@ -71,12 +88,6 @@ else
   CONF_PHYSICS="conf/param.physics.conf.sh"
 fi
 
-if [ -f "conf/param.bucket.d${FNUM}.conf.sh" ]; then
-  CONF_BUCKET="conf/param.bucket.d${FNUM}.conf.sh"
-else
-  CONF_BUCKET="conf/param.bucket.conf.sh"
-fi
-
 if [ -f "conf/param.history.d${FNUM}.conf.sh" ]; then
   CONF_HISTORY="conf/param.history.d${FNUM}.conf.sh"
 else
@@ -98,6 +109,12 @@ fi
 IO_LOG_BASENAME="${INDIR}/pp_LOG_d${FNUM}"
 TOPO_OUT_BASENAME="${INDIR}/topo_d${FNUM}"
 LANDUSE_OUT_BASENAME="${INDIR}/landuse_d${FNUM}"
+
+if [ ${TRIMDIR} = true ]; then
+  IO_LOG_BASENAME="${IO_LOG_BASENAME##*/}"
+  TOPO_OUT_BASENAME="${TOPO_OUT_BASENAME##*/}"
+  LANDUSE_OUT_BASENAME="${LANDUSE_OUT_BASENAME##*/}"
+fi
 
 source ${BASE_PP}
 source ${CONF_REGION}
@@ -121,6 +138,14 @@ RESTART_OUT_BASENAME="${INDIR}/init_d${FNUM}"
 TOPO_IN_BASENAME="${INDIR}/topo_d${FNUM}"
 LANDUSE_IN_BASENAME="${INDIR}/landuse_d${FNUM}"
 BASENAME_BOUNDARY="${INDIR}/boundary_d${FNUM}"
+
+if [ ${TRIMDIR} = true ]; then
+  IO_LOG_BASENAME="${IO_LOG_BASENAME##*/}"
+  RESTART_OUT_BASENAME="${RESTART_OUT_BASENAME##*/}"
+  TOPO_IN_BASENAME="${TOPO_IN_BASENAME##*/}"
+  LANDUSE_IN_BASENAME="${LANDUSE_IN_BASENAME##*/}"
+  BASENAME_BOUNDARY="${BASENAME_BOUNDARY##*/}"
+fi
 
 source ${BASE_INIT}
 source ${CONF_REGION}
@@ -147,11 +172,20 @@ ATMOS_BOUNDARY_IN_BASENAME="${INDIR}/boundary_d${FNUM}"
 HISTORY_DEFAULT_BASENAME="${OUTDIR}/history_d${FNUM}"
 MONITOR_OUT_BASENAME="${OUTDIR}/monitor_d${FNUM}"
 
+if [ ${TRIMDIR} = true ]; then
+  IO_LOG_BASENAME="${IO_LOG_BASENAME##*/}"
+  RESTART_IN_BASENAME="${RESTART_IN_BASENAME##*/}"
+  TOPO_IN_BASENAME="${TOPO_IN_BASENAME##*/}"
+  LANDUSE_IN_BASENAME="${LANDUSE_IN_BASENAME##*/}"
+  ATMOS_BOUNDARY_IN_BASENAME="${ATMOS_BOUNDARY_IN_BASENAME##*/}"
+  HISTORY_DEFAULT_BASENAME="${HISTORY_DEFAULT_BASENAME##*/}"
+  MONITOR_OUT_BASENAME="${MONITOR_OUT_BASENAME##*/}"
+fi
+
 source ${BASE_RUN}
 source ${CONF_REGION}
 source ${CONF_ADMIN}
 source ${CONF_PHYSICS}
-source ${CONF_BUCKET}
 source ${CONF_HISTORY}
 source ${CONF_MONITOR}
 
@@ -159,7 +193,6 @@ cat conf/base.run.conf \
     conf/param.region.conf \
     conf/param.admin.conf \
     conf/param.physics.conf \
-    conf/param.bucket.conf \
     conf/param.history.conf \
     conf/param.monitor.conf \
 > run.d${FNUM}.conf

@@ -30,6 +30,9 @@ RD_MSTRN_HYGROPARA_IN_FILENAME="${RADDIR}/VARDATA.RM29"
 RD_PROFILE_CIRA86_IN_FILENAME="${RADDIR}/cira.nc"
 RD_PROFILE_MIPAS2001_IN_BASENAME="${RADDIR}/MIPAS"
 
+LANDPARAMDIR="../../../data/land"
+LAND_PROPERTY_IN_FILENAME="${LANDPARAMDIR}/param.bucket.conf"
+
 # for staging
 TRIMDIR=false
 
@@ -83,12 +86,6 @@ if [ -f "conf/param.physics.d${FNUM}.conf.sh" ]; then
   CONF_PHYSICS="conf/param.physics.d${FNUM}.conf.sh"
 else
   CONF_PHYSICS="conf/param.physics.conf.sh"
-fi
-
-if [ -f "conf/param.bucket.d${FNUM}.conf.sh" ]; then
-  CONF_BUCKET="conf/param.bucket.d${FNUM}.conf.sh"
-else
-  CONF_BUCKET="conf/param.bucket.conf.sh"
 fi
 
 if [ -f "conf/param.history.d${FNUM}.conf.sh" ]; then
@@ -189,7 +186,6 @@ source ${BASE_RUN}
 source ${CONF_REGION}
 source ${CONF_ADMIN}
 source ${CONF_PHYSICS}
-source ${CONF_BUCKET}
 source ${CONF_HISTORY}
 source ${CONF_MONITOR}
 
@@ -197,7 +193,6 @@ cat conf/base.run.conf \
     conf/param.region.conf \
     conf/param.admin.conf \
     conf/param.physics.conf \
-    conf/param.bucket.conf \
     conf/param.history.conf \
     conf/param.monitor.conf \
 > run.d${FNUM}.conf
