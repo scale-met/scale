@@ -20,10 +20,10 @@ BINNAME     = NONE
 PPCONF      = pp.conf
 INITCONF    = NONE
 RUNCONF     = NONE
-TPROC       = 9
+TPROC       = 16
 
 # required data (parameters,distributed files)
-DATDIR      = $(SCALE_DB)/landuse/LU100M/Products
+DATDIR      = $(SCALE_DB)/landuse/GLCCv2/Products
 DATPARAM    =
 DATDISTS    =
 

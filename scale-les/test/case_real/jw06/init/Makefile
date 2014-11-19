@@ -20,7 +20,7 @@ BINNAME     = NONE
 PPCONF      = NONE
 INITCONF    = init.conf
 RUNCONF     = NONE
-TPROC       = 24
+TPROC       = 16
 
 # required data (parameters,distributed files)
 DATDIR      = ../../../data
