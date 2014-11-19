@@ -1796,11 +1796,6 @@ contains
           end if
        end if
 
-       call COMM_vars8( MOMX(:,:,:), 1 )
-       call COMM_vars8( MOMY(:,:,:), 2 )
-       call COMM_wait ( MOMX(:,:,:), 1, .false. )
-       call COMM_wait ( MOMY(:,:,:), 2, .false. )
-
     elseif ( do_parent_process ) then
        ! do nothing
     else
