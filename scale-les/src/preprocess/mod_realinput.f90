@@ -3023,6 +3023,8 @@ contains
       mdlid,       & ! (in)
       serial       & ! (in)
       )
+    use mod_land_vars, only: &
+      convert_WS2VWC
     implicit none
 
     real(RP),         intent(out)  :: tg(:,:,:)
@@ -3052,6 +3054,7 @@ contains
     real(RP), allocatable :: zs_org(:,:,:,:)
     real(RP), allocatable :: dzs_org(:,:)
     real(RP), allocatable :: landmask(:,:)
+    real(RP), allocatable :: sh2o(:,:,:)
 
     real(SP), allocatable :: dummy_2D(:,:)       ! for WRF restart file
     real(SP), allocatable :: dummy_3D(:,:,:)     ! for WRF restart file
@@ -3077,6 +3080,7 @@ contains
     d2r = pi / 180.0_RP
 
     allocate( lcz_3D(LKMAX,IA,JA) )
+    allocate( sh2o(LKMAX,IA,JA) )
     allocate( hfact(IA,JA,itp_nh) )
     allocate( vfact(LKMAX,IA,JA,itp_nh,itp_nv) )
     allocate( igrd(IA,JA,itp_nh) )
@@ -3179,16 +3183,21 @@ contains
        do j = 1, JA
        do i = 1, IA
        do k = 1, LKMAX-1  ! interpolation
-          strg(k,i,j) =  org_4D(kgrd(k,i,j,1,1),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,1) &
+          sh2o(k,i,j) =  org_4D(kgrd(k,i,j,1,1),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,1) &
                        + org_4D(kgrd(k,i,j,2,1),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,1) &
                        + org_4D(kgrd(k,i,j,3,1),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,1) &
                        + org_4D(kgrd(k,i,j,1,2),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,2) &
                        + org_4D(kgrd(k,i,j,2,2),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,2) &
                        + org_4D(kgrd(k,i,j,3,2),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,2)
        enddo
-       strg(LKMAX,i,j) = strg(LKMAX-1,i,j)
+       sh2o(LKMAX,i,j) = sh2o(LKMAX-1,i,j)
        enddo
        enddo
+
+       ! conversion from water saturation [fraction] to volumetric water content [m3/m3]
+       do k = 1, LKMAX
+          strg(k,:,:) = convert_WS2VWC( sh2o(k,:,:), critical=.true. )
+       end do
     else
        ! default value: set as value of forest at 40% of evapolation rate.
        ! forest is considered as a typical landuse over Japan area.

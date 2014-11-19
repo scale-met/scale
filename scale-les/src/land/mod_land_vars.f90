@@ -38,6 +38,8 @@ module mod_land_vars
   public :: LAND_vars_total
   public :: LAND_vars_external_in
 
+  public :: convert_WS2VWC
+
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
@@ -626,5 +628,34 @@ contains
 
     return
   end subroutine LAND_param_read
+
+  !-----------------------------------------------------------------------------
+  !> conversion from water saturation [fraction] to volumetric water content [m3/m3]
+  function convert_WS2VWC( WS, critical ) result( VWC )
+    implicit none
+
+    real(RP), intent(in) :: WS(IA,JA) ! water saturation [fraction]
+    logical,  intent(in) :: critical  ! is I_WaterCritical used?
+
+    real(RP) :: VWC(IA,JA) ! volumetric water content [m3/m3]
+
+    ! work
+    integer :: i, j, num
+    !---------------------------------------------------------------------------
+
+    if( critical ) then
+      num = I_WaterCritical
+    else
+      num = I_WaterLimit
+    end if
+
+    do j = 1, JA
+    do i = 1, IA
+      VWC(i,j) = max( min( WS(i,j)*LAND_PROPERTY(i,j,num), LAND_PROPERTY(i,j,num) ), 0.0_RP )
+    end do
+    end do
+
+    return
+  end function convert_WS2VWC
 
 end module mod_land_vars
