@@ -299,6 +299,18 @@ contains
     endif
     if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_NEST)
 
+    ! only for register
+    call PROF_rapstart('NESTCOM send parent')
+    call PROF_rapend  ('NESTCOM send parent')
+    call PROF_rapstart('NESTCOM wait parent')
+    call PROF_rapend  ('NESTCOM wait parent')
+    call PROF_rapstart('NESTCOM recv child')
+    call PROF_rapend  ('NESTCOM recv child')
+    call PROF_rapstart('NESTCOM wait child')
+    call PROF_rapend  ('NESTCOM wait child')
+    call PROF_rapstart('NESTCOM interp')
+    call PROF_rapend  ('NESTCOM interp')
+
     allocate ( errcodes(1:ONLINE_DAUGHTER_PRC) )
 
     if( USE_NESTING ) then
@@ -1676,12 +1688,18 @@ contains
     if ( NEST_Filiation( INTERCOMM_ID(HANDLE) ) > 0 ) then
     !--------------------------------------------------- parent
        do yp = 1, NUM_YP
+          call PROF_rapstart('NESTCOM send parent')
+
           ! send data to multiple daughter processes
           target_rank = NEST_TILE_LIST_YP(yp)
 
           l = l + 1
           call MPI_ISEND(pvar, ileng, COMM_datatype, target_rank, tag, INTERCOMM_DAUGHTER, ireq(l), ierr(l))
+          call PROF_rapend('NESTCOM send parent')
+
+          call PROF_rapstart('NESTCOM wait parent')
           call MPI_WAIT(ireq(l), istatus, ierr(l))
+          call PROF_rapend('NESTCOM wait parent')
 
           dvar(:,:,:) = -1.0_RP  ! input as a dummy value
        enddo
@@ -1689,6 +1707,8 @@ contains
     elseif ( NEST_Filiation( INTERCOMM_ID(HANDLE) ) < 0 ) then
     !--------------------------------------------------- daughter
        do yp = 1, NEST_TILE_ALL ! YP Loop
+          call PROF_rapstart('NESTCOM recv child')
+
           ! receive data from multiple parent tiles
           target_rank = NEST_TILE_LIST_d(yp,PRC_myrank+1)
 
@@ -1711,7 +1731,11 @@ contains
                              INTERCOMM_PARENT, &
                              ireq(l),          &
                              ierr(l)           )
+             call PROF_rapend('NESTCOM recv child')
+
+             call PROF_rapstart('NESTCOM wait child')
              call MPI_WAIT(ireq(l), istatus, ierr(l))
+             call PROF_rapend('NESTCOM wait child')
 
              if ( .not. logarithmic ) then
                 ! linear interpolation
@@ -1735,12 +1759,19 @@ contains
                              INTERCOMM_PARENT, &
                              ireq(l),          &
                              ierr(l)           )
+             call PROF_rapend('NESTCOM recv child')
+
+             call PROF_rapstart('NESTCOM wait child')
              call MPI_WAIT(ireq(l), istatus, ierr(l))
+             call PROF_rapend('NESTCOM wait child')
+
              do k = 0, PARENT_KA(HANDLE)
                 buffer_ref_3DF(k,xs:xe,ys:ye) &
                 = buffer_3DF(k,PRNT_IS(HANDLE):PRNT_IE(HANDLE),PRNT_JS(HANDLE):PRNT_JE(HANDLE))
              enddo
           endif
+
+          call PROF_rapstart('NESTCOM interp')
 
           if ( no_zstag ) then
              if ( .not. logarithmic ) then
@@ -1805,6 +1836,8 @@ contains
              end do
              end do
           endif
+
+          call PROF_rapend('NESTCOM interp')
 
        enddo ! YP Loop
 
