@@ -4461,7 +4461,6 @@ enddo
     logical                  :: USE_FILE_DENSITY    = .false.   ! use density data from files
     logical                  :: WRF_FILE_TYPE       = .false.   ! wrf filetype: T=wrfout, F=wrfrst
     logical                  :: SERIAL_PROC_READ    = .false.   ! read by one MPI process and broadcast
-    logical                  :: NO_ADDITIONAL_INPUT = .false.   ! no additional information
 
 
     NAMELIST / PARAM_MKINIT_REAL / &
@@ -4476,8 +4475,7 @@ enddo
          USE_FILE_DENSITY,    &
          PARENT_MP_TYPE,      &
          WRF_FILE_TYPE,       &
-         SERIAL_PROC_READ,    &
-         NO_ADDITIONAL_INPUT
+         SERIAL_PROC_READ
 
     character(len=H_LONG) :: BASENAME_WITHNUM  = ''
     character(len=5)      :: NUM               = ''
@@ -4642,8 +4640,7 @@ enddo
                              dims,                &
                              1,                   &
                              mdlid,               &
-                             SERIAL_PROC_READ,    &
-                             NO_ADDITIONAL_INPUT  )
+                             SERIAL_PROC_READ     )
 
     do j = 1, JA
     do i = 1, IA

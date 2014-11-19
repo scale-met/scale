@@ -138,7 +138,7 @@ contains
     intrinsic shape
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) ''
     if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[realinput]/Categ[Setup]'
 
     select case(trim(filetype))
@@ -227,7 +227,7 @@ contains
     character(len=H_SHORT)  :: mptype_run
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) ''
     if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[realinput]/Categ[Input]'
 
     select case (TRACER_TYPE)
@@ -335,7 +335,7 @@ contains
 
     allocate( buffer(KA,IA,JA,te-ts+1) )
 
-    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) ''
     if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[realinput]/Categ[Boundary]'
 
     call FILEIO_write( DENS(:,:,:,ts:te), basename, title,           &
@@ -434,8 +434,7 @@ contains
       dims,         &
       timelen,      &
       mdlid,        &
-      serial,       &
-      no_add_input  )
+      serial        )
     use scale_comm, only: &
        COMM_vars8, &
        COMM_wait
@@ -465,7 +464,6 @@ contains
     integer,          intent(in) :: timelen  ! time steps in one file
     integer,          intent(in) :: mdlid    ! model type id
     logical,          intent(in) :: serial   ! read by a serial process
-    logical,          intent(in) :: no_add_input
 
     real(RP) :: temp(KA,IA,JA)
     real(RP) :: pres(KA,IA,JA)
@@ -497,7 +495,7 @@ contains
     intrinsic shape
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) ''
     if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[realinput]/Categ[Input-Surface]'
 
     if( LKMAX < 4 )then
@@ -543,8 +541,7 @@ contains
                              basename_org, &
                              dims(:),      &
                              mdlid,        &
-                             serial,       &
-                             no_add_input  )
+                             serial        )
     elseif( mdlid == iNICAM ) then ! TYPE: NICAM-NETCDF
        call InputSurfaceNICAM( tg   (:,:,:), &
                                strg (:,:,:), &
@@ -767,7 +764,7 @@ contains
     allocate( temp_org( KALL, IALL, JALL, start_step:end_step )    )
     allocate( pres_org( KALL, IALL, JALL, start_step:end_step )    )
 
-    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) ''
     if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[realinput]/Categ[InputSCALE]'
 
     do i = 1, size( NEST_TILE_ID(:) )
@@ -1481,7 +1478,7 @@ contains
     allocate( latv_org (dims(2),dims(6),        ts:te   ) )
     allocate( lonv_org (dims(2),dims(6),        ts:te   ) )
 
-    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) ''
     if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[realinput]/Categ[InputWRF]'
 
     if( .NOT. serial .or. myrank == PRC_master ) then
@@ -2097,7 +2094,7 @@ contains
     allocate( pres_org( dims3p1, dims(1), dims(2), start_step:end_step ) )
     allocate( qtrc_org( dims(3), dims(1), dims(2), start_step:end_step, QA_NCM) )
 
-    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) ''
     if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[realinput]/Categ[InputNICAM]'
 
     ! normal vertical grid arrangement
@@ -2795,7 +2792,7 @@ contains
     allocate( jgrd (        IA, JA, itp_nh         ) )
     allocate( kgrd ( LKMAX, IA, JA, itp_nh, itp_nv ) )
 
-    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) ''
     if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[realinput]/Categ[InputSCALE-Surface]'
 
     do i = 1, size( NEST_TILE_ID(:) )
@@ -3019,8 +3016,7 @@ contains
       basename,    & ! (in)
       dims,        & ! (in)
       mdlid,       & ! (in)
-      serial,      & ! (in)
-      no_input     & ! (in)
+      serial       & ! (in)
       )
     implicit none
 
@@ -3043,7 +3039,6 @@ contains
     integer,          intent( in)  :: mdlid
     integer,          intent( in)  :: dims(:)
     logical,          intent( in)  :: serial
-    logical,          intent( in)  :: no_input
 
     real(RP), allocatable :: org_3D(:,:,:)
     real(RP), allocatable :: org_4D(:,:,:,:)
@@ -3070,6 +3065,7 @@ contains
     integer :: tcount = 1
 
     logical :: do_read
+    logical :: existence
 
     intrinsic shape
     !---------------------------------------------------------------------------
@@ -3103,7 +3099,7 @@ contains
        do_read = .true.
     endif
 
-    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) ''
     if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[realinput]/Categ[InputWRF-Surface]'
 
     if( do_read ) then
@@ -3165,6 +3161,35 @@ contains
     enddo
     enddo
 
+    ! soil liquid water m3 m-3] (no wrfout-default)
+    call ExternalFileVarExistence( existence, BASENAME, "SH2O", myrank, mdlid, single=.true. )
+    if ( existence ) then
+       if( do_read ) then
+          call ExternalFileRead( dummy_4D(:,:,:,:),                             &
+                         BASENAME, "SH2O", 1, tcount, myrank, mdlid, single=.true., landgrid=.true.  )
+          org_4D(:,:,:,:) = dummy_4D(:,:,:,:)
+       endif
+       if( serial ) call COMM_bcast( org_4D(:,:,:,:), dims(7),dims(2),dims(3),tcount )
+       n = 1
+       do j = 1, JA
+       do i = 1, IA
+       do k = 1, LKMAX-1  ! interpolation
+          strg(k,i,j) =  org_4D(kgrd(k,i,j,1,1),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,1) &
+                       + org_4D(kgrd(k,i,j,2,1),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,1) &
+                       + org_4D(kgrd(k,i,j,3,1),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,1) &
+                       + org_4D(kgrd(k,i,j,1,2),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,2) &
+                       + org_4D(kgrd(k,i,j,2,2),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,2) &
+                       + org_4D(kgrd(k,i,j,3,2),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,2)
+       enddo
+       strg(LKMAX,i,j) = strg(LKMAX-1,i,j)
+       enddo
+       enddo
+    else
+       ! default value: set as value of forest at 40% of evapolation rate.
+       ! forest is considered as a typical landuse over Japan area.
+       strg(:,:,:) = 0.02_DP
+    endif
+
     ! surface runoff [mm]
     if( do_read ) then
        call ExternalFileRead( dummy_3D(:,:,:),                             &
@@ -3186,14 +3211,6 @@ contains
                   + org_3D(igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3)
     enddo
     enddo
-
-    ! soil liquid water m3 m-3] (no wrfout-default)
-    ! --- not available; appropriate convert method is not found
-    strg(:,:,:) = 0.15_DP
-
-    ! accumulated surface evaporation [kg m-2]
-    ! --- not available; convert method is not found
-    qvef(:,:) = 0.0_DP
 
     ! land mask (1:land, 0:water)
     if( do_read ) then
@@ -3245,6 +3262,7 @@ contains
     ust(:,:) = lst(:,:)
     !sst(:,:) = lst(:,:)
     sst(:,:) = tw(:,:)
+    qvef(:,:) = 0.0_DP ! currently not used
 
     ! ALBEDO [-]
     if( do_read ) then
@@ -3263,7 +3281,7 @@ contains
     enddo
     albg(:,:,I_SW) = albw(:,:,I_SW)
 
-    ! SURFACE EMISSIVITY [-] (no wrfout-default)
+    ! SURFACE EMISSIVITY [-]
     if( do_read ) then
        call ExternalFileRead( dummy_3D(:,:,:),                             &
                       BASENAME, "EMISS",  1, tcount, myrank, mdlid, single=.true. )
@@ -3287,9 +3305,8 @@ contains
     albg(:,:,I_LW) = albw(:,:,I_LW)
 
     ! TIME-VARYING ROUGHNESS LENGTH [m] (no wrfout-default)
-    if ( no_input ) then
-       z0w(:,:) = 0.1_DP
-    else
+    call ExternalFileVarExistence( existence, BASENAME, "ZNT", myrank, mdlid, single=.true. )
+    if ( existence ) then
        if( do_read ) then
           call ExternalFileRead( dummy_3D(:,:,:),                             &
                          BASENAME, "ZNT",  1, tcount, myrank, mdlid, single=.true. )
@@ -3304,6 +3321,8 @@ contains
                     + org_3D(igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3)
        enddo
        enddo
+    else
+       z0w(:,:) = 0.1_DP
     endif
 
     !tentative approach for skin
@@ -3311,25 +3330,29 @@ contains
     skinw(:,:) = 0.0_DP
 
     ! SNOW WATER EQUIVALENT [kg m-2] (no wrfout-default)
-    if( do_read ) then
-       call ExternalFileRead( dummy_3D(:,:,:),                             &
-                      BASENAME, "SNOW",  1, tcount, myrank, mdlid, single=.true. )
-       org_3D(:,:,:) = dummy_3D(:,:,:)
+    call ExternalFileVarExistence( existence, BASENAME, "SNOW", myrank, mdlid, single=.true. )
+    if ( existence ) then
+       if( do_read ) then
+          call ExternalFileRead( dummy_3D(:,:,:),                             &
+                         BASENAME, "SNOW",  1, tcount, myrank, mdlid, single=.true. )
+          org_3D(:,:,:) = dummy_3D(:,:,:)
+       endif
+       if( serial ) call COMM_bcast( org_3D(:,:,:), dims(2),dims(3),tcount )
+       n = 1
+       do j = 1, JA
+       do i = 1, IA
+          snowq(i,j) =  org_3D(igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) &
+                      + org_3D(igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) &
+                      + org_3D(igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3)
+       enddo
+       enddo
+    else
+       snowq(:,:) = 0.0_DP
     endif
-    if( serial ) call COMM_bcast( org_3D(:,:,:), dims(2),dims(3),tcount )
-    n = 1
-    do j = 1, JA
-    do i = 1, IA
-       snowq(i,j) =  org_3D(igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) &
-                   + org_3D(igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) &
-                   + org_3D(igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3)
-    enddo
-    enddo
 
     ! AVERAGE SNOW TEMPERATURE [C] (no wrfout-default)
-    if ( no_input ) then
-       snowt(:,:) = lst(:,:)
-    else
+    call ExternalFileVarExistence( existence, BASENAME, "TSNAV", myrank, mdlid, single=.true. )
+    if ( existence ) then
        if( do_read ) then
           call ExternalFileRead( dummy_3D(:,:,:),                             &
                          BASENAME, "TSNAV",  1, tcount, myrank, mdlid, single=.true. )
@@ -3350,6 +3373,8 @@ contains
                       + org_3D(igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3)
        enddo
        enddo
+    else
+       snowt(:,:) = lst(:,:)
     endif
 
     deallocate( dummy_2D )
@@ -3513,7 +3538,7 @@ contains
     allocate( jgrd (          dims(1), dims(2), itp_nh         ) )
     allocate( kgrd ( dims(7), dims(1), dims(2), itp_nh, itp_nv ) )
 
-    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) ''
     if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[realinput]/Categ[InputNICAM-Surface]'
 
     if( do_read ) then
@@ -3600,12 +3625,14 @@ contains
                                     single=.true.     )
        strg_org(:,:,:) = real( read4D(:,:,:,1), kind=RP )
 
-       ! tentative: missing value => 0.2
+       ! tentative: missing value => 0.02
        do k = 1, dims(7)
        do j = 1, dims(2)
        do i = 1, dims(1)
           if( strg_org(k,i,j) < sqrt(EPS) )then
-              strg_org(k,i,j) = 0.2D0
+              ! default value: set as value of forest at 40% of evapolation rate.
+              ! forest is considered as a typical landuse over Japan area.
+              strg_org(k,i,j) = 0.02D0
           endif
        end do
        end do
