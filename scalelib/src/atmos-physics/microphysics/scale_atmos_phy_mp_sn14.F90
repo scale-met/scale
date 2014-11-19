@@ -3771,18 +3771,19 @@ contains
     real(RP), intent(in)  :: temp(KA,IA,JA)    ! temperature
     real(RP), intent(in)  :: pres(KA,IA,JA)    ! pressure
 
-    real(RP) :: xq      (KA,6)  ! average mass of 1 particle( mass/number )
+    real(RP) :: xq      (KA,IA,JA,6)  ! average mass of 1 particle( mass/number )
 
-    real(RP) :: rhofac  (KA)    ! density factor for terminal velocity( air friction )
-    real(RP) :: rhofac_q(KA,6)
+    real(RP) :: rhofac  (KA,IA,JA)    ! density factor for terminal velocity( air friction )
+    real(RP) :: rhofac_q(KA,IA,JA,6)
 
-    real(RP) :: rlambdar(KA)    ! work for diagnosis of Rain DSD ( Seifert, 2008 )
+    real(RP) :: rlambdar(KA,IA,JA)    ! work for diagnosis of Rain DSD ( Seifert, 2008 )
     real(RP) :: mud_r           !
-    real(RP) :: dq      (KA,QA) ! work for Rogers etal. (1993)
-    real(RP) :: weight  (KA,QA) !
-    real(RP) :: velq_s  (KA,QA) ! terminal velocity for small branch of Rogers formula
-    real(RP) :: velq_l  (KA,QA) ! terminal velocity for large branch of Rogers formula
+    real(RP) :: dq      (KA,IA,JA,QA) ! work for Rogers etal. (1993)
+    real(RP) :: weight  (KA,IA,JA,QA) !
+    real(RP) :: velq_s  (KA,IA,JA,QA) ! terminal velocity for small branch of Rogers formula
+    real(RP) :: velq_l  (KA,IA,JA,QA) ! terminal velocity for large branch of Rogers formula
 
+    real(RP) :: tmp
     integer :: k, i, j
     !---------------------------------------------------------------------------
 
@@ -3790,154 +3791,263 @@ contains
 
     do j = JS, JE
     do i = IS, IE
+    do k = KS, KE
+       rhofac(k,i,j) = rho_0 / max( DENS(k,i,j), rho_min )
+    enddo
+    enddo
+    enddo
 
-       do k = KS, KE
-          rhofac(k) = rho_0 / max( DENS(k,i,j), rho_min )
-       enddo
+    ! average mass
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       xq(k,i,j,I_QC) = max( xqmin(I_QC), &
+                        min( xqmax(I_QC), &
+                             rhoq(k,i,j,I_QC) / ( rhoq(k,i,j,I_NC) + nqmin(I_QC) ) ) )
+       xq(k,i,j,I_QR) = max( xqmin(I_QR), &
+                        min( xqmax(I_QR), &
+                             rhoq(k,i,j,I_QR) / ( rhoq(k,i,j,I_NR) + nqmin(I_QR) ) ) )
+       xq(k,i,j,I_QI) = max( xqmin(I_QI), &
+                        min( xqmax(I_QI), &
+                             rhoq(k,i,j,I_QI) / ( rhoq(k,i,j,I_NI) + nqmin(I_QI) ) ) )
+       xq(k,i,j,I_QS) = max( xqmin(I_QS), &
+                        min( xqmax(I_QS), &
+                             rhoq(k,i,j,I_QS) / ( rhoq(k,i,j,I_NS) + nqmin(I_QS) ) ) )
+       xq(k,i,j,I_QG) = max( xqmin(I_QG), &
+                        min( xqmax(I_QG), &
+                             rhoq(k,i,j,I_QG) / ( rhoq(k,i,j,I_NG) + nqmin(I_QG) ) ) )
+    enddo
+    enddo
+    enddo
 
-       ! average mass
-       do k = KS, KE
-          xq(k,I_QC) = rhoq(k,i,j,I_QC) / ( rhoq(k,i,j,I_NC) + nqmin(I_QC) )
-          xq(k,I_QR) = rhoq(k,i,j,I_QR) / ( rhoq(k,i,j,I_NR) + nqmin(I_QR) )
-          xq(k,I_QI) = rhoq(k,i,j,I_QI) / ( rhoq(k,i,j,I_NI) + nqmin(I_QI) )
-          xq(k,I_QS) = rhoq(k,i,j,I_QS) / ( rhoq(k,i,j,I_NS) + nqmin(I_QS) )
-          xq(k,I_QG) = rhoq(k,i,j,I_QG) / ( rhoq(k,i,j,I_NG) + nqmin(I_QG) )
-       enddo
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       rlambdar(k,i,j) = a_m(I_QR) * xq(k,i,j,I_QR)**b_m(I_QR) &
+                   * ( (mud_r+3.0_RP) * (mud_r+2.0_RP) * (mud_r+1.0_RP) )**(-0.333333333_RP)
+    enddo
+    enddo
+    enddo
 
-       ! limiter
-       do k  = KS, KE
-          xq(k,I_QC) = max( min( xq(k,I_QC), xqmax(I_QC) ), xqmin(I_QC) )
-          xq(k,I_QR) = max( min( xq(k,I_QR), xqmax(I_QR) ), xqmin(I_QR) )
-          xq(k,I_QI) = max( min( xq(k,I_QI), xqmax(I_QI) ), xqmin(I_QI) )
-          xq(k,I_QS) = max( min( xq(k,I_QS), xqmax(I_QS) ), xqmin(I_QS) )
-          xq(k,I_QG) = max( min( xq(k,I_QG), xqmax(I_QG) ), xqmin(I_QG) )
-       enddo
+    ! Improved Rogers formula by T.Mitsui
+    ! weigthed diameter
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       dq(k,i,j,I_QR) = ( 4.0_RP + mud_r ) * rlambdar(k,i,j) ! D^(3)+mu weighted mean diameter
+       dq(k,i,j,I_NR) = ( 1.0_RP + mud_r ) * rlambdar(k,i,j)
+    enddo
+    enddo
+    enddo
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       tmp = a_m(I_QI) * xq(k,i,j,I_QI)**b_m(I_QI)
+       dq(k,i,j,I_QI) = coef_dave_L(I_QI) * tmp
+       dq(k,i,j,I_NI) = coef_dave_N(I_QI) * tmp
+    enddo
+    enddo
+    enddo
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       tmp = a_m(I_QS) * xq(k,i,j,I_QS)**b_m(I_QS)
+       dq(k,i,j,I_QS) = coef_dave_L(I_QS) * tmp
+       dq(k,i,j,I_NS) = coef_dave_N(I_QS) * tmp
+    enddo
+    enddo
+    enddo
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       tmp = a_m(I_QG) * xq(k,i,j,I_QG)**b_m(I_QG)
+       dq(k,i,j,I_QG) = coef_dave_L(I_QG) * tmp
+       dq(k,i,j,I_NG) = coef_dave_N(I_QG) * tmp
+    enddo
+    enddo
+    enddo
 
-       do k = KS, KE
-          rlambdar(k) = a_m(I_QR) * xq(k,I_QR)**b_m(I_QR) &
-                      * ( (mud_r+3.0_RP) * (mud_r+2.0_RP) * (mud_r+1.0_RP) )**(-0.333333333_RP)
-       enddo
+    ! small/large branch terminal velocity
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       velq_s(k,i,j,I_QR) = coef_vtr_ar2 * dq(k,i,j,I_QR) &
+            * ( 1.0_RP - ( 1.0_RP + coef_vtr_br2*rlambdar(k,i,j) )**(-5.0_RP-mud_r) )
+       velq_l(k,i,j,I_QR) = coef_vtr_ar1 - coef_vtr_br1 &
+            * ( 1.0_RP + coef_vtr_cr1*rlambdar(k,i,j) )**(-4.0_RP-mud_r)
+       velq_s(k,i,j,I_NR) = coef_vtr_ar2 * dq(k,i,j,I_QR) &
+            * ( 1.0_RP - ( 1.0_RP + coef_vtr_br2*rlambdar(k,i,j) )**(-2.0_RP-mud_r) )
+       velq_l(k,i,j,I_NR) = coef_vtr_ar1 - coef_vtr_br1 &
+            * ( 1.0_RP + coef_vtr_cr1*rlambdar(k,i,j) )**(-1.0_RP-mud_r)
+    enddo
+    enddo
+    enddo
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       velq_s(k,i,j,I_QI) = coef_vt1(I_QI,1) * xq(k,i,j,I_QI)**beta_v (I_QI,1)
+       velq_l(k,i,j,I_QI) = coef_vt1(I_QI,2) * xq(k,i,j,I_QI)**beta_v (I_QI,2)
+       velq_s(k,i,j,I_NI) = coef_vt0(I_QI,1) * xq(k,i,j,I_QI)**beta_vn(I_QI,1)
+       velq_l(k,i,j,I_NI) = coef_vt0(I_QI,2) * xq(k,i,j,I_QI)**beta_vn(I_QI,2)
+    enddo
+    enddo
+    enddo
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       velq_s(k,i,j,I_QS) = coef_vt1(I_QS,1) * xq(k,i,j,I_QS)**beta_v (I_QS,1)
+       velq_l(k,i,j,I_QS) = coef_vt1(I_QS,2) * xq(k,i,j,I_QS)**beta_v (I_QS,2)
+       velq_s(k,i,j,I_NS) = coef_vt0(I_QS,1) * xq(k,i,j,I_QS)**beta_vn(I_QS,1)
+       velq_l(k,i,j,I_NS) = coef_vt0(I_QS,2) * xq(k,i,j,I_QS)**beta_vn(I_QS,2)
+    enddo
+    enddo
+    enddo
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       velq_s(k,i,j,I_QG) = coef_vt1(I_QG,1) * xq(k,i,j,I_QG)**beta_v (I_QG,1)
+       velq_l(k,i,j,I_QG) = coef_vt1(I_QG,2) * xq(k,i,j,I_QG)**beta_v (I_QG,2)
+       velq_s(k,i,j,I_NG) = coef_vt0(I_QG,1) * xq(k,i,j,I_QG)**beta_vn(I_QG,1)
+       velq_l(k,i,j,I_NG) = coef_vt0(I_QG,2) * xq(k,i,j,I_QG)**beta_vn(I_QG,2)
+    enddo
+    enddo
+    enddo
 
-       ! Improved Rogers formula by T.Mitsui
-       ! weigthed diameter
-       do k = KS, KE
-          dq(k,I_QR) = ( 4.0_RP + mud_r ) * rlambdar(k) ! D^(3)+mu weighted mean diameter
-          dq(k,I_NR) = ( 1.0_RP + mud_r ) * rlambdar(k)
-       enddo
-       do k = KS, KE
-          dq(k,I_QI) = coef_dave_L(I_QI) * a_m(I_QI) * xq(k,I_QI)**b_m(I_QI)
-          dq(k,I_NI) = coef_dave_N(I_QI) * a_m(I_QI) * xq(k,I_QI)**b_m(I_QI)
-       enddo
-       do k = KS, KE
-          dq(k,I_QS) = coef_dave_L(I_QS) * a_m(I_QS) * xq(k,I_QS)**b_m(I_QS)
-          dq(k,I_NS) = coef_dave_N(I_QS) * a_m(I_QS) * xq(k,I_QS)**b_m(I_QS)
-       enddo
-       do k = KS, KE
-          dq(k,I_QG) = coef_dave_L(I_QG) * a_m(I_QG) * xq(k,I_QG)**b_m(I_QG)
-          dq(k,I_NG) = coef_dave_N(I_QG) * a_m(I_QG) * xq(k,I_QG)**b_m(I_QG)
-       enddo
+    ! weighting coefficient for 2-branches is determined by ratio between 0.745mm and weighted diameter
+    ! SB06 Table.1
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       weight(k,i,j,I_QR) = 0.5_RP * ( 1.0_RP + tanh( PI * log( dq(k,i,j,I_QR)/d_vtr_branch ) ) ) ! Lr
+       weight(k,i,j,I_QI) = 0.5_RP * ( 1.0_RP + log( dq(k,i,j,I_QI)/d0_li ) )
+       weight(k,i,j,I_QS) = 0.5_RP * ( 1.0_RP + log( dq(k,i,j,I_QS)/d0_ls ) )
+       weight(k,i,j,I_QG) = 0.5_RP * ( 1.0_RP + log( dq(k,i,j,I_QG)/d0_lg ) )
+       weight(k,i,j,I_NR) = 0.5_RP * ( 1.0_RP + tanh( PI * log( dq(k,i,j,I_NR)/d_vtr_branch ) ) ) ! Nr
+       weight(k,i,j,I_NI) = 0.5_RP * ( 1.0_RP + log( dq(k,i,j,I_NI)/d0_ni ) )
+       weight(k,i,j,I_NS) = 0.5_RP * ( 1.0_RP + log( dq(k,i,j,I_NS)/d0_ns ) )
+       weight(k,i,j,I_NG) = 0.5_RP * ( 1.0_RP + log( dq(k,i,j,I_NG)/d0_ng ) )
+    enddo
+    enddo
+    enddo
 
-       ! small/large branch terminal velocity
-       do k = KS, KE
-          velq_s(k,I_QR) = coef_vtr_ar2 * dq(k,I_QR) * ( 1.0_RP - ( 1.0_RP + coef_vtr_br2*rlambdar(k) )**(-5-mud_r) )
-          velq_l(k,I_QR) = coef_vtr_ar1 - coef_vtr_br1 * ( 1.0_RP + coef_vtr_cr1*rlambdar(k) )**(-4-mud_r)
-          velq_s(k,I_NR) = coef_vtr_ar2 * dq(k,I_QR) * ( 1.0_RP - ( 1.0_RP + coef_vtr_br2*rlambdar(k) )**(-2-mud_r) )
-          velq_l(k,I_NR) = coef_vtr_ar1 - coef_vtr_br1 * ( 1.0_RP + coef_vtr_cr1*rlambdar(k) )**(-1-mud_r)
-       enddo
-       do k = KS, KE
-          velq_s(k,I_QI) = coef_vt1(I_QI,1) * xq(k,I_QI)**beta_v (I_QI,1)
-          velq_l(k,I_QI) = coef_vt1(I_QI,2) * xq(k,I_QI)**beta_v (I_QI,2)
-          velq_s(k,I_NI) = coef_vt0(I_QI,1) * xq(k,I_QI)**beta_vn(I_QI,1)
-          velq_l(k,I_NI) = coef_vt0(I_QI,2) * xq(k,I_QI)**beta_vn(I_QI,2)
-       enddo
-       do k = KS, KE
-          velq_s(k,I_QS) = coef_vt1(I_QS,1) * xq(k,I_QS)**beta_v (I_QS,1)
-          velq_l(k,I_QS) = coef_vt1(I_QS,2) * xq(k,I_QS)**beta_v (I_QS,2)
-          velq_s(k,I_NS) = coef_vt0(I_QS,1) * xq(k,I_QS)**beta_vn(I_QS,1)
-          velq_l(k,I_NS) = coef_vt0(I_QS,2) * xq(k,I_QS)**beta_vn(I_QS,2)
-       enddo
-       do k = KS, KE
-          velq_s(k,I_QG) = coef_vt1(I_QG,1) * xq(k,I_QG)**beta_v (I_QG,1)
-          velq_l(k,I_QG) = coef_vt1(I_QG,2) * xq(k,I_QG)**beta_v (I_QG,2)
-          velq_s(k,I_NG) = coef_vt0(I_QG,1) * xq(k,I_QG)**beta_vn(I_QG,1)
-          velq_l(k,I_NG) = coef_vt0(I_QG,2) * xq(k,I_QG)**beta_vn(I_QG,2)
-       enddo
+    ! filter is used to avoid unrealistic terminal velocity( when ni,ns,ng are too small )
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       weight(k,i,j,I_QI) = min( max( weight(k,i,j,I_QI), 0.0_RP ), 1.0_RP )
+       weight(k,i,j,I_QS) = min( max( weight(k,i,j,I_QS), 0.0_RP ), 1.0_RP )
+       weight(k,i,j,I_QG) = min( max( weight(k,i,j,I_QG), 0.0_RP ), 1.0_RP )
+       weight(k,i,j,I_NI) = min( max( weight(k,i,j,I_NI), 0.0_RP ), 1.0_RP )
+       weight(k,i,j,I_NS) = min( max( weight(k,i,j,I_NS), 0.0_RP ), 1.0_RP )
+       weight(k,i,j,I_NG) = min( max( weight(k,i,j,I_NG), 0.0_RP ), 1.0_RP )
+    enddo
+    enddo
+    enddo
 
-       ! weighting coefficient for 2-branches is determined by ratio between 0.745mm and weighted diameter
-       ! SB06 Table.1
-       do k = KS, KE
-          weight(k,I_QR) = 0.5_RP * ( 1.0_RP + tanh( PI * log( dq(k,I_QR)/d_vtr_branch ) ) ) ! Lr
-          weight(k,I_QI) = 0.5_RP * ( 1.0_RP + log( dq(k,I_QI)/d0_li ) )
-          weight(k,I_QS) = 0.5_RP * ( 1.0_RP + log( dq(k,I_QS)/d0_ls ) )
-          weight(k,I_QG) = 0.5_RP * ( 1.0_RP + log( dq(k,I_QG)/d0_lg ) )
-          weight(k,I_NR) = 0.5_RP * ( 1.0_RP + tanh( PI * log( dq(k,I_NR)/d_vtr_branch ) ) ) ! Nr
-          weight(k,I_NI) = 0.5_RP * ( 1.0_RP + log( dq(k,I_NI)/d0_ni ) )
-          weight(k,I_NS) = 0.5_RP * ( 1.0_RP + log( dq(k,I_NS)/d0_ns ) )
-          weight(k,I_NG) = 0.5_RP * ( 1.0_RP + log( dq(k,I_NG)/d0_ng ) )
-       enddo
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       rhofac_q(k,i,j,I_QC) = rhofac(k,i,j) ** gamma_v(I_QC)
+       rhofac_q(k,i,j,I_QR) = rhofac(k,i,j) ** gamma_v(I_QR)
+       rhofac_q(k,i,j,I_QI) = ( pres(k,i,j)/pre0_vt )**a_pre0_vt * ( temp(k,i,j)/tem0_vt )**a_tem0_vt
+       rhofac_q(k,i,j,I_QS) = rhofac_q(k,i,j,I_QI)
+       rhofac_q(k,i,j,I_QG) = rhofac_q(k,i,j,I_QI)
+    enddo
+    enddo
+    enddo
 
-          ! filter is used to avoid unrealistic terminal velocity( when ni,ns,ng are too small )
-       do k = KS, KE
-          weight(k,I_QI) = min( max( weight(k,I_QI), 0.0_RP ), 1.0_RP )
-          weight(k,I_QS) = min( max( weight(k,I_QS), 0.0_RP ), 1.0_RP )
-          weight(k,I_QG) = min( max( weight(k,I_QG), 0.0_RP ), 1.0_RP )
-          weight(k,I_NI) = min( max( weight(k,I_NI), 0.0_RP ), 1.0_RP )
-          weight(k,I_NS) = min( max( weight(k,I_NS), 0.0_RP ), 1.0_RP )
-          weight(k,I_NG) = min( max( weight(k,I_NG), 0.0_RP ), 1.0_RP )
-       enddo
-
-       do k = KS, KE
-          rhofac_q(k,I_QC) = rhofac(k) ** gamma_v(I_QC)
-          rhofac_q(k,I_QR) = rhofac(k) ** gamma_v(I_QR)
-          rhofac_q(k,I_QI) = ( pres(k,i,j)/pre0_vt )**a_pre0_vt * ( temp(k,i,j)/tem0_vt )**a_tem0_vt
-          rhofac_q(k,I_QS) = rhofac_q(k,I_QI)
-          rhofac_q(k,I_QG) = rhofac_q(k,I_QI)
-       enddo
-
-       ! interpolated terminal velocity
-       ! SB06(78) these are defined as negative value
+    ! interpolated terminal velocity
+    ! SB06(78) these are defined as negative value
+    do j = JS, JE
+    do i = IS, IE
        velw(:,i,j,I_QV) = CONST_UNDEF
+    enddo
+    enddo
 
-       do k = KS, KE
-          velw(k,i,j,I_QC) = -rhofac_q(k,I_QC) * coef_vt1(I_QC,1) * xq(k,I_QC)**beta_v(I_QC,1)
-          velw(k,i,j,I_NC) = -rhofac_q(k,I_QC) * coef_vt0(I_QC,1) * xq(k,I_QC)**beta_vn(I_QC,1)
-       enddo
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       velw(k,i,j,I_QC) = -rhofac_q(k,i,j,I_QC) * coef_vt1(I_QC,1) * xq(k,i,j,I_QC)**beta_v(I_QC,1)
+       velw(k,i,j,I_NC) = -rhofac_q(k,i,j,I_QC) * coef_vt0(I_QC,1) * xq(k,i,j,I_QC)**beta_vn(I_QC,1)
+    enddo
+    enddo
+    enddo
+    do j = JS, JE
+    do i = IS, IE
        velw(KS-1,i,j,I_QC) = velw(KS,i,j,I_QC)
        velw(KS-1,i,j,I_NC) = velw(KS,i,j,I_NC)
-
-       do k = KS, KE
-          velw(k,i,j,I_QR) = -rhofac_q(k,I_QR) * ( velq_l(k,I_QR) * (          weight(k,I_QR) ) &
-                                                 + velq_s(k,I_QR) * ( 1.0_RP - weight(k,I_QR) ) )
-          velw(k,i,j,I_NR) = -rhofac_q(k,I_QR) * ( velq_l(k,I_NR) * (          weight(k,I_NR) ) &
-                                                 + velq_s(k,I_NR) * ( 1.0_RP - weight(k,I_NR) ) )
-       enddo
+    enddo
+    enddo
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       velw(k,i,j,I_QR) = -rhofac_q(k,i,j,I_QR) &
+            * ( velq_l(k,i,j,I_QR) * (          weight(k,i,j,I_QR) ) &
+              + velq_s(k,i,j,I_QR) * ( 1.0_RP - weight(k,i,j,I_QR) ) )
+       velw(k,i,j,I_NR) = -rhofac_q(k,i,j,I_QR) &
+            * ( velq_l(k,i,j,I_NR) * (          weight(k,i,j,I_NR) ) &
+              + velq_s(k,i,j,I_NR) * ( 1.0_RP - weight(k,i,j,I_NR) ) )
+    enddo
+    enddo
+    enddo
+    do j = JS, JE
+    do i = IS, IE
        velw(KS-1,i,j,I_QR) = velw(KS,i,j,I_QR)
        velw(KS-1,i,j,I_NR) = velw(KS,i,j,I_NR)
-       do k = KS, KE
-          velw(k,i,j,I_QI) = -rhofac_q(k,I_QI) * ( velq_l(k,I_QI) * (          weight(k,I_QI) ) &
-                                                 + velq_s(k,I_QI) * ( 1.0_RP - weight(k,I_QI) ) )
-          velw(k,i,j,I_NI) = -rhofac_q(k,I_QI) * ( velq_l(k,I_NI) * (          weight(k,I_NI) ) &
-                                                 + velq_s(k,I_NI) * ( 1.0_RP - weight(k,I_NI) ) )
-       enddo
+    enddo
+    enddo
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       velw(k,i,j,I_QI) = -rhofac_q(k,i,j,I_QI) &
+            * ( velq_l(k,i,j,I_QI) * (          weight(k,i,j,I_QI) ) &
+              + velq_s(k,i,j,I_QI) * ( 1.0_RP - weight(k,i,j,I_QI) ) )
+       velw(k,i,j,I_NI) = -rhofac_q(k,i,j,I_QI) &
+            * ( velq_l(k,i,j,I_NI) * (          weight(k,i,j,I_NI) ) &
+              + velq_s(k,i,j,I_NI) * ( 1.0_RP - weight(k,i,j,I_NI) ) )
+    enddo
+    enddo
+    enddo
+    do j = JS, JE
+    do i = IS, IE
        velw(KS-1,i,j,I_QI) = velw(KS,i,j,I_QI)
        velw(KS-1,i,j,I_NI) = velw(KS,i,j,I_NI)
-       do k = KS, KE
-          velw(k,i,j,I_QS) = -rhofac_q(k,I_QS) * ( velq_l(k,I_QS) * (          weight(k,I_QS) ) &
-                                                 + velq_s(k,I_QS) * ( 1.0_RP - weight(k,I_QS) ) )
-          velw(k,i,j,I_NS) = -rhofac_q(k,I_QS) * ( velq_l(k,I_NS) * (          weight(k,I_NS) ) &
-                                                 + velq_s(k,I_NS) * ( 1.0_RP - weight(k,I_NS) ) )
-       enddo
+    enddo
+    enddo
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       velw(k,i,j,I_QS) = -rhofac_q(k,i,j,I_QS) &
+            * ( velq_l(k,i,j,I_QS) * (          weight(k,i,j,I_QS) ) &
+              + velq_s(k,i,j,I_QS) * ( 1.0_RP - weight(k,i,j,I_QS) ) )
+       velw(k,i,j,I_NS) = -rhofac_q(k,i,j,I_QS) &
+            * ( velq_l(k,i,j,I_NS) * (          weight(k,i,j,I_NS) ) &
+              + velq_s(k,i,j,I_NS) * ( 1.0_RP - weight(k,i,j,I_NS) ) )
+    enddo
+    enddo
+    enddo
+    do j = JS, JE
+    do i = IS, IE
        velw(KS-1,i,j,I_QS) = velw(KS,i,j,I_QS)
        velw(KS-1,i,j,I_NS) = velw(KS,i,j,I_NS)
-       do k = KS, KE
-          velw(k,i,j,I_QG) = -rhofac_q(k,I_QG) * ( velq_l(k,I_QG) * (          weight(k,I_QG) ) &
-                                                 + velq_s(k,I_QG) * ( 1.0_RP - weight(k,I_QG) ) )
-          velw(k,i,j,I_NG) = -rhofac_q(k,I_QG) * ( velq_l(k,I_NG) * (          weight(k,I_NG) ) &
-                                                 + velq_s(k,I_NG) * ( 1.0_RP - weight(k,I_NG) ) )
-       enddo
+    enddo
+    enddo
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       velw(k,i,j,I_QG) = -rhofac_q(k,i,j,I_QG) &
+            * ( velq_l(k,i,j,I_QG) * (          weight(k,i,j,I_QG) ) &
+              + velq_s(k,i,j,I_QG) * ( 1.0_RP - weight(k,i,j,I_QG) ) )
+       velw(k,i,j,I_NG) = -rhofac_q(k,i,j,I_QG) &
+            * ( velq_l(k,i,j,I_NG) * (          weight(k,i,j,I_NG) ) &
+              + velq_s(k,i,j,I_NG) * ( 1.0_RP - weight(k,i,j,I_NG) ) )
+    enddo
+    enddo
+    enddo
+    do j = JS, JE
+    do i = IS, IE
        velw(KS-1,i,j,I_QG) = velw(KS,i,j,I_QG)
        velw(KS-1,i,j,I_NG) = velw(KS,i,j,I_NG)
-
     enddo
     enddo
 
