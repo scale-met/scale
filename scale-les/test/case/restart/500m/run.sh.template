@@ -15,6 +15,7 @@ ln -svf ../../../data/rad/MIPAS/day.atm .
 ln -svf ../../../data/rad/MIPAS/equ.atm .
 ln -svf ../../../data/rad/MIPAS/sum.atm .
 ln -svf ../../../data/rad/MIPAS/win.atm .
+ln -svf ../../../data/land/param.bucket.conf .
 
 # run
 mpirun -np 1 ./scale-les_init init.conf || exit

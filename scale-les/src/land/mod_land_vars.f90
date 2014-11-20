@@ -38,6 +38,8 @@ module mod_land_vars
   public :: LAND_vars_total
   public :: LAND_vars_external_in
 
+  public :: convert_WS2VWC
+
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
@@ -62,6 +64,8 @@ module mod_land_vars
   real(RP), public, allocatable :: LAND_SFC_albedo(:,:,:) !< land surface albedo           [0-1]
 
   real(RP), public, allocatable :: LAND_PROPERTY  (:,:,:) !< land surface property
+
+  character(len=H_LONG), public :: LAND_PROPERTY_IN_FILENAME  = '' !< the file of land parameter table
 
   integer,  public, parameter   :: LAND_PROPERTY_nmax = 8
   integer,  public, parameter   :: I_WaterLimit       = 1 ! maximum  soil moisture        [m3/m3]
@@ -512,6 +516,9 @@ contains
     real(RP)               :: Z0H
     real(RP)               :: Z0E
 
+    NAMELIST / PARAM_LAND_PROPERTY /  &
+       LAND_PROPERTY_IN_FILENAME
+
     NAMELIST / PARAM_LAND_DATA / &
        index,       &
        description, &
@@ -526,71 +533,129 @@ contains
 
     integer :: n
     integer :: ierr
-    !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Properties for each plant functional type (PFT)'
-    if( IO_L ) write(IO_FID_LOG,*) &
-    '--------------------------------------------------------------------------------------------------------'
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,11(1x,A))') '***         ',  &
-                                                   ' description', &
-                                                   ' Max Stg.', &
-                                                   ' CRT Stg.', &
-                                                   ' T condu.', &
-                                                   ' H capac.', &
-                                                   ' DFC Wat.', &
-                                                   '    Z0(m)', &
-                                                   '    Z0(h)', &
-                                                   '    Z0(e)'
+    integer :: IO_FID_LAND_PROPERTY
+    !---------------------------------------------------------------------------
 
     !--- read namelist
     rewind(IO_FID_CONF)
-    do n = 1, LANDUSE_PFT_nmax
-       ! undefined roughness length
-       Z0H = -1.0_RP
-       Z0E = -1.0_RP
+    read(IO_FID_CONF,nml=PARAM_LAND_PROPERTY,iostat=ierr)
+    if( ierr < 0 ) then !--- missing
+       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+    elseif( ierr > 0 ) then !--- fatal error
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_LAND_PROPERTY. Check!'
+       call PRC_MPIstop
+    endif
+    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_LAND_PROPERTY)
 
-       read(IO_FID_CONF,nml=PARAM_LAND_DATA,iostat=ierr)
-       if ( ierr < 0 ) then !--- no more data
-          exit
-       elseif( ierr > 0 ) then !--- fatal error
-          write(*,*) 'xxx Not appropriate names in namelist PARAM_LAND. Check!'
-          call PRC_MPIstop
-       endif
+    !--- Open land parameter file
+    IO_FID_LAND_PROPERTY = IO_get_available_fid()
+    open( IO_FID_LAND_PROPERTY,                     &
+          file   = trim(LAND_PROPERTY_IN_FILENAME), &
+          form   = 'formatted',                     &
+          status = 'old',                           &
+          iostat = ierr                             )
 
-       if( Z0H < 0.0_RP ) then
-         Z0H = Z0M / 7.4_RP ! defined by Garratt and Francey (1978)
-       endif
-       if( Z0E < 0.0_RP ) then
-         Z0E = Z0M / 7.4_RP ! defined by Garratt and Francey (1978)
-       endif
+    if ( ierr /= 0 ) then
+       if( IO_L ) write(IO_FID_LOG,*) 'WARNING: Failed to open land parameter file! :', trim(LAND_PROPERTY_IN_FILENAME)
+    else
+      if( IO_L ) write(IO_FID_LOG,*)
+      if( IO_L ) write(IO_FID_LOG,*) '*** Properties for each plant functional type (PFT)'
+      if( IO_L ) write(IO_FID_LOG,*) &
+      '--------------------------------------------------------------------------------------------------------'
+      if( IO_L ) write(IO_FID_LOG,'(1x,A,11(1x,A))') '***         ',  &
+                                                     ' description', &
+                                                     ' Max Stg.', &
+                                                     ' CRT Stg.', &
+                                                     ' T condu.', &
+                                                     ' H capac.', &
+                                                     ' DFC Wat.', &
+                                                     '    Z0(m)', &
+                                                     '    Z0(h)', &
+                                                     '    Z0(e)'
 
-       LAND_PROPERTY_table(index,I_WaterLimit   ) = STRGMAX
-       LAND_PROPERTY_table(index,I_WaterCritical) = STRGCRT
-       LAND_PROPERTY_table(index,I_ThermalCond  ) = TCS
-       LAND_PROPERTY_table(index,I_HeatCapacity ) = HCS
-       LAND_PROPERTY_table(index,I_WaterDiff    ) = DFW
-       LAND_PROPERTY_table(index,I_Z0M          ) = Z0M
-       LAND_PROPERTY_table(index,I_Z0H          ) = Z0H
-       LAND_PROPERTY_table(index,I_Z0E          ) = Z0E
+      !--- read namelist
+      rewind(IO_FID_LAND_PROPERTY)
 
-       if( IO_L ) write(IO_FID_LOG,'(1x,A8,I3,1x,A12,3(1x,F9.2),(1x,1PE9.1),4(1x,F9.2))') &
-                                     '*** IDX =', index, &
-                                     trim(description), &
-                                     STRGMAX, &
-                                     STRGCRT, &
-                                     TCS,     &
-                                     HCS,     &
-                                     DFW,     &
-                                     Z0M,     &
-                                     Z0H,     &
-                                     Z0E
-    enddo
+      do n = 1, LANDUSE_PFT_nmax
+         ! undefined roughness length
+         Z0H = -1.0_RP
+         Z0E = -1.0_RP
+
+         read(IO_FID_LAND_PROPERTY,nml=PARAM_LAND_DATA,iostat=ierr)
+         if ( ierr < 0 ) then !--- no more data
+            exit
+         elseif( ierr > 0 ) then !--- fatal error
+            write(*,*) 'xxx Not appropriate names in namelist PARAM_LAND_DATA. Check!'
+            call PRC_MPIstop
+         endif
+
+         if( Z0H < 0.0_RP ) then
+           Z0H = Z0M / 7.4_RP ! defined by Garratt and Francey (1978)
+         endif
+         if( Z0E < 0.0_RP ) then
+           Z0E = Z0M / 7.4_RP ! defined by Garratt and Francey (1978)
+         endif
+
+         LAND_PROPERTY_table(index,I_WaterLimit   ) = STRGMAX
+         LAND_PROPERTY_table(index,I_WaterCritical) = STRGCRT
+         LAND_PROPERTY_table(index,I_ThermalCond  ) = TCS
+         LAND_PROPERTY_table(index,I_HeatCapacity ) = HCS
+         LAND_PROPERTY_table(index,I_WaterDiff    ) = DFW
+         LAND_PROPERTY_table(index,I_Z0M          ) = Z0M
+         LAND_PROPERTY_table(index,I_Z0H          ) = Z0H
+         LAND_PROPERTY_table(index,I_Z0E          ) = Z0E
+
+         if( IO_L ) write(IO_FID_LOG,'(1x,A8,I3,1x,A12,3(1x,F9.2),(1x,1PE9.1),4(1x,F9.2))') &
+                                       '*** IDX =', index, &
+                                       trim(description), &
+                                       STRGMAX, &
+                                       STRGCRT, &
+                                       TCS,     &
+                                       HCS,     &
+                                       DFW,     &
+                                       Z0M,     &
+                                       Z0H,     &
+                                       Z0E
+      enddo
+
+    end if
+
+    close( IO_FID_LAND_PROPERTY )
 
     if( IO_L ) write(IO_FID_LOG,*) &
     '--------------------------------------------------------------------------------------------------------'
 
     return
   end subroutine LAND_param_read
+
+  !-----------------------------------------------------------------------------
+  !> conversion from water saturation [fraction] to volumetric water content [m3/m3]
+  function convert_WS2VWC( WS, critical ) result( VWC )
+    implicit none
+
+    real(RP), intent(in) :: WS(IA,JA) ! water saturation [fraction]
+    logical,  intent(in) :: critical  ! is I_WaterCritical used?
+
+    real(RP) :: VWC(IA,JA) ! volumetric water content [m3/m3]
+
+    ! work
+    integer :: i, j, num
+    !---------------------------------------------------------------------------
+
+    if( critical ) then
+      num = I_WaterCritical
+    else
+      num = I_WaterLimit
+    end if
+
+    do j = 1, JA
+    do i = 1, IA
+      VWC(i,j) = max( min( WS(i,j)*LAND_PROPERTY(i,j,num), LAND_PROPERTY(i,j,num) ), 0.0_RP )
+    end do
+    end do
+
+    return
+  end function convert_WS2VWC
 
 end module mod_land_vars
