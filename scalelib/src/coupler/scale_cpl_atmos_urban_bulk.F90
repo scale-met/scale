@@ -1513,6 +1513,10 @@ contains
     integer                 :: NEWT
     integer, parameter      :: NEWT_END = 10
 
+    real(RP)                :: lnZ
+
+    lnZ = log( (Z+Z0)/Z0 )
+
     if( RIB <= -15.0_RP ) RIB = -15.0_RP
 
     if( RIB < 0.0_RP ) then
@@ -1526,13 +1530,13 @@ contains
         X     = (1.0_RP-16.0_RP*XXX)**0.25
         X0    = (1.0_RP-16.0_RP*XXX0)**0.25
 
-        PSIM  = log( (Z+Z0)/Z0 ) &
+        PSIM  = lnZ &
               - log( (X+1.0_RP)**2 * (X**2+1.0_RP) ) &
               + 2.0_RP * atan(X) &
               + log( (X+1.0_RP)**2 * (X0**2+1.0_RP) ) &
               - 2.0_RP * atan(X0)
         FAIH  = 1.0_RP / sqrt( 1.0_RP - 16.0_RP*XXX )
-        PSIH  = log( (Z+Z0)/Z0 ) + 0.4_RP*B1 &
+        PSIH  = lnZ + 0.4_RP*B1 &
               - 2.0_RP * log( sqrt( 1.0_RP - 16.0_RP*XXX ) + 1.0_RP ) &
               + 2.0_RP * log( sqrt( 1.0_RP - 16.0_RP*XXX0 ) + 1.0_RP )
 
@@ -1556,18 +1560,18 @@ contains
     else if( RIB >= 0.142857_RP ) then
 
       XXX  = 0.714_RP
-      PSIM = log( (Z+Z0)/Z0 ) + 7.0_RP * XXX
+      PSIM = lnZ + 7.0_RP * XXX
       PSIH = PSIM + 0.4_RP * B1
 
     else
 
-      AL   = LOG( (Z+Z0)/Z0 )
+      AL   = lnZ
       XKB  = 0.4_RP * B1
       DD   = -4.0_RP * RIB * 7.0_RP * XKB * AL + (AL+XKB)**2
       if( DD <= 0.0_RP ) DD = 0.0_RP
 
       XXX  = ( AL + XKB - 2.0_RP*RIB*7.0_RP*AL - sqrt(DD) ) / ( 2.0_RP * ( RIB*7.0_RP**2 - 7.0_RP ) )
-      PSIM = log( (Z+Z0)/Z0 ) + 7.0_RP * min( XXX, 0.714_RP )
+      PSIM = lnZ + 7.0_RP * min( XXX, 0.714_RP )
       PSIH = PSIM + 0.4_RP * B1
 
     endif
@@ -1602,7 +1606,7 @@ contains
     integer,  intent(in)    :: BOUND
     real(RP), intent(in)    :: DZ(KM)
     real(RP), intent(inout) :: TSL(KM)
-    real(RP)                :: A(KM), B(KM), C(KM), D(KM), X(KM), P(KM), Q(KM)
+    real(RP)                :: A(KM), B(KM), C(KM), D(KM), P(KM), Q(KM)
     real(RP)                :: DZEND
     integer                 :: K
 
@@ -1642,15 +1646,11 @@ contains
       Q(K) = ( -A(K) * Q(K-1) + D(K) ) / ( A(K) * P(K-1) + B(K) )
     end do
 
-    X(KM) = Q(KM)
+    TSL(KM) = Q(KM)
 
     do K = KM-1, 1, -1
-      X(K) = P(K) * X(K+1) + Q(K)
+      TSL(K) = P(K) * TSL(K+1) + Q(K)
     end do
-
-    do K = 1, KM
-      TSL(K) = X(K)
-    enddo
 
     return
   end subroutine multi_layer
