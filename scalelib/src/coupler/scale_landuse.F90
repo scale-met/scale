@@ -40,7 +40,7 @@ module scale_landuse
   real(RP), public, allocatable :: LANDUSE_frac_urban(:,:) !< urban fraction
 
   integer,  public              :: LANDUSE_PFT_mosaic = 2   !< number of PFT mosaic
-  integer,  public              :: LANDUSE_PFT_nmax   = 4   !< number of plant functional type(PFT)
+  integer,  public              :: LANDUSE_PFT_nmax   = 15  !< number of plant functional type(PFT)
 
   real(RP), public, allocatable :: LANDUSE_frac_PFT (:,:,:) !< fraction of PFT for each mosaic
   integer,  public, allocatable :: LANDUSE_index_PFT(:,:,:) !< index of PFT for each mosaic

@@ -360,7 +360,7 @@ contains
        KARMAN => CONST_KARMAN,  &    ! kalman constant  [-]
        PI     => CONST_PI,      &    ! pi               [-]
        CPdry  => CONST_CPdry,   &    ! heat capacity of dry air [J/K/kg]
-       LHV    => CONST_LHV,     &    ! latent heat of vaporization [J/kg]
+       LHV0   => CONST_LHV0,    &    ! latent heat of vaporization [J/kg]
        GRAV   => CONST_GRAV,    &    !< gravitational constant [m/s2]
        Rdry   => CONST_Rdry,    &    !< specific gas constant (dry) [J/kg/K]
        Rvap   => CONST_Rvap,    &    !< gas constant (water vapor) [J/kg/K]
@@ -546,7 +546,7 @@ contains
 
     RR   = EPSR * ( RX - STB * (TR**4) )
     SHR  = RHOO * CPdry * CHR * UA * (TR-TA)
-    LHR  = RHOO * LHV * CHR * UA * BETR * (QS0R-QA)
+    LHR  = RHOO * LHV0 * CHR * UA * BETR * (QS0R-QA)
     GHR  = SR + RR - SHR - LHR
 
     !--- Wall and Road
@@ -593,13 +593,13 @@ contains
      call qsat( QS0B, TB, PRES )
 
      SHB  = RHOO * CPdry * CHB * UC * (TB-TC)
-     LHB  = RHOO * LHV   * CHB * UC * BETB * (QS0B-QC)
+     LHB  = RHOO * LHV0  * CHB * UC * BETB * (QS0B-QC)
      GHB  =  SB + RB - SHB - LHB
 
      call qsat( QS0G, TG, PRES )
 
      SHG  = RHOO * CPdry * CHG * UC * (TG-TC)
-     LHG  = RHOO * LHV   * CHG * UC * BETG * (QS0G-QC)
+     LHG  = RHOO * LHV0  * CHG * UC * BETG * (QS0G-QC)
      GHG  =  SG + RG - SHG - LHG
 
     !-----------------------------------------------------------
@@ -641,7 +641,7 @@ contains
      ! comment out below three lines to avoid using unintialized value
      !UST = sqrt( FLXUV )              ! u* [m/s]
      !TST = -SH / RHOO / CPdry / UST   ! T* [K]
-     !QST = -LH / RHOO / LHV / UST     ! q* [-]
+     !QST = -LH / RHOO / LHV0 / UST    ! q* [-]
 
     !-----------------------------------------------------------
     !  diagnostic GRID AVERAGED TS from upward logwave
@@ -745,7 +745,7 @@ contains
        D2R    => CONST_D2R,     &    ! degree to radian
        KARMAN => CONST_KARMAN,  &    ! Kalman constant  [-]
        CPdry  => CONST_CPdry,   &    ! Heat capacity of dry air [J/K/kg]
-       LHV    => CONST_LHV,     &    ! Latent heat of vaporization [J/kg]
+       LHV0   => CONST_LHV0,    &    ! Latent heat of vaporization [J/kg]
        GRAV   => CONST_GRAV,    &    ! gravitational constant [m/s2]
        Rdry   => CONST_Rdry,    &    ! specific gas constant (dry) [J/kg/K]
        Rvap   => CONST_Rvap,    &    ! gas constant (water vapor) [J/kg/K]
@@ -971,9 +971,9 @@ contains
     !-----------------------------------------------------------
 
     !!--- calculate rain amount remaining on the surface
-    RAINR = max(0.0_RP, RAINR-(LHR/LHV)*DELT)   ! [kg/m/m = mm]
-    RAINB = max(0.0_RP, RAINB-(LHB/LHV)*DELT)   ! [kg/m/m = mm]
-    RAING = max(0.0_RP, RAING-(LHG/LHV)*DELT)   ! [kg/m/m = mm]
+    RAINR = max(0.0_RP, RAINR-(LHR/LHV0)*DELT)   ! [kg/m/m = mm]
+    RAINB = max(0.0_RP, RAINB-(LHB/LHV0)*DELT)   ! [kg/m/m = mm]
+    RAING = max(0.0_RP, RAING-(LHG/LHV0)*DELT)   ! [kg/m/m = mm]
 
     !!--- calculate evaporation efficiency
     RAINT = 1.0_RP * ( RAIN * DELT )            ! [kg/m2/s -> kg/m2]
@@ -1038,7 +1038,7 @@ contains
 
       RR    = EPSR * ( RX - STB * (TR**4)  )
       HR    = RHOO * CPdry * CHR * UA * (TR-TA)
-      ELER  = RHOO * LHV   * CHR * UA * BETR * (QS0R-QA)
+      ELER  = RHOO * LHV0  * CHR * UA * BETR * (QS0R-QA)
       G0R   = SR + RR - HR - ELER
 
     !--- calculate temperature in roof
@@ -1071,7 +1071,7 @@ contains
 
      RR      = EPSR * ( RX - STB * (TR**4) )
      HR      = RHOO * CPdry * CHR * UA * (TR-TA)
-     ELER    = RHOO * LHV   * CHR * UA * BETR * (QS0R-QA)
+     ELER    = RHOO * LHV0  * CHR * UA * BETR * (QS0R-QA)
      G0R     = SR + RR - HR - ELER
 
     !--------------------------------------------------
@@ -1131,11 +1131,11 @@ contains
       RB    = RB1 + RB2
 
       HB    = RHOO * CPdry * CHB * UC * (TB-TC)
-      ELEB  = RHOO * LHV   * CHB * UC * BETB * (QS0B-QC)
+      ELEB  = RHOO * LHV0  * CHB * UC * BETB * (QS0B-QC)
       G0B   = SB + RB - HB - ELEB
 
       HG    = RHOO * CPdry * CHG * UC * (TG-TC)
-      ELEG  = RHOO * LHV   * CHG * UC * BETG * (QS0G-QC)
+      ELEG  = RHOO * LHV0  * CHG * UC * BETG * (QS0G-QC)
       G0G   = SG + RG - HG - ELEG
 
     !--- Heat capacity and Thermal conductivity of 1st layer
@@ -1208,11 +1208,11 @@ contains
      RB       = RB1 + RB2
 
      HB   = RHOO * CPdry * CHB * UC * (TB-TC)
-     ELEB = RHOO * LHV   * CHB * UC * BETB * (QS0B-QC)
+     ELEB = RHOO * LHV0  * CHB * UC * BETB * (QS0B-QC)
      G0B  = SB + RB - HB - ELEB
 
      HG   = RHOO * CPdry * CHG * UC * (TG-TC)
-     ELEG = RHOO * LHV   * CHG * UC * BETG * (QS0G-QC)
+     ELEG = RHOO * LHV0  * CHG * UC * BETG * (QS0G-QC)
      G0G  = SG + RG - HG - ELEG
 
     !-----------------------------------------------------------
@@ -1275,7 +1275,7 @@ contains
 
     UST = sqrt( FLXUV )             ! u* [m/s]
     TST = -SH / RHOO / CPdry / UST  ! T* [K]
-    QST = -LH / RHOO / LHV   / UST    ! q* [-]
+    QST = -LH / RHOO / LHV0  / UST    ! q* [-]
 
     !-----------------------------------------------------------
     !  diagnostic GRID AVERAGED TS from heat flux
