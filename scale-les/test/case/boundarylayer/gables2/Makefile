@@ -19,8 +19,8 @@ RUNCONF     = run.conf
 TPROC       = 1
 
 # required data (parameters,distributed files)
-DATDIR      = 
-DATPARAM    = 
+DATDIR      = ../../../data
+DATPARAM    = land/param.bucket.conf
 DATDISTS    =
 
 
