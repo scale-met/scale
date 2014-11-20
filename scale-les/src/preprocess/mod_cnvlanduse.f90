@@ -195,30 +195,30 @@ contains
 
     integer  :: lookuptable(1:25)
     data lookuptable /  0, & !   1 Urban and Built-Up Land        ->  0 urban
-                        2, & !   2 Dryland Cropland and Pasture   ->  2 grassland
-                        2, & !   3 Irrigated Cropland and Pasture ->  2 grassland
-                        2, & !   4 Mixed Cropland and Pasture     ->  2 grassland
-                        2, & !   5 Cropland/Grassland Mosaic      ->  2 grassland
-                        2, & !   6 Cropland/Woodland Mosaic       ->  2 grassland
-                        2, & !   7 Grassland                      ->  2 grassland
-                        2, & !   8 Shrubland                      ->  2 grassland
-                        2, & !   9 Mixed Shrubland/Grassland      ->  2 grassland
-                        2, & !  10 Savanna                        ->  2 grassland
-                        3, & !  11 Deciduous Broadleaf Forest     ->  3 forest
-                        3, & !  12 Deciduous Needleleaf Forest    ->  3 forest
-                        3, & !  13 Evergreen Broadleaf Forest     ->  3 forest
-                        3, & !  14 Evergreen Needleleaf Forest    ->  3 forest
-                        3, & !  15 Mixed Forest                   ->  3 forest
-                       -2, & !  16 Water Bodies                   -> -2 lake,river
-                        4, & !  17 Herbaceous Wetland             ->  4 paddy
-                        4, & !  18 Wooded Wetland                 ->  4 paddy
-                        1, & !  19 Barren or Sparsely Vegetated   ->  1 bare ground
-                        1, & !  20 Herbaceous Tundra              ->  1 bare ground
-                        1, & !  21 Wooded Tundra                  ->  1 bare ground
-                        1, & !  22 Mixed Tundra                   ->  1 bare ground
-                        1, & !  23 Bare Ground Tundra             ->  1 bare ground
-                        1, & !  24 Snow or Ice                    ->  1 bare ground
-                       -1  / !  25 Missing Data                   -> -1 ocean
+                        7, & !   2 Dryland Cropland and Pasture   ->  7 Dryland Cropland and Pasture
+                        8, & !   3 Irrigated Cropland and Pasture ->  8 Irrigated Cropland and Pasture
+                        9, & !   4 Mixed Cropland and Pasture     ->  9 Mixed Cropland and Pasture
+                        5, & !   5 Cropland/Grassland Mosaic      ->  5 Cropland/Grassland Mosaic
+                        6, & !   6 Cropland/Woodland Mosaic       ->  6 Cropland/Woodland Mosaic
+                        2, & !   7 Grassland                      ->  2 Grassland
+                        3, & !   8 Shrubland                      ->  3 Shrubland
+                        4, & !   9 Mixed Shrubland/Grassland      ->  4 Mixed Shrubland/Grassland
+                        4, & !  10 Savanna                        ->  4 Mixed Shrubland/Grassland
+                       11, & !  11 Deciduous Broadleaf Forest     -> 11 Deciduous Broadleaf Forest
+                       12, & !  12 Deciduous Needleleaf Forest    -> 12 Deciduous Needleleaf Forest
+                       13, & !  13 Evergreen Broadleaf Forest     -> 13 Deciduous Broadleaf Forest
+                       14, & !  14 Evergreen Needleleaf Forest    -> 14 Deciduous Needleleaf Forest
+                       15, & !  15 Mixed Forest                   -> 15 Mixed Forest
+                       -2, & !  16 Water Bodies                   -> -2 Lake/River
+                       10, & !  17 Herbaceous Wetland             -> 10 Paddy
+                       10, & !  18 Wooded Wetland                 -> 10 Paddy
+                        1, & !  19 Barren or Sparsely Vegetated   ->  1 Bare Ground
+                        1, & !  20 Herbaceous Tundra              ->  1 Bare Ground
+                        1, & !  21 Wooded Tundra                  ->  1 Bare Ground
+                        1, & !  22 Mixed Tundra                   ->  1 Bare Ground
+                        1, & !  23 Bare Ground Tundra             ->  1 Bare Ground
+                        1, & !  24 Snow or Ice                    ->  1 Bare Ground
+                       -1  / !  25 Missing Data                   -> -1 Sea Surface
 
     real(RP) :: categ_pftsum, allsum
     real(RP) :: PFT    (LANDUSE_PFT_nmax)
@@ -563,23 +563,23 @@ contains
     real(RP) :: categ_sum(IA,JA,-2:LANDUSE_PFT_nmax)
 
     integer  :: lookuptable(0:16)
-    data lookuptable / -1, & !  0 missing        -> -1 ocean
-                        4, & !  1 paddy          ->  4 paddy
-                        2, & !  2 cropland       ->  2 grassland
-                        1, & !  3 UNDEF          ->  1 bare ground
-                        1, & !  4 UNDEF          ->  1 bare ground
-                        3, & !  5 forest         ->  3 forest
-                        1, & !  6 bareground     ->  1 bare ground
-                        0, & !  7 urban building ->  0 urban
-                        1, & !  8 UNDEF          ->  1 bare ground
-                        0, & !  9 motorway       ->  0 urban
-                        0, & ! 10 urban ground   ->  0 urban
-                       -2, & ! 11 lake,river     -> -2 lake,river
-                        1, & ! 12 UNDEF          ->  1 bare ground
-                        1, & ! 13 UNDEF          ->  1 bare ground
-                        1, & ! 14 seashore       ->  1 bare ground
-                       -1, & ! 15 ocean          -> -1 ocean
-                        2  / ! 16 golf course    ->  2 grassland
+    data lookuptable / -1, & !  0 missing        -> -1 Sea Surface
+                       10, & !  1 paddy          -> 10 Paddy
+                        9, & !  2 cropland       ->  9 Mixed Cropland and Pasture
+                        1, & !  3 UNDEF          ->  1 Bare Ground
+                        1, & !  4 UNDEF          ->  1 Bare Ground
+                       11, & !  5 forest         -> 11 Deciduous Broadleaf Forest
+                        1, & !  6 bareground     ->  1 Bare Ground
+                        0, & !  7 urban building ->  0 Urban and Built-up Land
+                        1, & !  8 UNDEF          ->  1 Bare Ground
+                        0, & !  9 motorway       ->  0 Urban and Built-up Land
+                        0, & ! 10 urban ground   ->  0 Urban and Built-up Land
+                       -2, & ! 11 lake,river     -> -2 Lake/River
+                        1, & ! 12 UNDEF          ->  1 Bare Ground
+                        1, & ! 13 UNDEF          ->  1 Bare Ground
+                        1, & ! 14 seashore       ->  1 Bare Ground
+                       -1, & ! 15 ocean          -> -1 Sea Surface
+                        2  / ! 16 golf course    ->  2 Grassland
 
     real(RP) :: categ_pftsum, allsum
     real(RP) :: PFT    (LANDUSE_PFT_nmax)
