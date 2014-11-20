@@ -1201,8 +1201,8 @@ contains
     real(RP), intent(in)  :: temp   (KA,IA,JA)
     real(RP), intent(in)  :: dens   (KA,IA,JA)
 
-    real(RP) :: psat(KA) ! saturation vapor pressure
-    real(RP) :: lhv (KA) ! latent heat for condensation
+    real(RP) :: psat ! saturation vapor pressure
+    real(RP) :: lhv  ! latent heat for condensation
 
     real(RP) :: RTEM00, TEM
 
@@ -1214,22 +1214,18 @@ contains
     !$omp parallel do private(i,j,k,TEM,psat,lhv) OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
     do i = IS, IE
+    do k = KS, KE
+       TEM = max( temp(k,i,j), TEM_MIN )
 
-       do k = KS, KE
-          TEM = max( temp(k,i,j), TEM_MIN )
+       psat = PSAT0                                    &
+            * ( TEM * RTEM00 )**CPovR_liq             &
+            * exp( LovR_liq * ( RTEM00 - 1.0_RP/TEM ) )
 
-          psat(k) = PSAT0                                    &
-                   * ( TEM * RTEM00 )**CPovR_liq             &
-                   * exp( LovR_liq * ( RTEM00 - 1.0_RP/TEM ) )
-       enddo
+       lhv = LHV0 + ( CPvap-CL ) * ( temp(k,i,j)-TEM00 )
 
-       do k = KS, KE
-          lhv(k)  = LHV0 + ( CPvap-CL ) * ( temp(k,i,j)-TEM00 )
-
-          dqsdtem(k,i,j) = psat(k) / ( dens(k,i,j) * Rvap * temp(k,i,j) * temp(k,i,j) ) &
-                         * ( lhv(k) / ( Rvap * temp(k,i,j) ) - 1.0_RP )
-       enddo
-
+       dqsdtem(k,i,j) = psat / ( dens(k,i,j) * Rvap * temp(k,i,j) * temp(k,i,j) ) &
+                      * ( lhv / ( Rvap * temp(k,i,j) ) - 1.0_RP )
+    enddo
     enddo
     enddo
 
@@ -1248,8 +1244,8 @@ contains
     real(RP), intent(in)  :: temp   (KA,IA,JA)
     real(RP), intent(in)  :: dens   (KA,IA,JA)
 
-    real(RP) :: psat(KA) ! saturation vapor pressure
-    real(RP) :: lhv (KA) ! latent heat for condensation
+    real(RP) :: psat ! saturation vapor pressure
+    real(RP) :: lhv  ! latent heat for condensation
 
     real(RP) :: RTEM00, TEM
 
@@ -1261,22 +1257,17 @@ contains
     !$omp parallel do private(i,j,k,TEM,psat,lhv) OMP_SCHEDULE_ collapse(2)
     do j = 1, JA
     do i = 1, IA
+    do k = KS, KE
+       TEM = max( temp(k,i,j), TEM_MIN )
 
-       do k = KS, KE
-          TEM = max( temp(k,i,j), TEM_MIN )
+       psat = PSAT0                                   &
+            * ( TEM * RTEM00 )**CPovR_ice             &
+            * exp( LovR_ice * ( RTEM00 - 1.0_RP/TEM ) )
+       lhv = LHS0 + ( CPvap-CI ) * ( temp(k,i,j)-TEM00 )
 
-          psat(k) = PSAT0                                   &
-                  * ( TEM * RTEM00 )**CPovR_ice             &
-                  * exp( LovR_ice * ( RTEM00 - 1.0_RP/TEM ) )
-       enddo
-
-       do k = KS, KE
-          lhv(k) = LHS0 + ( CPvap-CI ) * ( temp(k,i,j)-TEM00 )
-
-          dqsdtem(k,i,j) = psat(k) / ( dens(k,i,j) * Rvap * temp(k,i,j) * temp(k,i,j) ) &
-                         * ( lhv(k) / ( Rvap * temp(k,i,j) ) - 1.0_RP )
-       enddo
-
+       dqsdtem(k,i,j) = psat / ( dens(k,i,j) * Rvap * temp(k,i,j) * temp(k,i,j) ) &
+                      * ( lhv / ( Rvap * temp(k,i,j) ) - 1.0_RP )
+    enddo
     enddo
     enddo
 
@@ -1296,10 +1287,10 @@ contains
     real(RP), intent(in)  :: temp   (KA,IA,JA)
     real(RP), intent(in)  :: pres   (KA,IA,JA)
 
-    real(RP) :: psat(KA) ! saturation vapor pressure
-    real(RP) :: lhv (KA) ! latent heat for condensation
+    real(RP) :: psat ! saturation vapor pressure
+    real(RP) :: lhv  ! latent heat for condensation
 
-    real(RP) :: den1(KA), den2(KA) ! denominator
+    real(RP) :: den1, den2 ! denominator
     real(RP) :: RTEM00, TEM
 
     integer :: k, i, j
@@ -1310,27 +1301,21 @@ contains
     !$omp parallel do private(i,j,k,TEM,psat,den1,den2,lhv) OMP_SCHEDULE_ collapse(2)
     do j = 1, JA
     do i = 1, IA
+    do k = KS, KE
+       TEM = max( temp(k,i,j), TEM_MIN )
 
-       do k = KS, KE
-          TEM = max( temp(k,i,j), TEM_MIN )
+       psat = PSAT0                                   &
+            * ( TEM * RTEM00 )**CPovR_liq             &
+            * exp( LovR_liq * ( RTEM00 - 1.0_RP/TEM ) )
 
-          psat(k) = PSAT0                                   &
-                  * ( TEM * RTEM00 )**CPovR_liq             &
-                  * exp( LovR_liq * ( RTEM00 - 1.0_RP/TEM ) )
-       enddo
+       den1 = ( pres(k,i,j) - (1.0_RP-EPSvap) * psat ) &
+            * ( pres(k,i,j) - (1.0_RP-EPSvap) * psat )
+       den2 = den1 * Rvap * temp(k,i,j) * temp(k,i,j)
+       lhv  = LHV0 + ( CPvap-CL ) * ( temp(k,i,j)-TEM00 )
 
-       do k = KS, KE
-          den1(k) = ( pres(k,i,j) - (1.0_RP-EPSvap) * psat(k) ) &
-                  * ( pres(k,i,j) - (1.0_RP-EPSvap) * psat(k) )
-          den2(k) = den1(k) * Rvap * temp(k,i,j) * temp(k,i,j)
-          lhv (k) = LHV0 + ( CPvap-CL ) * ( temp(k,i,j)-TEM00 )
-       enddo
-
-       do k = KS, KE
-          dqsdpre(k,i,j) = - EPSvap * psat(k) / den1(k)
-          dqsdtem(k,i,j) =   EPSvap * psat(k) / den2(k) * lhv(k) * pres(k,i,j)
-       enddo
-
+       dqsdpre(k,i,j) = - EPSvap * psat / den1
+       dqsdtem(k,i,j) =   EPSvap * psat / den2 * lhv * pres(k,i,j)
+    enddo
     enddo
     enddo
 
@@ -1350,10 +1335,10 @@ contains
     real(RP), intent(in)  :: temp   (KA,IA,JA)
     real(RP), intent(in)  :: pres   (KA,IA,JA)
 
-    real(RP) :: psat(KA) ! saturation vapor pressure
-    real(RP) :: lhv (KA) ! latent heat for condensation
+    real(RP) :: psat ! saturation vapor pressure
+    real(RP) :: lhv  ! latent heat for condensation
 
-    real(RP) :: den1(KA), den2(KA) ! denominator
+    real(RP) :: den1, den2 ! denominator
     real(RP) :: RTEM00, TEM
 
     integer :: k, i, j
@@ -1364,27 +1349,21 @@ contains
     !$omp parallel do private(i,j,k,TEM,psat,den1,den2,lhv) OMP_SCHEDULE_ collapse(2)
     do j = 1, JA
     do i = 1, IA
+    do k = KS, KE
+       TEM = max( temp(k,i,j), TEM_MIN )
 
-       do k = KS, KE
-          TEM = max( temp(k,i,j), TEM_MIN )
+       psat = PSAT0                                   &
+            * ( TEM * RTEM00 )**CPovR_ice             &
+            * exp( LovR_ice * ( RTEM00 - 1.0_RP/TEM ) )
 
-          psat(k) = PSAT0                                   &
-                  * ( TEM * RTEM00 )**CPovR_ice             &
-                  * exp( LovR_ice * ( RTEM00 - 1.0_RP/TEM ) )
-       enddo
+       den1 = ( pres(k,i,j) - (1.0_RP-EPSvap) * psat ) &
+            * ( pres(k,i,j) - (1.0_RP-EPSvap) * psat )
+       den2 = den1 * Rvap * temp(k,i,j) * temp(k,i,j)
+       lhv  = LHS0 + ( CPvap-CI ) * ( temp(k,i,j)-TEM00 )
 
-       do k = KS, KE
-          den1(k) = ( pres(k,i,j) - (1.0_RP-EPSvap) * psat(k) ) &
-                  * ( pres(k,i,j) - (1.0_RP-EPSvap) * psat(k) )
-          den2(k) = den1(k) * Rvap * temp(k,i,j) * temp(k,i,j)
-          lhv (k) = LHS0 + ( CPvap-CI ) * ( temp(k,i,j)-TEM00 )
-       enddo
-
-       do k = KS, KE
-          dqsdpre(k,i,j) = - EPSvap * psat(k) / den1(k)
-          dqsdtem(k,i,j) =   EPSvap * psat(k) / den2(k) * lhv(k) * pres(k,i,j)
-       enddo
-
+       dqsdpre(k,i,j) = - EPSvap * psat / den1
+       dqsdtem(k,i,j) =   EPSvap * psat / den2 * lhv * pres(k,i,j)
+    enddo
     enddo
     enddo
 
