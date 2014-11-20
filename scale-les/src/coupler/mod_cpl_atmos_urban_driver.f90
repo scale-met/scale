@@ -137,9 +137,10 @@ contains
        CNT_AtmUrb,                           &
        CNT_Urb
     use scale_grid_real, only: &
-       Z1  => REAL_Z1,  &
-       LON => REAL_lon, &
-       LAT => REAL_lat
+       Z1  => REAL_Z1
+    use scale_mapproj,   only: &
+       CLON => MPRJ_basepoint_lon, &
+       CLAT => MPRJ_basepoint_lat
     use mod_urban_vars, only: &
        TR_URB,    &
        TG_URB,    &
@@ -167,9 +168,12 @@ contains
        RAINB_URB, &
        RAING_URB, &
        ROFF_URB,  &
-       Rngrd_URB, &
        AH_URB,    &
-       ALH_URB
+       ALH_URB,   &
+       Rngrd_URB, &
+       SHFLX_URB, &
+       LHFLX_URB, &
+       GHFLX_URB
 
     implicit none
 
@@ -187,18 +191,13 @@ contains
     real(RP) :: ATM_Q2      (IA,JA)
 
     logical  :: LSOLAR = .false.    ! logical [true=both, false=SSG only]
-    !real(RP) :: QMA                 ! mixing ratio at the lowest atmospheric level  [kg/kg]
     real(RP) :: Uabs                ! wind speed at the lowest atmospheric level    [m/s]
     integer  :: i, j
-    integer  :: ii, jj
 
     real(RP) :: total ! dummy
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Coupler: Atmos-Urban'
-
-    ii = int( real(IA)/2. )  ! center grid of X
-    jj = int( real(JA)/2. )  ! center grid of Y
 
     if ( sfc_temp_update ) then  ! temperature update
 
@@ -226,7 +225,6 @@ contains
                          ALH_URB     (i,j),   & ! [INOUT]
                          SFC_albedo  (i,j,I_LW), & ! [INOUT]
                          SFC_albedo  (i,j,I_SW), & ! [INOUT]
-                         TS_URB      (i,j),   & ! [OUT]
                          SHR_URB     (i,j),   & ! [OUT]
                          SHB_URB     (i,j),   & ! [OUT]
                          SHG_URB     (i,j),   & ! [OUT]
@@ -260,10 +258,13 @@ contains
                          FLX_LW_dn   (i,j),   & ! [IN]
                          FLX_precip  (i,j),   & ! [IN]
                          ATM_DENS    (i,j),   & ! [IN]
-                         LON         (ii,jj), & ! [IN]
-                         LAT         (ii,jj)  ) ! [IN]
+                         CLON             ,   & ! [IN]
+                         CLAT                 ) ! [IN]
 
                          TS_URB      (i,j) = SFC_TEMP (i,j)
+                         SHFLX_URB   (i,j) = ATM_FLX_SH  (i,j)
+                         LHFLX_URB   (i,j) = ATM_FLX_LH  (i,j)
+                         GHFLX_URB   (i,j) = URB_FLX_heat(i,j)
 
         call CPL_AtmUrb_bulk_momentum(           &
                          ATM_FLX_MU  (i,j),      & ! (out)
@@ -299,6 +300,9 @@ contains
                          AH_URB      (i,j) = 0.0_RP
                          ALH_URB     (i,j) = 0.0_RP
                          Rngrd_URB   (i,j) = 0.0_RP
+                         SHFLX_URB   (i,j) = 0.0_RP
+                         LHFLX_URB   (i,j) = 0.0_RP
+                         GHFLX_URB   (i,j) = 0.0_RP
                          ATM_FLX_SH  (i,j) = 0.0_RP
                          ATM_FLX_LH  (i,j) = 0.0_RP
                          URB_FLX_heat(i,j) = 0.0_RP
@@ -373,10 +377,13 @@ contains
                          FLX_SW_dn   (i,j),   & ! [IN]
                          FLX_LW_dn   (i,j),   & ! [IN]
                          ATM_DENS    (i,j),   & ! [IN]
-                         LON         (ii,jj), & ! [IN]
-                         LAT         (ii,jj)  ) ! [IN]
+                         CLON             ,   & ! [IN]
+                         CLAT                 ) ! [IN]
 
                          TS_URB      (i,j) = SFC_TEMP (i,j)
+                         SHFLX_URB   (i,j) = ATM_FLX_SH  (i,j)
+                         LHFLX_URB   (i,j) = ATM_FLX_LH  (i,j)
+                         GHFLX_URB   (i,j) = URB_FLX_heat(i,j)
 
         call CPL_AtmUrb_bulk_momentum(           &
                          ATM_FLX_MU  (i,j),      & ! (out)
@@ -411,6 +418,9 @@ contains
                          AH_URB      (i,j) = 0.0_RP
                          ALH_URB     (i,j) = 0.0_RP
                          Rngrd_URB   (i,j) = 0.0_RP
+                         SHFLX_URB   (i,j) = 0.0_RP
+                         LHFLX_URB   (i,j) = 0.0_RP
+                         GHFLX_URB   (i,j) = 0.0_RP
                          ATM_FLX_SH  (i,j) = 0.0_RP
                          ATM_FLX_LH  (i,j) = 0.0_RP
                          URB_FLX_heat(i,j) = 0.0_RP

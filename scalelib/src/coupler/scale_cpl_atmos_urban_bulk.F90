@@ -232,9 +232,9 @@ contains
     URBAN_UCM_TBLEND       = TBLEND
     URBAN_UCM_TGLEND       = TGLEND
     URBAN_UCM_BOUND        = BOUND
-    URBAN_UCM_DZR(UKS:UKE) = 0.01
-    URBAN_UCM_DZB(UKS:UKE) = 0.01
-    URBAN_UCM_DZG(UKS:UKE) = 0.01
+    URBAN_UCM_DZR(UKS:UKE) = 0.01_RP
+    URBAN_UCM_DZB(UKS:UKE) = 0.01_RP
+    URBAN_UCM_DZG(UKS:UKE) = 0.01_RP
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -438,7 +438,7 @@ contains
     real(RP) :: W, VFGS, VFGW, VFWG, VFWS, VFWW
     real(RP) :: SX, RX
 
-    real(RP) :: UST, TST, QST
+    !real(RP) :: UST, TST, QST
 
     real(RP) :: LUP, LDN, RUP
     real(RP) :: SUP, SDN
@@ -701,7 +701,6 @@ contains
         ALH_t,        & ! (inout)
         ALBD_LW_grid, & ! (out)
         ALBD_SW_grid, & ! (out)
-        TS,           & ! (out)
         SHR,          & ! (out)
         SHB,          & ! (out)
         SHG,          & ! (out)
@@ -796,7 +795,6 @@ contains
     !-- Output variables from Urban to Coupler
     real(RP), intent(out)   :: ALBD_SW_grid  ! grid mean of surface albedo for SW
     real(RP), intent(out)   :: ALBD_LW_grid  ! grid mean of surface albedo for LW ( 1-emiss )
-    real(RP), intent(out)   :: TS     ! Diagnostic surface temperature   [K]
     real(RP), intent(out)   :: RTS    ! radiative surface temperature    [K]
     real(RP), intent(out)   :: SH     ! sensible heat flux               [W/m/m]
     real(RP), intent(out)   :: LH     ! latent heat flux                 [W/m/m]
@@ -842,7 +840,6 @@ contains
     real(RP) :: TGP = 350.0_RP   ! TGP: at previous time step [K]
     real(RP) :: TCP = 350.0_RP   ! TCP: at previous time step [K]
     real(RP) :: QCP = 0.01_RP    ! QCP: at previous time step [kg/kg]
-    real(RP) :: TSP = 300.0_RP   ! TSP: at previous time step [K]
     real(RP) :: TRLP(UKS:UKE)    ! Layer temperature at previous step  [K]
     real(RP) :: TBLP(UKS:UKE)    ! Layer temperature at previous step  [K]
     real(RP) :: TGLP(UKS:UKE)    ! Layer temperature at previous step  [K]
@@ -851,7 +848,7 @@ contains
     real(RP) :: RAINBP ! at previous step, rain amount in storage on building [kg/m2]
     real(RP) :: RAINGP ! at previous step, rain amount in storage on road     [kg/m2]
 
-    real(RP) :: UST, TST, QST
+    !real(RP) :: UST, TST, QST
 
     real(RP) :: RAINT
     real(RP) :: ROFFR, ROFFB, ROFFG ! runoff [kg/m2]
@@ -887,7 +884,7 @@ contains
     real(RP) :: ALPHAR, ALPHAB, ALPHAG, ALPHAC
     real(RP) :: CHR, CHB, CHG, CHC, CDC
     real(RP) :: TC1, TC2, QC1, QC2
-    real(RP) :: QZR, QS
+    real(RP) :: QZR
     real(RP) :: CAPL1, AKSL1
 
     real(RP) :: oldF,oldGF      ! residual in previous step
@@ -911,7 +908,6 @@ contains
     TGP = TG
     TCP = TC
     QCP = QC
-    TSP = TS
     !
     TRLP = TRL
     TBLP = TBL
@@ -1273,21 +1269,9 @@ contains
     RNB = SB + RB        ! Net radiation on building [W/m/m]
     RNG = SG + RG        ! Net radiation on ground [W/m/m]
 
-    UST = sqrt( FLXUV )             ! u* [m/s]
-    TST = -SH / RHOO / CPdry / UST  ! T* [K]
-    QST = -LH / RHOO / LHV0  / UST    ! q* [-]
-
-    !-----------------------------------------------------------
-    !  diagnostic GRID AVERAGED TS from heat flux
-    !-----------------------------------------------------------
-
-    !Z    = ZA - ZDC
-    !BHC  = LOG(Z0C/Z0HC) / 0.4_RP
-    !RIBC = ( GRAV * 2.0_RP / (TA+TSP) ) * (TA-TSP) * (Z+Z0C) / (UA*UA)
-    !call mos(XXX,CHC,CD,BHC,RIBC,Z,Z0C,UA,TA,TS,RHOO)
-
-    TS = TA + SH / CHC / RHOO / Cpdry / UA ! surface potential temp (flux temp)
-    !QS = QA + LH / CHC   ! surface humidity
+    !UST = sqrt( FLXUV )             ! u* [m/s]
+    !TST = -SH / RHOO / CPdry / UST  ! T* [K]
+    !QST = -LH / RHOO / LHV   / UST    ! q* [-]
 
     !-----------------------------------------------------------
     !  diagnostic GRID AVERAGED TS from upward logwave
