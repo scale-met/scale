@@ -121,6 +121,8 @@ contains
        OCN_FLX_heat   => CPL_AtmOcn_OCN_FLX_heat,   &
        OCN_FLX_precip => CPL_AtmOcn_OCN_FLX_precip, &
        OCN_FLX_evap   => CPL_AtmOcn_OCN_FLX_evap,   &
+       CNT_putAtm,                                  &
+       CNT_putOcn,                                  &
        CNT_getAtmOcn,                               &
        CNT_getOcn
     implicit none
@@ -206,6 +208,8 @@ contains
     OCN_FLX_precip(:,:) = ( OCN_FLX_precip(:,:) * CNT_getOcn + FLX_precip      (:,:)      ) / ( CNT_getOcn + 1.0_RP )
     OCN_FLX_evap  (:,:) = ( OCN_FLX_evap  (:,:) * CNT_getOcn - tmp_ATM_FLX_LH  (:,:)/LHV0 ) / ( CNT_getOcn + 1.0_RP )
 
+    CNT_putAtm    = 0.0_RP
+    CNT_putOcn    = 0.0_RP
     CNT_getAtmOcn = CNT_getAtmOcn + 1.0_RP
     CNT_getOcn    = CNT_getOcn    + 1.0_RP
 

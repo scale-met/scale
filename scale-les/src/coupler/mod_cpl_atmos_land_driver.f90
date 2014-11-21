@@ -119,6 +119,8 @@ contains
        LND_FLX_heat   => CPL_AtmLnd_LND_FLX_heat,   &
        LND_FLX_precip => CPL_AtmLnd_LND_FLX_precip, &
        LND_FLX_evap   => CPL_AtmLnd_LND_FLX_evap,   &
+       CNT_putAtm,                                  &
+       CNT_putLnd,                                  &
        CNT_getAtmLnd,                               &
        CNT_getLnd
     implicit none
@@ -190,6 +192,8 @@ contains
     LND_FLX_precip(:,:) = ( LND_FLX_precip(:,:) * CNT_getLnd + FLX_precip      (:,:)      ) / ( CNT_getLnd + 1.0_RP )
     LND_FLX_evap  (:,:) = ( LND_FLX_evap  (:,:) * CNT_getLnd - tmp_ATM_FLX_LH  (:,:)/LHV0 ) / ( CNT_getLnd + 1.0_RP )
 
+    CNT_putAtm    = 0.0_RP
+    CNT_putLnd    = 0.0_RP
     CNT_getAtmLnd = CNT_getAtmLnd + 1.0_RP
     CNT_getLnd    = CNT_getLnd    + 1.0_RP
 

@@ -134,6 +134,8 @@ contains
        URB_FLX_heat   => CPL_AtmUrb_URB_FLX_heat,   &
        URB_FLX_precip => CPL_AtmUrb_URB_FLX_precip, &
        URB_FLX_evap   => CPL_AtmUrb_URB_FLX_evap,   &
+       CNT_putAtm,                                  &
+       CNT_putUrb,                                  &
        CNT_getAtmUrb,                               &
        CNT_getUrb
     use scale_grid_real, only: &
@@ -455,6 +457,8 @@ contains
     URB_FLX_precip(:,:) = ( URB_FLX_precip(:,:) * CNT_getUrb + FLX_precip      (:,:)      ) / ( CNT_getUrb + 1.0_RP )
     URB_FLX_evap  (:,:) = ( URB_FLX_evap  (:,:) * CNT_getUrb - tmp_ATM_FLX_LH  (:,:)/LHV0 ) / ( CNT_getUrb + 1.0_RP )
 
+    CNT_putAtm    = 0.0_RP
+    CNT_putUrb    = 0.0_RP
     CNT_getAtmUrb = CNT_getAtmUrb + 1.0_RP
     CNT_getUrb    = CNT_getUrb    + 1.0_RP
 
