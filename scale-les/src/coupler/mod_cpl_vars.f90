@@ -163,12 +163,16 @@ module mod_cpl_vars
   real(RP), public, allocatable :: CPL_AtmUrb_URB_FLX_evap  (:,:) ! water vapor  flux  [kg/m2/s]
 
   ! counter
-  real(RP), public :: CNT_AtmLnd ! counter for atmos flux by land
-  real(RP), public :: CNT_AtmUrb ! counter for atmos flux by urban
-  real(RP), public :: CNT_AtmOcn ! counter for atmos flux by ocean
-  real(RP), public :: CNT_Lnd    ! counter for land flux
-  real(RP), public :: CNT_Urb    ! counter for urban flux
-  real(RP), public :: CNT_Ocn    ! counter for ocean flux
+  real(RP), public :: CNT_putAtm    ! put counter for atmos flux
+  real(RP), public :: CNT_putLnd    ! put counter for land flux
+  real(RP), public :: CNT_putUrb    ! put counter for urban flux
+  real(RP), public :: CNT_putOcn    ! put counter for ocean flux
+  real(RP), public :: CNT_getAtmLnd ! get counter for atmos flux by land
+  real(RP), public :: CNT_getAtmUrb ! get counter for atmos flux by urban
+  real(RP), public :: CNT_getAtmOcn ! get counter for atmos flux by ocean
+  real(RP), public :: CNT_getLnd    ! get counter for land flux
+  real(RP), public :: CNT_getUrb    ! get counter for urban flux
+  real(RP), public :: CNT_getOcn    ! get counter for ocean flux
 
   !-----------------------------------------------------------------------------
   !
@@ -361,12 +365,16 @@ contains
     CPL_AtmUrb_URB_FLX_precip(:,:) = UNDEF
     CPL_AtmUrb_URB_FLX_evap  (:,:) = UNDEF
 
-    CNT_AtmOcn = 0.0_RP
-    CNT_AtmLnd = 0.0_RP
-    CNT_AtmUrb = 0.0_RP
-    CNT_Ocn    = 0.0_RP
-    CNT_Lnd    = 0.0_RP
-    CNT_Urb    = 0.0_RP
+    CNT_putAtm    = 0.0_RP
+    CNT_putOcn    = 0.0_RP
+    CNT_putLnd    = 0.0_RP
+    CNT_putUrb    = 0.0_RP
+    CNT_getAtmOcn = 0.0_RP
+    CNT_getAtmLnd = 0.0_RP
+    CNT_getAtmUrb = 0.0_RP
+    CNT_getOcn    = 0.0_RP
+    CNT_getLnd    = 0.0_RP
+    CNT_getUrb    = 0.0_RP
 
     return
   end subroutine CPL_vars_setup
@@ -578,19 +586,32 @@ contains
     real(RP), intent(in) :: SFLX_snow (IA,JA)
     !---------------------------------------------------------------------------
 
-    CPL_fromAtm_ATM_TEMP  (:,:) = ATM_TEMP  (:,:)
-    CPL_fromAtm_ATM_PRES  (:,:) = ATM_PRES  (:,:)
-    CPL_fromAtm_ATM_W     (:,:) = ATM_W     (:,:)
-    CPL_fromAtm_ATM_U     (:,:) = ATM_U     (:,:)
-    CPL_fromAtm_ATM_V     (:,:) = ATM_V     (:,:)
-    CPL_fromAtm_ATM_DENS  (:,:) = ATM_DENS  (:,:)
-    CPL_fromAtm_ATM_QV    (:,:) = ATM_QTRC  (:,:,I_QV)
-    CPL_fromAtm_ATM_PBL   (:,:) = ATM_PBL   (:,:)
-    CPL_fromAtm_SFC_PRES  (:,:) = SFC_PRES  (:,:)
-    CPL_fromAtm_FLX_LW_dn (:,:) = SFLX_LW_dn(:,:)
-    CPL_fromAtm_FLX_SW_dn (:,:) = SFLX_SW_dn(:,:)
-    CPL_fromAtm_FLX_precip(:,:) = SFLX_rain (:,:) &
-                                + SFLX_snow (:,:)
+    CPL_fromAtm_ATM_TEMP  (:,:) = ( CPL_fromAtm_ATM_TEMP  (:,:) * CNT_putAtm + ATM_TEMP  (:,:)                   ) &
+                                / ( CNT_putAtm + 1.0_RP )
+    CPL_fromAtm_ATM_PRES  (:,:) = ( CPL_fromAtm_ATM_PRES  (:,:) * CNT_putAtm + ATM_PRES  (:,:)                   ) &
+                                / ( CNT_putAtm + 1.0_RP )
+    CPL_fromAtm_ATM_W     (:,:) = ( CPL_fromAtm_ATM_W     (:,:) * CNT_putAtm + ATM_W     (:,:)                   ) &
+                                / ( CNT_putAtm + 1.0_RP )
+    CPL_fromAtm_ATM_U     (:,:) = ( CPL_fromAtm_ATM_U     (:,:) * CNT_putAtm + ATM_U     (:,:)                   ) &
+                                / ( CNT_putAtm + 1.0_RP )
+    CPL_fromAtm_ATM_V     (:,:) = ( CPL_fromAtm_ATM_V     (:,:) * CNT_putAtm + ATM_V     (:,:)                   ) &
+                                / ( CNT_putAtm + 1.0_RP )
+    CPL_fromAtm_ATM_DENS  (:,:) = ( CPL_fromAtm_ATM_DENS  (:,:) * CNT_putAtm + ATM_DENS  (:,:)                   ) &
+                                / ( CNT_putAtm + 1.0_RP )
+    CPL_fromAtm_ATM_QV    (:,:) = ( CPL_fromAtm_ATM_QV    (:,:) * CNT_putAtm + ATM_QTRC  (:,:,I_QV)              ) &
+                                / ( CNT_putAtm + 1.0_RP )
+    CPL_fromAtm_ATM_PBL   (:,:) = ( CPL_fromAtm_ATM_PBL   (:,:) * CNT_putAtm + ATM_PBL   (:,:)                   ) &
+                                / ( CNT_putAtm + 1.0_RP )
+    CPL_fromAtm_SFC_PRES  (:,:) = ( CPL_fromAtm_SFC_PRES  (:,:) * CNT_putAtm + SFC_PRES  (:,:)                   ) &
+                                / ( CNT_putAtm + 1.0_RP )
+    CPL_fromAtm_FLX_LW_dn (:,:) = ( CPL_fromAtm_FLX_LW_dn (:,:) * CNT_putAtm + SFLX_LW_dn(:,:)                   ) &
+                                / ( CNT_putAtm + 1.0_RP )
+    CPL_fromAtm_FLX_SW_dn (:,:) = ( CPL_fromAtm_FLX_SW_dn (:,:) * CNT_putAtm + SFLX_SW_dn(:,:)                   ) &
+                                / ( CNT_putAtm + 1.0_RP )
+    CPL_fromAtm_FLX_precip(:,:) = ( CPL_fromAtm_FLX_precip(:,:) * CNT_putAtm + SFLX_rain (:,:) + SFLX_snow (:,:) ) &
+                                / ( CNT_putAtm + 1.0_RP )
+
+    CNT_putAtm = CNT_putAtm + 1.0_RP
 
     return
   end subroutine CPL_putAtm
@@ -603,7 +624,10 @@ contains
     real(RP), intent(in) :: OCN_TEMP(IA,JA)
     !---------------------------------------------------------------------------
 
-    CPL_fromOcn_OCN_TEMP(:,:) = OCN_TEMP(:,:)
+    CPL_fromOcn_OCN_TEMP(:,:) = ( CPL_fromOcn_OCN_TEMP(:,:) * CNT_putOcn + OCN_TEMP(:,:) ) &
+                              / ( CNT_putOcn + 1.0_RP )
+
+    CNT_putOcn = CNT_putOcn + 1.0_RP
 
     return
   end subroutine CPL_putOcn
@@ -618,8 +642,12 @@ contains
     real(RP), intent(in) :: LND_BETA(IA,JA)
     !---------------------------------------------------------------------------
 
-    CPL_fromLnd_LND_TEMP(:,:) = LND_TEMP(:,:)
-    CPL_fromLnd_LND_BETA(:,:) = LND_BETA(:,:)
+    CPL_fromLnd_LND_TEMP(:,:) = ( CPL_fromLnd_LND_TEMP(:,:) * CNT_putLnd + LND_TEMP(:,:) ) &
+                              / ( CNT_putLnd + 1.0_RP )
+    CPL_fromLnd_LND_BETA(:,:) = ( CPL_fromLnd_LND_BETA(:,:) * CNT_putLnd + LND_BETA(:,:) ) &
+                              / ( CNT_putLnd + 1.0_RP )
+
+    CNT_putLnd = CNT_putLnd + 1.0_RP
 
     return
   end subroutine CPL_putLnd
@@ -697,9 +725,9 @@ contains
     SFLX_QTRC(:,:,:) = 0.0_RP                 ! tentative
     SFLX_QTRC(:,:,1) = CPL_Merged_FLX_QV(:,:) ! tentative
 
-    CNT_AtmLnd = 0.0_RP
-    CNT_AtmUrb = 0.0_RP
-    CNT_AtmOcn = 0.0_RP
+    CNT_getAtmLnd = 0.0_RP
+    CNT_getAtmUrb = 0.0_RP
+    CNT_getAtmOcn = 0.0_RP
 
     return
   end subroutine CPL_getAtm_SF
@@ -720,7 +748,7 @@ contains
     OCN_FLX_precip(:,:) = CPL_AtmOcn_OCN_FLX_precip(:,:)
     OCN_FLX_evap  (:,:) = CPL_AtmOcn_OCN_FLX_evap  (:,:)
 
-    CNT_Ocn = 0.0_RP
+    CNT_getOcn = 0.0_RP
 
     return
   end subroutine CPL_getOcn
@@ -741,7 +769,7 @@ contains
     LND_FLX_precip(:,:) = CPL_AtmLnd_LND_FLX_precip(:,:)
     LND_FLX_evap  (:,:) = CPL_AtmLnd_LND_FLX_evap  (:,:)
 
-    CNT_Lnd = 0.0_RP
+    CNT_getLnd = 0.0_RP
 
     return
   end subroutine CPL_getLnd
@@ -762,7 +790,7 @@ contains
     URB_FLX_precip(:,:) = CPL_AtmUrb_URB_FLX_precip(:,:)
     URB_FLX_evap  (:,:) = CPL_AtmUrb_URB_FLX_evap  (:,:)
 
-    CNT_Urb = 0.0_RP
+    CNT_getUrb = 0.0_RP
 
     return
   end subroutine CPL_getUrb
