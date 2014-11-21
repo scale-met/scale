@@ -87,10 +87,13 @@ module mod_urban_vars
   real(RP), public, allocatable :: RAINB_URB(:,:) ! Rain storage on roof [mm=kg/m2]
   real(RP), public, allocatable :: RAING_URB(:,:) ! Rain storage on roof [mm=kg/m2]
   real(RP), public, allocatable :: ROFF_URB(:,:)  ! Runoff from urban [mm=kg/m2]
-  real(RP), public, allocatable :: Rngrd_URB(:,:) ! Grid average of Net radiation [W/m2]
-
   real(RP), public, allocatable :: AH_URB(:,:)    ! Anthropogenic sensible heat [W/m2] for restart
   real(RP), public, allocatable :: ALH_URB(:,:)   ! Anthropogenic sensible heat [W/m2] for restart
+
+  real(RP), public, allocatable :: Rngrd_URB(:,:) ! Grid average of Net radiation [W/m2]
+  real(RP), public, allocatable :: SHFLX_URB(:,:) ! Grid average of Net radiation [W/m2]
+  real(RP), public, allocatable :: LHFLX_URB(:,:) ! Grid average of Net radiation [W/m2]
+  real(RP), public, allocatable :: GHFLX_URB(:,:) ! Grid average of Net radiation [W/m2]
 
   !-----------------------------------------------------------------------------
   !
@@ -102,7 +105,7 @@ module mod_urban_vars
   !
   logical,                private :: URBAN_VARS_CHECKRANGE      = .false.
 
-  integer,                private, parameter :: VMAX = 29
+  integer,                private, parameter :: VMAX = 28
   integer,                private, parameter :: I_TR_URB  = 1
   integer,                private, parameter :: I_TB_URB  = 2
   integer,                private, parameter :: I_TG_URB  = 3
@@ -129,9 +132,12 @@ module mod_urban_vars
   integer,                private, parameter :: I_RAINB_URB = 24
   integer,                private, parameter :: I_RAING_URB = 25
   integer,                private, parameter :: I_ROFF_URB  = 26
-  integer,                private, parameter :: I_Rngrd_URB = 27
-  integer,                private, parameter :: I_AH_URB    = 28
-  integer,                private, parameter :: I_ALH_URB   = 29
+  integer,                private, parameter :: I_AH_URB    = 27
+  integer,                private, parameter :: I_ALH_URB   = 28
+ ! integer,                private, parameter :: I_Rngrd_URB = 29
+ ! integer,                private, parameter :: I_SHFLX_URB = 30
+ ! integer,                private, parameter :: I_LHFLX_URB = 31
+ ! integer,                private, parameter :: I_GHFLX_URB = 32
 
   character(len=H_SHORT), private            :: VAR_NAME(VMAX) !< name  of the urban variables
   character(len=H_MID),   private            :: VAR_DESC(VMAX) !< desc. of the urban variables
@@ -163,7 +169,6 @@ module mod_urban_vars
                   'RAINB_URB' , &
                   'RAING_URB' , &
                   'ROFF_URB',   &
-                  'Rngrd_URB',  &
                   'AH_URB',     &
                   'ALH_URB'     /
 
@@ -193,7 +198,6 @@ module mod_urban_vars
                   'Rain strage on building',            &
                   'Rain strage on road',                &
                   'Runoff from urban',                  &
-                  'Grid average of net radiation',      &
                   'Anthropogenic sensible heat',        &
                   'Anthropogenic latent heat'           /
 
@@ -223,7 +227,6 @@ module mod_urban_vars
                   'kg/m2', &
                   'kg/m2', &
                   'kg/m2', &
-                  'W/m2',  &
                   'W/m2',  &
                   'W/m2'   /
 
@@ -320,13 +323,19 @@ contains
     RAING_URB (:,:) = 0.0_RP
     ROFF_URB (:,:)  = 0.0_RP
 
-    allocate( Rngrd_URB(IA,JA) )
-    Rngrd_URB (:,:)  = 0.0_RP
-
     allocate( AH_URB(IA,JA) )
     allocate( ALH_URB(IA,JA) )
     AH_URB (:,:)   = 0.0_RP
     ALH_URB (:,:)  = 0.0_RP
+
+    allocate( Rngrd_URB(IA,JA) )
+    allocate( SHFLX_URB(IA,JA) )
+    allocate( LHFLX_URB(IA,JA) )
+    allocate( GHFLX_URB(IA,JA) )
+    Rngrd_URB (:,:)  = 0.0_RP
+    SHFLX_URB (:,:)  = 0.0_RP
+    LHFLX_URB (:,:)  = 0.0_RP
+    GHFLX_URB (:,:)  = 0.0_RP
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -403,10 +412,12 @@ contains
     call COMM_vars8( RAINB_URB(:,:),  21 )
     call COMM_vars8( RAING_URB(:,:),  22 )
     call COMM_vars8( ROFF_URB(:,:),   23 )
-    call COMM_vars8( Rngrd_URB(:,:),  24 )
-    call COMM_vars8( AH_URB(:,:),     25 )
-    call COMM_vars8( ALH_URB(:,:),    26 )
-
+    call COMM_vars8( AH_URB(:,:),     24 )
+    call COMM_vars8( ALH_URB(:,:),    25 )
+    call COMM_vars8( Rngrd_URB(:,:),  26 )
+    call COMM_vars8( SHFLX_URB(:,:),  27 )
+    call COMM_vars8( LHFLX_URB(:,:),  28 )
+    call COMM_vars8( GHFLX_URB(:,:),  29 )
 
     call COMM_wait ( TR_URB(:,:),     1  )
     call COMM_wait ( TB_URB(:,:),     2  )
@@ -431,9 +442,12 @@ contains
     call COMM_wait ( RAINB_URB(:,:),  21 )
     call COMM_wait ( RAING_URB(:,:),  22 )
     call COMM_wait ( ROFF_URB(:,:),   23 )
-    call COMM_wait ( Rngrd_URB(:,:),  24 )
-    call COMM_wait ( AH_URB(:,:),     25 )
-    call COMM_wait ( ALH_URB(:,:),    26 )
+    call COMM_wait ( AH_URB(:,:),     24 )
+    call COMM_wait ( ALH_URB(:,:),    25 )
+    call COMM_wait ( Rngrd_URB(:,:),  26 )
+    call COMM_wait ( SHFLX_URB(:,:),  27 )
+    call COMM_wait ( LHFLX_URB(:,:),  28 )
+    call COMM_wait ( GHFLX_URB(:,:),  29 )
 
     do k = UKS, UKE
       tmp1(:,:,k) = TRL_URB(k,:,:)
@@ -656,7 +670,11 @@ contains
     call HIST_in( RAING_URB(:,:), 'RAING_URB', VAR_DESC(I_RAING_URB), VAR_UNIT(I_RAING_URB), TIME_DTSEC_URBAN )
     call HIST_in( ROFF_URB(:,:),  'ROFF_URB',  VAR_DESC(I_ROFF_URB),  VAR_UNIT(I_ROFF_URB),  TIME_DTSEC_URBAN )
 
-    call HIST_in( Rngrd_URB(:,:),  'Rngrd_URB',  VAR_DESC(I_Rngrd_URB),  VAR_UNIT(I_Rngrd_URB),  TIME_DTSEC_URBAN )
+    call HIST_in( Rngrd_URB(:,:), 'Rngrd_URB', 'Urban grid average of net radiation',       'W/m2',  TIME_DTSEC_URBAN )
+    call HIST_in( SHFLX_URB(:,:), 'SHFLX_URB', 'Urban grid average of sensible heat flux',  'W/m2',  TIME_DTSEC_URBAN )
+    call HIST_in( LHFLX_URB(:,:), 'LHFLX_URB', 'Urban grid average of latent heat flux',    'W/m2',  TIME_DTSEC_URBAN )
+    call HIST_in( GHFLX_URB(:,:), 'GHFLX_URB', 'Urban grid average of ground heat flux',    'W/m2',  TIME_DTSEC_URBAN )
+
     return
   end subroutine URBAN_vars_history
 
@@ -703,9 +721,12 @@ contains
        call STAT_total( total, RAINB_URB(:,:), VAR_NAME(I_RAINB_URB) )
        call STAT_total( total, RAING_URB(:,:), VAR_NAME(I_RAING_URB) )
        call STAT_total( total, ROFF_URB(:,:),  VAR_NAME(I_ROFF_URB) )
-       call STAT_total( total, Rngrd_URB(:,:), VAR_NAME(I_Rngrd_URB) )
        call STAT_total( total, AH_URB(:,:),    VAR_NAME(I_AH_URB) )
        call STAT_total( total, ALH_URB(:,:),   VAR_NAME(I_ALH_URB) )
+!       call STAT_total( total, Rngrd_URB(:,:), 'Rngrd_URB' )
+!       call STAT_total( total, Rngrd_URB(:,:), 'SHFLX_URB' )
+!       call STAT_total( total, Rngrd_URB(:,:), 'LHFLX_URB' )
+!       call STAT_total( total, Rngrd_URB(:,:), 'GHFLX_URB' )
     endif
 
     return

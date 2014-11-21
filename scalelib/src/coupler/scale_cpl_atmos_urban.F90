@@ -46,7 +46,6 @@ module scale_cpl_atmos_urban
         ALH_URB,   & ! (inout)
         ALBD_LW,   & ! (out)
         ALBD_SW,   & ! (out)
-        TS_URB,    & ! (out)
         SHR_URB,   & ! (out)
         SHB_URB,   & ! (out)
         SHG_URB,   & ! (out)
@@ -105,7 +104,6 @@ module scale_cpl_atmos_urban
 
        real(RP), intent(out) :: ALBD_LW
        real(RP), intent(out) :: ALBD_SW
-       real(RP), intent(out) :: TS_URB
        real(RP), intent(out) :: SHR_URB
        real(RP), intent(out) :: SHB_URB
        real(RP), intent(out) :: SHG_URB

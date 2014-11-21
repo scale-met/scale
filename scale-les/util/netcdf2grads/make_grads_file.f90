@@ -487,7 +487,7 @@ program convine
      write(10,'(a,1x,a)') "DSET", "^"//trim(vname(n))//".grd"
      write(10,'(a)') "TITLE SCALE3 data output"
      write(10,'(a)') "OPTIONS BIG_ENDIAN"
-     write(10,'(a,1x,e15.7)') "UNDEF", -0.99900E+35
+     write(10,'(a,1x,e15.7)') "UNDEF", -9.9999001E+30
      write(10,'(a,3x,i7,1x,a)') "XDEF", nx, "LEVELS"
      write(10,'(5(1x,e15.7))') cx(1:nx)*1.d-3
      write(10,'(a,3x,i7,1x,a)') "YDEF", ny, "LEVELS"
