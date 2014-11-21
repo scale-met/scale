@@ -163,12 +163,12 @@ module mod_cpl_vars
   real(RP), public, allocatable :: CPL_AtmUrb_URB_FLX_evap  (:,:) ! water vapor  flux  [kg/m2/s]
 
   ! counter
-  real(RP), public :: CNT_AtmLnd ! counter for atmos flux by land
-  real(RP), public :: CNT_AtmUrb ! counter for atmos flux by urban
-  real(RP), public :: CNT_AtmOcn ! counter for atmos flux by ocean
-  real(RP), public :: CNT_Lnd    ! counter for land flux
-  real(RP), public :: CNT_Urb    ! counter for urban flux
-  real(RP), public :: CNT_Ocn    ! counter for ocean flux
+  real(RP), public :: CNT_getAtmLnd ! counter for atmos flux by land
+  real(RP), public :: CNT_getAtmUrb ! counter for atmos flux by urban
+  real(RP), public :: CNT_getAtmOcn ! counter for atmos flux by ocean
+  real(RP), public :: CNT_getLnd    ! counter for land flux
+  real(RP), public :: CNT_getUrb    ! counter for urban flux
+  real(RP), public :: CNT_getOcn    ! counter for ocean flux
 
   !-----------------------------------------------------------------------------
   !
@@ -361,12 +361,12 @@ contains
     CPL_AtmUrb_URB_FLX_precip(:,:) = UNDEF
     CPL_AtmUrb_URB_FLX_evap  (:,:) = UNDEF
 
-    CNT_AtmOcn = 0.0_RP
-    CNT_AtmLnd = 0.0_RP
-    CNT_AtmUrb = 0.0_RP
-    CNT_Ocn    = 0.0_RP
-    CNT_Lnd    = 0.0_RP
-    CNT_Urb    = 0.0_RP
+    CNT_getAtmOcn = 0.0_RP
+    CNT_getAtmLnd = 0.0_RP
+    CNT_getAtmUrb = 0.0_RP
+    CNT_getOcn    = 0.0_RP
+    CNT_getLnd    = 0.0_RP
+    CNT_getUrb    = 0.0_RP
 
     return
   end subroutine CPL_vars_setup
@@ -697,9 +697,9 @@ contains
     SFLX_QTRC(:,:,:) = 0.0_RP                 ! tentative
     SFLX_QTRC(:,:,1) = CPL_Merged_FLX_QV(:,:) ! tentative
 
-    CNT_AtmLnd = 0.0_RP
-    CNT_AtmUrb = 0.0_RP
-    CNT_AtmOcn = 0.0_RP
+    CNT_getAtmLnd = 0.0_RP
+    CNT_getAtmUrb = 0.0_RP
+    CNT_getAtmOcn = 0.0_RP
 
     return
   end subroutine CPL_getAtm_SF
@@ -720,7 +720,7 @@ contains
     OCN_FLX_precip(:,:) = CPL_AtmOcn_OCN_FLX_precip(:,:)
     OCN_FLX_evap  (:,:) = CPL_AtmOcn_OCN_FLX_evap  (:,:)
 
-    CNT_Ocn = 0.0_RP
+    CNT_getOcn = 0.0_RP
 
     return
   end subroutine CPL_getOcn
@@ -741,7 +741,7 @@ contains
     LND_FLX_precip(:,:) = CPL_AtmLnd_LND_FLX_precip(:,:)
     LND_FLX_evap  (:,:) = CPL_AtmLnd_LND_FLX_evap  (:,:)
 
-    CNT_Lnd = 0.0_RP
+    CNT_getLnd = 0.0_RP
 
     return
   end subroutine CPL_getLnd
@@ -762,7 +762,7 @@ contains
     URB_FLX_precip(:,:) = CPL_AtmUrb_URB_FLX_precip(:,:)
     URB_FLX_evap  (:,:) = CPL_AtmUrb_URB_FLX_evap  (:,:)
 
-    CNT_Urb = 0.0_RP
+    CNT_getUrb = 0.0_RP
 
     return
   end subroutine CPL_getUrb
