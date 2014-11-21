@@ -105,8 +105,7 @@ contains
   !> Driver
   subroutine ATMOS_PHY_SF_driver( update_flag, history_flag )
     use scale_const, only: &
-       CPdry => CONST_CPdry, &
-       LHV   => CONST_LHV
+       CPdry => CONST_CPdry
     use scale_comm, only: &
        COMM_vars8, &
        COMM_wait

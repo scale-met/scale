@@ -96,7 +96,7 @@ contains
   !-----------------------------------------------------------------------------
   subroutine CPL_AtmUrb_driver( sfc_temp_update )
     use scale_const, only: &
-       LHV => CONST_LHV
+       LHV0 => CONST_LHV0
     use scale_statistics, only: &
        STATISTICS_checktotal, &
        STAT_total
@@ -430,20 +430,20 @@ contains
     endif
 
     ! temporal average flux
-    CPL_AtmUrb_ATM_FLX_MW  (:,:) = ( CPL_AtmUrb_ATM_FLX_MW  (:,:) * CNT_AtmUrb + ATM_FLX_MW(:,:)     ) / ( CNT_AtmUrb + 1.0_RP )
-    CPL_AtmUrb_ATM_FLX_MU  (:,:) = ( CPL_AtmUrb_ATM_FLX_MU  (:,:) * CNT_AtmUrb + ATM_FLX_MU(:,:)     ) / ( CNT_AtmUrb + 1.0_RP )
-    CPL_AtmUrb_ATM_FLX_MV  (:,:) = ( CPL_AtmUrb_ATM_FLX_MV  (:,:) * CNT_AtmUrb + ATM_FLX_MV(:,:)     ) / ( CNT_AtmUrb + 1.0_RP )
-    CPL_AtmUrb_ATM_FLX_SH  (:,:) = ( CPL_AtmUrb_ATM_FLX_SH  (:,:) * CNT_AtmUrb + ATM_FLX_SH(:,:)     ) / ( CNT_AtmUrb + 1.0_RP )
-    CPL_AtmUrb_ATM_FLX_LH  (:,:) = ( CPL_AtmUrb_ATM_FLX_LH  (:,:) * CNT_AtmUrb + ATM_FLX_LH(:,:)     ) / ( CNT_AtmUrb + 1.0_RP )
-    CPL_AtmUrb_ATM_FLX_evap(:,:) = ( CPL_AtmUrb_ATM_FLX_evap(:,:) * CNT_AtmUrb + ATM_FLX_LH(:,:)/LHV ) / ( CNT_AtmUrb + 1.0_RP )
-    CPL_AtmUrb_ATM_U10     (:,:) = ( CPL_AtmUrb_ATM_U10     (:,:) * CNT_AtmUrb + ATM_U10   (:,:)     ) / ( CNT_AtmUrb + 1.0_RP )
-    CPL_AtmUrb_ATM_V10     (:,:) = ( CPL_AtmUrb_ATM_V10     (:,:) * CNT_AtmUrb + ATM_V10   (:,:)     ) / ( CNT_AtmUrb + 1.0_RP )
-    CPL_AtmUrb_ATM_T2      (:,:) = ( CPL_AtmUrb_ATM_T2      (:,:) * CNT_AtmUrb + ATM_T2    (:,:)     ) / ( CNT_AtmUrb + 1.0_RP )
-    CPL_AtmUrb_ATM_Q2      (:,:) = ( CPL_AtmUrb_ATM_Q2      (:,:) * CNT_AtmUrb + ATM_Q2    (:,:)     ) / ( CNT_AtmUrb + 1.0_RP )
+    CPL_AtmUrb_ATM_FLX_MW  (:,:) = ( CPL_AtmUrb_ATM_FLX_MW  (:,:) * CNT_AtmUrb + ATM_FLX_MW(:,:)      ) / ( CNT_AtmUrb + 1.0_RP )
+    CPL_AtmUrb_ATM_FLX_MU  (:,:) = ( CPL_AtmUrb_ATM_FLX_MU  (:,:) * CNT_AtmUrb + ATM_FLX_MU(:,:)      ) / ( CNT_AtmUrb + 1.0_RP )
+    CPL_AtmUrb_ATM_FLX_MV  (:,:) = ( CPL_AtmUrb_ATM_FLX_MV  (:,:) * CNT_AtmUrb + ATM_FLX_MV(:,:)      ) / ( CNT_AtmUrb + 1.0_RP )
+    CPL_AtmUrb_ATM_FLX_SH  (:,:) = ( CPL_AtmUrb_ATM_FLX_SH  (:,:) * CNT_AtmUrb + ATM_FLX_SH(:,:)      ) / ( CNT_AtmUrb + 1.0_RP )
+    CPL_AtmUrb_ATM_FLX_LH  (:,:) = ( CPL_AtmUrb_ATM_FLX_LH  (:,:) * CNT_AtmUrb + ATM_FLX_LH(:,:)      ) / ( CNT_AtmUrb + 1.0_RP )
+    CPL_AtmUrb_ATM_FLX_evap(:,:) = ( CPL_AtmUrb_ATM_FLX_evap(:,:) * CNT_AtmUrb + ATM_FLX_LH(:,:)/LHV0 ) / ( CNT_AtmUrb + 1.0_RP )
+    CPL_AtmUrb_ATM_U10     (:,:) = ( CPL_AtmUrb_ATM_U10     (:,:) * CNT_AtmUrb + ATM_U10   (:,:)      ) / ( CNT_AtmUrb + 1.0_RP )
+    CPL_AtmUrb_ATM_V10     (:,:) = ( CPL_AtmUrb_ATM_V10     (:,:) * CNT_AtmUrb + ATM_V10   (:,:)      ) / ( CNT_AtmUrb + 1.0_RP )
+    CPL_AtmUrb_ATM_T2      (:,:) = ( CPL_AtmUrb_ATM_T2      (:,:) * CNT_AtmUrb + ATM_T2    (:,:)      ) / ( CNT_AtmUrb + 1.0_RP )
+    CPL_AtmUrb_ATM_Q2      (:,:) = ( CPL_AtmUrb_ATM_Q2      (:,:) * CNT_AtmUrb + ATM_Q2    (:,:)      ) / ( CNT_AtmUrb + 1.0_RP )
 
-    CPL_AtmUrb_URB_FLX_heat  (:,:) = ( CPL_AtmUrb_URB_FLX_heat  (:,:) * CNT_Urb + URB_FLX_heat(:,:)     ) / ( CNT_Urb + 1.0_RP )
-    CPL_AtmUrb_URB_FLX_precip(:,:) = ( CPL_AtmUrb_URB_FLX_precip(:,:) * CNT_Urb + FLX_precip  (:,:)     ) / ( CNT_Urb + 1.0_RP )
-    CPL_AtmUrb_URB_FLX_evap  (:,:) = ( CPL_AtmUrb_URB_FLX_evap  (:,:) * CNT_Urb - ATM_FLX_LH  (:,:)/LHV ) / ( CNT_Urb + 1.0_RP )
+    CPL_AtmUrb_URB_FLX_heat  (:,:) = ( CPL_AtmUrb_URB_FLX_heat  (:,:) * CNT_Urb + URB_FLX_heat(:,:)      ) / ( CNT_Urb + 1.0_RP )
+    CPL_AtmUrb_URB_FLX_precip(:,:) = ( CPL_AtmUrb_URB_FLX_precip(:,:) * CNT_Urb + FLX_precip  (:,:)      ) / ( CNT_Urb + 1.0_RP )
+    CPL_AtmUrb_URB_FLX_evap  (:,:) = ( CPL_AtmUrb_URB_FLX_evap  (:,:) * CNT_Urb - ATM_FLX_LH  (:,:)/LHV0 ) / ( CNT_Urb + 1.0_RP )
 
     CNT_AtmUrb = CNT_AtmUrb + 1.0_RP
     CNT_Urb    = CNT_Urb    + 1.0_RP
