@@ -413,11 +413,23 @@ contains
     real(RP), intent(in)  :: lat ! [rad]
     real(RP), intent(out) :: x
     real(RP), intent(out) :: y
-    !---------------------------------------------------------------------------
 
-    ! Todo: must use inverse gnomonic projection
-    write(*,*) ' xxx inverse transformation is not implemented for MPRJ_type=NONE. STOP'
-    call PRC_MPIstop
+    real(RP) :: gno(2)
+    real(RP) :: cos_gmm
+    !---------------------------------------------------------------------------
+    ! http://mathworld.wolfram.com/GnomonicProjection.html
+
+    cos_gmm = sin(MPRJ_basepoint_lat*D2R) * sin(lat) + &
+          cos(MPRJ_basepoint_lat*D2R) * cos(lat) * cos(lon - MPRJ_basepoint_lon*D2R)
+
+    gno(1) = (cos(lat) * sin(lon - MPRJ_basepoint_lon*D2R)) / cos_gmm
+    gno(2) = (cos(MPRJ_basepoint_lat*D2R) * sin(lat) - &
+              sin(MPRJ_basepoint_lat*D2R) * cos(lat) * cos(lon - MPRJ_basepoint_lon*D2R)) / cos_gmm
+
+    x = MPRJ_basepoint_x + (gno(1) * cos(MPRJ_rotation*D2R) &
+                          - gno(2) * sin(MPRJ_rotation*D2R)) * RADIUS
+    y = MPRJ_basepoint_y + (gno(1) * sin(MPRJ_rotation*D2R) &
+                          + gno(2) * cos(MPRJ_rotation*D2R)) * RADIUS
 
     return
   end subroutine MPRJ_None_lonlat2xy
