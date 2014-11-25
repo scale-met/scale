@@ -247,6 +247,13 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_TIME. Check!'
        call PRC_MPIstop
     endif
+
+    ! Currently, urban scheme is included in coupler part and called at the same timming with the coupler. 
+       TIME_DT_URBAN               = TIME_DT_CPL
+       TIME_DT_URBAN_UNIT          = TIME_DT_CPL_UNIT
+       TIME_DT_URBAN_RESTART       = TIME_DT_CPL_RESTART
+       TIME_DT_URBAN_RESTART_UNIT  = TIME_DT_CPL_RESTART_UNIT                    
+
     if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_TIME)
 
     ! check time setting
