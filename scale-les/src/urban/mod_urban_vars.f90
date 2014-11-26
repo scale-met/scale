@@ -418,6 +418,10 @@ contains
     call COMM_vars8( SHFLX_URB(:,:),  27 )
     call COMM_vars8( LHFLX_URB(:,:),  28 )
     call COMM_vars8( GHFLX_URB(:,:),  29 )
+    call COMM_vars8( TRL_URB(:,:,:), 30 )
+    call COMM_vars8( TBL_URB(:,:,:), 31 )
+    call COMM_vars8( TGL_URB(:,:,:), 32 )
+
 
     call COMM_wait ( TR_URB(:,:),     1  )
     call COMM_wait ( TB_URB(:,:),     2  )
@@ -448,39 +452,9 @@ contains
     call COMM_wait ( SHFLX_URB(:,:),  27 )
     call COMM_wait ( LHFLX_URB(:,:),  28 )
     call COMM_wait ( GHFLX_URB(:,:),  29 )
-
-    do k = UKS, UKE
-      tmp1(:,:,k) = TRL_URB(k,:,:)
-      tmp2(:,:,k) = TBL_URB(k,:,:)
-      tmp3(:,:,k) = TGL_URB(k,:,:)
-    end do
-
-    do k = UKS, UKE
-      call COMM_vars8( tmp1(:,:,k), k )
-    enddo
-    do k = UKS, UKE
-      call COMM_wait ( tmp1(:,:,k), k )
-    enddo
-
-    do k = UKS, UKE
-      call COMM_vars8( tmp2(:,:,k), k )
-    enddo
-    do k = UKS, UKE
-      call COMM_wait ( tmp2(:,:,k), k )
-    enddo
-
-    do k = UKS, UKE
-      call COMM_vars8( tmp3(:,:,k), k )
-    end do
-    do k = UKS, UKE
-      call COMM_wait ( tmp3(:,:,k), k )
-    end do
-
-    do k = UKS, UKE
-      TRL_URB(k,:,:) = tmp1(:,:,k)
-      TBL_URB(k,:,:) = tmp2(:,:,k)
-      TGL_URB(k,:,:) = tmp3(:,:,k)
-    end do
+    call COMM_wait ( TRL_URB(:,:,:),  30 )
+    call COMM_wait ( TBL_URB(:,:,:),  31 )
+    call COMM_wait ( TGL_URB(:,:,:),  32 )
 
     return
   end subroutine URBAN_vars_fillhalo

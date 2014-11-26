@@ -191,20 +191,20 @@ contains
     nreq_4C  = 2 * JHALO !--- send x JHALO, recv x JHALO
     nreq_MAX = 2 * nreq_NS + 2 * nreq_WE + 4 * nreq_4C
 
-    COMM_size3D_NS4 = IA   * KA * JHALO
-    COMM_size3D_NS8 = IMAX * KA
-    COMM_size3D_WE  = JMAX * KA * IHALO
-    COMM_size3D_4C  =        KA * IHALO
+    COMM_size3D_NS4 = IA   * JHALO
+    COMM_size3D_NS8 = IMAX
+    COMM_size3D_WE  = JMAX * IHALO
+    COMM_size3D_4C  =        IHALO
 
     COMM_size2D_NS4 = IA   * JHALO
     COMM_size2D_NS8 = IMAX
     COMM_size2D_WE  = JMAX * IHALO
     COMM_size2D_4C  =        IHALO
 
-    allocate( recvpack_W2P(COMM_size3D_WE,COMM_vsize_max) )
-    allocate( recvpack_E2P(COMM_size3D_WE,COMM_vsize_max) )
-    allocate( sendpack_P2W(COMM_size3D_WE,COMM_vsize_max) )
-    allocate( sendpack_P2E(COMM_size3D_WE,COMM_vsize_max) )
+    allocate( recvpack_W2P(COMM_size3D_WE*KA,COMM_vsize_max) )
+    allocate( recvpack_E2P(COMM_size3D_WE*KA,COMM_vsize_max) )
+    allocate( sendpack_P2W(COMM_size3D_WE*KA,COMM_vsize_max) )
+    allocate( sendpack_P2E(COMM_size3D_WE*KA,COMM_vsize_max) )
 
     allocate( req_cnt (         COMM_vsize_max) )
     allocate( req_list(nreq_MAX,COMM_vsize_max) )
@@ -276,11 +276,12 @@ contains
        PRC_HAS_N
     implicit none
 
-    real(RP), intent(inout) :: var(KA,IA,JA) !< atmospheric 3D variable to communication
+    real(RP), intent(inout) :: var(:,:,:) !< atmospheric 3D variable to communication
     integer,  intent(in)    :: vid           !< request ID
 
     integer :: ireq, tag
 
+    integer :: kd
     integer :: ierr
     integer :: i, j, k, n
     !---------------------------------------------------------------------------
@@ -288,25 +289,27 @@ contains
     tag  = vid * 100
     ireq = 1
 
+    kd = size(var, 1)
+
     call PROF_rapstart('COMM vars MPI')
 
     if ( COMM_IsAllPeriodic ) then ! periodic condition
 
        !--- From 4-Direction HALO communicate
        ! From S
-       call MPI_IRECV( var(:,:,JS-JHALO:JS-1), COMM_size3D_NS4, COMM_datatype,      &
+       call MPI_IRECV( var(:,:,JS-JHALO:JS-1), COMM_size3D_NS4*kd, COMM_datatype,      &
                        PRC_next(PRC_S), tag+1, COMM_world, req_list(ireq,vid), ierr )
        ireq = ireq + 1
        ! From N
-       call MPI_IRECV( var(:,:,JE+1:JE+JHALO), COMM_size3D_NS4, COMM_datatype,      &
+       call MPI_IRECV( var(:,:,JE+1:JE+JHALO), COMM_size3D_NS4*kd, COMM_datatype,      &
                        PRC_next(PRC_N), tag+2, COMM_world, req_list(ireq,vid), ierr )
        ireq = ireq + 1
        ! From E
-       call MPI_IRECV( recvpack_E2P(:,vid),    COMM_size3D_WE,  COMM_datatype,      &
+       call MPI_IRECV( recvpack_E2P(:,vid),    COMM_size3D_WE*kd,  COMM_datatype,      &
                        PRC_next(PRC_E), tag+3, COMM_world, req_list(ireq,vid), ierr )
        ireq = ireq + 1
        ! From W
-       call MPI_IRECV( recvpack_W2P(:,vid),    COMM_size3D_WE,  COMM_datatype,      &
+       call MPI_IRECV( recvpack_W2P(:,vid),    COMM_size3D_WE*kd,  COMM_datatype,      &
                        PRC_next(PRC_W), tag+4, COMM_world, req_list(ireq,vid), ierr )
        ireq = ireq + 1
 
@@ -314,9 +317,9 @@ contains
        !$omp parallel do private(i,j,k,n) OMP_SCHEDULE_ collapse(2)
        do j = JS, JE
        do i = IS, IS+IHALO-1
-       do k = 1, KA
-          n = (j-JS) * KA * IHALO &
-            + (i-IS) * KA         &
+       do k = 1, kd
+          n = (j-JS) * kd * IHALO &
+            + (i-IS) * kd         &
             + k
           sendpack_P2W(n,vid) = var(k,i,j)
        enddo
@@ -326,9 +329,9 @@ contains
        !$omp parallel do private(i,j,k,n) OMP_SCHEDULE_ collapse(2)
        do j = JS, JE
        do i = IE-IHALO+1, IE
-       do k = 1, KA
-          n = (j-JS)         * KA * IHALO &
-            + (i-IE+IHALO-1) * KA         &
+       do k = 1, kd
+          n = (j-JS)         * kd * IHALO &
+            + (i-IE+IHALO-1) * kd         &
             + k
           sendpack_P2E(n,vid) = var(k,i,j)
        enddo
@@ -337,19 +340,19 @@ contains
 
        !--- To 4-Direction HALO communicate
        ! To W HALO
-       call MPI_ISEND( sendpack_P2W(:,vid),    COMM_size3D_WE,  COMM_datatype,      &
+       call MPI_ISEND( sendpack_P2W(:,vid),    COMM_size3D_WE*kd,  COMM_datatype,      &
                        PRC_next(PRC_W), tag+3, COMM_world, req_list(ireq,vid), ierr )
        ireq = ireq + 1
        ! To E HALO
-       call MPI_ISEND( sendpack_P2E(:,vid),    COMM_size3D_WE,  COMM_datatype,      &
+       call MPI_ISEND( sendpack_P2E(:,vid),    COMM_size3D_WE*kd,  COMM_datatype,      &
                        PRC_next(PRC_E), tag+4, COMM_world, req_list(ireq,vid), ierr )
        ireq = ireq + 1
        ! To N HALO
-       call MPI_ISEND( var(:,:,JE-JHALO+1:JE), COMM_size3D_NS4, COMM_datatype,      &
+       call MPI_ISEND( var(:,:,JE-JHALO+1:JE), COMM_size3D_NS4*kd, COMM_datatype,      &
                        PRC_next(PRC_N), tag+1, COMM_world, req_list(ireq,vid), ierr )
        ireq = ireq + 1
        ! To S HALO
-       call MPI_ISEND( var(:,:,JS:JS+JHALO-1), COMM_size3D_NS4, COMM_datatype,      &
+       call MPI_ISEND( var(:,:,JS:JS+JHALO-1), COMM_size3D_NS4*kd, COMM_datatype,      &
                        PRC_next(PRC_S), tag+2, COMM_world, req_list(ireq,vid), ierr )
        ireq = ireq + 1
 
@@ -358,25 +361,25 @@ contains
        !--- From 4-Direction HALO communicate
        ! From S
        if ( PRC_HAS_S ) then
-          call MPI_IRECV( var(:,:,JS-JHALO:JS-1), COMM_size3D_NS4, COMM_datatype,      &
+          call MPI_IRECV( var(:,:,JS-JHALO:JS-1), COMM_size3D_NS4*kd, COMM_datatype,      &
                           PRC_next(PRC_S), tag+1, COMM_world, req_list(ireq,vid), ierr )
           ireq = ireq + 1
        endif
        ! From N
        if ( PRC_HAS_N ) then
-          call MPI_IRECV( var(:,:,JE+1:JE+JHALO), COMM_size3D_NS4, COMM_datatype,      &
+          call MPI_IRECV( var(:,:,JE+1:JE+JHALO), COMM_size3D_NS4*kd, COMM_datatype,      &
                           PRC_next(PRC_N), tag+2, COMM_world, req_list(ireq,vid), ierr )
           ireq = ireq + 1
        endif
        ! From E
        if ( PRC_HAS_E ) then
-          call MPI_IRECV( recvpack_E2P(:,vid),    COMM_size3D_WE,  COMM_datatype,      &
+          call MPI_IRECV( recvpack_E2P(:,vid),    COMM_size3D_WE*kd,  COMM_datatype,      &
                           PRC_next(PRC_E), tag+3, COMM_world, req_list(ireq,vid), ierr )
           ireq = ireq + 1
        endif
        ! From W
        if ( PRC_HAS_W ) then
-          call MPI_IRECV( recvpack_W2P(:,vid),    COMM_size3D_WE,  COMM_datatype,      &
+          call MPI_IRECV( recvpack_W2P(:,vid),    COMM_size3D_WE*kd,  COMM_datatype,      &
                           PRC_next(PRC_W), tag+4, COMM_world, req_list(ireq,vid), ierr )
           ireq = ireq + 1
        endif
@@ -386,9 +389,9 @@ contains
           !$omp parallel do private(i,j,k,n) OMP_SCHEDULE_ collapse(2)
           do j = JS, JE
           do i = IS, IS+IHALO-1
-          do k = 1, KA
-             n = (j-JS) * KA * IHALO &
-               + (i-IS) * KA         &
+          do k = 1, kd
+             n = (j-JS) * kd * IHALO &
+               + (i-IS) * kd         &
                + k
              sendpack_P2W(n,vid) = var(k,i,j)
           enddo
@@ -400,9 +403,9 @@ contains
           !$omp parallel do private(i,j,k,n) OMP_SCHEDULE_ collapse(2)
           do j = JS, JE
           do i = IE-IHALO+1, IE
-          do k = 1, KA
-             n = (j-JS)         * KA * IHALO &
-               + (i-IE+IHALO-1) * KA         &
+          do k = 1, kd
+             n = (j-JS)         * kd * IHALO &
+               + (i-IE+IHALO-1) * kd         &
                + k
              sendpack_P2E(n,vid) = var(k,i,j)
           enddo
@@ -413,25 +416,25 @@ contains
        !--- To 4-Direction HALO communicate
        ! To W HALO
        if ( PRC_HAS_W ) then
-          call MPI_ISEND( sendpack_P2W(:,vid),    COMM_size3D_WE,  COMM_datatype,      &
+          call MPI_ISEND( sendpack_P2W(:,vid),    COMM_size3D_WE*kd,  COMM_datatype,      &
                           PRC_next(PRC_W), tag+3, COMM_world, req_list(ireq,vid), ierr )
           ireq = ireq + 1
        endif
        ! To E HALO
        if ( PRC_HAS_E ) then
-          call MPI_ISEND( sendpack_P2E(:,vid),    COMM_size3D_WE,  COMM_datatype,      &
+          call MPI_ISEND( sendpack_P2E(:,vid),    COMM_size3D_WE*kd,  COMM_datatype,      &
                           PRC_next(PRC_E), tag+4, COMM_world, req_list(ireq,vid), ierr )
           ireq = ireq + 1
        endif
        ! To N HALO
        if ( PRC_HAS_N ) then
-          call MPI_ISEND( var(:,:,JE-JHALO+1:JE), COMM_size3D_NS4, COMM_datatype,      &
+          call MPI_ISEND( var(:,:,JE-JHALO+1:JE), COMM_size3D_NS4*kd, COMM_datatype,      &
                           PRC_next(PRC_N), tag+1, COMM_world, req_list(ireq,vid), ierr )
           ireq = ireq + 1
        endif
        ! To S HALO
        if ( PRC_HAS_S ) then
-          call MPI_ISEND( var(:,:,JS:JS+JHALO-1), COMM_size3D_NS4, COMM_datatype,      &
+          call MPI_ISEND( var(:,:,JS:JS+JHALO-1), COMM_size3D_NS4*kd, COMM_datatype,      &
                           PRC_next(PRC_S), tag+2, COMM_world, req_list(ireq,vid), ierr )
           ireq = ireq + 1
        endif
@@ -463,10 +466,12 @@ contains
        PRC_HAS_N
     implicit none
 
-    real(RP), intent(inout) :: var(KA,IA,JA)
+    real(RP), intent(inout) :: var(:,:,:)
     integer,  intent(in)    :: vid
 
     integer :: ireq, tag, tagc
+
+    integer :: kd
 
     integer :: ierr
     integer :: i, j, k, n
@@ -474,6 +479,8 @@ contains
 
     tag  = vid * 100
     ireq = 1
+
+    kd = size(var, 1)
 
     call PROF_rapstart('COMM vars MPI')
 
@@ -483,7 +490,7 @@ contains
        ! From SE
        tagc = 0
        do j = JS-JHALO, JS-1
-          call MPI_IRECV( var(1,IE+1,j),     COMM_size3D_4C, COMM_datatype,                &
+          call MPI_IRECV( var(1,IE+1,j),     COMM_size3D_4C*kd, COMM_datatype,                &
                           PRC_next(PRC_SE), tag+tagc, COMM_world, req_list(ireq,vid), ierr )
           ireq = ireq + 1
           tagc = tagc + 1
@@ -491,7 +498,7 @@ contains
        ! From SW
        tagc = 10
        do j = JS-JHALO, JS-1
-          call MPI_IRECV( var(1,IS-IHALO,j), COMM_size3D_4C, COMM_datatype,                &
+          call MPI_IRECV( var(1,IS-IHALO,j), COMM_size3D_4C*kd, COMM_datatype,                &
                           PRC_next(PRC_SW), tag+tagc, COMM_world, req_list(ireq,vid), ierr )
           ireq = ireq + 1
           tagc = tagc + 1
@@ -499,7 +506,7 @@ contains
        ! From NE
        tagc = 20
        do j = JE+1, JE+JHALO
-          call MPI_IRECV( var(1,IE+1,j),     COMM_size3D_4C, COMM_datatype,                &
+          call MPI_IRECV( var(1,IE+1,j),     COMM_size3D_4C*kd, COMM_datatype,                &
                           PRC_next(PRC_NE), tag+tagc, COMM_world, req_list(ireq,vid), ierr )
           ireq = ireq + 1
           tagc = tagc + 1
@@ -507,7 +514,7 @@ contains
        ! From NW
        tagc = 30
        do j = JE+1, JE+JHALO
-          call MPI_IRECV( var(1,IS-IHALO,j), COMM_size3D_4C, COMM_datatype,                &
+          call MPI_IRECV( var(1,IS-IHALO,j), COMM_size3D_4C*kd, COMM_datatype,                &
                           PRC_next(PRC_NW), tag+tagc, COMM_world, req_list(ireq,vid), ierr )
           ireq = ireq + 1
           tagc = tagc + 1
@@ -515,7 +522,7 @@ contains
        ! From S
        tagc = 40
        do j = JS-JHALO, JS-1
-          call MPI_IRECV( var(1,IS,j),     COMM_size3D_NS8, COMM_datatype,                &
+          call MPI_IRECV( var(1,IS,j),     COMM_size3D_NS8*kd, COMM_datatype,                &
                           PRC_next(PRC_S), tag+tagc, COMM_world, req_list(ireq,vid), ierr )
           ireq = ireq + 1
           tagc = tagc + 1
@@ -523,19 +530,19 @@ contains
        ! From N
        tagc = 50
        do j = JE+1, JE+JHALO
-          call MPI_IRECV( var(1,IS,j),     COMM_size3D_NS8, COMM_datatype,                &
+          call MPI_IRECV( var(1,IS,j),     COMM_size3D_NS8*kd, COMM_datatype,                &
                           PRC_next(PRC_N), tag+tagc, COMM_world, req_list(ireq,vid), ierr )
           ireq = ireq + 1
           tagc = tagc + 1
        enddo
        ! From E
        tagc = 60
-       call MPI_IRECV( recvpack_E2P(:,vid), COMM_size3D_WE, COMM_datatype,             &
+       call MPI_IRECV( recvpack_E2P(:,vid), COMM_size3D_WE*kd, COMM_datatype,             &
                        PRC_next(PRC_E), tag+tagc, COMM_world, req_list(ireq,vid), ierr )
        ireq = ireq + 1
        ! From W
        tagc = 70
-       call MPI_IRECV( recvpack_W2P(:,vid), COMM_size3D_WE, COMM_datatype,             &
+       call MPI_IRECV( recvpack_W2P(:,vid), COMM_size3D_WE*kd, COMM_datatype,             &
                        PRC_next(PRC_W), tag+tagc, COMM_world, req_list(ireq,vid), ierr )
        ireq = ireq + 1
 
@@ -543,9 +550,9 @@ contains
        !$omp parallel do private(i,j,k,n) OMP_SCHEDULE_ collapse(2)
        do j = JS, JE
        do i = IS, IS+IHALO-1
-       do k = 1, KA
-          n = (j-JS) * KA * IHALO &
-            + (i-IS) * KA         &
+       do k = 1, kd
+          n = (j-JS) * kd * IHALO &
+            + (i-IS) * kd         &
             + k
           sendpack_P2W(n,vid) = var(k,i,j)
        enddo
@@ -555,9 +562,9 @@ contains
        !$omp parallel do private(i,j,k,n) OMP_SCHEDULE_ collapse(2)
        do j = JS, JE
        do i = IE-IHALO+1, IE
-       do k = 1, KA
-          n = (j-JS)         * KA * IHALO &
-            + (i-IE+IHALO-1) * KA         &
+       do k = 1, kd
+          n = (j-JS)         * kd * IHALO &
+            + (i-IE+IHALO-1) * kd         &
             + k
           sendpack_P2E(n,vid) = var(k,i,j)
        enddo
@@ -567,18 +574,18 @@ contains
        !--- To 8-Direction HALO communicate
        ! To W HALO
        tagc = 60
-       call MPI_ISEND( sendpack_P2W(:,vid), COMM_size3D_WE, COMM_datatype,             &
+       call MPI_ISEND( sendpack_P2W(:,vid), COMM_size3D_WE*kd, COMM_datatype,             &
                        PRC_next(PRC_W), tag+tagc, COMM_world, req_list(ireq,vid), ierr )
        ireq = ireq + 1
        ! To E HALO
        tagc = 70
-       call MPI_ISEND( sendpack_P2E(:,vid), COMM_size3D_WE, COMM_datatype,             &
+       call MPI_ISEND( sendpack_P2E(:,vid), COMM_size3D_WE*kd, COMM_datatype,             &
                        PRC_next(PRC_E), tag+tagc, COMM_world, req_list(ireq,vid), ierr )
        ireq = ireq + 1
        ! To N HALO
        tagc = 40
        do j = JE-JHALO+1, JE
-          call MPI_ISEND( var(1,IS,j), COMM_size3D_NS8, COMM_datatype,                    &
+          call MPI_ISEND( var(1,IS,j), COMM_size3D_NS8*kd, COMM_datatype,                    &
                           PRC_next(PRC_N), tag+tagc, COMM_world, req_list(ireq,vid), ierr )
           ireq = ireq + 1
           tagc = tagc + 1
@@ -586,7 +593,7 @@ contains
        ! To S HALO
        tagc = 50
        do j = JS, JS+JHALO-1
-          call MPI_ISEND( var(1,IS,j), COMM_size3D_NS8, COMM_datatype,                    &
+          call MPI_ISEND( var(1,IS,j), COMM_size3D_NS8*kd, COMM_datatype,                    &
                           PRC_next(PRC_S), tag+tagc, COMM_world, req_list(ireq,vid), ierr )
           ireq = ireq + 1
           tagc = tagc + 1
@@ -594,7 +601,7 @@ contains
        ! To NW HALO
        tagc = 0
        do j = JE-JHALO+1, JE
-          call MPI_ISEND( var(1,IS,j),         COMM_size3D_4C, COMM_datatype,              &
+          call MPI_ISEND( var(1,IS,j),         COMM_size3D_4C*kd, COMM_datatype,              &
                           PRC_next(PRC_NW), tag+tagc, COMM_world, req_list(ireq,vid), ierr )
           ireq = ireq + 1
           tagc = tagc + 1
@@ -602,7 +609,7 @@ contains
        ! To NE HALO
        tagc = 10
        do j = JE-JHALO+1, JE
-          call MPI_ISEND( var(1,IE-IHALO+1,j), COMM_size3D_4C, COMM_datatype,              &
+          call MPI_ISEND( var(1,IE-IHALO+1,j), COMM_size3D_4C*kd, COMM_datatype,              &
                           PRC_next(PRC_NE), tag+tagc, COMM_world, req_list(ireq,vid), ierr )
           ireq = ireq + 1
           tagc = tagc + 1
@@ -610,7 +617,7 @@ contains
        ! To SW HALO
        tagc = 20
        do j = JS, JS+JHALO-1
-          call MPI_ISEND( var(1,IS,j),         COMM_size3D_4C, COMM_datatype,              &
+          call MPI_ISEND( var(1,IS,j),         COMM_size3D_4C*kd, COMM_datatype,              &
                           PRC_next(PRC_SW), tag+tagc, COMM_world, req_list(ireq,vid), ierr )
           ireq = ireq + 1
           tagc = tagc + 1
@@ -618,7 +625,7 @@ contains
        ! To SE HALO
        tagc = 30
        do j = JS, JS+JHALO-1
-          call MPI_ISEND( var(1,IE-IHALO+1,j), COMM_size3D_4C, COMM_datatype,              &
+          call MPI_ISEND( var(1,IE-IHALO+1,j), COMM_size3D_4C*kd, COMM_datatype,              &
                           PRC_next(PRC_SE), tag+tagc, COMM_world, req_list(ireq,vid), ierr )
           ireq = ireq + 1
           tagc = tagc + 1
@@ -631,7 +638,7 @@ contains
        if ( PRC_HAS_S .and. PRC_HAS_E ) then
           tagc = 0
           do j = JS-JHALO, JS-1
-             call MPI_IRECV( var(1,IE+1,j),     COMM_size3D_4C, COMM_datatype,                &
+             call MPI_IRECV( var(1,IE+1,j),     COMM_size3D_4C*kd, COMM_datatype,                &
                              PRC_next(PRC_SE), tag+tagc, COMM_world, req_list(ireq,vid), ierr )
              ireq = ireq + 1
              tagc = tagc + 1
@@ -639,7 +646,7 @@ contains
        else if ( PRC_HAS_S ) then
           tagc = 0
           do j = JS-JHALO, JS-1
-             call MPI_IRECV( var(1,IE+1,j),     COMM_size3D_4C, COMM_datatype,                &
+             call MPI_IRECV( var(1,IE+1,j),     COMM_size3D_4C*kd, COMM_datatype,                &
                              PRC_next(PRC_S), tag+tagc, COMM_world, req_list(ireq,vid), ierr )
              ireq = ireq + 1
              tagc = tagc + 1
@@ -647,7 +654,7 @@ contains
        else if ( PRC_HAS_E ) then
           tagc = 0
           do j = JS-JHALO, JS-1
-             call MPI_IRECV( var(1,IE+1,j),     COMM_size3D_4C, COMM_datatype,                &
+             call MPI_IRECV( var(1,IE+1,j),     COMM_size3D_4C*kd, COMM_datatype,                &
                              PRC_next(PRC_E), tag+tagc, COMM_world, req_list(ireq,vid), ierr )
              ireq = ireq + 1
              tagc = tagc + 1
@@ -657,7 +664,7 @@ contains
        if ( PRC_HAS_S .and. PRC_HAS_W ) then
           tagc = 10
           do j = JS-JHALO, JS-1
-             call MPI_IRECV( var(1,IS-IHALO,j), COMM_size3D_4C, COMM_datatype,                &
+             call MPI_IRECV( var(1,IS-IHALO,j), COMM_size3D_4C*kd, COMM_datatype,                &
                              PRC_next(PRC_SW), tag+tagc, COMM_world, req_list(ireq,vid), ierr )
              ireq = ireq + 1
              tagc = tagc + 1
@@ -665,7 +672,7 @@ contains
        else if ( PRC_HAS_S ) then
           tagc = 10
           do j = JS-JHALO, JS-1
-             call MPI_IRECV( var(1,IS-IHALO,j), COMM_size3D_4C, COMM_datatype,                &
+             call MPI_IRECV( var(1,IS-IHALO,j), COMM_size3D_4C*kd, COMM_datatype,                &
                              PRC_next(PRC_S), tag+tagc, COMM_world, req_list(ireq,vid), ierr )
              ireq = ireq + 1
              tagc = tagc + 1
@@ -673,7 +680,7 @@ contains
        else if ( PRC_HAS_W ) then
           tagc = 10
           do j = JS-JHALO, JS-1
-             call MPI_IRECV( var(1,IS-IHALO,j), COMM_size3D_4C, COMM_datatype,                &
+             call MPI_IRECV( var(1,IS-IHALO,j), COMM_size3D_4C*kd, COMM_datatype,                &
                              PRC_next(PRC_W), tag+tagc, COMM_world, req_list(ireq,vid), ierr )
              ireq = ireq + 1
              tagc = tagc + 1
@@ -683,7 +690,7 @@ contains
        if ( PRC_HAS_N .and. PRC_HAS_E ) then
           tagc = 20
           do j = JE+1, JE+JHALO
-             call MPI_IRECV( var(1,IE+1,j),     COMM_size3D_4C, COMM_datatype,                &
+             call MPI_IRECV( var(1,IE+1,j),     COMM_size3D_4C*kd, COMM_datatype,                &
                              PRC_next(PRC_NE), tag+tagc, COMM_world, req_list(ireq,vid), ierr )
              ireq = ireq + 1
              tagc = tagc + 1
@@ -691,7 +698,7 @@ contains
        else if ( PRC_HAS_N ) then
           tagc = 20
           do j = JE+1, JE+JHALO
-             call MPI_IRECV( var(1,IE+1,j),     COMM_size3D_4C, COMM_datatype,                &
+             call MPI_IRECV( var(1,IE+1,j),     COMM_size3D_4C*kd, COMM_datatype,                &
                              PRC_next(PRC_N), tag+tagc, COMM_world, req_list(ireq,vid), ierr )
              ireq = ireq + 1
              tagc = tagc + 1
@@ -699,7 +706,7 @@ contains
        else if ( PRC_HAS_E ) then
           tagc = 20
           do j = JE+1, JE+JHALO
-             call MPI_IRECV( var(1,IE+1,j),     COMM_size3D_4C, COMM_datatype,                &
+             call MPI_IRECV( var(1,IE+1,j),     COMM_size3D_4C*kd, COMM_datatype,                &
                              PRC_next(PRC_E), tag+tagc, COMM_world, req_list(ireq,vid), ierr )
              ireq = ireq + 1
              tagc = tagc + 1
@@ -709,7 +716,7 @@ contains
        if ( PRC_HAS_N .and. PRC_HAS_W ) then
           tagc = 30
           do j = JE+1, JE+JHALO
-             call MPI_IRECV( var(1,IS-IHALO,j), COMM_size3D_4C, COMM_datatype,                &
+             call MPI_IRECV( var(1,IS-IHALO,j), COMM_size3D_4C*kd, COMM_datatype,                &
                              PRC_next(PRC_NW), tag+tagc, COMM_world, req_list(ireq,vid), ierr )
              ireq = ireq + 1
              tagc = tagc + 1
@@ -717,7 +724,7 @@ contains
        else if ( PRC_HAS_N ) then
           tagc = 30
           do j = JE+1, JE+JHALO
-             call MPI_IRECV( var(1,IS-IHALO,j), COMM_size3D_4C, COMM_datatype,                &
+             call MPI_IRECV( var(1,IS-IHALO,j), COMM_size3D_4C*kd, COMM_datatype,                &
                              PRC_next(PRC_N), tag+tagc, COMM_world, req_list(ireq,vid), ierr )
              ireq = ireq + 1
              tagc = tagc + 1
@@ -725,7 +732,7 @@ contains
        else if ( PRC_HAS_W ) then
           tagc = 30
           do j = JE+1, JE+JHALO
-             call MPI_IRECV( var(1,IS-IHALO,j), COMM_size3D_4C, COMM_datatype,                &
+             call MPI_IRECV( var(1,IS-IHALO,j), COMM_size3D_4C*kd, COMM_datatype,                &
                              PRC_next(PRC_W), tag+tagc, COMM_world, req_list(ireq,vid), ierr )
              ireq = ireq + 1
              tagc = tagc + 1
@@ -735,7 +742,7 @@ contains
        if ( PRC_HAS_S ) then
           tagc = 40
           do j = JS-JHALO, JS-1
-             call MPI_IRECV( var(1,IS,j),     COMM_size3D_NS8, COMM_datatype,                &
+             call MPI_IRECV( var(1,IS,j),     COMM_size3D_NS8*kd, COMM_datatype,                &
                              PRC_next(PRC_S), tag+tagc, COMM_world, req_list(ireq,vid), ierr )
              ireq = ireq + 1
              tagc = tagc + 1
@@ -745,7 +752,7 @@ contains
        if ( PRC_HAS_N ) then
           tagc = 50
           do j = JE+1, JE+JHALO
-             call MPI_IRECV( var(1,IS,j),     COMM_size3D_NS8, COMM_datatype,                &
+             call MPI_IRECV( var(1,IS,j),     COMM_size3D_NS8*kd, COMM_datatype,                &
                              PRC_next(PRC_N), tag+tagc, COMM_world, req_list(ireq,vid), ierr )
              ireq = ireq + 1
              tagc = tagc + 1
@@ -754,14 +761,14 @@ contains
        ! From E
        if ( PRC_HAS_E ) then
           tagc = 60
-          call MPI_IRECV( recvpack_E2P(:,vid), COMM_size3D_WE, COMM_datatype,             &
+          call MPI_IRECV( recvpack_E2P(:,vid), COMM_size3D_WE*kd, COMM_datatype,             &
                           PRC_next(PRC_E), tag+tagc, COMM_world, req_list(ireq,vid), ierr )
           ireq = ireq + 1
        endif
        ! From W
        if ( PRC_HAS_W ) then
           tagc = 70
-          call MPI_IRECV( recvpack_W2P(:,vid), COMM_size3D_WE, COMM_datatype,             &
+          call MPI_IRECV( recvpack_W2P(:,vid), COMM_size3D_WE*kd, COMM_datatype,             &
                           PRC_next(PRC_W), tag+tagc, COMM_world, req_list(ireq,vid), ierr )
           ireq = ireq + 1
        endif
@@ -771,9 +778,9 @@ contains
           !$omp parallel do private(i,j,k,n) OMP_SCHEDULE_ collapse(2)
           do j = JS, JE
           do i = IS, IS+IHALO-1
-          do k = 1, KA
-             n = (j-JS) * KA * IHALO &
-               + (i-IS) * KA         &
+          do k = 1, kd
+             n = (j-JS) * kd * IHALO &
+               + (i-IS) * kd         &
                + k
              sendpack_P2W(n,vid) = var(k,i,j)
           enddo
@@ -785,9 +792,9 @@ contains
           !$omp parallel do private(i,j,k,n) OMP_SCHEDULE_ collapse(2)
           do j = JS, JE
           do i = IE-IHALO+1, IE
-          do k = 1, KA
-             n = (j-JS)         * KA * IHALO &
-               + (i-IE+IHALO-1) * KA         &
+          do k = 1, kd
+             n = (j-JS)         * kd * IHALO &
+               + (i-IE+IHALO-1) * kd         &
                + k
              sendpack_P2E(n,vid) = var(k,i,j)
           enddo
@@ -799,14 +806,14 @@ contains
        ! To W HALO
        if ( PRC_HAS_W ) then
           tagc = 60
-          call MPI_ISEND( sendpack_P2W(:,vid), COMM_size3D_WE, COMM_datatype,             &
+          call MPI_ISEND( sendpack_P2W(:,vid), COMM_size3D_WE*kd, COMM_datatype,             &
                           PRC_next(PRC_W), tag+tagc, COMM_world, req_list(ireq,vid), ierr )
           ireq = ireq + 1
        endif
        ! To E HALO
        if ( PRC_HAS_E ) then
           tagc = 70
-          call MPI_ISEND( sendpack_P2E(:,vid), COMM_size3D_WE, COMM_datatype,             &
+          call MPI_ISEND( sendpack_P2E(:,vid), COMM_size3D_WE*kd, COMM_datatype,             &
                           PRC_next(PRC_E), tag+tagc, COMM_world, req_list(ireq,vid), ierr )
           ireq = ireq + 1
        endif
@@ -814,7 +821,7 @@ contains
        if ( PRC_HAS_N ) then
           tagc = 40
           do j = JE-JHALO+1, JE
-             call MPI_ISEND( var(1,IS,j), COMM_size3D_NS8, COMM_datatype,                    &
+             call MPI_ISEND( var(1,IS,j), COMM_size3D_NS8*kd, COMM_datatype,                    &
                              PRC_next(PRC_N), tag+tagc, COMM_world, req_list(ireq,vid), ierr )
              ireq = ireq + 1
              tagc = tagc + 1
@@ -824,7 +831,7 @@ contains
        if ( PRC_HAS_S ) then
           tagc = 50
           do j = JS, JS+JHALO-1
-             call MPI_ISEND( var(1,IS,j), COMM_size3D_NS8, COMM_datatype,                    &
+             call MPI_ISEND( var(1,IS,j), COMM_size3D_NS8*kd, COMM_datatype,                    &
                              PRC_next(PRC_S), tag+tagc, COMM_world, req_list(ireq,vid), ierr )
              ireq = ireq + 1
              tagc = tagc + 1
@@ -834,7 +841,7 @@ contains
        if ( PRC_HAS_N .and. PRC_HAS_W ) then
           tagc = 0
           do j = JE-JHALO+1, JE
-             call MPI_ISEND( var(1,IS,j),         COMM_size3D_4C, COMM_datatype,              &
+             call MPI_ISEND( var(1,IS,j),         COMM_size3D_4C*kd, COMM_datatype,              &
                              PRC_next(PRC_NW), tag+tagc, COMM_world, req_list(ireq,vid), ierr )
              ireq = ireq + 1
              tagc = tagc + 1
@@ -842,7 +849,7 @@ contains
        else if ( PRC_HAS_N ) then
           tagc = 10
           do j = JE-JHALO+1, JE
-             call MPI_ISEND( var(1,IS,j),         COMM_size3D_4C, COMM_datatype,              &
+             call MPI_ISEND( var(1,IS,j),         COMM_size3D_4C*kd, COMM_datatype,              &
                              PRC_next(PRC_N), tag+tagc, COMM_world, req_list(ireq,vid), ierr )
              ireq = ireq + 1
              tagc = tagc + 1
@@ -850,7 +857,7 @@ contains
        else if ( PRC_HAS_W ) then
           tagc = 20
           do j = JE-JHALO+1, JE
-             call MPI_ISEND( var(1,IS,j),         COMM_size3D_4C, COMM_datatype,              &
+             call MPI_ISEND( var(1,IS,j),         COMM_size3D_4C*kd, COMM_datatype,              &
                              PRC_next(PRC_W), tag+tagc, COMM_world, req_list(ireq,vid), ierr )
              ireq = ireq + 1
              tagc = tagc + 1
@@ -860,7 +867,7 @@ contains
        if ( PRC_HAS_N .and. PRC_HAS_E ) then
           tagc = 10
           do j = JE-JHALO+1, JE
-             call MPI_ISEND( var(1,IE-IHALO+1,j), COMM_size3D_4C, COMM_datatype,              &
+             call MPI_ISEND( var(1,IE-IHALO+1,j), COMM_size3D_4C*kd, COMM_datatype,              &
                              PRC_next(PRC_NE), tag+tagc, COMM_world, req_list(ireq,vid), ierr )
              ireq = ireq + 1
              tagc = tagc + 1
@@ -868,7 +875,7 @@ contains
        else if ( PRC_HAS_N ) then
           tagc = 0
           do j = JE-JHALO+1, JE
-             call MPI_ISEND( var(1,IE-IHALO+1,j), COMM_size3D_4C, COMM_datatype,              &
+             call MPI_ISEND( var(1,IE-IHALO+1,j), COMM_size3D_4C*kd, COMM_datatype,              &
                              PRC_next(PRC_N), tag+tagc, COMM_world, req_list(ireq,vid), ierr )
              ireq = ireq + 1
              tagc = tagc + 1
@@ -876,7 +883,7 @@ contains
        else if ( PRC_HAS_E ) then
           tagc = 30
           do j = JE-JHALO+1, JE
-             call MPI_ISEND( var(1,IE-IHALO+1,j), COMM_size3D_4C, COMM_datatype,              &
+             call MPI_ISEND( var(1,IE-IHALO+1,j), COMM_size3D_4C*kd, COMM_datatype,              &
                              PRC_next(PRC_E), tag+tagc, COMM_world, req_list(ireq,vid), ierr )
              ireq = ireq + 1
              tagc = tagc + 1
@@ -886,7 +893,7 @@ contains
        if ( PRC_HAS_S .and. PRC_HAS_W ) then
           tagc = 20
           do j = JS, JS+JHALO-1
-             call MPI_ISEND( var(1,IS,j),         COMM_size3D_4C, COMM_datatype,              &
+             call MPI_ISEND( var(1,IS,j),         COMM_size3D_4C*kd, COMM_datatype,              &
                              PRC_next(PRC_SW), tag+tagc, COMM_world, req_list(ireq,vid), ierr )
              ireq = ireq + 1
              tagc = tagc + 1
@@ -894,7 +901,7 @@ contains
        else if ( PRC_HAS_S ) then
           tagc = 30
           do j = JS, JS+JHALO-1
-             call MPI_ISEND( var(1,IS,j),         COMM_size3D_4C, COMM_datatype,              &
+             call MPI_ISEND( var(1,IS,j),         COMM_size3D_4C*kd, COMM_datatype,              &
                              PRC_next(PRC_S), tag+tagc, COMM_world, req_list(ireq,vid), ierr )
              ireq = ireq + 1
              tagc = tagc + 1
@@ -902,7 +909,7 @@ contains
        else if ( PRC_HAS_W ) then
           tagc = 0
           do j = JS, JS+JHALO-1
-             call MPI_ISEND( var(1,IS,j),         COMM_size3D_4C, COMM_datatype,              &
+             call MPI_ISEND( var(1,IS,j),         COMM_size3D_4C*kd, COMM_datatype,              &
                              PRC_next(PRC_W), tag+tagc, COMM_world, req_list(ireq,vid), ierr )
              ireq = ireq + 1
              tagc = tagc + 1
@@ -912,7 +919,7 @@ contains
        if ( PRC_HAS_S .and. PRC_HAS_E ) then
           tagc = 30
           do j = JS, JS+JHALO-1
-             call MPI_ISEND( var(1,IE-IHALO+1,j), COMM_size3D_4C, COMM_datatype,              &
+             call MPI_ISEND( var(1,IE-IHALO+1,j), COMM_size3D_4C*kd, COMM_datatype,              &
                              PRC_next(PRC_SE), tag+tagc, COMM_world, req_list(ireq,vid), ierr )
              ireq = ireq + 1
              tagc = tagc + 1
@@ -920,7 +927,7 @@ contains
        else if ( PRC_HAS_S ) then
           tagc = 20
           do j = JS, JS+JHALO-1
-             call MPI_ISEND( var(1,IE-IHALO+1,j), COMM_size3D_4C, COMM_datatype,              &
+             call MPI_ISEND( var(1,IE-IHALO+1,j), COMM_size3D_4C*kd, COMM_datatype,              &
                              PRC_next(PRC_S), tag+tagc, COMM_world, req_list(ireq,vid), ierr )
              ireq = ireq + 1
              tagc = tagc + 1
@@ -928,7 +935,7 @@ contains
        else if ( PRC_HAS_E ) then
           tagc = 10
           do j = JS, JS+JHALO-1
-             call MPI_ISEND( var(1,IE-IHALO+1,j), COMM_size3D_4C, COMM_datatype,              &
+             call MPI_ISEND( var(1,IE-IHALO+1,j), COMM_size3D_4C*kd, COMM_datatype,              &
                              PRC_next(PRC_E), tag+tagc, COMM_world, req_list(ireq,vid), ierr )
              ireq = ireq + 1
              tagc = tagc + 1
@@ -963,6 +970,9 @@ contains
     logical, intent(in), optional :: FILL_BND
 
     logical :: FILL_BND_
+
+    integer :: kd
+
     integer :: ierr
     integer :: i, j, k, n
     !---------------------------------------------------------------------------
@@ -970,6 +980,8 @@ contains
 !    FILL_BND_ = COMM_FILL_BND
     FILL_BND_ = .true.
     if ( present(FILL_BND) ) FILL_BND_ = FILL_BND
+
+    kd = size(var, 1)
 
     call PROF_rapstart('COMM wait MPI')
 
@@ -985,9 +997,9 @@ contains
        !$omp parallel do private(i,j,k,n) OMP_SCHEDULE_ collapse(2)
        do j = JS, JE
        do i = IE+1, IE+IHALO
-       do k = 1, KA
-          n = (j-JS)   * KA * IHALO &
-            + (i-IE-1) * KA         &
+       do k = 1, kd
+          n = (j-JS)   * kd * IHALO &
+            + (i-IE-1) * kd         &
             + k
           var(k,i,j) = recvpack_E2P(n,vid)
        enddo
@@ -998,9 +1010,9 @@ contains
        !$omp parallel do private(i,j,k,n) OMP_SCHEDULE_ collapse(2)
        do j = JS, JE
        do i = IS-IHALO, IS-1
-       do k = 1, KA
-          n = (j-JS)       * KA * IHALO &
-            + (i-IS+IHALO) * KA         &
+       do k = 1, kd
+          n = (j-JS)       * kd * IHALO &
+            + (i-IS+IHALO) * kd         &
             + k
           var(k,i,j) = recvpack_W2P(n,vid)
        enddo
@@ -1014,9 +1026,9 @@ contains
            !$omp parallel do private(i,j,k,n) OMP_SCHEDULE_ collapse(2)
            do j = JS, JE
            do i = IE+1, IE+IHALO
-           do k = 1, KA
-              n = (j-JS)   * KA * IHALO &
-                + (i-IE-1) * KA         &
+           do k = 1, kd
+              n = (j-JS)   * kd * IHALO &
+                + (i-IE-1) * kd         &
                 + k
               var(k,i,j) = recvpack_E2P(n,vid)
            enddo
@@ -1029,9 +1041,9 @@ contains
            !$omp parallel do private(i,j,k,n) OMP_SCHEDULE_ collapse(2)
            do j = JS, JE
            do i = IS-IHALO, IS-1
-           do k = 1, KA
-              n = (j-JS)       * KA * IHALO &
-                + (i-IS+IHALO) * KA         &
+           do k = 1, kd
+              n = (j-JS)       * kd * IHALO &
+                + (i-IS+IHALO) * kd         &
                 + k
               var(k,i,j) = recvpack_W2P(n,vid)
            enddo
