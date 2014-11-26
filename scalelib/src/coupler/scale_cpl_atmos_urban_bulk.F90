@@ -10,6 +10,7 @@
 !! @par History
 !<
 !-------------------------------------------------------------------------------
+! !OCL SERIAL
 module scale_cpl_atmos_urban_bulk
   !-----------------------------------------------------------------------------
   !
@@ -540,6 +541,7 @@ contains
     Z    = ZA - ZDC
     BHR  = LOG(Z0R/Z0HR) / 0.4_RP
     RIBR = ( GRAV * 2.0_RP / (TA+TR) ) * (TA-TR) * (Z+Z0R) / (UA*UA)
+xxxr=0.0_RP ! temtative
     call mos(XXXR,CHR,CDR,BHR,RIBR,Z,Z0R,UA,TA,TR,RHOO)
 
     call qsat( QS0R, TR, PRES )
@@ -654,6 +656,7 @@ contains
     !  Below method would be better to be improved. This is tentative method.
     !-----------------------------------------------------------
 
+xxx = 0.0_RP ! tentative
      call cal_psi(XXX,psim,psih)
 
      XXX2 = (2.0_RP/Z) * XXX
@@ -1028,6 +1031,7 @@ contains
       Z    = ZA - ZDC
       BHR  = LOG(Z0R/Z0HR) / 0.4_RP
       RIBR = ( GRAV * 2.0_RP / (TA+TR) ) * (TA-TR) * (Z+Z0R) / (UA*UA)
+xxxr=0.0_RP ! tentative
       call mos(XXXR,CHR,CDR,BHR,RIBR,Z,Z0R,UA,TA,TR,RHOO)
 
       call qsat( QS0R, TR, PRES )
@@ -1091,6 +1095,7 @@ contains
       Z    = ZA - ZDC
       BHC  = LOG(Z0C/Z0HC) / 0.4_RP
       RIBC = ( GRAV * 2.0_RP / (TA+TC) ) * (TA-TC) * (Z+Z0C) / (UA*UA)
+xxxc = 0.0_RP ! tentative
       call mos(XXXC,CHC,CDC,BHC,RIBC,Z,Z0C,UA,TA,TC,RHOO)
       ALPHAC = CHC * RHOO * CPdry * UA
 
@@ -1284,6 +1289,7 @@ contains
     !  Below method would be better to be improved. This is tentative method.
     !-----------------------------------------------------------
 
+xxx = 0.0_RP ! tentative
     call cal_psi(XXX,psim,psih)
 
     XXX2 = (2.0_RP/Z) * XXX

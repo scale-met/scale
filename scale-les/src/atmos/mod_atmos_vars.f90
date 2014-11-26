@@ -135,7 +135,7 @@ module mod_atmos_vars
   integer, private, allocatable :: AQ_HIST_id(:)
 
   ! history & monitor output of diagnostic variables
-  integer, private, parameter :: AD_nmax = 51 ! number of diagnostic variables for history output
+  integer, private, parameter :: AD_nmax = 52 ! number of diagnostic variables for history output
 
   integer, private, parameter :: I_W     =  1 ! velocity w at cell center
   integer, private, parameter :: I_U     =  2 ! velocity u at cell center
@@ -201,6 +201,8 @@ module mod_atmos_vars
   integer, private, parameter :: I_PRCP         = 50
 
   integer, private, parameter :: I_DENS_MEAN    = 51
+
+  integer, private, parameter :: I_QSAT         = 52
 
   integer, private            :: AD_HIST_id (AD_nmax)
   integer, private            :: AD_PREP_sw (AD_nmax)
@@ -533,7 +535,9 @@ contains
        AD_PREP_sw(I_CPTOT) = 1
        AD_PREP_sw(I_PRES)  = 1
        AD_PREP_sw(I_TEMP)  = 1
+       AD_PREP_sw(I_QSAT)  = 1
     endif
+
 
     if ( AD_HIST_id (I_VOR) > 0 ) then
        AD_PREP_sw(I_VOR) = 1
@@ -664,8 +668,8 @@ contains
     if ( present(FILL_BND) ) FILL_BND_ = FILL_BND
 
     !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
-    do j  = JS, JE
-    do i  = IS, IE
+    do j  = JSB, JEB
+    do i  = ISB, IEB
        DENS(   1:KS-1,i,j) = DENS(KS,i,j)
        MOMZ(   1:KS-1,i,j) = MOMZ(KS,i,j)
        MOMX(   1:KS-1,i,j) = MOMX(KS,i,j)
@@ -681,8 +685,8 @@ contains
 
     !$omp parallel do private(i,j,iq) OMP_SCHEDULE_ collapse(3)
     do iq = 1, QA
-    do j  = JS, JE
-    do i  = IS, IE
+    do j  = JSB, JEB
+    do i  = ISB, IEB
        QTRC(   1:KS-1,i,j,iq) = QTRC(KS,i,j,iq)
        QTRC(KE+1:KA,  i,j,iq) = QTRC(KE,i,j,iq)
     enddo
@@ -1169,8 +1173,8 @@ contains
     endif
 
     if ( AD_PREP_sw(I_QTOT) > 0 ) then
-       do j  = 1, JA
-       do i  = 1, IA
+       do j  = JSB, JEB
+       do i  = ISB, IEB
        do k  = KS, KE
           QTOT(k,i,j) = 1.0_RP - QDRY(k,i,j)
        enddo
@@ -1203,8 +1207,8 @@ contains
     endif
 
     if ( AD_PREP_sw(I_LWP) > 0 ) then
-       do j  = 1, JA
-       do i  = 1, IA
+       do j  = JSB, JEB
+       do i  = ISB, IEB
           LWP(i,j) = 0.0_RP
           do k  = KS, KE
              LWP(i,j) = LWP(i,j) &
@@ -1215,8 +1219,8 @@ contains
     endif
 
     if ( AD_PREP_sw(I_IWP) > 0 ) then
-       do j  = 1, JA
-       do i  = 1, IA
+       do j  = JSB, JEB
+       do i  = ISB, IEB
           IWP(i,j) = 0.0_RP
           do k  = KS, KE
              IWP(i,j) = IWP(i,j) &
@@ -1228,8 +1232,8 @@ contains
 
     if ( AD_PREP_sw(I_RTOT) > 0 ) then
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       do j  = 1, JA
-       do i  = 1, IA
+       do j  = JSB, JEB
+       do i  = ISB, IEB
        do k  = KS, KE
           RTOT (k,i,j) = Rdry * QDRY(k,i,j) + Rvap * QTRC(k,i,j,I_QV)
        enddo
@@ -1239,8 +1243,8 @@ contains
 
     if ( AD_PREP_sw(I_CPTOT) > 0 ) then
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       do j  = 1, JA
-       do i  = 1, IA
+       do j  = JSB, JEB
+       do i  = ISB, IEB
        do k  = KS, KE
           CPTOT(k,i,j) = CPdry * QDRY(k,i,j)
        enddo
@@ -1249,8 +1253,8 @@ contains
 
        do iq = QQS, QQE
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       do j  = 1, JA
-       do i  = 1, IA
+       do j  = JSB, JEB
+       do i  = ISB, IEB
        do k  = KS, KE
           CPTOT(k,i,j) = CPTOT(k,i,j) + QTRC(k,i,j,iq) * CPw(iq)
        enddo
@@ -1259,8 +1263,8 @@ contains
        enddo
 
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       do j  = 1, JA
-       do i  = 1, IA
+       do j  = JSB, JEB
+       do i  = ISB, IEB
        do k  = KS, KE
           CPovCV(k,i,j) = CPTOT(k,i,j) / ( CPTOT(k,i,j) - RTOT(k,i,j) )
        enddo
@@ -1292,8 +1296,8 @@ contains
 
     if ( AD_PREP_sw(I_POTL) > 0 ) then
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       do j = 1, JA
-       do i = 1, IA
+       do j  = JSB, JEB
+       do i  = ISB, IEB
        do k = KS, KE
           POTL(k,i,j) = POTT(k,i,j) &
                       - LHV / CPdry * QLIQ(k,i,j) * POTT(k,i,j) / TEMP(k,i,j)
@@ -1302,13 +1306,15 @@ contains
        enddo
     endif
 
-    if ( AD_HIST_id(I_RH) > 0 ) then
+    if ( AD_PREP_sw(I_QSAT) > 0 ) then
        call SATURATION_dens2qsat_all( QSAT(:,:,:), & ! [OUT]
                                       TEMP(:,:,:), & ! [IN]
                                       DENS(:,:,:)  ) ! [IN]
+    end if
 
-       do j  = 1, JA
-       do i  = 1, IA
+    if ( AD_HIST_id(I_RH) > 0 ) then
+       do j  = JS, JE
+       do i  = IS, IE
        do k  = KS, KE
           RH(k,i,j) = QTRC(k,i,j,I_QV) / QSAT(k,i,j) * 1.0E2_RP
        enddo
@@ -1317,13 +1323,9 @@ contains
     endif
 
     if ( AD_HIST_id(I_RHL) > 0 ) then
-       call SATURATION_dens2qsat_liq( QSAT(:,:,:), & ! [OUT]
-                                      TEMP(:,:,:), & ! [IN]
-                                      DENS(:,:,:)  ) ! [IN]
-
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       do j  = 1, JA
-       do i  = 1, IA
+       do j  = JS, JE
+       do i  = IS, IE
        do k  = KS, KE
           RHL(k,i,j) = QTRC(k,i,j,I_QV) / QSAT(k,i,j) * 1.0E2_RP
        enddo
@@ -1332,13 +1334,9 @@ contains
     endif
 
     if ( AD_HIST_id(I_RHI) > 0 ) then
-       call SATURATION_dens2qsat_ice( QSAT(:,:,:), & ! [OUT]
-                                      TEMP(:,:,:), & ! [IN]
-                                      DENS(:,:,:)  ) ! [IN]
-
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       do j  = 1, JA
-       do i  = 1, IA
+       do j  = JS, JE
+       do i  = IS, IE
        do k  = KS, KE
           RHI(k,i,j) = QTRC(k,i,j,I_QV) / QSAT(k,i,j) * 1.0E2_RP
        enddo
@@ -1579,8 +1577,8 @@ contains
 
     if ( AD_PREP_sw(I_ENGI) > 0 ) then
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       do j = 1, JA
-       do i = 1, IA
+       do j  = JSB, JEB
+       do i  = ISB, IEB
        do k = KS, KE
           ENGI(k,i,j) = DENS(k,i,j) * QDRY(k,i,j) * TEMP(k,i,j) * CVdry
        enddo
@@ -1589,8 +1587,8 @@ contains
 
        do iq = QQS, QQE
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(3)
-       do j  = 1, JA
-       do i  = 1, IA
+       do j  = JSB, JEB
+       do i  = ISB, IEB
        do k  = KS, KE
           ENGI(k,i,j) = ENGI(k,i,j) &
                       + DENS(k,i,j) * QTRC(k,i,j,iq) * TEMP(k,i,j) * CVw(iq)
@@ -1602,8 +1600,8 @@ contains
 
     if ( AD_PREP_sw(I_ENGT) > 0 ) then
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       do j  = 1, JA
-       do i  = 1, IA
+       do j  = JSB, JEB
+       do i  = ISB, IEB
        do k  = KS, KE
           ENGT(k,i,j) = ENGP(k,i,j) + ENGK(k,i,j) + ENGI(k,i,j)
        enddo
@@ -1782,9 +1780,19 @@ contains
 
     do j = 1, JA
     do i = 1, IA
-    do k = KS, KE
+    do k = KS+1, KE-1
        W(k,i,j) = 0.5_RP * ( MOMZ(k-1,i,j)+MOMZ(k,i,j) ) / DENS(k,i,j)
     enddo
+    enddo
+    enddo
+    do j = 1, JA
+    do i = 1, IA
+       W(KS,i,j) = 0.5_RP * (               MOMZ(KS,i,j) ) / DENS(KS,i,j)
+    enddo
+    enddo
+    do j = 1, JA
+    do i = 1, IA
+       W(KE,i,j) = 0.5_RP * ( MOMZ(KE-1,i,j)             ) / DENS(KE,i,j)
     enddo
     enddo
 

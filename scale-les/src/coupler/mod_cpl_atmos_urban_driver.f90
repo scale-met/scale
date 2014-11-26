@@ -203,8 +203,9 @@ contains
 
     if ( sfc_temp_update ) then  ! temperature update
 
-      do j = 1, JA
-      do i = 1, IA
+      !$omp parallel do private(Uabs,i,j) schedule(static,16) collapse(2)
+      do j = JS, JE
+      do i = IS, IE
 
       if( is_FLX(i,j) ) then
 
@@ -442,20 +443,72 @@ contains
     endif
 
     ! temporal average flux
-    ATM_FLX_MW  (:,:) = ( ATM_FLX_MW  (:,:) * CNT_getAtmUrb + tmp_ATM_FLX_MW(:,:)      ) / ( CNT_getAtmUrb + 1.0_RP )
-    ATM_FLX_MU  (:,:) = ( ATM_FLX_MU  (:,:) * CNT_getAtmUrb + tmp_ATM_FLX_MU(:,:)      ) / ( CNT_getAtmUrb + 1.0_RP )
-    ATM_FLX_MV  (:,:) = ( ATM_FLX_MV  (:,:) * CNT_getAtmUrb + tmp_ATM_FLX_MV(:,:)      ) / ( CNT_getAtmUrb + 1.0_RP )
-    ATM_FLX_SH  (:,:) = ( ATM_FLX_SH  (:,:) * CNT_getAtmUrb + tmp_ATM_FLX_SH(:,:)      ) / ( CNT_getAtmUrb + 1.0_RP )
-    ATM_FLX_LH  (:,:) = ( ATM_FLX_LH  (:,:) * CNT_getAtmUrb + tmp_ATM_FLX_LH(:,:)      ) / ( CNT_getAtmUrb + 1.0_RP )
-    ATM_FLX_evap(:,:) = ( ATM_FLX_evap(:,:) * CNT_getAtmUrb + tmp_ATM_FLX_LH(:,:)/LHV0 ) / ( CNT_getAtmUrb + 1.0_RP )
-    ATM_U10     (:,:) = ( ATM_U10     (:,:) * CNT_getAtmUrb + tmp_ATM_U10   (:,:)      ) / ( CNT_getAtmUrb + 1.0_RP )
-    ATM_V10     (:,:) = ( ATM_V10     (:,:) * CNT_getAtmUrb + tmp_ATM_V10   (:,:)      ) / ( CNT_getAtmUrb + 1.0_RP )
-    ATM_T2      (:,:) = ( ATM_T2      (:,:) * CNT_getAtmUrb + tmp_ATM_T2    (:,:)      ) / ( CNT_getAtmUrb + 1.0_RP )
-    ATM_Q2      (:,:) = ( ATM_Q2      (:,:) * CNT_getAtmUrb + tmp_ATM_Q2    (:,:)      ) / ( CNT_getAtmUrb + 1.0_RP )
+    do j = JS, JE
+    do i = IS, IE
+       ATM_FLX_MW  (i,j) = ( ATM_FLX_MW  (i,j) * CNT_getAtmUrb + tmp_ATM_FLX_MW(i,j)      ) / ( CNT_getAtmUrb + 1.0_RP )
+    end do
+    end do
+    do j = JS, JE
+    do i = IS, IE
+       ATM_FLX_MU  (i,j) = ( ATM_FLX_MU  (i,j) * CNT_getAtmUrb + tmp_ATM_FLX_MU(i,j)      ) / ( CNT_getAtmUrb + 1.0_RP )
+    end do
+    end do
+    do j = JS, JE
+    do i = IS, IE
+       ATM_FLX_MV  (i,j) = ( ATM_FLX_MV  (i,j) * CNT_getAtmUrb + tmp_ATM_FLX_MV(i,j)      ) / ( CNT_getAtmUrb + 1.0_RP )
+    end do
+    end do
+    do j = JS, JE
+    do i = IS, IE
+       ATM_FLX_SH  (i,j) = ( ATM_FLX_SH  (i,j) * CNT_getAtmUrb + tmp_ATM_FLX_SH(i,j)      ) / ( CNT_getAtmUrb + 1.0_RP )
+    end do
+    end do
+    do j = JS, JE
+    do i = IS, IE
+       ATM_FLX_LH  (i,j) = ( ATM_FLX_LH  (i,j) * CNT_getAtmUrb + tmp_ATM_FLX_LH(i,j)      ) / ( CNT_getAtmUrb + 1.0_RP )
+    end do
+    end do
+    do j = JS, JE
+    do i = IS, IE
+       ATM_FLX_evap(i,j) = ( ATM_FLX_evap(i,j) * CNT_getAtmUrb + tmp_ATM_FLX_LH(i,j)/LHV0 ) / ( CNT_getAtmUrb + 1.0_RP )
+    end do
+    end do
+    do j = JS, JE
+    do i = IS, IE
+       ATM_U10     (i,j) = ( ATM_U10     (i,j) * CNT_getAtmUrb + tmp_ATM_U10   (i,j)      ) / ( CNT_getAtmUrb + 1.0_RP )
+    end do
+    end do
+    do j = JS, JE
+    do i = IS, IE
+       ATM_V10     (i,j) = ( ATM_V10     (i,j) * CNT_getAtmUrb + tmp_ATM_V10   (i,j)      ) / ( CNT_getAtmUrb + 1.0_RP )
+    end do
+    end do
+    do j = JS, JE
+    do i = IS, IE
+       ATM_T2      (i,j) = ( ATM_T2      (i,j) * CNT_getAtmUrb + tmp_ATM_T2    (i,j)      ) / ( CNT_getAtmUrb + 1.0_RP )
+    end do
+    end do
+    do j = JS, JE
+    do i = IS, IE
+       ATM_Q2      (i,j) = ( ATM_Q2      (i,j) * CNT_getAtmUrb + tmp_ATM_Q2    (i,j)      ) / ( CNT_getAtmUrb + 1.0_RP )
+    end do
+    end do
 
-    URB_FLX_heat  (:,:) = ( URB_FLX_heat  (:,:) * CNT_getUrb + tmp_URB_FLX_heat(:,:)      ) / ( CNT_getUrb + 1.0_RP )
-    URB_FLX_precip(:,:) = ( URB_FLX_precip(:,:) * CNT_getUrb + FLX_precip      (:,:)      ) / ( CNT_getUrb + 1.0_RP )
-    URB_FLX_evap  (:,:) = ( URB_FLX_evap  (:,:) * CNT_getUrb - tmp_ATM_FLX_LH  (:,:)/LHV0 ) / ( CNT_getUrb + 1.0_RP )
+    do j = JS, JE
+    do i = IS, IE
+       URB_FLX_heat  (i,j) = ( URB_FLX_heat  (i,j) * CNT_getUrb + tmp_URB_FLX_heat(i,j)      ) / ( CNT_getUrb + 1.0_RP )
+    end do
+    end do
+    do j = JS, JE
+    do i = IS, IE
+       URB_FLX_precip(i,j) = ( URB_FLX_precip(i,j) * CNT_getUrb + FLX_precip      (i,j)      ) / ( CNT_getUrb + 1.0_RP )
+    end do
+    end do
+    do j = JS, JE
+    do i = IS, IE
+       URB_FLX_evap  (i,j) = ( URB_FLX_evap  (i,j) * CNT_getUrb - tmp_ATM_FLX_LH  (i,j)/LHV0 ) / ( CNT_getUrb + 1.0_RP )
+    end do
+    end do
 
     CNT_putAtm    = 0.0_RP
     CNT_putUrb    = 0.0_RP

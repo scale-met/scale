@@ -297,8 +297,8 @@ contains
     integer  :: i, j
     !---------------------------------------------------------------------------
 
-    do j = 1, JA
-    do i = 1, IA
+    do j = JS, JE
+    do i = IS, IE
        Uabs  = sqrt( UA(i,j)**2 + VA(i,j)**2 )
        Ustar = max( sqrt( OCEAN_roughness_miller92_CM0 ) * Uabs, OCEAN_roughness_Ustar_min )
 
@@ -355,16 +355,16 @@ contains
     integer  :: i, j
     !---------------------------------------------------------------------------
 
-    do j = 1, JA
-    do i = 1, IA
+    do j = JS, JE
+    do i = IS, IE
        Z0M(i,j)  = max( Z0(i,j), OCEAN_roughness_Z0M_min )
        Uabs(i,j) = sqrt( UA(i,j)**2 + VA(i,j)**2 )
     enddo
     enddo
 
     do ite = 1, OCEAN_roughness_moon07_itelim
-       do j = 1, JA
-       do i = 1, IA
+       do j = JS, JE
+       do i = IS, IE
           Ustar(i,j) = max( KARMAN * Uabs(i,j) / log( Z1(i,j)/Z0M(i,j) ), OCEAN_roughness_Ustar_min )
           U10M = Ustar(i,j) / KARMAN * log( 10.0_RP/Z0M(i,j) )
 
@@ -381,16 +381,16 @@ contains
 
     !  Fairall et al. TOGA V3.0
     !  Fairall et al. (2003) JCLI, vol. 16, 571-591. Eq. (28)
-    do j = 1, JA
-    do i = 1, IA
+    do j = JS, JE
+    do i = IS, IE
        Z0H(i,j) = min( 5.5E-5_RP / ( Z0M(i,j) * Ustar(i,j) / OCEAN_roughness_visck )**0.6_RP, 1.1E-4_RP )
        Z0E(i,j) = Z0H(i,j)
     enddo
     enddo
 
     ! limiter
-    do j = 1, JA
-    do i = 1, IA
+    do j = JS, JE
+    do i = IS, IE
        Z0M(i,j) = max( Z0M(i,j), OCEAN_roughness_Z0M_min )
        Z0H(i,j) = max( Z0H(i,j), OCEAN_roughness_Z0H_min )
        Z0E(i,j) = max( Z0E(i,j), OCEAN_roughness_Z0E_min )

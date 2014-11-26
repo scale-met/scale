@@ -57,7 +57,7 @@ contains
 
     character(len=*), intent(in) :: CPL_TYPE_AtmOcn
 
-    logical :: dummy
+    logical :: dummy = .false.
 
     NAMELIST / PARAM_CPL_ATMOCN_BULK / &
       dummy
@@ -201,8 +201,8 @@ contains
       ! get surface flux without SST updating
     end if
 
-    do j = 1, JA
-    do i = 1, IA
+    do j = JS, JE
+    do i = IS, IE
 
       if( is_FLX(i,j) ) then
         ! saturation at the surface

@@ -244,48 +244,19 @@ contains
        COMM_vars8, &
        COMM_wait
     implicit none
-
-    integer :: k, iq
     !---------------------------------------------------------------------------
 
-    iq = 0
-    do k = LKS, LKE
-       iq = iq + 1
-       work_comm(:,:,iq) = LAND_TEMP (k,:,:)
-    enddo
-    do k = LKS, LKE
-       iq = iq + 1
-       work_comm(:,:,iq) = LAND_WATER(k,:,:)
-    enddo
-    iq = iq + 1
-    work_comm(:,:,iq) = LAND_SFC_TEMP  (:,:)
-    iq = iq + 1
-    work_comm(:,:,iq) = LAND_SFC_albedo(:,:,I_LW)
-    iq = iq + 1
-    work_comm(:,:,iq) = LAND_SFC_albedo(:,:,I_SW)
+    call COMM_vars8( LAND_TEMP(:,:,:), 1 )
+    call COMM_vars8( LAND_WATER(:,:,:), 2 )
+    call COMM_vars8( LAND_SFC_TEMP(:,:), 3 )
+    call COMM_vars8( LAND_SFC_albedo(:,:,I_LW), 4 )
+    call COMM_vars8( LAND_SFC_albedo(:,:,I_SW), 5 )
 
-    do iq = 1, LAND_QA_comm
-      call COMM_vars8( work_comm(:,:,iq), iq )
-    enddo
-    do iq = 1, LAND_QA_comm
-      call COMM_wait ( work_comm(:,:,iq), iq )
-    enddo
-
-    iq = 0
-    do k = LKS, LKE
-       iq = iq + 1
-       LAND_TEMP (k,:,:) = work_comm(:,:,iq)
-    enddo
-    do k = LKS, LKE
-       iq = iq + 1
-       LAND_WATER(k,:,:) = work_comm(:,:,iq)
-    enddo
-    iq = iq + 1
-    LAND_SFC_TEMP  (:,:)      = work_comm(:,:,iq)
-    iq = iq + 1
-    LAND_SFC_albedo(:,:,I_LW) = work_comm(:,:,iq)
-    iq = iq + 1
-    LAND_SFC_albedo(:,:,I_SW) = work_comm(:,:,iq)
+    call COMM_wait ( LAND_TEMP(:,:,:), 1 )
+    call COMM_wait ( LAND_WATER(:,:,:), 2 )
+    call COMM_wait ( LAND_SFC_TEMP(:,:), 3 )
+    call COMM_wait ( LAND_SFC_albedo(:,:,I_LW), 4 )
+    call COMM_wait ( LAND_SFC_albedo(:,:,I_SW), 5 )
 
     return
   end subroutine LAND_vars_fillhalo

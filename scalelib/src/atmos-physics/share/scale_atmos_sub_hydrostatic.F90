@@ -309,8 +309,8 @@ contains
 
     !--- from surface to lowermost atmosphere
 
-    do j = JS, JE
-    do i = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
        dz(KS,i,j) = REAL_CZ(KS,i,j) - REAL_FZ(KS-1,i,j) ! distance from surface to cell center
        do k = KS+1, KE
           dz(k,i,j) = REAL_CZ(k,i,j) - REAL_CZ(k-1,i,j) ! distance from cell center to cell center
@@ -319,8 +319,8 @@ contains
     enddo
     enddo
 
-    do j = JS, JE
-    do i = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
        pott_toa(i,j) = pott(KE,i,j)
        qv_toa  (i,j) = qv  (KE,i,j)
        qc_toa  (i,j) = qc  (KE,i,j)
@@ -328,8 +328,8 @@ contains
     enddo
 
     ! density at surface
-    do j = JS, JE
-    do i = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
        Rtot_sfc  (i,j) = Rdry  * ( 1.0_RP - qv_sfc(1,i,j) - qc_sfc(1,i,j) ) &
                        + Rvap  * qv_sfc(1,i,j)
        CVtot_sfc (i,j) = CVdry * ( 1.0_RP - qv_sfc(1,i,j) - qc_sfc(1,i,j) ) &
@@ -339,8 +339,8 @@ contains
     enddo
     enddo
 
-    do j = JS, JE
-    do i = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
        Rtot  (i,j) = Rdry  * ( 1.0_RP - qv(KS,i,j) - qc(KS,i,j) ) &
                    + Rvap  * qv(KS,i,j)
        CVtot (i,j) = CVdry * ( 1.0_RP - qv(KS,i,j) - qc(KS,i,j) ) &
@@ -351,8 +351,8 @@ contains
     enddo
 
     ! density at surface
-    do j = JS, JE
-    do i = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
        CVovCP_sfc      = 1.0_RP / CPovCV_sfc(i,j)
        dens_sfc(1,i,j) = P00 / Rtot_sfc(i,j) / pott_sfc(1,i,j) * ( pres_sfc(1,i,j)/P00 )**CVovCP_sfc
        temp_sfc(1,i,j) = pres_sfc(1,i,j) / ( dens_sfc(1,i,j) * Rtot_sfc(i,j) )
@@ -362,8 +362,8 @@ contains
     ! make density at lowermost cell center
     if ( HYDROSTATIC_uselapserate ) then
 
-       do j = JS, JE
-       do i = IS, IE
+       do j = JSB, JEB
+       do i = ISB, IEB
           CPovR  = ( CVtot(i,j) + Rtot(i,j) ) / Rtot(i,j)
           CVovCP = 1.0_RP / CPovCV(i,j)
 
@@ -414,8 +414,8 @@ contains
 
     ! density at TOA
     call COMM_horizontal_mean( dens_1D(:), dens(:,:,:) )
-    do j = JS, JE
-    do i = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
        dens(:,i,j) = dens_1D(:)
     enddo
     enddo
@@ -668,8 +668,8 @@ contains
     integer  :: i, j
     !---------------------------------------------------------------------------
 
-    do j = JS, JE
-    do i = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
        Rtot_L1  (i,j) = Rdry  * ( 1.0_RP - qv_L1(i,j) - qc_L1(i,j) ) &
                       + Rvap  * qv_L1(i,j)
        CVtot_L1 (i,j) = CVdry * ( 1.0_RP - qv_L1(i,j) - qc_L1(i,j) ) &
@@ -686,8 +686,8 @@ contains
     enddo
     enddo
 
-    do j = JS, JE
-    do i = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
        RovCV = Rtot_L2(i,j) / CVtot_L2(i,j)
 
        dens_s       = 0.0_RP
@@ -723,8 +723,8 @@ contains
     enddo
     enddo
 
-    do j = JS, JE
-    do i = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
        pres_L2(i,j) = P00 * ( dens_L2(i,j) * Rtot_L2(i,j) * pott_L2(i,j) / P00 )**CPovCV_L2(i,j)
        temp_L2(i,j) = pres_L2(i,j) / ( dens_L2(i,j) * Rtot_L2(i,j) )
     enddo
@@ -767,8 +767,8 @@ contains
     integer  :: k, i, j
     !---------------------------------------------------------------------------
 
-    do j = JS, JE
-    do i = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
     do k = KS, KE
        Rtot  (k,i,j) = Rdry  * ( 1.0_RP - qv(k,i,j) - qc(k,i,j) ) &
                      + Rvap  * qv(k,i,j)
@@ -780,8 +780,8 @@ contains
     enddo
     enddo
 
-    do j = JS, JE
-    do i = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
     do k = KS+1, KE
        RovCV = Rtot(k,i,j) / CVtot(k,i,j)
 
@@ -819,8 +819,8 @@ contains
     enddo
     enddo
 
-    do j = JS, JE
-    do i = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
     do k = KS, KE
        pres(k,i,j) = P00 * ( dens(k,i,j) * Rtot(k,i,j) * pott(k,i,j) / P00 )**CPovCV(k,i,j)
        temp(k,i,j) = pres(k,i,j) / ( dens(k,i,j) * Rtot(k,i,j) )
@@ -875,8 +875,8 @@ contains
     integer  :: i, j
     !---------------------------------------------------------------------------
 
-    do j = JS, JE
-    do i = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
        Rtot_L1  (i,j) = Rdry  * ( 1.0_RP - qv_L1(i,j) - qc_L1(i,j) ) &
                       + Rvap  * qv_L1(i,j)
        CVtot_L1 (i,j) = CVdry * ( 1.0_RP - qv_L1(i,j) - qc_L1(i,j) ) &
@@ -893,8 +893,8 @@ contains
     enddo
     enddo
 
-    do j = JS, JE
-    do i = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
        RovCV = Rtot_L1(i,j) / CVtot_L1(i,j)
 
        dens_s       = 0.0_RP
@@ -930,8 +930,8 @@ contains
     enddo
     enddo
 
-    do j = JS, JE
-    do i = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
        pres_L1(i,j) = P00 * ( dens_L1(i,j) * Rtot_L1(i,j) * pott_L1(i,j) / P00 )**CPovCV_L1(i,j)
        temp_L1(i,j) = pres_L1(i,j) / ( dens_L1(i,j) * Rtot_L1(i,j) )
     enddo
@@ -974,8 +974,8 @@ contains
     integer  :: k, i, j
     !---------------------------------------------------------------------------
 
-    do j = JS, JE
-    do i = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
     do k = KS, KE
        Rtot  (k,i,j) = Rdry  * ( 1.0_RP - qv(k,i,j) - qc(k,i,j) ) &
                      + Rvap  * qv(k,i,j)
@@ -987,8 +987,8 @@ contains
     enddo
     enddo
 
-    do j = JS, JE
-    do i = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
     do k = KE-1, KS, -1
        RovCV = Rtot(k,i,j) / CVtot(k,i,j)
 
@@ -1026,8 +1026,8 @@ contains
     enddo
     enddo
 
-    do j = JS, JE
-    do i = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
     do k = KS, KE
        pres(k,i,j) = P00 * ( dens(k,i,j) * Rtot(k,i,j) * pott(k,i,j) / P00 )**CPovCV(k,i,j)
        temp(k,i,j) = pres(k,i,j) / ( dens(k,i,j) * Rtot(k,i,j) )
@@ -1192,8 +1192,8 @@ contains
 
     !--- from surface to lowermost atmosphere
 
-    do j = JS, JE
-    do i = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
        Rtot_sfc (i,j) = Rdry  * ( 1.0_RP - qv_sfc(1,i,j) - qc_sfc(1,i,j) ) &
                       + Rvap  * qv_sfc(1,i,j)
        CVtot_sfc(i,j) = CVdry * ( 1.0_RP - qv_sfc(1,i,j) - qc_sfc(1,i,j) ) &
@@ -1202,8 +1202,8 @@ contains
     enddo
     enddo
 
-    do j = JS, JE
-    do i = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
        Rtot (i,j) = Rdry  * ( 1.0_RP - qv(KS,i,j) - qc(KS,i,j) ) &
                   + Rvap  * qv(KS,i,j)
        CVtot(i,j) = CVdry * ( 1.0_RP - qv(KS,i,j) - qc(KS,i,j) ) &
@@ -1213,8 +1213,8 @@ contains
     enddo
 
     ! density at surface
-    do j = JS, JE
-    do i = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
        RovCP_sfc       = Rtot_sfc(i,j) / ( CVtot_sfc(i,j) + Rtot_sfc(i,j) )
        dens_sfc(1,i,j) = pres_sfc(1,i,j) / ( Rtot_sfc(i,j) * temp_sfc(1,i,j) )
        pott_sfc(1,i,j) = temp_sfc(1,i,j) / ( P00/pres_sfc(1,i,j) )**RovCP_sfc
@@ -1222,8 +1222,8 @@ contains
     enddo
 
     ! make density at lowermost cell center
-    do j = JS, JE
-    do i = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
        DZ = REAL_CZ(KS,i,j) - REAL_FZ(KS-1,i,j)
 
        dens_s       = 0.0_RP
@@ -1382,8 +1382,8 @@ contains
     integer  :: k, i, j
     !---------------------------------------------------------------------------
 
-    do j = JS, JE
-    do i = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
     do k = KS, KE
        Rtot (k,i,j) = Rdry  * ( 1.0_RP - qv(k,i,j) - qc(k,i,j) ) &
                     + Rvap  * qv(k,i,j)
@@ -1394,8 +1394,8 @@ contains
     enddo
     enddo
 
-    do j = JS, JE
-    do i = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
     do k = KS+1, KE
        DZ = REAL_CZ(k,i,j) - REAL_CZ(k-1,i,j)
 
@@ -1432,8 +1432,8 @@ contains
     enddo
     enddo
 
-    do j = JS, JE
-    do i = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
     do k = KS, KE
        RovCP   = Rtot(k,i,j) / ( CVtot(k,i,j) + Rtot(k,i,j) )
        pres(k,i,j) = dens(k,i,j) * Rtot(k,i,j) * temp(k,i,j)

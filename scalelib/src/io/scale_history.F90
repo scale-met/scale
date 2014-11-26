@@ -129,30 +129,20 @@ contains
        write(HISTORY_T_SINCE(1:4),'(i4)') TIME_OFFSET_YEAR
     end if
 
-    im = IMAX
-    jm = JMAX
-    ims = IS
-    ime = IE
-    jms = JS
-    jme = JE
-
     if ( HIST_BND ) then
-       if ( .not. PRC_HAS_W ) then
-          im = im + IHALO
-          ims = 1
-       end if
-       if ( .not. PRC_HAS_E ) then
-          im = im + IHALO
-          ime = IA
-       end if
-       if ( .not. PRC_HAS_S ) then
-          jm = jm + JHALO
-          jms = 1
-       end if
-       if ( .not. PRC_HAS_N ) then
-          jm = jm + JHALO
-          jme = JA
-       end if
+       im = IMAXB
+       jm = JMAXB
+       ims = ISB
+       ime = IEB
+       jms = JSB
+       jme = JEB
+    else
+       im = IMAX
+       jm = JMAX
+       ims = IS
+       ime = IE
+       jms = JS
+       jme = JE
     end if
 
     call HistoryInit( HISTORY_H_TITLE,           &

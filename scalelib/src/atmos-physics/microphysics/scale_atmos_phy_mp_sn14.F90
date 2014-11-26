@@ -2099,8 +2099,12 @@ contains
 
     endif
 
-    SFLX_rain(:,:) = FLX_rain(KS-1,:,:)
-    SFLX_snow(:,:) = FLX_snow(KS-1,:,:)
+    do j = JS, JE
+    do i = IS, IE
+       SFLX_rain(i,j) = FLX_rain(KS-1,i,j)
+       SFLX_snow(i,j) = FLX_snow(KS-1,i,j)
+    end do
+    end do
 
     call PROF_rapend  ('MP5 Sedimentation')
 
