@@ -135,10 +135,6 @@ module scale_atmos_boundary
   logical,               private :: do_daughter_process     = .false.
   logical,               private :: l_bnd = .false.
 
-  integer :: im, jm
-  integer :: ims, ime
-  integer :: jms, jme
-
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -255,28 +251,6 @@ contains
        BND_QA = I_QV
     end if
 
-    im = IMAX
-    jm = JMAX
-    ims = IS
-    ime = IE
-    jms = JS
-    jme = JE
-    if ( .not. PRC_HAS_W ) then
-       im = im + IHALO
-       ims = 1
-    end if
-    if ( .not. PRC_HAS_E ) then
-       im = im + IHALO
-       ime = IA
-    end if
-    if ( .not. PRC_HAS_S ) then
-       jm = jm + JHALO
-       jms = 1
-    end if
-    if ( .not. PRC_HAS_N ) then
-       jm = jm + JHALO
-       jme = JA
-    end if
 
     allocate( ATMOS_BOUNDARY_DENS(KA,IA,JA) )
     allocate( ATMOS_BOUNDARY_VELZ(KA,IA,JA) )
@@ -779,7 +753,7 @@ contains
        PRC_myrank
     implicit none
 
-    real(RP) :: reference_atmos(KMAX,IM,JM) !> restart file (no HALO)
+    real(RP) :: reference_atmos(KMAX,IMAXB,JMAXB) !> restart file (no HALO)
 
     character(len=H_LONG) :: bname
 
@@ -795,54 +769,54 @@ contains
          .or. ATMOS_BOUNDARY_USE_POTT &
          ) then
        call FileRead( reference_atmos(:,:,:), bname, 'DENS', 1, PRC_myrank )
-       ATMOS_BOUNDARY_DENS(KS:KE,ims:ime,ims:jme) = reference_atmos(1:KMAX,1:IM,1:JM)
+       ATMOS_BOUNDARY_DENS(KS:KE,ISB:IEB,JSB:JEB) = reference_atmos(:,:,:)
     end if
     if ( ATMOS_BOUNDARY_USE_DENS ) then
        call FileRead( reference_atmos(:,:,:), bname, 'ALPHA_DENS', 1, PRC_myrank )
-       ATMOS_BOUNDARY_alpha_DENS(KS:KE,ims:ime,ims:jme) = reference_atmos(1:KMAX,1:IM,1:JM)
+       ATMOS_BOUNDARY_alpha_DENS(KS:KE,ISB:IEB,JSB:JEB) = reference_atmos(:,:,:)
     endif
 
     if ( ATMOS_BOUNDARY_USE_VELZ ) then
        call FileRead( reference_atmos(:,:,:), bname, 'VELZ', 1, PRC_myrank )
-       ATMOS_BOUNDARY_VELZ(KS:KE,ims:ime,jms:jme) = reference_atmos(1:KMAX,1:IM,1:JM)
+       ATMOS_BOUNDARY_VELZ(KS:KE,ISB:IEB,JSB:JEB) = reference_atmos(:,:,:)
        call FileRead( reference_atmos(:,:,:), bname, 'ALPHA_VELZ', 1, PRC_myrank )
-       ATMOS_BOUNDARY_alpha_VELZ(KS:KE,ims:ime,jms:jme) = reference_atmos(1:KMAX,1:IM,1:JM)
+       ATMOS_BOUNDARY_alpha_VELZ(KS:KE,ISB:IEB,JSB:JEB) = reference_atmos(:,:,:)
     endif
 
     if ( ATMOS_BOUNDARY_USE_VELX ) then
        call FileRead( reference_atmos(:,:,:), bname, 'VELX', 1, PRC_myrank )
-       ATMOS_BOUNDARY_VELX(KS:KE,ims:ime,jms:jme) = reference_atmos(1:KMAX,1:IM,1:JM)
+       ATMOS_BOUNDARY_VELX(KS:KE,ISB:IEB,JSB:JEB) = reference_atmos(:,:,:)
        call FileRead( reference_atmos(:,:,:), bname, 'ALPHA_VELX', 1, PRC_myrank )
-       ATMOS_BOUNDARY_alpha_VELX(KS:KE,ims:ime,jms:jme) = reference_atmos(1:KMAX,1:IM,1:JM)
+       ATMOS_BOUNDARY_alpha_VELX(KS:KE,ISB:IEB,JSB:JEB) = reference_atmos(:,:,:)
     endif
 
     if ( ATMOS_BOUNDARY_USE_VELY ) then
        call FileRead( reference_atmos(:,:,:), bname, 'VELY', 1, PRC_myrank )
-       ATMOS_BOUNDARY_VELY(KS:KE,ims:ime,jms:jme) = reference_atmos(1:KMAX,1:IM,1:JM)
+       ATMOS_BOUNDARY_VELY(KS:KE,ISB:IEB,JSB:JEB) = reference_atmos(:,:,:)
        call FileRead( reference_atmos(:,:,:), bname, 'ALPHA_VELY', 1, PRC_myrank )
-       ATMOS_BOUNDARY_alpha_VELY(KS:KE,ims:ime,jms:jme) = reference_atmos(1:KMAX,1:IM,1:JM)
+       ATMOS_BOUNDARY_alpha_VELY(KS:KE,ISB:IEB,JSB:JEB) = reference_atmos(:,:,:)
     endif
 
     if ( ATMOS_BOUNDARY_USE_POTT ) then
        call FileRead( reference_atmos(:,:,:), bname, 'POTT', 1, PRC_myrank )
-       ATMOS_BOUNDARY_POTT(KS:KE,ims:ime,jms:jme) = reference_atmos(1:KMAX,1:IM,1:JM)
+       ATMOS_BOUNDARY_POTT(KS:KE,ISB:IEB,JSB:JEB) = reference_atmos(:,:,:)
        call FileRead( reference_atmos(:,:,:), bname, 'ALPHA_POTT', 1, PRC_myrank )
-       ATMOS_BOUNDARY_alpha_POTT(KS:KE,ims:ime,jms:jme) = reference_atmos(1:KMAX,1:IM,1:JM)
+       ATMOS_BOUNDARY_alpha_POTT(KS:KE,ISB:IEB,JSB:JEB) = reference_atmos(:,:,:)
     endif
 
     if ( ATMOS_BOUNDARY_USE_QV   ) then
        call FileRead( reference_atmos(:,:,:), bname, 'QV',   1, PRC_myrank )
-       ATMOS_BOUNDARY_QTRC(KS:KE,ims:ime,jms:jme,1) = reference_atmos(1:KMAX,1:IM,1:JM)
+       ATMOS_BOUNDARY_QTRC(KS:KE,ISB:IEB,JSB:JEB,1) = reference_atmos(:,:,:)
        call FileRead( reference_atmos(:,:,:), bname, 'ALPHA_QV', 1, PRC_myrank )
-       ATMOS_BOUNDARY_alpha_QTRC(KS:KE,ims:ime,jms:jme,1) = reference_atmos(1:KMAX,1:IM,1:JM)
+       ATMOS_BOUNDARY_alpha_QTRC(KS:KE,ISB:IEB,JSB:JEB,1) = reference_atmos(:,:,:)
     endif
 
     if ( ATMOS_BOUNDARY_USE_QHYD ) then
        do iq = 2, BND_QA
           call FileRead( reference_atmos(:,:,:), bname, AQ_NAME(iq), 1, PRC_myrank )
-          ATMOS_BOUNDARY_QTRC(KS:KE,ims:ime,jms:jme,iq) = reference_atmos(1:KMAX,1:IM,1:JM)
+          ATMOS_BOUNDARY_QTRC(KS:KE,ISB:IEB,JSB:JEB,iq) = reference_atmos(:,:,:)
           call FileRead( reference_atmos(:,:,:), bname, 'ALPHA_'//trim(AQ_NAME(iq)), 1, PRC_myrank )
-          ATMOS_BOUNDARY_alpha_QTRC(KS:KE,ims:ime,jms:jme,iq) = reference_atmos(1:KMAX,1:IM,1:JM)
+          ATMOS_BOUNDARY_alpha_QTRC(KS:KE,ISB:IEB,JSB:JEB,iq) = reference_atmos(:,:,:)
        end do
     endif
 
@@ -1007,7 +981,7 @@ contains
        CALENDAR_date2daysec,    &
        CALENDAR_combine_daysec
     implicit none
-    real(RP) :: reference_atmos(KMAX,IM,JM) !> restart file (no HALO)
+    real(RP) :: reference_atmos(KMAX,IMAXB,JMAXB) !> restart file (no HALO)
 
     integer  :: run_time_startdate(6)
     integer  :: run_time_startday
@@ -1067,30 +1041,30 @@ contains
 
     ! read boundary data from input file
     call FileRead( reference_atmos(:,:,:), bname, 'DENS', boundary_timestep, PRC_myrank )
-    ATMOS_BOUNDARY_ref_DENS(KS:KE,ims:ime,jms:jme,1) = reference_atmos(1:KMAX,1:im,1:jm)
+    ATMOS_BOUNDARY_ref_DENS(KS:KE,ISB:IEB,JSB:JEB,1) = reference_atmos(:,:,:)
     call FileRead( reference_atmos(:,:,:), bname, 'VELX', boundary_timestep, PRC_myrank )
-    ATMOS_BOUNDARY_ref_VELX(KS:KE,ims:ime,jms:jme,1) = reference_atmos(1:KMAX,1:im,1:jm)
+    ATMOS_BOUNDARY_ref_VELX(KS:KE,ISB:IEB,JSB:JEB,1) = reference_atmos(:,:,:)
     call FileRead( reference_atmos(:,:,:), bname, 'VELY', boundary_timestep, PRC_myrank )
-    ATMOS_BOUNDARY_ref_VELY(KS:KE,ims:ime,jms:jme,1) = reference_atmos(1:KMAX,1:im,1:jm)
+    ATMOS_BOUNDARY_ref_VELY(KS:KE,ISB:IEB,JSB:JEB,1) = reference_atmos(:,:,:)
     call FileRead( reference_atmos(:,:,:), bname, 'POTT', boundary_timestep, PRC_myrank )
-    ATMOS_BOUNDARY_ref_POTT(KS:KE,ims:ime,jms:jme,1) = reference_atmos(1:KMAX,1:im,1:jm)
+    ATMOS_BOUNDARY_ref_POTT(KS:KE,ISB:IEB,JSB:JEB,1) = reference_atmos(:,:,:)
     do iq = 1, BND_QA
        call FileRead( reference_atmos(:,:,:), bname, AQ_NAME(iq), boundary_timestep, PRC_myrank )
-       ATMOS_BOUNDARY_ref_QTRC(KS:KE,ims:ime,jms:jme,iq,1) = reference_atmos(1:KMAX,1:im,1:jm)
+       ATMOS_BOUNDARY_ref_QTRC(KS:KE,ISB:IEB,JSB:JEB,iq,1) = reference_atmos(:,:,:)
     end do
 
     boundary_timestep = boundary_timestep + 1
     call FileRead( reference_atmos(:,:,:), bname, 'DENS', boundary_timestep, PRC_myrank )
-    ATMOS_BOUNDARY_ref_DENS(KS:KE,ims:ime,jms:jme,2) = reference_atmos(1:KMAX,1:im,1:jm)
+    ATMOS_BOUNDARY_ref_DENS(KS:KE,ISB:IEB,JSB:JEB,2) = reference_atmos(:,:,:)
     call FileRead( reference_atmos(:,:,:), bname, 'VELX', boundary_timestep, PRC_myrank )
-    ATMOS_BOUNDARY_ref_VELX(KS:KE,ims:ime,jms:jme,2) = reference_atmos(1:KMAX,1:im,1:jm)
+    ATMOS_BOUNDARY_ref_VELX(KS:KE,ISB:IEB,JSB:JEB,2) = reference_atmos(:,:,:)
     call FileRead( reference_atmos(:,:,:), bname, 'VELY', boundary_timestep, PRC_myrank )
-    ATMOS_BOUNDARY_ref_VELY(KS:KE,ims:ime,jms:jme,2) = reference_atmos(1:KMAX,1:im,1:jm)
+    ATMOS_BOUNDARY_ref_VELY(KS:KE,ISB:IEB,JSB:JEB,2) = reference_atmos(:,:,:)
     call FileRead( reference_atmos(:,:,:), bname, 'POTT', boundary_timestep, PRC_myrank )
-    ATMOS_BOUNDARY_ref_POTT(KS:KE,ims:ime,jms:jme,2) = reference_atmos(1:KMAX,1:im,1:jm)
+    ATMOS_BOUNDARY_ref_POTT(KS:KE,ISB:IEB,JSB:JEB,2) = reference_atmos(:,:,:)
     do iq = 1, BND_QA
        call FileRead( reference_atmos(:,:,:), bname, AQ_NAME(iq), boundary_timestep, PRC_myrank )
-       ATMOS_BOUNDARY_ref_QTRC(KS:KE,ims:ime,jms:jme,iq,2) = reference_atmos(1:KMAX,1:im,1:jm)
+       ATMOS_BOUNDARY_ref_QTRC(KS:KE,ISB:IEB,JSB:JEB,iq,2) = reference_atmos(:,:,:)
     end do
 
     do j  = 1, JA
@@ -1838,7 +1812,7 @@ contains
        COMM_wait
     implicit none
 
-    real(RP) :: reference_atmos(KMAX,im,jm) !> restart file (no HALO)
+    real(RP) :: reference_atmos(KMAX,IMAXB,JMAXB) !> restart file (no HALO)
 
     character(len=H_LONG) :: bname
 
@@ -1865,16 +1839,16 @@ contains
     end do
 
     call FileRead( reference_atmos(:,:,:), bname, 'DENS', boundary_timestep, PRC_myrank )
-    ATMOS_BOUNDARY_ref_DENS(KS:KE,ims:ime,jms:jme,2) = reference_atmos(1:KMAX,1:im,1:jm)
+    ATMOS_BOUNDARY_ref_DENS(KS:KE,ISB:IEB,JSB:JEB,2) = reference_atmos(:,:,:)
     call FileRead( reference_atmos(:,:,:), bname, 'VELX', boundary_timestep, PRC_myrank )
-    ATMOS_BOUNDARY_ref_VELX(KS:KE,ims:ime,jms:jme,2) = reference_atmos(1:KMAX,1:im,1:jm)
+    ATMOS_BOUNDARY_ref_VELX(KS:KE,ISB:IEB,JSB:JEB,2) = reference_atmos(:,:,:)
     call FileRead( reference_atmos(:,:,:), bname, 'VELY', boundary_timestep, PRC_myrank )
-    ATMOS_BOUNDARY_ref_VELY(KS:KE,ims:ime,jms:jme,2) = reference_atmos(1:KMAX,1:im,1:jm)
+    ATMOS_BOUNDARY_ref_VELY(KS:KE,ISB:IEB,JSB:JEB,2) = reference_atmos(:,:,:)
     call FileRead( reference_atmos(:,:,:), bname, 'POTT', boundary_timestep, PRC_myrank )
-    ATMOS_BOUNDARY_ref_POTT(KS:KE,ims:ime,jms:jme,2) = reference_atmos(1:KMAX,1:im,1:jm)
+    ATMOS_BOUNDARY_ref_POTT(KS:KE,ISB:IEB,JSB:JEB,2) = reference_atmos(:,:,:)
     do iq = 1, BND_QA
        call FileRead( reference_atmos(:,:,:), bname, AQ_NAME(iq), boundary_timestep, PRC_myrank )
-       ATMOS_BOUNDARY_ref_QTRC(KS:KE,ims:ime,jms:jme,iq,2) = reference_atmos(1:KMAX,1:im,1:jm)
+       ATMOS_BOUNDARY_ref_QTRC(KS:KE,ISB:IEB,JSB:JEB,iq,2) = reference_atmos(:,:,:)
     end do
 
     do j  = 1, JA

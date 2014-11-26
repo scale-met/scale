@@ -63,6 +63,13 @@ module scale_grid_index
   integer, public :: JE          !< end   point of inner domain: y, local
 #endif
 
+  ! indices considering boundary
+  integer, public :: IMAXB
+  integer, public :: JMAXB
+  integer, public :: ISB
+  integer, public :: IEB
+  integer, public :: JSB
+  integer, public :: JEB
   integer, public :: IEH         !< end   point of inner domain: x, local (half level)
   integer, public :: JEH         !< end   point of inner domain: y, local (half level)
 
@@ -89,7 +96,11 @@ contains
        PRC_myrank,  &
        PRC_2Drank,  &
        PRC_NUM_X,   &
-       PRC_NUM_Y
+       PRC_NUM_Y,   &
+       PRC_HAS_W,   &
+       PRC_HAS_E,   &
+       PRC_HAS_S,   &
+       PRC_HAS_N
     implicit none
 
 #ifndef _FIXEDINDEX_
@@ -155,6 +166,30 @@ contains
     IEG = IHALO + IMAX + PRC_2Drank(PRC_myrank,1) * IMAX
     JSG = JHALO + 1    + PRC_2Drank(PRC_myrank,2) * JMAX
     JEG = JHALO + JMAX + PRC_2Drank(PRC_myrank,2) * JMAX
+
+    ! index considering boundary region
+    IMAXB = IMAX
+    JMAXB = JMAX
+    ISB = IS
+    IEB = IE
+    JSB = JS
+    JEB = JE
+    if ( .not. PRC_HAS_W ) then
+       IMAXB = IMAXB + IHALO
+       ISB = 1
+    end if
+    if ( .not. PRC_HAS_E ) then
+       IMAXB = IMAXB + IHALO
+       IEB = IA
+    end if
+    if ( .not. PRC_HAS_S ) then
+       JMAXB = JMAXB + JHALO
+       JSB = 1
+    end if
+    if ( .not. PRC_HAS_N ) then
+       JMAXB = JMAXB + JHALO
+       JEB = JA
+    end if
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** Atmosphere grid index information ***'
