@@ -111,6 +111,14 @@ contains
 
     call ATMOS_BOUNDARY_setup( DENS, MOMZ, MOMX, MOMY, RHOT, QTRC ) ! (in)
 
+    !########## initialize tendencies ##########
+    DENS_tp(:,:,:)   = 0.0_RP
+    MOMZ_tp(:,:,:)   = 0.0_RP
+    MOMX_tp(:,:,:)   = 0.0_RP
+    MOMY_tp(:,:,:)   = 0.0_RP
+    RHOT_tp(:,:,:)   = 0.0_RP
+    RHOQ_tp(:,:,:,:) = 0.0_RP
+
     ! setup each components
     call ATMOS_DYN_driver_setup
     call ATMOS_PHY_MP_driver_setup
@@ -120,14 +128,6 @@ contains
     call ATMOS_PHY_SF_driver_setup
     call ATMOS_PHY_TB_driver_setup
     call ATMOS_PHY_CP_driver_setup
-
-    !########## initialize tendencies ##########
-    DENS_tp(:,:,:)   = 0.0_RP
-    MOMZ_tp(:,:,:)   = 0.0_RP
-    MOMX_tp(:,:,:)   = 0.0_RP
-    MOMY_tp(:,:,:)   = 0.0_RP
-    RHOT_tp(:,:,:)   = 0.0_RP
-    RHOQ_tp(:,:,:,:) = 0.0_RP
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** Finish setup of each atmospheric components.'
