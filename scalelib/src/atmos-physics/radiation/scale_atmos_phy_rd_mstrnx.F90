@@ -500,6 +500,7 @@ contains
           temph_merge(RD_k,i,j) = RD_temph(RD_k)
        enddo
 
+       temp(KE+1,i,j) = temp(KE,i,j)
        do RD_k = RD_KADD+1, RD_KMAX
           k = KS + RD_KMAX - RD_k ! reverse axis
 
