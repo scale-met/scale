@@ -108,21 +108,16 @@ contains
     use scale_grid_real, only: &
        REAL_lon
     use mod_cpl_vars, only: &
-       TMPA  => CPL_fromAtm_ATM_TEMP,    &
-       QVA   => CPL_fromAtm_ATM_QV,      &
+       RHOA  => CPL_fromAtm_ATM_DENS,    &
        UA    => CPL_fromAtm_ATM_U,       &
        VA    => CPL_fromAtm_ATM_V,       &
        WA    => CPL_fromAtm_ATM_W,       &
-       RHOA  => CPL_fromAtm_ATM_DENS,    &
+       TMPA  => CPL_fromAtm_ATM_TEMP,    &
+       QVA   => CPL_fromAtm_ATM_QV,      &
+       PRES  => CPL_fromAtm_SFC_PRES,    &
        PREC  => CPL_fromAtm_FLX_precip,  &
-       SWD   => CPL_fromAtm_FLX_SW_dn,   &
        LWD   => CPL_fromAtm_FLX_LW_dn,   &
-       PRES  => CPL_fromAtm_SFC_PRES,   &
-       SHFLX => CPL_AtmUrb_ATM_FLX_SH,   &
-       LHFLX => CPL_AtmUrb_ATM_FLX_LH,   &
-       GHFLX => CPL_AtmUrb_URB_FLX_heat, &
-       CNT_AtmUrb,                       &
-       CNT_Urb
+       SWD   => CPL_fromAtm_FLX_SW_dn
     use scale_time, only:   &
        NOWSEC => TIME_NOWSEC,      & !< absolute sec
        dt_URB => TIME_DTSEC_URBAN, & !< time interval of urban step [sec]
@@ -163,9 +158,6 @@ contains
     !---------------------------------------------------------------------------
 
     if ( USER_do .AND. TIME_DOURBAN_step ) then
-
-       CNT_AtmUrb = 0.0_RP
-       CNT_Urb    = 0.0_RP
 
        VA  (:,:)  = 0.0_RP
        WA  (:,:)  = 0.0_RP
@@ -218,11 +210,6 @@ contains
        WORK(:,:) = PREC(:,:) * dt_URB
        call HIST_in( WORK (:,:), 'RAIN_urb',  'Precipitation',                'kg/m2', dt_URB )
 
-       call HIST_in( SHFLX(:,:), 'SHFLX_urb', 'Sensible heat flux',           'W/m2',  dt_URB )
-       call HIST_in( LHFLX(:,:), 'LHFLX_urb', 'Latent heat flux',             'W/m2',  dt_URB )
-
-       WORK(:,:) = -GHFLX(:,:)
-       call HIST_in( WORK(:,:),  'GHFLX_urb', 'Ground heat flux (down.pos.)', 'W/m2',  dt_URB )
     endif
 
     return
