@@ -103,6 +103,9 @@ module scale_cpl_atmos_urban_bulk
   real(RP), private, allocatable :: DZR(:)     ! thickness of each roof layer [m]
   real(RP), private, allocatable :: DZB(:)     ! thickness of each building layer [m]
   real(RP), private, allocatable :: DZG(:)     ! thickness of each road layer [m]
+
+  real(RP), private :: XXXR    = 0.0_RP        ! Monin-Obkhov length for roof [-]
+  real(RP), private :: XXXC    = 0.0_RP        ! Monin-Obkhov length for canopy [-]
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -455,9 +458,10 @@ contains
     real(RP) :: Z
     real(RP) :: QS0R,QS0B,QS0G
 
-    real(RP) :: RIBR, XXXR, BHR, CDR
+    real(RP) :: RIBC, BHC, CDC
+    real(RP) :: RIBR, BHR, CDR
     real(RP) :: ALPHAB, ALPHAG
-    real(RP) :: CHR, CHB, CHG, CDC
+    real(RP) :: CHR, CHB, CHG, CHC 
 
     real(RP) :: XXX, X, CD, CH, CHU, XXX2, XXX10
 
@@ -465,7 +469,7 @@ contains
     ! Set parameters
     !-----------------------------------------------------------
 
-     ! local time
+     ! local time at center point
      LAT = XLAT / D2R
      LON = XLON / D2R
 
@@ -537,7 +541,6 @@ contains
     !-----------------------------------------------------------
 
     !--- Roof
-
     Z    = ZA - ZDC
     BHR  = LOG(Z0R/Z0HR) / 0.4_RP
     RIBR = ( GRAV * 2.0_RP / (TA+TR) ) * (TA-TR) * (Z+Z0R) / (UA*UA)
@@ -640,11 +643,6 @@ xxxr=0.0_RP ! temtative
      RUP = (LDN - LUP) * RX - LNET
      ALBD_LW_grid = LUP / LDN
 
-     ! comment out below three lines to avoid using unintialized value
-     !UST = sqrt( FLXUV )              ! u* [m/s]
-     !TST = -SH / RHOO / CPdry / UST   ! T* [K]
-     !QST = -LH / RHOO / LHV0 / UST    ! q* [-]
-
     !-----------------------------------------------------------
     !  diagnostic GRID AVERAGED TS from upward logwave
     !-----------------------------------------------------------
@@ -655,8 +653,16 @@ xxxr=0.0_RP ! temtative
     !  diagnostic grid average U10, V10, T2, Q2 from urban
     !  Below method would be better to be improved. This is tentative method.
     !-----------------------------------------------------------
+    ! comment out below three lines to avoid using unintialized value
+    !UST = sqrt( FLXUV )              ! u* [m/s]
+    !TST = -SH / RHOO / CPdry / UST   ! T* [K]
+    !QST = -LH / RHOO / LHV0 / UST    ! q* [-]
+     Z    = ZA - ZDC
+     BHC  = LOG(Z0C/Z0HC) / 0.4_RP
+     RIBC = ( GRAV * 2.0_RP / (TA+TC) ) * (TA-TC) * (Z+Z0C) / (UA*UA)
+     call mos(XXXC,CHC,CDC,BHC,RIBC,Z,Z0C,UA,TA,TC,RHOO)
 
-xxx = 0.0_RP ! tentative
+     XXX  = XXXC
      call cal_psi(XXX,psim,psih)
 
      XXX2 = (2.0_RP/Z) * XXX
@@ -671,8 +677,6 @@ xxx = 0.0_RP ! tentative
      V10 = V1 * log(10.0_RP/Z0C) / log(Z/Z0C)
 
      T2  = RTS + (TA-RTS)*((log(2.0_RP/Z0HC)-psih2)/(log(Z/Z0HC)-psih))
-     ! Q2 = QS + (QA-QS)*((log(2.0_RP/Z0HC)-psih2)/(log(Z/Z0HC)-psih))  ! humidity at 2 m [-]
-     ! Q2  = QA * ((log(2.0_RP/Z0HC)-psih2)/(log(Z/Z0HC)-psih))  ! humidity at 2 m [-]OB
      Q2 = QC
 
     !-----------------------------------------------------------
@@ -882,12 +886,11 @@ xxx = 0.0_RP ! tentative
     real(RP) :: Z
     real(RP) :: QS0R, QS0B, QS0G
 
-    real(RP) :: RIBR, XXXR, BHR, CDR
-    real(RP) :: RIBC, XXXC, BHC
+    real(RP) :: RIBR, BHR, CDR
+    real(RP) :: RIBC, BHC, CDC
     real(RP) :: ALPHAR, ALPHAB, ALPHAG, ALPHAC
-    real(RP) :: CHR, CHB, CHG, CHC, CDC
+    real(RP) :: CHR, CHB, CHG, CHC
     real(RP) :: TC1, TC2, QC1, QC2
-    real(RP) :: QZR
     real(RP) :: CAPL1, AKSL1
 
     real(RP) :: oldF,oldGF      ! residual in previous step
@@ -1031,7 +1034,6 @@ xxx = 0.0_RP ! tentative
       Z    = ZA - ZDC
       BHR  = LOG(Z0R/Z0HR) / 0.4_RP
       RIBR = ( GRAV * 2.0_RP / (TA+TR) ) * (TA-TR) * (Z+Z0R) / (UA*UA)
-xxxr=0.0_RP ! tentative
       call mos(XXXR,CHR,CDR,BHR,RIBR,Z,Z0R,UA,TA,TR,RHOO)
 
       call qsat( QS0R, TR, PRES )
@@ -1095,7 +1097,6 @@ xxxr=0.0_RP ! tentative
       Z    = ZA - ZDC
       BHC  = LOG(Z0C/Z0HC) / 0.4_RP
       RIBC = ( GRAV * 2.0_RP / (TA+TC) ) * (TA-TC) * (Z+Z0C) / (UA*UA)
-xxxc = 0.0_RP ! tentative
       call mos(XXXC,CHC,CDC,BHC,RIBC,Z,Z0C,UA,TA,TC,RHOO)
       ALPHAC = CHC * RHOO * CPdry * UA
 
@@ -1174,9 +1175,6 @@ xxxc = 0.0_RP ! tentative
       QC1    =  RW*(CHC*UA)    + RW*(CHG*BETG*UC)      + W*(CHB*BETB*UC)
       QC2    =  RW*(CHC*UA)*QA + RW*(CHG*BETG*UC)*QS0G + W*(CHB*BETB*UC)*QS0B
       QC     =  QC2 / QC1
-      !QC1    =  RW*(CHC*UA)     + RW*(CHG*BETG*UC)      + W*(CHB*BETB*UC)
-      !QC2    =  RW*(CHC*UA)*QZR + RW*(CHG*BETG*UC)*QS0G + W*(CHB*BETB*UC)*QS0B
-      !QC     =  QC2 / QC1
 
       resi1  =  abs(G0B - G0BP)
       resi2  =  abs(G0G - G0GP)
@@ -1274,10 +1272,6 @@ xxxc = 0.0_RP ! tentative
     RNB = SB + RB        ! Net radiation on building [W/m/m]
     RNG = SG + RG        ! Net radiation on ground [W/m/m]
 
-    !UST = sqrt( FLXUV )             ! u* [m/s]
-    !TST = -SH / RHOO / CPdry / UST  ! T* [K]
-    !QST = -LH / RHOO / LHV   / UST    ! q* [-]
-
     !-----------------------------------------------------------
     !  diagnostic GRID AVERAGED TS from upward logwave
     !-----------------------------------------------------------
@@ -1288,8 +1282,13 @@ xxxc = 0.0_RP ! tentative
     !  diagnostic grid average U10, V10, T2, Q2 from urban
     !  Below method would be better to be improved. This is tentative method.
     !-----------------------------------------------------------
+    !UST = sqrt( FLXUV )             ! u* [m/s]
+    !TST = -SH / RHOO / CPdry / UST  ! T* [K]
+    !QST = -LH / RHOO / LHV   / UST    ! q* [-]
+    !Z = ZA - ZDC
+    !XXX = 0.4*9.81*Z*TST/TA/UST/UST
 
-xxx = 0.0_RP ! tentative
+    XXX = XXXC
     call cal_psi(XXX,psim,psih)
 
     XXX2 = (2.0_RP/Z) * XXX
@@ -1304,8 +1303,6 @@ xxx = 0.0_RP ! tentative
     V10 = V1 * log(10.0_RP/Z0C) / log(Z/Z0C)
 
     T2  = RTS + (TA-RTS)*((log(2.0_RP/Z0HC)-psih2)/(log(Z/Z0HC)-psih))
-    ! Q2 = QS + (QA-QS)*((log(2.0_RP/Z0HC)-psih2)/(log(Z/Z0HC)-psih))  ! humidity at 2 m [-]
-    ! Q2  = QA * ((log(2.0_RP/Z0HC)-psih2)/(log(Z/Z0HC)-psih))  ! humidity at 2 m [-]
     Q2 = QC
 
     !-----------------------------------------------------------

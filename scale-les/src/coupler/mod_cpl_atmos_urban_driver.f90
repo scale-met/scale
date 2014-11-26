@@ -384,9 +384,9 @@ contains
                          CLAT                        ) ! [IN]
 
                          TS_URB      (i,j) = SFC_TEMP (i,j)
-                         SHFLX_URB   (i,j) = ATM_FLX_SH  (i,j)
-                         LHFLX_URB   (i,j) = ATM_FLX_LH  (i,j)
-                         GHFLX_URB   (i,j) = URB_FLX_heat(i,j)
+                         SHFLX_URB   (i,j) = tmp_ATM_FLX_SH  (i,j)
+                         LHFLX_URB   (i,j) = tmp_ATM_FLX_LH  (i,j)
+                         GHFLX_URB   (i,j) = tmp_URB_FLX_heat(i,j)
 
         call CPL_AtmUrb_bulk_momentum( &
                          tmp_ATM_FLX_MU  (i,j), & ! (out)
