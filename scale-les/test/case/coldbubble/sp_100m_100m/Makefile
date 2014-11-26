@@ -1,0 +1,27 @@
+################################################################################
+#
+# Makefile for each test program
+#
+################################################################################
+
+PWD         = $(shell pwd)
+TOPDIR      = $(abspath ../../../../..)
+TESTDIR     = ../../..
+
+# for build
+index      = 100m64x128x2
+precision  = real8
+dynamics   = heve
+tracer     = dry
+sfcflx     = const
+turbulence = dummy
+radiation  = dummy
+
+# for run
+INITCONF  = init_d0.conf
+RUNCONF   = run_d0.conf
+TPROC     = 8
+
+
+# build, makedir, run, jobshell, allclean, clean is inside of common Makefile
+include $(TESTDIR)/Makefile.common
