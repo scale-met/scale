@@ -128,7 +128,9 @@ module scale_atmos_boundary
   integer,               private :: now_step
   real(DP),              private :: integrated_sec    = 0.0_DP
   integer,               private :: boundary_timestep = 0
-  logical,               private :: ATMOS_BOUNDARY_LINEARZ  = .false.  ! linear or non-linear profile of relax region
+  logical,               private :: ATMOS_BOUNDARY_LINEAR_V = .false.  ! linear or non-linear profile of relax region
+  logical,               private :: ATMOS_BOUNDARY_LINEAR_H = .true.   ! linear or non-linear profile of relax region
+  real(RP),              private :: ATMOS_BOUNDARY_EXP_H    = 2.0_RP   ! factor of non-linear profile of relax region
   logical,               private :: ATMOS_BOUNDARY_ONLINE   = .false.  ! boundary online update by communicate inter-domain
   logical,               private :: ATMOS_BOUNDARY_ONLINE_MASTER = .false.  ! master domain in communicate inter-domain
   logical,               private :: do_parent_process       = .false.
@@ -198,7 +200,9 @@ contains
        ATMOS_BOUNDARY_tauy,           &
        ATMOS_BOUNDARY_UPDATE_DT,      &
        ATMOS_BOUNDARY_START_DATE,     &
-       ATMOS_BOUNDARY_LINEARZ
+       ATMOS_BOUNDARY_LINEAR_V,       &
+       ATMOS_BOUNDARY_LINEAR_H,       &
+       ATMOS_BOUNDARY_EXP_H
 
     integer :: ierr
     !---------------------------------------------------------------------------
@@ -543,20 +547,16 @@ contains
        endif
 
        alpha_z1 = 0.0_RP
-       if ( ATMOS_BOUNDARY_LINEARZ ) then
+       alpha_z2 = 0.0_RP
+       if ( ATMOS_BOUNDARY_LINEAR_V ) then
           alpha_z1 = coef_z * ee1
+          alpha_z2 = coef_z * ee2
        else
           if    ( ee1 > 0.0_RP .AND. ee1 <= 0.5_RP ) then
              alpha_z1 = coef_z * 0.5_RP * ( 1.0_RP - cos( ee1*PI ) )
           elseif( ee1 > 0.5_RP .AND. ee1 <= 1.0_RP ) then
              alpha_z1 = coef_z * 0.5_RP * ( 1.0_RP + sin( (ee1-0.5_RP)*PI ) )
           endif
-       endif
-
-       alpha_z2 = 0.0_RP
-       if ( ATMOS_BOUNDARY_LINEARZ ) then
-          alpha_z2 = coef_z * ee2
-       else
           if    ( ee2 > 0.0_RP .AND. ee2 <= 0.5_RP ) then
              alpha_z2 = coef_z * 0.5_RP * ( 1.0_RP - cos( ee2*PI ) )
           elseif( ee2 > 0.5_RP .AND. ee2 <= 1.0_RP ) then
@@ -578,8 +578,13 @@ contains
           ee2 = ( ee2 - 1.0_RP + ATMOS_BOUNDARY_FRACX ) / ATMOS_BOUNDARY_FRACX
        endif
 
-       alpha_x1 = coef_x * ee1
-       alpha_x2 = coef_x * ee2
+       if ( ATMOS_BOUNDARY_LINEAR_H ) then
+          alpha_x1 = coef_x * ee1
+          alpha_x2 = coef_x * ee2
+       else
+          alpha_x1 = coef_x * ee1 * exp( -(1.0_RP-ee1) * ATMOS_BOUNDARY_EXP_H )
+          alpha_x2 = coef_x * ee2 * exp( -(1.0_RP-ee2) * ATMOS_BOUNDARY_EXP_H )
+       end if
 
        ee1 = CBFY(j)
        if ( ee1 <= 1.0_RP - ATMOS_BOUNDARY_FRACY ) then
@@ -595,8 +600,13 @@ contains
           ee2 = ( ee2 - 1.0_RP + ATMOS_BOUNDARY_FRACY ) / ATMOS_BOUNDARY_FRACY
        endif
 
-       alpha_y1 = coef_y * ee1
-       alpha_y2 = coef_y * ee2
+       if ( ATMOS_BOUNDARY_LINEAR_H ) then
+          alpha_y1 = coef_x * ee1
+          alpha_y2 = coef_x * ee2
+       else
+          alpha_y1 = coef_y * ee1 * exp( -(1.0_RP-ee1) * ATMOS_BOUNDARY_EXP_H )
+          alpha_y2 = coef_y * ee2 * exp( -(1.0_RP-ee2) * ATMOS_BOUNDARY_EXP_H )
+       end if
 
 
        if ( l_bnd ) then
