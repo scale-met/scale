@@ -230,8 +230,8 @@ contains
     integer :: i, j, n
     !---------------------------------------------------------------------------
 
-    do j = 1, JA
-    do i = 1, IA
+    do j = JS, JE
+    do i = IS, IE
 
       if( is_FLX(i,j) ) then
 

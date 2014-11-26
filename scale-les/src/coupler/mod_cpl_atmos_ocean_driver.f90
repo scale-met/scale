@@ -145,6 +145,7 @@ contains
     real(RP) :: SFC_Z0E     (IA,JA)
 
     real(RP) :: total ! dummy
+    integer :: i, j
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Coupler: Atmos-Ocean'
@@ -193,20 +194,72 @@ contains
                      SFC_Z0H         (:,:),      & ! [IN]
                      SFC_Z0E         (:,:)       ) ! [IN]
 
-    ATM_FLX_MW  (:,:) = ( ATM_FLX_MW  (:,:) * CNT_getAtmOcn + tmp_ATM_FLX_MW(:,:)      ) / ( CNT_getAtmOcn + 1.0_RP )
-    ATM_FLX_MU  (:,:) = ( ATM_FLX_MU  (:,:) * CNT_getAtmOcn + tmp_ATM_FLX_MU(:,:)      ) / ( CNT_getAtmOcn + 1.0_RP )
-    ATM_FLX_MV  (:,:) = ( ATM_FLX_MV  (:,:) * CNT_getAtmOcn + tmp_ATM_FLX_MV(:,:)      ) / ( CNT_getAtmOcn + 1.0_RP )
-    ATM_FLX_SH  (:,:) = ( ATM_FLX_SH  (:,:) * CNT_getAtmOcn + tmp_ATM_FLX_SH(:,:)      ) / ( CNT_getAtmOcn + 1.0_RP )
-    ATM_FLX_LH  (:,:) = ( ATM_FLX_LH  (:,:) * CNT_getAtmOcn + tmp_ATM_FLX_LH(:,:)      ) / ( CNT_getAtmOcn + 1.0_RP )
-    ATM_FLX_evap(:,:) = ( ATM_FLX_evap(:,:) * CNT_getAtmOcn + tmp_ATM_FLX_LH(:,:)/LHV0 ) / ( CNT_getAtmOcn + 1.0_RP )
-    ATM_U10     (:,:) = ( ATM_U10     (:,:) * CNT_getAtmOcn + tmp_ATM_U10   (:,:)      ) / ( CNT_getAtmOcn + 1.0_RP )
-    ATM_V10     (:,:) = ( ATM_V10     (:,:) * CNT_getAtmOcn + tmp_ATM_V10   (:,:)      ) / ( CNT_getAtmOcn + 1.0_RP )
-    ATM_T2      (:,:) = ( ATM_T2      (:,:) * CNT_getAtmOcn + tmp_ATM_T2    (:,:)      ) / ( CNT_getAtmOcn + 1.0_RP )
-    ATM_Q2      (:,:) = ( ATM_Q2      (:,:) * CNT_getAtmOcn + tmp_ATM_Q2    (:,:)      ) / ( CNT_getAtmOcn + 1.0_RP )
+    do j = JS, JE
+    do i = IS, IE
+       ATM_FLX_MW  (i,j) = ( ATM_FLX_MW  (i,j) * CNT_getAtmOcn + tmp_ATM_FLX_MW(i,j)      ) / ( CNT_getAtmOcn + 1.0_RP )
+    end do
+    end do
+    do j = JS, JE
+    do i = IS, IE
+       ATM_FLX_MU  (i,j) = ( ATM_FLX_MU  (i,j) * CNT_getAtmOcn + tmp_ATM_FLX_MU(i,j)      ) / ( CNT_getAtmOcn + 1.0_RP )
+    end do
+    end do
+    do j = JS, JE
+    do i = IS, IE
+       ATM_FLX_MV  (i,j) = ( ATM_FLX_MV  (i,j) * CNT_getAtmOcn + tmp_ATM_FLX_MV(i,j)      ) / ( CNT_getAtmOcn + 1.0_RP )
+    end do
+    end do
+    do j = JS, JE
+    do i = IS, IE
+       ATM_FLX_SH  (i,j) = ( ATM_FLX_SH  (i,j) * CNT_getAtmOcn + tmp_ATM_FLX_SH(i,j)      ) / ( CNT_getAtmOcn + 1.0_RP )
+    end do
+    end do
+    do j = JS, JE
+    do i = IS, IE
+       ATM_FLX_LH  (i,j) = ( ATM_FLX_LH  (i,j) * CNT_getAtmOcn + tmp_ATM_FLX_LH(i,j)      ) / ( CNT_getAtmOcn + 1.0_RP )
+    end do
+    end do
+    do j = JS, JE
+    do i = IS, IE
+       ATM_FLX_evap(i,j) = ( ATM_FLX_evap(i,j) * CNT_getAtmOcn + tmp_ATM_FLX_LH(i,j)/LHV0 ) / ( CNT_getAtmOcn + 1.0_RP )
+    end do
+    end do
+    do j = JS, JE
+    do i = IS, IE
+       ATM_U10     (i,j) = ( ATM_U10     (i,j) * CNT_getAtmOcn + tmp_ATM_U10   (i,j)      ) / ( CNT_getAtmOcn + 1.0_RP )
+    end do
+    end do
+    do j = JS, JE
+    do i = IS, IE
+       ATM_V10     (i,j) = ( ATM_V10     (i,j) * CNT_getAtmOcn + tmp_ATM_V10   (i,j)      ) / ( CNT_getAtmOcn + 1.0_RP )
+    end do
+    end do
+    do j = JS, JE
+    do i = IS, IE
+       ATM_T2      (i,j) = ( ATM_T2      (i,j) * CNT_getAtmOcn + tmp_ATM_T2    (i,j)      ) / ( CNT_getAtmOcn + 1.0_RP )
+    end do
+    end do
+    do j = JS, JE
+    do i = IS, IE
+       ATM_Q2      (i,j) = ( ATM_Q2      (i,j) * CNT_getAtmOcn + tmp_ATM_Q2    (i,j)      ) / ( CNT_getAtmOcn + 1.0_RP )
+    end do
+    end do
 
-    OCN_FLX_heat  (:,:) = ( OCN_FLX_heat  (:,:) * CNT_getOcn + tmp_OCN_FLX_heat(:,:)      ) / ( CNT_getOcn + 1.0_RP )
-    OCN_FLX_precip(:,:) = ( OCN_FLX_precip(:,:) * CNT_getOcn + FLX_precip      (:,:)      ) / ( CNT_getOcn + 1.0_RP )
-    OCN_FLX_evap  (:,:) = ( OCN_FLX_evap  (:,:) * CNT_getOcn - tmp_ATM_FLX_LH  (:,:)/LHV0 ) / ( CNT_getOcn + 1.0_RP )
+    do j = JS, JE
+    do i = IS, IE
+       OCN_FLX_heat  (i,j) = ( OCN_FLX_heat  (i,j) * CNT_getOcn + tmp_OCN_FLX_heat(i,j)      ) / ( CNT_getOcn + 1.0_RP )
+    end do
+    end do
+    do j = JS, JE
+    do i = IS, IE
+       OCN_FLX_precip(i,j) = ( OCN_FLX_precip(i,j) * CNT_getOcn + FLX_precip      (i,j)      ) / ( CNT_getOcn + 1.0_RP )
+    end do
+    end do
+    do j = JS, JE
+    do i = IS, IE
+       OCN_FLX_evap  (i,j) = ( OCN_FLX_evap  (i,j) * CNT_getOcn - tmp_ATM_FLX_LH  (i,j)/LHV0 ) / ( CNT_getOcn + 1.0_RP )
+    end do
+    end do
 
     CNT_putAtm    = 0.0_RP
     CNT_putOcn    = 0.0_RP

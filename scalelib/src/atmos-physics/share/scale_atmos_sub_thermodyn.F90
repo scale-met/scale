@@ -209,8 +209,8 @@ contains
     !-----------------------------------------------------------------------------
 
     !$omp parallel do private(i,j,k,iqw) OMP_SCHEDULE_ collapse(2)
-    do j = 1, JA
-    do i = 1, IA
+    do j = JSB, JEB
+    do i = ISB, IEB
     do k = 1, KA
 
 !       qdry(k,i,j) = 1.0_RP
@@ -267,8 +267,8 @@ contains
     !---------------------------------------------------------------------------
 
     !$omp parallel do private(i,j,k,iqw) OMP_SCHEDULE_ collapse(2)
-    do j = 1, JA
-    do i = 1, IA
+    do j = JSB, JEB
+    do i = ISB, IEB
     do k = 1, KA
 
 !       CPtot(k,i,j) = qdry(k,i,j) * CPdry
@@ -326,8 +326,8 @@ contains
     !---------------------------------------------------------------------------
 
     !$omp parallel do private(i,j,k,iqw) OMP_SCHEDULE_ collapse(2)
-    do j = 1, JA
-    do i = 1, IA
+    do j = JSB, JEB
+    do i = ISB, IEB
     do k = 1, KA
 
 !       CVtot(k,i,j) = qdry(k,i,j) * CVdry
@@ -406,8 +406,8 @@ contains
     !---------------------------------------------------------------------------
 
     !$omp parallel do private(i,j,k,iqw,qdry,pres,Rtot,CVtot,CPovCV) OMP_SCHEDULE_ collapse(2)
-    do j = 1, JA
-    do i = 1, IA
+    do j = JSB, JEB
+    do i = ISB, IEB
     do k = 1, KA
 #ifdef DRY
        CVtot = CVdry
@@ -498,8 +498,8 @@ contains
     !---------------------------------------------------------------------------
 
     !$omp parallel do private(i,j,k,iqw,qdry,pres,Rtot,CVtot,RovCP) OMP_SCHEDULE_ collapse(2)
-    do j = 1, JA
-    do i = 1, IA
+    do j = JSB, JEB
+    do i = ISB, IEB
     do k = KS, KE
 
 #ifdef DRY
@@ -595,8 +595,8 @@ contains
     !---------------------------------------------------------------------------
 
     !$omp parallel do private(i,j,k,iqw,qdry,Rtot,CVtot,CPovCV) OMP_SCHEDULE_ collapse(2)
-    do j = 1, JA
-    do i = 1, IA
+    do j = JSB, JEB
+    do i = ISB, IEB
     do k = KS, KE
 #ifdef DRY
        CVtot = CVdry
@@ -688,8 +688,8 @@ contains
     !---------------------------------------------------------------------------
 
     !$omp parallel do private(i,j,k,iqw,qdry,Rtot,CVtot) OMP_SCHEDULE_ collapse(2)
-    do j = 1, JA
-    do i = 1, IA
+    do j = JSB, JEB
+    do i = ISB, IEB
     do k = KS, KE
 #ifdef DRY
        CVtot = CVdry
@@ -733,8 +733,8 @@ contains
     !---------------------------------------------------------------------------
 
     !$omp parallel do private(i,j,k,iqw,cv,Rmoist) OMP_SCHEDULE_ collapse(2)
-    do j = 1, JA
-    do i = 1, IA
+    do j = JSB, JEB
+    do i = ISB, IEB
     do k = 1, KA
 
        CALC_CV(cv, qdry(k,i,j), q, k, i, j, iqw, CVdry, AQ_CV)
@@ -770,8 +770,8 @@ contains
     !---------------------------------------------------------------------------
 
     !$omp parallel do private(i,j,k,iqw,cp,Rmoist) OMP_SCHEDULE_ collapse(2)
-    do j = 1, JA
-    do i = 1, IA
+    do j = JSB, JEB
+    do i = ISB, IEB
     do k = 1, KA
 
        CALC_CP(cp, qdry(k,i,j), q, k, i, j, iqw, CPdry, AQ_CP)
@@ -844,8 +844,8 @@ contains
     integer :: k, i, j, iqw
     !---------------------------------------------------------------------------
 
-    do j = 1, JA
-    do i = 1, IA
+    do j = JSB, JEB
+    do i = ISB, IEB
     do k = 1, KA
 #ifdef DRY
        CVtot = CVdry

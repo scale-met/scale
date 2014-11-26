@@ -190,7 +190,11 @@ contains
        enddo
        enddo
 
-       precip(:,:) = SFLX_rain(:,:) + SFLX_snow(:,:)
+       do j  = JS, JE
+       do i  = IS, IE
+          precip(i,j) = SFLX_rain(i,j) + SFLX_snow(i,j)
+       end do
+       end do
 
        if ( history_flag ) then
           call HIST_in( SFLX_rain(:,:), 'RAIN', 'surface rain rate',          'kg/m2/s', dt_MP )

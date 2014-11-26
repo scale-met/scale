@@ -253,7 +253,7 @@ contains
     allocate( CPL_fromUrb_SFC_albedo(IA,JA,2) )
     CPL_fromUrb_SFC_Z0M   (:,:) = UNDEF
     CPL_fromUrb_SFC_TEMP  (:,:) = UNDEF
-    CPL_fromUrb_SFC_albedo(:,:,2) = UNDEF
+    CPL_fromUrb_SFC_albedo(:,:,:) = UNDEF
 
     allocate( CPL_Merged_SFC_TEMP  (IA,JA) )
     allocate( CPL_Merged_SFC_albedo(IA,JA,2) )
@@ -391,69 +391,131 @@ contains
     implicit none
 
     real(RP) :: total ! dummy
+
+    integer :: i, j
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Coupler: Merge values of surface submodel'
 
-    CPL_Merged_SFC_TEMP(:,:)     = fact_ocean(:,:) * CPL_fromOcn_SFC_TEMP  (:,:) &
-                                 + fact_land (:,:) * CPL_fromLnd_SFC_TEMP  (:,:) &
-                                 + fact_urban(:,:) * CPL_fromUrb_SFC_TEMP  (:,:)
+    do j = JS, JE
+    do i = IS, IE
+       CPL_Merged_SFC_TEMP(i,j)     = fact_ocean(i,j) * CPL_fromOcn_SFC_TEMP  (i,j) &
+                                    + fact_land (i,j) * CPL_fromLnd_SFC_TEMP  (i,j) &
+                                    + fact_urban(i,j) * CPL_fromUrb_SFC_TEMP  (i,j)
+    end do
+    end do
 
-    CPL_Merged_SFC_albedo(:,:,I_LW) = fact_ocean(:,:) * CPL_fromOcn_SFC_albedo(:,:,I_LW) &
-                                    + fact_land (:,:) * CPL_fromLnd_SFC_albedo(:,:,I_LW) &
-                                    + fact_urban(:,:) * CPL_fromUrb_SFC_albedo(:,:,I_LW)
+    do j = JS, JE
+    do i = IS, IE
+       CPL_Merged_SFC_albedo(i,j,I_LW) = fact_ocean(i,j) * CPL_fromOcn_SFC_albedo(i,j,I_LW) &
+                                       + fact_land (i,j) * CPL_fromLnd_SFC_albedo(i,j,I_LW) &
+                                       + fact_urban(i,j) * CPL_fromUrb_SFC_albedo(i,j,I_LW)
+    end do
+    end do
 
-    CPL_Merged_SFC_albedo(:,:,I_SW) = fact_ocean(:,:) * CPL_fromOcn_SFC_albedo(:,:,I_SW) &
-                                    + fact_land (:,:) * CPL_fromLnd_SFC_albedo(:,:,I_SW) &
-                                    + fact_urban(:,:) * CPL_fromUrb_SFC_albedo(:,:,I_SW)
+    do j = JS, JE
+    do i = IS, IE
+       CPL_Merged_SFC_albedo(i,j,I_SW) = fact_ocean(i,j) * CPL_fromOcn_SFC_albedo(i,j,I_SW) &
+                                       + fact_land (i,j) * CPL_fromLnd_SFC_albedo(i,j,I_SW) &
+                                       + fact_urban(i,j) * CPL_fromUrb_SFC_albedo(i,j,I_SW)
+    end do
+    end do
 
-    CPL_Merged_FLX_MW(:,:) = fact_ocean(:,:) * CPL_AtmOcn_ATM_FLX_MW  (:,:) &
-                           + fact_land (:,:) * CPL_AtmLnd_ATM_FLX_MW  (:,:) &
-                           + fact_urban(:,:) * CPL_AtmUrb_ATM_FLX_MW  (:,:)
+    do j = JS, JE
+    do i = IS, IE
+       CPL_Merged_FLX_MW(i,j) = fact_ocean(i,j) * CPL_AtmOcn_ATM_FLX_MW  (i,j) &
+                              + fact_land (i,j) * CPL_AtmLnd_ATM_FLX_MW  (i,j) &
+                              + fact_urban(i,j) * CPL_AtmUrb_ATM_FLX_MW  (i,j)
+    end do
+    end do
 
-    CPL_Merged_FLX_MU(:,:) = fact_ocean(:,:) * CPL_AtmOcn_ATM_FLX_MU  (:,:) &
-                           + fact_land (:,:) * CPL_AtmLnd_ATM_FLX_MU  (:,:) &
-                           + fact_urban(:,:) * CPL_AtmUrb_ATM_FLX_MU  (:,:)
+    do j = JS, JE
+    do i = IS, IE
+       CPL_Merged_FLX_MU(i,j) = fact_ocean(i,j) * CPL_AtmOcn_ATM_FLX_MU  (i,j) &
+                              + fact_land (i,j) * CPL_AtmLnd_ATM_FLX_MU  (i,j) &
+                              + fact_urban(i,j) * CPL_AtmUrb_ATM_FLX_MU  (i,j)
+    end do
+    end do
 
-    CPL_Merged_FLX_MV(:,:) = fact_ocean(:,:) * CPL_AtmOcn_ATM_FLX_MV  (:,:) &
-                           + fact_land (:,:) * CPL_AtmLnd_ATM_FLX_MV  (:,:) &
-                           + fact_urban(:,:) * CPL_AtmUrb_ATM_FLX_MV  (:,:)
+    do j = JS, JE
+    do i = IS, IE
+       CPL_Merged_FLX_MV(i,j) = fact_ocean(i,j) * CPL_AtmOcn_ATM_FLX_MV  (i,j) &
+                              + fact_land (i,j) * CPL_AtmLnd_ATM_FLX_MV  (i,j) &
+                              + fact_urban(i,j) * CPL_AtmUrb_ATM_FLX_MV  (i,j)
+    end do
+    end do
 
-    CPL_Merged_FLX_SH(:,:) = fact_ocean(:,:) * CPL_AtmOcn_ATM_FLX_SH  (:,:) &
-                           + fact_land (:,:) * CPL_AtmLnd_ATM_FLX_SH  (:,:) &
-                           + fact_urban(:,:) * CPL_AtmUrb_ATM_FLX_SH  (:,:)
+    do j = JS, JE
+    do i = IS, IE
+       CPL_Merged_FLX_SH(i,j) = fact_ocean(i,j) * CPL_AtmOcn_ATM_FLX_SH  (i,j) &
+                              + fact_land (i,j) * CPL_AtmLnd_ATM_FLX_SH  (i,j) &
+                              + fact_urban(i,j) * CPL_AtmUrb_ATM_FLX_SH  (i,j)
+    end do
+    end do
 
-    CPL_Merged_FLX_LH(:,:) = fact_ocean(:,:) * CPL_AtmOcn_ATM_FLX_LH  (:,:) &
-                           + fact_land (:,:) * CPL_AtmLnd_ATM_FLX_LH  (:,:) &
-                           + fact_urban(:,:) * CPL_AtmUrb_ATM_FLX_LH  (:,:)
+    do j = JS, JE
+    do i = IS, IE
+       CPL_Merged_FLX_LH(i,j) = fact_ocean(i,j) * CPL_AtmOcn_ATM_FLX_LH  (i,j) &
+                              + fact_land (i,j) * CPL_AtmLnd_ATM_FLX_LH  (i,j) &
+                              + fact_urban(i,j) * CPL_AtmUrb_ATM_FLX_LH  (i,j)
+    end do
+    end do
 
-    CPL_Merged_FLX_QV(:,:) = fact_ocean(:,:) * CPL_AtmOcn_ATM_FLX_evap(:,:) &
-                           + fact_land (:,:) * CPL_AtmLnd_ATM_FLX_evap(:,:) &
-                           + fact_urban(:,:) * CPL_AtmUrb_ATM_FLX_evap(:,:)
+    do j = JS, JE
+    do i = IS, IE
+       CPL_Merged_FLX_QV(i,j) = fact_ocean(i,j) * CPL_AtmOcn_ATM_FLX_evap(i,j) &
+                              + fact_land (i,j) * CPL_AtmLnd_ATM_FLX_evap(i,j) &
+                              + fact_urban(i,j) * CPL_AtmUrb_ATM_FLX_evap(i,j)
+    end do
+    end do
 
-    CPL_Merged_Z0M   (:,:) = fact_ocean(:,:) * CPL_fromOcn_SFC_Z0M  (:,:) &
-                           + fact_land (:,:) * CPL_fromLnd_SFC_Z0M  (:,:) &
-                           + fact_urban(:,:) * CPL_fromUrb_SFC_Z0M  (:,:)
+    do j = JS, JE
+    do i = IS, IE
+       CPL_Merged_Z0M   (i,j) = fact_ocean(i,j) * CPL_fromOcn_SFC_Z0M  (i,j) &
+                              + fact_land (i,j) * CPL_fromLnd_SFC_Z0M  (i,j) &
+                              + fact_urban(i,j) * CPL_fromUrb_SFC_Z0M  (i,j)
+    end do
+    end do
 
-    CPL_Merged_U10   (:,:) = fact_ocean(:,:) * CPL_AtmOcn_ATM_U10     (:,:) &
-                           + fact_land (:,:) * CPL_AtmLnd_ATM_U10     (:,:) &
-                           + fact_urban(:,:) * CPL_AtmUrb_ATM_U10     (:,:)
+    do j = JS, JE
+    do i = IS, IE
+       CPL_Merged_U10   (i,j) = fact_ocean(i,j) * CPL_AtmOcn_ATM_U10     (i,j) &
+                              + fact_land (i,j) * CPL_AtmLnd_ATM_U10     (i,j) &
+                              + fact_urban(i,j) * CPL_AtmUrb_ATM_U10     (i,j)
+    end do
+    end do
 
-    CPL_Merged_V10   (:,:) = fact_ocean(:,:) * CPL_AtmOcn_ATM_V10     (:,:) &
-                           + fact_land (:,:) * CPL_AtmLnd_ATM_V10     (:,:) &
-                           + fact_urban(:,:) * CPL_AtmUrb_ATM_V10     (:,:)
+    do j = JS, JE
+    do i = IS, IE
+       CPL_Merged_V10   (i,j) = fact_ocean(i,j) * CPL_AtmOcn_ATM_V10     (i,j) &
+                              + fact_land (i,j) * CPL_AtmLnd_ATM_V10     (i,j) &
+                              + fact_urban(i,j) * CPL_AtmUrb_ATM_V10     (i,j)
+    end do
+    end do
 
-    CPL_Merged_T2    (:,:) = fact_ocean(:,:) * CPL_AtmOcn_ATM_T2      (:,:) &
-                           + fact_land (:,:) * CPL_AtmLnd_ATM_T2      (:,:) &
-                           + fact_urban(:,:) * CPL_AtmUrb_ATM_T2      (:,:)
+    do j = JS, JE
+    do i = IS, IE
+       CPL_Merged_T2    (i,j) = fact_ocean(i,j) * CPL_AtmOcn_ATM_T2      (i,j) &
+                              + fact_land (i,j) * CPL_AtmLnd_ATM_T2      (i,j) &
+                              + fact_urban(i,j) * CPL_AtmUrb_ATM_T2      (i,j)
+    end do
+    end do
 
-    CPL_Merged_Q2    (:,:) = fact_ocean(:,:) * CPL_AtmOcn_ATM_Q2      (:,:) &
-                           + fact_land (:,:) * CPL_AtmLnd_ATM_Q2      (:,:) &
-                           + fact_urban(:,:) * CPL_AtmUrb_ATM_Q2      (:,:)
+    do j = JS, JE
+    do i = IS, IE
+       CPL_Merged_Q2    (i,j) = fact_ocean(i,j) * CPL_AtmOcn_ATM_Q2      (i,j) &
+                              + fact_land (i,j) * CPL_AtmLnd_ATM_Q2      (i,j) &
+                              + fact_urban(i,j) * CPL_AtmUrb_ATM_Q2      (i,j)
+    end do
+    end do
 
-    CPL_Merged_FLX_heat(:,:) = fact_ocean(:,:) * CPL_AtmOcn_OCN_FLX_heat(:,:) &
-                             + fact_land (:,:) * CPL_AtmLnd_LND_FLX_heat(:,:) &
-                             + fact_urban(:,:) * CPL_AtmUrb_URB_FLX_heat(:,:)
+    do j = JS, JE
+    do i = IS, IE
+       CPL_Merged_FLX_heat(i,j) = fact_ocean(i,j) * CPL_AtmOcn_OCN_FLX_heat(i,j) &
+                                + fact_land (i,j) * CPL_AtmLnd_LND_FLX_heat(i,j) &
+                                + fact_urban(i,j) * CPL_AtmUrb_URB_FLX_heat(i,j)
+    end do
+    end do
 
     if ( STATISTICS_checktotal ) then
        call STAT_total( total, CPL_Merged_SFC_TEMP  (:,:),      'SFC_TEMP  ' )
@@ -481,9 +543,14 @@ contains
     implicit none
 
     real(RP), intent(in) :: ATM_Z1(IA,JA)
+    integer :: i, j
     !---------------------------------------------------------------------------
 
-    CPL_fromAtm_ATM_Z1(:,:) = ATM_Z1(:,:)
+    do j = JS, JE
+    do i = IS, IE
+       CPL_fromAtm_ATM_Z1(i,j) = ATM_Z1(i,j)
+    end do
+    end do
 
     return
   end subroutine CPL_putAtm_setup
@@ -498,11 +565,26 @@ contains
     real(RP), intent(in) :: SFC_TEMP  (IA,JA)
     real(RP), intent(in) :: SFC_albedo(IA,JA,2)
     real(RP), intent(in) :: SFC_Z0    (IA,JA)
+
+    integer :: i, j
     !---------------------------------------------------------------------------
 
-    CPL_fromOcn_SFC_TEMP  (:,:)   = SFC_TEMP  (:,:)
-    CPL_fromOcn_SFC_albedo(:,:,:) = SFC_albedo(:,:,:)
-    CPL_fromOcn_SFC_Z0M   (:,:)   = SFC_Z0    (:,:)
+    do j = JS, JE
+    do i = IS, IE
+       CPL_fromOcn_SFC_TEMP  (i,j)   = SFC_TEMP  (i,j)
+    end do
+    end do
+    do j = JS, JE
+    do i = IS, IE
+       CPL_fromOcn_SFC_albedo(i,j,1) = SFC_albedo(i,j,1)
+       CPL_fromOcn_SFC_albedo(i,j,2) = SFC_albedo(i,j,2)
+    end do
+    end do
+    do j = JS, JE
+    do i = IS, IE
+       CPL_fromOcn_SFC_Z0M   (i,j)   = SFC_Z0    (i,j)
+    end do
+    end do
 
     return
   end subroutine CPL_putOcn_setup
@@ -525,15 +607,46 @@ contains
     real(RP), intent(in) :: SFC_Z0M   (IA,JA)
     real(RP), intent(in) :: SFC_Z0H   (IA,JA)
     real(RP), intent(in) :: SFC_Z0E   (IA,JA)
+
+    integer :: i, j
     !---------------------------------------------------------------------------
 
-    CPL_fromLnd_SFC_TEMP  (:,:)   = SFC_TEMP  (:,:)
-    CPL_fromLnd_SFC_albedo(:,:,:) = SFC_albedo(:,:,:)
-    CPL_fromLnd_LND_TCS   (:,:)   = LND_TCS   (:,:)
-    CPL_fromLnd_LND_DZ    (:,:)   = LND_DZ    (:,:)
-    CPL_fromLnd_SFC_Z0M   (:,:)   = SFC_Z0M   (:,:)
-    CPL_fromLnd_SFC_Z0H   (:,:)   = SFC_Z0H   (:,:)
-    CPL_fromLnd_SFC_Z0E   (:,:)   = SFC_Z0E   (:,:)
+    do j = JS, JE
+    do i = IS, IE
+       CPL_fromLnd_SFC_TEMP  (i,j)   = SFC_TEMP  (i,j)
+    end do
+    end do
+    do j = JS, JE
+    do i = IS, IE
+       CPL_fromLnd_SFC_albedo(i,j,1) = SFC_albedo(i,j,1)
+       CPL_fromLnd_SFC_albedo(i,j,2) = SFC_albedo(i,j,2)
+    end do
+    end do
+    do j = JS, JE
+    do i = IS, IE
+       CPL_fromLnd_LND_TCS   (i,j)   = LND_TCS   (i,j)
+    end do
+    end do
+    do j = JS, JE
+    do i = IS, IE
+       CPL_fromLnd_LND_DZ    (i,j)   = LND_DZ    (i,j)
+    end do
+    end do
+    do j = JS, JE
+    do i = IS, IE
+       CPL_fromLnd_SFC_Z0M   (i,j)   = SFC_Z0M   (i,j)
+    end do
+    end do
+    do j = JS, JE
+    do i = IS, IE
+       CPL_fromLnd_SFC_Z0H   (i,j)   = SFC_Z0H   (i,j)
+    end do
+    end do
+    do j = JS, JE
+    do i = IS, IE
+       CPL_fromLnd_SFC_Z0E   (i,j)   = SFC_Z0E   (i,j)
+    end do
+    end do
 
     return
   end subroutine CPL_putLnd_setup
@@ -546,10 +659,21 @@ contains
 
     real(RP), intent(in) :: SFC_TEMP  (IA,JA)
     real(RP), intent(in) :: SFC_albedo(IA,JA,2)
+
+    integer :: i, j
     !---------------------------------------------------------------------------
 
-    CPL_fromUrb_SFC_TEMP  (:,:)   = SFC_TEMP  (:,:)
-    CPL_fromUrb_SFC_albedo(:,:,:) = SFC_albedo(:,:,:)
+    do j = JS, JE
+    do i = IS, IE
+       CPL_fromUrb_SFC_TEMP  (i,j)   = SFC_TEMP  (i,j)
+    end do
+    end do
+    do j = JS, JE
+    do i = IS, IE
+       CPL_fromUrb_SFC_albedo(i,j,1) = SFC_albedo(i,j,1)
+       CPL_fromUrb_SFC_albedo(i,j,2) = SFC_albedo(i,j,2)
+    end do
+    end do
 
     return
   end subroutine CPL_putUrb_setup
@@ -584,32 +708,82 @@ contains
     real(RP), intent(in) :: SFLX_SW_dn(IA,JA)
     real(RP), intent(in) :: SFLX_rain (IA,JA)
     real(RP), intent(in) :: SFLX_snow (IA,JA)
+
+    integer :: i, j
     !---------------------------------------------------------------------------
 
-    CPL_fromAtm_ATM_TEMP  (:,:) = ( CPL_fromAtm_ATM_TEMP  (:,:) * CNT_putAtm + ATM_TEMP  (:,:)                   ) &
-                                / ( CNT_putAtm + 1.0_RP )
-    CPL_fromAtm_ATM_PRES  (:,:) = ( CPL_fromAtm_ATM_PRES  (:,:) * CNT_putAtm + ATM_PRES  (:,:)                   ) &
-                                / ( CNT_putAtm + 1.0_RP )
-    CPL_fromAtm_ATM_W     (:,:) = ( CPL_fromAtm_ATM_W     (:,:) * CNT_putAtm + ATM_W     (:,:)                   ) &
-                                / ( CNT_putAtm + 1.0_RP )
-    CPL_fromAtm_ATM_U     (:,:) = ( CPL_fromAtm_ATM_U     (:,:) * CNT_putAtm + ATM_U     (:,:)                   ) &
-                                / ( CNT_putAtm + 1.0_RP )
-    CPL_fromAtm_ATM_V     (:,:) = ( CPL_fromAtm_ATM_V     (:,:) * CNT_putAtm + ATM_V     (:,:)                   ) &
-                                / ( CNT_putAtm + 1.0_RP )
-    CPL_fromAtm_ATM_DENS  (:,:) = ( CPL_fromAtm_ATM_DENS  (:,:) * CNT_putAtm + ATM_DENS  (:,:)                   ) &
-                                / ( CNT_putAtm + 1.0_RP )
-    CPL_fromAtm_ATM_QV    (:,:) = ( CPL_fromAtm_ATM_QV    (:,:) * CNT_putAtm + ATM_QTRC  (:,:,I_QV)              ) &
-                                / ( CNT_putAtm + 1.0_RP )
-    CPL_fromAtm_ATM_PBL   (:,:) = ( CPL_fromAtm_ATM_PBL   (:,:) * CNT_putAtm + ATM_PBL   (:,:)                   ) &
-                                / ( CNT_putAtm + 1.0_RP )
-    CPL_fromAtm_SFC_PRES  (:,:) = ( CPL_fromAtm_SFC_PRES  (:,:) * CNT_putAtm + SFC_PRES  (:,:)                   ) &
-                                / ( CNT_putAtm + 1.0_RP )
-    CPL_fromAtm_FLX_LW_dn (:,:) = ( CPL_fromAtm_FLX_LW_dn (:,:) * CNT_putAtm + SFLX_LW_dn(:,:)                   ) &
-                                / ( CNT_putAtm + 1.0_RP )
-    CPL_fromAtm_FLX_SW_dn (:,:) = ( CPL_fromAtm_FLX_SW_dn (:,:) * CNT_putAtm + SFLX_SW_dn(:,:)                   ) &
-                                / ( CNT_putAtm + 1.0_RP )
-    CPL_fromAtm_FLX_precip(:,:) = ( CPL_fromAtm_FLX_precip(:,:) * CNT_putAtm + SFLX_rain (:,:) + SFLX_snow (:,:) ) &
-                                / ( CNT_putAtm + 1.0_RP )
+    do j = JS, JE
+    do i = IS, IE
+       CPL_fromAtm_ATM_TEMP  (i,j) = ( CPL_fromAtm_ATM_TEMP  (i,j) * CNT_putAtm + ATM_TEMP  (i,j)                   ) &
+                                   / ( CNT_putAtm + 1.0_RP )
+    end do
+    end do
+    do j = JS, JE
+    do i = IS, IE
+       CPL_fromAtm_ATM_PRES  (i,j) = ( CPL_fromAtm_ATM_PRES  (i,j) * CNT_putAtm + ATM_PRES  (i,j)                   ) &
+                                   / ( CNT_putAtm + 1.0_RP )
+    end do
+    end do
+    do j = JS, JE
+    do i = IS, IE
+       CPL_fromAtm_ATM_W     (i,j) = ( CPL_fromAtm_ATM_W     (i,j) * CNT_putAtm + ATM_W     (i,j)                   ) &
+                                   / ( CNT_putAtm + 1.0_RP )
+    end do
+    end do
+    do j = JS, JE
+    do i = IS, IE
+       CPL_fromAtm_ATM_U     (i,j) = ( CPL_fromAtm_ATM_U     (i,j) * CNT_putAtm + ATM_U     (i,j)                   ) &
+                                   / ( CNT_putAtm + 1.0_RP )
+    end do
+    end do
+    do j = JS, JE
+    do i = IS, IE
+       CPL_fromAtm_ATM_V     (i,j) = ( CPL_fromAtm_ATM_V     (i,j) * CNT_putAtm + ATM_V     (i,j)                   ) &
+                                   / ( CNT_putAtm + 1.0_RP )
+    end do
+    end do
+    do j = JS, JE
+    do i = IS, IE
+       CPL_fromAtm_ATM_DENS  (i,j) = ( CPL_fromAtm_ATM_DENS  (i,j) * CNT_putAtm + ATM_DENS  (i,j)                   ) &
+                                   / ( CNT_putAtm + 1.0_RP )
+    end do
+    end do
+    do j = JS, JE
+    do i = IS, IE
+       CPL_fromAtm_ATM_QV    (i,j) = ( CPL_fromAtm_ATM_QV    (i,j) * CNT_putAtm + ATM_QTRC  (i,j,I_QV)              ) &
+                                   / ( CNT_putAtm + 1.0_RP )
+    end do
+    end do
+    do j = JS, JE
+    do i = IS, IE
+       CPL_fromAtm_ATM_PBL   (i,j) = ( CPL_fromAtm_ATM_PBL   (i,j) * CNT_putAtm + ATM_PBL   (i,j)                   ) &
+                                   / ( CNT_putAtm + 1.0_RP )
+    end do
+    end do
+    do j = JS, JE
+    do i = IS, IE
+       CPL_fromAtm_SFC_PRES  (i,j) = ( CPL_fromAtm_SFC_PRES  (i,j) * CNT_putAtm + SFC_PRES  (i,j)                   ) &
+                                   / ( CNT_putAtm + 1.0_RP )
+    end do
+    end do
+    do j = JS, JE
+    do i = IS, IE
+       CPL_fromAtm_FLX_LW_dn (i,j) = ( CPL_fromAtm_FLX_LW_dn (i,j) * CNT_putAtm + SFLX_LW_dn(i,j)                   ) &
+                                   / ( CNT_putAtm + 1.0_RP )
+    end do
+    end do
+    do j = JS, JE
+    do i = IS, IE
+       CPL_fromAtm_FLX_SW_dn (i,j) = ( CPL_fromAtm_FLX_SW_dn (i,j) * CNT_putAtm + SFLX_SW_dn(i,j)                   ) &
+                                   / ( CNT_putAtm + 1.0_RP )
+    end do
+    end do
+    do j = JS, JE
+    do i = IS, IE
+       CPL_fromAtm_FLX_precip(i,j) = ( CPL_fromAtm_FLX_precip(i,j) * CNT_putAtm + SFLX_rain (i,j) + SFLX_snow (i,j) ) &
+                                   / ( CNT_putAtm + 1.0_RP )
+    end do
+    end do
 
     CNT_putAtm = CNT_putAtm + 1.0_RP
 
@@ -622,10 +796,15 @@ contains
     implicit none
 
     real(RP), intent(in) :: OCN_TEMP(IA,JA)
+    integer :: i, j
     !---------------------------------------------------------------------------
 
-    CPL_fromOcn_OCN_TEMP(:,:) = ( CPL_fromOcn_OCN_TEMP(:,:) * CNT_putOcn + OCN_TEMP(:,:) ) &
-                              / ( CNT_putOcn + 1.0_RP )
+    do j = JS, JE
+    do i = IS, IE
+       CPL_fromOcn_OCN_TEMP(i,j) = ( CPL_fromOcn_OCN_TEMP(i,j) * CNT_putOcn + OCN_TEMP(i,j) ) &
+                                 / ( CNT_putOcn + 1.0_RP )
+    end do
+    end do
 
     CNT_putOcn = CNT_putOcn + 1.0_RP
 
@@ -640,12 +819,21 @@ contains
 
     real(RP), intent(in) :: LND_TEMP(IA,JA)
     real(RP), intent(in) :: LND_BETA(IA,JA)
+    integer :: i, j
     !---------------------------------------------------------------------------
 
-    CPL_fromLnd_LND_TEMP(:,:) = ( CPL_fromLnd_LND_TEMP(:,:) * CNT_putLnd + LND_TEMP(:,:) ) &
-                              / ( CNT_putLnd + 1.0_RP )
-    CPL_fromLnd_LND_BETA(:,:) = ( CPL_fromLnd_LND_BETA(:,:) * CNT_putLnd + LND_BETA(:,:) ) &
-                              / ( CNT_putLnd + 1.0_RP )
+    do j = JS, JE
+    do i = IS, IE
+       CPL_fromLnd_LND_TEMP(i,j) = ( CPL_fromLnd_LND_TEMP(i,j) * CNT_putLnd + LND_TEMP(i,j) ) &
+                                 / ( CNT_putLnd + 1.0_RP )
+    end do
+    end do
+    do j = JS, JE
+    do i = IS, IE
+       CPL_fromLnd_LND_BETA(i,j) = ( CPL_fromLnd_LND_BETA(i,j) * CNT_putLnd + LND_BETA(i,j) ) &
+                                 / ( CNT_putLnd + 1.0_RP )
+    end do
+    end do
 
     CNT_putLnd = CNT_putLnd + 1.0_RP
 
@@ -682,19 +870,58 @@ contains
     real(RP), intent(out) :: T2        (IA,JA)
     real(RP), intent(out) :: Q2        (IA,JA)
     real(RP), intent(out) :: FLX_heat  (IA,JA)
+
+    integer :: i, j
     !---------------------------------------------------------------------------
 
-    SFC_TEMP  (:,:)   = CPL_Merged_SFC_TEMP  (:,:)
-    SFC_albedo(:,:,:) = CPL_Merged_SFC_albedo(:,:,:)
-    Z0        (:,:)   = CPL_Merged_Z0M       (:,:)
-    U10       (:,:)   = CPL_Merged_U10       (:,:)
-    V10       (:,:)   = CPL_Merged_V10       (:,:)
-    T2        (:,:)   = CPL_Merged_T2        (:,:)
-    Q2        (:,:)   = CPL_Merged_Q2        (:,:)
-    FLX_heat  (:,:)   = CPL_Merged_FLX_heat  (:,:)
+    do j = JS, JE
+    do i = IS, IE
+       SFC_TEMP  (i,j)   = CPL_Merged_SFC_TEMP  (i,j)
+    end do
+    end do
+    do j = JS, JE
+    do i = IS, IE
+       SFC_albedo(i,j,1) = CPL_Merged_SFC_albedo(i,j,1)
+       SFC_albedo(i,j,2) = CPL_Merged_SFC_albedo(i,j,2)
+    end do
+    end do
+    do j = JS, JE
+    do i = IS, IE
+       Z0        (i,j)   = CPL_Merged_Z0M       (i,j)
+    end do
+    end do
+    do j = JS, JE
+    do i = IS, IE
+       U10       (i,j)   = CPL_Merged_U10       (i,j)
+    end do
+    end do
+    do j = JS, JE
+    do i = IS, IE
+       V10       (i,j)   = CPL_Merged_V10       (i,j)
+    end do
+    end do
+    do j = JS, JE
+    do i = IS, IE
+       T2        (i,j)   = CPL_Merged_T2        (i,j)
+    end do
+    end do
+    do j = JS, JE
+    do i = IS, IE
+       Q2        (i,j)   = CPL_Merged_Q2        (i,j)
+    end do
+    end do
+    do j = JS, JE
+    do i = IS, IE
+       FLX_heat  (i,j)   = CPL_Merged_FLX_heat  (i,j)
+    end do
+    end do
 
-    Uabs10(:,:) = sqrt( CPL_Merged_U10(:,:)*CPL_Merged_U10(:,:) &
-                      + CPL_Merged_V10(:,:)*CPL_Merged_V10(:,:) )
+    do j = JS, JE
+    do i = IS, IE
+       Uabs10(i,j) = sqrt( CPL_Merged_U10(i,j)*CPL_Merged_U10(i,j) &
+                         + CPL_Merged_V10(i,j)*CPL_Merged_V10(i,j) )
+    end do
+    end do
 
     return
   end subroutine CPL_getAtm
@@ -715,15 +942,47 @@ contains
     real(RP), intent(out) :: SFLX_SH  (IA,JA)
     real(RP), intent(out) :: SFLX_LH  (IA,JA)
     real(RP), intent(out) :: SFLX_QTRC(IA,JA,QA)
+
+    integer :: i, j, iq
     !---------------------------------------------------------------------------
 
-    SFLX_MW  (:,:)   = CPL_Merged_FLX_MW(:,:)
-    SFLX_MU  (:,:)   = CPL_Merged_FLX_MU(:,:)
-    SFLX_MV  (:,:)   = CPL_Merged_FLX_MV(:,:)
-    SFLX_SH  (:,:)   = CPL_Merged_FLX_SH(:,:)
-    SFLX_LH  (:,:)   = CPL_Merged_FLX_LH(:,:)
-    SFLX_QTRC(:,:,:) = 0.0_RP                 ! tentative
-    SFLX_QTRC(:,:,1) = CPL_Merged_FLX_QV(:,:) ! tentative
+    do j = JS, JE
+    do i = IS, IE
+       SFLX_MW  (i,j)   = CPL_Merged_FLX_MW(i,j)
+    end do
+    end do
+    do j = JS, JE
+    do i = IS, IE
+       SFLX_MU  (i,j)   = CPL_Merged_FLX_MU(i,j)
+    end do
+    end do
+    do j = JS, JE
+    do i = IS, IE
+       SFLX_MV  (i,j)   = CPL_Merged_FLX_MV(i,j)
+    end do
+    end do
+    do j = JS, JE
+    do i = IS, IE
+       SFLX_SH  (i,j)   = CPL_Merged_FLX_SH(i,j)
+    end do
+    end do
+    do j = JS, JE
+    do i = IS, IE
+       SFLX_LH  (i,j)   = CPL_Merged_FLX_LH(i,j)
+    end do
+    end do
+    do iq = 1, QA
+    do j = JS, JE
+    do i = IS, IE
+       SFLX_QTRC(i,j,iq) = 0.0_RP                 ! tentative
+    end do
+    end do
+    end do
+    do j = JS, JE
+    do i = IS, IE
+       SFLX_QTRC(i,j,1) = CPL_Merged_FLX_QV(i,j) ! tentative
+    end do
+    end do
 
     CNT_getAtmLnd = 0.0_RP
     CNT_getAtmUrb = 0.0_RP
@@ -742,11 +1001,25 @@ contains
     real(RP), intent(out) :: OCN_FLX_heat  (IA,JA)
     real(RP), intent(out) :: OCN_FLX_precip(IA,JA)
     real(RP), intent(out) :: OCN_FLX_evap  (IA,JA)
-    !---------------------------------------------------------------------------
 
-    OCN_FLX_heat  (:,:) = CPL_AtmOcn_OCN_FLX_heat  (:,:)
-    OCN_FLX_precip(:,:) = CPL_AtmOcn_OCN_FLX_precip(:,:)
-    OCN_FLX_evap  (:,:) = CPL_AtmOcn_OCN_FLX_evap  (:,:)
+    integer :: i, j
+!---------------------------------------------------------------------------
+
+    do j = JS, JE
+    do i = IS, IE
+       OCN_FLX_heat  (i,j) = CPL_AtmOcn_OCN_FLX_heat  (i,j)
+    end do
+    end do
+    do j = JS, JE
+    do i = IS, IE
+       OCN_FLX_precip(i,j) = CPL_AtmOcn_OCN_FLX_precip(i,j)
+    end do
+    end do
+    do j = JS, JE
+    do i = IS, IE
+       OCN_FLX_evap  (i,j) = CPL_AtmOcn_OCN_FLX_evap  (i,j)
+    end do
+    end do
 
     CNT_getOcn = 0.0_RP
 
@@ -763,11 +1036,25 @@ contains
     real(RP), intent(out) :: LND_FLX_heat  (IA,JA)
     real(RP), intent(out) :: LND_FLX_precip(IA,JA)
     real(RP), intent(out) :: LND_FLX_evap  (IA,JA)
+
+    integer :: i, j
     !---------------------------------------------------------------------------
 
-    LND_FLX_heat  (:,:) = CPL_AtmLnd_LND_FLX_heat  (:,:)
-    LND_FLX_precip(:,:) = CPL_AtmLnd_LND_FLX_precip(:,:)
-    LND_FLX_evap  (:,:) = CPL_AtmLnd_LND_FLX_evap  (:,:)
+    do j = JS, JE
+    do i = IS, IE
+       LND_FLX_heat  (i,j) = CPL_AtmLnd_LND_FLX_heat  (i,j)
+    end do
+    end do
+    do j = JS, JE
+    do i = IS, IE
+       LND_FLX_precip(i,j) = CPL_AtmLnd_LND_FLX_precip(i,j)
+    end do
+    end do
+    do j = JS, JE
+    do i = IS, IE
+       LND_FLX_evap  (i,j) = CPL_AtmLnd_LND_FLX_evap  (i,j)
+    end do
+    end do
 
     CNT_getLnd = 0.0_RP
 
@@ -784,11 +1071,25 @@ contains
     real(RP), intent(out) :: URB_FLX_heat  (IA,JA)
     real(RP), intent(out) :: URB_FLX_precip(IA,JA)
     real(RP), intent(out) :: URB_FLX_evap  (IA,JA)
+
+    integer :: i, j
     !---------------------------------------------------------------------------
 
-    URB_FLX_heat  (:,:) = CPL_AtmUrb_URB_FLX_heat  (:,:)
-    URB_FLX_precip(:,:) = CPL_AtmUrb_URB_FLX_precip(:,:)
-    URB_FLX_evap  (:,:) = CPL_AtmUrb_URB_FLX_evap  (:,:)
+    do j = JS, JE
+    do i = IS, IE
+       URB_FLX_heat  (i,j) = CPL_AtmUrb_URB_FLX_heat  (i,j)
+    end do
+    end do
+    do j = JS, JE
+    do i = IS, IE
+       URB_FLX_precip(i,j) = CPL_AtmUrb_URB_FLX_precip(i,j)
+    end do
+    end do
+    do j = JS, JE
+    do i = IS, IE
+       URB_FLX_evap  (i,j) = CPL_AtmUrb_URB_FLX_evap  (i,j)
+    end do
+    end do
 
     CNT_getUrb = 0.0_RP
 
@@ -805,11 +1106,26 @@ contains
     real(RP), intent(out) :: SFC_TEMP  (IA,JA)
     real(RP), intent(out) :: SFC_albedo(IA,JA,2)
     real(RP), intent(out) :: SFC_Z0    (IA,JA)
+
+    integer :: i, j
     !---------------------------------------------------------------------------
 
-    SFC_TEMP  (:,:)   = CPL_fromOcn_SFC_TEMP  (:,:)
-    SFC_albedo(:,:,:) = CPL_fromOcn_SFC_albedo(:,:,:)
-    SFC_Z0    (:,:)   = CPL_fromOcn_SFC_Z0M   (:,:)
+    do j = JS, JE
+    do i = IS, IE
+       SFC_TEMP  (i,j)   = CPL_fromOcn_SFC_TEMP  (i,j)
+    end do
+    end do
+    do j = JS, JE
+    do i = IS, IE
+       SFC_albedo(i,j,1) = CPL_fromOcn_SFC_albedo(i,j,1)
+       SFC_albedo(i,j,2) = CPL_fromOcn_SFC_albedo(i,j,2)
+    end do
+    end do
+    do j = JS, JE
+    do i = IS, IE
+       SFC_Z0    (i,j)   = CPL_fromOcn_SFC_Z0M   (i,j)
+    end do
+    end do
 
     return
   end subroutine CPL_getOcn_restart
@@ -822,10 +1138,21 @@ contains
 
     real(RP), intent(out) :: SFC_TEMP  (IA,JA)
     real(RP), intent(out) :: SFC_albedo(IA,JA,2)
+
+    integer :: i, j
     !---------------------------------------------------------------------------
 
-    SFC_TEMP  (:,:)   = CPL_fromLnd_SFC_TEMP  (:,:)
-    SFC_albedo(:,:,:) = CPL_fromLnd_SFC_albedo(:,:,:)
+    do j = JS, JE
+    do i = IS, JE
+       SFC_TEMP  (i,j)   = CPL_fromLnd_SFC_TEMP  (i,j)
+    end do
+    end do
+    do j = JS, JE
+    do i = IS, JE
+       SFC_albedo(i,j,1) = CPL_fromLnd_SFC_albedo(i,j,1)
+       SFC_albedo(i,j,2) = CPL_fromLnd_SFC_albedo(i,j,2)
+    end do
+    end do
 
     return
   end subroutine CPL_getLnd_restart
@@ -838,10 +1165,21 @@ contains
 
     real(RP), intent(out) :: SFC_TEMP  (IA,JA)
     real(RP), intent(out) :: SFC_albedo(IA,JA,2)
+
+    integer :: i, j
     !---------------------------------------------------------------------------
 
-    SFC_TEMP  (:,:)   = CPL_fromUrb_SFC_TEMP  (:,:)
-    SFC_albedo(:,:,:) = CPL_fromUrb_SFC_albedo(:,:,:)
+    do j = JS, JE
+    do i = IS, JE
+       SFC_TEMP  (i,j)   = CPL_fromUrb_SFC_TEMP  (i,j)
+    end do
+    end do
+    do j = JS, JE
+    do i = IS, JE
+       SFC_albedo(i,j,1) = CPL_fromUrb_SFC_albedo(i,j,1)
+       SFC_albedo(i,j,2) = CPL_fromUrb_SFC_albedo(i,j,2)
+    end do
+    end do
 
     return
   end subroutine CPL_getUrb_restart

@@ -67,8 +67,8 @@ contains
     !---------------------------------------------------------------------------
 
     ! estimate surface density (extrapolation)
-    do j = 1, JA
-    do i = 1, IA
+    do j = JSB, JEB
+    do i = ISB, IEB
        SFC_DENS(i,j) = lagrange_interp( Zsfc(i,j),         & ! [IN]
                                         CZ  (KS:KS+2,i,j), & ! [IN]
                                         DENS(KS:KS+2,i,j)  ) ! [IN]
@@ -76,8 +76,8 @@ contains
     enddo
 
     ! estimate surface pressure (hydrostatic balance)
-    do j = 1, JA
-    do i = 1, IA
+    do j = JSB, JEB
+    do i = ISB, IEB
        SFC_PRES(i,j) = PRES(KS,i,j) &
                      + 0.5_RP * ( SFC_DENS(i,j) + DENS(KS,i,j) ) * GRAV * Z1(i,j)
     enddo

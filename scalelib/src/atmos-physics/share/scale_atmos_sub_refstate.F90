@@ -563,6 +563,7 @@ contains
   !> apply 1D reference to 3D (terrain-following) with re-calc hydrostatic balance
   subroutine ATMOS_REFSTATE_calc3D
     use scale_const, only: &
+       UNDEF => CONST_UNDEF, &
        Rdry  => CONST_Rdry,  &
        CPdry => CONST_CPdry, &
        P00   => CONST_PRE00
@@ -607,8 +608,8 @@ contains
     RovCP = Rdry / CPdry
 
     !--- potential temperature
-    do j = JS, JE
-    do i = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
        work(:,i,j) = ATMOS_REFSTATE1D_pott(:)
     enddo
     enddo
@@ -617,8 +618,8 @@ contains
                                pott(:,:,:)  ) ! [OUT]
 
     !--- water vapor
-    do j = JS, JE
-    do i = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
        work(:,i,j) = ATMOS_REFSTATE1D_qv(:)
     enddo
     enddo
@@ -646,8 +647,8 @@ contains
                                         KE+1                       ) ! [IN]
 
     ! build down density from TOA (3D)
-    do j = JS, JE
-    do i = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
        dz(KS,i,j) = REAL_CZ(KS,i,j) - REAL_FZ(KS-1,i,j) ! distance from surface to cell center
        do k = KS+1, KE
           dz(k,i,j) = REAL_CZ(k,i,j) - REAL_CZ(k-1,i,j) ! distance from cell center to cell center
@@ -656,8 +657,8 @@ contains
     enddo
     enddo
 
-    do j = JS, JE
-    do i = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
        dens(KE+1,i,j) = dens_toa_1D
        temp(KE+1,i,j) = temp_toa_1D
        pres(KE+1,i,j) = pres_toa_1D
@@ -666,8 +667,8 @@ contains
     enddo
     enddo
 
-    do j = JS, JE
-    do i = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
        pott(KS-1,i,j) = pott(KS,i,j)
        qv  (KS-1,i,j) = qv  (KS,i,j)
     enddo
@@ -708,9 +709,8 @@ contains
 !                                            qc  (KS  ,:,:), & ! [IN]
 !                                            dz  (KS  ,:,:), & ! [IN]
 !                                            KS              ) ! [IN]
-
-    do j = JS, JE
-    do i = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
     do k = KS, KE
        ATMOS_REFSTATE_dens(k,i,j) = dens(k,i,j)
        ATMOS_REFSTATE_temp(k,i,j) = temp(k,i,j)
@@ -721,38 +721,45 @@ contains
     enddo
     enddo
 
+    ! boundary condition
+    do j = JSB, JEB
+    do i = ISB, IEB
+
+       ATMOS_REFSTATE_temp(1:KS-1,i,j) = temp(KS,i,j)
+       ATMOS_REFSTATE_temp(KE+1:KA,i,j) = temp_toa_1D
+
+       ATMOS_REFSTATE_qv  (1:KS-1,i,j) = qv  (KS,i,j)
+       ATMOS_REFSTATE_qv  (KE+1:KA,i,j) = qv  (KE,i,j)
+
+       ATMOS_REFSTATE_pres(1:KS-2,i,j) = UNDEF
+       ATMOS_REFSTATE_pres(KS-1,i,j) = ATMOS_REFSTATE_pres(KS+1,i,j) &
+                                     - ATMOS_REFSTATE_dens(KS  ,i,j) * ( REAL_PHI(KS-1,i,j) - REAL_PHI(KS+1,i,j) )
+       ATMOS_REFSTATE_pres(KE+1,i,j) = ATMOS_REFSTATE_pres(KE-1,i,j) &
+                                     - ATMOS_REFSTATE_dens(KE  ,i,j) * ( REAL_PHI(KE+1,i,j) - REAL_PHI(KE-1,i,j) )
+       ATMOS_REFSTATE_pres(KE+2:KA,i,j) = UNDEF
+
+       ATMOS_REFSTATE_dens(1:KS-2,i,j) = UNDEF
+       ATMOS_REFSTATE_dens(KS-1,i,j) = ATMOS_REFSTATE_pres(KS-1,i,j) / ( ATMOS_REFSTATE_temp(KS-1,i,j) * Rdry )
+       ATMOS_REFSTATE_dens(KE+1,i,j) = ATMOS_REFSTATE_pres(KE+1,i,j) / ( ATMOS_REFSTATE_temp(KE+1,i,j) * Rdry )
+       ATMOS_REFSTATE_dens(KE+2:KA,i,j) = UNDEF
+
+       ATMOS_REFSTATE_pott(1:KS-2,i,j) = UNDEF
+       ATMOS_REFSTATE_pott(KS-1,i,j) = ATMOS_REFSTATE_temp(KS-1,i,j) * ( P00 / ATMOS_REFSTATE_pres(KS-1,i,j) )**RovCP
+       ATMOS_REFSTATE_pott(KE+1,i,j) = ATMOS_REFSTATE_temp(KE+1,i,j) * ( P00 / ATMOS_REFSTATE_pres(KE+1,i,j) )**RovCP
+       ATMOS_REFSTATE_pott(KE+2:KA,i,j) = UNDEF
+    enddo
+    enddo
+
     call COMM_vars8( ATMOS_REFSTATE_dens(:,:,:), 1 )
     call COMM_vars8( ATMOS_REFSTATE_temp(:,:,:), 2 )
     call COMM_vars8( ATMOS_REFSTATE_pres(:,:,:), 3 )
     call COMM_vars8( ATMOS_REFSTATE_pott(:,:,:), 4 )
     call COMM_vars8( ATMOS_REFSTATE_qv  (:,:,:), 5 )
-    call COMM_wait ( ATMOS_REFSTATE_dens(:,:,:), 1 )
-    call COMM_wait ( ATMOS_REFSTATE_temp(:,:,:), 2 )
-    call COMM_wait ( ATMOS_REFSTATE_pres(:,:,:), 3 )
-    call COMM_wait ( ATMOS_REFSTATE_pott(:,:,:), 4 )
-    call COMM_wait ( ATMOS_REFSTATE_qv  (:,:,:), 5 )
-
-    ! boundary condition
-    do j = 1, JA
-    do i = 1, IA
-       ATMOS_REFSTATE_temp(KS-1,i,j) = ATMOS_REFSTATE_temp(KS,i,j)
-       ATMOS_REFSTATE_temp(KE+1,i,j) = ATMOS_REFSTATE_temp(KE,i,j)
-
-       ATMOS_REFSTATE_pres(KS-1,i,j) = ATMOS_REFSTATE_pres(KS+1,i,j) &
-                                     - ATMOS_REFSTATE_dens(KS  ,i,j) * ( REAL_PHI(KS-1,i,j) - REAL_PHI(KS+1,i,j) )
-       ATMOS_REFSTATE_pres(KE+1,i,j) = ATMOS_REFSTATE_pres(KE-1,i,j) &
-                                     - ATMOS_REFSTATE_dens(KE  ,i,j) * ( REAL_PHI(KE+1,i,j) - REAL_PHI(KE-1,i,j) )
-
-       ATMOS_REFSTATE_dens(KS-1,i,j) = ATMOS_REFSTATE_pres(KS-1,i,j) / ( ATMOS_REFSTATE_temp(KS-1,i,j) * Rdry )
-       ATMOS_REFSTATE_dens(KE+1,i,j) = ATMOS_REFSTATE_pres(KE+1,i,j) / ( ATMOS_REFSTATE_temp(KE+1,i,j) * Rdry )
-
-       ATMOS_REFSTATE_pott(KS-1,i,j) = ATMOS_REFSTATE_temp(KS-1,i,j) * ( P00 / ATMOS_REFSTATE_pres(KS-1,i,j) )**RovCP
-       ATMOS_REFSTATE_pott(KE+1,i,j) = ATMOS_REFSTATE_temp(KE+1,i,j) * ( P00 / ATMOS_REFSTATE_pres(KE+1,i,j) )**RovCP
-
-       ATMOS_REFSTATE_qv  (KS-1,i,j) = ATMOS_REFSTATE_qv  (KS,i,j)
-       ATMOS_REFSTATE_qv  (KE+1,i,j) = ATMOS_REFSTATE_qv  (KE,i,j)
-    enddo
-    enddo
+    call COMM_wait ( ATMOS_REFSTATE_dens(:,:,:), 1, .false. )
+    call COMM_wait ( ATMOS_REFSTATE_temp(:,:,:), 2, .false. )
+    call COMM_wait ( ATMOS_REFSTATE_pres(:,:,:), 3, .false. )
+    call COMM_wait ( ATMOS_REFSTATE_pott(:,:,:), 4, .false. )
+    call COMM_wait ( ATMOS_REFSTATE_qv  (:,:,:), 5, .false. )
 
     return
   end subroutine ATMOS_REFSTATE_calc3D

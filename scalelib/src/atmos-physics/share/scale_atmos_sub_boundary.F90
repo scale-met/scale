@@ -383,8 +383,8 @@ contains
     integer :: i, j, iq
     !---------------------------------------------------------------------------
 
-    do j  = 1, JA
-    do i  = 1, IA
+    do j = 1, JA
+    do i = 1, IA
        ATMOS_BOUNDARY_DENS(   1:KS-1,i,j) = ATMOS_BOUNDARY_DENS(KS,i,j)
        ATMOS_BOUNDARY_VELZ(   1:KS-1,i,j) = ATMOS_BOUNDARY_VELZ(KS,i,j)
        ATMOS_BOUNDARY_VELX(   1:KS-1,i,j) = ATMOS_BOUNDARY_VELX(KS,i,j)
@@ -525,8 +525,8 @@ contains
        coef_y = 1.0_RP / ATMOS_BOUNDARY_tauy
     endif
 
-    do j = 1, JA
-    do i = 1, IA
+    do j  = 1, JA
+    do i  = 1, IA
     do k = 1, KA
        ee1 = CBFZ(k)
        if ( ee1 <= 1.0_RP - ATMOS_BOUNDARY_FRACZ ) then
@@ -710,8 +710,8 @@ contains
     integer :: i, j, k, iq
     !---------------------------------------------------------------------------
 
-    do j = 1, JA
-    do i = 1, IA
+    do j  = 1, JA
+    do i  = 1, IA
     do k = KS, KE
        ATMOS_BOUNDARY_DENS(k,i,j) = DENS(k,i,j)
        ATMOS_BOUNDARY_VELZ(k,i,j) = MOMZ(k,i,j) / ( DENS(k,i,j)+DENS(k+1,i,  j  ) ) * 2.0_RP
@@ -723,19 +723,29 @@ contains
     enddo
     enddo
 
-    do j = 1, JA
-    do i = 1, IA-1
+    do j  = 1, JA
+    do i  = 1, IA-1
     do k = KS, KE
        ATMOS_BOUNDARY_VELX(k,i,j) = MOMX(k,i,j) / ( DENS(k,i,j)+DENS(k,  i+1,j  ) ) * 2.0_RP
     enddo
     enddo
     enddo
+    do j = 1, JA
+    do k = KS, KE
+       ATMOS_BOUNDARY_VELX(k,IA,j) = MOMX(k,IA,j) / DENS(k,IA,j)
+    enddo
+    enddo
 
-    do j = 1, JA-1
-    do i = 1, IA
+    do j  = 1, JA-1
+    do i  = 1, IA
     do k = KS, KE
        ATMOS_BOUNDARY_VELY(k,i,j) = MOMY(k,i,j) / ( DENS(k,i,j)+DENS(k,  i,  j+1) ) * 2.0_RP
     enddo
+    enddo
+    enddo
+    do i = 1, IA
+    do k = KS, KE
+       ATMOS_BOUNDARY_VELY(k,i,JA) = MOMY(k,i,JA) / DENS(k,i,JA)
     enddo
     enddo
 
@@ -834,8 +844,6 @@ contains
     use scale_grid_nest, only: &
        ONLINE_USE_VELZ
     implicit none
-
-    real(RP) :: buffer(KA,IA,JA)
 
     integer :: iq
     !---------------------------------------------------------------------------
@@ -1067,28 +1075,28 @@ contains
        ATMOS_BOUNDARY_ref_QTRC(KS:KE,ISB:IEB,JSB:JEB,iq,2) = reference_atmos(:,:,:)
     end do
 
-    do j  = 1, JA
-    do i  = 1, IA
+    do j = JSB, JEB
+    do i = ISB, IEB
        ATMOS_BOUNDARY_ref_DENS(   1:KS-1,i,j,1) = ATMOS_BOUNDARY_ref_DENS(KS,i,j,1)
-       ATMOS_BOUNDARY_ref_VELZ(   1:KS-1,i,j,1) = ATMOS_BOUNDARY_ref_VELZ(KS,i,j,1)
+!       ATMOS_BOUNDARY_ref_VELZ(   1:KS-1,i,j,1) = ATMOS_BOUNDARY_ref_VELZ(KS,i,j,1)
        ATMOS_BOUNDARY_ref_VELX(   1:KS-1,i,j,1) = ATMOS_BOUNDARY_ref_VELX(KS,i,j,1)
        ATMOS_BOUNDARY_ref_VELY(   1:KS-1,i,j,1) = ATMOS_BOUNDARY_ref_VELY(KS,i,j,1)
        ATMOS_BOUNDARY_ref_POTT(   1:KS-1,i,j,1) = ATMOS_BOUNDARY_ref_POTT(KS,i,j,1)
 
        ATMOS_BOUNDARY_ref_DENS(KE+1:KA,  i,j,1) = ATMOS_BOUNDARY_ref_DENS(KE,i,j,1)
-       ATMOS_BOUNDARY_ref_VELZ(KE+1:KA,  i,j,1) = ATMOS_BOUNDARY_ref_VELZ(KE,i,j,1)
+!       ATMOS_BOUNDARY_ref_VELZ(KE+1:KA,  i,j,1) = ATMOS_BOUNDARY_ref_VELZ(KE,i,j,1)
        ATMOS_BOUNDARY_ref_VELX(KE+1:KA,  i,j,1) = ATMOS_BOUNDARY_ref_VELX(KE,i,j,1)
        ATMOS_BOUNDARY_ref_VELY(KE+1:KA,  i,j,1) = ATMOS_BOUNDARY_ref_VELY(KE,i,j,1)
        ATMOS_BOUNDARY_ref_POTT(KE+1:KA,  i,j,1) = ATMOS_BOUNDARY_ref_POTT(KE,i,j,1)
 
        ATMOS_BOUNDARY_ref_DENS(   1:KS-1,i,j,2) = ATMOS_BOUNDARY_ref_DENS(KS,i,j,2)
-       ATMOS_BOUNDARY_ref_VELZ(   1:KS-1,i,j,2) = ATMOS_BOUNDARY_ref_VELZ(KS,i,j,2)
+!       ATMOS_BOUNDARY_ref_VELZ(   1:KS-1,i,j,2) = ATMOS_BOUNDARY_ref_VELZ(KS,i,j,2)
        ATMOS_BOUNDARY_ref_VELX(   1:KS-1,i,j,2) = ATMOS_BOUNDARY_ref_VELX(KS,i,j,2)
        ATMOS_BOUNDARY_ref_VELY(   1:KS-1,i,j,2) = ATMOS_BOUNDARY_ref_VELY(KS,i,j,2)
        ATMOS_BOUNDARY_ref_POTT(   1:KS-1,i,j,2) = ATMOS_BOUNDARY_ref_POTT(KS,i,j,2)
 
        ATMOS_BOUNDARY_ref_DENS(KE+1:KA,  i,j,2) = ATMOS_BOUNDARY_ref_DENS(KE,i,j,2)
-       ATMOS_BOUNDARY_ref_VELZ(KE+1:KA,  i,j,2) = ATMOS_BOUNDARY_ref_VELZ(KE,i,j,2)
+!       ATMOS_BOUNDARY_ref_VELZ(KE+1:KA,  i,j,2) = ATMOS_BOUNDARY_ref_VELZ(KE,i,j,2)
        ATMOS_BOUNDARY_ref_VELX(KE+1:KA,  i,j,2) = ATMOS_BOUNDARY_ref_VELX(KE,i,j,2)
        ATMOS_BOUNDARY_ref_VELY(KE+1:KA,  i,j,2) = ATMOS_BOUNDARY_ref_VELY(KE,i,j,2)
        ATMOS_BOUNDARY_ref_POTT(KE+1:KA,  i,j,2) = ATMOS_BOUNDARY_ref_POTT(KE,i,j,2)
@@ -1104,13 +1112,13 @@ contains
     end do
 
     call COMM_vars8( ATMOS_BOUNDARY_ref_DENS(:,:,:,1),  1 )
-    call COMM_vars8( ATMOS_BOUNDARY_ref_VELZ(:,:,:,1),  2 )
+!    call COMM_vars8( ATMOS_BOUNDARY_ref_VELZ(:,:,:,1),  2 )
     call COMM_vars8( ATMOS_BOUNDARY_ref_VELX(:,:,:,1),  3 )
     call COMM_vars8( ATMOS_BOUNDARY_ref_VELY(:,:,:,1),  4 )
     call COMM_vars8( ATMOS_BOUNDARY_ref_POTT(:,:,:,1),  5 )
 
     call COMM_vars8( ATMOS_BOUNDARY_ref_DENS(:,:,:,2),  6 )
-    call COMM_vars8( ATMOS_BOUNDARY_ref_VELZ(:,:,:,2),  7 )
+!    call COMM_vars8( ATMOS_BOUNDARY_ref_VELZ(:,:,:,2),  7 )
     call COMM_vars8( ATMOS_BOUNDARY_ref_VELX(:,:,:,2),  8 )
     call COMM_vars8( ATMOS_BOUNDARY_ref_VELY(:,:,:,2),  9 )
     call COMM_vars8( ATMOS_BOUNDARY_ref_POTT(:,:,:,2), 10 )
@@ -1120,26 +1128,26 @@ contains
        call COMM_vars8( ATMOS_BOUNDARY_ref_QTRC(:,:,:,iq,2), 10+iq+BND_QA )
     end do
 
-    call COMM_wait ( ATMOS_BOUNDARY_ref_DENS(:,:,:,1),  1 )
-    call COMM_wait ( ATMOS_BOUNDARY_ref_VELZ(:,:,:,1),  2 )
-    call COMM_wait ( ATMOS_BOUNDARY_ref_VELX(:,:,:,1),  3 )
-    call COMM_wait ( ATMOS_BOUNDARY_ref_VELY(:,:,:,1),  4 )
-    call COMM_wait ( ATMOS_BOUNDARY_ref_POTT(:,:,:,1),  5 )
+    call COMM_wait ( ATMOS_BOUNDARY_ref_DENS(:,:,:,1),  1, .false. )
+!    call COMM_wait ( ATMOS_BOUNDARY_ref_VELZ(:,:,:,1),  2, .false. )
+    call COMM_wait ( ATMOS_BOUNDARY_ref_VELX(:,:,:,1),  3, .false. )
+    call COMM_wait ( ATMOS_BOUNDARY_ref_VELY(:,:,:,1),  4, .false. )
+    call COMM_wait ( ATMOS_BOUNDARY_ref_POTT(:,:,:,1),  5, .false. )
 
-    call COMM_wait ( ATMOS_BOUNDARY_ref_DENS(:,:,:,2),  6 )
-    call COMM_wait ( ATMOS_BOUNDARY_ref_VELZ(:,:,:,2),  7 )
-    call COMM_wait ( ATMOS_BOUNDARY_ref_VELX(:,:,:,2),  8 )
-    call COMM_wait ( ATMOS_BOUNDARY_ref_VELY(:,:,:,2),  9 )
-    call COMM_wait ( ATMOS_BOUNDARY_ref_POTT(:,:,:,2), 10 )
+    call COMM_wait ( ATMOS_BOUNDARY_ref_DENS(:,:,:,2),  6, .false. )
+!    call COMM_wait ( ATMOS_BOUNDARY_ref_VELZ(:,:,:,2),  7, .false. )
+    call COMM_wait ( ATMOS_BOUNDARY_ref_VELX(:,:,:,2),  8, .false. )
+    call COMM_wait ( ATMOS_BOUNDARY_ref_VELY(:,:,:,2),  9, .false. )
+    call COMM_wait ( ATMOS_BOUNDARY_ref_POTT(:,:,:,2), 10, .false. )
 
     do iq = 1, BND_QA
-       call COMM_wait ( ATMOS_BOUNDARY_ref_QTRC(:,:,:,iq,1), 10+iq        )
-       call COMM_wait ( ATMOS_BOUNDARY_ref_QTRC(:,:,:,iq,2), 10+iq+BND_QA )
+       call COMM_wait ( ATMOS_BOUNDARY_ref_QTRC(:,:,:,iq,1), 10+iq       , .false. )
+       call COMM_wait ( ATMOS_BOUNDARY_ref_QTRC(:,:,:,iq,2), 10+iq+BND_QA, .false. )
     end do
 
     ! set boundary data and time increment
-    do j  = 1, JA
-    do i  = 1, IA
+    do j = 1, JA
+    do i = 1, IA
     do k  = 1, KA
        ATMOS_BOUNDARY_DENS(k,i,j) = ATMOS_BOUNDARY_ref_DENS(k,i,j,1)
        ATMOS_BOUNDARY_VELX(k,i,j) = ATMOS_BOUNDARY_ref_VELX(k,i,j,1)
@@ -1171,8 +1179,8 @@ contains
     end do
 
     ! fill in gaps of the offset
-    do j  = 1, JA
-    do i  = 1, IA
+    do j = 1, JA
+    do i = 1, IA
     do k  = 1, KA
        ATMOS_BOUNDARY_DENS(k,i,j) = ATMOS_BOUNDARY_DENS(k,i,j) + ATMOS_BOUNDARY_increment_DENS(k,i,j) * dble(fillgaps_steps)
        ATMOS_BOUNDARY_VELX(k,i,j) = ATMOS_BOUNDARY_VELX(k,i,j) + ATMOS_BOUNDARY_increment_VELX(k,i,j) * dble(fillgaps_steps)
@@ -1303,8 +1311,8 @@ contains
                              ATMOS_BOUNDARY_ref_POTT(:,:,:,2),       &   !(KA,IA,JA)
                              ATMOS_BOUNDARY_ref_QTRC(:,:,:,1:NESTQA,2) ) !(KA,IA,JA,QA)
 
-    do j  = 1, JA
-    do i  = 1, IA
+    do j = 1, JA
+    do i = 1, IA
        ATMOS_BOUNDARY_ref_DENS(   1:KS-1,i,j,1) = ATMOS_BOUNDARY_ref_DENS(KS,i,j,1)
        ATMOS_BOUNDARY_ref_VELZ(   1:KS-1,i,j,1) = ATMOS_BOUNDARY_ref_VELZ(KS,i,j,1)
        ATMOS_BOUNDARY_ref_VELX(   1:KS-1,i,j,1) = ATMOS_BOUNDARY_ref_VELX(KS,i,j,1)
@@ -1374,8 +1382,8 @@ contains
     end do
 
     ! set boundary data and time increment
-    do j  = 1, JA
-    do i  = 1, IA
+    do j = 1, JA
+    do i = 1, IA
     do k  = 1, KA
        ATMOS_BOUNDARY_DENS(k,i,j) = ATMOS_BOUNDARY_ref_DENS(k,i,j,1)
        ATMOS_BOUNDARY_VELX(k,i,j) = ATMOS_BOUNDARY_ref_VELX(k,i,j,1)
@@ -1407,8 +1415,8 @@ contains
     end do
 
     if ( ONLINE_USE_VELZ ) then
-       do j  = 1, JA
-       do i  = 1, IA
+       do j = 1, JA
+       do i = 1, IA
        do k  = 1, KA
           ATMOS_BOUNDARY_VELZ(k,i,j) = ATMOS_BOUNDARY_ref_VELZ(k,i,j,1)
 
@@ -1500,8 +1508,8 @@ contains
        end if
 
        if ( ref_updated ) then
-          do j  = 1, JA
-          do i  = 1, IA
+          do j = 1, JA
+          do i = 1, IA
           do k  = 1, KA
              ATMOS_BOUNDARY_DENS(k,i,j) = ATMOS_BOUNDARY_ref_DENS(k,i,j,1)
              ATMOS_BOUNDARY_VELX(k,i,j) = ATMOS_BOUNDARY_ref_VELX(k,i,j,1)
@@ -1529,9 +1537,9 @@ contains
           end do
           end do
           if ( ONLINE_USE_VELZ ) then
-             do j  = 1, JA
-             do i  = 1, IA
-             do k  = 1, KA
+             do j = 1, JA
+             do i = 1, IA
+             do k = 1, KA
                 ATMOS_BOUNDARY_VELZ(k,i,j) = ATMOS_BOUNDARY_ref_VELZ(k,i,j,1)
                 ATMOS_BOUNDARY_increment_VELZ(k,i,j) = ( ATMOS_BOUNDARY_ref_VELZ(k,i,j,2) &
                                                        - ATMOS_BOUNDARY_ref_VELZ(k,i,j,1) ) &
@@ -1541,8 +1549,8 @@ contains
              end do
           end if
        else
-          do j  = 1, JA
-          do i  = 1, IA
+          do j = 1, JA
+          do i = 1, IA
           do k  = 1, KA
              ATMOS_BOUNDARY_DENS(k,i,j) = ATMOS_BOUNDARY_DENS(k,i,j) + ATMOS_BOUNDARY_increment_DENS(k,i,j)
              ATMOS_BOUNDARY_VELX(k,i,j) = ATMOS_BOUNDARY_VELX(k,i,j) + ATMOS_BOUNDARY_increment_VELX(k,i,j)
@@ -1555,8 +1563,8 @@ contains
           end do
           end do
           if ( ONLINE_USE_VELZ ) then
-             do j  = 1, JA
-             do i  = 1, IA
+             do j = 1, JA
+             do i = 1, IA
              do k  = 1, KA
                 ATMOS_BOUNDARY_VELZ(k,i,j) = ATMOS_BOUNDARY_VELZ(k,i,j) + ATMOS_BOUNDARY_increment_VELZ(k,i,j)
              end do
@@ -1591,6 +1599,12 @@ contains
           end do
           end do
           end do
+          do i = 1, IS-1
+          do k = 1, KA
+             MOMY(k,i,JA) = ATMOS_BOUNDARY_VELY(k,i,JA) &
+                  * ATMOS_BOUNDARY_DENS(k,i,JA)
+          end do
+          end do
           if ( ONLINE_USE_VELZ ) then
              do j = 1, JA
              do i = 1, IS-1
@@ -1600,6 +1614,7 @@ contains
              end do
              end do
              end do
+          else
              do j = 1, JA
              do i = 1, IS-1
              do k = KS, KE-1
@@ -1647,6 +1662,12 @@ contains
           end do
           end do
           end do
+          do i = IE+1, IA
+          do k = 1, KA
+             MOMY(k,i,JA) = ATMOS_BOUNDARY_VELY(k,i,JA) &
+                  * ATMOS_BOUNDARY_DENS(k,i,JA)
+          end do
+          end do
           if ( ONLINE_USE_VELZ ) then
              do j = 1, JA
              do i = IE+1, IA
@@ -1691,6 +1712,12 @@ contains
              MOMX(k,i,j) = ATMOS_BOUNDARY_VELX(k,i,j) &
                   * ( ATMOS_BOUNDARY_DENS(k,i,j) + ATMOS_BOUNDARY_DENS(k,i+1,j) ) * 0.5_RP
           end do
+          end do
+          end do
+          do j = 1, JS-1
+          do k = 1, KA
+             MOMX(k,IA,j) = ATMOS_BOUNDARY_VELX(k,IA,j) &
+                  * ATMOS_BOUNDARY_DENS(k,IA,j)
           end do
           end do
           if ( ONLINE_USE_VELZ ) then
@@ -1748,6 +1775,12 @@ contains
              MOMX(k,i,j) = ATMOS_BOUNDARY_VELX(k,i,j) &
                   * ( ATMOS_BOUNDARY_DENS(k,i,j) + ATMOS_BOUNDARY_DENS(k,i+1,j) ) * 0.5_RP
           end do
+          end do
+          end do
+          do j = JE+1, JA
+          do k = 1, KA
+             MOMX(k,IA,j) = ATMOS_BOUNDARY_VELX(k,IA,j) &
+                  * ATMOS_BOUNDARY_DENS(k,IA,j)
           end do
           end do
           if ( ONLINE_USE_VELZ ) then
@@ -1823,8 +1856,8 @@ contains
 
     bname = ATMOS_BOUNDARY_IN_BASENAME
 
-    do j  = 1, JA
-    do i  = 1, IA
+    do j  = JSB, JEB
+    do i  = ISB, IEB
     do k  = 1, KA
        ATMOS_BOUNDARY_ref_DENS(k,i,j,1) = ATMOS_BOUNDARY_ref_DENS(k,i,j,2)
        ATMOS_BOUNDARY_ref_VELZ(k,i,j,1) = ATMOS_BOUNDARY_ref_VELZ(k,i,j,2)
@@ -1851,8 +1884,8 @@ contains
        ATMOS_BOUNDARY_ref_QTRC(KS:KE,ISB:IEB,JSB:JEB,iq,2) = reference_atmos(:,:,:)
     end do
 
-    do j  = 1, JA
-    do i  = 1, IA
+    do j  = JSB, JEB
+    do i  = ISB, IEB
        ATMOS_BOUNDARY_ref_DENS(   1:KS-1,i,j,2) = ATMOS_BOUNDARY_ref_DENS(KS,i,j,2)
        ATMOS_BOUNDARY_ref_VELZ(   1:KS-1,i,j,2) = ATMOS_BOUNDARY_ref_VELZ(KS,i,j,2)
        ATMOS_BOUNDARY_ref_VELX(   1:KS-1,i,j,2) = ATMOS_BOUNDARY_ref_VELX(KS,i,j,2)
@@ -1976,8 +2009,8 @@ contains
     elseif ( handle == 2 .and. do_daughter_process ) then ! [daughter]
        if (IO_L) write(IO_FID_LOG,*)"*** NESTCOMM inter-domain as a DAUGHTER (step=", boundary_timestep, ")"
 
-       do j  = 1, JA
-       do i  = 1, IA
+       do j  = JSB, JEB
+       do i  = ISB, IEB
        do k  = 1, KA
           ATMOS_BOUNDARY_ref_DENS(k,i,j,1) = ATMOS_BOUNDARY_ref_DENS(k,i,j,2)
           ATMOS_BOUNDARY_ref_VELZ(k,i,j,1) = ATMOS_BOUNDARY_ref_VELZ(k,i,j,2)
@@ -2006,8 +2039,8 @@ contains
                                 ATMOS_BOUNDARY_ref_POTT(:,:,:,2),       &   !(KA,IA,JA)
                                 ATMOS_BOUNDARY_ref_QTRC(:,:,:,1:NESTQA,2) ) !(KA,IA,JA,QA)
 
-       do j  = 1, JA
-       do i  = 1, IA
+       do j  = JSB, JEB
+       do i  = ISB, IEB
           ATMOS_BOUNDARY_ref_DENS(   1:KS-1,i,j,2) = ATMOS_BOUNDARY_ref_DENS(KS,i,j,2)
           ATMOS_BOUNDARY_ref_VELZ(   1:KS-1,i,j,2) = ATMOS_BOUNDARY_ref_VELZ(KS,i,j,2)
           ATMOS_BOUNDARY_ref_VELX(   1:KS-1,i,j,2) = ATMOS_BOUNDARY_ref_VELX(KS,i,j,2)
