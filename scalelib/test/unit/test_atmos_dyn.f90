@@ -1,4 +1,4 @@
-module test_atmos_dyn_fent_fct
+module test_atmos_dyn
 
   !-----------------------------------------------------------------------------
   use scale_precision
@@ -35,7 +35,7 @@ module test_atmos_dyn_fent_fct
   implicit none
   private
   !-----------------------------------------------------------------------------
-  public :: test_atmos_dyn_fent_fct_run
+  public :: test_atmos_dyn_run
 
   !-----------------------------------------------------------------------------
   real(RP), allocatable :: DENS(:,:,:)
@@ -106,7 +106,7 @@ module test_atmos_dyn_fent_fct
   !-----------------------------------------------------------------------------
 contains
 
-  subroutine test_atmos_dyn_fent_fct_run
+  subroutine test_atmos_dyn_run
   !-----------------------------------------------------------------------------
   !
   !++ used modules
@@ -191,6 +191,7 @@ contains
 
   DYN_TYPE = "HEVE"
   call ATMOS_DYN_setup( DYN_TYPE,                           & ! (in)
+                        DENS, MOMZ, MOMX, MOMY, RHOT, QTRC, & ! (in)
                         CDZ, CDX, CDY, FDZ, FDX, FDY,       & ! (in)
                         .false., lat                        ) ! (in)
 
@@ -238,7 +239,7 @@ contains
 
   call test_fctminmax
 
-end subroutine test_atmos_dyn_fent_fct_run
+end subroutine test_atmos_dyn_run
 !=============================================================================
 
 
@@ -689,4 +690,4 @@ subroutine copy
 end subroutine copy
 
 
-end module test_atmos_dyn_fent_fct
+end module test_atmos_dyn

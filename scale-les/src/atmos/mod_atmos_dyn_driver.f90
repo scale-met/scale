@@ -90,6 +90,13 @@ contains
     use mod_atmos_admin, only: &
        ATMOS_DYN_TYPE, &
        ATMOS_sw_dyn
+    use mod_atmos_vars, only: &
+       DENS, &
+       MOMZ, &
+       MOMX, &
+       MOMY, &
+       RHOT, &
+       QTRC
     implicit none
 
     NAMELIST / PARAM_ATMOS_DYN / &
@@ -129,10 +136,10 @@ contains
        DT = real(TIME_DTSEC_ATMOS_DYN,kind=RP)
 
        call ATMOS_DYN_setup( ATMOS_DYN_TYPE,                 & ! [IN]
+                             DENS, MOMZ, MOMX, MOMY, RHOT, QTRC, & ! [IN]
                              GRID_CDZ, GRID_CDX, GRID_CDY,   & ! [IN]
                              GRID_FDZ, GRID_FDX, GRID_FDY,   & ! [IN]
                              ATMOS_DYN_enable_coriolis,      & ! [IN]
-                             ATMOS_DYN_adjust_flux_cell,     & ! [IN]
                              REAL_LAT                        ) ! [IN]
     endif
 
