@@ -96,15 +96,15 @@ contains
     allocate( AXIS_LATXY(IMAXB,JMAXB) )
 
     ! only for register
-    call PROF_rapstart('FILE I NetCDF')
+    call PROF_rapstart('FILE I NetCDF', 2)
     call PROF_rapend  ('FILE I NetCDF')
-    call PROF_rapstart('FILE O NetCDF')
+    call PROF_rapstart('FILE O NetCDF', 2)
     call PROF_rapend  ('FILE O NetCDF')
-    call PROF_rapstart('FILE I ASCII')
+    call PROF_rapstart('FILE I ASCII', 2)
     call PROF_rapend  ('FILE I ASCII')
-    call PROF_rapstart('FILE O ASCII')
+    call PROF_rapstart('FILE O ASCII', 2)
     call PROF_rapend  ('FILE O ASCII')
-    call PROF_rapstart('FILE O Interpolation')
+    call PROF_rapstart('FILE O Interpolation', 2)
     call PROF_rapend  ('FILE O Interpolation')
 
     return
@@ -320,7 +320,7 @@ contains
     real(RP), allocatable :: var1D(:)
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('FILE I NetCDF')
+    call PROF_rapstart('FILE I NetCDF', 2)
 
     if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Read 1D var: ', trim(varname)
 
@@ -379,7 +379,7 @@ contains
     real(RP), allocatable :: var2D(:,:)
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('FILE I NetCDF')
+    call PROF_rapstart('FILE I NetCDF', 2)
 
     if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Read 2D var: ', trim(varname)
 
@@ -441,7 +441,7 @@ contains
     real(RP), allocatable :: var3D(:,:,:)
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('FILE I NetCDF')
+    call PROF_rapstart('FILE I NetCDF', 2)
 
     if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Read 3D var: ', trim(varname)
 
@@ -520,7 +520,7 @@ contains
     real(RP), allocatable :: var4D(:,:,:,:)
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('FILE I NetCDF')
+    call PROF_rapstart('FILE I NetCDF', 2)
 
     if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Read 4D var: ', trim(varname)
 
@@ -603,7 +603,7 @@ contains
     integer :: fid, vid
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('FILE O NetCDF')
+    call PROF_rapstart('FILE O NetCDF', 2)
 
     rankidx(1) = PRC_2Drank(PRC_myrank,1)
     rankidx(2) = PRC_2Drank(PRC_myrank,2)
@@ -729,7 +729,7 @@ contains
     logical :: nohalo_
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('FILE O NetCDF')
+    call PROF_rapstart('FILE O NetCDF', 2)
 
     nohalo_ = .false.
     if ( present(nohalo) ) nohalo_ = nohalo
@@ -915,7 +915,7 @@ contains
     logical :: nohalo_
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('FILE O NetCDF')
+    call PROF_rapstart('FILE O NetCDF', 2)
 
     nohalo_ = .false.
     if ( present(nohalo) ) nohalo_ = nohalo
@@ -1148,7 +1148,7 @@ contains
     logical :: nohalo_
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('FILE O NetCDF')
+    call PROF_rapstart('FILE O NetCDF', 2)
 
     nohalo_ = .false.
     if ( present(nohalo) ) nohalo_ = nohalo

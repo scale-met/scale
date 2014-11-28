@@ -42,8 +42,8 @@ module scale_atmos_phy_mp_common
   !
   !++ Private procedure
   !
-  public :: moist_conversion_liq
-  public :: moist_conversion_all
+  private :: moist_conversion_liq
+  private :: moist_conversion_all
 
   !-----------------------------------------------------------------------------
   !
@@ -70,7 +70,7 @@ contains
     integer :: i, j, iq
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('Debug')
+    call PROF_rapstart('MP filter', 2)
 
     !$omp parallel do private(i,j,diffq) OMP_SCHEDULE_ collapse(2)
     do j = 1, JA
@@ -110,7 +110,7 @@ contains
     enddo
     enddo
 
-    call PROF_rapend  ('Debug')
+    call PROF_rapend('MP filter')
 
     return
   end subroutine ATMOS_PHY_MP_negative_fixer
@@ -161,7 +161,7 @@ contains
     integer :: k, i, j, iq
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('MP_saturation_adjustment')
+    call PROF_rapstart('MP Saturation_adjustment', 2)
 
     rdt = 1.0_RP / dt
 
@@ -306,7 +306,7 @@ contains
     enddo
     enddo
 
-    call PROF_rapend  ('MP_saturation_adjustment')
+    call PROF_rapend  ('MP Saturation_adjustment')
 
     return
   end subroutine ATMOS_PHY_MP_saturation_adjustment
@@ -667,7 +667,7 @@ contains
     integer :: k, i, j, iq
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('MP_precipitation')
+    call PROF_rapstart('MP Precipitation', 2)
 
     do iq = 1, QA
        call COMM_vars8( vterm(:,:,:,iq), iq )
@@ -927,7 +927,7 @@ contains
     endif
 
 
-    call PROF_rapend  ('MP_precipitation')
+    call PROF_rapend  ('MP Precipitation')
 
     return
   end subroutine ATMOS_PHY_MP_precipitation

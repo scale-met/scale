@@ -21,6 +21,7 @@ module scale_prof
   !
   !++ Public procedure
   !
+  public :: PROF_setup
   public :: PROF_rapstart
   public :: PROF_rapend
   public :: PROF_rapreport
@@ -39,7 +40,7 @@ module scale_prof
   !
   !++ Private procedure
   !
-  private :: PROF_rapid
+  private :: get_rapid
 
   !-----------------------------------------------------------------------------
   !
@@ -48,10 +49,16 @@ module scale_prof
   integer,                private, parameter :: PROF_rapnlimit = 100
   integer,                private,      save :: PROF_rapnmax   = 0
   character(len=H_SHORT), private,      save :: PROF_rapname(PROF_rapnlimit)
+  integer,                private,      save :: PROF_grpnmax   = 0
+  character(len=H_SHORT), private,      save :: PROF_grpname(PROF_rapnlimit)
+  integer,                private,      save :: PROF_grpid  (PROF_rapnlimit)
   real(DP),               private,      save :: PROF_raptstr(PROF_rapnlimit)
   real(DP),               private,      save :: PROF_rapttot(PROF_rapnlimit)
   integer,                private,      save :: PROF_rapnstr(PROF_rapnlimit)
   integer,                private,      save :: PROF_rapnend(PROF_rapnlimit)
+  integer,                private,      save :: PROF_raplevel(PROF_rapnlimit)
+
+  integer,                private,      save :: PROF_rap_level = 2
 
 #ifdef _PAPI_
   integer(DP),private :: PROF_PAPI_flops     = 0   !> total floating point operations since the first call
@@ -65,45 +72,56 @@ module scale_prof
 contains
 
   !-----------------------------------------------------------------------------
-  !> Get item ID or register item
-  function PROF_rapid( rapname ) result(id)
+  subroutine PROF_setup
+    use scale_process, only: &
+       PRC_MPIstop
     implicit none
 
-    character(len=*), intent(in) :: rapname !< name of item
+    namelist / PARAM_PROF / &
+         PROF_rap_level
 
-    integer :: id
-    character (len=H_SHORT) :: trapname
-    !---------------------------------------------------------------------------
+    integer :: ierr
 
-    trapname = trim(rapname)
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[PROF] / Origin[SCALElib]'
 
-    do id = 1, PROF_rapnmax
-       if( trapname == PROF_rapname(id) ) return
-    enddo
+    !--- read namelist
+    rewind(IO_FID_CONF)
+    read(IO_FID_CONF,nml=PARAM_PROF,iostat=ierr)
+    if( ierr < 0 ) then !--- missing
+       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+    elseif( ierr > 0 ) then !--- fatal error
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_PROF. Check!'
+       call PRC_MPIstop
+    endif
+    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_PROF)
 
-    PROF_rapnmax     = PROF_rapnmax + 1
-    id               = PROF_rapnmax
-    PROF_rapname(id) = trapname
-
-    PROF_rapnstr(id) = 0
-    PROF_rapnend(id) = 0
-    PROF_rapttot(id) = 0.0_DP
-
-  end function PROF_rapid
+    return
+  end subroutine PROF_setup
 
   !-----------------------------------------------------------------------------
   !> Start raptime
-  subroutine PROF_rapstart( rapname )
+  subroutine PROF_rapstart( rapname, level )
     use scale_process, only: &
        PRC_MPItime
     implicit none
 
     character(len=*), intent(in) :: rapname !< name of item
+    integer, intent(in), optional :: level  !< level of item (default is 2)
 
+    integer :: level_
     integer :: id
     !---------------------------------------------------------------------------
 
-    id = PROF_rapid( rapname )
+    if ( present(level) ) then
+       level_ = level
+    else
+       level_ = 2
+    end if
+
+    id = get_rapid( rapname, level_ )
+
+    if ( level_ > PROF_rap_level ) return
 
     PROF_raptstr(id) = PRC_MPItime()
     PROF_rapnstr(id) = PROF_rapnstr(id) + 1
@@ -111,7 +129,10 @@ contains
     !if( IO_L ) write(IO_FID_LOG,*) rapname, PROF_rapnstr(id)
 
 #ifdef _FAPP_
-call START_COLLECTION( rapname )
+    call FAPP_START( trim(PROF_grpname(get_grpid(rapname))), id, level_ )
+#endif
+#ifdef _FINEPA_
+    call START_COLLECTION( rapname )
 #endif
 
     return
@@ -126,16 +147,21 @@ call START_COLLECTION( rapname )
 
     character(len=*), intent(in) :: rapname !< name of item
 
-    integer :: id
+    integer :: id, level
     !---------------------------------------------------------------------------
 
-    id = PROF_rapid( rapname )
+    id = get_rapid( rapname, level )
+
+    if ( level > PROF_rap_level ) return
 
     PROF_rapttot(id) = PROF_rapttot(id) + ( PRC_MPItime()-PROF_raptstr(id) )
     PROF_rapnend(id) = PROF_rapnend(id) + 1
 
+#ifdef _FINEPA_
+    call STOP_COLLECTION( rapname )
+#endif
 #ifdef _FAPP_
-call STOP_COLLECTION( rapname )
+    call FAPP_STOP( trim(PROF_grpname(PROF_grpid(id))), id, level )
 #endif
 
     return
@@ -156,7 +182,8 @@ call STOP_COLLECTION( rapname )
     integer  :: maxidx(PROF_rapnlimit)
     integer  :: minidx(PROF_rapnlimit)
 
-    integer :: id
+    integer :: id, gid
+    integer :: fid
     !---------------------------------------------------------------------------
 
     do id = 1, PROF_rapnmax
@@ -167,12 +194,19 @@ call STOP_COLLECTION( rapname )
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** Computational Time Report'
+    if( IO_L ) write(IO_FID_LOG,*) '*** Rap level is ', PROF_rap_level
 
     if ( IO_LOG_ALLNODE ) then ! report for each node
 
-       do id = 1, PROF_rapnmax
-          if( IO_L ) write(IO_FID_LOG,'(1x,A,I3.3,A,A,A,F10.3,A,I7)') &
+       do gid = 1, PROF_rapnmax
+          do id = 1, PROF_rapnmax
+             if ( PROF_raplevel(id) .le. PROF_rap_level .and. &
+                  PROF_grpid(id) == gid .and. &
+                  IO_L ) then
+                write(IO_FID_LOG,'(1x,A,I3.3,A,A,A,F10.3,A,I7)') &
                      '*** ID=',id,' : ',PROF_rapname(id),' T=',PROF_rapttot(id),' N=',PROF_rapnstr(id)
+             end if
+          enddo
        enddo
 
     else
@@ -184,28 +218,31 @@ call STOP_COLLECTION( rapname )
                              minidx      (1:PROF_rapnmax), &
                              PROF_rapttot(1:PROF_rapnmax)  )
 
-       do id = 1, PROF_rapnmax
-          if( IO_L ) write(IO_FID_LOG,'(1x,A,I3.3,A,A,A,F10.3,A,F10.3,A,I5,A,A,F10.3,A,I5,A,A,I7)') &
+       fid = -1
+       if ( IO_LOG_SUPPRESS ) then ! report to STDOUT
+          if ( PRC_myrank == PRC_master ) then
+             write(*,*) '*** Computational Time Report'
+             fid = 6 ! master node
+          end if
+       else
+          if ( IO_L ) fid = IO_FID_LOG
+       end if
+
+       do gid = 1, PROF_rapnmax
+          do id = 1, PROF_rapnmax
+             if ( PROF_raplevel(id) .le. PROF_rap_level .and. &
+                  PROF_grpid(id) == gid .and. &
+                  fid > 0 ) then
+                write(IO_FID_LOG,'(1x,A,I3.3,A,A,A,F10.3,A,F10.3,A,I5,A,A,F10.3,A,I5,A,A,I7)') &
                      '*** ID=',id,' : ',PROF_rapname(id), &
                      ' T(avg)=',avgvar(id), &
                      ', T(max)=',maxvar(id),'[',maxidx(id),']', &
                      ', T(min)=',minvar(id),'[',minidx(id),']', &
                      ' N=',PROF_rapnstr(id)
+             end if
+          enddo
        enddo
 
-       if ( IO_LOG_SUPPRESS ) then ! report to STDOUT
-          if ( PRC_myrank == PRC_master ) then ! master node
-             write(*,*) '*** Computational Time Report'
-             do id = 1, PROF_rapnmax
-                write(*,'(1x,A,I3.3,A,A,A,F10.3,A,F10.3,A,I5,A,A,F10.3,A,I5,A,A,I7)') &
-                     '*** ID=',id,' : ',PROF_rapname(id), &
-                     ' T(avg)=',avgvar(id), &
-                     ', T(max)=',maxvar(id),'[',maxidx(id),']', &
-                     ', T(min)=',minvar(id),'[',minidx(id),']', &
-                     ' N=',PROF_rapnstr(id)
-             enddo
-          endif
-       endif
     endif
 
     return
@@ -325,6 +362,72 @@ call STOP_COLLECTION( rapname )
     return
   end subroutine PROF_PAPI_rapreport
 #endif
+
+  !-----------------------------------------------------------------------------
+  !> Get item ID or register item
+  function get_rapid( rapname, level ) result(id)
+    implicit none
+
+    character(len=*), intent(in)    :: rapname !< name of item
+    integer,          intent(inout) :: level   !< level of item
+
+    integer :: id
+    character (len=H_SHORT) :: trapname
+    !---------------------------------------------------------------------------
+
+    trapname = trim(rapname)
+
+    do id = 1, PROF_rapnmax
+       if( trapname == PROF_rapname(id) )  then
+          level = PROF_raplevel(id)
+          return
+       end if
+    enddo
+
+    PROF_rapnmax     = PROF_rapnmax + 1
+    id               = PROF_rapnmax
+    PROF_rapname(id) = trapname
+    
+    PROF_grpid(id) = get_grpid(trapname)
+
+    PROF_rapnstr(id) = 0
+    PROF_rapnend(id) = 0
+    PROF_rapttot(id) = 0.0_DP
+
+    PROF_raplevel(id) = level
+
+    return
+  end function get_rapid
+
+  !-----------------------------------------------------------------------------
+  !> Get group ID
+  function get_grpid( rapname ) result(gid)
+    implicit none
+
+    character(len=*), intent(in)    :: rapname !< name of item
+
+    integer :: gid
+    integer :: idx
+    character(len=H_SHORT) :: grpname
+    !---------------------------------------------------------------------------
+
+    idx = index(rapname," ")
+    if ( idx > 1 ) then
+       grpname = rapname(1:idx-1)
+    else
+       grpname = rapname
+    end if
+
+    do gid = 1, PROF_grpnmax
+       if( grpname == PROF_grpname(gid) ) return
+    enddo
+
+    PROF_grpnmax      = PROF_grpnmax + 1
+    gid               = PROF_grpnmax
+    PROF_grpname(gid) = grpname
+
+    return
+  end function get_grpid
 
 end module scale_prof
 !-------------------------------------------------------------------------------

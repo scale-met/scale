@@ -329,8 +329,6 @@ contains
     integer :: k, i, j
     !---------------------------------------------------------------------------
 
-
-
     ! numerical diffusion
     DIFF4 = ND_COEF / ( 2**(4*ND_ORDER) * DT )
 
@@ -340,6 +338,8 @@ contains
     !###########################################################################
 
     if ( .not. ND_USE_RS ) then
+
+       call PROF_rapstart("NumFilter Main", 3)
 
        do JJS = JS, JE, JBLOCK
        JJE = JJS+JBLOCK-1
@@ -402,13 +402,21 @@ contains
        end do
        end do
 
+       call PROF_rapend  ("NumFilter Main")
+
+       call PROF_rapstart("NumFilter Comm", 3)
+
        call COMM_vars8( dens_diff,  1 )
        call COMM_vars8( pott_diff,  2 )
 
        call COMM_wait ( dens_diff,  1 )
        call COMM_wait ( pott_diff,  2 )
 
+       call PROF_rapend  ("NumFilter Comm")
+
     end if
+
+    call PROF_rapstart("NumFilter Main", 3)
 
     do JJS = JS, JE, JBLOCK
     JJE = JJS+JBLOCK-1
@@ -504,6 +512,8 @@ contains
     enddo
     enddo ! end tile
 
+    call PROF_rapend  ("NumFilter Main")
+
     !###########################################################################
     ! High order coefficients
     !###########################################################################
@@ -512,6 +522,8 @@ contains
     num_diff_pt1 => num_diff_work
 
     do no = 2, nd_order
+
+       call PROF_rapstart("NumFilter Comm", 3)
 
        call COMM_vars8( num_diff_pt0(:,:,:,I_DENS,ZDIR),  1 )
        call COMM_vars8( num_diff_pt0(:,:,:,I_DENS,XDIR),  2 )
@@ -533,6 +545,10 @@ contains
        call COMM_wait ( num_diff_pt0(:,:,:,I_DENS,XDIR),  2 )
        call COMM_wait ( num_diff_pt0(:,:,:,I_DENS,YDIR),  3 )
 
+       call PROF_rapend  ("NumFilter Comm")
+
+       call PROF_rapstart("NumFilter Main", 3)
+
        call calc_diff4( num_diff_pt1(:,:,:,:,:), & ! (out)
                         num_diff_pt0(:,:,:,:,:), & ! (in)
                         CNZ4(:,:,1),             & ! (in)
@@ -541,9 +557,17 @@ contains
                         I_DENS,                  & ! (in)
                         KE                       ) ! (in)
 
+       call PROF_rapend  ("NumFilter Main")
+
+       call PROF_rapstart("NumFilter Comm", 3)
+
        call COMM_wait ( num_diff_pt0(:,:,:,I_MOMZ,ZDIR),  4 )
        call COMM_wait ( num_diff_pt0(:,:,:,I_MOMZ,XDIR),  5 )
        call COMM_wait ( num_diff_pt0(:,:,:,I_MOMZ,YDIR),  6 )
+
+       call PROF_rapend  ("NumFilter Comm")
+
+       call PROF_rapstart("NumFilter Main", 3)
 
        call calc_diff4( num_diff_pt1(:,:,:,:,:), & ! (out)
                         num_diff_pt0(:,:,:,:,:), & ! (in)
@@ -553,9 +577,17 @@ contains
                         I_MOMZ,                  & ! (in)
                         KE-1                     ) ! (in)
 
+       call PROF_rapend  ("NumFilter Main")
+
+       call PROF_rapstart("NumFilter Comm", 3)
+
        call COMM_wait ( num_diff_pt0(:,:,:,I_MOMX,ZDIR),  7 )
        call COMM_wait ( num_diff_pt0(:,:,:,I_MOMX,XDIR),  8 )
        call COMM_wait ( num_diff_pt0(:,:,:,I_MOMX,YDIR),  9 )
+
+       call PROF_rapend  ("NumFilter Comm")
+
+       call PROF_rapstart("NumFilter Main", 3)
 
        call calc_diff4( num_diff_pt1(:,:,:,:,:), & ! (out)
                         num_diff_pt0(:,:,:,:,:), & ! (in)
@@ -565,9 +597,17 @@ contains
                         I_MOMX,                  & ! (in)
                         KE                       ) ! (in)
 
+       call PROF_rapend  ("NumFilter Main")
+
+       call PROF_rapstart("NumFilter Comm", 3)
+
        call COMM_wait ( num_diff_pt0(:,:,:,I_MOMY,ZDIR), 10 )
        call COMM_wait ( num_diff_pt0(:,:,:,I_MOMY,XDIR), 11 )
        call COMM_wait ( num_diff_pt0(:,:,:,I_MOMY,YDIR), 12 )
+
+       call PROF_rapend  ("NumFilter Comm")
+
+       call PROF_rapstart("NumFilter Main", 3)
 
        call calc_diff4( num_diff_pt1(:,:,:,:,:), & ! (out)
                         num_diff_pt0(:,:,:,:,:), & ! (in)
@@ -577,9 +617,17 @@ contains
                         I_MOMY,                  & ! (in)
                         KE                       ) ! (in)
 
+       call PROF_rapend  ("NumFilter Main")
+
+       call PROF_rapstart("NumFilter Comm", 3)
+
        call COMM_wait ( num_diff_pt0(:,:,:,I_RHOT,ZDIR), 13 )
        call COMM_wait ( num_diff_pt0(:,:,:,I_RHOT,XDIR), 14 )
        call COMM_wait ( num_diff_pt0(:,:,:,I_RHOT,YDIR), 15 )
+
+       call PROF_rapend  ("NumFilter Comm")
+
+       call PROF_rapstart("NumFilter Main", 3)
 
        call calc_diff4( num_diff_pt1(:,:,:,:,:), & ! (out)
                         num_diff_pt0(:,:,:,:,:), & ! (in)
@@ -589,6 +637,8 @@ contains
                         I_RHOT,                  & ! (in)
                         KE                       ) ! (in)
 
+       call PROF_rapend  ("NumFilter Main")
+
        ! swap pointer target
        tmp_pt       => num_diff_pt1
        num_diff_pt1 => num_diff_pt0
@@ -596,6 +646,8 @@ contains
     enddo
 
     nd_order4 = nd_order * 4
+
+    call PROF_rapstart("NumFilter Main", 3)
 
     do JJS = JS, JE, JBLOCK
     JJE = JJS+JBLOCK-1
@@ -607,172 +659,346 @@ contains
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE
        do i = IIS, IIE
-          do k = KS-1, KE
-             num_diff(k,i,j,I_DENS,ZDIR) = num_diff_pt0(k,i,j,I_DENS,ZDIR) * DIFF4 * CDZ(k)**nd_order4
-          enddo
+       do k = KS-1, KE
+          num_diff(k,i,j,I_DENS,ZDIR) = num_diff_pt0(k,i,j,I_DENS,ZDIR) * DIFF4 * CDZ(k)**nd_order4
+       enddo
+       enddo
+       enddo
+       do j = JJS, JJE
+       do i = IIS, IIE
           num_diff(   1:KS-2,i,j,I_DENS,ZDIR) = 0.0_RP
           num_diff(KE+1:KA  ,i,j,I_DENS,ZDIR) = 0.0_RP
+       enddo
+       enddo
 
-          do k = KS+2, KE
-             num_diff(k,i,j,I_DENS,XDIR) = num_diff_pt0(k,i,j,I_DENS,XDIR) * DIFF4 * CDX(i)**nd_order4
-          enddo
+       do j = JJS, JJE
+       do i = IIS, IIE
+       do k = KS+2, KE
+          num_diff(k,i,j,I_DENS,XDIR) = num_diff_pt0(k,i,j,I_DENS,XDIR) * DIFF4 * CDX(i)**nd_order4
+       enddo
+       enddo
+       enddo
+       do j = JJS, JJE
+       do i = IIS, IIE
+          num_diff(   1:KS-1,i,j,I_DENS,XDIR) = 0.0_RP
           num_diff(KS  ,i,j,I_DENS,XDIR) = num_DIFF(KS  ,i,j,I_DENS,XDIR) * ND_SFC_FACT
           num_diff(KS+1,i,j,I_DENS,XDIR) = num_DIFF(KS+1,i,j,I_DENS,XDIR) * (1.0_RP + ND_SFC_FACT) * 0.5_RP
-
-          num_diff(   1:KS-1,i,j,I_DENS,XDIR) = 0.0_RP
           num_diff(KE+1:KA  ,i,j,I_DENS,XDIR) = 0.0_RP
+       enddo
+       enddo
 
-          do k = KS+2, KE
-             num_diff(k,i,j,I_DENS,YDIR) = num_diff_pt0(k,i,j,I_DENS,YDIR) * DIFF4 * CDY(j)**nd_order4
-          enddo
+       do j = JJS, JJE
+       do i = IIS, IIE
+       do k = KS+2, KE
+          num_diff(k,i,j,I_DENS,YDIR) = num_diff_pt0(k,i,j,I_DENS,YDIR) * DIFF4 * CDY(j)**nd_order4
+       enddo
+       enddo
+       enddo
+       do j = JJS, JJE
+       do i = IIS, IIE
+          num_diff(   1:KS-1,i,j,I_DENS,YDIR) = 0.0_RP
           num_diff(KS  ,i,j,I_DENS,YDIR) = num_DIFF(KS  ,i,j,I_DENS,YDIR) * ND_SFC_FACT
           num_diff(KS+1,i,j,I_DENS,YDIR) = num_DIFF(KS+1,i,j,I_DENS,YDIR) * (1.0_RP + ND_SFC_FACT) * 0.5_RP
-
-          num_diff(   1:KS-1,i,j,I_DENS,YDIR) = 0.0_RP
           num_diff(KE+1:KA  ,i,j,I_DENS,YDIR) = 0.0_RP
        enddo
        enddo
+
+    enddo
+    enddo
+
+    call PROF_rapend  ("NumFilter Main")
+
+    call PROF_rapstart("NumFilter Comm", 3)
+
+    call COMM_vars8( num_diff(:,:,:,I_DENS,ZDIR),  1 )
+    call COMM_vars8( num_diff(:,:,:,I_DENS,XDIR),  2 )
+    call COMM_vars8( num_diff(:,:,:,I_DENS,YDIR),  3 )
+
+    call PROF_rapend  ("NumFilter Comm")
+
+
+    !-----< z-momentum >-----
+
+    call PROF_rapstart("NumFilter Main", 3)
+
+    do JJS = JS, JE, JBLOCK
+    JJE = JJS+JBLOCK-1
+    do IIS = IS, IE, IBLOCK
+    IIE = IIS+IBLOCK-1
 
        !-----< z-momentum >-----
 
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE
        do i = IIS, IIE
-          do k = KS+1, KE-1
-             num_diff(k,i,j,I_MOMZ,ZDIR) = num_diff_pt0(k,i,j,I_MOMZ,ZDIR) * DIFF4 * FDZ(k)**nd_order4 &
-                                         * DENS(k,i,j)
-          enddo
-
+       do k = KS+1, KE-1
+          num_diff(k,i,j,I_MOMZ,ZDIR) = num_diff_pt0(k,i,j,I_MOMZ,ZDIR) * DIFF4 * FDZ(k)**nd_order4 &
+                                      * DENS(k,i,j)
+       enddo
+       enddo
+       enddo
+       do j = JJS, JJE
+       do i = IIS, IIE
           num_diff( 1:KS,i,j,I_MOMZ,ZDIR) = 0.0_RP
           num_diff(KE:KA,i,j,I_MOMZ,ZDIR) = 0.0_RP
+       enddo
+       enddo
 
-          do k = KS, KE-1
-             num_diff(k,i,j,I_MOMZ,XDIR) = num_diff_pt0(k,i,j,I_MOMZ,XDIR) * DIFF4 * CDX(i)**nd_order4 &
-                                         * 0.25_RP * ( DENS(k+1,i+1,j)+DENS(k+1,i,j)+DENS(k,i+1,j)+DENS(k,i,j) )
-          enddo
+       do j = JJS, JJE
+       do i = IIS, IIE
+       do k = KS, KE-1
+          num_diff(k,i,j,I_MOMZ,XDIR) = num_diff_pt0(k,i,j,I_MOMZ,XDIR) * DIFF4 * CDX(i)**nd_order4 &
+                                      * 0.25_RP * ( DENS(k+1,i+1,j)+DENS(k+1,i,j)+DENS(k,i+1,j)+DENS(k,i,j) )
+       enddo
+       enddo
+       enddo
+       do j = JJS, JJE
+       do i = IIS, IIE
+          num_diff( 1:KS-1,i,j,I_MOMZ,XDIR) = 0.0_RP
           num_diff(KS  ,i,j,I_MOMZ,XDIR) = num_DIFF(KS  ,i,j,I_MOMZ,XDIR) * ND_SFC_FACT
           num_diff(KS+1,i,j,I_MOMZ,XDIR) = num_DIFF(KS+1,i,j,I_MOMZ,XDIR) * (1.0_RP + ND_SFC_FACT) * 0.5_RP
-
-          num_diff( 1:KS-1,i,j,I_MOMZ,XDIR) = 0.0_RP
           num_diff(KE:KA  ,i,j,I_MOMZ,XDIR) = 0.0_RP
+       enddo
+       enddo
 
-          do k = KS, KE-1
-             num_diff(k,i,j,I_MOMZ,YDIR) = num_diff_pt0(k,i,j,I_MOMZ,YDIR) * DIFF4 * CDY(j)**nd_order4 &
-                                         * 0.25_RP * ( DENS(k+1,i,j+1)+DENS(k+1,i,j)+DENS(k,i,j+1)+DENS(k,i,j) )
-          enddo
+       do j = JJS, JJE
+       do i = IIS, IIE
+       do k = KS, KE-1
+          num_diff(k,i,j,I_MOMZ,YDIR) = num_diff_pt0(k,i,j,I_MOMZ,YDIR) * DIFF4 * CDY(j)**nd_order4 &
+                                      * 0.25_RP * ( DENS(k+1,i,j+1)+DENS(k+1,i,j)+DENS(k,i,j+1)+DENS(k,i,j) )
+       enddo
+       enddo
+       enddo
+       do j = JJS, JJE
+       do i = IIS, IIE
+          num_diff( 1:KS-1,i,j,I_MOMZ,YDIR) = 0.0_RP
           num_diff(KS  ,i,j,I_MOMZ,YDIR) = num_DIFF(KS  ,i,j,I_MOMZ,YDIR) * ND_SFC_FACT
           num_diff(KS+1,i,j,I_MOMZ,YDIR) = num_DIFF(KS+1,i,j,I_MOMZ,YDIR) * (1.0_RP + ND_SFC_FACT) * 0.5_RP
 
-          num_diff( 1:KS-1,i,j,I_MOMZ,YDIR) = 0.0_RP
           num_diff(KE:KA  ,i,j,I_MOMZ,YDIR) = 0.0_RP
        enddo
        enddo
 
-       !-----< x-momentum >-----
+    enddo
+    enddo
+
+    call PROF_rapend  ("NumFilter Main")
+
+    call PROF_rapstart("NumFilter Comm", 3)
+
+    call COMM_vars8( num_diff(:,:,:,I_MOMZ,ZDIR),  4 )
+    call COMM_vars8( num_diff(:,:,:,I_MOMZ,XDIR),  5 )
+    call COMM_vars8( num_diff(:,:,:,I_MOMZ,YDIR),  6 )
+
+    call PROF_rapend  ("NumFilter Comm")
+
+
+    !-----< x-momentum >-----
+
+    call PROF_rapstart("NumFilter Main", 3)
+
+    do JJS = JS, JE, JBLOCK
+    JJE = JJS+JBLOCK-1
+    do IIS = IS, IE, IBLOCK
+    IIE = IIS+IBLOCK-1
 
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE
        do i = IIS, IIE
-          do k = KS,    KE-1
-             num_diff(k,i,j,I_MOMX,ZDIR) = num_diff_pt0(k,i,j,I_MOMX,ZDIR) * DIFF4 * CDZ(k)**nd_order4 &
-                                         * 0.25_RP * ( DENS(k+1,i+1,j)+DENS(k+1,i,j)+DENS(k,i+1,j)+DENS(k,i,j) )
-          enddo
-
+       do k = KS,    KE-1
+          num_diff(k,i,j,I_MOMX,ZDIR) = num_diff_pt0(k,i,j,I_MOMX,ZDIR) * DIFF4 * CDZ(k)**nd_order4 &
+                                      * 0.25_RP * ( DENS(k+1,i+1,j)+DENS(k+1,i,j)+DENS(k,i+1,j)+DENS(k,i,j) )
+       enddo
+       enddo
+       enddo
+       do j = JJS, JJE
+       do i = IIS, IIE
           num_diff( 1:KS-1,i,j,I_MOMX,ZDIR) = 0.0_RP
           num_diff(KE:KA  ,i,j,I_MOMX,ZDIR) = 0.0_RP
+       enddo
+       enddo
 
-          do k = KS, KE
-             num_diff(k,i,j,I_MOMX,XDIR) = num_diff_pt0(k,i,j,I_MOMX,XDIR) * DIFF4 * FDX(i)**nd_order4 &
-                                         * DENS(k,i,j)
-          enddo
+       do j = JJS, JJE
+       do i = IIS, IIE
+       do k = KS, KE
+          num_diff(k,i,j,I_MOMX,XDIR) = num_diff_pt0(k,i,j,I_MOMX,XDIR) * DIFF4 * FDX(i)**nd_order4 &
+                                      * DENS(k,i,j)
+       enddo
+       enddo
+       enddo
+       do j = JJS, JJE
+       do i = IIS, IIE
+          num_diff(   1:KS-1,i,j,I_MOMX,XDIR) = 0.0_RP
           num_diff(KS  ,i,j,I_MOMX,XDIR) = num_DIFF(KS  ,i,j,I_MOMX,XDIR) * ND_SFC_FACT
           num_diff(KS+1,i,j,I_MOMX,XDIR) = num_DIFF(KS+1,i,j,I_MOMX,XDIR) * (1.0_RP + ND_SFC_FACT) * 0.5_RP
 
-          num_diff(   1:KS-1,i,j,I_MOMX,XDIR) = 0.0_RP
           num_diff(KE+1:KA  ,i,j,I_MOMX,XDIR) = 0.0_RP
+       enddo
+       enddo
 
-          do k = KS, KE
-             num_diff(k,i,j,I_MOMX,YDIR) = num_diff_pt0(k,i,j,I_MOMX,YDIR) * DIFF4 * CDY(j)**nd_order4 &
-                                         * 0.25_RP * ( DENS(k,i+1,j+1)+DENS(k,i+1,j)+DENS(k,i,j+1)+DENS(k,i,j) )
-          enddo
+       do j = JJS, JJE
+       do i = IIS, IIE
+       do k = KS, KE
+          num_diff(k,i,j,I_MOMX,YDIR) = num_diff_pt0(k,i,j,I_MOMX,YDIR) * DIFF4 * CDY(j)**nd_order4 &
+                                      * 0.25_RP * ( DENS(k,i+1,j+1)+DENS(k,i+1,j)+DENS(k,i,j+1)+DENS(k,i,j) )
+       enddo
+       enddo
+       enddo
+       do j = JJS, JJE
+       do i = IIS, IIE
+          num_diff(   1:KS-1,i,j,I_MOMX,YDIR) = 0.0_RP
           num_diff(KS  ,i,j,I_MOMX,YDIR) = num_DIFF(KS  ,i,j,I_MOMX,YDIR) * ND_SFC_FACT
           num_diff(KS+1,i,j,I_MOMX,YDIR) = num_DIFF(KS+1,i,j,I_MOMX,YDIR) * (1.0_RP + ND_SFC_FACT) * 0.5_RP
-
-          num_diff(   1:KS-1,i,j,I_MOMX,YDIR) = 0.0_RP
           num_diff(KE+1:KA  ,i,j,I_MOMX,YDIR) = 0.0_RP
        enddo
        enddo
 
-       !-----< y-momentum >-----
+    enddo
+    enddo
+
+    call PROF_rapend  ("NumFilter Main")
+
+    call PROF_rapstart("NumFilter Comm", 3)
+
+    call COMM_vars8( num_diff(:,:,:,I_MOMX,ZDIR),  7 )
+    call COMM_vars8( num_diff(:,:,:,I_MOMX,XDIR),  8 )
+    call COMM_vars8( num_diff(:,:,:,I_MOMX,YDIR),  9 )
+
+    call PROF_rapend  ("NumFilter Comm")
+
+
+    !-----< y-momentum >-----
+
+    call PROF_rapstart("NumFilter Main", 3)
+
+    do JJS = JS, JE, JBLOCK
+    JJE = JJS+JBLOCK-1
+    do IIS = IS, IE, IBLOCK
+    IIE = IIS+IBLOCK-1
 
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE
        do i = IIS, IIE
-          do k = KS,  KE-1
-             num_diff(k,i,j,I_MOMY,ZDIR) = num_diff_pt0(k,i,j,I_MOMY,ZDIR) * DIFF4 * CDZ(k)**nd_order4 &
-                                         * 0.25_RP * ( DENS(k+1,i,j+1)+DENS(k+1,i,j)+DENS(k,i,j+1)+DENS(k,i,j) )
-          enddo
-
+       do k = KS,  KE-1
+          num_diff(k,i,j,I_MOMY,ZDIR) = num_diff_pt0(k,i,j,I_MOMY,ZDIR) * DIFF4 * CDZ(k)**nd_order4 &
+                                      * 0.25_RP * ( DENS(k+1,i,j+1)+DENS(k+1,i,j)+DENS(k,i,j+1)+DENS(k,i,j) )
+       enddo
+       enddo
+       enddo
+       do j = JJS, JJE
+       do i = IIS, IIE
           num_diff( 1:KS-1,i,j,I_MOMY,ZDIR) = 0.0_RP
           num_diff(KE:KA  ,i,j,I_MOMY,ZDIR) = 0.0_RP
+       end do
+       end do
 
-          do k = KS, KE
-             num_diff(k,i,j,I_MOMY,XDIR) = num_diff_pt0(k,i,j,I_MOMY,XDIR) * DIFF4 * CDX(i)**nd_order4 &
-                                         * 0.25_RP * ( DENS(k,i+1,j+1)+DENS(k,i,j+1)+DENS(k,i+1,j)+DENS(k,i,j) )
-          enddo
+       do j = JJS, JJE
+       do i = IIS, IIE
+       do k = KS, KE
+          num_diff(k,i,j,I_MOMY,XDIR) = num_diff_pt0(k,i,j,I_MOMY,XDIR) * DIFF4 * CDX(i)**nd_order4 &
+                                      * 0.25_RP * ( DENS(k,i+1,j+1)+DENS(k,i,j+1)+DENS(k,i+1,j)+DENS(k,i,j) )
+       enddo
+       enddo
+       enddo
+       do j = JJS, JJE
+       do i = IIS, IIE
+          num_diff(   1:KS-1,i,j,I_MOMY,XDIR) = 0.0_RP
           num_diff(KS  ,i,j,I_MOMY,XDIR) = num_DIFF(KS  ,i,j,I_MOMY,XDIR) * ND_SFC_FACT
           num_diff(KS+1,i,j,I_MOMY,XDIR) = num_DIFF(KS+1,i,j,I_MOMY,XDIR) * (1.0_RP + ND_SFC_FACT) * 0.5_RP
-
-          num_diff(   1:KS-1,i,j,I_MOMY,XDIR) = 0.0_RP
           num_diff(KE+1:KA  ,i,j,I_MOMY,XDIR) = 0.0_RP
+       enddo
+       enddo
 
-          do k = KS, KE
-             num_diff(k,i,j,I_MOMY,YDIR) = num_diff_pt0(k,i,j,I_MOMY,YDIR) * DIFF4 * FDY(j)**nd_order4 &
-                                         * DENS(k,i,j)
-          enddo
+       do j = JJS, JJE
+       do i = IIS, IIE
+       do k = KS, KE
+          num_diff(k,i,j,I_MOMY,YDIR) = num_diff_pt0(k,i,j,I_MOMY,YDIR) * DIFF4 * FDY(j)**nd_order4 &
+                                      * DENS(k,i,j)
+       enddo
+       enddo
+       enddo
+       do j = JJS, JJE
+       do i = IIS, IIE
+          num_diff(   1:KS-1,i,j,I_MOMY,YDIR) = 0.0_RP
           num_diff(KS  ,i,j,I_MOMY,YDIR) = num_DIFF(KS  ,i,j,I_MOMY,YDIR) * ND_SFC_FACT
           num_diff(KS+1,i,j,I_MOMY,YDIR) = num_DIFF(KS+1,i,j,I_MOMY,YDIR) * (1.0_RP + ND_SFC_FACT) * 0.5_RP
-
-          num_diff(   1:KS-1,i,j,I_MOMY,YDIR) = 0.0_RP
           num_diff(KE+1:KA  ,i,j,I_MOMY,YDIR) = 0.0_RP
        enddo
        enddo
 
-       !-----< rho * theta >-----
+    enddo
+    enddo
+
+    call PROF_rapend  ("NumFilter Main")
+
+    call PROF_rapstart("NumFilter Comm", 3)
+
+    call COMM_vars8( num_diff(:,:,:,I_MOMY,ZDIR), 10 )
+    call COMM_vars8( num_diff(:,:,:,I_MOMY,XDIR), 11 )
+    call COMM_vars8( num_diff(:,:,:,I_MOMY,YDIR), 12 )
+
+    call PROF_rapend  ("NumFilter Comm")
+
+
+    !-----< rho * theta >-----
+
+    call PROF_rapstart("NumFilter Main", 3)
+
+    do JJS = JS, JE, JBLOCK
+    JJE = JJS+JBLOCK-1
+    do IIS = IS, IE, IBLOCK
+    IIE = IIS+IBLOCK-1
 
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE
        do i = IIS, IIE
-          do k = KS  , KE-1
-             num_diff(k,i,j,I_RHOT,ZDIR) = num_diff_pt0(k,i,j,I_RHOT,ZDIR) * DIFF4 * CDZ(k)**nd_order4 &
-                                         * 0.5_RP * ( DENS(k+1,i,j)+DENS(k,i,j) )
-          enddo
+       do k = KS  , KE-1
+          num_diff(k,i,j,I_RHOT,ZDIR) = num_diff_pt0(k,i,j,I_RHOT,ZDIR) * DIFF4 * CDZ(k)**nd_order4 &
+                                      * 0.5_RP * ( DENS(k+1,i,j)+DENS(k,i,j) )
+       enddo
+       enddo
+       enddo
+       do j = JJS, JJE
+       do i = IIS, IIE
+          num_diff(   1:KS-2,i,j,I_RHOT,ZDIR) = 0.0_RP
           num_diff(KS-1,i,j,I_RHOT,ZDIR) = num_diff_pt0(KS-1,i,j,I_RHOT,ZDIR) * DIFF4 * CDZ(KS-1)**nd_order4 &
                                          * DENS(KS,i,j)
           num_diff(KE  ,i,j,I_RHOT,ZDIR) = num_diff_pt0(KE  ,i,j,I_RHOT,ZDIR) * DIFF4 * CDZ(KE  )**nd_order4 &
                                          * DENS(KE,i,j)
-
-          num_diff(   1:KS-2,i,j,I_RHOT,ZDIR) = 0.0_RP
           num_diff(KE+1:KA  ,i,j,I_RHOT,ZDIR) = 0.0_RP
+       enddo
+       enddo
 
-          do k = KS, KE
-             num_diff(k,i,j,I_RHOT,XDIR) = num_diff_pt0(k,i,j,I_RHOT,XDIR) * DIFF4 * CDX(i)**nd_order4 &
-                                         * 0.5_RP * ( DENS(k,i+1,j)+DENS(k,i,j) )
-          enddo
+       do j = JJS, JJE
+       do i = IIS, IIE
+       do k = KS, KE
+          num_diff(k,i,j,I_RHOT,XDIR) = num_diff_pt0(k,i,j,I_RHOT,XDIR) * DIFF4 * CDX(i)**nd_order4 &
+                                      * 0.5_RP * ( DENS(k,i+1,j)+DENS(k,i,j) )
+       enddo
+       enddo
+       enddo
+       do j = JJS, JJE
+       do i = IIS, IIE
+          num_diff(   1:KS-1,i,j,I_RHOT,XDIR) = 0.0_RP
           num_diff(KS  ,i,j,I_RHOT,XDIR) = num_DIFF(KS  ,i,j,I_RHOT,XDIR) * ND_SFC_FACT
           num_diff(KS+1,i,j,I_RHOT,XDIR) = num_DIFF(KS+1,i,j,I_RHOT,XDIR) * (1.0_RP + ND_SFC_FACT) * 0.5_RP
-
-          num_diff(   1:KS-1,i,j,I_RHOT,XDIR) = 0.0_RP
           num_diff(KE+1:KA  ,i,j,I_RHOT,XDIR) = 0.0_RP
+       enddo
+       enddo
 
-          do k = KS, KE
-             num_diff(k,i,j,I_RHOT,YDIR) = num_diff_pt0(k,i,j,I_RHOT,YDIR) * DIFF4 * CDY(j)**nd_order4 &
-                                         * 0.5_RP * ( DENS(k,i,j+1)+DENS(k,i,j) )
-          enddo
+       do j = JJS, JJE
+       do i = IIS, IIE
+       do k = KS, KE
+          num_diff(k,i,j,I_RHOT,YDIR) = num_diff_pt0(k,i,j,I_RHOT,YDIR) * DIFF4 * CDY(j)**nd_order4 &
+                                      * 0.5_RP * ( DENS(k,i,j+1)+DENS(k,i,j) )
+       enddo
+       enddo
+       enddo
+       do j = JJS, JJE
+       do i = IIS, IIE
+          num_diff(   1:KS-1,i,j,I_RHOT,YDIR) = 0.0_RP
           num_diff(KS  ,i,j,I_RHOT,YDIR) = num_DIFF(KS  ,i,j,I_RHOT,YDIR) * ND_SFC_FACT
           num_diff(KS+1,i,j,I_RHOT,YDIR) = num_DIFF(KS+1,i,j,I_RHOT,YDIR) * (1.0_RP + ND_SFC_FACT) * 0.5_RP
-
-          num_diff(   1:KS-1,i,j,I_RHOT,YDIR) = 0.0_RP
           num_diff(KE+1:KA  ,i,j,I_RHOT,YDIR) = 0.0_RP
        enddo
        enddo
@@ -780,18 +1006,10 @@ contains
     enddo
     enddo
 
-    call COMM_vars8( num_diff(:,:,:,I_DENS,ZDIR),  1 )
-    call COMM_vars8( num_diff(:,:,:,I_DENS,XDIR),  2 )
-    call COMM_vars8( num_diff(:,:,:,I_DENS,YDIR),  3 )
-    call COMM_vars8( num_diff(:,:,:,I_MOMZ,ZDIR),  4 )
-    call COMM_vars8( num_diff(:,:,:,I_MOMZ,XDIR),  5 )
-    call COMM_vars8( num_diff(:,:,:,I_MOMZ,YDIR),  6 )
-    call COMM_vars8( num_diff(:,:,:,I_MOMX,ZDIR),  7 )
-    call COMM_vars8( num_diff(:,:,:,I_MOMX,XDIR),  8 )
-    call COMM_vars8( num_diff(:,:,:,I_MOMX,YDIR),  9 )
-    call COMM_vars8( num_diff(:,:,:,I_MOMY,ZDIR), 10 )
-    call COMM_vars8( num_diff(:,:,:,I_MOMY,XDIR), 11 )
-    call COMM_vars8( num_diff(:,:,:,I_MOMY,YDIR), 12 )
+    call PROF_rapend  ("NumFilter Main")
+
+    call PROF_rapstart("NumFilter Comm", 3)
+
     call COMM_vars8( num_diff(:,:,:,I_RHOT,ZDIR), 13 )
     call COMM_vars8( num_diff(:,:,:,I_RHOT,XDIR), 14 )
     call COMM_vars8( num_diff(:,:,:,I_RHOT,YDIR), 15 )
@@ -811,6 +1029,8 @@ contains
     call COMM_wait ( num_diff(:,:,:,I_RHOT,ZDIR), 13 )
     call COMM_wait ( num_diff(:,:,:,I_RHOT,XDIR), 14 )
     call COMM_wait ( num_diff(:,:,:,I_RHOT,YDIR), 15 )
+
+    call PROF_rapend  ("NumFilter Comm")
 
     return
   end subroutine ATMOS_DYN_numfilter_coef
@@ -870,6 +1090,9 @@ contains
     DIFF4 = ND_COEF / ( 2**(4*ND_ORDER) * DT )
 
     if ( iq == I_QV .and. (.not. ND_USE_RS) ) then
+
+       call PROF_rapstart("NumFilter Main", 3)
+
        do JJS = JS, JE, JBLOCK
        JJE = JJS+JBLOCK-1
        do IIS = IS, IE, IBLOCK
@@ -905,9 +1128,18 @@ contains
        end do
        end do
 
+       call PROF_rapend  ("NumFilter Main")
+
+       call PROF_rapstart("NumFilter Comm", 3)
+
        call COMM_vars8(qv_diff, 1)
        call COMM_wait (qv_diff, 1)
+
+       call PROF_rapend  ("NumFilter Comm")
+
     end if
+
+    call PROF_rapstart("NumFilter Main", 3)
 
     do JJS = JS, JE, JBLOCK
     JJE = JJS+JBLOCK-1
@@ -948,6 +1180,8 @@ contains
     enddo
     enddo ! end tile
 
+    call PROF_rapend  ("NumFilter Main")
+
     !###########################################################################
     ! High order coefficients
     !###########################################################################
@@ -957,6 +1191,8 @@ contains
 
     do no = 2, nd_order
 
+       call PROF_rapstart("NumFilter Comm", 3)
+
        call COMM_vars8( num_diff_pt0(:,:,:,1,ZDIR), 1 )
        call COMM_vars8( num_diff_pt0(:,:,:,1,XDIR), 2 )
        call COMM_vars8( num_diff_pt0(:,:,:,1,YDIR), 3 )
@@ -964,6 +1200,10 @@ contains
        call COMM_wait ( num_diff_pt0(:,:,:,1,ZDIR), 1 )
        call COMM_wait ( num_diff_pt0(:,:,:,1,XDIR), 2 )
        call COMM_wait ( num_diff_pt0(:,:,:,1,YDIR), 3 )
+
+       call PROF_rapend  ("NumFilter Comm")
+
+       call PROF_rapstart("NumFilter Main", 3)
 
        call calc_diff4( num_diff_pt1(:,:,:,:,:), & ! (out)
                         num_diff_pt0(:,:,:,:,:), & ! (in)
@@ -973,11 +1213,15 @@ contains
                         1,                       & ! (in)
                         KE                       ) ! (in)
 
+       call PROF_rapend  ("NumFilter Main")
+
        ! swap pointer target
        tmp_pt       => num_diff_pt1
        num_diff_pt1 => num_diff_pt0
        num_diff_pt0 => tmp_pt
     enddo
+
+    call PROF_rapstart("NumFilter Main", 3)
 
     nd_order4 = nd_order * 4
 
@@ -989,26 +1233,46 @@ contains
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE
        do i = IIS, IIE
-          do k = KS  , KE-1
-             num_diff_q(k,i,j,ZDIR) = num_diff_pt0(k,i,j,1,ZDIR) * DIFF4 * CDZ(k)**nd_order4 &
-                                    * 0.5_RP * ( DENS(k+1,i,j)+DENS(k,i,j) )
-          enddo
+       do k = KS  , KE-1
+          num_diff_q(k,i,j,ZDIR) = num_diff_pt0(k,i,j,1,ZDIR) * DIFF4 * CDZ(k)**nd_order4 &
+                                 * 0.5_RP * ( DENS(k+1,i,j)+DENS(k,i,j) )
+       enddo
+       enddo
+       enddo
+       do j = JJS, JJE
+       do i = IIS, IIE
           num_diff_q(KS-1,i,j,ZDIR) = num_diff_pt0(KS-1,i,j,1,ZDIR) * DIFF4 * CDZ(KS-1)**nd_order4 &
                                     * DENS(KS,i,j)
           num_diff_q(KE  ,i,j,ZDIR) = num_diff_pt0(KE  ,i,j,1,ZDIR) * DIFF4 * CDZ(KE  )**nd_order4 &
                                     * DENS(KE,i,j)
+       enddo
+       enddo
 
-          do k = KS, KE
-             num_diff_q(k,i,j,XDIR) = num_diff_pt0(k,i,j,1,XDIR) * DIFF4 * CDX(i)**nd_order4 &
-                                    * 0.5_RP * ( DENS(k,i+1,j)+DENS(k,i,j) )
-          enddo
+       do j = JJS, JJE
+       do i = IIS, IIE
+       do k = KS, KE
+          num_diff_q(k,i,j,XDIR) = num_diff_pt0(k,i,j,1,XDIR) * DIFF4 * CDX(i)**nd_order4 &
+                                 * 0.5_RP * ( DENS(k,i+1,j)+DENS(k,i,j) )
+       enddo
+       enddo
+       enddo
+       do j = JJS, JJE
+       do i = IIS, IIE
           num_diff_q(KS  ,i,j,XDIR) = num_DIFF(KS  ,i,j,1,XDIR) * ND_SFC_FACT
           num_diff_q(KS+1,i,j,XDIR) = num_DIFF(KS+1,i,j,1,XDIR) * (1.0_RP + ND_SFC_FACT) * 0.5_RP
+       enddo
+       enddo
 
-          do k = KS, KE
-             num_diff_q(k,i,j,YDIR) = num_diff_pt0(k,i,j,1,YDIR) * DIFF4 * CDY(j)**nd_order4 &
-                                    * 0.5_RP * ( DENS(k,i,j+1)+DENS(k,i,j) )
-          enddo
+       do j = JJS, JJE
+       do i = IIS, IIE
+       do k = KS, KE
+          num_diff_q(k,i,j,YDIR) = num_diff_pt0(k,i,j,1,YDIR) * DIFF4 * CDY(j)**nd_order4 &
+                                 * 0.5_RP * ( DENS(k,i,j+1)+DENS(k,i,j) )
+       enddo
+       enddo
+       enddo
+       do j = JJS, JJE
+       do i = IIS, IIE
           num_diff_q(KS  ,i,j,YDIR) = num_DIFF(KS  ,i,j,1,YDIR) * ND_SFC_FACT
           num_diff_q(KS+1,i,j,YDIR) = num_DIFF(KS+1,i,j,1,YDIR) * (1.0_RP + ND_SFC_FACT) * 0.5_RP
        enddo
@@ -1017,6 +1281,10 @@ contains
     enddo
     enddo
 
+    call PROF_rapend  ("NumFilter Main")
+
+    call PROF_rapstart("NumFilter Comm", 3)
+
     call COMM_vars8( num_diff_q(:,:,:,ZDIR), 1 )
     call COMM_vars8( num_diff_q(:,:,:,XDIR), 2 )
     call COMM_vars8( num_diff_q(:,:,:,YDIR), 3 )
@@ -1024,6 +1292,8 @@ contains
     call COMM_wait ( num_diff_q(:,:,:,ZDIR), 1 )
     call COMM_wait ( num_diff_q(:,:,:,XDIR), 2 )
     call COMM_wait ( num_diff_q(:,:,:,YDIR), 3 )
+
+    call PROF_rapend  ("NumFilter Comm")
 
     return
   end subroutine ATMOS_DYN_numfilter_coef_q

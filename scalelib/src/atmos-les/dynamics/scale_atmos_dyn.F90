@@ -464,6 +464,8 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Dynamics step: ', NSTEP_ATMOS_DYN, ' small steps'
 
+    call PROF_rapstart("DYN Preparation", 2)
+
 #ifdef DEBUG
     DENS00  (:,:,:) = UNDEF
     DENS0   (:,:,:) = UNDEF
@@ -518,9 +520,13 @@ contains
     damp_t(:,:,:) = 0.0_RP
 #endif
 
+    call PROF_rapend  ("DYN Preparation")
+
     !###########################################################################
     ! Update DENS,MONZ,MOMX,MOMY,MOMZ,RHOT
     !###########################################################################
+
+    call PROF_rapstart("DYN Tendency", 2)
 
     DENS_tq(:,:,:) = 0.0_RP
     do iq = 1, BND_QA
@@ -586,10 +592,14 @@ contains
        enddo
     end do
 
+    call PROF_rapend  ("DYN Tendency")
+
 
     do step = 1, NSTEP_ATMOS_DYN
 
        !-----< prepare tendency >-----
+
+       call PROF_rapstart("DYN Tendency", 2)
 
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JS-1, JE+2
@@ -775,6 +785,10 @@ contains
        call COMM_wait ( MOMY_t(:,:,:), I_COMM_MOMY_t, .false. )
        call COMM_wait ( RHOT_t(:,:,:), I_COMM_RHOT_t, .false. )
 
+       call PROF_rapend  ("DYN Tendency")
+
+       call PROF_rapstart("DYN Numfilter", 2)
+    
        dt = real(DTSEC_ATMOS_DYN,kind=RP)
 
        !-----< prepare numerical diffusion coefficient >-----
@@ -789,6 +803,8 @@ contains
                                          ND_COEF, ND_ORDER, ND_SFC_FACT, ND_USE_RS ) ! [IN]
        endif
 
+       call PROF_rapend  ("DYN Numfilter")
+
        !------------------------------------------------------------------------
        ! Start RK
        !------------------------------------------------------------------------
@@ -799,6 +815,8 @@ contains
        MOMX0(:,:,:) = MOMX(:,:,:)
        MOMY0(:,:,:) = MOMY(:,:,:)
        RHOT0(:,:,:) = RHOT(:,:,:)
+
+       call PROF_rapstart("DYN Boundary", 2)
 
        if ( BND_W ) then
           !$omp parallel do private(j,k) OMP_SCHEDULE_ collapse(2)
@@ -845,6 +863,10 @@ contains
           enddo
        end if
 
+       call PROF_rapend  ("DYN Boundary")
+
+       call PROF_rapstart("DYN RK", 2)
+
        !##### RK1 : PROG0,PROG->PROG_RK1 #####
 
        dtrk = real(DTSEC_ATMOS_DYN,kind=RP) / 3.0_RP
@@ -864,6 +886,9 @@ contains
                           REF_pres, REF_dens,                               & ! (in)
                           BND_W, BND_E, BND_S, BND_N,                       & ! (in)
                           dtrk, dt                                          ) ! (in)
+       call PROF_rapend  ("DYN RK")
+
+       call PROF_rapstart("DYN Boundary", 2)
 
        if ( BND_W ) then
           !$omp parallel do private(j,k) OMP_SCHEDULE_ collapse(2)
@@ -934,6 +959,8 @@ contains
           enddo
        end if
 
+       call PROF_rapend  ("DYN Boundary")
+
        call COMM_vars8( DENS_RK1(:,:,:), I_COMM_DENS_RK1 )
        call COMM_vars8( MOMZ_RK1(:,:,:), I_COMM_MOMZ_RK1 )
        call COMM_vars8( MOMX_RK1(:,:,:), I_COMM_MOMX_RK1 )
@@ -946,6 +973,8 @@ contains
        call COMM_wait ( RHOT_RK1(:,:,:), I_COMM_RHOT_RK1, .false. )
 
        !##### RK2 : PROG0,PROG_RK2->PROG_RK3 #####
+
+       call PROF_rapstart("DYN RK", 2)
 
        dtrk = real(DTSEC_ATMOS_DYN,kind=RP) / 2.0_RP
 
@@ -964,6 +993,10 @@ contains
                           REF_pres, REF_dens,                               & ! (in)
                           BND_W, BND_E, BND_S, BND_N,                       & ! (in)
                           dtrk, dt                                          ) ! (in)
+
+       call PROF_rapend  ("DYN RK")
+
+       call PROF_rapstart("DYN Boundary", 2)
 
        if ( BND_W ) then
           !$omp parallel do private(j,k) OMP_SCHEDULE_ collapse(2)
@@ -1034,6 +1067,8 @@ contains
           enddo
        end if
 
+       call PROF_rapend  ("DYN Boundary")
+
        call COMM_vars8( DENS_RK2(:,:,:), I_COMM_DENS_RK2 )
        call COMM_vars8( MOMZ_RK2(:,:,:), I_COMM_MOMZ_RK2 )
        call COMM_vars8( MOMX_RK2(:,:,:), I_COMM_MOMX_RK2 )
@@ -1046,6 +1081,8 @@ contains
        call COMM_wait ( RHOT_RK2(:,:,:), I_COMM_RHOT_RK2, .false. )
 
        !##### RK3 : PROG0,PROG_RK3->PROG #####
+
+       call PROF_rapstart("DYN RK", 2)
 
        dtrk = real(DTSEC_ATMOS_DYN,kind=RP)
 
@@ -1064,6 +1101,8 @@ contains
                           REF_pres, REF_dens,                               & ! (in)
                           BND_W, BND_E, BND_S, BND_N,                       & ! (in)
                           dtrk, dt                                          ) ! (in)
+
+       call PROF_rapend  ("DYN RK")
 
 #ifdef CHECK_MASS
        call HIST_in(mflx_hi(:,:,:,ZDIR), 'MFLXZ', 'momentum flux of z-direction', &
@@ -1220,6 +1259,7 @@ contains
 #endif
 
        do iq = 1, QA
+
           do j = JS, JE
           do i = IS, IE
           do k = KS, KE
@@ -1269,6 +1309,8 @@ contains
     !------------------------------------------------------------------------
     do iq = 1, QA
 
+       call PROF_rapstart("DYN Numfilter", 2)
+
        if ( ND_COEF_Q == 0.0_RP ) then
           num_diff_q(:,:,:,:) = 0.0_RP
        else
@@ -1278,6 +1320,10 @@ contains
                                            REF_qv, iq,                             & ! [IN]
                                            ND_COEF_Q, ND_ORDER, ND_SFC_FACT, ND_USE_RS ) ! [IN]
        endif
+
+       call PROF_rapend  ("DYN Numfilter")
+
+       call PROF_rapstart("DYN Boundary", 2)
 
        if ( BND_W ) then
           if ( iq <= BND_QA ) then
@@ -1355,6 +1401,10 @@ contains
              enddo
           end if
        end if
+
+       call PROF_rapend  ("DYN Boundary")
+
+       call PROF_rapstart("DYN Tracer", 2)
 
        do JJS = JS, JE, JBLOCK
        JJE = JJS+JBLOCK-1
@@ -1446,6 +1496,10 @@ contains
 
        enddo
        enddo
+
+       call PROF_rapend ("DYN Tracer")
+
+       call PROF_rapstart("DYN Boundary", 2)
 
        if ( BND_W ) then
           if ( iq <= BND_QA ) then
@@ -1550,6 +1604,10 @@ contains
           enddo
        end if
 
+       call PROF_rapend  ("DYN Boundary")
+
+       call PROF_rapstart("DYN Tracer", 2)
+
        call ATMOS_DYN_fct( qflx_anti,                    & ! (out)
                            QTRC(:,:,:,iq), DENS00, DENS, & ! (in)
                            qflx_hi, qflx_lo,             & ! (in)
@@ -1583,6 +1641,8 @@ contains
 
        enddo
        enddo
+
+       call PROF_rapend  ("DYN Tracer")
 
        do j  = JS, JE
        do i  = IS, IE
