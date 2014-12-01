@@ -136,6 +136,7 @@ module scale_atmos_boundary
   logical,               private :: do_parent_process       = .false.
   logical,               private :: do_daughter_process     = .false.
   logical,               private :: l_bnd = .false.
+  logical,               private :: firsttime = .false.
 
   !-----------------------------------------------------------------------------
 contains
@@ -229,6 +230,7 @@ contains
           ATMOS_BOUNDARY_ONLINE = .false.
        else
           ATMOS_BOUNDARY_ONLINE = .true.
+          firsttime = .true.
        endif
     endif
     do_parent_process   = .false.
@@ -440,8 +442,8 @@ contains
     integer :: i, j, iq
     !---------------------------------------------------------------------------
 
-    do j  = 1, JA
-    do i  = 1, IA
+    do j = 1, JA
+    do i = 1, IA
        ATMOS_BOUNDARY_alpha_DENS(   1:KS-1,i,j) = ATMOS_BOUNDARY_alpha_DENS(KS,i,j)
        ATMOS_BOUNDARY_alpha_VELZ(   1:KS-1,i,j) = ATMOS_BOUNDARY_alpha_VELZ(KS,i,j)
        ATMOS_BOUNDARY_alpha_VELX(   1:KS-1,i,j) = ATMOS_BOUNDARY_alpha_VELX(KS,i,j)
@@ -529,8 +531,8 @@ contains
        coef_y = 1.0_RP / ATMOS_BOUNDARY_tauy
     endif
 
-    do j  = 1, JA
-    do i  = 1, IA
+    do j = 1, JA
+    do i = 1, IA
     do k = 1, KA
        ee1 = CBFZ(k)
        if ( ee1 <= 1.0_RP - ATMOS_BOUNDARY_FRACZ ) then
@@ -720,8 +722,8 @@ contains
     integer :: i, j, k, iq
     !---------------------------------------------------------------------------
 
-    do j  = 1, JA
-    do i  = 1, IA
+    do j = 1, JA
+    do i = 1, IA
     do k = KS, KE
        ATMOS_BOUNDARY_DENS(k,i,j) = DENS(k,i,j)
        ATMOS_BOUNDARY_VELZ(k,i,j) = MOMZ(k,i,j) / ( DENS(k,i,j)+DENS(k+1,i,  j  ) ) * 2.0_RP
@@ -733,8 +735,8 @@ contains
     enddo
     enddo
 
-    do j  = 1, JA
-    do i  = 1, IA-1
+    do j = 1, JA
+    do i = 1, IA-1
     do k = KS, KE
        ATMOS_BOUNDARY_VELX(k,i,j) = MOMX(k,i,j) / ( DENS(k,i,j)+DENS(k,  i+1,j  ) ) * 2.0_RP
     enddo
@@ -746,8 +748,8 @@ contains
     enddo
     enddo
 
-    do j  = 1, JA-1
-    do i  = 1, IA
+    do j = 1, JA-1
+    do i = 1, IA
     do k = KS, KE
        ATMOS_BOUNDARY_VELY(k,i,j) = MOMY(k,i,j) / ( DENS(k,i,j)+DENS(k,  i,  j+1) ) * 2.0_RP
     enddo
@@ -1230,7 +1232,7 @@ contains
        PRC_myrank, &
        PRC_MPIstop
     use scale_comm, only: &
-       COMM_vars8, &
+       COMM_vars8,        &
        COMM_wait
     use scale_time, only: &
        TIME_DTSEC,        &
@@ -1238,6 +1240,7 @@ contains
        TIME_NSTEP
     use scale_grid_nest, only: &
        NEST_COMM_nestdown, &
+       NEST_COMM_recvwait_issue, &
        ONLINE_USE_VELZ,    &
        PARENT_KA,          &
        PARENT_IA,          &
@@ -1264,10 +1267,10 @@ contains
 
     integer, parameter  :: handle = 2
 
-    real(RP) :: dummy1_p(PARENT_KA(handle),  PARENT_IA(handle),  PARENT_JA(handle))
-    real(RP) :: dummy2_p(PARENT_KA(handle),  PARENT_IA(handle),  PARENT_JA(handle),  NESTQA)
+    real(RP) :: dummy1_p(PARENT_KA(handle), PARENT_IA(handle), PARENT_JA(handle)        )
+    real(RP) :: dummy2_p(PARENT_KA(handle), PARENT_IA(handle), PARENT_JA(handle), NESTQA)
 
-    integer  :: i, j, k, iq
+    integer  :: i, j, k, iq, ierr
     !---------------------------------------------------------------------------
 
     ATMOS_BOUNDARY_UPDATE_DT = PARENT_DTSEC(handle)
@@ -1285,8 +1288,8 @@ contains
     ! import data from parent domain
     boundary_timestep = 1
     if( IO_L ) write(IO_FID_LOG,*) '+++ BOUNDARY TIMESTEP NUMBER FOR INIT:', boundary_timestep
-    if( IO_L ) write(IO_FID_LOG,*) '+++ waiting for communication accept from parent domain'
 
+    call NEST_COMM_recvwait_issue( handle, NESTQA )
     call NEST_COMM_nestdown( handle,                                 &
                              NESTQA,                                 &
                              dummy1_p(:,:,:),                        &   !(KA,IA,JA)
@@ -1304,8 +1307,8 @@ contains
 
     boundary_timestep = boundary_timestep + 1
     if( IO_L ) write(IO_FID_LOG,*) '+++ BOUNDARY TIMESTEP NUMBER FOR INIT:', boundary_timestep
-    if( IO_L ) write(IO_FID_LOG,*) '+++ waiting for communication accept from parent domain'
 
+    call NEST_COMM_recvwait_issue( handle, NESTQA )
     call NEST_COMM_nestdown( handle,                                 &
                              NESTQA,                                 &
                              dummy1_p(:,:,:),                        &   !(KA,IA,JA)
@@ -1320,6 +1323,9 @@ contains
                              ATMOS_BOUNDARY_ref_VELY(:,:,:,2),       &   !(KA,IA,JA)
                              ATMOS_BOUNDARY_ref_POTT(:,:,:,2),       &   !(KA,IA,JA)
                              ATMOS_BOUNDARY_ref_QTRC(:,:,:,1:NESTQA,2) ) !(KA,IA,JA,QA)
+
+    ! cast receive-buffers on ahead for the next communication
+    call NEST_COMM_recvwait_issue( handle, NESTQA )
 
     do j = 1, JA
     do i = 1, IA
@@ -1394,7 +1400,7 @@ contains
     ! set boundary data and time increment
     do j = 1, JA
     do i = 1, IA
-    do k  = 1, KA
+    do k = 1, KA
        ATMOS_BOUNDARY_DENS(k,i,j) = ATMOS_BOUNDARY_ref_DENS(k,i,j,1)
        ATMOS_BOUNDARY_VELX(k,i,j) = ATMOS_BOUNDARY_ref_VELX(k,i,j,1)
        ATMOS_BOUNDARY_VELY(k,i,j) = ATMOS_BOUNDARY_ref_VELY(k,i,j,1)
@@ -1427,7 +1433,7 @@ contains
     if ( ONLINE_USE_VELZ ) then
        do j = 1, JA
        do i = 1, IA
-       do k  = 1, KA
+       do k = 1, KA
           ATMOS_BOUNDARY_VELZ(k,i,j) = ATMOS_BOUNDARY_ref_VELZ(k,i,j,1)
 
           ATMOS_BOUNDARY_increment_VELZ(k,i,j) = ( ATMOS_BOUNDARY_ref_VELZ(k,i,j,2) &
@@ -1440,13 +1446,29 @@ contains
        ATMOS_BOUNDARY_VELZ(:,:,:) = ATMOS_BOUNDARY_VALUE_VELZ
     end if
 
+    ! free buffer
+    do j  = JSB, JEB
+    do i  = ISB, IEB
+    do k  = 1, KA
+       ATMOS_BOUNDARY_ref_DENS(k,i,j,1) = ATMOS_BOUNDARY_ref_DENS(k,i,j,2)
+       ATMOS_BOUNDARY_ref_VELZ(k,i,j,1) = ATMOS_BOUNDARY_ref_VELZ(k,i,j,2)
+       ATMOS_BOUNDARY_ref_VELX(k,i,j,1) = ATMOS_BOUNDARY_ref_VELX(k,i,j,2)
+       ATMOS_BOUNDARY_ref_VELY(k,i,j,1) = ATMOS_BOUNDARY_ref_VELY(k,i,j,2)
+       ATMOS_BOUNDARY_ref_POTT(k,i,j,1) = ATMOS_BOUNDARY_ref_POTT(k,i,j,2)
+       do iq = 1, NESTQA
+          ATMOS_BOUNDARY_ref_QTRC(k,i,j,iq,1) = ATMOS_BOUNDARY_ref_QTRC(k,i,j,iq,2)
+       end do
+    end do
+    end do
+    end do
+
     UPDATE_NSTEP = nint( ATMOS_BOUNDARY_UPDATE_DT / TIME_DTSEC )
     if ( UPDATE_NSTEP * PARENT_NSTEP(handle) /= TIME_NSTEP ) then
        write(*,*) 'xxx NSTEP is not multiple of PARENT_NSTEP'
        call PRC_MPIstop
     end if
 
-    now_step = 0
+    now_step = 0  ! should be set as zero in initialize process
 
     return
   end subroutine ATMOS_BOUNDARY_initialize_online
@@ -1474,8 +1496,12 @@ contains
        TIME_DTSEC, &
        TIME_NOWDAYSEC
     use scale_grid_nest, only: &
-       ONLINE_USE_VELZ, &
-       PARENT_DTSEC
+       NEST_COMM_recvwait_issue, &
+       NEST_COMM_recv_cancel,    &
+       NEST_COMM_test,           &
+       ONLINE_USE_VELZ,          &
+       PARENT_DTSEC,             &
+       NESTQA => NEST_BND_QA
     implicit none
 
     real(RP), intent(inout) :: DENS(KA,IA,JA)
@@ -1492,13 +1518,25 @@ contains
     !---------------------------------------------------------------------------
 
     if ( do_parent_process ) then !online [parent]
+       ! should be called every time step
        handle = 1
-       call ATMOS_BOUNDARY_update_online( DENS,MOMZ,MOMX,MOMY,RHOT,QTRC,handle )
+       call ATMOS_BOUNDARY_update_online( DENS,MOMZ,MOMX,MOMY,RHOT,QTRC,handle,now_step )
     endif
 
     if ( present(last) ) then
-       if (last) return
-    end if
+    if (last) then
+       if ( do_parent_process ) then !online [parent]
+          handle = 1
+          call NEST_COMM_recvwait_issue( handle, NESTQA )
+       endif
+
+       if ( do_daughter_process ) then !online [daughter]
+          handle = 2
+          call NEST_COMM_recv_cancel( handle )
+       endif
+       return
+    endif
+    endif
 
     if ( l_bnd ) then
 
@@ -1508,7 +1546,7 @@ contains
           now_step = 1
           if ( do_daughter_process ) then !online [daughter]
              handle = 2
-             call ATMOS_BOUNDARY_update_online( DENS,MOMZ,MOMX,MOMY,RHOT,QTRC,handle )
+             call ATMOS_BOUNDARY_update_online( DENS,MOMZ,MOMX,MOMY,RHOT,QTRC,handle,now_step )
           else
              call ATMOS_BOUNDARY_update_file
           end if
@@ -1517,10 +1555,10 @@ contains
           now_step = now_step + 1
        end if
 
-       if ( ref_updated ) then
+       if ( ref_updated ) then ! update boundary and increment
           do j = 1, JA
           do i = 1, IA
-          do k  = 1, KA
+          do k = 1, KA
              ATMOS_BOUNDARY_DENS(k,i,j) = ATMOS_BOUNDARY_ref_DENS(k,i,j,1)
              ATMOS_BOUNDARY_VELX(k,i,j) = ATMOS_BOUNDARY_ref_VELX(k,i,j,1)
              ATMOS_BOUNDARY_VELY(k,i,j) = ATMOS_BOUNDARY_ref_VELY(k,i,j,1)
@@ -1558,9 +1596,32 @@ contains
              end do
              end do
           end if
-       else
-          do j = 1, JA
-          do i = 1, IA
+
+          ! free buffer
+          do j  = JSB, JEB
+          do i  = ISB, IEB
+          do k  = 1, KA
+             ATMOS_BOUNDARY_ref_DENS(k,i,j,1) = ATMOS_BOUNDARY_ref_DENS(k,i,j,2)
+             ATMOS_BOUNDARY_ref_VELZ(k,i,j,1) = ATMOS_BOUNDARY_ref_VELZ(k,i,j,2)
+             ATMOS_BOUNDARY_ref_VELX(k,i,j,1) = ATMOS_BOUNDARY_ref_VELX(k,i,j,2)
+             ATMOS_BOUNDARY_ref_VELY(k,i,j,1) = ATMOS_BOUNDARY_ref_VELY(k,i,j,2)
+             ATMOS_BOUNDARY_ref_POTT(k,i,j,1) = ATMOS_BOUNDARY_ref_POTT(k,i,j,2)
+             do iq = 1, NESTQA
+                ATMOS_BOUNDARY_ref_QTRC(k,i,j,iq,1) = ATMOS_BOUNDARY_ref_QTRC(k,i,j,iq,2)
+             end do
+          end do
+          end do
+          end do
+
+          ! issue receive
+          if ( do_daughter_process ) then
+             handle = 2
+             call NEST_COMM_recvwait_issue( handle, NESTQA )
+          end if
+
+       else ! update boundary using increment
+          do j  = 1, JA
+          do i  = 1, IA
           do k  = 1, KA
              ATMOS_BOUNDARY_DENS(k,i,j) = ATMOS_BOUNDARY_DENS(k,i,j) + ATMOS_BOUNDARY_increment_DENS(k,i,j)
              ATMOS_BOUNDARY_VELX(k,i,j) = ATMOS_BOUNDARY_VELX(k,i,j) + ATMOS_BOUNDARY_increment_VELX(k,i,j)
@@ -1573,15 +1634,16 @@ contains
           end do
           end do
           if ( ONLINE_USE_VELZ ) then
-             do j = 1, JA
-             do i = 1, IA
+             do j  = 1, JA
+             do i  = 1, IA
              do k  = 1, KA
                 ATMOS_BOUNDARY_VELZ(k,i,j) = ATMOS_BOUNDARY_VELZ(k,i,j) + ATMOS_BOUNDARY_increment_VELZ(k,i,j)
              end do
              end do
              end do
           end if
-       endif ! ref_updated
+
+       end if ! ref_updated
 
        if ( .not. PRC_HAS_W ) then
           do j = 1, JA
@@ -1839,6 +1901,15 @@ contains
             'VELZ_BND', 'Boundary velocity z-direction', 'm/s', TIME_DTSEC, zdim='half' )
     end if
 
+    if ( do_parent_process ) then !online [parent]
+       handle = 1
+       call NEST_COMM_test( handle )
+    endif
+
+    if ( do_daughter_process ) then !online [daughter]
+       handle = 2
+       call NEST_COMM_test( handle )
+    endif
 
     return
   end subroutine ATMOS_BOUNDARY_update
@@ -1865,21 +1936,6 @@ contains
     if (IO_L) write(IO_FID_LOG,*)"*** Atmos Boundary: read from boundary file(timestep=", boundary_timestep, ")"
 
     bname = ATMOS_BOUNDARY_IN_BASENAME
-
-    do j  = JSB, JEB
-    do i  = ISB, IEB
-    do k  = 1, KA
-       ATMOS_BOUNDARY_ref_DENS(k,i,j,1) = ATMOS_BOUNDARY_ref_DENS(k,i,j,2)
-       ATMOS_BOUNDARY_ref_VELZ(k,i,j,1) = ATMOS_BOUNDARY_ref_VELZ(k,i,j,2)
-       ATMOS_BOUNDARY_ref_VELX(k,i,j,1) = ATMOS_BOUNDARY_ref_VELX(k,i,j,2)
-       ATMOS_BOUNDARY_ref_VELY(k,i,j,1) = ATMOS_BOUNDARY_ref_VELY(k,i,j,2)
-       ATMOS_BOUNDARY_ref_POTT(k,i,j,1) = ATMOS_BOUNDARY_ref_POTT(k,i,j,2)
-       do iq = 1, BND_QA
-          ATMOS_BOUNDARY_ref_QTRC(k,i,j,iq,1) = ATMOS_BOUNDARY_ref_QTRC(k,i,j,iq,2)
-       end do
-    end do
-    end do
-    end do
 
     call FileRead( reference_atmos(:,:,:), bname, 'DENS', boundary_timestep, PRC_myrank )
     ATMOS_BOUNDARY_ref_DENS(KS:KE,ISB:IEB,JSB:JEB,2) = reference_atmos(:,:,:)
@@ -1942,17 +1998,19 @@ contains
   !-----------------------------------------------------------------------------
   !> Update reference boundary by communicate with parent domain
   subroutine ATMOS_BOUNDARY_update_online ( &
-       DENS,   & ! [in]
-       MOMZ,   & ! [in]
-       MOMX,   & ! [in]
-       MOMY,   & ! [in]
-       RHOT,   & ! [in]
-       QTRC,   & ! [in]
-       handle  ) ! [in]
+       DENS,    & ! [in]
+       MOMZ,    & ! [in]
+       MOMX,    & ! [in]
+       MOMY,    & ! [in]
+       RHOT,    & ! [in]
+       QTRC,    & ! [in]
+       handle,  & ! [in]
+       now_step ) ! [in]
     use scale_process, only: &
        PRC_myrank
     use scale_grid_nest, only: &
        NEST_COMM_nestdown, &
+       NEST_COMM_recvwait_issue, &
        PARENT_KA,          &
        PARENT_IA,          &
        PARENT_JA,          &
@@ -1984,6 +2042,7 @@ contains
     real(RP), intent(in) :: RHOT(KA,IA,JA)
     real(RP), intent(in) :: QTRC(KA,IA,JA,QA)
     integer,  intent(in) :: handle
+    integer,  intent(in) :: now_step
 
     real(RP) :: dummy1_p(PARENT_KA(handle),  PARENT_IA(handle),  PARENT_JA(handle))
     real(RP) :: dummy1_d(DAUGHTER_KA(handle),DAUGHTER_IA(handle),DAUGHTER_JA(handle),2)
@@ -1999,8 +2058,16 @@ contains
     dummy2_d(:,:,:,:,:) = 0.0_RP
 
     if ( handle == 1 .and. do_parent_process ) then ! [parent]
-       if (IO_L) write(IO_FID_LOG,*)"*** NESTCOMM inter-domain as a PARENT"
+       if ( IO_L ) write(IO_FID_LOG,*)"*** ATMOS BOUNDARY update online: PARENT"
 
+       ! issue wait
+       if ( .NOT. firsttime ) then
+           call NEST_COMM_recvwait_issue( handle, NESTQA )
+       else
+          firsttime = .false.
+       endif
+
+       ! issue send
        call NEST_COMM_nestdown( handle,                    &
                                 NESTQA,                    &
                                 DENS(:,:,:),               &  !(KA,IA,JA)
@@ -2017,23 +2084,9 @@ contains
                                 dummy2_d(:,:,:,1:NESTQA,2) )  !(KA,IA,JA,QA)
 
     elseif ( handle == 2 .and. do_daughter_process ) then ! [daughter]
-       if (IO_L) write(IO_FID_LOG,*)"*** NESTCOMM inter-domain as a DAUGHTER (step=", boundary_timestep, ")"
+       if( IO_L ) write(IO_FID_LOG,'(1X,A,I5)') '*** ATMOS BOUNDARY update online: DAUGHTER', boundary_timestep
 
-       do j  = JSB, JEB
-       do i  = ISB, IEB
-       do k  = 1, KA
-          ATMOS_BOUNDARY_ref_DENS(k,i,j,1) = ATMOS_BOUNDARY_ref_DENS(k,i,j,2)
-          ATMOS_BOUNDARY_ref_VELZ(k,i,j,1) = ATMOS_BOUNDARY_ref_VELZ(k,i,j,2)
-          ATMOS_BOUNDARY_ref_VELX(k,i,j,1) = ATMOS_BOUNDARY_ref_VELX(k,i,j,2)
-          ATMOS_BOUNDARY_ref_VELY(k,i,j,1) = ATMOS_BOUNDARY_ref_VELY(k,i,j,2)
-          ATMOS_BOUNDARY_ref_POTT(k,i,j,1) = ATMOS_BOUNDARY_ref_POTT(k,i,j,2)
-          do iq = 1, NESTQA
-             ATMOS_BOUNDARY_ref_QTRC(k,i,j,iq,1) = ATMOS_BOUNDARY_ref_QTRC(k,i,j,iq,2)
-          end do
-       end do
-       end do
-       end do
-
+       ! issue wait
        call NEST_COMM_nestdown( handle,                                 &
                                 NESTQA,                                 &
                                 dummy1_p(:,:,:),                        &   !(KA,IA,JA)
