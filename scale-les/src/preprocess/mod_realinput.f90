@@ -86,7 +86,7 @@ module mod_realinput
   private :: InputSurfaceWRF
   private :: InputSurfaceNICAM
   private :: latlonz_interporation_fact
-  private :: interp_sst_inland
+  private :: interp_OceanLand_data
   private :: diagnose_number_concentration
   private :: haversine
 
@@ -3025,6 +3025,8 @@ contains
       )
     use mod_land_vars, only: &
       convert_WS2VWC
+    use scale_landuse, only: &
+      frac_land  => LANDUSE_frac_land
     implicit none
 
     real(RP),         intent(out)  :: tg(:,:,:)
@@ -3042,7 +3044,7 @@ contains
     real(RP),         intent(out)  :: skinw(:,:)
     real(RP),         intent(out)  :: snowq(:,:)
     real(RP),         intent(out)  :: snowt(:,:)
-    character(LEN=*), intent( in) :: basename
+    character(LEN=*), intent( in)  :: basename
     integer,          intent( in)  :: mdlid
     integer,          intent( in)  :: dims(:)
     logical,          intent( in)  :: serial
@@ -3069,11 +3071,12 @@ contains
     integer, allocatable :: kgrd(:,:,:,:,:)
 
     real(RP) :: d2r
-    integer :: n, k, i, j, iq, iqw
-    integer :: tcount = 1
+    real(RP) :: maskval
+    integer  :: n, k, i, j, iq, iqw
+    integer  :: tcount = 1
 
-    logical :: do_read
-    logical :: existence
+    logical  :: do_read
+    logical  :: existence
 
     intrinsic shape
     !---------------------------------------------------------------------------
@@ -3148,6 +3151,20 @@ contains
     call latlonz_interporation_fact( hfact,vfact,kgrd,igrd,jgrd,lcz_3D,lat,lon, &
                                       zs_org,lat_org,lon_org,dims(7),dims(2),dims(3),1,landgrid=.true. )
 
+    ! land mask (1:land, 0:water)
+    if( do_read ) then
+       call ExternalFileRead( dummy_3D(:,:,:),                             &
+                      BASENAME, "LANDMASK",  1, tcount, myrank, mdlid, single=.true. )
+       org_3D(:,:,:) = dummy_3D(:,:,:)
+    endif
+    if( serial ) call COMM_bcast( org_3D(:,:,:), dims(2),dims(3),tcount )
+    n = 1
+    do j = 1, dims(3)
+    do i = 1, dims(2)
+       landmask(i,j) = org_3D(i,j,n)
+    enddo
+    enddo
+
     ! soil temperature [K]
     if( do_read ) then
        call ExternalFileRead( dummy_4D(:,:,:,:),                             &
@@ -3155,6 +3172,10 @@ contains
        org_4D(:,:,:,:) = dummy_4D(:,:,:,:)
     endif
     if( serial ) call COMM_bcast( org_4D(:,:,:,:), dims(7),dims(2),dims(3),tcount )
+    ! interpolation over the ocean
+    do k = 1, dims(7)
+     call interp_OceanLand_data(org_4D(k,:,:,:),landmask,dims(2),dims(3),tcount,landdata=.true.,maskval=maskval)
+    enddo
     n = 1
     do j = 1, JA
     do i = 1, IA
@@ -3169,8 +3190,11 @@ contains
     tg(LKMAX,i,j) = tg(LKMAX-1,i,j)
     enddo
     enddo
+    do k = 1, LKMAX
+     call replace_misval( tg(k,:,:), maskval, frac_land )
+    enddo
 
-    ! soil liquid water m3 m-3] (no wrfout-default)
+    ! soil liquid water [m3 m-3] (no wrfout-default)
     call ExternalFileVarExistence( existence, BASENAME, "SH2O", myrank, mdlid, single=.true. )
     if ( existence ) then
        if( do_read ) then
@@ -3179,6 +3203,10 @@ contains
           org_4D(:,:,:,:) = dummy_4D(:,:,:,:)
        endif
        if( serial ) call COMM_bcast( org_4D(:,:,:,:), dims(7),dims(2),dims(3),tcount )
+       ! interpolation over the ocean
+       do k = 1, dims(7)
+        call interp_OceanLand_data(org_4D(k,:,:,:),landmask,dims(2),dims(3),tcount,landdata=.true.,maskval=maskval)
+       enddo
        n = 1
        do j = 1, JA
        do i = 1, IA
@@ -3193,7 +3221,9 @@ contains
        sh2o(LKMAX,i,j) = sh2o(LKMAX-1,i,j)
        enddo
        enddo
-
+       do k = 1, LKMAX
+        call replace_misval( sh2o(k,:,:), maskval, frac_land )
+       enddo
        ! conversion from water saturation [fraction] to volumetric water content [m3/m3]
        do k = 1, LKMAX
           strg(k,:,:) = convert_WS2VWC( sh2o(k,:,:), critical=.true. )
@@ -3226,28 +3256,15 @@ contains
     enddo
     enddo
 
-    ! land mask (1:land, 0:water)
-    if( do_read ) then
-       call ExternalFileRead( dummy_3D(:,:,:),                             &
-                      BASENAME, "LANDMASK",  1, tcount, myrank, mdlid, single=.true. )
-       org_3D(:,:,:) = dummy_3D(:,:,:)
-    endif
-    if( serial ) call COMM_bcast( org_3D(:,:,:), dims(2),dims(3),tcount )
-    n = 1
-    do j = 1, dims(3)
-    do i = 1, dims(2)
-       landmask(i,j) =  org_3D(i,j,n)
-    enddo
-    enddo
-
-    ! sea surface temperature [K]
+    ! SEA SURFACE TEMPERATURE [K]
     if( do_read ) then
        call ExternalFileRead( dummy_3D(:,:,:),                             &
                       BASENAME, "SST",  1, tcount, myrank, mdlid, single=.true. )
        org_3D(:,:,:) = dummy_3D(:,:,:)
     endif
     if( serial ) call COMM_bcast( org_3D(:,:,:), dims(2),dims(3),tcount )
-    call interp_sst_inland(org_3D(:,:,:),landmask,dims(2),dims(3),tcount)
+    ! interpolate over the land
+    call interp_OceanLand_data(org_3D(:,:,:),landmask,dims(2),dims(3),tcount,landdata=.false.)
     n = 1
     do j = 1, JA
     do i = 1, IA
@@ -3256,14 +3273,18 @@ contains
                 + org_3D(igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3)
     enddo
     enddo
+    !sst(:,:) = lst(:,:)
+    sst(:,:) = tw(:,:)
 
-    ! surface skin temperature [K]
+    ! SURFACE SKIN TEMPERATURE [K]
     if( do_read ) then
        call ExternalFileRead( dummy_3D(:,:,:),                             &
                       BASENAME, "TSK",  1, tcount, myrank, mdlid, single=.true. )
        org_3D(:,:,:) = dummy_3D(:,:,:)
     endif
     if( serial ) call COMM_bcast( org_3D(:,:,:), dims(2),dims(3),tcount )
+    ! interpolate over the ocean
+    call interp_OceanLand_data(org_3D(:,:,:),landmask,dims(2),dims(3),tcount,landdata=.true.,maskval=maskval)
     n = 1
     do j = 1, JA
     do i = 1, IA
@@ -3272,10 +3293,8 @@ contains
                  + org_3D(igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3)
     enddo
     enddo
-
+    call replace_misval( lst(:,:), maskval, frac_land )
     ust(:,:) = lst(:,:)
-    !sst(:,:) = lst(:,:)
-    sst(:,:) = tw(:,:)
     qvef(:,:) = 0.0_DP ! currently not used
 
     ! ALBEDO [-]
@@ -3959,22 +3978,27 @@ contains
   end subroutine latlonz_interporation_fact
 
   !-----------------------------------------------------------------------------
-  subroutine interp_sst_inland( &
+  subroutine interp_OceanLand_data( &
       data,      & ! (inout)
       lsmask,    & ! (in)
       nx,        & ! (in)
       ny,        & ! (in)
-      tcount     & ! (in)
+      tcount,    & ! (in)
+      landdata,  & ! (in)
+      maskval    & ! (in)
       )
     use scale_const, only: &
        EPS => CONST_EPS
     implicit none
-    real(RP), intent(inout) :: data(:,:,:)
-    real(RP), intent(in)    :: lsmask(:,:)
-    integer,  intent(in)    :: nx
-    integer,  intent(in)    :: ny
-    integer,  intent(in)    :: tcount
+    real(RP), intent(inout)         :: data(:,:,:)
+    real(RP), intent(in)            :: lsmask(:,:)
+    integer,  intent(in)            :: nx
+    integer,  intent(in)            :: ny
+    integer,  intent(in)            :: tcount
+    logical,  intent(in)            :: landdata   ! .true. => land data , .false. => ocean data
+    real(RP), intent(out), optional :: maskval
 
+    integer                 :: untarget_mask
     integer, allocatable    :: imask(:,:),imaskr(:,:)
     real(RP),allocatable    :: newdata(:,:)
     real(RP)                :: flag(8)
@@ -3984,31 +4008,41 @@ contains
     integer :: i, j, k, ii, jj, kk ,n
 
     !---------------------------------------------------------------------------
-    allocate( imask(nx,ny),imaskr(nx,ny) )
-    allocate( newdata(nx,ny)             )
+    allocate( imask  (nx,ny) )
+    allocate( imaskr (nx,ny) )
+    allocate( newdata(nx,ny) )
     newdata = 0.0_RP
+    if( present(maskval) ) maskval = 999.99_RP
 
-    ! make flag of land/sea
-    do j = 1,ny
-    do i = 1,nx
-       if( abs(lsmask(i,j)-1.0_RP) < EPS )then
-          imask(i,j) = 1    ! land data
-       else
-          imask(i,j) = 0    ! sea data
-       endif
-    enddo
-    enddo
+    ! search target cell for interpolation
+     do j = 1, ny
+     do i = 1, nx
+        if( abs(lsmask(i,j)-1.0_RP) < EPS )then
+           imask(i,j) = 1  ! land grid
+        else
+           imask(i,j) = 0  ! ocean grid  
+        endif
+     enddo
+     enddo
+     if ( landdata ) then  ! interpolation for land data
+       untarget_mask = 1  
+     else                  ! interpolation for ocean data
+       untarget_mask = 0  
+     endif 
 
-    do n = 1,tcount
+    ! start interpolation
+    do n = 1, tcount
 
     imaskr = imask
-    do kk = 1,20
-    do j = 1,ny
-    do i = 1,nx
-       if(imask(i,j)==0)then  ! sea : not missing value
+    do kk = 1, 20
+    do j  = 1, ny
+    do i  = 1, nx
+       if ( imask(i,j) == untarget_mask ) then  ! not missing value
            newdata(i,j) = data(i,j,n)
            cycle
        else
+
+         if ( present(maskval) .and. (abs(maskval-999.99_RP)<EPS) ) maskval = data(i,j,n)
 
         !-------------------
         ! missing value
@@ -4026,54 +4060,54 @@ contains
         flag    = 0.0_RP
         ydata   = 0.0_RP
         if((i==1).and.(j==1))then
-           if(imask(i+1,j  )==0) flag(5)=1.0_RP
-           if(imask(i,  j+1)==0) flag(7)=1.0_RP
-           if(imask(i+1,j+1)==0) flag(8)=1.0_RP
+           if(imask(i+1,j  )==untarget_mask) flag(5)=1.0_RP
+           if(imask(i,  j+1)==untarget_mask) flag(7)=1.0_RP
+           if(imask(i+1,j+1)==untarget_mask) flag(8)=1.0_RP
         else if((i==nx).and.(j==1))then
-           if(imask(i-1,j  )==0) flag(4)=1.0_RP
-           if(imask(i-1,j+1)==0) flag(6)=1.0_RP
-           if(imask(i,  j+1)==0) flag(7)=1.0_RP
+           if(imask(i-1,j  )==untarget_mask) flag(4)=1.0_RP
+           if(imask(i-1,j+1)==untarget_mask) flag(6)=1.0_RP
+           if(imask(i,  j+1)==untarget_mask) flag(7)=1.0_RP
         else if((i==1).and.(j==ny))then
-           if(imask(i,  j-1)==0) flag(2)=1.0_RP
-           if(imask(i+1,j-1)==0) flag(3)=1.0_RP
-           if(imask(i+1,j  )==0) flag(5)=1.0_RP
+           if(imask(i,  j-1)==untarget_mask) flag(2)=1.0_RP
+           if(imask(i+1,j-1)==untarget_mask) flag(3)=1.0_RP
+           if(imask(i+1,j  )==untarget_mask) flag(5)=1.0_RP
         else if((i==nx).and.(j==ny))then
-           if(imask(i-1,j-1)==0) flag(1)=1.0_RP
-           if(imask(i,  j-1)==0) flag(2)=1.0_RP
-           if(imask(i-1,j  )==0) flag(4)=1.0_RP
+           if(imask(i-1,j-1)==untarget_mask) flag(1)=1.0_RP
+           if(imask(i,  j-1)==untarget_mask) flag(2)=1.0_RP
+           if(imask(i-1,j  )==untarget_mask) flag(4)=1.0_RP
         else if(i==1)then
-           if(imask(i,  j-1)==0) flag(2)=1.0_RP
-           if(imask(i+1,j-1)==0) flag(3)=1.0_RP
-           if(imask(i+1,j  )==0) flag(5)=1.0_RP
-           if(imask(i,  j+1)==0) flag(7)=1.0_RP
-           if(imask(i+1,j+1)==0) flag(8)=1.0_RP
+           if(imask(i,  j-1)==untarget_mask) flag(2)=1.0_RP
+           if(imask(i+1,j-1)==untarget_mask) flag(3)=1.0_RP
+           if(imask(i+1,j  )==untarget_mask) flag(5)=1.0_RP
+           if(imask(i,  j+1)==untarget_mask) flag(7)=1.0_RP
+           if(imask(i+1,j+1)==untarget_mask) flag(8)=1.0_RP
         else if(i==nx)then
-           if(imask(i-1,j-1)==0) flag(1)=1.0_RP
-           if(imask(i,  j-1)==0) flag(2)=1.0_RP
-           if(imask(i-1,j  )==0) flag(4)=1.0_RP
-           if(imask(i-1,j+1)==0) flag(6)=1.0_RP
-           if(imask(i,  j+1)==0) flag(7)=1.0_RP
+           if(imask(i-1,j-1)==untarget_mask) flag(1)=1.0_RP
+           if(imask(i,  j-1)==untarget_mask) flag(2)=1.0_RP
+           if(imask(i-1,j  )==untarget_mask) flag(4)=1.0_RP
+           if(imask(i-1,j+1)==untarget_mask) flag(6)=1.0_RP
+           if(imask(i,  j+1)==untarget_mask) flag(7)=1.0_RP
         else if(j==1)then
-           if(imask(i-1,j  )==0) flag(4)=1.0_RP
-           if(imask(i+1,j  )==0) flag(5)=1.0_RP
-           if(imask(i-1,j+1)==0) flag(6)=1.0_RP
-           if(imask(i,  j+1)==0) flag(7)=1.0_RP
-           if(imask(i+1,j+1)==0) flag(8)=1.0_RP
+           if(imask(i-1,j  )==untarget_mask) flag(4)=1.0_RP
+           if(imask(i+1,j  )==untarget_mask) flag(5)=1.0_RP
+           if(imask(i-1,j+1)==untarget_mask) flag(6)=1.0_RP
+           if(imask(i,  j+1)==untarget_mask) flag(7)=1.0_RP
+           if(imask(i+1,j+1)==untarget_mask) flag(8)=1.0_RP
         else if(j==ny)then
-           if(imask(i-1,j-1)==0) flag(1)=1.0_RP
-           if(imask(i,  j-1)==0) flag(2)=1.0_RP
-           if(imask(i+1,j-1)==0) flag(3)=1.0_RP
-           if(imask(i-1,j  )==0) flag(4)=1.0_RP
-           if(imask(i+1,j  )==0) flag(5)=1.0_RP
+           if(imask(i-1,j-1)==untarget_mask) flag(1)=1.0_RP
+           if(imask(i,  j-1)==untarget_mask) flag(2)=1.0_RP
+           if(imask(i+1,j-1)==untarget_mask) flag(3)=1.0_RP
+           if(imask(i-1,j  )==untarget_mask) flag(4)=1.0_RP
+           if(imask(i+1,j  )==untarget_mask) flag(5)=1.0_RP
         else
-           if(imask(i-1,j-1)==0) flag(1)=1.0_RP
-           if(imask(i,  j-1)==0) flag(2)=1.0_RP
-           if(imask(i+1,j-1)==0) flag(3)=1.0_RP
-           if(imask(i-1,j  )==0) flag(4)=1.0_RP
-           if(imask(i+1,j  )==0) flag(5)=1.0_RP
-           if(imask(i-1,j+1)==0) flag(6)=1.0_RP
-           if(imask(i,  j+1)==0) flag(7)=1.0_RP
-           if(imask(i+1,j+1)==0) flag(8)=1.0_RP
+           if(imask(i-1,j-1)==untarget_mask) flag(1)=1.0_RP
+           if(imask(i,  j-1)==untarget_mask) flag(2)=1.0_RP
+           if(imask(i+1,j-1)==untarget_mask) flag(3)=1.0_RP
+           if(imask(i-1,j  )==untarget_mask) flag(4)=1.0_RP
+           if(imask(i+1,j  )==untarget_mask) flag(5)=1.0_RP
+           if(imask(i-1,j+1)==untarget_mask) flag(6)=1.0_RP
+           if(imask(i,  j+1)==untarget_mask) flag(7)=1.0_RP
+           if(imask(i+1,j+1)==untarget_mask) flag(8)=1.0_RP
         endif
 
         if(int(sum(flag(:)))>=3)then  ! coast grid : interpolate
@@ -4091,7 +4125,7 @@ contains
            dd = sum(flag(:))
            newdata(i,j) = newdata(i,j) / dd
 
-           imaskr(i,j) = 0
+           imaskr(i,j) = untarget_mask
         else
           newdata(i,j) = data(i,j,n)
         endif
@@ -4107,8 +4141,32 @@ contains
 
     enddo ! n
 
+    deallocate( imask   )
+    deallocate( imaskr  )
+    deallocate( newdata )
+
     return
-  end subroutine interp_sst_inland
+  end subroutine interp_OceanLand_data
+
+  !-----------------------------------------------------------------------------
+  subroutine replace_misval( orgdata, maskval, frac_land )
+    use scale_const, only: &
+       EPS => CONST_EPS
+    implicit none
+    real(RP), intent(inout) :: orgdata(:,:)
+    real(RP), intent(in)    :: maskval
+    real(RP), intent(in)    :: frac_land(:,:)
+    integer                 :: i, j
+
+    do j = 1, JA
+    do i = 1, IA
+       if( abs(frac_land(i,j)-0.0_RP) < EPS )then ! ocean grid
+          orgdata(i,j) = maskval
+       endif
+    enddo
+    enddo
+
+  end subroutine replace_misval
 
   !-----------------------------------------------------------------------------
   subroutine diagnose_number_concentration( &

@@ -48,7 +48,7 @@ program convine
   logical    :: ofirst = .true.
   logical    :: oread = .true.
   integer(4) :: start(4), start2(3)
-  integer(4) :: count(4), count2(3), count_land(4)
+  integer(4) :: count(4), count2(3), count_urban(4)
 
   integer(4) :: it, ix, jy, kz, n
   integer(4) :: ncid, id01, status, iix, jjy, ndim
@@ -59,9 +59,9 @@ program convine
   real(8),allocatable :: cdx(:), cdy(:), cx(:), cy(:)
   real(8),allocatable :: p_cdx(:), p_cdy(:)
   real(8),allocatable :: p_cx(:), p_cy(:)
-  real(4),allocatable :: var2d(:,:), var3d(:,:,:), var_land_3d(:,:,:)
+  real(4),allocatable :: var2d(:,:), var3d(:,:,:), var_urban_3d(:,:,:)
 !  real(8),allocatable :: p_3d(:,:,:,:), p_2d(:,:,:,:)
-  real(8),allocatable :: p_3d(:,:,:,:), p_2d(:,:,:), p_land_3d(:,:,:,:)
+  real(8),allocatable :: p_3d(:,:,:,:), p_2d(:,:,:), p_urban_3d(:,:,:,:)
 
   character*5  :: HISTORY_DEFAULT_TUNIT
   real(8)      :: HISTORY_DEFAULT_TINTERVAL
@@ -237,10 +237,10 @@ program convine
 
       count(1:4)      = (/nxp,nyp,nz,1/)
       count2(1:3)     = (/nxp,nyp,1/)
-      count_land(1:4) = (/nxp,nyp,uz,1/)
+      count_urban(1:4) = (/nxp,nyp,uz,1/)
       allocate( p_3d(nxp,nyp,nz,1) )
       allocate( p_2d(nxp,nyp,1) )
-      allocate( p_land_3d(nxp,nyp,uz,1) )
+      allocate( p_urban_3d(nxp,nyp,uz,1) )
       allocate( p_cdx(nxp+2*nxhalo) )
       allocate( p_cdy(nyp+2*nyhalo) )
       allocate( p_cx(nxp+2*nxhalo) )
@@ -257,7 +257,7 @@ program convine
       endif
       allocate( var3d(nx,ny,nz) )
       allocate( var2d(nx,ny) )
-      allocate( var_land_3d(nx,ny,uz) )
+      allocate( var_urban_3d(nx,ny,uz) )
       allocate( cdx(nx) )
       allocate( cdy(ny) )
       allocate( cx(nx) )
@@ -358,9 +358,9 @@ program convine
     if( (trim(vname(n)) == "TRL_URB").or.  &
         (trim(vname(n)) == "TBL_URB").or.  &
         (trim(vname(n)) == "TGL_URB") ) then 
-     status = nf_get_vara_double( ncid,id01,start,count_land,p_land_3d )
+     status = nf_get_vara_double( ncid,id01,start,count_urban,p_urban_3d )
      if( status /= nf_noerr) then
-      write(*,*) "stop at nf get_var_double land ", trim(vname(n))
+      write(*,*) "stop at nf get_var_double urban ", trim(vname(n))
       stop
      end if
     elseif( ndim == 4 ) then 
@@ -451,7 +451,7 @@ program convine
         (trim(vname(n)) == "TGL_URB") ) then
      do iix = is,ie
      do jjy = js,je
-      var_land_3d(iix,jjy,1:uz) = real(p_land_3d(iix-is+1,jjy-js+1,1:uz,1))
+      var_urban_3d(iix,jjy,1:uz) = real(p_urban_3d(iix-is+1,jjy-js+1,1:uz,1))
      enddo
      enddo
     elseif( ndim == 4 ) then 
@@ -471,7 +471,7 @@ program convine
 
       deallocate( p_3d )
       deallocate( p_2d )
-      deallocate( p_land_3d )
+      deallocate( p_urban_3d )
       deallocate( p_cdx )
       deallocate( p_cdy )
       deallocate( p_cx )
@@ -543,11 +543,11 @@ program convine
        (trim(vname(n)) == "TBL_URB").or.  &
        (trim(vname(n)) == "TGL_URB") ) then
 
-      print *, maxval(var_land_3d), minval(var_land_3d)
+      print *, maxval(var_urban_3d), minval(var_urban_3d)
 
       open(10,file=trim(odir)//'/'//trim(vname(n))//".grd", &
            form="unformatted", access="direct", recl=4*nx*ny*uz)
-      write(10,rec=it-nst+1) (((var_land_3d(ix,jy,kz),ix=1,nx),jy=1,ny),kz=1,uz)
+      write(10,rec=it-nst+1) (((var_urban_3d(ix,jy,kz),ix=1,nx),jy=1,ny),kz=1,uz)
       close(10)
    elseif( ndim == 4 ) then
       print *, maxval(var3d), minval(var3d)
