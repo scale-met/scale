@@ -82,7 +82,7 @@ contains
        ATMOS_PHY_SF_U_minM,         &
        ATMOS_PHY_SF_CM_min,         &
        ATMOS_PHY_SF_Const_Ustar,    &
-       ATMOS_PHY_SF_Const_CM,       &
+       ATMOS_PHY_SF_Const_Cm,       &
        ATMOS_PHY_SF_Const_SH,       &
        ATMOS_PHY_SF_Const_LH,       &
        ATMOS_PHY_SF_FLG_SH_DIURNAL, &
