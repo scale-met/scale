@@ -88,8 +88,8 @@ contains
     !--- judge to run atmos-ocean coupler
     allocate( is_FLX(IA,JA) )
 
-    do j = 1, JA
-    do i = 1, IA
+    do j = JS, JE
+    do i = IS, IE
       if( LANDUSE_fact_ocean(i,j) > 0.0_RP ) then
         is_FLX(i,j) = .true.
       else

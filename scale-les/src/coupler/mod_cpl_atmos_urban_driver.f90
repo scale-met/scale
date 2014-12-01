@@ -72,8 +72,8 @@ contains
        !--- judge to run atmos-urban coupler
        allocate( is_FLX(IA,JA) )
 
-       do j = 1, JA
-       do i = 1, IA
+       do j = JS, JE
+       do i = IS, IE
          if( LANDUSE_fact_urban(i,j) > 0.0_RP ) then
            is_FLX(i,j) = .true.
          else
@@ -324,8 +324,8 @@ contains
 
     else     ! temperature not update
 
-      do j = 1, JA
-      do i = 1, IA
+      do j = JS, JE
+      do i = IS, IE
 
       if( is_FLX(i,j) ) then
 

@@ -30,7 +30,6 @@ module mod_ocean_vars
   !++ Public procedure
   !
   public :: OCEAN_vars_setup
-  public :: OCEAN_vars_fillhalo
   public :: OCEAN_vars_restart_read
   public :: OCEAN_vars_restart_write
   public :: OCEAN_vars_history
@@ -172,30 +171,6 @@ contains
   end subroutine OCEAN_vars_setup
 
   !-----------------------------------------------------------------------------
-  !> HALO Communication
-  subroutine OCEAN_vars_fillhalo
-    use scale_comm, only: &
-       COMM_vars8, &
-       COMM_wait
-    implicit none
-    !---------------------------------------------------------------------------
-
-    call COMM_vars8( OCEAN_TEMP      (:,:),      1 )
-    call COMM_vars8( OCEAN_SFC_TEMP  (:,:),      2 )
-    call COMM_vars8( OCEAN_SFC_albedo(:,:,I_LW), 3 )
-    call COMM_vars8( OCEAN_SFC_albedo(:,:,I_SW), 4 )
-    call COMM_vars8( OCEAN_SFC_Z0    (:,:),      5 )
-
-    call COMM_wait ( OCEAN_TEMP      (:,:),      1 )
-    call COMM_wait ( OCEAN_SFC_TEMP  (:,:),      2 )
-    call COMM_wait ( OCEAN_SFC_albedo(:,:,I_LW), 3 )
-    call COMM_wait ( OCEAN_SFC_albedo(:,:,I_SW), 4 )
-    call COMM_wait ( OCEAN_SFC_Z0    (:,:),      5 )
-
-    return
-  end subroutine OCEAN_vars_fillhalo
-
-  !-----------------------------------------------------------------------------
   !> Read ocean restart
   subroutine OCEAN_vars_restart_read
     use scale_fileio, only: &
@@ -221,8 +196,6 @@ contains
                          OCEAN_RESTART_IN_BASENAME, VAR_NAME(I_SFC_albedo_SW), 'XY', step=1 ) ! [IN]
        call FILEIO_read( OCEAN_SFC_Z0(:,:),                                                 & ! [OUT]
                          OCEAN_RESTART_IN_BASENAME, VAR_NAME(I_SFC_Z0),        'XY', step=1 ) ! [IN]
-
-       call OCEAN_vars_fillhalo
 
        call OCEAN_vars_total
     else
@@ -266,25 +239,23 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Output restart file (OCEAN) ***'
        if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(basename)
 
-       call OCEAN_vars_fillhalo
-
        call OCEAN_vars_total
 
        call FILEIO_write( OCEAN_TEMP(:,:),            basename,                  OCEAN_RESTART_OUT_TITLE,   & ! [IN]
                           VAR_NAME(I_TEMP),           VAR_DESC(I_TEMP),          VAR_UNIT(I_TEMP),          & ! [IN]
-                          'XY',                                                  OCEAN_RESTART_OUT_DTYPE    ) ! [IN]
+                          'XY',                       OCEAN_RESTART_OUT_DTYPE,   nohalo=.true.              ) ! [IN]
        call FILEIO_write( OCEAN_SFC_TEMP(:,:),        basename,                  OCEAN_RESTART_OUT_TITLE,   & ! [IN]
                           VAR_NAME(I_SFC_TEMP),       VAR_DESC(I_SFC_TEMP),      VAR_UNIT(I_SFC_TEMP),      & ! [IN]
-                          'XY',                                                  OCEAN_RESTART_OUT_DTYPE    ) ! [IN]
+                          'XY',                       OCEAN_RESTART_OUT_DTYPE,   nohalo=.true.              ) ! [IN]
        call FILEIO_write( OCEAN_SFC_albedo(:,:,I_LW), basename,                  OCEAN_RESTART_OUT_TITLE,   & ! [IN]
                           VAR_NAME(I_SFC_albedo_LW),  VAR_DESC(I_SFC_albedo_LW), VAR_UNIT(I_SFC_albedo_LW), & ! [IN]
-                          'XY',                                                  OCEAN_RESTART_OUT_DTYPE    ) ! [IN]
+                          'XY',                       OCEAN_RESTART_OUT_DTYPE,   nohalo=.true.              ) ! [IN]
        call FILEIO_write( OCEAN_SFC_albedo(:,:,I_SW), basename,                  OCEAN_RESTART_OUT_TITLE,   & ! [IN]
                           VAR_NAME(I_SFC_albedo_SW),  VAR_DESC(I_SFC_albedo_SW), VAR_UNIT(I_SFC_albedo_SW), & ! [IN]
-                          'XY',                                                  OCEAN_RESTART_OUT_DTYPE    ) ! [IN]
+                          'XY',                       OCEAN_RESTART_OUT_DTYPE,   nohalo=.true.              ) ! [IN]
        call FILEIO_write( OCEAN_SFC_Z0(:,:),          basename,                  OCEAN_RESTART_OUT_TITLE,   & ! [IN]
                           VAR_NAME(I_SFC_Z0),         VAR_DESC(I_SFC_Z0),        VAR_UNIT(I_SFC_Z0),        & ! [IN]
-                          'XY',                                                  OCEAN_RESTART_OUT_DTYPE    ) ! [IN]
+                          'XY',                       OCEAN_RESTART_OUT_DTYPE,   nohalo=.true.              ) ! [IN]
 
     endif
 
@@ -302,11 +273,11 @@ contains
     !---------------------------------------------------------------------------
 
     if ( OCEAN_VARS_CHECKRANGE ) then
-       call VALCHECK( OCEAN_TEMP      (:,:),      0.0_RP, 1000.0_RP, VAR_NAME(I_TEMP),          __FILE__, __LINE__ )
-       call VALCHECK( OCEAN_SFC_TEMP  (:,:),      0.0_RP, 1000.0_RP, VAR_NAME(I_SFC_TEMP),      __FILE__, __LINE__ )
-       call VALCHECK( OCEAN_SFC_albedo(:,:,I_LW), 0.0_RP,    2.0_RP, VAR_NAME(I_SFC_albedo_LW), __FILE__, __LINE__ )
-       call VALCHECK( OCEAN_SFC_albedo(:,:,I_SW), 0.0_RP,    2.0_RP, VAR_NAME(I_SFC_albedo_SW), __FILE__, __LINE__ )
-       call VALCHECK( OCEAN_SFC_Z0    (:,:),      0.0_RP, 1000.0_RP, VAR_NAME(I_SFC_Z0),        __FILE__, __LINE__ )
+       call VALCHECK( OCEAN_TEMP      (IS:IE,JS:JE),      0.0_RP, 1000.0_RP, VAR_NAME(I_TEMP),          __FILE__, __LINE__ )
+       call VALCHECK( OCEAN_SFC_TEMP  (IS:IE,JS:JE),      0.0_RP, 1000.0_RP, VAR_NAME(I_SFC_TEMP),      __FILE__, __LINE__ )
+       call VALCHECK( OCEAN_SFC_albedo(IS:IE,JS:JE,I_LW), 0.0_RP,    2.0_RP, VAR_NAME(I_SFC_albedo_LW), __FILE__, __LINE__ )
+       call VALCHECK( OCEAN_SFC_albedo(IS:IE,JS:JE,I_SW), 0.0_RP,    2.0_RP, VAR_NAME(I_SFC_albedo_SW), __FILE__, __LINE__ )
+       call VALCHECK( OCEAN_SFC_Z0    (IS:IE,JS:JE),      0.0_RP, 1000.0_RP, VAR_NAME(I_SFC_Z0),        __FILE__, __LINE__ )
     endif
 
     call HIST_in( OCEAN_TEMP(:,:),  &
@@ -384,8 +355,6 @@ contains
     OCEAN_SFC_TEMP  (:,:)   = OCEAN_SFC_TEMP_in  (:,:)
     OCEAN_SFC_albedo(:,:,:) = OCEAN_SFC_albedo_in(:,:,:)
     OCEAN_SFC_Z0    (:,:)   = OCEAN_SFC_Z0_in    (:,:)
-
-    call OCEAN_vars_fillhalo
 
     call OCEAN_vars_total
 

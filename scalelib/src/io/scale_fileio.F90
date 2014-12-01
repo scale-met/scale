@@ -683,7 +683,10 @@ contains
        unit,     &
        axistype, &
        datatype, &
-       append    )
+       append,   &
+       nohalo    )
+    use gtool_file, only: &
+       RMISS
     use gtool_file_h, only: &
        File_REAL8, &
        File_REAL4
@@ -709,6 +712,9 @@ contains
     character(len=*), intent(in)  :: axistype !< axis type (Z/X/Y)
     character(len=*), intent(in)  :: datatype !< data type (REAL8/REAL4/default)
     logical, optional, intent(in) :: append   !< switch whether append existing file or not (default=false)
+    logical, optional, intent(in) :: nohalo   !< switch whether include halo data or not (default=false)
+
+    real(RP)              :: varhalo( size(var(:,1)), size(var(1,:)) )
 
     integer               :: dtype
     character(len=2)      :: dims(2)
@@ -719,9 +725,14 @@ contains
     integer :: rankidx(2)
     logical :: fileexisted
     integer :: fid, vid
+    integer :: i, j
+    logical :: nohalo_
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('FILE O NetCDF')
+
+    nohalo_ = .false.
+    if ( present(nohalo) ) nohalo_ = nohalo
 
     rankidx(1) = PRC_2Drank(PRC_myrank,1)
     rankidx(2) = PRC_2Drank(PRC_myrank,2)
@@ -801,11 +812,40 @@ contains
        call PRC_MPIstop
     endif
 
+    varhalo(:,:) = var(:,:)
+
+    if ( nohalo_ ) then
+       ! W halo
+       do j = 1, JA
+       do i = 1, IS-1
+          varhalo(i,j) = RMISS
+       end do
+       end do
+       ! E halo
+       do j = 1, JA
+       do i = IE+1, IA
+          varhalo(i,j) = RMISS
+       end do
+       end do
+       ! S halo
+       do j = 1, JS-1
+       do i = 1, IA
+          varhalo(i,j) = RMISS
+       end do
+       end do
+       ! N halo
+       do j = JE+1, JA
+       do i = 1, IA
+          varhalo(i,j) = RMISS
+       end do
+       end do
+    end if
+
     call FileAddVariable( vid, fid, varname, desc, unit, dims, dtype ) ! [IN]
 
     allocate( var2D(dim1_max,dim2_max) )
 
-    var2D(1:dim1_max,1:dim2_max) = var(dim1_S:dim1_E,dim2_S:dim2_E)
+    var2D(1:dim1_max,1:dim2_max) = varhalo(dim1_S:dim1_E,dim2_S:dim2_E)
     call FileWrite( vid, var2D(:,:), NOWSEC, NOWSEC ) ! [IN]
 
     deallocate( var2D )
@@ -826,7 +866,10 @@ contains
        unit,     &
        axistype, &
        datatype, &
-       append    )
+       append,   &
+       nohalo    )
+    use gtool_file, only: &
+       RMISS
     use gtool_file_h, only: &
        File_REAL8, &
        File_REAL4
@@ -852,6 +895,9 @@ contains
     character(len=*),  intent(in)  :: axistype   !< axis type (Z/X/Y)
     character(len=*),  intent(in)  :: datatype   !< data type (REAL8/REAL4/default)
     logical, optional, intent(in)  :: append     !< append existing (closed) file?
+    logical, optional, intent(in)  :: nohalo     !< include halo data?
+
+    real(RP)         :: varhalo( size(var(:,1,1)), size(var(1,:,1)), size(var(1,1,:)) )
 
     integer          :: dtype
     character(len=2) :: dims(3)
@@ -865,9 +911,14 @@ contains
     logical :: append_sw
     logical :: fileexisted
     integer :: fid, vid
+    integer :: i, j, k
+    logical :: nohalo_
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('FILE O NetCDF')
+
+    nohalo_ = .false.
+    if ( present(nohalo) ) nohalo_ = nohalo
 
     rankidx(1) = PRC_2Drank(PRC_myrank,1)
     rankidx(2) = PRC_2Drank(PRC_myrank,2)
@@ -978,11 +1029,48 @@ contains
        call PRC_MPIstop
     endif
 
+    varhalo(:,:,:) = var(:,:,:)
+
+    if ( nohalo_ ) then
+       ! W halo
+       do k = 1, dim1_max
+       do j = 1, JA
+       do i = 1, IS-1
+          varhalo(k,i,j) = RMISS
+       end do
+       end do
+       end do
+       ! E halo
+       do k = 1, dim1_max
+       do j = 1, JA
+       do i = IE+1, IA
+          varhalo(k,i,j) = RMISS
+       end do
+       end do
+       end do
+       ! S halo
+       do k = 1, dim1_max
+       do j = 1, JS-1
+       do i = 1, IA
+          varhalo(k,i,j) = RMISS
+       end do
+       end do
+       end do
+       ! N halo
+       do k = 1, dim1_max
+       do j = JE+1, JA
+       do i = 1, IA
+          varhalo(k,i,j) = RMISS
+       end do
+       end do
+       end do
+    end if
+
     call FileAddVariable( vid, fid, varname, desc, unit, dims, dtype ) ! [IN]
 
     allocate( var3D(dim1_max,dim2_max,dim3_max) )
 
-    var3D(1:dim1_max,1:dim2_max,1:dim3_max) = var(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E)
+    var3D(1:dim1_max,1:dim2_max,1:dim3_max) = varhalo(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E)
     call FileWrite( vid, var3D(:,:,:), NOWSEC, NOWSEC ) ! [IN]
 
     deallocate( var3D )
@@ -1005,7 +1093,10 @@ contains
        datatype, &
        timeintv, &
        append,   &
-       timetarg  )
+       timetarg, &
+       nohalo    )
+    use gtool_file, only: &
+       RMISS
     use gtool_file_h, only: &
        File_REAL8, &
        File_REAL4
@@ -1031,9 +1122,12 @@ contains
     character(len=*),  intent(in)  :: unit         !< unit        of the variable
     character(len=*),  intent(in)  :: axistype     !< axis type (Z/X/Y/Time)
     character(len=*),  intent(in)  :: datatype     !< data type (REAL8/REAL4/default)
-    real(RP),          intent(in)  :: timeintv      !< time interval [sec]
+    real(RP),          intent(in)  :: timeintv     !< time interval [sec]
     logical, optional, intent(in)  :: append       !< append existing (closed) file?
     integer, optional, intent(in)  :: timetarg     !< target timestep (optional)
+    logical, optional, intent(in)  :: nohalo       !< include halo data?
+
+    real(RP)         :: varhalo( size(var(:,1,1,1)), size(var(1,:,1,1)), size(var(1,1,:,1)) )
 
     integer          :: dtype
     character(len=2) :: dims(3)
@@ -1050,10 +1144,14 @@ contains
     logical :: addvar
     integer :: fid, vid
     integer :: step
-    integer :: n
+    integer :: i, j, k, n
+    logical :: nohalo_
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('FILE O NetCDF')
+
+    nohalo_ = .false.
+    if ( present(nohalo) ) nohalo_ = nohalo
 
     time_interval = timeintv
     step = size(var(KS,ISB,JSB,:))
@@ -1116,19 +1214,93 @@ contains
     allocate( var3D(dim1_max,dim2_max,dim3_max) )
 
     if ( present(timetarg) ) then
+       varhalo(:,:,:) = var(:,:,:,timetarg)
+ 
+       if ( nohalo_ ) then
+          ! W halo
+          do k = 1, dim1_max
+          do j = 1, JA
+          do i = 1, IS-1
+             varhalo(k,i,j) = RMISS
+          end do
+          end do
+          end do
+          ! E halo
+          do k = 1, dim1_max
+          do j = 1, JA
+          do i = IE+1, IA
+             varhalo(k,i,j) = RMISS
+          end do
+          end do
+          end do
+          ! S halo
+          do k = 1, dim1_max
+          do j = 1, JS-1
+          do i = 1, IA
+             varhalo(k,i,j) = RMISS
+          end do
+          end do
+          end do
+          ! N halo
+          do k = 1, dim1_max
+          do j = JE+1, JA
+          do i = 1, IA
+             varhalo(k,i,j) = RMISS
+          end do
+          end do
+          end do
+       end if
+
        nowtime = (timetarg-1) * time_interval
-       var3D(1:dim1_max,1:dim2_max,1:dim3_max) = var(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E,timetarg)
+       var3D(1:dim1_max,1:dim2_max,1:dim3_max) = varhalo(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E)
        call FileWrite( vid, var3D(:,:,:), nowtime, nowtime ) ! [IN]
     else
        nowtime = 0.0_DP
-       do n=1, step
-          var3D(1:dim1_max,1:dim2_max,1:dim3_max) = var(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E,n)
+       do n = 1, step
+          varhalo(:,:,:) = var(:,:,:,n)
+
+          if ( nohalo_ ) then
+             ! W halo
+             do k = 1, dim1_max
+             do j = 1, JA
+             do i = 1, IS-1
+                varhalo(k,i,j) = RMISS
+             end do
+             end do
+             end do
+             ! E halo
+             do k = 1, dim1_max
+             do j = 1, JA
+             do i = IE+1, IA
+                varhalo(k,i,j) = RMISS
+             end do
+             end do
+             end do
+             ! S halo
+             do k = 1, dim1_max
+             do j = 1, JS-1
+             do i = 1, IA
+                varhalo(k,i,j) = RMISS
+             end do
+             end do
+             end do
+             ! N halo
+             do k = 1, dim1_max
+             do j = JE+1, JA
+             do i = 1, IA
+                varhalo(k,i,j) = RMISS
+             end do
+             end do
+             end do
+          end if
+
+          var3D(1:dim1_max,1:dim2_max,1:dim3_max) = varhalo(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E)
           call FileWrite( vid, var3D(:,:,:), nowtime, nowtime ) ! [IN]
           nowtime = nowtime + time_interval
        enddo
     endif
 
-    deallocate( var3D  )
+    deallocate( var3D )
 
     call PROF_rapend  ('FILE O NetCDF')
 
