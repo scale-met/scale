@@ -21,6 +21,7 @@ module scale_grid_nest
   use scale_precision
   use scale_stdio
   use scale_prof
+  use scale_debug
   use scale_grid_index
   use scale_index
   use scale_tracer
@@ -311,6 +312,7 @@ contains
     call PROF_rapstart('NESTCOM interp')
     call PROF_rapend  ('NESTCOM interp')
 
+    DEBUG_DOMAIN_NUM = ONLINE_DOMAIN_NUM
     allocate ( errcodes(1:ONLINE_DAUGHTER_PRC) )
 
     if( USE_NESTING ) then
