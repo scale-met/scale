@@ -31,7 +31,6 @@ module mod_land_vars
   !++ Public procedure
   !
   public :: LAND_vars_setup
-  public :: LAND_vars_fillhalo
   public :: LAND_vars_restart_read
   public :: LAND_vars_restart_write
   public :: LAND_vars_history
@@ -238,30 +237,6 @@ contains
   end subroutine LAND_vars_setup
 
   !-----------------------------------------------------------------------------
-  !> HALO Communication
-  subroutine LAND_vars_fillhalo
-    use scale_comm, only: &
-       COMM_vars8, &
-       COMM_wait
-    implicit none
-    !---------------------------------------------------------------------------
-
-    call COMM_vars8( LAND_TEMP(:,:,:), 1 )
-    call COMM_vars8( LAND_WATER(:,:,:), 2 )
-    call COMM_vars8( LAND_SFC_TEMP(:,:), 3 )
-    call COMM_vars8( LAND_SFC_albedo(:,:,I_LW), 4 )
-    call COMM_vars8( LAND_SFC_albedo(:,:,I_SW), 5 )
-
-    call COMM_wait ( LAND_TEMP(:,:,:), 1 )
-    call COMM_wait ( LAND_WATER(:,:,:), 2 )
-    call COMM_wait ( LAND_SFC_TEMP(:,:), 3 )
-    call COMM_wait ( LAND_SFC_albedo(:,:,I_LW), 4 )
-    call COMM_wait ( LAND_SFC_albedo(:,:,I_SW), 5 )
-
-    return
-  end subroutine LAND_vars_fillhalo
-
-  !-----------------------------------------------------------------------------
   !> Read land restart
   subroutine LAND_vars_restart_read
     use scale_fileio, only: &
@@ -287,8 +262,6 @@ contains
                          LAND_RESTART_IN_BASENAME, VAR_NAME(I_SFC_albedo_LW), 'XY', step=1 ) ! [IN]
        call FILEIO_read( LAND_SFC_albedo(:,:,I_SW),                                        & ! [OUT]
                          LAND_RESTART_IN_BASENAME, VAR_NAME(I_SFC_albedo_SW), 'XY', step=1 ) ! [IN]
-
-       call LAND_vars_fillhalo
 
        call LAND_vars_total
     else
@@ -331,25 +304,23 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Output restart file (LAND) ***'
        if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(basename)
 
-       call LAND_vars_fillhalo
-
        call LAND_vars_total
 
        call FILEIO_write( LAND_TEMP    (:,:,:),      basename,                  LAND_RESTART_OUT_TITLE,    & ! [IN]
                           VAR_NAME(I_TEMP),          VAR_DESC(I_TEMP),          VAR_UNIT(I_TEMP),          & ! [IN]
-                          'Land',                                               LAND_RESTART_OUT_DTYPE     ) ! [IN]
+                          'Land',                    LAND_RESTART_OUT_DTYPE,    nohalo=.true.              ) ! [IN]
        call FILEIO_write( LAND_WATER   (:,:,:),      basename,                  LAND_RESTART_OUT_TITLE,    & ! [IN]
                           VAR_NAME(I_WATER),         VAR_DESC(I_WATER),         VAR_UNIT(I_WATER),         & ! [IN]
-                          'Land',                                               LAND_RESTART_OUT_DTYPE     ) ! [IN]
+                          'Land',                    LAND_RESTART_OUT_DTYPE,    nohalo=.true.              ) ! [IN]
        call FILEIO_write( LAND_SFC_TEMP(:,:),        basename,                  LAND_RESTART_OUT_TITLE,    & ! [IN]
                           VAR_NAME(I_SFC_TEMP),      VAR_DESC(I_SFC_TEMP),      VAR_UNIT(I_SFC_TEMP),      & ! [IN]
-                          'XY',                                                 LAND_RESTART_OUT_DTYPE     ) ! [IN]
+                          'XY',                      LAND_RESTART_OUT_DTYPE,    nohalo=.true.              ) ! [IN]
        call FILEIO_write( LAND_SFC_albedo(:,:,I_LW), basename,                  LAND_RESTART_OUT_TITLE,    & ! [IN]
                           VAR_NAME(I_SFC_albedo_LW), VAR_DESC(I_SFC_albedo_LW), VAR_UNIT(I_SFC_albedo_LW), & ! [IN]
-                          'XY',                                                 LAND_RESTART_OUT_DTYPE     ) ! [IN]
+                          'XY',                      LAND_RESTART_OUT_DTYPE,    nohalo=.true.              ) ! [IN]
        call FILEIO_write( LAND_SFC_albedo(:,:,I_SW), basename,                  LAND_RESTART_OUT_TITLE,    & ! [IN]
                           VAR_NAME(I_SFC_albedo_SW), VAR_DESC(I_SFC_albedo_SW), VAR_UNIT(I_SFC_albedo_SW), & ! [IN]
-                          'XY',                                                 LAND_RESTART_OUT_DTYPE     ) ! [IN]
+                          'XY',                      LAND_RESTART_OUT_DTYPE,    nohalo=.true.              ) ! [IN]
 
     endif
 
@@ -367,11 +338,11 @@ contains
     !---------------------------------------------------------------------------
 
     if ( LAND_VARS_CHECKRANGE ) then
-       call VALCHECK( LAND_TEMP      (:,:,:),    0.0_RP, 1000.0_RP, VAR_NAME(I_TEMP),          __FILE__, __LINE__ )
-       call VALCHECK( LAND_WATER     (:,:,:),    0.0_RP, 1000.0_RP, VAR_NAME(I_WATER),         __FILE__, __LINE__ )
-       call VALCHECK( LAND_SFC_TEMP  (:,:),      0.0_RP, 1000.0_RP, VAR_NAME(I_SFC_TEMP),      __FILE__, __LINE__ )
-       call VALCHECK( LAND_SFC_albedo(:,:,I_LW), 0.0_RP,    2.0_RP, VAR_NAME(I_SFC_albedo_LW), __FILE__, __LINE__ )
-       call VALCHECK( LAND_SFC_albedo(:,:,I_SW), 0.0_RP,    2.0_RP, VAR_NAME(I_SFC_albedo_SW), __FILE__, __LINE__ )
+       call VALCHECK( LAND_TEMP      (:,IS:IE,JS:JE),    0.0_RP, 1000.0_RP, VAR_NAME(I_TEMP),          __FILE__, __LINE__ )
+       call VALCHECK( LAND_WATER     (:,IS:IE,JS:JE),    0.0_RP, 1000.0_RP, VAR_NAME(I_WATER),         __FILE__, __LINE__ )
+       call VALCHECK( LAND_SFC_TEMP  (IS:IE,JS:JE),      0.0_RP, 1000.0_RP, VAR_NAME(I_SFC_TEMP),      __FILE__, __LINE__ )
+       call VALCHECK( LAND_SFC_albedo(IS:IE,JS:JE,I_LW), 0.0_RP,    2.0_RP, VAR_NAME(I_SFC_albedo_LW), __FILE__, __LINE__ )
+       call VALCHECK( LAND_SFC_albedo(IS:IE,JS:JE,I_SW), 0.0_RP,    2.0_RP, VAR_NAME(I_SFC_albedo_SW), __FILE__, __LINE__ )
     endif
 
     call HIST_in( LAND_TEMP(:,:,:), &
@@ -459,8 +430,6 @@ contains
     LAND_WATER     (:,:,:) = LAND_WATER_in     (:,:,:)
     LAND_SFC_TEMP  (:,:)   = LAND_SFC_TEMP_in  (:,:)
     LAND_SFC_albedo(:,:,:) = LAND_SFC_albedo_in(:,:,:)
-
-    call LAND_vars_fillhalo
 
     call LAND_vars_total
 
@@ -620,8 +589,8 @@ contains
       num = I_WaterLimit
     end if
 
-    do j = 1, JA
-    do i = 1, IA
+    do j = JS, JE
+    do i = IS, IE
       VWC(i,j) = max( min( WS(i,j)*LAND_PROPERTY(i,j,num), LAND_PROPERTY(i,j,num) ), 0.0_RP )
     end do
     end do

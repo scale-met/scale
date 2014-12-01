@@ -31,7 +31,6 @@ module mod_urban_vars
   !++ Public procedure
   !
   public :: URBAN_vars_setup
-  public :: URBAN_vars_fillhalo
   public :: URBAN_vars_restart_read
   public :: URBAN_vars_restart_write
   public :: URBAN_vars_history
@@ -375,91 +374,6 @@ contains
   end subroutine URBAN_vars_setup
 
   !-----------------------------------------------------------------------------
-  !> HALO Communication
-  subroutine URBAN_vars_fillhalo
-    use scale_comm, only: &
-       COMM_vars8, &
-       COMM_wait
-    implicit none
-
-    integer :: k
-
-    real(RP) :: tmp1(IA,JA,UKS:UKE)
-    real(RP) :: tmp2(IA,JA,UKS:UKE)
-    real(RP) :: tmp3(IA,JA,UKS:UKE)
-    !---------------------------------------------------------------------------
-
-    call COMM_vars8( TR_URB(:,:),     1  )
-    call COMM_vars8( TB_URB(:,:),     2  )
-    call COMM_vars8( TG_URB(:,:),     3  )
-    call COMM_vars8( TC_URB(:,:),     4  )
-    call COMM_vars8( QC_URB(:,:),     5  )
-    call COMM_vars8( UC_URB(:,:),     6  )
-    call COMM_vars8( TS_URB(:,:),     7  )
-    call COMM_vars8( SHR_URB(:,:),    8  )
-    call COMM_vars8( SHB_URB(:,:),    9  )
-    call COMM_vars8( SHG_URB(:,:),    10 )
-    call COMM_vars8( LHR_URB(:,:),    11 )
-    call COMM_vars8( LHB_URB(:,:),    12 )
-    call COMM_vars8( LHG_URB(:,:),    13 )
-    call COMM_vars8( GHR_URB(:,:),    14 )
-    call COMM_vars8( GHB_URB(:,:),    15 )
-    call COMM_vars8( GHG_URB(:,:),    16 )
-    call COMM_vars8( RnR_URB(:,:),    17 )
-    call COMM_vars8( RnB_URB(:,:),    18 )
-    call COMM_vars8( RnG_URB(:,:),    19 )
-    call COMM_vars8( RAINR_URB(:,:),  20 )
-    call COMM_vars8( RAINB_URB(:,:),  21 )
-    call COMM_vars8( RAING_URB(:,:),  22 )
-    call COMM_vars8( ROFF_URB(:,:),   23 )
-    call COMM_vars8( AH_URB(:,:),     24 )
-    call COMM_vars8( ALH_URB(:,:),    25 )
-    call COMM_vars8( Rngrd_URB(:,:),  26 )
-    call COMM_vars8( SHFLX_URB(:,:),  27 )
-    call COMM_vars8( LHFLX_URB(:,:),  28 )
-    call COMM_vars8( GHFLX_URB(:,:),  29 )
-    call COMM_vars8( TRL_URB(:,:,:), 30 )
-    call COMM_vars8( TBL_URB(:,:,:), 31 )
-    call COMM_vars8( TGL_URB(:,:,:), 32 )
-
-
-    call COMM_wait ( TR_URB(:,:),     1  )
-    call COMM_wait ( TB_URB(:,:),     2  )
-    call COMM_wait ( TG_URB(:,:),     3  )
-    call COMM_wait ( TC_URB(:,:),     4  )
-    call COMM_wait ( QC_URB(:,:),     5  )
-    call COMM_wait ( UC_URB(:,:),     6  )
-    call COMM_wait ( TS_URB(:,:),     7  )
-    call COMM_wait ( SHR_URB(:,:),    8  )
-    call COMM_wait ( SHB_URB(:,:),    9  )
-    call COMM_wait ( SHG_URB(:,:),    10 )
-    call COMM_wait ( LHR_URB(:,:),    11 )
-    call COMM_wait ( LHB_URB(:,:),    12 )
-    call COMM_wait ( LHG_URB(:,:),    13 )
-    call COMM_wait ( GHR_URB(:,:),    14 )
-    call COMM_wait ( GHB_URB(:,:),    15 )
-    call COMM_wait ( GHG_URB(:,:),    16 )
-    call COMM_wait ( RnR_URB(:,:),    17 )
-    call COMM_wait ( RnB_URB(:,:),    18 )
-    call COMM_wait ( RnG_URB(:,:),    19 )
-    call COMM_wait ( RAINR_URB(:,:),  20 )
-    call COMM_wait ( RAINB_URB(:,:),  21 )
-    call COMM_wait ( RAING_URB(:,:),  22 )
-    call COMM_wait ( ROFF_URB(:,:),   23 )
-    call COMM_wait ( AH_URB(:,:),     24 )
-    call COMM_wait ( ALH_URB(:,:),    25 )
-    call COMM_wait ( Rngrd_URB(:,:),  26 )
-    call COMM_wait ( SHFLX_URB(:,:),  27 )
-    call COMM_wait ( LHFLX_URB(:,:),  28 )
-    call COMM_wait ( GHFLX_URB(:,:),  29 )
-    call COMM_wait ( TRL_URB(:,:,:),  30 )
-    call COMM_wait ( TBL_URB(:,:,:),  31 )
-    call COMM_wait ( TGL_URB(:,:,:),  32 )
-
-    return
-  end subroutine URBAN_vars_fillhalo
-
-  !-----------------------------------------------------------------------------
   !> Read urban restart
   subroutine URBAN_vars_restart_read
     use scale_fileio, only: &
@@ -510,8 +424,6 @@ contains
        call FILEIO_read( ALH_URB(:,:),                                        & ! [OUT]
                          URBAN_RESTART_IN_BASENAME, 'ALH_URB', 'XY', step=1 )   ! [IN]
 
-       call URBAN_vars_fillhalo
-
        call URBAN_vars_total
 
     else
@@ -547,40 +459,56 @@ contains
 
        call URBAN_vars_total
 
-       call FILEIO_write( TR_URB(:,:),  basename,                                           URBAN_RESTART_OUT_TITLE, & ! [IN]
-                          VAR_NAME(I_TR_URB), VAR_DESC(I_TR_URB), VAR_UNIT(I_TR_URB), 'XY', URBAN_RESTART_OUT_DTYPE  ) ! [IN]
-       call FILEIO_write( TB_URB(:,:),  basename,                                           URBAN_RESTART_OUT_TITLE, & ! [IN]
-                          VAR_NAME(I_TB_URB), VAR_DESC(I_TB_URB), VAR_UNIT(I_TB_URB), 'XY', URBAN_RESTART_OUT_DTYPE  ) ! [IN]
-       call FILEIO_write( TG_URB(:,:),  basename,                                           URBAN_RESTART_OUT_TITLE, & ! [IN]
-                          VAR_NAME(I_TG_URB), VAR_DESC(I_TG_URB), VAR_UNIT(I_TG_URB), 'XY', URBAN_RESTART_OUT_DTYPE  ) ! [IN]
-       call FILEIO_write( TC_URB(:,:),  basename,                                           URBAN_RESTART_OUT_TITLE, & ! [IN]
-                          VAR_NAME(I_TC_URB), VAR_DESC(I_TC_URB), VAR_UNIT(I_TC_URB), 'XY', URBAN_RESTART_OUT_DTYPE  ) ! [IN]
-       call FILEIO_write( QC_URB(:,:),  basename,                                           URBAN_RESTART_OUT_TITLE, & ! [IN]
-                          VAR_NAME(I_QC_URB), VAR_DESC(I_QC_URB), VAR_UNIT(I_QC_URB), 'XY', URBAN_RESTART_OUT_DTYPE  ) ! [IN]
-       call FILEIO_write( UC_URB(:,:),  basename,                                           URBAN_RESTART_OUT_TITLE, & ! [IN]
-                          VAR_NAME(I_UC_URB), VAR_DESC(I_UC_URB), VAR_UNIT(I_UC_URB), 'XY', URBAN_RESTART_OUT_DTYPE  ) ! [IN]
-       call FILEIO_write( TS_URB(:,:),  basename,                                           URBAN_RESTART_OUT_TITLE, & ! [IN]
-                          VAR_NAME(I_TS_URB), VAR_DESC(I_TS_URB), VAR_UNIT(I_TS_URB), 'XY', URBAN_RESTART_OUT_DTYPE  ) ! [IN]
+       call FILEIO_write( TR_URB(:,:),  basename, URBAN_RESTART_OUT_TITLE,            & ! [IN]
+                          VAR_NAME(I_TR_URB), VAR_DESC(I_TR_URB), VAR_UNIT(I_TR_URB), & ! [IN]
+                          'XY', URBAN_RESTART_OUT_DTYPE, nohalo=.true.                ) ! [IN]
+       call FILEIO_write( TB_URB(:,:),  basename, URBAN_RESTART_OUT_TITLE,            & ! [IN]
+                          VAR_NAME(I_TB_URB), VAR_DESC(I_TB_URB), VAR_UNIT(I_TB_URB), & ! [IN]
+                          'XY', URBAN_RESTART_OUT_DTYPE, nohalo=.true.                ) ! [IN]
+       call FILEIO_write( TG_URB(:,:),  basename, URBAN_RESTART_OUT_TITLE,            & ! [IN]
+                          VAR_NAME(I_TG_URB), VAR_DESC(I_TG_URB), VAR_UNIT(I_TG_URB), & ! [IN]
+                          'XY', URBAN_RESTART_OUT_DTYPE, nohalo=.true.                ) ! [IN]
+       call FILEIO_write( TC_URB(:,:),  basename, URBAN_RESTART_OUT_TITLE,            & ! [IN]
+                          VAR_NAME(I_TC_URB), VAR_DESC(I_TC_URB), VAR_UNIT(I_TC_URB), & ! [IN]
+                          'XY', URBAN_RESTART_OUT_DTYPE, nohalo=.true.                ) ! [IN]
+       call FILEIO_write( QC_URB(:,:),  basename, URBAN_RESTART_OUT_TITLE,            & ! [IN]
+                          VAR_NAME(I_QC_URB), VAR_DESC(I_QC_URB), VAR_UNIT(I_QC_URB), & ! [IN]
+                          'XY', URBAN_RESTART_OUT_DTYPE, nohalo=.true.                ) ! [IN]
+       call FILEIO_write( UC_URB(:,:),  basename, URBAN_RESTART_OUT_TITLE,            & ! [IN]
+                          VAR_NAME(I_UC_URB), VAR_DESC(I_UC_URB), VAR_UNIT(I_UC_URB), & ! [IN]
+                          'XY', URBAN_RESTART_OUT_DTYPE, nohalo=.true.                ) ! [IN]
+       call FILEIO_write( TS_URB(:,:),  basename, URBAN_RESTART_OUT_TITLE,            & ! [IN]
+                          VAR_NAME(I_TS_URB), VAR_DESC(I_TS_URB), VAR_UNIT(I_TS_URB), & ! [IN]
+                          'XY', URBAN_RESTART_OUT_DTYPE, nohalo=.true.                ) ! [IN]
 
-       call FILEIO_write( TRL_URB(:,:,:), basename,                                               URBAN_RESTART_OUT_TITLE, & ! [IN]
-                          VAR_NAME(I_TRL_URB), VAR_DESC(I_TRL_URB), VAR_UNIT(I_TRL_URB), 'Urban', URBAN_RESTART_OUT_DTYPE  ) ! [IN]
-       call FILEIO_write( TBL_URB(:,:,:), basename,                                               URBAN_RESTART_OUT_TITLE, & ! [IN]
-                          VAR_NAME(I_TBL_URB), VAR_DESC(I_TBL_URB), VAR_UNIT(I_TBL_URB), 'Urban', URBAN_RESTART_OUT_DTYPE  ) ! [IN]
-       call FILEIO_write( TGL_URB(:,:,:), basename,                                               URBAN_RESTART_OUT_TITLE, & ! [IN]
-                          VAR_NAME(I_TGL_URB), VAR_DESC(I_TGL_URB), VAR_UNIT(I_TGL_URB), 'Urban', URBAN_RESTART_OUT_DTYPE  ) ! [IN]
+       call FILEIO_write( TRL_URB(:,:,:), basename, URBAN_RESTART_OUT_TITLE,             & ! [IN]
+                          VAR_NAME(I_TRL_URB), VAR_DESC(I_TRL_URB), VAR_UNIT(I_TRL_URB), & ! [IN]
+                          'Urban', URBAN_RESTART_OUT_DTYPE, nohalo=.true.                ) ! [IN]
+       call FILEIO_write( TBL_URB(:,:,:), basename, URBAN_RESTART_OUT_TITLE,             & ! [IN]
+                          VAR_NAME(I_TBL_URB), VAR_DESC(I_TBL_URB), VAR_UNIT(I_TBL_URB), & ! [IN]
+                          'Urban', URBAN_RESTART_OUT_DTYPE, nohalo=.true.                ) ! [IN]
+       call FILEIO_write( TGL_URB(:,:,:), basename, URBAN_RESTART_OUT_TITLE,             & ! [IN]
+                          VAR_NAME(I_TGL_URB), VAR_DESC(I_TGL_URB), VAR_UNIT(I_TGL_URB), & ! [IN]
+                          'Urban', URBAN_RESTART_OUT_DTYPE, nohalo=.true.                ) ! [IN]
 
-       call FILEIO_write( RAINR_URB(:,:),  basename,                                                 URBAN_RESTART_OUT_TITLE, & ! [IN]
-                          VAR_NAME(I_RAINR_URB), VAR_DESC(I_RAINR_URB), VAR_UNIT(I_RAINR_URB), 'XY', URBAN_RESTART_OUT_DTYPE  ) ! [IN]
-       call FILEIO_write( RAINB_URB(:,:),  basename,                                                 URBAN_RESTART_OUT_TITLE, & ! [IN]
-                          VAR_NAME(I_RAINB_URB), VAR_DESC(I_RAINB_URB), VAR_UNIT(I_RAINB_URB), 'XY', URBAN_RESTART_OUT_DTYPE  ) ! [IN]
-       call FILEIO_write( RAING_URB(:,:),  basename,                                                 URBAN_RESTART_OUT_TITLE, & ! [IN]
-                          VAR_NAME(I_RAING_URB), VAR_DESC(I_RAING_URB), VAR_UNIT(I_RAING_URB), 'XY', URBAN_RESTART_OUT_DTYPE  ) ! [IN]
-       call FILEIO_write( ROFF_URB(:,:),  basename,                                                  URBAN_RESTART_OUT_TITLE, & ! [IN]
-                          VAR_NAME(I_ROFF_URB),  VAR_DESC(I_ROFF_URB),  VAR_UNIT(I_ROFF_URB),  'XY', URBAN_RESTART_OUT_DTYPE  ) ! [IN]
-       call FILEIO_write( AH_URB(:,:),  basename,                                                    URBAN_RESTART_OUT_TITLE, & ! [IN]
-                          VAR_NAME(I_AH_URB),    VAR_DESC(I_AH_URB),    VAR_UNIT(I_AH_URB),    'XY', URBAN_RESTART_OUT_DTYPE  ) ! [IN]
-       call FILEIO_write( ALH_URB(:,:),  basename,                                                   URBAN_RESTART_OUT_TITLE, & ! [IN]
-                          VAR_NAME(I_ALH_URB),   VAR_DESC(I_ALH_URB),   VAR_UNIT(I_ALH_URB),   'XY', URBAN_RESTART_OUT_DTYPE  ) ! [IN]
+       call FILEIO_write( RAINR_URB(:,:),  basename, URBAN_RESTART_OUT_TITLE,                  & ! [IN]
+                          VAR_NAME(I_RAINR_URB), VAR_DESC(I_RAINR_URB), VAR_UNIT(I_RAINR_URB), & ! [IN]
+                          'XY', URBAN_RESTART_OUT_DTYPE, nohalo=.true.                         ) ! [IN]
+       call FILEIO_write( RAINB_URB(:,:),  basename, URBAN_RESTART_OUT_TITLE,                  & ! [IN]
+                          VAR_NAME(I_RAINB_URB), VAR_DESC(I_RAINB_URB), VAR_UNIT(I_RAINB_URB), & ! [IN]
+                          'XY', URBAN_RESTART_OUT_DTYPE, nohalo=.true.                         ) ! [IN]
+       call FILEIO_write( RAING_URB(:,:),  basename, URBAN_RESTART_OUT_TITLE,                  & ! [IN]
+                          VAR_NAME(I_RAING_URB), VAR_DESC(I_RAING_URB), VAR_UNIT(I_RAING_URB), & ! [IN]
+                          'XY', URBAN_RESTART_OUT_DTYPE, nohalo=.true.                         ) ! [IN]
+       call FILEIO_write( ROFF_URB(:,:),  basename,  URBAN_RESTART_OUT_TITLE,                  & ! [IN]
+                          VAR_NAME(I_ROFF_URB),  VAR_DESC(I_ROFF_URB),  VAR_UNIT(I_ROFF_URB),  & ! [IN]
+                          'XY', URBAN_RESTART_OUT_DTYPE, nohalo=.true.                         ) ! [IN]
+       call FILEIO_write( AH_URB(:,:),  basename,    URBAN_RESTART_OUT_TITLE,                  & ! [IN]
+                          VAR_NAME(I_AH_URB),    VAR_DESC(I_AH_URB),    VAR_UNIT(I_AH_URB),    & ! [IN]
+                          'XY', URBAN_RESTART_OUT_DTYPE, nohalo=.true.                         ) ! [IN]
+       call FILEIO_write( ALH_URB(:,:),  basename,   URBAN_RESTART_OUT_TITLE,                  & ! [IN]
+                          VAR_NAME(I_ALH_URB),   VAR_DESC(I_ALH_URB),   VAR_UNIT(I_ALH_URB),   & ! [IN]
+                          'XY', URBAN_RESTART_OUT_DTYPE, nohalo=.true.                         ) ! [IN]
 
     endif
 
@@ -598,19 +526,19 @@ contains
     !---------------------------------------------------------------------------
 
     if ( URBAN_VARS_CHECKRANGE ) then
-       call VALCHECK( TR_URB(:,:), 0.0_RP, 1000.0_RP, VAR_NAME(I_TR_URB), __FILE__, __LINE__ )
-       call VALCHECK( TB_URB(:,:), 0.0_RP, 1000.0_RP, VAR_NAME(I_TB_URB), __FILE__, __LINE__ )
-       call VALCHECK( TG_URB(:,:), 0.0_RP, 1000.0_RP, VAR_NAME(I_TG_URB), __FILE__, __LINE__ )
-       call VALCHECK( TC_URB(:,:), 0.0_RP, 1000.0_RP, VAR_NAME(I_TC_URB), __FILE__, __LINE__ )
-       call VALCHECK( QC_URB(:,:), 0.0_RP, 1000.0_RP, VAR_NAME(I_QC_URB), __FILE__, __LINE__ )
-       call VALCHECK( UC_URB(:,:), 0.0_RP, 1000.0_RP, VAR_NAME(I_UC_URB), __FILE__, __LINE__ )
-       call VALCHECK( TRL_URB(:,:,:), 0.0_RP, 1000.0_RP, VAR_NAME(I_TRL_URB), __FILE__, __LINE__ )
-       call VALCHECK( TBL_URB(:,:,:), 0.0_RP, 1000.0_RP, VAR_NAME(I_TBL_URB), __FILE__, __LINE__ )
-       call VALCHECK( TGL_URB(:,:,:), 0.0_RP, 1000.0_RP, VAR_NAME(I_TGL_URB), __FILE__, __LINE__ )
-       call VALCHECK( RAINR_URB(:,:), -500.0_RP, 1000.0_RP, VAR_NAME(I_RAINR_URB), __FILE__, __LINE__ )
-       call VALCHECK( RAINB_URB(:,:), -500.0_RP, 1000.0_RP, VAR_NAME(I_RAINB_URB), __FILE__, __LINE__ )
-       call VALCHECK( RAING_URB(:,:), -500.0_RP, 1000.0_RP, VAR_NAME(I_RAING_URB), __FILE__, __LINE__ )
-       call VALCHECK( ROFF_URB(:,:),  -500.0_RP, 1000.0_RP, VAR_NAME(I_ROFF_URB), __FILE__, __LINE__ )
+       call VALCHECK( TR_URB   (IS:IE,JS:JE),      0.0_RP, 1000.0_RP, VAR_NAME(I_TR_URB),    __FILE__, __LINE__ )
+       call VALCHECK( TB_URB   (IS:IE,JS:JE),      0.0_RP, 1000.0_RP, VAR_NAME(I_TB_URB),    __FILE__, __LINE__ )
+       call VALCHECK( TG_URB   (IS:IE,JS:JE),      0.0_RP, 1000.0_RP, VAR_NAME(I_TG_URB),    __FILE__, __LINE__ )
+       call VALCHECK( TC_URB   (IS:IE,JS:JE),      0.0_RP, 1000.0_RP, VAR_NAME(I_TC_URB),    __FILE__, __LINE__ )
+       call VALCHECK( QC_URB   (IS:IE,JS:JE),      0.0_RP, 1000.0_RP, VAR_NAME(I_QC_URB),    __FILE__, __LINE__ )
+       call VALCHECK( UC_URB   (IS:IE,JS:JE),      0.0_RP, 1000.0_RP, VAR_NAME(I_UC_URB),    __FILE__, __LINE__ )
+       call VALCHECK( TRL_URB  (:,IS:IE,JS:JE),    0.0_RP, 1000.0_RP, VAR_NAME(I_TRL_URB),   __FILE__, __LINE__ )
+       call VALCHECK( TBL_URB  (:,IS:IE,JS:JE),    0.0_RP, 1000.0_RP, VAR_NAME(I_TBL_URB),   __FILE__, __LINE__ )
+       call VALCHECK( TGL_URB  (:,IS:IE,JS:JE),    0.0_RP, 1000.0_RP, VAR_NAME(I_TGL_URB),   __FILE__, __LINE__ )
+       call VALCHECK( RAINR_URB(IS:IE,JS:JE),   -500.0_RP, 1000.0_RP, VAR_NAME(I_RAINR_URB), __FILE__, __LINE__ )
+       call VALCHECK( RAINB_URB(IS:IE,JS:JE),   -500.0_RP, 1000.0_RP, VAR_NAME(I_RAINB_URB), __FILE__, __LINE__ )
+       call VALCHECK( RAING_URB(IS:IE,JS:JE),   -500.0_RP, 1000.0_RP, VAR_NAME(I_RAING_URB), __FILE__, __LINE__ )
+       call VALCHECK( ROFF_URB (IS:IE,JS:JE),   -500.0_RP, 1000.0_RP, VAR_NAME(I_ROFF_URB),  __FILE__, __LINE__ )
 !       call VALCHECK( Rngrd_URB(:,:),  -5000.0_RP, 5000.0_RP, VAR_NAME(I_Rngrd_URB), __FILE__, __LINE__ )
     endif
 
@@ -746,8 +674,6 @@ contains
     ROFF_URB(:,:)  = 0.D0
     AH_URB(:,:)    = 0.D0
     ALH_URB(:,:)   = 0.D0
-
-    call URBAN_vars_fillhalo
 
     call URBAN_vars_total
 

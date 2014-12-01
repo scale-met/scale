@@ -135,7 +135,6 @@ contains
     use scale_land_grid, only: &
        dz => GRID_LCDZ
     use mod_land_vars, only: &
-       LAND_vars_fillhalo, &
        I_WaterCritical,    &
        I_ThermalCond,      &
        I_Z0M,              &
@@ -163,8 +162,6 @@ contains
     !---------------------------------------------------------------------------
 
     if ( CPL_sw_AtmLnd ) then
-       call LAND_vars_fillhalo
-
        if ( setup ) then
           LAND_DZ(:,:) = dz(LKS)
 

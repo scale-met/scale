@@ -127,7 +127,6 @@ contains
   !> Put surface boundary to other model
   subroutine OCEAN_SURFACE_SET( setup )
     use mod_ocean_vars, only: &
-       OCEAN_vars_fillhalo, &
        OCEAN_TEMP,          &
        OCEAN_SFC_TEMP,      &
        OCEAN_SFC_albedo,    &
@@ -143,8 +142,6 @@ contains
     !---------------------------------------------------------------------------
 
     if ( CPL_sw_AtmOcn ) then
-       call OCEAN_vars_fillhalo
-
        if ( setup ) then
           call CPL_putOcn_setup( OCEAN_SFC_TEMP  (:,:),   & ! [IN]
                                  OCEAN_SFC_albedo(:,:,:), & ! [IN]

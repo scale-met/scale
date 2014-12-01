@@ -261,8 +261,8 @@ contains
     integer  :: i, j
     !---------------------------------------------------------------------------
 
-    do j = 1, JA
-    do i = 1, IA
+    do j = JS, JE
+    do i = IS, IE
        Z0M(i,j) = OCEAN_roughness_const_Z0M
        Z0H(i,j) = OCEAN_roughness_const_Z0H
        Z0E(i,j) = OCEAN_roughness_const_Z0E

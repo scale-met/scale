@@ -113,8 +113,6 @@ contains
   !-----------------------------------------------------------------------------
   !> Put surface boundary to other model
   subroutine URBAN_SURFACE_SET( setup )
-    use mod_urban_vars, only: &
-       URBAN_vars_fillhalo
     use mod_cpl_admin, only: &
        CPL_sw_AtmUrb
     use mod_cpl_vars, only: &
@@ -126,8 +124,6 @@ contains
     !---------------------------------------------------------------------------
 
 !    if ( CPL_sw_AtmUrb ) then
-!       call URBAN_vars_fillhalo
-!
 !       if ( setup ) then
 !          call CPL_putUrb_setup( URBAN_TEMP(:,:) ) ! [IN]
 !       endif
