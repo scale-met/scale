@@ -217,14 +217,17 @@ contains
     use scale_const, only: &
        D2R => CONST_D2R
     use scale_process, only: &
-       PRC_nmax,   &
-       PRC_master, &
-       PRC_myrank, &
-       PRC_MPIstop, &
-       PRC_HAS_W, &
-       PRC_HAS_E, &
-       PRC_HAS_S, &
-       PRC_HAS_N
+       PRC_nmax,          &
+       PRC_master,        &
+       PRC_myrank,        &
+       PRC_MPIstop,       &
+       PRC_HAS_W,         &
+       PRC_HAS_E,         &
+       PRC_HAS_S,         &
+       PRC_HAS_N,         &
+       PRC_online_nest,   &
+       PRC_interdomain_p, &
+       PRC_interdomain_d
     use scale_grid_real, only: &
        REAL_LONXY,           &
        REAL_LATXY,           &
@@ -413,6 +416,9 @@ contains
                                  errcodes,            &
                                  ierr                 )
 
+            PRC_online_nest   = .true.
+            PRC_interdomain_d = INTERCOMM_DAUGHTER
+
             call NEST_COMM_ping( HANDLING_NUM )
 
             call NEST_COMM_parentsize( HANDLING_NUM )
@@ -464,6 +470,9 @@ contains
             call MPI_COMM_GET_PARENT( INTERCOMM_PARENT, ierr )
             if( IO_L ) write(IO_FID_LOG,'(1x,A,I2,A)') &
             '*** Activated Daughter Domain [INTERCOMM_ID:', INTERCOMM_ID(HANDLING_NUM), ' ]'
+
+            PRC_online_nest   = .true.
+            PRC_interdomain_p = INTERCOMM_PARENT
 
             call NEST_COMM_ping( HANDLING_NUM )
 
