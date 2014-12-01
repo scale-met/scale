@@ -304,7 +304,7 @@ contains
        PRC_MPIstop
     implicit none
 
-    real(RP), intent(in)    :: var(:,:,:) !< variable for register
+    real(RP), intent(inout) :: var(:,:,:) !< variable for register
     integer,  intent(inout) :: vid        !< variable ID
     !---------------------------------------------------------------------------
 
@@ -346,7 +346,7 @@ contains
        PRC_MPIstop
     implicit none
 
-    real(RP), intent(in)    :: var(:,:,:) !< variable for register
+    real(RP), intent(inout) :: var(:,:,:) !< variable for register
     integer,  intent(inout) :: vid        !< variable ID
     !---------------------------------------------------------------------------
 
@@ -1018,7 +1018,7 @@ contains
        PRC_E,    &
        PRC_S
     implicit none
-    real(RP), intent(in) :: var(:,:,:)
+    real(RP), intent(inout) :: var(:,:,:)
     integer,  intent(in) :: vid
     integer,  intent(in) :: seqid
 
@@ -1103,7 +1103,7 @@ contains
        PRC_HAS_E, &
        PRC_HAS_S
     implicit none
-    real(RP), intent(in) :: var(:,:,:)
+    real(RP), intent(inout) :: var(:,:,:)
     integer,  intent(in) :: vid
     integer,  intent(in) :: seqid
 

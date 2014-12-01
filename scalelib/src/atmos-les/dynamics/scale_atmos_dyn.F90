@@ -166,12 +166,13 @@ contains
 
     character(len=H_SHORT), intent(in) :: DYN_TYPE
 
-    real(RP),               intent(in) :: DENS(KA,IA,JA)
-    real(RP),               intent(in) :: MOMZ(KA,IA,JA)
-    real(RP),               intent(in) :: MOMX(KA,IA,JA)
-    real(RP),               intent(in) :: MOMY(KA,IA,JA)
-    real(RP),               intent(in) :: RHOT(KA,IA,JA)
-    real(RP),               intent(in) :: QTRC(KA,IA,JA,QA)
+    ! MPI_RECV_INIT requires intent(inout)
+    real(RP),               intent(inout) :: DENS(KA,IA,JA)
+    real(RP),               intent(inout) :: MOMZ(KA,IA,JA)
+    real(RP),               intent(inout) :: MOMX(KA,IA,JA)
+    real(RP),               intent(inout) :: MOMY(KA,IA,JA)
+    real(RP),               intent(inout) :: RHOT(KA,IA,JA)
+    real(RP),               intent(inout) :: QTRC(KA,IA,JA,QA)
 
     real(RP),               intent(in) :: CDZ(KA)
     real(RP),               intent(in) :: CDX(IA)
