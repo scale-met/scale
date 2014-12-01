@@ -37,6 +37,8 @@ module scale_debug
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
+  integer, public :: DEBUG_DOMAIN_NUM = 0
+
   !
   !-----------------------------------------------------------------------------
   !
@@ -125,6 +127,7 @@ contains
        write(*,*) 'xxx invalid value:', trim(varname), &
                   '(', PRC_myrank, ',', k, ')=', var(k)
        write(*,*) 'xxx in file:', trim(current_file), ', at line:', current_line
+       write(*,*) 'xxx in domain:', DEBUG_DOMAIN_NUM
 
        call PRC_MPIstop
     endif
@@ -187,6 +190,7 @@ contains
        write(*,*) 'xxx invalid value:', trim(varname), &
                   '(', PRC_myrank, ',', k, ',', i, ')=', var(k,i)
        write(*,*) 'xxx in file:', trim(current_file), ', at line:', current_line
+       write(*,*) 'xxx in domain:', DEBUG_DOMAIN_NUM
 
        call PRC_MPIstop
     endif
@@ -255,6 +259,7 @@ contains
        write(*,*) 'xxx invalid value:', trim(varname), &
                   '(', PRC_myrank, ',', k, ',', i, ',', j, ')=', var(k,i,j)
        write(*,*) 'xxx in file:', trim(current_file), ', at line:', current_line
+       write(*,*) 'xxx in domain:', DEBUG_DOMAIN_NUM
 
        call PRC_MPIstop
     endif

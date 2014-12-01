@@ -17,6 +17,8 @@ module scale_process
   !++ used modules
   !
   use mpi
+  use gtool_file, only: &
+     FileCloseAll
   use scale_precision
   use scale_stdio
   !-----------------------------------------------------------------------------
@@ -63,6 +65,10 @@ module scale_process
   logical, public            :: PRC_HAS_E
   logical, public            :: PRC_HAS_S
 
+  logical, public :: PRC_online_nest   = .false. !< whether online nesting is running or not?
+  integer, public :: PRC_interdomain_p = 0       ! interdomain communicator (to parent)
+  integer, public :: PRC_interdomain_d = 0       ! interdomain communicator (to daughter)
+
   !-----------------------------------------------------------------------------
   !
   !++ Private procedure
@@ -71,7 +77,10 @@ module scale_process
   !
   !++ Private parameters & variables
   !
-  logical, private :: PRC_mpi_alive = .false. !< whether MPI is alive or not?
+  integer, private, parameter :: abort_code   = 1 !< mpi abort code in error handler
+!  integer, private, parameter :: abort_code_p = 2 !< mpi abort code in error handler from parent
+!  integer, private, parameter :: abort_code_d = 3 !< mpi abort code in error handler from daughter
+  logical, private :: PRC_mpi_alive   = .false. !< whether MPI is alive or not?
 
   !-----------------------------------------------------------------------------
 contains
@@ -80,12 +89,20 @@ contains
   subroutine PRC_MPIstart
     implicit none
 
-    character(len=H_LONG) :: fname ! name of logfile for each process
+    character(len=H_LONG)  :: fname ! name of logfile for each process
+    character(len=H_SHORT) :: info
 
+    integer :: new_abort
+    integer :: handler_status
     integer :: ierr
     !---------------------------------------------------------------------------
 
     call MPI_Init(ierr)
+
+    call MPI_COMM_CREATE_ERRHANDLER( PRC_MPI_errorhandler, new_abort, ierr )
+    call MPI_COMM_SET_ERRHANDLER   ( MPI_COMM_WORLD,       new_abort, ierr )
+    call MPI_COMM_GET_ERRHANDLER   ( MPI_COMM_WORLD,  handler_status, ierr )
+
     call MPI_Comm_size(MPI_COMM_WORLD,PRC_nmax,  ierr)
     call MPI_Comm_rank(MPI_COMM_WORLD,PRC_myrank,ierr)
 
@@ -123,7 +140,7 @@ contains
           endif
        endif
 
-       write(IO_FID_LOG,*)
+       write(IO_FID_LOG,*) ''
        write(IO_FID_LOG,*) '                                               -+++++++++;              '
        write(IO_FID_LOG,*) '                                             ++++++++++++++=            '
        write(IO_FID_LOG,*) '                                           ++++++++++++++++++-          '
@@ -175,24 +192,25 @@ contains
        write(IO_FID_LOG,*) ',,,,,,,,,,.     ,,,,,,,,,    .,,,,,,,.       .,,,,,,,,    ,,,,,,,,      '
        write(IO_FID_LOG,*) '                                                                        '
        write(IO_FID_LOG,*) '     SCALE : Scalable Computing by Advanced Library and Environment     '
-       write(IO_FID_LOG,*)
+       write(IO_FID_LOG,*) ''
        write(IO_FID_LOG,*) '++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++'
        write(IO_FID_LOG,*) '+                   LES-scale Numerical Weather Model                  +'
        write(IO_FID_LOG,*) '++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++'
        write(IO_FID_LOG,*) trim(H_LIBNAME)
        write(IO_FID_LOG,*) trim(H_MODELNAME)
-       write(IO_FID_LOG,*)
+       write(IO_FID_LOG,*) ''
        write(IO_FID_LOG,*) '++++++ Start MPI'
        write(IO_FID_LOG,*) '*** total process : ', PRC_nmax
        write(IO_FID_LOG,*) '*** master rank   : ', PRC_master
        write(IO_FID_LOG,*) '*** my process ID : ', PRC_myrank
-       write(IO_FID_LOG,*)
+       write(IO_FID_LOG,*) ''
        write(IO_FID_LOG,*) '++++++ Module[STDIO] / Categ[IO] / Origin[SCALElib]'
-       write(IO_FID_LOG,*)
+       write(IO_FID_LOG,*) ''
        write(IO_FID_LOG,*) '*** Open config file, FID = ', IO_FID_CONF
        write(IO_FID_LOG,*) '*** Open log    file, FID = ', IO_FID_LOG
        write(IO_FID_LOG,*) '*** basename of log file  = ', trim(IO_LOG_BASENAME)
        write(IO_FID_LOG,*) '*** detailed log output   = ', IO_LNML
+       write(IO_FID_LOG,*) '*** Created Error Handler: rt=', new_abort,' st=', handler_status
 
     else
 
@@ -275,16 +293,8 @@ contains
     integer :: ierr
     !---------------------------------------------------------------------------
 
-    ! flush 1kbyte
-    if( IO_L ) write(IO_FID_LOG,'(32A32)') '                                '
-
     if ( PRC_mpi_alive ) then
-       if ( IO_L ) then
-          write(IO_FID_LOG,*)
-          write(IO_FID_LOG,*) '++++++ Abort MPI'
-          if ( IO_FID_LOG /= IO_FID_STDOUT ) close(IO_FID_LOG)
-       endif
-       call MPI_Abort(MPI_COMM_WORLD, 1, ierr)
+        call MPI_COMM_CALL_ERRHANDLER(MPI_COMM_WORLD, abort_code, ierr)
     endif
 
     stop
@@ -549,6 +559,70 @@ contains
 
     return
   end subroutine PRC_MPItimestat
+
+  !-----------------------------------------------------------------------------
+  !> MPI Error Handler
+  subroutine PRC_MPI_errorhandler( &
+      comm,     &
+      errcode   )
+    implicit none
+
+    integer, intent(in) :: comm    !< MPI communicator
+    integer, intent(in) :: errcode !< error code
+
+    character(len=H_SHORT) :: request = 'STOP'
+    integer :: ireq, ierr
+    !---------------------------------------------------------------------------
+
+    ! Print Error Messages
+    if ( PRC_mpi_alive ) then
+       if( IO_L ) then
+          ! flush 1kbyte
+          write(IO_FID_LOG,'(32A32)') '                                '
+          write(IO_FID_LOG,*) '++++++ Abort MPI'
+          write(IO_FID_LOG,*) ''
+
+          if ( errcode .eq. abort_code ) then
+             write(IO_FID_LOG,*) '++++++ Expected error code'
+          elseif ( errcode .eq. MPI_ERR_OTHER ) then
+             write(IO_FID_LOG,*) '++++++ MPI known error not in list'
+          else
+             write(IO_FID_LOG,*) '++++++ Unexpected error code', errcode
+          endif
+
+          if ( comm .ne. MPI_COMM_WORLD ) then
+             write(IO_FID_LOG,*) '++++++ Unexpected communicator'
+          endif
+          write(IO_FID_LOG,*) ''
+       endif
+    endif
+
+    call FileCloseAll
+
+    ! Close logfile, configfile
+    if ( IO_L ) then
+       if ( IO_FID_LOG /= IO_FID_STDOUT ) close(IO_FID_LOG)
+    endif
+    close(IO_FID_CONF)
+
+    ! Abort MPI
+    if ( PRC_mpi_alive ) then
+       if ( PRC_online_nest ) then
+          if ( PRC_interdomain_d /= 0 ) then ! # of comm may not be 0
+             write(*,*) "Send abort code to daughter domain"
+             call MPI_ABORT(PRC_interdomain_d, abort_code, ierr)
+          endif
+          if ( PRC_interdomain_p /= 0 ) then ! # of comm may not be 0
+             write(*,*) "Send abort code to parent domain"
+             call MPI_ABORT(PRC_interdomain_p, abort_code, ierr)
+          endif
+       endif
+
+       call MPI_ABORT(MPI_COMM_WORLD, abort_code, ierr)
+    endif
+
+    stop
+  end subroutine PRC_MPI_errorhandler
 
 end module scale_process
 !-------------------------------------------------------------------------------
