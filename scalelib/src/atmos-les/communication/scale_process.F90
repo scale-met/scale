@@ -77,7 +77,7 @@ module scale_process
   !
   !++ Private parameters & variables
   !
-  integer, private, parameter :: abort_code   = 1 !< mpi abort code in error handler
+  integer, private, parameter :: abort_code   = -1 !< mpi abort code in error handler
 !  integer, private, parameter :: abort_code_p = 2 !< mpi abort code in error handler from parent
 !  integer, private, parameter :: abort_code_d = 3 !< mpi abort code in error handler from daughter
   logical, private :: PRC_mpi_alive   = .false. !< whether MPI is alive or not?
@@ -292,6 +292,16 @@ contains
 
     integer :: ierr
     !---------------------------------------------------------------------------
+
+    if ( IO_L ) then
+       write(IO_FID_LOG,*) ''
+       write(IO_FID_LOG,*) '++++++ PRC_MPIstop'
+       write(IO_FID_LOG,*) ''
+    end if
+
+    write(*,*) ''
+    write(*,*) '++++++ PRC_MPIstop'
+    write(*,*) ''
 
     if ( PRC_mpi_alive ) then
         call MPI_COMM_CALL_ERRHANDLER(MPI_COMM_WORLD, abort_code, ierr)
@@ -570,31 +580,36 @@ contains
     integer, intent(in) :: comm    !< MPI communicator
     integer, intent(in) :: errcode !< error code
 
-    character(len=H_SHORT) :: request = 'STOP'
-    integer :: ireq, ierr
+    character(len=MPI_MAX_ERROR_STRING) :: msg
+    integer :: len
+    integer :: ierr
     !---------------------------------------------------------------------------
 
     ! Print Error Messages
     if ( PRC_mpi_alive ) then
-       if( IO_L ) then
           ! flush 1kbyte
+       if ( IO_L ) then
           write(IO_FID_LOG,'(32A32)') '                                '
           write(IO_FID_LOG,*) '++++++ Abort MPI'
           write(IO_FID_LOG,*) ''
+       end if
 
-          if ( errcode .eq. abort_code ) then
-             write(IO_FID_LOG,*) '++++++ Expected error code'
-          elseif ( errcode .eq. MPI_ERR_OTHER ) then
-             write(IO_FID_LOG,*) '++++++ MPI known error not in list'
-          else
-             write(IO_FID_LOG,*) '++++++ Unexpected error code', errcode
-          endif
-
-          if ( comm .ne. MPI_COMM_WORLD ) then
-             write(IO_FID_LOG,*) '++++++ Unexpected communicator'
-          endif
-          write(IO_FID_LOG,*) ''
+       if ( errcode .eq. abort_code ) then ! called from PRC_MPIstop
+       elseif ( errcode <= MPI_ERR_LASTCODE ) then
+          call MPI_ERROR_STRING(errcode, msg, len, ierr)
+          if ( IO_L ) write(IO_FID_LOG,*) '++++++ ', trim(msg)
+          write(*,*) '++++++ ', trim(msg)
+       else
+          if ( IO_L ) write(IO_FID_LOG,*) '++++++ Unexpected error code', errcode
+          write(*,*) '++++++ Unexpected error code', errcode
        endif
+
+       if ( comm .ne. MPI_COMM_WORLD ) then
+          if ( IO_L ) write(IO_FID_LOG,*) '++++++ Unexpected communicator'
+          write(*,*) '++++++ Unexpected communicator'
+       endif
+       if ( IO_L ) write(IO_FID_LOG,*) ''
+       write(*,*) ''
     endif
 
     call FileCloseAll
@@ -608,11 +623,13 @@ contains
     ! Abort MPI
     if ( PRC_mpi_alive ) then
        if ( PRC_online_nest ) then
-          if ( PRC_interdomain_d /= 0 ) then ! # of comm may not be 0
+          if ( PRC_interdomain_d /= 0 .and. & ! # of comm may not be 0
+               PRC_interdomain_d /= comm ) then
              write(*,*) "Send abort code to daughter domain"
              call MPI_ABORT(PRC_interdomain_d, abort_code, ierr)
           endif
-          if ( PRC_interdomain_p /= 0 ) then ! # of comm may not be 0
+          if ( PRC_interdomain_p /= 0 .and. & ! # of comm may not be 0
+               PRC_interdomain_p /= comm ) then
              write(*,*) "Send abort code to parent domain"
              call MPI_ABORT(PRC_interdomain_p, abort_code, ierr)
           endif
