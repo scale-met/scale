@@ -348,12 +348,16 @@ contains
     if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_NEST)
 
     ! only for register
+    call PROF_rapstart('NESTCOM total parent')
+    call PROF_rapend  ('NESTCOM total parent')
     call PROF_rapstart('NESTCOM send parent')
     call PROF_rapend  ('NESTCOM send parent')
     call PROF_rapstart('NESTCOM test parent')
     call PROF_rapend  ('NESTCOM test parent')
     call PROF_rapstart('NESTCOM wait parent')
     call PROF_rapend  ('NESTCOM wait parent')
+    call PROF_rapstart('NESTCOM total child')
+    call PROF_rapend  ('NESTCOM total child')
     call PROF_rapstart('NESTCOM recv child')
     call PROF_rapend  ('NESTCOM recv child')
     call PROF_rapstart('NESTCOM test child')
@@ -1542,6 +1546,8 @@ contains
 
     if ( NEST_Filiation( INTERCOMM_ID(HANDLE) ) > 0 ) then
     !-------------------------------------------------------- parent [send issue]
+       call PROF_rapstart('NESTCOM total parent')
+
        nsend = nsend + 1
        if( IO_L ) write(IO_FID_LOG,'(1X,A,I5,A)') "*** NestIDC [P]: que send ( ", nsend, " )"
 
@@ -1596,8 +1602,12 @@ contains
 
        rq_tot_p = rq_ctl_p
 
+       call PROF_rapend('NESTCOM total parent')
+
     elseif ( NEST_Filiation( INTERCOMM_ID(HANDLE) ) < 0 ) then
     !-------------------------------------------------------- daughter [wait issue]
+       call PROF_rapstart('NESTCOM total child')
+
        nwait_d = nwait_d + 1
        !if( IO_L ) write(IO_FID_LOG,'(1X,A,I5,A)') "*** NestIDC [C]: que wait ( ", nwait_d, " )"
 
@@ -1719,6 +1729,7 @@ contains
           enddo
        enddo
 
+       call PROF_rapend('NESTCOM total child')
     else
        write(*,*) 'xxx internal error [nestdown: nest/grid]'
        call PRC_MPIstop
@@ -1756,6 +1767,7 @@ contains
 
     if ( NEST_Filiation( INTERCOMM_ID(HANDLE) ) > 0 ) then
     !-------------------------------------------------------- parent [wait issue]
+       call PROF_rapstart('NESTCOM total parent')
        nwait_p = nwait_p + 1
        !if( IO_L ) write(IO_FID_LOG,'(1X,A,I5,A)') "*** NestIDC [P]: que wait ( ", nwait_p, " )"
 
@@ -1769,8 +1781,10 @@ contains
        endif
        call PROF_rapend  ('NESTCOM wait parent')
 
+       call PROF_rapend('NESTCOM total parent')
     elseif ( NEST_Filiation( INTERCOMM_ID(HANDLE) ) < 0 ) then
     !-------------------------------------------------------- daughter [receive issue]
+       call PROF_rapstart('NESTCOM total child')
        nrecv = nrecv + 1
        if( IO_L ) write(IO_FID_LOG,'(1X,A,I5,A)') "*** NestIDC [C]: que recv ( ", nrecv, " )"
 
@@ -1813,6 +1827,7 @@ contains
 
        rq_tot_d = rq_ctl_d
 
+       call PROF_rapend('NESTCOM total child')
     else
        write(*,*) 'xxx internal error [issue: nest/grid]'
        call PRC_MPIstop
