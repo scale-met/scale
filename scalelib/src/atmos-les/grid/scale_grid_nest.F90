@@ -348,24 +348,26 @@ contains
     if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_NEST)
 
     ! only for register
-    call PROF_rapstart('NESTCOM total parent')
-    call PROF_rapend  ('NESTCOM total parent')
-    call PROF_rapstart('NESTCOM send parent')
-    call PROF_rapend  ('NESTCOM send parent')
-    call PROF_rapstart('NESTCOM test parent')
-    call PROF_rapend  ('NESTCOM test parent')
-    call PROF_rapstart('NESTCOM wait parent')
-    call PROF_rapend  ('NESTCOM wait parent')
-    call PROF_rapstart('NESTCOM total child')
-    call PROF_rapend  ('NESTCOM total child')
-    call PROF_rapstart('NESTCOM recv child')
-    call PROF_rapend  ('NESTCOM recv child')
-    call PROF_rapstart('NESTCOM test child')
-    call PROF_rapend  ('NESTCOM test child')
-    call PROF_rapstart('NESTCOM wait child')
-    call PROF_rapend  ('NESTCOM wait child')
-    call PROF_rapstart('NESTCOM interp')
-    call PROF_rapend  ('NESTCOM interp')
+    if ( ONLINE_IAM_PARENT .or. ONLINE_IAM_DAUGHTER ) then
+       call PROF_rapstart('NESTCOM total parent')
+       call PROF_rapend  ('NESTCOM total parent')
+       call PROF_rapstart('NESTCOM send parent')
+       call PROF_rapend  ('NESTCOM send parent')
+       call PROF_rapstart('NESTCOM test parent')
+       call PROF_rapend  ('NESTCOM test parent')
+       call PROF_rapstart('NESTCOM wait parent')
+       call PROF_rapend  ('NESTCOM wait parent')
+       call PROF_rapstart('NESTCOM total child')
+       call PROF_rapend  ('NESTCOM total child')
+       call PROF_rapstart('NESTCOM recv child')
+       call PROF_rapend  ('NESTCOM recv child')
+       call PROF_rapstart('NESTCOM test child')
+       call PROF_rapend  ('NESTCOM test child')
+       call PROF_rapstart('NESTCOM wait child')
+       call PROF_rapend  ('NESTCOM wait child')
+       call PROF_rapstart('NESTCOM interp')
+       call PROF_rapend  ('NESTCOM interp')
+    endif
 
     DEBUG_DOMAIN_NUM = ONLINE_DOMAIN_NUM
     allocate ( errcodes(1:ONLINE_DAUGHTER_PRC) )
@@ -2249,22 +2251,22 @@ contains
     integer, intent(inout) :: ireq(max_rq)
 
     integer :: ierr
-    integer :: istatus(MPI_STATUS_SIZE)
+    integer :: istatus(MPI_STATUS_SIZE,req_count)
 
     logical    :: flag
-    integer(8) :: num
+    !integer(8) :: num
     !---------------------------------------------------------------------------
-    num  = 0
+    !num  = 0
     flag = .false.
 
     do while ( .not. flag )
-       num = num + 1
-       call MPI_TESTALL( req_count, ireq(1:req_count), flag, istatus, ierr )
+       !num = num + 1
+       call MPI_TESTALL( req_count, ireq, flag, istatus, ierr )
     enddo
 
-    if ( num > 500000 ) then
-       if( IO_L ) write(IO_FID_LOG,'(1x,A)') '*** WARNING: long waste time for NEST_COMM_waitall'
-    endif
+    !if ( num > 500000 ) then
+    !   if( IO_L ) write(IO_FID_LOG,'(1x,A)') '*** WARNING: long waste time for NEST_COMM_waitall'
+    !endif
 
     return
   end subroutine NEST_COMM_waitall
