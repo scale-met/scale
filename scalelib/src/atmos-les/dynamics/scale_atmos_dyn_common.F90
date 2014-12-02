@@ -469,13 +469,13 @@ contains
 
     end if
 
-    call PROF_rapstart("NumFilter Main", 3)
-
-
 
     !-----< density >-----
 
     if ( ND_USE_RS ) then
+
+       call PROF_rapstart("NumFilter Main", 3)
+
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JS-1, JE+2
        do i = IS-1, IE+2
@@ -484,6 +484,9 @@ contains
        enddo
        enddo
        enddo
+
+       call PROF_rapend("NumFilter Main")
+
     endif
 
     call calc_numdiff( work(:,:,:,:,1), iwork, & ! (out)
