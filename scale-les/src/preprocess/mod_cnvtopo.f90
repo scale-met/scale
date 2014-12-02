@@ -778,8 +778,8 @@ contains
     real(RP) :: DZsfc_DX(1,IA,JA,1) ! d(Zsfc)/dx at u-position
     real(RP) :: DZsfc_DY(1,IA,JA,1) ! d(Zsfc)/dy at v-position
 
-    real(RP) :: DXL(IA)
-    real(RP) :: DYL(JA)
+    real(RP) :: DXL(IA-1)
+    real(RP) :: DYL(JA-1)
 
     real(RP) :: FLX_X(IA,JA)
     real(RP) :: FLX_Y(IA,JA)
