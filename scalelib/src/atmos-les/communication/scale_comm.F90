@@ -166,8 +166,8 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[COMM] / Categ[ATMOS-LES COMM] / Origin[SCALElib]'
 
-    COMM_vsize_max = 2 * max( 5 + QA, 20 )
-    COMM_vsize_max_pc = 35 + QA*2
+    COMM_vsize_max = max( 10 + QA*2, 25 )
+    COMM_vsize_max_pc = 50 + QA*2
 
     !--- read namelist
     rewind(IO_FID_CONF)

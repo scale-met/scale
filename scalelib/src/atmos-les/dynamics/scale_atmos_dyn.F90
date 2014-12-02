@@ -99,42 +99,45 @@ module scale_atmos_dyn
   real(RP), private, allocatable :: CORIOLI(:,:)            ! coriolis term
   real(RP), private, allocatable :: mflx_hi(:,:,:,:)        ! rho * vel(x,y,z) @ (u,v,w)-face high order
 
+  real(RP), private, allocatable :: num_diff  (:,:,:,:,:)
+  real(RP), private, allocatable :: num_diff_q(:,:,:,:)
+
   logical, private :: BND_W
   logical, private :: BND_E
   logical, private :: BND_S
   logical, private :: BND_N
 
-    ! for communication
-    integer :: I_COMM_DENS = 1
-    integer :: I_COMM_MOMZ = 2
-    integer :: I_COMM_MOMX = 3
-    integer :: I_COMM_MOMY = 4
-    integer :: I_COMM_RHOT = 5
+  ! for communication
+  integer :: I_COMM_DENS = 1
+  integer :: I_COMM_MOMZ = 2
+  integer :: I_COMM_MOMX = 3
+  integer :: I_COMM_MOMY = 4
+  integer :: I_COMM_RHOT = 5
 
-    integer :: I_COMM_DENS_t = 1
-    integer :: I_COMM_MOMZ_t = 2
-    integer :: I_COMM_MOMX_t = 3
-    integer :: I_COMM_MOMY_t = 4
-    integer :: I_COMM_RHOT_t = 5
+  integer :: I_COMM_DENS_t = 1
+  integer :: I_COMM_MOMZ_t = 2
+  integer :: I_COMM_MOMX_t = 3
+  integer :: I_COMM_MOMY_t = 4
+  integer :: I_COMM_RHOT_t = 5
 
-    integer :: I_COMM_DENS_RK1 = 1
-    integer :: I_COMM_MOMZ_RK1 = 2
-    integer :: I_COMM_MOMX_RK1 = 3
-    integer :: I_COMM_MOMY_RK1 = 4
-    integer :: I_COMM_RHOT_RK1 = 5
+  integer :: I_COMM_DENS_RK1 = 1
+  integer :: I_COMM_MOMZ_RK1 = 2
+  integer :: I_COMM_MOMX_RK1 = 3
+  integer :: I_COMM_MOMY_RK1 = 4
+  integer :: I_COMM_RHOT_RK1 = 5
 
-    integer :: I_COMM_DENS_RK2 = 1
-    integer :: I_COMM_MOMZ_RK2 = 2
-    integer :: I_COMM_MOMX_RK2 = 3
-    integer :: I_COMM_MOMY_RK2 = 4
-    integer :: I_COMM_RHOT_RK2 = 5
+  integer :: I_COMM_DENS_RK2 = 1
+  integer :: I_COMM_MOMZ_RK2 = 2
+  integer :: I_COMM_MOMX_RK2 = 3
+  integer :: I_COMM_MOMY_RK2 = 4
+  integer :: I_COMM_RHOT_RK2 = 5
 
-    integer, allocatable :: I_COMM_RHOQ_t(:)
-    integer, allocatable :: I_COMM_QTRC(:)
+  integer, allocatable :: I_COMM_RHOQ_t(:)
+  integer, allocatable :: I_COMM_QTRC(:)
 
-    integer :: I_COMM_mflx_z = 1
-    integer :: I_COMM_mflx_x = 2
-    integer :: I_COMM_mflx_y = 3
+  integer :: I_COMM_mflx_z = 1
+  integer :: I_COMM_mflx_x = 2
+  integer :: I_COMM_mflx_y = 3
 
   !-----------------------------------------------------------------------------
 contains
@@ -207,11 +210,16 @@ contains
     allocate( CORIOLI(IA,JA) )
     allocate( mflx_hi(KA,IA,JA,3) )
 
+    allocate( num_diff  (KA,IA,JA,5,3) )
+    allocate( num_diff_q(KA,IA,JA,3) )
+
     allocate( I_COMM_RHOQ_t(QA) )
     allocate( I_COMM_QTRC(QA) )
 
     ! numerical diffusion
-    call ATMOS_DYN_filter_setup( CDZ, CDX, CDY, FDZ, FDX, FDY ) ! (in)
+    call ATMOS_DYN_filter_setup( &
+         num_diff, num_diff_q, & ! (inout)
+         CDZ, CDX, CDY, FDZ, FDX, FDY ) ! (in)
 
     ! coriolis parameter
     if ( enable_coriolis ) then
@@ -430,9 +438,6 @@ contains
 #ifdef HIST_TEND
     real(RP) :: damp_t(KA,IA,JA)
 #endif
-
-    real(RP) :: num_diff  (KA,IA,JA,5,3)
-    real(RP) :: num_diff_q(KA,IA,JA,3)
 
     ! For tracer advection
     real(RP) :: mflx_av  (KA,IA,JA,3)     ! rho * vel(x,y,z) @ (u,v,w)-face average

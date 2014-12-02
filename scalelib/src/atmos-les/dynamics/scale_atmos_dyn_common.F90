@@ -69,13 +69,36 @@ module scale_atmos_dyn_common
   real(RP), allocatable :: CNX4(:,:,:)
   real(RP), allocatable :: CNY4(:,:,:)
 
+  integer :: I_COMM_DENS_Z = 1
+  integer :: I_COMM_DENS_X = 2
+  integer :: I_COMM_DENS_Y = 3
+  integer :: I_COMM_MOMZ_Z = 4
+  integer :: I_COMM_MOMZ_X = 5
+  integer :: I_COMM_MOMZ_Y = 6
+  integer :: I_COMM_MOMX_Z = 7
+  integer :: I_COMM_MOMX_X = 8
+  integer :: I_COMM_MOMX_Y = 9
+  integer :: I_COMM_MOMY_Z = 10
+  integer :: I_COMM_MOMY_X = 11
+  integer :: I_COMM_MOMY_Y = 12
+  integer :: I_COMM_RHOT_Z = 13
+  integer :: I_COMM_RHOT_X = 14
+  integer :: I_COMM_RHOT_Y = 15
+  integer :: I_COMM_QTRC_Z = 1
+  integer :: I_COMM_QTRC_X = 2
+  integer :: I_COMM_QTRC_Y = 3
+
 contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine ATMOS_DYN_filter_setup( &
+       num_diff, num_diff_q, &
        CDZ, CDX, CDY, FDZ, FDX, FDY        )
+    use scale_comm, only: &
+       COMM_vars8_init
     implicit none
-
+    real(RP), intent(inout) :: num_diff(KA,IA,JA,5,3)
+    real(RP), intent(inout) :: num_diff_q(KA,IA,JA,3)
     real(RP), intent(in)  :: CDZ(KA)
     real(RP), intent(in)  :: CDX(IA)
     real(RP), intent(in)  :: CDY(JA)
@@ -93,6 +116,26 @@ contains
     allocate( CNZ4(5,KA,2) )
     allocate( CNX4(5,IA,2) )
     allocate( CNY4(5,JA,2) )
+
+    call COMM_vars8_init( num_diff(:,:,:,I_DENS,ZDIR), I_COMM_DENS_Z )
+    call COMM_vars8_init( num_diff(:,:,:,I_DENS,XDIR), I_COMM_DENS_X )
+    call COMM_vars8_init( num_diff(:,:,:,I_DENS,YDIR), I_COMM_DENS_Y )
+    call COMM_vars8_init( num_diff(:,:,:,I_MOMZ,ZDIR), I_COMM_MOMZ_Z )
+    call COMM_vars8_init( num_diff(:,:,:,I_MOMZ,XDIR), I_COMM_MOMZ_X )
+    call COMM_vars8_init( num_diff(:,:,:,I_MOMZ,YDIR), I_COMM_MOMZ_Y )
+    call COMM_vars8_init( num_diff(:,:,:,I_MOMX,ZDIR), I_COMM_MOMX_Z )
+    call COMM_vars8_init( num_diff(:,:,:,I_MOMX,XDIR), I_COMM_MOMX_X )
+    call COMM_vars8_init( num_diff(:,:,:,I_MOMX,YDIR), I_COMM_MOMX_Y )
+    call COMM_vars8_init( num_diff(:,:,:,I_MOMY,ZDIR), I_COMM_MOMY_Z )
+    call COMM_vars8_init( num_diff(:,:,:,I_MOMY,XDIR), I_COMM_MOMY_X )
+    call COMM_vars8_init( num_diff(:,:,:,I_MOMY,YDIR), I_COMM_MOMY_Y )
+    call COMM_vars8_init( num_diff(:,:,:,I_RHOT,ZDIR), I_COMM_RHOT_Z )
+    call COMM_vars8_init( num_diff(:,:,:,I_RHOT,XDIR), I_COMM_RHOT_X )
+    call COMM_vars8_init( num_diff(:,:,:,I_RHOT,YDIR), I_COMM_RHOT_Y )
+
+    call COMM_vars8_init( num_diff_q(:,:,:,ZDIR), I_COMM_QTRC_Z )
+    call COMM_vars8_init( num_diff_q(:,:,:,XDIR), I_COMM_QTRC_X )
+    call COMM_vars8_init( num_diff_q(:,:,:,YDIR), I_COMM_QTRC_Y )
 
 #ifdef DEBUG
     CNZ3(:,:,:) = UNDEF
@@ -503,9 +546,9 @@ contains
 
     call PROF_rapstart("NumFilter Comm", 3)
 
-    call COMM_vars8( num_diff(:,:,:,I_DENS,ZDIR),  1 )
-    call COMM_vars8( num_diff(:,:,:,I_DENS,XDIR),  2 )
-    call COMM_vars8( num_diff(:,:,:,I_DENS,YDIR),  3 )
+    call COMM_vars8( num_diff(:,:,:,I_DENS,ZDIR),  I_COMM_DENS_Z )
+    call COMM_vars8( num_diff(:,:,:,I_DENS,XDIR),  I_COMM_DENS_X )
+    call COMM_vars8( num_diff(:,:,:,I_DENS,YDIR),  I_COMM_DENS_Y )
 
     call PROF_rapend  ("NumFilter Comm")
 
@@ -587,9 +630,9 @@ contains
 
     call PROF_rapstart("NumFilter Comm", 3)
 
-    call COMM_vars8( num_diff(:,:,:,I_MOMZ,ZDIR),  4 )
-    call COMM_vars8( num_diff(:,:,:,I_MOMZ,XDIR),  5 )
-    call COMM_vars8( num_diff(:,:,:,I_MOMZ,YDIR),  6 )
+    call COMM_vars8( num_diff(:,:,:,I_MOMZ,ZDIR), I_COMM_MOMZ_Z )
+    call COMM_vars8( num_diff(:,:,:,I_MOMZ,XDIR), I_COMM_MOMZ_X )
+    call COMM_vars8( num_diff(:,:,:,I_MOMZ,YDIR), I_COMM_MOMZ_Y )
 
     call PROF_rapend  ("NumFilter Comm")
 
@@ -672,9 +715,9 @@ contains
 
     call PROF_rapstart("NumFilter Comm", 3)
 
-    call COMM_vars8( num_diff(:,:,:,I_MOMX,ZDIR),  7 )
-    call COMM_vars8( num_diff(:,:,:,I_MOMX,XDIR),  8 )
-    call COMM_vars8( num_diff(:,:,:,I_MOMX,YDIR),  9 )
+    call COMM_vars8( num_diff(:,:,:,I_MOMX,ZDIR), I_COMM_MOMX_Z )
+    call COMM_vars8( num_diff(:,:,:,I_MOMX,XDIR), I_COMM_MOMX_X )
+    call COMM_vars8( num_diff(:,:,:,I_MOMX,YDIR), I_COMM_MOMX_Y )
 
     call PROF_rapend  ("NumFilter Comm")
 
@@ -755,9 +798,9 @@ contains
 
     call PROF_rapstart("NumFilter Comm", 3)
 
-    call COMM_vars8( num_diff(:,:,:,I_MOMY,ZDIR), 10 )
-    call COMM_vars8( num_diff(:,:,:,I_MOMY,XDIR), 11 )
-    call COMM_vars8( num_diff(:,:,:,I_MOMY,YDIR), 12 )
+    call COMM_vars8( num_diff(:,:,:,I_MOMY,ZDIR), I_COMM_MOMY_Z )
+    call COMM_vars8( num_diff(:,:,:,I_MOMY,XDIR), I_COMM_MOMY_X )
+    call COMM_vars8( num_diff(:,:,:,I_MOMY,YDIR), I_COMM_MOMY_Y )
 
     call PROF_rapend  ("NumFilter Comm")
 
@@ -843,25 +886,25 @@ contains
 
     call PROF_rapstart("NumFilter Comm", 3)
 
-    call COMM_vars8( num_diff(:,:,:,I_RHOT,ZDIR), 13 )
-    call COMM_vars8( num_diff(:,:,:,I_RHOT,XDIR), 14 )
-    call COMM_vars8( num_diff(:,:,:,I_RHOT,YDIR), 15 )
+    call COMM_vars8( num_diff(:,:,:,I_RHOT,ZDIR), I_COMM_RHOT_Z )
+    call COMM_vars8( num_diff(:,:,:,I_RHOT,XDIR), I_COMM_RHOT_X )
+    call COMM_vars8( num_diff(:,:,:,I_RHOT,YDIR), I_COMM_RHOT_Y )
 
-    call COMM_wait ( num_diff(:,:,:,I_DENS,ZDIR),  1 )
-    call COMM_wait ( num_diff(:,:,:,I_DENS,XDIR),  2 )
-    call COMM_wait ( num_diff(:,:,:,I_DENS,YDIR),  3 )
-    call COMM_wait ( num_diff(:,:,:,I_MOMZ,ZDIR),  4 )
-    call COMM_wait ( num_diff(:,:,:,I_MOMZ,XDIR),  5 )
-    call COMM_wait ( num_diff(:,:,:,I_MOMZ,YDIR),  6 )
-    call COMM_wait ( num_diff(:,:,:,I_MOMX,ZDIR),  7 )
-    call COMM_wait ( num_diff(:,:,:,I_MOMX,XDIR),  8 )
-    call COMM_wait ( num_diff(:,:,:,I_MOMX,YDIR),  9 )
-    call COMM_wait ( num_diff(:,:,:,I_MOMY,ZDIR), 10 )
-    call COMM_wait ( num_diff(:,:,:,I_MOMY,XDIR), 11 )
-    call COMM_wait ( num_diff(:,:,:,I_MOMY,YDIR), 12 )
-    call COMM_wait ( num_diff(:,:,:,I_RHOT,ZDIR), 13 )
-    call COMM_wait ( num_diff(:,:,:,I_RHOT,XDIR), 14 )
-    call COMM_wait ( num_diff(:,:,:,I_RHOT,YDIR), 15 )
+    call COMM_wait ( num_diff(:,:,:,I_DENS,ZDIR), I_COMM_DENS_Z )
+    call COMM_wait ( num_diff(:,:,:,I_DENS,XDIR), I_COMM_DENS_X )
+    call COMM_wait ( num_diff(:,:,:,I_DENS,YDIR), I_COMM_DENS_Y )
+    call COMM_wait ( num_diff(:,:,:,I_MOMZ,ZDIR), I_COMM_MOMZ_Z )
+    call COMM_wait ( num_diff(:,:,:,I_MOMZ,XDIR), I_COMM_MOMZ_X )
+    call COMM_wait ( num_diff(:,:,:,I_MOMZ,YDIR), I_COMM_MOMZ_Y )
+    call COMM_wait ( num_diff(:,:,:,I_MOMX,ZDIR), I_COMM_MOMX_Z )
+    call COMM_wait ( num_diff(:,:,:,I_MOMX,XDIR), I_COMM_MOMX_X )
+    call COMM_wait ( num_diff(:,:,:,I_MOMX,YDIR), I_COMM_MOMX_Y )
+    call COMM_wait ( num_diff(:,:,:,I_MOMY,ZDIR), I_COMM_MOMY_Z )
+    call COMM_wait ( num_diff(:,:,:,I_MOMY,XDIR), I_COMM_MOMY_X )
+    call COMM_wait ( num_diff(:,:,:,I_MOMY,YDIR), I_COMM_MOMY_Y )
+    call COMM_wait ( num_diff(:,:,:,I_RHOT,ZDIR), I_COMM_RHOT_Z )
+    call COMM_wait ( num_diff(:,:,:,I_RHOT,XDIR), I_COMM_RHOT_X )
+    call COMM_wait ( num_diff(:,:,:,I_RHOT,YDIR), I_COMM_RHOT_Y )
 
     call PROF_rapend  ("NumFilter Comm")
 
@@ -1063,13 +1106,13 @@ contains
 
     call PROF_rapstart("NumFilter Comm", 3)
 
-    call COMM_vars8( num_diff_q(:,:,:,ZDIR), 1 )
-    call COMM_vars8( num_diff_q(:,:,:,XDIR), 2 )
-    call COMM_vars8( num_diff_q(:,:,:,YDIR), 3 )
+    call COMM_vars8( num_diff_q(:,:,:,ZDIR), I_COMM_QTRC_Z )
+    call COMM_vars8( num_diff_q(:,:,:,XDIR), I_COMM_QTRC_X )
+    call COMM_vars8( num_diff_q(:,:,:,YDIR), I_COMM_QTRC_Y )
 
-    call COMM_wait ( num_diff_q(:,:,:,ZDIR), 1 )
-    call COMM_wait ( num_diff_q(:,:,:,XDIR), 2 )
-    call COMM_wait ( num_diff_q(:,:,:,YDIR), 3 )
+    call COMM_wait ( num_diff_q(:,:,:,ZDIR), I_COMM_QTRC_Z )
+    call COMM_wait ( num_diff_q(:,:,:,XDIR), I_COMM_QTRC_X )
+    call COMM_wait ( num_diff_q(:,:,:,YDIR), I_COMM_QTRC_Y )
 
     call PROF_rapend  ("NumFilter Comm")
 
