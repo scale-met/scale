@@ -2249,22 +2249,22 @@ contains
     integer, intent(inout) :: ireq(max_rq)
 
     integer :: ierr
-    integer :: istatus(MPI_STATUS_SIZE)
+    integer :: istatus(MPI_STATUS_SIZE,req_count)
 
     logical    :: flag
-    integer(8) :: num
+    !integer(8) :: num
     !---------------------------------------------------------------------------
-    num  = 0
+    !num  = 0
     flag = .false.
 
     do while ( .not. flag )
-       num = num + 1
-       call MPI_TESTALL( req_count, ireq(1:req_count), flag, istatus, ierr )
+       !num = num + 1
+       call MPI_TESTALL( req_count, ireq, flag, istatus, ierr )
     enddo
 
-    if ( num > 500000 ) then
-       if( IO_L ) write(IO_FID_LOG,'(1x,A)') '*** WARNING: long waste time for NEST_COMM_waitall'
-    endif
+    !if ( num > 500000 ) then
+    !   if( IO_L ) write(IO_FID_LOG,'(1x,A)') '*** WARNING: long waste time for NEST_COMM_waitall'
+    !endif
 
     return
   end subroutine NEST_COMM_waitall
