@@ -77,14 +77,65 @@ module scale_atmos_dyn
   !
   !++ Private parameters & variables
   !
-  real(RP), private, allocatable :: CORIOLI(:,:)            ! coriolis term
+  real(RP), private, allocatable :: DENS_RK1(:,:,:) ! prognostic variables (+1/3 step)
+  real(RP), private, allocatable :: MOMZ_RK1(:,:,:)
+  real(RP), private, allocatable :: MOMX_RK1(:,:,:)
+  real(RP), private, allocatable :: MOMY_RK1(:,:,:)
+  real(RP), private, allocatable :: RHOT_RK1(:,:,:)
+  real(RP), private, allocatable :: DENS_RK2(:,:,:) ! prognostic variables (+2/3 step)
+  real(RP), private, allocatable :: MOMZ_RK2(:,:,:)
+  real(RP), private, allocatable :: MOMX_RK2(:,:,:)
+  real(RP), private, allocatable :: MOMY_RK2(:,:,:)
+  real(RP), private, allocatable :: RHOT_RK2(:,:,:)
 
-  integer,  private              :: NUM_LBFLX               ! number of cell adjusting lateral boundary flux
+  ! tendency
+  real(RP), private, allocatable :: DENS_t(:,:,:)
+  real(RP), private, allocatable :: MOMZ_t(:,:,:)
+  real(RP), private, allocatable :: MOMX_t(:,:,:)
+  real(RP), private, allocatable :: MOMY_t(:,:,:)
+  real(RP), private, allocatable :: RHOT_t(:,:,:)
+  real(RP), private, allocatable :: RHOQ_t(:,:,:,:)
+
+  real(RP), private, allocatable :: CORIOLI(:,:)            ! coriolis term
+  real(RP), private, allocatable :: mflx_hi(:,:,:,:)        ! rho * vel(x,y,z) @ (u,v,w)-face high order
 
   logical, private :: BND_W
   logical, private :: BND_E
   logical, private :: BND_S
   logical, private :: BND_N
+
+    ! for communication
+    integer :: I_COMM_DENS = 1
+    integer :: I_COMM_MOMZ = 2
+    integer :: I_COMM_MOMX = 3
+    integer :: I_COMM_MOMY = 4
+    integer :: I_COMM_RHOT = 5
+
+    integer :: I_COMM_DENS_t = 1
+    integer :: I_COMM_MOMZ_t = 2
+    integer :: I_COMM_MOMX_t = 3
+    integer :: I_COMM_MOMY_t = 4
+    integer :: I_COMM_RHOT_t = 5
+
+    integer :: I_COMM_DENS_RK1 = 1
+    integer :: I_COMM_MOMZ_RK1 = 2
+    integer :: I_COMM_MOMX_RK1 = 3
+    integer :: I_COMM_MOMY_RK1 = 4
+    integer :: I_COMM_RHOT_RK1 = 5
+
+    integer :: I_COMM_DENS_RK2 = 1
+    integer :: I_COMM_MOMZ_RK2 = 2
+    integer :: I_COMM_MOMX_RK2 = 3
+    integer :: I_COMM_MOMY_RK2 = 4
+    integer :: I_COMM_RHOT_RK2 = 5
+
+    integer, allocatable :: I_COMM_RHOQ_t(:)
+    integer, allocatable :: I_COMM_QTRC(:)
+
+    integer :: I_COMM_mflx_z = 1
+    integer :: I_COMM_mflx_x = 2
+    integer :: I_COMM_mflx_y = 3
+
   !-----------------------------------------------------------------------------
 contains
 
@@ -92,10 +143,10 @@ contains
   !> Setup
   subroutine ATMOS_DYN_setup( &
        DYN_TYPE,         &
+       DENS, MOMZ, MOMX, MOMY, RHOT, QTRC, &
        CDZ, CDX, CDY,    &
        FDZ, FDX, FDY,    &
        enable_coriolis,  &
-       adjust_flux_cell, &
        lat               )
     use scale_process, only: &
        PRC_MPIstop, &
@@ -105,27 +156,59 @@ contains
        PRC_HAS_S
     use scale_const, only: &
        OHM => CONST_OHM
+    use scale_comm, only: &
+       COMM_vars8_init
     use scale_atmos_dyn_common, only: &
        ATMOS_DYN_filter_setup
     use scale_atmos_dyn_rk, only: &
        ATMOS_DYN_rk_setup
     implicit none
 
-    character(len=H_SHORT), intent(in)  :: DYN_TYPE
-    real(RP),               intent(in)  :: CDZ(KA)
-    real(RP),               intent(in)  :: CDX(IA)
-    real(RP),               intent(in)  :: CDY(JA)
-    real(RP),               intent(in)  :: FDZ(KA-1)
-    real(RP),               intent(in)  :: FDX(IA-1)
-    real(RP),               intent(in)  :: FDY(JA-1)
-    logical,                intent(in)  :: enable_coriolis
-    integer,                intent(in)  :: adjust_flux_cell
-    real(RP),               intent(in)  :: lat(IA,JA)
+    character(len=H_SHORT), intent(in) :: DYN_TYPE
+
+    ! MPI_RECV_INIT requires intent(inout)
+    real(RP),               intent(inout) :: DENS(KA,IA,JA)
+    real(RP),               intent(inout) :: MOMZ(KA,IA,JA)
+    real(RP),               intent(inout) :: MOMX(KA,IA,JA)
+    real(RP),               intent(inout) :: MOMY(KA,IA,JA)
+    real(RP),               intent(inout) :: RHOT(KA,IA,JA)
+    real(RP),               intent(inout) :: QTRC(KA,IA,JA,QA)
+
+    real(RP),               intent(in) :: CDZ(KA)
+    real(RP),               intent(in) :: CDX(IA)
+    real(RP),               intent(in) :: CDY(JA)
+    real(RP),               intent(in) :: FDZ(KA-1)
+    real(RP),               intent(in) :: FDX(IA-1)
+    real(RP),               intent(in) :: FDY(JA-1)
+    logical,                intent(in) :: enable_coriolis
+    real(RP),               intent(in) :: lat(IA,JA)
+
+    integer :: iq
     !---------------------------------------------------------------------------
 
-    NUM_LBFLX = adjust_flux_cell
+    allocate( DENS_RK1(KA,IA,JA) )
+    allocate( MOMZ_RK1(KA,IA,JA) )
+    allocate( MOMX_RK1(KA,IA,JA) )
+    allocate( MOMY_RK1(KA,IA,JA) )
+    allocate( RHOT_RK1(KA,IA,JA) )
+    allocate( DENS_RK2(KA,IA,JA) )
+    allocate( MOMZ_RK2(KA,IA,JA) )
+    allocate( MOMX_RK2(KA,IA,JA) )
+    allocate( MOMY_RK2(KA,IA,JA) )
+    allocate( RHOT_RK2(KA,IA,JA) )
+
+    allocate( DENS_t(KA,IA,JA) )
+    allocate( MOMZ_t(KA,IA,JA) )
+    allocate( MOMX_t(KA,IA,JA) )
+    allocate( MOMY_t(KA,IA,JA) )
+    allocate( RHOT_t(KA,IA,JA) )
+    allocate( RHOQ_t(KA,IA,JA,QA) )
 
     allocate( CORIOLI(IA,JA) )
+    allocate( mflx_hi(KA,IA,JA,3) )
+
+    allocate( I_COMM_RHOQ_t(QA) )
+    allocate( I_COMM_QTRC(QA) )
 
     ! numerical diffusion
     call ATMOS_DYN_filter_setup( CDZ, CDX, CDY, FDZ, FDX, FDY ) ! (in)
@@ -145,6 +228,42 @@ contains
     call ATMOS_DYN_rk_setup( &
          DYN_TYPE, &
          BND_W, BND_E, BND_S, BND_N )
+
+    call COMM_vars8_init( DENS, I_COMM_DENS )
+    call COMM_vars8_init( MOMZ, I_COMM_MOMZ )
+    call COMM_vars8_init( MOMX, I_COMM_MOMX )
+    call COMM_vars8_init( MOMY, I_COMM_MOMY )
+    call COMM_vars8_init( RHOT, I_COMM_RHOT )
+
+    call COMM_vars8_init( DENS_t, I_COMM_DENS_t )
+    call COMM_vars8_init( MOMZ_t, I_COMM_MOMZ_t )
+    call COMM_vars8_init( MOMX_t, I_COMM_MOMX_t )
+    call COMM_vars8_init( MOMY_t, I_COMM_MOMY_t )
+    call COMM_vars8_init( RHOT_t, I_COMM_RHOT_t )
+
+    call COMM_vars8_init( DENS_RK1, I_COMM_DENS_RK1 )
+    call COMM_vars8_init( MOMZ_RK1, I_COMM_MOMZ_RK1 )
+    call COMM_vars8_init( MOMX_RK1, I_COMM_MOMX_RK1 )
+    call COMM_vars8_init( MOMY_RK1, I_COMM_MOMY_RK1 )
+    call COMM_vars8_init( RHOT_RK1, I_COMM_RHOT_RK1 )
+
+    call COMM_vars8_init( DENS_RK2, I_COMM_DENS_RK2 )
+    call COMM_vars8_init( MOMZ_RK2, I_COMM_MOMZ_RK2 )
+    call COMM_vars8_init( MOMX_RK2, I_COMM_MOMX_RK2 )
+    call COMM_vars8_init( MOMY_RK2, I_COMM_MOMY_RK2 )
+    call COMM_vars8_init( RHOT_RK2, I_COMM_RHOT_RK2 )
+
+    do iq = 1, QA
+       I_COMM_RHOQ_t(iq) = 5 + iq
+       I_COMM_QTRC(iq) = 5 + iq
+
+       call COMM_vars8_init( RHOQ_t(:,:,:,iq), I_COMM_RHOQ_t(iq) )
+       call COMM_vars8_init( QTRC  (:,:,:,iq), I_COMM_QTRC(iq) )
+    end do
+
+    call COMM_vars8_init( mflx_hi(:,:,:,ZDIR), I_COMM_mflx_z )
+    call COMM_vars8_init( mflx_hi(:,:,:,XDIR), I_COMM_mflx_x )
+    call COMM_vars8_init( mflx_hi(:,:,:,YDIR), I_COMM_mflx_y )
 
     return
   end subroutine ATMOS_DYN_setup
@@ -299,23 +418,6 @@ contains
     real(RP) :: MOMX0   (KA,IA,JA) !
     real(RP) :: MOMY0   (KA,IA,JA) !
     real(RP) :: RHOT0   (KA,IA,JA) !
-    real(RP) :: DENS_RK1(KA,IA,JA) ! prognostic variables (+1/3 step)
-    real(RP) :: MOMZ_RK1(KA,IA,JA) !
-    real(RP) :: MOMX_RK1(KA,IA,JA) !
-    real(RP) :: MOMY_RK1(KA,IA,JA) !
-    real(RP) :: RHOT_RK1(KA,IA,JA) !
-    real(RP) :: DENS_RK2(KA,IA,JA) ! prognostic variables (+2/3 step)
-    real(RP) :: MOMZ_RK2(KA,IA,JA) !
-    real(RP) :: MOMX_RK2(KA,IA,JA) !
-    real(RP) :: MOMY_RK2(KA,IA,JA) !
-    real(RP) :: RHOT_RK2(KA,IA,JA) !
-
-    ! tendency
-    real(RP) :: DENS_t(KA,IA,JA)
-    real(RP) :: MOMZ_t(KA,IA,JA)
-    real(RP) :: MOMX_t(KA,IA,JA)
-    real(RP) :: MOMY_t(KA,IA,JA)
-    real(RP) :: RHOT_t(KA,IA,JA)
 
     ! diagnostic variables
     real(RP) :: QDRY (KA,IA,JA) ! dry air
@@ -333,8 +435,6 @@ contains
     real(RP) :: num_diff_q(KA,IA,JA,3)
 
     ! For tracer advection
-    real(RP) :: RHOQ_t   (KA,IA,JA,QA)    ! tendency
-    real(RP) :: mflx_hi  (KA,IA,JA,3)     ! rho * vel(x,y,z) @ (u,v,w)-face high order
     real(RP) :: mflx_av  (KA,IA,JA,3)     ! rho * vel(x,y,z) @ (u,v,w)-face average
     real(RP) :: tflx_hi  (KA,IA,JA,3)     ! rho * theta * vel(x,y,z) @ (u,v,w)-face high order
     real(RP) :: qflx_hi  (KA,IA,JA,3)  ! rho * vel(x,y,z) * phi @ (u,v,w)-face high order
@@ -351,6 +451,8 @@ contains
     real(RP) :: allmflx_lb_total
     real(RP) :: allmass_total
     real(RP) :: allmass_total2
+
+    integer :: ierr
 #endif
 
     real(RP) :: dt
@@ -359,12 +461,11 @@ contains
     integer  :: IIS, IIE
     integer  :: JJS, JJE
     integer  :: i, j, k, iq, step
-#ifdef CHECK_MASS
-    integer :: ierr
-#endif
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Dynamics step: ', NSTEP_ATMOS_DYN, ' small steps'
+
+    call PROF_rapstart("DYN Preparation", 2)
 
 #ifdef DEBUG
     DENS00  (:,:,:) = UNDEF
@@ -420,9 +521,13 @@ contains
     damp_t(:,:,:) = 0.0_RP
 #endif
 
+    call PROF_rapend  ("DYN Preparation")
+
     !###########################################################################
     ! Update DENS,MONZ,MOMX,MOMY,MOMZ,RHOT
     !###########################################################################
+
+    call PROF_rapstart("DYN Tendency", 2)
 
     DENS_tq(:,:,:) = 0.0_RP
     do iq = 1, BND_QA
@@ -463,7 +568,7 @@ contains
        enddo
        enddo
 
-       call COMM_vars8( RHOQ_t(:,:,:,iq), 5+iq )
+       call COMM_vars8( RHOQ_t(:,:,:,iq), I_COMM_RHOQ_t(iq) )
 
        do j = JS, JE
        do i = IS, IE
@@ -473,7 +578,7 @@ contains
        end do
        end do
 
-       call COMM_wait ( RHOQ_t(:,:,:,iq), 5+iq, .false. )
+       call COMM_wait ( RHOQ_t(:,:,:,iq), I_COMM_RHOQ_t(iq), .false. )
 
     end do
 
@@ -488,10 +593,14 @@ contains
        enddo
     end do
 
+    call PROF_rapend  ("DYN Tendency")
+
 
     do step = 1, NSTEP_ATMOS_DYN
 
        !-----< prepare tendency >-----
+
+       call PROF_rapstart("DYN Tendency", 2)
 
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JS-1, JE+2
@@ -666,17 +775,21 @@ contains
        enddo
        enddo
 
-       call COMM_vars8( DENS_t(:,:,:), 1 )
-       call COMM_vars8( MOMZ_t(:,:,:), 2 )
-       call COMM_vars8( MOMX_t(:,:,:), 3 )
-       call COMM_vars8( MOMY_t(:,:,:), 4 )
-       call COMM_vars8( RHOT_t(:,:,:), 5 )
-       call COMM_wait ( DENS_t(:,:,:), 1, .false. )
-       call COMM_wait ( MOMZ_t(:,:,:), 2, .false. )
-       call COMM_wait ( MOMX_t(:,:,:), 3, .false. )
-       call COMM_wait ( MOMY_t(:,:,:), 4, .false. )
-       call COMM_wait ( RHOT_t(:,:,:), 5, .false. )
+       call COMM_vars8( DENS_t(:,:,:), I_COMM_DENS_t )
+       call COMM_vars8( MOMZ_t(:,:,:), I_COMM_MOMZ_t )
+       call COMM_vars8( MOMX_t(:,:,:), I_COMM_MOMX_t )
+       call COMM_vars8( MOMY_t(:,:,:), I_COMM_MOMY_t )
+       call COMM_vars8( RHOT_t(:,:,:), I_COMM_RHOT_t )
+       call COMM_wait ( DENS_t(:,:,:), I_COMM_DENS_t, .false. )
+       call COMM_wait ( MOMZ_t(:,:,:), I_COMM_MOMZ_t, .false. )
+       call COMM_wait ( MOMX_t(:,:,:), I_COMM_MOMX_t, .false. )
+       call COMM_wait ( MOMY_t(:,:,:), I_COMM_MOMY_t, .false. )
+       call COMM_wait ( RHOT_t(:,:,:), I_COMM_RHOT_t, .false. )
 
+       call PROF_rapend  ("DYN Tendency")
+
+       call PROF_rapstart("DYN Numfilter", 2)
+    
        dt = real(DTSEC_ATMOS_DYN,kind=RP)
 
        !-----< prepare numerical diffusion coefficient >-----
@@ -691,6 +804,8 @@ contains
                                          ND_COEF, ND_ORDER, ND_SFC_FACT, ND_USE_RS ) ! [IN]
        endif
 
+       call PROF_rapend  ("DYN Numfilter")
+
        !------------------------------------------------------------------------
        ! Start RK
        !------------------------------------------------------------------------
@@ -701,6 +816,8 @@ contains
        MOMX0(:,:,:) = MOMX(:,:,:)
        MOMY0(:,:,:) = MOMY(:,:,:)
        RHOT0(:,:,:) = RHOT(:,:,:)
+
+       call PROF_rapstart("DYN Boundary", 2)
 
        if ( BND_W ) then
           !$omp parallel do private(j,k) OMP_SCHEDULE_ collapse(2)
@@ -747,6 +864,10 @@ contains
           enddo
        end if
 
+       call PROF_rapend  ("DYN Boundary")
+
+       call PROF_rapstart("DYN RK", 2)
+
        !##### RK1 : PROG0,PROG->PROG_RK1 #####
 
        dtrk = real(DTSEC_ATMOS_DYN,kind=RP) / 3.0_RP
@@ -766,6 +887,9 @@ contains
                           REF_pres, REF_dens,                               & ! (in)
                           BND_W, BND_E, BND_S, BND_N,                       & ! (in)
                           dtrk, dt                                          ) ! (in)
+       call PROF_rapend  ("DYN RK")
+
+       call PROF_rapstart("DYN Boundary", 2)
 
        if ( BND_W ) then
           !$omp parallel do private(j,k) OMP_SCHEDULE_ collapse(2)
@@ -836,18 +960,22 @@ contains
           enddo
        end if
 
-       call COMM_vars8( DENS_RK1(:,:,:), 1 )
-       call COMM_vars8( MOMZ_RK1(:,:,:), 2 )
-       call COMM_vars8( MOMX_RK1(:,:,:), 3 )
-       call COMM_vars8( MOMY_RK1(:,:,:), 4 )
-       call COMM_vars8( RHOT_RK1(:,:,:), 5 )
-       call COMM_wait ( DENS_RK1(:,:,:), 1, .false. )
-       call COMM_wait ( MOMZ_RK1(:,:,:), 2, .false. )
-       call COMM_wait ( MOMX_RK1(:,:,:), 3, .false. )
-       call COMM_wait ( MOMY_RK1(:,:,:), 4, .false. )
-       call COMM_wait ( RHOT_RK1(:,:,:), 5, .false. )
+       call PROF_rapend  ("DYN Boundary")
+
+       call COMM_vars8( DENS_RK1(:,:,:), I_COMM_DENS_RK1 )
+       call COMM_vars8( MOMZ_RK1(:,:,:), I_COMM_MOMZ_RK1 )
+       call COMM_vars8( MOMX_RK1(:,:,:), I_COMM_MOMX_RK1 )
+       call COMM_vars8( MOMY_RK1(:,:,:), I_COMM_MOMY_RK1 )
+       call COMM_vars8( RHOT_RK1(:,:,:), I_COMM_RHOT_RK1 )
+       call COMM_wait ( DENS_RK1(:,:,:), I_COMM_DENS_RK1, .false. )
+       call COMM_wait ( MOMZ_RK1(:,:,:), I_COMM_MOMZ_RK1, .false. )
+       call COMM_wait ( MOMX_RK1(:,:,:), I_COMM_MOMX_RK1, .false. )
+       call COMM_wait ( MOMY_RK1(:,:,:), I_COMM_MOMY_RK1, .false. )
+       call COMM_wait ( RHOT_RK1(:,:,:), I_COMM_RHOT_RK1, .false. )
 
        !##### RK2 : PROG0,PROG_RK2->PROG_RK3 #####
+
+       call PROF_rapstart("DYN RK", 2)
 
        dtrk = real(DTSEC_ATMOS_DYN,kind=RP) / 2.0_RP
 
@@ -866,6 +994,10 @@ contains
                           REF_pres, REF_dens,                               & ! (in)
                           BND_W, BND_E, BND_S, BND_N,                       & ! (in)
                           dtrk, dt                                          ) ! (in)
+
+       call PROF_rapend  ("DYN RK")
+
+       call PROF_rapstart("DYN Boundary", 2)
 
        if ( BND_W ) then
           !$omp parallel do private(j,k) OMP_SCHEDULE_ collapse(2)
@@ -936,18 +1068,22 @@ contains
           enddo
        end if
 
-       call COMM_vars8( DENS_RK2(:,:,:), 1 )
-       call COMM_vars8( MOMZ_RK2(:,:,:), 2 )
-       call COMM_vars8( MOMX_RK2(:,:,:), 3 )
-       call COMM_vars8( MOMY_RK2(:,:,:), 4 )
-       call COMM_vars8( RHOT_RK2(:,:,:), 5 )
-       call COMM_wait ( DENS_RK2(:,:,:), 1, .false. )
-       call COMM_wait ( MOMZ_RK2(:,:,:), 2, .false. )
-       call COMM_wait ( MOMX_RK2(:,:,:), 3, .false. )
-       call COMM_wait ( MOMY_RK2(:,:,:), 4, .false. )
-       call COMM_wait ( RHOT_RK2(:,:,:), 5, .false. )
+       call PROF_rapend  ("DYN Boundary")
+
+       call COMM_vars8( DENS_RK2(:,:,:), I_COMM_DENS_RK2 )
+       call COMM_vars8( MOMZ_RK2(:,:,:), I_COMM_MOMZ_RK2 )
+       call COMM_vars8( MOMX_RK2(:,:,:), I_COMM_MOMX_RK2 )
+       call COMM_vars8( MOMY_RK2(:,:,:), I_COMM_MOMY_RK2 )
+       call COMM_vars8( RHOT_RK2(:,:,:), I_COMM_RHOT_RK2 )
+       call COMM_wait ( DENS_RK2(:,:,:), I_COMM_DENS_RK2, .false. )
+       call COMM_wait ( MOMZ_RK2(:,:,:), I_COMM_MOMZ_RK2, .false. )
+       call COMM_wait ( MOMX_RK2(:,:,:), I_COMM_MOMX_RK2, .false. )
+       call COMM_wait ( MOMY_RK2(:,:,:), I_COMM_MOMY_RK2, .false. )
+       call COMM_wait ( RHOT_RK2(:,:,:), I_COMM_RHOT_RK2, .false. )
 
        !##### RK3 : PROG0,PROG_RK3->PROG #####
+
+       call PROF_rapstart("DYN RK", 2)
 
        dtrk = real(DTSEC_ATMOS_DYN,kind=RP)
 
@@ -966,6 +1102,8 @@ contains
                           REF_pres, REF_dens,                               & ! (in)
                           BND_W, BND_E, BND_S, BND_N,                       & ! (in)
                           dtrk, dt                                          ) ! (in)
+
+       call PROF_rapend  ("DYN RK")
 
 #ifdef CHECK_MASS
        call HIST_in(mflx_hi(:,:,:,ZDIR), 'MFLXZ', 'momentum flux of z-direction', &
@@ -1098,16 +1236,16 @@ contains
        enddo
        enddo
 
-       call COMM_vars8( DENS(:,:,:), 1 )
-       call COMM_vars8( MOMZ(:,:,:), 2 )
-       call COMM_vars8( MOMX(:,:,:), 3 )
-       call COMM_vars8( MOMY(:,:,:), 4 )
-       call COMM_vars8( RHOT(:,:,:), 5 )
-       call COMM_wait ( DENS(:,:,:), 1, .false. )
-       call COMM_wait ( MOMZ(:,:,:), 2, .false. )
-       call COMM_wait ( MOMX(:,:,:), 3, .false. )
-       call COMM_wait ( MOMY(:,:,:), 4, .false. )
-       call COMM_wait ( RHOT(:,:,:), 5, .false. )
+       call COMM_vars8( DENS(:,:,:), I_COMM_DENS )
+       call COMM_vars8( MOMZ(:,:,:), I_COMM_MOMZ )
+       call COMM_vars8( MOMX(:,:,:), I_COMM_MOMX )
+       call COMM_vars8( MOMY(:,:,:), I_COMM_MOMY )
+       call COMM_vars8( RHOT(:,:,:), I_COMM_RHOT )
+       call COMM_wait ( DENS(:,:,:), I_COMM_DENS, .false. )
+       call COMM_wait ( MOMZ(:,:,:), I_COMM_MOMZ, .false. )
+       call COMM_wait ( MOMX(:,:,:), I_COMM_MOMX, .false. )
+       call COMM_wait ( MOMY(:,:,:), I_COMM_MOMY, .false. )
+       call COMM_wait ( RHOT(:,:,:), I_COMM_RHOT, .false. )
 
        if ( USE_AVERAGE ) then
           DENS_av(:,:,:) = DENS_av(:,:,:) + DENS(:,:,:)
@@ -1122,6 +1260,7 @@ contains
 #endif
 
        do iq = 1, QA
+
           do j = JS, JE
           do i = IS, IE
           do k = KS, KE
@@ -1130,8 +1269,8 @@ contains
           end do
           end do
 
-          call COMM_vars8( QTRC(:,:,:,iq), 6 )
-          call COMM_wait ( QTRC(:,:,:,iq), 6, .false. )
+          call COMM_vars8( QTRC(:,:,:,iq), I_COMM_QTRC(iq) )
+          call COMM_wait ( QTRC(:,:,:,iq), I_COMM_QTRC(iq), .false. )
 
           ! TODO: mass and energy conservation should be considered
        end do
@@ -1155,12 +1294,12 @@ contains
 
     mflx_hi(:,:,:,:) = mflx_av(:,:,:,:) / real(NSTEP_ATMOS_DYN,kind=RP)
 
-    call COMM_vars8( mflx_hi(:,:,:,ZDIR), 1 )
-    call COMM_vars8( mflx_hi(:,:,:,XDIR), 2 )
-    call COMM_vars8( mflx_hi(:,:,:,YDIR), 3 )
-    call COMM_wait ( mflx_hi(:,:,:,ZDIR), 1, .false. )
-    call COMM_wait ( mflx_hi(:,:,:,XDIR), 2, .false. )
-    call COMM_wait ( mflx_hi(:,:,:,YDIR), 3, .false. )
+    call COMM_vars8( mflx_hi(:,:,:,ZDIR), I_COMM_mflx_z )
+    call COMM_vars8( mflx_hi(:,:,:,XDIR), I_COMM_mflx_x )
+    call COMM_vars8( mflx_hi(:,:,:,YDIR), I_COMM_mflx_y )
+    call COMM_wait ( mflx_hi(:,:,:,ZDIR), I_COMM_mflx_z, .false. )
+    call COMM_wait ( mflx_hi(:,:,:,XDIR), I_COMM_mflx_x, .false. )
+    call COMM_wait ( mflx_hi(:,:,:,YDIR), I_COMM_mflx_y, .false. )
 
     if ( USE_AVERAGE ) then
        QTRC_av(:,:,:,:) = 0.0_RP
@@ -1171,6 +1310,8 @@ contains
     !------------------------------------------------------------------------
     do iq = 1, QA
 
+       call PROF_rapstart("DYN Numfilter", 2)
+
        if ( ND_COEF_Q == 0.0_RP ) then
           num_diff_q(:,:,:,:) = 0.0_RP
        else
@@ -1180,6 +1321,10 @@ contains
                                            REF_qv, iq,                             & ! [IN]
                                            ND_COEF_Q, ND_ORDER, ND_SFC_FACT, ND_USE_RS ) ! [IN]
        endif
+
+       call PROF_rapend  ("DYN Numfilter")
+
+       call PROF_rapstart("DYN Boundary", 2)
 
        if ( BND_W ) then
           if ( iq <= BND_QA ) then
@@ -1257,6 +1402,10 @@ contains
              enddo
           end if
        end if
+
+       call PROF_rapend  ("DYN Boundary")
+
+       call PROF_rapstart("DYN Tracer", 2)
 
        do JJS = JS, JE, JBLOCK
        JJE = JJS+JBLOCK-1
@@ -1348,6 +1497,10 @@ contains
 
        enddo
        enddo
+
+       call PROF_rapend ("DYN Tracer")
+
+       call PROF_rapstart("DYN Boundary", 2)
 
        if ( BND_W ) then
           if ( iq <= BND_QA ) then
@@ -1452,6 +1605,10 @@ contains
           enddo
        end if
 
+       call PROF_rapend  ("DYN Boundary")
+
+       call PROF_rapstart("DYN Tracer", 2)
+
        call ATMOS_DYN_fct( qflx_anti,                    & ! (out)
                            QTRC(:,:,:,iq), DENS00, DENS, & ! (in)
                            qflx_hi, qflx_lo,             & ! (in)
@@ -1486,6 +1643,8 @@ contains
        enddo
        enddo
 
+       call PROF_rapend  ("DYN Tracer")
+
        do j  = JS, JE
        do i  = IS, IE
           QTRC(   1:KS-1,i,j,iq) = QTRC(KS,i,j,iq)
@@ -1501,10 +1660,10 @@ contains
     enddo ! scalar quantities loop
 
     do iq = 1, QA
-       call COMM_vars8( QTRC(:,:,:,iq), iq )
+       call COMM_vars8( QTRC(:,:,:,iq), I_COMM_QTRC(iq) )
     enddo
     do iq = 1, QA
-       call COMM_wait ( QTRC(:,:,:,iq), iq, .false. )
+       call COMM_wait ( QTRC(:,:,:,iq), I_COMM_QTRC(iq), .false. )
     enddo
 #endif
 

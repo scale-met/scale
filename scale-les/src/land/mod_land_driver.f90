@@ -83,7 +83,7 @@ contains
 
     !########## Physics ##########
     if ( LAND_sw ) then
-      call PROF_rapstart('LND Physics')
+      call PROF_rapstart('LND Physics', 1)
       call LAND_PHY_driver( update_flag=.true., history_flag=.true. )
       call PROF_rapend  ('LND Physics')
     endif
@@ -113,7 +113,7 @@ contains
     call LAND_SURFACE_SET( setup=.false. )
 
     !########## History & Monitor ##########
-    call PROF_rapstart('LND History')
+    call PROF_rapstart('LND History', 1)
     call LAND_vars_history
     call PROF_rapend  ('LND History')
 

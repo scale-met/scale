@@ -119,7 +119,7 @@ contains
     if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_HIST)
 
 
-    call PROF_rapstart('FILE O NetCDF')
+    call PROF_rapstart('FILE O NetCDF', 2)
 
     rankidx(1) = PRC_2Drank(PRC_myrank, 1)
     rankidx(2) = PRC_2Drank(PRC_myrank, 2)
@@ -476,7 +476,7 @@ contains
     character(len=16) :: dims(3)
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('FILE O NetCDF')
+    call PROF_rapstart('FILE O NetCDF', 2)
 
     if ( ndim == 1 ) then
 
@@ -574,7 +574,7 @@ contains
 
     if ( itemid < 0 ) return
 
-    call PROF_rapstart('FILE O NetCDF')
+    call PROF_rapstart('FILE O NetCDF', 2)
 
     do k = 1, KMAX
        var2(k) = var(KS+k-1)
@@ -612,7 +612,7 @@ contains
 
     if ( itemid < 0 ) return
 
-    call PROF_rapstart('FILE O NetCDF')
+    call PROF_rapstart('FILE O NetCDF', 2)
 
     do j = 1, jm
     do i = 1, im
@@ -706,7 +706,7 @@ contains
 
     if ( itemid < 0 ) return
 
-    call PROF_rapstart('FILE O NetCDF')
+    call PROF_rapstart('FILE O NetCDF', 2)
 
     xd = ''
     yd = ''
@@ -792,7 +792,7 @@ contains
        if (       ksize == KMAX    &
             .AND. zinterp          &
             .AND. INTERP_available ) then
-          call PROF_rapstart('FILE O Interpolation')
+          call PROF_rapstart('FILE O Interpolation', 2)
           call INTERP_vertical_xi2z( var  (:,:,:), & ! [IN]
                                      var_Z(:,:,:)  ) ! [OUT]
           call PROF_rapend  ('FILE O Interpolation')
@@ -1014,7 +1014,7 @@ contains
     logical :: am
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('FILE I NetCDF')
+    call PROF_rapstart('FILE I NetCDF', 2)
 
     am = .false.
     if( present(allow_missing) ) am = allow_missing
@@ -1052,7 +1052,7 @@ contains
     logical :: am
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('FILE I NetCDF')
+    call PROF_rapstart('FILE I NetCDF', 2)
 
     am = .false.
     if( present(allow_missing) ) am = allow_missing
@@ -1090,7 +1090,7 @@ contains
     logical :: am
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('FILE I NetCDF')
+    call PROF_rapstart('FILE I NetCDF', 2)
 
     am = .false.
     if( present(allow_missing) ) am = allow_missing
@@ -1116,7 +1116,7 @@ contains
     implicit none
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('FILE O NetCDF')
+    call PROF_rapstart('FILE O NetCDF', 2)
 
     call HistoryWriteAll( TIME_NOWDAYSEC ) ![IN]
 

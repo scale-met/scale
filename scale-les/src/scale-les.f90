@@ -26,6 +26,8 @@ program scaleles
      PRC_setup,    &
      PRC_MPIstart, &
      PRC_MPIfinish
+  use scale_prof, only: &
+     PROF_setup
   use scale_const, only: &
      CONST_setup
   use scale_calendar, only: &
@@ -187,6 +189,9 @@ program scaleles
   ! setup Log
   call LogInit(IO_FID_CONF, IO_FID_LOG, IO_L)
 
+  ! setup PROF
+  call PROF_setup
+
   ! setup constants
   call CONST_setup
 
@@ -199,7 +204,7 @@ program scaleles
   ! setup time
   call TIME_setup( setup_TimeIntegration = .true. )
 
-  call PROF_rapstart('Initialize')
+  call PROF_rapstart('Initialize', 0)
 
   ! setup horizontal/vertical grid coordinates (cartesian,idealized)
   call GRID_INDEX_setup
@@ -307,7 +312,7 @@ program scaleles
 
   if( IO_L ) write(IO_FID_LOG,*)
   if( IO_L ) write(IO_FID_LOG,*) '++++++ START TIMESTEP ++++++'
-  call PROF_rapstart('Main Loop(Total)')
+  call PROF_rapstart('Main Loop(Total)', 0)
 
   do
 

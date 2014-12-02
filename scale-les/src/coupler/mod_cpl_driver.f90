@@ -92,21 +92,21 @@ contains
 
     !########## Coupler Atoms-Ocean ##########
     if( CPL_sw_AtmOcn ) then
-      call PROF_rapstart('CPL Atmos-Ocean')
+      call PROF_rapstart('CPL Atmos-Ocean', 1)
       call CPL_AtmOcn_driver( CPL_OCN_SFC_TEMP_UPDATE )
       call PROF_rapend  ('CPL Atmos-Ocean')
     endif
 
     !########## Coupler Atoms-Land ##########
     if( CPL_sw_AtmLnd ) then
-      call PROF_rapstart('CPL Atmos-Land')
+      call PROF_rapstart('CPL Atmos-Land', 1)
       call CPL_AtmLnd_driver( CPL_LND_SFC_TEMP_UPDATE )
       call PROF_rapend  ('CPL Atmos-Land')
     endif
 
     !########## Coupler Atoms-Urban ##########
     if( CPL_sw_AtmUrb ) then
-      call PROF_rapstart('CPL Atmos-Urban')
+      call PROF_rapstart('CPL Atmos-Urban', 1)
       call CPL_AtmUrb_driver( CPL_URB_SFC_TEMP_UPDATE )
       call PROF_rapend  ('CPL Atmos-Urban')
     endif

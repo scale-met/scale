@@ -494,9 +494,7 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Cloud microphysics(SN14)'
 
-    call PROF_rapstart('MP0 Setup')
     call MP_negativefilter( DENS, QTRC )
-    call PROF_rapend  ('MP0 Setup')
 
     call mp_sn14( DENS,      & ! [INOUT]
                   MOMZ,      & ! [INOUT]
@@ -507,9 +505,7 @@ contains
                   SFLX_rain, & ! [OUT]
                   SFLX_snow  ) ! [OUT]
 
-    call PROF_rapstart('MP6 Filter')
     call MP_negativefilter( DENS, QTRC )
-    call PROF_rapend  ('MP6 Filter')
 
     return
   end subroutine ATMOS_PHY_MP_sn14
@@ -1373,7 +1369,7 @@ contains
     ! 1.Nucleation of cloud water and cloud ice
     !
     !----------------------------------------------------------------------------
-    call PROF_rapstart('MPX ijkconvert')
+    call PROF_rapstart('MP Preprocess', 2)
 
     do iq = 1, QA
        do j = JS, JE
@@ -1423,9 +1419,9 @@ contains
 
     if( opt_debug_tem ) call debug_tem_kij( 1, tem_d(:,:,:), DENS(:,:,:), pre_d(:,:,:), q_d(:,:,:,I_QV) )
 
-    call PROF_rapend  ('MPX ijkconvert')
+    call PROF_rapend  ('MP Preprocess')
 
-    call PROF_rapstart('MP1 Nucleation')
+    call PROF_rapstart('MP Nucleation', 2)
 
     do j = JS,  JE
     do i = IS,  IE
@@ -1512,13 +1508,13 @@ contains
 !    if( opt_debug )     call debugreport_nucleation
     if( opt_debug_tem ) call debug_tem_kij( 2, tem_d(:,:,:), DENS(:,:,:), pre_d(:,:,:), q_d(:,:,:,I_QV) )
 
-    call PROF_rapend  ('MP1 Nucleation')
+    call PROF_rapend  ('MP Nucleation')
     !----------------------------------------------------------------------------
     !
     ! 2.Phase change: Freezing, Melting, Vapor deposition
     !
     !----------------------------------------------------------------------------
-    call PROF_rapstart('MP2 Phase change')
+    call PROF_rapstart('MP Phase change', 2)
 
     ! parameter setting
     wdt=dt
@@ -1662,13 +1658,13 @@ contains
 !       if( opt_debug )     call debugreport_phasechange
        if( opt_debug_tem ) call debug_tem_kij( 3, tem_d(:,:,:), DENS(:,:,:), pre_d(:,:,:), q_d(:,:,:,I_QV) )
 
-    call PROF_rapend  ('MP2 Phase change')
+    call PROF_rapend  ('MP Phase change')
     !----------------------------------------------------------------------------
     !
     ! 3.Collection process
     !
     !----------------------------------------------------------------------------
-    call PROF_rapstart('MP3 Collection')
+    call PROF_rapstart('MP Collection', 2)
 
     wdt = dt
     flag_history_in=.true.
@@ -2012,9 +2008,9 @@ contains
 !    if( opt_debug )     call debugreport_collection
     if( opt_debug_tem ) call debug_tem_kij( 4, tem_d(:,:,:), DENS(:,:,:), pre_d(:,:,:), q_d(:,:,:,I_QV) )
 
-    call PROF_rapend  ('MP3 Collection')
+    call PROF_rapend  ('MP Collection')
 
-    call PROF_rapstart('MPX ijkconvert')
+    call PROF_rapstart('MP Postprocess', 2)
 
     do j = JS, JE
     do i = IS, IE
@@ -2038,22 +2034,22 @@ contains
        enddo
     enddo
 
-    call PROF_rapend  ('MPX ijkconvert')
+    call PROF_rapend  ('MP Postprocess')
 
     !----------------------------------------------------------------------------
     !
     ! 4.Saturation adjustment
     !
     !----------------------------------------------------------------------------
-    call PROF_rapstart('MP4 Saturation adjustment')
+    call PROF_rapstart('MP Saturation adjustment', 2)
     ! nothing to do
-    call PROF_rapend  ('MP4 Saturation adjustment')
+    call PROF_rapend  ('MP Saturation adjustment')
     !----------------------------------------------------------------------------
     !
     ! 5. Sedimentation ( terminal velocity must be negative )
     !
     !----------------------------------------------------------------------------
-    call PROF_rapstart('MP5 Sedimentation')
+    call PROF_rapstart('MP Sedimentation', 2)
 
     if ( doprecipitation ) then
 
@@ -2106,7 +2102,7 @@ contains
     end do
     end do
 
-    call PROF_rapend  ('MP5 Sedimentation')
+    call PROF_rapend  ('MP Sedimentation')
 
     return
   end subroutine mp_sn14
@@ -4765,6 +4761,8 @@ contains
     integer :: k, i, j, iq
     !---------------------------------------------------------------------------
 
+    call PROF_rapstart('MP filter', 2)
+
     r_xmin = 1.0_RP / xmin_filter
 
     ! total hydrometeor (before correction)
@@ -4834,6 +4832,8 @@ contains
 
     enddo
     enddo
+
+    call PROF_rapend('MP filter')
 
     return
   end subroutine MP_negativefilter

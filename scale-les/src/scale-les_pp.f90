@@ -27,6 +27,8 @@ program scaleles_pp
      PRC_MPIfinish
   use scale_const, only: &
      CONST_setup
+  use scale_prof, only: &
+     PROF_setup
   use scale_calendar, only: &
      CALENDAR_setup
   use scale_random, only: &
@@ -113,6 +115,9 @@ program scaleles_pp
 
   ! setup Log
   call LogInit(IO_FID_CONF, IO_FID_LOG, IO_L)
+
+  ! setup PROF
+  call PROF_setup
 
   ! setup constants
   call CONST_setup

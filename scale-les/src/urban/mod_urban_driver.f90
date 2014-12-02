@@ -79,7 +79,7 @@ contains
 
     !########## Physics ##########
     if ( URBAN_sw ) then
-      call PROF_rapstart('URB Physics')
+      call PROF_rapstart('URB Physics', 1)
       call URBAN_PHY_driver( update_flag=.true., history_flag=.true. )
       call PROF_rapend  ('URB Physics')
     endif
@@ -97,7 +97,7 @@ contains
     call URBAN_SURFACE_SET( setup=.false. )
 
     !########## History & Monitor ##########
-    call PROF_rapstart('URB History')
+    call PROF_rapstart('URB History', 1)
     call URBAN_vars_history
     call PROF_rapend  ('URB History')
 

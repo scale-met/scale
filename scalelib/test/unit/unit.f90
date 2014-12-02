@@ -17,7 +17,9 @@ program unit
 
   use test_atmos_phy_tb_smg
 
-  use test_atmos_dyn_fent_fct
+  use test_atmos_dyn
+
+  use test_comm
 
   character(len=H_MID), parameter :: MODELNAME = "Unit test"
 
@@ -33,12 +35,6 @@ program unit
   ! setup constants
   call CONST_setup
 
-  KMAX = 10
-  IMAX = 10
-  JMAX = 2
-  IBLOCK = 5
-  JBLOCK = 1
-
   call GRID_INDEX_setup
 
   TRACER_TYPE = 'SN14'
@@ -51,11 +47,14 @@ program unit
   ! setup mpi communication
   call COMM_setup
 
+  write(*,*) "test_comm"
+  call test_comm_run
+
   write(*,*) "test_atmos_phy_tb_smg_run"
   call test_atmos_phy_tb_smg_run
 
-  write(*,*) "test_atmos_dyn_fent_fct_run"
-  call test_atmos_dyn_fent_fct_run
+  write(*,*) "test_atmos_dyn_run"
+  call test_atmos_dyn_run
 
   call PRC_MPIfinish
 

@@ -212,56 +212,56 @@ contains
 
     !########## Microphysics ##########
     if ( ATMOS_sw_phy_mp ) then
-       call PROF_rapstart('ATM Microphysics')
+       call PROF_rapstart('ATM Microphysics', 1)
        call ATMOS_PHY_MP_driver( update_flag=do_phy_mp, history_flag=.true. )
        call PROF_rapend  ('ATM Microphysics')
     endif
 
     !########## Aerosol ##########
     if ( ATMOS_sw_phy_ae ) then
-       call PROF_rapstart('ATM Aerosol')
+       call PROF_rapstart('ATM Aerosol', 1)
        call ATMOS_PHY_AE_driver( update_flag=do_phy_ae, history_flag=.true. )
        call PROF_rapend  ('ATM Aerosol')
     endif
 
     !########## Chemistry ##########
     if ( ATMOS_sw_phy_ch ) then
-       call PROF_rapstart('ATM Chemistry')
+       call PROF_rapstart('ATM Chemistry', 1)
        call ATMOS_PHY_CH_driver( update_flag=do_phy_ch, history_flag=.true. )
        call PROF_rapend  ('ATM Chemistry')
     endif
 
     !########## Radiation ##########
     if ( ATMOS_sw_phy_rd ) then
-       call PROF_rapstart('ATM Radiation')
+       call PROF_rapstart('ATM Radiation', 1)
        call ATMOS_PHY_RD_driver( update_flag=do_phy_rd, history_flag=.true. )
        call PROF_rapend  ('ATM Radiation')
     endif
 
     !########## Surface Flux ##########
     if ( ATMOS_sw_phy_sf ) then
-       call PROF_rapstart('ATM SurfaceFlux')
+       call PROF_rapstart('ATM SurfaceFlux', 1)
        call ATMOS_PHY_SF_driver( update_flag=do_phy_sf, history_flag=.true. )
        call PROF_rapend  ('ATM SurfaceFlux')
     endif
 
     !########## Turbulence ##########
     if ( ATMOS_sw_phy_tb ) then
-       call PROF_rapstart('ATM Turbulence')
+       call PROF_rapstart('ATM Turbulence', 1)
        call ATMOS_PHY_TB_driver( update_flag=do_phy_tb, history_flag=.true. )
        call PROF_rapend  ('ATM Turbulence')
     endif
 
     !########## Cumulus ##########
     if ( ATMOS_sw_phy_cp ) then
-       call PROF_rapstart('ATM Cumulus')
+       call PROF_rapstart('ATM Cumulus', 1)
        call ATMOS_PHY_CP_driver( update_flag=do_phy_cp, history_flag=.true. )
        call PROF_rapend  ('ATM Cumulus')
     endif
 
     !########## Dynamics ##########
     if ( ATMOS_sw_dyn ) then
-       call PROF_rapstart('ATM Dynamics')
+       call PROF_rapstart('ATM Dynamics', 1)
        call ATMOS_DYN_driver( do_dyn )
        call PROF_rapend  ('ATM Dynamics')
     endif
@@ -273,7 +273,7 @@ contains
     call ATMOS_SURFACE_SET( setup=.false. )
 
     !########## History & Monitor ##########
-    call PROF_rapstart('ATM History Vars')
+    call PROF_rapstart('ATM History Vars', 1)
     call ATMOS_vars_history
     call ATMOS_vars_monitor
     call PROF_rapend  ('ATM History Vars')
