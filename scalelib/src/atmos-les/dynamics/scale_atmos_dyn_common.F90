@@ -86,6 +86,7 @@ contains
     integer :: k, i, j
     !---------------------------------------------------------------------------
 
+    ! allocation
     allocate( CNZ3(3,KA,2) )
     allocate( CNX3(3,IA,2) )
     allocate( CNY3(3,JA,2) )
@@ -320,7 +321,13 @@ contains
     integer  :: iwork
 
     real(RP) :: DIFF4
-    integer  :: nd_order4, no
+    integer  :: nd_order4
+    real(RP) :: nd_coef_cdz(KA)
+    real(RP) :: nd_coef_cdx(IA)
+    real(RP) :: nd_coef_cdy(JA)
+    real(RP) :: nd_coef_fdz(KA-1)
+    real(RP) :: nd_coef_fdx(IA-1)
+    real(RP) :: nd_coef_fdy(JA-1)
 
     integer :: k, i, j
     !---------------------------------------------------------------------------
@@ -328,6 +335,21 @@ contains
     ! numerical diffusion
     nd_order4 = nd_order * 4
     DIFF4 = ND_COEF / ( 2**(nd_order4) * DT )
+    do k = KS-1, KE
+       nd_coef_cdz(k) = DIFF4 * CDZ(k)**nd_order4
+    end do
+    do k = KS+1, KE-1
+       nd_coef_fdz(k) = DIFF4 * FDZ(k)**nd_order4
+    end do
+    do i = IS, IE
+       nd_coef_cdx(i) = DIFF4 * CDX(i)**nd_order4
+       nd_coef_fdx(i) = DIFF4 * FDX(i)**nd_order4
+    end do
+    do j = JS, JE
+       nd_coef_cdy(j) = DIFF4 * CDY(j)**nd_order4
+       nd_coef_fdy(j) = DIFF4 * FDY(j)**nd_order4
+    end do
+
 
     !###########################################################################
     ! 1st order coefficients
@@ -434,7 +456,7 @@ contains
     do j = JS, JE
     do i = IS, IE
     do k = KS-1, KE
-       num_diff(k,i,j,I_DENS,ZDIR) = work(k,i,j,ZDIR,iwork) * DIFF4 * CDZ(k)**nd_order4
+       num_diff(k,i,j,I_DENS,ZDIR) = work(k,i,j,ZDIR,iwork) * nd_coef_cdz(k)
     enddo
     enddo
     enddo
@@ -448,7 +470,7 @@ contains
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       num_diff(k,i,j,I_DENS,XDIR) = work(k,i,j,XDIR,iwork) * DIFF4 * CDX(i)**nd_order4
+       num_diff(k,i,j,I_DENS,XDIR) = work(k,i,j,XDIR,iwork) * nd_coef_cdx(i)
     enddo
     enddo
     enddo
@@ -464,7 +486,7 @@ contains
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       num_diff(k,i,j,I_DENS,YDIR) = work(k,i,j,YDIR,iwork) * DIFF4 * CDY(j)**nd_order4
+       num_diff(k,i,j,I_DENS,YDIR) = work(k,i,j,YDIR,iwork) * nd_coef_cdy(j)
     enddo
     enddo
     enddo
@@ -514,7 +536,7 @@ contains
     do j = JS, JE
     do i = IS, IE
     do k = KS+1, KE-1
-       num_diff(k,i,j,I_MOMZ,ZDIR) = work(k,i,j,ZDIR,iwork) * DIFF4 * FDZ(k)**nd_order4 &
+       num_diff(k,i,j,I_MOMZ,ZDIR) = work(k,i,j,ZDIR,iwork) * nd_coef_fdz(k) &
                                    * DENS(k,i,j)
     enddo
     enddo
@@ -529,7 +551,7 @@ contains
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE-1
-       num_diff(k,i,j,I_MOMZ,XDIR) = work(k,i,j,XDIR,iwork) * DIFF4 * CDX(i)**nd_order4 &
+       num_diff(k,i,j,I_MOMZ,XDIR) = work(k,i,j,XDIR,iwork) * nd_coef_cdx(i) &
                                    * 0.25_RP * ( DENS(k+1,i+1,j)+DENS(k+1,i,j)+DENS(k,i+1,j)+DENS(k,i,j) )
     enddo
     enddo
@@ -546,7 +568,7 @@ contains
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE-1
-       num_diff(k,i,j,I_MOMZ,YDIR) = work(k,i,j,YDIR,iwork) * DIFF4 * CDY(j)**nd_order4 &
+       num_diff(k,i,j,I_MOMZ,YDIR) = work(k,i,j,YDIR,iwork) * nd_coef_cdy(j) &
                                    * 0.25_RP * ( DENS(k+1,i,j+1)+DENS(k+1,i,j)+DENS(k,i,j+1)+DENS(k,i,j) )
     enddo
     enddo
@@ -599,7 +621,7 @@ contains
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE-1
-       num_diff(k,i,j,I_MOMX,ZDIR) = work(k,i,j,ZDIR,iwork) * DIFF4 * CDZ(k)**nd_order4 &
+       num_diff(k,i,j,I_MOMX,ZDIR) = work(k,i,j,ZDIR,iwork) * nd_coef_cdz(k) &
                                    * 0.25_RP * ( DENS(k+1,i+1,j)+DENS(k+1,i,j)+DENS(k,i+1,j)+DENS(k,i,j) )
     enddo
     enddo
@@ -614,7 +636,7 @@ contains
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       num_diff(k,i,j,I_MOMX,XDIR) = work(k,i,j,XDIR,iwork) * DIFF4 * FDX(i)**nd_order4 &
+       num_diff(k,i,j,I_MOMX,XDIR) = work(k,i,j,XDIR,iwork) * nd_coef_fdx(i) &
                                    * DENS(k,i,j)
     enddo
     enddo
@@ -632,7 +654,7 @@ contains
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       num_diff(k,i,j,I_MOMX,YDIR) = work(k,i,j,YDIR,iwork) * DIFF4 * CDY(j)**nd_order4 &
+       num_diff(k,i,j,I_MOMX,YDIR) = work(k,i,j,YDIR,iwork) * nd_coef_cdy(j) &
                                    * 0.25_RP * ( DENS(k,i+1,j+1)+DENS(k,i+1,j)+DENS(k,i,j+1)+DENS(k,i,j) )
     enddo
     enddo
@@ -683,7 +705,7 @@ contains
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE-1
-       num_diff(k,i,j,I_MOMY,ZDIR) = work(k,i,j,ZDIR,iwork) * DIFF4 * CDZ(k)**nd_order4 &
+       num_diff(k,i,j,I_MOMY,ZDIR) = work(k,i,j,ZDIR,iwork) * nd_coef_cdz(k) &
                                    * 0.25_RP * ( DENS(k+1,i,j+1)+DENS(k+1,i,j)+DENS(k,i,j+1)+DENS(k,i,j) )
     enddo
     enddo
@@ -698,7 +720,7 @@ contains
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       num_diff(k,i,j,I_MOMY,XDIR) = work(k,i,j,XDIR,iwork) * DIFF4 * CDX(i)**nd_order4 &
+       num_diff(k,i,j,I_MOMY,XDIR) = work(k,i,j,XDIR,iwork) * nd_coef_cdx(i) &
                                    * 0.25_RP * ( DENS(k,i+1,j+1)+DENS(k,i,j+1)+DENS(k,i+1,j)+DENS(k,i,j) )
     enddo
     enddo
@@ -715,7 +737,7 @@ contains
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       num_diff(k,i,j,I_MOMY,YDIR) = work(k,i,j,YDIR,iwork) * DIFF4 * FDY(j)**nd_order4 &
+       num_diff(k,i,j,I_MOMY,YDIR) = work(k,i,j,YDIR,iwork) * nd_coef_fdy(j) &
                                    * DENS(k,i,j)
     enddo
     enddo
@@ -767,7 +789,7 @@ contains
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE-1
-       num_diff(k,i,j,I_RHOT,ZDIR) = work(k,i,j,ZDIR,iwork) * DIFF4 * CDZ(k)**nd_order4 &
+       num_diff(k,i,j,I_RHOT,ZDIR) = work(k,i,j,ZDIR,iwork) * nd_coef_cdz(k) &
                                    * 0.5_RP * ( DENS(k+1,i,j)+DENS(k,i,j) )
     enddo
     enddo
@@ -775,9 +797,9 @@ contains
     do j = JS, JE
     do i = IS, IE
        num_diff(   1:KS-2,i,j,I_RHOT,ZDIR) = 0.0_RP
-       num_diff(KS-1,i,j,I_RHOT,ZDIR) = work(KS-1,i,j,ZDIR,iwork) * DIFF4 * CDZ(KS-1)**nd_order4 &
+       num_diff(KS-1,i,j,I_RHOT,ZDIR) = work(KS-1,i,j,ZDIR,iwork) * nd_coef_cdz(KS-1) &
                                       * DENS(KS,i,j)
-       num_diff(KE  ,i,j,I_RHOT,ZDIR) = work(KE  ,i,j,ZDIR,iwork) * DIFF4 * CDZ(KE  )**nd_order4 &
+       num_diff(KE  ,i,j,I_RHOT,ZDIR) = work(KE  ,i,j,ZDIR,iwork) * nd_coef_cdz(KE  ) &
                                       * DENS(KE,i,j)
        num_diff(KE+1:KA  ,i,j,I_RHOT,ZDIR) = 0.0_RP
     enddo
@@ -786,7 +808,7 @@ contains
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       num_diff(k,i,j,I_RHOT,XDIR) = work(k,i,j,XDIR,iwork) * DIFF4 * CDX(i)**nd_order4 &
+       num_diff(k,i,j,I_RHOT,XDIR) = work(k,i,j,XDIR,iwork) * nd_coef_cdx(i) &
                                    * 0.5_RP * ( DENS(k,i+1,j)+DENS(k,i,j) )
     enddo
     enddo
@@ -803,7 +825,7 @@ contains
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       num_diff(k,i,j,I_RHOT,YDIR) = work(k,i,j,YDIR,iwork) * DIFF4 * CDY(j)**nd_order4 &
+       num_diff(k,i,j,I_RHOT,YDIR) = work(k,i,j,YDIR,iwork) * nd_coef_cdy(j) &
                                    * 0.5_RP * ( DENS(k,i,j+1)+DENS(k,i,j) )
     enddo
     enddo
@@ -884,7 +906,10 @@ contains
     integer  :: iwork
 
     real(RP) :: DIFF4
-    integer  :: nd_order4, no
+    integer  :: nd_order4
+    real(RP) :: nd_coef_cdz(KA)
+    real(RP) :: nd_coef_cdx(IA)
+    real(RP) :: nd_coef_cdy(JA)
 
     integer :: k, i, j
     !---------------------------------------------------------------------------
@@ -895,6 +920,15 @@ contains
 
     nd_order4 = nd_order * 4
     DIFF4 = ND_COEF / ( 2**(nd_order4) * DT )
+    do k = KS-1, KE
+       nd_coef_cdz(k) = DIFF4 * CDZ(k)**nd_order4
+    end do
+    do i = IS, IE
+       nd_coef_cdx(i) = DIFF4 * CDX(i)**nd_order4
+    end do
+    do j = JS, JE
+       nd_coef_cdy(j) = DIFF4 * CDY(j)**nd_order4
+    end do
 
     if ( iq == I_QV .and. (.not. ND_USE_RS) ) then
 
@@ -981,16 +1015,16 @@ contains
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE-1
-       num_diff_q(k,i,j,ZDIR) = work(k,i,j,ZDIR,iwork) * DIFF4 * CDZ(k)**nd_order4 &
+       num_diff_q(k,i,j,ZDIR) = work(k,i,j,ZDIR,iwork) * nd_coef_cdz(k) &
                               * 0.5_RP * ( DENS(k+1,i,j)+DENS(k,i,j) )
     enddo
     enddo
     enddo
     do j = JS, JE
     do i = IS, IE
-       num_diff_q(KS-1,i,j,ZDIR) = work(KS-1,i,j,ZDIR,iwork) * DIFF4 * CDZ(KS-1)**nd_order4 &
+       num_diff_q(KS-1,i,j,ZDIR) = work(KS-1,i,j,ZDIR,iwork) * nd_coef_cdz(KS-1) &
                                  * DENS(KS,i,j)
-       num_diff_q(KE  ,i,j,ZDIR) = work(KE  ,i,j,ZDIR,iwork) * DIFF4 * CDZ(KE  )**nd_order4 &
+       num_diff_q(KE  ,i,j,ZDIR) = work(KE  ,i,j,ZDIR,iwork) * nd_coef_cdz(KE  ) &
                                  * DENS(KE,i,j)
     enddo
     enddo
@@ -998,7 +1032,7 @@ contains
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       num_diff_q(k,i,j,XDIR) = work(k,i,j,XDIR,iwork) * DIFF4 * CDX(i)**nd_order4 &
+       num_diff_q(k,i,j,XDIR) = work(k,i,j,XDIR,iwork) * nd_coef_cdx(i) &
                               * 0.5_RP * ( DENS(k,i+1,j)+DENS(k,i,j) )
     enddo
     enddo
@@ -1013,7 +1047,7 @@ contains
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       num_diff_q(k,i,j,YDIR) = work(k,i,j,YDIR,iwork) * DIFF4 * CDY(j)**nd_order4 &
+       num_diff_q(k,i,j,YDIR) = work(k,i,j,YDIR,iwork) * nd_coef_cdy(j) &
                               * 0.5_RP * ( DENS(k,i,j+1)+DENS(k,i,j) )
     enddo
     enddo
