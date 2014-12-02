@@ -119,6 +119,15 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Turbulence(dummy)'
 
     ! do nothing
+    qflx_sgs_momz(:,:,:,:)   = 0.0_RP
+    qflx_sgs_momx(:,:,:,:)   = 0.0_RP
+    qflx_sgs_momy(:,:,:,:)   = 0.0_RP
+    qflx_sgs_rhot(:,:,:,:)   = 0.0_RP
+    qflx_sgs_rhoq(:,:,:,:,:) = 0.0_RP
+
+    nu_C(:,:,:) = 0.0_RP
+    Pr  (:,:,:) = 0.0_RP
+    Ri  (:,:,:) = 0.0_RP
 
     return
   end subroutine ATMOS_PHY_TB_dummy

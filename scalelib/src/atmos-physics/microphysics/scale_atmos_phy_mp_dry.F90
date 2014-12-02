@@ -106,6 +106,9 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Cloud microphysics(dummy)'
 
+    SFLX_rain(:,:) = 0.0_RP
+    SFLX_snow(:,:) = 0.0_RP
+
     return
   end subroutine ATMOS_PHY_MP_dry
 

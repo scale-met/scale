@@ -577,8 +577,9 @@ contains
       errcode   )
     implicit none
 
-    integer, intent(in) :: comm    !< MPI communicator
-    integer, intent(in) :: errcode !< error code
+    ! attributes are needed to be the same with COMM_ERRHANDLER function
+    integer :: comm    !< MPI communicator
+    integer :: errcode !< error code
 
     character(len=MPI_MAX_ERROR_STRING) :: msg
     integer :: len
