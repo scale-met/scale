@@ -526,20 +526,34 @@ contains
     !---------------------------------------------------------------------------
 
     if ( URBAN_VARS_CHECKRANGE ) then
-       call VALCHECK( TR_URB   (IS:IE,JS:JE),      0.0_RP, 1000.0_RP, VAR_NAME(I_TR_URB),    __FILE__, __LINE__ )
-       call VALCHECK( TB_URB   (IS:IE,JS:JE),      0.0_RP, 1000.0_RP, VAR_NAME(I_TB_URB),    __FILE__, __LINE__ )
-       call VALCHECK( TG_URB   (IS:IE,JS:JE),      0.0_RP, 1000.0_RP, VAR_NAME(I_TG_URB),    __FILE__, __LINE__ )
-       call VALCHECK( TC_URB   (IS:IE,JS:JE),      0.0_RP, 1000.0_RP, VAR_NAME(I_TC_URB),    __FILE__, __LINE__ )
-       call VALCHECK( QC_URB   (IS:IE,JS:JE),      0.0_RP, 1000.0_RP, VAR_NAME(I_QC_URB),    __FILE__, __LINE__ )
-       call VALCHECK( UC_URB   (IS:IE,JS:JE),      0.0_RP, 1000.0_RP, VAR_NAME(I_UC_URB),    __FILE__, __LINE__ )
-       call VALCHECK( TRL_URB  (:,IS:IE,JS:JE),    0.0_RP, 1000.0_RP, VAR_NAME(I_TRL_URB),   __FILE__, __LINE__ )
-       call VALCHECK( TBL_URB  (:,IS:IE,JS:JE),    0.0_RP, 1000.0_RP, VAR_NAME(I_TBL_URB),   __FILE__, __LINE__ )
-       call VALCHECK( TGL_URB  (:,IS:IE,JS:JE),    0.0_RP, 1000.0_RP, VAR_NAME(I_TGL_URB),   __FILE__, __LINE__ )
-       call VALCHECK( RAINR_URB(IS:IE,JS:JE),   -500.0_RP, 1000.0_RP, VAR_NAME(I_RAINR_URB), __FILE__, __LINE__ )
-       call VALCHECK( RAINB_URB(IS:IE,JS:JE),   -500.0_RP, 1000.0_RP, VAR_NAME(I_RAINB_URB), __FILE__, __LINE__ )
-       call VALCHECK( RAING_URB(IS:IE,JS:JE),   -500.0_RP, 1000.0_RP, VAR_NAME(I_RAING_URB), __FILE__, __LINE__ )
-       call VALCHECK( ROFF_URB (IS:IE,JS:JE),   -500.0_RP, 1000.0_RP, VAR_NAME(I_ROFF_URB),  __FILE__, __LINE__ )
-!       call VALCHECK( Rngrd_URB(:,:),  -5000.0_RP, 5000.0_RP, VAR_NAME(I_Rngrd_URB), __FILE__, __LINE__ )
+       call VALCHECK( TR_URB   (IS:IE,JS:JE),      0.0_RP, 1000.0_RP, VAR_NAME(I_TR_URB), &
+                     __FILE__, __LINE__ )
+       call VALCHECK( TB_URB   (IS:IE,JS:JE),      0.0_RP, 1000.0_RP, VAR_NAME(I_TB_URB), &
+                     __FILE__, __LINE__ )
+       call VALCHECK( TG_URB   (IS:IE,JS:JE),      0.0_RP, 1000.0_RP, VAR_NAME(I_TG_URB), &
+                     __FILE__, __LINE__ )
+       call VALCHECK( TC_URB   (IS:IE,JS:JE),      0.0_RP, 1000.0_RP, VAR_NAME(I_TC_URB), &
+                     __FILE__, __LINE__ )
+       call VALCHECK( QC_URB   (IS:IE,JS:JE),      0.0_RP, 1000.0_RP, VAR_NAME(I_QC_URB), &
+                     __FILE__, __LINE__ )
+       call VALCHECK( UC_URB   (IS:IE,JS:JE),      0.0_RP, 1000.0_RP, VAR_NAME(I_UC_URB), &
+                     __FILE__, __LINE__ )
+       call VALCHECK( TRL_URB  (:,IS:IE,JS:JE),    0.0_RP, 1000.0_RP, VAR_NAME(I_TRL_URB), &
+                     __FILE__, __LINE__ )
+       call VALCHECK( TBL_URB  (:,IS:IE,JS:JE),    0.0_RP, 1000.0_RP, VAR_NAME(I_TBL_URB), &
+                     __FILE__, __LINE__ )
+       call VALCHECK( TGL_URB  (:,IS:IE,JS:JE),    0.0_RP, 1000.0_RP, VAR_NAME(I_TGL_URB), &
+                     __FILE__, __LINE__ )
+       call VALCHECK( RAINR_URB(IS:IE,JS:JE),   -500.0_RP, 1000.0_RP, VAR_NAME(I_RAINR_URB), &
+                     __FILE__, __LINE__ )
+       call VALCHECK( RAINB_URB(IS:IE,JS:JE),   -500.0_RP, 1000.0_RP, VAR_NAME(I_RAINB_URB), &
+                     __FILE__, __LINE__ )
+       call VALCHECK( RAING_URB(IS:IE,JS:JE),   -500.0_RP, 1000.0_RP, VAR_NAME(I_RAING_URB), &
+                     __FILE__, __LINE__ )
+       call VALCHECK( ROFF_URB (IS:IE,JS:JE),   -500.0_RP, 1000.0_RP, VAR_NAME(I_ROFF_URB),  &
+                     __FILE__, __LINE__ )
+!       call VALCHECK( Rngrd_URB(:,:),  -5000.0_RP, 5000.0_RP, VAR_NAME(I_Rngrd_URB),        &
+!                    __FILE__, __LINE__ )
     endif
 
     call HIST_in( TR_URB(:,:), 'TR_URB', VAR_DESC(I_TR_URB), VAR_UNIT(I_TR_URB), TIME_DTSEC_URBAN )
