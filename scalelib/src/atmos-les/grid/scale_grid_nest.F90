@@ -2272,13 +2272,13 @@ contains
     if ( NEST_Filiation( INTERCOMM_ID(HANDLE) ) > 0 ) then
     !--------------------------------------------------- parent
        call PROF_rapstart('NESTCOM test parent')
-       call MPI_TEST(ireq_p(1), flag, istatus, ierr)
+       if ( rq_ctl_p > 0 ) call MPI_TEST(ireq_p(1), flag, istatus, ierr)
        call PROF_rapend('NESTCOM test parent')
 
     elseif ( NEST_Filiation( INTERCOMM_ID(HANDLE) ) < 0 ) then
     !--------------------------------------------------- daughter
        call PROF_rapstart('NESTCOM test child')
-       call MPI_TEST(ireq_d(1), flag, istatus, ierr)
+       if ( rq_ctl_d > 0 ) call MPI_TEST(ireq_d(1), flag, istatus, ierr)
        call PROF_rapend('NESTCOM test child')
     else
     !---------------------------------------------------
