@@ -115,6 +115,9 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Land step: Matsiro'
 
+    LAND_TEMP_t (:,:,:) = 0.0_RP
+    LAND_WATER_t(:,:,:) = 0.0_RP
+
     return
   end subroutine LAND_PHY_matsiro
 
