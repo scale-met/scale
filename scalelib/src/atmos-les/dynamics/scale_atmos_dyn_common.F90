@@ -324,8 +324,6 @@ contains
     real(RP) :: DIFF4
     integer  :: nd_order4, no
 
-    integer :: IIS, IIE
-    integer :: JJS, JJE
     integer :: k, i, j
     !---------------------------------------------------------------------------
 
@@ -341,64 +339,56 @@ contains
 
        call PROF_rapstart("NumFilter Main", 3)
 
-       do JJS = JS, JE, JBLOCK
-       JJE = JJS+JBLOCK-1
-       do IIS = IS, IE, IBLOCK
-       IIE = IIS+IBLOCK-1
+       do j = JS-2, JE+2
+       do i = IS-2, IE+2
+       do k = KS, KE
+          POTT(k,i,j) = RHOT(k,i,j) / DENS(k,i,j)
+       end do
+       end do
+       end do
 
-          do j = JJS-2, JJE+2
-          do i = IIS-2, IIE+2
-          do k = KS, KE
-             POTT(k,i,j) = RHOT(k,i,j) / DENS(k,i,j)
-          end do
-          end do
-          end do
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS+1, KE-1
+          dens_diff(k,i,j) = ( ( DENS(k,i,j)                                             ) * 3.0_RP &
+                             + ( DENS(k,i+1,j)+DENS(k,i-1,j)+DENS(k,i,j+1)+DENS(k,i,j-1) ) * 2.0_RP &
+                             + ( DENS(k,i+2,j)+DENS(k,i-2,j)+DENS(k,i,j+2)+DENS(k,i,j-2) ) &
+                             + ( DENS(k+1,i,j)+DENS(k-1,i,j)                             ) * 2.0_RP &
+                             ) / 19.0_RP
 
-          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-          do j = JJS, JJE
-          do i = IIS, IIE
-          do k = KS+1, KE-1
-             dens_diff(k,i,j) = ( ( DENS(k,i,j)                                             ) * 3.0_RP &
-                                + ( DENS(k,i+1,j)+DENS(k,i-1,j)+DENS(k,i,j+1)+DENS(k,i,j-1) ) * 2.0_RP &
-                                + ( DENS(k,i+2,j)+DENS(k,i-2,j)+DENS(k,i,j+2)+DENS(k,i,j-2) ) &
-                                + ( DENS(k+1,i,j)+DENS(k-1,i,j)                             ) * 2.0_RP &
-                                ) / 19.0_RP
+          pott_diff(k,i,j) = ( ( POTT(k,i,j)                                             ) * 3.0_RP &
+                             + ( POTT(k,i+1,j)+POTT(k,i-1,j)+POTT(k,i,j+1)+POTT(k,i,j-1) ) * 2.0_RP &
+                             + ( POTT(k,i+2,j)+POTT(k,i-2,j)+POTT(k,i,j+2)+POTT(k,i,j-2) ) &
+                             + ( POTT(k+1,i,j)+POTT(k-1,i,j)                             ) * 2.0_RP &
+                             ) / 19.0_RP
+       enddo
+       enddo
+       enddo
 
-             pott_diff(k,i,j) = ( ( POTT(k,i,j)                                             ) * 3.0_RP &
-                                + ( POTT(k,i+1,j)+POTT(k,i-1,j)+POTT(k,i,j+1)+POTT(k,i,j-1) ) * 2.0_RP &
-                                + ( POTT(k,i+2,j)+POTT(k,i-2,j)+POTT(k,i,j+2)+POTT(k,i,j-2) ) &
-                                + ( POTT(k+1,i,j)+POTT(k-1,i,j)                             ) * 2.0_RP &
-                                ) / 19.0_RP
-          enddo
-          enddo
-          enddo
+       do j  = JS, JE
+       do i  = IS, IE
+          dens_diff(KS,i,j) = ( ( DENS(KS,i,j)                                                ) * 3.0_RP &
+                              + ( DENS(KS,i+1,j)+DENS(KS,i-1,j)+DENS(KS,i,j+1)+DENS(KS,i,j-1) ) * 2.0_RP &
+                              + ( DENS(KS,i+2,j)+DENS(KS,i-2,j)+DENS(KS,i,j+2)+DENS(KS,i,j-2) ) &
+                              + ( DENS(KS+1,i,j)                                              ) * 2.0_RP &
+                              ) / 17.0_RP
+          dens_diff(KE,i,j) = ( ( DENS(KE,i,j)                                                ) * 3.0_RP &
+                              + ( DENS(KE,i+1,j)+DENS(KE,i-1,j)+DENS(KE,i,j+1)+DENS(KE,i,j-1) ) * 2.0_RP &
+                              + ( DENS(KE,i+2,j)+DENS(KE,i-2,j)+DENS(KE,i,j+2)+DENS(KE,i,j-2) ) &
+                              + ( DENS(KE-1,i,j)                                              ) * 2.0_RP &
+                              ) / 17.0_RP
 
-          do j  = JJS, JJE
-          do i  = IIS, IIE
-             dens_diff(KS,i,j) = ( ( DENS(KS,i,j)                                                ) * 3.0_RP &
-                                 + ( DENS(KS,i+1,j)+DENS(KS,i-1,j)+DENS(KS,i,j+1)+DENS(KS,i,j-1) ) * 2.0_RP &
-                                 + ( DENS(KS,i+2,j)+DENS(KS,i-2,j)+DENS(KS,i,j+2)+DENS(KS,i,j-2) ) &
-                                 + ( DENS(KS+1,i,j)                                              ) * 2.0_RP &
-                                 ) / 17.0_RP
-             dens_diff(KE,i,j) = ( ( DENS(KE,i,j)                                                ) * 3.0_RP &
-                                 + ( DENS(KE,i+1,j)+DENS(KE,i-1,j)+DENS(KE,i,j+1)+DENS(KE,i,j-1) ) * 2.0_RP &
-                                 + ( DENS(KE,i+2,j)+DENS(KE,i-2,j)+DENS(KE,i,j+2)+DENS(KE,i,j-2) ) &
-                                 + ( DENS(KE-1,i,j)                                              ) * 2.0_RP &
-                                 ) / 17.0_RP
-
-             pott_diff(KS,i,j) = ( ( POTT(KS,i,j)                                                ) * 3.0_RP &
-                                 + ( POTT(KS,i+1,j)+POTT(KS,i-1,j)+POTT(KS,i,j+1)+POTT(KS,i,j-1) ) * 2.0_RP &
-                                 + ( POTT(KS,i+2,j)+POTT(KS,i-2,j)+POTT(KS,i,j+2)+POTT(KS,i,j-2) ) &
-                                 + ( POTT(KS+1,i,j)                                              ) * 2.0_RP &
-                                 ) / 17.0_RP
-             pott_diff(KE,i,j) = ( ( POTT(KE,i,j)                                                ) * 3.0_RP &
-                                 + ( POTT(KE,i+1,j)+POTT(KE,i-1,j)+POTT(KE,i,j+1)+POTT(KE,i,j-1) ) * 2.0_RP &
-                                 + ( POTT(KE,i+2,j)+POTT(KE,i-2,j)+POTT(KE,i,j+2)+POTT(KE,i,j-2) ) &
-                                 + ( POTT(KE-1,i,j)                                              ) * 2.0_RP &
-                                 ) / 17.0_RP
-          enddo
-          enddo
-
+          pott_diff(KS,i,j) = ( ( POTT(KS,i,j)                                                ) * 3.0_RP &
+                              + ( POTT(KS,i+1,j)+POTT(KS,i-1,j)+POTT(KS,i,j+1)+POTT(KS,i,j-1) ) * 2.0_RP &
+                              + ( POTT(KS,i+2,j)+POTT(KS,i-2,j)+POTT(KS,i,j+2)+POTT(KS,i,j-2) ) &
+                              + ( POTT(KS+1,i,j)                                              ) * 2.0_RP &
+                              ) / 17.0_RP
+          pott_diff(KE,i,j) = ( ( POTT(KE,i,j)                                                ) * 3.0_RP &
+                              + ( POTT(KE,i+1,j)+POTT(KE,i-1,j)+POTT(KE,i,j+1)+POTT(KE,i,j-1) ) * 2.0_RP &
+                              + ( POTT(KE,i+2,j)+POTT(KE,i-2,j)+POTT(KE,i,j+2)+POTT(KE,i,j-2) ) &
+                              + ( POTT(KE-1,i,j)                                              ) * 2.0_RP &
+                              ) / 17.0_RP
        end do
        end do
 
@@ -418,99 +408,96 @@ contains
 
     call PROF_rapstart("NumFilter Main", 3)
 
-    do JJS = JS, JE, JBLOCK
-    JJE = JJS+JBLOCK-1
-    do IIS = IS, IE, IBLOCK
-    IIE = IIS+IBLOCK-1
-
-       !-----< Density & Potential temperature >-----
-
-       if ( ND_USE_RS ) then
-          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-          do j = JJS-1, JJE+2
-          do i = IIS-1, IIE+2
-          do k = KS, KE
-             dens_diff(k,i,j) = DENS(k,i,j) - REF_dens(k,i,j)
-             pott_diff(k,i,j) = RHOT(k,i,j) / DENS(k,i,j) - REF_pott(k,i,j)
-          enddo
-          enddo
-          enddo
-       endif
 
 
-       !-----< density >-----
-       call calc_diff3( num_diff(:,:,:,I_DENS,ZDIR), & ! (out)
-                        num_diff(:,:,:,I_DENS,XDIR), & ! (out)
-                        num_diff(:,:,:,I_DENS,YDIR), & ! (out)
-                        dens_diff, & ! (in)
-                        0, 0, 0, &
-                        IIS, IIE, JJS, JJE ) ! (in)
+    !-----< density >-----
 
-       !-----< z-momentum >-----
-
+    if ( ND_USE_RS ) then
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       do j = JJS-2, JJE+2
-       do i = IIS-2, IIE+2
-       do k = KS, KE-1
-          VELZ(k,i,j) = 2.0_RP * MOMZ(k,i,j) / ( DENS(k+1,i,j)+DENS(k,i,j) )
-       enddo
-       enddo
-       enddo
-
-       call calc_diff3( num_diff(:,:,:,I_MOMZ,ZDIR), & ! (out)
-                        num_diff(:,:,:,I_MOMZ,XDIR), & ! (out)
-                        num_diff(:,:,:,I_MOMZ,YDIR), & ! (out)
-                        VELZ, & ! (in)
-                        1, 0, 0, &
-                        IIS, IIE, JJS, JJE ) ! (in)
-
-       !-----< x-momentum >-----
-
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       do j = JJS-2, JJE+2
-       do i = IIS-2, IIE+1
+       do j = JS-1, JE+2
+       do i = IS-1, IE+2
        do k = KS, KE
-          VELX(k,i,j) = 2.0_RP * MOMX(k,i,j) / ( DENS(k,i+1,j)+DENS(k,i,j) )
+          dens_diff(k,i,j) = DENS(k,i,j) - REF_dens(k,i,j)
        enddo
        enddo
        enddo
+    endif
 
-       call calc_diff3( num_diff(:,:,:,I_MOMX,ZDIR), & ! (out)
-                        num_diff(:,:,:,I_MOMX,XDIR), & ! (out)
-                        num_diff(:,:,:,I_MOMX,YDIR), & ! (out)
-                        VELX, & ! (in)
-                        0, 1, 0, &
-                        IIS, IIE, JJS, JJE ) ! (in)
+    call calc_diff3( num_diff(:,:,:,I_DENS,ZDIR), & ! (out)
+                     num_diff(:,:,:,I_DENS,XDIR), & ! (out)
+                     num_diff(:,:,:,I_DENS,YDIR), & ! (out)
+                     dens_diff, & ! (in)
+                     0, 0, 0 )
 
-       !-----< y-momentum >-----
+    !-----< z-momentum >-----
 
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       do j = JJS-2, JJE+1
-       do i = IIS-2, IIE+2
-       do k = KS, KE
-          VELY(k,i,j) = 2.0_RP * MOMY(k,i,j) / ( DENS(k,i,j+1)+DENS(k,i,j) )
-       enddo
-       enddo
-       enddo
-
-       call calc_diff3( num_diff(:,:,:,I_MOMY,ZDIR), & ! (out)
-                        num_diff(:,:,:,I_MOMY,XDIR), & ! (out)
-                        num_diff(:,:,:,I_MOMY,YDIR), & ! (out)
-                        VELY, & ! (in)
-                        0, 0, 1, &
-                        IIS, IIE, JJS, JJE ) ! (in)
-
-       !-----< rho * theta >-----
-
-       call calc_diff3( num_diff(:,:,:,I_RHOT,ZDIR), & ! (out)
-                        num_diff(:,:,:,I_RHOT,XDIR), & ! (out)
-                        num_diff(:,:,:,I_RHOT,YDIR), & ! (out)
-                        pott_diff, & ! (in)
-                        0, 0, 0, &
-                        IIS, IIE, JJS, JJE ) ! (in)
-
+    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+    do j = JS-2, JE+2
+    do i = IS-2, IE+2
+    do k = KS, KE-1
+       VELZ(k,i,j) = 2.0_RP * MOMZ(k,i,j) / ( DENS(k+1,i,j)+DENS(k,i,j) )
     enddo
-    enddo ! end tile
+    enddo
+    enddo
+
+    call calc_diff3( num_diff(:,:,:,I_MOMZ,ZDIR), & ! (out)
+                     num_diff(:,:,:,I_MOMZ,XDIR), & ! (out)
+                     num_diff(:,:,:,I_MOMZ,YDIR), & ! (out)
+                     VELZ, & ! (in)
+                     1, 0, 0 )
+
+    !-----< x-momentum >-----
+
+    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+    do j = JS-2, JE+2
+    do i = IS-2, IE+1
+    do k = KS, KE
+       VELX(k,i,j) = 2.0_RP * MOMX(k,i,j) / ( DENS(k,i+1,j)+DENS(k,i,j) )
+    enddo
+    enddo
+    enddo
+
+    call calc_diff3( num_diff(:,:,:,I_MOMX,ZDIR), & ! (out)
+                     num_diff(:,:,:,I_MOMX,XDIR), & ! (out)
+                     num_diff(:,:,:,I_MOMX,YDIR), & ! (out)
+                     VELX, & ! (in)
+                     0, 1, 0 )
+
+    !-----< y-momentum >-----
+
+    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+    do j = JS-2, JE+1
+    do i = IS-2, IE+2
+    do k = KS, KE
+       VELY(k,i,j) = 2.0_RP * MOMY(k,i,j) / ( DENS(k,i,j+1)+DENS(k,i,j) )
+    enddo
+    enddo
+    enddo
+
+    call calc_diff3( num_diff(:,:,:,I_MOMY,ZDIR), & ! (out)
+                     num_diff(:,:,:,I_MOMY,XDIR), & ! (out)
+                     num_diff(:,:,:,I_MOMY,YDIR), & ! (out)
+                     VELY, & ! (in)
+                     0, 0, 1 )
+
+    !-----< rho * theta >-----
+
+    if ( ND_USE_RS ) then
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+       do j = JS-1, JE+2
+       do i = IS-1, IE+2
+       do k = KS, KE
+          pott_diff(k,i,j) = RHOT(k,i,j) / DENS(k,i,j) - REF_pott(k,i,j)
+       enddo
+       enddo
+       enddo
+    endif
+
+    call calc_diff3( num_diff(:,:,:,I_RHOT,ZDIR), & ! (out)
+                     num_diff(:,:,:,I_RHOT,XDIR), & ! (out)
+                     num_diff(:,:,:,I_RHOT,YDIR), & ! (out)
+                     pott_diff, & ! (in)
+                     0, 0, 0 )
 
     call PROF_rapend  ("NumFilter Main")
 
@@ -649,60 +636,52 @@ contains
 
     call PROF_rapstart("NumFilter Main", 3)
 
-    do JJS = JS, JE, JBLOCK
-    JJE = JJS+JBLOCK-1
-    do IIS = IS, IE, IBLOCK
-    IIE = IIS+IBLOCK-1
+    !-----< density >-----
 
-       !-----< density >-----
+    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS-1, KE
+       num_diff(k,i,j,I_DENS,ZDIR) = num_diff_pt0(k,i,j,I_DENS,ZDIR) * DIFF4 * CDZ(k)**nd_order4
+    enddo
+    enddo
+    enddo
+    do j = JS, JE
+    do i = IS, IE
+       num_diff(   1:KS-2,i,j,I_DENS,ZDIR) = 0.0_RP
+       num_diff(KE+1:KA  ,i,j,I_DENS,ZDIR) = 0.0_RP
+    enddo
+    enddo
 
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       do j = JJS, JJE
-       do i = IIS, IIE
-       do k = KS-1, KE
-          num_diff(k,i,j,I_DENS,ZDIR) = num_diff_pt0(k,i,j,I_DENS,ZDIR) * DIFF4 * CDZ(k)**nd_order4
-       enddo
-       enddo
-       enddo
-       do j = JJS, JJE
-       do i = IIS, IIE
-          num_diff(   1:KS-2,i,j,I_DENS,ZDIR) = 0.0_RP
-          num_diff(KE+1:KA  ,i,j,I_DENS,ZDIR) = 0.0_RP
-       enddo
-       enddo
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS+2, KE
+       num_diff(k,i,j,I_DENS,XDIR) = num_diff_pt0(k,i,j,I_DENS,XDIR) * DIFF4 * CDX(i)**nd_order4
+    enddo
+    enddo
+    enddo
+    do j = JS, JE
+    do i = IS, IE
+       num_diff(   1:KS-1,i,j,I_DENS,XDIR) = 0.0_RP
+       num_diff(KS  ,i,j,I_DENS,XDIR) = num_DIFF(KS  ,i,j,I_DENS,XDIR) * ND_SFC_FACT
+       num_diff(KS+1,i,j,I_DENS,XDIR) = num_DIFF(KS+1,i,j,I_DENS,XDIR) * (1.0_RP + ND_SFC_FACT) * 0.5_RP
+       num_diff(KE+1:KA  ,i,j,I_DENS,XDIR) = 0.0_RP
+    enddo
+    enddo
 
-       do j = JJS, JJE
-       do i = IIS, IIE
-       do k = KS+2, KE
-          num_diff(k,i,j,I_DENS,XDIR) = num_diff_pt0(k,i,j,I_DENS,XDIR) * DIFF4 * CDX(i)**nd_order4
-       enddo
-       enddo
-       enddo
-       do j = JJS, JJE
-       do i = IIS, IIE
-          num_diff(   1:KS-1,i,j,I_DENS,XDIR) = 0.0_RP
-          num_diff(KS  ,i,j,I_DENS,XDIR) = num_DIFF(KS  ,i,j,I_DENS,XDIR) * ND_SFC_FACT
-          num_diff(KS+1,i,j,I_DENS,XDIR) = num_DIFF(KS+1,i,j,I_DENS,XDIR) * (1.0_RP + ND_SFC_FACT) * 0.5_RP
-          num_diff(KE+1:KA  ,i,j,I_DENS,XDIR) = 0.0_RP
-       enddo
-       enddo
-
-       do j = JJS, JJE
-       do i = IIS, IIE
-       do k = KS+2, KE
-          num_diff(k,i,j,I_DENS,YDIR) = num_diff_pt0(k,i,j,I_DENS,YDIR) * DIFF4 * CDY(j)**nd_order4
-       enddo
-       enddo
-       enddo
-       do j = JJS, JJE
-       do i = IIS, IIE
-          num_diff(   1:KS-1,i,j,I_DENS,YDIR) = 0.0_RP
-          num_diff(KS  ,i,j,I_DENS,YDIR) = num_DIFF(KS  ,i,j,I_DENS,YDIR) * ND_SFC_FACT
-          num_diff(KS+1,i,j,I_DENS,YDIR) = num_DIFF(KS+1,i,j,I_DENS,YDIR) * (1.0_RP + ND_SFC_FACT) * 0.5_RP
-          num_diff(KE+1:KA  ,i,j,I_DENS,YDIR) = 0.0_RP
-       enddo
-       enddo
-
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS+2, KE
+       num_diff(k,i,j,I_DENS,YDIR) = num_diff_pt0(k,i,j,I_DENS,YDIR) * DIFF4 * CDY(j)**nd_order4
+    enddo
+    enddo
+    enddo
+    do j = JS, JE
+    do i = IS, IE
+       num_diff(   1:KS-1,i,j,I_DENS,YDIR) = 0.0_RP
+       num_diff(KS  ,i,j,I_DENS,YDIR) = num_DIFF(KS  ,i,j,I_DENS,YDIR) * ND_SFC_FACT
+       num_diff(KS+1,i,j,I_DENS,YDIR) = num_DIFF(KS+1,i,j,I_DENS,YDIR) * (1.0_RP + ND_SFC_FACT) * 0.5_RP
+       num_diff(KE+1:KA  ,i,j,I_DENS,YDIR) = 0.0_RP
     enddo
     enddo
 
@@ -721,64 +700,56 @@ contains
 
     call PROF_rapstart("NumFilter Main", 3)
 
-    do JJS = JS, JE, JBLOCK
-    JJE = JJS+JBLOCK-1
-    do IIS = IS, IE, IBLOCK
-    IIE = IIS+IBLOCK-1
+    !-----< z-momentum >-----
 
-       !-----< z-momentum >-----
+    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS+1, KE-1
+       num_diff(k,i,j,I_MOMZ,ZDIR) = num_diff_pt0(k,i,j,I_MOMZ,ZDIR) * DIFF4 * FDZ(k)**nd_order4 &
+                                   * DENS(k,i,j)
+    enddo
+    enddo
+    enddo
+    do j = JS, JE
+    do i = IS, IE
+       num_diff( 1:KS,i,j,I_MOMZ,ZDIR) = 0.0_RP
+       num_diff(KE:KA,i,j,I_MOMZ,ZDIR) = 0.0_RP
+    enddo
+    enddo
 
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       do j = JJS, JJE
-       do i = IIS, IIE
-       do k = KS+1, KE-1
-          num_diff(k,i,j,I_MOMZ,ZDIR) = num_diff_pt0(k,i,j,I_MOMZ,ZDIR) * DIFF4 * FDZ(k)**nd_order4 &
-                                      * DENS(k,i,j)
-       enddo
-       enddo
-       enddo
-       do j = JJS, JJE
-       do i = IIS, IIE
-          num_diff( 1:KS,i,j,I_MOMZ,ZDIR) = 0.0_RP
-          num_diff(KE:KA,i,j,I_MOMZ,ZDIR) = 0.0_RP
-       enddo
-       enddo
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE-1
+       num_diff(k,i,j,I_MOMZ,XDIR) = num_diff_pt0(k,i,j,I_MOMZ,XDIR) * DIFF4 * CDX(i)**nd_order4 &
+                                   * 0.25_RP * ( DENS(k+1,i+1,j)+DENS(k+1,i,j)+DENS(k,i+1,j)+DENS(k,i,j) )
+    enddo
+    enddo
+    enddo
+    do j = JS, JE
+    do i = IS, IE
+       num_diff( 1:KS-1,i,j,I_MOMZ,XDIR) = 0.0_RP
+       num_diff(KS  ,i,j,I_MOMZ,XDIR) = num_DIFF(KS  ,i,j,I_MOMZ,XDIR) * ND_SFC_FACT
+       num_diff(KS+1,i,j,I_MOMZ,XDIR) = num_DIFF(KS+1,i,j,I_MOMZ,XDIR) * (1.0_RP + ND_SFC_FACT) * 0.5_RP
+       num_diff(KE:KA  ,i,j,I_MOMZ,XDIR) = 0.0_RP
+    enddo
+    enddo
 
-       do j = JJS, JJE
-       do i = IIS, IIE
-       do k = KS, KE-1
-          num_diff(k,i,j,I_MOMZ,XDIR) = num_diff_pt0(k,i,j,I_MOMZ,XDIR) * DIFF4 * CDX(i)**nd_order4 &
-                                      * 0.25_RP * ( DENS(k+1,i+1,j)+DENS(k+1,i,j)+DENS(k,i+1,j)+DENS(k,i,j) )
-       enddo
-       enddo
-       enddo
-       do j = JJS, JJE
-       do i = IIS, IIE
-          num_diff( 1:KS-1,i,j,I_MOMZ,XDIR) = 0.0_RP
-          num_diff(KS  ,i,j,I_MOMZ,XDIR) = num_DIFF(KS  ,i,j,I_MOMZ,XDIR) * ND_SFC_FACT
-          num_diff(KS+1,i,j,I_MOMZ,XDIR) = num_DIFF(KS+1,i,j,I_MOMZ,XDIR) * (1.0_RP + ND_SFC_FACT) * 0.5_RP
-          num_diff(KE:KA  ,i,j,I_MOMZ,XDIR) = 0.0_RP
-       enddo
-       enddo
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE-1
+       num_diff(k,i,j,I_MOMZ,YDIR) = num_diff_pt0(k,i,j,I_MOMZ,YDIR) * DIFF4 * CDY(j)**nd_order4 &
+                                   * 0.25_RP * ( DENS(k+1,i,j+1)+DENS(k+1,i,j)+DENS(k,i,j+1)+DENS(k,i,j) )
+    enddo
+    enddo
+    enddo
+    do j = JS, JE
+    do i = IS, IE
+       num_diff( 1:KS-1,i,j,I_MOMZ,YDIR) = 0.0_RP
+       num_diff(KS  ,i,j,I_MOMZ,YDIR) = num_DIFF(KS  ,i,j,I_MOMZ,YDIR) * ND_SFC_FACT
+       num_diff(KS+1,i,j,I_MOMZ,YDIR) = num_DIFF(KS+1,i,j,I_MOMZ,YDIR) * (1.0_RP + ND_SFC_FACT) * 0.5_RP
 
-       do j = JJS, JJE
-       do i = IIS, IIE
-       do k = KS, KE-1
-          num_diff(k,i,j,I_MOMZ,YDIR) = num_diff_pt0(k,i,j,I_MOMZ,YDIR) * DIFF4 * CDY(j)**nd_order4 &
-                                      * 0.25_RP * ( DENS(k+1,i,j+1)+DENS(k+1,i,j)+DENS(k,i,j+1)+DENS(k,i,j) )
-       enddo
-       enddo
-       enddo
-       do j = JJS, JJE
-       do i = IIS, IIE
-          num_diff( 1:KS-1,i,j,I_MOMZ,YDIR) = 0.0_RP
-          num_diff(KS  ,i,j,I_MOMZ,YDIR) = num_DIFF(KS  ,i,j,I_MOMZ,YDIR) * ND_SFC_FACT
-          num_diff(KS+1,i,j,I_MOMZ,YDIR) = num_DIFF(KS+1,i,j,I_MOMZ,YDIR) * (1.0_RP + ND_SFC_FACT) * 0.5_RP
-
-          num_diff(KE:KA  ,i,j,I_MOMZ,YDIR) = 0.0_RP
-       enddo
-       enddo
-
+       num_diff(KE:KA  ,i,j,I_MOMZ,YDIR) = 0.0_RP
     enddo
     enddo
 
@@ -797,62 +768,54 @@ contains
 
     call PROF_rapstart("NumFilter Main", 3)
 
-    do JJS = JS, JE, JBLOCK
-    JJE = JJS+JBLOCK-1
-    do IIS = IS, IE, IBLOCK
-    IIE = IIS+IBLOCK-1
+    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE-1
+       num_diff(k,i,j,I_MOMX,ZDIR) = num_diff_pt0(k,i,j,I_MOMX,ZDIR) * DIFF4 * CDZ(k)**nd_order4 &
+                                   * 0.25_RP * ( DENS(k+1,i+1,j)+DENS(k+1,i,j)+DENS(k,i+1,j)+DENS(k,i,j) )
+    enddo
+    enddo
+    enddo
+    do j = JS, JE
+    do i = IS, IE
+       num_diff( 1:KS-1,i,j,I_MOMX,ZDIR) = 0.0_RP
+       num_diff(KE:KA  ,i,j,I_MOMX,ZDIR) = 0.0_RP
+    enddo
+    enddo
 
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       do j = JJS, JJE
-       do i = IIS, IIE
-       do k = KS,    KE-1
-          num_diff(k,i,j,I_MOMX,ZDIR) = num_diff_pt0(k,i,j,I_MOMX,ZDIR) * DIFF4 * CDZ(k)**nd_order4 &
-                                      * 0.25_RP * ( DENS(k+1,i+1,j)+DENS(k+1,i,j)+DENS(k,i+1,j)+DENS(k,i,j) )
-       enddo
-       enddo
-       enddo
-       do j = JJS, JJE
-       do i = IIS, IIE
-          num_diff( 1:KS-1,i,j,I_MOMX,ZDIR) = 0.0_RP
-          num_diff(KE:KA  ,i,j,I_MOMX,ZDIR) = 0.0_RP
-       enddo
-       enddo
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       num_diff(k,i,j,I_MOMX,XDIR) = num_diff_pt0(k,i,j,I_MOMX,XDIR) * DIFF4 * FDX(i)**nd_order4 &
+                                   * DENS(k,i,j)
+    enddo
+    enddo
+    enddo
+    do j = JS, JE
+    do i = IS, IE
+       num_diff(   1:KS-1,i,j,I_MOMX,XDIR) = 0.0_RP
+       num_diff(KS  ,i,j,I_MOMX,XDIR) = num_DIFF(KS  ,i,j,I_MOMX,XDIR) * ND_SFC_FACT
+       num_diff(KS+1,i,j,I_MOMX,XDIR) = num_DIFF(KS+1,i,j,I_MOMX,XDIR) * (1.0_RP + ND_SFC_FACT) * 0.5_RP
 
-       do j = JJS, JJE
-       do i = IIS, IIE
-       do k = KS, KE
-          num_diff(k,i,j,I_MOMX,XDIR) = num_diff_pt0(k,i,j,I_MOMX,XDIR) * DIFF4 * FDX(i)**nd_order4 &
-                                      * DENS(k,i,j)
-       enddo
-       enddo
-       enddo
-       do j = JJS, JJE
-       do i = IIS, IIE
-          num_diff(   1:KS-1,i,j,I_MOMX,XDIR) = 0.0_RP
-          num_diff(KS  ,i,j,I_MOMX,XDIR) = num_DIFF(KS  ,i,j,I_MOMX,XDIR) * ND_SFC_FACT
-          num_diff(KS+1,i,j,I_MOMX,XDIR) = num_DIFF(KS+1,i,j,I_MOMX,XDIR) * (1.0_RP + ND_SFC_FACT) * 0.5_RP
+       num_diff(KE+1:KA  ,i,j,I_MOMX,XDIR) = 0.0_RP
+    enddo
+    enddo
 
-          num_diff(KE+1:KA  ,i,j,I_MOMX,XDIR) = 0.0_RP
-       enddo
-       enddo
-
-       do j = JJS, JJE
-       do i = IIS, IIE
-       do k = KS, KE
-          num_diff(k,i,j,I_MOMX,YDIR) = num_diff_pt0(k,i,j,I_MOMX,YDIR) * DIFF4 * CDY(j)**nd_order4 &
-                                      * 0.25_RP * ( DENS(k,i+1,j+1)+DENS(k,i+1,j)+DENS(k,i,j+1)+DENS(k,i,j) )
-       enddo
-       enddo
-       enddo
-       do j = JJS, JJE
-       do i = IIS, IIE
-          num_diff(   1:KS-1,i,j,I_MOMX,YDIR) = 0.0_RP
-          num_diff(KS  ,i,j,I_MOMX,YDIR) = num_DIFF(KS  ,i,j,I_MOMX,YDIR) * ND_SFC_FACT
-          num_diff(KS+1,i,j,I_MOMX,YDIR) = num_DIFF(KS+1,i,j,I_MOMX,YDIR) * (1.0_RP + ND_SFC_FACT) * 0.5_RP
-          num_diff(KE+1:KA  ,i,j,I_MOMX,YDIR) = 0.0_RP
-       enddo
-       enddo
-
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       num_diff(k,i,j,I_MOMX,YDIR) = num_diff_pt0(k,i,j,I_MOMX,YDIR) * DIFF4 * CDY(j)**nd_order4 &
+                                   * 0.25_RP * ( DENS(k,i+1,j+1)+DENS(k,i+1,j)+DENS(k,i,j+1)+DENS(k,i,j) )
+    enddo
+    enddo
+    enddo
+    do j = JS, JE
+    do i = IS, IE
+       num_diff(   1:KS-1,i,j,I_MOMX,YDIR) = 0.0_RP
+       num_diff(KS  ,i,j,I_MOMX,YDIR) = num_DIFF(KS  ,i,j,I_MOMX,YDIR) * ND_SFC_FACT
+       num_diff(KS+1,i,j,I_MOMX,YDIR) = num_DIFF(KS+1,i,j,I_MOMX,YDIR) * (1.0_RP + ND_SFC_FACT) * 0.5_RP
+       num_diff(KE+1:KA  ,i,j,I_MOMX,YDIR) = 0.0_RP
     enddo
     enddo
 
@@ -871,61 +834,53 @@ contains
 
     call PROF_rapstart("NumFilter Main", 3)
 
-    do JJS = JS, JE, JBLOCK
-    JJE = JJS+JBLOCK-1
-    do IIS = IS, IE, IBLOCK
-    IIE = IIS+IBLOCK-1
+    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE-1
+       num_diff(k,i,j,I_MOMY,ZDIR) = num_diff_pt0(k,i,j,I_MOMY,ZDIR) * DIFF4 * CDZ(k)**nd_order4 &
+                                   * 0.25_RP * ( DENS(k+1,i,j+1)+DENS(k+1,i,j)+DENS(k,i,j+1)+DENS(k,i,j) )
+    enddo
+    enddo
+    enddo
+    do j = JS, JE
+    do i = IS, IE
+       num_diff( 1:KS-1,i,j,I_MOMY,ZDIR) = 0.0_RP
+       num_diff(KE:KA  ,i,j,I_MOMY,ZDIR) = 0.0_RP
+    end do
+    end do
 
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       do j = JJS, JJE
-       do i = IIS, IIE
-       do k = KS,  KE-1
-          num_diff(k,i,j,I_MOMY,ZDIR) = num_diff_pt0(k,i,j,I_MOMY,ZDIR) * DIFF4 * CDZ(k)**nd_order4 &
-                                      * 0.25_RP * ( DENS(k+1,i,j+1)+DENS(k+1,i,j)+DENS(k,i,j+1)+DENS(k,i,j) )
-       enddo
-       enddo
-       enddo
-       do j = JJS, JJE
-       do i = IIS, IIE
-          num_diff( 1:KS-1,i,j,I_MOMY,ZDIR) = 0.0_RP
-          num_diff(KE:KA  ,i,j,I_MOMY,ZDIR) = 0.0_RP
-       end do
-       end do
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       num_diff(k,i,j,I_MOMY,XDIR) = num_diff_pt0(k,i,j,I_MOMY,XDIR) * DIFF4 * CDX(i)**nd_order4 &
+                                   * 0.25_RP * ( DENS(k,i+1,j+1)+DENS(k,i,j+1)+DENS(k,i+1,j)+DENS(k,i,j) )
+    enddo
+    enddo
+    enddo
+    do j = JS, JE
+    do i = IS, IE
+       num_diff(   1:KS-1,i,j,I_MOMY,XDIR) = 0.0_RP
+       num_diff(KS  ,i,j,I_MOMY,XDIR) = num_DIFF(KS  ,i,j,I_MOMY,XDIR) * ND_SFC_FACT
+       num_diff(KS+1,i,j,I_MOMY,XDIR) = num_DIFF(KS+1,i,j,I_MOMY,XDIR) * (1.0_RP + ND_SFC_FACT) * 0.5_RP
+       num_diff(KE+1:KA  ,i,j,I_MOMY,XDIR) = 0.0_RP
+    enddo
+    enddo
 
-       do j = JJS, JJE
-       do i = IIS, IIE
-       do k = KS, KE
-          num_diff(k,i,j,I_MOMY,XDIR) = num_diff_pt0(k,i,j,I_MOMY,XDIR) * DIFF4 * CDX(i)**nd_order4 &
-                                      * 0.25_RP * ( DENS(k,i+1,j+1)+DENS(k,i,j+1)+DENS(k,i+1,j)+DENS(k,i,j) )
-       enddo
-       enddo
-       enddo
-       do j = JJS, JJE
-       do i = IIS, IIE
-          num_diff(   1:KS-1,i,j,I_MOMY,XDIR) = 0.0_RP
-          num_diff(KS  ,i,j,I_MOMY,XDIR) = num_DIFF(KS  ,i,j,I_MOMY,XDIR) * ND_SFC_FACT
-          num_diff(KS+1,i,j,I_MOMY,XDIR) = num_DIFF(KS+1,i,j,I_MOMY,XDIR) * (1.0_RP + ND_SFC_FACT) * 0.5_RP
-          num_diff(KE+1:KA  ,i,j,I_MOMY,XDIR) = 0.0_RP
-       enddo
-       enddo
-
-       do j = JJS, JJE
-       do i = IIS, IIE
-       do k = KS, KE
-          num_diff(k,i,j,I_MOMY,YDIR) = num_diff_pt0(k,i,j,I_MOMY,YDIR) * DIFF4 * FDY(j)**nd_order4 &
-                                      * DENS(k,i,j)
-       enddo
-       enddo
-       enddo
-       do j = JJS, JJE
-       do i = IIS, IIE
-          num_diff(   1:KS-1,i,j,I_MOMY,YDIR) = 0.0_RP
-          num_diff(KS  ,i,j,I_MOMY,YDIR) = num_DIFF(KS  ,i,j,I_MOMY,YDIR) * ND_SFC_FACT
-          num_diff(KS+1,i,j,I_MOMY,YDIR) = num_DIFF(KS+1,i,j,I_MOMY,YDIR) * (1.0_RP + ND_SFC_FACT) * 0.5_RP
-          num_diff(KE+1:KA  ,i,j,I_MOMY,YDIR) = 0.0_RP
-       enddo
-       enddo
-
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       num_diff(k,i,j,I_MOMY,YDIR) = num_diff_pt0(k,i,j,I_MOMY,YDIR) * DIFF4 * FDY(j)**nd_order4 &
+                                   * DENS(k,i,j)
+    enddo
+    enddo
+    enddo
+    do j = JS, JE
+    do i = IS, IE
+       num_diff(   1:KS-1,i,j,I_MOMY,YDIR) = 0.0_RP
+       num_diff(KS  ,i,j,I_MOMY,YDIR) = num_DIFF(KS  ,i,j,I_MOMY,YDIR) * ND_SFC_FACT
+       num_diff(KS+1,i,j,I_MOMY,YDIR) = num_DIFF(KS+1,i,j,I_MOMY,YDIR) * (1.0_RP + ND_SFC_FACT) * 0.5_RP
+       num_diff(KE+1:KA  ,i,j,I_MOMY,YDIR) = 0.0_RP
     enddo
     enddo
 
@@ -944,65 +899,57 @@ contains
 
     call PROF_rapstart("NumFilter Main", 3)
 
-    do JJS = JS, JE, JBLOCK
-    JJE = JJS+JBLOCK-1
-    do IIS = IS, IE, IBLOCK
-    IIE = IIS+IBLOCK-1
+    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE-1
+       num_diff(k,i,j,I_RHOT,ZDIR) = num_diff_pt0(k,i,j,I_RHOT,ZDIR) * DIFF4 * CDZ(k)**nd_order4 &
+                                   * 0.5_RP * ( DENS(k+1,i,j)+DENS(k,i,j) )
+    enddo
+    enddo
+    enddo
+    do j = JS, JE
+    do i = IS, IE
+       num_diff(   1:KS-2,i,j,I_RHOT,ZDIR) = 0.0_RP
+       num_diff(KS-1,i,j,I_RHOT,ZDIR) = num_diff_pt0(KS-1,i,j,I_RHOT,ZDIR) * DIFF4 * CDZ(KS-1)**nd_order4 &
+                                      * DENS(KS,i,j)
+       num_diff(KE  ,i,j,I_RHOT,ZDIR) = num_diff_pt0(KE  ,i,j,I_RHOT,ZDIR) * DIFF4 * CDZ(KE  )**nd_order4 &
+                                      * DENS(KE,i,j)
+       num_diff(KE+1:KA  ,i,j,I_RHOT,ZDIR) = 0.0_RP
+    enddo
+    enddo
 
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       do j = JJS, JJE
-       do i = IIS, IIE
-       do k = KS  , KE-1
-          num_diff(k,i,j,I_RHOT,ZDIR) = num_diff_pt0(k,i,j,I_RHOT,ZDIR) * DIFF4 * CDZ(k)**nd_order4 &
-                                      * 0.5_RP * ( DENS(k+1,i,j)+DENS(k,i,j) )
-       enddo
-       enddo
-       enddo
-       do j = JJS, JJE
-       do i = IIS, IIE
-          num_diff(   1:KS-2,i,j,I_RHOT,ZDIR) = 0.0_RP
-          num_diff(KS-1,i,j,I_RHOT,ZDIR) = num_diff_pt0(KS-1,i,j,I_RHOT,ZDIR) * DIFF4 * CDZ(KS-1)**nd_order4 &
-                                         * DENS(KS,i,j)
-          num_diff(KE  ,i,j,I_RHOT,ZDIR) = num_diff_pt0(KE  ,i,j,I_RHOT,ZDIR) * DIFF4 * CDZ(KE  )**nd_order4 &
-                                         * DENS(KE,i,j)
-          num_diff(KE+1:KA  ,i,j,I_RHOT,ZDIR) = 0.0_RP
-       enddo
-       enddo
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       num_diff(k,i,j,I_RHOT,XDIR) = num_diff_pt0(k,i,j,I_RHOT,XDIR) * DIFF4 * CDX(i)**nd_order4 &
+                                   * 0.5_RP * ( DENS(k,i+1,j)+DENS(k,i,j) )
+    enddo
+    enddo
+    enddo
+    do j = JS, JE
+    do i = IS, IE
+       num_diff(   1:KS-1,i,j,I_RHOT,XDIR) = 0.0_RP
+       num_diff(KS  ,i,j,I_RHOT,XDIR) = num_DIFF(KS  ,i,j,I_RHOT,XDIR) * ND_SFC_FACT
+       num_diff(KS+1,i,j,I_RHOT,XDIR) = num_DIFF(KS+1,i,j,I_RHOT,XDIR) * (1.0_RP + ND_SFC_FACT) * 0.5_RP
+       num_diff(KE+1:KA  ,i,j,I_RHOT,XDIR) = 0.0_RP
+    enddo
+    enddo
 
-       do j = JJS, JJE
-       do i = IIS, IIE
-       do k = KS, KE
-          num_diff(k,i,j,I_RHOT,XDIR) = num_diff_pt0(k,i,j,I_RHOT,XDIR) * DIFF4 * CDX(i)**nd_order4 &
-                                      * 0.5_RP * ( DENS(k,i+1,j)+DENS(k,i,j) )
-       enddo
-       enddo
-       enddo
-       do j = JJS, JJE
-       do i = IIS, IIE
-          num_diff(   1:KS-1,i,j,I_RHOT,XDIR) = 0.0_RP
-          num_diff(KS  ,i,j,I_RHOT,XDIR) = num_DIFF(KS  ,i,j,I_RHOT,XDIR) * ND_SFC_FACT
-          num_diff(KS+1,i,j,I_RHOT,XDIR) = num_DIFF(KS+1,i,j,I_RHOT,XDIR) * (1.0_RP + ND_SFC_FACT) * 0.5_RP
-          num_diff(KE+1:KA  ,i,j,I_RHOT,XDIR) = 0.0_RP
-       enddo
-       enddo
-
-       do j = JJS, JJE
-       do i = IIS, IIE
-       do k = KS, KE
-          num_diff(k,i,j,I_RHOT,YDIR) = num_diff_pt0(k,i,j,I_RHOT,YDIR) * DIFF4 * CDY(j)**nd_order4 &
-                                      * 0.5_RP * ( DENS(k,i,j+1)+DENS(k,i,j) )
-       enddo
-       enddo
-       enddo
-       do j = JJS, JJE
-       do i = IIS, IIE
-          num_diff(   1:KS-1,i,j,I_RHOT,YDIR) = 0.0_RP
-          num_diff(KS  ,i,j,I_RHOT,YDIR) = num_DIFF(KS  ,i,j,I_RHOT,YDIR) * ND_SFC_FACT
-          num_diff(KS+1,i,j,I_RHOT,YDIR) = num_DIFF(KS+1,i,j,I_RHOT,YDIR) * (1.0_RP + ND_SFC_FACT) * 0.5_RP
-          num_diff(KE+1:KA  ,i,j,I_RHOT,YDIR) = 0.0_RP
-       enddo
-       enddo
-
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       num_diff(k,i,j,I_RHOT,YDIR) = num_diff_pt0(k,i,j,I_RHOT,YDIR) * DIFF4 * CDY(j)**nd_order4 &
+                                   * 0.5_RP * ( DENS(k,i,j+1)+DENS(k,i,j) )
+    enddo
+    enddo
+    enddo
+    do j = JS, JE
+    do i = IS, IE
+       num_diff(   1:KS-1,i,j,I_RHOT,YDIR) = 0.0_RP
+       num_diff(KS  ,i,j,I_RHOT,YDIR) = num_DIFF(KS  ,i,j,I_RHOT,YDIR) * ND_SFC_FACT
+       num_diff(KS+1,i,j,I_RHOT,YDIR) = num_DIFF(KS+1,i,j,I_RHOT,YDIR) * (1.0_RP + ND_SFC_FACT) * 0.5_RP
+       num_diff(KE+1:KA  ,i,j,I_RHOT,YDIR) = 0.0_RP
     enddo
     enddo
 
@@ -1078,8 +1025,6 @@ contains
     real(RP) :: DIFF4
     integer  :: nd_order4, no
 
-    integer :: IIS, IIE
-    integer :: JJS, JJE
     integer :: k, i, j
     !---------------------------------------------------------------------------
 
@@ -1093,38 +1038,32 @@ contains
 
        call PROF_rapstart("NumFilter Main", 3)
 
-       do JJS = JS, JE, JBLOCK
-       JJE = JJS+JBLOCK-1
-       do IIS = IS, IE, IBLOCK
-       IIE = IIS+IBLOCK-1
-             !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-             do j = JJS-1, JJE+2
-             do i = IIS-1, IIE+2
-             do k = KS+1, KE-1
-                qv_diff(k,i,j) = ( ( QTRC(k,i,j)                                             ) * 3.0_RP &
-                                 + ( QTRC(k,i+1,j)+QTRC(k,i-1,j)+QTRC(k,i,j+1)+QTRC(k,i,j-1) ) * 2.0_RP &
-                                 + ( QTRC(k,i+2,j)+QTRC(k,i-2,j)+QTRC(k,i,j+2)+QTRC(k,i,j-2) ) &
-                                 + ( QTRC(k+1,i,j)+QTRC(k-1,i,j)                             ) * 2.0_RP &
-                                 ) / 19.0_RP
-             enddo
-             enddo
-             enddo
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+       do j = JS-1, JE+2
+       do i = IS-1, IE+2
+       do k = KS+1, KE-1
+          qv_diff(k,i,j) = ( ( QTRC(k,i,j)                                             ) * 3.0_RP &
+                           + ( QTRC(k,i+1,j)+QTRC(k,i-1,j)+QTRC(k,i,j+1)+QTRC(k,i,j-1) ) * 2.0_RP &
+                           + ( QTRC(k,i+2,j)+QTRC(k,i-2,j)+QTRC(k,i,j+2)+QTRC(k,i,j-2) ) &
+                           + ( QTRC(k+1,i,j)+QTRC(k-1,i,j)                             ) * 2.0_RP &
+                           ) / 19.0_RP
+       enddo
+       enddo
+       enddo
 
-             !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-             do j  = JJS-1, JJE+2
-             do i  = IIS-1, IIE+2
-                qv_diff(KS,i,j) = ( ( QTRC(KS,i,j)                                                ) * 3.0_RP &
-                                  + ( QTRC(KS,i+1,j)+QTRC(KS,i-1,j)+QTRC(KS,i,j+1)+QTRC(KS,i,j-1) ) * 2.0_RP &
-                                  + ( QTRC(KS,i+2,j)+QTRC(KS,i-2,j)+QTRC(KS,i,j+2)+QTRC(KS,i,j-2) ) &
-                                  + ( QTRC(KS+1,i,j)                                              ) * 2.0_RP &
-                                  ) / 17.0_RP
-                qv_diff(KE,i,j) = ( ( QTRC(KE,i,j)                                                ) * 3.0_RP &
-                                  + ( QTRC(KE,i+1,j)+QTRC(KE,i-1,j)+QTRC(KE,i,j+1)+QTRC(KE,i,j-1) ) * 2.0_RP &
-                                  + ( QTRC(KE,i+2,j)+QTRC(KE,i-2,j)+QTRC(KE,i,j+2)+QTRC(KE,i,j-2) ) &
-                                  + ( QTRC(KE-1,i,j)                                              ) * 2.0_RP &
-                                  ) / 17.0_RP
-             enddo
-             enddo
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+       do j  = JS-1, JE+2
+       do i  = IS-1, IE+2
+          qv_diff(KS,i,j) = ( ( QTRC(KS,i,j)                                                ) * 3.0_RP &
+                            + ( QTRC(KS,i+1,j)+QTRC(KS,i-1,j)+QTRC(KS,i,j+1)+QTRC(KS,i,j-1) ) * 2.0_RP &
+                            + ( QTRC(KS,i+2,j)+QTRC(KS,i-2,j)+QTRC(KS,i,j+2)+QTRC(KS,i,j-2) ) &
+                            + ( QTRC(KS+1,i,j)                                              ) * 2.0_RP &
+                            ) / 17.0_RP
+          qv_diff(KE,i,j) = ( ( QTRC(KE,i,j)                                                ) * 3.0_RP &
+                            + ( QTRC(KE,i+1,j)+QTRC(KE,i-1,j)+QTRC(KE,i,j+1)+QTRC(KE,i,j-1) ) * 2.0_RP &
+                            + ( QTRC(KE,i+2,j)+QTRC(KE,i-2,j)+QTRC(KE,i,j+2)+QTRC(KE,i,j-2) ) &
+                            + ( QTRC(KE-1,i,j)                                              ) * 2.0_RP &
+                            ) / 17.0_RP
        end do
        end do
 
@@ -1141,44 +1080,34 @@ contains
 
     call PROF_rapstart("NumFilter Main", 3)
 
-    do JJS = JS, JE, JBLOCK
-    JJE = JJS+JBLOCK-1
-    do IIS = IS, IE, IBLOCK
-    IIE = IIS+IBLOCK-1
+    if ( iq == I_QV ) then
 
-       if ( iq == I_QV ) then
+       if ( ND_USE_RS ) then
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+          do j = JS-1, JE+2
+          do i = IS-1, IE+2
+          do k = KS, KE
+             qv_diff(k,i,j) = QTRC(k,i,j) - REF_qv(k,i,j)
+          enddo
+          enddo
+          enddo
+       endif
 
-          if ( ND_USE_RS ) then
-             !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-             do j = JJS-1, JJE+2
-             do i = IIS-1, IIE+2
-             do k = KS, KE
-                qv_diff(k,i,j) = QTRC(k,i,j) - REF_qv(k,i,j)
-             enddo
-             enddo
-             enddo
-          endif
+       call calc_diff3( num_diff(:,:,:,1,ZDIR), & ! (out)
+                        num_diff(:,:,:,1,XDIR), & ! (out)
+                        num_diff(:,:,:,1,YDIR), & ! (out)
+                        qv_diff, & ! (in)
+                        0, 0, 0 )
 
-          call calc_diff3( num_diff(:,:,:,1,ZDIR), & ! (out)
-                           num_diff(:,:,:,1,XDIR), & ! (out)
-                           num_diff(:,:,:,1,YDIR), & ! (out)
-                           qv_diff, & ! (in)
-                           0, 0, 0, &
-                           IIS, IIE, JJS, JJE ) ! (in)
+    else ! iq /= I_QV
 
-       else ! iq /= I_QV
+       call calc_diff3( num_diff(:,:,:,1,ZDIR), & ! (out)
+                        num_diff(:,:,:,1,XDIR), & ! (out)
+                        num_diff(:,:,:,1,YDIR), & ! (out)
+                        QTRC, & ! (in)
+                        0, 0, 0 )
 
-          call calc_diff3( num_diff(:,:,:,1,ZDIR), & ! (out)
-                           num_diff(:,:,:,1,XDIR), & ! (out)
-                           num_diff(:,:,:,1,YDIR), & ! (out)
-                           QTRC, & ! (in)
-                           0, 0, 0, &
-                           IIS, IIE, JJS, JJE ) ! (in)
-
-       endif ! QV or not?
-
-    enddo
-    enddo ! end tile
+    endif ! QV or not?
 
     call PROF_rapend  ("NumFilter Main")
 
@@ -1225,59 +1154,51 @@ contains
 
     nd_order4 = nd_order * 4
 
-    do JJS = JS, JE, JBLOCK
-    JJE = JJS+JBLOCK-1
-    do IIS = IS, IE, IBLOCK
-    IIE = IIS+IBLOCK-1
+    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE-1
+       num_diff_q(k,i,j,ZDIR) = num_diff_pt0(k,i,j,1,ZDIR) * DIFF4 * CDZ(k)**nd_order4 &
+                              * 0.5_RP * ( DENS(k+1,i,j)+DENS(k,i,j) )
+    enddo
+    enddo
+    enddo
+    do j = JS, JE
+    do i = IS, IE
+       num_diff_q(KS-1,i,j,ZDIR) = num_diff_pt0(KS-1,i,j,1,ZDIR) * DIFF4 * CDZ(KS-1)**nd_order4 &
+                                 * DENS(KS,i,j)
+       num_diff_q(KE  ,i,j,ZDIR) = num_diff_pt0(KE  ,i,j,1,ZDIR) * DIFF4 * CDZ(KE  )**nd_order4 &
+                                 * DENS(KE,i,j)
+    enddo
+    enddo
 
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       do j = JJS, JJE
-       do i = IIS, IIE
-       do k = KS  , KE-1
-          num_diff_q(k,i,j,ZDIR) = num_diff_pt0(k,i,j,1,ZDIR) * DIFF4 * CDZ(k)**nd_order4 &
-                                 * 0.5_RP * ( DENS(k+1,i,j)+DENS(k,i,j) )
-       enddo
-       enddo
-       enddo
-       do j = JJS, JJE
-       do i = IIS, IIE
-          num_diff_q(KS-1,i,j,ZDIR) = num_diff_pt0(KS-1,i,j,1,ZDIR) * DIFF4 * CDZ(KS-1)**nd_order4 &
-                                    * DENS(KS,i,j)
-          num_diff_q(KE  ,i,j,ZDIR) = num_diff_pt0(KE  ,i,j,1,ZDIR) * DIFF4 * CDZ(KE  )**nd_order4 &
-                                    * DENS(KE,i,j)
-       enddo
-       enddo
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       num_diff_q(k,i,j,XDIR) = num_diff_pt0(k,i,j,1,XDIR) * DIFF4 * CDX(i)**nd_order4 &
+                              * 0.5_RP * ( DENS(k,i+1,j)+DENS(k,i,j) )
+    enddo
+    enddo
+    enddo
+    do j = JS, JE
+    do i = IS, IE
+       num_diff_q(KS  ,i,j,XDIR) = num_DIFF(KS  ,i,j,1,XDIR) * ND_SFC_FACT
+       num_diff_q(KS+1,i,j,XDIR) = num_DIFF(KS+1,i,j,1,XDIR) * (1.0_RP + ND_SFC_FACT) * 0.5_RP
+    enddo
+    enddo
 
-       do j = JJS, JJE
-       do i = IIS, IIE
-       do k = KS, KE
-          num_diff_q(k,i,j,XDIR) = num_diff_pt0(k,i,j,1,XDIR) * DIFF4 * CDX(i)**nd_order4 &
-                                 * 0.5_RP * ( DENS(k,i+1,j)+DENS(k,i,j) )
-       enddo
-       enddo
-       enddo
-       do j = JJS, JJE
-       do i = IIS, IIE
-          num_diff_q(KS  ,i,j,XDIR) = num_DIFF(KS  ,i,j,1,XDIR) * ND_SFC_FACT
-          num_diff_q(KS+1,i,j,XDIR) = num_DIFF(KS+1,i,j,1,XDIR) * (1.0_RP + ND_SFC_FACT) * 0.5_RP
-       enddo
-       enddo
-
-       do j = JJS, JJE
-       do i = IIS, IIE
-       do k = KS, KE
-          num_diff_q(k,i,j,YDIR) = num_diff_pt0(k,i,j,1,YDIR) * DIFF4 * CDY(j)**nd_order4 &
-                                 * 0.5_RP * ( DENS(k,i,j+1)+DENS(k,i,j) )
-       enddo
-       enddo
-       enddo
-       do j = JJS, JJE
-       do i = IIS, IIE
-          num_diff_q(KS  ,i,j,YDIR) = num_DIFF(KS  ,i,j,1,YDIR) * ND_SFC_FACT
-          num_diff_q(KS+1,i,j,YDIR) = num_DIFF(KS+1,i,j,1,YDIR) * (1.0_RP + ND_SFC_FACT) * 0.5_RP
-       enddo
-       enddo
-
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       num_diff_q(k,i,j,YDIR) = num_diff_pt0(k,i,j,1,YDIR) * DIFF4 * CDY(j)**nd_order4 &
+                              * 0.5_RP * ( DENS(k,i,j+1)+DENS(k,i,j) )
+    enddo
+    enddo
+    enddo
+    do j = JS, JE
+    do i = IS, IE
+       num_diff_q(KS  ,i,j,YDIR) = num_DIFF(KS  ,i,j,1,YDIR) * ND_SFC_FACT
+       num_diff_q(KS+1,i,j,YDIR) = num_DIFF(KS+1,i,j,1,YDIR) * (1.0_RP + ND_SFC_FACT) * 0.5_RP
     enddo
     enddo
 
@@ -1321,39 +1242,26 @@ contains
     real(RP) :: flux_x(KA,IA,JA)
     real(RP) :: flux_y(KA,IA,JA)
 
-    integer :: IIS, IIE
-    integer :: JJS, JJE
-
-
     integer :: k, i, j
 
     call calc_diff3( flux_z, flux_x, flux_y, & ! (out)
                      phi, & ! (in)
-                     KO, IO, JO, &
-                     IS, IE, JS, JE )
+                     KO, IO, JO )
 
     call COMM_vars8( flux_x, 1 )
     call COMM_vars8( flux_y, 2 )
     call COMM_wait ( flux_x, 1 )
     call COMM_wait ( flux_y, 2 )
 
-    do JJS = JS, JE, JBLOCK
-    JJE = JJS+JBLOCK-1
-    do IIS = IS, IE, IBLOCK
-    IIE = IIS+IBLOCK-1
-
-       do j = JJS, JJE
-       do i = IIS, IIE
-       do k = KS, KE
-          phi_t(k,i,j) = ( flux_z(k+KO,i,j) - flux_z(k-1+KO,i,j) ) * RDZ(k) &
-                       + ( flux_x(k,i+IO,j) - flux_x(k,i-1+IO,j) ) * RDX(i) &
-                       + ( flux_y(k,i,j+JO) - flux_y(k,i,j-1+JO) ) * RDY(j)
-       end do
-       end do
-       end do
-
-    enddo
-    enddo
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       phi_t(k,i,j) = ( flux_z(k+KO,i,j) - flux_z(k-1+KO,i,j) ) * RDZ(k) &
+                    + ( flux_x(k,i+IO,j) - flux_x(k,i-1+IO,j) ) * RDX(i) &
+                    + ( flux_y(k,i,j+JO) - flux_y(k,i,j-1+JO) ) * RDY(j)
+    end do
+    end do
+    end do
 
     return
   end subroutine ATMOS_DYN_filter_tend
@@ -1362,8 +1270,7 @@ contains
   subroutine calc_diff3( &
        diff_z, diff_x, diff_y, &
        phi, &
-       KO, IO, JO, &
-       IIS, IIE, JJS, JJE )
+       KO, IO, JO )
     implicit none
     real(RP), intent(out) :: diff_z(KA,IA,JA)
     real(RP), intent(out) :: diff_x(KA,IA,JA)
@@ -1372,16 +1279,12 @@ contains
     integer , intent(in ) :: KO
     integer , intent(in ) :: IO
     integer , intent(in ) :: JO
-    integer , intent(in ) :: IIS
-    integer , intent(in ) :: IIE
-    integer , intent(in ) :: JJS
-    integer , intent(in ) :: JJE
 
     integer :: k, i, j
 
     !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-    do j = JJS, JJE
-    do i = IIS, IIE
+    do j = JS, JE
+    do i = IS, IE
     do k = KS+1, KE-2-KO
 #ifdef DEBUG
        call CHECK( __LINE__, phi(k+2,i,j) )
@@ -1399,8 +1302,8 @@ contains
 
     if ( KO==1 ) then
        !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
-       do j = JJS, JJE
-       do i = IIS, IIE
+       do j = JS, JE
+       do i = IS, IE
 #ifdef DEBUG
           call CHECK( __LINE__, phi(KS+1,i,j) )
           call CHECK( __LINE__, phi(KS  ,i,j) )
@@ -1412,8 +1315,8 @@ contains
        end do
     end if
     !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
-    do j = JJS, JJE
-    do i = IIS, IIE
+    do j = JS, JE
+    do i = IS, IE
 #ifdef DEBUG
        call CHECK( __LINE__, phi(KS+2,i,j) )
        call CHECK( __LINE__, phi(KS+1,i,j) )
@@ -1430,8 +1333,8 @@ contains
 
     if ( KO==0 ) then
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       do j = JJS, JJE
-       do i = IIS, IIE
+       do j = JS, JE
+       do i = IS, IE
 #ifdef DEBUG
        call CHECK( __LINE__, phi(KE,i,j) )
        call CHECK( __LINE__, phi(KE-1,i,j) )
@@ -1446,8 +1349,8 @@ contains
        end do
     else
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       do j = JJS, JJE
-       do i = IIS, IIE
+       do j = JS, JE
+       do i = IS, IE
 #ifdef DEBUG
           call CHECK( __LINE__, phi(KE-1,i,j) )
           call CHECK( __LINE__, phi(KE-2,i,j) )
@@ -1463,15 +1366,15 @@ contains
        end do
     end if
     !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-    do j = JJS, JJE
-    do i = IIS, IIE
+    do j = JS, JE
+    do i = IS, IE
        diff_z(KE  +KO,i,j) = - diff_z(KE-1+KO,i,j)
        diff_z(KE+1+KO,i,j) = - diff_z(KE-2+KO,i,j)
     enddo
     enddo
     !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-    do j = JJS, JJE
-    do i = IIS-IO, IIE-IO
+    do j = JS, JE
+    do i = IS-IO, IE-IO
     do k = KS, KE-KO
 #ifdef DEBUG
        call CHECK( __LINE__, phi(k,i+2,j) )
@@ -1487,16 +1390,16 @@ contains
     enddo
     enddo
 
-    do j = JJS, JJE
-    do i = IIS, IIE
+    do j = JS, JE
+    do i = IS, IE
        diff_x(   1:KS-1,i,j) = 0.0_RP
        diff_x(KE+1:KA  ,i,j) = 0.0_RP
     enddo
     enddo
 
     !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-    do j = JJS-JO, JJE-JO
-    do i = IIS, IIE
+    do j = JS-JO, JE-JO
+    do i = IS, IE
     do k = KS, KE-KO
 #ifdef DEBUG
        call CHECK( __LINE__, phi(k,i,j+2) )
@@ -1512,8 +1415,8 @@ contains
     enddo
     enddo
 
-    do j = JJS, JJE
-    do i = IIS, IIE
+    do j = JS, JE
+    do i = IS, IE
        diff_y(   1:KS-1,i,j) = 0.0_RP
        diff_y(KE+1:KA  ,i,j) = 0.0_RP
     enddo
@@ -1542,17 +1445,11 @@ contains
     integer,  intent(in)  :: k1
 
     integer :: i, j, k
-    integer :: IIS, IIE, JJS, JJE
     !---------------------------------------------------------------------------
 
-    do JJS = JS, JE, JBLOCK
-    JJE = JJS+JBLOCK-1
-    do IIS = IS, IE, IBLOCK
-    IIE = IIS+IBLOCK-1
-
     !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-    do j = JJS, JJE
-    do i = IIS, IIE
+    do j = JS, JE
+    do i = IS, IE
     do k = KS, KE-1
 #ifdef DEBUG
        call CHECK( __LINE__, CNZ4(1,k) )
@@ -1577,8 +1474,8 @@ contains
     enddo
 
     !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-    do j = JJS, JJE
-    do i = IIS, IIE
+    do j = JS, JE
+    do i = IS, IE
        num_diff_pt1(KS-1,i,j,I_val,ZDIR) = - num_diff_pt1(KS  ,i,j,I_val,ZDIR)
        num_diff_pt1(KS-2,i,j,I_val,ZDIR) = - num_diff_pt1(KS+1,i,j,I_val,ZDIR)
        num_diff_pt1(KE  ,i,j,I_val,ZDIR) = - num_diff_pt1(KE-1,i,j,I_val,ZDIR)
@@ -1587,8 +1484,8 @@ contains
     enddo
 
     !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-    do j = JJS, JJE
-    do i = IIS, IIE
+    do j = JS, JE
+    do i = IS, IE
     do k = KS, K1
 #ifdef DEBUG
        call CHECK( __LINE__, CNX4(1,i) )
@@ -1613,8 +1510,8 @@ contains
     enddo
 
     !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-    do j = JJS, JJE
-    do i = IIS, IIE
+    do j = JS, JE
+    do i = IS, IE
     do k = KS, K1
 #ifdef DEBUG
        call CHECK( __LINE__, CNY4(1,j) )
@@ -1635,9 +1532,6 @@ contains
                     - CNY4(4,j) * num_diff_pt0(k,i,j-1,I_val,YDIR) &
                     + CNY4(5,j) * num_diff_pt0(k,i,j-2,I_val,YDIR) )
     enddo
-    enddo
-    enddo
-
     enddo
     enddo
 
