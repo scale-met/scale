@@ -338,11 +338,16 @@ contains
     !---------------------------------------------------------------------------
 
     if ( LAND_VARS_CHECKRANGE ) then
-       call VALCHECK( LAND_TEMP      (:,IS:IE,JS:JE),    0.0_RP, 1000.0_RP, VAR_NAME(I_TEMP),          __FILE__, __LINE__ )
-       call VALCHECK( LAND_WATER     (:,IS:IE,JS:JE),    0.0_RP, 1000.0_RP, VAR_NAME(I_WATER),         __FILE__, __LINE__ )
-       call VALCHECK( LAND_SFC_TEMP  (IS:IE,JS:JE),      0.0_RP, 1000.0_RP, VAR_NAME(I_SFC_TEMP),      __FILE__, __LINE__ )
-       call VALCHECK( LAND_SFC_albedo(IS:IE,JS:JE,I_LW), 0.0_RP,    2.0_RP, VAR_NAME(I_SFC_albedo_LW), __FILE__, __LINE__ )
-       call VALCHECK( LAND_SFC_albedo(IS:IE,JS:JE,I_SW), 0.0_RP,    2.0_RP, VAR_NAME(I_SFC_albedo_SW), __FILE__, __LINE__ )
+       call VALCHECK( LAND_TEMP      (:,IS:IE,JS:JE),    0.0_RP, 1000.0_RP, VAR_NAME(I_TEMP),          &
+                     __FILE__, __LINE__ )
+       call VALCHECK( LAND_WATER     (:,IS:IE,JS:JE),    0.0_RP, 1000.0_RP, VAR_NAME(I_WATER),         &
+                     __FILE__, __LINE__ )
+       call VALCHECK( LAND_SFC_TEMP  (IS:IE,JS:JE),      0.0_RP, 1000.0_RP, VAR_NAME(I_SFC_TEMP),      &
+                     __FILE__, __LINE__ )
+       call VALCHECK( LAND_SFC_albedo(IS:IE,JS:JE,I_LW), 0.0_RP,    2.0_RP, VAR_NAME(I_SFC_albedo_LW), &
+                     __FILE__, __LINE__ )
+       call VALCHECK( LAND_SFC_albedo(IS:IE,JS:JE,I_SW), 0.0_RP,    2.0_RP, VAR_NAME(I_SFC_albedo_SW), &
+                     __FILE__, __LINE__ )
     endif
 
     call HIST_in( LAND_TEMP(:,:,:), &

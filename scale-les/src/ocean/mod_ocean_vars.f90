@@ -273,11 +273,16 @@ contains
     !---------------------------------------------------------------------------
 
     if ( OCEAN_VARS_CHECKRANGE ) then
-       call VALCHECK( OCEAN_TEMP      (IS:IE,JS:JE),      0.0_RP, 1000.0_RP, VAR_NAME(I_TEMP),          __FILE__, __LINE__ )
-       call VALCHECK( OCEAN_SFC_TEMP  (IS:IE,JS:JE),      0.0_RP, 1000.0_RP, VAR_NAME(I_SFC_TEMP),      __FILE__, __LINE__ )
-       call VALCHECK( OCEAN_SFC_albedo(IS:IE,JS:JE,I_LW), 0.0_RP,    2.0_RP, VAR_NAME(I_SFC_albedo_LW), __FILE__, __LINE__ )
-       call VALCHECK( OCEAN_SFC_albedo(IS:IE,JS:JE,I_SW), 0.0_RP,    2.0_RP, VAR_NAME(I_SFC_albedo_SW), __FILE__, __LINE__ )
-       call VALCHECK( OCEAN_SFC_Z0    (IS:IE,JS:JE),      0.0_RP, 1000.0_RP, VAR_NAME(I_SFC_Z0),        __FILE__, __LINE__ )
+       call VALCHECK( OCEAN_TEMP      (IS:IE,JS:JE),      0.0_RP, 1000.0_RP, VAR_NAME(I_TEMP),          &
+                     __FILE__, __LINE__ )
+       call VALCHECK( OCEAN_SFC_TEMP  (IS:IE,JS:JE),      0.0_RP, 1000.0_RP, VAR_NAME(I_SFC_TEMP),      &
+                     __FILE__, __LINE__ )
+       call VALCHECK( OCEAN_SFC_albedo(IS:IE,JS:JE,I_LW), 0.0_RP,    2.0_RP, VAR_NAME(I_SFC_albedo_LW), &
+                     __FILE__, __LINE__ )
+       call VALCHECK( OCEAN_SFC_albedo(IS:IE,JS:JE,I_SW), 0.0_RP,    2.0_RP, VAR_NAME(I_SFC_albedo_SW), &
+                     __FILE__, __LINE__ )
+       call VALCHECK( OCEAN_SFC_Z0    (IS:IE,JS:JE),      0.0_RP, 1000.0_RP, VAR_NAME(I_SFC_Z0),        &
+                     __FILE__, __LINE__ )
     endif
 
     call HIST_in( OCEAN_TEMP(:,:),  &
