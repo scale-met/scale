@@ -35,7 +35,7 @@ module scale_tracer
   !
 
 #ifdef TRACER
-#define EXTM(name) scale_tracer_ ## name ## .f90
+#define EXTM(name) inc_tracer_ ## name ## .h
 #define NAME(name) EXTM(name)
 #define XSTR(s) # s
 #define STR(s) XSTR(s)
@@ -102,7 +102,14 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine TRACER_setup
-#ifndef TRACER
+#ifdef TRACER
+#define EXTM2(name) scale_tracer_ ## name
+#define _MODNAME(name) EXTM2(name)
+#define EXTM3(name) tracer_ ## name ## _setup
+#define _SETUP(name) EXTM3(name)
+  use _MODNAME(TRACER), only: &
+    _SETUP(TRACER)
+#else
   use scale_process, only: &
     PRC_MPIstop
   use scale_tracer_dry, only: &
@@ -274,7 +281,9 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) ''
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[TRACER]/Categ[COMMON]'
 
-#ifndef TRACER
+#ifdef TRACER
+    call _SETUP(TRACER)
+#else
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_TRACER,iostat=ierr)
@@ -478,11 +487,11 @@ contains
        I_MP2RD = I_MP2RD_suzuki10
        I_AE2ALL = I_AE2ALL_suzuki10
        I_AE2RD = I_AE2RD_suzuki10
-#endif
      case default
         write(*,*) 'xxx Unsupported TRACER_TYPE (', trim(TRACER_TYPE), '). Check!'
         call PRC_MPIstop
      end select
+#endif
 
   end subroutine TRACER_setup
 

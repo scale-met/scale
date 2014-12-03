@@ -475,6 +475,7 @@ contains
        SFLX_rain,   &
        SFLX_snow,   &
        history_flag )
+    use scale_grid_index
     use scale_tracer, only: &
        QAD => QA, &
        MP_QAD => MP_QA
@@ -4940,6 +4941,7 @@ contains
   subroutine ATMOS_PHY_MP_sn14_CloudFraction( &
        cldfrac, &
        QTRC     )
+    use scale_grid_index
     use scale_const, only: &
        EPS => CONST_EPS
     use scale_tracer, only: &
@@ -4974,6 +4976,7 @@ contains
        Re,    &
        QTRC0, &
        DENS0  )
+    use scale_grid_index
     use scale_tracer, only: &
        QAD => QA, &
        MP_QAD => MP_QA
@@ -5112,6 +5115,7 @@ contains
   subroutine ATMOS_PHY_MP_sn14_Mixingratio( &
        Qe,    &
        QTRC0  )
+    use scale_grid_index
     use scale_tracer, only: &
        QAD => QA, &
        MP_QAD => MP_QA

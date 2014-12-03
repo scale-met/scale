@@ -362,6 +362,8 @@ contains
        flux_rad,              &
        flux_rad_top           )
 !       Jval                            )
+    use scale_grid_index
+    use scale_tracer
     use scale_const, only: &
        EPS  => CONST_EPS, &
        Mdry => CONST_Mdry, &

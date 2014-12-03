@@ -155,6 +155,7 @@ contains
         Z0M,        & ! (in)
         Z0H,        & ! (in)
         Z0E         ) ! (in)
+    use scale_grid_index
     use scale_const, only: &
       CPdry => CONST_CPdry, &
       STB   => CONST_STB,   &

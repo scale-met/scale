@@ -135,6 +135,7 @@ contains
         Z0M,        & ! (in)
         Z0H,        & ! (in)
         Z0E         ) ! (in)
+    use scale_grid_index
     use scale_process, only: &
        PRC_MPIstop
     use scale_const, only: &

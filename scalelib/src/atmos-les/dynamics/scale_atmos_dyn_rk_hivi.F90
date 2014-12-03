@@ -155,6 +155,7 @@ contains
     REF_pres, REF_dens,                          &
     BND_W, BND_E, BND_S, BND_N,                  &
     dtrk, dt                                     )
+    use scale_grid_index
     use scale_const, only: &
 #ifdef DRY
        Rdry   => CONST_Rdry,   &
