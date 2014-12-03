@@ -14,6 +14,18 @@
 !<
 !-------------------------------------------------------------------------------
 #include "inc_openmp.h"
+
+#ifdef PROFILE_FAPP
+#define PROFILE_START(name) call fapp_start(name, 1, 1)
+#define PROFILE_STOP(name)  call fapp_stop (name, 1, 1)
+#elif defined(PROFILE_FINEPA)
+#define PROFILE_START(name) call start_collection(name)
+#define PROFILE_STOP(name)  call stop_collection (name)
+#else
+#define PROFILE_START(name)
+#define PROFILE_STOP(name)
+#endif
+
 module scale_atmos_dyn_rk_hevi
   !-----------------------------------------------------------------------------
   !
@@ -293,6 +305,7 @@ contains
 
     integer :: IIS, IIE, JJS, JJE
     integer :: k, i, j
+    integer :: iss, iee
 
 #ifdef DEBUG
     PRES(:,:,:) = UNDEF
@@ -319,6 +332,10 @@ contains
     JJE = JJS+JBLOCK-1
     do IIS = IS, IE, IBLOCK
     IIE = IIS+IBLOCK-1
+
+#ifdef PROFILE_FIPP
+    call fipp_start()
+#endif
 
        ! momentum -> velocity
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
@@ -389,8 +406,9 @@ contains
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
 
+       PROFILE_START("hevi_pres")
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       do j = JJS, JJE+1
+       do j = JJS, JJE
        do i = IIS, IIE+1
           do k = KS, KE
 #ifdef DEBUG
@@ -412,6 +430,29 @@ contains
           enddo
        enddo
        enddo
+       ! j = JJE+1
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(1)
+       do i = IIS, IIE
+          do k = KS, KE
+#ifdef DEBUG
+             call CHECK( __LINE__, RHOT(k,i,JJE+1) )
+             call CHECK( __LINE__, Rtot(k,i,JJE+1) )
+             call CHECK( __LINE__, CVtot(k,i,JJE+1) )
+#endif
+#ifdef DRY
+             PRES(k,i,JJE+1) = P00 * ( RHOT(k,i,JJE+1) * Rdry / P00 )**kappa
+#else
+             PRES(k,i,JJE+1) = P00 * ( RHOT(k,i,JJE+1) * Rtot(k,i,JJE+1) / P00 )**(CPtot(k,i,JJE+1)/CVtot(k,i,JJE+1))
+#endif
+          enddo
+          PRES(KS-1,i,JJE+1) = PRES(KS+1,i,JJE+1) - DENS(KS,i,JJE+1) * ( PHI(KS-1,i,JJE+1) - PHI(KS+1,i,JJE+1) )
+          PRES(KE+1,i,JJE+1) = PRES(KE-1,i,JJE+1) - DENS(KE,i,JJE+1) * ( PHI(KE+1,i,JJE+1) - PHI(KE-1,i,JJE+1) )
+
+          do k = KS-1, KE+1
+             DPRES(k,i,JJE+1) = PRES(k,i,JJE+1) - REF_pres(k,i,JJE+1)
+          enddo
+       enddo
+       PROFILE_STOP("hevi_pres")
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JJS-2, JJE+2
        do i = IIS-2, IIE+2
@@ -428,60 +469,63 @@ contains
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
 
-       ! 3D divergence for damping
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       do j = JJS, JJE+1
-       do i = IIS, IIE+1
-       do k = KS+1, KE-1
+       if ( divdmp_coef > 0.0_RP ) then
+          ! 3D divergence for damping
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+          do j = JJS, JJE+1
+          do i = IIS, IIE+1
+          do k = KS+1, KE-1
 #ifdef DEBUG
-          call CHECK( __LINE__, MOMZ(k  ,i  ,j  ) )
-          call CHECK( __LINE__, MOMZ(k-1,i  ,j  ) )
-          call CHECK( __LINE__, MOMX(k  ,i  ,j  ) )
-          call CHECK( __LINE__, MOMX(k  ,i-1,j  ) )
-          call CHECK( __LINE__, MOMY(k  ,i  ,j  ) )
-          call CHECK( __LINE__, MOMY(k  ,i  ,j-1) )
+             call CHECK( __LINE__, MOMZ(k  ,i  ,j  ) )
+             call CHECK( __LINE__, MOMZ(k-1,i  ,j  ) )
+             call CHECK( __LINE__, MOMX(k  ,i  ,j  ) )
+             call CHECK( __LINE__, MOMX(k  ,i-1,j  ) )
+             call CHECK( __LINE__, MOMY(k  ,i  ,j  ) )
+             call CHECK( __LINE__, MOMY(k  ,i  ,j-1) )
 #endif
-            DDIV(k,i,j) = ( MOMZ(k,i,j) - MOMZ(k-1,i  ,j  ) ) * RCDZ(k) &
-                        + MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) &
-                        * ( ( MOMX(k,i,j)/MAPF(i,j,2,I_UY) - MOMX(k,i-1,j)/MAPF(i-1,j,2,I_UY) ) * RCDX(i) &
-                          + ( MOMY(k,i,j)/MAPF(i,j,1,I_XV) - MOMY(k,i,j-1)/MAPF(i,j-1,1,I_XV) ) * RCDY(j) )
-       enddo
-       enddo
-       enddo
+             DDIV(k,i,j) = ( MOMZ(k,i,j) - MOMZ(k-1,i  ,j  ) ) * RCDZ(k) &
+                         + MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) &
+                         * ( ( MOMX(k,i,j)/MAPF(i,j,2,I_UY) - MOMX(k,i-1,j)/MAPF(i-1,j,2,I_UY) ) * RCDX(i) &
+                           + ( MOMY(k,i,j)/MAPF(i,j,1,I_XV) - MOMY(k,i,j-1)/MAPF(i,j-1,1,I_XV) ) * RCDY(j) )
+          enddo
+          enddo
+          enddo
 #ifdef DEBUG
-       k = IUNDEF; i = IUNDEF; j = IUNDEF
+          k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
-       !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
-       do j = JJS, JJE+1
-       do i = IIS, IIE+1
+          !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
+          do j = JJS, JJE+1
+          do i = IIS, IIE+1
 #ifdef DEBUG
-          call CHECK( __LINE__, MOMZ(KS  ,i  ,j  ) )
-          call CHECK( __LINE__, MOMX(KS  ,i  ,j  ) )
-          call CHECK( __LINE__, MOMX(KS  ,i-1,j  ) )
-          call CHECK( __LINE__, MOMY(KS  ,i  ,j  ) )
-          call CHECK( __LINE__, MOMY(KS  ,i  ,j-1) )
-          call CHECK( __LINE__, MOMZ(KE-1,i  ,j  ) )
-          call CHECK( __LINE__, MOMX(KE  ,i  ,j  ) )
-          call CHECK( __LINE__, MOMX(KE  ,i-1,j  ) )
-          call CHECK( __LINE__, MOMY(KE  ,i  ,j  ) )
-          call CHECK( __LINE__, MOMY(KE  ,i  ,j-1) )
+             call CHECK( __LINE__, MOMZ(KS  ,i  ,j  ) )
+             call CHECK( __LINE__, MOMX(KS  ,i  ,j  ) )
+             call CHECK( __LINE__, MOMX(KS  ,i-1,j  ) )
+             call CHECK( __LINE__, MOMY(KS  ,i  ,j  ) )
+             call CHECK( __LINE__, MOMY(KS  ,i  ,j-1) )
+             call CHECK( __LINE__, MOMZ(KE-1,i  ,j  ) )
+             call CHECK( __LINE__, MOMX(KE  ,i  ,j  ) )
+             call CHECK( __LINE__, MOMX(KE  ,i-1,j  ) )
+             call CHECK( __LINE__, MOMY(KE  ,i  ,j  ) )
+             call CHECK( __LINE__, MOMY(KE  ,i  ,j-1) )
 #endif
-            DDIV(KS,i,j) = ( MOMZ(KS,i,j)                     ) * RCDZ(KS) &
-                        + MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) &
-                        * ( ( MOMX(KS,i,j)/MAPF(i,j,2,I_UY) - MOMX(KS,i-1,j)/MAPF(i-1,j,2,I_UY) ) * RCDX(i) &
-                          + ( MOMY(KS,i,j)/MAPF(i,j,1,I_XV) - MOMY(KS,i,j-1)/MAPF(i,j-1,1,I_XV) ) * RCDY(j) )
-            DDIV(KE,i,j) = (             - MOMZ(KE-1,i  ,j  ) ) * RCDZ(KE) &
-                        + MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) &
-                        * ( ( MOMX(KE,i,j)/MAPF(i,j,2,I_UY) - MOMX(KE,i-1,j)/MAPF(i-1,j,2,I_UY) )* RCDX(i) &
-                          + ( MOMY(KE,i,j)/MAPF(i,j,1,I_XV) - MOMY(KE,i,j-1)/MAPF(i,j-1,1,I_XV) ) * RCDY(j) )
-       enddo
-       enddo
+             DDIV(KS,i,j) = ( MOMZ(KS,i,j)                     ) * RCDZ(KS) &
+                          + MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) &
+                          * ( ( MOMX(KS,i,j)/MAPF(i,j,2,I_UY) - MOMX(KS,i-1,j)/MAPF(i-1,j,2,I_UY) ) * RCDX(i) &
+                            + ( MOMY(KS,i,j)/MAPF(i,j,1,I_XV) - MOMY(KS,i,j-1)/MAPF(i,j-1,1,I_XV) ) * RCDY(j) )
+             DDIV(KE,i,j) = (             - MOMZ(KE-1,i  ,j  ) ) * RCDZ(KE) &
+                          + MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) &
+                          * ( ( MOMX(KE,i,j)/MAPF(i,j,2,I_UY) - MOMX(KE,i-1,j)/MAPF(i-1,j,2,I_UY) )* RCDX(i) &
+                            + ( MOMY(KE,i,j)/MAPF(i,j,1,I_XV) - MOMY(KE,i,j-1)/MAPF(i,j-1,1,I_XV) ) * RCDY(j) )
+          enddo
+          enddo
 #ifdef DEBUG
-       k = IUNDEF; i = IUNDEF; j = IUNDEF
+          k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
+       end if
 
        !##### continuity equation #####
 
+       PROFILE_START("hevi_mflx_z")
        ! at (x, y, w)
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE
@@ -510,6 +554,7 @@ contains
 #ifdef DEBUG
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
+       PROFILE_STOP("hevi_mflx_z")
 
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE
@@ -520,10 +565,13 @@ contains
        enddo
 
 
+       PROFILE_START("hevi_mflx_x")
+       iss = IIS-IFS_OFF
+       iee = min(IIE,IEH)
        ! at (u, y, z)
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       do j = JJS  , JJE
-       do i = IIS-IFS_OFF, min(IIE,IEH)
+       do j = JJS, JJE
+       do i = iss, iee
        do k = KS, KE
 #ifdef DEBUG
           call CHECK( __LINE__, GSQRT(k,i,j,I_UYZ) )
@@ -538,6 +586,8 @@ contains
 #ifdef DEBUG
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
+       PROFILE_STOP("hevi_mflx_x")
+
        ! at (x, v, z)
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JJS-JFS_OFF, min(JJE,JEH)
@@ -559,6 +609,7 @@ contains
 
        !--- update density
        !$omp parallel do private(i,j,k,advch) OMP_SCHEDULE_ collapse(2)
+       PROFILE_START("hevi_sr")
        do j = JJS, JJE
        do i = IIS, IIE
        do k = KS, KE
@@ -584,9 +635,11 @@ contains
 #ifdef DEBUG
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
+       PROFILE_STOP("hevi_sr")
 
        !##### momentum equation (z) #####
 
+       PROFILE_START("hevi_dens_qflxhi_z")
        ! at (x, y, z)
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE
@@ -611,6 +664,8 @@ contains
 #ifdef DEBUG
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
+       PROFILE_STOP("hevi_dens_qflxhi_z")
+
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE
        do i = IIS, IIE
@@ -645,6 +700,8 @@ contains
 #ifdef DEBUG
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
+
+       PROFILE_START("hevi_dens_qflxj")
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE
        do i = IIS, IIE
@@ -699,11 +756,14 @@ contains
           qflx_J(KE,i,j) = 0.0_RP
        enddo
        enddo
+       PROFILE_STOP("hevi_dens_qflxj")
 #ifdef DEBUG
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
 
        ! at (u, y, w)
+
+       PROFILE_START("hevi_dens_qflxhi_x")
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JJS,   JJE
        do i = IIS-1, IIE
@@ -725,6 +785,7 @@ contains
        enddo
        enddo
        enddo
+       PROFILE_STOP("hevi_dens_qflxhi_x")
 #ifdef DEBUG
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
@@ -884,6 +945,7 @@ contains
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
 
+       PROFILE_START("hevi_st")
        !$omp parallel do private(i,j,k,advch) OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE
        do i = IIS, IIE
@@ -913,6 +975,7 @@ contains
 #ifdef DEBUG
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
+       PROFILE_STOP("hevi_st")
 
        ! implicit solver
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
@@ -947,6 +1010,7 @@ contains
        end do
        end do
 
+       PROFILE_START("hevi_matrix")
        !$omp parallel do private(i,j,k,B) OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE
        do i = IIS, IIE
@@ -969,6 +1033,7 @@ contains
           F3(KE-1,i,j) =        - ( PT(KE-2,i,j) * RFDZ(KE-1) *             A(KE-1,i,j)  - B ) / GSQRT(KE-1,i,j,I_XYW)
        end do
        end do
+       PROFILE_STOP("hevi_matrix")
 
        !$omp parallel do private(i,j,k,pg) OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE
@@ -1299,6 +1364,7 @@ contains
 #endif
 
        !--- update momentum(x)
+       PROFILE_START("hevi_momx")
        !$omp parallel do private(i,j,k,advch,advcv,pg,cf,div) OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE
        do i = IIS, min(IIE,IEH)
@@ -1357,6 +1423,7 @@ contains
        enddo
        enddo
        enddo
+       PROFILE_STOP("hevi_momx")
 #ifdef DEBUG
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
@@ -1520,6 +1587,7 @@ contains
 #endif
 
        !--- update momentum(y)
+       PROFILE_START("hevi_momy")
        !$omp parallel do private(i,j,k,advch,advcv,pg,cf,div) OMP_SCHEDULE_ collapse(2)
        do j = JJS, min(JJE,JEH)
        do i = IIS, IIE
@@ -1580,8 +1648,13 @@ contains
        enddo
        enddo
        enddo
+       PROFILE_STOP("hevi_momy")
 #ifdef DEBUG
        k = IUNDEF; i = IUNDEF; j = IUNDEF
+#endif
+
+#ifdef PROFILE_FIPP
+       call fipp_stop()
 #endif
 
     enddo
@@ -1850,6 +1923,7 @@ contains
 
     integer :: k, i, j
 
+    PROFILE_START("hevi_direct1")
     !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
     do j = JJS, JJE
     do i = IIS, IIE
@@ -1863,6 +1937,7 @@ contains
        end do
     end do
     end do
+    PROFILE_STOP("hevi_direct1")
 
     ! C = \rho w
     !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
