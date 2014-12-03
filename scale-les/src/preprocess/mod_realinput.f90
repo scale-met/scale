@@ -433,6 +433,7 @@ contains
       basename_org, &
       dims,         &
       timelen,      &
+      skiplen,      &
       mdlid,        &
       serial        )
     use scale_comm, only: &
@@ -462,6 +463,7 @@ contains
     character(LEN=*), intent(in) :: basename_org
     integer,          intent(in) :: dims(:)
     integer,          intent(in) :: timelen  ! time steps in one file
+    integer,          intent(in) :: skiplen  ! skipped time steps
     integer,          intent(in) :: mdlid    ! model type id
     logical,          intent(in) :: serial   ! read by a serial process
 
@@ -559,7 +561,8 @@ contains
                                snowq(:,:),   &
                                snowt(:,:),   &
                                basename_org, &
-                               dims(:)       )
+                               dims(:),      &
+                               skiplen       ) ! the number of skipped data
     endif
 
     do j = 1, JA
@@ -3450,7 +3453,8 @@ contains
       snowq,        & ! (out)
       snowt,        & ! (out)
       basename_num, & ! (in)
-      dims          ) ! (in)
+      dims,         & ! (in)
+      skiplen       ) ! (in)
     use scale_const, only: &
        D2R   => CONST_D2R,   &
        TEM00 => CONST_TEM00, &
@@ -3477,6 +3481,7 @@ contains
 
     character(LEN=*), intent(in) :: basename_num
     integer,          intent(in) :: dims(:)
+    integer,          intent(in) :: skiplen
 
     ! [imported] NICAM/nhm/physics/mod_land_driver.f90 ---------------
     real(RP) :: glevm5 (1:6) &
@@ -3671,7 +3676,9 @@ contains
                                     single=.true.     )
        strg_org(:,:,:) = real( read4D(:,:,:,1), kind=RP )
 
-       !
+       ! 6hourly data, first steps are skipped
+       start_step = skiplen + 1
+       end_step   = skiplen + 1
        basename = "ss_tem_sfc"//trim(basename_num)
        call ExternalFileRead( read3DS(:,:,:,:), &
                               trim(basename),   &
@@ -3684,6 +3691,8 @@ contains
        lst_org(:,:) = real( read3DS(1,:,:,1), kind=RP )
 
        ! [scale-offset]
+       start_step = 1
+       end_step   = 1
        basename = "oa_sst"//trim(basename_num)
        call ExternalFileReadOffset( read3DT(:,:,:,:), &
                                     trim(basename),   &
