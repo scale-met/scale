@@ -96,7 +96,7 @@ module scale_grid_nest
   logical,  public              :: ONLINE_IAM_PARENT    = .false.   !< a flag to say "I am a parent"
   logical,  public              :: ONLINE_IAM_DAUGHTER  = .false.   !< a flag to say "I am a daughter"
   integer,  public              :: ONLINE_DOMAIN_NUM    = 1
-  integer,  public              :: ONLINE_DAUGHTER_PRC  = 1
+  integer,  public              :: ONLINE_LAUNCH_PRC    = 1
   logical,  public              :: ONLINE_USE_VELZ      = .false.
   logical,  public              :: ONLINE_NO_ROTATE     = .false.
   logical,  public              :: ONLINE_BOUNDARY_USE_QHYD = .false.
@@ -158,6 +158,7 @@ module scale_grid_nest
   logical, private               :: ONLINE_DAUGHTER_USE_VELZ
   logical, private               :: ONLINE_DAUGHTER_NO_ROTATE
   logical, private               :: ONLINE_AGGRESSIVE_COMM
+  logical, private               :: ONLINE_REVERSE_LAUNCH
 
   integer, parameter :: I_LON    = 1
   integer, parameter :: I_LAT    = 2
@@ -284,8 +285,9 @@ contains
     !< metadata files for lat-lon domain for all processes
     character(len=H_LONG)  :: LATLON_CATALOGUE_FNAME = 'latlon_domain_catalogue.txt'
     character(len=H_MID)   :: cmd                    = './scale-les'
-    character(len=H_MID)   :: ONLINE_DAUGHTER_CONF   = ''
-    character(len=H_SHORT) :: argv(2)
+    character(len=H_MID)   :: ONLINE_LAUNCH_CONF     = ''
+    character(len=H_SHORT) :: argv(3)
+    character(len=H_SHORT) :: launch_direction
 
     integer :: i
     integer :: fid, ierr
@@ -310,12 +312,13 @@ contains
        ONLINE_DOMAIN_NUM,        &
        ONLINE_IAM_PARENT,        &
        ONLINE_IAM_DAUGHTER,      &
-       ONLINE_DAUGHTER_PRC,      &
-       ONLINE_DAUGHTER_CONF,     &
+       ONLINE_LAUNCH_PRC,        &
+       ONLINE_LAUNCH_CONF,       &
        ONLINE_USE_VELZ,          &
        ONLINE_NO_ROTATE,         &
        ONLINE_BOUNDARY_USE_QHYD, &
-       ONLINE_AGGRESSIVE_COMM
+       ONLINE_AGGRESSIVE_COMM,   &
+       ONLINE_REVERSE_LAUNCH
 
     !---------------------------------------------------------------------------
 
@@ -328,12 +331,14 @@ contains
     nsend = 0
 
 !    argv(1) = 'run.conf'
-    argv(2) = ''  ! an end-signal for mpi_comm_spawn
+    argv(2) = 'normal'
+    argv(3) = ''  ! an end-signal for mpi_comm_spawn
 
     HANDLING_NUM           = 0
     NEST_Filiation(:)      = 0
-    ONLINE_DAUGHTER_PRC    = PRC_nmax
+    ONLINE_LAUNCH_PRC      = PRC_nmax
     ONLINE_AGGRESSIVE_COMM = .false.
+    ONLINE_REVERSE_LAUNCH  = .false.
     interp_search_divnum   = 10
 
     !--- read namelist
@@ -346,6 +351,10 @@ contains
        call PRC_MPIstop
     endif
     if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_NEST)
+
+    if ( ONLINE_REVERSE_LAUNCH ) then
+       argv(2) = 'reverse'
+    endif
 
     ! only for register
     if ( ONLINE_IAM_PARENT .or. ONLINE_IAM_DAUGHTER ) then
@@ -370,7 +379,7 @@ contains
     endif
 
     DEBUG_DOMAIN_NUM = ONLINE_DOMAIN_NUM
-    allocate ( errcodes(1:ONLINE_DAUGHTER_PRC) )
+    allocate ( errcodes(1:ONLINE_LAUNCH_PRC) )
 
     if( USE_NESTING ) then
 
@@ -415,7 +424,7 @@ contains
                iostat = ierr                           )
 
          if ( ierr /= 0 ) then
-            if( IO_L ) write(*,*) 'xxx cannot open latlon-catalogue file!'
+            write(*,*) 'xxx cannot open latlon-catalogue file!'
             call PRC_MPIstop
          endif
 
@@ -438,6 +447,21 @@ contains
       else ! ONLINE RELATIONSHIP
          if( IO_L ) write(IO_FID_LOG,'(1x,A)') '*** Setup Online Nesting Inter-Domain Communicator (IDC)'
 
+         call get_command_argument(2,launch_direction)
+         if ( trim(launch_direction) .eq. "reverse" ) then
+            if ( .NOT. ONLINE_REVERSE_LAUNCH ) then
+               write(*,*) 'xxx The flag of reverse launch is not consistent with namelist!'
+               write(*,*) '    domain: ', ONLINE_DOMAIN_NUM
+               call PRC_MPIstop
+            endif
+         else
+            if ( ONLINE_REVERSE_LAUNCH ) then
+               write(*,*) 'xxx The flag of reverse launch is not consistent with namelist!'
+               write(*,*) '    domain: ', ONLINE_DOMAIN_NUM
+               call PRC_MPIstop
+            endif
+         endif
+
          if( ONLINE_BOUNDARY_USE_QHYD ) then
             NEST_BND_QA = QA
          else
@@ -450,25 +474,36 @@ contains
             INTERCOMM_ID(HANDLING_NUM) = ONLINE_DOMAIN_NUM
             NEST_Filiation(INTERCOMM_ID(HANDLING_NUM)) = 1
 
-            ! Launch Daughter Domain
-            if ( ONLINE_DAUGHTER_CONF == '' ) then
-               write(dom_num,'(I2.2)') ONLINE_DOMAIN_NUM+1
-               argv(1) = 'run.d'//dom_num//'.conf'
-            else
-               argv(1) =  ONLINE_DAUGHTER_CONF
-            end if
-            if( IO_L ) write(IO_FID_LOG,'(1x,A,I2,A)') '*** Launch Daughter Domain [INTERCOMM_ID:', INTERCOMM_ID(HANDLING_NUM), ' ]'
-            if( IO_L ) write(IO_FID_LOG,'(1x,A,A,A,A)') '*** Launch Command: ', trim(cmd), ' ', trim(argv(1))
-            if( IO_L ) write(IO_FID_LOG,'(1x,A,I5   )') '*** Number of Daughter Processes: ', ONLINE_DAUGHTER_PRC
-            call MPI_COMM_SPAWN( trim(cmd),           &
-                                 argv,                &
-                                 ONLINE_DAUGHTER_PRC, &
-                                 MPI_INFO_NULL,       &
-                                 PRC_master,          &
-                                 COMM_world,          &
-                                 INTERCOMM_DAUGHTER,  &
-                                 errcodes,            &
-                                 ierr                 )
+            if ( .NOT. ONLINE_REVERSE_LAUNCH ) then
+               ! Launch Daughter Domain
+               if ( ONLINE_LAUNCH_CONF == '' ) then
+                  write(dom_num,'(I2.2)') ONLINE_DOMAIN_NUM+1
+                  argv(1) = 'run.d'//dom_num//'.conf'
+               else
+                  argv(1) =  ONLINE_LAUNCH_CONF
+               end if
+               argv(2) = 'normal'
+
+               if( IO_L ) write(IO_FID_LOG,'(1x,A,I2,A)') '*** Launch Daughter Domain [INTERCOMM_ID:', &
+                                                           INTERCOMM_ID(HANDLING_NUM), ' ]'
+               if( IO_L ) write(IO_FID_LOG,'(1x,A,A,A,A)') '*** Launch Command: ', trim(cmd), ' ', trim(argv(1))
+               if( IO_L ) write(IO_FID_LOG,'(1x,A,I5   )') '*** Number of Daughter Processes: ', ONLINE_LAUNCH_PRC
+               call MPI_COMM_SPAWN( trim(cmd),           &
+                                    argv,                &
+                                    ONLINE_LAUNCH_PRC,   &
+                                    MPI_INFO_NULL,       &
+                                    PRC_master,          &
+                                    COMM_world,          &
+                                    INTERCOMM_DAUGHTER,  &
+                                    errcodes,            &
+                                    ierr                 )
+            elseif ( ONLINE_REVERSE_LAUNCH ) then
+               if( IO_L ) write(IO_FID_LOG,'(1x,A)') '*** Online Nesting: Reverse Launch'
+
+               call MPI_COMM_GET_PARENT( INTERCOMM_DAUGHTER, ierr )
+               if( IO_L ) write(IO_FID_LOG,'(1x,A,I2,A)') &
+               '*** Activated Parent Domain [INTERCOMM_ID:', INTERCOMM_ID(HANDLING_NUM), ' ]'
+            endif
 
             PRC_online_nest   = .true.
             PRC_interdomain_d = INTERCOMM_DAUGHTER
@@ -528,9 +563,36 @@ contains
             INTERCOMM_ID(HANDLING_NUM) = ONLINE_DOMAIN_NUM - 1
             NEST_Filiation(INTERCOMM_ID(HANDLING_NUM)) = -1
 
-            call MPI_COMM_GET_PARENT( INTERCOMM_PARENT, ierr )
-            if( IO_L ) write(IO_FID_LOG,'(1x,A,I2,A)') &
-            '*** Activated Daughter Domain [INTERCOMM_ID:', INTERCOMM_ID(HANDLING_NUM), ' ]'
+            if ( .NOT. ONLINE_REVERSE_LAUNCH ) then
+
+               call MPI_COMM_GET_PARENT( INTERCOMM_PARENT, ierr )
+               if( IO_L ) write(IO_FID_LOG,'(1x,A,I2,A)') &
+               '*** Activated Daughter Domain [INTERCOMM_ID:', INTERCOMM_ID(HANDLING_NUM), ' ]'
+            elseif ( ONLINE_REVERSE_LAUNCH ) then
+               if( IO_L ) write(IO_FID_LOG,'(1x,A)') '*** Online Nesting: Reverse Launch'
+               ! Launch Daughter Domain
+               if ( ONLINE_LAUNCH_CONF == '' ) then
+                  write(dom_num,'(I2.2)') ONLINE_DOMAIN_NUM-1
+                  argv(1) = 'run.d'//dom_num//'.conf'
+               else
+                  argv(1) =  ONLINE_LAUNCH_CONF
+               end if
+               argv(2) = 'reverse'
+
+               if( IO_L ) write(IO_FID_LOG,'(1x,A,I2,A)') '*** Launch Parent Domain [INTERCOMM_ID:', &
+                                                           INTERCOMM_ID(HANDLING_NUM), ' ]'
+               if( IO_L ) write(IO_FID_LOG,'(1x,A,A,A,A)') '*** Launch Command: ', trim(cmd), ' ', trim(argv(1))
+               if( IO_L ) write(IO_FID_LOG,'(1x,A,I5   )') '*** Number of Parent Processes: ', ONLINE_LAUNCH_PRC
+               call MPI_COMM_SPAWN( trim(cmd),           &
+                                    argv,                &
+                                    ONLINE_LAUNCH_PRC,   &
+                                    MPI_INFO_NULL,       &
+                                    PRC_master,          &
+                                    COMM_world,          &
+                                    INTERCOMM_PARENT,    &
+                                    errcodes,            &
+                                    ierr                 )
+            endif
 
             PRC_online_nest   = .true.
             PRC_interdomain_p = INTERCOMM_PARENT
