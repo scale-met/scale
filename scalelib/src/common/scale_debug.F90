@@ -65,7 +65,7 @@ contains
     real(RP), intent(in) :: v
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('Debug')
+    call PROF_rapstart('Debug', 2)
 
     if ( .NOT. ( abs(v) < abs(CONST_UNDEF) ) ) then
 !       if( IO_L ) write(IO_FID_LOG,,*) 'xxx uninitialized value at line:', current_line
@@ -75,7 +75,7 @@ contains
        call abort
     end if
 
-    call PROF_rapend  ('Debug')
+    call PROF_rapend  ('Debug', 2)
 
     return
   end subroutine CHECK
@@ -105,7 +105,7 @@ contains
     integer :: k, kstr, kend
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('Debug')
+    call PROF_rapstart('Debug', 2)
 
     kstr = lbound( var(:), 1 )
     kend = ubound( var(:), 1 )
@@ -132,7 +132,7 @@ contains
        call PRC_MPIstop
     endif
 
-    call PROF_rapend  ('Debug')
+    call PROF_rapend  ('Debug', 2)
 
     return
   end subroutine VALCHECK_1D
@@ -163,7 +163,7 @@ contains
     integer :: i, istr, iend
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('Debug')
+    call PROF_rapstart('Debug', 2)
 
     kstr = lbound( var(:,:), 1 )
     kend = ubound( var(:,:), 1 )
@@ -195,7 +195,7 @@ contains
        call PRC_MPIstop
     endif
 
-    call PROF_rapend  ('Debug')
+    call PROF_rapend  ('Debug', 2)
 
     return
   end subroutine VALCHECK_2D
@@ -227,7 +227,7 @@ contains
     integer :: j, jstr, jend
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('Debug')
+    call PROF_rapstart('Debug', 2)
 
     kstr = lbound( var(:,:,:), 1 )
     kend = ubound( var(:,:,:), 1 )
@@ -264,7 +264,7 @@ contains
        call PRC_MPIstop
     endif
 
-    call PROF_rapend  ('Debug')
+    call PROF_rapend  ('Debug', 2)
 
     return
   end subroutine VALCHECK_3D

@@ -85,7 +85,7 @@ contains
     if ( LAND_sw ) then
       call PROF_rapstart('LND Physics', 1)
       call LAND_PHY_driver( update_flag=.true., history_flag=.true. )
-      call PROF_rapend  ('LND Physics')
+      call PROF_rapend  ('LND Physics', 1)
     endif
 
     !########## Update ##########
@@ -115,7 +115,7 @@ contains
     !########## History & Monitor ##########
     call PROF_rapstart('LND History', 1)
     call LAND_vars_history
-    call PROF_rapend  ('LND History')
+    call PROF_rapend  ('LND History', 1)
 
     do j = JS, JE
     do i = IS, IE

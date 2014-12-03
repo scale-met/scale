@@ -299,7 +299,7 @@ program scaleles
 
   call MONIT_write('MAIN')
 
-  call PROF_rapend('Initialize')
+  call PROF_rapend('Initialize', 0)
 
   !########## main ##########
 
@@ -346,7 +346,7 @@ program scaleles
 
   enddo
 
-  call PROF_rapend('Main Loop(Total)')
+  call PROF_rapend('Main Loop(Total)', 0)
   if( IO_L ) write(IO_FID_LOG,*) '++++++ END TIMESTEP ++++++'
   if( IO_L ) write(IO_FID_LOG,*)
 

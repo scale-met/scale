@@ -97,13 +97,13 @@ contains
 
     ! only for register
     call PROF_rapstart('FILE I NetCDF', 2)
-    call PROF_rapend  ('FILE I NetCDF')
+    call PROF_rapend  ('FILE I NetCDF', 2)
     call PROF_rapstart('FILE O NetCDF', 2)
-    call PROF_rapend  ('FILE O NetCDF')
+    call PROF_rapend  ('FILE O NetCDF', 2)
     call PROF_rapstart('FILE I ASCII', 2)
-    call PROF_rapend  ('FILE I ASCII')
+    call PROF_rapend  ('FILE I ASCII', 2)
     call PROF_rapstart('FILE O ASCII', 2)
-    call PROF_rapend  ('FILE O ASCII')
+    call PROF_rapend  ('FILE O ASCII', 2)
     call PROF_rapstart('FILE O Interpolation', 2)
     call PROF_rapend  ('FILE O Interpolation')
 
@@ -348,7 +348,7 @@ contains
 
     deallocate( var1D )
 
-    call PROF_rapend  ('FILE I NetCDF')
+    call PROF_rapend  ('FILE I NetCDF', 2)
 
     return
   end subroutine FILEIO_read_1D
@@ -409,7 +409,7 @@ contains
 
     deallocate( var2D )
 
-    call PROF_rapend  ('FILE I NetCDF')
+    call PROF_rapend  ('FILE I NetCDF', 2)
 
     return
   end subroutine FILEIO_read_2D
@@ -487,7 +487,7 @@ contains
 
     deallocate( var3D )
 
-    call PROF_rapend  ('FILE I NetCDF')
+    call PROF_rapend  ('FILE I NetCDF', 2)
 
     return
   end subroutine FILEIO_read_3D
@@ -549,7 +549,7 @@ contains
 
     deallocate( var4D )
 
-    call PROF_rapend  ('FILE I NetCDF')
+    call PROF_rapend  ('FILE I NetCDF', 2)
 
     return
   end subroutine FILEIO_read_4D
@@ -667,7 +667,7 @@ contains
 
     deallocate( var1D )
 
-    call PROF_rapend  ('FILE O NetCDF')
+    call PROF_rapend  ('FILE O NetCDF', 2)
 
     return
   end subroutine FILEIO_write_1D
@@ -850,7 +850,7 @@ contains
 
     deallocate( var2D )
 
-    call PROF_rapend  ('FILE O NetCDF')
+    call PROF_rapend  ('FILE O NetCDF', 2)
 
     return
   end subroutine FILEIO_write_2D
@@ -1075,7 +1075,7 @@ contains
 
     deallocate( var3D )
 
-    call PROF_rapend  ('FILE O NetCDF')
+    call PROF_rapend  ('FILE O NetCDF', 2)
 
     return
   end subroutine FILEIO_write_3D
@@ -1302,7 +1302,7 @@ contains
 
     deallocate( var3D )
 
-    call PROF_rapend  ('FILE O NetCDF')
+    call PROF_rapend  ('FILE O NetCDF', 2)
 
     return
   end subroutine FILEIO_write_4D

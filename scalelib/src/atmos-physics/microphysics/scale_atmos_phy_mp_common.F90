@@ -306,7 +306,7 @@ contains
     enddo
     enddo
 
-    call PROF_rapend  ('MP Saturation_adjustment')
+    call PROF_rapend  ('MP Saturation_adjustment', 2)
 
     return
   end subroutine ATMOS_PHY_MP_saturation_adjustment
@@ -927,7 +927,7 @@ contains
     endif
 
 
-    call PROF_rapend  ('MP Precipitation')
+    call PROF_rapend  ('MP Precipitation', 2)
 
     return
   end subroutine ATMOS_PHY_MP_precipitation

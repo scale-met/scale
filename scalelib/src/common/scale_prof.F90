@@ -109,8 +109,8 @@ contains
     character(len=*), intent(in) :: rapname !< name of item
     integer, intent(in), optional :: level  !< level of item (default is 2)
 
-    integer :: level_
     integer :: id
+    integer :: level_
     !---------------------------------------------------------------------------
 
     if ( present(level) ) then
@@ -119,9 +119,9 @@ contains
        level_ = 2
     end if
 
-    id = get_rapid( rapname, level_ )
-
     if ( level_ > PROF_rap_level ) return
+
+    id = get_rapid( rapname, level_ )
 
     PROF_raptstr(id) = PRC_MPItime()
     PROF_rapnstr(id) = PROF_rapnstr(id) + 1
@@ -140,19 +140,25 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Save raptime
-  subroutine PROF_rapend( rapname )
+  subroutine PROF_rapend( rapname, level )
     use scale_process, only: &
        PRC_MPItime
     implicit none
 
     character(len=*), intent(in) :: rapname !< name of item
+    integer, intent(in), optional :: level  !< level of item (default is 2)
 
-    integer :: id, level
+    integer :: id
+    integer :: level_
     !---------------------------------------------------------------------------
 
-    id = get_rapid( rapname, level )
+    if ( present(level) ) then
+       if ( level > PROF_rap_level ) return
+    end if
 
-    if ( level > PROF_rap_level ) return
+    id = get_rapid( rapname, level_ )
+
+    if ( level_ > PROF_rap_level ) return
 
     PROF_rapttot(id) = PROF_rapttot(id) + ( PRC_MPItime()-PROF_raptstr(id) )
     PROF_rapnend(id) = PROF_rapnend(id) + 1
@@ -161,7 +167,7 @@ contains
     call STOP_COLLECTION( rapname )
 #endif
 #ifdef _FAPP_
-    call FAPP_STOP( trim(PROF_grpname(PROF_grpid(id))), id, level )
+    call FAPP_STOP( trim(PROF_grpname(PROF_grpid(id))), id, level_ )
 #endif
 
     return

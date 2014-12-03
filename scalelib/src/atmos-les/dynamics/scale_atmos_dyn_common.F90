@@ -1123,7 +1123,7 @@ contains
     call COMM_wait ( num_diff_q(:,:,:,XDIR), I_COMM_QTRC_X )
     call COMM_wait ( num_diff_q(:,:,:,YDIR), I_COMM_QTRC_Y )
 
-    call PROF_rapend  ("NumFilter Comm")
+    call PROF_rapend  ("NumFilter Comm", 3)
 
     return
   end subroutine ATMOS_DYN_numfilter_coef_q
@@ -1202,7 +1202,7 @@ contains
                      data, & ! (in)
                      KO, IO, JO ) ! (in)
 
-    call PROF_rapend  ("NumFilter Main")
+    call PROF_rapend  ("NumFilter Main", 3)
 
     !###########################################################################
     ! High order coefficients
@@ -1223,7 +1223,7 @@ contains
        call COMM_wait ( work(:,:,:,XDIR,i_in),  2 )
        call COMM_wait ( work(:,:,:,YDIR,i_in),  3 )
 
-       call PROF_rapend  ("NumFilter Comm")
+       call PROF_rapend  ("NumFilter Comm", 3)
 
        call PROF_rapstart("NumFilter Main", 3)
 
@@ -1234,7 +1234,7 @@ contains
                         CNY4(:,:,1),             & ! (in)
                         KE                       ) ! (in)
 
-       call PROF_rapend  ("NumFilter Main")
+       call PROF_rapend  ("NumFilter Main", 3)
 
        ! swap pointer target
        i_tmp = i_in

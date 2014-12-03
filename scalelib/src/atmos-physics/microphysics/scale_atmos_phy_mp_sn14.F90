@@ -1423,7 +1423,7 @@ contains
 
     if( opt_debug_tem ) call debug_tem_kij( 1, tem_d(:,:,:), DENS(:,:,:), pre_d(:,:,:), q_d(:,:,:,I_QV) )
 
-    call PROF_rapend  ('MP Preprocess')
+    call PROF_rapend  ('MP Preprocess', 2)
 
     call PROF_rapstart('MP Nucleation', 2)
 
@@ -1533,7 +1533,7 @@ contains
 !    if( opt_debug )     call debugreport_nucleation
     if( opt_debug_tem ) call debug_tem_kij( 2, tem_d(:,:,:), DENS(:,:,:), pre_d(:,:,:), q_d(:,:,:,I_QV) )
 
-    call PROF_rapend  ('MP Nucleation')
+    call PROF_rapend  ('MP Nucleation', 2)
     !----------------------------------------------------------------------------
     !
     ! 2.Phase change: Freezing, Melting, Vapor deposition
@@ -1716,7 +1716,7 @@ contains
 !       if( opt_debug )     call debugreport_phasechange
        if( opt_debug_tem ) call debug_tem_kij( 3, tem_d(:,:,:), DENS(:,:,:), pre_d(:,:,:), q_d(:,:,:,I_QV) )
 
-    call PROF_rapend  ('MP Phase change')
+    call PROF_rapend  ('MP Phase change', 2)
     !----------------------------------------------------------------------------
     !
     ! 3.Collection process
@@ -2082,7 +2082,7 @@ contains
 !    if( opt_debug )     call debugreport_collection
     if( opt_debug_tem ) call debug_tem_kij( 4, tem_d(:,:,:), DENS(:,:,:), pre_d(:,:,:), q_d(:,:,:,I_QV) )
 
-    call PROF_rapend  ('MP Collection')
+    call PROF_rapend  ('MP Collection', 2)
 
     call PROF_rapstart('MP Postprocess', 2)
 
@@ -2107,7 +2107,7 @@ contains
        enddo
     enddo
 
-    call PROF_rapend  ('MP Postprocess')
+    call PROF_rapend  ('MP Postprocess', 2)
 
     !----------------------------------------------------------------------------
     !
@@ -2116,7 +2116,7 @@ contains
     !----------------------------------------------------------------------------
     call PROF_rapstart('MP Saturation adjustment', 2)
     ! nothing to do
-    call PROF_rapend  ('MP Saturation adjustment')
+    call PROF_rapend  ('MP Saturation adjustment', 2)
     !----------------------------------------------------------------------------
     !
     ! 5. Sedimentation ( terminal velocity must be negative )
@@ -2175,7 +2175,7 @@ contains
     end do
     end do
 
-    call PROF_rapend  ('MP Sedimentation')
+    call PROF_rapend  ('MP Sedimentation', 2)
 
     return
   end subroutine mp_sn14
@@ -4930,7 +4930,7 @@ contains
     enddo
     enddo
 
-    call PROF_rapend('MP filter')
+    call PROF_rapend('MP filter', 2)
 
     return
   end subroutine MP_negativefilter

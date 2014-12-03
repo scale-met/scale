@@ -158,7 +158,7 @@ contains
 
     call HIST_put_axes
 
-    call PROF_rapend  ('FILE O NetCDF')
+    call PROF_rapend  ('FILE O NetCDF', 2)
 
     return
   end subroutine HIST_setup
@@ -549,7 +549,7 @@ contains
                              zinterp = zinterp, & ! [OUT]
                              existed = existed  ) ! [OUT]
 
-    call PROF_rapend  ('FILE O NetCDF')
+    call PROF_rapend  ('FILE O NetCDF', 2)
 
     return
   end subroutine HIST_reg
@@ -581,7 +581,7 @@ contains
     enddo
     call HistoryPut(itemid, var2, dt)
 
-    call PROF_rapend  ('FILE O NetCDF')
+    call PROF_rapend  ('FILE O NetCDF', 2)
 
     return
   end subroutine HIST_put_1D
@@ -652,7 +652,7 @@ contains
 
     call HistoryPut(itemid, var2, dt)
 
-    call PROF_rapend  ('FILE O NetCDF')
+    call PROF_rapend  ('FILE O NetCDF', 2)
 
     return
   end subroutine HIST_put_2D
@@ -795,7 +795,7 @@ contains
           call PROF_rapstart('FILE O Interpolation', 2)
           call INTERP_vertical_xi2z( var  (:,:,:), & ! [IN]
                                      var_Z(:,:,:)  ) ! [OUT]
-          call PROF_rapend  ('FILE O Interpolation')
+          call PROF_rapend  ('FILE O Interpolation', 2)
 
           do k = 1, ksize
           do j = 1, jsize
@@ -853,7 +853,7 @@ contains
 
     endif
 
-    call PROF_rapend  ('FILE O NetCDF')
+    call PROF_rapend  ('FILE O NetCDF', 2)
 
     return
   end subroutine HIST_put_3D
@@ -1025,7 +1025,7 @@ contains
                      step,            & ! [IN]
                      allow_missing=am ) ! [IN]
 
-    call PROF_rapend  ('FILE I NetCDF')
+    call PROF_rapend  ('FILE I NetCDF', 2)
 
     return
   end subroutine HIST_get_1D
@@ -1063,7 +1063,7 @@ contains
                      step,            & ! [IN]
                      allow_missing=am ) ! [IN]
 
-    call PROF_rapend  ('FILE I NetCDF')
+    call PROF_rapend  ('FILE I NetCDF', 2)
 
     return
   end subroutine HIST_get_2D
@@ -1101,7 +1101,7 @@ contains
                      step,            & ! [IN]
                      allow_missing=am ) ! [IN]
 
-    call PROF_rapend  ('FILE I NetCDF')
+    call PROF_rapend  ('FILE I NetCDF', 2)
 
     return
   end subroutine HIST_get_3D
@@ -1120,7 +1120,7 @@ contains
 
     call HistoryWriteAll( TIME_NOWDAYSEC ) ![IN]
 
-    call PROF_rapend  ('FILE O NetCDF')
+    call PROF_rapend  ('FILE O NetCDF', 2)
 
     return
   end subroutine HIST_write

@@ -540,7 +540,7 @@ contains
     damp_t(:,:,:) = 0.0_RP
 #endif
 
-    call PROF_rapend  ("DYN Preparation")
+    call PROF_rapend  ("DYN Preparation", 2)
 
     !###########################################################################
     ! Update DENS,MONZ,MOMX,MOMY,MOMZ,RHOT
@@ -612,7 +612,7 @@ contains
        enddo
     end do
 
-    call PROF_rapend  ("DYN Tendency")
+    call PROF_rapend  ("DYN Tendency", 2)
 
 
     do step = 1, NSTEP_ATMOS_DYN
@@ -805,7 +805,7 @@ contains
        call COMM_wait ( MOMY_t(:,:,:), I_COMM_MOMY_t, .false. )
        call COMM_wait ( RHOT_t(:,:,:), I_COMM_RHOT_t, .false. )
 
-       call PROF_rapend  ("DYN Tendency")
+       call PROF_rapend  ("DYN Tendency", 2)
 
        call PROF_rapstart("DYN Numfilter", 2)
     
@@ -823,7 +823,7 @@ contains
                                          ND_COEF, ND_ORDER, ND_SFC_FACT, ND_USE_RS ) ! [IN]
        endif
 
-       call PROF_rapend  ("DYN Numfilter")
+       call PROF_rapend  ("DYN Numfilter", 2)
 
        !------------------------------------------------------------------------
        ! Start RK
@@ -883,7 +883,7 @@ contains
           enddo
        end if
 
-       call PROF_rapend  ("DYN Boundary")
+       call PROF_rapend  ("DYN Boundary", 2)
 
        call PROF_rapstart("DYN RK", 2)
 
@@ -906,7 +906,7 @@ contains
                           REF_pres, REF_dens,                               & ! (in)
                           BND_W, BND_E, BND_S, BND_N,                       & ! (in)
                           dtrk, dt                                          ) ! (in)
-       call PROF_rapend  ("DYN RK")
+       call PROF_rapend  ("DYN RK", 2)
 
        call PROF_rapstart("DYN Boundary", 2)
 
@@ -979,7 +979,7 @@ contains
           enddo
        end if
 
-       call PROF_rapend  ("DYN Boundary")
+       call PROF_rapend  ("DYN Boundary", 2)
 
        call COMM_vars8( DENS_RK1(:,:,:), I_COMM_DENS_RK1 )
        call COMM_vars8( MOMZ_RK1(:,:,:), I_COMM_MOMZ_RK1 )
@@ -1014,7 +1014,7 @@ contains
                           BND_W, BND_E, BND_S, BND_N,                       & ! (in)
                           dtrk, dt                                          ) ! (in)
 
-       call PROF_rapend  ("DYN RK")
+       call PROF_rapend  ("DYN RK", 2)
 
        call PROF_rapstart("DYN Boundary", 2)
 
@@ -1087,7 +1087,7 @@ contains
           enddo
        end if
 
-       call PROF_rapend  ("DYN Boundary")
+       call PROF_rapend  ("DYN Boundary", 2)
 
        call COMM_vars8( DENS_RK2(:,:,:), I_COMM_DENS_RK2 )
        call COMM_vars8( MOMZ_RK2(:,:,:), I_COMM_MOMZ_RK2 )
@@ -1122,7 +1122,7 @@ contains
                           BND_W, BND_E, BND_S, BND_N,                       & ! (in)
                           dtrk, dt                                          ) ! (in)
 
-       call PROF_rapend  ("DYN RK")
+       call PROF_rapend  ("DYN RK", 2)
 
 #ifdef CHECK_MASS
        call HIST_in(mflx_hi(:,:,:,ZDIR), 'MFLXZ', 'momentum flux of z-direction', &
@@ -1341,7 +1341,7 @@ contains
                                            ND_COEF_Q, ND_ORDER, ND_SFC_FACT, ND_USE_RS ) ! [IN]
        endif
 
-       call PROF_rapend  ("DYN Numfilter")
+       call PROF_rapend  ("DYN Numfilter", 2)
 
        call PROF_rapstart("DYN Boundary", 2)
 
@@ -1422,7 +1422,7 @@ contains
           end if
        end if
 
-       call PROF_rapend  ("DYN Boundary")
+       call PROF_rapend  ("DYN Boundary", 2)
 
        call PROF_rapstart("DYN Tracer", 2)
 
@@ -1517,7 +1517,7 @@ contains
        enddo
        enddo
 
-       call PROF_rapend ("DYN Tracer")
+       call PROF_rapend ("DYN Tracer", 2)
 
        call PROF_rapstart("DYN Boundary", 2)
 
@@ -1624,7 +1624,7 @@ contains
           enddo
        end if
 
-       call PROF_rapend  ("DYN Boundary")
+       call PROF_rapend  ("DYN Boundary", 2)
 
        call PROF_rapstart("DYN Tracer", 2)
 
@@ -1662,7 +1662,7 @@ contains
        enddo
        enddo
 
-       call PROF_rapend  ("DYN Tracer")
+       call PROF_rapend  ("DYN Tracer", 2)
 
        do j  = JS, JE
        do i  = IS, IE

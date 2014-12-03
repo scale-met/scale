@@ -81,7 +81,7 @@ contains
     if ( URBAN_sw ) then
       call PROF_rapstart('URB Physics', 1)
       call URBAN_PHY_driver( update_flag=.true., history_flag=.true. )
-      call PROF_rapend  ('URB Physics')
+      call PROF_rapend  ('URB Physics', 1)
     endif
 
     !########## Update ##########
@@ -99,7 +99,7 @@ contains
     !########## History & Monitor ##########
     call PROF_rapstart('URB History', 1)
     call URBAN_vars_history
-    call PROF_rapend  ('URB History')
+    call PROF_rapend  ('URB History', 1)
 
     do j = JS, JE
     do i = IS, IE
