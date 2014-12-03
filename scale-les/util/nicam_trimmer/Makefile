@@ -30,11 +30,11 @@ jw06: prg_nicam_trimmer_jw06.o
 	$(FC) $(FFLAGS) -o $(OBJECT2) $(MODS2) $(LIBS)
 
 #f90.o:
-mod_netcdf.o: mod_netcdf.f90
+mod_netcdf.o: src/mod_netcdf.f90
 	$(FC) $(FFLAGS) $(INCLUDES) -o $@ -c $<
-prg_nicam_trimmer.o: prg_nicam_trimmer.f90 mod_netcdf.o
+prg_nicam_trimmer.o: src/prg_nicam_trimmer.f90 mod_netcdf.o
 	$(FC) $(FFLAGS) $(INCLUDES) -o $@ -c $<
-prg_nicam_trimmer_jw06.o: prg_nicam_trimmer_jw06.f90 mod_netcdf.o
+prg_nicam_trimmer_jw06.o: src/prg_nicam_trimmer_jw06.f90 mod_netcdf.o
 	$(FC) $(FFLAGS) $(INCLUDES) -o $@ -c $<
 
 clean:

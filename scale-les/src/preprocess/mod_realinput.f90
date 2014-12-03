@@ -3455,6 +3455,8 @@ contains
        D2R   => CONST_D2R,   &
        TEM00 => CONST_TEM00, &
        EPS   => CONST_EPS
+    use scale_landuse, only: &
+       frac_land  => LANDUSE_frac_land
     implicit none
 
     real(RP), intent(out) :: tg   (:,:,:)
@@ -3494,6 +3496,7 @@ contains
     real(RP), allocatable :: lat_org(:,:,:)
     real(RP), allocatable :: lz_org (:,:,:,:)
 
+    real(RP), allocatable :: landmask (:,:)
     real(RP), allocatable :: tg_org   (:,:,:)
     real(RP), allocatable :: strg_org (:,:,:)
     real(RP), allocatable :: tw_org   (:,:)
@@ -3517,6 +3520,12 @@ contains
     integer,  allocatable :: kgrd(:,:,:,:,:)
 
     real(RP) :: lcz_3D(LKMAX,IA,JA)
+
+    real(RP)              :: maskval_tg
+    real(RP)              :: maskval_strg
+    real(RP)              :: maskval_lst
+    real(RP), parameter   :: sst_missval=273.1506_RP
+    real(RP), allocatable :: work (:,:,:)
 
     integer :: start_step
     integer :: end_step
@@ -3550,6 +3559,8 @@ contains
     allocate( lat_org(          dims(1), dims(2), nt  ) )
     allocate( lz_org ( dims(7), dims(1), dims(2), nt  ) )
 
+    allocate( work     (          dims(1), dims(2), 1 ) )
+    allocate( landmask (          dims(1), dims(2)    ) )
     allocate( tg_org   ( dims(7), dims(1), dims(2)    ) )
     allocate( strg_org ( dims(7), dims(1), dims(2)    ) )
     allocate( tw_org   (          dims(1), dims(2)    ) )
@@ -3622,7 +3633,20 @@ contains
     deallocate( lat_org )
     deallocate( lz_org  )
 
+
     if( do_read ) then
+       !
+       basename = "lsmask"//trim(basename_num)
+       call ExternalFileRead( read3DS(:,:,:,:), &
+                              trim(basename),   &
+                              "lsmask",         &
+                              start_step,       &
+                              end_step,         &
+                              myrank,           &
+                              iNICAM,           &
+                              single=.true.     )
+       landmask(:,:) = real( read3DS(1,:,:,1), kind=RP )
+
        ! [scale-offset]
        basename = "la_tg"//trim(basename_num)
        call ExternalFileReadOffset( read4D(:,:,:,:),  &
@@ -3635,17 +3659,6 @@ contains
                                     single=.true.     )
        tg_org(:,:,:) = real( read4D(:,:,:,1), kind=RP )
      
-       ! tentative: missing value => 298.
-       do k = 1, dims(7)
-       do j = 1, dims(2)
-       do i = 1, dims(1)
-          if( (tg_org(k,i,j)-50.0D0) < sqrt(EPS) )then
-               tg_org(k,i,j) = 298.0D0
-          endif
-       end do
-       end do
-       end do
-
        ! [scale-offset]
        basename = "la_wg"//trim(basename_num)
        call ExternalFileReadOffset( read4D(:,:,:,:),  &
@@ -3658,20 +3671,7 @@ contains
                                     single=.true.     )
        strg_org(:,:,:) = real( read4D(:,:,:,1), kind=RP )
 
-       ! tentative: missing value => 0.02
-       do k = 1, dims(7)
-       do j = 1, dims(2)
-       do i = 1, dims(1)
-          if( strg_org(k,i,j) < sqrt(EPS) )then
-              ! default value: set as value of forest at 40% of evapolation rate.
-              ! forest is considered as a typical landuse over Japan area.
-              strg_org(k,i,j) = 0.02D0
-          endif
-       end do
-       end do
-       end do
-
-
+       !
        basename = "ss_tem_sfc"//trim(basename_num)
        call ExternalFileRead( read3DS(:,:,:,:), &
                               trim(basename),   &
@@ -3706,11 +3706,64 @@ contains
        deallocate( read4D  )
     endif
 
+    call COMM_bcast( landmask(:,:),              dims(1), dims(2)     )
     call COMM_bcast( tg_org  (:,:,:),   dims(7), dims(1), dims(2)     )
     call COMM_bcast( strg_org(:,:,:),   dims(7), dims(1), dims(2)     )
     call COMM_bcast( lst_org (:,:),              dims(1), dims(2)     )
     call COMM_bcast( sst_org (:,:),              dims(1), dims(2)     )
     !call COMM_bcast( ice_org (:,:),              dims(1), dims(2)     )
+
+    ! replace missing value 
+     maskval_tg=298.0_RP    ! mask value 50K => 298K
+     maskval_strg=0.02_RP    ! mask value 0.0 => 0.02
+                             ! default value 0.02: set as value of forest at 40% of evapolation rate.
+                             ! forest is considered as a typical landuse over Japan area.
+     do k=1,dims(7)
+     do j=1,dims(2)
+     do i=1,dims(1)
+        if ( abs(tg_org(k,i,j)-50.0D0) < EPS ) then
+           tg_org(k,i,j) = maskval_tg
+        endif
+        if ( abs(strg_org(k,i,j)-0.0D0) < EPS ) then
+           strg_org(k,i,j) = maskval_strg
+        endif
+     enddo
+     enddo
+     enddo
+
+    ! Land temp: interpolate over the ocean
+     do k=1,dims(7)
+        work(:,:,1) = tg_org(k,:,:)
+        call interp_OceanLand_data(work(:,:,:),landmask,dims(1),dims(2), 1,landdata=.true.)
+        tg_org(k,:,:) = work(:,:,1)
+     enddo
+
+    ! Land water: interpolate over the ocean
+     do k=1,dims(7)
+        work(:,:,1) = strg_org(k,:,:)
+        call interp_OceanLand_data(work(:,:,:),landmask,dims(1),dims(2), 1,landdata=.true.)
+        strg_org(k,:,:) = work(:,:,1)
+     enddo
+
+    ! Surface skin temp: interpolate over the ocean
+     work(:,:,1) = lst_org(:,:)
+     call interp_OceanLand_data(work(:,:,:),landmask,dims(1),dims(2), 1,landdata=.true.)
+     lst_org(:,:) = work(:,:,1)
+
+    ! SST: retrieve SST data around coast
+     do j=1,dims(2)
+     do i=1,dims(1)
+        if( abs(landmask(i,j)-1.0_RP) < EPS )then  ! not land data
+           cycle
+        else
+           sst_org(i,j)=(sst_org(i,j)-sst_missval*landmask(i,j))/(1.0_RP-landmask(i,j))
+        endif
+     enddo
+     enddo
+    ! interpolate over the land
+     work(:,:,1) = sst_org(:,:)
+     call interp_OceanLand_data(work(:,:,:),landmask,dims(1),dims(2), 1,landdata=.false.)
+     sst_org(:,:) = work(:,:,1)
 
     ! cold start approach
     skint_org(:,:)   = lst_org(:,:)
@@ -3753,6 +3806,12 @@ contains
     deallocate( tg_org    )
     deallocate( strg_org  )
 
+    ! replace values over the ocean
+    do k = 1, LKMAX
+     call replace_misval( tg(k,:,:),   maskval_tg,   frac_land )
+     call replace_misval( strg(k,:,:), maskval_strg, frac_land )
+    enddo
+
     roff(:,:) = 0.0_RP ! not necessary
     qvef(:,:) = 0.0_RP ! not necessary
 
@@ -3787,6 +3846,18 @@ contains
                   + snowt_org(igrd(i,j,3),jgrd(i,j,3)) * hfact(i,j,3)
     enddo
     enddo
+
+    ! replace values over the ocean
+     do j = 1, JA
+     do i = 1, IA
+        if( abs(frac_land(i,j)-0.0_RP) < EPS )then ! ocean grid
+           lst(i,j)   = sst(i,j)
+           ust(i,j)   = sst(i,j)
+           skint(i,j) = sst(i,j)
+        endif
+     enddo
+     enddo
+
 
     do n = 1, 2 ! 1:LW, 2:SW
     do j = 1, JA
@@ -4042,7 +4113,9 @@ contains
            cycle
        else
 
-         if ( present(maskval) .and. (abs(maskval-999.99_RP)<EPS) ) maskval = data(i,j,n)
+         if ( present(maskval).and.(abs(maskval-999.99_RP)<EPS) ) then
+            if (abs(lsmask(i,j)-0.0_RP) < EPS) maskval = data(i,j,n)
+         endif
 
         !-------------------
         ! missing value
