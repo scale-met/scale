@@ -208,9 +208,10 @@ module scale_grid_nest
   integer, private   :: INTERCOMM_PARENT
   integer, private   :: INTERCOMM_DAUGHTER
 
-  integer, private, parameter :: max_isu  = 100              ! maximum number of receive/wait issue
-  integer, private, parameter :: max_isuf = 20               ! maximum number of receive/wait issue (z-stag)
-  integer, private, parameter :: max_rq   = 500              ! maximum number of req: tentative approach
+  integer, private, parameter :: max_isu   = 100             ! maximum number of receive/wait issue
+  integer, private, parameter :: max_isuf  = 20              ! maximum number of receive/wait issue (z-stag)
+  integer, private, parameter :: max_rq    = 500             ! maximum number of req: tentative approach
+  integer, private, parameter :: max_bndqa = 12              ! maximum number of QA in boundary: tentative approach
   integer, private            :: rq_ctl_p                    ! for control request id (counting)
   integer, private            :: rq_ctl_d                    ! for control request id (counting)
   integer, private            :: rq_tot_p                    ! for control request id (total number)
@@ -239,6 +240,13 @@ module scale_grid_nest
   real(RP), private, allocatable :: buffer_ref_3DF(:,:,:)    ! buffer of communicator: 3D at z-Face (with HALO)
   real(RP), private, allocatable :: u_llp(:,:,:)
   real(RP), private, allocatable :: v_llp(:,:,:)
+
+  real(RP), private, allocatable :: org_DENS(:,:,:)          ! buffer to keep values at that time in parent
+  real(RP), private, allocatable :: org_MOMZ(:,:,:)          ! buffer to keep values at that time in parent
+  real(RP), private, allocatable :: org_MOMX(:,:,:)          ! buffer to keep values at that time in parent
+  real(RP), private, allocatable :: org_MOMY(:,:,:)          ! buffer to keep values at that time in parent
+  real(RP), private, allocatable :: org_RHOT(:,:,:)          ! buffer to keep values at that time in parent
+  real(RP), private, allocatable :: org_QTRC(:,:,:,:)        ! buffer to keep values at that time in parent
 
   real(RP), private, allocatable :: hfact(:,:,:,:)           ! interpolation factor for horizontal direction
   real(RP), private, allocatable :: vfact(:,:,:,:,:,:)       ! interpolation factor for vertical direction
@@ -551,6 +559,13 @@ contains
             if( IO_L ) write(IO_FID_LOG,'(1x,A,F9.3)') '***  --- DAUGHTER_DTSEC    :', DAUGHTER_DTSEC(HANDLING_NUM)
             if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)  ') '***  --- DAUGHTER_NSTEP    :', DAUGHTER_NSTEP(HANDLING_NUM)
 
+            allocate( org_DENS(PARENT_KA(HANDLING_NUM),PARENT_IA(HANDLING_NUM),PARENT_JA(HANDLING_NUM))           )
+            allocate( org_MOMZ(PARENT_KA(HANDLING_NUM),PARENT_IA(HANDLING_NUM),PARENT_JA(HANDLING_NUM))           )
+            allocate( org_MOMX(PARENT_KA(HANDLING_NUM),PARENT_IA(HANDLING_NUM),PARENT_JA(HANDLING_NUM))           )
+            allocate( org_MOMY(PARENT_KA(HANDLING_NUM),PARENT_IA(HANDLING_NUM),PARENT_JA(HANDLING_NUM))           )
+            allocate( org_RHOT(PARENT_KA(HANDLING_NUM),PARENT_IA(HANDLING_NUM),PARENT_JA(HANDLING_NUM))           )
+            allocate( org_QTRC(PARENT_KA(HANDLING_NUM),PARENT_IA(HANDLING_NUM),PARENT_JA(HANDLING_NUM),max_bndqa) )
+
             call NEST_COMM_setup_nestdown( HANDLING_NUM )
 
          !---------------------------------- parent routines
@@ -564,7 +579,6 @@ contains
             NEST_Filiation(INTERCOMM_ID(HANDLING_NUM)) = -1
 
             if ( .NOT. ONLINE_REVERSE_LAUNCH ) then
-
                call MPI_COMM_GET_PARENT( INTERCOMM_PARENT, ierr )
                if( IO_L ) write(IO_FID_LOG,'(1x,A,I2,A)') &
                '*** Activated Daughter Domain [INTERCOMM_ID:', INTERCOMM_ID(HANDLING_NUM), ' ]'
@@ -746,11 +760,11 @@ contains
             ONLINE_USE_VELZ = .false.
          endif
 
-         if( IO_L ) write(IO_FID_LOG,'(1x,A,I2)') '*** Number of Related Domains :', HANDLING_NUM
-         if ( HANDLING_NUM > 2 ) then
-            if( IO_L ) write(*,*) 'xxx Too much handing domains (up to 2)'
-            call PRC_MPIstop
-         endif
+         !if( IO_L ) write(IO_FID_LOG,'(1x,A,I2)') '*** Number of Related Domains :', HANDLING_NUM
+         !if ( HANDLING_NUM > 2 ) then
+         !   if( IO_L ) write(*,*) 'xxx Too much handing domains (up to 2)'
+         !   call PRC_MPIstop
+         !endif
 
       endif !--- OFFLINE or NOT
 
@@ -1541,12 +1555,12 @@ contains
   subroutine NEST_COMM_nestdown( &
       HANDLE,              & ! [in   ]
       BND_QA,              & ! [in   ]
-      org_DENS,            & ! [in   ]
-      org_MOMZ,            & ! [in   ]
-      org_MOMX,            & ! [in   ]
-      org_MOMY,            & ! [in   ]
-      org_RHOT,            & ! [in   ]
-      org_QTRC,            & ! [in   ]
+      ipt_DENS,            & ! [in   ]
+      ipt_MOMZ,            & ! [in   ]
+      ipt_MOMX,            & ! [in   ]
+      ipt_MOMY,            & ! [in   ]
+      ipt_RHOT,            & ! [in   ]
+      ipt_QTRC,            & ! [in   ]
       interped_ref_DENS,   & ! [inout]
       interped_ref_VELZ,   & ! [inout]
       interped_ref_VELX,   & ! [inout]
@@ -1571,12 +1585,12 @@ contains
     integer,  intent(in)    :: HANDLE        !< id number of nesting relation in this process target
     integer,  intent(in)    :: BND_QA        !< num of tracer
 
-    real(RP), intent(in   ) :: org_DENS(PARENT_KA(HANDLE),PARENT_IA(HANDLE),PARENT_JA(HANDLE))
-    real(RP), intent(in   ) :: org_MOMZ(PARENT_KA(HANDLE),PARENT_IA(HANDLE),PARENT_JA(HANDLE))
-    real(RP), intent(in   ) :: org_MOMX(PARENT_KA(HANDLE),PARENT_IA(HANDLE),PARENT_JA(HANDLE))
-    real(RP), intent(in   ) :: org_MOMY(PARENT_KA(HANDLE),PARENT_IA(HANDLE),PARENT_JA(HANDLE))
-    real(RP), intent(in   ) :: org_RHOT(PARENT_KA(HANDLE),PARENT_IA(HANDLE),PARENT_JA(HANDLE))
-    real(RP), intent(in   ) :: org_QTRC(PARENT_KA(HANDLE),PARENT_IA(HANDLE),PARENT_JA(HANDLE),BND_QA)
+    real(RP), intent(in   ) :: ipt_DENS(PARENT_KA(HANDLE),PARENT_IA(HANDLE),PARENT_JA(HANDLE))
+    real(RP), intent(in   ) :: ipt_MOMZ(PARENT_KA(HANDLE),PARENT_IA(HANDLE),PARENT_JA(HANDLE))
+    real(RP), intent(in   ) :: ipt_MOMX(PARENT_KA(HANDLE),PARENT_IA(HANDLE),PARENT_JA(HANDLE))
+    real(RP), intent(in   ) :: ipt_MOMY(PARENT_KA(HANDLE),PARENT_IA(HANDLE),PARENT_JA(HANDLE))
+    real(RP), intent(in   ) :: ipt_RHOT(PARENT_KA(HANDLE),PARENT_IA(HANDLE),PARENT_JA(HANDLE))
+    real(RP), intent(in   ) :: ipt_QTRC(PARENT_KA(HANDLE),PARENT_IA(HANDLE),PARENT_JA(HANDLE),BND_QA)
 
     real(RP), intent(inout) :: interped_ref_DENS(DAUGHTER_KA(HANDLE),DAUGHTER_IA(HANDLE),DAUGHTER_JA(HANDLE))
     real(RP), intent(inout) :: interped_ref_VELZ(DAUGHTER_KA(HANDLE),DAUGHTER_IA(HANDLE),DAUGHTER_JA(HANDLE))
@@ -1602,7 +1616,11 @@ contains
     !---------------------------------------------------------------------------
 
     if ( BND_QA > I_BNDQA ) then
-       if( IO_L ) write(*,*) 'xxx internal error: about BND_QA [nest/grid]'
+       if( IO_L ) write(*,*) 'xxx internal error: BND_QA is larger than I_BNDQA [nest/grid]'
+       call PRC_MPIstop
+    endif
+    if ( BND_QA > max_bndqa ) then
+       if( IO_L ) write(*,*) 'xxx internal error: BND_QA is larger than max_bndqa [nest/grid]'
        call PRC_MPIstop
     endif
 
@@ -1614,6 +1632,17 @@ contains
 
        nsend = nsend + 1
        if( IO_L ) write(IO_FID_LOG,'(1X,A,I5,A)') "*** NestIDC [P]: que send ( ", nsend, " )"
+
+       ! to keep values at that time by finish of sending process
+       org_DENS(:,:,:) = ipt_DENS(:,:,:)
+       org_MOMZ(:,:,:) = ipt_MOMZ(:,:,:)
+       org_MOMX(:,:,:) = ipt_MOMX(:,:,:)
+       org_MOMY(:,:,:) = ipt_MOMY(:,:,:)
+       org_RHOT(:,:,:) = ipt_RHOT(:,:,:)
+       do iq = 1, BND_QA
+          org_QTRC(:,:,:,iq) = ipt_QTRC(:,:,:,iq)
+       enddo
+
 
        !*** request control
        !--- do not change the calling order below;
