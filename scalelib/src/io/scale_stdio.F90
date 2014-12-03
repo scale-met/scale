@@ -97,7 +97,7 @@ contains
     !---------------------------------------------------------------------------
 
     !--- Read from argument
-    if ( COMMAND_ARGUMENT_COUNT() /= 1 ) then
+    if ( COMMAND_ARGUMENT_COUNT() < 1 ) then
        write(*,*) ' xxx Program needs config file! STOP.'
        stop
     else

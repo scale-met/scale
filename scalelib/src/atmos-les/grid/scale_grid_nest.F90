@@ -96,7 +96,7 @@ module scale_grid_nest
   logical,  public              :: ONLINE_IAM_PARENT    = .false.   !< a flag to say "I am a parent"
   logical,  public              :: ONLINE_IAM_DAUGHTER  = .false.   !< a flag to say "I am a daughter"
   integer,  public              :: ONLINE_DOMAIN_NUM    = 1
-  integer,  public              :: ONLINE_DAUGHTER_PRC  = 1
+  integer,  public              :: ONLINE_LAUNCH_PRC    = 1
   logical,  public              :: ONLINE_USE_VELZ      = .false.
   logical,  public              :: ONLINE_NO_ROTATE     = .false.
   logical,  public              :: ONLINE_BOUNDARY_USE_QHYD = .false.
@@ -158,6 +158,7 @@ module scale_grid_nest
   logical, private               :: ONLINE_DAUGHTER_USE_VELZ
   logical, private               :: ONLINE_DAUGHTER_NO_ROTATE
   logical, private               :: ONLINE_AGGRESSIVE_COMM
+  logical, private               :: ONLINE_REVERSE_LAUNCH
 
   integer, parameter :: I_LON    = 1
   integer, parameter :: I_LAT    = 2
@@ -207,9 +208,10 @@ module scale_grid_nest
   integer, private   :: INTERCOMM_PARENT
   integer, private   :: INTERCOMM_DAUGHTER
 
-  integer, private, parameter :: max_isu  = 100              ! maximum number of receive/wait issue
-  integer, private, parameter :: max_isuf = 20               ! maximum number of receive/wait issue (z-stag)
-  integer, private, parameter :: max_rq   = 500              ! maximum number of req: tentative approach
+  integer, private, parameter :: max_isu   = 100             ! maximum number of receive/wait issue
+  integer, private, parameter :: max_isuf  = 20              ! maximum number of receive/wait issue (z-stag)
+  integer, private, parameter :: max_rq    = 500             ! maximum number of req: tentative approach
+  integer, private, parameter :: max_bndqa = 12              ! maximum number of QA in boundary: tentative approach
   integer, private            :: rq_ctl_p                    ! for control request id (counting)
   integer, private            :: rq_ctl_d                    ! for control request id (counting)
   integer, private            :: rq_tot_p                    ! for control request id (total number)
@@ -238,6 +240,13 @@ module scale_grid_nest
   real(RP), private, allocatable :: buffer_ref_3DF(:,:,:)    ! buffer of communicator: 3D at z-Face (with HALO)
   real(RP), private, allocatable :: u_llp(:,:,:)
   real(RP), private, allocatable :: v_llp(:,:,:)
+
+  real(RP), private, allocatable :: org_DENS(:,:,:)          ! buffer to keep values at that time in parent
+  real(RP), private, allocatable :: org_MOMZ(:,:,:)          ! buffer to keep values at that time in parent
+  real(RP), private, allocatable :: org_MOMX(:,:,:)          ! buffer to keep values at that time in parent
+  real(RP), private, allocatable :: org_MOMY(:,:,:)          ! buffer to keep values at that time in parent
+  real(RP), private, allocatable :: org_RHOT(:,:,:)          ! buffer to keep values at that time in parent
+  real(RP), private, allocatable :: org_QTRC(:,:,:,:)        ! buffer to keep values at that time in parent
 
   real(RP), private, allocatable :: hfact(:,:,:,:)           ! interpolation factor for horizontal direction
   real(RP), private, allocatable :: vfact(:,:,:,:,:,:)       ! interpolation factor for vertical direction
@@ -284,8 +293,9 @@ contains
     !< metadata files for lat-lon domain for all processes
     character(len=H_LONG)  :: LATLON_CATALOGUE_FNAME = 'latlon_domain_catalogue.txt'
     character(len=H_MID)   :: cmd                    = './scale-les'
-    character(len=H_MID)   :: ONLINE_DAUGHTER_CONF   = ''
-    character(len=H_SHORT) :: argv(2)
+    character(len=H_MID)   :: ONLINE_LAUNCH_CONF     = ''
+    character(len=H_SHORT) :: argv(3)
+    character(len=H_SHORT) :: launch_direction
 
     integer :: i
     integer :: fid, ierr
@@ -310,12 +320,13 @@ contains
        ONLINE_DOMAIN_NUM,        &
        ONLINE_IAM_PARENT,        &
        ONLINE_IAM_DAUGHTER,      &
-       ONLINE_DAUGHTER_PRC,      &
-       ONLINE_DAUGHTER_CONF,     &
+       ONLINE_LAUNCH_PRC,        &
+       ONLINE_LAUNCH_CONF,       &
        ONLINE_USE_VELZ,          &
        ONLINE_NO_ROTATE,         &
        ONLINE_BOUNDARY_USE_QHYD, &
-       ONLINE_AGGRESSIVE_COMM
+       ONLINE_AGGRESSIVE_COMM,   &
+       ONLINE_REVERSE_LAUNCH
 
     !---------------------------------------------------------------------------
 
@@ -328,12 +339,14 @@ contains
     nsend = 0
 
 !    argv(1) = 'run.conf'
-    argv(2) = ''  ! an end-signal for mpi_comm_spawn
+    argv(2) = 'normal'
+    argv(3) = ''  ! an end-signal for mpi_comm_spawn
 
     HANDLING_NUM           = 0
     NEST_Filiation(:)      = 0
-    ONLINE_DAUGHTER_PRC    = PRC_nmax
+    ONLINE_LAUNCH_PRC      = PRC_nmax
     ONLINE_AGGRESSIVE_COMM = .false.
+    ONLINE_REVERSE_LAUNCH  = .false.
     interp_search_divnum   = 10
 
     !--- read namelist
@@ -346,6 +359,10 @@ contains
        call PRC_MPIstop
     endif
     if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_NEST)
+
+    if ( ONLINE_REVERSE_LAUNCH ) then
+       argv(2) = 'reverse'
+    endif
 
     ! only for register
     if ( ONLINE_IAM_PARENT .or. ONLINE_IAM_DAUGHTER ) then
@@ -370,7 +387,7 @@ contains
     endif
 
     DEBUG_DOMAIN_NUM = ONLINE_DOMAIN_NUM
-    allocate ( errcodes(1:ONLINE_DAUGHTER_PRC) )
+    allocate ( errcodes(1:ONLINE_LAUNCH_PRC) )
 
     if( USE_NESTING ) then
 
@@ -415,7 +432,7 @@ contains
                iostat = ierr                           )
 
          if ( ierr /= 0 ) then
-            if( IO_L ) write(*,*) 'xxx cannot open latlon-catalogue file!'
+            write(*,*) 'xxx cannot open latlon-catalogue file!'
             call PRC_MPIstop
          endif
 
@@ -438,6 +455,21 @@ contains
       else ! ONLINE RELATIONSHIP
          if( IO_L ) write(IO_FID_LOG,'(1x,A)') '*** Setup Online Nesting Inter-Domain Communicator (IDC)'
 
+         call get_command_argument(2,launch_direction)
+         if ( trim(launch_direction) .eq. "reverse" ) then
+            if ( .NOT. ONLINE_REVERSE_LAUNCH ) then
+               write(*,*) 'xxx The flag of reverse launch is not consistent with namelist!'
+               write(*,*) '    domain: ', ONLINE_DOMAIN_NUM
+               call PRC_MPIstop
+            endif
+         else
+            if ( ONLINE_REVERSE_LAUNCH ) then
+               write(*,*) 'xxx The flag of reverse launch is not consistent with namelist!'
+               write(*,*) '    domain: ', ONLINE_DOMAIN_NUM
+               call PRC_MPIstop
+            endif
+         endif
+
          if( ONLINE_BOUNDARY_USE_QHYD ) then
             NEST_BND_QA = QA
          else
@@ -450,25 +482,36 @@ contains
             INTERCOMM_ID(HANDLING_NUM) = ONLINE_DOMAIN_NUM
             NEST_Filiation(INTERCOMM_ID(HANDLING_NUM)) = 1
 
-            ! Launch Daughter Domain
-            if ( ONLINE_DAUGHTER_CONF == '' ) then
-               write(dom_num,'(I2.2)') ONLINE_DOMAIN_NUM+1
-               argv(1) = 'run.d'//dom_num//'.conf'
-            else
-               argv(1) =  ONLINE_DAUGHTER_CONF
-            end if
-            if( IO_L ) write(IO_FID_LOG,'(1x,A,I2,A)') '*** Launch Daughter Domain [INTERCOMM_ID:', INTERCOMM_ID(HANDLING_NUM), ' ]'
-            if( IO_L ) write(IO_FID_LOG,'(1x,A,A,A,A)') '*** Launch Command: ', trim(cmd), ' ', trim(argv(1))
-            if( IO_L ) write(IO_FID_LOG,'(1x,A,I5   )') '*** Number of Daughter Processes: ', ONLINE_DAUGHTER_PRC
-            call MPI_COMM_SPAWN( trim(cmd),           &
-                                 argv,                &
-                                 ONLINE_DAUGHTER_PRC, &
-                                 MPI_INFO_NULL,       &
-                                 PRC_master,          &
-                                 COMM_world,          &
-                                 INTERCOMM_DAUGHTER,  &
-                                 errcodes,            &
-                                 ierr                 )
+            if ( .NOT. ONLINE_REVERSE_LAUNCH ) then
+               ! Launch Daughter Domain
+               if ( ONLINE_LAUNCH_CONF == '' ) then
+                  write(dom_num,'(I2.2)') ONLINE_DOMAIN_NUM+1
+                  argv(1) = 'run.d'//dom_num//'.conf'
+               else
+                  argv(1) =  ONLINE_LAUNCH_CONF
+               end if
+               argv(2) = 'normal'
+
+               if( IO_L ) write(IO_FID_LOG,'(1x,A,I2,A)') '*** Launch Daughter Domain [INTERCOMM_ID:', &
+                                                           INTERCOMM_ID(HANDLING_NUM), ' ]'
+               if( IO_L ) write(IO_FID_LOG,'(1x,A,A,A,A)') '*** Launch Command: ', trim(cmd), ' ', trim(argv(1))
+               if( IO_L ) write(IO_FID_LOG,'(1x,A,I5   )') '*** Number of Daughter Processes: ', ONLINE_LAUNCH_PRC
+               call MPI_COMM_SPAWN( trim(cmd),           &
+                                    argv,                &
+                                    ONLINE_LAUNCH_PRC,   &
+                                    MPI_INFO_NULL,       &
+                                    PRC_master,          &
+                                    COMM_world,          &
+                                    INTERCOMM_DAUGHTER,  &
+                                    errcodes,            &
+                                    ierr                 )
+            elseif ( ONLINE_REVERSE_LAUNCH ) then
+               if( IO_L ) write(IO_FID_LOG,'(1x,A)') '*** Online Nesting: Reverse Launch'
+
+               call MPI_COMM_GET_PARENT( INTERCOMM_DAUGHTER, ierr )
+               if( IO_L ) write(IO_FID_LOG,'(1x,A,I2,A)') &
+               '*** Activated Parent Domain [INTERCOMM_ID:', INTERCOMM_ID(HANDLING_NUM), ' ]'
+            endif
 
             PRC_online_nest   = .true.
             PRC_interdomain_d = INTERCOMM_DAUGHTER
@@ -516,6 +559,13 @@ contains
             if( IO_L ) write(IO_FID_LOG,'(1x,A,F9.3)') '***  --- DAUGHTER_DTSEC    :', DAUGHTER_DTSEC(HANDLING_NUM)
             if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)  ') '***  --- DAUGHTER_NSTEP    :', DAUGHTER_NSTEP(HANDLING_NUM)
 
+            allocate( org_DENS(PARENT_KA(HANDLING_NUM),PARENT_IA(HANDLING_NUM),PARENT_JA(HANDLING_NUM))           )
+            allocate( org_MOMZ(PARENT_KA(HANDLING_NUM),PARENT_IA(HANDLING_NUM),PARENT_JA(HANDLING_NUM))           )
+            allocate( org_MOMX(PARENT_KA(HANDLING_NUM),PARENT_IA(HANDLING_NUM),PARENT_JA(HANDLING_NUM))           )
+            allocate( org_MOMY(PARENT_KA(HANDLING_NUM),PARENT_IA(HANDLING_NUM),PARENT_JA(HANDLING_NUM))           )
+            allocate( org_RHOT(PARENT_KA(HANDLING_NUM),PARENT_IA(HANDLING_NUM),PARENT_JA(HANDLING_NUM))           )
+            allocate( org_QTRC(PARENT_KA(HANDLING_NUM),PARENT_IA(HANDLING_NUM),PARENT_JA(HANDLING_NUM),max_bndqa) )
+
             call NEST_COMM_setup_nestdown( HANDLING_NUM )
 
          !---------------------------------- parent routines
@@ -528,9 +578,35 @@ contains
             INTERCOMM_ID(HANDLING_NUM) = ONLINE_DOMAIN_NUM - 1
             NEST_Filiation(INTERCOMM_ID(HANDLING_NUM)) = -1
 
-            call MPI_COMM_GET_PARENT( INTERCOMM_PARENT, ierr )
-            if( IO_L ) write(IO_FID_LOG,'(1x,A,I2,A)') &
-            '*** Activated Daughter Domain [INTERCOMM_ID:', INTERCOMM_ID(HANDLING_NUM), ' ]'
+            if ( .NOT. ONLINE_REVERSE_LAUNCH ) then
+               call MPI_COMM_GET_PARENT( INTERCOMM_PARENT, ierr )
+               if( IO_L ) write(IO_FID_LOG,'(1x,A,I2,A)') &
+               '*** Activated Daughter Domain [INTERCOMM_ID:', INTERCOMM_ID(HANDLING_NUM), ' ]'
+            elseif ( ONLINE_REVERSE_LAUNCH ) then
+               if( IO_L ) write(IO_FID_LOG,'(1x,A)') '*** Online Nesting: Reverse Launch'
+               ! Launch Daughter Domain
+               if ( ONLINE_LAUNCH_CONF == '' ) then
+                  write(dom_num,'(I2.2)') ONLINE_DOMAIN_NUM-1
+                  argv(1) = 'run.d'//dom_num//'.conf'
+               else
+                  argv(1) =  ONLINE_LAUNCH_CONF
+               end if
+               argv(2) = 'reverse'
+
+               if( IO_L ) write(IO_FID_LOG,'(1x,A,I2,A)') '*** Launch Parent Domain [INTERCOMM_ID:', &
+                                                           INTERCOMM_ID(HANDLING_NUM), ' ]'
+               if( IO_L ) write(IO_FID_LOG,'(1x,A,A,A,A)') '*** Launch Command: ', trim(cmd), ' ', trim(argv(1))
+               if( IO_L ) write(IO_FID_LOG,'(1x,A,I5   )') '*** Number of Parent Processes: ', ONLINE_LAUNCH_PRC
+               call MPI_COMM_SPAWN( trim(cmd),           &
+                                    argv,                &
+                                    ONLINE_LAUNCH_PRC,   &
+                                    MPI_INFO_NULL,       &
+                                    PRC_master,          &
+                                    COMM_world,          &
+                                    INTERCOMM_PARENT,    &
+                                    errcodes,            &
+                                    ierr                 )
+            endif
 
             PRC_online_nest   = .true.
             PRC_interdomain_p = INTERCOMM_PARENT
@@ -684,11 +760,11 @@ contains
             ONLINE_USE_VELZ = .false.
          endif
 
-         if( IO_L ) write(IO_FID_LOG,'(1x,A,I2)') '*** Number of Related Domains :', HANDLING_NUM
-         if ( HANDLING_NUM > 2 ) then
-            if( IO_L ) write(*,*) 'xxx Too much handing domains (up to 2)'
-            call PRC_MPIstop
-         endif
+         !if( IO_L ) write(IO_FID_LOG,'(1x,A,I2)') '*** Number of Related Domains :', HANDLING_NUM
+         !if ( HANDLING_NUM > 2 ) then
+         !   if( IO_L ) write(*,*) 'xxx Too much handing domains (up to 2)'
+         !   call PRC_MPIstop
+         !endif
 
       endif !--- OFFLINE or NOT
 
@@ -1479,12 +1555,12 @@ contains
   subroutine NEST_COMM_nestdown( &
       HANDLE,              & ! [in   ]
       BND_QA,              & ! [in   ]
-      org_DENS,            & ! [in   ]
-      org_MOMZ,            & ! [in   ]
-      org_MOMX,            & ! [in   ]
-      org_MOMY,            & ! [in   ]
-      org_RHOT,            & ! [in   ]
-      org_QTRC,            & ! [in   ]
+      ipt_DENS,            & ! [in   ]
+      ipt_MOMZ,            & ! [in   ]
+      ipt_MOMX,            & ! [in   ]
+      ipt_MOMY,            & ! [in   ]
+      ipt_RHOT,            & ! [in   ]
+      ipt_QTRC,            & ! [in   ]
       interped_ref_DENS,   & ! [inout]
       interped_ref_VELZ,   & ! [inout]
       interped_ref_VELX,   & ! [inout]
@@ -1509,12 +1585,12 @@ contains
     integer,  intent(in)    :: HANDLE        !< id number of nesting relation in this process target
     integer,  intent(in)    :: BND_QA        !< num of tracer
 
-    real(RP), intent(in   ) :: org_DENS(PARENT_KA(HANDLE),PARENT_IA(HANDLE),PARENT_JA(HANDLE))
-    real(RP), intent(in   ) :: org_MOMZ(PARENT_KA(HANDLE),PARENT_IA(HANDLE),PARENT_JA(HANDLE))
-    real(RP), intent(in   ) :: org_MOMX(PARENT_KA(HANDLE),PARENT_IA(HANDLE),PARENT_JA(HANDLE))
-    real(RP), intent(in   ) :: org_MOMY(PARENT_KA(HANDLE),PARENT_IA(HANDLE),PARENT_JA(HANDLE))
-    real(RP), intent(in   ) :: org_RHOT(PARENT_KA(HANDLE),PARENT_IA(HANDLE),PARENT_JA(HANDLE))
-    real(RP), intent(in   ) :: org_QTRC(PARENT_KA(HANDLE),PARENT_IA(HANDLE),PARENT_JA(HANDLE),BND_QA)
+    real(RP), intent(in   ) :: ipt_DENS(PARENT_KA(HANDLE),PARENT_IA(HANDLE),PARENT_JA(HANDLE))
+    real(RP), intent(in   ) :: ipt_MOMZ(PARENT_KA(HANDLE),PARENT_IA(HANDLE),PARENT_JA(HANDLE))
+    real(RP), intent(in   ) :: ipt_MOMX(PARENT_KA(HANDLE),PARENT_IA(HANDLE),PARENT_JA(HANDLE))
+    real(RP), intent(in   ) :: ipt_MOMY(PARENT_KA(HANDLE),PARENT_IA(HANDLE),PARENT_JA(HANDLE))
+    real(RP), intent(in   ) :: ipt_RHOT(PARENT_KA(HANDLE),PARENT_IA(HANDLE),PARENT_JA(HANDLE))
+    real(RP), intent(in   ) :: ipt_QTRC(PARENT_KA(HANDLE),PARENT_IA(HANDLE),PARENT_JA(HANDLE),BND_QA)
 
     real(RP), intent(inout) :: interped_ref_DENS(DAUGHTER_KA(HANDLE),DAUGHTER_IA(HANDLE),DAUGHTER_JA(HANDLE))
     real(RP), intent(inout) :: interped_ref_VELZ(DAUGHTER_KA(HANDLE),DAUGHTER_IA(HANDLE),DAUGHTER_JA(HANDLE))
@@ -1540,7 +1616,11 @@ contains
     !---------------------------------------------------------------------------
 
     if ( BND_QA > I_BNDQA ) then
-       if( IO_L ) write(*,*) 'xxx internal error: about BND_QA [nest/grid]'
+       if( IO_L ) write(*,*) 'xxx internal error: BND_QA is larger than I_BNDQA [nest/grid]'
+       call PRC_MPIstop
+    endif
+    if ( BND_QA > max_bndqa ) then
+       if( IO_L ) write(*,*) 'xxx internal error: BND_QA is larger than max_bndqa [nest/grid]'
        call PRC_MPIstop
     endif
 
@@ -1552,6 +1632,17 @@ contains
 
        nsend = nsend + 1
        if( IO_L ) write(IO_FID_LOG,'(1X,A,I5,A)') "*** NestIDC [P]: que send ( ", nsend, " )"
+
+       ! to keep values at that time by finish of sending process
+       org_DENS(:,:,:) = ipt_DENS(:,:,:)
+       org_MOMZ(:,:,:) = ipt_MOMZ(:,:,:)
+       org_MOMX(:,:,:) = ipt_MOMX(:,:,:)
+       org_MOMY(:,:,:) = ipt_MOMY(:,:,:)
+       org_RHOT(:,:,:) = ipt_RHOT(:,:,:)
+       do iq = 1, BND_QA
+          org_QTRC(:,:,:,iq) = ipt_QTRC(:,:,:,iq)
+       enddo
+
 
        !*** request control
        !--- do not change the calling order below;
