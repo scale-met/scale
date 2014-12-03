@@ -15,7 +15,7 @@ else
 endif
 
 #SSE_FLAGS = -mtune=native
-SSE_FLAGS = -mtune=native -mavx -mfma
+SSE_FLAGS = -mtune=native -mavx
 
 FFLAGS_CORE = -m64 \
               -std=f2003 -fall-intrinsics -pedantic-errors -fimplicit-none -fmodule-private \
@@ -32,8 +32,8 @@ FFLAGS_DEBUG = -O0 $(FFLAGS_CORE) $(GNUCPPOPT) \
                -DDEBUG
 
 FC     = mpif90
-#FFLAGS = $(FFLAGS_FAST)
-FFLAGS = $(FFLAGS_DEBUG)
+FFLAGS = $(FFLAGS_FAST)
+#FFLAGS = $(FFLAGS_DEBUG)
 
 FFLAGS_DYN = $(FFLAGS)
 
