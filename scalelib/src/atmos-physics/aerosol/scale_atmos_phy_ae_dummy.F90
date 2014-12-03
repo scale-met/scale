@@ -84,15 +84,15 @@ contains
           MOMY, &
           RHOT, &
           QTRC  )
-    use scale_tracer, only: &
-       QAD => QA
+    use scale_grid_index
+    use scale_tracer
     implicit none
     real(RP), intent(inout) :: DENS(KA,IA,JA)
     real(RP), intent(inout) :: MOMZ(KA,IA,JA)
     real(RP), intent(inout) :: MOMX(KA,IA,JA)
     real(RP), intent(inout) :: MOMY(KA,IA,JA)
     real(RP), intent(inout) :: RHOT(KA,IA,JA)
-    real(RP), intent(inout) :: QTRC(KA,IA,JA,QAD)
+    real(RP), intent(inout) :: QTRC(KA,IA,JA,QA)
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Aerosol(dummy)'
 
@@ -105,6 +105,8 @@ contains
        Re,   &
        QTRC, &
        RH    )
+    use scale_grid_index
+    use scale_tracer
     use scale_const, only: &
        UNDEF => CONST_UNDEF
     implicit none

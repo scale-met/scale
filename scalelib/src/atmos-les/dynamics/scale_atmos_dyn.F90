@@ -158,7 +158,8 @@ contains
        PRC_HAS_N, &
        PRC_HAS_S
     use scale_const, only: &
-       OHM => CONST_OHM
+       OHM => CONST_OHM, &
+       UNDEF => CONST_UNDEF
     use scale_comm, only: &
        COMM_vars8_init
     use scale_atmos_dyn_common, only: &
@@ -273,6 +274,19 @@ contains
     call COMM_vars8_init( mflx_hi(:,:,:,XDIR), I_COMM_mflx_x )
     call COMM_vars8_init( mflx_hi(:,:,:,YDIR), I_COMM_mflx_y )
 
+    DENS_RK1(:,:,:) = UNDEF
+    MOMZ_RK1(:,:,:) = UNDEF
+    MOMX_RK1(:,:,:) = UNDEF
+    MOMY_RK1(:,:,:) = UNDEF
+    RHOT_RK1(:,:,:) = UNDEF
+    DENS_RK2(:,:,:) = UNDEF
+    MOMZ_RK2(:,:,:) = UNDEF
+    MOMX_RK2(:,:,:) = UNDEF
+    MOMY_RK2(:,:,:) = UNDEF
+    RHOT_RK2(:,:,:) = UNDEF
+
+    mflx_hi(:,:,:,:) = UNDEF
+
     return
   end subroutine ATMOS_DYN_setup
 
@@ -375,8 +389,8 @@ contains
 
     real(RP), intent(in)    :: PHI  (KA,IA,JA)   !< geopotential
     real(RP), intent(in)    :: GSQRT(KA,IA,JA,7) !< vertical metrics {G}^1/2
-    real(RP), intent(in)    :: J13G (KA,IA,JA,4) !< (1,3) element of Jacobian matrix
-    real(RP), intent(in)    :: J23G (KA,IA,JA,4) !< (2,3) element of Jacobian matrix
+    real(RP), intent(in)    :: J13G (KA,IA,JA,7) !< (1,3) element of Jacobian matrix
+    real(RP), intent(in)    :: J23G (KA,IA,JA,7) !< (2,3) element of Jacobian matrix
     real(RP), intent(in)    :: J33G              !< (3,3) element of Jacobian matrix
     real(RP), intent(in)    :: MAPF (IA,JA,2,4)  !< map factor
 

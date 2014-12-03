@@ -743,6 +743,7 @@ xxxr=0.0_RP ! temtative
         RHOO,         & ! (in)
         XLON,         & ! (in)
         XLAT          ) ! (in)
+    use scale_grid_index
     use scale_process, only: &
        PRC_MPIstop
     use scale_const, only: &

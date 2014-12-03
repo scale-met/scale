@@ -555,6 +555,7 @@ contains
        SFLX_rain,   &
        SFLX_snow,   &
        history_flag )
+    use scale_grid_index
     use scale_time, only: &
        TIME_DTSEC_ATMOS_PHY_MP, &
        TIME_NOWDAYSEC
@@ -2912,6 +2913,7 @@ call STOP_COLLECTION("MICROPHYSICS")
   subroutine ATMOS_PHY_MP_suzuki10_CloudFraction( &
        cldfrac, &
        QTRC     )
+    use scale_grid_index
     use scale_const, only: &
        EPS => CONST_EPS
     use scale_tracer, only: &
@@ -2948,6 +2950,7 @@ call STOP_COLLECTION("MICROPHYSICS")
        Re,    &
        QTRC0, &
        DENS0  )
+    use scale_grid_index
     use scale_const, only: &
        EPS => CONST_EPS
     use scale_tracer, only: &
@@ -3002,6 +3005,7 @@ call STOP_COLLECTION("MICROPHYSICS")
   subroutine ATMOS_PHY_MP_suzuki10_Mixingratio( &
        Qe,    &
        QTRC0  )
+    use scale_grid_index
     use scale_const, only: &
        EPS => CONST_EPS
     use scale_tracer, only: &

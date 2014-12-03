@@ -109,6 +109,7 @@ contains
        CDZ,               &
        LAND_TEMP_t,       &
        LAND_WATER_t       )
+    use scale_grid_index
     use scale_const, only: &
        DWATR => CONST_DWATR
     use scale_time, only: &

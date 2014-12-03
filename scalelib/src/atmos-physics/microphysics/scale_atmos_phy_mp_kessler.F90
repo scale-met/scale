@@ -135,6 +135,7 @@ contains
        SFLX_rain,   &
        SFLX_snow,   &
        history_flag )
+    use scale_grid_index
     use scale_comm, only: &
        COMM_horizontal_mean
     use scale_time, only: &
@@ -458,6 +459,7 @@ contains
   subroutine ATMOS_PHY_MP_kessler_CloudFraction( &
        cldfrac, &
        QTRC     )
+    use scale_grid_index
     use scale_tracer, only: &
        QAD => QA
     use scale_const, only: &
@@ -492,6 +494,7 @@ contains
        Re,    &
        QTRC0, &
        DENS0  )
+    use scale_grid_index
     use scale_tracer, only: &
        QAD => QA, &
        MP_QAD => MP_QA
@@ -515,6 +518,7 @@ contains
   subroutine ATMOS_PHY_MP_kessler_Mixingratio( &
        Qe,    &
        QTRC0  )
+    use scale_grid_index
     use scale_tracer, only: &
        QAD => QA, &
        MP_QAD => MP_QA

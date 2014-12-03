@@ -183,6 +183,7 @@ contains
         Z0M,        & ! (in)
         Z0H,        & ! (in)
         Z0E         ) ! (in)
+    use scale_grid_index
     use scale_const, only: &
       PI    => CONST_PI,    &
       UNDEF => CONST_UNDEF

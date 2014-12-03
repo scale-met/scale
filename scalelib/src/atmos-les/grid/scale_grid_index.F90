@@ -145,9 +145,6 @@ contains
     JS   = 1    + JHALO
     JE   = JMAX + JHALO
 
-    IEH = IE
-    JEH = JE
-
     if( IBLOCK == -1 ) IBLOCK = IMAX
     if( JBLOCK == -1 ) JBLOCK = JMAX
 #endif
@@ -174,6 +171,8 @@ contains
     IEB = IE
     JSB = JS
     JEB = JE
+    IEH = IE
+    JEH = JE
     if ( .not. PRC_HAS_W ) then
        IMAXB = IMAXB + IHALO
        ISB = 1
@@ -181,6 +180,7 @@ contains
     if ( .not. PRC_HAS_E ) then
        IMAXB = IMAXB + IHALO
        IEB = IA
+       IEH = IE - 1
     end if
     if ( .not. PRC_HAS_S ) then
        JMAXB = JMAXB + JHALO
@@ -189,6 +189,7 @@ contains
     if ( .not. PRC_HAS_N ) then
        JMAXB = JMAXB + JHALO
        JEB = JA
+       JEH = JE - 1
     end if
 
     if( IO_L ) write(IO_FID_LOG,*)

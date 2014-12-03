@@ -128,6 +128,8 @@ contains
        SFLX_MW, SFLX_MU, SFLX_MV, SFLX_SH, SFLX_LH, &
        SFLX_QTRC,                                   &
        Uabs10, U10, V10, T2, Q2                     )
+    use scale_grid_index
+    use scale_tracer
     use scale_const, only: &
        PI   => CONST_PI,   &
        LHV  => CONST_LHV,  &

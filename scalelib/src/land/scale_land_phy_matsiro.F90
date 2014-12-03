@@ -96,6 +96,7 @@ contains
        CDZ,               &
        LAND_TEMP_t,       &
        LAND_WATER_t       )
+    use scale_grid_index
     implicit none
 
     real(RP), intent(in)  :: LAND_TEMP        (LKMAX,IA,JA)

@@ -173,6 +173,8 @@ contains
        MOMZ, MOMX, MOMY, RHOT, DENS, QTRC,          &
        SFLX_MW, SFLX_MU, SFLX_MV, SFLX_SH,          &
        GSQRT, J13G, J23G, J33G, MAPF, dt            )
+    use scale_grid_index
+    use scale_tracer
     use scale_const, only: &
        GRAV => CONST_GRAV
     use scale_grid, only: &

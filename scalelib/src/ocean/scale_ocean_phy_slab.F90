@@ -103,6 +103,7 @@ contains
        FLX_precip,   &
        FLX_evap,     &
        OCEAN_TEMP_t  )
+    use scale_grid_index
     implicit none
 
     real(RP), intent(in)  :: OCEAN_TEMP  (IA,JA)

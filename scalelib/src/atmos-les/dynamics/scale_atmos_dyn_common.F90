@@ -1068,10 +1068,12 @@ contains
     enddo
     do j = JS, JE
     do i = IS, IE
+       num_diff_q(1:KS-2,i,j,ZDIR) = 0.0_RP
        num_diff_q(KS-1,i,j,ZDIR) = work(KS-1,i,j,ZDIR,iwork) * nd_coef_cdz(KS-1) &
                                  * DENS(KS,i,j)
        num_diff_q(KE  ,i,j,ZDIR) = work(KE  ,i,j,ZDIR,iwork) * nd_coef_cdz(KE  ) &
                                  * DENS(KE,i,j)
+       num_diff_q(KE+1:KA,i,j,ZDIR) = 0.0_RP
     enddo
     enddo
 
@@ -1085,8 +1087,10 @@ contains
     enddo
     do j = JS, JE
     do i = IS, IE
+       num_diff_q(1:KS-1,i,j,XDIR) = 0.0_RP
        num_diff_q(KS  ,i,j,XDIR) = num_diff_q(KS  ,i,j,XDIR) * ND_SFC_FACT
        num_diff_q(KS+1,i,j,XDIR) = num_diff_q(KS+1,i,j,XDIR) * (1.0_RP + ND_SFC_FACT) * 0.5_RP
+       num_diff_q(KE+1:KA,i,j,XDIR) = 0.0_RP
     enddo
     enddo
 
@@ -1100,8 +1104,10 @@ contains
     enddo
     do j = JS, JE
     do i = IS, IE
+       num_diff_q(1:KS-1,i,j,YDIR) = 0.0_RP
        num_diff_q(KS  ,i,j,YDIR) = num_diff_q(KS  ,i,j,YDIR) * ND_SFC_FACT
        num_diff_q(KS+1,i,j,YDIR) = num_diff_q(KS+1,i,j,YDIR) * (1.0_RP + ND_SFC_FACT) * 0.5_RP
+       num_diff_q(KE+1:KA,i,j,YDIR) = 0.0_RP
     enddo
     enddo
 
@@ -1253,115 +1259,148 @@ contains
     integer , intent(in ) :: IO
     integer , intent(in ) :: JO
 
+    integer :: kee
     integer :: k, i, j
 
-    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS+1, KE-2-KO
-#ifdef DEBUG
-       call CHECK( __LINE__, phi(k+2,i,j) )
-       call CHECK( __LINE__, phi(k+1,i,j) )
-       call CHECK( __LINE__, phi(k  ,i,j) )
-       call CHECK( __LINE__, phi(k-1,i,j) )
-#endif
-       diff(k+KO,i,j,ZDIR) = ( + CNZ3(1,k+1,1+KO) * phi(k+2,i,j) &
-                               - CNZ3(2,k+1,1+KO) * phi(k+1,i,j) &
-                               + CNZ3(3,k+1,1+KO) * phi(k  ,i,j) &
-                               - CNZ3(1,k  ,1+KO) * phi(k-1,i,j) )
-    enddo
-    enddo
-    enddo
+    KEE = KE-KO
 
-    if ( KO==1 ) then
+    if ( KO == 0 ) then
+ 
+      !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS+1, KE-2
+#ifdef DEBUG
+          call CHECK( __LINE__, phi(k+2,i,j) )
+          call CHECK( __LINE__, phi(k+1,i,j) )
+          call CHECK( __LINE__, phi(k  ,i,j) )
+          call CHECK( __LINE__, phi(k-1,i,j) )
+#endif
+          diff(k,i,j,ZDIR) = ( + CNZ3(1,k+1,1) * phi(k+2,i,j) &
+                               - CNZ3(2,k+1,1) * phi(k+1,i,j) &
+                               + CNZ3(3,k+1,1) * phi(k  ,i,j) &
+                               - CNZ3(1,k  ,1) * phi(k-1,i,j) )
+       enddo
+       enddo
+       enddo
+
        !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
        do j = JS, JE
        do i = IS, IE
 #ifdef DEBUG
+          call CHECK( __LINE__, phi(KS+2,i,j) )
           call CHECK( __LINE__, phi(KS+1,i,j) )
-          call CHECK( __LINE__, phi(KS  ,i,j) )
+          call CHECK( __LINE__, phi(KS,i,j) )
+          call CHECK( __LINE__, phi(KE,i,j) )
+          call CHECK( __LINE__, phi(KE-1,i,j) )
+          call CHECK( __LINE__, phi(KE-2,i,j) )
 #endif
-          diff(KS,i,j,ZDIR) = ( + CNZ3(1,KS  ,2) * phi(KS+1,i,j) &
-                                - CNZ3(2,KS  ,2) * phi(KS  ,i,j) &
-                                - CNZ3(1,KS-1,2) * phi(KS+1,i,j) )
-       end do
-       end do
-    end if
-    !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
-    do j = JS, JE
-    do i = IS, IE
-#ifdef DEBUG
-       call CHECK( __LINE__, phi(KS+2,i,j) )
-       call CHECK( __LINE__, phi(KS+1,i,j) )
-       call CHECK( __LINE__, phi(KS,i,j) )
-#endif
-       diff(KS+KO,i,j,ZDIR) = ( + CNZ3(1,KS+1,1+KO) * phi(KS+2,i,j) &
-                                - CNZ3(2,KS+1,1+KO) * phi(KS+1,i,j) &
-                                + CNZ3(3,KS+1,1+KO) * phi(KS  ,i,j) &
-                                - CNZ3(1,KS  ,1)    * phi(KS+1,i,j) * (1-KO) )
-       diff(KS-1,i,j,ZDIR) = - diff(KS  ,i,j,ZDIR)
-       diff(KS-2,i,j,ZDIR) = - diff(KS+1,i,j,ZDIR)
-    enddo
-    enddo
-
-    if ( KO==0 ) then
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       do j = JS, JE
-       do i = IS, IE
-#ifdef DEBUG
-       call CHECK( __LINE__, phi(KE,i,j) )
-       call CHECK( __LINE__, phi(KE-1,i,j) )
-       call CHECK( __LINE__, phi(KE-2,i,j) )
-#endif
-          diff(KE-1,i,j,ZDIR) = ( + CNZ3(1,KE  ,1+KO) * phi(KE-1,i,j) &
-                                  - CNZ3(2,KE  ,1+KO) * phi(KE  ,i,j) &
-                                  + CNZ3(3,KE  ,1+KO) * phi(KE-1,i,j) &
-                                  - CNZ3(1,KE-1,1+KO) * phi(KE-2,i,j) )
+          diff(KS,i,j,ZDIR) = ( + CNZ3(1,KS+1,1) * phi(KS+2,i,j) &
+                                - CNZ3(2,KS+1,1) * phi(KS+1,i,j) &
+                                + CNZ3(3,KS+1,1) * phi(KS  ,i,j) &
+                                - CNZ3(1,KS  ,1) * phi(KS+1,i,j) )
+          diff(KS-1,i,j,ZDIR) = - diff(KS  ,i,j,ZDIR)
+          diff(KS-2,i,j,ZDIR) = - diff(KS+1,i,j,ZDIR)
+          diff(KE-1,i,j,ZDIR) = ( + CNZ3(1,KE  ,1) * phi(KE-1,i,j) &
+                                  - CNZ3(2,KE  ,1) * phi(KE  ,i,j) &
+                                  + CNZ3(3,KE  ,1) * phi(KE-1,i,j) &
+                                  - CNZ3(1,KE-1,1) * phi(KE-2,i,j) )
+          diff(KE  ,i,j,ZDIR) = - diff(KE-1,i,j,ZDIR)
+          diff(KE+1,i,j,ZDIR) = - diff(KE-2,i,j,ZDIR)
           diff(KE+2,i,j,ZDIR) = 0.0_RP
        end do
        end do
-    else
+
+    else ! K0=1
+
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JS, JE
        do i = IS, IE
+       do k = KS+2, KE-2
 #ifdef DEBUG
+          call CHECK( __LINE__, phi(k+1,i,j) )
+          call CHECK( __LINE__, phi(k  ,i,j) )
+          call CHECK( __LINE__, phi(k-1,i,j) )
+          call CHECK( __LINE__, phi(k-2,i,j) )
+#endif
+          diff(k,i,j,ZDIR) = ( + CNZ3(1,k  ,2) * phi(k+1,i,j) &
+                               - CNZ3(2,k  ,2) * phi(k  ,i,j) &
+                               + CNZ3(3,k  ,2) * phi(k-1,i,j) &
+                               - CNZ3(1,k-1,2) * phi(k-2,i,j) )
+       enddo
+       enddo
+       enddo
+
+       !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
+       do j = JS, JE
+       do i = IS, IE
+#ifdef DEBUG
+          call CHECK( __LINE__, phi(KS+2,i,j) )
+          call CHECK( __LINE__, phi(KS+1,i,j) )
+          call CHECK( __LINE__, phi(KS,i,j) )
+          call CHECK( __LINE__, phi(KS+1,i,j) )
+          call CHECK( __LINE__, phi(KS  ,i,j) )
           call CHECK( __LINE__, phi(KE-1,i,j) )
           call CHECK( __LINE__, phi(KE-2,i,j) )
           call CHECK( __LINE__, phi(KE-3,i,j) )
 #endif
+          diff(KS+1,i,j,ZDIR) = ( + CNZ3(1,KS+1,2) * phi(KS+2,i,j) &
+                                  - CNZ3(2,KS+1,2) * phi(KS+1,i,j) &
+                                  + CNZ3(3,KS+1,2) * phi(KS  ,i,j) )
+          diff(KS  ,i,j,ZDIR) = ( + CNZ3(1,KS  ,2) * phi(KS+1,i,j) &
+                                  - CNZ3(2,KS  ,2) * phi(KS  ,i,j) &
+                                  - CNZ3(1,KS-1,2) * phi(KS+1,i,j) )
+          diff(KS-1,i,j,ZDIR) = - diff(KS  ,i,j,ZDIR)
+          diff(KS-2,i,j,ZDIR) = - diff(KS+1,i,j,ZDIR)
           diff(KE-1,i,j,ZDIR) = ( - CNZ3(2,KE-1,2) * phi(KE-1,i,j) &
                                   + CNZ3(3,KE-1,2) * phi(KE-2,i,j) &
                                   - CNZ3(1,KE-2,2) * phi(KE-3,i,j) )
           diff(KE  ,i,j,ZDIR) = ( + CNZ3(1,KE  ,2) * phi(KE-1,i,j) &
                                   + CNZ3(3,KE  ,2) * phi(KE-1,i,j) &
                                   - CNZ3(1,KE-1,2) * phi(KE-2,i,j) )
+          diff(KE+1,i,j,ZDIR) = - diff(KE  ,i,j,ZDIR)
+          diff(KE+2,i,j,ZDIR) = - diff(KE-1,i,j,ZDIR)
        end do
        end do
+
     end if
+
     !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-    do j = JS, JE
-    do i = IS, IE
-       diff(KE  +KO,i,j,ZDIR) = - diff(KE-1+KO,i,j,ZDIR)
-       diff(KE+1+KO,i,j,ZDIR) = - diff(KE-2+KO,i,j,ZDIR)
-    enddo
-    enddo
-    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-    do j = JS, JE
-    do i = IS-IO, IE-IO
-    do k = KS, KE-KO
+    if ( IO == 0 ) then
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KEE
 #ifdef DEBUG
-       call CHECK( __LINE__, phi(k,i+2,j) )
-       call CHECK( __LINE__, phi(k,i+1,j) )
-       call CHECK( __LINE__, phi(k,i  ,j) )
-       call CHECK( __LINE__, phi(k,i-1,j) )
+          call CHECK( __LINE__, phi(k,i+2,j) )
+          call CHECK( __LINE__, phi(k,i+1,j) )
+          call CHECK( __LINE__, phi(k,i  ,j) )
+          call CHECK( __LINE__, phi(k,i-1,j) )
 #endif
-       diff(k,i+IO,j,XDIR) = ( + CNX3(1,i+1,1) * phi(k,i+2,j) &
+          diff(k,i,j,XDIR) = ( + CNX3(1,i+1,1) * phi(k,i+2,j) &
                                - CNX3(2,i+1,1) * phi(k,i+1,j) &
                                + CNX3(3,i+1,1) * phi(k,i  ,j) &
                                - CNX3(1,i  ,1) * phi(k,i-1,j) )
-    enddo
-    enddo
-    enddo
+       enddo
+       enddo
+       enddo
+    else
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KEE
+#ifdef DEBUG
+          call CHECK( __LINE__, phi(k,i+1,j) )
+          call CHECK( __LINE__, phi(k,i  ,j) )
+          call CHECK( __LINE__, phi(k,i-1,j) )
+          call CHECK( __LINE__, phi(k,i-2,j) )
+#endif
+          diff(k,i,j,XDIR) = ( + CNX3(1,i  ,2) * phi(k,i+1,j) &
+                               - CNX3(2,i  ,2) * phi(k,i  ,j) &
+                               + CNX3(3,i  ,2) * phi(k,i-1,j) &
+                               - CNX3(1,i-1,2) * phi(k,i-2,j) )
+       enddo
+       enddo
+       enddo
+    end if
 
     do j = JS, JE
     do i = IS, IE
@@ -1370,23 +1409,43 @@ contains
     enddo
     enddo
 
-    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-    do j = JS-JO, JE-JO
-    do i = IS, IE
-    do k = KS, KE-KO
+    if ( JO == 0 ) then
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KEE
 #ifdef DEBUG
-       call CHECK( __LINE__, phi(k,i,j+2) )
-       call CHECK( __LINE__, phi(k,i,j+1) )
-       call CHECK( __LINE__, phi(k,i,j  ) )
-       call CHECK( __LINE__, phi(k,i,j-1) )
+          call CHECK( __LINE__, phi(k,i,j+2) )
+          call CHECK( __LINE__, phi(k,i,j+1) )
+          call CHECK( __LINE__, phi(k,i,j  ) )
+          call CHECK( __LINE__, phi(k,i,j-1) )
 #endif
-       diff(k,i,j+JO,YDIR) = ( + CNY3(1,j+1,1) * phi(k,i,j+2) &
+          diff(k,i,j,YDIR) = ( + CNY3(1,j+1,1) * phi(k,i,j+2) &
                                - CNY3(2,j+1,1) * phi(k,i,j+1) &
                                + CNY3(3,j+1,1) * phi(k,i,j  ) &
                                - CNY3(1,j  ,1) * phi(k,i,j-1) )
-    enddo
-    enddo
-    enddo
+       enddo
+       enddo
+       enddo
+    else
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KEE
+#ifdef DEBUG
+          call CHECK( __LINE__, phi(k,i,j+1) )
+          call CHECK( __LINE__, phi(k,i,j  ) )
+          call CHECK( __LINE__, phi(k,i,j-1) )
+          call CHECK( __LINE__, phi(k,i,j-2) )
+#endif
+          diff(k,i,j,YDIR) = ( + CNY3(1,j  ,2) * phi(k,i,j+1) &
+                               - CNY3(2,j  ,2) * phi(k,i,j  ) &
+                               + CNY3(3,j  ,2) * phi(k,i,j-1) &
+                               - CNY3(1,j-1,2) * phi(k,i,j-2) )
+       enddo
+       enddo
+       enddo
+    end if
 
     do j = JS, JE
     do i = IS, IE
