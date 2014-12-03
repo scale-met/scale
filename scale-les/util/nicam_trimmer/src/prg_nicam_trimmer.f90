@@ -57,7 +57,7 @@ program nicam_trimmer
 
   real(DP), allocatable :: lon_trm(:)
   real(DP), allocatable :: lat_trm(:)
-  real(SP), allocatable :: lsmask(:,:)
+  !real(SP), allocatable :: lsmask(:,:)
   real(SP), allocatable :: data_4d(:,:,:,:)
   real(SP), allocatable :: trimmed(:,:,:,:)
 
@@ -155,12 +155,17 @@ program nicam_trimmer
   ! landuse
   allocate( data_4d( dims(1), dims(2), 1, 1 ) )
   allocate( trimmed( dims(6), dims(7), 1, 1 ) )
-  allocate( lsmask( dims(6), dims(7) ) )
+  !allocate( lsmask( dims(6), dims(7) ) )
 
-  call nicamread_lsmask( data_4d, trim(landdir)//"/"//"lsmask.grd", "lsmask", &
-                     (/ dims(1), dims(2), 1 ,1/), .false. )
+  !call nicamread_lsmask( data_4d, trim(landdir)//"/"//"lsmask.grd", "lsmask", &
+  !                   (/ dims(1), dims(2), 1 ,1/), .false. )
+  call nicamread_4D( data_4d, trim(landdir)//"/"//"lsmask", "lsmask", &
+                     (/ dims(1), dims(2), 1, 1/), .false. )
   call trimming_4d( trimmed, data_4d, is, js, ie, je )
-  lsmask(:,:)=trimmed( :, :, 1, 1 )  ! land fraction (sea=0,land=1)
+  call nicamwrite_4D( lon_trm, lat_trm, slev, time, trimmed, "lsmask", &
+                     (/ dims(6), dims(7), 1, 1 /), outputdir, .false. )
+
+  !lsmask(:,:)=trimmed( :, :, 1, 1 )  ! land fraction (sea=0,land=1)
   deallocate( data_4d )
   deallocate( trimmed )
 
@@ -203,6 +208,41 @@ program nicam_trimmer
   call nicamwrite_4D( lon_trm, lat_trm, lev, time, trimmed, "ms_qv", &
                      (/ dims(6), dims(7), dims(3), dims(5) /), outputdir, .false. )
 
+  !> mixing ratio of rain water
+  call nicamread_4D( data_4d, trim(inputdir)//"/"//"ms_qr", "ms_qr", &
+                     (/ dims(1), dims(2), dims(3), dims(5) /), .false. )
+  call trimming_4d( trimmed, data_4d, is, js, ie, je )
+  call nicamwrite_4D( lon_trm, lat_trm, lev, time, trimmed, "ms_qr", &
+                     (/ dims(6), dims(7), dims(3), dims(5) /), outputdir, .false. )
+
+  !> mixing ratio of cloud water
+  call nicamread_4D( data_4d, trim(inputdir)//"/"//"ms_qc", "ms_qc", &
+                     (/ dims(1), dims(2), dims(3), dims(5) /), .false. )
+  call trimming_4d( trimmed, data_4d, is, js, ie, je )
+  call nicamwrite_4D( lon_trm, lat_trm, lev, time, trimmed, "ms_qc", &
+                     (/ dims(6), dims(7), dims(3), dims(5) /), outputdir, .false. )
+
+  !> mixing ratio of cloud ice
+  call nicamread_4D( data_4d, trim(inputdir)//"/"//"ms_qi", "ms_qi", &
+                     (/ dims(1), dims(2), dims(3), dims(5) /), .false. )
+  call trimming_4d( trimmed, data_4d, is, js, ie, je )
+  call nicamwrite_4D( lon_trm, lat_trm, lev, time, trimmed, "ms_qi", &
+                     (/ dims(6), dims(7), dims(3), dims(5) /), outputdir, .false. )
+
+  !> mixing ratio of cloud snow
+  call nicamread_4D( data_4d, trim(inputdir)//"/"//"ms_qs", "ms_qs", &
+                     (/ dims(1), dims(2), dims(3), dims(5) /), .false. )
+  call trimming_4d( trimmed, data_4d, is, js, ie, je )
+  call nicamwrite_4D( lon_trm, lat_trm, lev, time, trimmed, "ms_qs", &
+                     (/ dims(6), dims(7), dims(3), dims(5) /), outputdir, .false. )
+
+  !> mixing ratio of cloud graupel
+  call nicamread_4D( data_4d, trim(inputdir)//"/"//"ms_qg", "ms_qg", &
+                     (/ dims(1), dims(2), dims(3), dims(5) /), .false. )
+  call trimming_4d( trimmed, data_4d, is, js, ie, je )
+  call nicamwrite_4D( lon_trm, lat_trm, lev, time, trimmed, "ms_qg", &
+                     (/ dims(6), dims(7), dims(3), dims(5) /), outputdir, .false. )
+
   deallocate( data_4d )
   deallocate( trimmed )
   allocate( data_4d( dims(1), dims(2), dims(4), 1 ) )
@@ -233,20 +273,18 @@ program nicam_trimmer
   call nicamread_4D( data_4d, trim(inputdir)//"/"//"oa_sst", "oa_sst", &
                      (/ dims(1), dims(2), 1, 1 /), .true. )
   call trimming_4d( trimmed, data_4d, is, js, ie, je )
-
    ! retrieve SST data around coast
-   do j=1,dims(7)
-   do i=1,dims(6)
-      if( abs(lsmask(i,j)-1.0_RP) < EPS )then  ! not land data
-         cycle
-      else
-         trimmed(i,j,1,1)=(trimmed(i,j,1,1)-sst_missval*lsmask(i,j))/(1.0_RP-lsmask(i,j))
-      endif
-   enddo
-   enddo
-
+   !do j=1,dims(7)
+   !do i=1,dims(6)
+   !   if( abs(lsmask(i,j)-1.0_RP) < EPS )then  ! not land data
+   !      cycle
+   !   else
+   !      trimmed(i,j,1,1)=(trimmed(i,j,1,1)-sst_missval*lsmask(i,j))/(1.0_RP-lsmask(i,j))
+   !   endif
+   !enddo
+   !enddo
   ! interpolate data on land
-  call interp_liner_missing (trimmed(:,:,1,1), lsmask, lon_trm, lat_trm ,dims(6), dims(7), sst_missval)
+  !call interp_liner_missing (trimmed(:,:,1,1), lsmask, lon_trm, lat_trm ,dims(6), dims(7), sst_missval)
   call nicamwrite_4D( lon_trm, lat_trm, slev, time, trimmed, "oa_sst", &
                      (/ dims(6), dims(7), 1, 1 /), outputdir, .true. )
   

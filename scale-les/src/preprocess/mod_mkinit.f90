@@ -4450,8 +4450,10 @@ enddo
     implicit none
 
     integer                  :: NUMBER_OF_FILES     = 1
-    integer                  :: NUMBER_OF_TSTEPS    = 1   ! num of time steps in one file
-    integer                  :: INTERP_SERC_DIV_NUM = 10  ! num of dividing blocks in interpolation search
+    integer                  :: NUMBER_OF_TSTEPS    = 1    ! num of time steps in one file
+    integer                  :: NUMBER_OF_SKIP_TSTEPS  = 0 ! num of skipped first several data
+                                                           !                 available only for NICAM
+    integer                  :: INTERP_SERC_DIV_NUM = 10   ! num of dividing blocks in interpolation search
     character(len=H_LONG)    :: BASENAME_ORG        = ''
     character(len=H_LONG)    :: FILETYPE_ORG        = ''
     character(len=H_LONG)    :: BASENAME_BOUNDARY   = 'boundary_real'
@@ -4465,17 +4467,18 @@ enddo
 
 
     NAMELIST / PARAM_MKINIT_REAL / &
-         NUMBER_OF_FILES,     &
-         NUMBER_OF_TSTEPS,    &
-         INTERP_SERC_DIV_NUM, &
-         BASENAME_ORG,        &
-         FILETYPE_ORG,        &
-         BASENAME_BOUNDARY,   &
-         BOUNDARY_TITLE,      &
-         BOUNDARY_UPDATE_DT,  &
-         USE_FILE_DENSITY,    &
-         PARENT_MP_TYPE,      &
-         WRF_FILE_TYPE,       &
+         NUMBER_OF_FILES,        &
+         NUMBER_OF_TSTEPS,       &
+         NUMBER_OF_SKIP_TSTEPS,  &
+         INTERP_SERC_DIV_NUM,    &
+         BASENAME_ORG,           &
+         FILETYPE_ORG,           &
+         BASENAME_BOUNDARY,      &
+         BOUNDARY_TITLE,         &
+         BOUNDARY_UPDATE_DT,     &
+         USE_FILE_DENSITY,       &
+         PARENT_MP_TYPE,         &
+         WRF_FILE_TYPE,          &
          SERIAL_PROC_READ
 
     character(len=H_LONG) :: BASENAME_WITHNUM  = ''
@@ -4572,6 +4575,7 @@ enddo
           ne = n
        endif
 
+       ! read all prepared data
        call ParentAtomInput( DENS_org(:,:,:,ns:ne),    &
                              MOMZ_org(:,:,:,ns:ne),    &
                              MOMX_org(:,:,:,ns:ne),    &
@@ -4588,29 +4592,31 @@ enddo
     enddo
 
     !--- input initial data
+    ns = NUMBER_OF_SKIP_TSTEPS + 1  ! skip first several data
     do j = 1, JA
     do i = 1, IA
     do k = KS, KE
-       DENS(k,i,j) = DENS_ORG(k,i,j,1)
-       MOMZ(k,i,j) = MOMZ_ORG(k,i,j,1)
-       MOMX(k,i,j) = MOMX_ORG(k,i,j,1)
-       MOMY(k,i,j) = MOMY_ORG(k,i,j,1)
-       RHOT(k,i,j) = RHOT_ORG(k,i,j,1)
+       DENS(k,i,j) = DENS_ORG(k,i,j,ns)
+       MOMZ(k,i,j) = MOMZ_ORG(k,i,j,ns)
+       MOMX(k,i,j) = MOMX_ORG(k,i,j,ns)
+       MOMY(k,i,j) = MOMY_ORG(k,i,j,ns)
+       RHOT(k,i,j) = RHOT_ORG(k,i,j,ns)
 
        do iq = 1, QA
-          QTRC(k,i,j,iq) = QTRC_ORG(k,i,j,1,iq)
+          QTRC(k,i,j,iq) = QTRC_ORG(k,i,j,ns,iq)
        enddo
     enddo
     enddo
     enddo
 
     !--- output boundary data
-    call ParentAtomBoundary( DENS_ORG(:,:,:,:),   &
-                             MOMZ_ORG(:,:,:,:),   &
-                             MOMX_ORG(:,:,:,:),   &
-                             MOMY_ORG(:,:,:,:),   &
-                             RHOT_ORG(:,:,:,:),   &
-                             QTRC_ORG(:,:,:,:,:), &
+    totaltimesteps = totaltimesteps - NUMBER_OF_SKIP_TSTEPS ! skip first several data
+    call ParentAtomBoundary( DENS_ORG(:,:,:,ns:ne),   &
+                             MOMZ_ORG(:,:,:,ns:ne),   &
+                             MOMX_ORG(:,:,:,ns:ne),   &
+                             MOMY_ORG(:,:,:,ns:ne),   &
+                             RHOT_ORG(:,:,:,ns:ne),   &
+                             QTRC_ORG(:,:,:,ns:ne,:), &
                              totaltimesteps,      &
                              BOUNDARY_UPDATE_DT,  &
                              BASENAME_BOUNDARY,   &
@@ -4631,17 +4637,18 @@ enddo
       call PRC_MPIstop
     end if
 
-    call ParentSurfaceInput( DENS_ORG(:,:,:,:),   &
-                             MOMZ_ORG(:,:,:,:),   &
-                             MOMX_ORG(:,:,:,:),   &
-                             MOMY_ORG(:,:,:,:),   &
-                             RHOT_ORG(:,:,:,:),   &
-                             QTRC_ORG(:,:,:,:,:), &
-                             BASENAME_WITHNUM,    &
-                             dims,                &
-                             1,                   &
-                             mdlid,               &
-                             SERIAL_PROC_READ     )
+    call ParentSurfaceInput( DENS_ORG(:,:,:,ns:ne),     &
+                             MOMZ_ORG(:,:,:,ns:ne),     &
+                             MOMX_ORG(:,:,:,ns:ne),     &
+                             MOMY_ORG(:,:,:,ns:ne),     &
+                             RHOT_ORG(:,:,:,ns:ne),     &
+                             QTRC_ORG(:,:,:,ns:ne,:),   &
+                             BASENAME_WITHNUM,      &
+                             dims,                  &
+                             1,                     &
+                             NUMBER_OF_SKIP_TSTEPS, & ! skip first several data for 6 hourly data
+                             mdlid,                 &
+                             SERIAL_PROC_READ       )
 
     do j = 1, JA
     do i = 1, IA
