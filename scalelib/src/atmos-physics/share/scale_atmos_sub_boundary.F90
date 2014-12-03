@@ -297,8 +297,6 @@ contains
     if ( l_bnd ) then
 
        COMM_FILL_BND = .false.
-       if ( .not. PRC_HAS_E ) IEH = IE - 1
-       if ( .not. PRC_HAS_N ) JEH = JE - 1
 
        allocate( ATMOS_BOUNDARY_ref_DENS(KA,IA,JA,2) )
        allocate( ATMOS_BOUNDARY_ref_VELZ(KA,IA,JA,2) )

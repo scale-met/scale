@@ -522,6 +522,8 @@ contains
 #ifdef DEBUG
           k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
+       else
+          DDIV(:,:,:) = 0.0_RP
        end if
 
        !##### continuity equation #####
@@ -567,7 +569,7 @@ contains
 
 
        PROFILE_START("hevi_mflx_x")
-       iss = IIS-IFS_OFF
+       iss = max(IIS-1,IS-IFS_OFF)
        iee = min(IIE,IEH)
        ! at (u, y, z)
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
@@ -591,8 +593,8 @@ contains
 
        ! at (x, v, z)
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       do j = JJS-JFS_OFF, min(JJE,JEH)
-       do i = IIS  , IIE
+       do j = max(JJS-1,JS-JFS_OFF), min(JJE,JEH)
+       do i = IIS, IIE
        do k = KS, KE
 #ifdef DEBUG
           call CHECK( __LINE__, GSQRT(k,i,j,I_XVZ) )
@@ -901,8 +903,10 @@ contains
 #endif
        ! at (u, y, z)
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+       iss = max(IIS-1,IS-IFS_OFF)
+       iee = min(IIE,IEH)
        do j = JJS,   JJE
-       do i = IIS-IFS_OFF, min(IIE,IEH)
+       do i = iss, iee
        do k = KS, KE
 #ifdef DEBUG
           call CHECK( __LINE__, mflx_hi(k,i,j,XDIR) )
@@ -924,7 +928,7 @@ contains
 #endif
        ! at (x, v, z)
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       do j = JJS-JFS_OFF, min(JJE,JEH)
+       do j = max(JJS-1,JS-JFS_OFF), min(JJE,JEH)
        do i = IIS,   IIE
        do k = KS, KE
 #ifdef DEBUG

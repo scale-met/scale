@@ -1068,10 +1068,12 @@ contains
     enddo
     do j = JS, JE
     do i = IS, IE
+       num_diff_q(1:KS-2,i,j,ZDIR) = 0.0_RP
        num_diff_q(KS-1,i,j,ZDIR) = work(KS-1,i,j,ZDIR,iwork) * nd_coef_cdz(KS-1) &
                                  * DENS(KS,i,j)
        num_diff_q(KE  ,i,j,ZDIR) = work(KE  ,i,j,ZDIR,iwork) * nd_coef_cdz(KE  ) &
                                  * DENS(KE,i,j)
+       num_diff_q(KE+1:KA,i,j,ZDIR) = 0.0_RP
     enddo
     enddo
 
@@ -1085,8 +1087,10 @@ contains
     enddo
     do j = JS, JE
     do i = IS, IE
+       num_diff_q(1:KS-1,i,j,XDIR) = 0.0_RP
        num_diff_q(KS  ,i,j,XDIR) = num_diff_q(KS  ,i,j,XDIR) * ND_SFC_FACT
        num_diff_q(KS+1,i,j,XDIR) = num_diff_q(KS+1,i,j,XDIR) * (1.0_RP + ND_SFC_FACT) * 0.5_RP
+       num_diff_q(KE+1:KA,i,j,XDIR) = 0.0_RP
     enddo
     enddo
 
@@ -1100,8 +1104,10 @@ contains
     enddo
     do j = JS, JE
     do i = IS, IE
+       num_diff_q(1:KS-1,i,j,YDIR) = 0.0_RP
        num_diff_q(KS  ,i,j,YDIR) = num_diff_q(KS  ,i,j,YDIR) * ND_SFC_FACT
        num_diff_q(KS+1,i,j,YDIR) = num_diff_q(KS+1,i,j,YDIR) * (1.0_RP + ND_SFC_FACT) * 0.5_RP
+       num_diff_q(KE+1:KA,i,j,YDIR) = 0.0_RP
     enddo
     enddo
 
