@@ -329,14 +329,19 @@ contains
     lhist = dt .eq. dtrk
 #endif
 
+#ifdef PROFILE_FIPP
+    call fipp_start()
+#endif
+
+    if ( .not. divdmp_coef > 0.0_RP ) then
+!OCL XFILL
+       DDIV(:,:,:) = 0.0_RP
+    end if
+
     do JJS = JS, JE, JBLOCK
     JJE = JJS+JBLOCK-1
     do IIS = IS, IE, IBLOCK
     IIE = IIS+IBLOCK-1
-
-#ifdef PROFILE_FIPP
-    call fipp_start()
-#endif
 
        ! momentum -> velocity
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
@@ -522,8 +527,6 @@ contains
 #ifdef DEBUG
           k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
-       else
-          DDIV(:,:,:) = 0.0_RP
        end if
 
        !##### continuity equation #####
@@ -765,7 +768,6 @@ contains
 #endif
 
        ! at (u, y, w)
-
        PROFILE_START("hevi_dens_qflxhi_x")
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JJS,   JJE
@@ -820,6 +822,7 @@ contains
 #endif
 
        !--- update momentum(z)
+       PROFILE_START("hevi_sw")
        !$omp parallel do private(i,j,k,advcv,advch,cf,div) OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE
        do i = IIS, IIE
@@ -857,6 +860,7 @@ contains
        enddo
        enddo
        enddo
+       PROFILE_STOP("hevi_sw")
 #ifdef DEBUG
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
@@ -1000,6 +1004,7 @@ contains
        end do
        end do
 
+       PROFILE_START("hevi_a")
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE
        do i = IIS, IIE
@@ -1014,6 +1019,7 @@ contains
        end do
        end do
        end do
+       PROFILE_STOP("hevi_a")
 
        PROFILE_START("hevi_matrix")
        !$omp parallel do private(i,j,k,B) OMP_SCHEDULE_ collapse(2)
@@ -1040,6 +1046,7 @@ contains
        end do
        PROFILE_STOP("hevi_matrix")
 
+       PROFILE_START("hevi_vector")
        !$omp parallel do private(i,j,k,pg) OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE
        do i = IIS, IIE
@@ -1058,6 +1065,7 @@ contains
        end do
        end do
        end do
+       PROFILE_STOP("hevi_vector")
 
 #ifdef HEVI_BICGSTAB
        !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
@@ -1370,9 +1378,10 @@ contains
 
        !--- update momentum(x)
        PROFILE_START("hevi_momx")
+       iee = min(IIE,IEH)
        !$omp parallel do private(i,j,k,advch,advcv,pg,cf,div) OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE
-       do i = IIS, min(IIE,IEH)
+       do i = IIS, iee
        do k = KS, KE
 #ifdef DEBUG
           call CHECK( __LINE__, qflx_hi(k  ,i  ,j  ,ZDIR) )
@@ -1658,12 +1667,12 @@ contains
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
 
+    enddo
+    enddo
+
 #ifdef PROFILE_FIPP
        call fipp_stop()
 #endif
-
-    enddo
-    enddo
 
 #ifdef HIST_TEND
     if ( lhist ) then
@@ -1921,8 +1930,8 @@ contains
     integer,  intent(in)    :: JJS
     integer,  intent(in)    :: JJE
 
-    real(RP) :: e(KMAX-1,IA,JA)
-    real(RP) :: f(KMAX-1,IA,JA)
+    real(RP) :: e(KMAX-2,IA,JA)
+    real(RP) :: f(KMAX-2,IA,JA)
 
     real(RP) :: rdenom
 
@@ -1940,14 +1949,8 @@ contains
           e(k,i,j) = - F1(k+KS-1,i,j) * rdenom
           f(k,i,j) = ( C(k,i,j) - F3(k+KS-1,i,j) * f(k-1,i,j) ) * rdenom
        end do
-    end do
-    end do
-    PROFILE_STOP("hevi_direct1")
 
     ! C = \rho w
-    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-    do j = JJS, JJE
-    do i = IIS, IIE
        C(KMAX-1,i,j) = ( C(KMAX-1,i,j) - F3(KE-1,i,j) * f(KMAX-2,i,j) ) &
                      / ( F2(KE-1,i,j) + F3(KE-1,i,j) * e(KMAX-2,i,j) ) ! C(KMAX-1) = f(KMAX-1)
        do k = KMAX-2, 1, -1
@@ -1955,6 +1958,7 @@ contains
        end do
     end do
     end do
+    PROFILE_STOP("hevi_direct1")
 
     return
   end subroutine solve_direct
