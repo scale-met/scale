@@ -6,8 +6,12 @@
 
 FFLAGS_FAST  = -Kfast,parallel,ocl,preex,array_private,noalias=s,mfunc=2 \
                -Qi -Qt -X03 -Ncompdisp -Koptmsg=1 -Cpp                   \
-               -Kdynamic_iteration -Ksimd                                \
+	       -x-                                                       \
+               -Ksimd                                                    \
                -Kauto,threadsafe
+
+FFLAGS_AGGRESIVE = $(FFLAGS_FAST) \
+		 -Kautoobjstack
 
 # note: Kauto,threadsafe,autoobjstack,temparraystack depends on the stacksize.
 # If you find the segmentation fault error, please check.
@@ -34,6 +38,7 @@ RDMA = -U_USE_RDMA
 #RDMA = -D_USE_RDMA
 
 FC     = mpifrtpx
+#FFLAGS = $(FFLAGS_AGGRESIVE) $(PERF_MONIT) $(RDMA)
 FFLAGS = $(FFLAGS_FAST) $(PERF_MONIT) $(RDMA)
 #FFLAGS = $(FFLAGS_DEBUG) $(PERF_MONIT) $(RDMA)
 
