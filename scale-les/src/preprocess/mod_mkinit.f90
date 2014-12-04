@@ -4576,19 +4576,19 @@ enddo
        endif
 
        ! read all prepared data
-       call ParentAtomInput( DENS_org(:,:,:,ns:ne),    &
-                             MOMZ_org(:,:,:,ns:ne),    &
-                             MOMX_org(:,:,:,ns:ne),    &
-                             MOMY_org(:,:,:,ns:ne),    &
-                             RHOT_org(:,:,:,ns:ne),    &
-                             QTRC_org(:,:,:,ns:ne,:),  &
-                             BASENAME_WITHNUM,         &
-                             USE_FILE_DENSITY,         &
-                             dims(:),                  &
-                             mdlid,                    &
-                             PARENT_MP_TYPE,           &
-                             NUMBER_OF_TSTEPS,         &
-                             SERIAL_PROC_READ          )
+       call ParentAtomInput( DENS_org(:,:,:,ns:ne),   &
+                             MOMZ_org(:,:,:,ns:ne),   &
+                             MOMX_org(:,:,:,ns:ne),   &
+                             MOMY_org(:,:,:,ns:ne),   &
+                             RHOT_org(:,:,:,ns:ne),   &
+                             QTRC_org(:,:,:,ns:ne,:), &
+                             BASENAME_WITHNUM,        &
+                             USE_FILE_DENSITY,        &
+                             dims(:),                 &
+                             mdlid,                   &
+                             PARENT_MP_TYPE,          &
+                             NUMBER_OF_TSTEPS,        &
+                             SERIAL_PROC_READ         )
     enddo
 
     !--- input initial data
@@ -4617,10 +4617,10 @@ enddo
                              MOMY_ORG(:,:,:,ns:ne),   &
                              RHOT_ORG(:,:,:,ns:ne),   &
                              QTRC_ORG(:,:,:,ns:ne,:), &
-                             totaltimesteps,      &
-                             BOUNDARY_UPDATE_DT,  &
-                             BASENAME_BOUNDARY,   &
-                             BOUNDARY_TITLE       )
+                             totaltimesteps,          &
+                             BOUNDARY_UPDATE_DT,      &
+                             BASENAME_BOUNDARY,       &
+                             BOUNDARY_TITLE           )
 
     !--- read/write initial data for bottom boundary models
     n = 1
@@ -4637,18 +4637,18 @@ enddo
       call PRC_MPIstop
     end if
 
-    call ParentSurfaceInput( DENS_ORG(:,:,:,ns:ne),     &
-                             MOMZ_ORG(:,:,:,ns:ne),     &
-                             MOMX_ORG(:,:,:,ns:ne),     &
-                             MOMY_ORG(:,:,:,ns:ne),     &
-                             RHOT_ORG(:,:,:,ns:ne),     &
-                             QTRC_ORG(:,:,:,ns:ne,:),   &
-                             BASENAME_WITHNUM,      &
-                             dims,                  &
-                             1,                     &
-                             NUMBER_OF_SKIP_TSTEPS, & ! skip first several data for 6 hourly data
-                             mdlid,                 &
-                             SERIAL_PROC_READ       )
+    call ParentSurfaceInput( DENS_ORG(:,:,:,ns:ne),   &
+                             MOMZ_ORG(:,:,:,ns:ne),   &
+                             MOMX_ORG(:,:,:,ns:ne),   &
+                             MOMY_ORG(:,:,:,ns:ne),   &
+                             RHOT_ORG(:,:,:,ns:ne),   &
+                             QTRC_ORG(:,:,:,ns:ne,:), &
+                             BASENAME_WITHNUM,        &
+                             dims,                    &
+                             1,                       &
+                             NUMBER_OF_SKIP_TSTEPS,   & ! skip first several data for 6 hourly data
+                             mdlid,                   &
+                             SERIAL_PROC_READ         )
 
     do j = 1, JA
     do i = 1, IA
