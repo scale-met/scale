@@ -1791,6 +1791,8 @@ contains
           if ( abs(ru) < EPSILON .and. abs(rv) < EPSILON .and. abs(rw) < EPSILON ) then
              qa_in = phi_in(k,i,j)
              qa_lo = phi_lo(k,i,j)
+             qb_in = phi_in(k,i,j)
+             qb_lo = phi_lo(k,i,j)
           elseif ( abs(ru) .ge. abs(rv) .and. abs(ru) .ge. abs(rw) ) then
              x = rv / ru
              y = rw / ru
