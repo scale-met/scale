@@ -51,8 +51,8 @@ module mod_realinput
      grav   => CONST_GRAV,   &
      r_in_m => CONST_RADIUS, &
      dwatr  => CONST_DWATR,  &
-     I_SW   => CONST_I_SW,   &
-     I_LW   => CONST_I_LW
+     I_LW   => CONST_I_LW,   &
+     I_SW   => CONST_I_SW
   use scale_external_io
   use scale_land_grid_index
   use scale_land_grid, only: &
@@ -478,8 +478,8 @@ contains
     real(RP) :: lst  (IA,JA)
     real(RP) :: ust  (IA,JA)
     real(RP) :: sst  (IA,JA)
-    real(RP) :: albw (IA,JA,2)
-    real(RP) :: albg (IA,JA,2)
+    real(RP) :: albw (IA,JA,2)  ! albedo for ocean
+    real(RP) :: albg (IA,JA,2)  ! albedo for land
     real(RP) :: z0w  (IA,JA)
     real(RP) :: skint(IA,JA)
     real(RP) :: skinw(IA,JA)
@@ -3471,7 +3471,7 @@ contains
     real(RP), intent(out) :: lst  (:,:)
     real(RP), intent(out) :: ust  (:,:)
     real(RP), intent(out) :: sst  (:,:)
-    real(RP), intent(out) :: albw (:,:,:)
+    real(RP), intent(out) :: albw (:,:,:) 
     real(RP), intent(out) :: albg (:,:,:)
     real(RP), intent(out) :: z0w  (:,:)
     real(RP), intent(out) :: skint(:,:)
@@ -3676,7 +3676,7 @@ contains
                                     single=.true.     )
        strg_org(:,:,:) = real( read4D(:,:,:,1), kind=RP )
 
-       ! 6hourly data, first steps are skipped
+       ! 6hourly data, first "skiplen" steps are skipped
        start_step = skiplen + 1
        end_step   = skiplen + 1
        basename = "ss_tem_sfc"//trim(basename_num)
@@ -3722,11 +3722,11 @@ contains
     call COMM_bcast( sst_org (:,:),              dims(1), dims(2)     )
     !call COMM_bcast( ice_org (:,:),              dims(1), dims(2)     )
 
-    ! replace missing value 
-     maskval_tg=298.0_RP    ! mask value 50K => 298K
-     maskval_strg=0.02_RP    ! mask value 0.0 => 0.02
-                             ! default value 0.02: set as value of forest at 40% of evapolation rate.
-                             ! forest is considered as a typical landuse over Japan area.
+    ! replace missing value
+     maskval_tg   = 298.0_RP    ! mask value 50K => 298K
+     maskval_strg = 0.02_RP     ! mask value 0.0 => 0.02
+                                ! default value 0.02: set as value of forest at 40% of evapolation rate.
+                                ! forest is considered as a typical landuse over Japan area.
      do k=1,dims(7)
      do j=1,dims(2)
      do i=1,dims(1)
@@ -3775,17 +3775,17 @@ contains
      sst_org(:,:) = work(:,:,1)
 
     ! cold start approach
-    skint_org(:,:)   = lst_org(:,:)
-    skinw_org(:,:)   = 0.0_RP
-    snowq_org(:,:)   = 0.0_RP
-    snowt_org(:,:)   = TEM00
-    tw_org   (:,:)   = sst_org(:,:)
-    ust_org  (:,:)   = lst_org(:,:)
-    albw_org (:,:,1) = 0.10_RP
-    albw_org (:,:,2) = 0.10_RP
-    albg_org (:,:,1) = 0.22_RP
-    albg_org (:,:,2) = 0.22_RP
-    z0w_org  (:,:)   = 0.01_RP
+    skint_org(:,:)      = lst_org(:,:)
+    skinw_org(:,:)      = 0.0_RP
+    snowq_org(:,:)      = 0.0_RP
+    snowt_org(:,:)      = TEM00
+    tw_org   (:,:)      = sst_org(:,:)
+    ust_org  (:,:)      = lst_org(:,:)
+    albw_org (:,:,I_LW) = 0.04_RP  ! emissivity of water surface : 0.96
+    albw_org (:,:,I_SW) = 0.10_RP
+    albg_org (:,:,I_LW) = 0.03_RP  ! emissivity of general ground surface : 0.95-0.98
+    albg_org (:,:,I_SW) = 0.22_RP
+    z0w_org  (:,:)      = 0.001_RP  
 
     ! interpolation
     do j = 1, JA
