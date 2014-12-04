@@ -155,11 +155,14 @@ contains
         Z0M,        & ! (in)
         Z0H,        & ! (in)
         Z0E         ) ! (in)
-    use scale_grid_index
+    use scale_process, only: &
+       PRC_myrank,  &
+       PRC_MPIstop
     use scale_const, only: &
       CPdry => CONST_CPdry, &
       STB   => CONST_STB,   &
       LHV0  => CONST_LHV0
+    use scale_grid_index
     use scale_grid_real, only: &
       Z1 => REAL_Z1
     use scale_atmos_saturation, only: &
@@ -337,6 +340,12 @@ contains
             ! not converged and stop program
             if( IO_L ) write(IO_FID_LOG,*) 'Warning: surface tempearture is not converged.'
             if( IO_L ) write(IO_FID_LOG,*) 'Residual [W/m2]', res
+
+            ! check NaN
+            if ( .not. ( pLST > -1.0_RP .OR. pLST < 1.0_RP ) ) then ! must be NaN
+               write(*,*) 'xxx NaN is detected for surface temperature in rank, i, j: ', PRC_myrank, i, j
+               call PRC_MPIstop
+            endif
           end if
 
           ! update surface temperature
