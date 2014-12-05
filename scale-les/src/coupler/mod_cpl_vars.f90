@@ -224,10 +224,10 @@ contains
     allocate( CPL_fromOcn_SFC_albedo(IA,JA,2) )
     allocate( CPL_fromOcn_SFC_Z0M   (IA,JA) )
     allocate( CPL_fromOcn_OCN_TEMP  (IA,JA) )
-    CPL_fromOcn_SFC_TEMP  (:,:) = UNDEF
-    CPL_fromOcn_SFC_albedo(:,:,2) = UNDEF
-    CPL_fromOcn_SFC_Z0M   (:,:) = UNDEF
-    CPL_fromOcn_OCN_TEMP  (:,:) = UNDEF
+    CPL_fromOcn_SFC_TEMP  (:,:)   = UNDEF
+    CPL_fromOcn_SFC_albedo(:,:,:) = UNDEF
+    CPL_fromOcn_SFC_Z0M   (:,:)   = UNDEF
+    CPL_fromOcn_OCN_TEMP  (:,:)   = UNDEF
 
     allocate( CPL_fromLnd_SFC_TEMP  (IA,JA) )
     allocate( CPL_fromLnd_SFC_albedo(IA,JA,2) )
@@ -238,21 +238,21 @@ contains
     allocate( CPL_fromLnd_SFC_Z0E   (IA,JA) )
     allocate( CPL_fromLnd_LND_TEMP  (IA,JA) )
     allocate( CPL_fromLnd_LND_BETA  (IA,JA) )
-    CPL_fromLnd_SFC_TEMP  (:,:) = UNDEF
-    CPL_fromLnd_SFC_albedo(:,:,2) = UNDEF
-    CPL_fromLnd_LND_TCS   (:,:) = UNDEF
-    CPL_fromLnd_LND_DZ    (:,:) = UNDEF
-    CPL_fromLnd_SFC_Z0M   (:,:) = UNDEF
-    CPL_fromLnd_SFC_Z0H   (:,:) = UNDEF
-    CPL_fromLnd_SFC_Z0E   (:,:) = UNDEF
-    CPL_fromLnd_LND_TEMP  (:,:) = UNDEF
-    CPL_fromLnd_LND_BETA  (:,:) = UNDEF
+    CPL_fromLnd_SFC_TEMP  (:,:)   = UNDEF
+    CPL_fromLnd_SFC_albedo(:,:,:) = UNDEF
+    CPL_fromLnd_LND_TCS   (:,:)   = UNDEF
+    CPL_fromLnd_LND_DZ    (:,:)   = UNDEF
+    CPL_fromLnd_SFC_Z0M   (:,:)   = UNDEF
+    CPL_fromLnd_SFC_Z0H   (:,:)   = UNDEF
+    CPL_fromLnd_SFC_Z0E   (:,:)   = UNDEF
+    CPL_fromLnd_LND_TEMP  (:,:)   = UNDEF
+    CPL_fromLnd_LND_BETA  (:,:)   = UNDEF
 
     allocate( CPL_fromUrb_SFC_Z0M   (IA,JA) )
     allocate( CPL_fromUrb_SFC_TEMP  (IA,JA) )
     allocate( CPL_fromUrb_SFC_albedo(IA,JA,2) )
-    CPL_fromUrb_SFC_Z0M   (:,:) = UNDEF
-    CPL_fromUrb_SFC_TEMP  (:,:) = UNDEF
+    CPL_fromUrb_SFC_Z0M   (:,:)   = UNDEF
+    CPL_fromUrb_SFC_TEMP  (:,:)   = UNDEF
     CPL_fromUrb_SFC_albedo(:,:,:) = UNDEF
 
     allocate( CPL_Merged_SFC_TEMP  (IA,JA) )
@@ -269,20 +269,20 @@ contains
     allocate( CPL_Merged_T2        (IA,JA) )
     allocate( CPL_Merged_Q2        (IA,JA) )
     allocate( CPL_Merged_FLX_heat  (IA,JA) )
-    CPL_Merged_SFC_TEMP  (:,:) = UNDEF
-    CPL_Merged_SFC_albedo(:,:,2) = UNDEF
-    CPL_Merged_FLX_MU    (:,:) = UNDEF
-    CPL_Merged_FLX_MV    (:,:) = UNDEF
-    CPL_Merged_FLX_MW    (:,:) = UNDEF
-    CPL_Merged_FLX_SH    (:,:) = UNDEF
-    CPL_Merged_FLX_LH    (:,:) = UNDEF
-    CPL_Merged_FLX_QV    (:,:) = UNDEF
-    CPL_Merged_Z0M       (:,:) = UNDEF
-    CPL_Merged_U10       (:,:) = UNDEF
-    CPL_Merged_V10       (:,:) = UNDEF
-    CPL_Merged_T2        (:,:) = UNDEF
-    CPL_Merged_Q2        (:,:) = UNDEF
-    CPL_Merged_FLX_heat  (:,:) = UNDEF
+    CPL_Merged_SFC_TEMP  (:,:)   = UNDEF
+    CPL_Merged_SFC_albedo(:,:,:) = UNDEF
+    CPL_Merged_FLX_MU    (:,:)   = UNDEF
+    CPL_Merged_FLX_MV    (:,:)   = UNDEF
+    CPL_Merged_FLX_MW    (:,:)   = UNDEF
+    CPL_Merged_FLX_SH    (:,:)   = UNDEF
+    CPL_Merged_FLX_LH    (:,:)   = UNDEF
+    CPL_Merged_FLX_QV    (:,:)   = UNDEF
+    CPL_Merged_Z0M       (:,:)   = UNDEF
+    CPL_Merged_U10       (:,:)   = UNDEF
+    CPL_Merged_V10       (:,:)   = UNDEF
+    CPL_Merged_T2        (:,:)   = UNDEF
+    CPL_Merged_Q2        (:,:)   = UNDEF
+    CPL_Merged_FLX_heat  (:,:)   = UNDEF
 
     allocate( CPL_AtmOcn_ATM_FLX_MU    (IA,JA) )
     allocate( CPL_AtmOcn_ATM_FLX_MV    (IA,JA) )
