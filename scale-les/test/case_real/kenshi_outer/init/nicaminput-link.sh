@@ -4,7 +4,7 @@
 #   2009/10/26 --- Ryuji Yoshida.
 #   2014/07/08 --- Tsuyoshi Yamaura
 #-----------------------------------------
-dir='/data3/kenshi/scale_database/NICAM_output/trimmed_data'
+dir=${SCALE_DB}'/NICAM_output/trimmed_data'
 ftype='peall'
 #
 dt=86400
@@ -49,7 +49,7 @@ do
 
   ln -svf ${dir}/${year}${month}${day}/la_tg.nc      ./la_tg_${fmtd_fn}.${ftype}.nc
   ln -svf ${dir}/${year}${month}${day}/la_wg.nc      ./la_wg_${fmtd_fn}.${ftype}.nc
-  ln -svf ${dir}/${year}${month}${day}/lsmask.nc    ./lsmask_${fmtd_fn}.${ftype}.nc
+  ln -svf ${dir}/${year}${month}${day}/lsmask.nc     ./lsmask_${fmtd_fn}.${ftype}.nc
   ln -svf ${dir}/${year}${month}${day}/ms_pres.nc    ./ms_pres_${fmtd_fn}.${ftype}.nc
   ln -svf ${dir}/${year}${month}${day}/ms_qv.nc      ./ms_qv_${fmtd_fn}.${ftype}.nc
   #ln -svf ${dir}/${year}${month}${day}/ms_rh.nc      ./ms_rh_${fmtd_fn}.${ftype}.nc
