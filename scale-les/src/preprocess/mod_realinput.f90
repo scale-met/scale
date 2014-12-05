@@ -3491,11 +3491,11 @@ contains
     ! ----------------------------------------------------------------
 
     ! work
-    real(RP), allocatable :: read1DX(:)
-    real(RP), allocatable :: read1DY(:)
-    real(RP), allocatable :: read3DT(:,:,:,:)
-    real(4 ), allocatable :: read3DS(:,:,:,:)
-    real(RP), allocatable :: read4D (:,:,:,:)
+    real(SP), allocatable :: read1DX(:)
+    real(SP), allocatable :: read1DY(:)
+    real(SP), allocatable :: read3DT(:,:,:,:)
+    real(SP), allocatable :: read3DS(:,:,:,:)
+    real(SP), allocatable :: read4D (:,:,:,:)
 
     real(RP), allocatable :: lon_org(:,:,:)
     real(RP), allocatable :: lat_org(:,:,:)
@@ -3581,11 +3581,11 @@ contains
     allocate( snowq_org(          dims(1), dims(2)    ) )
     allocate( snowt_org(          dims(1), dims(2)    ) )
 
-    allocate( hfact(          dims(1), dims(2), itp_nh         ) )
-    allocate( vfact( dims(7), dims(1), dims(2), itp_nh, itp_nv ) )
-    allocate( igrd (          dims(1), dims(2), itp_nh         ) )
-    allocate( jgrd (          dims(1), dims(2), itp_nh         ) )
-    allocate( kgrd ( dims(7), dims(1), dims(2), itp_nh, itp_nv ) )
+    allocate( hfact(        IA, JA, itp_nh         ) )
+    allocate( vfact( LKMAX, IA, JA, itp_nh, itp_nv ) )
+    allocate( igrd (        IA, JA, itp_nh         ) )
+    allocate( jgrd (        IA, JA, itp_nh         ) )
+    allocate( kgrd ( LKMAX, IA, JA, itp_nh, itp_nv ) )
 
     if( IO_L ) write(IO_FID_LOG,*) ''
     if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[realinput]/Categ[InputNICAM-Surface]'
