@@ -185,9 +185,9 @@ contains
        URBAN_UCM_TRLEND,     &
        URBAN_UCM_TBLEND,     &
        URBAN_UCM_TGLEND,     &
-       URBAN_UCM_DZR,        &
-       URBAN_UCM_DZB,        &
-       URBAN_UCM_DZG,        &
+       !URBAN_UCM_DZR,        &
+       !URBAN_UCM_DZB,        &
+       !URBAN_UCM_DZG,        &
        URBAN_UCM_BOUND
 
     integer :: ierr
@@ -236,9 +236,9 @@ contains
     URBAN_UCM_TBLEND       = TBLEND
     URBAN_UCM_TGLEND       = TGLEND
     URBAN_UCM_BOUND        = BOUND
-    URBAN_UCM_DZR(UKS:UKE) = 0.01_RP
-    URBAN_UCM_DZB(UKS:UKE) = 0.01_RP
-    URBAN_UCM_DZG(UKS:UKE) = 0.01_RP
+    URBAN_UCM_DZR(UKS:UKE) = (/0.01_RP,0.01_RP,0.03_RP,0.05_RP,0.10_RP/)
+    URBAN_UCM_DZB(UKS:UKE) = (/0.01_RP,0.01_RP,0.03_RP,0.05_RP,0.10_RP/)
+    URBAN_UCM_DZG(UKS:UKE) = (/0.01_RP,0.01_RP,0.03_RP,0.05_RP,0.10_RP/)
 
     !--- read namelist
     rewind(IO_FID_CONF)
