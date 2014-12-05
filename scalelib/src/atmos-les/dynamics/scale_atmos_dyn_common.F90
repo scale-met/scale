@@ -455,7 +455,7 @@ contains
        end do
        end do
 
-       call PROF_rapend  ("NumFilter Main")
+       call PROF_rapend  ("NumFilter Main", 3)
 
        call PROF_rapstart("NumFilter Comm", 3)
 
@@ -465,7 +465,7 @@ contains
        call COMM_wait ( dens_diff,  1 )
        call COMM_wait ( pott_diff,  2 )
 
-       call PROF_rapend  ("NumFilter Comm")
+       call PROF_rapend  ("NumFilter Comm", 3)
 
     end if
 
@@ -485,7 +485,7 @@ contains
        enddo
        enddo
 
-       call PROF_rapend("NumFilter Main")
+       call PROF_rapend("NumFilter Main", 3)
 
     endif
 
@@ -545,7 +545,7 @@ contains
     enddo
     enddo
 
-    call PROF_rapend  ("NumFilter Main")
+    call PROF_rapend  ("NumFilter Main", 3)
 
     call PROF_rapstart("NumFilter Comm", 3)
 
@@ -553,7 +553,7 @@ contains
     call COMM_vars8( num_diff(:,:,:,I_DENS,XDIR),  I_COMM_DENS_X )
     call COMM_vars8( num_diff(:,:,:,I_DENS,YDIR),  I_COMM_DENS_Y )
 
-    call PROF_rapend  ("NumFilter Comm")
+    call PROF_rapend  ("NumFilter Comm", 3)
 
 
     !-----< z-momentum >-----
@@ -569,7 +569,7 @@ contains
     enddo
     enddo
 
-    call PROF_rapend  ("NumFilter Main")
+    call PROF_rapend  ("NumFilter Main", 3)
 
     call calc_numdiff( work(:,:,:,:,1), iwork, & ! (out)
                        VELZ, & ! (in)
@@ -629,7 +629,7 @@ contains
     enddo
     enddo
 
-    call PROF_rapend  ("NumFilter Main")
+    call PROF_rapend  ("NumFilter Main", 3)
 
     call PROF_rapstart("NumFilter Comm", 3)
 
@@ -637,7 +637,7 @@ contains
     call COMM_vars8( num_diff(:,:,:,I_MOMZ,XDIR), I_COMM_MOMZ_X )
     call COMM_vars8( num_diff(:,:,:,I_MOMZ,YDIR), I_COMM_MOMZ_Y )
 
-    call PROF_rapend  ("NumFilter Comm")
+    call PROF_rapend  ("NumFilter Comm", 3)
 
 
     !-----< x-momentum >-----
@@ -653,7 +653,7 @@ contains
     enddo
     enddo
 
-    call PROF_rapend  ("NumFilter Main")
+    call PROF_rapend  ("NumFilter Main", 3)
 
     call calc_numdiff( work(:,:,:,:,1), iwork, & ! (out)
                        VELX, & ! (in)
@@ -714,7 +714,7 @@ contains
     enddo
     enddo
 
-    call PROF_rapend  ("NumFilter Main")
+    call PROF_rapend  ("NumFilter Main", 3)
 
     call PROF_rapstart("NumFilter Comm", 3)
 
@@ -722,7 +722,7 @@ contains
     call COMM_vars8( num_diff(:,:,:,I_MOMX,XDIR), I_COMM_MOMX_X )
     call COMM_vars8( num_diff(:,:,:,I_MOMX,YDIR), I_COMM_MOMX_Y )
 
-    call PROF_rapend  ("NumFilter Comm")
+    call PROF_rapend  ("NumFilter Comm", 3)
 
 
     !-----< y-momentum >-----
@@ -738,7 +738,7 @@ contains
     enddo
     enddo
 
-    call PROF_rapend  ("NumFilter Comm")
+    call PROF_rapend  ("NumFilter Comm", 3)
 
     call calc_numdiff( work(:,:,:,:,1), iwork, & ! (out)
                        VELY, & ! (in)
@@ -797,7 +797,7 @@ contains
     enddo
     enddo
 
-    call PROF_rapend  ("NumFilter Main")
+    call PROF_rapend  ("NumFilter Main", 3)
 
     call PROF_rapstart("NumFilter Comm", 3)
 
@@ -805,7 +805,7 @@ contains
     call COMM_vars8( num_diff(:,:,:,I_MOMY,XDIR), I_COMM_MOMY_X )
     call COMM_vars8( num_diff(:,:,:,I_MOMY,YDIR), I_COMM_MOMY_Y )
 
-    call PROF_rapend  ("NumFilter Comm")
+    call PROF_rapend  ("NumFilter Comm", 3)
 
     !-----< rho * theta >-----
 
@@ -822,7 +822,7 @@ contains
        enddo
     endif
 
-    call PROF_rapend  ("NumFilter Main")
+    call PROF_rapend  ("NumFilter Main", 3)
 
     call calc_numdiff( work(:,:,:,:,1), iwork, & ! (out)
                        pott_diff, & ! (in)
@@ -885,7 +885,7 @@ contains
     enddo
     enddo
 
-    call PROF_rapend  ("NumFilter Main")
+    call PROF_rapend  ("NumFilter Main", 3)
 
     call PROF_rapstart("NumFilter Comm", 3)
 
@@ -909,7 +909,7 @@ contains
     call COMM_wait ( num_diff(:,:,:,I_RHOT,XDIR), I_COMM_RHOT_X )
     call COMM_wait ( num_diff(:,:,:,I_RHOT,YDIR), I_COMM_RHOT_Y )
 
-    call PROF_rapend  ("NumFilter Comm")
+    call PROF_rapend  ("NumFilter Comm", 3)
 
     return
   end subroutine ATMOS_DYN_numfilter_coef
@@ -1009,14 +1009,14 @@ contains
        end do
        end do
 
-       call PROF_rapend  ("NumFilter Main")
+       call PROF_rapend  ("NumFilter Main", 3)
 
        call PROF_rapstart("NumFilter Comm", 3)
 
        call COMM_vars8(qv_diff, 1)
        call COMM_wait (qv_diff, 1)
 
-       call PROF_rapend  ("NumFilter Comm")
+       call PROF_rapend  ("NumFilter Comm", 3)
 
     end if
 
@@ -1035,7 +1035,7 @@ contains
           enddo
           enddo
 
-          call PROF_rapend  ("NumFilter Main")
+          call PROF_rapend  ("NumFilter Main", 3)
 
        endif
 
@@ -1111,7 +1111,7 @@ contains
     enddo
     enddo
 
-    call PROF_rapend  ("NumFilter Main")
+    call PROF_rapend  ("NumFilter Main", 3)
 
     call PROF_rapstart("NumFilter Comm", 3)
 
@@ -1791,6 +1791,8 @@ contains
           if ( abs(ru) < EPSILON .and. abs(rv) < EPSILON .and. abs(rw) < EPSILON ) then
              qa_in = phi_in(k,i,j)
              qa_lo = phi_lo(k,i,j)
+             qb_in = phi_in(k,i,j)
+             qb_lo = phi_lo(k,i,j)
           elseif ( abs(ru) .ge. abs(rv) .and. abs(ru) .ge. abs(rw) ) then
              x = rv / ru
              y = rw / ru

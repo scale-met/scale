@@ -626,8 +626,6 @@ contains
 
     ! calc radiative transfer
     call RD_MSTRN_DTRN3( RD_KMAX,                      & ! [IN]
-                         IA, IS, IE,                   & ! [IN]
-                         JA, JS, JE,                   & ! [IN]
                          MSTRN_ngas,                   & ! [IN]
                          MSTRN_ncfc,                   & ! [IN]
                          RD_naero,                     & ! [IN]
@@ -985,9 +983,7 @@ contains
   !-----------------------------------------------------------------------------
   !> DTRN v3.2
   subroutine RD_MSTRN_DTRN3( &
-       kmax,         &
-       imax, IS, IE, &
-       jmax, JS, JE, &
+       rd_kmax,         &
        ngas,         &
        ncfc,         &
        naero,        &
@@ -1019,9 +1015,7 @@ contains
        PPM  => CONST_PPM
     implicit none
 
-    integer,  intent(in)  :: kmax
-    integer,  intent(in)  :: imax, IS, IE
-    integer,  intent(in)  :: jmax, JS, JE
+    integer,  intent(in)  :: rd_kmax
     integer,  intent(in)  :: ngas
     integer,  intent(in)  :: ncfc
     integer,  intent(in)  :: naero
@@ -1029,71 +1023,71 @@ contains
     integer,  intent(in)  :: hydro_end
     integer,  intent(in)  :: aero_str
     integer,  intent(in)  :: aero_end
-    real(RP), intent(in)  :: solins      (imax,jmax)
-    real(RP), intent(in)  :: cosSZA      (imax,jmax)
-    real(RP), intent(in)  :: rhodz       (kmax  ,imax,jmax)
-    real(RP), intent(in)  :: pres        (kmax  ,imax,jmax)
-    real(RP), intent(in)  :: temp        (kmax  ,imax,jmax)
-    real(RP), intent(in)  :: temph       (kmax+1,imax,jmax)
-    real(RP), intent(in)  :: temp_sfc    (imax,jmax)
-    real(RP), intent(in)  :: gas         (kmax,imax,jmax,ngas )
-    real(RP), intent(in)  :: cfc         (kmax,imax,jmax,ncfc )
-    real(RP), intent(in)  :: aerosol_conc(kmax,imax,jmax,naero)
-    real(RP), intent(in)  :: aerosol_radi(kmax,imax,jmax,naero)
+    real(RP), intent(in)  :: solins      (IA,JA)
+    real(RP), intent(in)  :: cosSZA      (IA,JA)
+    real(RP), intent(in)  :: rhodz       (rd_kmax  ,IA,JA)
+    real(RP), intent(in)  :: pres        (rd_kmax  ,IA,JA)
+    real(RP), intent(in)  :: temp        (rd_kmax  ,IA,JA)
+    real(RP), intent(in)  :: temph       (rd_kmax+1,IA,JA)
+    real(RP), intent(in)  :: temp_sfc    (IA,JA)
+    real(RP), intent(in)  :: gas         (rd_kmax,IA,JA,ngas )
+    real(RP), intent(in)  :: cfc         (rd_kmax,IA,JA,ncfc )
+    real(RP), intent(in)  :: aerosol_conc(rd_kmax,IA,JA,naero)
+    real(RP), intent(in)  :: aerosol_radi(rd_kmax,IA,JA,naero)
     integer,  intent(in)  :: aero2ptype  (naero)
-    real(RP), intent(in)  :: cldfrac     (kmax,imax,jmax)
-    real(RP), intent(in)  :: albedo_land (imax,jmax,2)
-    real(RP), intent(in)  :: fact_ocean  (imax,jmax)
-    real(RP), intent(in)  :: fact_land   (imax,jmax)
-    real(RP), intent(in)  :: fact_urban  (imax,jmax)
-    real(RP), intent(out) :: rflux       (kmax+1,imax,jmax,2,2)
+    real(RP), intent(in)  :: cldfrac     (rd_kmax,IA,JA)
+    real(RP), intent(in)  :: albedo_land (IA,JA,2)
+    real(RP), intent(in)  :: fact_ocean  (IA,JA)
+    real(RP), intent(in)  :: fact_land   (IA,JA)
+    real(RP), intent(in)  :: fact_urban  (IA,JA)
+    real(RP), intent(out) :: rflux       (rd_kmax+1,IA,JA,2,2)
 
     ! for P-T fitting
-    real(RP) :: dz_std (kmax,imax,jmax)       ! layer thickness at 0C, 1atm [cm]
-    real(RP) :: logP   (kmax,imax,jmax)       ! log10(pres)
-    real(RP) :: logT   (kmax,imax,jmax)       ! log10(temp)
-    integer  :: indexP (kmax,imax,jmax)       ! index for interpolation in P-fitting
-    real(RP) :: factP  (kmax,imax,jmax)       ! interpolation factor    in P-fitting
-    real(RP) :: factT32(kmax,imax,jmax)       ! interpolation factor    in T-fitting
-    real(RP) :: factT21(kmax,imax,jmax)       ! interpolation factor    in T-fitting
-    integer  :: indexR (kmax,imax,jmax,naero) ! index for interpolation in R-fitting
-    real(RP) :: factR  (kmax,imax,jmax,naero) ! interpolation factor    in R-fitting
+    real(RP) :: dz_std (rd_kmax,IA,JA)       ! layer thickness at 0C, 1atm [cm]
+    real(RP) :: logP   (rd_kmax,IA,JA)       ! log10(pres)
+    real(RP) :: logT   (rd_kmax,IA,JA)       ! log10(temp)
+    integer  :: indexP (rd_kmax,IA,JA)       ! index for interpolation in P-fitting
+    real(RP) :: factP  (rd_kmax,IA,JA)       ! interpolation factor    in P-fitting
+    real(RP) :: factT32(rd_kmax,IA,JA)       ! interpolation factor    in T-fitting
+    real(RP) :: factT21(rd_kmax,IA,JA)       ! interpolation factor    in T-fitting
+    integer  :: indexR (rd_kmax,IA,JA,naero) ! index for interpolation in R-fitting
+    real(RP) :: factR  (rd_kmax,IA,JA,naero) ! interpolation factor    in R-fitting
 
     ! for optical thickness by gas
-    real(RP) :: tauGAS(kmax,imax,jmax,MSTRN_ch_limit) ! optical thickness by gas absorption (total)
+    real(RP) :: tauGAS(rd_kmax,IA,JA,MSTRN_ch_limit) ! optical thickness by gas absorption (total)
     real(RP) :: A1, A2, A3, factPT
     real(RP) :: qv, length
     integer  :: gasno
 
     ! for optical thickness by particles
-    real(RP) :: tauPR   (kmax,imax,jmax,MSTRN_ncloud)               ! optical thickness        by Rayleigh/cloud/aerosol
-    real(RP) :: omgPR   (kmax,imax,jmax,MSTRN_ncloud)               ! single scattering albedo by Rayleigh/cloud/aerosol
-    real(RP) :: optparam(kmax,imax,jmax,MSTRN_nmoment,MSTRN_ncloud) ! optical parameters
+    real(RP) :: tauPR   (rd_kmax,IA,JA,MSTRN_ncloud)               ! optical thickness        by Rayleigh/cloud/aerosol
+    real(RP) :: omgPR   (rd_kmax,IA,JA,MSTRN_ncloud)               ! single scattering albedo by Rayleigh/cloud/aerosol
+    real(RP) :: optparam(rd_kmax,IA,JA,MSTRN_nmoment,MSTRN_ncloud) ! optical parameters
     real(RP) :: q_fit, dp_P
 
     ! for albedo
-    real(RP) :: albedo_sfc  (imax,jmax,MSTRN_ncloud) ! surface albedo
-    real(RP) :: albedo_ocean(imax,jmax,2, MSTRN_ncloud) ! surface albedo
-    real(RP) :: tau_column  (imax,jmax, MSTRN_ncloud)
+    real(RP) :: albedo_sfc  (IA,JA,MSTRN_ncloud) ! surface albedo
+    real(RP) :: albedo_ocean(IA,JA,2, MSTRN_ncloud) ! surface albedo
+    real(RP) :: tau_column  (IA,JA, MSTRN_ncloud)
 
     ! for planck functions
-    real(RP) :: bbar (kmax  ,imax,jmax) ! planck functions for thermal source at the interface
-    real(RP) :: bbarh(kmax+1,imax,jmax) ! planck functions for thermal source at the center
-    real(RP) :: b_sfc(imax,jmax)        ! planck functions for thermal source at the surface
+    real(RP) :: bbar (rd_kmax  ,IA,JA) ! planck functions for thermal source at the interface
+    real(RP) :: bbarh(rd_kmax+1,IA,JA) ! planck functions for thermal source at the center
+    real(RP) :: b_sfc(IA,JA)        ! planck functions for thermal source at the surface
     real(RP) :: wl, beta
 
     ! for two-stream
-    real(RP) :: tau(kmax,imax,jmax,    MSTRN_ncloud) ! total optical thickness
-    real(RP) :: omg(kmax,imax,jmax,    MSTRN_ncloud) ! single scattering albedo
-    real(RP) :: g  (kmax,imax,jmax,0:2,MSTRN_ncloud) ! two-stream approximation factors
+    real(RP) :: tau(rd_kmax,IA,JA,    MSTRN_ncloud) ! total optical thickness
+    real(RP) :: omg(rd_kmax,IA,JA,    MSTRN_ncloud) ! single scattering albedo
+    real(RP) :: g  (rd_kmax,IA,JA,0:2,MSTRN_ncloud) ! two-stream approximation factors
                                                      ! 0: always 1
                                                      ! 1: asymmetry factor
                                                      ! 2: truncation factor
-    real(RP) :: b  (kmax,imax,jmax,0:2,MSTRN_ncloud) ! planck expansion coefficients (zero if SW)
-    real(RP) :: fsol_rgn(imax,jmax)                  ! solar insolation              (zero if LW)
+    real(RP) :: b  (rd_kmax,IA,JA,0:2,MSTRN_ncloud) ! planck expansion coefficients (zero if SW)
+    real(RP) :: fsol_rgn(IA,JA)                  ! solar insolation              (zero if LW)
 
-    real(RP) :: flux       (kmax+1,imax,jmax,2)      ! upward/downward flux
-    real(RP) :: flux_direct(kmax+1,imax,jmax)        ! downward flux (direct solar)
+    real(RP) :: flux       (rd_kmax+1,IA,JA,2)      ! upward/downward flux
+    real(RP) :: flux_direct(rd_kmax+1,IA,JA)        ! downward flux (direct solar)
 
     real(RP) :: zerosw
     real(RP) :: valsum
@@ -1118,7 +1112,7 @@ contains
     !$acc loop gang vector(8)
     do i = IS, IE
     !$acc loop gang vector(32)
-    do k = 1, kmax
+    do k = 1, rd_kmax
        dz_std(k,i,j) = rhodz(k,i,j) * RRHO_std ! [cm]
     enddo
     enddo
@@ -1131,7 +1125,7 @@ contains
     !$acc loop gang vector(8)
     do i = IS, IE
     !$acc loop gang vector(32)
-    do k = 1, kmax
+    do k = 1, rd_kmax
        logP(k,i,j) = log10( pres(k,i,j) )
        logT(k,i,j) = log10( temp(k,i,j) )
     enddo
@@ -1145,7 +1139,7 @@ contains
     !$acc loop gang vector(8)
     do i = IS, IE
     !$acc loop gang vector(32)
-    do k = 1, kmax
+    do k = 1, rd_kmax
        indexP(k,i,j) = MSTRN_nfitP
        !$acc loop seq
        do ip = MSTRN_nfitP, 2, -1
@@ -1163,7 +1157,7 @@ contains
     !$acc loop gang vector(8)
     do i = IS, IE
     !$acc loop gang vector(32) private(ip)
-    do k = 1, kmax
+    do k = 1, rd_kmax
        ip = indexP(k,i,j)
 
        factP(k,i,j) = ( logP(k,i,j) - logfitP(ip-1) ) / ( logfitP(ip) - logfitP(ip-1) )
@@ -1187,7 +1181,7 @@ contains
        !$acc loop gang vector(8)
        do i = IS, IE
        !$acc loop gang vector(32)
-       do k = 1, kmax
+       do k = 1, rd_kmax
           if ( aerosol_radi(k,i,j,iaero) <= radmode(iptype,1) ) then ! extrapolation
 
              ir = 1
@@ -1241,7 +1235,7 @@ contains
           !$acc loop gang vector(8)
           do i = IS, IE
           !$acc loop gang vector(32)
-          do k = 1, kmax
+          do k = 1, rd_kmax
              tauGAS(k,i,j,ich) = 0.0_RP
           enddo
           enddo
@@ -1260,7 +1254,7 @@ contains
           !$acc loop gang vector(8)
           do i = IS, IE
           !$acc loop gang vector(32)
-          do k = 1, kmax
+          do k = 1, rd_kmax
              ip = indexP(k,i,j)
 
              length = gas(k,i,j,igasabs(igas,iw)) * PPM * dz_std(k,i,j)
@@ -1293,7 +1287,7 @@ contains
           !$acc loop gang vector(8)
           do i = IS, IE
           !$acc loop gang vector(32)
-          do k = 1, kmax
+          do k = 1, rd_kmax
              ip = indexP(k,i,j)
 
              qv = gas(k,i,j,1) * PPM * dz_std(k,i,j)
@@ -1325,7 +1319,7 @@ contains
           !$acc loop gang vector(4)
           do i = IS, IE
           !$acc loop gang vector(32)
-          do k = 1, kmax
+          do k = 1, rd_kmax
              valsum = 0.0_RP
              !$acc loop seq
              do icfc = 1, ncfc
@@ -1356,7 +1350,7 @@ contains
        !$acc loop gang vector(8)
        do i = IS, IE
        !$acc loop gang vector(32)
-       do k = 1, kmax
+       do k = 1, rd_kmax
           dp_P = rhodz(k,i,j) * GRAV / Pstd
           length = rayleigh(iw) * dp_P
 
@@ -1380,7 +1374,7 @@ contains
           !$acc loop gang vector(8)
           do i = IS, IE
           !$acc loop gang vector(32)
-          do k = 1, kmax
+          do k = 1, rd_kmax
              ir = indexR(k,i,j,iaero)
 
              length = aerosol_conc(k,i,j,iaero) * PPM * dz_std(k,i,j)
@@ -1408,7 +1402,7 @@ contains
           !$acc loop gang vector(8)
           do i = IS, IE
           !$acc loop gang vector(32)
-          do k = 1, kmax
+          do k = 1, rd_kmax
              ir = indexR(k,i,j,iaero)
 
              length = aerosol_conc(k,i,j,iaero) * PPM * dz_std(k,i,j)
@@ -1434,7 +1428,7 @@ contains
           !$acc loop gang vector(8)
           do i = IS, IE
           !$acc loop gang vector(32)
-          do k = 1, kmax
+          do k = 1, rd_kmax
              tauPR(k,i,j,icloud) = optparam(k,i,j,1,icloud)
              omgPR(k,i,j,icloud) = optparam(k,i,j,1,icloud) - optparam(k,i,j,2,icloud)
 
@@ -1464,7 +1458,7 @@ contains
           do i = IS, IE
              valsum = 0.0_RP
              !$acc loop gang vector(32) reduction(+:valsum)
-             do k = 1, kmax
+             do k = 1, rd_kmax
                 valsum = valsum + tauPR(k,i,j,icloud) ! layer-total(for ocean albedo)
              enddo
              tau_column(i,j,icloud) = valsum
@@ -1472,9 +1466,7 @@ contains
           enddo
           !$acc end kernels
 
-          call RD_albedo_ocean( imax, IS, IE,               & ! [IN]
-                                jmax, JS, JE,               & ! [IN]
-                                cosSZA      (:,:),          & ! [IN]
+          call RD_albedo_ocean( cosSZA      (:,:),          & ! [IN]
                                 tau_column  (:,:,icloud),   & ! [IN]
                                 albedo_ocean(:,:,:,icloud) )  ! [OUT]
 
@@ -1502,7 +1494,7 @@ contains
              !$acc loop gang vector(8)
              do i = IS, IE
              !$acc loop gang vector(32)
-             do k = 1, kmax
+             do k = 1, rd_kmax
                 tau(k,i,j,icloud) = tauGAS(k,i,j,ich) + tauPR(k,i,j,icloud)
                 !tau(k,i,j,icloud) = max( tauGAS(k,i,j,ich) + tauPR(k,i,j,icloud), 0.0_RP )
 
@@ -1528,7 +1520,7 @@ contains
                 !$acc loop gang vector(8)
                 do i = IS, IE
                 !$acc loop gang vector(32)
-                do k = 1, kmax
+                do k = 1, rd_kmax
                    b(k,i,j,0,icloud) = 0.0_RP
                    b(k,i,j,1,icloud) = 0.0_RP
                    b(k,i,j,2,icloud) = 0.0_RP
@@ -1560,7 +1552,7 @@ contains
              !$acc loop gang vector(8)
              do i = IS, IE
              !$acc loop gang vector(32)
-             do k = 1, kmax
+             do k = 1, rd_kmax
                 beta = 0.0_RP
                 !$acc loop seq
                 do iplk = MSTRN_nfitPLK, 1, -1
@@ -1580,7 +1572,7 @@ contains
              !$acc loop gang vector(8)
              do i = IS, IE
              !$acc loop gang vector(32)
-             do k = 1, kmax+1
+             do k = 1, rd_kmax+1
                 beta = 0.0_RP
                 !$acc loop seq
                 do iplk = MSTRN_nfitPLK, 1, -1
@@ -1600,7 +1592,7 @@ contains
                 !$acc loop gang vector(8)
                 do i = IS, IE
                 !$acc loop gang vector(32)
-                do k = 1, kmax
+                do k = 1, rd_kmax
                    zerosw = 0.5_RP - sign( 0.5_RP, tau(k,i,j,icloud)-RD_EPS ) ! if tau < EPS, zerosw = 1
 
                    b(k,i,j,0,icloud) = bbarh(k,i,j)
@@ -1657,9 +1649,7 @@ contains
           !if( IO_L ) write(IO_FID_LOG,*) "omg min", iw, ich, minval(omg(:,IS:IE,JS:JE,1)), minval(omg(:,IS:IE,JS:JE,2))
 
           ! two-stream transfer
-          call RD_MSTRN_two_stream( kmax,                   & ! [IN]
-                                    imax, IS, IE,           & ! [IN]
-                                    jmax, JS, JE,           & ! [IN]
+          call RD_MSTRN_two_stream( rd_kmax,                   & ! [IN]
                                     iw, ich,                & ! [IN]
                                     cosSZA     (:,:),       & ! [IN]
                                     fsol_rgn   (:,:),       & ! [IN]
@@ -1680,7 +1670,7 @@ contains
           !$acc loop gang vector(8)
           do i = IS, IE
           !$acc loop gang vector(32)
-          do k = 1, kmax+1
+          do k = 1, rd_kmax+1
              rflux(k,i,j,irgn,I_up) = rflux(k,i,j,irgn,I_up) + flux(k,i,j,I_up) * wgtch(ich,iw)
              rflux(k,i,j,irgn,I_dn) = rflux(k,i,j,irgn,I_dn) + flux(k,i,j,I_dn) * wgtch(ich,iw)
           enddo
@@ -1707,9 +1697,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Two stream calculation CORE
   subroutine RD_MSTRN_two_stream( &
-       kmax,         &
-       imax, IS, IE, &
-       jmax, JS, JE, &
+       rd_kmax,         &
        iw, ich,      &
        cosSZA0,      &
        fsol,         &
@@ -1728,23 +1716,21 @@ contains
        EPS1 => CONST_EPS1
     implicit none
 
-    integer,  intent(in)  :: kmax
-    integer,  intent(in)  :: imax, IS, IE
-    integer,  intent(in)  :: jmax, JS, JE
+    integer,  intent(in)  :: rd_kmax
     integer,  intent(in)  :: iw, ich
-    real(RP), intent(in)  :: cosSZA0    (imax,jmax)                       ! cos(SZA) = mu0
-    real(RP), intent(in)  :: fsol       (imax,jmax)                       ! solar radiation intensity
+    real(RP), intent(in)  :: cosSZA0    (IA,JA)                       ! cos(SZA) = mu0
+    real(RP), intent(in)  :: fsol       (IA,JA)                       ! solar radiation intensity
     integer,  intent(in)  :: irgn                                         ! 1:SW 2:LW
-    real(RP), intent(in)  :: tau        (kmax,imax,jmax,    MSTRN_ncloud) ! total optical thickness          (clear-sky/cloud)
-    real(RP), intent(in)  :: omg        (kmax,imax,jmax,    MSTRN_ncloud) ! single scattering albedo         (clear-sky/cloud)
-    real(RP), intent(in)  :: g          (kmax,imax,jmax,0:2,MSTRN_ncloud) ! two-stream approximation factors (clear-sky/cloud)
-    real(RP), intent(in)  :: b          (kmax,imax,jmax,0:2,MSTRN_ncloud) ! planck expansion coefficients    (clear-sky/cloud)
-    real(RP), intent(in)  :: b_sfc      (imax,jmax)                       ! planck function at surface
-    real(RP), intent(in)  :: albedo_sfc (imax,jmax,MSTRN_ncloud)          ! surface albedo                   (clear-sky/cloud)
-    real(RP), intent(in)  :: cldfrac    (kmax,imax,jmax)                  ! cloud fraction
+    real(RP), intent(in)  :: tau        (rd_kmax,IA,JA,    MSTRN_ncloud) ! total optical thickness          (clear-sky/cloud)
+    real(RP), intent(in)  :: omg        (rd_kmax,IA,JA,    MSTRN_ncloud) ! single scattering albedo         (clear-sky/cloud)
+    real(RP), intent(in)  :: g          (rd_kmax,IA,JA,0:2,MSTRN_ncloud) ! two-stream approximation factors (clear-sky/cloud)
+    real(RP), intent(in)  :: b          (rd_kmax,IA,JA,0:2,MSTRN_ncloud) ! planck expansion coefficients    (clear-sky/cloud)
+    real(RP), intent(in)  :: b_sfc      (IA,JA)                       ! planck function at surface
+    real(RP), intent(in)  :: albedo_sfc (IA,JA,MSTRN_ncloud)          ! surface albedo                   (clear-sky/cloud)
+    real(RP), intent(in)  :: cldfrac    (rd_kmax,IA,JA)                  ! cloud fraction
 
-    real(RP), intent(out) :: flux       (kmax+1,imax,jmax,2)              ! upward(sfc->TOA)/downward(TOA->sfc) flux
-    real(RP), intent(out) :: flux_direct(kmax+1,imax,jmax)                ! downward(TOA->sfc) flux, solar direct
+    real(RP), intent(out) :: flux       (rd_kmax+1,IA,JA,2)              ! upward(sfc->TOA)/downward(TOA->sfc) flux
+    real(RP), intent(out) :: flux_direct(rd_kmax+1,IA,JA)                ! downward(TOA->sfc) flux, solar direct
 
     ! parameters with two-stream truncation
     real(RP) :: tau_new    ! optical thickness        : two-stream truncation
@@ -1762,7 +1748,7 @@ contains
     real(RP) :: Smns, Spls ! Source function          : two-stream truncation
 
     ! working
-    real(RP) :: cosSZA(imax,jmax)
+    real(RP) :: cosSZA(IA,JA)
     real(RP) :: X, Y                 ! X-, X+
     real(RP) :: lamda                ! eigenvalue of X-, X+
     real(RP) :: E
@@ -1776,27 +1762,27 @@ contains
     real(RP) :: Qgamma               ! Q * gamma
 
     ! main factors
-    real(RP) :: Tdir0(kmax,imax,jmax,MSTRN_ncloud) ! transmission factor for solar direct (clear-sky/cloud)
-    real(RP) :: R0   (kmax,imax,jmax,MSTRN_ncloud) ! reflection   factor                  (clear-sky/cloud)
-    real(RP) :: T0   (kmax,imax,jmax,MSTRN_ncloud) ! transmission factor                  (clear-sky/cloud)
-    real(RP) :: Em_LW(kmax,imax,jmax,MSTRN_ncloud) ! thermal source (sfc->TOA)            (clear-sky/cloud)
-    real(RP) :: Em_SW(kmax,imax,jmax,MSTRN_ncloud) ! solar   source (sfc->TOA)            (clear-sky/cloud)
-    real(RP) :: Ep_LW(kmax,imax,jmax,MSTRN_ncloud) ! thermal source (TOA->sfc)            (clear-sky/cloud)
-    real(RP) :: Ep_SW(kmax,imax,jmax,MSTRN_ncloud) ! solar   source (TOA->sfc)            (clear-sky/cloud)
+    real(RP) :: Tdir0(rd_kmax,IA,JA,MSTRN_ncloud) ! transmission factor for solar direct (clear-sky/cloud)
+    real(RP) :: R0   (rd_kmax,IA,JA,MSTRN_ncloud) ! reflection   factor                  (clear-sky/cloud)
+    real(RP) :: T0   (rd_kmax,IA,JA,MSTRN_ncloud) ! transmission factor                  (clear-sky/cloud)
+    real(RP) :: Em_LW(rd_kmax,IA,JA,MSTRN_ncloud) ! thermal source (sfc->TOA)            (clear-sky/cloud)
+    real(RP) :: Em_SW(rd_kmax,IA,JA,MSTRN_ncloud) ! solar   source (sfc->TOA)            (clear-sky/cloud)
+    real(RP) :: Ep_LW(rd_kmax,IA,JA,MSTRN_ncloud) ! thermal source (TOA->sfc)            (clear-sky/cloud)
+    real(RP) :: Ep_SW(rd_kmax,IA,JA,MSTRN_ncloud) ! solar   source (TOA->sfc)            (clear-sky/cloud)
 
     ! Averaged factors, considering cloud overwrap
-    real(RP) :: tau_bar_sol(kmax+1,imax,jmax) ! solar insolation through accumulated optical thickness at each layer
-    real(RP) :: Tdir       (kmax+1,imax,jmax) ! transmission factor for solar direct
-    real(RP) :: R          (kmax+1,imax,jmax) ! reflection   factor
-    real(RP) :: T          (kmax+1,imax,jmax) ! transmission factor
-    real(RP) :: Em         (kmax+1,imax,jmax) ! source (sfc->TOA)
-    real(RP) :: Ep         (kmax+1,imax,jmax) ! source (TOA->sfc)
+    real(RP) :: tau_bar_sol(rd_kmax+1,IA,JA) ! solar insolation through accumulated optical thickness at each layer
+    real(RP) :: Tdir       (rd_kmax+1,IA,JA) ! transmission factor for solar direct
+    real(RP) :: R          (rd_kmax+1,IA,JA) ! reflection   factor
+    real(RP) :: T          (rd_kmax+1,IA,JA) ! transmission factor
+    real(RP) :: Em         (rd_kmax+1,IA,JA) ! source (sfc->TOA)
+    real(RP) :: Ep         (rd_kmax+1,IA,JA) ! source (TOA->sfc)
 
     ! Doubling-Adding
-    real(RP) :: R12mns(kmax+1,imax,jmax) ! reflection factor in doubling method
-    real(RP) :: R12pls(kmax+1,imax,jmax) ! reflection factor in doubling method
-    real(RP) :: E12mns(kmax+1,imax,jmax) ! source function   in doubling method
-    real(RP) :: E12pls(kmax+1,imax,jmax) ! source function   in doubling method
+    real(RP) :: R12mns(rd_kmax+1,IA,JA) ! reflection factor in doubling method
+    real(RP) :: R12pls(rd_kmax+1,IA,JA) ! reflection factor in doubling method
+    real(RP) :: E12mns(rd_kmax+1,IA,JA) ! source function   in doubling method
+    real(RP) :: E12pls(rd_kmax+1,IA,JA) ! source function   in doubling method
     real(RP) :: Umns, Upls               ! flux intensity
 
     real(RP) :: Em0(MSTRN_ncloud)
@@ -1835,14 +1821,15 @@ contains
        !$acc kernels pcopy(tdir0, r0, t0, em_lw, ep_lw, em_sw, ep_sw) &
        !$acc& pcopyin(wmns, tau, g, omg, cossza, b, m, w) async(0)
 !OCL PARALLEL
+!OCL NORECURRENCE(Tdir0,R0,T0,Em_LW,Ep_LW,Em_SW,Ep_SW)
        !do j = JS, JE
        !do i = IS, IE
-       !do k = 1, kmax
+       !do k = 1, rd_kmax
        !$acc loop independent gang vector(128)
-       do kij = 1, kmax*(IE-IS+1)*(JE-JS+1)
-          k = 1  + mod(kij-1, kmax)
-          i = IS + mod((kij-1)/kmax, (IE-IS+1))
-          j = JS + (kij-1)/(kmax*(IE-IS+1))
+       do kij = 1, rd_kmax*IMAX*JMAX
+          k = 1  + mod(kij-1, rd_kmax)
+          i = IS + mod((kij-1)/rd_kmax, IMAX)
+          j = JS + (kij-1)/(rd_kmax*IMAX)
 
           !---< two-stream truncation >---
           tau_new = ( 1.0_RP - omg(k,i,j,icloud)*g(k,i,j,2,icloud) ) * tau(k,i,j,icloud)
@@ -1946,7 +1933,7 @@ contains
     !$acc loop gang vector(8)
     do i = IS, IE
     !$acc loop gang vector(32)
-    do k = 1, kmax
+    do k = 1, rd_kmax
        Tdir(k,i,j) = (        cldfrac(k,i,j) ) * Tdir0(k,i,j,I_Cloud   ) &
                    + ( 1.0_RP-cldfrac(k,i,j) ) * Tdir0(k,i,j,I_ClearSky)
 
@@ -1965,7 +1952,7 @@ contains
     do i = IS, IE
        tau_bar_sol(1,i,j) = fsol(i,j) ! k-recurrence
        !$acc loop seq
-       do k = 2, kmax+1
+       do k = 2, rd_kmax+1
           tau_bar_sol(k,i,j) = tau_bar_sol(k-1,i,j) * Tdir(k-1,i,j)
        enddo
     enddo
@@ -1976,7 +1963,7 @@ contains
     !$acc loop gang vector(8)
     do i = IS, IE
     !$acc loop gang vector(32)
-    do k = 1, kmax
+    do k = 1, rd_kmax
        Em(k,i,j) = (        cldfrac(k,i,j) ) * ( Em_LW(k,i,j,I_Cloud   ) &
                                                + Em_SW(k,i,j,I_Cloud   ) * tau_bar_sol(k,i,j) ) &
                  + ( 1.0_RP-cldfrac(k,i,j) ) * ( Em_LW(k,i,j,I_ClearSky) &
@@ -1997,22 +1984,22 @@ contains
     !$acc loop gang vector(32) private(Em0)
     do i = IS, IE
        ! at lambert surface
-       R (kmax+1,i,j) = (        cldfrac(kmax,i,j) ) * albedo_sfc(i,j,I_Cloud   ) &
-                      + ( 1.0_RP-cldfrac(kmax,i,j) ) * albedo_sfc(i,j,I_ClearSky)
+       R (rd_kmax+1,i,j) = (        cldfrac(rd_kmax,i,j) ) * albedo_sfc(i,j,I_Cloud   ) &
+                      + ( 1.0_RP-cldfrac(rd_kmax,i,j) ) * albedo_sfc(i,j,I_ClearSky)
 
-       T (kmax+1,i,j) = 0.0_RP
+       T (rd_kmax+1,i,j) = 0.0_RP
 
-       flux_direct(kmax+1,i,j) = cosSZA(i,j) * tau_bar_sol(kmax+1,i,j)
+       flux_direct(rd_kmax+1,i,j) = cosSZA(i,j) * tau_bar_sol(rd_kmax+1,i,j)
 
-       Em0(I_Cloud   ) = Wpls_irgn * ( flux_direct(kmax+1,i,j) * albedo_sfc(i,j,I_Cloud   ) / (W_irgn*M_irgn) &
+       Em0(I_Cloud   ) = Wpls_irgn * ( flux_direct(rd_kmax+1,i,j) * albedo_sfc(i,j,I_Cloud   ) / (W_irgn*M_irgn) &
                        + 2.0_RP * PI * ( 1.0_RP-albedo_sfc(i,j,I_Cloud   ) ) * b_sfc(i,j) )
-       Em0(I_ClearSky) = Wpls_irgn * ( flux_direct(kmax+1,i,j) * albedo_sfc(i,j,I_ClearSky) / (W_irgn*M_irgn) &
+       Em0(I_ClearSky) = Wpls_irgn * ( flux_direct(rd_kmax+1,i,j) * albedo_sfc(i,j,I_ClearSky) / (W_irgn*M_irgn) &
                        + 2.0_RP * PI * ( 1.0_RP-albedo_sfc(i,j,I_ClearSky) ) * b_sfc(i,j) )
 
-       Em(kmax+1,i,j) = (        cldfrac(kmax,i,j) ) * Em0(I_Cloud   ) &
-                      + ( 1.0_RP-cldfrac(kmax,i,j) ) * Em0(I_ClearSky)
+       Em(rd_kmax+1,i,j) = (        cldfrac(rd_kmax,i,j) ) * Em0(I_Cloud   ) &
+                      + ( 1.0_RP-cldfrac(rd_kmax,i,j) ) * Em0(I_ClearSky)
 
-       Ep(kmax+1,i,j) = 0.0_RP
+       Ep(rd_kmax+1,i,j) = 0.0_RP
     enddo
     enddo
 
@@ -2030,8 +2017,8 @@ contains
           do j = JS, JE
           !$acc loop gang vector(32)
           do i = IS, IE
-             R12pls(kmax+1,i,j) = R (kmax+1,i,j)
-             E12mns(kmax+1,i,j) = Em(kmax+1,i,j)
+             R12pls(rd_kmax+1,i,j) = R (rd_kmax+1,i,j)
+             E12mns(rd_kmax+1,i,j) = Em(rd_kmax+1,i,j)
           enddo
           enddo
 
@@ -2040,7 +2027,7 @@ contains
           !$acc loop gang vector(32)
           do i = IS, IE
              !$acc loop seq
-             do k = kmax, 1, -1
+             do k = rd_kmax, 1, -1
                 R12pls(k,i,j) = R (k,i,j) + T(k,i,j) / ( 1.0_RP - R12pls(k+1,i,j) * R(k,i,j)           ) &
                                                      * ( R12pls(k+1,i,j) * T (k,i,j)                   )
                 E12mns(k,i,j) = Em(k,i,j) + T(k,i,j) / ( 1.0_RP - R12pls(k+1,i,j) * R(k,i,j)           ) &
@@ -2065,7 +2052,7 @@ contains
           !$acc loop gang vector(32)
           do i = IS, IE
              !$acc loop seq
-             do k = 2, kmax+1
+             do k = 2, rd_kmax+1
                 R12mns(k,i,j) = R (k,i,j) + T(k,i,j) / ( 1.0_RP - R12mns(k-1,i,j) * R(k,i,j)         ) &
                                                      * ( R12mns(k-1,i,j) *T (k,i,j)                  )
                 E12pls(k,i,j) = Ep(k,i,j) + T(k,i,j) / ( 1.0_RP - R12mns(k-1,i,j) * R(k,i,j)         ) &
@@ -2088,7 +2075,7 @@ contains
     !$acc loop gang vector(8)
     do i = IS, IE
     !$acc loop gang vector(32)
-    do k = 1, kmax+1
+    do k = 1, rd_kmax+1
        if ( k == 1 ) then ! TOA boundary
           Upls = 0.0_RP
        else
@@ -2111,18 +2098,14 @@ contains
   !-----------------------------------------------------------------------------
   ! Sea surface reflectance by Payne
   subroutine RD_albedo_ocean( &
-       imax, IS, IE, &
-       jmax, JS, JE, &
        cosSZA,       &
        tau,          &
        albedo_ocean )
     implicit none
 
-    integer,  intent(in)  :: imax, IS, IE
-    integer,  intent(in)  :: jmax, JS, JE
-    real(RP), intent(in)  :: cosSZA      (imax,jmax)
-    real(RP), intent(in)  :: tau         (imax,jmax)
-    real(RP), intent(out) :: albedo_ocean(imax,jmax,2)
+    real(RP), intent(in)  :: cosSZA      (IA,JA)
+    real(RP), intent(in)  :: tau         (IA,JA)
+    real(RP), intent(out) :: albedo_ocean(IA,JA,2)
 
     real(RP) :: am1, tr1, s
     real(RP) :: sw

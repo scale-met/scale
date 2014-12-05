@@ -58,6 +58,7 @@ module scale_prof
   integer,                private,      save :: PROF_rapnend(PROF_rapnlimit)
   integer,                private,      save :: PROF_raplevel(PROF_rapnlimit)
 
+  integer,                private, parameter :: PROF_default_rap_level = 2
   integer,                private,      save :: PROF_rap_level = 2
 
 #ifdef _PAPI_
@@ -116,7 +117,7 @@ contains
     if ( present(level) ) then
        level_ = level
     else
-       level_ = 2
+       level_ = PROF_default_rap_level
     end if
 
     if ( level_ > PROF_rap_level ) return
@@ -146,7 +147,7 @@ contains
     implicit none
 
     character(len=*), intent(in) :: rapname !< name of item
-    integer, intent(in), optional :: level  !< level of item (default is 2)
+    integer, intent(in), optional :: level  !< level of item
 
     integer :: id
     integer :: level_

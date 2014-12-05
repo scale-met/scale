@@ -10,6 +10,9 @@ FFLAGS_FAST  = -Kfast,parallel,ocl,preex,array_private,noalias=s,mfunc=2 \
                -Ksimd                                                    \
                -Kauto,threadsafe
 
+FFLAGS_AGGRESIVE = $(FFLAGS_FAST) \
+		 -Kautoobjstack
+
 # note: Kauto,threadsafe,autoobjstack,temparraystack depends on the stacksize.
 # If you find the segmentation fault error, please check.
 
@@ -20,7 +23,7 @@ FFLAGS_DEBUG = -O0                                                       \
 
 # Performance monitor
 # disable
-#PERF_MONIT = -Ntl_notrt -U_FIPP_ -U_FAPP_ -U_FINEPA_
+PERF_MONIT = -Ntl_notrt -U_FIPP_ -U_FAPP_ -U_FINEPA_
 # fipp
 #PERF_MONIT = -Ntl_trt -D_FIPP_ -U_FAPP_ -U_FINEPA_
 # fapp
@@ -35,6 +38,7 @@ RDMA = -U_USE_RDMA
 #RDMA = -D_USE_RDMA
 
 FC     = mpifrtpx
+#FFLAGS = $(FFLAGS_AGGRESIVE) $(PERF_MONIT) $(RDMA)
 FFLAGS = $(FFLAGS_FAST) $(PERF_MONIT) $(RDMA)
 #FFLAGS = $(FFLAGS_DEBUG) $(PERF_MONIT) $(RDMA)
 

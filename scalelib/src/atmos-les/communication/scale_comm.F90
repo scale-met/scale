@@ -2871,6 +2871,7 @@ contains
     if ( COMM_IsAllPeriodic ) then ! periodic condition
 
        !--- packing packets to West
+!OCL NORECURRENCE(sendpack_P2W)
        !$omp parallel do private(i,j,k,n) OMP_SCHEDULE_ collapse(2)
        do j = JS, JE
        do i = IS, IS+IHALO-1
@@ -2883,6 +2884,7 @@ contains
        enddo
        enddo
        !--- packing packets to East
+!OCL NORECURRENCE(sendpack_P2E)
        !$omp parallel do private(i,j,k,n) OMP_SCHEDULE_ collapse(2)
        do j = JS, JE
        do i = IE-IHALO+1, IE
@@ -2899,6 +2901,7 @@ contains
 
        if ( PRC_HAS_W ) then
           !--- packing packets to West
+!OCL NORECURRENCE(sendpack_P2W)
           !$omp parallel do private(i,j,k,n) OMP_SCHEDULE_ collapse(2)
           do j = JS, JE
           do i = IS, IS+IHALO-1
@@ -2913,6 +2916,7 @@ contains
        endif
        if ( PRC_HAS_E ) then
           !--- packing packets to East
+!OCL NORECURRENCE(sendpack_P2E)
           !$omp parallel do private(i,j,k,n) OMP_SCHEDULE_ collapse(2)
           do j = JS, JE
           do i = IE-IHALO+1, IE
@@ -2949,6 +2953,7 @@ contains
 
        !--- To 4-Direction HALO communicate
        !--- packing packets to West
+!OCL NORECURRENCE(sendpack_P2W)
        !$omp parallel do private(i,j,n) OMP_SCHEDULE_ collapse(2)
        do j = JS, JE
        do i = IS, IS+IHALO-1
@@ -2960,6 +2965,7 @@ contains
 
        !--- packing packets to East
        !$omp parallel do private(i,j,n) OMP_SCHEDULE_ collapse(2)
+!OCL NORECURRENCE(sendpack_P2E)
        do j = JS, JE
        do i = IE-IHALO+1, IE
           n = (j-JS)         * IHALO &
@@ -2973,6 +2979,8 @@ contains
        !--- To 4-Direction HALO communicate
        !--- packing packets to West
        if ( PRC_HAS_W ) then
+!OCL NORECURRENCE(sendpack_P2W)
+       !$omp parallel do private(i,j,n) OMP_SCHEDULE_ collapse(2)
           do j = JS, JE
           do i = IS, IS+IHALO-1
              n = (j-JS) * IHALO &
@@ -2984,6 +2992,8 @@ contains
 
        !--- packing packets to East
        if ( PRC_HAS_E ) then
+!OCL NORECURRENCE(sendpack_P2E)
+       !$omp parallel do private(i,j,n) OMP_SCHEDULE_ collapse(2)
           do j = JS, JE
           do i = IE-IHALO+1, IE
              n = (j-JS)         * IHALO &
