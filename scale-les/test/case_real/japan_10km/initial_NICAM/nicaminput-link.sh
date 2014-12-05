@@ -47,9 +47,9 @@ do
 
   fmtd_fn=`printf "%05d" $fn`
 
+  ln -svf ${dir}/${year}${month}${day}/lsmask.nc     ./lsmask_${fmtd_fn}.${ftype}.nc
   ln -svf ${dir}/${year}${month}${day}/la_tg.nc      ./la_tg_${fmtd_fn}.${ftype}.nc
   ln -svf ${dir}/${year}${month}${day}/la_wg.nc      ./la_wg_${fmtd_fn}.${ftype}.nc
-  ln -svf ${dir}/${year}${month}${day}/lsmask.nc     ./lsmask_${fmtd_fn}.${ftype}.nc
   ln -svf ${dir}/${year}${month}${day}/ms_pres.nc    ./ms_pres_${fmtd_fn}.${ftype}.nc
   ln -svf ${dir}/${year}${month}${day}/ms_qv.nc      ./ms_qv_${fmtd_fn}.${ftype}.nc
   #ln -svf ${dir}/${year}${month}${day}/ms_rh.nc      ./ms_rh_${fmtd_fn}.${ftype}.nc
