@@ -130,31 +130,32 @@ module scale_grid_nest
   !
   !++ Private parameters & variables
   !
-  real(RP), private, allocatable :: latlon_catalog(:,:,:)  !< parent latlon catalog [rad]
-  real(RP), private              :: corner_loc(4,2)        !< local corner location [rad]
+  real(RP), private, allocatable :: latlon_catalog(:,:,:)    !< parent latlon catalog [rad]
+  real(RP), private              :: corner_loc(4,2)          !< local corner location [rad]
 
-  integer, private               :: PARENT_PRC_NUM_X(2)    !< MPI processes in x-direction in parent
-  integer, private               :: PARENT_PRC_NUM_Y(2)    !< MPI processes in y-direction in parent
-  integer, private               :: PARENT_PRC_nmax(2)     !< MPI total processes in parent
+  integer, private               :: PARENT_PRC_NUM_X(2)      !< MPI processes in x-direction in parent
+  integer, private               :: PARENT_PRC_NUM_Y(2)      !< MPI processes in y-direction in parent
+  integer, private               :: PARENT_PRC_nmax(2)       !< MPI total processes in parent
 
-  integer, private               :: DAUGHTER_PRC_NUM_X(2)  !< MPI processes in x-direction in daughter
-  integer, private               :: DAUGHTER_PRC_NUM_Y(2)  !< MPI processes in y-direction in daughter
-  integer, private               :: DAUGHTER_PRC_nmax(2)   !< MPI total processes in daughter
+  integer, private               :: DAUGHTER_PRC_NUM_X(2)    !< MPI processes in x-direction in daughter
+  integer, private               :: DAUGHTER_PRC_NUM_Y(2)    !< MPI processes in y-direction in daughter
+  integer, private               :: DAUGHTER_PRC_nmax(2)     !< MPI total processes in daughter
 
-  integer, private               :: NEST_TILE_ALL          !< NUM of TILEs in the local node
-  integer, private               :: NEST_TILE_ALLMAX_p     !< MAXNUM of TILEs among whole processes for parent
-  integer, private               :: NEST_TILE_ALLMAX_d     !< MAXNUM of TILEs among whole processes for daughter
-  integer, private, allocatable  :: NEST_TILE_LIST_p(:,:)  !< relationship list in whole system for parent
-  integer, private, allocatable  :: NEST_TILE_LIST_d(:,:)  !< relationship list in whole system for daughter
-  integer, private, allocatable  :: NEST_TILE_LIST_YP(:)   !< yellow-page of daughter targets for parent
-  integer, private               :: NUM_YP                 !< page number of yellow-page
+  integer, private               :: NEST_TILE_ALL            !< NUM of TILEs in the local node
+  integer, private               :: NEST_TILE_ALLMAX_p       !< MAXNUM of TILEs among whole processes for parent
+  integer, private               :: NEST_TILE_ALLMAX_d       !< MAXNUM of TILEs among whole processes for daughter
+  integer, private, allocatable  :: NEST_TILE_LIST_p(:,:)    !< relationship list in whole system for parent
+  integer, private, allocatable  :: NEST_TILE_LIST_d(:,:)    !< relationship list in whole system for daughter
+  integer, private, allocatable  :: NEST_TILE_LIST_YP(:)     !< yellow-page of daughter targets for parent
+  integer, private               :: NUM_YP                   !< page number of yellow-page
 
   integer, private               :: OFFLINE_PARENT_PRC_NUM_X !< MPI processes in x-direction in parent [for namelist]
   integer, private               :: OFFLINE_PARENT_PRC_NUM_Y !< MPI processes in y-direction in parent [for namelist]
-  integer, private               :: OFFLINE_PARENT_KMAX    !< parent max number in z-direction [for namelist]
-  integer, private               :: OFFLINE_PARENT_IMAX    !< parent max number in x-direction [for namelist]
-  integer, private               :: OFFLINE_PARENT_JMAX    !< parent max number in y-direction [for namelist]
-  integer, private               :: OFFLINE_PARENT_LKMAX   !< parent max number in lz-direction [for namelist]
+  integer, private               :: OFFLINE_PARENT_KMAX      !< parent max number in z-direction [for namelist]
+  integer, private               :: OFFLINE_PARENT_IMAX      !< parent max number in x-direction [for namelist]
+  integer, private               :: OFFLINE_PARENT_JMAX      !< parent max number in y-direction [for namelist]
+  integer, private               :: OFFLINE_PARENT_LKMAX     !< parent max number in lz-direction [for namelist]
+  integer, private               :: ONLINE_WAIT_LIMIT        !< limit times of waiting loop in "NEST_COMM_waitall"
   logical, private               :: ONLINE_DAUGHTER_USE_VELZ
   logical, private               :: ONLINE_DAUGHTER_NO_ROTATE
   logical, private               :: ONLINE_AGGRESSIVE_COMM
@@ -216,9 +217,9 @@ module scale_grid_nest
   integer, private            :: rq_ctl_d                    ! for control request id (counting)
   integer, private            :: rq_tot_p                    ! for control request id (total number)
   integer, private            :: rq_tot_d                    ! for control request id (total number)
-  integer, private, save            :: ireq_p(max_rq)
-  integer, private, save            :: ireq_d(max_rq)
-  integer, private, save            :: call_order(max_rq)          ! calling order from parent
+  integer, private            :: ireq_p(max_rq)
+  integer, private            :: ireq_d(max_rq)
+  integer, private            :: call_order(max_rq)          ! calling order from parent
 
   real(RP), private, allocatable :: buffer_2D (:,:)          ! buffer of communicator: 2D (with HALO)
   real(RP), private, allocatable :: buffer_3D (:,:,:)        ! buffer of communicator: 3D (with HALO)
@@ -326,7 +327,8 @@ contains
        ONLINE_NO_ROTATE,         &
        ONLINE_BOUNDARY_USE_QHYD, &
        ONLINE_AGGRESSIVE_COMM,   &
-       ONLINE_REVERSE_LAUNCH
+       ONLINE_REVERSE_LAUNCH,    &
+       ONLINE_WAIT_LIMIT
 
     !---------------------------------------------------------------------------
 
@@ -345,6 +347,7 @@ contains
     HANDLING_NUM           = 0
     NEST_Filiation(:)      = 0
     ONLINE_LAUNCH_PRC      = PRC_nmax
+    ONLINE_WAIT_LIMIT      = 1000000
     ONLINE_AGGRESSIVE_COMM = .false.
     ONLINE_REVERSE_LAUNCH  = .false.
     interp_search_divnum   = 10
@@ -2345,19 +2348,21 @@ contains
     integer :: istatus(MPI_STATUS_SIZE,req_count)
 
     logical    :: flag
-    !integer(8) :: num
+    integer(8) :: num
     !---------------------------------------------------------------------------
-    !num  = 0
+    num  = 0
     flag = .false.
 
     do while ( .not. flag )
-       !num = num + 1
+       num = num + 1
        call MPI_TESTALL( req_count, ireq, flag, istatus, ierr )
-    enddo
 
-    !if ( num > 500000 ) then
-    !   if( IO_L ) write(IO_FID_LOG,'(1x,A)') '*** WARNING: long waste time for NEST_COMM_waitall'
-    !endif
+       if ( num > ONLINE_WAIT_LIMIT ) then
+          if( IO_L ) write(IO_FID_LOG,'(1x,A)') '*** ERROR: over the limit of waiting time [NESTCOM]'
+          write(*,'(1x,A)') '*** ERROR: over the limit of waiting time [NESTCOM]'
+          call PRC_MPIstop
+       endif
+    enddo
 
     return
   end subroutine NEST_COMM_waitall
