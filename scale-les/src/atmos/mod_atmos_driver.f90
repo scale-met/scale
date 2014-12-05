@@ -359,6 +359,13 @@ contains
     !---------------------------------------------------------------------------
 
     if ( setup ) then
+       SFLX_MW  (:,:)   = 0.0_RP
+       SFLX_MU  (:,:)   = 0.0_RP
+       SFLX_MV  (:,:)   = 0.0_RP
+       SFLX_SH  (:,:)   = 0.0_RP
+       SFLX_LH  (:,:)   = 0.0_RP
+       SFLX_QTRC(:,:,:) = 0.0_RP
+
        if ( CPL_sw ) then
           call CPL_getATM_SF( SFLX_MW  (:,:),  & ! [OUT]
                               SFLX_MU  (:,:),  & ! [OUT]
@@ -366,17 +373,17 @@ contains
                               SFLX_SH  (:,:),  & ! [OUT]
                               SFLX_LH  (:,:),  & ! [OUT]
                               SFLX_QTRC(:,:,:) ) ! [OUT]
-       else
-          SFLX_MW  (:,:)   = 0.0_RP
-          SFLX_MU  (:,:)   = 0.0_RP
-          SFLX_MV  (:,:)   = 0.0_RP
-          SFLX_SH  (:,:)   = 0.0_RP
-          SFLX_LH  (:,:)   = 0.0_RP
-          SFLX_QTRC(:,:,:) = 0.0_RP
        endif
     endif
 
     if ( CPL_sw ) then
+       Uabs10   (:,:)   = 0.0_RP
+       U10      (:,:)   = 0.0_RP
+       V10      (:,:)   = 0.0_RP
+       T2       (:,:)   = 0.0_RP
+       Q2       (:,:)   = 0.0_RP
+       FLX_heat (:,:)   = 0.0_RP
+
        call CPL_getATM( SFC_TEMP  (:,:),   & ! [OUT]
                         SFC_albedo(:,:,:), & ! [OUT]
                         SFC_Z0    (:,:),   & ! [OUT]

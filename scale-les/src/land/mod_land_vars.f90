@@ -451,7 +451,7 @@ contains
     implicit none
 
     integer                :: index
-    character(len=H_SHORT) :: description
+    character(len=H_LONG)  :: description
     real(RP)               :: STRGMAX
     real(RP)               :: STRGCRT
     real(RP)               :: TCS
