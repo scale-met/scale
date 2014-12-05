@@ -49,6 +49,18 @@
 !!
 !<
 !-------------------------------------------------------------------------------
+
+#ifdef PROFILE_FAPP
+#define PROFILE_START(name) call fapp_start(name, 1, 1)
+#define PROFILE_STOP(name)  call fapp_stop (name, 1, 1)
+#elif defined(PROFILE_FINEPA)
+#define PROFILE_START(name) call start_collection(name)
+#define PROFILE_STOP(name)  call stop_collection (name)
+#else
+#define PROFILE_START(name)
+#define PROFILE_STOP(name)
+#endif
+
 #include "macro_thermodyn.h"
 module scale_atmos_phy_mp_sn14
   !-----------------------------------------------------------------------------
@@ -436,8 +448,10 @@ contains
     WLABEL(10) = "SNOW_NUM"
     WLABEL(11) = "GRAUPEL_NUM"
 
-    call mp_sn14_init( IA, JA )
+    call mp_sn14_init
 
+    allocate(nc_uplim_d(1,IA,JA))
+    nc_uplim_d(:,:,:) = 150.E6_RP
 
     MP_NSTEP_SEDIMENTATION  = ntmax_sedimentation
     MP_RNSTEP_SEDIMENTATION = 1.0_RP / real(ntmax_sedimentation,kind=RP)
@@ -495,6 +509,10 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Cloud microphysics(SN14)'
 
+#ifdef PROFILE_FIPP
+    call fipp_start()
+#endif
+
     call MP_negativefilter( DENS, QTRC )
 
     call mp_sn14( DENS,      & ! [INOUT]
@@ -508,18 +526,20 @@ contains
 
     call MP_negativefilter( DENS, QTRC )
 
+#ifdef PROFILE_FIPP
+    call fipp_stop()
+#endif
+
     return
   end subroutine ATMOS_PHY_MP_sn14
 
   !-----------------------------------------------------------------------------
-  subroutine mp_sn14_init ( IAA, JA )
+  subroutine mp_sn14_init
     use scale_process, only: &
        PRC_MPIstop
     use scale_specfunc, only: &
         gammafunc => SF_gamma
     implicit none
-
-    integer, intent(in) :: IAA, JA
 
     real(RP), allocatable :: w1(:),w2(:),w3(:),w4(:),w5(:),w6(:),w7(:),w8(:)
     ! work for calculation of capacity, Mitchell and Arnott (1994) , eq.(9)
@@ -1131,9 +1151,6 @@ contains
        if( IO_L ) write(IO_FID_LOG,'(a,a10,a,100e16.6)') "theta1(a,b)=(",trim(WLABEL(ia)),",b)=",(theta_ab1(ia,ib),ib=QQS,QQE)
     enddo
 
-    allocate(nc_uplim_d(1,IAA,JA))
-    nc_uplim_d(:,:,:) = 150.d6
-
     return
   end subroutine mp_sn14_init
   !-----------------------------------------------------------------------------
@@ -1466,10 +1483,6 @@ contains
     enddo
 
     call nucleation_kij(     &
-         IA, JA, KA,     & ! in
-         IS, IE,         & ! in
-         JS, JE,         & ! in
-         KS, KE,         & ! in
          z, w_d,         & ! in
          DENS, wtem_d, pre_d, & ! in
          lv_d, nc_d, ni_d,     & ! in
@@ -1637,10 +1650,6 @@ contains
        call moist_psat_ice( esi_d, wtem_d )
        !
        call freezing_water_kij( &
-            IA, JA, KA,    & ! in
-            IS, IE,     & ! in
-            JS, JE,     & ! in
-            KS, KE,     & ! in
             wdt,            & ! in
             PLChom_d, PNChom_d, & ! out
             PLChet_d, PNChet_d, & ! out
@@ -1648,10 +1657,6 @@ contains
             lc_d, lr_d, nc_d, nr_d, xc_d, xr_d, tem_d ) ! in
        !
        call dep_vapor_melt_ice_kij( &
-            IA, JA, KA,           & ! in
-            IS, IE,               & ! in
-            JS, JE,               & ! in
-            KS, KE,               & ! in
             PLCdep_d,             & ! out
             PLRdep_d, PNRdep_d,   & ! out
             PLIdep_d, PNIdep_d,   & ! out
@@ -1677,9 +1682,6 @@ contains
        !
        call update_by_phase_change_kij(    &
             ntdiv, ntmax_phase_change,     & ! in
-            IA, JA, KA,                    & ! in
-            IS, IE, JS, JE, KS, KE,        & ! in
-            QA,                            & ! in
             wdt,                           & ! in
             gsgam2_d,                      & ! in
             z,                             & ! in
@@ -1710,8 +1712,8 @@ contains
             PLSmlt_d, PNSmlt_d, & ! in
             PLGmlt_d, PNGmlt_d, & ! in
             flag_history_in,    & ! in
-            sl_PLCdep_d,        & ! out
-            sl_PLRdep_d, sl_PNRdep_d ) ! out
+            sl_PLCdep_d,        & ! inout
+            sl_PLRdep_d, sl_PNRdep_d ) ! inout
 
 !       if( opt_debug )     call debugreport_phasechange
        if( opt_debug_tem ) call debug_tem_kij( 3, tem_d(:,:,:), DENS(:,:,:), pre_d(:,:,:), q_d(:,:,:,I_QV) )
@@ -1795,10 +1797,6 @@ contains
     ! [Mod] T.Seiki
     if ( doautoconversion ) then
        call aut_acc_slc_brk_kij(  &
-            IA, JA, KA,      &
-            IS, IE,       &
-            JS, JE,       &
-            KS, KE,       &
             PLCaut_d, PNCaut_d,   &
             PNRaut_d,           &
             PLCacc_d, PNCacc_d,   &
@@ -1817,10 +1815,6 @@ contains
     endif
        !
        call mixed_phase_collection_kij(         &
-            IA, JA, KA,                         & ! in
-            IS, IE,                             & ! in
-            JS, JE,                             & ! in
-            KS, KE,                             & ! in
             ! collection process
             PLIacLC2LI_d,   PNIacNC2NI_d,       & ! out
             PLSacLC2LS_d,   PNSacNC2NS_d,       & ! out
@@ -1855,10 +1849,6 @@ contains
 
        !
        call ice_multiplication_kij( &
-            IA, JA, KA,        & ! in
-            IS, IE,         & ! in
-            JS, JE,         & ! in
-            KS, KE,         & ! in
             PLGspl_d, PLSspl_d,     & ! out
             PNIspl_d,             & ! out
             PLIacLC2LI_d,         & ! in
@@ -2218,10 +2208,6 @@ contains
   end subroutine debug_tem_kij
 
   subroutine nucleation_kij( &
-       IA, JA, KA,      &
-       IS, IE,       &
-       JS, JE,       &
-       KS, KE,       &
        z, w,             &
        rho, tem, pre,    &
        LV, NC, NI,       &
@@ -2240,10 +2226,6 @@ contains
        moist_dqsi_dtem_rho  => ATMOS_SATURATION_dqsi_dtem_rho
     implicit none
 
-    integer, intent(in)  :: KA, IA, JA
-    integer, intent(in)  :: KS, IS, JS
-    integer, intent(in)  :: KE, IE, JE
-    !
     real(RP), intent(in)  :: z(KA)      !
     real(RP), intent(in)  :: rho(KA,IA,JA)    ! [Add] 09/08/18 T.Mitsui
     real(RP), intent(in)  :: tem(KA,IA,JA)    ! [Add] 09/08/18 T.Mitsui
@@ -2568,10 +2550,6 @@ contains
   end subroutine nucleation_kij
   !----------------------------
   subroutine ice_multiplication_kij( &
-       IA, JA, KA,              & ! in
-       IS, IE,               & ! in
-       JS, JE,               & ! in
-       KS, KE,               & ! in
        PLGspl, PLSspl, PNIspl,   & ! out
        PLIacLC2LI,               & ! in
        PLSacLC2LS,               & ! in
@@ -2583,10 +2561,6 @@ contains
     use scale_specfunc, only: &
        gammafunc => SF_gamma
     implicit none
-    !
-    integer, intent(in) :: IA, JA, KA
-    integer, intent(in) :: IS, JS, KS
-    integer, intent(in) :: IE, JE, KE
     real(RP), intent(out):: PLGspl(KA,IA,JA)
     real(RP), intent(out):: PLSspl(KA,IA,JA) ! [Add]
     real(RP), intent(out):: PNIspl(KA,IA,JA)
@@ -2718,10 +2692,6 @@ contains
   end subroutine ice_multiplication_kij
   !----------------------------
   subroutine mixed_phase_collection_kij(   &
-       IA, JA, KA,                    & ! in
-       IS, IE,                     & ! in
-       JS, JE,                     & ! in
-       KS, KE,                     & ! in
        ! collection process
        PLIacLC2LI,   PNIacNC2NI,       & ! out
        PLSacLC2LS,   PNSacNC2NS,       & ! out
@@ -2756,9 +2726,6 @@ contains
        moist_psat_ice => ATMOS_SATURATION_psat_ice
     implicit none
 
-    integer, intent(in) :: IA,JA,KA
-    integer, intent(in) :: IS,JS,KS
-    integer, intent(in) :: IE,JE,KE
     !--- mixed-phase collection process
     !    PXXacYY2ZZ_x: XX collecting YY to form ZZ.
     !                  _x means the contributions of XX or YY.
@@ -3344,10 +3311,6 @@ contains
   !----------------------------
   ! Auto-conversion, Accretion, Self-collection, Break-up
   subroutine aut_acc_slc_brk_kij(  &
-       IA, JA, KA,            &
-       IS, IE,             &
-       JS, JE,             &
-       KS, KE,             &
        PLCaut, PNCaut,         &
        PNRaut,                 &
        PLCacc, PNCacc,         &
@@ -3358,10 +3321,6 @@ contains
        rho                     )
     implicit none
 
-    integer, intent(in)  :: IA, JA, KA
-    integer, intent(in)  :: IS, JS, KS
-    integer, intent(in)  :: IE, JE, KE
-    !
     real(RP), intent(out) :: PLCaut(KA,IA,JA) ! Lc change for Auto-conversion
     real(RP), intent(out) :: PNCaut(KA,IA,JA) ! Nc
     real(RP), intent(out) :: PNRaut(KA,IA,JA) ! Nr
@@ -3462,10 +3421,6 @@ contains
   end subroutine aut_acc_slc_brk_kij
   ! Vapor Deposition, Ice Melting
   subroutine dep_vapor_melt_ice_kij( &
-       IA, JA, KA,          & ! in
-       IS, IE,           & ! in
-       JS, JE,           & ! in
-       KS, KE,           & ! in
        PLCdep,               & ! out
        PLRdep, PNRdep,       & ! out
        PLIdep, PNIdep,       & ! out
@@ -3484,9 +3439,6 @@ contains
        dc_xave, dr_xave, di_xave, ds_xave, dg_xave ) ! in
     implicit none
 
-    integer, intent(in)  :: IA,JA,KA
-    integer, intent(in)  :: IS,JS,KS
-    integer, intent(in)  :: IE,JE,KE
     ! Diffusion growth or Evaporation, Sublimation
     real(RP), intent(out) :: PLCdep(KA,IA,JA)  ! mass change   for cloud, [Add]  09/08/18 T.Mitsui
     real(RP), intent(out) :: PLRdep(KA,IA,JA)  ! mass change   for rain deposion
@@ -3750,10 +3702,6 @@ contains
   end subroutine dep_vapor_melt_ice_kij
   !-----------------------------------------------------------------------------
   subroutine freezing_water_kij( &
-       IA, JA, KA,          &
-       IS, IE,           &
-       JS, JE,           &
-       KS, KE,           &
        dt,                   &
        PLChom, PNChom,       &
        PLChet, PNChet,       &
@@ -3764,10 +3712,6 @@ contains
     ! We assumed surface temperature of droplets are same as environment.
     implicit none
 
-    integer, intent(in) :: IA, JA, KA
-    integer, intent(in) :: IS, JS, KS
-    integer, intent(in) :: IE, JE, KE
-    !
     real(RP), intent(in) :: dt
     ! freezing in nature (homogenous)
     real(RP), intent(out):: PLChom(KA,IA,JA) ! cloud water => cloud ice
@@ -4156,11 +4100,6 @@ contains
   !----------------------------------------------------------------
   subroutine update_by_phase_change_kij(   &
        ntdiv    , ntmax,         & ! in [Add] 10/08/03
-       IA, JA, KA,               &
-       IS, IE,                   & ! in
-       JS, JE,                   & ! in
-       KS, KE,                   & ! in
-       QA,                       & ! in
        dt,                       & ! in
        gsgam2,                   & ! in
        z,                        & ! in
@@ -4210,11 +4149,6 @@ contains
     integer, intent(in)    :: ntdiv                   ! [Add] 10/08/03
     integer, intent(in)    :: ntmax                   ! [Add] 10/08/03
     !
-    integer, intent(in)    :: IA, JA, KA                   !
-    integer, intent(in)    :: IS, IE        !
-    integer, intent(in)    :: JS, JE        !
-    integer, intent(in)    :: KS, KE        !
-    integer, intent(in)    :: QA                   ! tracer number
     real(RP), intent(in)    :: dt                      ! time step[s]
     real(RP), intent(in)    :: gsgam2(KA,IA,JA)      ! metric
     real(RP), intent(in)    :: z(KA)           ! altitude [m]
