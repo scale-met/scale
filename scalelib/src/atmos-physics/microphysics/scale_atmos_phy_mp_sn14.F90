@@ -1859,6 +1859,7 @@ contains
        ! update
        ! rhogq = l*gsgam
        !
+       PROFILE_START("sn14_update")
        do j = JS, JE
        do i = IS, IE
           do k = KS, KE
@@ -2050,6 +2051,7 @@ contains
           enddo
        enddo
        enddo
+       PROFILE_STOP("sn14_update")
 
     !--- update mixing ratio
     do j  = JS, JE
@@ -2998,6 +3000,7 @@ contains
        end do
     end if
     !
+    PROFILE_START("sn14_collection")
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -3289,6 +3292,7 @@ contains
     end do
     end do
     end do
+    PROFILE_STOP("sn14_collection")
     !
 !!$    if ( flag_history_in )then
 !!$       call history_in( 'ml_PLIaut' , PLIacLI2LS(:,:) )
@@ -3540,6 +3544,8 @@ contains
     ! Because following phenomena are not adjustment but transition.
     ! Just time-scales differ among them.
     ! If we would treat more appropreately, there would be time-splitting method to solve each ones.
+
+    PROFILE_START("sn14_dep_vapor")
     do j = JS, JE
     do i = IS, IE
        do k = KS, KE
@@ -3697,6 +3703,7 @@ contains
        end do
     end do
     end do
+    PROFILE_STOP("sn14_dep_vapor")
     !
     return
   end subroutine dep_vapor_melt_ice_kij
@@ -3750,6 +3757,7 @@ contains
     coef_m2_c =   coef_m2(I_QC)
     coef_m2_r =   coef_m2(I_QR)
     !
+    PROFILE_START("sn14_freezing")
     do j = JS, JE
     do i = IS, IE
        do k = KS, KE
@@ -3792,6 +3800,7 @@ contains
        end do
     end do
     end do
+    PROFILE_STOP("sn14_freezing")
     !
     return
   end subroutine freezing_water_kij
