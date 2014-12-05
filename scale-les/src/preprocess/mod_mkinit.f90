@@ -4462,6 +4462,9 @@ enddo
                                                                 ! 0: dry, 3:3-class, 5:5-class, 6:6-class, >6:double moment
     real(RP)                 :: BOUNDARY_UPDATE_DT  = 0.0_RP    ! inteval time of boudary data update [s]
     logical                  :: USE_FILE_DENSITY    = .false.   ! use density data from files
+    logical                  :: USE_FILE_LANDWATER  = .true.    ! use land water data from files
+    real(RP)                 :: INIT_LANDWATER_RATIO = 0.5_RP   ! Ratio of land water to storage is constant,
+                                                                !            if USE_FILE_LANDWATER is ".false."
     logical                  :: WRF_FILE_TYPE       = .false.   ! wrf filetype: T=wrfout, F=wrfrst
     logical                  :: SERIAL_PROC_READ    = .false.   ! read by one MPI process and broadcast
 
@@ -4477,6 +4480,8 @@ enddo
          BOUNDARY_TITLE,         &
          BOUNDARY_UPDATE_DT,     &
          USE_FILE_DENSITY,       &
+         USE_FILE_LANDWATER,     &
+         INIT_LANDWATER_RATIO,   &
          PARENT_MP_TYPE,         &
          WRF_FILE_TYPE,          &
          SERIAL_PROC_READ
@@ -4647,6 +4652,8 @@ enddo
                              dims,                    &
                              1,                       &
                              NUMBER_OF_SKIP_TSTEPS,   & ! skip first several data for 6 hourly data
+                             USE_FILE_LANDWATER,      &
+                             INIT_LANDWATER_RATIO,    &
                              mdlid,                   &
                              SERIAL_PROC_READ         )
 

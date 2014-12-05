@@ -424,18 +424,20 @@ contains
   !> Land&Ocean Data Read/Write
   !-----------------------------------------------------------------------------
   subroutine ParentSurfaceInput( &
-      dens,         &
-      momz,         &
-      momx,         &
-      momy,         &
-      rhot,         &
-      qtrc,         &
-      basename_org, &
-      dims,         &
-      timelen,      &
-      skiplen,      &
-      mdlid,        &
-      serial        )
+      dens,                 &
+      momz,                 &
+      momx,                 &
+      momy,                 &
+      rhot,                 &
+      qtrc,                 &
+      basename_org,         &
+      dims,                 &
+      timelen,              &
+      skiplen,              &
+      use_file_landwater,   &
+      init_landwater_ratio, &
+      mdlid,                &
+      serial                )
     use scale_comm, only: &
        COMM_vars8, &
        COMM_wait
@@ -462,10 +464,13 @@ contains
     real(RP),         intent(in) :: qtrc(:,:,:,:,:)
     character(LEN=*), intent(in) :: basename_org
     integer,          intent(in) :: dims(:)
-    integer,          intent(in) :: timelen  ! time steps in one file
-    integer,          intent(in) :: skiplen  ! skipped time steps
-    integer,          intent(in) :: mdlid    ! model type id
-    logical,          intent(in) :: serial   ! read by a serial process
+    integer,          intent(in) :: timelen              ! time steps in one file
+    integer,          intent(in) :: skiplen              ! skipped time steps
+    logical,          intent(in) :: use_file_landwater   ! use land water data from files
+    real(RP),         intent(in) :: init_landwater_ratio ! Ratio of land water to storage is constant,
+                                                         !          if use_file_landwater is ".false."
+    integer,          intent(in) :: mdlid                ! model type id
+    logical,          intent(in) :: serial               ! read by a serial process
 
     real(RP) :: temp(KA,IA,JA)
     real(RP) :: pres(KA,IA,JA)
@@ -508,61 +513,67 @@ contains
 
     ! Read Data
     if( mdlid == iSCALE ) then ! TYPE: SCALE-LES
-       call InputSurfaceSCALE( tg   (:,:,:), &
-                               strg (:,:,:), &
-                               roff (:,:),   &
-                               qvef (:,:),   &
-                               tw   (:,:),   &
-                               lst  (:,:),   &
-                               ust  (:,:),   &
-                               sst  (:,:),   &
-                               albw (:,:,:), &
-                               albg (:,:,:), &
-                               z0w  (:,:),   &
-                               skint(:,:),   &
-                               skinw(:,:),   &
-                               snowq(:,:),   &
-                               snowt(:,:),   &
-                               basename_org  )
+       call InputSurfaceSCALE( tg   (:,:,:),         &
+                               strg (:,:,:),         &
+                               roff (:,:),           &
+                               qvef (:,:),           &
+                               tw   (:,:),           &
+                               lst  (:,:),           &
+                               ust  (:,:),           &
+                               sst  (:,:),           &
+                               albw (:,:,:),         &
+                               albg (:,:,:),         &
+                               z0w  (:,:),           &
+                               skint(:,:),           &
+                               skinw(:,:),           &
+                               snowq(:,:),           &
+                               snowt(:,:),           &
+                               basename_org,         &
+                               use_file_landwater,   &  ! use land water data from files
+                               init_landwater_ratio  )  ! Ratio of land water to storage is constant
     elseif( mdlid == iWRFARW ) then ! TYPE: WRF-ARW
-       call InputSurfaceWRF( tg   (:,:,:), &
-                             strg (:,:,:), &
-                             roff (:,:),   &
-                             qvef (:,:),   &
-                             tw   (:,:),   &
-                             lst  (:,:),   &
-                             ust  (:,:),   &
-                             sst  (:,:),   &
-                             albw (:,:,:), &
-                             albg (:,:,:), &
-                             z0w  (:,:),   &
-                             skint(:,:),   &
-                             skinw(:,:),   &
-                             snowq(:,:),   &
-                             snowt(:,:),   &
-                             basename_org, &
-                             dims(:),      &
-                             mdlid,        &
-                             serial        )
+       call InputSurfaceWRF( tg   (:,:,:),         &
+                             strg (:,:,:),         &
+                             roff (:,:),           &
+                             qvef (:,:),           &
+                             tw   (:,:),           &
+                             lst  (:,:),           &
+                             ust  (:,:),           &
+                             sst  (:,:),           &
+                             albw (:,:,:),         &
+                             albg (:,:,:),         &
+                             z0w  (:,:),           &
+                             skint(:,:),           &
+                             skinw(:,:),           &
+                             snowq(:,:),           &
+                             snowt(:,:),           &
+                             basename_org,         &
+                             dims(:),              &
+                             use_file_landwater,   &  ! use land water data from files
+                             init_landwater_ratio, &  ! Ratio of land water to storage is constant
+                             mdlid,                &
+                             serial                )
     elseif( mdlid == iNICAM ) then ! TYPE: NICAM-NETCDF
-       call InputSurfaceNICAM( tg   (:,:,:), &
-                               strg (:,:,:), &
-                               roff (:,:),   &
-                               qvef (:,:),   &
-                               tw   (:,:),   &
-                               lst  (:,:),   &
-                               ust  (:,:),   &
-                               sst  (:,:),   &
-                               albw (:,:,:), &
-                               albg (:,:,:), &
-                               z0w  (:,:),   &
-                               skint(:,:),   &
-                               skinw(:,:),   &
-                               snowq(:,:),   &
-                               snowt(:,:),   &
-                               basename_org, &
-                               dims(:),      &
-                               skiplen       ) ! the number of skipped data
+       call InputSurfaceNICAM( tg   (:,:,:),        &
+                               strg (:,:,:),        &
+                               roff (:,:),          &
+                               qvef (:,:),          &
+                               tw   (:,:),          &
+                               lst  (:,:),          &
+                               ust  (:,:),          &
+                               sst  (:,:),          &
+                               albw (:,:,:),        &
+                               albg (:,:,:),        &
+                               z0w  (:,:),          &
+                               skint(:,:),          &
+                               skinw(:,:),          &
+                               snowq(:,:),          &
+                               snowt(:,:),          &
+                               basename_org,        &
+                               dims(:),             &
+                               skiplen,             &   ! the number of skipped data
+                               use_file_landwater,  &   ! use land water data from files
+                               init_landwater_ratio )   ! Ratio of land water to storage is constant
     endif
 
     do j = 1, JA
@@ -2678,22 +2689,24 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine InputSurfaceSCALE( &
-      tg,          & ! (out)
-      strg,        & ! (out)
-      roff,        & ! (out)
-      qvef,        & ! (out)
-      tw,          & ! (out)
-      lst,         & ! (out)
-      ust,         & ! (out)
-      sst,         & ! (out)
-      albw,        & ! (out)
-      albg,        & ! (out)
-      z0w,         & ! (out)
-      skint,       & ! (out)
-      skinw,       & ! (out)
-      snowq,       & ! (out)
-      snowt,       & ! (out)
-      basename_org ) ! (in)
+      tg,                  & ! (out)
+      strg,                & ! (out)
+      roff,                & ! (out)
+      qvef,                & ! (out)
+      tw,                  & ! (out)
+      lst,                 & ! (out)
+      ust,                 & ! (out)
+      sst,                 & ! (out)
+      albw,                & ! (out)
+      albg,                & ! (out)
+      z0w,                 & ! (out)
+      skint,               & ! (out)
+      skinw,               & ! (out)
+      snowq,               & ! (out)
+      snowt,               & ! (out)
+      basename_org,        & ! (in)
+      use_file_landwater,  & ! (in)
+      init_landwater_ratio ) ! (in)
     use scale_const, only: &
        D2R   => CONST_D2R,   &
        TEM00 => CONST_TEM00
@@ -2705,6 +2718,8 @@ contains
        NEST_TILE_NUM_X, &
        NEST_TILE_NUM_Y, &
        NEST_TILE_ID
+    use mod_land_vars, only: &
+       convert_WS2VWC
     implicit none
 
     real(RP), intent(out) :: tg   (:,:,:)
@@ -2724,6 +2739,8 @@ contains
     real(RP), intent(out) :: snowt(:,:)
 
     character(LEN=*), intent(in) :: basename_org
+    logical,          intent(in) :: use_file_landwater   ! use land water data from files
+    real(RP),         intent(in) :: init_landwater_ratio ! Ratio of land water to storage is constant
 
     integer, parameter    :: handle = 1
 
@@ -2749,6 +2766,8 @@ contains
     real(RP), allocatable :: skinw_org(:,:)
     real(RP), allocatable :: snowq_org(:,:)
     real(RP), allocatable :: snowt_org(:,:)
+
+    real(RP), allocatable :: sh2o (:,:,:)
 
     real(RP), allocatable :: hfact(:,:,:)
     real(RP), allocatable :: vfact(:,:,:,:,:)
@@ -2782,6 +2801,7 @@ contains
 
     allocate( tg_org   ( KALL, IALL, JALL    ) )
     allocate( strg_org ( KALL, IALL, JALL    ) )
+    allocate( sh2o     ( KALL, IALL, JALL    ) )
     allocate( tw_org   (       IALL, JALL    ) )
     allocate( lst_org  (       IALL, JALL    ) )
     allocate( ust_org  (       IALL, JALL    ) )
@@ -2829,10 +2849,12 @@ contains
          tg_org(k,xs:xe,ys:ye) = read3D(:,:,k)
        end do
 
-       call FileRead( read3D(:,:,:), BASENAME_ORG, "LAND_WATER", 1, rank )
-       do k = 1, KALL
-         strg_org(k,xs:xe,ys:ye) = read3D(:,:,k)
-       end do
+       if( use_file_landwater )then
+        call FileRead( read3D(:,:,:), BASENAME_ORG, "LAND_WATER", 1, rank )
+        do k = 1, KALL
+          strg_org(k,xs:xe,ys:ye) = read3D(:,:,k)
+        end do
+       endif
 
        call FileRead( read2D(:,:), BASENAME_ORG, "OCEAN_TEMP",     1, rank )
        tw_org(xs:xe,ys:ye) = read2D(:,:)
@@ -2909,21 +2931,33 @@ contains
                    + tg_org  (kgrd(k,i,j,1,2),igrd(i,j,1),jgrd(i,j,1)) * hfact(i,j,1) * vfact(k,i,j,1,2) &
                    + tg_org  (kgrd(k,i,j,2,2),igrd(i,j,2),jgrd(i,j,2)) * hfact(i,j,2) * vfact(k,i,j,2,2) &
                    + tg_org  (kgrd(k,i,j,3,2),igrd(i,j,3),jgrd(i,j,3)) * hfact(i,j,3) * vfact(k,i,j,3,2)
-       strg(k,i,j) = strg_org(kgrd(k,i,j,1,1),igrd(i,j,1),jgrd(i,j,1)) * hfact(i,j,1) * vfact(k,i,j,1,1) &
-                   + strg_org(kgrd(k,i,j,2,1),igrd(i,j,2),jgrd(i,j,2)) * hfact(i,j,2) * vfact(k,i,j,2,1) &
-                   + strg_org(kgrd(k,i,j,3,1),igrd(i,j,3),jgrd(i,j,3)) * hfact(i,j,3) * vfact(k,i,j,3,1) &
-                   + strg_org(kgrd(k,i,j,1,2),igrd(i,j,1),jgrd(i,j,1)) * hfact(i,j,1) * vfact(k,i,j,1,2) &
-                   + strg_org(kgrd(k,i,j,2,2),igrd(i,j,2),jgrd(i,j,2)) * hfact(i,j,2) * vfact(k,i,j,2,2) &
-                   + strg_org(kgrd(k,i,j,3,2),igrd(i,j,3),jgrd(i,j,3)) * hfact(i,j,3) * vfact(k,i,j,3,2)
     enddo
     enddo
-    enddo
-    do j = 1, JA
-    do i = 1, IA
        tg  (LKMAX,i,j) = tg  (LKMAX-1,i,j)
-       strg(LKMAX,i,j) = strg(LKMAX-1,i,j)
     enddo
-    enddo
+
+    if( use_file_landwater )then
+      ! interpolation
+      do j = 1, JA
+      do i = 1, IA
+      do k = 1, LKMAX-1
+         strg(k,i,j) = strg_org(kgrd(k,i,j,1,1),igrd(i,j,1),jgrd(i,j,1)) * hfact(i,j,1) * vfact(k,i,j,1,1) &
+                     + strg_org(kgrd(k,i,j,2,1),igrd(i,j,2),jgrd(i,j,2)) * hfact(i,j,2) * vfact(k,i,j,2,1) &
+                     + strg_org(kgrd(k,i,j,3,1),igrd(i,j,3),jgrd(i,j,3)) * hfact(i,j,3) * vfact(k,i,j,3,1) &
+                     + strg_org(kgrd(k,i,j,1,2),igrd(i,j,1),jgrd(i,j,1)) * hfact(i,j,1) * vfact(k,i,j,1,2) &
+                     + strg_org(kgrd(k,i,j,2,2),igrd(i,j,2),jgrd(i,j,2)) * hfact(i,j,2) * vfact(k,i,j,2,2) &
+                     + strg_org(kgrd(k,i,j,3,2),igrd(i,j,3),jgrd(i,j,3)) * hfact(i,j,3) * vfact(k,i,j,3,2)
+      enddo
+      enddo
+         strg(LKMAX,i,j) = strg(LKMAX-1,i,j)
+      enddo
+    else  ! not read from boundary file
+      sh2o(:,:,:) = init_landwater_ratio
+      ! conversion from water saturation [fraction] to volumetric water content [m3/m3]
+      do k = 1, LKMAX
+         strg(k,:,:) = convert_WS2VWC( sh2o(k,:,:), critical=.true. )
+      end do
+    endif
 
     roff(:,:) = 0.0_RP ! not necessary
     qvef(:,:) = 0.0_RP ! not necessary
@@ -2983,6 +3017,7 @@ contains
 
     deallocate( tg_org    )
     deallocate( strg_org  )
+    deallocate( sh2o      )
     deallocate( tw_org    )
     deallocate( lst_org   )
     deallocate( ust_org   )
@@ -3006,25 +3041,27 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine InputSurfaceWRF( &
-      tg,          & ! (out)
-      strg,        & ! (out)
-      roff,        & ! (out)
-      qvef,        & ! (out)
-      tw,          & ! (out)
-      lst,         & ! (out)
-      ust,         & ! (out)
-      sst,         & ! (out)
-      albw,        & ! (out)
-      albg,        & ! (out)
-      z0w,         & ! (out)
-      skint,       & ! (out)
-      skinw,       & ! (out)
-      snowq,       & ! (out)
-      snowt,       & ! (out)
-      basename,    & ! (in)
-      dims,        & ! (in)
-      mdlid,       & ! (in)
-      serial       & ! (in)
+      tg,                   & ! (out)
+      strg,                 & ! (out)
+      roff,                 & ! (out)
+      qvef,                 & ! (out)
+      tw,                   & ! (out)
+      lst,                  & ! (out)
+      ust,                  & ! (out)
+      sst,                  & ! (out)
+      albw,                 & ! (out)
+      albg,                 & ! (out)
+      z0w,                  & ! (out)
+      skint,                & ! (out)
+      skinw,                & ! (out)
+      snowq,                & ! (out)
+      snowt,                & ! (out)
+      basename,             & ! (in)
+      dims,                 & ! (in)
+      use_file_landwater,   & ! (in)
+      init_landwater_ratio, & ! (in)
+      mdlid,                & ! (in)
+      serial                & ! (in)
       )
     use mod_land_vars, only: &
       convert_WS2VWC
@@ -3050,6 +3087,8 @@ contains
     character(LEN=*), intent( in)  :: basename
     integer,          intent( in)  :: mdlid
     integer,          intent( in)  :: dims(:)
+    logical,          intent( in)  :: use_file_landwater   ! use land water data from files
+    real(RP),         intent( in)  :: init_landwater_ratio ! Ratio of land water to storage is constant,
     logical,          intent( in)  :: serial
 
     real(RP), allocatable :: org_3D(:,:,:)
@@ -3198,8 +3237,9 @@ contains
     enddo
 
     ! soil liquid water [m3 m-3] (no wrfout-default)
-    call ExternalFileVarExistence( existence, BASENAME, "SH2O", myrank, mdlid, single=.true. )
-    if ( existence ) then
+    if( use_file_landwater ) then
+     call ExternalFileVarExistence( existence, BASENAME, "SH2O", myrank, mdlid, single=.true. )
+     if ( existence ) then
        if( do_read ) then
           call ExternalFileRead( dummy_4D(:,:,:,:),                             &
                          BASENAME, "SH2O", 1, tcount, myrank, mdlid, single=.true., landgrid=.true.  )
@@ -3231,10 +3271,17 @@ contains
        do k = 1, LKMAX
           strg(k,:,:) = convert_WS2VWC( sh2o(k,:,:), critical=.true. )
        end do
-    else
+     else
        ! default value: set as value of forest at 40% of evapolation rate.
        ! forest is considered as a typical landuse over Japan area.
        strg(:,:,:) = 0.02_DP
+     endif
+    else  ! not read from boundary file
+       sh2o(:,:,:) = init_landwater_ratio
+       ! conversion from water saturation [fraction] to volumetric water content [m3/m3]
+       do k = 1, LKMAX
+          strg(k,:,:) = convert_WS2VWC( sh2o(k,:,:), critical=.true. )
+       end do
     endif
 
     ! surface runoff [mm]
@@ -3437,30 +3484,34 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine InputSurfaceNICAM( &
-      tg,           & ! (out)
-      strg,         & ! (out)
-      roff,         & ! (out)
-      qvef,         & ! (out)
-      tw,           & ! (out)
-      lst,          & ! (out)
-      ust,          & ! (out)
-      sst,          & ! (out)
-      albw,         & ! (out)
-      albg,         & ! (out)
-      z0w,          & ! (out)
-      skint,        & ! (out)
-      skinw,        & ! (out)
-      snowq,        & ! (out)
-      snowt,        & ! (out)
-      basename_num, & ! (in)
-      dims,         & ! (in)
-      skiplen       ) ! (in)
+      tg,                  & ! (out)
+      strg,                & ! (out)
+      roff,                & ! (out)
+      qvef,                & ! (out)
+      tw,                  & ! (out)
+      lst,                 & ! (out)
+      ust,                 & ! (out)
+      sst,                 & ! (out)
+      albw,                & ! (out)
+      albg,                & ! (out)
+      z0w,                 & ! (out)
+      skint,               & ! (out)
+      skinw,               & ! (out)
+      snowq,               & ! (out)
+      snowt,               & ! (out)
+      basename_num,        & ! (in)
+      dims,                & ! (in)
+      skiplen,             & ! (in)
+      use_file_landwater,  & ! (in)
+      init_landwater_ratio ) ! (in)
     use scale_const, only: &
        D2R   => CONST_D2R,   &
        TEM00 => CONST_TEM00, &
        EPS   => CONST_EPS
     use scale_landuse, only: &
        frac_land  => LANDUSE_frac_land
+    use mod_land_vars, only: &
+      convert_WS2VWC
     implicit none
 
     real(RP), intent(out) :: tg   (:,:,:)
@@ -3482,6 +3533,9 @@ contains
     character(LEN=*), intent(in) :: basename_num
     integer,          intent(in) :: dims(:)
     integer,          intent(in) :: skiplen
+    logical,          intent(in) :: use_file_landwater   ! use land water data from files
+    real(RP),         intent(in) :: init_landwater_ratio ! Ratio of land water to storage is constant,
+                                                         !              if use_file_landwater is ".false."
 
     ! [imported] NICAM/nhm/physics/mod_land_driver.f90 ---------------
     real(RP) :: glevm5 (1:6) &
@@ -3516,6 +3570,7 @@ contains
     real(RP), allocatable :: skinw_org(:,:)
     real(RP), allocatable :: snowq_org(:,:)
     real(RP), allocatable :: snowt_org(:,:)
+    real(RP), allocatable :: sh2o(:,:,:)
 
     real(RP), allocatable :: hfact(:,:,:)
     real(RP), allocatable :: vfact(:,:,:,:,:)
@@ -3586,6 +3641,8 @@ contains
     allocate( igrd (        IA, JA, itp_nh         ) )
     allocate( jgrd (        IA, JA, itp_nh         ) )
     allocate( kgrd ( LKMAX, IA, JA, itp_nh, itp_nv ) )
+
+    allocate( sh2o (LKMAX,IA,JA) )
 
     if( IO_L ) write(IO_FID_LOG,*) ''
     if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[realinput]/Categ[InputNICAM-Surface]'
@@ -3665,16 +3722,18 @@ contains
        tg_org(:,:,:) = real( read4D(:,:,:,1), kind=RP )
      
        ! [scale-offset]
-       basename = "la_wg"//trim(basename_num)
-       call ExternalFileReadOffset( read4D(:,:,:,:),  &
-                                    trim(basename),   &
-                                    "la_wg",          &
-                                    start_step,       &
-                                    end_step,         &
-                                    myrank,           &
-                                    iNICAM,           &
-                                    single=.true.     )
-       strg_org(:,:,:) = real( read4D(:,:,:,1), kind=RP )
+       if( use_file_landwater ) then
+        basename = "la_wg"//trim(basename_num)
+        call ExternalFileReadOffset( read4D(:,:,:,:),  &
+                                     trim(basename),   &
+                                     "la_wg",          &
+                                     start_step,       &
+                                     end_step,         &
+                                     myrank,           &
+                                     iNICAM,           &
+                                     single=.true.     )
+        strg_org(:,:,:) = real( read4D(:,:,:,1), kind=RP )
+       endif
 
        ! 6hourly data, first "skiplen" steps are skipped
        start_step = skiplen + 1
@@ -3716,43 +3775,98 @@ contains
     endif
 
     call COMM_bcast( landmask(:,:),              dims(1), dims(2)     )
-    call COMM_bcast( tg_org  (:,:,:),   dims(7), dims(1), dims(2)     )
-    call COMM_bcast( strg_org(:,:,:),   dims(7), dims(1), dims(2)     )
     call COMM_bcast( lst_org (:,:),              dims(1), dims(2)     )
     call COMM_bcast( sst_org (:,:),              dims(1), dims(2)     )
     !call COMM_bcast( ice_org (:,:),              dims(1), dims(2)     )
+    call COMM_bcast( tg_org  (:,:,:),   dims(7), dims(1), dims(2)     )
+    if( use_file_landwater ) then
+     call COMM_bcast( strg_org(:,:,:),   dims(7), dims(1), dims(2)     )
+    endif
 
     ! replace missing value
      maskval_tg   = 298.0_RP    ! mask value 50K => 298K
      maskval_strg = 0.02_RP     ! mask value 0.0 => 0.02
                                 ! default value 0.02: set as value of forest at 40% of evapolation rate.
                                 ! forest is considered as a typical landuse over Japan area.
+
+    ! Land temp: interpolate over the ocean
      do k=1,dims(7)
      do j=1,dims(2)
      do i=1,dims(1)
         if ( abs(tg_org(k,i,j)-50.0D0) < EPS ) then
            tg_org(k,i,j) = maskval_tg
         endif
-        if ( abs(strg_org(k,i,j)-0.0D0) < EPS ) then
-           strg_org(k,i,j) = maskval_strg
-        endif
      enddo
      enddo
      enddo
 
-    ! Land temp: interpolate over the ocean
      do k=1,dims(7)
         work(:,:,1) = tg_org(k,:,:)
         call interp_OceanLand_data(work(:,:,:),landmask,dims(1),dims(2), 1,landdata=.true.)
         tg_org(k,:,:) = work(:,:,1)
      enddo
+     ! interpolation
+     do j = 1, JA
+     do i = 1, IA
+     do k = 1, LKMAX-1
+        tg  (k,i,j) = tg_org  (kgrd(k,i,j,1,1),igrd(i,j,1),jgrd(i,j,1)) * hfact(i,j,1) * vfact(k,i,j,1,1) &
+                    + tg_org  (kgrd(k,i,j,2,1),igrd(i,j,2),jgrd(i,j,2)) * hfact(i,j,2) * vfact(k,i,j,2,1) &
+                    + tg_org  (kgrd(k,i,j,3,1),igrd(i,j,3),jgrd(i,j,3)) * hfact(i,j,3) * vfact(k,i,j,3,1) &
+                    + tg_org  (kgrd(k,i,j,1,2),igrd(i,j,1),jgrd(i,j,1)) * hfact(i,j,1) * vfact(k,i,j,1,2) &
+                    + tg_org  (kgrd(k,i,j,2,2),igrd(i,j,2),jgrd(i,j,2)) * hfact(i,j,2) * vfact(k,i,j,2,2) &
+                    + tg_org  (kgrd(k,i,j,3,2),igrd(i,j,3),jgrd(i,j,3)) * hfact(i,j,3) * vfact(k,i,j,3,2)
+     enddo
+        tg  (LKMAX,i,j) = tg  (LKMAX-1,i,j)
+     enddo
+     enddo
+     deallocate( tg_org )
+     ! replace values over the ocean
+     do k = 1, LKMAX
+      call replace_misval( tg(k,:,:),   maskval_tg,   frac_land )
+     enddo
 
     ! Land water: interpolate over the ocean
-     do k=1,dims(7)
-        work(:,:,1) = strg_org(k,:,:)
-        call interp_OceanLand_data(work(:,:,:),landmask,dims(1),dims(2), 1,landdata=.true.)
-        strg_org(k,:,:) = work(:,:,1)
-     enddo
+    if( use_file_landwater ) then
+      do k=1,dims(7)
+      do j=1,dims(2)
+      do i=1,dims(1)
+         if ( abs(strg_org(k,i,j)-0.0D0) < EPS ) then
+            strg_org(k,i,j) = maskval_strg
+         endif
+      enddo
+      enddo
+      enddo
+      do k=1,dims(7)
+         work(:,:,1) = strg_org(k,:,:)
+         call interp_OceanLand_data(work(:,:,:),landmask,dims(1),dims(2), 1,landdata=.true.)
+         strg_org(k,:,:) = work(:,:,1)
+      enddo
+      ! interpolation
+      do j = 1, JA
+      do i = 1, IA
+      do k = 1, LKMAX-1
+         strg(k,i,j) = strg_org(kgrd(k,i,j,1,1),igrd(i,j,1),jgrd(i,j,1)) * hfact(i,j,1) * vfact(k,i,j,1,1) &
+                     + strg_org(kgrd(k,i,j,2,1),igrd(i,j,2),jgrd(i,j,2)) * hfact(i,j,2) * vfact(k,i,j,2,1) &
+                     + strg_org(kgrd(k,i,j,3,1),igrd(i,j,3),jgrd(i,j,3)) * hfact(i,j,3) * vfact(k,i,j,3,1) &
+                     + strg_org(kgrd(k,i,j,1,2),igrd(i,j,1),jgrd(i,j,1)) * hfact(i,j,1) * vfact(k,i,j,1,2) &
+                     + strg_org(kgrd(k,i,j,2,2),igrd(i,j,2),jgrd(i,j,2)) * hfact(i,j,2) * vfact(k,i,j,2,2) &
+                     + strg_org(kgrd(k,i,j,3,2),igrd(i,j,3),jgrd(i,j,3)) * hfact(i,j,3) * vfact(k,i,j,3,2)
+      enddo
+         strg(LKMAX,i,j) = strg(LKMAX-1,i,j)
+      enddo
+      enddo
+      ! replace values over the ocean
+      do k = 1, LKMAX
+       call replace_misval( strg(k,:,:), maskval_strg, frac_land )
+      enddo
+    else
+      sh2o(:,:,:) = init_landwater_ratio
+      ! conversion from water saturation [fraction] to volumetric water content [m3/m3]
+      do k = 1, LKMAX
+         strg(k,:,:) = convert_WS2VWC( sh2o(k,:,:), critical=.true. )
+      end do
+    endif
+    deallocate( strg_org )
 
     ! Surface skin temp: interpolate over the ocean
      work(:,:,1) = lst_org(:,:)
@@ -3786,40 +3900,6 @@ contains
     albg_org (:,:,I_LW) = 0.03_RP  ! emissivity of general ground surface : 0.95-0.98
     albg_org (:,:,I_SW) = 0.22_RP
     z0w_org  (:,:)      = 0.001_RP  
-
-    ! interpolation
-    do j = 1, JA
-    do i = 1, IA
-    do k = 1, LKMAX-1
-       tg  (k,i,j) = tg_org  (kgrd(k,i,j,1,1),igrd(i,j,1),jgrd(i,j,1)) * hfact(i,j,1) * vfact(k,i,j,1,1) &
-                   + tg_org  (kgrd(k,i,j,2,1),igrd(i,j,2),jgrd(i,j,2)) * hfact(i,j,2) * vfact(k,i,j,2,1) &
-                   + tg_org  (kgrd(k,i,j,3,1),igrd(i,j,3),jgrd(i,j,3)) * hfact(i,j,3) * vfact(k,i,j,3,1) &
-                   + tg_org  (kgrd(k,i,j,1,2),igrd(i,j,1),jgrd(i,j,1)) * hfact(i,j,1) * vfact(k,i,j,1,2) &
-                   + tg_org  (kgrd(k,i,j,2,2),igrd(i,j,2),jgrd(i,j,2)) * hfact(i,j,2) * vfact(k,i,j,2,2) &
-                   + tg_org  (kgrd(k,i,j,3,2),igrd(i,j,3),jgrd(i,j,3)) * hfact(i,j,3) * vfact(k,i,j,3,2)
-       strg(k,i,j) = strg_org(kgrd(k,i,j,1,1),igrd(i,j,1),jgrd(i,j,1)) * hfact(i,j,1) * vfact(k,i,j,1,1) &
-                   + strg_org(kgrd(k,i,j,2,1),igrd(i,j,2),jgrd(i,j,2)) * hfact(i,j,2) * vfact(k,i,j,2,1) &
-                   + strg_org(kgrd(k,i,j,3,1),igrd(i,j,3),jgrd(i,j,3)) * hfact(i,j,3) * vfact(k,i,j,3,1) &
-                   + strg_org(kgrd(k,i,j,1,2),igrd(i,j,1),jgrd(i,j,1)) * hfact(i,j,1) * vfact(k,i,j,1,2) &
-                   + strg_org(kgrd(k,i,j,2,2),igrd(i,j,2),jgrd(i,j,2)) * hfact(i,j,2) * vfact(k,i,j,2,2) &
-                   + strg_org(kgrd(k,i,j,3,2),igrd(i,j,3),jgrd(i,j,3)) * hfact(i,j,3) * vfact(k,i,j,3,2)
-    enddo
-    enddo
-    enddo
-    do j = 1, JA
-    do i = 1, IA
-       tg  (LKMAX,i,j) = tg  (LKMAX-1,i,j)
-       strg(LKMAX,i,j) = strg(LKMAX-1,i,j)
-    enddo
-    enddo
-    deallocate( tg_org    )
-    deallocate( strg_org  )
-
-    ! replace values over the ocean
-    do k = 1, LKMAX
-     call replace_misval( tg(k,:,:),   maskval_tg,   frac_land )
-     call replace_misval( strg(k,:,:), maskval_strg, frac_land )
-    enddo
 
     roff(:,:) = 0.0_RP ! not necessary
     qvef(:,:) = 0.0_RP ! not necessary
@@ -3894,6 +3974,7 @@ contains
     deallocate( snowq_org )
     deallocate( snowt_org )
 
+    deallocate( sh2o )
     deallocate( hfact )
     deallocate( vfact )
     deallocate( igrd  )
