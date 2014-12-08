@@ -669,174 +669,99 @@ contains
 
     call PROF_rapstart('MP Precipitation', 2)
 
-    do iq = 1, QA
+    do iq = I_QC, QQE
        call COMM_vars8( vterm(:,:,:,iq), iq )
     enddo
-    do iq = 1, QA
-       call COMM_vars8( QTRC(:,:,:,iq), QA+iq )
-    enddo
-    do iq = 1, QA
-       call COMM_wait( vterm(:,:,:,iq), iq )
-    enddo
-    do iq = 1, QA
-       call COMM_wait( QTRC(:,:,:,iq), QA+iq )
+    do iq = I_QC, QQE
+       call COMM_vars8( QTRC(:,:,:,iq), QQE+iq )
     enddo
 
+!OCL XFILL
     flux_rain(:,:,:) = 0.0_RP
+!OCL XFILL
     flux_snow(:,:,:) = 0.0_RP
 
     ! tracer/energy transport by falldown
     ! 1st order upwind, forward euler, velocity is always negative
-    !$omp parallel do private(i,j,k,iq,eflx,qflx) OMP_SCHEDULE_ collapse(2)
-    do j  = JS, JE
-    do i  = IS, IE
-       eflx(KE,i,j) = 0.0_RP
-    end do
-    end do
 
-    do j  = JS, JE
-    do i  = IS, IE
-    do k = KS, KE
-       rcdz(k,i,j) = 1.0_RP / ( REAL_FZ(k,i,j) - REAL_FZ(k-1,i,j) )
-    enddo
-    enddo
-    enddo
-
-    do j  = JS, JE
-    do i  = IS, IE
-    do k = KS, KE
-       rcdz_u(k,i,j) = 2.0_RP / ( ( REAL_FZ(k,i+1,j) - REAL_FZ(k-1,i+1,j) ) &
-                                + ( REAL_FZ(k,i  ,j) - REAL_FZ(k-1,i  ,j) ) )
-    enddo
-    enddo
-    enddo
-
-    do j  = JS, JE
-    do i  = IS, IE
-    do k = KS, KE
-       rcdz_v(k,i,j) = 2.0_RP / ( ( REAL_FZ(k,i,j+1) - REAL_FZ(k-1,i,j+1) ) &
-                                + ( REAL_FZ(k,i,j  ) - REAL_FZ(k-1,i,j  ) ) )
-    enddo
-    enddo
-    enddo
-
-    do j  = JS, JE
-    do i  = IS, IE
-    do k = KS, KE
-       rfdz(k,i,j) = 1.0_RP / ( REAL_CZ(k+1,i,j) - REAL_CZ(k,i,j) )
-    enddo
-    enddo
-    enddo
-    do j  = JS, JE
-    do i  = IS, IE
+    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+    do j = JS, JE
+    do i = IS, IE
        rfdz(KS-1,i,j) = 1.0_RP / ( REAL_CZ(KS,i,j) - REAL_FZ(KS-1,i,j) )
-    end do
-    end do
+       do k = KS, KE
+          rcdz  (k,i,j) = 1.0_RP / ( REAL_FZ(k,i,j) - REAL_FZ(k-1,i,j) )
+          rcdz_u(k,i,j) = 2.0_RP / ( ( REAL_FZ(k,i+1,j) - REAL_FZ(k-1,i+1,j) ) &
+                                   + ( REAL_FZ(k,i  ,j) - REAL_FZ(k-1,i  ,j) ) )
+          rcdz_v(k,i,j) = 2.0_RP / ( ( REAL_FZ(k,i,j+1) - REAL_FZ(k-1,i,j+1) ) &
+                                   + ( REAL_FZ(k,i,j  ) - REAL_FZ(k-1,i,j  ) ) )
+          rfdz(k,i,j) = 1.0_RP / ( REAL_CZ(k+1,i,j) - REAL_CZ(k,i,j) )
+       enddo
+    enddo
+    enddo
 
     do iq = I_QC, QQE
 
-       !--- mass flux for each mass tracer, upwind with vel < 0
+       call COMM_wait( vterm(:,:,:,iq), iq )
+       call COMM_wait( QTRC(:,:,:,iq), QQE+iq )
+
        do j  = JS, JE
        do i  = IS, IE
-       do k  = KS-1, KE-1
-          qflx(k,i,j,iq) = vterm(k+1,i,j,iq) * DENS(k+1,i,j) * QTRC(k+1,i,j,iq) * J33G
-       enddo
-       enddo
-       enddo
-       do j  = JS, JE
-       do i  = IS, IE
+          !--- mass flux for each mass tracer, upwind with vel < 0
+          do k  = KS-1, KE-1
+             qflx(k,i,j,iq) = vterm(k+1,i,j,iq) * DENS(k+1,i,j) * QTRC(k+1,i,j,iq) * J33G
+          enddo
           qflx(KE,i,j,iq) = 0.0_RP
-       end do
-       end do
 
-       !--- internal energy
-       do j  = JS, JE
-       do i  = IS, IE
-       do k  = KS-1, KE-1
-          eflx(k,i,j) = qflx(k,i,j,iq) * temp(k+1,i,j) * CVw(iq)
-       enddo
-       enddo
-       enddo
-       do j  = JS, JE
-       do i  = IS, IE
-       do k  = KS, KE
-          RHOE(k,i,j) = RHOE(k,i,j) - dt * ( eflx(k,i,j) - eflx(k-1,i,j) ) * rcdz(k,i,j)
-       enddo
-       enddo
-       enddo
+          !--- internal energy
+          eflx(KS-1,i,j) = qflx(KS-1,i,j,iq) * temp(KS,i,j) * CVw(iq)
+          do k  = KS, KE-1
+             eflx(k,i,j) = qflx(k,i,j,iq) * temp(k+1,i,j) * CVw(iq)
+             RHOE(k,i,j) = RHOE(k,i,j) - dt * ( eflx(k,i,j) - eflx(k-1,i,j) ) * rcdz(k,i,j)
+          enddo
+          eflx(KE,i,j) = 0.0_RP
+          RHOE(KE,i,j) = RHOE(KE,i,j) - dt * ( - eflx(KE-1,i,j) ) * rcdz(KE,i,j)
 
-       !--- potential energy
-       do j  = JS, JE
-       do i  = IS, IE
-       do k  = KS, KE-1
-          eflx(k,i,j) = qflx(k,i,j,iq) * GRAV / rfdz(k,i,j)
-       enddo
-       enddo
-       enddo
-       do j  = JS, JE
-       do i  = IS, IE
+          !--- potential energy
           eflx(KS-1,i,j) = qflx(KS-1,i,j,iq) * GRAV / rfdz(KS-1,i,j)
-       end do
-       end do
-       do j  = JS, JE
-       do i  = IS, IE
-       do k  = KS, KE
-          RHOE(k,i,j) = RHOE(k,i,j) - dt * ( eflx(k,i,j) - eflx(k-1,i,j) ) * rcdz(k,i,j)
-       enddo
-       enddo
-       enddo
+          do k  = KS, KE-1
+             eflx(k,i,j) = qflx(k,i,j,iq) * GRAV / rfdz(k,i,j)
+             RHOE(k,i,j) = RHOE(k,i,j) - dt * ( eflx(k,i,j) - eflx(k-1,i,j) ) * rcdz(k,i,j)
+          enddo
+          RHOE(KE,i,j) = RHOE(KE,i,j) - dt * ( - eflx(KE-1,i,j) ) * rcdz(KE,i,j)
 
-       !--- momentum z (half level)
-       do j  = JS, JE
-       do i  = IS, IE
-       do k  = KS-1, KE-1
-          eflx(k,i,j) = 0.25_RP * ( vterm(k+1,i,j,iq) + vterm(k,i,j,iq) ) &
-                                * ( QTRC (k+1,i,j,iq) + QTRC (k,i,j,iq) ) &
-                                * MOMZ(k,i,j)
-       enddo
-       enddo
-       enddo
-       do j  = JS, JE
-       do i  = IS, IE
-       do k  = KS, KE-1
-          MOMZ(k,i,j) = MOMZ(k,i,j) - dt * ( eflx(k+1,i,j) - eflx(k,i,j) ) * rfdz(k,i,j)
-       enddo
-       enddo
-       enddo
+          !--- momentum z (half level)
+          do k  = KS-1, KE-1
+             eflx(k,i,j) = 0.25_RP * ( vterm(k+1,i,j,iq) + vterm(k,i,j,iq) ) &
+                                   * ( QTRC (k+1,i,j,iq) + QTRC (k,i,j,iq) ) &
+                                   * MOMZ(k,i,j)
+          enddo
+          do k  = KS, KE-1
+             MOMZ(k,i,j) = MOMZ(k,i,j) - dt * ( eflx(k+1,i,j) - eflx(k,i,j) ) * rfdz(k,i,j)
+          enddo
 
-       !--- momentum x
-       do j  = JS, JE
-       do i  = IS, IE
-       do k  = KS-1, KE-1
-          eflx(k,i,j) = 0.25_RP * ( vterm(k+1,i,j,iq) + vterm(k+1,i+1,j,iq) ) &
-                                * ( QTRC (k+1,i,j,iq) + QTRC (k+1,i+1,j,iq) ) &
-                                * MOMX(k+1,i,j)
-       enddo
-       enddo
-       enddo
-       do j  = JS, JE
-       do i  = IS, IE
-       do k  = KS, KE
-          MOMX(k,i,j) = MOMX(k,i,j) - dt * ( eflx(k,i,j) - eflx(k-1,i,j) ) * rcdz_u(k,i,j)
-       enddo
-       enddo
-       enddo
+          !--- momentum x
+          eflx(KS-1,i,j) = 0.25_RP * ( vterm(KS,i,j,iq) + vterm(KS,i+1,j,iq) ) &
+                                   * ( QTRC (KS,i,j,iq) + QTRC (KS,i+1,j,iq) ) &
+                                   * MOMX(KS,i,j)
+          do k  = KS-1, KE-1
+             eflx(k,i,j) = 0.25_RP * ( vterm(k+1,i,j,iq) + vterm(k+1,i+1,j,iq) ) &
+                                   * ( QTRC (k+1,i,j,iq) + QTRC (k+1,i+1,j,iq) ) &
+                                   * MOMX(k+1,i,j)
+             MOMX(k,i,j) = MOMX(k,i,j) - dt * ( eflx(k,i,j) - eflx(k-1,i,j) ) * rcdz_u(k,i,j)
+          enddo
+          MOMX(KE,i,j) = MOMX(KE,i,j) - dt * ( - eflx(KE-1,i,j) ) * rcdz_u(KE,i,j)
 
-       !--- momentum y
-       do j  = JS, JE
-       do i  = IS, IE
-       do k  = KS-1, KE-1
-          eflx(k,i,j) = 0.25_RP * ( vterm(k+1,i,j,iq) + vterm(k+1,i,j+1,iq) ) &
-                                * ( QTRC (k+1,i,j,iq) + QTRC (k+1,i,j+1,iq) ) &
-                                * MOMY(k+1,i,j)
-       enddo
-       enddo
-       enddo
-       do j  = JS, JE
-       do i  = IS, IE
-       do k  = KS, KE
-          MOMY(k,i,j) = MOMY(k,i,j) - dt * ( eflx(k,i,j) - eflx(k-1,i,j) ) * rcdz_v(k,i,j)
-       enddo
+          !--- momentum y
+          eflx(KS-1,i,j) = 0.25_RP * ( vterm(KS,i,j,iq) + vterm(KS,i,j+1,iq) ) &
+                                   * ( QTRC (KS,i,j,iq) + QTRC (KS,i,j+1,iq) ) &
+                                   * MOMY(KS,i,j)
+          do k  = KS-1, KE-1
+             eflx(k,i,j) = 0.25_RP * ( vterm(k+1,i,j,iq) + vterm(k+1,i,j+1,iq) ) &
+                                   * ( QTRC (k+1,i,j,iq) + QTRC (k+1,i,j+1,iq) ) &
+                                   * MOMY(k+1,i,j)
+             MOMY(k,i,j) = MOMY(k,i,j) - dt * ( eflx(k,i,j) - eflx(k-1,i,j) ) * rcdz_v(k,i,j)
+          enddo
+          MOMY(KE,i,j) = MOMY(KE,i,j) - dt * ( - eflx(KE-1,i,j) ) * rcdz_v(KE,i,j)
        enddo
        enddo
 
@@ -844,10 +769,10 @@ contains
 
     ! save previous value
     do iq = 1, QA
-       !$omp parallel do private(i,j,k,iq,rhoq,qflx) OMP_SCHEDULE_ collapse(2)
-       do j  = JS, JE
-       do i  = IS, IE
-       do k  = KS-1, KE
+       !$omp parallel do private(i,j,k,iq,rhoq) OMP_SCHEDULE_ collapse(2)
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS-1, KE
           rhoq(k,i,j,iq) = DENS(k,i,j) * QTRC(k,i,j,iq)
        enddo
        enddo
@@ -857,15 +782,12 @@ contains
 
     !--- mass flux for each tracer, upwind with vel < 0
     do iq = I_QC, QA
+
        do j  = JS, JE
        do i  = IS, IE
-       do k  = KS-1, KE-1
-          qflx(k,i,j,iq) = vterm(k+1,i,j,iq) * rhoq(k+1,i,j,iq)
-       enddo
-       enddo
-       enddo
-       do j  = JS, JE
-       do i  = IS, IE
+          do k  = KS-1, KE-1
+             qflx(k,i,j,iq) = vterm(k+1,i,j,iq) * rhoq(k+1,i,j,iq)
+          enddo
           qflx(KE,i,j,iq) = 0.0_RP
        enddo
        enddo
@@ -894,8 +816,8 @@ contains
     enddo
 
     !--- update no-falling tracer (use updated total density)
-    do j  = JS, JE
-    do i  = IS, IE
+    do j = JS, JE
+    do i = IS, IE
     do k = KS, KE
        QTRC(k,i,j,I_QV) = rhoq(k,i,j,I_QV) / DENS(k,i,j)
     enddo
