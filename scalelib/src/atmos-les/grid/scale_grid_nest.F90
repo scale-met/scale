@@ -2339,6 +2339,8 @@ contains
   subroutine NEST_COMM_waitall( &
       req_count,  & ! [in]
       ireq        ) ! [in]
+    use scale_process, only: &
+       PRC_MPIstop
     implicit none
 
     integer, intent(in)    :: req_count
