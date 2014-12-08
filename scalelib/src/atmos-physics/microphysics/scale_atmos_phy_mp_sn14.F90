@@ -1304,7 +1304,7 @@ contains
     real(RP) :: temp(KA,IA,JA)
     real(RP) :: pres(KA,IA,JA)
     real(RP) :: rhoe(KA,IA,JA)
-    real(RP) :: w(KA,IA,JA)
+    real(RP) :: velz(KA,IA,JA)
     !
     real(RP) :: rhoq2(QA,KA,IA,JA)
     !
@@ -1319,8 +1319,8 @@ contains
     !
     real(RP) :: rho_fac
     real(RP) :: rho_fac_q(5,KA,IA,JA) ! factor for tracers, 1:cloud, 2:rain, 3:ice, 4: snow, 5:graupel
-    real(RP) :: cva_d(KA,IA,JA)    !
-    real(RP) :: cpa_d(KA,IA,JA)       ! [Add] 09/08/18 T.Mitsui
+    real(RP) :: cva(KA,IA,JA)    !
+    real(RP) :: cpa(KA,IA,JA)       ! [Add] 09/08/18 T.Mitsui
     !
     real(RP) :: drhogqv               ! d (rho*qv*gsgam2)
     real(RP) :: drhogqc, drhognc      !        qc, nc
@@ -1382,8 +1382,8 @@ contains
     !
     !--------------------------------------------------
     ! work for column production term
-    real(RP) :: sl_PLCdep_d(1,IA,JA)
-    real(RP) :: sl_PLRdep_d(1,IA,JA), sl_PNRdep_d(1,IA,JA) !
+    real(RP) :: sl_PLCdep(IA,JA)
+    real(RP) :: sl_PLRdep(IA,JA), sl_PNRdep(IA,JA) !
     !--------------------------------------------------
     logical :: flag_history_in
     real(RP) :: qke_d(KA,IA,JA)
@@ -1396,7 +1396,6 @@ contains
     integer :: ntdiv
 
     real(RP) :: Rmoist
-    real(RP) :: cpa
 
     real(RP) :: velw(KA,IA,JA,QA)
     real(RP) :: FLX_rain (KA,IA,JA)
@@ -1431,61 +1430,49 @@ contains
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-    do iq = 1, QA
-       rhoq(iq,k,i,j) = DENS(k,i,j) * QTRC(k,i,j,iq)
-    enddo
+       do iq = 1, QA
+          rhoq(iq,k,i,j) = DENS(k,i,j) * QTRC(k,i,j,iq)
+       enddo
+       rhoq2(I_QV,k,i,j) = DENS(k,i,j)*QTRC(k,i,j,I_QV)
+       rhoq2(I_NI,k,i,j) = max( 0.0_RP, DENS(k,i,j)*QTRC(k,i,j,I_NI) )
+       rhoq2(I_NC,k,i,j) = max( 0.0_RP, DENS(k,i,j)*QTRC(k,i,j,I_NC) )
     enddo
     enddo
     enddo
 
     do j = JS, JE
     do i = IS, IE
-       sl_PLCdep_d(1,i,j) = 0.0_RP
-       sl_PLRdep_d(1,i,j) = 0.0_RP
-       sl_PNRdep_d(1,i,j) = 0.0_RP
+       velz(KS-1,i,j) = 0.0_RP
+       do k = KS, KE-1
+          velz(k,i,j) = MOMZ(k,i,j) / ( DENS(k,i,j) + DENS(k+1,i,j) ) * 2.0_RP
+       enddo
+       velz(KE,i,j) = 0.0_RP
     end do
     end do
 
     do j = JS, JE
     do i = IS, IE
-       do k = KS-1, KE+1
-          rrho(k,i,j) = 1.0_RP / DENS(k,i,j)
-          w(k,i,j) = ( MOMZ(k,i,j) + MOMZ(k-1,i,j) ) * rrho(k,i,j)
-       enddo
-       do k = KS, KE
-          pott(k,i,j) = RHOT(k,i,j) * rrho(k,i,j)
-       enddo
-    end do
-    end do
-
-    do j = JS, JE
-    do i = IS, IE
-       do k = KS, KE
-          CALC_QDRY( qdry(k,i,j), QTRC, k, i, j, iq )
-          CALC_CV( cva_d(k,i,j), qdry(k,i,j), QTRC, k, i, j, iq, CVdry, AQ_CV )
-       enddo
-       do k = KS, KE
-          CALC_R( Rmoist, QTRC(k,i,j,I_QV), qdry(k,i,j), Rdry, Rvap )
-          cpa = cva_d(k,i,j) + Rmoist
-          CALC_PRE( pres(k,i,j), DENS(k,i,j), pott(k,i,j), Rmoist, cpa, P00 )
-          temp(k,i,j) = pres(k,i,j) / ( DENS(k,i,j) * Rmoist )
-       enddo
-       do k = KS, KE
-          rhoe(k,i,j) = DENS(k,i,j) * temp(k,i,j) * cva_d(k,i,j)
-       enddo
+    do k = KS, KE
+       rrho(k,i,j) = 1.0_RP / DENS(k,i,j)
+       pott(k,i,j) = RHOT(k,i,j) * rrho(k,i,j)
+       CALC_QDRY( qdry(k,i,j), QTRC, k, i, j, iq )
+       CALC_CV( cva(k,i,j), qdry(k,i,j), QTRC, k, i, j, iq, CVdry, AQ_CV )
+       CALC_R( Rmoist, QTRC(k,i,j,I_QV), qdry(k,i,j), Rdry, Rvap )
+       cpa(k,i,j) = cva(k,i,j) + Rmoist
+       CALC_PRE( pres(k,i,j), DENS(k,i,j), pott(k,i,j), Rmoist, cpa(k,i,j), P00 )
+       temp(k,i,j) = pres(k,i,j) / ( DENS(k,i,j) * Rmoist )
+       rhoe(k,i,j) = DENS(k,i,j) * temp(k,i,j) * cva(k,i,j)
+       wtemp(k,i,j) = max(temp(k,i,j), tem_min)
+    enddo
     enddo
     enddo
 
     if( opt_debug_tem ) call debug_tem_kij( 1, temp(:,:,:), DENS(:,:,:), pres(:,:,:), QTRC(:,:,:,I_QV) )
 
-    call PROF_rapend  ('MP Preprocess', 2)
-
-    call PROF_rapstart('MP Nucleation', 2)
-
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       rho_fac         = rho_0 / max(DENS(k,i,j),rho_min)
+       rho_fac              = rho_0 / max(DENS(k,i,j),rho_min)
        rho_fac_q(I_C,k,i,j) = rho_fac**gamma_v(I_QC)
        rho_fac_q(I_R,k,i,j) = rho_fac**gamma_v(I_QR)
        rho_fac_q(I_I,k,i,j) = (pres(k,i,j)/pre0_vt)**a_pre0_vt * (temp(k,i,j)/tem0_vt)**a_tem0_vt
@@ -1494,42 +1481,48 @@ contains
     enddo
     enddo
     enddo
+
+!OCL XFILL
+    do j = JS, JE
+    do i = IS, IE
+       sl_PLCdep(i,j) = 0.0_RP
+       sl_PLRdep(i,j) = 0.0_RP
+       sl_PNRdep(i,j) = 0.0_RP
+    end do
+    end do
+
+!OCL XFILL
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       CALC_CP( cpa_d(k,i,j), qdry(k,i,j), QTRC, k, i, j, iq, CVdry, AQ_CP )
-       wtemp(k,i,j) = max(temp(k,i,j), tem_min)
+       qke_d(k,i,j) = 0.0_RP ! 2*TKE
     enddo
     enddo
     enddo
+
+!OCL XFILL
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       rhoq2(I_QV,k,i,j) = DENS(k,i,j)*QTRC(k,i,j,I_QV)
-       rhoq2(I_NI,k,i,j) = max( 0.0_RP, DENS(k,i,j)*QTRC(k,i,j,I_NI) )
-       rhoq2(I_NC,k,i,j) = max( 0.0_RP, DENS(k,i,j)*QTRC(k,i,j,I_NC) )
-    enddo
-    enddo
-    enddo
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       qke_d       (k,i,j) = 0.0_RP ! 2*TKE
        dTdt_equiv_d(k,i,j) = 0.0_RP
     enddo
     enddo
     enddo
 
+    call PROF_rapend  ('MP Preprocess', 2)
+
+    call PROF_rapstart('MP Nucleation', 2)
+
     call nucleation_kij(    &
-         z, w,              & ! in
+         z, velz,           & ! in
          DENS, wtemp, pres, & ! in
          rhoq2,             & ! (in)
-         PQ, & ! out
-         cpa_d,            & ! in
-         dTdt_equiv_d,     & ! in
-         qke_d,            & ! in
-         flag_history_in,& ! in
-         dt              ) ! in
+         PQ,                & ! out
+         cpa,               & ! in
+         dTdt_equiv_d,      & ! in
+         qke_d,             & ! in
+         flag_history_in,   & ! in
+         dt                 ) ! in
 
     do j = JS, JE
     do i = IS, IE
@@ -1572,9 +1565,9 @@ contains
     do i = IS, IE
     do k = KS, KE
        CALC_QDRY( qdry(k,i,j), QTRC, k, i, j, iq )
-       CALC_CV( cva_d(k,i,j), qdry(k,i,j), QTRC, k, i, j, iq, CVdry, AQ_CV )
+       CALC_CV( cva(k,i,j), qdry(k,i,j), QTRC, k, i, j, iq, CVdry, AQ_CV )
        CALC_R ( Rmoist, QTRC(k,i,j,I_QV), qdry(k,i,j), Rdry, Rvap )
-       temp(k,i,j) = rhoe(k,i,j) / ( DENS(k,i,j) * cva_d(k,i,j) )
+       temp(k,i,j) = rhoe(k,i,j) / ( DENS(k,i,j) * cva(k,i,j) )
        pres(k,i,j) = DENS(k,i,j) * Rmoist * temp(k,i,j)
     enddo
     enddo
@@ -1582,6 +1575,7 @@ contains
 
 !    if( opt_debug )     call debugreport_nucleation
     if( opt_debug_tem ) call debug_tem_kij( 2, temp(:,:,:), DENS(:,:,:), pres(:,:,:), QTRC(:,:,:,I_QV) )
+
 
     call PROF_rapend  ('MP Nucleation', 2)
     !----------------------------------------------------------------------------
@@ -1702,17 +1696,17 @@ contains
             gsgam2_d,                   & ! in
             z,                          & ! in
             dz,                         & ! in
-            w,                          & ! in
+            velz,                       & ! in
             dTdt_equiv_d,               & ! in
             DENS,                       & ! in
             rhoe,                       & ! inout
             rhoq, QTRC,                 & ! inout
             temp, pres,                 & ! inout
-            cva_d,                      & ! out
+            cva,                        & ! out
             esw, esi, rhoq2,            & ! in
             PQ,                         & ! inout
-            sl_PLCdep_d,                & ! inout
-            sl_PLRdep_d, sl_PNRdep_d    ) ! inout
+            sl_PLCdep,                  & ! inout
+            sl_PLRdep, sl_PNRdep        ) ! inout
 
 !       if( opt_debug )     call debugreport_phasechange
        if( opt_debug_tem ) call debug_tem_kij( 3, temp(:,:,:), DENS(:,:,:), pres(:,:,:), QTRC(:,:,:,I_QV) )
@@ -2028,10 +2022,10 @@ contains
        enddo
 
        CALC_QDRY( qdry(k,i,j), QTRC, k, i, j, iq )
-       CALC_CV( cva_d(k,i,j), qdry(k,i,j), QTRC, k, i, j, iq, CVdry, AQ_CV )
+       CALC_CV( cva(k,i,j), qdry(k,i,j), QTRC, k, i, j, iq, CVdry, AQ_CV )
        CALC_R( Rmoist, QTRC(k,i,j,I_QV), qdry(k,i,j), Rdry, Rvap )
 
-       temp(k,i,j) = rhoe(k,i,j) / ( DENS(k,i,j) * cva_d(k,i,j) )
+       temp(k,i,j) = rhoe(k,i,j) / ( DENS(k,i,j) * cva(k,i,j) )
        pres(k,i,j) = DENS(k,i,j) * Rmoist * temp(k,i,j)
     enddo
     enddo
@@ -2047,9 +2041,9 @@ contains
     do j = JS, JE
     do i = IS, IE
     do k  = KS, KE
-       CALC_CP( cpa_d(k,i,j), qdry(k,i,j), QTRC, k, i, j, iq, CPdry, AQ_CP )
+       CALC_CP( cpa(k,i,j), qdry(k,i,j), QTRC, k, i, j, iq, CPdry, AQ_CP )
        CALC_R( Rmoist, QTRC(k,i,j,I_QV), qdry(k,i,j), Rdry, Rvap )
-       RHOT(k,i,j) = temp(k,i,j) * ( P00 / pres(k,i,j) )**(Rmoist/cpa_d(k,i,j)) &
+       RHOT(k,i,j) = temp(k,i,j) * ( P00 / pres(k,i,j) )**(Rmoist/cpa(k,i,j)) &
                * DENS(k,i,j)
     enddo
     enddo
@@ -3917,8 +3911,8 @@ contains
     !+++ tendency[kg/m3/s]
     real(RP), intent(inout) :: PQ(PQ_MAX,KA,IA,JA)
     !+++ Column integrated tendency[kg/m2/s]
-    real(RP), intent(inout) :: sl_PLCdep(1,IA,JA)
-    real(RP), intent(inout) :: sl_PLRdep(1,IA,JA), sl_PNRdep(1,IA,JA)
+    real(RP), intent(inout) :: sl_PLCdep(IA,JA)
+    real(RP), intent(inout) :: sl_PLRdep(IA,JA), sl_PNRdep(IA,JA)
     !
     real(RP) :: Rmoist
     !
@@ -4498,9 +4492,9 @@ contains
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       sl_PLCdep(1,i,j) = sl_PLCdep(1,i,j) + dep_dqc(k,i,j)*Dz(k)*gsgam2(k,i,j)
-       sl_PLRdep(1,i,j) = sl_PLRdep(1,i,j) + dep_dqr(k,i,j)*Dz(k)*gsgam2(k,i,j)
-       sl_PNRdep(1,i,j) = sl_PNRdep(1,i,j) + dep_dnr(k,i,j)*Dz(k)*gsgam2(k,i,j)
+       sl_PLCdep(i,j) = sl_PLCdep(i,j) + dep_dqc(k,i,j)*Dz(k)*gsgam2(k,i,j)
+       sl_PLRdep(i,j) = sl_PLRdep(i,j) + dep_dqr(k,i,j)*Dz(k)*gsgam2(k,i,j)
+       sl_PNRdep(i,j) = sl_PNRdep(i,j) + dep_dnr(k,i,j)*Dz(k)*gsgam2(k,i,j)
     end do
     end do
     end do
