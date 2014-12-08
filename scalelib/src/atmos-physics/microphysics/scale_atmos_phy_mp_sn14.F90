@@ -1403,6 +1403,8 @@ contains
     real(RP) :: wflux_snow(KA,IA,JA)
     integer :: step
 
+    real(RP) :: sw
+
     integer :: k, i, j, iq
     !---------------------------------------------------------------------------
 
@@ -1756,7 +1758,7 @@ contains
     ! update
     ! rhogq = l*gsgam
     !
-    PROFILE_START("sn14_update")
+    PROFILE_START("sn14_update_rhoq")
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -1780,28 +1782,19 @@ contains
        gc_dnc  = max( dt*Pac(I_NGacNC2NG,k,i,j)  , min(0.0_RP, -rhoq2(I_NC,k,i,j)-wrm_dnc               )) ! => dnc:minus
        sc_dnc  = max( dt*Pac(I_NSacNC2NS,k,i,j)  , min(0.0_RP, -rhoq2(I_NC,k,i,j)-wrm_dnc-gc_dnc        )) ! => dnc:minus
        ic_dnc  = max( dt*Pac(I_NIacNC2NI,k,i,j)  , min(0.0_RP, -rhoq2(I_NC,k,i,j)-wrm_dnc-gc_dnc-sc_dnc )) ! => dnc:minus
+
        ! rain mass decrease ( tem < 273.15K)
-       if( temp(k,i,j) <= T00 )then
-          rg_dqr  = max( dt*Pac(I_LRacLG2LG,  k,i,j), min(0.0_RP, -rhoq2(I_QR,k,i,j)-wrm_dqr               )) ! => dqg
-          rg_dqg  = 0.0_RP
-          rs_dqr  = max( dt*Pac(I_LRacLS2LG_R,k,i,j), min(0.0_RP, -rhoq2(I_QR,k,i,j)-wrm_dqr-rg_dqr        )) ! => dqg
-          ri_dqr  = max( dt*Pac(I_LRacLI2LG_R,k,i,j), min(0.0_RP, -rhoq2(I_QR,k,i,j)-wrm_dqr-rg_dqr-rs_dqr )) ! => dqg
-          ! rain num. decrease
-          rg_dnr  = max( dt*Pac(I_NRacNG2NG,  k,i,j), min(0.0_RP, -rhoq2(I_NR,k,i,j)-wrm_dnr               )) ! => dnr:minus,dng:plus
-          rg_dng  = 0.0_RP
-          rs_dnr  = max( dt*Pac(I_NRacNS2NG_R,k,i,j), min(0.0_RP, -rhoq2(I_NR,k,i,j)-wrm_dnr-rg_dnr        )) ! => dnr:minus,dng:plus
-          ri_dnr  = max( dt*Pac(I_NRacNI2NG_R,k,i,j), min(0.0_RP, -rhoq2(I_NR,k,i,j)-wrm_dnr-rg_dnr-rs_dnr )) ! => dnr:minus,dng:plus
-       else
-          rg_dqg  = max( dt*Pac(I_LRacLG2LG,  k,i,j), min(0.0_RP, -rhoq2(I_QG,k,i,j)                       )) ! => dqg
-          rg_dqr  = 0.0_RP ! r+g -> r
-          rs_dqr  = 0.0_RP ! r+s -> r
-          ri_dqr  = 0.0_RP ! r+i -> r
-          ! rain num. decrease
-          rg_dng  = max( dt*Pac(I_NRacNG2NG,  k,i,j), min(0.0_RP, -rhoq2(I_NG,k,i,j)                       )) ! => dnr:minus,dng:plus
-          rg_dnr  = 0.0_RP ! r+g -> r
-          rs_dnr  = 0.0_RP ! r+s -> r
-          ri_dnr  = 0.0_RP ! r+i -> r
-       end if
+       sw = sign(0.5_RP, T00-temp(k,i,j)) + 0.5_RP ! if( temp(k,i,j) <= T00 )then sw=1, else sw=0
+       rg_dqr  = max( dt*Pac(I_LRacLG2LG,  k,i,j), min(0.0_RP, -rhoq2(I_QR,k,i,j)-wrm_dqr               )) * sw
+       rg_dqg  = max( dt*Pac(I_LRacLG2LG,  k,i,j), min(0.0_RP, -rhoq2(I_QG,k,i,j)                       )) * ( 1.0_RP - sw )
+       rs_dqr  = max( dt*Pac(I_LRacLS2LG_R,k,i,j), min(0.0_RP, -rhoq2(I_QR,k,i,j)-wrm_dqr-rg_dqr        )) * sw
+       ri_dqr  = max( dt*Pac(I_LRacLI2LG_R,k,i,j), min(0.0_RP, -rhoq2(I_QR,k,i,j)-wrm_dqr-rg_dqr-rs_dqr )) * sw
+       ! rain num. decrease
+       rg_dnr  = max( dt*Pac(I_NRacNG2NG,  k,i,j), min(0.0_RP, -rhoq2(I_NR,k,i,j)-wrm_dnr               )) * sw
+       rg_dng  = max( dt*Pac(I_NRacNG2NG,  k,i,j), min(0.0_RP, -rhoq2(I_NG,k,i,j)                       )) * ( 1.0_RP - sw )
+       rs_dnr  = max( dt*Pac(I_NRacNS2NG_R,k,i,j), min(0.0_RP, -rhoq2(I_NR,k,i,j)-wrm_dnr-rg_dnr        )) * sw
+       ri_dnr  = max( dt*Pac(I_NRacNI2NG_R,k,i,j), min(0.0_RP, -rhoq2(I_NR,k,i,j)-wrm_dnr-rg_dnr-rs_dnr )) * sw
+
        ! ice mass decrease
        fac1    = (ri_dqr-eps)/ (dt*Pac(I_LRacLI2LG_R,k,i,j)-eps) ! suppress factor by filter of rain
        ri_dqi  = max( dt*Pac(I_LRacLI2LG_I,k,i,j)*fac1, min(0.0_RP, -rhoq2(I_QI,k,i,j)+ic_dqc               )) ! => dqg
@@ -1827,59 +1820,32 @@ contains
        !
        ! total plus in mixed phase collection(clp_)
        ! mass
-       if( temp(k,i,j) <= T00 )then
-          clp_dqc =  0.0_RP
-          clp_dqr =  0.0_RP
-          clp_dqi = -ic_dqc
-          clp_dqs = -sc_dqc-ii_dqi-is_dqi
-          clp_dqg = -gc_dqc-rg_dqr-rs_dqr-rs_dqs-ri_dqr-ri_dqi-gs_dqs
-          ! num.( number only increase when a+b=>c,  dnc=-dna)
-          clp_dnc = 0.0_RP
-          clp_dnr = 0.0_RP
-          clp_dni = 0.0_RP
-          clp_dns = -ii_dni*0.5_RP
-          clp_dng =       -rs_dnr-ri_dnr
-          ! total minus in mixed phase collection(clm_)
-          ! mass
-          clm_dqc = gc_dqc+sc_dqc+ic_dqc
-          clm_dqr = rg_dqr+rs_dqr+ri_dqr
-          clm_dqi = ri_dqi+ii_dqi+is_dqi
-          clm_dqs = rs_dqs+gs_dqs
-          clm_dqg = 0.0_RP
-          ! num.
-          clm_dnc = gc_dnc+sc_dnc+ic_dnc
-          clm_dnr = rg_dnr+rs_dnr+ri_dnr
-          clm_dni = ri_dni+ii_dni+is_dni
-          clm_dns = rs_dns+ss_dns+gs_dns
-          clm_dng = gg_dng ! [Mod] 11/08/30 T.Mitsui
-       else
-          clp_dqc =  0.0_RP
-          clp_dqr = -rg_dqg-rs_dqs-ri_dqi
-          clp_dqi = -ic_dqc
-          clp_dqs = -sc_dqc-ii_dqi-is_dqi
-          clp_dqg = -gc_dqc-gs_dqs
-          ! num.( number only increase when a+b=>c,  dnc=-dna)
-          clp_dnc = 0.0_RP
-          clp_dnr = 0.0_RP
-          clp_dni = 0.0_RP
-          clp_dns = -ii_dni*0.5_RP
-          clp_dng = 0.0_RP
-          ! total minus in mixed phase collection(clm_)
-          ! mass
-          clm_dqc = gc_dqc+sc_dqc+ic_dqc
-          clm_dqr = 0.0_RP
-          clm_dqi = ri_dqi+ii_dqi+is_dqi
-          clm_dqs = rs_dqs+gs_dqs
-          clm_dqg = rg_dqg
-          ! num.
-          clm_dnc = gc_dnc+sc_dnc+ic_dnc
-          clm_dnr = 0.0_RP
-          clm_dni = ri_dni+ii_dni+is_dni
-          clm_dns = rs_dns+ss_dns+gs_dns
-!!$          clm_dng = rg_dng
-          clm_dng = rg_dng+gg_dng ! [Mod] 11/08/30 T.Mitsui
-       end if
-       !
+       ! if( temp(k,i,j) <= T00 )then sw=1, else sw=0
+       clp_dqc =  0.0_RP
+       clp_dqr = (-rg_dqg-rs_dqs-ri_dqi) * (1.0_RP-sw)
+       clp_dqi = -ic_dqc
+       clp_dqs = -sc_dqc-ii_dqi-is_dqi
+       clp_dqg = -gc_dqc -gs_dqs  + (-rg_dqr-rs_dqr-rs_dqs-ri_dqr-ri_dqi) * sw
+       ! num.( number only increase when a+b=>c,  dnc=-dna)
+       clp_dnc = 0.0_RP
+       clp_dnr = 0.0_RP
+       clp_dni = 0.0_RP
+       clp_dns = -ii_dni*0.5_RP
+       clp_dng = (-rs_dnr-ri_dnr) * sw
+       ! total minus in mixed phase collection(clm_)
+       ! mass
+       clm_dqc = gc_dqc+sc_dqc+ic_dqc
+       clm_dqr = (rg_dqr+rs_dqr+ri_dqr) * sw
+       clm_dqi = ri_dqi+ii_dqi+is_dqi
+       clm_dqs = rs_dqs+gs_dqs
+       clm_dqg = rg_dqg * (1.0_RP-sw)
+       ! num.
+       clm_dnc = gc_dnc+sc_dnc+ic_dnc
+       clm_dnr = (rg_dnr+rs_dnr+ri_dnr) * sw
+       clm_dni = ri_dni+ii_dni+is_dni
+       clm_dns = rs_dns+ss_dns+gs_dns
+       clm_dng = gg_dng + rg_dng * (1.0_RP-sw)
+
        ! partial conversion
        ! 08/05/08 [Mod] T.Mitsui
        pco_dqi = max( dt*PQ(I_LIcon,k,i,j), -clp_dqi )
@@ -1948,7 +1914,7 @@ contains
     enddo
     enddo
     enddo
-    PROFILE_STOP("sn14_update")
+    PROFILE_STOP("sn14_update_rhoq")
 
     call PROF_rapend  ('MP Collection', 2)
 
@@ -2840,11 +2806,11 @@ contains
        ! cloud-ice => ice
        ! reduction term of cloud
        coef_acc_LCI = &
-            (  delta_b1(I_QC)*dcdc + delta_ab1(I_QI,I_QC)*dcdi + delta_b0(I_QI)*didi ) &
+              ( delta_b1(I_QC)*dcdc + delta_ab1(I_QI,I_QC)*dcdi + delta_b0(I_QI)*didi ) &
             * ( theta_b1(I_QC)*vcvc - theta_ab1(I_QI,I_QC)*vcvi + theta_b0(I_QI)*vivi   &
             +  sigma_i + sigma_c )**0.5_RP
        coef_acc_NCI = &
-            (  delta_b0(I_QC)*dcdc + delta_ab0(I_QI,I_QC)*dcdi + delta_b0(I_QI)*didi ) &
+              ( delta_b0(I_QC)*dcdc + delta_ab0(I_QI,I_QC)*dcdi + delta_b0(I_QI)*didi ) &
             * ( theta_b0(I_QC)*vcvc - theta_ab0(I_QI,I_QC)*vcvi + theta_b0(I_QI)*vivi   &
             +  sigma_i + sigma_c )**0.5_RP
        Pac(I_LIacLC2LI,k,i,j)= -0.25_RP*pi*E_ic*rhoq(I_NI,k,i,j)*rhoq(I_QC,k,i,j)*coef_acc_LCI
@@ -2852,11 +2818,11 @@ contains
        ! cloud-snow => snow
        ! reduction term of cloud
        coef_acc_LCS = &
-            (  delta_b1(I_QC)*dcdc + delta_ab1(I_QS,I_QC)*dcds + delta_b0(I_QS)*dsds ) &
+              ( delta_b1(I_QC)*dcdc + delta_ab1(I_QS,I_QC)*dcds + delta_b0(I_QS)*dsds ) &
             * ( theta_b1(I_QC)*vcvc - theta_ab1(I_QS,I_QC)*vcvs + theta_b0(I_QS)*vsvs   &
             +  sigma_s + sigma_c )**0.5_RP
        coef_acc_NCS = &
-            (  delta_b0(I_QC)*dcdc + delta_ab0(I_QS,I_QC)*dcds + delta_b0(I_QS)*dsds ) &
+              ( delta_b0(I_QC)*dcdc + delta_ab0(I_QS,I_QC)*dcds + delta_b0(I_QS)*dsds ) &
             * ( theta_b0(I_QC)*vcvc - theta_ab0(I_QS,I_QC)*vcvs + theta_b0(I_QS)*vsvs   &
             +  sigma_s + sigma_c )**0.5_RP
        Pac(I_LSacLC2LS,k,i,j)= -0.25_RP*pi*E_sc*rhoq(I_NS,k,i,j)*rhoq(I_QC,k,i,j)*coef_acc_LCS
@@ -2864,22 +2830,22 @@ contains
        ! cloud-graupel => graupel
        ! reduction term of cloud
        coef_acc_LCG = &
-            (  delta_b1(I_QC)*dcdc + delta_ab1(I_QG,I_QC)*dcdg + delta_b0(I_QG)*dgdg ) &
+              ( delta_b1(I_QC)*dcdc + delta_ab1(I_QG,I_QC)*dcdg + delta_b0(I_QG)*dgdg ) &
             * ( theta_b1(I_QC)*vcvc - theta_ab1(I_QG,I_QC)*vcvg + theta_b0(I_QG)*vgvg   &
             +  sigma_g + sigma_c )**0.5_RP
        coef_acc_NCG = &
-            (  delta_b0(I_QC)*dcdc + delta_ab0(I_QG,I_QC)*dcdg + delta_b0(I_QG)*dgdg ) &
+              ( delta_b0(I_QC)*dcdc + delta_ab0(I_QG,I_QC)*dcdg + delta_b0(I_QG)*dgdg ) &
             * ( theta_b0(I_QC)*vcvc - theta_ab0(I_QG,I_QC)*vcvg + theta_b0(I_QG)*vgvg   &
             +  sigma_g + sigma_c )**0.5_RP
        Pac(I_LGacLC2LG,k,i,j)= -0.25_RP*pi*E_gc*rhoq(I_NG,k,i,j)*rhoq(I_QC,k,i,j)*coef_acc_LCG
        Pac(I_NGacNC2NG,k,i,j)= -0.25_RP*pi*E_gc*rhoq(I_NG,k,i,j)*rhoq(I_NC,k,i,j)*coef_acc_NCG
        ! snow-graupel => graupel
        coef_acc_LSG = &
-            (  delta_b1(I_QS)*dsds + delta_ab1(I_QG,I_QS)*dsdg + delta_b0(I_QG)*dgdg ) &
+              ( delta_b1(I_QS)*dsds + delta_ab1(I_QG,I_QS)*dsdg + delta_b0(I_QG)*dgdg ) &
             * ( theta_b1(I_QS)*vsvs - theta_ab1(I_QG,I_QS)*vsvg + theta_b0(I_QG)*vgvg   &
             +  sigma_g + sigma_s )**0.5_RP
        coef_acc_NSG = &
-            (  delta_b0(I_QS)*dsds + delta_ab0(I_QG,I_QS)*dsdg + delta_b0(I_QG)*dgdg ) &
+              ( delta_b0(I_QS)*dsds + delta_ab0(I_QG,I_QS)*dsdg + delta_b0(I_QG)*dgdg ) &
             ! [fix] T.Mitsui 08/05/08
             * ( theta_b0(I_QS)*vsvs - theta_ab0(I_QG,I_QS)*vsvg + theta_b0(I_QG)*vgvg   &
             +  sigma_g + sigma_s )**0.5_RP
@@ -2889,11 +2855,11 @@ contains
        ! ice-snow => snow
        ! reduction term of ice
        coef_acc_LIS = &
-            (  delta_b1(I_QI)*didi + delta_ab1(I_QS,I_QI)*dids + delta_b0(I_QS)*dsds ) &
+              ( delta_b1(I_QI)*didi + delta_ab1(I_QS,I_QI)*dids + delta_b0(I_QS)*dsds ) &
             * ( theta_b1(I_QI)*vivi - theta_ab1(I_QS,I_QI)*vivs + theta_b0(I_QS)*vsvs   &
             +  sigma_i + sigma_s )**0.5_RP
        coef_acc_NIS = &
-            (  delta_b0(I_QI)*didi + delta_ab0(I_QS,I_QI)*dids + delta_b0(I_QS)*dsds ) &
+              ( delta_b0(I_QI)*didi + delta_ab0(I_QS,I_QI)*dids + delta_b0(I_QS)*dsds ) &
             * ( theta_b0(I_QI)*vivi - theta_ab0(I_QS,I_QI)*vivs + theta_b0(I_QS)*vsvs   &
             +  sigma_i + sigma_s )**0.5_RP
        Pac(I_LIacLS2LS,k,i,j)= -0.25_RP*pi*E_stick(k,i,j)*E_si*rhoq(I_NS,k,i,j)*rhoq(I_QI,k,i,j)*coef_acc_LIS
@@ -2903,7 +2869,7 @@ contains
           ! rain-graupel => graupel
           ! reduction term of rain
           coef_acc_LRG = &
-               (  delta_b1(I_QR)*drdr + delta_ab1(I_QG,I_QR)*drdg + delta_b0(I_QG)*dgdg ) &
+                 ( delta_b1(I_QR)*drdr + delta_ab1(I_QG,I_QR)*drdg + delta_b0(I_QG)*dgdg ) &
                * ( theta_b1(I_QR)*vrvr - theta_ab1(I_QG,I_QR)*vrvg + theta_b0(I_QG)*vgvg   &
                +  sigma_r + sigma_g )**0.5_RP
           Pac(I_LRacLG2LG,k,i,j) = -0.25_RP*pi*E_gr*rhoq(I_NG,k,i,j)*rhoq(I_QR,k,i,j)*coef_acc_LRG
@@ -2911,13 +2877,13 @@ contains
           ! rain-graupel => rain
           ! reduction term of graupel
           coef_acc_LRG = &
-               (  delta_b1(I_QG)*dgdg + delta_ab1(I_QR,I_QG)*drdg + delta_b0(I_QR)*drdr ) &
+                 ( delta_b1(I_QG)*dgdg + delta_ab1(I_QR,I_QG)*drdg + delta_b0(I_QR)*drdr ) &
                * ( theta_b1(I_QG)*vgvg - theta_ab1(I_QR,I_QG)*vrvg + theta_b0(I_QR)*vrvr   &
                +  sigma_r + sigma_g )**0.5_RP
           Pac(I_LRacLG2LG,k,i,j) = -0.25_RP*pi*E_gr*rhoq(I_NR,k,i,j)*rhoq(I_QG,k,i,j)*coef_acc_LRG
        end if
        coef_acc_NRG = &
-            (  delta_b0(I_QR)*drdr + delta_ab0(I_QG,I_QR)*drdg + delta_b0(I_QG)*dgdg ) &
+              ( delta_b0(I_QR)*drdr + delta_ab0(I_QG,I_QR)*drdg + delta_b0(I_QG)*dgdg ) &
             * ( theta_b0(I_QR)*vrvr - theta_ab0(I_QG,I_QR)*vrvg + theta_b0(I_QG)*vgvg   &
             +  sigma_r + sigma_g )**0.5_RP
        Pac(I_NRacNG2NG,k,i,j) = -0.25_RP*pi*E_gr*rhoq(I_NG,k,i,j)*rhoq(I_NR,k,i,j)*coef_acc_NRG
@@ -2930,22 +2896,22 @@ contains
        ! rain-ice => graupel
        ! reduction term of ice
        coef_acc_LRI_I = &
-            (  delta_b1(I_QI)*didi + delta_ab1(I_QR,I_QI)*drdi + delta_b0(I_QR)*drdr ) &
+              ( delta_b1(I_QI)*didi + delta_ab1(I_QR,I_QI)*drdi + delta_b0(I_QR)*drdr ) &
             * ( theta_b1(I_QI)*vivi - theta_ab1(I_QR,I_QI)*vrvi + theta_b0(I_QR)*vrvr   &
             +  sigma_r + sigma_i )**0.5_RP
        coef_acc_NRI_I = &
-            (  delta_b0(I_QI)*didi + delta_ab0(I_QR,I_QI)*drdi + delta_b0(I_QR)*drdr ) &
+              ( delta_b0(I_QI)*didi + delta_ab0(I_QR,I_QI)*drdi + delta_b0(I_QR)*drdr ) &
             * ( theta_b0(I_QI)*vivi - theta_ab0(I_QR,I_QI)*vrvi + theta_b0(I_QR)*vrvr   &
             +  sigma_r + sigma_i )**0.5_RP
        Pac(I_LRacLI2LG_I,k,i,j)= -0.25_RP*pi*E_ir*rhoq(I_NR,k,i,j)*rhoq(I_QI,k,i,j)*coef_acc_LRI_I
        Pac(I_NRacNI2NG_I,k,i,j)= -0.25_RP*pi*E_ir*rhoq(I_NR,k,i,j)*rhoq(I_NI,k,i,j)*coef_acc_NRI_I
        ! reduction term of rain
        coef_acc_LRI_R = &
-            (  delta_b1(I_QR)*drdr + delta_ab1(I_QI,I_QR)*drdi + delta_b0(I_QI)*didi ) &
+              ( delta_b1(I_QR)*drdr + delta_ab1(I_QI,I_QR)*drdi + delta_b0(I_QI)*didi ) &
             * ( theta_b1(I_QR)*vrvr - theta_ab1(I_QI,I_QR)*vrvi + theta_b0(I_QI)*vivi   &
             +  sigma_r + sigma_i )**0.5_RP
        coef_acc_NRI_R = &
-            (  delta_b0(I_QR)*drdr + delta_ab0(I_QI,I_QR)*drdi + delta_b0(I_QI)*didi ) &
+              ( delta_b0(I_QR)*drdr + delta_ab0(I_QI,I_QR)*drdi + delta_b0(I_QI)*didi ) &
             * ( theta_b0(I_QR)*vrvr - theta_ab0(I_QI,I_QR)*vrvi + theta_b0(I_QI)*vivi   &
             +  sigma_r + sigma_i )**0.5_RP
        Pac(I_LRacLI2LG_R,k,i,j)= -0.25_RP*pi*E_ir*rhoq(I_NI,k,i,j)*rhoq(I_QR,k,i,j)*coef_acc_LRI_R
@@ -2953,22 +2919,22 @@ contains
        ! rain-snow => graupel
        ! reduction term of snow
        coef_acc_LRS_S = &
-            (  delta_b1(I_QS)*dsds + delta_ab1(I_QR,I_QS)*drds + delta_b0(I_QR)*drdr ) &
+              ( delta_b1(I_QS)*dsds + delta_ab1(I_QR,I_QS)*drds + delta_b0(I_QR)*drdr ) &
             * ( theta_b1(I_QS)*vsvs - theta_ab1(I_QR,I_QS)*vrvs + theta_b0(I_QR)*vrvr   &
             +  sigma_r + sigma_s )**0.5_RP
        coef_acc_NRS_S = &
-            (  delta_b0(I_QS)*dsds + delta_ab0(I_QR,I_QS)*drds + delta_b0(I_QR)*drdr ) &
+              ( delta_b0(I_QS)*dsds + delta_ab0(I_QR,I_QS)*drds + delta_b0(I_QR)*drdr ) &
             * ( theta_b0(I_QS)*vsvs - theta_ab0(I_QR,I_QS)*vrvs + theta_b0(I_QR)*vrvr   &
             +  sigma_r + sigma_s )**0.5_RP
        Pac(I_LRacLS2LG_S,k,i,j)= -0.25_RP*pi*E_sr*rhoq(I_NR,k,i,j)*rhoq(I_QS,k,i,j)*coef_acc_LRS_S
        Pac(I_NRacNS2NG_S,k,i,j)= -0.25_RP*pi*E_sr*rhoq(I_NR,k,i,j)*rhoq(I_NS,k,i,j)*coef_acc_NRS_S
        ! reduction term of rain
        coef_acc_LRS_R = &
-            (  delta_b1(I_QR)*drdr + delta_ab1(I_QS,I_QR)*drds + delta_b0(I_QS)*dsds ) &
+              ( delta_b1(I_QR)*drdr + delta_ab1(I_QS,I_QR)*drds + delta_b0(I_QS)*dsds ) &
             * ( theta_b1(I_QR)*vrvr - theta_ab1(I_QS,I_QR)*vrvs + theta_b0(I_QS)*vsvs   &
             +  sigma_r + sigma_s )**0.5_RP
        coef_acc_NRS_R = &
-            (  delta_b0(I_QR)*drdr + delta_ab0(I_QS,I_QR)*drds + delta_b0(I_QS)*dsds ) &
+              ( delta_b0(I_QR)*drdr + delta_ab0(I_QS,I_QR)*drds + delta_b0(I_QS)*dsds ) &
             * ( theta_b0(I_QR)*vrvr - theta_ab0(I_QS,I_QR)*vrvs + theta_b0(I_QS)*vsvs   &
             +  sigma_r + sigma_s )**0.5_RP
        Pac(I_LRacLS2LG_R,k,i,j)= -0.25_RP*pi*E_sr*rhoq(I_NS,k,i,j)*rhoq(I_QR,k,i,j)*coef_acc_LRS_R
@@ -2980,11 +2946,11 @@ contains
        !------------------------------------------------------------------------
        ! ice-ice ( reduction is double, but includes double-count)
        coef_acc_LII = &
-            (  delta_b0(I_QI)*didi + delta_ab1(I_QI,I_QI)*didi + delta_b1(I_QI)*didi ) &
+              ( delta_b0(I_QI)*didi + delta_ab1(I_QI,I_QI)*didi + delta_b1(I_QI)*didi ) &
             * ( theta_b0(I_QI)*vivi - theta_ab1(I_QI,I_QI)*vivi + theta_b1(I_QI)*vivi   &
             +  sigma_i + sigma_i )**0.5_RP
        coef_acc_NII = &
-            (  delta_b0(I_QI)*didi + delta_ab0(I_QI,I_QI)*didi + delta_b0(I_QI)*didi ) &
+              ( delta_b0(I_QI)*didi + delta_ab0(I_QI,I_QI)*didi + delta_b0(I_QI)*didi ) &
             * ( theta_b0(I_QI)*vivi - theta_ab0(I_QI,I_QI)*vivi + theta_b0(I_QI)*vivi   &
             +  sigma_i + sigma_i )**0.5_RP
        Pac(I_LIacLI2LS,k,i,j)= -0.25_RP*pi*E_stick(k,i,j)*E_ii*rhoq(I_NI,k,i,j)*rhoq(I_QI,k,i,j)*coef_acc_LII
@@ -3000,14 +2966,14 @@ contains
        !------------------------------------------------------------------------
        ! snow-snow => snow
        coef_acc_NSS = &
-            (  delta_b0(I_QS)*dsds + delta_ab0(I_QS,I_QS)*dsds + delta_b0(I_QS)*dsds ) &
+              ( delta_b0(I_QS)*dsds + delta_ab0(I_QS,I_QS)*dsds + delta_b0(I_QS)*dsds ) &
             * ( theta_b0(I_QS)*vsvs - theta_ab0(I_QS,I_QS)*vsvs + theta_b0(I_QS)*vsvs   &
             +  sigma_s + sigma_s )**0.5_RP
        Pac(I_NSacNS2NS,k,i,j)= -0.125_RP*pi*E_stick(k,i,j)*E_ss*rhoq(I_NS,k,i,j)*rhoq(I_NS,k,i,j)*coef_acc_NSS
        !
        ! graupel-grauple => graupel
        coef_acc_NGG = &
-            (  delta_b0(I_QG)*dgdg + delta_ab0(I_QG,I_QG)*dgdg + delta_b0(I_QG)*dgdg ) &
+              ( delta_b0(I_QG)*dgdg + delta_ab0(I_QG,I_QG)*dgdg + delta_b0(I_QG)*dgdg ) &
             * ( theta_b0(I_QG)*vgvg - theta_ab0(I_QG,I_QG)*vgvg + theta_b0(I_QG)*vgvg   &
             +  sigma_g + sigma_g )**0.5_RP
        Pac(I_NGacNG2NG,k,i,j)= -0.125_RP*pi*E_stick(k,i,j)*E_gg*rhoq(I_NG,k,i,j)*rhoq(I_NG,k,i,j)*coef_acc_NGG
@@ -3169,6 +3135,8 @@ contains
        rhoq,                   & ! in
        esw, esi,             & ! in
        xq, vt_xave, dq_xave  ) ! in
+    use scale_const, only: &
+       eps => CONST_EPS
     implicit none
 
     ! Diffusion growth or Evaporation, Sublimation
@@ -3233,6 +3201,8 @@ contains
     !
     real(RP), parameter :: Re_max=1.E+3_RP
     real(RP), parameter :: Re_min=1.E-4_RP
+
+    real(RP) :: sw
     !
     integer :: i, j, k
     !
@@ -3245,159 +3215,152 @@ contains
     PROFILE_START("sn14_dep_vapor")
     do j = JS, JE
     do i = IS, IE
-       do k = KS, KE
-          temc    = tem(k,i,j) - T00   ! degC
-          temc_lim= max(temc, -40._RP )       ! [Add] 09/08/18 T.Mitsui, Pruppacher and Klett(1997),(13-3)
-          rho_lim = max(rho(k,i,j),rho_min)   ! [Add] 09/08/18 T.Mitsui
-          qv      = rhoq(I_QV,k,i,j)/rho_lim
-          pre_lim = rho_lim*(qd(k,i,j)*Rdry + qv*Rvap)*(temc_lim+T00) ![Add] 09/08/18 T.Mitsui
-          !--------------------------------------------------------------------
-          ! Diffusion growth part is described in detail
-          ! by Pruppacher and Klett (1997) Sec. 13.2(liquid) and 13.3(solid)
-          !
-          ! G:factor of thermal diffusion(1st.term) and vapor diffusion(2nd. term)
-          ! SB06(23),(38), Lin et al(31),(52) or others
-          ! Dw is introduced by Pruppacher and Klett(1997),(13-3)
-          Dw      = 0.211E-4_RP* (((temc_lim+T00)/T00)**1.94_RP) *(P00/pre_lim)
-          Kalfa      = Ka0  + temc_lim*dKa_dT
-          mua     = mua0 + temc_lim*dmua_dT
-          nua     = mua/rho_lim
-          r_nua   = 1.0_RP/nua
-          Gw      = (LHV0/Kalfa/tem(k,i,j))*(LHV0/Rvap/tem(k,i,j)-1.0_RP)+(Rvap*tem(k,i,j)/Dw/esw(k,i,j))
-          Gi      = (LHS0/Kalfa/tem(k,i,j))*(LHS0/Rvap/tem(k,i,j)-1.0_RP)+(Rvap*tem(k,i,j)/Dw/esi(k,i,j))
-          ! capacities account for their surface geometries
-          Gwr     = 4.0_RP*PI/cap(I_QR)/Gw
-          Gii     = 4.0_RP*PI/cap(I_QI)/Gi
-          Gis     = 4.0_RP*PI/cap(I_QS)/Gi
-          Gig     = 4.0_RP*PI/cap(I_QG)/Gi
-          ! vent: ventilation effect( asymmetry vapor field around particles due to aerodynamic )
-          ! SB06 (30),(31) and each coefficient is by (88),(89)
-          Nsc_r3  = (nua/Dw)**(0.33333333_RP)                    ! (Schmidt number )^(1/3)
-          !
-!          Nrecs_r2 = sqrt(max(Re_min,min(Re_max,vt_xave(I_C,1,k,i,j)*dq_xave(I_C,k,i,j)*r_nua))) ! (Reynolds number)^(1/2) cloud
-          Nrers_r2 = sqrt(max(Re_min,min(Re_max,vt_xave(I_R,1,k,i,j)*dq_xave(I_R,k,i,j)*r_nua))) ! (Reynolds number)^(1/2) rain
-          Nreis_r2 = sqrt(max(Re_min,min(Re_max,vt_xave(I_I,1,k,i,j)*dq_xave(I_I,k,i,j)*r_nua))) ! (Reynolds number)^(1/2) cloud ice
-          Nress_r2 = sqrt(max(Re_min,min(Re_max,vt_xave(I_S,1,k,i,j)*dq_xave(I_S,k,i,j)*r_nua))) ! (Reynolds number)^(1/2) snow
-          Nregs_r2 = sqrt(max(Re_min,min(Re_max,vt_xave(I_G,1,k,i,j)*dq_xave(I_G,k,i,j)*r_nua))) ! (Reynolds number)^(1/2) graupel
-          !
-!          Nrecl_r2 = sqrt(max(Re_min,min(Re_max,vt_xave(I_C,2,k,i,j)*dq_xave(I_C,k,i,j)*r_nua))) ! (Reynolds number)^(1/2) cloud
-          Nrerl_r2 = sqrt(max(Re_min,min(Re_max,vt_xave(I_R,2,k,i,j)*dq_xave(I_R,k,i,j)*r_nua))) ! (Reynolds number)^(1/2) rain
-          Nreil_r2 = sqrt(max(Re_min,min(Re_max,vt_xave(I_I,2,k,i,j)*dq_xave(I_I,k,i,j)*r_nua))) ! (Reynolds number)^(1/2) cloud ice
-          Nresl_r2 = sqrt(max(Re_min,min(Re_max,vt_xave(I_S,2,k,i,j)*dq_xave(I_S,k,i,j)*r_nua))) ! (Reynolds number)^(1/2) snow
-          Nregl_r2 = sqrt(max(Re_min,min(Re_max,vt_xave(I_G,2,k,i,j)*dq_xave(I_G,k,i,j)*r_nua))) ! (Reynolds number)^(1/2) graupel
-          NscNrer_s=Nsc_r3*Nrers_r2 ! small rain
-          NscNrer_l=Nsc_r3*Nrerl_r2 ! large rain
-          !
-          NscNrei_s=Nsc_r3*Nreis_r2 ! small ice
-          NscNrei_l=Nsc_r3*Nreil_r2 ! large ice
-          !
-          NscNres_s=Nsc_r3*Nress_r2 ! small snow
-          NscNres_l=Nsc_r3*Nresl_r2 ! large snow
-          !
-          NscNreg_s=Nsc_r3*Nregs_r2 ! small snow
-          NscNreg_l=Nsc_r3*Nregl_r2 ! large snow
-          !
-          ventLR_s = ah_vent1(I_QR,1) + bh_vent1(I_QR,1)*NscNrer_s
-          ventLR_l = ah_vent1(I_QR,2) + bh_vent1(I_QR,2)*NscNrer_l
-          !
-          ventNI_s = ah_vent0(I_QI,1) + bh_vent0(I_QI,1)*NscNrei_s
-          ventNI_l = ah_vent0(I_QI,2) + bh_vent0(I_QI,2)*NscNrei_l
-          ventLI_s = ah_vent1(I_QI,1) + bh_vent1(I_QI,1)*NscNrei_s
-          ventLI_l = ah_vent1(I_QI,2) + bh_vent1(I_QI,2)*NscNrei_l
-          !
-          ventNS_s = ah_vent0(I_QS,1) + bh_vent0(I_QS,1)*NscNres_s
-          ventNS_l = ah_vent0(I_QS,2) + bh_vent0(I_QS,2)*NscNres_l
-          ventLS_s = ah_vent1(I_QS,1) + bh_vent1(I_QS,1)*NscNres_s
-          ventLS_l = ah_vent1(I_QS,2) + bh_vent1(I_QS,2)*NscNres_l
-          !
-          ventNG_s = ah_vent0(I_QG,1) + bh_vent0(I_QG,1)*NscNreg_s
-          ventNG_l = ah_vent0(I_QG,2) + bh_vent0(I_QG,2)*NscNreg_l
-          ventLG_s = ah_vent1(I_QG,1) + bh_vent1(I_QG,1)*NscNreg_s
-          ventLG_l = ah_vent1(I_QG,2) + bh_vent1(I_QG,2)*NscNreg_l
-          !
-          ! branch is 1.4 for rain, snow, graupel; is 1.0 for ice (PK97, 13-60,-61,-88,-89).
-          !
-          wtr     = ( min(max( NscNrer_s*r_14, 0.5_RP), 2.0_RP) -0.5_RP )*r_15 ! weighting between 1.4*0.5 and 1.4*2
-          wti     = ( min(max( NscNrei_s     , 0.5_RP), 2.0_RP) -0.5_RP )*r_15 ! weighting between 1.0*0.5 and 1.0*2
-          wts     = ( min(max( NscNres_s*r_14, 0.5_RP), 2.0_RP) -0.5_RP )*r_15 ! weighting between 1.4*0.5 and 1.4*2
-          wtg     = ( min(max( NscNreg_s*r_14, 0.5_RP), 2.0_RP) -0.5_RP )*r_15 ! weighting between 1.4*0.5 and 1.4*2
-          ! interpolation between two branches
-          ventNI  = (1.0_RP-wti)*ventNI_s + wti*ventNI_l
-          ventNS  = (1.0_RP-wts)*ventNS_s + wts*ventNS_l
-          ventNG  = (1.0_RP-wtg)*ventNG_s + wtg*ventNG_l
-          !
-          ventLR  = (1.0_RP-wtr)*ventLR_s + wtr*ventLR_l
-          ventLI  = (1.0_RP-wti)*ventLI_s + wti*ventLI_l
-          ventLS  = (1.0_RP-wts)*ventLS_s + wts*ventLS_l
-          ventLG  = (1.0_RP-wtg)*ventLG_s + wtg*ventLG_l
-          !
-          ! SB06(29)
-          ! [Mod] 08/05/08 T.Mitsui, recover PNXdep, and rain is only evaporation.
-          ! Ni, Ns, Ng should decrease in nature so we add this term.
-          ! And vapor deposition never occur unless number exist.
-          ! [Add comment]  09/08/18
-          ! recover condensation/evaporation of rain,
-          ! and ventilation effects are not taken into account for cloud.
-          !
+    do k = KS, KE
+       temc    = tem(k,i,j) - T00   ! degC
+       temc_lim= max(temc, -40._RP )       ! [Add] 09/08/18 T.Mitsui, Pruppacher and Klett(1997),(13-3)
+       rho_lim = max(rho(k,i,j),rho_min)   ! [Add] 09/08/18 T.Mitsui
+       qv      = rhoq(I_QV,k,i,j)/rho_lim
+       pre_lim = rho_lim*(qd(k,i,j)*Rdry + qv*Rvap)*(temc_lim+T00) ![Add] 09/08/18 T.Mitsui
+       !--------------------------------------------------------------------
+       ! Diffusion growth part is described in detail
+       ! by Pruppacher and Klett (1997) Sec. 13.2(liquid) and 13.3(solid)
+       !
+       ! G:factor of thermal diffusion(1st.term) and vapor diffusion(2nd. term)
+       ! SB06(23),(38), Lin et al(31),(52) or others
+       ! Dw is introduced by Pruppacher and Klett(1997),(13-3)
+       Dw      = 0.211E-4_RP* (((temc_lim+T00)/T00)**1.94_RP) *(P00/pre_lim)
+       Kalfa      = Ka0  + temc_lim*dKa_dT
+       mua     = mua0 + temc_lim*dmua_dT
+       nua     = mua/rho_lim
+       r_nua   = 1.0_RP/nua
+       Gw      = (LHV0/Kalfa/tem(k,i,j))*(LHV0/Rvap/tem(k,i,j)-1.0_RP)+(Rvap*tem(k,i,j)/Dw/esw(k,i,j))
+       Gi      = (LHS0/Kalfa/tem(k,i,j))*(LHS0/Rvap/tem(k,i,j)-1.0_RP)+(Rvap*tem(k,i,j)/Dw/esi(k,i,j))
+       ! capacities account for their surface geometries
+       Gwr     = 4.0_RP*PI/cap(I_QR)/Gw
+       Gii     = 4.0_RP*PI/cap(I_QI)/Gi
+       Gis     = 4.0_RP*PI/cap(I_QS)/Gi
+       Gig     = 4.0_RP*PI/cap(I_QG)/Gi
+       ! vent: ventilation effect( asymmetry vapor field around particles due to aerodynamic )
+       ! SB06 (30),(31) and each coefficient is by (88),(89)
+       Nsc_r3  = (nua/Dw)**(0.33333333_RP)                    ! (Schmidt number )^(1/3)
+       !
+!       Nrecs_r2 = sqrt(max(Re_min,min(Re_max,vt_xave(I_C,1,k,i,j)*dq_xave(I_C,k,i,j)*r_nua))) ! (Reynolds number)^(1/2) cloud
+       Nrers_r2 = sqrt(max(Re_min,min(Re_max,vt_xave(I_R,1,k,i,j)*dq_xave(I_R,k,i,j)*r_nua))) ! (Reynolds number)^(1/2) rain
+       Nreis_r2 = sqrt(max(Re_min,min(Re_max,vt_xave(I_I,1,k,i,j)*dq_xave(I_I,k,i,j)*r_nua))) ! (Reynolds number)^(1/2) cloud ice
+       Nress_r2 = sqrt(max(Re_min,min(Re_max,vt_xave(I_S,1,k,i,j)*dq_xave(I_S,k,i,j)*r_nua))) ! (Reynolds number)^(1/2) snow
+       Nregs_r2 = sqrt(max(Re_min,min(Re_max,vt_xave(I_G,1,k,i,j)*dq_xave(I_G,k,i,j)*r_nua))) ! (Reynolds number)^(1/2) graupel
+       !
+!       Nrecl_r2 = sqrt(max(Re_min,min(Re_max,vt_xave(I_C,2,k,i,j)*dq_xave(I_C,k,i,j)*r_nua))) ! (Reynolds number)^(1/2) cloud
+       Nrerl_r2 = sqrt(max(Re_min,min(Re_max,vt_xave(I_R,2,k,i,j)*dq_xave(I_R,k,i,j)*r_nua))) ! (Reynolds number)^(1/2) rain
+       Nreil_r2 = sqrt(max(Re_min,min(Re_max,vt_xave(I_I,2,k,i,j)*dq_xave(I_I,k,i,j)*r_nua))) ! (Reynolds number)^(1/2) cloud ice
+       Nresl_r2 = sqrt(max(Re_min,min(Re_max,vt_xave(I_S,2,k,i,j)*dq_xave(I_S,k,i,j)*r_nua))) ! (Reynolds number)^(1/2) snow
+       Nregl_r2 = sqrt(max(Re_min,min(Re_max,vt_xave(I_G,2,k,i,j)*dq_xave(I_G,k,i,j)*r_nua))) ! (Reynolds number)^(1/2) graupel
+       NscNrer_s=Nsc_r3*Nrers_r2 ! small rain
+       NscNrer_l=Nsc_r3*Nrerl_r2 ! large rain
+       !
+       NscNrei_s=Nsc_r3*Nreis_r2 ! small ice
+       NscNrei_l=Nsc_r3*Nreil_r2 ! large ice
+       !
+       NscNres_s=Nsc_r3*Nress_r2 ! small snow
+       NscNres_l=Nsc_r3*Nresl_r2 ! large snow
+       !
+       NscNreg_s=Nsc_r3*Nregs_r2 ! small snow
+       NscNreg_l=Nsc_r3*Nregl_r2 ! large snow
+       !
+       ventLR_s = ah_vent1(I_QR,1) + bh_vent1(I_QR,1)*NscNrer_s
+       ventLR_l = ah_vent1(I_QR,2) + bh_vent1(I_QR,2)*NscNrer_l
+       !
+       ventNI_s = ah_vent0(I_QI,1) + bh_vent0(I_QI,1)*NscNrei_s
+       ventNI_l = ah_vent0(I_QI,2) + bh_vent0(I_QI,2)*NscNrei_l
+       ventLI_s = ah_vent1(I_QI,1) + bh_vent1(I_QI,1)*NscNrei_s
+       ventLI_l = ah_vent1(I_QI,2) + bh_vent1(I_QI,2)*NscNrei_l
+       !
+       ventNS_s = ah_vent0(I_QS,1) + bh_vent0(I_QS,1)*NscNres_s
+       ventNS_l = ah_vent0(I_QS,2) + bh_vent0(I_QS,2)*NscNres_l
+       ventLS_s = ah_vent1(I_QS,1) + bh_vent1(I_QS,1)*NscNres_s
+       ventLS_l = ah_vent1(I_QS,2) + bh_vent1(I_QS,2)*NscNres_l
+       !
+       ventNG_s = ah_vent0(I_QG,1) + bh_vent0(I_QG,1)*NscNreg_s
+       ventNG_l = ah_vent0(I_QG,2) + bh_vent0(I_QG,2)*NscNreg_l
+       ventLG_s = ah_vent1(I_QG,1) + bh_vent1(I_QG,1)*NscNreg_s
+       ventLG_l = ah_vent1(I_QG,2) + bh_vent1(I_QG,2)*NscNreg_l
+       !
+       ! branch is 1.4 for rain, snow, graupel; is 1.0 for ice (PK97, 13-60,-61,-88,-89).
+       !
+       wtr     = ( min(max( NscNrer_s*r_14, 0.5_RP), 2.0_RP) -0.5_RP )*r_15 ! weighting between 1.4*0.5 and 1.4*2
+       wti     = ( min(max( NscNrei_s     , 0.5_RP), 2.0_RP) -0.5_RP )*r_15 ! weighting between 1.0*0.5 and 1.0*2
+       wts     = ( min(max( NscNres_s*r_14, 0.5_RP), 2.0_RP) -0.5_RP )*r_15 ! weighting between 1.4*0.5 and 1.4*2
+       wtg     = ( min(max( NscNreg_s*r_14, 0.5_RP), 2.0_RP) -0.5_RP )*r_15 ! weighting between 1.4*0.5 and 1.4*2
+       ! interpolation between two branches
+       ventNI  = (1.0_RP-wti)*ventNI_s + wti*ventNI_l
+       ventNS  = (1.0_RP-wts)*ventNS_s + wts*ventNS_l
+       ventNG  = (1.0_RP-wtg)*ventNG_s + wtg*ventNG_l
+       !
+       ventLR  = (1.0_RP-wtr)*ventLR_s + wtr*ventLR_l
+       ventLI  = (1.0_RP-wti)*ventLI_s + wti*ventLI_l
+       ventLS  = (1.0_RP-wts)*ventLS_s + wts*ventLS_l
+       ventLG  = (1.0_RP-wtg)*ventLG_s + wtg*ventLG_l
+       !
+       ! SB06(29)
+       ! [Mod] 08/05/08 T.Mitsui, recover PNXdep, and rain is only evaporation.
+       ! Ni, Ns, Ng should decrease in nature so we add this term.
+       ! And vapor deposition never occur unless number exist.
+       ! [Add comment]  09/08/18
+       ! recover condensation/evaporation of rain,
+       ! and ventilation effects are not taken into account for cloud.
+       !
 !!$***************************************************************************
 !!$        NOTICE:
 !!$         09/08/18 [Mod] Hereafter PLxdep means inverse of timescale.
 !!$***************************************************************************
-!!$       PQ(I_LCdep,k,i,j) = Gwr*ssw*rhoq(I_NC,k,i,j)*dq_xave(I_C,k,i,j)*coef_deplc
-!!$       PQ(I_LRdep,k,i,j) = Gwr*ssw*rhoq(I_NR,k,i,j)*dq_xave(I_R,k,i,j)*ventLR
-!!$       PQ(I_LIdep,k,i,j) = Gii*ssi*rhoq(I_NI,k,i,j)*dq_xave(I_I,k,i,j)*ventLI
-!!$       PQ(I_LSdep,k,i,j) = Gis*ssi*rhoq(I_NS,k,i,j)*dq_xave(I_S,k,i,j)*ventLS
-!!$       PQ(I_LGdep,k,i,j) = Gig*ssi*rhoq(I_NG,k,i,j)*dq_xave(I_G,k,i,j)*ventLG
-          PQ(I_LCdep,k,i,j) = Gwr*rhoq(I_NC,k,i,j)*dq_xave(I_C,k,i,j)*coef_deplc
-          PQ(I_LRdep,k,i,j) = Gwr*rhoq(I_NR,k,i,j)*dq_xave(I_R,k,i,j)*ventLR
-          PQ(I_LIdep,k,i,j) = Gii*rhoq(I_NI,k,i,j)*dq_xave(I_I,k,i,j)*ventLI
-          PQ(I_LSdep,k,i,j) = Gis*rhoq(I_NS,k,i,j)*dq_xave(I_S,k,i,j)*ventLS
-          PQ(I_LGdep,k,i,j) = Gig*rhoq(I_NG,k,i,j)*dq_xave(I_G,k,i,j)*ventLG
-          PQ(I_NRdep,k,i,j) = PQ(I_LRdep,k,i,j)/xq(I_R,k,i,j)
-          PQ(I_NIdep,k,i,j) = 0.0_RP
-          PQ(I_NSdep,k,i,j) = PQ(I_LSdep,k,i,j)/xq(I_S,k,i,j)
-          PQ(I_NGdep,k,i,j) = PQ(I_LGdep,k,i,j)/xq(I_G,k,i,j)
-          !
-          !------------------------------------------------------------------------
-          ! Melting part is described by Pruppacher and Klett (1997) Sec.16.3.1
-          ! Here we omit "Shedding" of snow-flakes and ice-particles.
-          ! "Shedding" may be applicative if you refer
-          ! eq.(38) in Cotton etal.(1986) Jour. Clim. Appl. Meteor. p.1658-1680.
-          ! SB06(73)
-          Dt      = Kalfa/(CPvap*rho_0)
-          ! Gm: factor caused by balance between
-          !     "water evaporation cooling(1st.)" and "fusion heating(2nd.)"
-          ! SB06(76)
-          ! [fix] 08/05/08 T.Mitsui  LHF00 => EMELT  and  esw => PSAT0
-          ! LHS0 is more suitable than LHS because melting occurs around 273.15 K.
-          Gm      = 2.0_RP*PI/EMELT&
+!!$     PQ(I_LCdep,k,i,j) = Gwr*ssw*rhoq(I_NC,k,i,j)*dq_xave(I_C,k,i,j)*coef_deplc
+!!$     PQ(I_LRdep,k,i,j) = Gwr*ssw*rhoq(I_NR,k,i,j)*dq_xave(I_R,k,i,j)*ventLR
+!!$     PQ(I_LIdep,k,i,j) = Gii*ssi*rhoq(I_NI,k,i,j)*dq_xave(I_I,k,i,j)*ventLI
+!!$     PQ(I_LSdep,k,i,j) = Gis*ssi*rhoq(I_NS,k,i,j)*dq_xave(I_S,k,i,j)*ventLS
+!!$     PQ(I_LGdep,k,i,j) = Gig*ssi*rhoq(I_NG,k,i,j)*dq_xave(I_G,k,i,j)*ventLG
+       PQ(I_LCdep,k,i,j) = Gwr*rhoq(I_NC,k,i,j)*dq_xave(I_C,k,i,j)*coef_deplc
+       PQ(I_LRdep,k,i,j) = Gwr*rhoq(I_NR,k,i,j)*dq_xave(I_R,k,i,j)*ventLR
+       PQ(I_LIdep,k,i,j) = Gii*rhoq(I_NI,k,i,j)*dq_xave(I_I,k,i,j)*ventLI
+       PQ(I_LSdep,k,i,j) = Gis*rhoq(I_NS,k,i,j)*dq_xave(I_S,k,i,j)*ventLS
+       PQ(I_LGdep,k,i,j) = Gig*rhoq(I_NG,k,i,j)*dq_xave(I_G,k,i,j)*ventLG
+       PQ(I_NRdep,k,i,j) = PQ(I_LRdep,k,i,j)/xq(I_R,k,i,j)
+       PQ(I_NIdep,k,i,j) = 0.0_RP
+       PQ(I_NSdep,k,i,j) = PQ(I_LSdep,k,i,j)/xq(I_S,k,i,j)
+       PQ(I_NGdep,k,i,j) = PQ(I_LGdep,k,i,j)/xq(I_G,k,i,j)
+       !
+       !------------------------------------------------------------------------
+       ! Melting part is described by Pruppacher and Klett (1997) Sec.16.3.1
+       ! Here we omit "Shedding" of snow-flakes and ice-particles.
+       ! "Shedding" may be applicative if you refer
+       ! eq.(38) in Cotton etal.(1986) Jour. Clim. Appl. Meteor. p.1658-1680.
+       ! SB06(73)
+       Dt      = Kalfa/(CPvap*rho_0)
+       ! Gm: factor caused by balance between
+       !     "water evaporation cooling(1st.)" and "fusion heating(2nd.)"
+       ! SB06(76)
+       ! [fix] 08/05/08 T.Mitsui  LHF00 => EMELT  and  esw => PSAT0
+       ! LHS0 is more suitable than LHS because melting occurs around 273.15 K.
+       Gm      = 2.0_RP*PI/EMELT&
                * ( (Kalfa*Dt/Dw)*(temc) + (Dw*LHS0/Rvap)*(esi(k,i,j)/tem(k,i,j)-PSAT0/T00) )
-          ! SB06(76)
-          ! Notice! melting only occurs where T > 273.15 K else doesn't.
-          ! [fix] 08/05/08 T.Mitsui, Gm could be both positive and negative value.
-          !       See Pruppacher and Klett(1997) eq.(16-79) or Rasmussen and Pruppacher(1982)
-          if( (temc>=0.0_RP) .and. (Gm>0.0_RP) )then !  if Gm==0 then rh and tem is critical value for melting process.
-             ! 08/05/16 [Mod] T.Mitsui, change term of PLimlt. N_i => L_i/ (limited x_i)
-             ! because melting never occur when N_i=0.
-             PQ(I_LImlt,k,i,j) = - Gm * rhoq(I_QI,k,i,j)*dq_xave(I_I,k,i,j)*ventLI/xq(I_I,k,i,j)
-             ! [Mod] 08/08/23 T.Mitsui for Seifert(2008)
-             PQ(I_NImlt,k,i,j) = - Gm * rhoq(I_NI,k,i,j)*dq_xave(I_I,k,i,j)*ventNI/xq(I_I,k,i,j) ! 09/08/18 [Mod] recover, T.Mitsui
-             PQ(I_LSmlt,k,i,j) = - Gm * rhoq(I_QS,k,i,j)*dq_xave(I_S,k,i,j)*ventLS/xq(I_S,k,i,j)
-             ! [Mod] 08/08/23 T.Mitsui for Seifert(2008)
-             PQ(I_NSmlt,k,i,j) = - Gm * rhoq(I_NS,k,i,j)*dq_xave(I_S,k,i,j)*ventNS/xq(I_S,k,i,j) ! 09/08/18 [Mod] recover, T.Mitsui
-             PQ(I_LGmlt,k,i,j) = - Gm * rhoq(I_QG,k,i,j)*dq_xave(I_G,k,i,j)*ventLG/xq(I_G,k,i,j)
-             ! [Mod] 08/08/23 T.Mitsui for Seifert(2008)
-             PQ(I_NGmlt,k,i,j) = - Gm * rhoq(I_NG,k,i,j)*dq_xave(I_G,k,i,j)*ventNG/xq(I_G,k,i,j) ! 09/08/18 [Mod] recover, T.Mitsui
-          else
-             PQ(I_LImlt,k,i,j) = 0.0_RP
-             PQ(I_NImlt,k,i,j) = 0.0_RP
-             PQ(I_LSmlt,k,i,j) = 0.0_RP
-             PQ(I_NSmlt,k,i,j) = 0.0_RP
-             PQ(I_LGmlt,k,i,j) = 0.0_RP
-             PQ(I_NGmlt,k,i,j) = 0.0_RP
-          end if
-          !
-       end do
+       ! SB06(76)
+       ! Notice! melting only occurs where T > 273.15 K else doesn't.
+       ! [fix] 08/05/08 T.Mitsui, Gm could be both positive and negative value.
+       !       See Pruppacher and Klett(1997) eq.(16-79) or Rasmussen and Pruppacher(1982)
+       sw = ( sign(0.5_RP,temc) + 0.5_RP ) * ( sign(0.5_RP,Gm-eps) + 0.5_RP ) ! sw = 1 if( (temc>=0.0_RP) .and. (Gm>0.0_RP) ), otherwise sw = 0
+       !  if Gm==0 then rh and tem is critical value for melting process.
+       ! 08/05/16 [Mod] T.Mitsui, change term of PLimlt. N_i => L_i/ (limited x_i)
+       ! because melting never occur when N_i=0.
+       PQ(I_LImlt,k,i,j) = - Gm * rhoq(I_QI,k,i,j)*dq_xave(I_I,k,i,j)*ventLI/xq(I_I,k,i,j) * sw
+       ! [Mod] 08/08/23 T.Mitsui for Seifert(2008)
+       PQ(I_NImlt,k,i,j) = - Gm * rhoq(I_NI,k,i,j)*dq_xave(I_I,k,i,j)*ventNI/xq(I_I,k,i,j) * sw ! 09/08/18 [Mod] recover, T.Mitsui
+       PQ(I_LSmlt,k,i,j) = - Gm * rhoq(I_QS,k,i,j)*dq_xave(I_S,k,i,j)*ventLS/xq(I_S,k,i,j) * sw
+       ! [Mod] 08/08/23 T.Mitsui for Seifert(2008)
+       PQ(I_NSmlt,k,i,j) = - Gm * rhoq(I_NS,k,i,j)*dq_xave(I_S,k,i,j)*ventNS/xq(I_S,k,i,j) * sw ! 09/08/18 [Mod] recover, T.Mitsui
+       PQ(I_LGmlt,k,i,j) = - Gm * rhoq(I_QG,k,i,j)*dq_xave(I_G,k,i,j)*ventLG/xq(I_G,k,i,j) * sw
+       ! [Mod] 08/08/23 T.Mitsui for Seifert(2008)
+       PQ(I_NGmlt,k,i,j) = - Gm * rhoq(I_NG,k,i,j)*dq_xave(I_G,k,i,j)*ventNG/xq(I_G,k,i,j) * sw ! 09/08/18 [Mod] recover, T.Mitsui
+
+    end do
     end do
     end do
     PROFILE_STOP("sn14_dep_vapor")
@@ -3505,166 +3468,177 @@ contains
     real(RP), intent(in)  :: temp(KA,IA,JA)    ! temperature
     real(RP), intent(in)  :: pres(KA,IA,JA)    ! pressure
 
-    real(RP) :: xq(5,KA,IA,JA)  ! average mass of 1 particle( mass/number )
+    real(RP) :: xq       ! average mass of 1 particle( mass/number )
 
-    real(RP) :: rhofac  (KA,IA,JA)    ! density factor for terminal velocity( air friction )
-    real(RP) :: rhofac_q(KA,IA,JA,6)
+    real(RP) :: rhofac   ! density factor for terminal velocity( air friction )
+    real(RP) :: rhofac_q(5)
 
-    real(RP) :: rlambdar(KA,IA,JA)    ! work for diagnosis of Rain DSD ( Seifert, 2008 )
-    real(RP) :: mud_r           !
-    real(RP) :: dq      (KA,IA,JA,QA) ! work for Rogers etal. (1993)
-    real(RP) :: weight  (KA,IA,JA,QA) !
-    real(RP) :: velq_s  (KA,IA,JA,QA) ! terminal velocity for small branch of Rogers formula
-    real(RP) :: velq_l  (KA,IA,JA,QA) ! terminal velocity for large branch of Rogers formula
+    real(RP) :: rlambdar ! work for diagnosis of Rain DSD ( Seifert, 2008 )
+    real(RP) :: mud_r        
+    real(RP) :: dq, dql  ! weigthed diameter.   Improved Rogers etal. (1993) formula by T.Mitsui
+    
+    
+    real(RP) :: weight ! weighting coefficient for 2-branches is determined by ratio between 0.745mm and weighted diameter.  SB06 Table.1
+    real(RP) :: velq_s ! terminal velocity for small branch of Rogers formula
+    real(RP) :: velq_l ! terminal velocity for large branch of Rogers formula
 
     real(RP) :: tmp
-    integer :: k, i, j
+    integer :: k, i, j, iq
     !---------------------------------------------------------------------------
 
+    PROFILE_START("sn14_terminal_vel")
+
     mud_r = 3.0_RP * nu(I_QR) + 2.0_RP
+
+!OCL XFILL
+    do j = JS, JE
+    do i = IS, IE
+    do k = 1, KA
+       velw(k,i,j,I_QV) = CONST_UNDEF
+    end do
+    end do
+    end do
+
 
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       rhofac(k,i,j) = rho_0 / max( DENS(k,i,j), rho_min )
+       rhofac = rho_0 / max( DENS(k,i,j), rho_min )
 
-       ! average mass
-       xq(I_C,k,i,j) = max( xqmin(I_QC), &
-                       min( xqmax(I_QC), &
-                            rhoq(I_QC,k,i,j) / ( rhoq(I_NC,k,i,j) + nqmin(I_QC) ) ) )
-       xq(I_R,k,i,j) = max( xqmin(I_QR), &
-                       min( xqmax(I_QR), &
-                            rhoq(I_QR,k,i,j) / ( rhoq(I_NR,k,i,j) + nqmin(I_QR) ) ) )
-       xq(I_I,k,i,j) = max( xqmin(I_QI), &
-                       min( xqmax(I_QI), &
-                            rhoq(I_QI,k,i,j) / ( rhoq(I_NI,k,i,j) + nqmin(I_QI) ) ) )
-       xq(I_S,k,i,j) = max( xqmin(I_QS), &
-                       min( xqmax(I_QS), &
-                            rhoq(I_QS,k,i,j) / ( rhoq(I_NS,k,i,j) + nqmin(I_QS) ) ) )
-       xq(I_G,k,i,j) = max( xqmin(I_QG), &
-                       min( xqmax(I_QG), &
-                            rhoq(I_QG,k,i,j) / ( rhoq(I_NG,k,i,j) + nqmin(I_QG) ) ) )
+       ! QC
+       rhofac_q(I_C) = rhofac ** gamma_v(I_QC)
+       xq = max( xqmin(I_QC), &
+            min( xqmax(I_QC), &
+                 rhoq(I_QC,k,i,j) / ( rhoq(I_NC,k,i,j) + nqmin(I_QC) ) ) )
+       velw(k,i,j,I_QC) = -rhofac_q(I_C) * coef_vt1(I_QC,1) * xq**beta_v(I_QC,1)
+       ! NC
+       velw(k,i,j,I_NC) = -rhofac_q(I_C) * coef_vt0(I_QC,1) * xq**beta_vn(I_QC,1)
 
-       rlambdar(k,i,j) = a_m(I_QR) * xq(I_R,k,i,j)**b_m(I_QR) &
+       ! QR
+       rhofac_q(I_R) = rhofac ** gamma_v(I_QR)
+       xq = max( xqmin(I_QR), &
+                 min( xqmax(I_QR), &
+                      rhoq(I_QR,k,i,j) / ( rhoq(I_NR,k,i,j) + nqmin(I_QR) ) ) )
+
+       rlambdar = a_m(I_QR) * xq**b_m(I_QR) &
                    * ( (mud_r+3.0_RP) * (mud_r+2.0_RP) * (mud_r+1.0_RP) )**(-0.333333333_RP)
+       dq = ( 4.0_RP + mud_r ) * rlambdar ! D^(3)+mu weighted mean diameter
+       dql = dq
+       weight = min( 1.0_RP, &
+                max( 0.0_RP, &
+                     0.5_RP * ( 1.0_RP + tanh( PI * log( dq/d_vtr_branch ) ) ) ) )
+       velq_s = coef_vtr_ar2 * dq &
+            * ( 1.0_RP - ( 1.0_RP + coef_vtr_br2*rlambdar )**(-5.0_RP-mud_r) )
+       velq_l = coef_vtr_ar1 - coef_vtr_br1 &
+            * ( 1.0_RP + coef_vtr_cr1*rlambdar )**(-4.0_RP-mud_r)
+       velw(k,i,j,I_QR) = -rhofac_q(I_R) &
+            * ( velq_l * (          weight ) &
+              + velq_s * ( 1.0_RP - weight ) )
+       ! NR
+       dq = ( 1.0_RP + mud_r ) * rlambdar
+       weight = min( 1.0_RP, &
+                max( 0.0_RP, &
+                     0.5_RP * ( 1.0_RP + tanh( PI * log( dq/d_vtr_branch ) ) ) ) )
+       velq_s = coef_vtr_ar2 * dql &
+            * ( 1.0_RP - ( 1.0_RP + coef_vtr_br2*rlambdar )**(-2.0_RP-mud_r) )
+       velq_l = coef_vtr_ar1 - coef_vtr_br1 &
+            * ( 1.0_RP + coef_vtr_cr1*rlambdar )**(-1.0_RP-mud_r)
+       velw(k,i,j,I_NR) = -rhofac_q(I_R) &
+            * ( velq_l * (          weight ) &
+              + velq_s * ( 1.0_RP - weight ) )
 
-       ! Improved Rogers formula by T.Mitsui
-       ! weigthed diameter
-       dq(k,i,j,I_QR) = ( 4.0_RP + mud_r ) * rlambdar(k,i,j) ! D^(3)+mu weighted mean diameter
-       dq(k,i,j,I_NR) = ( 1.0_RP + mud_r ) * rlambdar(k,i,j)
+       ! QI
+       rhofac_q(I_I) = ( pres(k,i,j)/pre0_vt )**a_pre0_vt * ( temp(k,i,j)/tem0_vt )**a_tem0_vt
+       xq = max( xqmin(I_QI), &
+            min( xqmax(I_QI), &
+                 rhoq(I_QI,k,i,j) / ( rhoq(I_NI,k,i,j) + nqmin(I_QI) ) ) )
+       tmp = a_m(I_QI) * xq**b_m(I_QI)
+       dq = coef_dave_L(I_QI) * tmp
+       weight = min( 1.0_RP, &
+                max( 0.0_RP, &
+                     0.5_RP * ( 1.0_RP + log( dq/d0_li ) ) ) )
+       velq_s = coef_vt1(I_QI,1) * xq**beta_v (I_QI,1)
+       velq_l = coef_vt1(I_QI,2) * xq**beta_v (I_QI,2)
+       velw(k,i,j,I_QI) = -rhofac_q(I_I) &
+            * ( velq_l * (          weight ) &
+              + velq_s * ( 1.0_RP - weight ) )
+       ! NI
+       dq = coef_dave_N(I_QI) * tmp
+       weight = min( 1.0_RP, &
+                max( 0.0_RP, &
+                     0.5_RP * ( 1.0_RP + log( dq/d0_ni ) ) ) )
+       velq_s = coef_vt0(I_QI,1) * xq**beta_vn(I_QI,1)
+       velq_l = coef_vt0(I_QI,2) * xq**beta_vn(I_QI,2)
+       velw(k,i,j,I_NI) = -rhofac_q(I_I) &
+            * ( velq_l * (          weight ) &
+              + velq_s * ( 1.0_RP - weight ) )
 
-       tmp = a_m(I_QI) * xq(I_I,k,i,j)**b_m(I_QI)
-       dq(k,i,j,I_QI) = coef_dave_L(I_QI) * tmp
-       dq(k,i,j,I_NI) = coef_dave_N(I_QI) * tmp
+       ! QS
+       rhofac_q(I_S) = rhofac_q(I_I)
+       xq = max( xqmin(I_QS), &
+            min( xqmax(I_QS), &
+                 rhoq(I_QS,k,i,j) / ( rhoq(I_NS,k,i,j) + nqmin(I_QS) ) ) )
+       tmp = a_m(I_QS) * xq**b_m(I_QS)
+       dq = coef_dave_L(I_QS) * tmp
+       weight = min( 1.0_RP, &
+                max( 0.0_RP, &
+                     0.5_RP * ( 1.0_RP + log( dq/d0_ls ) ) ) )
+       velq_s = coef_vt1(I_QS,1) * xq**beta_v (I_QS,1)
+       velq_l = coef_vt1(I_QS,2) * xq**beta_v (I_QS,2)
+       velw(k,i,j,I_QS) = -rhofac_q(I_S) &
+            * ( velq_l * (          weight ) &
+              + velq_s * ( 1.0_RP - weight ) )
+       ! NS
+       dq = coef_dave_N(I_QS) * tmp
+       weight = min( 1.0_RP, &
+                max( 0.0_RP, &
+                     0.5_RP * ( 1.0_RP + log( dq/d0_ns ) ) ) )
+       velq_s = coef_vt0(I_QS,1) * xq**beta_vn(I_QS,1)
+       velq_l = coef_vt0(I_QS,2) * xq**beta_vn(I_QS,2)
+       velw(k,i,j,I_NS) = -rhofac_q(I_S) &
+            * ( velq_l * (          weight ) &
+              + velq_s * ( 1.0_RP - weight ) )
 
-       tmp = a_m(I_QS) * xq(I_S,k,i,j)**b_m(I_QS)
-       dq(k,i,j,I_QS) = coef_dave_L(I_QS) * tmp
-       dq(k,i,j,I_NS) = coef_dave_N(I_QS) * tmp
-
-       tmp = a_m(I_QG) * xq(I_G,k,i,j)**b_m(I_QG)
-       dq(k,i,j,I_QG) = coef_dave_L(I_QG) * tmp
-       dq(k,i,j,I_NG) = coef_dave_N(I_QG) * tmp
-
-       ! small/large branch terminal velocity
-       velq_s(k,i,j,I_QR) = coef_vtr_ar2 * dq(k,i,j,I_QR) &
-            * ( 1.0_RP - ( 1.0_RP + coef_vtr_br2*rlambdar(k,i,j) )**(-5.0_RP-mud_r) )
-       velq_l(k,i,j,I_QR) = coef_vtr_ar1 - coef_vtr_br1 &
-            * ( 1.0_RP + coef_vtr_cr1*rlambdar(k,i,j) )**(-4.0_RP-mud_r)
-       velq_s(k,i,j,I_NR) = coef_vtr_ar2 * dq(k,i,j,I_QR) &
-            * ( 1.0_RP - ( 1.0_RP + coef_vtr_br2*rlambdar(k,i,j) )**(-2.0_RP-mud_r) )
-       velq_l(k,i,j,I_NR) = coef_vtr_ar1 - coef_vtr_br1 &
-            * ( 1.0_RP + coef_vtr_cr1*rlambdar(k,i,j) )**(-1.0_RP-mud_r)
-
-       velq_s(k,i,j,I_QI) = coef_vt1(I_QI,1) * xq(I_I,k,i,j)**beta_v (I_QI,1)
-       velq_l(k,i,j,I_QI) = coef_vt1(I_QI,2) * xq(I_I,k,i,j)**beta_v (I_QI,2)
-       velq_s(k,i,j,I_NI) = coef_vt0(I_QI,1) * xq(I_I,k,i,j)**beta_vn(I_QI,1)
-       velq_l(k,i,j,I_NI) = coef_vt0(I_QI,2) * xq(I_I,k,i,j)**beta_vn(I_QI,2)
-
-       velq_s(k,i,j,I_QS) = coef_vt1(I_QS,1) * xq(I_S,k,i,j)**beta_v (I_QS,1)
-       velq_l(k,i,j,I_QS) = coef_vt1(I_QS,2) * xq(I_S,k,i,j)**beta_v (I_QS,2)
-       velq_s(k,i,j,I_NS) = coef_vt0(I_QS,1) * xq(I_S,k,i,j)**beta_vn(I_QS,1)
-       velq_l(k,i,j,I_NS) = coef_vt0(I_QS,2) * xq(I_S,k,i,j)**beta_vn(I_QS,2)
-
-       velq_s(k,i,j,I_QG) = coef_vt1(I_QG,1) * xq(I_G,k,i,j)**beta_v (I_QG,1)
-       velq_l(k,i,j,I_QG) = coef_vt1(I_QG,2) * xq(I_G,k,i,j)**beta_v (I_QG,2)
-       velq_s(k,i,j,I_NG) = coef_vt0(I_QG,1) * xq(I_G,k,i,j)**beta_vn(I_QG,1)
-       velq_l(k,i,j,I_NG) = coef_vt0(I_QG,2) * xq(I_G,k,i,j)**beta_vn(I_QG,2)
-
-       ! weighting coefficient for 2-branches is determined by ratio between 0.745mm and weighted diameter
-       ! SB06 Table.1
-       weight(k,i,j,I_QR) = 0.5_RP * ( 1.0_RP + tanh( PI * log( dq(k,i,j,I_QR)/d_vtr_branch ) ) ) ! Lr
-       weight(k,i,j,I_QI) = 0.5_RP * ( 1.0_RP + log( dq(k,i,j,I_QI)/d0_li ) )
-       weight(k,i,j,I_QS) = 0.5_RP * ( 1.0_RP + log( dq(k,i,j,I_QS)/d0_ls ) )
-       weight(k,i,j,I_QG) = 0.5_RP * ( 1.0_RP + log( dq(k,i,j,I_QG)/d0_lg ) )
-       weight(k,i,j,I_NR) = 0.5_RP * ( 1.0_RP + tanh( PI * log( dq(k,i,j,I_NR)/d_vtr_branch ) ) ) ! Nr
-       weight(k,i,j,I_NI) = 0.5_RP * ( 1.0_RP + log( dq(k,i,j,I_NI)/d0_ni ) )
-       weight(k,i,j,I_NS) = 0.5_RP * ( 1.0_RP + log( dq(k,i,j,I_NS)/d0_ns ) )
-       weight(k,i,j,I_NG) = 0.5_RP * ( 1.0_RP + log( dq(k,i,j,I_NG)/d0_ng ) )
-
-       ! filter is used to avoid unrealistic terminal velocity( when ni,ns,ng are too small )
-       weight(k,i,j,I_QI) = min( max( weight(k,i,j,I_QI), 0.0_RP ), 1.0_RP )
-       weight(k,i,j,I_QS) = min( max( weight(k,i,j,I_QS), 0.0_RP ), 1.0_RP )
-       weight(k,i,j,I_QG) = min( max( weight(k,i,j,I_QG), 0.0_RP ), 1.0_RP )
-       weight(k,i,j,I_NI) = min( max( weight(k,i,j,I_NI), 0.0_RP ), 1.0_RP )
-       weight(k,i,j,I_NS) = min( max( weight(k,i,j,I_NS), 0.0_RP ), 1.0_RP )
-       weight(k,i,j,I_NG) = min( max( weight(k,i,j,I_NG), 0.0_RP ), 1.0_RP )
-
-       rhofac_q(k,i,j,I_QC) = rhofac(k,i,j) ** gamma_v(I_QC)
-       rhofac_q(k,i,j,I_QR) = rhofac(k,i,j) ** gamma_v(I_QR)
-       rhofac_q(k,i,j,I_QI) = ( pres(k,i,j)/pre0_vt )**a_pre0_vt * ( temp(k,i,j)/tem0_vt )**a_tem0_vt
-       rhofac_q(k,i,j,I_QS) = rhofac_q(k,i,j,I_QI)
-       rhofac_q(k,i,j,I_QG) = rhofac_q(k,i,j,I_QI)
-
-       ! interpolated terminal velocity
-       ! SB06(78) these are defined as negative value
-       velw(k,i,j,I_QV) = CONST_UNDEF
-
-       velw(k,i,j,I_QC) = -rhofac_q(k,i,j,I_QC) * coef_vt1(I_QC,1) * xq(I_C,k,i,j)**beta_v(I_QC,1)
-       velw(k,i,j,I_NC) = -rhofac_q(k,i,j,I_QC) * coef_vt0(I_QC,1) * xq(I_C,k,i,j)**beta_vn(I_QC,1)
-       velw(k,i,j,I_QR) = -rhofac_q(k,i,j,I_QR) &
-            * ( velq_l(k,i,j,I_QR) * (          weight(k,i,j,I_QR) ) &
-              + velq_s(k,i,j,I_QR) * ( 1.0_RP - weight(k,i,j,I_QR) ) )
-       velw(k,i,j,I_NR) = -rhofac_q(k,i,j,I_QR) &
-            * ( velq_l(k,i,j,I_NR) * (          weight(k,i,j,I_NR) ) &
-              + velq_s(k,i,j,I_NR) * ( 1.0_RP - weight(k,i,j,I_NR) ) )
-       velw(k,i,j,I_QI) = -rhofac_q(k,i,j,I_QI) &
-            * ( velq_l(k,i,j,I_QI) * (          weight(k,i,j,I_QI) ) &
-              + velq_s(k,i,j,I_QI) * ( 1.0_RP - weight(k,i,j,I_QI) ) )
-       velw(k,i,j,I_NI) = -rhofac_q(k,i,j,I_QI) &
-            * ( velq_l(k,i,j,I_NI) * (          weight(k,i,j,I_NI) ) &
-              + velq_s(k,i,j,I_NI) * ( 1.0_RP - weight(k,i,j,I_NI) ) )
-       velw(k,i,j,I_QS) = -rhofac_q(k,i,j,I_QS) &
-            * ( velq_l(k,i,j,I_QS) * (          weight(k,i,j,I_QS) ) &
-              + velq_s(k,i,j,I_QS) * ( 1.0_RP - weight(k,i,j,I_QS) ) )
-       velw(k,i,j,I_NS) = -rhofac_q(k,i,j,I_QS) &
-            * ( velq_l(k,i,j,I_NS) * (          weight(k,i,j,I_NS) ) &
-              + velq_s(k,i,j,I_NS) * ( 1.0_RP - weight(k,i,j,I_NS) ) )
-       velw(k,i,j,I_QG) = -rhofac_q(k,i,j,I_QG) &
-            * ( velq_l(k,i,j,I_QG) * (          weight(k,i,j,I_QG) ) &
-              + velq_s(k,i,j,I_QG) * ( 1.0_RP - weight(k,i,j,I_QG) ) )
-       velw(k,i,j,I_NG) = -rhofac_q(k,i,j,I_QG) &
-            * ( velq_l(k,i,j,I_NG) * (          weight(k,i,j,I_NG) ) &
-              + velq_s(k,i,j,I_NG) * ( 1.0_RP - weight(k,i,j,I_NG) ) )
+       ! QG
+       rhofac_q(I_G) = rhofac_q(I_I)
+       xq = max( xqmin(I_QG), &
+            min( xqmax(I_QG), &
+                 rhoq(I_QG,k,i,j) / ( rhoq(I_NG,k,i,j) + nqmin(I_QG) ) ) )
+       tmp = a_m(I_QG) * xq**b_m(I_QG)
+       dq = coef_dave_L(I_QG) * tmp
+       weight = min( 1.0_RP, &
+                max( 0.0_RP, &
+                     0.5_RP * ( 1.0_RP + log( dq/d0_lg ) ) ) )
+       velq_s = coef_vt1(I_QG,1) * xq**beta_v (I_QG,1)
+       velq_l = coef_vt1(I_QG,2) * xq**beta_v (I_QG,2)
+       velw(k,i,j,I_QG) = -rhofac_q(I_G) &
+            * ( velq_l * (          weight ) &
+              + velq_s * ( 1.0_RP - weight ) )
+       ! NG
+       dq = coef_dave_N(I_QG) * tmp
+       weight = min( 1.0_RP, &
+                max( 0.0_RP, &
+                     0.5_RP * ( 1.0_RP + log( dq/d0_ng ) ) ) )
+       velq_s = coef_vt0(I_QG,1) * xq**beta_vn(I_QG,1)
+       velq_l = coef_vt0(I_QG,2) * xq**beta_vn(I_QG,2)
+       velw(k,i,j,I_NG) = -rhofac_q(I_G) &
+            * ( velq_l * (          weight ) &
+              + velq_s * ( 1.0_RP - weight ) )
     enddo
     enddo
     enddo
+
+    do iq = I_QC, I_NG
     do j = JS, JE
     do i = IS, IE
-       velw(KS-1,i,j,I_QC) = velw(KS,i,j,I_QC)
-       velw(KS-1,i,j,I_NC) = velw(KS,i,j,I_NC)
-       velw(KS-1,i,j,I_QR) = velw(KS,i,j,I_QR)
-       velw(KS-1,i,j,I_NR) = velw(KS,i,j,I_NR)
-       velw(KS-1,i,j,I_QI) = velw(KS,i,j,I_QI)
-       velw(KS-1,i,j,I_NI) = velw(KS,i,j,I_NI)
-       velw(KS-1,i,j,I_QS) = velw(KS,i,j,I_QS)
-       velw(KS-1,i,j,I_NS) = velw(KS,i,j,I_NS)
-       velw(KS-1,i,j,I_QG) = velw(KS,i,j,I_QG)
-       velw(KS-1,i,j,I_NG) = velw(KS,i,j,I_NG)
+       velw(1:KS-2,i,j,iq) = CONST_UNDEF
+       velw(KS-1,i,j,iq) = velw(KS,i,j,iq)
+       velw(KE+1:KA,i,j,iq) = CONST_UNDEF
+    enddo
     enddo
     enddo
 
-    velw(   1:KS-2,:,:,:) = CONST_UNDEF
-    velw(KE+1:KA  ,:,:,:) = CONST_UNDEF
+    PROFILE_STOP("sn14_terminal_vel")
 
     return
   end subroutine MP_terminal_velocity
@@ -3725,13 +3699,13 @@ contains
     !
     real(RP) :: Rmoist
     !
-    real(RP) :: xi(KA,IA,JA)                     ! mean mass of ice particles
-    real(RP) :: rrho(KA,IA,JA)                  ! 1/rho
-    real(RP) :: wtem(KA,IA,JA)                   ! temperature[K]
-    real(RP) :: qd(KA,IA,JA)                     ! mixing ratio of dry air
+    real(RP) :: xi                     ! mean mass of ice particles
+    real(RP) :: rrho                   ! 1/rho
+    real(RP) :: wtem(KA,IA,JA)         ! temperature[K]
+    real(RP) :: qdry                   ! mixing ratio of dry air
     !
-    real(RP) :: r_cva                    ! specific heat at constant volume
-    real(RP) :: cpa(KA,IA,JA), r_cpa   ! specific heat at constant pressure
+    real(RP) :: r_cva                  ! specific heat at constant volume
+    real(RP) :: r_cpa                  ! specific heat at constant pressure
     real(RP) :: qsw(KA,IA,JA)          ! saturated mixing ratio for liquid
     real(RP) :: qsi(KA,IA,JA)          ! saturated mixing ratio for solid
     real(RP) :: dqswdtem_rho(KA,IA,JA) ! (dqsw/dtem)_rho
@@ -3741,48 +3715,48 @@ contains
     real(RP) :: dqswdpre_tem(KA,IA,JA) ! (dqsw/dpre)_tem
     real(RP) :: dqsidpre_tem(KA,IA,JA) ! (dqsi/dpre)_tem
     !
-    real(RP) :: w(KA,IA,JA)                     ! vetical velocity[m/s]
-    real(RP) :: Acnd                              ! Pdynliq + Bergeron-Findeisen
-    real(RP) :: Adep                              ! Pdyndep + Bergeron-Findeisen
+    real(RP) :: w                      ! vetical velocity[m/s]
+    real(RP) :: Acnd                   ! Pdynliq + Bergeron-Findeisen
+    real(RP) :: Adep                   ! Pdyndep + Bergeron-Findeisen
     real(RP) :: aliqliq, asolliq
     real(RP) :: aliqsol, asolsol
-    real(RP) :: Pdynliq                           ! production term of ssw by vertical motion
-    real(RP) :: Pdynsol                           ! production term of ssi by vertical motion
-    real(RP) :: Pradliq                           ! production term of ssw by radiation
-    real(RP) :: Pradsol                           ! production term of ssi by radiation
-    real(RP) :: taucnd(KA,IA,JA),   r_taucnd    ! time scale of ssw change by MP
-    real(RP) :: taudep(KA,IA,JA),   r_taudep    ! time scale of ssi change by MP
+    real(RP) :: Pdynliq                ! production term of ssw by vertical motion
+    real(RP) :: Pdynsol                ! production term of ssi by vertical motion
+    real(RP) :: Pradliq                ! production term of ssw by radiation
+    real(RP) :: Pradsol                ! production term of ssi by radiation
+    real(RP) :: taucnd, r_taucnd       ! time scale of ssw change by MP
+    real(RP) :: taudep, r_taudep       ! time scale of ssi change by MP
     real(RP) :: taucnd_c(KA,IA,JA), r_taucnd_c  ! by cloud
     real(RP) :: taucnd_r(KA,IA,JA), r_taucnd_r  ! by rain
     real(RP) :: taudep_i(KA,IA,JA), r_taudep_i  ! by ice
     real(RP) :: taudep_s(KA,IA,JA), r_taudep_s  ! by snow
     real(RP) :: taudep_g(KA,IA,JA), r_taudep_g  ! by graupel
     ! alternative tendency through changing ssw and ssi
-    real(RP) :: PNCdep(KA,IA,JA) ! [Add] 11/08/30 T.Mitsui
+    real(RP) :: PNCdep ! [Add] 11/08/30 T.Mitsui
     real(RP) :: PLR2NR, PLI2NI, PLS2NS, PLG2NG
     real(RP) :: coef_a_cnd, coef_b_cnd
     real(RP) :: coef_a_dep, coef_b_dep
     !
-    real(RP) :: frz_dqc(KA,IA,JA)
-    real(RP) :: frz_dnc(KA,IA,JA)
-    real(RP) :: frz_dqr(KA,IA,JA)
-    real(RP) :: frz_dnr(KA,IA,JA)
-    real(RP) :: mlt_dqi(KA,IA,JA)
-    real(RP) :: mlt_dni(KA,IA,JA)
-    real(RP) :: mlt_dqs(KA,IA,JA)
-    real(RP) :: mlt_dns(KA,IA,JA)
-    real(RP) :: mlt_dqg(KA,IA,JA)
-    real(RP) :: mlt_dng(KA,IA,JA)
-    real(RP) :: dep_dqi(KA,IA,JA)
-    real(RP) :: dep_dni(KA,IA,JA)
-    real(RP) :: dep_dqs(KA,IA,JA)
-    real(RP) :: dep_dns(KA,IA,JA)
-    real(RP) :: dep_dqg(KA,IA,JA)
-    real(RP) :: dep_dng(KA,IA,JA)
-    real(RP) :: dep_dqr(KA,IA,JA)
-    real(RP) :: dep_dnr(KA,IA,JA)
-    real(RP) :: dep_dqc(KA,IA,JA)
-    real(RP) :: dep_dnc(KA,IA,JA)   ! 11/08/30 [Add] T.Mitsui, dep_dnc
+    real(RP) :: frz_dqc
+    real(RP) :: frz_dnc
+    real(RP) :: frz_dqr
+    real(RP) :: frz_dnr
+    real(RP) :: mlt_dqi
+    real(RP) :: mlt_dni
+    real(RP) :: mlt_dqs
+    real(RP) :: mlt_dns
+    real(RP) :: mlt_dqg
+    real(RP) :: mlt_dng
+    real(RP) :: dep_dqi
+    real(RP) :: dep_dni
+    real(RP) :: dep_dqs
+    real(RP) :: dep_dns
+    real(RP) :: dep_dqg
+    real(RP) :: dep_dng
+    real(RP) :: dep_dqr
+    real(RP) :: dep_dnr
+    real(RP) :: dep_dqc
+    real(RP) :: dep_dnc   ! 11/08/30 [Add] T.Mitsui, dep_dnc
     real(RP) :: r_xc_ccn, r_xi_ccn ! 11/08/30 [Add] T.Mitsui
     !
     real(RP) :: drhoqv
@@ -3855,38 +3829,34 @@ contains
        end do
        if( IO_L ) write(IO_FID_LOG,*) "taucnd:fac_cndc_wrk=",fac_cndc_wrk
     end if
-    !
+
+!OCL XFILL
     do j = JS, JE
     do i = IS, IE
-    do k = KS,KE
-       rrho(k,i,j) = 1.0_RP/rho(k,i,j)
+    do k = KS, KE
        ! Temperature lower limit is only used for saturation condition.
        ! On the other hand original "tem" is used for calculation of latent heat or energy equation.
        wtem(k,i,j)  = max( tem(k,i,j), tem_min )
+    end do
+    end do
+    end do
 
-       if( z(k) <= 25000.0_RP )then
-          w(k,i,j) = 0.5_RP*(velz(k,i,j) + velz(k+1,i,j))
-       else
-          w(k,i,j) = 0.0_RP
-       end if
-
-       CALC_QDRY( qd(k,i,j), q, k, i, j, iqw )
-       CALC_CV( cva(k,i,j), qd(k,i,j), q, k, i, j, iqw, CVdry, AQ_CV )
-       CALC_CP( cpa(k,i,j), qd(k,i,j), q, k, i, j, iqw, CPdry, AQ_CP )
-    end do
-    end do
-    end do
-    !
     call moist_pres2qsat_liq ( qsw, wtem, pre )
     call moist_pres2qsat_ice ( qsi, wtem, pre )
     call moist_dqsw_dtem_rho ( dqswdtem_rho, wtem, rho )
     call moist_dqsi_dtem_rho ( dqsidtem_rho, wtem, rho )
     call moist_dqsw_dtem_dpre( dqswdtem_pre, dqswdpre_tem, wtem, pre )
     call moist_dqsi_dtem_dpre( dqsidtem_pre, dqsidpre_tem, wtem, pre )
-    !
+
+    PROFILE_START("sn14_update")
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
+       if( z(k) <= 25000.0_RP )then
+          w = 0.5_RP*(velz(k,i,j) + velz(k+1,i,j))
+       else
+          w = 0.0_RP
+       end if
        if( pre(k,i,j) < esw(k,i,j)+1.E-10_RP )then
           qsw(k,i,j) = 1.0_RP
           dqswdtem_rho(k,i,j) = 0.0_RP
@@ -3921,8 +3891,12 @@ contains
 !       taudep_s(k,i,j)   = 1.0_RP/(r_taudep_s+r_tau100day)
 !       taudep_g(k,i,j)   = 1.0_RP/(r_taudep_g+r_tau100day)
 
-       r_cva            = 1.0_RP/cva(k,i,j)
-       r_cpa            = 1.0_RP/cpa(k,i,j)
+       CALC_QDRY( qdry, q, k, i, j, iqw )
+       CALC_CV( cva(k,i,j), qdry, q, k, i, j, iqw, CVdry, AQ_CV )
+       CALC_R( Rmoist, q(k,i,j,I_QV), qdry, Rdry, Rvap )
+       r_cva = 1.0_RP / cva(k,i,j)
+       r_cpa = 1.0_RP / (cva(k,i,j) + Rmoist)
+
        ! Coefficient of latent heat release for ssw change by PLCdep and PLRdep
        aliqliq          = 1.0_RP &
                + r_cva*( LHV00              + (CVvap-CL)*tem(k,i,j) )*dqswdtem_rho(k,i,j)
@@ -3935,8 +3909,8 @@ contains
        ! Coefficient of latent heat release for ssi change by PLIdep, PLSdep and PLGdep
        asolsol          = 1.0_RP &
                + r_cva*( LHV00 + LHF00 + (CVvap-CI)*tem(k,i,j) )*dqsidtem_rho(k,i,j)
-       Pdynliq          = w(k,i,j)*GRAV * ( r_cpa*dqswdtem_pre(k,i,j) + rho(k,i,j)*dqswdpre_tem(k,i,j) )
-       Pdynsol          = w(k,i,j)*GRAV * ( r_cpa*dqsidtem_pre(k,i,j) + rho(k,i,j)*dqsidpre_tem(k,i,j) )
+       Pdynliq          = w * GRAV * ( r_cpa*dqswdtem_pre(k,i,j) + rho(k,i,j)*dqswdpre_tem(k,i,j) )
+       Pdynsol          = w * GRAV * ( r_cpa*dqsidtem_pre(k,i,j) + rho(k,i,j)*dqsidpre_tem(k,i,j) )
        Pradliq          = -dTdt_rad(k,i,j)    * dqswdtem_rho(k,i,j)
        Pradsol          = -dTdt_rad(k,i,j)    * dqsidtem_rho(k,i,j)
 
@@ -3959,16 +3933,16 @@ contains
        uplim_cnd        = max( rho(k,i,j)*ssw_o*qsw(k,i,j)*r_dt, 0.0_RP )
        lowlim_cnd       = min( rho(k,i,j)*ssw_o*qsw(k,i,j)*r_dt, 0.0_RP )
        if( r_taucnd < r_tau100day )then
-          taucnd(k,i,j)     = tau100day
+!          taucnd            = tau100day
           PQ(I_LCdep,k,i,j) = max(lowlim_cnd, min(uplim_cnd, PQ(I_LCdep,k,i,j)*ssw_o ))
           PQ(I_LRdep,k,i,j) = max(lowlim_cnd, min(uplim_cnd, PQ(I_LRdep,k,i,j)*ssw_o ))
           PQ(I_NRdep,k,i,j) = min(0.0_RP, PQ(I_NRdep,k,i,j)*ssw_o )
           PLR2NR           = 0.0_RP
        else
-          taucnd(k,i,j)     = 1.0_RP/r_taucnd
+          taucnd     = 1.0_RP/r_taucnd
           ! Production term for liquid water content
-          coef_a_cnd = rho(k,i,j)*Acnd*taucnd(k,i,j)
-          coef_b_cnd = rho(k,i,j)*taucnd(k,i,j)*r_dt*(ssw_o*qsw(k,i,j)-Acnd*taucnd(k,i,j)) * ( exp(-dt*r_taucnd) - 1.0_RP )
+          coef_a_cnd = rho(k,i,j)*Acnd*taucnd
+          coef_b_cnd = rho(k,i,j)*taucnd*r_dt*(ssw_o*qsw(k,i,j)-Acnd*taucnd) * ( exp(-dt*r_taucnd) - 1.0_RP )
           PQ(I_LCdep,k,i,j) = coef_a_cnd*r_taucnd_c - coef_b_cnd*r_taucnd_c
           PLR2NR            = PQ(I_NRdep,k,i,j)/(PQ(I_LRdep,k,i,j)+1.E-30_RP)
           PQ(I_LRdep,k,i,j) = coef_a_cnd*r_taucnd_r - coef_b_cnd*r_taucnd_r
@@ -3978,7 +3952,7 @@ contains
        uplim_dep        = max( rho(k,i,j)*ssi_o*qsi(k,i,j)*r_dt, 0.0_RP )
        lowlim_dep       = min( rho(k,i,j)*ssi_o*qsi(k,i,j)*r_dt, 0.0_RP )
        if( r_taudep < r_tau100day )then
-          taudep(k,i,j)     = tau100day
+!          taudep            = tau100day
           PQ(I_LIdep,k,i,j) = max(lowlim_dep, min(uplim_dep, PQ(I_LIdep,k,i,j)*ssi_o ))
           PQ(I_LSdep,k,i,j) = max(lowlim_dep, min(uplim_dep, PQ(I_LSdep,k,i,j)*ssi_o ))
           PQ(I_LGdep,k,i,j) = max(lowlim_dep, min(uplim_dep, PQ(I_LGdep,k,i,j)*ssi_o ))
@@ -3986,10 +3960,10 @@ contains
           PQ(I_NSdep,k,i,j) = min(0.0_RP, PQ(I_NSdep,k,i,j)*ssi_o )
           PQ(I_NGdep,k,i,j) = min(0.0_RP, PQ(I_NGdep,k,i,j)*ssi_o )
        else
-          taudep(k,i,j)     = 1.0_RP/r_taudep
+          taudep     = 1.0_RP/r_taudep
           ! Production term for ice water content
-          coef_a_dep = rho(k,i,j)*Adep*taudep(k,i,j)
-          coef_b_dep = rho(k,i,j)*taudep(k,i,j)*r_dt*(ssi_o*qsi(k,i,j)-Adep*taudep(k,i,j)) * ( exp(-dt*r_taudep) - 1.0_RP )
+          coef_a_dep = rho(k,i,j)*Adep*taudep
+          coef_b_dep = rho(k,i,j)*taudep*r_dt*(ssi_o*qsi(k,i,j)-Adep*taudep) * ( exp(-dt*r_taudep) - 1.0_RP )
           PLI2NI           = PQ(I_NIdep,k,i,j)/max(PQ(I_LIdep,k,i,j),1.E-30_RP)
           PLS2NS           = PQ(I_NSdep,k,i,j)/max(PQ(I_LSdep,k,i,j),1.E-30_RP)
           PLG2NG           = PQ(I_NGdep,k,i,j)/max(PQ(I_LGdep,k,i,j),1.E-30_RP)
@@ -4002,19 +3976,17 @@ contains
        end if
 
        sw = 0.5_RP - sign(0.5_RP, PQ(I_LCdep,k,i,j)+eps) != 1 for PLCdep<=-eps
-       PNCdep(k,i,j) = min(0.0_RP, ((rhoq2(I_QC,k,i,j)+PQ(I_LCdep,k,i,j)*dt)*r_xc_ccn - rhoq2(I_NC,k,i,j))*r_dt ) * sw
+       PNCdep = min(0.0_RP, ((rhoq2(I_QC,k,i,j)+PQ(I_LCdep,k,i,j)*dt)*r_xc_ccn - rhoq2(I_NC,k,i,j))*r_dt ) * sw
 !       if( PQ(I_LCdep,k,i,j) < -eps )then
-!          PNCdep(k,i,j) = min(0.0_RP, ((rhoq2(I_QC,k,i,j)+PQ(I_LCdep,k,i,j)*dt)*r_xc_ccn - rhoq2(I_NC,k,i,j))*r_dt )
+!          PNCdep = min(0.0_RP, ((rhoq2(I_QC,k,i,j)+PQ(I_LCdep,k,i,j)*dt)*r_xc_ccn - rhoq2(I_NC,k,i,j))*r_dt )
 !       else
-!          PNCdep(k,i,j) = 0.0_RP
+!          PNCdep = 0.0_RP
 !       end if
 !       if( PQ(I_LIdep,k,i,j) < -eps )then
 !          PQ(I_NIdep,k,i,j) = min(0.0_RP, ((li(k,i,j)+PQ(I_LIdep,k,i,j)*dt)*r_xi_ccn - rhoq2(I_NI,k,i,j))*r_dt )
 !       else
 !          PQ(I_NIdep,k,i,j) = 0.0_RP
 !       end if
-
-       xi(k,i,j) = min(xi_max, max(xi_min, rhoq2(I_QI,k,i,j)/(rhoq2(I_NI,k,i,j)+ni_min) ))
 
        !--- evaporation/condensation
        r_rvaptem = 1.0_RP/(Rvap*wtem(k,i,j))
@@ -4029,30 +4001,30 @@ contains
        ! sw= 0: partially unsaturated during timestep
        fac1 = min(dlvsw*sw,dcnd*sw)*sw / (abs(sw)-1.0_RP+dcnd) & ! sw=1,-1
             + 1.0_RP - abs(sw)                                   ! sw=0
-       dep_dqc(k,i,j) = max( dt*PQ(I_LCdep,k,i,j)*fac1, &
-                            -rhoq2(I_QC,k,i,j) - 1e30_RP*(sw+1.0_RP) )*abs(sw) != -lc for sw=-1, -inf for sw=1
-       dep_dqr(k,i,j) = max( dt*PQ(I_LRdep,k,i,j)*fac1, &
-                            -rhoq2(I_QR,k,i,j) - 1e30_RP*(sw+1.0_RP) )*abs(sw) != -lr for sw=-1, -inf for sw=1
+       dep_dqc = max( dt*PQ(I_LCdep,k,i,j)*fac1, &
+                     -rhoq2(I_QC,k,i,j) - 1e30_RP*(sw+1.0_RP) )*abs(sw) != -lc for sw=-1, -inf for sw=1
+       dep_dqr = max( dt*PQ(I_LRdep,k,i,j)*fac1, &
+                     -rhoq2(I_QR,k,i,j) - 1e30_RP*(sw+1.0_RP) )*abs(sw) != -lr for sw=-1, -inf for sw=1
 !       if     ( (dcnd >  eps) .and. (dlvsw > eps) )then
 !          ! always supersaturated
 !          fac1    = min(dlvsw,dcnd)/dcnd
-!          dep_dqc(k,i,j) =  dt*PQ(I_LCdep,k,i,j)*fac1
-!          dep_dqr(k,i,j) =  dt*PQ(I_LRdep,k,i,j)*fac1
+!          dep_dqc =  dt*PQ(I_LCdep,k,i,j)*fac1
+!          dep_dqr =  dt*PQ(I_LRdep,k,i,j)*fac1
 !       else if( (dcnd < -eps) .and. (dlvsw < -eps) )then
 !          ! always unsaturated
 !          fac1    = max( dlvsw,dcnd )/dcnd
-!          dep_dqc(k,i,j) = max( dt*PQ(I_LCdep,k,i,j)*fac1, -rhoq2(I_QC,k,i,j) )
-!          dep_dqr(k,i,j) = max( dt*PQ(I_LRdep,k,i,j)*fac1, -rhoq2(I_QR,k,i,j) )
+!          dep_dqc = max( dt*PQ(I_LCdep,k,i,j)*fac1, -rhoq2(I_QC,k,i,j) )
+!          dep_dqr = max( dt*PQ(I_LRdep,k,i,j)*fac1, -rhoq2(I_QR,k,i,j) )
 !       else
 !          ! partially unsaturated during timestep
 !          fac1    = 1.0_RP
-!          dep_dqc(k,i,j) = 0.0_RP
-!          dep_dqr(k,i,j) = 0.0_RP
+!          dep_dqc = 0.0_RP
+!          dep_dqr = 0.0_RP
 !       end if
 
        ! evaporation always lose number(always negative).
-       dep_dnc(k,i,j) = max( dt*PNCdep(k,i,j)*fac1, -rhoq2(I_NC,k,i,j) ) ! ss>0 dep=0, ss<0 dep<0 ! [Add] 11/08/30 T.Mitsui
-       dep_dnr(k,i,j) = max( dt*PQ(I_NRdep,k,i,j)*fac1, -rhoq2(I_NR,k,i,j) ) ! ss>0 dep=0, ss<0 dep<0
+       dep_dnc = max( dt*PNCdep*fac1, -rhoq2(I_NC,k,i,j) ) ! ss>0 dep=0, ss<0 dep<0 ! [Add] 11/08/30 T.Mitsui
+       dep_dnr = max( dt*PQ(I_NRdep,k,i,j)*fac1, -rhoq2(I_NR,k,i,j) ) ! ss>0 dep=0, ss<0 dep<0
 
        !--- deposition/sublimation
        lvsi    = esi(k,i,j)*r_rvaptem
@@ -4066,45 +4038,45 @@ contains
        ! sw= 0: partially unsaturated during timestep
        fac2 = min(dlvsi*sw,ddep*sw)*sw / (abs(sw)-1.0_RP+ddep) & ! sw=1,-1
             + 1.0_RP - abs(sw)                                   ! sw=0
-       dep_dqi(k,i,j) = max( dt*PQ(I_LIdep,k,i,j) &
-                             * ( 1.0_RP-abs(sw) + fac2*abs(sw) ), & != fac2 for sw=-1,1, 1 for sw=0
-                            -rhoq2(I_QI,k,i,j) - 1e30_RP*(sw+1.0_RP) )      != -li for sw=-1, -inf for sw=0,1
-       dep_dqs(k,i,j) = max( dt*PQ(I_LSdep,k,i,j) &
-                             * ( 1.0_RP-abs(sw) + fac2*abs(sw) ), & != fac2 for sw=-1,1, 1 for sw=0
-                            -rhoq2(I_QS,k,i,j) - 1e30_RP*(sw+1.0_RP) )      != -ls for sw=-1, -inf for sw=0,1
-       dep_dqg(k,i,j) = max( dt*PQ(I_LGdep,k,i,j) &
-                             * ( 1.0_RP-abs(sw) + fac2*abs(sw) ), & != fac2 for sw=-1,1, 1 for sw=0
-                            -rhoq2(I_QG,k,i,j) - 1e30_RP*(sw+1.0_RP) )      != -lg for sw=-1, -inf for sw=0,1
+       dep_dqi = max( dt*PQ(I_LIdep,k,i,j) &
+                      * ( 1.0_RP-abs(sw) + fac2*abs(sw) ), & != fac2 for sw=-1,1, 1 for sw=0
+                     -rhoq2(I_QI,k,i,j) - 1e30_RP*(sw+1.0_RP) )      != -li for sw=-1, -inf for sw=0,1
+       dep_dqs = max( dt*PQ(I_LSdep,k,i,j) &
+                      * ( 1.0_RP-abs(sw) + fac2*abs(sw) ), & != fac2 for sw=-1,1, 1 for sw=0
+                     -rhoq2(I_QS,k,i,j) - 1e30_RP*(sw+1.0_RP) )      != -ls for sw=-1, -inf for sw=0,1
+       dep_dqg = max( dt*PQ(I_LGdep,k,i,j) &
+                      * ( 1.0_RP-abs(sw) + fac2*abs(sw) ), & != fac2 for sw=-1,1, 1 for sw=0
+                     -rhoq2(I_QG,k,i,j) - 1e30_RP*(sw+1.0_RP) )      != -lg for sw=-1, -inf for sw=0,1
 !       if      ( (ddep >  eps) .and. (dlvsi > eps) )then
 !          ! always supersaturated
 !          fac2    = min(dlvsi,ddep)/ddep
-!          dep_dqi(k,i,j) = dt*PQ(I_LIdep,k,i,j)*fac2
-!          dep_dqs(k,i,j) = dt*PQ(I_LSdep,k,i,j)*fac2
-!          dep_dqg(k,i,j) = dt*PQ(I_LGdep,k,i,j)*fac2
+!          dep_dqi = dt*PQ(I_LIdep,k,i,j)*fac2
+!          dep_dqs = dt*PQ(I_LSdep,k,i,j)*fac2
+!          dep_dqg = dt*PQ(I_LGdep,k,i,j)*fac2
 !       else if ( (ddep < -eps) .and. (dlvsi < -eps) )then
 !          ! always unsaturated
 !          fac2    = max(dlvsi,ddep)/ddep
-!          dep_dqi(k,i,j) = max(dt*PQ(I_LIdep,k,i,j)*fac2, -rhoq2(I_QI,k,i,j) )
-!          dep_dqs(k,i,j) = max(dt*PQ(I_LSdep,k,i,j)*fac2, -rhoq2(I_QS,k,i,j) )
-!          dep_dqg(k,i,j) = max(dt*PQ(I_LGdep,k,i,j)*fac2, -rhoq2(I_QG,k,i,j) )
+!          dep_dqi = max(dt*PQ(I_LIdep,k,i,j)*fac2, -rhoq2(I_QI,k,i,j) )
+!          dep_dqs = max(dt*PQ(I_LSdep,k,i,j)*fac2, -rhoq2(I_QS,k,i,j) )
+!          dep_dqg = max(dt*PQ(I_LGdep,k,i,j)*fac2, -rhoq2(I_QG,k,i,j) )
 !       else
 !          ! partially unsaturated during timestep
 !          fac2    = 1.0_RP
-!          dep_dqi(k,i,j) = dt*PQ(I_LIdep,k,i,j)
-!          dep_dqs(k,i,j) = dt*PQ(I_LSdep,k,i,j)
-!          dep_dqg(k,i,j) = dt*PQ(I_LGdep,k,i,j)
+!          dep_dqi = dt*PQ(I_LIdep,k,i,j)
+!          dep_dqs = dt*PQ(I_LSdep,k,i,j)
+!          dep_dqg = dt*PQ(I_LGdep,k,i,j)
 !       end if
 
        ! evaporation always lose number(always negative).
-       dep_dni(k,i,j) = max( dt*PQ(I_NIdep,k,i,j)*fac2, -rhoq2(I_NI,k,i,j) ) ! ss>0 dep=0, ss<0 dep<0
-       dep_dns(k,i,j) = max( dt*PQ(I_NSdep,k,i,j)*fac2, -rhoq2(I_NS,k,i,j) ) ! ss>0 dep=0, ss<0 dep<0
-       dep_dng(k,i,j) = max( dt*PQ(I_NGdep,k,i,j)*fac2, -rhoq2(I_NG,k,i,j) ) ! ss>0 dep=0, ss<0 dep<0
+       dep_dni = max( dt*PQ(I_NIdep,k,i,j)*fac2, -rhoq2(I_NI,k,i,j) ) ! ss>0 dep=0, ss<0 dep<0
+       dep_dns = max( dt*PQ(I_NSdep,k,i,j)*fac2, -rhoq2(I_NS,k,i,j) ) ! ss>0 dep=0, ss<0 dep<0
+       dep_dng = max( dt*PQ(I_NGdep,k,i,j)*fac2, -rhoq2(I_NG,k,i,j) ) ! ss>0 dep=0, ss<0 dep<0
 
        !--- freezing of cloud drop
-       frz_dqc(k,i,j) = max( dt*(PQ(I_LChom,k,i,j)+PQ(I_LChet,k,i,j)), -rhoq2(I_QC,k,i,j)-dep_dqc(k,i,j) ) ! negative value
-       frz_dnc(k,i,j) = max( dt*(PQ(I_NChom,k,i,j)+PQ(I_NChet,k,i,j)), -rhoq2(I_NC,k,i,j)-dep_dnc(k,i,j) ) ! negative value
-       fac3    = ( frz_dqc(k,i,j)-eps )/( dt*(PQ(I_LChom,k,i,j)+PQ(I_LChet,k,i,j))-eps )
-       fac4    = ( frz_dnc(k,i,j)-eps )/( dt*(PQ(I_NChom,k,i,j)+PQ(I_NChet,k,i,j))-eps )
+       frz_dqc = max( dt*(PQ(I_LChom,k,i,j)+PQ(I_LChet,k,i,j)), -rhoq2(I_QC,k,i,j)-dep_dqc ) ! negative value
+       frz_dnc = max( dt*(PQ(I_NChom,k,i,j)+PQ(I_NChet,k,i,j)), -rhoq2(I_NC,k,i,j)-dep_dnc ) ! negative value
+       fac3    = ( frz_dqc-eps )/( dt*(PQ(I_LChom,k,i,j)+PQ(I_LChet,k,i,j))-eps )
+       fac4    = ( frz_dnc-eps )/( dt*(PQ(I_NChom,k,i,j)+PQ(I_NChet,k,i,j))-eps )
        PQ(I_LChom,k,i,j) = fac3*PQ(I_LChom,k,i,j)
        PQ(I_LChet,k,i,j) = fac3*PQ(I_LChet,k,i,j)
        PQ(I_NChom,k,i,j) = fac4*PQ(I_NChom,k,i,j)
@@ -4112,40 +4084,41 @@ contains
 
        !--- melting
        ! ice change
-       mlt_dqi(k,i,j) = max( dt*PQ(I_LImlt,k,i,j), -rhoq2(I_QI,k,i,j)-dep_dqi(k,i,j) )  ! negative value
-       mlt_dni(k,i,j) = max( dt*PQ(I_NImlt,k,i,j), -rhoq2(I_NI,k,i,j)-dep_dni(k,i,j) )  ! negative value
+       mlt_dqi = max( dt*PQ(I_LImlt,k,i,j), -rhoq2(I_QI,k,i,j)-dep_dqi )  ! negative value
+       mlt_dni = max( dt*PQ(I_NImlt,k,i,j), -rhoq2(I_NI,k,i,j)-dep_dni )  ! negative value
        ! snow change
-       mlt_dqs(k,i,j) = max( dt*PQ(I_LSmlt,k,i,j), -rhoq2(I_QS,k,i,j)-dep_dqs(k,i,j) )  ! negative value
-       mlt_dns(k,i,j) = max( dt*PQ(I_NSmlt,k,i,j), -rhoq2(I_NS,k,i,j)-dep_dns(k,i,j) )  ! negative value
+       mlt_dqs = max( dt*PQ(I_LSmlt,k,i,j), -rhoq2(I_QS,k,i,j)-dep_dqs )  ! negative value
+       mlt_dns = max( dt*PQ(I_NSmlt,k,i,j), -rhoq2(I_NS,k,i,j)-dep_dns )  ! negative value
        ! graupel change
-       mlt_dqg(k,i,j) = max( dt*PQ(I_LGmlt,k,i,j), -rhoq2(I_QG,k,i,j)-dep_dqg(k,i,j) )  ! negative value
-       mlt_dng(k,i,j) = max( dt*PQ(I_NGmlt,k,i,j), -rhoq2(I_NG,k,i,j)-dep_dng(k,i,j) )  ! negative value
+       mlt_dqg = max( dt*PQ(I_LGmlt,k,i,j), -rhoq2(I_QG,k,i,j)-dep_dqg )  ! negative value
+       mlt_dng = max( dt*PQ(I_NGmlt,k,i,j), -rhoq2(I_NG,k,i,j)-dep_dng )  ! negative value
 
        !--- freezing of larger droplets
-       frz_dqr(k,i,j) = max( dt*(PQ(I_LRhet,k,i,j)), min(0.0_RP, -rhoq2(I_QR,k,i,j)-dep_dqr(k,i,j)) ) ! negative value
-       frz_dnr(k,i,j) = max( dt*(PQ(I_NRhet,k,i,j)), min(0.0_RP, -rhoq2(I_NR,k,i,j)-dep_dnr(k,i,j)) ) ! negative value
+       frz_dqr = max( dt*(PQ(I_LRhet,k,i,j)), min(0.0_RP, -rhoq2(I_QR,k,i,j)-dep_dqr) ) ! negative value
+       frz_dnr = max( dt*(PQ(I_NRhet,k,i,j)), min(0.0_RP, -rhoq2(I_NR,k,i,j)-dep_dnr) ) ! negative value
 
-       fac5         = ( frz_dqr(k,i,j)-eps )/( dt*PQ(I_LRhet,k,i,j)-eps )
+       fac5         = ( frz_dqr-eps )/( dt*PQ(I_LRhet,k,i,j)-eps )
        PQ(I_LRhet,k,i,j) = fac5*PQ(I_LRhet,k,i,j)
-       fac6         = ( frz_dnr(k,i,j)-eps )/( dt*PQ(I_NRhet,k,i,j)-eps )
+       fac6         = ( frz_dnr-eps )/( dt*PQ(I_NRhet,k,i,j)-eps )
        PQ(I_NRhet,k,i,j) = fac6*PQ(I_NRhet,k,i,j)
 
        ! water vapor change
-       drhoqv = -(dep_dqc(k,i,j)+dep_dqi(k,i,j)+dep_dqs(k,i,j)+dep_dqg(k,i,j)+dep_dqr(k,i,j))
+       drhoqv = -(dep_dqc+dep_dqi+dep_dqs+dep_dqg+dep_dqr)
 
        rhoq(I_QV,k,i,j) = max(0.0_RP, rhoq(I_QV,k,i,j) + drhoqv )
 
        rhoe(k,i,j) = rhoe(k,i,j) - LHV * drhoqv
 
-       sw = 0.5_RP + sign(0.5_RP,xi(k,i,j)-x_sep) ! if (xi>=x_sep) then sw=1 else sw=0
+       xi = min(xi_max, max(xi_min, rhoq2(I_QI,k,i,j)/(rhoq2(I_NI,k,i,j)+ni_min) ))
+       sw = 0.5_RP + sign(0.5_RP,xi-x_sep) ! if (xi>=x_sep) then sw=1 else sw=0
                                                   ! sw=1: large ice crystals turn into rain by melting
 
        ! total cloud change
-       drhoqc = ( frz_dqc(k,i,j) - mlt_dqi(k,i,j)*(1.0_RP-sw) + dep_dqc(k,i,j) )
-       drhonc = ( frz_dnc(k,i,j) - mlt_dni(k,i,j)*(1.0_RP-sw) + dep_dnc(k,i,j) )
+       drhoqc = ( frz_dqc - mlt_dqi*(1.0_RP-sw) + dep_dqc )
+       drhonc = ( frz_dnc - mlt_dni*(1.0_RP-sw) + dep_dnc )
        ! total rain change
-       drhoqr = ( frz_dqr(k,i,j) - mlt_dqg(k,i,j) - mlt_dqs(k,i,j) - mlt_dqi(k,i,j)*sw + dep_dqr(k,i,j) )
-       drhonr = ( frz_dnr(k,i,j) - mlt_dng(k,i,j) - mlt_dns(k,i,j) - mlt_dni(k,i,j)*sw + dep_dnr(k,i,j) )
+       drhoqr = ( frz_dqr - mlt_dqg - mlt_dqs - mlt_dqi*sw + dep_dqr )
+       drhonr = ( frz_dnr - mlt_dng - mlt_dns - mlt_dni*sw + dep_dnr )
 
        rhoq(I_QC,k,i,j) = max(0.0_RP, rhoq(I_QC,k,i,j) + drhoqc )
        rhoq(I_NC,k,i,j) = max(0.0_RP, rhoq(I_NC,k,i,j) + drhonc )
@@ -4153,8 +4126,8 @@ contains
        rhoq(I_NR,k,i,j) = max(0.0_RP, rhoq(I_NR,k,i,j) + drhonr )
 
        ! total ice change
-       drhoqi = (-frz_dqc(k,i,j) + mlt_dqi(k,i,j)           + dep_dqi(k,i,j) )
-       drhoni = (-frz_dnc(k,i,j) + mlt_dni(k,i,j)           + dep_dni(k,i,j) )
+       drhoqi = (-frz_dqc + mlt_dqi             + dep_dqi )
+       drhoni = (-frz_dnc + mlt_dni             + dep_dni )
 
        rhoq(I_QI,k,i,j) = max(0.0_RP, rhoq(I_QI,k,i,j) + drhoqi )
        rhoq(I_NI,k,i,j) = max(0.0_RP, rhoq(I_NI,k,i,j) + drhoni )
@@ -4162,8 +4135,8 @@ contains
        rhoe(k,i,j) = rhoe(k,i,j) + LHF * drhoqi
 
        ! total snow change
-       drhoqs = (           mlt_dqs(k,i,j)           + dep_dqs(k,i,j) )
-       drhons = (           mlt_dns(k,i,j)           + dep_dns(k,i,j) )
+       drhoqs = (           mlt_dqs             + dep_dqs )
+       drhons = (           mlt_dns             + dep_dns )
 
        rhoq(I_QS,k,i,j) = max(0.0_RP, rhoq(I_QS,k,i,j) + drhoqs )
        rhoq(I_NS,k,i,j) = max(0.0_RP, rhoq(I_NS,k,i,j) + drhons )
@@ -4171,8 +4144,8 @@ contains
        rhoe(k,i,j) = rhoe(k,i,j) + LHF * drhoqs
 
        ! total graupel change
-       drhoqg = (-frz_dqr(k,i,j) + mlt_dqg(k,i,j)           + dep_dqg(k,i,j) )
-       drhong = (-frz_dnr(k,i,j) + mlt_dng(k,i,j)           + dep_dng(k,i,j) )
+       drhoqg = (-frz_dqr + mlt_dqg             + dep_dqg )
+       drhong = (-frz_dnr + mlt_dng             + dep_dng )
 
        rhoq(I_QG,k,i,j) = max(0.0_RP, rhoq(I_QG,k,i,j) + drhoqg )
        rhoq(I_NG,k,i,j) = max(0.0_RP, rhoq(I_NG,k,i,j) + drhong )
@@ -4180,34 +4153,35 @@ contains
        rhoe(k,i,j) = rhoe(k,i,j) + LHF * drhoqg
 
        !--- update mixing ratio
-       q(k,i,j,I_QV) = rhoq(I_QV,k,i,j) * rrho(k,i,j)
-       q(k,i,j,I_QC) = rhoq(I_QC,k,i,j) * rrho(k,i,j)
-       q(k,i,j,I_QR) = rhoq(I_QR,k,i,j) * rrho(k,i,j)
-       q(k,i,j,I_QI) = rhoq(I_QI,k,i,j) * rrho(k,i,j)
-       q(k,i,j,I_QS) = rhoq(I_QS,k,i,j) * rrho(k,i,j)
-       q(k,i,j,I_QG) = rhoq(I_QG,k,i,j) * rrho(k,i,j)
-       !
-       q(k,i,j,I_NC) = rhoq(I_NC,k,i,j) * rrho(k,i,j)
-       q(k,i,j,I_NR) = rhoq(I_NR,k,i,j) * rrho(k,i,j)
-       q(k,i,j,I_NI) = rhoq(I_NI,k,i,j) * rrho(k,i,j)
-       q(k,i,j,I_NS) = rhoq(I_NS,k,i,j) * rrho(k,i,j)
-       q(k,i,j,I_NG) = rhoq(I_NG,k,i,j) * rrho(k,i,j)
+       rrho = 1.0_RP/rho(k,i,j)
 
-       CALC_QDRY( qd(k,i,j), q, k, i, j, iqw )
-       CALC_CV( cva(k,i,j), qd(k,i,j), q, k, i, j, iqw, CVdry, AQ_CV )
-       CALC_R( Rmoist, q(k,i,j,I_QV), qd(k,i,j), Rdry, Rvap )
+       q(k,i,j,I_QV) = rhoq(I_QV,k,i,j) * rrho
+       q(k,i,j,I_QC) = rhoq(I_QC,k,i,j) * rrho
+       q(k,i,j,I_QR) = rhoq(I_QR,k,i,j) * rrho
+       q(k,i,j,I_QI) = rhoq(I_QI,k,i,j) * rrho
+       q(k,i,j,I_QS) = rhoq(I_QS,k,i,j) * rrho
+       q(k,i,j,I_QG) = rhoq(I_QG,k,i,j) * rrho
+       q(k,i,j,I_NC) = rhoq(I_NC,k,i,j) * rrho
+       q(k,i,j,I_NR) = rhoq(I_NR,k,i,j) * rrho
+       q(k,i,j,I_NI) = rhoq(I_NI,k,i,j) * rrho
+       q(k,i,j,I_NS) = rhoq(I_NS,k,i,j) * rrho
+       q(k,i,j,I_NG) = rhoq(I_NG,k,i,j) * rrho
+
+       CALC_QDRY( qdry, q, k, i, j, iqw )
+       CALC_CV( cva(k,i,j), qdry, q, k, i, j, iqw, CVdry, AQ_CV )
+       CALC_R( Rmoist, q(k,i,j,I_QV), qdry, Rdry, Rvap )
        tem(k,i,j) = rhoe(k,i,j) / ( rho(k,i,j) * cva(k,i,j) )
        pre(k,i,j) = rho(k,i,j) * Rmoist * tem(k,i,j)
 
-       sl_PLCdep(i,j) = sl_PLCdep(i,j) + dep_dqc(k,i,j)*Dz(k)*gsgam2(k,i,j)
-       sl_PLRdep(i,j) = sl_PLRdep(i,j) + dep_dqr(k,i,j)*Dz(k)*gsgam2(k,i,j)
-       sl_PNRdep(i,j) = sl_PNRdep(i,j) + dep_dnr(k,i,j)*Dz(k)*gsgam2(k,i,j)
+       sl_PLCdep(i,j) = sl_PLCdep(i,j) + dep_dqc*Dz(k)*gsgam2(k,i,j)
+       sl_PLRdep(i,j) = sl_PLRdep(i,j) + dep_dqr*Dz(k)*gsgam2(k,i,j)
+       sl_PNRdep(i,j) = sl_PNRdep(i,j) + dep_dnr*Dz(k)*gsgam2(k,i,j)
     end do
     end do
     end do
-    !
-    return
+    PROFILE_STOP("sn14_update")
 
+    return
   end subroutine update_by_phase_change_kij
   !-------------------------------------------------------------------------------
   subroutine MP_negativefilter( &
