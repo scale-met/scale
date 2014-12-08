@@ -14,8 +14,8 @@ else
   MODDIROPT = -M
 endif
 
-#SSE_FLAGS = -mtune=native
-SSE_FLAGS = -mtune=native -mavx
+SSE_FLAGS = -mtune=native
+#SSE_FLAGS = -mtune=native -mavx
 
 FFLAGS_CORE = -m64 \
               -std=f2003 -fall-intrinsics -pedantic-errors -fimplicit-none -fmodule-private \
