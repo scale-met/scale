@@ -2676,6 +2676,8 @@ contains
     real(RP) :: wx_cri, wx_crs
     real(RP) :: coef_emelt
     real(RP) :: w1
+
+    real(RP) :: sw
     !
     integer :: i, j, k
     !
@@ -2735,6 +2737,7 @@ contains
     end if
     !
     PROFILE_START("sn14_collection")
+!OCL NOSIMD
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -2749,21 +2752,12 @@ contains
        !------------------------------------------------------------------------
        ! coellection efficiency are given as follows
        E_c = max(0.0_RP, min(1.0_RP, (ave_dc-dc0)/(dc1-dc0) ))
-       if(ave_di>di0)then
-          E_i = E_im
-       else
-          E_i = 0.0_RP
-       end if
-       if(ave_ds>ds0)then
-          E_s = E_sm
-       else
-          E_s = 0.0_RP
-       end if
-       if(ave_dg>dg0)then
-          E_g = E_gm
-       else
-          E_g = 0.0_RP
-       end if
+       sw = 0.5_RP - sign(0.5_RP, di0-ave_di) ! if(ave_di>di0)then sw=1
+       E_i = E_im * sw
+       sw = 0.5_RP - sign(0.5_RP, ds0-ave_ds) ! if(ave_ds>ds0)then sw=1
+       E_s = E_sm * sw
+       sw = 0.5_RP - sign(0.5_RP, dg0-ave_dg) ! if(ave_dg>dg0)then sw=1
+       E_g = E_gm * sw
        E_ic = E_i*E_c
        E_sc = E_s*E_c
        E_gc = E_g*E_c
@@ -2865,23 +2859,24 @@ contains
        Pac(I_LIacLS2LS,k,i,j)= -0.25_RP*pi*E_stick(k,i,j)*E_si*rhoq(I_NS,k,i,j)*rhoq(I_QI,k,i,j)*coef_acc_LIS
        Pac(I_NIacNS2NS,k,i,j)= -0.25_RP*pi*E_stick(k,i,j)*E_si*rhoq(I_NS,k,i,j)*rhoq(I_NI,k,i,j)*coef_acc_NIS
        !
-       if ( tem(k,i,j) <= T00 )then
+       sw = sign(0.5_RP, T00-tem(k,i,j)) + 0.5_RP
+       ! if ( tem(k,i,j) <= T00 )then
           ! rain-graupel => graupel
           ! reduction term of rain
-          coef_acc_LRG = &
-                 ( delta_b1(I_QR)*drdr + delta_ab1(I_QG,I_QR)*drdg + delta_b0(I_QG)*dgdg ) &
-               * ( theta_b1(I_QR)*vrvr - theta_ab1(I_QG,I_QR)*vrvg + theta_b0(I_QG)*vgvg   &
-               +  sigma_r + sigma_g )**0.5_RP
-          Pac(I_LRacLG2LG,k,i,j) = -0.25_RP*pi*E_gr*rhoq(I_NG,k,i,j)*rhoq(I_QR,k,i,j)*coef_acc_LRG
-       else
+          ! sw = 1
+       ! else
           ! rain-graupel => rain
           ! reduction term of graupel
-          coef_acc_LRG = &
-                 ( delta_b1(I_QG)*dgdg + delta_ab1(I_QR,I_QG)*drdg + delta_b0(I_QR)*drdr ) &
-               * ( theta_b1(I_QG)*vgvg - theta_ab1(I_QR,I_QG)*vrvg + theta_b0(I_QR)*vrvr   &
-               +  sigma_r + sigma_g )**0.5_RP
-          Pac(I_LRacLG2LG,k,i,j) = -0.25_RP*pi*E_gr*rhoq(I_NR,k,i,j)*rhoq(I_QG,k,i,j)*coef_acc_LRG
-       end if
+          ! sw = 0
+       coef_acc_LRG = &
+              ( ( delta_b1(I_QR)*drdr + delta_ab1(I_QG,I_QR)*drdg + delta_b0(I_QG)*dgdg ) * sw &
+              + ( delta_b1(I_QG)*dgdg + delta_ab1(I_QR,I_QG)*drdg + delta_b0(I_QR)*drdr ) * (1.0_RP-sw) ) &
+            * sqrt( ( theta_b1(I_QR)*vrvr - theta_ab1(I_QG,I_QR)*vrvg + theta_b0(I_QG)*vgvg ) * sw &
+                  + ( theta_b1(I_QG)*vgvg - theta_ab1(I_QR,I_QG)*vrvg + theta_b0(I_QR)*vrvr ) * (1.0_RP-sw) &
+                  + sigma_r + sigma_g )
+       Pac(I_LRacLG2LG,k,i,j) = -0.25_RP*pi*E_gr*coef_acc_LRG &
+            * ( rhoq(I_NG,k,i,j)*rhoq(I_QR,k,i,j) * sw &
+              + rhoq(I_NR,k,i,j)*rhoq(I_QG,k,i,j) * (1.0_RP-sw) )
        coef_acc_NRG = &
               ( delta_b0(I_QR)*drdr + delta_ab0(I_QG,I_QR)*drdg + delta_b0(I_QG)*dgdg ) &
             * ( theta_b0(I_QR)*vrvr - theta_ab0(I_QG,I_QR)*vrvg + theta_b0(I_QG)*vgvg   &
@@ -2983,15 +2978,11 @@ contains
        ! SB06(70),(71)
        ! i_iconv2g: option whether partial conversions work or not
        ! ice-cloud => graupel
-       if( ave_di > di_cri )then
-          wx_cri = cfill_i*DWATR/rho_g*( pi/6.0_RP*rho_g*ave_di*ave_di*ave_di/xq(I_I,k,i,j) - 1.0_RP )
-          PQ(I_LIcon,k,i,j) = i_iconv2g*  Pac(I_LIacLC2LI,k,i,j)/max(1.0_RP, wx_cri)
-          PQ(I_NIcon,k,i,j) = i_iconv2g*  PQ(I_LIcon,k,i,j)/xq(I_I,k,i,j)
-       else
-          wx_cri       = 0.0_RP
-          PQ(I_LIcon,k,i,j) = 0.0_RP
-          PQ(I_NIcon,k,i,j) = 0.0_RP
-       end if
+       sw = 0.5_RP - sign(0.5_RP,di_cri-ave_di) ! if( ave_di > di_cri )then sw=1
+       wx_cri = cfill_i*DWATR/rho_g*( pi/6.0_RP*rho_g*ave_di*ave_di*ave_di/xq(I_I,k,i,j) - 1.0_RP ) * sw
+       PQ(I_LIcon,k,i,j) = i_iconv2g * Pac(I_LIacLC2LI,k,i,j)/max(1.0_RP, wx_cri) * sw
+       PQ(I_NIcon,k,i,j) = i_iconv2g * PQ(I_LIcon,k,i,j)/xq(I_I,k,i,j) * sw
+
        ! snow-cloud => graupel
        wx_crs = cfill_s*DWATR/rho_g*( pi/6.0_RP*rho_g*ave_ds*ave_ds*ave_ds/xq(I_S,k,i,j) - 1.0_RP )
        PQ(I_LScon,k,i,j) = i_sconv2g * (Pac(I_LSacLC2LS,k,i,j))/max(1.0_RP, wx_crs)
@@ -3499,7 +3490,6 @@ contains
     end do
     end do
 
-
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -3507,26 +3497,22 @@ contains
 
        ! QC
        rhofac_q(I_C) = rhofac ** gamma_v(I_QC)
-       xq = max( xqmin(I_QC), &
-            min( xqmax(I_QC), &
-                 rhoq(I_QC,k,i,j) / ( rhoq(I_NC,k,i,j) + nqmin(I_QC) ) ) )
+       xq = max( xqmin(I_QC), min( xqmax(I_QC), rhoq(I_QC,k,i,j) / ( rhoq(I_NC,k,i,j) + nqmin(I_QC) ) ) )
+                 
        velw(k,i,j,I_QC) = -rhofac_q(I_C) * coef_vt1(I_QC,1) * xq**beta_v(I_QC,1)
        ! NC
        velw(k,i,j,I_NC) = -rhofac_q(I_C) * coef_vt0(I_QC,1) * xq**beta_vn(I_QC,1)
 
        ! QR
        rhofac_q(I_R) = rhofac ** gamma_v(I_QR)
-       xq = max( xqmin(I_QR), &
-                 min( xqmax(I_QR), &
-                      rhoq(I_QR,k,i,j) / ( rhoq(I_NR,k,i,j) + nqmin(I_QR) ) ) )
+       xq = max( xqmin(I_QR), min( xqmax(I_QR), rhoq(I_QR,k,i,j) / ( rhoq(I_NR,k,i,j) + nqmin(I_QR) ) ) )
 
        rlambdar = a_m(I_QR) * xq**b_m(I_QR) &
                    * ( (mud_r+3.0_RP) * (mud_r+2.0_RP) * (mud_r+1.0_RP) )**(-0.333333333_RP)
        dq = ( 4.0_RP + mud_r ) * rlambdar ! D^(3)+mu weighted mean diameter
        dql = dq
-       weight = min( 1.0_RP, &
-                max( 0.0_RP, &
-                     0.5_RP * ( 1.0_RP + tanh( PI * log( dq/d_vtr_branch ) ) ) ) )
+       weight = min( 1.0_RP, max( 0.0_RP, 0.5_RP * ( 1.0_RP + tanh( PI * log( dq/d_vtr_branch ) ) ) ) )
+                
        velq_s = coef_vtr_ar2 * dq &
             * ( 1.0_RP - ( 1.0_RP + coef_vtr_br2*rlambdar )**(-5.0_RP-mud_r) )
        velq_l = coef_vtr_ar1 - coef_vtr_br1 &
@@ -3536,9 +3522,8 @@ contains
               + velq_s * ( 1.0_RP - weight ) )
        ! NR
        dq = ( 1.0_RP + mud_r ) * rlambdar
-       weight = min( 1.0_RP, &
-                max( 0.0_RP, &
-                     0.5_RP * ( 1.0_RP + tanh( PI * log( dq/d_vtr_branch ) ) ) ) )
+       weight = min( 1.0_RP, max( 0.0_RP, 0.5_RP * ( 1.0_RP + tanh( PI * log( dq/d_vtr_branch ) ) ) ) )
+                     
        velq_s = coef_vtr_ar2 * dql &
             * ( 1.0_RP - ( 1.0_RP + coef_vtr_br2*rlambdar )**(-2.0_RP-mud_r) )
        velq_l = coef_vtr_ar1 - coef_vtr_br1 &
@@ -3549,14 +3534,12 @@ contains
 
        ! QI
        rhofac_q(I_I) = ( pres(k,i,j)/pre0_vt )**a_pre0_vt * ( temp(k,i,j)/tem0_vt )**a_tem0_vt
-       xq = max( xqmin(I_QI), &
-            min( xqmax(I_QI), &
-                 rhoq(I_QI,k,i,j) / ( rhoq(I_NI,k,i,j) + nqmin(I_QI) ) ) )
+       xq = max( xqmin(I_QI), min( xqmax(I_QI), rhoq(I_QI,k,i,j) / ( rhoq(I_NI,k,i,j) + nqmin(I_QI) ) ) )
+                 
        tmp = a_m(I_QI) * xq**b_m(I_QI)
        dq = coef_dave_L(I_QI) * tmp
-       weight = min( 1.0_RP, &
-                max( 0.0_RP, &
-                     0.5_RP * ( 1.0_RP + log( dq/d0_li ) ) ) )
+       weight = min( 1.0_RP, max( 0.0_RP, 0.5_RP * ( 1.0_RP + log( dq/d0_li ) ) ) )
+                     
        velq_s = coef_vt1(I_QI,1) * xq**beta_v (I_QI,1)
        velq_l = coef_vt1(I_QI,2) * xq**beta_v (I_QI,2)
        velw(k,i,j,I_QI) = -rhofac_q(I_I) &
@@ -3564,9 +3547,8 @@ contains
               + velq_s * ( 1.0_RP - weight ) )
        ! NI
        dq = coef_dave_N(I_QI) * tmp
-       weight = min( 1.0_RP, &
-                max( 0.0_RP, &
-                     0.5_RP * ( 1.0_RP + log( dq/d0_ni ) ) ) )
+       weight = min( 1.0_RP, max( 0.0_RP, 0.5_RP * ( 1.0_RP + log( dq/d0_ni ) ) ) )
+                
        velq_s = coef_vt0(I_QI,1) * xq**beta_vn(I_QI,1)
        velq_l = coef_vt0(I_QI,2) * xq**beta_vn(I_QI,2)
        velw(k,i,j,I_NI) = -rhofac_q(I_I) &
@@ -3575,14 +3557,12 @@ contains
 
        ! QS
        rhofac_q(I_S) = rhofac_q(I_I)
-       xq = max( xqmin(I_QS), &
-            min( xqmax(I_QS), &
-                 rhoq(I_QS,k,i,j) / ( rhoq(I_NS,k,i,j) + nqmin(I_QS) ) ) )
+       xq = max( xqmin(I_QS), min( xqmax(I_QS), rhoq(I_QS,k,i,j) / ( rhoq(I_NS,k,i,j) + nqmin(I_QS) ) ) )
+                 
        tmp = a_m(I_QS) * xq**b_m(I_QS)
        dq = coef_dave_L(I_QS) * tmp
-       weight = min( 1.0_RP, &
-                max( 0.0_RP, &
-                     0.5_RP * ( 1.0_RP + log( dq/d0_ls ) ) ) )
+       weight = min( 1.0_RP, max( 0.0_RP, 0.5_RP * ( 1.0_RP + log( dq/d0_ls ) ) ) )
+                     
        velq_s = coef_vt1(I_QS,1) * xq**beta_v (I_QS,1)
        velq_l = coef_vt1(I_QS,2) * xq**beta_v (I_QS,2)
        velw(k,i,j,I_QS) = -rhofac_q(I_S) &
@@ -3590,9 +3570,8 @@ contains
               + velq_s * ( 1.0_RP - weight ) )
        ! NS
        dq = coef_dave_N(I_QS) * tmp
-       weight = min( 1.0_RP, &
-                max( 0.0_RP, &
-                     0.5_RP * ( 1.0_RP + log( dq/d0_ns ) ) ) )
+       weight = min( 1.0_RP, max( 0.0_RP, 0.5_RP * ( 1.0_RP + log( dq/d0_ns ) ) ) )
+                     
        velq_s = coef_vt0(I_QS,1) * xq**beta_vn(I_QS,1)
        velq_l = coef_vt0(I_QS,2) * xq**beta_vn(I_QS,2)
        velw(k,i,j,I_NS) = -rhofac_q(I_S) &
@@ -3601,14 +3580,12 @@ contains
 
        ! QG
        rhofac_q(I_G) = rhofac_q(I_I)
-       xq = max( xqmin(I_QG), &
-            min( xqmax(I_QG), &
-                 rhoq(I_QG,k,i,j) / ( rhoq(I_NG,k,i,j) + nqmin(I_QG) ) ) )
+       xq = max( xqmin(I_QG), min( xqmax(I_QG), rhoq(I_QG,k,i,j) / ( rhoq(I_NG,k,i,j) + nqmin(I_QG) ) ) )
+                 
        tmp = a_m(I_QG) * xq**b_m(I_QG)
        dq = coef_dave_L(I_QG) * tmp
-       weight = min( 1.0_RP, &
-                max( 0.0_RP, &
-                     0.5_RP * ( 1.0_RP + log( dq/d0_lg ) ) ) )
+       weight = min( 1.0_RP, max( 0.0_RP, 0.5_RP * ( 1.0_RP + log( dq/d0_lg ) ) ) )
+                     
        velq_s = coef_vt1(I_QG,1) * xq**beta_v (I_QG,1)
        velq_l = coef_vt1(I_QG,2) * xq**beta_v (I_QG,2)
        velw(k,i,j,I_QG) = -rhofac_q(I_G) &
@@ -3616,9 +3593,8 @@ contains
               + velq_s * ( 1.0_RP - weight ) )
        ! NG
        dq = coef_dave_N(I_QG) * tmp
-       weight = min( 1.0_RP, &
-                max( 0.0_RP, &
-                     0.5_RP * ( 1.0_RP + log( dq/d0_ng ) ) ) )
+       weight = min( 1.0_RP, max( 0.0_RP, 0.5_RP * ( 1.0_RP + log( dq/d0_ng ) ) ) )
+                     
        velq_s = coef_vt0(I_QG,1) * xq**beta_vn(I_QG,1)
        velq_l = coef_vt0(I_QG,2) * xq**beta_vn(I_QG,2)
        velw(k,i,j,I_NG) = -rhofac_q(I_G) &
@@ -3937,7 +3913,7 @@ contains
           PQ(I_LCdep,k,i,j) = max(lowlim_cnd, min(uplim_cnd, PQ(I_LCdep,k,i,j)*ssw_o ))
           PQ(I_LRdep,k,i,j) = max(lowlim_cnd, min(uplim_cnd, PQ(I_LRdep,k,i,j)*ssw_o ))
           PQ(I_NRdep,k,i,j) = min(0.0_RP, PQ(I_NRdep,k,i,j)*ssw_o )
-          PLR2NR           = 0.0_RP
+!          PLR2NR           = 0.0_RP
        else
           taucnd     = 1.0_RP/r_taucnd
           ! Production term for liquid water content
@@ -4217,9 +4193,7 @@ contains
     ! remove negative value of hydrometeor (mass, number)
     do iq = 1, QA
     do k  = KS, KE
-       if ( QTRC(k,i,j,iq) < 0.0_RP ) then
-          QTRC(k,i,j,iq) = 0.0_RP
-       endif
+       QTRC(k,i,j,iq) = max(0.0_RP, QTRC(k,i,j,iq))
     enddo
     enddo
 
