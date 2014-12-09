@@ -21,6 +21,16 @@ ifeq ($(origin INDEX_DIR), undefined)
    INDEX_DIR = $(SCALELIBDIR)/include
 endif
 
+ifeq ($(AGGRESIVE),T)
+  FFLAGS = $(FFLAGS_AGGRESIVE) $(PERF_MONIT) $(RDMA)
+else
+  ifeq ($(DEBUG),T)
+    FFLAGS = $(FFLAGS_DEBUG) $(PERF_MONIT) $(RDMA)
+  else
+    FFLAGS = $(FFLAGS_FAST) $(PERF_MONIT) $(RDMA)
+  endif
+endif
+
 ifeq ($(ENABLE_OPENMP),T)
       FFLAGS += -openmp -openmp-report
 endif
@@ -40,4 +50,8 @@ ifeq ($(ENABLE_FIXEDINDEX),T)
       inc_index = $(INDEX_DIR)/inc_index.h
 else
       inc_index =
+endif
+
+ifneq ($(TRACER),)
+      FFLAGS += -DTRACER=$(TRACER)
 endif
