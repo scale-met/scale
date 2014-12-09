@@ -303,6 +303,8 @@ contains
     use scale_atmos_boundary, only: &
        ATMOS_BOUNDARY_UPDATE_FLAG, &
        ATMOS_BOUNDARY_update
+    use scale_grid_nest, only: &
+       NEST_COMM_disconnect
     use mod_atmos_vars, only: &
        DENS, &
        MOMZ, &
@@ -315,6 +317,9 @@ contains
     if ( ATMOS_BOUNDARY_UPDATE_FLAG ) then
        ! If this run is parent of online nesting, boundary data must be sent
        call ATMOS_BOUNDARY_update( DENS, MOMZ, MOMX, MOMY, RHOT, QTRC, .true. ) ! (in)
+
+       ! Finialize Inter-Communicators
+       call NEST_COMM_disconnect
     endif
 
   end subroutine ATMOS_driver_finalize

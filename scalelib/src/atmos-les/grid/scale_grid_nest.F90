@@ -40,6 +40,7 @@ module scale_grid_nest
   public :: NEST_COMM_recvwait_issue
   public :: NEST_COMM_recv_cancel
   public :: NEST_COMM_test
+  public :: NEST_COMM_disconnect
 
   !-----------------------------------------------------------------------------
   !
@@ -2403,6 +2404,31 @@ contains
 
     return
   end subroutine NEST_COMM_test
+
+  !-----------------------------------------------------------------------------
+  !> [finalize: disconnect] Inter-communication
+  subroutine NEST_COMM_disconnect ( )
+    implicit none
+
+    integer :: ierr
+    !---------------------------------------------------------------------------
+
+    if ( ONLINE_IAM_PARENT ) then
+       if( IO_L ) write(IO_FID_LOG,'(1x,A)') '*** Waiting finish of whole processes as a parent'
+       call MPI_BARRIER(INTERCOMM_DAUGHTER, ierr)
+       call MPI_COMM_FREE(INTERCOMM_DAUGHTER, ierr)
+       if( IO_L ) write(IO_FID_LOG,'(1x,A)') '*** Disconnected communication with child '
+    endif
+
+    if ( ONLINE_IAM_DAUGHTER ) then
+       if( IO_L ) write(IO_FID_LOG,'(1x,A)') '*** Waiting finish of whole processes as a child'
+       call MPI_BARRIER(INTERCOMM_PARENT, ierr)
+       call MPI_COMM_FREE(INTERCOMM_PARENT, ierr)
+       if( IO_L ) write(IO_FID_LOG,'(1x,A)') '*** Disconnected communication with parent'
+    endif
+
+    return
+  end subroutine NEST_COMM_disconnect
 
   !-----------------------------------------------------------------------------
   ! WITHOUT TIME DIMENSION
