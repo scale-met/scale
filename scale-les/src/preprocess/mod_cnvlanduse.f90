@@ -181,10 +181,10 @@ contains
     real(RP) :: TILE_DLAT, TILE_DLON
     real(RP) :: area, area_fraction
 
-    integer  :: iloc   (3600)
-    integer  :: jloc   (3600)
-    real(RP) :: ifrac_l(3600) ! fraction for iloc
-    real(RP) :: jfrac_b(3600) ! fraction for jloc
+    integer  :: iloc
+    integer  :: jloc
+    real(RP) :: ifrac_l ! fraction for iloc
+    real(RP) :: jfrac_b ! fraction for jloc
 
 
     real(RP) :: DOMAIN_LATS, DOMAIN_LATE
@@ -257,10 +257,10 @@ contains
     enddo
     enddo
 
-    DOMAIN_LATS = minval(REAL_LATY(:,:)) / D2R ! [rad->deg]
-    DOMAIN_LATE = maxval(REAL_LATY(:,:)) / D2R ! [rad->deg]
-    DOMAIN_LONS = minval(REAL_LONX(:,:)) / D2R ! [rad->deg]
-    DOMAIN_LONE = maxval(REAL_LONX(:,:)) / D2R ! [rad->deg]
+    DOMAIN_LATS = minval(REAL_LATY(:,:))
+    DOMAIN_LATE = maxval(REAL_LATY(:,:))
+    DOMAIN_LONS = minval(REAL_LONX(:,:))
+    DOMAIN_LONE = maxval(REAL_LONX(:,:))
 
     !---< READ from external files >---
 
@@ -295,23 +295,23 @@ contains
        hit_lat = .false.
        hit_lon = .false.
 
-       if (      ( TILE_LATS(t) >= DOMAIN_LATS  .AND. TILE_LATS(t) < DOMAIN_LATE  ) &
-            .OR. ( TILE_LATE(t) >= DOMAIN_LATS  .AND. TILE_LATE(t) < DOMAIN_LATE  ) ) then
+       if (      ( TILE_LATS(t)*D2R >= DOMAIN_LATS  .AND. TILE_LATS(t)*D2R < DOMAIN_LATE  ) &
+            .OR. ( TILE_LATE(t)*D2R >= DOMAIN_LATS  .AND. TILE_LATE(t)*D2R < DOMAIN_LATE  ) ) then
           hit_lat = .true.
        endif
 
-       if (      ( DOMAIN_LATS  >= TILE_LATS(t) .AND. DOMAIN_LATS  < TILE_LATE(t) ) &
-            .OR. ( DOMAIN_LATE  >= TILE_LATS(t) .AND. DOMAIN_LATE  < TILE_LATE(t) ) ) then
+       if (      ( DOMAIN_LATS  >= TILE_LATS(t)*D2R .AND. DOMAIN_LATS  < TILE_LATE(t)*D2R ) &
+            .OR. ( DOMAIN_LATE  >= TILE_LATS(t)*D2R .AND. DOMAIN_LATE  < TILE_LATE(t)*D2R ) ) then
           hit_lat = .true.
        endif
 
-       if (      ( TILE_LONS(t) >= DOMAIN_LONS  .AND. TILE_LONS(t) < DOMAIN_LONE  ) &
-            .OR. ( TILE_LONE(t) >= DOMAIN_LONS  .AND. TILE_LONE(t) < DOMAIN_LONE  ) ) then
+       if (      ( TILE_LONS(t)*D2R >= DOMAIN_LONS  .AND. TILE_LONS(t)*D2R < DOMAIN_LONE  ) &
+            .OR. ( TILE_LONE(t)*D2R >= DOMAIN_LONS  .AND. TILE_LONE(t)*D2R < DOMAIN_LONE  ) ) then
           hit_lon = .true.
        endif
 
-       if (      ( DOMAIN_LONS  >= TILE_LONS(t) .AND. DOMAIN_LONS  < TILE_LONE(t) ) &
-            .OR. ( DOMAIN_LONE  >= TILE_LONS(t) .AND. DOMAIN_LONE  < TILE_LONE(t) ) ) then
+       if (      ( DOMAIN_LONS  >= TILE_LONS(t)*D2R .AND. DOMAIN_LONS  < TILE_LONE(t)*D2R ) &
+            .OR. ( DOMAIN_LONE  >= TILE_LONS(t)*D2R .AND. DOMAIN_LONE  < TILE_LONE(t)*D2R ) ) then
           hit_lon = .true.
        endif
 
@@ -362,58 +362,60 @@ contains
           enddo
 
           ! match and calc fraction
-          i = IS
-          do jj = 1, 3600
-             jloc   (jj) = 1 ! Z_sfc(1,1) is used for dummy grid
-             jfrac_b(jj) = 1.0_RP
-
-             do j = JS, JE
-                if (       TILE_LATH(jj-1) >= REAL_LATY(i,j-1) &
-                     .AND. TILE_LATH(jj-1) <  REAL_LATY(i,j  ) ) then
-
-                   jloc   (jj) = j
-                   jfrac_b(jj) = min( REAL_LATY(i,j)-TILE_LATH(jj-1), TILE_DLAT ) / TILE_DLAT
-
-                endif
-             enddo
-          enddo
-
-          j = JS
-          do ii = 1, 3600
-             iloc   (ii) = 1 ! Z_sfc(1,1) is used for dummy grid
-             ifrac_l(ii) = 1.0_RP
-
-             do i = IS, IE
-                if (       TILE_LONH(ii-1) >= REAL_LONX(i-1,j) &
-                     .AND. TILE_LONH(ii-1) <  REAL_LONX(i  ,j) ) then
-
-                   iloc   (ii) = i
-                   ifrac_l(ii) = min( REAL_LONX(i,j)-TILE_LONH(ii-1), TILE_DLON ) / TILE_DLON
-
-                endif
-             enddo
-          enddo
-
           do jj = 1, 3600
           do ii = 1, 3600
+
+             iloc    = 1 ! Z_sfc(1,1) is used for dummy grid
+             ifrac_l = 1.0_RP
+
+             jloc    = 1 ! Z_sfc(1,1) is used for dummy grid
+             jfrac_b = 1.0_RP
+
+             if (      TILE_LONH(ii-1) <  DOMAIN_LONS &
+                  .OR. TILE_LONH(ii-1) >= DOMAIN_LONE &
+                  .OR. TILE_LATH(jj-1) <  DOMAIN_LATS &
+                  .OR. TILE_LATH(jj-1) >= DOMAIN_LATE ) then
+                 cycle
+             endif
+
+      jloop: do j = JS, JE
+      iloop: do i = IS, IE
+                if (       TILE_LONH(ii-1) >= REAL_LONX(i-1,j  ) &
+                     .AND. TILE_LONH(ii-1) <  REAL_LONX(i  ,j  ) &
+                     .AND. TILE_LATH(jj-1) >= REAL_LATY(i  ,j-1) &
+                     .AND. TILE_LATH(jj-1) <  REAL_LATY(i  ,j  ) ) then
+
+                   iloc    = i
+                   ifrac_l = min( REAL_LONX(i,j)-TILE_LONH(ii-1), TILE_DLON ) / TILE_DLON
+
+                   jloc    = j
+                   jfrac_b = min( REAL_LATY(i,j)-TILE_LATH(jj-1), TILE_DLAT ) / TILE_DLAT
+                   exit jloop
+
+                endif
+             enddo iloop
+             enddo jloop
+
+             if( iloc == 1 .AND. jloc == 1 ) cycle
+
              area = RADIUS * RADIUS * TILE_DLON * ( sin(TILE_LATH(jj))-sin(TILE_LATH(jj-1)) )
 
              pp = min( max( int(TILE_LANDUSE(ii,jj),kind=4), 0 ), 25 )
              p  = lookuptable(pp)
 
-!             if( IO_L ) write(IO_FID_LOG,*) ii, jj, iloc(ii), jloc(jj), p, pp
+             !if( IO_L ) write(IO_FID_LOG,*) ii, jj, iloc, jloc, p, pp
 
-             area_fraction = (       ifrac_l(ii)) * (       jfrac_b(jj)) * area
-             categ_sum(iloc(ii)  ,jloc(jj)  ,p) = categ_sum(iloc(ii)  ,jloc(jj)  ,p) + area_fraction
+             area_fraction = (       ifrac_l) * (       jfrac_b) * area
+             categ_sum(iloc  ,jloc  ,p) = categ_sum(iloc  ,jloc  ,p) + area_fraction
 
-             area_fraction = (1.0_RP-ifrac_l(ii)) * (       jfrac_b(jj)) * area
-             categ_sum(iloc(ii)+1,jloc(jj)  ,p) = categ_sum(iloc(ii)+1,jloc(jj)  ,p) + area_fraction
+             area_fraction = (1.0_RP-ifrac_l) * (       jfrac_b) * area
+             categ_sum(iloc+1,jloc  ,p) = categ_sum(iloc+1,jloc  ,p) + area_fraction
 
-             area_fraction = (       ifrac_l(ii)) * (1.0_RP-jfrac_b(jj)) * area
-             categ_sum(iloc(ii)  ,jloc(jj)+1,p) = categ_sum(iloc(ii)  ,jloc(jj)+1,p) + area_fraction
+             area_fraction = (       ifrac_l) * (1.0_RP-jfrac_b) * area
+             categ_sum(iloc  ,jloc+1,p) = categ_sum(iloc  ,jloc+1,p) + area_fraction
 
-             area_fraction = (1.0_RP-ifrac_l(ii)) * (1.0_RP-jfrac_b(jj)) * area
-             categ_sum(iloc(ii)+1,jloc(jj)+1,p) = categ_sum(iloc(ii)+1,jloc(jj)+1,p) + area_fraction
+             area_fraction = (1.0_RP-ifrac_l) * (1.0_RP-jfrac_b) * area
+             categ_sum(iloc+1,jloc+1,p) = categ_sum(iloc+1,jloc+1,p) + area_fraction
           enddo
           enddo
 
@@ -550,10 +552,10 @@ contains
     real(RP) :: TILE_DLAT, TILE_DLON
     real(RP) :: area, area_fraction
 
-    integer  :: iloc   (800)
-    integer  :: jloc   (800)
-    real(RP) :: ifrac_l(800) ! fraction for iloc
-    real(RP) :: jfrac_b(800) ! fraction for jloc
+    integer  :: iloc
+    integer  :: jloc
+    real(RP) :: ifrac_l ! fraction for iloc
+    real(RP) :: jfrac_b ! fraction for jloc
 
 
     real(RP) :: DOMAIN_LATS, DOMAIN_LATE
@@ -618,10 +620,10 @@ contains
     enddo
     enddo
 
-    DOMAIN_LATS = minval(REAL_LATY(:,:)) / D2R ! [rad->deg]
-    DOMAIN_LATE = maxval(REAL_LATY(:,:)) / D2R ! [rad->deg]
-    DOMAIN_LONS = minval(REAL_LONX(:,:)) / D2R ! [rad->deg]
-    DOMAIN_LONE = maxval(REAL_LONX(:,:)) / D2R ! [rad->deg]
+    DOMAIN_LATS = minval(REAL_LATY(:,:))
+    DOMAIN_LATE = maxval(REAL_LATY(:,:))
+    DOMAIN_LONS = minval(REAL_LONX(:,:))
+    DOMAIN_LONE = maxval(REAL_LONX(:,:))
 
     !---< READ from external files >---
 
@@ -656,23 +658,23 @@ contains
        hit_lat = .false.
        hit_lon = .false.
 
-       if (      ( TILE_LATS(t) >= DOMAIN_LATS  .AND. TILE_LATS(t) < DOMAIN_LATE  ) &
-            .OR. ( TILE_LATE(t) >= DOMAIN_LATS  .AND. TILE_LATE(t) < DOMAIN_LATE  ) ) then
+       if (      ( TILE_LATS(t)*D2R >= DOMAIN_LATS  .AND. TILE_LATS(t)*D2R < DOMAIN_LATE  ) &
+            .OR. ( TILE_LATE(t)*D2R >= DOMAIN_LATS  .AND. TILE_LATE(t)*D2R < DOMAIN_LATE  ) ) then
           hit_lat = .true.
        endif
 
-       if (      ( DOMAIN_LATS  >= TILE_LATS(t) .AND. DOMAIN_LATS  < TILE_LATE(t) ) &
-            .OR. ( DOMAIN_LATE  >= TILE_LATS(t) .AND. DOMAIN_LATE  < TILE_LATE(t) ) ) then
+       if (      ( DOMAIN_LATS  >= TILE_LATS(t)*D2R .AND. DOMAIN_LATS  < TILE_LATE(t)*D2R ) &
+            .OR. ( DOMAIN_LATE  >= TILE_LATS(t)*D2R .AND. DOMAIN_LATE  < TILE_LATE(t)*D2R ) ) then
           hit_lat = .true.
        endif
 
-       if (      ( TILE_LONS(t) >= DOMAIN_LONS  .AND. TILE_LONS(t) < DOMAIN_LONE  ) &
-            .OR. ( TILE_LONE(t) >= DOMAIN_LONS  .AND. TILE_LONE(t) < DOMAIN_LONE  ) ) then
+       if (      ( TILE_LONS(t)*D2R >= DOMAIN_LONS  .AND. TILE_LONS(t)*D2R < DOMAIN_LONE  ) &
+            .OR. ( TILE_LONE(t)*D2R >= DOMAIN_LONS  .AND. TILE_LONE(t)*D2R < DOMAIN_LONE  ) ) then
           hit_lon = .true.
        endif
 
-       if (      ( DOMAIN_LONS  >= TILE_LONS(t) .AND. DOMAIN_LONS  < TILE_LONE(t) ) &
-            .OR. ( DOMAIN_LONE  >= TILE_LONS(t) .AND. DOMAIN_LONE  < TILE_LONE(t) ) ) then
+       if (      ( DOMAIN_LONS  >= TILE_LONS(t)*D2R .AND. DOMAIN_LONS  < TILE_LONE(t)*D2R ) &
+            .OR. ( DOMAIN_LONE  >= TILE_LONS(t)*D2R .AND. DOMAIN_LONE  < TILE_LONE(t)*D2R ) ) then
           hit_lon = .true.
        endif
 
@@ -723,58 +725,60 @@ contains
           enddo
 
           ! match and calc fraction
-          i = IS
-          do jj = 1, 800
-             jloc   (jj) = 1 ! Z_sfc(1,1) is used for dummy grid
-             jfrac_b(jj) = 1.0_RP
-
-             do j = JS, JE
-                if (       TILE_LATH(jj-1) >= REAL_LATY(i,j-1) &
-                     .AND. TILE_LATH(jj-1) <  REAL_LATY(i,j  ) ) then
-
-                   jloc   (jj) = j
-                   jfrac_b(jj) = min( REAL_LATY(i,j)-TILE_LATH(jj-1), TILE_DLAT ) / TILE_DLAT
-
-                endif
-             enddo
-          enddo
-
-          j = JS
-          do ii = 1, 800
-             iloc   (ii) = 1 ! Z_sfc(1,1) is used for dummy grid
-             ifrac_l(ii) = 1.0_RP
-
-             do i = IS, IE
-                if (       TILE_LONH(ii-1) >= REAL_LONX(i-1,j) &
-                     .AND. TILE_LONH(ii-1) <  REAL_LONX(i  ,j) ) then
-
-                   iloc   (ii) = i
-                   ifrac_l(ii) = min( REAL_LONX(i,j)-TILE_LONH(ii-1), TILE_DLON ) / TILE_DLON
-
-                endif
-             enddo
-          enddo
-
           do jj = 1, 800
           do ii = 1, 800
+
+             iloc    = 1 ! Z_sfc(1,1) is used for dummy grid
+             ifrac_l = 1.0_RP
+
+             jloc    = 1 ! Z_sfc(1,1) is used for dummy grid
+             jfrac_b = 1.0_RP
+
+             if (      TILE_LONH(ii-1) <  DOMAIN_LONS &
+                  .OR. TILE_LONH(ii-1) >= DOMAIN_LONE &
+                  .OR. TILE_LATH(jj-1) <  DOMAIN_LATS &
+                  .OR. TILE_LATH(jj-1) >= DOMAIN_LATE ) then
+                 cycle
+             endif
+
+      jloop: do j = JS, JE
+      iloop: do i = IS, IE
+                if (       TILE_LONH(ii-1) >= REAL_LONX(i-1,j  ) &
+                     .AND. TILE_LONH(ii-1) <  REAL_LONX(i  ,j  ) &
+                     .AND. TILE_LATH(jj-1) >= REAL_LATY(i  ,j-1) &
+                     .AND. TILE_LATH(jj-1) <  REAL_LATY(i  ,j  ) ) then
+
+                   iloc    = i
+                   ifrac_l = min( REAL_LONX(i,j)-TILE_LONH(ii-1), TILE_DLON ) / TILE_DLON
+
+                   jloc    = j
+                   jfrac_b = min( REAL_LATY(i,j)-TILE_LATH(jj-1), TILE_DLAT ) / TILE_DLAT
+                   exit jloop
+
+                endif
+             enddo iloop
+             enddo jloop
+
+             if( iloc == 1 .AND. jloc == 1 ) cycle
+
              area = RADIUS * RADIUS * TILE_DLON * ( sin(TILE_LATH(jj))-sin(TILE_LATH(jj-1)) )
 
              pp = int( max( TILE_LANDUSE(ii,jj), 0.0 ) )
              p  = lookuptable(pp)
 
-!             if( IO_L ) write(IO_FID_LOG,*) ii, jj, iloc(ii), jloc(jj), p, pp
+             !if( IO_L ) write(IO_FID_LOG,*) ii, jj, iloc, jloc, p, pp
 
-             area_fraction = (       ifrac_l(ii)) * (       jfrac_b(jj)) * area
-             categ_sum(iloc(ii)  ,jloc(jj)  ,p) = categ_sum(iloc(ii)  ,jloc(jj)  ,p) + area_fraction
+             area_fraction = (       ifrac_l) * (       jfrac_b) * area
+             categ_sum(iloc  ,jloc  ,p) = categ_sum(iloc  ,jloc  ,p) + area_fraction
 
-             area_fraction = (1.0_RP-ifrac_l(ii)) * (       jfrac_b(jj)) * area
-             categ_sum(iloc(ii)+1,jloc(jj)  ,p) = categ_sum(iloc(ii)+1,jloc(jj)  ,p) + area_fraction
+             area_fraction = (1.0_RP-ifrac_l) * (       jfrac_b) * area
+             categ_sum(iloc+1,jloc  ,p) = categ_sum(iloc+1,jloc  ,p) + area_fraction
 
-             area_fraction = (       ifrac_l(ii)) * (1.0_RP-jfrac_b(jj)) * area
-             categ_sum(iloc(ii)  ,jloc(jj)+1,p) = categ_sum(iloc(ii)  ,jloc(jj)+1,p) + area_fraction
+             area_fraction = (       ifrac_l) * (1.0_RP-jfrac_b) * area
+             categ_sum(iloc  ,jloc+1,p) = categ_sum(iloc  ,jloc+1,p) + area_fraction
 
-             area_fraction = (1.0_RP-ifrac_l(ii)) * (1.0_RP-jfrac_b(jj)) * area
-             categ_sum(iloc(ii)+1,jloc(jj)+1,p) = categ_sum(iloc(ii)+1,jloc(jj)+1,p) + area_fraction
+             area_fraction = (1.0_RP-ifrac_l) * (1.0_RP-jfrac_b) * area
+             categ_sum(iloc+1,jloc+1,p) = categ_sum(iloc+1,jloc+1,p) + area_fraction
           enddo
           enddo
 
