@@ -75,8 +75,10 @@ module mod_cpl_vars
 
   ! Input form ocean model
   real(RP), public, allocatable :: CPL_fromOcn_SFC_TEMP  (:,:)   ! (first time only) surface skin temperature [K]
-  real(RP), public, allocatable :: CPL_fromOcn_SFC_albedo(:,:,:) ! (first time only) surface albedo           [0-1]
+  real(RP), public, allocatable :: CPL_fromOcn_SFC_albedo(:,:,:) ! (first time only) surface albedo [0-1]
   real(RP), public, allocatable :: CPL_fromOcn_SFC_Z0M   (:,:)   ! roughness length for momemtum [m]
+  real(RP), public, allocatable :: CPL_fromOcn_SFC_Z0H   (:,:)   ! roughness length for heat [m]
+  real(RP), public, allocatable :: CPL_fromOcn_SFC_Z0E   (:,:)   ! roughness length for vapor [m]
   real(RP), public, allocatable :: CPL_fromOcn_OCN_TEMP  (:,:)   ! temperature at the uppermost ocean layer [K]
 
   ! Input form land model
@@ -92,6 +94,8 @@ module mod_cpl_vars
 
   ! Input form urban model
   real(RP), public, allocatable :: CPL_fromUrb_SFC_Z0M   (:,:)   ! (first time only) roughness length for momemtum [m]
+  real(RP), public, allocatable :: CPL_fromUrb_SFC_Z0H   (:,:)   ! (first time only) roughness length for momemtum [m]
+  real(RP), public, allocatable :: CPL_fromUrb_SFC_Z0E   (:,:)   ! (first time only) roughness length for momemtum [m]
   real(RP), public, allocatable :: CPL_fromUrb_SFC_TEMP  (:,:)   ! (first time only) surface skin temperature [K]
   real(RP), public, allocatable :: CPL_fromUrb_SFC_albedo(:,:,:) ! (first time only) surface albedo           [0-1]
 
@@ -107,6 +111,8 @@ module mod_cpl_vars
   real(RP), public, allocatable :: CPL_Merged_FLX_LH    (:,:)   ! Merged latent heat   flux [J/m2/s]
   real(RP), public, allocatable :: CPL_Merged_FLX_QV    (:,:)   ! Merged water vapor   flux [kg/m2/s]
   real(RP), public, allocatable :: CPL_Merged_Z0M       (:,:)   ! Merged roughness length   [m]
+  real(RP), public, allocatable :: CPL_Merged_Z0H       (:,:)   ! Merged roughness length   [m]
+  real(RP), public, allocatable :: CPL_Merged_Z0E       (:,:)   ! Merged roughness length   [m]
   real(RP), public, allocatable :: CPL_Merged_U10       (:,:)   ! Merged velocity u at 10m  [m/s]
   real(RP), public, allocatable :: CPL_Merged_V10       (:,:)   ! Merged velocity v at 10m  [m/s]
   real(RP), public, allocatable :: CPL_Merged_T2        (:,:)   ! Merged temperature at 2m  [K]
@@ -223,10 +229,14 @@ contains
     allocate( CPL_fromOcn_SFC_TEMP  (IA,JA) )
     allocate( CPL_fromOcn_SFC_albedo(IA,JA,2) )
     allocate( CPL_fromOcn_SFC_Z0M   (IA,JA) )
+    allocate( CPL_fromOcn_SFC_Z0H   (IA,JA) )
+    allocate( CPL_fromOcn_SFC_Z0E   (IA,JA) )
     allocate( CPL_fromOcn_OCN_TEMP  (IA,JA) )
     CPL_fromOcn_SFC_TEMP  (:,:)   = UNDEF
     CPL_fromOcn_SFC_albedo(:,:,:) = UNDEF
     CPL_fromOcn_SFC_Z0M   (:,:)   = UNDEF
+    CPL_fromOcn_SFC_Z0H   (:,:)   = UNDEF
+    CPL_fromOcn_SFC_Z0E   (:,:)   = UNDEF
     CPL_fromOcn_OCN_TEMP  (:,:)   = UNDEF
 
     allocate( CPL_fromLnd_SFC_TEMP  (IA,JA) )
@@ -249,9 +259,13 @@ contains
     CPL_fromLnd_LND_BETA  (:,:)   = UNDEF
 
     allocate( CPL_fromUrb_SFC_Z0M   (IA,JA) )
+    allocate( CPL_fromUrb_SFC_Z0H   (IA,JA) )
+    allocate( CPL_fromUrb_SFC_Z0E   (IA,JA) )
     allocate( CPL_fromUrb_SFC_TEMP  (IA,JA) )
     allocate( CPL_fromUrb_SFC_albedo(IA,JA,2) )
     CPL_fromUrb_SFC_Z0M   (:,:)   = UNDEF
+    CPL_fromUrb_SFC_Z0H   (:,:)   = UNDEF
+    CPL_fromUrb_SFC_Z0E   (:,:)   = UNDEF
     CPL_fromUrb_SFC_TEMP  (:,:)   = UNDEF
     CPL_fromUrb_SFC_albedo(:,:,:) = UNDEF
 
@@ -264,6 +278,8 @@ contains
     allocate( CPL_Merged_FLX_LH    (IA,JA) )
     allocate( CPL_Merged_FLX_QV    (IA,JA) )
     allocate( CPL_Merged_Z0M       (IA,JA) )
+    allocate( CPL_Merged_Z0H       (IA,JA) )
+    allocate( CPL_Merged_Z0E       (IA,JA) )
     allocate( CPL_Merged_U10       (IA,JA) )
     allocate( CPL_Merged_V10       (IA,JA) )
     allocate( CPL_Merged_T2        (IA,JA) )
@@ -278,6 +294,8 @@ contains
     CPL_Merged_FLX_LH    (:,:)   = UNDEF
     CPL_Merged_FLX_QV    (:,:)   = UNDEF
     CPL_Merged_Z0M       (:,:)   = UNDEF
+    CPL_Merged_Z0H       (:,:)   = UNDEF
+    CPL_Merged_Z0E       (:,:)   = UNDEF
     CPL_Merged_U10       (:,:)   = UNDEF
     CPL_Merged_V10       (:,:)   = UNDEF
     CPL_Merged_T2        (:,:)   = UNDEF
@@ -479,6 +497,22 @@ contains
 
     do j = JS, JE
     do i = IS, IE
+       CPL_Merged_Z0H   (i,j) = fact_ocean(i,j) * CPL_fromOcn_SFC_Z0H  (i,j) &
+                              + fact_land (i,j) * CPL_fromLnd_SFC_Z0H  (i,j) &
+                              + fact_urban(i,j) * CPL_fromUrb_SFC_Z0H  (i,j)
+    end do
+    end do
+
+    do j = JS, JE
+    do i = IS, IE
+       CPL_Merged_Z0E   (i,j) = fact_ocean(i,j) * CPL_fromOcn_SFC_Z0E  (i,j) &
+                              + fact_land (i,j) * CPL_fromLnd_SFC_Z0E  (i,j) &
+                              + fact_urban(i,j) * CPL_fromUrb_SFC_Z0E  (i,j)
+    end do
+    end do
+
+    do j = JS, JE
+    do i = IS, IE
        CPL_Merged_U10   (i,j) = fact_ocean(i,j) * CPL_AtmOcn_ATM_U10     (i,j) &
                               + fact_land (i,j) * CPL_AtmLnd_ATM_U10     (i,j) &
                               + fact_urban(i,j) * CPL_AtmUrb_ATM_U10     (i,j)
@@ -559,12 +593,16 @@ contains
   subroutine CPL_putOcn_setup( &
        SFC_TEMP,   &
        SFC_albedo, &
-       SFC_Z0      )
+       SFC_Z0M,    &
+       SFC_Z0H,    &
+       SFC_Z0E     )
     implicit none
 
     real(RP), intent(in) :: SFC_TEMP  (IA,JA)
     real(RP), intent(in) :: SFC_albedo(IA,JA,2)
-    real(RP), intent(in) :: SFC_Z0    (IA,JA)
+    real(RP), intent(in) :: SFC_Z0M   (IA,JA)
+    real(RP), intent(in) :: SFC_Z0H   (IA,JA)
+    real(RP), intent(in) :: SFC_Z0E   (IA,JA)
 
     integer :: i, j
     !---------------------------------------------------------------------------
@@ -582,7 +620,17 @@ contains
     end do
     do j = JS, JE
     do i = IS, IE
-       CPL_fromOcn_SFC_Z0M   (i,j)   = SFC_Z0    (i,j)
+       CPL_fromOcn_SFC_Z0M   (i,j)   = SFC_Z0M   (i,j)
+    end do
+    end do
+    do j = JS, JE
+    do i = IS, IE
+       CPL_fromOcn_SFC_Z0H   (i,j)   = SFC_Z0H   (i,j)
+    end do
+    end do
+    do j = JS, JE
+    do i = IS, IE
+       CPL_fromOcn_SFC_Z0E   (i,j)   = SFC_Z0E   (i,j)
     end do
     end do
 
@@ -852,7 +900,9 @@ contains
   subroutine CPL_getAtm( &
        SFC_TEMP,   &
        SFC_albedo, &
-       Z0,         &
+       Z0M,        &
+       Z0H,        &
+       Z0E,        &
        Uabs10,     &
        U10,        &
        V10,        &
@@ -863,7 +913,9 @@ contains
 
     real(RP), intent(out) :: SFC_TEMP  (IA,JA)
     real(RP), intent(out) :: SFC_albedo(IA,JA,2)
-    real(RP), intent(out) :: Z0        (IA,JA)
+    real(RP), intent(out) :: Z0M       (IA,JA)
+    real(RP), intent(out) :: Z0H       (IA,JA)
+    real(RP), intent(out) :: Z0E       (IA,JA)
     real(RP), intent(out) :: Uabs10    (IA,JA)
     real(RP), intent(out) :: U10       (IA,JA)
     real(RP), intent(out) :: V10       (IA,JA)
@@ -887,7 +939,17 @@ contains
     end do
     do j = JS, JE
     do i = IS, IE
-       Z0        (i,j)   = CPL_Merged_Z0M       (i,j)
+       Z0M       (i,j)   = CPL_Merged_Z0M       (i,j)
+    end do
+    end do
+    do j = JS, JE
+    do i = IS, IE
+       Z0H       (i,j)   = CPL_Merged_Z0H       (i,j)
+    end do
+    end do
+    do j = JS, JE
+    do i = IS, IE
+       Z0E       (i,j)   = CPL_Merged_Z0E       (i,j)
     end do
     end do
     do j = JS, JE
@@ -1100,12 +1162,16 @@ contains
   subroutine CPL_getOcn_restart( &
        SFC_TEMP,   &
        SFC_albedo, &
-       SFC_Z0      )
+       SFC_Z0M,    &
+       SFC_Z0H,    &
+       SFC_Z0E     )
     implicit none
 
     real(RP), intent(out) :: SFC_TEMP  (IA,JA)
     real(RP), intent(out) :: SFC_albedo(IA,JA,2)
-    real(RP), intent(out) :: SFC_Z0    (IA,JA)
+    real(RP), intent(out) :: SFC_Z0M   (IA,JA)
+    real(RP), intent(out) :: SFC_Z0H   (IA,JA)
+    real(RP), intent(out) :: SFC_Z0E   (IA,JA)
 
     integer :: i, j
     !---------------------------------------------------------------------------
@@ -1123,7 +1189,17 @@ contains
     end do
     do j = JS, JE
     do i = IS, IE
-       SFC_Z0    (i,j)   = CPL_fromOcn_SFC_Z0M   (i,j)
+       SFC_Z0M   (i,j)   = CPL_fromOcn_SFC_Z0M   (i,j)
+    end do
+    end do
+    do j = JS, JE
+    do i = IS, IE
+       SFC_Z0H   (i,j)   = CPL_fromOcn_SFC_Z0H   (i,j)
+    end do
+    end do
+    do j = JS, JE
+    do i = IS, IE
+       SFC_Z0E   (i,j)   = CPL_fromOcn_SFC_Z0E   (i,j)
     end do
     end do
 

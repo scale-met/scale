@@ -130,7 +130,9 @@ contains
        OCEAN_TEMP,          &
        OCEAN_SFC_TEMP,      &
        OCEAN_SFC_albedo,    &
-       OCEAN_SFC_Z0
+       OCEAN_SFC_Z0M,       &
+       OCEAN_SFC_Z0H,       &
+       OCEAN_SFC_Z0E
     use mod_cpl_admin, only: &
        CPL_sw_AtmOcn
     use mod_cpl_vars, only: &
@@ -145,7 +147,9 @@ contains
        if ( setup ) then
           call CPL_putOcn_setup( OCEAN_SFC_TEMP  (:,:),   & ! [IN]
                                  OCEAN_SFC_albedo(:,:,:), & ! [IN]
-                                 OCEAN_SFC_Z0    (:,:)    ) ! [IN]
+                                 OCEAN_SFC_Z0M   (:,:),   & ! [IN]
+                                 OCEAN_SFC_Z0H   (:,:),   & ! [IN]
+                                 OCEAN_SFC_Z0E   (:,:)    ) ! [IN]
        endif
 
        call CPL_putOcn( OCEAN_TEMP(:,:) ) ! [IN]

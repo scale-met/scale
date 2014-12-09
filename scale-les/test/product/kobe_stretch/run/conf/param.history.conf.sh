@@ -49,7 +49,7 @@ cat << EOF > conf/param.history.conf
 &HISTITEM item="SFC_TEMP"   /
 &HISTITEM item="SFC_ALB_SW" /
 &HISTITEM item="SFC_ALB_LW" /
-&HISTITEM item="SFC_Z0"     /
+&HISTITEM item="SFC_Z0M"    /
 
 &HISTITEM item="U10" /
 &HISTITEM item="V10" /
@@ -70,7 +70,9 @@ cat << EOF > conf/param.history.conf
 &HISTITEM item="OCEAN_SFC_TEMP" /
 &HISTITEM item="OCEAN_ALB_SW"   /
 &HISTITEM item="OCEAN_ALB_LW"   /
-&HISTITEM item="OCEAN_SFC_Z0"   /
+&HISTITEM item="OCEAN_SFC_Z0M"  /
+&HISTITEM item="OCEAN_SFC_Z0H"  /
+&HISTITEM item="OCEAN_SFC_Z0E"  /
 
 &HISTITEM item="LAND_TEMP"     /
 &HISTITEM item="LAND_WATER"    /

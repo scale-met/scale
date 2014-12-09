@@ -106,7 +106,9 @@ contains
        FLX_SW_dn      => CPL_fromAtm_FLX_SW_dn,     &
        SFC_TEMP       => CPL_fromOcn_SFC_TEMP,      &
        SFC_albedo     => CPL_fromOcn_SFC_albedo,    &
-       SFC_Z0         => CPL_fromOcn_SFC_Z0M,       &
+       SFC_Z0M        => CPL_fromOcn_SFC_Z0M,       &
+       SFC_Z0H        => CPL_fromOcn_SFC_Z0H,       &
+       SFC_Z0E        => CPL_fromOcn_SFC_Z0E,       &
        OCN_TEMP       => CPL_fromOcn_OCN_TEMP,      &
        ATM_FLX_MW     => CPL_AtmOcn_ATM_FLX_MW,     &
        ATM_FLX_MU     => CPL_AtmOcn_ATM_FLX_MU,     &
@@ -140,23 +142,20 @@ contains
     real(RP) :: tmp_ATM_T2      (IA,JA)
     real(RP) :: tmp_ATM_Q2      (IA,JA)
 
-    real(RP) :: SFC_Z0M     (IA,JA)
-    real(RP) :: SFC_Z0H     (IA,JA)
-    real(RP) :: SFC_Z0E     (IA,JA)
-
     real(RP) :: total ! dummy
     integer :: i, j
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Coupler: Atmos-Ocean'
 
-    call OCEAN_roughness(  SFC_Z0 (:,:), & ! [INOUT]
-                           SFC_Z0M(:,:), & ! [OUT]
-                           SFC_Z0H(:,:), & ! [OUT]
-                           SFC_Z0E(:,:), & ! [OUT]
-                           ATM_U  (:,:), & ! [IN]
-                           ATM_V  (:,:), & ! [IN]
-                           ATM_W  (:,:)  ) ! [IN]
+    ! not used at initial setup
+    if( sfc_temp_update ) then
+       call OCEAN_roughness(  SFC_Z0M(:,:),   & ! [INOUT]
+                              SFC_Z0H(:,:),   & ! [INOUT]
+                              SFC_Z0E(:,:),   & ! [INOUT]
+                              ATM_U  (:,:),   & ! [IN]
+                              ATM_V  (:,:)    ) ! [IN]
+    end if
 
     if ( STATISTICS_checktotal ) then
        call STAT_total( total, SFC_Z0M(:,:), 'SFC_Z0M' )

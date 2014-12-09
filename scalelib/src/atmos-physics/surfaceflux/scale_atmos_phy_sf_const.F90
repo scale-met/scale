@@ -124,7 +124,7 @@ contains
        SFC_DENS, SFC_PRES,                          &
        SFLX_LW_dn, SFLX_SW_dn,                      &
        SFC_TEMP, SFC_albedo, SFC_beta,              &
-       SFC_Z0,                                      &
+       SFC_Z0M, SFC_Z0H, SFC_Z0E,                   &
        SFLX_MW, SFLX_MU, SFLX_MV, SFLX_SH, SFLX_LH, &
        SFLX_QTRC,                                   &
        Uabs10, U10, V10, T2, Q2                     )
@@ -153,7 +153,9 @@ contains
     real(RP), intent(in)    :: SFC_TEMP  (IA,JA)    ! temperature at the surface skin [K]
     real(RP), intent(in)    :: SFC_albedo(IA,JA,2)  ! surface albedo (LW/SW) [0-1]
     real(RP), intent(in)    :: SFC_beta  (IA,JA)    ! evaporation efficiency [0-1]
-    real(RP), intent(inout) :: SFC_Z0    (IA,JA)    ! surface roughness length (momentum) [m]
+    real(RP), intent(inout) :: SFC_Z0M   (IA,JA)    ! surface roughness length (momentum) [m]
+    real(RP), intent(inout) :: SFC_Z0H   (IA,JA)    ! surface roughness length (heat) [m]
+    real(RP), intent(inout) :: SFC_Z0E   (IA,JA)    ! surface roughness length (moisture) [m]
     real(RP), intent(out)   :: SFLX_MW   (IA,JA)    ! surface flux for z-momentum    (area center)   [m/s*kg/m2/s]
     real(RP), intent(out)   :: SFLX_MU   (IA,JA)    ! surface flux for x-momentum    (area center)   [m/s*kg/m2/s]
     real(RP), intent(out)   :: SFLX_MV   (IA,JA)    ! surface flux for y-momentum    (area center)   [m/s*kg/m2/s]

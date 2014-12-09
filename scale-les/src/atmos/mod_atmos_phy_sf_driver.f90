@@ -54,7 +54,9 @@ contains
        ATMOS_PHY_SF_TYPE, &
        ATMOS_sw_phy_sf
     use mod_atmos_phy_sf_vars, only: &
-       SFC_Z0    => ATMOS_PHY_SF_SFC_Z0,    &
+       SFC_Z0M   => ATMOS_PHY_SF_SFC_Z0M,   &
+       SFC_Z0H   => ATMOS_PHY_SF_SFC_Z0H,   &
+       SFC_Z0E   => ATMOS_PHY_SF_SFC_Z0E,   &
        SFLX_MW   => ATMOS_PHY_SF_SFLX_MW,   &
        SFLX_MU   => ATMOS_PHY_SF_SFLX_MU,   &
        SFLX_MV   => ATMOS_PHY_SF_SFLX_MV,   &
@@ -76,8 +78,10 @@ contains
 
        if ( .NOT. CPL_sw ) then
           if( IO_L ) write(IO_FID_LOG,*) '*** Coupler is disabled.'
-          if( IO_L ) write(IO_FID_LOG,*) '*** SFC_Z0 is assumed to be 0.'
-          SFC_Z0(:,:) = 0.0_RP
+          if( IO_L ) write(IO_FID_LOG,*) '*** SFC_Z0[MHE] is assumed to be 0.'
+          SFC_Z0M(:,:) = 0.0_RP
+          SFC_Z0H(:,:) = 0.0_RP
+          SFC_Z0E(:,:) = 0.0_RP
        endif
 
        ! run once (only for the diagnostic value)
@@ -161,7 +165,9 @@ contains
        SFC_PRES   => ATMOS_PHY_SF_SFC_PRES,   &
        SFC_TEMP   => ATMOS_PHY_SF_SFC_TEMP,   &
        SFC_albedo => ATMOS_PHY_SF_SFC_albedo, &
-       SFC_Z0     => ATMOS_PHY_SF_SFC_Z0,     &
+       SFC_Z0M    => ATMOS_PHY_SF_SFC_Z0M,    &
+       SFC_Z0H    => ATMOS_PHY_SF_SFC_Z0H,    &
+       SFC_Z0E    => ATMOS_PHY_SF_SFC_Z0E,    &
        SFLX_MW    => ATMOS_PHY_SF_SFLX_MW,    &
        SFLX_MU    => ATMOS_PHY_SF_SFLX_MU,    &
        SFLX_MV    => ATMOS_PHY_SF_SFLX_MV,    &
@@ -217,7 +223,9 @@ contains
                              SFC_TEMP  (:,:),      & ! [IN]
                              SFC_albedo(:,:,:),    & ! [IN]
                              beta      (:,:),      & ! [IN]
-                             SFC_Z0    (:,:),      & ! [INOUT]
+                             SFC_Z0M   (:,:),      & ! [INOUT]
+                             SFC_Z0H   (:,:),      & ! [INOUT]
+                             SFC_Z0E   (:,:),      & ! [INOUT]
                              SFLX_MW   (:,:),      & ! [OUT]
                              SFLX_MU   (:,:),      & ! [OUT]
                              SFLX_MV   (:,:),      & ! [OUT]
@@ -231,13 +239,15 @@ contains
                              Q2        (:,:)       ) ! [OUT]
 
           if ( history_flag ) then
-             call HIST_in( SFC_Z0(:,:), 'SFC_Z0', 'roughness length',  'm',     dt_SF )
+             call HIST_in( SFC_Z0M(:,:), 'SFC_Z0M', 'roughness length (momentum)',  'm',     dt_SF )
+             call HIST_in( SFC_Z0H(:,:), 'SFC_Z0H', 'roughness length (heat)',      'm',     dt_SF )
+             call HIST_in( SFC_Z0E(:,:), 'SFC_Z0E', 'roughness length (moisture)',  'm',     dt_SF )
 
-             call HIST_in( Uabs10(:,:), 'Uabs10', '10m absolute wind', 'm/s',   dt_SF )
-             call HIST_in( U10   (:,:), 'U10'  ,  '10m x-wind',        'm/s',   dt_SF )
-             call HIST_in( V10   (:,:), 'V10'  ,  '10m y-wind',        'm/s',   dt_SF )
-             call HIST_in( T2    (:,:), 'T2 '  ,  '2m temperature',    'K',     dt_SF )
-             call HIST_in( Q2    (:,:), 'Q2 '  ,  '2m water vapor',    'kg/kg', dt_SF )
+             call HIST_in( Uabs10 (:,:), 'Uabs10',  '10m absolute wind',            'm/s',   dt_SF )
+             call HIST_in( U10    (:,:), 'U10',     '10m x-wind',                   'm/s',   dt_SF )
+             call HIST_in( V10    (:,:), 'V10',     '10m y-wind',                   'm/s',   dt_SF )
+             call HIST_in( T2     (:,:), 'T2 ',     '2m temperature',               'K',     dt_SF )
+             call HIST_in( Q2     (:,:), 'Q2 ',     '2m water vapor',               'kg/kg', dt_SF )
           endif
        endif
 
