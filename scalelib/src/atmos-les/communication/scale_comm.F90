@@ -105,9 +105,6 @@ module scale_comm
   integer,  private              :: COMM_nreq_max       !< # limit of communication request at once
   integer,  private              :: COMM_vsize_max      !< # limit of communication variables at once
   integer,  private              :: COMM_vsize_max_pc      !< # limit of total communication variables for MPI PC
-#ifdef _USE_RDMA
-  integer,  private              :: COMM_vsize_max_rdma !< # limit of communication variables at once
-#endif
 
   logical,  private              :: COMM_IsAllPeriodic  !< periodic boundary condition?
 
@@ -264,22 +261,20 @@ contains
     COMM_world = MPI_COMM_WORLD
 
 #ifdef _USE_RDMA
-    COMM_vsize_max_rdma = 2 * max( 5 + QA + 25, 20 )
-
-    call rdma_setup( COMM_vsize_max_rdma, &
-                     IA,                  &
-                     JA,                  &
-                     KA,                  &
-                     IHALO,               &
-                     JHALO,               &
-                     IS,                  &
-                     IE,                  &
-                     JS,                  &
-                     JE,                  &
-                     PRC_next(PRC_W),     &
-                     PRC_next(PRC_N),     &
-                     PRC_next(PRC_E),     &
-                     PRC_next(PRC_S)      )
+    call rdma_setup( COMM_vsize_max_pc, &
+                     IA,                &
+                     JA,                &
+                     KA,                &
+                     IHALO,             &
+                     JHALO,             &
+                     IS,                &
+                     IE,                &
+                     JS,                &
+                     JE,                &
+                     PRC_next(PRC_W),   &
+                     PRC_next(PRC_N),   &
+                     PRC_next(PRC_E),   &
+                     PRC_next(PRC_S)    )
 #endif
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -392,7 +387,7 @@ contains
     if ( vid > COMM_vsize_max ) then
 #ifdef _USE_RDMA
        call PROF_rapstart('COMM vars RDMA', 2)
-       call rdma_put(vid-COMM_vsize_max-1, num)
+       call rdma_put(vid-COMM_vsize_max-1, 1)
        call PROF_rapend  ('COMM vars RDMA', 2)
 #else
        call PROF_rapstart('COMM vars MPI PC', 2)

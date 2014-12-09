@@ -165,9 +165,6 @@ contains
        GRAV   => CONST_GRAV,   &
        P00    => CONST_PRE00
     use scale_comm, only: &
-#ifdef _USE_RDMA
-       COMM_rdma_vars8, &
-#endif
        COMM_vars8, &
        COMM_wait
     use scale_atmos_dyn_common, only: &
