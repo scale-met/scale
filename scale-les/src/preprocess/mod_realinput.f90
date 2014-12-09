@@ -85,7 +85,7 @@ module mod_realinput
   private :: InputSurfaceSCALE
   private :: InputSurfaceWRF
   private :: InputSurfaceNICAM
-  private :: latlonz_interporation_fact
+  private :: latlonz_interpolation_fact
   private :: interp_OceanLand_data
   private :: diagnose_number_concentration
   private :: haversine
@@ -904,7 +904,7 @@ contains
                                      LON(:,:),        LAT(:,:),        FZ(:,:,:), skip_x=.true., skip_y=.true. )
 
     ! for vector (w) points
-    call latlonz_interporation_fact( hfact   (:,:,:),     & ! [OUT]
+    call latlonz_interpolation_fact( hfact   (:,:,:),     & ! [OUT]
                                      vfact   (:,:,:,:,:), & ! [OUT]
                                      kgrd    (:,:,:,:,:), & ! [OUT]
                                      igrd    (:,:,:),     & ! [OUT]
@@ -952,7 +952,7 @@ contains
     end do
 
     ! for vector (u) points
-    call latlonz_interporation_fact( hfact   (:,:,:),     & ! [OUT]
+    call latlonz_interpolation_fact( hfact   (:,:,:),     & ! [OUT]
                                      vfact   (:,:,:,:,:), & ! [OUT]
                                      kgrd    (:,:,:,:,:), & ! [OUT]
                                      igrd    (:,:,:),     & ! [OUT]
@@ -1017,7 +1017,7 @@ contains
     end do
 
     ! for vector (v) points
-    call latlonz_interporation_fact( hfact   (:,:,:),     & ! [OUT]
+    call latlonz_interpolation_fact( hfact   (:,:,:),     & ! [OUT]
                                      vfact   (:,:,:,:,:), & ! [OUT]
                                      kgrd    (:,:,:,:,:), & ! [OUT]
                                      igrd    (:,:,:),     & ! [OUT]
@@ -1141,7 +1141,7 @@ contains
     end do
 
     ! for scalar points
-    call latlonz_interporation_fact( hfact   (:,:,:),     & ! [OUT]
+    call latlonz_interpolation_fact( hfact   (:,:,:),     & ! [OUT]
                                      vfact   (:,:,:,:,:), & ! [OUT]
                                      kgrd    (:,:,:,:,:), & ! [OUT]
                                      igrd    (:,:,:),     & ! [OUT]
@@ -1674,7 +1674,7 @@ contains
     do n = ts, te !--- time loop
 
        ! for vector (w) points
-       call latlonz_interporation_fact( hfact   (:,:,:),           & ! [OUT]
+       call latlonz_interpolation_fact( hfact   (:,:,:),           & ! [OUT]
                                         vfact   (:,:,:,:,:),       & ! [OUT]
                                         kgrd    (:,:,:,:,:),       & ! [OUT]
                                         igrd    (:,:,:),           & ! [OUT]
@@ -1702,7 +1702,7 @@ contains
        end do
 
        ! for vector (u) points
-       call latlonz_interporation_fact( hfact   (:,:,:),           & ! [OUT]
+       call latlonz_interpolation_fact( hfact   (:,:,:),           & ! [OUT]
                                         vfact   (:,:,:,:,:),       & ! [OUT]
                                         kgrd    (:,:,:,:,:),       & ! [OUT]
                                         igrd    (:,:,:),           & ! [OUT]
@@ -1730,7 +1730,7 @@ contains
        end do
 
        ! for vector (v) points
-       call latlonz_interporation_fact( hfact   (:,:,:),           & ! [OUT]
+       call latlonz_interpolation_fact( hfact   (:,:,:),           & ! [OUT]
                                         vfact   (:,:,:,:,:),       & ! [OUT]
                                         kgrd    (:,:,:,:,:),       & ! [OUT]
                                         igrd    (:,:,:),           & ! [OUT]
@@ -1818,7 +1818,7 @@ contains
        call COMM_wait ( vely(:,:,:), 2, .false. )
 
        ! for scalar points
-       call latlonz_interporation_fact( hfact   (:,:,:),           & ! [OUT]
+       call latlonz_interpolation_fact( hfact   (:,:,:),           & ! [OUT]
                                         vfact   (:,:,:,:,:),       & ! [OUT]
                                         kgrd    (:,:,:,:,:),       & ! [OUT]
                                         igrd    (:,:,:),           & ! [OUT]
@@ -2149,7 +2149,7 @@ contains
     call check_domain_compatibility( lon_org(:,:,1),  lat_org(:,:,1),  hgt_org(:,:,:,1), &
                                      LON(:,:),        LAT(:,:),        FZ(:,:,:), skip_x=.true., skip_y=.true. )
 
-    call latlonz_interporation_fact( hfact   (:,:,:),           & ! [OUT]
+    call latlonz_interpolation_fact( hfact   (:,:,:),           & ! [OUT]
                                      vfact   (:,:,:,:,:),       & ! [OUT]
                                      kgrd    (:,:,:,:,:),       & ! [OUT]
                                      igrd    (:,:,:),           & ! [OUT]
@@ -2431,7 +2431,7 @@ contains
     endif
     call COMM_bcast( hgt_op1(:,:,:,:), dims3p1, dims(1), dims(2), step_fixed )
 
-    call latlonz_interporation_fact( hfact   (:,:,:),           & ! [OUT]
+    call latlonz_interpolation_fact( hfact   (:,:,:),           & ! [OUT]
                                      vfact   (:,:,:,:,:),       & ! [OUT]
                                      kgrd    (:,:,:,:,:),       & ! [OUT]
                                      igrd    (:,:,:),           & ! [OUT]
@@ -2517,7 +2517,7 @@ contains
     endif
     call COMM_bcast( hgt_op1(:,:,:,:), dims3p1, dims(1), dims(2), step_fixed )
 
-    call latlonz_interporation_fact( hfact   (:,:,:),           & ! [OUT]
+    call latlonz_interpolation_fact( hfact   (:,:,:),           & ! [OUT]
                                      vfact   (:,:,:,:,:),       & ! [OUT]
                                      kgrd    (:,:,:,:,:),       & ! [OUT]
                                      igrd    (:,:,:),           & ! [OUT]
@@ -2818,7 +2818,7 @@ contains
     allocate( vfact( LKMAX, IA, JA, itp_nh, itp_nv ) )
     allocate( igrd (        IA, JA, itp_nh         ) )
     allocate( jgrd (        IA, JA, itp_nh         ) )
-    allocate( kgrd ( LKMAX, IA, JA, itp_nh, itp_nv ) )
+    allocate( kgrd ( LKMAX, IA, JA, itp_nh, itp_nv ) )   
 
     if( IO_L ) write(IO_FID_LOG,*) ''
     if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[realinput]/Categ[InputSCALE-Surface]'
@@ -2906,7 +2906,7 @@ contains
     snowq_org(:,:) = 0.0_RP
     snowt_org(:,:) = TEM00
 
-    call latlonz_interporation_fact( hfact  (:,:,:),     & ! [OUT]
+    call latlonz_interpolation_fact( hfact  (:,:,:),     & ! [OUT]
                                      vfact  (:,:,:,:,:), & ! [OUT]
                                      kgrd   (:,:,:,:,:), & ! [OUT]
                                      igrd   (:,:,:),     & ! [OUT]
@@ -2931,10 +2931,10 @@ contains
                    + tg_org  (kgrd(k,i,j,1,2),igrd(i,j,1),jgrd(i,j,1)) * hfact(i,j,1) * vfact(k,i,j,1,2) &
                    + tg_org  (kgrd(k,i,j,2,2),igrd(i,j,2),jgrd(i,j,2)) * hfact(i,j,2) * vfact(k,i,j,2,2) &
                    + tg_org  (kgrd(k,i,j,3,2),igrd(i,j,3),jgrd(i,j,3)) * hfact(i,j,3) * vfact(k,i,j,3,2)
-    enddo
-    enddo
+    enddo ! k
        tg  (LKMAX,i,j) = tg  (LKMAX-1,i,j)
-    enddo
+    enddo ! i
+    enddo ! j
 
     if( use_file_landwater )then
       ! interpolation
@@ -2948,8 +2948,8 @@ contains
                      + strg_org(kgrd(k,i,j,2,2),igrd(i,j,2),jgrd(i,j,2)) * hfact(i,j,2) * vfact(k,i,j,2,2) &
                      + strg_org(kgrd(k,i,j,3,2),igrd(i,j,3),jgrd(i,j,3)) * hfact(i,j,3) * vfact(k,i,j,3,2)
       enddo
-      enddo
          strg(LKMAX,i,j) = strg(LKMAX-1,i,j)
+      enddo
       enddo
     else  ! not read from boundary file
       sh2o(:,:,:) = init_landwater_ratio
@@ -3190,7 +3190,7 @@ contains
        lcz_3D(:,i,j) = lcz(:)
     enddo
     enddo
-    call latlonz_interporation_fact( hfact,vfact,kgrd,igrd,jgrd,lcz_3D,lat,lon, &
+    call latlonz_interpolation_fact( hfact,vfact,kgrd,igrd,jgrd,lcz_3D,lat,lon, &
                                       zs_org,lat_org,lon_org,dims(7),dims(2),dims(3),1,landgrid=.true. )
 
     ! land mask (1:land, 0:water)
@@ -3677,7 +3677,7 @@ contains
     enddo
     enddo
 
-    call latlonz_interporation_fact( hfact  (:,:,:),            & ! [OUT]
+    call latlonz_interpolation_fact( hfact  (:,:,:),            & ! [OUT]
                                      vfact  (:,:,:,:,:),        & ! [OUT]
                                      kgrd   (:,:,:,:,:),        & ! [OUT]
                                      igrd   (:,:,:),            & ! [OUT]
@@ -3985,7 +3985,7 @@ contains
   end subroutine InputSurfaceNICAM
 
   !-----------------------------------------------------------------------------
-  subroutine latlonz_interporation_fact( &
+  subroutine latlonz_interpolation_fact( &
       hfact,      & ! (out)
       vfact,      & ! (out)
       kgrd,       & ! (out)
@@ -4136,7 +4136,7 @@ contains
     enddo
 
     return
-  end subroutine latlonz_interporation_fact
+  end subroutine latlonz_interpolation_fact
 
   !-----------------------------------------------------------------------------
   subroutine interp_OceanLand_data( &
@@ -4207,19 +4207,25 @@ contains
             if (abs(lsmask(i,j)-0.0_RP) < EPS) maskval = data(i,j,n)
          endif
 
-        !-------------------
-        ! missing value
-        !-------------------
+        !--------------------------------------       
         ! check data of neighbor grid
-        !-------------------
-        ! flag(i,j,4)
-        !-------------------
-        ! 6----7----8
-        ! |    |    |
-        ! 4--(i,j)--5
-        ! |    |    |
-        ! 1----2----3
-        !-------------------
+        !
+        !           flag(i,j,8)
+        !
+        !     +---+---+---+---+---+---+
+        !     |       |       |       |
+        !     +   6   +   7   +   8   +
+        !     |       |       |       |
+        !     +---+---+---+---+---+---+
+        !     |       |       |       |
+        !     +   4   + (i,j) +   5   +
+        !     |       |       |       |
+        !     +---+---+---+---+---+---+
+        !     |       |       |       |
+        !     +   1   +   2   +   3   +
+        !     |       |       |       |
+        !     +---+---+---+---+---+---+
+        !---------------------------------------
         flag    = 0.0_RP
         ydata   = 0.0_RP
         if((i==1).and.(j==1))then
@@ -4582,7 +4588,6 @@ contains
     d = r_in_m * work2
 
   end function haversine
-
 
 end module mod_realinput
 !-------------------------------------------------------------------------------

@@ -4,8 +4,8 @@
 #   2009/10/26 --- Ryuji Yoshida.
 #   2014/07/08 --- Tsuyoshi Yamaura
 #-----------------------------------------
-dir="${SCALE_DB}/SCALE_output/kobe_case1/2.5km"
-num=16
+dir="${SCALE_DB}/SCALE_output/japan10km_nicam"
+num=9
 #
 #-----------------------------------------
 #
