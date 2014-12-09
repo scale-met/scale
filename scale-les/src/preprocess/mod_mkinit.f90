@@ -681,7 +681,9 @@ contains
        OCEAN_TEMP,       &
        OCEAN_SFC_TEMP,   &
        OCEAN_SFC_albedo, &
-       OCEAN_SFC_Z0
+       OCEAN_SFC_Z0M,    &
+       OCEAN_SFC_Z0H,    &
+       OCEAN_SFC_Z0E
     implicit none
 
     ! Surface state
@@ -877,7 +879,9 @@ contains
        OCEAN_SFC_TEMP  (i,j)      = THETAstd
        OCEAN_SFC_albedo(i,j,I_LW) = 0.04_RP
        OCEAN_SFC_albedo(i,j,I_SW) = 0.05_RP
-       OCEAN_SFC_Z0    (i,j)      = 0.0_RP
+       OCEAN_SFC_Z0M   (i,j)      = 0.0_RP
+       OCEAN_SFC_Z0H   (i,j)      = 0.0_RP
+       OCEAN_SFC_Z0E   (i,j)      = 0.0_RP
     enddo
     enddo
 
@@ -3749,7 +3753,9 @@ enddo
        OCEAN_TEMP,       &
        OCEAN_SFC_TEMP,   &
        OCEAN_SFC_albedo, &
-       OCEAN_SFC_Z0
+       OCEAN_SFC_Z0M,    &
+       OCEAN_SFC_Z0H,    &
+       OCEAN_SFC_Z0E
     implicit none
 
     ! Flux from Atmosphere
@@ -3762,7 +3768,9 @@ enddo
     real(RP) :: SFC_TEMP               ! ocean skin temperature      [K]
     real(RP) :: SFC_albedo_LW = 0.0_RP ! ocean surface albedo for LW [0-1]
     real(RP) :: SFC_albedo_SW = 0.0_RP ! ocean surface albedo for SW [0-1]
-    real(RP) :: SFC_Z0        = 0.0_RP ! ocean surface roughness length [m]
+    real(RP) :: SFC_Z0M       = 0.0_RP ! ocean surface roughness length (momentum) [m]
+    real(RP) :: SFC_Z0H       = 0.0_RP ! ocean surface roughness length (heat) [m]
+    real(RP) :: SFC_Z0E       = 0.0_RP ! ocean surface roughness length (vapor) [m]
 
     NAMELIST / PARAM_MKINIT_OCEANCOUPLE / &
        FLX_rain,      &
@@ -3773,7 +3781,9 @@ enddo
        SFC_TEMP,      &
        SFC_albedo_LW, &
        SFC_albedo_SW, &
-       SFC_Z0
+       SFC_Z0M,       &
+       SFC_Z0H,       &
+       SFC_Z0E
 
     integer :: ierr
     !---------------------------------------------------------------------------
@@ -3804,7 +3814,9 @@ enddo
     OCEAN_SFC_TEMP  (:,:)      = SFC_TEMP
     OCEAN_SFC_albedo(:,:,I_LW) = SFC_albedo_LW
     OCEAN_SFC_albedo(:,:,I_SW) = SFC_albedo_SW
-    OCEAN_SFC_Z0    (:,:)      = SFC_Z0
+    OCEAN_SFC_Z0M   (:,:)      = SFC_Z0M
+    OCEAN_SFC_Z0H   (:,:)      = SFC_Z0H
+    OCEAN_SFC_Z0E   (:,:)      = SFC_Z0E
 
     return
   end subroutine MKINIT_oceancouple
@@ -3966,7 +3978,9 @@ enddo
        OCEAN_TEMP,       &
        OCEAN_SFC_TEMP,   &
        OCEAN_SFC_albedo, &
-       OCEAN_SFC_Z0
+       OCEAN_SFC_Z0M,    &
+       OCEAN_SFC_Z0H,    &
+       OCEAN_SFC_Z0E
     use mod_land_vars, only: &
        LAND_TEMP,       &
        LAND_WATER,      &
@@ -3984,7 +3998,9 @@ enddo
     real(RP) :: OCN_SFC_TEMP               ! ocean skin temperature      [K]
     real(RP) :: OCN_SFC_albedo_LW = 0.0_RP ! ocean surface albedo for LW [0-1]
     real(RP) :: OCN_SFC_albedo_SW = 0.0_RP ! ocean surface albedo for SW [0-1]
-    real(RP) :: OCN_SFC_Z0        = 0.0_RP ! ocean surface roughness length [m]
+    real(RP) :: OCN_SFC_Z0M       = 0.0_RP ! ocean surface roughness length (momentum) [m]
+    real(RP) :: OCN_SFC_Z0H       = 0.0_RP ! ocean surface roughness length (heat) [m]
+    real(RP) :: OCN_SFC_Z0E       = 0.0_RP ! ocean surface roughness length (vapor) [m]
     ! Land state
     real(RP) :: LND_TEMP                   ! soil temperature           [K]
     real(RP) :: LND_WATER         = 0.0_RP ! soil moisture              [m3/m3]
@@ -4001,7 +4017,9 @@ enddo
        OCN_SFC_TEMP,      &
        OCN_SFC_albedo_LW, &
        OCN_SFC_albedo_SW, &
-       OCN_SFC_Z0,        &
+       OCN_SFC_Z0M,       &
+       OCN_SFC_Z0H,       &
+       OCN_SFC_Z0E,       &
        LND_TEMP,          &
        LND_WATER,         &
        LND_SFC_TEMP,      &
@@ -4041,7 +4059,9 @@ enddo
     OCEAN_SFC_TEMP  (:,:)      = OCN_SFC_TEMP
     OCEAN_SFC_albedo(:,:,I_LW) = OCN_SFC_albedo_LW
     OCEAN_SFC_albedo(:,:,I_SW) = OCN_SFC_albedo_SW
-    OCEAN_SFC_Z0    (:,:)      = OCN_SFC_Z0
+    OCEAN_SFC_Z0M   (:,:)      = OCN_SFC_Z0M
+    OCEAN_SFC_Z0H   (:,:)      = OCN_SFC_Z0H
+    OCEAN_SFC_Z0E   (:,:)      = OCN_SFC_Z0E
 
     LAND_TEMP       (:,:,:)    = LND_TEMP
     LAND_WATER      (:,:,:)    = LND_WATER

@@ -620,7 +620,7 @@ contains
     call COMM_wait ( uc_urb, 1, .false. )
 
     ! Write out: Ocean
-    call OCEAN_vars_external_in( tw, sst, albw, z0w )
+    call OCEAN_vars_external_in( tw, sst, albw, z0w, z0w, z0w )
 
     ! Write out: Land
     call LAND_vars_external_in( tg, strg, lst, albg )
@@ -629,7 +629,7 @@ contains
     call URBAN_vars_external_in( ust, tc_urb, qc_urb, uc_urb )
 
     ! Input to PHY_SF Container
-    call ATMOS_PHY_SF_vars_external_in( skint, albw(:,:,I_LW), albw(:,:,I_SW), z0w )
+    call ATMOS_PHY_SF_vars_external_in( skint, albw(:,:,I_LW), albw(:,:,I_SW), z0w, z0w, z0w )
 
     return
   end subroutine ParentSurfaceInput
@@ -2880,7 +2880,7 @@ contains
        call FileRead( read2D(:,:), BASENAME_ORG, "LAND_ALB_SW",    1, rank )
        albg_org(xs:xe,ys:ye,2) = read2D(:,:)
 
-       call FileRead( read2D(:,:), BASENAME_ORG, "OCEAN_SFC_Z0",   1, rank )
+       call FileRead( read2D(:,:), BASENAME_ORG, "OCEAN_SFC_Z0M",  1, rank )
        z0w_org(xs:xe,ys:ye) = read2D(:,:)
 
        call FileRead( read2D(:,:), BASENAME_ORG, "SFC_TEMP",       1, rank )

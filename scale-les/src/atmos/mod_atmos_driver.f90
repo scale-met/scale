@@ -347,7 +347,9 @@ contains
        SFC_PRES   => ATMOS_PHY_SF_SFC_PRES,   &
        SFC_TEMP   => ATMOS_PHY_SF_SFC_TEMP,   &
        SFC_albedo => ATMOS_PHY_SF_SFC_albedo, &
-       SFC_Z0     => ATMOS_PHY_SF_SFC_Z0,     &
+       SFC_Z0M    => ATMOS_PHY_SF_SFC_Z0M,    &
+       SFC_Z0H    => ATMOS_PHY_SF_SFC_Z0H,    &
+       SFC_Z0E    => ATMOS_PHY_SF_SFC_Z0E,    &
        SFLX_MW    => ATMOS_PHY_SF_SFLX_MW,    &
        SFLX_MU    => ATMOS_PHY_SF_SFLX_MU,    &
        SFLX_MV    => ATMOS_PHY_SF_SFLX_MV,    &
@@ -399,7 +401,9 @@ contains
 
        call CPL_getATM( SFC_TEMP  (:,:),   & ! [OUT]
                         SFC_albedo(:,:,:), & ! [OUT]
-                        SFC_Z0    (:,:),   & ! [OUT]
+                        SFC_Z0M   (:,:),   & ! [OUT]
+                        SFC_Z0H   (:,:),   & ! [OUT]
+                        SFC_Z0E   (:,:),   & ! [OUT]
                         Uabs10    (:,:),   & ! [OUT]
                         U10       (:,:),   & ! [OUT]
                         V10       (:,:),   & ! [OUT]
@@ -408,12 +412,14 @@ contains
                         FLX_heat  (:,:)    ) ! [OUT]
 
        if ( .NOT. setup ) then
-          call HIST_in( SFC_Z0(:,:), 'SFC_Z0', 'roughness length',  'm',     TIME_DTSEC )
-          call HIST_in( Uabs10(:,:), 'Uabs10', '10m absolute wind', 'm/s',   TIME_DTSEC )
-          call HIST_in( U10   (:,:), 'U10'  ,  '10m x-wind',        'm/s',   TIME_DTSEC )
-          call HIST_in( V10   (:,:), 'V10'  ,  '10m y-wind',        'm/s',   TIME_DTSEC )
-          call HIST_in( T2    (:,:), 'T2 '  ,  '2m temperature',    'K',     TIME_DTSEC )
-          call HIST_in( Q2    (:,:), 'Q2 '  ,  '2m water vapor',    'kg/kg', TIME_DTSEC )
+          call HIST_in( SFC_Z0M(:,:), 'SFC_Z0M', 'roughness length (momentum)',  'm',     TIME_DTSEC )
+          call HIST_in( SFC_Z0H(:,:), 'SFC_Z0H', 'roughness length (heat)',      'm',     TIME_DTSEC )
+          call HIST_in( SFC_Z0E(:,:), 'SFC_Z0E', 'roughness length (vapor)',     'm',     TIME_DTSEC )
+          call HIST_in( Uabs10 (:,:), 'Uabs10',  '10m absolute wind',            'm/s',   TIME_DTSEC )
+          call HIST_in( U10    (:,:), 'U10',     '10m x-wind',                   'm/s',   TIME_DTSEC )
+          call HIST_in( V10    (:,:), 'V10',     '10m y-wind',                   'm/s',   TIME_DTSEC )
+          call HIST_in( T2     (:,:), 'T2 ',     '2m temperature',               'K',     TIME_DTSEC )
+          call HIST_in( Q2     (:,:), 'Q2 ',     '2m water vapor',               'kg/kg', TIME_DTSEC )
 
           call HIST_in( FLX_heat(:,:), 'GHFLX', 'ground heat flux (merged)', 'W/m2', TIME_DTSEC )
        endif

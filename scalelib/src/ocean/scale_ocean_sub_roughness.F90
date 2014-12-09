@@ -31,24 +31,20 @@ module scale_ocean_roughness
 
   abstract interface
      subroutine rl( &
-          Z0,  &
           Z0M, &
           Z0H, &
           Z0E, &
           UA,  &
-          VA,  &
-          WA   )
+          VA   )
        use scale_precision
        use scale_grid_index
        implicit none
 
-       real(RP), intent(inout) :: Z0 (IA,JA) ! roughness length for save     [m]
-       real(RP), intent(out)   :: Z0M(IA,JA) ! roughness length for momentum [m]
-       real(RP), intent(out)   :: Z0H(IA,JA) ! roughness length for heat     [m]
-       real(RP), intent(out)   :: Z0E(IA,JA) ! roughness length for moisture [m]
-       real(RP), intent(in)    :: UA (IA,JA) ! velocity u at the lowest atmospheric layer [m/s]
-       real(RP), intent(in)    :: VA (IA,JA) ! velocity v at the lowest atmospheric layer [m/s]
-       real(RP), intent(in)    :: WA (IA,JA) ! velocity w at the lowest atmospheric layer [m/s]
+       real(RP), intent(inout) :: Z0M(IA,JA)  ! roughness length for momentum [m]
+       real(RP), intent(inout) :: Z0H(IA,JA)  ! roughness length for heat     [m]
+       real(RP), intent(inout) :: Z0E(IA,JA)  ! roughness length for moisture [m]
+       real(RP), intent(in)    :: UA (IA,JA)  ! velocity u at the lowest atmospheric layer [m/s]
+       real(RP), intent(in)    :: VA (IA,JA)  ! velocity v at the lowest atmospheric layer [m/s]
      end subroutine rl
   end interface
 
@@ -74,7 +70,7 @@ module scale_ocean_roughness
   !
   !++ Private parameters & variables
   !
-  character(len=H_SHORT), private :: OCEAN_roughness_TYPE = 'MILLER92' ! sea roughness length scheme
+  character(len=H_SHORT), private :: OCEAN_roughness_TYPE = 'MOON07' ! sea roughness length scheme
 
   real(RP), private :: OCEAN_roughness_visck          = 1.5E-5_RP ! kinematic viscosity
   real(RP), private :: OCEAN_roughness_Ustar_min      = 1.0E-3_RP ! minimum fiction velocity
@@ -241,22 +237,18 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine OCEAN_roughness_const( &
-       Z0,  &
        Z0M, &
        Z0H, &
        Z0E, &
        UA,  &
-       VA,  &
-       WA   )
+       VA   )
     implicit none
 
-    real(RP), intent(inout) :: Z0 (IA,JA) ! roughness length for save     [m]
-    real(RP), intent(out)   :: Z0M(IA,JA) ! roughness length for momentum [m]
-    real(RP), intent(out)   :: Z0H(IA,JA) ! roughness length for heat     [m]
-    real(RP), intent(out)   :: Z0E(IA,JA) ! roughness length for moisture [m]
-    real(RP), intent(in)    :: UA (IA,JA) ! velocity u at the lowest atomspheric layer [m/s]
-    real(RP), intent(in)    :: VA (IA,JA) ! velocity v at the lowest atomspheric layer [m/s]
-    real(RP), intent(in)    :: WA (IA,JA) ! velocity w at the lowest atomspheric layer [m/s]
+    real(RP), intent(inout) :: Z0M(IA,JA)  ! roughness length for momentum [m]
+    real(RP), intent(inout) :: Z0H(IA,JA)  ! roughness length for heat     [m]
+    real(RP), intent(inout) :: Z0E(IA,JA)  ! roughness length for moisture [m]
+    real(RP), intent(in)    :: UA (IA,JA)  ! velocity u at the lowest atomspheric layer [m/s]
+    real(RP), intent(in)    :: VA (IA,JA)  ! velocity v at the lowest atomspheric layer [m/s]
 
     integer  :: i, j
     !---------------------------------------------------------------------------
@@ -274,24 +266,20 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine OCEAN_roughness_miller92( &
-       Z0,  &
        Z0M, &
        Z0H, &
        Z0E, &
        UA,  &
-       VA,  &
-       WA   )
+       VA   )
     use scale_const, only: &
        GRAV => CONST_GRAV
     implicit none
 
-    real(RP), intent(inout) :: Z0 (IA,JA) ! roughness length for save     [m]
-    real(RP), intent(out)   :: Z0M(IA,JA) ! roughness length for momentum [m]
-    real(RP), intent(out)   :: Z0H(IA,JA) ! roughness length for heat     [m]
-    real(RP), intent(out)   :: Z0E(IA,JA) ! roughness length for moisture [m]
-    real(RP), intent(in)    :: UA (IA,JA) ! velocity u at the lowest atomspheric layer [m/s]
-    real(RP), intent(in)    :: VA (IA,JA) ! velocity v at the lowest atomspheric layer [m/s]
-    real(RP), intent(in)    :: WA (IA,JA) ! velocity w at the lowest atomspheric layer [m/s]
+    real(RP), intent(inout) :: Z0M(IA,JA)  ! roughness length for momentum [m]
+    real(RP), intent(inout) :: Z0H(IA,JA)  ! roughness length for heat     [m]
+    real(RP), intent(inout) :: Z0E(IA,JA)  ! roughness length for moisture [m]
+    real(RP), intent(in)    :: UA (IA,JA)  ! velocity u at the lowest atomspheric layer [m/s]
+    real(RP), intent(in)    :: VA (IA,JA)  ! velocity v at the lowest atomspheric layer [m/s]
 
     real(RP) :: Uabs, Ustar
     integer  :: i, j
@@ -325,13 +313,11 @@ contains
   !> A Physics-Based Parameterization of Air-Sea Momentum Flux at High Wind Speeds
   !> and Its Impact on Hurricane Intensity Predictions, Mon. Wea. Rev., 135, 2869-2878
   subroutine OCEAN_roughness_moon07( &
-       Z0,  &
        Z0M, &
        Z0H, &
        Z0E, &
        UA,  &
-       VA,  &
-       WA   )
+       VA   )
     use scale_const, only: &
        GRAV   => CONST_GRAV,   &
        KARMAN => CONST_KARMAN
@@ -339,13 +325,11 @@ contains
        Z1 => REAL_Z1
     implicit none
 
-    real(RP), intent(inout) :: Z0 (IA,JA) ! roughness length for save     [m]
-    real(RP), intent(out)   :: Z0M(IA,JA) ! roughness length for momentum [m]
-    real(RP), intent(out)   :: Z0H(IA,JA) ! roughness length for heat     [m]
-    real(RP), intent(out)   :: Z0E(IA,JA) ! roughness length for moisture [m]
-    real(RP), intent(in)    :: UA (IA,JA) ! velocity u at the lowest atomspheric layer [m/s]
-    real(RP), intent(in)    :: VA (IA,JA) ! velocity v at the lowest atomspheric layer [m/s]
-    real(RP), intent(in)    :: WA (IA,JA) ! velocity w at the lowest atomspheric layer [m/s]
+    real(RP), intent(inout) :: Z0M(IA,JA)  ! roughness length for momentum [m]
+    real(RP), intent(inout) :: Z0H(IA,JA)  ! roughness length for heat     [m]
+    real(RP), intent(inout) :: Z0E(IA,JA)  ! roughness length for moisture [m]
+    real(RP), intent(in)    :: UA (IA,JA)  ! velocity u at the lowest atomspheric layer [m/s]
+    real(RP), intent(in)    :: VA (IA,JA)  ! velocity v at the lowest atomspheric layer [m/s]
 
     real(RP) :: Ustar(IA,JA)
     real(RP) :: Uabs (IA,JA)
@@ -357,7 +341,7 @@ contains
 
     do j = JS, JE
     do i = IS, IE
-       Z0M(i,j)  = max( Z0(i,j), OCEAN_roughness_Z0M_min )
+       Z0M(i,j)  = max( Z0M(i,j), OCEAN_roughness_Z0M_min )
        Uabs(i,j) = sqrt( UA(i,j)**2 + VA(i,j)**2 )
     enddo
     enddo
@@ -394,8 +378,6 @@ contains
        Z0M(i,j) = max( Z0M(i,j), OCEAN_roughness_Z0M_min )
        Z0H(i,j) = max( Z0H(i,j), OCEAN_roughness_Z0H_min )
        Z0E(i,j) = max( Z0E(i,j), OCEAN_roughness_Z0E_min )
-       ! update and save Z0
-       Z0 (i,j) = Z0M(i,j)
     enddo
     enddo
 
