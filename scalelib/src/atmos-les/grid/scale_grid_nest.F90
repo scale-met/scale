@@ -403,7 +403,7 @@ contains
           if ( .not. PRC_HAS_W ) ims = 1
           if ( .not. PRC_HAS_E ) ime = IA
           if ( .not. PRC_HAS_S ) jms = 1
-          if ( .not. PRC_HAS_N ) jme = JE
+          if ( .not. PRC_HAS_N ) jme = JA
           corner_loc(I_NW,I_LON) = REAL_LONXY(ims,jme) / D2R
           corner_loc(I_NE,I_LON) = REAL_LONXY(ime,jme) / D2R
           corner_loc(I_SW,I_LON) = REAL_LONXY(ims,jms) / D2R
