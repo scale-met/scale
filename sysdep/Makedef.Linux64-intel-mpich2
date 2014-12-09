@@ -4,16 +4,17 @@
 
 ##### for computation
 
-FFLAGS_FAST  = -fpp3 -m64 -O3 -xHost                \
+FFLAGS_FAST  = -fpp -m64 -O3 -xHost                 \
                -assume byterecl -convert big_endian \
                -fp-model source                     \
                -mcmodel=medium -heap-arrays
 
-FFLAGS_DEBUG = -fpp3 -m64 -O0                       \
+FFLAGS_DEBUG = -fpp -m64 -O0                        \
                -assume byterecl -convert big_endian \
                -fpe0 -fp-model source               \
                -check all -warn all -g -traceback   \
                -mcmodel=medium -heap-arrays         \
+               -assume nobuffered_io                \
                -DDEBUG
 
 FC     = mpif90

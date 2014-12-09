@@ -6,14 +6,14 @@
 
 FFLAGS_FAST  = -Kfast,parallel,ocl,preex,array_private,noalias=s,mfunc=2 \
                -Qi -Qt -X03 -Ncompdisp -Koptmsg=1 -Cpp                   \
-	       -x-                                                       \
+               -x-                                                       \
                -Ksimd                                                    \
                -Kauto,threadsafe
 
 FFLAGS_AGGRESIVE = $(FFLAGS_FAST) \
-		 -Kautoobjstack \
-                 -Kinstance=8 \
-                 -Kswp_strong
+                   -Kautoobjstack \
+                   -Kinstance=8   \
+                   -Kswp_strong
 
 # note: Kauto,threadsafe,autoobjstack,temparraystack depends on the stacksize.
 # If you find the segmentation fault error, please check.
