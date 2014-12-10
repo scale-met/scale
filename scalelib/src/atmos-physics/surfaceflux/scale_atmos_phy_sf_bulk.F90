@@ -50,10 +50,10 @@ module scale_atmos_phy_sf_bulk
   !
   real(RP), private, parameter :: ATMOS_PHY_SF_U_maxM = 100.0_RP ! maximum limit of absolute velocity for momentum [m/s]
   real(RP), private, parameter :: ATMOS_PHY_SF_U_maxH = 100.0_RP ! maximum limit of absolute velocity for heat     [m/s]
-  real(RP), private, parameter :: ATMOS_PHY_SF_U_maxE = 100.0_RP ! maximum limit of absolute velocity for moisture [m/s]
+  real(RP), private, parameter :: ATMOS_PHY_SF_U_maxE = 100.0_RP ! maximum limit of absolute velocity for vapor    [m/s]
   real(RP), private            :: ATMOS_PHY_SF_U_minM =   0.0_RP ! minimum limit of absolute velocity for momentum [m/s]
   real(RP), private            :: ATMOS_PHY_SF_U_minH =   0.0_RP ! minimum limit of absolute velocity for heat     [m/s]
-  real(RP), private            :: ATMOS_PHY_SF_U_minE =   0.0_RP ! minimum limit of absolute velocity for moisture [m/s]
+  real(RP), private            :: ATMOS_PHY_SF_U_minE =   0.0_RP ! minimum limit of absolute velocity for vapor    [m/s]
 
   !-----------------------------------------------------------------------------
 contains
@@ -147,7 +147,7 @@ contains
     real(RP), intent(in)    :: SFC_beta  (IA,JA)    ! evaporation efficiency [0-1]
     real(RP), intent(inout) :: SFC_Z0M   (IA,JA)    ! surface roughness length (momentum) [m]
     real(RP), intent(inout) :: SFC_Z0H   (IA,JA)    ! surface roughness length (heat) [m]
-    real(RP), intent(inout) :: SFC_Z0E   (IA,JA)    ! surface roughness length (moisture) [m]
+    real(RP), intent(inout) :: SFC_Z0E   (IA,JA)    ! surface roughness length (vapor) [m]
     real(RP), intent(out)   :: SFLX_MW   (IA,JA)    ! surface flux for z-momentum    (area center)   [m/s*kg/m2/s]
     real(RP), intent(out)   :: SFLX_MU   (IA,JA)    ! surface flux for x-momentum    (area center)   [m/s*kg/m2/s]
     real(RP), intent(out)   :: SFLX_MV   (IA,JA)    ! surface flux for y-momentum    (area center)   [m/s*kg/m2/s]
@@ -166,7 +166,7 @@ contains
 
     real(RP) :: Cm  (IA,JA)     ! bulk coefficient for momentum
     real(RP) :: Ch  (IA,JA)     ! bulk coefficient for heat
-    real(RP) :: Ce  (IA,JA)     ! bulk coefficient for moisture
+    real(RP) :: Ce  (IA,JA)     ! bulk coefficient for vapor
     real(RP) :: R10M(IA,JA)
     real(RP) :: R2H (IA,JA)
     real(RP) :: R2E (IA,JA)

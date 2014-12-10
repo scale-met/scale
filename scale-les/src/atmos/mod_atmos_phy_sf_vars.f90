@@ -106,7 +106,7 @@ module mod_atmos_phy_sf_vars
                   'surface albedo for shortwave',        &
                   'surface roughness length (momentum)', &
                   'surface roughness length (heat)',     &
-                  'surface roughness length (moisture)'  /
+                  'surface roughness length (vapor)'     /
 
   data VAR_UNIT / 'K',   &
                   '0-1', &
