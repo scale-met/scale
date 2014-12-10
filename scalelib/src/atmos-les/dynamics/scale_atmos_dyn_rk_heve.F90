@@ -269,7 +269,7 @@ contains
 #endif
 
 #ifdef DRY
-    real(RP) :: CPovCV = CPdry / CVdry
+    real(RP) :: CPovCV
 #endif
 
     integer  :: IIS, IIE
@@ -300,6 +300,10 @@ contains
 
 #ifdef HIST_TEND
     lhist = dt .eq. dtrk
+#endif
+
+#ifdef DRY
+    CPovCV = CPdry / CVdry
 #endif
 
     do JJS = JS, JE, JBLOCK
@@ -371,7 +375,7 @@ contains
              call CHECK( __LINE__, CVtot(k,i,j) )
 #endif
 #ifdef DRY
-             PRES(k,i,j) = P00 * ( RHOT(k,i,j) * Rdry / P00 )**CPovCV &
+             PRES(k,i,j) = P00 * ( RHOT(k,i,j) * Rdry / P00 )**CPovCV
 #else
              PRES(k,i,j) = P00 * ( RHOT(k,i,j) * Rtot(k,i,j) / P00 )**((CVtot(k,i,j)+Rtot(k,i,j))/CVtot(k,i,j))
 #endif

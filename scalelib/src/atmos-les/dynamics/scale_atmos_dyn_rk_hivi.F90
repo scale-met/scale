@@ -1973,10 +1973,18 @@ contains
                  - 0.5_RP * GRAV &
                  * ( DDENS(k+1,i,j) &
                    + ( DPRES(k+1,i,j) - (PRES(k+1,i,j)-REF_pres(k+1,i,j)) ) &
+#ifdef DRY
+                   * DENS(k+1,i,j) / ( kappa         *PRES(k+1,i,j) ) &
+#else
                    * DENS(k+1,i,j) / ( kappa(k+1,i,j)*PRES(k+1,i,j) ) &
+#endif
                    + DDENS(k  ,i,j) &
                    + ( DPRES(k  ,i,j) - (PRES(k  ,i,j)-REF_pres(k  ,i,j)) ) &
+#ifdef DRY
+                   * DENS(k  ,i,j) / ( kappa         *PRES(k  ,i,j) ) ) &
+#else
                    * DENS(k  ,i,j) / ( kappa(k  ,i,j)*PRES(k  ,i,j) ) ) &
+#endif
                  + Sw(k,i,j) )
           MOMZ_RK(k,i,j) = MOMZ0(k,i,j) + duvw
           mflx_hi(k,i,j,ZDIR) = J33G * ( MOMZ(k,i,j) + duvw )
