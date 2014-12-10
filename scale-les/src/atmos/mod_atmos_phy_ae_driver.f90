@@ -142,7 +142,7 @@ contains
        CCN(:,:,:) = 0.0_RP ! tentative
 
        if ( history_flag ) then
-          call HIST_in( CCN(:,:,:), 'CCN', 'cloud condensation nucrei', '', dt_AE )
+          call HIST_in( CCN(:,:,:), 'CCN', 'cloud condensation nucrei', '' )
        endif
 
     endif

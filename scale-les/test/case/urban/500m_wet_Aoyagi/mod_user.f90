@@ -201,14 +201,14 @@ contains
        enddo
 
 
-       call HIST_in( TMPA (:,:), 'PT_urb',    'Air temperature',              'K',     dt_URB )
-       call HIST_in( QVA  (:,:), 'QA_urb',    'Specific humidity',            'kg/kg', dt_URB )
-       call HIST_in( UA   (:,:), 'UA_urb',    'Wind speed',                   'm/s',   dt_URB )
-       call HIST_in( SWD  (:,:), 'SWD_urb',   'Downward shortwave radiation', 'W/m2',  dt_URB )
-       call HIST_in( LWD  (:,:), 'LWD_urb',   'Downward longwave radiation',  'W/m2',  dt_URB )
+       call HIST_in( TMPA (:,:), 'PT_urb',   'Air temperature',              'K'     )
+       call HIST_in( QVA  (:,:), 'QA_urb',   'Specific humidity',            'kg/kg' )
+       call HIST_in( UA   (:,:), 'UA_urb',   'Wind speed',                   'm/s'   )
+       call HIST_in( SWD  (:,:), 'SWD_urb',  'Downward shortwave radiation', 'W/m2'  )
+       call HIST_in( LWD  (:,:), 'LWD_urb',  'Downward longwave radiation',  'W/m2'  )
 
        WORK(:,:) = PREC(:,:) * dt_URB
-       call HIST_in( WORK (:,:), 'RAIN_urb',  'Precipitation',                'kg/m2', dt_URB )
+       call HIST_in( WORK (:,:), 'RAIN_urb', 'Precipitation',                'kg/m2' )
 
     endif
 

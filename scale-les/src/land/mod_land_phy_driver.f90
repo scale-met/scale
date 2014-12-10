@@ -136,17 +136,17 @@ contains
                       LAND_WATER_t (:,:,:)               ) ! [OUT]
 
        if ( history_flag ) then
-          call HIST_in( LAND_TEMP_t (:,:,:), 'LAND_TEMP_t',  'Soil temperature tendency', 'K',     dt, zdim='land' )
-          call HIST_in( LAND_WATER_t(:,:,:), 'LAND_WATER_t', 'Soil moisture    tendency', 'm3/m3', dt, zdim='land' )
+          call HIST_in( LAND_TEMP_t (:,:,:), 'LAND_TEMP_t',  'Soil temperature tendency', 'K',     zdim='land' )
+          call HIST_in( LAND_WATER_t(:,:,:), 'LAND_WATER_t', 'Soil moisture    tendency', 'm3/m3', zdim='land' )
 
-          call HIST_in( LAND_PROPERTY(:,:,1), 'LP_WaterLimit   ',  'LAND PROPERTY, WaterLimit   ', 'm3/m3',  dt )
-          call HIST_in( LAND_PROPERTY(:,:,2), 'LP_WaterCritical',  'LAND PROPERTY, WaterCritical', 'm3/m3',  dt )
-          call HIST_in( LAND_PROPERTY(:,:,3), 'LP_ThermalCond  ',  'LAND PROPERTY, ThermalCond  ', 'W/K/m',  dt )
-          call HIST_in( LAND_PROPERTY(:,:,4), 'LP_HeatCapacity ',  'LAND PROPERTY, HeatCapacity ', 'J/K/m3', dt )
-          call HIST_in( LAND_PROPERTY(:,:,5), 'LP_WaterDiff    ',  'LAND PROPERTY, WaterDiff    ', 'm2/s',   dt )
-          call HIST_in( LAND_PROPERTY(:,:,6), 'LP_Z0M          ',  'LAND PROPERTY, Z0M          ', 'm',      dt )
-          call HIST_in( LAND_PROPERTY(:,:,7), 'LP_Z0H          ',  'LAND PROPERTY, Z0H          ', 'm',      dt )
-          call HIST_in( LAND_PROPERTY(:,:,8), 'LP_Z0E          ',  'LAND PROPERTY, Z0E          ', 'm',      dt )
+          call HIST_in( LAND_PROPERTY(:,:,1), 'LP_WaterLimit   ', 'LAND PROPERTY, WaterLimit   ', 'm3/m3'  )
+          call HIST_in( LAND_PROPERTY(:,:,2), 'LP_WaterCritical', 'LAND PROPERTY, WaterCritical', 'm3/m3'  )
+          call HIST_in( LAND_PROPERTY(:,:,3), 'LP_ThermalCond  ', 'LAND PROPERTY, ThermalCond  ', 'W/K/m'  )
+          call HIST_in( LAND_PROPERTY(:,:,4), 'LP_HeatCapacity ', 'LAND PROPERTY, HeatCapacity ', 'J/K/m3' )
+          call HIST_in( LAND_PROPERTY(:,:,5), 'LP_WaterDiff    ', 'LAND PROPERTY, WaterDiff    ', 'm2/s'   )
+          call HIST_in( LAND_PROPERTY(:,:,6), 'LP_Z0M          ', 'LAND PROPERTY, Z0M          ', 'm'      )
+          call HIST_in( LAND_PROPERTY(:,:,7), 'LP_Z0H          ', 'LAND PROPERTY, Z0H          ', 'm'      )
+          call HIST_in( LAND_PROPERTY(:,:,8), 'LP_Z0E          ', 'LAND PROPERTY, Z0E          ', 'm'      )
        endif
 
     endif

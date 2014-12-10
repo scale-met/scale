@@ -621,7 +621,7 @@ contains
           end if
           if ( ATMOS_BOUNDARY_USE_DENS ) then
              ATMOS_BOUNDARY_alpha_DENS(k,i,j) = max( alpha_z1, alpha_x1, alpha_y1 )
-          else                        
+          else
              ATMOS_BOUNDARY_alpha_DENS(k,i,j) = 0.0_RP
 !             ATMOS_BOUNDARY_alpha_DENS(k,i,j) = max( alpha_x1, alpha_y1 )
           endif
@@ -1880,24 +1880,18 @@ contains
        call PRC_MPIstop
     end if
 
-    call HIST_in( ATMOS_BOUNDARY_DENS(:,:,:),                                    &
-                  'DENS_BND', 'Boundary Density', 'kg/m3', TIME_DTSEC )
-    call HIST_in( ATMOS_BOUNDARY_VELX(:,:,:),                                    &
-                  'VELX_BND', 'Boundary velocity x-direction', 'm/s', TIME_DTSEC, xdim='half' )
-    call HIST_in( ATMOS_BOUNDARY_VELY(:,:,:),                                    &
-                  'VELY_BND', 'Boundary velocity y-direction', 'm/s', TIME_DTSEC, ydim='half' )
-    call HIST_in( ATMOS_BOUNDARY_POTT(:,:,:),                                    &
-                  'POTT_BND', 'Boundary potential temperature', 'K', TIME_DTSEC )
-    do iq = 1, QA
-       call HIST_in( ATMOS_BOUNDARY_QTRC(:,:,:,iq),                                    &
-
-            trim(AQ_NAME(iq))//'_BND', 'Boundary '//trim(AQ_NAME(iq)), 'kg/kg', TIME_DTSEC )
-    end do
+    call HIST_in( ATMOS_BOUNDARY_DENS(:,:,:), 'DENS_BND', 'Boundary Density',               'kg/m3' )
+    call HIST_in( ATMOS_BOUNDARY_VELX(:,:,:), 'VELX_BND', 'Boundary velocity x-direction',  'm/s', xdim='half' )
+    call HIST_in( ATMOS_BOUNDARY_VELY(:,:,:), 'VELY_BND', 'Boundary velocity y-direction',  'm/s', ydim='half' )
+    call HIST_in( ATMOS_BOUNDARY_POTT(:,:,:), 'POTT_BND', 'Boundary potential temperature', 'K'     )
 
     if ( ONLINE_USE_VELZ ) then
-       call HIST_in( ATMOS_BOUNDARY_VELZ(:,:,:),                                    &
-            'VELZ_BND', 'Boundary velocity z-direction', 'm/s', TIME_DTSEC, zdim='half' )
-    end if
+       call HIST_in( ATMOS_BOUNDARY_VELZ(:,:,:), 'VELZ_BND', 'Boundary velocity z-direction', 'm/s', zdim='half' )
+    endif
+
+    do iq = 1, QA
+       call HIST_in( ATMOS_BOUNDARY_QTRC(:,:,:,iq), trim(AQ_NAME(iq))//'_BND', 'Boundary '//trim(AQ_NAME(iq)), 'kg/kg' )
+    enddo
 
     if ( do_parent_process ) then !online [parent]
        handle = 1

@@ -249,7 +249,7 @@ contains
                                    DENS  (:,:,:)    ) ! [IN]
 
     if ( history_flag ) then
-       call HIST_in( vterm(:,:,:,I_QR), 'Vterm_QR', 'terminal velocity of QR', 'm/s', dt )
+       call HIST_in( vterm(:,:,:,I_QR), 'Vterm_QR', 'terminal velocity of QR', 'm/s' )
     endif
 
     !##### END MP Main #####

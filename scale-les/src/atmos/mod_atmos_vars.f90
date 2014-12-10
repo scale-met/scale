@@ -1112,13 +1112,13 @@ contains
     endif
 
     ! history output of prognostic variables
-    call HIST_in( DENS(:,:,:), VAR_NAME(I_DENS), VAR_DESC(I_DENS), VAR_UNIT(I_DENS), TIME_DTSEC )
-    call HIST_in( MOMZ(:,:,:), VAR_NAME(I_MOMZ), VAR_DESC(I_MOMZ), VAR_UNIT(I_MOMZ), TIME_DTSEC )
-    call HIST_in( MOMX(:,:,:), VAR_NAME(I_MOMX), VAR_DESC(I_MOMX), VAR_UNIT(I_MOMX), TIME_DTSEC )
-    call HIST_in( MOMY(:,:,:), VAR_NAME(I_MOMY), VAR_DESC(I_MOMY), VAR_UNIT(I_MOMY), TIME_DTSEC )
-    call HIST_in( RHOT(:,:,:), VAR_NAME(I_RHOT), VAR_DESC(I_RHOT), VAR_UNIT(I_RHOT), TIME_DTSEC )
+    call HIST_in( DENS(:,:,:), VAR_NAME(I_DENS), VAR_DESC(I_DENS), VAR_UNIT(I_DENS) )
+    call HIST_in( MOMZ(:,:,:), VAR_NAME(I_MOMZ), VAR_DESC(I_MOMZ), VAR_UNIT(I_MOMZ) )
+    call HIST_in( MOMX(:,:,:), VAR_NAME(I_MOMX), VAR_DESC(I_MOMX), VAR_UNIT(I_MOMX) )
+    call HIST_in( MOMY(:,:,:), VAR_NAME(I_MOMY), VAR_DESC(I_MOMY), VAR_UNIT(I_MOMY) )
+    call HIST_in( RHOT(:,:,:), VAR_NAME(I_RHOT), VAR_DESC(I_RHOT), VAR_UNIT(I_RHOT) )
     do iq = 1, QA
-       call HIST_in( QTRC(:,:,:,iq), AQ_NAME(iq), AQ_DESC(iq), AQ_UNIT(iq), TIME_DTSEC )
+       call HIST_in( QTRC(:,:,:,iq), AQ_NAME(iq), AQ_DESC(iq), AQ_UNIT(iq) )
     enddo
 
     ! prepare and history output of diagnostic variables
@@ -1609,48 +1609,48 @@ contains
        enddo
     endif
 
-    call HIST_in( W    (:,:,:), 'W',     'velocity w',             'm/s',    TIME_DTSEC )
-    call HIST_in( U    (:,:,:), 'U',     'velocity u',             'm/s',    TIME_DTSEC )
-    call HIST_in( V    (:,:,:), 'V',     'velocity v',             'm/s',    TIME_DTSEC )
-    call HIST_in( POTT (:,:,:), 'PT',    'potential temp.',        'K',      TIME_DTSEC )
+    call HIST_in( W    (:,:,:), 'W',     'velocity w',             'm/s'    )
+    call HIST_in( U    (:,:,:), 'U',     'velocity u',             'm/s'    )
+    call HIST_in( V    (:,:,:), 'V',     'velocity v',             'm/s'    )
+    call HIST_in( POTT (:,:,:), 'PT',    'potential temp.',        'K'      )
 
-    call HIST_in( QDRY (:,:,:), 'QDRY',  'dry air',                'kg/kg',  TIME_DTSEC )
-    call HIST_in( QTOT (:,:,:), 'QTOT',  'total water',            'kg/kg',  TIME_DTSEC )
-    call HIST_in( QHYD (:,:,:), 'QHYD',  'total hydrometeors',     'kg/kg',  TIME_DTSEC )
-    call HIST_in( QLIQ (:,:,:), 'QLIQ',  'total liquid water',     'kg/kg',  TIME_DTSEC )
-    call HIST_in( QICE (:,:,:), 'QICE',  'total ice water',        'kg/kg',  TIME_DTSEC )
+    call HIST_in( QDRY (:,:,:), 'QDRY',  'dry air',                'kg/kg'  )
+    call HIST_in( QTOT (:,:,:), 'QTOT',  'total water',            'kg/kg'  )
+    call HIST_in( QHYD (:,:,:), 'QHYD',  'total hydrometeors',     'kg/kg'  )
+    call HIST_in( QLIQ (:,:,:), 'QLIQ',  'total liquid water',     'kg/kg'  )
+    call HIST_in( QICE (:,:,:), 'QICE',  'total ice water',        'kg/kg'  )
 
-    call HIST_in( LWP  (:,:),   'LWP',   'liquid water path',      'g/m2',   TIME_DTSEC )
-    call HIST_in( IWP  (:,:),   'IWP',   'ice    water path',      'g/m2',   TIME_DTSEC )
+    call HIST_in( LWP  (:,:),   'LWP',   'liquid water path',      'g/m2'   )
+    call HIST_in( IWP  (:,:),   'IWP',   'ice    water path',      'g/m2'   )
 
-    call HIST_in( RTOT (:,:,:), 'RTOT',  'Total gas constant',     'J/kg/K', TIME_DTSEC )
-    call HIST_in( CPTOT(:,:,:), 'CPTOT', 'Total heat capacity',    'J/kg/K', TIME_DTSEC )
-    call HIST_in( PRES (:,:,:), 'PRES',  'pressure',               'Pa',     TIME_DTSEC )
-    call HIST_in( TEMP (:,:,:), 'T',     'temperature',            'K',      TIME_DTSEC )
+    call HIST_in( RTOT (:,:,:), 'RTOT',  'Total gas constant',     'J/kg/K' )
+    call HIST_in( CPTOT(:,:,:), 'CPTOT', 'Total heat capacity',    'J/kg/K' )
+    call HIST_in( PRES (:,:,:), 'PRES',  'pressure',               'Pa'     )
+    call HIST_in( TEMP (:,:,:), 'T',     'temperature',            'K'      )
 
-    call HIST_in( POTL (:,:,:), 'LWPT',  'liq. potential temp.',   'K',      TIME_DTSEC )
-    call HIST_in( RH   (:,:,:), 'RH',    'relative humidity',      '%',      TIME_DTSEC )
-    call HIST_in( RHL  (:,:,:), 'RHL',   'relative humidity(liq)', '%',      TIME_DTSEC )
-    call HIST_in( RHI  (:,:,:), 'RHI',   'relative humidity(ice)', '%',      TIME_DTSEC )
+    call HIST_in( POTL (:,:,:), 'LWPT',  'liq. potential temp.',   'K'      )
+    call HIST_in( RH   (:,:,:), 'RH',    'relative humidity',      '%'      )
+    call HIST_in( RHL  (:,:,:), 'RHL',   'relative humidity(liq)', '%'      )
+    call HIST_in( RHI  (:,:,:), 'RHI',   'relative humidity(ice)', '%'      )
 
-    call HIST_in( VOR  (:,:,:), 'VOR',   'vertical vorticity',     '1/s',    TIME_DTSEC )
-    call HIST_in( DIV  (:,:,:), 'DIV',   'divergence',             '1/s',    TIME_DTSEC )
-    call HIST_in( HDIV (:,:,:), 'HDIV',  'horizontal divergence',  '1/s',    TIME_DTSEC )
+    call HIST_in( VOR  (:,:,:), 'VOR',   'vertical vorticity',     '1/s'    )
+    call HIST_in( DIV  (:,:,:), 'DIV',   'divergence',             '1/s'    )
+    call HIST_in( HDIV (:,:,:), 'HDIV',  'horizontal divergence',  '1/s'    )
 
-    call HIST_in( DENS_PRIM(:,:,:), 'DENS_PRIM', 'horiz. deviation of density',    'kg/m3', TIME_DTSEC )
-    call HIST_in( W_PRIM   (:,:,:), 'W_PRIM',    'horiz. deviation of w',          'm/s',   TIME_DTSEC )
-    call HIST_in( U_PRIM   (:,:,:), 'U_PRIM',    'horiz. deviation of u',          'm/s',   TIME_DTSEC )
-    call HIST_in( V_PRIM   (:,:,:), 'V_PRIM',    'horiz. deviation of v',          'm/s',   TIME_DTSEC )
-    call HIST_in( POTT_PRIM(:,:,:), 'PT_PRIM',   'horiz. deviation of pot. temp.', 'K',     TIME_DTSEC )
-    call HIST_in( W_PRIM2  (:,:,:), 'W_PRIM2',   'variance of w',                  'm2/s2', TIME_DTSEC )
-    call HIST_in( PT_W_PRIM(:,:,:), 'PT_W_PRIM', 'resolved scale heat flux',       'W/s',   TIME_DTSEC )
-    call HIST_in( W_PRIM3  (:,:,:), 'W_PRIM3',   'skewness of w',                  'm3/s3', TIME_DTSEC )
-    call HIST_in( TKE_RS   (:,:,:), 'TKE_RS',    'resolved scale TKE',             'm2/s2', TIME_DTSEC )
+    call HIST_in( DENS_PRIM(:,:,:), 'DENS_PRIM', 'horiz. deviation of density',    'kg/m3' )
+    call HIST_in( W_PRIM   (:,:,:), 'W_PRIM',    'horiz. deviation of w',          'm/s'   )
+    call HIST_in( U_PRIM   (:,:,:), 'U_PRIM',    'horiz. deviation of u',          'm/s'   )
+    call HIST_in( V_PRIM   (:,:,:), 'V_PRIM',    'horiz. deviation of v',          'm/s'   )
+    call HIST_in( POTT_PRIM(:,:,:), 'PT_PRIM',   'horiz. deviation of pot. temp.', 'K'     )
+    call HIST_in( W_PRIM2  (:,:,:), 'W_PRIM2',   'variance of w',                  'm2/s2' )
+    call HIST_in( PT_W_PRIM(:,:,:), 'PT_W_PRIM', 'resolved scale heat flux',       'W/s'   )
+    call HIST_in( W_PRIM3  (:,:,:), 'W_PRIM3',   'skewness of w',                  'm3/s3' )
+    call HIST_in( TKE_RS   (:,:,:), 'TKE_RS',    'resolved scale TKE',             'm2/s2' )
 
-    call HIST_in( ENGT (:,:,:), 'ENGT',  'total energy',           'J/m3',   TIME_DTSEC )
-    call HIST_in( ENGP (:,:,:), 'ENGP',  'potential energy',       'J/m3',   TIME_DTSEC )
-    call HIST_in( ENGK (:,:,:), 'ENGK',  'kinetic energy',         'J/m3',   TIME_DTSEC )
-    call HIST_in( ENGI (:,:,:), 'ENGI',  'internal energy',        'J/m3',   TIME_DTSEC )
+    call HIST_in( ENGT (:,:,:), 'ENGT',  'total energy',           'J/m3'   )
+    call HIST_in( ENGP (:,:,:), 'ENGP',  'potential energy',       'J/m3'   )
+    call HIST_in( ENGK (:,:,:), 'ENGK',  'kinetic energy',         'J/m3'   )
+    call HIST_in( ENGI (:,:,:), 'ENGI',  'internal energy',        'J/m3'   )
 
     return
   end subroutine ATMOS_vars_history

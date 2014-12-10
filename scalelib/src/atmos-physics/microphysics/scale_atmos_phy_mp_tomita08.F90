@@ -409,7 +409,7 @@ contains
 
     ! detailed tendency monitor
     do ip = 1, w_nmax
-       call HIST_reg( w_histid(ip), w_zinterp(ip), w_name(ip), w_desc(ip), w_unit(ip), ndim=3, dt = TIME_DTSEC_ATMOS_PHY_MP )
+       call HIST_reg( w_histid(ip), w_zinterp(ip), w_name(ip), w_desc(ip), w_unit(ip), ndim=3 )
     enddo
 
     return
@@ -523,10 +523,10 @@ contains
                                    DENS  (:,:,:)    ) ! [IN]
 
     if ( history_flag ) then
-       call HIST_in( vterm(:,:,:,I_QR), 'Vterm_QR', 'terminal velocity of QR', 'm/s', dt )
-       call HIST_in( vterm(:,:,:,I_QI), 'Vterm_QI', 'terminal velocity of QI', 'm/s', dt )
-       call HIST_in( vterm(:,:,:,I_QS), 'Vterm_QS', 'terminal velocity of QS', 'm/s', dt )
-       call HIST_in( vterm(:,:,:,I_QG), 'Vterm_QG', 'terminal velocity of QG', 'm/s', dt )
+       call HIST_in( vterm(:,:,:,I_QR), 'Vterm_QR', 'terminal velocity of QR', 'm/s' )
+       call HIST_in( vterm(:,:,:,I_QI), 'Vterm_QI', 'terminal velocity of QI', 'm/s' )
+       call HIST_in( vterm(:,:,:,I_QS), 'Vterm_QS', 'terminal velocity of QS', 'm/s' )
+       call HIST_in( vterm(:,:,:,I_QG), 'Vterm_QG', 'terminal velocity of QG', 'm/s' )
     endif
 
     !##### END MP Main #####
@@ -570,8 +570,7 @@ contains
     use scale_time, only: &
        dt => TIME_DTSEC_ATMOS_PHY_MP
     use scale_history, only: &
-       HIST_put, &
-       HIST_in
+       HIST_put
     use scale_atmos_thermodyn, only: &
        THERMODYN_temp_pres_E => ATMOS_THERMODYN_temp_pres_E
     use scale_atmos_saturation, only: &
@@ -1340,7 +1339,7 @@ contains
 !          if( IO_L ) write(IO_FID_LOG,*) w_name(ip), "MAX/MIN:", &
 !                     maxval(work3D(KS:KE,IS:IE,JS:JE)), minval(work3D(KS:KE,IS:IE,JS:JE))
 
-          call HIST_put( w_histid(ip), work3D(:,:,:), dt, w_zinterp(ip) )
+          call HIST_put( w_histid(ip), work3D(:,:,:), w_zinterp(ip) )
        endif
     enddo
 

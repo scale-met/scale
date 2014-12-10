@@ -113,7 +113,7 @@ contains
                            URBAN_TEMP_t(:,:)  ) ! [OUT]
 
        if ( history_flag ) then
-          call HIST_in( URBAN_TEMP_t(:,:), 'URBAN_TEMP_t', 'SST tendency', 'K', dt )
+          call HIST_in( URBAN_TEMP_t(:,:), 'URBAN_TEMP_t', 'SST tendency', 'K' )
        endif
 
     endif

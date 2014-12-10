@@ -30,8 +30,7 @@ module mod_user
      ATMOS_BOUNDARY_var
   use mod_atmos_vars
   use scale_history, only: &
-      HIST_reg,             &
-      HIST_in
+     HIST_in
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -56,7 +55,7 @@ module mod_user
   !
   logical, private :: USER_do  = .false. !< do user step?
   logical, private :: CONST_MOMX = .false.         ! assume constant momentum-x
-  integer, private :: NUM_RELAX_GRIDS = 10        ! num of relaxation grid   
+  integer, private :: NUM_RELAX_GRIDS = 10        ! num of relaxation grid
   real(RP), private :: UINIT  = 0.0_RP
   real(RP), private :: UEND   = 5.0_RP
   real(RP), private :: FRONT_OFFSET   = 1000.0_RP
@@ -178,7 +177,6 @@ contains
     real(RP) :: mini, diff, dist1, dist2
     real(RP) :: fact_A, fact_B
 
-    integer  :: id_dens, id_velx
     logical  :: zintp
     !---------------------------------------------------------------------------
 
@@ -186,10 +184,8 @@ contains
        call PRC_MPIstop
     endif
 
-    call HIST_reg( id_dens, zintp, 'BND_DENS', 'boundary_dens', 'kg/m3', ndim=3 )
-    call HIST_reg( id_velx, zintp, 'BND_VELX', 'boundary_velx', 'm/s',   ndim=3 )
-    call HIST_in( ATMOS_BOUNDARY_var(:,:,:,I_BND_DENS), 'BND_DENS', 'boundary_dens', 'kg/m3', TIME_DTSEC )
-    call HIST_in( ATMOS_BOUNDARY_var(:,:,:,I_BND_VELX), 'BND_VELX', 'boundary_velx', 'm/s',   TIME_DTSEC )
+    call HIST_in( ATMOS_BOUNDARY_var(:,:,:,I_BND_DENS), 'BND_DENS', 'boundary_dens', 'kg/m3' )
+    call HIST_in( ATMOS_BOUNDARY_var(:,:,:,I_BND_VELX), 'BND_VELX', 'boundary_velx', 'm/s'   )
 
     front_posi = front_posi + UEND * TIME_DTSEC
     if( IO_L ) write(IO_FID_LOG,*) '*** front position', front_posi

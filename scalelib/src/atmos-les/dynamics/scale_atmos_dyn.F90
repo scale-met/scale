@@ -575,10 +575,10 @@ contains
        enddo
        enddo
 #ifdef HIST_TEND
-       call HIST_in( RHOQ_tp(:,:,:,iq), trim(AQ_NAME(iq))//'_t_phys', &
-                     'tendency of '//trim(AQ_NAME(iq))//' due to physics', 'kg/kg/s', DTSEC )
-       call HIST_in( damp_t, trim(AQ_NAME(iq))//'_t_damp', &
-                     'tendency of '//trim(AQ_NAME(iq))//' due to rayleigh damping', 'kg/kg/s', DTSEC )
+       call HIST_in(RHOQ_tp(:,:,:,iq), trim(AQ_NAME(iq))//'_t_phys',                         &
+                    'tendency of '//trim(AQ_NAME(iq))//' due to physics',          'kg/kg/s' )
+       call HIST_in(damp_t,            trim(AQ_NAME(iq))//'_t_damp',                         &
+                    'tendency of '//trim(AQ_NAME(iq))//' due to rayleigh damping', 'kg/kg/s' )
 #endif
        do j = JS, JE
        do i = IS, IE
@@ -647,10 +647,8 @@ contains
        enddo
        enddo
 #ifdef HIST_TEND
-       call HIST_in(DENS_tp, 'DENS_t_phys', 'tendency of dencity due to physics', &
-                            'kg/m3/s', DTSEC_ATMOS_DYN)
-       call HIST_in(damp_t, 'DENS_t_damp', 'tendency of dencity due to rayleigh damping', &
-                            'kg/m3/s', DTSEC_ATMOS_DYN)
+       call HIST_in(DENS_tp, 'DENS_t_phys', 'tendency of dencity due to physics',          'kg/m3/s' )
+       call HIST_in(damp_t,  'DENS_t_damp', 'tendency of dencity due to rayleigh damping', 'kg/m3/s' )
 #endif
 
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
@@ -683,10 +681,8 @@ contains
        enddo
        enddo
 #ifdef HIST_TEND
-       call HIST_in(MOMZ_tp, 'MOMZ_t_phys', 'tendency of momentum z due to physics', &
-                            'kg/m2/s2', DTSEC_ATMOS_DYN, zdim='half')
-       call HIST_in(damp_t, 'MOMZ_t_damp', 'tendency of momentum z due to rayleigh damping', &
-                            'kg/m2/s2', DTSEC_ATMOS_DYN, zdim='half')
+       call HIST_in(MOMZ_tp, 'MOMZ_t_phys', 'tendency of momentum z due to physics',          'kg/m2/s2', zdim='half' )
+       call HIST_in(damp_t,  'MOMZ_t_damp', 'tendency of momentum z due to rayleigh damping', 'kg/m2/s2', zdim='half' )
 #endif
 
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
@@ -713,10 +709,8 @@ contains
        enddo
        enddo
 #ifdef HIST_TEND
-       call HIST_in(MOMX_tp, 'MOMX_t_phys', 'tendency of momentum x due to physics', &
-                            'kg/m2/s2', DTSEC_ATMOS_DYN, xdim='half')
-       call HIST_in(damp_t, 'MOMX_t_damp', 'tendency of momentum x due to rayleigh damping', &
-                            'kg/m2/s2', DTSEC_ATMOS_DYN, xdim='half')
+       call HIST_in(MOMX_tp, 'MOMX_t_phys', 'tendency of momentum x due to physics',          'kg/m2/s2', xdim='half' )
+       call HIST_in(damp_t,  'MOMX_t_damp', 'tendency of momentum x due to rayleigh damping', 'kg/m2/s2', xdim='half' )
 #endif
 
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
@@ -743,10 +737,8 @@ contains
        enddo
        enddo
 #ifdef HIST_TEND
-       call HIST_in(MOMY_tp, 'MOMY_t_phys', 'tendency of momentum y due to physics', &
-                            'kg/m2/s2', DTSEC_ATMOS_DYN, ydim='half')
-       call HIST_in(damp_t, 'MOMY_t_damp', 'tendency of momentum y due to rayleigh damping', &
-                            'kg/m2/s2', DTSEC_ATMOS_DYN, ydim='half')
+       call HIST_in(MOMY_tp, 'MOMY_t_phys', 'tendency of momentum y due to physics',          'kg/m2/s2', ydim='half' )
+       call HIST_in(damp_t,  'MOMY_t_damp', 'tendency of momentum y due to rayleigh damping', 'kg/m2/s2', ydim='half' )
 #endif
 
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
@@ -773,10 +765,8 @@ contains
        enddo
        enddo
 #ifdef HIST_TEND
-       call HIST_in(RHOT_tp, 'RHOT_t_phys', 'tendency of rho*theta temperature due to physics', &
-                            'K kg/m3/s', DTSEC_ATMOS_DYN)
-       call HIST_in(damp_t, 'RHOT_t_damp', 'tendency of rho*theta temperature due to rayleigh damping', &
-                            'K kg/m3/s', DTSEC_ATMOS_DYN)
+       call HIST_in(RHOT_tp, 'RHOT_t_phys', 'tendency of rho*theta temperature due to physics',          'K kg/m3/s' )
+       call HIST_in(damp_t,  'RHOT_t_damp', 'tendency of rho*theta temperature due to rayleigh damping', 'K kg/m3/s' )
 #endif
 
        do j = JS, JE
@@ -808,7 +798,7 @@ contains
        call PROF_rapend  ("DYN Tendency", 2)
 
        call PROF_rapstart("DYN Numfilter", 2)
-    
+
        dt = real(DTSEC_ATMOS_DYN,kind=RP)
 
        !-----< prepare numerical diffusion coefficient >-----
@@ -1125,19 +1115,13 @@ contains
        call PROF_rapend  ("DYN RK", 2)
 
 #ifdef CHECK_MASS
-       call HIST_in(mflx_hi(:,:,:,ZDIR), 'MFLXZ', 'momentum flux of z-direction', &
-                                         'kg/m2/s', dt, zdim='half'                                       )
-       call HIST_in(mflx_hi(:,:,:,XDIR), 'MFLXX', 'momentum flux of x-direction', &
-                                         'kg/m2/s', dt, xdim='half'                                       )
-       call HIST_in(mflx_hi(:,:,:,YDIR), 'MFLXY', 'momentum flux of y-direction', &
-                                         'kg/m2/s', dt, ydim='half'                                       )
+       call HIST_in(mflx_hi(:,:,:,ZDIR), 'MFLXZ', 'momentum flux of z-direction', 'kg/m2/s', zdim='half' )
+       call HIST_in(mflx_hi(:,:,:,XDIR), 'MFLXX', 'momentum flux of x-direction', 'kg/m2/s', xdim='half' )
+       call HIST_in(mflx_hi(:,:,:,YDIR), 'MFLXY', 'momentum flux of y-direction', 'kg/m2/s', ydim='half' )
 
-       call HIST_in(tflx_hi(:,:,:,ZDIR), 'TFLXZ', 'potential temperature flux of z-direction', &
-                                         'K*kg/m2/s', dt, zdim='half'                                                  )
-       call HIST_in(tflx_hi(:,:,:,XDIR), 'TFLXX', 'potential temperature flux of x-direction', &
-                                         'K*kg/m2/s', dt, xdim='half'                                                  )
-       call HIST_in(tflx_hi(:,:,:,YDIR), 'TFLXY', 'potential temperature flux of y-direction', &
-                                         'K*kg/m2/s', dt, ydim='half'                                                  )
+       call HIST_in(tflx_hi(:,:,:,ZDIR), 'TFLXZ', 'potential temperature flux of z-direction', 'K*kg/m2/s', zdim='half' )
+       call HIST_in(tflx_hi(:,:,:,XDIR), 'TFLXX', 'potential temperature flux of x-direction', 'K*kg/m2/s', xdim='half' )
+       call HIST_in(tflx_hi(:,:,:,YDIR), 'TFLXY', 'potential temperature flux of y-direction', 'K*kg/m2/s', ydim='half' )
 
        mflx_lb_total            = 0.0_RP
        mflx_lb_horizontal(:)    = 0.0_RP
@@ -1209,6 +1193,7 @@ contains
                            MPI_SUM,              &
                            MPI_COMM_WORLD,       &
                            ierr                  )
+
        if( IO_L ) write(IO_FID_LOG,'(A,1x,i1,1x,2PE24.17)') 'total mflx_lb:', step, allmflx_lb_total
 
        call MPI_Allreduce( mass_total,           &
@@ -1218,6 +1203,7 @@ contains
                            MPI_SUM,              &
                            MPI_COMM_WORLD,       &
                            ierr                  )
+
        if( IO_L ) write(IO_FID_LOG,'(A,1x,i1,1x,2PE24.17)') 'total mass   :', step, allmass_total
 
        call MPI_Allreduce( mass_total2,          &
@@ -1227,6 +1213,7 @@ contains
                            MPI_SUM,              &
                            MPI_COMM_WORLD,       &
                            ierr                  )
+
        if( IO_L ) write(IO_FID_LOG,'(A,1x,i1,1x,2PE24.17)') 'total mass2  :', step, allmass_total2
 
        call MPI_Allreduce( mflx_lb_horizontal(KS:KE),    &
@@ -1236,8 +1223,9 @@ contains
                            MPI_SUM,                      &
                            MPI_COMM_WORLD,               &
                            ierr                          )
-       call HIST_in(allmflx_lb_horizontal(:), 'ALLMOM_lb_hz', 'horizontally total momentum flux from lateral boundary', &
-                                                  'kg/m2/s', dt )
+
+       call HIST_in(allmflx_lb_horizontal(:), 'ALLMOM_lb_hz',                           &
+                    'horizontally total momentum flux from lateral boundary', 'kg/m2/s' )
 #endif
 
        do j  = JS, JE

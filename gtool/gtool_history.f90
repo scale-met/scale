@@ -44,6 +44,7 @@ module gtool_history
   public :: HistoryPutAxis
   public :: HistoryPutAssociatedCoordinates
   public :: HistorySetTAttr
+  public :: HistoryQuery
   public :: HistoryPut
   public :: HistoryWrite
   public :: HistoryWriteAll
@@ -81,16 +82,6 @@ module gtool_history
      module procedure HistoryPut3DNameDP
      module procedure HistoryPut3DIdDP
   end interface HistoryPut
-
-  interface HistoryWrite
-     module procedure HistoryWriteSP
-     module procedure HistoryWriteDP
-  end interface HistoryWrite
-
-  interface HistoryWriteAll
-     module procedure HistoryWriteAllSP
-     module procedure HistoryWriteAllDP
-  end interface HistoryWriteAll
 
   interface HistoryGet
      module procedure HistoryGet1DSP
@@ -136,11 +127,14 @@ module gtool_history
   !
   !++ Private parameters & variables
   !
-  character(len=File_HMID) :: HISTORY_TITLE
-  character(len=File_HMID) :: HISTORY_SOURCE
-  character(len=File_HMID) :: HISTORY_INSTITUTION
-  character(len=File_HMID) :: HISTORY_TIME_UNITS
-  character(len=File_HMID) :: HISTORY_TIME_SINCE
+  character(len=File_HMID)   :: HISTORY_TITLE
+  character(len=File_HMID)   :: HISTORY_SOURCE
+  character(len=File_HMID)   :: HISTORY_INSTITUTION
+  character(len=File_HMID)   :: HISTORY_TIME_UNITS
+  character(len=File_HMID)   :: HISTORY_TIME_SINCE
+
+  logical                    :: HISTORY_OUTPUT_STEP0  = .false. !> output value of step=0?
+  logical                    :: HISTORY_ERROR_PUTMISS = .false. !> Abort if the value is never stored after last output?
 
   integer, parameter         :: History_req_limit = 1000 !> number limit for history item request
   character(len=File_HLONG)  :: History_req_basename(History_req_limit)
@@ -161,6 +155,7 @@ module gtool_history
   real(DP),                   allocatable :: History_varsum (:,:)
   integer,                    allocatable :: History_size   (:)
   real(DP),                   allocatable :: History_tstrsec(:)
+  real(DP),                   allocatable :: History_tlstsec(:)
   real(DP),                   allocatable :: History_tsumsec(:)
 
 
@@ -236,7 +231,9 @@ contains
          HISTORY_DEFAULT_TUNIT,     &
          HISTORY_DEFAULT_TAVERAGE,  &
          HISTORY_DEFAULT_ZINTERP,   &
-         HISTORY_DEFAULT_DATATYPE
+         HISTORY_DEFAULT_DATATYPE,  &
+         HISTORY_OUTPUT_STEP0,      &
+         HISTORY_ERROR_PUTMISS
 
     character(len=File_HLONG)  :: BASENAME  !> file base name
     character(len=File_HSHORT) :: ITEM      !> name of history item
@@ -361,6 +358,7 @@ contains
     allocate( History_varsum (array_size,History_req_nmax) )
     allocate( History_size   (History_req_nmax) )
     allocate( History_tstrsec(History_req_nmax) )
+    allocate( History_tlstsec(History_req_nmax) )
     allocate( History_tsumsec(History_req_nmax) )
 
     if ( fid_conf > 0 ) rewind(fid_conf)
@@ -424,62 +422,64 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine HistoryAddVariable( &
-      varname, &
-      dims,    &
-      desc,    &
-      units,   &
-      dt,      &
-      options, &
-      itemid,  &
-      zinterp, &
-      existed  )
+       varname,  &
+       dims,     &
+       desc,     &
+       units,    &
+       time_now, &
+       id,       &
+       zinterp,  &
+       existed,  &
+       options   )
     use gtool_file, only: &
-         FileCreate, &
-         FileSetOption, &
-         FileAddVariable, &
-         FileSetTAttr, &
-         FilePutAxis, &
-         FilePutAssociatedCoordinates
+       FileCreate,      &
+       FileSetOption,   &
+       FileAddVariable, &
+       FileSetTAttr,    &
+       FilePutAxis,     &
+       FilePutAssociatedCoordinates
     implicit none
 
-    character(len=*), intent( in) :: varname
-    character(len=*), intent( in) :: dims(:)
-    character(len=*), intent( in) :: desc
-    character(len=*), intent( in) :: units
-    real(DP),         intent( in), optional :: dt !< update time interval
-    character(len=*), intent( in), optional :: options ! 'filetype1:key1=val1&filetype2:key2=val2&...'
-    integer,          intent(out), optional :: itemid
-    logical,          intent(out), optional :: zinterp
-    logical,          intent(out), optional :: existed
+    character(len=*), intent(in)  :: varname
+    character(len=*), intent(in)  :: dims(:)
+    character(len=*), intent(in)  :: desc
+    character(len=*), intent(in)  :: units
+    real(DP),         intent(in)  :: time_now
+    integer,          intent(out) :: id
+    logical,          intent(out) :: zinterp
+    logical,          intent(out) :: existed
+    character(len=*), intent(in), optional :: options ! 'filetype1:key1=val1&filetype2:key2=val2&...'
 
     character(len=File_HMID) :: tunits
+
     logical :: fileexisted
-    integer :: id
     integer :: nmax, reqid
     integer :: n, m
     integer :: ic, ie, is, lo
+
     intrinsic size
     !---------------------------------------------------------------------------
+
+    existed = .false.
 
     !--- search existing item
     id = -1
     nmax = min( History_id_count, History_req_nmax )
     do n = 1, nmax
        if ( varname == History_item(n) ) then ! match existing item
-          if ( present(itemid)  ) itemid  = n
-          if ( present(zinterp) ) zinterp = History_zinterp(n)
-          if ( present(existed) ) existed = .true.
+          id      = n
+          zinterp = History_zinterp(n)
+          existed = .true.
           return
        endif
     enddo
 
-    if ( present(existed) ) existed = .false.
-
     if ( id < 0 ) then ! request-register matching check
+
        do n = 1, History_req_nmax
           if ( varname == History_req_item(n) ) then
-             reqid  = n
-             if ( History_req_basename(reqid) == '' ) exit
+             reqid = n
+             if( History_req_basename(reqid) == '' ) exit
              History_id_count = History_id_count + 1
              id = History_id_count
 
@@ -488,19 +488,25 @@ contains
                 tunits = HISTORY_TIME_UNITS
              else
                 tunits = trim(HISTORY_TIME_UNITS)//' since '//trim(HISTORY_TIME_SINCE)
-             end if
-             call FileCreate(History_fid(id), fileexisted,              & ! (out)
-                  trim(History_req_basename(reqid)),                    & ! (in)
-                  HISTORY_TITLE, HISTORY_SOURCE, HISTORY_INSTITUTION,   & ! (in)
-                  History_master, History_myrank, History_rankidx,      & ! (in)
-                  time_units = tunits                                   & ! (in)
-                  )
+             endif
+
+             call FileCreate( History_fid(id),                   & ! (out)
+                              fileexisted,                       & ! (out)
+                              trim(History_req_basename(reqid)), & ! (in)
+                              HISTORY_TITLE,                     & ! (in)
+                              HISTORY_SOURCE,                    & ! (in)
+                              HISTORY_INSTITUTION,               & ! (in)
+                              History_master,                    & ! (in)
+                              History_myrank,                    & ! (in)
+                              History_rankidx,                   & ! (in)
+                              time_units = tunits                ) ! (in)
 
              if ( .not. fileexisted ) then
+
                 if ( present(options) ) then
                    ic = -1 ! index of ':'
                    ie = -1 ! index of '='
-                   is = 1  ! start index
+                   is =  1 ! start index
                    lo = len_trim(options)
                    do m = 1, lo+1
                       if ( m == lo+1 .or. options(m:m) == '&' ) then
@@ -522,57 +528,50 @@ contains
                 endif
 
                 do m = 1, History_axis_count
-                   call FilePutAxis( &
-                        History_fid(id),                             & ! (in)
-                        History_axis(m)%name,  History_axis(m)%desc, & ! (in)
-                        History_axis(m)%units, History_axis(m)%dim,  & ! (in)
-                        History_axis(m)%type,  History_axis(m)%var   ) ! (in)
+                   call FilePutAxis( History_fid(id),                             & ! (in)
+                                     History_axis(m)%name,  History_axis(m)%desc, & ! (in)
+                                     History_axis(m)%units, History_axis(m)%dim,  & ! (in)
+                                     History_axis(m)%type,  History_axis(m)%var   ) ! (in)
                 enddo
 
                 do m = 1, History_assoc_count
-                   call FilePutAssociatedCoordinates( &
-                        History_fid(id),                                 & ! (in)
-                        History_assoc(m)%name, History_assoc(m)%desc,    & ! (in)
-                        History_assoc(m)%units,                          & ! (in)
-                        History_assoc(m)%dims(1:History_assoc(m)%ndims), & ! (in)
-                        History_assoc(m)%type, History_assoc(m)%var      ) ! (in)
+                   call FilePutAssociatedCoordinates( History_fid(id),                                 & ! (in)
+                                                      History_assoc(m)%name, History_assoc(m)%desc,    & ! (in)
+                                                      History_assoc(m)%units,                          & ! (in)
+                                                      History_assoc(m)%dims(1:History_assoc(m)%ndims), & ! (in)
+                                                      History_assoc(m)%type, History_assoc(m)%var      ) ! (in)
                 enddo
 
-             end if
+             endif
 
+             History_item    (id) = varname
+             History_tintsec (id) = History_req_tintsec(reqid)
+             History_tavg    (id) = History_req_tavg   (reqid)
+             History_zinterp (id) = History_req_zinterp(reqid)
 
-             History_item   (id) = varname
-
-             if ( present(dt) ) then
-                History_tintsec(id) = max(History_req_tintsec(reqid), dt)
+             History_varsum(:,id) = 0.D0
+             if ( HISTORY_OUTPUT_STEP0 ) then
+                History_tstrsec(id) = -History_tintsec(id)
              else
-                History_tintsec(id) = History_req_tintsec(reqid)
-             end if
-             History_tavg   (id) = History_req_tavg   (reqid)
-             History_zinterp(id) = History_req_zinterp(reqid)
+                History_tstrsec(id) = time_now
+             endif
+             History_tlstsec (id) = History_tstrsec(id)
+             History_tsumsec (id) = 0.D0
 
-             History_varsum(:,id) =  0.D0
-             History_tstrsec (id) = -1.D0
-             History_tsumsec (id) =  0.D0
-
-             call FileAddVariable( &
-                  History_vid(id),            & ! (out)
-                  History_fid(id),            & ! (in)
-                  varname, desc, units, dims, & ! (in)
-                  History_req_dtype(reqid),   & ! (in)
-                  History_tintsec(id),        & ! (in)
-                  History_tavg   (id)         & ! (in)
-                  )
+             call FileAddVariable( History_vid(id),            & ! (out)
+                                   History_fid(id),            & ! (in)
+                                   varname, desc, units, dims, & ! (in)
+                                   History_req_dtype(reqid),   & ! (in)
+                                   History_tintsec(id),        & ! (in)
+                                   History_tavg   (id)         ) ! (in)
 
              if ( .not. fileexisted ) then
                 do m = 1, History_axis_count
                    if ( History_axis(m)%down ) then
-                      call FileSetTAttr( &
-                           History_fid(id), History_axis(m)%name, &
-                           "positive", "down" )
-                   end if
-                end do
-             end if
+                      call FileSetTAttr( History_fid(id), History_axis(m)%name, "positive", "down" )
+                   endif
+                enddo
+             endif
 
              write(message,*) '*** [HIST] Item registration No.= ', id
              call Log('I', message)
@@ -590,12 +589,13 @@ contains
              call Log('I', message)
              call Log('I', '')
 
+             zinterp = History_zinterp(id)
+
              exit
           endif
        enddo
-    endif
 
-    if ( present(itemid) ) itemid = id
+    endif
 
     return
   end subroutine HistoryAddVariable
@@ -654,7 +654,7 @@ contains
           History_axis(History_axis_count)%down = down
        else
           History_axis(History_axis_count)%down = .false.
-       end if
+       endif
     else
        write(message,*) 'xxx Number of axis exceeds the limit.'
        call Log('E', message)
@@ -713,7 +713,7 @@ contains
           History_axis(History_axis_count)%down = down
        else
           History_axis(History_axis_count)%down = .false.
-       end if
+       endif
     else
        write(message,*) 'xxx Number of axis exceeds the limit.'
        call Log('E', message)
@@ -1152,40 +1152,65 @@ contains
 
   !-----------------------------------------------------------------------------
   ! HistorySetTAttr
-  !-----------------------------------------------------------------------------
   subroutine HistorySetTAttr( &
        varname, &
        key,     &
        val      )
     use gtool_file, only: &
-         FileSetTAttr
+       FileSetTAttr
     implicit none
+
     character(len=*), intent(in) :: varname
     character(len=*), intent(in) :: key
     character(len=*), intent(in) :: val
 
     integer :: n
+    !---------------------------------------------------------------------------
 
     do n = 1, History_id_count
-       call FileSetTAttr( &
-            History_fid(n), varname, & ! (in)
-            key, val                 ) ! (in)
+       call FileSetTAttr( History_fid(n), & ! (in)
+                          varname,        & ! (in)
+                          key,            & ! (in)
+                          val             ) ! (in)
     enddo
 
   end subroutine HistorySetTAttr
 
   !-----------------------------------------------------------------------------
-  ! interface HistoryPut
-  !-----------------------------------------------------------------------------
-  subroutine HistoryPut1DNameSP( &
-       varname, &
-       var,     &
-       dt       )
+  ! HistoryQuery
+  subroutine HistoryQuery( &
+       itemid,    &
+       time_next, &
+       answer     )
     implicit none
 
-    character(len=*), intent(in)           :: varname
-    real(SP),         intent(in)           :: var(:)
-    real(DP),         intent(in)           :: dt
+    integer,  intent(in)  :: itemid
+    real(DP), intent(in)  :: time_next
+    logical,  intent(out) :: answer
+    !---------------------------------------------------------------------------
+
+    answer = .false.
+
+    if    ( History_tavg(itemid) ) then
+       answer = .true.
+    elseif( time_next - History_tstrsec(itemid) - History_tintsec(itemid) > -eps ) then
+       answer = .true.
+    endif
+
+    return
+  end subroutine HistoryQuery
+
+  !-----------------------------------------------------------------------------
+  ! interface HistoryPut(by NAME)
+  subroutine HistoryPut1DNameSP( &
+       varname,  &
+       time_now, &
+       var       )
+    implicit none
+
+    character(len=*), intent(in) :: varname
+    real(DP),         intent(in) :: time_now
+    real(SP),         intent(in) :: var(:)
 
     integer :: itemid, n
     !---------------------------------------------------------------------------
@@ -1199,56 +1224,69 @@ contains
        endif
     enddo
 
-    call HistoryPut1DIdSP(itemid, var, dt)
+    call HistoryPut1DIdSP(itemid, time_now, var)
 
     return
   end subroutine HistoryPut1DNameSP
+
+  !-----------------------------------------------------------------------------
+  ! interface HistoryPut(by ID)
   subroutine HistoryPut1DIdSP( &
-       itemid, &
-       var,    &
-       dt      )
+       itemid,    &
+       time_next, &
+       var        )
     implicit none
 
-    integer,         intent(in)            :: itemid
-    real(SP),        intent(in)            :: var(:)
-    real(DP),        intent(in)            :: dt
+    integer,  intent(in) :: itemid
+    real(DP), intent(in) :: time_next
+    real(SP), intent(in) :: var(:)
 
-    integer :: ijk(1), idx
-    integer :: i
+    real(DP) :: dt
+    integer  :: ijk(1), idx
+    integer  :: i
     intrinsic shape
     !---------------------------------------------------------------------------
 
     if ( itemid < 0 ) return
 
     ijk = shape(var)
+    dt  = time_next - History_tlstsec(itemid)
+
+    if ( dt < eps ) then
+       write(message,*) 'xxx History variable was put two times before output!: ', &
+                        trim(History_item(itemid))
+       call Log('E', message)
+    endif
 
     if ( History_tavg(itemid) ) then
        do i = 1, ijk(1)
           idx = i
-          History_varsum(idx,itemid) = &
-                  History_varsum(idx,itemid) &
-                  + var(i) * dt
+
+          History_varsum(idx,itemid) = History_varsum(idx,itemid) + var(i) * dt
        enddo
     else
        do i = 1, ijk(1)
           idx = i
+
           History_varsum(idx,itemid) = var(i)
        enddo
     endif
+
     History_size   (itemid) = idx
+    History_tlstsec(itemid) = time_next
     History_tsumsec(itemid) = History_tsumsec(itemid) + dt
 
     return
   end subroutine HistoryPut1DIdSP
   subroutine HistoryPut1DNameDP( &
-       varname, &
-       var,     &
-       dt       )
+       varname,  &
+       time_now, &
+       var       )
     implicit none
 
-    character(len=*), intent(in)           :: varname
-    real(DP),         intent(in)           :: var(:)
-    real(DP),         intent(in)           :: dt
+    character(len=*), intent(in) :: varname
+    real(DP),         intent(in) :: time_now
+    real(DP),         intent(in) :: var(:)
 
     integer :: itemid, n
     !---------------------------------------------------------------------------
@@ -1262,56 +1300,69 @@ contains
        endif
     enddo
 
-    call HistoryPut1DIdDP(itemid, var, dt)
+    call HistoryPut1DIdDP(itemid, time_now, var)
 
     return
   end subroutine HistoryPut1DNameDP
+
+  !-----------------------------------------------------------------------------
+  ! interface HistoryPut(by ID)
   subroutine HistoryPut1DIdDP( &
-       itemid, &
-       var,    &
-       dt      )
+       itemid,    &
+       time_next, &
+       var        )
     implicit none
 
-    integer,         intent(in)            :: itemid
-    real(DP),        intent(in)            :: var(:)
-    real(DP),        intent(in)            :: dt
+    integer,  intent(in) :: itemid
+    real(DP), intent(in) :: time_next
+    real(DP), intent(in) :: var(:)
 
-    integer :: ijk(1), idx
-    integer :: i
+    real(DP) :: dt
+    integer  :: ijk(1), idx
+    integer  :: i
     intrinsic shape
     !---------------------------------------------------------------------------
 
     if ( itemid < 0 ) return
 
     ijk = shape(var)
+    dt  = time_next - History_tlstsec(itemid)
+
+    if ( dt < eps ) then
+       write(message,*) 'xxx History variable was put two times before output!: ', &
+                        trim(History_item(itemid))
+       call Log('E', message)
+    endif
 
     if ( History_tavg(itemid) ) then
        do i = 1, ijk(1)
           idx = i
-          History_varsum(idx,itemid) = &
-                  History_varsum(idx,itemid) &
-                  + var(i) * dt
+
+          History_varsum(idx,itemid) = History_varsum(idx,itemid) + var(i) * dt
        enddo
     else
        do i = 1, ijk(1)
           idx = i
+
           History_varsum(idx,itemid) = var(i)
        enddo
     endif
+
     History_size   (itemid) = idx
+    History_tlstsec(itemid) = time_next
     History_tsumsec(itemid) = History_tsumsec(itemid) + dt
 
     return
   end subroutine HistoryPut1DIdDP
   subroutine HistoryPut2DNameSP( &
-       varname, &
-       var,     &
-       dt       )
+       varname,  &
+       time_now, &
+       var       )
     implicit none
 
-    character(len=*), intent(in)           :: varname
-    real(SP),         intent(in)           :: var(:,:)
-    real(DP),         intent(in)           :: dt
+    character(len=*), intent(in) :: varname
+    real(DP),         intent(in) :: time_now
+    real(SP),         intent(in) :: var(:,:)
 
     integer :: itemid, n
     !---------------------------------------------------------------------------
@@ -1325,60 +1376,73 @@ contains
        endif
     enddo
 
-    call HistoryPut2DIdSP(itemid, var, dt)
+    call HistoryPut2DIdSP(itemid, time_now, var)
 
     return
   end subroutine HistoryPut2DNameSP
+
+  !-----------------------------------------------------------------------------
+  ! interface HistoryPut(by ID)
   subroutine HistoryPut2DIdSP( &
-       itemid, &
-       var,    &
-       dt      )
+       itemid,    &
+       time_next, &
+       var        )
     implicit none
 
-    integer,         intent(in)            :: itemid
-    real(SP),        intent(in)            :: var(:,:)
-    real(DP),        intent(in)            :: dt
+    integer,  intent(in) :: itemid
+    real(DP), intent(in) :: time_next
+    real(SP), intent(in) :: var(:,:)
 
-    integer :: ijk(2), idx
-    integer :: i, j
+    real(DP) :: dt
+    integer  :: ijk(2), idx
+    integer  :: i, j
     intrinsic shape
     !---------------------------------------------------------------------------
 
     if ( itemid < 0 ) return
 
     ijk = shape(var)
+    dt  = time_next - History_tlstsec(itemid)
+
+    if ( dt < eps ) then
+       write(message,*) 'xxx History variable was put two times before output!: ', &
+                        trim(History_item(itemid))
+       call Log('E', message)
+    endif
 
     if ( History_tavg(itemid) ) then
        do j = 1, ijk(2)
        do i = 1, ijk(1)
           idx = j*ijk(i)+i
-          History_varsum(idx,itemid) = &
-                  History_varsum(idx,itemid) &
-                  + var(i,j) * dt
+
+          History_varsum(idx,itemid) = History_varsum(idx,itemid) + var(i,j) * dt
        enddo
        enddo
     else
        do j = 1, ijk(2)
        do i = 1, ijk(1)
           idx = j*ijk(i)+i
+
           History_varsum(idx,itemid) = var(i,j)
        enddo
        enddo
     endif
+
     History_size   (itemid) = idx
+    History_tlstsec(itemid) = time_next
     History_tsumsec(itemid) = History_tsumsec(itemid) + dt
 
     return
   end subroutine HistoryPut2DIdSP
   subroutine HistoryPut2DNameDP( &
-       varname, &
-       var,     &
-       dt       )
+       varname,  &
+       time_now, &
+       var       )
     implicit none
 
-    character(len=*), intent(in)           :: varname
-    real(DP),         intent(in)           :: var(:,:)
-    real(DP),         intent(in)           :: dt
+    character(len=*), intent(in) :: varname
+    real(DP),         intent(in) :: time_now
+    real(DP),         intent(in) :: var(:,:)
 
     integer :: itemid, n
     !---------------------------------------------------------------------------
@@ -1392,60 +1456,73 @@ contains
        endif
     enddo
 
-    call HistoryPut2DIdDP(itemid, var, dt)
+    call HistoryPut2DIdDP(itemid, time_now, var)
 
     return
   end subroutine HistoryPut2DNameDP
+
+  !-----------------------------------------------------------------------------
+  ! interface HistoryPut(by ID)
   subroutine HistoryPut2DIdDP( &
-       itemid, &
-       var,    &
-       dt      )
+       itemid,    &
+       time_next, &
+       var        )
     implicit none
 
-    integer,         intent(in)            :: itemid
-    real(DP),        intent(in)            :: var(:,:)
-    real(DP),        intent(in)            :: dt
+    integer,  intent(in) :: itemid
+    real(DP), intent(in) :: time_next
+    real(DP), intent(in) :: var(:,:)
 
-    integer :: ijk(2), idx
-    integer :: i, j
+    real(DP) :: dt
+    integer  :: ijk(2), idx
+    integer  :: i, j
     intrinsic shape
     !---------------------------------------------------------------------------
 
     if ( itemid < 0 ) return
 
     ijk = shape(var)
+    dt  = time_next - History_tlstsec(itemid)
+
+    if ( dt < eps ) then
+       write(message,*) 'xxx History variable was put two times before output!: ', &
+                        trim(History_item(itemid))
+       call Log('E', message)
+    endif
 
     if ( History_tavg(itemid) ) then
        do j = 1, ijk(2)
        do i = 1, ijk(1)
           idx = j*ijk(i)+i
-          History_varsum(idx,itemid) = &
-                  History_varsum(idx,itemid) &
-                  + var(i,j) * dt
+
+          History_varsum(idx,itemid) = History_varsum(idx,itemid) + var(i,j) * dt
        enddo
        enddo
     else
        do j = 1, ijk(2)
        do i = 1, ijk(1)
           idx = j*ijk(i)+i
+
           History_varsum(idx,itemid) = var(i,j)
        enddo
        enddo
     endif
+
     History_size   (itemid) = idx
+    History_tlstsec(itemid) = time_next
     History_tsumsec(itemid) = History_tsumsec(itemid) + dt
 
     return
   end subroutine HistoryPut2DIdDP
   subroutine HistoryPut3DNameSP( &
-       varname, &
-       var,     &
-       dt       )
+       varname,  &
+       time_now, &
+       var       )
     implicit none
 
-    character(len=*), intent(in)           :: varname
-    real(SP),         intent(in)           :: var(:,:,:)
-    real(DP),         intent(in)           :: dt
+    character(len=*), intent(in) :: varname
+    real(DP),         intent(in) :: time_now
+    real(SP),         intent(in) :: var(:,:,:)
 
     integer :: itemid, n
     !---------------------------------------------------------------------------
@@ -1459,37 +1536,47 @@ contains
        endif
     enddo
 
-    call HistoryPut3DIdSP(itemid, var, dt)
+    call HistoryPut3DIdSP(itemid, time_now, var)
 
     return
   end subroutine HistoryPut3DNameSP
+
+  !-----------------------------------------------------------------------------
+  ! interface HistoryPut(by ID)
   subroutine HistoryPut3DIdSP( &
-       itemid, &
-       var,    &
-       dt      )
+       itemid,    &
+       time_next, &
+       var        )
     implicit none
 
-    integer,         intent(in)            :: itemid
-    real(SP),        intent(in)            :: var(:,:,:)
-    real(DP),        intent(in)            :: dt
+    integer,  intent(in) :: itemid
+    real(DP), intent(in) :: time_next
+    real(SP), intent(in) :: var(:,:,:)
 
-    integer :: ijk(3), idx
-    integer :: i, j, k
+    real(DP) :: dt
+    integer  :: ijk(3), idx
+    integer  :: i, j, k
     intrinsic shape
     !---------------------------------------------------------------------------
 
     if ( itemid < 0 ) return
 
     ijk = shape(var)
+    dt  = time_next - History_tlstsec(itemid)
+
+    if ( dt < eps ) then
+       write(message,*) 'xxx History variable was put two times before output!: ', &
+                        trim(History_item(itemid))
+       call Log('E', message)
+    endif
 
     if ( History_tavg(itemid) ) then
        do k = 1, ijk(3)
        do j = 1, ijk(2)
        do i = 1, ijk(1)
           idx = (k*ijk(2)+j)*ijk(1)+i
-          History_varsum(idx,itemid) = &
-                  History_varsum(idx,itemid) &
-                  + var(i,j,k) * dt
+
+          History_varsum(idx,itemid) = History_varsum(idx,itemid) + var(i,j,k) * dt
        enddo
        enddo
        enddo
@@ -1498,25 +1585,28 @@ contains
        do j = 1, ijk(2)
        do i = 1, ijk(1)
           idx = (k*ijk(2)+j)*ijk(1)+i
+
           History_varsum(idx,itemid) = var(i,j,k)
        enddo
        enddo
        enddo
     endif
+
     History_size   (itemid) = idx
+    History_tlstsec(itemid) = time_next
     History_tsumsec(itemid) = History_tsumsec(itemid) + dt
 
     return
   end subroutine HistoryPut3DIdSP
   subroutine HistoryPut3DNameDP( &
-       varname, &
-       var,     &
-       dt       )
+       varname,  &
+       time_now, &
+       var       )
     implicit none
 
-    character(len=*), intent(in)           :: varname
-    real(DP),         intent(in)           :: var(:,:,:)
-    real(DP),         intent(in)           :: dt
+    character(len=*), intent(in) :: varname
+    real(DP),         intent(in) :: time_now
+    real(DP),         intent(in) :: var(:,:,:)
 
     integer :: itemid, n
     !---------------------------------------------------------------------------
@@ -1530,37 +1620,47 @@ contains
        endif
     enddo
 
-    call HistoryPut3DIdDP(itemid, var, dt)
+    call HistoryPut3DIdDP(itemid, time_now, var)
 
     return
   end subroutine HistoryPut3DNameDP
+
+  !-----------------------------------------------------------------------------
+  ! interface HistoryPut(by ID)
   subroutine HistoryPut3DIdDP( &
-       itemid, &
-       var,    &
-       dt      )
+       itemid,    &
+       time_next, &
+       var        )
     implicit none
 
-    integer,         intent(in)            :: itemid
-    real(DP),        intent(in)            :: var(:,:,:)
-    real(DP),        intent(in)            :: dt
+    integer,  intent(in) :: itemid
+    real(DP), intent(in) :: time_next
+    real(DP), intent(in) :: var(:,:,:)
 
-    integer :: ijk(3), idx
-    integer :: i, j, k
+    real(DP) :: dt
+    integer  :: ijk(3), idx
+    integer  :: i, j, k
     intrinsic shape
     !---------------------------------------------------------------------------
 
     if ( itemid < 0 ) return
 
     ijk = shape(var)
+    dt  = time_next - History_tlstsec(itemid)
+
+    if ( dt < eps ) then
+       write(message,*) 'xxx History variable was put two times before output!: ', &
+                        trim(History_item(itemid))
+       call Log('E', message)
+    endif
 
     if ( History_tavg(itemid) ) then
        do k = 1, ijk(3)
        do j = 1, ijk(2)
        do i = 1, ijk(1)
           idx = (k*ijk(2)+j)*ijk(1)+i
-          History_varsum(idx,itemid) = &
-                  History_varsum(idx,itemid) &
-                  + var(i,j,k) * dt
+
+          History_varsum(idx,itemid) = History_varsum(idx,itemid) + var(i,j,k) * dt
        enddo
        enddo
        enddo
@@ -1569,353 +1669,282 @@ contains
        do j = 1, ijk(2)
        do i = 1, ijk(1)
           idx = (k*ijk(2)+j)*ijk(1)+i
+
           History_varsum(idx,itemid) = var(i,j,k)
        enddo
        enddo
        enddo
     endif
+
     History_size   (itemid) = idx
+    History_tlstsec(itemid) = time_next
     History_tsumsec(itemid) = History_tsumsec(itemid) + dt
 
     return
   end subroutine HistoryPut3DIdDP
 
   !-----------------------------------------------------------------------------
-  ! interface HistoryWrite
-  !-----------------------------------------------------------------------------
-  subroutine HistoryWriteSP( &
-       itemid, &
-       time, &
-       force )
+  ! HistoryWrite
+  subroutine HistoryWrite( &
+       itemid,  &
+       time_now )
     use dc_calendar, only: &
        CalendarSec2ymdhms
     use gtool_file, only: &
        FileWrite
     implicit none
 
-    integer, intent(in) :: itemid
-    real(SP), intent(in) :: time
-    logical, intent(in), optional :: force
+    integer,  intent(in) :: itemid
+    real(DP), intent(in) :: time_now
 
-    real(DP) :: stime, etime
+    integer  :: isize
+    real(DP) :: time_str, time_end
     logical, save :: firsttime = .true.
     !---------------------------------------------------------------------------
 
     if( History_id_count == 0 ) return
 
-    if (firsttime) then
+    if ( time_now - History_tstrsec(itemid) - History_tintsec(itemid) <= -eps ) then
+       return
+    endif
+
+    if ( History_tlstsec(itemid) - History_tstrsec(itemid) < eps ) then
+       write(message,*) 'xxx History variable was never put after the last output!: ', &
+                        trim(History_item(itemid))
+       if ( HISTORY_ERROR_PUTMISS ) then
+          call Log('E', message)
+       else
+          call Log('I', message)
+       endif
+    endif
+
+    isize = History_size(itemid)
+
+    if ( History_tavg(itemid) ) then
+       History_varsum(1:isize,itemid) = History_varsum(1:isize,itemid) / History_tsumsec(itemid)
+    endif
+
+    if ( firsttime ) then
        firsttime = .false.
+
        call HistoryOutputList
-    endif
 
-    if ( History_tsumsec(itemid) - History_tintsec(itemid) <= -eps ) then
-       if ( present(force) ) then
-          if ( .not. force ) return
-       else
-          return
+       if ( HISTORY_OUTPUT_STEP0 ) then
+          History_tstrsec(itemid) = time_now
        endif
     endif
 
-    if ( History_tsumsec(itemid) > eps ) then
-       if ( History_tavg(itemid) ) then
-          History_varsum(1:History_size(itemid),itemid) = &
-               History_varsum(1:History_size(itemid),itemid) / History_tsumsec(itemid)
-       endif
+    time_str = History_tstrsec(itemid)
+    time_end = time_now
 
-       if ( History_tstrsec(itemid) < 0.D0 ) then ! first time
-          stime = time - History_tsumsec(itemid)
-          etime = time
-       else
-          stime = History_tstrsec(itemid)
-          etime = History_tstrsec(itemid) + History_tsumsec(itemid) ! neary equal to time
-       endif
+    ! convert time units
+    call CalendarSec2ymdhms( time_str, time_str, HISTORY_TIME_UNITS )
+    call CalendarSec2ymdhms( time_end, time_end, HISTORY_TIME_UNITS )
 
-       ! convert time units
-       call CalendarSec2ymdhms( stime, stime, HISTORY_TIME_UNITS )
-       call CalendarSec2ymdhms( etime, etime, HISTORY_TIME_UNITS )
-
-       call FileWrite( History_vid(itemid),                & ! vid
-            History_varsum(1:History_size(itemid),itemid), & ! data
-            stime, etime                                   ) ! start & end time
-
-    endif
+    call FileWrite( History_vid   (itemid),         & ! id
+                    History_varsum(1:isize,itemid), & ! data
+                    time_str,                       & ! start time
+                    time_end                        ) ! end   time
 
     History_varsum(:,itemid) = 0.0_DP
-    History_tstrsec (itemid) = time
+    History_tstrsec (itemid) = time_now
+    History_tlstsec (itemid) = time_now
     History_tsumsec (itemid) = 0.0_DP
 
     return
-  end subroutine HistoryWriteSP
-  subroutine HistoryWriteDP( &
-       itemid, &
-       time, &
-       force )
-    use dc_calendar, only: &
-       CalendarSec2ymdhms
-    use gtool_file, only: &
-       FileWrite
+  end subroutine HistoryWrite
+
+  !-----------------------------------------------------------------------------
+  ! HistoryWritaAll
+  subroutine HistoryWriteAll( &
+       time_now )
     implicit none
 
-    integer, intent(in) :: itemid
-    real(DP), intent(in) :: time
-    logical, intent(in), optional :: force
+    real(DP), intent(in) :: time_now
 
-    real(DP) :: stime, etime
-    logical, save :: firsttime = .true.
+    integer :: n
     !---------------------------------------------------------------------------
 
-    if( History_id_count == 0 ) return
-
-    if (firsttime) then
-       firsttime = .false.
-       call HistoryOutputList
-    endif
-
-    if ( History_tsumsec(itemid) - History_tintsec(itemid) <= -eps ) then
-       if ( present(force) ) then
-          if ( .not. force ) return
-       else
-          return
-       endif
-    endif
-
-    if ( History_tsumsec(itemid) > eps ) then
-       if ( History_tavg(itemid) ) then
-          History_varsum(1:History_size(itemid),itemid) = &
-               History_varsum(1:History_size(itemid),itemid) / History_tsumsec(itemid)
-       endif
-
-       if ( History_tstrsec(itemid) < 0.D0 ) then ! first time
-          stime = time - History_tsumsec(itemid)
-          etime = time
-       else
-          stime = History_tstrsec(itemid)
-          etime = History_tstrsec(itemid) + History_tsumsec(itemid) ! neary equal to time
-       endif
-
-       ! convert time units
-       call CalendarSec2ymdhms( stime, stime, HISTORY_TIME_UNITS )
-       call CalendarSec2ymdhms( etime, etime, HISTORY_TIME_UNITS )
-
-       call FileWrite( History_vid(itemid),                & ! vid
-            History_varsum(1:History_size(itemid),itemid), & ! data
-            stime, etime                                   ) ! start & end time
-
-    endif
-
-    History_varsum(:,itemid) = 0.0_DP
-    History_tstrsec (itemid) = time
-    History_tsumsec (itemid) = 0.0_DP
-
-    return
-  end subroutine HistoryWriteDP
-
-  !-----------------------------------------------------------------------------
-  ! interface HistoryWritaAll
-  !-----------------------------------------------------------------------------
-  subroutine HistoryWriteAllSP( &
-       time, & ! (in)
-       force & ! (in) optional
-       )
-    implicit none
-
-    real(SP), intent(in) :: time
-    logical,  intent(in), optional :: force
-
-    logical :: fforce = .false.
-    integer :: n
-
-    if ( present(force) ) fforce = force
-
     do n = 1, History_id_count
-       call HistoryWrite( n, time, fforce )
+       call HistoryWrite( n, time_now )
     enddo
 
     return
-  end subroutine HistoryWriteAllSP
-  subroutine HistoryWriteAllDP( &
-       time, & ! (in)
-       force & ! (in) optional
-       )
-    implicit none
-
-    real(DP), intent(in) :: time
-    logical,  intent(in), optional :: force
-
-    logical :: fforce = .false.
-    integer :: n
-
-    if ( present(force) ) fforce = force
-
-    do n = 1, History_id_count
-       call HistoryWrite( n, time, fforce )
-    enddo
-
-    return
-  end subroutine HistoryWriteAllDP
+  end subroutine HistoryWriteAll
 
   !-----------------------------------------------------------------------------
   ! interface HistoryGet
-  !-----------------------------------------------------------------------------
   subroutine HistoryGet1DDP( &
-       var, &
-       basename, &
-       varname, &
-       step, &
+       var,           &
+       basename,      &
+       varname,       &
+       step,          &
        allow_missing, &
-       single &
-       )
+       single         )
     use gtool_file, only: &
-         FileRead
+       FileRead
     implicit none
 
     real(DP),         intent(out) :: var(:)
-    character(len=*), intent( in) :: basename
-    character(len=*), intent( in) :: varname
-    integer,          intent( in) :: step
-    logical,          intent( in), optional :: allow_missing
-    logical,          intent( in), optional :: single
+    character(len=*), intent(in)  :: basename
+    character(len=*), intent(in)  :: varname
+    integer,          intent(in)  :: step
+    logical,          intent(in), optional :: allow_missing
+    logical,          intent(in), optional :: single
     !---------------------------------------------------------------------------
 
-    call FileRead(var,                            & ! (out)
-         basename, varname, step, History_myrank, & ! (in)
-         allow_missing, single                    & ! (in)
-         )
+    call FileRead( var,            & ! [OUT]
+                   basename,       & ! [IN]
+                   varname,        & ! [IN]
+                   step,           & ! [IN]
+                   History_myrank, & ! [IN]
+                   allow_missing,  & ! [IN]
+                   single          ) ! [IN]
 
     return
   end subroutine HistoryGet1DDP
   subroutine HistoryGet1DSP( &
-       var, &
-       basename, &
-       varname, &
-       step, &
+       var,           &
+       basename,      &
+       varname,       &
+       step,          &
        allow_missing, &
-       single &
-       )
+       single         )
     use gtool_file, only: &
-         FileRead
+       FileRead
     implicit none
 
     real(SP),         intent(out) :: var(:)
-    character(len=*), intent( in) :: basename
-    character(len=*), intent( in) :: varname
-    integer,          intent( in) :: step
-    logical,          intent( in), optional :: allow_missing
-    logical,          intent( in), optional :: single
+    character(len=*), intent(in)  :: basename
+    character(len=*), intent(in)  :: varname
+    integer,          intent(in)  :: step
+    logical,          intent(in), optional :: allow_missing
+    logical,          intent(in), optional :: single
     !---------------------------------------------------------------------------
 
-    call FileRead(var,                            & ! (out)
-         basename, varname, step, History_myrank, & ! (in)
-         allow_missing, single                    & ! (in)
-         )
+    call FileRead( var,            & ! [OUT]
+                   basename,       & ! [IN]
+                   varname,        & ! [IN]
+                   step,           & ! [IN]
+                   History_myrank, & ! [IN]
+                   allow_missing,  & ! [IN]
+                   single          ) ! [IN]
 
     return
   end subroutine HistoryGet1DSP
   subroutine HistoryGet2DDP( &
-       var, &
-       basename, &
-       varname, &
-       step, &
+       var,           &
+       basename,      &
+       varname,       &
+       step,          &
        allow_missing, &
-       single &
-       )
+       single         )
     use gtool_file, only: &
-         FileRead
+       FileRead
     implicit none
 
     real(DP),         intent(out) :: var(:,:)
-    character(len=*), intent( in) :: basename
-    character(len=*), intent( in) :: varname
-    integer,          intent( in) :: step
-    logical,          intent( in), optional :: allow_missing
-    logical,          intent( in), optional :: single
+    character(len=*), intent(in)  :: basename
+    character(len=*), intent(in)  :: varname
+    integer,          intent(in)  :: step
+    logical,          intent(in), optional :: allow_missing
+    logical,          intent(in), optional :: single
     !---------------------------------------------------------------------------
 
-    call FileRead(var,                            & ! (out)
-         basename, varname, step, History_myrank, & ! (in)
-         allow_missing, single                    & ! (in)
-         )
+    call FileRead( var,            & ! [OUT]
+                   basename,       & ! [IN]
+                   varname,        & ! [IN]
+                   step,           & ! [IN]
+                   History_myrank, & ! [IN]
+                   allow_missing,  & ! [IN]
+                   single          ) ! [IN]
 
     return
   end subroutine HistoryGet2DDP
   subroutine HistoryGet2DSP( &
-       var, &
-       basename, &
-       varname, &
-       step, &
+       var,           &
+       basename,      &
+       varname,       &
+       step,          &
        allow_missing, &
-       single &
-       )
+       single         )
     use gtool_file, only: &
-         FileRead
+       FileRead
     implicit none
 
     real(SP),         intent(out) :: var(:,:)
-    character(len=*), intent( in) :: basename
-    character(len=*), intent( in) :: varname
-    integer,          intent( in) :: step
-    logical,          intent( in), optional :: allow_missing
-    logical,          intent( in), optional :: single
+    character(len=*), intent(in)  :: basename
+    character(len=*), intent(in)  :: varname
+    integer,          intent(in)  :: step
+    logical,          intent(in), optional :: allow_missing
+    logical,          intent(in), optional :: single
     !---------------------------------------------------------------------------
 
-    call FileRead(var,                            & ! (out)
-         basename, varname, step, History_myrank, & ! (in)
-         allow_missing, single                    & ! (in)
-         )
+    call FileRead( var,            & ! [OUT]
+                   basename,       & ! [IN]
+                   varname,        & ! [IN]
+                   step,           & ! [IN]
+                   History_myrank, & ! [IN]
+                   allow_missing,  & ! [IN]
+                   single          ) ! [IN]
 
     return
   end subroutine HistoryGet2DSP
   subroutine HistoryGet3DDP( &
-       var, &
-       basename, &
-       varname, &
-       step, &
+       var,           &
+       basename,      &
+       varname,       &
+       step,          &
        allow_missing, &
-       single &
-       )
+       single         )
     use gtool_file, only: &
-         FileRead
+       FileRead
     implicit none
 
     real(DP),         intent(out) :: var(:,:,:)
-    character(len=*), intent( in) :: basename
-    character(len=*), intent( in) :: varname
-    integer,          intent( in) :: step
-    logical,          intent( in), optional :: allow_missing
-    logical,          intent( in), optional :: single
+    character(len=*), intent(in)  :: basename
+    character(len=*), intent(in)  :: varname
+    integer,          intent(in)  :: step
+    logical,          intent(in), optional :: allow_missing
+    logical,          intent(in), optional :: single
     !---------------------------------------------------------------------------
 
-    call FileRead(var,                            & ! (out)
-         basename, varname, step, History_myrank, & ! (in)
-         allow_missing, single                    & ! (in)
-         )
+    call FileRead( var,            & ! [OUT]
+                   basename,       & ! [IN]
+                   varname,        & ! [IN]
+                   step,           & ! [IN]
+                   History_myrank, & ! [IN]
+                   allow_missing,  & ! [IN]
+                   single          ) ! [IN]
 
     return
   end subroutine HistoryGet3DDP
   subroutine HistoryGet3DSP( &
-       var, &
-       basename, &
-       varname, &
-       step, &
+       var,           &
+       basename,      &
+       varname,       &
+       step,          &
        allow_missing, &
-       single &
-       )
+       single         )
     use gtool_file, only: &
-         FileRead
+       FileRead
     implicit none
 
     real(SP),         intent(out) :: var(:,:,:)
-    character(len=*), intent( in) :: basename
-    character(len=*), intent( in) :: varname
-    integer,          intent( in) :: step
-    logical,          intent( in), optional :: allow_missing
-    logical,          intent( in), optional :: single
+    character(len=*), intent(in)  :: basename
+    character(len=*), intent(in)  :: varname
+    integer,          intent(in)  :: step
+    logical,          intent(in), optional :: allow_missing
+    logical,          intent(in), optional :: single
     !---------------------------------------------------------------------------
 
-    call FileRead(var,                            & ! (out)
-         basename, varname, step, History_myrank, & ! (in)
-         allow_missing, single                    & ! (in)
-         )
+    call FileRead( var,            & ! [OUT]
+                   basename,       & ! [IN]
+                   varname,        & ! [IN]
+                   step,           & ! [IN]
+                   History_myrank, & ! [IN]
+                   allow_missing,  & ! [IN]
+                   single          ) ! [IN]
 
     return
   end subroutine HistoryGet3DSP

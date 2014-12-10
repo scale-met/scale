@@ -174,8 +174,6 @@ contains
        GTRANS_J23G,  &
        GTRANS_J33G,  &
        GTRANS_MAPF
-    use scale_history, only: &
-       HIST_in
     use mod_atmos_admin, only: &
        ATMOS_USE_AVERAGE
     use mod_atmos_vars, only: &

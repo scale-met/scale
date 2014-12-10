@@ -139,7 +139,7 @@ contains
        MFLX_cloudbase(:,:) = 0.0_RP
 
        if ( history_flag ) then
-          call HIST_in( MFLX_cloudbase(:,:), 'CBMFX', 'cloud base mass flux', 'kg/m2/s', dt_CP )
+          call HIST_in( MFLX_cloudbase(:,:), 'CBMFX', 'cloud base mass flux', 'kg/m2/s' )
        endif
     endif
 
