@@ -461,7 +461,7 @@ contains
     real(RP) :: RIBC, BHC, CDC
     real(RP) :: RIBR, BHR, CDR
     real(RP) :: ALPHAB, ALPHAG
-    real(RP) :: CHR, CHB, CHG, CHC 
+    real(RP) :: CHR, CHB, CHG, CHC
 
     real(RP) :: XXX, X, CD, CH, CHU, XXX2, XXX10
 
@@ -819,15 +819,15 @@ xxxr=0.0_RP ! temtative
 
     !-- parameters
     real(RP), parameter     :: SRATIO    = 0.75_RP     ! ratio between direct/total solar [-]
-    real(RP), parameter     :: TFa       = 0.5_RP      ! factor a in Tomita (2009)
-    real(RP), parameter     :: TFb       = 1.1_RP      ! factor b in Tomita (2009)
+!    real(RP), parameter     :: TFa       = 0.5_RP      ! factor a in Tomita (2009)
+!    real(RP), parameter     :: TFb       = 1.1_RP      ! factor b in Tomita (2009)
     real(RP), parameter     :: redf_min  = 1.0E-2_RP   ! minimum reduced factor
     real(RP), parameter     :: redf_max  = 1.0_RP      ! maximum reduced factor
-    real(RP), parameter     :: CAP_water = 4.185E6_RP ! Heat capacity of water (15 deg) [J m-3 K]
-    real(RP), parameter     :: AKS_water = 0.59_RP    ! Thermal conductivity of water   [W m-1 K]
+!    real(RP), parameter     :: CAP_water = 4.185E6_RP ! Heat capacity of water (15 deg) [J m-3 K]
+!    real(RP), parameter     :: AKS_water = 0.59_RP    ! Thermal conductivity of water   [W m-1 K]
 
     !-- Local variables
-    logical  :: SHADOW = .false.
+!    logical  :: SHADOW = .false.
            !  true  = consider svf and shadow effects,
            !  false = consider svf effect only
 
@@ -892,17 +892,14 @@ xxxr=0.0_RP ! temtative
     real(RP) :: ALPHAR, ALPHAB, ALPHAG, ALPHAC
     real(RP) :: CHR, CHB, CHG, CHC
     real(RP) :: TC1, TC2, QC1, QC2
-    real(RP) :: CAPL1, AKSL1
-
-    real(RP) :: oldF,oldGF      ! residual in previous step
-    real(RP) :: redf,redfg      ! reduced factor
+!    real(RP) :: CAPL1, AKSL1
 
     real(RP) :: resi1,resi2     ! residual
     real(RP) :: G0RP,G0BP,G0GP
 
     real(RP) :: XXX, X, CD, CH, CHU, XXX2, XXX10
 
-    integer  :: iteration, K
+    integer  :: iteration
 
     !-----------------------------------------------------------
     ! Set parameters
@@ -928,26 +925,26 @@ xxxr=0.0_RP ! temtative
     LAT = XLAT / D2R
     LON = XLON / D2R
 
-    TIME = real(NOWDATE(4)*3600.0_RP + NOWDATE(5)*60.0_RP + NOWDATE(6))
+    TIME = real( NOWDATE(4)*3600.0_RP + NOWDATE(5)*60.0_RP + NOWDATE(6), kind=RP )
     tloc = mod((NOWDATE(4) + int(LON/15.0_RP)),24 )
-    dsec = real(NOWDATE(5)*60.0_RP + NOWDATE(6)) / 3600.0_RP
-    if(tloc==0) tloc = 24
+    dsec = real( NOWDATE(5)*60.0_RP + NOWDATE(6), kind=RP ) / 3600.0_RP
+    if( tloc == 0 ) tloc = 24
 
     !--- Calculate AH data at LST
-     if(tloc==24)then
-       tahdiurnal = ( (1.0_RP-dsec) * ahdiurnal(tloc  ) &
-                    + (       dsec) * ahdiurnal(1)      )
-     else
-       tahdiurnal = ( (1.0_RP-dsec) * ahdiurnal(tloc  ) &
-                    + (       dsec) * ahdiurnal(tloc+1) )
-     endif
-     AH_t  = AH  * tahdiurnal
-     ALH_t = ALH * tahdiurnal
+    if ( tloc == 24 ) then
+      tahdiurnal = ( 1.0_RP-dsec ) * ahdiurnal(tloc  ) &
+                 + (        dsec ) * ahdiurnal(1     )
+    else
+      tahdiurnal = ( 1.0_RP-dsec ) * ahdiurnal(tloc  ) &
+                 + (        dsec ) * ahdiurnal(tloc+1)
+    endif
+    AH_t  = AH  * tahdiurnal
+    ALH_t = ALH * tahdiurnal
 
-    if( ZDC+Z0C+2.0_RP >= ZA) then
-      if( IO_L ) write(IO_FID_LOG,*) 'ZDC + Z0C + 2m is larger than the 1st WRF level' // &
-                                     'Stop in subroutine urban - change ZDC and Z0C'
-      call PRC_MPIstop
+    if ( ZDC + Z0C + 2.0_RP >= ZA ) then
+       if( IO_L ) write(IO_FID_LOG,*) 'ZDC + Z0C + 2m is larger than the 1st WRF level' // &
+                                      'Stop in subroutine urban - change ZDC and Z0C'
+       call PRC_MPIstop
     endif
 
     !if(.NOT.LSOLAR) then   ! Radiation scheme does not have SSGD and SSGQ.
@@ -1365,37 +1362,34 @@ xxxr=0.0_RP ! temtative
     real(RP) :: Qstar ! friction mixing rate [kg/kg]
     real(RP) :: Uabs  ! modified absolute velocity [m/s]
     real(RP) :: QVS   ! saturation water vapor mixing ratio at surface [kg/kg]
-
-    integer :: i, j, n
     !---------------------------------------------------------------------------
 
-        ! saturation at the surface
-        call qsat( QVS, RTS, PRSS )
+    ! saturation at the surface
+    call qsat( QVS, RTS, PRSS )
 
-        call CPL_bulkflux( &
-            Ustar,     & ! (out)
-            Tstar,     & ! (out)
-            Qstar,     & ! (out)
-            Uabs,      & ! (out)
-            TMPA,      & ! (in)
-            RTS,       & ! (in)
-            PRSA,      & ! (in)
-            PRSS,      & ! (in)
-            QVA,       & ! (in)
-            QVS,       & ! (in)
-            UA,        & ! (in)
-            VA,        & ! (in)
-            ZA,        & ! (in)
-            PBL,       & ! (in)
-            Z0C,       & ! (in)
-            Z0HC,      & ! (in)
-            Z0HC       ) ! (in)
+    call CPL_bulkflux( Ustar, & ! (out)
+                       Tstar, & ! (out)
+                       Qstar, & ! (out)
+                       Uabs,  & ! (out)
+                       TMPA,  & ! (in)
+                       RTS,   & ! (in)
+                       PRSA,  & ! (in)
+                       PRSS,  & ! (in)
+                       QVA,   & ! (in)
+                       QVS,   & ! (in)
+                       UA,    & ! (in)
+                       VA,    & ! (in)
+                       ZA,    & ! (in)
+                       PBL,   & ! (in)
+                       Z0C,   & ! (in)
+                       Z0HC,  & ! (in)
+                       Z0HC   ) ! (in)
 
-        XMFLX  = -RHOA * Ustar**2 / Uabs * UA
-        YMFLX  = -RHOA * Ustar**2 / Uabs * VA
-        ZMFLX  = -RHOA * Ustar**2 / Uabs * WA
+    XMFLX  = -RHOA * Ustar**2 / Uabs * UA
+    YMFLX  = -RHOA * Ustar**2 / Uabs * VA
+    ZMFLX  = -RHOA * Ustar**2 / Uabs * WA
 
-        Z0M = Z0C
+    Z0M = Z0C
 
     return
   end subroutine CPL_AtmUrb_bulk_momentum
@@ -1480,17 +1474,13 @@ xxxr=0.0_RP ! temtative
   end subroutine cal_psi
 
   !-----------------------------------------------------------------------------
+  !  XXX:   z/L (requires iteration by Newton-Rapson method)
+  !  B1:    Stanton number
+  !  PSIM:  = PSIX of LSM
+  !  PSIH:  = PSIT of LSM
   subroutine mos(XXX,CH,CD,B1,RIB,Z,Z0,UA,TA,TSF,RHO)
-
     use scale_const, only: &
-       KARMAN => CONST_KARMAN,  & ! AK : kalman constant  [-]
-       CPdry  => CONST_CPdry      ! CPP : heat capacity of dry air [J/K/kg]
-
-    !  XXX:   z/L (requires iteration by Newton-Rapson method)
-    !  B1:    Stanton number
-    !  PSIM:  = PSIX of LSM
-    !  PSIH:  = PSIT of LSM
-
+       CPdry => CONST_CPdry ! CPP : heat capacity of dry air [J/K/kg]
     implicit none
 
     real(RP), intent(in)    :: B1, Z, Z0, UA, TA, TSF, RHO

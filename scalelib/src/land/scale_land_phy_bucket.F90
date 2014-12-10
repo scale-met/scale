@@ -133,7 +133,7 @@ contains
 
     real(RP) :: LAND_TEMP1 (LKMAX,IA,JA)
     real(RP) :: LAND_WATER1(LKMAX,IA,JA)
-    real(RP) :: LAND_RUNOFF(IA,JA)
+!    real(RP) :: LAND_RUNOFF(IA,JA)
     real(RP) :: SOIL_DENSCS(IA,JA)
 
     real(RP) :: U   (LKMAX-1,IA,JA)

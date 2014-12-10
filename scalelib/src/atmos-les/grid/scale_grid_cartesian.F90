@@ -244,8 +244,6 @@ contains
     implicit none
 
     character(len=H_LONG) :: bname
-
-    integer :: k, i, j
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -489,7 +487,7 @@ contains
 
     allocate( buffz(0:KA) )
 
-    if ( minval(FZ(1:KMAX)) > 0 ) then ! input from namelist
+    if ( minval(FZ(1:KMAX)) > 0.0_RP ) then ! input from namelist
        if( IO_L ) write(IO_FID_LOG,*) '*** Z coordinate is given from NAMELIST.'
 
        if ( KMAX < 2 ) then

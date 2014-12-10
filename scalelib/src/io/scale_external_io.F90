@@ -167,7 +167,7 @@ contains
        dims(:) = dims_org(:)
     endif
 
-    status = nf90_close(ncid) 
+    status = nf90_close(ncid)
     if (status .ne. nf90_noerr) call handle_err(status)
 
     return
@@ -228,7 +228,7 @@ contains
        var(i) = work(i)
     enddo
 
-    status = nf90_close(ncid) 
+    status = nf90_close(ncid)
     if (status .ne. nf90_noerr) call handle_err(status)
     deallocate( work )
 
@@ -290,7 +290,7 @@ contains
        var(i) = work(i)
     enddo
 
-    status = nf90_close(ncid) 
+    status = nf90_close(ncid)
     if (status .ne. nf90_noerr) call handle_err(status)
     deallocate( work )
 
@@ -352,7 +352,7 @@ contains
        var(i) = work(i)
     enddo
 
-    status = nf90_close(ncid) 
+    status = nf90_close(ncid)
     if (status .ne. nf90_noerr) call handle_err(status)
     deallocate( work )
 
@@ -381,7 +381,7 @@ contains
     logical,          intent( in), optional :: single
 
     integer :: status
-    integer :: i, ncid, length
+    integer :: ncid, length
     character(len=H_LONG) :: fname = ''
     character(len=80)     :: work
     logical :: single_ = .false.
@@ -467,7 +467,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '+++ not exist variable: ', trim(varname)
     endif
 
-    status = nf90_close(ncid) 
+    status = nf90_close(ncid)
     if (status .ne. nf90_noerr) call handle_err(status)
 
     return
@@ -543,7 +543,7 @@ contains
                             count = (/ nx,tcount /) )
     if (status .ne. nf90_noerr) call handle_err(status)
 
-    status = nf90_close(ncid) 
+    status = nf90_close(ncid)
     if (status .ne. nf90_noerr) call handle_err(status)
 
     call ConvertArrayOrder( var,var_org,tcount,nx )
@@ -619,7 +619,7 @@ contains
                             count = (/ nx,tcount /) )
     if (status .ne. nf90_noerr) call handle_err(status)
 
-    status = nf90_close(ncid) 
+    status = nf90_close(ncid)
     if (status .ne. nf90_noerr) call handle_err(status)
 
     call ConvertArrayOrder( var,var_org,tcount,nx )
@@ -708,7 +708,7 @@ contains
                             count = (/ nx,ny,tcount /) )
     if (status .ne. nf90_noerr) call handle_err(status)
 
-    status = nf90_close(ncid) 
+    status = nf90_close(ncid)
     if (status .ne. nf90_noerr) call handle_err(status)
 
     call ConvertArrayOrder( var,var_org,tcount,nx,ny )
@@ -797,7 +797,7 @@ contains
                             count = (/ nx,ny,tcount /) )
     if (status .ne. nf90_noerr) call handle_err(status)
 
-    status = nf90_close(ncid) 
+    status = nf90_close(ncid)
     if (status .ne. nf90_noerr) call handle_err(status)
 
     call ConvertArrayOrder( var,var_org,tcount,nx,ny )
@@ -897,7 +897,7 @@ contains
                             count = (/ nx,ny,nz,tcount /) )
     if (status .ne. nf90_noerr) call handle_err(status)
 
-    status = nf90_close(ncid) 
+    status = nf90_close(ncid)
     if (status .ne. nf90_noerr) call handle_err(status)
 
     call ConvertArrayOrder( var,var_org,tcount,nz,nx,ny )
@@ -997,7 +997,7 @@ contains
                             count = (/ nx,ny,nz,tcount /) )
     if (status .ne. nf90_noerr) call handle_err(status)
 
-    status = nf90_close(ncid) 
+    status = nf90_close(ncid)
     if (status .ne. nf90_noerr) call handle_err(status)
 
     call ConvertArrayOrder( var,var_org,tcount,nz,nx,ny )
@@ -1100,7 +1100,7 @@ contains
 
     var_org(:,:,:) = real( short(:,:,:) )*scale_factor + add_offset
 
-    status = nf90_close(ncid) 
+    status = nf90_close(ncid)
     if (status .ne. nf90_noerr) call handle_err(status)
 
     call ConvertArrayOrder( var,var_org,tcount,nx,ny )
@@ -1201,9 +1201,9 @@ contains
                             count = (/ nx,ny,tcount /) )
     if (status .ne. nf90_noerr) call handle_err(status)
 
-    var_org(:,:,:) = real( short(:,:,:) )*scale_factor + add_offset
+    var_org(:,:,:) =  real( real(short(:,:,:),kind=SP)*scale_factor + add_offset, kind=DP )
 
-    status = nf90_close(ncid) 
+    status = nf90_close(ncid)
     if (status .ne. nf90_noerr) call handle_err(status)
 
     call ConvertArrayOrder( var,var_org,tcount,nx,ny )
@@ -1317,7 +1317,7 @@ contains
 
     var_org(:,:,:,:) = real( short(:,:,:,:) )*scale_factor + add_offset
 
-    status = nf90_close(ncid) 
+    status = nf90_close(ncid)
     if (status .ne. nf90_noerr) call handle_err(status)
 
     call ConvertArrayOrder( var,var_org,tcount,nz,nx,ny )
@@ -1429,9 +1429,9 @@ contains
                             count = (/ nx,ny,nz,tcount /) )
     if (status .ne. nf90_noerr) call handle_err(status)
 
-    var_org(:,:,:,:) = real( short(:,:,:,:) )*scale_factor + add_offset
+    var_org(:,:,:,:) = real( real(short(:,:,:,:),kind=SP)*scale_factor + add_offset, kind=DP )
 
-    status = nf90_close(ncid) 
+    status = nf90_close(ncid)
     if (status .ne. nf90_noerr) call handle_err(status)
 
     call ConvertArrayOrder( var,var_org,tcount,nz,nx,ny )
@@ -1605,7 +1605,7 @@ contains
     integer,          intent( in)  :: tcount
     integer,          intent( in)  :: nx
     integer,          intent( in)  :: ny
-    integer :: n, k, i, j
+    integer :: n, i, j
     intrinsic shape
 
     do n = 1, tcount
@@ -1632,7 +1632,7 @@ contains
     integer,          intent( in)  :: tcount
     integer,          intent( in)  :: nx
     integer,          intent( in)  :: ny
-    integer :: n, k, i, j
+    integer :: n, i, j
     intrinsic shape
 
     do n = 1, tcount

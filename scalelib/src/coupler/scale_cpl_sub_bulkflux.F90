@@ -284,23 +284,23 @@ contains
   !
   !-----------------------------------------------------------------------------
   subroutine CPL_bulkflux_b91w01( &
-      Ustar,   & ! (out)
-      Tstar,   & ! (out)
-      Qstar,   & ! (out)
-      Uabs,    & ! (out)
-      Ta,      & ! (in)
-      Ts,      & ! (in)
-      Pa,      & ! (in)
-      Ps,      & ! (in)
-      Qa,      & ! (in)
-      Qs,      & ! (in)
-      Ua,      & ! (in)
-      Va,      & ! (in)
-      Za,      & ! (in)
-      PBL,     & ! (in)
-      Z0M,     & ! (in)
-      Z0H,     & ! (in)
-      Z0E      ) ! (in)
+       Ustar,   & ! (out)
+       Tstar,   & ! (out)
+       Qstar,   & ! (out)
+       Uabs,    & ! (out)
+       Ta,      & ! (in)
+       Ts,      & ! (in)
+       Pa,      & ! (in)
+       Ps,      & ! (in)
+       Qa,      & ! (in)
+       Qs,      & ! (in)
+       Ua,      & ! (in)
+       Va,      & ! (in)
+       Za,      & ! (in)
+       PBL,     & ! (in)
+       Z0M,     & ! (in)
+       Z0H,     & ! (in)
+       Z0E      ) ! (in)
     use scale_const, only: &
        GRAV   => CONST_GRAV,   &
        KARMAN => CONST_KARMAN, &
@@ -444,8 +444,8 @@ contains
   !-----------------------------------------------------------------------------
   ! stability function for momemtum in unstable condition
   function fm_unstable( Z, L )
-    use scale_const, only: &
-      PI  => CONST_PI
+!    use scale_const, only: &
+!      PI  => CONST_PI
     implicit none
 
     ! argument
@@ -457,7 +457,7 @@ contains
 
     ! works
     real(RP) :: R
-    real(RP) :: r4R
+!    real(RP) :: r4R
     !---------------------------------------------------------------------------
 
     R = min( Z/L, 0.0_RP )

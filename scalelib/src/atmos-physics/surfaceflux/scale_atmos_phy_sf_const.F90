@@ -131,9 +131,8 @@ contains
     use scale_grid_index
     use scale_tracer
     use scale_const, only: &
-       PI   => CONST_PI,   &
-       LHV  => CONST_LHV,  &
-       STB  => CONST_STB
+       PI   => CONST_PI,  &
+       LHV  => CONST_LHV
     use scale_time, only: &
        TIME_NOWSEC
     implicit none
@@ -169,10 +168,9 @@ contains
     real(RP), intent(out)   :: Q2        (IA,JA)    ! water vapor q     at  2m height
 
     real(RP) :: ATM_Uabs(IA,JA) ! absolute velocity at z1 [m/s]
-    real(RP) :: SFC_QSAT(IA,JA) ! saturatad water vapor mixing ratio [kg/kg]
 
     real(RP) :: Cm(IA,JA)       ! bulk coefficient for momentum
-    real(RP) :: R10, R2
+    real(RP) :: R10
 
     real(RP) :: modulation
     real(RP) :: Uabs_lim
