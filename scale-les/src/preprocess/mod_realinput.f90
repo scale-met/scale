@@ -939,7 +939,7 @@ contains
     do n = start_step, end_step
     do j = 1, JA
     do i = 1, IA
-    do k = KS-1, KE+1
+    do k = KS, KE-1
        velz(k,i,j,n) = velz_org(kgrd(k,i,j,1,1),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,1) &
                      + velz_org(kgrd(k,i,j,2,1),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,1) &
                      + velz_org(kgrd(k,i,j,3,1),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,1) &
@@ -1272,8 +1272,19 @@ contains
     do n = start_step, end_step
        do j = 1, JA
        do i = 1, IA
-       do k = KS, KE
+       do k = KS, KE-1
           momz(k,i,j,n) = velz(k,i,j,n) * ( dens(k+1,i  ,j  ,n) + dens(k,i,j,n) ) * 0.5_RP
+       end do
+       end do
+       end do
+       do j = 1, JA
+       do i = 1, IA
+          momz(KE,i,j,n) = 0.0_RP
+       end do
+       end do
+       do j = 1, JA
+       do i = 1, IA
+       do k = KS, KE
           rhot(k,i,j,n) = pott(k,i,j,n) * dens(k,i,j,n)
        end do
        end do
@@ -1690,7 +1701,7 @@ contains
 
        do j = 1, JA
        do i = 1, IA
-       do k = KS-1, KE+1
+       do k = KS, KE-1
           velz(k,i,j) = velz_org(kgrd(k,i,j,1,1),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,1) &
                       + velz_org(kgrd(k,i,j,2,1),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,1) &
                       + velz_org(kgrd(k,i,j,3,1),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,1) &
@@ -1907,8 +1918,19 @@ contains
 
        do j = 1, JA
        do i = 1, IA
-       do k = KS, KE
+       do k = KS, KE-1
           momz(k,i,j,n) = 0.5_RP * velz(k,i,j) * ( dens(k+1,  i,  j,n) + dens(k,i,j,n) )
+       end do
+       end do
+       end do
+       do j = 1, JA
+       do i = 1, IA
+          momz(KE,i,j,n) = 0.0_RP
+       end do
+       end do
+       do j = 1, JA
+       do i = 1, IA
+       do k = KS, KE
           rhot(k,i,j,n) = pott(k,i,j) * dens(k,i,j,n)
        end do
        end do
@@ -2645,8 +2667,19 @@ contains
     do n = start_step, end_step
        do j = 1, JA
        do i = 1, IA
-       do k = KS, KE
+       do k = KS, KE-1
           momz(k,i,j,n) = velz(k,i,j,n) * ( dens(k+1,i  ,j  ,n) + dens(k,i,j,n) ) * 0.5_RP
+       end do
+       end do
+       end do
+       do j = 1, JA
+       do i = 1, IA
+          momz(k,i,j,n) = 0.0_RP
+       end do
+       end do
+       do j = 1, JA
+       do i = 1, IA
+       do k = KS, KE
           rhot(k,i,j,n) = pott(k,i,j,n) * dens(k,i,j,n)
        end do
        end do
@@ -4451,7 +4484,7 @@ contains
     if ( do_zdirec ) then
        max_ref = maxval( lev_org(:,:,:) )
        !min_ref = minval( lev_org(:,:,:) )
-       max_loc = maxval( lev_loc(:,:,:) ) ! HALO + 1
+       max_loc = maxval( lev_loc(KS-1:KE,:,:) ) ! HALO + 1
        !min_loc = minval( lev_loc(3:KA,:,:) ) ! HALO + 1
 
        if ( max_ref < max_loc ) then
