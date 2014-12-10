@@ -101,7 +101,7 @@ module scale_grid
   real(RP), private :: BUFFER_DY = 0.0_RP ! thickness of buffer region [m]: y
   real(RP), private :: BUFFFACT  = 1.0_RP ! strech factor for dx/dy/dz of buffer region
 
-  integer,  private, parameter :: KMAX_user_lim = 200 !< limit of index size for user defined z
+  integer,  private, parameter :: KMAX_user_lim = 300 !< limit of index size for user defined z
   real(RP), private            :: FZ(KMAX_user_lim)   !< user defined center coordinate [m]: z, local=global
 
   logical,  private :: debug = .false.
