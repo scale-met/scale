@@ -228,6 +228,13 @@ contains
     !########## Get Surface Boundary Condition from coupler ##########
     call ATMOS_SURFACE_GET( setup=.false. )
 
+    !########## Dynamics ##########
+    if ( ATMOS_sw_dyn ) then
+       call PROF_rapstart('ATM Dynamics', 1)
+       call ATMOS_DYN_driver( do_dyn )
+       call PROF_rapend  ('ATM Dynamics', 1)
+    endif
+
     !########## Microphysics ##########
     if ( ATMOS_sw_phy_mp ) then
        call PROF_rapstart('ATM Microphysics', 1)
@@ -275,13 +282,6 @@ contains
        call PROF_rapstart('ATM Cumulus', 1)
        call ATMOS_PHY_CP_driver( update_flag = do_phy_cp )
        call PROF_rapend  ('ATM Cumulus', 1)
-    endif
-
-    !########## Dynamics ##########
-    if ( ATMOS_sw_dyn ) then
-       call PROF_rapstart('ATM Dynamics', 1)
-       call ATMOS_DYN_driver( do_dyn )
-       call PROF_rapend  ('ATM Dynamics', 1)
     endif
 
     !########## Calculate diagnostic variables ##########
