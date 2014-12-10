@@ -239,15 +239,15 @@ contains
                              Q2        (:,:)       ) ! [OUT]
 
           if ( history_flag ) then
-             call HIST_in( SFC_Z0M(:,:), 'SFC_Z0M', 'roughness length (momentum)',  'm',     dt_SF )
-             call HIST_in( SFC_Z0H(:,:), 'SFC_Z0H', 'roughness length (heat)',      'm',     dt_SF )
-             call HIST_in( SFC_Z0E(:,:), 'SFC_Z0E', 'roughness length (moisture)',  'm',     dt_SF )
+             call HIST_in( SFC_Z0M(:,:), 'SFC_Z0M', 'roughness length (momentum)', 'm'     )
+             call HIST_in( SFC_Z0H(:,:), 'SFC_Z0H', 'roughness length (heat)',     'm'     )
+             call HIST_in( SFC_Z0E(:,:), 'SFC_Z0E', 'roughness length (moisture)', 'm'     )
 
-             call HIST_in( Uabs10 (:,:), 'Uabs10',  '10m absolute wind',            'm/s',   dt_SF )
-             call HIST_in( U10    (:,:), 'U10',     '10m x-wind',                   'm/s',   dt_SF )
-             call HIST_in( V10    (:,:), 'V10',     '10m y-wind',                   'm/s',   dt_SF )
-             call HIST_in( T2     (:,:), 'T2 ',     '2m temperature',               'K',     dt_SF )
-             call HIST_in( Q2     (:,:), 'Q2 ',     '2m water vapor',               'kg/kg', dt_SF )
+             call HIST_in( Uabs10 (:,:), 'Uabs10',  '10m absolute wind',           'm/s'   )
+             call HIST_in( U10    (:,:), 'U10',     '10m x-wind',                  'm/s'   )
+             call HIST_in( V10    (:,:), 'V10',     '10m y-wind',                  'm/s'   )
+             call HIST_in( T2     (:,:), 'T2 ',     '2m temperature',              'K'     )
+             call HIST_in( Q2     (:,:), 'Q2 ',     '2m water vapor',              'kg/kg' )
           endif
        endif
 
@@ -298,8 +298,8 @@ contains
        enddo
 
        if ( history_flag ) then
-          call HIST_in( SFLX_LH(:,:), 'LHFLX',  'latent heat flux',   'W/m2',  dt_SF )
-          call HIST_in( SFLX_SH(:,:), 'SHFLX',  'sensible heat flux', 'W/m2',  dt_SF )
+          call HIST_in( SFLX_LH(:,:), 'LHFLX', 'latent heat flux',   'W/m2' )
+          call HIST_in( SFLX_SH(:,:), 'SHFLX', 'sensible heat flux', 'W/m2' )
        endif
 
     endif

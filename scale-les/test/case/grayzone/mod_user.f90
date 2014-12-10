@@ -1028,18 +1028,12 @@ contains
         endif
       endif
 
-!return ! tmp10
+      call HIST_in( SST       (:,:),     'SST2',      'sst',   'K'    )
+      call HIST_in( SFLX_POTT (:,:)*CPd, 'SHF',       'shf',   'W/m2' )
+      call HIST_in( SFLX_QV   (:,:)*LHV, 'LHF',       'lhf',   'W/m2' )
+      call HIST_in( SFC_albedo(:,:,1),   'ALBEDO_LW', 'alblw', '-'    )
+      call HIST_in( SFC_albedo(:,:,2),   'ALBEDO_SW', 'albsw', '-'    )
 
-!write(*,*)'chksst',dtsf,maxval(sst(1,:,:)), minval(sst(1,:,:))
-!     call HIST_in( SST_loc(:,:), 'SST','sst','K',dtsf)
-      call HIST_in( SST(:,:), 'SST2','sst','K',dtsf)
-      call HIST_in( SFLX_POTT(:,:)*CPd, 'SHF','shf','W/m2',dtsf)
-      call HIST_in( SFLX_QV(:,:)*LHV, 'LHF','lhf','W/m2',dtsf)
-      call HIST_in( SFC_albedo(:,:,1), 'ALBEDO_LW','alblw','-',dtsf)
-      call HIST_in( SFC_albedo(:,:,2), 'ALBEDO_SW','albsw','-',dtsf)
-!write(*,*)'chksst2'
-
-!return ! tmp11
       !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
       do j = JS, JE
       do i = IS, IE
@@ -1065,8 +1059,8 @@ contains
       enddo
 !return ! tmp12
 
-      call HIST_in( SHFLX(:,:), 'SHFLX', 'sensible heat flux', 'W/m2', dtsf )
-      call HIST_in( LHFLX(:,:), 'LHFLX', 'latent heat flux',   'W/m2', dtsf )
+      call HIST_in( SHFLX(:,:), 'SHFLX', 'sensible heat flux', 'W/m2' )
+      call HIST_in( LHFLX(:,:), 'LHFLX', 'latent heat flux',   'W/m2' )
 
     endif
 !momz_tp(:,:,:)=0.0

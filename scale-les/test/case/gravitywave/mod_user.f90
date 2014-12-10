@@ -115,7 +115,7 @@ contains
        enddo
        enddo
 
-       call HIST_in( PT_diff(:,:,:), 'PT_diff', 'PT perturbation', 'K', DTSEC)
+       call HIST_in( PT_diff(:,:,:), 'PT_diff', 'PT perturbation', 'K' )
     endif
 
     return

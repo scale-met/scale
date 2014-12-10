@@ -315,41 +315,13 @@ contains
                      __FILE__, __LINE__ )
     endif
 
-    call HIST_in( OCEAN_TEMP(:,:),  &
-                  VAR_NAME(I_TEMP), &
-                  VAR_DESC(I_TEMP), &
-                  VAR_UNIT(I_TEMP), &
-                  TIME_DTSEC_OCEAN  )
-    call HIST_in( OCEAN_SFC_TEMP(:,:),  &
-                  VAR_NAME(I_SFC_TEMP), &
-                  VAR_DESC(I_SFC_TEMP), &
-                  VAR_UNIT(I_SFC_TEMP), &
-                  TIME_DTSEC_OCEAN      )
-    call HIST_in( OCEAN_SFC_albedo(:,:,I_LW),  &
-                  VAR_NAME(I_SFC_albedo_LW),   &
-                  VAR_DESC(I_SFC_albedo_LW),   &
-                  VAR_UNIT(I_SFC_albedo_LW),   &
-                  TIME_DTSEC_OCEAN             )
-    call HIST_in( OCEAN_SFC_albedo(:,:,I_SW),  &
-                  VAR_NAME(I_SFC_albedo_SW),   &
-                  VAR_DESC(I_SFC_albedo_SW),   &
-                  VAR_UNIT(I_SFC_albedo_SW),   &
-                  TIME_DTSEC_OCEAN             )
-    call HIST_in( OCEAN_SFC_Z0M(:,:),  &
-                  VAR_NAME(I_SFC_Z0M), &
-                  VAR_DESC(I_SFC_Z0M), &
-                  VAR_UNIT(I_SFC_Z0M), &
-                  TIME_DTSEC_OCEAN     )
-    call HIST_in( OCEAN_SFC_Z0H(:,:),  &
-                  VAR_NAME(I_SFC_Z0H), &
-                  VAR_DESC(I_SFC_Z0H), &
-                  VAR_UNIT(I_SFC_Z0H), &
-                  TIME_DTSEC_OCEAN     )
-    call HIST_in( OCEAN_SFC_Z0E(:,:),  &
-                  VAR_NAME(I_SFC_Z0E), &
-                  VAR_DESC(I_SFC_Z0E), &
-                  VAR_UNIT(I_SFC_Z0E), &
-                  TIME_DTSEC_OCEAN     )
+    call HIST_in( OCEAN_TEMP      (:,:),      VAR_NAME(I_TEMP),          VAR_DESC(I_TEMP),          VAR_UNIT(I_TEMP)          )
+    call HIST_in( OCEAN_SFC_TEMP  (:,:),      VAR_NAME(I_SFC_TEMP),      VAR_DESC(I_SFC_TEMP),      VAR_UNIT(I_SFC_TEMP)      )
+    call HIST_in( OCEAN_SFC_albedo(:,:,I_LW), VAR_NAME(I_SFC_albedo_LW), VAR_DESC(I_SFC_albedo_LW), VAR_UNIT(I_SFC_albedo_LW) )
+    call HIST_in( OCEAN_SFC_albedo(:,:,I_SW), VAR_NAME(I_SFC_albedo_SW), VAR_DESC(I_SFC_albedo_SW), VAR_UNIT(I_SFC_albedo_SW) )
+    call HIST_in( OCEAN_SFC_Z0M   (:,:),      VAR_NAME(I_SFC_Z0M),       VAR_DESC(I_SFC_Z0M),       VAR_UNIT(I_SFC_Z0M)       )
+    call HIST_in( OCEAN_SFC_Z0H   (:,:),      VAR_NAME(I_SFC_Z0H),       VAR_DESC(I_SFC_Z0H),       VAR_UNIT(I_SFC_Z0H)       )
+    call HIST_in( OCEAN_SFC_Z0E   (:,:),      VAR_NAME(I_SFC_Z0E),       VAR_DESC(I_SFC_Z0E),       VAR_UNIT(I_SFC_Z0E)       )
 
     return
   end subroutine OCEAN_vars_history

@@ -123,7 +123,7 @@ contains
        O3       (:,:,:)   = 0.0_RP
 
        if ( history_flag ) then
-          call HIST_in( O3(:,:,:), 'Ozone', 'Ozone', 'PPM', dt_CH )
+          call HIST_in( O3(:,:,:), 'Ozone', 'Ozone', 'PPM' )
        endif
     endif
 

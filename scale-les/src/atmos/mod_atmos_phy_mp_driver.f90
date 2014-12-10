@@ -197,9 +197,9 @@ contains
        end do
 
        if ( history_flag ) then
-          call HIST_in( SFLX_rain(:,:), 'RAIN', 'surface rain rate',          'kg/m2/s', dt_MP )
-          call HIST_in( SFLX_snow(:,:), 'SNOW', 'surface snow rate',          'kg/m2/s', dt_MP )
-          call HIST_in( precip   (:,:), 'PREC', 'surface precipitation rate', 'kg/m2/s', dt_MP )
+          call HIST_in( SFLX_rain(:,:), 'RAIN', 'surface rain rate',          'kg/m2/s' )
+          call HIST_in( SFLX_snow(:,:), 'SNOW', 'surface snow rate',          'kg/m2/s' )
+          call HIST_in( precip   (:,:), 'PREC', 'surface precipitation rate', 'kg/m2/s' )
        endif
 
     endif

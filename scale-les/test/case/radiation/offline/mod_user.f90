@@ -65,7 +65,7 @@ contains
     namelist / PARAM_USER / &
        USER_do, &
        ITIME
-    
+
     integer :: ierr
     !---------------------------------------------------------------------------
 
@@ -128,8 +128,6 @@ contains
     use mod_atmos_phy_sf_vars, only: &
        SFC_TEMP   => ATMOS_PHY_SF_SFC_TEMP,  &
        SFC_albedo => ATMOS_PHY_SF_SFC_albedo
-    use scale_history, only: &
-       HIST_in
     implicit none
 
     real(RP) :: WORK_3d(KA,IA,JA)
@@ -181,7 +179,7 @@ contains
        print *,"QTRC",QTRC(KA/2,IA/2,JA/2,I_QG)
        print *,"SFC_TEMP",SFC_TEMP(IA/2,JA/2)
        print *,"ALB_LW",SFC_albedo(IA/2,JA/2,I_LW)
-       print *,"ALB_SW",SFC_albedo(IA/2,JA/2,I_SW)     
+       print *,"ALB_SW",SFC_albedo(IA/2,JA/2,I_SW)
 
     endif
 
@@ -191,10 +189,10 @@ contains
 !----------------------------------------------------------
   subroutine read_rad_inputdata(filename,var)
 
-    implicit none     
+    implicit none
     character(*),intent(in)  :: filename
     real(RP),intent(out)     :: var (KA,IA,JA)
-    real(SP)                 :: work(IMAX,JMAX,KMAX) 
+    real(SP)                 :: work(IMAX,JMAX,KMAX)
     integer                  :: k, i, j, irecl
 
      irecl=(IE-IS+1)*(JE-JS+1)*(KE-KS+1)*4
@@ -232,7 +230,7 @@ contains
          enddo
          do j=1,JS-1
            var(k,:,j) = var(k,:,JS)
-         enddo 
+         enddo
          do j=JE+1,JA
            var(k,:,j) = var(k,:,JE)
          enddo
@@ -249,10 +247,10 @@ contains
 !----------------------------------------------------------
   subroutine read_rad_inputdata_2d(filename,var)
 
-    implicit none     
+    implicit none
     character(*),intent(in)  :: filename
     real(RP),intent(out)     :: var (IA,JA)
-    real(SP)                 :: work(IMAX,JMAX) 
+    real(SP)                 :: work(IMAX,JMAX)
     integer                  :: i, j, irecl
 
      irecl=(IE-IS+1)*(JE-JS+1)*4
@@ -285,7 +283,7 @@ contains
       enddo
       do j=1,JS-1
            var(:,j) = var(:,JS)
-      enddo 
+      enddo
       do j=JE+1,JA
            var(:,j) = var(:,JE)
       enddo

@@ -297,6 +297,8 @@ program scaleles
   ! setup user-defined procedure
   call USER_setup
 
+  ! history&monitor file output
+  call HIST_write ! if needed
   call MONIT_write('MAIN')
 
   call PROF_rapend('Initialize', 0)

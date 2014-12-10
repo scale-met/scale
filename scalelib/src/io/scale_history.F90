@@ -280,14 +280,14 @@ contains
     ! associate coordinates
     do k = 1, KMAX
        AXIS(1:im,1:jm,k) = REAL_CZ(k+KS-1,ims:ime,jms:jme)
-    end do
+    enddo
     AXIS_name(1:3) = (/'x ','y ', 'z '/)
     call HistoryPutAssociatedCoordinates( 'height' , 'height'             ,     &
                                           'm' , AXIS_name(1:3), AXIS(:,:,:) )
 
     do k = 1, KMAX
        AXIS(1:im,1:jm,k) = REAL_FZ(k+KS-1,ims:ime,jms:jme)
-    end do
+    enddo
     AXIS_name(1:3) = (/'x ','y ', 'zh'/)
     call HistoryPutAssociatedCoordinates( 'height_xyw' , 'height (half level xyw)'             ,     &
                                           'm' , AXIS_name(1:3), AXIS(:,:,:) )
@@ -296,14 +296,14 @@ contains
     do j = 1, jm
     do i = 1, im-1
        AXIS(i,j,k) = ( REAL_CZ(k+KS-1,ims+i-1,jms+j-1) + REAL_CZ(k+KS-1,ims+i,jms+j-1) ) * 0.5_RP
-    end do
-    end do
-    end do
+    enddo
+    enddo
+    enddo
     do k = 1, KMAX
     do j = 1, jm
        AXIS(im,j,k) = REAL_CZ(k+KS-1,ims+im-1,jms+j-1)
-    end do
-    end do
+    enddo
+    enddo
     AXIS_name(1:3) = (/'xh','y ', 'z '/)
     call HistoryPutAssociatedCoordinates( 'height_uyz' , 'height (half level uyz)'             ,     &
                                           'm' , AXIS_name(1:3), AXIS(:,:,:) )
@@ -312,14 +312,14 @@ contains
     do j = 1, jm-1
     do i = 1, im
        AXIS(i,j,k) = ( REAL_CZ(k+KS-1,ims+i-1,jms+j-1) + REAL_CZ(k+KS-1,ims+i-1,jms+j) ) * 0.5_RP
-    end do
-    end do
-    end do
+    enddo
+    enddo
+    enddo
     do k = 1, KMAX
     do i = 1, im
        AXIS(i,jm,k) = REAL_CZ(k+KS-1,ims+i-1,jms+jm-1)
-    end do
-    end do
+    enddo
+    enddo
     AXIS_name(1:3) = (/'x ','yh', 'z '/)
     call HistoryPutAssociatedCoordinates( 'height_xvz' , 'height (half level xvz)'             ,     &
                                           'm' , AXIS_name(1:3), AXIS(:,:,:) )
@@ -329,19 +329,19 @@ contains
     do i = 1, im-1
        AXIS(i,j,k) = ( REAL_CZ(k+KS-1,ims+i-1,jms+j-1) + REAL_CZ(k+KS-1,ims+i  ,jms+j-1) &
                      + REAL_CZ(k+KS-1,ims+i-1,jms+j  ) + REAL_CZ(k+KS-1,ims+i  ,jms+j  ) ) * 0.25_RP
-    end do
-    end do
-    end do
+    enddo
+    enddo
+    enddo
     do k = 1, KMAX
     do i = 1, im
        AXIS(i,jm,k) = REAL_CZ(k+KS-1,ims+i-1,jms+jm-1)
-    end do
-    end do
+    enddo
+    enddo
     do k = 1, KMAX
     do j = 1, jm
        AXIS(im,j,k) = REAL_CZ(k+KS-1,ims+im-1,jms+j-1)
-    end do
-    end do
+    enddo
+    enddo
     AXIS_name(1:3) = (/'xh','yh', 'z '/)
     call HistoryPutAssociatedCoordinates( 'height_uvz' , 'height (half level uvz)'             ,     &
                                           'm' , AXIS_name(1:3), AXIS(:,:,:) )
@@ -350,14 +350,14 @@ contains
     do j = 1, jm
     do i = 1, im-1
        AXIS(i,j,k) = ( REAL_FZ(k+KS-1,ims+i-1,jms+j-1) + REAL_FZ(k+KS-1,ims+i,jms+j-1) ) * 0.5_RP
-    end do
-    end do
-    end do
+    enddo
+    enddo
+    enddo
     do k = 1, KMAX
     do j = 1, jm
        AXIS(im,j,k) = REAL_FZ(k+KS-1,ims+im-1,jms+j-1)
-    end do
-    end do
+    enddo
+    enddo
     AXIS_name(1:3) = (/'xh','y ', 'zh'/)
     call HistoryPutAssociatedCoordinates( 'height_uyw' , 'height (half level uyw)'             ,     &
                                           'm' , AXIS_name(1:3), AXIS(:,:,:) )
@@ -366,14 +366,14 @@ contains
     do j = 1, jm-1
     do i = 1, im
        AXIS(i,j,k) = ( REAL_FZ(k+KS-1,ims+i-1,jms+j-1) + REAL_FZ(k+KS-1,ims+i-1,jms+j) ) * 0.5_RP
-    end do
-    end do
-    end do
+    enddo
+    enddo
+    enddo
     do k = 1, KMAX
     do i = 1, im
        AXIS(i,jm,k) = REAL_FZ(k+KS-1,ims+i-1,jms+jm-1)
-    end do
-    end do
+    enddo
+    enddo
     AXIS_name(1:3) = (/'x ','yh', 'zh'/)
     call HistoryPutAssociatedCoordinates( 'height_xvw' , 'height (half level xvw)'             ,     &
                                           'm' , AXIS_name(1:3), AXIS(:,:,:) )
@@ -383,19 +383,19 @@ contains
     do i = 1, im-1
        AXIS(i,j,k) = ( REAL_FZ(k+KS-1,ims+i-1,jms+j-1) + REAL_FZ(k+KS-1,ims+i  ,jms+j-1) &
                      + REAL_FZ(k+KS-1,ims+i-1,jms+j  ) + REAL_FZ(k+KS-1,ims+i  ,jms+j  ) ) * 0.25_RP
-    end do
-    end do
-    end do
+    enddo
+    enddo
+    enddo
     do k = 1, KMAX
     do i = 1, im
        AXIS(i,jm,k) = REAL_FZ(k+KS-1,ims+i-1,jms+jm-1)
-    end do
-    end do
+    enddo
+    enddo
     do k = 1, KMAX
     do j = 1, jm
        AXIS(im,j,k) = REAL_FZ(k+KS-1,ims+im-1,jms+j-1)
-    end do
-    end do
+    enddo
+    enddo
     AXIS_name(1:3) = (/'xh','yh', 'zh'/)
     call HistoryPutAssociatedCoordinates( 'height_uvw' , 'height (half level uvw)'             ,     &
                                           'm' , AXIS_name(1:3), AXIS(:,:,:) )
@@ -448,12 +448,13 @@ contains
        desc,    &
        unit,    &
        ndim,    &
-       dt,      &
        xdim,    &
        ydim,    &
        zdim     )
     use gtool_history, only: &
        HistoryAddVariable
+    use scale_time, only: &
+       TIME_NOWDAYSEC
     implicit none
 
     integer,          intent(out) :: itemid  !< index number of the item
@@ -463,7 +464,6 @@ contains
     character(len=*), intent(in)  :: unit    !< unit         of the item
     integer,          intent(in)  :: ndim    !< dimension    of the item
 
-    real(DP),         intent(in),optional  :: dt   !< update time interval
     character(len=*), intent(in), optional :: xdim
     character(len=*), intent(in), optional :: ydim
     character(len=*), intent(in), optional :: zdim
@@ -540,14 +540,14 @@ contains
 
     end if
 
-    call HistoryAddVariable( item,              & ! [IN]
-                             dims(1:ndim),      & ! [IN]
-                             desc,              & ! [IN]
-                             unit,              & ! [IN]
-                             dt,                & ! [IN]
-                             itemid  = itemid,  & ! [OUT]
-                             zinterp = zinterp, & ! [OUT]
-                             existed = existed  ) ! [OUT]
+    call HistoryAddVariable( item,           & ! [IN]
+                             dims(1:ndim),   & ! [IN]
+                             desc,           & ! [IN]
+                             unit,           & ! [IN]
+                             TIME_NOWDAYSEC, & ! [IN]
+                             itemid,         & ! [OUT]
+                             zinterp,        & ! [OUT]
+                             existed         ) ! [OUT]
 
     call PROF_rapend  ('FILE O NetCDF', 2)
 
@@ -555,18 +555,47 @@ contains
   end subroutine HIST_reg
 
   !-----------------------------------------------------------------------------
+  !> Check time to putting data
+  subroutine HIST_query( &
+       itemid, &
+       answer  )
+    use gtool_history, only: &
+       HistoryQuery
+    use scale_time, only: &
+       TIME_NOWDAYSEC, &
+       TIME_DTSEC
+    implicit none
+
+    integer, intent(in)  :: itemid !< index number of the item
+    logical, intent(out) :: answer !< is it time to store?
+
+    !---------------------------------------------------------------------------
+
+    if ( itemid < 0 ) return
+
+    call PROF_rapstart('FILE O NetCDF', 2)
+
+    call HistoryQuery(itemid, TIME_NOWDAYSEC+TIME_DTSEC, answer)
+
+    call PROF_rapend  ('FILE O NetCDF', 2)
+
+    return
+  end subroutine HIST_query
+
+  !-----------------------------------------------------------------------------
   !> Put 1D data to history buffer
   subroutine HIST_put_1D( &
-      itemid, &
-      var,    &
-      dt      )
+       itemid, &
+       var     )
     use gtool_history, only: &
        HistoryPut
+    use scale_time, only: &
+       TIME_NOWDAYSEC, &
+       TIME_DTSEC
     implicit none
 
     integer,  intent(in) :: itemid !< index number of the item
     real(RP), intent(in) :: var(:) !< value
-    real(DP), intent(in) :: dt     !< delta t [sec]
 
     real(RP) :: var2(KMAX)
     integer  :: k
@@ -579,7 +608,8 @@ contains
     do k = 1, KMAX
        var2(k) = var(KS+k-1)
     enddo
-    call HistoryPut(itemid, var2, dt)
+
+    call HistoryPut(itemid, TIME_NOWDAYSEC+TIME_DTSEC, var2)
 
     call PROF_rapend  ('FILE O NetCDF', 2)
 
@@ -589,21 +619,22 @@ contains
   !-----------------------------------------------------------------------------
   !> Put 2D data to history buffer
   subroutine HIST_put_2D( &
-      itemid, &
-      var,    &
-      dt,     &
-      nohalo  )
+       itemid, &
+       var,    &
+       nohalo  )
     use gtool_file, only: &
        RMISS
     use gtool_history, only: &
        HistoryPut
+    use scale_time, only: &
+       TIME_NOWDAYSEC, &
+       TIME_DTSEC
     implicit none
 
     integer,  intent(in) :: itemid   !< index number of the item
     real(RP), intent(in) :: var(:,:) !< value
-    real(DP), intent(in) :: dt       !< delta t [sec]
 
-    logical, intent(in), optional :: nohalo
+    logical,  intent(in), optional :: nohalo
 
     real(RP) :: var2(im*jm)
     integer  :: i, j
@@ -628,29 +659,29 @@ contains
        do j = 1, jm
        do i = 1, IS-ims
           var2(i + (j-1)*im) = RMISS
-       end do
-       end do
+       enddo
+       enddo
        ! E halo
        do j = 1, jm
        do i = IE-ims+2, ime-ims+1
           var2(i + (j-1)*im) = RMISS
-       end do
-       end do
+       enddo
+       enddo
        ! S halo
        do j = 1, JS-jms
        do i = 1, im
           var2(i + (j-1)*im) = RMISS
-       end do
-       end do
+       enddo
+       enddo
        ! N halo
        do j = JE-jms+2, jme-jms+1
        do i = 1, im
           var2(i + (j-1)*im) = RMISS
-       end do
-       end do
+       enddo
+       enddo
     end if
 
-    call HistoryPut(itemid, var2, dt)
+    call HistoryPut(itemid, TIME_NOWDAYSEC+TIME_DTSEC, var2)
 
     call PROF_rapend  ('FILE O NetCDF', 2)
 
@@ -660,18 +691,20 @@ contains
   !-----------------------------------------------------------------------------
   !> Put 3D data to history buffer
   subroutine HIST_put_3D( &
-      itemid,  &
-      var,     &
-      dt,      &
-      zinterp, &
-      xdim,    &
-      ydim,    &
-      zdim,    &
-      nohalo   )
+       itemid,  &
+       var,     &
+       zinterp, &
+       xdim,    &
+       ydim,    &
+       zdim,    &
+       nohalo   )
     use gtool_file, only: &
        RMISS
     use gtool_history, only: &
        HistoryPut
+    use scale_time, only: &
+       TIME_NOWDAYSEC, &
+       TIME_DTSEC
     use scale_interpolation, only: &
        INTERP_vertical_xi2z, &
        INTERP_available
@@ -679,14 +712,12 @@ contains
 
     integer,  intent(in) :: itemid     !< index number of the item
     real(RP), intent(in) :: var(:,:,:) !< value
-    real(DP), intent(in) :: dt         !< delta t [sec]
     logical,  intent(in) :: zinterp    !< vertical interpolation?
 
     character(len=*), intent(in), optional :: xdim
     character(len=*), intent(in), optional :: ydim
     character(len=*), intent(in), optional :: zdim
-
-    logical, intent(in), optional :: nohalo
+    logical,          intent(in), optional :: nohalo
 
     intrinsic shape
     integer :: s(3)
@@ -696,10 +727,10 @@ contains
     real(RP), allocatable :: var_Z(:,:,:)
     real(RP), allocatable :: var2 (:)
 
-    integer  :: i, j, k
-    integer  :: isize, jsize, ksize
-    integer  :: iall, jall, kall
-    integer  :: istart, jstart, kstart
+    integer :: i, j, k
+    integer :: isize, jsize, ksize
+    integer :: iall, jall, kall
+    integer :: istart, jstart, kstart
 
     logical :: nohalo_
     !---------------------------------------------------------------------------
@@ -764,29 +795,29 @@ contains
           do j = 1, jsize
           do i = 1, IS-ims
              var2(i + (j-1)*isize) = RMISS
-          end do
-          end do
+          enddo
+          enddo
           ! E halo
           do j = 1, jsize
           do i = IE-ims+2, ime-ims+1
              var2(i + (j-1)*isize) = RMISS
-          end do
-          end do
+          enddo
+          enddo
           ! S halo
           do j = 1, JS-jms
           do i = 1, isize
              var2(i + (j-1)*isize) = RMISS
-          end do
-          end do
+          enddo
+          enddo
           ! N halo
           do j = JE-jms+2, jme-jms+1
           do i = 1, isize
              var2(i + (j-1)*isize) = RMISS
-          end do
-          end do
+          enddo
+          enddo
        end if
 
-       call HistoryPut(itemid, var2(1:isize*jsize), dt)
+       call HistoryPut(itemid, TIME_NOWDAYSEC+TIME_DTSEC, var2(1:isize*jsize))
 
     else
        if (       ksize == KMAX    &
@@ -820,36 +851,36 @@ contains
           do j = 1, jsize
           do i = 1, IS-ims
              var2(i + (j-1)*isize + (k-1)*jsize*isize) = RMISS
-          end do
-          end do
-          end do
+          enddo
+          enddo
+          enddo
           ! E halo
           do k = 1, ksize
           do j = 1, jsize
           do i = IE-ims+2, ime-ims+1
              var2(i + (j-1)*isize + (k-1)*jsize*isize) = RMISS
-          end do
-          end do
-          end do
+          enddo
+          enddo
+          enddo
           ! S halo
           do k = 1, ksize
           do j = 1, JS-jms
           do i = 1, isize
              var2(i + (j-1)*isize + (k-1)*jsize*isize) = RMISS
-          end do
-          end do
-          end do
+          enddo
+          enddo
+          enddo
           ! N halo
           do k = 1, ksize
           do j = JE-jms+2, jme-jms+1
           do i = 1, isize
              var2(i + (j-1)*isize + (k-1)*jsize*isize) = RMISS
-          end do
-          end do
-          end do
+          enddo
+          enddo
+          enddo
        end if
 
-       call HistoryPut(itemid, var2, dt)
+       call HistoryPut(itemid, TIME_NOWDAYSEC+TIME_DTSEC, var2)
 
     endif
 
@@ -865,7 +896,6 @@ contains
        item, &
        desc, &
        unit, &
-       dt,   &
        zdim  )
     implicit none
 
@@ -873,13 +903,13 @@ contains
     character(len=*), intent(in) :: item
     character(len=*), intent(in) :: desc
     character(len=*), intent(in) :: unit
-    real(DP),         intent(in) :: dt
 
     character(len=*), intent(in), optional :: zdim
 
     character(len=16) :: zd
-    integer          :: itemid
-    logical          :: zinterp
+    integer           :: itemid
+    logical           :: zinterp
+    logical           :: do_put
     !---------------------------------------------------------------------------
 
     zd = ''
@@ -888,10 +918,14 @@ contains
     call HIST_reg( itemid,              & ! [OUT]
                    zinterp,             & ! [OUT]
                    item, desc, unit, 1, & ! [IN]
-                   dt = dt,             & ! [IN]
                    zdim = zd            ) ! [IN]
 
-    call HIST_put( itemid, var, dt ) ! [IN]
+    call HIST_query( itemid, & ! [IN]
+                     do_put  ) ! [OUT]
+
+    if ( do_put ) then
+       call HIST_put( itemid, var ) ! [IN]
+    endif
 
     return
   end subroutine HIST_in_1D
@@ -899,13 +933,12 @@ contains
   !-----------------------------------------------------------------------------
   !> Wrapper routine of HIST_reg+HIST_put 2D
   subroutine HIST_in_2D( &
-       var,  &
-       item, &
-       desc, &
-       unit, &
-       dt,   &
-       xdim, &
-       ydim, &
+       var,   &
+       item,  &
+       desc,  &
+       unit,  &
+       xdim,  &
+       ydim,  &
        nohalo )
     implicit none
 
@@ -913,16 +946,15 @@ contains
     character(len=*), intent(in) :: item     !< name        of the item
     character(len=*), intent(in) :: desc     !< description of the item
     character(len=*), intent(in) :: unit     !< unit        of the item
-    real(DP),         intent(in) :: dt       !< delta t [sec]
 
     character(len=*), intent(in), optional :: xdim
     character(len=*), intent(in), optional :: ydim
-
-    logical, intent(in), optional :: nohalo
+    logical,          intent(in), optional :: nohalo
 
     character(len=16) :: xd, yd
-    integer          :: itemid
-    logical          :: zinterp
+    integer           :: itemid
+    logical           :: zinterp
+    logical           :: do_put
     !---------------------------------------------------------------------------
 
     xd = ''
@@ -933,10 +965,14 @@ contains
     call HIST_reg( itemid,              & ! [OUT]
                    zinterp,             & ! [OUT]
                    item, desc, unit, 2, & ! [IN]
-                   dt = dt,             & ! [IN]
                    xdim = xd, ydim = yd ) ! [IN]
 
-    call HIST_put( itemid, var, dt, nohalo = nohalo ) ! [IN]
+    call HIST_query( itemid, & ! [IN]
+                     do_put  ) ! [OUT]
+
+    if ( do_put ) then
+       call HIST_put( itemid, var, nohalo = nohalo ) ! [IN]
+    endif
 
     return
   end subroutine HIST_in_2D
@@ -944,14 +980,13 @@ contains
   !-----------------------------------------------------------------------------
   !> Wrapper routine of HIST_reg+HIST_put 3D
   subroutine HIST_in_3D( &
-       var,  &
-       item, &
-       desc, &
-       unit, &
-       dt,   &
-       xdim, &
-       ydim, &
-       zdim, &
+       var,   &
+       item,  &
+       desc,  &
+       unit,  &
+       xdim,  &
+       ydim,  &
+       zdim,  &
        nohalo )
     implicit none
 
@@ -959,17 +994,16 @@ contains
     character(len=*), intent(in) :: item       !< name        of the item
     character(len=*), intent(in) :: desc       !< description of the item
     character(len=*), intent(in) :: unit       !< unit        of the item
-    real(DP),         intent(in) :: dt         !< delta t [sec]
 
     character(len=*), intent(in), optional :: xdim
     character(len=*), intent(in), optional :: ydim
     character(len=*), intent(in), optional :: zdim
-
-    logical, intent(in), optional :: nohalo
+    logical,          intent(in), optional :: nohalo
 
     character(len=16) :: xd, yd, zd
-    integer          :: itemid
-    logical          :: zinterp
+    integer           :: itemid
+    logical           :: zinterp
+    logical           :: do_put
     !---------------------------------------------------------------------------
 
     xd = ''
@@ -982,12 +1016,16 @@ contains
     call HIST_reg( itemid,                       & ! [OUT]
                    zinterp,                      & ! [OUT]
                    item, desc, unit, 3,          & ! [IN]
-                   dt = dt,                      & ! [IN]
                    xdim = xd, ydim = yd, zdim=zd ) ! [IN]
 
-    call HIST_put( itemid, var, dt, zinterp,      & ! [IN]
-                   xdim = xd, ydim = yd, zdim=zd, & ! [IN]
-                   nohalo = nohalo                ) ! [IN]
+    call HIST_query( itemid, & ! [IN]
+                     do_put  ) ! [OUT]
+
+    if ( do_put ) then
+       call HIST_put( itemid, var, zinterp,          & ! [IN]
+                      xdim = xd, ydim = yd, zdim=zd, & ! [IN]
+                      nohalo = nohalo                ) ! [IN]
+    endif
 
     return
   end subroutine HIST_in_3D
@@ -1110,9 +1148,9 @@ contains
   !> Flush history buffer to file
   subroutine HIST_write
     use gtool_history, only: &
-         HistoryWriteAll
+       HistoryWriteAll
     use scale_time, only: &
-         TIME_NOWDAYSEC
+       TIME_NOWDAYSEC
     implicit none
     !---------------------------------------------------------------------------
 

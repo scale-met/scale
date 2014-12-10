@@ -117,7 +117,7 @@ contains
                        OCEAN_TEMP_t(:,:)  ) ! [OUT]
 
        if ( history_flag ) then
-          call HIST_in( OCEAN_TEMP_t(:,:), 'OCEAN_TEMP_t', 'SST tendency', 'K', dt )
+          call HIST_in( OCEAN_TEMP_t(:,:), 'OCEAN_TEMP_t', 'SST tendency', 'K' )
        endif
 
     endif

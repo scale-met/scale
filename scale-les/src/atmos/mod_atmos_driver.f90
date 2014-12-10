@@ -412,16 +412,16 @@ contains
                         FLX_heat  (:,:)    ) ! [OUT]
 
        if ( .NOT. setup ) then
-          call HIST_in( SFC_Z0M(:,:), 'SFC_Z0M', 'roughness length (momentum)',  'm',     TIME_DTSEC )
-          call HIST_in( SFC_Z0H(:,:), 'SFC_Z0H', 'roughness length (heat)',      'm',     TIME_DTSEC )
-          call HIST_in( SFC_Z0E(:,:), 'SFC_Z0E', 'roughness length (vapor)',     'm',     TIME_DTSEC )
-          call HIST_in( Uabs10 (:,:), 'Uabs10',  '10m absolute wind',            'm/s',   TIME_DTSEC )
-          call HIST_in( U10    (:,:), 'U10',     '10m x-wind',                   'm/s',   TIME_DTSEC )
-          call HIST_in( V10    (:,:), 'V10',     '10m y-wind',                   'm/s',   TIME_DTSEC )
-          call HIST_in( T2     (:,:), 'T2 ',     '2m temperature',               'K',     TIME_DTSEC )
-          call HIST_in( Q2     (:,:), 'Q2 ',     '2m water vapor',               'kg/kg', TIME_DTSEC )
+          call HIST_in( SFC_Z0M(:,:), 'SFC_Z0M', 'roughness length (momentum)', 'm'     )
+          call HIST_in( SFC_Z0H(:,:), 'SFC_Z0H', 'roughness length (heat)',     'm'     )
+          call HIST_in( SFC_Z0E(:,:), 'SFC_Z0E', 'roughness length (vapor)',    'm'     )
+          call HIST_in( Uabs10 (:,:), 'Uabs10',  '10m absolute wind',           'm/s'   )
+          call HIST_in( U10    (:,:), 'U10',     '10m x-wind',                  'm/s'   )
+          call HIST_in( V10    (:,:), 'V10',     '10m y-wind',                  'm/s'   )
+          call HIST_in( T2     (:,:), 'T2 ',     '2m temperature',              'K'     )
+          call HIST_in( Q2     (:,:), 'Q2 ',     '2m water vapor',              'kg/kg' )
 
-          call HIST_in( FLX_heat(:,:), 'GHFLX', 'ground heat flux (merged)', 'W/m2', TIME_DTSEC )
+          call HIST_in( FLX_heat(:,:), 'GHFLX', 'ground heat flux (merged)', 'W/m2' )
        endif
     endif
 
@@ -435,13 +435,13 @@ contains
                              SFC_DENS (:,:),   & ! [OUT]
                              SFC_PRES (:,:)    ) ! [OUT]
 
-       call HIST_in( SFC_DENS  (:,:),      'SFC_DENS',   'surface atmospheric density',       'kg/m3', TIME_DTSEC )
-       call HIST_in( SFC_PRES  (:,:),      'SFC_PRES',   'surface atmospheric pressure',      'Pa',    TIME_DTSEC )
+       call HIST_in( SFC_DENS  (:,:),      'SFC_DENS',   'surface atmospheric density',       'kg/m3' )
+       call HIST_in( SFC_PRES  (:,:),      'SFC_PRES',   'surface atmospheric pressure',      'Pa'    )
 
        ! if coupler is disabled, SFC_TEMP, SFC_albedo is set in ATMOS_PHY_SF_vars
-       call HIST_in( SFC_TEMP  (:,:),      'SFC_TEMP',   'surface skin temperature (merged)', 'K',     TIME_DTSEC )
-       call HIST_in( SFC_albedo(:,:,I_LW), 'SFC_ALB_LW', 'surface albedo (longwave, merged)', '0-1',   TIME_DTSEC )
-       call HIST_in( SFC_albedo(:,:,I_SW), 'SFC_ALB_SW', 'surface albedo (shortwave,merged)', '0-1',   TIME_DTSEC )
+       call HIST_in( SFC_TEMP  (:,:),      'SFC_TEMP',   'surface skin temperature (merged)', 'K'     )
+       call HIST_in( SFC_albedo(:,:,I_LW), 'SFC_ALB_LW', 'surface albedo (longwave, merged)', '0-1'   )
+       call HIST_in( SFC_albedo(:,:,I_SW), 'SFC_ALB_SW', 'surface albedo (shortwave,merged)', '0-1'   )
     endif
 
     return
