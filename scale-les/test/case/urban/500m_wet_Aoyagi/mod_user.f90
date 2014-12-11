@@ -50,14 +50,14 @@ contains
     use scale_process, only: &
        PRC_MPIstop
     use mod_atmos_admin, only: &
-       ATMOS_do,          &
-       ATMOS_sw_dyn,      &
-       ATMOS_sw_phy_mp,   &
-       ATMOS_sw_phy_ae,   &
-       ATMOS_sw_phy_ch,   &
-       ATMOS_sw_phy_rd,   &
-       ATMOS_sw_phy_sf,   &
-       ATMOS_sw_phy_tb,   &
+       ATMOS_do,        &
+       ATMOS_sw_dyn,    &
+       ATMOS_sw_phy_mp, &
+       ATMOS_sw_phy_ae, &
+       ATMOS_sw_phy_ch, &
+       ATMOS_sw_phy_rd, &
+       ATMOS_sw_phy_sf, &
+       ATMOS_sw_phy_tb, &
        ATMOS_sw_phy_cp
     implicit none
 
@@ -84,15 +84,18 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
 
     ! atmosphric model set to off
-       ATMOS_do         = .false.
-       ATMOS_sw_dyn     = .false.
-       ATMOS_sw_phy_mp  = .false.
-       ATMOS_sw_phy_ae  = .false.
-       ATMOS_sw_phy_ch  = .false.
-       ATMOS_sw_phy_rd  = .false.
-       ATMOS_sw_phy_sf  = .false.
-       ATMOS_sw_phy_tb  = .false.
-       ATMOS_sw_phy_cp  = .false.
+    ATMOS_do        = .false.
+    ATMOS_sw_dyn    = .false.
+    ATMOS_sw_phy_mp = .false.
+    ATMOS_sw_phy_ae = .false.
+    ATMOS_sw_phy_ch = .false.
+    ATMOS_sw_phy_rd = .false.
+    ATMOS_sw_phy_sf = .false.
+    ATMOS_sw_phy_tb = .false.
+    ATMOS_sw_phy_cp = .false.
+
+    ! run once (only for the diagnostic value)
+    call USER_step
 
     return
   end subroutine USER_setup
@@ -100,7 +103,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Step
   subroutine USER_step
-   use scale_const, only: &
+    use scale_const, only: &
        D2R   => CONST_D2R,   &
        TEM00 => CONST_TEM00, &
        LHV   => CONST_LHV,   &    ! ELL : latent heat of vaporization [J/kg]
@@ -131,13 +134,12 @@ contains
     real(RP) :: dsec
     integer  :: tloc
 
-    real(RP) :: ES
     real(RP) :: SW  (0:24)
     real(RP) :: PT  (0:24)
     real(RP) :: Wind(0:24)
     real(RP) :: Rain(0:24)
     real(RP) :: Qvapor(0:24) ! mixing ratio [kg/kg]
-
+    real(RP) :: ES
 
     data SW / 0.0, 0.0, 0.0, 0.0, 0.0, 11.0, 26.5, 161.5, 434.2, 694.6, 877.5, 807.4,     &
               907.4, 847.2, 725.2, 559.0, 357.9, 158.6, 14.7, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0/
@@ -157,7 +159,7 @@ contains
     integer :: k, i, j
     !---------------------------------------------------------------------------
 
-    if ( USER_do .AND. TIME_DOURBAN_step ) then
+    if ( USER_do ) then
 
        VA  (:,:)  = 0.0_RP
        WA  (:,:)  = 0.0_RP
@@ -165,12 +167,15 @@ contains
        LWD (:,:)  = 400.0_RP
        PRES(:,:)  = 101000.0_RP
 
+
+
+
        do j = 1, JA
        do i = 1, IA
 
           LON = REAL_lon(i,j) / D2R
 
-          tloc = mod( int(NOWSEC/3600.0_RP)+int(LON/15.0_RP), 24 )
+          tloc = mod(int(NOWSEC/3600.0_RP)+int(LON/15.0_RP),24)
 
           dsec = mod(NOWSEC,3600.0_RP) / 3600.0_RP
 
@@ -185,10 +190,10 @@ contains
 
           QVA (i,j) = ( ( 1.0_RP-dsec ) * Qvapor(tloc  ) &
                       + (        dsec ) * Qvapor(tloc+1) )
-          QVA (i,j) = QVA(i,j)/(1.0_RP + QVA(i,j))
+          QVA (i,j) = QVA(i,j) / (1.0_RP + QVA(i,j)) ! [mixing ratio->specific humidity]
 
           PREC(i,j) = ( ( 1.0_RP-dsec ) * Rain(tloc  ) &
-                      + (        dsec ) * Rain(tloc+1) )/3600.0_RP
+                      + (        dsec ) * Rain(tloc+1) ) / 3600.0_RP
 
 !          if ( with_rain ) then
 !             if (( tloc >= 1 ).and.( tloc < 10 )) then
@@ -199,7 +204,6 @@ contains
 
        enddo
        enddo
-
 
        call HIST_in( TMPA (:,:), 'PT_urb',   'Air temperature',              'K'     )
        call HIST_in( QVA  (:,:), 'QA_urb',   'Specific humidity',            'kg/kg' )

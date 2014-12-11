@@ -50,14 +50,14 @@ contains
     use scale_process, only: &
        PRC_MPIstop
     use mod_atmos_admin, only: &
-       ATMOS_do,          &
-       ATMOS_sw_dyn,      &
-       ATMOS_sw_phy_mp,   &
-       ATMOS_sw_phy_ae,   &
-       ATMOS_sw_phy_ch,   &
-       ATMOS_sw_phy_rd,   &
-       ATMOS_sw_phy_sf,   &
-       ATMOS_sw_phy_tb,   &
+       ATMOS_do,        &
+       ATMOS_sw_dyn,    &
+       ATMOS_sw_phy_mp, &
+       ATMOS_sw_phy_ae, &
+       ATMOS_sw_phy_ch, &
+       ATMOS_sw_phy_rd, &
+       ATMOS_sw_phy_sf, &
+       ATMOS_sw_phy_tb, &
        ATMOS_sw_phy_cp
     implicit none
 
@@ -84,15 +84,18 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
 
     ! atmosphric model set to off
-       ATMOS_do         = .false.
-       ATMOS_sw_dyn     = .false.
-       ATMOS_sw_phy_mp  = .false.
-       ATMOS_sw_phy_ae  = .false.
-       ATMOS_sw_phy_ch  = .false.
-       ATMOS_sw_phy_rd  = .false.
-       ATMOS_sw_phy_sf  = .false.
-       ATMOS_sw_phy_tb  = .false.
-       ATMOS_sw_phy_cp  = .false.
+    ATMOS_do        = .false.
+    ATMOS_sw_dyn    = .false.
+    ATMOS_sw_phy_mp = .false.
+    ATMOS_sw_phy_ae = .false.
+    ATMOS_sw_phy_ch = .false.
+    ATMOS_sw_phy_rd = .false.
+    ATMOS_sw_phy_sf = .false.
+    ATMOS_sw_phy_tb = .false.
+    ATMOS_sw_phy_cp = .false.
+
+    ! run once (only for the diagnostic value)
+    call USER_step
 
     return
   end subroutine USER_setup
@@ -100,7 +103,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Step
   subroutine USER_step
-   use scale_const, only: &
+    use scale_const, only: &
        D2R   => CONST_D2R,   &
        TEM00 => CONST_TEM00, &
        LHV   => CONST_LHV,   &    ! ELL : latent heat of vaporization [J/kg]
@@ -131,9 +134,12 @@ contains
     real(RP) :: dsec
     integer  :: tloc
 
+    real(RP) :: SW  (0:24)
     real(RP) :: PT  (0:24)
     real(RP) :: Wind(0:24)
-    real(RP) :: SW  (0:24)
+
+
+
 
     data SW / 0.0,0.0,0.0,0.0,0.0,0.0,50.0,240.0,420.0,600.0,690.0,765.0,800.0, &
               765.0,690.0,600.0,420.0,240.0,50.0,0.0,0.0,0.0,0.0,0.0,0.0/
@@ -144,25 +150,32 @@ contains
     data Wind / 2.75,2.75,2.75,2.75,2.75,2.75,2.8,3.0,3.25,3.5,3.65,3.65,3.5, &
                 3.4,3.27,3.15,3.05,2.95,2.85,2.8,2.75,2.7,2.72,2.75,2.75/
 
+
+
+
+
+
+
     integer :: k, i, j
     !---------------------------------------------------------------------------
 
-    if ( USER_do .AND. TIME_DOURBAN_step ) then
+    if ( USER_do ) then
 
-       QVA (:,:)  = 0.015_RP
        VA  (:,:)  = 0.0_RP
        WA  (:,:)  = 0.0_RP
        RHOA(:,:)  = 1.13_RP
        LWD (:,:)  = 400.0_RP
-       PREC(:,:)  = 0.0_RP
        PRES(:,:)  = 101000.0_RP
+
+       QVA (:,:)  = 0.015_RP
+       PREC(:,:)  = 0.0_RP
 
        do j = 1, JA
        do i = 1, IA
 
           LON = REAL_lon(i,j) / D2R
 
-          tloc = mod( int(NOWSEC/3600.0_RP)+int(LON/15.0_RP), 24 )
+          tloc = mod(int(NOWSEC/3600.0_RP)+int(LON/15.0_RP),24)
 
           dsec = mod(NOWSEC,3600.0_RP) / 3600.0_RP
 
