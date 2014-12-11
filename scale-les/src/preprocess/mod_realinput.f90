@@ -1262,8 +1262,8 @@ contains
           qc = 0.0_RP
           qc_sfc    = 0.0_RP
 #else
-          qc = qtrc(:,:,:,n_I_QC)
-          qc_sfc = qtrc_sfc(:,:,:,n_I_QC)
+          qc = qtrc(:,:,:,n,I_QC)
+          qc_sfc = qtrc_sfc(:,:,:,n,I_QC)
 #endif
           ! make density in moist condition
           call HYDROSTATIC_buildrho( dens    (:,:,:,n),      & ! [OUT]
@@ -2888,7 +2888,7 @@ contains
     allocate( vfact( LKMAX, IA, JA, itp_nh, itp_nv ) )
     allocate( igrd (        IA, JA, itp_nh         ) )
     allocate( jgrd (        IA, JA, itp_nh         ) )
-    allocate( kgrd ( LKMAX, IA, JA, itp_nh, itp_nv ) )   
+    allocate( kgrd ( LKMAX, IA, JA, itp_nh, itp_nv ) )
 
     if( IO_L ) write(IO_FID_LOG,*) ''
     if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[realinput]/Categ[InputSCALE-Surface]'
@@ -3592,7 +3592,7 @@ contains
     real(RP), intent(out) :: lst  (:,:)
     real(RP), intent(out) :: ust  (:,:)
     real(RP), intent(out) :: sst  (:,:)
-    real(RP), intent(out) :: albw (:,:,:) 
+    real(RP), intent(out) :: albw (:,:,:)
     real(RP), intent(out) :: albg (:,:,:)
     real(RP), intent(out) :: z0w  (:,:)
     real(RP), intent(out) :: skint(:,:)
@@ -3790,7 +3790,7 @@ contains
                                     iNICAM,           &
                                     single=.true.     )
        tg_org(:,:,:) = real( read4D(:,:,:,1), kind=RP )
-     
+
        ! [scale-offset]
        if( use_file_landwater ) then
         basename = "la_wg"//trim(basename_num)
@@ -3969,7 +3969,7 @@ contains
     albw_org (:,:,I_SW) = 0.10_RP
     albg_org (:,:,I_LW) = 0.03_RP  ! emissivity of general ground surface : 0.95-0.98
     albg_org (:,:,I_SW) = 0.22_RP
-    z0w_org  (:,:)      = 0.001_RP  
+    z0w_org  (:,:)      = 0.001_RP
 
     roff(:,:) = 0.0_RP ! not necessary
     qvef(:,:) = 0.0_RP ! not necessary
@@ -4251,15 +4251,15 @@ contains
         if( abs(lsmask(i,j)-1.0_RP) < EPS )then
            imask(i,j) = 1  ! land grid
         else
-           imask(i,j) = 0  ! ocean grid  
+           imask(i,j) = 0  ! ocean grid
         endif
      enddo
      enddo
      if ( landdata ) then  ! interpolation for land data
-       untarget_mask = 1  
+       untarget_mask = 1
      else                  ! interpolation for ocean data
-       untarget_mask = 0  
-     endif 
+       untarget_mask = 0
+     endif
 
     ! start interpolation
     do n = 1, tcount
@@ -4277,7 +4277,7 @@ contains
             if (abs(lsmask(i,j)-0.0_RP) < EPS) maskval = data(i,j,n)
          endif
 
-        !--------------------------------------       
+        !--------------------------------------
         ! check data of neighbor grid
         !
         !           flag(i,j,8)
