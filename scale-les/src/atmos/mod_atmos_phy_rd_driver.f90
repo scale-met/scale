@@ -74,7 +74,9 @@ contains
        call ATMOS_PHY_RD_setup( ATMOS_PHY_RD_TYPE )
 
        ! run once (only for the diagnostic value)
-       call ATMOS_PHY_RD_driver( .true., .false. )
+       call PROF_rapstart('ATM Radiation', 1)
+       call ATMOS_PHY_RD_driver( update_flag = .true. )
+       call PROF_rapend  ('ATM Radiation', 1)
 
     else
 
@@ -96,7 +98,7 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Driver
-  subroutine ATMOS_PHY_RD_driver( update_flag, history_flag )
+  subroutine ATMOS_PHY_RD_driver( update_flag )
     use scale_grid_real, only: &
        REAL_CZ,            &
        REAL_FZ,            &
@@ -158,7 +160,6 @@ contains
     implicit none
 
     logical, intent(in) :: update_flag
-    logical, intent(in) :: history_flag
 
     real(RP) :: TEMP_t      (KA,IA,JA,3)
     real(RP) :: flux_rad    (KA,IA,JA,2,2)
@@ -278,140 +279,133 @@ contains
 
        if ( ATMOS_PHY_RD_TYPE == 'WRF' ) then
 
-          if ( history_flag ) then
+          flux_rad_org(:,:,:,:,:) = flux_rad(:,:,:,:,:)
+          RTHRATENSW = 0.0_RP
+          SDOWN3D    = 0.0_RP
+          GSW        = 0.0_RP
 
-             flux_rad_org(:,:,:,:,:) = flux_rad(:,:,:,:,:)
-             RTHRATENSW = 0.0_RP
-             SDOWN3D    = 0.0_RP
-             GSW        = 0.0_RP
+          do j = 1, JA
+          do i = 1, IA
+          do k = 1, KA
+             QV3D (i,k,j) = QTRC(k,i,j,I_QV)
+             QC3D (i,k,j) = QTRC(k,i,j,I_QC)
+             QR3D (i,k,j) = QTRC(k,i,j,I_QR)
+             QI3D (i,k,j) = QTRC(k,i,j,I_QI)
+             QS3D (i,k,j) = QTRC(k,i,j,I_QS)
+             QG3D (i,k,j) = QTRC(k,i,j,I_QG)
+             T3D  (i,k,j) = TEMP(k,i,j)                       ! temperature (K)
+             RHO3D(i,k,j) = DENS(k,i,j)                       ! density (kg/m^3)
+             P3D  (i,k,j) = PRES(k,i,j)                       ! pressure (Pa)
+             PI3D (i,k,j) = (PRES(k,i,j)/PRE00)**(Rdry/CPdry) ! exner function (dimensionless)
+             DZ8W (i,k,j) = REAL_FZ(k,i,j)-REAL_FZ(k-1,i,j)   ! dz between full levels(m)
+          enddo
+          enddo
+          enddo
 
-             do j = 1, JA
-             do i = 1, IA
-             do k = 1, KA
-                QV3D (i,k,j) = QTRC(k,i,j,I_QV)
-                QC3D (i,k,j) = QTRC(k,i,j,I_QC)
-                QR3D (i,k,j) = QTRC(k,i,j,I_QR)
-                QI3D (i,k,j) = QTRC(k,i,j,I_QI)
-                QS3D (i,k,j) = QTRC(k,i,j,I_QS)
-                QG3D (i,k,j) = QTRC(k,i,j,I_QG)
-                T3D  (i,k,j) = TEMP(k,i,j)                       ! temperature (K)
-                RHO3D(i,k,j) = DENS(k,i,j)                       ! density (kg/m^3)
-                P3D  (i,k,j) = PRES(k,i,j)                       ! pressure (Pa)
-                PI3D (i,k,j) = (PRES(k,i,j)/PRE00)**(Rdry/CPdry) ! exner function (dimensionless)
-                DZ8W (i,k,j) = REAL_FZ(k,i,j)-REAL_FZ(k-1,i,j)   ! dz between full levels(m)
-             enddo
-             enddo
-             enddo
+          call SWRAD( dt_RD,                & ! [IN]
+                      RTHRATENSW,           & ! [INOUT]
+                      SDOWN3D,              & ! [INOUT]
+                      GSW,                  & ! [INOUT]
+                      LAT,                  & ! [IN]
+                      LON,                  & ! [IN]
+                      SFC_albedo(:,:,I_SW), & ! [IN]
+                      RHO3D,                & ! [IN]
+                      T3D,                  & ! [IN]
+                      P3D,                  & ! [IN]
+                      PI3D,                 & ! [IN]
+                      DZ8W,                 & ! [IN]
+                      solins(:,:),          & ! [IN]
+                      cosSZA(:,:),          & ! [IN]
+                      QV3D,                 & ! [IN]
+                      QC3D,                 & ! [IN]
+                      QR3D,                 & ! [IN]
+                      QI3D,                 & ! [IN]
+                      QS3D,                 & ! [IN]
+                      QG3D,                 & ! [IN]
+                      F_QV      = .true.,   & ! [IN]
+                      F_QC      = .true.,   & ! [IN]
+                      F_QR      = .true.,   & ! [IN]
+                      F_QI      = .true.,   & ! [IN]
+                      F_QS      = .true.,   & ! [IN]
+                      F_QG      = .true.,   & ! [IN]
+                      icloud    = 1,        & ! [IN]
+                      warm_rain = .true.    ) ! [IN]
 
-             call SWRAD( dt_RD,                & ! [IN]
-                         RTHRATENSW,           & ! [INOUT]
-                         SDOWN3D,              & ! [INOUT]
-                         GSW,                  & ! [INOUT]
-                         LAT,                  & ! [IN]
-                         LON,                  & ! [IN]
-                         SFC_albedo(:,:,I_SW), & ! [IN]
-                         RHO3D,                & ! [IN]
-                         T3D,                  & ! [IN]
-                         P3D,                  & ! [IN]
-                         PI3D,                 & ! [IN]
-                         DZ8W,                 & ! [IN]
-                         solins(:,:),          & ! [IN]
-                         cosSZA(:,:),          & ! [IN]
-                         QV3D,                 & ! [IN]
-                         QC3D,                 & ! [IN]
-                         QR3D,                 & ! [IN]
-                         QI3D,                 & ! [IN]
-                         QS3D,                 & ! [IN]
-                         QG3D,                 & ! [IN]
-                         F_QV      = .true.,   & ! [IN]
-                         F_QC      = .true.,   & ! [IN]
-                         F_QR      = .true.,   & ! [IN]
-                         F_QI      = .true.,   & ! [IN]
-                         F_QS      = .true.,   & ! [IN]
-                         F_QG      = .true.,   & ! [IN]
-                         icloud    = 1,        & ! [IN]
-                         warm_rain = .true.    ) ! [IN]
-
-             do j = JS, JE
-             do i = IS, IE
-                flux_net_sfc(i,j,I_SW) = GSW(i,j)
-                do k = KS-1, KE
-                   flux_rad(k,i,j,I_SW,I_up) = 0.0_RP
-                   flux_rad(k,i,j,I_SW,I_dn) = SDOWN3D(i,k,j)
-                enddo
-
-                do k = 1, KS-2
-                   flux_rad(k,i,j,I_SW,I_dn) = SDOWN3D(i,KS-1,j)
-                enddo
-
-                do k = KE+1, KA
-                   flux_rad(k,i,j,I_SW,I_dn) = SDOWN3D(i,KE,j)
-                enddo
-             enddo
+          do j = JS, JE
+          do i = IS, IE
+             flux_net_sfc(i,j,I_SW) = GSW(i,j)
+             do k = KS-1, KE
+                flux_rad(k,i,j,I_SW,I_up) = 0.0_RP
+                flux_rad(k,i,j,I_SW,I_dn) = SDOWN3D(i,k,j)
              enddo
 
-             do j = JS, JE
-             do i = IS, IE
-                SFCFLX_SW_up(i,j) = flux_rad(KS-1,i,j,I_SW,I_dn) * SFC_albedo(i,j,I_SW)
-                SFCFLX_SW_dn(i,j) = flux_rad(KS-1,i,j,I_SW,I_dn)
-
-                TOAFLX_SW_up(i,j) = 0.0_RP
-                TOAFLX_SW_dn(i,j) = flux_rad(KE,i,j,I_SW,I_dn) ! sometimes TOA altitude is very low
-             enddo
+             do k = 1, KS-2
+                flux_rad(k,i,j,I_SW,I_dn) = SDOWN3D(i,KS-1,j)
              enddo
 
-             do j = JS, JE
-             do i = IS, IE
-                flux_net_toa(i,j,I_SW) = 0.0_RP
-                do k = KS, KE
-                   flux_net(k,i,j,I_SW) = 0.0_RP
-                   flux_up (k,i,j,I_SW) = 0.0_RP
-                   flux_dn (k,i,j,I_SW) = 0.5_RP * ( flux_rad(k-1,i,j,I_SW,I_dn) + flux_rad(k,i,j,I_SW,I_dn) )
-                enddo
+             do k = KE+1, KA
+                flux_rad(k,i,j,I_SW,I_dn) = SDOWN3D(i,KE,j)
              enddo
-             enddo
+          enddo
+          enddo
 
-             do j = JS, JE
-             do i = IS, IE
-                flux_net_sfc(i,j,I_SW) = flux_rad(KS-1,i,j,I_SW,I_dn)*SFC_albedo(i,j,I_SW)-flux_rad(KS-1,i,j,I_SW,I_dn)
+          do j = JS, JE
+          do i = IS, IE
+             SFCFLX_SW_up(i,j) = flux_rad(KS-1,i,j,I_SW,I_dn) * SFC_albedo(i,j,I_SW)
+             SFCFLX_SW_dn(i,j) = flux_rad(KS-1,i,j,I_SW,I_dn)
+
+             TOAFLX_SW_up(i,j) = 0.0_RP
+             TOAFLX_SW_dn(i,j) = flux_rad(KE,i,j,I_SW,I_dn) ! sometimes TOA altitude is very low
+          enddo
+          enddo
+
+          do j = JS, JE
+          do i = IS, IE
+             flux_net_toa(i,j,I_SW) = 0.0_RP
+             do k = KS, KE
+                flux_net(k,i,j,I_SW) = 0.0_RP
+                flux_up (k,i,j,I_SW) = 0.0_RP
+                flux_dn (k,i,j,I_SW) = 0.5_RP * ( flux_rad(k-1,i,j,I_SW,I_dn) + flux_rad(k,i,j,I_SW,I_dn) )
              enddo
-             enddo
-          endif
+          enddo
+          enddo
+
+          do j = JS, JE
+          do i = IS, IE
+             flux_net_sfc(i,j,I_SW) = flux_rad(KS-1,i,j,I_SW,I_dn)*SFC_albedo(i,j,I_SW)-flux_rad(KS-1,i,j,I_SW,I_dn)
+          enddo
+          enddo
 
        endif
 
+       call HIST_in( solins(:,:), 'SOLINS', 'solar insolation',        'W/m2', nohalo=.true. )
+       call HIST_in( cosSZA(:,:), 'COSZ',   'cos(solar zenith angle)', '0-1',  nohalo=.true.)
 
-       if ( history_flag ) then
+       call HIST_in( SFCFLX_LW_up(:,:), 'SFLX_LW_up',   'SFC upward   longwave  radiation flux', 'W/m2', nohalo=.true. )
+       call HIST_in( SFCFLX_LW_dn(:,:), 'SFLX_LW_dn',   'SFC downward longwave  radiation flux', 'W/m2', nohalo=.true. )
+       call HIST_in( SFCFLX_SW_up(:,:), 'SFLX_SW_up',   'SFC upward   shortwave radiation flux', 'W/m2', nohalo=.true. )
+       call HIST_in( SFCFLX_SW_dn(:,:), 'SFLX_SW_dn',   'SFC downward shortwave radiation flux', 'W/m2', nohalo=.true. )
 
-          call HIST_in( solins(:,:), 'SOLINS', 'solar insolation',        'W/m2', nohalo=.true. )
-          call HIST_in( cosSZA(:,:), 'COSZ',   'cos(solar zenith angle)', '0-1',  nohalo=.true.)
+       call HIST_in( TOAFLX_LW_up(:,:), 'TOAFLX_LW_up', 'TOA upward   longwave  radiation flux', 'W/m2', nohalo=.true. )
+       call HIST_in( TOAFLX_LW_dn(:,:), 'TOAFLX_LW_dn', 'TOA downward longwave  radiation flux', 'W/m2', nohalo=.true. )
+       call HIST_in( TOAFLX_SW_up(:,:), 'TOAFLX_SW_up', 'TOA upward   shortwave radiation flux', 'W/m2', nohalo=.true. )
+       call HIST_in( TOAFLX_SW_dn(:,:), 'TOAFLX_SW_dn', 'TOA downward shortwave radiation flux', 'W/m2', nohalo=.true. )
 
-          call HIST_in( SFCFLX_LW_up(:,:), 'SFLX_LW_up',   'SFC upward   longwave  radiation flux', 'W/m2', nohalo=.true. )
-          call HIST_in( SFCFLX_LW_dn(:,:), 'SFLX_LW_dn',   'SFC downward longwave  radiation flux', 'W/m2', nohalo=.true. )
-          call HIST_in( SFCFLX_SW_up(:,:), 'SFLX_SW_up',   'SFC upward   shortwave radiation flux', 'W/m2', nohalo=.true. )
-          call HIST_in( SFCFLX_SW_dn(:,:), 'SFLX_SW_dn',   'SFC downward shortwave radiation flux', 'W/m2', nohalo=.true. )
+       call HIST_in( flux_net_sfc(:,:,I_LW), 'SLR', 'SFC net longwave  radiation flux', 'W/m2', nohalo=.true. )
+       call HIST_in( flux_net_sfc(:,:,I_SW), 'SSR', 'SFC net shortwave radiation flux', 'W/m2', nohalo=.true. )
+       call HIST_in( flux_net_toa(:,:,I_LW), 'OLR', 'TOA net longwave  radiation flux', 'W/m2', nohalo=.true. )
+       call HIST_in( flux_net_toa(:,:,I_SW), 'OSR', 'TOA net shortwave radiation flux', 'W/m2', nohalo=.true. )
 
-          call HIST_in( TOAFLX_LW_up(:,:), 'TOAFLX_LW_up', 'TOA upward   longwave  radiation flux', 'W/m2', nohalo=.true. )
-          call HIST_in( TOAFLX_LW_dn(:,:), 'TOAFLX_LW_dn', 'TOA downward longwave  radiation flux', 'W/m2', nohalo=.true. )
-          call HIST_in( TOAFLX_SW_up(:,:), 'TOAFLX_SW_up', 'TOA upward   shortwave radiation flux', 'W/m2', nohalo=.true. )
-          call HIST_in( TOAFLX_SW_dn(:,:), 'TOAFLX_SW_dn', 'TOA downward shortwave radiation flux', 'W/m2', nohalo=.true. )
+       call HIST_in( flux_up (:,:,:,I_LW), 'RADFLUX_LWUP', 'upward   longwave  radiation flux', 'W/m2', nohalo=.true. )
+       call HIST_in( flux_dn (:,:,:,I_LW), 'RADFLUX_LWDN', 'downward longwave  radiation flux', 'W/m2', nohalo=.true. )
+       call HIST_in( flux_net(:,:,:,I_LW), 'RADFLUX_LW',   'net      longwave  radiation flux', 'W/m2', nohalo=.true. )
+       call HIST_in( flux_up (:,:,:,I_SW), 'RADFLUX_SWUP', 'upward   shortwave radiation flux', 'W/m2', nohalo=.true. )
+       call HIST_in( flux_dn (:,:,:,I_SW), 'RADFLUX_SWDN', 'downward shortwave radiation flux', 'W/m2', nohalo=.true. )
+       call HIST_in( flux_net(:,:,:,I_SW), 'RADFLUX_SW',   'net      shortwave radiation flux', 'W/m2', nohalo=.true. )
 
-          call HIST_in( flux_net_sfc(:,:,I_LW), 'SLR', 'SFC net longwave  radiation flux', 'W/m2', nohalo=.true. )
-          call HIST_in( flux_net_sfc(:,:,I_SW), 'SSR', 'SFC net shortwave radiation flux', 'W/m2', nohalo=.true. )
-          call HIST_in( flux_net_toa(:,:,I_LW), 'OLR', 'TOA net longwave  radiation flux', 'W/m2', nohalo=.true. )
-          call HIST_in( flux_net_toa(:,:,I_SW), 'OSR', 'TOA net shortwave radiation flux', 'W/m2', nohalo=.true. )
-
-          call HIST_in( flux_up (:,:,:,I_LW), 'RADFLUX_LWUP', 'upward   longwave  radiation flux', 'W/m2', nohalo=.true. )
-          call HIST_in( flux_dn (:,:,:,I_LW), 'RADFLUX_LWDN', 'downward longwave  radiation flux', 'W/m2', nohalo=.true. )
-          call HIST_in( flux_net(:,:,:,I_LW), 'RADFLUX_LW',   'net      longwave  radiation flux', 'W/m2', nohalo=.true. )
-          call HIST_in( flux_up (:,:,:,I_SW), 'RADFLUX_SWUP', 'upward   shortwave radiation flux', 'W/m2', nohalo=.true. )
-          call HIST_in( flux_dn (:,:,:,I_SW), 'RADFLUX_SWDN', 'downward shortwave radiation flux', 'W/m2', nohalo=.true. )
-          call HIST_in( flux_net(:,:,:,I_SW), 'RADFLUX_SW',   'net      shortwave radiation flux', 'W/m2', nohalo=.true. )
-
-          call HIST_in( TEMP_t(:,:,:,I_LW), 'TEMP_t_rd_LW', 'tendency of temp in rd(LW)', 'K/day', nohalo=.true. )
-          call HIST_in( TEMP_t(:,:,:,I_SW), 'TEMP_t_rd_SW', 'tendency of temp in rd(SW)', 'K/day', nohalo=.true. )
-          call HIST_in( TEMP_t(:,:,:,3   ), 'TEMP_t_rd',    'tendency of temp in rd',     'K/day', nohalo=.true. )
-       endif
+       call HIST_in( TEMP_t(:,:,:,I_LW), 'TEMP_t_rd_LW', 'tendency of temp in rd(LW)', 'K/day', nohalo=.true. )
+       call HIST_in( TEMP_t(:,:,:,I_SW), 'TEMP_t_rd_SW', 'tendency of temp in rd(SW)', 'K/day', nohalo=.true. )
+       call HIST_in( TEMP_t(:,:,:,3   ), 'TEMP_t_rd',    'tendency of temp in rd',     'K/day', nohalo=.true. )
 
        if ( ATMOS_PHY_RD_TYPE ==  'WRF' ) then
           ! revert all radiation flux from MM5 scheme to default

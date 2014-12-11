@@ -85,7 +85,9 @@ contains
        endif
 
        ! run once (only for the diagnostic value)
-       call ATMOS_PHY_SF_driver( .true., .false. )
+       call PROF_rapstart('ATM SurfaceFlux', 1)
+       call ATMOS_PHY_SF_driver( update_flag = .true. )
+       call PROF_rapend  ('ATM SurfaceFlux', 1)
 
     else
 
@@ -107,7 +109,7 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Driver
-  subroutine ATMOS_PHY_SF_driver( update_flag, history_flag )
+  subroutine ATMOS_PHY_SF_driver( update_flag )
     use scale_const, only: &
        CPdry => CONST_CPdry
     use scale_comm, only: &
@@ -181,7 +183,6 @@ contains
     implicit none
 
     logical, intent(in) :: update_flag
-    logical, intent(in) :: history_flag
 
     real(RP) :: Uabs10(IA,JA) ! 10m absolute wind [m/s]
     real(RP) :: U10   (IA,JA) ! 10m x-wind [m/s]
@@ -238,17 +239,15 @@ contains
                              T2        (:,:),      & ! [OUT]
                              Q2        (:,:)       ) ! [OUT]
 
-          if ( history_flag ) then
-             call HIST_in( SFC_Z0M(:,:), 'SFC_Z0M', 'roughness length (momentum)', 'm'     )
-             call HIST_in( SFC_Z0H(:,:), 'SFC_Z0H', 'roughness length (heat)',     'm'     )
-             call HIST_in( SFC_Z0E(:,:), 'SFC_Z0E', 'roughness length (moisture)', 'm'     )
+          call HIST_in( SFC_Z0M(:,:), 'SFC_Z0M', 'roughness length (momentum)', 'm'     )
+          call HIST_in( SFC_Z0H(:,:), 'SFC_Z0H', 'roughness length (heat)',     'm'     )
+          call HIST_in( SFC_Z0E(:,:), 'SFC_Z0E', 'roughness length (moisture)', 'm'     )
 
-             call HIST_in( Uabs10 (:,:), 'Uabs10',  '10m absolute wind',           'm/s'   )
-             call HIST_in( U10    (:,:), 'U10',     '10m x-wind',                  'm/s'   )
-             call HIST_in( V10    (:,:), 'V10',     '10m y-wind',                  'm/s'   )
-             call HIST_in( T2     (:,:), 'T2 ',     '2m temperature',              'K'     )
-             call HIST_in( Q2     (:,:), 'Q2 ',     '2m water vapor',              'kg/kg' )
-          endif
+          call HIST_in( Uabs10 (:,:), 'Uabs10',  '10m absolute wind',           'm/s'   )
+          call HIST_in( U10    (:,:), 'U10',     '10m x-wind',                  'm/s'   )
+          call HIST_in( V10    (:,:), 'V10',     '10m y-wind',                  'm/s'   )
+          call HIST_in( T2     (:,:), 'T2 ',     '2m temperature',              'K'     )
+          call HIST_in( Q2     (:,:), 'Q2 ',     '2m water vapor',              'kg/kg' )
        endif
 
        call COMM_vars8( SFLX_MU(:,:), 1 )
@@ -297,10 +296,8 @@ contains
        enddo
        enddo
 
-       if ( history_flag ) then
-          call HIST_in( SFLX_LH(:,:), 'LHFLX', 'latent heat flux',   'W/m2' )
-          call HIST_in( SFLX_SH(:,:), 'SHFLX', 'sensible heat flux', 'W/m2' )
-       endif
+       call HIST_in( SFLX_LH(:,:), 'LHFLX', 'latent heat flux',   'W/m2' )
+       call HIST_in( SFLX_SH(:,:), 'SHFLX', 'sensible heat flux', 'W/m2' )
 
     endif
 

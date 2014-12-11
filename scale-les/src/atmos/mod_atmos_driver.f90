@@ -61,17 +61,19 @@ contains
        TIME_NOWDATE,    &
        TIME_OFFSET_YEAR
     use mod_atmos_vars, only: &
-       DENS,    &
-       MOMZ,    &
-       MOMX,    &
-       MOMY,    &
-       RHOT,    &
-       QTRC,    &
-       DENS_tp, &
-       MOMZ_tp, &
-       MOMX_tp, &
-       MOMY_tp, &
-       RHOT_tp, &
+       ATMOS_vars_diagnostics, &
+       ATMOS_vars_history,     &
+       DENS,                   &
+       MOMZ,                   &
+       MOMX,                   &
+       MOMY,                   &
+       RHOT,                   &
+       QTRC,                   &
+       DENS_tp,                &
+       MOMZ_tp,                &
+       MOMX_tp,                &
+       MOMY_tp,                &
+       RHOT_tp,                &
        RHOQ_tp
     use scale_atmos_solarins, only: &
        ATMOS_SOLARINS_setup
@@ -128,6 +130,14 @@ contains
     call ATMOS_PHY_SF_driver_setup
     call ATMOS_PHY_TB_driver_setup
     call ATMOS_PHY_CP_driver_setup
+
+    !########## Calculate diagnostic variables ##########
+    call ATMOS_vars_diagnostics
+
+    !########## History & Monitor ##########
+    call PROF_rapstart('ATM History Vars', 1)
+    call ATMOS_vars_history
+    call PROF_rapend  ('ATM History Vars', 1)
 
     !########## initialize tendencies ##########
     DENS_tp(:,:,:)   = 0.0_RP
@@ -221,49 +231,49 @@ contains
     !########## Microphysics ##########
     if ( ATMOS_sw_phy_mp ) then
        call PROF_rapstart('ATM Microphysics', 1)
-       call ATMOS_PHY_MP_driver( update_flag=do_phy_mp, history_flag=.true. )
+       call ATMOS_PHY_MP_driver( update_flag = do_phy_mp )
        call PROF_rapend  ('ATM Microphysics', 1)
     endif
 
     !########## Aerosol ##########
     if ( ATMOS_sw_phy_ae ) then
        call PROF_rapstart('ATM Aerosol', 1)
-       call ATMOS_PHY_AE_driver( update_flag=do_phy_ae, history_flag=.true. )
+       call ATMOS_PHY_AE_driver( update_flag = do_phy_ae )
        call PROF_rapend  ('ATM Aerosol', 1)
     endif
 
     !########## Chemistry ##########
     if ( ATMOS_sw_phy_ch ) then
        call PROF_rapstart('ATM Chemistry', 1)
-       call ATMOS_PHY_CH_driver( update_flag=do_phy_ch, history_flag=.true. )
+       call ATMOS_PHY_CH_driver( update_flag = do_phy_ch )
        call PROF_rapend  ('ATM Chemistry', 1)
     endif
 
     !########## Radiation ##########
     if ( ATMOS_sw_phy_rd ) then
        call PROF_rapstart('ATM Radiation', 1)
-       call ATMOS_PHY_RD_driver( update_flag=do_phy_rd, history_flag=.true. )
+       call ATMOS_PHY_RD_driver( update_flag = do_phy_rd )
        call PROF_rapend  ('ATM Radiation', 1)
     endif
 
     !########## Surface Flux ##########
     if ( ATMOS_sw_phy_sf ) then
        call PROF_rapstart('ATM SurfaceFlux', 1)
-       call ATMOS_PHY_SF_driver( update_flag=do_phy_sf, history_flag=.true. )
+       call ATMOS_PHY_SF_driver( update_flag = do_phy_sf )
        call PROF_rapend  ('ATM SurfaceFlux', 1)
     endif
 
     !########## Turbulence ##########
     if ( ATMOS_sw_phy_tb ) then
        call PROF_rapstart('ATM Turbulence', 1)
-       call ATMOS_PHY_TB_driver( update_flag=do_phy_tb, history_flag=.true. )
+       call ATMOS_PHY_TB_driver( update_flag = do_phy_tb )
        call PROF_rapend  ('ATM Turbulence', 1)
     endif
 
     !########## Cumulus ##########
     if ( ATMOS_sw_phy_cp ) then
        call PROF_rapstart('ATM Cumulus', 1)
-       call ATMOS_PHY_CP_driver( update_flag=do_phy_cp, history_flag=.true. )
+       call ATMOS_PHY_CP_driver( update_flag = do_phy_cp )
        call PROF_rapend  ('ATM Cumulus', 1)
     endif
 
@@ -411,38 +421,34 @@ contains
                         Q2        (:,:),   & ! [OUT]
                         FLX_heat  (:,:)    ) ! [OUT]
 
-       if ( .NOT. setup ) then
-          call HIST_in( SFC_Z0M(:,:), 'SFC_Z0M', 'roughness length (momentum)', 'm'     )
-          call HIST_in( SFC_Z0H(:,:), 'SFC_Z0H', 'roughness length (heat)',     'm'     )
-          call HIST_in( SFC_Z0E(:,:), 'SFC_Z0E', 'roughness length (vapor)',    'm'     )
-          call HIST_in( Uabs10 (:,:), 'Uabs10',  '10m absolute wind',           'm/s'   )
-          call HIST_in( U10    (:,:), 'U10',     '10m x-wind',                  'm/s'   )
-          call HIST_in( V10    (:,:), 'V10',     '10m y-wind',                  'm/s'   )
-          call HIST_in( T2     (:,:), 'T2 ',     '2m temperature',              'K'     )
-          call HIST_in( Q2     (:,:), 'Q2 ',     '2m water vapor',              'kg/kg' )
+       call HIST_in( SFC_Z0M(:,:), 'SFC_Z0M', 'roughness length (momentum)', 'm'     )
+       call HIST_in( SFC_Z0H(:,:), 'SFC_Z0H', 'roughness length (heat)',     'm'     )
+       call HIST_in( SFC_Z0E(:,:), 'SFC_Z0E', 'roughness length (vapor)',    'm'     )
+       call HIST_in( Uabs10 (:,:), 'Uabs10',  '10m absolute wind',           'm/s'   )
+       call HIST_in( U10    (:,:), 'U10',     '10m x-wind',                  'm/s'   )
+       call HIST_in( V10    (:,:), 'V10',     '10m y-wind',                  'm/s'   )
+       call HIST_in( T2     (:,:), 'T2 ',     '2m temperature',              'K'     )
+       call HIST_in( Q2     (:,:), 'Q2 ',     '2m water vapor',              'kg/kg' )
 
-          call HIST_in( FLX_heat(:,:), 'GHFLX', 'ground heat flux (merged)', 'W/m2' )
-       endif
+       call HIST_in( FLX_heat(:,:), 'GHFLX', 'ground heat flux (merged)', 'W/m2' )
     endif
 
-    if ( .NOT. setup ) then
-       ! calculate surface density, surface pressure
-       call BOTTOM_estimate( DENS     (:,:,:), & ! [IN]
-                             PRES     (:,:,:), & ! [IN]
-                             REAL_CZ  (:,:,:), & ! [IN]
-                             TOPO_Zsfc(:,:),   & ! [IN]
-                             REAL_Z1  (:,:),   & ! [IN]
-                             SFC_DENS (:,:),   & ! [OUT]
-                             SFC_PRES (:,:)    ) ! [OUT]
+    ! calculate surface density, surface pressure
+    call BOTTOM_estimate( DENS     (:,:,:), & ! [IN]
+                          PRES     (:,:,:), & ! [IN]
+                          REAL_CZ  (:,:,:), & ! [IN]
+                          TOPO_Zsfc(:,:),   & ! [IN]
+                          REAL_Z1  (:,:),   & ! [IN]
+                          SFC_DENS (:,:),   & ! [OUT]
+                          SFC_PRES (:,:)    ) ! [OUT]
 
-       call HIST_in( SFC_DENS  (:,:),      'SFC_DENS',   'surface atmospheric density',       'kg/m3' )
-       call HIST_in( SFC_PRES  (:,:),      'SFC_PRES',   'surface atmospheric pressure',      'Pa'    )
+    call HIST_in( SFC_DENS  (:,:),      'SFC_DENS',   'surface atmospheric density',       'kg/m3' )
+    call HIST_in( SFC_PRES  (:,:),      'SFC_PRES',   'surface atmospheric pressure',      'Pa'    )
 
-       ! if coupler is disabled, SFC_TEMP, SFC_albedo is set in ATMOS_PHY_SF_vars
-       call HIST_in( SFC_TEMP  (:,:),      'SFC_TEMP',   'surface skin temperature (merged)', 'K'     )
-       call HIST_in( SFC_albedo(:,:,I_LW), 'SFC_ALB_LW', 'surface albedo (longwave, merged)', '0-1'   )
-       call HIST_in( SFC_albedo(:,:,I_SW), 'SFC_ALB_SW', 'surface albedo (shortwave,merged)', '0-1'   )
-    endif
+    ! if coupler is disabled, SFC_TEMP, SFC_albedo is set in ATMOS_PHY_SF_vars
+    call HIST_in( SFC_TEMP  (:,:),      'SFC_TEMP',   'surface skin temperature (merged)', 'K'     )
+    call HIST_in( SFC_albedo(:,:,I_LW), 'SFC_ALB_LW', 'surface albedo (longwave, merged)', '0-1'   )
+    call HIST_in( SFC_albedo(:,:,I_SW), 'SFC_ALB_SW', 'surface albedo (shortwave,merged)', '0-1'   )
 
     return
   end subroutine ATMOS_SURFACE_GET

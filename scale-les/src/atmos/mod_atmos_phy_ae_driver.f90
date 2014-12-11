@@ -66,7 +66,9 @@ contains
        call ATMOS_PHY_AE_setup( ATMOS_PHY_AE_TYPE )
 
        ! run once (only for the diagnostic value)
-       call ATMOS_PHY_AE_driver( .true., .false. )
+       call PROF_rapstart('ATM Aerosol', 1)
+       call ATMOS_PHY_AE_driver( update_flag = .true. )
+       call PROF_rapend  ('ATM Aerosol', 1)
 
 !    else
 !       if( IO_L ) write(IO_FID_LOG,*) '*** this component is never called.'
@@ -77,7 +79,7 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Driver
-  subroutine ATMOS_PHY_AE_driver( update_flag, history_flag )
+  subroutine ATMOS_PHY_AE_driver( update_flag )
     use scale_time, only: &
        dt_AE => TIME_DTSEC_ATMOS_PHY_AE
     use scale_statistics, only: &
@@ -101,7 +103,6 @@ contains
     implicit none
 
     logical, intent(in) :: update_flag
-    logical, intent(in) :: history_flag
 
     real(RP) :: QTRC0(KA,IA,JA,QA)
 
@@ -141,9 +142,7 @@ contains
 
        CCN(:,:,:) = 0.0_RP ! tentative
 
-       if ( history_flag ) then
-          call HIST_in( CCN(:,:,:), 'CCN', 'cloud condensation nucrei', '' )
-       endif
+       call HIST_in( CCN(:,:,:), 'CCN', 'cloud condensation nucrei', '' )
 
     endif
 

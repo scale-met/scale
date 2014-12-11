@@ -80,6 +80,9 @@ contains
     endif
     if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_USER)
 
+    ! run once (only for the diagnostic value)
+    call USER_step
+
     return
   end subroutine USER_setup
 

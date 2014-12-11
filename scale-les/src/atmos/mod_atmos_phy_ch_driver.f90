@@ -65,7 +65,9 @@ contains
        !call ATMOS_PHY_CH_setup( ATMOS_PHY_CH_TYPE )
 
        ! run once (only for the diagnostic value)
-       call ATMOS_PHY_CH_driver( .true., .false. )
+       call PROF_rapstart('ATM Chemistry', 1)
+       call ATMOS_PHY_CH_driver( update_flag = .true. )
+       call PROF_rapend  ('ATM Chemistry', 1)
 
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** this component is never called.'
@@ -76,7 +78,7 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Driver
-  subroutine ATMOS_PHY_CH_driver( update_flag, history_flag )
+  subroutine ATMOS_PHY_CH_driver( update_flag )
     use scale_time, only: &
        dt_CH => TIME_DTSEC_ATMOS_PHY_CH
     use scale_statistics, only: &
@@ -100,7 +102,6 @@ contains
     implicit none
 
     logical, intent(in) :: update_flag
-    logical, intent(in) :: history_flag
 
     real(RP) :: total ! dummy
 
@@ -122,9 +123,7 @@ contains
        RHOQ_t_CH(:,:,:,:) = 0.0_RP
        O3       (:,:,:)   = 0.0_RP
 
-       if ( history_flag ) then
-          call HIST_in( O3(:,:,:), 'Ozone', 'Ozone', 'PPM' )
-       endif
+       call HIST_in( O3(:,:,:), 'Ozone', 'Ozone', 'PPM' )
     endif
 
     !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(3)

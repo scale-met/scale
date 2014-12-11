@@ -418,15 +418,14 @@ contains
   !-----------------------------------------------------------------------------
   !> Cloud Microphysics
   subroutine ATMOS_PHY_MP_tomita08( &
-       DENS,        &
-       MOMZ,        &
-       MOMX,        &
-       MOMY,        &
-       RHOT,        &
-       QTRC,        &
-       SFLX_rain,   &
-       SFLX_snow,   &
-       history_flag )
+       DENS,      &
+       MOMZ,      &
+       MOMX,      &
+       MOMY,      &
+       RHOT,      &
+       QTRC,      &
+       SFLX_rain, &
+       SFLX_snow  )
     use scale_grid_index
     use scale_time, only: &
        dt => TIME_DTSEC_ATMOS_PHY_MP
@@ -452,7 +451,6 @@ contains
     real(RP), intent(inout) :: QTRC(KA,IA,JA,QAD)
     real(RP), intent(out)   :: SFLX_rain(IA,JA)
     real(RP), intent(out)   :: SFLX_snow(IA,JA)
-    logical,  intent(in)    :: history_flag
 
     real(RP) :: RHOE_t(KA,IA,JA)
     real(RP) :: QTRC_t(KA,IA,JA,QA)
@@ -522,12 +520,10 @@ contains
                                    QTRC  (:,:,:,:), & ! [INOUT]
                                    DENS  (:,:,:)    ) ! [IN]
 
-    if ( history_flag ) then
-       call HIST_in( vterm(:,:,:,I_QR), 'Vterm_QR', 'terminal velocity of QR', 'm/s' )
-       call HIST_in( vterm(:,:,:,I_QI), 'Vterm_QI', 'terminal velocity of QI', 'm/s' )
-       call HIST_in( vterm(:,:,:,I_QS), 'Vterm_QS', 'terminal velocity of QS', 'm/s' )
-       call HIST_in( vterm(:,:,:,I_QG), 'Vterm_QG', 'terminal velocity of QG', 'm/s' )
-    endif
+    call HIST_in( vterm(:,:,:,I_QR), 'Vterm_QR', 'terminal velocity of QR', 'm/s' )
+    call HIST_in( vterm(:,:,:,I_QI), 'Vterm_QI', 'terminal velocity of QI', 'm/s' )
+    call HIST_in( vterm(:,:,:,I_QS), 'Vterm_QS', 'terminal velocity of QS', 'm/s' )
+    call HIST_in( vterm(:,:,:,I_QG), 'Vterm_QG', 'terminal velocity of QG', 'm/s' )
 
     !##### END MP Main #####
 
