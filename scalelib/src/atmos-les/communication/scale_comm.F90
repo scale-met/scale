@@ -854,7 +854,8 @@ contains
   !> Broadcast data for whole process value in 4D field
   subroutine COMM_bcast_4D( var, gIA, gJA, gKA, gTime )
     use scale_process, only: &
-       PRC_master
+       PRC_master, &
+       PRC_MPIstop
     implicit none
 
     real(RP), intent(inout) :: var(:,:,:,:) !< broadcast buffer(gIA,gJA,gKA,gTime)
@@ -870,6 +871,11 @@ contains
     call PROF_rapstart('COMM Bcast MPI', 2)
 
     counts = gIA * gJA * gKA * gTime
+    if ( gIA>0 .and. gJA>0 .and. gKA>0 .and. gTime>0 .and. &
+         counts < 0 ) then
+       write(*,*) 'xxx counts overflow'
+       call PRC_MPIstop
+    end if
 
     call MPI_BCAST( var(:,:,:,:),   &
                      counts,         &
