@@ -97,7 +97,7 @@ module scale_time
   integer,  private :: TIME_STARTDATE(6) = (/ 0, 1, 1, 0, 0, 0 /)
   real(DP), private :: TIME_STARTMS      = 0.0_DP !< [millisec]
   integer,  private :: TIME_STARTDAY
-  real(DP), private :: TIME_STARTSEC
+  real(DP), public  :: TIME_STARTSEC
 
   integer,  private :: TIME_ENDDATE(6)
   real(DP), private :: TIME_ENDMS
@@ -248,11 +248,11 @@ contains
        call PRC_MPIstop
     endif
 
-    ! Currently, urban scheme is included in coupler part and called at the same timming with the coupler. 
+    ! Currently, urban scheme is included in coupler part and called at the same timming with the coupler.
        TIME_DT_URBAN               = TIME_DT_CPL
        TIME_DT_URBAN_UNIT          = TIME_DT_CPL_UNIT
        TIME_DT_URBAN_RESTART       = TIME_DT_CPL_RESTART
-       TIME_DT_URBAN_RESTART_UNIT  = TIME_DT_CPL_RESTART_UNIT                    
+       TIME_DT_URBAN_RESTART_UNIT  = TIME_DT_CPL_RESTART_UNIT
 
     if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_TIME)
 
