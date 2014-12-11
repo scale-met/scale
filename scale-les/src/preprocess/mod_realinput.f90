@@ -173,7 +173,9 @@ contains
        dims(4) = dims_ncm(1) ! nicam lat-lon data doesn't have staggered grid system
        dims(5) = dims_ncm(2) ! nicam lat-lon data doesn't have staggered grid system
        dims(6) = dims_ncm(3) ! nicam lat-lon data doesn't have staggered grid system
-       dims(7) = 5           ! vertical grid of land model [tentative]
+       basename = "la_tg"//trim(basename_org)
+       call FileGetShape( dims_ncm(:), trim(basename), "la_tg", 1, single=.true. )
+       dims(7) = dims_ncm(3) ! vertical grid of land model [tentative]
 
     !case('JMA-MSM')
 
@@ -2524,9 +2526,9 @@ contains
              endif
           enddo
 
-          bottom = 1
-          upper  = kke + 1
           if ( lack_of_val ) then
+             bottom = 1
+             upper  = kke + 1
              do k = kks, kke
                 wgt_bt = (hgt_op1(upper,i,j,1) - hgt_op1(k,     i,j,1)) / ((hgt_op1(upper,i,j,1) - hgt_op1(bottom,i,j,1)))
                 wgt_up = (hgt_op1(k,    i,j,1) - hgt_op1(bottom,i,j,1)) / ((hgt_op1(upper,i,j,1) - hgt_op1(bottom,i,j,1)))
@@ -2620,9 +2622,9 @@ contains
              endif
           enddo
 
-          bottom = 1
-          upper  = kke + 1
           if ( lack_of_val ) then
+             bottom = 1
+             upper  = kke + 1
              do k = kks, kke
                 wgt_bt = (hgt_op1(upper,i,j,1) - hgt_op1(k,     i,j,1)) / ((hgt_op1(upper,i,j,1) - hgt_op1(bottom,i,j,1)))
                 wgt_up = (hgt_op1(k,    i,j,1) - hgt_op1(bottom,i,j,1)) / ((hgt_op1(upper,i,j,1) - hgt_op1(bottom,i,j,1)))
@@ -3607,16 +3609,12 @@ contains
     real(RP),         intent(in) :: init_landwater_ratio ! Ratio of land water to storage is constant,
                                                          !              if use_file_landwater is ".false."
 
-    ! [imported] NICAM/nhm/physics/mod_land_driver.f90 ---------------
-    real(RP) :: glevm5 (1:6) &
-         = (/ 0.000  , 0.050  , 0.250  , 1.000  , 2.000  , 4.000  /)
-    real(RP) :: wlevm5 (1:6) &
-         = (/ 0.000  , 0.050  , 0.250  , 1.000  , 2.000  , 4.000  /)
     ! ----------------------------------------------------------------
 
     ! work
     real(SP), allocatable :: read1DX(:)
     real(SP), allocatable :: read1DY(:)
+    real(SP), allocatable :: read1DZ(:)
     real(SP), allocatable :: read3DT(:,:,:,:)
     real(SP), allocatable :: read3DS(:,:,:,:)
     real(SP), allocatable :: read4D (:,:,:,:)
@@ -3680,6 +3678,7 @@ contains
     if( do_read ) then
        allocate( read1DX( dims(1)                        ) )
        allocate( read1DY( dims(2)                        ) )
+       allocate( read1DZ( dims(7)                        ) )
        allocate( read3DT( 1,       dims(1), dims(2), nt  ) )
        allocate( read3DS( 1,       dims(1), dims(2), nt  ) )
        allocate( read4D ( dims(7), dims(1), dims(2), nt  ) )
@@ -3729,11 +3728,10 @@ contains
           lat_org (i,:,start_step)  = read1DY(:) * D2R
        enddo
 
+       call FileRead( read1DZ(:), trim(basename), "lev", start_step, 1, single=.true. )
        do j = 1, dims(2)
        do i = 1, dims(1)
-       do k = 1, dims(7)
-          lz_org(k,i,j,start_step) = glevm5(k) + (glevm5(k+1) - glevm5(k))*0.5_RP
-       enddo
+          lz_org(:,i,j,start_step) = read1DZ(:)
        enddo
        enddo
     endif
@@ -3793,16 +3791,16 @@ contains
 
        ! [scale-offset]
        if( use_file_landwater ) then
-        basename = "la_wg"//trim(basename_num)
-        call ExternalFileReadOffset( read4D(:,:,:,:),  &
-                                     trim(basename),   &
-                                     "la_wg",          &
-                                     start_step,       &
-                                     end_step,         &
-                                     myrank,           &
-                                     iNICAM,           &
-                                     single=.true.     )
-        strg_org(:,:,:) = real( read4D(:,:,:,1), kind=RP )
+          basename = "la_wg"//trim(basename_num)
+          call ExternalFileReadOffset( read4D(:,:,:,:),  &
+                                       trim(basename),   &
+                                       "la_wg",          &
+                                       start_step,       &
+                                       end_step,         &
+                                       myrank,           &
+                                       iNICAM,           &
+                                       single=.true.     )
+          strg_org(:,:,:) = real( read4D(:,:,:,1), kind=RP )
        endif
 
        ! 6hourly data, first "skiplen" steps are skipped
@@ -3839,6 +3837,7 @@ contains
 
        deallocate( read1DX )
        deallocate( read1DY )
+       deallocate( read1DZ )
        deallocate( read3DT )
        deallocate( read3DS )
        deallocate( read4D  )
@@ -3897,9 +3896,9 @@ contains
 
     ! Land water: interpolate over the ocean
     if( use_file_landwater ) then
-      do k=1,dims(7)
       do j=1,dims(2)
       do i=1,dims(1)
+      do k=1,dims(7)
          if ( abs(strg_org(k,i,j)-0.0D0) < EPS ) then
             strg_org(k,i,j) = maskval_strg
          endif
@@ -4430,11 +4429,13 @@ contains
 
     piov6 = pi / 6.0_RP
 
+#ifndef DRY
     qvars(:,:,:,:,I_NC) = qvars(:,:,:,:,I_QC) / ( (piov6*RHOw) * Dc**b )
     qvars(:,:,:,:,I_NR) = qvars(:,:,:,:,I_QR) / ( (piov6*RHOw) * Dr**b )
     qvars(:,:,:,:,I_NI) = qvars(:,:,:,:,I_QI) / ( (piov6*RHOf) * Di**b )
     qvars(:,:,:,:,I_NS) = qvars(:,:,:,:,I_QS) / ( (piov6*RHOf) * Ds**b )
     qvars(:,:,:,:,I_NG) = qvars(:,:,:,:,I_QG) / ( (piov6*RHOg) * Dg**b )
+#endif
 
     return
   end subroutine diagnose_number_concentration
