@@ -46,15 +46,14 @@ module scale_atmos_phy_mp
   !
   abstract interface
      subroutine mp( &
-          DENS,        &
-          MOMZ,        &
-          MOMX,        &
-          MOMY,        &
-          RHOT,        &
-          QTRC,        &
-          SFLX_rain,   &
-          SFLX_snow,   &
-          history_flag )
+          DENS,      &
+          MOMZ,      &
+          MOMX,      &
+          MOMY,      &
+          RHOT,      &
+          QTRC,      &
+          SFLX_rain, &
+          SFLX_snow  )
        use scale_precision
        use scale_grid_index
        use scale_tracer
@@ -66,7 +65,6 @@ module scale_atmos_phy_mp
        real(RP), intent(inout) :: QTRC(KA,IA,JA,QA)
        real(RP), intent(out)   :: SFLX_rain(IA,JA)
        real(RP), intent(out)   :: SFLX_snow(IA,JA)
-       logical,  intent(in)    :: history_flag
      end subroutine mp
      subroutine cf( &
           cldfrac, &

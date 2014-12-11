@@ -49,6 +49,8 @@ contains
        OCEAN_PHY_driver_setup
 !    use mod_ocean_frc_nudge, only: &
 !       OCEAN_FRC_driver_setup
+    use mod_ocean_vars, only: &
+       OCEAN_vars_history
     implicit none
     !---------------------------------------------------------------------------
 
@@ -58,6 +60,11 @@ contains
     call OCEAN_PHY_driver_setup
 
 !    if( OCEAN_FRC_sw ) call OCEAN_FRC_driver_setup
+
+    !########## History & Monitor ##########
+    call PROF_rapstart('OCN History', 1)
+    call OCEAN_vars_history
+    call PROF_rapend  ('OCN History', 1)
 
     return
   end subroutine OCEAN_driver_setup
@@ -86,7 +93,7 @@ contains
     !########## Physics ##########
     if ( OCEAN_sw ) then
        call PROF_rapstart('OCN Physics', 1)
-       call OCEAN_PHY_driver( update_flag=.true., history_flag=.true. )
+       call OCEAN_PHY_driver( update_flag = .true. )
        call PROF_rapend  ('OCN Physics', 1)
     endif
 

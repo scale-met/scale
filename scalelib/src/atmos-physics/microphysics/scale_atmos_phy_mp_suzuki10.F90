@@ -546,15 +546,14 @@ contains
   !> Cloud Microphysics
   !-----------------------------------------------------------------------------
   subroutine ATMOS_PHY_MP_suzuki10( &
-       DENS,        &
-       MOMZ,        &
-       MOMX,        &
-       MOMY,        &
-       RHOT,        &
-       QTRC,        &
-       SFLX_rain,   &
-       SFLX_snow,   &
-       history_flag )
+       DENS,      &
+       MOMZ,      &
+       MOMX,      &
+       MOMY,      &
+       RHOT,      &
+       QTRC,      &
+       SFLX_rain, &
+       SFLX_snow  )
     use scale_grid_index
     use scale_time, only: &
        TIME_DTSEC_ATMOS_PHY_MP, &
@@ -590,7 +589,6 @@ contains
     real(RP), intent(inout) :: QTRC(KA,IA,JA,QAD)
     real(RP), intent(out)   :: SFLX_rain(IA,JA)
     real(RP), intent(out)   :: SFLX_snow(IA,JA)
-    logical,  intent(in)    :: history_flag
 
     real(RP) :: dz (KA)
     real(RP) :: dzh(KA)

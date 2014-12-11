@@ -585,15 +585,14 @@ contains
   !> Cloud Microphysics
   !-----------------------------------------------------------------------------
   subroutine ATMOS_PHY_MP_sn14( &
-       DENS,        &
-       MOMZ,        &
-       MOMX,        &
-       MOMY,        &
-       RHOT,        &
-       QTRC,        &
-       SFLX_rain,   &
-       SFLX_snow,   &
-       history_flag )
+       DENS,      &
+       MOMZ,      &
+       MOMX,      &
+       MOMY,      &
+       RHOT,      &
+       QTRC,      &
+       SFLX_rain, &
+       SFLX_snow  )
     use scale_grid_index
     use scale_tracer, only: &
        QAD => QA, &
@@ -608,8 +607,6 @@ contains
     real(RP), intent(inout) :: QTRC(KA,IA,JA,QAD)
     real(RP), intent(out)   :: SFLX_rain(IA,JA)
     real(RP), intent(out)   :: SFLX_snow(IA,JA)
-    logical,  intent(in)    :: history_flag
-
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Cloud microphysics(SN14)'
@@ -3465,10 +3462,10 @@ contains
     real(RP) :: rhofac_q(5)
 
     real(RP) :: rlambdar ! work for diagnosis of Rain DSD ( Seifert, 2008 )
-    real(RP) :: mud_r        
+    real(RP) :: mud_r
     real(RP) :: dq, dql  ! weigthed diameter.   Improved Rogers etal. (1993) formula by T.Mitsui
-    
-    
+
+
     real(RP) :: weight ! weighting coefficient for 2-branches is determined by ratio between 0.745mm and weighted diameter.  SB06 Table.1
     real(RP) :: velq_s ! terminal velocity for small branch of Rogers formula
     real(RP) :: velq_l ! terminal velocity for large branch of Rogers formula
@@ -3498,7 +3495,7 @@ contains
        ! QC
        rhofac_q(I_C) = rhofac ** gamma_v(I_QC)
        xq = max( xqmin(I_QC), min( xqmax(I_QC), rhoq(I_QC,k,i,j) / ( rhoq(I_NC,k,i,j) + nqmin(I_QC) ) ) )
-                 
+
        velw(k,i,j,I_QC) = -rhofac_q(I_C) * coef_vt1(I_QC,1) * xq**beta_v(I_QC,1)
        ! NC
        velw(k,i,j,I_NC) = -rhofac_q(I_C) * coef_vt0(I_QC,1) * xq**beta_vn(I_QC,1)
@@ -3512,7 +3509,7 @@ contains
        dq = ( 4.0_RP + mud_r ) * rlambdar ! D^(3)+mu weighted mean diameter
        dql = dq
        weight = min( 1.0_RP, max( 0.0_RP, 0.5_RP * ( 1.0_RP + tanh( PI * log( dq/d_vtr_branch ) ) ) ) )
-                
+
        velq_s = coef_vtr_ar2 * dq &
             * ( 1.0_RP - ( 1.0_RP + coef_vtr_br2*rlambdar )**(-5.0_RP-mud_r) )
        velq_l = coef_vtr_ar1 - coef_vtr_br1 &
@@ -3523,7 +3520,7 @@ contains
        ! NR
        dq = ( 1.0_RP + mud_r ) * rlambdar
        weight = min( 1.0_RP, max( 0.0_RP, 0.5_RP * ( 1.0_RP + tanh( PI * log( dq/d_vtr_branch ) ) ) ) )
-                     
+
        velq_s = coef_vtr_ar2 * dql &
             * ( 1.0_RP - ( 1.0_RP + coef_vtr_br2*rlambdar )**(-2.0_RP-mud_r) )
        velq_l = coef_vtr_ar1 - coef_vtr_br1 &
@@ -3535,11 +3532,11 @@ contains
        ! QI
        rhofac_q(I_I) = ( pres(k,i,j)/pre0_vt )**a_pre0_vt * ( temp(k,i,j)/tem0_vt )**a_tem0_vt
        xq = max( xqmin(I_QI), min( xqmax(I_QI), rhoq(I_QI,k,i,j) / ( rhoq(I_NI,k,i,j) + nqmin(I_QI) ) ) )
-                 
+
        tmp = a_m(I_QI) * xq**b_m(I_QI)
        dq = coef_dave_L(I_QI) * tmp
        weight = min( 1.0_RP, max( 0.0_RP, 0.5_RP * ( 1.0_RP + log( dq/d0_li ) ) ) )
-                     
+
        velq_s = coef_vt1(I_QI,1) * xq**beta_v (I_QI,1)
        velq_l = coef_vt1(I_QI,2) * xq**beta_v (I_QI,2)
        velw(k,i,j,I_QI) = -rhofac_q(I_I) &
@@ -3548,7 +3545,7 @@ contains
        ! NI
        dq = coef_dave_N(I_QI) * tmp
        weight = min( 1.0_RP, max( 0.0_RP, 0.5_RP * ( 1.0_RP + log( dq/d0_ni ) ) ) )
-                
+
        velq_s = coef_vt0(I_QI,1) * xq**beta_vn(I_QI,1)
        velq_l = coef_vt0(I_QI,2) * xq**beta_vn(I_QI,2)
        velw(k,i,j,I_NI) = -rhofac_q(I_I) &
@@ -3558,11 +3555,11 @@ contains
        ! QS
        rhofac_q(I_S) = rhofac_q(I_I)
        xq = max( xqmin(I_QS), min( xqmax(I_QS), rhoq(I_QS,k,i,j) / ( rhoq(I_NS,k,i,j) + nqmin(I_QS) ) ) )
-                 
+
        tmp = a_m(I_QS) * xq**b_m(I_QS)
        dq = coef_dave_L(I_QS) * tmp
        weight = min( 1.0_RP, max( 0.0_RP, 0.5_RP * ( 1.0_RP + log( dq/d0_ls ) ) ) )
-                     
+
        velq_s = coef_vt1(I_QS,1) * xq**beta_v (I_QS,1)
        velq_l = coef_vt1(I_QS,2) * xq**beta_v (I_QS,2)
        velw(k,i,j,I_QS) = -rhofac_q(I_S) &
@@ -3571,7 +3568,7 @@ contains
        ! NS
        dq = coef_dave_N(I_QS) * tmp
        weight = min( 1.0_RP, max( 0.0_RP, 0.5_RP * ( 1.0_RP + log( dq/d0_ns ) ) ) )
-                     
+
        velq_s = coef_vt0(I_QS,1) * xq**beta_vn(I_QS,1)
        velq_l = coef_vt0(I_QS,2) * xq**beta_vn(I_QS,2)
        velw(k,i,j,I_NS) = -rhofac_q(I_S) &
@@ -3581,11 +3578,11 @@ contains
        ! QG
        rhofac_q(I_G) = rhofac_q(I_I)
        xq = max( xqmin(I_QG), min( xqmax(I_QG), rhoq(I_QG,k,i,j) / ( rhoq(I_NG,k,i,j) + nqmin(I_QG) ) ) )
-                 
+
        tmp = a_m(I_QG) * xq**b_m(I_QG)
        dq = coef_dave_L(I_QG) * tmp
        weight = min( 1.0_RP, max( 0.0_RP, 0.5_RP * ( 1.0_RP + log( dq/d0_lg ) ) ) )
-                     
+
        velq_s = coef_vt1(I_QG,1) * xq**beta_v (I_QG,1)
        velq_l = coef_vt1(I_QG,2) * xq**beta_v (I_QG,2)
        velw(k,i,j,I_QG) = -rhofac_q(I_G) &
@@ -3594,7 +3591,7 @@ contains
        ! NG
        dq = coef_dave_N(I_QG) * tmp
        weight = min( 1.0_RP, max( 0.0_RP, 0.5_RP * ( 1.0_RP + log( dq/d0_ng ) ) ) )
-                     
+
        velq_s = coef_vt0(I_QG,1) * xq**beta_vn(I_QG,1)
        velq_l = coef_vt0(I_QG,2) * xq**beta_vn(I_QG,2)
        velw(k,i,j,I_NG) = -rhofac_q(I_G) &

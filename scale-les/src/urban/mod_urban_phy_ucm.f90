@@ -58,9 +58,13 @@ contains
 
     if ( URBAN_sw ) then
 
+       ! setup library component
        call URBAN_PHY_ucm_setup( URBAN_TYPE )
 
-       call URBAN_PHY_driver( .true., .false. )
+       ! run once (only for the diagnostic value)
+       call PROF_rapstart('URB Physics', 1)
+       call URBAN_PHY_driver( update_flag = .true. )
+       call PROF_rapend  ('URB Physics', 1)
 
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** this component is never called.'
@@ -71,7 +75,7 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Driver
-  subroutine URBAN_PHY_driver( update_flag, history_flag )
+  subroutine URBAN_PHY_driver( update_flag )
     use scale_time, only: &
        dt => TIME_DTSEC_URBAN
     use scale_statistics, only: &
@@ -89,7 +93,6 @@ contains
     implicit none
 
     logical, intent(in) :: update_flag
-    logical, intent(in) :: history_flag
 
     real(RP) :: FLX_heat  (IA,JA)
     real(RP) :: FLX_precip(IA,JA)
@@ -112,9 +115,7 @@ contains
                            FLX_evap    (:,:), & ! [IN]
                            URBAN_TEMP_t(:,:)  ) ! [OUT]
 
-       if ( history_flag ) then
-          call HIST_in( URBAN_TEMP_t(:,:), 'URBAN_TEMP_t', 'SST tendency', 'K' )
-       endif
+       call HIST_in( URBAN_TEMP_t(:,:), 'URBAN_TEMP_t', 'SST tendency', 'K' )
 
     endif
 

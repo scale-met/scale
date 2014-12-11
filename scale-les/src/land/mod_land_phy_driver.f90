@@ -62,7 +62,9 @@ contains
        call LAND_PHY_setup( LAND_TYPE )
 
        ! run once (only for the diagnostic value)
-       call LAND_PHY_driver( update_flag=.true., history_flag=.false. )
+       call PROF_rapstart('LND Physics', 1)
+       call LAND_PHY_driver( update_flag = .true. )
+       call PROF_rapend  ('LND Physics', 1)
 
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** this component is never called.'
@@ -73,7 +75,7 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Driver
-  subroutine LAND_PHY_driver( update_flag, history_flag )
+  subroutine LAND_PHY_driver( update_flag )
     use scale_time, only: &
        dt => TIME_DTSEC_LAND
     use scale_land_grid, only: &
@@ -102,7 +104,6 @@ contains
     implicit none
 
     logical, intent(in) :: update_flag
-    logical, intent(in) :: history_flag
 
     real(RP) :: FLX_heat  (IA,JA)
     real(RP) :: FLX_precip(IA,JA)
@@ -135,19 +136,17 @@ contains
                       LAND_TEMP_t  (:,:,:),              & ! [OUT]
                       LAND_WATER_t (:,:,:)               ) ! [OUT]
 
-       if ( history_flag ) then
-          call HIST_in( LAND_TEMP_t (:,:,:), 'LAND_TEMP_t',  'Soil temperature tendency', 'K',     zdim='land' )
-          call HIST_in( LAND_WATER_t(:,:,:), 'LAND_WATER_t', 'Soil moisture    tendency', 'm3/m3', zdim='land' )
+       call HIST_in( LAND_TEMP_t (:,:,:), 'LAND_TEMP_t',  'Soil temperature tendency', 'K',     zdim='land' )
+       call HIST_in( LAND_WATER_t(:,:,:), 'LAND_WATER_t', 'Soil moisture    tendency', 'm3/m3', zdim='land' )
 
-          call HIST_in( LAND_PROPERTY(:,:,1), 'LP_WaterLimit   ', 'LAND PROPERTY, WaterLimit   ', 'm3/m3'  )
-          call HIST_in( LAND_PROPERTY(:,:,2), 'LP_WaterCritical', 'LAND PROPERTY, WaterCritical', 'm3/m3'  )
-          call HIST_in( LAND_PROPERTY(:,:,3), 'LP_ThermalCond  ', 'LAND PROPERTY, ThermalCond  ', 'W/K/m'  )
-          call HIST_in( LAND_PROPERTY(:,:,4), 'LP_HeatCapacity ', 'LAND PROPERTY, HeatCapacity ', 'J/K/m3' )
-          call HIST_in( LAND_PROPERTY(:,:,5), 'LP_WaterDiff    ', 'LAND PROPERTY, WaterDiff    ', 'm2/s'   )
-          call HIST_in( LAND_PROPERTY(:,:,6), 'LP_Z0M          ', 'LAND PROPERTY, Z0M          ', 'm'      )
-          call HIST_in( LAND_PROPERTY(:,:,7), 'LP_Z0H          ', 'LAND PROPERTY, Z0H          ', 'm'      )
-          call HIST_in( LAND_PROPERTY(:,:,8), 'LP_Z0E          ', 'LAND PROPERTY, Z0E          ', 'm'      )
-       endif
+       call HIST_in( LAND_PROPERTY(:,:,1), 'LP_WaterLimit   ', 'LAND PROPERTY, WaterLimit   ', 'm3/m3'  )
+       call HIST_in( LAND_PROPERTY(:,:,2), 'LP_WaterCritical', 'LAND PROPERTY, WaterCritical', 'm3/m3'  )
+       call HIST_in( LAND_PROPERTY(:,:,3), 'LP_ThermalCond  ', 'LAND PROPERTY, ThermalCond  ', 'W/K/m'  )
+       call HIST_in( LAND_PROPERTY(:,:,4), 'LP_HeatCapacity ', 'LAND PROPERTY, HeatCapacity ', 'J/K/m3' )
+       call HIST_in( LAND_PROPERTY(:,:,5), 'LP_WaterDiff    ', 'LAND PROPERTY, WaterDiff    ', 'm2/s'   )
+       call HIST_in( LAND_PROPERTY(:,:,6), 'LP_Z0M          ', 'LAND PROPERTY, Z0M          ', 'm'      )
+       call HIST_in( LAND_PROPERTY(:,:,7), 'LP_Z0H          ', 'LAND PROPERTY, Z0H          ', 'm'      )
+       call HIST_in( LAND_PROPERTY(:,:,8), 'LP_Z0E          ', 'LAND PROPERTY, Z0E          ', 'm'      )
 
     endif
 

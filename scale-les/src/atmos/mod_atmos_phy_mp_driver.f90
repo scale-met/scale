@@ -68,9 +68,12 @@ contains
        call ATMOS_PHY_MP_setup( ATMOS_PHY_MP_TYPE )
 
        ! run once (only for the diagnostic value)
-       call ATMOS_PHY_MP_driver( .true., .false. )
+       call PROF_rapstart('ATM Microphysics', 1)
+       call ATMOS_PHY_MP_driver( update_flag = .true. )
+       call PROF_rapend  ('ATM Microphysics', 1)
 
     else
+
        if( IO_L ) write(IO_FID_LOG,*) '*** this component is never called.'
        if( IO_L ) write(IO_FID_LOG,*) '*** SFLX_rain and SFLX_snow is set to zero.'
        SFLX_rain(:,:) = 0.0_RP
@@ -83,7 +86,7 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Driver
-  subroutine ATMOS_PHY_MP_driver( update_flag, history_flag )
+  subroutine ATMOS_PHY_MP_driver( update_flag )
     use scale_time, only: &
        dt_MP => TIME_DTSEC_ATMOS_PHY_MP
     use scale_statistics, only: &
@@ -118,7 +121,6 @@ contains
     implicit none
 
     logical, intent(in) :: update_flag
-    logical, intent(in) :: history_flag
 
     real(RP) :: DENS0(KA,IA,JA)
     real(RP) :: MOMZ0(KA,IA,JA)
@@ -164,8 +166,7 @@ contains
                           RHOT0    (:,:,:),   & ! [INOUT]
                           QTRC0    (:,:,:,:), & ! [INOUT]
                           SFLX_rain(:,:),     & ! [OUT]
-                          SFLX_snow(:,:),     & ! [OUT]
-                          history_flag        ) ! [OUT]
+                          SFLX_snow(:,:)      ) ! [OUT]
 
        do j  = JS, JE
        do i  = IS, IE
@@ -196,11 +197,9 @@ contains
        end do
        end do
 
-       if ( history_flag ) then
-          call HIST_in( SFLX_rain(:,:), 'RAIN', 'surface rain rate',          'kg/m2/s' )
-          call HIST_in( SFLX_snow(:,:), 'SNOW', 'surface snow rate',          'kg/m2/s' )
-          call HIST_in( precip   (:,:), 'PREC', 'surface precipitation rate', 'kg/m2/s' )
-       endif
+       call HIST_in( SFLX_rain(:,:), 'RAIN', 'surface rain rate',          'kg/m2/s' )
+       call HIST_in( SFLX_snow(:,:), 'SNOW', 'surface snow rate',          'kg/m2/s' )
+       call HIST_in( precip   (:,:), 'PREC', 'surface precipitation rate', 'kg/m2/s' )
 
     endif
 

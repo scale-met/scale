@@ -422,15 +422,15 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine HistoryAddVariable( &
-       varname,  &
-       dims,     &
-       desc,     &
-       units,    &
-       time_now, &
-       id,       &
-       zinterp,  &
-       existed,  &
-       options   )
+       varname,    &
+       dims,       &
+       desc,       &
+       units,      &
+       time_start, &
+       id,         &
+       zinterp,    &
+       existed,    &
+       options     )
     use gtool_file, only: &
        FileCreate,      &
        FileSetOption,   &
@@ -444,7 +444,7 @@ contains
     character(len=*), intent(in)  :: dims(:)
     character(len=*), intent(in)  :: desc
     character(len=*), intent(in)  :: units
-    real(DP),         intent(in)  :: time_now
+    real(DP),         intent(in)  :: time_start
     integer,          intent(out) :: id
     logical,          intent(out) :: zinterp
     logical,          intent(out) :: existed
@@ -553,7 +553,7 @@ contains
              if ( HISTORY_OUTPUT_STEP0 ) then
                 History_tstrsec(id) = -History_tintsec(id)
              else
-                History_tstrsec(id) = time_now
+                History_tstrsec(id) = time_start
              endif
              History_tlstsec (id) = History_tstrsec(id)
              History_tsumsec (id) = 0.D0

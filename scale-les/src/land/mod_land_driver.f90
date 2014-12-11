@@ -49,6 +49,8 @@ contains
   subroutine LAND_driver_setup
     use mod_land_phy_driver, only: &
        LAND_PHY_driver_setup
+    use mod_land_vars, only: &
+       LAND_vars_history
     implicit none
     !---------------------------------------------------------------------------
 
@@ -56,6 +58,11 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[DRIVER] / Categ[LAND] / Origin[SCALE-LES]'
 
     call LAND_PHY_driver_setup
+
+    !########## History & Monitor ##########
+    call PROF_rapstart('LND History', 1)
+    call LAND_vars_history
+    call PROF_rapend  ('LND History', 1)
 
     return
   end subroutine LAND_driver_setup
@@ -83,9 +90,9 @@ contains
 
     !########## Physics ##########
     if ( LAND_sw ) then
-      call PROF_rapstart('LND Physics', 1)
-      call LAND_PHY_driver( update_flag=.true., history_flag=.true. )
-      call PROF_rapend  ('LND Physics', 1)
+       call PROF_rapstart('LND Physics', 1)
+       call LAND_PHY_driver( update_flag = .true. )
+       call PROF_rapend  ('LND Physics', 1)
     endif
 
     !########## Update ##########
