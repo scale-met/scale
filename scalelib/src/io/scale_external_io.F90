@@ -862,7 +862,10 @@ contains
     call ExternalFileMakeFname( fname,mdlid,basename,myrank,single_ )
 
     status = nf90_open( trim(fname), nf90_nowrite, ncid )
-    if (status .ne. nf90_noerr) call handle_err(status, __LINE__)
+    if (status .ne. nf90_noerr) then
+       write(*,*) trim(fname)
+       call handle_err(status, __LINE__)
+    end if
 
     ! retrieve dimension size in data original order
     call ExternalTakeDimension( dims(:),ncid,mdlid )
