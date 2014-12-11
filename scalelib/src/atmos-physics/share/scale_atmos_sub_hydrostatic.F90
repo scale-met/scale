@@ -529,7 +529,7 @@ contains
     enddo
 
     if ( .NOT. converged ) then
-       write(*,*) 'xxx [buildrho 2D atmos] iteration not converged!', &
+       write(*,*) 'xxx [buildrho 0D atmos] iteration not converged!', &
                   k,dens_L2,ite,dens_s,dhyd,dgrd
        call PRC_MPIstop
     endif

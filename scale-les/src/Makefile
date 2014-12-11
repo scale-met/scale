@@ -151,8 +151,7 @@ $(BUILD_DIR)/mod_atmos_phy_sf_vars.o      : mod_atmos_phy_sf_vars.f90 $(DEPENDLI
 $(BUILD_DIR)/mod_atmos_phy_tb_vars.o      : mod_atmos_phy_tb_vars.f90 $(DEPENDLIB) mod_atmos_admin.o
 $(BUILD_DIR)/mod_atmos_phy_ch_vars.o      : mod_atmos_phy_ch_vars.f90 $(DEPENDLIB) mod_atmos_admin.o
 $(BUILD_DIR)/mod_atmos_phy_ae_vars.o      : mod_atmos_phy_ae_vars.f90 $(DEPENDLIB) mod_atmos_admin.o
-$(BUILD_DIR)/mod_atmos_vars.o             : mod_atmos_vars.f90        $(DEPENDLIB) mod_atmos_admin.o
-
+$(BUILD_DIR)/mod_atmos_vars.o             : mod_atmos_vars.f90        $(DEPENDLIB) mod_atmos_admin.o mod_atmos_dyn_vars.o mod_atmos_phy_mp_vars.o mod_atmos_phy_ae_vars.o mod_atmos_phy_ch_vars.o mod_atmos_phy_rd_vars.o mod_atmos_phy_sf_vars.o mod_atmos_phy_tb_vars.o mod_atmos_phy_cp_vars.o
 $(BUILD_DIR)/mod_atmos_dyn_driver.o       : mod_atmos_dyn_driver.f90    $(DEPENDLIB) mod_atmos_admin.o mod_atmos_vars.o mod_atmos_dyn_vars.o
 $(BUILD_DIR)/mod_atmos_phy_cp_driver.o    : mod_atmos_phy_cp_driver.f90 $(DEPENDLIB) mod_atmos_admin.o mod_atmos_vars.o mod_atmos_phy_cp_vars.o
 $(BUILD_DIR)/mod_atmos_phy_mp_driver.o    : mod_atmos_phy_mp_driver.f90 $(DEPENDLIB) mod_atmos_admin.o mod_atmos_vars.o mod_atmos_phy_mp_vars.o

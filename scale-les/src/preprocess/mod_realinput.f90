@@ -595,7 +595,11 @@ contains
     do j = 1, JA
     do i = 1, IA
        tc_urb(i,j) = temp(KS,i,j)
+#ifdef DRY
+       qc_urb(i,j) = 0.0_RP
+#else
        qc_urb(i,j) = qtrc(KS,i,j,1,I_QV)
+#endif
     enddo
     enddo
 
@@ -734,6 +738,9 @@ contains
     integer :: igrd(   IA,JA,itp_nh       )
     integer :: jgrd(   IA,JA,itp_nh       )
     integer :: kgrd(KA,IA,JA,itp_nh,itp_nv)
+
+    real(RP) :: qc(KA,IA,JA)
+    real(RP) :: qc_sfc(1,IA,JA)
 
     integer :: KALL, IALL, JALL
     integer :: rank
@@ -1251,18 +1258,25 @@ contains
        end do
 
        do n = start_step, end_step
+#ifdef DRY
+          qc = 0.0_RP
+          qc_sfc    = 0.0_RP
+#else
+          qc = qtrc(:,:,:,n_I_QC)
+          qc_sfc = qtrc_sfc(:,:,:,n_I_QC)
+#endif
           ! make density in moist condition
           call HYDROSTATIC_buildrho( dens    (:,:,:,n),      & ! [OUT]
                                      temp    (:,:,:,n),      & ! [OUT]
                                      pres    (:,:,:,n),      & ! [OUT]
                                      pott    (:,:,:,n),      & ! [IN]
                                      qtrc    (:,:,:,n,I_QV), & ! [IN]
-                                     qtrc    (:,:,:,n,I_QC), & ! [IN]
+                                     qc      (:,:,:),        & ! [OUT]
                                      temp_sfc(:,:,:,n),      & ! [OUT]
                                      pres_sfc(:,:,:,n),      & ! [IN]
                                      pott_sfc(:,:,:,n),      & ! [IN]
                                      qtrc_sfc(:,:,:,n,I_QV), & ! [IN]
-                                     qtrc_sfc(:,:,:,n,I_QC)  ) ! [IN]
+                                     qc_sfc  (:,:,:)         ) ! [IN]
 
           call COMM_vars8( dens(:,:,:,n), 1 )
           call COMM_wait ( dens(:,:,:,n), 1 )
@@ -1450,6 +1464,9 @@ contains
     integer :: jgrd(   IA,JA,itp_nh       )
     integer :: kgrd(KA,IA,JA,itp_nh,itp_nv)
 
+    real(RP) :: qc(KA,IA,JA)
+    real(RP) :: qc_sfc(1,IA,JA)
+
     integer :: n, k, i, j, iq
 
     character(len=H_MID) :: varname_T
@@ -1564,6 +1581,7 @@ contains
        !convert from mixing ratio [kg/kg] to ratio of mass of tracer to total mass[kg/kg]
        qtrc_org(:,:,:,:,I_QV) = real(read_zxy(:,:,:,:),kind=RP)/( 1.0_RP + real(read_zxy(:,:,:,:),kind=RP) )
 
+#ifndef DRY
        if( mptype_parent > 0 ) then
           call ExternalFileRead( read_zxy(:,:,:,:), BASENAME, "QCLOUD", ts, te, myrank, mdlid, single=.true. )
           !convert from mixing ratio [kg/kg] to ratio of mass of tracer to total mass[kg/kg]
@@ -1606,6 +1624,7 @@ contains
           call ExternalFileRead( read_zxy(:,:,:,:), BASENAME, "NG",     ts, te, myrank, mdlid, single=.true. )
           qtrc_org(:,:,:,:,I_NG) = real( read_zxy(:,:,:,:), kind=RP )
        endif
+#endif
 
        do n = ts, te
        do j = 1, dims(3)
@@ -1900,18 +1919,25 @@ contains
        end do
        end do
 
+#ifdef DRY
+       qc = 0.0_RP
+       qc_sfc = 0.0_RP
+#else
+       qc = qtrc(:,:,:,n,I_QC)
+       qc_sfc = qtrc_sfc(:,:,:,I_QC)
+#endif
        ! make density & pressure profile in moist condition
        call HYDROSTATIC_buildrho( dens    (:,:,:,n),      & ! [OUT]
                                   temp    (:,:,:),        & ! [OUT]
                                   pres    (:,:,:),        & ! [OUT]
                                   pott    (:,:,:),        & ! [IN]
                                   qtrc    (:,:,:,n,I_QV), & ! [IN]
-                                  qtrc    (:,:,:,n,I_QC), & ! [IN]
+                                  qc      (:,:,:),        & ! [IN]
                                   temp_sfc(:,:,:),        & ! [OUT]
                                   pres_sfc(:,:,:),        & ! [IN]
                                   pott_sfc(:,:,:),        & ! [IN]
                                   qtrc_sfc(:,:,:,I_QV),   & ! [IN]
-                                  qtrc_sfc(:,:,:,I_QC)    ) ! [IN]
+                                  qc_sfc  (:,:,:)         ) ! [IN]
 
        call COMM_vars8( dens(:,:,:,n), 1 )
        call COMM_wait ( dens(:,:,:,n), 1 )
@@ -2085,6 +2111,9 @@ contains
     integer :: igrd(   IA,JA,itp_nh       )
     integer :: jgrd(   IA,JA,itp_nh       )
     integer :: kgrd(KA,IA,JA,itp_nh,itp_nv)
+
+    real(RP) :: qc(KA,IA,JA)
+    real(RP) :: qc_sfc(1,IA,JA)
 
     real(RP) :: sw
     real(RP) :: Rtot
@@ -2647,6 +2676,13 @@ contains
     end do
     end do
 
+#ifdef DRY
+    qc = 0.0_RP
+    qc_sfc = 0.0_RP
+#else
+    qc = qtrc(:,:,:,n,I_QC)
+    qc_sfc = qtrc_sfc(:,:,:,n,I_QC)
+#endif
     do n = start_step, end_step
        !> make density in moist condition
        call HYDROSTATIC_buildrho( dens    (:,:,:,n),      & ! [OUT]
@@ -2654,12 +2690,13 @@ contains
                                   pres    (:,:,:,n),      & ! [OUT] not-used
                                   pott    (:,:,:,n),      & ! [IN]
                                   qtrc    (:,:,:,n,I_QV), & ! [IN]
-                                  qtrc    (:,:,:,n,I_QC), & ! [IN]
+                                  qc      (:,:,:),        & ! [IN]
                                   temp_sfc(:,:,:,n),      & ! [OUT] not-used
                                   pres_sfc(:,:,:,n),      & ! [IN]
                                   pott_sfc(:,:,:,n),      & ! [IN]
                                   qtrc_sfc(:,:,:,n,I_QV), & ! [IN]
-                                  qtrc_sfc(:,:,:,n,I_QC)  ) ! [IN]
+                                  qc_sfc  (:,:,:)         ) ! [IN]
+
        call COMM_vars8( dens(:,:,:,n), 3 )
        call COMM_wait ( dens(:,:,:,n), 3 )
     end do

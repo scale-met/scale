@@ -546,9 +546,9 @@ contains
 
       end if
 
-    end if
+      close( IO_FID_LAND_PROPERTY )
 
-    close( IO_FID_LAND_PROPERTY )
+    end if
 
     if( IO_L ) write(IO_FID_LOG,*) &
     '--------------------------------------------------------------------------------------------------------'
