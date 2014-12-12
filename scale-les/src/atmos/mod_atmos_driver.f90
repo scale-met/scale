@@ -458,9 +458,6 @@ contains
   subroutine ATMOS_SURFACE_SET( setup )
     use scale_topography, only: &
        TOPO_Zsfc
-    use scale_comm, only: &
-       COMM_vars8, &
-       COMM_wait
     use scale_grid_real, only: &
        REAL_CZ, &
        REAL_Z1
@@ -508,19 +505,6 @@ contains
     ATM_PBL(:,:) = 1.0E+2_RP ! tentative
 
     if ( CPL_sw ) then
-       call COMM_vars8( ATM_PBL   (:,:), 1 )
-       call COMM_vars8( SFC_PRES  (:,:), 2 )
-       call COMM_vars8( SFLX_LW_dn(:,:), 3 )
-       call COMM_vars8( SFLX_SW_dn(:,:), 4 )
-       call COMM_vars8( SFLX_rain (:,:), 5 )
-       call COMM_vars8( SFLX_snow (:,:), 6 )
-       call COMM_wait ( ATM_PBL   (:,:), 1 )
-       call COMM_wait ( SFC_PRES  (:,:), 2 )
-       call COMM_wait ( SFLX_LW_dn(:,:), 3 )
-       call COMM_wait ( SFLX_SW_dn(:,:), 4 )
-       call COMM_wait ( SFLX_rain (:,:), 5 )
-       call COMM_wait ( SFLX_snow (:,:), 6 )
-
        call CPL_putAtm( TEMP      (KS,:,:),   & ! [IN]
                         PRES      (KS,:,:),   & ! [IN]
                         W         (KS,:,:),   & ! [IN]
