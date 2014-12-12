@@ -16,6 +16,8 @@
 !! @li      2014-06-13 (S.Shima) [new] Separated common variables from scale_atmos_phy_mp_sdm.F90
 !! @li      2014-07-14 (S.Shima) [rev] Removed unused variables: KMIN,KPLS,...,
 !! @li      2014-07-18 (Y.Sato)  [add] add QTRC_sdm
+!! @li      2014-12-12 (Y.Sato)  [mod] modify LatHet and DNS_RL as those used in SCALE Library
+!! @li      2014-12-12 (Y.Sato)  [mod] modify characteristics of aeorosl from ammonium sulfate to ammonium disulfate
 !!
 !<
 !-------------------------------------------------------------------------------
@@ -31,7 +33,9 @@ module m_sdm_common
      ONE_PI => CONST_PI, &
      rrst   => CONST_R, &       ! Gas constant [J/(K*mol)]
      mass_air => CONST_Mdry, &  ! Molecular mass of air [g/mol]
-     GasV_C => CONST_Rvap       ! Gas Constant of vapor [J/K/kg]
+     GasV_C => CONST_Rvap, &    ! Gas Constant of vapor [J/K/kg]
+!!$     LatHet => CONST_LH0, &
+     DNS_RL => CONST_DWATR
 
   use rng_uniform_mt, only: c_rng_uniform_mt
 
@@ -128,12 +132,16 @@ module m_sdm_common
   !++ Basic parameter for SDM
   !
   !------------------------------------------------------------------------------
-  real(RP), parameter :: LatHet = 2.453E+6_RP   ! Latent heat of water at 293K [J/kg]
+!  real(RP), parameter :: LatHet = 2.453E+6_RP   ! Latent heat of water at 293K [J/kg]
   real(RP), parameter :: Heat_C = 2.550E-2_RP   ! thermal conductivity at 293K, 100kPa [J/m s K]
-  real(RP), parameter :: DNS_RL = 998.203_RP     ! Density of liquid water at 293K [kg m-3]
+  !--- Y.Sato
+!  real(RP), parameter :: DNS_RL = 998.203_RP     ! Density of liquid water at 293K [kg m-3]
+  !--- Y.Sato
   real(RP), parameter :: Diff_C = 2.52E-5_RP    ! Diffusion Constant
-  real(RP), parameter :: LatGas = LatHet / GasV_C
-  real(RP), parameter :: L_RL_K = LatHet * DNS_RL / Heat_C
+  !--- Y.Sato
+!!$  real(RP), parameter :: LatGas = LatHet / GasV_C
+!!$  real(RP), parameter :: L_RL_K = LatHet * DNS_RL / Heat_C
+  !--- Y.Sato
   real(RP), parameter :: RLRv_D = DNS_RL * GasV_C / Diff_C
 !  real(RP), parameter :: exp_K = GasD_C / cp_C    ! exponent k used in adiabatic process
   real(RP), parameter :: m2micro = 1.0E+6_RP    ! Convert unit [m] -> [micron]
@@ -156,13 +164,17 @@ module m_sdm_common
   real(RP), parameter :: boltz = 1.38066E-23_RP  ! Boltzmann constant
   ! Molecular mass of sea salt (NaCl) contained as water-solble aerosol in S.D. [g]
   real(RP), parameter :: mass_nacl = 58.44277_RP 
-  ! Molecular mass of sea salt (NaCl) contained as water-solble aerosol in S.D. [g]
-  real(RP), parameter :: mass_amsul = 132.14_RP  
+!!  ! Molecular mass of ammonium sulfate contained as water-solble aerosol in S.D. [g]
+!!  real(RP), parameter :: mass_amsul = 132.14_RP  
+  ! Molecular mass of ammonium disulfate contained as water-solble aerosol in S.D. [g]
+  real(RP), parameter :: mass_amsul = 115.11_RP  
   ! Degree of ion dissociation of ammonium sulfate and sea salt contained 
   ! as water-soluble aerosol in super droplets
   real(RP), parameter :: ion_amsul = 2.0_RP, ion_nacl = 2.0_RP 
-  ! Density of ammonium sulfate and sea salt [g/m3] contained as water-soluble aerosol in super droplets
-  real(RP), parameter :: rho_amsul = 1.769E+6_RP, rho_nacl = 2.165E+6_RP
+!!  ! Density of ammonium sulfate and sea salt [g/m3] contained as water-soluble aerosol in super droplets
+!!  real(RP), parameter :: rho_amsul = 1.769E+6_RP, rho_nacl = 2.165E+6_RP
+  ! Density of ammonium disulfate and sea salt [g/m3] contained as water-soluble aerosol in super droplets
+  real(RP), parameter :: rho_amsul = 1.78E+6_RP, rho_nacl = 2.165E+6_RP
   ! parameter for 3mode log-normal distribution of aerosol
   real(RP)  :: n1_amsul                                  !! [1/m3]
   real(RP)  :: n2_amsul

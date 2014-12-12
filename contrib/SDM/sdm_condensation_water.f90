@@ -16,6 +16,7 @@
 !! @li      2014-07-11 (S.Shima) [new] Separated from scale_atmos_phy_mp_sdm.F90
 !! @li      2014-07-18 (Y.Sato)  [rev] Change Teten's formula to SATURATION library of SCALE Library 
 !! @li      2014-07-24 (Y.Sato)  [mod] Modify a bug relating to the revision on 2014/07/18
+!! @li      2014-12-12 (Y.Sato)  [mod] modify epsva, LatHet, and DNS_RL as those used in SCALE Library
 !!
 !<
 !-------------------------------------------------------------------------------
@@ -38,6 +39,9 @@ contains
          p0   => CONST_PRE00, &
          t0   => CONST_TEM00, &
          es0  => CONST_PSAT0, &
+         LatHet => CONST_LH00, &
+         DNS_RL => CONST_DWATR, &
+         epsva=> CONST_EPSvap, &
          rd   => CONST_Rdry
     use scale_grid_index, only: &
          IA,JA,KA
@@ -49,7 +53,9 @@ contains
     use m_sdm_common, only: &
          mass_amsul, ion_amsul, mass_nacl, ion_nacl, &
          VALID2INVALID, &
-         RLRv_D, LatGas, L_RL_K, CurveF, ASL_FF
+         RLRv_D, CurveF, ASL_FF, &
+         GasV_C, Heat_C
+!!         RLRv_D, LatGas, L_RL_K, CurveF, ASL_FF
     ! Input variables
     integer,  intent(in) :: sdm_aslset
     real(RP), intent(in) :: sdm_aslmw(20)
@@ -108,9 +114,11 @@ contains
     integer :: i, j, k, n, s, t, it               ! index
     ! Parameters
     integer, parameter :: itr_max = 25   ! iteration number
-    real(RP), parameter :: epsva = 0.622_RP   ! Molecular weight ratio of vapor/air
-    real(RP) :: tmpd
+!!$    real(RP), parameter :: epsva = 0.622_RP   ! Molecular weight ratio of vapor/air
+    real(RP) :: LatGas, L_RL_K
     !---------------------------------------------------------------------
+    LatGas = LatHet / GasV_C
+    L_RL_K = LatHet * DNS_RL / Heat_C
       
     call sdm_x2ri(sd_num,sd_x,sd_ri,sd_rk)
     call sdm_y2rj(sd_num,sd_y,sd_rj,sd_rk)
@@ -293,15 +301,16 @@ contains
   !-----------------------------------------------------------------------------
   subroutine sdm_condevp_updatefluid(RHOT,QTRC,DENS,rhowp_sdm,rhowc_sdm)
     use scale_const, only: &
-         cp => CONST_CPdry
+         cp => CONST_CPdry, &
+         LatHet => CONST_LH00
     use scale_tracer, only: &
          I_QV,QAD=>QA
     use scale_grid_index, only: &
          IA,JA,KA,IS,IE,JS,JE,KS,KE
     use m_sdm_fluidconv, only: &
          sdm_rhot_qtrc2cpexnr
-    use m_sdm_common, only: &
-         LatHet
+!!    use m_sdm_common, only: &
+!!         LatHet
     ! Input variables
     real(RP), intent(in) :: rhowp_sdm(KA,IA,JA) ! density of liquid water at preveous step
     real(RP), intent(in) :: rhowc_sdm(KA,IA,JA) ! density of liquid water at current step

@@ -8,6 +8,7 @@
 !!
 !! @par History
 !! @li      2013-06-20 (S.Nishizawa)   [new] split from dynamical core
+!! @li      2014-12-12 (Y.Sato)        [mod] Modify several bug in forcing term for RICO case
 !!
 !<
 !-------------------------------------------------------------------------------
@@ -74,6 +75,9 @@ module mod_user
   real(RP), private, save      :: FIXED_SST = 299.8_RP  ! fixed Temperature of surface [K]
   real(RP), private, parameter :: pres_sfc = 1015.4E2_RP! fixed surface pressure
   !-----------------------------------------------------------------------------
+  real(RP), private, save      :: USER_LH =  154.0_RP  ! constant Latent heat flux [W/m2]
+  real(RP), private, save      :: USER_SH =  7.3_RP    ! constant Sensible heat flux [W/m2]
+  real(RP), private, save      :: USER_Ustar = 0.25_RP ! constant frection velocity [m/s]
 contains
   !-----------------------------------------------------------------------------
   !> Setup
@@ -90,7 +94,9 @@ contains
     namelist / PARAM_USER / &
        USER_LSsink_D,          &
        USER_LSsink_bottom,     &
-       USER_LS_FLG
+       USER_LS_FLG, &
+       USER_LH, USER_SH, &
+       USER_Ustar
 
     real(RP) :: zovzb
     real(RP) :: cr, xi, ar, yc, xz
@@ -273,8 +279,6 @@ contains
     use scale_time, only: &
          do_phy_sf => TIME_DOATMOS_PHY_SF, &
          dtsf =>  TIME_DTSEC_ATMOS_PHY_SF
-    use scale_atmos_saturation, only : &
-         moist_pres2qsat_liq  => ATMOS_SATURATION_pres2qsat_liq
 #ifdef _SDM
     use scale_atmos_phy_mp_sdm, only: &
          ATMOS_PHY_MP_sdm_Mixingratio
@@ -299,7 +303,7 @@ contains
     real(RP) :: QHYD, RovCP, PRES, CPovCV, CPtot, Rtot, Qdry, Qtot
     real(RP) :: qv_evap, pres_evap, PT_SST
 #ifdef _SDM
-    real(RP) :: Qe(KA,IA,JA,MP_QA)
+    real(RP) :: Qe(KA,IA,JA, MP_QA) ! tendency rho*theta     [K*kg/m3/s]
 #endif
 
     integer :: k, i, j, iq, iw
@@ -307,7 +311,6 @@ contains
     ! work
     real(RP) :: Uabs  ! absolute velocity at the lowermost atmos. layer [m/s]
     real(RP) :: Cm, Ch, Ce    !
-
 
     do JJS = JS, JE, JBLOCK
     JJE = JJS+JBLOCK-1
@@ -328,7 +331,7 @@ contains
           do i = IIS, IIE
           do k = KS, KE-2
              MOMZ_tp(k,i,j) = MOMZ_tp(k,i,j) &
-                  - MOMZ_LS(k,2) * ( WORK(k+1,i,j) - WORK(k,i,j) ) * RCDZ(k) * 0.0_RP
+                  - MOMZ_LS(k,2) * ( WORK(k+1,i,j) - WORK(k,i,j) ) * RCDZ(k)*0.0_RP
           enddo
           enddo
           enddo
@@ -336,7 +339,7 @@ contains
           do j = JJS, JJE
           do i = IIS, IIE
              MOMZ_tp(KE-1,i,j) = MOMZ_tp(KE-1,i,j) &
-                  - MOMZ_LS(KE-1,2) * (           - WORK(KE-1,i,j) ) * RCDZ(KE-1) * 0.0_RP
+                  - MOMZ_LS(KE-1,2) * (           - WORK(KE-1,i,j) ) * RCDZ(KE-1)*0.0_RP
           enddo
           enddo
        end if
@@ -497,6 +500,7 @@ contains
 #else
           do iq = 1, QA
 #endif
+!          do iq = 1, QA
              !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
              do j = JJS, JJE
              do i = IIS, IIE
@@ -529,7 +533,7 @@ contains
 
        do k = KS, KE
 
-            RHOT_tp(k,i,j) = RHOT_tp(k,i,j) + ( -2.5_RP/86400.0_RP ) * DENS(k,i,j) 
+            RHOT_tp(k,i,j) = RHOT_tp(k,i,j) + ( -2.5_RP/86400.0_RP ) * DENS(k,i,j) ! [K/s]
        enddo
 
     enddo
@@ -551,27 +555,14 @@ contains
 
        !--- absolute velocity
        Uabs = sqrt( &
-              ( MOMZ(KS,i,j)                  )**2 &
+!              ( MOMZ(KS,i,j)                  )**2 &
             + ( MOMX(KS,i-1,j) + MOMX(KS,i,j) )**2 &
             + ( MOMY(KS,i,j-1) + MOMY(KS,i,j) )**2 &
             ) / DENS(KS,i,j) * 0.5_RP
 
-       !--- Bulk coef. at w, theta, and qv points
-       Cm = Cm_const
-       Ch = Ch_const
-       Ce = Ce_const
+        Cm = min( max(USER_Ustar**2 / Uabs**2, Cm_min), Cm_max )
 
-       !--- saturation at surface
-       qtot = 0.0_RP
-       qdry = 1.0_RP
-       CPtot = 0.0_RP
 #ifdef _SDM
-       do iw = I_QV, I_QV
-          qdry = qdry - QTRC(KS,i,j,iw)
-          qtot = qtot + QTRC(KS,i,j,iw)
-          CPtot = CPtot + QTRC(KS,i,j,iw) * CPw(iw)
-       enddo
-       qtot = qtot + Qe(KS,i,j,I_mp_QC)
 #else
        do iw = QQS, QQE
           qdry = qdry - QTRC(KS,i,j,iw)
@@ -579,25 +570,18 @@ contains
           CPtot = CPtot + QTRC(KS,i,j,iw) * CPw(iw)
        enddo
 #endif
-       Rtot = Rdry*qdry + Rvap*QTRC(KS,i,j,I_QV)
-       CPtot = CPdry*qdry + CPtot
-       CPovCV = CPtot / ( CPtot - Rtot )
-       pres      = P00 * ( RHOT(KS,i,j) * Rtot / P00 )**CPovCV
-
-       call moist_pres2qsat_liq( qv_evap, FIXED_SST, pres_sfc )
 
        ! flux
        SFLX_MOMZ(i,j) = 0.0_RP
-       SFLX_POTT(i,j) =   Ch * min(max(Uabs,U_minH),U_maxH) &
-            * ( FIXED_PTSST * DENS(KS,i,j) - RHOT(KS,i,j) )
-       SFLX_QV  (i,j) =   Ce * min(max(Uabs,U_minE),U_maxE) &
-            * ( qv_evap - qtot )
+       SFLX_POTT(i,j) =  USER_SH / CPdry
+       SFLX_QV  (i,j) =  USER_LH / LH0
 
        ! at (u, y, layer)
        Uabs = sqrt( &
             + ( 2.0_RP *   MOMX(KS,i,j) )**2 &
             + ( 0.5_RP * ( MOMY(KS,i,j-1) + MOMY(KS,i,j) + MOMY(KS,i+1,j-1) + MOMY(KS,i+1,j) ) )**2 &
             ) / ( DENS(KS,i,j) + DENS(KS,i+1,j) )
+       Cm = min( max(USER_Ustar**2 / Uabs**2, Cm_min), Cm_max )
        SFLX_MOMX(i,j) = - Cm * min( max(Uabs,U_minM), U_maxM ) * MOMX(KS,i,j)
 
        ! at (x, v, layer)
@@ -605,6 +589,7 @@ contains
             + ( 0.5_RP * ( MOMX(KS,i-1,j) + MOMX(KS,i,j) + MOMX(KS,i-1,j+1) + MOMX(KS,i,j+1) ) )**2 &
             + ( 2.0_RP *   MOMY(KS,i,j) )**2 &
           ) / ( DENS(KS,i,j) + DENS(KS,i,j+1) )
+       Cm = min( max(USER_Ustar**2 / Uabs**2, Cm_min), Cm_max )
        SFLX_MOMY(i,j) = - Cm * min( max(Uabs,U_minM), U_maxM ) * MOMY(KS,i,j)
 
        SHFLX(i,j) = SFLX_POTT(i,j) * CPdry

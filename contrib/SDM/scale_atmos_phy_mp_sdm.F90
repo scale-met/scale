@@ -62,6 +62,7 @@
 !! @li      2014-07-24 (Y.Sato)  [mod] Modify a bug for restart
 !! @li      2014-07-25 (Y.Sato)  [rev] Move sdm_getrklu from sdm_iniset to ATMOS_PHY_MP_sdm_setup
 !! @li      2014-07-25 (Y.Sato)  [rev] Add COMM_var, and COMM_wait for filling u_scale, v_scale, and w_scale
+!! @li      2014-12-12 (Y.Sato)  [mod] Modify for using QTRC_sdm in sdm_sd2qcqr in sdm_iniset 
 !<
 !-------------------------------------------------------------------------------
 #include "macro_thermodyn.h"
@@ -1234,7 +1235,8 @@ contains
 
       !### Diagnose QC and QR from super-droplets ###!
       !! note that when SDM is used QC := rhoc/(rhod+rhov), QR := rhor/(rhod+rhov)
-      call sdm_sd2qcqr(DENS,QTRC(:,:,:,I_QC),QTRC(:,:,:,I_QR),          &
+!!$      call sdm_sd2qcqr(DENS,QTRC(:,:,:,I_QC),QTRC(:,:,:,I_QR),          &
+      call sdm_sd2qcqr(DENS,QTRC_sdm(:,:,:,I_QC),QTRC_sdm(:,:,:,I_QR),          &
                        zph_crs,                   &
                        sdnum_s2c,sdn_s2c,sdx_s2c,sdy_s2c,        &
                        sdr_s2c,sdri_s2c,sdrj_s2c,sdrk_s2c,sdrkl_s2c,sdrku_s2c,            &
