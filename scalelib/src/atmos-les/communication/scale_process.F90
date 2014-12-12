@@ -620,7 +620,7 @@ contains
        ! make a process table
        color = 1
        key   = 0
-       nprc  = PRC_DOMAINS(color) - 1
+       nprc  = PRC_DOMAINS(color)
        PRC_ROOT(:) = -999
 
        do i = 0, GLOBAL_nmax-1
