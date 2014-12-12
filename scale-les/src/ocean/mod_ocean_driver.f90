@@ -144,7 +144,6 @@ contains
   !> Get surface boundary to other model
   subroutine OCEAN_SURFACE_GET( setup )
     use mod_ocean_vars, only: &
-       OCEAN_TEMP,          &
        OCEAN_SFC_TEMP,      &
        OCEAN_SFC_albedo,    &
        OCEAN_SFC_Z0M,       &
