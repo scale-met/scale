@@ -38,18 +38,18 @@ module mod_cpl_vars
   public :: CPL_putOcn_setup
   public :: CPL_putLnd_setup
   public :: CPL_putUrb_setup
+  public :: CPL_putAtm_restart
+  public :: CPL_putOcn_restart
+  public :: CPL_putLnd_restart
   public :: CPL_putAtm
   public :: CPL_putOcn
   public :: CPL_putLnd
   public :: CPL_putUrb
-  public :: CPL_putAtm_restart
-  public :: CPL_putOcn_restart
   public :: CPL_getAtm
   public :: CPL_getAtm_SF
   public :: CPL_getOcn
   public :: CPL_getLnd
   public :: CPL_getUrb
-  public :: CPL_getLnd_restart
   public :: CPL_getUrb_restart
 
   !-----------------------------------------------------------------------------
@@ -1127,31 +1127,46 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine CPL_getLnd( &
-      LND_FLX_heat,   & ! (out)
-      LND_FLX_precip, & ! (out)
-      LND_FLX_evap    ) ! (out)
+      SFC_TEMP,   & ! (out)
+      SFC_albedo, & ! (out)
+      FLX_heat,   & ! (out)
+      FLX_precip, & ! (out)
+      FLX_evap    ) ! (out)
     implicit none
 
-    real(RP), intent(out) :: LND_FLX_heat  (IA,JA)
-    real(RP), intent(out) :: LND_FLX_precip(IA,JA)
-    real(RP), intent(out) :: LND_FLX_evap  (IA,JA)
+    real(RP), intent(out) :: SFC_TEMP  (IA,JA)
+    real(RP), intent(out) :: SFC_albedo(IA,JA,2)
+    real(RP), intent(out) :: FLX_heat  (IA,JA)
+    real(RP), intent(out) :: FLX_precip(IA,JA)
+    real(RP), intent(out) :: FLX_evap  (IA,JA)
 
     integer :: i, j
     !---------------------------------------------------------------------------
 
     do j = JS, JE
-    do i = IS, IE
-       LND_FLX_heat  (i,j) = CPL_AtmLnd_LND_FLX_heat  (i,j)
+    do i = IS, JE
+       SFC_TEMP  (i,j)   = CPL_fromLnd_SFC_TEMP  (i,j)
+    end do
+    end do
+    do j = JS, JE
+    do i = IS, JE
+       SFC_albedo(i,j,1) = CPL_fromLnd_SFC_albedo(i,j,1)
+       SFC_albedo(i,j,2) = CPL_fromLnd_SFC_albedo(i,j,2)
     end do
     end do
     do j = JS, JE
     do i = IS, IE
-       LND_FLX_precip(i,j) = CPL_AtmLnd_LND_FLX_precip(i,j)
+       FLX_heat  (i,j) = CPL_AtmLnd_LND_FLX_heat  (i,j)
     end do
     end do
     do j = JS, JE
     do i = IS, IE
-       LND_FLX_evap  (i,j) = CPL_AtmLnd_LND_FLX_evap  (i,j)
+       FLX_precip(i,j) = CPL_AtmLnd_LND_FLX_precip(i,j)
+    end do
+    end do
+    do j = JS, JE
+    do i = IS, IE
+       FLX_evap  (i,j) = CPL_AtmLnd_LND_FLX_evap  (i,j)
     end do
     end do
 
@@ -1194,33 +1209,6 @@ contains
 
     return
   end subroutine CPL_getUrb
-
-  !-----------------------------------------------------------------------------
-  subroutine CPL_getLnd_restart( &
-       SFC_TEMP,   &
-       SFC_albedo  )
-    implicit none
-
-    real(RP), intent(out) :: SFC_TEMP  (IA,JA)
-    real(RP), intent(out) :: SFC_albedo(IA,JA,2)
-
-    integer :: i, j
-    !---------------------------------------------------------------------------
-
-    do j = JS, JE
-    do i = IS, JE
-       SFC_TEMP  (i,j)   = CPL_fromLnd_SFC_TEMP  (i,j)
-    end do
-    end do
-    do j = JS, JE
-    do i = IS, JE
-       SFC_albedo(i,j,1) = CPL_fromLnd_SFC_albedo(i,j,1)
-       SFC_albedo(i,j,2) = CPL_fromLnd_SFC_albedo(i,j,2)
-    end do
-    end do
-
-    return
-  end subroutine CPL_getLnd_restart
 
   !-----------------------------------------------------------------------------
   subroutine CPL_getUrb_restart( &
@@ -1371,5 +1359,38 @@ contains
 
     return
   end subroutine CPL_putOcn_restart
+
+  !-----------------------------------------------------------------------------
+  subroutine CPL_putLnd_restart( &
+       FLX_heat,   & ! (in)
+       FLX_precip, & ! (in)
+       FLX_evap    ) ! (in)
+    implicit none
+
+    real(RP), intent(in) :: FLX_heat  (IA,JA)
+    real(RP), intent(in) :: FLX_precip(IA,JA)
+    real(RP), intent(in) :: FLX_evap  (IA,JA)
+
+    integer :: i, j
+    !---------------------------------------------------------------------------
+
+    do j = JS, JE
+    do i = IS, IE
+       CPL_AtmLnd_LND_FLX_heat  (i,j)   = FLX_heat  (i,j)  
+    end do
+    end do
+    do j = JS, JE
+    do i = IS, IE
+       CPL_AtmLnd_LND_FLX_precip(i,j)   = FLX_precip(i,j)  
+    end do
+    end do
+    do j = JS, JE
+    do i = IS, IE
+       CPL_AtmLnd_LND_FLX_evap  (i,j)   = FLX_evap  (i,j)  
+    end do
+    end do
+
+    return
+  end subroutine CPL_putLnd_restart
 
 end module mod_CPL_vars

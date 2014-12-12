@@ -193,9 +193,9 @@ contains
     use mod_cpl_admin, only: &
        CPL_sw_AtmOcn
     use mod_cpl_vars, only: &
-       CPL_putOcn_setup, &
-       CPL_putOcn, &
-       CPL_putOcn_restart
+       CPL_putOcn_setup,   &
+       CPL_putOcn_restart, &
+       CPL_putOcn
     implicit none
 
     logical, intent(in) :: setup

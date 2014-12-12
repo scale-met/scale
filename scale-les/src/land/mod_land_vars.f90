@@ -59,8 +59,11 @@ module mod_land_vars
   real(RP), public, allocatable :: LAND_WATER_t   (:,:,:) !< tendency of LAND_WATER
 
   ! for restart
-  real(RP), public, allocatable :: LAND_SFC_TEMP  (:,:)   !< land surface skin temperature [K]
-  real(RP), public, allocatable :: LAND_SFC_albedo(:,:,:) !< land surface albedo           [0-1]
+  real(RP), public, allocatable :: LAND_SFC_TEMP  (:,:)   !< land surface skin temperature   [K]
+  real(RP), public, allocatable :: LAND_SFC_albedo(:,:,:) !< land surface albedo             [0-1]
+  real(RP), public, allocatable :: LAND_SFLX_heat (:,:)   !< land surface heat flux          [J/m2/s]
+  real(RP), public, allocatable :: LAND_SFLX_prec (:,:)   !< land surface precipitation flux [kg/m2/s]
+  real(RP), public, allocatable :: LAND_SFLX_evap (:,:)   !< land surface water vapor flux   [kg/m2/s]
 
   real(RP), public, allocatable :: LAND_PROPERTY  (:,:,:) !< land surface property
 
@@ -88,32 +91,44 @@ module mod_land_vars
   !
   logical,                private :: LAND_VARS_CHECKRANGE      = .false.
 
-  integer,                private, parameter :: VMAX            = 5 !< number of the variables
+  integer,                private, parameter :: VMAX            = 8 !< number of the variables
   integer,                private, parameter :: I_TEMP          = 1
   integer,                private, parameter :: I_WATER         = 2
   integer,                private, parameter :: I_SFC_TEMP      = 3
   integer,                private, parameter :: I_SFC_albedo_LW = 4
   integer,                private, parameter :: I_SFC_albedo_SW = 5
+  integer,                private, parameter :: I_SFLX_heat     = 6
+  integer,                private, parameter :: I_SFLX_prec     = 7
+  integer,                private, parameter :: I_SFLX_evap     = 8
 
   character(len=H_SHORT), private            :: VAR_NAME(VMAX) !< name  of the variables
   character(len=H_MID),   private            :: VAR_DESC(VMAX) !< desc. of the variables
   character(len=H_SHORT), private            :: VAR_UNIT(VMAX) !< unit  of the variables
 
-  data VAR_NAME / 'LAND_TEMP',     &
-                  'LAND_WATER',    &
-                  'LAND_SFC_TEMP', &
-                  'LAND_ALB_LW',   &
-                  'LAND_ALB_SW'    /
+  data VAR_NAME / 'LAND_TEMP',      &
+                  'LAND_WATER',     &
+                  'LAND_SFC_TEMP',  &
+                  'LAND_ALB_LW',    &
+                  'LAND_ALB_SW',    &
+                  'LAND_SFLX_heat', &
+                  'LAND_SFLX_prec', &
+                  'LAND_SFLX_evap'  /
   data VAR_DESC / 'temperature at each soil layer',  &
                   'moisture    at each soil layer',  &
                   'land surface skin temperature',   &
                   'land surface albedo (longwave)',  &
-                  'land surface albedo (shortwave)'  /
-  data VAR_UNIT / 'K',     &
-                  'm3/m3', &
-                  'K',     &
-                  '0-1',   &
-                  '0-1'    /
+                  'land surface albedo (shortwave)', &
+                  'land surface heat flux',          &
+                  'land surface precipitation flux', &
+                  'land surface water vapor flux'    /
+  data VAR_UNIT / 'K',       &
+                  'm3/m3',   &
+                  'K',       &
+                  '0-1',     &
+                  '0-1',     &
+                  'J/m2/s',  &
+                  'kg/m2/s', &
+                  'kg/m2/s'  /
 
   real(RP), private, allocatable :: LAND_PROPERTY_table(:,:)
 
@@ -164,8 +179,14 @@ contains
 
     allocate( LAND_SFC_TEMP  (IA,JA)   )
     allocate( LAND_SFC_albedo(IA,JA,2) )
+    allocate( LAND_SFLX_heat (IA,JA)   )
+    allocate( LAND_SFLX_prec (IA,JA)   )
+    allocate( LAND_SFLX_evap (IA,JA)   )
     LAND_SFC_TEMP  (:,:)   = UNDEF
     LAND_SFC_albedo(:,:,:) = UNDEF
+    LAND_SFLX_heat (:,:)   = UNDEF
+    LAND_SFLX_prec (:,:)   = UNDEF
+    LAND_SFLX_evap (:,:)   = UNDEF
 
     LAND_QA_comm = LKMAX &
                  + LKMAX &
@@ -262,6 +283,12 @@ contains
                          LAND_RESTART_IN_BASENAME, VAR_NAME(I_SFC_albedo_LW), 'XY', step=1 ) ! [IN]
        call FILEIO_read( LAND_SFC_albedo(:,:,I_SW),                                        & ! [OUT]
                          LAND_RESTART_IN_BASENAME, VAR_NAME(I_SFC_albedo_SW), 'XY', step=1 ) ! [IN]
+       call FILEIO_read( LAND_SFLX_heat(:,:),                                              & ! [OUT]
+                         LAND_RESTART_IN_BASENAME, VAR_NAME(I_SFLX_heat),     'XY', step=1 ) ! [IN]
+       call FILEIO_read( LAND_SFLX_prec(:,:),                                              & ! [OUT]
+                         LAND_RESTART_IN_BASENAME, VAR_NAME(I_SFLX_prec),     'XY', step=1 ) ! [IN]
+       call FILEIO_read( LAND_SFLX_evap(:,:),                                              & ! [OUT]
+                         LAND_RESTART_IN_BASENAME, VAR_NAME(I_SFLX_evap),     'XY', step=1 ) ! [IN]
 
        call LAND_vars_total
     else
@@ -283,7 +310,7 @@ contains
     use mod_cpl_admin, only: &
        CPL_sw_AtmLnd
     use mod_cpl_vars, only: &
-       CPL_getLnd_restart
+       CPL_getLnd
     implicit none
 
     character(len=15)     :: timelabel
@@ -293,8 +320,11 @@ contains
     if ( LAND_sw .and. LAND_RESTART_OUT_BASENAME /= '' ) then
 
        if ( CPL_sw_AtmLnd ) then
-          call CPL_getLnd_restart( LAND_SFC_TEMP  (:,:),  & ! [OUT]
-                                   LAND_SFC_albedo(:,:,:) ) ! [OUT]
+          call CPL_getLnd( LAND_SFC_TEMP  (:,:),   & ! [OUT]
+                           LAND_SFC_albedo(:,:,:), & ! [OUT]
+                           LAND_SFLX_heat (:,:),   & ! [OUT]
+                           LAND_SFLX_prec (:,:),   & ! [OUT]
+                           LAND_SFLX_evap (:,:)    ) ! [OUT]
        endif
 
        call TIME_gettimelabel( timelabel )
@@ -320,6 +350,15 @@ contains
                           'XY',                      LAND_RESTART_OUT_DTYPE,    nohalo=.true.              ) ! [IN]
        call FILEIO_write( LAND_SFC_albedo(:,:,I_SW), basename,                  LAND_RESTART_OUT_TITLE,    & ! [IN]
                           VAR_NAME(I_SFC_albedo_SW), VAR_DESC(I_SFC_albedo_SW), VAR_UNIT(I_SFC_albedo_SW), & ! [IN]
+                          'XY',                      LAND_RESTART_OUT_DTYPE,    nohalo=.true.              ) ! [IN]
+       call FILEIO_write( LAND_SFLX_heat(:,:),       basename,                  LAND_RESTART_OUT_TITLE,    & ! [IN]
+                          VAR_NAME(I_SFLX_heat),     VAR_DESC(I_SFLX_heat),     VAR_UNIT(I_SFLX_heat),     & ! [IN]
+                          'XY',                      LAND_RESTART_OUT_DTYPE,    nohalo=.true.              ) ! [IN]
+       call FILEIO_write( LAND_SFLX_prec(:,:),       basename,                  LAND_RESTART_OUT_TITLE,    & ! [IN]
+                          VAR_NAME(I_SFLX_prec),     VAR_DESC(I_SFLX_prec),     VAR_UNIT(I_SFLX_prec),     & ! [IN]
+                          'XY',                      LAND_RESTART_OUT_DTYPE,    nohalo=.true.              ) ! [IN]
+       call FILEIO_write( LAND_SFLX_evap(:,:),       basename,                  LAND_RESTART_OUT_TITLE,    & ! [IN]
+                          VAR_NAME(I_SFLX_evap),     VAR_DESC(I_SFLX_evap),     VAR_UNIT(I_SFLX_evap),     & ! [IN]
                           'XY',                      LAND_RESTART_OUT_DTYPE,    nohalo=.true.              ) ! [IN]
 
     endif
@@ -355,6 +394,9 @@ contains
     call HIST_in( LAND_SFC_TEMP  (:,:),      VAR_NAME(I_SFC_TEMP),      VAR_DESC(I_SFC_TEMP),      VAR_UNIT(I_SFC_TEMP)      )
     call HIST_in( LAND_SFC_albedo(:,:,I_LW), VAR_NAME(I_SFC_albedo_LW), VAR_DESC(I_SFC_albedo_LW), VAR_UNIT(I_SFC_albedo_LW) )
     call HIST_in( LAND_SFC_albedo(:,:,I_SW), VAR_NAME(I_SFC_albedo_SW), VAR_DESC(I_SFC_albedo_SW), VAR_UNIT(I_SFC_albedo_SW) )
+    call HIST_in( LAND_SFLX_heat (:,:),      VAR_NAME(I_SFLX_heat),     VAR_DESC(I_SFLX_heat),     VAR_UNIT(I_SFLX_heat)     )
+    call HIST_in( LAND_SFLX_prec (:,:),      VAR_NAME(I_SFLX_prec),     VAR_DESC(I_SFLX_prec),     VAR_UNIT(I_SFLX_prec)     )
+    call HIST_in( LAND_SFLX_evap (:,:),      VAR_NAME(I_SFLX_evap),     VAR_DESC(I_SFLX_evap),     VAR_UNIT(I_SFLX_evap)     )
 
     return
   end subroutine LAND_vars_history

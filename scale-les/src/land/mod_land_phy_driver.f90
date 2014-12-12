@@ -96,18 +96,13 @@ contains
        LAND_WATER,     &
        LAND_TEMP_t,    &
        LAND_WATER_t,   &
+       LAND_SFLX_heat, &
+       LAND_SFLX_prec, &
+       LAND_SFLX_evap, &
        LAND_PROPERTY
-    use mod_cpl_admin, only: &
-       CPL_sw_AtmLnd
-    use mod_cpl_vars, only: &
-       CPL_getLnd
     implicit none
 
     logical, intent(in) :: update_flag
-
-    real(RP) :: FLX_heat  (IA,JA)
-    real(RP) :: FLX_precip(IA,JA)
-    real(RP) :: FLX_evap  (IA,JA)
 
     real(RP) :: total ! dummy
 
@@ -116,25 +111,18 @@ contains
     !---------------------------------------------------------------------------
 
     if ( update_flag ) then
-
-       if ( CPL_sw_AtmLnd ) then
-          call CPL_getLnd( FLX_heat  (:,:), & ! [OUT]
-                           FLX_precip(:,:), & ! [OUT]
-                           FLX_evap  (:,:)  ) ! [OUT]
-       endif
-
-       call LAND_PHY( LAND_TEMP    (:,:,:),              & ! [IN]
-                      LAND_WATER   (:,:,:),              & ! [IN]
-                      LAND_PROPERTY(:,:,I_WaterLimit),   & ! [IN]
-                      LAND_PROPERTY(:,:,I_ThermalCond),  & ! [IN]
-                      LAND_PROPERTY(:,:,I_HeatCapacity), & ! [IN]
-                      LAND_PROPERTY(:,:,I_WaterDiff),    & ! [IN]
-                      FLX_heat     (:,:),                & ! [IN]
-                      FLX_precip   (:,:),                & ! [IN]
-                      FLX_evap     (:,:),                & ! [IN]
-                      GRID_LCDZ    (:),                  & ! [IN]
-                      LAND_TEMP_t  (:,:,:),              & ! [OUT]
-                      LAND_WATER_t (:,:,:)               ) ! [OUT]
+       call LAND_PHY( LAND_TEMP     (:,:,:),              & ! [IN]
+                      LAND_WATER    (:,:,:),              & ! [IN]
+                      LAND_PROPERTY (:,:,I_WaterLimit),   & ! [IN]
+                      LAND_PROPERTY (:,:,I_ThermalCond),  & ! [IN]
+                      LAND_PROPERTY (:,:,I_HeatCapacity), & ! [IN]
+                      LAND_PROPERTY (:,:,I_WaterDiff),    & ! [IN]
+                      LAND_SFLX_heat(:,:),                & ! [IN]
+                      LAND_SFLX_prec(:,:),                & ! [IN]
+                      LAND_SFLX_evap(:,:),                & ! [IN]
+                      GRID_LCDZ     (:),                  & ! [IN]
+                      LAND_TEMP_t   (:,:,:),              & ! [OUT]
+                      LAND_WATER_t  (:,:,:)               ) ! [OUT]
 
        call HIST_in( LAND_TEMP_t (:,:,:), 'LAND_TEMP_t',  'Soil temperature tendency', 'K',     zdim='land' )
        call HIST_in( LAND_WATER_t(:,:,:), 'LAND_WATER_t', 'Soil moisture    tendency', 'm3/m3', zdim='land' )

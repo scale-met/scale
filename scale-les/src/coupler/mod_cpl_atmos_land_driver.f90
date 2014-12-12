@@ -51,6 +51,8 @@ module mod_cpl_atmos_land_driver
 contains
   !-----------------------------------------------------------------------------
   subroutine CPL_AtmLnd_driver_setup
+    use mod_admin_restart, only: &
+       RESTART_RUN
     use mod_cpl_admin, only: &
        CPL_sw_AtmLnd,   &
        CPL_TYPE_AtmLnd
@@ -66,7 +68,9 @@ contains
 
        call CPL_AtmLnd_setup( CPL_TYPE_AtmLnd )
 
-       call CPL_AtmLnd_driver( sfc_temp_update=.false. )
+       if( .NOT. RESTART_RUN ) then
+          call CPL_AtmLnd_driver( sfc_temp_update=.false. )
+       end if
 
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** this component is never called.'
