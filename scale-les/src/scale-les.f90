@@ -27,6 +27,7 @@ program scaleles_launcher
      PRC_MPIsplit,  &
      PRC_MPIfinish, &
      PRC_MPIstop,   &
+     GLOBAL_nmax,   &
      GLOBAL_LOG,    &
      max_depth
   use scale_fileio, only: &
@@ -58,6 +59,7 @@ program scaleles_launcher
 
   logical :: flag_parent              ! flag of "I am parent domain"
   logical :: flag_child               ! flag of "I am child domain"
+  logical :: single_run               ! flag of single run
 
   character(len=H_LONG) :: CONF_FILES(max_depth)  ! names of configulation files
   character(len=H_LONG) :: fname_launch           ! config file for launcher
@@ -84,6 +86,7 @@ program scaleles_launcher
   NUM_DOMAIN    = 1
   PRC_DOMAINS   = 0
   CONF_FILES(1) = fname_launch
+  single_run    = .false.
 
   !--- Open config file till end
   LNC_FID_CONF = IO_get_available_fid()
@@ -97,6 +100,7 @@ program scaleles_launcher
      write(*,*) 'WARNING: Failed to open config file! :', trim(fname_launch)
      write(*,*) '         Default values are used.'
      write(*,*)
+     single_run = .true.
   end if
 
   !--- read PARAM
@@ -112,6 +116,7 @@ program scaleles_launcher
 
   ! start MPI
   call PRC_MPIstart
+  if ( single_run ) PRC_DOMAINS(1) = GLOBAL_nmax
 
   if ( GLOBAL_LOG ) write(*,*) '*** Start Launch System for SCALE-LES'
   if ( GLOBAL_LOG ) write ( *, * ) "NUM_DOMAIN = ", NUM_DOMAIN

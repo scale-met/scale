@@ -155,6 +155,7 @@ contains
     else
        PRC_nmax   = GLOBAL_nmax
        PRC_myrank = GLOBAL_myrank
+       LOCAL_COMM_WORLD = GLOBAL_COMM_WORLD
     endif
 
     if ( .not. IO_LOG_SUPPRESS ) then
