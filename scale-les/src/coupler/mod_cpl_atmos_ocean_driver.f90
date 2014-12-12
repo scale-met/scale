@@ -51,6 +51,8 @@ module mod_cpl_atmos_ocean_driver
 contains
   !-----------------------------------------------------------------------------
   subroutine CPL_AtmOcn_driver_setup
+    use mod_admin_restart, only: &
+       RESTART_RUN
     use mod_cpl_admin, only: &
        CPL_sw_AtmOcn,  &
        CPL_TYPE_AtmOcn
@@ -71,7 +73,9 @@ contains
 
        call CPL_AtmOcn_setup( CPL_TYPE_AtmOcn )
 
-       call CPL_AtmOcn_driver( sfc_temp_update=.false. )
+       if( .NOT. RESTART_RUN ) then
+          call CPL_AtmOcn_driver( sfc_temp_update=.false. )
+       end if
 
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** this component is never called.'

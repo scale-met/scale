@@ -46,6 +46,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine CPL_driver_setup
+    use mod_admin_restart, only: &
+       RESTART_RUN
     use mod_cpl_vars, only: &
        CPL_vars_merge
     use mod_cpl_atmos_ocean_driver, only: &
@@ -64,7 +66,9 @@ contains
     call CPL_AtmLnd_driver_setup
     call CPL_AtmUrb_driver_setup
 
-    call CPL_vars_merge
+    if( .NOT. RESTART_RUN ) then
+       call CPL_vars_merge
+    end if
 
     return
   end subroutine CPL_driver_setup

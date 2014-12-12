@@ -471,6 +471,8 @@ contains
        W,    &
        U,    &
        V
+    use mod_admin_restart, only: &
+       RESTART_RUN
     use mod_atmos_phy_mp_vars, only: &
        SFLX_rain => ATMOS_PHY_MP_SFLX_rain, &
        SFLX_snow => ATMOS_PHY_MP_SFLX_snow
@@ -478,12 +480,24 @@ contains
        SFLX_LW_dn => ATMOS_PHY_RD_SFLX_LW_dn, &
        SFLX_SW_dn => ATMOS_PHY_RD_SFLX_SW_dn
     use mod_atmos_phy_sf_vars, only: &
-       SFC_DENS => ATMOS_PHY_SF_SFC_DENS, &
-       SFC_PRES => ATMOS_PHY_SF_SFC_PRES
+       SFC_DENS   => ATMOS_PHY_SF_SFC_DENS,   &
+       SFC_PRES   => ATMOS_PHY_SF_SFC_PRES,   &
+       SFC_TEMP   => ATMOS_PHY_SF_SFC_TEMP,   &
+       SFC_albedo => ATMOS_PHY_SF_SFC_albedo, &
+       SFC_Z0M    => ATMOS_PHY_SF_SFC_Z0M,    &
+       SFC_Z0H    => ATMOS_PHY_SF_SFC_Z0H,    &
+       SFC_Z0E    => ATMOS_PHY_SF_SFC_Z0E,    &
+       SFLX_MW    => ATMOS_PHY_SF_SFLX_MW,    &
+       SFLX_MU    => ATMOS_PHY_SF_SFLX_MU,    &
+       SFLX_MV    => ATMOS_PHY_SF_SFLX_MV,    &
+       SFLX_SH    => ATMOS_PHY_SF_SFLX_SH,    &
+       SFLX_LH    => ATMOS_PHY_SF_SFLX_LH,    &
+       SFLX_QTRC  => ATMOS_PHY_SF_SFLX_QTRC
     use mod_cpl_admin, only: &
        CPL_sw
     use mod_cpl_vars, only: &
-       CPL_putATM
+       CPL_putAtm, &
+       CPL_putAtm_restart
     implicit none
 
     logical, intent(in) :: setup
@@ -505,19 +519,33 @@ contains
     ATM_PBL(:,:) = 1.0E+2_RP ! tentative
 
     if ( CPL_sw ) then
-       call CPL_putAtm( TEMP      (KS,:,:),   & ! [IN]
-                        PRES      (KS,:,:),   & ! [IN]
-                        W         (KS,:,:),   & ! [IN]
-                        U         (KS,:,:),   & ! [IN]
-                        V         (KS,:,:),   & ! [IN]
-                        DENS      (KS,:,:),   & ! [IN]
-                        QTRC      (KS,:,:,:), & ! [IN]
-                        ATM_PBL   (:,:),      & ! [IN]
-                        SFC_PRES  (:,:),      & ! [IN]
-                        SFLX_LW_dn(:,:),      & ! [IN]
-                        SFLX_SW_dn(:,:),      & ! [IN]
-                        SFLX_rain (:,:),      & ! [IN]
-                        SFLX_snow (:,:)       ) ! [IN]
+       if ( setup .and. RESTART_RUN ) then
+          call CPL_putAtm_restart( SFC_TEMP  (:,:),   & ! [IN]
+                                   SFC_albedo(:,:,:), & ! [IN]
+                                   SFC_Z0M   (:,:),   & ! [IN]
+                                   SFC_Z0H   (:,:),   & ! [IN]
+                                   SFC_Z0E   (:,:),   & ! [IN]
+                                   SFLX_MW   (:,:),   & ! [IN]
+                                   SFLX_MU   (:,:),   & ! [IN]
+                                   SFLX_MV   (:,:),   & ! [IN]
+                                   SFLX_SH   (:,:),   & ! [IN]
+                                   SFLX_LH   (:,:),   & ! [IN]
+                                   SFLX_QTRC (:,:,:)  ) ! [IN]
+       else
+          call CPL_putAtm( TEMP      (KS,:,:),   & ! [IN]
+                           PRES      (KS,:,:),   & ! [IN]
+                           W         (KS,:,:),   & ! [IN]
+                           U         (KS,:,:),   & ! [IN]
+                           V         (KS,:,:),   & ! [IN]
+                           DENS      (KS,:,:),   & ! [IN]
+                           QTRC      (KS,:,:,:), & ! [IN]
+                           ATM_PBL   (:,:),      & ! [IN]
+                           SFC_PRES  (:,:),      & ! [IN]
+                           SFLX_LW_dn(:,:),      & ! [IN]
+                           SFLX_SW_dn(:,:),      & ! [IN]
+                           SFLX_rain (:,:),      & ! [IN]
+                           SFLX_snow (:,:)       ) ! [IN]
+       endif
     endif
 
     return

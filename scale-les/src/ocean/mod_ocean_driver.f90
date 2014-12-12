@@ -59,6 +59,9 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[DRIVER] / Categ[OCEAN] / Origin[SCALE-LES]'
 
+    !########## Get Surface Boundary to coupler ##########
+    call OCEAN_SURFACE_GET( setup=.false. )
+
     call OCEAN_PHY_driver_setup
 
 !    if( OCEAN_FRC_sw ) call OCEAN_FRC_driver_setup
@@ -93,6 +96,9 @@ contains
 
     integer :: i, j
     !---------------------------------------------------------------------------
+
+    !########## Get Surface Boundary to coupler ##########
+    call OCEAN_SURFACE_GET( setup=.false. )
 
     !########## Physics ##########
     if ( OCEAN_sw ) then
@@ -135,20 +141,62 @@ contains
   end subroutine OCEAN_driver
 
   !-----------------------------------------------------------------------------
-  !> Put surface boundary to other model
-  subroutine OCEAN_SURFACE_SET( setup )
+  !> Get surface boundary to other model
+  subroutine OCEAN_SURFACE_GET( setup )
     use mod_ocean_vars, only: &
        OCEAN_TEMP,          &
        OCEAN_SFC_TEMP,      &
        OCEAN_SFC_albedo,    &
        OCEAN_SFC_Z0M,       &
        OCEAN_SFC_Z0H,       &
-       OCEAN_SFC_Z0E
+       OCEAN_SFC_Z0E,       &
+       OCEAN_SFLX_heat,     &
+       OCEAN_SFLX_prec,     &
+       OCEAN_SFLX_evap
+    use mod_cpl_admin, only: &
+       CPL_sw_AtmOcn
+    use mod_cpl_vars, only: &
+       CPL_getOcn
+    implicit none
+
+    logical, intent(in) :: setup
+    !---------------------------------------------------------------------------
+
+    if ( CPL_sw_AtmOcn ) then
+       call CPL_getOcn( OCEAN_SFC_TEMP  (:,:),   & ! [OUT]
+                        OCEAN_SFC_albedo(:,:,:), & ! [OUT]
+                        OCEAN_SFC_Z0M   (:,:),   & ! [OUT]
+                        OCEAN_SFC_Z0H   (:,:),   & ! [OUT]
+                        OCEAN_SFC_Z0E   (:,:),   & ! [OUT]
+                        OCEAN_SFLX_heat (:,:),   & ! [OUT]
+                        OCEAN_SFLX_prec (:,:),   & ! [OUT]
+                        OCEAN_SFLX_evap (:,:)    ) ! [OUT]
+    endif
+
+    return
+  end subroutine OCEAN_SURFACE_GET
+
+  !-----------------------------------------------------------------------------
+  !> Put surface boundary to other model
+  subroutine OCEAN_SURFACE_SET( setup )
+    use mod_admin_restart, only: &
+       RESTART_RUN
+    use mod_ocean_vars, only: &
+       OCEAN_TEMP,          &
+       OCEAN_SFC_TEMP,      &
+       OCEAN_SFC_albedo,    &
+       OCEAN_SFC_Z0M,       &
+       OCEAN_SFC_Z0H,       &
+       OCEAN_SFC_Z0E,       &
+       OCEAN_SFLX_heat,     &
+       OCEAN_SFLX_prec,     &
+       OCEAN_SFLX_evap
     use mod_cpl_admin, only: &
        CPL_sw_AtmOcn
     use mod_cpl_vars, only: &
        CPL_putOcn_setup, &
-       CPL_putOcn
+       CPL_putOcn, &
+       CPL_putOcn_restart
     implicit none
 
     logical, intent(in) :: setup
@@ -161,9 +209,15 @@ contains
                                  OCEAN_SFC_Z0M   (:,:),   & ! [IN]
                                  OCEAN_SFC_Z0H   (:,:),   & ! [IN]
                                  OCEAN_SFC_Z0E   (:,:)    ) ! [IN]
-       endif
 
-       call CPL_putOcn( OCEAN_TEMP(:,:) ) ! [IN]
+          if ( RESTART_RUN ) then
+             call CPL_putOcn_restart( OCEAN_SFLX_heat (:,:),   & ! [IN]
+                                      OCEAN_SFLX_prec (:,:),   & ! [IN]
+                                      OCEAN_SFLX_evap (:,:)    ) ! [IN]
+          endif
+       else
+          call CPL_putOcn( OCEAN_TEMP(:,:) ) ! [IN]
+       endif
     endif
 
     return

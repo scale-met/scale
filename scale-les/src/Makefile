@@ -42,6 +42,7 @@ else
 endif
 
 OBJS =	\
+	mod_admin_restart.o          \
 	mod_urban_admin.o            \
 	mod_urban_vars.o             \
 	mod_cpl_admin.o              \
@@ -78,8 +79,7 @@ OBJS =	\
 	mod_land_phy_driver.o        \
 	mod_land_driver.o            \
 	mod_urban_phy_ucm.o          \
-	mod_urban_driver.o           \
-	mod_admin_restart.o
+	mod_urban_driver.o
 
 OBJS_RUN =	\
 	mod_les_driver.o

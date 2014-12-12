@@ -86,36 +86,25 @@ contains
     use scale_ocean_phy, only: &
        OCEAN_PHY
     use mod_ocean_vars, only: &
-       OCEAN_TEMP,  &
-       OCEAN_TEMP_t
-    use mod_cpl_admin, only: &
-       CPL_sw_AtmOcn
-    use mod_cpl_vars, only: &
-       CPL_getOcn
+       OCEAN_TEMP,      &
+       OCEAN_TEMP_t,    &
+       OCEAN_SFLX_heat, &
+       OCEAN_SFLX_prec, &
+       OCEAN_SFLX_evap
     implicit none
 
     logical, intent(in) :: update_flag
-
-    real(RP) :: FLX_heat  (IA,JA)
-    real(RP) :: FLX_precip(IA,JA)
-    real(RP) :: FLX_evap  (IA,JA)
 
     real(RP) :: total ! dummy
     !---------------------------------------------------------------------------
 
     if ( update_flag ) then
 
-       if ( CPL_sw_AtmOcn ) then
-          call CPL_getOcn( FLX_heat  (:,:), & ! [OUT]
-                           FLX_precip(:,:), & ! [OUT]
-                           FLX_evap  (:,:)  ) ! [OUT]
-       endif
-
-       call OCEAN_PHY( OCEAN_TEMP  (:,:), & ! [IN]
-                       FLX_heat    (:,:), & ! [IN]
-                       FLX_precip  (:,:), & ! [IN]
-                       FLX_evap    (:,:), & ! [IN]
-                       OCEAN_TEMP_t(:,:)  ) ! [OUT]
+       call OCEAN_PHY( OCEAN_TEMP     (:,:), & ! [IN]
+                       OCEAN_SFLX_heat(:,:), & ! [IN]
+                       OCEAN_SFLX_prec(:,:), & ! [IN]
+                       OCEAN_SFLX_evap(:,:), & ! [IN]
+                       OCEAN_TEMP_t   (:,:)  ) ! [OUT]
 
        call HIST_in( OCEAN_TEMP_t(:,:), 'OCEAN_TEMP_t', 'SST tendency', 'K' )
 
