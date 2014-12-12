@@ -1955,8 +1955,10 @@ contains
     logical :: logarithmic = .false.
     !---------------------------------------------------------------------------
     logarithmic = .false.
-    if ( present(flag_dens) .and. flag_dens ) then
+    if ( present(flag_dens) ) then
+    if ( flag_dens ) then
        logarithmic = .true.
+    endif
     endif
 
     if ( id_stag == I_SCLR )     then
@@ -2159,8 +2161,10 @@ contains
     !---------------------------------------------------------------------------
 
     logarithmic = .false.
-    if ( present(flag_dens) .and. flag_dens ) then
+    if ( present(flag_dens) ) then
+    if ( flag_dens ) then
        logarithmic = .true.
+    endif
     endif
 
     if ( id_stag == I_SCLR )     then
@@ -2418,8 +2422,10 @@ contains
     !---------------------------------------------------------------------------
 
     lndgrd = .false.
-    if ( present(landgrid) .and. landgrid ) then
+    if ( present(landgrid) ) then
+    if ( landgrid ) then
        lndgrd = .true.
+    endif
     endif
 
     hfact(:,:,:) = 0.0_RP
