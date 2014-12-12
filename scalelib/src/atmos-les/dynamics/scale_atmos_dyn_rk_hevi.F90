@@ -416,11 +416,9 @@ contains
              DPRES(k,i,j) = PRES(k,i,j) - REF_pres(k,i,j)
           enddo
           PRES (KS-1,i,j) = PRES(KS+1,i,j) - DENS(KS,i,j) * ( PHI(KS-1,i,j) - PHI(KS+1,i,j) )
+          DPRES(KS-1,i,j) = PRES(KS-1,i,j) - REF_pres(KS-1,i,j)
           PRES (KE+1,i,j) = PRES(KE-1,i,j) - DENS(KE,i,j) * ( PHI(KE+1,i,j) - PHI(KE-1,i,j) )
-
-          do k = KS-1, KE+1
-             DPRES(k,i,j) = PRES(k,i,j) - REF_pres(k,i,j)
-          enddo
+          DPRES(KE+1,i,j) = PRES(KE+1,i,j) - REF_pres(KE+1,i,j)
        enddo
        enddo
        ! j = JJE+1
@@ -441,11 +439,9 @@ contains
              DPRES(k,i,JJE+1) = PRES(k,i,JJE+1) - REF_pres(k,i,JJE+1)
           enddo
           PRES (KS-1,i,JJE+1) = PRES(KS+1,i,JJE+1) - DENS(KS,i,JJE+1) * ( PHI(KS-1,i,JJE+1) - PHI(KS+1,i,JJE+1) )
+          DPRES(KS-1,i,JJE+1) = PRES(KS-1,i,JJE+1) - REF_pres(KS-1,i,JJE+1)
           PRES (KE+1,i,JJE+1) = PRES(KE-1,i,JJE+1) - DENS(KE,i,JJE+1) * ( PHI(KE+1,i,JJE+1) - PHI(KE-1,i,JJE+1) )
-
-          do k = KS-1, KE+1
-             DPRES(k,i,JJE+1) = PRES(k,i,JJE+1) - REF_pres(k,i,JJE+1)
-          enddo
+          DPRES(KE+1,i,JJE+1) = PRES(KE+1,i,JJE+1) - REF_pres(KE+1,i,JJE+1)
        enddo
        PROFILE_STOP("hevi_pres")
 
