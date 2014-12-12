@@ -235,6 +235,14 @@ contains
        call PROF_rapend  ('ATM Dynamics', 1)
     endif
 
+    !########## reset tendencies ##########
+    DENS_tp(:,:,:)   = 0.0_RP
+    MOMZ_tp(:,:,:)   = 0.0_RP
+    MOMX_tp(:,:,:)   = 0.0_RP
+    MOMY_tp(:,:,:)   = 0.0_RP
+    RHOT_tp(:,:,:)   = 0.0_RP
+    RHOQ_tp(:,:,:,:) = 0.0_RP
+
     !########## Microphysics ##########
     if ( ATMOS_sw_phy_mp ) then
        call PROF_rapstart('ATM Microphysics', 1)
@@ -295,14 +303,6 @@ contains
     call ATMOS_vars_history
     call ATMOS_vars_monitor
     call PROF_rapend  ('ATM History Vars', 1)
-
-    !########## reset tendencies ##########
-    DENS_tp(:,:,:)   = 0.0_RP
-    MOMZ_tp(:,:,:)   = 0.0_RP
-    MOMX_tp(:,:,:)   = 0.0_RP
-    MOMY_tp(:,:,:)   = 0.0_RP
-    RHOT_tp(:,:,:)   = 0.0_RP
-    RHOQ_tp(:,:,:,:) = 0.0_RP
 
     return
   end subroutine ATMOS_driver
