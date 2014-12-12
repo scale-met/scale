@@ -78,7 +78,10 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   !> read command argument, open config file
-  subroutine IO_setup( MODELNAME )
+  subroutine IO_setup( &
+      MODELNAME,          &
+      call_from_launcher, &
+      fname_in            )
     implicit none
 
     namelist / PARAM_IO / &
@@ -89,19 +92,29 @@ contains
        IO_LOG_ALLNODE,      &
        IO_LOG_NML_SUPPRESS
 
-    character(len=H_MID), intent(in) :: MODELNAME !< name of the model
+    character(len=H_MID),  intent(in) :: MODELNAME !< name of the model
+    logical,               intent(in) :: call_from_launcher  !< flag to get command argument
+    character(len=H_LONG), intent(in), optional :: fname_in !< name of config file for each process
 
-    character(len=H_LONG) :: fname !< name of config file for each process
-
+    character(len=H_LONG) :: fname
     integer :: ierr
     !---------------------------------------------------------------------------
 
-    !--- Read from argument
-    if ( COMMAND_ARGUMENT_COUNT() < 1 ) then
-       write(*,*) ' xxx Program needs config file! STOP.'
-       stop
+    if ( call_from_launcher ) then
+       if ( present(fname_in) ) then
+          fname = fname_in
+       else
+          write(*,*) ' xxx Not imported name of config file! STOP.'
+          stop
+       endif
     else
-       call get_command_argument(1,fname)
+       !--- Read from argument
+       if ( COMMAND_ARGUMENT_COUNT() < 1 ) then
+          write(*,*) ' xxx Program needs config file! STOP.'
+          stop
+       else
+          call get_command_argument(1,fname)
+       endif
     endif
 
     !--- Open config file till end
