@@ -144,10 +144,11 @@ contains
        PRC_N,       &
        PRC_E,       &
        PRC_S,       &
-       PRC_HAS_W, &
-       PRC_HAS_E, &
-       PRC_HAS_S, &
-       PRC_HAS_N
+       PRC_HAS_W,   &
+       PRC_HAS_E,   &
+       PRC_HAS_S,   &
+       PRC_HAS_N,   &
+       LOCAL_COMM_WORLD
     implicit none
 
     NAMELIST / PARAM_COMM / &
@@ -258,7 +259,7 @@ contains
        call PRC_MPIstop
     endif
 
-    COMM_world = MPI_COMM_WORLD
+    COMM_world = LOCAL_COMM_WORLD
 
 #ifdef _USE_RDMA
     call rdma_setup( COMM_vsize_max_pc, &

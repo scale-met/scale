@@ -46,6 +46,9 @@ module scale_grid_nest
   !
   !++ Public parameters & variables
   !
+  integer,  public              :: INTERCOMM_PARENT     ! inter-communicator to parent
+  integer,  public              :: INTERCOMM_DAUGHTER   ! inter-communicator to daughter
+
   integer,  public              :: NEST_Filiation(10)   !< index of parent-daughter relation (p>0, d<0)
   integer,  public              :: HANDLING_NUM         !< handing number of nesting relation
   integer,  public              :: NEST_TILE_NUM_X      !< parent tile number in x-direction
@@ -97,7 +100,6 @@ module scale_grid_nest
   logical,  public              :: ONLINE_IAM_PARENT    = .false.   !< a flag to say "I am a parent"
   logical,  public              :: ONLINE_IAM_DAUGHTER  = .false.   !< a flag to say "I am a daughter"
   integer,  public              :: ONLINE_DOMAIN_NUM    = 1
-  integer,  public              :: ONLINE_LAUNCH_PRC    = 1
   logical,  public              :: ONLINE_USE_VELZ      = .false.
   logical,  public              :: ONLINE_NO_ROTATE     = .false.
   logical,  public              :: ONLINE_BOUNDARY_USE_QHYD = .false.
@@ -114,6 +116,7 @@ module scale_grid_nest
   private :: NEST_COMM_intercomm_nestdown
   private :: NEST_COMM_issuer_of_receive
   private :: NEST_COMM_issuer_of_wait
+  private :: NEST_latlonz_interporation_fact
 
   interface NEST_COMM_intercomm_nestdown
      module procedure NEST_COMM_intercomm_nestdown_3D
@@ -156,11 +159,10 @@ module scale_grid_nest
   integer, private               :: OFFLINE_PARENT_IMAX      !< parent max number in x-direction [for namelist]
   integer, private               :: OFFLINE_PARENT_JMAX      !< parent max number in y-direction [for namelist]
   integer, private               :: OFFLINE_PARENT_LKMAX     !< parent max number in lz-direction [for namelist]
-  integer, private               :: ONLINE_WAIT_LIMIT        !< limit times of waiting loop in "NEST_COMM_waitall"
+  integer(8), private            :: ONLINE_WAIT_LIMIT        !< limit times of waiting loop in "NEST_COMM_waitall"
   logical, private               :: ONLINE_DAUGHTER_USE_VELZ
   logical, private               :: ONLINE_DAUGHTER_NO_ROTATE
   logical, private               :: ONLINE_AGGRESSIVE_COMM
-  logical, private               :: ONLINE_REVERSE_LAUNCH
 
   integer, parameter :: I_LON    = 1
   integer, parameter :: I_LAT    = 2
@@ -207,8 +209,6 @@ module scale_grid_nest
   integer,  private            :: interp_search_divnum
 
   integer, private   :: INTERCOMM_ID(2)
-  integer, private   :: INTERCOMM_PARENT
-  integer, private   :: INTERCOMM_DAUGHTER
 
   integer, private, parameter :: max_isu   = 100             ! maximum number of receive/wait issue
   integer, private, parameter :: max_isuf  = 20              ! maximum number of receive/wait issue (z-stag)
@@ -261,7 +261,11 @@ module scale_grid_nest
 contains
   !-----------------------------------------------------------------------------
   !> Setup
-  subroutine NEST_setup
+  subroutine NEST_setup ( &
+      icomm_parent,  &
+      icomm_child,   &
+      flag_parent,   &
+      flag_child     )
     use scale_const, only: &
        D2R => CONST_D2R
     use scale_process, only: &
@@ -272,10 +276,7 @@ contains
        PRC_HAS_W,         &
        PRC_HAS_E,         &
        PRC_HAS_S,         &
-       PRC_HAS_N,         &
-       PRC_online_nest,   &
-       PRC_interdomain_p, &
-       PRC_interdomain_d
+       PRC_HAS_N
     use scale_grid_real, only: &
        REAL_LONXY,           &
        REAL_LATXY,           &
@@ -292,12 +293,13 @@ contains
        COMM_world
     implicit none
 
+    integer, intent(in), optional :: icomm_parent
+    integer, intent(in), optional :: icomm_child
+    logical, intent(in), optional :: flag_parent
+    logical, intent(in), optional :: flag_child
+
     !< metadata files for lat-lon domain for all processes
     character(len=H_LONG)  :: LATLON_CATALOGUE_FNAME = 'latlon_domain_catalogue.txt'
-    character(len=H_MID)   :: cmd                    = './scale-les'
-    character(len=H_MID)   :: ONLINE_LAUNCH_CONF     = ''
-    character(len=H_SHORT) :: argv(3)
-    character(len=H_SHORT) :: launch_direction
 
     integer :: i
     integer :: fid, ierr
@@ -322,13 +324,10 @@ contains
        ONLINE_DOMAIN_NUM,        &
        ONLINE_IAM_PARENT,        &
        ONLINE_IAM_DAUGHTER,      &
-       ONLINE_LAUNCH_PRC,        &
-       ONLINE_LAUNCH_CONF,       &
        ONLINE_USE_VELZ,          &
        ONLINE_NO_ROTATE,         &
        ONLINE_BOUNDARY_USE_QHYD, &
        ONLINE_AGGRESSIVE_COMM,   &
-       ONLINE_REVERSE_LAUNCH,    &
        ONLINE_WAIT_LIMIT
 
     !---------------------------------------------------------------------------
@@ -341,16 +340,10 @@ contains
     nrecv = 0
     nsend = 0
 
-!    argv(1) = 'run.conf'
-    argv(2) = 'normal'
-    argv(3) = ''  ! an end-signal for mpi_comm_spawn
-
     HANDLING_NUM           = 0
     NEST_Filiation(:)      = 0
-    ONLINE_LAUNCH_PRC      = PRC_nmax
-    ONLINE_WAIT_LIMIT      = 1000000
+    ONLINE_WAIT_LIMIT      = 999999999
     ONLINE_AGGRESSIVE_COMM = .false.
-    ONLINE_REVERSE_LAUNCH  = .false.
     interp_search_divnum   = 10
 
     !--- read namelist
@@ -363,10 +356,6 @@ contains
        call PRC_MPIstop
     endif
     if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_NEST)
-
-    if ( ONLINE_REVERSE_LAUNCH ) then
-       argv(2) = 'reverse'
-    endif
 
     ! only for register
     if ( ONLINE_IAM_PARENT .or. ONLINE_IAM_DAUGHTER ) then
@@ -391,7 +380,6 @@ contains
     endif
 
     DEBUG_DOMAIN_NUM = ONLINE_DOMAIN_NUM
-    allocate ( errcodes(1:ONLINE_LAUNCH_PRC) )
 
     if( USE_NESTING ) then
 
@@ -457,21 +445,14 @@ contains
          call NEST_domain_relate(HANDLING_NUM)
 
       else ! ONLINE RELATIONSHIP
-         if( IO_L ) write(IO_FID_LOG,'(1x,A)') '*** Setup Online Nesting Inter-Domain Communicator (IDC)'
-
-         call get_command_argument(2,launch_direction)
-         if ( trim(launch_direction) .eq. "reverse" ) then
-            if ( .NOT. ONLINE_REVERSE_LAUNCH ) then
-               write(*,*) 'xxx The flag of reverse launch is not consistent with namelist!'
-               write(*,*) '    domain: ', ONLINE_DOMAIN_NUM
-               call PRC_MPIstop
-            endif
+         if ( present(flag_parent) .and. present(flag_child) ) then
+            if( IO_L ) write(IO_FID_LOG,'(1x,A)') &
+                       '*** Setup Online Nesting Inter-Domain Communicator (IDC)'
          else
-            if ( ONLINE_REVERSE_LAUNCH ) then
-               write(*,*) 'xxx The flag of reverse launch is not consistent with namelist!'
-               write(*,*) '    domain: ', ONLINE_DOMAIN_NUM
-               call PRC_MPIstop
-            endif
+            write(*,*) 'xxx Internal Error:'
+            write(*,*) 'xxx The flag_parent and flag_child are needed.'
+            write(*,*) '    domain: ', ONLINE_DOMAIN_NUM
+            call PRC_MPIstop
          endif
 
          if( ONLINE_BOUNDARY_USE_QHYD ) then
@@ -480,45 +461,22 @@ contains
             NEST_BND_QA = I_QV
          endif
 
-         if( ONLINE_IAM_PARENT ) then ! must do first before daughter processes
+         if( flag_parent ) then ! must do first before daughter processes
          !-------------------------------------------------
+            if ( .NOT. ONLINE_IAM_PARENT ) then
+               write(*,*) 'xxx Flag from launcher is not consistent with namelist!'
+               write(*,*) '    PARENT - domain: ', ONLINE_DOMAIN_NUM
+               call PRC_MPIstop
+            endif
+
             HANDLING_NUM = 1 !HANDLING_NUM + 1
             INTERCOMM_ID(HANDLING_NUM) = ONLINE_DOMAIN_NUM
             NEST_Filiation(INTERCOMM_ID(HANDLING_NUM)) = 1
 
-            if ( .NOT. ONLINE_REVERSE_LAUNCH ) then
-               ! Launch Daughter Domain
-               if ( ONLINE_LAUNCH_CONF == '' ) then
-                  write(dom_num,'(I2.2)') ONLINE_DOMAIN_NUM+1
-                  argv(1) = 'run.d'//dom_num//'.conf'
-               else
-                  argv(1) =  ONLINE_LAUNCH_CONF
-               end if
-               argv(2) = 'normal'
-
-               if( IO_L ) write(IO_FID_LOG,'(1x,A,I2,A)') '*** Launch Daughter Domain [INTERCOMM_ID:', &
-                                                           INTERCOMM_ID(HANDLING_NUM), ' ]'
-               if( IO_L ) write(IO_FID_LOG,'(1x,A,A,A,A)') '*** Launch Command: ', trim(cmd), ' ', trim(argv(1))
-               if( IO_L ) write(IO_FID_LOG,'(1x,A,I5   )') '*** Number of Daughter Processes: ', ONLINE_LAUNCH_PRC
-               call MPI_COMM_SPAWN( trim(cmd),           &
-                                    argv,                &
-                                    ONLINE_LAUNCH_PRC,   &
-                                    MPI_INFO_NULL,       &
-                                    PRC_master,          &
-                                    COMM_world,          &
-                                    INTERCOMM_DAUGHTER,  &
-                                    errcodes,            &
-                                    ierr                 )
-            elseif ( ONLINE_REVERSE_LAUNCH ) then
-               if( IO_L ) write(IO_FID_LOG,'(1x,A)') '*** Online Nesting: Reverse Launch'
-
-               call MPI_COMM_GET_PARENT( INTERCOMM_DAUGHTER, ierr )
-               if( IO_L ) write(IO_FID_LOG,'(1x,A,I2,A)') &
-               '*** Activated Parent Domain [INTERCOMM_ID:', INTERCOMM_ID(HANDLING_NUM), ' ]'
-            endif
-
-            PRC_online_nest   = .true.
-            PRC_interdomain_d = INTERCOMM_DAUGHTER
+            INTERCOMM_DAUGHTER = icomm_child
+            if( IO_L ) write(IO_FID_LOG,'(1x,A,I2,A)') '*** Online Nesting - PARENT [INTERCOMM_ID:', &
+                                                        INTERCOMM_ID(HANDLING_NUM), ' ]'
+            if( IO_L ) write(IO_FID_LOG,*) '*** Online Nesting - INTERCOMM :', INTERCOMM_DAUGHTER
 
             call NEST_COMM_ping( HANDLING_NUM )
 
@@ -576,44 +534,22 @@ contains
          endif
 
 
-         if( ONLINE_IAM_DAUGHTER ) then
+         if( flag_child ) then
          !-------------------------------------------------
+            if ( .NOT. ONLINE_IAM_DAUGHTER ) then
+               write(*,*) 'xxx Flag from launcher is not consistent with namelist!'
+               write(*,*) '    DAUGHTER - domain: ', ONLINE_DOMAIN_NUM
+               call PRC_MPIstop
+            endif
+
             HANDLING_NUM = 2 !HANDLING_NUM + 1
             INTERCOMM_ID(HANDLING_NUM) = ONLINE_DOMAIN_NUM - 1
             NEST_Filiation(INTERCOMM_ID(HANDLING_NUM)) = -1
 
-            if ( .NOT. ONLINE_REVERSE_LAUNCH ) then
-               call MPI_COMM_GET_PARENT( INTERCOMM_PARENT, ierr )
-               if( IO_L ) write(IO_FID_LOG,'(1x,A,I2,A)') &
-               '*** Activated Daughter Domain [INTERCOMM_ID:', INTERCOMM_ID(HANDLING_NUM), ' ]'
-            elseif ( ONLINE_REVERSE_LAUNCH ) then
-               if( IO_L ) write(IO_FID_LOG,'(1x,A)') '*** Online Nesting: Reverse Launch'
-               ! Launch Daughter Domain
-               if ( ONLINE_LAUNCH_CONF == '' ) then
-                  write(dom_num,'(I2.2)') ONLINE_DOMAIN_NUM-1
-                  argv(1) = 'run.d'//dom_num//'.conf'
-               else
-                  argv(1) =  ONLINE_LAUNCH_CONF
-               end if
-               argv(2) = 'reverse'
-
-               if( IO_L ) write(IO_FID_LOG,'(1x,A,I2,A)') '*** Launch Parent Domain [INTERCOMM_ID:', &
-                                                           INTERCOMM_ID(HANDLING_NUM), ' ]'
-               if( IO_L ) write(IO_FID_LOG,'(1x,A,A,A,A)') '*** Launch Command: ', trim(cmd), ' ', trim(argv(1))
-               if( IO_L ) write(IO_FID_LOG,'(1x,A,I5   )') '*** Number of Parent Processes: ', ONLINE_LAUNCH_PRC
-               call MPI_COMM_SPAWN( trim(cmd),           &
-                                    argv,                &
-                                    ONLINE_LAUNCH_PRC,   &
-                                    MPI_INFO_NULL,       &
-                                    PRC_master,          &
-                                    COMM_world,          &
-                                    INTERCOMM_PARENT,    &
-                                    errcodes,            &
-                                    ierr                 )
-            endif
-
-            PRC_online_nest   = .true.
-            PRC_interdomain_p = INTERCOMM_PARENT
+            INTERCOMM_PARENT = icomm_parent
+            if( IO_L ) write(IO_FID_LOG,'(1x,A,I2,A)') '*** Online Nesting - DAUGHTER [INTERCOMM_ID:', &
+                                                        INTERCOMM_ID(HANDLING_NUM), ' ]'
+            if( IO_L ) write(IO_FID_LOG,*) '*** Online Nesting - INTERCOMM :', INTERCOMM_PARENT
 
             call NEST_COMM_ping( HANDLING_NUM )
 
@@ -688,72 +624,72 @@ contains
 
 
             ! for scalar points
-            call latlonz_interporation_fact( hfact          (:,:,:,I_SCLR),     & ! [OUT]
-                                             vfact          (:,:,:,:,:,I_SCLR), & ! [OUT]
-                                             kgrd           (:,:,:,:,:,I_SCLR), & ! [OUT]
-                                             igrd           (:,:,:,I_SCLR),     & ! [OUT]
-                                             jgrd           (:,:,:,I_SCLR),     & ! [OUT]
-                                             MY_CZ          (:,:,:),            & ! [IN]
-                                             MY_LAT         (:,:),              & ! [IN]
-                                             MY_LON         (:,:),              & ! [IN]
-                                             buffer_ref_CZ  (:,:,:),            & ! [IN]
-                                             buffer_ref_LAT (:,:),              & ! [IN]
-                                             buffer_ref_LON (:,:),              & ! [IN]
-                                             TILEAL_KA(HANDLING_NUM),           & ! [IN]
-                                             TILEAL_IA(HANDLING_NUM),           & ! [IN]
-                                             TILEAL_JA(HANDLING_NUM),           & ! [IN]
-                                             HANDLING_NUM                       ) ! [IN]
+            call NEST_latlonz_interporation_fact( hfact          (:,:,:,I_SCLR),     & ! [OUT]
+                                                  vfact          (:,:,:,:,:,I_SCLR), & ! [OUT]
+                                                  kgrd           (:,:,:,:,:,I_SCLR), & ! [OUT]
+                                                  igrd           (:,:,:,I_SCLR),     & ! [OUT]
+                                                  jgrd           (:,:,:,I_SCLR),     & ! [OUT]
+                                                  MY_CZ          (:,:,:),            & ! [IN]
+                                                  MY_LAT         (:,:),              & ! [IN]
+                                                  MY_LON         (:,:),              & ! [IN]
+                                                  buffer_ref_CZ  (:,:,:),            & ! [IN]
+                                                  buffer_ref_LAT (:,:),              & ! [IN]
+                                                  buffer_ref_LON (:,:),              & ! [IN]
+                                                  TILEAL_KA(HANDLING_NUM),           & ! [IN]
+                                                  TILEAL_IA(HANDLING_NUM),           & ! [IN]
+                                                  TILEAL_JA(HANDLING_NUM),           & ! [IN]
+                                                  HANDLING_NUM                       ) ! [IN]
 
             ! for z staggered points
-            call latlonz_interporation_fact( hfact          (:,:,:,I_ZSTG),     & ! [OUT]
-                                             vfact          (:,:,:,:,:,I_ZSTG), & ! [OUT]
-                                             kgrd           (:,:,:,:,:,I_ZSTG), & ! [OUT]
-                                             igrd           (:,:,:,I_ZSTG),     & ! [OUT]
-                                             jgrd           (:,:,:,I_ZSTG),     & ! [OUT]
-                                             MY_FZ          (:,:,:),            & ! [IN]
-                                             MY_LAT         (:,:),              & ! [IN]
-                                             MY_LON         (:,:),              & ! [IN]
-                                             buffer_ref_FZ  (:,:,:),            & ! [IN]
-                                             buffer_ref_LAT (:,:),              & ! [IN]
-                                             buffer_ref_LON (:,:),              & ! [IN]
-                                             TILEAL_KA(HANDLING_NUM)+1,         & ! [IN]
-                                             TILEAL_IA(HANDLING_NUM),           & ! [IN]
-                                             TILEAL_JA(HANDLING_NUM),           & ! [IN]
-                                             HANDLING_NUM                       ) ! [IN]
+            call NEST_latlonz_interporation_fact( hfact          (:,:,:,I_ZSTG),     & ! [OUT]
+                                                  vfact          (:,:,:,:,:,I_ZSTG), & ! [OUT]
+                                                  kgrd           (:,:,:,:,:,I_ZSTG), & ! [OUT]
+                                                  igrd           (:,:,:,I_ZSTG),     & ! [OUT]
+                                                  jgrd           (:,:,:,I_ZSTG),     & ! [OUT]
+                                                  MY_FZ          (:,:,:),            & ! [IN]
+                                                  MY_LAT         (:,:),              & ! [IN]
+                                                  MY_LON         (:,:),              & ! [IN]
+                                                  buffer_ref_FZ  (:,:,:),            & ! [IN]
+                                                  buffer_ref_LAT (:,:),              & ! [IN]
+                                                  buffer_ref_LON (:,:),              & ! [IN]
+                                                  TILEAL_KA(HANDLING_NUM)+1,         & ! [IN]
+                                                  TILEAL_IA(HANDLING_NUM),           & ! [IN]
+                                                  TILEAL_JA(HANDLING_NUM),           & ! [IN]
+                                                  HANDLING_NUM                       ) ! [IN]
 
             ! for x staggered points
-            call latlonz_interporation_fact( hfact          (:,:,:,I_XSTG),     & ! [OUT]
-                                             vfact          (:,:,:,:,:,I_XSTG), & ! [OUT]
-                                             kgrd           (:,:,:,:,:,I_XSTG), & ! [OUT]
-                                             igrd           (:,:,:,I_XSTG),     & ! [OUT]
-                                             jgrd           (:,:,:,I_XSTG),     & ! [OUT]
-                                             MY_CZ          (:,:,:),            & ! [IN]
-                                             MY_LATX        (:,:),              & ! [IN]
-                                             MY_LONX        (:,:),              & ! [IN]
-                                             buffer_ref_CZ  (:,:,:),            & ! [IN]
-                                             buffer_ref_LATX(:,:),              & ! [IN]
-                                             buffer_ref_LONX(:,:),              & ! [IN]
-                                             TILEAL_KA(HANDLING_NUM),           & ! [IN]
-                                             TILEAL_IA(HANDLING_NUM),           & ! [IN]
-                                             TILEAL_JA(HANDLING_NUM),           & ! [IN]
-                                             HANDLING_NUM                       ) ! [IN]
+            call NEST_latlonz_interporation_fact( hfact          (:,:,:,I_XSTG),     & ! [OUT]
+                                                  vfact          (:,:,:,:,:,I_XSTG), & ! [OUT]
+                                                  kgrd           (:,:,:,:,:,I_XSTG), & ! [OUT]
+                                                  igrd           (:,:,:,I_XSTG),     & ! [OUT]
+                                                  jgrd           (:,:,:,I_XSTG),     & ! [OUT]
+                                                  MY_CZ          (:,:,:),            & ! [IN]
+                                                  MY_LATX        (:,:),              & ! [IN]
+                                                  MY_LONX        (:,:),              & ! [IN]
+                                                  buffer_ref_CZ  (:,:,:),            & ! [IN]
+                                                  buffer_ref_LATX(:,:),              & ! [IN]
+                                                  buffer_ref_LONX(:,:),              & ! [IN]
+                                                  TILEAL_KA(HANDLING_NUM),           & ! [IN]
+                                                  TILEAL_IA(HANDLING_NUM),           & ! [IN]
+                                                  TILEAL_JA(HANDLING_NUM),           & ! [IN]
+                                                  HANDLING_NUM                       ) ! [IN]
 
             ! for y staggered points
-            call latlonz_interporation_fact( hfact          (:,:,:,I_YSTG),     & ! [OUT]
-                                             vfact          (:,:,:,:,:,I_YSTG), & ! [OUT]
-                                             kgrd           (:,:,:,:,:,I_YSTG), & ! [OUT]
-                                             igrd           (:,:,:,I_YSTG),     & ! [OUT]
-                                             jgrd           (:,:,:,I_YSTG),     & ! [OUT]
-                                             MY_CZ          (:,:,:),            & ! [IN]
-                                             MY_LATY        (:,:),              & ! [IN]
-                                             MY_LONY        (:,:),              & ! [IN]
-                                             buffer_ref_CZ  (:,:,:),            & ! [IN]
-                                             buffer_ref_LATY(:,:),              & ! [IN]
-                                             buffer_ref_LONY(:,:),              & ! [IN]
-                                             TILEAL_KA(HANDLING_NUM),           & ! [IN]
-                                             TILEAL_IA(HANDLING_NUM),           & ! [IN]
-                                             TILEAL_JA(HANDLING_NUM),           & ! [IN]
-                                             HANDLING_NUM                       ) ! [IN]
+            call NEST_latlonz_interporation_fact( hfact          (:,:,:,I_YSTG),     & ! [OUT]
+                                                  vfact          (:,:,:,:,:,I_YSTG), & ! [OUT]
+                                                  kgrd           (:,:,:,:,:,I_YSTG), & ! [OUT]
+                                                  igrd           (:,:,:,I_YSTG),     & ! [OUT]
+                                                  jgrd           (:,:,:,I_YSTG),     & ! [OUT]
+                                                  MY_CZ          (:,:,:),            & ! [IN]
+                                                  MY_LATY        (:,:),              & ! [IN]
+                                                  MY_LONY        (:,:),              & ! [IN]
+                                                  buffer_ref_CZ  (:,:,:),            & ! [IN]
+                                                  buffer_ref_LATY(:,:),              & ! [IN]
+                                                  buffer_ref_LONY(:,:),              & ! [IN]
+                                                  TILEAL_KA(HANDLING_NUM),           & ! [IN]
+                                                  TILEAL_IA(HANDLING_NUM),           & ! [IN]
+                                                  TILEAL_JA(HANDLING_NUM),           & ! [IN]
+                                                  HANDLING_NUM                       ) ! [IN]
 
             deallocate( buffer_2D  )
             deallocate( buffer_3D  )
@@ -2019,8 +1955,10 @@ contains
     logical :: logarithmic = .false.
     !---------------------------------------------------------------------------
     logarithmic = .false.
-    if ( present(flag_dens) .and. flag_dens ) then
+    if ( present(flag_dens) ) then
+    if ( flag_dens ) then
        logarithmic = .true.
+    endif
     endif
 
     if ( id_stag == I_SCLR )     then
@@ -2223,8 +2161,10 @@ contains
     !---------------------------------------------------------------------------
 
     logarithmic = .false.
-    if ( present(flag_dens) .and. flag_dens ) then
+    if ( present(flag_dens) ) then
+    if ( flag_dens ) then
        logarithmic = .true.
+    endif
     endif
 
     if ( id_stag == I_SCLR )     then
@@ -2432,7 +2372,7 @@ contains
 
   !-----------------------------------------------------------------------------
   ! WITHOUT TIME DIMENSION
-  subroutine latlonz_interporation_fact( &
+  subroutine NEST_latlonz_interporation_fact( &
       hfact,      & ! (out)
       vfact,      & ! (out)
       kgrd,       & ! (out)
@@ -2482,8 +2422,10 @@ contains
     !---------------------------------------------------------------------------
 
     lndgrd = .false.
-    if ( present(landgrid) .and. landgrid ) then
+    if ( present(landgrid) ) then
+    if ( landgrid ) then
        lndgrd = .true.
+    endif
     endif
 
     hfact(:,:,:) = 0.0_RP
@@ -2583,7 +2525,7 @@ contains
     enddo
 
     return
-  end subroutine latlonz_interporation_fact
+  end subroutine NEST_latlonz_interporation_fact
 
   !-----------------------------------------------------------------------------
   ! Haversine Formula (from R.W. Sinnott, "Virtues of the Haversine",

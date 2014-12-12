@@ -571,6 +571,8 @@ contains
 
     !---------------------------------------------------------------------------
 
+    answer = .false.
+
     if ( itemid < 0 ) return
 
     call PROF_rapstart('FILE O NetCDF', 2)

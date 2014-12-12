@@ -81,6 +81,9 @@ OBJS =	\
 	mod_urban_driver.o           \
 	mod_admin_restart.o
 
+OBJS_RUN =	\
+	mod_les_driver.o
+
 OBJS_INIT =	\
 	mod_cnvtopo.o                \
 	mod_cnvlanduse.o             \
@@ -114,7 +117,7 @@ $(LIBDIR)/libscale.a : $(LIBDIR)/libdcutils.a $(LIBDIR)/libgtool.a
 
 makebin: $(BINS)
 
-$(BINDIR)/$(BINNAME)  : $(BUILD_DIR)/$(BINNAME).o  $(patsubst %,$(BUILD_DIR)/%,$(OBJS)) $(BUILD_DIR)/mod_user.o
+$(BINDIR)/$(BINNAME)  : $(BUILD_DIR)/$(BINNAME).o  $(patsubst %,$(BUILD_DIR)/%,$(OBJS)) $(patsubst %,$(BUILD_DIR)/%,$(OBJS_RUN))  $(BUILD_DIR)/mod_user.o
 	$(FC) $(LDFLAGS) -o $@ $^ $(DEPENDLIB) $(NETCDF_LIBS) $(LAPACK_LIBS) $(PAPI_LIBS)
 
 $(BINDIR)/$(INITNAME) : $(BUILD_DIR)/$(INITNAME).o $(patsubst %,$(BUILD_DIR)/%,$(OBJS)) $(patsubst %,$(BUILD_DIR)/%,$(OBJS_INIT)) $(BUILD_DIR)/mod_user.o
@@ -123,7 +126,7 @@ $(BINDIR)/$(INITNAME) : $(BUILD_DIR)/$(INITNAME).o $(patsubst %,$(BUILD_DIR)/%,$
 $(BINDIR)/$(PPNAME)   : $(BUILD_DIR)/$(PPNAME).o   $(patsubst %,$(BUILD_DIR)/%,$(OBJS)) $(patsubst %,$(BUILD_DIR)/%,$(OBJS_INIT)) $(BUILD_DIR)/mod_user.o
 	$(FC) $(LDFLAGS) -o $@ $^ $(DEPENDLIB) $(NETCDF_LIBS) $(LAPACK_LIBS) $(PAPI_LIBS)
 
-$(BUILD_DIR)/$(BINNAME).o  : $(BINNAME).f90  $(DEPENDLIB) $(patsubst %,$(BUILD_DIR)/%,$(OBJS)) $(BUILD_DIR)/mod_user.o
+$(BUILD_DIR)/$(BINNAME).o  : $(BINNAME).f90  $(DEPENDLIB) $(patsubst %,$(BUILD_DIR)/%,$(OBJS)) $(patsubst %,$(BUILD_DIR)/%,$(OBJS_RUN))  $(BUILD_DIR)/mod_user.o
 $(BUILD_DIR)/$(INITNAME).o : $(INITNAME).f90 $(DEPENDLIB) $(patsubst %,$(BUILD_DIR)/%,$(OBJS)) $(patsubst %,$(BUILD_DIR)/%,$(OBJS_INIT)) $(BUILD_DIR)/mod_user.o
 $(BUILD_DIR)/$(PPNAME).o   : $(PPNAME).f90   $(DEPENDLIB) $(patsubst %,$(BUILD_DIR)/%,$(OBJS)) $(patsubst %,$(BUILD_DIR)/%,$(OBJS_INIT)) $(BUILD_DIR)/mod_user.o
 
@@ -207,6 +210,7 @@ $(BUILD_DIR)/mod_cnvlanduse.o             : mod_cnvlanduse.f90 $(DEPENDLIB)
 
 $(BUILD_DIR)/mod_user.o                   : mod_user.f90 $(DEPENDLIB) $(patsubst %,$(BUILD_DIR)/%,$(OBJS))
 
+$(BUILD_DIR)/mod_les_driver.o             : mod_les_driver.f90 $(DEPENDLIB) $(patsubst %,$(BUILD_DIR)/%,$(OBJS)) $(BUILD_DIR)/mod_user.o
 
 
 allclean: distclean

@@ -401,8 +401,6 @@ contains
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE
        do i = IIS, IIE+1
-          PRES (KS-1,i,j) = PRES(KS+1,i,j) - DENS(KS,i,j) * ( PHI(KS-1,i,j) - PHI(KS+1,i,j) )
-          DPRES(KS-1,i,j) = PRES(KE-1,i,j) - REF_pres(KE-1,i,j)
           do k = KS, KE
 #ifdef DEBUG
              call CHECK( __LINE__, RHOT(k,i,j) )
@@ -417,15 +415,17 @@ contains
 #endif
              DPRES(k,i,j) = PRES(k,i,j) - REF_pres(k,i,j)
           enddo
+          PRES (KS-1,i,j) = PRES(KS+1,i,j) - DENS(KS,i,j) * ( PHI(KS-1,i,j) - PHI(KS+1,i,j) )
           PRES (KE+1,i,j) = PRES(KE-1,i,j) - DENS(KE,i,j) * ( PHI(KE+1,i,j) - PHI(KE-1,i,j) )
-          DPRES(KE+1,i,j) = PRES(KE+1,i,j) - REF_pres(KE+1,i,j)
+
+          do k = KS-1, KE+1
+             DPRES(k,i,j) = PRES(k,i,j) - REF_pres(k,i,j)
+          enddo
        enddo
        enddo
        ! j = JJE+1
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(1)
        do i = IIS, IIE
-          PRES (KS-1,i,JJE+1) = PRES(KS+1,i,JJE+1) - DENS(KS,i,JJE+1) * ( PHI(KS-1,i,JJE+1) - PHI(KS+1,i,JJE+1) )
-          DPRES(KS-1,i,JJE+1) = PRES(KS-1,i,JJE+1) - REF_pres(KS-1,i,JJE+1)
           do k = KS, KE
 #ifdef DEBUG
              call CHECK( __LINE__, RHOT(k,i,JJE+1) )
@@ -440,8 +440,12 @@ contains
 #endif
              DPRES(k,i,JJE+1) = PRES(k,i,JJE+1) - REF_pres(k,i,JJE+1)
           enddo
+          PRES (KS-1,i,JJE+1) = PRES(KS+1,i,JJE+1) - DENS(KS,i,JJE+1) * ( PHI(KS-1,i,JJE+1) - PHI(KS+1,i,JJE+1) )
           PRES (KE+1,i,JJE+1) = PRES(KE-1,i,JJE+1) - DENS(KE,i,JJE+1) * ( PHI(KE+1,i,JJE+1) - PHI(KE-1,i,JJE+1) )
-          DPRES(KE+1,i,JJE+1) = PRES(KE+1,i,JJE+1) - REF_pres(KE+1,i,JJE+1)
+
+          do k = KS-1, KE+1
+             DPRES(k,i,JJE+1) = PRES(k,i,JJE+1) - REF_pres(k,i,JJE+1)
+          enddo
        enddo
        PROFILE_STOP("hevi_pres")
 
