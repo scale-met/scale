@@ -165,6 +165,7 @@ contains
        GRAV   => CONST_GRAV,   &
        P00    => CONST_PRE00
     use scale_comm, only: &
+       COMM_world, &
        COMM_vars8, &
        COMM_wait
     use scale_atmos_dyn_common, only: &
@@ -2236,6 +2237,7 @@ contains
     use scale_process, only: &
        PRC_MPIstop
     use scale_comm, only: &
+       COMM_world, &
        COMM_vars8, &
        COMM_wait
     implicit none
@@ -2350,7 +2352,7 @@ contains
 
     iprod(1) = r0r
     iprod(2) = norm
-    call MPI_AllReduce(iprod, buf, 2, mtype, MPI_SUM, MPI_COMM_WORLD, ierror)
+    call MPI_AllReduce(iprod, buf, 2, mtype, MPI_SUM, COMM_world, ierror)
     r0r = buf(1)
     norm = buf(2)
 
@@ -2372,7 +2374,7 @@ contains
 #ifdef DEBUG
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
-       call MPI_AllReduce(error, buf, 1, mtype, MPI_SUM, MPI_COMM_WORLD, ierror)
+       call MPI_AllReduce(error, buf, 1, mtype, MPI_SUM, COMM_world, ierror)
        error = buf(1)
 
 #ifdef DEBUG
@@ -2405,7 +2407,7 @@ contains
 #ifdef DEBUG
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
-       call MPI_AllReduce(iprod, buf, 1, mtype, MPI_SUM, MPI_COMM_WORLD, ierror)
+       call MPI_AllReduce(iprod, buf, 1, mtype, MPI_SUM, COMM_world, ierror)
        al = r0r / buf(1) ! (r0,r) / (r0,Mp)
 
        do j = JS, JE
@@ -2443,7 +2445,7 @@ contains
 #ifdef DEBUG
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
-       call MPI_AllReduce(iprod, buf, 2, mtype, MPI_SUM, MPI_COMM_WORLD, ierror)
+       call MPI_AllReduce(iprod, buf, 2, mtype, MPI_SUM, COMM_world, ierror)
        w = buf(1) / buf(2) ! (Ms,s) / (Ms,Ms)
 
        iprod(1) = 0.0_RP
@@ -2502,7 +2504,7 @@ contains
     end do
     end do
 
-       call MPI_AllReduce(iprod, r0r, 1, mtype, MPI_SUM, MPI_COMM_WORLD, ierror)
+       call MPI_AllReduce(iprod, r0r, 1, mtype, MPI_SUM, COMM_world, ierror)
 
        be = be * r0r ! al/w * (r0,rn)/(r0,r)
        do j = JS, JE

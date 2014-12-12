@@ -322,6 +322,7 @@ contains
     use scale_comm, only: &
 #ifdef CHECK_MASS
        COMM_datatype, &
+       COMM_world,    &
 #endif
        COMM_vars8, &
        COMM_wait
@@ -1191,7 +1192,7 @@ contains
                            1,                    &
                            COMM_datatype,        &
                            MPI_SUM,              &
-                           MPI_COMM_WORLD,       &
+                           COMM_world,           &
                            ierr                  )
 
        if( IO_L ) write(IO_FID_LOG,'(A,1x,i1,1x,2PE24.17)') 'total mflx_lb:', step, allmflx_lb_total
@@ -1201,7 +1202,7 @@ contains
                            1,                    &
                            COMM_datatype,        &
                            MPI_SUM,              &
-                           MPI_COMM_WORLD,       &
+                           COMM_world,           &
                            ierr                  )
 
        if( IO_L ) write(IO_FID_LOG,'(A,1x,i1,1x,2PE24.17)') 'total mass   :', step, allmass_total
@@ -1211,7 +1212,7 @@ contains
                            1,                    &
                            COMM_datatype,        &
                            MPI_SUM,              &
-                           MPI_COMM_WORLD,       &
+                           COMM_world,           &
                            ierr                  )
 
        if( IO_L ) write(IO_FID_LOG,'(A,1x,i1,1x,2PE24.17)') 'total mass2  :', step, allmass_total2
@@ -1221,7 +1222,7 @@ contains
                            KMAX,                         &
                            COMM_datatype,                &
                            MPI_SUM,                      &
-                           MPI_COMM_WORLD,               &
+                           COMM_world,                   &
                            ierr                          )
 
        call HIST_in(allmflx_lb_horizontal(:), 'ALLMOM_lb_hz',                           &
