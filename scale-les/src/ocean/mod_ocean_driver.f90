@@ -51,6 +51,8 @@ contains
 !       OCEAN_FRC_driver_setup
     use mod_ocean_vars, only: &
        OCEAN_vars_history
+    use mod_ocean_admin, only: &
+       OCEAN_sw
     implicit none
     !---------------------------------------------------------------------------
 
@@ -62,9 +64,11 @@ contains
 !    if( OCEAN_FRC_sw ) call OCEAN_FRC_driver_setup
 
     !########## History & Monitor ##########
-    call PROF_rapstart('OCN History', 1)
-    call OCEAN_vars_history
-    call PROF_rapend  ('OCN History', 1)
+    if ( OCEAN_sw ) then
+       call PROF_rapstart('OCN History', 1)
+       call OCEAN_vars_history
+       call PROF_rapend  ('OCN History', 1)
+    endif
 
     return
   end subroutine OCEAN_driver_setup

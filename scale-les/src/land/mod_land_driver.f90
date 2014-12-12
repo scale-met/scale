@@ -51,6 +51,8 @@ contains
        LAND_PHY_driver_setup
     use mod_land_vars, only: &
        LAND_vars_history
+    use mod_land_admin, only: &
+       LAND_sw
     implicit none
     !---------------------------------------------------------------------------
 
@@ -60,9 +62,11 @@ contains
     call LAND_PHY_driver_setup
 
     !########## History & Monitor ##########
-    call PROF_rapstart('LND History', 1)
-    call LAND_vars_history
-    call PROF_rapend  ('LND History', 1)
+    if ( LAND_sw ) then
+       call PROF_rapstart('LND History', 1)
+       call LAND_vars_history
+       call PROF_rapend  ('LND History', 1)
+    endif
 
     return
   end subroutine LAND_driver_setup

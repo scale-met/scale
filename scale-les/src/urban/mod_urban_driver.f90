@@ -49,6 +49,8 @@ contains
        URBAN_PHY_driver_setup
     use mod_urban_vars, only: &
        URBAN_vars_history
+    use mod_urban_admin, only: &
+       URBAN_sw
     implicit none
     !---------------------------------------------------------------------------
 
@@ -58,9 +60,11 @@ contains
     call URBAN_PHY_driver_setup
 
     !########## History & Monitor ##########
-    call PROF_rapstart('URB History', 1)
-    call URBAN_vars_history
-    call PROF_rapend  ('URB History', 1)
+    if ( URBAN_sw ) then
+       call PROF_rapstart('URB History', 1)
+       call URBAN_vars_history
+       call PROF_rapend  ('URB History', 1)
+    endif
 
     return
   end subroutine URBAN_driver_setup
