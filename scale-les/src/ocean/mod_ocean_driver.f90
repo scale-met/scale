@@ -59,8 +59,8 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[DRIVER] / Categ[OCEAN] / Origin[SCALE-LES]'
 
-    !########## Get Surface Boundary to coupler ##########
-    call OCEAN_SURFACE_GET( setup=.false. )
+    !########## Get Surface Boundary from coupler ##########
+    call OCEAN_SURFACE_GET( setup=.true. )
 
     call OCEAN_PHY_driver_setup
 
@@ -97,7 +97,7 @@ contains
     integer :: i, j
     !---------------------------------------------------------------------------
 
-    !########## Get Surface Boundary to coupler ##########
+    !########## Get Surface Boundary from coupler ##########
     call OCEAN_SURFACE_GET( setup=.false. )
 
     !########## Physics ##########
