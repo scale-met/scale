@@ -57,6 +57,9 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[DRIVER] / Categ[URBAN] / Origin[SCALE-LES]'
 
+    !########## Get Surface Boundary from coupler ##########
+    call URBAN_SURFACE_GET( setup=.true. )
+
     call URBAN_PHY_driver_setup
 
     !########## History & Monitor ##########
@@ -87,6 +90,9 @@ contains
 
     integer :: i, j
     !---------------------------------------------------------------------------
+
+    !########## Get Surface Boundary from coupler ##########
+    call URBAN_SURFACE_GET( setup=.false. )
 
     !########## Physics ##########
     if ( URBAN_sw ) then
@@ -122,26 +128,33 @@ contains
   end subroutine URBAN_driver
 
   !-----------------------------------------------------------------------------
+  !> Get surface boundary
+  subroutine URBAN_SURFACE_GET( setup )
+    use mod_cpl_admin, only: &
+       CPL_sw_AtmUrb
+    use mod_cpl_vars, only: &
+       CPL_getUrb
+    implicit none
+
+    logical, intent(in) :: setup
+    !---------------------------------------------------------------------------
+
+    return
+  end subroutine URBAN_SURFACE_GET
+
+  !-----------------------------------------------------------------------------
   !> Put surface boundary to other model
   subroutine URBAN_SURFACE_SET( setup )
     use mod_cpl_admin, only: &
        CPL_sw_AtmUrb
     use mod_cpl_vars, only: &
        CPL_putUrb_setup, &
+       CPL_putUrb_restart, &
        CPL_putUrb
     implicit none
 
     logical, intent(in) :: setup
     !---------------------------------------------------------------------------
-
-!    if ( CPL_sw_AtmUrb ) then
-!       if ( setup ) then
-!          call CPL_putUrb_setup( URBAN_TEMP(:,:) ) ! [IN]
-!       endif
-!
-!       call CPL_putUrb( URBAN_TEMP(:,:) ) ! [IN]
-!
-!    endif
 
     return
   end subroutine URBAN_SURFACE_SET

@@ -86,33 +86,16 @@ contains
     use mod_urban_vars, only: &
        URBAN_TEMP,  &
        URBAN_TEMP_t
-    use mod_cpl_admin, only: &
-       CPL_sw_AtmUrb
-    use mod_cpl_vars, only: &
-       CPL_getUrb
     implicit none
 
     logical, intent(in) :: update_flag
-
-    real(RP) :: FLX_heat  (IA,JA)
-    real(RP) :: FLX_precip(IA,JA)
-    real(RP) :: FLX_evap  (IA,JA)
 
     real(RP) :: total ! dummy
     !---------------------------------------------------------------------------
 
     if ( update_flag ) then
 
-       if ( CPL_sw_AtmUrb ) then
-          call CPL_getUrb( FLX_heat  (:,:), & ! [OUT]
-                           FLX_precip(:,:), & ! [OUT]
-                           FLX_evap  (:,:)  ) ! [OUT]
-       endif
-
        call URBAN_PHY_ucm( URBAN_TEMP  (:,:), & ! [IN]
-                           FLX_heat    (:,:), & ! [IN]
-                           FLX_precip  (:,:), & ! [IN]
-                           FLX_evap    (:,:), & ! [IN]
                            URBAN_TEMP_t(:,:)  ) ! [OUT]
 
        call HIST_in( URBAN_TEMP_t(:,:), 'URBAN_TEMP_t', 'SST tendency', 'K' )
@@ -169,16 +152,10 @@ contains
   !>  Urban canopy model
   subroutine URBAN_PHY_ucm( &
        URBAN_TEMP,   &
-       FLX_heat,     &
-       FLX_precip,   &
-       FLX_evap,     &
        URBAN_TEMP_t  )
     implicit none
 
     real(RP), intent(in)  :: URBAN_TEMP  (IA,JA)
-    real(RP), intent(in)  :: FLX_heat    (IA,JA)
-    real(RP), intent(in)  :: FLX_precip  (IA,JA)
-    real(RP), intent(in)  :: FLX_evap    (IA,JA)
     real(RP), intent(out) :: URBAN_TEMP_t(IA,JA)
 
     integer :: i, j
