@@ -592,6 +592,7 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine CPL_putOcn_setup( &
+       OCN_TEMP,   &
        SFC_TEMP,   &
        SFC_albedo, &
        SFC_Z0M,    &
@@ -599,6 +600,7 @@ contains
        SFC_Z0E     )
     implicit none
 
+    real(RP), intent(in) :: OCN_TEMP  (IA,JA)
     real(RP), intent(in) :: SFC_TEMP  (IA,JA)
     real(RP), intent(in) :: SFC_albedo(IA,JA,2)
     real(RP), intent(in) :: SFC_Z0M   (IA,JA)
@@ -608,6 +610,11 @@ contains
     integer :: i, j
     !---------------------------------------------------------------------------
 
+    do j = JS, JE
+    do i = IS, IE
+       CPL_fromOcn_OCN_TEMP  (i,j)   = OCN_TEMP  (i,j)
+    end do
+    end do
     do j = JS, JE
     do i = IS, IE
        CPL_fromOcn_SFC_TEMP  (i,j)   = SFC_TEMP  (i,j)
@@ -640,6 +647,8 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine CPL_putLnd_setup( &
+       LND_TEMP,   &
+       LND_BETA,   &
        SFC_TEMP,   &
        SFC_albedo, &
        LND_TCS,    &
@@ -649,6 +658,8 @@ contains
        SFC_Z0E     )
     implicit none
 
+    real(RP), intent(in) :: LND_TEMP  (IA,JA)
+    real(RP), intent(in) :: LND_BETA  (IA,JA)
     real(RP), intent(in) :: SFC_TEMP  (IA,JA)
     real(RP), intent(in) :: SFC_albedo(IA,JA,2)
     real(RP), intent(in) :: LND_TCS   (IA,JA)
@@ -660,6 +671,17 @@ contains
     integer :: i, j
     !---------------------------------------------------------------------------
 
+
+    do j = JS, JE
+    do i = IS, IE
+       CPL_fromLnd_LND_TEMP  (i,j)   = LND_TEMP  (i,j)
+    end do
+    end do
+    do j = JS, JE
+    do i = IS, IE
+       CPL_fromLnd_LND_BETA  (i,j)   = LND_BETA  (i,j)
+    end do
+    end do
     do j = JS, JE
     do i = IS, IE
        CPL_fromLnd_SFC_TEMP  (i,j)   = SFC_TEMP  (i,j)

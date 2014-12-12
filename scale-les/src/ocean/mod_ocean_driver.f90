@@ -203,7 +203,8 @@ contains
 
     if ( CPL_sw_AtmOcn ) then
        if ( setup ) then
-          call CPL_putOcn_setup( OCEAN_SFC_TEMP  (:,:),   & ! [IN]
+          call CPL_putOcn_setup( OCEAN_TEMP      (:,:),   & ! [IN]
+                                 OCEAN_SFC_TEMP  (:,:),   & ! [IN]
                                  OCEAN_SFC_albedo(:,:,:), & ! [IN]
                                  OCEAN_SFC_Z0M   (:,:),   & ! [IN]
                                  OCEAN_SFC_Z0H   (:,:),   & ! [IN]

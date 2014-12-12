@@ -217,7 +217,9 @@ contains
        if ( setup ) then
           LAND_DZ(:,:) = dz(LKS)
 
-          call CPL_putLnd_setup( LAND_SFC_TEMP  (:,:),               & ! [IN]
+          call CPL_putLnd_setup( LAND_TEMP_Z1(:,:),                  & ! [IN]
+                                 LAND_BETA   (:,:),                  & ! [IN]
+                                 LAND_SFC_TEMP  (:,:),               & ! [IN]
                                  LAND_SFC_albedo(:,:,:),             & ! [IN]
                                  LAND_PROPERTY  (:,:,I_ThermalCond), & ! [IN]
                                  LAND_DZ        (:,:),               & ! [IN]
