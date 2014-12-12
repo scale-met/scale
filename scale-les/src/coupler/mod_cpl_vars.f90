@@ -728,6 +728,195 @@ contains
   end subroutine CPL_putUrb_setup
 
   !-----------------------------------------------------------------------------
+  subroutine CPL_putAtm_restart( &
+       SFC_TEMP,   &
+       SFC_albedo, &
+       Z0M,        &
+       Z0H,        &
+       Z0E,        &
+       SFLX_MW,    &
+       SFLX_MU,    &
+       SFLX_MV,    &
+       SFLX_SH,    &
+       SFLX_LH,    &
+       SFLX_QTRC   )
+    implicit none
+
+    real(RP), intent(in) :: SFC_TEMP  (IA,JA)
+    real(RP), intent(in) :: SFC_albedo(IA,JA,2)
+    real(RP), intent(in) :: Z0M       (IA,JA)
+    real(RP), intent(in) :: Z0H       (IA,JA)
+    real(RP), intent(in) :: Z0E       (IA,JA)
+    real(RP), intent(in) :: SFLX_MW   (IA,JA)
+    real(RP), intent(in) :: SFLX_MU   (IA,JA)
+    real(RP), intent(in) :: SFLX_MV   (IA,JA)
+    real(RP), intent(in) :: SFLX_SH   (IA,JA)
+    real(RP), intent(in) :: SFLX_LH   (IA,JA)
+    real(RP), intent(in) :: SFLX_QTRC (IA,JA,QA)
+
+    integer :: i, j
+    !---------------------------------------------------------------------------
+
+    do j = JS, JE
+    do i = IS, IE
+       CPL_Merged_SFC_TEMP  (i,j)   = SFC_TEMP  (i,j)  
+    end do
+    end do
+    do j = JS, JE
+    do i = IS, IE
+       CPL_Merged_SFC_albedo(i,j,1) = SFC_albedo(i,j,1)
+       CPL_Merged_SFC_albedo(i,j,2) = SFC_albedo(i,j,2)
+    end do
+    end do
+    do j = JS, JE
+    do i = IS, IE
+       CPL_Merged_Z0M       (i,j)   = Z0M       (i,j)  
+    end do
+    end do
+    do j = JS, JE
+    do i = IS, IE
+       CPL_Merged_Z0H       (i,j)   = Z0H       (i,j)  
+    end do
+    end do
+    do j = JS, JE
+    do i = IS, IE
+       CPL_Merged_Z0E       (i,j)   = Z0E       (i,j)  
+    end do
+    end do
+    do j = JS, JE
+    do i = IS, IE
+       CPL_Merged_FLX_MW    (i,j)   = SFLX_MW   (i,j)
+    end do
+    end do
+    do j = JS, JE
+    do i = IS, IE
+       CPL_Merged_FLX_MU    (i,j)   = SFLX_MU   (i,j)
+    end do
+    end do
+    do j = JS, JE
+    do i = IS, IE
+       CPL_Merged_FLX_MV    (i,j)   = SFLX_MV   (i,j)
+    end do
+    end do
+    do j = JS, JE
+    do i = IS, IE
+       CPL_Merged_FLX_SH    (i,j)   = SFLX_SH   (i,j)
+    end do
+    end do
+    do j = JS, JE
+    do i = IS, IE
+       CPL_Merged_FLX_LH    (i,j)   = SFLX_LH   (i,j)
+    end do
+    end do
+    do j = JS, JE
+    do i = IS, IE
+       CPL_Merged_FLX_QV    (i,j)   = SFLX_QTRC (i,j,1)  ! tentative
+    end do
+    end do
+
+    return
+  end subroutine CPL_putAtm_restart
+
+  !-----------------------------------------------------------------------------
+  subroutine CPL_putOcn_restart( &
+       FLX_heat,   & ! (in)
+       FLX_precip, & ! (in)
+       FLX_evap    ) ! (in)
+    implicit none
+
+    real(RP), intent(in) :: FLX_heat  (IA,JA)
+    real(RP), intent(in) :: FLX_precip(IA,JA)
+    real(RP), intent(in) :: FLX_evap  (IA,JA)
+
+    integer :: i, j
+    !---------------------------------------------------------------------------
+
+    do j = JS, JE
+    do i = IS, IE
+       CPL_AtmOcn_OCN_FLX_heat  (i,j)   = FLX_heat  (i,j)  
+    end do
+    end do
+    do j = JS, JE
+    do i = IS, IE
+       CPL_AtmOcn_OCN_FLX_precip(i,j)   = FLX_precip(i,j)  
+    end do
+    end do
+    do j = JS, JE
+    do i = IS, IE
+       CPL_AtmOcn_OCN_FLX_evap  (i,j)   = FLX_evap  (i,j)  
+    end do
+    end do
+
+    return
+  end subroutine CPL_putOcn_restart
+
+  !-----------------------------------------------------------------------------
+  subroutine CPL_putLnd_restart( &
+       FLX_heat,   & ! (in)
+       FLX_precip, & ! (in)
+       FLX_evap    ) ! (in)
+    implicit none
+
+    real(RP), intent(in) :: FLX_heat  (IA,JA)
+    real(RP), intent(in) :: FLX_precip(IA,JA)
+    real(RP), intent(in) :: FLX_evap  (IA,JA)
+
+    integer :: i, j
+    !---------------------------------------------------------------------------
+
+    do j = JS, JE
+    do i = IS, IE
+       CPL_AtmLnd_LND_FLX_heat  (i,j)   = FLX_heat  (i,j)  
+    end do
+    end do
+    do j = JS, JE
+    do i = IS, IE
+       CPL_AtmLnd_LND_FLX_precip(i,j)   = FLX_precip(i,j)  
+    end do
+    end do
+    do j = JS, JE
+    do i = IS, IE
+       CPL_AtmLnd_LND_FLX_evap  (i,j)   = FLX_evap  (i,j)  
+    end do
+    end do
+
+    return
+  end subroutine CPL_putLnd_restart
+
+  !-----------------------------------------------------------------------------
+  subroutine CPL_putUrb_restart( &
+       FLX_heat,   & ! (in)
+       FLX_precip, & ! (in)
+       FLX_evap    ) ! (in)
+    implicit none
+
+    real(RP), intent(in) :: FLX_heat  (IA,JA)
+    real(RP), intent(in) :: FLX_precip(IA,JA)
+    real(RP), intent(in) :: FLX_evap  (IA,JA)
+
+    integer :: i, j
+    !---------------------------------------------------------------------------
+
+    do j = JS, JE
+    do i = IS, IE
+       CPL_AtmUrb_URB_FLX_heat  (i,j)   = FLX_heat  (i,j)  
+    end do
+    end do
+    do j = JS, JE
+    do i = IS, IE
+       CPL_AtmUrb_URB_FLX_precip(i,j)   = FLX_precip(i,j)  
+    end do
+    end do
+    do j = JS, JE
+    do i = IS, IE
+       CPL_AtmUrb_URB_FLX_evap  (i,j)   = FLX_evap  (i,j)  
+    end do
+    end do
+
+    return
+  end subroutine CPL_putUrb_restart
+
+  !-----------------------------------------------------------------------------
   subroutine CPL_putAtm( &
        ATM_TEMP,   &
        ATM_PRES,   &
@@ -1224,194 +1413,5 @@ contains
 
     return
   end subroutine CPL_getUrb
-
-  !-----------------------------------------------------------------------------
-  subroutine CPL_putAtm_restart( &
-       SFC_TEMP,   &
-       SFC_albedo, &
-       Z0M,        &
-       Z0H,        &
-       Z0E,        &
-       SFLX_MW,    &
-       SFLX_MU,    &
-       SFLX_MV,    &
-       SFLX_SH,    &
-       SFLX_LH,    &
-       SFLX_QTRC   )
-    implicit none
-
-    real(RP), intent(in) :: SFC_TEMP  (IA,JA)
-    real(RP), intent(in) :: SFC_albedo(IA,JA,2)
-    real(RP), intent(in) :: Z0M       (IA,JA)
-    real(RP), intent(in) :: Z0H       (IA,JA)
-    real(RP), intent(in) :: Z0E       (IA,JA)
-    real(RP), intent(in) :: SFLX_MW   (IA,JA)
-    real(RP), intent(in) :: SFLX_MU   (IA,JA)
-    real(RP), intent(in) :: SFLX_MV   (IA,JA)
-    real(RP), intent(in) :: SFLX_SH   (IA,JA)
-    real(RP), intent(in) :: SFLX_LH   (IA,JA)
-    real(RP), intent(in) :: SFLX_QTRC (IA,JA,QA)
-
-    integer :: i, j
-    !---------------------------------------------------------------------------
-
-    do j = JS, JE
-    do i = IS, IE
-       CPL_Merged_SFC_TEMP  (i,j)   = SFC_TEMP  (i,j)  
-    end do
-    end do
-    do j = JS, JE
-    do i = IS, IE
-       CPL_Merged_SFC_albedo(i,j,1) = SFC_albedo(i,j,1)
-       CPL_Merged_SFC_albedo(i,j,2) = SFC_albedo(i,j,2)
-    end do
-    end do
-    do j = JS, JE
-    do i = IS, IE
-       CPL_Merged_Z0M       (i,j)   = Z0M       (i,j)  
-    end do
-    end do
-    do j = JS, JE
-    do i = IS, IE
-       CPL_Merged_Z0H       (i,j)   = Z0H       (i,j)  
-    end do
-    end do
-    do j = JS, JE
-    do i = IS, IE
-       CPL_Merged_Z0E       (i,j)   = Z0E       (i,j)  
-    end do
-    end do
-    do j = JS, JE
-    do i = IS, IE
-       CPL_Merged_FLX_MW    (i,j)   = SFLX_MW   (i,j)
-    end do
-    end do
-    do j = JS, JE
-    do i = IS, IE
-       CPL_Merged_FLX_MU    (i,j)   = SFLX_MU   (i,j)
-    end do
-    end do
-    do j = JS, JE
-    do i = IS, IE
-       CPL_Merged_FLX_MV    (i,j)   = SFLX_MV   (i,j)
-    end do
-    end do
-    do j = JS, JE
-    do i = IS, IE
-       CPL_Merged_FLX_SH    (i,j)   = SFLX_SH   (i,j)
-    end do
-    end do
-    do j = JS, JE
-    do i = IS, IE
-       CPL_Merged_FLX_LH    (i,j)   = SFLX_LH   (i,j)
-    end do
-    end do
-    do j = JS, JE
-    do i = IS, IE
-       CPL_Merged_FLX_QV    (i,j)   = SFLX_QTRC (i,j,1)  ! tentative
-    end do
-    end do
-
-    return
-  end subroutine CPL_putAtm_restart
-
-  !-----------------------------------------------------------------------------
-  subroutine CPL_putOcn_restart( &
-       FLX_heat,   & ! (in)
-       FLX_precip, & ! (in)
-       FLX_evap    ) ! (in)
-    implicit none
-
-    real(RP), intent(in) :: FLX_heat  (IA,JA)
-    real(RP), intent(in) :: FLX_precip(IA,JA)
-    real(RP), intent(in) :: FLX_evap  (IA,JA)
-
-    integer :: i, j
-    !---------------------------------------------------------------------------
-
-    do j = JS, JE
-    do i = IS, IE
-       CPL_AtmOcn_OCN_FLX_heat  (i,j)   = FLX_heat  (i,j)  
-    end do
-    end do
-    do j = JS, JE
-    do i = IS, IE
-       CPL_AtmOcn_OCN_FLX_precip(i,j)   = FLX_precip(i,j)  
-    end do
-    end do
-    do j = JS, JE
-    do i = IS, IE
-       CPL_AtmOcn_OCN_FLX_evap  (i,j)   = FLX_evap  (i,j)  
-    end do
-    end do
-
-    return
-  end subroutine CPL_putOcn_restart
-
-  !-----------------------------------------------------------------------------
-  subroutine CPL_putLnd_restart( &
-       FLX_heat,   & ! (in)
-       FLX_precip, & ! (in)
-       FLX_evap    ) ! (in)
-    implicit none
-
-    real(RP), intent(in) :: FLX_heat  (IA,JA)
-    real(RP), intent(in) :: FLX_precip(IA,JA)
-    real(RP), intent(in) :: FLX_evap  (IA,JA)
-
-    integer :: i, j
-    !---------------------------------------------------------------------------
-
-    do j = JS, JE
-    do i = IS, IE
-       CPL_AtmLnd_LND_FLX_heat  (i,j)   = FLX_heat  (i,j)  
-    end do
-    end do
-    do j = JS, JE
-    do i = IS, IE
-       CPL_AtmLnd_LND_FLX_precip(i,j)   = FLX_precip(i,j)  
-    end do
-    end do
-    do j = JS, JE
-    do i = IS, IE
-       CPL_AtmLnd_LND_FLX_evap  (i,j)   = FLX_evap  (i,j)  
-    end do
-    end do
-
-    return
-  end subroutine CPL_putLnd_restart
-
-  !-----------------------------------------------------------------------------
-  subroutine CPL_putUrb_restart( &
-       FLX_heat,   & ! (in)
-       FLX_precip, & ! (in)
-       FLX_evap    ) ! (in)
-    implicit none
-
-    real(RP), intent(in) :: FLX_heat  (IA,JA)
-    real(RP), intent(in) :: FLX_precip(IA,JA)
-    real(RP), intent(in) :: FLX_evap  (IA,JA)
-
-    integer :: i, j
-    !---------------------------------------------------------------------------
-
-    do j = JS, JE
-    do i = IS, IE
-       CPL_AtmUrb_URB_FLX_heat  (i,j)   = FLX_heat  (i,j)  
-    end do
-    end do
-    do j = JS, JE
-    do i = IS, IE
-       CPL_AtmUrb_URB_FLX_precip(i,j)   = FLX_precip(i,j)  
-    end do
-    end do
-    do j = JS, JE
-    do i = IS, IE
-       CPL_AtmUrb_URB_FLX_evap  (i,j)   = FLX_evap  (i,j)  
-    end do
-    end do
-
-    return
-  end subroutine CPL_putUrb_restart
 
 end module mod_CPL_vars
