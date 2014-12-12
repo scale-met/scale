@@ -24,6 +24,7 @@ program scaleles_pp
   use scale_process, only: &
      PRC_setup,    &
      PRC_MPIstart, &
+     PRC_MPIsetup, &
      PRC_MPIfinish
   use scale_const, only: &
      CONST_setup
@@ -105,10 +106,11 @@ program scaleles_pp
   !########## Initial setup ##########
 
   ! setup standard I/O
-  call IO_setup( MODELNAME )
+  call IO_setup( MODELNAME, .false. )
 
   ! start MPI
   call PRC_MPIstart
+  call PRC_MPIsetup( .false. )
 
   ! setup process
   call PRC_setup
