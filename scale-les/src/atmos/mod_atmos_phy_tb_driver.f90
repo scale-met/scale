@@ -69,6 +69,14 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[DRIVER] / Categ[ATMOS PHY_TB] / Origin[SCALE-LES]'
 
+    ! initialize
+    do j = JS, JE
+    do i = IS, IE
+       MOMZ_t_TB(KS-1,i,j) = 0.0_RP
+       MOMZ_t_TB(KE  ,i,j) = 0.0_RP
+    enddo
+    enddo
+
     if ( ATMOS_sw_phy_tb ) then
 
        ! setup library component
@@ -83,13 +91,6 @@ contains
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** this component is never called.'
     endif
-
-    do j = JS, JE
-    do i = IS, IE
-       MOMZ_t_TB(KS-1,i,j) = 0.0_RP
-       MOMZ_t_TB(KE  ,i,j) = 0.0_RP
-    enddo
-    enddo
 
     return
   end subroutine ATMOS_PHY_TB_driver_setup
