@@ -1368,9 +1368,13 @@ contains
        do k = KS-1, KE+1
           rrhog_d(k,i,j) = 1.0_RP / DENS(k,i,j)
        enddo
-       do k = KS-1, KE+1
-          w_d(k,i,j) = ( MOMZ(k,i,j) + MOMZ(k-1,i,j) ) * rrhog_d(k,i,j)
+!!       do k = KS-1, KE+1
+!!          w_d(k,i,j) = ( MOMZ(k,i,j) + MOMZ(k-1,i,j) ) * rrhog_d(k,i,j)
+       w_d(KS-1,i,j) = 0.0_RP
+       do k = KS, KE-1
+          w_d(k,i,j) = MOMZ(k,i,j) / ( DENS(k,i,j) + DENS(k+1,i,j) ) * 2.0_RP
        enddo
+       w_d(KE:KE+1,i,j) = 0.0_RP
        do k = KS, KE
           th_d(k,i,j) = RHOT(k,i,j) * rrhog_d(k,i,j)
        enddo
