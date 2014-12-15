@@ -113,7 +113,7 @@ contains
 
     call ATMOS_BOUNDARY_setup( DENS, MOMZ, MOMX, MOMY, RHOT, QTRC ) ! (in)
 
-    ! refuse UNDEF for debug
+    !########## initialize tendencies ##########
     DENS_tp(:,:,:)   = 0.0_RP
     MOMZ_tp(:,:,:)   = 0.0_RP
     MOMX_tp(:,:,:)   = 0.0_RP
@@ -138,14 +138,6 @@ contains
     call PROF_rapstart('ATM History Vars', 1)
     call ATMOS_vars_history
     call PROF_rapend  ('ATM History Vars', 1)
-
-    !########## initialize tendencies ##########
-    DENS_tp(:,:,:)   = 0.0_RP
-    MOMZ_tp(:,:,:)   = 0.0_RP
-    MOMX_tp(:,:,:)   = 0.0_RP
-    MOMY_tp(:,:,:)   = 0.0_RP
-    RHOT_tp(:,:,:)   = 0.0_RP
-    RHOQ_tp(:,:,:,:) = 0.0_RP
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** Finish setup of each atmospheric components.'
