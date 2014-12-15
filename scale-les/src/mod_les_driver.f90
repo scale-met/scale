@@ -368,6 +368,9 @@ contains
       ! report current time
       call TIME_checkstate
   
+      ! time advance
+      call TIME_advance
+  
       ! user-defined procedure
       call USER_step
   
@@ -377,9 +380,6 @@ contains
       if( LAND_do  .AND. TIME_DOLAND_step  ) call LAND_driver
       if( URBAN_do .AND. TIME_DOURBAN_step ) call URBAN_driver
       if( CPL_do   .AND. TIME_DOCPL_calc   ) call CPL_driver
-  
-      ! time advance
-      call TIME_advance
   
       ! history&monitor file output
       call HIST_write

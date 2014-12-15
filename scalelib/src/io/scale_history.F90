@@ -562,8 +562,7 @@ contains
     use gtool_history, only: &
        HistoryQuery
     use scale_time, only: &
-       TIME_NOWDAYSEC, &
-       TIME_DTSEC
+       TIME_NOWDAYSEC
     implicit none
 
     integer, intent(in)  :: itemid !< index number of the item
@@ -577,7 +576,7 @@ contains
 
     call PROF_rapstart('FILE O NetCDF', 2)
 
-    call HistoryQuery(itemid, TIME_NOWDAYSEC+TIME_DTSEC, answer)
+    call HistoryQuery(itemid, TIME_NOWDAYSEC, answer)
 
     call PROF_rapend  ('FILE O NetCDF', 2)
 
@@ -592,8 +591,7 @@ contains
     use gtool_history, only: &
        HistoryPut
     use scale_time, only: &
-       TIME_NOWDAYSEC, &
-       TIME_DTSEC
+       TIME_NOWDAYSEC
     implicit none
 
     integer,  intent(in) :: itemid !< index number of the item
@@ -611,7 +609,7 @@ contains
        var2(k) = var(KS+k-1)
     enddo
 
-    call HistoryPut(itemid, TIME_NOWDAYSEC+TIME_DTSEC, var2)
+    call HistoryPut(itemid, TIME_NOWDAYSEC, var2)
 
     call PROF_rapend  ('FILE O NetCDF', 2)
 
@@ -629,8 +627,7 @@ contains
     use gtool_history, only: &
        HistoryPut
     use scale_time, only: &
-       TIME_NOWDAYSEC, &
-       TIME_DTSEC
+       TIME_NOWDAYSEC
     implicit none
 
     integer,  intent(in) :: itemid   !< index number of the item
@@ -683,7 +680,7 @@ contains
        enddo
     end if
 
-    call HistoryPut(itemid, TIME_NOWDAYSEC+TIME_DTSEC, var2)
+    call HistoryPut(itemid, TIME_NOWDAYSEC, var2)
 
     call PROF_rapend  ('FILE O NetCDF', 2)
 
@@ -705,8 +702,7 @@ contains
     use gtool_history, only: &
        HistoryPut
     use scale_time, only: &
-       TIME_NOWDAYSEC, &
-       TIME_DTSEC
+       TIME_NOWDAYSEC
     use scale_interpolation, only: &
        INTERP_vertical_xi2z, &
        INTERP_available
@@ -819,7 +815,7 @@ contains
           enddo
        end if
 
-       call HistoryPut(itemid, TIME_NOWDAYSEC+TIME_DTSEC, var2(1:isize*jsize))
+       call HistoryPut(itemid, TIME_NOWDAYSEC, var2(1:isize*jsize))
 
     else
        if (       ksize == KMAX    &
@@ -882,7 +878,7 @@ contains
           enddo
        end if
 
-       call HistoryPut(itemid, TIME_NOWDAYSEC+TIME_DTSEC, var2)
+       call HistoryPut(itemid, TIME_NOWDAYSEC, var2)
 
     endif
 

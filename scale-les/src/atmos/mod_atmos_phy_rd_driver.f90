@@ -75,12 +75,10 @@ contains
        ! setup library component
        call ATMOS_PHY_RD_setup( ATMOS_PHY_RD_TYPE )
 
-       if( .NOT. RESTART_RUN ) then
-          ! run once (only for the diagnostic value)
-          call PROF_rapstart('ATM Radiation', 1)
-          call ATMOS_PHY_RD_driver( update_flag = .true. )
-          call PROF_rapend  ('ATM Radiation', 1)
-       end if
+       ! run once (only for the diagnostic value)
+       call PROF_rapstart('ATM Radiation', 1)
+       call ATMOS_PHY_RD_driver( update_flag = .true. )
+       call PROF_rapend  ('ATM Radiation', 1)
 
     else
 
