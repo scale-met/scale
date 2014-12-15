@@ -28,6 +28,7 @@ module mod_user
   !
   !++ Public procedure
   !
+  public :: USER_setup0
   public :: USER_setup
   public :: USER_step
 
@@ -75,6 +76,11 @@ module mod_user
   real(RP), private, parameter :: pres_sfc = 1015.4E2_RP! fixed surface pressure
   !-----------------------------------------------------------------------------
 contains
+  !-----------------------------------------------------------------------------
+  !> Setup0
+  subroutine USER_setup0
+  end subroutine USER_setup0
+
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine USER_setup

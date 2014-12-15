@@ -196,6 +196,7 @@ contains
        CPL_driver_setup, &
        CPL_driver
     use mod_user, only: &
+       USER_setup0, &
        USER_setup, &
        USER_step
     implicit none
@@ -317,6 +318,9 @@ contains
     if( LAND_do  ) call LAND_vars_restart_read
     if( URBAN_do ) call URBAN_vars_restart_read
   
+    ! setup user-defined procedure before setup of other components
+    call USER_setup0
+
     ! calc diagnostics
     call ATMOS_vars_diagnostics
   

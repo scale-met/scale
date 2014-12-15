@@ -25,6 +25,7 @@ module mod_user
   !
   !++ Public procedure
   !
+  public :: USER_setup0
   public :: USER_setup
   public :: USER_step
 
@@ -44,6 +45,11 @@ module mod_user
 
   !-----------------------------------------------------------------------------
 contains
+  !-----------------------------------------------------------------------------
+  !> Setup0
+  subroutine USER_setup0
+  end subroutine USER_setup0
+
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine USER_setup
