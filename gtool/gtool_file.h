@@ -15,8 +15,9 @@
 /* data type */
 #define File_REAL4     0
 #define File_REAL8     1
-#define File_INTEGER4  2
-#define File_INTEGER8  3
+#define File_INTEGER2  2
+#define File_INTEGER4  3
+#define File_INTEGER8  4
 
 /* action type */
 #define File_FREAD   0

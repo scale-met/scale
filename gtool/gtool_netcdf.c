@@ -22,6 +22,9 @@
   case NC_DOUBLE:						\
     type = File_REAL8;						\
     break;							\
+  case NC_SHORT:						\
+    type = File_INTEGER2;						\
+    break;							\
   default:                                                      \
     fprintf(stderr, "unsuppoted data type: %d\n", xtype);	\
     return ERROR_CODE;						\
