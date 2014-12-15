@@ -194,13 +194,15 @@ contains
     use scale_comm, only: &
        COMM_vars8, &
        COMM_wait
+    use scale_atmos_phy_tb_common, only: &
+       diffusion_solver => ATMOS_PHY_TB_diffusion_solver
     implicit none
 
     real(RP), intent(out) :: qflx_sgs_momz(KA,IA,JA,3)
     real(RP), intent(out) :: qflx_sgs_momx(KA,IA,JA,3)
     real(RP), intent(out) :: qflx_sgs_momy(KA,IA,JA,3)
     real(RP), intent(out) :: qflx_sgs_rhot(KA,IA,JA,3)
-    real(RP), intent(out) :: qflx_sgs_rhoq(KA,IA,JA,QA,3)
+    real(RP), intent(out) :: qflx_sgs_rhoq(KA,IA,JA,3,QA)
 
     real(RP), intent(inout) :: tke (KA,IA,JA) ! TKE
     real(RP), intent(out) :: Nu(KA,IA,JA) ! eddy viscosity (center)
@@ -304,7 +306,7 @@ contains
     do j = JS  , JE
     do i = IS-1, IE
     do k = KS-1, KE+1
-       qflx_sgs_rhoq(k,i,j,iq,XDIR) = 0.0_RP
+       qflx_sgs_rhoq(k,i,j,XDIR,iq) = 0.0_RP
     end do
     end do
     end do
@@ -347,7 +349,7 @@ contains
     do j = JS-1, JE
     do i = IS  , IE
     do k = KS-1, KE+1
-       qflx_sgs_rhoq(k,i,j,iq,YDIR) = 0.0_RP
+       qflx_sgs_rhoq(k,i,j,YDIR,iq) = 0.0_RP
     end do
     end do
     end do
@@ -550,36 +552,32 @@ contains
        !  for velocities
        do j = JJS, JJE+1
        do i = IIS, IIE+1
+
           ap = - dt * 0.5_RP * ( DENS(KS  ,i,j)*Nu(KS  ,i,j) &
                                + DENS(KS+1,i,j)*Nu(KS+1,i,j) ) &
              * RFDZ(KS) / GSQRT(KS,i,j,I_XYW)
-          a(KS,i,j) = ap * RCDZ(KS) / ( DENS(KS,i,j) * GSQRT(KS,i,j,I_XYZ) ) 
+          a(KS,i,j) = ap * RCDZ(KS) / ( DENS(KS,i,j) * GSQRT(KS,i,j,I_XYZ) )
           c(KS,i,j) = 0.0_RP
           b(KS,i,j) = - a(KS,i,j) + 1.0_RP
           do k = KS+1, KE_PBL-1
-             c(k,i,j) = ap * RCDZ(k) / ( DENS(k,i,j) * GSQRT(k,i,j,I_XYZ) ) 
+             c(k,i,j) = ap * RCDZ(k) / ( DENS(k,i,j) * GSQRT(k,i,j,I_XYZ) )
              ap = - dt * 0.5_RP * ( DENS(k  ,i,j)*Nu(k  ,i,j) &
                                   + DENS(k+1,i,j)*Nu(k+1,i,j) ) &
                 * RFDZ(k) / GSQRT(k,i,j,I_XYW)
-             a(k,i,j) = ap * RCDZ(k) / ( DENS(k,i,j) * GSQRT(k,i,j,I_XYZ) ) 
+             a(k,i,j) = ap * RCDZ(k) / ( DENS(k,i,j) * GSQRT(k,i,j,I_XYZ) )
              b(k,i,j) = - a(k,i,j) - c(k,i,j) + 1.0_RP
           end do
           a(KE_PBL,i,j) = 0.0_RP
-          c(KE_PBL,i,j) = ap * RCDZ(KE_PBL) / ( DENS(KE_PBL,i,j) * GSQRT(KE_PBL,i,j,I_XYZ) ) 
+          c(KE_PBL,i,j) = ap * RCDZ(KE_PBL) / ( DENS(KE_PBL,i,j) * GSQRT(KE_PBL,i,j,I_XYZ) )
           b(KE_PBL,i,j) = - c(KE_PBL,i,j) + 1.0_RP
-       end do
-       end do
 
-
-       ! integration U
-       do j = JJS, JJE
-       do i = IIS, IIE+1
           do k = KS, KE_PBL
              d(k) = U(k,i,j)
           end do
           call diffusion_solver( &
-               phiN(:,i,j),                    & ! (out)
-               a(:,i,j), b(:,i,j), c(:,i,j), d ) ! (in)
+               phiN(:,i,j),                     & ! (out)
+               a(:,i,j), b(:,i,j), c(:,i,j), d, & ! (in)
+               KE_PBL                           ) ! (in)
        end do
        end do
        do j = JJS, JJE
@@ -614,8 +612,9 @@ contains
              d(k) = V(k,i,j)
           end do
           call diffusion_solver( &
-               phiN(:,i,j),                    & ! (out)
-               a(:,i,j), b(:,i,j), c(:,i,j), d ) ! (in)
+               phiN(:,i,j),                     & ! (out)
+               a(:,i,j), b(:,i,j), c(:,i,j), d, & ! (in)
+               KE_PBL                           ) ! (in)
        end do
        end do
        do j = JJS, JJE
@@ -673,8 +672,9 @@ contains
              d(k) = POTT(k,i,j)
           end do
           call diffusion_solver( &
-               phiN(:,i,j),                    & ! (out)
-               a(:,i,j), b(:,i,j), c(:,i,j), d ) ! (in)
+               phiN(:,i,j),                     & ! (out)
+               a(:,i,j), b(:,i,j), c(:,i,j), d, & ! (in)
+               KE_PBL                           ) ! (in)
        end do
        end do
        do j = JJS, JJE
@@ -709,14 +709,15 @@ contains
                 d(k) = QTRC(k,i,j,iq)
              end do
              call diffusion_solver( &
-                  phiN(:,i,j),                    & ! (out)
-                  a(:,i,j), b(:,i,j), c(:,i,j), d ) ! (in)
+                  phiN(:,i,j),                     & ! (out)
+                  a(:,i,j), b(:,i,j), c(:,i,j), d, & ! (in)
+                  KE_PBL                           ) ! (in)
           end do
           end do
           do j = JJS, JJE
           do i = IIS, IIE
           do k = KS, KE_PBL-1
-             qflx_sgs_rhoq(k,i,j,iq,ZDIR) = - 0.25_RP & ! 1/2/2
+             qflx_sgs_rhoq(k,i,j,ZDIR,iq) = - 0.25_RP & ! 1/2/2
                   * ( Nu(k,i,j)/Pr(k,i,j) + Nu(k+1,i,j)/Pr(k+1,i,j) ) &
                   * ( DENS(k,i,j) + DENS(k+1,i,j) ) &
                   * J33G * ( phiN(k+1,i,j) - phiN(k,i,j) ) * RFDZ(k) / GSQRT(k,i,j,I_XYW)
@@ -725,13 +726,13 @@ contains
           end do
           do j = JJS, JJE
           do i = IIS, IIE
-             qflx_sgs_rhoq(KS-1,i,j,iq,ZDIR) = 0.0_RP
+             qflx_sgs_rhoq(KS-1,i,j,ZDIR,iq) = 0.0_RP
           end do
           end do
           do j = JJS, JJE
           do i = IIS, IIE
           do k = KE_PBL, KE
-             qflx_sgs_rhoq(k,i,j,iq,ZDIR) = 0.0_RP
+             qflx_sgs_rhoq(k,i,j,ZDIR,iq) = 0.0_RP
           end do
           end do
           end do
@@ -810,7 +811,8 @@ contains
                                              - advc )
           call diffusion_solver( &
                tke_N(:,i,j),     & ! (out)
-               a(:,i,j), b(:,i,j), c(:,i,j), d ) ! (in)
+               a(:,i,j), b(:,i,j), c(:,i,j), d, & ! (in)
+               KE_PBL                           ) ! (in)
        end do
        end do
     end do
@@ -831,38 +833,6 @@ contains
 
     return
   end subroutine ATMOS_PHY_TB_mynn
-
-  subroutine diffusion_solver( &
-       phi, &
-       a, b, c, d )
-    implicit none
-    real(RP), intent(out) :: phi(KA)
-    real(RP), intent(in)  :: a(KA)
-    real(RP), intent(in)  :: b(KA)
-    real(RP), intent(in)  :: c(KA)
-    real(RP), intent(in)  :: d(KA)
-    real(RP) :: e(KA)
-    real(RP) :: f(KA)
-    real(RP) :: denom
-    integer :: k
-
-    e(KS) = - a(KS) / b(KS)
-    f(KS) =   d(KS) / b(KS)
-    do k = KS+1, KE_PBL-1
-       denom = b(k) + c(k)*e(k-1)
-       e(k) = - a(k) / denom
-       f(k) = ( d(k) - c(k)*f(k-1) ) / denom
-    end do
-
-    ! flux at the top boundary is zero
-    phi(KE_PBL) = ( d(KE_PBL) - c(KE_PBL)*f(KE_PBL-1) ) / ( b(KE_PBL) + c(KE_PBL)*e(KE_PBL-1) ) ! = f(KE_PBL)
-
-    do k = KE_PBL-1, KS, -1
-       phi(k) = e(k) * phi(k+1) + f(k)
-    end do
-
-    return
-  end subroutine diffusion_solver
 
   subroutine get_length( &
        l, &

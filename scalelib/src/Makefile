@@ -75,6 +75,7 @@ OBJS = $(scale_rdma)	\
 	scale_atmos_phy_sf_bulk.o	\
 	scale_atmos_phy_sf_const.o	\
 	scale_atmos_phy_tb.o	\
+	scale_atmos_phy_tb_common.o	\
 	scale_atmos_phy_tb_dummy.o	\
 	scale_atmos_phy_tb_smg.o	\
 	scale_atmos_phy_tb_dns.o	\

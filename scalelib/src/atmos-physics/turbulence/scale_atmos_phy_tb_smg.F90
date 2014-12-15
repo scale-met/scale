@@ -84,7 +84,9 @@ module scale_atmos_phy_tb_smg
 
   real(RP), private, parameter :: OneOverThree = 1.0_RP / 3.0_RP
   real(RP), private, parameter :: twoOverThree = 2.0_RP / 3.0_RP
+  real(RP), private, parameter :: FourOverThree = 4.0_RP / 3.0_RP
 
+  logical, private  :: ATMOS_PHY_TB_SMG_implicit = .false.
   logical, private  :: ATMOS_PHY_TB_SMG_bottom = .false.
 
   !-----------------------------------------------------------------------------
@@ -111,6 +113,7 @@ contains
     NAMELIST / PARAM_ATMOS_PHY_TB_SMG / &
          ATMOS_PHY_TB_SMG_Cs, &
          ATMOS_PHY_TB_SMG_filter_fact, &
+         ATMOS_PHY_TB_SMG_implicit, &
          ATMOS_PHY_TB_SMG_bottom
 
     integer :: k, i, j
@@ -199,6 +202,12 @@ contains
        I_UY,  &
        I_XV,  &
        I_UV
+    use scale_atmos_phy_tb_common, only: &
+       diffusion_solver => ATMOS_PHY_TB_diffusion_solver, &
+       calc_tend_momz => ATMOS_PHY_TB_calc_tend_momz, &
+       calc_tend_momx => ATMOS_PHY_TB_calc_tend_momx, &
+       calc_tend_momy => ATMOS_PHY_TB_calc_tend_momy, &
+       calc_tend_phi  => ATMOS_PHY_TB_calc_tend_phi
     implicit none
 
     ! SGS flux
@@ -206,7 +215,7 @@ contains
     real(RP), intent(out) :: qflx_sgs_momx(KA,IA,JA,3)
     real(RP), intent(out) :: qflx_sgs_momy(KA,IA,JA,3)
     real(RP), intent(out) :: qflx_sgs_rhot(KA,IA,JA,3)
-    real(RP), intent(out) :: qflx_sgs_rhoq(KA,IA,JA,QA,3)
+    real(RP), intent(out) :: qflx_sgs_rhoq(KA,IA,JA,3,QA)
 
     real(RP), intent(inout) :: tke(KA,IA,JA) ! TKE
     real(RP), intent(out) :: nu (KA,IA,JA) ! eddy viscosity (center)
@@ -257,6 +266,13 @@ contains
     real(RP) :: WORK_Z(KA,IA,JA) !            (z edge or x-y plane)
     real(RP) :: WORK_X(KA,IA,JA) !            (x edge or y-z plane)
     real(RP) :: WORK_Y(KA,IA,JA) !            (y edge or z-x plane)
+
+    real(RP) :: TEND(KA,IA,JA)
+    real(RP) :: a(KA,IA,JA)
+    real(RP) :: b(KA,IA,JA)
+    real(RP) :: c(KA,IA,JA)
+    real(RP) :: d(KA)
+    real(RP) :: ap
 
     integer :: IIS, IIE
     integer :: JJS, JJE
@@ -1339,9 +1355,9 @@ contains
        call CHECK( __LINE__, S12_C(k,i,j) )
        call CHECK( __LINE__, S23_C(k,i,j) )
 #endif
-          S2(k,i,j) = &
+          S2(k,i,j) = max( 1e-10_RP, &
                  2.0_RP * ( S11_C(k,i,j)**2 + S22_C(k,i,j)**2 + S33_C(k,i,j)**2 ) &
-               + 4.0_RP * ( S31_C(k,i,j)**2 + S12_C(k,i,j)**2 + S23_C(k,i,j)**2 )
+               + 4.0_RP * ( S31_C(k,i,j)**2 + S12_C(k,i,j)**2 + S23_C(k,i,j)**2 ) )
        enddo
        enddo
        enddo
@@ -1362,7 +1378,7 @@ contains
        call CHECK( __LINE__, S2(k,i,j) )
 #endif
           Ri(k,i,j) = GRAV * ( POTT(k+1,i,j) - POTT(k-1,i,j) ) * J33G &
-               / ( ( FDZ(k) + FDZ(k-1) ) * GSQRT(k,i,j,I_XYZ) * POTT(k,i,j) * max(S2(k,i,j),1.0E-20_RP) )
+               / ( ( FDZ(k) + FDZ(k-1) ) * GSQRT(k,i,j,I_XYZ) * POTT(k,i,j) * S2(k,i,j) )
        enddo
        enddo
        enddo
@@ -1378,7 +1394,7 @@ contains
        call CHECK( __LINE__, S2(KS,i,j) )
 #endif
           Ri(KS,i,j) = GRAV * ( POTT(KS+1,i,j) - POTT(KS,i,j) ) * J33G * RFDZ(KS) &
-               / (GSQRT(KS,i,j,I_XYZ) * POTT(KS,i,j) * max(S2(KS,i,j),1.0E-20_RP) )
+               / ( GSQRT(KS,i,j,I_XYZ) * POTT(KS,i,j) * S2(KS,i,j) )
        enddo
        enddo
 #ifdef DEBUG
@@ -1393,7 +1409,7 @@ contains
        call CHECK( __LINE__, S2(KE,i,j) )
 #endif
           Ri(KE,i,j) = GRAV * ( POTT(KE,i,j) - POTT(KE-1,i,j) ) * J33G * RFDZ(KE-1) &
-               / (GSQRT(KE,i,j,I_XYZ) * POTT(KE,i,j) * max(S2(KE,i,j),1.0E-20_RP) )
+               / ( GSQRT(KE,i,j,I_XYZ) * POTT(KE,i,j) * S2(KE,i,j) )
        enddo
        enddo
 #ifdef DEBUG
@@ -1497,6 +1513,53 @@ contains
 #ifdef DEBUG
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
+       if ( ATMOS_PHY_TB_SMG_implicit ) then
+          call calc_tend_MOMZ( TEND, & ! (out)
+                               qflx_sgs_momz, & ! (in)
+                               GSQRT, J13G, J23G, J33G, MAPF, & ! (in)
+                               IIS, IIE, JJS, JJE ) ! (in)
+
+          do j = JJS, JJE
+          do i = IIS, IIE
+
+             ap = - FourOverThree * dt &
+                  * DENS(KS+1,i,j)*Nu(KS+1,i,j) &
+                  * RCDZ(KS+1) / GSQRT(KS+1,i,j,I_XYZ)
+             a(KS,i,j) = ap * RFDZ(KS) / GSQRT(KS,i,j,I_XYW)
+             c(KS,i,j) = 0.0_RP
+             b(KS,i,j) = - a(KS,i,j) + 0.5_RP * ( DENS(KS,i,j)+DENS(KS+1,i,j) )
+             do k = KS+1, KE-2
+                c(k,i,j) = ap * RFDZ(k+1) / GSQRT(k+1,i,j,I_XYW)
+                ap = - FourOverThree * dt &
+                     * DENS(k+1,i,j)*Nu(k+1,i,j) &
+                     * RCDZ(k+1) / GSQRT(k+1,i,j,I_XYZ)
+                a(k,i,j) = ap * RFDZ(k) / GSQRT(k,i,j,I_XYW)
+                b(k,i,j) = - a(k,i,j) - c(k,i,j) + 0.5_RP * ( DENS(k,i,j)+DENS(k+1,i,j) )
+             end do
+             a(KE-1,i,j) = 0.0_RP
+             c(KE-1,i,j) = ap * RFDZ(KE) / GSQRT(KE,i,j,I_XYW)
+             b(KE-1,i,j) = - c(KE-1,i,j) + 0.5_RP * ( DENS(KE-1,i,j)+DENS(KE,i,j) )
+
+             do k = KS, KE-1
+                d(k) = TEND(k,i,j)
+             end do
+
+             call diffusion_solver( &
+                  TEND(:,i,j),                     & ! (out)
+                  a(:,i,j), b(:,i,j), c(:,i,j), d, & ! (in)
+                  KE-1                             ) ! (in)
+
+             do k = KS+1, KE-1
+                qflx_sgs_momz(k,i,j,ZDIR) = qflx_sgs_momz(k,i,j,ZDIR) &
+                     - FourOverThree * DENS(k,i,j) * Nu(k,i,j) * dt &
+                     * ( TEND(k,i,j) - TEND(k-1,i,j) ) * RCDZ(k) / GSQRT(k,i,j,I_XYZ)
+             end do
+
+          end do
+          end do
+
+       end if
+
        ! (y edge)
        do j = JJS,   JJE
        do i = IIS-1, IIE
@@ -1583,6 +1646,60 @@ contains
 #ifdef DEBUG
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
+       if ( ATMOS_PHY_TB_SMG_implicit ) then
+          call calc_tend_MOMX( TEND, & ! (out)
+                               qflx_sgs_momx, & ! (in)
+                               GSQRT, J13G, J23G, J33G, MAPF, & ! (in)
+                               IIS, IIE, JJS, JJE ) ! (in)
+
+          do j = JJS, JJE
+          do i = IIS, IIE
+
+             ap = - dt * 0.25_RP * ( DENS(KS  ,i  ,j)*Nu(KS  ,i  ,j) &
+                                   + DENS(KS+1,i  ,j)*Nu(KS+1,i  ,j) &
+                                   + DENS(KS  ,i+1,j)*Nu(KS  ,i+1,j) &
+                                   + DENS(KS+1,i+1,j)*Nu(KS+1,i+1,j) ) &
+                                 * RFDZ(KS) / GSQRT(KS,i,j,I_UYW)
+             a(KS,i,j) = ap * RCDZ(KS) / GSQRT(KS,i,j,I_UYZ)
+             c(KS,i,j) = 0.0_RP
+             b(KS,i,j) = - a(KS,i,j) + 0.5_RP * ( DENS(KS,i,j)+DENS(KS,i+1,j) )
+             do k = KS+1, KE-1
+                c(k,i,j) = ap * RCDZ(k) / GSQRT(k,i,j,I_UYZ)
+                ap = - dt * 0.25_RP * ( DENS(k  ,i  ,j)*Nu(k  ,i  ,j) &
+                                      + DENS(k+1,i  ,j)*Nu(k+1,i  ,j) &
+                                      + DENS(k  ,i+1,j)*Nu(k  ,i+1,j) &
+                                      + DENS(k+1,i+1,j)*Nu(k+1,i+1,j) ) &
+                                    * RFDZ(k) / GSQRT(k,i,j,I_UYW)
+                a(k,i,j) = ap * RCDZ(k) / GSQRT(k,i,j,I_UYZ)
+                b(k,i,j) = - a(k,i,j) - c(k,i,j) + 0.5_RP * ( DENS(k,i,j)+DENS(k,i+1,j) )
+             end do
+             a(KE,i,j) = 0.0_RP
+             c(KE,i,j) = ap * RCDZ(KE) / GSQRT(KE,i,j,I_UYZ)
+             b(KE,i,j) = - c(KE,i,j) + 0.5_RP * ( DENS(KE,i,j)+DENS(KE,i+1,j) )
+
+             do k = KS, KE
+                d(k) = TEND(k,i,j)
+             end do
+
+             call diffusion_solver( &
+                  TEND(:,i,j),                     & ! (out)
+                  a(:,i,j), b(:,i,j), c(:,i,j), d, & ! (in)
+                  KE                               ) ! (in)
+
+             do k = KS, KE-1
+                qflx_sgs_momx(k,i,j,ZDIR) = qflx_sgs_momx(k,i,j,ZDIR) &
+                     - 0.25_RP * ( DENS(k  ,i  ,j)*Nu(k  ,i  ,j) &
+                                 + DENS(k+1,i  ,j)*Nu(k+1,i  ,j) &
+                                 + DENS(k  ,i+1,j)*Nu(k  ,i+1,j) &
+                                 + DENS(k+1,i+1,j)*Nu(k+1,i+1,j) ) &
+                     * dt * ( TEND(k+1,i,j) - TEND(k,i,j) ) * RFDZ(k) / GSQRT(k,i,j,I_UYW)
+             end do
+
+          end do
+          end do
+
+       end if
+
        ! (cell center)
        do j = JJS, JJE
        do i = IIS, IIE+1
@@ -1666,6 +1783,60 @@ contains
 #ifdef DEBUG
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
+
+       if ( ATMOS_PHY_TB_SMG_implicit ) then
+          call calc_tend_MOMY( TEND, & ! (out)
+                               qflx_sgs_momy, & ! (in)
+                               GSQRT, J13G, J23G, J33G, MAPF, & ! (in)
+                               IIS, IIE, JJS, JJE ) ! (in)
+
+          do j = JJS, JJE
+          do i = IIS, IIE
+
+             ap = - dt * 0.25_RP * ( DENS(KS  ,i,j  )*Nu(KS  ,i,j  ) &
+                                   + DENS(KS+1,i,j  )*Nu(KS+1,i,j  ) &
+                                   + DENS(KS  ,i,j+1)*Nu(KS  ,i,j+1) &
+                                   + DENS(KS+1,i,j+1)*Nu(KS+1,i,j+1) ) &
+                                 * RFDZ(KS) / GSQRT(KS,i,j,I_XVW)
+             a(KS,i,j) = ap * RCDZ(KS) / GSQRT(KS,i,j,I_XVZ)
+             c(KS,i,j) = 0.0_RP
+             b(KS,i,j) = - a(KS,i,j) + 0.5_RP * ( DENS(KS,i,j)+DENS(KS,i,j+1) )
+             do k = KS+1, KE-1
+                c(k,i,j) = ap * RCDZ(k) / GSQRT(k,i,j,I_XVZ)
+                ap = - dt * 0.25_RP * ( DENS(k  ,i,j  )*Nu(k  ,i,j  ) &
+                                      + DENS(k+1,i,j  )*Nu(k+1,i,j  ) &
+                                      + DENS(k  ,i,j+1)*Nu(k  ,i,j+1) &
+                                      + DENS(k+1,i,j+1)*Nu(k+1,i,j+1) ) &
+                                    * RFDZ(k) / GSQRT(k,i,j,I_XVW)
+                a(k,i,j) = ap * RCDZ(k) / GSQRT(k,i,j,I_XVZ)
+                b(k,i,j) = - a(k,i,j) - c(k,i,j) + 0.5_RP * ( DENS(k,i,j)+DENS(k,i,j+1) )
+             end do
+             a(KE,i,j) = 0.0_RP
+             c(KE,i,j) = ap * RCDZ(KE) / GSQRT(KE,i,j,I_XVZ)
+             b(KE,i,j) = - c(KE,i,j) + 0.5_RP * ( DENS(KE,i,j)+DENS(KE,i,j+1) )
+
+             do k = KS, KE
+                d(k) = TEND(k,i,j)
+             end do
+
+             call diffusion_solver( &
+                  TEND(:,i,j),                     & ! (out)
+                  a(:,i,j), b(:,i,j), c(:,i,j), d, & ! (in)
+                  KE                               ) ! (in)
+
+             do k = KS, KE-1
+                qflx_sgs_momy(k,i,j,ZDIR) = qflx_sgs_momy(k,i,j,ZDIR) &
+                     - 0.25_RP * ( DENS(k  ,i,j  )*Nu(k  ,i,j  ) &
+                                 + DENS(k+1,i,j  )*Nu(k+1,i,j  ) &
+                                 + DENS(k  ,i,j+1)*Nu(k  ,i,j+1) &
+                                 + DENS(k+1,i,j+1)*Nu(k+1,i,j+1) ) &
+                     * dt * ( TEND(k+1,i,j) - TEND(k,i,j) ) * RFDZ(k) / GSQRT(k,i,j,I_XVW)
+             end do
+
+          end do
+          end do
+
+       end if
 
        ! (z edge)
        do j = JJS,   JJE
@@ -1751,6 +1922,56 @@ contains
 #ifdef DEBUG
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
+
+       if ( ATMOS_PHY_TB_SMG_implicit ) then
+          call calc_tend_phi( TEND, & ! (out)
+                              qflx_sgs_rhot, & ! (in)
+                              GSQRT, J13G, J23G, J33G, MAPF, & ! (in)
+                              IIS, IIE, JJS, JJE ) ! (in)
+
+          do j = JJS, JJE
+          do i = IIS, IIE
+
+             ap = - dt * 0.25_RP * ( DENS(KS,i,j)+DENS(KS+1,i,j) ) &
+                                 * ( Nu(KS,i,j)/Pr(KS,i,j)+Nu(KS+1,i,j)/Pr(KS+1,i,j) ) &
+                                 * RFDZ(KS) / GSQRT(KS,i,j,I_XYW)
+             a(KS,i,j) = ap * RCDZ(KS) / GSQRT(KS,i,j,I_XYZ)
+             c(KS,i,j) = 0.0_RP
+             b(KS,i,j) = - a(KS,i,j) + DENS(KS,i,j)
+             do k = KS+1, KE-1
+                c(k,i,j) = ap * RCDZ(k) / GSQRT(k,i,j,I_XYZ)
+                ap = - dt * 0.25_RP * ( DENS(k,i,j)+DENS(k+1,i,j) ) &
+                                    * ( Nu(k,i,j)/Pr(k,i,j)+Nu(k+1,i,j)/Pr(k+1,i,j) ) &
+                                   * RFDZ(k) / GSQRT(k,i,j,I_XYW)
+                a(k,i,j) = ap * RCDZ(k) / GSQRT(k,i,j,I_XYZ)
+                b(k,i,j) = - a(k,i,j) - c(k,i,j) + DENS(k,i,j)
+             end do
+             a(KE,i,j) = 0.0_RP
+             c(KE,i,j) = ap * RCDZ(KE) / GSQRT(KE,i,j,I_XYZ)
+             b(KE,i,j) = - c(KE,i,j) + DENS(KE,i,j)
+
+             do k = KS, KE
+                d(k) = TEND(k,i,j)
+             end do
+
+             call diffusion_solver( &
+                  TEND(:,i,j),                     & ! (out)
+                  a(:,i,j), b(:,i,j), c(:,i,j), d, & ! (in)
+                  KE                               ) ! (in)
+
+             do k = KS, KE-1
+                qflx_sgs_rhot(k,i,j,ZDIR) = qflx_sgs_rhot(k,i,j,ZDIR) &
+                     - 0.25_RP & ! 2/2/2/2
+                     * ( DENS(k,i,j)+DENS(k+1,i,j) ) &
+                     * ( nu(k,i,j)/Pr(k,i,j) + nu(k+1,i,j)/Pr(k+1,i,j) ) &
+                     * dt * ( TEND(k+1,i,j)-TEND(k,i,j) ) * RFDZ(k) * J33G &
+                     / GSQRT(k,i,j,I_XYW)
+             end do
+
+          end do
+          end do
+
+       end if
 
        ! (y-z plane; u,y,z)
        do j = JJS,   JJE
@@ -1918,7 +2139,7 @@ contains
        call CHECK( __LINE__, QTRC(k,i,j,iq) )
        call CHECK( __LINE__, RFDZ(k) )
 #endif
-          qflx_sgs_rhoq(k,i,j,iq,ZDIR) = - 0.25_RP & ! 1/2/2
+          qflx_sgs_rhoq(k,i,j,ZDIR,iq) = - 0.25_RP & ! 1/2/2
                * ( DENS(k,i,j)+DENS(k+1,i,j) ) &
                * ( nu(k,i,j)/Pr(k,i,j) + nu(k+1,i,j)/Pr(k+1,i,j) ) &
                * ( QTRC(k+1,i,j,iq)-QTRC(k,i,j,iq) ) * RFDZ(k) * J33G &
@@ -1931,13 +2152,45 @@ contains
 #endif
        do j = JJS, JJE
        do i = IIS, IIE
-          qflx_sgs_rhoq(KS-1,i,j,iq,ZDIR) = 0.0_RP
-          qflx_sgs_rhoq(KE  ,i,j,iq,ZDIR) = 0.0_RP
+          qflx_sgs_rhoq(KS-1,i,j,ZDIR,iq) = 0.0_RP
+          qflx_sgs_rhoq(KE  ,i,j,ZDIR,iq) = 0.0_RP
        enddo
        enddo
 #ifdef DEBUG
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
+
+       if ( ATMOS_PHY_TB_SMG_implicit ) then
+          call calc_tend_phi( TEND, & ! (out)
+                              qflx_sgs_rhoq(:,:,:,:,iq), & ! (in)
+                              GSQRT, J13G, J23G, J33G, MAPF, & ! (in)
+                              IIS, IIE, JJS, JJE ) ! (in)
+
+          do j = JJS, JJE
+          do i = IIS, IIE
+
+             do k = KS, KE
+                d(k) = TEND(k,i,j)
+             end do
+
+             call diffusion_solver( &
+                  TEND(:,i,j),                & ! (out)
+                  a(:,i,j), b(:,i,j), c(:,i,j), d, & ! (in)
+                  KE                               ) ! (in)
+
+             do k = KS, KE-1
+                qflx_sgs_rhoq(k,i,j,ZDIR,iq) = qflx_sgs_rhoq(k,i,j,ZDIR,iq) &
+                     - 0.25_RP & ! 1/2/2
+                     * ( DENS(k,i,j)+DENS(k+1,i,j) ) &
+                     * ( nu(k,i,j)/Pr(k,i,j) + nu(k+1,i,j)/Pr(k+1,i,j) ) &
+                     * dt * ( TEND(k+1,i,j)-TEND(k,i,j) ) * RFDZ(k) * J33G &
+                     / GSQRT(k,i,j,I_XYW)
+             end do
+
+          end do
+          end do
+
+       end if
 
        ! (y-z plane; u,y,z)
        do j = JJS,   JJE
@@ -1952,7 +2205,7 @@ contains
        call CHECK( __LINE__, QTRC(k,i,j,iq) )
        call CHECK( __LINE__, RFDX(i) )
 #endif
-          qflx_sgs_rhoq(k,i,j,iq,XDIR) = - 0.25_RP & ! 1/2/2
+          qflx_sgs_rhoq(k,i,j,XDIR,iq) = - 0.25_RP & ! 1/2/2
                * ( DENS(k,i,j)+DENS(k,i+1,j) ) &
                * ( nu(k,i,j)/Pr(k,i,j) + nu(k,i+1,j)/Pr(k,i+1,j) ) &
                * ( &
@@ -1979,7 +2232,7 @@ contains
        call CHECK( __LINE__, QTRC(KS,i,j,iq) )
        call CHECK( __LINE__, RFDX(i) )
 #endif
-          qflx_sgs_rhoq(KS,i,j,iq,XDIR) = - 0.25_RP & ! 1/2/2
+          qflx_sgs_rhoq(KS,i,j,XDIR,iq) = - 0.25_RP & ! 1/2/2
                * ( DENS(KS,i,j)+DENS(KS,i+1,j) ) &
                * ( nu(KS,i,j)/Pr(KS,i,j) + nu(KS,i+1,j)/Pr(KS,i+1,j) ) &
                * ( &
@@ -1989,7 +2242,7 @@ contains
                    - J13G(KS  ,i,j,I_UYZ) * ( QTRC(KS  ,i+1,j,iq)+QTRC(KS  ,i,j,iq) ) &
                    ) * 0.5_RP * RFDZ(KS) &
                ) * MAPF(i,j,1,I_UY) / GSQRT(KS,i,j,I_UYZ)
-          qflx_sgs_rhoq(KE,i,j,iq,XDIR) = - 0.25_RP & ! 1/2/2
+          qflx_sgs_rhoq(KE,i,j,XDIR,iq) = - 0.25_RP & ! 1/2/2
                * ( DENS(KE,i,j)+DENS(KE,i+1,j) ) &
                * ( nu(KE,i,j)/Pr(KE,i,j) + nu(KE,i+1,j)/Pr(KE,i+1,j) ) &
                * ( &
@@ -2017,7 +2270,7 @@ contains
        call CHECK( __LINE__, QTRC(k,i,j,iq) )
        call CHECK( __LINE__, RFDY(j) )
 #endif
-          qflx_sgs_rhoq(k,i,j,iq,YDIR) = - 0.25_RP &
+          qflx_sgs_rhoq(k,i,j,YDIR,iq) = - 0.25_RP &
                * ( DENS(k,i,j)+DENS(k,i,j+1) ) &
                * ( nu(k,i,j)/Pr(k,i,j) + nu(k,i,j+1)/Pr(k,i,j+1) ) &
                * ( &
@@ -2044,7 +2297,7 @@ contains
        call CHECK( __LINE__, QTRC(KS,i,j,iq) )
        call CHECK( __LINE__, RFDY(j) )
 #endif
-          qflx_sgs_rhoq(KS,i,j,iq,YDIR) = - 0.25_RP &
+          qflx_sgs_rhoq(KS,i,j,YDIR,iq) = - 0.25_RP &
                * ( DENS(KS,i,j)+DENS(KS,i,j+1) ) &
                * ( nu(KS,i,j)/Pr(KS,i,j) + nu(KS,i,j+1)/Pr(KS,i,j+1) ) &
                * ( &
@@ -2054,7 +2307,7 @@ contains
                      - J23G(KS  ,i,j,I_XVZ) * ( QTRC(KS  ,i,j+1,iq)+QTRC(KS  ,i,j,iq) ) &
                      ) * 0.5_RP * RFDZ(KS) &
                ) * MAPF(i,j,2,I_XV) / GSQRT(KS,i,j,I_XVZ)
-          qflx_sgs_rhoq(KE,i,j,iq,YDIR) = - 0.25_RP &
+          qflx_sgs_rhoq(KE,i,j,YDIR,iq) = - 0.25_RP &
                * ( DENS(KE,i,j)+DENS(KE,i,j+1) ) &
                * ( nu(KE,i,j)/Pr(KE,i,j) + nu(KE,i,j+1)/Pr(KE,i,j+1) ) &
                * ( &
