@@ -306,7 +306,7 @@ contains
    ! momentum -> velocity
     do j = JS-1, JE+1
     do i = IS-1, IE+1
-    do k = KS, KE
+    do k = KS, KE-1
 #ifdef DEBUG
        call CHECK( __LINE__, MOMZ(k,i,j) )
        call CHECK( __LINE__, DENS(k+1,i,j) )
@@ -314,6 +314,14 @@ contains
 #endif
        VELZ_XY(k,i,j) = 2.0_RP * MOMZ(k,i,j) / ( DENS(k+1,i,j)+DENS(k,i,j) )
     enddo
+    enddo
+    enddo
+#ifdef DEBUG
+       i = IUNDEF; j = IUNDEF; k = IUNDEF
+#endif
+    do j = JS-1, JE+1
+    do i = IS-1, IE+1
+       VELZ_XY(KE,i,j) = 0.0_RP
     enddo
     enddo
 #ifdef DEBUG
