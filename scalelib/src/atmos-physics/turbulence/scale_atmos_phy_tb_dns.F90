@@ -143,7 +143,7 @@ contains
     real(RP), intent(out) :: qflx_sgs_MOMX(KA,IA,JA,3)
     real(RP), intent(out) :: qflx_sgs_MOMY(KA,IA,JA,3)
     real(RP), intent(out) :: qflx_sgs_rhot(KA,IA,JA,3)
-    real(RP), intent(out) :: qflx_sgs_rhoq(KA,IA,JA,QA,3)
+    real(RP), intent(out) :: qflx_sgs_rhoq(KA,IA,JA,3,QA)
 
     real(RP), intent(inout) :: tke(KA,IA,JA) ! TKE
     real(RP), intent(out) :: nu (KA,IA,JA) ! eddy viscosity (center)
@@ -367,15 +367,15 @@ contains
        do j = JJS, JJE
        do i = IIS, IIE
        do k = KS, KE-1
-          qflx_sgs_rhoq(k,i,j,iq,ZDIR) = -0.5_RP * ( DENS(k+1,i,j)+DENS(k,i,j) ) &
+          qflx_sgs_rhoq(k,i,j,ZDIR,iq) = -0.5_RP * ( DENS(k+1,i,j)+DENS(k,i,j) ) &
                                        * ATMOS_PHY_TB_DNS_MU * ( QTRC(k+1,i,j,iq)-QTRC(k,i,j,iq) ) * RFDZ(k)
        enddo
        enddo
        enddo
        do j = JJS, JJE
        do i = IIS, IIE
-          qflx_sgs_rhoq(KS-1,i,j,iq,ZDIR) = 0.0_RP
-          qflx_sgs_rhoq(KE  ,i,j,iq,ZDIR) = 0.0_RP
+          qflx_sgs_rhoq(KS-1,i,j,ZDIR,iq) = 0.0_RP
+          qflx_sgs_rhoq(KE  ,i,j,ZDIR,iq) = 0.0_RP
        enddo
        enddo
 
@@ -383,7 +383,7 @@ contains
        do j = JJS,   JJE
        do i = IIS-1, IIE
        do k = KS,   KE
-          qflx_sgs_rhoq(k,i,j,iq,XDIR) = -0.5_RP * ( DENS(k,i+1,j)+DENS(k,i,j) ) &
+          qflx_sgs_rhoq(k,i,j,XDIR,iq) = -0.5_RP * ( DENS(k,i+1,j)+DENS(k,i,j) ) &
                                        * ATMOS_PHY_TB_DNS_MU * ( QTRC(k,i+1,j,iq)-QTRC(k,i,j,iq) ) * RFDX(i) * MAPF(i,j,1,I_XY)
        enddo
        enddo
@@ -393,7 +393,7 @@ contains
        do j = JJS-1, JJE
        do i = IIS,   IIE
        do k = KS,   KE
-          qflx_sgs_rhoq(k,i,j,iq,YDIR) = -0.5_RP * ( DENS(k,i,j+1)+DENS(k,i,j) ) &
+          qflx_sgs_rhoq(k,i,j,YDIR,iq) = -0.5_RP * ( DENS(k,i,j+1)+DENS(k,i,j) ) &
                                        * ATMOS_PHY_TB_DNS_MU * ( QTRC(k,i,j+1,iq)-QTRC(k,i,j,iq) ) * RFDY(j) * MAPF(i,j,2,I_XY)
        enddo
        enddo

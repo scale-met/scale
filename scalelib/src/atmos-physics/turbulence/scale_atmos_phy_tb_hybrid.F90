@@ -69,7 +69,7 @@ module scale_atmos_phy_tb_hybrid
        real(RP), intent(out) :: qflx_sgs_momx(KA,IA,JA,3)
        real(RP), intent(out) :: qflx_sgs_momy(KA,IA,JA,3)
        real(RP), intent(out) :: qflx_sgs_rhot(KA,IA,JA,3)
-       real(RP), intent(out) :: qflx_sgs_rhoq(KA,IA,JA,QA,3)
+       real(RP), intent(out) :: qflx_sgs_rhoq(KA,IA,JA,3,QA)
 
        real(RP), intent(inout) :: tke (KA,IA,JA) ! TKE
        real(RP), intent(out)   :: nu_C(KA,IA,JA) ! eddy viscosity (center)
@@ -228,7 +228,7 @@ contains
     real(RP), intent(out) :: qflx_sgs_momx(KA,IA,JA,3)
     real(RP), intent(out) :: qflx_sgs_momy(KA,IA,JA,3)
     real(RP), intent(out) :: qflx_sgs_rhot(KA,IA,JA,3)
-    real(RP), intent(out) :: qflx_sgs_rhoq(KA,IA,JA,QA,3)
+    real(RP), intent(out) :: qflx_sgs_rhoq(KA,IA,JA,3,QA)
 
     real(RP), intent(inout) :: tke (KA,IA,JA) ! TKE
     real(RP), intent(out) :: Nu(KA,IA,JA) ! eddy viscosity (center)
@@ -258,7 +258,7 @@ contains
     real(RP) :: w_qflx_sgs_momx(KA,IA,JA,3,2)
     real(RP) :: w_qflx_sgs_momy(KA,IA,JA,3,2)
     real(RP) :: w_qflx_sgs_rhot(KA,IA,JA,3,2)
-    real(RP) :: w_qflx_sgs_rhoq(KA,IA,JA,QA,3,2)
+    real(RP) :: w_qflx_sgs_rhoq(KA,IA,JA,3,QA,2)
 
     real(RP) :: w_tke (KA,IA,JA,2)
     real(RP) :: w_Nu(KA,IA,JA,2)
@@ -352,12 +352,12 @@ contains
     do j = 1, JA
     do i = 1, IA
     do k = KS, KE
-       qflx_sgs_rhoq(k,i,j,iq,1) = w_qflx_sgs_rhoq(k,i,j,iq,1,1) * (1.0_RP - frac(i,j)) &
-                                 + w_qflx_sgs_rhoq(k,i,j,iq,1,2) * frac(i,j)
-       qflx_sgs_rhoq(k,i,j,iq,2) = w_qflx_sgs_rhoq(k,i,j,iq,2,1) * (1.0_RP - frac(i,j)) &
-                                 + w_qflx_sgs_rhoq(k,i,j,iq,2,2) * frac(i,j)
-       qflx_sgs_rhoq(k,i,j,iq,3) = w_qflx_sgs_rhoq(k,i,j,iq,3,1) * (1.0_RP - frac(i,j)) &
-                                 + w_qflx_sgs_rhoq(k,i,j,iq,3,2) * frac(i,j)
+       qflx_sgs_rhoq(k,i,j,1,iq) = w_qflx_sgs_rhoq(k,i,j,1,iq,1) * (1.0_RP - frac(i,j)) &
+                                 + w_qflx_sgs_rhoq(k,i,j,1,iq,2) * frac(i,j)
+       qflx_sgs_rhoq(k,i,j,2,iq) = w_qflx_sgs_rhoq(k,i,j,2,iq,1) * (1.0_RP - frac(i,j)) &
+                                 + w_qflx_sgs_rhoq(k,i,j,2,iq,2) * frac(i,j)
+       qflx_sgs_rhoq(k,i,j,3,iq) = w_qflx_sgs_rhoq(k,i,j,3,iq,1) * (1.0_RP - frac(i,j)) &
+                                 + w_qflx_sgs_rhoq(k,i,j,3,iq,2) * frac(i,j)
     end do
     end do
     end do
