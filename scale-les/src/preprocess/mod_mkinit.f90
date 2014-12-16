@@ -367,9 +367,11 @@ contains
       if( IO_L ) write(IO_FID_LOG,*) '++++++ START MAKING INITIAL DATA ++++++'
 
       !--- Initialize variables
+#ifndef DRY
       do iq = 2, QA
          QTRC(:,:,:,iq) = 0.0_RP
       enddo
+#endif
 
       pres(:,:,:) = CONST_UNDEF8
       temp(:,:,:) = CONST_UNDEF8
@@ -567,6 +569,7 @@ contains
        PI => CONST_PI
     implicit none
 
+#ifndef DRY
     real(RP) :: xasta, xaend, dxaer
     real(RP), allocatable :: xabnd( : ), xactr( : )
 
@@ -653,6 +656,7 @@ contains
     deallocate( xactr )
     deallocate( xabnd )
 
+#endif
     return
   end subroutine SBMAERO_setup
 
@@ -893,6 +897,7 @@ contains
   subroutine MKINIT_tracerbubble
     implicit none
 
+#ifndef DRY
     ! Surface state
     real(RP) :: SFC_THETA               ! surface potential temperature [K]
     real(RP) :: SFC_PRES                ! surface pressure [Pa]
@@ -994,6 +999,7 @@ contains
        call PRC_MPIstop
     endif
 
+#endif
     return
   end subroutine MKINIT_tracerbubble
 
@@ -1558,6 +1564,7 @@ contains
     enddo
     enddo
 
+#ifndef DRY
     if ( QA >= 2 ) then
        do iq = 2, QA
        do j = JS, JE
@@ -1569,6 +1576,7 @@ contains
        enddo
        enddo
     endif
+#endif
 
     if ( flg_bin ) then
        write(*,*) 'xxx SBM cannot be used on turbulence. Check!'
@@ -2299,6 +2307,7 @@ enddo
     enddo
     enddo
 
+#ifndef DRY
     if ( QA >= 2 ) then
        do iq = 2, QA
        do j = JS, JE
@@ -2310,6 +2319,7 @@ enddo
        enddo
        enddo
     endif
+#endif
 
     do j = JS, JE
     do i = IS, IE
@@ -2326,6 +2336,7 @@ enddo
   subroutine MKINIT_DYCOMS2_RF01
     implicit none
 
+#ifndef DRY
     real(RP) :: PERTURB_AMP = 0.0_RP
     integer  :: RANDOM_LIMIT = 5
     integer  :: RANDOM_FLAG  = 0       ! 0 -> no perturbation
@@ -2575,6 +2586,7 @@ enddo
        endif
     endif
 
+#endif
     return
   end subroutine MKINIT_DYCOMS2_RF01
 
@@ -2583,6 +2595,7 @@ enddo
   subroutine MKINIT_DYCOMS2_RF02
     implicit none
 
+#ifndef DRY
     real(RP) :: PERTURB_AMP  = 0.0_RP
     integer  :: RANDOM_LIMIT = 5
     integer  :: RANDOM_FLAG  = 0 ! 0 -> no perturbation
@@ -2820,6 +2833,7 @@ enddo
        endif
     endif
 
+#endif
     return
   end subroutine MKINIT_DYCOMS2_RF02
 
@@ -2828,6 +2842,7 @@ enddo
   subroutine MKINIT_DYCOMS2_RF02_DNS
     implicit none
 
+#ifndef DRY
     real(RP) :: ZB  = 750.0_RP ! domain bottom
 !   real(RP) :: ZT  = 900.0_RP ! domain top
     real(RP) :: CONST_U = 0.0_RP
@@ -3078,6 +3093,7 @@ enddo
        endif
     endif
 
+#endif
     return
   end subroutine MKINIT_DYCOMS2_RF02_DNS
 
@@ -3086,6 +3102,7 @@ enddo
   subroutine MKINIT_RICO
     implicit none
 
+#ifndef DRY
     real(RP):: PERTURB_AMP_PT = 0.1_RP
     real(RP):: PERTURB_AMP_QV = 2.5E-5_RP
 
@@ -3293,6 +3310,7 @@ enddo
        endif
     endif
 
+#endif
     return
   end subroutine MKINIT_RICO
 
@@ -3927,7 +3945,6 @@ enddo
        URB_GRND_LAYER_TEMP
 
     integer :: ierr
-    integer :: i, j
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -4523,7 +4540,7 @@ enddo
     integer :: timelen = 1
     integer :: ierr
 
-    integer :: k, i, j, iq, n, ns, ne, l, ll
+    integer :: k, i, j, iq, n, ns, ne
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)

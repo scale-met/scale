@@ -23,6 +23,8 @@ module scale_atmos_phy_mp_common
   use scale_prof
   use scale_grid_index
   use scale_tracer
+  use scale_const, only: &
+     UNDEF => CONST_UNDEF
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -160,6 +162,8 @@ contains
 
     integer :: k, i, j, iq
     !---------------------------------------------------------------------------
+
+#ifndef DRY
 
     call PROF_rapstart('MP Saturation_adjustment', 2)
 
@@ -308,6 +312,12 @@ contains
 
     call PROF_rapend  ('MP Saturation_adjustment', 2)
 
+#else
+    RHOE_t = UNDEF
+    QTRC_t = UNDEF
+    RHOE0  = UNDEF
+    QTRC0  = UNDEF
+#endif
     return
   end subroutine ATMOS_PHY_MP_saturation_adjustment
 
@@ -365,6 +375,8 @@ contains
     logical  :: converged
     integer  :: k, i, j, ijk, iq, ite
     !---------------------------------------------------------------------------
+
+#ifndef DRY
 
     dtemp_criteria = 0.1_RP**(2+RP/2)
 
@@ -449,6 +461,11 @@ contains
        enddo
     enddo
 
+#else
+    TEMP1 = UNDEF
+    QTRC1 = UNDEF
+#endif
+
     return
   end subroutine moist_conversion_liq
 
@@ -516,6 +533,7 @@ contains
     integer  :: k, i, j, ijk, iq, ite
     !---------------------------------------------------------------------------
 
+#ifndef DRY
     dtemp_criteria = 0.1_RP**(2+RP/2)
 
     call SATURATION_dens2qsat_all( QSAT (:,:,:), & ! [OUT]
@@ -610,6 +628,11 @@ contains
           QTRC1(k,i,j,iq) = q(iq)
        enddo
     enddo
+
+#end
+    TEMP1 = UNDEF
+    QTRC1 = UNDEF
+#endif
 
     return
   end subroutine moist_conversion_all

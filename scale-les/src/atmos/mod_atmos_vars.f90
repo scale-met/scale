@@ -1714,11 +1714,11 @@ contains
                                  RHOT(:,:,:),  & ! [IN]
                                  QTRC(:,:,:,:) ) ! [IN]
 
-       RHOQ(:,:,:) = DENS(:,:,:) * QDRY (:,:,:)
+       RHOQ(KS:KE,IS:IE,JS:JE) = DENS(KS:KE,IS:IE,JS:JE) * QDRY (KS:KE,IS:IE,JS:JE)
 
        call STAT_total( total, RHOQ(:,:,:), 'QDRY' )
 
-       RHOQ(:,:,:) = DENS(:,:,:) * ( 1.0_RP - QDRY (:,:,:) ) ! Qtotal
+       RHOQ(KS:KE,IS:IE,JS:JE) = DENS(KS:KE,IS:IE,JS:JE) * ( 1.0_RP - QDRY (KS:KE,IS:IE,JS:JE) ) ! Qtotal
 
        call STAT_total( total, RHOQ(:,:,:), 'QTOT' )
 

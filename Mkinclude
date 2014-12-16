@@ -26,6 +26,8 @@ ifeq ($(AGGRESIVE),T)
 else
   ifeq ($(DEBUG),T)
     FFLAGS = $(FFLAGS_DEBUG) $(PERF_MONIT) $(RDMA)
+    FFLAGS_DYN = $(FFLAGS)
+    CFLAGS = $(CFLAGS_DEBUG) $(PERF_MONIT) $(RDMA)
   else
     FFLAGS = $(FFLAGS_FAST) $(PERF_MONIT) $(RDMA)
   endif

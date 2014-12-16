@@ -315,7 +315,9 @@ contains
     r(:,:,:) = UNDEF
     p(:,:,:) = UNDEF
 
+#ifndef DRY
     kappa(:,:,:) = UNDEF
+#endif
 #endif
 
     rdt = 1.0_RP / dtrk
@@ -2219,8 +2221,8 @@ contains
 #ifdef DEBUG
        call check_pres( &
             DPRES, REF_pres, PRES, RHOT_RK, RHOT &
-#ifdef DRY
-            , kappa
+#ifndef DRY
+            , kappa &
 #endif
     )
 #endif
@@ -3003,8 +3005,8 @@ contains
   subroutine check_pres( &
        DPRES, REF_pres, PRES, &
        RHOT_RK, RHOT &
-#ifdef DRY
-       , kappa
+#ifndef DRY
+       , kappa &
 #endif
        )
     use scale_const, only: &
@@ -3017,7 +3019,7 @@ contains
     real(RP), intent(in) :: PRES(KA,IA,JA)
     real(RP), intent(in) :: RHOT_RK(KA,IA,JA)
     real(RP), intent(in) :: RHOT(KA,IA,JA)
-#ifdef DRY
+#ifndef DRY
     real(RP), intent(in) :: kappa(KA,IA,JA)
 #endif
 
@@ -3028,7 +3030,7 @@ contains
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-#ifdef DRY
+#ifndef DRY
        R = Rtot(k,i,j)
        kapp = kappa(k,i,j)
 #else

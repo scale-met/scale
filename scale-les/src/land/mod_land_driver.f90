@@ -185,9 +185,9 @@ contains
                                  LAND_PROPERTY  (:,:,I_Z0E)          ) ! [IN]
        endif
 
-       LAND_TEMP_Z1(:,:) = LAND_TEMP(LKS,:,:)
+       LAND_TEMP_Z1(IS:IE,JS:JE) = LAND_TEMP(LKS,IS:IE,JS:JE)
 
-       LAND_BETA   (:,:) = min( LAND_WATER(LKS,:,:) / LAND_PROPERTY(:,:,I_WaterCritical), BETA_MAX )
+       LAND_BETA   (IS:IE,JS:JE) = min( LAND_WATER(LKS,IS:IE,JS:JE) / LAND_PROPERTY(IS:IE,JS:JE,I_WaterCritical), BETA_MAX )
 
        call CPL_putLnd( LAND_TEMP_Z1(:,:), & ! [IN]
                         LAND_BETA   (:,:)  ) ! [IN]
