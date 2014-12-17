@@ -629,7 +629,7 @@ contains
        enddo
     enddo
 
-#endif
+#else
     TEMP1 = UNDEF
     QTRC1 = UNDEF
 #endif
