@@ -63,6 +63,7 @@
 !! @li      2014-07-25 (Y.Sato)  [rev] Move sdm_getrklu from sdm_iniset to ATMOS_PHY_MP_sdm_setup
 !! @li      2014-07-25 (Y.Sato)  [rev] Add COMM_var, and COMM_wait for filling u_scale, v_scale, and w_scale
 !! @li      2014-12-12 (Y.Sato)  [mod] Modify for using QTRC_sdm in sdm_sd2qcqr in sdm_iniset 
+!! @li      2014-12-17 (Y.Sato)  [mod] Add initialization of prr_crs for Restart
 !<
 !-------------------------------------------------------------------------------
 #include "macro_thermodyn.h"
@@ -629,6 +630,7 @@ contains
       if( sd_rest_flg_in ) then
          !---- read restart file
          call ATMOS_PHY_MP_sdm_restart_in
+         prr_crs(1:IA,1:JA,1:2)=0.0_RP
       else
          !---- set initial condition
          call sdm_iniset(DENS, RHOT, QTRC,                   &
