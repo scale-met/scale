@@ -210,9 +210,6 @@ contains
           LAT(:,:) = REAL_LAT(:,:)
        endif
 
-if( IO_L ) write(IO_FID_LOG,*) SFC_TEMP(IS:IE,JS:JE)
-if( IO_L ) write(IO_FID_LOG,*) SFC_albedo(IS:IE,JS:JE,1)
-if( IO_L ) write(IO_FID_LOG,*) SFC_albedo(IS:IE,JS:JE,2)
        call SOLARINS_insolation( solins(:,:),    & ! [OUT]
                                  cosSZA(:,:),    & ! [OUT]
                                  LON   (:,:),    & ! [IN]

@@ -151,7 +151,9 @@ contains
     use mod_atmos_driver, only: &
        ATMOS_driver_setup,    &
        ATMOS_driver,          &
-       ATMOS_driver_finalize
+       ATMOS_driver_initial,  &
+       ATMOS_driver_finalize, &
+       ATMOS_SURFACE_SET
     use mod_ocean_admin, only: &
        OCEAN_admin_setup, &
        OCEAN_do
@@ -162,7 +164,8 @@ contains
        OCEAN_vars_restart_write
     use mod_ocean_driver, only: &
        OCEAN_driver_setup, &
-       OCEAN_driver
+       OCEAN_driver,       &
+       OCEAN_SURFACE_SET
     use mod_land_admin, only: &
        LAND_admin_setup, &
        LAND_do
@@ -173,7 +176,8 @@ contains
        LAND_vars_restart_write
     use mod_land_driver, only: &
        LAND_driver_setup, &
-       LAND_driver
+       LAND_driver,       &
+       LAND_SURFACE_SET
     use mod_urban_admin, only: &
        URBAN_admin_setup, &
        URBAN_do
@@ -184,7 +188,8 @@ contains
        URBAN_vars_restart_write
     use mod_urban_driver, only: &
        URBAN_driver_setup, &
-       URBAN_driver
+       URBAN_driver,       &
+       URBAN_SURFACE_SET
     use mod_cpl_admin, only: &
        CPL_admin_setup
     use mod_cpl_vars, only: &
@@ -323,12 +328,27 @@ contains
   
     ! first monitor
     call ATMOS_vars_monitor
+
+    ! setup surface condition
+    call ATMOS_SURFACE_SET( countup=.false. )
+    call OCEAN_SURFACE_SET( countup=.false. )
+    call LAND_SURFACE_SET ( countup=.false. )
+    call URBAN_SURFACE_SET( countup=.false. )
   
     ! setup submodel driver
     call ATMOS_driver_setup
     call OCEAN_driver_setup
     call LAND_driver_setup
     call URBAN_driver_setup
+
+    ! setup initial condition
+    call ATMOS_driver_initial
+
+    ! setup surface condition again
+    call ATMOS_SURFACE_SET( countup=.true. )
+    call OCEAN_SURFACE_SET( countup=.true. )
+    call LAND_SURFACE_SET ( countup=.true. )
+    call URBAN_SURFACE_SET( countup=.true. )
   
     ! setup user-defined procedure
     call USER_setup
@@ -364,20 +384,20 @@ contains
       call USER_step
   
       ! change to next state
-      if( ATMOS_do .AND. TIME_DOATMOS_step ) call ATMOS_driver
       if( OCEAN_do .AND. TIME_DOOCEAN_step ) call OCEAN_driver
       if( LAND_do  .AND. TIME_DOLAND_step  ) call LAND_driver
       if( URBAN_do .AND. TIME_DOURBAN_step ) call URBAN_driver
+      if( ATMOS_do .AND. TIME_DOATMOS_step ) call ATMOS_driver
   
       ! history&monitor file output
       call HIST_write
       call MONIT_write('MAIN')
   
       ! restart output
-      if( ATMOS_sw_restart .AND. TIME_DOATMOS_restart ) call ATMOS_vars_restart_write
       if( OCEAN_sw_restart .AND. TIME_DOOCEAN_restart ) call OCEAN_vars_restart_write
       if( LAND_sw_restart  .AND. TIME_DOLAND_restart  ) call LAND_vars_restart_write
       if( URBAN_sw_restart .AND. TIME_DOURBAN_restart ) call URBAN_vars_restart_write
+      if( ATMOS_sw_restart .AND. TIME_DOATMOS_restart ) call ATMOS_vars_restart_write
   
       if( TIME_DOend ) exit
   
