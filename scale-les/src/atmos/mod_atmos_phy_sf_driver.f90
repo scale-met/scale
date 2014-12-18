@@ -205,6 +205,7 @@ contains
     !---------------------------------------------------------------------------
 
     if ( update_flag ) then
+
        ! update surface density, surface pressure
        call BOTTOM_estimate( DENS     (:,:,:), & ! [IN]
                              PRES     (:,:,:), & ! [IN]

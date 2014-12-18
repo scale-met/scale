@@ -506,6 +506,13 @@ contains
   !-----------------------------------------------------------------------------
   !> Set surface boundary condition
   subroutine ATMOS_SURFACE_SET( countup )
+    use scale_grid_real, only: &
+       REAL_CZ, &
+       REAL_Z1
+    use scale_topography, only: &
+       TOPO_Zsfc
+    use scale_atmos_bottom, only: &
+       BOTTOM_estimate => ATMOS_BOTTOM_estimate
     use mod_atmos_vars, only: &
        DENS, &
        QTRC, &
@@ -520,8 +527,6 @@ contains
     use mod_atmos_phy_rd_vars, only: &
        SFLX_LW_dn => ATMOS_PHY_RD_SFLX_LW_dn, &
        SFLX_SW_dn => ATMOS_PHY_RD_SFLX_SW_dn
-    use mod_atmos_phy_sf_vars, only: &
-       SFC_PRES   => ATMOS_PHY_SF_SFC_PRES
     use mod_cpl_admin, only: &
        CPL_sw
     use mod_cpl_vars, only: &
@@ -532,12 +537,22 @@ contains
     logical, intent(in) :: countup
 
     ! works
+    real(RP) :: SFC_DENS(IA,JA)
+    real(RP) :: SFC_PRES(IA,JA)
     real(RP) :: ATM_PBL (IA,JA)
     !---------------------------------------------------------------------------
 
     if ( CPL_sw ) then
        ! planetary boundary layer
        ATM_PBL(:,:) = 100.0_RP ! tentative
+
+       call BOTTOM_estimate( DENS     (:,:,:), & ! [IN]
+                             PRES     (:,:,:), & ! [IN]
+                             REAL_CZ  (:,:,:), & ! [IN]
+                             TOPO_Zsfc(:,:),   & ! [IN]
+                             REAL_Z1  (:,:),   & ! [IN]
+                             SFC_DENS (:,:),   & ! [OUT]
+                             SFC_PRES (:,:)    ) ! [OUT]
 
        call CPL_putATM( TEMP      (KS,:,:),   & ! [IN]
                         PRES      (KS,:,:),   & ! [IN]
