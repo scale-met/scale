@@ -114,9 +114,22 @@ contains
   !-----------------------------------------------------------------------------
   !> Read topography
   subroutine TOPO_read
+    use gtool_file, only: &
+       FileRead
     use scale_fileio, only: &
        FILEIO_read
+    use scale_process, only: &
+       PRC_MPIstop, &
+       PRC_myrank
+    use scale_grid, only: &
+       GRID_CBFZ, &
+       GRID_CBFX, &
+       GRID_CBFY
+
     implicit none
+
+    real(RP) :: tmp_CBFZ(KA), tmp_CBFX(IA), tmp_CBFY(JA)
+    integer  :: i, j, k
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -130,6 +143,33 @@ contains
        call TOPO_fillhalo
 
        TOPO_exist = .true.
+
+       call FileRead( tmp_CBFZ(:),  TOPO_IN_BASENAME, 'CBFZ', 1, PRC_myrank )
+       call FileRead( tmp_CBFX(:),  TOPO_IN_BASENAME, 'CBFX', 1, PRC_myrank )
+       call FileRead( tmp_CBFY(:),  TOPO_IN_BASENAME, 'CBFY', 1, PRC_myrank )
+
+       do i = 1, IA
+         if( tmp_CBFX(i) /= GRID_CBFX(i) ) then
+           write( IO_L,'(A)')  '*** Buffer layer in TOPO_IN_BASENAME is different from GRID_IN_BASENAME ***'
+           write( IO_L,* )  "I", i, tmp_CBFX(i), GRID_CBFX(i)
+           call PRC_MPIstop
+         endif
+       enddo
+       do j = 1, JA
+         if( tmp_CBFY(j) /= GRID_CBFY(j) ) then
+           write( IO_L,'(A)')  '*** Buffer layer in TOPO_IN_BASENAME is different from GRID_IN_BASENAME ***'
+           write( IO_L,* )  "J", j, tmp_CBFY(j), GRID_CBFY(j)
+           call PRC_MPIstop
+         endif
+       enddo
+       do k = 1, KA
+         if( tmp_CBFZ(k) /= GRID_CBFZ(k) ) then
+           write( IO_L,'(A)')  '*** Buffer layer in TOPO_IN_BASENAME is different from GRID_IN_BASENAME ***'
+           write( IO_L,* )  "K", k, tmp_CBFZ(k), GRID_CBFZ(k)
+           call PRC_MPIstop
+         endif
+       enddo
+
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** topography file is not specified.'
 

@@ -770,7 +770,8 @@ contains
     use gtool_file, only: &
        FileRead
     use scale_process, only: &
-       PRC_myrank
+       PRC_myrank, &
+       PRC_MPIstop
     implicit none
 
     real(RP) :: reference_atmos(KMAX,IMAXB,JMAXB) !> restart file (no HALO)
@@ -778,6 +779,8 @@ contains
     character(len=H_LONG) :: bname
 
     integer :: iq
+    real(RP) :: tmp_CBFZ(KA), tmp_CBFX(IA), tmp_CBFY(JA)
+    integer  :: i, j, k
     !---------------------------------------------------------------------------
 
     bname = ATMOS_BOUNDARY_IN_BASENAME
@@ -839,6 +842,29 @@ contains
           ATMOS_BOUNDARY_alpha_QTRC(KS:KE,ISB:IEB,JSB:JEB,iq) = reference_atmos(:,:,:)
        end do
     endif
+
+    call FileRead( tmp_CBFZ(:),  bname, 'CBFZ', 1, PRC_myrank )
+    call FileRead( tmp_CBFX(:),  bname, 'CBFX', 1, PRC_myrank )
+    call FileRead( tmp_CBFY(:),  bname, 'CBFY', 1, PRC_myrank )
+
+    do i = 1, IA
+       if( tmp_CBFX(i) /= GRID_CBFX(i) ) then
+           write( IO_L,'(A)')  '*** Buffer layer in ATMOS_BOUNDARY_IN_BASENAME is different from GRID_IN_BASENAME ***'
+           call PRC_MPIstop
+       endif
+    enddo
+    do j = 1, JA
+       if( tmp_CBFY(j) /= GRID_CBFY(j) ) then
+           write( IO_L,'(A)')  '*** Buffer layer in ATMOS_BOUNDARY_IN_BASENAME is different from GRID_IN_BASENAME ***'
+           call PRC_MPIstop
+       endif
+    enddo
+    do k = 1, KA
+       if( tmp_CBFZ(k) /= GRID_CBFZ(k) ) then
+           write( IO_L,'(A)')  '*** Buffer layer in ATMOS_BOUNDARY_IN_BASENAME is different from GRID_IN_BASENAME ***'
+           call PRC_MPIstop
+       endif
+    enddo
 
     call ATMOS_BOUNDARY_var_fillhalo
     call ATMOS_BOUNDARY_alpha_fillhalo
