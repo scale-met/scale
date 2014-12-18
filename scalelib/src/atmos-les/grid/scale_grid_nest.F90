@@ -1338,6 +1338,8 @@ contains
     integer :: xs, xe
     integer :: ys, ye
 
+    real(RP) :: max_ref, max_loc
+
     integer :: i, k, rq
     !---------------------------------------------------------------------------
 
@@ -1480,6 +1482,16 @@ contains
           enddo
        enddo
 
+       ! check domain compatibility
+       max_ref = maxval( buffer_ref_FZ(:,:,:) )
+       max_loc = maxval( REAL_FZ(KS-1:KE,:,:) ) ! HALO + 1
+       if ( max_ref < max_loc ) then
+          write(*,*) 'xxx ERROR: REQUESTED DOMAIN IS TOO MUCH BROAD'
+          write(*,*) 'xxx -- VERTICAL direction over the limit'
+          write(*,*) 'xxx -- reference max: ', max_ref
+          write(*,*) 'xxx --     local max: ', max_loc
+          call PRC_MPIstop
+       endif
 
     else
     !---------------------------------------------------
