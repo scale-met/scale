@@ -2360,21 +2360,26 @@ contains
   !-----------------------------------------------------------------------------
   !> [finalize: disconnect] Inter-communication
   subroutine NEST_COMM_disconnect ( )
+    use scale_process, only: &
+       GLOBAL_COMM_WORLD
     implicit none
 
     integer :: ierr
     !---------------------------------------------------------------------------
 
+    if( IO_L ) write(IO_FID_LOG,'(1x,A)') '*** Waiting finish of whole processes'
+    call MPI_BARRIER(GLOBAL_COMM_WORLD, ierr)
+
     if ( ONLINE_IAM_PARENT ) then
-       if( IO_L ) write(IO_FID_LOG,'(1x,A)') '*** Waiting finish of whole processes as a parent'
-       call MPI_BARRIER(INTERCOMM_DAUGHTER, ierr)
+       !if( IO_L ) write(IO_FID_LOG,'(1x,A)') '*** Waiting finish of whole processes as a parent'
+       !call MPI_BARRIER(INTERCOMM_DAUGHTER, ierr)
        call MPI_COMM_FREE(INTERCOMM_DAUGHTER, ierr)
-       if( IO_L ) write(IO_FID_LOG,'(1x,A)') '*** Disconnected communication with child '
+       if( IO_L ) write(IO_FID_LOG,'(1x,A)') '*** Disconnected communication with child'
     endif
 
     if ( ONLINE_IAM_DAUGHTER ) then
-       if( IO_L ) write(IO_FID_LOG,'(1x,A)') '*** Waiting finish of whole processes as a child'
-       call MPI_BARRIER(INTERCOMM_PARENT, ierr)
+       !if( IO_L ) write(IO_FID_LOG,'(1x,A)') '*** Waiting finish of whole processes as a child'
+       !call MPI_BARRIER(INTERCOMM_PARENT, ierr)
        call MPI_COMM_FREE(INTERCOMM_PARENT, ierr)
        if( IO_L ) write(IO_FID_LOG,'(1x,A)') '*** Disconnected communication with parent'
     endif
