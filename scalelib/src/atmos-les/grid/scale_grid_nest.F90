@@ -1338,6 +1338,8 @@ contains
     integer :: xs, xe
     integer :: ys, ye
 
+    real(RP) :: max_ref, max_loc
+
     integer :: i, k, rq
     !---------------------------------------------------------------------------
 
@@ -1480,6 +1482,16 @@ contains
           enddo
        enddo
 
+       ! check domain compatibility
+       max_ref = maxval( buffer_ref_FZ(:,:,:) )
+       max_loc = maxval( REAL_FZ(KS-1:KE,:,:) ) ! HALO + 1
+       if ( max_ref < max_loc ) then
+          write(*,*) 'xxx ERROR: REQUESTED DOMAIN IS TOO MUCH BROAD'
+          write(*,*) 'xxx -- VERTICAL direction over the limit'
+          write(*,*) 'xxx -- reference max: ', max_ref
+          write(*,*) 'xxx --     local max: ', max_loc
+          call PRC_MPIstop
+       endif
 
     else
     !---------------------------------------------------
@@ -2348,21 +2360,26 @@ contains
   !-----------------------------------------------------------------------------
   !> [finalize: disconnect] Inter-communication
   subroutine NEST_COMM_disconnect ( )
+    use scale_process, only: &
+       GLOBAL_COMM_WORLD
     implicit none
 
     integer :: ierr
     !---------------------------------------------------------------------------
 
+    if( IO_L ) write(IO_FID_LOG,'(1x,A)') '*** Waiting finish of whole processes'
+    call MPI_BARRIER(GLOBAL_COMM_WORLD, ierr)
+
     if ( ONLINE_IAM_PARENT ) then
-       if( IO_L ) write(IO_FID_LOG,'(1x,A)') '*** Waiting finish of whole processes as a parent'
-       call MPI_BARRIER(INTERCOMM_DAUGHTER, ierr)
+       !if( IO_L ) write(IO_FID_LOG,'(1x,A)') '*** Waiting finish of whole processes as a parent'
+       !call MPI_BARRIER(INTERCOMM_DAUGHTER, ierr)
        call MPI_COMM_FREE(INTERCOMM_DAUGHTER, ierr)
-       if( IO_L ) write(IO_FID_LOG,'(1x,A)') '*** Disconnected communication with child '
+       if( IO_L ) write(IO_FID_LOG,'(1x,A)') '*** Disconnected communication with child'
     endif
 
     if ( ONLINE_IAM_DAUGHTER ) then
-       if( IO_L ) write(IO_FID_LOG,'(1x,A)') '*** Waiting finish of whole processes as a child'
-       call MPI_BARRIER(INTERCOMM_PARENT, ierr)
+       !if( IO_L ) write(IO_FID_LOG,'(1x,A)') '*** Waiting finish of whole processes as a child'
+       !call MPI_BARRIER(INTERCOMM_PARENT, ierr)
        call MPI_COMM_FREE(INTERCOMM_PARENT, ierr)
        if( IO_L ) write(IO_FID_LOG,'(1x,A)') '*** Disconnected communication with parent'
     endif

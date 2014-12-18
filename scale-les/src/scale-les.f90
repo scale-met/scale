@@ -74,17 +74,20 @@ program scaleles_launcher
      CONF_FILES
   !-----------------------------------------------------------
 
-  !--- Read from argument
-  if ( COMMAND_ARGUMENT_COUNT() < 1 ) then
-     write(*,*) 'WARNING: No config file specified!'
-     write(*,*) '         Default values are used.'
-  else
-     call get_command_argument(1,fname_launch)
-  endif
-
   NUM_DOMAIN    = 1
   PRC_DOMAINS   = 0
   CONF_FILES(1) = fname_launch
+
+  ! start MPI
+  call PRC_MPIstart
+
+  !--- Read from argument
+  if ( COMMAND_ARGUMENT_COUNT() < 1 ) then
+     if (GLOBAL_LOG) write(*,*) 'WARNING: No config file specified!'
+     if (GLOBAL_LOG) write(*,*) '         Default values are used.'
+  else
+     call get_command_argument(1,fname_launch)
+  endif
 
   !--- Open config file till end
   LNC_FID_CONF = IO_get_available_fid()
@@ -94,10 +97,10 @@ program scaleles_launcher
         status = 'old',              &
         iostat = ierr                )
   if ( ierr /= 0 ) then
-     write(*,*)
-     write(*,*) 'WARNING: Failed to open config file! :', trim(fname_launch)
-     write(*,*) '         Default values are used.'
-     write(*,*)
+     if (GLOBAL_LOG) write(*,*)
+     if (GLOBAL_LOG) write(*,*) 'WARNING: Failed to open config file! :', trim(fname_launch)
+     if (GLOBAL_LOG) write(*,*) '         Default values are used.'
+     if (GLOBAL_LOG) write(*,*)
   end if
 
   !--- read PARAM
@@ -105,14 +108,12 @@ program scaleles_launcher
   read(LNC_FID_CONF,nml=PARAM_LAUNCHER,iostat=ierr)
 
   if( ierr > 0 ) then !--- fatal error
-     write(*,*) ' xxx Not appropriate names in namelist PARAM_LAUNCHER . Check!'
+     if (GLOBAL_LOG) write(*,*) ' xxx Not appropriate names in namelist PARAM_LAUNCHER . Check!'
      call PRC_MPIstop
   endif
 
   close( LNC_FID_CONF )
 
-  ! start MPI
-  call PRC_MPIstart
   if ( NUM_DOMAIN == 1 ) then
      PRC_DOMAINS(1) = GLOBAL_nmax
   endif
