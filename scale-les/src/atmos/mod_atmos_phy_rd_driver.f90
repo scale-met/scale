@@ -48,8 +48,6 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine ATMOS_PHY_RD_driver_setup
-    use mod_admin_restart, only: &
-       RESTART_RUN
     use scale_atmos_phy_rd, only: &
        ATMOS_PHY_RD_setup
     use mod_atmos_admin, only: &

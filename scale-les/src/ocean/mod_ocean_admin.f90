@@ -54,7 +54,7 @@ contains
     implicit none
 
     NAMELIST / PARAM_OCEAN / &
-       OCEAN_do,  &
+       OCEAN_do,   &
        OCEAN_TYPE
 
     integer :: ierr

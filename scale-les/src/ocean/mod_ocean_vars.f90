@@ -48,21 +48,49 @@ module mod_ocean_vars
   character(len=H_MID),  public :: OCEAN_RESTART_OUT_DTYPE    = 'DEFAULT'       !< REAL4 or REAL8
 
   ! prognostic variables
-  real(RP), public, allocatable :: OCEAN_TEMP      (:,:)   !< temperature at uppermost ocean layer (SST)  [K]
-
-  ! tendency variables
-  real(RP), public, allocatable :: OCEAN_TEMP_t    (:,:)   !< tendency of OCEAN_TEMP
-
-  ! for restart
-  real(RP), public, allocatable :: OCEAN_SFC_TEMP  (:,:)   !< ocean surface skin temperature              [K]
-  real(RP), public, allocatable :: OCEAN_SFC_albedo(:,:,:) !< ocean surface albedo                        [0-1]
+  real(RP), public, allocatable :: OCEAN_TEMP      (:,:)   !< temperature at uppermost ocean layer [K]
+  real(RP), public, allocatable :: OCEAN_SFC_TEMP  (:,:)   !< ocean surface skin temperature [K]
+  real(RP), public, allocatable :: OCEAN_SFC_albedo(:,:,:) !< ocean surface albedo [0-1]
   real(RP), public, allocatable :: OCEAN_SFC_Z0M   (:,:)   !< ocean surface roughness length for momentum [m]
   real(RP), public, allocatable :: OCEAN_SFC_Z0H   (:,:)   !< ocean surface roughness length for heat [m]
   real(RP), public, allocatable :: OCEAN_SFC_Z0E   (:,:)   !< ocean surface roughness length for vapor [m]
 
-  real(RP), public, allocatable :: OCEAN_SFLX_heat (:,:)   !< ocean surface heat flux [J/m2/s]
-  real(RP), public, allocatable :: OCEAN_SFLX_prec (:,:)   !< ocean surface precipitation flux [kg/m2/s]
-  real(RP), public, allocatable :: OCEAN_SFLX_evap (:,:)   !< ocean surface water vapor flux [kg/m2/s]
+  ! tendency variables
+  real(RP), public, allocatable :: OCEAN_TEMP_t      (:,:)   !< tendency of OCEAN_TEMP
+  real(RP), public, allocatable :: OCEAN_SFC_TEMP_t  (:,:)   !< tendency of OCEAN_SFC_TEMP
+  real(RP), public, allocatable :: OCEAN_SFC_albedo_t(:,:,:) !< tendency of OCEAN_SFC_alebdo
+  real(RP), public, allocatable :: OCEAN_SFC_Z0M_t   (:,:)   !< tendency of OCEAN_SFC_Z0M
+  real(RP), public, allocatable :: OCEAN_SFC_Z0H_t   (:,:)   !< tendency of OCEAN_SFC_Z0H
+  real(RP), public, allocatable :: OCEAN_SFC_Z0E_t   (:,:)   !< tendency of OCEAN_SFC_Z0E
+
+  ! surface variables for restart
+  real(RP), public, allocatable :: OCEAN_SFLX_MW  (:,:) !< ocean surface w-momentum flux    [kg/m2/s]
+  real(RP), public, allocatable :: OCEAN_SFLX_MU  (:,:) !< ocean surface u-momentum flux    [kg/m2/s]
+  real(RP), public, allocatable :: OCEAN_SFLX_MV  (:,:) !< ocean surface v-momentum flux    [kg/m2/s]
+  real(RP), public, allocatable :: OCEAN_SFLX_SH  (:,:) !< ocean surface sensible heat flux [J/m2/s]
+  real(RP), public, allocatable :: OCEAN_SFLX_LH  (:,:) !< ocean surface latent heat flux   [J/m2/s]
+  real(RP), public, allocatable :: OCEAN_SFLX_WH  (:,:) !< ocean surface water heat flux    [J/m2/s]
+  real(RP), public, allocatable :: OCEAN_SFLX_evap(:,:) !< ocean surface water vapor flux   [kg/m2/s]
+
+  ! diagnostic variables
+  real(RP), public, allocatable :: OCEAN_U10(:,:) !< ocean surface velocity u at 10m [m/s]
+  real(RP), public, allocatable :: OCEAN_V10(:,:) !< ocean surface velocity v at 10m [m/s]
+  real(RP), public, allocatable :: OCEAN_T2 (:,:) !< ocean surface temperature at 2m [K]
+  real(RP), public, allocatable :: OCEAN_Q2 (:,:) !< ocean surface water vapor at 2m [kg/kg]
+
+  ! recieved atmospheric variables
+  real(RP), public, allocatable :: ATMOS_TEMP     (:,:)
+  real(RP), public, allocatable :: ATMOS_PRES     (:,:)
+  real(RP), public, allocatable :: ATMOS_W        (:,:)
+  real(RP), public, allocatable :: ATMOS_U        (:,:)
+  real(RP), public, allocatable :: ATMOS_V        (:,:)
+  real(RP), public, allocatable :: ATMOS_DENS     (:,:)
+  real(RP), public, allocatable :: ATMOS_QV       (:,:)
+  real(RP), public, allocatable :: ATMOS_PBL      (:,:)
+  real(RP), public, allocatable :: ATMOS_SFC_PRES (:,:)
+  real(RP), public, allocatable :: ATMOS_SFLX_LW  (:,:)
+  real(RP), public, allocatable :: ATMOS_SFLX_SW  (:,:)
+  real(RP), public, allocatable :: ATMOS_SFLX_prec(:,:)
 
   !-----------------------------------------------------------------------------
   !
@@ -74,17 +102,21 @@ module mod_ocean_vars
   !
   logical,                private :: OCEAN_VARS_CHECKRANGE      = .false.
 
-  integer,                private, parameter :: VMAX = 10      !< number of the variables
-  integer,                private, parameter :: I_TEMP          =  1
-  integer,                private, parameter :: I_SFC_TEMP      =  2
-  integer,                private, parameter :: I_SFC_albedo_LW =  3
-  integer,                private, parameter :: I_SFC_albedo_SW =  4
-  integer,                private, parameter :: I_SFC_Z0M       =  5
-  integer,                private, parameter :: I_SFC_Z0H       =  6
-  integer,                private, parameter :: I_SFC_Z0E       =  7
-  integer,                private, parameter :: I_SFLX_heat     =  8
-  integer,                private, parameter :: I_SFLX_prec     =  9
-  integer,                private, parameter :: I_SFLX_evap     = 10
+  integer,                private, parameter :: VMAX         = 14 !< number of the variables
+  integer,                private, parameter :: I_TEMP       =  1
+  integer,                private, parameter :: I_SFC_TEMP   =  2
+  integer,                private, parameter :: I_SFC_ALB_LW =  3
+  integer,                private, parameter :: I_SFC_ALB_SW =  4
+  integer,                private, parameter :: I_SFC_Z0M    =  5
+  integer,                private, parameter :: I_SFC_Z0H    =  6
+  integer,                private, parameter :: I_SFC_Z0E    =  7
+  integer,                private, parameter :: I_SFLX_MW    =  8
+  integer,                private, parameter :: I_SFLX_MU    =  9
+  integer,                private, parameter :: I_SFLX_MV    = 10
+  integer,                private, parameter :: I_SFLX_SH    = 11
+  integer,                private, parameter :: I_SFLX_LH    = 12
+  integer,                private, parameter :: I_SFLX_WH    = 13
+  integer,                private, parameter :: I_SFLX_evap  = 14
 
   character(len=H_SHORT), private            :: VAR_NAME(VMAX) !< name  of the variables
   character(len=H_MID),   private            :: VAR_DESC(VMAX) !< desc. of the variables
@@ -97,18 +129,26 @@ module mod_ocean_vars
                   'OCEAN_SFC_Z0M',   &
                   'OCEAN_SFC_Z0H',   &
                   'OCEAN_SFC_Z0E',   &
-                  'OCEAN_SFLX_heat', &
-                  'OCEAN_SFLX_prec', &
+                  'OCEAN_SFLX_MW',   &
+                  'OCEAN_SFLX_MU',   &
+                  'OCEAN_SFLX_MV',   &
+                  'OCEAN_SFLX_SH',   &
+                  'OCEAN_SFLX_LH',   &
+                  'OCEAN_SFLX_WH',   &
                   'OCEAN_SFLX_evap'  /
-  data VAR_DESC / 'temperature at uppermost ocean layer (SST)', &
+  data VAR_DESC / 'temperature at uppermost ocean layer', &
                   'ocean surface skin temperature',             &
                   'ocean surface albedo (longwave)',            &
                   'ocean surface albedo (shortwave)',           &
                   'ocean surface roughness length (momentum)',  &
                   'ocean surface roughness length (heat)',      &
                   'ocean surface roughness length (vapor)',     &
-                  'ocean surface heat flux',                    &
-                  'ocean surface precipitation flux',           &
+                  'ocean surface w-momentum flux',              &
+                  'ocean surface u-momentum flux',              &
+                  'ocean surface v-momentum flux',              &
+                  'ocean surface sensible heat flux',           &
+                  'ocean surface latent heat flux',             &
+                  'ocean surface water heat flux',              &
                   'ocean surface water vapor flux'              /
   data VAR_UNIT / 'K',       &
                   'K',       &
@@ -117,8 +157,12 @@ module mod_ocean_vars
                   'm',       &
                   'm',       &
                   'm',       &
-                  'J/m2/s',  &
                   'kg/m2/s', &
+                  'kg/m2/s', &
+                  'kg/m2/s', &
+                  'J/m2/s',  &
+                  'J/m2/s',  &
+                  'J/m2/s',  &
                   'kg/m2/s'  /
 
   !-----------------------------------------------------------------------------
@@ -146,28 +190,80 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[VARS] / Categ[OCEAN] / Origin[SCALE-LES]'
 
-    allocate( OCEAN_TEMP  (IA,JA) )
-    allocate( OCEAN_TEMP_t(IA,JA) )
-    OCEAN_TEMP  (:,:) = UNDEF
-    OCEAN_TEMP_t(:,:) = UNDEF
-
+    allocate( OCEAN_TEMP      (IA,JA)   )
     allocate( OCEAN_SFC_TEMP  (IA,JA)   )
     allocate( OCEAN_SFC_albedo(IA,JA,2) )
     allocate( OCEAN_SFC_Z0M   (IA,JA)   )
     allocate( OCEAN_SFC_Z0H   (IA,JA)   )
     allocate( OCEAN_SFC_Z0E   (IA,JA)   )
+    OCEAN_TEMP      (:,:)   = UNDEF
     OCEAN_SFC_TEMP  (:,:)   = UNDEF
     OCEAN_SFC_albedo(:,:,:) = UNDEF
     OCEAN_SFC_Z0M   (:,:)   = UNDEF
     OCEAN_SFC_Z0H   (:,:)   = UNDEF
     OCEAN_SFC_Z0E   (:,:)   = UNDEF
 
-    allocate( OCEAN_SFLX_heat(IA,JA) )
-    allocate( OCEAN_SFLX_prec(IA,JA) )
+    allocate( OCEAN_TEMP_t      (IA,JA)   )
+    allocate( OCEAN_SFC_TEMP_t  (IA,JA)   )
+    allocate( OCEAN_SFC_albedo_t(IA,JA,2) )
+    allocate( OCEAN_SFC_Z0M_t   (IA,JA)   )
+    allocate( OCEAN_SFC_Z0H_t   (IA,JA)   )
+    allocate( OCEAN_SFC_Z0E_t   (IA,JA)   )
+    OCEAN_TEMP_t      (:,:)   = UNDEF
+    OCEAN_SFC_TEMP_t  (:,:)   = UNDEF
+    OCEAN_SFC_albedo_t(:,:,:) = UNDEF
+    OCEAN_SFC_Z0M_t   (:,:)   = UNDEF
+    OCEAN_SFC_Z0H_t   (:,:)   = UNDEF
+    OCEAN_SFC_Z0E_t   (:,:)   = UNDEF
+
+    allocate( OCEAN_SFLX_MW  (IA,JA) )
+    allocate( OCEAN_SFLX_MU  (IA,JA) )
+    allocate( OCEAN_SFLX_MV  (IA,JA) )
+    allocate( OCEAN_SFLX_SH  (IA,JA) )
+    allocate( OCEAN_SFLX_LH  (IA,JA) )
+    allocate( OCEAN_SFLX_WH  (IA,JA) )
     allocate( OCEAN_SFLX_evap(IA,JA) )
-    OCEAN_SFLX_heat(:,:) = UNDEF
-    OCEAN_SFLX_prec(:,:) = UNDEF
+    OCEAN_SFLX_MW  (:,:) = UNDEF
+    OCEAN_SFLX_MU  (:,:) = UNDEF
+    OCEAN_SFLX_MV  (:,:) = UNDEF
+    OCEAN_SFLX_SH  (:,:) = UNDEF
+    OCEAN_SFLX_LH  (:,:) = UNDEF
+    OCEAN_SFLX_WH  (:,:) = UNDEF
     OCEAN_SFLX_evap(:,:) = UNDEF
+
+    allocate( OCEAN_U10(IA,JA) )
+    allocate( OCEAN_V10(IA,JA) )
+    allocate( OCEAN_T2 (IA,JA) )
+    allocate( OCEAN_Q2 (IA,JA) )
+    OCEAN_U10(:,:) = UNDEF
+    OCEAN_V10(:,:) = UNDEF
+    OCEAN_T2 (:,:) = UNDEF
+    OCEAN_Q2 (:,:) = UNDEF
+
+    allocate( ATMOS_TEMP     (IA,JA) )
+    allocate( ATMOS_PRES     (IA,JA) )
+    allocate( ATMOS_W        (IA,JA) )
+    allocate( ATMOS_U        (IA,JA) )
+    allocate( ATMOS_V        (IA,JA) )
+    allocate( ATMOS_DENS     (IA,JA) )
+    allocate( ATMOS_QV       (IA,JA) )
+    allocate( ATMOS_PBL      (IA,JA) )
+    allocate( ATMOS_SFC_PRES (IA,JA) )
+    allocate( ATMOS_SFLX_LW  (IA,JA) )
+    allocate( ATMOS_SFLX_SW  (IA,JA) )
+    allocate( ATMOS_SFLX_prec(IA,JA) )
+    ATMOS_TEMP     (:,:) = UNDEF
+    ATMOS_PRES     (:,:) = UNDEF
+    ATMOS_W        (:,:) = UNDEF
+    ATMOS_U        (:,:) = UNDEF
+    ATMOS_V        (:,:) = UNDEF
+    ATMOS_DENS     (:,:) = UNDEF
+    ATMOS_QV       (:,:) = UNDEF
+    ATMOS_PBL      (:,:) = UNDEF
+    ATMOS_SFC_PRES (:,:) = UNDEF
+    ATMOS_SFLX_LW  (:,:) = UNDEF
+    ATMOS_SFLX_SW  (:,:) = UNDEF
+    ATMOS_SFLX_prec(:,:) = UNDEF
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -223,26 +319,35 @@ contains
     if ( OCEAN_sw .and. OCEAN_RESTART_IN_BASENAME /= '' ) then
        if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(OCEAN_RESTART_IN_BASENAME)
 
-       call FILEIO_read( OCEAN_TEMP(:,:),                                                   & ! [OUT]
-                         OCEAN_RESTART_IN_BASENAME, VAR_NAME(I_TEMP),          'XY', step=1 ) ! [IN]
-       call FILEIO_read( OCEAN_SFC_TEMP(:,:),                                               & ! [OUT]
-                         OCEAN_RESTART_IN_BASENAME, VAR_NAME(I_SFC_TEMP),      'XY', step=1 ) ! [IN]
-       call FILEIO_read( OCEAN_SFC_albedo(:,:,I_LW),                                        & ! [OUT]
-                         OCEAN_RESTART_IN_BASENAME, VAR_NAME(I_SFC_albedo_LW), 'XY', step=1 ) ! [IN]
-       call FILEIO_read( OCEAN_SFC_albedo(:,:,I_SW),                                        & ! [OUT]
-                         OCEAN_RESTART_IN_BASENAME, VAR_NAME(I_SFC_albedo_SW), 'XY', step=1 ) ! [IN]
-       call FILEIO_read( OCEAN_SFC_Z0M(:,:),                                                & ! [OUT]
-                         OCEAN_RESTART_IN_BASENAME, VAR_NAME(I_SFC_Z0M),       'XY', step=1 ) ! [IN]
-       call FILEIO_read( OCEAN_SFC_Z0H(:,:),                                                & ! [OUT]
-                         OCEAN_RESTART_IN_BASENAME, VAR_NAME(I_SFC_Z0H),       'XY', step=1 ) ! [IN]
-       call FILEIO_read( OCEAN_SFC_Z0E(:,:),                                                & ! [OUT]
-                         OCEAN_RESTART_IN_BASENAME, VAR_NAME(I_SFC_Z0E),       'XY', step=1 ) ! [IN]
-       call FILEIO_read( OCEAN_SFLX_heat(:,:),                                              & ! [OUT]
-                         OCEAN_RESTART_IN_BASENAME, VAR_NAME(I_SFLX_heat),     'XY', step=1 ) ! [IN]
-       call FILEIO_read( OCEAN_SFLX_prec(:,:),                                              & ! [OUT]
-                         OCEAN_RESTART_IN_BASENAME, VAR_NAME(I_SFLX_prec),     'XY', step=1 ) ! [IN]
-       call FILEIO_read( OCEAN_SFLX_evap(:,:),                                              & ! [OUT]
-                         OCEAN_RESTART_IN_BASENAME, VAR_NAME(I_SFLX_evap),     'XY', step=1 ) ! [IN]
+       call FILEIO_read( OCEAN_TEMP(:,:),                                                & ! [OUT]
+                         OCEAN_RESTART_IN_BASENAME, VAR_NAME(I_TEMP),       'XY', step=1 ) ! [IN]
+       call FILEIO_read( OCEAN_SFC_TEMP(:,:),                                            & ! [OUT]
+                         OCEAN_RESTART_IN_BASENAME, VAR_NAME(I_SFC_TEMP),   'XY', step=1 ) ! [IN]
+       call FILEIO_read( OCEAN_SFC_albedo(:,:,I_LW),                                     & ! [OUT]
+                         OCEAN_RESTART_IN_BASENAME, VAR_NAME(I_SFC_ALB_LW), 'XY', step=1 ) ! [IN]
+       call FILEIO_read( OCEAN_SFC_albedo(:,:,I_SW),                                     & ! [OUT]
+                         OCEAN_RESTART_IN_BASENAME, VAR_NAME(I_SFC_ALB_SW), 'XY', step=1 ) ! [IN]
+       call FILEIO_read( OCEAN_SFC_Z0M(:,:),                                             & ! [OUT]
+                         OCEAN_RESTART_IN_BASENAME, VAR_NAME(I_SFC_Z0M),    'XY', step=1 ) ! [IN]
+       call FILEIO_read( OCEAN_SFC_Z0H(:,:),                                             & ! [OUT]
+                         OCEAN_RESTART_IN_BASENAME, VAR_NAME(I_SFC_Z0H),    'XY', step=1 ) ! [IN]
+       call FILEIO_read( OCEAN_SFC_Z0E(:,:),                                             & ! [OUT]
+                         OCEAN_RESTART_IN_BASENAME, VAR_NAME(I_SFC_Z0E),    'XY', step=1 ) ! [IN]
+
+       call FILEIO_read( OCEAN_SFLX_MW(:,:),                                             & ! [OUT]
+                         OCEAN_RESTART_IN_BASENAME, VAR_NAME(I_SFLX_MW),    'XY', step=1 ) ! [IN]
+       call FILEIO_read( OCEAN_SFLX_MU(:,:),                                             & ! [OUT]
+                         OCEAN_RESTART_IN_BASENAME, VAR_NAME(I_SFLX_MU),    'XY', step=1 ) ! [IN]
+       call FILEIO_read( OCEAN_SFLX_MV(:,:),                                             & ! [OUT]
+                         OCEAN_RESTART_IN_BASENAME, VAR_NAME(I_SFLX_MV),    'XY', step=1 ) ! [IN]
+       call FILEIO_read( OCEAN_SFLX_SH(:,:),                                             & ! [OUT]
+                         OCEAN_RESTART_IN_BASENAME, VAR_NAME(I_SFLX_SH),    'XY', step=1 ) ! [IN]
+       call FILEIO_read( OCEAN_SFLX_LH(:,:),                                             & ! [OUT]
+                         OCEAN_RESTART_IN_BASENAME, VAR_NAME(I_SFLX_LH),    'XY', step=1 ) ! [IN]
+       call FILEIO_read( OCEAN_SFLX_WH(:,:),                                             & ! [OUT]
+                         OCEAN_RESTART_IN_BASENAME, VAR_NAME(I_SFLX_WH),    'XY', step=1 ) ! [IN]
+       call FILEIO_read( OCEAN_SFLX_evap(:,:),                                           & ! [OUT]
+                         OCEAN_RESTART_IN_BASENAME, VAR_NAME(I_SFLX_evap),  'XY', step=1 ) ! [IN]
 
        call OCEAN_vars_total
     else
@@ -261,10 +366,6 @@ contains
        FILEIO_write
     use mod_ocean_admin, only: &
        OCEAN_sw
-    use mod_cpl_admin, only: &
-       CPL_sw_AtmOcn
-    use mod_cpl_vars, only: &
-       CPL_getOcn
     implicit none
 
     character(len=15)     :: timelabel
@@ -272,17 +373,6 @@ contains
     !---------------------------------------------------------------------------
 
     if ( OCEAN_sw .and. OCEAN_RESTART_OUT_BASENAME /= '' ) then
-
-       if ( CPL_sw_AtmOcn ) then
-          call CPL_getOcn( OCEAN_SFC_TEMP  (:,:),   & ! [OUT]
-                           OCEAN_SFC_albedo(:,:,:), & ! [OUT]
-                           OCEAN_SFC_Z0M   (:,:),   & ! [OUT]
-                           OCEAN_SFC_Z0H   (:,:),   & ! [OUT]
-                           OCEAN_SFC_Z0E   (:,:),   & ! [OUT]
-                           OCEAN_SFLX_heat (:,:),   & ! [OUT]
-                           OCEAN_SFLX_prec (:,:),   & ! [OUT]
-                           OCEAN_SFLX_evap (:,:)    ) ! [OUT]
-       endif
 
        call TIME_gettimelabel( timelabel )
        write(basename,'(A,A,A)') trim(OCEAN_RESTART_OUT_BASENAME), '_', trim(timelabel)
@@ -293,36 +383,48 @@ contains
 
        call OCEAN_vars_total
 
-       call FILEIO_write( OCEAN_TEMP(:,:),            basename,                  OCEAN_RESTART_OUT_TITLE,   & ! [IN]
-                          VAR_NAME(I_TEMP),           VAR_DESC(I_TEMP),          VAR_UNIT(I_TEMP),          & ! [IN]
-                          'XY',                       OCEAN_RESTART_OUT_DTYPE,   nohalo=.true.              ) ! [IN]
-       call FILEIO_write( OCEAN_SFC_TEMP(:,:),        basename,                  OCEAN_RESTART_OUT_TITLE,   & ! [IN]
-                          VAR_NAME(I_SFC_TEMP),       VAR_DESC(I_SFC_TEMP),      VAR_UNIT(I_SFC_TEMP),      & ! [IN]
-                          'XY',                       OCEAN_RESTART_OUT_DTYPE,   nohalo=.true.              ) ! [IN]
-       call FILEIO_write( OCEAN_SFC_albedo(:,:,I_LW), basename,                  OCEAN_RESTART_OUT_TITLE,   & ! [IN]
-                          VAR_NAME(I_SFC_albedo_LW),  VAR_DESC(I_SFC_albedo_LW), VAR_UNIT(I_SFC_albedo_LW), & ! [IN]
-                          'XY',                       OCEAN_RESTART_OUT_DTYPE,   nohalo=.true.              ) ! [IN]
-       call FILEIO_write( OCEAN_SFC_albedo(:,:,I_SW), basename,                  OCEAN_RESTART_OUT_TITLE,   & ! [IN]
-                          VAR_NAME(I_SFC_albedo_SW),  VAR_DESC(I_SFC_albedo_SW), VAR_UNIT(I_SFC_albedo_SW), & ! [IN]
-                          'XY',                       OCEAN_RESTART_OUT_DTYPE,   nohalo=.true.              ) ! [IN]
-       call FILEIO_write( OCEAN_SFC_Z0M(:,:),         basename,                  OCEAN_RESTART_OUT_TITLE,   & ! [IN]
-                          VAR_NAME(I_SFC_Z0M),        VAR_DESC(I_SFC_Z0M),       VAR_UNIT(I_SFC_Z0M),       & ! [IN]
-                          'XY',                       OCEAN_RESTART_OUT_DTYPE,   nohalo=.true.              ) ! [IN]
-       call FILEIO_write( OCEAN_SFC_Z0H(:,:),         basename,                  OCEAN_RESTART_OUT_TITLE,   & ! [IN]
-                          VAR_NAME(I_SFC_Z0H),        VAR_DESC(I_SFC_Z0H),       VAR_UNIT(I_SFC_Z0H),       & ! [IN]
-                          'XY',                       OCEAN_RESTART_OUT_DTYPE,   nohalo=.true.              ) ! [IN]
-       call FILEIO_write( OCEAN_SFC_Z0E(:,:),         basename,                  OCEAN_RESTART_OUT_TITLE,   & ! [IN]
-                          VAR_NAME(I_SFC_Z0E),        VAR_DESC(I_SFC_Z0E),       VAR_UNIT(I_SFC_Z0E),       & ! [IN]
-                          'XY',                       OCEAN_RESTART_OUT_DTYPE,   nohalo=.true.              ) ! [IN]
-       call FILEIO_write( OCEAN_SFLX_heat(:,:),       basename,                  OCEAN_RESTART_OUT_TITLE,   & ! [IN]
-                          VAR_NAME(I_SFLX_heat),      VAR_DESC(I_SFLX_heat),     VAR_UNIT(I_SFLX_heat),     & ! [IN]
-                          'XY',                       OCEAN_RESTART_OUT_DTYPE,   nohalo=.true.              ) ! [IN]
-       call FILEIO_write( OCEAN_SFLX_prec(:,:),       basename,                  OCEAN_RESTART_OUT_TITLE,   & ! [IN]
-                          VAR_NAME(I_SFLX_prec),      VAR_DESC(I_SFLX_prec),     VAR_UNIT(I_SFLX_prec),     & ! [IN]
-                          'XY',                       OCEAN_RESTART_OUT_DTYPE,   nohalo=.true.              ) ! [IN]
-       call FILEIO_write( OCEAN_SFLX_evap(:,:),       basename,                  OCEAN_RESTART_OUT_TITLE,   & ! [IN]
-                          VAR_NAME(I_SFLX_evap),      VAR_DESC(I_SFLX_evap),     VAR_UNIT(I_SFLX_evap),     & ! [IN]
-                          'XY',                       OCEAN_RESTART_OUT_DTYPE,   nohalo=.true.              ) ! [IN]
+       call FILEIO_write( OCEAN_TEMP(:,:),            basename,                OCEAN_RESTART_OUT_TITLE, & ! [IN]
+                          VAR_NAME(I_TEMP),           VAR_DESC(I_TEMP),        VAR_UNIT(I_TEMP),        & ! [IN]
+                          'XY',                       OCEAN_RESTART_OUT_DTYPE, nohalo=.true.            ) ! [IN]
+       call FILEIO_write( OCEAN_SFC_TEMP(:,:),        basename,                OCEAN_RESTART_OUT_TITLE, & ! [IN]
+                          VAR_NAME(I_SFC_TEMP),       VAR_DESC(I_SFC_TEMP),    VAR_UNIT(I_SFC_TEMP),    & ! [IN]
+                          'XY',                       OCEAN_RESTART_OUT_DTYPE, nohalo=.true.            ) ! [IN]
+       call FILEIO_write( OCEAN_SFC_albedo(:,:,I_LW), basename,                OCEAN_RESTART_OUT_TITLE, & ! [IN]
+                          VAR_NAME(I_SFC_ALB_LW),     VAR_DESC(I_SFC_ALB_LW),  VAR_UNIT(I_SFC_ALB_LW),  & ! [IN]
+                          'XY',                       OCEAN_RESTART_OUT_DTYPE, nohalo=.true.            ) ! [IN]
+       call FILEIO_write( OCEAN_SFC_albedo(:,:,I_SW), basename,                OCEAN_RESTART_OUT_TITLE, & ! [IN]
+                          VAR_NAME(I_SFC_ALB_SW),     VAR_DESC(I_SFC_ALB_SW),  VAR_UNIT(I_SFC_ALB_SW),  & ! [IN]
+                          'XY',                       OCEAN_RESTART_OUT_DTYPE, nohalo=.true.            ) ! [IN]
+       call FILEIO_write( OCEAN_SFC_Z0M(:,:),         basename,                OCEAN_RESTART_OUT_TITLE, & ! [IN]
+                          VAR_NAME(I_SFC_Z0M),        VAR_DESC(I_SFC_Z0M),     VAR_UNIT(I_SFC_Z0M),     & ! [IN]
+                          'XY',                       OCEAN_RESTART_OUT_DTYPE, nohalo=.true.            ) ! [IN]
+       call FILEIO_write( OCEAN_SFC_Z0H(:,:),         basename,                OCEAN_RESTART_OUT_TITLE, & ! [IN]
+                          VAR_NAME(I_SFC_Z0H),        VAR_DESC(I_SFC_Z0H),     VAR_UNIT(I_SFC_Z0H),     & ! [IN]
+                          'XY',                       OCEAN_RESTART_OUT_DTYPE, nohalo=.true.            ) ! [IN]
+       call FILEIO_write( OCEAN_SFC_Z0E(:,:),         basename,                OCEAN_RESTART_OUT_TITLE, & ! [IN]
+                          VAR_NAME(I_SFC_Z0E),        VAR_DESC(I_SFC_Z0E),     VAR_UNIT(I_SFC_Z0E),     & ! [IN]
+                          'XY',                       OCEAN_RESTART_OUT_DTYPE, nohalo=.true.            ) ! [IN]
+       call FILEIO_write( OCEAN_SFLX_MW(:,:),         basename,                OCEAN_RESTART_OUT_TITLE, & ! [IN]
+                          VAR_NAME(I_SFLX_MW),        VAR_DESC(I_SFLX_MW),     VAR_UNIT(I_SFLX_MW),     & ! [IN]
+                          'XY',                       OCEAN_RESTART_OUT_DTYPE, nohalo=.true.            ) ! [IN]
+       call FILEIO_write( OCEAN_SFLX_MU(:,:),         basename,                OCEAN_RESTART_OUT_TITLE, & ! [IN]
+                          VAR_NAME(I_SFLX_MU),        VAR_DESC(I_SFLX_MU),     VAR_UNIT(I_SFLX_MU),     & ! [IN]
+                          'XY',                       OCEAN_RESTART_OUT_DTYPE, nohalo=.true.            ) ! [IN]
+       call FILEIO_write( OCEAN_SFLX_MV(:,:),         basename,                OCEAN_RESTART_OUT_TITLE, & ! [IN]
+                          VAR_NAME(I_SFLX_MV),        VAR_DESC(I_SFLX_MV),     VAR_UNIT(I_SFLX_MV),     & ! [IN]
+                          'XY',                       OCEAN_RESTART_OUT_DTYPE, nohalo=.true.            ) ! [IN]
+       call FILEIO_write( OCEAN_SFLX_SH(:,:),         basename,                OCEAN_RESTART_OUT_TITLE, & ! [IN]
+                          VAR_NAME(I_SFLX_SH),        VAR_DESC(I_SFLX_SH),     VAR_UNIT(I_SFLX_SH),     & ! [IN]
+                          'XY',                       OCEAN_RESTART_OUT_DTYPE, nohalo=.true.            ) ! [IN]
+       call FILEIO_write( OCEAN_SFLX_LH(:,:),         basename,                OCEAN_RESTART_OUT_TITLE, & ! [IN]
+                          VAR_NAME(I_SFLX_LH),        VAR_DESC(I_SFLX_LH),     VAR_UNIT(I_SFLX_LH),     & ! [IN]
+                          'XY',                       OCEAN_RESTART_OUT_DTYPE, nohalo=.true.            ) ! [IN]
+       call FILEIO_write( OCEAN_SFLX_WH(:,:),         basename,                OCEAN_RESTART_OUT_TITLE, & ! [IN]
+                          VAR_NAME(I_SFLX_WH),        VAR_DESC(I_SFLX_WH),     VAR_UNIT(I_SFLX_WH),     & ! [IN]
+                          'XY',                       OCEAN_RESTART_OUT_DTYPE, nohalo=.true.            ) ! [IN]
+       call FILEIO_write( OCEAN_SFLX_evap(:,:),       basename,                OCEAN_RESTART_OUT_TITLE, & ! [IN]
+                          VAR_NAME(I_SFLX_evap),      VAR_DESC(I_SFLX_evap),   VAR_UNIT(I_SFLX_evap),   & ! [IN]
+                          'XY',                       OCEAN_RESTART_OUT_DTYPE, nohalo=.true.            ) ! [IN]
 
     endif
 
@@ -340,32 +442,52 @@ contains
     !---------------------------------------------------------------------------
 
     if ( OCEAN_VARS_CHECKRANGE ) then
-       call VALCHECK( OCEAN_TEMP      (IS:IE,JS:JE),      0.0_RP, 1000.0_RP, VAR_NAME(I_TEMP),          &
+       call VALCHECK( OCEAN_TEMP      (IS:IE,JS:JE),      0.0_RP, 1000.0_RP, VAR_NAME(I_TEMP),       &
                      __FILE__, __LINE__ )
-       call VALCHECK( OCEAN_SFC_TEMP  (IS:IE,JS:JE),      0.0_RP, 1000.0_RP, VAR_NAME(I_SFC_TEMP),      &
+       call VALCHECK( OCEAN_SFC_TEMP  (IS:IE,JS:JE),      0.0_RP, 1000.0_RP, VAR_NAME(I_SFC_TEMP),   &
                      __FILE__, __LINE__ )
-       call VALCHECK( OCEAN_SFC_albedo(IS:IE,JS:JE,I_LW), 0.0_RP,    2.0_RP, VAR_NAME(I_SFC_albedo_LW), &
+       call VALCHECK( OCEAN_SFC_albedo(IS:IE,JS:JE,I_LW), 0.0_RP,    2.0_RP, VAR_NAME(I_SFC_ALB_LW), &
                      __FILE__, __LINE__ )
-       call VALCHECK( OCEAN_SFC_albedo(IS:IE,JS:JE,I_SW), 0.0_RP,    2.0_RP, VAR_NAME(I_SFC_albedo_SW), &
+       call VALCHECK( OCEAN_SFC_albedo(IS:IE,JS:JE,I_SW), 0.0_RP,    2.0_RP, VAR_NAME(I_SFC_ALB_SW), &
                      __FILE__, __LINE__ )
-       call VALCHECK( OCEAN_SFC_Z0M   (IS:IE,JS:JE),      0.0_RP, 1000.0_RP, VAR_NAME(I_SFC_Z0M),       &
+       call VALCHECK( OCEAN_SFC_Z0M   (IS:IE,JS:JE),      0.0_RP, 1000.0_RP, VAR_NAME(I_SFC_Z0M),    &
                      __FILE__, __LINE__ )
-       call VALCHECK( OCEAN_SFC_Z0H   (IS:IE,JS:JE),      0.0_RP, 1000.0_RP, VAR_NAME(I_SFC_Z0H),       &
+       call VALCHECK( OCEAN_SFC_Z0H   (IS:IE,JS:JE),      0.0_RP, 1000.0_RP, VAR_NAME(I_SFC_Z0H),    &
                      __FILE__, __LINE__ )
-       call VALCHECK( OCEAN_SFC_Z0E   (IS:IE,JS:JE),      0.0_RP, 1000.0_RP, VAR_NAME(I_SFC_Z0E),       &
+       call VALCHECK( OCEAN_SFC_Z0E   (IS:IE,JS:JE),      0.0_RP, 1000.0_RP, VAR_NAME(I_SFC_Z0E),    &
+                     __FILE__, __LINE__ )
+
+       call VALCHECK( OCEAN_SFLX_MW  (IS:IE,JS:JE), -5000.0_RP, 5000.0_RP, VAR_NAME(I_SFLX_MW),   &
+                     __FILE__, __LINE__ )
+       call VALCHECK( OCEAN_SFLX_MU  (IS:IE,JS:JE), -5000.0_RP, 5000.0_RP, VAR_NAME(I_SFLX_MU),   &
+                     __FILE__, __LINE__ )
+       call VALCHECK( OCEAN_SFLX_MV  (IS:IE,JS:JE), -5000.0_RP, 5000.0_RP, VAR_NAME(I_SFLX_MV),   &
+                     __FILE__, __LINE__ )
+       call VALCHECK( OCEAN_SFLX_SH  (IS:IE,JS:JE), -5000.0_RP, 5000.0_RP, VAR_NAME(I_SFLX_SH),   &
+                     __FILE__, __LINE__ )
+       call VALCHECK( OCEAN_SFLX_LH  (IS:IE,JS:JE), -5000.0_RP, 5000.0_RP, VAR_NAME(I_SFLX_LH),   &
+                     __FILE__, __LINE__ )
+       call VALCHECK( OCEAN_SFLX_WH  (IS:IE,JS:JE), -5000.0_RP, 5000.0_RP, VAR_NAME(I_SFLX_WH),   &
+                     __FILE__, __LINE__ )
+       call VALCHECK( OCEAN_SFLX_evap(IS:IE,JS:JE), -5000.0_RP, 5000.0_RP, VAR_NAME(I_SFLX_evap), &
                      __FILE__, __LINE__ )
     endif
 
-    call HIST_in( OCEAN_TEMP      (:,:),      VAR_NAME(I_TEMP),          VAR_DESC(I_TEMP),          VAR_UNIT(I_TEMP)          )
-    call HIST_in( OCEAN_SFC_TEMP  (:,:),      VAR_NAME(I_SFC_TEMP),      VAR_DESC(I_SFC_TEMP),      VAR_UNIT(I_SFC_TEMP)      )
-    call HIST_in( OCEAN_SFC_albedo(:,:,I_LW), VAR_NAME(I_SFC_albedo_LW), VAR_DESC(I_SFC_albedo_LW), VAR_UNIT(I_SFC_albedo_LW) )
-    call HIST_in( OCEAN_SFC_albedo(:,:,I_SW), VAR_NAME(I_SFC_albedo_SW), VAR_DESC(I_SFC_albedo_SW), VAR_UNIT(I_SFC_albedo_SW) )
-    call HIST_in( OCEAN_SFC_Z0M   (:,:),      VAR_NAME(I_SFC_Z0M),       VAR_DESC(I_SFC_Z0M),       VAR_UNIT(I_SFC_Z0M)       )
-    call HIST_in( OCEAN_SFC_Z0H   (:,:),      VAR_NAME(I_SFC_Z0H),       VAR_DESC(I_SFC_Z0H),       VAR_UNIT(I_SFC_Z0H)       )
-    call HIST_in( OCEAN_SFC_Z0E   (:,:),      VAR_NAME(I_SFC_Z0E),       VAR_DESC(I_SFC_Z0E),       VAR_UNIT(I_SFC_Z0E)       )
-    call HIST_in( OCEAN_SFLX_heat (:,:),      VAR_NAME(I_SFLX_heat),     VAR_DESC(I_SFLX_heat),     VAR_UNIT(I_SFLX_heat)     )
-    call HIST_in( OCEAN_SFLX_prec (:,:),      VAR_NAME(I_SFLX_prec),     VAR_DESC(I_SFLX_prec),     VAR_UNIT(I_SFLX_prec)     )
-    call HIST_in( OCEAN_SFLX_evap (:,:),      VAR_NAME(I_SFLX_evap),     VAR_DESC(I_SFLX_evap),     VAR_UNIT(I_SFLX_evap)     )
+    call HIST_in( OCEAN_TEMP      (:,:),      VAR_NAME(I_TEMP),       VAR_DESC(I_TEMP),       VAR_UNIT(I_TEMP)       )
+    call HIST_in( OCEAN_SFC_TEMP  (:,:),      VAR_NAME(I_SFC_TEMP),   VAR_DESC(I_SFC_TEMP),   VAR_UNIT(I_SFC_TEMP)   )
+    call HIST_in( OCEAN_SFC_albedo(:,:,I_LW), VAR_NAME(I_SFC_ALB_LW), VAR_DESC(I_SFC_ALB_LW), VAR_UNIT(I_SFC_ALB_LW) )
+    call HIST_in( OCEAN_SFC_albedo(:,:,I_SW), VAR_NAME(I_SFC_ALB_SW), VAR_DESC(I_SFC_ALB_SW), VAR_UNIT(I_SFC_ALB_SW) )
+    call HIST_in( OCEAN_SFC_Z0M   (:,:),      VAR_NAME(I_SFC_Z0M),    VAR_DESC(I_SFC_Z0M),    VAR_UNIT(I_SFC_Z0M)    )
+    call HIST_in( OCEAN_SFC_Z0H   (:,:),      VAR_NAME(I_SFC_Z0H),    VAR_DESC(I_SFC_Z0H),    VAR_UNIT(I_SFC_Z0H)    )
+    call HIST_in( OCEAN_SFC_Z0E   (:,:),      VAR_NAME(I_SFC_Z0E),    VAR_DESC(I_SFC_Z0E),    VAR_UNIT(I_SFC_Z0E)    )
+
+    call HIST_in( OCEAN_SFLX_MW  (:,:), VAR_NAME(I_SFLX_MW),   VAR_DESC(I_SFLX_MW),   VAR_UNIT(I_SFLX_MW)   )
+    call HIST_in( OCEAN_SFLX_MU  (:,:), VAR_NAME(I_SFLX_MU),   VAR_DESC(I_SFLX_MU),   VAR_UNIT(I_SFLX_MU)   )
+    call HIST_in( OCEAN_SFLX_MV  (:,:), VAR_NAME(I_SFLX_MV),   VAR_DESC(I_SFLX_MV),   VAR_UNIT(I_SFLX_MV)   )
+    call HIST_in( OCEAN_SFLX_SH  (:,:), VAR_NAME(I_SFLX_SH),   VAR_DESC(I_SFLX_SH),   VAR_UNIT(I_SFLX_SH)   )
+    call HIST_in( OCEAN_SFLX_LH  (:,:), VAR_NAME(I_SFLX_LH),   VAR_DESC(I_SFLX_LH),   VAR_UNIT(I_SFLX_LH)   )
+    call HIST_in( OCEAN_SFLX_WH  (:,:), VAR_NAME(I_SFLX_WH),   VAR_DESC(I_SFLX_WH),   VAR_UNIT(I_SFLX_WH)   )
+    call HIST_in( OCEAN_SFLX_evap(:,:), VAR_NAME(I_SFLX_evap), VAR_DESC(I_SFLX_evap), VAR_UNIT(I_SFLX_evap) )
 
     return
   end subroutine OCEAN_vars_history
@@ -383,13 +505,21 @@ contains
 
     if ( STATISTICS_checktotal ) then
 
-       call STAT_total( total, OCEAN_TEMP      (:,:),      VAR_NAME(I_TEMP         ) )
-       call STAT_total( total, OCEAN_SFC_TEMP  (:,:),      VAR_NAME(I_SFC_TEMP     ) )
-       call STAT_total( total, OCEAN_SFC_albedo(:,:,I_LW), VAR_NAME(I_SFC_albedo_LW) )
-       call STAT_total( total, OCEAN_SFC_albedo(:,:,I_SW), VAR_NAME(I_SFC_albedo_SW) )
-       call STAT_total( total, OCEAN_SFC_Z0M   (:,:),      VAR_NAME(I_SFC_Z0M      ) )
-       call STAT_total( total, OCEAN_SFC_Z0H   (:,:),      VAR_NAME(I_SFC_Z0H      ) )
-       call STAT_total( total, OCEAN_SFC_Z0E   (:,:),      VAR_NAME(I_SFC_Z0E      ) )
+       call STAT_total( total, OCEAN_TEMP      (:,:),      VAR_NAME(I_TEMP)       )
+       call STAT_total( total, OCEAN_SFC_TEMP  (:,:),      VAR_NAME(I_SFC_TEMP)   )
+       call STAT_total( total, OCEAN_SFC_albedo(:,:,I_LW), VAR_NAME(I_SFC_ALB_LW) )
+       call STAT_total( total, OCEAN_SFC_albedo(:,:,I_SW), VAR_NAME(I_SFC_ALB_SW) )
+       call STAT_total( total, OCEAN_SFC_Z0M   (:,:),      VAR_NAME(I_SFC_Z0M)    )
+       call STAT_total( total, OCEAN_SFC_Z0H   (:,:),      VAR_NAME(I_SFC_Z0H)    )
+       call STAT_total( total, OCEAN_SFC_Z0E   (:,:),      VAR_NAME(I_SFC_Z0E)    )
+
+       call STAT_total( total, OCEAN_SFLX_MW  (:,:), VAR_NAME(I_SFLX_MW)   )
+       call STAT_total( total, OCEAN_SFLX_MU  (:,:), VAR_NAME(I_SFLX_MU)   )
+       call STAT_total( total, OCEAN_SFLX_MV  (:,:), VAR_NAME(I_SFLX_MV)   )
+       call STAT_total( total, OCEAN_SFLX_SH  (:,:), VAR_NAME(I_SFLX_SH)   )
+       call STAT_total( total, OCEAN_SFLX_LH  (:,:), VAR_NAME(I_SFLX_LH)   )
+       call STAT_total( total, OCEAN_SFLX_WH  (:,:), VAR_NAME(I_SFLX_WH)   )
+       call STAT_total( total, OCEAN_SFLX_evap(:,:), VAR_NAME(I_SFLX_evap) )
 
     endif
 
@@ -424,6 +554,14 @@ contains
     OCEAN_SFC_Z0M   (:,:)   = OCEAN_SFC_Z0M_in   (:,:)
     OCEAN_SFC_Z0H   (:,:)   = OCEAN_SFC_Z0H_in   (:,:)
     OCEAN_SFC_Z0E   (:,:)   = OCEAN_SFC_Z0E_in   (:,:)
+
+    OCEAN_SFLX_MW  (:,:) = 0.0_RP
+    OCEAN_SFLX_MU  (:,:) = 0.0_RP
+    OCEAN_SFLX_MV  (:,:) = 0.0_RP
+    OCEAN_SFLX_SH  (:,:) = 0.0_RP
+    OCEAN_SFLX_LH  (:,:) = 0.0_RP
+    OCEAN_SFLX_WH  (:,:) = 0.0_RP
+    OCEAN_SFLX_evap(:,:) = 0.0_RP
 
     call OCEAN_vars_total
 

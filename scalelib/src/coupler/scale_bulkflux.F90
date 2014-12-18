@@ -1,15 +1,15 @@
 !-------------------------------------------------------------------------------
-!> module COUPLER / Surface Bulk flux
+!> module Surface bulk flux
 !!
 !! @par Description
-!!          calculation of Bulk flux at the surface
+!!          calculation of surface bulk flux
 !!
 !! @author Team SCALE
 !!
 !! @par History
 !<
 !-------------------------------------------------------------------------------
-module scale_cpl_bulkflux
+module scale_bulkflux
   !-----------------------------------------------------------------------------
   !
   !++ used modules
@@ -23,7 +23,7 @@ module scale_cpl_bulkflux
   !
   !++ Public procedure
   !
-  public :: CPL_bulkflux_setup
+  public :: BULKFLUX_setup
 
   abstract interface
      subroutine bc( &
@@ -68,8 +68,8 @@ module scale_cpl_bulkflux
      end subroutine bc
   end interface
 
-  procedure(bc), pointer :: CPL_bulkflux => NULL()
-  public :: CPL_bulkflux
+  procedure(bc), pointer :: BULKFLUX => NULL()
+  public :: BULKFLUX
 
   !-----------------------------------------------------------------------------
   !
@@ -79,8 +79,8 @@ module scale_cpl_bulkflux
   !
   !++ Private procedure
   !
-  private :: CPL_bulkflux_u95
-  private :: CPL_bulkflux_b91w01
+  private :: BULKFLUX_U95
+  private :: BULKFLUX_B91W01
   private :: fm_unstable
   private :: fh_unstable
   private :: fm_stable
@@ -90,86 +90,69 @@ module scale_cpl_bulkflux
   !
   !++ Private parameters & variables
   !
-  character(len=H_SHORT), private :: bulkflux_TYPE = 'B91W01'
+  character(len=H_SHORT), private :: BULKFLUX_TYPE = 'B91W01'
 
-  real(RP), private :: WSCF = 1.2E+0_RP ! empirical scaling factor of Wstar (Beljaars 1994)
+  real(RP), private :: BULKFLUX_WSCF = 1.2E+0_RP ! empirical scaling factor of Wstar (Beljaars 1994)
 
   ! limiter
-  real(RP), private :: Uabs_min  = 1.0E-2_RP ! minimum of Uabs [m/s]
-  real(RP), private :: RiB_min   = 1.0E-4_RP ! minimum of RiB [no unit]
-  real(RP), private :: Wstar_min = 1.0E-4_RP ! minimum of W* [m/s]
+  real(RP), private :: BULKFLUX_Uabs_min  = 1.0E-2_RP ! minimum of Uabs [m/s]
+  real(RP), private :: BULKFLUX_RiB_min   = 1.0E-4_RP ! minimum of RiB [no unit]
+  real(RP), private :: BULKFLUX_Wstar_min = 1.0E-4_RP ! minimum of W* [m/s]
 
 contains
 
   !-----------------------------------------------------------------------------
   !
   !-----------------------------------------------------------------------------
-  subroutine CPL_bulkflux_setup
+  subroutine BULKFLUX_setup
     use scale_process, only: &
        PRC_MPIstop
     implicit none
 
-    character(len=H_SHORT) :: CPL_bulkflux_TYPE
+    character(len=H_SHORT) :: BULKFLUX_TYPE
 
-    real(RP) :: CPL_bulkflux_WSCF
-    real(RP) :: CPL_bulkflux_Uabs_min
-    real(RP) :: CPL_bulkflux_RiB_min
-    real(RP) :: CPL_bulkflux_Wstar_min
-
-    NAMELIST / PARAM_CPL_BULKFLUX / &
-       CPL_bulkflux_TYPE,      &
-       CPL_bulkflux_WSCF,      &
-       CPL_bulkflux_Uabs_min,  &
-       CPL_bulkflux_RiB_min,   &
-       CPL_bulkflux_Wstar_min
+    NAMELIST / PARAM_BULKFLUX / &
+       BULKFLUX_TYPE,      &
+       BULKFLUX_WSCF,      &
+       BULKFLUX_Uabs_min,  &
+       BULKFLUX_RiB_min,   &
+       BULKFLUX_Wstar_min
 
     integer :: ierr
     !---------------------------------------------------------------------------
-
-    CPL_bulkflux_TYPE      = bulkflux_TYPE
-    CPL_bulkflux_WSCF      = WSCF
-    CPL_bulkflux_Uabs_min  = Uabs_min
-    CPL_bulkflux_RiB_min   = RiB_min
-    CPL_bulkflux_Wstar_min = Wstar_min
 
     if( IO_L ) write(IO_FID_LOG,*) ''
     if( IO_L ) write(IO_FID_LOG,*) '*** Bulk coefficient parameter'
 
     !--- read namelist
     rewind(IO_FID_CONF)
-    read(IO_FID_CONF,nml=PARAM_CPL_BULKFLUX,iostat=ierr)
+    read(IO_FID_CONF,nml=PARAM_BULKFLUX,iostat=ierr)
 
     if( ierr < 0 ) then !--- missing
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_CPL_BULKFLUX. Check!'
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_BULKFLUX. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_CPL_BULKFLUX)
+    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_BULKFLUX)
 
-    bulkflux_TYPE = CPL_bulkflux_TYPE
-    WSCF          = CPL_bulkflux_WSCF
-    Uabs_min      = CPL_bulkflux_Uabs_min
-    RiB_min       = CPL_bulkflux_RiB_min
-    Wstar_min     = CPL_bulkflux_Wstar_min
-
-    select case( bulkflux_TYPE )
+    select case( BULKFLUX_TYPE )
     case ( 'U95' )
-       CPL_bulkflux => CPL_bulkflux_u95
+       BULKFLUX => BULKFLUX_U95
     case ( 'B91W01' )
-       CPL_bulkflux => CPL_bulkflux_b91w01
+       BULKFLUX => BULKFLUX_B91W01
     case default
        write(*,*) ' xxx Unsupported TYPE. STOP'
        call PRC_MPIstop
     end select
 
     return
-  end subroutine CPL_bulkflux_setup
+  end subroutine BULKFLUX_setup
 
   !-----------------------------------------------------------------------------
   ! ref. Uno et al. (1995)
   !-----------------------------------------------------------------------------
-  subroutine CPL_bulkflux_u95( &
+  subroutine BULKFLUX_U95( &
       Ustar,   & ! (out)
       Tstar,   & ! (out)
       Qstar,   & ! (out)
@@ -231,11 +214,11 @@ contains
 
     RovCP = Rdry / CPdry
 
-    Uabs = max( sqrt( Ua**2 + Va**2 ), Uabs_min )
+    Uabs = max( sqrt( Ua**2 + Va**2 ), BULKFLUX_Uabs_min )
 
     RiB0 = GRAV * Za * ( Ta - Ts*(Pa/Ps)**RovCP ) / ( Ta * Uabs**2 )
-    if( abs( RiB0 ) < RiB_min ) then
-      RiB0 = sign( RiB_min, RiB0 )
+    if( abs( RiB0 ) < BULKFLUX_RiB_min ) then
+      RiB0 = sign( BULKFLUX_RiB_min, RiB0 )
     end if
 
     C0  = ( KARMAN / log( Za/Z0M ) )**2
@@ -273,7 +256,7 @@ contains
     Qstar = C0 * fh * q0qe / tPrn * Uabs / Ustar * ( Qa - Qs )
 
     return
-  end subroutine CPL_bulkflux_u95
+  end subroutine BULKFLUX_U95
 
   !-----------------------------------------------------------------------------
   !
@@ -283,7 +266,7 @@ contains
   ! you should fix the stability functions (fm_unstable, fh_unstable, fm_stable, and fh_stable).
   !
   !-----------------------------------------------------------------------------
-  subroutine CPL_bulkflux_b91w01( &
+  subroutine BULKFLUX_B91W01( &
        Ustar,   & ! (out)
        Tstar,   & ! (out)
        Qstar,   & ! (out)
@@ -360,30 +343,30 @@ contains
 
     RovCP = Rdry / CPdry
 
-    Uabs = max( sqrt( Ua**2 + Va**2 ), Uabs_min )
+    Uabs = max( sqrt( Ua**2 + Va**2 ), BULKFLUX_Uabs_min )
 
     ! initial bulk Richardson number
     RiB0 = GRAV * Za * ( Ta - Ts*(Pa/Ps)**RovCP ) / ( Ta * Uabs**2 )
-    if( abs( RiB0 ) < RiB_min ) then
-      RiB0 = sign( RiB_min, RiB0 )
+    if( abs( RiB0 ) < BULKFLUX_RiB_min ) then
+      RiB0 = sign( BULKFLUX_RiB_min, RiB0 )
     end if
 
     ! initial Obukhov length assumed by neutral condition
     L = Za / RiB0 * log(Za/Z0H) / log(Za/Z0M)**2
 
     ! initial free convection velocity scale
-    Wstar  = Wstar_min
-    dWstar = Wstar_min
+    Wstar  = BULKFLUX_Wstar_min
+    dWstar = BULKFLUX_Wstar_min
 
     do n = 1, nmax
       ! unstable condition
-      UabsUS  = max( sqrt( Ua**2 + Va**2 + (WSCF*Wstar)**2 ), Uabs_min )
+      UabsUS  = max( sqrt( Ua**2 + Va**2 + (BULKFLUX_WSCF*Wstar)**2 ), BULKFLUX_Uabs_min )
       UstarUS = KARMAN / ( log(Za/Z0M) - fm_unstable(Za,L) + fm_unstable(Z0M,L) ) * UabsUS
       TstarUS = KARMAN / ( log(Za/Z0H) - fh_unstable(Za,L) + fh_unstable(Z0H,L) ) / Pt * ( Ta - Ts*(Pa/Ps)**RovCP )
       QstarUS = KARMAN / ( log(Za/Z0E) - fh_unstable(Za,L) + fh_unstable(Z0E,L) ) / Pt * ( Qa - Qs )
 
       ! stable condition
-      UabsS  = max( sqrt( Ua**2 + Va**2 ), Uabs_min )
+      UabsS  = max( sqrt( Ua**2 + Va**2 ), BULKFLUX_Uabs_min )
       UstarS = KARMAN / ( log(Za/Z0M) - fm_stable(Za,L) + fm_stable(Z0M,L) ) * UabsS
       TstarS = KARMAN / ( log(Za/Z0H) - fh_stable(Za,L) + fh_stable(Z0H,L) ) / Pt * ( Ta - Ts*(Pa/Ps)**RovCP )
       QstarS = KARMAN / ( log(Za/Z0E) - fh_stable(Za,L) + fh_stable(Z0E,L) ) / Pt * ( Qa - Qs )
@@ -402,12 +385,12 @@ contains
       res = L - Ustar**2 * Ta / ( KARMAN * GRAV * Tstar )
 
       ! unstable condition
-      dUabsUS  = max( sqrt( Ua**2 + Va**2 + (WSCF*dWstar)**2 ), Uabs_min )
+      dUabsUS  = max( sqrt( Ua**2 + Va**2 + (BULKFLUX_WSCF*dWstar)**2 ), BULKFLUX_Uabs_min )
       dUstarUS = KARMAN / ( log(Za/Z0M) - fm_unstable(Za,L+dL) + fm_unstable(Z0M,L+dL) ) * dUabsUS
       dTstarUS = KARMAN / ( log(Za/Z0H) - fh_unstable(Za,L+dL) + fh_unstable(Z0H,L+dL) ) / Pt * ( Ta - Ts*(Pa/Ps)**RovCP )
       dQstarUS = KARMAN / ( log(Za/Z0E) - fh_unstable(Za,L+dL) + fh_unstable(Z0E,L+dL) ) / Pt * ( Qa - Qs )
       ! stable condition
-      dUabsS  = max( sqrt( Ua**2 + Va**2 ), Uabs_min )
+      dUabsS  = max( sqrt( Ua**2 + Va**2 ), BULKFLUX_Uabs_min )
       dUstarS = KARMAN / ( log(Za/Z0M) - fm_stable(Za,L+dL) + fm_stable(Z0M,L+dL) ) * dUabsS
       dTstarS = KARMAN / ( log(Za/Z0H) - fh_stable(Za,L+dL) + fh_stable(Z0H,L+dL) ) / Pt * ( Ta - Ts*(Pa/Ps)**RovCP )
       dQstarS = KARMAN / ( log(Za/Z0E) - fh_stable(Za,L+dL) + fh_stable(Z0E,L+dL) ) / Pt * ( Qa - Qs )
@@ -435,11 +418,11 @@ contains
     end do
 
     if( n > nmax ) then
-      if( IO_L ) write(IO_FID_LOG,*) 'Warning: reach maximum iteration in the function of CPL_bulkflux_b91w01.'
+      if( IO_L ) write(IO_FID_LOG,*) 'Warning: reach maximum iteration in the function of BULKFLUX_B91W01.'
     end if
 
     return
-  end subroutine CPL_bulkflux_b91w01
+  end subroutine BULKFLUX_B91W01
 
   !-----------------------------------------------------------------------------
   ! stability function for momemtum in unstable condition
@@ -565,4 +548,4 @@ contains
     return
   end function fh_stable
 
-end module scale_cpl_bulkflux
+end module scale_bulkflux

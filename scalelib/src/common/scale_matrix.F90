@@ -1,5 +1,5 @@
 !-------------------------------------------------------------------------------
-!> module LAND / Physics
+!> module MATRIX
 !!
 !! @par Description
 !!          solve matrix module
@@ -7,7 +7,7 @@
 !! @author Team SCALE
 !<
 !-------------------------------------------------------------------------------
-module scale_land_sub_matrix
+module scale_matrix
   !-----------------------------------------------------------------------------
   !
   !++ used modules
@@ -21,12 +21,12 @@ module scale_land_sub_matrix
   !
   !++ Public procedure
   !
-  public :: SOLVER_tridiagonal_matrix
+  public :: MATRIX_SOLVER_tridiagonal
 
-  interface SOLVER_tridiagonal_matrix
-     module procedure SOLVER_tridiagonal_matrix_1D
-     module procedure SOLVER_tridiagonal_matrix_3D
-  end interface SOLVER_tridiagonal_matrix
+  interface MATRIX_SOLVER_tridiagonal
+     module procedure MATRIX_SOLVER_tridiagonal_1D
+     module procedure MATRIX_SOLVER_tridiagonal_3D
+  end interface MATRIX_SOLVER_tridiagonal
 
   !-----------------------------------------------------------------------------
   !
@@ -44,7 +44,7 @@ module scale_land_sub_matrix
 contains
   !-----------------------------------------------------------------------------
   !> solve tridiagonal matrix with Thomas's algorithm
-  subroutine SOLVER_tridiagonal_matrix_1D( &
+  subroutine MATRIX_SOLVER_tridiagonal_1D( &
        KA, &
        ud, &
        md, &
@@ -81,11 +81,11 @@ contains
     enddo
 
     return
-  end subroutine SOLVER_tridiagonal_matrix_1D
+  end subroutine MATRIX_SOLVER_tridiagonal_1D
 
   !-----------------------------------------------------------------------------
   !> solve tridiagonal matrix with Thomas's algorithm
-  subroutine SOLVER_tridiagonal_matrix_3D( &
+  subroutine MATRIX_SOLVER_tridiagonal_3D( &
        KA,         &
        IA, IS, IE, &
        JA, JS, JE, &
@@ -146,6 +146,6 @@ contains
     enddo
 
     return
-  end subroutine SOLVER_tridiagonal_matrix_3D
+  end subroutine MATRIX_SOLVER_tridiagonal_3D
 
-end module scale_land_sub_matrix
+end module scale_matrix

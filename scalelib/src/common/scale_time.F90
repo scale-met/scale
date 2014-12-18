@@ -54,8 +54,6 @@ module scale_time
   real(DP), public :: TIME_DTSEC_LAND_RESTART   !< time interval of land restart          [sec]
   real(DP), public :: TIME_DTSEC_URBAN          !< time interval of urban step            [sec]
   real(DP), public :: TIME_DTSEC_URBAN_RESTART  !< time interval of urban restart         [sec]
-  real(DP), public :: TIME_DTSEC_CPL            !< time interval of coupler calc.         [sec]
-  real(DP), public :: TIME_DTSEC_CPL_RESTART    !< time interval of coupler restart       [sec]
 
   integer,  public :: TIME_OFFSET_YEAR          !< time offset [year]
   integer,  public :: TIME_NOWDATE(6)           !< current time [YYYY MM DD HH MM SS]
@@ -84,8 +82,6 @@ module scale_time
   logical,  public :: TIME_DOLAND_restart       !< execute land restart output?
   logical,  public :: TIME_DOURBAN_step         !< execute urban component in this step?
   logical,  public :: TIME_DOURBAN_restart      !< execute urban restart output?
-  logical,  public :: TIME_DOCPL_calc           !< execute coupler component in this step?
-  logical,  public :: TIME_DOCPL_restart        !< execute coupler restart output?
   logical,  public :: TIME_DOend                !< finish program in this step?
 
   !-----------------------------------------------------------------------------
@@ -121,8 +117,6 @@ module scale_time
   real(DP), private :: TIME_RES_LAND_RESTART  = 0.0_DP
   real(DP), private :: TIME_RES_URBAN         = 0.0_DP
   real(DP), private :: TIME_RES_URBAN_RESTART = 0.0_DP
-  real(DP), private :: TIME_RES_CPL           = 0.0_DP
-  real(DP), private :: TIME_RES_CPL_RESTART   = 0.0_DP
 
   real(DP), private, parameter :: eps = 1.E-6_DP !> epsilon for timesec
 
@@ -185,11 +179,6 @@ contains
     real(DP)               :: TIME_DT_URBAN_RESTART      = UNDEF8
     character(len=H_SHORT) :: TIME_DT_URBAN_RESTART_UNIT = ""
 
-    real(DP)               :: TIME_DT_CPL                = UNDEF8
-    character(len=H_SHORT) :: TIME_DT_CPL_UNIT           = ""
-    real(DP)               :: TIME_DT_CPL_RESTART        = UNDEF8
-    character(len=H_SHORT) :: TIME_DT_CPL_RESTART_UNIT   = ""
-
     NAMELIST / PARAM_TIME / &
        TIME_STARTDATE,             &
        TIME_STARTMS,               &
@@ -226,11 +215,7 @@ contains
        TIME_DT_URBAN,              &
        TIME_DT_URBAN_UNIT,         &
        TIME_DT_URBAN_RESTART,      &
-       TIME_DT_URBAN_RESTART_UNIT, &
-       TIME_DT_CPL,                &
-       TIME_DT_CPL_UNIT,           &
-       TIME_DT_CPL_RESTART,        &
-       TIME_DT_CPL_RESTART_UNIT
+       TIME_DT_URBAN_RESTART_UNIT
 
     real(DP) :: TIME_DURATIONSEC
 
@@ -249,12 +234,6 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_TIME. Check!'
        call PRC_MPIstop
     endif
-
-    ! Currently, urban scheme is included in coupler part and called at the same timming with the coupler.
-       TIME_DT_URBAN               = TIME_DT_CPL
-       TIME_DT_URBAN_UNIT          = TIME_DT_CPL_UNIT
-       TIME_DT_URBAN_RESTART       = TIME_DT_CPL_RESTART
-       TIME_DT_URBAN_RESTART_UNIT  = TIME_DT_CPL_RESTART_UNIT
 
     if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_TIME)
 
@@ -404,24 +383,6 @@ contains
           if( IO_L ) write(IO_FID_LOG,*) '*** Not found TIME_DT_URBAN_RESTART_UNIT. TIME_DURATION_UNIT is used.'
           TIME_DT_URBAN_RESTART_UNIT = TIME_DURATION_UNIT
        endif
-       ! COUPLER
-       if ( TIME_DT_CPL == UNDEF8 ) then
-          if( IO_L ) write(IO_FID_LOG,*) '*** Not found TIME_DT_CPL. TIME_DT is used.'
-          TIME_DT_CPL = TIME_DT
-       endif
-       if ( TIME_DT_CPL_UNIT == '' ) then
-          if( IO_L ) write(IO_FID_LOG,*) '*** Not found TIME_DT_CPL_UNIT. TIME_DT_UNIT is used.'
-          TIME_DT_CPL_UNIT = TIME_DT_UNIT
-       endif
-       ! CPL RESTART
-       if ( TIME_DT_CPL_RESTART == UNDEF8 ) then
-          if( IO_L ) write(IO_FID_LOG,*) '*** Not found TIME_DT_CPL_RESTART. TIME_DURATION is used.'
-          TIME_DT_CPL_RESTART = TIME_DURATION
-       endif
-       if ( TIME_DT_CPL_RESTART_UNIT == '' ) then
-          if( IO_L ) write(IO_FID_LOG,*) '*** Not found TIME_DT_CPL_RESTART_UNIT. TIME_DURATION_UNIT is used.'
-          TIME_DT_CPL_RESTART_UNIT = TIME_DURATION_UNIT
-       endif
     endif
 
     !--- calculate time
@@ -496,8 +457,6 @@ contains
        call CALENDAR_unit2sec( TIME_DTSEC_LAND_RESTART,  TIME_DT_LAND_RESTART,  TIME_DT_LAND_RESTART_UNIT  )
        call CALENDAR_unit2sec( TIME_DTSEC_URBAN,         TIME_DT_URBAN,         TIME_DT_URBAN_UNIT         )
        call CALENDAR_unit2sec( TIME_DTSEC_URBAN_RESTART, TIME_DT_URBAN_RESTART, TIME_DT_URBAN_RESTART_UNIT )
-       call CALENDAR_unit2sec( TIME_DTSEC_CPL,           TIME_DT_CPL,           TIME_DT_CPL_UNIT           )
-       call CALENDAR_unit2sec( TIME_DTSEC_CPL_RESTART,   TIME_DT_CPL_RESTART,   TIME_DT_CPL_RESTART_UNIT   )
 
        TIME_NSTEP_ATMOS_DYN = max( nint( TIME_DTSEC / TIME_DTSEC_ATMOS_DYN ), 1 )
 
@@ -516,8 +475,6 @@ contains
        TIME_DTSEC_LAND_RESTART  = max( TIME_DTSEC_LAND_RESTART,  TIME_DTSEC_ATMOS_DYN*TIME_NSTEP_ATMOS_DYN )
        TIME_DTSEC_URBAN         = max( TIME_DTSEC_URBAN,         TIME_DTSEC_ATMOS_DYN*TIME_NSTEP_ATMOS_DYN )
        TIME_DTSEC_URBAN_RESTART = max( TIME_DTSEC_URBAN_RESTART, TIME_DTSEC_ATMOS_DYN*TIME_NSTEP_ATMOS_DYN )
-       TIME_DTSEC_CPL           = max( TIME_DTSEC_CPL,           TIME_DTSEC_ATMOS_DYN*TIME_NSTEP_ATMOS_DYN )
-       TIME_DTSEC_CPL_RESTART   = max( TIME_DTSEC_CPL_RESTART,   TIME_DTSEC_ATMOS_DYN*TIME_NSTEP_ATMOS_DYN )
 
        if( IO_L ) write(IO_FID_LOG,*)
        if( IO_L ) write(IO_FID_LOG,*) '*** Time interval for atmospheric processes (sec.)'
@@ -536,14 +493,11 @@ contains
        if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3)') '*** Land update                 : ', TIME_DTSEC_LAND
        if( IO_L ) write(IO_FID_LOG,*) '*** Time interval for urban process (sec.)'
        if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3)') '*** Urban update                : ', TIME_DTSEC_URBAN
-       if( IO_L ) write(IO_FID_LOG,*) '*** Time interval for coupler process (sec.)'
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3)') '*** Coupler interval            : ', TIME_DTSEC_CPL
-       if( IO_L ) write(IO_FID_LOG,*) '*** Time interval for Restart (sec.)'
+       if( IO_L ) write(IO_FID_LOG,*) '*** Time interval for restart process (sec.)'
        if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3)') '*** Atmospheric Variables       : ', TIME_DTSEC_ATMOS_RESTART
        if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3)') '*** Ocean Variables             : ', TIME_DTSEC_OCEAN_RESTART
        if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3)') '*** Land Variables              : ', TIME_DTSEC_LAND_RESTART
        if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3)') '*** Urban Variables             : ', TIME_DTSEC_URBAN_RESTART
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3)') '*** Coupler Variables           : ', TIME_DTSEC_CPL_RESTART
 
     endif
 
@@ -572,7 +526,6 @@ contains
     TIME_DOOCEAN_step      = .false.
     TIME_DOLAND_step       = .false.
     TIME_DOURBAN_step      = .false.
-    TIME_DOCPL_calc        = .false.
 
     TIME_RES_ATMOS_DYN    = TIME_RES_ATMOS_DYN    + TIME_DTSEC
     TIME_RES_ATMOS_PHY_CP = TIME_RES_ATMOS_PHY_CP + TIME_DTSEC
@@ -585,7 +538,6 @@ contains
     TIME_RES_OCEAN        = TIME_RES_OCEAN        + TIME_DTSEC
     TIME_RES_LAND         = TIME_RES_LAND         + TIME_DTSEC
     TIME_RES_URBAN        = TIME_RES_URBAN        + TIME_DTSEC
-    TIME_RES_CPL          = TIME_RES_CPL          + TIME_DTSEC
 
     if ( TIME_RES_ATMOS_DYN - TIME_DTSEC_ATMOS_DYN > -eps ) then
        TIME_DOATMOS_step  = .true.
@@ -639,11 +591,6 @@ contains
     if ( TIME_RES_URBAN - TIME_DTSEC_URBAN > -eps ) then
        TIME_DOURBAN_step = .true.
        TIME_RES_URBAN    = TIME_RES_URBAN - TIME_DTSEC_URBAN
-    endif
-
-    if ( TIME_RES_CPL   - TIME_DTSEC_CPL   > -eps ) then
-       TIME_DOCPL_calc   = .true.
-       TIME_RES_CPL      = TIME_RES_CPL   - TIME_DTSEC_CPL
     endif
 
     if( IO_L ) write(IO_FID_LOG,'(1x,A,I4.4,A,I2.2,A,I2.2,A,I2.2,A,I2.2,A,I2.2,A,F6.3,A,I6,A,I6)') &
@@ -701,13 +648,11 @@ contains
     TIME_DOOCEAN_restart = .false.
     TIME_DOLAND_restart  = .false.
     TIME_DOURBAN_restart = .false.
-    TIME_DOCPL_restart   = .false.
 
     TIME_RES_ATMOS_RESTART = TIME_RES_ATMOS_RESTART + TIME_DTSEC
     TIME_RES_OCEAN_RESTART = TIME_RES_OCEAN_RESTART + TIME_DTSEC
     TIME_RES_LAND_RESTART  = TIME_RES_LAND_RESTART  + TIME_DTSEC
     TIME_RES_URBAN_RESTART = TIME_RES_URBAN_RESTART + TIME_DTSEC
-    TIME_RES_CPL_RESTART   = TIME_RES_CPL_RESTART   + TIME_DTSEC
 
     if ( TIME_RES_ATMOS_RESTART - TIME_DTSEC_ATMOS_RESTART > -eps ) then
        TIME_DOATMOS_restart   = .true.
@@ -735,13 +680,6 @@ contains
        TIME_RES_URBAN_RESTART = TIME_RES_URBAN_RESTART - TIME_DTSEC_URBAN_RESTART
     elseif( TIME_DOend ) then
        TIME_DOURBAN_restart   = .true.
-    endif
-
-    if ( TIME_RES_CPL_RESTART   - TIME_DTSEC_CPL_RESTART  > -eps ) then
-       TIME_DOCPL_restart     = .true.
-       TIME_RES_CPL_RESTART   = TIME_RES_CPL_RESTART  - TIME_DTSEC_CPL_RESTART
-    elseif( TIME_DOend ) then
-       TIME_DOCPL_restart     = .true.
     endif
 
     return

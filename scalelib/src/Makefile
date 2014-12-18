@@ -15,6 +15,7 @@ LIBNAME = libscale.a
 DEPENDLIB = $(LIBDIR)/libgtool.a $(LIBDIR)/libdcutils.a
 
 VPATH = common:                     \
+        coupler:                    \
         io:                         \
         atmos-physics:              \
         atmos-physics/share:        \
@@ -33,8 +34,7 @@ VPATH = common:                     \
         land/grid:                  \
         ocean:                      \
         urban:                      \
-        urban/grid:                 \
-        coupler:
+        urban/grid:
 
 LIBVERSION = $(shell git rev-parse --short HEAD 2> /dev/null)
 ifeq ($(LIBVERSION),)
@@ -118,18 +118,10 @@ OBJS = $(scale_rdma)	\
 	scale_atmos_sub_saturation.o	\
 	scale_atmos_sub_solarins.o	\
 	scale_atmos_sub_thermodyn.o	\
+	scale_bulkflux.o	\
 	scale_calendar.o	\
 	scale_comm.o	\
 	scale_const.o	\
-	scale_cpl_atmos_land.o	\
-	scale_cpl_atmos_land_bulk.o	\
-	scale_cpl_atmos_land_const.o	\
-	scale_cpl_atmos_urban.o	\
-	scale_cpl_atmos_urban_bulk.o	\
-	scale_cpl_atmos_ocean.o	\
-	scale_cpl_atmos_ocean_bulk.o	\
-	scale_cpl_atmos_ocean_const.o	\
-	scale_cpl_sub_bulkflux.o	\
 	scale_debug.o	\
 	scale_external_io.o	\
 	scale_fileio.o	\
@@ -143,19 +135,23 @@ OBJS = $(scale_rdma)	\
 	scale_land_grid.o	\
 	scale_land_grid_index.o	\
 	scale_land_phy.o	\
-	scale_land_phy_bucket.o	\
+	scale_land_phy_slab.o	\
 	scale_land_phy_matsiro.o	\
-	scale_land_sub_matrix.o	\
+	scale_land_sfc.o	\
+	scale_land_sfc_slab.o	\
 	scale_landuse.o	\
 	scale_mapproj.o	\
+	scale_matrix.o	\
 	scale_monitor.o	\
 	scale_ocean_phy.o	\
 	scale_ocean_phy_slab.o	\
-	scale_ocean_sub_roughness.o	\
+	scale_ocean_sfc.o	\
+	scale_ocean_sfc_slab.o	\
 	scale_precision.o	\
 	scale_process.o	\
 	scale_prof.o	\
 	scale_random.o	\
+	scale_roughness.o	\
 	scale_specfunc.o	\
 	scale_statistics.o	\
 	scale_stdio.o	\
@@ -164,7 +160,9 @@ OBJS = $(scale_rdma)	\
 	scale_tracer.o	\
 	$(OBJS_TRACER)	\
 	scale_urban_grid.o	\
-	scale_urban_grid_index.o
+	scale_urban_grid_index.o	\
+	scale_urban_phy.o	\
+	scale_urban_phy_slc.o
 
 
 

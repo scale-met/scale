@@ -19,6 +19,10 @@ module mod_land_driver
   use scale_debug
   use scale_grid_index
   use scale_land_grid_index
+
+  use scale_const, only: &
+     I_SW  => CONST_I_SW, &
+     I_LW  => CONST_I_LW
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -28,6 +32,7 @@ module mod_land_driver
   !
   public :: LAND_driver_setup
   public :: LAND_driver
+  public :: LAND_SURFACE_GET
   public :: LAND_SURFACE_SET
 
   !-----------------------------------------------------------------------------
@@ -60,9 +65,12 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[DRIVER] / Categ[LAND] / Origin[SCALE-LES]'
 
     !########## Get Surface Boundary from coupler ##########
-    call LAND_SURFACE_GET( setup=.true. )
+    call LAND_SURFACE_GET
 
     call LAND_PHY_driver_setup
+
+    !########## Set Surface Boundary to coupler ##########
+    call LAND_SURFACE_SET( countup=.false. )
 
     !########## History & Monitor ##########
     if ( LAND_sw ) then
@@ -82,11 +90,15 @@ contains
     use mod_land_admin, only: &
        LAND_sw
     use mod_land_vars, only: &
-       LAND_TEMP,        &
-       LAND_WATER,       &
-       LAND_TEMP_t,      &
-       LAND_WATER_t,     &
-       LAND_vars_total,  &
+       LAND_TEMP,         &
+       LAND_WATER,        &
+       LAND_SFC_TEMP,     &
+       LAND_SFC_albedo,   &
+       LAND_TEMP_t,       &
+       LAND_WATER_t,      &
+       LAND_SFC_TEMP_t,   &
+       LAND_SFC_albedo_t, &
+       LAND_vars_total,   &
        LAND_vars_history
     use mod_land_phy_driver, only: &
        LAND_PHY_driver
@@ -96,7 +108,7 @@ contains
     !---------------------------------------------------------------------------
 
     !########## Get Surface Boundary from coupler ##########
-    call LAND_SURFACE_GET( setup=.false. )
+    call LAND_SURFACE_GET
 
     !########## Physics ##########
     if ( LAND_sw ) then
@@ -114,6 +126,13 @@ contains
     enddo
     enddo
     enddo
+    do j = JS, JE
+    do i = IS, IE
+       LAND_SFC_TEMP  (i,j)      = LAND_SFC_TEMP  (i,j)      + LAND_SFC_TEMP_t  (i,j)      * dt
+       LAND_SFC_albedo(i,j,I_LW) = LAND_SFC_albedo(i,j,I_LW) + LAND_SFC_albedo_t(i,j,I_LW) * dt
+       LAND_SFC_albedo(i,j,I_SW) = LAND_SFC_albedo(i,j,I_SW) + LAND_SFC_albedo_t(i,j,I_SW) * dt
+    enddo
+    enddo
 
     !########## Negative Fixer ##########
     do j = JS, JE
@@ -126,14 +145,10 @@ contains
 
     call LAND_vars_total
 
-    !########## Put Surface Boundary to coupler ##########
-    call LAND_SURFACE_SET( setup=.false. )
+    !########## Set Surface Boundary to coupler ##########
+    call LAND_SURFACE_SET( countup=.true. )
 
-    !########## History & Monitor ##########
-    call PROF_rapstart('LND History', 1)
-    call LAND_vars_history
-    call PROF_rapend  ('LND History', 1)
-
+    !########## reset tendencies ##########
     do j = JS, JE
     do i = IS, IE
     do k = LKS, LKE
@@ -142,34 +157,58 @@ contains
     enddo
     enddo
     enddo
+    do j = JS, JE
+    do i = IS, IE
+       LAND_SFC_TEMP_t  (i,j)      = 0.0_RP
+       LAND_SFC_albedo_t(i,j,I_LW) = 0.0_RP
+       LAND_SFC_albedo_t(i,j,I_SW) = 0.0_RP
+    enddo
+    enddo
+
+    !########## History & Monitor ##########
+    call PROF_rapstart('LND History', 1)
+    call LAND_vars_history
+    call PROF_rapend  ('LND History', 1)
 
     return
   end subroutine LAND_driver
 
   !-----------------------------------------------------------------------------
-  !> Get surface boundary
-  subroutine LAND_SURFACE_GET( setup )
+  !> Get surface boundary from other model
+  subroutine LAND_SURFACE_GET
+    use mod_land_admin, only: &
+       LAND_sw
     use mod_land_vars, only: &
-       LAND_SFC_TEMP,      &
-       LAND_SFC_albedo,    &
-       LAND_SFLX_heat,     &
-       LAND_SFLX_prec,     &
-       LAND_SFLX_evap
-    use mod_cpl_admin, only: &
-       CPL_sw_AtmLnd
+       ATMOS_TEMP,     &
+       ATMOS_PRES,     &
+       ATMOS_W,        &
+       ATMOS_U,        &
+       ATMOS_V,        &
+       ATMOS_DENS,     &
+       ATMOS_QV,       &
+       ATMOS_PBL,      &
+       ATMOS_SFC_PRES, &
+       ATMOS_SFLX_LW,  &
+       ATMOS_SFLX_SW,  &
+       ATMOS_SFLX_prec
     use mod_cpl_vars, only: &
-       CPL_getLnd
+       CPL_getATM_LND
     implicit none
-
-    logical, intent(in) :: setup
     !---------------------------------------------------------------------------
 
-    if ( CPL_sw_AtmLnd ) then
-       call CPL_getLnd( LAND_SFC_TEMP  (:,:),   & ! [OUT]
-                        LAND_SFC_albedo(:,:,:), & ! [OUT]
-                        LAND_SFLX_heat (:,:),   & ! [OUT]
-                        LAND_SFLX_prec (:,:),   & ! [OUT]
-                        LAND_SFLX_evap (:,:)    ) ! [OUT]
+    if ( LAND_sw ) then
+       call CPL_getATM_LND( ATMOS_TEMP,     & ! [OUT]
+                            ATMOS_PRES,     & ! [OUT]
+                            ATMOS_W,        & ! [OUT]
+                            ATMOS_U,        & ! [OUT]
+                            ATMOS_V,        & ! [OUT]
+                            ATMOS_DENS,     & ! [OUT]
+                            ATMOS_QV,       & ! [OUT]
+                            ATMOS_PBL,      & ! [OUT]
+                            ATMOS_SFC_PRES, & ! [OUT]
+                            ATMOS_SFLX_LW,  & ! [OUT]
+                            ATMOS_SFLX_SW,  & ! [OUT]
+                            ATMOS_SFLX_prec ) ! [OUT]
     endif
 
     return
@@ -177,69 +216,53 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Put surface boundary to other model
-  subroutine LAND_SURFACE_SET( setup )
-    use scale_land_grid, only: &
-       dz => GRID_LCDZ
-    use mod_admin_restart, only: &
-       RESTART_RUN
+  subroutine LAND_SURFACE_SET( countup )
+    use mod_land_admin, only: &
+       LAND_sw
     use mod_land_vars, only: &
-       I_WaterCritical,    &
-       I_ThermalCond,      &
-       I_Z0M,              &
-       I_Z0H,              &
-       I_Z0E,              &
-       LAND_TEMP,          &
-       LAND_WATER,         &
-       LAND_SFC_TEMP,      &
-       LAND_SFC_albedo,    &
-       LAND_SFLX_heat,     &
-       LAND_SFLX_prec,     &
-       LAND_SFLX_evap,     &
-       LAND_PROPERTY
-    use mod_cpl_admin, only: &
-       CPL_sw_AtmLnd
+       LAND_PROPERTY,   &
+       I_Z0M,           &
+       I_Z0H,           &
+       I_Z0E,           &
+       LAND_SFC_TEMP,   &
+       LAND_SFC_albedo, &
+       LAND_SFLX_MW,    &
+       LAND_SFLX_MU,    &
+       LAND_SFLX_MV,    &
+       LAND_SFLX_SH,    &
+       LAND_SFLX_LH,    &
+       LAND_SFLX_GH,    &
+       LAND_SFLX_evap,  &
+       LAND_U10,        &
+       LAND_V10,        &
+       LAND_T2,         &
+       LAND_Q2
     use mod_cpl_vars, only: &
-       CPL_putLnd_setup,   &
-       CPL_putLnd_restart, &
-       CPL_putLnd
+       CPL_putLND
     implicit none
 
-    logical, intent(in) :: setup
-
-    real(RP) :: LAND_DZ     (IA,JA)
-    real(RP) :: LAND_TEMP_Z1(IA,JA)
-    real(RP) :: LAND_BETA   (IA,JA)
-
-    real(RP), parameter :: BETA_MAX = 1.0_RP
+    ! arguments
+    logical, intent(in) :: countup
     !---------------------------------------------------------------------------
 
-    if ( CPL_sw_AtmLnd ) then
-       if ( setup ) then
-          LAND_DZ(:,:) = dz(LKS)
-
-          call CPL_putLnd_setup( LAND_TEMP_Z1(:,:),                  & ! [IN]
-                                 LAND_BETA   (:,:),                  & ! [IN]
-                                 LAND_SFC_TEMP  (:,:),               & ! [IN]
-                                 LAND_SFC_albedo(:,:,:),             & ! [IN]
-                                 LAND_PROPERTY  (:,:,I_ThermalCond), & ! [IN]
-                                 LAND_DZ        (:,:),               & ! [IN]
-                                 LAND_PROPERTY  (:,:,I_Z0M),         & ! [IN]
-                                 LAND_PROPERTY  (:,:,I_Z0H),         & ! [IN]
-                                 LAND_PROPERTY  (:,:,I_Z0E)          ) ! [IN]
-
-          if ( RESTART_RUN ) then
-             call CPL_putLnd_restart( LAND_SFLX_heat (:,:),   & ! [IN]
-                                      LAND_SFLX_prec (:,:),   & ! [IN]
-                                      LAND_SFLX_evap (:,:)    ) ! [IN]
-          endif
-       else
-          LAND_TEMP_Z1(:,:) = LAND_TEMP(LKS,:,:)
-
-          LAND_BETA   (:,:) = min( LAND_WATER(LKS,:,:) / LAND_PROPERTY(:,:,I_WaterCritical), BETA_MAX )
-
-          call CPL_putLnd( LAND_TEMP_Z1(:,:), & ! [IN]
-                           LAND_BETA   (:,:)  ) ! [IN]
-       endif
+    if ( LAND_sw ) then
+       call CPL_putLND( LAND_SFC_TEMP  (:,:),       & ! [IN]
+                        LAND_SFC_albedo(:,:,:),     & ! [IN]
+                        LAND_PROPERTY  (:,:,I_Z0M), & ! [IN]
+                        LAND_PROPERTY  (:,:,I_Z0H), & ! [IN]
+                        LAND_PROPERTY  (:,:,I_Z0E), & ! [IN]
+                        LAND_SFLX_MW   (:,:),       & ! [IN]
+                        LAND_SFLX_MU   (:,:),       & ! [IN]
+                        LAND_SFLX_MV   (:,:),       & ! [IN]
+                        LAND_SFLX_SH   (:,:),       & ! [IN]
+                        LAND_SFLX_LH   (:,:),       & ! [IN]
+                        LAND_SFLX_GH   (:,:),       & ! [IN]
+                        LAND_SFLX_evap (:,:),       & ! [IN]
+                        LAND_U10       (:,:),       & ! [IN]
+                        LAND_V10       (:,:),       & ! [IN]
+                        LAND_T2        (:,:),       & ! [IN]
+                        LAND_Q2        (:,:),       & ! [IN]
+                        countup                     ) ! [IN]
     endif
 
     return

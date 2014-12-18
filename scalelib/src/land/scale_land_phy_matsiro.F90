@@ -25,8 +25,8 @@ module scale_land_phy_matsiro
   !
   !++ Public procedure
   !
-  public :: LAND_PHY_matsiro_setup
-  public :: LAND_PHY_matsiro
+  public :: LAND_PHY_MATSIRO_setup
+  public :: LAND_PHY_MATSIRO
 
   !-----------------------------------------------------------------------------
   !
@@ -44,7 +44,7 @@ module scale_land_phy_matsiro
 contains
   !-----------------------------------------------------------------------------
   !> Setup
-  subroutine LAND_PHY_matsiro_setup( LAND_TYPE )
+  subroutine LAND_PHY_MATSIRO_setup( LAND_TYPE )
     use scale_process, only: &
        PRC_MPIstop
     implicit none
@@ -60,12 +60,7 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[MATSIRO] / Categ[LAND PHY] / Origin[SCALE-LES]'
-
-    if ( LAND_TYPE /= 'MATSIRO' ) then
-       write(*,*) 'xxx LAND_TYPE is not MATSIRO. Check!'
-       call PRC_MPIstop
-    endif
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[MATSIRO] / Categ[LAND PHY] / Origin[SCALElib]'
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -79,25 +74,30 @@ contains
     if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_LAND_MATSIRO)
 
     return
-  end subroutine LAND_PHY_matsiro_setup
+  end subroutine LAND_PHY_MATSIRO_setup
 
   !-----------------------------------------------------------------------------
   !> Physical processes for land submodel
-  subroutine LAND_PHY_matsiro( &
+  subroutine LAND_PHY_MATSIRO( &
+       LAND_TEMP_t,       &
+       LAND_WATER_t,      &
        LAND_TEMP,         &
        LAND_WATER,        &
        LAND_WaterLimit,   &
        LAND_ThermalCond,  &
        LAND_HeatCapacity, &
        LAND_WaterDiff,    &
-       FLX_heat,          &
-       FLX_precip,        &
-       FLX_evap,          &
+       LAND_SFLX_GH,      &
+       LAND_SFLX_prec,    &
+       LAND_SFLX_evap,    &
        CDZ,               &
-       LAND_TEMP_t,       &
-       LAND_WATER_t       )
+       dt                 )
     use scale_grid_index
     implicit none
+
+    ! arguments
+    real(RP), intent(out) :: LAND_TEMP_t      (LKMAX,IA,JA)
+    real(RP), intent(out) :: LAND_WATER_t     (LKMAX,IA,JA)
 
     real(RP), intent(in)  :: LAND_TEMP        (LKMAX,IA,JA)
     real(RP), intent(in)  :: LAND_WATER       (LKMAX,IA,JA)
@@ -105,13 +105,11 @@ contains
     real(RP), intent(in)  :: LAND_ThermalCond (IA,JA)
     real(RP), intent(in)  :: LAND_HeatCapacity(IA,JA)
     real(RP), intent(in)  :: LAND_WaterDiff   (IA,JA)
-    real(RP), intent(in)  :: FLX_heat         (IA,JA)
-    real(RP), intent(in)  :: FLX_precip       (IA,JA)
-    real(RP), intent(in)  :: FLX_evap         (IA,JA)
+    real(RP), intent(in)  :: LAND_SFLX_GH     (IA,JA)
+    real(RP), intent(in)  :: LAND_SFLX_prec   (IA,JA)
+    real(RP), intent(in)  :: LAND_SFLX_evap   (IA,JA)
     real(RP), intent(in)  :: CDZ              (LKMAX)
-    real(RP), intent(out) :: LAND_TEMP_t      (LKMAX,IA,JA)
-    real(RP), intent(out) :: LAND_WATER_t     (LKMAX,IA,JA)
-
+    real(RP), intent(in)  :: dt
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Land step: Matsiro'
@@ -120,6 +118,6 @@ contains
     LAND_WATER_t(:,:,:) = 0.0_RP
 
     return
-  end subroutine LAND_PHY_matsiro
+  end subroutine LAND_PHY_MATSIRO
 
 end module scale_land_phy_matsiro

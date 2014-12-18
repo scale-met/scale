@@ -17,6 +17,10 @@ module mod_ocean_driver
   use scale_prof
   use scale_debug
   use scale_grid_index
+
+  use scale_const, only: &
+     I_SW  => CONST_I_SW, &
+     I_LW  => CONST_I_LW
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -26,6 +30,7 @@ module mod_ocean_driver
   !
   public :: OCEAN_driver_setup
   public :: OCEAN_driver
+  public :: OCEAN_SURFACE_GET
   public :: OCEAN_SURFACE_SET
 
   !-----------------------------------------------------------------------------
@@ -60,11 +65,14 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[DRIVER] / Categ[OCEAN] / Origin[SCALE-LES]'
 
     !########## Get Surface Boundary from coupler ##########
-    call OCEAN_SURFACE_GET( setup=.true. )
+    call OCEAN_SURFACE_GET
 
     call OCEAN_PHY_driver_setup
 
 !    if( OCEAN_FRC_sw ) call OCEAN_FRC_driver_setup
+
+    !########## Set Surface Boundary to coupler ##########
+    call OCEAN_SURFACE_SET( countup=.false. )
 
     !########## History & Monitor ##########
     if ( OCEAN_sw ) then
@@ -84,9 +92,19 @@ contains
     use mod_ocean_admin, only: &
        OCEAN_sw
     use mod_ocean_vars, only: &
-       OCEAN_TEMP,        &
-       OCEAN_TEMP_t,      &
-       OCEAN_vars_total,  &
+       OCEAN_TEMP,         &
+       OCEAN_SFC_TEMP,     &
+       OCEAN_SFC_albedo,   &
+       OCEAN_SFC_Z0M,      &
+       OCEAN_SFC_Z0H,      &
+       OCEAN_SFC_Z0E,      &
+       OCEAN_TEMP_t,       &
+       OCEAN_SFC_TEMP_t,   &
+       OCEAN_SFC_albedo_t, &
+       OCEAN_SFC_Z0M_t,    &
+       OCEAN_SFC_Z0H_t,    &
+       OCEAN_SFC_Z0E_t,    &
+       OCEAN_vars_total,   &
        OCEAN_vars_history
     use mod_ocean_phy_driver, only: &
        OCEAN_PHY_driver
@@ -98,7 +116,7 @@ contains
     !---------------------------------------------------------------------------
 
     !########## Get Surface Boundary from coupler ##########
-    call OCEAN_SURFACE_GET( setup=.false. )
+    call OCEAN_SURFACE_GET
 
     !########## Physics ##########
     if ( OCEAN_sw ) then
@@ -117,59 +135,78 @@ contains
     !########## Update ##########
     do j = JS, JE
     do i = IS, IE
-       OCEAN_TEMP(i,j) = OCEAN_TEMP(i,j) + OCEAN_TEMP_t(i,j) * dt
+       OCEAN_TEMP      (i,j)      = OCEAN_TEMP      (i,j)      + OCEAN_TEMP_t      (i,j)      * dt
+       OCEAN_SFC_TEMP  (i,j)      = OCEAN_SFC_TEMP  (i,j)      + OCEAN_SFC_TEMP_t  (i,j)      * dt
+       OCEAN_SFC_albedo(i,j,I_LW) = OCEAN_SFC_albedo(i,j,I_LW) + OCEAN_SFC_albedo_t(i,j,I_LW) * dt
+       OCEAN_SFC_albedo(i,j,I_SW) = OCEAN_SFC_albedo(i,j,I_SW) + OCEAN_SFC_albedo_t(i,j,I_SW) * dt
+       OCEAN_SFC_Z0M   (i,j)      = OCEAN_SFC_Z0M   (i,j)      + OCEAN_SFC_Z0M_t   (i,j)      * dt
+       OCEAN_SFC_Z0H   (i,j)      = OCEAN_SFC_Z0H   (i,j)      + OCEAN_SFC_Z0H_t   (i,j)      * dt
+       OCEAN_SFC_Z0E   (i,j)      = OCEAN_SFC_Z0E   (i,j)      + OCEAN_SFC_Z0E_t   (i,j)      * dt
     enddo
     enddo
 
     call OCEAN_vars_total
 
-    !########## Put Surface Boundary to coupler ##########
-    call OCEAN_SURFACE_SET( setup=.false. )
+    !########## Set Surface Boundary to coupler ##########
+    call OCEAN_SURFACE_SET( countup=.true. )
+
+    !########## reset tendencies ##########
+    do j = JS, JE
+    do i = IS, IE
+       OCEAN_TEMP_t      (i,j)      = 0.0_RP
+       OCEAN_SFC_TEMP_t  (i,j)      = 0.0_RP
+       OCEAN_SFC_albedo_t(i,j,I_LW) = 0.0_RP
+       OCEAN_SFC_albedo_t(i,j,I_SW) = 0.0_RP
+       OCEAN_SFC_Z0M_t   (i,j)      = 0.0_RP
+       OCEAN_SFC_Z0H_t   (i,j)      = 0.0_RP
+       OCEAN_SFC_Z0E_t   (i,j)      = 0.0_RP
+    enddo
+    enddo
 
     !########## History & Monitor ##########
     call PROF_rapstart('OCN History', 1)
     call OCEAN_vars_history
     call PROF_rapend  ('OCN History', 1)
 
-    do j = JS, JE
-    do i = IS, IE
-       OCEAN_TEMP_t(i,j) = 0.0_RP
-    enddo
-    enddo
-
     return
   end subroutine OCEAN_driver
 
   !-----------------------------------------------------------------------------
-  !> Get surface boundary to other model
-  subroutine OCEAN_SURFACE_GET( setup )
+  !> Get surface boundary from other model
+  subroutine OCEAN_SURFACE_GET
+    use mod_ocean_admin, only: &
+       OCEAN_sw
     use mod_ocean_vars, only: &
-       OCEAN_SFC_TEMP,      &
-       OCEAN_SFC_albedo,    &
-       OCEAN_SFC_Z0M,       &
-       OCEAN_SFC_Z0H,       &
-       OCEAN_SFC_Z0E,       &
-       OCEAN_SFLX_heat,     &
-       OCEAN_SFLX_prec,     &
-       OCEAN_SFLX_evap
-    use mod_cpl_admin, only: &
-       CPL_sw_AtmOcn
+       ATMOS_TEMP,     &
+       ATMOS_PRES,     &
+       ATMOS_W,        &
+       ATMOS_U,        &
+       ATMOS_V,        &
+       ATMOS_DENS,     &
+       ATMOS_QV,       &
+       ATMOS_PBL,      &
+       ATMOS_SFC_PRES, &
+       ATMOS_SFLX_LW,  &
+       ATMOS_SFLX_SW,  &
+       ATMOS_SFLX_prec
     use mod_cpl_vars, only: &
-       CPL_getOcn
+       CPL_getATM_OCN
     implicit none
-
-    logical, intent(in) :: setup
     !---------------------------------------------------------------------------
 
-    if ( CPL_sw_AtmOcn ) then
-       call CPL_getOcn( OCEAN_SFC_TEMP  (:,:),   & ! [OUT]
-                        OCEAN_SFC_albedo(:,:,:), & ! [OUT]
-                        OCEAN_SFC_Z0M   (:,:),   & ! [OUT]
-                        OCEAN_SFC_Z0H   (:,:),   & ! [OUT]
-                        OCEAN_SFC_Z0E   (:,:),   & ! [OUT]
-                        OCEAN_SFLX_heat (:,:),   & ! [OUT]
-                        OCEAN_SFLX_prec (:,:),   & ! [OUT]
-                        OCEAN_SFLX_evap (:,:)    ) ! [OUT]
+    if ( OCEAN_sw ) then
+       call CPL_getATM_OCN( ATMOS_TEMP,     & ! [OUT]
+                            ATMOS_PRES,     & ! [OUT]
+                            ATMOS_W,        & ! [OUT]
+                            ATMOS_U,        & ! [OUT]
+                            ATMOS_V,        & ! [OUT]
+                            ATMOS_DENS,     & ! [OUT]
+                            ATMOS_QV,       & ! [OUT]
+                            ATMOS_PBL,      & ! [OUT]
+                            ATMOS_SFC_PRES, & ! [OUT]
+                            ATMOS_SFLX_LW,  & ! [OUT]
+                            ATMOS_SFLX_SW,  & ! [OUT]
+                            ATMOS_SFLX_prec ) ! [OUT]
     endif
 
     return
@@ -177,47 +214,52 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Put surface boundary to other model
-  subroutine OCEAN_SURFACE_SET( setup )
-    use mod_admin_restart, only: &
-       RESTART_RUN
+  subroutine OCEAN_SURFACE_SET( countup )
+    use mod_ocean_admin, only: &
+       OCEAN_sw
     use mod_ocean_vars, only: &
-       OCEAN_TEMP,          &
        OCEAN_SFC_TEMP,      &
        OCEAN_SFC_albedo,    &
        OCEAN_SFC_Z0M,       &
        OCEAN_SFC_Z0H,       &
        OCEAN_SFC_Z0E,       &
-       OCEAN_SFLX_heat,     &
-       OCEAN_SFLX_prec,     &
-       OCEAN_SFLX_evap
-    use mod_cpl_admin, only: &
-       CPL_sw_AtmOcn
+       OCEAN_SFLX_MW,       &
+       OCEAN_SFLX_MU,       &
+       OCEAN_SFLX_MV,       &
+       OCEAN_SFLX_SH,       &
+       OCEAN_SFLX_LH,       &
+       OCEAN_SFLX_WH,       &
+       OCEAN_SFLX_evap,     &
+       OCEAN_U10,           &
+       OCEAN_V10,           &
+       OCEAN_T2,            &
+       OCEAN_Q2
     use mod_cpl_vars, only: &
-       CPL_putOcn_setup,   &
-       CPL_putOcn_restart, &
-       CPL_putOcn
+       CPL_putOCN
     implicit none
 
-    logical, intent(in) :: setup
+    ! arguments
+    logical, intent(in) :: countup
     !---------------------------------------------------------------------------
 
-    if ( CPL_sw_AtmOcn ) then
-       if ( setup ) then
-          call CPL_putOcn_setup( OCEAN_TEMP      (:,:),   & ! [IN]
-                                 OCEAN_SFC_TEMP  (:,:),   & ! [IN]
-                                 OCEAN_SFC_albedo(:,:,:), & ! [IN]
-                                 OCEAN_SFC_Z0M   (:,:),   & ! [IN]
-                                 OCEAN_SFC_Z0H   (:,:),   & ! [IN]
-                                 OCEAN_SFC_Z0E   (:,:)    ) ! [IN]
-
-          if ( RESTART_RUN ) then
-             call CPL_putOcn_restart( OCEAN_SFLX_heat (:,:),   & ! [IN]
-                                      OCEAN_SFLX_prec (:,:),   & ! [IN]
-                                      OCEAN_SFLX_evap (:,:)    ) ! [IN]
-          endif
-       else
-          call CPL_putOcn( OCEAN_TEMP(:,:) ) ! [IN]
-       endif
+    if ( OCEAN_sw ) then
+       call CPL_putOCN( OCEAN_SFC_TEMP  (:,:),   & ! [IN]
+                        OCEAN_SFC_albedo(:,:,:), & ! [IN]
+                        OCEAN_SFC_Z0M   (:,:),   & ! [IN]
+                        OCEAN_SFC_Z0H   (:,:),   & ! [IN]
+                        OCEAN_SFC_Z0E   (:,:),   & ! [IN]
+                        OCEAN_SFLX_MW   (:,:),   & ! [IN]
+                        OCEAN_SFLX_MU   (:,:),   & ! [IN]
+                        OCEAN_SFLX_MV   (:,:),   & ! [IN]
+                        OCEAN_SFLX_SH   (:,:),   & ! [IN]
+                        OCEAN_SFLX_LH   (:,:),   & ! [IN]
+                        OCEAN_SFLX_WH   (:,:),   & ! [IN]
+                        OCEAN_SFLX_evap (:,:),   & ! [IN]
+                        OCEAN_U10       (:,:),   & ! [IN]
+                        OCEAN_V10       (:,:),   & ! [IN]
+                        OCEAN_T2        (:,:),   & ! [IN]
+                        OCEAN_Q2        (:,:),   & ! [IN]
+                        countup                  ) ! [IN]
     endif
 
     return

@@ -3910,16 +3910,16 @@ enddo
   !> Make initial state ( urban variables )
   subroutine MKINIT_urbancouple
     use mod_urban_vars, only: &
-       TR_URB,  &
-       TB_URB,  &
-       TG_URB,  &
-       TC_URB,  &
-       QC_URB,  &
-       UC_URB,  &
-       TS_URB,  &
-       TRL_URB, &
-       TBL_URB, &
-       TGL_URB
+       URBAN_TR,       &
+       URBAN_TB,       &
+       URBAN_TG,       &
+       URBAN_TC,       &
+       URBAN_QC,       &
+       URBAN_UC,       &
+       URBAN_TRL,      &
+       URBAN_TBL,      &
+       URBAN_TGL,      &
+       URBAN_SFC_TEMP
     implicit none
 
     ! urban state
@@ -3970,16 +3970,17 @@ enddo
     endif
     if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_URBANCOUPLE)
 
-    TR_URB (:,:)   = URB_ROOF_TEMP
-    TB_URB (:,:)   = URB_BLDG_TEMP
-    TG_URB (:,:)   = URB_GRND_TEMP
-    TC_URB (:,:)   = URB_CNPY_TEMP
-    QC_URB (:,:)   = URB_CNPY_HMDT
-    UC_URB (:,:)   = URB_CNPY_WIND
-    TS_URB (:,:)   = URB_CNPY_TEMP
-    TRL_URB(:,:,:) = URB_ROOF_LAYER_TEMP
-    TBL_URB(:,:,:) = URB_BLDG_LAYER_TEMP
-    TGL_URB(:,:,:) = URB_GRND_LAYER_TEMP
+    URBAN_TR (:,:)   = URB_ROOF_TEMP
+    URBAN_TB (:,:)   = URB_BLDG_TEMP
+    URBAN_TG (:,:)   = URB_GRND_TEMP
+    URBAN_TC (:,:)   = URB_CNPY_TEMP
+    URBAN_QC (:,:)   = URB_CNPY_HMDT
+    URBAN_UC (:,:)   = URB_CNPY_WIND
+    URBAN_TRL(:,:,:) = URB_ROOF_LAYER_TEMP
+    URBAN_TBL(:,:,:) = URB_BLDG_LAYER_TEMP
+    URBAN_TGL(:,:,:) = URB_GRND_LAYER_TEMP
+
+    URBAN_SFC_TEMP(:,:) = URB_CNPY_TEMP
 
     return
   end subroutine MKINIT_urbancouple
@@ -4122,16 +4123,16 @@ enddo
        LAND_SFC_albedo, &
        LAND_PROPERTY
     use mod_urban_vars, only: &
-       TR_URB,  &
-       TB_URB,  &
-       TG_URB,  &
-       TC_URB,  &
-       QC_URB,  &
-       UC_URB,  &
-       TS_URB,  &
-       TRL_URB, &
-       TBL_URB, &
-       TGL_URB
+       URBAN_TR,       &
+       URBAN_TB,       &
+       URBAN_TG,       &
+       URBAN_TC,       &
+       URBAN_QC,       &
+       URBAN_UC,       &
+       URBAN_TRL,      &
+       URBAN_TBL,      &
+       URBAN_TGL,      &
+       URBAN_SFC_TEMP
     implicit none
 
     ! Flux from Atmosphere
@@ -4227,16 +4228,17 @@ enddo
     LAND_PROPERTY   (:,:,I_HeatCapacity) = LND_SFC_HeatCapa
     LAND_PROPERTY   (:,:,I_Z0M)          = LND_SFC_z0
 
-    TR_URB (:,:)   = URB_ROOF_TEMP
-    TB_URB (:,:)   = URB_BLDG_TEMP
-    TG_URB (:,:)   = URB_GRND_TEMP
-    TC_URB (:,:)   = URB_CNPY_TEMP
-    QC_URB (:,:)   = URB_CNPY_HMDT
-    UC_URB (:,:)   = URB_CNPY_WIND
-    TS_URB (:,:)   = URB_CNPY_TEMP
-    TRL_URB(:,:,:) = URB_ROOF_LAYER_TEMP
-    TBL_URB(:,:,:) = URB_BLDG_LAYER_TEMP
-    TGL_URB(:,:,:) = URB_GRND_LAYER_TEMP
+    URBAN_TR (:,:)   = URB_ROOF_TEMP
+    URBAN_TB (:,:)   = URB_BLDG_TEMP
+    URBAN_TG (:,:)   = URB_GRND_TEMP
+    URBAN_TC (:,:)   = URB_CNPY_TEMP
+    URBAN_QC (:,:)   = URB_CNPY_HMDT
+    URBAN_UC (:,:)   = URB_CNPY_WIND
+    URBAN_TRL(:,:,:) = URB_ROOF_LAYER_TEMP
+    URBAN_TBL(:,:,:) = URB_BLDG_LAYER_TEMP
+    URBAN_TGL(:,:,:) = URB_GRND_LAYER_TEMP
+
+    URBAN_SFC_TEMP(:,:) = URB_CNPY_TEMP
 
     ! 1/9 size of domain
     dist = ( GRID_CXG(IMAX*PRC_NUM_X) - GRID_CXG(1) ) / 9.0_RP

@@ -107,14 +107,14 @@ contains
        ATM_TEMP, ATM_PRES, ATM_W, ATM_U, ATM_V,     &
        ATM_DENS,                                    &
        ATM_QTRC,                                    &
-       ATM_Z1,                                      &
+       ATM_Z1, dt,                                  &
        SFC_DENS, SFC_PRES,                          &
        SFLX_LW_dn, SFLX_SW_dn,                      &
        SFC_TEMP, SFC_albedo, SFC_beta,              &
        SFC_Z0M, SFC_Z0H, SFC_Z0E,                   &
        SFLX_MW, SFLX_MU, SFLX_MV, SFLX_SH, SFLX_LH, &
        SFLX_QTRC,                                   &
-       Uabs10, U10, V10, T2, Q2                     )
+       U10, V10, T2, Q2                             )
     use scale_grid_index
     use scale_tracer
     use scale_const, only: &
@@ -126,8 +126,8 @@ contains
        SF_bulkcoef => ATMOS_PHY_SF_bulkcoef
     use scale_atmos_saturation, only: &
        SATURATION_pres2qsat_all => ATMOS_SATURATION_pres2qsat_all
-    use scale_ocean_roughness, only: &
-       OCEAN_roughness
+    use scale_roughness, only: &
+       ROUGHNESS
     implicit none
 
     real(RP), intent(in)    :: ATM_TEMP  (IA,JA)    ! temperature at the lowermost layer (cell center) [K]
@@ -138,6 +138,7 @@ contains
     real(RP), intent(in)    :: ATM_DENS  (IA,JA)    ! density     at the lowermost layer (cell center) [kg/m3]
     real(RP), intent(in)    :: ATM_QTRC  (IA,JA,QA) ! tracer      at the lowermost layer (cell center) [kg/kg]
     real(RP), intent(in)    :: ATM_Z1    (IA,JA)    ! height of the lowermost grid from surface (cell center) [m]
+    real(RP), intent(in)    :: dt                   ! delta time
     real(RP), intent(in)    :: SFC_DENS  (IA,JA)    ! density     at the surface atmosphere [kg/m3]
     real(RP), intent(in)    :: SFC_PRES  (IA,JA)    ! pressure    at the surface atmosphere [Pa]
     real(RP), intent(in)    :: SFLX_LW_dn(IA,JA)    ! downward longwave  radiation flux at the surface [J/m2/s]
@@ -154,11 +155,14 @@ contains
     real(RP), intent(out)   :: SFLX_SH   (IA,JA)    ! surface flux for sensible heat (area center)   [J/m2/s]
     real(RP), intent(out)   :: SFLX_LH   (IA,JA)    ! surface flux for latent   heat (area center)   [J/m2/s]
     real(RP), intent(out)   :: SFLX_QTRC (IA,JA,QA) ! surface flux for tracer mass   (area center)   [kg/m2/s]
-    real(RP), intent(out)   :: Uabs10    (IA,JA)    ! absolute velocity at 10m height
     real(RP), intent(out)   :: U10       (IA,JA)    ! velocity u        at 10m height
     real(RP), intent(out)   :: V10       (IA,JA)    ! velocity v        at 10m height
     real(RP), intent(out)   :: T2        (IA,JA)    ! temperature t     at  2m height
     real(RP), intent(out)   :: Q2        (IA,JA)    ! water vapor q     at  2m height
+
+    real(RP) :: SFC_Z0M_t(IA,JA)
+    real(RP) :: SFC_Z0H_t(IA,JA)
+    real(RP) :: SFC_Z0E_t(IA,JA)
 
     real(RP) :: ATM_Uabs(IA,JA) ! absolute velocity at z1 [m/s]
     real(RP) :: ATM_POTT(IA,JA) ! potential temperature at z1, based on the local surface pressure [K]
@@ -194,11 +198,20 @@ contains
     enddo
     enddo
 
-    call OCEAN_roughness( SFC_Z0M(:,:), & ! [INOUT]
-                          SFC_Z0H(:,:), & ! [INOUT]
-                          SFC_Z0E(:,:), & ! [INOUT]
-                          ATM_U (:,:),  & ! [IN]
-                          ATM_V (:,:)   ) ! [IN]
+    call ROUGHNESS( SFC_Z0M_t(:,:), & ! [OUT]
+                    SFC_Z0H_t(:,:), & ! [OUT]
+                    SFC_Z0E_t(:,:), & ! [OUT]
+                    SFC_Z0M  (:,:), & ! [IN]
+                    SFC_Z0H  (:,:), & ! [IN]
+                    SFC_Z0E  (:,:), & ! [IN]
+                    ATM_U    (:,:), & ! [IN]
+                    ATM_V    (:,:), & ! [IN]
+                    ATM_Z1   (:,:), & ! [IN]
+                    dt              ) ! [IN]
+
+    SFC_Z0M(:,:) = SFC_Z0M(:,:) + SFC_Z0M_t(:,:) * dt
+    SFC_Z0H(:,:) = SFC_Z0H(:,:) + SFC_Z0H_t(:,:) * dt
+    SFC_Z0E(:,:) = SFC_Z0E(:,:) + SFC_Z0E_t(:,:) * dt
 
     call SF_bulkcoef( ATM_Uabs(:,:), & ! [IN]
                       ATM_POTT(:,:), & ! [IN]
@@ -261,7 +274,6 @@ contains
 
     do j = JS, JE
     do i = IS, IE
-       Uabs10(i,j) = R10M(i,j) * ATM_Uabs(i,j)
        U10   (i,j) = R10M(i,j) * ATM_U   (i,j)
        V10   (i,j) = R10M(i,j) * ATM_V   (i,j)
     enddo

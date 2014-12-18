@@ -49,50 +49,68 @@ module mod_urban_vars
   character(len=H_MID),  public :: URBAN_RESTART_OUT_DTYPE    = 'DEFAULT'       !< REAL4 or REAL8
 
   ! prognostic variables
-  real(RP), public, allocatable :: URBAN_TEMP      (:,:)   !< temperature at uppermost urban canopy [K]
+  real(RP), public, allocatable :: URBAN_TR   (:,:)   ! urban surface temperature of roof [K]
+  real(RP), public, allocatable :: URBAN_TB   (:,:)   ! urban surface temperature of wall [K]
+  real(RP), public, allocatable :: URBAN_TG   (:,:)   ! urban surface temperature of road [K]
+  real(RP), public, allocatable :: URBAN_TC   (:,:)   ! urban canopy air temperature [K]
+  real(RP), public, allocatable :: URBAN_QC   (:,:)   ! urban canopy humidity [kg/kg]
+  real(RP), public, allocatable :: URBAN_UC   (:,:)   ! urban canopy wind [m/s]
+  real(RP), public, allocatable :: URBAN_TRL  (:,:,:) ! urban temperature in layer of roof [K]
+  real(RP), public, allocatable :: URBAN_TBL  (:,:,:) ! urban temperature in layer of wall [K]
+  real(RP), public, allocatable :: URBAN_TGL  (:,:,:) ! urban temperature in layer of road [K]
+  real(RP), public, allocatable :: URBAN_RAINR(:,:)   ! urban rain storage on roof [mm=kg/m2]
+  real(RP), public, allocatable :: URBAN_RAINB(:,:)   ! urban rain storage on wall [mm=kg/m2]
+  real(RP), public, allocatable :: URBAN_RAING(:,:)   ! urban rain storage on road [mm=kg/m2]
+  real(RP), public, allocatable :: URBAN_ROFF (:,:)   ! urban runoff [mm=kg/m2]
 
   ! tendency variables
-  real(RP), public, allocatable :: URBAN_TEMP_t    (:,:)   !< tendency of URBAN_TEMP
+  real(RP), public, allocatable :: URBAN_TRL_t  (:,:,:) ! tendency of URBAN_TRL
+  real(RP), public, allocatable :: URBAN_TBL_t  (:,:,:) ! tendency of URBAN_TBL
+  real(RP), public, allocatable :: URBAN_TGL_t  (:,:,:) ! tendency of URBAN_TGL
+  real(RP), public, allocatable :: URBAN_TC_t   (:,:)   ! tendency of URBAN_TC
+  real(RP), public, allocatable :: URBAN_UC_t   (:,:)   ! tendency of URBAN_UC
+  real(RP), public, allocatable :: URBAN_QC_t   (:,:)   ! tendency of URBAN_QC
+  real(RP), public, allocatable :: URBAN_TR_t   (:,:)   ! tendency of URBAN_TR
+  real(RP), public, allocatable :: URBAN_TB_t   (:,:)   ! tendency of URBAN_TB
+  real(RP), public, allocatable :: URBAN_TG_t   (:,:)   ! tendency of URBAN_TG
+  real(RP), public, allocatable :: URBAN_RAINR_t(:,:)   ! tendency of URBAN_RAINR
+  real(RP), public, allocatable :: URBAN_RAINB_t(:,:)   ! tendency of URBAN_RAINB
+  real(RP), public, allocatable :: URBAN_RAING_t(:,:)   ! tendency of URBAN_RAING
+  real(RP), public, allocatable :: URBAN_ROFF_t (:,:)   ! tendency of URBAN_ROFF
 
   ! for restart
-  real(RP), public, allocatable :: URBAN_SFC_TEMP  (:,:)   !< urban canopy temperature [K]
-  real(RP), public, allocatable :: URBAN_SFC_albedo(:,:,:) !< urban canopy albedo      [0-1]
+  real(RP), public, allocatable :: URBAN_SFC_TEMP  (:,:)   ! urban grid average of surface temperature [K]
+  real(RP), public, allocatable :: URBAN_SFC_albedo(:,:,:) ! urban grid average of albedo [0-1]
+  real(RP), public, allocatable :: URBAN_SFLX_MW   (:,:)   ! urban grid average of w-momentum flux [kg/m2/s]
+  real(RP), public, allocatable :: URBAN_SFLX_MU   (:,:)   ! urban grid average of u-momentum flux [kg/m2/s]
+  real(RP), public, allocatable :: URBAN_SFLX_MV   (:,:)   ! urban grid average of v-momentum flux [kg/m2/s]
+  real(RP), public, allocatable :: URBAN_SFLX_SH   (:,:)   ! urban grid average of sensible heat flux [W/m2]
+  real(RP), public, allocatable :: URBAN_SFLX_LH   (:,:)   ! urban grid average of latent heat flux [W/m2]
+  real(RP), public, allocatable :: URBAN_SFLX_GH   (:,:)   ! urban grid average of ground heat flux [W/m2]
+  real(RP), public, allocatable :: URBAN_SFLX_evap (:,:)   ! urban grid average of water vapor flux [kg/m2/s]
 
-  ! prognostic variables
-  real(RP), public, allocatable :: TC_URB (:,:)   ! Diagnostic canopy air temperature [K]
-  real(RP), public, allocatable :: QC_URB (:,:)   ! Diagnostic canopy humidity [-]
-  real(RP), public, allocatable :: UC_URB (:,:)   ! Diagnostic canopy wind [m/s]
-  real(RP), public, allocatable :: TS_URB (:,:)   ! Diagnostic surface temperature [K]
+  ! diagnostic variables
+  real(RP), public, allocatable :: URBAN_Z0M(:,:) ! urban grid average of rougness length (momentum) [m]
+  real(RP), public, allocatable :: URBAN_Z0H(:,:) ! urban grid average of rougness length (heat) [m]
+  real(RP), public, allocatable :: URBAN_Z0E(:,:) ! urban grid average of rougness length (vapor) [m]
+  real(RP), public, allocatable :: URBAN_U10(:,:) ! urban grid average of velocity u at 10m [m/s]
+  real(RP), public, allocatable :: URBAN_V10(:,:) ! urban grid average of velocity v at 10m [m/s]
+  real(RP), public, allocatable :: URBAN_T2 (:,:) ! urban grid average of temperature at 2m [K]
+  real(RP), public, allocatable :: URBAN_Q2 (:,:) ! urban grid average of water vapor at 2m [kg/kg]
 
-  real(RP), public, allocatable :: TR_URB (:,:)   ! Surface temperature of roof [K]
-  real(RP), public, allocatable :: TB_URB (:,:)   ! Surface temperature of wall [K]
-  real(RP), public, allocatable :: TG_URB (:,:)   ! Surface temperature of road [K]
-  real(RP), public, allocatable :: SHR_URB (:,:)  ! Sensible heat flux from roof [W/m2]
-  real(RP), public, allocatable :: SHB_URB (:,:)  ! Sensible heat flux from wall [W/m2]
-  real(RP), public, allocatable :: SHG_URB (:,:)  ! Sensible heat flux from road [W/m2]
-  real(RP), public, allocatable :: LHR_URB (:,:)  ! Latent heat flux from roof [W/m2]
-  real(RP), public, allocatable :: LHB_URB (:,:)  ! Latent heat flux from wall [W/m2]
-  real(RP), public, allocatable :: LHG_URB (:,:)  ! Latent heat flux from road [W/m2]
-  real(RP), public, allocatable :: GHR_URB (:,:)  ! Ground heat flux on roof [W/m2]
-  real(RP), public, allocatable :: GHB_URB (:,:)  ! Ground heat flux on wall [W/m2]
-  real(RP), public, allocatable :: GHG_URB (:,:)  ! Ground heat flux on road [W/m2]
-  real(RP), public, allocatable :: RnR_URB (:,:)  ! Net radiation on roof [W/m2]
-  real(RP), public, allocatable :: RnB_URB (:,:)  ! Net radiation on wall [W/m2]
-  real(RP), public, allocatable :: RnG_URB (:,:)  ! Net radiation on road [W/m2]
-  real(RP), public, allocatable :: TRL_URB(:,:,:) ! temperature in layer of roof [K]
-  real(RP), public, allocatable :: TBL_URB(:,:,:) ! temperature in layer of wall [K]
-  real(RP), public, allocatable :: TGL_URB(:,:,:) ! temperature in layer of road [K]
-  real(RP), public, allocatable :: RAINR_URB(:,:) ! Rain storage on roof [mm=kg/m2]
-  real(RP), public, allocatable :: RAINB_URB(:,:) ! Rain storage on roof [mm=kg/m2]
-  real(RP), public, allocatable :: RAING_URB(:,:) ! Rain storage on roof [mm=kg/m2]
-  real(RP), public, allocatable :: ROFF_URB(:,:)  ! Runoff from urban [mm=kg/m2]
-  real(RP), public, allocatable :: AH_URB(:,:)    ! Anthropogenic sensible heat [W/m2] for restart
-  real(RP), public, allocatable :: ALH_URB(:,:)   ! Anthropogenic sensible heat [W/m2] for restart
-
-  real(RP), public, allocatable :: Rngrd_URB(:,:) ! Grid average of Net radiation [W/m2]
-  real(RP), public, allocatable :: SHFLX_URB(:,:) ! Grid average of Net radiation [W/m2]
-  real(RP), public, allocatable :: LHFLX_URB(:,:) ! Grid average of Net radiation [W/m2]
-  real(RP), public, allocatable :: GHFLX_URB(:,:) ! Grid average of Net radiation [W/m2]
+  ! recieved atmospheric variables
+  real(RP), public, allocatable :: ATMOS_TEMP     (:,:)
+  real(RP), public, allocatable :: ATMOS_PRES     (:,:)
+  real(RP), public, allocatable :: ATMOS_W        (:,:)
+  real(RP), public, allocatable :: ATMOS_U        (:,:)
+  real(RP), public, allocatable :: ATMOS_V        (:,:)
+  real(RP), public, allocatable :: ATMOS_DENS     (:,:)
+  real(RP), public, allocatable :: ATMOS_QV       (:,:)
+  real(RP), public, allocatable :: ATMOS_PBL      (:,:)
+  real(RP), public, allocatable :: ATMOS_SFC_PRES (:,:)
+  real(RP), public, allocatable :: ATMOS_SFLX_LW  (:,:)
+  real(RP), public, allocatable :: ATMOS_SFLX_SW  (:,:)
+  real(RP), public, allocatable :: ATMOS_SFLX_prec(:,:)
 
   !-----------------------------------------------------------------------------
   !
@@ -104,130 +122,106 @@ module mod_urban_vars
   !
   logical,                private :: URBAN_VARS_CHECKRANGE      = .false.
 
-  integer,                private, parameter :: VMAX = 28
-  integer,                private, parameter :: I_TR_URB  = 1
-  integer,                private, parameter :: I_TB_URB  = 2
-  integer,                private, parameter :: I_TG_URB  = 3
-  integer,                private, parameter :: I_TC_URB  = 4
-  integer,                private, parameter :: I_QC_URB  = 5
-  integer,                private, parameter :: I_UC_URB  = 6
-  integer,                private, parameter :: I_TS_URB  = 7
-  integer,                private, parameter :: I_SHR_URB = 8
-  integer,                private, parameter :: I_SHB_URB = 9
-  integer,                private, parameter :: I_SHG_URB = 10
-  integer,                private, parameter :: I_LHR_URB = 11
-  integer,                private, parameter :: I_LHB_URB = 12
-  integer,                private, parameter :: I_LHG_URB = 13
-  integer,                private, parameter :: I_GHR_URB = 14
-  integer,                private, parameter :: I_GHB_URB = 15
-  integer,                private, parameter :: I_GHG_URB = 16
-  integer,                private, parameter :: I_RnR_URB = 17
-  integer,                private, parameter :: I_RnB_URB = 18
-  integer,                private, parameter :: I_RnG_URB = 19
-  integer,                private, parameter :: I_TRL_URB = 20
-  integer,                private, parameter :: I_TBL_URB = 21
-  integer,                private, parameter :: I_TGL_URB = 22
-  integer,                private, parameter :: I_RAINR_URB = 23
-  integer,                private, parameter :: I_RAINB_URB = 24
-  integer,                private, parameter :: I_RAING_URB = 25
-  integer,                private, parameter :: I_ROFF_URB  = 26
-  integer,                private, parameter :: I_AH_URB    = 27
-  integer,                private, parameter :: I_ALH_URB   = 28
- ! integer,                private, parameter :: I_Rngrd_URB = 29
- ! integer,                private, parameter :: I_SHFLX_URB = 30
- ! integer,                private, parameter :: I_LHFLX_URB = 31
- ! integer,                private, parameter :: I_GHFLX_URB = 32
+  integer,                private, parameter :: VMAX         = 23
+  integer,                private, parameter :: I_TR         = 1
+  integer,                private, parameter :: I_TB         = 2
+  integer,                private, parameter :: I_TG         = 3
+  integer,                private, parameter :: I_TC         = 4
+  integer,                private, parameter :: I_QC         = 5
+  integer,                private, parameter :: I_UC         = 6
+  integer,                private, parameter :: I_TRL        = 7
+  integer,                private, parameter :: I_TBL        = 8
+  integer,                private, parameter :: I_TGL        = 9
+  integer,                private, parameter :: I_RAINR      = 10
+  integer,                private, parameter :: I_RAINB      = 11
+  integer,                private, parameter :: I_RAING      = 12
+  integer,                private, parameter :: I_ROFF       = 13
+  integer,                private, parameter :: I_SFC_TEMP   = 14
+  integer,                private, parameter :: I_SFC_ALB_LW = 15
+  integer,                private, parameter :: I_SFC_ALB_SW = 16
+  integer,                private, parameter :: I_SFLX_MW    = 17
+  integer,                private, parameter :: I_SFLX_MU    = 18
+  integer,                private, parameter :: I_SFLX_MV    = 19
+  integer,                private, parameter :: I_SFLX_SH    = 20
+  integer,                private, parameter :: I_SFLX_LH    = 21
+  integer,                private, parameter :: I_SFLX_GH    = 22
+  integer,                private, parameter :: I_SFLX_evap  = 23
 
   character(len=H_SHORT), private            :: VAR_NAME(VMAX) !< name  of the urban variables
   character(len=H_MID),   private            :: VAR_DESC(VMAX) !< desc. of the urban variables
   character(len=H_SHORT), private            :: VAR_UNIT(VMAX) !< unit  of the urban variables
 
-  data VAR_NAME / 'TR_URB' ,  &
-                  'TB_URB' ,  &
-                  'TG_URB' ,  &
-                  'TC_URB' ,  &
-                  'QC_URB' ,  &
-                  'UC_URB' ,  &
-                  'TS_URB' ,  &
-                  'SHR_URB' , &
-                  'SHB_URB' , &
-                  'SHG_URB' , &
-                  'LHR_URB' , &
-                  'LHB_URB' , &
-                  'LHG_URB' , &
-                  'GHR_URB' , &
-                  'GHB_URB' , &
-                  'GHG_URB' , &
-                  'RnR_URB' , &
-                  'RnB_URB' , &
-                  'RnG_URB' , &
-                  'TRL_URB' , &
-                  'TBL_URB' , &
-                  'TGL_URB' , &
-                  'RAINR_URB' , &
-                  'RAINB_URB' , &
-                  'RAING_URB' , &
-                  'ROFF_URB',   &
-                  'AH_URB',     &
-                  'ALH_URB'     /
+  data VAR_NAME / 'URBAN_TR' ,       &
+                  'URBAN_TB' ,       &
+                  'URBAN_TG' ,       &
+                  'URBAN_TC' ,       &
+                  'URBAN_QC' ,       &
+                  'URBAN_UC' ,       &
+                  'URBAN_TRL' ,      &
+                  'URBAN_TBL' ,      &
+                  'URBAN_TGL' ,      &
+                  'URBAN_RAINR' ,    &
+                  'URBAN_RAINB' ,    &
+                  'URBAN_RAING' ,    &
+                  'URBAN_ROFF',      &
+                  'URBAN_SFC_TEMP',  &
+                  'URBAN_ALB_LW',    &
+                  'URBAN_ALB_SW',    &
+                  'URBAN_SFLX_MW',   &
+                  'URBAN_SFLX_MU',   &
+                  'URBAN_SFLX_MV',   &
+                  'URBAN_SFLX_SH',   &
+                  'URBAN_SFLX_LH',   &
+                  'URBAN_SFLX_GH',   &
+                  'URBAN_SFLX_evap'  /
 
-  data VAR_DESC / 'Surface temperature of roof',        &
-                  'Surface temperature of wall',        &
-                  'Surface temperature of road',        &
-                  'Diagnostic canopy air temperature',  &
-                  'Diagnostic canopy humidity',         &
-                  'Diagnostic canopy wind',             &
-                  'Diagnostic surface temperature',     &
-                  'Sensible heat flux from roof',       &
-                  'Sensible heat flux from wall',       &
-                  'Sensible heat flux from road',       &
-                  'Latent heat flux from roof',         &
-                  'Latent heat flux from wall',         &
-                  'Latent heat flux from road',         &
-                  'Ground heat flux on roof',           &
-                  'Ground heat flux on wall',           &
-                  'Ground heat flux on road',           &
-                  'Net radiation on roof',              &
-                  'Net radiation on wall',              &
-                  'Net radiation on road',              &
-                  'Temperature in layer of roof',       &
-                  'Temperature in layer of wall',       &
-                  'Temperature in layer of road',       &
-                  'Rain strage on roof',                &
-                  'Rain strage on building',            &
-                  'Rain strage on road',                &
-                  'Runoff from urban',                  &
-                  'Anthropogenic sensible heat',        &
-                  'Anthropogenic latent heat'           /
+  data VAR_DESC / 'urban surface temperature of roof',                &
+                  'urban surface temperature of wall',                &
+                  'urban surface temperature of road',                &
+                  'urban canopy air temperature',                     &
+                  'urban canopy humidity',                            &
+                  'urban canopy wind',                                &
+                  'urban temperature in layer of roof',               &
+                  'urban temperature in layer of wall',               &
+                  'urban temperature in layer of road',               &
+                  'urban rain strage on roof',                        &
+                  'urban rain strage on wall',                        &
+                  'urban rain strage on road',                        &
+                  'urban runoff ',                                    &
+                  'urban grid average of temperature',                &
+                  'urban grid average of albedo LW',                  &
+                  'urban grid average of albedo SW',                  &
+                  'urban grid average of w-momentum flux',            &
+                  'urban grid average of u-momentum flux',            &
+                  'urban grid average of v-momentum flux',            &
+                  'urban grid average of sensible heat flux',         &
+                  'urban grid average of latent heat flux',           &
+                  'urban grid average of ground heat flux',           &
+                  'urban grid average of water vapor flux'            /
 
-  data VAR_UNIT / 'K',     &
-                  'K',     &
-                  'K',     &
-                  'K',     &
-                  'kg/kg', &
-                  'm/s',   &
-                  'K',     &
-                  'W/m2',  &
-                  'W/m2',  &
-                  'W/m2',  &
-                  'W/m2',  &
-                  'W/m2',  &
-                  'W/m2',  &
-                  'W/m2',  &
-                  'W/m2',  &
-                  'W/m2',  &
-                  'W/m2',  &
-                  'W/m2',  &
-                  'W/m2',  &
-                  'K',     &
-                  'K',     &
-                  'K',     &
-                  'kg/m2', &
-                  'kg/m2', &
-                  'kg/m2', &
-                  'kg/m2', &
-                  'W/m2',  &
-                  'W/m2'   /
+  data VAR_UNIT / 'K',       &
+                  'K',       &
+                  'K',       &
+                  'K',       &
+                  'kg/kg',   &
+                  'm/s',     &
+                  'K',       &
+                  'K',       &
+                  'K',       &
+                  'kg/m2',   &
+                  'kg/m2',   &
+                  'kg/m2',   &
+                  'kg/m2',   &
+                  'K',       &
+                  '0-1',     &
+                  '0-1',     &
+                  'kg/m2/s', &
+                  'kg/m2/s', &
+                  'kg/m2/s', &
+                  'W/m2',    &
+                  'W/m2',    &
+                  'W/m2',    &
+                  'kg/m2/s'  /
 
   !-----------------------------------------------------------------------------
 contains
@@ -255,86 +249,118 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[VARS] / Categ[URBAN] / Origin[SCALE-LES]'
 
-    allocate( URBAN_TEMP  (IA,JA) )
-    URBAN_TEMP   (:,:) = UNDEF
+    allocate( URBAN_TR   (IA,JA)         )
+    allocate( URBAN_TB   (IA,JA)         )
+    allocate( URBAN_TG   (IA,JA)         )
+    allocate( URBAN_TC   (IA,JA)         )
+    allocate( URBAN_QC   (IA,JA)         )
+    allocate( URBAN_UC   (IA,JA)         )
+    allocate( URBAN_TRL  (UKS:UKE,IA,JA) )
+    allocate( URBAN_TBL  (UKS:UKE,IA,JA) )
+    allocate( URBAN_TGL  (UKS:UKE,IA,JA) )
+    allocate( URBAN_RAINR(IA,JA)         )
+    allocate( URBAN_RAINB(IA,JA)         )
+    allocate( URBAN_RAING(IA,JA)         )
+    allocate( URBAN_ROFF (IA,JA)         )
+    URBAN_TR   (:,:)   = UNDEF
+    URBAN_TB   (:,:)   = UNDEF
+    URBAN_TG   (:,:)   = UNDEF
+    URBAN_TC   (:,:)   = UNDEF
+    URBAN_QC   (:,:)   = UNDEF
+    URBAN_UC   (:,:)   = UNDEF
+    URBAN_TRL  (:,:,:) = UNDEF
+    URBAN_TBL  (:,:,:) = UNDEF
+    URBAN_TGL  (:,:,:) = UNDEF
+    URBAN_RAINR(:,:)   = UNDEF
+    URBAN_RAINB(:,:)   = UNDEF
+    URBAN_RAING(:,:)   = UNDEF
+    URBAN_ROFF (:,:)   = UNDEF
 
-    allocate( URBAN_TEMP_t(IA,JA) )
-    URBAN_TEMP_t (:,:) = UNDEF
+    allocate( URBAN_TR_t   (IA,JA)         )
+    allocate( URBAN_TB_t   (IA,JA)         )
+    allocate( URBAN_TG_t   (IA,JA)         )
+    allocate( URBAN_TC_t   (IA,JA)         )
+    allocate( URBAN_QC_t   (IA,JA)         )
+    allocate( URBAN_UC_t   (IA,JA)         )
+    allocate( URBAN_TRL_t  (UKS:UKE,IA,JA) )
+    allocate( URBAN_TBL_t  (UKS:UKE,IA,JA) )
+    allocate( URBAN_TGL_t  (UKS:UKE,IA,JA) )
+    allocate( URBAN_RAINR_t(IA,JA)         )
+    allocate( URBAN_RAINB_t(IA,JA)         )
+    allocate( URBAN_RAING_t(IA,JA)         )
+    allocate( URBAN_ROFF_t (IA,JA)         )
+    URBAN_TR_t   (:,:)   = UNDEF
+    URBAN_TB_t   (:,:)   = UNDEF
+    URBAN_TG_t   (:,:)   = UNDEF
+    URBAN_TC_t   (:,:)   = UNDEF
+    URBAN_QC_t   (:,:)   = UNDEF
+    URBAN_UC_t   (:,:)   = UNDEF
+    URBAN_TRL_t  (:,:,:) = UNDEF
+    URBAN_TBL_t  (:,:,:) = UNDEF
+    URBAN_TGL_t  (:,:,:) = UNDEF
+    URBAN_RAINR_t(:,:)   = UNDEF
+    URBAN_RAINB_t(:,:)   = UNDEF
+    URBAN_RAING_t(:,:)   = UNDEF
+    URBAN_ROFF_t (:,:)   = UNDEF
 
     allocate( URBAN_SFC_TEMP  (IA,JA)   )
     allocate( URBAN_SFC_albedo(IA,JA,2) )
+    allocate( URBAN_SFLX_MW   (IA,JA)   )
+    allocate( URBAN_SFLX_MU   (IA,JA)   )
+    allocate( URBAN_SFLX_MV   (IA,JA)   )
+    allocate( URBAN_SFLX_SH   (IA,JA)   )
+    allocate( URBAN_SFLX_LH   (IA,JA)   )
+    allocate( URBAN_SFLX_GH   (IA,JA)   )
+    allocate( URBAN_SFLX_evap (IA,JA)   )
     URBAN_SFC_TEMP  (:,:)   = UNDEF
     URBAN_SFC_albedo(:,:,:) = UNDEF
+    URBAN_SFLX_MW   (:,:)   = UNDEF
+    URBAN_SFLX_MU   (:,:)   = UNDEF
+    URBAN_SFLX_MV   (:,:)   = UNDEF
+    URBAN_SFLX_SH   (:,:)   = UNDEF
+    URBAN_SFLX_LH   (:,:)   = UNDEF
+    URBAN_SFLX_GH   (:,:)   = UNDEF
+    URBAN_SFLX_evap (:,:)   = UNDEF
 
-    allocate( TR_URB(IA,JA) )
-    allocate( TB_URB(IA,JA) )
-    allocate( TG_URB(IA,JA) )
-    allocate( TC_URB(IA,JA) )
-    allocate( QC_URB(IA,JA) )
-    allocate( UC_URB(IA,JA) )
-    allocate( TS_URB(IA,JA) )
-    TR_URB (:,:) = UNDEF
-    TB_URB (:,:) = UNDEF
-    TG_URB (:,:) = UNDEF
-    TC_URB (:,:) = UNDEF
-    QC_URB (:,:) = UNDEF
-    UC_URB (:,:) = UNDEF
-    TS_URB (:,:) = UNDEF
+    allocate( URBAN_Z0M(IA,JA) )
+    allocate( URBAN_Z0H(IA,JA) )
+    allocate( URBAN_Z0E(IA,JA) )
+    allocate( URBAN_U10(IA,JA) )
+    allocate( URBAN_V10(IA,JA) )
+    allocate( URBAN_T2 (IA,JA) )
+    allocate( URBAN_Q2 (IA,JA) )
+    URBAN_Z0M(:,:) = UNDEF
+    URBAN_Z0H(:,:) = UNDEF
+    URBAN_Z0E(:,:) = UNDEF
+    URBAN_U10(:,:) = UNDEF
+    URBAN_V10(:,:) = UNDEF
+    URBAN_T2 (:,:) = UNDEF
+    URBAN_Q2 (:,:) = UNDEF
 
-    allocate( SHR_URB(IA,JA) )
-    allocate( SHB_URB(IA,JA) )
-    allocate( SHG_URB(IA,JA) )
-    allocate( LHR_URB(IA,JA) )
-    allocate( LHB_URB(IA,JA) )
-    allocate( LHG_URB(IA,JA) )
-    allocate( GHR_URB(IA,JA) )
-    allocate( GHB_URB(IA,JA) )
-    allocate( GHG_URB(IA,JA) )
-    allocate( RnR_URB(IA,JA) )
-    allocate( RnB_URB(IA,JA) )
-    allocate( RnG_URB(IA,JA) )
-    SHR_URB (:,:) = UNDEF
-    SHB_URB (:,:) = UNDEF
-    SHG_URB (:,:) = UNDEF
-    LHR_URB (:,:) = UNDEF
-    LHB_URB (:,:) = UNDEF
-    LHG_URB (:,:) = UNDEF
-    GHR_URB (:,:) = UNDEF
-    GHB_URB (:,:) = UNDEF
-    GHG_URB (:,:) = UNDEF
-    RnR_URB (:,:) = UNDEF
-    RnB_URB (:,:) = UNDEF
-    RnG_URB (:,:) = UNDEF
-
-    allocate( TRL_URB(UKS:UKE,IA,JA) )
-    allocate( TBL_URB(UKS:UKE,IA,JA) )
-    allocate( TGL_URB(UKS:UKE,IA,JA) )
-    TRL_URB(:,:,:) = UNDEF
-    TBL_URB(:,:,:) = UNDEF
-    TGL_URB(:,:,:) = UNDEF
-
-    allocate( RAINR_URB(IA,JA) )
-    allocate( RAINB_URB(IA,JA) )
-    allocate( RAING_URB(IA,JA) )
-    allocate( ROFF_URB(IA,JA) )
-    RAINR_URB (:,:) = 0.0_RP
-    RAINB_URB (:,:) = 0.0_RP
-    RAING_URB (:,:) = 0.0_RP
-    ROFF_URB (:,:)  = 0.0_RP
-
-    allocate( AH_URB(IA,JA) )
-    allocate( ALH_URB(IA,JA) )
-    AH_URB (:,:)   = 0.0_RP
-    ALH_URB (:,:)  = 0.0_RP
-
-    allocate( Rngrd_URB(IA,JA) )
-    allocate( SHFLX_URB(IA,JA) )
-    allocate( LHFLX_URB(IA,JA) )
-    allocate( GHFLX_URB(IA,JA) )
-    Rngrd_URB (:,:)  = 0.0_RP
-    SHFLX_URB (:,:)  = 0.0_RP
-    LHFLX_URB (:,:)  = 0.0_RP
-    GHFLX_URB (:,:)  = 0.0_RP
+    allocate( ATMOS_TEMP     (IA,JA) )
+    allocate( ATMOS_PRES     (IA,JA) )
+    allocate( ATMOS_W        (IA,JA) )
+    allocate( ATMOS_U        (IA,JA) )
+    allocate( ATMOS_V        (IA,JA) )
+    allocate( ATMOS_DENS     (IA,JA) )
+    allocate( ATMOS_QV       (IA,JA) )
+    allocate( ATMOS_PBL      (IA,JA) )
+    allocate( ATMOS_SFC_PRES (IA,JA) )
+    allocate( ATMOS_SFLX_LW  (IA,JA) )
+    allocate( ATMOS_SFLX_SW  (IA,JA) )
+    allocate( ATMOS_SFLX_prec(IA,JA) )
+    ATMOS_TEMP     (:,:) = UNDEF
+    ATMOS_PRES     (:,:) = UNDEF
+    ATMOS_W        (:,:) = UNDEF
+    ATMOS_U        (:,:) = UNDEF
+    ATMOS_V        (:,:) = UNDEF
+    ATMOS_DENS     (:,:) = UNDEF
+    ATMOS_QV       (:,:) = UNDEF
+    ATMOS_PBL      (:,:) = UNDEF
+    ATMOS_SFC_PRES (:,:) = UNDEF
+    ATMOS_SFLX_LW  (:,:) = UNDEF
+    ATMOS_SFLX_SW  (:,:) = UNDEF
+    ATMOS_SFLX_prec(:,:) = UNDEF
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -389,40 +415,56 @@ contains
     if ( URBAN_sw .and. URBAN_RESTART_IN_BASENAME /= '' ) then
        if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(URBAN_RESTART_IN_BASENAME)
 
-       call FILEIO_read( TR_URB(:,:),                                      & ! [OUT]
-                         URBAN_RESTART_IN_BASENAME, 'TR_URB', 'XY', step=1 ) ! [IN]
-       call FILEIO_read( TB_URB(:,:),                                      & ! [OUT]
-                         URBAN_RESTART_IN_BASENAME, 'TB_URB', 'XY', step=1 ) ! [IN]
-       call FILEIO_read( TG_URB(:,:),                                      & ! [OUT]
-                         URBAN_RESTART_IN_BASENAME, 'TG_URB', 'XY', step=1 ) ! [IN]
-       call FILEIO_read( TC_URB(:,:),                                      & ! [OUT]
-                         URBAN_RESTART_IN_BASENAME, 'TC_URB', 'XY', step=1 ) ! [IN]
-       call FILEIO_read( QC_URB(:,:),                                      & ! [OUT]
-                         URBAN_RESTART_IN_BASENAME, 'QC_URB', 'XY', step=1 ) ! [IN]
-       call FILEIO_read( UC_URB(:,:),                                      & ! [OUT]
-                         URBAN_RESTART_IN_BASENAME, 'UC_URB', 'XY', step=1 ) ! [IN]
-       call FILEIO_read( TS_URB(:,:),                                      & ! [OUT]
-                         URBAN_RESTART_IN_BASENAME, 'TS_URB', 'XY', step=1 ) ! [IN]
+       call FILEIO_read( URBAN_TR(:,:),                                          & ! [OUT]
+                         URBAN_RESTART_IN_BASENAME, VAR_NAME(I_TR), 'XY', step=1 ) ! [IN]
+       call FILEIO_read( URBAN_TB(:,:),                                          & ! [OUT]
+                         URBAN_RESTART_IN_BASENAME, VAR_NAME(I_TB), 'XY', step=1 ) ! [IN]
+       call FILEIO_read( URBAN_TG(:,:),                                          & ! [OUT]
+                         URBAN_RESTART_IN_BASENAME, VAR_NAME(I_TG), 'XY', step=1 ) ! [IN]
+       call FILEIO_read( URBAN_TC(:,:),                                          & ! [OUT]
+                         URBAN_RESTART_IN_BASENAME, VAR_NAME(I_TC), 'XY', step=1 ) ! [IN]
+       call FILEIO_read( URBAN_QC(:,:),                                          & ! [OUT]
+                         URBAN_RESTART_IN_BASENAME, VAR_NAME(I_QC), 'XY', step=1 ) ! [IN]
+       call FILEIO_read( URBAN_UC(:,:),                                          & ! [OUT]
+                         URBAN_RESTART_IN_BASENAME, VAR_NAME(I_UC), 'XY', step=1 ) ! [IN]
 
-       call FILEIO_read( TRL_URB(:,:,:),                                       & ! [OUT]
-                         URBAN_RESTART_IN_BASENAME, 'TRL_URB', 'Urban', step=1 ) ! [IN]
-       call FILEIO_read( TBL_URB(:,:,:),                                       & ! [OUT]
-                         URBAN_RESTART_IN_BASENAME, 'TBL_URB', 'Urban', step=1 ) ! [IN]
-       call FILEIO_read( TGL_URB(:,:,:),                                       & ! [OUT]
-                         URBAN_RESTART_IN_BASENAME, 'TGL_URB', 'Urban', step=1 ) ! [IN]
+       call FILEIO_read( URBAN_TRL(:,:,:),                                           & ! [OUT]
+                         URBAN_RESTART_IN_BASENAME, VAR_NAME(I_TRL), 'Urban', step=1 ) ! [IN]
+       call FILEIO_read( URBAN_TBL(:,:,:),                                           & ! [OUT]
+                         URBAN_RESTART_IN_BASENAME, VAR_NAME(I_TBL), 'Urban', step=1 ) ! [IN]
+       call FILEIO_read( URBAN_TGL(:,:,:),                                           & ! [OUT]
+                         URBAN_RESTART_IN_BASENAME, VAR_NAME(I_TGL), 'Urban', step=1 ) ! [IN]
 
-       call FILEIO_read( RAINR_URB(:,:),                                      & ! [OUT]
-                         URBAN_RESTART_IN_BASENAME, 'RAINR_URB', 'XY', step=1 ) ! [IN]
-       call FILEIO_read( RAINB_URB(:,:),                                      & ! [OUT]
-                         URBAN_RESTART_IN_BASENAME, 'RAINB_URB', 'XY', step=1 ) ! [IN]
-       call FILEIO_read( RAING_URB(:,:),                                      & ! [OUT]
-                         URBAN_RESTART_IN_BASENAME, 'RAING_URB', 'XY', step=1 ) ! [IN]
-       call FILEIO_read( ROFF_URB(:,:),                                       & ! [OUT]
-                         URBAN_RESTART_IN_BASENAME, 'ROFF_URB', 'XY', step=1 )  ! [IN]
-       call FILEIO_read( AH_URB(:,:),                                         & ! [OUT]
-                         URBAN_RESTART_IN_BASENAME, 'AH_URB', 'XY', step=1 )    ! [IN]
-       call FILEIO_read( ALH_URB(:,:),                                        & ! [OUT]
-                         URBAN_RESTART_IN_BASENAME, 'ALH_URB', 'XY', step=1 )   ! [IN]
+       call FILEIO_read( URBAN_RAINR(:,:),                                          & ! [OUT]
+                         URBAN_RESTART_IN_BASENAME, VAR_NAME(I_RAINR), 'XY', step=1 ) ! [IN]
+       call FILEIO_read( URBAN_RAINB(:,:),                                          & ! [OUT]
+                         URBAN_RESTART_IN_BASENAME, VAR_NAME(I_RAINB), 'XY', step=1 ) ! [IN]
+       call FILEIO_read( URBAN_RAING(:,:),                                          & ! [OUT]
+                         URBAN_RESTART_IN_BASENAME, VAR_NAME(I_RAING), 'XY', step=1 ) ! [IN]
+       call FILEIO_read( URBAN_ROFF(:,:),                                           & ! [OUT]
+                         URBAN_RESTART_IN_BASENAME, VAR_NAME(I_ROFF),  'XY', step=1 ) ! [IN]
+
+       call FILEIO_read( URBAN_SFC_TEMP(:,:),                                            & ! [OUT]
+                         URBAN_RESTART_IN_BASENAME, VAR_NAME(I_SFC_TEMP),   'XY', step=1 ) ! [IN]
+       call FILEIO_read( URBAN_SFC_albedo(:,:,I_LW),                                     & ! [OUT]
+                         URBAN_RESTART_IN_BASENAME, VAR_NAME(I_SFC_ALB_LW), 'XY', step=1 ) ! [IN]
+       call FILEIO_read( URBAN_SFC_albedo(:,:,I_SW),                                     & ! [OUT]
+                         URBAN_RESTART_IN_BASENAME, VAR_NAME(I_SFC_ALB_SW), 'XY', step=1 ) ! [IN]
+
+       call FILEIO_read( URBAN_SFLX_MW(:,:),                                            & ! [OUT]
+                         URBAN_RESTART_IN_BASENAME, VAR_NAME(I_SFLX_MW),   'XY', step=1 ) ! [IN]
+       call FILEIO_read( URBAN_SFLX_MU(:,:),                                            & ! [OUT]
+                         URBAN_RESTART_IN_BASENAME, VAR_NAME(I_SFLX_MU),   'XY', step=1 ) ! [IN]
+       call FILEIO_read( URBAN_SFLX_MV(:,:),                                            & ! [OUT]
+                         URBAN_RESTART_IN_BASENAME, VAR_NAME(I_SFLX_MV),   'XY', step=1 ) ! [IN]
+       call FILEIO_read( URBAN_SFLX_SH(:,:),                                            & ! [OUT]
+                         URBAN_RESTART_IN_BASENAME, VAR_NAME(I_SFLX_SH),   'XY', step=1 ) ! [IN]
+       call FILEIO_read( URBAN_SFLX_LH(:,:),                                            & ! [OUT]
+                         URBAN_RESTART_IN_BASENAME, VAR_NAME(I_SFLX_LH),   'XY', step=1 ) ! [IN]
+       call FILEIO_read( URBAN_SFLX_GH(:,:),                                            & ! [OUT]
+                         URBAN_RESTART_IN_BASENAME, VAR_NAME(I_SFLX_GH),   'XY', step=1 ) ! [IN]
+       call FILEIO_read( URBAN_SFLX_evap(:,:),                                          & ! [OUT]
+                         URBAN_RESTART_IN_BASENAME, VAR_NAME(I_SFLX_evap), 'XY', step=1 ) ! [IN]
 
        call URBAN_vars_total
 
@@ -459,55 +501,78 @@ contains
 
        call URBAN_vars_total
 
-       call FILEIO_write( TR_URB(:,:),  basename, URBAN_RESTART_OUT_TITLE,            & ! [IN]
-                          VAR_NAME(I_TR_URB), VAR_DESC(I_TR_URB), VAR_UNIT(I_TR_URB), & ! [IN]
-                          'XY', URBAN_RESTART_OUT_DTYPE, nohalo=.true.                ) ! [IN]
-       call FILEIO_write( TB_URB(:,:),  basename, URBAN_RESTART_OUT_TITLE,            & ! [IN]
-                          VAR_NAME(I_TB_URB), VAR_DESC(I_TB_URB), VAR_UNIT(I_TB_URB), & ! [IN]
-                          'XY', URBAN_RESTART_OUT_DTYPE, nohalo=.true.                ) ! [IN]
-       call FILEIO_write( TG_URB(:,:),  basename, URBAN_RESTART_OUT_TITLE,            & ! [IN]
-                          VAR_NAME(I_TG_URB), VAR_DESC(I_TG_URB), VAR_UNIT(I_TG_URB), & ! [IN]
-                          'XY', URBAN_RESTART_OUT_DTYPE, nohalo=.true.                ) ! [IN]
-       call FILEIO_write( TC_URB(:,:),  basename, URBAN_RESTART_OUT_TITLE,            & ! [IN]
-                          VAR_NAME(I_TC_URB), VAR_DESC(I_TC_URB), VAR_UNIT(I_TC_URB), & ! [IN]
-                          'XY', URBAN_RESTART_OUT_DTYPE, nohalo=.true.                ) ! [IN]
-       call FILEIO_write( QC_URB(:,:),  basename, URBAN_RESTART_OUT_TITLE,            & ! [IN]
-                          VAR_NAME(I_QC_URB), VAR_DESC(I_QC_URB), VAR_UNIT(I_QC_URB), & ! [IN]
-                          'XY', URBAN_RESTART_OUT_DTYPE, nohalo=.true.                ) ! [IN]
-       call FILEIO_write( UC_URB(:,:),  basename, URBAN_RESTART_OUT_TITLE,            & ! [IN]
-                          VAR_NAME(I_UC_URB), VAR_DESC(I_UC_URB), VAR_UNIT(I_UC_URB), & ! [IN]
-                          'XY', URBAN_RESTART_OUT_DTYPE, nohalo=.true.                ) ! [IN]
-       call FILEIO_write( TS_URB(:,:),  basename, URBAN_RESTART_OUT_TITLE,            & ! [IN]
-                          VAR_NAME(I_TS_URB), VAR_DESC(I_TS_URB), VAR_UNIT(I_TS_URB), & ! [IN]
-                          'XY', URBAN_RESTART_OUT_DTYPE, nohalo=.true.                ) ! [IN]
+       call FILEIO_write( URBAN_TR(:,:),  basename, URBAN_RESTART_OUT_TITLE, & ! [IN]
+                          VAR_NAME(I_TR), VAR_DESC(I_TR), VAR_UNIT(I_TR),    & ! [IN]
+                          'XY', URBAN_RESTART_OUT_DTYPE, nohalo=.true.       ) ! [IN]
+       call FILEIO_write( URBAN_TB(:,:),  basename, URBAN_RESTART_OUT_TITLE, & ! [IN]
+                          VAR_NAME(I_TB), VAR_DESC(I_TB), VAR_UNIT(I_TB),    & ! [IN]
+                          'XY', URBAN_RESTART_OUT_DTYPE, nohalo=.true.       ) ! [IN]
+       call FILEIO_write( URBAN_TG(:,:),  basename, URBAN_RESTART_OUT_TITLE, & ! [IN]
+                          VAR_NAME(I_TG), VAR_DESC(I_TG), VAR_UNIT(I_TG),    & ! [IN]
+                          'XY', URBAN_RESTART_OUT_DTYPE, nohalo=.true.       ) ! [IN]
+       call FILEIO_write( URBAN_TC(:,:),  basename, URBAN_RESTART_OUT_TITLE, & ! [IN]
+                          VAR_NAME(I_TC), VAR_DESC(I_TC), VAR_UNIT(I_TC),    & ! [IN]
+                          'XY', URBAN_RESTART_OUT_DTYPE, nohalo=.true.       ) ! [IN]
+       call FILEIO_write( URBAN_QC(:,:),  basename, URBAN_RESTART_OUT_TITLE, & ! [IN]
+                          VAR_NAME(I_QC), VAR_DESC(I_QC), VAR_UNIT(I_QC),    & ! [IN]
+                          'XY', URBAN_RESTART_OUT_DTYPE, nohalo=.true.       ) ! [IN]
+       call FILEIO_write( URBAN_UC(:,:),  basename, URBAN_RESTART_OUT_TITLE, & ! [IN]
+                          VAR_NAME(I_UC), VAR_DESC(I_UC), VAR_UNIT(I_UC),    & ! [IN]
+                          'XY', URBAN_RESTART_OUT_DTYPE, nohalo=.true.       ) ! [IN]
 
-       call FILEIO_write( TRL_URB(:,:,:), basename, URBAN_RESTART_OUT_TITLE,             & ! [IN]
-                          VAR_NAME(I_TRL_URB), VAR_DESC(I_TRL_URB), VAR_UNIT(I_TRL_URB), & ! [IN]
-                          'Urban', URBAN_RESTART_OUT_DTYPE, nohalo=.true.                ) ! [IN]
-       call FILEIO_write( TBL_URB(:,:,:), basename, URBAN_RESTART_OUT_TITLE,             & ! [IN]
-                          VAR_NAME(I_TBL_URB), VAR_DESC(I_TBL_URB), VAR_UNIT(I_TBL_URB), & ! [IN]
-                          'Urban', URBAN_RESTART_OUT_DTYPE, nohalo=.true.                ) ! [IN]
-       call FILEIO_write( TGL_URB(:,:,:), basename, URBAN_RESTART_OUT_TITLE,             & ! [IN]
-                          VAR_NAME(I_TGL_URB), VAR_DESC(I_TGL_URB), VAR_UNIT(I_TGL_URB), & ! [IN]
-                          'Urban', URBAN_RESTART_OUT_DTYPE, nohalo=.true.                ) ! [IN]
+       call FILEIO_write( URBAN_TRL(:,:,:), basename, URBAN_RESTART_OUT_TITLE, & ! [IN]
+                          VAR_NAME(I_TRL), VAR_DESC(I_TRL), VAR_UNIT(I_TRL),   & ! [IN]
+                          'Urban', URBAN_RESTART_OUT_DTYPE, nohalo=.true.      ) ! [IN]
+       call FILEIO_write( URBAN_TBL(:,:,:), basename, URBAN_RESTART_OUT_TITLE, & ! [IN]
+                          VAR_NAME(I_TBL), VAR_DESC(I_TBL), VAR_UNIT(I_TBL),   & ! [IN]
+                          'Urban', URBAN_RESTART_OUT_DTYPE, nohalo=.true.      ) ! [IN]
+       call FILEIO_write( URBAN_TGL(:,:,:), basename, URBAN_RESTART_OUT_TITLE, & ! [IN]
+                          VAR_NAME(I_TGL), VAR_DESC(I_TGL), VAR_UNIT(I_TGL),   & ! [IN]
+                          'Urban', URBAN_RESTART_OUT_DTYPE, nohalo=.true.      ) ! [IN]
 
-       call FILEIO_write( RAINR_URB(:,:),  basename, URBAN_RESTART_OUT_TITLE,                  & ! [IN]
-                          VAR_NAME(I_RAINR_URB), VAR_DESC(I_RAINR_URB), VAR_UNIT(I_RAINR_URB), & ! [IN]
+       call FILEIO_write( URBAN_RAINR(:,:),  basename, URBAN_RESTART_OUT_TITLE,    & ! [IN]
+                          VAR_NAME(I_RAINR), VAR_DESC(I_RAINR), VAR_UNIT(I_RAINR), & ! [IN]
+                          'XY', URBAN_RESTART_OUT_DTYPE, nohalo=.true.             ) ! [IN]
+       call FILEIO_write( URBAN_RAINB(:,:),  basename, URBAN_RESTART_OUT_TITLE,    & ! [IN]
+                          VAR_NAME(I_RAINB), VAR_DESC(I_RAINB), VAR_UNIT(I_RAINB), & ! [IN]
+                          'XY', URBAN_RESTART_OUT_DTYPE, nohalo=.true.             ) ! [IN]
+       call FILEIO_write( URBAN_RAING(:,:),  basename, URBAN_RESTART_OUT_TITLE,    & ! [IN]
+                          VAR_NAME(I_RAING), VAR_DESC(I_RAING), VAR_UNIT(I_RAING), & ! [IN]
+                          'XY', URBAN_RESTART_OUT_DTYPE, nohalo=.true.             ) ! [IN]
+       call FILEIO_write( URBAN_ROFF(:,:),   basename, URBAN_RESTART_OUT_TITLE,    & ! [IN]
+                          VAR_NAME(I_ROFF),  VAR_DESC(I_ROFF),  VAR_UNIT(I_ROFF),  & ! [IN]
+                          'XY', URBAN_RESTART_OUT_DTYPE, nohalo=.true.             ) ! [IN]
+
+       call FILEIO_write( URBAN_SFC_TEMP(:,:), basename, URBAN_RESTART_OUT_TITLE,                 & ! [IN]
+                          VAR_NAME(I_SFC_TEMP), VAR_DESC(I_SFC_TEMP), VAR_UNIT(I_SFC_TEMP),       & ! [IN]
+                          'XY', URBAN_RESTART_OUT_DTYPE, nohalo=.true.                            ) ! [IN]
+       call FILEIO_write( URBAN_SFC_albedo(:,:,I_LW), basename, URBAN_RESTART_OUT_TITLE,          & ! [IN]
+                          VAR_NAME(I_SFC_ALB_LW), VAR_DESC(I_SFC_ALB_LW), VAR_UNIT(I_SFC_ALB_LW), & ! [IN]
+                          'XY', URBAN_RESTART_OUT_DTYPE, nohalo=.true.                            ) ! [IN]
+       call FILEIO_write( URBAN_SFC_albedo(:,:,I_SW), basename, URBAN_RESTART_OUT_TITLE,          & ! [IN]
+                          VAR_NAME(I_SFC_ALB_SW), VAR_DESC(I_SFC_ALB_SW), VAR_UNIT(I_SFC_ALB_SW), & ! [IN]
+                          'XY', URBAN_RESTART_OUT_DTYPE, nohalo=.true.                            ) ! [IN]
+
+       call FILEIO_write( URBAN_SFLX_MW(:,:), basename, URBAN_RESTART_OUT_TITLE,               & ! [IN]
+                          VAR_NAME(I_SFLX_MW), VAR_DESC(I_SFLX_MW), VAR_UNIT(I_SFLX_MW),       & ! [IN]
                           'XY', URBAN_RESTART_OUT_DTYPE, nohalo=.true.                         ) ! [IN]
-       call FILEIO_write( RAINB_URB(:,:),  basename, URBAN_RESTART_OUT_TITLE,                  & ! [IN]
-                          VAR_NAME(I_RAINB_URB), VAR_DESC(I_RAINB_URB), VAR_UNIT(I_RAINB_URB), & ! [IN]
+       call FILEIO_write( URBAN_SFLX_MU(:,:), basename, URBAN_RESTART_OUT_TITLE,               & ! [IN]
+                          VAR_NAME(I_SFLX_MU), VAR_DESC(I_SFLX_MU), VAR_UNIT(I_SFLX_MU),       & ! [IN]
                           'XY', URBAN_RESTART_OUT_DTYPE, nohalo=.true.                         ) ! [IN]
-       call FILEIO_write( RAING_URB(:,:),  basename, URBAN_RESTART_OUT_TITLE,                  & ! [IN]
-                          VAR_NAME(I_RAING_URB), VAR_DESC(I_RAING_URB), VAR_UNIT(I_RAING_URB), & ! [IN]
+       call FILEIO_write( URBAN_SFLX_MV(:,:), basename, URBAN_RESTART_OUT_TITLE,               & ! [IN]
+                          VAR_NAME(I_SFLX_MV), VAR_DESC(I_SFLX_MV), VAR_UNIT(I_SFLX_MV),       & ! [IN]
                           'XY', URBAN_RESTART_OUT_DTYPE, nohalo=.true.                         ) ! [IN]
-       call FILEIO_write( ROFF_URB(:,:),  basename,  URBAN_RESTART_OUT_TITLE,                  & ! [IN]
-                          VAR_NAME(I_ROFF_URB),  VAR_DESC(I_ROFF_URB),  VAR_UNIT(I_ROFF_URB),  & ! [IN]
+       call FILEIO_write( URBAN_SFLX_SH(:,:), basename, URBAN_RESTART_OUT_TITLE,               & ! [IN]
+                          VAR_NAME(I_SFLX_SH), VAR_DESC(I_SFLX_SH), VAR_UNIT(I_SFLX_SH),       & ! [IN]
                           'XY', URBAN_RESTART_OUT_DTYPE, nohalo=.true.                         ) ! [IN]
-       call FILEIO_write( AH_URB(:,:),  basename,    URBAN_RESTART_OUT_TITLE,                  & ! [IN]
-                          VAR_NAME(I_AH_URB),    VAR_DESC(I_AH_URB),    VAR_UNIT(I_AH_URB),    & ! [IN]
+       call FILEIO_write( URBAN_SFLX_LH(:,:), basename, URBAN_RESTART_OUT_TITLE,               & ! [IN]
+                          VAR_NAME(I_SFLX_LH), VAR_DESC(I_SFLX_LH), VAR_UNIT(I_SFLX_LH),       & ! [IN]
                           'XY', URBAN_RESTART_OUT_DTYPE, nohalo=.true.                         ) ! [IN]
-       call FILEIO_write( ALH_URB(:,:),  basename,   URBAN_RESTART_OUT_TITLE,                  & ! [IN]
-                          VAR_NAME(I_ALH_URB),   VAR_DESC(I_ALH_URB),   VAR_UNIT(I_ALH_URB),   & ! [IN]
+       call FILEIO_write( URBAN_SFLX_GH(:,:), basename, URBAN_RESTART_OUT_TITLE,               & ! [IN]
+                          VAR_NAME(I_SFLX_GH), VAR_DESC(I_SFLX_GH), VAR_UNIT(I_SFLX_GH),       & ! [IN]
+                          'XY', URBAN_RESTART_OUT_DTYPE, nohalo=.true.                         ) ! [IN]
+       call FILEIO_write( URBAN_SFLX_evap(:,:), basename, URBAN_RESTART_OUT_TITLE,             & ! [IN]
+                          VAR_NAME(I_SFLX_evap), VAR_DESC(I_SFLX_evap), VAR_UNIT(I_SFLX_evap), & ! [IN]
                           'XY', URBAN_RESTART_OUT_DTYPE, nohalo=.true.                         ) ! [IN]
 
     endif
@@ -518,78 +583,87 @@ contains
   !-----------------------------------------------------------------------------
   !> History output set for urban variables
   subroutine URBAN_vars_history
-    use scale_time, only: &
-       TIME_DTSEC_URBAN
     use scale_history, only: &
        HIST_in
     implicit none
     !---------------------------------------------------------------------------
 
     if ( URBAN_VARS_CHECKRANGE ) then
-       call VALCHECK( TR_URB   (IS:IE,JS:JE),      0.0_RP, 1000.0_RP, VAR_NAME(I_TR_URB), &
+       call VALCHECK( URBAN_TR        (IS:IE,JS:JE),          0.0_RP, 1000.0_RP, VAR_NAME(I_TR),         &
                      __FILE__, __LINE__ )
-       call VALCHECK( TB_URB   (IS:IE,JS:JE),      0.0_RP, 1000.0_RP, VAR_NAME(I_TB_URB), &
+       call VALCHECK( URBAN_TB        (IS:IE,JS:JE),          0.0_RP, 1000.0_RP, VAR_NAME(I_TB),         &
                      __FILE__, __LINE__ )
-       call VALCHECK( TG_URB   (IS:IE,JS:JE),      0.0_RP, 1000.0_RP, VAR_NAME(I_TG_URB), &
+       call VALCHECK( URBAN_TG        (IS:IE,JS:JE),          0.0_RP, 1000.0_RP, VAR_NAME(I_TG),         &
                      __FILE__, __LINE__ )
-       call VALCHECK( TC_URB   (IS:IE,JS:JE),      0.0_RP, 1000.0_RP, VAR_NAME(I_TC_URB), &
+       call VALCHECK( URBAN_TC        (IS:IE,JS:JE),          0.0_RP, 1000.0_RP, VAR_NAME(I_TC),         &
                      __FILE__, __LINE__ )
-       call VALCHECK( QC_URB   (IS:IE,JS:JE),      0.0_RP, 1000.0_RP, VAR_NAME(I_QC_URB), &
+       call VALCHECK( URBAN_QC        (IS:IE,JS:JE),          0.0_RP, 1000.0_RP, VAR_NAME(I_QC),         &
                      __FILE__, __LINE__ )
-       call VALCHECK( UC_URB   (IS:IE,JS:JE),      0.0_RP, 1000.0_RP, VAR_NAME(I_UC_URB), &
+       call VALCHECK( URBAN_UC        (IS:IE,JS:JE),          0.0_RP, 1000.0_RP, VAR_NAME(I_UC),         &
                      __FILE__, __LINE__ )
-       call VALCHECK( TRL_URB  (:,IS:IE,JS:JE),    0.0_RP, 1000.0_RP, VAR_NAME(I_TRL_URB), &
+       call VALCHECK( URBAN_TRL       (:,IS:IE,JS:JE),        0.0_RP, 1000.0_RP, VAR_NAME(I_TRL),        &
                      __FILE__, __LINE__ )
-       call VALCHECK( TBL_URB  (:,IS:IE,JS:JE),    0.0_RP, 1000.0_RP, VAR_NAME(I_TBL_URB), &
+       call VALCHECK( URBAN_TBL       (:,IS:IE,JS:JE),        0.0_RP, 1000.0_RP, VAR_NAME(I_TBL),        &
                      __FILE__, __LINE__ )
-       call VALCHECK( TGL_URB  (:,IS:IE,JS:JE),    0.0_RP, 1000.0_RP, VAR_NAME(I_TGL_URB), &
+       call VALCHECK( URBAN_TGL       (:,IS:IE,JS:JE),        0.0_RP, 1000.0_RP, VAR_NAME(I_TGL),        &
                      __FILE__, __LINE__ )
-       call VALCHECK( RAINR_URB(IS:IE,JS:JE),   -500.0_RP, 1000.0_RP, VAR_NAME(I_RAINR_URB), &
+       call VALCHECK( URBAN_RAINR     (IS:IE,JS:JE),      -1000.0_RP, 1000.0_RP, VAR_NAME(I_RAINR),      &
                      __FILE__, __LINE__ )
-       call VALCHECK( RAINB_URB(IS:IE,JS:JE),   -500.0_RP, 1000.0_RP, VAR_NAME(I_RAINB_URB), &
+       call VALCHECK( URBAN_RAINB     (IS:IE,JS:JE),      -1000.0_RP, 1000.0_RP, VAR_NAME(I_RAINB),      &
                      __FILE__, __LINE__ )
-       call VALCHECK( RAING_URB(IS:IE,JS:JE),   -500.0_RP, 1000.0_RP, VAR_NAME(I_RAING_URB), &
+       call VALCHECK( URBAN_RAING     (IS:IE,JS:JE),      -1000.0_RP, 1000.0_RP, VAR_NAME(I_RAING),      &
                      __FILE__, __LINE__ )
-       call VALCHECK( ROFF_URB (IS:IE,JS:JE),   -500.0_RP, 1000.0_RP, VAR_NAME(I_ROFF_URB),  &
+       call VALCHECK( URBAN_ROFF      (IS:IE,JS:JE),      -1000.0_RP, 1000.0_RP, VAR_NAME(I_ROFF),       &
                      __FILE__, __LINE__ )
-!       call VALCHECK( Rngrd_URB(:,:),  -5000.0_RP, 5000.0_RP, VAR_NAME(I_Rngrd_URB),        &
-!                    __FILE__, __LINE__ )
+       call VALCHECK( URBAN_SFC_TEMP  (IS:IE,JS:JE),          0.0_RP, 1000.0_RP, VAR_NAME(I_SFC_TEMP),   &
+                     __FILE__, __LINE__ )
+       call VALCHECK( URBAN_SFC_albedo(IS:IE,JS:JE,I_LW),     0.0_RP,    2.0_RP, VAR_NAME(I_SFC_ALB_LW), &
+                     __FILE__, __LINE__ )
+       call VALCHECK( URBAN_SFC_albedo(IS:IE,JS:JE,I_SW),     0.0_RP,    2.0_RP, VAR_NAME(I_SFC_ALB_SW), &
+                     __FILE__, __LINE__ )
+       call VALCHECK( URBAN_SFLX_MW   (IS:IE,JS:JE),      -5000.0_RP, 5000.0_RP, VAR_NAME(I_SFLX_MW),    &
+                     __FILE__, __LINE__ )
+       call VALCHECK( URBAN_SFLX_MU   (IS:IE,JS:JE),      -5000.0_RP, 5000.0_RP, VAR_NAME(I_SFLX_MU),    &
+                     __FILE__, __LINE__ )
+       call VALCHECK( URBAN_SFLX_MV   (IS:IE,JS:JE),      -5000.0_RP, 5000.0_RP, VAR_NAME(I_SFLX_MV),    &
+                     __FILE__, __LINE__ )
+       call VALCHECK( URBAN_SFLX_SH   (IS:IE,JS:JE),      -5000.0_RP, 5000.0_RP, VAR_NAME(I_SFLX_SH),    &
+                     __FILE__, __LINE__ )
+       call VALCHECK( URBAN_SFLX_LH   (IS:IE,JS:JE),      -5000.0_RP, 5000.0_RP, VAR_NAME(I_SFLX_LH),    &
+                     __FILE__, __LINE__ )
+       call VALCHECK( URBAN_SFLX_GH   (IS:IE,JS:JE),      -5000.0_RP, 5000.0_RP, VAR_NAME(I_SFLX_GH),    &
+                     __FILE__, __LINE__ )
+       call VALCHECK( URBAN_SFLX_evap (IS:IE,JS:JE),      -5000.0_RP, 5000.0_RP, VAR_NAME(I_SFLX_evap),  &
+                     __FILE__, __LINE__ )
     endif
 
-    call HIST_in( TR_URB(:,:), 'TR_URB', VAR_DESC(I_TR_URB), VAR_UNIT(I_TR_URB) )
-    call HIST_in( TB_URB(:,:), 'TB_URB', VAR_DESC(I_TB_URB), VAR_UNIT(I_TB_URB) )
-    call HIST_in( TG_URB(:,:), 'TG_URB', VAR_DESC(I_TG_URB), VAR_UNIT(I_TG_URB) )
-    call HIST_in( TC_URB(:,:), 'TC_URB', VAR_DESC(I_TC_URB), VAR_UNIT(I_TC_URB) )
-    call HIST_in( QC_URB(:,:), 'QC_URB', VAR_DESC(I_QC_URB), VAR_UNIT(I_QC_URB) )
-    call HIST_in( UC_URB(:,:), 'UC_URB', VAR_DESC(I_UC_URB), VAR_UNIT(I_UC_URB) )
-    call HIST_in( TS_URB(:,:), 'TS_URB', VAR_DESC(I_TS_URB), VAR_UNIT(I_TS_URB) )
+    call HIST_in( URBAN_TR(:,:), VAR_NAME(I_TR), VAR_DESC(I_TR), VAR_UNIT(I_TR) )
+    call HIST_in( URBAN_TB(:,:), VAR_NAME(I_TB), VAR_DESC(I_TB), VAR_UNIT(I_TB) )
+    call HIST_in( URBAN_TG(:,:), VAR_NAME(I_TG), VAR_DESC(I_TG), VAR_UNIT(I_TG) )
+    call HIST_in( URBAN_TC(:,:), VAR_NAME(I_TC), VAR_DESC(I_TC), VAR_UNIT(I_TC) )
+    call HIST_in( URBAN_QC(:,:), VAR_NAME(I_QC), VAR_DESC(I_QC), VAR_UNIT(I_QC) )
+    call HIST_in( URBAN_UC(:,:), VAR_NAME(I_UC), VAR_DESC(I_UC), VAR_UNIT(I_UC) )
 
-    call HIST_in( SHR_URB(:,:), 'SHR_URB', VAR_DESC(I_SHR_URB), VAR_UNIT(I_SHR_URB) )
-    call HIST_in( SHB_URB(:,:), 'SHB_URB', VAR_DESC(I_SHB_URB), VAR_UNIT(I_SHB_URB) )
-    call HIST_in( SHG_URB(:,:), 'SHG_URB', VAR_DESC(I_SHG_URB), VAR_UNIT(I_SHG_URB) )
-    call HIST_in( LHR_URB(:,:), 'LHR_URB', VAR_DESC(I_LHR_URB), VAR_UNIT(I_LHR_URB) )
-    call HIST_in( LHB_URB(:,:), 'LHB_URB', VAR_DESC(I_LHB_URB), VAR_UNIT(I_LHB_URB) )
-    call HIST_in( LHG_URB(:,:), 'LHG_URB', VAR_DESC(I_LHG_URB), VAR_UNIT(I_LHG_URB) )
-    call HIST_in( GHR_URB(:,:), 'GHR_URB', VAR_DESC(I_GHR_URB), VAR_UNIT(I_GHR_URB) )
-    call HIST_in( GHB_URB(:,:), 'GHB_URB', VAR_DESC(I_GHB_URB), VAR_UNIT(I_GHB_URB) )
-    call HIST_in( GHG_URB(:,:), 'GHG_URB', VAR_DESC(I_GHG_URB), VAR_UNIT(I_GHG_URB) )
-    call HIST_in( RnR_URB(:,:), 'RnR_URB', VAR_DESC(I_RnR_URB), VAR_UNIT(I_RnR_URB) )
-    call HIST_in( RnB_URB(:,:), 'RnB_URB', VAR_DESC(I_RnB_URB), VAR_UNIT(I_RnB_URB) )
-    call HIST_in( RnG_URB(:,:), 'RnG_URB', VAR_DESC(I_RnG_URB), VAR_UNIT(I_RnG_URB) )
+    call HIST_in( URBAN_TRL(:,:,:), VAR_NAME(I_TRL), VAR_DESC(I_TRL), VAR_UNIT(I_TRL), zdim='urban' )
+    call HIST_in( URBAN_TBL(:,:,:), VAR_NAME(I_TBL), VAR_DESC(I_TBL), VAR_UNIT(I_TBL), zdim='urban' )
+    call HIST_in( URBAN_TGL(:,:,:), VAR_NAME(I_TGL), VAR_DESC(I_TGL), VAR_UNIT(I_TGL), zdim='urban' )
 
-    call HIST_in( TRL_URB(:,:,:), 'TRL_URB', VAR_DESC(I_TRL_URB), VAR_UNIT(I_TRL_URB), zdim='urban' )
-    call HIST_in( TBL_URB(:,:,:), 'TBL_URB', VAR_DESC(I_TBL_URB), VAR_UNIT(I_TBL_URB), zdim='urban' )
-    call HIST_in( TGL_URB(:,:,:), 'TGL_URB', VAR_DESC(I_TGL_URB), VAR_UNIT(I_TGL_URB), zdim='urban' )
+    call HIST_in( URBAN_RAINR(:,:), VAR_NAME(I_RAINR), VAR_DESC(I_RAINR), VAR_UNIT(I_RAINR) )
+    call HIST_in( URBAN_RAINB(:,:), VAR_NAME(I_RAINB), VAR_DESC(I_RAINB), VAR_UNIT(I_RAINB) )
+    call HIST_in( URBAN_RAING(:,:), VAR_NAME(I_RAING), VAR_DESC(I_RAING), VAR_UNIT(I_RAING) )
+    call HIST_in( URBAN_ROFF (:,:), VAR_NAME(I_ROFF),  VAR_DESC(I_ROFF),  VAR_UNIT(I_ROFF)  )
 
-    call HIST_in( RAINR_URB(:,:), 'RAINR_URB', VAR_DESC(I_RAINR_URB), VAR_UNIT(I_RAINR_URB) )
-    call HIST_in( RAINB_URB(:,:), 'RAINB_URB', VAR_DESC(I_RAINB_URB), VAR_UNIT(I_RAINB_URB) )
-    call HIST_in( RAING_URB(:,:), 'RAING_URB', VAR_DESC(I_RAING_URB), VAR_UNIT(I_RAING_URB) )
-    call HIST_in( ROFF_URB (:,:),  'ROFF_URB', VAR_DESC(I_ROFF_URB),  VAR_UNIT(I_ROFF_URB)  )
+    call HIST_in( URBAN_SFC_TEMP  (:,:),      VAR_NAME(I_SFC_TEMP),   VAR_DESC(I_SFC_TEMP),   VAR_UNIT(I_SFC_TEMP)   )
+    call HIST_in( URBAN_SFC_albedo(:,:,I_LW), VAR_NAME(I_SFC_ALB_LW), VAR_DESC(I_SFC_ALB_LW), VAR_UNIT(I_SFC_ALB_LW) )
+    call HIST_in( URBAN_SFC_albedo(:,:,I_SW), VAR_NAME(I_SFC_ALB_SW), VAR_DESC(I_SFC_ALB_SW), VAR_UNIT(I_SFC_ALB_SW) )
 
-    call HIST_in( Rngrd_URB(:,:), 'Rngrd_URB', 'Urban grid average of net radiation',      'W/m2' )
-    call HIST_in( SHFLX_URB(:,:), 'SHFLX_URB', 'Urban grid average of sensible heat flux', 'W/m2' )
-    call HIST_in( LHFLX_URB(:,:), 'LHFLX_URB', 'Urban grid average of latent heat flux',   'W/m2' )
-    call HIST_in( GHFLX_URB(:,:), 'GHFLX_URB', 'Urban grid average of ground heat flux',   'W/m2' )
+    call HIST_in( URBAN_SFLX_MW  (:,:), VAR_NAME(I_SFLX_MW),   VAR_DESC(I_SFLX_MW),   VAR_UNIT(I_SFLX_MW)    )
+    call HIST_in( URBAN_SFLX_MU  (:,:), VAR_NAME(I_SFLX_MU),   VAR_DESC(I_SFLX_MU),   VAR_UNIT(I_SFLX_MU)    )
+    call HIST_in( URBAN_SFLX_MV  (:,:), VAR_NAME(I_SFLX_MV),   VAR_DESC(I_SFLX_MV),   VAR_UNIT(I_SFLX_MV)    )
+    call HIST_in( URBAN_SFLX_SH  (:,:), VAR_NAME(I_SFLX_SH),   VAR_DESC(I_SFLX_SH),   VAR_UNIT(I_SFLX_SH)    )
+    call HIST_in( URBAN_SFLX_LH  (:,:), VAR_NAME(I_SFLX_LH),   VAR_DESC(I_SFLX_LH),   VAR_UNIT(I_SFLX_LH)    )
+    call HIST_in( URBAN_SFLX_GH  (:,:), VAR_NAME(I_SFLX_GH),   VAR_DESC(I_SFLX_GH),   VAR_UNIT(I_SFLX_GH)    )
+    call HIST_in( URBAN_SFLX_evap(:,:), VAR_NAME(I_SFLX_evap), VAR_DESC(I_SFLX_evap), VAR_UNIT(I_SFLX_evap)  )
 
     return
   end subroutine URBAN_vars_history
@@ -607,42 +681,36 @@ contains
     !---------------------------------------------------------------------------
 
     if ( STATISTICS_checktotal ) then
-       call STAT_total( total, TR_URB(:,:), VAR_NAME(I_TR_URB) )
-       call STAT_total( total, TB_URB(:,:), VAR_NAME(I_TB_URB) )
-       call STAT_total( total, TG_URB(:,:), VAR_NAME(I_TG_URB) )
-       call STAT_total( total, TC_URB(:,:), VAR_NAME(I_TC_URB) )
-       call STAT_total( total, QC_URB(:,:), VAR_NAME(I_QC_URB) )
-       call STAT_total( total, UC_URB(:,:), VAR_NAME(I_UC_URB) )
-       call STAT_total( total, TS_URB(:,:), VAR_NAME(I_TS_URB) )
-       call STAT_total( total, SHR_URB(:,:), VAR_NAME(I_SHR_URB) )
-       call STAT_total( total, SHB_URB(:,:), VAR_NAME(I_SHB_URB) )
-       call STAT_total( total, SHG_URB(:,:), VAR_NAME(I_SHG_URB) )
-       call STAT_total( total, LHR_URB(:,:), VAR_NAME(I_LHR_URB) )
-       call STAT_total( total, LHB_URB(:,:), VAR_NAME(I_LHB_URB) )
-       call STAT_total( total, LHG_URB(:,:), VAR_NAME(I_LHG_URB) )
-       call STAT_total( total, GHR_URB(:,:), VAR_NAME(I_GHR_URB) )
-       call STAT_total( total, GHB_URB(:,:), VAR_NAME(I_GHB_URB) )
-       call STAT_total( total, GHG_URB(:,:), VAR_NAME(I_GHG_URB) )
-       call STAT_total( total, RnR_URB(:,:), VAR_NAME(I_RnR_URB) )
-       call STAT_total( total, RnB_URB(:,:), VAR_NAME(I_RnB_URB) )
-       call STAT_total( total, RnG_URB(:,:), VAR_NAME(I_RnG_URB) )
+       call STAT_total( total, URBAN_TR(:,:), VAR_NAME(I_TR) )
+       call STAT_total( total, URBAN_TB(:,:), VAR_NAME(I_TB) )
+       call STAT_total( total, URBAN_TG(:,:), VAR_NAME(I_TG) )
+       call STAT_total( total, URBAN_TC(:,:), VAR_NAME(I_TC) )
+       call STAT_total( total, URBAN_QC(:,:), VAR_NAME(I_QC) )
+       call STAT_total( total, URBAN_UC(:,:), VAR_NAME(I_UC) )
 
        do k = UKS, UKE
-          call STAT_total( total, TRL_URB(k,:,:), VAR_NAME(I_TRL_URB) )
-          call STAT_total( total, TBL_URB(k,:,:), VAR_NAME(I_TBL_URB) )
-          call STAT_total( total, TGL_URB(k,:,:), VAR_NAME(I_TGL_URB) )
+          call STAT_total( total, URBAN_TRL(k,:,:), VAR_NAME(I_TRL) )
+          call STAT_total( total, URBAN_TBL(k,:,:), VAR_NAME(I_TBL) )
+          call STAT_total( total, URBAN_TGL(k,:,:), VAR_NAME(I_TGL) )
        enddo
 
-       call STAT_total( total, RAINR_URB(:,:), VAR_NAME(I_RAINR_URB) )
-       call STAT_total( total, RAINB_URB(:,:), VAR_NAME(I_RAINB_URB) )
-       call STAT_total( total, RAING_URB(:,:), VAR_NAME(I_RAING_URB) )
-       call STAT_total( total, ROFF_URB(:,:),  VAR_NAME(I_ROFF_URB) )
-       call STAT_total( total, AH_URB(:,:),    VAR_NAME(I_AH_URB) )
-       call STAT_total( total, ALH_URB(:,:),   VAR_NAME(I_ALH_URB) )
-!       call STAT_total( total, Rngrd_URB(:,:), 'Rngrd_URB' )
-!       call STAT_total( total, Rngrd_URB(:,:), 'SHFLX_URB' )
-!       call STAT_total( total, Rngrd_URB(:,:), 'LHFLX_URB' )
-!       call STAT_total( total, Rngrd_URB(:,:), 'GHFLX_URB' )
+       call STAT_total( total, URBAN_RAINR(:,:), VAR_NAME(I_RAINR) )
+       call STAT_total( total, URBAN_RAINB(:,:), VAR_NAME(I_RAINB) )
+       call STAT_total( total, URBAN_RAING(:,:), VAR_NAME(I_RAING) )
+       call STAT_total( total, URBAN_ROFF (:,:), VAR_NAME(I_ROFF)  )
+
+       call STAT_total( total, URBAN_SFC_TEMP  (:,:),      VAR_NAME(I_SFC_TEMP)   )
+       call STAT_total( total, URBAN_SFC_albedo(:,:,I_LW), VAR_NAME(I_SFC_ALB_LW) )
+       call STAT_total( total, URBAN_SFC_albedo(:,:,I_SW), VAR_NAME(I_SFC_ALB_SW) )
+
+       call STAT_total( total, URBAN_SFLX_MW  (:,:), VAR_NAME(I_SFLX_MW)    )
+       call STAT_total( total, URBAN_SFLX_MU  (:,:), VAR_NAME(I_SFLX_MU)    )
+       call STAT_total( total, URBAN_SFLX_MV  (:,:), VAR_NAME(I_SFLX_MV)    )
+       call STAT_total( total, URBAN_SFLX_SH  (:,:), VAR_NAME(I_SFLX_SH)    )
+       call STAT_total( total, URBAN_SFLX_LH  (:,:), VAR_NAME(I_SFLX_LH)    )
+       call STAT_total( total, URBAN_SFLX_GH  (:,:), VAR_NAME(I_SFLX_GH)    )
+       call STAT_total( total, URBAN_SFLX_evap(:,:), VAR_NAME(I_SFLX_evap)  )
+
     endif
 
     return
@@ -661,33 +729,41 @@ contains
     real(RP), intent(in) :: tc_urb_in(IA,JA)
     real(RP), intent(in) :: qc_urb_in(IA,JA)
     real(RP), intent(in) :: uc_urb_in(IA,JA)
-    integer :: i
+
+    integer :: k
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** External Input (coupler) ***'
 
-    TS_URB(:,:) = ts_urb_in(:,:)
-    TR_URB(:,:) = ts_urb_in(:,:)
-    TB_URB(:,:) = ts_urb_in(:,:)
-    TG_URB(:,:) = ts_urb_in(:,:)
+    URBAN_TR(:,:) = ts_urb_in(:,:)
+    URBAN_TB(:,:) = ts_urb_in(:,:)
+    URBAN_TG(:,:) = ts_urb_in(:,:)
 
-    TC_URB(:,:) = tc_urb_in(:,:)
-    QC_URB(:,:) = qc_urb_in(:,:)
-    UC_URB(:,:) = uc_urb_in(:,:)
+    URBAN_TC(:,:) = tc_urb_in(:,:)
+    URBAN_QC(:,:) = qc_urb_in(:,:)
+    URBAN_UC(:,:) = uc_urb_in(:,:)
 
-    do i=UKS, UKE
-       TRL_URB(i,:,:) = ts_urb_in(:,:)
-       TBL_URB(i,:,:) = ts_urb_in(:,:)
-       TGL_URB(i,:,:) = ts_urb_in(:,:)
-    enddo
+    do k = UKS, UKE
+       URBAN_TRL(k,:,:) = ts_urb_in(:,:)
+       URBAN_TBL(k,:,:) = ts_urb_in(:,:)
+       URBAN_TGL(k,:,:) = ts_urb_in(:,:)
+    end do
 
-    RAINR_URB(:,:) = 0.D0
-    RAINB_URB(:,:) = 0.D0
-    RAING_URB(:,:) = 0.D0
-    ROFF_URB(:,:)  = 0.D0
-    AH_URB(:,:)    = 0.D0
-    ALH_URB(:,:)   = 0.D0
+    URBAN_RAINR(:,:) = 0.0_RP
+    URBAN_RAINB(:,:) = 0.0_RP
+    URBAN_RAING(:,:) = 0.0_RP
+    URBAN_ROFF (:,:) = 0.0_RP
+
+    URBAN_SFC_TEMP(:,:) = ts_urb_in(:,:)
+
+    URBAN_SFLX_MW  (:,:) = 0.0_RP
+    URBAN_SFLX_MU  (:,:) = 0.0_RP
+    URBAN_SFLX_MV  (:,:) = 0.0_RP
+    URBAN_SFLX_SH  (:,:) = 0.0_RP
+    URBAN_SFLX_LH  (:,:) = 0.0_RP
+    URBAN_SFLX_GH  (:,:) = 0.0_RP
+    URBAN_SFLX_evap(:,:) = 0.0_RP
 
     call URBAN_vars_total
 

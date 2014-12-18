@@ -79,7 +79,6 @@ contains
        TIME_DOLAND_step,     &
        TIME_DOURBAN_step,    &
        TIME_DOOCEAN_step,    &
-       TIME_DOCPL_calc,      &
        TIME_DOATMOS_restart, &
        TIME_DOLAND_restart,  &
        TIME_DOURBAN_restart, &
@@ -130,6 +129,10 @@ contains
        ATMOS_THERMODYN_setup
     use scale_atmos_saturation, only: &
        ATMOS_SATURATION_setup
+    use scale_bulkflux, only: &
+       BULKFLUX_setup
+    use scale_roughness, only: &
+       ROUGHNESS_setup
   
     use mod_admin_restart, only: &
        ADMIN_restart_setup
@@ -146,11 +149,9 @@ contains
        ATMOS_sw_check => ATMOS_RESTART_CHECK,    &
        ATMOS_vars_restart_check
     use mod_atmos_driver, only: &
-       ATMOS_driver_setup, &
-       ATMOS_driver,       &
-       ATMOS_driver_finalize, &
-       ATMOS_SURFACE_GET,  &
-       ATMOS_SURFACE_SET
+       ATMOS_driver_setup,    &
+       ATMOS_driver,          &
+       ATMOS_driver_finalize
     use mod_ocean_admin, only: &
        OCEAN_admin_setup, &
        OCEAN_do
@@ -161,8 +162,7 @@ contains
        OCEAN_vars_restart_write
     use mod_ocean_driver, only: &
        OCEAN_driver_setup, &
-       OCEAN_driver,       &
-       OCEAN_SURFACE_set
+       OCEAN_driver
     use mod_land_admin, only: &
        LAND_admin_setup, &
        LAND_do
@@ -173,8 +173,7 @@ contains
        LAND_vars_restart_write
     use mod_land_driver, only: &
        LAND_driver_setup, &
-       LAND_driver,       &
-       LAND_SURFACE_set
+       LAND_driver
     use mod_urban_admin, only: &
        URBAN_admin_setup, &
        URBAN_do
@@ -185,16 +184,11 @@ contains
        URBAN_vars_restart_write
     use mod_urban_driver, only: &
        URBAN_driver_setup, &
-       URBAN_driver,       &
-       URBAN_SURFACE_set
+       URBAN_driver
     use mod_cpl_admin, only: &
-       CPL_admin_setup, &
-       CPL_do
+       CPL_admin_setup
     use mod_cpl_vars, only: &
        CPL_vars_setup
-    use mod_cpl_driver, only: &
-       CPL_driver_setup, &
-       CPL_driver
     use mod_user, only: &
        USER_setup0, &
        USER_setup, &
@@ -297,7 +291,10 @@ contains
     call ATMOS_HYDROSTATIC_setup
     call ATMOS_THERMODYN_setup
     call ATMOS_SATURATION_setup
-  
+
+    call BULKFLUX_setup
+    call ROUGHNESS_setup
+
     ! setup submodel administrator
     call ATMOS_admin_setup
     call OCEAN_admin_setup
@@ -323,14 +320,6 @@ contains
 
     ! calc diagnostics
     call ATMOS_vars_diagnostics
-  
-    ! first surface coupling
-    call ATMOS_SURFACE_SET( setup=.true. )
-    call OCEAN_SURFACE_SET( setup=.true. )
-    call LAND_SURFACE_SET ( setup=.true. )
-    call URBAN_SURFACE_SET( setup=.true. )
-    call CPL_driver_setup
-    call ATMOS_SURFACE_GET( setup=.true. )
   
     ! first monitor
     call ATMOS_vars_monitor
@@ -379,7 +368,6 @@ contains
       if( OCEAN_do .AND. TIME_DOOCEAN_step ) call OCEAN_driver
       if( LAND_do  .AND. TIME_DOLAND_step  ) call LAND_driver
       if( URBAN_do .AND. TIME_DOURBAN_step ) call URBAN_driver
-      if( CPL_do   .AND. TIME_DOCPL_calc   ) call CPL_driver
   
       ! history&monitor file output
       call HIST_write

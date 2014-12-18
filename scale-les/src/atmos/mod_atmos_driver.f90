@@ -23,10 +23,6 @@ module mod_atmos_driver
   use scale_stdio
   use scale_prof
   use scale_grid_index
-
-  use scale_const, only: &
-     I_SW  => CONST_I_SW, &
-     I_LW  => CONST_I_LW
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -37,8 +33,6 @@ module mod_atmos_driver
   public :: ATMOS_driver_setup
   public :: ATMOS_driver
   public :: ATMOS_driver_finalize
-  public :: ATMOS_SURFACE_GET
-  public :: ATMOS_SURFACE_SET
 
   !-----------------------------------------------------------------------------
   !
@@ -134,6 +128,9 @@ contains
     !########## Calculate diagnostic variables ##########
     call ATMOS_vars_diagnostics
 
+    !########## Set Surface Boundary Condition ##########
+    call ATMOS_SURFACE_SET( countup =.false. )
+
     !########## History & Monitor ##########
     call PROF_rapstart('ATM History Vars', 1)
     call ATMOS_vars_history
@@ -217,8 +214,8 @@ contains
        call ATMOS_BOUNDARY_update( DENS, MOMZ, MOMX, MOMY, RHOT, QTRC ) ! (in)
     endif
 
-    !########## Get Surface Boundary Condition from coupler ##########
-    call ATMOS_SURFACE_GET( setup=.false. )
+    !########## Get Surface Boundary Condition ##########
+    call ATMOS_SURFACE_GET
 
     !########## Dynamics ##########
     if ( ATMOS_sw_dyn ) then
@@ -287,8 +284,8 @@ contains
     !########## Calculate diagnostic variables ##########
     call ATMOS_vars_diagnostics
 
-    !########## Set Surface Boundary & Put to coupler ##########
-    call ATMOS_SURFACE_SET( setup=.false. )
+    !########## Set Surface Boundary Condition ##########
+    call ATMOS_SURFACE_SET( countup =.true. )
 
     !########## History & Monitor ##########
     call PROF_rapstart('ATM History Vars', 1)
@@ -326,27 +323,10 @@ contains
 
   end subroutine ATMOS_driver_finalize
 
-
   !-----------------------------------------------------------------------------
-  !> Get surface boundary condition (CPL2ATM)
-  subroutine ATMOS_SURFACE_GET( setup )
-    use scale_time, only: &
-       TIME_DTSEC
-    use scale_history, only: &
-       HIST_in
-    use scale_topography, only: &
-       TOPO_Zsfc
-    use scale_grid_real, only: &
-       REAL_CZ, &
-       REAL_Z1
-    use scale_atmos_bottom, only: &
-       BOTTOM_estimate => ATMOS_BOTTOM_estimate
-    use mod_atmos_vars, only: &
-       DENS, &
-       PRES
+  !> Get surface boundary condition
+  subroutine ATMOS_SURFACE_GET
     use mod_atmos_phy_sf_vars, only: &
-       SFC_DENS   => ATMOS_PHY_SF_SFC_DENS,   &
-       SFC_PRES   => ATMOS_PHY_SF_SFC_PRES,   &
        SFC_TEMP   => ATMOS_PHY_SF_SFC_TEMP,   &
        SFC_albedo => ATMOS_PHY_SF_SFC_albedo, &
        SFC_Z0M    => ATMOS_PHY_SF_SFC_Z0M,    &
@@ -357,104 +337,44 @@ contains
        SFLX_MV    => ATMOS_PHY_SF_SFLX_MV,    &
        SFLX_SH    => ATMOS_PHY_SF_SFLX_SH,    &
        SFLX_LH    => ATMOS_PHY_SF_SFLX_LH,    &
-       SFLX_QTRC  => ATMOS_PHY_SF_SFLX_QTRC
+       SFLX_GH    => ATMOS_PHY_SF_SFLX_GH,    &
+       SFLX_QTRC  => ATMOS_PHY_SF_SFLX_QTRC,  &
+       U10        => ATMOS_PHY_SF_U10,        &
+       V10        => ATMOS_PHY_SF_V10,        &
+       T2         => ATMOS_PHY_SF_T2,         &
+       Q2         => ATMOS_PHY_SF_Q2
     use mod_cpl_admin, only: &
        CPL_sw
     use mod_cpl_vars, only: &
-       CPL_getATM,   &
-       CPL_getATM_SF
+       CPL_getSFC_ATM
     implicit none
-
-    logical, intent(in) :: setup
-
-    real(RP) :: Uabs10  (IA,JA) ! 10m absolute wind [m/s]
-    real(RP) :: U10     (IA,JA) ! 10m x-wind [m/s]
-    real(RP) :: V10     (IA,JA) ! 10m y-wind [m/s]
-    real(RP) :: T2      (IA,JA) !  2m Temp   [K]
-    real(RP) :: Q2      (IA,JA) !  2m Vapor  [kg/kg]
-    real(RP) :: FLX_heat(IA,JA) ! ground heat flux [J/m2/s]
     !---------------------------------------------------------------------------
 
-    if ( setup ) then
-       SFLX_MW  (:,:)   = 0.0_RP
-       SFLX_MU  (:,:)   = 0.0_RP
-       SFLX_MV  (:,:)   = 0.0_RP
-       SFLX_SH  (:,:)   = 0.0_RP
-       SFLX_LH  (:,:)   = 0.0_RP
-       SFLX_QTRC(:,:,:) = 0.0_RP
-
-       if ( CPL_sw ) then
-          call CPL_getATM_SF( SFLX_MW  (:,:),  & ! [OUT]
-                              SFLX_MU  (:,:),  & ! [OUT]
-                              SFLX_MV  (:,:),  & ! [OUT]
-                              SFLX_SH  (:,:),  & ! [OUT]
-                              SFLX_LH  (:,:),  & ! [OUT]
-                              SFLX_QTRC(:,:,:) ) ! [OUT]
-       endif
-    endif
-
     if ( CPL_sw ) then
-       Uabs10   (:,:)   = 0.0_RP
-       U10      (:,:)   = 0.0_RP
-       V10      (:,:)   = 0.0_RP
-       T2       (:,:)   = 0.0_RP
-       Q2       (:,:)   = 0.0_RP
-       FLX_heat (:,:)   = 0.0_RP
-
-       call CPL_getATM( SFC_TEMP  (:,:),   & ! [OUT]
-                        SFC_albedo(:,:,:), & ! [OUT]
-                        SFC_Z0M   (:,:),   & ! [OUT]
-                        SFC_Z0H   (:,:),   & ! [OUT]
-                        SFC_Z0E   (:,:),   & ! [OUT]
-                        Uabs10    (:,:),   & ! [OUT]
-                        U10       (:,:),   & ! [OUT]
-                        V10       (:,:),   & ! [OUT]
-                        T2        (:,:),   & ! [OUT]
-                        Q2        (:,:),   & ! [OUT]
-                        FLX_heat  (:,:)    ) ! [OUT]
-
-       call HIST_in( SFC_Z0M(:,:), 'SFC_Z0M', 'roughness length (momentum)', 'm'     )
-       call HIST_in( SFC_Z0H(:,:), 'SFC_Z0H', 'roughness length (heat)',     'm'     )
-       call HIST_in( SFC_Z0E(:,:), 'SFC_Z0E', 'roughness length (vapor)',    'm'     )
-       call HIST_in( Uabs10 (:,:), 'Uabs10',  '10m absolute wind',           'm/s'   )
-       call HIST_in( U10    (:,:), 'U10',     '10m x-wind',                  'm/s'   )
-       call HIST_in( V10    (:,:), 'V10',     '10m y-wind',                  'm/s'   )
-       call HIST_in( T2     (:,:), 'T2 ',     '2m temperature',              'K'     )
-       call HIST_in( Q2     (:,:), 'Q2 ',     '2m water vapor',              'kg/kg' )
-
-       call HIST_in( FLX_heat(:,:), 'GHFLX', 'ground heat flux (merged)', 'W/m2' )
+       call CPL_getSFC_ATM( SFC_TEMP  (:,:),   & ! [OUT]
+                            SFC_albedo(:,:,:), & ! [OUT]
+                            SFC_Z0M   (:,:),   & ! [OUT]
+                            SFC_Z0H   (:,:),   & ! [OUT]
+                            SFC_Z0E   (:,:),   & ! [OUT]
+                            SFLX_MW   (:,:),   & ! [OUT]
+                            SFLX_MU   (:,:),   & ! [OUT]
+                            SFLX_MV   (:,:),   & ! [OUT]
+                            SFLX_SH   (:,:),   & ! [OUT]
+                            SFLX_LH   (:,:),   & ! [OUT]
+                            SFLX_GH   (:,:),   & ! [OUT]
+                            SFLX_QTRC (:,:,:), & ! [OUT]
+                            U10       (:,:),   & ! [OUT]
+                            V10       (:,:),   & ! [OUT]
+                            T2        (:,:),   & ! [OUT]
+                            Q2        (:,:)    ) ! [OUT]
     endif
-
-    ! calculate surface density, surface pressure
-    call BOTTOM_estimate( DENS     (:,:,:), & ! [IN]
-                          PRES     (:,:,:), & ! [IN]
-                          REAL_CZ  (:,:,:), & ! [IN]
-                          TOPO_Zsfc(:,:),   & ! [IN]
-                          REAL_Z1  (:,:),   & ! [IN]
-                          SFC_DENS (:,:),   & ! [OUT]
-                          SFC_PRES (:,:)    ) ! [OUT]
-
-    call HIST_in( SFC_DENS  (:,:),      'SFC_DENS',   'surface atmospheric density',       'kg/m3' )
-    call HIST_in( SFC_PRES  (:,:),      'SFC_PRES',   'surface atmospheric pressure',      'Pa'    )
-
-    ! if coupler is disabled, SFC_TEMP, SFC_albedo is set in ATMOS_PHY_SF_vars
-    call HIST_in( SFC_TEMP  (:,:),      'SFC_TEMP',   'surface skin temperature (merged)', 'K'     )
-    call HIST_in( SFC_albedo(:,:,I_LW), 'SFC_ALB_LW', 'surface albedo (longwave, merged)', '0-1'   )
-    call HIST_in( SFC_albedo(:,:,I_SW), 'SFC_ALB_SW', 'surface albedo (shortwave,merged)', '0-1'   )
 
     return
   end subroutine ATMOS_SURFACE_GET
 
   !-----------------------------------------------------------------------------
-  !> Set surface boundary condition (ATM->CPL)
-  subroutine ATMOS_SURFACE_SET( setup )
-    use scale_topography, only: &
-       TOPO_Zsfc
-    use scale_grid_real, only: &
-       REAL_CZ, &
-       REAL_Z1
-    use scale_atmos_bottom, only: &
-       BOTTOM_estimate => ATMOS_BOTTOM_estimate
+  !> Set surface boundary condition
+  subroutine ATMOS_SURFACE_SET( countup )
     use mod_atmos_vars, only: &
        DENS, &
        QTRC, &
@@ -463,8 +383,6 @@ contains
        W,    &
        U,    &
        V
-    use mod_admin_restart, only: &
-       RESTART_RUN
     use mod_atmos_phy_mp_vars, only: &
        SFLX_rain => ATMOS_PHY_MP_SFLX_rain, &
        SFLX_snow => ATMOS_PHY_MP_SFLX_snow
@@ -472,72 +390,38 @@ contains
        SFLX_LW_dn => ATMOS_PHY_RD_SFLX_LW_dn, &
        SFLX_SW_dn => ATMOS_PHY_RD_SFLX_SW_dn
     use mod_atmos_phy_sf_vars, only: &
-       SFC_DENS   => ATMOS_PHY_SF_SFC_DENS,   &
-       SFC_PRES   => ATMOS_PHY_SF_SFC_PRES,   &
-       SFC_TEMP   => ATMOS_PHY_SF_SFC_TEMP,   &
-       SFC_albedo => ATMOS_PHY_SF_SFC_albedo, &
-       SFC_Z0M    => ATMOS_PHY_SF_SFC_Z0M,    &
-       SFC_Z0H    => ATMOS_PHY_SF_SFC_Z0H,    &
-       SFC_Z0E    => ATMOS_PHY_SF_SFC_Z0E,    &
-       SFLX_MW    => ATMOS_PHY_SF_SFLX_MW,    &
-       SFLX_MU    => ATMOS_PHY_SF_SFLX_MU,    &
-       SFLX_MV    => ATMOS_PHY_SF_SFLX_MV,    &
-       SFLX_SH    => ATMOS_PHY_SF_SFLX_SH,    &
-       SFLX_LH    => ATMOS_PHY_SF_SFLX_LH,    &
-       SFLX_QTRC  => ATMOS_PHY_SF_SFLX_QTRC
+       SFC_PRES   => ATMOS_PHY_SF_SFC_PRES
     use mod_cpl_admin, only: &
        CPL_sw
     use mod_cpl_vars, only: &
-       CPL_putAtm, &
-       CPL_putAtm_restart
+       CPL_putATM
     implicit none
 
-    logical, intent(in) :: setup
+    ! arguments
+    logical, intent(in) :: countup
 
     ! works
     real(RP) :: ATM_PBL (IA,JA)
     !---------------------------------------------------------------------------
 
-    ! update surface density, surface pressure
-    call BOTTOM_estimate( DENS     (:,:,:), & ! [IN]
-                          PRES     (:,:,:), & ! [IN]
-                          REAL_CZ  (:,:,:), & ! [IN]
-                          TOPO_Zsfc(:,:),   & ! [IN]
-                          REAL_Z1  (:,:),   & ! [IN]
-                          SFC_DENS (:,:),   & ! [OUT]
-                          SFC_PRES (:,:)    ) ! [OUT]
-
-    ! planetary boundary layer
-    ATM_PBL(:,:) = 1.0E+2_RP ! tentative
-
     if ( CPL_sw ) then
-       if ( setup .and. RESTART_RUN ) then
-          call CPL_putAtm_restart( SFC_TEMP  (:,:),   & ! [IN]
-                                   SFC_albedo(:,:,:), & ! [IN]
-                                   SFC_Z0M   (:,:),   & ! [IN]
-                                   SFC_Z0H   (:,:),   & ! [IN]
-                                   SFC_Z0E   (:,:),   & ! [IN]
-                                   SFLX_MW   (:,:),   & ! [IN]
-                                   SFLX_MU   (:,:),   & ! [IN]
-                                   SFLX_MV   (:,:),   & ! [IN]
-                                   SFLX_SH   (:,:),   & ! [IN]
-                                   SFLX_LH   (:,:),   & ! [IN]
-                                   SFLX_QTRC (:,:,:)  ) ! [IN]
-       else
-          call CPL_putAtm( TEMP      (KS,:,:),   & ! [IN]
-                           PRES      (KS,:,:),   & ! [IN]
-                           W         (KS,:,:),   & ! [IN]
-                           U         (KS,:,:),   & ! [IN]
-                           V         (KS,:,:),   & ! [IN]
-                           DENS      (KS,:,:),   & ! [IN]
-                           QTRC      (KS,:,:,:), & ! [IN]
-                           ATM_PBL   (:,:),      & ! [IN]
-                           SFC_PRES  (:,:),      & ! [IN]
-                           SFLX_LW_dn(:,:),      & ! [IN]
-                           SFLX_SW_dn(:,:),      & ! [IN]
-                           SFLX_rain (:,:),      & ! [IN]
-                           SFLX_snow (:,:)       ) ! [IN]
-       endif
+       ! planetary boundary layer
+       ATM_PBL(:,:) = 100.0_RP ! tentative
+
+       call CPL_putATM( TEMP      (KS,:,:),   & ! [IN]
+                        PRES      (KS,:,:),   & ! [IN]
+                        W         (KS,:,:),   & ! [IN]
+                        U         (KS,:,:),   & ! [IN]
+                        V         (KS,:,:),   & ! [IN]
+                        DENS      (KS,:,:),   & ! [IN]
+                        QTRC      (KS,:,:,:), & ! [IN]
+                        ATM_PBL   (:,:),      & ! [IN]
+                        SFC_PRES  (:,:),      & ! [IN]
+                        SFLX_LW_dn(:,:),      & ! [IN]
+                        SFLX_SW_dn(:,:),      & ! [IN]
+                        SFLX_rain (:,:),      & ! [IN]
+                        SFLX_snow (:,:),      & ! [IN]
+                        countup               ) ! [IN]
     endif
 
     return

@@ -21,6 +21,10 @@ module mod_atmos_phy_sf_driver
   use scale_prof
   use scale_grid_index
   use scale_tracer
+
+  use scale_const, only: &
+     I_SW  => CONST_I_SW, &
+     I_LW  => CONST_I_LW
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -119,6 +123,7 @@ contains
        RCDZ => GRID_RCDZ, &
        RFDZ => GRID_RFDZ
     use scale_grid_real, only: &
+       REAL_CZ, &
        REAL_Z1
     use scale_gridtrans, only: &
        GSQRT => GTRANS_GSQRT, &
@@ -126,6 +131,8 @@ contains
        I_UYZ,                 &
        I_XVZ,                 &
        I_XYW
+    use scale_topography, only: &
+       TOPO_Zsfc
     use scale_time, only: &
        dt_SF => TIME_DTSEC_ATMOS_PHY_SF
     use scale_statistics, only: &
@@ -133,6 +140,8 @@ contains
        STAT_total
     use scale_history, only: &
        HIST_in
+    use scale_atmos_bottom, only: &
+       BOTTOM_estimate => ATMOS_BOTTOM_estimate
     use scale_atmos_phy_sf, only: &
        ATMOS_PHY_SF
     use mod_atmos_vars, only: &
@@ -175,22 +184,20 @@ contains
        SFLX_MV    => ATMOS_PHY_SF_SFLX_MV,    &
        SFLX_SH    => ATMOS_PHY_SF_SFLX_SH,    &
        SFLX_LH    => ATMOS_PHY_SF_SFLX_LH,    &
-       SFLX_QTRC  => ATMOS_PHY_SF_SFLX_QTRC
+       SFLX_GH    => ATMOS_PHY_SF_SFLX_GH,    &
+       SFLX_QTRC  => ATMOS_PHY_SF_SFLX_QTRC,  &
+       U10        => ATMOS_PHY_SF_U10,        &
+       V10        => ATMOS_PHY_SF_V10,        &
+       T2         => ATMOS_PHY_SF_T2,         &
+       Q2         => ATMOS_PHY_SF_Q2
     use mod_cpl_admin, only: &
        CPL_sw
-    use mod_cpl_vars, only: &
-       CPL_getATM_SF
     implicit none
 
     logical, intent(in) :: update_flag
 
     real(RP) :: Uabs10(IA,JA) ! 10m absolute wind [m/s]
-    real(RP) :: U10   (IA,JA) ! 10m x-wind [m/s]
-    real(RP) :: V10   (IA,JA) ! 10m y-wind [m/s]
-    real(RP) :: T2    (IA,JA) !  2m Temp   [K]
-    real(RP) :: Q2    (IA,JA) !  2m Vapor  [kg/kg]
-
-    real(RP) :: beta(IA,JA)
+    real(RP) :: beta  (IA,JA)
     real(RP) :: total ! dummy
     real(RP) :: work
 
@@ -198,15 +205,19 @@ contains
     !---------------------------------------------------------------------------
 
     if ( update_flag ) then
+       ! update surface density, surface pressure
+       call BOTTOM_estimate( DENS     (:,:,:), & ! [IN]
+                             PRES     (:,:,:), & ! [IN]
+                             REAL_CZ  (:,:,:), & ! [IN]
+                             TOPO_Zsfc(:,:),   & ! [IN]
+                             REAL_Z1  (:,:),   & ! [IN]
+                             SFC_DENS (:,:),   & ! [OUT]
+                             SFC_PRES (:,:)    ) ! [OUT]
 
-       if ( CPL_sw ) then
-          call CPL_getATM_SF( SFLX_MW  (:,:),  & ! [OUT]
-                              SFLX_MU  (:,:),  & ! [OUT]
-                              SFLX_MV  (:,:),  & ! [OUT]
-                              SFLX_SH  (:,:),  & ! [OUT]
-                              SFLX_LH  (:,:),  & ! [OUT]
-                              SFLX_QTRC(:,:,:) ) ! [OUT]
-       else
+       call HIST_in( SFC_DENS(:,:), 'SFC_DENS', 'surface atmospheric density',  'kg/m3' )
+       call HIST_in( SFC_PRES(:,:), 'SFC_PRES', 'surface atmospheric pressure', 'Pa'    )
+
+       if ( .NOT. CPL_sw ) then
           beta(:,:) = 1.0_RP
 
           call ATMOS_PHY_SF( TEMP      (KS,:,:),   & ! [IN]
@@ -217,6 +228,7 @@ contains
                              DENS      (KS,:,:),   & ! [IN]
                              QTRC      (KS,:,:,:), & ! [IN]
                              REAL_Z1   (:,:),      & ! [IN]
+                             dt_SF,                & ! [IN]
                              SFC_DENS  (:,:),      & ! [IN]
                              SFC_PRES  (:,:),      & ! [IN]
                              SFLX_LW_dn(:,:),      & ! [IN]
@@ -233,22 +245,35 @@ contains
                              SFLX_SH   (:,:),      & ! [OUT]
                              SFLX_LH   (:,:),      & ! [OUT]
                              SFLX_QTRC (:,:,:),    & ! [OUT]
-                             Uabs10    (:,:),      & ! [OUT]
                              U10       (:,:),      & ! [OUT]
                              V10       (:,:),      & ! [OUT]
                              T2        (:,:),      & ! [OUT]
                              Q2        (:,:)       ) ! [OUT]
-
-          call HIST_in( SFC_Z0M(:,:), 'SFC_Z0M', 'roughness length (momentum)', 'm'     )
-          call HIST_in( SFC_Z0H(:,:), 'SFC_Z0H', 'roughness length (heat)',     'm'     )
-          call HIST_in( SFC_Z0E(:,:), 'SFC_Z0E', 'roughness length (moisture)', 'm'     )
-
-          call HIST_in( Uabs10 (:,:), 'Uabs10',  '10m absolute wind',           'm/s'   )
-          call HIST_in( U10    (:,:), 'U10',     '10m x-wind',                  'm/s'   )
-          call HIST_in( V10    (:,:), 'V10',     '10m y-wind',                  'm/s'   )
-          call HIST_in( T2     (:,:), 'T2 ',     '2m temperature',              'K'     )
-          call HIST_in( Q2     (:,:), 'Q2 ',     '2m water vapor',              'kg/kg' )
        endif
+
+       do j = JS, JE
+       do i = IS, IE
+          Uabs10(i,j) = sqrt( U10(i,j)**2 + V10(i,j)**2 )
+       end do
+       end do
+
+       call HIST_in( SFC_TEMP  (:,:),      'SFC_TEMP',   'surface skin temperature (merged)', 'K'       )
+       call HIST_in( SFC_albedo(:,:,I_LW), 'SFC_ALB_LW', 'surface albedo (longwave,merged)',  '0-1'     )
+       call HIST_in( SFC_albedo(:,:,I_SW), 'SFC_ALB_SW', 'surface albedo (shortwave,merged)', '0-1'     )
+       call HIST_in( SFC_Z0M   (:,:),      'SFC_Z0M',    'roughness length (momentum)',       'm'       )
+       call HIST_in( SFC_Z0H   (:,:),      'SFC_Z0H',    'roughness length (heat)',           'm'       )
+       call HIST_in( SFC_Z0E   (:,:),      'SFC_Z0E',    'roughness length (vapor)',          'm'       )
+       call HIST_in( SFLX_MW   (:,:),      'MWFLX',      'w-momentum flux (merged)',          'kg/m2/s' )
+       call HIST_in( SFLX_MU   (:,:),      'MUFLX',      'u-momentum flux (merged)',          'kg/m2/s' )
+       call HIST_in( SFLX_MV   (:,:),      'MVFLX',      'v-momentum flux (merged)',          'kg/m2/s' )
+       call HIST_in( SFLX_SH   (:,:),      'SHFLX',      'sensible heat flux (merged)',       'W/m2'    )
+       call HIST_in( SFLX_LH   (:,:),      'LHFLX',      'latent heat flux (merged)',         'W/m2'    )
+       call HIST_in( SFLX_GH   (:,:),      'GHFLX',      'ground heat flux (merged)',         'W/m2'    )
+       call HIST_in( Uabs10    (:,:),      'Uabs10',     '10m absolute wind',                 'm/s'     )
+       call HIST_in( U10       (:,:),      'U10',        '10m x-wind',                        'm/s'     )
+       call HIST_in( V10       (:,:),      'V10',        '10m y-wind',                        'm/s'     )
+       call HIST_in( T2        (:,:),      'T2 ',        '2m temperature',                    'K'       )
+       call HIST_in( Q2        (:,:),      'Q2 ',        '2m water vapor',                    'kg/kg'   )
 
        call COMM_vars8( SFLX_MU(:,:), 1 )
        call COMM_vars8( SFLX_MV(:,:), 2 )
@@ -295,9 +320,6 @@ contains
           RHOT_t_SF(i,j) = RHOT_t_SF(i,j) + DENS_t_SF(i,j) * RHOT(KS,i,j) / DENS(KS,i,j)
        enddo
        enddo
-
-       call HIST_in( SFLX_LH(:,:), 'LHFLX', 'latent heat flux',   'W/m2' )
-       call HIST_in( SFLX_SH(:,:), 'SHFLX', 'sensible heat flux', 'W/m2' )
 
     endif
 

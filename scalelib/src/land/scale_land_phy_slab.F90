@@ -1,13 +1,13 @@
 !-------------------------------------------------------------------------------
-!> module LAND / Physics Bucket
+!> module LAND / Physics Slab model
 !!
 !! @par Description
-!!          bucket-type land physics module
+!!          slab-type land physics module
 !!
 !! @author Team SCALE
 !<
 !-------------------------------------------------------------------------------
-module scale_land_phy_bucket
+module scale_land_phy_slab
   !-----------------------------------------------------------------------------
   !
   !++ used modules
@@ -25,8 +25,8 @@ module scale_land_phy_bucket
   !
   !++ Public procedure
   !
-  public :: LAND_PHY_bucket_setup
-  public :: LAND_PHY_bucket
+  public :: LAND_PHY_SLAB_setup
+  public :: LAND_PHY_SLAB
 
   !-----------------------------------------------------------------------------
   !
@@ -40,6 +40,8 @@ module scale_land_phy_bucket
   !
   !++ Private parameters & variables
   !
+  logical, private :: LAND_PHY_SLAB_const = .false. ! constant condition?
+
   logical, private :: LAND_PHY_UPDATE_BOTTOM_TEMP  = .false. ! Is LAND_TEMP  updated in the lowest level?
   logical, private :: LAND_PHY_UPDATE_BOTTOM_WATER = .false. ! Is LAND_WATER updated in the lowest level?
 
@@ -49,7 +51,7 @@ module scale_land_phy_bucket
 contains
   !-----------------------------------------------------------------------------
   !> Setup
-  subroutine LAND_PHY_bucket_setup( LAND_TYPE )
+  subroutine LAND_PHY_SLAB_setup( LAND_TYPE )
     use scale_process, only: &
        PRC_MPIstop
     use scale_const, only: &
@@ -59,7 +61,7 @@ contains
 
     character(len=*), intent(in) :: LAND_TYPE
 
-    NAMELIST / PARAM_LAND_BUCKET / &
+    NAMELIST / PARAM_LAND_SLAB / &
        LAND_PHY_UPDATE_BOTTOM_TEMP,   &
        LAND_PHY_UPDATE_BOTTOM_WATER
 
@@ -69,54 +71,61 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[BUCKET] / Categ[LAND PHY] / Origin[SCALE-LES]'
 
-    if ( LAND_TYPE /= 'BUCKET' ) then
-       write(*,*) 'xxx LAND_TYPE is not BUCKET. Check!'
-       call PRC_MPIstop
-    endif
-
     !--- read namelist
     rewind(IO_FID_CONF)
-    read(IO_FID_CONF,nml=PARAM_LAND_BUCKET,iostat=ierr)
+    read(IO_FID_CONF,nml=PARAM_LAND_SLAB,iostat=ierr)
     if( ierr < 0 ) then !--- missing
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_LAND_BUCKET. Check!'
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_LAND_SLAB. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_LAND_BUCKET)
+    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_LAND_SLAB)
+
+    if( LAND_TYPE == 'CONST' ) then
+       LAND_PHY_SLAB_const = .true.
+    else if( LAND_TYPE == 'SLAB' ) then
+       LAND_PHY_SLAB_const = .false.
+    else
+       write(*,*) 'xxx wrong LAND_TYPE. Check!'
+       call PRC_MPIstop
+    end if
+
+    WATER_DENSCS = DWATR * CL
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** Update soil temperature of bottom layer? : ', LAND_PHY_UPDATE_BOTTOM_TEMP
     if( IO_L ) write(IO_FID_LOG,*) '*** Update soil moisture    of bottom layer? : ', LAND_PHY_UPDATE_BOTTOM_WATER
 
-    WATER_DENSCS = DWATR * CL
-
     return
-  end subroutine LAND_PHY_bucket_setup
+  end subroutine LAND_PHY_SLAB_setup
 
   !-----------------------------------------------------------------------------
   !> Physical processes for land submodel
-  subroutine LAND_PHY_bucket( &
+  subroutine LAND_PHY_SLAB( &
+       LAND_TEMP_t,       &
+       LAND_WATER_t,      &
        LAND_TEMP,         &
        LAND_WATER,        &
        LAND_WaterLimit,   &
        LAND_ThermalCond,  &
        LAND_HeatCapacity, &
        LAND_WaterDiff,    &
-       FLX_heat,          &
-       FLX_precip,        &
-       FLX_evap,          &
+       LAND_SFLX_GH,      &
+       LAND_SFLX_prec,    &
+       LAND_SFLX_evap,    &
        CDZ,               &
-       LAND_TEMP_t,       &
-       LAND_WATER_t       )
+       dt                 )
     use scale_grid_index
     use scale_const, only: &
        DWATR => CONST_DWATR
-    use scale_time, only: &
-       dt => TIME_DTSEC_LAND
-    use scale_land_sub_matrix, only: &
-       SOLVER_tridiagonal_matrix
+    use scale_matrix, only: &
+       MATRIX_SOLVER_tridiagonal
     implicit none
+
+    ! arguments
+    real(RP), intent(out) :: LAND_TEMP_t      (LKMAX,IA,JA)
+    real(RP), intent(out) :: LAND_WATER_t     (LKMAX,IA,JA)
 
     real(RP), intent(in)  :: LAND_TEMP        (LKMAX,IA,JA)
     real(RP), intent(in)  :: LAND_WATER       (LKMAX,IA,JA)
@@ -124,13 +133,13 @@ contains
     real(RP), intent(in)  :: LAND_ThermalCond (IA,JA)
     real(RP), intent(in)  :: LAND_HeatCapacity(IA,JA)
     real(RP), intent(in)  :: LAND_WaterDiff   (IA,JA)
-    real(RP), intent(in)  :: FLX_heat         (IA,JA)
-    real(RP), intent(in)  :: FLX_precip       (IA,JA)
-    real(RP), intent(in)  :: FLX_evap         (IA,JA)
+    real(RP), intent(in)  :: LAND_SFLX_GH     (IA,JA)
+    real(RP), intent(in)  :: LAND_SFLX_prec   (IA,JA)
+    real(RP), intent(in)  :: LAND_SFLX_evap   (IA,JA)
     real(RP), intent(in)  :: CDZ              (LKMAX)
-    real(RP), intent(out) :: LAND_TEMP_t      (LKMAX,IA,JA)
-    real(RP), intent(out) :: LAND_WATER_t     (LKMAX,IA,JA)
+    real(RP), intent(in)  :: dt
 
+    ! work
     real(RP) :: LAND_TEMP1 (LKMAX,IA,JA)
     real(RP) :: LAND_WATER1(LKMAX,IA,JA)
 !    real(RP) :: LAND_RUNOFF(IA,JA)
@@ -145,7 +154,7 @@ contains
     integer :: k, i, j
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** Land step: Bucket'
+    if( IO_L ) write(IO_FID_LOG,*) '*** Land step: Slab'
 
     ! Solve diffusion of soil moisture (tridiagonal matrix)
     do j = JS, JE
@@ -169,7 +178,7 @@ contains
     do j = JS, JE
     do i = IS, IE
        Vin(LKS  ,i,j) = LAND_WATER(LKS,i,j) &
-                      + ( FLX_precip(i,j) + FLX_evap(i,j) ) / ( CDZ(LKS) * DWATR ) * dt ! input from atmosphere
+                      + ( LAND_SFLX_prec(i,j) - LAND_SFLX_evap(i,j) ) / ( CDZ(LKS) * DWATR ) * dt ! input from atmosphere
 
        do k = LKS+1, LKE-2
           Vin(k,i,j) = LAND_WATER(k,i,j)
@@ -180,7 +189,7 @@ contains
     enddo
     enddo
 
-    call SOLVER_tridiagonal_matrix( LKMAX-1,     & ! [IN]
+    call MATRIX_SOLVER_tridiagonal( LKMAX-1,     & ! [IN]
                                     IA, IS, IE,  & ! [IN]
                                     JA, JS, JE,  & ! [IN]
                                     U   (:,:,:), & ! [IN]
@@ -260,7 +269,7 @@ contains
     do j = JS, JE
     do i = IS, IE
        Vin(LKS  ,i,j) = LAND_TEMP(LKS,i,j) &
-                      - FLX_heat(i,j) / ( SOIL_DENSCS(i,j) + LAND_WATER(LKS,i,j)*WATER_DENSCS ) / CDZ(LKS) * dt ! input from atmosphere
+                      - LAND_SFLX_GH(i,j) / ( SOIL_DENSCS(i,j) + LAND_WATER(LKS,i,j)*WATER_DENSCS ) / CDZ(LKS) * dt ! input from atmosphere
 
        do k = LKS+1, LKE-2
           Vin(k,i,j) = LAND_TEMP(k,i,j)
@@ -271,7 +280,7 @@ contains
     enddo
     enddo
 
-    call SOLVER_tridiagonal_matrix( LKMAX-1,     & ! [IN]
+    call MATRIX_SOLVER_tridiagonal( LKMAX-1,     & ! [IN]
                                     IA, IS, IE,  & ! [IN]
                                     JA, JS, JE,  & ! [IN]
                                     U   (:,:,:), & ! [IN]
@@ -304,17 +313,28 @@ contains
     endif
 
 
-
-    do j = JS, JE
-    do i = IS, IE
-    do k = LKS, LKE
-       LAND_TEMP_t (k,i,j) = ( LAND_TEMP1 (k,i,j) - LAND_TEMP (k,i,j) ) / dt
-       LAND_WATER_t(k,i,j) = ( LAND_WATER1(k,i,j) - LAND_WATER(k,i,j) ) / dt
-    enddo
-    enddo
-    enddo
+    ! calculate tendency
+    if( LAND_PHY_SLAB_const ) then
+       do j = JS, JE
+       do i = IS, IE
+       do k = LKS, LKE
+          LAND_TEMP_t (k,i,j) = 0.0_RP
+          LAND_WATER_t(k,i,j) = 0.0_RP
+       enddo
+       enddo
+       enddo
+    else
+       do j = JS, JE
+       do i = IS, IE
+       do k = LKS, LKE
+          LAND_TEMP_t (k,i,j) = ( LAND_TEMP1 (k,i,j) - LAND_TEMP (k,i,j) ) / dt
+          LAND_WATER_t(k,i,j) = ( LAND_WATER1(k,i,j) - LAND_WATER(k,i,j) ) / dt
+       enddo
+       enddo
+       enddo
+    endif
 
     return
-  end subroutine LAND_PHY_bucket
+  end subroutine LAND_PHY_SLAB
 
-end module scale_land_phy_bucket
+end module scale_land_phy_slab
