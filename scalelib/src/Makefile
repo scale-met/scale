@@ -50,43 +50,39 @@ else
 endif
 
 ifeq ($(MP),)
-  OBJS_MP = \
-	scale_atmos_phy_mp_dry.o	\
-	scale_atmos_phy_mp_kessler.o	\
-	scale_atmos_phy_mp_sn14.o	\
-	scale_atmos_phy_mp_suzuki10.o	\
-	scale_atmos_phy_mp_tomita08.o
+  OBJS_MP = scale_atmos_phy_mp_dry.o	\
+            scale_atmos_phy_mp_kessler.o	\
+            scale_atmos_phy_mp_sn14.o	\
+            scale_atmos_phy_mp_suzuki10.o	\
+            scale_atmos_phy_mp_tomita08.o
 else
   OBJS_MP = scale_atmos_phy_mp_$(MP).o
 endif
 
 ifeq ($(RD),)
-  OBJS_RD = \
-	scale_atmos_phy_rd_mstrnx.o	\
-	scale_atmos_phy_rd_mm5sw.o	\
-	scale_atmos_phy_rd_profile.o
+  OBJS_RD = scale_atmos_phy_rd_mstrnx.o	\
+            scale_atmos_phy_rd_mm5sw.o	\
+            scale_atmos_phy_rd_profile.o
 else
   OBJS_RD = scale_atmos_phy_rd_$(RD).o
 endif
 
 ifeq ($(TB),)
-  OBJS_TB = \
-	scale_atmos_phy_tb_dummy.o	\
-	scale_atmos_phy_tb_smg.o	\
-	scale_atmos_phy_tb_dns.o	\
-	scale_atmos_phy_tb_mynn.o	\
-	scale_atmos_phy_tb_hybrid.o
+  OBJS_TB = scale_atmos_phy_tb_dummy.o	\
+            scale_atmos_phy_tb_smg.o	\
+            scale_atmos_phy_tb_dns.o	\
+            scale_atmos_phy_tb_mynn.o	\
+            scale_atmos_phy_tb_hybrid.o
 else
   OBJS_TB = scale_atmos_phy_tb_$(TB).o
 endif
 
 ifeq ($(TRACER),)
-  OBJS_TRACER = \
-	scale_tracer_dry.o	\
-	scale_tracer_kessler.o	\
-	scale_tracer_sn14.o	\
-	scale_tracer_suzuki10.o	\
-	scale_tracer_tomita08.o
+  OBJS_TRACER = scale_tracer_dry.o	\
+                scale_tracer_kessler.o	\
+                scale_tracer_sn14.o	\
+                scale_tracer_suzuki10.o	\
+                scale_tracer_tomita08.o
 else
   OBJS_TRACER = scale_tracer_$(TRACER).o
 endif
@@ -103,17 +99,17 @@ OBJS = $(scale_rdma)	\
 	scale_atmos_phy_ae_dummy.o	\
 	scale_atmos_phy_mp.o	\
 	scale_atmos_phy_mp_common.o	\
-	$(OBJS_MP)                      \
+	$(OBJS_MP)	\
 	scale_atmos_phy_rd.o	\
 	scale_atmos_phy_rd_common.o	\
-        $(OBJS_RD)                      \
+	$(OBJS_RD)	\
 	scale_atmos_phy_sf.o	\
 	scale_atmos_phy_sf_bulkcoef.o	\
 	scale_atmos_phy_sf_bulk.o	\
 	scale_atmos_phy_sf_const.o	\
 	scale_atmos_phy_tb.o	\
 	scale_atmos_phy_tb_common.o	\
-	$(OBJS_TB)                      \
+	$(OBJS_TB)	\
 	scale_atmos_sub_bottom.o	\
 	scale_atmos_sub_boundary.o	\
 	scale_atmos_sub_hydrostatic.o	\
@@ -166,7 +162,7 @@ OBJS = $(scale_rdma)	\
 	scale_time.o	\
 	scale_topography.o	\
 	scale_tracer.o	\
-	$(OBJ_TRACER)           \
+	$(OBJS_TRACER)	\
 	scale_urban_grid.o	\
 	scale_urban_grid_index.o
 
