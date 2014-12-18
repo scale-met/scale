@@ -61,7 +61,7 @@ contains
 
     character(len=*), intent(in) :: LAND_TYPE
 
-    NAMELIST / PARAM_LAND_SLAB / &
+    NAMELIST / PARAM_LAND_PHY_SLAB / &
        LAND_PHY_UPDATE_BOTTOM_TEMP,   &
        LAND_PHY_UPDATE_BOTTOM_WATER
 
@@ -73,14 +73,14 @@ contains
 
     !--- read namelist
     rewind(IO_FID_CONF)
-    read(IO_FID_CONF,nml=PARAM_LAND_SLAB,iostat=ierr)
+    read(IO_FID_CONF,nml=PARAM_LAND_PHY_SLAB,iostat=ierr)
     if( ierr < 0 ) then !--- missing
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_LAND_SLAB. Check!'
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_LAND_PHY_SLAB. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_LAND_SLAB)
+    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_LAND_PHY_SLAB)
 
     if( LAND_TYPE == 'CONST' ) then
        LAND_PHY_SLAB_const = .true.

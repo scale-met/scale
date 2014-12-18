@@ -58,7 +58,7 @@ contains
 
     character(len=*), intent(in) :: OCEAN_TYPE
 
-    NAMELIST / PARAM_OCEAN_SLAB / &
+    NAMELIST / PARAM_OCEAN_PHY_SLAB / &
        OCEAN_PHY_SLAB_DEPTH
 
     integer :: ierr
@@ -69,14 +69,14 @@ contains
 
     !--- read namelist
     rewind(IO_FID_CONF)
-    read(IO_FID_CONF,nml=PARAM_OCEAN_SLAB,iostat=ierr)
+    read(IO_FID_CONF,nml=PARAM_OCEAN_PHY_SLAB,iostat=ierr)
     if( ierr < 0 ) then !--- missing
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_OCEAN_SLAB. Check!'
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_OCEAN_PHY_SLAB. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_OCEAN_SLAB)
+    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_OCEAN_PHY_SLAB)
 
     if( OCEAN_TYPE == 'CONST' ) then
        OCEAN_PHY_SLAB_fixedSST = .true.

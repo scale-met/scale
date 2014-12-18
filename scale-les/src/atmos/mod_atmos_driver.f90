@@ -33,6 +33,8 @@ module mod_atmos_driver
   public :: ATMOS_driver_setup
   public :: ATMOS_driver
   public :: ATMOS_driver_finalize
+  public :: ATMOS_SURFACE_GET
+  public :: ATMOS_SURFACE_SET
 
   !-----------------------------------------------------------------------------
   !

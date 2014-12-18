@@ -115,10 +115,6 @@ contains
 
     character(len=*), intent(in) :: URBAN_TYPE
 
-    real(RP),allocatable :: URBAN_UCM_DZR(:)
-    real(RP),allocatable :: URBAN_UCM_DZB(:)
-    real(RP),allocatable :: URBAN_UCM_DZG(:)
-
     NAMELIST / PARAM_URBAN_PHY_SLC / &
        ZR,         &
        roof_width, &

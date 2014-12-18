@@ -342,15 +342,23 @@ contains
        CONST_UNDEF8
     use scale_landuse, only: &
        LANDUSE_write
+    use mod_atmos_driver, only: &
+       ATMOS_SURFACE_GET
     use mod_atmos_vars, only: &
        ATMOS_sw_restart => ATMOS_RESTART_OUTPUT, &
        ATMOS_vars_restart_write
+    use mod_ocean_driver, only: &
+       OCEAN_SURFACE_SET
     use mod_ocean_vars, only: &
        OCEAN_sw_restart => OCEAN_RESTART_OUTPUT, &
        OCEAN_vars_restart_write
+    use mod_land_driver, only: &
+       LAND_SURFACE_SET
     use mod_land_vars, only: &
        LAND_sw_restart => LAND_RESTART_OUTPUT, &
        LAND_vars_restart_write
+    use mod_urban_driver, only: &
+       URBAN_SURFACE_SET
     use mod_urban_vars, only: &
        URBAN_sw_restart => URBAN_RESTART_OUTPUT, &
        URBAN_vars_restart_write
@@ -468,6 +476,12 @@ contains
       endselect
 
       if( IO_L ) write(IO_FID_LOG,*) '++++++ END   MAKING INITIAL  DATA ++++++'
+
+      ! setup surface condition
+      call OCEAN_SURFACE_SET( countup = .false. )
+      call LAND_SURFACE_SET ( countup = .false. )
+      call URBAN_SURFACE_SET( countup = .false. )
+      call ATMOS_SURFACE_GET
 
       ! output boundary file
       call LANDUSE_write

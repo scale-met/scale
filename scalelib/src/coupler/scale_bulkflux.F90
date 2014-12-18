@@ -109,8 +109,6 @@ contains
        PRC_MPIstop
     implicit none
 
-    character(len=H_SHORT) :: BULKFLUX_TYPE
-
     NAMELIST / PARAM_BULKFLUX / &
        BULKFLUX_TYPE,      &
        BULKFLUX_WSCF,      &
