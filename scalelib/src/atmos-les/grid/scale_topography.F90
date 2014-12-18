@@ -150,22 +150,22 @@ contains
 
        do i = 1, IA
          if( tmp_CBFX(i) /= GRID_CBFX(i) ) then
-           write( IO_L,'(A)')  '*** Buffer layer in TOPO_IN_BASENAME is different from GRID_IN_BASENAME ***'
-           write( IO_L,* )  "I", i, tmp_CBFX(i), GRID_CBFX(i)
+           write( IO_FID_LOG,'(A)')  '*** Buffer layer in TOPO_IN_BASENAME is different from GRID_IN_BASENAME ***'
+           write( IO_FID_LOG,* )  "I", i, tmp_CBFX(i), GRID_CBFX(i)
            call PRC_MPIstop
          endif
        enddo
        do j = 1, JA
          if( tmp_CBFY(j) /= GRID_CBFY(j) ) then
-           write( IO_L,'(A)')  '*** Buffer layer in TOPO_IN_BASENAME is different from GRID_IN_BASENAME ***'
-           write( IO_L,* )  "J", j, tmp_CBFY(j), GRID_CBFY(j)
+           write( IO_FID_LOG,'(A)')  '*** Buffer layer in TOPO_IN_BASENAME is different from GRID_IN_BASENAME ***'
+           write( IO_FID_LOG,* )  "J", j, tmp_CBFY(j), GRID_CBFY(j)
            call PRC_MPIstop
          endif
        enddo
        do k = 1, KA
          if( tmp_CBFZ(k) /= GRID_CBFZ(k) ) then
-           write( IO_L,'(A)')  '*** Buffer layer in TOPO_IN_BASENAME is different from GRID_IN_BASENAME ***'
-           write( IO_L,* )  "K", k, tmp_CBFZ(k), GRID_CBFZ(k)
+           write( IO_FID_LOG,'(A)')  '*** Buffer layer in TOPO_IN_BASENAME is different from GRID_IN_BASENAME ***'
+           write( IO_FID_LOG,* )  "K", k, tmp_CBFZ(k), GRID_CBFZ(k)
            call PRC_MPIstop
          endif
        enddo

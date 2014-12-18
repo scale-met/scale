@@ -167,19 +167,19 @@ contains
    
     do i = 1, IA
      if( tmp_CBFX(i) /= GRID_CBFX(i) ) then
-       write( IO_L,'(A)')  '*** Buffer layer in LAND_GRID_IN_BASENAME is different from GRID_IN_BASENAME ***'
+       write( IO_FID_LOG,'(A)')  '*** Buffer layer in LAND_GRID_IN_BASENAME is different from GRID_IN_BASENAME ***'
        call PRC_MPIstop
      endif
     enddo
     do j = 1, JA
      if( tmp_CBFY(j) /= GRID_CBFY(j) ) then
-       write( IO_L,'(A)')  '*** Buffer layer in LAND_GRID_IN_BASENAME is different from GRID_IN_BASENAME ***'
+       write( IO_FID_LOG,'(A)')  '*** Buffer layer in LAND_GRID_IN_BASENAME is different from GRID_IN_BASENAME ***'
        call PRC_MPIstop
      endif
     enddo
     do k = 1, KA
      if( tmp_CBFZ(k) /= GRID_CBFZ(k) ) then
-       write( IO_L,'(A)')  '*** Buffer layer in LAND_GRID_IN_BASENAME is different from GRID_IN_BASENAME ***'
+       write( IO_FID_LOG,'(A)')  '*** Buffer layer in LAND_GRID_IN_BASENAME is different from GRID_IN_BASENAME ***'
        call PRC_MPIstop
      endif
     enddo

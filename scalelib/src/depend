@@ -60,7 +60,7 @@ scale_gridtrans.o: atmos-les/grid/scale_gridtrans.F90 $(inc_index) $(DEPENDLIB) 
 scale_history.o: io/scale_history.F90 $(inc_index) $(DEPENDLIB) scale_const.o scale_grid_cartesian.o scale_grid_index.o scale_grid_real.o scale_intepolation.o scale_land_grid.o scale_land_grid_index.o scale_precision.o scale_process.o scale_prof.o scale_stdio.o scale_time.o scale_urban_grid.o scale_urban_grid_index.o
 scale_index.o: common/scale_index.F90 $(inc_index) $(DEPENDLIB) scale_stdio.o
 scale_intepolation.o: atmos-les/grid/scale_intepolation.F90 $(inc_index) $(DEPENDLIB) scale_const.o scale_grid_cartesian.o scale_grid_index.o scale_grid_real.o scale_precision.o scale_prof.o scale_stdio.o scale_topography.o
-scale_land_grid.o: land/grid/scale_land_grid.F90 $(inc_index) $(DEPENDLIB) scale_grid_index.o scale_land_grid_index.o scale_precision.o scale_process.o scale_prof.o scale_stdio.o
+scale_land_grid.o: land/grid/scale_land_grid.F90 $(inc_index) $(DEPENDLIB) scale_grid_cartesian.o scale_grid_index.o scale_land_grid_index.o scale_precision.o scale_process.o scale_prof.o scale_stdio.o
 scale_land_grid_index.o: land/grid/scale_land_grid_index.F90 $(inc_index) $(DEPENDLIB) scale_precision.o scale_process.o scale_prof.o scale_stdio.o
 scale_land_phy.o: land/scale_land_phy.F90 $(inc_index) $(DEPENDLIB) scale_grid_index.o scale_land_grid_index.o scale_land_phy_bucket.o scale_land_phy_matsiro.o scale_precision.o scale_process.o scale_prof.o scale_stdio.o
 scale_land_phy_bucket.o: land/scale_land_phy_bucket.F90 $(inc_index) $(DEPENDLIB) scale_const.o scale_debug.o scale_grid_index.o scale_land_grid_index.o scale_land_sub_matrix.o scale_precision.o scale_process.o scale_prof.o scale_stdio.o scale_time.o
@@ -80,7 +80,7 @@ scale_specfunc.o: common/scale_specfunc.F90 $(inc_index) $(DEPENDLIB) scale_prec
 scale_statistics.o: atmos-les/communication/scale_statistics.F90 $(inc_index) $(DEPENDLIB) scale_comm.o scale_const.o scale_grid_index.o scale_grid_real.o scale_precision.o scale_process.o scale_prof.o scale_stdio.o
 scale_stdio.o: io/scale_stdio.F90 $(inc_index) $(DEPENDLIB)
 scale_time.o: common/scale_time.F90 $(inc_index) $(DEPENDLIB) scale_calendar.o scale_const.o scale_precision.o scale_process.o scale_prof.o scale_stdio.o
-scale_topography.o: atmos-les/grid/scale_topography.F90 $(inc_index) $(DEPENDLIB) scale_comm.o scale_fileio.o scale_grid_index.o scale_precision.o scale_process.o scale_prof.o scale_stdio.o
+scale_topography.o: atmos-les/grid/scale_topography.F90 $(inc_index) $(DEPENDLIB) scale_comm.o scale_fileio.o scale_grid_cartesian.o scale_grid_index.o scale_precision.o scale_process.o scale_prof.o scale_stdio.o
 scale_tracer.o: atmos-physics/microphysics/scale_tracer.F90 $(inc_index) $(DEPENDLIB) scale_precision.o scale_process.o scale_stdio.o scale_tracer_dry.o scale_tracer_kessler.o scale_tracer_sn14.o scale_tracer_suzuki10.o scale_tracer_tomita08.o
 scale_tracer_dry.o: atmos-physics/microphysics/scale_tracer_dry.F90 $(inc_index) $(DEPENDLIB) scale_precision.o scale_stdio.o
 scale_tracer_kessler.o: atmos-physics/microphysics/scale_tracer_kessler.F90 $(inc_index) $(DEPENDLIB) scale_precision.o scale_stdio.o
