@@ -77,7 +77,7 @@ module mod_user
   !-----------------------------------------------------------------------------
   real(RP), private, save      :: USER_LH =  154.0_RP  ! constant Latent heat flux [W/m2]
   real(RP), private, save      :: USER_SH =  7.3_RP    ! constant Sensible heat flux [W/m2]
-  real(RP), private, save      :: USER_Ustar = 0.25_RP ! constant frection velocity [m/s]
+  real(RP), private, save      :: USER_Ustar = 0.32_RP ! constant frection velocity [m/s]
 contains
   !-----------------------------------------------------------------------------
   !> Setup
