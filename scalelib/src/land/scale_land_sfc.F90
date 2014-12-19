@@ -136,7 +136,7 @@ contains
     case ( 'CONST' )
        call LAND_SFC_SLAB_setup( LAND_TYPE )
        LAND_SFC => LAND_SFC_SLAB
-    case ( 'BULK' )
+    case ( 'SLAB' )
        call LAND_SFC_SLAB_setup( LAND_TYPE )
        LAND_SFC => LAND_SFC_SLAB
     end select

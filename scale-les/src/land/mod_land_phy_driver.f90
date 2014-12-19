@@ -163,12 +163,17 @@ contains
 
     character(len=2) :: sk
 
-    integer :: k
+    integer :: k, i, j
     !---------------------------------------------------------------------------
 
     if ( update_flag ) then
-       LAND_QVEF(:,:) = min( LAND_WATER(LKS,:,:) / LAND_PROPERTY(:,:,I_WaterCritical), BETA_MAX )
-       LAND_DZ1 (:,:) = GRID_LCDZ(LKS)
+
+       do j = JS, JE
+       do i = IS, IE
+          LAND_QVEF(i,j) = min( LAND_WATER(LKS,i,j) / LAND_PROPERTY(i,j,I_WaterCritical), BETA_MAX )
+          LAND_DZ1 (i,j) = GRID_LCDZ(LKS)
+       end do
+       end do
 
        call LAND_SFC( LAND_SFC_TEMP_t(:,:),               & ! [OUT]
                       LAND_SFLX_MW   (:,:),               & ! [OUT]
@@ -219,16 +224,17 @@ contains
                       ATMOS_SFLX_prec(:,:),                & ! [IN]
                       LAND_SFLX_evap (:,:),                & ! [IN]
                       GRID_LCDZ      (:),                  & ! [IN]
-                      dt                                  ) ! [IN]
+                      dt                                   ) ! [IN]
 
        ! no albedo update (tentative)
        LAND_SFC_albedo_t(:,:,:) = 0.0_RP
 
-       call HIST_in( LAND_TEMP_t      (:,:,:),    'LAND_TEMP_t',       'tendency of LAND_TEMP',     'K',     zdim='land' )
-       call HIST_in( LAND_WATER_t     (:,:,:),    'LAND_WATER_t',      'tendency of LAND_WATER',    'm3/m3', zdim='land' )
-       call HIST_in( LAND_SFC_TEMP_t  (:,:),      'LAND_SFC_TEMP_t',   'tendency of LAND_SFC_TEMP', 'K'                  )
-       call HIST_in( LAND_SFC_albedo_t(:,:,I_LW), 'LAND_SFC_ALB_LW_t', 'tendency of LAND_ALB_LW',   '0-1'                )
-       call HIST_in( LAND_SFC_albedo_t(:,:,I_SW), 'LAND_SFC_ALB_SW_t', 'tendency of LAND_ALB_SW',   '0-1'                )
+       call HIST_in( LAND_TEMP_t (:,:,:), 'LAND_TEMP_t',  'tendency of LAND_TEMP',  'K',     zdim='land' )
+       call HIST_in( LAND_WATER_t(:,:,:), 'LAND_WATER_t', 'tendency of LAND_WATER', 'm3/m3', zdim='land' )
+
+       call HIST_in( LAND_SFC_TEMP_t  (:,:),      'LAND_SFC_TEMP_t', 'tendency of LAND_SFC_TEMP', 'K'   )
+       call HIST_in( LAND_SFC_albedo_t(:,:,I_LW), 'LAND_ALB_LW_t',   'tendency of LAND_ALB_LW',   '0-1' )
+       call HIST_in( LAND_SFC_albedo_t(:,:,I_SW), 'LAND_ALB_SW_t',   'tendency of LAND_ALB_SW',   '0-1' )
 
        call HIST_in( LAND_PROPERTY(:,:,I_WaterLimit),    'LP_WaterLimit',    'LAND PROPERTY, WaterLimit',    'm3/m3'  )
        call HIST_in( LAND_PROPERTY(:,:,I_WaterCritical), 'LP_WaterCritical', 'LAND PROPERTY, WaterCritical', 'm3/m3'  )

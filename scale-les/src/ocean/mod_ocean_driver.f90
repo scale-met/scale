@@ -195,18 +195,18 @@ contains
     !---------------------------------------------------------------------------
 
     if ( OCEAN_sw ) then
-       call CPL_getATM_OCN( ATMOS_TEMP,     & ! [OUT]
-                            ATMOS_PRES,     & ! [OUT]
-                            ATMOS_W,        & ! [OUT]
-                            ATMOS_U,        & ! [OUT]
-                            ATMOS_V,        & ! [OUT]
-                            ATMOS_DENS,     & ! [OUT]
-                            ATMOS_QV,       & ! [OUT]
-                            ATMOS_PBL,      & ! [OUT]
-                            ATMOS_SFC_PRES, & ! [OUT]
-                            ATMOS_SFLX_LW,  & ! [OUT]
-                            ATMOS_SFLX_SW,  & ! [OUT]
-                            ATMOS_SFLX_prec ) ! [OUT]
+       call CPL_getATM_OCN( ATMOS_TEMP     (:,:), & ! [OUT]
+                            ATMOS_PRES     (:,:), & ! [OUT]
+                            ATMOS_W        (:,:), & ! [OUT]
+                            ATMOS_U        (:,:), & ! [OUT]
+                            ATMOS_V        (:,:), & ! [OUT]
+                            ATMOS_DENS     (:,:), & ! [OUT]
+                            ATMOS_QV       (:,:), & ! [OUT]
+                            ATMOS_PBL      (:,:), & ! [OUT]
+                            ATMOS_SFC_PRES (:,:), & ! [OUT]
+                            ATMOS_SFLX_LW  (:,:), & ! [OUT]
+                            ATMOS_SFLX_SW  (:,:), & ! [OUT]
+                            ATMOS_SFLX_prec(:,:)  ) ! [OUT]
     endif
 
     return
