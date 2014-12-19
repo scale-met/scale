@@ -80,6 +80,6 @@ cat << EOF > conf/param.history.conf
 &HISTITEM item="LAND_ALB_SW"   /
 &HISTITEM item="LAND_ALB_LW"   /
 
-&HISTITEM item="TS_URB" /
-&HISTITEM item="TC_URB" /
+&HISTITEM item="URBAN_TC"       /
+&HISTITEM item="URBAN_SFC_TEMP" /
 EOF

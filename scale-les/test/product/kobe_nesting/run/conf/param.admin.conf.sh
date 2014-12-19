@@ -25,16 +25,10 @@ cat << EOF > conf/param.admin.conf
 /
 
 &PARAM_LAND
- LAND_TYPE = "BUCKET",
+ LAND_TYPE = "SLAB",
 /
 
 &PARAM_URBAN
- URBAN_TYPE = "UCM",
-/
-
-&PARAM_CPL
- CPL_TYPE_AtmOcn = "BULK",
- CPL_TYPE_AtmLnd = "BULK",
- CPL_TYPE_AtmUrb = "BULK",
+ URBAN_TYPE = "SLC",
 /
 EOF
