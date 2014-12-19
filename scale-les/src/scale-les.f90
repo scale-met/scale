@@ -76,7 +76,7 @@ program scaleles_launcher
 
   NUM_DOMAIN    = 1
   PRC_DOMAINS   = 0
-  CONF_FILES(1) = fname_launch
+  CONF_FILES(:) = ""
 
   ! start MPI
   call PRC_MPIstart
@@ -88,6 +88,7 @@ program scaleles_launcher
   else
      call get_command_argument(1,fname_launch)
   endif
+  CONF_FILES(1) = fname_launch
 
   !--- Open config file till end
   LNC_FID_CONF = IO_get_available_fid()
