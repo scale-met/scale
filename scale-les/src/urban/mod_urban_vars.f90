@@ -719,16 +719,18 @@ contains
   !-----------------------------------------------------------------------------
   !> Input from External I/O
   subroutine URBAN_vars_external_in( &
-       ts_urb_in,     &
-       tc_urb_in,     &
-       qc_urb_in,     &
-       uc_urb_in      )
+       URBAN_TC_in,        &
+       URBAN_QC_in,        &
+       URBAN_UC_in,        &
+       URBAN_SFC_TEMP_in,  &
+       URBAN_SFC_albedo_in )
     implicit none
 
-    real(RP), intent(in) :: ts_urb_in(IA,JA)
-    real(RP), intent(in) :: tc_urb_in(IA,JA)
-    real(RP), intent(in) :: qc_urb_in(IA,JA)
-    real(RP), intent(in) :: uc_urb_in(IA,JA)
+    real(RP), intent(in) :: URBAN_TC_in        (IA,JA)
+    real(RP), intent(in) :: URBAN_QC_in        (IA,JA)
+    real(RP), intent(in) :: URBAN_UC_in        (IA,JA)
+    real(RP), intent(in) :: URBAN_SFC_TEMP_in  (IA,JA)
+    real(RP), intent(in) :: URBAN_SFC_albedo_in(IA,JA,2)
 
     integer :: k
     !---------------------------------------------------------------------------
@@ -736,18 +738,18 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** External Input (coupler) ***'
 
-    URBAN_TR(:,:) = ts_urb_in(:,:)
-    URBAN_TB(:,:) = ts_urb_in(:,:)
-    URBAN_TG(:,:) = ts_urb_in(:,:)
+    URBAN_TR(:,:) = URBAN_SFC_TEMP_in(:,:)
+    URBAN_TB(:,:) = URBAN_SFC_TEMP_in(:,:)
+    URBAN_TG(:,:) = URBAN_SFC_TEMP_in(:,:)
 
-    URBAN_TC(:,:) = tc_urb_in(:,:)
-    URBAN_QC(:,:) = qc_urb_in(:,:)
-    URBAN_UC(:,:) = uc_urb_in(:,:)
+    URBAN_TC(:,:) = URBAN_TC_in(:,:)
+    URBAN_QC(:,:) = URBAN_QC_in(:,:)
+    URBAN_UC(:,:) = URBAN_UC_in(:,:)
 
     do k = UKS, UKE
-       URBAN_TRL(k,:,:) = ts_urb_in(:,:)
-       URBAN_TBL(k,:,:) = ts_urb_in(:,:)
-       URBAN_TGL(k,:,:) = ts_urb_in(:,:)
+       URBAN_TRL(k,:,:) = URBAN_SFC_TEMP_in(:,:)
+       URBAN_TBL(k,:,:) = URBAN_SFC_TEMP_in(:,:)
+       URBAN_TGL(k,:,:) = URBAN_SFC_TEMP_in(:,:)
     end do
 
     URBAN_RAINR(:,:) = 0.0_RP
@@ -755,7 +757,8 @@ contains
     URBAN_RAING(:,:) = 0.0_RP
     URBAN_ROFF (:,:) = 0.0_RP
 
-    URBAN_SFC_TEMP(:,:) = ts_urb_in(:,:)
+    URBAN_SFC_TEMP  (:,:)   = URBAN_SFC_TEMP_in  (:,:)
+    URBAN_SFC_albedo(:,:,:) = URBAN_SFC_albedo_in(:,:,:)
 
     URBAN_SFLX_MW  (:,:) = 0.0_RP
     URBAN_SFLX_MU  (:,:) = 0.0_RP

@@ -487,6 +487,7 @@ contains
     real(RP) :: sst  (IA,JA)
     real(RP) :: albw (IA,JA,2)  ! albedo for ocean
     real(RP) :: albg (IA,JA,2)  ! albedo for land
+    real(RP) :: albu (IA,JA,2)  ! albedo for urban
     real(RP) :: z0w  (IA,JA)
     real(RP) :: skint(IA,JA)
     real(RP) :: skinw(IA,JA)
@@ -622,6 +623,13 @@ contains
     uc_urb(IA,JA) = max(sqrt( ( momx(KS,IA,JA,1) / dens(KS,IA,JA,1) )**2.0_RP &
                             + ( momy(KS,IA,JA,1) / dens(KS,IA,JA,1) )**2.0_RP ), 0.01_RP)
 
+    ! copy albedo of land to urban
+    do j = 1, JA
+    do i = 1, IA
+       albu(i,j,:) = albg(i,j,:)
+    enddo
+    enddo
+
     call COMM_vars8( uc_urb, 1 )
     call COMM_wait ( uc_urb, 1, .false. )
 
@@ -632,7 +640,7 @@ contains
     call LAND_vars_external_in( tg, strg, lst, albg )
 
     ! Write out: Urban
-    call URBAN_vars_external_in( ust, tc_urb, qc_urb, uc_urb )
+    call URBAN_vars_external_in( tc_urb, qc_urb, uc_urb, ust, albu )
 
     ! Input to PHY_SF Container
     call ATMOS_PHY_SF_vars_external_in( skint, albw(:,:,I_LW), albw(:,:,I_SW), z0w, z0w, z0w )
