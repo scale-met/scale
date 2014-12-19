@@ -30,9 +30,9 @@ module mod_atmos_driver
   !
   !++ Public procedure
   !
-  public :: ATMOS_driver_setup
+  public :: ATMOS_driver_setup1
+  public :: ATMOS_driver_setup2
   public :: ATMOS_driver
-  public :: ATMOS_driver_initial
   public :: ATMOS_driver_finalize
   public :: ATMOS_SURFACE_GET
   public :: ATMOS_SURFACE_SET
@@ -53,13 +53,12 @@ module mod_atmos_driver
 contains
   !-----------------------------------------------------------------------------
   !> Setup
-  subroutine ATMOS_driver_setup
+  subroutine ATMOS_driver_setup1
     use scale_time, only: &
        TIME_NOWDATE,    &
        TIME_OFFSET_YEAR
     use mod_atmos_vars, only: &
        ATMOS_vars_diagnostics, &
-       ATMOS_vars_history,     &
        DENS,                   &
        MOMZ,                   &
        MOMX,                   &
@@ -88,12 +87,6 @@ contains
        ATMOS_PHY_CH_driver_setup
     use mod_atmos_phy_rd_driver, only: &
        ATMOS_PHY_RD_driver_setup
-    use mod_atmos_phy_sf_driver, only: &
-       ATMOS_PHY_SF_driver_setup
-    use mod_atmos_phy_tb_driver, only: &
-       ATMOS_PHY_TB_driver_setup
-    use mod_atmos_phy_cp_driver, only: &
-       ATMOS_PHY_CP_driver_setup
     implicit none
     !---------------------------------------------------------------------------
 
@@ -101,7 +94,7 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[DRIVER] / Categ[ATMOS] / Origin[SCALE-LES]'
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Setup each atmospheric components...'
+    if( IO_L ) write(IO_FID_LOG,*) '*** Setup each atmospheric components 1 ...'
 
     !--- setup solar insolation
     call ATMOS_SOLARINS_setup( TIME_NOWDATE(1)+TIME_OFFSET_YEAR )
@@ -127,15 +120,46 @@ contains
     call ATMOS_PHY_AE_driver_setup
     call ATMOS_PHY_CH_driver_setup
     call ATMOS_PHY_RD_driver_setup
-    call ATMOS_PHY_SF_driver_setup
-    call ATMOS_PHY_TB_driver_setup
-    call ATMOS_PHY_CP_driver_setup
 
     !########## Calculate diagnostic variables ##########
     call ATMOS_vars_diagnostics
 
     !########## Set Surface Boundary Condition ##########
     call ATMOS_SURFACE_SET( countup =.false. )
+
+    return
+  end subroutine ATMOS_driver_setup1
+
+  !-----------------------------------------------------------------------------
+  !> Setup
+  subroutine ATMOS_driver_setup2
+    use mod_atmos_vars, only: &
+       ATMOS_vars_history
+    use mod_atmos_phy_sf_driver, only: &
+       ATMOS_PHY_SF_driver_setup
+    use mod_atmos_phy_tb_driver, only: &
+       ATMOS_PHY_TB_driver_setup
+    use mod_atmos_phy_cp_driver, only: &
+       ATMOS_PHY_CP_driver_setup
+    implicit none
+    !---------------------------------------------------------------------------
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[DRIVER] / Categ[ATMOS] / Origin[SCALE-LES]'
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '*** Setup each atmospheric components 2 ...'
+
+    !########## Get Surface Boundary Condition ##########
+    call ATMOS_SURFACE_GET
+
+    ! setup each components
+    call ATMOS_PHY_SF_driver_setup
+    call ATMOS_PHY_TB_driver_setup
+    call ATMOS_PHY_CP_driver_setup
+
+    !########## Set Surface Boundary Condition ##########
+    call ATMOS_SURFACE_SET( countup =.true. )
 
     !########## History & Monitor ##########
     call PROF_rapstart('ATM History Vars', 1)
@@ -146,7 +170,7 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '*** Finish setup of each atmospheric components.'
 
     return
-  end subroutine ATMOS_driver_setup
+  end subroutine ATMOS_driver_setup2
 
   !-----------------------------------------------------------------------------
   !> advance atmospheric state
@@ -301,131 +325,6 @@ contains
 
     return
   end subroutine ATMOS_driver
-
-  !-----------------------------------------------------------------------------
-  !> Initial
-  subroutine ATMOS_driver_initial
-    use mod_admin_restart, only: &
-       RESTART_RUN
-    use mod_atmos_vars, only: &
-       ATMOS_vars_diagnostics, &
-       DENS_tp,                &
-       MOMZ_tp,                &
-       MOMX_tp,                &
-       MOMY_tp,                &
-       RHOT_tp,                &
-       RHOQ_tp
-    use mod_atmos_admin, only: &
-       ATMOS_sw_phy_mp, &
-       ATMOS_sw_phy_ae, &
-       ATMOS_sw_phy_ch, &
-       ATMOS_sw_phy_rd, &
-       ATMOS_sw_phy_sf, &
-       ATMOS_sw_phy_tb, &
-       ATMOS_sw_phy_cp
-    use mod_atmos_phy_mp_driver, only: &
-       ATMOS_PHY_MP_driver
-    use mod_atmos_phy_ae_driver, only: &
-       ATMOS_PHY_AE_driver
-    use mod_atmos_phy_ch_driver, only: &
-       ATMOS_PHY_CH_driver
-    use mod_atmos_phy_rd_driver, only: &
-       ATMOS_PHY_RD_driver
-    use mod_atmos_phy_sf_driver, only: &
-       ATMOS_PHY_SF_driver
-    use mod_atmos_phy_tb_driver, only: &
-       ATMOS_PHY_TB_driver
-    use mod_atmos_phy_cp_driver, only: &
-       ATMOS_PHY_CP_driver
-    implicit none
-    !---------------------------------------------------------------------------
-
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[DRIVER] / Categ[ATMOS] / Origin[SCALE-LES]'
-
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Initialized atmospheric components...'
-
-    if( .NOT. RESTART_RUN ) then
-
-       !########## Get Surface Boundary Condition ##########
-       call ATMOS_SURFACE_GET
-
-       !########## initialize tendencies ##########
-       DENS_tp(:,:,:)   = 0.0_RP
-       MOMZ_tp(:,:,:)   = 0.0_RP
-       MOMX_tp(:,:,:)   = 0.0_RP
-       MOMY_tp(:,:,:)   = 0.0_RP
-       RHOT_tp(:,:,:)   = 0.0_RP
-       RHOQ_tp(:,:,:,:) = 0.0_RP
-
-       !########## Microphysics ##########
-       if ( ATMOS_sw_phy_mp ) then
-          call PROF_rapstart('ATM Microphysics', 1)
-          call ATMOS_PHY_MP_driver( update_flag = .true. )
-          call PROF_rapend  ('ATM Microphysics', 1)
-       endif
-
-       !########## Aerosol ##########
-       if ( ATMOS_sw_phy_ae ) then
-          call PROF_rapstart('ATM Aerosol', 1)
-          call ATMOS_PHY_AE_driver( update_flag = .true. )
-          call PROF_rapend  ('ATM Aerosol', 1)
-       endif
-
-       !########## Chemistry ##########
-       if ( ATMOS_sw_phy_ch ) then
-          call PROF_rapstart('ATM Chemistry', 1)
-          call ATMOS_PHY_CH_driver( update_flag = .true. )
-          call PROF_rapend  ('ATM Chemistry', 1)
-       endif
-
-       !########## Radiation ##########
-       if ( ATMOS_sw_phy_rd ) then
-          call PROF_rapstart('ATM Radiation', 1)
-          call ATMOS_PHY_RD_driver( update_flag = .true. )
-          call PROF_rapend  ('ATM Radiation', 1)
-       endif
-
-       !########## Surface Flux ##########
-       if ( ATMOS_sw_phy_sf ) then
-          call PROF_rapstart('ATM SurfaceFlux', 1)
-          call ATMOS_PHY_SF_driver( update_flag = .true. )
-          call PROF_rapend  ('ATM SurfaceFlux', 1)
-       endif
-
-       !########## Turbulence ##########
-       if ( ATMOS_sw_phy_tb ) then
-          call PROF_rapstart('ATM Turbulence', 1)
-          call ATMOS_PHY_TB_driver( update_flag = .true. )
-          call PROF_rapend  ('ATM Turbulence', 1)
-       endif
-
-       !########## Cumulus ##########
-       if ( ATMOS_sw_phy_cp ) then
-          call PROF_rapstart('ATM Cumulus', 1)
-          call ATMOS_PHY_CP_driver( update_flag = .true. )
-          call PROF_rapend  ('ATM Cumulus', 1)
-       endif
-
-       !########## Calculate diagnostic variables ##########
-       call ATMOS_vars_diagnostics
-
-       !########## Set Surface Boundary Condition ##########
-       call ATMOS_SURFACE_SET( countup =.false. )
-
-       if( IO_L ) write(IO_FID_LOG,*)
-       if( IO_L ) write(IO_FID_LOG,*) '*** Finish tendency initialized ...'
-
-    else
-
-       if( IO_L ) write(IO_FID_LOG,*)
-       if( IO_L ) write(IO_FID_LOG,*) '*** Use restart tendency ...'
-
-    end if
-
-    return
-  end subroutine ATMOS_driver_initial
 
   !-----------------------------------------------------------------------------
   !> Finalize

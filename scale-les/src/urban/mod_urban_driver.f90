@@ -65,7 +65,7 @@ contains
     call URBAN_PHY_driver_setup
 
     !########## Set Surface Boundary to coupler ##########
-    call URBAN_SURFACE_SET( countup=.false. )
+    call URBAN_SURFACE_SET( countup=.true. )
 
     !########## History & Monitor ##########
     if ( URBAN_sw ) then

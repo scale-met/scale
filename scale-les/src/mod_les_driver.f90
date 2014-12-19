@@ -149,9 +149,9 @@ contains
        ATMOS_sw_check => ATMOS_RESTART_CHECK,    &
        ATMOS_vars_restart_check
     use mod_atmos_driver, only: &
-       ATMOS_driver_setup,    &
+       ATMOS_driver_setup1,   &
+       ATMOS_driver_setup2,   &
        ATMOS_driver,          &
-       ATMOS_driver_initial,  &
        ATMOS_driver_finalize, &
        ATMOS_SURFACE_SET
     use mod_ocean_admin, only: &
@@ -336,20 +336,12 @@ contains
     call URBAN_SURFACE_SET( countup=.false. )
   
     ! setup submodel driver
-    call ATMOS_driver_setup
+    call ATMOS_driver_setup1
     call OCEAN_driver_setup
     call LAND_driver_setup
     call URBAN_driver_setup
+    call ATMOS_driver_setup2
 
-    ! setup initial condition
-    call ATMOS_driver_initial
-
-    ! setup surface condition again
-    call ATMOS_SURFACE_SET( countup=.true. )
-    call OCEAN_SURFACE_SET( countup=.true. )
-    call LAND_SURFACE_SET ( countup=.true. )
-    call URBAN_SURFACE_SET( countup=.true. )
-  
     ! setup user-defined procedure
     call USER_setup
 

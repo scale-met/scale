@@ -70,7 +70,7 @@ contains
     call LAND_PHY_driver_setup
 
     !########## Set Surface Boundary to coupler ##########
-    call LAND_SURFACE_SET( countup=.false. )
+    call LAND_SURFACE_SET( countup=.true. )
 
     !########## History & Monitor ##########
     if ( LAND_sw ) then

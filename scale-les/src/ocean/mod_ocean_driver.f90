@@ -72,7 +72,7 @@ contains
 !    if( OCEAN_FRC_sw ) call OCEAN_FRC_driver_setup
 
     !########## Set Surface Boundary to coupler ##########
-    call OCEAN_SURFACE_SET( countup=.false. )
+    call OCEAN_SURFACE_SET( countup=.true. )
 
     !########## History & Monitor ##########
     if ( OCEAN_sw ) then
