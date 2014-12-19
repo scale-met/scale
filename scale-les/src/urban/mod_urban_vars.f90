@@ -122,30 +122,30 @@ module mod_urban_vars
   !
   logical,                private :: URBAN_VARS_CHECKRANGE      = .false.
 
-  integer,                private, parameter :: VMAX         = 23
-  integer,                private, parameter :: I_TR         = 1
-  integer,                private, parameter :: I_TB         = 2
-  integer,                private, parameter :: I_TG         = 3
-  integer,                private, parameter :: I_TC         = 4
-  integer,                private, parameter :: I_QC         = 5
-  integer,                private, parameter :: I_UC         = 6
-  integer,                private, parameter :: I_TRL        = 7
-  integer,                private, parameter :: I_TBL        = 8
-  integer,                private, parameter :: I_TGL        = 9
-  integer,                private, parameter :: I_RAINR      = 10
-  integer,                private, parameter :: I_RAINB      = 11
-  integer,                private, parameter :: I_RAING      = 12
-  integer,                private, parameter :: I_ROFF       = 13
-  integer,                private, parameter :: I_SFC_TEMP   = 14
-  integer,                private, parameter :: I_SFC_ALB_LW = 15
-  integer,                private, parameter :: I_SFC_ALB_SW = 16
-  integer,                private, parameter :: I_SFLX_MW    = 17
-  integer,                private, parameter :: I_SFLX_MU    = 18
-  integer,                private, parameter :: I_SFLX_MV    = 19
-  integer,                private, parameter :: I_SFLX_SH    = 20
-  integer,                private, parameter :: I_SFLX_LH    = 21
-  integer,                private, parameter :: I_SFLX_GH    = 22
-  integer,                private, parameter :: I_SFLX_evap  = 23
+  integer,                private, parameter :: VMAX        = 23
+  integer,                private, parameter :: I_TR        = 1
+  integer,                private, parameter :: I_TB        = 2
+  integer,                private, parameter :: I_TG        = 3
+  integer,                private, parameter :: I_TC        = 4
+  integer,                private, parameter :: I_QC        = 5
+  integer,                private, parameter :: I_UC        = 6
+  integer,                private, parameter :: I_TRL       = 7
+  integer,                private, parameter :: I_TBL       = 8
+  integer,                private, parameter :: I_TGL       = 9
+  integer,                private, parameter :: I_RAINR     = 10
+  integer,                private, parameter :: I_RAINB     = 11
+  integer,                private, parameter :: I_RAING     = 12
+  integer,                private, parameter :: I_ROFF      = 13
+  integer,                private, parameter :: I_SFC_TEMP  = 14
+  integer,                private, parameter :: I_ALB_LW    = 15
+  integer,                private, parameter :: I_ALB_SW    = 16
+  integer,                private, parameter :: I_SFLX_MW   = 17
+  integer,                private, parameter :: I_SFLX_MU   = 18
+  integer,                private, parameter :: I_SFLX_MV   = 19
+  integer,                private, parameter :: I_SFLX_SH   = 20
+  integer,                private, parameter :: I_SFLX_LH   = 21
+  integer,                private, parameter :: I_SFLX_GH   = 22
+  integer,                private, parameter :: I_SFLX_evap = 23
 
   character(len=H_SHORT), private            :: VAR_NAME(VMAX) !< name  of the urban variables
   character(len=H_MID),   private            :: VAR_DESC(VMAX) !< desc. of the urban variables
@@ -444,12 +444,12 @@ contains
        call FILEIO_read( URBAN_ROFF(:,:),                                           & ! [OUT]
                          URBAN_RESTART_IN_BASENAME, VAR_NAME(I_ROFF),  'XY', step=1 ) ! [IN]
 
-       call FILEIO_read( URBAN_SFC_TEMP(:,:),                                            & ! [OUT]
-                         URBAN_RESTART_IN_BASENAME, VAR_NAME(I_SFC_TEMP),   'XY', step=1 ) ! [IN]
-       call FILEIO_read( URBAN_SFC_albedo(:,:,I_LW),                                     & ! [OUT]
-                         URBAN_RESTART_IN_BASENAME, VAR_NAME(I_SFC_ALB_LW), 'XY', step=1 ) ! [IN]
-       call FILEIO_read( URBAN_SFC_albedo(:,:,I_SW),                                     & ! [OUT]
-                         URBAN_RESTART_IN_BASENAME, VAR_NAME(I_SFC_ALB_SW), 'XY', step=1 ) ! [IN]
+       call FILEIO_read( URBAN_SFC_TEMP(:,:),                                          & ! [OUT]
+                         URBAN_RESTART_IN_BASENAME, VAR_NAME(I_SFC_TEMP), 'XY', step=1 ) ! [IN]
+       call FILEIO_read( URBAN_SFC_albedo(:,:,I_LW),                                   & ! [OUT]
+                         URBAN_RESTART_IN_BASENAME, VAR_NAME(I_ALB_LW),   'XY', step=1 ) ! [IN]
+       call FILEIO_read( URBAN_SFC_albedo(:,:,I_SW),                                   & ! [OUT]
+                         URBAN_RESTART_IN_BASENAME, VAR_NAME(I_ALB_SW),   'XY', step=1 ) ! [IN]
 
        call FILEIO_read( URBAN_SFLX_MW(:,:),                                            & ! [OUT]
                          URBAN_RESTART_IN_BASENAME, VAR_NAME(I_SFLX_MW),   'XY', step=1 ) ! [IN]
@@ -543,15 +543,15 @@ contains
                           VAR_NAME(I_ROFF),  VAR_DESC(I_ROFF),  VAR_UNIT(I_ROFF),  & ! [IN]
                           'XY', URBAN_RESTART_OUT_DTYPE, nohalo=.true.             ) ! [IN]
 
-       call FILEIO_write( URBAN_SFC_TEMP(:,:), basename, URBAN_RESTART_OUT_TITLE,                 & ! [IN]
-                          VAR_NAME(I_SFC_TEMP), VAR_DESC(I_SFC_TEMP), VAR_UNIT(I_SFC_TEMP),       & ! [IN]
-                          'XY', URBAN_RESTART_OUT_DTYPE, nohalo=.true.                            ) ! [IN]
-       call FILEIO_write( URBAN_SFC_albedo(:,:,I_LW), basename, URBAN_RESTART_OUT_TITLE,          & ! [IN]
-                          VAR_NAME(I_SFC_ALB_LW), VAR_DESC(I_SFC_ALB_LW), VAR_UNIT(I_SFC_ALB_LW), & ! [IN]
-                          'XY', URBAN_RESTART_OUT_DTYPE, nohalo=.true.                            ) ! [IN]
-       call FILEIO_write( URBAN_SFC_albedo(:,:,I_SW), basename, URBAN_RESTART_OUT_TITLE,          & ! [IN]
-                          VAR_NAME(I_SFC_ALB_SW), VAR_DESC(I_SFC_ALB_SW), VAR_UNIT(I_SFC_ALB_SW), & ! [IN]
-                          'XY', URBAN_RESTART_OUT_DTYPE, nohalo=.true.                            ) ! [IN]
+       call FILEIO_write( URBAN_SFC_TEMP(:,:), basename, URBAN_RESTART_OUT_TITLE,           & ! [IN]
+                          VAR_NAME(I_SFC_TEMP), VAR_DESC(I_SFC_TEMP), VAR_UNIT(I_SFC_TEMP), & ! [IN]
+                          'XY', URBAN_RESTART_OUT_DTYPE, nohalo=.true.                      ) ! [IN]
+       call FILEIO_write( URBAN_SFC_albedo(:,:,I_LW), basename, URBAN_RESTART_OUT_TITLE,    & ! [IN]
+                          VAR_NAME(I_ALB_LW), VAR_DESC(I_ALB_LW), VAR_UNIT(I_ALB_LW),       & ! [IN]
+                          'XY', URBAN_RESTART_OUT_DTYPE, nohalo=.true.                      ) ! [IN]
+       call FILEIO_write( URBAN_SFC_albedo(:,:,I_SW), basename, URBAN_RESTART_OUT_TITLE,    & ! [IN]
+                          VAR_NAME(I_ALB_SW), VAR_DESC(I_ALB_SW), VAR_UNIT(I_ALB_SW),       & ! [IN]
+                          'XY', URBAN_RESTART_OUT_DTYPE, nohalo=.true.                      ) ! [IN]
 
        call FILEIO_write( URBAN_SFLX_MW(:,:), basename, URBAN_RESTART_OUT_TITLE,               & ! [IN]
                           VAR_NAME(I_SFLX_MW), VAR_DESC(I_SFLX_MW), VAR_UNIT(I_SFLX_MW),       & ! [IN]
@@ -589,51 +589,51 @@ contains
     !---------------------------------------------------------------------------
 
     if ( URBAN_VARS_CHECKRANGE ) then
-       call VALCHECK( URBAN_TR        (IS:IE,JS:JE),          0.0_RP, 1000.0_RP, VAR_NAME(I_TR),         &
+       call VALCHECK( URBAN_TR        (IS:IE,JS:JE),          0.0_RP, 1000.0_RP, VAR_NAME(I_TR),        &
                      __FILE__, __LINE__ )
-       call VALCHECK( URBAN_TB        (IS:IE,JS:JE),          0.0_RP, 1000.0_RP, VAR_NAME(I_TB),         &
+       call VALCHECK( URBAN_TB        (IS:IE,JS:JE),          0.0_RP, 1000.0_RP, VAR_NAME(I_TB),        &
                      __FILE__, __LINE__ )
-       call VALCHECK( URBAN_TG        (IS:IE,JS:JE),          0.0_RP, 1000.0_RP, VAR_NAME(I_TG),         &
+       call VALCHECK( URBAN_TG        (IS:IE,JS:JE),          0.0_RP, 1000.0_RP, VAR_NAME(I_TG),        &
                      __FILE__, __LINE__ )
-       call VALCHECK( URBAN_TC        (IS:IE,JS:JE),          0.0_RP, 1000.0_RP, VAR_NAME(I_TC),         &
+       call VALCHECK( URBAN_TC        (IS:IE,JS:JE),          0.0_RP, 1000.0_RP, VAR_NAME(I_TC),        &
                      __FILE__, __LINE__ )
-       call VALCHECK( URBAN_QC        (IS:IE,JS:JE),          0.0_RP, 1000.0_RP, VAR_NAME(I_QC),         &
+       call VALCHECK( URBAN_QC        (IS:IE,JS:JE),          0.0_RP, 1000.0_RP, VAR_NAME(I_QC),        &
                      __FILE__, __LINE__ )
-       call VALCHECK( URBAN_UC        (IS:IE,JS:JE),          0.0_RP, 1000.0_RP, VAR_NAME(I_UC),         &
+       call VALCHECK( URBAN_UC        (IS:IE,JS:JE),          0.0_RP, 1000.0_RP, VAR_NAME(I_UC),        &
                      __FILE__, __LINE__ )
-       call VALCHECK( URBAN_TRL       (:,IS:IE,JS:JE),        0.0_RP, 1000.0_RP, VAR_NAME(I_TRL),        &
+       call VALCHECK( URBAN_TRL       (:,IS:IE,JS:JE),        0.0_RP, 1000.0_RP, VAR_NAME(I_TRL),       &
                      __FILE__, __LINE__ )
-       call VALCHECK( URBAN_TBL       (:,IS:IE,JS:JE),        0.0_RP, 1000.0_RP, VAR_NAME(I_TBL),        &
+       call VALCHECK( URBAN_TBL       (:,IS:IE,JS:JE),        0.0_RP, 1000.0_RP, VAR_NAME(I_TBL),       &
                      __FILE__, __LINE__ )
-       call VALCHECK( URBAN_TGL       (:,IS:IE,JS:JE),        0.0_RP, 1000.0_RP, VAR_NAME(I_TGL),        &
+       call VALCHECK( URBAN_TGL       (:,IS:IE,JS:JE),        0.0_RP, 1000.0_RP, VAR_NAME(I_TGL),       &
                      __FILE__, __LINE__ )
-       call VALCHECK( URBAN_RAINR     (IS:IE,JS:JE),      -1000.0_RP, 1000.0_RP, VAR_NAME(I_RAINR),      &
+       call VALCHECK( URBAN_RAINR     (IS:IE,JS:JE),      -1000.0_RP, 1000.0_RP, VAR_NAME(I_RAINR),     &
                      __FILE__, __LINE__ )
-       call VALCHECK( URBAN_RAINB     (IS:IE,JS:JE),      -1000.0_RP, 1000.0_RP, VAR_NAME(I_RAINB),      &
+       call VALCHECK( URBAN_RAINB     (IS:IE,JS:JE),      -1000.0_RP, 1000.0_RP, VAR_NAME(I_RAINB),     &
                      __FILE__, __LINE__ )
-       call VALCHECK( URBAN_RAING     (IS:IE,JS:JE),      -1000.0_RP, 1000.0_RP, VAR_NAME(I_RAING),      &
+       call VALCHECK( URBAN_RAING     (IS:IE,JS:JE),      -1000.0_RP, 1000.0_RP, VAR_NAME(I_RAING),     &
                      __FILE__, __LINE__ )
-       call VALCHECK( URBAN_ROFF      (IS:IE,JS:JE),      -1000.0_RP, 1000.0_RP, VAR_NAME(I_ROFF),       &
+       call VALCHECK( URBAN_ROFF      (IS:IE,JS:JE),      -1000.0_RP, 1000.0_RP, VAR_NAME(I_ROFF),      &
                      __FILE__, __LINE__ )
-       call VALCHECK( URBAN_SFC_TEMP  (IS:IE,JS:JE),          0.0_RP, 1000.0_RP, VAR_NAME(I_SFC_TEMP),   &
+       call VALCHECK( URBAN_SFC_TEMP  (IS:IE,JS:JE),          0.0_RP, 1000.0_RP, VAR_NAME(I_SFC_TEMP),  &
                      __FILE__, __LINE__ )
-       call VALCHECK( URBAN_SFC_albedo(IS:IE,JS:JE,I_LW),     0.0_RP,    2.0_RP, VAR_NAME(I_SFC_ALB_LW), &
+       call VALCHECK( URBAN_SFC_albedo(IS:IE,JS:JE,I_LW),     0.0_RP,    2.0_RP, VAR_NAME(I_ALB_LW),    &
                      __FILE__, __LINE__ )
-       call VALCHECK( URBAN_SFC_albedo(IS:IE,JS:JE,I_SW),     0.0_RP,    2.0_RP, VAR_NAME(I_SFC_ALB_SW), &
+       call VALCHECK( URBAN_SFC_albedo(IS:IE,JS:JE,I_SW),     0.0_RP,    2.0_RP, VAR_NAME(I_ALB_SW),    &
                      __FILE__, __LINE__ )
-       call VALCHECK( URBAN_SFLX_MW   (IS:IE,JS:JE),      -5000.0_RP, 5000.0_RP, VAR_NAME(I_SFLX_MW),    &
+       call VALCHECK( URBAN_SFLX_MW   (IS:IE,JS:JE),      -5000.0_RP, 5000.0_RP, VAR_NAME(I_SFLX_MW),   &
                      __FILE__, __LINE__ )
-       call VALCHECK( URBAN_SFLX_MU   (IS:IE,JS:JE),      -5000.0_RP, 5000.0_RP, VAR_NAME(I_SFLX_MU),    &
+       call VALCHECK( URBAN_SFLX_MU   (IS:IE,JS:JE),      -5000.0_RP, 5000.0_RP, VAR_NAME(I_SFLX_MU),   &
                      __FILE__, __LINE__ )
-       call VALCHECK( URBAN_SFLX_MV   (IS:IE,JS:JE),      -5000.0_RP, 5000.0_RP, VAR_NAME(I_SFLX_MV),    &
+       call VALCHECK( URBAN_SFLX_MV   (IS:IE,JS:JE),      -5000.0_RP, 5000.0_RP, VAR_NAME(I_SFLX_MV),   &
                      __FILE__, __LINE__ )
-       call VALCHECK( URBAN_SFLX_SH   (IS:IE,JS:JE),      -5000.0_RP, 5000.0_RP, VAR_NAME(I_SFLX_SH),    &
+       call VALCHECK( URBAN_SFLX_SH   (IS:IE,JS:JE),      -5000.0_RP, 5000.0_RP, VAR_NAME(I_SFLX_SH),   &
                      __FILE__, __LINE__ )
-       call VALCHECK( URBAN_SFLX_LH   (IS:IE,JS:JE),      -5000.0_RP, 5000.0_RP, VAR_NAME(I_SFLX_LH),    &
+       call VALCHECK( URBAN_SFLX_LH   (IS:IE,JS:JE),      -5000.0_RP, 5000.0_RP, VAR_NAME(I_SFLX_LH),   &
                      __FILE__, __LINE__ )
-       call VALCHECK( URBAN_SFLX_GH   (IS:IE,JS:JE),      -5000.0_RP, 5000.0_RP, VAR_NAME(I_SFLX_GH),    &
+       call VALCHECK( URBAN_SFLX_GH   (IS:IE,JS:JE),      -5000.0_RP, 5000.0_RP, VAR_NAME(I_SFLX_GH),   &
                      __FILE__, __LINE__ )
-       call VALCHECK( URBAN_SFLX_evap (IS:IE,JS:JE),      -5000.0_RP, 5000.0_RP, VAR_NAME(I_SFLX_evap),  &
+       call VALCHECK( URBAN_SFLX_evap (IS:IE,JS:JE),      -5000.0_RP, 5000.0_RP, VAR_NAME(I_SFLX_evap), &
                      __FILE__, __LINE__ )
     endif
 
@@ -653,17 +653,17 @@ contains
     call HIST_in( URBAN_RAING(:,:), VAR_NAME(I_RAING), VAR_DESC(I_RAING), VAR_UNIT(I_RAING) )
     call HIST_in( URBAN_ROFF (:,:), VAR_NAME(I_ROFF),  VAR_DESC(I_ROFF),  VAR_UNIT(I_ROFF)  )
 
-    call HIST_in( URBAN_SFC_TEMP  (:,:),      VAR_NAME(I_SFC_TEMP),   VAR_DESC(I_SFC_TEMP),   VAR_UNIT(I_SFC_TEMP)   )
-    call HIST_in( URBAN_SFC_albedo(:,:,I_LW), VAR_NAME(I_SFC_ALB_LW), VAR_DESC(I_SFC_ALB_LW), VAR_UNIT(I_SFC_ALB_LW) )
-    call HIST_in( URBAN_SFC_albedo(:,:,I_SW), VAR_NAME(I_SFC_ALB_SW), VAR_DESC(I_SFC_ALB_SW), VAR_UNIT(I_SFC_ALB_SW) )
+    call HIST_in( URBAN_SFC_TEMP  (:,:),      VAR_NAME(I_SFC_TEMP), VAR_DESC(I_SFC_TEMP), VAR_UNIT(I_SFC_TEMP) )
+    call HIST_in( URBAN_SFC_albedo(:,:,I_LW), VAR_NAME(I_ALB_LW),   VAR_DESC(I_ALB_LW),   VAR_UNIT(I_ALB_LW)   )
+    call HIST_in( URBAN_SFC_albedo(:,:,I_SW), VAR_NAME(I_ALB_SW),   VAR_DESC(I_ALB_SW),   VAR_UNIT(I_ALB_SW)   )
 
-    call HIST_in( URBAN_SFLX_MW  (:,:), VAR_NAME(I_SFLX_MW),   VAR_DESC(I_SFLX_MW),   VAR_UNIT(I_SFLX_MW)    )
-    call HIST_in( URBAN_SFLX_MU  (:,:), VAR_NAME(I_SFLX_MU),   VAR_DESC(I_SFLX_MU),   VAR_UNIT(I_SFLX_MU)    )
-    call HIST_in( URBAN_SFLX_MV  (:,:), VAR_NAME(I_SFLX_MV),   VAR_DESC(I_SFLX_MV),   VAR_UNIT(I_SFLX_MV)    )
-    call HIST_in( URBAN_SFLX_SH  (:,:), VAR_NAME(I_SFLX_SH),   VAR_DESC(I_SFLX_SH),   VAR_UNIT(I_SFLX_SH)    )
-    call HIST_in( URBAN_SFLX_LH  (:,:), VAR_NAME(I_SFLX_LH),   VAR_DESC(I_SFLX_LH),   VAR_UNIT(I_SFLX_LH)    )
-    call HIST_in( URBAN_SFLX_GH  (:,:), VAR_NAME(I_SFLX_GH),   VAR_DESC(I_SFLX_GH),   VAR_UNIT(I_SFLX_GH)    )
-    call HIST_in( URBAN_SFLX_evap(:,:), VAR_NAME(I_SFLX_evap), VAR_DESC(I_SFLX_evap), VAR_UNIT(I_SFLX_evap)  )
+    call HIST_in( URBAN_SFLX_MW  (:,:), VAR_NAME(I_SFLX_MW),   VAR_DESC(I_SFLX_MW),   VAR_UNIT(I_SFLX_MW)   )
+    call HIST_in( URBAN_SFLX_MU  (:,:), VAR_NAME(I_SFLX_MU),   VAR_DESC(I_SFLX_MU),   VAR_UNIT(I_SFLX_MU)   )
+    call HIST_in( URBAN_SFLX_MV  (:,:), VAR_NAME(I_SFLX_MV),   VAR_DESC(I_SFLX_MV),   VAR_UNIT(I_SFLX_MV)   )
+    call HIST_in( URBAN_SFLX_SH  (:,:), VAR_NAME(I_SFLX_SH),   VAR_DESC(I_SFLX_SH),   VAR_UNIT(I_SFLX_SH)   )
+    call HIST_in( URBAN_SFLX_LH  (:,:), VAR_NAME(I_SFLX_LH),   VAR_DESC(I_SFLX_LH),   VAR_UNIT(I_SFLX_LH)   )
+    call HIST_in( URBAN_SFLX_GH  (:,:), VAR_NAME(I_SFLX_GH),   VAR_DESC(I_SFLX_GH),   VAR_UNIT(I_SFLX_GH)   )
+    call HIST_in( URBAN_SFLX_evap(:,:), VAR_NAME(I_SFLX_evap), VAR_DESC(I_SFLX_evap), VAR_UNIT(I_SFLX_evap) )
 
     return
   end subroutine URBAN_vars_history
@@ -699,17 +699,17 @@ contains
        call STAT_total( total, URBAN_RAING(:,:), VAR_NAME(I_RAING) )
        call STAT_total( total, URBAN_ROFF (:,:), VAR_NAME(I_ROFF)  )
 
-       call STAT_total( total, URBAN_SFC_TEMP  (:,:),      VAR_NAME(I_SFC_TEMP)   )
-       call STAT_total( total, URBAN_SFC_albedo(:,:,I_LW), VAR_NAME(I_SFC_ALB_LW) )
-       call STAT_total( total, URBAN_SFC_albedo(:,:,I_SW), VAR_NAME(I_SFC_ALB_SW) )
+       call STAT_total( total, URBAN_SFC_TEMP  (:,:),      VAR_NAME(I_SFC_TEMP) )
+       call STAT_total( total, URBAN_SFC_albedo(:,:,I_LW), VAR_NAME(I_ALB_LW)   )
+       call STAT_total( total, URBAN_SFC_albedo(:,:,I_SW), VAR_NAME(I_ALB_SW)   )
 
-       call STAT_total( total, URBAN_SFLX_MW  (:,:), VAR_NAME(I_SFLX_MW)    )
-       call STAT_total( total, URBAN_SFLX_MU  (:,:), VAR_NAME(I_SFLX_MU)    )
-       call STAT_total( total, URBAN_SFLX_MV  (:,:), VAR_NAME(I_SFLX_MV)    )
-       call STAT_total( total, URBAN_SFLX_SH  (:,:), VAR_NAME(I_SFLX_SH)    )
-       call STAT_total( total, URBAN_SFLX_LH  (:,:), VAR_NAME(I_SFLX_LH)    )
-       call STAT_total( total, URBAN_SFLX_GH  (:,:), VAR_NAME(I_SFLX_GH)    )
-       call STAT_total( total, URBAN_SFLX_evap(:,:), VAR_NAME(I_SFLX_evap)  )
+       call STAT_total( total, URBAN_SFLX_MW  (:,:), VAR_NAME(I_SFLX_MW)   )
+       call STAT_total( total, URBAN_SFLX_MU  (:,:), VAR_NAME(I_SFLX_MU)   )
+       call STAT_total( total, URBAN_SFLX_MV  (:,:), VAR_NAME(I_SFLX_MV)   )
+       call STAT_total( total, URBAN_SFLX_SH  (:,:), VAR_NAME(I_SFLX_SH)   )
+       call STAT_total( total, URBAN_SFLX_LH  (:,:), VAR_NAME(I_SFLX_LH)   )
+       call STAT_total( total, URBAN_SFLX_GH  (:,:), VAR_NAME(I_SFLX_GH)   )
+       call STAT_total( total, URBAN_SFLX_evap(:,:), VAR_NAME(I_SFLX_evap) )
 
     endif
 
