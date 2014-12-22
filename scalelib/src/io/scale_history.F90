@@ -454,8 +454,7 @@ contains
     use gtool_history, only: &
        HistoryAddVariable
     use scale_time, only: &
-       TIME_STARTSEC,     &
-       TIME_NOWDAYSEC
+       TIME_STARTDAYSEC
     implicit none
 
     integer,          intent(out) :: itemid  !< index number of the item
@@ -540,15 +539,15 @@ contains
        endif
 
     end if
-   
-    call HistoryAddVariable( item,           & ! [IN]
-                             dims(1:ndim),   & ! [IN]
-                             desc,           & ! [IN]
-                             unit,           & ! [IN]
-                             TIME_NOWDAYSEC, & ! [IN]
-                             itemid,         & ! [OUT]
-                             zinterp,        & ! [OUT]
-                             existed         ) ! [OUT]
+
+    call HistoryAddVariable( item,             & ! [IN]
+                             dims(1:ndim),     & ! [IN]
+                             desc,             & ! [IN]
+                             unit,             & ! [IN]
+                             TIME_STARTDAYSEC, & ! [IN]
+                             itemid,           & ! [OUT]
+                             zinterp,          & ! [OUT]
+                             existed           ) ! [OUT]
 
     call PROF_rapend  ('FILE O NetCDF', 2)
 

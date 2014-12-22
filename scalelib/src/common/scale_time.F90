@@ -66,6 +66,8 @@ module scale_time
   integer,  public :: TIME_NOWSTEP              !< current step [number]
   integer,  public :: TIME_NSTEP                !< total steps [number]
 
+  real(DP), public :: TIME_STARTDAYSEC          !< second of start time [sec]
+
   logical,  public :: TIME_DOATMOS_step         !< execute atmospheric component in this step?
   logical,  public :: TIME_DOATMOS_DYN          !< execute dynamics?
   logical,  public :: TIME_DOATMOS_PHY_CP       !< execute physics(cumulus     )?
@@ -97,7 +99,7 @@ module scale_time
   integer,  private :: TIME_STARTDATE(6) = (/ 0, 1, 1, 0, 0, 0 /)
   real(DP), private :: TIME_STARTMS      = 0.0_DP !< [millisec]
   integer,  private :: TIME_STARTDAY
-  real(DP), public  :: TIME_STARTSEC
+  real(DP), private :: TIME_STARTSEC
 
   integer,  private :: TIME_ENDDATE(6)
   real(DP), private :: TIME_ENDMS
@@ -431,6 +433,8 @@ contains
                                TIME_STARTDATE(:), & ! [IN]
                                TIME_STARTMS,      & ! [IN]
                                TIME_OFFSET_YEAR   ) ! [IN]
+
+    TIME_STARTDAYSEC = CALENDAR_combine_daysec( TIME_STARTDAY, TIME_STARTSEC )
 
     TIME_NOWDATE(:) = TIME_STARTDATE(:)
     TIME_NOWMS      = TIME_STARTMS
