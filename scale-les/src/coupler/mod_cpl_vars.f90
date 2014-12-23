@@ -5,7 +5,6 @@
 !!          Container for coupler variables
 !!
 !! @author Team SCALE
-!! @li      2013-08-31 (T.Yamaura)  [new]
 !!
 !<
 !-------------------------------------------------------------------------------
@@ -32,153 +31,124 @@ module mod_cpl_vars
   !++ Public procedure
   !
   public :: CPL_vars_setup
-  public :: CPL_vars_merge
 
-  public :: CPL_putAtm_setup
-  public :: CPL_putOcn_setup
-  public :: CPL_putLnd_setup
-  public :: CPL_putUrb_setup
-  public :: CPL_putAtm
-  public :: CPL_putOcn
-  public :: CPL_putLnd
-  public :: CPL_putUrb
-  public :: CPL_getAtm
-  public :: CPL_getAtm_SF
-  public :: CPL_getOcn
-  public :: CPL_getLnd
-  public :: CPL_getUrb
-  public :: CPL_getOcn_restart
-  public :: CPL_getLnd_restart
-  public :: CPL_getUrb_restart
+  public :: CPL_putATM
+  public :: CPL_putOCN
+  public :: CPL_putLND
+  public :: CPL_putURB
+  public :: CPL_getSFC_ATM
+  public :: CPL_getATM_OCN
+  public :: CPL_getATM_LND
+  public :: CPL_getATM_URB
 
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
   !
 
-  !##### INPUT: Submodel->Coupler (flux is upward(Surface submodel->Atmosphere) positive) #####
+  ! Input from ocean model
+  real(RP), public, allocatable :: OCN_SFC_TEMP  (:,:)   ! ocean surface skin temperature [K]
+  real(RP), public, allocatable :: OCN_SFC_albedo(:,:,:) ! ocean surface albedo [0-1]
+  real(RP), public, allocatable :: OCN_SFC_Z0M   (:,:)   ! ocean surface roughness length for momemtum [m]
+  real(RP), public, allocatable :: OCN_SFC_Z0H   (:,:)   ! ocean surface roughness length for heat [m]
+  real(RP), public, allocatable :: OCN_SFC_Z0E   (:,:)   ! ocean surface roughness length for vapor [m]
+  real(RP), public, allocatable :: OCN_SFLX_MW   (:,:)   ! ocean surface w-momentum flux [kg/m2/s]
+  real(RP), public, allocatable :: OCN_SFLX_MU   (:,:)   ! ocean surface u-momentum flux [kg/m2/s]
+  real(RP), public, allocatable :: OCN_SFLX_MV   (:,:)   ! ocean surface v-momentum flux [kg/m2/s]
+  real(RP), public, allocatable :: OCN_SFLX_SH   (:,:)   ! ocean surface sensible heat flux [J/m2/s]
+  real(RP), public, allocatable :: OCN_SFLX_LH   (:,:)   ! ocean surface latent heat flux [J/m2/s]
+  real(RP), public, allocatable :: OCN_SFLX_WH   (:,:)   ! ocean surface water heat flux [J/m2/s]
+  real(RP), public, allocatable :: OCN_SFLX_evap (:,:)   ! ocean surface water vapor flux [kg/m2/s]
+  real(RP), public, allocatable :: OCN_U10       (:,:)   ! ocean velocity u at 10m [m/s]
+  real(RP), public, allocatable :: OCN_V10       (:,:)   ! ocean velocity v at 10m [m/s]
+  real(RP), public, allocatable :: OCN_T2        (:,:)   ! ocean temperature at 2m [K]
+  real(RP), public, allocatable :: OCN_Q2        (:,:)   ! ocean water vapor at 2m [kg/kg]
 
-  ! Input form atmosphere model
-  real(RP), public, allocatable :: CPL_fromAtm_ATM_DENS  (:,:) ! density     at the lowermost atmosphere layer [kg/m3]
-  real(RP), public, allocatable :: CPL_fromAtm_ATM_U     (:,:) ! velocity u  at the lowermost atmosphere layer [m/s]
-  real(RP), public, allocatable :: CPL_fromAtm_ATM_V     (:,:) ! velocity v  at the lowermost atmosphere layer [m/s]
-  real(RP), public, allocatable :: CPL_fromAtm_ATM_W     (:,:) ! velocity w  at the lowermost atmosphere layer [m/s]
-  real(RP), public, allocatable :: CPL_fromAtm_ATM_TEMP  (:,:) ! temperature at the lowermost atmosphere layer [K]
-  real(RP), public, allocatable :: CPL_fromAtm_ATM_PRES  (:,:) ! pressure    at the lowermost atmosphere layer [Pa]
-  real(RP), public, allocatable :: CPL_fromAtm_ATM_QV    (:,:) ! water vapor at the lowermost atmosphere layer [kg/kg]
-  real(RP), public, allocatable :: CPL_fromAtm_ATM_PBL   (:,:) ! the top of atmospheric mixing layer           [m]
-  real(RP), public, allocatable :: CPL_fromAtm_SFC_PRES  (:,:) ! pressure    at the surface                    [Pa]
-  real(RP), public, allocatable :: CPL_fromAtm_FLX_precip(:,:) ! liquid water                 flux [kg/m2/s]
-  real(RP), public, allocatable :: CPL_fromAtm_FLX_SW_dn (:,:) ! downward shortwave radiation flux [J/m2/s]
-  real(RP), public, allocatable :: CPL_fromAtm_FLX_LW_dn (:,:) ! downward longwave  radiation flux [J/m2/s]
-  real(RP), public, allocatable :: CPL_fromAtm_ATM_Z1    (:,:) ! height of lowermost atmosphere layer (cell center) [m]
+  ! Input from land model
+  real(RP), public, allocatable :: LND_SFC_TEMP  (:,:)   ! land surface skin temperature [K]
+  real(RP), public, allocatable :: LND_SFC_albedo(:,:,:) ! land surface albedo [0-1]
+  real(RP), public, allocatable :: LND_SFC_Z0M   (:,:)   ! land surface roughness length for momemtum [m]
+  real(RP), public, allocatable :: LND_SFC_Z0H   (:,:)   ! land surface roughness length for heat [m]
+  real(RP), public, allocatable :: LND_SFC_Z0E   (:,:)   ! land surface roughness length for vapor [m]
+  real(RP), public, allocatable :: LND_SFLX_MW   (:,:)   ! land surface w-momentum flux [kg/m2/s]
+  real(RP), public, allocatable :: LND_SFLX_MU   (:,:)   ! land surface u-momentum flux [kg/m2/s]
+  real(RP), public, allocatable :: LND_SFLX_MV   (:,:)   ! land surface v-momentum flux [kg/m2/s]
+  real(RP), public, allocatable :: LND_SFLX_SH   (:,:)   ! land surface sensible heat flux [J/m2/s]
+  real(RP), public, allocatable :: LND_SFLX_LH   (:,:)   ! land surface latent heat flux [J/m2/s]
+  real(RP), public, allocatable :: LND_SFLX_GH   (:,:)   ! land surface ground heat flux [J/m2/s]
+  real(RP), public, allocatable :: LND_SFLX_evap (:,:)   ! land surface water vapor flux [kg/m2/s]
+  real(RP), public, allocatable :: LND_U10       (:,:)   ! land velocity u at 10m [m/s]
+  real(RP), public, allocatable :: LND_V10       (:,:)   ! land velocity v at 10m [m/s]
+  real(RP), public, allocatable :: LND_T2        (:,:)   ! land temperature at 2m [K]
+  real(RP), public, allocatable :: LND_Q2        (:,:)   ! land water vapor at 2m [kg/kg]
 
-  ! Input form ocean model
-  real(RP), public, allocatable :: CPL_fromOcn_SFC_TEMP  (:,:)   ! (first time only) surface skin temperature [K]
-  real(RP), public, allocatable :: CPL_fromOcn_SFC_albedo(:,:,:) ! (first time only) surface albedo [0-1]
-  real(RP), public, allocatable :: CPL_fromOcn_SFC_Z0M   (:,:)   ! roughness length for momemtum [m]
-  real(RP), public, allocatable :: CPL_fromOcn_SFC_Z0H   (:,:)   ! roughness length for heat [m]
-  real(RP), public, allocatable :: CPL_fromOcn_SFC_Z0E   (:,:)   ! roughness length for vapor [m]
-  real(RP), public, allocatable :: CPL_fromOcn_OCN_TEMP  (:,:)   ! temperature at the uppermost ocean layer [K]
+  ! Input from urban model
+  real(RP), public, allocatable :: URB_SFC_TEMP  (:,:)   ! urban surface skin temperature [K]
+  real(RP), public, allocatable :: URB_SFC_albedo(:,:,:) ! urban surface albedo [0-1]
+  real(RP), public, allocatable :: URB_SFC_Z0M   (:,:)   ! urban surface roughness length for momemtum [m]
+  real(RP), public, allocatable :: URB_SFC_Z0H   (:,:)   ! urban surface roughness length for heat [m]
+  real(RP), public, allocatable :: URB_SFC_Z0E   (:,:)   ! urban surface roughness length for vapor [m]
+  real(RP), public, allocatable :: URB_SFLX_MW   (:,:)   ! urban surface w-momentum flux [kg/m2/s]
+  real(RP), public, allocatable :: URB_SFLX_MU   (:,:)   ! urban surface u-momentum flux [kg/m2/s]
+  real(RP), public, allocatable :: URB_SFLX_MV   (:,:)   ! urban surface v-momentum flux [kg/m2/s]
+  real(RP), public, allocatable :: URB_SFLX_SH   (:,:)   ! urban surface sensible heat flux [J/m2/s]
+  real(RP), public, allocatable :: URB_SFLX_LH   (:,:)   ! urban surface latent heat flux [J/m2/s]
+  real(RP), public, allocatable :: URB_SFLX_GH   (:,:)   ! urban surface ground heat flux [J/m2/s]
+  real(RP), public, allocatable :: URB_SFLX_evap (:,:)   ! urban surface water vapor flux [kg/m2/s]
+  real(RP), public, allocatable :: URB_U10       (:,:)   ! urban velocity u at 10m [m/s]
+  real(RP), public, allocatable :: URB_V10       (:,:)   ! urban velocity v at 10m [m/s]
+  real(RP), public, allocatable :: URB_T2        (:,:)   ! urban temperature at 2m [K]
+  real(RP), public, allocatable :: URB_Q2        (:,:)   ! urban water vapor at 2m [kg/kg]
 
-  ! Input form land model
-  real(RP), public, allocatable :: CPL_fromLnd_SFC_TEMP  (:,:)   ! (first time only) surface skin temperature [K]
-  real(RP), public, allocatable :: CPL_fromLnd_SFC_albedo(:,:,:) ! (first time only) surface albedo           [0-1]
-  real(RP), public, allocatable :: CPL_fromLnd_LND_TCS   (:,:)   ! (first time only) thermal conductivity for soil [W/m/K]
-  real(RP), public, allocatable :: CPL_fromLnd_LND_DZ    (:,:)   ! (first time only) soil depth [m]
-  real(RP), public, allocatable :: CPL_fromLnd_SFC_Z0M   (:,:)   ! (first time only) roughness length for momemtum [m]
-  real(RP), public, allocatable :: CPL_fromLnd_SFC_Z0H   (:,:)   ! (first time only) roughness length for heat     [m]
-  real(RP), public, allocatable :: CPL_fromLnd_SFC_Z0E   (:,:)   ! (first time only) roughness length for vapor    [m]
-  real(RP), public, allocatable :: CPL_fromLnd_LND_TEMP  (:,:)   ! temperature at the uppermost land layer [K]
-  real(RP), public, allocatable :: CPL_fromLnd_LND_BETA  (:,:)   ! efficiency of evaporation [0-1]
+  ! Output to ocean model
+  real(RP), public, allocatable :: OCN_ATM_TEMP     (:,:) ! temperature at the lowermost atmosphere layer [K]
+  real(RP), public, allocatable :: OCN_ATM_PRES     (:,:) ! pressure at the lowermost atmosphere layer [Pa]
+  real(RP), public, allocatable :: OCN_ATM_W        (:,:) ! velocity w at the lowermost atmosphere layer [m/s]
+  real(RP), public, allocatable :: OCN_ATM_U        (:,:) ! velocity u at the lowermost atmosphere layer [m/s]
+  real(RP), public, allocatable :: OCN_ATM_V        (:,:) ! velocity v at the lowermost atmosphere layer [m/s]
+  real(RP), public, allocatable :: OCN_ATM_DENS     (:,:) ! density at the lowermost atmosphere layer [kg/m3]
+  real(RP), public, allocatable :: OCN_ATM_QV       (:,:) ! water vapor at the lowermost atmosphere layer [kg/kg]
+  real(RP), public, allocatable :: OCN_ATM_PBL      (:,:) ! the top of atmospheric mixing layer [m]
+  real(RP), public, allocatable :: OCN_ATM_SFC_PRES (:,:) ! surface pressure [Pa]
+  real(RP), public, allocatable :: OCN_ATM_SFLX_LW  (:,:) ! downward longwave radiation flux [J/m2/s]
+  real(RP), public, allocatable :: OCN_ATM_SFLX_SW  (:,:) ! downward shortwave radiation flux [J/m2/s]
+  real(RP), public, allocatable :: OCN_ATM_SFLX_prec(:,:) ! liquid water flux [kg/m2/s]
 
-  ! Input form urban model
-  real(RP), public, allocatable :: CPL_fromUrb_SFC_Z0M   (:,:)   ! (first time only) roughness length for momemtum [m]
-  real(RP), public, allocatable :: CPL_fromUrb_SFC_Z0H   (:,:)   ! (first time only) roughness length for momemtum [m]
-  real(RP), public, allocatable :: CPL_fromUrb_SFC_Z0E   (:,:)   ! (first time only) roughness length for momemtum [m]
-  real(RP), public, allocatable :: CPL_fromUrb_SFC_TEMP  (:,:)   ! (first time only) surface skin temperature [K]
-  real(RP), public, allocatable :: CPL_fromUrb_SFC_albedo(:,:,:) ! (first time only) surface albedo           [0-1]
+  ! Output to land model
+  real(RP), public, allocatable :: LND_ATM_TEMP     (:,:) ! temperature at the lowermost atmosphere layer [K]
+  real(RP), public, allocatable :: LND_ATM_PRES     (:,:) ! pressure at the lowermost atmosphere layer [Pa]
+  real(RP), public, allocatable :: LND_ATM_W        (:,:) ! velocity w at the lowermost atmosphere layer [m/s]
+  real(RP), public, allocatable :: LND_ATM_U        (:,:) ! velocity u at the lowermost atmosphere layer [m/s]
+  real(RP), public, allocatable :: LND_ATM_V        (:,:) ! velocity v at the lowermost atmosphere layer [m/s]
+  real(RP), public, allocatable :: LND_ATM_DENS     (:,:) ! density at the lowermost atmosphere layer [kg/m3]
+  real(RP), public, allocatable :: LND_ATM_QV       (:,:) ! water vapor at the lowermost atmosphere layer [kg/kg]
+  real(RP), public, allocatable :: LND_ATM_PBL      (:,:) ! the top of atmospheric mixing layer [m]
+  real(RP), public, allocatable :: LND_ATM_SFC_PRES (:,:) ! surface pressure [Pa]
+  real(RP), public, allocatable :: LND_ATM_SFLX_LW  (:,:) ! downward longwave radiation flux [J/m2/s]
+  real(RP), public, allocatable :: LND_ATM_SFLX_SW  (:,:) ! downward shortwave radiation flux [J/m2/s]
+  real(RP), public, allocatable :: LND_ATM_SFLX_prec(:,:) ! liquid water flux [kg/m2/s]
 
-  !##### OUTPUT: Coupler->Submodel (flux is upward(Surface submodel->Atmosphere) positive) #####
-
-  ! Output for atmosphere model (merged)
-  real(RP), public, allocatable :: CPL_Merged_SFC_TEMP  (:,:)   ! Merged surface skin temperature [K]
-  real(RP), public, allocatable :: CPL_Merged_SFC_albedo(:,:,:) ! Merged surface albedo           [0-1]
-  real(RP), public, allocatable :: CPL_Merged_FLX_MU    (:,:)   ! Merged w-momentum    flux [kg/m2/s]
-  real(RP), public, allocatable :: CPL_Merged_FLX_MV    (:,:)   ! Merged u-momentum    flux [kg/m2/s]
-  real(RP), public, allocatable :: CPL_Merged_FLX_MW    (:,:)   ! Merged v-momentum    flux [kg/m2/s]
-  real(RP), public, allocatable :: CPL_Merged_FLX_SH    (:,:)   ! Merged sensible heat flux [J/m2/s]
-  real(RP), public, allocatable :: CPL_Merged_FLX_LH    (:,:)   ! Merged latent heat   flux [J/m2/s]
-  real(RP), public, allocatable :: CPL_Merged_FLX_QV    (:,:)   ! Merged water vapor   flux [kg/m2/s]
-  real(RP), public, allocatable :: CPL_Merged_Z0M       (:,:)   ! Merged roughness length   [m]
-  real(RP), public, allocatable :: CPL_Merged_Z0H       (:,:)   ! Merged roughness length   [m]
-  real(RP), public, allocatable :: CPL_Merged_Z0E       (:,:)   ! Merged roughness length   [m]
-  real(RP), public, allocatable :: CPL_Merged_U10       (:,:)   ! Merged velocity u at 10m  [m/s]
-  real(RP), public, allocatable :: CPL_Merged_V10       (:,:)   ! Merged velocity v at 10m  [m/s]
-  real(RP), public, allocatable :: CPL_Merged_T2        (:,:)   ! Merged temperature at 2m  [K]
-  real(RP), public, allocatable :: CPL_Merged_Q2        (:,:)   ! Merged water vapor at 2m  [kg/kg]
-  ! Output for surface model (merged, for history)
-  real(RP), public, allocatable :: CPL_Merged_FLX_heat  (:,:)   ! Merged heat flux [J/m2/s]
-
-  ! Atmosphere-Ocean coupler: Output for atmosphere model
-  real(RP), public, allocatable :: CPL_AtmOcn_ATM_FLX_MW    (:,:) ! w-momentum    flux [kg/m2/s]
-  real(RP), public, allocatable :: CPL_AtmOcn_ATM_FLX_MU    (:,:) ! u-momentum    flux [kg/m2/s]
-  real(RP), public, allocatable :: CPL_AtmOcn_ATM_FLX_MV    (:,:) ! v-momentum    flux [kg/m2/s]
-  real(RP), public, allocatable :: CPL_AtmOcn_ATM_FLX_SH    (:,:) ! sensible heat flux [J/m2/s]
-  real(RP), public, allocatable :: CPL_AtmOcn_ATM_FLX_LH    (:,:) ! latent heat   flux [J/m2/s]
-  real(RP), public, allocatable :: CPL_AtmOcn_ATM_FLX_evap  (:,:) ! water vapor   flux [kg/m2/s]
-  real(RP), public, allocatable :: CPL_AtmOcn_ATM_U10       (:,:) ! velocity u at 10m  [m/s]
-  real(RP), public, allocatable :: CPL_AtmOcn_ATM_V10       (:,:) ! velocity v at 10m  [m/s]
-  real(RP), public, allocatable :: CPL_AtmOcn_ATM_T2        (:,:) ! temperature at 2m  [K]
-  real(RP), public, allocatable :: CPL_AtmOcn_ATM_Q2        (:,:) ! water vapor at 2m  [kg/kg]
-  !  Atmosphere-Ocean coupler: Output for ocean model
-  real(RP), public, allocatable :: CPL_AtmOcn_OCN_FLX_heat  (:,:) ! heat         flux  [J/m2/s]
-  real(RP), public, allocatable :: CPL_AtmOcn_OCN_FLX_precip(:,:) ! liquid water flux  [kg/m2/s]
-  real(RP), public, allocatable :: CPL_AtmOcn_OCN_FLX_evap  (:,:) ! water vapor  flux  [kg/m2/s]
-
-  ! Atmosphere-Land coupler: Output for atmosphere model
-  real(RP), public, allocatable :: CPL_AtmLnd_ATM_FLX_MW    (:,:) ! w-momentum    flux [kg/m2/s]
-  real(RP), public, allocatable :: CPL_AtmLnd_ATM_FLX_MU    (:,:) ! u-momentum    flux [kg/m2/s]
-  real(RP), public, allocatable :: CPL_AtmLnd_ATM_FLX_MV    (:,:) ! v-momentum    flux [kg/m2/s]
-  real(RP), public, allocatable :: CPL_AtmLnd_ATM_FLX_SH    (:,:) ! sensible heat flux [J/m2/s]
-  real(RP), public, allocatable :: CPL_AtmLnd_ATM_FLX_LH    (:,:) ! latent heat   flux [J/m2/s]
-  real(RP), public, allocatable :: CPL_AtmLnd_ATM_FLX_evap  (:,:) ! water vapor   flux [kg/m2/s]
-  real(RP), public, allocatable :: CPL_AtmLnd_ATM_U10       (:,:) ! velocity u at 10m  [m/s]
-  real(RP), public, allocatable :: CPL_AtmLnd_ATM_V10       (:,:) ! velocity v at 10m  [m/s]
-  real(RP), public, allocatable :: CPL_AtmLnd_ATM_T2        (:,:) ! temperature at 2m  [K]
-  real(RP), public, allocatable :: CPL_AtmLnd_ATM_Q2        (:,:) ! water vapor at 2m  [kg/kg]
-  ! Atmosphere-Land coupler: Output for land model
-  real(RP), public, allocatable :: CPL_AtmLnd_LND_FLX_heat  (:,:) ! heat         flux  [J/m2/s]
-  real(RP), public, allocatable :: CPL_AtmLnd_LND_FLX_precip(:,:) ! liquid water flux  [kg/m2/s]
-  real(RP), public, allocatable :: CPL_AtmLnd_LND_FLX_evap  (:,:) ! water vapor  flux  [kg/m2/s]
-
-  ! Atmosphere-Urban coupler: Output for atmosphere model
-  real(RP), public, allocatable :: CPL_AtmUrb_ATM_FLX_MW    (:,:) ! w-momentum    flux [kg/m2/s]
-  real(RP), public, allocatable :: CPL_AtmUrb_ATM_FLX_MU    (:,:) ! u-momentum    flux [kg/m2/s]
-  real(RP), public, allocatable :: CPL_AtmUrb_ATM_FLX_MV    (:,:) ! v-momentum    flux [kg/m2/s]
-  real(RP), public, allocatable :: CPL_AtmUrb_ATM_FLX_SH    (:,:) ! sensible heat flux [J/m2/s]
-  real(RP), public, allocatable :: CPL_AtmUrb_ATM_FLX_LH    (:,:) ! latent heat   flux [J/m2/s]
-  real(RP), public, allocatable :: CPL_AtmUrb_ATM_FLX_evap  (:,:) ! water vapor   flux [kg/m2/s]
-  real(RP), public, allocatable :: CPL_AtmUrb_ATM_U10       (:,:) ! velocity u at 10m  [m/s]
-  real(RP), public, allocatable :: CPL_AtmUrb_ATM_V10       (:,:) ! velocity v at 10m  [m/s]
-  real(RP), public, allocatable :: CPL_AtmUrb_ATM_T2        (:,:) ! temperature at 2m  [K]
-  real(RP), public, allocatable :: CPL_AtmUrb_ATM_Q2        (:,:) ! water vapor at 2m  [kg/kg]
-  ! Atmosphere-Urban coupler: Output for urban model
-  real(RP), public, allocatable :: CPL_AtmUrb_URB_FLX_heat  (:,:) ! heat         flux  [J/m2/s]
-  real(RP), public, allocatable :: CPL_AtmUrb_URB_FLX_precip(:,:) ! liquid water flux  [kg/m2/s]
-  real(RP), public, allocatable :: CPL_AtmUrb_URB_FLX_evap  (:,:) ! water vapor  flux  [kg/m2/s]
+  ! Output to urban model
+  real(RP), public, allocatable :: URB_ATM_TEMP     (:,:) ! temperature at the lowermost atmosphere layer [K]
+  real(RP), public, allocatable :: URB_ATM_PRES     (:,:) ! pressure at the lowermost atmosphere layer [Pa]
+  real(RP), public, allocatable :: URB_ATM_W        (:,:) ! velocity w at the lowermost atmosphere layer [m/s]
+  real(RP), public, allocatable :: URB_ATM_U        (:,:) ! velocity u at the lowermost atmosphere layer [m/s]
+  real(RP), public, allocatable :: URB_ATM_V        (:,:) ! velocity v at the lowermost atmosphere layer [m/s]
+  real(RP), public, allocatable :: URB_ATM_DENS     (:,:) ! density at the lowermost atmosphere layer [kg/m3]
+  real(RP), public, allocatable :: URB_ATM_QV       (:,:) ! water vapor at the lowermost atmosphere layer [kg/kg]
+  real(RP), public, allocatable :: URB_ATM_PBL      (:,:) ! the top of atmospheric mixing layer [m]
+  real(RP), public, allocatable :: URB_ATM_SFC_PRES (:,:) ! surface pressure [Pa]
+  real(RP), public, allocatable :: URB_ATM_SFLX_LW  (:,:) ! downward longwave radiation flux [J/m2/s]
+  real(RP), public, allocatable :: URB_ATM_SFLX_SW  (:,:) ! downward shortwave radiation flux [J/m2/s]
+  real(RP), public, allocatable :: URB_ATM_SFLX_prec(:,:) ! liquid water flux [kg/m2/s]
 
   ! counter
-  real(RP), public :: CNT_putAtm    ! put counter for atmos flux
-  real(RP), public :: CNT_putLnd    ! put counter for land flux
-  real(RP), public :: CNT_putUrb    ! put counter for urban flux
-  real(RP), public :: CNT_putOcn    ! put counter for ocean flux
-  real(RP), public :: CNT_getAtmLnd ! get counter for atmos flux by land
-  real(RP), public :: CNT_getAtmUrb ! get counter for atmos flux by urban
-  real(RP), public :: CNT_getAtmOcn ! get counter for atmos flux by ocean
-  real(RP), public :: CNT_getLnd    ! get counter for land flux
-  real(RP), public :: CNT_getUrb    ! get counter for urban flux
-  real(RP), public :: CNT_getOcn    ! get counter for ocean flux
+  real(RP), public :: CNT_putATM_OCN ! put counter for atmos to ocean
+  real(RP), public :: CNT_putATM_LND ! put counter for atmos to land
+  real(RP), public :: CNT_putATM_URB ! put counter for atmos to urban
+  real(RP), public :: CNT_putOCN     ! put counter for ocean
+  real(RP), public :: CNT_putLND     ! put counter for land
+  real(RP), public :: CNT_putURB     ! put counter for urban
 
   !-----------------------------------------------------------------------------
   !
@@ -201,970 +171,640 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[VARS] / Categ[CPL] / Origin[SCALE-LES]'
 
-    allocate( CPL_fromAtm_ATM_DENS  (IA,JA) )
-    allocate( CPL_fromAtm_ATM_U     (IA,JA) )
-    allocate( CPL_fromAtm_ATM_V     (IA,JA) )
-    allocate( CPL_fromAtm_ATM_W     (IA,JA) )
-    allocate( CPL_fromAtm_ATM_TEMP  (IA,JA) )
-    allocate( CPL_fromAtm_ATM_PRES  (IA,JA) )
-    allocate( CPL_fromAtm_ATM_QV    (IA,JA) )
-    allocate( CPL_fromAtm_ATM_PBL   (IA,JA) )
-    allocate( CPL_fromAtm_SFC_PRES  (IA,JA) )
-    allocate( CPL_fromAtm_FLX_precip(IA,JA) )
-    allocate( CPL_fromAtm_FLX_SW_dn (IA,JA) )
-    allocate( CPL_fromAtm_FLX_LW_dn (IA,JA) )
-    CPL_fromAtm_ATM_DENS  (:,:) = UNDEF
-    CPL_fromAtm_ATM_U     (:,:) = UNDEF
-    CPL_fromAtm_ATM_V     (:,:) = UNDEF
-    CPL_fromAtm_ATM_W     (:,:) = UNDEF
-    CPL_fromAtm_ATM_TEMP  (:,:) = UNDEF
-    CPL_fromAtm_ATM_PRES  (:,:) = UNDEF
-    CPL_fromAtm_ATM_QV    (:,:) = UNDEF
-    CPL_fromAtm_ATM_PBL   (:,:) = UNDEF
-    CPL_fromAtm_SFC_PRES  (:,:) = UNDEF
-    CPL_fromAtm_FLX_precip(:,:) = UNDEF
-    CPL_fromAtm_FLX_SW_dn (:,:) = UNDEF
-    CPL_fromAtm_FLX_LW_dn (:,:) = UNDEF
+    allocate( OCN_SFC_TEMP  (IA,JA)   )
+    allocate( OCN_SFC_albedo(IA,JA,2) )
+    allocate( OCN_SFC_Z0M   (IA,JA)   )
+    allocate( OCN_SFC_Z0H   (IA,JA)   )
+    allocate( OCN_SFC_Z0E   (IA,JA)   )
+    allocate( OCN_SFLX_MU   (IA,JA)   )
+    allocate( OCN_SFLX_MV   (IA,JA)   )
+    allocate( OCN_SFLX_MW   (IA,JA)   )
+    allocate( OCN_SFLX_SH   (IA,JA)   )
+    allocate( OCN_SFLX_LH   (IA,JA)   )
+    allocate( OCN_SFLX_WH   (IA,JA)   )
+    allocate( OCN_SFLX_evap (IA,JA)   )
+    allocate( OCN_U10       (IA,JA)   )
+    allocate( OCN_V10       (IA,JA)   )
+    allocate( OCN_T2        (IA,JA)   )
+    allocate( OCN_Q2        (IA,JA)   )
+    OCN_SFC_TEMP  (:,:)   = UNDEF
+    OCN_SFC_albedo(:,:,:) = UNDEF
+    OCN_SFC_Z0M   (:,:)   = UNDEF
+    OCN_SFC_Z0H   (:,:)   = UNDEF
+    OCN_SFC_Z0E   (:,:)   = UNDEF
+    OCN_SFLX_MU   (:,:)   = UNDEF
+    OCN_SFLX_MV   (:,:)   = UNDEF
+    OCN_SFLX_MW   (:,:)   = UNDEF
+    OCN_SFLX_SH   (:,:)   = UNDEF
+    OCN_SFLX_LH   (:,:)   = UNDEF
+    OCN_SFLX_WH   (:,:)   = UNDEF
+    OCN_SFLX_evap (:,:)   = UNDEF
+    OCN_U10       (:,:)   = UNDEF
+    OCN_V10       (:,:)   = UNDEF
+    OCN_T2        (:,:)   = UNDEF
+    OCN_Q2        (:,:)   = UNDEF
 
-    allocate( CPL_fromOcn_SFC_TEMP  (IA,JA) )
-    allocate( CPL_fromOcn_SFC_albedo(IA,JA,2) )
-    allocate( CPL_fromOcn_SFC_Z0M   (IA,JA) )
-    allocate( CPL_fromOcn_SFC_Z0H   (IA,JA) )
-    allocate( CPL_fromOcn_SFC_Z0E   (IA,JA) )
-    allocate( CPL_fromOcn_OCN_TEMP  (IA,JA) )
-    CPL_fromOcn_SFC_TEMP  (:,:)   = UNDEF
-    CPL_fromOcn_SFC_albedo(:,:,:) = UNDEF
-    CPL_fromOcn_SFC_Z0M   (:,:)   = UNDEF
-    CPL_fromOcn_SFC_Z0H   (:,:)   = UNDEF
-    CPL_fromOcn_SFC_Z0E   (:,:)   = UNDEF
-    CPL_fromOcn_OCN_TEMP  (:,:)   = UNDEF
+    allocate( LND_SFC_TEMP  (IA,JA)   )
+    allocate( LND_SFC_albedo(IA,JA,2) )
+    allocate( LND_SFC_Z0M   (IA,JA)   )
+    allocate( LND_SFC_Z0H   (IA,JA)   )
+    allocate( LND_SFC_Z0E   (IA,JA)   )
+    allocate( LND_SFLX_MU   (IA,JA)   )
+    allocate( LND_SFLX_MV   (IA,JA)   )
+    allocate( LND_SFLX_MW   (IA,JA)   )
+    allocate( LND_SFLX_SH   (IA,JA)   )
+    allocate( LND_SFLX_LH   (IA,JA)   )
+    allocate( LND_SFLX_GH   (IA,JA)   )
+    allocate( LND_SFLX_evap (IA,JA)   )
+    allocate( LND_U10       (IA,JA)   )
+    allocate( LND_V10       (IA,JA)   )
+    allocate( LND_T2        (IA,JA)   )
+    allocate( LND_Q2        (IA,JA)   )
+    LND_SFC_TEMP  (:,:)   = UNDEF
+    LND_SFC_albedo(:,:,:) = UNDEF
+    LND_SFC_Z0M   (:,:)   = UNDEF
+    LND_SFC_Z0H   (:,:)   = UNDEF
+    LND_SFC_Z0E   (:,:)   = UNDEF
+    LND_SFLX_MU   (:,:)   = UNDEF
+    LND_SFLX_MV   (:,:)   = UNDEF
+    LND_SFLX_MW   (:,:)   = UNDEF
+    LND_SFLX_SH   (:,:)   = UNDEF
+    LND_SFLX_LH   (:,:)   = UNDEF
+    LND_SFLX_GH   (:,:)   = UNDEF
+    LND_SFLX_evap (:,:)   = UNDEF
+    LND_U10       (:,:)   = UNDEF
+    LND_V10       (:,:)   = UNDEF
+    LND_T2        (:,:)   = UNDEF
+    LND_Q2        (:,:)   = UNDEF
 
-    allocate( CPL_fromLnd_SFC_TEMP  (IA,JA) )
-    allocate( CPL_fromLnd_SFC_albedo(IA,JA,2) )
-    allocate( CPL_fromLnd_LND_TCS   (IA,JA) )
-    allocate( CPL_fromLnd_LND_DZ    (IA,JA) )
-    allocate( CPL_fromLnd_SFC_Z0M   (IA,JA) )
-    allocate( CPL_fromLnd_SFC_Z0H   (IA,JA) )
-    allocate( CPL_fromLnd_SFC_Z0E   (IA,JA) )
-    allocate( CPL_fromLnd_LND_TEMP  (IA,JA) )
-    allocate( CPL_fromLnd_LND_BETA  (IA,JA) )
-    CPL_fromLnd_SFC_TEMP  (:,:)   = UNDEF
-    CPL_fromLnd_SFC_albedo(:,:,:) = UNDEF
-    CPL_fromLnd_LND_TCS   (:,:)   = UNDEF
-    CPL_fromLnd_LND_DZ    (:,:)   = UNDEF
-    CPL_fromLnd_SFC_Z0M   (:,:)   = UNDEF
-    CPL_fromLnd_SFC_Z0H   (:,:)   = UNDEF
-    CPL_fromLnd_SFC_Z0E   (:,:)   = UNDEF
-    CPL_fromLnd_LND_TEMP  (:,:)   = UNDEF
-    CPL_fromLnd_LND_BETA  (:,:)   = UNDEF
+    allocate( URB_SFC_TEMP  (IA,JA)   )
+    allocate( URB_SFC_albedo(IA,JA,2) )
+    allocate( URB_SFC_Z0M   (IA,JA)   )
+    allocate( URB_SFC_Z0H   (IA,JA)   )
+    allocate( URB_SFC_Z0E   (IA,JA)   )
+    allocate( URB_SFLX_MU   (IA,JA)   )
+    allocate( URB_SFLX_MV   (IA,JA)   )
+    allocate( URB_SFLX_MW   (IA,JA)   )
+    allocate( URB_SFLX_SH   (IA,JA)   )
+    allocate( URB_SFLX_LH   (IA,JA)   )
+    allocate( URB_SFLX_GH   (IA,JA)   )
+    allocate( URB_SFLX_evap (IA,JA)   )
+    allocate( URB_U10       (IA,JA)   )
+    allocate( URB_V10       (IA,JA)   )
+    allocate( URB_T2        (IA,JA)   )
+    allocate( URB_Q2        (IA,JA)   )
+    URB_SFC_TEMP  (:,:)   = UNDEF
+    URB_SFC_albedo(:,:,:) = UNDEF
+    URB_SFC_Z0M   (:,:)   = UNDEF
+    URB_SFC_Z0H   (:,:)   = UNDEF
+    URB_SFC_Z0E   (:,:)   = UNDEF
+    URB_SFLX_MU   (:,:)   = UNDEF
+    URB_SFLX_MV   (:,:)   = UNDEF
+    URB_SFLX_MW   (:,:)   = UNDEF
+    URB_SFLX_SH   (:,:)   = UNDEF
+    URB_SFLX_LH   (:,:)   = UNDEF
+    URB_SFLX_GH   (:,:)   = UNDEF
+    URB_SFLX_evap (:,:)   = UNDEF
+    URB_U10       (:,:)   = UNDEF
+    URB_V10       (:,:)   = UNDEF
+    URB_T2        (:,:)   = UNDEF
+    URB_Q2        (:,:)   = UNDEF
 
-    allocate( CPL_fromUrb_SFC_Z0M   (IA,JA) )
-    allocate( CPL_fromUrb_SFC_Z0H   (IA,JA) )
-    allocate( CPL_fromUrb_SFC_Z0E   (IA,JA) )
-    allocate( CPL_fromUrb_SFC_TEMP  (IA,JA) )
-    allocate( CPL_fromUrb_SFC_albedo(IA,JA,2) )
-    CPL_fromUrb_SFC_Z0M   (:,:)   = UNDEF
-    CPL_fromUrb_SFC_Z0H   (:,:)   = UNDEF
-    CPL_fromUrb_SFC_Z0E   (:,:)   = UNDEF
-    CPL_fromUrb_SFC_TEMP  (:,:)   = UNDEF
-    CPL_fromUrb_SFC_albedo(:,:,:) = UNDEF
+    allocate( OCN_ATM_TEMP     (IA,JA) )
+    allocate( OCN_ATM_PRES     (IA,JA) )
+    allocate( OCN_ATM_W        (IA,JA) )
+    allocate( OCN_ATM_U        (IA,JA) )
+    allocate( OCN_ATM_V        (IA,JA) )
+    allocate( OCN_ATM_DENS     (IA,JA) )
+    allocate( OCN_ATM_QV       (IA,JA) )
+    allocate( OCN_ATM_PBL      (IA,JA) )
+    allocate( OCN_ATM_SFC_PRES (IA,JA) )
+    allocate( OCN_ATM_SFLX_LW  (IA,JA) )
+    allocate( OCN_ATM_SFLX_SW  (IA,JA) )
+    allocate( OCN_ATM_SFLX_prec(IA,JA) )
+    OCN_ATM_TEMP     (:,:) = UNDEF
+    OCN_ATM_PRES     (:,:) = UNDEF
+    OCN_ATM_W        (:,:) = UNDEF
+    OCN_ATM_U        (:,:) = UNDEF
+    OCN_ATM_V        (:,:) = UNDEF
+    OCN_ATM_DENS     (:,:) = UNDEF
+    OCN_ATM_QV       (:,:) = UNDEF
+    OCN_ATM_PBL      (:,:) = UNDEF
+    OCN_ATM_SFC_PRES (:,:) = UNDEF
+    OCN_ATM_SFLX_LW  (:,:) = UNDEF
+    OCN_ATM_SFLX_SW  (:,:) = UNDEF
+    OCN_ATM_SFLX_prec(:,:) = UNDEF
 
-    allocate( CPL_Merged_SFC_TEMP  (IA,JA) )
-    allocate( CPL_Merged_SFC_albedo(IA,JA,2) )
-    allocate( CPL_Merged_FLX_MU    (IA,JA) )
-    allocate( CPL_Merged_FLX_MV    (IA,JA) )
-    allocate( CPL_Merged_FLX_MW    (IA,JA) )
-    allocate( CPL_Merged_FLX_SH    (IA,JA) )
-    allocate( CPL_Merged_FLX_LH    (IA,JA) )
-    allocate( CPL_Merged_FLX_QV    (IA,JA) )
-    allocate( CPL_Merged_Z0M       (IA,JA) )
-    allocate( CPL_Merged_Z0H       (IA,JA) )
-    allocate( CPL_Merged_Z0E       (IA,JA) )
-    allocate( CPL_Merged_U10       (IA,JA) )
-    allocate( CPL_Merged_V10       (IA,JA) )
-    allocate( CPL_Merged_T2        (IA,JA) )
-    allocate( CPL_Merged_Q2        (IA,JA) )
-    allocate( CPL_Merged_FLX_heat  (IA,JA) )
-    CPL_Merged_SFC_TEMP  (:,:)   = UNDEF
-    CPL_Merged_SFC_albedo(:,:,:) = UNDEF
-    CPL_Merged_FLX_MU    (:,:)   = UNDEF
-    CPL_Merged_FLX_MV    (:,:)   = UNDEF
-    CPL_Merged_FLX_MW    (:,:)   = UNDEF
-    CPL_Merged_FLX_SH    (:,:)   = UNDEF
-    CPL_Merged_FLX_LH    (:,:)   = UNDEF
-    CPL_Merged_FLX_QV    (:,:)   = UNDEF
-    CPL_Merged_Z0M       (:,:)   = UNDEF
-    CPL_Merged_Z0H       (:,:)   = UNDEF
-    CPL_Merged_Z0E       (:,:)   = UNDEF
-    CPL_Merged_U10       (:,:)   = UNDEF
-    CPL_Merged_V10       (:,:)   = UNDEF
-    CPL_Merged_T2        (:,:)   = UNDEF
-    CPL_Merged_Q2        (:,:)   = UNDEF
-    CPL_Merged_FLX_heat  (:,:)   = UNDEF
+    allocate( LND_ATM_TEMP     (IA,JA) )
+    allocate( LND_ATM_PRES     (IA,JA) )
+    allocate( LND_ATM_W        (IA,JA) )
+    allocate( LND_ATM_U        (IA,JA) )
+    allocate( LND_ATM_V        (IA,JA) )
+    allocate( LND_ATM_DENS     (IA,JA) )
+    allocate( LND_ATM_QV       (IA,JA) )
+    allocate( LND_ATM_PBL      (IA,JA) )
+    allocate( LND_ATM_SFC_PRES (IA,JA) )
+    allocate( LND_ATM_SFLX_LW  (IA,JA) )
+    allocate( LND_ATM_SFLX_SW  (IA,JA) )
+    allocate( LND_ATM_SFLX_prec(IA,JA) )
+    LND_ATM_TEMP     (:,:) = UNDEF
+    LND_ATM_PRES     (:,:) = UNDEF
+    LND_ATM_W        (:,:) = UNDEF
+    LND_ATM_U        (:,:) = UNDEF
+    LND_ATM_V        (:,:) = UNDEF
+    LND_ATM_DENS     (:,:) = UNDEF
+    LND_ATM_QV       (:,:) = UNDEF
+    LND_ATM_PBL      (:,:) = UNDEF
+    LND_ATM_SFC_PRES (:,:) = UNDEF
+    LND_ATM_SFLX_LW  (:,:) = UNDEF
+    LND_ATM_SFLX_SW  (:,:) = UNDEF
+    LND_ATM_SFLX_prec(:,:) = UNDEF
 
-    allocate( CPL_AtmOcn_ATM_FLX_MU    (IA,JA) )
-    allocate( CPL_AtmOcn_ATM_FLX_MV    (IA,JA) )
-    allocate( CPL_AtmOcn_ATM_FLX_MW    (IA,JA) )
-    allocate( CPL_AtmOcn_ATM_FLX_SH    (IA,JA) )
-    allocate( CPL_AtmOcn_ATM_FLX_LH    (IA,JA) )
-    allocate( CPL_AtmOcn_ATM_FLX_evap  (IA,JA) )
-    allocate( CPL_AtmOcn_ATM_U10       (IA,JA) )
-    allocate( CPL_AtmOcn_ATM_V10       (IA,JA) )
-    allocate( CPL_AtmOcn_ATM_T2        (IA,JA) )
-    allocate( CPL_AtmOcn_ATM_Q2        (IA,JA) )
-    allocate( CPL_AtmOcn_OCN_FLX_heat  (IA,JA) )
-    allocate( CPL_AtmOcn_OCN_FLX_precip(IA,JA) )
-    allocate( CPL_AtmOcn_OCN_FLX_evap  (IA,JA) )
-    CPL_AtmOcn_ATM_FLX_MU    (:,:) = UNDEF
-    CPL_AtmOcn_ATM_FLX_MV    (:,:) = UNDEF
-    CPL_AtmOcn_ATM_FLX_MW    (:,:) = UNDEF
-    CPL_AtmOcn_ATM_FLX_SH    (:,:) = UNDEF
-    CPL_AtmOcn_ATM_FLX_LH    (:,:) = UNDEF
-    CPL_AtmOcn_ATM_FLX_evap  (:,:) = UNDEF
-    CPL_AtmOcn_ATM_U10       (:,:) = UNDEF
-    CPL_AtmOcn_ATM_V10       (:,:) = UNDEF
-    CPL_AtmOcn_ATM_T2        (:,:) = UNDEF
-    CPL_AtmOcn_ATM_Q2        (:,:) = UNDEF
-    CPL_AtmOcn_OCN_FLX_heat  (:,:) = UNDEF
-    CPL_AtmOcn_OCN_FLX_precip(:,:) = UNDEF
-    CPL_AtmOcn_OCN_FLX_evap  (:,:) = UNDEF
+    allocate( URB_ATM_TEMP     (IA,JA) )
+    allocate( URB_ATM_PRES     (IA,JA) )
+    allocate( URB_ATM_W        (IA,JA) )
+    allocate( URB_ATM_U        (IA,JA) )
+    allocate( URB_ATM_V        (IA,JA) )
+    allocate( URB_ATM_DENS     (IA,JA) )
+    allocate( URB_ATM_QV       (IA,JA) )
+    allocate( URB_ATM_PBL      (IA,JA) )
+    allocate( URB_ATM_SFC_PRES (IA,JA) )
+    allocate( URB_ATM_SFLX_LW  (IA,JA) )
+    allocate( URB_ATM_SFLX_SW  (IA,JA) )
+    allocate( URB_ATM_SFLX_prec(IA,JA) )
+    URB_ATM_TEMP     (:,:) = UNDEF
+    URB_ATM_PRES     (:,:) = UNDEF
+    URB_ATM_W        (:,:) = UNDEF
+    URB_ATM_U        (:,:) = UNDEF
+    URB_ATM_V        (:,:) = UNDEF
+    URB_ATM_DENS     (:,:) = UNDEF
+    URB_ATM_QV       (:,:) = UNDEF
+    URB_ATM_PBL      (:,:) = UNDEF
+    URB_ATM_SFC_PRES (:,:) = UNDEF
+    URB_ATM_SFLX_LW  (:,:) = UNDEF
+    URB_ATM_SFLX_SW  (:,:) = UNDEF
+    URB_ATM_SFLX_prec(:,:) = UNDEF
 
-    allocate( CPL_AtmLnd_ATM_FLX_MU    (IA,JA) )
-    allocate( CPL_AtmLnd_ATM_FLX_MV    (IA,JA) )
-    allocate( CPL_AtmLnd_ATM_FLX_MW    (IA,JA) )
-    allocate( CPL_AtmLnd_ATM_FLX_SH    (IA,JA) )
-    allocate( CPL_AtmLnd_ATM_FLX_LH    (IA,JA) )
-    allocate( CPL_AtmLnd_ATM_FLX_evap  (IA,JA) )
-    allocate( CPL_AtmLnd_ATM_U10       (IA,JA) )
-    allocate( CPL_AtmLnd_ATM_V10       (IA,JA) )
-    allocate( CPL_AtmLnd_ATM_T2        (IA,JA) )
-    allocate( CPL_AtmLnd_ATM_Q2        (IA,JA) )
-    allocate( CPL_AtmLnd_LND_FLX_heat  (IA,JA) )
-    allocate( CPL_AtmLnd_LND_FLX_precip(IA,JA) )
-    allocate( CPL_AtmLnd_LND_FLX_evap  (IA,JA) )
-    CPL_AtmLnd_ATM_FLX_MU    (:,:) = UNDEF
-    CPL_AtmLnd_ATM_FLX_MV    (:,:) = UNDEF
-    CPL_AtmLnd_ATM_FLX_MW    (:,:) = UNDEF
-    CPL_AtmLnd_ATM_FLX_SH    (:,:) = UNDEF
-    CPL_AtmLnd_ATM_FLX_LH    (:,:) = UNDEF
-    CPL_AtmLnd_ATM_FLX_evap  (:,:) = UNDEF
-    CPL_AtmLnd_ATM_U10       (:,:) = UNDEF
-    CPL_AtmLnd_ATM_V10       (:,:) = UNDEF
-    CPL_AtmLnd_ATM_T2        (:,:) = UNDEF
-    CPL_AtmLnd_ATM_Q2        (:,:) = UNDEF
-    CPL_AtmLnd_LND_FLX_heat  (:,:) = UNDEF
-    CPL_AtmLnd_LND_FLX_precip(:,:) = UNDEF
-    CPL_AtmLnd_LND_FLX_evap  (:,:) = UNDEF
-
-    allocate( CPL_AtmUrb_ATM_FLX_MU    (IA,JA) )
-    allocate( CPL_AtmUrb_ATM_FLX_MV    (IA,JA) )
-    allocate( CPL_AtmUrb_ATM_FLX_MW    (IA,JA) )
-    allocate( CPL_AtmUrb_ATM_FLX_SH    (IA,JA) )
-    allocate( CPL_AtmUrb_ATM_FLX_LH    (IA,JA) )
-    allocate( CPL_AtmUrb_ATM_FLX_evap  (IA,JA) )
-    allocate( CPL_AtmUrb_ATM_U10       (IA,JA) )
-    allocate( CPL_AtmUrb_ATM_V10       (IA,JA) )
-    allocate( CPL_AtmUrb_ATM_T2        (IA,JA) )
-    allocate( CPL_AtmUrb_ATM_Q2        (IA,JA) )
-    allocate( CPL_AtmUrb_URB_FLX_heat  (IA,JA) )
-    allocate( CPL_AtmUrb_URB_FLX_precip(IA,JA) )
-    allocate( CPL_AtmUrb_URB_FLX_evap  (IA,JA) )
-    CPL_AtmUrb_ATM_FLX_MU    (:,:) = UNDEF
-    CPL_AtmUrb_ATM_FLX_MV    (:,:) = UNDEF
-    CPL_AtmUrb_ATM_FLX_MW    (:,:) = UNDEF
-    CPL_AtmUrb_ATM_FLX_SH    (:,:) = UNDEF
-    CPL_AtmUrb_ATM_FLX_LH    (:,:) = UNDEF
-    CPL_AtmUrb_ATM_FLX_evap  (:,:) = UNDEF
-    CPL_AtmUrb_ATM_U10       (:,:) = UNDEF
-    CPL_AtmUrb_ATM_V10       (:,:) = UNDEF
-    CPL_AtmUrb_ATM_T2        (:,:) = UNDEF
-    CPL_AtmUrb_ATM_Q2        (:,:) = UNDEF
-    CPL_AtmUrb_URB_FLX_heat  (:,:) = UNDEF
-    CPL_AtmUrb_URB_FLX_precip(:,:) = UNDEF
-    CPL_AtmUrb_URB_FLX_evap  (:,:) = UNDEF
-
-    CNT_putAtm    = 0.0_RP
-    CNT_putOcn    = 0.0_RP
-    CNT_putLnd    = 0.0_RP
-    CNT_putUrb    = 0.0_RP
-    CNT_getAtmOcn = 0.0_RP
-    CNT_getAtmLnd = 0.0_RP
-    CNT_getAtmUrb = 0.0_RP
-    CNT_getOcn    = 0.0_RP
-    CNT_getLnd    = 0.0_RP
-    CNT_getUrb    = 0.0_RP
+    ! counter intialize
+    CNT_putATM_OCN = 0.0_RP
+    CNT_putATM_LND = 0.0_RP
+    CNT_putATM_URB = 0.0_RP
+    CNT_putOCN     = 0.0_RP
+    CNT_putLND     = 0.0_RP
+    CNT_putURB     = 0.0_RP
 
     return
   end subroutine CPL_vars_setup
 
   !-----------------------------------------------------------------------------
-  subroutine CPL_vars_merge
-    use scale_landuse, only: &
-       fact_ocean => LANDUSE_fact_ocean, &
-       fact_land  => LANDUSE_fact_land,  &
-       fact_urban => LANDUSE_fact_urban
-    use scale_statistics, only: &
-       STATISTICS_checktotal, &
-       STAT_total
-    implicit none
-
-    real(RP) :: total ! dummy
-
-    integer :: i, j
-    !---------------------------------------------------------------------------
-
-    if( IO_L ) write(IO_FID_LOG,*) '*** Coupler: Merge values of surface submodel'
-
-    do j = JS, JE
-    do i = IS, IE
-       CPL_Merged_SFC_TEMP(i,j)     = fact_ocean(i,j) * CPL_fromOcn_SFC_TEMP  (i,j) &
-                                    + fact_land (i,j) * CPL_fromLnd_SFC_TEMP  (i,j) &
-                                    + fact_urban(i,j) * CPL_fromUrb_SFC_TEMP  (i,j)
-    end do
-    end do
-
-    do j = JS, JE
-    do i = IS, IE
-       CPL_Merged_SFC_albedo(i,j,I_LW) = fact_ocean(i,j) * CPL_fromOcn_SFC_albedo(i,j,I_LW) &
-                                       + fact_land (i,j) * CPL_fromLnd_SFC_albedo(i,j,I_LW) &
-                                       + fact_urban(i,j) * CPL_fromUrb_SFC_albedo(i,j,I_LW)
-    end do
-    end do
-
-    do j = JS, JE
-    do i = IS, IE
-       CPL_Merged_SFC_albedo(i,j,I_SW) = fact_ocean(i,j) * CPL_fromOcn_SFC_albedo(i,j,I_SW) &
-                                       + fact_land (i,j) * CPL_fromLnd_SFC_albedo(i,j,I_SW) &
-                                       + fact_urban(i,j) * CPL_fromUrb_SFC_albedo(i,j,I_SW)
-    end do
-    end do
-
-    do j = JS, JE
-    do i = IS, IE
-       CPL_Merged_FLX_MW(i,j) = fact_ocean(i,j) * CPL_AtmOcn_ATM_FLX_MW  (i,j) &
-                              + fact_land (i,j) * CPL_AtmLnd_ATM_FLX_MW  (i,j) &
-                              + fact_urban(i,j) * CPL_AtmUrb_ATM_FLX_MW  (i,j)
-    end do
-    end do
-
-    do j = JS, JE
-    do i = IS, IE
-       CPL_Merged_FLX_MU(i,j) = fact_ocean(i,j) * CPL_AtmOcn_ATM_FLX_MU  (i,j) &
-                              + fact_land (i,j) * CPL_AtmLnd_ATM_FLX_MU  (i,j) &
-                              + fact_urban(i,j) * CPL_AtmUrb_ATM_FLX_MU  (i,j)
-    end do
-    end do
-
-    do j = JS, JE
-    do i = IS, IE
-       CPL_Merged_FLX_MV(i,j) = fact_ocean(i,j) * CPL_AtmOcn_ATM_FLX_MV  (i,j) &
-                              + fact_land (i,j) * CPL_AtmLnd_ATM_FLX_MV  (i,j) &
-                              + fact_urban(i,j) * CPL_AtmUrb_ATM_FLX_MV  (i,j)
-    end do
-    end do
-
-    do j = JS, JE
-    do i = IS, IE
-       CPL_Merged_FLX_SH(i,j) = fact_ocean(i,j) * CPL_AtmOcn_ATM_FLX_SH  (i,j) &
-                              + fact_land (i,j) * CPL_AtmLnd_ATM_FLX_SH  (i,j) &
-                              + fact_urban(i,j) * CPL_AtmUrb_ATM_FLX_SH  (i,j)
-    end do
-    end do
-
-    do j = JS, JE
-    do i = IS, IE
-       CPL_Merged_FLX_LH(i,j) = fact_ocean(i,j) * CPL_AtmOcn_ATM_FLX_LH  (i,j) &
-                              + fact_land (i,j) * CPL_AtmLnd_ATM_FLX_LH  (i,j) &
-                              + fact_urban(i,j) * CPL_AtmUrb_ATM_FLX_LH  (i,j)
-    end do
-    end do
-
-    do j = JS, JE
-    do i = IS, IE
-       CPL_Merged_FLX_QV(i,j) = fact_ocean(i,j) * CPL_AtmOcn_ATM_FLX_evap(i,j) &
-                              + fact_land (i,j) * CPL_AtmLnd_ATM_FLX_evap(i,j) &
-                              + fact_urban(i,j) * CPL_AtmUrb_ATM_FLX_evap(i,j)
-    end do
-    end do
-
-    do j = JS, JE
-    do i = IS, IE
-       CPL_Merged_Z0M   (i,j) = fact_ocean(i,j) * CPL_fromOcn_SFC_Z0M  (i,j) &
-                              + fact_land (i,j) * CPL_fromLnd_SFC_Z0M  (i,j) &
-                              + fact_urban(i,j) * CPL_fromUrb_SFC_Z0M  (i,j)
-    end do
-    end do
-
-    do j = JS, JE
-    do i = IS, IE
-       CPL_Merged_Z0H   (i,j) = fact_ocean(i,j) * CPL_fromOcn_SFC_Z0H  (i,j) &
-                              + fact_land (i,j) * CPL_fromLnd_SFC_Z0H  (i,j) &
-                              + fact_urban(i,j) * CPL_fromUrb_SFC_Z0H  (i,j)
-    end do
-    end do
-
-    do j = JS, JE
-    do i = IS, IE
-       CPL_Merged_Z0E   (i,j) = fact_ocean(i,j) * CPL_fromOcn_SFC_Z0E  (i,j) &
-                              + fact_land (i,j) * CPL_fromLnd_SFC_Z0E  (i,j) &
-                              + fact_urban(i,j) * CPL_fromUrb_SFC_Z0E  (i,j)
-    end do
-    end do
-
-    do j = JS, JE
-    do i = IS, IE
-       CPL_Merged_U10   (i,j) = fact_ocean(i,j) * CPL_AtmOcn_ATM_U10     (i,j) &
-                              + fact_land (i,j) * CPL_AtmLnd_ATM_U10     (i,j) &
-                              + fact_urban(i,j) * CPL_AtmUrb_ATM_U10     (i,j)
-    end do
-    end do
-
-    do j = JS, JE
-    do i = IS, IE
-       CPL_Merged_V10   (i,j) = fact_ocean(i,j) * CPL_AtmOcn_ATM_V10     (i,j) &
-                              + fact_land (i,j) * CPL_AtmLnd_ATM_V10     (i,j) &
-                              + fact_urban(i,j) * CPL_AtmUrb_ATM_V10     (i,j)
-    end do
-    end do
-
-    do j = JS, JE
-    do i = IS, IE
-       CPL_Merged_T2    (i,j) = fact_ocean(i,j) * CPL_AtmOcn_ATM_T2      (i,j) &
-                              + fact_land (i,j) * CPL_AtmLnd_ATM_T2      (i,j) &
-                              + fact_urban(i,j) * CPL_AtmUrb_ATM_T2      (i,j)
-    end do
-    end do
-
-    do j = JS, JE
-    do i = IS, IE
-       CPL_Merged_Q2    (i,j) = fact_ocean(i,j) * CPL_AtmOcn_ATM_Q2      (i,j) &
-                              + fact_land (i,j) * CPL_AtmLnd_ATM_Q2      (i,j) &
-                              + fact_urban(i,j) * CPL_AtmUrb_ATM_Q2      (i,j)
-    end do
-    end do
-
-    do j = JS, JE
-    do i = IS, IE
-       CPL_Merged_FLX_heat(i,j) = fact_ocean(i,j) * CPL_AtmOcn_OCN_FLX_heat(i,j) &
-                                + fact_land (i,j) * CPL_AtmLnd_LND_FLX_heat(i,j) &
-                                + fact_urban(i,j) * CPL_AtmUrb_URB_FLX_heat(i,j)
-    end do
-    end do
-
-    if ( STATISTICS_checktotal ) then
-       call STAT_total( total, CPL_Merged_SFC_TEMP  (:,:),      'SFC_TEMP  ' )
-       call STAT_total( total, CPL_Merged_SFC_albedo(:,:,I_LW), 'SFC_ALB_LW' )
-       call STAT_total( total, CPL_Merged_SFC_albedo(:,:,I_SW), 'SFC_ALB_SW' )
-       call STAT_total( total, CPL_Merged_FLX_MU    (:,:),      'FLX_MU    ' )
-       call STAT_total( total, CPL_Merged_FLX_MV    (:,:),      'FLX_MV    ' )
-       call STAT_total( total, CPL_Merged_FLX_MW    (:,:),      'FLX_MW    ' )
-       call STAT_total( total, CPL_Merged_FLX_SH    (:,:),      'FLX_SH    ' )
-       call STAT_total( total, CPL_Merged_FLX_LH    (:,:),      'FLX_LH    ' )
-       call STAT_total( total, CPL_Merged_FLX_QV    (:,:),      'FLX_QV    ' )
-       call STAT_total( total, CPL_Merged_U10       (:,:),      'U10       ' )
-       call STAT_total( total, CPL_Merged_V10       (:,:),      'V10       ' )
-       call STAT_total( total, CPL_Merged_T2        (:,:),      'T2        ' )
-       call STAT_total( total, CPL_Merged_Q2        (:,:),      'Q2        ' )
-       call STAT_total( total, CPL_Merged_FLX_heat  (:,:),      'FLX_heat  ' )
-    endif
-
-    return
-  end subroutine CPL_vars_merge
-
-  !-----------------------------------------------------------------------------
-  subroutine CPL_putAtm_setup( &
-       ATM_Z1 )
-    implicit none
-
-    real(RP), intent(in) :: ATM_Z1(IA,JA)
-    integer :: i, j
-    !---------------------------------------------------------------------------
-
-    do j = JS, JE
-    do i = IS, IE
-       CPL_fromAtm_ATM_Z1(i,j) = ATM_Z1(i,j)
-    end do
-    end do
-
-    return
-  end subroutine CPL_putAtm_setup
-
-  !-----------------------------------------------------------------------------
-  subroutine CPL_putOcn_setup( &
-       SFC_TEMP,   &
-       SFC_albedo, &
-       SFC_Z0M,    &
-       SFC_Z0H,    &
-       SFC_Z0E     )
-    implicit none
-
-    real(RP), intent(in) :: SFC_TEMP  (IA,JA)
-    real(RP), intent(in) :: SFC_albedo(IA,JA,2)
-    real(RP), intent(in) :: SFC_Z0M   (IA,JA)
-    real(RP), intent(in) :: SFC_Z0H   (IA,JA)
-    real(RP), intent(in) :: SFC_Z0E   (IA,JA)
-
-    integer :: i, j
-    !---------------------------------------------------------------------------
-
-    do j = JS, JE
-    do i = IS, IE
-       CPL_fromOcn_SFC_TEMP  (i,j)   = SFC_TEMP  (i,j)
-    end do
-    end do
-    do j = JS, JE
-    do i = IS, IE
-       CPL_fromOcn_SFC_albedo(i,j,1) = SFC_albedo(i,j,1)
-       CPL_fromOcn_SFC_albedo(i,j,2) = SFC_albedo(i,j,2)
-    end do
-    end do
-    do j = JS, JE
-    do i = IS, IE
-       CPL_fromOcn_SFC_Z0M   (i,j)   = SFC_Z0M   (i,j)
-    end do
-    end do
-    do j = JS, JE
-    do i = IS, IE
-       CPL_fromOcn_SFC_Z0H   (i,j)   = SFC_Z0H   (i,j)
-    end do
-    end do
-    do j = JS, JE
-    do i = IS, IE
-       CPL_fromOcn_SFC_Z0E   (i,j)   = SFC_Z0E   (i,j)
-    end do
-    end do
-
-    return
-  end subroutine CPL_putOcn_setup
-
-  !-----------------------------------------------------------------------------
-  subroutine CPL_putLnd_setup( &
-       SFC_TEMP,   &
-       SFC_albedo, &
-       LND_TCS,    &
-       LND_DZ,     &
-       SFC_Z0M,    &
-       SFC_Z0H,    &
-       SFC_Z0E     )
-    implicit none
-
-    real(RP), intent(in) :: SFC_TEMP  (IA,JA)
-    real(RP), intent(in) :: SFC_albedo(IA,JA,2)
-    real(RP), intent(in) :: LND_TCS   (IA,JA)
-    real(RP), intent(in) :: LND_DZ    (IA,JA)
-    real(RP), intent(in) :: SFC_Z0M   (IA,JA)
-    real(RP), intent(in) :: SFC_Z0H   (IA,JA)
-    real(RP), intent(in) :: SFC_Z0E   (IA,JA)
-
-    integer :: i, j
-    !---------------------------------------------------------------------------
-
-    do j = JS, JE
-    do i = IS, IE
-       CPL_fromLnd_SFC_TEMP  (i,j)   = SFC_TEMP  (i,j)
-    end do
-    end do
-    do j = JS, JE
-    do i = IS, IE
-       CPL_fromLnd_SFC_albedo(i,j,1) = SFC_albedo(i,j,1)
-       CPL_fromLnd_SFC_albedo(i,j,2) = SFC_albedo(i,j,2)
-    end do
-    end do
-    do j = JS, JE
-    do i = IS, IE
-       CPL_fromLnd_LND_TCS   (i,j)   = LND_TCS   (i,j)
-    end do
-    end do
-    do j = JS, JE
-    do i = IS, IE
-       CPL_fromLnd_LND_DZ    (i,j)   = LND_DZ    (i,j)
-    end do
-    end do
-    do j = JS, JE
-    do i = IS, IE
-       CPL_fromLnd_SFC_Z0M   (i,j)   = SFC_Z0M   (i,j)
-    end do
-    end do
-    do j = JS, JE
-    do i = IS, IE
-       CPL_fromLnd_SFC_Z0H   (i,j)   = SFC_Z0H   (i,j)
-    end do
-    end do
-    do j = JS, JE
-    do i = IS, IE
-       CPL_fromLnd_SFC_Z0E   (i,j)   = SFC_Z0E   (i,j)
-    end do
-    end do
-
-    return
-  end subroutine CPL_putLnd_setup
-
-  !-----------------------------------------------------------------------------
-  subroutine CPL_putUrb_setup( &
-       SFC_TEMP,  &
-       SFC_albedo )
-    implicit none
-
-    real(RP), intent(in) :: SFC_TEMP  (IA,JA)
-    real(RP), intent(in) :: SFC_albedo(IA,JA,2)
-
-    integer :: i, j
-    !---------------------------------------------------------------------------
-
-    do j = JS, JE
-    do i = IS, IE
-       CPL_fromUrb_SFC_TEMP  (i,j)   = SFC_TEMP  (i,j)
-    end do
-    end do
-    do j = JS, JE
-    do i = IS, IE
-       CPL_fromUrb_SFC_albedo(i,j,1) = SFC_albedo(i,j,1)
-       CPL_fromUrb_SFC_albedo(i,j,2) = SFC_albedo(i,j,2)
-    end do
-    end do
-
-    return
-  end subroutine CPL_putUrb_setup
-
-  !-----------------------------------------------------------------------------
-  subroutine CPL_putAtm( &
-       ATM_TEMP,   &
-       ATM_PRES,   &
-       ATM_W,      &
-       ATM_U,      &
-       ATM_V,      &
-       ATM_DENS,   &
-       ATM_QTRC,   &
-       ATM_PBL,    &
+  subroutine CPL_putATM( &
+       TEMP,       &
+       PRES,       &
+       W,          &
+       U,          &
+       V,          &
+       DENS,       &
+       QTRC,       &
+       PBL,        &
        SFC_PRES,   &
-       SFLX_LW_dn, &
-       SFLX_SW_dn, &
+       SFLX_LW,    &
+       SFLX_SW,    &
        SFLX_rain,  &
-       SFLX_snow   )
+       SFLX_snow,  &
+       countup     )
     implicit none
 
-    real(RP), intent(in) :: ATM_TEMP  (IA,JA)
-    real(RP), intent(in) :: ATM_PRES  (IA,JA)
-    real(RP), intent(in) :: ATM_W     (IA,JA)
-    real(RP), intent(in) :: ATM_U     (IA,JA)
-    real(RP), intent(in) :: ATM_V     (IA,JA)
-    real(RP), intent(in) :: ATM_DENS  (IA,JA)
-    real(RP), intent(in) :: ATM_QTRC  (IA,JA,QA)
-    real(RP), intent(in) :: ATM_PBL   (IA,JA)
-    real(RP), intent(in) :: SFC_PRES  (IA,JA)
-    real(RP), intent(in) :: SFLX_LW_dn(IA,JA)
-    real(RP), intent(in) :: SFLX_SW_dn(IA,JA)
-    real(RP), intent(in) :: SFLX_rain (IA,JA)
-    real(RP), intent(in) :: SFLX_snow (IA,JA)
+    ! arguments
+    real(RP), intent(in) :: TEMP     (IA,JA)
+    real(RP), intent(in) :: PRES     (IA,JA)
+    real(RP), intent(in) :: W        (IA,JA)
+    real(RP), intent(in) :: U        (IA,JA)
+    real(RP), intent(in) :: V        (IA,JA)
+    real(RP), intent(in) :: DENS     (IA,JA)
+    real(RP), intent(in) :: QTRC     (IA,JA,QA)
+    real(RP), intent(in) :: PBL      (IA,JA)
+    real(RP), intent(in) :: SFC_PRES (IA,JA)
+    real(RP), intent(in) :: SFLX_LW  (IA,JA)
+    real(RP), intent(in) :: SFLX_SW  (IA,JA)
+    real(RP), intent(in) :: SFLX_rain(IA,JA)
+    real(RP), intent(in) :: SFLX_snow(IA,JA)
 
+    logical,  intent(in) :: countup
+
+    ! works
     integer :: i, j
     !---------------------------------------------------------------------------
 
     do j = JS, JE
     do i = IS, IE
-       CPL_fromAtm_ATM_TEMP  (i,j) = ( CPL_fromAtm_ATM_TEMP  (i,j) * CNT_putAtm + ATM_TEMP  (i,j)                   ) &
-                                   / ( CNT_putAtm + 1.0_RP )
-    end do
-    end do
-    do j = JS, JE
-    do i = IS, IE
-       CPL_fromAtm_ATM_PRES  (i,j) = ( CPL_fromAtm_ATM_PRES  (i,j) * CNT_putAtm + ATM_PRES  (i,j)                   ) &
-                                   / ( CNT_putAtm + 1.0_RP )
-    end do
-    end do
-    do j = JS, JE
-    do i = IS, IE
-       CPL_fromAtm_ATM_W     (i,j) = ( CPL_fromAtm_ATM_W     (i,j) * CNT_putAtm + ATM_W     (i,j)                   ) &
-                                   / ( CNT_putAtm + 1.0_RP )
-    end do
-    end do
-    do j = JS, JE
-    do i = IS, IE
-       CPL_fromAtm_ATM_U     (i,j) = ( CPL_fromAtm_ATM_U     (i,j) * CNT_putAtm + ATM_U     (i,j)                   ) &
-                                   / ( CNT_putAtm + 1.0_RP )
-    end do
-    end do
-    do j = JS, JE
-    do i = IS, IE
-       CPL_fromAtm_ATM_V     (i,j) = ( CPL_fromAtm_ATM_V     (i,j) * CNT_putAtm + ATM_V     (i,j)                   ) &
-                                   / ( CNT_putAtm + 1.0_RP )
-    end do
-    end do
-    do j = JS, JE
-    do i = IS, IE
-       CPL_fromAtm_ATM_DENS  (i,j) = ( CPL_fromAtm_ATM_DENS  (i,j) * CNT_putAtm + ATM_DENS  (i,j)                   ) &
-                                   / ( CNT_putAtm + 1.0_RP )
-    end do
-    end do
-    do j = JS, JE
-    do i = IS, IE
-       CPL_fromAtm_ATM_QV    (i,j) = ( CPL_fromAtm_ATM_QV    (i,j) * CNT_putAtm + ATM_QTRC  (i,j,I_QV)              ) &
-                                   / ( CNT_putAtm + 1.0_RP )
-    end do
-    end do
-    do j = JS, JE
-    do i = IS, IE
-       CPL_fromAtm_ATM_PBL   (i,j) = ( CPL_fromAtm_ATM_PBL   (i,j) * CNT_putAtm + ATM_PBL   (i,j)                   ) &
-                                   / ( CNT_putAtm + 1.0_RP )
-    end do
-    end do
-    do j = JS, JE
-    do i = IS, IE
-       CPL_fromAtm_SFC_PRES  (i,j) = ( CPL_fromAtm_SFC_PRES  (i,j) * CNT_putAtm + SFC_PRES  (i,j)                   ) &
-                                   / ( CNT_putAtm + 1.0_RP )
-    end do
-    end do
-    do j = JS, JE
-    do i = IS, IE
-       CPL_fromAtm_FLX_LW_dn (i,j) = ( CPL_fromAtm_FLX_LW_dn (i,j) * CNT_putAtm + SFLX_LW_dn(i,j)                   ) &
-                                   / ( CNT_putAtm + 1.0_RP )
-    end do
-    end do
-    do j = JS, JE
-    do i = IS, IE
-       CPL_fromAtm_FLX_SW_dn (i,j) = ( CPL_fromAtm_FLX_SW_dn (i,j) * CNT_putAtm + SFLX_SW_dn(i,j)                   ) &
-                                   / ( CNT_putAtm + 1.0_RP )
-    end do
-    end do
-    do j = JS, JE
-    do i = IS, IE
-       CPL_fromAtm_FLX_precip(i,j) = ( CPL_fromAtm_FLX_precip(i,j) * CNT_putAtm + SFLX_rain (i,j) + SFLX_snow (i,j) ) &
-                                   / ( CNT_putAtm + 1.0_RP )
+       ! for ocean
+       OCN_ATM_TEMP     (i,j) = OCN_ATM_TEMP     (i,j) * CNT_putATM_OCN + TEMP      (i,j)
+       OCN_ATM_PRES     (i,j) = OCN_ATM_PRES     (i,j) * CNT_putATM_OCN + PRES      (i,j)
+       OCN_ATM_W        (i,j) = OCN_ATM_W        (i,j) * CNT_putATM_OCN + W         (i,j)
+       OCN_ATM_U        (i,j) = OCN_ATM_U        (i,j) * CNT_putATM_OCN + U         (i,j)
+       OCN_ATM_V        (i,j) = OCN_ATM_V        (i,j) * CNT_putATM_OCN + V         (i,j)
+       OCN_ATM_DENS     (i,j) = OCN_ATM_DENS     (i,j) * CNT_putATM_OCN + DENS      (i,j)
+       OCN_ATM_QV       (i,j) = OCN_ATM_QV       (i,j) * CNT_putATM_OCN + QTRC      (i,j,I_QV)
+       OCN_ATM_PBL      (i,j) = OCN_ATM_PBL      (i,j) * CNT_putATM_OCN + PBL       (i,j)
+       OCN_ATM_SFC_PRES (i,j) = OCN_ATM_SFC_PRES (i,j) * CNT_putATM_OCN + SFC_PRES  (i,j)
+       OCN_ATM_SFLX_LW  (i,j) = OCN_ATM_SFLX_LW  (i,j) * CNT_putATM_OCN + SFLX_LW   (i,j)
+       OCN_ATM_SFLX_SW  (i,j) = OCN_ATM_SFLX_SW  (i,j) * CNT_putATM_OCN + SFLX_SW   (i,j)
+       OCN_ATM_SFLX_prec(i,j) = OCN_ATM_SFLX_prec(i,j) * CNT_putATM_OCN + SFLX_rain (i,j) &
+                                                                        + SFLX_snow (i,j)
+       ! for land
+       LND_ATM_TEMP     (i,j) = LND_ATM_TEMP     (i,j) * CNT_putATM_LND + TEMP      (i,j)
+       LND_ATM_PRES     (i,j) = LND_ATM_PRES     (i,j) * CNT_putATM_LND + PRES      (i,j)
+       LND_ATM_W        (i,j) = LND_ATM_W        (i,j) * CNT_putATM_LND + W         (i,j)
+       LND_ATM_U        (i,j) = LND_ATM_U        (i,j) * CNT_putATM_LND + U         (i,j)
+       LND_ATM_V        (i,j) = LND_ATM_V        (i,j) * CNT_putATM_LND + V         (i,j)
+       LND_ATM_DENS     (i,j) = LND_ATM_DENS     (i,j) * CNT_putATM_LND + DENS      (i,j)
+       LND_ATM_QV       (i,j) = LND_ATM_QV       (i,j) * CNT_putATM_LND + QTRC      (i,j,I_QV)
+       LND_ATM_PBL      (i,j) = LND_ATM_PBL      (i,j) * CNT_putATM_LND + PBL       (i,j)
+       LND_ATM_SFC_PRES (i,j) = LND_ATM_SFC_PRES (i,j) * CNT_putATM_LND + SFC_PRES  (i,j)
+       LND_ATM_SFLX_LW  (i,j) = LND_ATM_SFLX_LW  (i,j) * CNT_putATM_LND + SFLX_LW   (i,j)
+       LND_ATM_SFLX_SW  (i,j) = LND_ATM_SFLX_SW  (i,j) * CNT_putATM_LND + SFLX_SW   (i,j)
+       LND_ATM_SFLX_prec(i,j) = LND_ATM_SFLX_prec(i,j) * CNT_putATM_LND + SFLX_rain (i,j) &
+                                                                        + SFLX_snow (i,j)
+       ! for urban
+       URB_ATM_TEMP     (i,j) = URB_ATM_TEMP     (i,j) * CNT_putATM_URB + TEMP      (i,j)
+       URB_ATM_PRES     (i,j) = URB_ATM_PRES     (i,j) * CNT_putATM_URB + PRES      (i,j)
+       URB_ATM_W        (i,j) = URB_ATM_W        (i,j) * CNT_putATM_URB + W         (i,j)
+       URB_ATM_U        (i,j) = URB_ATM_U        (i,j) * CNT_putATM_URB + U         (i,j)
+       URB_ATM_V        (i,j) = URB_ATM_V        (i,j) * CNT_putATM_URB + V         (i,j)
+       URB_ATM_DENS     (i,j) = URB_ATM_DENS     (i,j) * CNT_putATM_URB + DENS      (i,j)
+       URB_ATM_QV       (i,j) = URB_ATM_QV       (i,j) * CNT_putATM_URB + QTRC      (i,j,I_QV)
+       URB_ATM_PBL      (i,j) = URB_ATM_PBL      (i,j) * CNT_putATM_URB + PBL       (i,j)
+       URB_ATM_SFC_PRES (i,j) = URB_ATM_SFC_PRES (i,j) * CNT_putATM_URB + SFC_PRES  (i,j)
+       URB_ATM_SFLX_LW  (i,j) = URB_ATM_SFLX_LW  (i,j) * CNT_putATM_URB + SFLX_LW   (i,j)
+       URB_ATM_SFLX_SW  (i,j) = URB_ATM_SFLX_SW  (i,j) * CNT_putATM_URB + SFLX_SW   (i,j)
+       URB_ATM_SFLX_prec(i,j) = URB_ATM_SFLX_prec(i,j) * CNT_putATM_URB + SFLX_rain (i,j) &
+                                                                        + SFLX_snow (i,j)
     end do
     end do
 
-    CNT_putAtm = CNT_putAtm + 1.0_RP
+    do j = JS, JE
+    do i = IS, IE
+       ! for ocean
+       OCN_ATM_TEMP     (i,j) = OCN_ATM_TEMP     (i,j) / ( CNT_putATM_OCN + 1.0_RP )
+       OCN_ATM_PRES     (i,j) = OCN_ATM_PRES     (i,j) / ( CNT_putATM_OCN + 1.0_RP )
+       OCN_ATM_W        (i,j) = OCN_ATM_W        (i,j) / ( CNT_putATM_OCN + 1.0_RP )
+       OCN_ATM_U        (i,j) = OCN_ATM_U        (i,j) / ( CNT_putATM_OCN + 1.0_RP )
+       OCN_ATM_V        (i,j) = OCN_ATM_V        (i,j) / ( CNT_putATM_OCN + 1.0_RP )
+       OCN_ATM_DENS     (i,j) = OCN_ATM_DENS     (i,j) / ( CNT_putATM_OCN + 1.0_RP )
+       OCN_ATM_QV       (i,j) = OCN_ATM_QV       (i,j) / ( CNT_putATM_OCN + 1.0_RP )
+       OCN_ATM_PBL      (i,j) = OCN_ATM_PBL      (i,j) / ( CNT_putATM_OCN + 1.0_RP )
+       OCN_ATM_SFC_PRES (i,j) = OCN_ATM_SFC_PRES (i,j) / ( CNT_putATM_OCN + 1.0_RP )
+       OCN_ATM_SFLX_LW  (i,j) = OCN_ATM_SFLX_LW  (i,j) / ( CNT_putATM_OCN + 1.0_RP )
+       OCN_ATM_SFLX_SW  (i,j) = OCN_ATM_SFLX_SW  (i,j) / ( CNT_putATM_OCN + 1.0_RP )
+       OCN_ATM_SFLX_prec(i,j) = OCN_ATM_SFLX_prec(i,j) / ( CNT_putATM_OCN + 1.0_RP )
+       ! for ocean
+       LND_ATM_TEMP     (i,j) = LND_ATM_TEMP     (i,j) / ( CNT_putATM_LND + 1.0_RP )
+       LND_ATM_PRES     (i,j) = LND_ATM_PRES     (i,j) / ( CNT_putATM_LND + 1.0_RP )
+       LND_ATM_W        (i,j) = LND_ATM_W        (i,j) / ( CNT_putATM_LND + 1.0_RP )
+       LND_ATM_U        (i,j) = LND_ATM_U        (i,j) / ( CNT_putATM_LND + 1.0_RP )
+       LND_ATM_V        (i,j) = LND_ATM_V        (i,j) / ( CNT_putATM_LND + 1.0_RP )
+       LND_ATM_DENS     (i,j) = LND_ATM_DENS     (i,j) / ( CNT_putATM_LND + 1.0_RP )
+       LND_ATM_QV       (i,j) = LND_ATM_QV       (i,j) / ( CNT_putATM_LND + 1.0_RP )
+       LND_ATM_PBL      (i,j) = LND_ATM_PBL      (i,j) / ( CNT_putATM_LND + 1.0_RP )
+       LND_ATM_SFC_PRES (i,j) = LND_ATM_SFC_PRES (i,j) / ( CNT_putATM_LND + 1.0_RP )
+       LND_ATM_SFLX_LW  (i,j) = LND_ATM_SFLX_LW  (i,j) / ( CNT_putATM_LND + 1.0_RP )
+       LND_ATM_SFLX_SW  (i,j) = LND_ATM_SFLX_SW  (i,j) / ( CNT_putATM_LND + 1.0_RP )
+       LND_ATM_SFLX_prec(i,j) = LND_ATM_SFLX_prec(i,j) / ( CNT_putATM_LND + 1.0_RP )
+       ! for ocean
+       URB_ATM_TEMP     (i,j) = URB_ATM_TEMP     (i,j) / ( CNT_putATM_URB + 1.0_RP )
+       URB_ATM_PRES     (i,j) = URB_ATM_PRES     (i,j) / ( CNT_putATM_URB + 1.0_RP )
+       URB_ATM_W        (i,j) = URB_ATM_W        (i,j) / ( CNT_putATM_URB + 1.0_RP )
+       URB_ATM_U        (i,j) = URB_ATM_U        (i,j) / ( CNT_putATM_URB + 1.0_RP )
+       URB_ATM_V        (i,j) = URB_ATM_V        (i,j) / ( CNT_putATM_URB + 1.0_RP )
+       URB_ATM_DENS     (i,j) = URB_ATM_DENS     (i,j) / ( CNT_putATM_URB + 1.0_RP )
+       URB_ATM_QV       (i,j) = URB_ATM_QV       (i,j) / ( CNT_putATM_URB + 1.0_RP )
+       URB_ATM_PBL      (i,j) = URB_ATM_PBL      (i,j) / ( CNT_putATM_URB + 1.0_RP )
+       URB_ATM_SFC_PRES (i,j) = URB_ATM_SFC_PRES (i,j) / ( CNT_putATM_URB + 1.0_RP )
+       URB_ATM_SFLX_LW  (i,j) = URB_ATM_SFLX_LW  (i,j) / ( CNT_putATM_URB + 1.0_RP )
+       URB_ATM_SFLX_SW  (i,j) = URB_ATM_SFLX_SW  (i,j) / ( CNT_putATM_URB + 1.0_RP )
+       URB_ATM_SFLX_prec(i,j) = URB_ATM_SFLX_prec(i,j) / ( CNT_putATM_URB + 1.0_RP )
+    end do
+    end do
+
+    if( countup ) then
+       CNT_putATM_OCN = CNT_putATM_OCN + 1.0_RP
+       CNT_putATM_LND = CNT_putATM_LND + 1.0_RP
+       CNT_putATM_URB = CNT_putATM_URB + 1.0_RP
+    end if
 
     return
-  end subroutine CPL_putAtm
+  end subroutine CPL_putATM
 
   !-----------------------------------------------------------------------------
-  subroutine CPL_putOcn( &
-       OCN_TEMP )
-    implicit none
-
-    real(RP), intent(in) :: OCN_TEMP(IA,JA)
-    integer :: i, j
-    !---------------------------------------------------------------------------
-
-    do j = JS, JE
-    do i = IS, IE
-       CPL_fromOcn_OCN_TEMP(i,j) = ( CPL_fromOcn_OCN_TEMP(i,j) * CNT_putOcn + OCN_TEMP(i,j) ) &
-                                 / ( CNT_putOcn + 1.0_RP )
-    end do
-    end do
-
-    CNT_putOcn = CNT_putOcn + 1.0_RP
-
-    return
-  end subroutine CPL_putOcn
-
-  !-----------------------------------------------------------------------------
-  subroutine CPL_putLnd( &
-       LND_TEMP, &
-       LND_BETA  )
-    implicit none
-
-    real(RP), intent(in) :: LND_TEMP(IA,JA)
-    real(RP), intent(in) :: LND_BETA(IA,JA)
-    integer :: i, j
-    !---------------------------------------------------------------------------
-
-    do j = JS, JE
-    do i = IS, IE
-       CPL_fromLnd_LND_TEMP(i,j) = ( CPL_fromLnd_LND_TEMP(i,j) * CNT_putLnd + LND_TEMP(i,j) ) &
-                                 / ( CNT_putLnd + 1.0_RP )
-    end do
-    end do
-    do j = JS, JE
-    do i = IS, IE
-       CPL_fromLnd_LND_BETA(i,j) = ( CPL_fromLnd_LND_BETA(i,j) * CNT_putLnd + LND_BETA(i,j) ) &
-                                 / ( CNT_putLnd + 1.0_RP )
-    end do
-    end do
-
-    CNT_putLnd = CNT_putLnd + 1.0_RP
-
-    return
-  end subroutine CPL_putLnd
-
-  !-----------------------------------------------------------------------------
-  subroutine CPL_putUrb
-    implicit none
-    !---------------------------------------------------------------------------
-
-    return
-  end subroutine CPL_putUrb
-
-  !-----------------------------------------------------------------------------
-  subroutine CPL_getAtm( &
+  subroutine CPL_putOCN( &
        SFC_TEMP,   &
        SFC_albedo, &
-       Z0M,        &
-       Z0H,        &
-       Z0E,        &
-       Uabs10,     &
+       SFC_Z0M,    &
+       SFC_Z0H,    &
+       SFC_Z0E,    &
+       SFLX_MW,    &
+       SFLX_MU,    &
+       SFLX_MV,    &
+       SFLX_SH,    &
+       SFLX_LH,    &
+       SFLX_WH,    &
+       SFLX_evap,  &
        U10,        &
        V10,        &
        T2,         &
        Q2,         &
-       FLX_heat    )
+       countup     )
     implicit none
 
-    real(RP), intent(out) :: SFC_TEMP  (IA,JA)
-    real(RP), intent(out) :: SFC_albedo(IA,JA,2)
-    real(RP), intent(out) :: Z0M       (IA,JA)
-    real(RP), intent(out) :: Z0H       (IA,JA)
-    real(RP), intent(out) :: Z0E       (IA,JA)
-    real(RP), intent(out) :: Uabs10    (IA,JA)
-    real(RP), intent(out) :: U10       (IA,JA)
-    real(RP), intent(out) :: V10       (IA,JA)
-    real(RP), intent(out) :: T2        (IA,JA)
-    real(RP), intent(out) :: Q2        (IA,JA)
-    real(RP), intent(out) :: FLX_heat  (IA,JA)
+    ! arguments
+    real(RP), intent(in) :: SFC_TEMP  (IA,JA)
+    real(RP), intent(in) :: SFC_albedo(IA,JA,2)
+    real(RP), intent(in) :: SFC_Z0M   (IA,JA)
+    real(RP), intent(in) :: SFC_Z0H   (IA,JA)
+    real(RP), intent(in) :: SFC_Z0E   (IA,JA)
+    real(RP), intent(in) :: SFLX_MW   (IA,JA)
+    real(RP), intent(in) :: SFLX_MU   (IA,JA)
+    real(RP), intent(in) :: SFLX_MV   (IA,JA)
+    real(RP), intent(in) :: SFLX_SH   (IA,JA)
+    real(RP), intent(in) :: SFLX_LH   (IA,JA)
+    real(RP), intent(in) :: SFLX_WH   (IA,JA)
+    real(RP), intent(in) :: SFLX_evap (IA,JA)
+    real(RP), intent(in) :: U10       (IA,JA)
+    real(RP), intent(in) :: V10       (IA,JA)
+    real(RP), intent(in) :: T2        (IA,JA)
+    real(RP), intent(in) :: Q2        (IA,JA)
 
+    logical,  intent(in) :: countup
+
+    ! works
     integer :: i, j
     !---------------------------------------------------------------------------
 
     do j = JS, JE
     do i = IS, IE
-       SFC_TEMP  (i,j)   = CPL_Merged_SFC_TEMP  (i,j)
-    end do
-    end do
-    do j = JS, JE
-    do i = IS, IE
-       SFC_albedo(i,j,1) = CPL_Merged_SFC_albedo(i,j,1)
-       SFC_albedo(i,j,2) = CPL_Merged_SFC_albedo(i,j,2)
-    end do
-    end do
-    do j = JS, JE
-    do i = IS, IE
-       Z0M       (i,j)   = CPL_Merged_Z0M       (i,j)
-    end do
-    end do
-    do j = JS, JE
-    do i = IS, IE
-       Z0H       (i,j)   = CPL_Merged_Z0H       (i,j)
-    end do
-    end do
-    do j = JS, JE
-    do i = IS, IE
-       Z0E       (i,j)   = CPL_Merged_Z0E       (i,j)
-    end do
-    end do
-    do j = JS, JE
-    do i = IS, IE
-       U10       (i,j)   = CPL_Merged_U10       (i,j)
-    end do
-    end do
-    do j = JS, JE
-    do i = IS, IE
-       V10       (i,j)   = CPL_Merged_V10       (i,j)
-    end do
-    end do
-    do j = JS, JE
-    do i = IS, IE
-       T2        (i,j)   = CPL_Merged_T2        (i,j)
-    end do
-    end do
-    do j = JS, JE
-    do i = IS, IE
-       Q2        (i,j)   = CPL_Merged_Q2        (i,j)
-    end do
-    end do
-    do j = JS, JE
-    do i = IS, IE
-       FLX_heat  (i,j)   = CPL_Merged_FLX_heat  (i,j)
+       OCN_SFC_TEMP  (i,j)      = OCN_SFC_TEMP  (i,j)      * CNT_putOCN + SFC_TEMP  (i,j)
+       OCN_SFC_albedo(i,j,I_LW) = OCN_SFC_albedo(i,j,I_LW) * CNT_putOCN + SFC_albedo(i,j,I_LW)
+       OCN_SFC_albedo(i,j,I_SW) = OCN_SFC_albedo(i,j,I_SW) * CNT_putOCN + SFC_albedo(i,j,I_SW)
+       OCN_SFC_Z0M   (i,j)      = OCN_SFC_Z0M   (i,j)      * CNT_putOCN + SFC_Z0M   (i,j)
+       OCN_SFC_Z0H   (i,j)      = OCN_SFC_Z0H   (i,j)      * CNT_putOCN + SFC_Z0H   (i,j)
+       OCN_SFC_Z0E   (i,j)      = OCN_SFC_Z0E   (i,j)      * CNT_putOCN + SFC_Z0E   (i,j)
+       OCN_SFLX_MW   (i,j)      = OCN_SFLX_MW   (i,j)      * CNT_putOCN + SFLX_MW   (i,j)
+       OCN_SFLX_MU   (i,j)      = OCN_SFLX_MU   (i,j)      * CNT_putOCN + SFLX_MU   (i,j)
+       OCN_SFLX_MV   (i,j)      = OCN_SFLX_MV   (i,j)      * CNT_putOCN + SFLX_MV   (i,j)
+       OCN_SFLX_SH   (i,j)      = OCN_SFLX_SH   (i,j)      * CNT_putOCN + SFLX_SH   (i,j)
+       OCN_SFLX_LH   (i,j)      = OCN_SFLX_LH   (i,j)      * CNT_putOCN + SFLX_LH   (i,j)
+       OCN_SFLX_WH   (i,j)      = OCN_SFLX_WH   (i,j)      * CNT_putOCN + SFLX_WH   (i,j)
+       OCN_SFLX_evap (i,j)      = OCN_SFLX_evap (i,j)      * CNT_putOCN + SFLX_evap (i,j)
+       OCN_U10       (i,j)      = OCN_U10       (i,j)      * CNT_putOCN + U10       (i,j)
+       OCN_V10       (i,j)      = OCN_V10       (i,j)      * CNT_putOCN + V10       (i,j)
+       OCN_T2        (i,j)      = OCN_T2        (i,j)      * CNT_putOCN + T2        (i,j)
+       OCN_Q2        (i,j)      = OCN_Q2        (i,j)      * CNT_putOCN + Q2        (i,j)
     end do
     end do
 
     do j = JS, JE
     do i = IS, IE
-       Uabs10(i,j) = sqrt( CPL_Merged_U10(i,j)*CPL_Merged_U10(i,j) &
-                         + CPL_Merged_V10(i,j)*CPL_Merged_V10(i,j) )
+       OCN_SFC_TEMP  (i,j)      = OCN_SFC_TEMP  (i,j)      / ( CNT_putOCN + 1.0_RP )
+       OCN_SFC_albedo(i,j,I_LW) = OCN_SFC_albedo(i,j,I_LW) / ( CNT_putOCN + 1.0_RP )
+       OCN_SFC_albedo(i,j,I_SW) = OCN_SFC_albedo(i,j,I_SW) / ( CNT_putOCN + 1.0_RP )
+       OCN_SFC_Z0M   (i,j)      = OCN_SFC_Z0M   (i,j)      / ( CNT_putOCN + 1.0_RP )
+       OCN_SFC_Z0H   (i,j)      = OCN_SFC_Z0H   (i,j)      / ( CNT_putOCN + 1.0_RP )
+       OCN_SFC_Z0E   (i,j)      = OCN_SFC_Z0E   (i,j)      / ( CNT_putOCN + 1.0_RP )
+       OCN_SFLX_MW   (i,j)      = OCN_SFLX_MW   (i,j)      / ( CNT_putOCN + 1.0_RP )
+       OCN_SFLX_MU   (i,j)      = OCN_SFLX_MU   (i,j)      / ( CNT_putOCN + 1.0_RP )
+       OCN_SFLX_MV   (i,j)      = OCN_SFLX_MV   (i,j)      / ( CNT_putOCN + 1.0_RP )
+       OCN_SFLX_SH   (i,j)      = OCN_SFLX_SH   (i,j)      / ( CNT_putOCN + 1.0_RP )
+       OCN_SFLX_LH   (i,j)      = OCN_SFLX_LH   (i,j)      / ( CNT_putOCN + 1.0_RP )
+       OCN_SFLX_WH   (i,j)      = OCN_SFLX_WH   (i,j)      / ( CNT_putOCN + 1.0_RP )
+       OCN_SFLX_evap (i,j)      = OCN_SFLX_evap (i,j)      / ( CNT_putOCN + 1.0_RP )
+       OCN_U10       (i,j)      = OCN_U10       (i,j)      / ( CNT_putOCN + 1.0_RP )
+       OCN_V10       (i,j)      = OCN_V10       (i,j)      / ( CNT_putOCN + 1.0_RP )
+       OCN_T2        (i,j)      = OCN_T2        (i,j)      / ( CNT_putOCN + 1.0_RP )
+       OCN_Q2        (i,j)      = OCN_Q2        (i,j)      / ( CNT_putOCN + 1.0_RP )
     end do
     end do
+
+    if( countup ) then
+       CNT_putOCN = CNT_putOCN + 1.0_RP
+    end if
 
     return
-  end subroutine CPL_getAtm
+  end subroutine CPL_putOCN
 
   !-----------------------------------------------------------------------------
-  subroutine CPL_getAtm_SF( &
-       SFLX_MW,   &
-       SFLX_MU,   &
-       SFLX_MV,   &
-       SFLX_SH,   &
-       SFLX_LH,   &
-       SFLX_QTRC  )
-    implicit none
-
-    real(RP), intent(out) :: SFLX_MW  (IA,JA)
-    real(RP), intent(out) :: SFLX_MU  (IA,JA)
-    real(RP), intent(out) :: SFLX_MV  (IA,JA)
-    real(RP), intent(out) :: SFLX_SH  (IA,JA)
-    real(RP), intent(out) :: SFLX_LH  (IA,JA)
-    real(RP), intent(out) :: SFLX_QTRC(IA,JA,QA)
-
-    integer :: i, j, iq
-    !---------------------------------------------------------------------------
-
-    do j = JS, JE
-    do i = IS, IE
-       SFLX_MW  (i,j)   = CPL_Merged_FLX_MW(i,j)
-    end do
-    end do
-    do j = JS, JE
-    do i = IS, IE
-       SFLX_MU  (i,j)   = CPL_Merged_FLX_MU(i,j)
-    end do
-    end do
-    do j = JS, JE
-    do i = IS, IE
-       SFLX_MV  (i,j)   = CPL_Merged_FLX_MV(i,j)
-    end do
-    end do
-    do j = JS, JE
-    do i = IS, IE
-       SFLX_SH  (i,j)   = CPL_Merged_FLX_SH(i,j)
-    end do
-    end do
-    do j = JS, JE
-    do i = IS, IE
-       SFLX_LH  (i,j)   = CPL_Merged_FLX_LH(i,j)
-    end do
-    end do
-    do iq = 1, QA
-    do j = JS, JE
-    do i = IS, IE
-       SFLX_QTRC(i,j,iq) = 0.0_RP                 ! tentative
-    end do
-    end do
-    end do
-    do j = JS, JE
-    do i = IS, IE
-       SFLX_QTRC(i,j,1) = CPL_Merged_FLX_QV(i,j) ! tentative
-    end do
-    end do
-
-    CNT_getAtmLnd = 0.0_RP
-    CNT_getAtmUrb = 0.0_RP
-    CNT_getAtmOcn = 0.0_RP
-
-    return
-  end subroutine CPL_getAtm_SF
-
-  !-----------------------------------------------------------------------------
-  subroutine CPL_getOcn( &
-       OCN_FLX_heat,   & ! (out)
-       OCN_FLX_precip, & ! (out)
-       OCN_FLX_evap    ) ! (out)
-    implicit none
-
-    real(RP), intent(out) :: OCN_FLX_heat  (IA,JA)
-    real(RP), intent(out) :: OCN_FLX_precip(IA,JA)
-    real(RP), intent(out) :: OCN_FLX_evap  (IA,JA)
-
-    integer :: i, j
-!---------------------------------------------------------------------------
-
-    do j = JS, JE
-    do i = IS, IE
-       OCN_FLX_heat  (i,j) = CPL_AtmOcn_OCN_FLX_heat  (i,j)
-    end do
-    end do
-    do j = JS, JE
-    do i = IS, IE
-       OCN_FLX_precip(i,j) = CPL_AtmOcn_OCN_FLX_precip(i,j)
-    end do
-    end do
-    do j = JS, JE
-    do i = IS, IE
-       OCN_FLX_evap  (i,j) = CPL_AtmOcn_OCN_FLX_evap  (i,j)
-    end do
-    end do
-
-    CNT_getOcn = 0.0_RP
-
-    return
-  end subroutine CPL_getOcn
-
-  !-----------------------------------------------------------------------------
-  subroutine CPL_getLnd( &
-      LND_FLX_heat,   & ! (out)
-      LND_FLX_precip, & ! (out)
-      LND_FLX_evap    ) ! (out)
-    implicit none
-
-    real(RP), intent(out) :: LND_FLX_heat  (IA,JA)
-    real(RP), intent(out) :: LND_FLX_precip(IA,JA)
-    real(RP), intent(out) :: LND_FLX_evap  (IA,JA)
-
-    integer :: i, j
-    !---------------------------------------------------------------------------
-
-    do j = JS, JE
-    do i = IS, IE
-       LND_FLX_heat  (i,j) = CPL_AtmLnd_LND_FLX_heat  (i,j)
-    end do
-    end do
-    do j = JS, JE
-    do i = IS, IE
-       LND_FLX_precip(i,j) = CPL_AtmLnd_LND_FLX_precip(i,j)
-    end do
-    end do
-    do j = JS, JE
-    do i = IS, IE
-       LND_FLX_evap  (i,j) = CPL_AtmLnd_LND_FLX_evap  (i,j)
-    end do
-    end do
-
-    CNT_getLnd = 0.0_RP
-
-    return
-  end subroutine CPL_getLnd
-
-  !-----------------------------------------------------------------------------
-  subroutine CPL_getUrb( &
-      URB_FLX_heat,   & ! (out)
-      URB_FLX_precip, & ! (out)
-      URB_FLX_evap    ) ! (out)
-    implicit none
-
-    real(RP), intent(out) :: URB_FLX_heat  (IA,JA)
-    real(RP), intent(out) :: URB_FLX_precip(IA,JA)
-    real(RP), intent(out) :: URB_FLX_evap  (IA,JA)
-
-    integer :: i, j
-    !---------------------------------------------------------------------------
-
-    do j = JS, JE
-    do i = IS, IE
-       URB_FLX_heat  (i,j) = CPL_AtmUrb_URB_FLX_heat  (i,j)
-    end do
-    end do
-    do j = JS, JE
-    do i = IS, IE
-       URB_FLX_precip(i,j) = CPL_AtmUrb_URB_FLX_precip(i,j)
-    end do
-    end do
-    do j = JS, JE
-    do i = IS, IE
-       URB_FLX_evap  (i,j) = CPL_AtmUrb_URB_FLX_evap  (i,j)
-    end do
-    end do
-
-    CNT_getUrb = 0.0_RP
-
-    return
-  end subroutine CPL_getUrb
-
-  !-----------------------------------------------------------------------------
-  subroutine CPL_getOcn_restart( &
+  subroutine CPL_putLND( &
        SFC_TEMP,   &
        SFC_albedo, &
        SFC_Z0M,    &
        SFC_Z0H,    &
-       SFC_Z0E     )
+       SFC_Z0E,    &
+       SFLX_MW,    &
+       SFLX_MU,    &
+       SFLX_MV,    &
+       SFLX_SH,    &
+       SFLX_LH,    &
+       SFLX_GH,    &
+       SFLX_evap,  &
+       U10,        &
+       V10,        &
+       T2,         &
+       Q2,         &
+       countup     )
+    implicit none
+
+    ! arguments
+    real(RP), intent(in) :: SFC_TEMP  (IA,JA)
+    real(RP), intent(in) :: SFC_albedo(IA,JA,2)
+    real(RP), intent(in) :: SFC_Z0M   (IA,JA)
+    real(RP), intent(in) :: SFC_Z0H   (IA,JA)
+    real(RP), intent(in) :: SFC_Z0E   (IA,JA)
+    real(RP), intent(in) :: SFLX_MW   (IA,JA)
+    real(RP), intent(in) :: SFLX_MU   (IA,JA)
+    real(RP), intent(in) :: SFLX_MV   (IA,JA)
+    real(RP), intent(in) :: SFLX_SH   (IA,JA)
+    real(RP), intent(in) :: SFLX_LH   (IA,JA)
+    real(RP), intent(in) :: SFLX_GH   (IA,JA)
+    real(RP), intent(in) :: SFLX_evap (IA,JA)
+    real(RP), intent(in) :: U10       (IA,JA)
+    real(RP), intent(in) :: V10       (IA,JA)
+    real(RP), intent(in) :: T2        (IA,JA)
+    real(RP), intent(in) :: Q2        (IA,JA)
+
+    logical,  intent(in) :: countup
+
+    ! works
+    integer :: i, j
+    !---------------------------------------------------------------------------
+
+    do j = JS, JE
+    do i = IS, IE
+       LND_SFC_TEMP  (i,j)      = LND_SFC_TEMP  (i,j)      * CNT_putLND + SFC_TEMP  (i,j)
+       LND_SFC_albedo(i,j,I_LW) = LND_SFC_albedo(i,j,I_LW) * CNT_putLND + SFC_albedo(i,j,I_LW)
+       LND_SFC_albedo(i,j,I_SW) = LND_SFC_albedo(i,j,I_SW) * CNT_putLND + SFC_albedo(i,j,I_SW)
+       LND_SFC_Z0M   (i,j)      = LND_SFC_Z0M   (i,j)      * CNT_putLND + SFC_Z0M   (i,j)
+       LND_SFC_Z0H   (i,j)      = LND_SFC_Z0H   (i,j)      * CNT_putLND + SFC_Z0H   (i,j)
+       LND_SFC_Z0E   (i,j)      = LND_SFC_Z0E   (i,j)      * CNT_putLND + SFC_Z0E   (i,j)
+       LND_SFLX_MW   (i,j)      = LND_SFLX_MW   (i,j)      * CNT_putLND + SFLX_MW   (i,j)
+       LND_SFLX_MU   (i,j)      = LND_SFLX_MU   (i,j)      * CNT_putLND + SFLX_MU   (i,j)
+       LND_SFLX_MV   (i,j)      = LND_SFLX_MV   (i,j)      * CNT_putLND + SFLX_MV   (i,j)
+       LND_SFLX_SH   (i,j)      = LND_SFLX_SH   (i,j)      * CNT_putLND + SFLX_SH   (i,j)
+       LND_SFLX_LH   (i,j)      = LND_SFLX_LH   (i,j)      * CNT_putLND + SFLX_LH   (i,j)
+       LND_SFLX_GH   (i,j)      = LND_SFLX_GH   (i,j)      * CNT_putLND + SFLX_GH   (i,j)
+       LND_SFLX_evap (i,j)      = LND_SFLX_evap (i,j)      * CNT_putLND + SFLX_evap (i,j)
+       LND_U10       (i,j)      = LND_U10       (i,j)      * CNT_putLND + U10       (i,j)
+       LND_V10       (i,j)      = LND_V10       (i,j)      * CNT_putLND + V10       (i,j)
+       LND_T2        (i,j)      = LND_T2        (i,j)      * CNT_putLND + T2        (i,j)
+       LND_Q2        (i,j)      = LND_Q2        (i,j)      * CNT_putLND + Q2        (i,j)
+    end do
+    end do
+
+    do j = JS, JE
+    do i = IS, IE
+       LND_SFC_TEMP  (i,j)      = LND_SFC_TEMP  (i,j)      / ( CNT_putLND + 1.0_RP )
+       LND_SFC_albedo(i,j,I_LW) = LND_SFC_albedo(i,j,I_LW) / ( CNT_putLND + 1.0_RP )
+       LND_SFC_albedo(i,j,I_SW) = LND_SFC_albedo(i,j,I_SW) / ( CNT_putLND + 1.0_RP )
+       LND_SFC_Z0M   (i,j)      = LND_SFC_Z0M   (i,j)      / ( CNT_putLND + 1.0_RP )
+       LND_SFC_Z0H   (i,j)      = LND_SFC_Z0H   (i,j)      / ( CNT_putLND + 1.0_RP )
+       LND_SFC_Z0E   (i,j)      = LND_SFC_Z0E   (i,j)      / ( CNT_putLND + 1.0_RP )
+       LND_SFLX_MW   (i,j)      = LND_SFLX_MW   (i,j)      / ( CNT_putLND + 1.0_RP )
+       LND_SFLX_MU   (i,j)      = LND_SFLX_MU   (i,j)      / ( CNT_putLND + 1.0_RP )
+       LND_SFLX_MV   (i,j)      = LND_SFLX_MV   (i,j)      / ( CNT_putLND + 1.0_RP )
+       LND_SFLX_SH   (i,j)      = LND_SFLX_SH   (i,j)      / ( CNT_putLND + 1.0_RP )
+       LND_SFLX_LH   (i,j)      = LND_SFLX_LH   (i,j)      / ( CNT_putLND + 1.0_RP )
+       LND_SFLX_GH   (i,j)      = LND_SFLX_GH   (i,j)      / ( CNT_putLND + 1.0_RP )
+       LND_SFLX_evap (i,j)      = LND_SFLX_evap (i,j)      / ( CNT_putLND + 1.0_RP )
+       LND_U10       (i,j)      = LND_U10       (i,j)      / ( CNT_putLND + 1.0_RP )
+       LND_V10       (i,j)      = LND_V10       (i,j)      / ( CNT_putLND + 1.0_RP )
+       LND_T2        (i,j)      = LND_T2        (i,j)      / ( CNT_putLND + 1.0_RP )
+       LND_Q2        (i,j)      = LND_Q2        (i,j)      / ( CNT_putLND + 1.0_RP )
+    end do
+    end do
+
+    if( countup ) then
+       CNT_putLND = CNT_putLND + 1.0_RP
+    end if
+
+    return
+  end subroutine CPL_putLND
+
+  !-----------------------------------------------------------------------------
+  subroutine CPL_putURB( &
+       SFC_TEMP,   &
+       SFC_albedo, &
+       SFC_Z0M,    &
+       SFC_Z0H,    &
+       SFC_Z0E,    &
+       SFLX_MW,    &
+       SFLX_MU,    &
+       SFLX_MV,    &
+       SFLX_SH,    &
+       SFLX_LH,    &
+       SFLX_GH,    &
+       SFLX_evap,  &
+       U10,        &
+       V10,        &
+       T2,         &
+       Q2,         &
+       countup     )
+    implicit none
+
+    ! arguments
+    real(RP), intent(in) :: SFC_TEMP  (IA,JA)
+    real(RP), intent(in) :: SFC_albedo(IA,JA,2)
+    real(RP), intent(in) :: SFC_Z0M   (IA,JA)
+    real(RP), intent(in) :: SFC_Z0H   (IA,JA)
+    real(RP), intent(in) :: SFC_Z0E   (IA,JA)
+    real(RP), intent(in) :: SFLX_MW   (IA,JA)
+    real(RP), intent(in) :: SFLX_MU   (IA,JA)
+    real(RP), intent(in) :: SFLX_MV   (IA,JA)
+    real(RP), intent(in) :: SFLX_SH   (IA,JA)
+    real(RP), intent(in) :: SFLX_LH   (IA,JA)
+    real(RP), intent(in) :: SFLX_GH   (IA,JA)
+    real(RP), intent(in) :: SFLX_evap (IA,JA)
+    real(RP), intent(in) :: U10       (IA,JA)
+    real(RP), intent(in) :: V10       (IA,JA)
+    real(RP), intent(in) :: T2        (IA,JA)
+    real(RP), intent(in) :: Q2        (IA,JA)
+
+    logical,  intent(in) :: countup
+
+    ! works
+    integer :: i, j
+    !---------------------------------------------------------------------------
+
+    do j = JS, JE
+    do i = IS, IE
+       URB_SFC_TEMP  (i,j)      = URB_SFC_TEMP  (i,j)      * CNT_putURB + SFC_TEMP  (i,j)
+       URB_SFC_albedo(i,j,I_LW) = URB_SFC_albedo(i,j,I_LW) * CNT_putURB + SFC_albedo(i,j,I_LW)
+       URB_SFC_albedo(i,j,I_SW) = URB_SFC_albedo(i,j,I_SW) * CNT_putURB + SFC_albedo(i,j,I_SW)
+       URB_SFC_Z0M   (i,j)      = URB_SFC_Z0M   (i,j)      * CNT_putURB + SFC_Z0M   (i,j)
+       URB_SFC_Z0H   (i,j)      = URB_SFC_Z0H   (i,j)      * CNT_putURB + SFC_Z0H   (i,j)
+       URB_SFC_Z0E   (i,j)      = URB_SFC_Z0E   (i,j)      * CNT_putURB + SFC_Z0E   (i,j)
+       URB_SFLX_MW   (i,j)      = URB_SFLX_MW   (i,j)      * CNT_putURB + SFLX_MW   (i,j)
+       URB_SFLX_MU   (i,j)      = URB_SFLX_MU   (i,j)      * CNT_putURB + SFLX_MU   (i,j)
+       URB_SFLX_MV   (i,j)      = URB_SFLX_MV   (i,j)      * CNT_putURB + SFLX_MV   (i,j)
+       URB_SFLX_SH   (i,j)      = URB_SFLX_SH   (i,j)      * CNT_putURB + SFLX_SH   (i,j)
+       URB_SFLX_LH   (i,j)      = URB_SFLX_LH   (i,j)      * CNT_putURB + SFLX_LH   (i,j)
+       URB_SFLX_GH   (i,j)      = URB_SFLX_GH   (i,j)      * CNT_putURB + SFLX_GH   (i,j)
+       URB_SFLX_evap (i,j)      = URB_SFLX_evap (i,j)      * CNT_putURB + SFLX_evap (i,j)
+       URB_U10       (i,j)      = URB_U10       (i,j)      * CNT_putURB + U10       (i,j)
+       URB_V10       (i,j)      = URB_V10       (i,j)      * CNT_putURB + V10       (i,j)
+       URB_T2        (i,j)      = URB_T2        (i,j)      * CNT_putURB + T2        (i,j)
+       URB_Q2        (i,j)      = URB_Q2        (i,j)      * CNT_putURB + Q2        (i,j)
+    end do
+    end do
+
+    do j = JS, JE
+    do i = IS, IE
+       URB_SFC_TEMP  (i,j)      = URB_SFC_TEMP  (i,j)      / ( CNT_putURB + 1.0_RP )
+       URB_SFC_albedo(i,j,I_LW) = URB_SFC_albedo(i,j,I_LW) / ( CNT_putURB + 1.0_RP )
+       URB_SFC_albedo(i,j,I_SW) = URB_SFC_albedo(i,j,I_SW) / ( CNT_putURB + 1.0_RP )
+       URB_SFC_Z0M   (i,j)      = URB_SFC_Z0M   (i,j)      / ( CNT_putURB + 1.0_RP )
+       URB_SFC_Z0H   (i,j)      = URB_SFC_Z0H   (i,j)      / ( CNT_putURB + 1.0_RP )
+       URB_SFC_Z0E   (i,j)      = URB_SFC_Z0E   (i,j)      / ( CNT_putURB + 1.0_RP )
+       URB_SFLX_MW   (i,j)      = URB_SFLX_MW   (i,j)      / ( CNT_putURB + 1.0_RP )
+       URB_SFLX_MU   (i,j)      = URB_SFLX_MU   (i,j)      / ( CNT_putURB + 1.0_RP )
+       URB_SFLX_MV   (i,j)      = URB_SFLX_MV   (i,j)      / ( CNT_putURB + 1.0_RP )
+       URB_SFLX_SH   (i,j)      = URB_SFLX_SH   (i,j)      / ( CNT_putURB + 1.0_RP )
+       URB_SFLX_LH   (i,j)      = URB_SFLX_LH   (i,j)      / ( CNT_putURB + 1.0_RP )
+       URB_SFLX_GH   (i,j)      = URB_SFLX_GH   (i,j)      / ( CNT_putURB + 1.0_RP )
+       URB_SFLX_evap (i,j)      = URB_SFLX_evap (i,j)      / ( CNT_putURB + 1.0_RP )
+       URB_U10       (i,j)      = URB_U10       (i,j)      / ( CNT_putURB + 1.0_RP )
+       URB_V10       (i,j)      = URB_V10       (i,j)      / ( CNT_putURB + 1.0_RP )
+       URB_T2        (i,j)      = URB_T2        (i,j)      / ( CNT_putURB + 1.0_RP )
+       URB_Q2        (i,j)      = URB_Q2        (i,j)      / ( CNT_putURB + 1.0_RP )
+    end do
+    end do
+
+    if( countup ) then
+       CNT_putURB = CNT_putURB + 1.0_RP
+    end if
+
+    return
+  end subroutine CPL_putURB
+
+  !-----------------------------------------------------------------------------
+  subroutine CPL_getSFC_ATM( &
+       SFC_TEMP,   &
+       SFC_albedo, &
+       SFC_Z0M,    &
+       SFC_Z0H,    &
+       SFC_Z0E,    &
+       SFLX_MW,    &
+       SFLX_MU,    &
+       SFLX_MV,    &
+       SFLX_SH,    &
+       SFLX_LH,    &
+       SFLX_GH,    &
+       SFLX_QTRC,  &
+       U10,        &
+       V10,        &
+       T2,         &
+       Q2          )
+    use scale_landuse, only: &
+       fact_ocean => LANDUSE_fact_ocean, &
+       fact_land  => LANDUSE_fact_land,  &
+       fact_urban => LANDUSE_fact_urban
     implicit none
 
     real(RP), intent(out) :: SFC_TEMP  (IA,JA)
@@ -1172,92 +812,264 @@ contains
     real(RP), intent(out) :: SFC_Z0M   (IA,JA)
     real(RP), intent(out) :: SFC_Z0H   (IA,JA)
     real(RP), intent(out) :: SFC_Z0E   (IA,JA)
+    real(RP), intent(out) :: SFLX_MW   (IA,JA)
+    real(RP), intent(out) :: SFLX_MU   (IA,JA)
+    real(RP), intent(out) :: SFLX_MV   (IA,JA)
+    real(RP), intent(out) :: SFLX_SH   (IA,JA)
+    real(RP), intent(out) :: SFLX_LH   (IA,JA)
+    real(RP), intent(out) :: SFLX_GH   (IA,JA)
+    real(RP), intent(out) :: SFLX_QTRC (IA,JA,QA)
+    real(RP), intent(out) :: U10       (IA,JA)
+    real(RP), intent(out) :: V10       (IA,JA)
+    real(RP), intent(out) :: T2        (IA,JA)
+    real(RP), intent(out) :: Q2        (IA,JA)
 
-    integer :: i, j
+    integer :: i, j, iq
     !---------------------------------------------------------------------------
 
     do j = JS, JE
     do i = IS, IE
-       SFC_TEMP  (i,j)   = CPL_fromOcn_SFC_TEMP  (i,j)
-    end do
-    end do
-    do j = JS, JE
-    do i = IS, IE
-       SFC_albedo(i,j,1) = CPL_fromOcn_SFC_albedo(i,j,1)
-       SFC_albedo(i,j,2) = CPL_fromOcn_SFC_albedo(i,j,2)
-    end do
-    end do
-    do j = JS, JE
-    do i = IS, IE
-       SFC_Z0M   (i,j)   = CPL_fromOcn_SFC_Z0M   (i,j)
-    end do
-    end do
-    do j = JS, JE
-    do i = IS, IE
-       SFC_Z0H   (i,j)   = CPL_fromOcn_SFC_Z0H   (i,j)
-    end do
-    end do
-    do j = JS, JE
-    do i = IS, IE
-       SFC_Z0E   (i,j)   = CPL_fromOcn_SFC_Z0E   (i,j)
+       do iq = 1, QA
+          SFLX_QTRC(i,j,iq) = 0.0_RP ! tentative
+       end do
+
+       SFC_TEMP  (i,j)      = fact_ocean(i,j) * OCN_SFC_TEMP  (i,j) &
+                            + fact_land (i,j) * LND_SFC_TEMP  (i,j) &
+                            + fact_urban(i,j) * URB_SFC_TEMP  (i,j)
+
+       SFC_albedo(i,j,I_LW) = fact_ocean(i,j) * OCN_SFC_albedo(i,j,I_LW) &
+                            + fact_land (i,j) * LND_SFC_albedo(i,j,I_LW) &
+                            + fact_urban(i,j) * URB_SFC_albedo(i,j,I_LW)
+
+       SFC_albedo(i,j,I_SW) = fact_ocean(i,j) * OCN_SFC_albedo(i,j,I_SW) &
+                            + fact_land (i,j) * LND_SFC_albedo(i,j,I_SW) &
+                            + fact_urban(i,j) * URB_SFC_albedo(i,j,I_SW)
+
+       SFC_Z0M   (i,j)      = fact_ocean(i,j) * OCN_SFC_Z0M   (i,j) &
+                            + fact_land (i,j) * LND_SFC_Z0M   (i,j) &
+                            + fact_urban(i,j) * URB_SFC_Z0M   (i,j)
+
+       SFC_Z0H   (i,j)      = fact_ocean(i,j) * OCN_SFC_Z0H   (i,j) &
+                            + fact_land (i,j) * LND_SFC_Z0H   (i,j) &
+                            + fact_urban(i,j) * URB_SFC_Z0H   (i,j)
+
+       SFC_Z0E   (i,j)      = fact_ocean(i,j) * OCN_SFC_Z0E   (i,j) &
+                            + fact_land (i,j) * LND_SFC_Z0E   (i,j) &
+                            + fact_urban(i,j) * URB_SFC_Z0E   (i,j)
+
+       SFLX_MW   (i,j)      = fact_ocean(i,j) * OCN_SFLX_MW   (i,j) &
+                            + fact_land (i,j) * LND_SFLX_MW   (i,j) &
+                            + fact_urban(i,j) * URB_SFLX_MW   (i,j)
+
+       SFLX_MU   (i,j)      = fact_ocean(i,j) * OCN_SFLX_MU   (i,j) &
+                            + fact_land (i,j) * LND_SFLX_MU   (i,j) &
+                            + fact_urban(i,j) * URB_SFLX_MU   (i,j)
+
+       SFLX_MV   (i,j)      = fact_ocean(i,j) * OCN_SFLX_MV   (i,j) &
+                            + fact_land (i,j) * LND_SFLX_MV   (i,j) &
+                            + fact_urban(i,j) * URB_SFLX_MV   (i,j)
+
+       SFLX_SH   (i,j)      = fact_ocean(i,j) * OCN_SFLX_SH   (i,j) &
+                            + fact_land (i,j) * LND_SFLX_SH   (i,j) &
+                            + fact_urban(i,j) * URB_SFLX_SH   (i,j)
+
+       SFLX_LH   (i,j)      = fact_ocean(i,j) * OCN_SFLX_LH   (i,j) &
+                            + fact_land (i,j) * LND_SFLX_LH   (i,j) &
+                            + fact_urban(i,j) * URB_SFLX_LH   (i,j)
+
+       SFLX_GH   (i,j)      = fact_ocean(i,j) * OCN_SFLX_WH   (i,j) &
+                            + fact_land (i,j) * LND_SFLX_GH   (i,j) &
+                            + fact_urban(i,j) * URB_SFLX_GH   (i,j)
+
+       SFLX_QTRC (i,j,I_QV) = fact_ocean(i,j) * OCN_SFLX_evap (i,j) &
+                            + fact_land (i,j) * LND_SFLX_evap (i,j) &
+                            + fact_urban(i,j) * URB_SFLX_evap (i,j)
+
+       U10       (i,j)      = fact_ocean(i,j) * OCN_U10       (i,j) &
+                            + fact_land (i,j) * LND_U10       (i,j) &
+                            + fact_urban(i,j) * URB_U10       (i,j)
+
+       V10       (i,j)      = fact_ocean(i,j) * OCN_V10       (i,j) &
+                            + fact_land (i,j) * LND_V10       (i,j) &
+                            + fact_urban(i,j) * URB_V10       (i,j)
+
+       T2        (i,j)      = fact_ocean(i,j) * OCN_T2        (i,j) &
+                            + fact_land (i,j) * LND_T2        (i,j) &
+                            + fact_urban(i,j) * URB_T2        (i,j)
+
+       Q2        (i,j)      = fact_ocean(i,j) * OCN_Q2        (i,j) &
+                            + fact_land (i,j) * LND_Q2        (i,j) &
+                            + fact_urban(i,j) * URB_Q2        (i,j)
     end do
     end do
 
+    CNT_putOCN = 0.0_RP
+    CNT_putLND = 0.0_RP
+    CNT_putURB = 0.0_RP
+
     return
-  end subroutine CPL_getOcn_restart
+  end subroutine CPL_getSFC_ATM
 
   !-----------------------------------------------------------------------------
-  subroutine CPL_getLnd_restart( &
-       SFC_TEMP,   &
-       SFC_albedo  )
+  subroutine CPL_getATM_OCN( &
+       TEMP,       &
+       PRES,       &
+       W,          &
+       U,          &
+       V,          &
+       DENS,       &
+       QV,         &
+       PBL,        &
+       SFC_PRES,   &
+       SFLX_LW,    &
+       SFLX_SW,    &
+       SFLX_prec   )
     implicit none
 
-    real(RP), intent(out) :: SFC_TEMP  (IA,JA)
-    real(RP), intent(out) :: SFC_albedo(IA,JA,2)
+    real(RP), intent(out) :: TEMP     (IA,JA)
+    real(RP), intent(out) :: PRES     (IA,JA)
+    real(RP), intent(out) :: W        (IA,JA)
+    real(RP), intent(out) :: U        (IA,JA)
+    real(RP), intent(out) :: V        (IA,JA)
+    real(RP), intent(out) :: DENS     (IA,JA)
+    real(RP), intent(out) :: QV       (IA,JA)
+    real(RP), intent(out) :: PBL      (IA,JA)
+    real(RP), intent(out) :: SFC_PRES (IA,JA)
+    real(RP), intent(out) :: SFLX_LW  (IA,JA)
+    real(RP), intent(out) :: SFLX_SW  (IA,JA)
+    real(RP), intent(out) :: SFLX_prec(IA,JA)
 
     integer :: i, j
     !---------------------------------------------------------------------------
 
     do j = JS, JE
-    do i = IS, JE
-       SFC_TEMP  (i,j)   = CPL_fromLnd_SFC_TEMP  (i,j)
-    end do
-    end do
-    do j = JS, JE
-    do i = IS, JE
-       SFC_albedo(i,j,1) = CPL_fromLnd_SFC_albedo(i,j,1)
-       SFC_albedo(i,j,2) = CPL_fromLnd_SFC_albedo(i,j,2)
+    do i = IS, IE
+       TEMP     (i,j) = OCN_ATM_TEMP     (i,j)
+       PRES     (i,j) = OCN_ATM_PRES     (i,j)
+       W        (i,j) = OCN_ATM_W        (i,j)
+       U        (i,j) = OCN_ATM_U        (i,j)
+       V        (i,j) = OCN_ATM_V        (i,j)
+       DENS     (i,j) = OCN_ATM_DENS     (i,j)
+       QV       (i,j) = OCN_ATM_QV       (i,j)
+       PBL      (i,j) = OCN_ATM_PBL      (i,j)
+       SFC_PRES (i,j) = OCN_ATM_SFC_PRES (i,j)
+       SFLX_LW  (i,j) = OCN_ATM_SFLX_LW  (i,j)
+       SFLX_SW  (i,j) = OCN_ATM_SFLX_SW  (i,j)
+       SFLX_prec(i,j) = OCN_ATM_SFLX_prec(i,j)
     end do
     end do
 
+    CNT_putATM_OCN = 0.0_RP
+
     return
-  end subroutine CPL_getLnd_restart
+  end subroutine CPL_getATM_OCN
 
   !-----------------------------------------------------------------------------
-  subroutine CPL_getUrb_restart( &
-       SFC_TEMP,  &
-       SFC_albedo )
+  subroutine CPL_getATM_LND( &
+       TEMP,       &
+       PRES,       &
+       W,          &
+       U,          &
+       V,          &
+       DENS,       &
+       QV,         &
+       PBL,        &
+       SFC_PRES,   &
+       SFLX_LW,    &
+       SFLX_SW,    &
+       SFLX_prec   )
     implicit none
 
-    real(RP), intent(out) :: SFC_TEMP  (IA,JA)
-    real(RP), intent(out) :: SFC_albedo(IA,JA,2)
+    real(RP), intent(out) :: TEMP     (IA,JA)
+    real(RP), intent(out) :: PRES     (IA,JA)
+    real(RP), intent(out) :: W        (IA,JA)
+    real(RP), intent(out) :: U        (IA,JA)
+    real(RP), intent(out) :: V        (IA,JA)
+    real(RP), intent(out) :: DENS     (IA,JA)
+    real(RP), intent(out) :: QV       (IA,JA)
+    real(RP), intent(out) :: PBL      (IA,JA)
+    real(RP), intent(out) :: SFC_PRES (IA,JA)
+    real(RP), intent(out) :: SFLX_LW  (IA,JA)
+    real(RP), intent(out) :: SFLX_SW  (IA,JA)
+    real(RP), intent(out) :: SFLX_prec(IA,JA)
 
     integer :: i, j
     !---------------------------------------------------------------------------
 
     do j = JS, JE
-    do i = IS, JE
-       SFC_TEMP  (i,j)   = CPL_fromUrb_SFC_TEMP  (i,j)
+    do i = IS, IE
+       TEMP     (i,j) = LND_ATM_TEMP     (i,j)
+       PRES     (i,j) = LND_ATM_PRES     (i,j)
+       W        (i,j) = LND_ATM_W        (i,j)
+       U        (i,j) = LND_ATM_U        (i,j)
+       V        (i,j) = LND_ATM_V        (i,j)
+       DENS     (i,j) = LND_ATM_DENS     (i,j)
+       QV       (i,j) = LND_ATM_QV       (i,j)
+       PBL      (i,j) = LND_ATM_PBL      (i,j)
+       SFC_PRES (i,j) = LND_ATM_SFC_PRES (i,j)
+       SFLX_LW  (i,j) = LND_ATM_SFLX_LW  (i,j)
+       SFLX_SW  (i,j) = LND_ATM_SFLX_SW  (i,j)
+       SFLX_prec(i,j) = LND_ATM_SFLX_prec(i,j)
     end do
     end do
-    do j = JS, JE
-    do i = IS, JE
-       SFC_albedo(i,j,1) = CPL_fromUrb_SFC_albedo(i,j,1)
-       SFC_albedo(i,j,2) = CPL_fromUrb_SFC_albedo(i,j,2)
-    end do
-    end do
+
+    CNT_putATM_LND = 0.0_RP
 
     return
-  end subroutine CPL_getUrb_restart
+  end subroutine CPL_getATM_LND
 
-end module mod_CPL_vars
+  !-----------------------------------------------------------------------------
+  subroutine CPL_getATM_URB( &
+       TEMP,       &
+       PRES,       &
+       W,          &
+       U,          &
+       V,          &
+       DENS,       &
+       QV,         &
+       PBL,        &
+       SFC_PRES,   &
+       SFLX_LW,    &
+       SFLX_SW,    &
+       SFLX_prec   )
+    implicit none
+
+    real(RP), intent(out) :: TEMP     (IA,JA)
+    real(RP), intent(out) :: PRES     (IA,JA)
+    real(RP), intent(out) :: W        (IA,JA)
+    real(RP), intent(out) :: U        (IA,JA)
+    real(RP), intent(out) :: V        (IA,JA)
+    real(RP), intent(out) :: DENS     (IA,JA)
+    real(RP), intent(out) :: QV       (IA,JA)
+    real(RP), intent(out) :: PBL      (IA,JA)
+    real(RP), intent(out) :: SFC_PRES (IA,JA)
+    real(RP), intent(out) :: SFLX_LW  (IA,JA)
+    real(RP), intent(out) :: SFLX_SW  (IA,JA)
+    real(RP), intent(out) :: SFLX_prec(IA,JA)
+
+    integer :: i, j
+    !---------------------------------------------------------------------------
+
+    do j = JS, JE
+    do i = IS, IE
+       TEMP     (i,j) = URB_ATM_TEMP     (i,j)
+       PRES     (i,j) = URB_ATM_PRES     (i,j)
+       W        (i,j) = URB_ATM_W        (i,j)
+       U        (i,j) = URB_ATM_U        (i,j)
+       V        (i,j) = URB_ATM_V        (i,j)
+       DENS     (i,j) = URB_ATM_DENS     (i,j)
+       QV       (i,j) = URB_ATM_QV       (i,j)
+       PBL      (i,j) = URB_ATM_PBL      (i,j)
+       SFC_PRES (i,j) = URB_ATM_SFC_PRES (i,j)
+       SFLX_LW  (i,j) = URB_ATM_SFLX_LW  (i,j)
+       SFLX_SW  (i,j) = URB_ATM_SFLX_SW  (i,j)
+       SFLX_prec(i,j) = URB_ATM_SFLX_prec(i,j)
+    end do
+    end do
+
+    CNT_putATM_URB = 0.0_RP
+
+    return
+  end subroutine CPL_getATM_URB
+
+end module mod_cpl_vars

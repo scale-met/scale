@@ -191,7 +191,6 @@ contains
     real(RP) :: QI3D      (IA,KA,JA)
     real(RP) :: QS3D      (IA,KA,JA)
     real(RP) :: QG3D      (IA,KA,JA)
-    real(RP) :: fact1, fact2
     real(RP) :: flux_rad_org(KA,IA,JA,2,2)
 
     real(RP) :: total ! dummy

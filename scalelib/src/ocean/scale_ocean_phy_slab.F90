@@ -25,8 +25,8 @@ module scale_ocean_phy_slab
   !
   !++ Public procedure
   !
-  public :: OCEAN_PHY_slab_setup
-  public :: OCEAN_PHY_slab
+  public :: OCEAN_PHY_SLAB_setup
+  public :: OCEAN_PHY_SLAB
 
   !-----------------------------------------------------------------------------
   !
@@ -42,14 +42,13 @@ module scale_ocean_phy_slab
   !
   real(RP), private :: OCEAN_PHY_SLAB_DEPTH    = 10.0_RP !< water depth of slab ocean [m]
   logical,  private :: OCEAN_PHY_SLAB_fixedSST = .false. !< Prevent SST change?
-
   real(RP), private :: OCEAN_PHY_SLAB_HeatCapacity       !< heat capacity of slab ocean [J/K/m2]
 
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
   !> Setup
-  subroutine OCEAN_PHY_slab_setup( OCEAN_TYPE )
+  subroutine OCEAN_PHY_SLAB_setup( OCEAN_TYPE )
     use scale_process, only: &
        PRC_MPIstop
     use scale_const, only: &
@@ -59,31 +58,34 @@ contains
 
     character(len=*), intent(in) :: OCEAN_TYPE
 
-    NAMELIST / PARAM_OCEAN_SLAB / &
-       OCEAN_PHY_SLAB_DEPTH,   &
-       OCEAN_PHY_SLAB_fixedSST
+    NAMELIST / PARAM_OCEAN_PHY_SLAB / &
+       OCEAN_PHY_SLAB_DEPTH
 
     integer :: ierr
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[SLAB] / Categ[OCEAN PHY] / Origin[SCALE-LES]'
-
-    if ( OCEAN_TYPE /= 'SLAB' ) then
-       write(*,*) 'xxx OCEAN_TYPE is not SLAB. Check!'
-       call PRC_MPIstop
-    endif
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[SLAB] / Categ[OCEAN PHY] / Origin[SCALElib]'
 
     !--- read namelist
     rewind(IO_FID_CONF)
-    read(IO_FID_CONF,nml=PARAM_OCEAN_SLAB,iostat=ierr)
+    read(IO_FID_CONF,nml=PARAM_OCEAN_PHY_SLAB,iostat=ierr)
     if( ierr < 0 ) then !--- missing
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_OCEAN_SLAB. Check!'
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_OCEAN_PHY_SLAB. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_OCEAN_SLAB)
+    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_OCEAN_PHY_SLAB)
+
+    if( OCEAN_TYPE == 'CONST' ) then
+       OCEAN_PHY_SLAB_fixedSST = .true.
+    else if( OCEAN_TYPE == 'SLAB' ) then
+       OCEAN_PHY_SLAB_fixedSST = .false.
+    else
+       write(*,*) 'xxx wrong OCEAN_TYPE. Check!'
+       call PRC_MPIstop
+    end if
 
     OCEAN_PHY_SLAB_HeatCapacity = DWATR * CL * OCEAN_PHY_SLAB_DEPTH
 
@@ -93,24 +95,26 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '*** Ocean heat capacity [J/K/m2] : ', OCEAN_PHY_SLAB_HeatCapacity
 
     return
-  end subroutine OCEAN_PHY_slab_setup
+  end subroutine OCEAN_PHY_SLAB_setup
 
   !-----------------------------------------------------------------------------
   !> Slab ocean model
-  subroutine OCEAN_PHY_slab( &
-       OCEAN_TEMP,   &
-       FLX_heat,     &
-       FLX_precip,   &
-       FLX_evap,     &
-       OCEAN_TEMP_t  )
+  subroutine OCEAN_PHY_SLAB( &
+       OCEAN_TEMP_t,    &
+       OCEAN_TEMP,      &
+       OCEAN_SFLX_WH,   &
+       OCEAN_SFLX_prec, &
+       OCEAN_SFLX_evap, &
+       dt               )
     use scale_grid_index
     implicit none
 
-    real(RP), intent(in)  :: OCEAN_TEMP  (IA,JA)
-    real(RP), intent(in)  :: FLX_heat    (IA,JA)
-    real(RP), intent(in)  :: FLX_precip  (IA,JA)
-    real(RP), intent(in)  :: FLX_evap    (IA,JA)
-    real(RP), intent(out) :: OCEAN_TEMP_t(IA,JA)
+    real(RP), intent(out) :: OCEAN_TEMP_t   (IA,JA)
+    real(RP), intent(in)  :: OCEAN_TEMP     (IA,JA)
+    real(RP), intent(in)  :: OCEAN_SFLX_WH  (IA,JA)
+    real(RP), intent(in)  :: OCEAN_SFLX_prec(IA,JA)
+    real(RP), intent(in)  :: OCEAN_SFLX_evap(IA,JA)
+    real(RP), intent(in)  :: dt
 
     integer :: i, j
     !---------------------------------------------------------------------------
@@ -118,17 +122,20 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '*** Ocean step: Slab'
 
     if( OCEAN_PHY_SLAB_fixedSST )then
-       OCEAN_TEMP_t(:,:) = 0.0D0
-       return
-    endif
-
-    do j = JS, JE
-    do i = IS, IE
-       OCEAN_TEMP_t(i,j) = - FLX_heat(i,j) / OCEAN_PHY_SLAB_HeatCapacity
-    enddo
-    enddo
+       do j = JS, JE
+       do i = IS, IE
+          OCEAN_TEMP_t(i,j) = 0.0_RP
+       enddo
+       enddo
+    else
+       do j = JS, JE
+       do i = IS, IE
+          OCEAN_TEMP_t(i,j) = - OCEAN_SFLX_WH(i,j) / OCEAN_PHY_SLAB_HeatCapacity
+       enddo
+       enddo
+    end if
 
     return
-  end subroutine OCEAN_PHY_slab
+  end subroutine OCEAN_PHY_SLAB
 
 end module scale_ocean_phy_slab

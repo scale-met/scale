@@ -342,15 +342,23 @@ contains
        CONST_UNDEF8
     use scale_landuse, only: &
        LANDUSE_write
+    use mod_atmos_driver, only: &
+       ATMOS_SURFACE_GET
     use mod_atmos_vars, only: &
        ATMOS_sw_restart => ATMOS_RESTART_OUTPUT, &
        ATMOS_vars_restart_write
+    use mod_ocean_driver, only: &
+       OCEAN_SURFACE_SET
     use mod_ocean_vars, only: &
        OCEAN_sw_restart => OCEAN_RESTART_OUTPUT, &
        OCEAN_vars_restart_write
+    use mod_land_driver, only: &
+       LAND_SURFACE_SET
     use mod_land_vars, only: &
        LAND_sw_restart => LAND_RESTART_OUTPUT, &
        LAND_vars_restart_write
+    use mod_urban_driver, only: &
+       URBAN_SURFACE_SET
     use mod_urban_vars, only: &
        URBAN_sw_restart => URBAN_RESTART_OUTPUT, &
        URBAN_vars_restart_write
@@ -468,6 +476,12 @@ contains
       endselect
 
       if( IO_L ) write(IO_FID_LOG,*) '++++++ END   MAKING INITIAL  DATA ++++++'
+
+      ! setup surface condition
+      call OCEAN_SURFACE_SET( countup = .false. )
+      call LAND_SURFACE_SET ( countup = .false. )
+      call URBAN_SURFACE_SET( countup = .false. )
+      call ATMOS_SURFACE_GET
 
       ! output boundary file
       call LANDUSE_write
@@ -3910,18 +3924,28 @@ enddo
   !> Make initial state ( urban variables )
   subroutine MKINIT_urbancouple
     use mod_urban_vars, only: &
-       TR_URB,  &
-       TB_URB,  &
-       TG_URB,  &
-       TC_URB,  &
-       QC_URB,  &
-       UC_URB,  &
-       TS_URB,  &
-       TRL_URB, &
-       TBL_URB, &
-       TGL_URB
+       URBAN_TR,         &
+       URBAN_TB,         &
+       URBAN_TG,         &
+       URBAN_TC,         &
+       URBAN_QC,         &
+       URBAN_UC,         &
+       URBAN_TRL,        &
+       URBAN_TBL,        &
+       URBAN_TGL,        &
+       URBAN_RAINR,      &
+       URBAN_RAINB,      &
+       URBAN_RAING,      &
+       URBAN_ROFF,       &
+       URBAN_SFC_TEMP,   &
+       URBAN_SFC_albedo
     implicit none
 
+    ! Flux from Atmosphere
+    real(RP) :: FLX_rain      = 0.0_RP ! surface rain flux                         [kg/m2/s]
+    real(RP) :: FLX_snow      = 0.0_RP ! surface snow flux                         [kg/m2/s]
+    real(RP) :: FLX_LW_dn     = 0.0_RP ! surface downwad long-wave  radiation flux [J/m2/s]
+    real(RP) :: FLX_SW_dn     = 0.0_RP ! surface downwad short-wave radiation flux [J/m2/s]
     ! urban state
     real(RP) :: URB_ROOF_TEMP          ! Surface temperature of roof [K]
     real(RP) :: URB_BLDG_TEMP          ! Surface temperature of building [K
@@ -3932,8 +3956,19 @@ enddo
     real(RP) :: URB_ROOF_LAYER_TEMP    ! temperature in layer of roof [K]
     real(RP) :: URB_BLDG_LAYER_TEMP    ! temperature in layer of building [
     real(RP) :: URB_GRND_LAYER_TEMP    ! temperature in layer of ground [K]
+    real(RP) :: URB_ROOF_RAIN = 0.0_RP ! temperature in layer of roof [K]
+    real(RP) :: URB_BLDG_RAIN = 0.0_RP ! temperature in layer of building [
+    real(RP) :: URB_GRND_RAIN = 0.0_RP ! temperature in layer of ground [K]
+    real(RP) :: URB_RUNOFF    = 0.0_RP ! temperature in layer of ground [K]
+    real(RP) :: URB_SFC_TEMP           ! Grid average of surface temperature [K]
+    real(RP) :: URB_ALB_LW    = 0.0_RP ! Grid average of surface albedo for LW [0-1]
+    real(RP) :: URB_ALB_SW    = 0.0_RP ! Grid average of surface albedo for SW [0-1]
 
     NAMELIST / PARAM_MKINIT_URBANCOUPLE / &
+       FLX_rain,            &
+       FLX_snow,            &
+       FLX_LW_dn,           &
+       FLX_SW_dn,           &
        URB_ROOF_TEMP,       &
        URB_BLDG_TEMP,       &
        URB_GRND_TEMP,       &
@@ -3942,7 +3977,14 @@ enddo
        URB_CNPY_WIND,       &
        URB_ROOF_LAYER_TEMP, &
        URB_BLDG_LAYER_TEMP, &
-       URB_GRND_LAYER_TEMP
+       URB_GRND_LAYER_TEMP, &
+       URB_ROOF_RAIN,       &
+       URB_BLDG_RAIN,       &
+       URB_GRND_RAIN,       &
+       URB_RUNOFF,          &
+       URB_SFC_TEMP,        &
+       URB_ALB_LW,          &
+       URB_ALB_SW
 
     integer :: ierr
     !---------------------------------------------------------------------------
@@ -3958,6 +4000,8 @@ enddo
     URB_BLDG_LAYER_TEMP = THETAstd
     URB_GRND_LAYER_TEMP = THETAstd
 
+    URB_SFC_TEMP        = THETAstd
+
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_MKINIT_URBANCOUPLE,iostat=ierr)
@@ -3970,16 +4014,28 @@ enddo
     endif
     if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_URBANCOUPLE)
 
-    TR_URB (:,:)   = URB_ROOF_TEMP
-    TB_URB (:,:)   = URB_BLDG_TEMP
-    TG_URB (:,:)   = URB_GRND_TEMP
-    TC_URB (:,:)   = URB_CNPY_TEMP
-    QC_URB (:,:)   = URB_CNPY_HMDT
-    UC_URB (:,:)   = URB_CNPY_WIND
-    TS_URB (:,:)   = URB_CNPY_TEMP
-    TRL_URB(:,:,:) = URB_ROOF_LAYER_TEMP
-    TBL_URB(:,:,:) = URB_BLDG_LAYER_TEMP
-    TGL_URB(:,:,:) = URB_GRND_LAYER_TEMP
+    SFLX_rain (:,:) = FLX_rain
+    SFLX_snow (:,:) = FLX_snow
+    SFLX_LW_dn(:,:) = FLX_LW_dn
+    SFLX_SW_dn(:,:) = FLX_SW_dn
+
+    URBAN_TR   (:,:)   = URB_ROOF_TEMP
+    URBAN_TB   (:,:)   = URB_BLDG_TEMP
+    URBAN_TG   (:,:)   = URB_GRND_TEMP
+    URBAN_TC   (:,:)   = URB_CNPY_TEMP
+    URBAN_QC   (:,:)   = URB_CNPY_HMDT
+    URBAN_UC   (:,:)   = URB_CNPY_WIND
+    URBAN_TRL  (:,:,:) = URB_ROOF_LAYER_TEMP
+    URBAN_TBL  (:,:,:) = URB_BLDG_LAYER_TEMP
+    URBAN_TGL  (:,:,:) = URB_GRND_LAYER_TEMP
+    URBAN_RAINR(:,:)   = URB_ROOF_RAIN
+    URBAN_RAINB(:,:)   = URB_BLDG_RAIN
+    URBAN_RAING(:,:)   = URB_GRND_RAIN
+    URBAN_ROFF (:,:)   = URB_RUNOFF
+
+    URBAN_SFC_TEMP  (:,:)      = URB_SFC_TEMP
+    URBAN_SFC_albedo(:,:,I_LW) = URB_ALB_LW
+    URBAN_SFC_albedo(:,:,I_SW) = URB_ALB_SW
 
     return
   end subroutine MKINIT_urbancouple
@@ -4122,16 +4178,16 @@ enddo
        LAND_SFC_albedo, &
        LAND_PROPERTY
     use mod_urban_vars, only: &
-       TR_URB,  &
-       TB_URB,  &
-       TG_URB,  &
-       TC_URB,  &
-       QC_URB,  &
-       UC_URB,  &
-       TS_URB,  &
-       TRL_URB, &
-       TBL_URB, &
-       TGL_URB
+       URBAN_TR,       &
+       URBAN_TB,       &
+       URBAN_TG,       &
+       URBAN_TC,       &
+       URBAN_QC,       &
+       URBAN_UC,       &
+       URBAN_TRL,      &
+       URBAN_TBL,      &
+       URBAN_TGL,      &
+       URBAN_SFC_TEMP
     implicit none
 
     ! Flux from Atmosphere
@@ -4227,16 +4283,17 @@ enddo
     LAND_PROPERTY   (:,:,I_HeatCapacity) = LND_SFC_HeatCapa
     LAND_PROPERTY   (:,:,I_Z0M)          = LND_SFC_z0
 
-    TR_URB (:,:)   = URB_ROOF_TEMP
-    TB_URB (:,:)   = URB_BLDG_TEMP
-    TG_URB (:,:)   = URB_GRND_TEMP
-    TC_URB (:,:)   = URB_CNPY_TEMP
-    QC_URB (:,:)   = URB_CNPY_HMDT
-    UC_URB (:,:)   = URB_CNPY_WIND
-    TS_URB (:,:)   = URB_CNPY_TEMP
-    TRL_URB(:,:,:) = URB_ROOF_LAYER_TEMP
-    TBL_URB(:,:,:) = URB_BLDG_LAYER_TEMP
-    TGL_URB(:,:,:) = URB_GRND_LAYER_TEMP
+    URBAN_TR (:,:)   = URB_ROOF_TEMP
+    URBAN_TB (:,:)   = URB_BLDG_TEMP
+    URBAN_TG (:,:)   = URB_GRND_TEMP
+    URBAN_TC (:,:)   = URB_CNPY_TEMP
+    URBAN_QC (:,:)   = URB_CNPY_HMDT
+    URBAN_UC (:,:)   = URB_CNPY_WIND
+    URBAN_TRL(:,:,:) = URB_ROOF_LAYER_TEMP
+    URBAN_TBL(:,:,:) = URB_BLDG_LAYER_TEMP
+    URBAN_TGL(:,:,:) = URB_GRND_LAYER_TEMP
+
+    URBAN_SFC_TEMP(:,:) = URB_CNPY_TEMP
 
     ! 1/9 size of domain
     dist = ( GRID_CXG(IMAX*PRC_NUM_X) - GRID_CXG(1) ) / 9.0_RP

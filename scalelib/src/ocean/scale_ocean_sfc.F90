@@ -1,16 +1,14 @@
 !-------------------------------------------------------------------------------
-!> module COUPLER / Atmosphere-Ocean Surface fluxes
+!> module OCEAN / Surface fluxes
 !!
 !! @par Description
-!!          Surface flux from the atmosphere-ocean coupler
+!!          Ocean surface flux
 !!
 !! @author Team SCALE
 !!
-!! @par History
-!! @li      2014-02-26 (T.Yamaura)  [new]
 !<
 !-------------------------------------------------------------------------------
-module scale_cpl_atmos_ocean
+module scale_ocean_sfc
   !-----------------------------------------------------------------------------
   !
   !++ used modules
@@ -25,48 +23,49 @@ module scale_cpl_atmos_ocean
   !
   !++ Public procedure
   !
-  public :: CPL_AtmOcn_setup
+  public :: OCEAN_SFC_setup
 
   abstract interface
-     subroutine cao( &
-         SST,        & ! (inout)
-         XMFLX,      & ! (out)
-         YMFLX,      & ! (out)
-         ZMFLX,      & ! (out)
-         SHFLX,      & ! (out)
-         LHFLX,      & ! (out)
-         WHFLX,      & ! (out)
-         U10,        & ! (out)
-         V10,        & ! (out)
-         T2,         & ! (out)
-         Q2,         & ! (out)
-         SST_UPDATE, & ! (in)
-         RHOA,       & ! (in)
-         UA,         & ! (in)
-         VA,         & ! (in)
-         WA,         & ! (in)
-         TMPA,       & ! (in)
-         PRSA,       & ! (in)
-         QVA,        & ! (in)
-         PBL,        & ! (in)
-         PRSS,       & ! (in)
-         SWD,        & ! (in)
-         LWD,        & ! (in)
-         TW,         & ! (in)
-         ALB_SW,     & ! (in)
-         ALB_LW,     & ! (in)
-         Z0M,        & ! (in)
-         Z0H,        & ! (in)
-         Z0E         ) ! (in)
+     subroutine ocnsfc( &
+           SST_t,  &
+           ZMFLX,  &
+           XMFLX,  &
+           YMFLX,  &
+           SHFLX,  &
+           LHFLX,  &
+           WHFLX,  &
+           U10,    &
+           V10,    &
+           T2,     &
+           Q2,     &
+           TMPA,   &
+           PRSA,   &
+           WA,     &
+           UA,     &
+           VA,     &
+           RHOA,   &
+           QVA,    &
+           Z1,     &
+           PBL,    &
+           PRSS,   &
+           LWD,    &
+           SWD,    &
+           TW,     &
+           SST,    &
+           ALB_LW, &
+           ALB_SW, &
+           Z0M,    &
+           Z0H,    &
+           Z0E,    &
+           dt      )
        use scale_precision
        use scale_grid_index
        implicit none
 
-       real(RP), intent(inout) :: SST (IA,JA) ! sea surface temperature [K]
-
+       real(RP), intent(out) :: SST_t(IA,JA) ! tendency of sea surface temperature
+       real(RP), intent(out) :: ZMFLX(IA,JA) ! z-momentum flux at the surface [kg/m2/s]
        real(RP), intent(out) :: XMFLX(IA,JA) ! x-momentum flux at the surface [kg/m2/s]
        real(RP), intent(out) :: YMFLX(IA,JA) ! y-momentum flux at the surface [kg/m2/s]
-       real(RP), intent(out) :: ZMFLX(IA,JA) ! z-momentum flux at the surface [kg/m2/s]
        real(RP), intent(out) :: SHFLX(IA,JA) ! sensible heat flux at the surface [W/m2]
        real(RP), intent(out) :: LHFLX(IA,JA) ! latent heat flux at the surface [W/m2]
        real(RP), intent(out) :: WHFLX(IA,JA) ! water heat flux at the surface [W/m2]
@@ -75,30 +74,31 @@ module scale_cpl_atmos_ocean
        real(RP), intent(out) :: T2   (IA,JA) ! temperature at 2m [K]
        real(RP), intent(out) :: Q2   (IA,JA) ! water vapor at 2m [kg/kg]
 
-       logical,  intent(in) :: SST_UPDATE  ! is sea surface temperature updated?
-
-       real(RP), intent(in) :: RHOA(IA,JA) ! density at the lowest atmospheric layer [kg/m3]
-       real(RP), intent(in) :: UA  (IA,JA) ! velocity u at the lowest atmospheric layer [m/s]
-       real(RP), intent(in) :: VA  (IA,JA) ! velocity v at the lowest atmospheric layer [m/s]
-       real(RP), intent(in) :: WA  (IA,JA) ! velocity w at the lowest atmospheric layer [m/s]
        real(RP), intent(in) :: TMPA(IA,JA) ! temperature at the lowest atmospheric layer [K]
        real(RP), intent(in) :: PRSA(IA,JA) ! pressure at the lowest atmospheric layer [Pa]
+       real(RP), intent(in) :: WA  (IA,JA) ! velocity w at the lowest atmospheric layer [m/s]
+       real(RP), intent(in) :: UA  (IA,JA) ! velocity u at the lowest atmospheric layer [m/s]
+       real(RP), intent(in) :: VA  (IA,JA) ! velocity v at the lowest atmospheric layer [m/s]
+       real(RP), intent(in) :: RHOA(IA,JA) ! density at the lowest atmospheric layer [kg/m3]
        real(RP), intent(in) :: QVA (IA,JA) ! ratio of water vapor mass to total mass at the lowest atmospheric layer [kg/kg]
+       real(RP), intent(in) :: Z1  (IA,JA) ! cell center height at the lowest atmospheric layer [m]
        real(RP), intent(in) :: PBL (IA,JA) ! the top of atmospheric mixing layer [m]
        real(RP), intent(in) :: PRSS(IA,JA) ! pressure at the surface [Pa]
-       real(RP), intent(in) :: SWD (IA,JA) ! downward short-wave radiation flux at the surface (upward positive) [W/m2]
        real(RP), intent(in) :: LWD (IA,JA) ! downward long-wave radiation flux at the surface (upward positive) [W/m2]
+       real(RP), intent(in) :: SWD (IA,JA) ! downward short-wave radiation flux at the surface (upward positive) [W/m2]
 
        real(RP), intent(in) :: TW    (IA,JA) ! water temperature [K]
-       real(RP), intent(in) :: ALB_SW(IA,JA) ! surface albedo for SW [0-1]
+       real(RP), intent(in) :: SST   (IA,JA) ! sea surface temperature [K]
        real(RP), intent(in) :: ALB_LW(IA,JA) ! surface albedo for LW [0-1]
+       real(RP), intent(in) :: ALB_SW(IA,JA) ! surface albedo for SW [0-1]
        real(RP), intent(in) :: Z0M   (IA,JA) ! roughness length for momentum [m]
        real(RP), intent(in) :: Z0H   (IA,JA) ! roughness length for heat [m]
        real(RP), intent(in) :: Z0E   (IA,JA) ! roughness length for vapor [m]
-     end subroutine cao
+       real(RP), intent(in) :: dt            ! delta time
+     end subroutine ocnsfc
   end interface
-  procedure(cao), pointer :: CPL_AtmOcn => NULL()
-  public :: CPL_AtmOcn
+  procedure(ocnsfc), pointer :: OCEAN_SFC => NULL()
+  public :: OCEAN_SFC
 
   !-----------------------------------------------------------------------------
   !
@@ -115,37 +115,26 @@ module scale_cpl_atmos_ocean
   !-----------------------------------------------------------------------------
 contains
 
-  subroutine CPL_AtmOcn_setup( CPL_TYPE_AtmOcn )
+  subroutine OCEAN_SFC_setup( OCEAN_TYPE )
     use scale_process, only: &
        PRC_MPIstop
-#define EXTM(pre, name, post) pre ## name ## post
-#define NAME(pre, name, post) EXTM(pre, name, post)
-#ifdef CAL
-    use NAME(scale_cpl_atmos_ocean_, CAO,), only: &
-       NAME(CPL_AtmOcn_, CAO, _setup), &
-       NAME(CPL_AtmOcn_, CAO,)
-#else
-    use scale_cpl_atmos_ocean_const, only: &
-       CPL_AtmOcn_const_setup, &
-       CPL_AtmOcn_const
-    use scale_cpl_atmos_ocean_bulk, only: &
-       CPL_AtmOcn_bulk_setup, &
-       CPL_AtmOcn_bulk
-#endif
+    use scale_ocean_sfc_slab, only: &
+       OCEAN_SFC_SLAB_setup, &
+       OCEAN_SFC_SLAB
     implicit none
 
-    character(len=*), intent(in) :: CPL_TYPE_AtmOcn
+    character(len=*), intent(in) :: OCEAN_TYPE
     !---------------------------------------------------------------------------
 
-    select case( CPL_TYPE_AtmOcn )
+    select case( OCEAN_TYPE )
     case ( 'CONST' )
-       call CPL_AtmOcn_const_setup( CPL_TYPE_AtmOcn )
-       CPL_AtmOcn => CPL_AtmOcn_const
-    case ( 'BULK' )
-       call CPL_AtmOcn_bulk_setup( CPL_TYPE_AtmOcn )
-       CPL_AtmOcn => CPL_AtmOcn_bulk
+       call OCEAN_SFC_SLAB_setup( OCEAN_TYPE )
+       OCEAN_SFC => OCEAN_SFC_SLAB
+    case ( 'SLAB' )
+       call OCEAN_SFC_SLAB_setup( OCEAN_TYPE )
+       OCEAN_SFC => OCEAN_SFC_SLAB
     end select
 
-  end subroutine CPL_AtmOcn_setup
+  end subroutine OCEAN_SFC_setup
 
-end module scale_cpl_atmos_ocean
+end module scale_ocean_sfc

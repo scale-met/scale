@@ -56,12 +56,8 @@ cat << EOF > conf/param.physics.conf
  OCEAN_VARS_CHECKRANGE = .true.,
 /
 
-&PARAM_OCEAN_SLAB
+&PARAM_OCEAN_PHY_SLAB
  OCEAN_PHY_SLAB_DEPTH = 10.D0,
-/
-
-&PARAM_OCEAN_ROUGHNESS
- OCEAN_ROUGHNESS_TYPE = "MOON07",
 /
 
 #################################################
@@ -74,7 +70,7 @@ cat << EOF > conf/param.physics.conf
  LAND_VARS_CHECKRANGE = .true.,
 /
 
-&PARAM_LAND_BUCKET
+&PARAM_LAND_PHY_SLAB
  LAND_PHY_UPDATE_BOTTOM_TEMP  = .false.,
  LAND_PHY_UPDATE_BOTTOM_WATER = .true.,
 /
@@ -95,9 +91,9 @@ cat << EOF > conf/param.physics.conf
 #
 #################################################
 
-&PARAM_CPL_ATMURB_BULK
- URBAN_UCM_STRGR = 0.24D0,
-! URBAN_UCM_STRGB = 0.009D0,
-! URBAN_UCM_STRGG = 0.24D0,
+&PARAM_URBAN_PHY_SLC
+ STRGR = 0.24D0,
+ STRGB = 0.009D0,
+ STRGG = 0.24D0,
 /
 EOF

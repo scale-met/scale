@@ -1,5 +1,5 @@
 !-------------------------------------------------------------------------------
-!> module COUPLER / Atmosphere-Urban Surface fluxes
+!> module URBAN / Surface fluxes with Single-layer Canpoy Model
 !!
 !! @par Description
 !!          Surface fluxes between atmosphere and urban
@@ -10,8 +10,7 @@
 !! @par History
 !<
 !-------------------------------------------------------------------------------
-! !OCL SERIAL
-module scale_cpl_atmos_urban_bulk
+module scale_urban_phy_slc
   !-----------------------------------------------------------------------------
   !
   !++ used modules
@@ -27,10 +26,8 @@ module scale_cpl_atmos_urban_bulk
   !
   !++ Public procedure
   !
-  public :: CPL_AtmUrb_bulk_setup
-  public :: CPL_AtmUrb_bulk_restart
-  public :: CPL_AtmUrb_bulk
-  public :: CPL_AtmUrb_bulk_momentum
+  public :: URBAN_PHY_SLC_setup
+  public :: URBAN_PHY_SLC
 
   !-----------------------------------------------------------------------------
   !
@@ -40,6 +37,7 @@ module scale_cpl_atmos_urban_bulk
   !
   !++ Private procedure
   !
+  private :: SLC_main
   private :: canopy_wind
   private :: cal_beta
   private :: cal_psi
@@ -110,216 +108,424 @@ module scale_cpl_atmos_urban_bulk
 contains
   !-----------------------------------------------------------------------------
   !> Setup
-  subroutine CPL_AtmUrb_bulk_setup( CPL_TYPE_AtmUrb )
-    use scale_cpl_bulkflux, only: &
-       CPL_bulkflux_setup
+  subroutine URBAN_PHY_SLC_setup( URBAN_TYPE )
     use scale_process, only: &
        PRC_MPIstop
     implicit none
 
-    character(len=*), intent(in) :: CPL_TYPE_AtmUrb
+    character(len=*), intent(in) :: URBAN_TYPE
 
-    real(RP) :: URBAN_UCM_ZR
-    real(RP) :: URBAN_UCM_roof_width
-    real(RP) :: URBAN_UCM_road_width
-    real(RP) :: URBAN_UCM_SIGMA_ZED
-    real(RP) :: URBAN_UCM_AH
-    real(RP) :: URBAN_UCM_ALH
-    real(RP) :: URBAN_UCM_BETR
-    real(RP) :: URBAN_UCM_BETB
-    real(RP) :: URBAN_UCM_BETG
-    real(RP) :: URBAN_UCM_STRGR
-    real(RP) :: URBAN_UCM_STRGB
-    real(RP) :: URBAN_UCM_STRGG
-    real(RP) :: URBAN_UCM_CAPR
-    real(RP) :: URBAN_UCM_CAPB
-    real(RP) :: URBAN_UCM_CAPG
-    real(RP) :: URBAN_UCM_AKSR
-    real(RP) :: URBAN_UCM_AKSB
-    real(RP) :: URBAN_UCM_AKSG
-    real(RP) :: URBAN_UCM_ALBR
-    real(RP) :: URBAN_UCM_ALBB
-    real(RP) :: URBAN_UCM_ALBG
-    real(RP) :: URBAN_UCM_EPSR
-    real(RP) :: URBAN_UCM_EPSB
-    real(RP) :: URBAN_UCM_EPSG
-    real(RP) :: URBAN_UCM_Z0R
-    real(RP) :: URBAN_UCM_Z0B
-    real(RP) :: URBAN_UCM_Z0G
-    real(RP) :: URBAN_UCM_TRLEND
-    real(RP) :: URBAN_UCM_TBLEND
-    real(RP) :: URBAN_UCM_TGLEND
-    real(RP),allocatable :: URBAN_UCM_DZR(:)
-    real(RP),allocatable :: URBAN_UCM_DZB(:)
-    real(RP),allocatable :: URBAN_UCM_DZG(:)
-    integer  :: URBAN_UCM_BOUND
-
-    NAMELIST / PARAM_CPL_ATMURB_BULK / &
-       URBAN_UCM_ZR,         &
-       URBAN_UCM_roof_width, &
-       URBAN_UCM_road_width, &
-       URBAN_UCM_SIGMA_ZED,  &
-       URBAN_UCM_AH,         &
-       URBAN_UCM_ALH,        &
-       URBAN_UCM_BETR,       &
-       URBAN_UCM_BETB,       &
-       URBAN_UCM_BETG,       &
-       URBAN_UCM_STRGR,      &
-       URBAN_UCM_STRGB,      &
-       URBAN_UCM_STRGG,      &
-       URBAN_UCM_CAPR,       &
-       URBAN_UCM_CAPB,       &
-       URBAN_UCM_CAPG,       &
-       URBAN_UCM_AKSR,       &
-       URBAN_UCM_AKSB,       &
-       URBAN_UCM_AKSG,       &
-       URBAN_UCM_ALBR,       &
-       URBAN_UCM_ALBB,       &
-       URBAN_UCM_ALBG,       &
-       URBAN_UCM_EPSR,       &
-       URBAN_UCM_EPSB,       &
-       URBAN_UCM_EPSG,       &
-       URBAN_UCM_Z0R,        &
-       URBAN_UCM_Z0B,        &
-       URBAN_UCM_Z0G,        &
-       URBAN_UCM_TRLEND,     &
-       URBAN_UCM_TBLEND,     &
-       URBAN_UCM_TGLEND,     &
-       !URBAN_UCM_DZR,        &
-       !URBAN_UCM_DZB,        &
-       !URBAN_UCM_DZG,        &
-       URBAN_UCM_BOUND
+    NAMELIST / PARAM_URBAN_PHY_SLC / &
+       ZR,         &
+       roof_width, &
+       road_width, &
+       SIGMA_ZED,  &
+       AH,         &
+       ALH,        &
+       BETR,       &
+       BETB,       &
+       BETG,       &
+       STRGR,      &
+       STRGB,      &
+       STRGG,      &
+       CAPR,       &
+       CAPB,       &
+       CAPG,       &
+       AKSR,       &
+       AKSB,       &
+       AKSG,       &
+       ALBR,       &
+       ALBB,       &
+       ALBG,       &
+       EPSR,       &
+       EPSB,       &
+       EPSG,       &
+       Z0R,        &
+       Z0B,        &
+       Z0G,        &
+       TRLEND,     &
+       TBLEND,     &
+       TGLEND,     &
+       BOUND
 
     integer :: ierr
     !---------------------------------------------------------------------------
 
-    allocate( URBAN_UCM_DZR(UKS:UKE) )
-    allocate( URBAN_UCM_DZB(UKS:UKE) )
-    allocate( URBAN_UCM_DZG(UKS:UKE) )
-
     if( IO_L ) write(IO_FID_LOG,*) ''
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[AtmUrb bulk] / Categ[COUPLER] / Origin[SCALElib]'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[SLC] / Categ[URBAN PHY] / Origin[SCALElib]'
 
-    if ( CPL_TYPE_AtmUrb /= 'BULK' ) then
-       write(*,*) 'xxx CPL_TYPE_AtmUrb is not BULK. Check!'
-       call PRC_MPIstop
-    endif
-
-    URBAN_UCM_ZR           = ZR
-    URBAN_UCM_roof_width   = roof_width
-    URBAN_UCM_road_width   = road_width
-    URBAN_UCM_SIGMA_ZED    = SIGMA_ZED
-    URBAN_UCM_AH           = AH
-    URBAN_UCM_ALH          = ALH
-    URBAN_UCM_BETR         = BETR
-    URBAN_UCM_BETB         = BETB
-    URBAN_UCM_BETG         = BETG
-    URBAN_UCM_STRGR        = STRGR
-    URBAN_UCM_STRGB        = STRGB
-    URBAN_UCM_STRGG        = STRGG
-    URBAN_UCM_CAPR         = CAPR
-    URBAN_UCM_CAPB         = CAPB
-    URBAN_UCM_CAPG         = CAPG
-    URBAN_UCM_AKSR         = AKSR
-    URBAN_UCM_AKSB         = AKSB
-    URBAN_UCM_AKSG         = AKSG
-    URBAN_UCM_ALBR         = ALBR
-    URBAN_UCM_ALBB         = ALBB
-    URBAN_UCM_ALBG         = ALBG
-    URBAN_UCM_EPSR         = EPSR
-    URBAN_UCM_EPSB         = EPSB
-    URBAN_UCM_EPSG         = EPSG
-    URBAN_UCM_Z0R          = Z0R
-    URBAN_UCM_Z0B          = Z0B
-    URBAN_UCM_Z0G          = Z0G
-    URBAN_UCM_TRLEND       = TRLEND
-    URBAN_UCM_TBLEND       = TBLEND
-    URBAN_UCM_TGLEND       = TGLEND
-    URBAN_UCM_BOUND        = BOUND
-    URBAN_UCM_DZR(UKS:UKE) = (/0.01_RP,0.01_RP,0.03_RP,0.05_RP,0.10_RP/)
-    URBAN_UCM_DZB(UKS:UKE) = (/0.01_RP,0.01_RP,0.03_RP,0.05_RP,0.10_RP/)
-    URBAN_UCM_DZG(UKS:UKE) = (/0.01_RP,0.01_RP,0.03_RP,0.05_RP,0.10_RP/)
+    allocate( DZR(UKS:UKE) )
+    allocate( DZB(UKS:UKE) )
+    allocate( DZG(UKS:UKE) )
+    DZR(UKS:UKE) = (/0.01_RP,0.01_RP,0.03_RP,0.05_RP,0.10_RP/)
+    DZB(UKS:UKE) = (/0.01_RP,0.01_RP,0.03_RP,0.05_RP,0.10_RP/)
+    DZG(UKS:UKE) = (/0.01_RP,0.01_RP,0.03_RP,0.05_RP,0.10_RP/)
 
     !--- read namelist
     rewind(IO_FID_CONF)
-    read(IO_FID_CONF,nml=PARAM_CPL_ATMURB_BULK,iostat=ierr)
+    read(IO_FID_CONF,nml=PARAM_URBAN_PHY_SLC,iostat=ierr)
     if( ierr < 0 ) then !--- missing
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_CPL_ATMURB_BULK. Check!'
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_URBAN_PHY_SLC. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_CPL_ATMURB_BULK)
-
-    ZR           = URBAN_UCM_ZR
-    roof_width   = URBAN_UCM_roof_width
-    road_width   = URBAN_UCM_road_width
-    SIGMA_ZED    = URBAN_UCM_SIGMA_ZED
-    AH           = URBAN_UCM_AH
-    ALH          = URBAN_UCM_ALH
-    BETR         = URBAN_UCM_BETR
-    BETB         = URBAN_UCM_BETB
-    BETG         = URBAN_UCM_BETG
-    STRGR        = URBAN_UCM_STRGR
-    STRGB        = URBAN_UCM_STRGB
-    STRGG        = URBAN_UCM_STRGG
-    CAPR         = URBAN_UCM_CAPR
-    CAPB         = URBAN_UCM_CAPB
-    CAPG         = URBAN_UCM_CAPG
-    AKSR         = URBAN_UCM_AKSR
-    AKSB         = URBAN_UCM_AKSB
-    AKSG         = URBAN_UCM_AKSG
-    ALBR         = URBAN_UCM_ALBR
-    ALBB         = URBAN_UCM_ALBB
-    ALBG         = URBAN_UCM_ALBG
-    EPSR         = URBAN_UCM_EPSR
-    EPSB         = URBAN_UCM_EPSB
-    EPSG         = URBAN_UCM_EPSG
-    Z0R          = URBAN_UCM_Z0R
-    Z0B          = URBAN_UCM_Z0B
-    Z0G          = URBAN_UCM_Z0G
-    TRLEND       = URBAN_UCM_TRLEND
-    TBLEND       = URBAN_UCM_TBLEND
-    TGLEND       = URBAN_UCM_TGLEND
-    BOUND        = URBAN_UCM_BOUND
+    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_URBAN_PHY_SLC)
 
     ahdiurnal(:) = (/ 0.356, 0.274, 0.232, 0.251, 0.375, 0.647, 0.919, 1.135, 1.249, 1.328, &
                       1.365, 1.363, 1.375, 1.404, 1.457, 1.526, 1.557, 1.521, 1.372, 1.206, &
                       1.017, 0.876, 0.684, 0.512                                            /)
 
-    allocate( DZR(UKS:UKE) )
-    allocate( DZB(UKS:UKE) )
-    allocate( DZG(UKS:UKE) )
-
-    DZR(UKS:UKE) = URBAN_UCM_DZR(UKS:UKE)
-    DZB(UKS:UKE) = URBAN_UCM_DZB(UKS:UKE)
-    DZG(UKS:UKE) = URBAN_UCM_DZG(UKS:UKE)
-
     ! set other urban parameters
     call urban_param_setup
 
-    ! set up bulk coefficient function
-    call CPL_bulkflux_setup
+    return
+  end subroutine URBAN_PHY_SLC_setup
+
+  subroutine URBAN_PHY_SLC( &
+        TR_URB_t,    &
+        TB_URB_t,    &
+        TG_URB_t,    &
+        TC_URB_t,    &
+        QC_URB_t,    &
+        UC_URB_t,    &
+        TRL_URB_t,   &
+        TBL_URB_t,   &
+        TGL_URB_t,   &
+        RAINR_URB_t, &
+        RAINB_URB_t, &
+        RAING_URB_t, &
+        ROFF_URB_t,  &
+        UST,         &
+        ALBD_LW,     &
+        ALBD_SW,     &
+        MWFLX,       &
+        MUFLX,       &
+        MVFLX,       &
+        SHFLX,       &
+        LHFLX,       &
+        GHFLX,       &
+        Z0M,         &
+        Z0H,         &
+        Z0E,         &
+        U10,         &
+        V10,         &
+        T2,          &
+        Q2,          &
+        TMPA,        &
+        PRES,        &
+        W1,          &
+        U1,          &
+        V1,          &
+        DENS,        &
+        QA,          &
+        Z1,          &
+        PBL,         &
+        PRSS,        &
+        LWD,         &
+        SWD,         &
+        PREC,        &
+        TR_URB,      &
+        TB_URB,      &
+        TG_URB,      &
+        TC_URB,      &
+        QC_URB,      &
+        UC_URB,      &
+        TRL_URB,     &
+        TBL_URB,     &
+        TGL_URB,     &
+        RAINR_URB,   &
+        RAINB_URB,   &
+        RAING_URB,   &
+        ROFF_URB,    &
+        LON,         &
+        LAT,         &
+        NOWDATE,     &
+        dt           )
+    use scale_history, only: &
+       HIST_in
+    use scale_atmos_saturation, only: &
+       qsat => ATMOS_SATURATION_pres2qsat_all
+    use scale_bulkflux, only: &
+       BULKFLUX
+    implicit none
+
+    ! parameter
+    logical,  parameter :: LSOLAR = .false. ! [true=both, false=SSG only]
+
+    real(RP), parameter :: Uabs_min = 0.1_RP
+
+    ! arguments
+    real(RP), intent(out) :: TR_URB_t   (IA,JA)
+    real(RP), intent(out) :: TB_URB_t   (IA,JA)
+    real(RP), intent(out) :: TG_URB_t   (IA,JA)
+    real(RP), intent(out) :: TC_URB_t   (IA,JA)
+    real(RP), intent(out) :: QC_URB_t   (IA,JA)
+    real(RP), intent(out) :: UC_URB_t   (IA,JA)
+    real(RP), intent(out) :: TRL_URB_t  (UKS:UKE,IA,JA)
+    real(RP), intent(out) :: TBL_URB_t  (UKS:UKE,IA,JA)
+    real(RP), intent(out) :: TGL_URB_t  (UKS:UKE,IA,JA)
+    real(RP), intent(out) :: RAINR_URB_t(IA,JA)
+    real(RP), intent(out) :: RAINB_URB_t(IA,JA)
+    real(RP), intent(out) :: RAING_URB_t(IA,JA)
+    real(RP), intent(out) :: ROFF_URB_t (IA,JA)
+
+    real(RP), intent(out) :: UST    (IA,JA)
+    real(RP), intent(out) :: ALBD_LW(IA,JA)
+    real(RP), intent(out) :: ALBD_SW(IA,JA)
+    real(RP), intent(out) :: MWFLX  (IA,JA)
+    real(RP), intent(out) :: MUFLX  (IA,JA)
+    real(RP), intent(out) :: MVFLX  (IA,JA)
+    real(RP), intent(out) :: SHFLX  (IA,JA)
+    real(RP), intent(out) :: LHFLX  (IA,JA)
+    real(RP), intent(out) :: GHFLX  (IA,JA)
+    real(RP), intent(out) :: Z0M    (IA,JA)
+    real(RP), intent(out) :: Z0H    (IA,JA)
+    real(RP), intent(out) :: Z0E    (IA,JA)
+    real(RP), intent(out) :: U10    (IA,JA)
+    real(RP), intent(out) :: V10    (IA,JA)
+    real(RP), intent(out) :: T2     (IA,JA)
+    real(RP), intent(out) :: Q2     (IA,JA)
+
+    real(RP), intent(in) :: TMPA  (IA,JA)
+    real(RP), intent(in) :: PRES  (IA,JA)
+    real(RP), intent(in) :: W1    (IA,JA)
+    real(RP), intent(in) :: U1    (IA,JA)
+    real(RP), intent(in) :: V1    (IA,JA)
+    real(RP), intent(in) :: DENS  (IA,JA)
+    real(RP), intent(in) :: QA    (IA,JA)
+    real(RP), intent(in) :: Z1    (IA,JA)
+    real(RP), intent(in) :: PBL   (IA,JA)
+    real(RP), intent(in) :: PRSS  (IA,JA)
+    real(RP), intent(in) :: LWD   (IA,JA)
+    real(RP), intent(in) :: SWD   (IA,JA)
+    real(RP), intent(in) :: PREC  (IA,JA)
+
+    real(RP), intent(in) :: TR_URB   (IA,JA)
+    real(RP), intent(in) :: TB_URB   (IA,JA)
+    real(RP), intent(in) :: TG_URB   (IA,JA)
+    real(RP), intent(in) :: TC_URB   (IA,JA)
+    real(RP), intent(in) :: QC_URB   (IA,JA)
+    real(RP), intent(in) :: UC_URB   (IA,JA)
+    real(RP), intent(in) :: TRL_URB  (UKS:UKE,IA,JA)
+    real(RP), intent(in) :: TBL_URB  (UKS:UKE,IA,JA)
+    real(RP), intent(in) :: TGL_URB  (UKS:UKE,IA,JA)
+    real(RP), intent(in) :: RAINR_URB(IA,JA)
+    real(RP), intent(in) :: RAINB_URB(IA,JA)
+    real(RP), intent(in) :: RAING_URB(IA,JA)
+    real(RP), intent(in) :: ROFF_URB (IA,JA)
+
+    real(RP), intent(in) :: LON
+    real(RP), intent(in) :: LAT
+    integer,  intent(in) :: NOWDATE(6)
+    real(RP), intent(in) :: dt
+
+    ! work
+    real(RP) :: TR
+    real(RP) :: TB
+    real(RP) :: TG
+    real(RP) :: TC
+    real(RP) :: QC
+    real(RP) :: UC
+    real(RP) :: TRL(UKS:UKE)
+    real(RP) :: TBL(UKS:UKE)
+    real(RP) :: TGL(UKS:UKE)
+    real(RP) :: RAINR
+    real(RP) :: RAINB
+    real(RP) :: RAING
+    real(RP) :: ROFF
+    real(RP) :: AH_t
+    real(RP) :: ALH_t
+
+    real(RP) :: SHR  (IA,JA)
+    real(RP) :: SHB  (IA,JA)
+    real(RP) :: SHG  (IA,JA)
+    real(RP) :: LHR  (IA,JA)
+    real(RP) :: LHB  (IA,JA)
+    real(RP) :: LHG  (IA,JA)
+    real(RP) :: GHR  (IA,JA)
+    real(RP) :: GHB  (IA,JA)
+    real(RP) :: GHG  (IA,JA)
+    real(RP) :: RNR  (IA,JA)
+    real(RP) :: RNB  (IA,JA)
+    real(RP) :: RNG  (IA,JA)
+    real(RP) :: RNgrd(IA,JA)
+
+    real(RP) :: Ustar ! friction velocity [m]
+    real(RP) :: Tstar ! friction temperature [K]
+    real(RP) :: Qstar ! friction mixing rate [kg/kg]
+    real(RP) :: Uabs  ! modified absolute velocity [m/s]
+    real(RP) :: QVS   ! saturation water vapor mixing ratio at surface [kg/kg]
+
+    integer :: k, i, j
+    !---------------------------------------------------------------------------
+
+    do j = JS, JE
+    do i = IS, IE
+       Uabs = max( sqrt( U1(i,j)**2 + V1(i,j)**2 + W1(i,j)**2 ), Uabs_min )
+
+       ! save
+       TR = TR_URB(i,j)
+       TB = TB_URB(i,j)
+       TG = TG_URB(i,j)
+       TC = TC_URB(i,j)
+       QC = QC_URB(i,j)
+       UC = UC_URB(i,j)
+
+       do k = UKS, UKE
+          TRL(k) = TRL_URB(k,i,j)
+          TBL(k) = TBL_URB(k,i,j)
+          TGL(k) = TGL_URB(k,i,j)
+       end do
+
+       RAINR = RAINR_URB(i,j)
+       RAINB = RAINB_URB(i,j)
+       RAING = RAING_URB(i,j)
+       ROFF  = ROFF_URB (i,j)
+
+       AH_t  = 0.0_RP
+       ALH_t = 0.0_RP
+
+       call SLC_main( TR,           & ! [INOUT]
+                      TB,           & ! [INOUT]
+                      TG,           & ! [INOUT]
+                      TC,           & ! [INOUT]
+                      QC,           & ! [INOUT]
+                      UC,           & ! [INOUT]
+                      TRL    (:),   & ! [INOUT]
+                      TBL    (:),   & ! [INOUT]
+                      TGL    (:),   & ! [INOUT]
+                      RAINR,        & ! [INOUT]
+                      RAINB,        & ! [INOUT]
+                      RAING,        & ! [INOUT]
+                      ROFF,         & ! [INOUT]
+                      AH_t,         & ! [INOUT]
+                      ALH_t,        & ! [INOUT]
+                      ALBD_LW(i,j), & ! [OUT]
+                      ALBD_SW(i,j), & ! [OUT]
+                      SHR    (i,j), & ! [OUT]
+                      SHB    (i,j), & ! [OUT]
+                      SHG    (i,j), & ! [OUT]
+                      LHR    (i,j), & ! [OUT]
+                      LHB    (i,j), & ! [OUT]
+                      LHG    (i,j), & ! [OUT]
+                      GHR    (i,j), & ! [OUT]
+                      GHB    (i,j), & ! [OUT]
+                      GHG    (i,j), & ! [OUT]
+                      RNR    (i,j), & ! [OUT]
+                      RNB    (i,j), & ! [OUT]
+                      RNG    (i,j), & ! [OUT]
+                      UST    (i,j), & ! [OUT]
+                      RNgrd  (i,j), & ! [OUT]
+                      SHFLX  (i,j), & ! [OUT]
+                      LHFLX  (i,j), & ! [OUT]
+                      GHFLX  (i,j), & ! [OUT]
+                      U10    (i,j), & ! [OUT]
+                      V10    (i,j), & ! [OUT]
+                      T2     (i,j), & ! [OUT]
+                      Q2     (i,j), & ! [OUT]
+                      LSOLAR,       & ! [IN]
+                      PRSS   (i,j), & ! [IN]
+                      TMPA   (i,j), & ! [IN]
+                      QA     (i,j), & ! [IN]
+                      Uabs,         & ! [IN]
+                      U1     (i,j), & ! [IN]
+                      V1     (i,j), & ! [IN]
+                      Z1     (i,j), & ! [IN]
+                      SWD    (i,j), & ! [IN]
+                      LWD    (i,j), & ! [IN]
+                      PREC   (i,j), & ! [IN]
+                      DENS   (i,j), & ! [IN]
+                      LON,          & ! [IN]
+                      LAT,          & ! [IN]
+                      NOWDATE(:),   & ! [IN]
+                      dt            ) ! [IN]
+
+       ! calculate tendency 
+       TR_URB_t(i,j) = ( TR - TR_URB(i,j) ) /dt
+       TB_URB_t(i,j) = ( TB - TB_URB(i,j) ) /dt
+       TG_URB_t(i,j) = ( TG - TG_URB(i,j) ) /dt
+       TC_URB_t(i,j) = ( TC - TC_URB(i,j) ) /dt
+       QC_URB_t(i,j) = ( QC - QC_URB(i,j) ) /dt
+       UC_URB_t(i,j) = ( UC - UC_URB(i,j) ) /dt
+
+       do k = UKS, UKE
+          TRL_URB_t(k,i,j) = ( TRL(k) - TRL_URB(k,i,j) ) / dt
+          TBL_URB_t(k,i,j) = ( TBL(k) - TBL_URB(k,i,j) ) / dt
+          TGL_URB_t(k,i,j) = ( TGL(k) - TGL_URB(k,i,j) ) / dt
+       end do
+
+       RAINR_URB_t(i,j) = ( RAINR - RAINR_URB(i,j) ) / dt
+       RAINB_URB_t(i,j) = ( RAINB - RAINB_URB(i,j) ) / dt
+       RAING_URB_t(i,j) = ( RAING - RAING_URB(i,j) ) / dt
+       ROFF_URB_t (i,j) = ( ROFF  - ROFF_URB (i,j) ) / dt
+
+       ! saturation at the surface
+       call qsat( QVS, UST(i,j), PRSS(i,j) )
+
+       call BULKFLUX( Ustar,     & ! [OUT]
+                      Tstar,     & ! [OUT]
+                      Qstar,     & ! [OUT]
+                      Uabs,      & ! [OUT]
+                      TMPA(i,j), & ! [IN]
+                      UST (i,j), & ! [IN]
+                      PRES(i,j), & ! [IN]
+                      PRSS(i,j), & ! [IN]
+                      QA  (i,j), & ! [IN]
+                      QVS,       & ! [IN]
+                      U1  (i,j), & ! [IN]
+                      V1  (i,j), & ! [IN]
+                      Z1  (i,j), & ! [IN]
+                      PBL (i,j), & ! [IN]
+                      Z0C,       & ! [IN]
+                      Z0HC,      & ! [IN]
+                      Z0HC       ) ! [IN]
+
+       MWFLX(i,j) = -DENS(i,j) * Ustar**2 / Uabs * W1(i,j)
+       MUFLX(i,j) = -DENS(i,j) * Ustar**2 / Uabs * U1(i,j)
+       MVFLX(i,j) = -DENS(i,j) * Ustar**2 / Uabs * V1(i,j)
+
+       Z0M(i,j) = Z0C
+       Z0H(i,j) = Z0HC
+       Z0E(i,j) = Z0HC
+
+    end do
+    end do
+
+    call HIST_in( SHR  (:,:), 'URBAN_SHR',   'urban sensible heat flux on roof',    'W/m2' )
+    call HIST_in( SHB  (:,:), 'URBAN_SHB',   'urban sensible heat flux on wall',    'W/m2' )
+    call HIST_in( SHG  (:,:), 'URBAN_SHG',   'urban sensible heat flux on road',    'W/m2' )
+    call HIST_in( LHR  (:,:), 'URBAN_LHR',   'urban latent heat flux on roof',      'W/m2' )
+    call HIST_in( LHB  (:,:), 'URBAN_LHB',   'urban latent heat flux on wall',      'W/m2' )
+    call HIST_in( LHG  (:,:), 'URBAN_LHG',   'urban latent heat flux on road',      'W/m2' )
+    call HIST_in( GHR  (:,:), 'URBAN_GHR',   'urban ground heat flux on roof',      'W/m2' )
+    call HIST_in( GHB  (:,:), 'URBAN_GHB',   'urban ground heat flux on wall',      'W/m2' )
+    call HIST_in( GHG  (:,:), 'URBAN_GHG',   'urban ground heat flux on road',      'W/m2' )
+    call HIST_in( RNR  (:,:), 'URBAN_RNR',   'urban net radiation on roof',         'W/m2' )
+    call HIST_in( RNB  (:,:), 'URBAN_RNB',   'urban net radiation on wall',         'W/m2' )
+    call HIST_in( RNG  (:,:), 'URBAN_RNG',   'urban net radiation on road',         'W/m2' )
+    call HIST_in( RNgrd(:,:), 'URBAN_RNgrd', 'urban grid average of net radiation', 'W/m2' )
 
     return
-  end subroutine CPL_AtmUrb_bulk_setup
+  end subroutine URBAN_PHY_SLC
 
   !-----------------------------------------------------------------------------
-  subroutine CPL_AtmUrb_bulk_restart( &
-        TR,           & ! (in)
-        TB,           & ! (in)
-        TG,           & ! (in)
-        TC,           & ! (in)
-        QC,           & ! (in)
-        UC,           & ! (in)
-        TRL,          & ! (in)
-        TBL,          & ! (in)
-        TGL,          & ! (in)
-        RAINR,        & ! (in)
-        RAINB,        & ! (in)
-        RAING,        & ! (in)
-        AH_t,         & ! (in)
-        ALH_t,        & ! (in)
+  subroutine SLC_main( &
+        TR,           & ! (inout)
+        TB,           & ! (inout)
+        TG,           & ! (inout)
+        TC,           & ! (inout)
+        QC,           & ! (inout)
+        UC,           & ! (inout)
+        TRL,          & ! (inout)
+        TBL,          & ! (inout)
+        TGL,          & ! (inout)
+        RAINR,        & ! (inout)
+        RAINB,        & ! (inout)
+        RAING,        & ! (inout)
+        ROFF,         & ! (inout)
+        AH_t,         & ! (inout)
+        ALH_t,        & ! (inout)
         ALBD_LW_grid, & ! (out)
         ALBD_SW_grid, & ! (out)
         SHR,          & ! (out)
@@ -353,396 +559,12 @@ contains
         ZA,           & ! (in)
         SSG,          & ! (in)
         LLG,          & ! (in)
-        RHOO,         & ! (in)
-        XLON,         & ! (in)
-        XLAT          ) ! (in)
-    use scale_process, only: &
-       PRC_MPIstop
-    use scale_const, only: &
-       EPS    => CONST_EPS,     &    ! small number (machine epsilon)
-       D2R    => CONST_D2R,     &    ! degree to radian
-       KARMAN => CONST_KARMAN,  &    ! kalman constant  [-]
-       PI     => CONST_PI,      &    ! pi               [-]
-       CPdry  => CONST_CPdry,   &    ! heat capacity of dry air [J/K/kg]
-       LHV0   => CONST_LHV0,    &    ! latent heat of vaporization [J/kg]
-       GRAV   => CONST_GRAV,    &    !< gravitational constant [m/s2]
-       Rdry   => CONST_Rdry,    &    !< specific gas constant (dry) [J/kg/K]
-       Rvap   => CONST_Rvap,    &    !< gas constant (water vapor) [J/kg/K]
-       STB    => CONST_STB,     &    !< stefan-Boltzman constant [MKS unit]
-       TEM00  => CONST_TEM00         !< temperature reference (0 degree C) [K]
-    use scale_atmos_saturation, only: &
-       qsat => ATMOS_SATURATION_pres2qsat_all
-    use scale_time, only:       &
-       DELT => TIME_DTSEC_URBAN      !< time interval of urban step [sec]
-    implicit none
-
-    !-- configuration variables
-    logical, intent(in) :: LSOLAR  ! logical   [true=both, false=SSG only]
-
-    !-- Input variables from Coupler to Urban
-    real(RP), intent(in)    :: PRES    ! Surface Pressure                       [Pa]
-    real(RP), intent(in)    :: TA      ! temp at 1st atmospheric level          [K]
-    real(RP), intent(in)    :: QA      ! specific humidity at 1st atmospheric level  [kg/kg]
-    real(RP), intent(in)    :: UA      ! wind speed at 1st atmospheric level    [m/s]
-    real(RP), intent(in)    :: U1      ! u at 1st atmospheric level             [m/s]
-    real(RP), intent(in)    :: V1      ! v at 1st atmospheric level             [m/s]
-    real(RP), intent(in)    :: ZA      ! height of 1st atmospheric level        [m]
-    real(RP), intent(in)    :: SSG     ! downward total short wave radiation    [W/m/m]
-    real(RP), intent(in)    :: LLG     ! downward long wave radiation           [W/m/m]
-    real(RP), intent(in)    :: RHOO    ! air density                            [kg/m^3]
-    real(RP), intent(in)    :: XLAT    !< latitude                              [rad,-pi,pi]
-    real(RP), intent(in)    :: XLON    !< longitude                             [rad,0-2pi]
-
-    !-- In/Out variables from/to Coupler to/from Urban
-    real(RP), intent(in)    :: TR      ! roof temperature              [K]
-    real(RP), intent(in)    :: TB      ! building wall temperature     [K]
-    real(RP), intent(in)    :: TG      ! road temperature              [K]
-    real(RP), intent(in)    :: TC      ! urban-canopy air temperature  [K]
-    real(RP), intent(in)    :: QC      ! urban-canopy air specific humidity [kg/kg]
-    real(RP), intent(in)    :: UC      ! diagnostic canopy wind        [m/s]
-    real(RP), intent(in)    :: TRL(UKS:UKE)  ! layer temperature       [K]
-    real(RP), intent(in)    :: TBL(UKS:UKE)  ! layer temperature       [K]
-    real(RP), intent(in)    :: TGL(UKS:UKE)  ! layer temperature       [K]
-    real(RP), intent(in)    :: RAINR   ! rain amount in storage on roof     [kg/m2]
-    real(RP), intent(in)    :: RAINB   ! rain amount in storage on building [kg/m2]
-    real(RP), intent(in)    :: RAING   ! rain amount in storage on road     [kg/m2]
-    real(RP), intent(in)    :: AH_t    ! Sensible Anthropogenic heat        [W/m^2]
-    real(RP), intent(in)    :: ALH_t   ! Latent Anthropogenic heat          [W/m^2]
-
-    !-- Output variables from Urban to Coupler
-    real(RP), intent(out)   :: ALBD_SW_grid  ! grid mean of surface albedo for SW
-    real(RP), intent(out)   :: ALBD_LW_grid  ! grid mean of surface albedo for LW ( 1-emiss )
-    real(RP), intent(out)   :: RTS           ! radiative surface temperature    [K]
-    real(RP), intent(out)   :: SH            ! sensible heat flux               [W/m/m]
-    real(RP), intent(out)   :: LH            ! latent heat flux                 [W/m/m]
-    real(RP), intent(out)   :: GHFLX         ! heat flux into the ground        [W/m/m]
-    real(RP), intent(out)   :: RN            ! net radition                     [W/m/m]
-    real(RP), intent(out)   :: U10           ! U wind at 10m                    [m/s]
-    real(RP), intent(out)   :: V10           ! V wind at 10m                    [m/s]
-    real(RP), intent(out)   :: T2            ! air temperature at 2m            [K]
-    real(RP), intent(out)   :: Q2            ! specific humidity at 2m          [kg/kg]
-    real(RP), intent(out)   :: RNR, RNB, RNG
-    real(RP), intent(out)   :: SHR, SHB, SHG
-    real(RP), intent(out)   :: LHR, LHB, LHG
-    real(RP), intent(out)   :: GHR, GHB, GHG
-
-    !-- parameters
-    real(RP), parameter     :: SRATIO = 0.75_RP  ! ratio between direct/total solar [-]
-
-    !-- Local variables
-    logical  :: SHADOW = .false.
-           !  true  = consider svf and shadow effects,
-           !  false = consider svf effect only
-
-    real(RP) :: LON, LAT  ! longitude [deg], latitude [deg]
-
-    real(RP) :: SSGD      ! downward direct short wave radiation   [W/m/m]
-    real(RP) :: SSGQ      ! downward diffuse short wave radiation  [W/m/m]
-
-    real(RP) :: W, VFGS, VFGW, VFWG, VFWS, VFWW
-    real(RP) :: SX, RX
-
-    !real(RP) :: UST, TST, QST
-
-    real(RP) :: LUP, LDN, RUP
-    real(RP) :: SUP, SDN
-
-    real(RP) :: LNET, SNET, FLXUV
-    real(RP) :: psim,psim2,psim10   ! similality stability shear function for momentum
-    real(RP) :: psih,psih2,psih10   ! similality stability shear function for heat
-
-    real(RP) :: SR, SB, SG, RR, RB, RG
-    real(RP) :: SB1, SB2, SG1, SG2
-    real(RP) :: RB1, RB2, RG1, RG2
-
-    real(RP) :: Z
-    real(RP) :: QS0R,QS0B,QS0G
-
-    real(RP) :: RIBC, BHC, CDC
-    real(RP) :: RIBR, BHR, CDR
-    real(RP) :: ALPHAB, ALPHAG
-    real(RP) :: CHR, CHB, CHG, CHC
-
-    real(RP) :: XXX, X, CD, CH, CHU, XXX2, XXX10
-
-    !-----------------------------------------------------------
-    ! Set parameters
-    !-----------------------------------------------------------
-
-     ! local time at center point
-     LAT = XLAT / D2R
-     LON = XLON / D2R
-
-     !if(.NOT.LSOLAR) then   ! Radiation scheme does not have SSGD and SSGQ.
-       SSGD = SRATIO * SSG   ! downward direct short wave radiation
-       SSGQ = SSG - SSGD     ! downward diffuse short wave radiation
-     !endif
-
-     W    = 2.0_RP * 1.0_RP * HGT
-     VFGS = SVF
-     VFGW = 1.0_RP - SVF
-     VFWG = ( 1.0_RP - SVF ) * ( 1.0_RP - R ) / W
-     VFWS = VFWG
-     VFWW = 1.0_RP - 2.0_RP * VFWG
-
-     SX  = (SSGD+SSGQ)   ! downward short wave radition [W/m2]
-     RX  = LLG           ! downward long wave radiation
-
-    !-----------------------------------------------------------
-    ! Radiation : Net Short Wave Radiation at roof/wall/road
-    !-----------------------------------------------------------
-
-     if( SSG > 0.0_RP ) then !  SSG is downward short
-
-      ! currently we use no shadow effect model
-      !!     IF(.NOT.SHADOW) THEN              ! no shadow effects model
-
-      SG1  = SX * VFGS * ( 1.0_RP - ALBG )
-      SB1  = SX * VFWS * ( 1.0_RP - ALBB )
-      SG2  = SB1 * ALBB / ( 1.0_RP - ALBB ) * VFGW * ( 1.0_RP - ALBG )
-      SB2  = SG1 * ALBG / ( 1.0_RP - ALBG ) * VFWG * ( 1.0_RP - ALBB )
-
-      SR   = SX * ( 1.0_RP - ALBR )
-      SG   = SG1 + SG2
-      SB   = SB1 + SB2
-      SNET = R * SR + W * SB + RW * SG
-
-     else
-
-      SR   = 0.0_RP
-      SG   = 0.0_RP
-      SB   = 0.0_RP
-      SNET = 0.0_RP
-
-     end if
-
-    !-----------------------------------------------------------
-    ! Set evaporation efficiency on roof/wall/road
-    !-----------------------------------------------------------
-
-    if ( STRGR == 0.0_RP ) then
-       BETR = 0.0_RP
-    else
-       BETR = min ( RAINR / STRGR, 1.0_RP)
-    endif
-    if ( STRGB == 0.0_RP ) then
-       BETB = 0.0_RP
-    else
-       BETB = min ( RAINB / STRGB, 1.0_RP)
-    endif
-    if ( STRGG == 0.0_RP ) then
-       BETG = 0.0_RP
-    else
-       BETG = min ( RAING / STRGG, 1.0_RP)
-    endif
-
-    !-----------------------------------------------------------
-    ! Energy balance on roof/wall/road surface
-    !-----------------------------------------------------------
-
-    !--- Roof
-    Z    = ZA - ZDC
-    BHR  = LOG(Z0R/Z0HR) / 0.4_RP
-    RIBR = ( GRAV * 2.0_RP / (TA+TR) ) * (TA-TR) * (Z+Z0R) / (UA*UA)
-xxxr=0.0_RP ! temtative
-    call mos(XXXR,CHR,CDR,BHR,RIBR,Z,Z0R,UA,TA,TR,RHOO)
-
-    call qsat( QS0R, TR, PRES )
-
-    RR   = EPSR * ( RX - STB * (TR**4) )
-    SHR  = RHOO * CPdry * CHR * UA * (TR-TA)
-    LHR  = RHOO * LHV0 * CHR * UA * BETR * (QS0R-QA)
-    GHR  = SR + RR - SHR - LHR
-
-    !--- Wall and Road
-
-    ! empirical form
-    !ALPHAB = RHOO * CPdry * ( 6.15_RP + 4.18_RP * UC ) / 1200.0_RP
-    !if( UC > 5.0_RP ) ALPHAB = RHOO * CPdry * ( 7.51_RP * UC**0.78_RP ) / 1200.0_RP
-    !ALPHAG = RHOO * CPdry * ( 6.15_RP + 4.18_RP * UC ) / 1200.0_RP
-    !if( UC > 5.0_RP ) ALPHAG = RHOO * CPdry * ( 7.51_RP * UC**0.78_RP ) / 1200.0_RP
-
-     if ( (UC-0.0) < sqrt(EPS) ) then
-       write(*,*) 'UC value is too small. Check!'
-       call PRC_MPIstop
-     endif
-
-     ALPHAB = 6.15_RP + 4.18_RP * UC
-     if( UC > 5.0_RP ) ALPHAB = 7.51_RP * (UC**0.78_RP )
-     ALPHAG = 6.15_RP + 4.18_RP * UC
-     if( UC > 5.0_RP ) ALPHAG = 7.51_RP * (UC**0.78_RP )
-
-     CHB = ALPHAB / RHOO / CPdry / UC
-     CHG = ALPHAG / RHOO / CPdry / UC
-
-     RG1      = EPSG * ( RX * VFGS                   &
-                       + EPSB * VFGW * STB * TB**4   &
-                       - STB * TG**4                )
-     RB1      = EPSB * ( RX * VFWS                   &
-                       + EPSG * VFWG * STB * TG**4   &
-                       + EPSB * VFWW * STB * TB**4   &
-                       - STB * TB**4                )
-
-     RG2      = EPSG * ( (1.0_RP-EPSB) * VFGW * VFWS * RX                  &
-                       + (1.0_RP-EPSB) * VFGW * VFWG * EPSG * STB * TG**4  &
-                       + EPSB * (1.0_RP-EPSB) * VFGW * VFWW * STB * TB**4  )
-     RB2      = EPSB * ( (1.0_RP-EPSG) * VFWG * VFGS * RX                                  &
-                       + (1.0_RP-EPSG) * EPSB * VFGW * VFWG * STB * TB**4                  &
-                       + (1.0_RP-EPSB) * VFWS * VFWW * RX                                  &
-                       + (1.0_RP-EPSB) * VFWG * VFWW * STB * EPSG * TG**4                  &
-                       + EPSB * (1.0_RP-EPSB) * VFWW * (1.0_RP-2.0_RP*VFWS) * STB * TB**4  )
-
-     RG       = RG1 + RG2
-     RB       = RB1 + RB2
-
-     call qsat( QS0B, TB, PRES )
-
-     SHB  = RHOO * CPdry * CHB * UC * (TB-TC)
-     LHB  = RHOO * LHV0  * CHB * UC * BETB * (QS0B-QC)
-     GHB  =  SB + RB - SHB - LHB
-
-     call qsat( QS0G, TG, PRES )
-
-     SHG  = RHOO * CPdry * CHG * UC * (TG-TC)
-     LHG  = RHOO * LHV0  * CHG * UC * BETG * (QS0G-QC)
-     GHG  =  SG + RG - SHG - LHG
-
-    !-----------------------------------------------------------
-    ! Total Fluxes from Urban Canopy
-    !-----------------------------------------------------------
-
-     ! comment out below line to avoid using unintialized value
-     !FLXUV  = ( R*CDR + RW*CDC ) * UA * UA
-     SH     =  R*SHR  + W*SHB  + RW*SHG               ! Sensible heat flux [W/m/m]
-     LH     =  R*LHR  + W*LHB  + RW*LHG               ! Latent heat flux [W/m/m]
-     GHFLX  =  -1.0_RP * ( R*GHR + W*GHB + RW*GHG )
-     LNET   =  R*RR   + W*RB   + RW*RG
-
-    !-----------------------------------------------------------
-    ! Net Radiation and surface albedo
-    !-----------------------------------------------------------
-     RNR = SR + RR        ! Net radiation on roof [W/m/m]
-     RNB = SB + RB        ! Net radiation on building [W/m/m]
-     RNG = SG + RG        ! Net radiation on ground [W/m/m]
-     RN = (SNET+LNET)     ! Net radiation [W/m/m]
-
-     !--- shortwave radiation
-     SDN =  R + W * (VFWS + VFGS * ALBG * VFWG)  + RW * (VFGS + VFWS * ALBB * VFGW)
-     SUP =  R  * ALBR  &
-          + W  * ( VFWS* ALBB + VFGS * ALBG * VFWG *ALBB ) &
-          + RW * ( VFGS * ALBG + VFWS * ALBB * VFGW *ALBG )
-
-     ALBD_SW_grid = SUP / SDN
-
-     !--- longwave radiation
-     LDN =  R + W*VFWS + RW*VFGS
-     LUP =  R  * (1.0_RP-EPSR) &
-          + W  * ( (1.0_RP-EPSB*VFWW)*(1.0_RP-EPSB)*VFWS - EPSB*VFWG*(1.0_RP-EPSG)*VFGS )  &
-          + RW * ( (1.0_RP-EPSG)*VFGS - EPSG*(1.0_RP-VFGS)*(1.0_RP-EPSB)*VFWS )
-
-     RUP = (LDN - LUP) * RX - LNET
-     ALBD_LW_grid = LUP / LDN
-
-    !-----------------------------------------------------------
-    !  diagnostic GRID AVERAGED TS from upward logwave
-    !-----------------------------------------------------------
-
-     RTS = ( RUP / STB / ( 1.0_RP-ALBD_LW_grid) )**0.25
-
-    !-----------------------------------------------------------
-    !  diagnostic grid average U10, V10, T2, Q2 from urban
-    !  Below method would be better to be improved. This is tentative method.
-    !-----------------------------------------------------------
-    ! comment out below three lines to avoid using unintialized value
-    !UST = sqrt( FLXUV )              ! u* [m/s]
-    !TST = -SH / RHOO / CPdry / UST   ! T* [K]
-    !QST = -LH / RHOO / LHV0 / UST    ! q* [-]
-     Z    = ZA - ZDC
-     BHC  = LOG(Z0C/Z0HC) / 0.4_RP
-     RIBC = ( GRAV * 2.0_RP / (TA+TC) ) * (TA-TC) * (Z+Z0C) / (UA*UA)
-     call mos(XXXC,CHC,CDC,BHC,RIBC,Z,Z0C,UA,TA,TC,RHOO)
-
-     XXX  = XXXC
-     call cal_psi(XXX,psim,psih)
-
-     XXX2 = (2.0_RP/Z) * XXX
-     call cal_psi(XXX2,psim2,psih2)
-
-     XXX10 = (10.0_RP/Z) * XXX
-     call cal_psi(XXX10,psim10,psih10)
-
-     !U10 = U1 * ((log(10.0_RP/Z0C)-psim10)/(log(Z/Z0C)-psim))  ! u at 10 m [m/s]
-     !V10 = V1 * ((log(10.0_RP/Z0C)-psim10)/(log(Z/Z0C)-psim))  ! v at 10 m [m/s]
-     U10 = U1 * log(10.0_RP/Z0C) / log(Z/Z0C)
-     V10 = V1 * log(10.0_RP/Z0C) / log(Z/Z0C)
-
-     T2  = RTS + (TA-RTS)*((log(2.0_RP/Z0HC)-psih2)/(log(Z/Z0HC)-psih))
-     Q2 = QC
-
-    !-----------------------------------------------------------
-    ! Add anthropogenic heat fluxes
-    !-----------------------------------------------------------
-
-     SH     = SH + AH_t     ! Sensible heat flux  [W/m/m]
-     LH     = LH + ALH_t    ! Latent heat flux    [W/m/m]
-
-    return
-  end subroutine CPL_AtmUrb_bulk_restart
-
-  !-----------------------------------------------------------------------------
-  subroutine CPL_AtmUrb_bulk( &
-        TR,           & ! (inout)
-        TB,           & ! (inout)
-        TG,           & ! (inout)
-        TC,           & ! (inout)
-        QC,           & ! (inout)
-        UC,           & ! (inout)
-        TRL,          & ! (inout)
-        TBL,          & ! (inout)
-        TGL,          & ! (inout)
-        RAINR,        & ! (inout)
-        RAINB,        & ! (inout)
-        RAING,        & ! (inout)
-        ROFF,         & ! (inout)
-        AH_t,         & ! (inout)
-        ALH_t,        & ! (inout)
-        ALBD_LW_grid, & ! (out)
-        ALBD_SW_grid, & ! (out)
-        SHR,          & ! (out)
-        SHB,          & ! (out)
-        SHG,          & ! (out)
-        LHR,          & ! (inout)
-        LHB,          & ! (inout)
-        LHG,          & ! (inout)
-        GHR,          & ! (out)
-        GHB,          & ! (out)
-        GHG,          & ! (out)
-        RNR,          & ! (out)
-        RNB,          & ! (out)
-        RNG,          & ! (out)
-        RTS,          & ! (out)
-        RN,           & ! (out)
-        SH,           & ! (out)
-        LH,           & ! (out)
-        GHFLX,        & ! (out)
-        U10,          & ! (out)
-        V10,          & ! (out)
-        T2,           & ! (out)
-        Q2,           & ! (out)
-        LSOLAR,       & ! (in)
-        PRES,         & ! (in)
-        TA,           & ! (in)
-        QA,           & ! (in)
-        UA,           & ! (in)
-        U1,           & ! (in)
-        V1,           & ! (in)
-        ZA,           & ! (in)
-        SSG,          & ! (in)
-        LLG,          & ! (in)
         RAIN,         & ! (in)
         RHOO,         & ! (in)
         XLON,         & ! (in)
-        XLAT          ) ! (in)
+        XLAT,         & ! (in)
+        NOWDATE,      & ! (in)
+        dt            ) ! (in)
     use scale_grid_index
     use scale_process, only: &
        PRC_MPIstop
@@ -760,9 +582,6 @@ xxxr=0.0_RP ! temtative
        TEM00  => CONST_TEM00         ! temperature reference (0 degree C) [K]
     use scale_atmos_saturation, only: &
        qsat   => ATMOS_SATURATION_pres2qsat_all
-    use scale_time, only:       &
-       NOWDATE => TIME_NOWDATE, &    ! current time [YYYY MM DD HH MM SS]
-       DELT    => TIME_DTSEC_URBAN   ! time interval of urban step [sec]
     implicit none
 
     !-- configuration variables
@@ -782,6 +601,8 @@ xxxr=0.0_RP ! temtative
     real(RP), intent(in)    :: RHOO ! air density                            [kg/m^3]
     real(RP), intent(in)    :: XLAT ! latitude                               [rad,-pi,pi]
     real(RP), intent(in)    :: XLON ! longitude                              [rad,0-2pi]
+    integer,  intent(in)    :: NOWDATE(6)
+    real(RP), intent(in)    :: dt
 
     !-- In/Out variables from/to Coupler to/from Urban
     real(RP), intent(inout) :: TR   ! roof temperature              [K]
@@ -814,7 +635,7 @@ xxxr=0.0_RP ! temtative
     real(RP), intent(out)   :: Q2     ! specific humidity at 2m          [kg/kg]
     real(RP), intent(out)   :: RNR, RNB, RNG
     real(RP), intent(out)   :: SHR, SHB, SHG
-    real(RP), intent(inout) :: LHR, LHB, LHG
+    real(RP), intent(out)   :: LHR, LHB, LHG
     real(RP), intent(out)   :: GHR, GHB, GHG
 
     !-- parameters
@@ -970,19 +791,14 @@ xxxr=0.0_RP ! temtative
     ! Set evaporation efficiency on roof/wall/road
     !-----------------------------------------------------------
 
-    !!--- calculate rain amount remaining on the surface
-    RAINR = max(0.0_RP, RAINR-(LHR/LHV0)*DELT)   ! [kg/m/m = mm]
-    RAINB = max(0.0_RP, RAINB-(LHB/LHV0)*DELT)   ! [kg/m/m = mm]
-    RAING = max(0.0_RP, RAING-(LHG/LHV0)*DELT)   ! [kg/m/m = mm]
-
     !!--- calculate evaporation efficiency
-    RAINT = 1.0_RP * ( RAIN * DELT )            ! [kg/m2/s -> kg/m2]
+    RAINT = 1.0_RP * ( RAIN * dt )            ! [kg/m2/s -> kg/m2]
     call cal_beta(BETR, RAINT, RAINR, STRGR, ROFFR)
 
-    RAINT = 0.1_RP * ( RAIN * DELT )
+    RAINT = 0.1_RP * ( RAIN * dt )
     call cal_beta(BETB, RAINT, RAINB, STRGB, ROFFB)
 
-    RAINT = 0.9_RP * ( RAIN * DELT )
+    RAINT = 0.9_RP * ( RAIN * dt )
     call cal_beta(BETG, RAINT, RAING, STRGG, ROFFG)
 
     ROFF = ROFF +  R * ROFFR  + RW * ( ROFFB + ROFFG )
@@ -1051,9 +867,9 @@ xxxr=0.0_RP ! temtative
     !  endif
 
       TRL = TRLP
-      call multi_layer(UKE,BOUND,G0R,CAPR,AKSR,TRL,DZR,DELT,TRLEND)
+      call multi_layer(UKE,BOUND,G0R,CAPR,AKSR,TRL,DZR,dt,TRLEND)
       !! 1st layer's cap, aks are replaced.
-      !! call multi_layer2(UKE,BOUND,G0R,CAPR,AKSR,TRL,DZR,DELT,TRLEND,CAPL1,AKSL1)
+      !! call multi_layer2(UKE,BOUND,G0R,CAPR,AKSR,TRL,DZR,dt,TRLEND,CAPL1,AKSL1)
       TR  = TRL(1)
 
       resi1  =  abs(G0R - G0RP)
@@ -1148,8 +964,8 @@ xxxr=0.0_RP ! temtative
      !   AKSL1 = AKSB
      ! endif
       TBL = TBLP
-      call multi_layer(UKE,BOUND,G0B,CAPB,AKSB,TBL,DZB,DELT,TBLEND)
-      !call multi_layer2(UKE,BOUND,G0B,CAPB,AKSB,TBL,DZB,DELT,TBLEND,CAPL1,AKSL1)
+      call multi_layer(UKE,BOUND,G0B,CAPB,AKSB,TBL,DZB,dt,TBLEND)
+      !call multi_layer2(UKE,BOUND,G0B,CAPB,AKSB,TBL,DZB,dt,TBLEND,CAPL1,AKSL1)
       TB = TBL(1)
 
       !if ( STRGG /= 0.0_RP ) then
@@ -1160,8 +976,8 @@ xxxr=0.0_RP ! temtative
       !  AKSL1 = AKSG
       !endif
       TGL = TGLP
-      call multi_layer(UKE,BOUND,G0G,CAPG,AKSG,TGL,DZG,DELT,TGLEND)
-      !call multi_layer2(UKE,BOUND,G0G,CAPG,AKSG,TGL,DZG,DELT,TGLEND,CAPL1,AKSL1)
+      call multi_layer(UKE,BOUND,G0G,CAPG,AKSG,TGL,DZG,dt,TGLEND)
+      !call multi_layer2(UKE,BOUND,G0G,CAPG,AKSG,TGL,DZG,dt,TGLEND,CAPL1,AKSL1)
       TG = TGL(1)
 
       call qsat( QS0B, TB, PRES )
@@ -1270,6 +1086,11 @@ xxxr=0.0_RP ! temtative
     RNB = SB + RB        ! Net radiation on building [W/m/m]
     RNG = SG + RG        ! Net radiation on ground [W/m/m]
 
+    !!--- calculate rain amount remaining on the surface
+    RAINR = max(0.0_RP, RAINR-(LHR/LHV0)*dt)   ! [kg/m/m = mm]
+    RAINB = max(0.0_RP, RAINB-(LHB/LHV0)*dt)   ! [kg/m/m = mm]
+    RAING = max(0.0_RP, RAING-(LHG/LHV0)*dt)   ! [kg/m/m = mm]
+
     !-----------------------------------------------------------
     !  diagnostic GRID AVERAGED TS from upward logwave
     !-----------------------------------------------------------
@@ -1311,88 +1132,7 @@ xxxr=0.0_RP ! temtative
     LH     = LH + ALH_t          ! Latent heat flux            [W/m/m]
 
     return
-  end subroutine CPL_AtmUrb_bulk
-
-  !-----------------------------------------------------------------------------
-  subroutine CPL_AtmUrb_bulk_momentum( &
-        XMFLX,      & ! (out)
-        YMFLX,      & ! (out)
-        ZMFLX,      & ! (out)
-        Z0M,        & ! (out)
-        ZA,         & ! (in)
-        RHOA,       & ! (in)
-        UA,         & ! (in)
-        VA,         & ! (in)
-        WA,         & ! (in)
-        TMPA,       & ! (in)
-        PRSA,       & ! (in)
-        QVA,        & ! (in)
-        PBL,        & ! (in)
-        PRSS,       & ! (in)
-        RTS         ) ! (in)
-    use scale_atmos_saturation, only: &
-       qsat => ATMOS_SATURATION_pres2qsat_all
-    use scale_cpl_bulkflux, only: &
-       CPL_bulkflux
-    use scale_process, only: &
-       PRC_MPIstop
-    implicit none
-
-    ! arguments
-    real(RP), intent(out) :: XMFLX  ! x-momentum flux at the surface [kg/m2/s]
-    real(RP), intent(out) :: YMFLX  ! y-momentum flux at the surface [kg/m2/s]
-    real(RP), intent(out) :: ZMFLX  ! z-momentum flux at the surface [kg/m2/s]
-    real(RP), intent(out) :: Z0M    ! roughness length for momentum [m]
-
-    real(RP), intent(in)  :: RTS    ! radiative surface temperature [K]
-    real(RP), intent(in)  :: RHOA   ! density at the lowest atmospheric layer [kg/m3]
-    real(RP), intent(in)  :: ZA     ! height at the lowest atmospheric layer [m/s]
-    real(RP), intent(in)  :: UA     ! velocity u at the lowest atmospheric layer [m/s]
-    real(RP), intent(in)  :: VA     ! velocity v at the lowest atmospheric layer [m/s]
-    real(RP), intent(in)  :: WA     ! velocity w at the lowest atmospheric layer [m/s]
-    real(RP), intent(in)  :: TMPA   ! temperature at the lowest atmospheric layer [K]
-    real(RP), intent(in)  :: PRSA   ! pressure at the lowest atmospheric layer [Pa]
-    real(RP), intent(in)  :: QVA    ! ratio of water vapor mass to total mass at the lowest atmospheric layer [kg/kg]
-    real(RP), intent(in)  :: PBL    ! the top of atmospheric mixing layer [m]
-    real(RP), intent(in)  :: PRSS   ! pressure at the surface [Pa]
-
-    ! works
-    real(RP) :: Ustar ! friction velocity [m]
-    real(RP) :: Tstar ! friction temperature [K]
-    real(RP) :: Qstar ! friction mixing rate [kg/kg]
-    real(RP) :: Uabs  ! modified absolute velocity [m/s]
-    real(RP) :: QVS   ! saturation water vapor mixing ratio at surface [kg/kg]
-    !---------------------------------------------------------------------------
-
-    ! saturation at the surface
-    call qsat( QVS, RTS, PRSS )
-
-    call CPL_bulkflux( Ustar, & ! (out)
-                       Tstar, & ! (out)
-                       Qstar, & ! (out)
-                       Uabs,  & ! (out)
-                       TMPA,  & ! (in)
-                       RTS,   & ! (in)
-                       PRSA,  & ! (in)
-                       PRSS,  & ! (in)
-                       QVA,   & ! (in)
-                       QVS,   & ! (in)
-                       UA,    & ! (in)
-                       VA,    & ! (in)
-                       ZA,    & ! (in)
-                       PBL,   & ! (in)
-                       Z0C,   & ! (in)
-                       Z0HC,  & ! (in)
-                       Z0HC   ) ! (in)
-
-    XMFLX  = -RHOA * Ustar**2 / Uabs * UA
-    YMFLX  = -RHOA * Ustar**2 / Uabs * VA
-    ZMFLX  = -RHOA * Ustar**2 / Uabs * WA
-
-    Z0M = Z0C
-
-    return
-  end subroutine CPL_AtmUrb_bulk_momentum
+  end subroutine SLC_main
 
   !-----------------------------------------------------------------------------
   subroutine canopy_wind(ZA, UA, UC)
@@ -1759,4 +1499,4 @@ xxxr=0.0_RP ! temtative
     return
   end subroutine urban_param_setup
 
-end module scale_cpl_atmos_urban_bulk
+end module scale_urban_phy_slc
