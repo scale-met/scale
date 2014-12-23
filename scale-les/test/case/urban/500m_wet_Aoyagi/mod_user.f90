@@ -117,16 +117,18 @@ contains
     use scale_grid_real, only: &
        REAL_lon
     use mod_cpl_vars, only: &
-       RHOA  => CPL_fromAtm_ATM_DENS,    &
-       UA    => CPL_fromAtm_ATM_U,       &
-       VA    => CPL_fromAtm_ATM_V,       &
-       WA    => CPL_fromAtm_ATM_W,       &
-       TMPA  => CPL_fromAtm_ATM_TEMP,    &
-       QVA   => CPL_fromAtm_ATM_QV,      &
-       PRES  => CPL_fromAtm_SFC_PRES,    &
-       PREC  => CPL_fromAtm_FLX_precip,  &
-       LWD   => CPL_fromAtm_FLX_LW_dn,   &
-       SWD   => CPL_fromAtm_FLX_SW_dn
+       TMPA  => URB_ATM_TEMP,      &
+       PRSA  => URB_ATM_PRES,      &
+       WA    => URB_ATM_W,         &
+       UA    => URB_ATM_U,         &
+       VA    => URB_ATM_V,         &
+       RHOA  => URB_ATM_DENS,      &
+       QVA   => URB_ATM_QV,        &
+       PBL   => URB_ATM_PBL,       &
+       PRSS  => URB_ATM_SFC_PRES,  &
+       LWD   => URB_ATM_SFLX_LW,   &
+       SWD   => URB_ATM_SFLX_SW,   &
+       PREC  => URB_ATM_SFLX_prec
     use scale_time, only:   &
        NOWSEC => TIME_NOWSEC,      & !< absolute sec
        dt_URB => TIME_DTSEC_URBAN, & !< time interval of urban step [sec]
@@ -170,8 +172,10 @@ contains
        VA  (:,:)  = 0.0_RP
        WA  (:,:)  = 0.0_RP
        RHOA(:,:)  = 1.13_RP
+       PBL (:,:)  = 100.0_RP
        LWD (:,:)  = 400.0_RP
-       PRES(:,:)  = 101000.0_RP
+       PRSA(:,:)  = 100000.0_RP
+       PRSS(:,:)  = 101000.0_RP
 
 
 
