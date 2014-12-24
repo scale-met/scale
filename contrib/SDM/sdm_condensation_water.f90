@@ -18,6 +18,7 @@
 !! @li      2014-07-24 (Y.Sato)  [mod] Modify a bug relating to the revision on 2014/07/18
 !! @li      2014-12-12 (Y.Sato)  [mod] modify epsva, LatHet, and DNS_RL as those used in SCALE Library
 !! @li      2014-12-19 (Y.Sato)  [mod] modify the location for defining LatHet
+!! @li      2014-12-24 (Y.Sato)  [mod] Modify the Latent Heat for SCALE library 
 !!
 !<
 !-------------------------------------------------------------------------------
@@ -296,10 +297,13 @@ contains
   subroutine sdm_condevp_updatefluid(RHOT,QTRC,DENS,rhowp_sdm,rhowc_sdm)
     use scale_tracer, only: &
          I_QV,QAD=>QA
+    use scale_atmos_thermodyn, only: &
+        ATMOS_THERMODYN_templhv
     use scale_grid_index, only: &
          IA,JA,KA,IS,IE,JS,JE,KS,KE
     use m_sdm_fluidconv, only: &
-         sdm_rhot_qtrc2cpexnr
+         sdm_rhot_qtrc2cpexnr, &
+         sdm_rhot_qtrc2p_t
     use m_sdm_common, only: &
          LatHet
     ! Input variables
@@ -312,7 +316,8 @@ contains
     ! Work variables
     real(RP) :: rhov(KA,IA,JA),cpexnr(KA,IA,JA)
     real(RP) :: delta_rhow, dens_old
-    integer :: i, j, k ! index
+    integer  :: i, j, k ! index
+    real(RP) :: lhv(KA,IA,JA), pre(KA,IA,JA), temp(KA,IA,JA)
     !-------------------------------------------------------------------7--
      
     ! exchange vapor
@@ -338,6 +343,9 @@ contains
     end do
     end do
 
+    call sdm_rhot_qtrc2p_t(RHOT,QTRC,DENS,pre,temp)
+    call ATMOS_THERMODYN_templhv(lhv,temp)
+
     ! exchange heat
     call sdm_rhot_qtrc2cpexnr(RHOT,QTRC,DENS,cpexnr)
 
@@ -346,7 +354,8 @@ contains
     do i=IS,IE
        delta_rhow = rhowc_sdm(k,i,j)-rhowp_sdm(k,i,j)
        
-       RHOT(k,i,j) = RHOT(k,i,j) + LatHet*delta_rhow / cpexnr(k,i,j)  
+!!$       RHOT(k,i,j) = RHOT(k,i,j) + LatHet*delta_rhow / cpexnr(k,i,j)  
+       RHOT(k,i,j) = RHOT(k,i,j) + lhv(k,i,j)*delta_rhow / cpexnr(k,i,j)  
     end do
     end do
     end do

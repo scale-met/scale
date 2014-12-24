@@ -36,6 +36,8 @@ module scale_atmos_thermodyn
      CVvap => CONST_CVvap, &
      CL    => CONST_CL,    &
      CI    => CONST_CI,    &
+     LH0   => CONST_LH0,   &
+     TEM00 => CONST_TEM00, &
      PRE00 => CONST_PRE00
   !-----------------------------------------------------------------------------
   implicit none
@@ -54,6 +56,7 @@ module scale_atmos_thermodyn
   public :: ATMOS_THERMODYN_rhot
   public :: ATMOS_THERMODYN_temp_pres
   public :: ATMOS_THERMODYN_temp_pres_E
+  public :: ATMOS_THERMODYN_templhv
 
   interface ATMOS_THERMODYN_qd
      module procedure ATMOS_THERMODYN_qd_0D
@@ -89,6 +92,12 @@ module scale_atmos_thermodyn
      module procedure ATMOS_THERMODYN_temp_pres_E_0D
      module procedure ATMOS_THERMODYN_temp_pres_E_3D
   end interface ATMOS_THERMODYN_temp_pres_E
+
+  interface ATMOS_THERMODYN_templhv
+     module procedure ATMOS_THERMODYN_templhv_0D
+     module procedure ATMOS_THERMODYN_templhv_2D
+     module procedure ATMOS_THERMODYN_templhv_3D
+  end interface ATMOS_THERMODYN_templhv
 
   public :: ATMOS_THERMODYN_tempre
   public :: ATMOS_THERMODYN_tempre2
@@ -758,5 +767,83 @@ contains
 
     return
   end subroutine ATMOS_THERMODYN_tempre2
+
+  !-----------------------------------------------------------------------------
+  subroutine ATMOS_THERMODYN_templhv_0D( &
+      lhv,         &
+      temp         )
+!    use scale_const, only: &
+!       THERMODYN_TYPE => CONST_THERMODYN_TYPE
+    implicit none
+
+    real(RP), intent(out) :: lhv  ! potential temperature [K]
+    real(RP), intent(in)  :: temp  ! temperature           [K]
+
+    !---------------------------------------------------------------------------
+
+!    if ( THERMODYN_TYPE == 'EXACT' ) then
+         lhv = LH0 + ( CPvap - CL ) * ( temp - TEM00 )
+!    elseif ( THERMODYN_TYPE == 'SIMPLE' ) then
+!         lhv = LH0
+!    endif
+
+    return
+  end subroutine ATMOS_THERMODYN_templhv_0D
+
+  !-----------------------------------------------------------------------------
+  subroutine ATMOS_THERMODYN_templhv_2D( &
+      lhv,         &
+      temp         )
+!    use scale_const, only: &
+!       THERMODYN_TYPE => CONST_THERMODYN_TYPE
+    implicit none
+
+    real(RP), intent(out) :: lhv(IA,JA)     ! potential temperature [K]
+    real(RP), intent(in)  :: temp(IA,JA)    ! temperature           [K]
+
+    integer :: i, j
+    !---------------------------------------------------------------------------
+
+    do j = 1, JA
+    do i = 1, IA
+!       if ( THERMODYN_TYPE == 'EXACT' ) then
+         lhv(i,j) = LH0 + ( CPvap - CL ) * ( temp(i,j) - TEM00 )
+!       elseif ( THERMODYN_TYPE == 'SIMPLE' ) then
+!         lhv(i,j) = LH0
+!       endif
+    enddo
+    enddo
+
+    return
+  end subroutine ATMOS_THERMODYN_templhv_2D
+
+  !-----------------------------------------------------------------------------
+  subroutine ATMOS_THERMODYN_templhv_3D( &
+      lhv,         &
+      temp         )
+!    use scale_const, only: &
+!       THERMODYN_TYPE => CONST_THERMODYN_TYPE
+    implicit none
+
+    real(RP), intent(out) :: lhv(KA,IA,JA)     ! potential temperature [K]
+    real(RP), intent(in)  :: temp(KA,IA,JA)    ! temperature           [K]
+
+    integer :: k, i, j
+    !---------------------------------------------------------------------------
+
+    do j = 1, JA
+    do i = 1, IA
+    do k = 1, KA
+!       if ( THERMODYN_TYPE == 'EXACT' ) then
+         lhv(k,i,j) = LH0 + ( CPvap - CL ) * ( temp(k,i,j) - TEM00 )
+!       elseif ( THERMODYN_TYPE == 'SIMPLE' ) then
+!         lhv(k,i,j) = LH0
+!       endif
+    enddo
+    enddo
+    enddo
+
+    return
+  end subroutine ATMOS_THERMODYN_templhv_3D
 
 end module scale_atmos_thermodyn
