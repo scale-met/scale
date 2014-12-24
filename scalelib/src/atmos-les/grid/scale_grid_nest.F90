@@ -212,7 +212,7 @@ module scale_grid_nest
 
   integer, private, parameter :: max_isu   = 100             ! maximum number of receive/wait issue
   integer, private, parameter :: max_isuf  = 20              ! maximum number of receive/wait issue (z-stag)
-  integer, private, parameter :: max_rq    = 500             ! maximum number of req: tentative approach
+  integer, private, parameter :: max_rq    = 5000            ! maximum number of req: tentative approach
   integer, private, parameter :: max_bndqa = 12              ! maximum number of QA in boundary: tentative approach
   integer, private            :: rq_ctl_p                    ! for control request id (counting)
   integer, private            :: rq_ctl_d                    ! for control request id (counting)
