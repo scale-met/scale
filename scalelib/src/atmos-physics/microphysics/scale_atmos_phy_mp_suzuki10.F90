@@ -1217,8 +1217,10 @@ call STOP_COLLECTION("MICROPHYSICS")
   use scale_const, only: &
      cp    => CONST_CPdry, &
      rhow  => CONST_DWATR, &
-     qlevp => CONST_LHV, &
+!     qlevp => CONST_LHV, &
      rvap  => CONST_Rvap
+  use scale_atmos_thermodyn, only: &
+       ATMOS_THERMODYN_templhv
   use scale_atmos_saturation, only: &
        pres2qsat_liq => ATMOS_SATURATION_pres2qsat_liq,   &
        pres2qsat_ice => ATMOS_SATURATION_pres2qsat_ice
@@ -1231,7 +1233,7 @@ call STOP_COLLECTION("MICROPHYSICS")
   real(RP), intent(inout) :: temp  !  temperature [ K ]
   !
   !--- local
-  real(RP) :: ssliq, ssice, delcld
+  real(RP) :: ssliq, ssice, delcld, qlevp
   real(RP) :: sumold, sumnew, acoef, bcoef, xcrit, rcrit
   real(RP) :: ractr, rcld, xcld, part, vdmp, dmp
   integer :: n, nc, ncrit
@@ -1240,6 +1242,8 @@ call STOP_COLLECTION("MICROPHYSICS")
   !
   real(RP) :: n_c, sumnum, gcn( nbin )
   !
+  !--- lhv
+  call ATMOS_THERMODYN_templhv( qlevp,temp )
   !--- supersaturation
   call pres2qsat_liq( ssliq,temp,pres )
   call pres2qsat_ice( ssice,temp,pres )
@@ -1281,8 +1285,10 @@ call STOP_COLLECTION("MICROPHYSICS")
   use scale_const, only: &
      cp    => CONST_CPdry, &
      rhow  => CONST_DWATR, &
-     qlevp => CONST_LHV, &
+!     qlevp => CONST_LHV, &
      rvap  => CONST_Rvap
+  use scale_atmos_thermodyn, only: &
+       ATMOS_THERMODYN_templhv
   use scale_atmos_saturation, only: &
        pres2qsat_liq => ATMOS_SATURATION_pres2qsat_liq,   &
        pres2qsat_ice => ATMOS_SATURATION_pres2qsat_ice
@@ -1297,13 +1303,15 @@ call STOP_COLLECTION("MICROPHYSICS")
   !
   !--- local
   real(RP) :: gan( nccn )  !  SDF ( aerosol ) : number
-  real(RP) :: ssliq, ssice, delcld
+  real(RP) :: ssliq, ssice, delcld, qlevp
   real(RP) :: sumold, sumnew, acoef, bcoef, xcrit, rcrit
   real(RP) :: ractr, rcld, xcld, part, vdmp, dmp
   integer :: n, nc, ncrit
   integer, allocatable, save :: ncld( : )
   logical, save :: ofirst = .true.
   !
+  !--- lhv
+  call ATMOS_THERMODYN_templhv( qlevp,temp )
   !--- supersaturation
   call pres2qsat_liq( ssliq,temp,pres )
   call pres2qsat_ice( ssice,temp,pres )
@@ -1511,8 +1519,10 @@ call STOP_COLLECTION("MICROPHYSICS")
   use scale_const, only: &
      cp    => CONST_CPdry, &
      rhow  => CONST_DWATR, &
-     qlevp => CONST_LHV, &
+!     qlevp => CONST_LHV, &
      rvap  => CONST_Rvap
+  use scale_atmos_thermodyn, only: &
+     ATMOS_THERMODYN_templhv
   use scale_atmos_saturation, only: &
      pres2qsat_liq => ATMOS_SATURATION_pres2qsat_liq,   &
      pres2qsat_ice => ATMOS_SATURATION_pres2qsat_ice
@@ -1524,7 +1534,7 @@ call STOP_COLLECTION("MICROPHYSICS")
   !
   !--- local variables
   integer :: n, nloop, ncount
-  real(RP) :: gclold, gclnew, gtliq, umax, dtcnd
+  real(RP) :: gclold, gclnew, gtliq, umax, dtcnd, qlevp
   real(RP) :: sumliq, cefliq, a, sliqtnd, cndmss, ssliq, ssice
   real(RP) :: gcn( nbin ), gdu( nbin+1 ), gcnold( nbin )
   real(RP), parameter :: cflfct = 0.50_RP
@@ -1540,6 +1550,8 @@ call STOP_COLLECTION("MICROPHYSICS")
   gcn( 1:nbin ) = gc( 1:nbin ) / exp( xctr( 1:nbin ) )
 
   !
+  !--- lhv
+  call ATMOS_THERMODYN_templhv( qlevp,temp )
   !------- CFL condition
   call pres2qsat_liq( ssliq,temp,pres )
   call pres2qsat_ice( ssice,temp,pres )
@@ -1556,6 +1568,8 @@ call STOP_COLLECTION("MICROPHYSICS")
   !------- loop
   do ncount = 1, nloop
 
+  !--- lhv
+  call ATMOS_THERMODYN_templhv( qlevp,temp )
   !----- matrix for supersaturation tendency
   call pres2qsat_liq( ssliq,temp,pres )
   call pres2qsat_ice( ssice,temp,pres )
@@ -1614,6 +1628,8 @@ call STOP_COLLECTION("MICROPHYSICS")
   !----- continue/end
   end do
   !
+  !--- lhv
+  call ATMOS_THERMODYN_templhv( qlevp,temp )
   !------- number -> mass
   do n = 1 , nbin
    gc( n ) = gcn( n )*exp( xctr( n ) )
@@ -1633,10 +1649,13 @@ call STOP_COLLECTION("MICROPHYSICS")
         gc, qvap, temp  ) !--- inout
   !
   use scale_const, only : rhow   => CONST_DWATR, &
-                        qlevp  => CONST_LHV,  &
-                        qlsbl  => CONST_LHS,  &
+!                        qlevp  => CONST_LHV,  &
+!                        qlsbl  => CONST_LHS,  &
                         rvap   => CONST_Rvap, &
                         cp     => CONST_CPdry
+  use scale_atmos_thermodyn, only: &
+     ATMOS_THERMODYN_templhv, &
+     ATMOS_THERMODYN_templhs
   use scale_atmos_saturation, only: &
      pres2qsat_liq => ATMOS_SATURATION_pres2qsat_liq,   &
      pres2qsat_ice => ATMOS_SATURATION_pres2qsat_ice
@@ -1648,7 +1667,7 @@ call STOP_COLLECTION("MICROPHYSICS")
   !
   !--- local variables
   integer :: myu, n, nloop, ncount
-  real(RP) :: gciold, gtice, umax, uval, dtcnd
+  real(RP) :: gciold, gtice, umax, uval, dtcnd, qlevp, qlsbl
   real(RP) :: sumice, cefice, d, sicetnd, gcinew, sblmss, ssliq, ssice
   real(RP) :: gcn( nspc,nbin ), gdu( nbin+1 )
   real(RP), parameter :: cflfct = 0.50_RP
@@ -1669,6 +1688,8 @@ call STOP_COLLECTION("MICROPHYSICS")
     gcn( myu,1:nbin ) = gc( myu,1:nbin )/exp( xctr( 1:nbin ) )
   end do
 
+  !--- lhv
+  call ATMOS_THERMODYN_templhs( qlsbl,temp )
   !----- CFL condition
   call pres2qsat_liq( ssliq,temp,pres )
   call pres2qsat_ice( ssice,temp,pres )
@@ -1690,6 +1711,8 @@ call STOP_COLLECTION("MICROPHYSICS")
   !----- loop
 !  1000 continue
   do ncount = 1, nloop
+  !--- lhv
+  call ATMOS_THERMODYN_templhs( qlsbl,temp )
   !----- matrix for supersaturation tendency
   call pres2qsat_liq( ssliq,temp,pres )
   call pres2qsat_ice( ssice,temp,pres )
@@ -1769,10 +1792,13 @@ call STOP_COLLECTION("MICROPHYSICS")
         gc, qvap, temp    )!--- inout
   !
   use scale_const, only : rhow   => CONST_DWATR,  &
-                        qlevp  => CONST_LHV,  &
-                        qlsbl  => CONST_LHS,  &
+!                        qlevp  => CONST_LHV,  &
+!                        qlsbl  => CONST_LHS,  &
                         rvap   => CONST_Rvap, &
                         cp     => CONST_CPdry
+  use scale_atmos_thermodyn, only: &
+     ATMOS_THERMODYN_templhv, &
+     ATMOS_THERMODYN_templhs
   use scale_atmos_saturation, only: &
      pres2qsat_liq => ATMOS_SATURATION_pres2qsat_liq,   &
      pres2qsat_ice => ATMOS_SATURATION_pres2qsat_ice
@@ -1787,7 +1813,7 @@ call STOP_COLLECTION("MICROPHYSICS")
   !--- local variables
   integer :: n, myu, nloop, ncount
   real(RP) :: gclold, gclnew, gciold, gcinew, cndmss, sblmss
-  real(RP) :: gtliq, gtice, umax, uval, dtcnd
+  real(RP) :: gtliq, gtice, umax, uval, dtcnd, qlevp, qlsbl
   real(RP) :: cef1, cef2, cef3, cef4, a, b, c, d
   real(RP) :: rmdplus, rmdmins, ssplus, ssmins, tplus, tmins
   real(RP) :: sliqtnd, sicetnd, ssliq, ssice, sumliq, sumice
@@ -1817,6 +1843,8 @@ call STOP_COLLECTION("MICROPHYSICS")
          gc( myu,1:nbin ) / exp( xctr( 1:nbin ) )
   end do
 
+  !-- thermodyn
+  call ATMOS_THERMODYN_templhv( qlevp,temp )
   !----- CFL condition
   call pres2qsat_liq( ssliq,temp,pres )
   call pres2qsat_ice( ssice,temp,pres )
@@ -1841,6 +1869,9 @@ call STOP_COLLECTION("MICROPHYSICS")
 !  1000 continue
   do ncount = 1, nloop
 
+  !-- thermodyn
+  call ATMOS_THERMODYN_templhv( qlevp,temp )
+  call ATMOS_THERMODYN_templhs( qlsbl,temp )
   !-- matrix for supersaturation tendency
   call pres2qsat_liq( ssliq,temp,pres )
   call pres2qsat_ice( ssice,temp,pres )
@@ -2216,15 +2247,19 @@ call STOP_COLLECTION("MICROPHYSICS")
   function  gliq( pres,temp )
   !
   use scale_const, only : rair  => CONST_Rdry,  &
-                        rvap  => CONST_Rvap,  &
-                        qlevp => CONST_LHV
+                        rvap  => CONST_Rvap !,  &
+!                        qlevp => CONST_LHV
+  use scale_atmos_thermodyn, only: &
+                        ATMOS_THERMODYN_templhv
   !
   real(RP), intent(in) :: pres, temp
   real(RP) :: gliq
   !
-  real(RP) :: emu, dens, cefd, cefk, f1, f2
+  real(RP) :: emu, dens, cefd, cefk, f1, f2, qlevp
   real(RP), parameter :: fct = 1.4E+3_RP
   !
+  !-- thermodyn
+  call ATMOS_THERMODYN_templhv( qlevp,temp )
   emu = fmyu( temp )
   dens = pres/rair/temp
   cefd = emu/dens
@@ -2240,15 +2275,20 @@ call STOP_COLLECTION("MICROPHYSICS")
   function gice ( pres, temp )
   !
   use scale_const, only : rair  => CONST_Rdry,  &
-                        rvap  => CONST_Rvap,  &
-                        qlsbl => CONST_LHS0
+                        rvap  => CONST_Rvap !,  &
+!                        qlsbl => CONST_LHS0
+  use scale_atmos_thermodyn, only: &
+                        ATMOS_THERMODYN_templhs
   !
   real(RP), intent(in) :: pres, temp
   real(RP) :: gice
   !
-  real(RP) :: emu, dens, cefd, cefk, f1, f2
+  real(RP) :: emu, dens, cefd, cefk, f1, f2, qlsbl
   real(RP), parameter :: fct = 1.4E+3_RP
   !
+  !-- thermodyn
+  call ATMOS_THERMODYN_templhs( qlsbl,temp )
+
   emu = fmyu( temp )
   dens = pres/rair/temp
   cefd = emu/dens
@@ -2279,12 +2319,16 @@ call STOP_COLLECTION("MICROPHYSICS")
   !
   use scale_const, only : temp0 => CONST_TEM00, &
                         rvap  => CONST_RVAP,  &
-                        qlsbl => CONST_LHS0,  &
+!                        qlsbl => CONST_LHS0,  &
                         esat0 => CONST_PSAT0
+  use scale_atmos_thermodyn, only: &
+                        ATMOS_THERMODYN_templhs
   !
   real(RP), intent(in) :: temp
-  real(RP) :: fesati
+  real(RP) :: fesati, qlsbl
   !
+  !-- thermodyn
+  call ATMOS_THERMODYN_templhs( qlsbl,temp )
   fesati = esat0*exp( qlsbl/rvap*( 1.0_RP/temp0 - 1.0_RP/temp ) )
   !
   return
@@ -2296,11 +2340,15 @@ call STOP_COLLECTION("MICROPHYSICS")
   use scale_const, only: &
      temp0 => CONST_TEM00, &
      esat0 => CONST_PSAT0, &
-     qlevp => CONST_LHV,   &
+!     qlevp => CONST_LHV,   &
      rvap  => CONST_Rvap
+  use scale_atmos_thermodyn, only: &
+     ATMOS_THERMODYN_templhv
   real(RP), intent(in) :: temp
-  real(RP) :: fesatl
+  real(RP) :: fesatl, qlevp
   !
+  !-- thermodyn
+  call ATMOS_THERMODYN_templhv( qlevp,temp )
   fesatl = esat0*exp( qlevp/rvap*( 1.0_RP/temp0 - 1.0_RP/temp ) )
   !
   return

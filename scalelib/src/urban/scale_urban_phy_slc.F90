@@ -574,14 +574,13 @@ contains
        D2R    => CONST_D2R,     &    ! degree to radian
        KARMAN => CONST_KARMAN,  &    ! Kalman constant  [-]
        CPdry  => CONST_CPdry,   &    ! Heat capacity of dry air [J/K/kg]
-       CPvap  => CONST_CPvap,   &    ! Heat capacity of wet air [J/K/kg]
-       CL     => CONST_CL,      &    ! specific heat for liquid water [J/kg/K]
-       LHV0   => CONST_LHV0,    &    ! Latent heat of vaporization [J/kg]
        GRAV   => CONST_GRAV,    &    ! gravitational constant [m/s2]
        Rdry   => CONST_Rdry,    &    ! specific gas constant (dry) [J/kg/K]
        Rvap   => CONST_Rvap,    &    ! gas constant (water vapor) [J/kg/K]
        STB    => CONST_STB,     &    ! stefan-Boltzman constant [MKS unit]
        TEM00  => CONST_TEM00         ! temperature reference (0 degree C) [K]
+    use scale_atmos_thermodyn, only: &
+       ATMOS_THERMODYN_templhv
     use scale_atmos_saturation, only: &
        qsat   => ATMOS_SATURATION_pres2qsat_all
     implicit none
@@ -729,7 +728,7 @@ contains
     ! Set parameters
     !-----------------------------------------------------------
 
-    LHV = LHV0 + ( CPvap-CL ) * ( TA-TEM00 )
+    call ATMOS_THERMODYN_templhv( LHV, TA )
 
     !--- Renew surface and layer temperatures
 

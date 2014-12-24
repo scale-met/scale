@@ -89,11 +89,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Driver
   subroutine OCEAN_PHY_driver( update_flag )
-    use scale_const, only: &
-       CPvap => CONST_CPvap, &
-       CL    => CONST_CL,    &
-       LHV0  => CONST_LHV0,  &
-       TEM00 => CONST_TEM00
+    use scale_atmos_thermodyn, only: &
+       ATMOS_THERMODYN_templhv
     use scale_time, only: &
        dt => TIME_DTSEC_OCEAN
     use scale_statistics, only: &
@@ -150,6 +147,8 @@ contains
     logical, intent(in) :: update_flag
 
     real(RP) :: total ! dummy
+
+    real(RP) :: lhv(IA,JA)
     !---------------------------------------------------------------------------
 
     if ( update_flag ) then
@@ -197,7 +196,10 @@ contains
                        OCEAN_SFC_Z0E   (:,:),      & ! [IN]
                        dt                          ) ! [IN]
 
-       OCEAN_SFLX_evap(:,:) = OCEAN_SFLX_LH(:,:) / ( LHV0 + ( CPvap-CL ) * ( ATMOS_TEMP(:,:)-TEM00 ) )
+
+       call ATMOS_THERMODYN_templhv( lhv, ATMOS_TEMP )
+
+       OCEAN_SFLX_evap(:,:) = OCEAN_SFLX_LH(:,:) / lhv(:,:)
 
        call OCEAN_PHY( OCEAN_TEMP_t   (:,:), & ! [OUT]
                        OCEAN_TEMP     (:,:), & ! [IN]

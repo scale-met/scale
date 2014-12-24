@@ -85,11 +85,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Driver
   subroutine URBAN_PHY_driver( update_flag )
-    use scale_const, only: &
-       CPvap => CONST_CPvap, &
-       CL    => CONST_CL,    &
-       LHV0  => CONST_LHV0,  &
-       TEM00 => CONST_TEM00
+    use scale_atmos_thermodyn, only: &
+       ATMOS_THERMODYN_templhv
     use scale_time, only: &
        NOWDATE => TIME_NOWDATE,     &
        dt      => TIME_DTSEC_URBAN
@@ -167,6 +164,7 @@ contains
 
     ! works
     real(RP) :: total ! dummy
+    real(RP) :: lhv(IA,KA)
 
     character(len=2) :: sk
 
@@ -235,7 +233,9 @@ contains
                        NOWDATE         (:),        & ! [IN]
                        dt                          ) ! [IN]
 
-       URBAN_SFLX_evap(:,:) = URBAN_SFLX_LH(:,:) / ( LHV0 + ( CPvap-CL ) * ( ATMOS_TEMP(:,:)-TEM00 ) )
+       call ATMOS_THERMODYN_templhv( lhv, ATMOS_TEMP )
+
+       URBAN_SFLX_evap(:,:) = URBAN_SFLX_LH(:,:) / lhv(:,:)
 
        call HIST_in( URBAN_TR_t(:,:), 'URBAN_TR_t', 'tendency of URBAN_TR', 'K'     )
        call HIST_in( URBAN_TB_t(:,:), 'URBAN_TB_t', 'tendency of URBAN_TB', 'K'     )
