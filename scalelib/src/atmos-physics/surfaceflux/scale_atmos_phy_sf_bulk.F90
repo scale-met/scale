@@ -120,15 +120,13 @@ contains
     use scale_const, only: &
        STB   => CONST_STB,   &
        CPdry => CONST_CPdry, &
-       CPvap => CONST_CPvap, &
-       CL    => CONST_CL,    &
-       Rdry  => CONST_Rdry,  &
-       LHV0  => CONST_LHV0,  &
-       TEM00 => CONST_TEM00
+       Rdry  => CONST_Rdry
     use scale_atmos_phy_sf_bulkcoef, only: &
        SF_bulkcoef => ATMOS_PHY_SF_bulkcoef
     use scale_atmos_saturation, only: &
        SATURATION_pres2qsat_all => ATMOS_SATURATION_pres2qsat_all
+    use scale_atmos_thermodyn, only: &
+       ATMOS_THERMODYN_templhv
     use scale_roughness, only: &
        ROUGHNESS
     implicit none
@@ -179,7 +177,7 @@ contains
     real(RP) :: R2E (IA,JA)
 
     real(RP) :: Uabs_lim, RovCP
-    real(RP) :: LHV
+    real(RP) :: LHV (IA,JA)
     integer  :: i, j
     !---------------------------------------------------------------------------
 
@@ -257,12 +255,13 @@ contains
                                    SFC_TEMP(:,:), & ! [IN]
                                    SFC_PRES(:,:)  ) ! [IN]
 
+    call ATMOS_THERMODYN_templhv( LHV, ATM_TEMP )
+
     do j = JS, JE
     do i = IS, IE
        Uabs_lim = min( max( ATM_Uabs(i,j), ATMOS_PHY_SF_U_minE ), ATMOS_PHY_SF_U_maxE )
-       LHV      = LHV0 + ( CPvap-CL ) * ( ATM_TEMP(i,j)-TEM00 )
 
-       SFLX_LH(i,j) = Ce(i,j) * Uabs_lim * SFC_DENS(i,j) * LHV * SFC_beta(i,j) * ( SFC_QSAT(i,j) - ATM_QTRC(i,j,I_QV) )
+       SFLX_LH(i,j) = Ce(i,j) * Uabs_lim * SFC_DENS(i,j) * LHV(i,j) * SFC_beta(i,j) * ( SFC_QSAT(i,j) - ATM_QTRC(i,j,I_QV) )
     enddo
     enddo
 
@@ -271,9 +270,7 @@ contains
     SFLX_QTRC(:,:,:) = 0.0_RP
     do j = JS, JE
     do i = IS, IE
-       LHV      = LHV0 + ( CPvap-CL ) * ( ATM_TEMP(i,j)-TEM00 )
-
-       SFLX_QTRC(i,j,I_QV) = SFLX_LH(i,j) / LHV
+       SFLX_QTRC(i,j,I_QV) = SFLX_LH(i,j) / LHV(i,j)
     enddo
     enddo
 

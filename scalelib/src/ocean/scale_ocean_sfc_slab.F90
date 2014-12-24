@@ -124,13 +124,11 @@ contains
        PRC_MPIstop
     use scale_const, only: &
       CPdry => CONST_CPdry, &
-      CPvap => CONST_CPvap, &
-      CL    => CONST_CL,    &
-      STB   => CONST_STB,   &
-      LHV0  => CONST_LHV0,  &
-      TEM00 => CONST_TEM00
+      STB   => CONST_STB
     use scale_bulkflux, only: &
       BULKFLUX
+    use scale_atmos_thermodyn, only: &
+       ATMOS_THERMODYN_templhv
     use scale_atmos_saturation, only: &
       qsat => ATMOS_SATURATION_pres2qsat_all
     implicit none
@@ -173,12 +171,12 @@ contains
     ! works
     real(RP) :: SST1(IA,JA)
 
-    real(RP) :: Ustar ! friction velocity [m]
-    real(RP) :: Tstar ! friction temperature [K]
-    real(RP) :: Qstar ! friction mixing rate [kg/kg]
-    real(RP) :: Uabs  ! modified absolute velocity [m/s]
-    real(RP) :: SQV   ! saturation water vapor mixing ratio at surface [kg/kg]
-    real(RP) :: LHV   ! latent heat for vaporization depending on temperature [J/kg]
+    real(RP) :: Ustar        ! friction velocity [m]
+    real(RP) :: Tstar        ! friction temperature [K]
+    real(RP) :: Qstar        ! friction mixing rate [kg/kg]
+    real(RP) :: Uabs         ! modified absolute velocity [m/s]
+    real(RP) :: SQV          ! saturation water vapor mixing ratio at surface [kg/kg]
+    real(RP) :: LHV(IA,JA)   ! latent heat for vaporization depending on temperature [J/kg]
 
     integer :: i, j, n
     !---------------------------------------------------------------------------
@@ -192,12 +190,12 @@ contains
     end do
     end do
 
+    call ATMOS_THERMODYN_templhv( LHV, TMPA )
+
     do j = JS, JE
     do i = IS, IE
 
       if( is_FLX(i,j) ) then
-
-        LHV = LHV0 + ( CPvap-CL ) * ( TMPA(i,j)-TEM00 )
 
         ! saturation at the surface
         call qsat( SQV,       & ! [OUT]
@@ -228,7 +226,7 @@ contains
         YMFLX(i,j) = -RHOA(i,j) * Ustar**2 / Uabs * VA(i,j)
 
         SHFLX (i,j) = -CPdry * RHOA(i,j) * Ustar * Tstar
-        LHFLX (i,j) = -LHV   * RHOA(i,j) * Ustar * Qstar
+        LHFLX (i,j) = -LHV(i,j) * RHOA(i,j) * Ustar * Qstar
 
         ! calculation for residual
         WHFLX(i,j) = ( 1.0_RP - ALB_SW(i,j) ) * SWD(i,j) * (-1.0_RP) &

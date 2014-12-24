@@ -568,7 +568,10 @@ contains
     use scale_history, only: &
        HIST_put
     use scale_atmos_thermodyn, only: &
-       THERMODYN_temp_pres_E => ATMOS_THERMODYN_temp_pres_E
+       THERMODYN_temp_pres_E => ATMOS_THERMODYN_temp_pres_E, &
+       ATMOS_THERMODYN_templhv, &
+       ATMOS_THERMODYN_templhs, &
+       ATMOS_THERMODYN_templhf
     use scale_atmos_saturation, only: &
        SATURATION_dens2qsat_liq => ATMOS_SATURATION_dens2qsat_liq, &
        SATURATION_dens2qsat_ice => ATMOS_SATURATION_dens2qsat_ice
@@ -639,6 +642,9 @@ contains
 
     real(RP) :: zerosw
     real(RP) :: tmp
+    real(RP) :: LHVEx(KA,IA,JA)
+    real(RP) :: LHFEx(KA,IA,JA)
+    real(RP) :: LHSEx(KA,IA,JA)
 
     integer :: k, i, j, iq, ijk, indirect, ip
     !---------------------------------------------------------------------------
@@ -673,6 +679,11 @@ contains
                                     a1   (:,:,:), & ! [OUT]
                                     a2   (:,:,:), & ! [OUT]
                                     ma2  (:,:,:)  ) ! [OUT]
+
+    call ATMOS_THERMODYN_templhv( LHVEx, TEMP0 )
+    call ATMOS_THERMODYN_templhf( LHFEx, TEMP0 )
+    call ATMOS_THERMODYN_templhs( LHSEx, TEMP0 )
+
 
     do j = JS, JE
     do i = IS, IE
@@ -837,9 +848,9 @@ contains
        Kd = ( Dw0 + dDw_dT * temc ) * PRE00 / pres
        NU = ( mu0 + dmu_dT * temc ) * Rdens
 
-       Glv  = 1.0_RP / ( LHV0/(Da*temp) * ( LHV0/(Rvap*temp) - 1.0_RP ) + 1.0_RP/(Kd*dens*QSATL(k,i,j)) )
-       Giv  = 1.0_RP / ( LHS0/(Da*temp) * ( LHS0/(Rvap*temp) - 1.0_RP ) + 1.0_RP/(Kd*dens*QSATI(k,i,j)) )
-       Gil  = 1.0_RP / LHF0 * (Da*temc)
+       Glv  = 1.0_RP / ( LHVEx(k,i,j)/(Da*temp) * ( LHVEx(k,i,j)/(Rvap*temp) - 1.0_RP ) + 1.0_RP/(Kd*dens*QSATL(k,i,j)) )
+       Giv  = 1.0_RP / ( LHSEx(k,i,j)/(Da*temp) * ( LHSEx(k,i,j)/(Rvap*temp) - 1.0_RP ) + 1.0_RP/(Kd*dens*QSATI(k,i,j)) )
+       Gil  = 1.0_RP / LHFEx(k,i,j) * (Da*temc)
 
        ! [Prevp] evaporation rate of rain
        ventr = f1r * GAM_2 * RLMDr_2 + f2r * sqrt( Cr * rho_fact / NU * RLMDr_5dr ) * GAM_5dr_h

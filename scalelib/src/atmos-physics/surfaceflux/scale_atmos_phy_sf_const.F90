@@ -131,11 +131,9 @@ contains
     use scale_grid_index
     use scale_tracer
     use scale_const, only: &
-       PI    => CONST_PI,    &
-       CPvap => CONST_CPvap, &
-       CL    => CONST_CL,    &
-       LHV0  => CONST_LHV0,  &
-       TEM00 => CONST_TEM00
+       PI    => CONST_PI
+    use scale_atmos_thermodyn, only: &
+       ATMOS_THERMODYN_templhv
     use scale_time, only: &
        TIME_NOWSEC
     implicit none
@@ -177,7 +175,7 @@ contains
 
     real(RP) :: modulation
     real(RP) :: Uabs_lim
-    real(RP) :: LHV
+    real(RP) :: LHV(IA,JA)
     integer  :: i, j
     !---------------------------------------------------------------------------
 
@@ -234,13 +232,12 @@ contains
     enddo
 
     !-----< mass flux >-----
+   call ATMOS_THERMODYN_templhv( LHV, ATM_TEMP )
 
     SFLX_QTRC(:,:,:) = 0.0_RP
     do j = JS, JE
     do i = IS, IE
-       LHV = LHV0 + ( CPvap-CL ) * ( ATM_TEMP(i,j)-TEM00 )
-
-       SFLX_QTRC(i,j,I_QV) = SFLX_LH(i,j) / LHV
+       SFLX_QTRC(i,j,I_QV) = SFLX_LH(i,j) / LHV(i,j)
     enddo
     enddo
 
