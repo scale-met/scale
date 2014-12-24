@@ -129,8 +129,11 @@ contains
     implicit none
 
     real(RP) :: tmp_CBFZ(KA), tmp_CBFX(IA), tmp_CBFY(JA)
+    real(RP) :: epsilon
     integer  :: i, j, k
     !---------------------------------------------------------------------------
+
+    epsilon = 0.1_RP**(RP-1)
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** Input topography file ***'
@@ -149,21 +152,21 @@ contains
        call FileRead( tmp_CBFY(:),  TOPO_IN_BASENAME, 'CBFY', 1, PRC_myrank )
 
        do i = 1, IA
-         if( tmp_CBFX(i) /= GRID_CBFX(i) ) then
+         if( abs(tmp_CBFX(i) - GRID_CBFX(i)) > epsilon ) then
            write( IO_FID_LOG,'(A)')  '*** Buffer layer in TOPO_IN_BASENAME is different from GRID_IN_BASENAME ***'
            write( IO_FID_LOG,* )  "I", i, tmp_CBFX(i), GRID_CBFX(i)
            call PRC_MPIstop
          endif
        enddo
        do j = 1, JA
-         if( tmp_CBFY(j) /= GRID_CBFY(j) ) then
+         if( abs(tmp_CBFY(j) - GRID_CBFY(j)) > epsilon ) then
            write( IO_FID_LOG,'(A)')  '*** Buffer layer in TOPO_IN_BASENAME is different from GRID_IN_BASENAME ***'
            write( IO_FID_LOG,* )  "J", j, tmp_CBFY(j), GRID_CBFY(j)
            call PRC_MPIstop
          endif
        enddo
        do k = 1, KA
-         if( tmp_CBFZ(k) /= GRID_CBFZ(k) ) then
+         if( abs(tmp_CBFZ(k) - GRID_CBFZ(k)) > epsilon ) then
            write( IO_FID_LOG,'(A)')  '*** Buffer layer in TOPO_IN_BASENAME is different from GRID_IN_BASENAME ***'
            write( IO_FID_LOG,* )  "K", k, tmp_CBFZ(k), GRID_CBFZ(k)
            call PRC_MPIstop
