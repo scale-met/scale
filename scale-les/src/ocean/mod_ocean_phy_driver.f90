@@ -90,7 +90,10 @@ contains
   !> Driver
   subroutine OCEAN_PHY_driver( update_flag )
     use scale_const, only: &
-       LHV0 => CONST_LHV0
+       CPvap => CONST_CPvap, &
+       CL    => CONST_CL,    &
+       LHV0  => CONST_LHV0,  &
+       TEM00 => CONST_TEM00
     use scale_time, only: &
        dt => TIME_DTSEC_OCEAN
     use scale_statistics, only: &
@@ -194,7 +197,7 @@ contains
                        OCEAN_SFC_Z0E   (:,:),      & ! [IN]
                        dt                          ) ! [IN]
 
-       OCEAN_SFLX_evap(:,:) = OCEAN_SFLX_LH(:,:) / LHV0
+       OCEAN_SFLX_evap(:,:) = OCEAN_SFLX_LH(:,:) / ( LHV0 + ( CPvap-CL ) * ( ATMOS_TEMP(:,:)-TEM00 ) )
 
        call OCEAN_PHY( OCEAN_TEMP_t   (:,:), & ! [OUT]
                        OCEAN_TEMP     (:,:), & ! [IN]

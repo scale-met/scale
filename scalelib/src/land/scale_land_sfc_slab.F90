@@ -149,8 +149,11 @@ contains
        PRC_MPIstop
     use scale_const, only: &
       CPdry => CONST_CPdry, &
+      CPvap => CONST_CPvap, &
+      CL    => CONST_CL,    &
       STB   => CONST_STB,   &
-      LHV0  => CONST_LHV0
+      LHV0  => CONST_LHV0,  &
+      TEM00 => CONST_TEM00
     use scale_grid_index
     use scale_atmos_saturation, only: &
       qsat => ATMOS_SATURATION_pres2qsat_all
@@ -216,8 +219,9 @@ contains
     real(RP) :: Ustar, dUstar ! friction velocity [m]
     real(RP) :: Tstar, dTstar ! friction temperature [K]
     real(RP) :: Qstar, dQstar ! friction mixing rate [kg/kg]
-    real(RP) :: Uabs, dUabs ! modified absolute velocity [m/s]
-    real(RP) :: SQV, dSQV ! saturation water vapor mixing ratio at surface [kg/kg]
+    real(RP) :: Uabs, dUabs   ! modified absolute velocity [m/s]
+    real(RP) :: SQV, dSQV     ! saturation water vapor mixing ratio at surface [kg/kg]
+    real(RP) :: LHV           ! latent heat for vaporization depending on temperature [J/kg]
 
     integer :: i, j, n
     !---------------------------------------------------------------------------
@@ -237,6 +241,8 @@ contains
 
         redf   = 1.0_RP
         oldres = 1.0E+5_RP
+
+        LHV = LHV0 + ( CPvap-CL ) * ( TMPA(i,j)-TEM00 )
 
         ! modified Newton-Raphson method (Tomita 2009)
         do n = 1, LAND_SFC_SLAB_itr_max
@@ -290,13 +296,13 @@ contains
           res = ( 1.0_RP - ALB_SW(i,j) ) * SWD(i,j) &
               + ( 1.0_RP - ALB_LW(i,j) ) * ( LWD(i,j) - STB * LST1(i,j)**4 ) &
               + CPdry * RHOA(i,j) * Ustar * Tstar &
-              + LHV0  * RHOA(i,j) * Ustar * Qstar * QVEF(i,j) &
+              + LHV   * RHOA(i,j) * Ustar * Qstar * QVEF(i,j) &
               - 2.0_RP * TCS(i,j) * ( LST1(i,j) - TG(i,j)  ) / DZG(i,j)
 
           ! calculation for d(residual)/dLST
           dres = -4.0_RP * ( 1.0_RP - ALB_LW(i,j) ) * STB * LST1(i,j)**3 &
                + CPdry  * RHOA(i,j) * ( (dUstar-Ustar)/dTS0 * Tstar + Ustar * (dTstar-Tstar)/dTS0 ) &
-               + LHV0   * RHOA(i,j) * ( (dUstar-Ustar)/dTS0 * Qstar + Ustar * (dQstar-Qstar)/dTS0 ) * QVEF(i,j) &
+               + LHV    * RHOA(i,j) * ( (dUstar-Ustar)/dTS0 * Qstar + Ustar * (dQstar-Qstar)/dTS0 ) * QVEF(i,j) &
                - 2.0_RP * TCS(i,j) / DZG(i,j)
 
           if( abs(dres) * dres_lim < abs(res) ) then
@@ -355,7 +361,11 @@ contains
 
       if( is_FLX(i,j) ) then
 
-        call qsat( SQV, LST1(i,j), PRSS(i,j) )
+        LHV = LHV0 + ( CPvap-CL ) * ( TMPA(i,j)-TEM00 )
+
+        call qsat( SQV,       & ! [OUT]
+                   LST1(i,j), & ! [IN]
+                   PRSS(i,j)  ) ! [IN]
 
         call BULKFLUX( &
             Ustar,     & ! [OUT]
@@ -380,7 +390,7 @@ contains
         XMFLX(i,j) = -RHOA(i,j) * Ustar**2 / Uabs * UA(i,j)
         YMFLX(i,j) = -RHOA(i,j) * Ustar**2 / Uabs * VA(i,j)
         SHFLX(i,j) = -CPdry * RHOA(i,j) * Ustar * Tstar
-        LHFLX(i,j) = -LHV0  * RHOA(i,j) * Ustar * Qstar * QVEF(i,j)
+        LHFLX(i,j) = -LHV   * RHOA(i,j) * Ustar * Qstar * QVEF(i,j)
         GHFLX(i,j) = -2.0_RP * TCS(i,j) * ( LST1(i,j) - TG(i,j) ) / DZG(i,j)
 
         ! calculation for residual
