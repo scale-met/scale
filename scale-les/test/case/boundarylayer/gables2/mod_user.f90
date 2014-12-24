@@ -238,8 +238,8 @@ contains
   subroutine set_tg( tsec )
 !    use mod_atmos_phy_sf_vars, only: &
 !       T_sf => ATMOS_PHY_SF_SFC_TEMP
-    use mod_cpl_vars, only: &
-       T_sf => CPL_fromLnd_SFC_TEMP
+    use mod_land_vars, only: &
+       T_sf => LAND_SFC_TEMP
     implicit none
     real(RP), intent(in)  :: tsec
     real(RP) :: time
