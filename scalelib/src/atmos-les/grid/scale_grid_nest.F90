@@ -754,10 +754,10 @@ contains
        wid_lat = abs((latlon_catalog(i,I_SW,I_LAT) - latlon_catalog(i,I_NW,I_LAT)) &
                       / real( PARENT_JMAX(HANDLE)-1, kind=RP )) * 0.5_RP
 
-       if ( corner_loc(I_SW,I_LON) >= latlon_catalog(i,I_SW,I_LON)-wid_lon .and. &
-            corner_loc(I_SW,I_LAT) >= latlon_catalog(i,I_SW,I_LAT)-wid_lat .and. &
-            corner_loc(I_SW,I_LON) <= latlon_catalog(i,I_NE,I_LON)+wid_lon .and. &
-            corner_loc(I_SW,I_LAT) <= latlon_catalog(i,I_NE,I_LAT)+wid_lat        ) then
+       if ( corner_loc(I_SW,I_LON) >= min(latlon_catalog(i,I_SW,I_LON),latlon_catalog(i,I_NW,I_LON))-wid_lon .and. &
+            corner_loc(I_SW,I_LAT) >= min(latlon_catalog(i,I_SW,I_LAT),latlon_catalog(i,I_SE,I_LAT))-wid_lat .and. &
+            corner_loc(I_SW,I_LON) <= max(latlon_catalog(i,I_NE,I_LON),latlon_catalog(i,I_SE,I_LON))+wid_lon .and. &
+            corner_loc(I_SW,I_LAT) <= max(latlon_catalog(i,I_NE,I_LAT),latlon_catalog(i,I_NW,I_LAT))+wid_lat ) then
 
           pd_sw_tile = i-1 ! MPI process number starts from zero
           hit = .true.
@@ -784,16 +784,16 @@ contains
 
     !--- NE search
     hit = .false.
-    do i = 1, PARENT_PRC_nmax(HANDLE)
+    do i = PARENT_PRC_nmax(HANDLE), 1, -1
        wid_lon = abs((latlon_catalog(i,I_NW,I_LON) - latlon_catalog(i,I_NE,I_LON)) &
                       / real( PARENT_IMAX(HANDLE)-1, kind=RP )) * 0.5_RP
        wid_lat = abs((latlon_catalog(i,I_SE,I_LAT) - latlon_catalog(i,I_NE,I_LAT)) &
                       / real( PARENT_JMAX(HANDLE)-1, kind=RP )) * 0.5_RP
 
-       if ( corner_loc(I_NE,I_LON) >= latlon_catalog(i,I_SW,I_LON)-wid_lon .and. &
-            corner_loc(I_NE,I_LAT) >= latlon_catalog(i,I_SW,I_LAT)-wid_lat .and. &
-            corner_loc(I_NE,I_LON) <= latlon_catalog(i,I_NE,I_LON)+wid_lon .and. &
-            corner_loc(I_NE,I_LAT) <= latlon_catalog(i,I_NE,I_LAT)+wid_lat        ) then
+       if ( corner_loc(I_NE,I_LON) >= min(latlon_catalog(i,I_SW,I_LON),latlon_catalog(i,I_NW,I_LON))-wid_lon .and. &
+            corner_loc(I_NE,I_LAT) >= min(latlon_catalog(i,I_SW,I_LAT),latlon_catalog(i,I_SE,I_LAT))-wid_lat .and. &
+            corner_loc(I_NE,I_LON) <= max(latlon_catalog(i,I_NE,I_LON),latlon_catalog(i,I_SE,I_LON))+wid_lon .and. &
+            corner_loc(I_NE,I_LAT) <= max(latlon_catalog(i,I_NE,I_LAT),latlon_catalog(i,I_NW,I_LAT))+wid_lat ) then
 
           pd_ne_tile = i-1 ! MPI process number starts from zero
           hit = .true.
