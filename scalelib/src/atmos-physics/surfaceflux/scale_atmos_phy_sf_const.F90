@@ -131,8 +131,11 @@ contains
     use scale_grid_index
     use scale_tracer
     use scale_const, only: &
-       PI   => CONST_PI,  &
-       LHV  => CONST_LHV
+       PI    => CONST_PI,    &
+       CPvap => CONST_CPvap, &
+       CL    => CONST_CL,    &
+       LHV0  => CONST_LHV0,  &
+       TEM00 => CONST_TEM00
     use scale_time, only: &
        TIME_NOWSEC
     implicit none
@@ -174,6 +177,7 @@ contains
 
     real(RP) :: modulation
     real(RP) :: Uabs_lim
+    real(RP) :: LHV
     integer  :: i, j
     !---------------------------------------------------------------------------
 
@@ -234,6 +238,8 @@ contains
     SFLX_QTRC(:,:,:) = 0.0_RP
     do j = JS, JE
     do i = IS, IE
+       LHV = LHV0 + ( CPvap-CL ) * ( ATM_TEMP(i,j)-TEM00 )
+
        SFLX_QTRC(i,j,I_QV) = SFLX_LH(i,j) / LHV
     enddo
     enddo
