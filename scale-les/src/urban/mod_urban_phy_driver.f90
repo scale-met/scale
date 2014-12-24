@@ -164,7 +164,7 @@ contains
 
     ! works
     real(RP) :: total ! dummy
-    real(RP) :: lhv(IA,KA)
+    real(RP) :: lhv(IA,JA)
 
     character(len=2) :: sk
 
