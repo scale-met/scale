@@ -20,11 +20,11 @@ module mod_realinput
   use scale_stdio
   use scale_grid_index
   use scale_grid_real, only: &
-     LON  => REAL_LON,   &
-     LAT  => REAL_LAT,   &
-     LONX => REAL_LONX,  &
-     LATY => REAL_LATY,  &
-     CZ   => REAL_CZ,    &
+     LON  => REAL_LON,  &
+     LAT  => REAL_LAT,  &
+     LONX => REAL_LONX, &
+     LATY => REAL_LATY, &
+     CZ   => REAL_CZ,   &
      FZ   => REAL_FZ
   use scale_index
   use scale_tracer
@@ -2942,7 +2942,7 @@ contains
        call FileRead( read2D(:,:), BASENAME_ORG, "LAND_SFC_TEMP",  1, rank )
        lst_org(xs:xe,ys:ye) = read2D(:,:)
 
-       call FileRead( read2D(:,:), BASENAME_ORG, "TS_URB",         1, rank )
+       call FileRead( read2D(:,:), BASENAME_ORG, "URBAN_SFC_TEMP", 1, rank )
        ust_org(xs:xe,ys:ye) = read2D(:,:)
 
        call FileRead( read2D(:,:), BASENAME_ORG, "OCEAN_SFC_TEMP", 1, rank )
@@ -4459,6 +4459,8 @@ contains
       skip_x,      & ! (in)
       skip_y,      & ! (in)
       skip_z       ) ! (in)
+    use scale_const, only: &
+       D2R => CONST_D2R
     implicit none
     real(RP), intent(in) :: lon_org(:,:)
     real(RP), intent(in) :: lat_org(:,:)
@@ -4494,10 +4496,10 @@ contains
     endif
 
     if ( do_xdirec ) then
-       max_ref = maxval( lon_org(:,:) )
-       min_ref = minval( lon_org(:,:) )
-       max_loc = maxval( lon_loc(:,:) )
-       min_loc = minval( lon_loc(:,:) )
+       max_ref = maxval( lon_org(:,:) / D2R )
+       min_ref = minval( lon_org(:,:) / D2R )
+       max_loc = maxval( lon_loc(:,:) / D2R )
+       min_loc = minval( lon_loc(:,:) / D2R )
 
        if ( max_ref < max_loc .or. min_ref > min_loc ) then
           write(*,*) 'xxx ERROR: REQUESTED DOMAIN IS TOO MUCH BROAD'
@@ -4511,10 +4513,10 @@ contains
     endif
 
     if ( do_ydirec ) then
-       max_ref = maxval( lat_org(:,:) )
-       min_ref = minval( lat_org(:,:) )
-       max_loc = maxval( lat_loc(:,:) )
-       min_loc = minval( lat_loc(:,:) )
+       max_ref = maxval( lat_org(:,:) / D2R )
+       min_ref = minval( lat_org(:,:) / D2R )
+       max_loc = maxval( lat_loc(:,:) / D2R )
+       min_loc = minval( lat_loc(:,:) / D2R )
 
        if ( max_ref < max_loc .or. min_ref > min_loc ) then
           write(*,*) 'xxx ERROR: REQUESTED DOMAIN IS TOO MUCH BROAD'
