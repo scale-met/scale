@@ -138,12 +138,12 @@ module m_sdm_common
   !
   !------------------------------------------------------------------------------
 !!$  real(RP), parameter :: LatHet = 2.453E+6_RP   ! Latent heat of water at 293K [J/kg]
-!!$  real(RP), parameter :: LatHet = LH0 - ( CPvap - CL )*TEM00   ! Latent heat of water at 293K [J/kg]
-  real(RP), parameter :: LatHet = LH0           ! Latent heat of water at 293K [J/kg]
+!!$  real(RP), parameter :: LatHet = LH0 - ( CPvap - CL )*TEM00   ! Latent heat of water at 0K [J/kg]
+  real(RP), parameter :: LatHet = LH0           ! Latent heat of water at 273.15K [J/kg] 
   real(RP), parameter :: Heat_C = 2.550E-2_RP   ! thermal conductivity at 293K, 100kPa [J/m s K]
   !--- Y.Sato
 !!$  real(RP), parameter :: DNS_RL = 998.203_RP ! Density of liquid water at 293K [kg m-3]
-  real(RP), parameter :: DNS_RL = DWATR         ! Density of liquid water at 293K [kg m-3]
+  real(RP), parameter :: DNS_RL = DWATR         ! Density of liquid water [kg m-3]
   !--- Y.Sato
   real(RP), parameter :: Diff_C = 2.52E-5_RP    ! Diffusion Constant
   !--- Y.Sato
