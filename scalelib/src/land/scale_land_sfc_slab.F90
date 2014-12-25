@@ -293,13 +293,13 @@ contains
           ! calculation for residual
           res = ( 1.0_RP - ALB_SW(i,j) ) * SWD(i,j) &
               + ( 1.0_RP - ALB_LW(i,j) ) * ( LWD(i,j) - STB * LST1(i,j)**4 ) &
-              + CPdry * RHOA(i,j) * Ustar * Tstar &
+              + CPdry    * RHOA(i,j) * Ustar * Tstar &
               + LHV(i,j) * RHOA(i,j) * Ustar * Qstar * QVEF(i,j) &
               - 2.0_RP * TCS(i,j) * ( LST1(i,j) - TG(i,j)  ) / DZG(i,j)
 
           ! calculation for d(residual)/dLST
           dres = -4.0_RP * ( 1.0_RP - ALB_LW(i,j) ) * STB * LST1(i,j)**3 &
-               + CPdry  * RHOA(i,j) * ( (dUstar-Ustar)/dTS0 * Tstar + Ustar * (dTstar-Tstar)/dTS0 ) &
+               + CPdry    * RHOA(i,j) * ( (dUstar-Ustar)/dTS0 * Tstar + Ustar * (dTstar-Tstar)/dTS0 ) &
                + LHV(i,j) * RHOA(i,j) * ( (dUstar-Ustar)/dTS0 * Qstar + Ustar * (dQstar-Qstar)/dTS0 ) * QVEF(i,j) &
                - 2.0_RP * TCS(i,j) / DZG(i,j)
 
@@ -385,7 +385,7 @@ contains
         ZMFLX(i,j) = -RHOA(i,j) * Ustar**2 / Uabs * WA(i,j)
         XMFLX(i,j) = -RHOA(i,j) * Ustar**2 / Uabs * UA(i,j)
         YMFLX(i,j) = -RHOA(i,j) * Ustar**2 / Uabs * VA(i,j)
-        SHFLX(i,j) = -CPdry * RHOA(i,j) * Ustar * Tstar
+        SHFLX(i,j) = -CPdry    * RHOA(i,j) * Ustar * Tstar
         LHFLX(i,j) = -LHV(i,j) * RHOA(i,j) * Ustar * Qstar * QVEF(i,j)
         GHFLX(i,j) = -2.0_RP * TCS(i,j) * ( LST1(i,j) - TG(i,j) ) / DZG(i,j)
 

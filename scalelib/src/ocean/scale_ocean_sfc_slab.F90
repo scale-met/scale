@@ -181,8 +181,6 @@ contains
     integer :: i, j, n
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** Ocean surface step: Slab'
-
     ! update surface temperature
     do j = JS, JE
     do i = IS, IE
@@ -225,7 +223,7 @@ contains
         XMFLX(i,j) = -RHOA(i,j) * Ustar**2 / Uabs * UA(i,j)
         YMFLX(i,j) = -RHOA(i,j) * Ustar**2 / Uabs * VA(i,j)
 
-        SHFLX (i,j) = -CPdry * RHOA(i,j) * Ustar * Tstar
+        SHFLX (i,j) = -CPdry    * RHOA(i,j) * Ustar * Tstar
         LHFLX (i,j) = -LHV(i,j) * RHOA(i,j) * Ustar * Qstar
 
         ! calculation for residual

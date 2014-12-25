@@ -168,7 +168,7 @@ contains
 
     character(len=2) :: sk
 
-    integer :: k
+    integer :: k, i, j
     !---------------------------------------------------------------------------
 
     if ( update_flag ) then
@@ -235,7 +235,11 @@ contains
 
        call ATMOS_THERMODYN_templhv( lhv, ATMOS_TEMP )
 
-       URBAN_SFLX_evap(:,:) = URBAN_SFLX_LH(:,:) / lhv(:,:)
+       do j = JS, JE
+       do i = IS, IE
+          URBAN_SFLX_evap(i,j) = URBAN_SFLX_LH(i,j) / lhv(i,j)
+       end do
+       end do
 
        call HIST_in( URBAN_TR_t(:,:), 'URBAN_TR_t', 'tendency of URBAN_TR', 'K'     )
        call HIST_in( URBAN_TB_t(:,:), 'URBAN_TB_t', 'tendency of URBAN_TB', 'K'     )
