@@ -147,8 +147,9 @@ contains
     logical, intent(in) :: update_flag
 
     real(RP) :: total ! dummy
-
     real(RP) :: lhv(IA,JA)
+
+    integer  :: i, j
     !---------------------------------------------------------------------------
 
     if ( update_flag ) then
@@ -199,7 +200,11 @@ contains
 
        call ATMOS_THERMODYN_templhv( lhv, ATMOS_TEMP )
 
-       OCEAN_SFLX_evap(:,:) = OCEAN_SFLX_LH(:,:) / lhv(:,:)
+       do j = JS, JE
+       do i = IS, IE
+          OCEAN_SFLX_evap(i,j) = OCEAN_SFLX_LH(i,j) / lhv(i,j)
+       end do
+       end do
 
        call OCEAN_PHY( OCEAN_TEMP_t   (:,:), & ! [OUT]
                        OCEAN_TEMP     (:,:), & ! [IN]

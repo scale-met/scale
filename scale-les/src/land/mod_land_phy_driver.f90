@@ -213,7 +213,11 @@ contains
 
        call ATMOS_THERMODYN_templhv( lhv, ATMOS_TEMP )
  
-       LAND_SFLX_evap(:,:) = LAND_SFLX_LH(:,:) / lhv(:,:)
+       do j = JS, JE
+       do i = IS, IE
+          LAND_SFLX_evap(i,j) = LAND_SFLX_LH(i,j) / lhv(i,j)
+       end do
+       end do
 
        call LAND_PHY( LAND_TEMP_t    (:,:,:),              & ! [OUT]
                       LAND_WATER_t   (:,:,:),              & ! [OUT]
