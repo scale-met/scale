@@ -212,7 +212,7 @@ module scale_grid_nest
 
   integer, private, parameter :: max_isu   = 100             ! maximum number of receive/wait issue
   integer, private, parameter :: max_isuf  = 20              ! maximum number of receive/wait issue (z-stag)
-  integer, private, parameter :: max_rq    = 500             ! maximum number of req: tentative approach
+  integer, private, parameter :: max_rq    = 5000            ! maximum number of req: tentative approach
   integer, private, parameter :: max_bndqa = 12              ! maximum number of QA in boundary: tentative approach
   integer, private            :: rq_ctl_p                    ! for control request id (counting)
   integer, private            :: rq_ctl_d                    ! for control request id (counting)
@@ -750,9 +750,9 @@ contains
     hit = .false.
     do i = 1, PARENT_PRC_nmax(HANDLE)
        wid_lon = abs((latlon_catalog(i,I_SW,I_LON) - latlon_catalog(i,I_SE,I_LON)) &
-                      / real( PARENT_IMAX(HANDLE)-1, kind=RP )) * 0.5_RP
+                      / real( PARENT_IMAX(HANDLE)-1, kind=RP )) * 0.8_RP
        wid_lat = abs((latlon_catalog(i,I_SW,I_LAT) - latlon_catalog(i,I_NW,I_LAT)) &
-                      / real( PARENT_JMAX(HANDLE)-1, kind=RP )) * 0.5_RP
+                      / real( PARENT_JMAX(HANDLE)-1, kind=RP )) * 0.8_RP
 
        if ( corner_loc(I_SW,I_LON) >= min(latlon_catalog(i,I_SW,I_LON),latlon_catalog(i,I_NW,I_LON))-wid_lon .and. &
             corner_loc(I_SW,I_LAT) >= min(latlon_catalog(i,I_SW,I_LAT),latlon_catalog(i,I_SE,I_LAT))-wid_lat .and. &
@@ -765,9 +765,9 @@ contains
        endif
     enddo
     if ( .NOT. hit ) then
-       write(*,*) 'xxx domain mismatch between parent and daughter: SW search'
+       write(*,*) 'xxx region of daughter domain is larger than that of parent: SW search'
        write(*,*) '    at rank:', PRC_myrank, ' of domain:', ONLINE_DOMAIN_NUM
-       if( IO_L ) write(IO_FID_LOG,'(1x,A)') 'xxx domain mismatch between parent and daughter: SW search'
+       if( IO_L ) write(IO_FID_LOG,'(1x,A)') 'xxx region of daughter domain is larger than that of parent: SW search'
        if( IO_L ) write(IO_FID_LOG,*) ' grid width: half width in lat:', wid_lat, ' half width in lon:', wid_lon
        if( IO_L ) write(IO_FID_LOG,'(1x,A,F12.6)') '    daughter local (me): LON=',corner_loc(I_SW,I_LON)
        do i = 1, PARENT_PRC_nmax(HANDLE)
@@ -786,9 +786,9 @@ contains
     hit = .false.
     do i = PARENT_PRC_nmax(HANDLE), 1, -1
        wid_lon = abs((latlon_catalog(i,I_NW,I_LON) - latlon_catalog(i,I_NE,I_LON)) &
-                      / real( PARENT_IMAX(HANDLE)-1, kind=RP )) * 0.5_RP
+                      / real( PARENT_IMAX(HANDLE)-1, kind=RP )) * 0.8_RP
        wid_lat = abs((latlon_catalog(i,I_SE,I_LAT) - latlon_catalog(i,I_NE,I_LAT)) &
-                      / real( PARENT_JMAX(HANDLE)-1, kind=RP )) * 0.5_RP
+                      / real( PARENT_JMAX(HANDLE)-1, kind=RP )) * 0.8_RP
 
        if ( corner_loc(I_NE,I_LON) >= min(latlon_catalog(i,I_SW,I_LON),latlon_catalog(i,I_NW,I_LON))-wid_lon .and. &
             corner_loc(I_NE,I_LAT) >= min(latlon_catalog(i,I_SW,I_LAT),latlon_catalog(i,I_SE,I_LAT))-wid_lat .and. &
@@ -801,9 +801,9 @@ contains
        endif
     enddo
     if ( .NOT. hit ) then
-       write(*,*) 'xxx domain mismatch between parent and daughter: NE search'
+       write(*,*) 'xxx region of daughter domain is larger than that of parent: NE search'
        write(*,*) '    at rank:', PRC_myrank, ' of domain:', ONLINE_DOMAIN_NUM
-       if( IO_L ) write(IO_FID_LOG,'(1x,A)') 'xxx domain mismatch between parent and daughter: NE search'
+       if( IO_L ) write(IO_FID_LOG,'(1x,A)') 'xxx region of daughter domain is larger than that of parent: NE search'
        if( IO_L ) write(IO_FID_LOG,*) ' grid width: half width in lat:', wid_lat, ' half width in lon:', wid_lon
        if( IO_L ) write(IO_FID_LOG,'(1x,A,F12.6)') '    daughter local (me): LON=',corner_loc(I_NE,I_LON)
        do i = 1, PARENT_PRC_nmax(HANDLE)
