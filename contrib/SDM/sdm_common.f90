@@ -19,6 +19,7 @@
 !! @li      2014-12-12 (Y.Sato)  [mod] modify LatHet and DNS_RL as those used in SCALE Library
 !! @li      2014-12-12 (Y.Sato)  [mod] modify characteristics of aeorosl from ammonium sulfate to ammonium bisulfate
 !! @li      2014-12-19 (Y.Sato)  [mod] modify the location for defining LatHet and DNS_RL, and modify some typo
+!! @li      2014-12-25 (Y.Sato)  [mod] modify LatHet to LH0
 !!
 !<
 !-------------------------------------------------------------------------------
@@ -137,7 +138,8 @@ module m_sdm_common
   !
   !------------------------------------------------------------------------------
 !!$  real(RP), parameter :: LatHet = 2.453E+6_RP   ! Latent heat of water at 293K [J/kg]
-  real(RP), parameter :: LatHet = LH0 - ( CPvap - CL )*TEM00   ! Latent heat of water at 293K [J/kg]
+!!$  real(RP), parameter :: LatHet = LH0 - ( CPvap - CL )*TEM00   ! Latent heat of water at 293K [J/kg]
+  real(RP), parameter :: LatHet = LH0           ! Latent heat of water at 293K [J/kg]
   real(RP), parameter :: Heat_C = 2.550E-2_RP   ! thermal conductivity at 293K, 100kPa [J/m s K]
   !--- Y.Sato
 !!$  real(RP), parameter :: DNS_RL = 998.203_RP ! Density of liquid water at 293K [kg m-3]
