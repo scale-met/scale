@@ -267,7 +267,8 @@ contains
          LH0   => CONST_LH0, &
          P00   => CONST_PRE00 
     use scale_atmos_thermodyn, only: &
-         CPw   => AQ_CP 
+         CPw   => AQ_CP, &
+         ATMOS_THERMODYN_templhv
     use scale_history, only: &
          HIST_in
     use scale_time, only: &
@@ -294,8 +295,6 @@ contains
     real(RP) :: LHFLX(IA,JA)
     real(RP) :: WORK(KA,IA,JA)
     real(RP) :: VELX(KA,IA,JA), VELY(KA,IA,JA)
-    real(RP) :: TEMP_t(KA,IA,JA) ! tendency rho*theta     [K*kg/m3/s]
-    real(RP) :: d_PT, drhot, LWPT, LWPT_a
     real(RP) :: QHYD, RovCP, PRES, CPovCV, CPtot, Rtot, Qdry, Qtot
     real(RP) :: qv_evap, pres_evap, PT_SST
 #ifdef _SDM
@@ -307,6 +306,7 @@ contains
     ! work
     real(RP) :: Uabs  ! absolute velocity at the lowermost atmos. layer [m/s]
     real(RP) :: Cm, Ch, Ce    !
+    real(RP) :: lhv, TEMP
 
 
     do JJS = JS, JE, JBLOCK
@@ -579,11 +579,13 @@ contains
           CPtot = CPtot + QTRC(KS,i,j,iw) * CPw(iw)
        enddo
 #endif
-       Rtot = Rdry*qdry + Rvap*QTRC(KS,i,j,I_QV)
-       CPtot = CPdry*qdry + CPtot
+       Rtot   = Rdry*qdry + Rvap*QTRC(KS,i,j,I_QV)
+       CPtot  = CPdry*qdry + CPtot
        CPovCV = CPtot / ( CPtot - Rtot )
-       pres      = P00 * ( RHOT(KS,i,j) * Rtot / P00 )**CPovCV
+       PRES   = P00 * ( RHOT(KS,i,j) * Rtot / P00 )**CPovCV
+       TEMP   = (RHOT(KS,i,j)/DENS(KS,i,j)) * (PRES/P00)**(Rtot/cptot)
 
+       call ATMOS_THERMODYN_templhv( lhv, TEMP )
        call moist_pres2qsat_liq( qv_evap, FIXED_SST, pres_sfc )
 
        ! flux
@@ -608,7 +610,7 @@ contains
        SFLX_MOMY(i,j) = - Cm * min( max(Uabs,U_minM), U_maxM ) * MOMY(KS,i,j)
 
        SHFLX(i,j) = SFLX_POTT(i,j) * CPdry
-       LHFLX(i,j) = SFLX_QV  (i,j) * LH0
+       LHFLX(i,j) = SFLX_QV  (i,j) * lhv
 
       enddo
       enddo

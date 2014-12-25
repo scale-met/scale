@@ -273,7 +273,8 @@ contains
          LH0   => CONST_LH0, &
          P00   => CONST_PRE00 
     use scale_atmos_thermodyn, only: &
-         CPw   => AQ_CP 
+         CPw   => AQ_CP, &
+         ATMOS_THERMODYN_templhv
     use scale_history, only: &
          HIST_in
     use scale_time, only: &
@@ -299,9 +300,8 @@ contains
     real(RP) :: WORK(KA,IA,JA)
     real(RP) :: VELX(KA,IA,JA), VELY(KA,IA,JA)
     real(RP) :: TEMP_t(KA,IA,JA) ! tendency rho*theta     [K*kg/m3/s]
-    real(RP) :: d_PT, drhot, LWPT, LWPT_a
     real(RP) :: QHYD, RovCP, PRES, CPovCV, CPtot, Rtot, Qdry, Qtot
-    real(RP) :: qv_evap, pres_evap, PT_SST
+    real(RP) :: qv_evap, pres_evap, PT_SST, lhv, TEMP
 #ifdef _SDM
     real(RP) :: Qe(KA,IA,JA, MP_QA) ! tendency rho*theta     [K*kg/m3/s]
 #endif
@@ -562,7 +562,17 @@ contains
 
         Cm = min( max(USER_Ustar**2 / Uabs**2, Cm_min), Cm_max )
 
+       !--- saturation at surface
+       qtot = 0.0_RP
+       qdry = 1.0_RP
+       CPtot = 0.0_RP
 #ifdef _SDM
+       do iw = I_QV, I_QV
+          qdry = qdry - QTRC(KS,i,j,iw)
+          qtot = qtot + QTRC(KS,i,j,iw)
+          CPtot = CPtot + QTRC(KS,i,j,iw) * CPw(iw)
+       enddo
+       qtot = qtot + Qe(KS,i,j,I_mp_QC)
 #else
        do iw = QQS, QQE
           qdry = qdry - QTRC(KS,i,j,iw)
@@ -570,11 +580,17 @@ contains
           CPtot = CPtot + QTRC(KS,i,j,iw) * CPw(iw)
        enddo
 #endif
+       Rtot   = Rdry*qdry + Rvap*QTRC(KS,i,j,I_QV)
+       CPtot  = CPdry*qdry + CPtot
+       CPovCV = CPtot / ( CPtot - Rtot )
+       PRES   = P00 * ( RHOT(KS,i,j) * Rtot / P00 )**CPovCV
+       TEMP   = (RHOT(KS,i,j)/DENS(KS,i,j)) * (PRES/P00)**(Rtot/cptot)
+       call ATMOS_THERMODYN_templhv( lhv, TEMP )
 
        ! flux
        SFLX_MOMZ(i,j) = 0.0_RP
        SFLX_POTT(i,j) =  USER_SH / CPdry
-       SFLX_QV  (i,j) =  USER_LH / LH0
+       SFLX_QV  (i,j) =  USER_LH / lhv
 
        ! at (u, y, layer)
        Uabs = sqrt( &
