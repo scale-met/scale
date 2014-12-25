@@ -213,7 +213,7 @@ contains
         T2,          &
         Q2,          &
         TMPA,        &
-        PRES,        &
+        PRSA,        &
         W1,          &
         U1,          &
         V1,          &
@@ -288,7 +288,7 @@ contains
     real(RP), intent(out) :: Q2     (IA,JA)
 
     real(RP), intent(in) :: TMPA  (IA,JA)
-    real(RP), intent(in) :: PRES  (IA,JA)
+    real(RP), intent(in) :: PRSA  (IA,JA)
     real(RP), intent(in) :: W1    (IA,JA)
     real(RP), intent(in) :: U1    (IA,JA)
     real(RP), intent(in) :: V1    (IA,JA)
@@ -428,6 +428,7 @@ contains
                       T2     (i,j), & ! [OUT]
                       Q2     (i,j), & ! [OUT]
                       LSOLAR,       & ! [IN]
+                      PRSA   (i,j), & ! [IN]
                       PRSS   (i,j), & ! [IN]
                       TMPA   (i,j), & ! [IN]
                       QA     (i,j), & ! [IN]
@@ -472,7 +473,7 @@ contains
                       Uabs,      & ! [OUT]
                       TMPA(i,j), & ! [IN]
                       UST (i,j), & ! [IN]
-                      PRES(i,j), & ! [IN]
+                      PRSA(i,j), & ! [IN]
                       PRSS(i,j), & ! [IN]
                       QA  (i,j), & ! [IN]
                       QVS,       & ! [IN]
@@ -553,7 +554,8 @@ contains
         T2,           & ! (out)
         Q2,           & ! (out)
         LSOLAR,       & ! (in)
-        PRES,         & ! (in)
+        PRSA,         & ! (in)
+        PRSS,         & ! (in)
         TA,           & ! (in)
         QA,           & ! (in)
         UA,           & ! (in)
@@ -581,7 +583,8 @@ contains
        Rdry   => CONST_Rdry,    &    ! specific gas constant (dry) [J/kg/K]
        Rvap   => CONST_Rvap,    &    ! gas constant (water vapor) [J/kg/K]
        STB    => CONST_STB,     &    ! stefan-Boltzman constant [MKS unit]
-       TEM00  => CONST_TEM00         ! temperature reference (0 degree C) [K]
+       TEM00  => CONST_TEM00,   &    ! temperature reference (0 degree C) [K]
+       PRE00  => CONST_PRE00         ! pressure reference [Pa]
     use scale_atmos_thermodyn, only: &
        ATMOS_THERMODYN_templhv
     use scale_atmos_saturation, only: &
@@ -592,7 +595,8 @@ contains
     logical , intent(in)    :: LSOLAR ! logical   [true=both, false=SSG only]
 
     !-- Input variables from Coupler to Urban
-    real(RP), intent(in)    :: PRES ! Surface Pressure                       [Pa]
+    real(RP), intent(in)    :: PRSA ! Pressure at 1st atmospheric layer      [Pa]
+    real(RP), intent(in)    :: PRSS ! Surface Pressure                       [Pa]
     real(RP), intent(in)    :: TA   ! temp at 1st atmospheric level          [K]
     real(RP), intent(in)    :: QA   ! specific humidity at 1st atmospheric level  [kg/kg]
     real(RP), intent(in)    :: UA   ! wind speed at 1st atmospheric level    [m/s]
@@ -724,6 +728,8 @@ contains
 
     real(RP) :: XXX, X, CD, CH, CHU, XXX2, XXX10
     real(RP) :: LHV
+    real(RP) :: THA
+    real(RP) :: RovCP
 
     integer  :: iteration
 
@@ -732,6 +738,9 @@ contains
     !-----------------------------------------------------------
 
     call ATMOS_THERMODYN_templhv( LHV, TA )
+
+    RovCP = Rdry / CPdry
+    THA   = TA * ( PRE00 / PRSA )**RovCP
 
     !--- Renew surface and layer temperatures
 
@@ -857,7 +866,7 @@ contains
       RIBR = ( GRAV * 2.0_RP / (TA+TR) ) * (TA-TR) * (Z+Z0R) / (UA*UA)
       call mos(XXXR,CHR,CDR,BHR,RIBR,Z,Z0R,UA,TA,TR,RHOO)
 
-      call qsat( QS0R, TR, PRES )
+      call qsat( QS0R, TR, PRSS )
 
       RR    = EPSR * ( RX - STB * (TR**4)  )
       HR    = RHOO * CPdry * CHR * UA * (TR-TA)
@@ -890,7 +899,7 @@ contains
      RIBR = ( GRAV * 2.0_RP / (TA+TR) ) * (TA-TR) * (Z+Z0R) / (UA*UA)
      call mos(XXXR,CHR,CDR,BHR,RIBR,Z,Z0R,UA,TA,TR,RHOO)
 
-     call qsat( QS0R, TR, PRES )
+     call qsat( QS0R, TR, PRSS )
 
      RR      = EPSR * ( RX - STB * (TR**4) )
      HR      = RHOO * CPdry * CHR * UA * (TR-TA)
@@ -921,8 +930,8 @@ contains
       call mos(XXXC,CHC,CDC,BHC,RIBC,Z,Z0C,UA,TA,TC,RHOO)
       ALPHAC = CHC * RHOO * CPdry * UA
 
-      call qsat( QS0B, TB, PRES )
-      call qsat( QS0G, TG, PRES )
+      call qsat( QS0B, TB, PRSS )
+      call qsat( QS0G, TG, PRSS )
 
       TC1   = RW*ALPHAC    + RW*ALPHAG    + W*ALPHAB
       TC2   = RW*ALPHAC*TA + RW*ALPHAG*TG + W*ALPHAB*TB
@@ -987,8 +996,8 @@ contains
       !call multi_layer2(UKE,BOUND,G0G,CAPG,AKSG,TGL,DZG,dt,TGLEND,CAPL1,AKSL1)
       TG = TGL(1)
 
-      call qsat( QS0B, TB, PRES )
-      call qsat( QS0G, TG, PRES )
+      call qsat( QS0B, TB, PRSS )
+      call qsat( QS0G, TG, PRSS )
 
       TC1    =  RW*ALPHAC    + RW*ALPHAG    + W*ALPHAB
       TC2    =  RW*ALPHAC*TA + RW*ALPHAG*TG + W*ALPHAB*TB
