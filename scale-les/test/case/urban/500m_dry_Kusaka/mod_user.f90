@@ -112,12 +112,14 @@ contains
     use scale_const, only: &
        D2R   => CONST_D2R,   &
        TEM00 => CONST_TEM00, &
+       PRE00 => CONST_PRE00, &
        LHV   => CONST_LHV,   &    ! ELL : latent heat of vaporization [J/kg]
-       Rvap  => CONST_Rvap        !< gas constant (water vapor) [J/kg/K]
+       Rdry  => CONST_Rdry,  &    ! specific gas constant (dry air)
+       CPdry => CONST_CPdry       ! specific heat (dry air,constant pressure) [J/kg/K]
     use scale_grid_real, only: &
        REAL_lon
     use mod_cpl_vars, only: &
-       TMPA  => URB_ATM_TEMP,      &
+       TMPA  => URB_ATM_TEMP,      &  ! air temperature
        PRSA  => URB_ATM_PRES,      &
        WA    => URB_ATM_W,         &
        UA    => URB_ATM_U,         &
@@ -146,9 +148,6 @@ contains
     real(RP) :: PT  (0:24)
     real(RP) :: Wind(0:24)
 
-
-
-
     data SW / 0.0,0.0,0.0,0.0,0.0,0.0,50.0,240.0,420.0,600.0,690.0,765.0,800.0, &
               765.0,690.0,600.0,420.0,240.0,50.0,0.0,0.0,0.0,0.0,0.0,0.0/
 
@@ -158,27 +157,25 @@ contains
     data Wind / 2.75,2.75,2.75,2.75,2.75,2.75,2.8,3.0,3.25,3.5,3.65,3.65,3.5, &
                 3.4,3.27,3.15,3.05,2.95,2.85,2.8,2.75,2.7,2.72,2.75,2.75/
 
-
-
-
-
-
-
+    real(RP) :: THETA
+    real(RP) :: RovCP
     integer :: k, i, j
     !---------------------------------------------------------------------------
+
+    RovCP = Rdry / CPdry
 
     if ( USER_do ) then
 
        VA  (:,:)  = 0.0_RP
        WA  (:,:)  = 0.0_RP
        RHOA(:,:)  = 1.13_RP
+       PBL(:,:)   = 100.0_RP
        LWD (:,:)  = 400.0_RP
        PRSA(:,:)  = 100000.0_RP
-       PRSS(:,:)  = 101000.0_RP
-
+       PRSS(:,:)  = 100120.0_RP
        QVA (:,:)  = 0.015_RP
        PREC(:,:)  = 0.0_RP
-       PBL(:,:)   = 100.0_RP
+
 
        do j = 1, JA
        do i = 1, IA
@@ -192,8 +189,10 @@ contains
           SWD (i,j) = ( ( 1.0_RP-dsec ) * SW(tloc  ) &
                       + (        dsec ) * SW(tloc+1) )
 
-          TMPA(i,j) = ( ( 1.0_RP-dsec ) * PT(tloc  ) &
+          THETA     = ( ( 1.0_RP-dsec ) * PT(tloc  ) &
                       + (        dsec ) * PT(tloc+1) ) + TEM00
+          WORK(i,j) = THETA                                  ! potential temp
+          TMPA(i,j) = THETA * ( PRSA(i,j) / PRE00 )**RovCP   ! air temp, but now PRSA = 100000Pa
 
           UA  (i,j) = ( ( 1.0_RP-dsec ) * Wind(tloc  ) &
                       + (        dsec ) * Wind(tloc+1) )
@@ -201,8 +200,7 @@ contains
        enddo
        enddo
 
-
-       call HIST_in( TMPA (:,:), 'PT_urb',   'Potential temp',               'K'     )
+       call HIST_in( WORK (:,:), 'PT_urb',   'Potential air temperature',    'K'     )
        call HIST_in( QVA  (:,:), 'QA_urb',   'Specific humidity',            'kg/kg' )
        call HIST_in( UA   (:,:), 'UA_urb',   'Wind speed',                   'm/s'   )
        call HIST_in( SWD  (:,:), 'SWD_urb',  'Downward shortwave radiation', 'W/m2'  )

@@ -728,7 +728,7 @@ contains
 
     real(RP) :: XXX, X, CD, CH, CHU, XXX2, XXX10
     real(RP) :: LHV
-    real(RP) :: THA
+    real(RP) :: THA,THC,THS,THS1,THS2
     real(RP) :: RovCP
 
     integer  :: iteration
@@ -861,15 +861,18 @@ contains
      G0RP = 0.0_RP
      do iteration = 1, 20
 
+      THS   = TR * ( PRE00 / PRSS )**RovCP   ! potential temp
+
       Z    = ZA - ZDC
       BHR  = LOG(Z0R/Z0HR) / 0.4_RP
-      RIBR = ( GRAV * 2.0_RP / (TA+TR) ) * (TA-TR) * (Z+Z0R) / (UA*UA)
-      call mos(XXXR,CHR,CDR,BHR,RIBR,Z,Z0R,UA,TA,TR,RHOO)
+      RIBR = ( GRAV * 2.0_RP / (THA+THS) ) * (THA-THS) * (Z+Z0R) / (UA*UA)
+      call mos(XXXR,CHR,CDR,BHR,RIBR,Z,Z0R,UA,THA,THS,RHOO)
 
       call qsat( QS0R, TR, PRSS )
 
       RR    = EPSR * ( RX - STB * (TR**4)  )
-      HR    = RHOO * CPdry * CHR * UA * (TR-TA)
+      !HR    = RHOO * CPdry * CHR * UA * (TR-TA)
+      HR    = RHOO * CPdry * CHR * UA * (THS-THA)
       ELER  = RHOO * LHV   * CHR * UA * BETR * (QS0R-QA)
       G0R   = SR + RR - HR - ELER
 
@@ -896,13 +899,14 @@ contains
      enddo
 
     !--- update only fluxes ----
-     RIBR = ( GRAV * 2.0_RP / (TA+TR) ) * (TA-TR) * (Z+Z0R) / (UA*UA)
-     call mos(XXXR,CHR,CDR,BHR,RIBR,Z,Z0R,UA,TA,TR,RHOO)
+     THS   = TR * ( PRE00 / PRSS )**RovCP
+     RIBR = ( GRAV * 2.0_RP / (THA+THS) ) * (THA-THS) * (Z+Z0R) / (UA*UA)
+     call mos(XXXR,CHR,CDR,BHR,RIBR,Z,Z0R,UA,THA,THS,RHOO)
 
      call qsat( QS0R, TR, PRSS )
 
      RR      = EPSR * ( RX - STB * (TR**4) )
-     HR      = RHOO * CPdry * CHR * UA * (TR-TA)
+     HR      = RHOO * CPdry * CHR * UA * (THS-THA)
      ELER    = RHOO * LHV   * CHR * UA * BETR * (QS0R-QA)
      G0R     = SR + RR - HR - ELER
 
@@ -924,18 +928,23 @@ contains
      G0GP = 0.0_RP
      do iteration = 1, 50
 
+      THS1   = TB * ( PRE00 / PRSS )**RovCP
+      THS2   = TG * ( PRE00 / PRSS )**RovCP
+      THC    = TC * ( PRE00 / PRSS )**RovCP
+
       Z    = ZA - ZDC
       BHC  = LOG(Z0C/Z0HC) / 0.4_RP
-      RIBC = ( GRAV * 2.0_RP / (TA+TC) ) * (TA-TC) * (Z+Z0C) / (UA*UA)
-      call mos(XXXC,CHC,CDC,BHC,RIBC,Z,Z0C,UA,TA,TC,RHOO)
+      RIBC = ( GRAV * 2.0_RP / (THA+THC) ) * (THA-THC) * (Z+Z0C) / (UA*UA)
+      call mos(XXXC,CHC,CDC,BHC,RIBC,Z,Z0C,UA,THA,THC,RHOO)
       ALPHAC = CHC * RHOO * CPdry * UA
 
       call qsat( QS0B, TB, PRSS )
       call qsat( QS0G, TG, PRSS )
 
       TC1   = RW*ALPHAC    + RW*ALPHAG    + W*ALPHAB
-      TC2   = RW*ALPHAC*TA + RW*ALPHAG*TG + W*ALPHAB*TB
-      TC    = TC2 / TC1
+      !TC2   = RW*ALPHAC*TA + RW*ALPHAG*TG + W*ALPHAB*TB
+      TC2   = RW*ALPHAC*THA + W*ALPHAB*THS1 + RW*ALPHAG*THS2
+      THC   = TC2 / TC1
       QC1   = RW*(CHC*UA)    + RW*(CHG*BETG*UC)      + W*(CHB*BETB*UC)
       QC2   = RW*(CHC*UA)*QA + RW*(CHG*BETG*UC)*QS0G + W*(CHB*BETB*UC)*QS0B
       QC    = QC2 / QC1
@@ -962,46 +971,34 @@ contains
       RG    = RG1 + RG2
       RB    = RB1 + RB2
 
-      HB    = RHOO * CPdry * CHB * UC * (TB-TC)
+      HB    = RHOO * CPdry * CHB * UC * (THS1-THC)
       ELEB  = RHOO * LHV   * CHB * UC * BETB * (QS0B-QC)
       G0B   = SB + RB - HB - ELEB
 
-      HG    = RHOO * CPdry * CHG * UC * (TG-TC)
+      HG    = RHOO * CPdry * CHG * UC * (THS2-THC)
       ELEG  = RHOO * LHV   * CHG * UC * BETG * (QS0G-QC)
       G0G   = SG + RG - HG - ELEG
 
-    !--- Heat capacity and Thermal conductivity of 1st layer
-    !                 and calculate temperature in building/road
-     ! if ( STRGB /= 0.0_RP ) then
-     !   CAPL1 = CAP_water * (RAINB / (DZB(1) + RAINB)) + CAPB * (DZB(1) / (DZB(1) + RAINB))
-     !   AKSL1 = AKS_water * (RAINB / (DZB(1) + RAINB)) + AKSB * (DZB(1) / (DZB(1) + RAINB))
-     ! else
-     !   CAPL1 = CAPB
-     !   AKSL1 = AKSB
-     ! endif
       TBL = TBLP
       call multi_layer(UKE,BOUND,G0B,CAPB,AKSB,TBL,DZB,dt,TBLEND)
-      !call multi_layer2(UKE,BOUND,G0B,CAPB,AKSB,TBL,DZB,dt,TBLEND,CAPL1,AKSL1)
       TB = TBL(1)
 
-      !if ( STRGG /= 0.0_RP ) then
-      !  CAPL1 = CAP_water * (RAING / (DZG(1) + RAING)) + CAPG * (DZG(1) / (DZG(1) + RAING))
-      !  AKSL1 = AKS_water * (RAING / (DZG(1) + RAING)) + AKSG * (DZG(1) / (DZG(1) + RAING))
-      !else
-      !  CAPL1 = CAPG
-      !  AKSL1 = AKSG
-      !endif
       TGL = TGLP
       call multi_layer(UKE,BOUND,G0G,CAPG,AKSG,TGL,DZG,dt,TGLEND)
-      !call multi_layer2(UKE,BOUND,G0G,CAPG,AKSG,TGL,DZG,dt,TGLEND,CAPL1,AKSL1)
       TG = TGL(1)
 
       call qsat( QS0B, TB, PRSS )
       call qsat( QS0G, TG, PRSS )
 
+      THS1   = TB * ( PRE00 / PRSS )**RovCP
+      THS2   = TG * ( PRE00 / PRSS )**RovCP
+
       TC1    =  RW*ALPHAC    + RW*ALPHAG    + W*ALPHAB
-      TC2    =  RW*ALPHAC*TA + RW*ALPHAG*TG + W*ALPHAB*TB
-      TC     =  TC2 / TC1
+      !TC2    =  RW*ALPHAC*THA + RW*ALPHAG*TG + W*ALPHAB*TB
+      TC2    =  RW*ALPHAC*THA + W*ALPHAB*THS1 + RW*ALPHAG*THS2
+      THC    =  TC2 / TC1
+      TC = THC * ( PRSS / PRE00 )**RovCP
+
       QC1    =  RW*(CHC*UA)    + RW*(CHG*BETG*UC)      + W*(CHB*BETB*UC)
       QC2    =  RW*(CHC*UA)*QA + RW*(CHG*BETG*UC)*QS0G + W*(CHB*BETB*UC)*QS0B
       QC     =  QC2 / QC1
@@ -1036,11 +1033,15 @@ contains
      RG       = RG1 + RG2
      RB       = RB1 + RB2
 
-     HB   = RHOO * CPdry * CHB * UC * (TB-TC)
+     THS1   = TB * ( PRE00 / PRSS )**RovCP
+     THS2   = TG * ( PRE00 / PRSS )**RovCP
+     THC    = TC * ( PRE00 / PRSS )**RovCP
+
+     HB   = RHOO * CPdry * CHB * UC * (THS1-THC)
      ELEB = RHOO * LHV   * CHB * UC * BETB * (QS0B-QC)
      G0B  = SB + RB - HB - ELEB
 
-     HG   = RHOO * CPdry * CHG * UC * (TG-TC)
+     HG   = RHOO * CPdry * CHG * UC * (THS2-THC)
      ELEG = RHOO * LHV   * CHG * UC * BETG * (QS0G-QC)
      G0G  = SG + RG - HG - ELEG
 
@@ -1196,8 +1197,6 @@ contains
        ROFF  = max(0.0_RP, WATER-STRG)
        WATER = WATER - max(0.0_RP, WATER-STRG)
        BET   = min ( WATER / STRG, 1.0_RP)
-    !   BET   = min ( WATER / STRG, 0.35_RP)
-    !   BET   = max ( WATER / STRG, 0.1_RP)
     endif
 
     return
