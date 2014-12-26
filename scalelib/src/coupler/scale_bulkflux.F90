@@ -172,7 +172,8 @@ contains
       GRAV   => CONST_GRAV,   &
       KARMAN => CONST_KARMAN, &
       Rdry   => CONST_Rdry,   &
-      CPdry  => CONST_CPdry
+      CPdry  => CONST_CPdry,  &
+      PRE00  => CONST_PRE00
     implicit none
 
     ! argument
@@ -206,6 +207,7 @@ contains
     real(RP) :: RiB0, RiB ! bulk Richardson number [no unit]
     real(RP) :: C0 ! initial drag coefficient [no unit]
     real(RP) :: fm, fh, t0th, q0qe
+    real(RP) :: Tha, Ths
 
     real(RP) :: RovCP
     !---------------------------------------------------------------------------
@@ -213,8 +215,10 @@ contains
     RovCP = Rdry / CPdry
 
     Uabs = max( sqrt( Ua**2 + Va**2 ), BULKFLUX_Uabs_min )
+    Tha  = Ta*(PRE00/Pa)**RovCP
+    Ths  = Ts*(PRE00/Ps)**RovCP
 
-    RiB0 = GRAV * Za * ( Ta - Ts*(Pa/Ps)**RovCP ) / ( Ta * Uabs**2 )
+    RiB0 = GRAV * Za * ( Tha - Ths ) / ( Tha * Uabs**2 )
     if( abs( RiB0 ) < BULKFLUX_RiB_min ) then
       RiB0 = sign( BULKFLUX_RiB_min, RiB0 )
     end if
@@ -250,8 +254,8 @@ contains
     q0qe = 1.0_RP / ( 1.0_RP + log( Z0M/Z0E ) / log( Za/Z0M ) / sqrt( fm ) * fh )
 
     Ustar = sqrt( C0 * fm ) * Uabs
-    Tstar = C0 * fh * t0th / tPrn * Uabs / Ustar * ( Ta - Ts*(Pa/Ps)**RovCP )
-    Qstar = C0 * fh * q0qe / tPrn * Uabs / Ustar * ( Qa - Qs )
+    Tstar = C0 * fh * t0th / tPrn * Uabs / Ustar * ( Tha - Ths )
+    Qstar = C0 * fh * q0qe / tPrn * Uabs / Ustar * ( Qa  - Qs  )
 
     return
   end subroutine BULKFLUX_U95
@@ -283,12 +287,13 @@ contains
        Z0H,     & ! (in)
        Z0E      ) ! (in)
     use scale_const, only: &
-       GRAV   => CONST_GRAV,   &
-       KARMAN => CONST_KARMAN, &
-       Rdry   => CONST_Rdry,   &
-       CPdry  => CONST_CPdry,  &
-       EPS     => CONST_EPS,   &
-       EPSTvap => CONST_EPSTvap
+       GRAV    => CONST_GRAV,    &
+       KARMAN  => CONST_KARMAN,  &
+       Rdry    => CONST_Rdry,    &
+       CPdry   => CONST_CPdry,   &
+       EPS     => CONST_EPS,     &
+       EPSTvap => CONST_EPSTvap, &
+       PRE00   => CONST_PRE00
     implicit none
 
     ! parameter
@@ -335,6 +340,7 @@ contains
     real(RP) :: TstarUS, TstarS, dTstar, dTstarUS, dTstarS
     real(RP) :: QstarUS, QstarS, dQstar, dQstarUS, dQstarS
 
+    real(RP) :: Tha, Ths
     real(RP) :: RovCP
     real(RP) :: sw
     !---------------------------------------------------------------------------
@@ -342,9 +348,11 @@ contains
     RovCP = Rdry / CPdry
 
     Uabs = max( sqrt( Ua**2 + Va**2 ), BULKFLUX_Uabs_min )
+    Tha  = Ta*(PRE00/Pa)**RovCP
+    Ths  = Ts*(PRE00/Ps)**RovCP
 
     ! initial bulk Richardson number
-    RiB0 = GRAV * Za * ( Ta - Ts*(Pa/Ps)**RovCP ) / ( Ta * Uabs**2 )
+    RiB0 = GRAV * Za * ( Tha - Ths ) / ( Tha * Uabs**2 )
     if( abs( RiB0 ) < BULKFLUX_RiB_min ) then
       RiB0 = sign( BULKFLUX_RiB_min, RiB0 )
     end if
@@ -360,14 +368,14 @@ contains
       ! unstable condition
       UabsUS  = max( sqrt( Ua**2 + Va**2 + (BULKFLUX_WSCF*Wstar)**2 ), BULKFLUX_Uabs_min )
       UstarUS = KARMAN / ( log(Za/Z0M) - fm_unstable(Za,L) + fm_unstable(Z0M,L) ) * UabsUS
-      TstarUS = KARMAN / ( log(Za/Z0H) - fh_unstable(Za,L) + fh_unstable(Z0H,L) ) / Pt * ( Ta - Ts*(Pa/Ps)**RovCP )
-      QstarUS = KARMAN / ( log(Za/Z0E) - fh_unstable(Za,L) + fh_unstable(Z0E,L) ) / Pt * ( Qa - Qs )
+      TstarUS = KARMAN / ( log(Za/Z0H) - fh_unstable(Za,L) + fh_unstable(Z0H,L) ) / Pt * ( Tha - Ths )
+      QstarUS = KARMAN / ( log(Za/Z0E) - fh_unstable(Za,L) + fh_unstable(Z0E,L) ) / Pt * ( Qa  - Qs  )
 
       ! stable condition
       UabsS  = max( sqrt( Ua**2 + Va**2 ), BULKFLUX_Uabs_min )
       UstarS = KARMAN / ( log(Za/Z0M) - fm_stable(Za,L) + fm_stable(Z0M,L) ) * UabsS
-      TstarS = KARMAN / ( log(Za/Z0H) - fh_stable(Za,L) + fh_stable(Z0H,L) ) / Pt * ( Ta - Ts*(Pa/Ps)**RovCP )
-      QstarS = KARMAN / ( log(Za/Z0E) - fh_stable(Za,L) + fh_stable(Z0E,L) ) / Pt * ( Qa - Qs )
+      TstarS = KARMAN / ( log(Za/Z0H) - fh_stable(Za,L) + fh_stable(Z0H,L) ) / Pt * ( Tha - Ths )
+      QstarS = KARMAN / ( log(Za/Z0E) - fh_stable(Za,L) + fh_stable(Z0E,L) ) / Pt * ( Qa  - Qs  )
 
       sw = 0.5_RP - sign( 0.5_RP, L ) ! if unstable, sw = 1
 
@@ -377,21 +385,21 @@ contains
       Qstar = ( sw ) * QstarUS + ( 1.0_RP-sw ) * QstarS
 
       ! update free convection velocity scale (unstable condition only)
-      Wstar = ( -PBL * GRAV / Ta * Ustar * Tstar * sw )**(1.0_RP/3.0_RP)
+      Wstar = ( -PBL * GRAV / Tha * Ustar * Tstar * sw )**(1.0_RP/3.0_RP)
 
       ! calculate residual
-      res = L - Ustar**2 * Ta / ( KARMAN * GRAV * Tstar )
+      res = L - Ustar**2 * Tha / ( KARMAN * GRAV * Tstar )
 
       ! unstable condition
       dUabsUS  = max( sqrt( Ua**2 + Va**2 + (BULKFLUX_WSCF*dWstar)**2 ), BULKFLUX_Uabs_min )
       dUstarUS = KARMAN / ( log(Za/Z0M) - fm_unstable(Za,L+dL) + fm_unstable(Z0M,L+dL) ) * dUabsUS
-      dTstarUS = KARMAN / ( log(Za/Z0H) - fh_unstable(Za,L+dL) + fh_unstable(Z0H,L+dL) ) / Pt * ( Ta - Ts*(Pa/Ps)**RovCP )
-      dQstarUS = KARMAN / ( log(Za/Z0E) - fh_unstable(Za,L+dL) + fh_unstable(Z0E,L+dL) ) / Pt * ( Qa - Qs )
+      dTstarUS = KARMAN / ( log(Za/Z0H) - fh_unstable(Za,L+dL) + fh_unstable(Z0H,L+dL) ) / Pt * ( Tha - Ths )
+      dQstarUS = KARMAN / ( log(Za/Z0E) - fh_unstable(Za,L+dL) + fh_unstable(Z0E,L+dL) ) / Pt * ( Qa  - Qs  )
       ! stable condition
       dUabsS  = max( sqrt( Ua**2 + Va**2 ), BULKFLUX_Uabs_min )
       dUstarS = KARMAN / ( log(Za/Z0M) - fm_stable(Za,L+dL) + fm_stable(Z0M,L+dL) ) * dUabsS
-      dTstarS = KARMAN / ( log(Za/Z0H) - fh_stable(Za,L+dL) + fh_stable(Z0H,L+dL) ) / Pt * ( Ta - Ts*(Pa/Ps)**RovCP )
-      dQstarS = KARMAN / ( log(Za/Z0E) - fh_stable(Za,L+dL) + fh_stable(Z0E,L+dL) ) / Pt * ( Qa - Qs )
+      dTstarS = KARMAN / ( log(Za/Z0H) - fh_stable(Za,L+dL) + fh_stable(Z0H,L+dL) ) / Pt * ( Tha - Ths )
+      dQstarS = KARMAN / ( log(Za/Z0E) - fh_stable(Za,L+dL) + fh_stable(Z0E,L+dL) ) / Pt * ( Qa  - Qs  )
 
       sw = 0.5_RP - sign( 0.5_RP, L+dL ) ! if unstable, sw = 1
 
@@ -400,10 +408,10 @@ contains
       dQstar = ( sw ) * dQstarUS + ( 1.0_RP-sw ) * dQstarS
 
       ! update d(free convection velocity scale) (unstable condition only)
-      dWstar = ( -PBL * GRAV / Ta * dUstar * dTstar * sw )**(1.0_RP/3.0_RP)
+      dWstar = ( -PBL * GRAV / Tha * dUstar * dTstar * sw )**(1.0_RP/3.0_RP)
 
       ! calculate d(residual)/dL
-      dres = ( (L+dL) - dUstar**2 * Ta / ( KARMAN * GRAV * dTstar ) - res ) / dL
+      dres = ( (L+dL) - dUstar**2 * Tha / ( KARMAN * GRAV * dTstar ) - res ) / dL
 
       if( abs( res ) < res_min .or. dres < EPS ) then
         ! finish iteration
