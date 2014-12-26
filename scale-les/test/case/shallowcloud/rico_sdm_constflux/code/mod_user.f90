@@ -312,6 +312,7 @@ contains
     real(RP) :: Uabs  ! absolute velocity at the lowermost atmos. layer [m/s]
     real(RP) :: Cm, Ch, Ce    !
 
+
     do JJS = JS, JE, JBLOCK
     JJE = JJS+JBLOCK-1
     do IIS = IS, IE, IBLOCK
@@ -500,7 +501,6 @@ contains
 #else
           do iq = 1, QA
 #endif
-!          do iq = 1, QA
              !$omp parallel do private(i,j,k) schedule(static,1) collapse(2)
              do j = JJS, JJE
              do i = IIS, IIE
@@ -609,7 +609,7 @@ contains
        SFLX_MOMY(i,j) = - Cm * min( max(Uabs,U_minM), U_maxM ) * MOMY(KS,i,j)
 
        SHFLX(i,j) = SFLX_POTT(i,j) * CPdry
-       LHFLX(i,j) = SFLX_QV  (i,j) * LH0
+       LHFLX(i,j) = SFLX_QV  (i,j) * lhv
 
       enddo
       enddo
