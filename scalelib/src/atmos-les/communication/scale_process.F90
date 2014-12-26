@@ -803,8 +803,8 @@ contains
        if ( errcode .eq. abort_code ) then ! called from PRC_MPIstop
        elseif ( errcode <= MPI_ERR_LASTCODE ) then
           call MPI_ERROR_STRING(errcode, msg, len, ierr)
-          if ( IO_L ) write(IO_FID_LOG,*) '++++++ ', trim(msg)
-          write(*,*) '++++++ ', trim(msg)
+          if ( IO_L ) write(IO_FID_LOG,*) '++++++ ', errcode, trim(msg)
+          write(*,*) '++++++ ', errcode, trim(msg)
        else
           if ( IO_L ) write(IO_FID_LOG,*) '++++++ Unexpected error code', errcode
           write(*,*) '++++++ Unexpected error code', errcode
@@ -828,6 +828,7 @@ contains
 
     ! Abort MPI
     if ( PRC_mpi_alive ) then
+       call sleep(5)
        call MPI_ABORT(MPI_COMM_WORLD, abort_code, ierr)
     endif
 
