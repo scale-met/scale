@@ -250,8 +250,8 @@ contains
     if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_CNVLANDUSE_GLCCv2)
 
     do p = -2, LANDUSE_PFT_nmax
-    do j = JS, JE
-    do i = IS, IE
+    do j = 1, JA
+    do i = 1, IA
        categ_sum(i,j,p) = 0.0_RP
     enddo
     enddo
@@ -613,8 +613,8 @@ contains
     if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_CNVLANDUSE_LU100M)
 
     do p = -2, LANDUSE_PFT_nmax
-    do j = JS, JE
-    do i = IS, IE
+    do j = 1, JA
+    do i = 1, IA
        categ_sum(i,j,p) = 0.0_RP
     enddo
     enddo
