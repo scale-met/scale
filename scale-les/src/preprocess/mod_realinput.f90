@@ -2686,14 +2686,14 @@ contains
     end do
     end do
 
-#ifdef DRY
-    qc = 0.0_RP
-    qc_sfc = 0.0_RP
-#else
-    qc = qtrc(:,:,:,n,I_QC)
-    qc_sfc = qtrc_sfc(:,:,:,n,I_QC)
-#endif
     do n = start_step, end_step
+#ifdef DRY
+       qc = 0.0_RP
+       qc_sfc = 0.0_RP
+#else
+       qc = qtrc(:,:,:,n,I_QC)
+       qc_sfc = qtrc_sfc(:,:,:,n,I_QC)
+#endif
        !> make density in moist condition
        call HYDROSTATIC_buildrho( dens    (:,:,:,n),      & ! [OUT]
                                   temp    (:,:,:,n),      & ! [OUT] not-used
