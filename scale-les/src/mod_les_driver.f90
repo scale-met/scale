@@ -393,6 +393,8 @@ contains
   
       if( TIME_DOend ) exit
   
+      if( IO_L ) call flush(IO_FID_LOG)
+
     enddo
   
     call PROF_rapend('Main Loop(Total)', 0)
