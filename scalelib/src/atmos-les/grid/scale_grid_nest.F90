@@ -1468,7 +1468,7 @@ contains
           tag = tagbase + tag_cz
           call MPI_IRECV(buffer_3D, ileng, COMM_datatype, target_rank, tag, INTERCOMM_PARENT, ireq_d(rq), ierr)
           call MPI_WAIT(ireq_d(rq), istatus, ierr)
-          do k = 1, KA
+          do k = 1, PARENT_KA(HANDLE)
              buffer_ref_CZ(k,xs:xe,ys:ye)  = buffer_3D(k,PRNT_IS(HANDLE):PRNT_IE(HANDLE),PRNT_JS(HANDLE):PRNT_JE(HANDLE))
           enddo
 
@@ -1477,7 +1477,7 @@ contains
           tag = tagbase + tag_fz
           call MPI_IRECV(buffer_3DF,ileng, COMM_datatype, target_rank, tag, INTERCOMM_PARENT, ireq_d(rq), ierr)
           call MPI_WAIT(ireq_d(rq), istatus, ierr)
-          do k = 0, KA
+          do k = 0, PARENT_KA(HANDLE)
              buffer_ref_FZ(k,xs:xe,ys:ye)  = buffer_3DF(k,PRNT_IS(HANDLE):PRNT_IE(HANDLE),PRNT_JS(HANDLE):PRNT_JE(HANDLE))
           enddo
        enddo
