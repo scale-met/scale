@@ -44,7 +44,7 @@ module scale_land_sfc_slab
   integer,  private :: LAND_SFC_SLAB_itr_max = 100 ! maximum iteration number
 
   real(RP), private :: LAND_SFC_SLAB_res_min = 1.0E+0_RP ! minimum number of residual
-  real(RP), private :: LAND_SFC_SLAB_dTS_max = 1.0E+0_RP ! maximum delta surface temp.
+  real(RP), private :: LAND_SFC_SLAB_dTS_max = 1.0E+1_RP ! maximum delta surface temp.
 
   logical, allocatable, private :: is_FLX(:,:) ! is atmos-land coupler run?
 
@@ -148,6 +148,7 @@ contains
        PRC_myrank,  &
        PRC_MPIstop
     use scale_const, only: &
+      Rdry  => CONST_Rdry, &
       CPdry => CONST_CPdry, &
       STB   => CONST_STB
     use scale_grid_index
@@ -160,7 +161,7 @@ contains
     implicit none
 
     ! parameters
-    real(RP), parameter :: dTS0     = 1.0E-8_RP ! delta surface temp.
+    real(RP), parameter :: dTS0     = 1.0E-4_RP ! delta surface temp.
     real(RP), parameter :: dres_lim = 1.0E+2_RP ! limiter of d(residual)
 
     real(RP), parameter :: redf_min = 1.0E-2_RP ! minimum reduced factor
@@ -211,7 +212,9 @@ contains
 
     real(RP) :: res    ! residual
     real(RP) :: dres   ! d(residual)/dLST
-    real(RP) :: oldres ! residual in previous step
+    real(RP) :: oldres  ! residual in previous step
+    real(RP) :: olddres ! d(residual)/dLST in previous step
+    real(RP) :: oldlst1 ! LST1 in previous step
     real(RP) :: redf   ! reduced factor
 
     real(RP) :: Ustar, dUstar ! friction velocity [m]
@@ -240,7 +243,7 @@ contains
       if( is_FLX(i,j) ) then
 
         redf   = 1.0_RP
-        oldres = 1.0E+5_RP
+        oldres = 1.0E+10_RP
 
         ! modified Newton-Raphson method (Tomita 2009)
         do n = 1, LAND_SFC_SLAB_itr_max
@@ -308,48 +311,49 @@ contains
                + LHV(i,j) * RHOA(i,j) * ( (dUstar-Ustar)/dTS0 * Qstar + Ustar * (dQstar-Qstar)/dTS0 ) * QVEF(i,j) &
                - 2.0_RP * TCS(i,j) / DZG(i,j)
 
-          if( abs(dres) * dres_lim < abs(res) ) then
-            ! stop iteration to prevent numerical error
-            exit
-          end if
-
-          ! calculate reduced factor
-          if( redf < 0.0_RP ) then
-            redf = 1.0_RP
-          end if
-
           if( abs(res) > abs(oldres) ) then
-            redf = max( TFa*redf, redf_min )
+            redf = max( TFa*redf, redf_min ) ! smaller redf
+            res = oldres
+            dres = olddres
+            LST1(i,j) = oldlst1
           else
-            redf = min( TFb*redf, redf_max )
-          end if
-
-          if( dres > 0.0_RP ) then
-            redf = -1.0_RP
+            redf = min( TFb*redf, redf_max ) ! larger redf
+            oldres = res
+            olddres = dres
+            oldlst1 = LST1(i,j)
           end if
 
           ! estimate next surface temperature
-          LST1(i,j) = LST1(i,j) - redf * res / dres
+          if( abs(dres) * dres_lim < abs(res) ) then
+             LST1(i,j) = LST1(i,j) - redf * sign(dTS0, res * dres)
+          else
+             LST1(i,j) = LST1(i,j) - redf * res / dres
+          end if
 
-          ! save residual in this step
-          oldres = res
+          LST1(i,j) = min( max( LST1(i,j), &
+                                LST(i,j) - LAND_SFC_SLAB_dTS_max ), &
+                                LST(i,j) + LAND_SFC_SLAB_dTS_max )
 
         end do
 
-        if( n > LAND_SFC_SLAB_itr_max ) then
+        if( n >= LAND_SFC_SLAB_itr_max ) then
           ! check NaN
-          if ( .NOT. ( LST1(i,j) > -1.0_RP .OR. LST1(i,j) < 1.0_RP ) ) then ! must be NaN
+          if ( .NOT. ( res > -1.0_RP .OR. res < 1.0_RP ) ) then ! must be NaN
              write(*,*) 'xxx NaN is detected for land surface temperature in rank, i, j: ', PRC_myrank, i, j
+
              call PRC_MPIstop
           endif
 
           ! not converged and stop program
           if( IO_L ) write(IO_FID_LOG,*) 'Warning: surface tempearture is not converged.'
           if( IO_L ) write(IO_FID_LOG,*) 'Residual [W/m2]', res
+          if( IO_L ) write(IO_FID_LOG,*) LST(i,j), PRSS(i,j), PRSA(i,j), TMPA(i,j), QVA(i,j), TG(i,j), &
+                                         UA(i,j), VA(i,j), WA(i,j), Z1(i,j), PBL(i,j), RHOA(i,j), &
+                                         Z0M(i,j), Z0H(i,j), Z0E(i,j), LHV(i,j), &
+                                         ALB_SW(i,j), ALB_LW(i,j), SWD(i,j), LWD(i,j), &
+                                         Ustar, Tstar, Qstar, QVEF(i,j), &
+                                         TCS(i,j), LST1(i,j), DZG(i,j)
         end if
-
-        ! limit updating surface temperature
-        LST1(i,j) = min( max( LST1(i,j), LST(i,j)-LAND_SFC_SLAB_dTS_max ), LST(i,j)+LAND_SFC_SLAB_dTS_max )
 
       end if
 
