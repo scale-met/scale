@@ -297,6 +297,11 @@ contains
               + LHV(i,j) * RHOA(i,j) * Ustar * Qstar * QVEF(i,j) &
               - 2.0_RP * TCS(i,j) * ( LST1(i,j) - TG(i,j)  ) / DZG(i,j)
 
+          if( abs(res) < LAND_SFC_SLAB_res_min ) then
+            ! iteration converged
+            exit
+          end if
+
           ! calculation for d(residual)/dLST
           dres = -4.0_RP * ( 1.0_RP - ALB_LW(i,j) ) * STB * LST1(i,j)**3 &
                + CPdry    * RHOA(i,j) * ( (dUstar-Ustar)/dTS0 * Tstar + Ustar * (dTstar-Tstar)/dTS0 ) &
@@ -329,24 +334,22 @@ contains
           ! save residual in this step
           oldres = res
 
-          if( abs(res) < LAND_SFC_SLAB_res_min ) then
-            ! iteration converged
-            exit
-          end if
-
         end do
 
         if( n > LAND_SFC_SLAB_itr_max ) then
-          ! not converged and stop program
-          if( IO_L ) write(IO_FID_LOG,*) 'Warning: surface tempearture is not converged.'
-          if( IO_L ) write(IO_FID_LOG,*) 'Residual [W/m2]', res
-
           ! check NaN
           if ( .NOT. ( LST1(i,j) > -1.0_RP .OR. LST1(i,j) < 1.0_RP ) ) then ! must be NaN
              write(*,*) 'xxx NaN is detected for land surface temperature in rank, i, j: ', PRC_myrank, i, j
              call PRC_MPIstop
           endif
+
+          ! not converged and stop program
+          if( IO_L ) write(IO_FID_LOG,*) 'Warning: surface tempearture is not converged.'
+          if( IO_L ) write(IO_FID_LOG,*) 'Residual [W/m2]', res
         end if
+
+        ! limit updating surface temperature
+        LST1(i,j) = min( max( LST1(i,j), LST(i,j)-LAND_SFC_SLAB_dTS_max ), LST(i,j)+LAND_SFC_SLAB_dTS_max )
 
       end if
 
@@ -427,13 +430,13 @@ contains
     if( LST_UPDATE ) then
       do j = JS, JE
       do i = IS, IE
-          LST_t(i,j) = max( min( LST1(i,j) - LST(i,j), LAND_SFC_SLAB_dTS_max ), -LAND_SFC_SLAB_dTS_max ) / dt
+         LST_t(i,j) = ( LST1(i,j) - LST(i,j) ) / dt
       end do
       end do
     else
       do j = JS, JE
       do i = IS, IE
-          LST_t(i,j) = 0.0_RP
+         LST_t(i,j) = 0.0_RP
       end do
       end do
     end if
