@@ -1919,7 +1919,7 @@ contains
        call HIST_in( ATMOS_BOUNDARY_VELZ(:,:,:), 'VELZ_BND', 'Boundary velocity z-direction', 'm/s', zdim='half' )
     endif
 
-    do iq = 1, QA
+    do iq = 1, BND_QA
        call HIST_in( ATMOS_BOUNDARY_QTRC(:,:,:,iq), trim(AQ_NAME(iq))//'_BND', 'Boundary '//trim(AQ_NAME(iq)), 'kg/kg' )
     enddo
 
@@ -1941,6 +1941,8 @@ contains
   subroutine ATMOS_BOUNDARY_update_file()
     use gtool_file, only: &
        FileRead
+    use scale_history, only: &
+       HIST_in
     use scale_process, only: &
        PRC_myrank
     use scale_comm, only: &
@@ -2012,6 +2014,13 @@ contains
     do iq = 1, BND_QA
        call COMM_wait ( ATMOS_BOUNDARY_ref_QTRC(:,:,:,iq,2), 5+iq, .false. )
     end do
+
+    call HIST_in( ATMOS_BOUNDARY_ref_DENS(:,:,:,2), 'BND_ref_DENS', 'reference DENS',             'kg/m3'    )
+    call HIST_in( ATMOS_BOUNDARY_ref_VELZ(:,:,:,2), 'BND_ref_VELZ', 'reference VELZ',             'm/s'    )
+    call HIST_in( ATMOS_BOUNDARY_ref_VELX(:,:,:,2), 'BND_ref_VELX', 'reference VELZ',             'm/s'    )
+    call HIST_in( ATMOS_BOUNDARY_ref_VELY(:,:,:,2), 'BND_ref_VELY', 'reference VELZ',             'm/s'    )
+    call HIST_in( ATMOS_BOUNDARY_ref_POTT(:,:,:,2), 'BND_ref_POTT', 'reference VELZ',             'K'    )
+
 
     return
   end subroutine ATMOS_BOUNDARY_update_file

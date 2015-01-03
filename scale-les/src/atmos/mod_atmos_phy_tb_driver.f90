@@ -314,57 +314,57 @@ contains
                      ydim='half', nohalo=.true.)
 
        if ( I_QV > 0 ) then
-          call HIST_in( QFLX_RHOQ(:,:,:,I_QV,ZDIR), 'SGS_ZFLX_QV', 'SGS Z FLUX of QV', 'kg/m2/s', &
+          call HIST_in( QFLX_RHOQ(:,:,:,ZDIR,I_QV), 'SGS_ZFLX_QV', 'SGS Z FLUX of QV', 'kg/m2/s', &
                         zdim='half', nohalo=.true.)
-          call HIST_in( QFLX_RHOQ(:,:,:,I_QV,XDIR), 'SGS_XFLX_QV', 'SGS X FLUX of QV', 'kg/m2/s', &
+          call HIST_in( QFLX_RHOQ(:,:,:,XDIR,I_QV), 'SGS_XFLX_QV', 'SGS X FLUX of QV', 'kg/m2/s', &
                         xdim='half', nohalo=.true.)
-          call HIST_in( QFLX_RHOQ(:,:,:,I_QV,YDIR), 'SGS_YFLX_QV', 'SGS Y FLUX of QV', 'kg/m2/s', &
+          call HIST_in( QFLX_RHOQ(:,:,:,YDIR,I_QV), 'SGS_YFLX_QV', 'SGS Y FLUX of QV', 'kg/m2/s', &
                         ydim='half', nohalo=.true.)
        endif
 
 #ifndef DRY
        if ( I_QC > 0 ) then
-          call HIST_in( QFLX_RHOQ(:,:,:,I_QC,ZDIR), 'SGS_ZFLX_QC', 'SGS Z FLUX of QC', 'kg/m2/s', &
+          call HIST_in( QFLX_RHOQ(:,:,:,ZDIR,I_QC), 'SGS_ZFLX_QC', 'SGS Z FLUX of QC', 'kg/m2/s', &
                         zdim='half', nohalo=.true.)
-          call HIST_in( QFLX_RHOQ(:,:,:,I_QC,XDIR), 'SGS_XFLX_QC', 'SGS X FLUX of QC', 'kg/m2/s', &
+          call HIST_in( QFLX_RHOQ(:,:,:,XDIR,I_QC), 'SGS_XFLX_QC', 'SGS X FLUX of QC', 'kg/m2/s', &
                         xdim='half', nohalo=.true.)
-          call HIST_in( QFLX_RHOQ(:,:,:,I_QC,YDIR), 'SGS_YFLX_QC', 'SGS Y FLUX of QC', 'kg/m2/s', &
+          call HIST_in( QFLX_RHOQ(:,:,:,YDIR,I_QC), 'SGS_YFLX_QC', 'SGS Y FLUX of QC', 'kg/m2/s', &
                         ydim='half', nohalo=.true.)
        endif
 
        if ( I_QR > 0 ) then
-          call HIST_in( QFLX_RHOQ(:,:,:,I_QR,ZDIR), 'SGS_ZFLX_QR', 'SGS Z FLUX of QR', 'kg/m2/s', &
+          call HIST_in( QFLX_RHOQ(:,:,:,ZDIR,I_QR), 'SGS_ZFLX_QR', 'SGS Z FLUX of QR', 'kg/m2/s', &
                         zdim='half', nohalo=.true.)
-          call HIST_in( QFLX_RHOQ(:,:,:,I_QR,XDIR), 'SGS_XFLX_QR', 'SGS X FLUX of QR', 'kg/m2/s', &
+          call HIST_in( QFLX_RHOQ(:,:,:,XDIR,I_QR), 'SGS_XFLX_QR', 'SGS X FLUX of QR', 'kg/m2/s', &
                         xdim='half', nohalo=.true.)
-          call HIST_in( QFLX_RHOQ(:,:,:,I_QR,YDIR), 'SGS_YFLX_QR', 'SGS Y FLUX of QR', 'kg/m2/s', &
+          call HIST_in( QFLX_RHOQ(:,:,:,YDIR,I_QR), 'SGS_YFLX_QR', 'SGS Y FLUX of QR', 'kg/m2/s', &
                         ydim='half', nohalo=.true.)
        endif
 
        if ( I_QI > 0 ) then
-          call HIST_in( QFLX_RHOQ(:,:,:,I_QI,ZDIR), 'SGS_ZFLX_QI', 'SGS Z FLUX of QI', 'kg/m2/s', &
+          call HIST_in( QFLX_RHOQ(:,:,:,ZDIR,I_QI), 'SGS_ZFLX_QI', 'SGS Z FLUX of QI', 'kg/m2/s', &
                         zdim='half', nohalo=.true.)
-          call HIST_in( QFLX_RHOQ(:,:,:,I_QI,XDIR), 'SGS_XFLX_QI', 'SGS X FLUX of QI', 'kg/m2/s', &
+          call HIST_in( QFLX_RHOQ(:,:,:,XDIR,I_QI), 'SGS_XFLX_QI', 'SGS X FLUX of QI', 'kg/m2/s', &
                         xdim='half', nohalo=.true.)
-          call HIST_in( QFLX_RHOQ(:,:,:,I_QI,YDIR), 'SGS_YFLX_QI', 'SGS Y FLUX of QI', 'kg/m2/s', &
+          call HIST_in( QFLX_RHOQ(:,:,:,YDIR,I_QI), 'SGS_YFLX_QI', 'SGS Y FLUX of QI', 'kg/m2/s', &
                         ydim='half', nohalo=.true.)
        endif
 
        if ( I_QS > 0 ) then
-          call HIST_in( QFLX_RHOQ(:,:,:,I_QS,ZDIR), 'SGS_ZFLX_QS', 'SGS Z FLUX of QS', 'kg/m2/s', &
+          call HIST_in( QFLX_RHOQ(:,:,:,ZDIR,I_QS), 'SGS_ZFLX_QS', 'SGS Z FLUX of QS', 'kg/m2/s', &
                         zdim='half', nohalo=.true.)
-          call HIST_in( QFLX_RHOQ(:,:,:,I_QS,XDIR), 'SGS_XFLX_QS', 'SGS X FLUX of QS', 'kg/m2/s', &
+          call HIST_in( QFLX_RHOQ(:,:,:,XDIR,I_QS), 'SGS_XFLX_QS', 'SGS X FLUX of QS', 'kg/m2/s', &
                         xdim='half', nohalo=.true.)
-          call HIST_in( QFLX_RHOQ(:,:,:,I_QS,YDIR), 'SGS_YFLX_QS', 'SGS Y FLUX of QS', 'kg/m2/s', &
+          call HIST_in( QFLX_RHOQ(:,:,:,YDIR,I_QS), 'SGS_YFLX_QS', 'SGS Y FLUX of QS', 'kg/m2/s', &
                         ydim='half', nohalo=.true.)
        endif
 
        if ( I_QG > 0 ) then
-          call HIST_in( QFLX_RHOQ(:,:,:,I_QG,ZDIR), 'SGS_ZFLX_QG', 'SGS Z FLUX of QG', 'kg/m2/s', &
+          call HIST_in( QFLX_RHOQ(:,:,:,ZDIR,I_QG), 'SGS_ZFLX_QG', 'SGS Z FLUX of QG', 'kg/m2/s', &
                         zdim='half', nohalo=.true.)
-          call HIST_in( QFLX_RHOQ(:,:,:,I_QG,XDIR), 'SGS_XFLX_QG', 'SGS X FLUX of QG', 'kg/m2/s', &
+          call HIST_in( QFLX_RHOQ(:,:,:,XDIR,I_QG), 'SGS_XFLX_QG', 'SGS X FLUX of QG', 'kg/m2/s', &
                         xdim='half', nohalo=.true.)
-          call HIST_in( QFLX_RHOQ(:,:,:,I_QG,YDIR), 'SGS_YFLX_QG', 'SGS Y FLUX of QG', 'kg/m2/s', &
+          call HIST_in( QFLX_RHOQ(:,:,:,YDIR,I_QG), 'SGS_YFLX_QG', 'SGS Y FLUX of QG', 'kg/m2/s', &
                         ydim='half', nohalo=.true.)
        endif
 #endif

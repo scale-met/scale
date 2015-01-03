@@ -1313,8 +1313,8 @@ contains
     end if
 
     if ( AD_HIST_id(I_RH) > 0 ) then
-       do j  = JS, JE
-       do i  = IS, IE
+       do j  = JSB, JEB
+       do i  = ISB, IEB
        do k  = KS, KE
           RH(k,i,j) = QTRC(k,i,j,I_QV) / QSAT(k,i,j) * 1.0E2_RP
        enddo
@@ -1324,8 +1324,8 @@ contains
 
     if ( AD_HIST_id(I_RHL) > 0 ) then
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       do j  = JS, JE
-       do i  = IS, IE
+       do j  = JSB, JEB
+       do i  = ISB, IEB
        do k  = KS, KE
           RHL(k,i,j) = QTRC(k,i,j,I_QV) / QSAT(k,i,j) * 1.0E2_RP
        enddo
@@ -1335,8 +1335,8 @@ contains
 
     if ( AD_HIST_id(I_RHI) > 0 ) then
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       do j  = JS, JE
-       do i  = IS, IE
+       do j  = JSB, JEB
+       do i  = ISB, IEB
        do k  = KS, KE
           RHI(k,i,j) = QTRC(k,i,j,I_QV) / QSAT(k,i,j) * 1.0E2_RP
        enddo
@@ -1747,10 +1747,10 @@ contains
        enddo
        enddo
 
-       call STAT_total( total, ENGT(:,:,:), 'ENGT' )
        call STAT_total( total, ENGP(:,:,:), 'ENGP' )
        call STAT_total( total, ENGK(:,:,:), 'ENGK' )
        call STAT_total( total, ENGI(:,:,:), 'ENGI' )
+       call STAT_total( total, ENGT(:,:,:), 'ENGT' )
 
     endif
 

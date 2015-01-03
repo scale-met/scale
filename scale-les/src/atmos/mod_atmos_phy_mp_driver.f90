@@ -197,9 +197,9 @@ contains
        end do
        end do
 
-       call HIST_in( SFLX_rain(:,:), 'RAIN', 'surface rain rate',          'kg/m2/s' )
-       call HIST_in( SFLX_snow(:,:), 'SNOW', 'surface snow rate',          'kg/m2/s' )
-       call HIST_in( precip   (:,:), 'PREC', 'surface precipitation rate', 'kg/m2/s' )
+       call HIST_in( SFLX_rain(:,:), 'RAIN', 'surface rain rate',          'kg/m2/s', nohalo=.true. )
+       call HIST_in( SFLX_snow(:,:), 'SNOW', 'surface snow rate',          'kg/m2/s', nohalo=.true. )
+       call HIST_in( precip   (:,:), 'PREC', 'surface precipitation rate', 'kg/m2/s', nohalo=.true. )
 
     endif
 

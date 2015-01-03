@@ -242,7 +242,7 @@ contains
     !$omp parallel do private(i,j,k,iqw) OMP_SCHEDULE_ collapse(2)
     do j = JSB, JEB
     do i = ISB, IEB
-    do k = 1, KA
+    do k = KS, KE
 
 !       qdry(k,i,j) = 1.0_RP
 !       do iqw = QQS, QQE
@@ -300,7 +300,7 @@ contains
     !$omp parallel do private(i,j,k,iqw) OMP_SCHEDULE_ collapse(2)
     do j = JSB, JEB
     do i = ISB, IEB
-    do k = 1, KA
+    do k = KS, KE
 
 !       CPtot(k,i,j) = qdry(k,i,j) * CPdry
 !       do iqw = QQS, QQE
@@ -359,7 +359,7 @@ contains
     !$omp parallel do private(i,j,k,iqw) OMP_SCHEDULE_ collapse(2)
     do j = JSB, JEB
     do i = ISB, IEB
-    do k = 1, KA
+    do k = KS, KE
 
 !       CVtot(k,i,j) = qdry(k,i,j) * CVdry
 !       do iqw = QQS, QQE
@@ -439,7 +439,7 @@ contains
     !$omp parallel do private(i,j,k,iqw,qdry,pres,Rtot,CVtot,CPovCV) OMP_SCHEDULE_ collapse(2)
     do j = JSB, JEB
     do i = ISB, IEB
-    do k = 1, KA
+    do k = KS, KE
 #ifdef DRY
        CVtot = CVdry
        Rtot  = Rdry
@@ -766,7 +766,7 @@ contains
     !$omp parallel do private(i,j,k,iqw,cv,Rmoist) OMP_SCHEDULE_ collapse(2)
     do j = JSB, JEB
     do i = ISB, IEB
-    do k = 1, KA
+    do k = KS, KE
 
        CALC_CV(cv, qdry(k,i,j), q, k, i, j, iqw, CVdry, AQ_CV)
        CALC_R(Rmoist, q(k,i,j,I_QV), qdry(k,i,j), Rdry, Rvap)
@@ -803,7 +803,7 @@ contains
     !$omp parallel do private(i,j,k,iqw,cp,Rmoist) OMP_SCHEDULE_ collapse(2)
     do j = JSB, JEB
     do i = ISB, IEB
-    do k = 1, KA
+    do k = KS, KE
 
        CALC_CP(cp, qdry(k,i,j), q, k, i, j, iqw, CPdry, AQ_CP)
        CALC_R(Rmoist, q(k,i,j,I_QV), qdry(k,i,j), Rdry, Rvap)
@@ -877,7 +877,7 @@ contains
 
     do j = JSB, JEB
     do i = ISB, IEB
-    do k = 1, KA
+    do k = KS, KE
 #ifdef DRY
        CVtot = CVdry
        Rtot  = Rdry
@@ -967,7 +967,7 @@ contains
 
     do j = JSB, JEB
     do i = ISB, IEB
-    do k = 1, KA
+    do k = KS, KE
        if ( THERMODYN_TYPE == 'EXACT' ) then
          lhv(k,i,j) = LHV0 + ( CPvap - CL ) * ( temp(k,i,j) - TEM00 )
        elseif ( THERMODYN_TYPE == 'SIMPLE' ) then
@@ -1045,7 +1045,7 @@ contains
 
     do j = JSB, JEB
     do i = ISB, IEB
-    do k = 1, KA
+    do k = KS, KE
        if ( THERMODYN_TYPE == 'EXACT' ) then
          lhs(k,i,j) = LHS0 + ( CPvap - CI ) * ( temp(k,i,j) - TEM00 )
        elseif ( THERMODYN_TYPE == 'SIMPLE' ) then
@@ -1123,7 +1123,7 @@ contains
 
     do j = JSB, JEB
     do i = ISB, IEB
-    do k = 1, KA
+    do k = KS, KE
        if ( THERMODYN_TYPE == 'EXACT' ) then
          lhf(k,i,j) = LHF0 + ( CL - CI ) * ( temp(k,i,j) - TEM00 )
        elseif ( THERMODYN_TYPE == 'SIMPLE' ) then

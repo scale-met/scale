@@ -1439,6 +1439,12 @@ contains
     enddo
     enddo
     enddo
+    do j = JS, JE
+    do i = IS, IE
+       vterm(1:KS-1,i,j,:) = 0.0_RP
+       vterm(KE+1:KA,i,j,:) = 0.0_RP
+    end do
+    end do
 
     return
   end subroutine MP_tomita08_vterm

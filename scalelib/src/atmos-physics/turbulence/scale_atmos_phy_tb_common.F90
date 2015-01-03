@@ -477,6 +477,12 @@ contains
     do k = KE_TB-1, KS, -1
        phi(k) = e(k) * phi(k+1) + f(k)
     end do
+    do k = 1, KS-1
+       phi(k) = 0.0_RP
+    end do
+    do k = KE_TB+1, KA
+       phi(k) = 0.0_RP
+    end do
 
     return
   end subroutine ATMOS_PHY_TB_diffusion_solver

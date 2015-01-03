@@ -171,8 +171,8 @@ contains
 
     !$omp parallel do private(i,j,k,iq) OMP_SCHEDULE_ collapse(4)
     do iq = QQS, QQE
-    do j = JS, JE
-    do i = IS, IE
+    do j = JSB, JEB
+    do i = ISB, IEB
     do k = KS, KE
        QTRC1(k,i,j,iq) = QTRC0(k,i,j,iq)
     enddo
@@ -198,8 +198,8 @@ contains
 
        ! Turn QC into QV with consistency of moist internal energy
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       do j = JS, JE
-       do i = IS, IE
+       do j = JSB, JEB
+       do i = ISB, IEB
        do k = KS, KE
           Emoist(k,i,j) = TEMP0(k,i,j) * CVtot(k,i,j) &
                         + QTRC1(k,i,j,I_QV) * LHV
@@ -219,8 +219,8 @@ contains
 
        ! new temperature (after QC evaporation)
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       do j = JS, JE
-       do i = IS, IE
+       do j = JSB, JEB
+       do i = ISB, IEB
        do k = KS, KE
           TEMP1(k,i,j) = ( Emoist(k,i,j) - QTRC1(k,i,j,I_QV) * LHV ) / CVtot(k,i,j)
        enddo
@@ -238,8 +238,8 @@ contains
 
        ! Turn QC & QI into QV with consistency of moist internal energy
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       do j = JS, JE
-       do i = IS, IE
+       do j = JSB, JEB
+       do i = ISB, IEB
        do k = KS, KE
           Emoist(k,i,j) = TEMP0(k,i,j) * CVtot(k,i,j) &
                         + QTRC1(k,i,j,I_QV) * LHV     &
@@ -262,8 +262,8 @@ contains
 
        ! new temperature (after QC & QI evaporation)
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       do j = JS, JE
-       do i = IS, IE
+       do j = JSB, JEB
+       do i = ISB, IEB
        do k = KS, KE
           TEMP1(k,i,j) = ( Emoist(k,i,j) - QTRC1(k,i,j,I_QV) * LHV ) / CVtot(k,i,j)
        enddo
@@ -619,6 +619,7 @@ contains
        enddo
 
        if ( .NOT. converged ) then
+          write(*,*) TEMP1(k,i,j), dens0(k,i,j),q,QTRC1(k,i,j,QQS:QQE)
           write(*,*) 'xxx [moist_conversion] not converged! dtemp=', dtemp, k,i,j,ite
           call PRC_MPIstop
        endif
@@ -766,7 +767,7 @@ contains
           eflx(KS-1,i,j) = 0.25_RP * ( vterm(KS,i,j,iq) + vterm(KS,i+1,j,iq) ) &
                                    * ( QTRC (KS,i,j,iq) + QTRC (KS,i+1,j,iq) ) &
                                    * MOMX(KS,i,j)
-          do k  = KS-1, KE-1
+          do k  = KS, KE-1
              eflx(k,i,j) = 0.25_RP * ( vterm(k+1,i,j,iq) + vterm(k+1,i+1,j,iq) ) &
                                    * ( QTRC (k+1,i,j,iq) + QTRC (k+1,i+1,j,iq) ) &
                                    * MOMX(k+1,i,j)
@@ -778,7 +779,7 @@ contains
           eflx(KS-1,i,j) = 0.25_RP * ( vterm(KS,i,j,iq) + vterm(KS,i,j+1,iq) ) &
                                    * ( QTRC (KS,i,j,iq) + QTRC (KS,i,j+1,iq) ) &
                                    * MOMY(KS,i,j)
-          do k  = KS-1, KE-1
+          do k  = KS, KE-1
              eflx(k,i,j) = 0.25_RP * ( vterm(k+1,i,j,iq) + vterm(k+1,i,j+1,iq) ) &
                                    * ( QTRC (k+1,i,j,iq) + QTRC (k+1,i,j+1,iq) ) &
                                    * MOMY(k+1,i,j)

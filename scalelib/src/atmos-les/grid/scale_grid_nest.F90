@@ -2482,6 +2482,8 @@ contains
        dist(1) = large_number_three
        dist(2) = large_number_two
        dist(3) = large_number_one
+       igrd(i,j,:) = -1
+       jgrd(i,j,:) = -1
        do jj = jstart, jend
        do ii = istart, iend
           distance = haversine( mylat(i,j),mylon(i,j),inlat(ii,jj),inlon(ii,jj) )
@@ -2519,6 +2521,7 @@ contains
           do k = kstart, kend
              dist(1) = large_number_two
              dist(2) = large_number_one
+             kgrd(k,i,j,idx,:) = -1
              do kk = 1+KHALO, nz-KHALO
                 distance = abs( myhgt(k,i,j) - inhgt(kk,ii,jj) )
                 if ( distance <= dist(1) ) then
