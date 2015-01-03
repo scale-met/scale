@@ -193,6 +193,7 @@ contains
        I_XV
     use scale_comm, only: &
        COMM_vars8, &
+       COMM_vars, &
        COMM_wait
     use scale_atmos_phy_tb_common, only: &
        diffusion_solver => ATMOS_PHY_TB_diffusion_solver
@@ -454,27 +455,35 @@ contains
             dudz2, Ri, l, & ! (in)
             IIS, IIE, JJS, JJE ) ! (in)
 
-       if ( ATMOS_PHY_TB_MYNN_TKE_INIT ) then
-          do j = JJS, JJE+1
-          do i = IIS, IIE+1
-          do k = KS, KE_PBL
-             tke(k,i,j) = q2_2(k,i,j) * 0.5_RP
-          end do
-          end do
-          end do
-          do j = JJS, JJE+1
-          do i = IIS, IIE+1
-          do k = KE_PBL+1, KE
-             tke(k,i,j) = 0.0_RP
-          end do
-          end do
-          end do
-          call COMM_vars8(tke, 1)
-          call COMM_wait (tke, 1)
+    end do
+    end do
+
+    if ( ATMOS_PHY_TB_MYNN_TKE_INIT ) then
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE_PBL
+          tke(k,i,j) = q2_2(k,i,j) * 0.5_RP
+       end do
+       end do
+       end do
+       do j = JS, JE
+       do i = IS, IE
+       do k = KE_PBL+1, KE
+          tke(k,i,j) = 0.0_RP
+       end do
+       end do
+       end do
+       call COMM_vars8(tke, 1)
+       call COMM_wait (tke, 1)
        end if
 
-       do j = JJS, JJE+1
-       do i = IIS, IIE+1
+    do JJS = JS, JE, JBLOCK
+    JJE = JJS+JBLOCK-1
+    do IIS = IS, IE, IBLOCK
+    IIE = IIS+IBLOCK-1
+
+       do j = JJS, JJE
+       do i = IIS, IIE
        do k = KS, KE_PBL
           sw = sign(0.5_RP, tke(k,i,j)-EPS) + 0.5_RP
           q(k,i,j) = sqrt( tke(k,i,j)*2.0_RP*sw + 1.E-10_RP*(1.0_RP-sw) )
@@ -482,8 +491,8 @@ contains
        end do
        end do
 
-       do j = JJS, JJE+1
-       do i = IIS, IIE+1
+       do j = JJS, JJE
+       do i = IIS, IIE
        do k = KS, KE_PBL
 
           ! level 2.5
@@ -505,23 +514,22 @@ contains
        end do
        end do
 
-       do j = JJS, JJE+1
-       do i = IIS, IIE+1
-       do k = KS, KE_PBL
-          Nu(k,i,j) = l(k,i,j) * q(k,i,j) * sm(k,i,j)
-       end do
-       end do
-       end do
-       do j = JJS, JJE+1
-       do i = IIS, IIE+1
-       do k = KE_PBL+1, KE
-          Nu(k,i,j) = 0.0_RP
-       end do
+       do j = JJS, JJE
+       do i = IIS, IIE
+          do k = 1, KS-1
+             Nu(k,i,j) = 0.0_RP
+          end do
+          do k = KS, KE_PBL
+             Nu(k,i,j) = l(k,i,j) * q(k,i,j) * sm(k,i,j)
+          end do
+          do k = KE_PBL+1, KA
+             Nu(k,i,j) = 0.0_RP
+          end do
        end do
        end do
 
-       do j = JJS, JJE+1
-       do i = IIS, IIE+1
+       do j = JJS, JJE
+       do i = IIS, IIE
        do k = KS, KE_PBL
           sw = 0.5_RP - sign(0.5_RP, sh(k,i,j)-EPS)
           Pr(k,i,j) = sm(k,i,j) / (sh(k,i,j)+sw) * (1.0_RP-sw) &
@@ -529,29 +537,27 @@ contains
        end do
        end do
        end do
-       do j = JJS, JJE+1
-       do i = IIS, IIE+1
+       do j = JJS, JJE
+       do i = IIS, IIE
        do k = KE_PBL+1, KE
           Pr(k,i,j) = 1.0_RP
        end do
        end do
        end do
 
-       do j = JJS, JJE+1
-       do i = IIS, IIE+1
+       do j = JJS, JJE
+       do i = IIS, IIE
        do k = KE_PBL+1, KE
           Ri(k,i,j) = 0.0_RP
        end do
        end do
        end do
 
-
-
        ! time integration
 
        !  for velocities
-       do j = JJS, JJE+1
-       do i = IIS, IIE+1
+       do j = JJS, JJE
+       do i = IIS, IIE
 
           ap = - dt * 0.5_RP * ( DENS(KS  ,i,j)*Nu(KS  ,i,j) &
                                + DENS(KS+1,i,j)*Nu(KS+1,i,j) ) &
@@ -580,6 +586,21 @@ contains
                KE_PBL                           ) ! (in)
        end do
        end do
+
+    end do
+    end do
+
+
+    call COMM_vars( Nu,   1 )
+    call COMM_vars( phiN, 2 )
+    call COMM_wait( Nu,   1 )
+    call COMM_wait( phiN, 2 )
+
+    do JJS = JS, JE, JBLOCK
+    JJE = JJS+JBLOCK-1
+    do IIS = IS, IE, IBLOCK
+    IIE = IIS+IBLOCK-1
+
        do j = JJS, JJE
        do i = IIS, IIE
        do k = KS, KE_PBL-1
@@ -606,7 +627,7 @@ contains
 
 
        ! integration V
-       do j = JJS, JJE+1
+       do j = JJS, JJE
        do i = IIS, IIE
           do k = KS, KE_PBL
              d(k) = V(k,i,j)
@@ -617,6 +638,18 @@ contains
                KE_PBL                           ) ! (in)
        end do
        end do
+
+    end do
+    end do
+
+    call COMM_vars( phiN, 1 )
+    call COMM_wait( phiN, 1 )
+
+    do JJS = JS, JE, JBLOCK
+    JJE = JJS+JBLOCK-1
+    do IIS = IS, IE, IBLOCK
+    IIE = IIS+IBLOCK-1
+
        do j = JJS, JJE
        do i = IIS, IIE
        do k = KS, KE_PBL-1
@@ -887,8 +920,8 @@ contains
     real(RP) :: sw, sw2
     integer :: k, i, j
 
-    do j = JJS, JJE+1
-    do i = IIS, IIE+1
+    do j = JJS, JJE
+    do i = IIS, IIE
        int_qz = 0.0_RP
        int_q = 0.0_RP
        do k = KS, KE_PBL
@@ -958,8 +991,8 @@ contains
     real(RP) :: sw
     integer :: k, i, j
 
-    do j = JJS, JJE+1
-    do i = IIS, IIE+1
+    do j = JJS, JJE
+    do i = IIS, IIE
     do k = KS, KE_PBL
        rf = min(0.5_RP / AF12 * ( Ri(k,i,j) &
                               + AF12*Rf1 &
