@@ -456,21 +456,6 @@ contains
                      __FILE__, __LINE__ )
        call VALCHECK( OCEAN_SFC_Z0E   (IS:IE,JS:JE),      0.0_RP, 1000.0_RP, VAR_NAME(I_SFC_Z0E),  &
                      __FILE__, __LINE__ )
-
-       call VALCHECK( OCEAN_SFLX_MW  (IS:IE,JS:JE), -5000.0_RP, 5000.0_RP, VAR_NAME(I_SFLX_MW),   &
-                     __FILE__, __LINE__ )
-       call VALCHECK( OCEAN_SFLX_MU  (IS:IE,JS:JE), -5000.0_RP, 5000.0_RP, VAR_NAME(I_SFLX_MU),   &
-                     __FILE__, __LINE__ )
-       call VALCHECK( OCEAN_SFLX_MV  (IS:IE,JS:JE), -5000.0_RP, 5000.0_RP, VAR_NAME(I_SFLX_MV),   &
-                     __FILE__, __LINE__ )
-       call VALCHECK( OCEAN_SFLX_SH  (IS:IE,JS:JE), -5000.0_RP, 5000.0_RP, VAR_NAME(I_SFLX_SH),   &
-                     __FILE__, __LINE__ )
-       call VALCHECK( OCEAN_SFLX_LH  (IS:IE,JS:JE), -5000.0_RP, 5000.0_RP, VAR_NAME(I_SFLX_LH),   &
-                     __FILE__, __LINE__ )
-       call VALCHECK( OCEAN_SFLX_WH  (IS:IE,JS:JE), -5000.0_RP, 5000.0_RP, VAR_NAME(I_SFLX_WH),   &
-                     __FILE__, __LINE__ )
-       call VALCHECK( OCEAN_SFLX_evap(IS:IE,JS:JE), -5000.0_RP, 5000.0_RP, VAR_NAME(I_SFLX_evap), &
-                     __FILE__, __LINE__ )
     endif
 
     call HIST_in( OCEAN_TEMP      (:,:),      VAR_NAME(I_TEMP),     VAR_DESC(I_TEMP),     VAR_UNIT(I_TEMP)     )
