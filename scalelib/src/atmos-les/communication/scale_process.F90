@@ -347,12 +347,12 @@ contains
 
     if ( IO_L ) then
        write(IO_FID_LOG,*) ''
-       write(IO_FID_LOG,*) '++++++ PRC_MPIstop'
+       write(IO_FID_LOG,*) '++++++ PRC_MPIstop', PRC_myrank
        write(IO_FID_LOG,*) ''
     end if
 
     write(*,*) ''
-    write(*,*) '++++++ PRC_MPIstop'
+    write(*,*) '++++++ PRC_MPIstop', PRC_myrank
     write(*,*) ''
 
     if ( PRC_mpi_alive ) then

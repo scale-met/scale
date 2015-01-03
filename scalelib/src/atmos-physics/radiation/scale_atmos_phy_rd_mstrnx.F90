@@ -1009,6 +1009,8 @@ contains
        fact_land,    &
        fact_urban,   &
        rflux         )
+    use scale_process, only: &
+       PRC_MPIstop
     use scale_const, only: &
        GRAV => CONST_GRAV, &
        Pstd => CONST_Pstd, &
@@ -1199,6 +1201,7 @@ contains
 
           else
              !$acc loop seq
+             indexR(k,i,j,iaero) = -1
              do ir = 1, MSTRN_nradius-1
                 if (       aerosol_radi(k,i,j,iaero) <= radmode(iptype,ir+1) &
                      .AND. aerosol_radi(k,i,j,iaero) >  radmode(iptype,ir  ) ) then ! interpolation
@@ -1207,8 +1210,13 @@ contains
                    factR (k,i,j,iaero) = ( aerosol_radi(k,i,j,iaero) - radmode(iptype,ir) ) &
                                        / ( radmode(iptype,ir+1)      - radmode(iptype,ir) )
 
+                   exit
                 endif
              enddo
+             if ( indexR(k,i,j,iaero) == -1 ) then
+                write(*,*) 'xxx invalid index', k,i,j, iaero, aerosol_radi(k,i,j,iaero)
+                call PRC_MPIstop
+             end if
           endif
        enddo
        enddo
