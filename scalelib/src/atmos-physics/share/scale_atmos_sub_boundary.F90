@@ -1306,7 +1306,7 @@ contains
     dummy1_p(:,:,:)   = 0.0_RP
     dummy2_p(:,:,:,:) = 0.0_RP
 
-    if ( NESTQA > BND_QA ) then
+    if ( NESTQA .ne. BND_QA ) then
        write(*,*) 'xxx ERROR: NEST_BND_QA exceeds BND_QA [initialize/ATMOS_BOUNDARY]'
        write(*,*) 'xxx check consistency between'
        write(*,*) '    ONLINE_BOUNDARY_USE_QHYD and ATMOS_BOUNDARY_USE_QHYD.'
@@ -1381,7 +1381,7 @@ contains
        ATMOS_BOUNDARY_ref_VELY(KE+1:KA,  i,j,2) = ATMOS_BOUNDARY_ref_VELY(KE,i,j,2)
        ATMOS_BOUNDARY_ref_POTT(KE+1:KA,  i,j,2) = ATMOS_BOUNDARY_ref_POTT(KE,i,j,2)
 
-       do iq = 1, NESTQA
+       do iq = 1, BND_QA
           ATMOS_BOUNDARY_ref_QTRC(   1:KS-1,i,j,iq,1) = ATMOS_BOUNDARY_ref_QTRC(KS,i,j,iq,1)
           ATMOS_BOUNDARY_ref_QTRC(KE+1:KA,  i,j,iq,1) = ATMOS_BOUNDARY_ref_QTRC(KE,i,j,iq,1)
 
@@ -1403,9 +1403,9 @@ contains
     call COMM_vars8( ATMOS_BOUNDARY_ref_VELY(:,:,:,2),  9 )
     call COMM_vars8( ATMOS_BOUNDARY_ref_POTT(:,:,:,2), 10 )
 
-    do iq = 1, NESTQA
+    do iq = 1, BND_QA
        call COMM_vars8( ATMOS_BOUNDARY_ref_QTRC(:,:,:,iq,1), 10+iq        )
-       call COMM_vars8( ATMOS_BOUNDARY_ref_QTRC(:,:,:,iq,2), 10+iq+NESTQA )
+       call COMM_vars8( ATMOS_BOUNDARY_ref_QTRC(:,:,:,iq,2), 10+iq+BND_QA )
     end do
 
     call COMM_wait ( ATMOS_BOUNDARY_ref_DENS(:,:,:,1),  1, .false. )
@@ -1420,9 +1420,9 @@ contains
     call COMM_wait ( ATMOS_BOUNDARY_ref_VELY(:,:,:,2),  9, .false. )
     call COMM_wait ( ATMOS_BOUNDARY_ref_POTT(:,:,:,2), 10, .false. )
 
-    do iq = 1, NESTQA
+    do iq = 1, BND_QA
        call COMM_wait ( ATMOS_BOUNDARY_ref_QTRC(:,:,:,iq,1), 10+iq       , .false. )
-       call COMM_wait ( ATMOS_BOUNDARY_ref_QTRC(:,:,:,iq,2), 10+iq+NESTQA, .false. )
+       call COMM_wait ( ATMOS_BOUNDARY_ref_QTRC(:,:,:,iq,2), 10+iq+BND_QA, .false. )
     end do
 
     ! set boundary data and time increment
@@ -1447,7 +1447,7 @@ contains
                                               - ATMOS_BOUNDARY_ref_POTT(k,i,j,1) ) &
                                             / ( ATMOS_BOUNDARY_UPDATE_DT / TIME_DTSEC )
 
-       do iq = 1, NESTQA
+       do iq = 1, BND_QA
           ATMOS_BOUNDARY_QTRC(k,i,j,iq) = ATMOS_BOUNDARY_ref_QTRC(k,i,j,iq,1)
 
           ATMOS_BOUNDARY_increment_QTRC(k,i,j,iq) = ( ATMOS_BOUNDARY_ref_QTRC(k,i,j,iq,2) &
@@ -1483,7 +1483,7 @@ contains
        ATMOS_BOUNDARY_ref_VELX(k,i,j,1) = ATMOS_BOUNDARY_ref_VELX(k,i,j,2)
        ATMOS_BOUNDARY_ref_VELY(k,i,j,1) = ATMOS_BOUNDARY_ref_VELY(k,i,j,2)
        ATMOS_BOUNDARY_ref_POTT(k,i,j,1) = ATMOS_BOUNDARY_ref_POTT(k,i,j,2)
-       do iq = 1, NESTQA
+       do iq = 1, BND_QA
           ATMOS_BOUNDARY_ref_QTRC(k,i,j,iq,1) = ATMOS_BOUNDARY_ref_QTRC(k,i,j,iq,2)
        end do
     end do
@@ -1634,7 +1634,7 @@ contains
              ATMOS_BOUNDARY_ref_VELX(k,i,j,1) = ATMOS_BOUNDARY_ref_VELX(k,i,j,2)
              ATMOS_BOUNDARY_ref_VELY(k,i,j,1) = ATMOS_BOUNDARY_ref_VELY(k,i,j,2)
              ATMOS_BOUNDARY_ref_POTT(k,i,j,1) = ATMOS_BOUNDARY_ref_POTT(k,i,j,2)
-             do iq = 1, NESTQA
+             do iq = 1, BND_QA
                 ATMOS_BOUNDARY_ref_QTRC(k,i,j,iq,1) = ATMOS_BOUNDARY_ref_QTRC(k,i,j,iq,2)
              end do
           end do
@@ -2147,7 +2147,7 @@ contains
           ATMOS_BOUNDARY_ref_VELY(KE+1:KA,  i,j,2) = ATMOS_BOUNDARY_ref_VELY(KE,i,j,2)
           ATMOS_BOUNDARY_ref_POTT(KE+1:KA,  i,j,2) = ATMOS_BOUNDARY_ref_POTT(KE,i,j,2)
 
-          do iq = 1, NESTQA
+          do iq = 1, BND_QA
              ATMOS_BOUNDARY_ref_QTRC(   1:KS-1,i,j,iq,2) = ATMOS_BOUNDARY_ref_QTRC(KS,i,j,iq,2)
              ATMOS_BOUNDARY_ref_QTRC(KE+1:KA,  i,j,iq,2) = ATMOS_BOUNDARY_ref_QTRC(KE,i,j,iq,2)
           end do
@@ -2160,7 +2160,7 @@ contains
        call COMM_vars8( ATMOS_BOUNDARY_ref_VELY(:,:,:,2), 4 )
        call COMM_vars8( ATMOS_BOUNDARY_ref_POTT(:,:,:,2), 5 )
 
-       do iq = 1, NESTQA
+       do iq = 1, BND_QA
           call COMM_vars8( ATMOS_BOUNDARY_ref_QTRC(:,:,:,iq,2), 5+iq )
        end do
 
@@ -2170,7 +2170,7 @@ contains
        call COMM_wait ( ATMOS_BOUNDARY_ref_VELY(:,:,:,2), 4, .false. )
        call COMM_wait ( ATMOS_BOUNDARY_ref_POTT(:,:,:,2), 5, .false. )
 
-       do iq = 1, NESTQA
+       do iq = 1, BND_QA
           call COMM_wait ( ATMOS_BOUNDARY_ref_QTRC(:,:,:,iq,2), 5+iq, .false. )
        end do
 
