@@ -208,15 +208,11 @@ contains
     real(RP) :: C0 ! initial drag coefficient [no unit]
     real(RP) :: fm, fh, t0th, q0qe
     real(RP) :: Tha, Ths
-
-    real(RP) :: RovCP
     !---------------------------------------------------------------------------
 
-    RovCP = Rdry / CPdry
-
     Uabs = max( sqrt( Ua**2 + Va**2 ), BULKFLUX_Uabs_min )
-    Tha  = Ta*(PRE00/Pa)**RovCP
-    Ths  = Ts*(PRE00/Ps)**RovCP
+    Tha  = Ta * ( PRE00 / Pa )**( Rdry / CPdry )
+    Ths  = Ts * ( PRE00 / Ps )**( Rdry / CPdry )
 
     RiB0 = GRAV * Za * ( Tha - Ths ) / ( Tha * Uabs**2 )
     if( abs( RiB0 ) < BULKFLUX_RiB_min ) then
@@ -341,15 +337,12 @@ contains
     real(RP) :: QstarUS, QstarS, dQstar, dQstarUS, dQstarS
 
     real(RP) :: Tha, Ths
-    real(RP) :: RovCP
     real(RP) :: sw
     !---------------------------------------------------------------------------
 
-    RovCP = Rdry / CPdry
-
     Uabs = max( sqrt( Ua**2 + Va**2 ), BULKFLUX_Uabs_min )
-    Tha  = Ta*(PRE00/Pa)**RovCP
-    Ths  = Ts*(PRE00/Ps)**RovCP
+    Tha  = Ta * ( PRE00 / Pa )**( Rdry / CPdry )
+    Ths  = Ts * ( PRE00 / Ps )**( Rdry / CPdry )
 
     ! initial bulk Richardson number
     RiB0 = GRAV * Za * ( Tha - Ths ) / ( Tha * Uabs**2 )
@@ -385,10 +378,10 @@ contains
       Qstar = ( sw ) * QstarUS + ( 1.0_RP-sw ) * QstarS
 
       ! update free convection velocity scale (unstable condition only)
-      Wstar = ( -PBL * GRAV / Tha * Ustar * Tstar * sw )**(1.0_RP/3.0_RP)
+      Wstar = ( -PBL * GRAV / Ta * Ustar * Tstar * sw )**(1.0_RP/3.0_RP)
 
       ! calculate residual
-      res = L - Ustar**2 * Tha / ( KARMAN * GRAV * Tstar )
+      res = L - Ustar**2 * Ta / ( KARMAN * GRAV * Tstar )
 
       ! unstable condition
       dUabsUS  = max( sqrt( Ua**2 + Va**2 + (BULKFLUX_WSCF*dWstar)**2 ), BULKFLUX_Uabs_min )
@@ -408,10 +401,10 @@ contains
       dQstar = ( sw ) * dQstarUS + ( 1.0_RP-sw ) * dQstarS
 
       ! update d(free convection velocity scale) (unstable condition only)
-      dWstar = ( -PBL * GRAV / Tha * dUstar * dTstar * sw )**(1.0_RP/3.0_RP)
+      dWstar = ( -PBL * GRAV / Ta * dUstar * dTstar * sw )**(1.0_RP/3.0_RP)
 
       ! calculate d(residual)/dL
-      dres = ( (L+dL) - dUstar**2 * Tha / ( KARMAN * GRAV * dTstar ) - res ) / dL
+      dres = ( (L+dL) - dUstar**2 * Ta / ( KARMAN * GRAV * dTstar ) - res ) / dL
 
       if( abs( res ) < res_min .or. dres < EPS ) then
         ! finish iteration
