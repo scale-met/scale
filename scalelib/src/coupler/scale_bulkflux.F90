@@ -319,7 +319,7 @@ contains
     integer,  parameter :: nmax    = 100        ! maximum iteration number
 
     real(RP), parameter :: res_min = 1.0E-4_RP
-    real(RP), parameter :: dL      = 1.0E-4_RP  ! delta Obukhov length [m]
+    real(RP), parameter :: dL      = 1.0E-8_RP  ! delta Obukhov length [m]
 
     ! variables
     integer :: n
@@ -417,8 +417,28 @@ contains
     end do
 
     if( n > nmax ) then
-      if( IO_L ) write(IO_FID_LOG,*) 'Warning: reach maximum iteration in the function of BULKFLUX_B91W01.', res, dres, L
-      if( IO_L ) write(IO_FID_LOG,*) Ta, Ts, Pa, Ps, Qa, Qs, Ua, Va, Za, PBL, Z0M, Z0H, Z0E
+      if( IO_L ) write(IO_FID_LOG,*) 'Warning: reach maximum iteration in the function of BULKFLUX_B91W01.'
+
+      if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- Residual                            [m]     :', res
+      if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- delta Residual                      [m]     :', dres
+      if( IO_L ) write(IO_FID_LOG,*) ''
+      if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- air tempearature                    [K]     :', Ta
+      if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- surface temperature                 [K]     :', Ts
+      if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- pressure                            [Pa]    :', Pa
+      if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- surface pressure                    [Pa]    :', Ps
+      if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- water vapor mass ratio              [kg/kg] :', Qa
+      if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- surface water vapor mass ratio      [kg/kg] :', Qs
+      if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- zonal wind                          [m/s]   :', Ua
+      if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- meridional wind                     [m/s]   :', Va
+      if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- cell center height                  [m]     :', Za
+      if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- the top of atmospheric mixing layer [m]     :', PBL
+      if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- roughness length of momentum        [m]     :', Z0M
+      if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- roughness length of heat            [m]     :', Z0H
+      if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- roughness length of moisture        [m]     :', Z0E
+      if( IO_L ) write(IO_FID_LOG,*) ''
+      if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- friction velocity                   [m]     :', Ustar
+      if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- friction potential temperature      [K]     :', Tstar
+      if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- friction water vapor mass ratio     [kg/kg] :', Qstar
     end if
 
     return
