@@ -31,15 +31,15 @@ module scale_bulkflux
           Tstar,   & ! (out)
           Qstar,   & ! (out)
           Uabs,    & ! (out)
-          Ta,      & ! (in)
-          Ts,      & ! (in)
-          Pa,      & ! (in)
-          Ps,      & ! (in)
-          Qa,      & ! (in)
-          Qs,      & ! (in)
-          Ua,      & ! (in)
-          Va,      & ! (in)
-          Za,      & ! (in)
+          T1,      & ! (in)
+          T0,      & ! (in)
+          P1,      & ! (in)
+          P0,      & ! (in)
+          Q1,      & ! (in)
+          Q0,      & ! (in)
+          U1,      & ! (in)
+          V1,      & ! (in)
+          Z1,      & ! (in)
           PBL,     & ! (in)
           Z0M,     & ! (in)
           Z0H,     & ! (in)
@@ -52,15 +52,15 @@ module scale_bulkflux
        real(RP), intent(out) :: Qstar ! friction mixing rate [kg/kg]
        real(RP), intent(out) :: Uabs  ! modified absolute velocity [m/s]
 
-       real(RP), intent(in) :: Ta  ! tempearature at the lowest atmospheric layer [K]
-       real(RP), intent(in) :: Ts  ! skin temperature [K]
-       real(RP), intent(in) :: Pa  ! pressure at the lowest atmospheric layer [Pa]
-       real(RP), intent(in) :: Ps  ! surface pressure [Pa]
-       real(RP), intent(in) :: Qa  ! mixing ratio at the lowest atmospheric layer [kg/kg]
-       real(RP), intent(in) :: Qs  ! surface mixing ratio [kg/kg]
-       real(RP), intent(in) :: Ua  ! zonal wind at the lowest atmospheric layer [m/s]
-       real(RP), intent(in) :: Va  ! meridional wind at the lowest atmospheric layer [m/s]
-       real(RP), intent(in) :: Za  ! height at the lowest atmospheric layer [m]
+       real(RP), intent(in) :: T1  ! tempearature at the lowest atmospheric layer [K]
+       real(RP), intent(in) :: T0  ! skin temperature [K]
+       real(RP), intent(in) :: P1  ! pressure at the lowest atmospheric layer [Pa]
+       real(RP), intent(in) :: P0  ! surface pressure [Pa]
+       real(RP), intent(in) :: Q1  ! mixing ratio at the lowest atmospheric layer [kg/kg]
+       real(RP), intent(in) :: Q0  ! surface mixing ratio [kg/kg]
+       real(RP), intent(in) :: U1  ! zonal wind at the lowest atmospheric layer [m/s]
+       real(RP), intent(in) :: V1  ! meridional wind at the lowest atmospheric layer [m/s]
+       real(RP), intent(in) :: Z1  ! height at the lowest atmospheric layer [m]
        real(RP), intent(in) :: PBL ! the top of atmospheric mixing layer [m]
        real(RP), intent(in) :: Z0M ! roughness length of momentum [m]
        real(RP), intent(in) :: Z0H ! roughness length of heat [m]
@@ -155,15 +155,15 @@ contains
       Tstar,   & ! (out)
       Qstar,   & ! (out)
       Uabs,    & ! (out)
-      Ta,      & ! (in)
-      Ts,      & ! (in)
-      Pa,      & ! (in)
-      Ps,      & ! (in)
-      Qa,      & ! (in)
-      Qs,      & ! (in)
-      Ua,      & ! (in)
-      Va,      & ! (in)
-      Za,      & ! (in)
+      T1,      & ! (in)
+      T0,      & ! (in)
+      P1,      & ! (in)
+      P0,      & ! (in)
+      Q1,      & ! (in)
+      Q0,      & ! (in)
+      U1,      & ! (in)
+      V1,      & ! (in)
+      Z1,      & ! (in)
       PBL,     & ! (in)
       Z0M,     & ! (in)
       Z0H,     & ! (in)
@@ -182,15 +182,15 @@ contains
     real(RP), intent(out) :: Qstar ! friction mixing rate [kg/kg]
     real(RP), intent(out) :: Uabs  ! modified absolute velocity [m/s]
 
-    real(RP), intent(in) :: Ta  ! tempearature at the lowest atmospheric layer [K]
-    real(RP), intent(in) :: Ts  ! skin temperature [K]
-    real(RP), intent(in) :: Pa  ! pressure at the lowest atmospheric layer [Pa]
-    real(RP), intent(in) :: Ps  ! surface pressure [Pa]
-    real(RP), intent(in) :: Qa  ! mixing ratio at the lowest atmospheric layer [kg/kg]
-    real(RP), intent(in) :: Qs  ! surface mixing ratio [kg/kg]
-    real(RP), intent(in) :: Ua  ! zonal wind at the lowest atmospheric layer [m/s]
-    real(RP), intent(in) :: Va  ! meridional wind at the lowest atmospheric layer [m/s]
-    real(RP), intent(in) :: Za  ! height at the lowest atmospheric layer [m]
+    real(RP), intent(in) :: T1  ! tempearature at the lowest atmospheric layer [K]
+    real(RP), intent(in) :: T0  ! skin temperature [K]
+    real(RP), intent(in) :: P1  ! pressure at the lowest atmospheric layer [Pa]
+    real(RP), intent(in) :: P0  ! surface pressure [Pa]
+    real(RP), intent(in) :: Q1  ! mixing ratio at the lowest atmospheric layer [kg/kg]
+    real(RP), intent(in) :: Q0  ! surface mixing ratio [kg/kg]
+    real(RP), intent(in) :: U1  ! zonal wind at the lowest atmospheric layer [m/s]
+    real(RP), intent(in) :: V1  ! meridional wind at the lowest atmospheric layer [m/s]
+    real(RP), intent(in) :: Z1  ! height at the lowest atmospheric layer [m]
     real(RP), intent(in) :: PBL ! the top of atmospheric mixing layer [m]
     real(RP), intent(in) :: Z0M ! roughness length of momentum [m]
     real(RP), intent(in) :: Z0H ! roughness length of heat [m]
@@ -207,19 +207,19 @@ contains
     real(RP) :: RiB0, RiB ! bulk Richardson number [no unit]
     real(RP) :: C0 ! initial drag coefficient [no unit]
     real(RP) :: fm, fh, t0th, q0qe
-    real(RP) :: Tha, Ths
+    real(RP) :: TH1, TH0
     !---------------------------------------------------------------------------
 
-    Uabs = max( sqrt( Ua**2 + Va**2 ), BULKFLUX_Uabs_min )
-    Tha  = Ta * ( PRE00 / Pa )**( Rdry / CPdry )
-    Ths  = Ts * ( PRE00 / Ps )**( Rdry / CPdry )
+    Uabs = max( sqrt( U1**2 + V1**2 ), BULKFLUX_Uabs_min )
+    TH1  = T1 * ( PRE00 / P1 )**( Rdry / CPdry )
+    TH0  = T0 * ( PRE00 / P0 )**( Rdry / CPdry )
 
-    RiB0 = GRAV * Za * ( Tha - Ths ) / ( Tha * Uabs**2 )
+    RiB0 = GRAV * Z1 * ( TH1 - TH0 ) / ( TH1 * Uabs**2 )
     if( abs( RiB0 ) < BULKFLUX_RiB_min ) then
       RiB0 = sign( BULKFLUX_RiB_min, RiB0 )
     end if
 
-    C0  = ( KARMAN / log( Za/Z0M ) )**2
+    C0  = ( KARMAN / log( Z1/Z0M ) )**2
     RiB = RiB0
 
     if( RiB0 >= 0.0_RP ) then
@@ -228,12 +228,12 @@ contains
       fh = fm
     else
       ! unstable condition
-      fm = 1.0_RP - LFb * RiB / ( 1.0_RP + LFb * LFdm * C0 * sqrt( Za/Z0M ) * sqrt( abs( RiB ) ) )
-      fh = 1.0_RP - LFb * RiB / ( 1.0_RP + LFb * LFdh * C0 * sqrt( Za/Z0M ) * sqrt( abs( RiB ) ) )
+      fm = 1.0_RP - LFb * RiB / ( 1.0_RP + LFb * LFdm * C0 * sqrt( Z1/Z0M ) * sqrt( abs( RiB ) ) )
+      fh = 1.0_RP - LFb * RiB / ( 1.0_RP + LFb * LFdh * C0 * sqrt( Z1/Z0M ) * sqrt( abs( RiB ) ) )
     end if
 
-    t0th = 1.0_RP / ( 1.0_RP + log( Z0M/Z0H ) / log( Za/Z0M ) / sqrt( fm ) * fh )
-    q0qe = 1.0_RP / ( 1.0_RP + log( Z0M/Z0E ) / log( Za/Z0M ) / sqrt( fm ) * fh )
+    t0th = 1.0_RP / ( 1.0_RP + log( Z0M/Z0H ) / log( Z1/Z0M ) / sqrt( fm ) * fh )
+    q0qe = 1.0_RP / ( 1.0_RP + log( Z0M/Z0E ) / log( Z1/Z0M ) / sqrt( fm ) * fh )
     RiB  = RiB * t0th
 
     if( RiB0 >= 0.0_RP ) then
@@ -242,16 +242,16 @@ contains
       fh = fm
     else
       ! unstable condition
-      fm = 1.0_RP - LFb * RiB / ( 1.0_RP + LFb * LFdm * C0 * sqrt( Za/Z0M ) * sqrt( abs( RiB ) ) )
-      fh = 1.0_RP - LFb * RiB / ( 1.0_RP + LFb * LFdh * C0 * sqrt( Za/Z0M ) * sqrt( abs( RiB ) ) )
+      fm = 1.0_RP - LFb * RiB / ( 1.0_RP + LFb * LFdm * C0 * sqrt( Z1/Z0M ) * sqrt( abs( RiB ) ) )
+      fh = 1.0_RP - LFb * RiB / ( 1.0_RP + LFb * LFdh * C0 * sqrt( Z1/Z0M ) * sqrt( abs( RiB ) ) )
     end if
 
-    t0th = 1.0_RP / ( 1.0_RP + log( Z0M/Z0H ) / log( Za/Z0M ) / sqrt( fm ) * fh )
-    q0qe = 1.0_RP / ( 1.0_RP + log( Z0M/Z0E ) / log( Za/Z0M ) / sqrt( fm ) * fh )
+    t0th = 1.0_RP / ( 1.0_RP + log( Z0M/Z0H ) / log( Z1/Z0M ) / sqrt( fm ) * fh )
+    q0qe = 1.0_RP / ( 1.0_RP + log( Z0M/Z0E ) / log( Z1/Z0M ) / sqrt( fm ) * fh )
 
     Ustar = sqrt( C0 * fm ) * Uabs
-    Tstar = C0 * fh * t0th / tPrn * Uabs / Ustar * ( Tha - Ths )
-    Qstar = C0 * fh * q0qe / tPrn * Uabs / Ustar * ( Qa  - Qs  )
+    Tstar = C0 * fh * t0th / tPrn * Uabs / Ustar * ( TH1 - TH0 )
+    Qstar = C0 * fh * q0qe / tPrn * Uabs / Ustar * ( Q1  - Q0  )
 
     return
   end subroutine BULKFLUX_U95
@@ -269,15 +269,15 @@ contains
        Tstar,   & ! (out)
        Qstar,   & ! (out)
        Uabs,    & ! (out)
-       Ta,      & ! (in)
-       Ts,      & ! (in)
-       Pa,      & ! (in)
-       Ps,      & ! (in)
-       Qa,      & ! (in)
-       Qs,      & ! (in)
-       Ua,      & ! (in)
-       Va,      & ! (in)
-       Za,      & ! (in)
+       T1,      & ! (in)
+       T0,      & ! (in)
+       P1,      & ! (in)
+       P0,      & ! (in)
+       Q1,      & ! (in)
+       Q0,      & ! (in)
+       U1,      & ! (in)
+       V1,      & ! (in)
+       Z1,      & ! (in)
        PBL,     & ! (in)
        Z0M,     & ! (in)
        Z0H,     & ! (in)
@@ -301,15 +301,15 @@ contains
     real(RP), intent(out) :: Qstar ! friction mixing rate [kg/kg]
     real(RP), intent(out) :: Uabs  ! modified absolute velocity [m/s]
 
-    real(RP), intent(in) :: Ta  ! tempearature at the lowest atmospheric layer [K]
-    real(RP), intent(in) :: Ts  ! skin temperature [K]
-    real(RP), intent(in) :: Pa  ! pressure at the lowest atmospheric layer [Pa]
-    real(RP), intent(in) :: Ps  ! surface pressure [Pa]
-    real(RP), intent(in) :: Qa  ! mixing ratio at the lowest atmospheric layer [kg/kg]
-    real(RP), intent(in) :: Qs  ! surface mixing ratio [kg/kg]
-    real(RP), intent(in) :: Ua  ! zonal wind at the lowest atmospheric layer [m/s]
-    real(RP), intent(in) :: Va  ! meridional wind at the lowest atmospheric layer [m/s]
-    real(RP), intent(in) :: Za  ! height at the lowest atmospheric layer [m]
+    real(RP), intent(in) :: T1  ! tempearature at the lowest atmospheric layer [K]
+    real(RP), intent(in) :: T0  ! skin temperature [K]
+    real(RP), intent(in) :: P1  ! pressure at the lowest atmospheric layer [Pa]
+    real(RP), intent(in) :: P0  ! surface pressure [Pa]
+    real(RP), intent(in) :: Q1  ! mixing ratio at the lowest atmospheric layer [kg/kg]
+    real(RP), intent(in) :: Q0  ! surface mixing ratio [kg/kg]
+    real(RP), intent(in) :: U1  ! zonal wind at the lowest atmospheric layer [m/s]
+    real(RP), intent(in) :: V1  ! meridional wind at the lowest atmospheric layer [m/s]
+    real(RP), intent(in) :: Z1  ! height at the lowest atmospheric layer [m]
     real(RP), intent(in) :: PBL ! the top of atmospheric mixing layer [m]
     real(RP), intent(in) :: Z0M ! roughness length of momentum [m]
     real(RP), intent(in) :: Z0H ! roughness length of heat [m]
@@ -336,22 +336,29 @@ contains
     real(RP) :: TstarUS, TstarS, dTstar, dTstarUS, dTstarS
     real(RP) :: QstarUS, QstarS, dQstar, dQstarUS, dQstarS
 
-    real(RP) :: Tha, Ths
+    real(RP) :: TH1, TH0
     real(RP) :: sw
+
+    real(RP) :: log_Z1ovZ0M, log_Z1ovZ0H, log_Z1ovZ0E
     !---------------------------------------------------------------------------
 
-    Uabs = max( sqrt( Ua**2 + Va**2 ), BULKFLUX_Uabs_min )
-    Tha  = Ta * ( PRE00 / Pa )**( Rdry / CPdry )
-    Ths  = Ts * ( PRE00 / Ps )**( Rdry / CPdry )
+    Uabs = max( sqrt( U1**2 + V1**2 ), BULKFLUX_Uabs_min )
+    TH1  = T1 * ( PRE00 / P1 )**( Rdry / CPdry )
+    TH0  = T0 * ( PRE00 / P0 )**( Rdry / CPdry )
+
+    ! make log constant
+    log_Z1ovZ0M = log( Z1 / Z0M )
+    log_Z1ovZ0H = log( Z1 / Z0H )
+    log_Z1ovZ0E = log( Z1 / Z0E )
 
     ! initial bulk Richardson number
-    RiB0 = GRAV * Za * ( Tha - Ths ) / ( Tha * Uabs**2 )
+    RiB0 = GRAV * Z1 * ( TH1 - TH0 ) / ( TH1 * Uabs**2 )
     if( abs( RiB0 ) < BULKFLUX_RiB_min ) then
       RiB0 = sign( BULKFLUX_RiB_min, RiB0 )
     end if
 
     ! initial Obukhov length assumed by neutral condition
-    L = Za / RiB0 * log(Za/Z0H) / log(Za/Z0M)**2
+    L = Z1 / RiB0 * log_Z1ovZ0H / log_Z1ovZ0M**2
 
     ! initial free convection velocity scale
     Wstar  = BULKFLUX_Wstar_min
@@ -359,16 +366,16 @@ contains
 
     do n = 1, nmax
       ! unstable condition
-      UabsUS  = max( sqrt( Ua**2 + Va**2 + (BULKFLUX_WSCF*Wstar)**2 ), BULKFLUX_Uabs_min )
-      UstarUS = KARMAN / ( log(Za/Z0M) - fm_unstable(Za,L) + fm_unstable(Z0M,L) ) * UabsUS
-      TstarUS = KARMAN / ( log(Za/Z0H) - fh_unstable(Za,L) + fh_unstable(Z0H,L) ) / Pt * ( Tha - Ths )
-      QstarUS = KARMAN / ( log(Za/Z0E) - fh_unstable(Za,L) + fh_unstable(Z0E,L) ) / Pt * ( Qa  - Qs  )
+      UabsUS  = max( sqrt( U1**2 + V1**2 + (BULKFLUX_WSCF*Wstar)**2 ), BULKFLUX_Uabs_min )
+      UstarUS = KARMAN / ( log_Z1ovZ0M - fm_unstable(Z1,L) + fm_unstable(Z0M,L) ) * UabsUS
+      TstarUS = KARMAN / ( log_Z1ovZ0H - fh_unstable(Z1,L) + fh_unstable(Z0H,L) ) / Pt * ( TH1 - TH0 )
+      QstarUS = KARMAN / ( log_Z1ovZ0E - fh_unstable(Z1,L) + fh_unstable(Z0E,L) ) / Pt * ( Q1  - Q0  )
 
       ! stable condition
-      UabsS  = max( sqrt( Ua**2 + Va**2 ), BULKFLUX_Uabs_min )
-      UstarS = KARMAN / ( log(Za/Z0M) - fm_stable(Za,L) + fm_stable(Z0M,L) ) * UabsS
-      TstarS = KARMAN / ( log(Za/Z0H) - fh_stable(Za,L) + fh_stable(Z0H,L) ) / Pt * ( Tha - Ths )
-      QstarS = KARMAN / ( log(Za/Z0E) - fh_stable(Za,L) + fh_stable(Z0E,L) ) / Pt * ( Qa  - Qs  )
+      UabsS  = max( sqrt( U1**2 + V1**2 ), BULKFLUX_Uabs_min )
+      UstarS = KARMAN / ( log_Z1ovZ0M - fm_stable(Z1,L) + fm_stable(Z0M,L) ) * UabsS
+      TstarS = KARMAN / ( log_Z1ovZ0H - fh_stable(Z1,L) + fh_stable(Z0H,L) ) / Pt * ( TH1 - TH0 )
+      QstarS = KARMAN / ( log_Z1ovZ0E - fh_stable(Z1,L) + fh_stable(Z0E,L) ) / Pt * ( Q1  - Q0  )
 
       sw = 0.5_RP - sign( 0.5_RP, L ) ! if unstable, sw = 1
 
@@ -378,21 +385,21 @@ contains
       Qstar = ( sw ) * QstarUS + ( 1.0_RP-sw ) * QstarS
 
       ! update free convection velocity scale (unstable condition only)
-      Wstar = ( -PBL * GRAV / Ta * Ustar * Tstar * sw )**(1.0_RP/3.0_RP)
+      Wstar = ( -PBL * GRAV / T1 * Ustar * Tstar * sw )**(1.0_RP/3.0_RP)
 
       ! calculate residual
-      res = L - Ustar**2 * Ta / ( KARMAN * GRAV * Tstar )
+      res = L - Ustar**2 * T1 / ( KARMAN * GRAV * Tstar )
 
       ! unstable condition
-      dUabsUS  = max( sqrt( Ua**2 + Va**2 + (BULKFLUX_WSCF*dWstar)**2 ), BULKFLUX_Uabs_min )
-      dUstarUS = KARMAN / ( log(Za/Z0M) - fm_unstable(Za,L+dL) + fm_unstable(Z0M,L+dL) ) * dUabsUS
-      dTstarUS = KARMAN / ( log(Za/Z0H) - fh_unstable(Za,L+dL) + fh_unstable(Z0H,L+dL) ) / Pt * ( Tha - Ths )
-      dQstarUS = KARMAN / ( log(Za/Z0E) - fh_unstable(Za,L+dL) + fh_unstable(Z0E,L+dL) ) / Pt * ( Qa  - Qs  )
+      dUabsUS  = max( sqrt( U1**2 + V1**2 + (BULKFLUX_WSCF*dWstar)**2 ), BULKFLUX_Uabs_min )
+      dUstarUS = KARMAN / ( log_Z1ovZ0M - fm_unstable(Z1,L+dL) + fm_unstable(Z0M,L+dL) ) * dUabsUS
+      dTstarUS = KARMAN / ( log_Z1ovZ0H - fh_unstable(Z1,L+dL) + fh_unstable(Z0H,L+dL) ) / Pt * ( TH1 - TH0 )
+      dQstarUS = KARMAN / ( log_Z1ovZ0E - fh_unstable(Z1,L+dL) + fh_unstable(Z0E,L+dL) ) / Pt * ( Q1  - Q0  )
       ! stable condition
-      dUabsS  = max( sqrt( Ua**2 + Va**2 ), BULKFLUX_Uabs_min )
-      dUstarS = KARMAN / ( log(Za/Z0M) - fm_stable(Za,L+dL) + fm_stable(Z0M,L+dL) ) * dUabsS
-      dTstarS = KARMAN / ( log(Za/Z0H) - fh_stable(Za,L+dL) + fh_stable(Z0H,L+dL) ) / Pt * ( Tha - Ths )
-      dQstarS = KARMAN / ( log(Za/Z0E) - fh_stable(Za,L+dL) + fh_stable(Z0E,L+dL) ) / Pt * ( Qa  - Qs  )
+      dUabsS  = max( sqrt( U1**2 + V1**2 ), BULKFLUX_Uabs_min )
+      dUstarS = KARMAN / ( log_Z1ovZ0M - fm_stable(Z1,L+dL) + fm_stable(Z0M,L+dL) ) * dUabsS
+      dTstarS = KARMAN / ( log_Z1ovZ0H - fh_stable(Z1,L+dL) + fh_stable(Z0H,L+dL) ) / Pt * ( TH1 - TH0 )
+      dQstarS = KARMAN / ( log_Z1ovZ0E - fh_stable(Z1,L+dL) + fh_stable(Z0E,L+dL) ) / Pt * ( Q1  - Q0  )
 
       sw = 0.5_RP - sign( 0.5_RP, L+dL ) ! if unstable, sw = 1
 
@@ -401,10 +408,10 @@ contains
       dQstar = ( sw ) * dQstarUS + ( 1.0_RP-sw ) * dQstarS
 
       ! update d(free convection velocity scale) (unstable condition only)
-      dWstar = ( -PBL * GRAV / Ta * dUstar * dTstar * sw )**(1.0_RP/3.0_RP)
+      dWstar = ( -PBL * GRAV / T1 * dUstar * dTstar * sw )**(1.0_RP/3.0_RP)
 
       ! calculate d(residual)/dL
-      dres = ( (L+dL) - dUstar**2 * Ta / ( KARMAN * GRAV * dTstar ) - res ) / dL
+      dres = ( (L+dL) - dUstar**2 * T1 / ( KARMAN * GRAV * dTstar ) - res ) / dL
 
       if( abs( res ) < res_min .or. dres < EPS ) then
         ! finish iteration
@@ -422,15 +429,15 @@ contains
       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- Residual                            [m]       :', res
       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- delta Residual                      [m]       :', dres
       if( IO_L ) write(IO_FID_LOG,*) ''
-      if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- air tempearature                    [K]       :', Ta
-      if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- surface temperature                 [K]       :', Ts
-      if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- pressure                            [Pa]      :', Pa
-      if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- surface pressure                    [Pa]      :', Ps
-      if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- water vapor mass ratio              [kg/kg]   :', Qa
-      if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- surface water vapor mass ratio      [kg/kg]   :', Qs
-      if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- zonal wind                          [m/s]     :', Ua
-      if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- meridional wind                     [m/s]     :', Va
-      if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- cell center height                  [m]       :', Za
+      if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- air tempearature                    [K]       :', T1
+      if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- surface temperature                 [K]       :', T0
+      if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- pressure                            [Pa]      :', P1
+      if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- surface pressure                    [Pa]      :', P0
+      if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- water vapor mass ratio              [kg/kg]   :', Q1
+      if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- surface water vapor mass ratio      [kg/kg]   :', Q0
+      if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- zonal wind                          [m/s]     :', U1
+      if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- meridional wind                     [m/s]     :', V1
+      if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- cell center height                  [m]       :', Z1
       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- the top of atmospheric mixing layer [m]       :', PBL
       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- roughness length of momentum        [m]       :', Z0M
       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- roughness length of heat            [m]       :', Z0H
