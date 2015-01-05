@@ -44,7 +44,7 @@ module scale_land_sfc_slab
   integer,  private :: LAND_SFC_SLAB_itr_max = 100 ! maximum iteration number
 
   real(RP), private :: LAND_SFC_SLAB_res_min = 1.0E+0_RP ! minimum number of residual
-  real(RP), private :: LAND_SFC_SLAB_dTS_max = 1.0E+1_RP ! maximum delta surface temp.
+  real(RP), private :: LAND_SFC_SLAB_dTS_max = 5.0E-2_RP ! maximum delta surface temperature [K/s]
 
   logical, allocatable, private :: is_FLX(:,:) ! is atmos-land coupler run?
 
@@ -335,8 +335,8 @@ contains
 
         ! update land surface temperature with limitation
         LST1(i,j) = min( max( LST1(i,j), &
-                              LST (i,j) - LAND_SFC_SLAB_dTS_max ), &
-                              LST (i,j) + LAND_SFC_SLAB_dTS_max )
+                              LST (i,j) - LAND_SFC_SLAB_dTS_max * dt ), &
+                              LST (i,j) + LAND_SFC_SLAB_dTS_max * dt )
 
         if( n > LAND_SFC_SLAB_itr_max ) then
           ! check NaN
