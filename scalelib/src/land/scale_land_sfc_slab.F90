@@ -336,11 +336,17 @@ contains
 
         end do
 
-        if( n >= LAND_SFC_SLAB_itr_max ) then
+        if( n > LAND_SFC_SLAB_itr_max ) then
           ! check NaN
           if ( .NOT. ( res > -1.0_RP .OR. res < 1.0_RP ) ) then ! must be NaN
              write(*,*) 'xxx NaN is detected for land surface temperature in rank, i, j: ', PRC_myrank, i, j
 
+             write(*,*) LST(i,j), PRSS(i,j), PRSA(i,j), TMPA(i,j), QVA(i,j), TG(i,j), &
+                                  UA(i,j), VA(i,j), WA(i,j), Z1(i,j), PBL(i,j), RHOA(i,j), &
+                                  Z0M(i,j), Z0H(i,j), Z0E(i,j), LHV(i,j), &
+                                  ALB_SW(i,j), ALB_LW(i,j), SWD(i,j), LWD(i,j), &
+                                  Ustar, Tstar, Qstar, QVEF(i,j), &
+                                  TCS(i,j), LST1(i,j), DZG(i,j)
              call PRC_MPIstop
           endif
 

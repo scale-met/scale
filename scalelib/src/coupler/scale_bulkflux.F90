@@ -319,7 +319,7 @@ contains
     integer,  parameter :: nmax    = 100        ! maximum iteration number
 
     real(RP), parameter :: res_min = 1.0E-4_RP
-    real(RP), parameter :: dL      = 1.0E-8_RP  ! delta Obukhov length [m]
+    real(RP), parameter :: dL      = 1.0E-4_RP  ! delta Obukhov length [m]
 
     ! variables
     integer :: n
@@ -417,7 +417,8 @@ contains
     end do
 
     if( n > nmax ) then
-      if( IO_L ) write(IO_FID_LOG,*) 'Warning: reach maximum iteration in the function of BULKFLUX_B91W01.'
+      if( IO_L ) write(IO_FID_LOG,*) 'Warning: reach maximum iteration in the function of BULKFLUX_B91W01.', res, dres, L
+      if( IO_L ) write(IO_FID_LOG,*) Ta, Ts, Pa, Ps, Qa, Qs, Ua, Va, Za, PBL, Z0M, Z0H, Z0E
     end if
 
     return
