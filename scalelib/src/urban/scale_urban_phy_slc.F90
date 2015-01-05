@@ -51,6 +51,7 @@ module scale_urban_phy_slc
   !
   !-----------------------------------------------------------------------------
   !
+  real(RP), private, parameter :: DTS_MAX = 10.0_RP
   ! from namelist
   real(RP), private :: ZR         =   10.0_RP ! roof level ( building height) [m]
   real(RP), private :: roof_width =    9.0_RP ! roof level ( building height) [m]
@@ -443,7 +444,7 @@ contains
                       LON,          & ! [IN]
                       LAT,          & ! [IN]
                       NOWDATE(:),   & ! [IN]
-                      dt            ) ! [IN]
+                      dt, i, j      ) ! [IN]
 
        ! calculate tendency 
        TR_URB_t(i,j) = ( TR - TR_URB(i,j) ) /dt
@@ -569,9 +570,11 @@ contains
         XLON,         & ! (in)
         XLAT,         & ! (in)
         NOWDATE,      & ! (in)
-        dt            ) ! (in)
+        dt,           & ! (in)
+        i, j          ) ! (in)
     use scale_grid_index
     use scale_process, only: &
+       PRC_myrank, &
        PRC_MPIstop
     use scale_const, only: &
        EPS    => CONST_EPS,     &    ! small number (machine epsilon)
@@ -645,6 +648,7 @@ contains
     real(RP), intent(out)   :: SHR, SHB, SHG
     real(RP), intent(out)   :: LHR, LHB, LHG
     real(RP), intent(out)   :: GHR, GHB, GHG
+    integer , intent(in)    :: i, j
 
     !-- parameters
     real(RP), parameter     :: SRATIO    = 0.75_RP     ! ratio between direct/total solar [-]
@@ -859,6 +863,7 @@ contains
     ! new scheme
 
      G0RP = 0.0_RP
+     XXXR = 0.0_RP
      do iteration = 1, 20
 
       THS   = TR * ( PRE00 / PRSS )**RovCP   ! potential temp
@@ -889,7 +894,8 @@ contains
       call multi_layer(UKE,BOUND,G0R,CAPR,AKSR,TRL,DZR,dt,TRLEND)
       !! 1st layer's cap, aks are replaced.
       !! call multi_layer2(UKE,BOUND,G0R,CAPR,AKSR,TRL,DZR,dt,TRLEND,CAPL1,AKSL1)
-      TR  = TRL(1)
+!      TR = TRL(1)
+      TR = max( TRP - DTS_MAX, min( TRP + DTS_MAX, TRL(1) ) )
 
       resi1  =  abs(G0R - G0RP)
       G0RP   =  G0R
@@ -897,6 +903,13 @@ contains
       if( resi1 < sqrt(EPS) ) exit
 
      enddo
+
+!    if( .not. (resi1 < sqrt(EPS)) ) then
+!       write(*,*) 'xxx Warning not converged for TR in URBAN SLC', &
+!            PRC_myrank, i,j, &
+!            resi1, G0R
+!    end if
+
 
     !--- update only fluxes ----
      THS   = TR * ( PRE00 / PRSS )**RovCP
@@ -926,6 +939,8 @@ contains
 
      G0BP = 0.0_RP
      G0GP = 0.0_RP
+     XXXC = 0.0_RP
+
      do iteration = 1, 50
 
       THS1   = TB * ( PRE00 / PRSS )**RovCP
@@ -981,11 +996,13 @@ contains
 
       TBL = TBLP
       call multi_layer(UKE,BOUND,G0B,CAPB,AKSB,TBL,DZB,dt,TBLEND)
-      TB = TBL(1)
+!      TB = TBL(1)
+      TB = max( TBP - DTS_MAX, min( TBP + DTS_MAX, TBL(1) ) )
 
       TGL = TGLP
       call multi_layer(UKE,BOUND,G0G,CAPG,AKSG,TGL,DZG,dt,TGLEND)
-      TG = TGL(1)
+!      TG = TGL(1)
+      TG = max( TGP - DTS_MAX, min( TGP + DTS_MAX, TGL(1) ) )
 
       call qsat( QS0B, TB, PRSS )
       call qsat( QS0G, TG, PRSS )
@@ -1005,12 +1022,27 @@ contains
 
       resi1  =  abs(G0B - G0BP)
       resi2  =  abs(G0G - G0GP)
-      G0BP   =  G0B
-      G0GP   =  G0G
 
       if( resi1 < sqrt(EPS) .and. resi2 < sqrt(EPS) ) exit
 
+      G0BP   = G0B
+      G0GP   = G0G
+
     enddo
+
+!    if( .not. (resi1 < sqrt(EPS) .and. resi2 < sqrt(EPS) ) ) then
+!       write(*,*) 'xxx Warning not converged for TG, TB in URBAN SLC', &
+!            PRC_myrank, i,j, &
+!            resi1, resi2, TB, TG, TC, G0BP, G0GP, RB, HB, RG, HG, QC, &
+!            CHC, CDC, BHC, ALPHAC
+!       write(*,*) TBP, TGP, TCP, &
+!                  PRSS, THA, UA, QA, RHOO, UC, QCP, &
+!                  ZA, ZDC, Z0C, Z0HC, &
+!                  CHG, CHB, &
+!                  W, RW, ALPHAG, ALPHAB, BETG, BETB, &
+!                  RX, VFGS, VFGW, VFWG, VFWW, VFWS, STB, &
+!                  SB, SG, LHV, TBLP, TGLP
+!    end if
 
     !--- update only fluxes ----
      RG1      = EPSG * ( RX * VFGS                  &
