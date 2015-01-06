@@ -953,9 +953,9 @@ contains
 
       TRL = TRLP
       call multi_layer(UKE,BOUND,G0R,CAPR,AKSR,TRL,DZR,dt,TRLEND)
+      resi1 = TRL(1) - TR
       !! 1st layer's cap, aks are replaced.
       !! call multi_layer2(UKE,BOUND,G0R,CAPR,AKSR,TRL,DZR,dt,TRLEND,CAPL1,AKSL1)
-      resi1 = TRL(1) - TR
 
       !resi1  =  abs(G0R - G0RP)
       !G0RP   =  G0R
