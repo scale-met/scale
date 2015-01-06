@@ -925,7 +925,7 @@ contains
      G0RP = 0.0_RP
      XXXR = 0.0_RP
      resi1p = 0.0_RP
-     do iteration = 1, 20
+     do iteration = 1, 50
 
       THS   = TR * ( PRE00 / PRSS )**RovCP   ! potential temp
 
@@ -950,15 +950,12 @@ contains
     !    CAPL1 = CAPR
     !    AKSL1 = AKSR
     !  endif
+    !! 1st layer's cap, aks are replaced.
+    !! call multi_layer2(UKE,BOUND,G0R,CAPR,AKSR,TRL,DZR,dt,TRLEND,CAPL1,AKSL1)
 
       TRL = TRLP
       call multi_layer(UKE,BOUND,G0R,CAPR,AKSR,TRL,DZR,dt,TRLEND)
       resi1 = TRL(1) - TR
-      !! 1st layer's cap, aks are replaced.
-      !! call multi_layer2(UKE,BOUND,G0R,CAPR,AKSR,TRL,DZR,dt,TRLEND,CAPL1,AKSL1)
-
-      !resi1  =  abs(G0R - G0RP)
-      !G0RP   =  G0R
 
       if( abs(resi1) < sqrt(EPS) ) then
         TR = TRL(1)
@@ -983,7 +980,6 @@ contains
 !            resi1, G0R
 !    end if
 
-
     !--- update only fluxes ----
      THS   = TR * ( PRE00 / PRSS )**RovCP
      RIBR = ( GRAV * 2.0_RP / (THA+THS) ) * (THA-THS) * (Z+Z0R) / (UA*UA)
@@ -995,6 +991,21 @@ contains
      HR      = RHOO * CPdry * CHR * UA * (THS-THA)
      ELER    = RHOO * LHV   * CHR * UA * BETR * (QS0R-QA)
      G0R     = SR + RR - HR - ELER
+
+     TRL = TRLP
+     call multi_layer(UKE,BOUND,G0R,CAPR,AKSR,TRL,DZR,dt,TRLEND)
+     resi1 = (TRL(1) - TR)/dt
+     TR  = TRL(1)
+
+     if ( abs(resi1) > DTS_MAX ) then
+       if ( abs(resi1) > DTS_MAX*10.0_RP ) then
+         if( IO_L ) write(IO_FID_LOG,*) '!xxx Error xxx!: Kusaka urban (SLC_main) not converged for TR'
+         if( IO_L ) write(IO_FID_LOG,*) '!xxx previous TR and updated TR(TRL(1)) is ',TR-resi1*dt,TR
+         call PRC_MPIstop
+       endif
+       if( IO_L ) write(IO_FID_LOG,*) '!xxx Warning xxx!: Kusaka urban (SLC_main) not converged for TR'
+       if( IO_L ) write(IO_FID_LOG,*) '!xxx previous TR and updated TR(TRL(1)) is ',TR-resi1*dt,TR
+     endif
 
     !--------------------------------------------------
     !   Wall and Road
@@ -1078,14 +1089,14 @@ contains
       resi2 = TGL(1) - TG
 
       !-----------
-      print *,HB, RHOO , CPdry , CHB , UC , THS1,THC
-      print *,HG, RHOO , CPdry , CHG , UC , THS2,THC
-      print *,ELEB ,RHOO , LHV , CHB , UC , BETB , QS0B , QC
-      print *,ELEG ,RHOO , LHV , CHG , UC , BETG , QS0G , QC
+      !print *,HB, RHOO , CPdry , CHB , UC , THS1,THC
+      !print *,HG, RHOO , CPdry , CHG , UC , THS2,THC
+      !print *,ELEB ,RHOO , LHV , CHB , UC , BETB , QS0B , QC
+      !print *,ELEG ,RHOO , LHV , CHG , UC , BETG , QS0G , QC
 
-      write(*,'(a3,i5,f8.3,6f15.5)') "TB,",iteration,TB,G0B,SB,RB,HB,ELEB,resi1
-      write(*,'(a3,i5,f8.3,6f15.5)') "TG,",iteration,TG,G0G,SG,RG,HG,ELEG,resi2
-      write(*,'(a3,i5,f8.3,3f15.5)') "TC,",iteration,TC,QC,QS0B,QS0G
+      !write(*,'(a3,i5,f8.3,6f15.5)') "TB,",iteration,TB,G0B,SB,RB,HB,ELEB,resi1
+      !write(*,'(a3,i5,f8.3,6f15.5)') "TG,",iteration,TG,G0G,SG,RG,HG,ELEG,resi2
+      !write(*,'(a3,i5,f8.3,3f15.5)') "TC,",iteration,TC,QC,QS0B,QS0G
       !--------
       !resi1  =  abs(G0B - G0BP)
       !resi2  =  abs(G0G - G0GP)
@@ -1147,15 +1158,16 @@ contains
 !                  W, RW, ALPHAG, ALPHAB, BETG, BETB, &
 !                  RX, VFGS, VFGW, VFWG, VFWW, VFWS, STB, &
 !                  SB, SG, LHV, TBLP, TGLP
-       write(*,*) "1",TBP, TGP, TCP
-       write(*,*) "2",PRSS, THA, UA, QA, RHOO, UC, QCP
-       write(*,*) "3",ZA, ZDC, Z0C, Z0HC
-       write(*,*) "4",CHG, CHB
-       write(*,*) "5",W, RW, ALPHAG, ALPHAB, BETG, BETB
-       write(*,*) "6",RX, VFGS, VFGW, VFWG, VFWW, VFWS, STB
-       write(*,*) "7",SB, SG, LHV
-       write(*,*) "8",TBLP, TGLP
+!       write(*,*) "1",TBP, TGP, TCP
+!       write(*,*) "2",PRSS, THA, UA, QA, RHOO, UC, QCP
+!       write(*,*) "3",ZA, ZDC, Z0C, Z0HC
+!       write(*,*) "4",CHG, CHB
+!       write(*,*) "5",W, RW, ALPHAG, ALPHAB, BETG, BETB
+!       write(*,*) "6",RX, VFGS, VFGW, VFWG, VFWW, VFWS, STB
+!       write(*,*) "7",SB, SG, LHV
+!       write(*,*) "8",TBLP, TGLP
 !    end if
+
 
     !--- update only fluxes ----
      RG1      = EPSG * ( RX * VFGS                  &
@@ -1189,6 +1201,37 @@ contains
      HG   = RHOO * CPdry * CHG * UC * (THS2-THC)
      ELEG = RHOO * LHV   * CHG * UC * BETG * (QS0G-QC)
      G0G  = SG + RG - HG - ELEG
+
+     TBL = TBLP
+     call multi_layer(UKE,BOUND,G0B,CAPB,AKSB,TBL,DZB,dt,TBLEND)
+     resi1 = (TBL(1) - TB)/dt
+     TB  = TBL(1)
+
+     TGL = TGLP
+     call multi_layer(UKE,BOUND,G0G,CAPG,AKSG,TGL,DZG,dt,TGLEND)
+     resi2 = (TGL(1) - TG)/dt
+     TG  = TGL(1)
+
+
+     if ( abs(resi1) > DTS_MAX ) then
+       if ( abs(resi1) > DTS_MAX*10.0_RP ) then
+         if( IO_L ) write(IO_FID_LOG,*) '!xxx Error xxx!: Kusaka urban (SLC_main) not converged for TB'
+         if( IO_L ) write(IO_FID_LOG,*) '!xxx previous TB and updated TB(TBL(1)) is ',TB-resi1*dt,TB
+         call PRC_MPIstop
+       endif
+       if( IO_L ) write(IO_FID_LOG,*) '!xxx Warning xxx!: Kusaka urban (SLC_main) not converged for TB'
+       if( IO_L ) write(IO_FID_LOG,*) '!xxx previous TB and updated TB(TBL(1)) is ',TB-resi1*dt,TB
+     endif
+
+     if ( abs(resi2) > DTS_MAX ) then
+       if ( abs(resi2) > DTS_MAX*10.0_RP ) then
+         if( IO_L ) write(IO_FID_LOG,*) '!xxx Error xxx!: Kusaka urban (SLC_main) not converged for TG'
+         if( IO_L ) write(IO_FID_LOG,*) '!xxx previous TG and updated TG(TGL(1)) is ',TG-resi2*dt,TG,resi2
+         call PRC_MPIstop
+       endif
+       if( IO_L ) write(IO_FID_LOG,*) '!xxx Warning xxx!: Kusaka urban (SLC_main) not converged for TG'
+       if( IO_L ) write(IO_FID_LOG,*) '!xxx previous TG and updated TG(TGL(1)) is ',TG-resi2*dt,TG
+     endif
 
     !-----------------------------------------------------------
     ! Total Fluxes from Urban Canopy
