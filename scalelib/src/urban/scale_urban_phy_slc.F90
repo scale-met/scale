@@ -262,6 +262,8 @@ contains
         LAT,         &
         NOWDATE,     &
         dt           )
+    use scale_grid_index
+    use scale_urban_grid_index
     use scale_history, only: &
        HIST_in
     use scale_atmos_saturation, only: &
@@ -930,7 +932,7 @@ contains
      G0RP = 0.0_RP
      XXXR = 0.0_RP
      resi1p = 0.0_RP
-     do iteration = 1, 50
+     do iteration = 1, 100
 
       THS   = TR * ( PRE00 / PRSS )**RovCP   ! potential temp
 
@@ -962,6 +964,8 @@ contains
       call multi_layer(UKE,BOUND,G0R,CAPR,AKSR,TRL,DZR,dt,TRLEND)
       resi1 = TRL(1) - TR
 
+     ! write(*,'(a3,i5,f8.3,6f15.5)') "TR,",iteration,TR,G0R,SR,RR,HR,ELER,resi1
+
       if( abs(resi1) < sqrt(EPS) ) then
         TR = TRL(1)
         TR = max( TRP - DTS_MAX_onestep, min( TRP + DTS_MAX_onestep, TR ) )
@@ -985,6 +989,39 @@ contains
 !            resi1, G0R
 !    end if
 
+     ! output for debug
+     if ( iteration > 100 ) then
+       if( IO_L ) write(IO_FID_LOG,*) '*** Warning: Kusaka urban (SLC_main) iteration for TR was not converged',PRC_myrank,i,j
+       if( IO_L ) write(IO_FID_LOG,*) '---------------------------------------------------------------------------------'
+       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- Residual                                          [K] :', resi1
+       if( IO_L ) write(IO_FID_LOG,*) ''
+       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- TRP : Initial TR                                  [K] :', TRP
+       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- TRLP: Initial TRL                                 [K] :', TRLP
+       if( IO_L ) write(IO_FID_LOG,*) ''
+       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- SX  : Shortwave radiation                      [W/m2] :', SX
+       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- RX  : Longwave radiation                       [W/m2] :', RX
+       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- PRSS: Surface pressure                           [Pa] :', PRSS
+       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- PRSA: Pressure at 1st atmos layer                 [m] :', PRSA
+       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- RHOO: Air density                             [kg/m3] :', RHOO
+       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- ZA  : Height at 1st atmos layer                   [m] :', ZA
+       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- TA  : Temperature at 1st atmos layer              [K] :', TA
+       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- UA  : Wind speed at 1st atmos layer             [m/s] :', UA
+       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- QA  : Specific humidity at 1st atmos layer    [kg/kg] :', QA
+       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- DZR : Depth of surface layer                      [m] :', DZR
+       if( IO_L ) write(IO_FID_LOG,*) ''
+       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- R, W, RW : Normalized height and road width       [-] :', R, W,RW
+       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- SVF : Sky View Factors                            [-] :', SVF
+       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- BETR: Evaporation efficiency                      [-] :', BETR
+       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- EPSR: Surface emissivity of roof                  [-] :', EPSR
+       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- CAPR: Heat capacity of roof                 [J m-3 K] :', CAPR
+       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- AKSR: Thermal conductivity of roof          [W m-1 K] :', AKSR
+       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- QS0R: Surface specific humidity               [kg/kg] :', QS0R
+       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- ZDC : Desplacement height of canopy               [m] :', ZDC
+       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- Z0R : Momentum roughness length of roof           [m] :', Z0R
+       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- Z0HR: Thermal roughness length of roof            [m] :', Z0HR
+       if( IO_L ) write(IO_FID_LOG,*) '---------------------------------------------------------------------------------'
+     endif
+
     !--- update only fluxes ----
      THS   = TR * ( PRE00 / PRSS )**RovCP
      RIBR = ( GRAV * 2.0_RP / (THA+THS) ) * (THA-THS) * (Z+Z0R) / (UA*UA)
@@ -1004,11 +1041,11 @@ contains
 
      if ( abs(resi1) > DTS_MAX_onestep ) then
        if ( abs(resi1) > DTS_MAX_onestep*10.0_RP ) then
-         if( IO_L ) write(IO_FID_LOG,*) '!xxx Error xxx!: Kusaka urban (SLC_main) not converged for TR'
+         if( IO_L ) write(IO_FID_LOG,*) '!xxx Error xxx!: Kusaka urban (SLC_main) tendency of TR is over limitter'
          if( IO_L ) write(IO_FID_LOG,*) '!xxx previous TR and updated TR(TRL(1)) is ',TR-resi1,TR
          call PRC_MPIstop
        endif
-       if( IO_L ) write(IO_FID_LOG,*) '!xxx Warning xxx!: Kusaka urban (SLC_main) not converged for TR'
+       if( IO_L ) write(IO_FID_LOG,*) '!xxx Warning xxx!: Kusaka urban (SLC_main) tendency of TR is over limitter'
        if( IO_L ) write(IO_FID_LOG,*) '!xxx previous TR and updated TR(TRL(1)) is ',TR-resi1,TR
      endif
 
@@ -1032,7 +1069,7 @@ contains
      resi1p = 0.0_RP
      resi2p = 0.0_RP
 
-     do iteration = 1, 5000
+     do iteration = 1, 200
 
       THS1   = TB * ( PRE00 / PRSS )**RovCP
       THS2   = TG * ( PRE00 / PRSS )**RovCP
@@ -1163,15 +1200,47 @@ contains
 !                  W, RW, ALPHAG, ALPHAB, BETG, BETB, &
 !                  RX, VFGS, VFGW, VFWG, VFWW, VFWS, STB, &
 !                  SB, SG, LHV, TBLP, TGLP
-!       write(*,*) "1",TBP, TGP, TCP
-!       write(*,*) "2",PRSS, THA, UA, QA, RHOO, UC, QCP
-!       write(*,*) "3",ZA, ZDC, Z0C, Z0HC
-!       write(*,*) "4",CHG, CHB
-!       write(*,*) "5",W, RW, ALPHAG, ALPHAB, BETG, BETB
-!       write(*,*) "6",RX, VFGS, VFGW, VFWG, VFWW, VFWS, STB
-!       write(*,*) "7",SB, SG, LHV
-!       write(*,*) "8",TBLP, TGLP
+!       write(*,*) "6",VFGS, VFGW, VFWG, VFWW, VFWS
 !    end if
+
+     ! output for debug
+     if ( iteration > 200 ) then
+       if( IO_L ) write(IO_FID_LOG,*) '*** Warning: Kusaka urban (SLC_main) iteration for TB/TG was not converged',PRC_myrank,i,j
+       if( IO_L ) write(IO_FID_LOG,*) '---------------------------------------------------------------------------------'
+       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- Residual                                       [K] :', resi1,resi2
+       if( IO_L ) write(IO_FID_LOG,*) ''
+       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- TBP : Initial TB                               [K] :', TBP
+       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- TBLP: Initial TBL                              [K] :', TBLP
+       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- TGP : Initial TG                               [K] :', TGP
+       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- TGLP: Initial TGL                              [K] :', TGLP
+       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- TCP : Initial TC                               [K] :', TCP
+       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- QCP : Initial QC                               [K] :', QCP
+       if( IO_L ) write(IO_FID_LOG,*) ''
+       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- UC  : Canopy wind                            [m/s] :', UC
+       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- SX  : Shortwave radiation                   [W/m2] :', SX
+       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- RX  : Longwave radiation                    [W/m2] :', RX
+       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- PRSS: Surface pressure                        [Pa] :', PRSS
+       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- PRSA: Pressure at 1st atmos layer              [m] :', PRSA
+       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- RHOO: Air density                          [kg/m3] :', RHOO
+       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- ZA  : Height at 1st atmos layer                [m] :', ZA
+       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- TA  : Temperature at 1st atmos layer           [K] :', TA
+       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- UA  : Wind speed at 1st atmos layer          [m/s] :', UA
+       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- QA  : Specific humidity at 1st atmos layer [kg/kg] :', QA
+       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- DZB : Depth of surface layer                   [m] :', DZB
+       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- DZG : Depth of surface layer                   [m] :', DZG
+       if( IO_L ) write(IO_FID_LOG,*) ''
+       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- R, W, RW  : Normalized height and road width    [-] :', R, W,RW
+       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- SVF       : Sky View Factors                    [-] :', SVF
+       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- BETB,BETG : Evaporation efficiency              [-] :', BETB,BETG
+       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- EPSB,EPSG : Surface emissivity                  [-] :', EPSB,EPSG
+       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- CAPB,CAPG : Heat capacity                 [J m-3 K] :', CAPB,CAPG
+       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- AKSB,AKSG : Thermal conductivity          [W m-1 K] :', AKSB,AKSB
+       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- QS0B,QS0G : Surface specific humidity       [kg/kg] :', QS0B,QS0G
+       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- ZDC       : Desplacement height of canopy       [m] :', ZDC
+       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- Z0C       : Momentum roughness length of canopy [m] :', Z0C
+       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- Z0HC      : Thermal roughness length of canopy  [m] :', Z0HC
+       if( IO_L ) write(IO_FID_LOG,*) '---------------------------------------------------------------------------------'
+     endif
 
 
     !--- update only fluxes ----
@@ -1220,21 +1289,21 @@ contains
 
      if ( abs(resi1) > DTS_MAX_onestep ) then
        if ( abs(resi1) > DTS_MAX_onestep*10.0_RP ) then
-         if( IO_L ) write(IO_FID_LOG,*) '!xxx Error xxx!: Kusaka urban (SLC_main) not converged for TB'
+         if( IO_L ) write(IO_FID_LOG,*) '!xxx Error xxx!: Kusaka urban (SLC_main) tendency of TB is over limitter'
          if( IO_L ) write(IO_FID_LOG,*) '!xxx previous TB and updated TB(TBL(1)) is ',TB-resi1,TB
          call PRC_MPIstop
        endif
-       if( IO_L ) write(IO_FID_LOG,*) '!xxx Warning xxx!: Kusaka urban (SLC_main) not converged for TB'
+       if( IO_L ) write(IO_FID_LOG,*) '!xxx Warning xxx!: Kusaka urban (SLC_main) tendency of TB is over limitter'
        if( IO_L ) write(IO_FID_LOG,*) '!xxx previous TB and updated TB(TBL(1)) is ',TB-resi1,TB
      endif
 
      if ( abs(resi2) > DTS_MAX_onestep ) then
        if ( abs(resi2) > DTS_MAX_onestep*10.0_RP ) then
-         if( IO_L ) write(IO_FID_LOG,*) '!xxx Error xxx!: Kusaka urban (SLC_main) not converged for TG'
+         if( IO_L ) write(IO_FID_LOG,*) '!xxx Error xxx!: Kusaka urban (SLC_main) tendency of TG is over limitter'
          if( IO_L ) write(IO_FID_LOG,*) '!xxx previous TG and updated TG(TGL(1)) is ',TG-resi2,TG,resi2
          call PRC_MPIstop
        endif
-       if( IO_L ) write(IO_FID_LOG,*) '!xxx Warning xxx!: Kusaka urban (SLC_main) not converged for TG'
+       if( IO_L ) write(IO_FID_LOG,*) '!xxx Warning xxx!: Kusaka urban (SLC_main) tendency of TG is over limitter'
        if( IO_L ) write(IO_FID_LOG,*) '!xxx previous TG and updated TG(TGL(1)) is ',TG-resi2,TG
      endif
 
