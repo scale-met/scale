@@ -53,7 +53,8 @@ module scale_urban_phy_slc
   !
   logical, allocatable, private :: is_FLX(:,:) ! urban tile or not.
   ! from namelist
-  real(RP), private :: DTS_MAX    =    5.0_RP ! maximum dT during one minute [K/sec]
+  real(RP), private :: DTS_MAX    =    0.1_RP ! maximum dT during one minute [K/sec]
+                                              ! 0.1 [K/sec] = 6.0 [K/min]
   real(RP), private :: ZR         =   10.0_RP ! roof level ( building height) [m]
   real(RP), private :: roof_width =    9.0_RP ! roof level ( building height) [m]
   real(RP), private :: road_width =   11.0_RP ! roof level ( building height) [m]
@@ -523,7 +524,7 @@ contains
        RAINB_URB_t(i,j)   = 0.0_RP
        RAING_URB_t(i,j)   = 0.0_RP
        ROFF_URB_t (i,j)   = 0.0_RP
-       ! SFC_TEMP   (i,j)   = 0.0_RP ! not change
+       SFC_TEMP   (i,j)   = 300.0_RP ! constant value
        ALBD_LW    (i,j)   = 0.0_RP
        ALBD_SW    (i,j)   = 0.0_RP
        MWFLX      (i,j)   = 0.0_RP
@@ -786,6 +787,7 @@ contains
     real(RP) :: TC1, TC2, QC1, QC2
 !    real(RP) :: CAPL1, AKSL1
 
+    real(RP) :: DTS_MAX_onestep = 0.0_RP   ! DTS_MAX * dt
     real(RP) :: resi1,resi2     ! residual
     real(RP) :: resi1p,resi2p     ! residual
     real(RP) :: G0RP,G0BP,G0GP
@@ -841,6 +843,9 @@ contains
     endif
     AH_t  = AH  * tahdiurnal
     ALH_t = ALH * tahdiurnal
+
+    !--- limitter for surface temp change
+    DTS_MAX_onestep = DTS_MAX * dt
 
     if ( ZDC + Z0C + 2.0_RP >= ZA ) then
        if( IO_L ) write(IO_FID_LOG,*) 'ZDC + Z0C + 2m is larger than the 1st WRF level' // &
@@ -959,7 +964,7 @@ contains
 
       if( abs(resi1) < sqrt(EPS) ) then
         TR = TRL(1)
-        TR = max( TRP - DTS_MAX, min( TRP + DTS_MAX, TR ) )
+        TR = max( TRP - DTS_MAX_onestep, min( TRP + DTS_MAX_onestep, TR ) )
         exit
       endif
 
@@ -968,7 +973,7 @@ contains
       else
         TR = TRL(1)
       endif
-      TR = max( TRP - DTS_MAX, min( TRP + DTS_MAX, TR ) )
+      TR = max( TRP - DTS_MAX_onestep, min( TRP + DTS_MAX_onestep, TR ) )
 
       resi1p = resi1
 
@@ -992,19 +997,19 @@ contains
      ELER    = RHOO * LHV   * CHR * UA * BETR * (QS0R-QA)
      G0R     = SR + RR - HR - ELER
 
-     TRL = TRLP
+     TRL   = TRLP
      call multi_layer(UKE,BOUND,G0R,CAPR,AKSR,TRL,DZR,dt,TRLEND)
-     resi1 = (TRL(1) - TR)/dt
-     TR  = TRL(1)
+     resi1 = TRL(1) - TR
+     TR    = TRL(1)
 
-     if ( abs(resi1) > DTS_MAX ) then
-       if ( abs(resi1) > DTS_MAX*10.0_RP ) then
+     if ( abs(resi1) > DTS_MAX_onestep ) then
+       if ( abs(resi1) > DTS_MAX_onestep*10.0_RP ) then
          if( IO_L ) write(IO_FID_LOG,*) '!xxx Error xxx!: Kusaka urban (SLC_main) not converged for TR'
-         if( IO_L ) write(IO_FID_LOG,*) '!xxx previous TR and updated TR(TRL(1)) is ',TR-resi1*dt,TR
+         if( IO_L ) write(IO_FID_LOG,*) '!xxx previous TR and updated TR(TRL(1)) is ',TR-resi1,TR
          call PRC_MPIstop
        endif
        if( IO_L ) write(IO_FID_LOG,*) '!xxx Warning xxx!: Kusaka urban (SLC_main) not converged for TR'
-       if( IO_L ) write(IO_FID_LOG,*) '!xxx previous TR and updated TR(TRL(1)) is ',TR-resi1*dt,TR
+       if( IO_L ) write(IO_FID_LOG,*) '!xxx previous TR and updated TR(TRL(1)) is ',TR-resi1,TR
      endif
 
     !--------------------------------------------------
@@ -1106,8 +1111,8 @@ contains
       if ( abs(resi1) < sqrt(EPS) .and. abs(resi2) < sqrt(EPS) ) then
          TB = TBL(1)
 	 TG = TGL(1)
-         TB = max( TBP - DTS_MAX, min( TBP + DTS_MAX, TB ) )
-         TG = max( TGP - DTS_MAX, min( TGP + DTS_MAX, TG ) )
+         TB = max( TBP - DTS_MAX_onestep, min( TBP + DTS_MAX_onestep, TB ) )
+         TG = max( TGP - DTS_MAX_onestep, min( TGP + DTS_MAX_onestep, TG ) )
          exit
       endif
 
@@ -1121,8 +1126,8 @@ contains
       else
          TG = TGL(1)
       endif
-      TB = max( TBP - DTS_MAX, min( TBP + DTS_MAX, TB ) )
-      TG = max( TGP - DTS_MAX, min( TGP + DTS_MAX, TG ) )
+      TB = max( TBP - DTS_MAX_onestep, min( TBP + DTS_MAX_onestep, TB ) )
+      TG = max( TGP - DTS_MAX_onestep, min( TGP + DTS_MAX_onestep, TG ) )
  
       resi1p = resi1
       resi2p = resi2
@@ -1202,35 +1207,35 @@ contains
      ELEG = RHOO * LHV   * CHG * UC * BETG * (QS0G-QC)
      G0G  = SG + RG - HG - ELEG
 
-     TBL = TBLP
+     TBL   = TBLP
      call multi_layer(UKE,BOUND,G0B,CAPB,AKSB,TBL,DZB,dt,TBLEND)
-     resi1 = (TBL(1) - TB)/dt
-     TB  = TBL(1)
+     resi1 = TBL(1) - TB
+     TB    = TBL(1)
 
-     TGL = TGLP
+     TGL   = TGLP
      call multi_layer(UKE,BOUND,G0G,CAPG,AKSG,TGL,DZG,dt,TGLEND)
-     resi2 = (TGL(1) - TG)/dt
-     TG  = TGL(1)
+     resi2 = TGL(1) - TG
+     TG    = TGL(1)
 
 
-     if ( abs(resi1) > DTS_MAX ) then
-       if ( abs(resi1) > DTS_MAX*10.0_RP ) then
+     if ( abs(resi1) > DTS_MAX_onestep ) then
+       if ( abs(resi1) > DTS_MAX_onestep*10.0_RP ) then
          if( IO_L ) write(IO_FID_LOG,*) '!xxx Error xxx!: Kusaka urban (SLC_main) not converged for TB'
-         if( IO_L ) write(IO_FID_LOG,*) '!xxx previous TB and updated TB(TBL(1)) is ',TB-resi1*dt,TB
+         if( IO_L ) write(IO_FID_LOG,*) '!xxx previous TB and updated TB(TBL(1)) is ',TB-resi1,TB
          call PRC_MPIstop
        endif
        if( IO_L ) write(IO_FID_LOG,*) '!xxx Warning xxx!: Kusaka urban (SLC_main) not converged for TB'
-       if( IO_L ) write(IO_FID_LOG,*) '!xxx previous TB and updated TB(TBL(1)) is ',TB-resi1*dt,TB
+       if( IO_L ) write(IO_FID_LOG,*) '!xxx previous TB and updated TB(TBL(1)) is ',TB-resi1,TB
      endif
 
-     if ( abs(resi2) > DTS_MAX ) then
-       if ( abs(resi2) > DTS_MAX*10.0_RP ) then
+     if ( abs(resi2) > DTS_MAX_onestep ) then
+       if ( abs(resi2) > DTS_MAX_onestep*10.0_RP ) then
          if( IO_L ) write(IO_FID_LOG,*) '!xxx Error xxx!: Kusaka urban (SLC_main) not converged for TG'
-         if( IO_L ) write(IO_FID_LOG,*) '!xxx previous TG and updated TG(TGL(1)) is ',TG-resi2*dt,TG,resi2
+         if( IO_L ) write(IO_FID_LOG,*) '!xxx previous TG and updated TG(TGL(1)) is ',TG-resi2,TG,resi2
          call PRC_MPIstop
        endif
        if( IO_L ) write(IO_FID_LOG,*) '!xxx Warning xxx!: Kusaka urban (SLC_main) not converged for TG'
-       if( IO_L ) write(IO_FID_LOG,*) '!xxx previous TG and updated TG(TGL(1)) is ',TG-resi2*dt,TG
+       if( IO_L ) write(IO_FID_LOG,*) '!xxx previous TG and updated TG(TGL(1)) is ',TG-resi2,TG
      endif
 
     !-----------------------------------------------------------
