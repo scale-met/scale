@@ -51,8 +51,10 @@ module scale_urban_phy_slc
   !
   !-----------------------------------------------------------------------------
   !
-  real(RP), private, parameter :: DTS_MAX = 10.0_RP
+  logical, allocatable, private :: is_FLX(:,:) ! urban tile or not.
   ! from namelist
+  real(RP), private :: DTS_MAX    =    0.1_RP ! maximum dT during one minute [K/sec]
+                                              ! 0.1 [K/sec] = 6.0 [K/min]
   real(RP), private :: ZR         =   10.0_RP ! roof level ( building height) [m]
   real(RP), private :: roof_width =    9.0_RP ! roof level ( building height) [m]
   real(RP), private :: road_width =   11.0_RP ! roof level ( building height) [m]
@@ -112,11 +114,15 @@ contains
   subroutine URBAN_PHY_SLC_setup( URBAN_TYPE )
     use scale_process, only: &
        PRC_MPIstop
+    use scale_landuse, only: &
+       LANDUSE_fact_urban
     implicit none
 
     character(len=*), intent(in) :: URBAN_TYPE
+    integer                      :: i, j
 
     NAMELIST / PARAM_URBAN_PHY_SLC / &
+       DTS_MAX,    &
        ZR,         &
        roof_width, &
        road_width, &
@@ -180,6 +186,19 @@ contains
     ! set other urban parameters
     call urban_param_setup
 
+    ! judge to run slab land model
+    allocate( is_FLX(IA,JA) )
+
+    do j = JS, JE
+    do i = IS, IE
+      if( LANDUSE_fact_urban(i,j) > 0.0_RP )then
+        is_FLX(i,j) = .true.
+      else
+        is_FLX(i,j) = .false.
+      endif
+    enddo
+    enddo
+
     return
   end subroutine URBAN_PHY_SLC_setup
 
@@ -197,7 +216,7 @@ contains
         RAINB_URB_t, &
         RAING_URB_t, &
         ROFF_URB_t,  &
-        UST,         &
+        SFC_TEMP,    &
         ALBD_LW,     &
         ALBD_SW,     &
         MWFLX,       &
@@ -243,6 +262,8 @@ contains
         LAT,         &
         NOWDATE,     &
         dt           )
+    use scale_grid_index
+    use scale_urban_grid_index
     use scale_history, only: &
        HIST_in
     use scale_atmos_saturation, only: &
@@ -271,22 +292,22 @@ contains
     real(RP), intent(out) :: RAING_URB_t(IA,JA)
     real(RP), intent(out) :: ROFF_URB_t (IA,JA)
 
-    real(RP), intent(out) :: UST    (IA,JA)
-    real(RP), intent(out) :: ALBD_LW(IA,JA)
-    real(RP), intent(out) :: ALBD_SW(IA,JA)
-    real(RP), intent(out) :: MWFLX  (IA,JA)
-    real(RP), intent(out) :: MUFLX  (IA,JA)
-    real(RP), intent(out) :: MVFLX  (IA,JA)
-    real(RP), intent(out) :: SHFLX  (IA,JA)
-    real(RP), intent(out) :: LHFLX  (IA,JA)
-    real(RP), intent(out) :: GHFLX  (IA,JA)
-    real(RP), intent(out) :: Z0M    (IA,JA)
-    real(RP), intent(out) :: Z0H    (IA,JA)
-    real(RP), intent(out) :: Z0E    (IA,JA)
-    real(RP), intent(out) :: U10    (IA,JA)
-    real(RP), intent(out) :: V10    (IA,JA)
-    real(RP), intent(out) :: T2     (IA,JA)
-    real(RP), intent(out) :: Q2     (IA,JA)
+    real(RP), intent(out) :: SFC_TEMP(IA,JA)
+    real(RP), intent(out) :: ALBD_LW (IA,JA)
+    real(RP), intent(out) :: ALBD_SW (IA,JA)
+    real(RP), intent(out) :: MWFLX   (IA,JA)
+    real(RP), intent(out) :: MUFLX   (IA,JA)
+    real(RP), intent(out) :: MVFLX   (IA,JA)
+    real(RP), intent(out) :: SHFLX   (IA,JA)
+    real(RP), intent(out) :: LHFLX   (IA,JA)
+    real(RP), intent(out) :: GHFLX   (IA,JA)
+    real(RP), intent(out) :: Z0M     (IA,JA)
+    real(RP), intent(out) :: Z0H     (IA,JA)
+    real(RP), intent(out) :: Z0E     (IA,JA)
+    real(RP), intent(out) :: U10     (IA,JA)
+    real(RP), intent(out) :: V10     (IA,JA)
+    real(RP), intent(out) :: T2      (IA,JA)
+    real(RP), intent(out) :: Q2      (IA,JA)
 
     real(RP), intent(in) :: TMPA  (IA,JA)
     real(RP), intent(in) :: PRSA  (IA,JA)
@@ -335,8 +356,6 @@ contains
     real(RP) :: RAINB
     real(RP) :: RAING
     real(RP) :: ROFF
-    real(RP) :: AH_t
-    real(RP) :: ALH_t
 
     real(RP) :: SHR  (IA,JA)
     real(RP) :: SHB  (IA,JA)
@@ -366,6 +385,9 @@ contains
 
     do j = JS, JE
     do i = IS, IE
+
+    if( is_FLX(i,j) ) then
+
        Uabs = max( sqrt( U1(i,j)**2 + V1(i,j)**2 + W1(i,j)**2 ), Uabs_min )
 
        ! save
@@ -387,64 +409,59 @@ contains
        RAING = RAING_URB(i,j)
        ROFF  = ROFF_URB (i,j)
 
-       AH_t  = 0.0_RP
-       ALH_t = 0.0_RP
-
-       call SLC_main( TR,           & ! [INOUT]
-                      TB,           & ! [INOUT]
-                      TG,           & ! [INOUT]
-                      TC,           & ! [INOUT]
-                      QC,           & ! [INOUT]
-                      UC,           & ! [INOUT]
-                      TRL    (:),   & ! [INOUT]
-                      TBL    (:),   & ! [INOUT]
-                      TGL    (:),   & ! [INOUT]
-                      RAINR,        & ! [INOUT]
-                      RAINB,        & ! [INOUT]
-                      RAING,        & ! [INOUT]
-                      ROFF,         & ! [INOUT]
-                      AH_t,         & ! [INOUT]
-                      ALH_t,        & ! [INOUT]
-                      ALBD_LW(i,j), & ! [OUT]
-                      ALBD_SW(i,j), & ! [OUT]
-                      SHR    (i,j), & ! [OUT]
-                      SHB    (i,j), & ! [OUT]
-                      SHG    (i,j), & ! [OUT]
-                      LHR    (i,j), & ! [OUT]
-                      LHB    (i,j), & ! [OUT]
-                      LHG    (i,j), & ! [OUT]
-                      GHR    (i,j), & ! [OUT]
-                      GHB    (i,j), & ! [OUT]
-                      GHG    (i,j), & ! [OUT]
-                      RNR    (i,j), & ! [OUT]
-                      RNB    (i,j), & ! [OUT]
-                      RNG    (i,j), & ! [OUT]
-                      UST    (i,j), & ! [OUT]
-                      RNgrd  (i,j), & ! [OUT]
-                      SHFLX  (i,j), & ! [OUT]
-                      LHFLX  (i,j), & ! [OUT]
-                      GHFLX  (i,j), & ! [OUT]
-                      U10    (i,j), & ! [OUT]
-                      V10    (i,j), & ! [OUT]
-                      T2     (i,j), & ! [OUT]
-                      Q2     (i,j), & ! [OUT]
-                      LSOLAR,       & ! [IN]
-                      PRSA   (i,j), & ! [IN]
-                      PRSS   (i,j), & ! [IN]
-                      TMPA   (i,j), & ! [IN]
-                      QA     (i,j), & ! [IN]
-                      Uabs,         & ! [IN]
-                      U1     (i,j), & ! [IN]
-                      V1     (i,j), & ! [IN]
-                      Z1     (i,j), & ! [IN]
-                      SWD    (i,j), & ! [IN]
-                      LWD    (i,j), & ! [IN]
-                      PREC   (i,j), & ! [IN]
-                      DENS   (i,j), & ! [IN]
-                      LON,          & ! [IN]
-                      LAT,          & ! [IN]
-                      NOWDATE(:),   & ! [IN]
-                      dt, i, j      ) ! [IN]
+       call SLC_main( TR,            & ! [INOUT]
+                      TB,            & ! [INOUT]
+                      TG,            & ! [INOUT]
+                      TC,            & ! [INOUT]
+                      QC,            & ! [INOUT]
+                      UC,            & ! [INOUT]
+                      TRL     (:),   & ! [INOUT]
+                      TBL     (:),   & ! [INOUT]
+                      TGL     (:),   & ! [INOUT]
+                      RAINR,         & ! [INOUT]
+                      RAINB,         & ! [INOUT]
+                      RAING,         & ! [INOUT]
+                      ROFF,          & ! [INOUT]
+                      ALBD_LW (i,j), & ! [OUT]
+                      ALBD_SW (i,j), & ! [OUT]
+                      SHR     (i,j), & ! [OUT]
+                      SHB     (i,j), & ! [OUT]
+                      SHG     (i,j), & ! [OUT]
+                      LHR     (i,j), & ! [OUT]
+                      LHB     (i,j), & ! [OUT]
+                      LHG     (i,j), & ! [OUT]
+                      GHR     (i,j), & ! [OUT]
+                      GHB     (i,j), & ! [OUT]
+                      GHG     (i,j), & ! [OUT]
+                      RNR     (i,j), & ! [OUT]
+                      RNB     (i,j), & ! [OUT]
+                      RNG     (i,j), & ! [OUT]
+                      SFC_TEMP(i,j), & ! [OUT]
+                      RNgrd   (i,j), & ! [OUT]
+                      SHFLX   (i,j), & ! [OUT]
+                      LHFLX   (i,j), & ! [OUT]
+                      GHFLX   (i,j), & ! [OUT]
+                      U10     (i,j), & ! [OUT]
+                      V10     (i,j), & ! [OUT]
+                      T2      (i,j), & ! [OUT]
+                      Q2      (i,j), & ! [OUT]
+                      LSOLAR,        & ! [IN]
+                      PRSA    (i,j), & ! [IN]
+                      PRSS    (i,j), & ! [IN]
+                      TMPA    (i,j), & ! [IN]
+                      QA      (i,j), & ! [IN]
+                      Uabs,          & ! [IN]
+                      U1      (i,j), & ! [IN]
+                      V1      (i,j), & ! [IN]
+                      Z1      (i,j), & ! [IN]
+                      SWD     (i,j), & ! [IN]
+                      LWD     (i,j), & ! [IN]
+                      PREC    (i,j), & ! [IN]
+                      DENS    (i,j), & ! [IN]
+                      LON,           & ! [IN]
+                      LAT,           & ! [IN]
+                      NOWDATE (:),   & ! [IN]
+                      dt, i, j       ) ! [IN]
 
        ! calculate tendency 
        TR_URB_t(i,j) = ( TR - TR_URB(i,j) ) /dt
@@ -466,25 +483,25 @@ contains
        ROFF_URB_t (i,j) = ( ROFF  - ROFF_URB (i,j) ) / dt
 
        ! saturation at the surface
-       call qsat( QVS, UST(i,j), PRSS(i,j) )
+       call qsat( QVS, SFC_TEMP(i,j), PRSS(i,j) )
 
-       call BULKFLUX( Ustar,     & ! [OUT]
-                      Tstar,     & ! [OUT]
-                      Qstar,     & ! [OUT]
-                      Uabs,      & ! [OUT]
-                      TMPA(i,j), & ! [IN]
-                      UST (i,j), & ! [IN]
-                      PRSA(i,j), & ! [IN]
-                      PRSS(i,j), & ! [IN]
-                      QA  (i,j), & ! [IN]
-                      QVS,       & ! [IN]
-                      U1  (i,j), & ! [IN]
-                      V1  (i,j), & ! [IN]
-                      Z1  (i,j), & ! [IN]
-                      PBL (i,j), & ! [IN]
-                      Z0C,       & ! [IN]
-                      Z0HC,      & ! [IN]
-                      Z0HC       ) ! [IN]
+       call BULKFLUX( Ustar,         & ! [OUT]
+                      Tstar,         & ! [OUT]
+                      Qstar,         & ! [OUT]
+                      Uabs,          & ! [OUT]
+                      TMPA    (i,j), & ! [IN]
+                      SFC_TEMP(i,j), & ! [IN]
+                      PRSA    (i,j), & ! [IN]
+                      PRSS    (i,j), & ! [IN]
+                      QA      (i,j), & ! [IN]
+                      QVS,           & ! [IN]
+                      U1      (i,j), & ! [IN]
+                      V1      (i,j), & ! [IN]
+                      Z1      (i,j), & ! [IN]
+                      PBL     (i,j), & ! [IN]
+                      Z0C,           & ! [IN]
+                      Z0HC,          & ! [IN]
+                      Z0HC           ) ! [IN]
 
        MWFLX(i,j) = -DENS(i,j) * Ustar**2 / Uabs * W1(i,j)
        MUFLX(i,j) = -DENS(i,j) * Ustar**2 / Uabs * U1(i,j)
@@ -493,6 +510,53 @@ contains
        Z0M(i,j) = Z0C
        Z0H(i,j) = Z0HC
        Z0E(i,j) = Z0HC
+
+    else
+       ! not calculate urban module
+       TR_URB_t   (i,j)   = 0.0_RP
+       TB_URB_t   (i,j)   = 0.0_RP
+       TG_URB_t   (i,j)   = 0.0_RP
+       TC_URB_t   (i,j)   = 0.0_RP
+       QC_URB_t   (i,j)   = 0.0_RP
+       UC_URB_t   (i,j)   = 0.0_RP
+       TRL_URB_t  (:,i,j) = 0.0_RP
+       TBL_URB_t  (:,i,j) = 0.0_RP
+       TGL_URB_t  (:,i,j) = 0.0_RP
+       RAINR_URB_t(i,j)   = 0.0_RP
+       RAINB_URB_t(i,j)   = 0.0_RP
+       RAING_URB_t(i,j)   = 0.0_RP
+       ROFF_URB_t (i,j)   = 0.0_RP
+       SFC_TEMP   (i,j)   = 300.0_RP ! constant value
+       ALBD_LW    (i,j)   = 0.0_RP
+       ALBD_SW    (i,j)   = 0.0_RP
+       MWFLX      (i,j)   = 0.0_RP
+       MUFLX      (i,j)   = 0.0_RP
+       MVFLX      (i,j)   = 0.0_RP
+       SHFLX      (i,j)   = 0.0_RP
+       LHFLX      (i,j)   = 0.0_RP
+       GHFLX      (i,j)   = 0.0_RP
+       Z0M        (i,j)   = 0.0_RP
+       Z0H        (i,j)   = 0.0_RP
+       Z0E        (i,j)   = 0.0_RP
+       U10        (i,j)   = 0.0_RP
+       V10        (i,j)   = 0.0_RP
+       T2         (i,j)   = 0.0_RP
+       Q2         (i,j)   = 0.0_RP
+       !
+       SHR        (i,j)   = 0.0_RP
+       SHB        (i,j)   = 0.0_RP
+       SHG        (i,j)   = 0.0_RP
+       LHR        (i,j)   = 0.0_RP
+       LHB        (i,j)   = 0.0_RP
+       LHG        (i,j)   = 0.0_RP
+       GHR        (i,j)   = 0.0_RP
+       GHB        (i,j)   = 0.0_RP
+       GHG        (i,j)   = 0.0_RP
+       RNR        (i,j)   = 0.0_RP
+       RNB        (i,j)   = 0.0_RP
+       RNG        (i,j)   = 0.0_RP
+       RNgrd      (i,j)   = 0.0_RP
+    endif
 
     end do
     end do
@@ -529,8 +593,6 @@ contains
         RAINB,        & ! (inout)
         RAING,        & ! (inout)
         ROFF,         & ! (inout)
-        AH_t,         & ! (inout)
-        ALH_t,        & ! (inout)
         ALBD_LW_grid, & ! (out)
         ALBD_SW_grid, & ! (out)
         SHR,          & ! (out)
@@ -629,8 +691,6 @@ contains
     real(RP), intent(inout) :: RAINB ! rain amount in storage on building [kg/m2]
     real(RP), intent(inout) :: RAING ! rain amount in storage on road     [kg/m2]
     real(RP), intent(inout) :: ROFF  ! runoff from urban           [kg/m2]
-    real(RP), intent(inout) :: AH_t  ! Sensible Anthropogenic heat [W/m^2]
-    real(RP), intent(inout) :: ALH_t ! Latent Anthropogenic heat   [W/m^2]
 
     !-- Output variables from Urban to Coupler
     real(RP), intent(out)   :: ALBD_SW_grid  ! grid mean of surface albedo for SW
@@ -669,6 +729,8 @@ contains
     real(RP) :: dsec     ! second [s]
     real(RP) :: TIME     ! absorute part of current time
     real(RP) :: tahdiurnal ! temporal AH diurnal profile
+    real(RP) :: AH_t     ! Sensible Anthropogenic heat [W/m^2]
+    real(RP) :: ALH_t    ! Latent Anthropogenic heat   [W/m^2]
 
     real(RP) :: SSGD     ! downward direct short wave radiation   [W/m/m]
     real(RP) :: SSGQ     ! downward diffuse short wave radiation  [W/m/m]
@@ -676,10 +738,10 @@ contains
     real(RP) :: W, VFGS, VFGW, VFWG, VFWS, VFWW
     real(RP) :: SX, RX
 
-    real(RP) :: TRP = 350.0_RP   ! TRP: at previous time step [K]
-    real(RP) :: TBP = 350.0_RP   ! TBP: at previous time step [K]
-    real(RP) :: TGP = 350.0_RP   ! TGP: at previous time step [K]
-    real(RP) :: TCP = 350.0_RP   ! TCP: at previous time step [K]
+    real(RP) :: TRP = 310.0_RP   ! TRP: at previous time step [K]
+    real(RP) :: TBP = 310.0_RP   ! TBP: at previous time step [K]
+    real(RP) :: TGP = 310.0_RP   ! TGP: at previous time step [K]
+    real(RP) :: TCP = 310.0_RP   ! TCP: at previous time step [K]
     real(RP) :: QCP = 0.01_RP    ! QCP: at previous time step [kg/kg]
     real(RP) :: TRLP(UKS:UKE)    ! Layer temperature at previous step  [K]
     real(RP) :: TBLP(UKS:UKE)    ! Layer temperature at previous step  [K]
@@ -727,7 +789,9 @@ contains
     real(RP) :: TC1, TC2, QC1, QC2
 !    real(RP) :: CAPL1, AKSL1
 
+    real(RP) :: DTS_MAX_onestep = 0.0_RP   ! DTS_MAX * dt
     real(RP) :: resi1,resi2     ! residual
+    real(RP) :: resi1p,resi2p     ! residual
     real(RP) :: G0RP,G0BP,G0GP
 
     real(RP) :: XXX, X, CD, CH, CHU, XXX2, XXX10
@@ -781,6 +845,9 @@ contains
     endif
     AH_t  = AH  * tahdiurnal
     ALH_t = ALH * tahdiurnal
+
+    !--- limitter for surface temp change
+    DTS_MAX_onestep = DTS_MAX * dt
 
     if ( ZDC + Z0C + 2.0_RP >= ZA ) then
        if( IO_L ) write(IO_FID_LOG,*) 'ZDC + Z0C + 2m is larger than the 1st WRF level' // &
@@ -864,7 +931,8 @@ contains
 
      G0RP = 0.0_RP
      XXXR = 0.0_RP
-     do iteration = 1, 20
+     resi1p = 0.0_RP
+     do iteration = 1, 100
 
       THS   = TR * ( PRE00 / PRSS )**RovCP   ! potential temp
 
@@ -889,18 +957,29 @@ contains
     !    CAPL1 = CAPR
     !    AKSL1 = AKSR
     !  endif
+    !! 1st layer's cap, aks are replaced.
+    !! call multi_layer2(UKE,BOUND,G0R,CAPR,AKSR,TRL,DZR,dt,TRLEND,CAPL1,AKSL1)
 
       TRL = TRLP
       call multi_layer(UKE,BOUND,G0R,CAPR,AKSR,TRL,DZR,dt,TRLEND)
-      !! 1st layer's cap, aks are replaced.
-      !! call multi_layer2(UKE,BOUND,G0R,CAPR,AKSR,TRL,DZR,dt,TRLEND,CAPL1,AKSL1)
-!      TR = TRL(1)
-      TR = max( TRP - DTS_MAX, min( TRP + DTS_MAX, TRL(1) ) )
+      resi1 = TRL(1) - TR
 
-      resi1  =  abs(G0R - G0RP)
-      G0RP   =  G0R
+     ! write(*,'(a3,i5,f8.3,6f15.5)') "TR,",iteration,TR,G0R,SR,RR,HR,ELER,resi1
 
-      if( resi1 < sqrt(EPS) ) exit
+      if( abs(resi1) < sqrt(EPS) ) then
+        TR = TRL(1)
+        TR = max( TRP - DTS_MAX_onestep, min( TRP + DTS_MAX_onestep, TR ) )
+        exit
+      endif
+
+      if ( resi1*resi1p < 0.0_RP ) then
+        TR = (TR + TRL(1)) * 0.5_RP
+      else
+        TR = TRL(1)
+      endif
+      TR = max( TRP - DTS_MAX_onestep, min( TRP + DTS_MAX_onestep, TR ) )
+
+      resi1p = resi1
 
      enddo
 
@@ -910,6 +989,38 @@ contains
 !            resi1, G0R
 !    end if
 
+     ! output for debug
+     if ( iteration > 100 ) then
+       if( IO_L ) write(IO_FID_LOG,*) '*** Warning: Kusaka urban (SLC_main) iteration for TR was not converged',PRC_myrank,i,j
+       if( IO_L ) write(IO_FID_LOG,*) '---------------------------------------------------------------------------------'
+       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- Residual                                          [K] :', resi1
+       if( IO_L ) write(IO_FID_LOG,*) ''
+       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- TRP : Initial TR                                  [K] :', TRP
+       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- TRLP: Initial TRL                                 [K] :', TRLP
+       if( IO_L ) write(IO_FID_LOG,*) ''
+       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- SX  : Shortwave radiation                      [W/m2] :', SX
+       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- RX  : Longwave radiation                       [W/m2] :', RX
+       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- PRSS: Surface pressure                           [Pa] :', PRSS
+       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- PRSA: Pressure at 1st atmos layer                 [m] :', PRSA
+       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- RHOO: Air density                             [kg/m3] :', RHOO
+       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- ZA  : Height at 1st atmos layer                   [m] :', ZA
+       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- TA  : Temperature at 1st atmos layer              [K] :', TA
+       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- UA  : Wind speed at 1st atmos layer             [m/s] :', UA
+       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- QA  : Specific humidity at 1st atmos layer    [kg/kg] :', QA
+       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- DZR : Depth of surface layer                      [m] :', DZR
+       if( IO_L ) write(IO_FID_LOG,*) ''
+       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- R, W, RW : Normalized height and road width       [-] :', R, W,RW
+       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- SVF : Sky View Factors                            [-] :', SVF
+       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- BETR: Evaporation efficiency                      [-] :', BETR
+       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- EPSR: Surface emissivity of roof                  [-] :', EPSR
+       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- CAPR: Heat capacity of roof                 [J m-3 K] :', CAPR
+       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- AKSR: Thermal conductivity of roof          [W m-1 K] :', AKSR
+       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- QS0R: Surface specific humidity               [kg/kg] :', QS0R
+       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- ZDC : Desplacement height of canopy               [m] :', ZDC
+       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- Z0R : Momentum roughness length of roof           [m] :', Z0R
+       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- Z0HR: Thermal roughness length of roof            [m] :', Z0HR
+       if( IO_L ) write(IO_FID_LOG,*) '---------------------------------------------------------------------------------'
+     endif
 
     !--- update only fluxes ----
      THS   = TR * ( PRE00 / PRSS )**RovCP
@@ -922,6 +1033,21 @@ contains
      HR      = RHOO * CPdry * CHR * UA * (THS-THA)
      ELER    = RHOO * LHV   * CHR * UA * BETR * (QS0R-QA)
      G0R     = SR + RR - HR - ELER
+
+     TRL   = TRLP
+     call multi_layer(UKE,BOUND,G0R,CAPR,AKSR,TRL,DZR,dt,TRLEND)
+     resi1 = TRL(1) - TR
+     TR    = TRL(1)
+
+     if ( abs(resi1) > DTS_MAX_onestep ) then
+       if ( abs(resi1) > DTS_MAX_onestep*10.0_RP ) then
+         if( IO_L ) write(IO_FID_LOG,*) '!xxx Error xxx!: Kusaka urban (SLC_main) tendency of TR is over limitter'
+         if( IO_L ) write(IO_FID_LOG,*) '!xxx previous TR and updated TR(TRL(1)) is ',TR-resi1,TR
+         call PRC_MPIstop
+       endif
+       if( IO_L ) write(IO_FID_LOG,*) '!xxx Warning xxx!: Kusaka urban (SLC_main) tendency of TR is over limitter'
+       if( IO_L ) write(IO_FID_LOG,*) '!xxx previous TR and updated TR(TRL(1)) is ',TR-resi1,TR
+     endif
 
     !--------------------------------------------------
     !   Wall and Road
@@ -940,8 +1066,10 @@ contains
      G0BP = 0.0_RP
      G0GP = 0.0_RP
      XXXC = 0.0_RP
+     resi1p = 0.0_RP
+     resi2p = 0.0_RP
 
-     do iteration = 1, 50
+     do iteration = 1, 200
 
       THS1   = TB * ( PRE00 / PRSS )**RovCP
       THS2   = TG * ( PRE00 / PRSS )**RovCP
@@ -996,14 +1124,52 @@ contains
 
       TBL = TBLP
       call multi_layer(UKE,BOUND,G0B,CAPB,AKSB,TBL,DZB,dt,TBLEND)
-!      TB = TBL(1)
-      TB = max( TBP - DTS_MAX, min( TBP + DTS_MAX, TBL(1) ) )
+      resi1 = TBL(1) - TB
 
       TGL = TGLP
       call multi_layer(UKE,BOUND,G0G,CAPG,AKSG,TGL,DZG,dt,TGLEND)
-!      TG = TGL(1)
-      TG = max( TGP - DTS_MAX, min( TGP + DTS_MAX, TGL(1) ) )
+      resi2 = TGL(1) - TG
 
+      !-----------
+      !print *,HB, RHOO , CPdry , CHB , UC , THS1,THC
+      !print *,HG, RHOO , CPdry , CHG , UC , THS2,THC
+      !print *,ELEB ,RHOO , LHV , CHB , UC , BETB , QS0B , QC
+      !print *,ELEG ,RHOO , LHV , CHG , UC , BETG , QS0G , QC
+
+      !write(*,'(a3,i5,f8.3,6f15.5)') "TB,",iteration,TB,G0B,SB,RB,HB,ELEB,resi1
+      !write(*,'(a3,i5,f8.3,6f15.5)') "TG,",iteration,TG,G0G,SG,RG,HG,ELEG,resi2
+      !write(*,'(a3,i5,f8.3,3f15.5)') "TC,",iteration,TC,QC,QS0B,QS0G
+      !--------
+      !resi1  =  abs(G0B - G0BP)
+      !resi2  =  abs(G0G - G0GP)
+      !G0BP   = G0B
+      !G0GP   = G0G
+
+      if ( abs(resi1) < sqrt(EPS) .and. abs(resi2) < sqrt(EPS) ) then
+         TB = TBL(1)
+	 TG = TGL(1)
+         TB = max( TBP - DTS_MAX_onestep, min( TBP + DTS_MAX_onestep, TB ) )
+         TG = max( TGP - DTS_MAX_onestep, min( TGP + DTS_MAX_onestep, TG ) )
+         exit
+      endif
+
+      if ( resi1*resi1p < 0.0_RP ) then
+         TB = (TB + TBL(1)) * 0.5_RP
+      else
+         TB = TBL(1)
+      endif
+      if ( resi2*resi2p < 0.0_RP ) then
+         TG = (TG + TGL(1)) * 0.5_RP
+      else
+         TG = TGL(1)
+      endif
+      TB = max( TBP - DTS_MAX_onestep, min( TBP + DTS_MAX_onestep, TB ) )
+      TG = max( TGP - DTS_MAX_onestep, min( TGP + DTS_MAX_onestep, TG ) )
+ 
+      resi1p = resi1
+      resi2p = resi2
+
+      ! this is for TC, QC
       call qsat( QS0B, TB, PRSS )
       call qsat( QS0G, TG, PRSS )
 
@@ -1020,14 +1186,6 @@ contains
       QC2    =  RW*(CHC*UA)*QA + RW*(CHG*BETG*UC)*QS0G + W*(CHB*BETB*UC)*QS0B
       QC     =  QC2 / QC1
 
-      resi1  =  abs(G0B - G0BP)
-      resi2  =  abs(G0G - G0GP)
-
-      if( resi1 < sqrt(EPS) .and. resi2 < sqrt(EPS) ) exit
-
-      G0BP   = G0B
-      G0GP   = G0G
-
     enddo
 
 !    if( .not. (resi1 < sqrt(EPS) .and. resi2 < sqrt(EPS) ) ) then
@@ -1042,7 +1200,48 @@ contains
 !                  W, RW, ALPHAG, ALPHAB, BETG, BETB, &
 !                  RX, VFGS, VFGW, VFWG, VFWW, VFWS, STB, &
 !                  SB, SG, LHV, TBLP, TGLP
+!       write(*,*) "6",VFGS, VFGW, VFWG, VFWW, VFWS
 !    end if
+
+     ! output for debug
+     if ( iteration > 200 ) then
+       if( IO_L ) write(IO_FID_LOG,*) '*** Warning: Kusaka urban (SLC_main) iteration for TB/TG was not converged',PRC_myrank,i,j
+       if( IO_L ) write(IO_FID_LOG,*) '---------------------------------------------------------------------------------'
+       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- Residual                                       [K] :', resi1,resi2
+       if( IO_L ) write(IO_FID_LOG,*) ''
+       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- TBP : Initial TB                               [K] :', TBP
+       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- TBLP: Initial TBL                              [K] :', TBLP
+       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- TGP : Initial TG                               [K] :', TGP
+       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- TGLP: Initial TGL                              [K] :', TGLP
+       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- TCP : Initial TC                               [K] :', TCP
+       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- QCP : Initial QC                               [K] :', QCP
+       if( IO_L ) write(IO_FID_LOG,*) ''
+       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- UC  : Canopy wind                            [m/s] :', UC
+       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- SX  : Shortwave radiation                   [W/m2] :', SX
+       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- RX  : Longwave radiation                    [W/m2] :', RX
+       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- PRSS: Surface pressure                        [Pa] :', PRSS
+       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- PRSA: Pressure at 1st atmos layer              [m] :', PRSA
+       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- RHOO: Air density                          [kg/m3] :', RHOO
+       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- ZA  : Height at 1st atmos layer                [m] :', ZA
+       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- TA  : Temperature at 1st atmos layer           [K] :', TA
+       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- UA  : Wind speed at 1st atmos layer          [m/s] :', UA
+       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- QA  : Specific humidity at 1st atmos layer [kg/kg] :', QA
+       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- DZB : Depth of surface layer                   [m] :', DZB
+       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- DZG : Depth of surface layer                   [m] :', DZG
+       if( IO_L ) write(IO_FID_LOG,*) ''
+       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- R, W, RW  : Normalized height and road width    [-] :', R, W,RW
+       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- SVF       : Sky View Factors                    [-] :', SVF
+       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- BETB,BETG : Evaporation efficiency              [-] :', BETB,BETG
+       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- EPSB,EPSG : Surface emissivity                  [-] :', EPSB,EPSG
+       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- CAPB,CAPG : Heat capacity                 [J m-3 K] :', CAPB,CAPG
+       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- AKSB,AKSG : Thermal conductivity          [W m-1 K] :', AKSB,AKSB
+       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- QS0B,QS0G : Surface specific humidity       [kg/kg] :', QS0B,QS0G
+       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- ZDC       : Desplacement height of canopy       [m] :', ZDC
+       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- Z0C       : Momentum roughness length of canopy [m] :', Z0C
+       if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- Z0HC      : Thermal roughness length of canopy  [m] :', Z0HC
+       if( IO_L ) write(IO_FID_LOG,*) '---------------------------------------------------------------------------------'
+     endif
+
 
     !--- update only fluxes ----
      RG1      = EPSG * ( RX * VFGS                  &
@@ -1076,6 +1275,37 @@ contains
      HG   = RHOO * CPdry * CHG * UC * (THS2-THC)
      ELEG = RHOO * LHV   * CHG * UC * BETG * (QS0G-QC)
      G0G  = SG + RG - HG - ELEG
+
+     TBL   = TBLP
+     call multi_layer(UKE,BOUND,G0B,CAPB,AKSB,TBL,DZB,dt,TBLEND)
+     resi1 = TBL(1) - TB
+     TB    = TBL(1)
+
+     TGL   = TGLP
+     call multi_layer(UKE,BOUND,G0G,CAPG,AKSG,TGL,DZG,dt,TGLEND)
+     resi2 = TGL(1) - TG
+     TG    = TGL(1)
+
+
+     if ( abs(resi1) > DTS_MAX_onestep ) then
+       if ( abs(resi1) > DTS_MAX_onestep*10.0_RP ) then
+         if( IO_L ) write(IO_FID_LOG,*) '!xxx Error xxx!: Kusaka urban (SLC_main) tendency of TB is over limitter'
+         if( IO_L ) write(IO_FID_LOG,*) '!xxx previous TB and updated TB(TBL(1)) is ',TB-resi1,TB
+         call PRC_MPIstop
+       endif
+       if( IO_L ) write(IO_FID_LOG,*) '!xxx Warning xxx!: Kusaka urban (SLC_main) tendency of TB is over limitter'
+       if( IO_L ) write(IO_FID_LOG,*) '!xxx previous TB and updated TB(TBL(1)) is ',TB-resi1,TB
+     endif
+
+     if ( abs(resi2) > DTS_MAX_onestep ) then
+       if ( abs(resi2) > DTS_MAX_onestep*10.0_RP ) then
+         if( IO_L ) write(IO_FID_LOG,*) '!xxx Error xxx!: Kusaka urban (SLC_main) tendency of TG is over limitter'
+         if( IO_L ) write(IO_FID_LOG,*) '!xxx previous TG and updated TG(TGL(1)) is ',TG-resi2,TG,resi2
+         call PRC_MPIstop
+       endif
+       if( IO_L ) write(IO_FID_LOG,*) '!xxx Warning xxx!: Kusaka urban (SLC_main) tendency of TG is over limitter'
+       if( IO_L ) write(IO_FID_LOG,*) '!xxx previous TG and updated TG(TGL(1)) is ',TG-resi2,TG
+     endif
 
     !-----------------------------------------------------------
     ! Total Fluxes from Urban Canopy
