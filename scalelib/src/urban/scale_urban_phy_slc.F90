@@ -51,8 +51,8 @@ module scale_urban_phy_slc
   !
   !-----------------------------------------------------------------------------
   !
-  real(RP), private, parameter :: DTS_MAX = 10.0_RP
   ! from namelist
+  real(RP), private :: DTS_MAX    =    5.0_RP ! maximum dT during one minute [K/sec]
   real(RP), private :: ZR         =   10.0_RP ! roof level ( building height) [m]
   real(RP), private :: roof_width =    9.0_RP ! roof level ( building height) [m]
   real(RP), private :: road_width =   11.0_RP ! roof level ( building height) [m]
@@ -117,6 +117,7 @@ contains
     character(len=*), intent(in) :: URBAN_TYPE
 
     NAMELIST / PARAM_URBAN_PHY_SLC / &
+       DTS_MAX,    &
        ZR,         &
        roof_width, &
        road_width, &
@@ -676,10 +677,10 @@ contains
     real(RP) :: W, VFGS, VFGW, VFWG, VFWS, VFWW
     real(RP) :: SX, RX
 
-    real(RP) :: TRP = 350.0_RP   ! TRP: at previous time step [K]
-    real(RP) :: TBP = 350.0_RP   ! TBP: at previous time step [K]
-    real(RP) :: TGP = 350.0_RP   ! TGP: at previous time step [K]
-    real(RP) :: TCP = 350.0_RP   ! TCP: at previous time step [K]
+    real(RP) :: TRP = 310.0_RP   ! TRP: at previous time step [K]
+    real(RP) :: TBP = 310.0_RP   ! TBP: at previous time step [K]
+    real(RP) :: TGP = 310.0_RP   ! TGP: at previous time step [K]
+    real(RP) :: TCP = 310.0_RP   ! TCP: at previous time step [K]
     real(RP) :: QCP = 0.01_RP    ! QCP: at previous time step [kg/kg]
     real(RP) :: TRLP(UKS:UKE)    ! Layer temperature at previous step  [K]
     real(RP) :: TBLP(UKS:UKE)    ! Layer temperature at previous step  [K]
@@ -728,6 +729,7 @@ contains
 !    real(RP) :: CAPL1, AKSL1
 
     real(RP) :: resi1,resi2     ! residual
+    real(RP) :: resi1p,resi2p     ! residual
     real(RP) :: G0RP,G0BP,G0GP
 
     real(RP) :: XXX, X, CD, CH, CHU, XXX2, XXX10
@@ -864,6 +866,7 @@ contains
 
      G0RP = 0.0_RP
      XXXR = 0.0_RP
+     resi1p = 0.0_RP
      do iteration = 1, 20
 
       THS   = TR * ( PRE00 / PRSS )**RovCP   ! potential temp
@@ -894,13 +897,25 @@ contains
       call multi_layer(UKE,BOUND,G0R,CAPR,AKSR,TRL,DZR,dt,TRLEND)
       !! 1st layer's cap, aks are replaced.
       !! call multi_layer2(UKE,BOUND,G0R,CAPR,AKSR,TRL,DZR,dt,TRLEND,CAPL1,AKSL1)
-!      TR = TRL(1)
-      TR = max( TRP - DTS_MAX, min( TRP + DTS_MAX, TRL(1) ) )
+      resi1 = TRL(1) - TR
 
-      resi1  =  abs(G0R - G0RP)
-      G0RP   =  G0R
+      !resi1  =  abs(G0R - G0RP)
+      !G0RP   =  G0R
 
-      if( resi1 < sqrt(EPS) ) exit
+      if( abs(resi1) < sqrt(EPS) ) then
+        TR = TRL(1)
+        TR = max( TRP - DTS_MAX, min( TRP + DTS_MAX, TR ) )
+        exit
+      endif
+
+      if ( resi1*resi1p < 0.0_RP ) then
+        TR = (TR + TRL(1)) * 0.5_RP
+      else
+        TR = TRL(1)
+      endif
+      TR = max( TRP - DTS_MAX, min( TRP + DTS_MAX, TR ) )
+
+      resi1p = resi1
 
      enddo
 
@@ -940,8 +955,10 @@ contains
      G0BP = 0.0_RP
      G0GP = 0.0_RP
      XXXC = 0.0_RP
+     resi1p = 0.0_RP
+     resi2p = 0.0_RP
 
-     do iteration = 1, 50
+     do iteration = 1, 5000
 
       THS1   = TB * ( PRE00 / PRSS )**RovCP
       THS2   = TG * ( PRE00 / PRSS )**RovCP
@@ -996,14 +1013,52 @@ contains
 
       TBL = TBLP
       call multi_layer(UKE,BOUND,G0B,CAPB,AKSB,TBL,DZB,dt,TBLEND)
-!      TB = TBL(1)
-      TB = max( TBP - DTS_MAX, min( TBP + DTS_MAX, TBL(1) ) )
+      resi1 = TBL(1) - TB
 
       TGL = TGLP
       call multi_layer(UKE,BOUND,G0G,CAPG,AKSG,TGL,DZG,dt,TGLEND)
-!      TG = TGL(1)
-      TG = max( TGP - DTS_MAX, min( TGP + DTS_MAX, TGL(1) ) )
+      resi2 = TGL(1) - TG
 
+      !-----------
+      print *,HB, RHOO , CPdry , CHB , UC , THS1,THC
+      print *,HG, RHOO , CPdry , CHG , UC , THS2,THC
+      print *,ELEB ,RHOO , LHV , CHB , UC , BETB , QS0B , QC
+      print *,ELEG ,RHOO , LHV , CHG , UC , BETG , QS0G , QC
+
+      write(*,'(a3,i5,f8.3,6f15.5)') "TB,",iteration,TB,G0B,SB,RB,HB,ELEB,resi1
+      write(*,'(a3,i5,f8.3,6f15.5)') "TG,",iteration,TG,G0G,SG,RG,HG,ELEG,resi2
+      write(*,'(a3,i5,f8.3,3f15.5)') "TC,",iteration,TC,QC,QS0B,QS0G
+      !--------
+      !resi1  =  abs(G0B - G0BP)
+      !resi2  =  abs(G0G - G0GP)
+      !G0BP   = G0B
+      !G0GP   = G0G
+
+      if ( abs(resi1) < sqrt(EPS) .and. abs(resi2) < sqrt(EPS) ) then
+         TB = TBL(1)
+	 TG = TGL(1)
+         TB = max( TBP - DTS_MAX, min( TBP + DTS_MAX, TB ) )
+         TG = max( TGP - DTS_MAX, min( TGP + DTS_MAX, TG ) )
+         exit
+      endif
+
+      if ( resi1*resi1p < 0.0_RP ) then
+         TB = (TB + TBL(1)) * 0.5_RP
+      else
+         TB = TBL(1)
+      endif
+      if ( resi2*resi2p < 0.0_RP ) then
+         TG = (TG + TGL(1)) * 0.5_RP
+      else
+         TG = TGL(1)
+      endif
+      TB = max( TBP - DTS_MAX, min( TBP + DTS_MAX, TB ) )
+      TG = max( TGP - DTS_MAX, min( TGP + DTS_MAX, TG ) )
+ 
+      resi1p = resi1
+      resi2p = resi2
+
+      ! this is for TC, QC
       call qsat( QS0B, TB, PRSS )
       call qsat( QS0G, TG, PRSS )
 
@@ -1020,14 +1075,6 @@ contains
       QC2    =  RW*(CHC*UA)*QA + RW*(CHG*BETG*UC)*QS0G + W*(CHB*BETB*UC)*QS0B
       QC     =  QC2 / QC1
 
-      resi1  =  abs(G0B - G0BP)
-      resi2  =  abs(G0G - G0GP)
-
-      if( resi1 < sqrt(EPS) .and. resi2 < sqrt(EPS) ) exit
-
-      G0BP   = G0B
-      G0GP   = G0G
-
     enddo
 
 !    if( .not. (resi1 < sqrt(EPS) .and. resi2 < sqrt(EPS) ) ) then
@@ -1042,6 +1089,14 @@ contains
 !                  W, RW, ALPHAG, ALPHAB, BETG, BETB, &
 !                  RX, VFGS, VFGW, VFWG, VFWW, VFWS, STB, &
 !                  SB, SG, LHV, TBLP, TGLP
+       write(*,*) "1",TBP, TGP, TCP
+       write(*,*) "2",PRSS, THA, UA, QA, RHOO, UC, QCP
+       write(*,*) "3",ZA, ZDC, Z0C, Z0HC
+       write(*,*) "4",CHG, CHB
+       write(*,*) "5",W, RW, ALPHAG, ALPHAB, BETG, BETB
+       write(*,*) "6",RX, VFGS, VFGW, VFWG, VFWW, VFWS, STB
+       write(*,*) "7",SB, SG, LHV
+       write(*,*) "8",TBLP, TGLP
 !    end if
 
     !--- update only fluxes ----
