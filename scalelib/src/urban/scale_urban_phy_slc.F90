@@ -51,6 +51,7 @@ module scale_urban_phy_slc
   !
   !-----------------------------------------------------------------------------
   !
+  logical, allocatable, private :: is_FLX(:,:) ! urban tile or not.
   ! from namelist
   real(RP), private :: DTS_MAX    =    5.0_RP ! maximum dT during one minute [K/sec]
   real(RP), private :: ZR         =   10.0_RP ! roof level ( building height) [m]
@@ -112,9 +113,12 @@ contains
   subroutine URBAN_PHY_SLC_setup( URBAN_TYPE )
     use scale_process, only: &
        PRC_MPIstop
+    use scale_landuse, only: &
+       LANDUSE_fact_urban
     implicit none
 
     character(len=*), intent(in) :: URBAN_TYPE
+    integer                      :: i, j
 
     NAMELIST / PARAM_URBAN_PHY_SLC / &
        DTS_MAX,    &
@@ -180,6 +184,19 @@ contains
 
     ! set other urban parameters
     call urban_param_setup
+
+    ! judge to run slab land model
+    allocate( is_FLX(IA,JA) )
+
+    do j = JS, JE
+    do i = IS, IE
+      if( LANDUSE_fact_urban(i,j) > 0.0_RP )then
+        is_FLX(i,j) = .true.
+      else
+        is_FLX(i,j) = .false.
+      endif
+    enddo
+    enddo
 
     return
   end subroutine URBAN_PHY_SLC_setup
@@ -367,6 +384,9 @@ contains
 
     do j = JS, JE
     do i = IS, IE
+
+    if( is_FLX(i,j) ) then
+
        Uabs = max( sqrt( U1(i,j)**2 + V1(i,j)**2 + W1(i,j)**2 ), Uabs_min )
 
        ! save
@@ -494,6 +514,53 @@ contains
        Z0M(i,j) = Z0C
        Z0H(i,j) = Z0HC
        Z0E(i,j) = Z0HC
+
+    else
+       ! not calculate urban module
+       TR_URB_t   (i,j)   = 0.0_RP
+       TB_URB_t   (i,j)   = 0.0_RP
+       TG_URB_t   (i,j)   = 0.0_RP
+       TC_URB_t   (i,j)   = 0.0_RP
+       QC_URB_t   (i,j)   = 0.0_RP
+       UC_URB_t   (i,j)   = 0.0_RP
+       TRL_URB_t  (:,i,j) = 0.0_RP
+       TBL_URB_t  (:,i,j) = 0.0_RP
+       TGL_URB_t  (:,i,j) = 0.0_RP
+       RAINR_URB_t(i,j)   = 0.0_RP
+       RAINB_URB_t(i,j)   = 0.0_RP
+       RAING_URB_t(i,j)   = 0.0_RP
+       ROFF_URB_t (i,j)   = 0.0_RP
+       UST        (i,j)   = 0.0_RP
+       ALBD_LW    (i,j)   = 0.0_RP
+       ALBD_SW    (i,j)   = 0.0_RP
+       MWFLX      (i,j)   = 0.0_RP
+       MUFLX      (i,j)   = 0.0_RP
+       MVFLX      (i,j)   = 0.0_RP
+       SHFLX      (i,j)   = 0.0_RP
+       LHFLX      (i,j)   = 0.0_RP
+       GHFLX      (i,j)   = 0.0_RP
+       Z0M        (i,j)   = 0.0_RP
+       Z0H        (i,j)   = 0.0_RP
+       Z0E        (i,j)   = 0.0_RP
+       U10        (i,j)   = 0.0_RP
+       V10        (i,j)   = 0.0_RP
+       T2         (i,j)   = 0.0_RP
+       Q2         (i,j)   = 0.0_RP
+       !
+       SHR        (i,j)   = 0.0_RP
+       SHB        (i,j)   = 0.0_RP
+       SHG        (i,j)   = 0.0_RP
+       LHR        (i,j)   = 0.0_RP
+       LHB        (i,j)   = 0.0_RP
+       LHG        (i,j)   = 0.0_RP
+       GHR        (i,j)   = 0.0_RP
+       GHB        (i,j)   = 0.0_RP
+       GHG        (i,j)   = 0.0_RP
+       RNR        (i,j)   = 0.0_RP
+       RNB        (i,j)   = 0.0_RP
+       RNG        (i,j)   = 0.0_RP
+       RNgrd      (i,j)   = 0.0_RP
+    endif
 
     end do
     end do
