@@ -42,7 +42,7 @@ module scale_urban_phy
            RAINB_URB_t, &
            RAING_URB_t, &
            ROFF_URB_t,  &
-           UST,         &
+           SFC_TEMP,    &
            ALBD_LW,     &
            ALBD_SW,     &
            MWFLX,       &
@@ -107,22 +107,22 @@ module scale_urban_phy
        real(RP), intent(out) :: RAING_URB_t(IA,JA)
        real(RP), intent(out) :: ROFF_URB_t (IA,JA)
 
-       real(RP), intent(out) :: UST    (IA,JA)
-       real(RP), intent(out) :: ALBD_LW(IA,JA)
-       real(RP), intent(out) :: ALBD_SW(IA,JA)
-       real(RP), intent(out) :: MWFLX  (IA,JA)
-       real(RP), intent(out) :: MUFLX  (IA,JA)
-       real(RP), intent(out) :: MVFLX  (IA,JA)
-       real(RP), intent(out) :: SHFLX  (IA,JA)
-       real(RP), intent(out) :: LHFLX  (IA,JA)
-       real(RP), intent(out) :: GHFLX  (IA,JA)
-       real(RP), intent(out) :: Z0M    (IA,JA)
-       real(RP), intent(out) :: Z0H    (IA,JA)
-       real(RP), intent(out) :: Z0E    (IA,JA)
-       real(RP), intent(out) :: U10    (IA,JA)
-       real(RP), intent(out) :: V10    (IA,JA)
-       real(RP), intent(out) :: T2     (IA,JA)
-       real(RP), intent(out) :: Q2     (IA,JA)
+       real(RP), intent(out) :: SFC_TEMP(IA,JA)
+       real(RP), intent(out) :: ALBD_LW (IA,JA)
+       real(RP), intent(out) :: ALBD_SW (IA,JA)
+       real(RP), intent(out) :: MWFLX   (IA,JA)
+       real(RP), intent(out) :: MUFLX   (IA,JA)
+       real(RP), intent(out) :: MVFLX   (IA,JA)
+       real(RP), intent(out) :: SHFLX   (IA,JA)
+       real(RP), intent(out) :: LHFLX   (IA,JA)
+       real(RP), intent(out) :: GHFLX   (IA,JA)
+       real(RP), intent(out) :: Z0M     (IA,JA)
+       real(RP), intent(out) :: Z0H     (IA,JA)
+       real(RP), intent(out) :: Z0E     (IA,JA)
+       real(RP), intent(out) :: U10     (IA,JA)
+       real(RP), intent(out) :: V10     (IA,JA)
+       real(RP), intent(out) :: T2      (IA,JA)
+       real(RP), intent(out) :: Q2      (IA,JA)
 
        real(RP), intent(in) :: TMPA  (IA,JA)
        real(RP), intent(in) :: PRES  (IA,JA)

@@ -215,7 +215,7 @@ contains
         RAINB_URB_t, &
         RAING_URB_t, &
         ROFF_URB_t,  &
-        UST,         &
+        SFC_TEMP,    &
         ALBD_LW,     &
         ALBD_SW,     &
         MWFLX,       &
@@ -289,22 +289,22 @@ contains
     real(RP), intent(out) :: RAING_URB_t(IA,JA)
     real(RP), intent(out) :: ROFF_URB_t (IA,JA)
 
-    real(RP), intent(out) :: UST    (IA,JA)
-    real(RP), intent(out) :: ALBD_LW(IA,JA)
-    real(RP), intent(out) :: ALBD_SW(IA,JA)
-    real(RP), intent(out) :: MWFLX  (IA,JA)
-    real(RP), intent(out) :: MUFLX  (IA,JA)
-    real(RP), intent(out) :: MVFLX  (IA,JA)
-    real(RP), intent(out) :: SHFLX  (IA,JA)
-    real(RP), intent(out) :: LHFLX  (IA,JA)
-    real(RP), intent(out) :: GHFLX  (IA,JA)
-    real(RP), intent(out) :: Z0M    (IA,JA)
-    real(RP), intent(out) :: Z0H    (IA,JA)
-    real(RP), intent(out) :: Z0E    (IA,JA)
-    real(RP), intent(out) :: U10    (IA,JA)
-    real(RP), intent(out) :: V10    (IA,JA)
-    real(RP), intent(out) :: T2     (IA,JA)
-    real(RP), intent(out) :: Q2     (IA,JA)
+    real(RP), intent(out) :: SFC_TEMP(IA,JA)
+    real(RP), intent(out) :: ALBD_LW (IA,JA)
+    real(RP), intent(out) :: ALBD_SW (IA,JA)
+    real(RP), intent(out) :: MWFLX   (IA,JA)
+    real(RP), intent(out) :: MUFLX   (IA,JA)
+    real(RP), intent(out) :: MVFLX   (IA,JA)
+    real(RP), intent(out) :: SHFLX   (IA,JA)
+    real(RP), intent(out) :: LHFLX   (IA,JA)
+    real(RP), intent(out) :: GHFLX   (IA,JA)
+    real(RP), intent(out) :: Z0M     (IA,JA)
+    real(RP), intent(out) :: Z0H     (IA,JA)
+    real(RP), intent(out) :: Z0E     (IA,JA)
+    real(RP), intent(out) :: U10     (IA,JA)
+    real(RP), intent(out) :: V10     (IA,JA)
+    real(RP), intent(out) :: T2      (IA,JA)
+    real(RP), intent(out) :: Q2      (IA,JA)
 
     real(RP), intent(in) :: TMPA  (IA,JA)
     real(RP), intent(in) :: PRSA  (IA,JA)
@@ -353,8 +353,6 @@ contains
     real(RP) :: RAINB
     real(RP) :: RAING
     real(RP) :: ROFF
-    real(RP) :: AH_t
-    real(RP) :: ALH_t
 
     real(RP) :: SHR  (IA,JA)
     real(RP) :: SHB  (IA,JA)
@@ -408,64 +406,59 @@ contains
        RAING = RAING_URB(i,j)
        ROFF  = ROFF_URB (i,j)
 
-       AH_t  = 0.0_RP
-       ALH_t = 0.0_RP
-
-       call SLC_main( TR,           & ! [INOUT]
-                      TB,           & ! [INOUT]
-                      TG,           & ! [INOUT]
-                      TC,           & ! [INOUT]
-                      QC,           & ! [INOUT]
-                      UC,           & ! [INOUT]
-                      TRL    (:),   & ! [INOUT]
-                      TBL    (:),   & ! [INOUT]
-                      TGL    (:),   & ! [INOUT]
-                      RAINR,        & ! [INOUT]
-                      RAINB,        & ! [INOUT]
-                      RAING,        & ! [INOUT]
-                      ROFF,         & ! [INOUT]
-                      AH_t,         & ! [INOUT]
-                      ALH_t,        & ! [INOUT]
-                      ALBD_LW(i,j), & ! [OUT]
-                      ALBD_SW(i,j), & ! [OUT]
-                      SHR    (i,j), & ! [OUT]
-                      SHB    (i,j), & ! [OUT]
-                      SHG    (i,j), & ! [OUT]
-                      LHR    (i,j), & ! [OUT]
-                      LHB    (i,j), & ! [OUT]
-                      LHG    (i,j), & ! [OUT]
-                      GHR    (i,j), & ! [OUT]
-                      GHB    (i,j), & ! [OUT]
-                      GHG    (i,j), & ! [OUT]
-                      RNR    (i,j), & ! [OUT]
-                      RNB    (i,j), & ! [OUT]
-                      RNG    (i,j), & ! [OUT]
-                      UST    (i,j), & ! [OUT]
-                      RNgrd  (i,j), & ! [OUT]
-                      SHFLX  (i,j), & ! [OUT]
-                      LHFLX  (i,j), & ! [OUT]
-                      GHFLX  (i,j), & ! [OUT]
-                      U10    (i,j), & ! [OUT]
-                      V10    (i,j), & ! [OUT]
-                      T2     (i,j), & ! [OUT]
-                      Q2     (i,j), & ! [OUT]
-                      LSOLAR,       & ! [IN]
-                      PRSA   (i,j), & ! [IN]
-                      PRSS   (i,j), & ! [IN]
-                      TMPA   (i,j), & ! [IN]
-                      QA     (i,j), & ! [IN]
-                      Uabs,         & ! [IN]
-                      U1     (i,j), & ! [IN]
-                      V1     (i,j), & ! [IN]
-                      Z1     (i,j), & ! [IN]
-                      SWD    (i,j), & ! [IN]
-                      LWD    (i,j), & ! [IN]
-                      PREC   (i,j), & ! [IN]
-                      DENS   (i,j), & ! [IN]
-                      LON,          & ! [IN]
-                      LAT,          & ! [IN]
-                      NOWDATE(:),   & ! [IN]
-                      dt, i, j      ) ! [IN]
+       call SLC_main( TR,            & ! [INOUT]
+                      TB,            & ! [INOUT]
+                      TG,            & ! [INOUT]
+                      TC,            & ! [INOUT]
+                      QC,            & ! [INOUT]
+                      UC,            & ! [INOUT]
+                      TRL     (:),   & ! [INOUT]
+                      TBL     (:),   & ! [INOUT]
+                      TGL     (:),   & ! [INOUT]
+                      RAINR,         & ! [INOUT]
+                      RAINB,         & ! [INOUT]
+                      RAING,         & ! [INOUT]
+                      ROFF,          & ! [INOUT]
+                      ALBD_LW (i,j), & ! [OUT]
+                      ALBD_SW (i,j), & ! [OUT]
+                      SHR     (i,j), & ! [OUT]
+                      SHB     (i,j), & ! [OUT]
+                      SHG     (i,j), & ! [OUT]
+                      LHR     (i,j), & ! [OUT]
+                      LHB     (i,j), & ! [OUT]
+                      LHG     (i,j), & ! [OUT]
+                      GHR     (i,j), & ! [OUT]
+                      GHB     (i,j), & ! [OUT]
+                      GHG     (i,j), & ! [OUT]
+                      RNR     (i,j), & ! [OUT]
+                      RNB     (i,j), & ! [OUT]
+                      RNG     (i,j), & ! [OUT]
+                      SFC_TEMP(i,j), & ! [OUT]
+                      RNgrd   (i,j), & ! [OUT]
+                      SHFLX   (i,j), & ! [OUT]
+                      LHFLX   (i,j), & ! [OUT]
+                      GHFLX   (i,j), & ! [OUT]
+                      U10     (i,j), & ! [OUT]
+                      V10     (i,j), & ! [OUT]
+                      T2      (i,j), & ! [OUT]
+                      Q2      (i,j), & ! [OUT]
+                      LSOLAR,        & ! [IN]
+                      PRSA    (i,j), & ! [IN]
+                      PRSS    (i,j), & ! [IN]
+                      TMPA    (i,j), & ! [IN]
+                      QA      (i,j), & ! [IN]
+                      Uabs,          & ! [IN]
+                      U1      (i,j), & ! [IN]
+                      V1      (i,j), & ! [IN]
+                      Z1      (i,j), & ! [IN]
+                      SWD     (i,j), & ! [IN]
+                      LWD     (i,j), & ! [IN]
+                      PREC    (i,j), & ! [IN]
+                      DENS    (i,j), & ! [IN]
+                      LON,           & ! [IN]
+                      LAT,           & ! [IN]
+                      NOWDATE (:),   & ! [IN]
+                      dt, i, j       ) ! [IN]
 
        ! calculate tendency 
        TR_URB_t(i,j) = ( TR - TR_URB(i,j) ) /dt
@@ -487,25 +480,25 @@ contains
        ROFF_URB_t (i,j) = ( ROFF  - ROFF_URB (i,j) ) / dt
 
        ! saturation at the surface
-       call qsat( QVS, UST(i,j), PRSS(i,j) )
+       call qsat( QVS, SFC_TEMP(i,j), PRSS(i,j) )
 
-       call BULKFLUX( Ustar,     & ! [OUT]
-                      Tstar,     & ! [OUT]
-                      Qstar,     & ! [OUT]
-                      Uabs,      & ! [OUT]
-                      TMPA(i,j), & ! [IN]
-                      UST (i,j), & ! [IN]
-                      PRSA(i,j), & ! [IN]
-                      PRSS(i,j), & ! [IN]
-                      QA  (i,j), & ! [IN]
-                      QVS,       & ! [IN]
-                      U1  (i,j), & ! [IN]
-                      V1  (i,j), & ! [IN]
-                      Z1  (i,j), & ! [IN]
-                      PBL (i,j), & ! [IN]
-                      Z0C,       & ! [IN]
-                      Z0HC,      & ! [IN]
-                      Z0HC       ) ! [IN]
+       call BULKFLUX( Ustar,         & ! [OUT]
+                      Tstar,         & ! [OUT]
+                      Qstar,         & ! [OUT]
+                      Uabs,          & ! [OUT]
+                      TMPA    (i,j), & ! [IN]
+                      SFC_TEMP(i,j), & ! [IN]
+                      PRSA    (i,j), & ! [IN]
+                      PRSS    (i,j), & ! [IN]
+                      QA      (i,j), & ! [IN]
+                      QVS,           & ! [IN]
+                      U1      (i,j), & ! [IN]
+                      V1      (i,j), & ! [IN]
+                      Z1      (i,j), & ! [IN]
+                      PBL     (i,j), & ! [IN]
+                      Z0C,           & ! [IN]
+                      Z0HC,          & ! [IN]
+                      Z0HC           ) ! [IN]
 
        MWFLX(i,j) = -DENS(i,j) * Ustar**2 / Uabs * W1(i,j)
        MUFLX(i,j) = -DENS(i,j) * Ustar**2 / Uabs * U1(i,j)
@@ -530,7 +523,7 @@ contains
        RAINB_URB_t(i,j)   = 0.0_RP
        RAING_URB_t(i,j)   = 0.0_RP
        ROFF_URB_t (i,j)   = 0.0_RP
-       UST        (i,j)   = 0.0_RP
+       ! SFC_TEMP   (i,j)   = 0.0_RP ! not change
        ALBD_LW    (i,j)   = 0.0_RP
        ALBD_SW    (i,j)   = 0.0_RP
        MWFLX      (i,j)   = 0.0_RP
@@ -597,8 +590,6 @@ contains
         RAINB,        & ! (inout)
         RAING,        & ! (inout)
         ROFF,         & ! (inout)
-        AH_t,         & ! (inout)
-        ALH_t,        & ! (inout)
         ALBD_LW_grid, & ! (out)
         ALBD_SW_grid, & ! (out)
         SHR,          & ! (out)
@@ -697,8 +688,6 @@ contains
     real(RP), intent(inout) :: RAINB ! rain amount in storage on building [kg/m2]
     real(RP), intent(inout) :: RAING ! rain amount in storage on road     [kg/m2]
     real(RP), intent(inout) :: ROFF  ! runoff from urban           [kg/m2]
-    real(RP), intent(inout) :: AH_t  ! Sensible Anthropogenic heat [W/m^2]
-    real(RP), intent(inout) :: ALH_t ! Latent Anthropogenic heat   [W/m^2]
 
     !-- Output variables from Urban to Coupler
     real(RP), intent(out)   :: ALBD_SW_grid  ! grid mean of surface albedo for SW
@@ -737,6 +726,8 @@ contains
     real(RP) :: dsec     ! second [s]
     real(RP) :: TIME     ! absorute part of current time
     real(RP) :: tahdiurnal ! temporal AH diurnal profile
+    real(RP) :: AH_t     ! Sensible Anthropogenic heat [W/m^2]
+    real(RP) :: ALH_t    ! Latent Anthropogenic heat   [W/m^2]
 
     real(RP) :: SSGD     ! downward direct short wave radiation   [W/m/m]
     real(RP) :: SSGQ     ! downward diffuse short wave radiation  [W/m/m]
