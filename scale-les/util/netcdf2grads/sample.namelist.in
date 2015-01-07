@@ -1,5 +1,6 @@
 &info
 timestep=6
+conffile="../../test/case_real/check_awajishima/run_WRF/run.conf"
 idir="../../test/case_real/check_awajishima/run_WRF"
 odir="./grads"
 vcount=1

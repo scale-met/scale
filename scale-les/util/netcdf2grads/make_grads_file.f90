@@ -24,10 +24,10 @@ program convine
   ! for silent
   integer(4)                :: uz,lz
   integer                   :: timestep
-  character*100             :: idir,odir
+  character*100             :: idir,odir,conffile
   character*5               :: delt
   character*15              :: stime
-  namelist /info/  timestep,idir,odir,vcount
+  namelist /info/  timestep,conffile,idir,odir,vcount
   namelist /vari/  vname
   namelist /grads/ delt,stime
 
@@ -36,6 +36,7 @@ program convine
   data stime /"00:00Z01JAN2000"/
   data idir  /"./"/
   data odir  /"./"/
+  data conffile /"./run.conf"/
 
   integer(4) :: xproc=2, yproc=3         !--- process number 
   integer(4) :: nx, ny, nz, nxp, nyp
@@ -62,16 +63,20 @@ program convine
   real(4),allocatable :: var2d(:,:), var3d(:,:,:), var_urban_3d(:,:,:), var_land_3d(:,:,:)
   real(8),allocatable :: p_3d(:,:,:,:), p_2d(:,:,:), p_urban_3d(:,:,:,:), p_land_3d(:,:,:,:)
 
+  character*64 :: HISTORY_DEFAULT_BASENAME
   character*5  :: HISTORY_DEFAULT_TUNIT
   real(8)      :: HISTORY_DEFAULT_TINTERVAL
+  logical      :: HISTORY_DEFAULT_ZINTERP = .true.
   character*64 :: item
   logical      :: HIST_BND = .true.
 
   namelist  / PARAM_PRC / &
     PRC_NUM_X, PRC_NUM_Y
-  namelist  / PARAM_HISTORY / &
+  namelist  / PARAM_HISTORY /  &
+    HISTORY_DEFAULT_BASENAME,  &
     HISTORY_DEFAULT_TINTERVAL, &
-    HISTORY_DEFAULT_TUNIT
+    HISTORY_DEFAULT_TUNIT,     &
+    HISTORY_DEFAULT_ZINTERP
   namelist  /PARAM_HIST/ &
     HIST_BND
   namelist  / HISTITEM / &
@@ -92,6 +97,8 @@ program convine
      write(*,*) "please specify the option '-i' or '-s'"
      stop
   case("-i") ! interactive
+     write(*,*) "path to configure file for run with the quotation mark"
+     read(*,*) conffile
      write(*,*) "path to directory of history files with the quotation mark"
      read(*,*) idir
      write(*,*) "path to directory of output files with the quotation mark"
@@ -142,7 +149,7 @@ program convine
 
 
   !--- read variable calculated by model
-  open(10,file=trim(idir)//'/'//"run.conf", form="formatted", access="sequential",iostat=ierr)
+  open(10,file=trim(conffile), form="formatted", access="sequential",iostat=ierr)
   if( ierr /= 0 )then
    write(*,*) "Fail to open *.conf file"
    stop
@@ -150,11 +157,17 @@ program convine
 
   rewind(10)
   read(10,nml=PARAM_PRC,iostat=ierr)
+  write(6,nml=PARAM_PRC)
   xproc = PRC_NUM_X
   yproc = PRC_NUM_Y
 
   rewind(10)
   read(10,nml=PARAM_HIST,iostat=ierr)
+  write(6,nml=PARAM_HIST)
+
+  rewind(10)
+  read(10,nml=PARAM_HISTORY,iostat=ierr)
+  write(6,nml=PARAM_HISTORY)
 
   if( vcount == 0 ) then
    rewind(10)
@@ -189,17 +202,7 @@ program convine
    do jy = 1, yproc
    do ix = 1, xproc
     nrec = nrec + 1
-    if( nrec < 10 ) then
-     write(cfile,'(a,i1,a)') "history.pe00000",nrec,".nc"
-    elseif( nrec < 100 ) then
-     write(cfile,'(a,i2,a)') "history.pe0000",nrec,".nc"
-    elseif( nrec < 1000 ) then
-     write(cfile,'(a,i3,a)') "history.pe000",nrec,".nc"
-    elseif( nrec < 10000 ) then
-     write(cfile,'(a,i4,a)') "history.pe00",nrec,".nc"
-    elseif( nrec < 100000 ) then
-     write(cfile,'(a,i5,a)') "history.pe0",nrec,".nc"
-    endif
+    write(cfile,'(a,i6.6,a)') trim(HISTORY_DEFAULT_BASENAME)//".pe",nrec,".nc"
   
     cfile=trim(idir)//'/'//trim(cfile)
     !write(6,*) trim(cfile)
