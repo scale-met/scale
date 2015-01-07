@@ -555,6 +555,9 @@ contains
              else
                 History_tstrsec(id) = time_start
              endif
+             if ( History_tavg(id) ) then
+                History_tstrsec(id) = time_start
+             end if
              History_tlstsec (id) = History_tstrsec(id)
              History_tsumsec (id) = 0.D0
 
@@ -1252,7 +1255,7 @@ contains
     ijk = shape(var)
     dt  = time_next - History_tlstsec(itemid)
 
-    if ( dt < eps ) then
+    if ( dt < eps .AND. ( .NOT. History_tavg(itemid) ) ) then
        write(message,*) 'xxx History variable was put two times before output!: ', &
                         trim(History_item(itemid))
        call Log('E', message)
@@ -1328,7 +1331,7 @@ contains
     ijk = shape(var)
     dt  = time_next - History_tlstsec(itemid)
 
-    if ( dt < eps ) then
+    if ( dt < eps .AND. ( .NOT. History_tavg(itemid) ) ) then
        write(message,*) 'xxx History variable was put two times before output!: ', &
                         trim(History_item(itemid))
        call Log('E', message)
@@ -1404,7 +1407,7 @@ contains
     ijk = shape(var)
     dt  = time_next - History_tlstsec(itemid)
 
-    if ( dt < eps ) then
+    if ( dt < eps .AND. ( .NOT. History_tavg(itemid) ) ) then
        write(message,*) 'xxx History variable was put two times before output!: ', &
                         trim(History_item(itemid))
        call Log('E', message)
@@ -1484,7 +1487,7 @@ contains
     ijk = shape(var)
     dt  = time_next - History_tlstsec(itemid)
 
-    if ( dt < eps ) then
+    if ( dt < eps .AND. ( .NOT. History_tavg(itemid) ) ) then
        write(message,*) 'xxx History variable was put two times before output!: ', &
                         trim(History_item(itemid))
        call Log('E', message)
@@ -1564,7 +1567,7 @@ contains
     ijk = shape(var)
     dt  = time_next - History_tlstsec(itemid)
 
-    if ( dt < eps ) then
+    if ( dt < eps .AND. ( .NOT. History_tavg(itemid) ) ) then
        write(message,*) 'xxx History variable was put two times before output!: ', &
                         trim(History_item(itemid))
        call Log('E', message)
@@ -1648,7 +1651,7 @@ contains
     ijk = shape(var)
     dt  = time_next - History_tlstsec(itemid)
 
-    if ( dt < eps ) then
+    if ( dt < eps .AND. ( .NOT. History_tavg(itemid) ) ) then
        write(message,*) 'xxx History variable was put two times before output!: ', &
                         trim(History_item(itemid))
        call Log('E', message)

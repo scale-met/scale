@@ -236,7 +236,15 @@ cat << EOF > param.history.conf
 
 EOF
 
-for VAR in ${HIST_ITEMS_ATMOS[*]} ${HIST_ITEMS_OCEAN[*]} ${HIST_ITEMS_LAND[*]} ${HIST_ITEMS_URBAN[*]}
-do
-  echo "&HISTITEM item=\"${VAR}\" /" >> param.history.conf
-done
+if [ ${#HIST_ITEMS_SNAPSHOT[*]} -ge 1 ]; then
+  for VAR in ${HIST_ITEMS_SNAPSHOT[*]}
+  do
+    echo "&HISTITEM item=\"${VAR}\" /" >> param.history.conf
+  done
+fi
+if [ ${#HIST_ITEMS_AVERAGE[*]} -ge 1 ]; then
+  for VAR in ${HIST_ITEMS_AVERAGE[*]}
+  do
+    echo "&HISTITEM item=\"${VAR}\", taverage=.true. /" >> param.history.conf
+  done
+fi
