@@ -796,9 +796,10 @@ contains
        !$omp parallel do private(i,j,k,iq,rhoq) OMP_SCHEDULE_ collapse(2)
        do j = JS, JE
        do i = IS, IE
-       do k = KS-1, KE
-          rhoq(k,i,j,iq) = DENS(k,i,j) * QTRC(k,i,j,iq)
-       enddo
+          rhoq(KS-1,i,j,iq) = DENS(KS,i,j) * QTRC(KS,i,j,iq)
+          do k = KS, KE
+             rhoq(k,i,j,iq) = DENS(k,i,j) * QTRC(k,i,j,iq)
+          enddo
        enddo
        enddo
     enddo
