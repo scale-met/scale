@@ -135,7 +135,7 @@ module mod_atmos_vars
   integer, private, allocatable :: AQ_HIST_id(:)
 
   ! history & monitor output of diagnostic variables
-  integer, private, parameter :: AD_nmax = 52 ! number of diagnostic variables for history output
+  integer, private, parameter :: AD_nmax = 53 ! number of diagnostic variables for history output
 
   integer, private, parameter :: I_W     =  1 ! velocity w at cell center
   integer, private, parameter :: I_U     =  2 ! velocity u at cell center
@@ -203,6 +203,8 @@ module mod_atmos_vars
   integer, private, parameter :: I_DENS_MEAN    = 51
 
   integer, private, parameter :: I_QSAT         = 52
+
+  integer, private, parameter :: I_Uabs         = 53
 
   integer, private            :: AD_HIST_id (AD_nmax)
   integer, private            :: AD_PREP_sw (AD_nmax)
@@ -410,6 +412,7 @@ contains
     call HIST_reg( AD_HIST_id(I_VOR)  , zinterp, 'VOR',   'vertical vorticity',     '1/s',    ndim=3 )
     call HIST_reg( AD_HIST_id(I_DIV)  , zinterp, 'DIV',   'divergence',             '1/s',    ndim=3 )
     call HIST_reg( AD_HIST_id(I_HDIV) , zinterp, 'HDIV',  'horizontal divergence',  '1/s',    ndim=3 )
+    call HIST_reg( AD_HIST_id(I_Uabs) , zinterp, 'Uabs',  'absolute velocity',      'm/s',    ndim=3 )
 
     call HIST_reg( AD_HIST_id(I_DENS_PRIM), zinterp, 'DENS_PRIM', 'horiz. deviation of density',    'kg/m3', ndim=3 )
     call HIST_reg( AD_HIST_id(I_W_PRIM   ), zinterp, 'W_PRIM',    'horiz. deviation of w',          'm/s',   ndim=3 )
@@ -546,6 +549,12 @@ contains
     if ( AD_PREP_sw(I_DIV) > 0 ) then
        AD_PREP_sw(I_HDIV) = 1
     end if
+
+    if ( AD_HIST_id(I_Uabs) > 0 ) then
+       AD_PREP_sw(I_U)    = 1
+       AD_PREP_sw(I_V)    = 1
+       AD_PREP_sw(I_Uabs) = 1
+    endif
 
     if ( AD_HIST_id(I_DENS_PRIM) > 0 ) then
        AD_PREP_sw(I_DENS_PRIM) = 1
@@ -1076,6 +1085,7 @@ contains
     real(RP) :: VOR   (KA,IA,JA) ! vertical vorticity    [1/s]
     real(RP) :: DIV   (KA,IA,JA) ! divergence            [1/s]
     real(RP) :: HDIV  (KA,IA,JA) ! horizontal divergence [1/s]
+    real(RP) :: Uabs  (KA,IA,JA) ! absolute velocity     [m/s]
 
     real(RP) :: DENS_PRIM(KA,IA,JA) ! horiz. deviation of density    [kg/m3]
     real(RP) :: W_PRIM   (KA,IA,JA) ! horiz. deviation of w          [m/s]
@@ -1430,6 +1440,17 @@ contains
        enddo
     endif
 
+    if ( AD_PREP_sw(I_Uabs) > 0 ) then
+       do j = 1, JA
+       do i = 1, IA
+       do k = KS, KE
+          Uabs(k,i,j) = sqrt( U(k,i,j) * U(k,i,j) &
+                            + V(k,i,j) * V(k,i,j) )
+       enddo
+       enddo
+       enddo
+    endif
+
     if ( AD_PREP_sw(I_DENS_MEAN) > 0 ) then
        call COMM_horizontal_mean( DENS_MEAN(:), DENS(:,:,:) )
     end if
@@ -1636,6 +1657,7 @@ contains
     call HIST_in( VOR  (:,:,:), 'VOR',   'vertical vorticity',     '1/s'    )
     call HIST_in( DIV  (:,:,:), 'DIV',   'divergence',             '1/s'    )
     call HIST_in( HDIV (:,:,:), 'HDIV',  'horizontal divergence',  '1/s'    )
+    call HIST_in( Uabs (:,:,:), 'Uabs',  'absolute velocity',      'm/s'    )
 
     call HIST_in( DENS_PRIM(:,:,:), 'DENS_PRIM', 'horiz. deviation of density',    'kg/m3' )
     call HIST_in( W_PRIM   (:,:,:), 'W_PRIM',    'horiz. deviation of w',          'm/s'   )
