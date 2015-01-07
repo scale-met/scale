@@ -1,21 +1,28 @@
 #!/bin/bash
 
-output_grads_dir="./grads"
+case1="19990516-19990522"
+#----------------------------
+ver="20150105.ver0b1728b48"
+icase=$case1
+#----------------------------
+
+output_grads_dir="./grads/${ver}/${icase}"
 if [ ! -d ${output_grads_dir} ] ; then   mkdir -p ${output_grads_dir} ; fi
 
 cat > namelist.in <<EOF
 &info
-timestep=6
-idir="../../test/case_real/check_awajishima/run_WRF"
+timestep=556
+conffile="../${ver}/${icase}/run/run.d01.conf"
+idir="../${ver}/${icase}/run/output"
 odir="${output_grads_dir}"
-vcount=1
+vcount=4
 &end
 &vari
-vname="SHFLX",
+vname="U","V","T","PRES",
 &end
 &grads
-delt="5mn"
-stime="00:05Z07sep2011"
+delt="15mn"
+stime="06:15Z16may1999"
 &end
 EOF
 
