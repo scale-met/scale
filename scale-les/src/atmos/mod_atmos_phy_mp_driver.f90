@@ -206,7 +206,10 @@ contains
        call HIST_in( MOMX_t_MP(:,:,:),'MOMX_t_MP',   'tendency MOMX in MP    ', 'kg/m2/s2' , nohalo=.true. )
        call HIST_in( MOMY_t_MP(:,:,:),'MOMY_t_MP',   'tendency MOMY in MP    ', 'kg/m2/s2' , nohalo=.true. )
        call HIST_in( RHOT_t_MP(:,:,:),'RHOT_t_MP',   'tendency RHOT in MP    ', 'K*kg/m3/s', nohalo=.true. )
-       call HIST_in( RHOQ_t_MP(:,:,:,:),'RHOQ_t_MP', 'tendency rho*QTRC in MP', 'kg/kg/s'  , nohalo=.true. )
+
+       do iq = 1, QA
+          call HIST_in( RHOQ_t_MP(:,:,:,iq),trim(AQ_NAME(iq))//'_t_MP', 'tendency rho*QTRC in MP', 'kg/m3/s'  , nohalo=.true. )
+       enddo
 
     endif
 
