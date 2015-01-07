@@ -566,6 +566,7 @@ contains
     use scale_time, only: &
        dt => TIME_DTSEC_ATMOS_PHY_MP
     use scale_history, only: &
+       HIST_query, &
        HIST_put
     use scale_atmos_thermodyn, only: &
        THERMODYN_temp_pres_E => ATMOS_THERMODYN_temp_pres_E, &
@@ -633,9 +634,9 @@ contains
     real(RP) :: dt1                 !< time during which the an ice particle of 40um grows to 50um
     real(RP) :: Ni50                !< number concentration of ice particle of 50um
 
-    integer :: ijk_warm, ijk_cold
-    integer :: index_warm(KMAX*IMAX*JMAX)
-    integer :: index_cold(KMAX*IMAX*JMAX)
+    integer  :: ijk_warm, ijk_cold
+    integer  :: index_warm(KMAX*IMAX*JMAX)
+    integer  :: index_cold(KMAX*IMAX*JMAX)
 
     real(RP) :: net, fac, fac_sw
     real(RP) :: tend(I_QV:I_QG,KMAX*IMAX*JMAX)
@@ -646,7 +647,8 @@ contains
     real(RP) :: LHFEx(KA,IA,JA)
     real(RP) :: LHSEx(KA,IA,JA)
 
-    integer :: k, i, j, iq, ijk, indirect, ip
+    logical  :: do_put
+    integer  :: k, i, j, iq, ijk, indirect, ip
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('MP_tomita08')
@@ -1330,23 +1332,30 @@ contains
 
     do ip = 1, w_nmax
        if ( w_histid(ip) > 0 ) then
-          do j = JS, JE
-          do i = IS, IE
-          do k = KS, KE
-             ijk = ( j - JS ) * KMAX * IMAX &
-                 + ( i - IS ) * KMAX        &
-                 + ( k - KS )               &
-                 + 1
 
-             work3D(k,i,j) = w(ip,ijk)
-          enddo
-          enddo
-          enddo
+          call HIST_query( w_histid(ip), & ! [IN]
+                           do_put        ) ! [OUT]
+
+          if ( do_put ) then
+             do j = JS, JE
+             do i = IS, IE
+             do k = KS, KE
+                ijk = ( j - JS ) * KMAX * IMAX &
+                    + ( i - IS ) * KMAX        &
+                    + ( k - KS )               &
+                    + 1
+
+                work3D(k,i,j) = w(ip,ijk)
+             enddo
+             enddo
+             enddo
 
 !          if( IO_L ) write(IO_FID_LOG,*) w_name(ip), "MAX/MIN:", &
 !                     maxval(work3D(KS:KE,IS:IE,JS:JE)), minval(work3D(KS:KE,IS:IE,JS:JE))
 
-          call HIST_put( w_histid(ip), work3D(:,:,:), w_zinterp(ip) )
+
+             call HIST_put( w_histid(ip), work3D(:,:,:), w_zinterp(ip) )
+          endif
        endif
     enddo
 

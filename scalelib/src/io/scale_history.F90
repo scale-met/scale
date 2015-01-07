@@ -33,6 +33,7 @@ module scale_history
   !
   public :: HIST_setup
   public :: HIST_reg
+  public :: HIST_query
   public :: HIST_in
   public :: HIST_put
   public :: HIST_get
