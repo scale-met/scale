@@ -119,24 +119,25 @@ LAND_TYPE=(  "SLAB" "SLAB" "SLAB" ) # required num. of parameters for each domai
 URBAN_TYPE=( "SLC"  "SLC"  "SLC"  ) # required num. of parameters for each domain
 
 # history parameters
-HIST_ITEMS_ATMOS=(
+HIST_ITEMS_SNAPSHOT=(
+# ATMOS history
   "DENS" "MOMZ" "MOMX" "MOMY"
   "QV" "QC" "QR" "QI" "QS" "QG" "QHYD" "QLIQ" "QICE"
   "T" "PRES" "U" "V" "W" "PT" "RH" "RHL" "RHI"
-  "PREC" "SFC_PRES" "SFC_TEMP" "SFC_Z0M"
+  "SFC_PRES" "SFC_TEMP" "SFC_Z0M"
   "U10" "V10" "T2" "Q2" "LHFLX" "SHFLX" "GHFLX"
   "SFLX_LW_up" "SFLX_LW_dn" "SFLX_SW_up" "SFLX_SW_dn"
   "TOAFLX_LW_up" "TOAFLX_LW_dn" "TOAFLX_SW_up" "TOAFLX_SW_dn"
   "OSR" "OLR" "SLR" "SSR" "RADFLUX_SWUP" "RADFLUX_SWDN"
-)
-HIST_ITEMS_OCEAN=(
+# OCEAN history
   "OCEAN_TEMP" "OCEAN_SFC_TEMP" "OCEAN_ALB_SW" "OCEAN_ALB_LW" "OCEAN_SFC_Z0M" "OCEAN_SFC_Z0H" "OCEAN_SFC_Z0E"
-)
-HIST_ITEMS_LAND=(
+# LAND history
   "LAND_TEMP" "LAND_WATER" "LAND_SFC_TEMP" "LAND_ALB_SW" "LAND_ALB_LW"
-)
-HIST_ITEMS_URBAN=(
+# URBAN history
   "URBAN_TC" "URBAN_SFC_TEMP"
+)
+HIST_ITEMS_AVERAGE=(
+  "PREC"
 )
 
 ##### for init
