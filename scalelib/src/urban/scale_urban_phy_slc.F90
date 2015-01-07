@@ -738,11 +738,11 @@ contains
     real(RP) :: W, VFGS, VFGW, VFWG, VFWS, VFWW
     real(RP) :: SX, RX
 
-    real(RP) :: TRP = 310.0_RP   ! TRP: at previous time step [K]
-    real(RP) :: TBP = 310.0_RP   ! TBP: at previous time step [K]
-    real(RP) :: TGP = 310.0_RP   ! TGP: at previous time step [K]
-    real(RP) :: TCP = 310.0_RP   ! TCP: at previous time step [K]
-    real(RP) :: QCP = 0.01_RP    ! QCP: at previous time step [kg/kg]
+    real(RP) :: TRP              ! TRP: at previous time step [K]
+    real(RP) :: TBP              ! TBP: at previous time step [K]
+    real(RP) :: TGP              ! TGP: at previous time step [K]
+    real(RP) :: TCP              ! TCP: at previous time step [K]
+    real(RP) :: QCP              ! QCP: at previous time step [kg/kg]
     real(RP) :: TRLP(UKS:UKE)    ! Layer temperature at previous step  [K]
     real(RP) :: TBLP(UKS:UKE)    ! Layer temperature at previous step  [K]
     real(RP) :: TGLP(UKS:UKE)    ! Layer temperature at previous step  [K]
