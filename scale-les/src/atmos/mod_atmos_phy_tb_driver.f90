@@ -283,7 +283,7 @@ contains
        call HIST_in( MOMZ_t_TB(:,:,:), 'MOMZ_t_TB', 'MOMZ tendency (TB)', 'kg/m2/s2', nohalo=.true. )
        call HIST_in( MOMX_t_TB(:,:,:), 'MOMX_t_TB', 'MOMX tendency (TB)', 'kg/m2/s2', nohalo=.true. )
        call HIST_in( MOMY_t_TB(:,:,:), 'MOMY_t_TB', 'MOMY tendency (TB)', 'kg/m2/s2', nohalo=.true. )
-       call HIST_in( RHOT_t_TB(:,:,:), 'RHOT_t_TB', 'RHOT tendency (TB)', 'K*kg/m3/s', nohalo=.true. )
+       call HIST_in( RHOT_t_TB(:,:,:), 'RHOT_t_TB', 'RHOT tendency (TB)', 'K.kg/m3/s', nohalo=.true. )
 
        do iq = 1, QA
           call HIST_in( RHOQ_t_TB(:,:,:,iq), trim(AQ_NAME(iq))//'_t_TB', 'RHO*'//trim(AQ_NAME(iq))//' tendency (TB)', 'kg/m3/s', nohalo=.true. )
