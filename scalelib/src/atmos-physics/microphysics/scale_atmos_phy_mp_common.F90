@@ -106,8 +106,8 @@ contains
 
        ! Apply correction to total density
        ! TODO: We have to consider energy conservation (but very small)
-       DENS(:,i,j) = DENS(:,i,j) * ( 1.0_RP + diffq(:) )
-       RHOT(:,i,j) = RHOT(:,i,j) * ( 1.0_RP + diffq(:) )
+       DENS(:,i,j) = DENS(:,i,j) * ( 1.0_RP - diffq(:) ) ! diffq is negative
+       RHOT(:,i,j) = RHOT(:,i,j) * ( 1.0_RP - diffq(:) )
 
     enddo
     enddo
