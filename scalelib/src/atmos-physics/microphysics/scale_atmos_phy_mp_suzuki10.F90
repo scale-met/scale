@@ -116,7 +116,7 @@ module scale_atmos_phy_mp_suzuki10
   integer, private, save :: MP_NSTEP_SEDIMENTATION
   real(RP), private, save :: MP_RNSTEP_SEDIMENTATION
   real(RP), private, save :: MP_DTSEC_SEDIMENTATION
-  integer, private, save :: ntmax_sedimentation= 1
+  integer, private, save :: MP_ntmax_sedimentation= 1
 
   !--- constant for bin
   real(RP), parameter :: cldmin = 1.0E-10_RP, eps = 1.0E-30_RP
@@ -238,12 +238,15 @@ contains
        ATMOS_PHY_MP_RNDM_FLGP, &
        ATMOS_PHY_MP_RNDM_MSPC, &
        ATMOS_PHY_MP_RNDM_MBIN, &
+       MP_ntmax_sedimentation, &
        doautoconversion, &
        doprecipitation, &
        donegative_fixer, &
        c_ccn, kappa, &
        sigma, vhfct
 
+    real(RP):: max_term_vel  !-- terminal velocity for calculate dt of sedimentation
+    integer :: nstep_max
     integer :: nnspc, nnbin
     integer :: nn, mm, mmyu, nnyu
     integer :: myu, nyu, i, j, k, n, ierr
@@ -535,9 +538,17 @@ contains
     enddo
     enddo
 
-    MP_NSTEP_SEDIMENTATION  = ntmax_sedimentation
-    MP_RNSTEP_SEDIMENTATION = 1.0_RP / real(ntmax_sedimentation,kind=RP)
+    max_term_vel = maxval( vt )
+    nstep_max = ( TIME_DTSEC_ATMOS_PHY_MP * max_term_vel ) / minval( CDZ )
+    MP_ntmax_sedimentation = max( MP_ntmax_sedimentation, nstep_max )
+
+    MP_NSTEP_SEDIMENTATION  = MP_ntmax_sedimentation
+    MP_RNSTEP_SEDIMENTATION = 1.0_RP / real(MP_ntmax_sedimentation,kind=RP)
     MP_DTSEC_SEDIMENTATION  = TIME_DTSEC_ATMOS_PHY_MP * MP_RNSTEP_SEDIMENTATION
+
+    if ( IO_L ) write(IO_FID_LOG,*)
+    if ( IO_L ) write(IO_FID_LOG,*) '*** Timestep of sedimentation is divided into : ', MP_ntmax_sedimentation, ' step'
+    if ( IO_L ) write(IO_FID_LOG,*) '*** DT of sedimentation is : ', MP_DTSEC_SEDIMENTATION, '[s]'
 
     return
 
