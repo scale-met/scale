@@ -201,14 +201,15 @@ contains
        call HIST_in( SFLX_snow(:,:), 'SNOW', 'surface snow rate',          'kg/m2/s', nohalo=.true. )
        call HIST_in( precip   (:,:), 'PREC', 'surface precipitation rate', 'kg/m2/s', nohalo=.true. )
 
-       call HIST_in( DENS_t_MP(:,:,:),'DENS_t_MP',   'tendency DENS in MP    ', 'kg/m3/s'  , nohalo=.true. )
-       call HIST_in( MOMZ_t_MP(:,:,:),'MOMZ_t_MP',   'tendency MOMZ in MP    ', 'kg/m2/s2' , nohalo=.true. )
-       call HIST_in( MOMX_t_MP(:,:,:),'MOMX_t_MP',   'tendency MOMX in MP    ', 'kg/m2/s2' , nohalo=.true. )
-       call HIST_in( MOMY_t_MP(:,:,:),'MOMY_t_MP',   'tendency MOMY in MP    ', 'kg/m2/s2' , nohalo=.true. )
-       call HIST_in( RHOT_t_MP(:,:,:),'RHOT_t_MP',   'tendency RHOT in MP    ', 'K*kg/m3/s', nohalo=.true. )
+       call HIST_in( DENS_t_MP(:,:,:), 'DENS_t_MP', 'tendency DENS in MP', 'kg/m3/s'  , nohalo=.true. )
+       call HIST_in( MOMZ_t_MP(:,:,:), 'MOMZ_t_MP', 'tendency MOMZ in MP', 'kg/m2/s2' , nohalo=.true. )
+       call HIST_in( MOMX_t_MP(:,:,:), 'MOMX_t_MP', 'tendency MOMX in MP', 'kg/m2/s2' , nohalo=.true. )
+       call HIST_in( MOMY_t_MP(:,:,:), 'MOMY_t_MP', 'tendency MOMY in MP', 'kg/m2/s2' , nohalo=.true. )
+       call HIST_in( RHOT_t_MP(:,:,:), 'RHOT_t_MP', 'tendency RHOT in MP', 'K*kg/m3/s', nohalo=.true. )
 
        do iq = 1, QA
-          call HIST_in( RHOQ_t_MP(:,:,:,iq),trim(AQ_NAME(iq))//'_t_MP', 'tendency rho*'//trim(AQ_NAME(iq))//'in MP', 'kg/m3/s'  , nohalo=.true. )
+          call HIST_in( RHOQ_t_MP(:,:,:,iq), trim(AQ_NAME(iq))//'_t_MP', &
+                        'tendency rho*'//trim(AQ_NAME(iq))//'in MP', 'kg/m3/s', nohalo=.true. )
        enddo
 
     endif
