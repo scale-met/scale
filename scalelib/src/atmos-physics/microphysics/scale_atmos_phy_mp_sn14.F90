@@ -297,7 +297,7 @@ module scale_atmos_phy_mp_sn14
   !
   integer, private, save :: ntmax_phase_change = 1
   integer, private, save :: ntmax_collection   = 1
-  integer, private, save :: ntmax_sedimentation= 1 ! 10/08/03 [Add] T.Mitsui
+  integer, private, save :: MP_ntmax_sedimentation= 1 ! 10/08/03 [Add] T.Mitsui
   !
   !--- standard density
   real(RP), private, parameter :: rho_0 = 1.280_RP
@@ -483,6 +483,8 @@ contains
   subroutine ATMOS_PHY_MP_sn14_setup( MP_TYPE )
     use scale_process, only: &
        PRC_MPIstop
+    use scale_grid, only: &
+       CDZ => GRID_CDZ
     use scale_const, only: &
        CONST_DWATR, &
        CONST_DICE
@@ -495,8 +497,11 @@ contains
     NAMELIST / PARAM_ATMOS_PHY_MP / &
        doautoconversion, &
        doprecipitation,  &
-       MP_ssw_lim
+       MP_ssw_lim,       &
+       MP_ntmax_sedimentation
 
+    real(RP), parameter :: max_term_vel = 10.0_RP  !-- terminal velocity for calculate dt of sedimentation
+    integer :: nstep_max
     integer :: ierr
     !---------------------------------------------------------------------------
 
@@ -558,9 +563,16 @@ contains
     allocate(nc_uplim_d(1,IA,JA))
     nc_uplim_d(:,:,:) = 150.E6_RP
 
-    MP_NSTEP_SEDIMENTATION  = ntmax_sedimentation
-    MP_RNSTEP_SEDIMENTATION = 1.0_RP / real(ntmax_sedimentation,kind=RP)
+    nstep_max = ( TIME_DTSEC_ATMOS_PHY_MP * max_term_vel ) / minval( CDZ )
+    MP_ntmax_sedimentation = max( MP_ntmax_sedimentation, nstep_max )
+
+    MP_NSTEP_SEDIMENTATION  = MP_ntmax_sedimentation
+    MP_RNSTEP_SEDIMENTATION = 1.0_RP / real(MP_ntmax_sedimentation,kind=RP)
     MP_DTSEC_SEDIMENTATION  = TIME_DTSEC_ATMOS_PHY_MP * MP_RNSTEP_SEDIMENTATION
+
+    if ( IO_L ) write(IO_FID_LOG,*)
+    if ( IO_L ) write(IO_FID_LOG,*) '*** Timestep of sedimentation is divided into : ', MP_ntmax_sedimentation, ' step'
+    if ( IO_L ) write(IO_FID_LOG,*) '*** DT of sedimentation is : ', MP_DTSEC_SEDIMENTATION, '[s]'
 
     !--- For kij
     allocate( gsgam2_d (KA,IA,JA) )
@@ -661,8 +673,7 @@ contains
          opt_debug_ree,              &
          opt_debug_bcs,              &
          ntmax_phase_change,         &
-         ntmax_collection,           &
-         ntmax_sedimentation
+         ntmax_collection
     !
     namelist /nm_mp_sn14_particles/ &
          a_m, b_m, alpha_v, beta_v, gamma_v, &

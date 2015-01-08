@@ -57,6 +57,7 @@ module scale_atmos_phy_mp_tomita08
   logical,  private :: MP_donegative_fixer = .true.  ! apply negative fixer?
   logical,  private :: MP_doprecipitation  = .true.  ! apply sedimentation (precipitation)?
 
+
   real(RP), private            :: dens00 = 1.28_RP !< standard density [kg/m3]
 
   ! Parameter for Marshall-Palmer distribution
@@ -246,6 +247,11 @@ module scale_atmos_phy_mp_tomita08
   real(RP), private, allocatable :: w(:,:)        ! working array
   real(RP), private, allocatable :: work3D(:,:,:) !< for history output
 
+  integer, private, save  :: MP_ntmax_sedimentation = 1 ! number of time step for sedimentation
+  integer, private, save  :: MP_NSTEP_SEDIMENTATION
+  real(RP), private, save :: MP_RNSTEP_SEDIMENTATION
+  real(RP), private, save :: MP_DTSEC_SEDIMENTATION
+
   logical, private :: debug
 
   !-----------------------------------------------------------------------------
@@ -264,6 +270,8 @@ contains
        SF_gamma
     use scale_time, only: &
        TIME_DTSEC_ATMOS_PHY_MP
+    use scale_grid, only: &
+       CDZ => GRID_CDZ
     use scale_history, only: &
        HIST_reg
     implicit none
@@ -275,7 +283,8 @@ contains
 
     NAMELIST / PARAM_ATMOS_PHY_MP / &
        MP_doprecipitation, &
-       MP_donegative_fixer
+       MP_donegative_fixer, &
+       MP_ntmax_sedimentation
 
     NAMELIST / PARAM_ATMOS_PHY_MP_TOMITA08 / &
        autoconv_nc,    &
@@ -284,6 +293,8 @@ contains
        dens_g,         &
        debug
 
+    real(RP), parameter :: max_term_vel = 10.0_RP  !-- terminal velocity for calculate dt of sedimentation
+    integer :: nstep_max
     integer :: ierr
     integer :: i, j, ip
     !---------------------------------------------------------------------------
@@ -412,6 +423,17 @@ contains
        call HIST_reg( w_histid(ip), w_zinterp(ip), w_name(ip), w_desc(ip), w_unit(ip), ndim=3 )
     enddo
 
+    nstep_max = ( TIME_DTSEC_ATMOS_PHY_MP * max_term_vel ) / minval( CDZ )
+    MP_ntmax_sedimentation = max( MP_ntmax_sedimentation, nstep_max )
+
+    MP_NSTEP_SEDIMENTATION  = MP_ntmax_sedimentation
+    MP_RNSTEP_SEDIMENTATION = 1.0_RP / real(MP_ntmax_sedimentation,kind=RP)
+    MP_DTSEC_SEDIMENTATION  = TIME_DTSEC_ATMOS_PHY_MP * MP_RNSTEP_SEDIMENTATION
+
+    if ( IO_L ) write(IO_FID_LOG,*)
+    if ( IO_L ) write(IO_FID_LOG,*) '*** Timestep of sedimentation is divided into : ', MP_ntmax_sedimentation, ' step'
+    if ( IO_L ) write(IO_FID_LOG,*) '*** DT of sedimentation is : ', MP_DTSEC_SEDIMENTATION, '[s]'
+
     return
   end subroutine ATMOS_PHY_MP_tomita08_setup
 
@@ -461,6 +483,10 @@ contains
     real(RP) :: vterm   (KA,IA,JA,QA) ! terminal velocity of each tracer [m/s]
     real(RP) :: FLX_rain(KA,IA,JA)
     real(RP) :: FLX_snow(KA,IA,JA)
+    real(RP) :: wflux_rain(KA,IA,JA)
+    real(RP) :: wflux_snow(KA,IA,JA)
+    integer  :: step
+    integer  :: k, i, j
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Cloud microphysics(tomita08)'
@@ -486,27 +512,45 @@ contains
                       DENS  (:,:,:)    ) ! [IN]
 
     if ( MP_doprecipitation ) then
-       call MP_tomita08_vterm( vterm(:,:,:,:), & ! [OUT]
-                               DENS (:,:,:),   & ! [IN]
-                               QTRC (:,:,:,:)  ) ! [IN]
 
-       call THERMODYN_temp_pres_E( temp(:,:,:),  & ! [OUT]
-                                   pres(:,:,:),  & ! [OUT]
-                                   DENS(:,:,:),  & ! [IN]
-                                   RHOE(:,:,:),  & ! [IN]
-                                   QTRC(:,:,:,:) ) ! [IN]
+       FLX_rain(:,:,:) = 0.0_RP
+       FLX_snow(:,:,:) = 0.0_RP
 
-       call MP_precipitation( FLX_rain(:,:,:),   & ! [OUT]
-                              FLX_snow(:,:,:),   & ! [OUT]
-                              DENS    (:,:,:),   & ! [INOUT]
-                              MOMZ    (:,:,:),   & ! [INOUT]
-                              MOMX    (:,:,:),   & ! [INOUT]
-                              MOMY    (:,:,:),   & ! [INOUT]
-                              RHOE    (:,:,:),   & ! [INOUT]
-                              QTRC    (:,:,:,:), & ! [INOUT]
-                              vterm   (:,:,:,:), & ! [IN]
-                              temp    (:,:,:),   & ! [IN]
-                              dt                 ) ! [IN]
+       do step = 1, MP_NSTEP_SEDIMENTATION
+
+         call MP_tomita08_vterm( vterm(:,:,:,:), & ! [OUT]
+                                 DENS (:,:,:),   & ! [IN]
+                                 QTRC (:,:,:,:)  ) ! [IN]
+
+         call THERMODYN_temp_pres_E( temp(:,:,:),  & ! [OUT]
+                                     pres(:,:,:),  & ! [OUT]
+                                     DENS(:,:,:),  & ! [IN]
+                                     RHOE(:,:,:),  & ! [IN]
+                                     QTRC(:,:,:,:) ) ! [IN]
+
+         call MP_precipitation( wflux_rain(:,:,:),     & ! [OUT]
+                                wflux_snow(:,:,:),     & ! [OUT]
+                                DENS    (:,:,:),       & ! [INOUT]
+                                MOMZ    (:,:,:),       & ! [INOUT]
+                                MOMX    (:,:,:),       & ! [INOUT]
+                                MOMY    (:,:,:),       & ! [INOUT]
+                                RHOE    (:,:,:),       & ! [INOUT]
+                                QTRC    (:,:,:,:),     & ! [INOUT]
+                                vterm   (:,:,:,:),     & ! [IN]
+                                temp    (:,:,:),       & ! [IN]
+                                MP_DTSEC_SEDIMENTATION ) ! [IN]
+
+         do j = JS, JE
+         do i = IS, IE
+         do k = KS-1, KE
+            FLX_rain(k,i,j) = FLX_rain(k,i,j) + wflux_rain(k,i,j) * MP_RNSTEP_SEDIMENTATION
+            FLX_snow(k,i,j) = FLX_snow(k,i,j) + wflux_snow(k,i,j) * MP_RNSTEP_SEDIMENTATION
+         enddo
+         enddo
+         enddo
+
+       enddo
+
     else
        vterm(:,:,:,:) = 0.0_RP
 
