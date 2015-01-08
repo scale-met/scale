@@ -563,7 +563,7 @@ contains
     allocate(nc_uplim_d(1,IA,JA))
     nc_uplim_d(:,:,:) = 150.E6_RP
 
-    nstep_max = ( TIME_DTSEC_ATMOS_PHY_MP * max_term_vel ) / minval( CDZ )
+    nstep_max = int( ( TIME_DTSEC_ATMOS_PHY_MP * max_term_vel ) / minval( CDZ ) )
     MP_ntmax_sedimentation = max( MP_ntmax_sedimentation, nstep_max )
 
     MP_NSTEP_SEDIMENTATION  = MP_ntmax_sedimentation

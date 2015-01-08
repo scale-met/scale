@@ -423,7 +423,7 @@ contains
        call HIST_reg( w_histid(ip), w_zinterp(ip), w_name(ip), w_desc(ip), w_unit(ip), ndim=3 )
     enddo
 
-    nstep_max = ( TIME_DTSEC_ATMOS_PHY_MP * max_term_vel ) / minval( CDZ )
+    nstep_max = int( ( TIME_DTSEC_ATMOS_PHY_MP * max_term_vel ) / minval( CDZ ) )
     MP_ntmax_sedimentation = max( MP_ntmax_sedimentation, nstep_max )
 
     MP_NSTEP_SEDIMENTATION  = MP_ntmax_sedimentation

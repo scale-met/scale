@@ -245,7 +245,7 @@ contains
        c_ccn, kappa, &
        sigma, vhfct
 
-    real(RP):: max_term_vel  !-- terminal velocity for calculate dt of sedimentation
+    real(RP), parameter :: max_term_vel = 10.0_RP !-- terminal velocity for calculate dt of sedimentation
     integer :: nstep_max
     integer :: nnspc, nnbin
     integer :: nn, mm, mmyu, nnyu
@@ -538,8 +538,7 @@ contains
     enddo
     enddo
 
-    max_term_vel = maxval( vt )
-    nstep_max = ( TIME_DTSEC_ATMOS_PHY_MP * max_term_vel ) / minval( CDZ )
+    nstep_max = int ( ( TIME_DTSEC_ATMOS_PHY_MP * max_term_vel ) / minval( CDZ ) )
     MP_ntmax_sedimentation = max( MP_ntmax_sedimentation, nstep_max )
 
     MP_NSTEP_SEDIMENTATION  = MP_ntmax_sedimentation
