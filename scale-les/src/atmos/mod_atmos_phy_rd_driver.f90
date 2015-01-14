@@ -405,6 +405,7 @@ contains
        call HIST_in( TEMP_t(:,:,:,I_LW), 'TEMP_t_rd_LW', 'tendency of temp in rd(LW)', 'K/day', nohalo=.true. )
        call HIST_in( TEMP_t(:,:,:,I_SW), 'TEMP_t_rd_SW', 'tendency of temp in rd(SW)', 'K/day', nohalo=.true. )
        call HIST_in( TEMP_t(:,:,:,3   ), 'TEMP_t_rd',    'tendency of temp in rd',     'K/day', nohalo=.true. )
+       call HIST_in( RHOT_t_RD(:,:,:),   'RHOT_t_RD',    'tendency of RHOT in rd',     'K.kg/m3/s', nohalo=.true. )
 
        if ( ATMOS_PHY_RD_TYPE ==  'WRF' ) then
           ! revert all radiation flux from MM5 scheme to default
