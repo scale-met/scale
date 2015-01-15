@@ -1218,6 +1218,22 @@ contains
     end do
     end do
 
+    ! free buffer
+    do j  = JSB, JEB
+    do i  = ISB, IEB
+    do k  = 1, KA
+       ATMOS_BOUNDARY_ref_DENS(k,i,j,1) = ATMOS_BOUNDARY_ref_DENS(k,i,j,2)
+       ATMOS_BOUNDARY_ref_VELZ(k,i,j,1) = ATMOS_BOUNDARY_ref_VELZ(k,i,j,2)
+       ATMOS_BOUNDARY_ref_VELX(k,i,j,1) = ATMOS_BOUNDARY_ref_VELX(k,i,j,2)
+       ATMOS_BOUNDARY_ref_VELY(k,i,j,1) = ATMOS_BOUNDARY_ref_VELY(k,i,j,2)
+       ATMOS_BOUNDARY_ref_POTT(k,i,j,1) = ATMOS_BOUNDARY_ref_POTT(k,i,j,2)
+       do iq = 1, BND_QA
+          ATMOS_BOUNDARY_ref_QTRC(k,i,j,iq,1) = ATMOS_BOUNDARY_ref_QTRC(k,i,j,iq,2)
+       end do
+    end do
+    end do
+    end do
+
     ! fill in gaps of the offset
     do j = 1, JA
     do i = 1, IA
