@@ -1071,7 +1071,7 @@ contains
       do i = IS, IE
 
        SHFLX(i,j) = SFLX_POTT(i,j) * CPdry
-       LHFLX(i,j) = SFLX_QV  (i,j) * LHV_lhv_t(i,j)
+       LHFLX(i,j) = SFLX_QV  (i,j) * lhv_t(i,j)
 
        RHOT_tp(KS,i,j) = RHOT_tp(KS,i,j) &
             + ( SFLX_POTT(i,j) &
