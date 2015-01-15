@@ -465,7 +465,7 @@ contains
     real(RP) :: qv_evap   ! saturation water vapor mixing ratio at surface[kg/kg]
     integer :: iw
   
-    real(RP) :: lhv_t_1d, lhv_t(IA,JA0
+    real(RP) :: lhv_t_1d, lhv_t(IA,JA)
 
     !---------------------------------------------------------------------------
 !return ! tmp05
