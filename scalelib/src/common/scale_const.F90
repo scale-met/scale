@@ -56,7 +56,8 @@ module scale_const
   real(RP), public            :: CONST_Rdry    =  287.04_RP          !< specific gas constant (dry air)           [J/kg/K]
   real(RP), public            :: CONST_CPdry   = 1004.64_RP          !< specific heat (dry air,constant pressure) [J/kg/K]
   real(RP), public            :: CONST_CVdry                         !< specific heat (dry air,constant volume)   [J/kg/K]
-  real(RP), public            :: CONST_LASPdry                       !< dry adiabatic lapse rate                  [K/m]
+  real(RP), public            :: CONST_LAPS    = 6.5E-3_RP           !< lapse rate of ISA                         [K/m]
+  real(RP), public            :: CONST_LAPSdry                       !< dry adiabatic lapse rate                  [K/m]
 
   ! water constants
   real(RP), public            :: CONST_Mvap    =  18.02_RP           !< mass weight (water vapor)                      [g/mol]
@@ -119,6 +120,7 @@ contains
        CONST_GRAV,   &
        CONST_Rdry,   &
        CONST_CPdry,  &
+       CONST_LAPS,   &
        CONST_Pstd,   &
        CONST_PRE00,  &
        CONST_Tstd,   &
@@ -156,7 +158,7 @@ contains
     CONST_EPS1    = 1.0_RP - epsilon(0.0_RP)
 
     CONST_CVdry   = CONST_CPdry - CONST_Rdry
-    CONST_LASPdry = CONST_GRAV / CONST_CPdry
+    CONST_LAPSdry = CONST_GRAV / CONST_CPdry
 
     CONST_CVvap   = CONST_CPvap - CONST_Rvap
     CONST_EPSvap  = CONST_Rdry / CONST_Rvap
@@ -203,7 +205,8 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '*** specific gas constant (dry air)          [J/kg/K] : Rdry    = ', CONST_Rdry
     if( IO_L ) write(IO_FID_LOG,*) '*** specific heat (dry air, const. pressure) [J/kg/K] : CPdry   = ', CONST_CPdry
     if( IO_L ) write(IO_FID_LOG,*) '*** specific heat (dry air, const. volume)   [J/kg/K] : Cvdry   = ', CONST_CVdry
-    if( IO_L ) write(IO_FID_LOG,*) '*** dry adiabatic lapse rate                    [K/m] : LASPdry = ', CONST_LASPdry
+    if( IO_L ) write(IO_FID_LOG,*) '*** lapse rate of ISA                           [K/m] : LAPS    = ', CONST_LAPS
+    if( IO_L ) write(IO_FID_LOG,*) '*** dry adiabatic lapse rate                    [K/m] : LAPSdry = ', CONST_LAPSdry
 
     if( IO_L ) write(IO_FID_LOG,*) '*** mass weight (water vapor)                 [g/mol] : Rvap    = ', CONST_Rvap
     if( IO_L ) write(IO_FID_LOG,*) '*** specific gas constant (water vapor)      [J/kg/K] : Rvap    = ', CONST_Rvap

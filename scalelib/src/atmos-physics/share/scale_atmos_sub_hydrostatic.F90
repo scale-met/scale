@@ -25,7 +25,8 @@ module scale_atmos_hydrostatic
      CVdry   => CONST_CVdry,   &
      CVvap   => CONST_CVvap,   &
      CL      => CONST_CL,      &
-     LASPdry => CONST_LASPdry, &
+     LAPS    => CONST_LAPS,    &
+     LAPSdry => CONST_LAPSdry, &
      P00     => CONST_PRE00
   use scale_grid, only: &
      GRID_CZ, &
@@ -50,6 +51,8 @@ module scale_atmos_hydrostatic
   public :: ATMOS_HYDROSTATIC_buildrho_atmos_rev_2D
   public :: ATMOS_HYDROSTATIC_buildrho_atmos_rev_3D
 
+  public :: ATMOS_HYDROSTATIC_barometric_law_mslp
+
   interface ATMOS_HYDROSTATIC_buildrho
      module procedure ATMOS_HYDROSTATIC_buildrho_1D
      module procedure ATMOS_HYDROSTATIC_buildrho_3D
@@ -69,6 +72,11 @@ module scale_atmos_hydrostatic
      module procedure ATMOS_HYDROSTATIC_buildrho_bytemp_atmos_1D
      module procedure ATMOS_HYDROSTATIC_buildrho_bytemp_atmos_3D
   end interface ATMOS_HYDROSTATIC_buildrho_bytemp_atmos
+
+  interface ATMOS_HYDROSTATIC_barometric_law_mslp
+     module procedure ATMOS_HYDROSTATIC_barometric_law_mslp_0D
+     module procedure ATMOS_HYDROSTATIC_barometric_law_mslp_2D
+  end interface ATMOS_HYDROSTATIC_barometric_law_mslp
 
   !-----------------------------------------------------------------------------
   !
@@ -202,7 +210,7 @@ contains
        CPovR  = ( CVtot + Rtot ) / Rtot
        CVovCP = 1.0_RP / CPovCV
 
-       temp(KS) = pott_sfc - LASPdry * GRID_CZ(KS) ! use dry lapse rate
+       temp(KS) = pott_sfc - LAPSdry * GRID_CZ(KS) ! use dry lapse rate
        pres(KS) = P00 * ( temp(KS)/pott(KS) )**CPovR
        dens(KS) = P00 / Rtot / pott(KS) * ( pres(KS)/P00 )**CVovCP
 
@@ -367,7 +375,7 @@ contains
           CPovR  = ( CVtot(i,j) + Rtot(i,j) ) / Rtot(i,j)
           CVovCP = 1.0_RP / CPovCV(i,j)
 
-          temp(KS,i,j) = pott_sfc(1,i,j) - LASPdry * ( REAL_CZ(KS,i,j) - REAL_FZ(KS-1,i,j) ) ! use dry lapse rate
+          temp(KS,i,j) = pott_sfc(1,i,j) - LAPSdry * ( REAL_CZ(KS,i,j) - REAL_FZ(KS-1,i,j) ) ! use dry lapse rate
           pres(KS,i,j) = P00 * ( temp(KS,i,j)/pott(KS,i,j) )**CPovR
           dens(KS,i,j) = P00 / Rtot(i,j) / pott(KS,i,j) * ( pres(KS,i,j)/P00 )**CVovCP
        enddo
@@ -1444,6 +1452,64 @@ contains
 
     return
   end subroutine ATMOS_HYDROSTATIC_buildrho_bytemp_atmos_3D
+
+  !-----------------------------------------------------------------------------
+  !> Calculate mean sea-level pressure from barometric law (0D)
+  subroutine ATMOS_HYDROSTATIC_barometric_law_mslp_0D( &
+       mslp, &
+       pres, &
+       temp, &
+       dz    )
+    implicit none
+
+    real(RP), intent(out) :: mslp !< mean sea-level pressure [Pa]
+    real(RP), intent(in)  :: pres !< surface pressure        [Pa]
+    real(RP), intent(in)  :: temp !< surface air temperature [K]
+    real(RP), intent(in)  :: dz   !< surface height from MSL [m]
+
+    ! work
+    real(RP) :: TM
+    !---------------------------------------------------------------------------
+
+    TM = temp + LAPS * dz / 2.0_RP ! column-mean air temperature
+
+    ! barometric law
+    mslp = pres * exp( GRAV * dz / ( Rdry * TM ))
+
+    return
+  end subroutine ATMOS_HYDROSTATIC_barometric_law_mslp_0D
+
+  !-----------------------------------------------------------------------------
+  !> Calculate mean sea-level pressure from barometric law (2D)
+  subroutine ATMOS_HYDROSTATIC_barometric_law_mslp_2D( &
+       mslp, &
+       pres, &
+       temp, &
+       dz    )
+    implicit none
+
+    real(RP), intent(out) :: mslp(IA,JA) !< mean sea-level pressure [Pa]
+    real(RP), intent(in)  :: pres(IA,JA) !< surface pressure        [Pa]
+    real(RP), intent(in)  :: temp(IA,JA) !< surface air temperature [K]
+    real(RP), intent(in)  :: dz  (IA,JA) !< surface height from MSL [m]
+
+    ! work
+    real(RP) :: TM
+
+    integer  :: i, j
+    !---------------------------------------------------------------------------
+
+    do j = JSB, JEB
+    do i = ISB, IEB
+       TM = temp(i,j) + LAPS * dz(i,j) / 2.0_RP ! column-mean air temperature
+
+       ! barometric law
+       mslp(i,j) = pres(i,j) * exp( GRAV * dz(i,j) / ( Rdry * TM ))
+    enddo
+    enddo
+
+    return
+  end subroutine ATMOS_HYDROSTATIC_barometric_law_mslp_2D
 
 end module scale_atmos_hydrostatic
 !-------------------------------------------------------------------------------
