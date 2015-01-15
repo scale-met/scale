@@ -9,6 +9,7 @@
 !! @par History
 !! @li      2014-05-01 (A.Noda)   [new]
 !! @li      2014-08-24 (A.Noda)   [mod] bug fix
+!! @li      2015-01-15 (Y.Sato)   [mod] bug fix
 !!
 !<
 !-------------------------------------------------------------------------------
@@ -392,7 +393,9 @@ contains
         EPSvap => CONST_EPSvap, &
         PSAT0  => CONST_PSAT0
     use scale_atmos_thermodyn, only: &
-       THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres
+       THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres, &
+       CPw => AQ_CP, &
+       ATMOS_THERMODYN_templhv
     use scale_history, only: &
          HIST_in
     use mod_atmos_phy_tb_vars, only: &
@@ -461,6 +464,8 @@ contains
     real(RP) :: pres_evap ! partial pressure of water vapor at surface [Pa]
     real(RP) :: qv_evap   ! saturation water vapor mixing ratio at surface[kg/kg]
     integer :: iw
+  
+    real(RP) :: lhv_t_1d, lhv_t(IA,JA)
 
     !---------------------------------------------------------------------------
 !return ! tmp05
@@ -942,8 +947,10 @@ contains
 
           !--- saturation at surface
           pres_1d   = P00 * ( RHOT(KS,i,j) * Rtot / P00 )**CPovCV
-          temp_1d   = ( RHOT(KS,i,j) / DENS(KS,i,j) ) * ( P00 / pres_1d )**RovCP
-          pres_evap = PSAT0 * exp( LHV/Rvap * ( 1.0_RP/T00 - 1.0_RP/SST(i,j) ) )
+          temp_1d   = ( RHOT(KS,i,j) / DENS(KS,i,j) ) * ( P00 / pres_1d )**RovCP 
+          call ATMOS_THERMODYN_templhv( lhv_t_1d, temp_1d ) 
+          pres_evap = PSAT0 * exp( lhv_t_1d/Rvap * ( 1.0_RP/T00 - 1.0_RP/SST(i,j) ) )
+!          pres_evap = PSAT0 * exp( LHV/Rvap * ( 1.0_RP/T00 - 1.0_RP/SST(i,j) ) )
 !          pres_evap = PSAT0 * exp( LHV/Rvap * ( 1.0_RP/T00 - 1.0_RP/SST_loc(i,j) )
 !          )
 !          qv_evap   = EPSvap * pres_evap / ( pres_1d - pres_evap )
@@ -1020,13 +1027,31 @@ contains
       enddo
       enddo
 
+      do j = JS, JE
+      do i = IS, IE
+          ! Gas constant
+          qdry = 1.0_RP
+          do iw = QQS, QQE
+             qdry = qdry - QTRC(KS,i,j,iw)
+          enddo
+          Rtot = Rdry*qdry + Rvap*QTRC(KS,i,j,I_QV)
+
+          !--- saturation at surface
+          pres_1d   = P00 * ( RHOT(KS,i,j) * Rtot / P00 )**CPovCV
+          temp_1d   = ( RHOT(KS,i,j) / DENS(KS,i,j) ) * ( P00 / pres_1d )**RovCP 
+          call ATMOS_THERMODYN_templhv( lhv_t(i,j), temp_1d ) 
+      enddo
+      enddo
+
       if( GIVEN_HEAT_FLUX )then
         do t=1, mstep-1
           if( time_nowsec>time_in(t) )then
             SFLX_POTT(:,:)=( (time_in(t+1)-time_nowsec)*shf_in(t)+(time_nowsec-time_in(t))*shf_in(t+1) )&
                           /( time_in(t+1)-time_in(t) ) / CPd
+!            SFLX_QV  (:,:)=( (time_in(t+1)-time_nowsec)*lhf_in(t)+(time_nowsec-time_in(t))*lhf_in(t+1) )&
+!                          /( time_in(t+1)-time_in(t) ) / LHV
             SFLX_QV  (:,:)=( (time_in(t+1)-time_nowsec)*lhf_in(t)+(time_nowsec-time_in(t))*lhf_in(t+1) )&
-                          /( time_in(t+1)-time_in(t) ) / LHV
+                          /( time_in(t+1)-time_in(t) ) / lhv_t(i,j)
           endif
         enddo
         if( time_nowsec>time_in(mstep) )then
@@ -1037,7 +1062,7 @@ contains
 
       call HIST_in( SST       (:,:),     'SST2',      'sst',   'K'    )
       call HIST_in( SFLX_POTT (:,:)*CPd, 'SHF',       'shf',   'W/m2' )
-      call HIST_in( SFLX_QV   (:,:)*LHV, 'LHF',       'lhf',   'W/m2' )
+      call HIST_in( SFLX_QV   (:,:)*lhv_t(:,:), 'LHF',       'lhf',   'W/m2' )
       call HIST_in( SFC_albedo(:,:,1),   'ALBEDO_LW', 'alblw', '-'    )
       call HIST_in( SFC_albedo(:,:,2),   'ALBEDO_SW', 'albsw', '-'    )
 
@@ -1046,7 +1071,7 @@ contains
       do i = IS, IE
 
        SHFLX(i,j) = SFLX_POTT(i,j) * CPdry
-       LHFLX(i,j) = SFLX_QV  (i,j) * LHV
+       LHFLX(i,j) = SFLX_QV  (i,j) * LHV_lhv_t(i,j)
 
        RHOT_tp(KS,i,j) = RHOT_tp(KS,i,j) &
             + ( SFLX_POTT(i,j) &
