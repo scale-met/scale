@@ -142,6 +142,8 @@ contains
        HIST_in
     use scale_atmos_bottom, only: &
        BOTTOM_estimate => ATMOS_BOTTOM_estimate
+    use scale_atmos_hydrostatic, only: &
+       barometric_law_mslp => ATMOS_HYDROSTATIC_barometric_law_mslp
     use scale_atmos_phy_sf, only: &
        ATMOS_PHY_SF
     use mod_atmos_vars, only: &
@@ -197,6 +199,7 @@ contains
     logical, intent(in) :: update_flag
 
     real(RP) :: Uabs10(IA,JA) ! 10m absolute wind [m/s]
+    real(RP) :: MSLP  (IA,JA) ! mean sea-level pressure [Pa]
     real(RP) :: beta  (IA,JA)
     real(RP) :: total ! dummy
     real(RP) :: work
@@ -214,9 +217,6 @@ contains
                              REAL_Z1  (:,:),   & ! [IN]
                              SFC_DENS (:,:),   & ! [OUT]
                              SFC_PRES (:,:)    ) ! [OUT]
-
-       call HIST_in( SFC_DENS(:,:), 'SFC_DENS', 'surface atmospheric density',  'kg/m3' )
-       call HIST_in( SFC_PRES(:,:), 'SFC_PRES', 'surface atmospheric pressure', 'Pa'    )
 
        if ( .NOT. CPL_sw ) then
           beta(:,:) = 1.0_RP
@@ -258,6 +258,10 @@ contains
        end do
        end do
 
+       call barometric_law_mslp( MSLP(:,:), SFC_PRES(:,:), T2(:,:), TOPO_Zsfc(:,:) )
+
+       call HIST_in( SFC_DENS  (:,:),      'SFC_DENS', 'surface atmospheric density',       'kg/m3'   )
+       call HIST_in( SFC_PRES  (:,:),      'SFC_PRES', 'surface atmospheric pressure',      'Pa'      )
        call HIST_in( SFC_TEMP  (:,:),      'SFC_TEMP', 'surface skin temperature (merged)', 'K'       )
        call HIST_in( SFC_albedo(:,:,I_LW), 'ALB_LW',   'surface albedo (longwave,merged)',  '0-1'     )
        call HIST_in( SFC_albedo(:,:,I_SW), 'ALB_SW',   'surface albedo (shortwave,merged)', '0-1'     )
@@ -275,6 +279,7 @@ contains
        call HIST_in( V10       (:,:),      'V10',      '10m y-wind',                        'm/s'     )
        call HIST_in( T2        (:,:),      'T2 ',      '2m temperature',                    'K'       )
        call HIST_in( Q2        (:,:),      'Q2 ',      '2m water vapor',                    'kg/kg'   )
+       call HIST_in( MSLP      (:,:),      'MSLP',     'mean sea-level pressure',           'Pa'      )
 
        call COMM_vars8( SFLX_MU(:,:), 1 )
        call COMM_vars8( SFLX_MV(:,:), 2 )
