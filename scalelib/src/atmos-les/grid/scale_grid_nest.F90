@@ -212,15 +212,15 @@ module scale_grid_nest
 
   integer, private, parameter :: max_isu   = 100             ! maximum number of receive/wait issue
   integer, private, parameter :: max_isuf  = 20              ! maximum number of receive/wait issue (z-stag)
-  integer, private, parameter :: max_rq    = 5000            ! maximum number of req: tentative approach
   integer, private, parameter :: max_bndqa = 12              ! maximum number of QA in boundary: tentative approach
+  integer, private            :: max_rq    = 1000            ! maximum number of req: tentative approach
   integer, private            :: rq_ctl_p                    ! for control request id (counting)
   integer, private            :: rq_ctl_d                    ! for control request id (counting)
   integer, private            :: rq_tot_p                    ! for control request id (total number)
   integer, private            :: rq_tot_d                    ! for control request id (total number)
-  integer, private            :: ireq_p(max_rq)
-  integer, private            :: ireq_d(max_rq)
-  integer, private            :: call_order(max_rq)          ! calling order from parent
+  integer, private, allocatable :: ireq_p(:)                 ! buffer of request-id for parent
+  integer, private, allocatable :: ireq_d(:)                 ! buffer of request-id for daughter
+  integer, private, allocatable :: call_order(:)             ! calling order from parent
 
   real(RP), private, allocatable :: buffer_2D (:,:)          ! buffer of communicator: 2D (with HALO)
   real(RP), private, allocatable :: buffer_3D (:,:,:)        ! buffer of communicator: 3D (with HALO)
@@ -301,6 +301,7 @@ contains
     !< metadata files for lat-lon domain for all processes
     character(len=H_LONG)  :: LATLON_CATALOGUE_FNAME = 'latlon_domain_catalogue.txt'
 
+    integer :: ONLINE_SPECIFIED_MAXRQ = 0
     integer :: i
     integer :: fid, ierr
     integer :: parent_id
@@ -328,7 +329,8 @@ contains
        ONLINE_NO_ROTATE,         &
        ONLINE_BOUNDARY_USE_QHYD, &
        ONLINE_AGGRESSIVE_COMM,   &
-       ONLINE_WAIT_LIMIT
+       ONLINE_WAIT_LIMIT,        &
+       ONLINE_SPECIFIED_MAXRQ
 
     !---------------------------------------------------------------------------
 
@@ -380,6 +382,10 @@ contains
     endif
 
     DEBUG_DOMAIN_NUM = ONLINE_DOMAIN_NUM
+    if( ONLINE_SPECIFIED_MAXRQ > max_rq ) max_rq = ONLINE_SPECIFIED_MAXRQ
+    allocate( ireq_p(max_rq)     )
+    allocate( ireq_d(max_rq)     )
+    allocate( call_order(max_rq) )
 
     if( USE_NESTING ) then
 
@@ -520,6 +526,7 @@ contains
             if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- DAUGHTER_JMAX     :', DAUGHTER_JMAX(HANDLING_NUM)
             if( IO_L ) write(IO_FID_LOG,'(1x,A,F9.3)') '***  --- DAUGHTER_DTSEC    :', DAUGHTER_DTSEC(HANDLING_NUM)
             if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)  ') '***  --- DAUGHTER_NSTEP    :', DAUGHTER_NSTEP(HANDLING_NUM)
+            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)  ') '***  Limit Num. NCOMM req. :', max_rq
 
             allocate( org_DENS(PARENT_KA(HANDLING_NUM),PARENT_IA(HANDLING_NUM),PARENT_JA(HANDLING_NUM))           )
             allocate( org_MOMZ(PARENT_KA(HANDLING_NUM),PARENT_IA(HANDLING_NUM),PARENT_JA(HANDLING_NUM))           )
@@ -593,6 +600,7 @@ contains
             if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- TILEALL_KA      :', TILEAL_KA(HANDLING_NUM)
             if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- TILEALL_IA      :', TILEAL_IA(HANDLING_NUM)
             if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- TILEALL_JA      :', TILEAL_JA(HANDLING_NUM)
+            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)  ') '***  Limit Num. NCOMM req. :', max_rq
 
             allocate( buffer_2D  (                            PARENT_IA(HANDLING_NUM), PARENT_JA(HANDLING_NUM) ) )
             allocate( buffer_3D  (   PARENT_KA(HANDLING_NUM), PARENT_IA(HANDLING_NUM), PARENT_JA(HANDLING_NUM) ) )
@@ -1299,7 +1307,7 @@ contains
        call PRC_MPIstop
     endif
 
-    if( NUM_YP > 1000 .or. NEST_TILE_ALL > 1000 ) then
+    if( NUM_YP > max_rq .or. NEST_TILE_ALL > max_rq ) then
        write(*,*) 'xxx internal error (overflow number of ireq) [nest/grid]'
        call PRC_MPIstop
     endif
@@ -1346,7 +1354,7 @@ contains
     tagbase = INTERCOMM_ID(HANDLE) * 100
     rq      = 0
 
-    if( NUM_YP*8 > 1000 .or. NEST_TILE_ALL*8 > 1000 ) then
+    if( NUM_YP*8 > max_rq .or. NEST_TILE_ALL*8 > max_rq ) then
        write(*,*) 'xxx internal error (overflow number of ireq) [nest/grid]'
        call PRC_MPIstop
     endif
