@@ -1307,8 +1307,11 @@ contains
        call PRC_MPIstop
     endif
 
-    if( NUM_YP > max_rq .or. NEST_TILE_ALL > max_rq ) then
+    if( NUM_YP * 16 > max_rq .or. NEST_TILE_ALL * 16 > max_rq ) then ! 16 = dyn:5 + qtrc:11
        write(*,*) 'xxx internal error (overflow number of ireq) [nest/grid]'
+       write(*,*) '    NUM_YP x 16        = ', NUM_YP * 16
+       write(*,*) '    NEST_TILE_ALL x 16 = ', NEST_TILE_ALL * 16
+       write(*,*) '    max_rq             = ', max_rq
        call PRC_MPIstop
     endif
 
@@ -1353,11 +1356,6 @@ contains
 
     tagbase = INTERCOMM_ID(HANDLE) * 100
     rq      = 0
-
-    if( NUM_YP*8 > max_rq .or. NEST_TILE_ALL*8 > max_rq ) then
-       write(*,*) 'xxx internal error (overflow number of ireq) [nest/grid]'
-       call PRC_MPIstop
-    endif
 
     if ( NEST_Filiation( INTERCOMM_ID(HANDLE) ) > 0 ) then
     !--------------------------------------------------- parent
