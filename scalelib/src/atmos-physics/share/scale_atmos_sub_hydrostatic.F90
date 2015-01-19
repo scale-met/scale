@@ -52,6 +52,7 @@ module scale_atmos_hydrostatic
   public :: ATMOS_HYDROSTATIC_buildrho_atmos_rev_3D
 
   public :: ATMOS_HYDROSTATIC_barometric_law_mslp
+  public :: ATMOS_HYDROSTATIC_barometric_law_pres
 
   interface ATMOS_HYDROSTATIC_buildrho
      module procedure ATMOS_HYDROSTATIC_buildrho_1D
@@ -77,6 +78,11 @@ module scale_atmos_hydrostatic
      module procedure ATMOS_HYDROSTATIC_barometric_law_mslp_0D
      module procedure ATMOS_HYDROSTATIC_barometric_law_mslp_2D
   end interface ATMOS_HYDROSTATIC_barometric_law_mslp
+
+  interface ATMOS_HYDROSTATIC_barometric_law_pres
+     module procedure ATMOS_HYDROSTATIC_barometric_law_pres_0D
+     module procedure ATMOS_HYDROSTATIC_barometric_law_pres_2D
+  end interface ATMOS_HYDROSTATIC_barometric_law_pres
 
   !-----------------------------------------------------------------------------
   !
@@ -1471,10 +1477,10 @@ contains
     real(RP) :: TM
     !---------------------------------------------------------------------------
 
-    TM = temp + LAPS * dz / 2.0_RP ! column-mean air temperature
+    TM = temp + LAPS * dz * 0.5_RP ! column-mean air temperature
 
     ! barometric law
-    mslp = pres * exp( GRAV * dz / ( Rdry * TM ))
+    mslp = pres * exp( GRAV * dz / ( Rdry * TM ) )
 
     return
   end subroutine ATMOS_HYDROSTATIC_barometric_law_mslp_0D
@@ -1501,15 +1507,73 @@ contains
 
     do j = JSB, JEB
     do i = ISB, IEB
-       TM = temp(i,j) + LAPS * dz(i,j) / 2.0_RP ! column-mean air temperature
+       TM = temp(i,j) + LAPS * dz(i,j) * 0.5_RP ! column-mean air temperature
 
        ! barometric law
-       mslp(i,j) = pres(i,j) * exp( GRAV * dz(i,j) / ( Rdry * TM ))
+       mslp(i,j) = pres(i,j) * exp( GRAV * dz(i,j) / ( Rdry * TM ) )
     enddo
     enddo
 
     return
   end subroutine ATMOS_HYDROSTATIC_barometric_law_mslp_2D
+
+  !-----------------------------------------------------------------------------
+  !> Calculate surface pressure from barometric law (0D)
+  subroutine ATMOS_HYDROSTATIC_barometric_law_pres_0D( &
+       pres, &
+       mslp, &
+       temp, &
+       dz    )
+    implicit none
+
+    real(RP), intent(out) :: pres !< surface pressure        [Pa]
+    real(RP), intent(in)  :: mslp !< mean sea-level pressure [Pa]
+    real(RP), intent(in)  :: temp !< surface air temperature [K]
+    real(RP), intent(in)  :: dz   !< surface height from MSL [m]
+
+    ! work
+    real(RP) :: TM
+    !---------------------------------------------------------------------------
+
+    TM = temp + LAPS * dz * 0.5_RP ! column-mean air temperature
+
+    ! barometric law
+    pres = mslp / exp( GRAV * dz / ( Rdry * TM ) )
+
+    return
+  end subroutine ATMOS_HYDROSTATIC_barometric_law_pres_0D
+
+  !-----------------------------------------------------------------------------
+  !> Calculate surface pressure from barometric law (2D)
+  subroutine ATMOS_HYDROSTATIC_barometric_law_pres_2D( &
+       pres, &
+       mslp, &
+       temp, &
+       dz    )
+    implicit none
+
+    real(RP), intent(out) :: pres(IA,JA) !< surface pressure        [Pa]
+    real(RP), intent(in)  :: mslp(IA,JA) !< mean sea-level pressure [Pa]
+    real(RP), intent(in)  :: temp(IA,JA) !< surface air temperature [K]
+    real(RP), intent(in)  :: dz  (IA,JA) !< surface height from MSL [m]
+
+    ! work
+    real(RP) :: TM
+
+    integer  :: i, j
+    !---------------------------------------------------------------------------
+
+    do j = JSB, JEB
+    do i = ISB, IEB
+       TM = temp(i,j) + LAPS * dz(i,j) * 0.5_RP ! column-mean air temperature
+
+       ! barometric law
+       pres(i,j) = mslp(i,j) / exp( GRAV * dz(i,j) / ( Rdry * TM ) )
+    enddo
+    enddo
+
+    return
+  end subroutine ATMOS_HYDROSTATIC_barometric_law_pres_2D
 
 end module scale_atmos_hydrostatic
 !-------------------------------------------------------------------------------
