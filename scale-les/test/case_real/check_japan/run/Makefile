@@ -29,7 +29,7 @@ TPROC       = 16
 # required data (parameters,distributed files)
 DATDIR      = ../../../data
 DATPARAM    = rad/PARAG.29,rad/PARAPC.29,rad/VARDATA.RM29,rad/cira.nc,rad/MIPAS/day.atm,rad/MIPAS/equ.atm,rad/MIPAS/sum.atm,rad/MIPAS/win.atm,land/param.bucket.conf
-DATDISTS    = $(PREPDIR)/topo/topo,$(PREPDIR)/landuse/landuse,$(PREPDIR)/init/boundary,$(PREPDIR)/init/init_00010368000.000
+DATDISTS    = $(PREPDIR)/topo/topo,$(PREPDIR)/landuse/landuse,$(PREPDIR)/init/boundary,$(PREPDIR)/init/init_00011685600.000
 
 
 
