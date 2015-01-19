@@ -2595,9 +2595,9 @@ contains
           endif
           if((topo(i,j)>=z1).and.(topo(i,j)<z2))then
              lack_of_val = .false.                  ! found
-             wgt_bt = (z2        - topo(i,j)) / (z2 - z1) )
-             wgt_up = (topo(i,j) - z1       ) / (z2 - z1) )
-             pres_sfc(k,i,j,n) = exp( log(pres1*wgt_bt + log(pres2*wgt_up )
+             wgt_bt = (z2        - topo(i,j)) / (z2 - z1)
+             wgt_up = (topo(i,j) - z1       ) / (z2 - z1)
+             pres_sfc(k,i,j,n) = exp( log(pres1*wgt_bt) + log(pres2*wgt_up) )
           endif
        enddo
        if( lack_of_val )then
