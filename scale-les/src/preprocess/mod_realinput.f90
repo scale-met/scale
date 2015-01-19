@@ -675,7 +675,7 @@ contains
        NEST_TILE_NUM_Y, &
        NEST_TILE_ID
     use scale_atmos_hydrostatic, only: &
-       HYDROSTATIC_buildrho => ATMOS_HYDROSTATIC_buildrho
+       HYDROSTATIC_buildrho_real => ATMOS_HYDROSTATIC_buildrho_real
     use scale_atmos_thermodyn, only: &
        THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres, &
        THERMODYN_pott      => ATMOS_THERMODYN_pott
@@ -1276,17 +1276,17 @@ contains
           qc_sfc = qtrc_sfc(:,:,:,n,I_QC)
 #endif
           ! make density in moist condition
-          call HYDROSTATIC_buildrho( dens    (:,:,:,n),      & ! [OUT]
-                                     temp    (:,:,:,n),      & ! [OUT]
-                                     pres    (:,:,:,n),      & ! [OUT]
-                                     pott    (:,:,:,n),      & ! [IN]
-                                     qtrc    (:,:,:,n,I_QV), & ! [IN]
-                                     qc      (:,:,:),        & ! [OUT]
-                                     temp_sfc(:,:,:,n),      & ! [OUT]
-                                     pres_sfc(:,:,:,n),      & ! [IN]
-                                     pott_sfc(:,:,:,n),      & ! [IN]
-                                     qtrc_sfc(:,:,:,n,I_QV), & ! [IN]
-                                     qc_sfc  (:,:,:)         ) ! [IN]
+          call HYDROSTATIC_buildrho_real( dens    (:,:,:,n),      & ! [OUT]
+                                          temp    (:,:,:,n),      & ! [OUT]
+                                          pres    (:,:,:,n),      & ! [OUT]
+                                          pott    (:,:,:,n),      & ! [IN]
+                                          qtrc    (:,:,:,n,I_QV), & ! [IN]
+                                          qc      (:,:,:),        & ! [OUT]
+                                          temp_sfc(:,:,:,n),      & ! [OUT]
+                                          pres_sfc(:,:,:,n),      & ! [IN]
+                                          pott_sfc(:,:,:,n),      & ! [IN]
+                                          qtrc_sfc(:,:,:,n,I_QV), & ! [IN]
+                                          qc_sfc  (:,:,:)         ) ! [IN]
 
           call COMM_vars8( dens(:,:,:,n), 1 )
           call COMM_wait ( dens(:,:,:,n), 1 )
@@ -1390,7 +1390,7 @@ contains
        COMM_vars8, &
        COMM_wait
     use scale_atmos_hydrostatic, only: &
-       HYDROSTATIC_buildrho => ATMOS_HYDROSTATIC_buildrho
+       HYDROSTATIC_buildrho_real => ATMOS_HYDROSTATIC_buildrho_real
     use scale_atmos_thermodyn, only: &
        THERMODYN_pott => ATMOS_THERMODYN_pott
     use scale_gridtrans, only: &
@@ -1937,17 +1937,17 @@ contains
        qc_sfc = qtrc_sfc(:,:,:,I_QC)
 #endif
        ! make density & pressure profile in moist condition
-       call HYDROSTATIC_buildrho( dens    (:,:,:,n),      & ! [OUT]
-                                  temp    (:,:,:),        & ! [OUT]
-                                  pres    (:,:,:),        & ! [OUT]
-                                  pott    (:,:,:),        & ! [IN]
-                                  qtrc    (:,:,:,n,I_QV), & ! [IN]
-                                  qc      (:,:,:),        & ! [IN]
-                                  temp_sfc(:,:,:),        & ! [OUT]
-                                  pres_sfc(:,:,:),        & ! [IN]
-                                  pott_sfc(:,:,:),        & ! [IN]
-                                  qtrc_sfc(:,:,:,I_QV),   & ! [IN]
-                                  qc_sfc  (:,:,:)         ) ! [IN]
+       call HYDROSTATIC_buildrho_real( dens    (:,:,:,n),      & ! [OUT]
+                                       temp    (:,:,:),        & ! [OUT]
+                                       pres    (:,:,:),        & ! [OUT]
+                                       pott    (:,:,:),        & ! [IN]
+                                       qtrc    (:,:,:,n,I_QV), & ! [IN]
+                                       qc      (:,:,:),        & ! [IN]
+                                       temp_sfc(:,:,:),        & ! [OUT]
+                                       pres_sfc(:,:,:),        & ! [IN]
+                                       pott_sfc(:,:,:),        & ! [IN]
+                                       qtrc_sfc(:,:,:,I_QV),   & ! [IN]
+                                       qc_sfc  (:,:,:)         ) ! [IN]
 
        call COMM_vars8( dens(:,:,:,n), 1 )
        call COMM_wait ( dens(:,:,:,n), 1 )
@@ -2059,7 +2059,7 @@ contains
        COMM_vars8, &
        COMM_wait
     use scale_atmos_hydrostatic, only: &
-       HYDROSTATIC_buildrho => ATMOS_HYDROSTATIC_buildrho
+       HYDROSTATIC_buildrho_real => ATMOS_HYDROSTATIC_buildrho_real
     use scale_atmos_thermodyn, only: &
        THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres, &
        THERMODYN_pott      => ATMOS_THERMODYN_pott
@@ -2695,17 +2695,17 @@ contains
        qc_sfc = qtrc_sfc(:,:,:,n,I_QC)
 #endif
        !> make density in moist condition
-       call HYDROSTATIC_buildrho( dens    (:,:,:,n),      & ! [OUT]
-                                  temp    (:,:,:,n),      & ! [OUT] not-used
-                                  pres    (:,:,:,n),      & ! [OUT] not-used
-                                  pott    (:,:,:,n),      & ! [IN]
-                                  qtrc    (:,:,:,n,I_QV), & ! [IN]
-                                  qc      (:,:,:),        & ! [IN]
-                                  temp_sfc(:,:,:,n),      & ! [OUT] not-used
-                                  pres_sfc(:,:,:,n),      & ! [IN]
-                                  pott_sfc(:,:,:,n),      & ! [IN]
-                                  qtrc_sfc(:,:,:,n,I_QV), & ! [IN]
-                                  qc_sfc  (:,:,:)         ) ! [IN]
+       call HYDROSTATIC_buildrho_real( dens    (:,:,:,n),      & ! [OUT]
+                                       temp    (:,:,:,n),      & ! [OUT] not-used
+                                       pres    (:,:,:,n),      & ! [OUT] not-used
+                                       pott    (:,:,:,n),      & ! [IN]
+                                       qtrc    (:,:,:,n,I_QV), & ! [IN]
+                                       qc      (:,:,:),        & ! [IN]
+                                       temp_sfc(:,:,:,n),      & ! [OUT] not-used
+                                       pres_sfc(:,:,:,n),      & ! [IN]
+                                       pott_sfc(:,:,:,n),      & ! [IN]
+                                       qtrc_sfc(:,:,:,n,I_QV), & ! [IN]
+                                       qc_sfc  (:,:,:)         ) ! [IN]
 
        call COMM_vars8( dens(:,:,:,n), 3 )
        call COMM_wait ( dens(:,:,:,n), 3 )

@@ -43,6 +43,7 @@ module scale_atmos_hydrostatic
   !
   public :: ATMOS_HYDROSTATIC_setup
   public :: ATMOS_HYDROSTATIC_buildrho
+  public :: ATMOS_HYDROSTATIC_buildrho_real
   public :: ATMOS_HYDROSTATIC_buildrho_atmos
   public :: ATMOS_HYDROSTATIC_buildrho_bytemp
   public :: ATMOS_HYDROSTATIC_buildrho_bytemp_atmos
@@ -58,6 +59,11 @@ module scale_atmos_hydrostatic
      module procedure ATMOS_HYDROSTATIC_buildrho_1D
      module procedure ATMOS_HYDROSTATIC_buildrho_3D
   end interface ATMOS_HYDROSTATIC_buildrho
+
+  interface ATMOS_HYDROSTATIC_buildrho_real
+     module procedure ATMOS_HYDROSTATIC_buildrho_1D ! buildrho_real_1D is completely equal to buildrho_1D
+     module procedure ATMOS_HYDROSTATIC_buildrho_real_3D
+  end interface ATMOS_HYDROSTATIC_buildrho_real
 
   interface ATMOS_HYDROSTATIC_buildrho_atmos
      module procedure ATMOS_HYDROSTATIC_buildrho_atmos_1D
@@ -458,6 +464,167 @@ contains
 
     return
   end subroutine ATMOS_HYDROSTATIC_buildrho_3D
+
+  !-----------------------------------------------------------------------------
+  !> Build up density from surface (3D), not to reverse from TOA
+  subroutine ATMOS_HYDROSTATIC_buildrho_real_3D( &
+       dens,     &
+       temp,     &
+       pres,     &
+       pott,     &
+       qv,       &
+       qc,       &
+       temp_sfc, &
+       pres_sfc, &
+       pott_sfc, &
+       qv_sfc,   &
+       qc_sfc    )
+    use scale_process, only: &
+       PRC_MPIstop
+    use scale_comm, only: &
+       COMM_horizontal_mean
+    implicit none
+
+    real(RP), intent(out) :: dens(KA,IA,JA) !< density               [kg/m3]
+    real(RP), intent(out) :: temp(KA,IA,JA) !< temperature           [K]
+    real(RP), intent(out) :: pres(KA,IA,JA) !< pressure              [Pa]
+    real(RP), intent(in)  :: pott(KA,IA,JA) !< potential temperature [K]
+    real(RP), intent(in)  :: qv  (KA,IA,JA) !< water vapor           [kg/kg]
+    real(RP), intent(in)  :: qc  (KA,IA,JA) !< liquid water          [kg/kg]
+
+    real(RP), intent(out) :: temp_sfc(1,IA,JA) !< surface temperature           [K]
+    real(RP), intent(in)  :: pres_sfc(1,IA,JA) !< surface pressure              [Pa]
+    real(RP), intent(in)  :: pott_sfc(1,IA,JA) !< surface potential temperature [K]
+    real(RP), intent(in)  :: qv_sfc  (1,IA,JA) !< surface water vapor           [kg/kg]
+    real(RP), intent(in)  :: qc_sfc  (1,IA,JA) !< surface liquid water          [kg/kg]
+
+    real(RP) :: dz(KA,IA,JA)
+
+    real(RP) :: dens_sfc  (1,IA,JA)
+    real(RP) :: pott_toa  (IA,JA) !< surface potential temperature [K]
+    real(RP) :: qv_toa    (IA,JA) !< surface water vapor           [kg/kg]
+    real(RP) :: qc_toa    (IA,JA) !< surface liquid water          [kg/kg]
+    real(RP) :: dens_1D   (KA)
+
+    real(RP) :: Rtot_sfc  (IA,JA)
+    real(RP) :: CVtot_sfc (IA,JA)
+    real(RP) :: CPovCV_sfc(IA,JA)
+    real(RP) :: Rtot      (IA,JA)
+    real(RP) :: CVtot     (IA,JA)
+    real(RP) :: CPovCV    (IA,JA)
+
+    real(RP) :: CVovCP_sfc, CPovR, CVovCP
+
+    integer  :: k, i, j
+    !---------------------------------------------------------------------------
+
+    !--- from surface to lowermost atmosphere
+
+    do j = JSB, JEB
+    do i = ISB, IEB
+       dz(KS,i,j) = REAL_CZ(KS,i,j) - REAL_FZ(KS-1,i,j) ! distance from surface to cell center
+       do k = KS+1, KE
+          dz(k,i,j) = REAL_CZ(k,i,j) - REAL_CZ(k-1,i,j) ! distance from cell center to cell center
+       enddo
+       dz(KE+1,i,j) = REAL_FZ(KE,i,j) - REAL_CZ(KE,i,j) ! distance from cell center to TOA
+    enddo
+    enddo
+
+    do j = JSB, JEB
+    do i = ISB, IEB
+       pott_toa(i,j) = pott(KE,i,j)
+       qv_toa  (i,j) = qv  (KE,i,j)
+       qc_toa  (i,j) = qc  (KE,i,j)
+    enddo
+    enddo
+
+    ! density at surface
+    do j = JSB, JEB
+    do i = ISB, IEB
+       Rtot_sfc  (i,j) = Rdry  * ( 1.0_RP - qv_sfc(1,i,j) - qc_sfc(1,i,j) ) &
+                       + Rvap  * qv_sfc(1,i,j)
+       CVtot_sfc (i,j) = CVdry * ( 1.0_RP - qv_sfc(1,i,j) - qc_sfc(1,i,j) ) &
+                       + CVvap * qv_sfc(1,i,j)                              &
+                       + CL    * qc_sfc(1,i,j)
+       CPovCV_sfc(i,j) = ( CVtot_sfc(i,j) + Rtot_sfc(i,j) ) / CVtot_sfc(i,j)
+    enddo
+    enddo
+
+    do j = JSB, JEB
+    do i = ISB, IEB
+       Rtot  (i,j) = Rdry  * ( 1.0_RP - qv(KS,i,j) - qc(KS,i,j) ) &
+                   + Rvap  * qv(KS,i,j)
+       CVtot (i,j) = CVdry * ( 1.0_RP - qv(KS,i,j) - qc(KS,i,j) ) &
+                   + CVvap * qv(KS,i,j)                           &
+                   + CL    * qc(KS,i,j)
+       CPovCV(i,j) = ( CVtot(i,j) + Rtot(i,j) ) / CVtot(i,j)
+    enddo
+    enddo
+
+    ! density at surface
+    do j = JSB, JEB
+    do i = ISB, IEB
+       CVovCP_sfc      = 1.0_RP / CPovCV_sfc(i,j)
+       dens_sfc(1,i,j) = P00 / Rtot_sfc(i,j) / pott_sfc(1,i,j) * ( pres_sfc(1,i,j)/P00 )**CVovCP_sfc
+       temp_sfc(1,i,j) = pres_sfc(1,i,j) / ( dens_sfc(1,i,j) * Rtot_sfc(i,j) )
+    enddo
+    enddo
+
+    ! make density at lowermost cell center
+    if ( HYDROSTATIC_uselapserate ) then
+
+       do j = JSB, JEB
+       do i = ISB, IEB
+          CPovR  = ( CVtot(i,j) + Rtot(i,j) ) / Rtot(i,j)
+          CVovCP = 1.0_RP / CPovCV(i,j)
+
+          temp(KS,i,j) = pott_sfc(1,i,j) - LAPSdry * ( REAL_CZ(KS,i,j) - REAL_FZ(KS-1,i,j) ) ! use dry lapse rate
+          pres(KS,i,j) = P00 * ( temp(KS,i,j)/pott(KS,i,j) )**CPovR
+          dens(KS,i,j) = P00 / Rtot(i,j) / pott(KS,i,j) * ( pres(KS,i,j)/P00 )**CVovCP
+       enddo
+       enddo
+
+    else ! use itelation
+
+       call ATMOS_HYDROSTATIC_buildrho_atmos_2D( dens    (KS,:,:), & ! [OUT]
+                                                 temp    (KS,:,:), & ! [OUT]->not used
+                                                 pres    (KS,:,:), & ! [OUT]->not used
+                                                 pott    (KS,:,:), & ! [IN]
+                                                 qv      (KS,:,:), & ! [IN]
+                                                 qc      (KS,:,:), & ! [IN]
+                                                 dens_sfc(1,:,:),  & ! [IN]
+                                                 pott_sfc(1,:,:),  & ! [IN]
+                                                 qv_sfc  (1,:,:),  & ! [IN]
+                                                 qc_sfc  (1,:,:),  & ! [IN]
+                                                 dz      (KS,:,:), & ! [IN]
+                                                 KS                ) ! [IN]
+
+    endif
+
+    !--- from lowermost atmosphere to top of atmosphere
+    call ATMOS_HYDROSTATIC_buildrho_atmos_3D( dens(:,:,:), & ! [INOUT]
+                                              temp(:,:,:), & ! [OUT]
+                                              pres(:,:,:), & ! [OUT]
+                                              pott(:,:,:), & ! [IN]
+                                              qv  (:,:,:), & ! [IN]
+                                              qc  (:,:,:), & ! [IN]
+                                              dz  (:,:,:)  ) ! [IN]
+
+    call ATMOS_HYDROSTATIC_buildrho_atmos_2D( dens    (KE+1,:,:), & ! [OUT]
+                                              temp    (KE+1,:,:), & ! [OUT]->not used
+                                              pres    (KE+1,:,:), & ! [OUT]->not used
+                                              pott_toa(:,:),      & ! [IN]
+                                              qv_toa  (:,:),      & ! [IN]
+                                              qc_toa  (:,:),      & ! [IN]
+                                              dens    (KE  ,:,:), & ! [IN]
+                                              pott    (KE  ,:,:), & ! [IN]
+                                              qv      (KE  ,:,:), & ! [IN]
+                                              qc      (KE  ,:,:), & ! [IN]
+                                              dz      (KE+1,:,:), & ! [IN]
+                                              KE+1                ) ! [IN]
+
+    return
+  end subroutine ATMOS_HYDROSTATIC_buildrho_real_3D
 
   !-----------------------------------------------------------------------------
   !> Build up density (0D)
