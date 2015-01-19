@@ -2065,6 +2065,8 @@ contains
        THERMODYN_pott      => ATMOS_THERMODYN_pott
     use scale_gridtrans, only: &
        rotc => GTRANS_ROTC
+    use scale_topography, only: &
+       topo => TOPO_Zsfc
     implicit none
 
     real(RP),         intent(out) :: dens(:,:,:,:)
@@ -2091,7 +2093,8 @@ contains
     real(RP), allocatable :: hgt_op1(:,:,:,:)
 
     real(RP), allocatable :: tsfc_org(:,:,:)
-    real(RP), allocatable :: psfc_org(:,:,:)
+    real(RP), allocatable :: slp_org(:,:,:)
+    !real(RP), allocatable :: psfc_org(:,:,:)
     real(RP), allocatable :: qsfc_org(:,:,:,:)
 
     real(RP), allocatable :: velx_org(:,:,:,:)
@@ -2111,6 +2114,7 @@ contains
     real(RP) :: work  (KA,IA,JA,start_step:end_step)
 
     real(RP) :: pott_sfc(1,IA,JA,start_step:end_step)
+    real(RP) :: slp_sfc (1,IA,JA,start_step:end_step)
     real(RP) :: pres_sfc(1,IA,JA,start_step:end_step)
     real(RP) :: temp_sfc(1,IA,JA,start_step:end_step)
     real(RP) :: qtrc_sfc(1,IA,JA,start_step:end_step,QA)
@@ -2128,6 +2132,7 @@ contains
     real(RP) :: sw
     real(RP) :: Rtot
     real(RP) :: wgt_up, wgt_bt
+    real(RP) :: z1,z2,pres1,pres2
 
     integer :: step_fixed = 1
     integer :: bottom, upper
@@ -2166,7 +2171,8 @@ contains
     allocate( hgt_op1( dims3p1,  dims(1), dims(2), step_fixed ) )
 
     allocate( tsfc_org(          dims(1), dims(2), start_step:end_step ) )
-    allocate( psfc_org(          dims(1), dims(2), start_step:end_step ) )
+    allocate( slp_org (          dims(1), dims(2), start_step:end_step ) )
+    !allocate( psfc_org(          dims(1), dims(2), start_step:end_step ) )
     allocate( qsfc_org(          dims(1), dims(2), start_step:end_step, QA_NCM) )
     allocate( velx_org( dims(3), dims(1), dims(2), start_step:end_step ) )
     allocate( vely_org( dims(3), dims(1), dims(2), start_step:end_step ) )
@@ -2389,7 +2395,7 @@ contains
                                     myrank,           &
                                     iNICAM,           &
                                     single=.true.     )
-       psfc_org(:,:,:) = real( read3DT(1,:,:,:), kind=RP )
+       slp_org(:,:,:) = real( read3DT(1,:,:,:), kind=RP )
 
        basename = "ss_t2m"//trim(basename_num)
        call ExternalFileRead( read3DT(:,:,:,:), trim(basename), "ss_t2m", start_step, end_step, myrank, iNICAM, single=.true. )
@@ -2399,16 +2405,20 @@ contains
        call ExternalFileRead( read3DT(:,:,:,:), trim(basename), "ss_q2m", start_step, end_step, myrank, iNICAM, single=.true. )
        qsfc_org(:,:,:,I_QV) = real( read3DT(1,:,:,:), kind=RP )
     endif
-    call COMM_bcast( psfc_org(:,:,:),                 dims(1), dims(2), nt )
+    call COMM_bcast( slp_org(:,:,:),                  dims(1), dims(2), nt )
     call COMM_bcast( tsfc_org(:,:,:),                 dims(1), dims(2), nt )
     call COMM_bcast( qsfc_org(:,:,:,I_QV),            dims(1), dims(2), nt )
 
     do n = start_step, end_step
     do j = 1, JA
     do i = 1, IA
-       pres_sfc(1,i,j,n) = psfc_org(igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) &
-                         + psfc_org(igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) &
-                         + psfc_org(igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3)
+       !pres_sfc(1,i,j,n) = psfc_org(igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) &
+       !                  + psfc_org(igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) &
+       !                  + psfc_org(igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3)
+
+       slp_sfc(1,i,j,n) =  slp_org(igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) &
+                         + slp_org(igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) &
+                         + slp_org(igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3)
 
        temp_sfc(1,i,j,n) = tsfc_org(igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) &
                          + tsfc_org(igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) &
@@ -2422,13 +2432,14 @@ contains
        sw = sign(0.5_RP, qtrc_sfc(1,i,j,n,I_QV)) + 0.5_RP
        qtrc_sfc(1,i,j,n,I_QV) = qtrc_sfc(1,i,j,n,I_QV) * sw !> --fix negative value
 
-       call THERMODYN_pott( pott_sfc(1,i,j,n),  & ! [OUT]
-                            temp_sfc(1,i,j,n),  & ! [IN]
-                            pres_sfc(1,i,j,n),  & ! [IN]
-                            qtrc_sfc(1,i,j,n,:) ) ! [IN]
+       !call THERMODYN_pott( pott_sfc(1,i,j,n),  & ! [OUT]
+       !                     temp_sfc(1,i,j,n),  & ! [IN]
+       !                     pres_sfc(1,i,j,n),  & ! [IN]
+       !                     qtrc_sfc(1,i,j,n,:) ) ! [IN]
     end do
     end do
     end do
+
 
     if( do_read ) then
        basename = "ms_qv"//trim(basename_num)
@@ -2509,7 +2520,7 @@ contains
     if( do_read ) then
        basename = "ms_pres"//trim(basename_num)
        call ExternalFileRead( read4D(:,:,:,:), trim(basename), "ms_pres", start_step, end_step, myrank, iNICAM, single=.true. )
-       pres_org(1,:,:,:) = psfc_org(:,:,:)
+       pres_org(1,:,:,:) = slp_org(:,:,:)
        do n = start_step, end_step
        do j = 1, dims(2)
        do i = 1, dims(1)
@@ -2564,6 +2575,50 @@ contains
     end do
     end do
     deallocate( pres_org )
+
+    ! Interpolate Surface pressure from SLP and PRES
+    do n = start_step, end_step
+    do j = 1, JA
+    do i = 1, IA
+       lack_of_val = .true.
+       do k = KS-1, KE
+          if(k == KS-1)then
+            z1=0.0_RP
+            z2=CZ(k+1,i,j)
+            pres1=slp_sfc(1,i,j,n)
+            pres2=pres(k+1,i,j,n)
+          else
+            z1=CZ(k,i,j)
+            z2=CZ(k+1,i,j)
+            pres1=pres(k,i,j,n)
+            pres2=pres(k+1,i,j,n)
+          endif
+          if((topo(i,j)>=z1).and.(topo(i,j)<z2))then
+             lack_of_val = .false.                  ! found
+             wgt_bt = (z2        - topo(i,j)) / (z2 - z1) )
+             wgt_up = (topo(i,j) - z1       ) / (z2 - z1) )
+             pres_sfc(k,i,j,n) = exp( log(pres1*wgt_bt + log(pres2*wgt_up )
+          endif
+       enddo
+       if( lack_of_val )then
+          write(IO_FID_LOG,*) 'realinput atom NICAM : cannot estimate pres_sfc',i,j,n
+          call PRC_MPIstop
+       endif
+    enddo
+    enddo
+    enddo
+
+    do n = start_step, end_step
+    do j = 1, JA
+    do i = 1, IA
+       call THERMODYN_pott( pott_sfc(1,i,j,n),  & ! [OUT]
+                            temp_sfc(1,i,j,n),  & ! [IN]
+                            pres_sfc(1,i,j,n),  & ! [IN]
+                            qtrc_sfc(1,i,j,n,:) ) ! [IN]
+    end do
+    end do
+    end do
+
 
     ! vertical grid arrangement combined with 2m height
     if( do_read ) then
@@ -2660,7 +2715,7 @@ contains
     end do
     end do
     deallocate( temp_org )
-    deallocate( psfc_org )
+    deallocate( slp_org )
     deallocate( tsfc_org )
     deallocate( qsfc_org )
     deallocate( hgt_op1  )
