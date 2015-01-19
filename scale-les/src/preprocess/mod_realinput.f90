@@ -2597,7 +2597,8 @@ contains
              lack_of_val = .false.                  ! found
              wgt_bt = (z2        - topo(i,j)) / (z2 - z1)
              wgt_up = (topo(i,j) - z1       ) / (z2 - z1)
-             pres_sfc(k,i,j,n) = exp( log(pres1*wgt_bt) + log(pres2*wgt_up) )
+             pres_sfc(1,i,j,n) = exp( log(pres1)*wgt_bt + log(pres2)*wgt_up )
+             exit ! exit loop
           endif
        enddo
        if( lack_of_val )then
