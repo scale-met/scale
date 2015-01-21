@@ -119,7 +119,9 @@ cat << EOF > param.physics.conf
 &PARAM_ATMOS_BOUNDARY
  ATMOS_BOUNDARY_TYPE        = "REAL",
  ATMOS_BOUNDARY_IN_BASENAME = "${ATMOS_BOUNDARY_IN_BASENAME}",
+ ATMOS_BOUNDARY_START_DATE  = ${ATMOS_BOUNDARY_START_DATE},
  ATMOS_BOUNDARY_UPDATE_DT   = ${ATMOS_BOUNDARY_UPDATE_DT},
+ ATMOS_BOUNDARY_USE_DENS    = ${ATMOS_BOUNDARY_USE_DENS},
  ATMOS_BOUNDARY_USE_VELZ    = .true.,
  ATMOS_BOUNDARY_USE_QHYD    = ${ATMOS_BOUNDARY_USE_QHYD},
  ATMOS_BOUNDARY_VALUE_VELZ  = 0.0D0,
@@ -228,6 +230,7 @@ cat << EOF > param.history.conf
  HISTORY_DEFAULT_TAVERAGE  = .false.,
  HISTORY_DEFAULT_DATATYPE  = "REAL4",
  HISTORY_DEFAULT_ZINTERP   = .false.,
+ HISTORY_OUTPUT_STEP0      = .true.,
 /
 
 &PARAM_HIST
@@ -242,9 +245,21 @@ if [ ${#HIST_ITEMS_SNAPSHOT[*]} -ge 1 ]; then
     echo "&HISTITEM item=\"${VAR}\" /" >> param.history.conf
   done
 fi
+if [ ${#HIST_ITEMS_SNAPSHOT_HI[*]} -ge 1 ]; then
+  for VAR in ${HIST_ITEMS_SNAPSHOT_HI[*]}
+  do
+    echo "&HISTITEM item=\"${VAR}\", tinterval=${TIME_DT_HISTORY_HI} /" >> param.history.conf
+  done
+fi
 if [ ${#HIST_ITEMS_AVERAGE[*]} -ge 1 ]; then
   for VAR in ${HIST_ITEMS_AVERAGE[*]}
   do
     echo "&HISTITEM item=\"${VAR}\", taverage=.true. /" >> param.history.conf
+  done
+fi
+if [ ${#HIST_ITEMS_AVERAGE_HI[*]} -ge 1 ]; then
+  for VAR in ${HIST_ITEMS_AVERAGE_HI[*]}
+  do
+    echo "&HISTITEM item=\"${VAR}\", taverage=.true., tinterval=${TIME_DT_HISTORY_HI} /" >> param.history.conf
   done
 fi
