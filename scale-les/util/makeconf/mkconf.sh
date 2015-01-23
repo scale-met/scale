@@ -213,6 +213,8 @@ fi
 #
 #################################################
 
+mkdir -p ${OUTPUT_CONFIGDIR}
+
 source ${PP_CONF}
 source ${INIT_CONF}
 source ${RUN_CONF}
