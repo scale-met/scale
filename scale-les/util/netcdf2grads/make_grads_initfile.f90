@@ -3,7 +3,7 @@ program convine
 
   include 'netcdf.inc'
 
-  integer(4), parameter :: nst=1, nen=1  !--- time for average profile
+  integer(4), parameter :: nst=1, nen=32  !--- time for average profile
   integer(4), parameter :: nt=nen-nst+1
   integer(4) :: nx, ny, nz, nxp, nyp
   integer(4) :: lz
@@ -12,8 +12,8 @@ program convine
   real(8)    :: dt
   logical    :: ofirst = .true.
   logical    :: oread = .true.
-  integer(4) :: start(3), start2(2)
-  integer(4) :: count(3), count2(2), count_land(3)
+  integer(4) :: start(3), start2(2), start4(4)
+  integer(4) :: count(3), count2(2), count_land(3) ,count4(4)
   character*64 :: cfile
   character*64, allocatable :: vname(:)
   integer(4) :: it, ix, jy, kz, nrec, n
@@ -25,7 +25,7 @@ program convine
   real(8),allocatable :: p_cdx(:), p_cdy(:), p_cdz(:) 
   real(8),allocatable :: p_cx(:), p_cy(:), p_cz(:)
   real(4),allocatable :: var2d(:,:), var3d(:,:,:), var_land_3d(:,:,:)
-  real(8),allocatable :: p_3d(:,:,:), p_2d(:,:), p_land_3d(:,:,:)
+  real(8),allocatable :: p_4d(:,:,:,:), p_3d(:,:,:), p_2d(:,:), p_land_3d(:,:,:)
   character*64 :: item
   character*5  :: HISTORY_DEFAULT_TUNIT
   real(8)      :: HISTORY_DEFAULT_TINTERVAL
@@ -55,7 +55,9 @@ program convine
   endif
 
   !--- read variable calculated by model
-  open(10,file="./init.conf", form="formatted", access="sequential",iostat=ierr)
+  open(10,file="./init.d01.conf", form="formatted", access="sequential",iostat=ierr)
+  !open(10,file="./pp.d01.conf", form="formatted", access="sequential",iostat=ierr)
+  !open(10,file="./run.d01.conf", form="formatted", access="sequential",iostat=ierr)
   if( ierr /= 0 )then
    write(*,*) "Fail to open *.conf file"
    stop
@@ -68,8 +70,9 @@ program convine
 
   do it = nst, nen !--- time
   !--- open NetCDF file and read from NetCDF file
-   start(1:4) = (/1,1,1,it/)
-   start2(1:3) = (/1,1,it/)
+   start(1:3) = (/1,1,it/)
+   start2(1:2) = (/1,1/)
+   start4(1:4) = (/1,1,1,it/)
    nrec = -1
 
   do n = 1, vcount
@@ -77,17 +80,10 @@ program convine
    do jy = 1, yproc
    do ix = 1, xproc
     nrec = nrec + 1
-    if( nrec < 10 ) then
-     write(cfile,'(a,i1,a)') "./init_00000000000.000.pe00000",nrec,".nc"
-    elseif( nrec < 100 ) then
-     write(cfile,'(a,i2,a)') "./init_00000000000.000.pe0000",nrec,".nc"
-    elseif( nrec < 1000 ) then
-     write(cfile,'(a,i3,a)') "./init_00000000000.000.pe000",nrec,".nc"
-    elseif( nrec < 10000 ) then
-     write(cfile,'(a,i4,a)') "./init_00000000000.000.pe00",nrec,".nc"
-    elseif( nrec < 100000 ) then
-     write(cfile,'(a,i5,a)') "./init_00000000000.000.pe0",nrec,".nc"
-    endif
+    !write(cfile,'(a,i6.6,a)') "./init_00000000000.000.pe",nrec,".nc"
+    !write(cfile,'(a,i6.6,a)') "./landuse_d01.pe",nrec,".nc"
+    !write(cfile,'(a,i6.6,a)') "./history_d01.pe",nrec,".nc"
+     write(cfile,'(a,i6.6,a)') "./boundary_d01.pe",nrec,".nc"
 
     print *,trim(cfile)
     status = nf_open(cfile,0,ncid)
@@ -126,7 +122,9 @@ program convine
 !      allocate( p_2d(nxp,nyp,1) )
       count(1:3) = (/nz,nxp,nyp/)
       count2(1:2) = (/nxp,nyp/)
+      count4(1:4) = (/nz,nxp,nyp,1/)
       count_land(1:3) = (/lz,nxp,nyp/)
+      allocate( p_4d(nz,nxp,nyp,1) )
       allocate( p_3d(nz,nxp,nyp) )
       allocate( p_2d(nxp,nyp) )
       allocate( p_land_3d(lz,nxp,nyp) )
@@ -252,6 +250,12 @@ program convine
       write(*,*) "stop at nf get_var_double land ", trim(vname(n))
       stop
      end if
+    elseif( ndim == 4 ) then
+     status = nf_get_vara_double( ncid,id01,start4,count4,p_4d )
+     if( status /= nf_noerr) then
+      write(*,*) "stop at nf get_var_double ", trim(vname(n))
+      stop
+     end if
     elseif( ndim == 3 ) then
      status = nf_get_vara_double( ncid,id01,start,count,p_3d )
      if( status /= nf_noerr) then
@@ -335,6 +339,12 @@ program convine
          var_land_3d(iix,jjy,1:lz) = real(p_land_3d(1:lz,iix-is+1,jjy-js+1))
      enddo
      enddo
+    elseif( ndim == 4 ) then
+     do iix = is,ie
+     do jjy = js,je
+         var3d(iix,jjy,1:nz) = real(p_4d(1:nz,iix-is+1,jjy-js+1,1))
+     enddo
+     enddo
     elseif( ndim == 3 ) then
      do iix = is,ie
      do jjy = js,je
@@ -349,6 +359,7 @@ program convine
      enddo
     endif
 
+     deallocate( p_4d )
      deallocate( p_3d )
      deallocate( p_land_3d )
      deallocate( p_2d )
@@ -375,7 +386,7 @@ program convine
      if( (trim(vname(n)) == "LAND_TEMP")    .or.  &
          (trim(vname(n)) == "LAND_WATER") ) then 
       write(10,'(a,3x,i7,1x,a,1x,a)') "ZDEF", lz, "linear", "1 1"
-     elseif( ndim == 3 ) then
+     elseif( ndim == 3 .or. ndim == 4) then
       write(10,'(a,3x,i7,1x,a)') "ZDEF", nz, "LEVELS"
       write(10,'(5(1x,e15.7))') cz(1:nz)*1.d-3
      elseif( ndim == 2 ) then
@@ -386,7 +397,7 @@ program convine
      if( (trim(vname(n)) == "LAND_TEMP")    .or.  &
          (trim(vname(n)) == "LAND_WATER") ) then 
       write(10,'(a,1x,i7,1x,i2,1x,a)') trim(vname(n)), lz, 99, "NONE"
-     elseif( ndim == 3 ) then
+     elseif( ndim == 3 .or. ndim == 4 ) then
       write(10,'(a,1x,i7,1x,i2,1x,a)') trim(vname(n)), nz, 99, "NONE"
      elseif( ndim == 2 ) then
       write(10,'(a,1x,i7,1x,i2,1x,a)') trim(vname(n)), 0, 99, "NONE"
@@ -401,7 +412,7 @@ program convine
          form="unformatted", access="direct", recl=4*nx*ny*lz)
     write(10,rec=it-nst+1) (((var_land_3d(ix,jy,kz),ix=1,nx),jy=1,ny),kz=1,lz)
     close(10)
-   elseif( ndim == 3 ) then
+   elseif( ndim == 3 .or. ndim == 4) then
     open(10,file=trim(vname(n))//".grd", &
          form="unformatted", access="direct", recl=4*nx*ny*nz)
     write(10,rec=it-nst+1) (((var3d(ix,jy,kz),ix=1,nx),jy=1,ny),kz=1,nz)
