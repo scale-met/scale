@@ -2412,6 +2412,8 @@ contains
       ny,         & ! (in)
       HANDLE,     & ! (in)
       landgrid    ) ! (in)
+    use scale_process, only: &
+       PRC_MPIstop
     implicit none
 
     real(RP), intent(out) :: hfact(:,:,:)
@@ -2441,7 +2443,11 @@ contains
     integer :: istart, iend, iinc, blk_i
     integer :: jstart, jend, jinc, blk_j
     integer :: kstart, kend
+
+    integer :: ncopy
+
     logical :: lndgrd
+    logical :: copy
     !---------------------------------------------------------------------------
 
     lndgrd = .false.
@@ -2524,11 +2530,18 @@ contains
        do idx = 1, itp_nh
           ii = igrd(i,j,idx)
           jj = jgrd(i,j,idx)
+          ncopy = 0
           do k = kstart, kend
              dist(1) = large_number_two
              dist(2) = large_number_one
              kgrd(k,i,j,idx,:) = -1
+             copy = .false.
              do kk = 1+KHALO, nz-KHALO
+                if( inhgt(kk,ii,jj) > myhgt(k,i,j) ) then
+                   copy = .true.
+                   exit
+                endif
+
                 distance = abs( myhgt(k,i,j) - inhgt(kk,ii,jj) )
                 if ( distance <= dist(1) ) then
                    dist(2) = dist(1);     kgrd(k,i,j,idx,2) = kgrd(k,i,j,idx,1)
@@ -2537,15 +2550,30 @@ contains
                    dist(2) = distance;    kgrd(k,i,j,idx,2) = kk
                 endif
              enddo
-             if( dist(1)==0.0_RP )then
+             if( copy ) then
+                kgrd(k,i,j,idx,1)  = 1+KHALO
+                kgrd(k,i,j,idx,2)  = 1+KHALO + 1 ! not used
                 vfact(k,i,j,idx,1) = 1.0_RP
                 vfact(k,i,j,idx,2) = 0.0_RP
-             else
+                ncopy = ncopy + 1
+             elseif( (.NOT. copy) .and. dist(1)==0.0_RP ) then
+                vfact(k,i,j,idx,1) = 1.0_RP
+                vfact(k,i,j,idx,2) = 0.0_RP
+             elseif( .NOT. copy ) then
                 denom = 1.0_RP / ( (1.0_RP/dist(1)) + (1.0_RP/dist(2)) )
                 vfact(k,i,j,idx,1) = ( 1.0_RP/dist(1) ) * denom
                 vfact(k,i,j,idx,2) = ( 1.0_RP/dist(2) ) * denom
+             else
+                write(*,*) 'xxx internal error [interporation: nest/grid]'
+                call PRC_MPIstop
              endif
           enddo
+          if( ncopy > 1 )then ! copy is allowed only one time.
+             write(*,*) 'xxx ERROR: times of copying is exceeded allowed times'
+             write(*,*) 'xxx domain number: ', ONLINE_DOMAIN_NUM
+             write(*,*) 'xxx copy times: ', ncopy
+             !call PRC_MPIstop
+          endif
        enddo
     enddo
     enddo
