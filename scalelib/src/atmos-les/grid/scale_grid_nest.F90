@@ -2572,7 +2572,7 @@ contains
              write(*,*) 'xxx ERROR: times of copying is exceeded allowed times'
              write(*,*) 'xxx domain number: ', ONLINE_DOMAIN_NUM
              write(*,*) 'xxx copy times: ', ncopy
-             call PRC_MPIstop
+             !call PRC_MPIstop
           endif
        enddo
     enddo
