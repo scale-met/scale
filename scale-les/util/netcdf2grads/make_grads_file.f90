@@ -24,10 +24,12 @@ program convine
   ! for silent
   integer(4)                :: uz,lz
   integer                   :: timestep
+  integer                   :: inest
+  character*2               :: cnest
   character*100             :: idir,odir,conffile
   character*5               :: delt
   character*15              :: stime
-  namelist /info/  timestep,conffile,idir,odir,vcount
+  namelist /info/  timestep,inest,conffile,idir,odir,vcount
   namelist /vari/  vname
   namelist /grads/ delt,stime
 
@@ -49,7 +51,7 @@ program convine
   logical    :: ofirst = .true.
   logical    :: oread = .true.
   integer(4) :: start(4), start2(3)
-  integer(4) :: count(4), count2(3), count_urban(4), count_land(4)
+  integer(4) :: count(4), count2(3), count_urban(4), count_land(4), count_height(3)
 
   integer(4) :: it, ix, jy, kz, n
   integer(4) :: ncid, id01, status, iix, jjy, ndim
@@ -61,7 +63,7 @@ program convine
   real(8),allocatable :: p_cdx(:), p_cdy(:)
   real(8),allocatable :: p_cx(:), p_cy(:)
   real(4),allocatable :: var2d(:,:), var3d(:,:,:), var_urban_3d(:,:,:), var_land_3d(:,:,:)
-  real(8),allocatable :: p_3d(:,:,:,:), p_2d(:,:,:), p_urban_3d(:,:,:,:), p_land_3d(:,:,:,:)
+  real(8),allocatable :: p_3d(:,:,:,:), p_2d(:,:,:), p_urban_3d(:,:,:,:), p_land_3d(:,:,:,:), p_height(:,:,:)
 
   character*64 :: HISTORY_DEFAULT_BASENAME
   character*5  :: HISTORY_DEFAULT_TUNIT
@@ -241,14 +243,18 @@ program convine
       status = nf_inq_dimid ( ncid, 'lz', id01 )
       status = nf_inq_dimlen( ncid, id01, lz )
 
-      count(1:4)      = (/nxp,nyp,nz,1/)
-      count2(1:3)     = (/nxp,nyp,1/)
-      count_urban(1:4) = (/nxp,nyp,uz,1/)
-      count_land(1:4) = (/nxp,nyp,lz,1/)
+
+      count(1:4)        = (/nxp,nyp,nz,1/)
+      count2(1:3)       = (/nxp,nyp,1/)
+      count_urban(1:4)  = (/nxp,nyp,uz,1/)
+      count_land(1:4)   = (/nxp,nyp,lz,1/)
+      count_height(1:3) = (/nxp,nyp,nz/)
       allocate( p_3d(nxp,nyp,nz,1) )
       allocate( p_2d(nxp,nyp,1) )
       allocate( p_urban_3d(nxp,nyp,uz,1) )
       allocate( p_land_3d(nxp,nyp,lz,1) )
+      allocate( p_height(nxp,nyp,nz) )
+      !
       allocate( p_cdx(nxp+2*nxhalo) )
       allocate( p_cdy(nyp+2*nyhalo) )
       allocate( p_cx(nxp+2*nxhalo) )
@@ -379,6 +385,12 @@ program convine
       write(*,*) "stop at nf get_var_double urban ", trim(vname(n))
       stop
      end if
+    elseif( (trim(vname(n)) == "height") )then
+     status = nf_get_vara_double( ncid,id01,start,count_height,p_height )
+     if( status /= nf_noerr) then
+      write(*,*) "stop at nf get_var_double height ", trim(vname(n))
+      stop
+     end if
     elseif( ndim == 4 ) then 
      status = nf_get_vara_double( ncid,id01,start,count,p_3d )
      if( status /= nf_noerr) then
@@ -477,6 +489,12 @@ program convine
       var_land_3d(iix,jjy,1:uz) = real(p_land_3d(iix-is+1,jjy-js+1,1:uz,1))
      enddo
      enddo
+    elseif( (trim(vname(n)) == "height") )then
+     do iix = is,ie
+     do jjy = js,je
+      var3d(iix,jjy,1:nz) = real(p_height(iix-is+1,jjy-js+1,1:nz))
+     enddo
+     enddo
     elseif( ndim == 4 ) then 
      do iix = is,ie
      do jjy = js,je
@@ -496,6 +514,7 @@ program convine
       deallocate( p_2d )
       deallocate( p_urban_3d )
       deallocate( p_land_3d )
+      deallocate( p_height )
       deallocate( p_cdx )
       deallocate( p_cdy )
       deallocate( p_cx )
@@ -505,10 +524,11 @@ program convine
    enddo
 
    if( it == nst ) then
+     write(cnest,'(i2.2)') inest
      write(*,*) "create ctl file of ", trim(vname(n))
 
-     open(10,file=trim(odir)//'/'//trim(vname(n))//".ctl", form="formatted", access="sequential" )
-     write(10,'(a,1x,a)') "DSET", "^"//trim(vname(n))//".grd"
+     open(10,file=trim(odir)//'/'//trim(vname(n))//'_d'//trim(cnest)//".ctl", form="formatted", access="sequential" )
+     write(10,'(a,1x,a)') "DSET", "^"//trim(vname(n))//'_d'//trim(cnest)//".grd"
      write(10,'(a)') "TITLE SCALE3 data output"
      write(10,'(a)') "OPTIONS BIG_ENDIAN"
      write(10,'(a,1x,e15.7)') "UNDEF", -9.9999001E+30
@@ -524,6 +544,9 @@ program convine
      elseif( (trim(vname(n)) == "LAND_TEMP").or.  &
              (trim(vname(n)) == "LAND_WATER") ) then
         write(10,'(a,3x,i7,1x,a,1x,a)') "ZDEF", lz, "linear", "1 1"
+     elseif( (trim(vname(n)) == "height") )then
+        write(10,'(a,3x,i7,1x,a)') "ZDEF", nz, "LEVELS"
+        write(10,'(5(1x,e15.7))') cz(nzhalo+1:nz+nzhalo)*1.d-3
      elseif( ndim == 4 ) then
         write(10,'(a,3x,i7,1x,a)') "ZDEF", nz, "LEVELS"
         write(10,'(5(1x,e15.7))') cz(nzhalo+1:nz+nzhalo)*1.d-3
@@ -541,6 +564,8 @@ program convine
      elseif( (trim(vname(n)) == "LAND_TEMP").or.  &
              (trim(vname(n)) == "LAND_WATER") ) then
         write(10,'(a,1x,i7,1x,i2,1x,a)') trim(vname(n)), lz, 99, "NONE"
+     elseif( (trim(vname(n)) == "height") )then
+        write(10,'(a,1x,i7,1x,i2,1x,a)') trim(vname(n)), nz, 99, "NONE"
      elseif( ndim == 4 ) then
         write(10,'(a,1x,i7,1x,i2,1x,a)') trim(vname(n)), nz, 99, "NONE"
      elseif( ndim == 3 ) then
@@ -551,30 +576,13 @@ program convine
      close(10)
    endif
 
-!   if( vname(n) == 'QHYD' )then
-!      do kz=1, nz
-!      do jy=1, ny
-!      do ix=1, nx
-!         if(var3d(ix,jy,kz) < 0.0D0) var3d(ix,jy,kz) = 0.0D0
-!      enddo
-!      enddo
-!      enddo
-!   else
-!      do kz=1, nz
-!      do jy=1, ny
-!      do ix=1, nx
-!         if(var3d(ix,jy,kz) == -9.9999001E+30) var3d(ix,jy,kz) = 0.0D0
-!      enddo
-!      enddo
-!      enddo
-!   endif
 
    if( (trim(vname(n)) == "TRL_URB").or.  &
        (trim(vname(n)) == "TBL_URB").or.  &
        (trim(vname(n)) == "TGL_URB") ) then
       print *, maxval(var_urban_3d), minval(var_urban_3d)
 
-      open(10,file=trim(odir)//'/'//trim(vname(n))//".grd", &
+      open(10,file=trim(odir)//'/'//trim(vname(n))//'_d'//trim(cnest)//".grd", &
            form="unformatted", access="direct", recl=4*nx*ny*uz)
       write(10,rec=it-nst+1) (((var_urban_3d(ix,jy,kz),ix=1,nx),jy=1,ny),kz=1,uz)
       close(10)
@@ -582,19 +590,25 @@ program convine
            (trim(vname(n)) == "LAND_WATER") ) then
       print *, maxval(var_land_3d), minval(var_land_3d)
 
-      open(10,file=trim(odir)//'/'//trim(vname(n))//".grd", &
+      open(10,file=trim(odir)//'/'//trim(vname(n))//'_d'//trim(cnest)//".grd", &
            form="unformatted", access="direct", recl=4*nx*ny*lz)
       write(10,rec=it-nst+1) (((var_land_3d(ix,jy,kz),ix=1,nx),jy=1,ny),kz=1,lz)
       close(10)
+   elseif( (trim(vname(n)) == "height") ) then
+      print *, maxval(var3d), minval(var3d)
+      open(10,file=trim(odir)//'/'//trim(vname(n))//'_d'//trim(cnest)//".grd", &
+           form="unformatted", access="direct", recl=4*nx*ny*nz)
+      write(10,rec=it-nst+1) (((var3d(ix,jy,kz),ix=1,nx),jy=1,ny),kz=1,nz)
+      close(10)   
    elseif( ndim == 4 ) then
       print *, maxval(var3d), minval(var3d)
-      open(10,file=trim(odir)//'/'//trim(vname(n))//".grd", &
+      open(10,file=trim(odir)//'/'//trim(vname(n))//'_d'//trim(cnest)//".grd", &
            form="unformatted", access="direct", recl=4*nx*ny*nz)
       write(10,rec=it-nst+1) (((var3d(ix,jy,kz),ix=1,nx),jy=1,ny),kz=1,nz)
       close(10)   
    elseif( ndim == 3 ) then
       print *, maxval(var2d), minval(var2d)
-      open(10,file=trim(odir)//'/'//trim(vname(n))//".grd", &
+      open(10,file=trim(odir)//'/'//trim(vname(n))//'_d'//trim(cnest)//".grd", &
            form="unformatted", access="direct", recl=4*nx*ny)
       write(10,rec=it-nst+1) ((var2d(ix,jy),ix=1,nx),jy=1,ny)
       close(10)   
