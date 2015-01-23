@@ -2551,8 +2551,8 @@ contains
                 endif
              enddo
              if( copy ) then
-                kgrd(k,i,j,idx,1)  = DATR_KS(HANDLE)
-                kgrd(k,i,j,idx,2)  = DATR_KS(HANDLE) + 1 ! not used
+                kgrd(k,i,j,idx,1)  = 1+KHALO
+                kgrd(k,i,j,idx,2)  = 1+KHALO + 1 ! not used
                 vfact(k,i,j,idx,1) = 1.0_RP
                 vfact(k,i,j,idx,2) = 0.0_RP
                 ncopy = ncopy + 1
