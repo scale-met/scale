@@ -2444,6 +2444,7 @@ contains
     integer :: jstart, jend, jinc, blk_j
     integer :: kstart, kend
 
+    integer :: KS_in
     integer :: ncopy
 
     logical :: lndgrd
@@ -2527,6 +2528,7 @@ contains
        !else
           kstart = DATR_KS(HANDLE);  kend = DATR_KE(HANDLE)
        !endif
+       KS_in = 1 + KHALO
        do idx = 1, itp_nh
           ii = igrd(i,j,idx)
           jj = jgrd(i,j,idx)
@@ -2536,12 +2538,8 @@ contains
              dist(2) = large_number_one
              kgrd(k,i,j,idx,:) = -1
              copy = .false.
-             do kk = 1+KHALO, nz-KHALO
-                if( inhgt(kk,ii,jj) > myhgt(k,i,j) ) then
-                   copy = .true.
-                   exit
-                endif
 
+             do kk = 1+KHALO, nz-KHALO
                 distance = abs( myhgt(k,i,j) - inhgt(kk,ii,jj) )
                 if ( distance <= dist(1) ) then
                    dist(2) = dist(1);     kgrd(k,i,j,idx,2) = kgrd(k,i,j,idx,1)
@@ -2550,9 +2548,13 @@ contains
                    dist(2) = distance;    kgrd(k,i,j,idx,2) = kk
                 endif
              enddo
+             if( inhgt(KS_in,ii,jj) > myhgt(k,i,j) ) then
+                copy = .true.
+             endif
+
              if( copy ) then
-                kgrd(k,i,j,idx,1)  = 1+KHALO
-                kgrd(k,i,j,idx,2)  = 1+KHALO + 1 ! not used
+                kgrd(k,i,j,idx,1)  = KS_in
+                kgrd(k,i,j,idx,2)  = KS_in + 1 ! not used
                 vfact(k,i,j,idx,1) = 1.0_RP
                 vfact(k,i,j,idx,2) = 0.0_RP
                 ncopy = ncopy + 1
