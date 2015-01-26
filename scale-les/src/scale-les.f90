@@ -59,6 +59,7 @@ program scaleles_launcher
 
   logical :: flag_parent              ! flag of "I am parent domain"
   logical :: flag_child               ! flag of "I am child domain"
+  logical :: LOG_SPLIT = .false.      ! flag of log-output for mpi splitting
 
   character(len=H_LONG) :: CONF_FILES(max_depth)  ! names of configulation files
   character(len=H_LONG) :: fname_launch           ! config file for launcher
@@ -71,7 +72,8 @@ program scaleles_launcher
   namelist / PARAM_LAUNCHER / &
      NUM_DOMAIN,     &
      PRC_DOMAINS,    &
-     CONF_FILES
+     CONF_FILES,     &
+     LOG_SPLIT
   !-----------------------------------------------------------
 
   NUM_DOMAIN    = 1
@@ -131,6 +133,7 @@ program scaleles_launcher
       NUM_DOMAIN,       & ! [in ]
       PRC_DOMAINS,      & ! [in ]
       CONF_FILES,       & ! [in ]
+      LOG_SPLIT,        & ! [in ]
       nmax_parent,      & ! [out]
       nmax_child,       & ! [out]
       myrank_local,     & ! [out]
