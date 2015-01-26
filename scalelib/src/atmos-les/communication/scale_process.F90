@@ -554,6 +554,7 @@ contains
       NUM_DOMAIN,       & ! [in ]
       PRC_DOMAINS,      & ! [in ]
       CONF_FILES,       & ! [in ]
+      LOG_SPLIT,        & ! [in ]
       nmax_parent,      & ! [out]
       nmax_child,       & ! [out]
       myrank_local,     & ! [out]
@@ -568,6 +569,7 @@ contains
     integer, intent(in)  :: NUM_DOMAIN
     integer, intent(in)  :: PRC_DOMAINS(:)
     character(len=H_LONG), intent(in) :: CONF_FILES(:)
+    logical, intent(in)  :: LOG_SPLIT
 
     integer, intent(out) :: nmax_parent
     integer, intent(out) :: nmax_child
@@ -627,7 +629,7 @@ contains
           if ( key == 0 ) PRC_ROOT(color) = i
           COLOR_LIST(i) = color
           KEY_LIST(i)   = key
-          if ( GLOBAL_LOG ) write ( *, '(1X,4(A,I3))' ) "PE:", i, "   COLOR:", COLOR_LIST(i), &
+          if ( LOG_SPLIT .and. GLOBAL_LOG ) write ( *, '(1X,4(A,I5))' ) "PE:", i, "   COLOR:", COLOR_LIST(i), &
                                   "   KEY:", KEY_LIST(i), "   PRC_ROOT:", PRC_ROOT(color)
           key = key + 1
           if ( key >= nprc ) then
