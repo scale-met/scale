@@ -681,6 +681,8 @@ contains
        THERMODYN_pott      => ATMOS_THERMODYN_pott
     use scale_gridtrans, only: &
        rotc => GTRANS_ROTC
+    use scale_topography, only: &
+       topo => TOPO_Zsfc
     implicit none
 
     real(RP),         intent(out) :: dens(:,:,:,:)
@@ -717,8 +719,8 @@ contains
     real(RP), allocatable :: qtrc_org(:,:,:,:,:)
 
     real(RP), allocatable :: tsfc_org(:,:,:)
-    real(RP), allocatable :: psfc_org(:,:,:)
     real(RP), allocatable :: qsfc_org(:,:,:,:)
+    real(RP), allocatable :: mslp_org(:,:,:)
 
     real(RP), allocatable :: velz_org(:,:,:,:)
     real(RP), allocatable :: velx_org(:,:,:,:)
@@ -741,6 +743,7 @@ contains
     real(RP) :: pres_sfc(1,IA,JA,start_step:end_step)
     real(RP) :: temp_sfc(1,IA,JA,start_step:end_step)
     real(RP) :: qtrc_sfc(1,IA,JA,start_step:end_step,QA)
+    real(RP) :: mslp_sfc(1,IA,JA,start_step:end_step)
 
     real(RP) :: hfact(   IA,JA,itp_nh       )
     real(RP) :: vfact(KA,IA,JA,itp_nh,itp_nv)
@@ -752,6 +755,10 @@ contains
     real(RP) :: qc(KA,IA,JA)
     real(RP) :: qc_sfc(1,IA,JA)
 
+    real(RP) :: wgt_up, wgt_bt
+    real(RP) :: z1, z2
+    real(RP) :: pres1, pres2
+
     integer :: KALL, IALL, JALL
     integer :: rank
 
@@ -759,6 +766,8 @@ contains
     integer :: xloc, yloc
     integer :: xs, xe
     integer :: ys, ye
+
+    logical :: lack_of_val
     !---------------------------------------------------------------------------
 
     KALL = PARENT_KMAX(handle)
@@ -785,8 +794,8 @@ contains
     allocate( qtrc_org( KALL, IALL, JALL, start_step:end_step, QA) )
 
     allocate( tsfc_org(       IALL, JALL, start_step:end_step )    )
-    allocate( psfc_org(       IALL, JALL, start_step:end_step )    )
     allocate( qsfc_org(       IALL, JALL, start_step:end_step, QA) )
+    allocate( mslp_org(       IALL, JALL, start_step:end_step )    )
 
     allocate( velz_org( KALL, IALL, JALL, start_step:end_step )    )
     allocate( velx_org( KALL, IALL, JALL, start_step:end_step )    )
@@ -839,11 +848,6 @@ contains
        end do
 
        do n = start_step, end_step
-         call FileRead( read2D(:,:), BASENAME_ORG, "SFC_PRES", n, rank )
-         psfc_org(xs:xe,ys:ye,n) = read2D(:,:)
-       end do
-
-       do n = start_step, end_step
          call FileRead( read2D(:,:), BASENAME_ORG, "T2", n, rank )
          tsfc_org(xs:xe,ys:ye,n) = read2D(:,:)
        end do
@@ -851,6 +855,11 @@ contains
        do n = start_step, end_step
          call FileRead( read2D(:,:), BASENAME_ORG, "Q2", n, rank )
          qsfc_org(xs:xe,ys:ye,n,I_QV) = read2D(:,:)
+       end do
+
+       do n = start_step, end_step
+         call FileRead( read2D(:,:), BASENAME_ORG, "MSLP", n, rank )
+         mslp_org(xs:xe,ys:ye,n) = read2D(:,:)
        end do
 
        do n = start_step, end_step
@@ -1249,9 +1258,42 @@ contains
                             + tsfc_org(igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) &
                             + tsfc_org(igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3)
 
-          pres_sfc(1,i,j,n) = psfc_org(igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) &
-                            + psfc_org(igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) &
-                            + psfc_org(igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3)
+          mslp_sfc(1,i,j,n) = mslp_org(igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) &
+                            + mslp_org(igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) &
+                            + mslp_org(igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3)
+
+          ! Interpolate Surface pressure from SLP and PRES
+          lack_of_val = .true.
+
+          do k = KS-1, KE
+             if( k == KS-1 ) then
+               z1    = 0.0_RP
+               z2    = CZ      (k+1,i,j  )
+               pres1 = mslp_sfc(  1,i,j,n)
+               pres2 = pres    (k+1,i,j,n)
+             else
+               z1    = CZ  (k  ,i,j  )
+               z2    = CZ  (k+1,i,j  )
+               pres1 = pres(k  ,i,j,n)
+               pres2 = pres(k+1,i,j,n)
+             endif
+             if( topo(i,j) >= z1 .and. &
+                 topo(i,j) <  z2       ) then
+                lack_of_val = .false. ! found
+
+                wgt_bt = ( z2        - topo(i,j) ) / (z2 - z1)
+                wgt_up = ( topo(i,j) - z1        ) / (z2 - z1)
+
+                pres_sfc(1,i,j,n) = exp( log(pres1)*wgt_bt + log(pres2)*wgt_up )
+
+                exit ! exit loop
+             endif
+          enddo
+
+          if( lack_of_val ) then
+             write(IO_FID_LOG,*) 'realinput ATM SCALE: cannot estimate pres_sfc',i,j,n
+             call PRC_MPIstop
+          endif
 
           ! interpolate QV (=Q2) only: other QTRC are set zero
           qtrc_sfc(1,i,j,n,:)    = 0.0_RP
