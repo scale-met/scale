@@ -213,7 +213,7 @@ module scale_grid_nest
   integer, private, parameter :: max_isu   = 100             ! maximum number of receive/wait issue
   integer, private, parameter :: max_isuf  = 20              ! maximum number of receive/wait issue (z-stag)
   integer, private, parameter :: max_bndqa = 12              ! maximum number of QA in boundary: tentative approach
-  integer, private            :: max_rq    = 10000           ! maximum number of req: tentative approach
+  integer, private            :: max_rq    = 1000            ! maximum number of req: tentative approach
   integer, private            :: rq_ctl_p                    ! for control request id (counting)
   integer, private            :: rq_ctl_d                    ! for control request id (counting)
   integer, private            :: rq_tot_p                    ! for control request id (total number)
@@ -2570,12 +2570,13 @@ contains
                 call PRC_MPIstop
              endif
           enddo
-          if( ncopy > 1 )then ! copy is allowed only one time.
-             write(*,*) 'xxx ERROR: times of copying is exceeded allowed times'
-             write(*,*) 'xxx domain number: ', ONLINE_DOMAIN_NUM
-             write(*,*) 'xxx copy times: ', ncopy
-             !call PRC_MPIstop
-          endif
+          ! not to output message: tentative
+          !if( ncopy > 1 )then ! copy is allowed only one time.
+          !   write(*,*) 'xxx ERROR: times of copying is exceeded allowed times'
+          !   write(*,*) 'xxx domain number: ', ONLINE_DOMAIN_NUM
+          !   write(*,*) 'xxx copy times: ', ncopy
+          !   call PRC_MPIstop
+          !endif
        enddo
     enddo
     enddo
