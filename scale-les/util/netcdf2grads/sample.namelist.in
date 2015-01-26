@@ -1,5 +1,6 @@
 &info
 timestep=6
+inest=2
 conffile="../../test/case_real/check_awajishima/run_WRF/run.conf"
 idir="../../test/case_real/check_awajishima/run_WRF"
 odir="./grads"
@@ -15,10 +16,12 @@ stime="00:05Z07sep2011"
 
 !---------------------------------------------------------------------
 ! timestep : the number of data
-! idir     : path to the directory of history.pe*.nc
+! inest    : domain number (used for the name of ctl file)
+! conffile : path to the configure file, run.d0X.conf
+! idir     : path to the directory of history.peXXXXXX.nc
 ! odir     : path to the directory of grads files (output)
-! vcount   : the number of variable you want to convert to grads format
-! vname    : the name of variable you want to convert
+! vcount   : the number of variables you want to convert to grads format
+! vname    : the name of variables you want to convert
 ! delt     : time interval of data, used for grads ctl file. The format is 1 or 2 digits and unit(yr mo dy hr mn sc).
 ! stime    : initial time for grads ctl file. The format is "hh:mmZddmmmyyyy".
 !---------------------------------------------------------------------
