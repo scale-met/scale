@@ -774,7 +774,7 @@ contains
        ! time integration tke
        do j = JJS, JJE
        do i = IIS, IIE
-          ap = - dt * 1.5_RP * ( DENS(KS  ,i,j)*Nu(KS  ,i,j) &
+          ap = - dt * 0.5_RP * ( DENS(KS  ,i,j)*Nu(KS  ,i,j) &
                                + DENS(KS+1,i,j)*Nu(KS+1,i,j) ) &
              * RFDZ(KS) / GSQRT(KS,i,j,I_XYW)
           a(KS,i,j) = ap * RCDZ(KS) / ( DENS(KS,i,j) * GSQRT(KS,i,j,I_XYZ) )
@@ -797,7 +797,7 @@ contains
                                      - advc )
           do k = KS+1, KE_PBL-1
              c(k,i,j) = ap * RCDZ(k) / ( DENS(k,i,j) * GSQRT(k,i,j,I_XYZ) )
-             ap = - dt * 1.5_RP * ( DENS(k  ,i,j)*Nu(k  ,i,j) &
+             ap = - dt * 0.5_RP * ( DENS(k  ,i,j)*Nu(k  ,i,j) &
                                   + DENS(k+1,i,j)*Nu(k+1,i,j) ) &
                 * RFDZ(k) / GSQRT(k,i,j,I_XYW)
              a(k,i,j) = ap * RCDZ(k) / ( DENS(k,i,j) * GSQRT(k,i,j,I_XYZ) )
