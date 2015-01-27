@@ -218,6 +218,10 @@ contains
        REAL_LATX, &
        REAL_LATY, &
        REAL_LATXY
+    use scale_topography, only: &
+       TOPO_Zsfc
+    use scale_landuse, only: &
+       LANDUSE_frac_land
     implicit none
 
     real(RP)         :: AXIS     (im,jm,KMAX)
@@ -436,6 +440,16 @@ contains
     AXIS_name(1:2) = (/'xh','yh'/)
     call HistoryPutAssociatedCoordinates( 'lat_uv', 'latitude (half level uv)' ,     &
                                           'degrees_north', AXIS_name(1:2), AXIS(:,:,1) )
+
+    AXIS(1:im,1:jm,1) = TOPO_Zsfc(ims:ime,jms:jme)
+    AXIS_name(1:2) = (/'x ','y '/)
+    call HistoryPutAssociatedCoordinates( 'topo', 'topography',            &
+                                          'm', AXIS_name(1:2), AXIS(:,:,1) )
+
+    AXIS(1:im,1:jm,1) = LANDUSE_frac_land(ims:ime,jms:jme)
+    AXIS_name(1:2) = (/'x ','y '/)
+    call HistoryPutAssociatedCoordinates( 'lsmask', 'fraction for land-sea mask', &
+                                          '0-1', AXIS_name(1:2), AXIS(:,:,1)      )
 
     return
   end subroutine HIST_put_axes
