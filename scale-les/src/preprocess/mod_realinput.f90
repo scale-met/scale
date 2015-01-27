@@ -3190,9 +3190,10 @@ contains
      call interp_OceanLand_data(work(:,:,:), lsmask_org, IALL, JALL, 1, landdata=.true.)
      lst_org(:,:) = work(:,:,1)
     ! Urban surface temp: interpolate over the ocean
-     work(:,:,1) = ust_org(:,:)
-     call interp_OceanLand_data(work(:,:,:), lsmask_org, IALL, JALL, 1, landdata=.true.)
-     ust_org(:,:) = work(:,:,1)
+     !work(:,:,1) = ust_org(:,:)
+     !call interp_OceanLand_data(work(:,:,:), lsmask_org, IALL, JALL, 1, landdata=.true.)
+     !ust_org(:,:) = work(:,:,1)
+     ust_org(:,:) = lst_org(:,:)
 
     ! cold start approach
     !skint_org(:,:)      = lst_org(:,:)
