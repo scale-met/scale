@@ -2889,7 +2889,10 @@ contains
        D2R   => CONST_D2R,   &
        TEM00 => CONST_TEM00
     use scale_landuse, only: &
-       lsmask_nest => LANDUSE_frac_land
+       lsmask_nest => LANDUSE_frac_land,  &
+       fact_ocean  => LANDUSE_fact_ocean, &
+       fact_land   => LANDUSE_fact_land,  &
+       fact_urban  => LANDUSE_fact_urban
     use scale_grid_nest, only: &
        PARENT_KMAX,     &
        PARENT_IMAX,     &
@@ -3191,12 +3194,10 @@ contains
      ust_org(:,:) = work(:,:,1)
 
     ! cold start approach
-    skint_org(:,:)      = lst_org(:,:)
+    !skint_org(:,:)      = lst_org(:,:)
     skinw_org(:,:)      = 0.0_RP
     snowq_org(:,:)      = 0.0_RP
     snowt_org(:,:)      = TEM00
-    !tw_org   (:,:)      = sst_org(:,:)
-    !ust_org  (:,:)      = lst_org(:,:)
     albw_org (:,:,I_LW) = 0.04_RP  ! emissivity of water surface : 0.96
     albw_org (:,:,I_SW) = 0.10_RP
     albg_org (:,:,I_LW) = 0.03_RP  ! emissivity of general ground surface : 0.95-0.98
@@ -3222,9 +3223,9 @@ contains
        ust  (i,j) = ust_org  (igrd(i,j,1),jgrd(i,j,1)) * hfact(i,j,1) &
                   + ust_org  (igrd(i,j,2),jgrd(i,j,2)) * hfact(i,j,2) &
                   + ust_org  (igrd(i,j,3),jgrd(i,j,3)) * hfact(i,j,3)
-       skint(i,j) = skint_org(igrd(i,j,1),jgrd(i,j,1)) * hfact(i,j,1) &
-                  + skint_org(igrd(i,j,2),jgrd(i,j,2)) * hfact(i,j,2) &
-                  + skint_org(igrd(i,j,3),jgrd(i,j,3)) * hfact(i,j,3)
+       !skint(i,j) = skint_org(igrd(i,j,1),jgrd(i,j,1)) * hfact(i,j,1) &
+       !           + skint_org(igrd(i,j,2),jgrd(i,j,2)) * hfact(i,j,2) &
+       !           + skint_org(igrd(i,j,3),jgrd(i,j,3)) * hfact(i,j,3)
        skinw(i,j) = skinw_org(igrd(i,j,1),jgrd(i,j,1)) * hfact(i,j,1) &
                   + skinw_org(igrd(i,j,2),jgrd(i,j,2)) * hfact(i,j,2) &
                   + skinw_org(igrd(i,j,3),jgrd(i,j,3)) * hfact(i,j,3)
@@ -3236,6 +3237,19 @@ contains
                   + snowt_org(igrd(i,j,3),jgrd(i,j,3)) * hfact(i,j,3)
     enddo
     enddo
+
+    ! replace values over the ocean ####
+     do j = 1, JA
+     do i = 1, IA
+        if( abs(lsmask_nest(i,j)-0.0_RP) < EPS )then ! ocean grid
+           lst(i,j)   = sst(i,j)
+           ust(i,j)   = sst(i,j)
+        endif
+           skint(i,j) = fact_ocean(i,j) * sst(i,j) &
+                      + fact_land (i,j) * lst(i,j) &
+                      + fact_urban(i,j) * ust(i,j)
+     enddo
+     enddo
 
     do n = 1, 2 ! 1:LW, 2:SW
     do j = 1, JA
