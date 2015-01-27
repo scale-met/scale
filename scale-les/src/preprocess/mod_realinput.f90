@@ -2887,7 +2887,8 @@ contains
       init_landwater_ratio ) ! (in)
     use scale_const, only: &
        D2R   => CONST_D2R,   &
-       TEM00 => CONST_TEM00
+       TEM00 => CONST_TEM00, &
+       EPS   => CONST_EPS
     use scale_landuse, only: &
        lsmask_nest => LANDUSE_frac_land,  &
        fact_ocean  => LANDUSE_fact_ocean, &
