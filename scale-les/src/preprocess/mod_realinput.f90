@@ -2888,6 +2888,8 @@ contains
     use scale_const, only: &
        D2R   => CONST_D2R,   &
        TEM00 => CONST_TEM00
+    use scale_landuse, only: &
+       lsmask_nest => LANDUSE_frac_land
     use scale_grid_nest, only: &
        PARENT_KMAX,     &
        PARENT_IMAX,     &
@@ -2957,6 +2959,11 @@ contains
 
     real(RP) :: lcz_3D(LKMAX,IA,JA)
 
+    real(RP)              :: maskval_tg
+    real(RP)              :: maskval_strg
+    real(RP)              :: maskval_lst
+    real(RP), allocatable :: work (:,:,:)
+
     integer :: KALL, IALL, JALL
     integer :: rank
 
@@ -2993,6 +3000,7 @@ contains
     allocate( snowq_org (       IALL, JALL    ) )
     allocate( snowt_org (       IALL, JALL    ) )
     allocate( lsmask_org(       IALL, JALL    ) )
+    allocate( work      (       IALL, JALL, 1 ) )
 
     allocate( hfact(        IA, JA, itp_nh         ) )
     allocate( vfact( LKMAX, IA, JA, itp_nh, itp_nv ) )
@@ -3084,11 +3092,6 @@ contains
     enddo
     enddo
 
-    ! tentative process
-    skinw_org(:,:) = 0.0_RP
-    snowq_org(:,:) = 0.0_RP
-    snowt_org(:,:) = TEM00
-
     call latlonz_interpolation_fact( hfact  (:,:,:),     & ! [OUT]
                                      vfact  (:,:,:,:,:), & ! [OUT]
                                      kgrd   (:,:,:,:,:), & ! [OUT]
@@ -3104,6 +3107,20 @@ contains
                                      1,                  & ! [IN]
                                      landgrid=.true.     ) ! [IN]
 
+
+    ! replace missing value
+     maskval_tg   = 298.0_RP    ! mask value 50K => 298K
+     maskval_strg = 0.02_RP     ! mask value 0.0 => 0.02
+                                ! default value 0.02: set as value of forest at 40% of evapolation rate.
+                                ! forest is considered as a typical landuse over Japan area.
+
+    ! Land temp: interpolate over the ocean
+     do k = 1, KALL
+        work(:,:,1) = tg_org(k,:,:)
+        call interp_OceanLand_data(work(:,:,:),lsmask_org, IALL, JALL, 1, landdata=.true.)
+        tg_org(k,:,:) = work(:,:,1)
+     enddo
+
     ! interpolation
     do j = 1, JA
     do i = 1, IA
@@ -3118,8 +3135,18 @@ contains
        tg  (LKMAX,i,j) = tg  (LKMAX-1,i,j)
     enddo ! i
     enddo ! j
+    ! replace values over the ocean
+    do k = 1, LKMAX
+       call replace_misval( tg(k,:,:), maskval_tg, lsmask_nest)
+    enddo
 
+    ! Land water: interpolate over the ocean
     if( use_file_landwater )then
+      do k = 1, KALL
+         work(:,:,1) = strg_org(k,:,:)
+         call interp_OceanLand_data(work(:,:,:), lsmask_org, IALL, JALL, 1, landdata=.true.)
+         strg_org(k,:,:) = work(:,:,1)
+      enddo
       ! interpolation
       do j = 1, JA
       do i = 1, IA
@@ -3134,6 +3161,10 @@ contains
          strg(LKMAX,i,j) = strg(LKMAX-1,i,j)
       enddo
       enddo
+      ! replace values over the ocean
+      do k = 1, LKMAX
+       call replace_misval( strg(k,:,:), maskval_strg, lsmask_nest )
+      enddo
     else  ! not read from boundary file
       sh2o(:,:,:) = init_landwater_ratio
       ! conversion from water saturation [fraction] to volumetric water content [m3/m3]
@@ -3142,6 +3173,35 @@ contains
       end do
     endif
 
+    ! Ocean temp: interpolate over the land
+     work(:,:,1) = tw_org(:,:)
+     call interp_OceanLand_data(work(:,:,:), lsmask_org, IALL, JALL, 1, landdata=.false.)
+     tw_org(:,:) = work(:,:,1)
+    ! SST: interpolate over the land
+     work(:,:,1) = sst_org(:,:)
+     call interp_OceanLand_data(work(:,:,:), lsmask_org, IALL, JALL, 1, landdata=.false.)
+     sst_org(:,:) = work(:,:,1)
+    ! Surface skin temp: interpolate over the ocean
+     work(:,:,1) = lst_org(:,:)
+     call interp_OceanLand_data(work(:,:,:), lsmask_org, IALL, JALL, 1, landdata=.true.)
+     lst_org(:,:) = work(:,:,1)
+    ! Urban surface temp: interpolate over the ocean
+     work(:,:,1) = ust_org(:,:)
+     call interp_OceanLand_data(work(:,:,:), lsmask_org, IALL, JALL, 1, landdata=.true.)
+     ust_org(:,:) = work(:,:,1)
+
+    ! cold start approach
+    skint_org(:,:)      = lst_org(:,:)
+    skinw_org(:,:)      = 0.0_RP
+    snowq_org(:,:)      = 0.0_RP
+    snowt_org(:,:)      = TEM00
+    !tw_org   (:,:)      = sst_org(:,:)
+    !ust_org  (:,:)      = lst_org(:,:)
+    albw_org (:,:,I_LW) = 0.04_RP  ! emissivity of water surface : 0.96
+    albw_org (:,:,I_SW) = 0.10_RP
+    albg_org (:,:,I_LW) = 0.03_RP  ! emissivity of general ground surface : 0.95-0.98
+    albg_org (:,:,I_SW) = 0.22_RP
+    z0w_org  (:,:)      = 0.001_RP
     roff(:,:) = 0.0_RP ! not necessary
     qvef(:,:) = 0.0_RP ! not necessary
 
@@ -3212,6 +3272,7 @@ contains
     deallocate( skinw_org )
     deallocate( snowq_org )
     deallocate( snowt_org )
+    deallocate( lsmask_org )
 
     deallocate( hfact )
     deallocate( vfact )
