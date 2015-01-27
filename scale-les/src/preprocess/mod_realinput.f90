@@ -3074,7 +3074,7 @@ contains
        call FileRead( read2D(:,:), BASENAME_ORG, "SFC_TEMP",       1, rank )
        skint_org(xs:xe,ys:ye) = read2D(:,:)
 
-       call FileRead( read2D(:,:), BASENAME_ORG, "FRAC_LAND",      1, rank )
+       call FileRead( read2D(:,:), BASENAME_ORG, "lsmask",         1, rank )
        lsmask_org(xs:xe,ys:ye) = read2D(:,:)
 
     end do
