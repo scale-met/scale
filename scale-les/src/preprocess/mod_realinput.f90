@@ -681,6 +681,8 @@ contains
        THERMODYN_pott      => ATMOS_THERMODYN_pott
     use scale_gridtrans, only: &
        rotc => GTRANS_ROTC
+    use scale_topography, only: &
+       topo => TOPO_Zsfc
     implicit none
 
     real(RP),         intent(out) :: dens(:,:,:,:)
@@ -717,8 +719,8 @@ contains
     real(RP), allocatable :: qtrc_org(:,:,:,:,:)
 
     real(RP), allocatable :: tsfc_org(:,:,:)
-    real(RP), allocatable :: psfc_org(:,:,:)
     real(RP), allocatable :: qsfc_org(:,:,:,:)
+    real(RP), allocatable :: mslp_org(:,:,:)
 
     real(RP), allocatable :: velz_org(:,:,:,:)
     real(RP), allocatable :: velx_org(:,:,:,:)
@@ -741,6 +743,7 @@ contains
     real(RP) :: pres_sfc(1,IA,JA,start_step:end_step)
     real(RP) :: temp_sfc(1,IA,JA,start_step:end_step)
     real(RP) :: qtrc_sfc(1,IA,JA,start_step:end_step,QA)
+    real(RP) :: mslp_sfc(1,IA,JA,start_step:end_step)
 
     real(RP) :: hfact(   IA,JA,itp_nh       )
     real(RP) :: vfact(KA,IA,JA,itp_nh,itp_nv)
@@ -752,6 +755,10 @@ contains
     real(RP) :: qc(KA,IA,JA)
     real(RP) :: qc_sfc(1,IA,JA)
 
+    real(RP) :: wgt_up, wgt_bt
+    real(RP) :: z1, z2
+    real(RP) :: pres1, pres2
+
     integer :: KALL, IALL, JALL
     integer :: rank
 
@@ -759,6 +766,8 @@ contains
     integer :: xloc, yloc
     integer :: xs, xe
     integer :: ys, ye
+
+    logical :: lack_of_val
     !---------------------------------------------------------------------------
 
     KALL = PARENT_KMAX(handle)
@@ -785,8 +794,8 @@ contains
     allocate( qtrc_org( KALL, IALL, JALL, start_step:end_step, QA) )
 
     allocate( tsfc_org(       IALL, JALL, start_step:end_step )    )
-    allocate( psfc_org(       IALL, JALL, start_step:end_step )    )
     allocate( qsfc_org(       IALL, JALL, start_step:end_step, QA) )
+    allocate( mslp_org(       IALL, JALL, start_step:end_step )    )
 
     allocate( velz_org( KALL, IALL, JALL, start_step:end_step )    )
     allocate( velx_org( KALL, IALL, JALL, start_step:end_step )    )
@@ -839,11 +848,6 @@ contains
        end do
 
        do n = start_step, end_step
-         call FileRead( read2D(:,:), BASENAME_ORG, "SFC_PRES", n, rank )
-         psfc_org(xs:xe,ys:ye,n) = read2D(:,:)
-       end do
-
-       do n = start_step, end_step
          call FileRead( read2D(:,:), BASENAME_ORG, "T2", n, rank )
          tsfc_org(xs:xe,ys:ye,n) = read2D(:,:)
        end do
@@ -851,6 +855,11 @@ contains
        do n = start_step, end_step
          call FileRead( read2D(:,:), BASENAME_ORG, "Q2", n, rank )
          qsfc_org(xs:xe,ys:ye,n,I_QV) = read2D(:,:)
+       end do
+
+       do n = start_step, end_step
+         call FileRead( read2D(:,:), BASENAME_ORG, "MSLP", n, rank )
+         mslp_org(xs:xe,ys:ye,n) = read2D(:,:)
        end do
 
        do n = start_step, end_step
@@ -1249,9 +1258,42 @@ contains
                             + tsfc_org(igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) &
                             + tsfc_org(igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3)
 
-          pres_sfc(1,i,j,n) = psfc_org(igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) &
-                            + psfc_org(igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) &
-                            + psfc_org(igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3)
+          mslp_sfc(1,i,j,n) = mslp_org(igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) &
+                            + mslp_org(igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) &
+                            + mslp_org(igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3)
+
+          ! Interpolate Surface pressure from SLP and PRES
+          lack_of_val = .true.
+
+          do k = KS-1, KE
+             if( k == KS-1 ) then
+               z1    = 0.0_RP
+               z2    = CZ      (k+1,i,j  )
+               pres1 = mslp_sfc(  1,i,j,n)
+               pres2 = pres    (k+1,i,j,n)
+             else
+               z1    = CZ  (k  ,i,j  )
+               z2    = CZ  (k+1,i,j  )
+               pres1 = pres(k  ,i,j,n)
+               pres2 = pres(k+1,i,j,n)
+             endif
+             if( topo(i,j) >= z1 .and. &
+                 topo(i,j) <  z2       ) then
+                lack_of_val = .false. ! found
+
+                wgt_bt = ( z2        - topo(i,j) ) / (z2 - z1)
+                wgt_up = ( topo(i,j) - z1        ) / (z2 - z1)
+
+                pres_sfc(1,i,j,n) = exp( log(pres1)*wgt_bt + log(pres2)*wgt_up )
+
+                exit ! exit loop
+             endif
+          enddo
+
+          if( lack_of_val ) then
+             write(IO_FID_LOG,*) 'realinput ATM SCALE: cannot estimate pres_sfc',i,j,n
+             call PRC_MPIstop
+          endif
 
           ! interpolate QV (=Q2) only: other QTRC are set zero
           qtrc_sfc(1,i,j,n,:)    = 0.0_RP
@@ -2845,7 +2887,13 @@ contains
       init_landwater_ratio ) ! (in)
     use scale_const, only: &
        D2R   => CONST_D2R,   &
-       TEM00 => CONST_TEM00
+       TEM00 => CONST_TEM00, &
+       EPS   => CONST_EPS
+    use scale_landuse, only: &
+       lsmask_nest => LANDUSE_frac_land,  &
+       fact_ocean  => LANDUSE_fact_ocean, &
+       fact_land   => LANDUSE_fact_land,  &
+       fact_urban  => LANDUSE_fact_urban
     use scale_grid_nest, only: &
        PARENT_KMAX,     &
        PARENT_IMAX,     &
@@ -2889,19 +2937,20 @@ contains
     real(RP), allocatable :: lat_org(:,:,:)
     real(RP), allocatable :: lz_org (:,:,:,:)
 
-    real(RP), allocatable :: tg_org   (:,:,:)
-    real(RP), allocatable :: strg_org (:,:,:)
-    real(RP), allocatable :: tw_org   (:,:)
-    real(RP), allocatable :: lst_org  (:,:)
-    real(RP), allocatable :: ust_org  (:,:)
-    real(RP), allocatable :: sst_org  (:,:)
-    real(RP), allocatable :: albw_org (:,:,:)
-    real(RP), allocatable :: albg_org (:,:,:)
-    real(RP), allocatable :: z0w_org  (:,:)
-    real(RP), allocatable :: skint_org(:,:)
-    real(RP), allocatable :: skinw_org(:,:)
-    real(RP), allocatable :: snowq_org(:,:)
-    real(RP), allocatable :: snowt_org(:,:)
+    real(RP), allocatable :: tg_org    (:,:,:)
+    real(RP), allocatable :: strg_org  (:,:,:)
+    real(RP), allocatable :: tw_org    (:,:)
+    real(RP), allocatable :: lst_org   (:,:)
+    real(RP), allocatable :: ust_org   (:,:)
+    real(RP), allocatable :: sst_org   (:,:)
+    real(RP), allocatable :: albw_org  (:,:,:)
+    real(RP), allocatable :: albg_org  (:,:,:)
+    real(RP), allocatable :: z0w_org   (:,:)
+    real(RP), allocatable :: skint_org (:,:)
+    real(RP), allocatable :: skinw_org (:,:)
+    real(RP), allocatable :: snowq_org (:,:)
+    real(RP), allocatable :: snowt_org (:,:)
+    real(RP), allocatable :: lsmask_org(:,:)
 
     real(RP), allocatable :: sh2o (:,:,:)
 
@@ -2913,6 +2962,11 @@ contains
     integer, allocatable :: kgrd(:,:,:,:,:)
 
     real(RP) :: lcz_3D(LKMAX,IA,JA)
+
+    real(RP)              :: maskval_tg
+    real(RP)              :: maskval_strg
+    real(RP)              :: maskval_lst
+    real(RP), allocatable :: work (:,:,:)
 
     integer :: KALL, IALL, JALL
     integer :: rank
@@ -2935,20 +2989,22 @@ contains
     allocate( lat_org(       IALL, JALL, 1 ) )
     allocate( lz_org ( KALL, IALL, JALL, 1 ) )
 
-    allocate( tg_org   ( KALL, IALL, JALL    ) )
-    allocate( strg_org ( KALL, IALL, JALL    ) )
-    allocate( sh2o     ( KALL, IALL, JALL    ) )
-    allocate( tw_org   (       IALL, JALL    ) )
-    allocate( lst_org  (       IALL, JALL    ) )
-    allocate( ust_org  (       IALL, JALL    ) )
-    allocate( sst_org  (       IALL, JALL    ) )
-    allocate( albw_org (       IALL, JALL, 2 ) )
-    allocate( albg_org (       IALL, JALL, 2 ) )
-    allocate( z0w_org  (       IALL, JALL    ) )
-    allocate( skint_org(       IALL, JALL    ) )
-    allocate( skinw_org(       IALL, JALL    ) )
-    allocate( snowq_org(       IALL, JALL    ) )
-    allocate( snowt_org(       IALL, JALL    ) )
+    allocate( tg_org    ( KALL, IALL, JALL    ) )
+    allocate( strg_org  ( KALL, IALL, JALL    ) )
+    allocate( sh2o      ( KALL, IALL, JALL    ) )
+    allocate( tw_org    (       IALL, JALL    ) )
+    allocate( lst_org   (       IALL, JALL    ) )
+    allocate( ust_org   (       IALL, JALL    ) )
+    allocate( sst_org   (       IALL, JALL    ) )
+    allocate( albw_org  (       IALL, JALL, 2 ) )
+    allocate( albg_org  (       IALL, JALL, 2 ) )
+    allocate( z0w_org   (       IALL, JALL    ) )
+    allocate( skint_org (       IALL, JALL    ) )
+    allocate( skinw_org (       IALL, JALL    ) )
+    allocate( snowq_org (       IALL, JALL    ) )
+    allocate( snowt_org (       IALL, JALL    ) )
+    allocate( lsmask_org(       IALL, JALL    ) )
+    allocate( work      (       IALL, JALL, 1 ) )
 
     allocate( hfact(        IA, JA, itp_nh         ) )
     allocate( vfact( LKMAX, IA, JA, itp_nh, itp_nv ) )
@@ -3022,6 +3078,9 @@ contains
        call FileRead( read2D(:,:), BASENAME_ORG, "SFC_TEMP",       1, rank )
        skint_org(xs:xe,ys:ye) = read2D(:,:)
 
+       call FileRead( read2D(:,:), BASENAME_ORG, "lsmask",         1, rank )
+       lsmask_org(xs:xe,ys:ye) = read2D(:,:)
+
     end do
 
     ! fill grid data
@@ -3036,11 +3095,6 @@ contains
       lcz_3D(:,i,j) = LCZ(:)
     enddo
     enddo
-
-    ! tentative process
-    skinw_org(:,:) = 0.0_RP
-    snowq_org(:,:) = 0.0_RP
-    snowt_org(:,:) = TEM00
 
     call latlonz_interpolation_fact( hfact  (:,:,:),     & ! [OUT]
                                      vfact  (:,:,:,:,:), & ! [OUT]
@@ -3057,6 +3111,20 @@ contains
                                      1,                  & ! [IN]
                                      landgrid=.true.     ) ! [IN]
 
+
+    ! replace missing value
+     maskval_tg   = 298.0_RP    ! mask value 50K => 298K
+     maskval_strg = 0.02_RP     ! mask value 0.0 => 0.02
+                                ! default value 0.02: set as value of forest at 40% of evapolation rate.
+                                ! forest is considered as a typical landuse over Japan area.
+
+    ! Land temp: interpolate over the ocean
+     do k = 1, KALL
+        work(:,:,1) = tg_org(k,:,:)
+        call interp_OceanLand_data(work(:,:,:),lsmask_org, IALL, JALL, 1, landdata=.true.)
+        tg_org(k,:,:) = work(:,:,1)
+     enddo
+
     ! interpolation
     do j = 1, JA
     do i = 1, IA
@@ -3071,8 +3139,18 @@ contains
        tg  (LKMAX,i,j) = tg  (LKMAX-1,i,j)
     enddo ! i
     enddo ! j
+    ! replace values over the ocean
+    do k = 1, LKMAX
+       call replace_misval( tg(k,:,:), maskval_tg, lsmask_nest)
+    enddo
 
+    ! Land water: interpolate over the ocean
     if( use_file_landwater )then
+      do k = 1, KALL
+         work(:,:,1) = strg_org(k,:,:)
+         call interp_OceanLand_data(work(:,:,:), lsmask_org, IALL, JALL, 1, landdata=.true.)
+         strg_org(k,:,:) = work(:,:,1)
+      enddo
       ! interpolation
       do j = 1, JA
       do i = 1, IA
@@ -3087,6 +3165,10 @@ contains
          strg(LKMAX,i,j) = strg(LKMAX-1,i,j)
       enddo
       enddo
+      ! replace values over the ocean
+      do k = 1, LKMAX
+       call replace_misval( strg(k,:,:), maskval_strg, lsmask_nest )
+      enddo
     else  ! not read from boundary file
       sh2o(:,:,:) = init_landwater_ratio
       ! conversion from water saturation [fraction] to volumetric water content [m3/m3]
@@ -3095,6 +3177,34 @@ contains
       end do
     endif
 
+    ! Ocean temp: interpolate over the land
+     work(:,:,1) = tw_org(:,:)
+     call interp_OceanLand_data(work(:,:,:), lsmask_org, IALL, JALL, 1, landdata=.false.)
+     tw_org(:,:) = work(:,:,1)
+    ! SST: interpolate over the land
+     work(:,:,1) = sst_org(:,:)
+     call interp_OceanLand_data(work(:,:,:), lsmask_org, IALL, JALL, 1, landdata=.false.)
+     sst_org(:,:) = work(:,:,1)
+    ! Surface skin temp: interpolate over the ocean
+     work(:,:,1) = lst_org(:,:)
+     call interp_OceanLand_data(work(:,:,:), lsmask_org, IALL, JALL, 1, landdata=.true.)
+     lst_org(:,:) = work(:,:,1)
+    ! Urban surface temp: interpolate over the ocean
+     !work(:,:,1) = ust_org(:,:)
+     !call interp_OceanLand_data(work(:,:,:), lsmask_org, IALL, JALL, 1, landdata=.true.)
+     !ust_org(:,:) = work(:,:,1)
+     ust_org(:,:) = lst_org(:,:)
+
+    ! cold start approach
+    !skint_org(:,:)      = lst_org(:,:)
+    skinw_org(:,:)      = 0.0_RP
+    snowq_org(:,:)      = 0.0_RP
+    snowt_org(:,:)      = TEM00
+    albw_org (:,:,I_LW) = 0.04_RP  ! emissivity of water surface : 0.96
+    albw_org (:,:,I_SW) = 0.10_RP
+    albg_org (:,:,I_LW) = 0.03_RP  ! emissivity of general ground surface : 0.95-0.98
+    albg_org (:,:,I_SW) = 0.22_RP
+    z0w_org  (:,:)      = 0.001_RP
     roff(:,:) = 0.0_RP ! not necessary
     qvef(:,:) = 0.0_RP ! not necessary
 
@@ -3115,9 +3225,9 @@ contains
        ust  (i,j) = ust_org  (igrd(i,j,1),jgrd(i,j,1)) * hfact(i,j,1) &
                   + ust_org  (igrd(i,j,2),jgrd(i,j,2)) * hfact(i,j,2) &
                   + ust_org  (igrd(i,j,3),jgrd(i,j,3)) * hfact(i,j,3)
-       skint(i,j) = skint_org(igrd(i,j,1),jgrd(i,j,1)) * hfact(i,j,1) &
-                  + skint_org(igrd(i,j,2),jgrd(i,j,2)) * hfact(i,j,2) &
-                  + skint_org(igrd(i,j,3),jgrd(i,j,3)) * hfact(i,j,3)
+       !skint(i,j) = skint_org(igrd(i,j,1),jgrd(i,j,1)) * hfact(i,j,1) &
+       !           + skint_org(igrd(i,j,2),jgrd(i,j,2)) * hfact(i,j,2) &
+       !           + skint_org(igrd(i,j,3),jgrd(i,j,3)) * hfact(i,j,3)
        skinw(i,j) = skinw_org(igrd(i,j,1),jgrd(i,j,1)) * hfact(i,j,1) &
                   + skinw_org(igrd(i,j,2),jgrd(i,j,2)) * hfact(i,j,2) &
                   + skinw_org(igrd(i,j,3),jgrd(i,j,3)) * hfact(i,j,3)
@@ -3129,6 +3239,19 @@ contains
                   + snowt_org(igrd(i,j,3),jgrd(i,j,3)) * hfact(i,j,3)
     enddo
     enddo
+
+    ! replace values over the ocean ####
+     do j = 1, JA
+     do i = 1, IA
+        if( abs(lsmask_nest(i,j)-0.0_RP) < EPS )then ! ocean grid
+           lst(i,j)   = sst(i,j)
+           ust(i,j)   = sst(i,j)
+        endif
+           skint(i,j) = fact_ocean(i,j) * sst(i,j) &
+                      + fact_land (i,j) * lst(i,j) &
+                      + fact_urban(i,j) * ust(i,j)
+     enddo
+     enddo
 
     do n = 1, 2 ! 1:LW, 2:SW
     do j = 1, JA
@@ -3165,6 +3288,7 @@ contains
     deallocate( skinw_org )
     deallocate( snowq_org )
     deallocate( snowt_org )
+    deallocate( lsmask_org )
 
     deallocate( hfact )
     deallocate( vfact )
