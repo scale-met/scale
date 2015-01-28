@@ -6,6 +6,7 @@ program unit
   use scale_process, only: &
      PRC_setup,    &
      PRC_MPIstart, &
+     PRC_MPIsetup, &
      PRC_MPIfinish
   use scale_const, only: &
      CONST_setup
@@ -23,11 +24,14 @@ program unit
 
   character(len=H_MID), parameter :: MODELNAME = "Unit test"
 
-  ! setup standard I/O
-  call IO_setup( MODELNAME )
-
   ! start MPI
   call PRC_MPIstart
+
+  ! setup standard I/O
+  call IO_setup( MODELNAME, .false. )
+
+  ! setup MPI
+  call PRC_MPIsetup( .false. )
 
   ! setup process
   call PRC_setup
