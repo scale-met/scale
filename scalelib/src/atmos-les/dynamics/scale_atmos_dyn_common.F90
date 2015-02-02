@@ -489,7 +489,7 @@ contains
 
     endif
 
-    call calc_numdiff( work(:,:,:,:,1), iwork, & ! (out)
+    call calc_numdiff( work, iwork, & ! (out)
                        dens_diff, & ! (in)
                        nd_order, & ! (in)
                        0, 0, 0, KE )
@@ -571,7 +571,7 @@ contains
 
     call PROF_rapend  ("NumFilter Main", 3)
 
-    call calc_numdiff( work(:,:,:,:,1), iwork, & ! (out)
+    call calc_numdiff( work, iwork, & ! (out)
                        VELZ, & ! (in)
                        nd_order, & ! (in)
                        1, 0, 0, KE-1 )
@@ -655,7 +655,7 @@ contains
 
     call PROF_rapend  ("NumFilter Main", 3)
 
-    call calc_numdiff( work(:,:,:,:,1), iwork, & ! (out)
+    call calc_numdiff( work, iwork, & ! (out)
                        VELX, & ! (in)
                        nd_order, & ! (in)
                        0, 1, 0, KE )
@@ -740,7 +740,7 @@ contains
 
     call PROF_rapend  ("NumFilter Main", 3)
 
-    call calc_numdiff( work(:,:,:,:,1), iwork, & ! (out)
+    call calc_numdiff( work, iwork, & ! (out)
                        VELY, & ! (in)
                        nd_order, & ! (in)
                        0, 0, 1, KE )
@@ -824,7 +824,7 @@ contains
 
     call PROF_rapend  ("NumFilter Main", 3)
 
-    call calc_numdiff( work(:,:,:,:,1), iwork, & ! (out)
+    call calc_numdiff( work, iwork, & ! (out)
                        pott_diff, & ! (in)
                        nd_order, & ! (in)
                        0, 0, 0, KE )
@@ -1039,14 +1039,14 @@ contains
 
        endif
 
-       call calc_numdiff( work(:,:,:,:,1), iwork, & ! (out)
+       call calc_numdiff( work, iwork, & ! (out)
                           qv_diff, & ! (in)
                           nd_order, & ! (in)
                           0, 0, 0, KE )
 
     else ! iq /= I_QV
 
-       call calc_numdiff( work(:,:,:,:,1), iwork, & ! (out)
+       call calc_numdiff( work, iwork, & ! (out)
                           QTRC, & ! (in)
                           nd_order, & ! (in)
                           0, 0, 0, KE )
@@ -1215,24 +1215,24 @@ contains
 
        call PROF_rapstart("NumFilter Comm", 3)
 
-       call COMM_vars8( work(:,:,:,ZDIR,i_in),  1 )
-       call COMM_vars8( work(:,:,:,XDIR,i_in),  2 )
-       call COMM_vars8( work(:,:,:,YDIR,i_in),  3 )
+       call COMM_vars8( work(:,:,:,ZDIR,i_in),  16 )
+       call COMM_vars8( work(:,:,:,XDIR,i_in),  17 )
+       call COMM_vars8( work(:,:,:,YDIR,i_in),  18 )
 
-       call COMM_wait ( work(:,:,:,ZDIR,i_in),  1 )
-       call COMM_wait ( work(:,:,:,XDIR,i_in),  2 )
-       call COMM_wait ( work(:,:,:,YDIR,i_in),  3 )
+       call COMM_wait ( work(:,:,:,ZDIR,i_in),  16 )
+       call COMM_wait ( work(:,:,:,XDIR,i_in),  17 )
+       call COMM_wait ( work(:,:,:,YDIR,i_in),  18 )
 
        call PROF_rapend  ("NumFilter Comm", 3)
 
        call PROF_rapstart("NumFilter Main", 3)
 
        call calc_diff4( work(:,:,:,:,i_out), & ! (out)
-                        work(:,:,:,:,i_in), & ! (in)
-                        CNZ4(:,:,1),             & ! (in)
-                        CNX4(:,:,1),             & ! (in)
-                        CNY4(:,:,1),             & ! (in)
-                        KE                       ) ! (in)
+                        work(:,:,:,:,i_in),  & ! (in)
+                        CNZ4(:,:,1+KO),      & ! (in)
+                        CNX4(:,:,1+IO),      & ! (in)
+                        CNY4(:,:,1+JO),      & ! (in)
+                        KEE                  ) ! (in)
 
        call PROF_rapend  ("NumFilter Main", 3)
 
