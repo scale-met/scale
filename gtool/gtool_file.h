@@ -15,8 +15,9 @@
 /* data type */
 #define File_REAL4     0
 #define File_REAL8     1
-#define File_INTEGER4  2
-#define File_INTEGER8  3
+#define File_INTEGER2  2
+#define File_INTEGER4  3
+#define File_INTEGER8  4
 
 /* action type */
 #define File_FREAD   0
@@ -78,6 +79,11 @@ extern int32_t file_set_global_attributes( int32_t  fid,          // (in)
 					   int32_t  nodeid,       // (in)
 					   int32_t *nodeidx,      // (in)
 					   int32_t  nodeidx_dim); // (in)
+
+extern int32_t file_set_tattr( int32_t  fid,   // (in)
+			       char    *vname, // (in)
+			       char    *key,   // (in)
+			       char    *val);  // (in)
 
 extern int32_t file_put_axis( int32_t fid,        // (in)
 			      char   *name,       // (in)

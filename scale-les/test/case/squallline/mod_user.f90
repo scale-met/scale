@@ -17,11 +17,11 @@ module mod_user
   !
   !++ used modules
   !
-  use mod_precision
-  use mod_stdio
-  use mod_prof
-  use mod_grid_index
-  use mod_tracer
+  use scale_precision
+  use scale_stdio
+  use scale_prof
+  use scale_grid_index
+  use scale_tracer
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -29,6 +29,7 @@ module mod_user
   !
   !++ Public procedure
   !
+  public :: USER_setup0
   public :: USER_setup
   public :: USER_step
 
@@ -67,30 +68,36 @@ module mod_user
 contains
 
   !-----------------------------------------------------------------------------
+  !> Setup0
+  !-----------------------------------------------------------------------------
+  subroutine USER_setup0
+  end subroutine USER_setup0
+
+  !-----------------------------------------------------------------------------
   !> Setup
   !-----------------------------------------------------------------------------
   subroutine USER_setup
-    use mod_process, only: &
+    use scale_process, only: &
        PRC_MPIstop
-    use mod_time, only: &
+    use scale_time, only: &
        NOWSEC => TIME_NOWSEC
-    use mod_grid, only: &
+    use scale_grid, only: &
        CZ => GRID_CZ
     implicit none
 
     namelist / PARAM_USER / &
-       USER_do, &
+       USER_do,        &
        FORCE_DURATION, &
-       DT_MAX, &
-       DQ_MAX, &
-       SHIFT_X, &
-       SHIFT_Y, &
-       POOL_CX, &
-       POOL_CY0, &
-       POOL_TOP, &
-       POOL_RX, &
-       POOL_RY, &
-       POOL_DIST, &
+       DT_MAX,         &
+       DQ_MAX,         &
+       SHIFT_X,        &
+       SHIFT_Y,        &
+       POOL_CX,        &
+       POOL_CY0,       &
+       POOL_TOP,       &
+       POOL_RX,        &
+       POOL_RY,        &
+       POOL_DIST,      &
        POOL_NUM
 
     integer :: k
@@ -103,14 +110,13 @@ contains
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_USER,iostat=ierr)
-
     if( ierr < 0 ) then !--- missing
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_USER. Check!'
        call PRC_MPIstop
     endif
-    if( IO_L ) write(IO_FID_LOG,nml=PARAM_USER)
+    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_USER)
 
     if ( USER_do ) then
        if( IO_L ) write(IO_FID_LOG,*) '*** Enable cold pool forcing'
@@ -123,10 +129,9 @@ contains
           if ( CZ(k) > POOL_TOP ) then
              Ktop = k-1
              exit
-          end if
+          endif
        enddo
-
-    end if
+    endif
 
     return
   end subroutine USER_setup
@@ -135,19 +140,19 @@ contains
   !> Step
   !-----------------------------------------------------------------------------
   subroutine USER_step
-    use mod_process, only: &
+    use scale_process, only: &
        PRC_MPIstop
-    use mod_time, only: &
+    use scale_time, only: &
        NOWSEC => TIME_NOWSEC, &
        DTSEC  => TIME_DTSEC
     use mod_atmos_vars, only: &
        DENS, &
        RHOT, &
        QTRC
-    use mod_grid, only: &
+    use scale_grid, only: &
        CX => GRID_CX, &
        CY => GRID_CY
-    use mod_comm, only: &
+    use scale_comm, only: &
        COMM_vars8, &
        COMM_wait
     implicit none
@@ -156,39 +161,46 @@ contains
     real(RP) :: time
     real(RP) :: fact, dist
     real(RP) :: POOL_CY
+
     integer :: k, i, j, n
     !---------------------------------------------------------------------------
 
     if ( USER_do ) then
+
        time = NOWSEC - TIME0
+
        if ( time <= FORCE_DURATION ) then
           do j = JS, JE
           do i = IS, IE
              dt = 0.0_RP
              dq = 0.0_RP
+
              do n = 1, POOL_NUM
                 POOL_CY = POOL_CY0 - real(2*n-POOL_NUM-1) * 0.5 * POOL_DIST
                 dist = ( (CX(i)-POOL_CX+SHIFT_X*time)/POOL_RX )**2 &
                      + ( (CY(j)-POOL_CY+SHIFT_Y*time)/POOL_RY )**2
+
                 if ( dist < 1.0_RP ) then
                    fact = cos( pi2*sqrt(dist) )**2
                    dt = dt + DT_MAX * fact
                    dq = dq + DQ_MAX * fact
-                end if
+                endif
              enddo
+
              do k = KS, Ktop
-                RHOT(k,i,j) = RHOT(k,i,j) &
-                     + dt * DENS(k,i,j) * DTSEC
-                QTRC(k,i,j,I_QV) = QTRC(k,i,j,I_QV) &
-                     + max( dq*DTSEC, -QTRC(k,i,j,I_QV) )
+                RHOT(k,i,j)      = RHOT(k,i,j)      +      dt*DTSEC * DENS(k,i,j)
+                QTRC(k,i,j,I_QV) = QTRC(k,i,j,I_QV) + max( dq*DTSEC, -QTRC(k,i,j,I_QV) )
              enddo
+
           enddo
           enddo
-          call COMM_vars8( RHOT(:,:,:), 1)
+
+          call COMM_vars8( RHOT(:,:,:),      1)
           call COMM_vars8( QTRC(:,:,:,I_QV), 2)
-          call COMM_wait( RHOT(:,:,:), 1)
-          call COMM_wait( QTRC(:,:,:,I_QV), 2)
-       end if
+          call COMM_wait ( RHOT(:,:,:),      1)
+          call COMM_wait ( QTRC(:,:,:,I_QV), 2)
+       endif
+
     endif
 
     return

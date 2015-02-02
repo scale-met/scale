@@ -7,7 +7,7 @@
 !! @author Team SCALE
 !!
 !! @par History
-!! @li      2012-07-19 (S.Nishizawa) [new] imported from SCALE mod_time
+!! @li      2012-07-19 (S.Nishizawa) [new] imported from SCALE scale_time
 !!
 !<
 !-------------------------------------------------------------------------------
@@ -160,13 +160,13 @@ contains
     select case(trim(unit))
     case('MSEC', 'msec')
        value = second / 1.0E-3_SP
-    case('SEC', 'sec', 's')
+    case('SEC', 'seconds', 'sec', 's')
        value = second
-    case('MIN', 'min')
+    case('MIN', 'mins', 'min')
        value = second / TIME_SEC
-    case('HOUR', 'hour', 'h')
+    case('HOUR', 'hours', 'hour', 'h')
        value = second / (TIME_SEC * TIME_MIN)
-    case('DAY', 'day')
+    case('DAY', 'days', 'day')
        value = second / (TIME_SEC * TIME_MIN * TIME_HOUR)
     case default
        write(message,*) ' xxx Unsupported UNIT:', trim(unit), value
@@ -189,13 +189,13 @@ contains
     select case(trim(unit))
     case('MSEC', 'msec')
        value = second / 1.0E-3_DP
-    case('SEC', 'sec', 's')
+    case('SEC', 'seconds', 'sec', 's')
        value = second
-    case('MIN', 'min')
+    case('MIN', 'mins', 'min')
        value = second / TIME_SEC
-    case('HOUR', 'hour', 'h')
+    case('HOUR', 'hours', 'hour', 'h')
        value = second / (TIME_SEC * TIME_MIN)
-    case('DAY', 'day')
+    case('DAY', 'days', 'day')
        value = second / (TIME_SEC * TIME_MIN * TIME_HOUR)
     case default
        write(message,*) ' xxx Unsupported UNIT:', trim(unit), value

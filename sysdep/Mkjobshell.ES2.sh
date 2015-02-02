@@ -7,6 +7,9 @@ BINNAME=${3}
 INITCONF=${4}
 RUNCONF=${5}
 TPROC=${6}
+DATDIR=${7}
+DATPARAM=(`echo ${8} | tr -s ',' ' '`)
+DATDISTS=(`echo ${9} | tr -s ',' ' '`)
 
 # System specific
 MPIEXEC="mpirun -nnp ${TPROC} /usr/lib/mpi/mpisep.sh"

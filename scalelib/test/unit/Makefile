@@ -1,9 +1,11 @@
 PWD = $(shell pwd)
-TOPDIR = ../../..
 BUILD_DIR := $(PWD)/.libs
 
-include $(TOPDIR)/Mkinclude
+TOPDIR     = ../../..
+SYSDEP_DIR = ../../../sysdep
+
 include $(SYSDEP_DIR)/Makedef.$(SCALE_SYS)
+include $(TOPDIR)/Mkinclude
 
 VPATH = $(BUILD_DIR)
 
@@ -15,15 +17,16 @@ PROJ_EXE = unit
 index   = 10x10x2
 dynamics = heve
 tracer  = kessler
-radiation = mstrnX
+radiation = mstrnx
 sfcflx  = const
 turbulence = smg
 precision = real8
 postfix = debug
 
 MODS = \
+	test_comm.o \
 	test_atmos_phy_tb_smg.o \
-	test_atmos_dyn_fent_fct.o
+	test_atmos_dyn.o
 
 all: makedir makelib makebin run
 
@@ -36,20 +39,22 @@ makelib:
 makebin: $(BUILD_DIR)/$(PROJ_EXE)
 
 run:
-	$(BUILD_DIR)/$(PROJ_EXE) dummy.conf
+	mpirun -n 4 $(BUILD_DIR)/$(PROJ_EXE) run.conf
 
 $(BUILD_DIR)/$(PROJ_EXE): $(BUILD_DIR)/$(PROJ_EXE).o $(patsubst %,$(BUILD_DIR)/%,$(MODS)) $(LIBDIR)/libscale.a $(LIBDIR)/libgtool.a $(LIBDIR)/libdcutils.a
 	$(LD) $(LDFLAGS) -o $@ $^ $(NETCDF_LIBS) $(LAPACK_LIBS)
 
+$(BUILD_DIR)/test_comm.o: test_comm.f90
+
 $(BUILD_DIR)/test_atmos_phy_tb_smg.o: test_atmos_phy_tb_smg.f90
 
-$(BUILD_DIR)/test_atmos_dyn_fent_fct.o: test_atmos_dyn_fent_fct.f90
+$(BUILD_DIR)/test_atmos_dyn.o: test_atmos_dyn.f90
 
-$(BUILD_DIR)/unit.o: unit.f90 test_atmos_phy_tb_smg.o test_atmos_dyn_fent_fct.o
+$(BUILD_DIR)/unit.o: unit.f90 $(patsubst %,$(BUILD_DIR)/%,$(MODS))
 
 .SUFFIXES: .o .f90
 $(BUILD_DIR)/%.o : %.f90
-	$(FC) $(FFLAGS_DEBUG) -I$(BUILD_DIR) -I$(DCUTILSDIR) -o $@ -c $< $(MODDIROPT) $(BUILD_DIR)
+	$(FC) $(FFLAGS_DEBUG) -I$(BUILD_DIR) -I$(DCUTILSDIR) -I$(MODDIR) -o $@ -c $< $(MODDIROPT) $(BUILD_DIR)
 
 %.o: %.mod
 

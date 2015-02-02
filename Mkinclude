@@ -10,14 +10,50 @@ ifeq ($(origin MODDIR), undefined)
    MODDIR = $(TOPDIR)/include
 endif
 
-INITNAME    = scale-les_init
-BINNAME     = scale-les
-
-SYSDEP_DIR  = $(TOPDIR)/sysdep
-
 GTOOLDIR    = $(TOPDIR)/gtool
 DCUTILSDIR  = $(TOPDIR)/dc_utils
 SCALELIBDIR = $(TOPDIR)/scalelib
 
 SCALELESDIR = $(TOPDIR)/scale-les
 SCALEGMDIR  = $(TOPDIR)/scale-gm
+
+ifeq ($(origin INDEX_DIR), undefined)
+   INDEX_DIR = $(SCALELIBDIR)/include
+endif
+
+ifeq ($(AGGRESIVE),T)
+  FFLAGS = $(FFLAGS_AGGRESIVE) $(PERF_MONIT) $(RDMA)
+else
+  ifeq ($(DEBUG),T)
+    FFLAGS = $(FFLAGS_DEBUG) $(PERF_MONIT) $(RDMA)
+    FFLAGS_DYN = $(FFLAGS)
+    CFLAGS = $(CFLAGS_DEBUG) $(PERF_MONIT) $(RDMA)
+  else
+    FFLAGS = $(FFLAGS_FAST) $(PERF_MONIT) $(RDMA)
+  endif
+endif
+
+ifeq ($(ENABLE_OPENMP),T)
+      FFLAGS += -openmp -openmp-report
+endif
+
+ifeq ($(ENABLE_PAPI),T)
+      FFLAGS += -D_PAPI_
+      PAPI_INCLUDE = -I$(PAPI)/include
+      PAPI_LIBS    = -L$(PAPI)/lib -lpapi
+endif
+
+ifneq ($(USE_NETCDF3),)
+      CFLAGS += -DNETCDF3
+endif
+
+ifeq ($(ENABLE_FIXEDINDEX),T)
+      FFLAGS += -D_FIXEDINDEX_
+      inc_index = $(INDEX_DIR)/inc_index.h
+else
+      inc_index =
+endif
+
+ifneq ($(TRACER),)
+      FFLAGS += -DTRACER=$(TRACER)
+endif

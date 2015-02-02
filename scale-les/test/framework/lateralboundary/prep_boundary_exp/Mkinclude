@@ -1,0 +1,30 @@
+##----------------------------------------------------------
+## configuration for Linux X86-64 intel (sandybridge)
+##----------------------------------------------------------
+## intel compiler
+INTEL=ifort
+PRODUCT=-O3 -xHOST -unroll0 -fp-model precise -pc 80
+DEBUG=-O0 -fp-model precise -pc 80 -CB -traceback -g  -check bounds -fpe0
+FFLAGS=-assume byterecl -convert big_endian
+
+##----------------------------------------------------------
+## GNU compiler
+#GNU=gfortran
+#PRODUCT=-O3 -mavx -mfma
+#FFLAGS=-ffree-line-length-none -fconvert=big-endian \
+#       -frecord-marker=4
+
+
+##----------------------------------------------------------
+## NETCDF Library
+NCHOME=/usr/local/intel/netcdf-4.1.3
+
+
+##----------------------------------------------------------
+FC=$(INTEL)
+FCOPTIM=$(PRODUCT)
+#FCOPTIM=$(DEBUG)
+
+LIBS=-L$(NETCDF4)/lib -lnetcdff -lnetcdf
+INCLUDES=-I$(NETCDF4)/include
+

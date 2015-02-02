@@ -1,0 +1,252 @@
+%\documentclass{book}
+%\usepackage{amsmath}
+%\usepackage{bm}
+%\begin{document}
+
+\chapter{Map factor}
+\label{chap: map factor}
+{\bf \Large 
+\begin{tabular}{ccc}
+\hline
+  Corresponding author & : & Seiya Nishizawa\\
+\hline
+\end{tabular}
+}
+
+\newcommand{\pd}[2]{\frac{\partial #1}{\partial #2}}
+
+
+\section{Coordinate transform}
+A orthogonal rectangular coordinate $(x, y, z)$.
+A orthogonal curvilinear coordinate $(\xi, \eta, \zeta)$.
+
+
+The transform is defined by
+\begin{align}
+  \bm{e}_\xi &= \pd{x}{\xi}\bm{e}_x + \pd{y}{\xi}\bm{e}_y + \pd{z}{\xi}\bm{e}_z, \\
+  \bm{e}_\eta &= \pd{x}{\eta}\bm{e}_x + \pd{y}{\eta}\bm{e}_y + \pd{z}{\eta}\bm{e}_z, \\
+  \bm{e}_\zeta &= \pd{x}{\zeta}\bm{e}_x + \pd{y}{\zeta}\bm{e}_y + \pd{z}{\zeta}\bm{e}_z.
+\end{align}
+Reverse transform is
+\begin{align}
+  \bm{e}_x &= \pd{\xi}{x}\bm{e}_\xi + \pd{\eta}{x}\bm{e}_\eta + \pd{\zeta}{x}\bm{e}_\zeta, \\
+  \bm{e}_y &= \pd{\eta}{y}\bm{e}_\xi + \pd{\eta}{y}\bm{e}_\eta + \pd{\zeta}{y}\bm{e}_\zeta, \\
+  \bm{e}_z &= \pd{\zeta}{z}\bm{e}_\xi + \pd{\eta}{z}\bm{e}_\eta + \pd{\zeta}{z}\bm{e}_\zeta.
+\end{align}
+
+The Jacobian matrix is $\{\pd{\xi^k}{x^i}\}$.
+
+
+The reverse transform after the transform of the transform after the reverse transform make a vector to the original vector;
+\begin{align}
+  \pd{\xi^k}{x^i}\pd{x^i}{\xi^l} &= \delta_l^k, \\
+  \pd{x^i}{\xi^k}\pd{\xi^k}{x^j} &= \delta_j^i,
+\end{align}
+where index which appares upper and lower suffix in a single term implies summation of the term over set ${1,2,3}$ (Einstein notation).
+
+
+Spatial parial derivative is tranformed with the Jacobian matrix (covariant transform);
+\begin{align}
+  \pd{}{\xi^k} &= \pd{x^i}{\xi^k}\pd{}{x^i}, \\
+  \pd{}{x^i} &= \pd{\xi^k}{x^i}\pd{}{\xi^k}.
+\end{align}
+
+
+Velocity is transformed with the inverse of the Jacobian matrix (cotravariant transform);
+\begin{align}
+  d\xi^k &= \pd{\xi^k}{x^i} dx^i, \\
+  dx^i &= \pd{x^i}{\xi^k} d\xi^k.
+\end{align}
+
+
+
+The metric tensor, $g_{kl}$ is defined by
+\begin{equation}
+  g_{kl} = \bm{e}_k \cdot \bm{e}_l
+  = \left(\pd{x^i}{\xi_k}\bm{e}_i\right) \cdot \left(\pd{x^j}{\xi_l}\bm{e}_j\right)
+  = \pd{x^i}{\xi_k}\pd{x^j}{\xi_l} (\bm{e}_i\cdot\bm{e}_j).
+\end{equation}
+
+For orthogonal curvilinear coordinates, the matrix ${g_{kl}}$ is diagonal.
+Metric factor, $h_k$ is defined as
+\begin{equation}
+  h_k^2 = g_{kk} = \sum_i \left(\pd{x^i}{\xi_k}\right)^2.
+\end{equation}
+
+Here we define the matrix, $\bm{E}_\xi$ is
+\begin{equation}
+  \bm{E}_\xi =
+  (\bm{e}_\xi \bm{e}_\eta \bm{e}_\zeta)\cdot \bm{H}^{-1}
+  = \bm{E}_x \cdot \left\{\pd{x^i}{\xi^k}\right\} \cdot \bm{H}^{-1},
+\end{equation}
+where $\bm{E}_x = (\bm{e}_x \bm{e}_y \bm{e}_z)$, and
+\begin{equation}
+  \bm{H} = \left(\begin{array}{ccc} h_1 & 0 & 0\\ 0 & h_2 & 0\\ 0 & 0 & h_3\end{array}\right).
+\end{equation}
+The vector $\frac{1}{h_k}\bm{e}_k$ is unit vector and orthogonal each other,
+so the inverse of the $\bm{E}_\xi$ is $\bm{E}_\xi^T$.
+\begin{align}
+  \left( \bm{E}_x \cdot \left\{\pd{x^i}{\xi^k}\right\} \cdot \bm{H}^{-1} \right)^{-1} &= \left( \bm{E}_x \cdot \left\{\pd{x^i}{\xi^k}\right\} \cdot \bm{H}^{-1} \right)^T, \nonumber\\
+  \bm{H} \cdot \left\{\pd{\xi^k}{x^i}\right\} \cdot \bm{E}_x^{-1} &= \bm{H}^{-1} \cdot \left\{\pd{x^i}{\xi^k}\right\}^T \cdot \bm{E}_x^T, \nonumber
+\end{align}
+\begin{align}
+  \left\{\pd{\xi^k}{x^i}\right\} &= \bm{H}^{-2} \cdot \left\{\pd{x^i}{\xi^k}\right\}^T \cdot \bm{E}_x^T \cdot \bm{E}_x \nonumber \\
+  &= \bm{H}^{-2} \cdot \left\{\pd{x^i}{\xi^k}\right\}^T.
+\end{align}
+That is
+\begin{equation}
+  \pd{\xi^k}{x^i} = \frac{1}{h_k^2} \pd{x^i}{\xi^k}.
+\end{equation}
+
+
+\section{Governing equations}
+
+\subsection{Continuous equiation}
+
+Divergence of $\rho \bm{u}$ is
+\begin{align}
+  \pd{}{x^i}(\rho dx^i)
+  &= \pd{\xi^k}{x^i}\pd{}{\xi^k}\left(\rho \pd{x^i}{\xi^l}d\xi^l\right) \nonumber \\
+  &= \pd{\xi^k}{x^i}\pd{x^i}{\xi^l}\pd{}{\xi^k}(\rho d\xi^l)
+    +\rho d\xi^l \pd{\xi^k}{x^i} \frac{\partial^2 x^i}{\partial \xi^k \partial \xi^l} \nonumber\\
+  &= \pd{}{\xi^k} (\rho d\xi^k) + \sum_k\frac{1}{h_k^2}\rho d\xi^l \pd{x^i}{\xi^k}\frac{\partial^2 x^i}{\partial \xi^k \partial \xi^l} \nonumber\\
+  &= \pd{}{\xi^k} (\rho d\xi^k) + \sum_k \frac{1}{2h_k^2}\rho d\xi^l \pd{}{\xi^l}\left(\pd{x^i}{\xi^k}\right)^2 \nonumber\\
+  &= \pd{}{\xi^k} (\rho d\xi^k) + \sum_k \frac{1}{2h_k^2}\rho d\xi^l \pd{}{\xi^l}h_k^2 \nonumber\\
+  &= \pd{}{\xi^k} (\rho d\xi^k) + \sum_k \frac{1}{2}\rho d\xi^l \pd{}{\xi^l}\ln h_k^2 \nonumber\\
+  &= \pd{}{\xi^k} (\rho d\xi^k) + \rho d\xi^k \pd{}{\xi^k}\ln (\prod_l h_l) \nonumber\\
+  &= J \left\{ J^{-1}\pd{}{\xi^k} (\rho d\xi^l) + \rho d\xi^k \pd{}{\xi^k}J^{-1}\right\} \nonumber\\
+  &= J \pd{}{\xi^k} (J^{-1}\rho d\xi^k),
+\end{align}
+where $J$ is the Jacobian of the Jacobian matrix and
+\begin{equation}
+  J = \frac{1}{\prod_k h_k}.
+\end{equation}
+
+The continuous equation is
+\begin{equation}
+\pd{\rho}{t} + J \pd{}{\xi^k}\frac{\rho d\xi^k}{J} = 0.
+\end{equation}
+
+
+
+\subsection{Momentum equation}
+
+\begin{equation}
+  \pd{\rho d\xi^k}{t} = \pd{\xi^k}{x^i} \pd{\rho dx^i}{t}.
+\end{equation}
+
+\begin{description}
+
+\item[Advection term]
+\begin{align}
+  & \pd{\xi^k}{x^i}\pd{\rho dx^idx^j}{x^j} \nonumber\\
+  &= \pd{\xi^k}{x^i}\left(dx^j\pd{\rho dx^i}{x^j} + \rho dx^i\pd{dx^j}{x^j}\right) \nonumber\\
+  &= \pd{\xi^k}{x^i}\left(\pd{x^j}{\xi^l}d\xi^l\right)\pd{\xi^m}{x^j}\pd{}{\xi^m}\left(\rho \pd{x^i}{\xi^n}d\xi^n\right)
+  + \pd{\xi^k}{x^i}\rho \left(\pd{x^i}{\xi^l}d\xi^l\right)\pd{\xi^m}{x^j}\pd{}{\xi^m}\left(\pd{x^j}{\xi^n}d\xi^n\right) \nonumber\\
+  &= d\xi^l\pd{\xi^k}{x^i}\pd{}{\xi^l}\left(\rho \pd{x^i}{\xi^n}d\xi^n\right)
+  + \rho d\xi^k\pd{\xi^m}{x^j}\pd{}{\xi^m}\left(\pd{x^j}{\xi^n}d\xi^n\right) \nonumber\\
+  &= d\xi^l\pd{\xi^k}{x^i}\left\{\pd{x^i}{\xi^n}\pd{}{\xi^l}\left(\rho d\xi^n\right) + \rho d\xi^n \frac{\partial^2 x^i}{\partial \xi^l \partial \xi^n}\right\}
+  + \rho d\xi^k\pd{\xi^m}{x^j} \left( \pd{x^j}{\xi^n}\pd{d\xi^n}{\xi^m} + d\xi^n\frac{\partial^2 x^j}{\partial \xi^m \partial \xi^n} \right) \nonumber\\
+  &= d\xi^l\pd{}{\xi^l}\left(\rho d\xi^k\right) + \rho d\xi^l d\xi^n\pd{\xi^k}{x^i} \frac{\partial^2 x^i}{\partial \xi^l \partial \xi^n}
+  + \rho d\xi^k\pd{d\xi^m}{\xi^m} + \rho d\xi^kd\xi^n\pd{\xi^m}{x^j}\frac{\partial^2 x^j}{\partial \xi^m \partial \xi^n} \nonumber\\
+  &= \pd{}{\xi^l}\left(\rho d\xi^k d\xi^l\right) + \rho d\xi^l d\xi^n\pd{\xi^k}{x^i} \frac{\partial^2 x^i}{\partial \xi^l \partial \xi^n}
+   + \rho d\xi^kd\xi^l\pd{\xi^m}{x^i}\frac{\partial^2 x^i}{\partial \xi^l \partial \xi^m} \nonumber\\
+  &= J\left\{ J^{-1}\pd{}{\xi^l}(\rho d\xi^k d\xi^l) + \rho d\xi^k d\xi^l\pd{J^{-1}}{\xi^l} \right\}
+   + \rho d\xi^ld\xi^m\pd{\xi^k}{x^i}\frac{\partial^2 x^i}{\partial \xi^l \partial \xi^m} \nonumber\\
+  &= J \pd{}{\xi^l}{J^{-1}\rho d\xi^k d\xi^l} + \rho d\xi^l d\xi^m\Gamma^k_{lm},
+\end{align}
+where $\Gamma$ is the Christoffel symbols of the second kind, and
+\begin{align}
+  \Gamma_{lm}^k
+  &= \pd{\xi^k}{x^i} \frac{\partial^2 x^i}{\partial \xi^l \partial \xi^m} \nonumber\\
+  &= \frac{1}{2}g^{kn}\left( \pd{g_{mn}}{\xi^l} + \pd{g_{ln}}{\xi^m} - \pd{g_{lm}}{\xi^n}\right) \nonumber\\
+  &= \frac{1}{h_k^2}\left( h_k\pd{h_k}{\xi^l}\delta_{km}+h_k\pd{h_k}{\xi^m}\delta_{kl}-h_l\pd{h_l}{\xi^k}\delta_{lm}\right),
+\end{align}
+where $\{g^{kn}\}$ is inverse matrix of $\{g_{kn}\}$.
+
+
+\item[Coriolis term]
+\begin{align}
+  \pd{\xi^k}{x^i} \epsilon^{ijp} f^j \rho dx^p
+  &= \epsilon^{klm} \frac{1}{h_kh_lh_m}\hat{f}^l d\xi^m,
+\end{align}
+where $\epsilon$ is the Levi-Civita symbol,
+and
+\begin{equation}
+  \hat{f}^l = \pd{\xi^l}{x^j} f^j.
+\end{equation}
+
+\item[Pressure gradient term]
+\begin{align}
+  \pd{\xi^k}{x^i} \pd{p}{x^i}
+  &= \pd{\xi^k}{x^i}\left(\pd{\xi^l}{x^i}\pd{p}{\xi^l}\right)\nonumber\\
+  &= \frac{1}{h_k^2}\pd{x^i}{\xi^k}\pd{\xi^l}{x^i}\pd{p}{\xi^l} \nonumber\\
+  &= \frac{1}{h_k^2}\pd{p}{\xi^k}.
+\end{align}
+
+\end{description}
+
+After all, momentum equation is
+\begin{align}
+  \pd{}{t} \rho d\xi^k + J\pd{}{\xi^l} \left( J^{-1} \rho d\xi^k d\xi^l \right)
+  + \rho d\xi^l d\xi^m \Gamma_{lm}^k
+  + \epsilon^{klm} \frac{1}{h_kh_lh_m}\hat{f}^l \rho d\xi^m = -\frac{1}{h_k^2}\pd{p}{\xi^k} + \rho g^p \pd{\xi^k}{x^p}.
+\end{align}
+
+
+
+\section{Map factor}
+We introduce Map factor $m, n$.
+\begin{align}
+  \frac{1}{m}\frac{a+z}{a} &= h_1, \\
+  \frac{1}{n}\frac{a+z}{a} &= h_2, \\
+  1 &= h_3,
+\end{align}
+where is $a$ is radius of the planet.
+Assuming shallow atmospher,
+\begin{align}
+  m &= h_1, \\
+  n &= h_2.
+\end{align}
+
+Normalized velocity is defined as
+\begin{align}
+  \hat{u} &= h_1\frac{d \xi}{dt} = \frac{1}{m}\frac{d \xi}{dt}, \\
+  \hat{v} &= h_2\frac{d \eta}{dt} = \frac{1}{n}\frac{d \eta}{dt}, \\
+  \hat{w} &= h_3\frac{d \zeta}{dt} = \frac{d \zeta}{dt}.
+\end{align}
+
+The continuous equation becomes
+\begin{equation}
+  \pd{\rho}{t} + mn\pd{}{\xi}\frac{\rho \hat{u}}{n} + mn\pd{}{\eta}\frac{\rho \hat{v}}{m} + \pd{}{\zeta}\rho \hat{w} = 0
+\end{equation}
+
+The momentum equations are
+\begin{equation}
+  \pd{\rho\hat{u}^k}{t}
+  + mn\pd{}{\xi}\frac{\rho \hat{u} \hat{u}^k}{n}
+  + mn\pd{}{\eta}\frac{\rho \hat{v} \hat{u}^k}{m}
+  + \pd{}{\zeta}\rho \hat{w} \hat{u}^k
+  + m m_k \rho \hat{u} \hat{u}^k \pd{}{\xi}\frac{1}{m_k}
+  + n m_k \rho \hat{v} \hat{u}^k \pd{}{\eta}\frac{1}{m_k}
+  - m m_k \rho \hat{u}^2 \pd{}{\xi^k}\frac{1}{m}
+  - n m_k \rho \hat{v}^2 \pd{}{\xi^k}\frac{1}{n}
+  + \epsilon^{klm} m_l \hat{f}^l \rho \hat{u}^m
+  = -m_k \pd{p}{\zeta^k} + \rho g \delta_{3k}
+\end{equation}
+
+\begin{align}
+  \pd{\rho u}{t} &+ mn\pd{}{\xi}\frac{\rho uu}{n} + mn\pd{}{\eta}\frac{\rho uv}{m} + \pd{}{\zeta}\rho uw \\
+  &- f\rho v - mn \rho v\left\{v\pd{}{\xi}\left(\frac{1}{n}\right) - u\pd{}{\eta}\left(\frac{1}{m}\right)\right\} = -m\pd{p}{\xi}, \\
+  \pd{\rho v}{t} &+ mn\pd{}{\xi}\frac{\rho uv}{n} + mn\pd{}{\eta}\frac{\rho vv}{m} + \pd{}{\zeta}\rho vw \\
+  &+f\rho u + mn \rho u\left\{v\pd{}{\xi}\left(\frac{1}{n}\right) - u\pd{}{\eta}\left(\frac{1}{m}\right)\right\} = -n\pd{p}{\eta}, \\
+  \pd{\rho w}{t} &+ mn\pd{}{\xi}\frac{\rho uw}{n} + mn\pd{}{\eta}\frac{\rho vw}{m} + \pd{}{\zeta}\rho ww = -\pd{p}{\zeta} -\rho g.
+\end{align}
+
+The thermodynamical and tracer equations
+\begin{equation}
+  \pd{\rho \phi}{t} + mn\pd{}{\xi}\frac{\rho \hat{u}\phi}{n} + mn\pd{}{\eta}\frac{\rho \hat{v}\phi}{m} + \pd{\rho \hat{w}\phi}{\zeta} = 0.
+\end{equation}
+
+
+%\end{document}

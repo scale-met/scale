@@ -37,14 +37,14 @@ dc_utils/rb2f90/:
 
 
 
-scalelib/src/atmos/mod_atmos_phy_mp_bin.F90:
-scalelib/src/atmos/mod_atmos_phy_mp_binw.F90:
-scalelib/src/atmos/mod_atmos_phy_mp_hbin.F90:
-scalelib/src/atmos/mod_atmos_phy_mp_hbinw.F90:
+scalelib/src/atmos/scale_atmos_phy_mp_bin.F90:
+scalelib/src/atmos/scale_atmos_phy_mp_binw.F90:
+scalelib/src/atmos/scale_atmos_phy_mp_hbin.F90:
+scalelib/src/atmos/scale_atmos_phy_mp_hbinw.F90:
 
   Copyright (c) 2003-2005, Kentaro Suzuki.
   Copyright (c) 2006-2008, Yousuke Sato.
-  Copyright (c) 2012-2013, Team SCALE.
+  Copyright (c) 2012-2015, Team SCALE.
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:

@@ -6,7 +6,6 @@
 !!
 !! @author Team SCALE
 !! @li      2013-08-31 (T.Yamaura)  [new]
-!!
 !<
 !-------------------------------------------------------------------------------
 module mod_land_vars
@@ -14,79 +13,97 @@ module mod_land_vars
   !
   !++ used modules
   !
-  use mod_precision
-  use mod_stdio
-  use mod_prof
-  use mod_debug
-  use mod_grid_index
+  use scale_precision
+  use scale_stdio
+  use scale_prof
+  use scale_debug
+  use scale_grid_index
+  use scale_land_grid_index
+
+  use scale_const, only: &
+     I_SW  => CONST_I_SW, &
+     I_LW  => CONST_I_LW
   !-----------------------------------------------------------------------------
   implicit none
   private
   !-----------------------------------------------------------------------------
   !
-  !++ included parameters
-  !
-  !-----------------------------------------------------------------------------
-  !
   !++ Public procedure
   !
   public :: LAND_vars_setup
-  public :: LAND_vars_fillhalo
   public :: LAND_vars_restart_read
   public :: LAND_vars_restart_write
   public :: LAND_vars_history
   public :: LAND_vars_total
+  public :: LAND_vars_external_in
+
+  public :: convert_WS2VWC
 
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
   !
-  character(len=H_SHORT), public, save :: LAND_TYPE_PHY = 'OFF' !< Land physics type
-  logical,                public, save :: LAND_sw_phy           !< do land physics update?
-  logical,                public, save :: LAND_sw_restart       !< output restart?
+  logical,               public :: LAND_RESTART_OUTPUT       = .false.        !< output restart file?
 
-  ! prognostic varia
-  real(RP), public, allocatable :: TG  (:,:) ! soil temperature [K]
-  real(RP), public, allocatable :: QVEF(:,:) ! efficiency of evaporation [0-1]
-  real(RP), public, allocatable :: ROFF(:,:) ! run-off water [kg/m2]
-  real(RP), public, allocatable :: STRG(:,:) ! water storage [kg/m2]
+  character(len=H_LONG), public :: LAND_RESTART_IN_BASENAME  = ''             !< basename of the restart file
+  character(len=H_LONG), public :: LAND_RESTART_OUT_BASENAME = ''             !< basename of the output file
+  character(len=H_MID),  public :: LAND_RESTART_OUT_TITLE    = 'LAND restart' !< title    of the output file
+  character(len=H_MID),  public :: LAND_RESTART_OUT_DTYPE    = 'DEFAULT'      !< REAL4 or REAL8
 
-  integer,  public, save :: I_TG   = 1
-  integer,  public, save :: I_QVEF = 2
-  integer,  public, save :: I_ROFF = 3
-  integer,  public, save :: I_STRG = 4
+  ! prognostic variables
+  real(RP), public, allocatable :: LAND_TEMP      (:,:,:) !< temperature of each soil layer [K]
+  real(RP), public, allocatable :: LAND_WATER     (:,:,:) !< moisture of each soil layer    [m3/m3]
+  real(RP), public, allocatable :: LAND_SFC_TEMP  (:,:)   !< land surface skin temperature  [K]
+  real(RP), public, allocatable :: LAND_SFC_albedo(:,:,:) !< land surface albedo            [0-1]
 
-  character(len=H_SHORT), public, save :: LP_NAME(4) !< name  of the land variables
-  character(len=H_MID),   public, save :: LP_DESC(4) !< desc. of the land variables
-  character(len=H_SHORT), public, save :: LP_UNIT(4) !< unit  of the land variables
+  ! tendency variables
+  real(RP), public, allocatable :: LAND_TEMP_t      (:,:,:) !< tendency of LAND_TEMP
+  real(RP), public, allocatable :: LAND_WATER_t     (:,:,:) !< tendency of LAND_WATER
+  real(RP), public, allocatable :: LAND_SFC_TEMP_t  (:,:)   !< tendency of LAND_SFC_TEMP
+  real(RP), public, allocatable :: LAND_SFC_albedo_t(:,:,:) !< tendency of LAND_SFC_albedo
 
-  data LP_NAME / 'TG',   &
-                 'QVEF', &
-                 'ROFF', &
-                 'STRG'  /
-  data LP_DESC / 'soil temperature',          &
-                 'efficiency of evaporation', &
-                 'run-off water',             &
-                 'water storage'              /
-  data LP_UNIT / 'K',     &
-                 '0-1',   &
-                 'kg/m2', &
-                 'kg/m2'  /
+  ! surface variables for restart
+  real(RP), public, allocatable :: LAND_SFLX_MW  (:,:) !< land surface w-momentum flux    [kg/m2/s]
+  real(RP), public, allocatable :: LAND_SFLX_MU  (:,:) !< land surface u-momentum flux    [kg/m2/s]
+  real(RP), public, allocatable :: LAND_SFLX_MV  (:,:) !< land surface v-momentum flux    [kg/m2/s]
+  real(RP), public, allocatable :: LAND_SFLX_SH  (:,:) !< land surface sensible heat flux [J/m2/s]
+  real(RP), public, allocatable :: LAND_SFLX_LH  (:,:) !< land surface latent heat flux   [J/m2/s]
+  real(RP), public, allocatable :: LAND_SFLX_GH  (:,:) !< land surface heat flux          [J/m2/s]
+  real(RP), public, allocatable :: LAND_SFLX_evap(:,:) !< land surface water vapor flux   [kg/m2/s]
 
-  integer,  public, parameter :: LAND_PROPERTY_nmax = 10
-  integer,  public, parameter :: I_STRGMAX =  1  ! maximum  water storage [kg/m2]
-  integer,  public, parameter :: I_STRGCRT =  2  ! critical water storage [kg/m2]
-  integer,  public, parameter :: I_EMIT    =  3  ! surface emissivity in long-wave  radiation [0-1]
-  integer,  public, parameter :: I_ALB     =  4  ! surface albedo     in short-wave radiation [0-1]
-  integer,  public, parameter :: I_TCS     =  5  ! thermal conductivity for soil [W/m/K]
-  integer,  public, parameter :: I_HCS     =  6  ! heat capacity        for soil [J/K]
-  integer,  public, parameter :: I_DZG     =  7  ! soil depth [m]
-  integer,  public, parameter :: I_Z0M     =  8  ! roughness length for momemtum [m]
-  integer,  public, parameter :: I_Z0H     =  9  ! roughness length for heat     [m]
-  integer,  public, parameter :: I_Z0E     = 10  ! roughness length for moisture [m]
+  ! diagnostic variables
+  real(RP), public, allocatable :: LAND_U10(:,:) !< land surface velocity u at 10m [m/s]
+  real(RP), public, allocatable :: LAND_V10(:,:) !< land surface velocity v at 10m [m/s]
+  real(RP), public, allocatable :: LAND_T2 (:,:) !< land surface temperature at 2m [K]
+  real(RP), public, allocatable :: LAND_Q2 (:,:) !< land surface water vapor at 2m [kg/kg]
 
-  integer,  public, allocatable :: LAND_Type    (:,:)   ! land type index
-  real(RP), public, allocatable :: LAND_PROPERTY(:,:,:) ! land surface property
+  ! recieved atmospheric variables
+  real(RP), public, allocatable :: ATMOS_TEMP     (:,:)
+  real(RP), public, allocatable :: ATMOS_PRES     (:,:)
+  real(RP), public, allocatable :: ATMOS_W        (:,:)
+  real(RP), public, allocatable :: ATMOS_U        (:,:)
+  real(RP), public, allocatable :: ATMOS_V        (:,:)
+  real(RP), public, allocatable :: ATMOS_DENS     (:,:)
+  real(RP), public, allocatable :: ATMOS_QV       (:,:)
+  real(RP), public, allocatable :: ATMOS_PBL      (:,:)
+  real(RP), public, allocatable :: ATMOS_SFC_PRES (:,:)
+  real(RP), public, allocatable :: ATMOS_SFLX_LW  (:,:)
+  real(RP), public, allocatable :: ATMOS_SFLX_SW  (:,:)
+  real(RP), public, allocatable :: ATMOS_SFLX_prec(:,:)
+
+  real(RP), public, allocatable :: LAND_PROPERTY  (:,:,:) !< land surface property
+
+  character(len=H_LONG), public :: LAND_PROPERTY_IN_FILENAME  = '' !< the file of land parameter table
+
+  integer,  public, parameter   :: LAND_PROPERTY_nmax = 8
+  integer,  public, parameter   :: I_WaterLimit       = 1 ! maximum  soil moisture           [m3/m3]
+  integer,  public, parameter   :: I_WaterCritical    = 2 ! critical soil moisture           [m3/m3]
+  integer,  public, parameter   :: I_ThermalCond      = 3 ! thermal conductivity for soil    [W/K/m]
+  integer,  public, parameter   :: I_HeatCapacity     = 4 ! heat capacity for soil           [J/K/m3]
+  integer,  public, parameter   :: I_WaterDiff        = 5 ! moisture diffusivity in the soil [m2/s]
+  integer,  public, parameter   :: I_Z0M              = 6 ! roughness length for momemtum    [m]
+  integer,  public, parameter   :: I_Z0H              = 7 ! roughness length for heat        [m]
+  integer,  public, parameter   :: I_Z0E              = 8 ! roughness length for vapor       [m]
 
   !-----------------------------------------------------------------------------
   !
@@ -98,35 +115,87 @@ module mod_land_vars
   !
   !++ Private parameters & variables
   !
-  character(len=H_LONG), private, save :: LAND_BOUNDARY_IN_BASENAME = ''                     !< basename of the boundary file
+  logical,                private :: LAND_VARS_CHECKRANGE      = .false.
 
-  logical,               private, save :: LAND_RESTART_OUTPUT       = .false.                !< output restart file?
-  character(len=H_LONG), private, save :: LAND_RESTART_IN_BASENAME  = ''                     !< basename of the restart file
-  character(len=H_LONG), private, save :: LAND_RESTART_OUT_BASENAME = 'restart_out'          !< basename of the output file
-  character(len=H_MID),  private, save :: LAND_RESTART_OUT_TITLE    = 'SCALE-LES LAND VARS.' !< title    of the output file
-  character(len=H_MID),  private, save :: LAND_RESTART_OUT_DTYPE    = 'DEFAULT'              !< REAL4 or REAL8
+  integer,                private, parameter :: VMAX        = 12 !< number of the variables
+  integer,                private, parameter :: I_TEMP      =  1
+  integer,                private, parameter :: I_WATER     =  2
+  integer,                private, parameter :: I_SFC_TEMP  =  3
+  integer,                private, parameter :: I_ALB_LW    =  4
+  integer,                private, parameter :: I_ALB_SW    =  5
+  integer,                private, parameter :: I_SFLX_MW   =  6
+  integer,                private, parameter :: I_SFLX_MU   =  7
+  integer,                private, parameter :: I_SFLX_MV   =  8
+  integer,                private, parameter :: I_SFLX_SH   =  9
+  integer,                private, parameter :: I_SFLX_LH   = 10
+  integer,                private, parameter :: I_SFLX_GH   = 11
+  integer,                private, parameter :: I_SFLX_evap = 12
 
-  logical,               private, save :: LAND_VARS_CHECKRANGE      = .false.
+  character(len=H_SHORT), private            :: VAR_NAME(VMAX) !< name  of the variables
+  character(len=H_MID),   private            :: VAR_DESC(VMAX) !< desc. of the variables
+  character(len=H_SHORT), private            :: VAR_UNIT(VMAX) !< unit  of the variables
 
-  integer,  private, parameter :: LAND_NUM_IDX = 2 ! # of land indices
+  data VAR_NAME / 'LAND_TEMP',      &
+                  'LAND_WATER',     &
+                  'LAND_SFC_TEMP',  &
+                  'LAND_ALB_LW',    &
+                  'LAND_ALB_SW',    &
+                  'LAND_SFLX_MW',   &
+                  'LAND_SFLX_MU',   &
+                  'LAND_SFLX_MV',   &
+                  'LAND_SFLX_SH',   &
+                  'LAND_SFLX_LH',   &
+                  'LAND_SFLX_GH',   &
+                  'LAND_SFLX_evap'  /
+  data VAR_DESC / 'temperature at each soil layer',  &
+                  'moisture at each soil layer',     &
+                  'land surface skin temperature',   &
+                  'land surface albedo (longwave)',  &
+                  'land surface albedo (shortwave)', &
+                  'land surface w-momentum flux',    &
+                  'land surface u-momentum flux',    &
+                  'land surface v-momentum flux',    &
+                  'land surface sensible heat flux', &
+                  'land surface latent heat flux',   &
+                  'land surface ground heat flux',   &
+                  'land surface water vapor flux'    /
+  data VAR_UNIT / 'K',       &
+                  'm3/m3',   &
+                  'K',       &
+                  '0-1',     &
+                  '0-1',     &
+                  'kg/m2/s', &
+                  'kg/m2/s', &
+                  'kg/m2/s', &
+                  'J/m2/s',  &
+                  'J/m2/s',  &
+                  'J/m2/s',  &
+                  'kg/m2/s'  /
 
-  real(RP), private, save      :: LAND_PROPERTY_table(LAND_NUM_IDX,LAND_PROPERTY_nmax)
+  real(RP), private, allocatable :: LAND_PROPERTY_table(:,:)
+
+  integer,  private              :: LAND_QA_comm
+  real(RP), private, allocatable :: work_comm(:,:,:) ! for communication
 
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine LAND_vars_setup
-    use mod_process, only: &
+    use scale_process, only: &
        PRC_MPIstop
+    use scale_const, only: &
+       UNDEF => CONST_UNDEF
+    use scale_comm, only: &
+       COMM_vars8, &
+       COMM_wait
+    use scale_landuse, only: &
+       LANDUSE_index_PFT, &
+       LANDUSE_PFT_nmax
     implicit none
-
-    NAMELIST / PARAM_LAND / &
-       LAND_TYPE_PHY
 
     NAMELIST / PARAM_LAND_VARS /  &
        LAND_RESTART_IN_BASENAME,  &
-       LAND_BOUNDARY_IN_BASENAME, &
        LAND_RESTART_OUTPUT,       &
        LAND_RESTART_OUT_BASENAME, &
        LAND_RESTART_OUT_TITLE,    &
@@ -134,173 +203,193 @@ contains
        LAND_VARS_CHECKRANGE
 
     integer :: ierr
-    integer :: ip
+    integer :: i, j, iv, p
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[LAND VARS]/Categ[LAND]'
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[VARS] / Categ[LAND] / Origin[SCALE-LES]'
 
-    allocate( TG  (IA,JA) )
-    allocate( QVEF(IA,JA) )
-    allocate( ROFF(IA,JA) )
-    allocate( STRG(IA,JA) )
+    allocate( LAND_TEMP      (LKMAX,IA,JA) )
+    allocate( LAND_WATER     (LKMAX,IA,JA) )
+    allocate( LAND_SFC_TEMP  (IA,JA)       )
+    allocate( LAND_SFC_albedo(IA,JA,2)     )
+    LAND_TEMP      (:,:,:) = UNDEF
+    LAND_WATER     (:,:,:) = UNDEF
+    LAND_SFC_TEMP  (:,:)   = UNDEF
+    LAND_SFC_albedo(:,:,:) = UNDEF
 
-    allocate( LAND_Type    (IA,JA) )
-    allocate( LAND_PROPERTY(IA,JA,LAND_PROPERTY_nmax) )
+    allocate( LAND_TEMP_t      (LKMAX,IA,JA) )
+    allocate( LAND_WATER_t     (LKMAX,IA,JA) )
+    allocate( LAND_SFC_TEMP_t  (IA,JA)       )
+    allocate( LAND_SFC_albedo_t(IA,JA,2)     )
+    LAND_TEMP_t      (:,:,:) = UNDEF
+    LAND_WATER_t     (:,:,:) = UNDEF
+    LAND_SFC_TEMP_t  (:,:)   = UNDEF
+    LAND_SFC_albedo_t(:,:,:) = UNDEF
 
-    !--- read namelist
-    rewind(IO_FID_CONF)
-    read(IO_FID_CONF,nml=PARAM_LAND,iostat=ierr)
+    allocate( LAND_SFLX_MW  (IA,JA) )
+    allocate( LAND_SFLX_MU  (IA,JA) )
+    allocate( LAND_SFLX_MV  (IA,JA) )
+    allocate( LAND_SFLX_SH  (IA,JA) )
+    allocate( LAND_SFLX_LH  (IA,JA) )
+    allocate( LAND_SFLX_GH  (IA,JA) )
+    allocate( LAND_SFLX_evap(IA,JA) )
+    LAND_SFLX_MW  (:,:) = UNDEF
+    LAND_SFLX_MU  (:,:) = UNDEF
+    LAND_SFLX_MV  (:,:) = UNDEF
+    LAND_SFLX_SH  (:,:) = UNDEF
+    LAND_SFLX_LH  (:,:) = UNDEF
+    LAND_SFLX_GH  (:,:) = UNDEF
+    LAND_SFLX_evap(:,:) = UNDEF
 
-    if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
-    elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_LAND. Check!'
-       call PRC_MPIstop
-    endif
-    if( IO_L ) write(IO_FID_LOG,nml=PARAM_LAND)
+    allocate( LAND_U10(IA,JA) )
+    allocate( LAND_V10(IA,JA) )
+    allocate( LAND_T2 (IA,JA) )
+    allocate( LAND_Q2 (IA,JA) )
+    LAND_U10(:,:) = UNDEF
+    LAND_V10(:,:) = UNDEF
+    LAND_T2 (:,:) = UNDEF
+    LAND_Q2 (:,:) = UNDEF
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** [LAND] selected components'
+    allocate( ATMOS_TEMP     (IA,JA) )
+    allocate( ATMOS_PRES     (IA,JA) )
+    allocate( ATMOS_W        (IA,JA) )
+    allocate( ATMOS_U        (IA,JA) )
+    allocate( ATMOS_V        (IA,JA) )
+    allocate( ATMOS_DENS     (IA,JA) )
+    allocate( ATMOS_QV       (IA,JA) )
+    allocate( ATMOS_PBL      (IA,JA) )
+    allocate( ATMOS_SFC_PRES (IA,JA) )
+    allocate( ATMOS_SFLX_LW  (IA,JA) )
+    allocate( ATMOS_SFLX_SW  (IA,JA) )
+    allocate( ATMOS_SFLX_prec(IA,JA) )
+    ATMOS_TEMP     (:,:) = UNDEF
+    ATMOS_PRES     (:,:) = UNDEF
+    ATMOS_W        (:,:) = UNDEF
+    ATMOS_U        (:,:) = UNDEF
+    ATMOS_V        (:,:) = UNDEF
+    ATMOS_DENS     (:,:) = UNDEF
+    ATMOS_QV       (:,:) = UNDEF
+    ATMOS_PBL      (:,:) = UNDEF
+    ATMOS_SFC_PRES (:,:) = UNDEF
+    ATMOS_SFLX_LW  (:,:) = UNDEF
+    ATMOS_SFLX_SW  (:,:) = UNDEF
+    ATMOS_SFLX_prec(:,:) = UNDEF
 
-    if ( LAND_TYPE_PHY /= 'OFF' .AND. LAND_TYPE_PHY /= 'NONE' ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** Land physics : ON'
-       LAND_sw_phy = .true.
-    else
-       if( IO_L ) write(IO_FID_LOG,*) '*** Land physics : OFF'
-       LAND_sw_phy = .false.
-    endif
+    LAND_QA_comm = LKMAX &
+                 + LKMAX &
+                 + 1     &
+                 + 2
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[LAND VARS]/Categ[LAND]'
+    allocate( work_comm(IA,JA,LAND_QA_comm) )
 
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_LAND_VARS,iostat=ierr)
-
     if( ierr < 0 ) then !--- missing
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist PARAM_LAND_VARS. Check!'
        call PRC_MPIstop
     endif
-    if( IO_L ) write(IO_FID_LOG,nml=PARAM_LAND_VARS)
+    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_LAND_VARS)
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** [LAND ] prognostic variables'
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,A8,A,A32,3(A))') &
-               '***       |',' VARNAME','|', 'DESCRIPTION                     ','[', 'UNIT            ',']'
-    do ip = 1, 4
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,i3,A,A8,A,A32,3(A))') &
-                  '*** NO.',ip,'|',trim(LP_NAME(ip)),'|', LP_DESC(ip),'[', LP_UNIT(ip),']'
+    if( IO_L ) write(IO_FID_LOG,*) '*** List of prognostic variables (LAND) ***'
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,A15,A,A32,3(A))') &
+               '***       |','VARNAME        ','|', 'DESCRIPTION                     ','[', 'UNIT            ',']'
+    do iv = 1, VMAX
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,i3,A,A15,A,A32,3(A))') &
+                  '*** NO.',iv,'|',VAR_NAME(iv),'|',VAR_DESC(iv),'[',VAR_UNIT(iv),']'
     enddo
 
-    if( IO_L ) write(IO_FID_LOG,*) 'Output...'
-    if ( LAND_RESTART_OUTPUT ) then
-       if( IO_L ) write(IO_FID_LOG,*) '  Land restart output : YES'
-       LAND_sw_restart = .true.
-    else
-       if( IO_L ) write(IO_FID_LOG,*) '  Land restart output : NO'
-       LAND_sw_restart = .false.
-    endif
     if( IO_L ) write(IO_FID_LOG,*)
+    if ( LAND_RESTART_IN_BASENAME /= '' ) then
+       if( IO_L ) write(IO_FID_LOG,*) '*** Restart input?  : ', trim(LAND_RESTART_IN_BASENAME)
+    else
+       if( IO_L ) write(IO_FID_LOG,*) '*** Restart input?  : NO'
+    endif
+    if (       LAND_RESTART_OUTPUT             &
+         .AND. LAND_RESTART_OUT_BASENAME /= '' ) then
+       if( IO_L ) write(IO_FID_LOG,*) '*** Restart output? : ', trim(LAND_RESTART_OUT_BASENAME)
+    else
+       if( IO_L ) write(IO_FID_LOG,*) '*** Restart output? : NO'
+       LAND_RESTART_OUTPUT = .false.
+    endif
+
+    ! Read land property table
+    allocate( LAND_PROPERTY_table(LANDUSE_PFT_nmax,LAND_PROPERTY_nmax) )
+    LAND_PROPERTY_table(:,:) = UNDEF
 
     call LAND_param_read
+
+    ! Apply land property to 2D map
+    allocate( LAND_PROPERTY(IA,JA,LAND_PROPERTY_nmax) )
+
+    ! tentative, mosaic is off
+    do p = 1, LAND_PROPERTY_nmax
+    do j = JS, JE
+    do i = IS, IE
+       LAND_PROPERTY(i,j,p) = LAND_PROPERTY_table( LANDUSE_index_PFT(i,j,1), p )
+    enddo
+    enddo
+    enddo
+
+    do p = 1, LAND_PROPERTY_nmax
+       call COMM_vars8( LAND_PROPERTY(:,:,p), p )
+    enddo
+    do p = 1, LAND_PROPERTY_nmax
+       call COMM_wait ( LAND_PROPERTY(:,:,p), p )
+    enddo
 
     return
   end subroutine LAND_vars_setup
 
   !-----------------------------------------------------------------------------
-  !> fill HALO region of land variables
-  subroutine LAND_vars_fillhalo
-    use mod_comm, only: &
-       COMM_vars8, &
-       COMM_wait
-    implicit none
-    !---------------------------------------------------------------------------
-
-    ! fill IHALO & JHALO
-    call COMM_vars8( TG  (:,:), 1 )
-    call COMM_vars8( QVEF(:,:), 2 )
-    call COMM_vars8( ROFF(:,:), 3 )
-    call COMM_vars8( STRG(:,:), 4 )
-
-    call COMM_wait ( TG  (:,:), 1 )
-    call COMM_wait ( QVEF(:,:), 2 )
-    call COMM_wait ( ROFF(:,:), 3 )
-    call COMM_wait ( STRG(:,:), 4 )
-
-    return
-  end subroutine LAND_vars_fillhalo
-
-  !-----------------------------------------------------------------------------
   !> Read land restart
   subroutine LAND_vars_restart_read
-    use mod_fileio, only: &
+    use scale_fileio, only: &
        FILEIO_read
-    use mod_const, only: &
-       CONST_UNDEF
-    use mod_comm, only: &
-       COMM_vars8, &
-       COMM_wait
+    use mod_land_admin, only: &
+       LAND_sw
     implicit none
-
-    integer :: i, j, v
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Input restart file (land) ***'
+    if( IO_L ) write(IO_FID_LOG,*) '*** Input restart file (LAND) ***'
 
-    call PROF_rapstart('FILE I NetCDF')
+    if ( LAND_sw .and. LAND_RESTART_IN_BASENAME /= '' ) then
+       if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(LAND_RESTART_IN_BASENAME)
 
-    if ( LAND_RESTART_IN_BASENAME /= '' ) then
-
-       call FILEIO_read( TG(:,:),                                       & ! [OUT]
-                         LAND_RESTART_IN_BASENAME, 'TG',   'XY', step=1 ) ! [IN]
-       call FILEIO_read( QVEF(:,:),                                     & ! [OUT]
-                         LAND_RESTART_IN_BASENAME, 'QVEF', 'XY', step=1 ) ! [IN]
-       call FILEIO_read( ROFF(:,:),                                     & ! [OUT]
-                         LAND_RESTART_IN_BASENAME, 'ROFF', 'XY', step=1 ) ! [IN]
-       call FILEIO_read( STRG(:,:),                                     & ! [OUT]
-                         LAND_RESTART_IN_BASENAME, 'STRG', 'XY', step=1 ) ! [IN]
-
-       call LAND_vars_fillhalo
+       call FILEIO_read( LAND_TEMP (:,:,:),                                              & ! [OUT]
+                         LAND_RESTART_IN_BASENAME, VAR_NAME(I_TEMP),      'Land', step=1 ) ! [IN]
+       call FILEIO_read( LAND_WATER(:,:,:),                                              & ! [OUT]
+                         LAND_RESTART_IN_BASENAME, VAR_NAME(I_WATER),     'Land', step=1 ) ! [IN]
+       call FILEIO_read( LAND_SFC_TEMP(:,:),                                             & ! [OUT]
+                         LAND_RESTART_IN_BASENAME, VAR_NAME(I_SFC_TEMP),  'XY',   step=1 ) ! [IN]
+       call FILEIO_read( LAND_SFC_albedo(:,:,I_LW),                                      & ! [OUT]
+                         LAND_RESTART_IN_BASENAME, VAR_NAME(I_ALB_LW),    'XY',   step=1 ) ! [IN]
+       call FILEIO_read( LAND_SFC_albedo(:,:,I_SW),                                      & ! [OUT]
+                         LAND_RESTART_IN_BASENAME, VAR_NAME(I_ALB_SW),    'XY',   step=1 ) ! [IN]
+       call FILEIO_read( LAND_SFLX_MW(:,:),                                              & ! [OUT]
+                         LAND_RESTART_IN_BASENAME, VAR_NAME(I_SFLX_MW),   'XY',   step=1 ) ! [IN]
+       call FILEIO_read( LAND_SFLX_MU(:,:),                                              & ! [OUT]
+                         LAND_RESTART_IN_BASENAME, VAR_NAME(I_SFLX_MU),   'XY',   step=1 ) ! [IN]
+       call FILEIO_read( LAND_SFLX_MV(:,:),                                              & ! [OUT]
+                         LAND_RESTART_IN_BASENAME, VAR_NAME(I_SFLX_MV),   'XY',   step=1 ) ! [IN]
+       call FILEIO_read( LAND_SFLX_SH(:,:),                                              & ! [OUT]
+                         LAND_RESTART_IN_BASENAME, VAR_NAME(I_SFLX_SH),   'XY',   step=1 ) ! [IN]
+       call FILEIO_read( LAND_SFLX_LH(:,:),                                              & ! [OUT]
+                         LAND_RESTART_IN_BASENAME, VAR_NAME(I_SFLX_LH),   'XY',   step=1 ) ! [IN]
+       call FILEIO_read( LAND_SFLX_GH(:,:),                                              & ! [OUT]
+                         LAND_RESTART_IN_BASENAME, VAR_NAME(I_SFLX_GH),   'XY',   step=1 ) ! [IN]
+       call FILEIO_read( LAND_SFLX_evap(:,:),                                            & ! [OUT]
+                         LAND_RESTART_IN_BASENAME, VAR_NAME(I_SFLX_evap), 'XY',   step=1 ) ! [IN]
 
        call LAND_vars_total
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** restart file for land is not specified.'
-       TG  (:,:) = 300.0_RP
-       QVEF(:,:) =   1.0_RP
-       ROFF(:,:) =   0.0_RP
-       STRG(:,:) = 200.0_RP
     endif
-
-    LAND_PROPERTY(:,:,:) = CONST_UNDEF
-
-    if ( LAND_BOUNDARY_IN_BASENAME /= '' ) then
-
-       LAND_Type(:,:)       = 1
-!       call FILEIO_read( LAND_Type(:,:),                                      & ! [OUT]
-!                         LAND_BOUNDARY_IN_BASENAME, 'LAND_Type', 'XY', step=1 ) ! [IN]
-
-       do v = 1,  LAND_PROPERTY_nmax
-       do j = JS, JE
-       do i = IS, IE
-          LAND_PROPERTY(i,j,v) = LAND_PROPERTY_table( LAND_Type(i,j),v )
-       enddo
-       enddo
-       enddo
-
-       do v = 1,  LAND_PROPERTY_nmax
-          call COMM_vars8( LAND_PROPERTY(:,:,v), v )
-       enddo
-       do v = 1,  LAND_PROPERTY_nmax
-          call COMM_wait ( LAND_PROPERTY(:,:,v), v )
-       enddo
-    else
-       if( IO_L ) write(IO_FID_LOG,*) '*** boundary file for land is not specified.'
-    endif
-
-    call PROF_rapend  ('FILE I NetCDF')
 
     return
   end subroutine LAND_vars_restart_read
@@ -308,45 +397,67 @@ contains
   !-----------------------------------------------------------------------------
   !> Write land restart
   subroutine LAND_vars_restart_write
-    use mod_time, only: &
-       NOWSEC => TIME_NOWDAYSEC
-    use mod_fileio, only: &
+    use scale_time, only: &
+       TIME_gettimelabel
+    use scale_fileio, only: &
        FILEIO_write
+    use mod_land_admin, only: &
+       LAND_sw
     implicit none
 
+    character(len=15)     :: timelabel
     character(len=H_LONG) :: basename
-
-    integer :: n
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('FILE O NetCDF')
+    if ( LAND_sw .and. LAND_RESTART_OUT_BASENAME /= '' ) then
 
-    if ( LAND_RESTART_OUT_BASENAME /= '' ) then
+       call TIME_gettimelabel( timelabel )
+       write(basename,'(A,A,A)') trim(LAND_RESTART_OUT_BASENAME), '_', trim(timelabel)
 
        if( IO_L ) write(IO_FID_LOG,*)
-       if( IO_L ) write(IO_FID_LOG,*) '*** Output restart file (land) ***'
+       if( IO_L ) write(IO_FID_LOG,*) '*** Output restart file (LAND) ***'
+       if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(basename)
 
-       basename = ''
-       write(basename(1:15), '(F15.3)') NOWSEC
-       do n = 1, 15
-          if ( basename(n:n) == ' ' ) basename(n:n) = '0'
-       enddo
-       basename = trim(LAND_RESTART_OUT_BASENAME) // '_' // trim(basename)
+       call LAND_vars_total
 
-       call FILEIO_write( TG(:,:),    basename,                                    LAND_RESTART_OUT_TITLE, & ! [IN]
-                          LP_NAME(I_TG),   LP_DESC(I_TG),   LP_UNIT(I_TG),   'XY', LAND_RESTART_OUT_DTYPE  ) ! [IN]
-       call FILEIO_write( QVEF(:,:), basename,                                     LAND_RESTART_OUT_TITLE, & ! [IN]
-                          LP_NAME(I_QVEF), LP_DESC(I_QVEF), LP_UNIT(I_QVEF), 'XY', LAND_RESTART_OUT_DTYPE  ) ! [IN]
-       call FILEIO_write( ROFF(:,:),  basename,                                    LAND_RESTART_OUT_TITLE, & ! [IN]
-                          LP_NAME(I_ROFF), LP_DESC(I_ROFF), LP_UNIT(I_ROFF), 'XY', LAND_RESTART_OUT_DTYPE  ) ! [IN]
-       call FILEIO_write( STRG(:,:),  basename,                                    LAND_RESTART_OUT_TITLE, & ! [IN]
-                          LP_NAME(I_STRG), LP_DESC(I_STRG), LP_UNIT(I_STRG), 'XY', LAND_RESTART_OUT_DTYPE  ) ! [IN]
+       call FILEIO_write( LAND_TEMP    (:,:,:),      basename,               LAND_RESTART_OUT_TITLE, & ! [IN]
+                          VAR_NAME(I_TEMP),          VAR_DESC(I_TEMP),       VAR_UNIT(I_TEMP),       & ! [IN]
+                          'Land',                    LAND_RESTART_OUT_DTYPE, nohalo=.true.           ) ! [IN]
+       call FILEIO_write( LAND_WATER   (:,:,:),      basename,               LAND_RESTART_OUT_TITLE, & ! [IN]
+                          VAR_NAME(I_WATER),         VAR_DESC(I_WATER),      VAR_UNIT(I_WATER),      & ! [IN]
+                          'Land',                    LAND_RESTART_OUT_DTYPE, nohalo=.true.           ) ! [IN]
+       call FILEIO_write( LAND_SFC_TEMP(:,:),        basename,               LAND_RESTART_OUT_TITLE, & ! [IN]
+                          VAR_NAME(I_SFC_TEMP),      VAR_DESC(I_SFC_TEMP),   VAR_UNIT(I_SFC_TEMP),   & ! [IN]
+                          'XY',                      LAND_RESTART_OUT_DTYPE, nohalo=.true.           ) ! [IN]
+       call FILEIO_write( LAND_SFC_albedo(:,:,I_LW), basename,               LAND_RESTART_OUT_TITLE, & ! [IN]
+                          VAR_NAME(I_ALB_LW),        VAR_DESC(I_ALB_LW),     VAR_UNIT(I_ALB_LW),     & ! [IN]
+                          'XY',                      LAND_RESTART_OUT_DTYPE, nohalo=.true.           ) ! [IN]
+       call FILEIO_write( LAND_SFC_albedo(:,:,I_SW), basename,               LAND_RESTART_OUT_TITLE, & ! [IN]
+                          VAR_NAME(I_ALB_SW),        VAR_DESC(I_ALB_SW),     VAR_UNIT(I_ALB_SW),     & ! [IN]
+                          'XY',                      LAND_RESTART_OUT_DTYPE, nohalo=.true.           ) ! [IN]
+       call FILEIO_write( LAND_SFLX_MW(:,:),         basename,               LAND_RESTART_OUT_TITLE, & ! [IN]
+                          VAR_NAME(I_SFLX_MW),       VAR_DESC(I_SFLX_MW),    VAR_UNIT(I_SFLX_MW),    & ! [IN]
+                          'XY',                      LAND_RESTART_OUT_DTYPE, nohalo=.true.           ) ! [IN]
+       call FILEIO_write( LAND_SFLX_MU(:,:),         basename,               LAND_RESTART_OUT_TITLE, & ! [IN]
+                          VAR_NAME(I_SFLX_MU),       VAR_DESC(I_SFLX_MU),    VAR_UNIT(I_SFLX_MU),    & ! [IN]
+                          'XY',                      LAND_RESTART_OUT_DTYPE, nohalo=.true.           ) ! [IN]
+       call FILEIO_write( LAND_SFLX_MV(:,:),         basename,               LAND_RESTART_OUT_TITLE, & ! [IN]
+                          VAR_NAME(I_SFLX_MV),       VAR_DESC(I_SFLX_MV),    VAR_UNIT(I_SFLX_MV),    & ! [IN]
+                          'XY',                      LAND_RESTART_OUT_DTYPE, nohalo=.true.           ) ! [IN]
+       call FILEIO_write( LAND_SFLX_SH(:,:),         basename,               LAND_RESTART_OUT_TITLE, & ! [IN]
+                          VAR_NAME(I_SFLX_SH),       VAR_DESC(I_SFLX_SH),    VAR_UNIT(I_SFLX_SH),    & ! [IN]
+                          'XY',                      LAND_RESTART_OUT_DTYPE, nohalo=.true.           ) ! [IN]
+       call FILEIO_write( LAND_SFLX_LH(:,:),         basename,               LAND_RESTART_OUT_TITLE, & ! [IN]
+                          VAR_NAME(I_SFLX_LH),       VAR_DESC(I_SFLX_LH),    VAR_UNIT(I_SFLX_LH),    & ! [IN]
+                          'XY',                      LAND_RESTART_OUT_DTYPE, nohalo=.true.           ) ! [IN]
+       call FILEIO_write( LAND_SFLX_GH(:,:),         basename,               LAND_RESTART_OUT_TITLE, & ! [IN]
+                          VAR_NAME(I_SFLX_GH),       VAR_DESC(I_SFLX_GH),    VAR_UNIT(I_SFLX_GH),    & ! [IN]
+                          'XY',                      LAND_RESTART_OUT_DTYPE, nohalo=.true.           ) ! [IN]
+       call FILEIO_write( LAND_SFLX_evap(:,:),       basename,               LAND_RESTART_OUT_TITLE, & ! [IN]
+                          VAR_NAME(I_SFLX_evap),     VAR_DESC(I_SFLX_evap),  VAR_UNIT(I_SFLX_evap),  & ! [IN]
+                          'XY',                      LAND_RESTART_OUT_DTYPE, nohalo=.true.           ) ! [IN]
 
     endif
-
-    call PROF_rapend  ('FILE O NetCDF')
-
-    call LAND_vars_total
 
     return
   end subroutine LAND_vars_restart_write
@@ -354,24 +465,40 @@ contains
   !-----------------------------------------------------------------------------
   !> History output set for land variables
   subroutine LAND_vars_history
-    use mod_time, only: &
+    use scale_time, only: &
        TIME_DTSEC_LAND
-    use mod_history, only: &
+    use scale_history, only: &
        HIST_in
     implicit none
     !---------------------------------------------------------------------------
 
     if ( LAND_VARS_CHECKRANGE ) then
-       call VALCHECK( TG  (:,:), 0.0_RP, 1000.0_RP, LP_NAME(I_TG)  , __FILE__, __LINE__ )
-       call VALCHECK( QVEF(:,:), 0.0_RP,    2.0_RP, LP_NAME(I_QVEF), __FILE__, __LINE__ )
-       call VALCHECK( ROFF(:,:), 0.0_RP, 1000.0_RP, LP_NAME(I_ROFF), __FILE__, __LINE__ )
-       call VALCHECK( STRG(:,:), 0.0_RP, 1000.0_RP, LP_NAME(I_STRG), __FILE__, __LINE__ )
+       call VALCHECK( LAND_TEMP      (:,IS:IE,JS:JE),    0.0_RP, 1000.0_RP, VAR_NAME(I_TEMP),       &
+                     __FILE__, __LINE__ )
+       call VALCHECK( LAND_WATER     (:,IS:IE,JS:JE),    0.0_RP, 1000.0_RP, VAR_NAME(I_WATER),      &
+                     __FILE__, __LINE__ )
+       call VALCHECK( LAND_SFC_TEMP  (IS:IE,JS:JE),      0.0_RP, 1000.0_RP, VAR_NAME(I_SFC_TEMP),   &
+                     __FILE__, __LINE__ )
+       call VALCHECK( LAND_SFC_albedo(IS:IE,JS:JE,I_LW), 0.0_RP,    2.0_RP, VAR_NAME(I_ALB_LW),     &
+                     __FILE__, __LINE__ )
+       call VALCHECK( LAND_SFC_albedo(IS:IE,JS:JE,I_SW), 0.0_RP,    2.0_RP, VAR_NAME(I_ALB_SW),     &
+                     __FILE__, __LINE__ )
     endif
 
-    call HIST_in( TG  (:,:), 'TG',   LP_DESC(I_TG),   LP_UNIT(I_TG),   TIME_DTSEC_LAND )
-    call HIST_in( QVEF(:,:), 'QVEF', LP_DESC(I_QVEF), LP_UNIT(I_QVEF), TIME_DTSEC_LAND )
-    call HIST_in( ROFF(:,:), 'ROFF', LP_DESC(I_ROFF), LP_UNIT(I_ROFF), TIME_DTSEC_LAND )
-    call HIST_in( STRG(:,:), 'STRG', LP_DESC(I_STRG), LP_UNIT(I_STRG), TIME_DTSEC_LAND )
+    call HIST_in( LAND_TEMP (:,:,:), VAR_NAME(I_TEMP),  VAR_DESC(I_TEMP),  VAR_UNIT(I_TEMP),  zdim='land' )
+    call HIST_in( LAND_WATER(:,:,:), VAR_NAME(I_WATER), VAR_DESC(I_WATER), VAR_UNIT(I_WATER), zdim='land' )
+
+    call HIST_in( LAND_SFC_TEMP  (:,:),      VAR_NAME(I_SFC_TEMP),   VAR_DESC(I_SFC_TEMP),   VAR_UNIT(I_SFC_TEMP) )
+    call HIST_in( LAND_SFC_albedo(:,:,I_LW), VAR_NAME(I_ALB_LW),     VAR_DESC(I_ALB_LW),     VAR_UNIT(I_ALB_LW)   )
+    call HIST_in( LAND_SFC_albedo(:,:,I_SW), VAR_NAME(I_ALB_SW),     VAR_DESC(I_ALB_SW),     VAR_UNIT(I_ALB_SW)   )
+
+    call HIST_in( LAND_SFLX_MW  (:,:), VAR_NAME(I_SFLX_MW),   VAR_DESC(I_SFLX_MW),   VAR_UNIT(I_SFLX_MW)   )
+    call HIST_in( LAND_SFLX_MU  (:,:), VAR_NAME(I_SFLX_MU),   VAR_DESC(I_SFLX_MU),   VAR_UNIT(I_SFLX_MU)   )
+    call HIST_in( LAND_SFLX_MV  (:,:), VAR_NAME(I_SFLX_MV),   VAR_DESC(I_SFLX_MV),   VAR_UNIT(I_SFLX_MV)   )
+    call HIST_in( LAND_SFLX_SH  (:,:), VAR_NAME(I_SFLX_SH),   VAR_DESC(I_SFLX_SH),   VAR_UNIT(I_SFLX_SH)   )
+    call HIST_in( LAND_SFLX_LH  (:,:), VAR_NAME(I_SFLX_LH),   VAR_DESC(I_SFLX_LH),   VAR_UNIT(I_SFLX_LH)   )
+    call HIST_in( LAND_SFLX_GH  (:,:), VAR_NAME(I_SFLX_GH),   VAR_DESC(I_SFLX_GH),   VAR_UNIT(I_SFLX_GH)   )
+    call HIST_in( LAND_SFLX_evap(:,:), VAR_NAME(I_SFLX_evap), VAR_DESC(I_SFLX_evap), VAR_UNIT(I_SFLX_evap) )
 
     return
   end subroutine LAND_vars_history
@@ -379,127 +506,235 @@ contains
   !-----------------------------------------------------------------------------
   !> Budget monitor for land
   subroutine LAND_vars_total
-!    use mod_comm, only: &
-!       STAT_checktotal, &
-!       STAT_total
+    use scale_statistics, only: &
+       STATISTICS_checktotal, &
+       STAT_total
     implicit none
 
-    !real(RP) :: total
+    real(RP) :: total
+
+    character(len=2) :: sk
+    integer          :: k
     !---------------------------------------------------------------------------
 
-!    if ( STAT_checktotal ) then
-!
-!    endif
+    if ( STATISTICS_checktotal ) then
+
+       do k = LKS, LKE
+          write(sk,'(I2.2)') k
+
+          call STAT_total( total, LAND_TEMP (k,:,:), trim(VAR_NAME(I_TEMP) )//sk )
+          call STAT_total( total, LAND_WATER(k,:,:), trim(VAR_NAME(I_WATER))//sk )
+       enddo
+
+       call STAT_total( total, LAND_SFC_TEMP  (:,:),      VAR_NAME(I_SFC_TEMP) )
+       call STAT_total( total, LAND_SFC_albedo(:,:,I_LW), VAR_NAME(I_ALB_LW)   )
+       call STAT_total( total, LAND_SFC_albedo(:,:,I_SW), VAR_NAME(I_ALB_SW)   )
+
+    endif
 
     return
   end subroutine LAND_vars_total
 
   !-----------------------------------------------------------------------------
+  !> Input from External I/O
+  subroutine LAND_vars_external_in( &
+      LAND_TEMP_in,      &
+      LAND_WATER_in,     &
+      LAND_SFC_TEMP_in,  &
+      LAND_SFC_albedo_in )
+    implicit none
+
+    real(RP), intent(in) :: LAND_TEMP_in (:,:,:)
+    real(RP), intent(in) :: LAND_WATER_in(:,:,:)
+    real(RP), intent(in) :: LAND_SFC_TEMP_in  (IA,JA)
+    real(RP), intent(in) :: LAND_SFC_albedo_in(IA,JA,2)
+    !---------------------------------------------------------------------------
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '*** External Input (land) ***'
+
+    LAND_TEMP      (:,:,:) = LAND_TEMP_in      (:,:,:)
+    LAND_WATER     (:,:,:) = LAND_WATER_in     (:,:,:)
+    LAND_SFC_TEMP  (:,:)   = LAND_SFC_TEMP_in  (:,:)
+    LAND_SFC_albedo(:,:,:) = LAND_SFC_albedo_in(:,:,:)
+
+    LAND_SFLX_MW  (:,:) = 0.0_RP
+    LAND_SFLX_MU  (:,:) = 0.0_RP
+    LAND_SFLX_MV  (:,:) = 0.0_RP
+    LAND_SFLX_SH  (:,:) = 0.0_RP
+    LAND_SFLX_LH  (:,:) = 0.0_RP
+    LAND_SFLX_GH  (:,:) = 0.0_RP
+    LAND_SFLX_evap(:,:) = 0.0_RP
+
+    call LAND_vars_total
+
+    return
+  end subroutine LAND_vars_external_in
+
+  !-----------------------------------------------------------------------------
   !> Budget monitor for land
   subroutine LAND_param_read
-    use mod_process, only: &
+    use scale_process, only: &
        PRC_MPIstop
-    use mod_const, only: &
-       CONST_UNDEF
+    use scale_landuse, only: &
+       LANDUSE_PFT_nmax
     implicit none
 
     integer                :: index
-    character(len=H_SHORT) :: description
+    character(len=H_LONG)  :: description
     real(RP)               :: STRGMAX
     real(RP)               :: STRGCRT
-    real(RP)               :: EMIT
-    real(RP)               :: ALB
     real(RP)               :: TCS
     real(RP)               :: HCS
-    real(RP)               :: DZG
+    real(RP)               :: DFW
     real(RP)               :: Z0M
     real(RP)               :: Z0H
     real(RP)               :: Z0E
+
+    NAMELIST / PARAM_LAND_PROPERTY /  &
+       LAND_PROPERTY_IN_FILENAME
 
     NAMELIST / PARAM_LAND_DATA / &
        index,       &
        description, &
        STRGMAX,     &
        STRGCRT,     &
-       EMIT,        &
-       ALB,         &
        TCS,         &
        HCS,         &
-       DZG,         &
+       DFW,         &
        Z0M,         &
        Z0H,         &
        Z0E
 
     integer :: n
     integer :: ierr
+
+    integer :: IO_FID_LAND_PROPERTY
     !---------------------------------------------------------------------------
-
-    LAND_PROPERTY_table(:,:) = CONST_UNDEF
-
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** [LAND ] vegetation parameters'
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,11(1x,A))') &
-               '***        ',  'description ', &
-                               'Max Stg.', &
-                               'CRT Stg.', &
-                               'Emissiv.', &
-                               '  Albedo', &
-                               'T condu.', &
-                               'H capac.', &
-                               '   Depth', &
-                               '   Z0(m)', &
-                               '   Z0(h)', &
-                               '   Z0(e)'
 
     !--- read namelist
     rewind(IO_FID_CONF)
-    do n = 1, LAND_NUM_IDX
-       ! undefined roughness length
-       Z0H = -1.0_RP
-       Z0E = -1.0_RP
+    read(IO_FID_CONF,nml=PARAM_LAND_PROPERTY,iostat=ierr)
+    if( ierr < 0 ) then !--- missing
+       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+    elseif( ierr > 0 ) then !--- fatal error
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_LAND_PROPERTY. Check!'
+       call PRC_MPIstop
+    endif
+    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_LAND_PROPERTY)
 
-       read(IO_FID_CONF,nml=PARAM_LAND_DATA,iostat=ierr)
+    if( LAND_PROPERTY_IN_FILENAME /= '' ) then
+      !--- Open land parameter file
+      IO_FID_LAND_PROPERTY = IO_get_available_fid()
+      open( IO_FID_LAND_PROPERTY,                     &
+            file   = trim(LAND_PROPERTY_IN_FILENAME), &
+            form   = 'formatted',                     &
+            status = 'old',                           &
+            iostat = ierr                             )
 
-       if ( ierr < 0 ) then !--- no more data
-          exit
-       elseif( ierr > 0 ) then !--- fatal error
-          write(*,*) 'xxx Not appropriate names in namelist PARAM_LAND. Check!'
-          call PRC_MPIstop
-       endif
+      if( ierr /= 0 ) then
+        if( IO_L ) write(IO_FID_LOG,*) 'Error: Failed to open land parameter file! :', trim(LAND_PROPERTY_IN_FILENAME)
+        call PRC_MPIstop
+      else
+        if( IO_L ) write(IO_FID_LOG,*)
+        if( IO_L ) write(IO_FID_LOG,*) '*** Properties for each plant functional type (PFT)'
+        if( IO_L ) write(IO_FID_LOG,*) &
+        '--------------------------------------------------------------------------------------------------------'
+        if( IO_L ) write(IO_FID_LOG,'(1x,A,11(1x,A))') '***         ',  &
+                                                       ' description', &
+                                                       ' Max Stg.', &
+                                                       ' CRT Stg.', &
+                                                       ' T condu.', &
+                                                       ' H capac.', &
+                                                       ' DFC Wat.', &
+                                                       '    Z0(m)', &
+                                                       '    Z0(h)', &
+                                                       '    Z0(e)'
 
-       if( Z0H < 0.0_RP ) then
-         Z0H = Z0M / 7.4_RP ! defined by Garratt and Francey (1978)
-       endif
-       if( Z0E < 0.0_RP ) then
-         Z0E = Z0M / 7.4_RP ! defined by Garratt and Francey (1978)
-       endif
+        !--- read namelist
+        rewind(IO_FID_LAND_PROPERTY)
 
-       LAND_PROPERTY_table(index,I_STRGMAX) = STRGMAX
-       LAND_PROPERTY_table(index,I_STRGCRT) = STRGCRT
-       LAND_PROPERTY_table(index,I_EMIT   ) = EMIT
-       LAND_PROPERTY_table(index,I_ALB    ) = ALB
-       LAND_PROPERTY_table(index,I_TCS    ) = TCS
-       LAND_PROPERTY_table(index,I_HCS    ) = HCS
-       LAND_PROPERTY_table(index,I_DZG    ) = DZG
-       LAND_PROPERTY_table(index,I_Z0M    ) = Z0M
-       LAND_PROPERTY_table(index,I_Z0H    ) = Z0H
-       LAND_PROPERTY_table(index,I_Z0E    ) = Z0E
+        do n = 1, LANDUSE_PFT_nmax
+           ! undefined roughness length
+           Z0H = -1.0_RP
+           Z0E = -1.0_RP
 
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,i3,1x,A12,5(1x,F8.2),1x,F8.0,4(1x,F8.2))') &
-                  '*** IDX=', index, trim(description), &
-                                     STRGMAX, &
-                                     STRGCRT, &
-                                     EMIT,    &
-                                     ALB,     &
-                                     TCS,     &
-                                     HCS,     &
-                                     DZG,     &
-                                     Z0M,     &
-                                     Z0H,     &
-                                     Z0E
-    enddo
+           read(IO_FID_LAND_PROPERTY,nml=PARAM_LAND_DATA,iostat=ierr)
+           if ( ierr < 0 ) then !--- no more data
+              exit
+           elseif( ierr > 0 ) then !--- fatal error
+              write(*,*) 'xxx Not appropriate names in namelist PARAM_LAND_DATA. Check!'
+              call PRC_MPIstop
+           endif
+
+           if( Z0H < 0.0_RP ) then
+             Z0H = Z0M / 7.4_RP ! defined by Garratt and Francey (1978)
+           endif
+           if( Z0E < 0.0_RP ) then
+             Z0E = Z0M / 7.4_RP ! defined by Garratt and Francey (1978)
+           endif
+
+           LAND_PROPERTY_table(index,I_WaterLimit   ) = STRGMAX
+           LAND_PROPERTY_table(index,I_WaterCritical) = STRGCRT
+           LAND_PROPERTY_table(index,I_ThermalCond  ) = TCS
+           LAND_PROPERTY_table(index,I_HeatCapacity ) = HCS
+           LAND_PROPERTY_table(index,I_WaterDiff    ) = DFW
+           LAND_PROPERTY_table(index,I_Z0M          ) = Z0M
+           LAND_PROPERTY_table(index,I_Z0H          ) = Z0H
+           LAND_PROPERTY_table(index,I_Z0E          ) = Z0E
+
+           if( IO_L ) write(IO_FID_LOG,'(1x,A8,I3,1x,A12,3(1x,F9.2),(1x,1PE9.1),4(1x,F9.2))') &
+                                         '*** IDX =', index, &
+                                         trim(description), &
+                                         STRGMAX, &
+                                         STRGCRT, &
+                                         TCS,     &
+                                         HCS,     &
+                                         DFW,     &
+                                         Z0M,     &
+                                         Z0H,     &
+                                         Z0E
+        enddo
+
+      end if
+
+      close( IO_FID_LAND_PROPERTY )
+
+    end if
+
+    if( IO_L ) write(IO_FID_LOG,*) &
+    '--------------------------------------------------------------------------------------------------------'
 
     return
   end subroutine LAND_param_read
+
+  !-----------------------------------------------------------------------------
+  !> conversion from water saturation [fraction] to volumetric water content [m3/m3]
+  function convert_WS2VWC( WS, critical ) result( VWC )
+    implicit none
+
+    real(RP), intent(in) :: WS(IA,JA) ! water saturation [fraction]
+    logical,  intent(in) :: critical  ! is I_WaterCritical used?
+
+    real(RP) :: VWC(IA,JA) ! volumetric water content [m3/m3]
+
+    ! work
+    integer :: i, j, num
+    !---------------------------------------------------------------------------
+
+    if( critical ) then
+      num = I_WaterCritical
+    else
+      num = I_WaterLimit
+    end if
+
+    do j = JS, JE
+    do i = IS, IE
+      VWC(i,j) = max( min( WS(i,j)*LAND_PROPERTY(i,j,num), LAND_PROPERTY(i,j,num) ), 0.0_RP )
+    end do
+    end do
+
+    return
+  end function convert_WS2VWC
 
 end module mod_land_vars
