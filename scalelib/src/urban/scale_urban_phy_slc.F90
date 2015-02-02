@@ -3,7 +3,7 @@
 !!
 !! @par Description
 !!          Surface fluxes between atmosphere and urban
-!!          based on Single-layer Urban Canopy Model (Kusaka et al. 2000, BLM)
+!!          based on Single-layer Urban Canopy Model (Kusaka et al. 2001, BLM)
 !!
 !! @author Team SCALE
 !!
