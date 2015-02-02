@@ -1,4 +1,5 @@
 program unit
+  use scale_precision
   use scale_stdio
   use scale_grid_index
   use scale_tracer
@@ -13,6 +14,7 @@ program unit
   use scale_comm, only: &
      COMM_setup
   use scale_grid, only: &
+     DZ, DX, DY, &
      GRID_allocate, &
      GRID_generate
 
@@ -45,6 +47,9 @@ program unit
   call TRACER_setup
 
   ! setup horizontal/veritical grid system
+  DZ = 500.0_RP
+  DX = 500.0_RP
+  DY = 500.0_RP
   call GRID_allocate
   call GRID_generate
 
