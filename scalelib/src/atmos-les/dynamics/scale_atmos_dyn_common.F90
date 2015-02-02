@@ -727,7 +727,7 @@ contains
 
     !-----< y-momentum >-----
 
-    call PROF_rapstart("NumFilter Comm", 3)
+    call PROF_rapstart("NumFilter Main", 3)
 
     !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
     do j = JS-2, JE+1
@@ -738,7 +738,7 @@ contains
     enddo
     enddo
 
-    call PROF_rapend  ("NumFilter Comm", 3)
+    call PROF_rapend  ("NumFilter Main", 3)
 
     call calc_numdiff( work(:,:,:,:,1), iwork, & ! (out)
                        VELY, & ! (in)

@@ -3032,7 +3032,6 @@ contains
     do i = IS, IE
     do k = KS, KE
 #ifndef DRY
-       R = Rtot(k,i,j)
        kapp = kappa(k,i,j)
 #else
        R = Rdry
