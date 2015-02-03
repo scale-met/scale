@@ -321,16 +321,16 @@ contains
           if( IO_L ) write(IO_FID_LOG,*)
           if( IO_L ) write(IO_FID_LOG,*) '+++ Input data      file :', trim(fname)
           if( IO_L ) write(IO_FID_LOG,*)
-          if( IO_L ) write(IO_FID_LOG,*) '*** Domain(LAT):', DOMAIN_LATS, DOMAIN_LATE
-          if( IO_L ) write(IO_FID_LOG,*) '***       (LON):', DOMAIN_LONS, DOMAIN_LONE
+          if( IO_L ) write(IO_FID_LOG,*) '*** Domain(LAT):', DOMAIN_LATS/D2R, DOMAIN_LATE/D2R
+          if( IO_L ) write(IO_FID_LOG,*) '***       (LON):', DOMAIN_LONS/D2R, DOMAIN_LONE/D2R
           if( IO_L ) write(IO_FID_LOG,*) '*** Tile  (LAT):', TILE_LATS(t), TILE_LATE(t)
           if( IO_L ) write(IO_FID_LOG,*) '***       (LON):', TILE_LONS(t), TILE_LONE(t)
 
           TILE_DLAT = 30.0_RP / 60.0_RP / 60.0_RP * D2R
           TILE_DLON = 30.0_RP / 60.0_RP / 60.0_RP * D2R
           if( IO_L ) write(IO_FID_LOG,*)
-          if( IO_L ) write(IO_FID_LOG,*) '*** TILE_DLAT  :', TILE_DLAT
-          if( IO_L ) write(IO_FID_LOG,*) '*** TILE_DLON  :', TILE_DLON
+          if( IO_L ) write(IO_FID_LOG,*) '*** TILE_DLAT  :', TILE_DLAT/D2R
+          if( IO_L ) write(IO_FID_LOG,*) '*** TILE_DLON  :', TILE_DLON/D2R
 
           fid = IO_get_available_fid()
           open( fid,                    &
@@ -378,8 +378,8 @@ contains
                  cycle
              endif
 
-      jloop: do j = JS, JE
-      iloop: do i = IS, IE
+      jloop: do j = JS-1, JE+1
+      iloop: do i = IS-1, IE+1
                 if (       TILE_LONH(ii-1) >= REAL_LONX(i-1,j  ) &
                      .AND. TILE_LONH(ii-1) <  REAL_LONX(i  ,j  ) &
                      .AND. TILE_LATH(jj-1) >= REAL_LATY(i  ,j-1) &
@@ -684,16 +684,16 @@ contains
           if( IO_L ) write(IO_FID_LOG,*)
           if( IO_L ) write(IO_FID_LOG,*) '+++ Input data      file :', trim(fname)
           if( IO_L ) write(IO_FID_LOG,*)
-          if( IO_L ) write(IO_FID_LOG,*) '*** Domain(LAT):', DOMAIN_LATS, DOMAIN_LATE
-          if( IO_L ) write(IO_FID_LOG,*) '***       (LON):', DOMAIN_LONS, DOMAIN_LONE
+          if( IO_L ) write(IO_FID_LOG,*) '*** Domain(LAT):', DOMAIN_LATS/D2R, DOMAIN_LATE/D2R
+          if( IO_L ) write(IO_FID_LOG,*) '***       (LON):', DOMAIN_LONS/D2R, DOMAIN_LONE/D2R
           if( IO_L ) write(IO_FID_LOG,*) '*** Tile  (LAT):', TILE_LATS(t), TILE_LATE(t)
           if( IO_L ) write(IO_FID_LOG,*) '***       (LON):', TILE_LONS(t), TILE_LONE(t)
 
           TILE_DLAT = 5.0_RP / 60.0_RP / 100.0_RP * D2R
           TILE_DLON = 7.5_RP / 60.0_RP / 100.0_RP * D2R
           if( IO_L ) write(IO_FID_LOG,*)
-          if( IO_L ) write(IO_FID_LOG,*) '*** TILE_DLAT  :', TILE_DLAT
-          if( IO_L ) write(IO_FID_LOG,*) '*** TILE_DLON  :', TILE_DLON
+          if( IO_L ) write(IO_FID_LOG,*) '*** TILE_DLAT  :', TILE_DLAT/D2R
+          if( IO_L ) write(IO_FID_LOG,*) '*** TILE_DLON  :', TILE_DLON/D2R
 
           fid = IO_get_available_fid()
           open( fid,                    &
@@ -741,8 +741,8 @@ contains
                  cycle
              endif
 
-      jloop: do j = JS, JE
-      iloop: do i = IS, IE
+      jloop: do j = JS-1, JE+1
+      iloop: do i = IS-1, IE+1
                 if (       TILE_LONH(ii-1) >= REAL_LONX(i-1,j  ) &
                      .AND. TILE_LONH(ii-1) <  REAL_LONX(i  ,j  ) &
                      .AND. TILE_LATH(jj-1) >= REAL_LATY(i  ,j-1) &
