@@ -1,8 +1,9 @@
-program net2g
+program popsca_h
   !-----------------------------------------------------------------------------
+  !> post-process for scale high-performance
   !> convert from netcdf to grads format (with combine and slice)
   !>
-  !> original: 2015/01/30
+  !> original: 2015/02/03
   !-----------------------------------------------------------------------------
 
   use netcdf
@@ -2020,4 +2021,4 @@ contains
     stop
   end subroutine err_abort
 
-end program net2g
+end program popsca_h
