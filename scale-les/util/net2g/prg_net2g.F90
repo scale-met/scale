@@ -19,11 +19,13 @@ program net2g
   integer,  parameter :: max_tcount = 500
   integer,  parameter :: max_zcount = 100
   integer,  parameter :: master     = 0
+  integer,  parameter :: FID_STD    = 6
   integer,  parameter :: FID_CONF   = 20
   integer,  parameter :: FID_RCNF   = 21
-  integer,  parameter :: FID_LOG    = 22
+  integer,  parameter :: FID_LOGF   = 22
   integer,  parameter :: FID_CTL    = 23
   integer,  parameter :: FID_DAT    = 24
+  integer             :: FID_LOG    = 22
 
   integer,  parameter :: err_internal = 0
   integer,  parameter :: err_netcdf   = -1
@@ -34,6 +36,7 @@ program net2g
   integer,  parameter :: vt_height = 2  ! vtype index
   integer,  parameter :: vt_land   = 3  ! vtype index
   integer,  parameter :: vt_urban  = 4  ! vtype index
+  integer,  parameter :: vt_tpmsk  = 5  ! vtype index
 
   integer,  parameter :: a_slice   = 0  ! atype index
   integer,  parameter :: a_max     = 1  ! atype index
@@ -49,6 +52,8 @@ program net2g
   integer         :: VCOUNT         = 1
   integer         :: ZCOUNT         = 1
   integer         :: TARGET_ZLEV(max_zcount) = 3
+  real(DP)        :: EXTRA_TINTERVAL = -9.999
+  character(5)    :: EXTRA_TUNIT    = ""
   character(CLNG) :: IDIR           = "./data"
   character(CLNG) :: ODIR           = "."
   character(CLNG) :: CONFFILE       = "./run.conf"
@@ -56,10 +61,14 @@ program net2g
   character(CMID) :: ANALYSIS       = "SLICE"
   character(5)    :: DELT           = "1mn"
   character(15)   :: STIME          = "00:00Z01JAN2000"
+  character(15)   :: FTIME          = "2000010100"
+  character(CLNG) :: LOG_BASENAME   = "LOG"
   logical         :: LOG_ALL_OUTPUT = .false.
+  logical         :: Z_MERGE_OUT    = .false.  ! only for slice
 
   integer         :: PRC_NUM_X
   integer         :: PRC_NUM_Y
+  integer         :: TIME_STARTDATE(6)
   real(DP)        :: HISTORY_DEFAULT_TINTERVAL
   character(CMID) :: HISTORY_DEFAULT_BASENAME
   character(5)    :: HISTORY_DEFAULT_TUNIT
@@ -79,6 +88,7 @@ program net2g
   real(DP),allocatable :: p_3d_urban(:,:,:,:)
   real(DP),allocatable :: p_3d_land(:,:,:,:)
   real(DP),allocatable :: p_2d(:,:,:)
+  real(DP),allocatable :: p_2dt(:,:)
 
   real(SP),allocatable :: sendbuf(:,:)
   real(SP),allocatable :: sendbuf_gx(:)
@@ -88,14 +98,17 @@ program net2g
   real(SP),allocatable :: cy_gather(:)
   real(SP),allocatable :: cdx_gather(:)
   real(SP),allocatable :: cdy_gather(:)
+  real(SP),allocatable :: vgrid(:)
 
   integer :: start_3d(4)
   integer :: start_2d(3)
+  integer :: start_2dt(2)
   integer :: count_3d(4)
   integer :: count_2d(3)
   integer :: count_urban(4)
   integer :: count_land(4)
   integer :: count_height(3)
+  integer :: count_tpmsk(2)
 
   integer :: vtype
   integer :: atype
@@ -134,18 +147,26 @@ program net2g
 
   integer :: nm, nmnge
   integer :: work
+  integer :: yy, mm, dd, hh, mn, sc
   integer,allocatable :: rk_mnge(:)
 
   character(6)    :: num
+  character(3)    :: cmm(12)
   character(CLNG) :: ncfile
   character(CMID) :: varname
   character(CMID) :: fconf
+  character(CLNG) :: fname_save
 
   logical :: flag_bnd       = .false.
+  logical :: open_file      = .false.
   logical :: LOUT           = .false.
   !-----------------------------------------------------------------------------
 
+  data cmm / "JAN", "FEB", "MAR", "APL", "MAY", "JUN", &
+             "JUL", "AUG", "SEP", "OCT", "NOV", "DEC" /
+
   namelist /LOGOUT/            &
+    LOG_BASENAME,              &
     LOG_ALL_OUTPUT
   namelist /INFO/              &
     START_TSTEP,               &
@@ -157,13 +178,18 @@ program net2g
     ANALYSIS,                  &
     CONFFILE,                  &
     IDIR,                      &
-    ODIR
+    ODIR,                      &
+    EXTRA_TINTERVAL,           &
+    EXTRA_TUNIT,               &
+    Z_MERGE_OUT
   namelist /VARI/              &
     VNAME,                     &
     TARGET_ZLEV
   namelist /GRADS/             &
     DELT,                      &
     STIME
+  namelist  / PARAM_TIME /     &
+    TIME_STARTDATE
   namelist  / PARAM_PRC /      &
     PRC_NUM_X,                 &
     PRC_NUM_Y
@@ -228,9 +254,9 @@ program net2g
 
   call gather_grid
 
-  if ( irank == master ) then
-     call combine_grid
-  endif
+  if ( irank == master ) call combine_grid
+
+  if ( Z_MERGE_OUT ) call make_vgrid
 
   !--- read data and combine
   nst = START_TSTEP
@@ -241,9 +267,13 @@ program net2g
      call err_abort( 1, __LINE__ )
   endif
 
+  call cal_init
+
   do it = nst, nen, INC_TSTEP !--- time loop
 
+     call set_calender
      if ( LOUT ) write( FID_LOG, '(1X,A,I3)' ) "+++ TIME STEP:   ", it
+     if ( LOUT ) write( FID_LOG, * ) "+++ Date: ", STIME
 
      do iv = 1, vcount !--- var loop
         varname = trim( VNAME(iv) )
@@ -270,17 +300,21 @@ program net2g
 
               if ( irank == master ) then
                  call combine_vars_2d( recvbuf, var_2d )
-                 call create_ctl( varname, idom, it, zz )
-                 call write_vars( var_2d, varname, idom, it, zz )
+                 if ( iz /= 1 .and. Z_MERGE_OUT ) then
+                    call write_vars_zmerge( var_2d, iz )
+                 else
+                    call create_ctl( varname, idom, it, zz )
+                    call write_vars( var_2d, varname, idom, it, zz )
+                 endif
               endif
            enddo !--- level loop
 
-        case ( vt_2d )
+        case ( vt_2d, vt_tpmsk )
 
-           if ( atype == a_slice ) then
-              zz = TARGET_ZLEV(1)
-              call check_targ_zlev( zz )
-           endif
+           !if ( atype == a_slice ) then
+           !   zz = TARGET_ZLEV(1)
+           !   call check_targ_zlev( zz )
+           !endif
 
            do nm = 1, nmnge
               call netcdf_read_var( rk_mnge(nm), nm, it, zz, varname, vtype, p_var )
@@ -299,10 +333,12 @@ program net2g
         end select
 
      enddo !--- var loop
+
+     call cal_increment
   enddo !--- time loop
 
   ! finalization
-  if ( LOUT ) close ( FID_LOG )
+  if ( open_file .and. LOUT ) close ( FID_LOG )
   call MPI_FINALIZE( ierr )
 
   !-----------------------------------------------------------------------------
@@ -334,9 +370,18 @@ contains
        if ( irank == master ) LOUT = .true.
     endif
 
-    if ( LOUT ) then
+    if ( trim(LOG_BASENAME) .eq. "STDOUT" ) then
+       FID_LOG = FID_STD
+       open_file = .false.
+    else
+       FID_LOG = FID_LOGF
+       open_file = .true.
+    endif
+
+    if ( open_file .and. LOUT ) then
        write( num,'(I6.6)' ) irank
-       open ( FID_LOG, file="LOG.pe"//num, status='replace', form='formatted' )
+       open ( FID_LOG, file=trim(LOG_BASENAME)//".pe"//num, &
+              status='replace', form='formatted' )
     endif
 
     return
@@ -503,6 +548,11 @@ contains
        istat = nf90_get_var( ncid, varid, p_2d(isn:ien,jsn:jen,1), start=start_2d, count=count_height )
        if (istat .ne. nf90_noerr) call handle_err(istat, __LINE__)
        p_var(is:ie,js:je) = real( p_2d(isn:ien,jsn:jen,1) )
+
+    case ( vt_tpmsk )
+       istat = nf90_get_var( ncid, varid, p_2dt(isn:ien,jsn:jen), start=start_2dt, count=count_tpmsk )
+       if (istat .ne. nf90_noerr) call handle_err(istat, __LINE__)
+       p_var(is:ie,js:je) = real( p_2dt(isn:ien,jsn:jen) )
 
     case ( vt_3d )
        istat = nf90_get_var( ncid, varid, p_3d(isn:ien,jsn:jen,1:nzn,1), start=start_3d, count=count_3d )
@@ -672,7 +722,6 @@ contains
 
     do jy = 1, yproc
     do ix = 1, xproc
-
        call set_index( ix, jy, is, ie, js, je )
        call set_index_gathered( ix, jy, gis, gie, gjs, gje )
 
@@ -826,10 +875,10 @@ contains
     character(3)    :: ctim
     character(3)    :: clev
     character(CLNG) :: fname
+    character(CLNG) :: fname2
     !---------------------------------------------------------------------------
 
      write(cdom,'(i2.2)') idom
-     write(ctim,'(i3.3)') it
      select case( atype )
      case ( a_slice )
         write(clev,'(i3.3)') zz
@@ -842,11 +891,12 @@ contains
      case ( a_ave )
         clev = "ave"
      end select
-     fname = trim(ODIR)//'/'//trim(varname)//'_d'//cdom//'z'//clev//'t'//ctim
+     fname = trim(ODIR)//'/'//trim(varname)//'_d'//cdom//'z'//clev//'_'//trim(FTIME)
+     fname2 = trim(varname)//'_d'//cdom//'z'//clev//'_'//trim(FTIME)
      if ( LOUT ) write( FID_LOG, '(1X,A,A)') "Create ctl file: ", trim(fname)
      open ( FID_CTL, file=trim(fname)//".ctl", form="formatted", access="sequential" )
 
-     write( FID_CTL, '(a,1x,a)') "DSET", "^"//trim(fname)//".grd"
+     write( FID_CTL, '(a,1x,a)') "DSET", "^"//trim(fname2)//".grd"
      write( FID_CTL, '(a)') "TITLE SCALE3 data output"
      write( FID_CTL, '(a)') "OPTIONS BIG_ENDIAN"
      write( FID_CTL, '(a,1x,e15.7)') "UNDEF", -9.9999001E+30
@@ -856,15 +906,27 @@ contains
      write( FID_CTL, '(5(1x,e15.7))') cy(1:ny)*1.d-3
 
      select case( vtype )
-     case ( vt_urban, vt_land )
+     case ( vt_urban, vt_land, vt_tpmsk )
         write( FID_CTL, '(a,3x,i7,1x,a,1x,a)') "ZDEF", 1, "linear", "1 1"
-     case ( vt_height, vt_3d, vt_2d )
-        write( FID_CTL, '(a,3x,i7,1x,a,1x,e15.7)') "ZDEF", 1, "LEVELS", cz(nzh+1)*1.d-3
+     case ( vt_height, vt_2d )
+        write( FID_CTL, '(a,3x,i7,1x,a,1x,e15.7)') "ZDEF", 1, "LEVELS", cz(zz)*1.d-3
+     case ( vt_3d )
+        if ( Z_MERGE_OUT ) then
+           write( FID_CTL, '(a,3x,i7,1x,a)') "ZDEF", ZCOUNT, "LEVELS"
+           write( FID_CTL, '(5(1x,e15.7))') vgrid(1:ZCOUNT)*1.d-3
+        else
+           write( FID_CTL, '(a,3x,i7,1x,a,1x,e15.7)') "ZDEF", 1, "LEVELS", cz(zz)*1.d-3
+        endif
+
      end select
 
      write( FID_CTL, '(a,3x,i5,1x,a,1x,a,3x,a)') "TDEF", 1, "LINEAR", trim(STIME), trim(DELT)
      write( FID_CTL, '(a,3x,i2)') "VARS", 1
-     write( FID_CTL, '(a,1x,i7,1x,i2,1x,a)') trim(varname), 0, 99, "NONE"
+     if ( Z_MERGE_OUT ) then
+        write( FID_CTL, '(a,1x,i7,1x,i2,1x,a)') trim(varname), ZCOUNT, 99, "NONE"
+     else
+        write( FID_CTL, '(a,1x,i7,1x,i2,1x,a)') trim(varname), 0, 99, "NONE"
+     endif
      write( FID_CTL, '(a)') "ENDVARS"
 
      close( FID_CTL )
@@ -899,7 +961,6 @@ contains
     irecl = int(nx,kind=8) * int(ny,kind=8) * 4_8
 
     write(cdom,'(i2.2)') idom
-    write(ctim,'(i3.3)') it
     select case( atype )
     case ( a_slice )
        write(clev,'(i3.3)') zz
@@ -912,18 +973,42 @@ contains
     case ( a_ave )
        clev = "ave"
     end select
-    fname = trim(ODIR)//'/'//trim(varname)//'_d'//cdom//'z'//clev//'t'//ctim//".grd"
+    fname = trim(ODIR)//'/'//trim(varname)//'_d'//cdom//'z'//clev//'_'//trim(FTIME)//".grd"
+    if ( Z_MERGE_OUT ) fname_save = fname
     if ( LOUT ) write( FID_LOG, '(1X,A,A)') "+++ Output data file: ", trim(fname)
     if ( LOUT ) write( FID_LOG, *) "+++ Check data range: ", maxval(var_2d), minval(var_2d)
 
     open( FID_DAT, file=trim(fname), form="unformatted", access="direct", recl=irecl)
-
     write( FID_DAT, rec=irec ) var_2d(:,:)
-
     close( FID_DAT )
 
     return
   end subroutine write_vars
+
+
+  !> write data file
+  !---------------------------------------------------------------------------
+  subroutine write_vars_zmerge( &
+      var_2d,   & ! [in]
+      irec      ) ! [in]
+    implicit none
+
+    real(SP),        intent(in) :: var_2d(:,:)
+    integer,         intent(in) :: irec
+
+    integer(8)      :: irecl
+    !---------------------------------------------------------------------------
+
+    irecl = int(nx,kind=8) * int(ny,kind=8) * 4_8
+    if ( LOUT ) write( FID_LOG, '(1X,A,A)') "+++ Merged output to: ", trim(fname_save)
+    if ( LOUT ) write( FID_LOG, *) "+++ Check data range: ", maxval(var_2d), minval(var_2d)
+
+    open( FID_DAT, file=trim(fname_save), form="unformatted", access="direct", recl=irecl)
+    write( FID_DAT, rec=irec ) var_2d(:,:)
+    close( FID_DAT )
+
+    return
+  end subroutine write_vars_zmerge
 
 
   !> read configulation namelists
@@ -1011,6 +1096,9 @@ contains
        call err_abort( 1, __LINE__ )
     endif
 
+    read  ( FID_RCNF, nml=PARAM_TIME, iostat=ierr )
+    if ( LOUT ) write ( FID_LOG, nml=PARAM_PRC )
+
     read  ( FID_RCNF, nml=PARAM_PRC, iostat=ierr )
     if ( LOUT ) write ( FID_LOG, nml=PARAM_PRC )
 
@@ -1023,6 +1111,13 @@ contains
     if ( LOUT ) write ( FID_LOG, nml=PARAM_HISTORY )
 
     close(FID_RCNF)
+
+    if ( EXTRA_TINTERVAL > 0 ) then
+       HISTORY_DEFAULT_TINTERVAL = EXTRA_TINTERVAL
+       HISTORY_DEFAULT_TUNIT     = EXTRA_TUNIT
+       if ( LOUT ) write( FID_LOG, '(1X,A,F5.1,A)' ) "+++ USE EXTRA TIME: ", &
+                        HISTORY_DEFAULT_TINTERVAL, trim(HISTORY_DEFAULT_TUNIT)
+    endif
 
     !--- tentative
     if ( HIST_BND ) then
@@ -1087,11 +1182,15 @@ contains
        vtype = vt_land
     case ( "height" )
        vtype = vt_height
+    case ( "topo", "lsmask" )
+       vtype = vt_tpmsk
+       Z_MERGE_OUT = .false.
     case default
        if( ndim == 4 ) then
           vtype = vt_3d
        elseif( ndim == 3 ) then
           vtype = vt_2d
+          Z_MERGE_OUT = .false.
        else
           call err_abort( 0, __LINE__ )
        end if
@@ -1113,15 +1212,19 @@ contains
     case ( "MAX", "max", "MAXIMUM", "maximum" )
        atype = a_max
        ZCOUNT  = 1
+       Z_MERGE_OUT = .false.
     case ( "MIN", "min", "MINIMUM", "minimum" )
        atype = a_min
        ZCOUNT  = 1
+       Z_MERGE_OUT = .false.
     case ( "SUM", "sum", "SUMMATION", "summation" )
        atype = a_sum
        ZCOUNT  = 1
+       Z_MERGE_OUT = .false.
     case ( "AVE", "ave", "AVERAGE", "average" )
        atype = a_ave
        ZCOUNT  = 1
+       Z_MERGE_OUT = .false.
     case default
        if ( LOUT ) write (*, *) "ERROR: specified analysis type is not appropiate"
        if ( LOUT ) write (*, *) "***** ", trim(ANALYSIS)
@@ -1150,7 +1253,6 @@ contains
        if ( ix == 1 .or. ix == xproc ) then
           flag_bnd = .true.
        endif
-
        if ( jy == 1 .or. jy == yproc ) then
           flag_bnd = .true.
        endif
@@ -1201,7 +1303,6 @@ contains
     else
        is = (ix-1)*nxp + 1
        ie = (ix-1)*nxp + nxp
-
        js = (jy-1)*nyp + 1
        je = (jy-1)*nyp + nyp
     endif
@@ -1228,7 +1329,6 @@ contains
 
     is = (ix-1)*nxgp + 1
     ie = (ix-1)*nxgp + nxgp
-
     js = (jy-1)*nygp*xproc + 1
     je = (jy-1)*nygp*xproc + nygp
 
@@ -1378,7 +1478,6 @@ contains
        else
           ie = mnxp - 2
        endif
-
        if ( jy == 1 .or. jy == yproc ) then
           je = mnyp
        else
@@ -1391,22 +1490,26 @@ contains
 
     select case( atype )
     case ( a_slice )
-       count_3d    (1:4) = (/ ie, je, 1, 1 /)
-       count_2d    (1:3) = (/ ie, je,    1 /)
-       count_urban (1:4) = (/ ie, je, 1, 1 /)
-       count_land  (1:4) = (/ ie, je, 1, 1 /)
-       count_height(1:3) = (/ ie, je, 1    /)
-       start_3d    (1:4) = (/ 1, 1, zz, it /)
-       start_2d    (1:3) = (/ 1, 1, it /)
+       count_3d    (1:4) = (/ ie, je, 1,  1  /)
+       count_2d    (1:3) = (/ ie, je,     1  /)
+       count_urban (1:4) = (/ ie, je, 1,  1  /)
+       count_land  (1:4) = (/ ie, je, 1,  1  /)
+       count_height(1:3) = (/ ie, je, 1      /)
+       count_tpmsk (1:2) = (/ ie, je         /)
+       start_3d    (1:4) = (/ 1,  1,  zz, it /)
+       start_2d    (1:3) = (/ 1,  1,      it /)
+       start_2dt   (1:2) = (/ 1,  1          /)
        nzn = 1
     case ( a_max, a_min, a_sum, a_ave )
-       count_3d    (1:4) = (/ ie, je, nz, 1 /)
-       count_2d    (1:3) = (/ ie, je,     1 /)
-       count_urban (1:4) = (/ ie, je, uz, 1 /)
-       count_land  (1:4) = (/ ie, je, lz, 1 /)
-       count_height(1:3) = (/ ie, je, nz    /)
-       start_3d    (1:4) = (/ 1, 1, 1, it /)
-       start_2d    (1:3) = (/ 1, 1, it /)
+       count_3d    (1:4) = (/ ie, je, nz, 1  /)
+       count_2d    (1:3) = (/ ie, je,     1  /)
+       count_urban (1:4) = (/ ie, je, uz, 1  /)
+       count_land  (1:4) = (/ ie, je, lz, 1  /)
+       count_height(1:3) = (/ ie, je, nz     /)
+       count_tpmsk (1:2) = (/ ie, je         /)
+       start_3d    (1:4) = (/ 1,  1,  1,  it /)
+       start_2d    (1:3) = (/ 1,  1,      it /)
+       start_2dt   (1:2) = (/ 1,  1          /)
 
        select case( vtype )
        case ( vt_urban )
@@ -1415,7 +1518,7 @@ contains
           nzn = lz
        case ( vt_3d )
           nzn = nz
-       case ( vt_2d, vt_height )
+       case ( vt_2d, vt_height, vt_tpmsk )
           if ( LOUT ) write (*, *) "ERROR: specified anal-type is not appropiate for the var"
           if ( LOUT ) write (*, *) "***** ", trim(ANALYSIS), trim(varname)
           call err_abort( 1, __LINE__ )
@@ -1448,7 +1551,6 @@ contains
 
     if ( LOUT ) write( FID_LOG, '(1X,A,I5)') &
                 "+++ number of ranks to manage: ", nmnge
-
     do n = 1, nmnge
        rk_mnge(n) = irank * nmnge + (n-1)
        if ( LOUT ) write( FID_LOG, '(1X,A,I5,A,I5)') &
@@ -1468,22 +1570,17 @@ contains
     if ( HIST_BND ) then
        mnxp = nxgp - 2
        mnyp = nygp - 2
-    else
-       mnxp = nxp
-       mnyp = nyp
-    endif
-
-    if ( HIST_BND ) then
        nx = (mnxp-2) * xproc + 4
        ny = (mnyp-2) * yproc + 4
     else
+       mnxp = nxp
+       mnyp = nyp
        nx = mnxp * xproc
        ny = mnyp * yproc
     endif
 
     mnx = mnxp * xproc
     mny = mnyp * yproc
-
     nxg_tproc = nxgp * tproc
     nyg_tproc = nygp * tproc
 
@@ -1491,6 +1588,27 @@ contains
 
     return
   end subroutine set_array_size
+
+
+  !> setting of calender indices
+  !---------------------------------------------------------------------------
+  subroutine set_calender()
+    implicit none
+
+    character(2) :: cmn, chh, cdd, cmm2
+    character(4) :: cyy
+    !---------------------------------------------------------------------------
+
+    write(cmn, '(I2.2)') mn
+    write(chh, '(I2.2)') hh
+    write(cdd, '(I2.2)') dd
+    write(cmm2,'(I2.2)') mm
+    write(cyy, '(I4.4)') yy
+    STIME = cmn//':'//chh//'Z'//cdd//cmm(mm)//cyy
+    FTIME = cyy//cmm2//cdd//chh//cmn
+
+    return
+  end subroutine set_calender
 
 
   !> setting of indices
@@ -1523,7 +1641,7 @@ contains
           if ( LOUT ) write (*, *) "ERROR: requested level is in K-HALO [3D data]"
           call err_abort( 1, __LINE__ )
        endif
-    case ( vt_2d )
+    case ( vt_2d, vt_tpmsk )
        if ( zz /= 1 ) then
           if ( LOUT ) write (*, *) "ERROR: requested level is not exist [2D data]"
           call err_abort( 1, __LINE__ )
@@ -1536,6 +1654,24 @@ contains
   end subroutine check_targ_zlev
 
 
+  !> make vgrid for merged-z output
+  !---------------------------------------------------------------------------
+  subroutine make_vgrid()
+    implicit none
+
+    integer :: iz
+    !---------------------------------------------------------------------------
+
+    allocate( vgrid( ZCOUNT ) )
+
+    do iz = 1, ZCOUNT
+       vgrid(iz) = cz( TARGET_ZLEV(iz) )
+    enddo
+
+    return
+  end subroutine make_vgrid
+
+
   !> allocation of data arrays
   !---------------------------------------------------------------------------
   subroutine allocation( &
@@ -1545,6 +1681,7 @@ contains
     integer, intent(in) :: irank
     !---------------------------------------------------------------------------
 
+    allocate( p_2dt       (mnxp,       mnyp              ) )
     allocate( p_2d        (mnxp,       mnyp,       1     ) )
     allocate( p_3d        (mnxp,       mnyp,       nz, 1 ) )
     allocate( p_3d_urban  (mnxp,       mnyp,       uz, 1 ) )
@@ -1582,6 +1719,261 @@ contains
 
     return
   end subroutine allocation
+
+
+  !> calender initialization
+  !---------------------------------------------------------------------------
+  subroutine cal_init()
+    implicit none
+
+    real(DP) :: inc
+    integer  :: i, tint
+    character(2) :: tunit
+    character(3) :: cint
+    !---------------------------------------------------------------------------
+
+    yy = TIME_STARTDATE(1)
+    mm = TIME_STARTDATE(2)
+    dd = TIME_STARTDATE(3)
+    hh = TIME_STARTDATE(4)
+    mn = TIME_STARTDATE(5)
+    sc = TIME_STARTDATE(6)
+
+    if ( START_TSTEP > 1 ) then
+       do i=1, START_TSTEP-1
+          call cal_increment
+       enddo
+    endif
+
+    inc = HISTORY_DEFAULT_TINTERVAL * dble(INC_TSTEP)
+    select case ( HISTORY_DEFAULT_TUNIT )
+    case ( "SEC", "sec" )
+       if ( inc < 60.0D0 ) then
+          if ( LOUT ) write( FID_LOG, '(1X,A)') &
+                      "*** WARNING: HISTORY_DEFAULT_TINTERVAL is not compatible!"
+          if ( LOUT ) write( FID_LOG, '(1X,A,I7,A)') &
+                      "*** ", int(HISTORY_DEFAULT_TINTERVAL), " is too short for Grads"
+          tint  = inc
+          tunit = "mn"
+       else
+          inc = mod( inc, 60.0D0 )
+          if ( inc < 60.0D0 ) then
+             tint  = inc
+             tunit = "mn"
+          else
+             tint  = inc
+             tunit = "hr"
+          endif
+       endif
+    case ( "MIN", "min" )
+       if ( inc < 60.0D0 ) then
+          tint  = inc
+          tunit = "mn"
+       else
+          inc = mod( inc, 60.0D0 )
+          tint  = inc
+          tunit = "hr"
+       endif
+    case ( "HOUR", "hour" )
+       tint  = inc
+       tunit = "hr"
+    case default
+        call err_abort( 0, __LINE__ )
+    end select
+
+    if ( tint <= 0 ) then
+       tint = 1  ! avoid zero
+    endif
+    write(cint,'(I3)') tint
+    DELT = trim(cint)//tunit
+
+    return
+  end subroutine cal_init
+
+
+  !> calender increment calculation
+  !---------------------------------------------------------------------------
+  subroutine cal_increment()
+    implicit none
+
+    real(DP) :: inc
+    !---------------------------------------------------------------------------
+
+    inc = HISTORY_DEFAULT_TINTERVAL * dble(INC_TSTEP)
+
+    select case ( HISTORY_DEFAULT_TUNIT )
+    case ( "SEC", "sec" )
+       if ( inc < 60.0D0 ) then
+          call cal_inc_sec( int(inc) )
+       else
+          inc = inc / 60.0D0
+          if ( inc < 60.0D0 ) then
+             call cal_inc_min( int(inc) )
+          else
+             inc = inc / 60.0D0
+             call cal_inc_hour( int(inc) )
+          endif
+       endif
+    case ( "MIN", "min" )
+       if ( inc < 60.0D0 ) then
+          call cal_inc_min( int(inc) )
+       else
+          inc = inc / 60.0D0
+          call cal_inc_hour( int(inc) )
+       endif
+    case ( "HOUR", "hour" )
+       call cal_inc_hour( int(inc) )
+    case default
+        call err_abort( 0, __LINE__ )
+    end select
+
+    return
+  end subroutine cal_increment
+
+
+  !> calender increment calculation: for [sec] increment
+  !---------------------------------------------------------------------------
+  subroutine cal_inc_sec( &
+      inc  ) ! [in]
+    implicit none
+
+    integer, intent(in)  :: inc
+
+    integer  :: eday
+    !---------------------------------------------------------------------------
+
+    call cal_date( yy, mm, eday )
+
+    sc = sc + inc
+    if ( sc >= 60 ) then
+       mn = mn + 1
+       sc = sc - 60
+       if ( mn >= 60 ) then
+          hh = hh + 1
+          mn = mn - 60
+          if ( hh >= 24 ) then
+             dd = dd + 1
+             hh = hh - 24
+             if ( dd > eday ) then
+                mm = mm + 1
+                dd = dd - eday
+                if ( mm > 12 ) then
+                   yy = yy + 1
+                   mm = mm - 12
+                endif
+             endif
+          endif
+       endif
+    endif
+
+    return
+  end subroutine cal_inc_sec
+
+
+  !> calender increment calculation: for [min] increment
+  !---------------------------------------------------------------------------
+  subroutine cal_inc_min( &
+      inc  ) ! [in]
+    implicit none
+
+    integer, intent(in)  :: inc
+
+    integer  :: eday
+    !---------------------------------------------------------------------------
+
+    call cal_date( yy, mm, eday )
+
+    mn = mn + inc
+    if ( mn >= 60 ) then
+       hh = hh + 1
+       mn = mn - 60
+       if ( hh >= 24 ) then
+          dd = dd + 1
+          hh = hh - 24
+          if ( dd > eday ) then
+             mm = mm + 1
+             dd = dd - eday
+             if ( mm > 12 ) then
+                yy = yy + 1
+                mm = mm - 12
+             endif
+          endif
+       endif
+    endif
+
+    return
+  end subroutine cal_inc_min
+
+
+  !> calender increment calculation: for [hour] increment
+  !---------------------------------------------------------------------------
+  subroutine cal_inc_hour( &
+      inc  ) ! [in]
+    implicit none
+
+    integer, intent(in)  :: inc
+
+    integer  :: eday
+    !---------------------------------------------------------------------------
+
+    call cal_date( yy, mm, eday )
+
+    hh = hh + inc
+    if ( hh >= 24 ) then
+       dd = dd + 1
+       hh = hh - 24
+       if ( dd > eday ) then
+          mm = mm + 1
+          dd = dd - eday
+          if ( mm > 12 ) then
+             yy = yy + 1
+             mm = mm - 12
+          endif
+       endif
+    endif
+
+    return
+  end subroutine cal_inc_hour
+
+
+  !> calender date calculation
+  !---------------------------------------------------------------------------
+  subroutine cal_date( &
+      yy,  & ! [in ]
+      mm,  & ! [in ]
+      dd   ) ! [out]
+    implicit none
+
+    integer, intent(in)  :: yy
+    integer, intent(in)  :: mm
+    integer, intent(out) :: dd
+
+    integer :: rem4, rem100, rem400
+    !---------------------------------------------------------------------------
+
+    select case ( mm )
+    case ( 4, 6, 9, 11 )
+       dd = 30
+    case ( 1, 3, 5, 7, 8, 10, 12 )
+       dd = 31
+    case ( 2 )
+       rem4   = int( mod(real(yy), 4.0  ) )
+       rem100 = int( mod(real(yy), 100.0) )
+       rem400 = int( mod(real(yy), 400.0) )
+       dd = 28
+       if ( rem4 == 0 ) then            ! T -> leap year
+          if ( rem100 == 0 ) then       ! F -> leap year
+             if ( rem400 == 0 ) dd = 29 ! T -> leap year
+          else
+             dd = 29
+          endif
+       endif
+    case default
+        call err_abort( 0, __LINE__ )
+    end select
+
+    return
+  end subroutine cal_date
 
 
   !> error handler for netcdf90 system
