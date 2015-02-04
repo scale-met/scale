@@ -1605,7 +1605,7 @@ contains
     write(cdd, '(I2.2)') dd
     write(cmm2,'(I2.2)') mm
     write(cyy, '(I4.4)') yy
-    STIME = cmn//':'//chh//'Z'//cdd//cmm(mm)//cyy
+    STIME = chh//':'//cmn//'Z'//cdd//cmm(mm)//cyy
     FTIME = cyy//cmm2//cdd//chh//cmn
 
     return
@@ -1757,7 +1757,7 @@ contains
           tint  = inc
           tunit = "mn"
        else
-          inc = mod( inc, 60.0D0 )
+          inc = inc / 60.0D0
           if ( inc < 60.0D0 ) then
              tint  = inc
              tunit = "mn"
@@ -1771,7 +1771,7 @@ contains
           tint  = inc
           tunit = "mn"
        else
-          inc = mod( inc, 60.0D0 )
+          inc = inc / 60.0D0
           tint  = inc
           tunit = "hr"
        endif
