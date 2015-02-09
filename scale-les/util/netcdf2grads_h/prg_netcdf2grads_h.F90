@@ -1,4 +1,4 @@
-program popsca_h
+program netcdf2grads_h
   !-----------------------------------------------------------------------------
   !> post-process for scale high-performance
   !> convert from netcdf to grads format (with combine and slice)
@@ -231,9 +231,12 @@ program popsca_h
   tproc = xproc * yproc
   nmnge = tproc / isize
   work = mod( tproc, isize )
-  if( work /= 0 ) then
+  if ( work /= 0 ) then
      if ( LOUT ) write (*, *) "ERROR: specified num of mpi processes is not adequate."
      if ( LOUT ) write (*, *) "*** specify the num; PRC_X*PRC_Y shuold be divisable by the num."
+     call err_abort( 1, __LINE__ )
+  elseif ( isize > tproc ) then
+     if ( LOUT ) write (*, *) "ERROR: num of mpi processes is larger than that of the scale-les run."
      call err_abort( 1, __LINE__ )
   endif
 
@@ -457,7 +460,7 @@ contains
     ncfile = trim(IDIR)//"/"//trim(HISTORY_DEFAULT_BASENAME)//".pe"//num//".nc"
     if ( LOUT ) write( FID_LOG, '(1x,A,A)' ) "+++ Target File (grd): ", trim(ncfile)
 
-    call set_index_readbuf( nm, is, ie, js, je, im_grid=.true. )
+    call set_index_readbuf_grid( nm, is, ie, js, je )
 
     istat = nf90_open( trim(ncfile), nf90_nowrite, ncid )
     if (istat .ne. nf90_noerr) call handle_err(istat, __LINE__)
@@ -1392,58 +1395,67 @@ contains
       ie,      & ! [out]
       js,      & ! [out]
       je,      & ! [out]
-      im_grid, & ! [in ] optional
       im_bnd   ) ! [in ] optional
     implicit none
 
     integer, intent(in)  :: nm               ! num of loop for manage ranks
     integer, intent(out) :: is, ie           ! start index, end index
     integer, intent(out) :: js, je           ! start index, end index
-    logical, intent(in), optional :: im_grid ! flag of grid variables
     logical, intent(in), optional :: im_bnd  ! flag of boundary (edge tile)
 
-    logical :: not_grid
     logical :: not_bnd
     !---------------------------------------------------------------------------
-
-    not_grid = .true.
-    if ( present(im_grid) ) then
-       if ( im_grid ) not_grid = .false.
-    endif
 
     not_bnd = .true.
     if ( present(im_bnd) ) then
        if ( im_bnd ) not_bnd = .false.
     endif
 
-    if ( not_grid ) then
-       if ( HIST_BND ) then
-          if ( not_bnd ) then
-             is = 1
-             ie = nxp
-             js = (nm-1)*mnyp + 1
-             je = (nm-1)*mnyp + nyp
-          else
-             is = 1
-             ie = mnxp
-             js = (nm-1)*mnyp + 1
-             je = (nm-1)*mnyp + mnyp
-          endif
-       else
+    if ( HIST_BND ) then
+       if ( not_bnd ) then
           is = 1
           ie = nxp
-          js = (nm-1)*nyp + 1
-          je = (nm-1)*nyp + nyp
+          js = (nm-1)*mnyp + 1
+          je = (nm-1)*mnyp + nyp
+       else
+          is = 1
+          ie = mnxp
+          js = (nm-1)*mnyp + 1
+          je = (nm-1)*mnyp + mnyp
        endif
     else
-       is = (nm-1)*nxgp + 1
-       ie = (nm-1)*nxgp + nxgp
-       js = (nm-1)*nygp + 1
-       je = (nm-1)*nygp + nygp
+       is = 1
+       ie = nxp
+       js = (nm-1)*nyp + 1
+       je = (nm-1)*nyp + nyp
     endif
 
     return
   end subroutine set_index_readbuf
+
+
+  !> setting of indices for reading buffer for grid
+  !---------------------------------------------------------------------------
+  subroutine set_index_readbuf_grid( &
+      nm,      & ! [in ]
+      is,      & ! [out]
+      ie,      & ! [out]
+      js,      & ! [out]
+      je       ) ! [out]
+    implicit none
+
+    integer, intent(in)  :: nm               ! num of loop for manage ranks
+    integer, intent(out) :: is, ie           ! start index, end index
+    integer, intent(out) :: js, je           ! start index, end index
+    !---------------------------------------------------------------------------
+
+    is = (nm-1)*nxgp + 1
+    ie = (nm-1)*nxgp + nxgp
+    js = (nm-1)*nygp + 1
+    je = (nm-1)*nygp + nygp
+
+    return
+  end subroutine set_index_readbuf_grid
 
 
   !> setting of indices for reading buffer (netcdf) with counts
@@ -1489,6 +1501,10 @@ contains
        je = nyp
     endif
 
+    count_tpmsk(1:2) = (/ ie, je    /)
+    start_2d   (1:3) = (/ 1,  1, it /)
+    start_2dt  (1:2) = (/ 1,  1     /)
+
     select case( atype )
     case ( a_slice )
        count_3d    (1:4) = (/ ie, je, 1,  1  /)
@@ -1496,10 +1512,7 @@ contains
        count_urban (1:4) = (/ ie, je, 1,  1  /)
        count_land  (1:4) = (/ ie, je, 1,  1  /)
        count_height(1:3) = (/ ie, je, 1      /)
-       count_tpmsk (1:2) = (/ ie, je         /)
        start_3d    (1:4) = (/ 1,  1,  zz, it /)
-       start_2d    (1:3) = (/ 1,  1,      it /)
-       start_2dt   (1:2) = (/ 1,  1          /)
        nzn = 1
     case ( a_max, a_min, a_sum, a_ave )
        count_3d    (1:4) = (/ ie, je, nz, 1  /)
@@ -1507,10 +1520,7 @@ contains
        count_urban (1:4) = (/ ie, je, uz, 1  /)
        count_land  (1:4) = (/ ie, je, lz, 1  /)
        count_height(1:3) = (/ ie, je, nz     /)
-       count_tpmsk (1:2) = (/ ie, je         /)
        start_3d    (1:4) = (/ 1,  1,  1,  it /)
-       start_2d    (1:3) = (/ 1,  1,      it /)
-       start_2dt   (1:2) = (/ 1,  1          /)
 
        select case( vtype )
        case ( vt_urban )
@@ -1673,55 +1683,6 @@ contains
   end subroutine make_vgrid
 
 
-  !> allocation of data arrays
-  !---------------------------------------------------------------------------
-  subroutine allocation( &
-      irank   ) ! [in]
-    implicit none
-
-    integer, intent(in) :: irank
-    !---------------------------------------------------------------------------
-
-    allocate( p_2dt       (mnxp,       mnyp              ) )
-    allocate( p_2d        (mnxp,       mnyp,       1     ) )
-    allocate( p_3d        (mnxp,       mnyp,       nz, 1 ) )
-    allocate( p_3d_urban  (mnxp,       mnyp,       uz, 1 ) )
-    allocate( p_3d_land   (mnxp,       mnyp,       lz, 1 ) )
-    allocate( p_var       (mnxp,       mnyp*nmnge        ) )
-    allocate( p_cdx       (nxgp*nmnge                    ) )
-    allocate( p_cdy       (nygp*nmnge                    ) )
-    allocate( p_cx        (nxgp*nmnge                    ) )
-    allocate( p_cy        (nygp*nmnge                    ) )
-    allocate( cdz         (nz+2*nzh                      ) )
-    allocate( cz          (nz+2*nzh                      ) )
-
-    allocate( sendbuf     (mnxp,       mnyp*nmnge        ) )
-    allocate( sendbuf_gx  (nxgp*nmnge                    ) )
-    allocate( sendbuf_gy  (nygp*nmnge                    ) )
-
-    if ( irank == master ) then
-       allocate( var_2d    (nx,               ny               ) )
-       allocate( cx        (nx                                 ) )
-       allocate( cy        (ny                                 ) )
-       allocate( cdx       (nx                                 ) )
-       allocate( cdy       (ny                                 ) )
-       allocate( recvbuf   (mnxp,             mnyp*nmnge*tproc ) )
-       allocate( cx_gather (nxgp*nmnge*tproc                   ) )
-       allocate( cy_gather (nygp*nmnge*tproc                   ) )
-       allocate( cdx_gather(nxgp*nmnge*tproc                   ) )
-       allocate( cdy_gather(nygp*nmnge*tproc                   ) )
-    else
-       allocate( recvbuf   (1,                1                ) )
-       allocate( cx_gather (1                                  ) )
-       allocate( cy_gather (1                                  ) )
-       allocate( cdx_gather(1                                  ) )
-       allocate( cdy_gather(1                                  ) )
-    endif
-
-    return
-  end subroutine allocation
-
-
   !> calender initialization
   !---------------------------------------------------------------------------
   subroutine cal_init()
@@ -1754,29 +1715,30 @@ contains
                       "*** WARNING: HISTORY_DEFAULT_TINTERVAL is not compatible!"
           if ( LOUT ) write( FID_LOG, '(1X,A,I7,A)') &
                       "*** ", int(HISTORY_DEFAULT_TINTERVAL), " is too short for Grads"
-          tint  = inc
-          tunit = "mn"
+          tint  = 1     !tentative
+          tunit = "mn"  !tentative
        else
           inc = inc / 60.0D0
           if ( inc < 60.0D0 ) then
-             tint  = inc
+             tint  = int(inc)
              tunit = "mn"
           else
-             tint  = inc
+             inc = inc / 60.0D0
+             tint  = int(inc)
              tunit = "hr"
           endif
        endif
     case ( "MIN", "min" )
        if ( inc < 60.0D0 ) then
-          tint  = inc
+          tint  = int(inc)
           tunit = "mn"
        else
           inc = inc / 60.0D0
-          tint  = inc
+          tint  = int(inc)
           tunit = "hr"
        endif
     case ( "HOUR", "hour" )
-       tint  = inc
+       tint  = int(inc)
        tunit = "hr"
     case default
         call err_abort( 0, __LINE__ )
@@ -1977,6 +1939,55 @@ contains
   end subroutine cal_date
 
 
+  !> allocation of data arrays
+  !---------------------------------------------------------------------------
+  subroutine allocation( &
+      irank   ) ! [in]
+    implicit none
+
+    integer, intent(in) :: irank
+    !---------------------------------------------------------------------------
+
+    allocate( p_2dt       (mnxp,       mnyp              ) )
+    allocate( p_2d        (mnxp,       mnyp,       1     ) )
+    allocate( p_3d        (mnxp,       mnyp,       nz, 1 ) )
+    allocate( p_3d_urban  (mnxp,       mnyp,       uz, 1 ) )
+    allocate( p_3d_land   (mnxp,       mnyp,       lz, 1 ) )
+    allocate( p_var       (mnxp,       mnyp*nmnge        ) )
+    allocate( p_cdx       (nxgp*nmnge                    ) )
+    allocate( p_cdy       (nygp*nmnge                    ) )
+    allocate( p_cx        (nxgp*nmnge                    ) )
+    allocate( p_cy        (nygp*nmnge                    ) )
+    allocate( cdz         (nz+2*nzh                      ) )
+    allocate( cz          (nz+2*nzh                      ) )
+
+    allocate( sendbuf     (mnxp,       mnyp*nmnge        ) )
+    allocate( sendbuf_gx  (nxgp*nmnge                    ) )
+    allocate( sendbuf_gy  (nygp*nmnge                    ) )
+
+    if ( irank == master ) then
+       allocate( var_2d    (nx,               ny               ) )
+       allocate( cx        (nx                                 ) )
+       allocate( cy        (ny                                 ) )
+       allocate( cdx       (nx                                 ) )
+       allocate( cdy       (ny                                 ) )
+       allocate( recvbuf   (mnxp,             mnyp*nmnge*tproc ) )
+       allocate( cx_gather (nxgp*nmnge*tproc                   ) )
+       allocate( cy_gather (nygp*nmnge*tproc                   ) )
+       allocate( cdx_gather(nxgp*nmnge*tproc                   ) )
+       allocate( cdy_gather(nygp*nmnge*tproc                   ) )
+    else
+       allocate( recvbuf   (1,                1                ) )
+       allocate( cx_gather (1                                  ) )
+       allocate( cy_gather (1                                  ) )
+       allocate( cdx_gather(1                                  ) )
+       allocate( cdy_gather(1                                  ) )
+    endif
+
+    return
+  end subroutine allocation
+
+
   !> error handler for netcdf90 system
   !---------------------------------------------------------------------------
   subroutine handle_err( &
@@ -2021,4 +2032,4 @@ contains
     stop
   end subroutine err_abort
 
-end program popsca_h
+end program netcdf2grads_h
