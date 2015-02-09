@@ -5,24 +5,24 @@ BUILD_DIR   = ./.libs
 SYSDEP_DIR  = ../../../sysdep
 
 include $(SYSDEP_DIR)/Makedef.$(SCALE_SYS)
+include $(TOPDIR)/Mkinclude
 
 LIBS=$(NETCDF_LIBS)
 INCLUDES=$(NETCDF_INCLUDE)
-#FFLAGS=$(FFLAGS_FAST)
 
-OBJECT=popsca
-MODS=prg_popsca_h.o
+OBJECT=net2g
+MODS=prg_netcdf2grads_h.o
 
 ##----------------------------------------------------------
 ## make rules
 
 all: main
 
-main: prg_popsca_h.o
+main: prg_netcdf2grads_h.o
 	$(FC) $(FFLAGS) -o $(OBJECT) $(MODS) $(LIBS)
 
 #f90.o:
-prg_popsca_h.o: prg_popsca_h.F90
+prg_netcdf2grads_h.o: prg_netcdf2grads_h.F90
 	$(FC) $(FFLAGS) $(INCLUDES) -o $@ -c $<
 
 clean:
