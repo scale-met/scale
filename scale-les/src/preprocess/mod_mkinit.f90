@@ -4223,9 +4223,6 @@ enddo
 
     integer                  :: NUMBER_OF_FILES     = 1
     integer                  :: NUMBER_OF_TSTEPS    = 1    ! num of time steps in one file
-    integer                  :: NUMBER_OF_SKIP_TSTEPS  = 0 ! num of skipped first several data
-                                                           !                 available only for NICAM
-    integer                  :: INTERP_SERC_DIV_NUM = 10   ! num of dividing blocks in interpolation search
     character(len=H_LONG)    :: BASENAME_ORG        = ''
     character(len=H_LONG)    :: FILETYPE_ORG        = ''
     character(len=H_LONG)    :: BASENAME_BOUNDARY   = 'boundary_real'
@@ -4233,12 +4230,20 @@ enddo
     integer                  :: PARENT_MP_TYPE      = 6         ! microphysics type of the parent model (number of classes)
                                                                 ! 0: dry, 3:3-class, 5:5-class, 6:6-class, >6:double moment
     real(RP)                 :: BOUNDARY_UPDATE_DT  = 0.0_RP    ! inteval time of boudary data update [s]
-    logical                  :: USE_FILE_DENSITY    = .false.   ! use density data from files
     logical                  :: USE_FILE_LANDWATER  = .true.    ! use land water data from files
     real(RP)                 :: INIT_LANDWATER_RATIO = 0.5_RP   ! Ratio of land water to storage is constant,
                                                                 !            if USE_FILE_LANDWATER is ".false."
-    logical                  :: WRF_FILE_TYPE       = .false.   ! wrf filetype: T=wrfout, F=wrfrst
+    integer                  :: INTERP_SERC_DIV_NUM = 10        ! num of dividing blocks in interpolation search
     logical                  :: SERIAL_PROC_READ    = .false.   ! read by one MPI process and broadcast
+
+    ! only for SCALE boundary
+    logical                  :: USE_FILE_DENSITY    = .false.   ! use density data from files
+    ! only for WRF boundary
+    logical                  :: WRF_FILE_TYPE       = .false.   ! wrf filetype: T=wrfout, F=wrfrst
+    ! only for NICAM boundary
+    integer                  :: NUMBER_OF_SKIP_TSTEPS  = 0      ! num of skipped first several data
+    ! only for GrADS format boundary
+    character(len=H_LONG)    :: GrADS_BOUNDARY_namelist = 'namelist.grads_boundary'    ! information about grads boundary file
 
 
     NAMELIST / PARAM_MKINIT_REAL / &
@@ -4256,6 +4261,7 @@ enddo
          INIT_LANDWATER_RATIO,   &
          PARENT_MP_TYPE,         &
          WRF_FILE_TYPE,          &
+         GrADS_BOUNDARY_namelist, &
          SERIAL_PROC_READ
 
     character(len=H_LONG) :: BASENAME_WITHNUM  = ''
@@ -4272,7 +4278,7 @@ enddo
     integer :: dims(7) ! dims 1-3: normal, 4-6: staggerd, 7: soil-layer
 
     integer :: totaltimesteps = 1
-    integer :: timelen = 1
+    integer :: timelen = 1           ! NUMBER_OF_TSTEPS for nicam data
     integer :: ierr
 
     integer :: k, i, j, iq, n, ns, ne
@@ -4297,7 +4303,12 @@ enddo
        call PRC_MPIstop
     endif
 
-    totaltimesteps = NUMBER_OF_FILES * NUMBER_OF_TSTEPS
+    if( FILETYPE_ORG /= 'NICAM-NETCDF' ) then
+      if ( NUMBER_OF_SKIP_TSTEPS /= 0 ) then
+         write(*,*) 'xxx NUMBER_OF_SKIP_TSTEPS cannot be used for ',trim(FILETYPE_ORG)
+         call PRC_MPIstop
+      endif
+    endif
 
     if     ( FILETYPE_ORG == 'WRF-ARW' ) then
       BASENAME_WITHNUM = trim(BASENAME_ORG)//"_00000"
@@ -4305,19 +4316,28 @@ enddo
       BASENAME_WITHNUM = trim(BASENAME_ORG)
     else if( FILETYPE_ORG == 'NICAM-NETCDF' ) then
       BASENAME_WITHNUM = trim(BASENAME_ORG)//"_00000"
+    else if( FILETYPE_ORG == 'GrADS' ) then
+      BASENAME_WITHNUM = trim(BASENAME_ORG)//"_00000"
+      if ( len_trim(GrADS_BOUNDARY_namelist) == 0 ) then
+         write(*,*) 'xxx "GrADS_BOUNDARY_namelist" is not specified in "PARAM_MKINIT_REAL"!',trim(GrADS_BOUNDARY_namelist)
+         call PRC_MPIstop
+      endif
     else
       write(*,*) ' xxx Unsupported FILE TYPE:', trim(FILETYPE_ORG)
       call PRC_MPIstop
     end if
 
-    call ParentAtomSetup( dims(:), timelen, mdlid,           & ![OUT]
-                          BASENAME_WITHNUM, FILETYPE_ORG,    & ![IN]
-                          INTERP_SERC_DIV_NUM, WRF_FILE_TYPE ) ![IN]
+    call ParentAtomSetup( dims(:), timelen, mdlid,            & ![OUT]
+                          BASENAME_WITHNUM, FILETYPE_ORG,     & ![IN]
+                          INTERP_SERC_DIV_NUM, WRF_FILE_TYPE, & ![IN]
+                          GrADS_BOUNDARY_namelist             ) ![IN]
 
     if ( FILETYPE_ORG == 'NICAM-NETCDF' ) then
        NUMBER_OF_TSTEPS = timelen
-       totaltimesteps = NUMBER_OF_FILES * NUMBER_OF_TSTEPS
+       !totaltimesteps = NUMBER_OF_FILES * NUMBER_OF_TSTEPS
     endif
+
+    totaltimesteps = NUMBER_OF_FILES * NUMBER_OF_TSTEPS
 
     allocate( dens_org(KA,IA,JA,totaltimesteps   ) )
     allocate( momz_org(KA,IA,JA,totaltimesteps   ) )
@@ -4335,6 +4355,8 @@ enddo
        else if( FILETYPE_ORG == 'SCALE-LES' ) then
          BASENAME_WITHNUM = trim(BASENAME_ORG)
        else if( FILETYPE_ORG == 'NICAM-NETCDF' ) then
+         BASENAME_WITHNUM = trim(BASENAME_ORG)//"_"//NUM
+       else if( FILETYPE_ORG == 'GrADS' ) then
          BASENAME_WITHNUM = trim(BASENAME_ORG)//"_"//NUM
        else
          write(*,*) ' xxx Unsupported FILE TYPE:', trim(FILETYPE_ORG)
@@ -4408,6 +4430,8 @@ enddo
     else if( FILETYPE_ORG == 'SCALE-LES' ) then
       BASENAME_WITHNUM = trim(BASENAME_ORG)
     else if( FILETYPE_ORG == 'NICAM-NETCDF' ) then
+      BASENAME_WITHNUM = trim(BASENAME_ORG)//"_"//NUM
+    else if( FILETYPE_ORG == 'GrADS' ) then
       BASENAME_WITHNUM = trim(BASENAME_ORG)//"_"//NUM
     else
       write(*,*) ' xxx Unsupported FILE TYPE:', trim(FILETYPE_ORG)
