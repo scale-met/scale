@@ -121,6 +121,9 @@ module scale_comm
   real(RP), private, allocatable :: recvpack_E2P(:,:)   !< packing packet (receive, from E)
   real(RP), private, allocatable :: sendpack_P2W(:,:)   !< packing packet (send,    to W  )
   real(RP), private, allocatable :: sendpack_P2E(:,:)   !< packing packet (send,    to E  )
+#ifdef DEBUG
+  logical,  private, allocatable :: use_packbuf(:)      !< using flag for packing buffer
+#endif
 
   integer,  private, allocatable :: req_cnt (:)         !< request ID of each MPI send/recv
   integer,  private, allocatable :: req_list(:,:)       !< request ID set of each variables
@@ -229,6 +232,10 @@ contains
     allocate( recvpack_E2P(COMM_size2D_WE*KA,COMM_vsize_max) )
     allocate( sendpack_P2W(COMM_size2D_WE*KA,COMM_vsize_max) )
     allocate( sendpack_P2E(COMM_size2D_WE*KA,COMM_vsize_max) )
+#ifdef DEBUG
+    allocate( use_packbuf(COMM_vsize_max) )
+    use_packbuf(:) = .false.
+#endif
 
     allocate( req_cnt (              COMM_vsize_max) )
     allocate( req_list(COMM_nreq_MAX,COMM_vsize_max) )
@@ -1548,6 +1555,7 @@ contains
 
   subroutine vars_3D_mpi(var, vid)
     use scale_process, only: &
+       PRC_MPIstop, &
        PRC_next, &
        PRC_W,    &
        PRC_N,    &
@@ -1573,6 +1581,14 @@ contains
     ireq = 1
 
     kd = size(var, 1)
+
+#ifdef DEBUG
+    if ( use_packbuf(vid) ) then
+       write(*,*) 'packing buffer is already used', vid
+       call PRC_MPIstop
+    end if
+    use_packbuf(vid) = .true.
+#endif
 
     if ( COMM_IsAllPeriodic ) then ! periodic condition
 
@@ -1679,6 +1695,7 @@ contains
 
   subroutine vars8_3D_mpi(var, vid)
     use scale_process, only: &
+       PRC_MPIstop, &
        PRC_next, &
        PRC_W,    &
        PRC_N,    &
@@ -1709,6 +1726,14 @@ contains
     ireq = 1
 
     kd = size(var, 1)
+
+#ifdef DEBUG
+    if ( use_packbuf(vid) ) then
+       write(*,*) 'packing buffer is already used', vid
+       call PRC_MPIstop
+    end if
+    use_packbuf(vid) = .true.
+#endif
 
     if ( COMM_IsAllPeriodic ) then ! periodic condition
 
@@ -2128,6 +2153,7 @@ contains
 
   subroutine vars_2D_mpi(var, vid)
     use scale_process, only: &
+       PRC_MPIstop, &
        PRC_next, &
        PRC_W,    &
        PRC_N,    &
@@ -2148,6 +2174,13 @@ contains
     tag = vid * 100
     ireq = 1
 
+#ifdef DEBUG
+    if ( use_packbuf(vid) ) then
+       write(*,*) 'packing buffer is already used', vid
+       call PRC_MPIstop
+    end if
+    use_packbuf(vid) = .true.
+#endif
 
     if ( COMM_IsAllPeriodic ) then
     !--- periodic condition
@@ -2280,6 +2313,7 @@ contains
 
   subroutine vars8_2D_mpi(var, vid)
     use scale_process, only: &
+       PRC_MPIstop, &
        PRC_next, &
        PRC_W,    &
        PRC_N,    &
@@ -2307,6 +2341,13 @@ contains
     tag   = vid * 100
     ireq = 1
 
+#ifdef DEBUG
+    if ( use_packbuf(vid) ) then
+       write(*,*) 'packing buffer is already used', vid
+       call PRC_MPIstop
+    end if
+    use_packbuf(vid) = .true.
+#endif
 
     if ( COMM_IsAllPeriodic ) then
     !--- periodic condition
@@ -2782,11 +2823,21 @@ contains
   end subroutine vars8_2D_mpi
 
   subroutine vars_3D_mpi_pc(var, vid)
+    use scale_process, only: &
+       PRC_MPIstop
     implicit none
     real(RP), intent(inout) :: var(:,:,:)
     integer, intent(in)    :: vid
     integer :: ierr
     !---------------------------------------------------------------------------
+
+#ifdef DEBUG
+    if ( use_packbuf(pseqid(vid)) ) then
+       write(*,*) 'packing buffer is already used', vid, pseqid(vid)
+       call PRC_MPIstop
+    end if
+    use_packbuf(pseqid(vid)) = .true.
+#endif
 
     call pack_3D(var, pseqid(vid))
 
@@ -2810,6 +2861,10 @@ contains
                       ierr                          )
     call unpack_3D(var, vid)
 
+#ifdef DEBUG
+    use_packbuf(vid) = .false.
+#endif
+
     return
   end subroutine wait_3D_mpi
 
@@ -2828,6 +2883,10 @@ contains
                       MPI_STATUSES_IGNORE, &
                       ierr )
     call unpack_2D(var, vid)
+
+#ifdef DEBUG
+    use_packbuf(vid) = .false.
+#endif
 
     return
   end subroutine wait_2D_mpi
@@ -2851,6 +2910,10 @@ contains
                       MPI_STATUSES_IGNORE,          &
                       ierr                          )
     call unpack_3D(var, pseqid(vid))
+
+#ifdef DEBUG
+    use_packbuf(pseqid(vid)) = .false.
+#endif
 
     return
   end subroutine wait_3D_mpi_pc
