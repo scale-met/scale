@@ -2209,7 +2209,7 @@ contains
        do i = IIS, IIE
           k = KE
           rw = mflx_hi(k-1,i,j,ZDIR) * RDZ(k) ! rho * w / dz
-          ru = (mflx_hi(k,i,j,XDIR)+mflx_hi(k  ,i-1,j  ,YDIR)) * RDX(i) ! rho * u / dx
+          ru = (mflx_hi(k,i,j,XDIR)+mflx_hi(k  ,i-1,j  ,XDIR)) * RDX(i) ! rho * u / dx
           rv = (mflx_hi(k,i,j,YDIR)+mflx_hi(k  ,i  ,j-1,YDIR)) * RDY(j) ! rho * v / dy
           if ( abs(ru) < EPSILON .and. abs(rv) < EPSILON .and. abs(rw) < EPSILON ) then
              qa_in = phi_in(k,i,j)
