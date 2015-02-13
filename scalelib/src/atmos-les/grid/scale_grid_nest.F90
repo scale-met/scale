@@ -2412,6 +2412,8 @@ contains
       ny,         & ! (in)
       HANDLE,     & ! (in)
       landgrid    ) ! (in)
+    use scale_const, only: &
+       EPS => CONST_EPS
     use scale_process, only: &
        PRC_MPIstop
     implicit none
@@ -2512,7 +2514,7 @@ contains
           endif
        enddo
        enddo
-       if( dist(1)==0.0_RP )then
+       if( abs(dist(1)) < EPS )then
           hfact(i,j,1) = 1.0_RP
           hfact(i,j,2) = 0.0_RP
           hfact(i,j,3) = 0.0_RP
@@ -2558,7 +2560,7 @@ contains
                 vfact(k,i,j,idx,1) = 1.0_RP
                 vfact(k,i,j,idx,2) = 0.0_RP
                 ncopy = ncopy + 1
-             elseif( (.NOT. copy) .and. dist(1)==0.0_RP ) then
+             elseif( (.NOT. copy) .and. abs(dist(1)) < EPS ) then
                 vfact(k,i,j,idx,1) = 1.0_RP
                 vfact(k,i,j,idx,2) = 0.0_RP
              elseif( .NOT. copy ) then
