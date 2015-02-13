@@ -46,12 +46,13 @@ scale_external_io.o: io/scale_external_io.F90 $(inc_index) $(DEPENDLIB) scale_gr
 scale_fileio.o: io/scale_fileio.F90 $(inc_index) $(DEPENDLIB) scale_const.o scale_grid_cartesian.o scale_grid_index.o scale_land_grid.o scale_land_grid_index.o scale_precision.o scale_process.o scale_prof.o scale_stdio.o scale_time.o scale_urban_grid.o scale_urban_grid_index.o
 scale_grid_cartesian.o: atmos-les/grid/scale_grid_cartesian.F90 $(inc_index) $(DEPENDLIB) scale_grid_index.o scale_precision.o scale_process.o scale_prof.o scale_stdio.o
 scale_grid_index.o: atmos-les/grid/scale_grid_index.F90 $(inc_index) $(DEPENDLIB) scale_precision.o scale_process.o scale_prof.o scale_stdio.o
-scale_grid_nest.o: atmos-les/grid/scale_grid_nest.F90 $(inc_index) $(DEPENDLIB) scale_comm.o scale_const.o scale_debug.o scale_grid_index.o scale_grid_real.o scale_gridtrans.o scale_index.o scale_precision.o scale_process.o scale_prof.o scale_stdio.o scale_time.o scale_tracer.o
+scale_grid_nest.o: atmos-les/grid/scale_grid_nest.F90 $(inc_index) $(DEPENDLIB) scale_comm.o scale_const.o scale_debug.o scale_grid_index.o scale_grid_real.o scale_gridtrans.o scale_index.o scale_interpolation_nest.o scale_precision.o scale_process.o scale_prof.o scale_stdio.o scale_time.o scale_tracer.o
 scale_grid_real.o: atmos-les/grid/scale_grid_real.F90 $(inc_index) $(DEPENDLIB) scale_comm.o scale_const.o scale_fileio.o scale_grid_cartesian.o scale_grid_index.o scale_mapproj.o scale_precision.o scale_process.o scale_prof.o scale_stdio.o scale_topography.o
 scale_gridtrans.o: atmos-les/grid/scale_gridtrans.F90 $(inc_index) $(DEPENDLIB) scale_comm.o scale_fileio.o scale_grid_cartesian.o scale_grid_index.o scale_grid_real.o scale_mapproj.o scale_precision.o scale_process.o scale_prof.o scale_stdio.o
 scale_history.o: io/scale_history.F90 $(inc_index) $(DEPENDLIB) scale_const.o scale_grid_cartesian.o scale_grid_index.o scale_grid_real.o scale_intepolation.o scale_land_grid.o scale_land_grid_index.o scale_landuse.o scale_precision.o scale_process.o scale_prof.o scale_stdio.o scale_time.o scale_topography.o scale_urban_grid.o scale_urban_grid_index.o
 scale_index.o: common/scale_index.F90 $(inc_index) $(DEPENDLIB) scale_stdio.o
 scale_intepolation.o: atmos-les/grid/scale_intepolation.F90 $(inc_index) $(DEPENDLIB) scale_const.o scale_grid_cartesian.o scale_grid_index.o scale_grid_real.o scale_precision.o scale_prof.o scale_stdio.o scale_topography.o
+scale_interpolation_nest.o: atmos-les/grid/scale_interpolation_nest.F90 $(inc_index) $(DEPENDLIB) scale_const.o scale_debug.o scale_grid_index.o scale_index.o scale_land_grid_index.o scale_precision.o scale_process.o scale_prof.o scale_stdio.o scale_tracer.o
 scale_land_grid.o: land/grid/scale_land_grid.F90 $(inc_index) $(DEPENDLIB) scale_grid_cartesian.o scale_grid_index.o scale_land_grid_index.o scale_precision.o scale_process.o scale_prof.o scale_stdio.o
 scale_land_grid_index.o: land/grid/scale_land_grid_index.F90 $(inc_index) $(DEPENDLIB) scale_precision.o scale_process.o scale_prof.o scale_stdio.o
 scale_land_phy.o: land/scale_land_phy.F90 $(inc_index) $(DEPENDLIB) scale_grid_index.o scale_land_grid_index.o scale_land_phy_matsiro.o scale_land_phy_slab.o scale_precision.o scale_process.o scale_prof.o scale_stdio.o
@@ -143,6 +144,7 @@ MODS =	\
 	scale_history.mod	\
 	scale_index.mod	\
 	scale_interpolation.mod	\
+	scale_interpolation_nest.mod	\
 	scale_land_grid.mod	\
 	scale_land_grid_index.mod	\
 	scale_land_phy.mod	\
