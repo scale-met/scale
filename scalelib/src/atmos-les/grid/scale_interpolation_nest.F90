@@ -34,6 +34,7 @@ module scale_interpolation_nest
   !++ Public procedure
   !
   public :: INTRPNEST_setup
+  public :: INTRPNEST_interp_fact_latlon
   public :: INTRPNEST_interp_fact_llz
 
   !-----------------------------------------------------------------------------
@@ -252,6 +253,97 @@ contains
 
     return
   end subroutine INTRPNEST_setup
+
+
+  !-----------------------------------------------------------------------------
+  ! make interpolation factor using Lat-Lon
+  subroutine INTRPNEST_interp_fact_latlon( &
+      hfact,      & ! (out)
+      igrd,       & ! (out)
+      jgrd,       & ! (out)
+      mylat,      & ! (in)
+      mylon,      & ! (in)
+      myIA,       & ! (in)
+      myJA,       & ! (in)
+      inlat,      & ! (in)
+      inlon,      & ! (in)
+      inIA,       & ! (in)
+      inJA        ) ! (in)
+    use scale_process, only: &
+       PRC_MPIstop
+    implicit none
+
+    real(RP), intent(out) :: hfact(:,:,:)       ! horizontal interp factor
+    integer,  intent(out) :: igrd (:,:,:)       ! grid points of interp target
+    integer,  intent(out) :: jgrd (:,:,:)       ! grid points of interp target
+
+    real(RP), intent(in)  :: mylat(:,:)         ! latitude data of mine
+    real(RP), intent(in)  :: mylon(:,:)         ! longitude data of mine
+    integer,  intent(in)  :: myIA               ! grid number of mine
+    integer,  intent(in)  :: myJA               ! grid number of mine
+
+    real(RP), intent(in)  :: inlat(:,:)         ! latitude data of you (input)
+    real(RP), intent(in)  :: inlon(:,:)         ! longitude data of you (input)
+    integer,  intent(in)  :: inIA               ! grid number of you (input)
+    integer,  intent(in)  :: inJA               ! grid number of you (input)
+
+    real(RP) :: distance
+    real(RP) :: dist
+    integer  :: i, j, ii, jj
+    integer  :: idx
+    integer  :: is, ie
+    integer  :: js, je
+    integer  :: iinc, jinc
+    integer  :: blk_i, blk_j
+    !---------------------------------------------------------------------------
+
+    hfact(:,:,:) = 0.0_RP
+
+    do j = 1, myJA
+    do i = 1, myIA
+       ! nearest block search
+       iinc = max( (inIA + 1) / divnum, 1 )
+       jinc = max( (inJA + 1) / divnum, 1 )
+       dist = large_number_1
+       jj = 1 + (jinc/2)
+       do while (jj <= inJA)
+          ii = 1 + (iinc/2)
+          do while (ii <= inIA)
+             distance = INTRPNEST_haversine( mylat(i,j),   mylon(i,j),  &
+                                             inlat(ii,jj), inlon(ii,jj) )
+             if( distance < dist )then
+                dist = distance
+                blk_i = ii
+                blk_j = jj
+             endif
+             ii = ii + iinc
+          enddo
+          jj = jj + jinc
+       enddo
+       is = blk_i - (iinc/2) - 1
+       if( is < 1 ) is = 1
+       ie   = blk_i + (iinc/2) + 1
+       if( ie  > inIA ) ie   = inIA
+       js = blk_j - (jinc/2) - 1
+       if( js < 1 ) js = 1
+       je   = blk_j + (jinc/2) + 1
+       if( je  > inJA ) je   = inJA
+
+       ! main search
+       call INTRPNEST_search_horiz( hfact(i,j,:), &
+                                    igrd(i,j,:),  &
+                                    jgrd(i,j,:),  &
+                                    mylat(i,j),   &
+                                    mylon(i,j),   &
+                                    inlat,        &
+                                    inlon,        &
+                                    is, ie,       &
+                                    js, je        )
+    enddo
+    enddo
+
+    return
+  end subroutine INTRPNEST_interp_fact_latlon
 
 
   !-----------------------------------------------------------------------------
