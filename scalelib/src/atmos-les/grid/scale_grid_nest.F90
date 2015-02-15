@@ -27,6 +27,7 @@ module scale_grid_nest
   use scale_tracer
   use scale_const, only: &
      r_in_m => CONST_RADIUS
+  use scale_interpolation_nest
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -94,6 +95,7 @@ module scale_grid_nest
   integer,  public              :: TILEAL_JA(2)         !< cells of all tiles in y-direction
 
   integer,  public              :: NEST_BND_QA = 1      !< number of tracer treated in nesting system
+  integer,  public              :: NEST_INTERP_LEVEL = 3 !< horizontal interpolation level
 
   logical,  public              :: USE_NESTING          = .false.
   logical,  public              :: OFFLINE              = .true.
@@ -116,7 +118,7 @@ module scale_grid_nest
   private :: NEST_COMM_intercomm_nestdown
   private :: NEST_COMM_issuer_of_receive
   private :: NEST_COMM_issuer_of_wait
-  private :: NEST_latlonz_interporation_fact
+!  private :: NEST_latlonz_interporation_fact
 
   interface NEST_COMM_intercomm_nestdown
      module procedure NEST_COMM_intercomm_nestdown_3D
@@ -179,8 +181,8 @@ module scale_grid_nest
   integer, parameter :: I_YSTG   = 4                       !< interpolation kinds of grid point (y-axis staggered)
 
   integer, parameter :: itp_ng   = 4                       !< # of interpolation kinds of grid point
-  integer, parameter :: itp_nh   = 3                       !< # of interpolation kinds of horizontal direction
-  integer, parameter :: itp_nv   = 2                       !< # of interpolation kinds of vertical direction
+  integer, private   :: itp_nh   = 3                       !< # of interpolation kinds of horizontal direction
+  integer, private   :: itp_nv   = 2                       !< # of interpolation kinds of vertical direction
 
   integer, parameter :: tag_lon  = 1
   integer, parameter :: tag_lat  = 2
@@ -203,9 +205,9 @@ module scale_grid_nest
   ! intercomm tag id:  IC | VAR |  YP
   ! (total: 6columns)   X   X X   X X X
 
-  real(RP), private, parameter :: large_number_one   = 9.999E+15_RP
-  real(RP), private, parameter :: large_number_two   = 8.888E+15_RP
-  real(RP), private, parameter :: large_number_three = 7.777E+15_RP
+!  real(RP), private, parameter :: large_number_one   = 9.999E+15_RP
+!  real(RP), private, parameter :: large_number_two   = 8.888E+15_RP
+!  real(RP), private, parameter :: large_number_three = 7.777E+15_RP
   integer,  private            :: interp_search_divnum
 
   integer, private   :: INTERCOMM_ID(2)
@@ -237,7 +239,7 @@ module scale_grid_nest
   real(RP), private, allocatable :: buffer_ref_CZ  (:,:,:)   ! buffer of communicator: VELY (with HALO)
   real(RP), private, allocatable :: buffer_ref_FZ  (:,:,:)   ! buffer of communicator: VELY (with HALO)
 
-  real(RP), private, allocatable :: buffer_ref_2D (:,:)      ! buffer of communicator: 2D data (with HALO)
+  !real(RP), private, allocatable :: buffer_ref_2D (:,:)      ! buffer of communicator: 2D data (with HALO)
   real(RP), private, allocatable :: buffer_ref_3D (:,:,:)    ! buffer of communicator: 3D data (with HALO)
   real(RP), private, allocatable :: buffer_ref_3DF(:,:,:)    ! buffer of communicator: 3D at z-Face (with HALO)
   real(RP), private, allocatable :: u_llp(:,:,:)
@@ -330,7 +332,8 @@ contains
        ONLINE_BOUNDARY_USE_QHYD, &
        ONLINE_AGGRESSIVE_COMM,   &
        ONLINE_WAIT_LIMIT,        &
-       ONLINE_SPECIFIED_MAXRQ
+       ONLINE_SPECIFIED_MAXRQ,   &
+       NEST_INTERP_LEVEL
 
     !---------------------------------------------------------------------------
 
@@ -358,6 +361,17 @@ contains
        call PRC_MPIstop
     endif
     if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_NEST)
+
+    call INTRPNEST_setup ( interp_search_divnum, NEST_INTERP_LEVEL, OFFLINE )
+
+    select case( NEST_INTERP_LEVEL )
+    case( 3 )
+       itp_nh = 3
+       itp_nv = 2
+    case( 4 )
+       itp_nh = 4
+       itp_nv = 2
+    endselect
 
     ! only for register
     if ( ONLINE_IAM_PARENT .or. ONLINE_IAM_DAUGHTER ) then
@@ -537,7 +551,7 @@ contains
 
             call NEST_COMM_setup_nestdown( HANDLING_NUM )
 
-         !---------------------------------- parent routines
+         !---------------------------------- end of parent routines
          endif
 
 
@@ -618,7 +632,7 @@ contains
             allocate( buffer_ref_CZ  (  PARENT_KA(HANDLING_NUM),TILEAL_IA(HANDLING_NUM),TILEAL_JA(HANDLING_NUM)) )
             allocate( buffer_ref_FZ  (0:PARENT_KA(HANDLING_NUM),TILEAL_IA(HANDLING_NUM),TILEAL_JA(HANDLING_NUM)) )
 
-            allocate( buffer_ref_2D  (                          TILEAL_IA(HANDLING_NUM),TILEAL_JA(HANDLING_NUM)) )
+            !allocate( buffer_ref_2D  (                          TILEAL_IA(HANDLING_NUM),TILEAL_JA(HANDLING_NUM)) )
             allocate( buffer_ref_3D  (  PARENT_KA(HANDLING_NUM),TILEAL_IA(HANDLING_NUM),TILEAL_JA(HANDLING_NUM)) )
             allocate( buffer_ref_3DF (0:PARENT_KA(HANDLING_NUM),TILEAL_IA(HANDLING_NUM),TILEAL_JA(HANDLING_NUM)) )
 
@@ -632,78 +646,152 @@ contains
 
 
             ! for scalar points
-            call NEST_latlonz_interporation_fact( hfact          (:,:,:,I_SCLR),     & ! [OUT]
-                                                  vfact          (:,:,:,:,:,I_SCLR), & ! [OUT]
-                                                  kgrd           (:,:,:,:,:,I_SCLR), & ! [OUT]
-                                                  igrd           (:,:,:,I_SCLR),     & ! [OUT]
-                                                  jgrd           (:,:,:,I_SCLR),     & ! [OUT]
-                                                  MY_CZ          (:,:,:),            & ! [IN]
-                                                  MY_LAT         (:,:),              & ! [IN]
-                                                  MY_LON         (:,:),              & ! [IN]
-                                                  buffer_ref_CZ  (:,:,:),            & ! [IN]
-                                                  buffer_ref_LAT (:,:),              & ! [IN]
-                                                  buffer_ref_LON (:,:),              & ! [IN]
-                                                  TILEAL_KA(HANDLING_NUM),           & ! [IN]
-                                                  TILEAL_IA(HANDLING_NUM),           & ! [IN]
-                                                  TILEAL_JA(HANDLING_NUM),           & ! [IN]
-                                                  HANDLING_NUM                       ) ! [IN]
+!            call NEST_latlonz_interporation_fact( hfact          (:,:,:,I_SCLR),     & ! [OUT]
+!                                                  vfact          (:,:,:,:,:,I_SCLR), & ! [OUT]
+!                                                  kgrd           (:,:,:,:,:,I_SCLR), & ! [OUT]
+!                                                  igrd           (:,:,:,I_SCLR),     & ! [OUT]
+!                                                  jgrd           (:,:,:,I_SCLR),     & ! [OUT]
+!                                                  MY_CZ          (:,:,:),            & ! [IN]
+!                                                  MY_LAT         (:,:),              & ! [IN]
+!                                                  MY_LON         (:,:),              & ! [IN]
+!                                                  buffer_ref_CZ  (:,:,:),            & ! [IN]
+!                                                  buffer_ref_LAT (:,:),              & ! [IN]
+!                                                  buffer_ref_LON (:,:),              & ! [IN]
+!                                                  TILEAL_KA(HANDLING_NUM),           & ! [IN]
+!                                                  TILEAL_IA(HANDLING_NUM),           & ! [IN]
+!                                                  TILEAL_JA(HANDLING_NUM),           & ! [IN]
+!                                                  HANDLING_NUM                       ) ! [IN]
+            call INTRPNEST_interp_fact_llz( hfact          (:,:,:,I_SCLR),     & ! [OUT]
+                                            vfact          (:,:,:,:,:,I_SCLR), & ! [OUT]
+                                            kgrd           (:,:,:,:,:,I_SCLR), & ! [OUT]
+                                            igrd           (:,:,:,I_SCLR),     & ! [OUT]
+                                            jgrd           (:,:,:,I_SCLR),     & ! [OUT]
+                                            MY_CZ          (:,:,:),            & ! [IN]
+                                            MY_LAT         (:,:),              & ! [IN]
+                                            MY_LON         (:,:),              & ! [IN]
+                                            DATR_KS(HANDLING_NUM),             & ! [IN]
+                                            DATR_KE(HANDLING_NUM),             & ! [IN]
+                                            DAUGHTER_IA(HANDLING_NUM),         & ! [IN]
+                                            DAUGHTER_JA(HANDLING_NUM),         & ! [IN]
+                                            buffer_ref_CZ  (:,:,:),            & ! [IN]
+                                            buffer_ref_LAT (:,:),              & ! [IN]
+                                            buffer_ref_LON (:,:),              & ! [IN]
+                                            TILEAL_KA(HANDLING_NUM),           & ! [IN]
+                                            TILEAL_IA(HANDLING_NUM),           & ! [IN]
+                                            TILEAL_JA(HANDLING_NUM)            ) ! [IN]
+
 
             ! for z staggered points
-            call NEST_latlonz_interporation_fact( hfact          (:,:,:,I_ZSTG),     & ! [OUT]
-                                                  vfact          (:,:,:,:,:,I_ZSTG), & ! [OUT]
-                                                  kgrd           (:,:,:,:,:,I_ZSTG), & ! [OUT]
-                                                  igrd           (:,:,:,I_ZSTG),     & ! [OUT]
-                                                  jgrd           (:,:,:,I_ZSTG),     & ! [OUT]
-                                                  MY_FZ          (:,:,:),            & ! [IN]
-                                                  MY_LAT         (:,:),              & ! [IN]
-                                                  MY_LON         (:,:),              & ! [IN]
-                                                  buffer_ref_FZ  (:,:,:),            & ! [IN]
-                                                  buffer_ref_LAT (:,:),              & ! [IN]
-                                                  buffer_ref_LON (:,:),              & ! [IN]
-                                                  TILEAL_KA(HANDLING_NUM)+1,         & ! [IN]
-                                                  TILEAL_IA(HANDLING_NUM),           & ! [IN]
-                                                  TILEAL_JA(HANDLING_NUM),           & ! [IN]
-                                                  HANDLING_NUM                       ) ! [IN]
+!            call NEST_latlonz_interporation_fact( hfact          (:,:,:,I_ZSTG),     & ! [OUT]
+!                                                  vfact          (:,:,:,:,:,I_ZSTG), & ! [OUT]
+!                                                  kgrd           (:,:,:,:,:,I_ZSTG), & ! [OUT]
+!                                                  igrd           (:,:,:,I_ZSTG),     & ! [OUT]
+!                                                  jgrd           (:,:,:,I_ZSTG),     & ! [OUT]
+!                                                  MY_FZ          (:,:,:),            & ! [IN]
+!                                                  MY_LAT         (:,:),              & ! [IN]
+!                                                  MY_LON         (:,:),              & ! [IN]
+!                                                  buffer_ref_FZ  (:,:,:),            & ! [IN]
+!                                                  buffer_ref_LAT (:,:),              & ! [IN]
+!                                                  buffer_ref_LON (:,:),              & ! [IN]
+!                                                  TILEAL_KA(HANDLING_NUM)+1,         & ! [IN]
+!                                                  TILEAL_IA(HANDLING_NUM),           & ! [IN]
+!                                                  TILEAL_JA(HANDLING_NUM),           & ! [IN]
+!                                                  HANDLING_NUM                       ) ! [IN]
+            call INTRPNEST_interp_fact_llz( hfact          (:,:,:,I_ZSTG),     & ! [OUT]
+                                            vfact          (:,:,:,:,:,I_ZSTG), & ! [OUT]
+                                            kgrd           (:,:,:,:,:,I_ZSTG), & ! [OUT]
+                                            igrd           (:,:,:,I_ZSTG),     & ! [OUT]
+                                            jgrd           (:,:,:,I_ZSTG),     & ! [OUT]
+                                            MY_FZ          (:,:,:),            & ! [IN]
+                                            MY_LAT         (:,:),              & ! [IN]
+                                            MY_LON         (:,:),              & ! [IN]
+                                            DATR_KS(HANDLING_NUM),             & ! [IN]
+                                            DATR_KE(HANDLING_NUM),             & ! [IN]
+                                            DAUGHTER_IA(HANDLING_NUM),         & ! [IN]
+                                            DAUGHTER_JA(HANDLING_NUM),         & ! [IN]
+                                            buffer_ref_FZ  (:,:,:),            & ! [IN]
+                                            buffer_ref_LAT (:,:),              & ! [IN]
+                                            buffer_ref_LON (:,:),              & ! [IN]
+                                            TILEAL_KA(HANDLING_NUM)+1,         & ! [IN]
+                                            TILEAL_IA(HANDLING_NUM),           & ! [IN]
+                                            TILEAL_JA(HANDLING_NUM)            ) ! [IN]
+
 
             ! for x staggered points
-            call NEST_latlonz_interporation_fact( hfact          (:,:,:,I_XSTG),     & ! [OUT]
-                                                  vfact          (:,:,:,:,:,I_XSTG), & ! [OUT]
-                                                  kgrd           (:,:,:,:,:,I_XSTG), & ! [OUT]
-                                                  igrd           (:,:,:,I_XSTG),     & ! [OUT]
-                                                  jgrd           (:,:,:,I_XSTG),     & ! [OUT]
-                                                  MY_CZ          (:,:,:),            & ! [IN]
-                                                  MY_LATX        (:,:),              & ! [IN]
-                                                  MY_LONX        (:,:),              & ! [IN]
-                                                  buffer_ref_CZ  (:,:,:),            & ! [IN]
-                                                  buffer_ref_LATX(:,:),              & ! [IN]
-                                                  buffer_ref_LONX(:,:),              & ! [IN]
-                                                  TILEAL_KA(HANDLING_NUM),           & ! [IN]
-                                                  TILEAL_IA(HANDLING_NUM),           & ! [IN]
-                                                  TILEAL_JA(HANDLING_NUM),           & ! [IN]
-                                                  HANDLING_NUM                       ) ! [IN]
+!            call NEST_latlonz_interporation_fact( hfact          (:,:,:,I_XSTG),     & ! [OUT]
+!                                                  vfact          (:,:,:,:,:,I_XSTG), & ! [OUT]
+!                                                  kgrd           (:,:,:,:,:,I_XSTG), & ! [OUT]
+!                                                  igrd           (:,:,:,I_XSTG),     & ! [OUT]
+!                                                  jgrd           (:,:,:,I_XSTG),     & ! [OUT]
+!                                                  MY_CZ          (:,:,:),            & ! [IN]
+!                                                  MY_LATX        (:,:),              & ! [IN]
+!                                                  MY_LONX        (:,:),              & ! [IN]
+!                                                  buffer_ref_CZ  (:,:,:),            & ! [IN]
+!                                                  buffer_ref_LATX(:,:),              & ! [IN]
+!                                                  buffer_ref_LONX(:,:),              & ! [IN]
+!                                                  TILEAL_KA(HANDLING_NUM),           & ! [IN]
+!                                                  TILEAL_IA(HANDLING_NUM),           & ! [IN]
+!                                                  TILEAL_JA(HANDLING_NUM),           & ! [IN]
+!                                                  HANDLING_NUM                       ) ! [IN]
+            call INTRPNEST_interp_fact_llz( hfact          (:,:,:,I_XSTG),     & ! [OUT]
+                                            vfact          (:,:,:,:,:,I_XSTG), & ! [OUT]
+                                            kgrd           (:,:,:,:,:,I_XSTG), & ! [OUT]
+                                            igrd           (:,:,:,I_XSTG),     & ! [OUT]
+                                            jgrd           (:,:,:,I_XSTG),     & ! [OUT]
+                                            MY_CZ          (:,:,:),            & ! [IN]
+                                            MY_LATX        (:,:),              & ! [IN]
+                                            MY_LONX        (:,:),              & ! [IN]
+                                            DATR_KS(HANDLING_NUM),             & ! [IN]
+                                            DATR_KE(HANDLING_NUM),             & ! [IN]
+                                            DAUGHTER_IA(HANDLING_NUM),         & ! [IN]
+                                            DAUGHTER_JA(HANDLING_NUM),         & ! [IN]
+                                            buffer_ref_CZ  (:,:,:),            & ! [IN]
+                                            buffer_ref_LATX(:,:),              & ! [IN]
+                                            buffer_ref_LONX(:,:),              & ! [IN]
+                                            TILEAL_KA(HANDLING_NUM),           & ! [IN]
+                                            TILEAL_IA(HANDLING_NUM),           & ! [IN]
+                                            TILEAL_JA(HANDLING_NUM)            ) ! [IN]
 
             ! for y staggered points
-            call NEST_latlonz_interporation_fact( hfact          (:,:,:,I_YSTG),     & ! [OUT]
-                                                  vfact          (:,:,:,:,:,I_YSTG), & ! [OUT]
-                                                  kgrd           (:,:,:,:,:,I_YSTG), & ! [OUT]
-                                                  igrd           (:,:,:,I_YSTG),     & ! [OUT]
-                                                  jgrd           (:,:,:,I_YSTG),     & ! [OUT]
-                                                  MY_CZ          (:,:,:),            & ! [IN]
-                                                  MY_LATY        (:,:),              & ! [IN]
-                                                  MY_LONY        (:,:),              & ! [IN]
-                                                  buffer_ref_CZ  (:,:,:),            & ! [IN]
-                                                  buffer_ref_LATY(:,:),              & ! [IN]
-                                                  buffer_ref_LONY(:,:),              & ! [IN]
-                                                  TILEAL_KA(HANDLING_NUM),           & ! [IN]
-                                                  TILEAL_IA(HANDLING_NUM),           & ! [IN]
-                                                  TILEAL_JA(HANDLING_NUM),           & ! [IN]
-                                                  HANDLING_NUM                       ) ! [IN]
+!            call NEST_latlonz_interporation_fact( hfact          (:,:,:,I_YSTG),     & ! [OUT]
+!                                                  vfact          (:,:,:,:,:,I_YSTG), & ! [OUT]
+!                                                  kgrd           (:,:,:,:,:,I_YSTG), & ! [OUT]
+!                                                  igrd           (:,:,:,I_YSTG),     & ! [OUT]
+!                                                  jgrd           (:,:,:,I_YSTG),     & ! [OUT]
+!                                                  MY_CZ          (:,:,:),            & ! [IN]
+!                                                  MY_LATY        (:,:),              & ! [IN]
+!                                                  MY_LONY        (:,:),              & ! [IN]
+!                                                  buffer_ref_CZ  (:,:,:),            & ! [IN]
+!                                                  buffer_ref_LATY(:,:),              & ! [IN]
+!                                                  buffer_ref_LONY(:,:),              & ! [IN]
+!                                                  TILEAL_KA(HANDLING_NUM),           & ! [IN]
+!                                                  TILEAL_IA(HANDLING_NUM),           & ! [IN]
+!                                                  TILEAL_JA(HANDLING_NUM),           & ! [IN]
+!                                                  HANDLING_NUM                       ) ! [IN]
+            call INTRPNEST_interp_fact_llz( hfact          (:,:,:,I_YSTG),     & ! [OUT]
+                                            vfact          (:,:,:,:,:,I_YSTG), & ! [OUT]
+                                            kgrd           (:,:,:,:,:,I_YSTG), & ! [OUT]
+                                            igrd           (:,:,:,I_YSTG),     & ! [OUT]
+                                            jgrd           (:,:,:,I_YSTG),     & ! [OUT]
+                                            MY_CZ          (:,:,:),            & ! [IN]
+                                            MY_LATY        (:,:),              & ! [IN]
+                                            MY_LONY        (:,:),              & ! [IN]
+                                            DATR_KS(HANDLING_NUM),             & ! [IN]
+                                            DATR_KE(HANDLING_NUM),             & ! [IN]
+                                            DAUGHTER_IA(HANDLING_NUM),         & ! [IN]
+                                            DAUGHTER_JA(HANDLING_NUM),         & ! [IN]
+                                            buffer_ref_CZ  (:,:,:),            & ! [IN]
+                                            buffer_ref_LATY(:,:),              & ! [IN]
+                                            buffer_ref_LONY(:,:),              & ! [IN]
+                                            TILEAL_KA(HANDLING_NUM),           & ! [IN]
+                                            TILEAL_IA(HANDLING_NUM),           & ! [IN]
+                                            TILEAL_JA(HANDLING_NUM)            ) ! [IN]
 
             deallocate( buffer_2D  )
             deallocate( buffer_3D  )
             deallocate( buffer_3DF )
 
-         !---------------------------------- daughter routines
+         !---------------------------------- end of daughter routines
          else
             ONLINE_USE_VELZ = .false.
          endif
@@ -2072,67 +2160,91 @@ contains
        dvar(:,:,:) = 0.0_RP 
 
        if ( no_zstag ) then
-          if ( .not. logarithmic ) then
-             ! linear interpolation
-             do j = 1, DAUGHTER_JA(HANDLE)
-             do i = 1, DAUGHTER_IA(HANDLE)
-             do k = DATR_KS(HANDLE), DATR_KE(HANDLE)
-                dvar(k,i,j) = buffer_ref_3D(kgrd(k,i,j,1,1,ig),igrd(i,j,1,ig),jgrd(i,j,1,ig)) &
-                            * hfact(i,j,1,ig) * vfact(k,i,j,1,1,ig)                           &
-                            + buffer_ref_3D(kgrd(k,i,j,2,1,ig),igrd(i,j,2,ig),jgrd(i,j,2,ig)) &
-                            * hfact(i,j,2,ig) * vfact(k,i,j,2,1,ig)                           &
-                            + buffer_ref_3D(kgrd(k,i,j,3,1,ig),igrd(i,j,3,ig),jgrd(i,j,3,ig)) &
-                            * hfact(i,j,3,ig) * vfact(k,i,j,3,1,ig)                           &
-                            + buffer_ref_3D(kgrd(k,i,j,1,2,ig),igrd(i,j,1,ig),jgrd(i,j,1,ig)) &
-                            * hfact(i,j,1,ig) * vfact(k,i,j,1,2,ig)                           &
-                            + buffer_ref_3D(kgrd(k,i,j,2,2,ig),igrd(i,j,2,ig),jgrd(i,j,2,ig)) &
-                            * hfact(i,j,2,ig) * vfact(k,i,j,2,2,ig)                           &
-                            + buffer_ref_3D(kgrd(k,i,j,3,2,ig),igrd(i,j,3,ig),jgrd(i,j,3,ig)) &
-                            * hfact(i,j,3,ig) * vfact(k,i,j,3,2,ig)
-             end do
-             end do
-             end do
-          else
-             ! logarithmic weighted interpolation
-             do j = 1, DAUGHTER_JA(HANDLE)
-             do i = 1, DAUGHTER_IA(HANDLE)
-             do k = DATR_KS(HANDLE), DATR_KE(HANDLE)
-                dvar(k,i,j) = exp( buffer_ref_3D(kgrd(k,i,j,1,1,ig),igrd(i,j,1,ig),jgrd(i,j,1,ig)) &
-                                 * hfact(i,j,1,ig) * vfact(k,i,j,1,1,ig)                           &
-                                 + buffer_ref_3D(kgrd(k,i,j,2,1,ig),igrd(i,j,2,ig),jgrd(i,j,2,ig)) &
-                                 * hfact(i,j,2,ig) * vfact(k,i,j,2,1,ig)                           &
-                                 + buffer_ref_3D(kgrd(k,i,j,3,1,ig),igrd(i,j,3,ig),jgrd(i,j,3,ig)) &
-                                 * hfact(i,j,3,ig) * vfact(k,i,j,3,1,ig)                           &
-                                 + buffer_ref_3D(kgrd(k,i,j,1,2,ig),igrd(i,j,1,ig),jgrd(i,j,1,ig)) &
-                                 * hfact(i,j,1,ig) * vfact(k,i,j,1,2,ig)                           &
-                                 + buffer_ref_3D(kgrd(k,i,j,2,2,ig),igrd(i,j,2,ig),jgrd(i,j,2,ig)) &
-                                 * hfact(i,j,2,ig) * vfact(k,i,j,2,2,ig)                           &
-                                 + buffer_ref_3D(kgrd(k,i,j,3,2,ig),igrd(i,j,3,ig),jgrd(i,j,3,ig)) &
-                                 * hfact(i,j,3,ig) * vfact(k,i,j,3,2,ig) )
-             end do
-             end do
-             end do
-          endif
+!          if ( .not. logarithmic ) then
+!             ! linear interpolation
+!             do j = 1, DAUGHTER_JA(HANDLE)
+!             do i = 1, DAUGHTER_IA(HANDLE)
+!             do k = DATR_KS(HANDLE), DATR_KE(HANDLE)
+!                dvar(k,i,j) = buffer_ref_3D(kgrd(k,i,j,1,1,ig),igrd(i,j,1,ig),jgrd(i,j,1,ig)) &
+!                            * hfact(i,j,1,ig) * vfact(k,i,j,1,1,ig)                           &
+!                            + buffer_ref_3D(kgrd(k,i,j,2,1,ig),igrd(i,j,2,ig),jgrd(i,j,2,ig)) &
+!                            * hfact(i,j,2,ig) * vfact(k,i,j,2,1,ig)                           &
+!                            + buffer_ref_3D(kgrd(k,i,j,3,1,ig),igrd(i,j,3,ig),jgrd(i,j,3,ig)) &
+!                            * hfact(i,j,3,ig) * vfact(k,i,j,3,1,ig)                           &
+!                            + buffer_ref_3D(kgrd(k,i,j,1,2,ig),igrd(i,j,1,ig),jgrd(i,j,1,ig)) &
+!                            * hfact(i,j,1,ig) * vfact(k,i,j,1,2,ig)                           &
+!                            + buffer_ref_3D(kgrd(k,i,j,2,2,ig),igrd(i,j,2,ig),jgrd(i,j,2,ig)) &
+!                            * hfact(i,j,2,ig) * vfact(k,i,j,2,2,ig)                           &
+!                            + buffer_ref_3D(kgrd(k,i,j,3,2,ig),igrd(i,j,3,ig),jgrd(i,j,3,ig)) &
+!                            * hfact(i,j,3,ig) * vfact(k,i,j,3,2,ig)
+!             end do
+!             end do
+!             end do
+!          else
+!             ! logarithmic weighted interpolation
+!             do j = 1, DAUGHTER_JA(HANDLE)
+!             do i = 1, DAUGHTER_IA(HANDLE)
+!             do k = DATR_KS(HANDLE), DATR_KE(HANDLE)
+!                dvar(k,i,j) = exp( buffer_ref_3D(kgrd(k,i,j,1,1,ig),igrd(i,j,1,ig),jgrd(i,j,1,ig)) &
+!                                 * hfact(i,j,1,ig) * vfact(k,i,j,1,1,ig)                           &
+!                                 + buffer_ref_3D(kgrd(k,i,j,2,1,ig),igrd(i,j,2,ig),jgrd(i,j,2,ig)) &
+!                                 * hfact(i,j,2,ig) * vfact(k,i,j,2,1,ig)                           &
+!                                 + buffer_ref_3D(kgrd(k,i,j,3,1,ig),igrd(i,j,3,ig),jgrd(i,j,3,ig)) &
+!                                 * hfact(i,j,3,ig) * vfact(k,i,j,3,1,ig)                           &
+!                                 + buffer_ref_3D(kgrd(k,i,j,1,2,ig),igrd(i,j,1,ig),jgrd(i,j,1,ig)) &
+!                                 * hfact(i,j,1,ig) * vfact(k,i,j,1,2,ig)                           &
+!                                 + buffer_ref_3D(kgrd(k,i,j,2,2,ig),igrd(i,j,2,ig),jgrd(i,j,2,ig)) &
+!                                 * hfact(i,j,2,ig) * vfact(k,i,j,2,2,ig)                           &
+!                                 + buffer_ref_3D(kgrd(k,i,j,3,2,ig),igrd(i,j,3,ig),jgrd(i,j,3,ig)) &
+!                                 * hfact(i,j,3,ig) * vfact(k,i,j,3,2,ig) )
+!             end do
+!             end do
+!             end do
+!          endif
+          call INTRPNEST_interp_3d( dvar,                 &
+                                    buffer_ref_3D,        &
+                                    hfact(:,:,:,ig),      &
+                                    vfact(:,:,:,:,:,ig),  &
+                                    kgrd(:,:,:,:,:,ig),   &
+                                    igrd(:,:,:,ig),       &
+                                    jgrd(:,:,:,ig),       &
+                                    DAUGHTER_IA(HANDLE),  &
+                                    DAUGHTER_JA(HANDLE),  &
+                                    DATR_KS(HANDLE),      &
+                                    DATR_KE(HANDLE),      &
+                                    logarithmic           )
        else
           ! linear interpolation (z-staggered)
-          do j = 1, DAUGHTER_JA(HANDLE)
-          do i = 1, DAUGHTER_IA(HANDLE)
-          do k = DATR_KS(HANDLE), DATR_KE(HANDLE)
-             dvar(k,i,j) = buffer_ref_3DF(kgrd(k,i,j,1,1,ig),igrd(i,j,1,ig),jgrd(i,j,1,ig)) &
-                         * hfact(i,j,1,ig) * vfact(k,i,j,1,1,ig)                            &
-                         + buffer_ref_3DF(kgrd(k,i,j,2,1,ig),igrd(i,j,2,ig),jgrd(i,j,2,ig)) &
-                         * hfact(i,j,2,ig) * vfact(k,i,j,2,1,ig)                            &
-                         + buffer_ref_3DF(kgrd(k,i,j,3,1,ig),igrd(i,j,3,ig),jgrd(i,j,3,ig)) &
-                         * hfact(i,j,3,ig) * vfact(k,i,j,3,1,ig)                            &
-                         + buffer_ref_3DF(kgrd(k,i,j,1,2,ig),igrd(i,j,1,ig),jgrd(i,j,1,ig)) &
-                         * hfact(i,j,1,ig) * vfact(k,i,j,1,2,ig)                            &
-                         + buffer_ref_3DF(kgrd(k,i,j,2,2,ig),igrd(i,j,2,ig),jgrd(i,j,2,ig)) &
-                         * hfact(i,j,2,ig) * vfact(k,i,j,2,2,ig)                            &
-                         + buffer_ref_3DF(kgrd(k,i,j,3,2,ig),igrd(i,j,3,ig),jgrd(i,j,3,ig)) &
-                         * hfact(i,j,3,ig) * vfact(k,i,j,3,2,ig)
-          end do
-          end do
-          end do
+!          do j = 1, DAUGHTER_JA(HANDLE)
+!          do i = 1, DAUGHTER_IA(HANDLE)
+!          do k = DATR_KS(HANDLE), DATR_KE(HANDLE)
+!             dvar(k,i,j) = buffer_ref_3DF(kgrd(k,i,j,1,1,ig),igrd(i,j,1,ig),jgrd(i,j,1,ig)) &
+!                         * hfact(i,j,1,ig) * vfact(k,i,j,1,1,ig)                            &
+!                         + buffer_ref_3DF(kgrd(k,i,j,2,1,ig),igrd(i,j,2,ig),jgrd(i,j,2,ig)) &
+!                         * hfact(i,j,2,ig) * vfact(k,i,j,2,1,ig)                            &
+!                         + buffer_ref_3DF(kgrd(k,i,j,3,1,ig),igrd(i,j,3,ig),jgrd(i,j,3,ig)) &
+!                         * hfact(i,j,3,ig) * vfact(k,i,j,3,1,ig)                            &
+!                         + buffer_ref_3DF(kgrd(k,i,j,1,2,ig),igrd(i,j,1,ig),jgrd(i,j,1,ig)) &
+!                         * hfact(i,j,1,ig) * vfact(k,i,j,1,2,ig)                            &
+!                         + buffer_ref_3DF(kgrd(k,i,j,2,2,ig),igrd(i,j,2,ig),jgrd(i,j,2,ig)) &
+!                         * hfact(i,j,2,ig) * vfact(k,i,j,2,2,ig)                            &
+!                         + buffer_ref_3DF(kgrd(k,i,j,3,2,ig),igrd(i,j,3,ig),jgrd(i,j,3,ig)) &
+!                         * hfact(i,j,3,ig) * vfact(k,i,j,3,2,ig)
+!          end do
+!          end do
+!          end do
+          call INTRPNEST_interp_3d( dvar,                 &
+                                    buffer_ref_3DF,       &
+                                    hfact(:,:,:,ig),      &
+                                    vfact(:,:,:,:,:,ig),  &
+                                    kgrd(:,:,:,:,:,ig),   &
+                                    igrd(:,:,:,ig),       &
+                                    jgrd(:,:,:,ig),       &
+                                    DAUGHTER_IA(HANDLE),  &
+                                    DAUGHTER_JA(HANDLE),  &
+                                    DATR_KS(HANDLE),      &
+                                    DATR_KE(HANDLE),      &
+                                    logarithmic           )
        endif
 
        call PROF_rapend('NESTCOM interp')
@@ -2392,220 +2504,5 @@ contains
 
     return
   end subroutine NEST_COMM_disconnect
-
-  !-----------------------------------------------------------------------------
-  ! WITHOUT TIME DIMENSION
-  subroutine NEST_latlonz_interporation_fact( &
-      hfact,      & ! (out)
-      vfact,      & ! (out)
-      kgrd,       & ! (out)
-      igrd,       & ! (out)
-      jgrd,       & ! (out)
-      myhgt,      & ! (in)
-      mylat,      & ! (in)
-      mylon,      & ! (in)
-      inhgt,      & ! (in)
-      inlat,      & ! (in)
-      inlon,      & ! (in)
-      nz,         & ! (in)
-      nx,         & ! (in)
-      ny,         & ! (in)
-      HANDLE,     & ! (in)
-      landgrid    ) ! (in)
-    use scale_process, only: &
-       PRC_MPIstop
-    implicit none
-
-    real(RP), intent(out) :: hfact(:,:,:)
-    real(RP), intent(out) :: vfact(:,:,:,:,:)
-    integer,  intent(out) :: kgrd (:,:,:,:,:)
-    integer,  intent(out) :: igrd (:,:,:)
-    integer,  intent(out) :: jgrd (:,:,:)
-
-    real(RP), intent(in)  :: myhgt(:,:,:)
-    real(RP), intent(in)  :: mylat(:,:)
-    real(RP), intent(in)  :: mylon(:,:)
-    real(RP), intent(in)  :: inhgt(:,:,:)
-    real(RP), intent(in)  :: inlat(:,:)
-    real(RP), intent(in)  :: inlon(:,:)
-    integer,  intent(in)  :: nz
-    integer,  intent(in)  :: nx
-    integer,  intent(in)  :: ny
-
-    integer,  intent(in)  :: HANDLE
-    logical,  intent(in), optional :: landgrid
-
-    real(RP) :: distance
-    real(RP) :: denom
-    real(RP) :: dist(itp_nh)
-    integer :: i, j, k, ii, jj, kk
-    integer :: idx
-    integer :: istart, iend, iinc, blk_i
-    integer :: jstart, jend, jinc, blk_j
-    integer :: kstart, kend
-
-    integer :: KS_in
-    integer :: ncopy
-
-    logical :: lndgrd
-    logical :: copy
-    !---------------------------------------------------------------------------
-
-    lndgrd = .false.
-    if ( present(landgrid) ) then
-    if ( landgrid ) then
-       lndgrd = .true.
-    endif
-    endif
-
-    hfact(:,:,:) = 0.0_RP
-    vfact(:,:,:,:,:) = 0.0_RP
-
-    do j = 1, DAUGHTER_JA(HANDLE)
-    do i = 1, DAUGHTER_IA(HANDLE)
-       ! nearest block search
-       iinc = max( (nx + 1) / interp_search_divnum, 1 )
-       jinc = max( (ny + 1) / interp_search_divnum, 1 )
-       dist(1) = large_number_one
-       jj = 1 + (jinc/2)
-       do while (jj <= ny)
-          ii = 1 + (iinc/2)
-          do while (ii <= nx)
-             distance = haversine( mylat(i,j),mylon(i,j),inlat(ii,jj),inlon(ii,jj) )
-
-             if( distance < dist(1) )then
-                dist(1) = distance
-                blk_i = ii
-                blk_j = jj
-             endif
-             ii = ii + iinc
-          enddo
-          jj = jj + jinc
-       enddo
-       istart = blk_i - (iinc/2) - 1
-       if( istart < 1 ) istart = 1
-       iend   = blk_i + (iinc/2) + 1
-       if( iend  > nx ) iend   = nx
-       jstart = blk_j - (jinc/2) - 1
-       if( jstart < 1 ) jstart = 1
-       jend   = blk_j + (jinc/2) + 1
-       if( jend  > ny ) jend   = ny
-
-       ! main search
-       dist(1) = large_number_three
-       dist(2) = large_number_two
-       dist(3) = large_number_one
-       igrd(i,j,:) = -1
-       jgrd(i,j,:) = -1
-       do jj = jstart, jend
-       do ii = istart, iend
-          distance = haversine( mylat(i,j),mylon(i,j),inlat(ii,jj),inlon(ii,jj) )
-          if ( distance <= dist(1) ) then
-             dist(3) = dist(2);     igrd(i,j,3) = igrd(i,j,2);  jgrd(i,j,3) = jgrd(i,j,2)
-             dist(2) = dist(1);     igrd(i,j,2) = igrd(i,j,1);  jgrd(i,j,2) = jgrd(i,j,1)
-             dist(1) = distance;    igrd(i,j,1) = ii;           jgrd(i,j,1) = jj
-          elseif ( dist(1) < distance .and. distance <= dist(2) ) then
-             dist(3) = dist(2);     igrd(i,j,3) = igrd(i,j,2);  jgrd(i,j,3) = jgrd(i,j,2)
-             dist(2) = distance;    igrd(i,j,2) = ii;           jgrd(i,j,2) = jj
-          elseif ( dist(2) < distance .and. distance <= dist(3) ) then
-             dist(3) = distance;    igrd(i,j,3) = ii;           jgrd(i,j,3) = jj
-          endif
-       enddo
-       enddo
-       if( dist(1)==0.0_RP )then
-          hfact(i,j,1) = 1.0_RP
-          hfact(i,j,2) = 0.0_RP
-          hfact(i,j,3) = 0.0_RP
-       else
-          denom = 1.0_RP / ( (1.0_RP/dist(1)) + (1.0_RP/dist(2)) + (1.0_RP/dist(3)) )
-          hfact(i,j,1) = ( 1.0_RP/dist(1) ) * denom
-          hfact(i,j,2) = ( 1.0_RP/dist(2) ) * denom
-          hfact(i,j,3) = ( 1.0_RP/dist(3) ) * denom
-       endif
-
-       !if ( lndgrd ) then
-       !   kstart = 1;     kend = LKMAX
-       !else
-          kstart = DATR_KS(HANDLE);  kend = DATR_KE(HANDLE)
-       !endif
-       KS_in = 1 + KHALO
-       do idx = 1, itp_nh
-          ii = igrd(i,j,idx)
-          jj = jgrd(i,j,idx)
-          ncopy = 0
-          do k = kstart, kend
-             dist(1) = large_number_two
-             dist(2) = large_number_one
-             kgrd(k,i,j,idx,:) = -1
-             copy = .false.
-
-             do kk = 1+KHALO, nz-KHALO
-                distance = abs( myhgt(k,i,j) - inhgt(kk,ii,jj) )
-                if ( distance <= dist(1) ) then
-                   dist(2) = dist(1);     kgrd(k,i,j,idx,2) = kgrd(k,i,j,idx,1)
-                   dist(1) = distance;    kgrd(k,i,j,idx,1) = kk
-                elseif ( dist(1) < distance .and. distance <= dist(2) ) then
-                   dist(2) = distance;    kgrd(k,i,j,idx,2) = kk
-                endif
-             enddo
-             if( inhgt(KS_in,ii,jj) > myhgt(k,i,j) ) then
-                copy = .true.
-             endif
-
-             if( copy ) then
-                kgrd(k,i,j,idx,1)  = KS_in
-                kgrd(k,i,j,idx,2)  = KS_in + 1 ! not used
-                vfact(k,i,j,idx,1) = 1.0_RP
-                vfact(k,i,j,idx,2) = 0.0_RP
-                ncopy = ncopy + 1
-             elseif( (.NOT. copy) .and. dist(1)==0.0_RP ) then
-                vfact(k,i,j,idx,1) = 1.0_RP
-                vfact(k,i,j,idx,2) = 0.0_RP
-             elseif( .NOT. copy ) then
-                denom = 1.0_RP / ( (1.0_RP/dist(1)) + (1.0_RP/dist(2)) )
-                vfact(k,i,j,idx,1) = ( 1.0_RP/dist(1) ) * denom
-                vfact(k,i,j,idx,2) = ( 1.0_RP/dist(2) ) * denom
-             else
-                write(*,*) 'xxx internal error [interporation: nest/grid]'
-                call PRC_MPIstop
-             endif
-          enddo
-          ! not to output message: tentative
-          !if( ncopy > 1 )then ! copy is allowed only one time.
-          !   write(*,*) 'xxx ERROR: times of copying is exceeded allowed times'
-          !   write(*,*) 'xxx domain number: ', ONLINE_DOMAIN_NUM
-          !   write(*,*) 'xxx copy times: ', ncopy
-          !   call PRC_MPIstop
-          !endif
-       enddo
-    enddo
-    enddo
-
-    return
-  end subroutine NEST_latlonz_interporation_fact
-
-  !-----------------------------------------------------------------------------
-  ! Haversine Formula (from R.W. Sinnott, "Virtues of the Haversine",
-  ! Sky and Telescope, vol. 68, no. 2, 1984, p. 159):
-  function haversine( &
-      la0,       &
-      lo0,       &
-      la,        &
-      lo )       &
-      result( d )
-    implicit none
-    real(RP), intent(in) :: la0, lo0, la, lo   ! la,la0: Lat, lo,lo0: Lon; [rad]
-    real(RP) :: d, dlon, dlat, work1, work2
-    !---------------------------------------------------------------------------
-
-    ! output unit : [m]
-    dlon = lo0 - lo
-    dlat = la0 - la
-    work1 = (sin(dlat/2.0_RP))**2.0_RP + &
-            cos(la0) * cos(la) * (sin(dlon/2.0_RP))**2.0_RP
-    work2 = 2.0_RP * asin(min( 1.0_RP, sqrt(work1) ))
-    d = r_in_m * work2
-
-  end function haversine
 
 end module scale_grid_nest

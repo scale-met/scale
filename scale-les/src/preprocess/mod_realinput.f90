@@ -26,6 +26,8 @@ module mod_realinput
      LATY => REAL_LATY, &
      CZ   => REAL_CZ,   &
      FZ   => REAL_FZ
+  use scale_grid_nest, only: &
+     NEST_INTERP_LEVEL
   use scale_index
   use scale_tracer
   use gtool_file_h
@@ -59,6 +61,7 @@ module mod_realinput
      LCZ  => GRID_LCZ
   use scale_comm, only: &
      COMM_bcast
+  use scale_interpolation_nest
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -85,10 +88,8 @@ module mod_realinput
   private :: InputSurfaceSCALE
   private :: InputSurfaceWRF
   private :: InputSurfaceNICAM
-  private :: latlonz_interpolation_fact
   private :: interp_OceanLand_data
   private :: diagnose_number_concentration
-  private :: haversine
 
   !-----------------------------------------------------------------------------
   !
@@ -99,11 +100,8 @@ module mod_realinput
   integer, private, parameter :: iNICAM  = 3
   integer, private, parameter :: iJMAMSM = 4
 
-  real(RP), private, parameter :: large_number_one   = 9.999E+15_RP
-  real(RP), private, parameter :: large_number_two   = 8.888E+15_RP
-  real(RP), private, parameter :: large_number_three = 7.777E+15_RP
-  integer, parameter :: itp_nh = 3
-  integer, parameter :: itp_nv = 2
+  integer, private :: itp_nh = 3
+  integer, private :: itp_nv = 2
 
   integer, private :: interp_search_divnum = 10
   logical, private :: wrfout = .false.  ! file type switch (wrfout or wrfrst)
@@ -189,6 +187,17 @@ contains
     interp_search_divnum = search_divnum_in
     if( IO_L ) write(IO_FID_LOG,*) '+++ Interpolation Search Block Dividing Num:', &
                                     interp_search_divnum
+    if( IO_L ) write(IO_FID_LOG,*) '+++ Horizontal Interpolation Level:', &
+                                    NEST_INTERP_LEVEL
+
+    select case( NEST_INTERP_LEVEL )
+    case( 3 )
+       itp_nh = 3
+       itp_nv = 2
+    case( 4 )
+       itp_nh = 4
+       itp_nv = 2
+    endselect
 
     return
   end subroutine ParentAtomSetup
@@ -608,17 +617,19 @@ contains
 
     do j = 1, JA-1
     do i = 1, IA-1
-       uc_urb(i,j) = max(sqrt( ( momx(KS,i,j,1) / ( dens(KS,i+1,  j,1) + dens(KS,i,j,1) ) * 2.0_RP )**2.0_RP &
-                             + ( momy(KS,i,j,1) / ( dens(KS,  i,j+1,1) + dens(KS,i,j,1) ) * 2.0_RP )**2.0_RP ), 0.01_RP)
+       uc_urb(i,j) = max(sqrt( ( momx(KS,i,j,1) / (dens(KS,i+1,  j,1)+dens(KS,i,j,1)) * 2.0_RP )**2.0_RP &
+                             + ( momy(KS,i,j,1) / (dens(KS,  i,j+1,1)+dens(KS,i,j,1)) * 2.0_RP )**2.0_RP ), &
+                         0.01_RP)
     enddo
     enddo
     do j = 1, JA-1
-       uc_urb(IA,j) = max(sqrt( ( momx(KS,IA,j,1) / dens(KS,IA,j,1) )**2.0_RP &
-                              + ( momy(KS,IA,j,1) / ( dens(KS,IA,j+1,1) + dens(KS,IA,j,1) ) * 2.0_RP )**2.0_RP ), 0.01_RP)
+       uc_urb(IA,j) = max(sqrt( ( momx(KS,IA,j,1) /  dens(KS,IA,j,1) )**2.0_RP &
+                              + ( momy(KS,IA,j,1) / (dens(KS,IA,j+1,1)+dens(KS,IA,j,1)) * 2.0_RP )**2.0_RP ), &
+                          0.01_RP)
     enddo
     do i = 1, IA-1
-       uc_urb(i,JA) = max(sqrt( ( momx(KS,i,JA,1) / ( dens(KS,i+1,JA,1) + dens(KS,i,JA,1) ) * 2.0_RP )**2.0_RP &
-                              + ( momy(KS,i,JA,1) / dens(KS,i,JA,1) )**2.0_RP ), 0.01_RP)
+       uc_urb(i,JA) = max(sqrt( ( momx(KS,i,JA,1) / (dens(KS,i+1,JA,1)+dens(KS,i,JA,1)) * 2.0_RP )**2.0_RP &
+                              + ( momy(KS,i,JA,1) /  dens(KS,i,JA,1) )**2.0_RP ), 0.01_RP)
     enddo
     uc_urb(IA,JA) = max(sqrt( ( momx(KS,IA,JA,1) / dens(KS,IA,JA,1) )**2.0_RP &
                             + ( momy(KS,IA,JA,1) / dens(KS,IA,JA,1) )**2.0_RP ), 0.01_RP)
@@ -660,8 +671,8 @@ contains
       qtrc,             & ! (out)
       basename_org,     & ! (in)
       use_file_density, & ! (in)
-      start_step,       & ! (in)
-      end_step          ) ! (in)
+      sstep,            & ! (in)
+      estep             ) ! (in)
     use scale_const, only: &
        D2R => CONST_D2R
     use scale_comm, only: &
@@ -693,8 +704,8 @@ contains
     real(RP),         intent(out) :: qtrc(:,:,:,:,:)
     character(LEN=*), intent(in)  :: basename_org
     logical,          intent(in)  :: use_file_density
-    integer,          intent(in)  :: start_step
-    integer,          intent(in)  :: end_step
+    integer,          intent(in)  :: sstep  ! start of steps
+    integer,          intent(in)  :: estep  ! end of steps
 
     integer, parameter    :: handle = 1
 
@@ -729,28 +740,27 @@ contains
     real(RP), allocatable :: temp_org(:,:,:,:)
     real(RP), allocatable :: pres_org(:,:,:,:)
 
-    real(RP) :: velz  (KA,IA,JA,start_step:end_step)
-    real(RP) :: velx  (KA,IA,JA,start_step:end_step)
-    real(RP) :: vely  (KA,IA,JA,start_step:end_step)
-    real(RP) :: llvelx(KA,IA,JA,start_step:end_step)
-    real(RP) :: llvely(KA,IA,JA,start_step:end_step)
-    real(RP) :: work  (KA,IA,JA,start_step:end_step)
-    real(RP) :: pott  (KA,IA,JA,start_step:end_step)
-    real(RP) :: temp  (KA,IA,JA,start_step:end_step)
-    real(RP) :: pres  (KA,IA,JA,start_step:end_step)
+    real(RP), allocatable :: hfact(:,:,:)
+    real(RP), allocatable :: vfact(:,:,:,:,:)
+    integer,  allocatable :: igrd (:,:,:)
+    integer,  allocatable :: jgrd (:,:,:)
+    integer,  allocatable :: kgrd (:,:,:,:,:)
 
-    real(RP) :: pott_sfc(1,IA,JA,start_step:end_step)
-    real(RP) :: pres_sfc(1,IA,JA,start_step:end_step)
-    real(RP) :: temp_sfc(1,IA,JA,start_step:end_step)
-    real(RP) :: qtrc_sfc(1,IA,JA,start_step:end_step,QA)
-    real(RP) :: mslp_sfc(1,IA,JA,start_step:end_step)
+    real(RP) :: velz  (KA,IA,JA,sstep:estep)
+    real(RP) :: velx  (KA,IA,JA,sstep:estep)
+    real(RP) :: vely  (KA,IA,JA,sstep:estep)
+    real(RP) :: llvelx(KA,IA,JA,sstep:estep)
+    real(RP) :: llvely(KA,IA,JA,sstep:estep)
+    real(RP) :: work  (KA,IA,JA,sstep:estep)
+    real(RP) :: pott  (KA,IA,JA,sstep:estep)
+    real(RP) :: temp  (KA,IA,JA,sstep:estep)
+    real(RP) :: pres  (KA,IA,JA,sstep:estep)
 
-    real(RP) :: hfact(   IA,JA,itp_nh       )
-    real(RP) :: vfact(KA,IA,JA,itp_nh,itp_nv)
-
-    integer :: igrd(   IA,JA,itp_nh       )
-    integer :: jgrd(   IA,JA,itp_nh       )
-    integer :: kgrd(KA,IA,JA,itp_nh,itp_nv)
+    real(RP) :: pott_sfc(1,IA,JA,sstep:estep)
+    real(RP) :: pres_sfc(1,IA,JA,sstep:estep)
+    real(RP) :: temp_sfc(1,IA,JA,sstep:estep)
+    real(RP) :: qtrc_sfc(1,IA,JA,sstep:estep,QA)
+    real(RP) :: mslp_sfc(1,IA,JA,sstep:estep)
 
     real(RP) :: qc(KA,IA,JA)
     real(RP) :: qc_sfc(1,IA,JA)
@@ -774,35 +784,41 @@ contains
     IALL = PARENT_IMAX(handle) * NEST_TILE_NUM_X
     JALL = PARENT_JMAX(handle) * NEST_TILE_NUM_Y
 
+    allocate( hfact(     IA, JA,itp_nh         ) )
+    allocate( vfact( KA, IA, JA,itp_nh, itp_nv ) )
+    allocate( igrd (     IA, JA,itp_nh         ) )
+    allocate( jgrd (     IA, JA,itp_nh         ) )
+    allocate( kgrd ( KA, IA, JA,itp_nh, itp_nv ) )
+
     allocate( read2D( PARENT_IMAX(handle), PARENT_JMAX(handle)                      ) )
     allocate( read3D( PARENT_IMAX(handle), PARENT_JMAX(handle), PARENT_KMAX(handle) ) )
 
-    allocate( lon_org (       IALL, JALL, start_step:end_step )    )
-    allocate( lat_org (       IALL, JALL, start_step:end_step )    )
-    allocate( lonu_org(       IALL, JALL, start_step:end_step )    )
-    allocate( latu_org(       IALL, JALL, start_step:end_step )    )
-    allocate( lonv_org(       IALL, JALL, start_step:end_step )    )
-    allocate( latv_org(       IALL, JALL, start_step:end_step )    )
-    allocate( geoh_org( KALL, IALL, JALL, start_step:end_step )    )
-    allocate( geof_org( KALL, IALL, JALL, start_step:end_step )    )
+    allocate( lon_org (       IALL, JALL, sstep:estep )    )
+    allocate( lat_org (       IALL, JALL, sstep:estep )    )
+    allocate( lonu_org(       IALL, JALL, sstep:estep )    )
+    allocate( latu_org(       IALL, JALL, sstep:estep )    )
+    allocate( lonv_org(       IALL, JALL, sstep:estep )    )
+    allocate( latv_org(       IALL, JALL, sstep:estep )    )
+    allocate( geoh_org( KALL, IALL, JALL, sstep:estep )    )
+    allocate( geof_org( KALL, IALL, JALL, sstep:estep )    )
 
-    allocate( dens_org( KALL, IALL, JALL, start_step:end_step )    )
-    allocate( momz_org( KALL, IALL, JALL, start_step:end_step )    )
-    allocate( momx_org( KALL, IALL, JALL, start_step:end_step )    )
-    allocate( momy_org( KALL, IALL, JALL, start_step:end_step )    )
-    allocate( rhot_org( KALL, IALL, JALL, start_step:end_step )    )
-    allocate( qtrc_org( KALL, IALL, JALL, start_step:end_step, QA) )
+    allocate( dens_org( KALL, IALL, JALL, sstep:estep )    )
+    allocate( momz_org( KALL, IALL, JALL, sstep:estep )    )
+    allocate( momx_org( KALL, IALL, JALL, sstep:estep )    )
+    allocate( momy_org( KALL, IALL, JALL, sstep:estep )    )
+    allocate( rhot_org( KALL, IALL, JALL, sstep:estep )    )
+    allocate( qtrc_org( KALL, IALL, JALL, sstep:estep, QA) )
 
-    allocate( tsfc_org(       IALL, JALL, start_step:end_step )    )
-    allocate( qsfc_org(       IALL, JALL, start_step:end_step, QA) )
-    allocate( mslp_org(       IALL, JALL, start_step:end_step )    )
+    allocate( tsfc_org(       IALL, JALL, sstep:estep )    )
+    allocate( qsfc_org(       IALL, JALL, sstep:estep, QA) )
+    allocate( mslp_org(       IALL, JALL, sstep:estep )    )
 
-    allocate( velz_org( KALL, IALL, JALL, start_step:end_step )    )
-    allocate( velx_org( KALL, IALL, JALL, start_step:end_step )    )
-    allocate( vely_org( KALL, IALL, JALL, start_step:end_step )    )
-    allocate( pott_org( KALL, IALL, JALL, start_step:end_step )    )
-    allocate( temp_org( KALL, IALL, JALL, start_step:end_step )    )
-    allocate( pres_org( KALL, IALL, JALL, start_step:end_step )    )
+    allocate( velz_org( KALL, IALL, JALL, sstep:estep )    )
+    allocate( velx_org( KALL, IALL, JALL, sstep:estep )    )
+    allocate( vely_org( KALL, IALL, JALL, sstep:estep )    )
+    allocate( pott_org( KALL, IALL, JALL, sstep:estep )    )
+    allocate( temp_org( KALL, IALL, JALL, sstep:estep )    )
+    allocate( pres_org( KALL, IALL, JALL, sstep:estep )    )
 
     if( IO_L ) write(IO_FID_LOG,*) ''
     if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[realinput]/Categ[InputSCALE]'
@@ -847,50 +863,50 @@ contains
          geof_org(k,xs:xe,ys:ye,1) = read3D(:,:,k)
        end do
 
-       do n = start_step, end_step
+       do n = sstep, estep
          call FileRead( read2D(:,:), BASENAME_ORG, "T2", n, rank )
          tsfc_org(xs:xe,ys:ye,n) = read2D(:,:)
        end do
 
-       do n = start_step, end_step
+       do n = sstep, estep
          call FileRead( read2D(:,:), BASENAME_ORG, "Q2", n, rank )
          qsfc_org(xs:xe,ys:ye,n,I_QV) = read2D(:,:)
        end do
 
-       do n = start_step, end_step
+       do n = sstep, estep
          call FileRead( read2D(:,:), BASENAME_ORG, "MSLP", n, rank )
          mslp_org(xs:xe,ys:ye,n) = read2D(:,:)
        end do
 
-       do n = start_step, end_step
+       do n = sstep, estep
          call FileRead( read3D(:,:,:), BASENAME_ORG, "DENS", n, rank )
          do k = 1, KALL
            dens_org(k,xs:xe,ys:ye,n) = read3D(:,:,k)
          end do
        end do
 
-       do n = start_step, end_step
+       do n = sstep, estep
          call FileRead( read3D(:,:,:), BASENAME_ORG, "MOMZ", n, rank )
          do k = 1, KALL
            momz_org(k,xs:xe,ys:ye,n) = read3D(:,:,k)
          end do
        end do
 
-       do n = start_step, end_step
+       do n = sstep, estep
          call FileRead( read3D(:,:,:), BASENAME_ORG, "MOMX", n, rank )
          do k = 1, KALL
            momx_org(k,xs:xe,ys:ye,n) = read3D(:,:,k)
          end do
        end do
 
-       do n = start_step, end_step
+       do n = sstep, estep
          call FileRead( read3D(:,:,:), BASENAME_ORG, "MOMY", n, rank )
          do k = 1, KALL
            momy_org(k,xs:xe,ys:ye,n) = read3D(:,:,k)
          end do
        end do
 
-       do n = start_step, end_step
+       do n = sstep, estep
          call FileRead( read3D(:,:,:), BASENAME_ORG, "RHOT", n, rank )
          do k = 1, KALL
            rhot_org(k,xs:xe,ys:ye,n) = read3D(:,:,k)
@@ -898,7 +914,7 @@ contains
        end do
 
        do iq = 1, QA
-         do n = start_step, end_step
+         do n = sstep, estep
            call FileRead( read3D(:,:,:), BASENAME_ORG, AQ_NAME(iq), n, rank )
            do k = 1, KALL
              qtrc_org(k,xs:xe,ys:ye,n,iq) = read3D(:,:,k)
@@ -909,7 +925,7 @@ contains
     end do
 
     ! fill all step
-    do n = start_step, end_step
+    do n = sstep, estep
       lon_org (:,:,n)   = lon_org (:,:,1)
       lat_org (:,:,n)   = lat_org (:,:,1)
       lonu_org(:,:,n)   = lonu_org(:,:,1)
@@ -930,22 +946,22 @@ contains
                                      LON(:,:),        LAT(:,:),        FZ(:,:,:), skip_x=.true., skip_y=.true. )
 
     ! for vector (w) points
-    call latlonz_interpolation_fact( hfact   (:,:,:),     & ! [OUT]
-                                     vfact   (:,:,:,:,:), & ! [OUT]
-                                     kgrd    (:,:,:,:,:), & ! [OUT]
-                                     igrd    (:,:,:),     & ! [OUT]
-                                     jgrd    (:,:,:),     & ! [OUT]
-                                     FZ      (:,:,:),     & ! [IN]
-                                     LAT     (:,:),       & ! [IN]
-                                     LON     (:,:),       & ! [IN]
-                                     geof_org(:,:,:,:),   & ! [IN]
-                                     lat_org (:,:,:),     & ! [IN]
-                                     lon_org (:,:,:),     & ! [IN]
-                                     KALL, IALL, JALL,    & ! [IN]
-                                     start_step           ) ! [IN]
+     call INTRPNEST_interp_fact_llz( hfact(:,:,:),          & ! [OUT]
+                                     vfact(:,:,:,:,:),      & ! [OUT]
+                                     kgrd(:,:,:,:,:),       & ! [OUT]
+                                     igrd(:,:,:),           & ! [OUT]
+                                     jgrd(:,:,:),           & ! [OUT]
+                                     FZ(:,:,:),             & ! [IN]
+                                     LAT(:,:),              & ! [IN]
+                                     LON(:,:),              & ! [IN]
+                                     KS, KE, IA, JA,        & ! [IN]
+                                     geof_org(:,:,:,sstep), & ! [IN]
+                                     lat_org (:,:,  sstep), & ! [IN]
+                                     lon_org (:,:,  sstep), & ! [IN]
+                                     KALL, IALL, JALL       ) ! [IN]
 
     ! convert from momentum to velocity
-    do n = start_step, end_step
+    do n = sstep, estep
     do j = 1, JALL
     do i = 1, IALL
     do k = 1, KALL-1
@@ -954,7 +970,7 @@ contains
     end do
     end do
     end do
-    do n = start_step, end_step
+    do n = sstep, estep
     do j = 1, JALL
     do i = 1, IALL
        velz_org(KALL,i,j,n) = 0.0_RP
@@ -962,38 +978,34 @@ contains
     end do
     end do
 
-    do n = start_step, end_step
-    do j = 1, JA
-    do i = 1, IA
-    do k = KS, KE-1
-       velz(k,i,j,n) = velz_org(kgrd(k,i,j,1,1),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,1) &
-                     + velz_org(kgrd(k,i,j,2,1),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,1) &
-                     + velz_org(kgrd(k,i,j,3,1),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,1) &
-                     + velz_org(kgrd(k,i,j,1,2),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,2) &
-                     + velz_org(kgrd(k,i,j,2,2),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,2) &
-                     + velz_org(kgrd(k,i,j,3,2),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,2)
-    end do
-    end do
-    end do
+    do n = sstep, estep
+       call INTRPNEST_interp_3d( velz(:,:,:,n),      &
+                                 velz_org(:,:,:,n),  &
+                                 hfact(:,:,:),       &
+                                 vfact(:,:,:,:,:),   &
+                                 kgrd(:,:,:,:,:),    &
+                                 igrd(:,:,:),        &
+                                 jgrd(:,:,:),        &
+                                 IA, JA, KS, KE-1    )
     end do
 
     ! for vector (u) points
-    call latlonz_interpolation_fact( hfact   (:,:,:),     & ! [OUT]
-                                     vfact   (:,:,:,:,:), & ! [OUT]
-                                     kgrd    (:,:,:,:,:), & ! [OUT]
-                                     igrd    (:,:,:),     & ! [OUT]
-                                     jgrd    (:,:,:),     & ! [OUT]
-                                     CZ      (:,:,:),     & ! [IN]
-                                     LAT     (:,:),       & ! [IN]
-                                     LONX    (:,:),       & ! [IN]
-                                     geoh_org(:,:,:,:),   & ! [IN]
-                                     latu_org(:,:,:),     & ! [IN]
-                                     lonu_org(:,:,:),     & ! [IN]
-                                     KALL, IALL, JALL,    & ! [IN]
-                                     start_step           ) ! [IN]
+     call INTRPNEST_interp_fact_llz( hfact(:,:,:),          & ! [OUT]
+                                     vfact(:,:,:,:,:),      & ! [OUT]
+                                     kgrd(:,:,:,:,:),       & ! [OUT]
+                                     igrd(:,:,:),           & ! [OUT]
+                                     jgrd(:,:,:),           & ! [OUT]
+                                     CZ(:,:,:),             & ! [IN]
+                                     LAT(:,:),              & ! [IN]
+                                     LONX(:,:),             & ! [IN]
+                                     KS, KE, IA, JA,        & ! [IN]
+                                     geoh_org(:,:,:,sstep), & ! [IN]
+                                     latu_org(:,:,  sstep), & ! [IN]
+                                     lonu_org(:,:,  sstep), & ! [IN]
+                                     KALL, IALL, JALL       ) ! [IN]
 
     ! convert from momentum to velocity
-    do n = start_step, end_step
+    do n = sstep, estep
     do j = 1, JALL
     do i = 1, IALL-1
     do k = 1, KALL
@@ -1002,7 +1014,7 @@ contains
     end do
     end do
     end do
-    do n = start_step, end_step
+    do n = sstep, estep
     do j = 1, JALL
     do k = 1, KALL
        velx_org(k,IALL,j,n) = momx_org(k,IALL,j,n) / dens_org(k,IALL,j,n)
@@ -1010,22 +1022,18 @@ contains
     end do
     end do
 
-    do n = start_step, end_step
-    do j = 1, JA
-    do i = 1, IA
-    do k = KS-1, KE+1
-       work(k,i,j,n) = velx_org(kgrd(k,i,j,1,1),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,1) &
-                     + velx_org(kgrd(k,i,j,2,1),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,1) &
-                     + velx_org(kgrd(k,i,j,3,1),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,1) &
-                     + velx_org(kgrd(k,i,j,1,2),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,2) &
-                     + velx_org(kgrd(k,i,j,2,2),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,2) &
-                     + velx_org(kgrd(k,i,j,3,2),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,2)
-    end do
-    end do
-    end do
+    do n = sstep, estep
+       call INTRPNEST_interp_3d( work    (:,:,:,n),   &
+                                 velx_org(:,:,:,n),   &
+                                 hfact   (:,:,:),     &
+                                 vfact   (:,:,:,:,:), &
+                                 kgrd    (:,:,:,:,:), &
+                                 igrd    (:,:,:),     &
+                                 jgrd    (:,:,:),     &
+                                 IA, JA, KS-1, KE+1   )
     end do
     ! from staggered point to scalar point
-    do n = start_step, end_step
+    do n = sstep, estep
        do j = 1, JA
        do i = 2, IA
        do k = KS-1, KE+1
@@ -1043,22 +1051,22 @@ contains
     end do
 
     ! for vector (v) points
-    call latlonz_interpolation_fact( hfact   (:,:,:),     & ! [OUT]
-                                     vfact   (:,:,:,:,:), & ! [OUT]
-                                     kgrd    (:,:,:,:,:), & ! [OUT]
-                                     igrd    (:,:,:),     & ! [OUT]
-                                     jgrd    (:,:,:),     & ! [OUT]
-                                     CZ      (:,:,:),     & ! [IN]
-                                     LATY    (:,:),       & ! [IN]
-                                     LON     (:,:),       & ! [IN]
-                                     geoh_org(:,:,:,:),   & ! [IN]
-                                     latv_org(:,:,:),     & ! [IN]
-                                     lonv_org(:,:,:),     & ! [IN]
-                                     KALL, IALL, JALL,    & ! [IN]
-                                     start_step           ) ! [IN]
+    call INTRPNEST_interp_fact_llz( hfact   (:,:,:),       & ! [OUT]
+                                    vfact   (:,:,:,:,:),   & ! [OUT]
+                                    kgrd    (:,:,:,:,:),   & ! [OUT]
+                                    igrd    (:,:,:),       & ! [OUT]
+                                    jgrd    (:,:,:),       & ! [OUT]
+                                    CZ      (:,:,:),       & ! [IN]
+                                    LATY    (:,:),         & ! [IN]
+                                    LON     (:,:),         & ! [IN]
+                                    KS, KE, IA, JA,        & ! [IN]
+                                    geoh_org(:,:,:,sstep), & ! [IN]
+                                    latv_org(:,:,  sstep), & ! [IN]
+                                    lonv_org(:,:,  sstep), & ! [IN]
+                                    KALL, IALL, JALL       ) ! [IN]
 
     ! convert from momentum to velocity
-    do n = start_step, end_step
+    do n = sstep, estep
     do j = 1, JALL-1
     do i = 1, IALL
     do k = 1, KALL
@@ -1067,7 +1075,7 @@ contains
     end do
     end do
     end do
-    do n = start_step, end_step
+    do n = sstep, estep
     do i = 1, IALL
     do k = 1, KALL
        vely_org(k,i,JALL,n) = momy_org(k,i,JALL,n) / dens_org(k,i,JALL,n)
@@ -1075,22 +1083,18 @@ contains
     end do
     end do
 
-    do n = start_step, end_step
-    do j = 1, JA
-    do i = 1, IA
-    do k = KS-1, KE+1
-       work(k,i,j,n) = vely_org(kgrd(k,i,j,1,1),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,1) &
-                     + vely_org(kgrd(k,i,j,2,1),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,1) &
-                     + vely_org(kgrd(k,i,j,3,1),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,1) &
-                     + vely_org(kgrd(k,i,j,1,2),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,2) &
-                     + vely_org(kgrd(k,i,j,2,2),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,2) &
-                     + vely_org(kgrd(k,i,j,3,2),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,2)
-    end do
-    end do
-    end do
+    do n = sstep, estep
+       call INTRPNEST_interp_3d( work    (:,:,:,n),   &
+                                 vely_org(:,:,:,n),   &
+                                 hfact   (:,:,:),     &
+                                 vfact   (:,:,:,:,:), &
+                                 kgrd    (:,:,:,:,:), &
+                                 igrd    (:,:,:),     &
+                                 jgrd    (:,:,:),     &
+                                 IA, JA, KS-1, KE+1   )
     end do
     ! from staggered point to scalar point
-    do n = start_step, end_step
+    do n = sstep, estep
        do j = 2, JA
        do i = 1, IA
        do k = KS-1, KE+1
@@ -1107,7 +1111,7 @@ contains
        call COMM_wait ( llvely(:,:,:,n), 1, .false. )
     end do
 
-    do n = start_step, end_step
+    do n = sstep, estep
        ! convert from latlon coordinate to local mapping (x)
        do j = 1, JA
        do i = 1, IA
@@ -1137,7 +1141,7 @@ contains
 
     end do
 
-    do n = start_step, end_step
+    do n = sstep, estep
        ! convert from latlon coordinate to local mapping (y)
        do j = 1, JA
        do i = 1, IA
@@ -1167,21 +1171,21 @@ contains
     end do
 
     ! for scalar points
-    call latlonz_interpolation_fact( hfact   (:,:,:),     & ! [OUT]
-                                     vfact   (:,:,:,:,:), & ! [OUT]
-                                     kgrd    (:,:,:,:,:), & ! [OUT]
-                                     igrd    (:,:,:),     & ! [OUT]
-                                     jgrd    (:,:,:),     & ! [OUT]
-                                     CZ      (:,:,:),     & ! [IN]
-                                     LAT     (:,:),       & ! [IN]
-                                     LON     (:,:),       & ! [IN]
-                                     geoh_org(:,:,:,:),   & ! [IN]
-                                     lat_org (:,:,:),     & ! [IN]
-                                     lon_org (:,:,:),     & ! [IN]
-                                     KALL, IALL, JALL,    & ! [IN]
-                                     start_step           ) ! [IN]
+    call INTRPNEST_interp_fact_llz( hfact   (:,:,:),       & ! [OUT]
+                                    vfact   (:,:,:,:,:),   & ! [OUT]
+                                    kgrd    (:,:,:,:,:),   & ! [OUT]
+                                    igrd    (:,:,:),       & ! [OUT]
+                                    jgrd    (:,:,:),       & ! [OUT]
+                                    CZ      (:,:,:),       & ! [IN]
+                                    LAT     (:,:),         & ! [IN]
+                                    LON     (:,:),         & ! [IN]
+                                    KS, KE, IA, JA,        & ! [IN]
+                                    geoh_org(:,:,:,sstep), & ! [IN]
+                                    lat_org (:,:,  sstep), & ! [IN]
+                                    lon_org (:,:,  sstep), & ! [IN]
+                                    KALL, IALL, JALL       ) ! [IN]
 
-    do n = start_step, end_step
+    do n = sstep, estep
     do j = 1, JALL
     do i = 1, IALL
     do k = 1, KALL
@@ -1203,65 +1207,78 @@ contains
     end do
     end do
 
-    do n = start_step, end_step
-    do j = 1, JA
-    do i = 1, IA
-    do k = KS-1, KE+1
-       pott(k,i,j,n) = pott_org(kgrd(k,i,j,1,1),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,1) &
-                     + pott_org(kgrd(k,i,j,2,1),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,1) &
-                     + pott_org(kgrd(k,i,j,3,1),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,1) &
-                     + pott_org(kgrd(k,i,j,1,2),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,2) &
-                     + pott_org(kgrd(k,i,j,2,2),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,2) &
-                     + pott_org(kgrd(k,i,j,3,2),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,2)
+    do n = sstep, estep
+       call INTRPNEST_interp_3d( pott    (:,:,:,n),   &
+                                 pott_org(:,:,:,n),   &
+                                 hfact   (:,:,:),     &
+                                 vfact   (:,:,:,:,:), &
+                                 kgrd    (:,:,:,:,:), &
+                                 igrd    (:,:,:),     &
+                                 jgrd    (:,:,:),     &
+                                 IA, JA, KS-1, KE+1   )
 
-       pres(k,i,j,n) = pres_org(kgrd(k,i,j,1,1),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,1) &
-                     + pres_org(kgrd(k,i,j,2,1),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,1) &
-                     + pres_org(kgrd(k,i,j,3,1),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,1) &
-                     + pres_org(kgrd(k,i,j,1,2),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,2) &
-                     + pres_org(kgrd(k,i,j,2,2),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,2) &
-                     + pres_org(kgrd(k,i,j,3,2),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,2)
+       call INTRPNEST_interp_3d( pres    (:,:,:,n),   &
+                                 pres_org(:,:,:,n),   &
+                                 hfact   (:,:,:),     &
+                                 vfact   (:,:,:,:,:), &
+                                 kgrd    (:,:,:,:,:), &
+                                 igrd    (:,:,:),     &
+                                 jgrd    (:,:,:),     &
+                                 IA, JA, KS-1, KE+1   )
 
        do iq = 1, QA
-          qtrc(k,i,j,n,iq) = qtrc_org(kgrd(k,i,j,1,1),igrd(i,j,1),jgrd(i,j,1),n,iq) * hfact(i,j,1) * vfact(k,i,j,1,1) &
-                           + qtrc_org(kgrd(k,i,j,2,1),igrd(i,j,2),jgrd(i,j,2),n,iq) * hfact(i,j,2) * vfact(k,i,j,2,1) &
-                           + qtrc_org(kgrd(k,i,j,3,1),igrd(i,j,3),jgrd(i,j,3),n,iq) * hfact(i,j,3) * vfact(k,i,j,3,1) &
-                           + qtrc_org(kgrd(k,i,j,1,2),igrd(i,j,1),jgrd(i,j,1),n,iq) * hfact(i,j,1) * vfact(k,i,j,1,2) &
-                           + qtrc_org(kgrd(k,i,j,2,2),igrd(i,j,2),jgrd(i,j,2),n,iq) * hfact(i,j,2) * vfact(k,i,j,2,2) &
-                           + qtrc_org(kgrd(k,i,j,3,2),igrd(i,j,3),jgrd(i,j,3),n,iq) * hfact(i,j,3) * vfact(k,i,j,3,2)
+          call INTRPNEST_interp_3d( qtrc    (:,:,:,n,iq), &
+                                    qtrc_org(:,:,:,n,iq), &
+                                    hfact   (:,:,:),      &
+                                    vfact   (:,:,:,:,:),  &
+                                    kgrd    (:,:,:,:,:),  &
+                                    igrd    (:,:,:),      &
+                                    jgrd    (:,:,:),      &
+                                    IA, JA, KS-1, KE+1    )
        end do
-    end do
-    end do
-    end do
     end do
 
     if( use_file_density ) then
        ! use logarithmic density to interpolate more accurately
-       do n = start_step, end_step
-       do j = 1, JA
-       do i = 1, IA
-       do k = KS-1, KE+1
-          dens(k,i,j,n) = exp( dens_org(kgrd(k,i,j,1,1),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,1) &
-                             + dens_org(kgrd(k,i,j,2,1),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,1) &
-                             + dens_org(kgrd(k,i,j,3,1),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,1) &
-                             + dens_org(kgrd(k,i,j,1,2),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,2) &
-                             + dens_org(kgrd(k,i,j,2,2),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,2) &
-                             + dens_org(kgrd(k,i,j,3,2),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,2) )
-       end do
-       end do
-       end do
+       do n = sstep, estep
+       call INTRPNEST_interp_3d( dens    (:,:,:,n),   &
+                                 dens_org(:,:,:,n),   &
+                                 hfact   (:,:,:),     &
+                                 vfact   (:,:,:,:,:), &
+                                 kgrd    (:,:,:,:,:), &
+                                 igrd    (:,:,:),     &
+                                 jgrd    (:,:,:),     &
+                                 IA, JA, KS-1, KE+1,  &
+                                 logwegt=.true.       )
        end do
     else
-       do n = start_step, end_step
+       do n = sstep, estep
+
+       call INTRPNEST_interp_2d( temp_sfc(1,:,:,n), &
+                                 tsfc_org(  :,:,n), &
+                                 hfact   (:,:,:),   &
+                                 igrd    (:,:,:),   &
+                                 jgrd    (:,:,:),   &
+                                 IA,   JA           )
+
+       call INTRPNEST_interp_2d( mslp_sfc(1,:,:,n), &
+                                 mslp_org(  :,:,n), &
+                                 hfact   (:,:,:),   &
+                                 igrd    (:,:,:),   &
+                                 jgrd    (:,:,:),   &
+                                 IA,   JA           )
+
+       ! interpolate QV (=Q2) only: other QTRC are set zero
+       qtrc_sfc(1,:,:,n,:)    = 0.0_RP
+       call INTRPNEST_interp_2d( qtrc_sfc(1,:,:,n,I_QV), &
+                                 qsfc_org(  :,:,n,I_QV), &
+                                 hfact   (:,:,:),        &
+                                 igrd    (:,:,:),        &
+                                 jgrd    (:,:,:),        &
+                                 IA,   JA                )
+
        do j = 1, JA
        do i = 1, IA
-          temp_sfc(1,i,j,n) = tsfc_org(igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) &
-                            + tsfc_org(igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) &
-                            + tsfc_org(igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3)
-
-          mslp_sfc(1,i,j,n) = mslp_org(igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) &
-                            + mslp_org(igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) &
-                            + mslp_org(igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3)
-
           ! Interpolate Surface pressure from SLP and PRES
           lack_of_val = .true.
 
@@ -1295,12 +1312,6 @@ contains
              call PRC_MPIstop
           endif
 
-          ! interpolate QV (=Q2) only: other QTRC are set zero
-          qtrc_sfc(1,i,j,n,:)    = 0.0_RP
-          qtrc_sfc(1,i,j,n,I_QV) = qsfc_org(igrd(i,j,1),jgrd(i,j,1),n,I_QV) * hfact(i,j,1) &
-                                 + qsfc_org(igrd(i,j,2),jgrd(i,j,2),n,I_QV) * hfact(i,j,2) &
-                                 + qsfc_org(igrd(i,j,3),jgrd(i,j,3),n,I_QV) * hfact(i,j,3)
-
           call THERMODYN_pott( pott_sfc(1,i,j,n),  & ! [OUT]
                                temp_sfc(1,i,j,n),  & ! [IN]
                                pres_sfc(1,i,j,n),  & ! [IN]
@@ -1309,7 +1320,7 @@ contains
        end do
        end do
 
-       do n = start_step, end_step
+       do n = sstep, estep
 #ifdef DRY
           qc = 0.0_RP
           qc_sfc    = 0.0_RP
@@ -1335,7 +1346,7 @@ contains
        end do
     end if
 
-    do n = start_step, end_step
+    do n = sstep, estep
        do j = 1, JA
        do i = 1, IA
        do k = KS, KE-1
@@ -1494,6 +1505,12 @@ contains
     real(RP), allocatable :: latv_org(:,:,:)
     real(RP), allocatable :: lonv_org(:,:,:)
 
+    real(RP), allocatable :: hfact(:,:,:)
+    real(RP), allocatable :: vfact(:,:,:,:,:)
+    integer,  allocatable :: igrd (:,:,:)
+    integer,  allocatable :: jgrd (:,:,:)
+    integer,  allocatable :: kgrd (:,:,:,:,:)
+
     real(RP) :: velz  (KA,IA,JA)
     real(RP) :: velx  (KA,IA,JA)
     real(RP) :: vely  (KA,IA,JA)
@@ -1508,13 +1525,6 @@ contains
     real(RP) :: temp_sfc(1,IA,JA)
     real(RP) :: pres_sfc(1,IA,JA)
     real(RP) :: qtrc_sfc(1,IA,JA,QA)
-
-    real(RP) :: hfact(   IA,JA,itp_nh       )
-    real(RP) :: vfact(KA,IA,JA,itp_nh,itp_nv)
-
-    integer :: igrd(   IA,JA,itp_nh       )
-    integer :: jgrd(   IA,JA,itp_nh       )
-    integer :: kgrd(KA,IA,JA,itp_nh,itp_nv)
 
     real(RP) :: qc(KA,IA,JA)
     real(RP) :: qc_sfc(1,IA,JA)
@@ -1538,6 +1548,12 @@ contains
        varname_U = "U_1"
        varname_V = "V_1"
     endif
+
+    allocate( hfact(     IA, JA,itp_nh         ) )
+    allocate( vfact( KA, IA, JA,itp_nh, itp_nv ) )
+    allocate( igrd (     IA, JA,itp_nh         ) )
+    allocate( jgrd (     IA, JA,itp_nh         ) )
+    allocate( kgrd ( KA, IA, JA,itp_nh, itp_nv ) )
 
     allocate( read_xy  (        dims(2),dims(3),ts:te   ) )
     allocate( read_uy  (        dims(5),dims(3),ts:te   ) )
@@ -1756,88 +1772,78 @@ contains
     do n = ts, te !--- time loop
 
        ! for vector (w) points
-       call latlonz_interpolation_fact( hfact   (:,:,:),           & ! [OUT]
-                                        vfact   (:,:,:,:,:),       & ! [OUT]
-                                        kgrd    (:,:,:,:,:),       & ! [OUT]
-                                        igrd    (:,:,:),           & ! [OUT]
-                                        jgrd    (:,:,:),           & ! [OUT]
-                                        FZ      (:,:,:),           & ! [IN]
-                                        LAT     (:,:),             & ! [IN]
-                                        LON     (:,:),             & ! [IN]
-                                        geof_org(:,:,:,:),         & ! [IN]
-                                        lat_org (:,:,:),           & ! [IN]
-                                        lon_org (:,:,:),           & ! [IN]
-                                        dims(4), dims(2), dims(3), & ! [IN]
-                                        n                          ) ! [IN]
+       call INTRPNEST_interp_fact_llz( hfact   (:,:,:),          & ! [OUT]
+                                       vfact   (:,:,:,:,:),      & ! [OUT]
+                                       kgrd    (:,:,:,:,:),      & ! [OUT]
+                                       igrd    (:,:,:),          & ! [OUT]
+                                       jgrd    (:,:,:),          & ! [OUT]
+                                       FZ      (:,:,:),          & ! [IN]
+                                       LAT     (:,:),            & ! [IN]
+                                       LON     (:,:),            & ! [IN]
+                                       KS, KE, IA, JA,           & ! [IN]
+                                       geof_org(:,:,:,n),        & ! [IN]
+                                       lat_org (:,:,  n),        & ! [IN]
+                                       lon_org (:,:,  n),        & ! [IN]
+                                       dims(4), dims(2), dims(3) ) ! [IN]
 
-       do j = 1, JA
-       do i = 1, IA
-       do k = KS, KE-1
-          velz(k,i,j) = velz_org(kgrd(k,i,j,1,1),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,1) &
-                      + velz_org(kgrd(k,i,j,2,1),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,1) &
-                      + velz_org(kgrd(k,i,j,3,1),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,1) &
-                      + velz_org(kgrd(k,i,j,1,2),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,2) &
-                      + velz_org(kgrd(k,i,j,2,2),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,2) &
-                      + velz_org(kgrd(k,i,j,3,2),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,2)
-       end do
-       end do
-       end do
+       call INTRPNEST_interp_3d( velz    (:,:,:),     &
+                                 velz_org(:,:,:,n),   &
+                                 hfact   (:,:,:),     &
+                                 vfact   (:,:,:,:,:), &
+                                 kgrd    (:,:,:,:,:), &
+                                 igrd    (:,:,:),     &
+                                 jgrd    (:,:,:),     &
+                                 IA, JA, KS, KE-1     )
 
        ! for vector (u) points
-       call latlonz_interpolation_fact( hfact   (:,:,:),           & ! [OUT]
-                                        vfact   (:,:,:,:,:),       & ! [OUT]
-                                        kgrd    (:,:,:,:,:),       & ! [OUT]
-                                        igrd    (:,:,:),           & ! [OUT]
-                                        jgrd    (:,:,:),           & ! [OUT]
-                                        CZ      (:,:,:),           & ! [IN]
-                                        LAT     (:,:),             & ! [IN]
-                                        LON     (:,:),             & ! [IN]
-                                        geoh_org(:,:,:,:),         & ! [IN]
-                                        latu_org(:,:,:),           & ! [IN]
-                                        lonu_org(:,:,:),           & ! [IN]
-                                        dims(1), dims(2), dims(3), & ! [IN] ! dims(5) wasn't used to keep consistency with geoh_org
-                                        n                          ) ! [IN]
+       call INTRPNEST_interp_fact_llz( hfact   (:,:,:),          & ! [OUT]
+                                       vfact   (:,:,:,:,:),      & ! [OUT]
+                                       kgrd    (:,:,:,:,:),      & ! [OUT]
+                                       igrd    (:,:,:),          & ! [OUT]
+                                       jgrd    (:,:,:),          & ! [OUT]
+                                       CZ      (:,:,:),          & ! [IN]
+                                       LAT     (:,:),            & ! [IN]
+                                       LON     (:,:),            & ! [IN]
+                                       KS, KE, IA, JA,           & ! [IN]
+                                       geoh_org(:,:,:,n),        & ! [IN]
+                                       latu_org(:,:,  n),        & ! [IN]
+                                       lonu_org(:,:,  n),        & ! [IN]
+                                       dims(1), dims(2), dims(3) ) ! [IN]
+                                       ! dims(5) isn't used to keep consistency with geoh_org
 
-       do j = 1, JA
-       do i = 1, IA
-       do k = KS, KE
-          velx(k,i,j) = velx_org(kgrd(k,i,j,1,1),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,1) &
-                      + velx_org(kgrd(k,i,j,2,1),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,1) &
-                      + velx_org(kgrd(k,i,j,3,1),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,1) &
-                      + velx_org(kgrd(k,i,j,1,2),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,2) &
-                      + velx_org(kgrd(k,i,j,2,2),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,2) &
-                      + velx_org(kgrd(k,i,j,3,2),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,2)
-       end do
-       end do
-       end do
+       call INTRPNEST_interp_3d( velx    (:,:,:),     &
+                                 velx_org(:,:,:,n),   &
+                                 hfact   (:,:,:),     &
+                                 vfact   (:,:,:,:,:), &
+                                 kgrd    (:,:,:,:,:), &
+                                 igrd    (:,:,:),     &
+                                 jgrd    (:,:,:),     &
+                                 IA, JA, KS, KE       )
 
        ! for vector (v) points
-       call latlonz_interpolation_fact( hfact   (:,:,:),           & ! [OUT]
-                                        vfact   (:,:,:,:,:),       & ! [OUT]
-                                        kgrd    (:,:,:,:,:),       & ! [OUT]
-                                        igrd    (:,:,:),           & ! [OUT]
-                                        jgrd    (:,:,:),           & ! [OUT]
-                                        CZ      (:,:,:),           & ! [IN]
-                                        LAT     (:,:),             & ! [IN]
-                                        LON     (:,:),             & ! [IN]
-                                        geoh_org(:,:,:,:),         & ! [IN]
-                                        latv_org(:,:,:),           & ! [IN]
-                                        lonv_org(:,:,:),           & ! [IN]
-                                        dims(1), dims(2), dims(3), & ! [IN] ! dims(6) wasn't used to keep consistency with geoh_org
-                                        n                          ) ! [IN]
+       call INTRPNEST_interp_fact_llz( hfact   (:,:,:),          & ! [OUT]
+                                       vfact   (:,:,:,:,:),      & ! [OUT]
+                                       kgrd    (:,:,:,:,:),      & ! [OUT]
+                                       igrd    (:,:,:),          & ! [OUT]
+                                       jgrd    (:,:,:),          & ! [OUT]
+                                       CZ      (:,:,:),          & ! [IN]
+                                       LAT     (:,:),            & ! [IN]
+                                       LON     (:,:),            & ! [IN]
+                                       KS, KE, IA, JA,           & ! [IN]
+                                       geoh_org(:,:,:,n),        & ! [IN]
+                                       latv_org(:,:,  n),        & ! [IN]
+                                       lonv_org(:,:,  n),        & ! [IN]
+                                       dims(1), dims(2), dims(3) ) ! [IN]
+                                       ! dims(6) isn't used to keep consistency with geoh_org
 
-       do j = 1, JA
-       do i = 1, IA
-       do k = KS, KE
-          vely(k,i,j) = vely_org(kgrd(k,i,j,1,1),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,1) &
-                      + vely_org(kgrd(k,i,j,2,1),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,1) &
-                      + vely_org(kgrd(k,i,j,3,1),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,1) &
-                      + vely_org(kgrd(k,i,j,1,2),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,2) &
-                      + vely_org(kgrd(k,i,j,2,2),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,2) &
-                      + vely_org(kgrd(k,i,j,3,2),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,2)
-       end do
-       end do
-       end do
+       call INTRPNEST_interp_3d( vely    (:,:,:),     &
+                                 vely_org(:,:,:,n),   &
+                                 hfact   (:,:,:),     &
+                                 vfact   (:,:,:,:,:), &
+                                 kgrd    (:,:,:,:,:), &
+                                 igrd    (:,:,:),     &
+                                 jgrd    (:,:,:),     &
+                                 IA, JA, KS, KE       )
 
        call wrf_arwpost_calc_uvmet( llvelx, llvely, & ! (out)
                                     velx,   vely,   & ! (in)
@@ -1900,46 +1906,51 @@ contains
        call COMM_wait ( vely(:,:,:), 2, .false. )
 
        ! for scalar points
-       call latlonz_interpolation_fact( hfact   (:,:,:),           & ! [OUT]
-                                        vfact   (:,:,:,:,:),       & ! [OUT]
-                                        kgrd    (:,:,:,:,:),       & ! [OUT]
-                                        igrd    (:,:,:),           & ! [OUT]
-                                        jgrd    (:,:,:),           & ! [OUT]
-                                        CZ      (:,:,:),           & ! [IN]
-                                        LAT     (:,:),             & ! [IN]
-                                        LON     (:,:),             & ! [IN]
-                                        geoh_org(:,:,:,:),         & ! [IN]
-                                        lat_org (:,:,:),           & ! [IN]
-                                        lon_org (:,:,:),           & ! [IN]
-                                        dims(1), dims(2), dims(3), & ! [IN]
-                                        n                          ) ! [IN]
+       call INTRPNEST_interp_fact_llz( hfact   (:,:,:),          & ! [OUT]
+                                       vfact   (:,:,:,:,:),      & ! [OUT]
+                                       kgrd    (:,:,:,:,:),      & ! [OUT]
+                                       igrd    (:,:,:),          & ! [OUT]
+                                       jgrd    (:,:,:),          & ! [OUT]
+                                       CZ      (:,:,:),          & ! [IN]
+                                       LAT     (:,:),            & ! [IN]
+                                       LON     (:,:),            & ! [IN]
+                                       KS, KE, IA, JA,           & ! [IN]
+                                       geoh_org(:,:,:,n),        & ! [IN]
+                                       lat_org (:,:,  n),        & ! [IN]
+                                       lon_org (:,:,  n),        & ! [IN]
+                                       dims(1), dims(2), dims(3) ) ! [IN]
+
+       call INTRPNEST_interp_3d( temp    (:,:,:),     &
+                                 temp_org(:,:,:,n),   &
+                                 hfact   (:,:,:),     &
+                                 vfact   (:,:,:,:,:), &
+                                 kgrd    (:,:,:,:,:), &
+                                 igrd    (:,:,:),     &
+                                 jgrd    (:,:,:),     &
+                                 IA, JA, KS, KE       )
+
+       call INTRPNEST_interp_3d( pres    (:,:,:),     &
+                                 pres_org(:,:,:,n),   &
+                                 hfact   (:,:,:),     &
+                                 vfact   (:,:,:,:,:), &
+                                 kgrd    (:,:,:,:,:), &
+                                 igrd    (:,:,:),     &
+                                 jgrd    (:,:,:),     &
+                                 IA, JA, KS, KE       )
+       do iq = 1, QA
+          call INTRPNEST_interp_3d( qtrc    (:,:,:,n,iq), &
+                                    qtrc_org(:,:,:,n,iq), &
+                                    hfact   (:,:,:),      &
+                                    vfact   (:,:,:,:,:),  &
+                                    kgrd    (:,:,:,:,:),  &
+                                    igrd    (:,:,:),      &
+                                    jgrd    (:,:,:),      &
+                                    IA, JA, KS, KE        )
+       end do
 
        do j = 1, JA
        do i = 1, IA
        do k = KS, KE
-          temp(k,i,j) = temp_org(kgrd(k,i,j,1,1),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,1) &
-                      + temp_org(kgrd(k,i,j,2,1),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,1) &
-                      + temp_org(kgrd(k,i,j,3,1),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,1) &
-                      + temp_org(kgrd(k,i,j,1,2),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,2) &
-                      + temp_org(kgrd(k,i,j,2,2),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,2) &
-                      + temp_org(kgrd(k,i,j,3,2),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,2)
-
-          pres(k,i,j) = pres_org(kgrd(k,i,j,1,1),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,1) &
-                      + pres_org(kgrd(k,i,j,2,1),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,1) &
-                      + pres_org(kgrd(k,i,j,3,1),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,1) &
-                      + pres_org(kgrd(k,i,j,1,2),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,2) &
-                      + pres_org(kgrd(k,i,j,2,2),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,2) &
-                      + pres_org(kgrd(k,i,j,3,2),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,2)
-
-          do iq = 1, QA
-             qtrc(k,i,j,n,iq) = qtrc_org(kgrd(k,i,j,1,1),igrd(i,j,1),jgrd(i,j,1),n,iq) * hfact(i,j,1) * vfact(k,i,j,1,1) &
-                              + qtrc_org(kgrd(k,i,j,2,1),igrd(i,j,2),jgrd(i,j,2),n,iq) * hfact(i,j,2) * vfact(k,i,j,2,1) &
-                              + qtrc_org(kgrd(k,i,j,3,1),igrd(i,j,3),jgrd(i,j,3),n,iq) * hfact(i,j,3) * vfact(k,i,j,3,1) &
-                              + qtrc_org(kgrd(k,i,j,1,2),igrd(i,j,1),jgrd(i,j,1),n,iq) * hfact(i,j,1) * vfact(k,i,j,1,2) &
-                              + qtrc_org(kgrd(k,i,j,2,2),igrd(i,j,2),jgrd(i,j,2),n,iq) * hfact(i,j,2) * vfact(k,i,j,2,2) &
-                              + qtrc_org(kgrd(k,i,j,3,2),igrd(i,j,3),jgrd(i,j,3),n,iq) * hfact(i,j,3) * vfact(k,i,j,3,2)
-          end do
-
           call THERMODYN_pott( pott(k,i,j),    & ! [OUT]
                                temp(k,i,j),    & ! [IN]
                                pres(k,i,j),    & ! [IN]
@@ -1948,22 +1959,31 @@ contains
        end do
        end do
 
+       call INTRPNEST_interp_2d( temp_sfc(1,:,:),   &
+                                 tsfc_org(  :,:,n), &
+                                 hfact   (:,:,:),   &
+                                 igrd    (:,:,:),   &
+                                 jgrd    (:,:,:),   &
+                                 IA, JA             )
+
+       call INTRPNEST_interp_2d( pres_sfc(1,:,:),   &
+                                 psfc_org(  :,:,n), &
+                                 hfact   (:,:,:),   &
+                                 igrd    (:,:,:),   &
+                                 jgrd    (:,:,:),   &
+                                 IA, JA             )
+
+       qtrc_sfc(1,:,:,:) = 0.0_RP
+       call INTRPNEST_interp_2d( qtrc_sfc(1,:,:,  I_QV), &
+                                 qsfc_org(  :,:,n,I_QV), &
+                                 hfact   (:,:,:),        &
+                                 igrd    (:,:,:),        &
+                                 jgrd    (:,:,:),        &
+                                 IA, JA                  )
+
+
        do j = 1, JA
        do i = 1, IA
-          temp_sfc(1,i,j) = tsfc_org(igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) &
-                          + tsfc_org(igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) &
-                          + tsfc_org(igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3)
-
-          pres_sfc(1,i,j) = psfc_org(igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) &
-                          + psfc_org(igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) &
-                          + psfc_org(igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3)
-
-          ! interpolate QV (=Q2) only: other QTRC are set zero
-          qtrc_sfc(1,i,j,:)    = 0.0_RP
-          qtrc_sfc(1,i,j,I_QV) = qsfc_org(igrd(i,j,1),jgrd(i,j,1),n,I_QV) * hfact(i,j,1) &
-                               + qsfc_org(igrd(i,j,2),jgrd(i,j,2),n,I_QV) * hfact(i,j,2) &
-                               + qsfc_org(igrd(i,j,3),jgrd(i,j,3),n,I_QV) * hfact(i,j,3)
-
           call THERMODYN_pott( pott_sfc(1,i,j),  & ! [OUT]
                                temp_sfc(1,i,j),  & ! [IN]
                                pres_sfc(1,i,j),  & ! [IN]
@@ -2092,8 +2112,8 @@ contains
       qtrc,             & ! (out)
       basename_num,     & ! (in)
       dims,             & ! (in)
-      start_step,       & ! (in)
-      end_step          ) ! (in)
+      sstep,       & ! (in)
+      estep          ) ! (in)
     use scale_const, only: &
        D2R => CONST_D2R,   &
        EPS => CONST_EPS
@@ -2119,8 +2139,8 @@ contains
     real(RP),         intent(out) :: qtrc(:,:,:,:,:)
     character(LEN=*), intent(in)  :: basename_num
     integer,          intent(in)  :: dims(:)
-    integer,          intent(in)  :: start_step
-    integer,          intent(in)  :: end_step
+    integer,          intent(in)  :: sstep   ! start of steps
+    integer,          intent(in)  :: estep     ! end of steps
 
     !> work
     real(SP), allocatable :: read1DX(:)
@@ -2145,28 +2165,27 @@ contains
     real(RP), allocatable :: pres_org(:,:,:,:)
     real(RP), allocatable :: qtrc_org(:,:,:,:,:)
 
-    real(RP) :: velz  (KA,IA,JA,start_step:end_step)
-    real(RP) :: velx  (KA,IA,JA,start_step:end_step)
-    real(RP) :: vely  (KA,IA,JA,start_step:end_step)
-    real(RP) :: llvelx(KA,IA,JA,start_step:end_step)
-    real(RP) :: llvely(KA,IA,JA,start_step:end_step)
-    real(RP) :: pott  (KA,IA,JA,start_step:end_step)
-    real(RP) :: temp  (KA,IA,JA,start_step:end_step)
-    real(RP) :: pres  (KA,IA,JA,start_step:end_step)
-    real(RP) :: work  (KA,IA,JA,start_step:end_step)
+    real(RP), allocatable :: hfact(:,:,:)
+    real(RP), allocatable :: vfact(:,:,:,:,:)
+    integer,  allocatable :: igrd (:,:,:)
+    integer,  allocatable :: jgrd (:,:,:)
+    integer,  allocatable :: kgrd (:,:,:,:,:)
 
-    real(RP) :: pott_sfc(1,IA,JA,start_step:end_step)
-    real(RP) :: slp_sfc (1,IA,JA,start_step:end_step)
-    real(RP) :: pres_sfc(1,IA,JA,start_step:end_step)
-    real(RP) :: temp_sfc(1,IA,JA,start_step:end_step)
-    real(RP) :: qtrc_sfc(1,IA,JA,start_step:end_step,QA)
+    real(RP) :: velz  (KA,IA,JA,sstep:estep)
+    real(RP) :: velx  (KA,IA,JA,sstep:estep)
+    real(RP) :: vely  (KA,IA,JA,sstep:estep)
+    real(RP) :: llvelx(KA,IA,JA,sstep:estep)
+    real(RP) :: llvely(KA,IA,JA,sstep:estep)
+    real(RP) :: pott  (KA,IA,JA,sstep:estep)
+    real(RP) :: temp  (KA,IA,JA,sstep:estep)
+    real(RP) :: pres  (KA,IA,JA,sstep:estep)
+    real(RP) :: work  (KA,IA,JA,sstep:estep)
 
-    real(RP) :: hfact(   IA,JA,itp_nh       )
-    real(RP) :: vfact(KA,IA,JA,itp_nh,itp_nv)
-
-    integer :: igrd(   IA,JA,itp_nh       )
-    integer :: jgrd(   IA,JA,itp_nh       )
-    integer :: kgrd(KA,IA,JA,itp_nh,itp_nv)
+    real(RP) :: pott_sfc(1,IA,JA,sstep:estep)
+    real(RP) :: slp_sfc (1,IA,JA,sstep:estep)
+    real(RP) :: pres_sfc(1,IA,JA,sstep:estep)
+    real(RP) :: temp_sfc(1,IA,JA,sstep:estep)
+    real(RP) :: qtrc_sfc(1,IA,JA,sstep:estep,QA)
 
     real(RP) :: qc(KA,IA,JA)
     real(RP) :: qc_sfc(1,IA,JA)
@@ -2176,7 +2195,7 @@ contains
     real(RP) :: wgt_up, wgt_bt
     real(RP) :: z1,z2,pres1,pres2
 
-    integer :: step_fixed = 1
+    integer :: fstep = 1  ! fixed target step
     integer :: bottom, upper
     integer :: QA_NCM = 1
     integer :: dims3p1
@@ -2190,7 +2209,7 @@ contains
     character(len=H_LONG) :: basename
     !---------------------------------------------------------------------------
 
-    nt = end_step - start_step + 1
+    nt = estep - sstep + 1
     dims3p1 = dims(3) + 1
 
     if( myrank == PRC_master ) then
@@ -2207,20 +2226,26 @@ contains
        allocate( read4D ( dims(3), dims(1), dims(2), nt ) )
     endif
 
-    allocate( lon_org(           dims(1), dims(2), step_fixed ) )
-    allocate( lat_org(           dims(1), dims(2), step_fixed ) )
-    allocate( hgt_org( dims(3),  dims(1), dims(2), step_fixed ) )
-    allocate( hgt_op1( dims3p1,  dims(1), dims(2), step_fixed ) )
+    allocate( hfact(     IA, JA,itp_nh         ) )
+    allocate( vfact( KA, IA, JA,itp_nh, itp_nv ) )
+    allocate( igrd (     IA, JA,itp_nh         ) )
+    allocate( jgrd (     IA, JA,itp_nh         ) )
+    allocate( kgrd ( KA, IA, JA,itp_nh, itp_nv ) )
 
-    allocate( tsfc_org(          dims(1), dims(2), start_step:end_step ) )
-    allocate( slp_org (          dims(1), dims(2), start_step:end_step ) )
-    !allocate( psfc_org(          dims(1), dims(2), start_step:end_step ) )
-    allocate( qsfc_org(          dims(1), dims(2), start_step:end_step, QA_NCM) )
-    allocate( velx_org( dims(3), dims(1), dims(2), start_step:end_step ) )
-    allocate( vely_org( dims(3), dims(1), dims(2), start_step:end_step ) )
-    allocate( temp_org( dims3p1, dims(1), dims(2), start_step:end_step ) )
-    allocate( pres_org( dims3p1, dims(1), dims(2), start_step:end_step ) )
-    allocate( qtrc_org( dims(3), dims(1), dims(2), start_step:end_step, QA_NCM) )
+    allocate( lon_org(           dims(1), dims(2), fstep ) )
+    allocate( lat_org(           dims(1), dims(2), fstep ) )
+    allocate( hgt_org( dims(3),  dims(1), dims(2), fstep ) )
+    allocate( hgt_op1( dims3p1,  dims(1), dims(2), fstep ) )
+
+    allocate( tsfc_org(          dims(1), dims(2), sstep:estep ) )
+    allocate( slp_org (          dims(1), dims(2), sstep:estep ) )
+    !allocate( psfc_org(          dims(1), dims(2), sstep:estep ) )
+    allocate( qsfc_org(          dims(1), dims(2), sstep:estep, QA_NCM) )
+    allocate( velx_org( dims(3), dims(1), dims(2), sstep:estep ) )
+    allocate( vely_org( dims(3), dims(1), dims(2), sstep:estep ) )
+    allocate( temp_org( dims3p1, dims(1), dims(2), sstep:estep ) )
+    allocate( pres_org( dims3p1, dims(1), dims(2), sstep:estep ) )
+    allocate( qtrc_org( dims(3), dims(1), dims(2), sstep:estep, QA_NCM) )
 
     if( IO_L ) write(IO_FID_LOG,*) ''
     if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[realinput]/Categ[InputNICAM]'
@@ -2228,26 +2253,26 @@ contains
     ! normal vertical grid arrangement
     if( do_read ) then
        basename = "ms_pres"//trim(basename_num)
-       call FileRead( read1DX(:), trim(basename), "lon", step_fixed, 1, single=.true. )
+       call FileRead( read1DX(:), trim(basename), "lon", fstep, 1, single=.true. )
        do j = 1, dims(2)
-          lon_org (:,j,step_fixed)  = read1DX(:) * D2R
+          lon_org (:,j,fstep)  = read1DX(:) * D2R
        enddo
 
-       call FileRead( read1DY(:), trim(basename), "lat", step_fixed, 1, single=.true. )
+       call FileRead( read1DY(:), trim(basename), "lat", fstep, 1, single=.true. )
        do i = 1, dims(1)
-          lat_org (i,:,step_fixed)  = read1DY(:) * D2R
+          lat_org (i,:,fstep)  = read1DY(:) * D2R
        enddo
 
-       call FileRead( read1DZ(:), trim(basename), "lev", step_fixed, 1, single=.true. )
+       call FileRead( read1DZ(:), trim(basename), "lev", fstep, 1, single=.true. )
        do j = 1, dims(2)
        do i = 1, dims(1)
-          hgt_org(:,i,j,step_fixed) = read1DZ(:)
+          hgt_org(:,i,j,fstep) = read1DZ(:)
        end do
        end do
     endif
-    call COMM_bcast( lat_org (:,:,:),                 dims(1), dims(2), step_fixed )
-    call COMM_bcast( lon_org (:,:,:),                 dims(1), dims(2), step_fixed )
-    call COMM_bcast( hgt_org (:,:,:,:),      dims(3), dims(1), dims(2), step_fixed )
+    call COMM_bcast( lat_org (:,:,:),                 dims(1), dims(2), fstep )
+    call COMM_bcast( lon_org (:,:,:),                 dims(1), dims(2), fstep )
+    call COMM_bcast( hgt_org (:,:,:,:),      dims(3), dims(1), dims(2), fstep )
 
     call check_domain_compatibility( lon_org(:,:,1),  lat_org(:,:,1),  hgt_org(:,:,:,1), &
                                      LON(:,:),        LAT(:,:),        CZ(:,:,:) )
@@ -2258,19 +2283,19 @@ contains
     call check_domain_compatibility( lon_org(:,:,1),  lat_org(:,:,1),  hgt_org(:,:,:,1), &
                                      LON(:,:),        LAT(:,:),        FZ(:,:,:), skip_x=.true., skip_y=.true. )
 
-    call latlonz_interpolation_fact( hfact   (:,:,:),           & ! [OUT]
-                                     vfact   (:,:,:,:,:),       & ! [OUT]
-                                     kgrd    (:,:,:,:,:),       & ! [OUT]
-                                     igrd    (:,:,:),           & ! [OUT]
-                                     jgrd    (:,:,:),           & ! [OUT]
-                                     CZ      (:,:,:),           & ! [IN]
-                                     LAT     (:,:),             & ! [IN]
-                                     LON     (:,:),             & ! [IN]
-                                     hgt_org (:,:,:,:),         & ! [IN]
-                                     lat_org (:,:,:),           & ! [IN]
-                                     lon_org (:,:,:),           & ! [IN]
-                                     dims(3), dims(1), dims(2), & ! [IN]
-                                     step_fixed                 ) ! [IN]
+    call INTRPNEST_interp_fact_llz( hfact  (:,:,:),           & ! [OUT]
+                                    vfact  (:,:,:,:,:),       & ! [OUT]
+                                    kgrd   (:,:,:,:,:),       & ! [OUT]
+                                    igrd   (:,:,:),           & ! [OUT]
+                                    jgrd   (:,:,:),           & ! [OUT]
+                                    CZ     (:,:,:),           & ! [IN]
+                                    LAT    (:,:),             & ! [IN]
+                                    LON    (:,:),             & ! [IN]
+                                    KS, KE, IA, JA,           & ! [IN]
+                                    hgt_org(:,:,:,fstep),     & ! [IN]
+                                    lat_org(:,:,  fstep),     & ! [IN]
+                                    lon_org(:,:,  fstep),     & ! [IN]
+                                    dims(3), dims(1), dims(2) ) ! [IN]
     deallocate( hgt_org  )
 
     if( do_read ) then
@@ -2279,8 +2304,8 @@ contains
        call ExternalFileReadOffset( read4D(:,:,:,:),  &
                                     trim(basename),   &
                                     "ms_u",           &
-                                    start_step,       &
-                                    end_step,         &
+                                    sstep,       &
+                                    estep,         &
                                     myrank,           &
                                     iNICAM,           &
                                     single=.true.     )
@@ -2289,7 +2314,7 @@ contains
     call COMM_bcast( velx_org(:,:,:,:),      dims(3), dims(1), dims(2), nt )
 
     ! tentative: missing value => 0.
-    do n = start_step, end_step
+    do n = sstep, estep
     do j = 1, dims(2)
     do i = 1, dims(1)
     do k = 1, dims(3)
@@ -2301,19 +2326,15 @@ contains
     end do
     end do
 
-    do n = start_step, end_step
-    do j = 1, JA
-    do i = 1, IA
-    do k = KS-1, KE+1
-       llvelx(k,i,j,n) = velx_org(kgrd(k,i,j,1,1),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,1) &
-                       + velx_org(kgrd(k,i,j,2,1),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,1) &
-                       + velx_org(kgrd(k,i,j,3,1),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,1) &
-                       + velx_org(kgrd(k,i,j,1,2),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,2) &
-                       + velx_org(kgrd(k,i,j,2,2),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,2) &
-                       + velx_org(kgrd(k,i,j,3,2),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,2)
-    end do
-    end do
-    end do
+    do n = sstep, estep
+       call INTRPNEST_interp_3d( llvelx  (:,:,:,n),   &
+                                 velx_org(:,:,:,n),   &
+                                 hfact   (:,:,:),     &
+                                 vfact   (:,:,:,:,:), &
+                                 kgrd    (:,:,:,:,:), &
+                                 igrd    (:,:,:),     &
+                                 jgrd    (:,:,:),     &
+                                 IA, JA, KS-1, KE+1   )
     end do
     deallocate( velx_org )
 
@@ -2323,8 +2344,8 @@ contains
        call ExternalFileReadOffset( read4D(:,:,:,:),  &
                                     trim(basename),   &
                                     "ms_v",           &
-                                    start_step,       &
-                                    end_step,         &
+                                    sstep,       &
+                                    estep,         &
                                     myrank,           &
                                     iNICAM,           &
                                     single=.true.     )
@@ -2333,7 +2354,7 @@ contains
     call COMM_bcast( vely_org(:,:,:,:),      dims(3), dims(1), dims(2), nt )
 
     ! tentative: missing value => 0.
-    do n = start_step, end_step
+    do n = sstep, estep
     do j = 1, dims(2)
     do i = 1, dims(1)
     do k = 1, dims(3)
@@ -2345,23 +2366,19 @@ contains
     end do
     end do
 
-    do n = start_step, end_step
-    do j = 1, JA
-    do i = 1, IA
-    do k = KS-1, KE+1
-       llvely(k,i,j,n) = vely_org(kgrd(k,i,j,1,1),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,1) &
-                       + vely_org(kgrd(k,i,j,2,1),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,1) &
-                       + vely_org(kgrd(k,i,j,3,1),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,1) &
-                       + vely_org(kgrd(k,i,j,1,2),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,2) &
-                       + vely_org(kgrd(k,i,j,2,2),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,2) &
-                       + vely_org(kgrd(k,i,j,3,2),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,2)
-    end do
-    end do
-    end do
+    do n = sstep, estep
+       call INTRPNEST_interp_3d( llvely  (:,:,:,n),   &
+                                 vely_org(:,:,:,n),   &
+                                 hfact   (:,:,:),     &
+                                 vfact   (:,:,:,:,:), &
+                                 kgrd    (:,:,:,:,:), &
+                                 igrd    (:,:,:),     &
+                                 jgrd    (:,:,:),     &
+                                 IA, JA, KS-1, KE+1   )
     end do
     deallocate( vely_org )
 
-    do n = start_step, end_step
+    do n = sstep, estep
        ! convert from latlon coordinate to local mapping (x)
        do j = 1, JA
        do i = 1, IA
@@ -2393,7 +2410,7 @@ contains
 
     end do
 
-    do n = start_step, end_step
+    do n = sstep, estep
        ! convert from latlon coordinate to local mapping (y)
        do j = 1, JA
        do i = 1, IA
@@ -2432,66 +2449,79 @@ contains
        call ExternalFileReadOffset( read3DT(:,:,:,:), &
                                     trim(basename),   &
                                     "ss_slp",         &
-                                    start_step,       &
-                                    end_step,         &
+                                    sstep,       &
+                                    estep,         &
                                     myrank,           &
                                     iNICAM,           &
                                     single=.true.     )
        slp_org(:,:,:) = real( read3DT(1,:,:,:), kind=RP )
 
        basename = "ss_t2m"//trim(basename_num)
-       call ExternalFileRead( read3DT(:,:,:,:), trim(basename), "ss_t2m", start_step, end_step, myrank, iNICAM, single=.true. )
+       call ExternalFileRead( read3DT(:,:,:,:), trim(basename), "ss_t2m", sstep, estep, myrank, iNICAM, single=.true. )
        tsfc_org(:,:,:) = real( read3DT(1,:,:,:), kind=RP )
 
        basename = "ss_q2m"//trim(basename_num)
-       call ExternalFileRead( read3DT(:,:,:,:), trim(basename), "ss_q2m", start_step, end_step, myrank, iNICAM, single=.true. )
+       call ExternalFileRead( read3DT(:,:,:,:), trim(basename), "ss_q2m", sstep, estep, myrank, iNICAM, single=.true. )
        qsfc_org(:,:,:,I_QV) = real( read3DT(1,:,:,:), kind=RP )
     endif
     call COMM_bcast( slp_org(:,:,:),                  dims(1), dims(2), nt )
     call COMM_bcast( tsfc_org(:,:,:),                 dims(1), dims(2), nt )
     call COMM_bcast( qsfc_org(:,:,:,I_QV),            dims(1), dims(2), nt )
 
-    do n = start_step, end_step
-    do j = 1, JA
-    do i = 1, IA
-       !pres_sfc(1,i,j,n) = psfc_org(igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) &
-       !                  + psfc_org(igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) &
-       !                  + psfc_org(igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3)
+    do n = sstep, estep
+       !call INTRPNEST_interp_2d( pres_sfc(1,:,:,n), &
+       !                          psfc_org(  :,:,n), &
+       !                          hfac t  (:,:,:),   &
+       !                          igrd    (:,:,:),   &
+       !                          jgrd    (:,:,:),   &
+       !                          IA, JA             )
 
-       slp_sfc(1,i,j,n) =  slp_org(igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) &
-                         + slp_org(igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) &
-                         + slp_org(igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3)
+       call INTRPNEST_interp_2d( slp_sfc(1,:,:,n), &
+                                 slp_org(  :,:,n), &
+                                 hfact  (:,:,:),   &
+                                 igrd   (:,:,:),   &
+                                 jgrd   (:,:,:),   &
+                                 IA, JA            )
 
-       temp_sfc(1,i,j,n) = tsfc_org(igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) &
-                         + tsfc_org(igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) &
-                         + tsfc_org(igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3)
+       call INTRPNEST_interp_2d( temp_sfc(1,:,:,n), &
+                                 tsfc_org(  :,:,n), &
+                                 hfact   (:,:,:),   &
+                                 igrd    (:,:,:),   &
+                                 jgrd    (:,:,:),   &
+                                 IA, JA             )
 
-       !> QTRC_sfc are set zero, except for QV; set q2.
-       qtrc_sfc(1,i,j,n,:)    = 0.0_RP
-       qtrc_sfc(1,i,j,n,I_QV) = qsfc_org(igrd(i,j,1),jgrd(i,j,1),n,I_QV) * hfact(i,j,1) &
-                              + qsfc_org(igrd(i,j,2),jgrd(i,j,2),n,I_QV) * hfact(i,j,2) &
-                              + qsfc_org(igrd(i,j,3),jgrd(i,j,3),n,I_QV) * hfact(i,j,3)
-       sw = sign(0.5_RP, qtrc_sfc(1,i,j,n,I_QV)) + 0.5_RP
-       qtrc_sfc(1,i,j,n,I_QV) = qtrc_sfc(1,i,j,n,I_QV) * sw !> --fix negative value
+       qtrc_sfc(1,:,:,n,:) = 0.0_RP
+       call INTRPNEST_interp_2d( qtrc_sfc(1,:,:,n,I_QV), &
+                                 qsfc_org(  :,:,n,I_QV), &
+                                 hfact   (:,:,:),        &
+                                 igrd    (:,:,:),        &
+                                 jgrd    (:,:,:),        &
+                                 IA, JA                  )
 
-       !call THERMODYN_pott( pott_sfc(1,i,j,n),  & ! [OUT]
-       !                     temp_sfc(1,i,j,n),  & ! [IN]
-       !                     pres_sfc(1,i,j,n),  & ! [IN]
-       !                     qtrc_sfc(1,i,j,n,:) ) ! [IN]
-    end do
-    end do
+       do j = 1, JA
+       do i = 1, IA
+          !> QTRC_sfc are set zero, except for QV; set q2.
+          sw = sign(0.5_RP, qtrc_sfc(1,i,j,n,I_QV)) + 0.5_RP
+          qtrc_sfc(1,i,j,n,I_QV) = qtrc_sfc(1,i,j,n,I_QV) * sw !> --fix negative value
+
+          !call THERMODYN_pott( pott_sfc(1,i,j,n),  & ! [OUT]
+          !                     temp_sfc(1,i,j,n),  & ! [IN]
+          !                     pres_sfc(1,i,j,n),  & ! [IN]
+          !                     qtrc_sfc(1,i,j,n,:) ) ! [IN]
+       end do
+       end do
     end do
 
 
     if( do_read ) then
        basename = "ms_qv"//trim(basename_num)
-       call ExternalFileRead( read4D(:,:,:,:), trim(basename), "ms_qv", start_step, end_step, myrank, iNICAM, single=.true. )
+       call ExternalFileRead( read4D(:,:,:,:), trim(basename), "ms_qv", sstep, estep, myrank, iNICAM, single=.true. )
        qtrc_org(:,:,:,:,I_QV) = real( read4D(:,:,:,:), kind=RP )
     endif
     call COMM_bcast( qtrc_org(:,:,:,:,I_QV), dims(3), dims(1), dims(2), nt )
 
        ! tentative: missing value => surface_qv
-       do n = start_step, end_step
+       do n = sstep, estep
        do j = 1, dims(2)
        do i = 1, dims(1)
        do k = 1, dims(3)
@@ -2503,7 +2533,7 @@ contains
        end do
        end do
 
-       do n = start_step, end_step
+       do n = sstep, estep
        do j = 1, dims(2)
        do i = 1, dims(1)
        do k = 1, dims(3)
@@ -2516,19 +2546,15 @@ contains
        enddo
 
     qtrc(:,:,:,:,:) = 0.0_RP !> cold initialize for hydrometeor
-    do n = start_step, end_step
-    do j = 1, JA
-    do i = 1, IA
-    do k = KS-1, KE+1
-       qtrc(k,i,j,n,I_QV) = qtrc_org(kgrd(k,i,j,1,1),igrd(i,j,1),jgrd(i,j,1),n,I_QV) * hfact(i,j,1) * vfact(k,i,j,1,1) &
-                          + qtrc_org(kgrd(k,i,j,2,1),igrd(i,j,2),jgrd(i,j,2),n,I_QV) * hfact(i,j,2) * vfact(k,i,j,2,1) &
-                          + qtrc_org(kgrd(k,i,j,3,1),igrd(i,j,3),jgrd(i,j,3),n,I_QV) * hfact(i,j,3) * vfact(k,i,j,3,1) &
-                          + qtrc_org(kgrd(k,i,j,1,2),igrd(i,j,1),jgrd(i,j,1),n,I_QV) * hfact(i,j,1) * vfact(k,i,j,1,2) &
-                          + qtrc_org(kgrd(k,i,j,2,2),igrd(i,j,2),jgrd(i,j,2),n,I_QV) * hfact(i,j,2) * vfact(k,i,j,2,2) &
-                          + qtrc_org(kgrd(k,i,j,3,2),igrd(i,j,3),jgrd(i,j,3),n,I_QV) * hfact(i,j,3) * vfact(k,i,j,3,2)
-    end do
-    end do
-    end do
+    do n = sstep, estep
+       call INTRPNEST_interp_3d( qtrc    (:,:,:,n,I_QV), &
+                                 qtrc_org(:,:,:,n,I_QV), &
+                                 hfact   (:,:,:),        &
+                                 vfact   (:,:,:,:,:),    &
+                                 kgrd    (:,:,:,:,:),    &
+                                 igrd    (:,:,:),        &
+                                 jgrd    (:,:,:),        &
+                                 IA, JA, KS-1, KE+1      )
     end do
     deallocate( qtrc_org )
 
@@ -2536,34 +2562,34 @@ contains
     if( do_read ) then
        do j = 1, dims(2)
        do i = 1, dims(1)
-          hgt_op1(1,i,j,step_fixed) = 0.0_RP !bottom level is 0 [m]
+          hgt_op1(1,i,j,fstep) = 0.0_RP !bottom level is 0 [m]
           do k = 2, dims3p1
-             hgt_op1(k,i,j,step_fixed) = read1DZ(k-1)
+             hgt_op1(k,i,j,fstep) = read1DZ(k-1)
           enddo
        end do
        end do
     endif
-    call COMM_bcast( hgt_op1(:,:,:,:), dims3p1, dims(1), dims(2), step_fixed )
+    call COMM_bcast( hgt_op1(:,:,:,:), dims3p1, dims(1), dims(2), fstep )
 
-    call latlonz_interpolation_fact( hfact   (:,:,:),           & ! [OUT]
-                                     vfact   (:,:,:,:,:),       & ! [OUT]
-                                     kgrd    (:,:,:,:,:),       & ! [OUT]
-                                     igrd    (:,:,:),           & ! [OUT]
-                                     jgrd    (:,:,:),           & ! [OUT]
-                                     CZ      (:,:,:),           & ! [IN]
-                                     LAT     (:,:),             & ! [IN]
-                                     LON     (:,:),             & ! [IN]
-                                     hgt_op1 (:,:,:,:),         & ! [IN]
-                                     lat_org (:,:,:),           & ! [IN]
-                                     lon_org (:,:,:),           & ! [IN]
-                                     dims3p1, dims(1), dims(2), & ! [IN]
-                                     step_fixed                 ) ! [IN]
+    call INTRPNEST_interp_fact_llz( hfact  (:,:,:),           & ! [OUT]
+                                    vfact  (:,:,:,:,:),       & ! [OUT]
+                                    kgrd   (:,:,:,:,:),       & ! [OUT]
+                                    igrd   (:,:,:),           & ! [OUT]
+                                    jgrd   (:,:,:),           & ! [OUT]
+                                    CZ     (:,:,:),           & ! [IN]
+                                    LAT    (:,:),             & ! [IN]
+                                    LON    (:,:),             & ! [IN]
+                                    KS, KE, IA, JA,           & ! [IN]
+                                    hgt_op1(:,:,:,fstep),     & ! [IN]
+                                    lat_org(:,:,  fstep),     & ! [IN]
+                                    lon_org(:,:,  fstep),     & ! [IN]
+                                    dims3p1, dims(1), dims(2) ) ! [IN]
 
     if( do_read ) then
        basename = "ms_pres"//trim(basename_num)
-       call ExternalFileRead( read4D(:,:,:,:), trim(basename), "ms_pres", start_step, end_step, myrank, iNICAM, single=.true. )
+       call ExternalFileRead( read4D(:,:,:,:), trim(basename), "ms_pres", sstep, estep, myrank, iNICAM, single=.true. )
        pres_org(1,:,:,:) = slp_org(:,:,:)
-       do n = start_step, end_step
+       do n = sstep, estep
        do j = 1, dims(2)
        do i = 1, dims(1)
        do k = 2, dims3p1
@@ -2574,7 +2600,7 @@ contains
        enddo
 
        ! interpolate using SLP (fill lacked data)
-       do n = start_step, end_step
+       do n = sstep, estep
        do j = 1, dims(2)
        do i = 1, dims(1)
           lack_of_val = .false.
@@ -2602,24 +2628,20 @@ contains
     endif
     call COMM_bcast( pres_org(:,:,:,:), dims3p1, dims(1), dims(2), nt )
 
-    do n = start_step, end_step
-    do j = 1, JA
-    do i = 1, IA
-    do k = KS-1, KE+1
-       pres(k,i,j,n) = pres_org(kgrd(k,i,j,1,1),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,1) &
-                     + pres_org(kgrd(k,i,j,2,1),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,1) &
-                     + pres_org(kgrd(k,i,j,3,1),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,1) &
-                     + pres_org(kgrd(k,i,j,1,2),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,2) &
-                     + pres_org(kgrd(k,i,j,2,2),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,2) &
-                     + pres_org(kgrd(k,i,j,3,2),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,2)
-    end do
-    end do
-    end do
+    do n = sstep, estep
+       call INTRPNEST_interp_3d( pres    (:,:,:,n),   &
+                                 pres_org(:,:,:,n),   &
+                                 hfact   (:,:,:),     &
+                                 vfact   (:,:,:,:,:), &
+                                 kgrd    (:,:,:,:,:), &
+                                 igrd    (:,:,:),     &
+                                 jgrd    (:,:,:),     &
+                                 IA, JA, KS-1, KE+1   )
     end do
     deallocate( pres_org )
 
     ! Interpolate Surface pressure from SLP and PRES
-    do n = start_step, end_step
+    do n = sstep, estep
     do j = 1, JA
     do i = 1, IA
        lack_of_val = .true.
@@ -2651,7 +2673,7 @@ contains
     enddo
     enddo
 
-    do n = start_step, end_step
+    do n = sstep, estep
     do j = 1, JA
     do i = 1, IA
        call THERMODYN_pott( pott_sfc(1,i,j,n),  & ! [OUT]
@@ -2667,28 +2689,28 @@ contains
     if( do_read ) then
        do j = 1, dims(2)
        do i = 1, dims(1)
-          hgt_op1(1,i,j,step_fixed) = 2.0_RP !bottom level is 2 [m]
+          hgt_op1(1,i,j,fstep) = 2.0_RP !bottom level is 2 [m]
           do k = 2, dims3p1
-             hgt_op1(k,i,j,step_fixed) = read1DZ(k-1)
+             hgt_op1(k,i,j,fstep) = read1DZ(k-1)
           enddo
        end do
        end do
     endif
-    call COMM_bcast( hgt_op1(:,:,:,:), dims3p1, dims(1), dims(2), step_fixed )
+    call COMM_bcast( hgt_op1(:,:,:,:), dims3p1, dims(1), dims(2), fstep )
 
-    call latlonz_interpolation_fact( hfact   (:,:,:),           & ! [OUT]
-                                     vfact   (:,:,:,:,:),       & ! [OUT]
-                                     kgrd    (:,:,:,:,:),       & ! [OUT]
-                                     igrd    (:,:,:),           & ! [OUT]
-                                     jgrd    (:,:,:),           & ! [OUT]
-                                     CZ      (:,:,:),           & ! [IN]
-                                     LAT     (:,:),             & ! [IN]
-                                     LON     (:,:),             & ! [IN]
-                                     hgt_op1 (:,:,:,:),         & ! [IN]
-                                     lat_org (:,:,:),           & ! [IN]
-                                     lon_org (:,:,:),           & ! [IN]
-                                     dims3p1, dims(1), dims(2), & ! [IN]
-                                     step_fixed                 ) ! [IN]
+    call INTRPNEST_interp_fact_llz( hfact  (:,:,:),           & ! [OUT]
+                                    vfact  (:,:,:,:,:),       & ! [OUT]
+                                    kgrd   (:,:,:,:,:),       & ! [OUT]
+                                    igrd   (:,:,:),           & ! [OUT]
+                                    jgrd   (:,:,:),           & ! [OUT]
+                                    CZ     (:,:,:),           & ! [IN]
+                                    LAT    (:,:),             & ! [IN]
+                                    LON    (:,:),             & ! [IN]
+                                    KS, KE, IA, JA,           & ! [IN]
+                                    hgt_op1(:,:,:,fstep),     & ! [IN]
+                                    lat_org(:,:,  fstep),     & ! [IN]
+                                    lon_org(:,:,  fstep),     & ! [IN]
+                                    dims3p1, dims(1), dims(2) ) ! [IN]
     deallocate( lon_org  )
     deallocate( lat_org  )
 
@@ -2698,13 +2720,13 @@ contains
        call ExternalFileReadOffset( read4D(:,:,:,:),  &
                                     trim(basename),   &
                                     "ms_tem",         &
-                                    start_step,       &
-                                    end_step,         &
+                                    sstep,       &
+                                    estep,         &
                                     myrank,           &
                                     iNICAM,           &
                                     single=.true.     )
        temp_org(1,:,:,:) = tsfc_org(:,:,:)
-       do n = start_step, end_step
+       do n = sstep, estep
        do j = 1, dims(2)
        do i = 1, dims(1)
        do k = 2, dims3p1
@@ -2715,7 +2737,7 @@ contains
        enddo
 
        ! interpolate using T2m (fill lacked data)
-       do n = start_step, end_step
+       do n = sstep, estep
        do j = 1, dims(2)
        do i = 1, dims(1)
           lack_of_val = .false.
@@ -2743,19 +2765,15 @@ contains
     endif
     call COMM_bcast( temp_org(:,:,:,:), dims3p1, dims(1), dims(2), nt )
 
-    do n = start_step, end_step
-    do j = 1, JA
-    do i = 1, IA
-    do k = KS-1, KE+1
-       temp(k,i,j,n) = temp_org(kgrd(k,i,j,1,1),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,1) &
-                     + temp_org(kgrd(k,i,j,2,1),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,1) &
-                     + temp_org(kgrd(k,i,j,3,1),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,1) &
-                     + temp_org(kgrd(k,i,j,1,2),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,2) &
-                     + temp_org(kgrd(k,i,j,2,2),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,2) &
-                     + temp_org(kgrd(k,i,j,3,2),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,2)
-    end do
-    end do
-    end do
+    do n = sstep, estep
+       call INTRPNEST_interp_3d( temp    (:,:,:,n),   &
+                                 temp_org(:,:,:,n),   &
+                                 hfact   (:,:,:),     &
+                                 vfact   (:,:,:,:,:), &
+                                 kgrd    (:,:,:,:,:), &
+                                 igrd    (:,:,:),     &
+                                 jgrd    (:,:,:),     &
+                                 IA, JA, KS-1, KE+1   )
     end do
     deallocate( temp_org )
     deallocate( slp_org )
@@ -2771,7 +2789,7 @@ contains
        deallocate( read4D  )
     endif
 
-    do n = start_step, end_step
+    do n = sstep, estep
     do j = 1, JA
     do i = 1, IA
     do k = KS-1, KE+1
@@ -2784,7 +2802,7 @@ contains
     end do
     end do
 
-    do n = start_step, end_step
+    do n = sstep, estep
 #ifdef DRY
        qc = 0.0_RP
        qc_sfc = 0.0_RP
@@ -2809,7 +2827,7 @@ contains
        call COMM_wait ( dens(:,:,:,n), 3 )
     end do
 
-    do n = start_step, end_step
+    do n = sstep, estep
        do j = 1, JA
        do i = 1, IA
        do k = KS, KE-1
@@ -3096,20 +3114,20 @@ contains
     enddo
     enddo
 
-    call latlonz_interpolation_fact( hfact  (:,:,:),     & ! [OUT]
-                                     vfact  (:,:,:,:,:), & ! [OUT]
-                                     kgrd   (:,:,:,:,:), & ! [OUT]
-                                     igrd   (:,:,:),     & ! [OUT]
-                                     jgrd   (:,:,:),     & ! [OUT]
-                                     lcz_3D (:,:,:),     & ! [IN]
-                                     LAT    (:,:),       & ! [IN]
-                                     LON    (:,:),       & ! [IN]
-                                     lz_org (:,:,:,:),   & ! [IN]
-                                     lat_org(:,:,:),     & ! [IN]
-                                     lon_org(:,:,:),     & ! [IN]
-                                     KALL, IALL, JALL,   & ! [IN]
-                                     1,                  & ! [IN]
-                                     landgrid=.true.     ) ! [IN]
+    call INTRPNEST_interp_fact_llz( hfact  (:,:,:),       & ! [OUT]
+                                    vfact  (:,:,:,:,:),   & ! [OUT]
+                                    kgrd   (:,:,:,:,:),   & ! [OUT]
+                                    igrd   (:,:,:),       & ! [OUT]
+                                    jgrd   (:,:,:),       & ! [OUT]
+                                    lcz_3D (:,:,:),       & ! [IN]
+                                    LAT    (:,:),         & ! [IN]
+                                    LON    (:,:),         & ! [IN]
+                                    KS, KE, IA, JA,       & ! [IN]
+                                    lz_org (:,:,:,1),     & ! [IN]
+                                    lat_org(:,:,  1),     & ! [IN]
+                                    lon_org(:,:,  1),     & ! [IN]
+                                    KALL, IALL, JALL,     & ! [IN]
+                                    landgrid=.true.       ) ! [IN]
 
 
     ! replace missing value
@@ -3125,17 +3143,18 @@ contains
         tg_org(k,:,:) = work(:,:,1)
      enddo
 
+     call INTRPNEST_interp_3d( tg    (:,:,:),     &
+                               tg_org(:,:,:),     &
+                               hfact (:,:,:),     &
+                               vfact (:,:,:,:,:), &
+                               kgrd  (:,:,:,:,:), &
+                               igrd  (:,:,:),     &
+                               jgrd  (:,:,:),     &
+                               IA, JA, 1, LKMAX-1 )
+
     ! interpolation
     do j = 1, JA
     do i = 1, IA
-    do k = 1, LKMAX-1
-       tg  (k,i,j) = tg_org  (kgrd(k,i,j,1,1),igrd(i,j,1),jgrd(i,j,1)) * hfact(i,j,1) * vfact(k,i,j,1,1) &
-                   + tg_org  (kgrd(k,i,j,2,1),igrd(i,j,2),jgrd(i,j,2)) * hfact(i,j,2) * vfact(k,i,j,2,1) &
-                   + tg_org  (kgrd(k,i,j,3,1),igrd(i,j,3),jgrd(i,j,3)) * hfact(i,j,3) * vfact(k,i,j,3,1) &
-                   + tg_org  (kgrd(k,i,j,1,2),igrd(i,j,1),jgrd(i,j,1)) * hfact(i,j,1) * vfact(k,i,j,1,2) &
-                   + tg_org  (kgrd(k,i,j,2,2),igrd(i,j,2),jgrd(i,j,2)) * hfact(i,j,2) * vfact(k,i,j,2,2) &
-                   + tg_org  (kgrd(k,i,j,3,2),igrd(i,j,3),jgrd(i,j,3)) * hfact(i,j,3) * vfact(k,i,j,3,2)
-    enddo ! k
        tg  (LKMAX,i,j) = tg  (LKMAX-1,i,j)
     enddo ! i
     enddo ! j
@@ -3151,17 +3170,18 @@ contains
          call interp_OceanLand_data(work(:,:,:), lsmask_org, IALL, JALL, 1, landdata=.true.)
          strg_org(k,:,:) = work(:,:,1)
       enddo
+
+      call INTRPNEST_interp_3d( strg    (:,:,:),     &
+                                strg_org(:,:,:),     &
+                                hfact   (:,:,:),     &
+                                vfact   (:,:,:,:,:), &
+                                kgrd    (:,:,:,:,:), &
+                                igrd    (:,:,:),     &
+                                jgrd    (:,:,:),     &
+                                IA, JA, 1, LKMAX-1   )
       ! interpolation
       do j = 1, JA
       do i = 1, IA
-      do k = 1, LKMAX-1
-         strg(k,i,j) = strg_org(kgrd(k,i,j,1,1),igrd(i,j,1),jgrd(i,j,1)) * hfact(i,j,1) * vfact(k,i,j,1,1) &
-                     + strg_org(kgrd(k,i,j,2,1),igrd(i,j,2),jgrd(i,j,2)) * hfact(i,j,2) * vfact(k,i,j,2,1) &
-                     + strg_org(kgrd(k,i,j,3,1),igrd(i,j,3),jgrd(i,j,3)) * hfact(i,j,3) * vfact(k,i,j,3,1) &
-                     + strg_org(kgrd(k,i,j,1,2),igrd(i,j,1),jgrd(i,j,1)) * hfact(i,j,1) * vfact(k,i,j,1,2) &
-                     + strg_org(kgrd(k,i,j,2,2),igrd(i,j,2),jgrd(i,j,2)) * hfact(i,j,2) * vfact(k,i,j,2,2) &
-                     + strg_org(kgrd(k,i,j,3,2),igrd(i,j,3),jgrd(i,j,3)) * hfact(i,j,3) * vfact(k,i,j,3,2)
-      enddo
          strg(LKMAX,i,j) = strg(LKMAX-1,i,j)
       enddo
       enddo
@@ -3208,37 +3228,24 @@ contains
     roff(:,:) = 0.0_RP ! not necessary
     qvef(:,:) = 0.0_RP ! not necessary
 
-    do j = 1, JA
-    do i = 1, IA
-       tw   (i,j) = tw_org   (igrd(i,j,1),jgrd(i,j,1)) * hfact(i,j,1) &
-                  + tw_org   (igrd(i,j,2),jgrd(i,j,2)) * hfact(i,j,2) &
-                  + tw_org   (igrd(i,j,3),jgrd(i,j,3)) * hfact(i,j,3)
-       sst  (i,j) = sst_org  (igrd(i,j,1),jgrd(i,j,1)) * hfact(i,j,1) &
-                  + sst_org  (igrd(i,j,2),jgrd(i,j,2)) * hfact(i,j,2) &
-                  + sst_org  (igrd(i,j,3),jgrd(i,j,3)) * hfact(i,j,3)
-       z0w  (i,j) = z0w_org  (igrd(i,j,1),jgrd(i,j,1)) * hfact(i,j,1) &
-                  + z0w_org  (igrd(i,j,2),jgrd(i,j,2)) * hfact(i,j,2) &
-                  + z0w_org  (igrd(i,j,3),jgrd(i,j,3)) * hfact(i,j,3)
-       lst  (i,j) = lst_org  (igrd(i,j,1),jgrd(i,j,1)) * hfact(i,j,1) &
-                  + lst_org  (igrd(i,j,2),jgrd(i,j,2)) * hfact(i,j,2) &
-                  + lst_org  (igrd(i,j,3),jgrd(i,j,3)) * hfact(i,j,3)
-       ust  (i,j) = ust_org  (igrd(i,j,1),jgrd(i,j,1)) * hfact(i,j,1) &
-                  + ust_org  (igrd(i,j,2),jgrd(i,j,2)) * hfact(i,j,2) &
-                  + ust_org  (igrd(i,j,3),jgrd(i,j,3)) * hfact(i,j,3)
-       !skint(i,j) = skint_org(igrd(i,j,1),jgrd(i,j,1)) * hfact(i,j,1) &
-       !           + skint_org(igrd(i,j,2),jgrd(i,j,2)) * hfact(i,j,2) &
-       !           + skint_org(igrd(i,j,3),jgrd(i,j,3)) * hfact(i,j,3)
-       skinw(i,j) = skinw_org(igrd(i,j,1),jgrd(i,j,1)) * hfact(i,j,1) &
-                  + skinw_org(igrd(i,j,2),jgrd(i,j,2)) * hfact(i,j,2) &
-                  + skinw_org(igrd(i,j,3),jgrd(i,j,3)) * hfact(i,j,3)
-       snowq(i,j) = snowq_org(igrd(i,j,1),jgrd(i,j,1)) * hfact(i,j,1) &
-                  + snowq_org(igrd(i,j,2),jgrd(i,j,2)) * hfact(i,j,2) &
-                  + snowq_org(igrd(i,j,3),jgrd(i,j,3)) * hfact(i,j,3)
-       snowt(i,j) = snowt_org(igrd(i,j,1),jgrd(i,j,1)) * hfact(i,j,1) &
-                  + snowt_org(igrd(i,j,2),jgrd(i,j,2)) * hfact(i,j,2) &
-                  + snowt_org(igrd(i,j,3),jgrd(i,j,3)) * hfact(i,j,3)
-    enddo
-    enddo
+    call INTRPNEST_interp_2d( tw(:,:),    tw_org(:,:),    hfact(:,:,:), &
+                              igrd(:,:,:), jgrd(:,:,:), IA, JA )
+    call INTRPNEST_interp_2d( sst(:,:),   sst_org(:,:),   hfact(:,:,:), &
+                              igrd(:,:,:), jgrd(:,:,:), IA, JA )
+    call INTRPNEST_interp_2d( z0w(:,:),   z0w_org(:,:),   hfact(:,:,:), &
+                              igrd(:,:,:), jgrd(:,:,:), IA, JA )
+    call INTRPNEST_interp_2d( lst(:,:),   lst_org(:,:),   hfact(:,:,:), &
+                              igrd(:,:,:), jgrd(:,:,:), IA, JA )
+    call INTRPNEST_interp_2d( ust(:,:),   ust_org(:,:),   hfact(:,:,:), &
+                              igrd(:,:,:), jgrd(:,:,:), IA, JA )
+    !call INTRPNEST_interp_2d( skint(:,:), skint_org(:,:), hfact(:,:,:), &
+    !                          igrd(:,:,:), jgrd(:,:,:), IA, JA )
+    call INTRPNEST_interp_2d( skinw(:,:), skinw_org(:,:), hfact(:,:,:), &
+                              igrd(:,:,:), jgrd(:,:,:), IA, JA )
+    call INTRPNEST_interp_2d( snowq(:,:), snowq_org(:,:), hfact(:,:,:), &
+                              igrd(:,:,:), jgrd(:,:,:), IA, JA )
+    call INTRPNEST_interp_2d( snowt(:,:), snowt_org(:,:), hfact(:,:,:), &
+                              igrd(:,:,:), jgrd(:,:,:), IA, JA )
 
     ! replace values over the ocean ####
      do j = 1, JA
@@ -3254,16 +3261,10 @@ contains
      enddo
 
     do n = 1, 2 ! 1:LW, 2:SW
-    do j = 1, JA
-    do i = 1, IA
-       albw(i,j,n) = albw_org(igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) &
-                   + albw_org(igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) &
-                   + albw_org(igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3)
-       albg(i,j,n) = albg_org(igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) &
-                   + albg_org(igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) &
-                   + albg_org(igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3)
-    enddo
-    enddo
+       call INTRPNEST_interp_2d( albw(:,:,n), albw_org(:,:,n), hfact(:,:,:), &
+                                 igrd(:,:,:), jgrd(:,:,:), IA, JA )
+       call INTRPNEST_interp_2d( albg(:,:,n), albg_org(:,:,n), hfact(:,:,:), &
+                                 igrd(:,:,:), jgrd(:,:,:), IA, JA )
     enddo
 
     deallocate( read1D )
@@ -3450,8 +3451,22 @@ contains
        lcz_3D(:,i,j) = lcz(:)
     enddo
     enddo
-    call latlonz_interpolation_fact( hfact,vfact,kgrd,igrd,jgrd,lcz_3D,lat,lon, &
-                                      zs_org,lat_org,lon_org,dims(7),dims(2),dims(3),1,landgrid=.true. )
+!    call latlonz_interpolation_fact( hfact,vfact,kgrd,igrd,jgrd,lcz_3D,lat,lon, &
+!                                      zs_org,lat_org,lon_org,dims(7),dims(2),dims(3),1,landgrid=.true. )
+    call INTRPNEST_interp_fact_llz( hfact  (:,:,:),          & ! [OUT]
+                                    vfact  (:,:,:,:,:),      & ! [OUT]
+                                    kgrd   (:,:,:,:,:),      & ! [OUT]
+                                    igrd   (:,:,:),          & ! [OUT]
+                                    jgrd   (:,:,:),          & ! [OUT]
+                                    lcz_3D (:,:,:),          & ! [IN]
+                                    LAT    (:,:),            & ! [IN]
+                                    LON    (:,:),            & ! [IN]
+                                    KS, KE, IA, JA,          & ! [IN]
+                                    zs_org (:,:,:,1),        & ! [IN]
+                                    lat_org(:,:,  1),        & ! [IN]
+                                    lon_org(:,:,  1),        & ! [IN]
+                                    dims(7),dims(2),dims(3), & ! [IN]
+                                    landgrid=.true.          ) ! [IN]
 
     ! land mask (1:land, 0:water)
     if( do_read ) then
@@ -3478,18 +3493,17 @@ contains
     do k = 1, dims(7)
      call interp_OceanLand_data(org_4D(k,:,:,:),landmask,dims(2),dims(3),tcount,landdata=.true.,maskval=maskval)
     enddo
-    n = 1
+    call INTRPNEST_interp_3d( tg    (:,:,:),     &
+                              org_4D(:,:,:,1),   &
+                              hfact (:,:,:),     &
+                              vfact (:,:,:,:,:), &
+                              kgrd  (:,:,:,:,:), &
+                              igrd  (:,:,:),     &
+                              jgrd  (:,:,:),     &
+                              IA, JA, 1, LKMAX-1 )
     do j = 1, JA
     do i = 1, IA
-    do k = 1, LKMAX-1  ! interpolation
-       tg(k,i,j) =  org_4D(kgrd(k,i,j,1,1),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,1) &
-                  + org_4D(kgrd(k,i,j,2,1),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,1) &
-                  + org_4D(kgrd(k,i,j,3,1),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,1) &
-                  + org_4D(kgrd(k,i,j,1,2),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,2) &
-                  + org_4D(kgrd(k,i,j,2,2),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,2) &
-                  + org_4D(kgrd(k,i,j,3,2),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,2)
-    enddo
-    tg(LKMAX,i,j) = tg(LKMAX-1,i,j)
+       tg(LKMAX,i,j) = tg(LKMAX-1,i,j)
     enddo
     enddo
     do k = 1, LKMAX
@@ -3510,18 +3524,17 @@ contains
        do k = 1, dims(7)
         call interp_OceanLand_data(org_4D(k,:,:,:),landmask,dims(2),dims(3),tcount,landdata=.true.,maskval=maskval)
        enddo
-       n = 1
+       call INTRPNEST_interp_3d( sh2o  (:,:,:),     &
+                                 org_4D(:,:,:,1),   &
+                                 hfact (:,:,:),     &
+                                 vfact (:,:,:,:,:), &
+                                 kgrd  (:,:,:,:,:), &
+                                 igrd  (:,:,:),     &
+                                 jgrd  (:,:,:),     &
+                                 IA, JA, 1, LKMAX-1 )
        do j = 1, JA
        do i = 1, IA
-       do k = 1, LKMAX-1  ! interpolation
-          sh2o(k,i,j) =  org_4D(kgrd(k,i,j,1,1),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,1) &
-                       + org_4D(kgrd(k,i,j,2,1),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,1) &
-                       + org_4D(kgrd(k,i,j,3,1),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,1) &
-                       + org_4D(kgrd(k,i,j,1,2),igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) * vfact(k,i,j,1,2) &
-                       + org_4D(kgrd(k,i,j,2,2),igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) * vfact(k,i,j,2,2) &
-                       + org_4D(kgrd(k,i,j,3,2),igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3) * vfact(k,i,j,3,2)
-       enddo
-       sh2o(LKMAX,i,j) = sh2o(LKMAX-1,i,j)
+          sh2o(LKMAX,i,j) = sh2o(LKMAX-1,i,j)
        enddo
        enddo
        do k = 1, LKMAX
@@ -3557,14 +3570,8 @@ contains
        enddo
     endif
     if( serial ) call COMM_bcast( org_3D(:,:,:), dims(2),dims(3),tcount )
-    n = 1
-    do j = 1, JA
-    do i = 1, IA
-       roff(i,j) =  org_3D(igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) &
-                  + org_3D(igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) &
-                  + org_3D(igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3)
-    enddo
-    enddo
+    call INTRPNEST_interp_2d( roff(:,:),   org_3D(:,:,1), hfact(:,:,:), &
+                              igrd(:,:,:), jgrd(:,:,:),   IA, JA )
 
     ! SEA SURFACE TEMPERATURE [K]
     if( do_read ) then
@@ -3575,14 +3582,9 @@ contains
     if( serial ) call COMM_bcast( org_3D(:,:,:), dims(2),dims(3),tcount )
     ! interpolate over the land
     call interp_OceanLand_data(org_3D(:,:,:),landmask,dims(2),dims(3),tcount,landdata=.false.)
-    n = 1
-    do j = 1, JA
-    do i = 1, IA
-       tw(i,j) =  org_3D(igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) &
-                + org_3D(igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) &
-                + org_3D(igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3)
-    enddo
-    enddo
+    call INTRPNEST_interp_2d( tw(:,:),     org_3D(:,:,1), hfact(:,:,:), &
+                              igrd(:,:,:), jgrd(:,:,:),   IA, JA )
+
     !sst(:,:) = lst(:,:)
     sst(:,:) = tw(:,:)
 
@@ -3595,14 +3597,9 @@ contains
     if( serial ) call COMM_bcast( org_3D(:,:,:), dims(2),dims(3),tcount )
     ! interpolate over the ocean
     call interp_OceanLand_data(org_3D(:,:,:),landmask,dims(2),dims(3),tcount,landdata=.true.,maskval=maskval)
-    n = 1
-    do j = 1, JA
-    do i = 1, IA
-       lst(i,j) =  org_3D(igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) &
-                 + org_3D(igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) &
-                 + org_3D(igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3)
-    enddo
-    enddo
+    call INTRPNEST_interp_2d( lst(:,:),    org_3D(:,:,1), hfact(:,:,:), &
+                              igrd(:,:,:), jgrd(:,:,:),   IA, JA )
+
     call replace_misval( lst(:,:), maskval, frac_land )
     ust(:,:) = lst(:,:)
     qvef(:,:) = 0.0_DP ! currently not used
@@ -3614,14 +3611,9 @@ contains
        org_3D(:,:,:) = dummy_3D(:,:,:)
     endif
     if( serial ) call COMM_bcast( org_3D(:,:,:), dims(2),dims(3),tcount )
-    n = 1
-    do j = 1, JA
-    do i = 1, IA
-       albw(i,j,I_SW) =  org_3D(igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) &
-                       + org_3D(igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) &
-                       + org_3D(igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3)
-    enddo
-    enddo
+    call INTRPNEST_interp_2d( albw(:,:,I_SW), org_3D(:,:,1), hfact(:,:,:), &
+                              igrd(:,:,:),    jgrd(:,:,:),   IA, JA )
+
     albg(:,:,I_SW) = albw(:,:,I_SW)
 
     ! SURFACE EMISSIVITY [-]
@@ -3637,14 +3629,9 @@ contains
        enddo
     endif
     if( serial ) call COMM_bcast( org_3D(:,:,:), dims(2),dims(3),tcount )
-    n = 1
-    do j = 1, JA
-    do i = 1, IA
-       albw(i,j,I_LW) =  org_3D(igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) &
-                       + org_3D(igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) &
-                       + org_3D(igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3)
-    enddo
-    enddo
+    call INTRPNEST_interp_2d( albw(:,:,I_LW), org_3D(:,:,1), hfact(:,:,:), &
+                              igrd(:,:,:),    jgrd(:,:,:),   IA, JA )
+
     albg(:,:,I_LW) = albw(:,:,I_LW)
 
     ! TIME-VARYING ROUGHNESS LENGTH [m] (no wrfout-default)
@@ -3656,14 +3643,8 @@ contains
           org_3D(:,:,:) = dummy_3D(:,:,:)
        endif
        if( serial ) call COMM_bcast( org_3D(:,:,:), dims(2),dims(3),tcount )
-       n = 1
-       do j = 1, JA
-       do i = 1, IA
-          z0w(i,j) =  org_3D(igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) &
-                    + org_3D(igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) &
-                    + org_3D(igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3)
-       enddo
-       enddo
+       call INTRPNEST_interp_2d( z0w(:,:),    org_3D(:,:,1), hfact(:,:,:), &
+                                 igrd(:,:,:), jgrd(:,:,:),   IA, JA )
     else
        z0w(:,:) = 0.1_DP
     endif
@@ -3681,14 +3662,8 @@ contains
           org_3D(:,:,:) = dummy_3D(:,:,:)
        endif
        if( serial ) call COMM_bcast( org_3D(:,:,:), dims(2),dims(3),tcount )
-       n = 1
-       do j = 1, JA
-       do i = 1, IA
-          snowq(i,j) =  org_3D(igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) &
-                      + org_3D(igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) &
-                      + org_3D(igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3)
-       enddo
-       enddo
+       call INTRPNEST_interp_2d( snowq(:,:),  org_3D(:,:,1), hfact(:,:,:), &
+                                 igrd(:,:,:), jgrd(:,:,:),   IA, JA )
     else
        snowq(:,:) = 0.0_DP
     endif
@@ -3708,14 +3683,8 @@ contains
           enddo
        endif
        if( serial ) call COMM_bcast( org_3D(:,:,:), dims(2),dims(3),tcount )
-       n = 1
-       do j = 1, JA
-       do i = 1, IA
-          snowt(i,j) =  org_3D(igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) &
-                      + org_3D(igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) &
-                      + org_3D(igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3)
-       enddo
-       enddo
+       call INTRPNEST_interp_2d( snowt(:,:),  org_3D(:,:,1), hfact(:,:,:), &
+                                 igrd(:,:,:), jgrd(:,:,:),   IA, JA )
     else
        snowt(:,:) = lst(:,:)
     endif
@@ -3843,8 +3812,8 @@ contains
     real(RP), parameter   :: sst_missval=273.1506_RP
     real(RP), allocatable :: work (:,:,:)
 
-    integer :: start_step
-    integer :: end_step
+    integer :: sstep
+    integer :: estep
     integer :: k, i, j, n, nt
 
     logical :: do_read
@@ -3853,9 +3822,9 @@ contains
     !---------------------------------------------------------------------------
 
     ! read data for initial condition
-    start_step = 1
-    end_step   = 1
-    nt = end_step - start_step + 1
+    sstep = 1
+    estep   = 1
+    nt = estep - sstep + 1
 
     if( myrank == PRC_master ) then
        do_read = .true.
@@ -3906,20 +3875,20 @@ contains
 
     if( do_read ) then
        basename = "la_tg"//trim(basename_num)
-       call FileRead( read1DX(:), trim(basename), "lon", start_step, 1, single=.true. )
+       call FileRead( read1DX(:), trim(basename), "lon", sstep, 1, single=.true. )
        do j = 1, dims(2)
-          lon_org (:,j,start_step)  = read1DX(:) * D2R
+          lon_org (:,j,sstep)  = read1DX(:) * D2R
        enddo
 
-       call FileRead( read1DY(:), trim(basename), "lat", start_step, 1, single=.true. )
+       call FileRead( read1DY(:), trim(basename), "lat", sstep, 1, single=.true. )
        do i = 1, dims(1)
-          lat_org (i,:,start_step)  = read1DY(:) * D2R
+          lat_org (i,:,sstep)  = read1DY(:) * D2R
        enddo
 
-       call FileRead( read1DZ(:), trim(basename), "lev", start_step, 1, single=.true. )
+       call FileRead( read1DZ(:), trim(basename), "lev", sstep, 1, single=.true. )
        do j = 1, dims(2)
        do i = 1, dims(1)
-          lz_org(:,i,j,start_step) = read1DZ(:)
+          lz_org(:,i,j,sstep) = read1DZ(:)
        enddo
        enddo
     endif
@@ -3933,20 +3902,20 @@ contains
     enddo
     enddo
 
-    call latlonz_interpolation_fact( hfact  (:,:,:),            & ! [OUT]
-                                     vfact  (:,:,:,:,:),        & ! [OUT]
-                                     kgrd   (:,:,:,:,:),        & ! [OUT]
-                                     igrd   (:,:,:),            & ! [OUT]
-                                     jgrd   (:,:,:),            & ! [OUT]
-                                     lcz_3D (:,:,:),            & ! [IN]
-                                     LAT    (:,:),              & ! [IN]
-                                     LON    (:,:),              & ! [IN]
-                                     lz_org (:,:,:,:),          & ! [IN]
-                                     lat_org(:,:,:),            & ! [IN]
-                                     lon_org(:,:,:),            & ! [IN]
-                                     dims(7), dims(1), dims(2), & ! [IN]
-                                     1,                         & ! [IN]
-                                     landgrid=.true.            ) ! [IN]
+    call INTRPNEST_interp_fact_llz( hfact  (:,:,:),          & ! [OUT]
+                                    vfact  (:,:,:,:,:),      & ! [OUT]
+                                    kgrd   (:,:,:,:,:),      & ! [OUT]
+                                    igrd   (:,:,:),          & ! [OUT]
+                                    jgrd   (:,:,:),          & ! [OUT]
+                                    lcz_3D (:,:,:),          & ! [IN]
+                                    LAT    (:,:),            & ! [IN]
+                                    LON    (:,:),            & ! [IN]
+                                    KS, KE, IA, JA,          & ! [IN]
+                                    lz_org (:,:,:,1),        & ! [IN]
+                                    lat_org(:,:,  1),        & ! [IN]
+                                    lon_org(:,:,  1),        & ! [IN]
+                                    dims(7),dims(1),dims(2), & ! [IN]
+                                    landgrid=.true.          ) ! [IN]
     deallocate( lon_org )
     deallocate( lat_org )
     deallocate( lz_org  )
@@ -3958,8 +3927,8 @@ contains
        call ExternalFileRead( read3DS(:,:,:,:), &
                               trim(basename),   &
                               "lsmask",         &
-                              start_step,       &
-                              end_step,         &
+                              sstep,       &
+                              estep,         &
                               myrank,           &
                               iNICAM,           &
                               single=.true.     )
@@ -3970,8 +3939,8 @@ contains
        call ExternalFileReadOffset( read4D(:,:,:,:),  &
                                     trim(basename),   &
                                     "la_tg",          &
-                                    start_step,       &
-                                    end_step,         &
+                                    sstep,       &
+                                    estep,         &
                                     myrank,           &
                                     iNICAM,           &
                                     single=.true.     )
@@ -3983,8 +3952,8 @@ contains
           call ExternalFileReadOffset( read4D(:,:,:,:),  &
                                        trim(basename),   &
                                        "la_wg",          &
-                                       start_step,       &
-                                       end_step,         &
+                                       sstep,       &
+                                       estep,         &
                                        myrank,           &
                                        iNICAM,           &
                                        single=.true.     )
@@ -3992,35 +3961,36 @@ contains
        endif
 
        ! 6hourly data, first "skiplen" steps are skipped
-       start_step = skiplen + 1
-       end_step   = skiplen + 1
+       sstep = skiplen + 1
+       estep   = skiplen + 1
        basename = "ss_tem_sfc"//trim(basename_num)
        call ExternalFileRead( read3DS(:,:,:,:), &
                               trim(basename),   &
                               "ss_tem_sfc",     &
-                              start_step,       &
-                              end_step,         &
+                              sstep,       &
+                              estep,         &
                               myrank,           &
                               iNICAM,           &
                               single=.true.     )
        lst_org(:,:) = real( read3DS(1,:,:,1), kind=RP )
 
        ! [scale-offset]
-       start_step = 1
-       end_step   = 1
+       sstep = 1
+       estep   = 1
        basename = "oa_sst"//trim(basename_num)
        call ExternalFileReadOffset( read3DT(:,:,:,:), &
                                     trim(basename),   &
                                     "oa_sst",         &
-                                    start_step,       &
-                                    end_step,         &
+                                    sstep,       &
+                                    estep,         &
                                     myrank,           &
                                     iNICAM,           &
                                     single=.true.     )
        sst_org(:,:) = real( read3DT(1,:,:,1), kind=RP )
 
        !basename = "oa_ice"//trim(basename_num)
-       !call ExternalFileRead( read3DS(:,:,:,:), trim(basename), "oa_ice", start_step, end_step, myrank, iNICAM, single=.true. )
+       !call ExternalFileRead( read3DS(:,:,:,:), trim(basename), &
+       !                       "oa_ice", sstep, estep, myrank, iNICAM, single=.true. )
        !ice_org(:,:) = real( read3DS(1,:,:,1), kind=RP )
 
        deallocate( read1DX )
@@ -4063,16 +4033,16 @@ contains
         tg_org(k,:,:) = work(:,:,1)
      enddo
      ! interpolation
+     call INTRPNEST_interp_3d( tg    (:,:,:),     &
+                               tg_org(:,:,:),     &
+                               hfact (:,:,:),     &
+                               vfact (:,:,:,:,:), &
+                               kgrd  (:,:,:,:,:), &
+                               igrd  (:,:,:),     &
+                               jgrd  (:,:,:),     &
+                               IA, JA, 1, LKMAX-1 )
      do j = 1, JA
      do i = 1, IA
-     do k = 1, LKMAX-1
-        tg  (k,i,j) = tg_org  (kgrd(k,i,j,1,1),igrd(i,j,1),jgrd(i,j,1)) * hfact(i,j,1) * vfact(k,i,j,1,1) &
-                    + tg_org  (kgrd(k,i,j,2,1),igrd(i,j,2),jgrd(i,j,2)) * hfact(i,j,2) * vfact(k,i,j,2,1) &
-                    + tg_org  (kgrd(k,i,j,3,1),igrd(i,j,3),jgrd(i,j,3)) * hfact(i,j,3) * vfact(k,i,j,3,1) &
-                    + tg_org  (kgrd(k,i,j,1,2),igrd(i,j,1),jgrd(i,j,1)) * hfact(i,j,1) * vfact(k,i,j,1,2) &
-                    + tg_org  (kgrd(k,i,j,2,2),igrd(i,j,2),jgrd(i,j,2)) * hfact(i,j,2) * vfact(k,i,j,2,2) &
-                    + tg_org  (kgrd(k,i,j,3,2),igrd(i,j,3),jgrd(i,j,3)) * hfact(i,j,3) * vfact(k,i,j,3,2)
-     enddo
         tg  (LKMAX,i,j) = tg  (LKMAX-1,i,j)
      enddo
      enddo
@@ -4099,16 +4069,16 @@ contains
          strg_org(k,:,:) = work(:,:,1)
       enddo
       ! interpolation
+      call INTRPNEST_interp_3d( strg    (:,:,:),     &
+                                strg_org(:,:,:),     &
+                                hfact   (:,:,:),     &
+                                vfact   (:,:,:,:,:), &
+                                kgrd    (:,:,:,:,:), &
+                                igrd    (:,:,:),     &
+                                jgrd    (:,:,:),     &
+                                IA, JA, 1, LKMAX-1   )
       do j = 1, JA
       do i = 1, IA
-      do k = 1, LKMAX-1
-         strg(k,i,j) = strg_org(kgrd(k,i,j,1,1),igrd(i,j,1),jgrd(i,j,1)) * hfact(i,j,1) * vfact(k,i,j,1,1) &
-                     + strg_org(kgrd(k,i,j,2,1),igrd(i,j,2),jgrd(i,j,2)) * hfact(i,j,2) * vfact(k,i,j,2,1) &
-                     + strg_org(kgrd(k,i,j,3,1),igrd(i,j,3),jgrd(i,j,3)) * hfact(i,j,3) * vfact(k,i,j,3,1) &
-                     + strg_org(kgrd(k,i,j,1,2),igrd(i,j,1),jgrd(i,j,1)) * hfact(i,j,1) * vfact(k,i,j,1,2) &
-                     + strg_org(kgrd(k,i,j,2,2),igrd(i,j,2),jgrd(i,j,2)) * hfact(i,j,2) * vfact(k,i,j,2,2) &
-                     + strg_org(kgrd(k,i,j,3,2),igrd(i,j,3),jgrd(i,j,3)) * hfact(i,j,3) * vfact(k,i,j,3,2)
-      enddo
          strg(LKMAX,i,j) = strg(LKMAX-1,i,j)
       enddo
       enddo
@@ -4161,37 +4131,24 @@ contains
     roff(:,:) = 0.0_RP ! not necessary
     qvef(:,:) = 0.0_RP ! not necessary
 
-    do j = 1, JA
-    do i = 1, IA
-       tw   (i,j) = tw_org   (igrd(i,j,1),jgrd(i,j,1)) * hfact(i,j,1) &
-                  + tw_org   (igrd(i,j,2),jgrd(i,j,2)) * hfact(i,j,2) &
-                  + tw_org   (igrd(i,j,3),jgrd(i,j,3)) * hfact(i,j,3)
-       sst  (i,j) = sst_org  (igrd(i,j,1),jgrd(i,j,1)) * hfact(i,j,1) &
-                  + sst_org  (igrd(i,j,2),jgrd(i,j,2)) * hfact(i,j,2) &
-                  + sst_org  (igrd(i,j,3),jgrd(i,j,3)) * hfact(i,j,3)
-       z0w  (i,j) = z0w_org  (igrd(i,j,1),jgrd(i,j,1)) * hfact(i,j,1) &
-                  + z0w_org  (igrd(i,j,2),jgrd(i,j,2)) * hfact(i,j,2) &
-                  + z0w_org  (igrd(i,j,3),jgrd(i,j,3)) * hfact(i,j,3)
-       lst  (i,j) = lst_org  (igrd(i,j,1),jgrd(i,j,1)) * hfact(i,j,1) &
-                  + lst_org  (igrd(i,j,2),jgrd(i,j,2)) * hfact(i,j,2) &
-                  + lst_org  (igrd(i,j,3),jgrd(i,j,3)) * hfact(i,j,3)
-       ust  (i,j) = ust_org  (igrd(i,j,1),jgrd(i,j,1)) * hfact(i,j,1) &
-                  + ust_org  (igrd(i,j,2),jgrd(i,j,2)) * hfact(i,j,2) &
-                  + ust_org  (igrd(i,j,3),jgrd(i,j,3)) * hfact(i,j,3)
-       skint(i,j) = skint_org(igrd(i,j,1),jgrd(i,j,1)) * hfact(i,j,1) &
-                  + skint_org(igrd(i,j,2),jgrd(i,j,2)) * hfact(i,j,2) &
-                  + skint_org(igrd(i,j,3),jgrd(i,j,3)) * hfact(i,j,3)
-       skinw(i,j) = skinw_org(igrd(i,j,1),jgrd(i,j,1)) * hfact(i,j,1) &
-                  + skinw_org(igrd(i,j,2),jgrd(i,j,2)) * hfact(i,j,2) &
-                  + skinw_org(igrd(i,j,3),jgrd(i,j,3)) * hfact(i,j,3)
-       snowq(i,j) = snowq_org(igrd(i,j,1),jgrd(i,j,1)) * hfact(i,j,1) &
-                  + snowq_org(igrd(i,j,2),jgrd(i,j,2)) * hfact(i,j,2) &
-                  + snowq_org(igrd(i,j,3),jgrd(i,j,3)) * hfact(i,j,3)
-       snowt(i,j) = snowt_org(igrd(i,j,1),jgrd(i,j,1)) * hfact(i,j,1) &
-                  + snowt_org(igrd(i,j,2),jgrd(i,j,2)) * hfact(i,j,2) &
-                  + snowt_org(igrd(i,j,3),jgrd(i,j,3)) * hfact(i,j,3)
-    enddo
-    enddo
+    call INTRPNEST_interp_2d( tw(:,:),     tw_org(:,:), hfact(:,:,:),    &
+                              igrd(:,:,:), jgrd(:,:,:), IA, JA )
+    call INTRPNEST_interp_2d( sst(:,:),    sst_org(:,:), hfact(:,:,:),   &
+                              igrd(:,:,:), jgrd(:,:,:), IA, JA )
+    call INTRPNEST_interp_2d( z0w(:,:),    z0w_org(:,:), hfact(:,:,:),   &
+                              igrd(:,:,:), jgrd(:,:,:), IA, JA )
+    call INTRPNEST_interp_2d( lst(:,:),    lst_org(:,:), hfact(:,:,:),   &
+                              igrd(:,:,:), jgrd(:,:,:), IA, JA )
+    call INTRPNEST_interp_2d( ust(:,:),    ust_org(:,:), hfact(:,:,:),   &
+                              igrd(:,:,:), jgrd(:,:,:), IA, JA )
+    call INTRPNEST_interp_2d( skint(:,:),  skint_org(:,:), hfact(:,:,:), &
+                              igrd(:,:,:), jgrd(:,:,:), IA, JA )
+    call INTRPNEST_interp_2d( skinw(:,:),  skinw_org(:,:), hfact(:,:,:), &
+                              igrd(:,:,:), jgrd(:,:,:), IA, JA )
+    call INTRPNEST_interp_2d( snowq(:,:),  snowq_org(:,:), hfact(:,:,:), &
+                              igrd(:,:,:), jgrd(:,:,:), IA, JA )
+    call INTRPNEST_interp_2d( snowt(:,:),  snowt_org(:,:), hfact(:,:,:), &
+                              igrd(:,:,:), jgrd(:,:,:), IA, JA )
 
     ! replace values over the ocean
      do j = 1, JA
@@ -4206,16 +4163,10 @@ contains
 
 
     do n = 1, 2 ! 1:LW, 2:SW
-    do j = 1, JA
-    do i = 1, IA
-       albw(i,j,n) = albw_org(igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) &
-                   + albw_org(igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) &
-                   + albw_org(igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3)
-       albg(i,j,n) = albg_org(igrd(i,j,1),jgrd(i,j,1),n) * hfact(i,j,1) &
-                   + albg_org(igrd(i,j,2),jgrd(i,j,2),n) * hfact(i,j,2) &
-                   + albg_org(igrd(i,j,3),jgrd(i,j,3),n) * hfact(i,j,3)
-    enddo
-    enddo
+       call INTRPNEST_interp_2d( albw(:,:,n), albw_org(:,:,n), hfact(:,:,:), &
+                                 igrd(:,:,:), jgrd(:,:,:), IA, JA )
+       call INTRPNEST_interp_2d( albg(:,:,n), albg_org(:,:,n), hfact(:,:,:), &
+                                 igrd(:,:,:), jgrd(:,:,:), IA, JA )
     enddo
 
     deallocate( tw_org    )
@@ -4240,160 +4191,6 @@ contains
 
     return
   end subroutine InputSurfaceNICAM
-
-  !-----------------------------------------------------------------------------
-  subroutine latlonz_interpolation_fact( &
-      hfact,      & ! (out)
-      vfact,      & ! (out)
-      kgrd,       & ! (out)
-      igrd,       & ! (out)
-      jgrd,       & ! (out)
-      myhgt,      & ! (in)
-      mylat,      & ! (in)
-      mylon,      & ! (in)
-      inhgt,      & ! (in)
-      inlat,      & ! (in)
-      inlon,      & ! (in)
-      nz,         & ! (in)
-      nx,         & ! (in)
-      ny,         & ! (in)
-      step,       & ! (in)
-      landgrid    ) ! (in)
-    implicit none
-
-    real(RP), intent(out) :: hfact(:,:,:)
-    real(RP), intent(out) :: vfact(:,:,:,:,:)
-    integer,  intent(out) :: kgrd (:,:,:,:,:)
-    integer,  intent(out) :: igrd (:,:,:)
-    integer,  intent(out) :: jgrd (:,:,:)
-
-    real(RP), intent(in)  :: myhgt(:,:,:)
-    real(RP), intent(in)  :: mylat(:,:)
-    real(RP), intent(in)  :: mylon(:,:)
-    real(RP), intent(in)  :: inhgt(:,:,:,:)
-    real(RP), intent(in)  :: inlat(:,:,:)
-    real(RP), intent(in)  :: inlon(:,:,:)
-    integer,  intent(in)  :: nz
-    integer,  intent(in)  :: nx
-    integer,  intent(in)  :: ny
-    integer,  intent(in)  :: step
-
-    logical,  intent(in), optional :: landgrid
-
-    real(RP) :: distance
-    real(RP) :: denom
-    real(RP) :: dist(itp_nh)
-    integer :: i, j, k, ii, jj, kk
-    integer :: idx
-    integer :: istart, iend, iinc, blk_i
-    integer :: jstart, jend, jinc, blk_j
-    integer :: kstart, kend
-    logical :: lndgrd
-    !---------------------------------------------------------------------------
-
-    lndgrd = .false.
-    if ( present(landgrid) .and. landgrid ) then
-       lndgrd = .true.
-    endif
-
-    hfact(:,:,:) = 0.0_RP
-    vfact(:,:,:,:,:) = 0.0_RP
-
-    do j = 1, JA
-    do i = 1, IA
-       ! nearest block search
-       iinc = (nx + 1) / interp_search_divnum
-       jinc = (ny + 1) / interp_search_divnum
-       dist(1) = large_number_one
-       jj = 1 + (jinc/2)
-       do while (jj <= ny)
-          ii = 1 + (iinc/2)
-          do while (ii <= nx)
-             distance = haversine( mylat(i,j),mylon(i,j),inlat(ii,jj,step),inlon(ii,jj,step) )
-
-             if( distance < dist(1) )then
-                dist(1) = distance
-                blk_i = ii
-                blk_j = jj
-             endif
-             ii = ii + iinc
-          enddo
-          jj = jj + jinc
-       enddo
-       istart = blk_i - (iinc/2) - 1
-       if( istart < 1 ) istart = 1
-       iend   = blk_i + (iinc/2) + 1
-       if( iend  > nx ) iend   = nx
-       jstart = blk_j - (jinc/2) - 1
-       if( jstart < 1 ) jstart = 1
-       jend   = blk_j + (jinc/2) + 1
-       if( jend  > ny ) jend   = ny
-
-       ! main search
-       dist(1) = large_number_three
-       dist(2) = large_number_two
-       dist(3) = large_number_one
-       do jj = jstart, jend
-       do ii = istart, iend
-          distance = haversine( mylat(i,j),mylon(i,j),inlat(ii,jj,step),inlon(ii,jj,step) )
-          if ( distance <= dist(1) ) then
-             dist(3) = dist(2);     igrd(i,j,3) = igrd(i,j,2);  jgrd(i,j,3) = jgrd(i,j,2)
-             dist(2) = dist(1);     igrd(i,j,2) = igrd(i,j,1);  jgrd(i,j,2) = jgrd(i,j,1)
-             dist(1) = distance;    igrd(i,j,1) = ii;           jgrd(i,j,1) = jj
-          elseif ( dist(1) < distance .and. distance <= dist(2) ) then
-             dist(3) = dist(2);     igrd(i,j,3) = igrd(i,j,2);  jgrd(i,j,3) = jgrd(i,j,2)
-             dist(2) = distance;    igrd(i,j,2) = ii;           jgrd(i,j,2) = jj
-          elseif ( dist(2) < distance .and. distance <= dist(3) ) then
-             dist(3) = distance;    igrd(i,j,3) = ii;           jgrd(i,j,3) = jj
-          endif
-       enddo
-       enddo
-       if( dist(1)==0.0_RP )then
-          hfact(i,j,1) = 1.0_RP
-          hfact(i,j,2) = 0.0_RP
-          hfact(i,j,3) = 0.0_RP
-       else
-          denom = 1.0_RP / ( (1.0_RP/dist(1)) + (1.0_RP/dist(2)) + (1.0_RP/dist(3)) )
-          hfact(i,j,1) = ( 1.0_RP/dist(1) ) * denom
-          hfact(i,j,2) = ( 1.0_RP/dist(2) ) * denom
-          hfact(i,j,3) = ( 1.0_RP/dist(3) ) * denom
-       endif
-
-       if ( lndgrd ) then
-          kstart = 1;     kend = LKMAX
-       else
-          kstart = KS-1;  kend = KE+1
-       endif
-       do idx = 1, itp_nh
-          ii = igrd(i,j,idx)
-          jj = jgrd(i,j,idx)
-          do k = kstart, kend
-             dist(1) = large_number_two
-             dist(2) = large_number_one
-             do kk = 1, nz
-                distance = abs( myhgt(k,i,j) - inhgt(kk,ii,jj,step) )
-                if ( distance <= dist(1) ) then
-                   dist(2) = dist(1);     kgrd(k,i,j,idx,2) = kgrd(k,i,j,idx,1)
-                   dist(1) = distance;    kgrd(k,i,j,idx,1) = kk
-                elseif ( dist(1) < distance .and. distance <= dist(2) ) then
-                   dist(2) = distance;    kgrd(k,i,j,idx,2) = kk
-                endif
-             enddo
-             if( dist(1)==0.0_RP )then
-                vfact(k,i,j,idx,1) = 1.0_RP
-                vfact(k,i,j,idx,2) = 0.0_RP
-             else
-                denom = 1.0_RP / ( (1.0_RP/dist(1)) + (1.0_RP/dist(2)) )
-                vfact(k,i,j,idx,1) = ( 1.0_RP/dist(1) ) * denom
-                vfact(k,i,j,idx,2) = ( 1.0_RP/dist(2) ) * denom
-             endif
-          enddo
-       enddo
-    enddo
-    enddo
-
-    return
-  end subroutine latlonz_interpolation_fact
 
   !-----------------------------------------------------------------------------
   subroutine interp_OceanLand_data( &
@@ -4825,30 +4622,6 @@ contains
 
     return
   end subroutine wrf_arwpost_calc_uvmet
-
-  !-----------------------------------------------------------------------------
-  ! Haversine Formula (from R.W. Sinnott, "Virtues of the Haversine",
-  ! Sky and Telescope, vol. 68, no. 2, 1984, p. 159):
-  function haversine( &
-      la0,       &
-      lo0,       &
-      la,        &
-      lo )       &
-      result( d )
-    implicit none
-    real(RP), intent(in) :: la0, lo0, la, lo   ! la,la0: Lat, lo,lo0: Lon; [rad]
-    real(RP) :: d, dlon, dlat, work1, work2
-    !---------------------------------------------------------------------------
-
-    ! output unit : [m]
-    dlon = lo0 - lo
-    dlat = la0 - la
-    work1 = (sin(dlat/2.0_RP))**2.0_RP + &
-            cos(la0) * cos(la) * (sin(dlon/2.0_RP))**2.0_RP
-    work2 = 2.0_RP * asin(min( 1.0_RP, sqrt(work1) ))
-    d = r_in_m * work2
-
-  end function haversine
 
 end module mod_realinput
 !-------------------------------------------------------------------------------

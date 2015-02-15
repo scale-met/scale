@@ -132,6 +132,7 @@ OBJS = $(scale_rdma)	\
 	scale_gridtrans.o	\
 	scale_history.o	\
 	scale_intepolation.o	\
+	scale_interpolation_nest.o	\
 	scale_land_grid.o	\
 	scale_land_grid_index.o	\
 	scale_land_phy.o	\
