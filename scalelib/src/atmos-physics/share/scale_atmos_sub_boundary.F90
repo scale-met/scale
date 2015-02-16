@@ -136,7 +136,8 @@ module scale_atmos_boundary
   logical,               private :: do_parent_process       = .false.
   logical,               private :: do_daughter_process     = .false.
   logical,               private :: l_bnd = .false.
-  logical,               private :: firsttime = .false.
+  logical,               private :: firsttime = .false.                ! firsttime switch for online-nesting
+  logical,               private :: inc_skip_at_1st = .false.          ! firsttime switch for boundary increment
 
   !-----------------------------------------------------------------------------
 contains
@@ -1265,6 +1266,7 @@ contains
     end if
 
     now_step = fillgaps_steps
+    inc_skip_at_1st = .true.
 
     return
   end subroutine ATMOS_BOUNDARY_initialize_file
@@ -1513,6 +1515,7 @@ contains
     end if
 
     now_step = 0  ! should be set as zero in initialize process
+    inc_skip_at_1st = .true.
 
     return
   end subroutine ATMOS_BOUNDARY_initialize_online
@@ -1664,28 +1667,32 @@ contains
           end if
 
        else ! update boundary using increment
-          do j  = 1, JA
-          do i  = 1, IA
-          do k  = 1, KA
-             ATMOS_BOUNDARY_DENS(k,i,j) = ATMOS_BOUNDARY_DENS(k,i,j) + ATMOS_BOUNDARY_increment_DENS(k,i,j)
-             ATMOS_BOUNDARY_VELX(k,i,j) = ATMOS_BOUNDARY_VELX(k,i,j) + ATMOS_BOUNDARY_increment_VELX(k,i,j)
-             ATMOS_BOUNDARY_VELY(k,i,j) = ATMOS_BOUNDARY_VELY(k,i,j) + ATMOS_BOUNDARY_increment_VELY(k,i,j)
-             ATMOS_BOUNDARY_POTT(k,i,j) = ATMOS_BOUNDARY_POTT(k,i,j) + ATMOS_BOUNDARY_increment_POTT(k,i,j)
-             do iq = 1, BND_QA
-                ATMOS_BOUNDARY_QTRC(k,i,j,iq) = ATMOS_BOUNDARY_QTRC(k,i,j,iq) + ATMOS_BOUNDARY_increment_QTRC(k,i,j,iq)
-             end do
-          end do
-          end do
-          end do
-          if ( ONLINE_USE_VELZ ) then
+          if ( .NOT. inc_skip_at_1st ) then ! to avoid increment at the 1st step
              do j  = 1, JA
              do i  = 1, IA
              do k  = 1, KA
-                ATMOS_BOUNDARY_VELZ(k,i,j) = ATMOS_BOUNDARY_VELZ(k,i,j) + ATMOS_BOUNDARY_increment_VELZ(k,i,j)
+                ATMOS_BOUNDARY_DENS(k,i,j) = ATMOS_BOUNDARY_DENS(k,i,j) + ATMOS_BOUNDARY_increment_DENS(k,i,j)
+                ATMOS_BOUNDARY_VELX(k,i,j) = ATMOS_BOUNDARY_VELX(k,i,j) + ATMOS_BOUNDARY_increment_VELX(k,i,j)
+                ATMOS_BOUNDARY_VELY(k,i,j) = ATMOS_BOUNDARY_VELY(k,i,j) + ATMOS_BOUNDARY_increment_VELY(k,i,j)
+                ATMOS_BOUNDARY_POTT(k,i,j) = ATMOS_BOUNDARY_POTT(k,i,j) + ATMOS_BOUNDARY_increment_POTT(k,i,j)
+                do iq = 1, BND_QA
+                   ATMOS_BOUNDARY_QTRC(k,i,j,iq) = ATMOS_BOUNDARY_QTRC(k,i,j,iq) + ATMOS_BOUNDARY_increment_QTRC(k,i,j,iq)
+                end do
              end do
              end do
              end do
-          end if
+             if ( ONLINE_USE_VELZ ) then
+                do j  = 1, JA
+                do i  = 1, IA
+                do k  = 1, KA
+                   ATMOS_BOUNDARY_VELZ(k,i,j) = ATMOS_BOUNDARY_VELZ(k,i,j) + ATMOS_BOUNDARY_increment_VELZ(k,i,j)
+                end do
+                end do
+                end do
+             end if
+          else
+             inc_skip_at_1st = .false.
+          endif
 
        end if ! ref_updated
 
