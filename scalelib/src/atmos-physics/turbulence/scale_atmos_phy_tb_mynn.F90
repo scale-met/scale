@@ -936,8 +936,10 @@ contains
 
        us = ( (SFLX_MU(i,j)**2 + SFLX_MV(i,j)**2)*0.5_RP )**0.25_RP / DENS(KS,i,j) ! friction velocity
        us = max(us, Us_min)
-       wtg = max(SFLX_SH(i,j) / (CP * DENS(KS,i,j)), 0.0_RP) ! surface heat flux
+       wtg = SFLX_SH(i,j) / (CP * DENS(KS,i,j)) ! surface heat flux
        rlm = - KARMAN * GRAV * wtg / (PT0(KS,i,j) * us**3 )
+
+       qc = (GRAV/PT0(KS,i,j)*max(wtg,0.0_RP)*lt)**OneOverThree
 
        do k = KS, KE_PBL
           z = ( FZ(k,i,j)+FZ(k-1,i,j) )*0.5_RP - FZ(KS-1,i,j)
@@ -952,7 +954,6 @@ contains
           ! LB
           sw = sign(0.5_RP, tke(k,i,j)-EPS) + 0.5_RP
           q = sqrt(tke(k,i,j) * 2.0_RP)*sw + 1.E-10_RP*(1.0_RP-sw)
-          qc = (GRAV/PT0(k,i,j)*wtg*lt)**OneOverThree
           sw  = sign(0.5_RP, n2(k,i,j)-EPS) + 0.5_RP ! 1 for dptdz >0, 0 for dptdz < 0
           rn2sr = 1.0_RP / ( sqrt(n2(k,i,j)*sw) + 1.0_RP-sw)
           lb = (1.0_RP + 5.0_RP * sqrt(qc*rn2sr/lt)) * q * rn2sr * sw & ! qc=0 when wtg < 0
