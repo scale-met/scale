@@ -27,7 +27,8 @@ module scale_atmos_hydrostatic
      CL      => CONST_CL,      &
      LAPS    => CONST_LAPS,    &
      LAPSdry => CONST_LAPSdry, &
-     P00     => CONST_PRE00
+     P00     => CONST_PRE00,   &
+     THERMODYN_TYPE => CONST_THERMODYN_TYPE
   use scale_grid, only: &
      GRID_CZ, &
      GRID_FDZ
@@ -105,9 +106,12 @@ module scale_atmos_hydrostatic
   !++ Private parameters & variables
   !
   integer,  private, parameter :: itelim = 100 !< itelation number limit
-  real(RP), private,      save :: criteria     !< convergence judgement criteria
+  real(RP), private              :: criteria                            !< convergence judgement criteria
+  logical,  private              :: HYDROSTATIC_uselapserate  = .false. !< use lapse rate?
 
-  logical,  private,      save :: HYDROSTATIC_uselapserate = .false. !< use lapse rate?
+
+  real(RP), private :: CV_qv
+  real(RP), private :: CV_qc
 
   !-----------------------------------------------------------------------------
 contains
@@ -145,6 +149,14 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** use lapse rate for estimation of surface temperature? : ', HYDROSTATIC_uselapserate
     if( IO_L ) write(IO_FID_LOG,*) '*** buildrho conversion criteria : ', criteria
+
+    if ( THERMODYN_TYPE == 'EXACT' ) then
+       CV_qv = CVvap
+       CV_qc = CL
+    elseif( THERMODYN_TYPE == 'SIMPLE' ) then
+       CV_qv = CVdry
+       CV_qc = CVdry
+    endif
 
     return
   end subroutine ATMOS_HYDROSTATIC_setup
@@ -200,15 +212,15 @@ contains
     Rtot_sfc   = Rdry  * ( 1.0_RP - qv_sfc - qc_sfc ) &
                + Rvap  * qv_sfc
     CVtot_sfc  = CVdry * ( 1.0_RP - qv_sfc - qc_sfc ) &
-               + CVvap * qv_sfc                       &
-               + CL    * qc_sfc
+               + CV_qv * qv_sfc                       &
+               + CV_qc * qc_sfc
     CPovCV_sfc = ( CVtot_sfc + Rtot_sfc ) / CVtot_sfc
 
     Rtot   = Rdry  * ( 1.0_RP - qv(KS) - qc(KS) ) &
            + Rvap  * qv(KS)
     CVtot  = CVdry * ( 1.0_RP - qv(KS) - qc(KS) ) &
-           + CVvap * qv(KS)                       &
-           + CL    * qc(KS)
+           + CV_qv * qv(KS)                       &
+           + CV_qc * qc(KS)
     CPovCV = ( CVtot + Rtot ) / CVtot
 
     ! density at surface
@@ -353,8 +365,8 @@ contains
        Rtot_sfc  (i,j) = Rdry  * ( 1.0_RP - qv_sfc(1,i,j) - qc_sfc(1,i,j) ) &
                        + Rvap  * qv_sfc(1,i,j)
        CVtot_sfc (i,j) = CVdry * ( 1.0_RP - qv_sfc(1,i,j) - qc_sfc(1,i,j) ) &
-                       + CVvap * qv_sfc(1,i,j)                              &
-                       + CL    * qc_sfc(1,i,j)
+                       + CV_qv * qv_sfc(1,i,j)                              &
+                       + CV_qc * qc_sfc(1,i,j)
        CPovCV_sfc(i,j) = ( CVtot_sfc(i,j) + Rtot_sfc(i,j) ) / CVtot_sfc(i,j)
     enddo
     enddo
@@ -364,8 +376,8 @@ contains
        Rtot  (i,j) = Rdry  * ( 1.0_RP - qv(KS,i,j) - qc(KS,i,j) ) &
                    + Rvap  * qv(KS,i,j)
        CVtot (i,j) = CVdry * ( 1.0_RP - qv(KS,i,j) - qc(KS,i,j) ) &
-                   + CVvap * qv(KS,i,j)                           &
-                   + CL    * qc(KS,i,j)
+                   + CV_qv * qv(KS,i,j)                           &
+                   + CV_qc * qc(KS,i,j)
        CPovCV(i,j) = ( CVtot(i,j) + Rtot(i,j) ) / CVtot(i,j)
     enddo
     enddo
@@ -544,8 +556,8 @@ contains
        Rtot_sfc  (i,j) = Rdry  * ( 1.0_RP - qv_sfc(1,i,j) - qc_sfc(1,i,j) ) &
                        + Rvap  * qv_sfc(1,i,j)
        CVtot_sfc (i,j) = CVdry * ( 1.0_RP - qv_sfc(1,i,j) - qc_sfc(1,i,j) ) &
-                       + CVvap * qv_sfc(1,i,j)                              &
-                       + CL    * qc_sfc(1,i,j)
+                       + CV_qv * qv_sfc(1,i,j)                              &
+                       + CV_qc * qc_sfc(1,i,j)
        CPovCV_sfc(i,j) = ( CVtot_sfc(i,j) + Rtot_sfc(i,j) ) / CVtot_sfc(i,j)
     enddo
     enddo
@@ -555,8 +567,8 @@ contains
        Rtot  (i,j) = Rdry  * ( 1.0_RP - qv(KS,i,j) - qc(KS,i,j) ) &
                    + Rvap  * qv(KS,i,j)
        CVtot (i,j) = CVdry * ( 1.0_RP - qv(KS,i,j) - qc(KS,i,j) ) &
-                   + CVvap * qv(KS,i,j)                           &
-                   + CL    * qc(KS,i,j)
+                   + CV_qv * qv(KS,i,j)                           &
+                   + CV_qc * qc(KS,i,j)
        CPovCV(i,j) = ( CVtot(i,j) + Rtot(i,j) ) / CVtot(i,j)
     enddo
     enddo
@@ -671,15 +683,15 @@ contains
     Rtot_L1   = Rdry  * ( 1.0_RP - qv_L1 - qc_L1 ) &
               + Rvap  * qv_L1
     CVtot_L1  = CVdry * ( 1.0_RP - qv_L1 - qc_L1 ) &
-              + CVvap * qv_L1                      &
-              + CL    * qc_L1
+              + CV_qv * qv_L1                      &
+              + CV_qc * qc_L1
     CPovCV_L1 = ( CVtot_L1 + Rtot_L1 ) / CVtot_L1
 
     Rtot_L2   = Rdry  * ( 1.0_RP - qv_L2 - qc_L2 ) &
               + Rvap  * qv_L2
     CVtot_L2  = CVdry * ( 1.0_RP - qv_L2 - qc_L2 ) &
-              + CVvap * qv_L2                      &
-              + CL    * qc_L2
+              + CV_qv * qv_L2                      &
+              + CV_qc * qc_L2
     CPovCV_L2 = ( CVtot_L2 + Rtot_L2 ) / CVtot_L2
 
     RovCV = Rtot_L2 / CVtot_L2
@@ -757,8 +769,8 @@ contains
        Rtot  (k) = Rdry  * ( 1.0_RP - qv(k) - qc(k) ) &
                  + Rvap  * qv(k)
        CVtot (k) = CVdry * ( 1.0_RP - qv(k) - qc(k) ) &
-                 + CVvap * qv(k)                      &
-                 + CL    * qc(k)
+                 + CV_qv * qv(k)                      &
+                 + CV_qc * qc(k)
        CPovCV(k) = ( CVtot(k) + Rtot(k) ) / CVtot(k)
     enddo
 
@@ -854,15 +866,15 @@ contains
        Rtot_L1  (i,j) = Rdry  * ( 1.0_RP - qv_L1(i,j) - qc_L1(i,j) ) &
                       + Rvap  * qv_L1(i,j)
        CVtot_L1 (i,j) = CVdry * ( 1.0_RP - qv_L1(i,j) - qc_L1(i,j) ) &
-                      + CVvap * qv_L1(i,j)                           &
-                      + CL    * qc_L1(i,j)
+                      + CV_qv * qv_L1(i,j)                           &
+                      + CV_qc * qc_L1(i,j)
        CPovCV_L1(i,j) = ( CVtot_L1(i,j) + Rtot_L1(i,j) ) / CVtot_L1(i,j)
 
        Rtot_L2  (i,j) = Rdry  * ( 1.0_RP - qv_L2(i,j) - qc_L2(i,j) ) &
                       + Rvap  * qv_L2(i,j)
        CVtot_L2 (i,j) = CVdry * ( 1.0_RP - qv_L2(i,j) - qc_L2(i,j) ) &
-                      + CVvap * qv_L2(i,j)                           &
-                      + CL    * qc_L2(i,j)
+                      + CV_qv * qv_L2(i,j)                           &
+                      + CV_qc * qc_L2(i,j)
        CPovCV_L2(i,j) = ( CVtot_L2(i,j) + Rtot_L2(i,j) ) / CVtot_L2(i,j)
     enddo
     enddo
@@ -954,8 +966,8 @@ contains
        Rtot  (k,i,j) = Rdry  * ( 1.0_RP - qv(k,i,j) - qc(k,i,j) ) &
                      + Rvap  * qv(k,i,j)
        CVtot (k,i,j) = CVdry * ( 1.0_RP - qv(k,i,j) - qc(k,i,j) ) &
-                     + CVvap * qv(k,i,j)                          &
-                     + CL    * qc(k,i,j)
+                     + CV_qv * qv(k,i,j)                          &
+                     + CV_qc * qc(k,i,j)
        CPovCV(k,i,j) = ( CVtot(k,i,j) + Rtot(k,i,j) ) / CVtot(k,i,j)
     enddo
     enddo
@@ -1061,15 +1073,15 @@ contains
        Rtot_L1  (i,j) = Rdry  * ( 1.0_RP - qv_L1(i,j) - qc_L1(i,j) ) &
                       + Rvap  * qv_L1(i,j)
        CVtot_L1 (i,j) = CVdry * ( 1.0_RP - qv_L1(i,j) - qc_L1(i,j) ) &
-                      + CVvap * qv_L1(i,j)                           &
-                      + CL    * qc_L1(i,j)
+                      + CV_qv * qv_L1(i,j)                           &
+                      + CV_qc * qc_L1(i,j)
        CPovCV_L1(i,j) = ( CVtot_L1(i,j) + Rtot_L1(i,j) ) / CVtot_L1(i,j)
 
        Rtot_L2  (i,j) = Rdry  * ( 1.0_RP - qv_L2(i,j) - qc_L2(i,j) ) &
                       + Rvap  * qv_L2(i,j)
        CVtot_L2 (i,j) = CVdry * ( 1.0_RP - qv_L2(i,j) - qc_L2(i,j) ) &
-                      + CVvap * qv_L2(i,j)                           &
-                      + CL    * qc_L2(i,j)
+                      + CV_qv * qv_L2(i,j)                           &
+                      + CV_qc * qc_L2(i,j)
        CPovCV_L2(i,j) = ( CVtot_L2(i,j) + Rtot_L2(i,j) ) / CVtot_L2(i,j)
     enddo
     enddo
@@ -1161,8 +1173,8 @@ contains
        Rtot  (k,i,j) = Rdry  * ( 1.0_RP - qv(k,i,j) - qc(k,i,j) ) &
                      + Rvap  * qv(k,i,j)
        CVtot (k,i,j) = CVdry * ( 1.0_RP - qv(k,i,j) - qc(k,i,j) ) &
-                     + CVvap * qv(k,i,j)                          &
-                     + CL    * qc(k,i,j)
+                     + CV_qv * qv(k,i,j)                          &
+                     + CV_qc * qc(k,i,j)
        CPovCV(k,i,j) = ( CVtot(k,i,j) + Rtot(k,i,j) ) / CVtot(k,i,j)
     enddo
     enddo
@@ -1268,14 +1280,14 @@ contains
     Rtot_sfc   = Rdry  * ( 1.0_RP - qv_sfc - qc_sfc ) &
                + Rvap  * qv_sfc
     CVtot_sfc  = CVdry * ( 1.0_RP - qv_sfc - qc_sfc ) &
-               + CVvap * qv_sfc                       &
-               + CL    * qc_sfc
+               + CV_qv * qv_sfc                       &
+               + CV_qc * qc_sfc
 
     Rtot   = Rdry  * ( 1.0_RP - qv(KS) - qc(KS) ) &
            + Rvap  * qv(KS)
     CVtot  = CVdry * ( 1.0_RP - qv(KS) - qc(KS) ) &
-           + CVvap * qv(KS)                       &
-           + CL    * qc(KS)
+           + CV_qv * qv(KS)                       &
+           + CV_qc * qc(KS)
 
     ! density at surface
     RovCP_sfc = Rtot_sfc / ( CVtot_sfc + Rtot_sfc )
@@ -1378,8 +1390,8 @@ contains
        Rtot_sfc (i,j) = Rdry  * ( 1.0_RP - qv_sfc(1,i,j) - qc_sfc(1,i,j) ) &
                       + Rvap  * qv_sfc(1,i,j)
        CVtot_sfc(i,j) = CVdry * ( 1.0_RP - qv_sfc(1,i,j) - qc_sfc(1,i,j) ) &
-                      + CVvap * qv_sfc(1,i,j)                              &
-                      + CL    * qc_sfc(1,i,j)
+                      + CV_qv * qv_sfc(1,i,j)                              &
+                      + CV_qc * qc_sfc(1,i,j)
     enddo
     enddo
 
@@ -1388,8 +1400,8 @@ contains
        Rtot (i,j) = Rdry  * ( 1.0_RP - qv(KS,i,j) - qc(KS,i,j) ) &
                   + Rvap  * qv(KS,i,j)
        CVtot(i,j) = CVdry * ( 1.0_RP - qv(KS,i,j) - qc(KS,i,j) ) &
-                  + CVvap * qv(KS,i,j)                           &
-                  + CL    * qc(KS,i,j)
+                  + CV_qv * qv(KS,i,j)                           &
+                  + CV_qc * qc(KS,i,j)
     enddo
     enddo
 
@@ -1485,8 +1497,8 @@ contains
        Rtot (k) = Rdry  * ( 1.0_RP - qv(k) - qc(k) ) &
                 + Rvap  * qv(k)
        CVtot(k) = CVdry * ( 1.0_RP - qv(k) - qc(k) ) &
-                + CVvap * qv(k)                      &
-                + CL    * qc(k)
+                + CV_qv * qv(k)                      &
+                + CV_qc * qc(k)
     enddo
 
     do k = KS+1, KE
@@ -1569,8 +1581,8 @@ contains
        Rtot (k,i,j) = Rdry  * ( 1.0_RP - qv(k,i,j) - qc(k,i,j) ) &
                     + Rvap  * qv(k,i,j)
        CVtot(k,i,j) = CVdry * ( 1.0_RP - qv(k,i,j) - qc(k,i,j) ) &
-                    + CVvap * qv(k,i,j)                          &
-                    + CL    * qc(k,i,j)
+                    + CV_qv * qv(k,i,j)                          &
+                    + CV_qc * qc(k,i,j)
     enddo
     enddo
     enddo
