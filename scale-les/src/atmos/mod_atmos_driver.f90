@@ -425,7 +425,8 @@ contains
        SFLX_snow => ATMOS_PHY_MP_SFLX_snow
     use mod_atmos_phy_rd_vars, only: &
        SFLX_LW_dn => ATMOS_PHY_RD_SFLX_LW_dn, &
-       SFLX_SW_dn => ATMOS_PHY_RD_SFLX_SW_dn
+       SFLX_SW_dn => ATMOS_PHY_RD_SFLX_SW_dn, &
+       cosSZA     => ATMOS_PHY_RD_cosSZA
     use mod_cpl_admin, only: &
        CPL_sw
     use mod_cpl_vars, only: &
@@ -464,6 +465,7 @@ contains
                         SFC_PRES  (:,:),      & ! [IN]
                         SFLX_LW_dn(:,:),      & ! [IN]
                         SFLX_SW_dn(:,:),      & ! [IN]
+                        cosSZA    (:,:),      & ! [IN]
                         SFLX_rain (:,:),      & ! [IN]
                         SFLX_snow (:,:),      & ! [IN]
                         countup               ) ! [IN]

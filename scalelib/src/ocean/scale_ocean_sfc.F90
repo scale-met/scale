@@ -96,9 +96,26 @@ module scale_ocean_sfc
        real(RP), intent(in) :: Z0E   (IA,JA) ! roughness length for vapor [m]
        real(RP), intent(in) :: dt            ! delta time
      end subroutine ocnsfc
+
+     subroutine alb( &
+           SFC_albedo_t, &
+           SFC_albedo,   &
+           cosSZA,       &
+           dt            )
+       use scale_precision
+       use scale_grid_index
+       implicit none
+
+       real(RP), intent(out) :: SFC_albedo_t(IA,JA,2) ! tendency of sea surface albedo [0-1]
+       real(RP), intent(in)  :: SFC_albedo  (IA,JA,2) ! sea surface                    [0-1]
+       real(RP), intent(in)  :: cosSZA      (IA,JA)   ! cos(solar zenith angle)        [0-1]
+       real(RP), intent(in)  :: dt                    ! delta time
+     end subroutine alb
   end interface
-  procedure(ocnsfc), pointer :: OCEAN_SFC => NULL()
+  procedure(ocnsfc), pointer :: OCEAN_SFC              => NULL()
+  procedure(alb),    pointer :: OCEAN_SFC_SimpleAlbedo => NULL()
   public :: OCEAN_SFC
+  public :: OCEAN_SFC_SimpleAlbedo
 
   !-----------------------------------------------------------------------------
   !
@@ -120,7 +137,8 @@ contains
        PRC_MPIstop
     use scale_ocean_sfc_slab, only: &
        OCEAN_SFC_SLAB_setup, &
-       OCEAN_SFC_SLAB
+       OCEAN_SFC_SLAB,       &
+       OCEAN_SFC_SLAB_SimpleAlbedo
     implicit none
 
     character(len=*), intent(in) :: OCEAN_TYPE
@@ -129,10 +147,12 @@ contains
     select case( OCEAN_TYPE )
     case ( 'CONST' )
        call OCEAN_SFC_SLAB_setup( OCEAN_TYPE )
-       OCEAN_SFC => OCEAN_SFC_SLAB
+       OCEAN_SFC              => OCEAN_SFC_SLAB
+       OCEAN_SFC_SimpleAlbedo => OCEAN_SFC_SLAB_SimpleAlbedo
     case ( 'SLAB' )
        call OCEAN_SFC_SLAB_setup( OCEAN_TYPE )
-       OCEAN_SFC => OCEAN_SFC_SLAB
+       OCEAN_SFC              => OCEAN_SFC_SLAB
+       OCEAN_SFC_SimpleAlbedo => OCEAN_SFC_SLAB_SimpleAlbedo
     end select
 
   end subroutine OCEAN_SFC_setup

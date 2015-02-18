@@ -57,6 +57,9 @@ module mod_atmos_phy_rd_vars
   real(RP), public, allocatable :: ATMOS_PHY_RD_TOAFLX_SW_up(:,:) ! TOA upward   shortwave flux [J/m2/s]
   real(RP), public, allocatable :: ATMOS_PHY_RD_TOAFLX_SW_dn(:,:) ! TOA downward shortwave flux [J/m2/s]
 
+  real(RP), public, allocatable :: ATMOS_PHY_RD_solins      (:,:) ! solar insolation flux   [J/m2/s]
+  real(RP), public, allocatable :: ATMOS_PHY_RD_cosSZA      (:,:) ! cos(solar zenith angle) [0-1]
+
   !-----------------------------------------------------------------------------
   !
   !++ Private procedure
@@ -66,14 +69,14 @@ module mod_atmos_phy_rd_vars
   !++ Private parameters & variables
   !
   integer,                private, parameter :: VMAX = 8       !< number of the variables
-  integer,                private, parameter :: I_SFLX_LW_up   = 1
-  integer,                private, parameter :: I_SFLX_LW_dn   = 2
-  integer,                private, parameter :: I_SFLX_SW_up   = 3
-  integer,                private, parameter :: I_SFLX_SW_dn   = 4
-  integer,                private, parameter :: I_TOAFLX_LW_up = 5
-  integer,                private, parameter :: I_TOAFLX_LW_dn = 6
-  integer,                private, parameter :: I_TOAFLX_SW_up = 7
-  integer,                private, parameter :: I_TOAFLX_SW_dn = 8
+  integer,                private, parameter :: I_SFLX_LW_up   =  1
+  integer,                private, parameter :: I_SFLX_LW_dn   =  2
+  integer,                private, parameter :: I_SFLX_SW_up   =  3
+  integer,                private, parameter :: I_SFLX_SW_dn   =  4
+  integer,                private, parameter :: I_TOAFLX_LW_up =  5
+  integer,                private, parameter :: I_TOAFLX_LW_dn =  6
+  integer,                private, parameter :: I_TOAFLX_SW_up =  7
+  integer,                private, parameter :: I_TOAFLX_SW_dn =  8
 
   character(len=H_SHORT), private            :: VAR_NAME(VMAX) !< name  of the variables
   character(len=H_MID),   private            :: VAR_DESC(VMAX) !< desc. of the variables
@@ -91,10 +94,10 @@ module mod_atmos_phy_rd_vars
                   'surface downward longwave  flux', &
                   'surface upward   shortwave flux', &
                   'surface downward shortwave flux', &
-                  'TOA upward   longwave  flux', &
-                  'TOA downward longwave  flux', &
-                  'TOA upward   shortwave flux', &
-                  'TOA downward shortwave flux' /
+                  'TOA upward   longwave  flux',     &
+                  'TOA downward longwave  flux',     &
+                  'TOA upward   shortwave flux',     &
+                  'TOA downward shortwave flux'      /
   data VAR_UNIT / 'W/m2', &
                   'W/m2', &
                   'W/m2', &
@@ -149,6 +152,11 @@ contains
     ATMOS_PHY_RD_TOAFLX_SW_up(:,:) = UNDEF
     ATMOS_PHY_RD_TOAFLX_SW_dn(:,:) = UNDEF
 
+    allocate( ATMOS_PHY_RD_solins(IA,JA) )
+    allocate( ATMOS_PHY_RD_cosSZA(IA,JA) )
+    ATMOS_PHY_RD_solins(:,:) = UNDEF
+    ATMOS_PHY_RD_cosSZA(:,:) = UNDEF
+
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_ATMOS_PHY_RD_VARS,iostat=ierr)
@@ -195,22 +203,22 @@ contains
     implicit none
     !---------------------------------------------------------------------------
 
-    call COMM_vars8( ATMOS_PHY_RD_SFLX_LW_up  (:,:), 1 )
-    call COMM_vars8( ATMOS_PHY_RD_SFLX_LW_dn  (:,:), 2 )
-    call COMM_vars8( ATMOS_PHY_RD_SFLX_SW_up  (:,:), 3 )
-    call COMM_vars8( ATMOS_PHY_RD_SFLX_SW_dn  (:,:), 4 )
-    call COMM_vars8( ATMOS_PHY_RD_TOAFLX_LW_up(:,:), 5 )
-    call COMM_vars8( ATMOS_PHY_RD_TOAFLX_LW_dn(:,:), 6 )
-    call COMM_vars8( ATMOS_PHY_RD_TOAFLX_SW_up(:,:), 7 )
-    call COMM_vars8( ATMOS_PHY_RD_TOAFLX_SW_dn(:,:), 8 )
-    call COMM_wait ( ATMOS_PHY_RD_SFLX_LW_up  (:,:), 1 )
-    call COMM_wait ( ATMOS_PHY_RD_SFLX_LW_dn  (:,:), 2 )
-    call COMM_wait ( ATMOS_PHY_RD_SFLX_SW_up  (:,:), 3 )
-    call COMM_wait ( ATMOS_PHY_RD_SFLX_SW_dn  (:,:), 4 )
-    call COMM_wait ( ATMOS_PHY_RD_TOAFLX_LW_up(:,:), 5 )
-    call COMM_wait ( ATMOS_PHY_RD_TOAFLX_LW_dn(:,:), 6 )
-    call COMM_wait ( ATMOS_PHY_RD_TOAFLX_SW_up(:,:), 7 )
-    call COMM_wait ( ATMOS_PHY_RD_TOAFLX_SW_dn(:,:), 8 )
+    call COMM_vars8( ATMOS_PHY_RD_SFLX_LW_up  (:,:),  1 )
+    call COMM_vars8( ATMOS_PHY_RD_SFLX_LW_dn  (:,:),  2 )
+    call COMM_vars8( ATMOS_PHY_RD_SFLX_SW_up  (:,:),  3 )
+    call COMM_vars8( ATMOS_PHY_RD_SFLX_SW_dn  (:,:),  4 )
+    call COMM_vars8( ATMOS_PHY_RD_TOAFLX_LW_up(:,:),  5 )
+    call COMM_vars8( ATMOS_PHY_RD_TOAFLX_LW_dn(:,:),  6 )
+    call COMM_vars8( ATMOS_PHY_RD_TOAFLX_SW_up(:,:),  7 )
+    call COMM_vars8( ATMOS_PHY_RD_TOAFLX_SW_dn(:,:),  8 )
+    call COMM_wait ( ATMOS_PHY_RD_SFLX_LW_up  (:,:),  1 )
+    call COMM_wait ( ATMOS_PHY_RD_SFLX_LW_dn  (:,:),  2 )
+    call COMM_wait ( ATMOS_PHY_RD_SFLX_SW_up  (:,:),  3 )
+    call COMM_wait ( ATMOS_PHY_RD_SFLX_SW_dn  (:,:),  4 )
+    call COMM_wait ( ATMOS_PHY_RD_TOAFLX_LW_up(:,:),  5 )
+    call COMM_wait ( ATMOS_PHY_RD_TOAFLX_LW_dn(:,:),  6 )
+    call COMM_wait ( ATMOS_PHY_RD_TOAFLX_SW_up(:,:),  7 )
+    call COMM_wait ( ATMOS_PHY_RD_TOAFLX_SW_dn(:,:),  8 )
 
     return
   end subroutine ATMOS_PHY_RD_vars_fillhalo

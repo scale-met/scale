@@ -112,6 +112,7 @@ module mod_cpl_vars
   real(RP), public, allocatable :: OCN_ATM_SFC_PRES (:,:) ! surface pressure [Pa]
   real(RP), public, allocatable :: OCN_ATM_SFLX_LW  (:,:) ! downward longwave radiation flux [J/m2/s]
   real(RP), public, allocatable :: OCN_ATM_SFLX_SW  (:,:) ! downward shortwave radiation flux [J/m2/s]
+  real(RP), public, allocatable :: OCN_ATM_cosSZA   (:,:) ! cos(solar zenith angle) [0-1]
   real(RP), public, allocatable :: OCN_ATM_SFLX_prec(:,:) ! liquid water flux [kg/m2/s]
 
   ! Output to land model
@@ -126,6 +127,7 @@ module mod_cpl_vars
   real(RP), public, allocatable :: LND_ATM_SFC_PRES (:,:) ! surface pressure [Pa]
   real(RP), public, allocatable :: LND_ATM_SFLX_LW  (:,:) ! downward longwave radiation flux [J/m2/s]
   real(RP), public, allocatable :: LND_ATM_SFLX_SW  (:,:) ! downward shortwave radiation flux [J/m2/s]
+  real(RP), public, allocatable :: LND_ATM_cosSZA   (:,:) ! cos(solar zenith angle) [0-1]
   real(RP), public, allocatable :: LND_ATM_SFLX_prec(:,:) ! liquid water flux [kg/m2/s]
 
   ! Output to urban model
@@ -140,6 +142,7 @@ module mod_cpl_vars
   real(RP), public, allocatable :: URB_ATM_SFC_PRES (:,:) ! surface pressure [Pa]
   real(RP), public, allocatable :: URB_ATM_SFLX_LW  (:,:) ! downward longwave radiation flux [J/m2/s]
   real(RP), public, allocatable :: URB_ATM_SFLX_SW  (:,:) ! downward shortwave radiation flux [J/m2/s]
+  real(RP), public, allocatable :: URB_ATM_cosSZA   (:,:) ! cos(solar zenith angle) [0-1]
   real(RP), public, allocatable :: URB_ATM_SFLX_prec(:,:) ! liquid water flux [kg/m2/s]
 
   ! counter
@@ -281,6 +284,7 @@ contains
     allocate( OCN_ATM_SFC_PRES (IA,JA) )
     allocate( OCN_ATM_SFLX_LW  (IA,JA) )
     allocate( OCN_ATM_SFLX_SW  (IA,JA) )
+    allocate( OCN_ATM_cosSZA   (IA,JA) )
     allocate( OCN_ATM_SFLX_prec(IA,JA) )
     OCN_ATM_TEMP     (:,:) = UNDEF
     OCN_ATM_PRES     (:,:) = UNDEF
@@ -293,6 +297,7 @@ contains
     OCN_ATM_SFC_PRES (:,:) = UNDEF
     OCN_ATM_SFLX_LW  (:,:) = UNDEF
     OCN_ATM_SFLX_SW  (:,:) = UNDEF
+    OCN_ATM_cosSZA   (:,:) = UNDEF
     OCN_ATM_SFLX_prec(:,:) = UNDEF
 
     allocate( LND_ATM_TEMP     (IA,JA) )
@@ -306,6 +311,7 @@ contains
     allocate( LND_ATM_SFC_PRES (IA,JA) )
     allocate( LND_ATM_SFLX_LW  (IA,JA) )
     allocate( LND_ATM_SFLX_SW  (IA,JA) )
+    allocate( LND_ATM_cosSZA   (IA,JA) )
     allocate( LND_ATM_SFLX_prec(IA,JA) )
     LND_ATM_TEMP     (:,:) = UNDEF
     LND_ATM_PRES     (:,:) = UNDEF
@@ -318,6 +324,7 @@ contains
     LND_ATM_SFC_PRES (:,:) = UNDEF
     LND_ATM_SFLX_LW  (:,:) = UNDEF
     LND_ATM_SFLX_SW  (:,:) = UNDEF
+    LND_ATM_cosSZA   (:,:) = UNDEF
     LND_ATM_SFLX_prec(:,:) = UNDEF
 
     allocate( URB_ATM_TEMP     (IA,JA) )
@@ -331,6 +338,7 @@ contains
     allocate( URB_ATM_SFC_PRES (IA,JA) )
     allocate( URB_ATM_SFLX_LW  (IA,JA) )
     allocate( URB_ATM_SFLX_SW  (IA,JA) )
+    allocate( URB_ATM_cosSZA   (IA,JA) )
     allocate( URB_ATM_SFLX_prec(IA,JA) )
     URB_ATM_TEMP     (:,:) = UNDEF
     URB_ATM_PRES     (:,:) = UNDEF
@@ -343,6 +351,7 @@ contains
     URB_ATM_SFC_PRES (:,:) = UNDEF
     URB_ATM_SFLX_LW  (:,:) = UNDEF
     URB_ATM_SFLX_SW  (:,:) = UNDEF
+    URB_ATM_cosSZA   (:,:) = UNDEF
     URB_ATM_SFLX_prec(:,:) = UNDEF
 
     ! counter intialize
@@ -369,6 +378,7 @@ contains
        SFC_PRES,   &
        SFLX_LW,    &
        SFLX_SW,    &
+       cosSZA,     &
        SFLX_rain,  &
        SFLX_snow,  &
        countup     )
@@ -386,6 +396,7 @@ contains
     real(RP), intent(in) :: SFC_PRES (IA,JA)
     real(RP), intent(in) :: SFLX_LW  (IA,JA)
     real(RP), intent(in) :: SFLX_SW  (IA,JA)
+    real(RP), intent(in) :: cosSZA   (IA,JA)
     real(RP), intent(in) :: SFLX_rain(IA,JA)
     real(RP), intent(in) :: SFLX_snow(IA,JA)
 
@@ -409,6 +420,7 @@ contains
        OCN_ATM_SFC_PRES (i,j) = OCN_ATM_SFC_PRES (i,j) * CNT_putATM_OCN + SFC_PRES  (i,j)
        OCN_ATM_SFLX_LW  (i,j) = OCN_ATM_SFLX_LW  (i,j) * CNT_putATM_OCN + SFLX_LW   (i,j)
        OCN_ATM_SFLX_SW  (i,j) = OCN_ATM_SFLX_SW  (i,j) * CNT_putATM_OCN + SFLX_SW   (i,j)
+       OCN_ATM_cosSZA   (i,j) = OCN_ATM_cosSZA   (i,j) * CNT_putATM_OCN + cosSZA    (i,j)
        OCN_ATM_SFLX_prec(i,j) = OCN_ATM_SFLX_prec(i,j) * CNT_putATM_OCN + SFLX_rain (i,j) &
                                                                         + SFLX_snow (i,j)
        ! for land
@@ -423,6 +435,7 @@ contains
        LND_ATM_SFC_PRES (i,j) = LND_ATM_SFC_PRES (i,j) * CNT_putATM_LND + SFC_PRES  (i,j)
        LND_ATM_SFLX_LW  (i,j) = LND_ATM_SFLX_LW  (i,j) * CNT_putATM_LND + SFLX_LW   (i,j)
        LND_ATM_SFLX_SW  (i,j) = LND_ATM_SFLX_SW  (i,j) * CNT_putATM_LND + SFLX_SW   (i,j)
+       LND_ATM_cosSZA   (i,j) = LND_ATM_cosSZA   (i,j) * CNT_putATM_LND + cosSZA    (i,j)
        LND_ATM_SFLX_prec(i,j) = LND_ATM_SFLX_prec(i,j) * CNT_putATM_LND + SFLX_rain (i,j) &
                                                                         + SFLX_snow (i,j)
        ! for urban
@@ -437,6 +450,7 @@ contains
        URB_ATM_SFC_PRES (i,j) = URB_ATM_SFC_PRES (i,j) * CNT_putATM_URB + SFC_PRES  (i,j)
        URB_ATM_SFLX_LW  (i,j) = URB_ATM_SFLX_LW  (i,j) * CNT_putATM_URB + SFLX_LW   (i,j)
        URB_ATM_SFLX_SW  (i,j) = URB_ATM_SFLX_SW  (i,j) * CNT_putATM_URB + SFLX_SW   (i,j)
+       URB_ATM_cosSZA   (i,j) = URB_ATM_cosSZA   (i,j) * CNT_putATM_URB + cosSZA    (i,j)
        URB_ATM_SFLX_prec(i,j) = URB_ATM_SFLX_prec(i,j) * CNT_putATM_URB + SFLX_rain (i,j) &
                                                                         + SFLX_snow (i,j)
     end do
@@ -456,6 +470,7 @@ contains
        OCN_ATM_SFC_PRES (i,j) = OCN_ATM_SFC_PRES (i,j) / ( CNT_putATM_OCN + 1.0_RP )
        OCN_ATM_SFLX_LW  (i,j) = OCN_ATM_SFLX_LW  (i,j) / ( CNT_putATM_OCN + 1.0_RP )
        OCN_ATM_SFLX_SW  (i,j) = OCN_ATM_SFLX_SW  (i,j) / ( CNT_putATM_OCN + 1.0_RP )
+       OCN_ATM_cosSZA   (i,j) = OCN_ATM_cosSZA   (i,j) / ( CNT_putATM_OCN + 1.0_RP )
        OCN_ATM_SFLX_prec(i,j) = OCN_ATM_SFLX_prec(i,j) / ( CNT_putATM_OCN + 1.0_RP )
        ! for ocean
        LND_ATM_TEMP     (i,j) = LND_ATM_TEMP     (i,j) / ( CNT_putATM_LND + 1.0_RP )
@@ -469,6 +484,7 @@ contains
        LND_ATM_SFC_PRES (i,j) = LND_ATM_SFC_PRES (i,j) / ( CNT_putATM_LND + 1.0_RP )
        LND_ATM_SFLX_LW  (i,j) = LND_ATM_SFLX_LW  (i,j) / ( CNT_putATM_LND + 1.0_RP )
        LND_ATM_SFLX_SW  (i,j) = LND_ATM_SFLX_SW  (i,j) / ( CNT_putATM_LND + 1.0_RP )
+       LND_ATM_cosSZA   (i,j) = LND_ATM_cosSZA   (i,j) / ( CNT_putATM_LND + 1.0_RP )
        LND_ATM_SFLX_prec(i,j) = LND_ATM_SFLX_prec(i,j) / ( CNT_putATM_LND + 1.0_RP )
        ! for ocean
        URB_ATM_TEMP     (i,j) = URB_ATM_TEMP     (i,j) / ( CNT_putATM_URB + 1.0_RP )
@@ -482,6 +498,7 @@ contains
        URB_ATM_SFC_PRES (i,j) = URB_ATM_SFC_PRES (i,j) / ( CNT_putATM_URB + 1.0_RP )
        URB_ATM_SFLX_LW  (i,j) = URB_ATM_SFLX_LW  (i,j) / ( CNT_putATM_URB + 1.0_RP )
        URB_ATM_SFLX_SW  (i,j) = URB_ATM_SFLX_SW  (i,j) / ( CNT_putATM_URB + 1.0_RP )
+       URB_ATM_cosSZA   (i,j) = URB_ATM_cosSZA   (i,j) / ( CNT_putATM_URB + 1.0_RP )
        URB_ATM_SFLX_prec(i,j) = URB_ATM_SFLX_prec(i,j) / ( CNT_putATM_URB + 1.0_RP )
     end do
     end do
@@ -923,6 +940,7 @@ contains
        SFC_PRES,   &
        SFLX_LW,    &
        SFLX_SW,    &
+       cosSZA,     &
        SFLX_prec   )
     implicit none
 
@@ -937,6 +955,7 @@ contains
     real(RP), intent(out) :: SFC_PRES (IA,JA)
     real(RP), intent(out) :: SFLX_LW  (IA,JA)
     real(RP), intent(out) :: SFLX_SW  (IA,JA)
+    real(RP), intent(out) :: cosSZA   (IA,JA)
     real(RP), intent(out) :: SFLX_prec(IA,JA)
 
     integer :: i, j
@@ -955,6 +974,7 @@ contains
        SFC_PRES (i,j) = OCN_ATM_SFC_PRES (i,j)
        SFLX_LW  (i,j) = OCN_ATM_SFLX_LW  (i,j)
        SFLX_SW  (i,j) = OCN_ATM_SFLX_SW  (i,j)
+       cosSZA   (i,j) = OCN_ATM_cosSZA   (i,j)
        SFLX_prec(i,j) = OCN_ATM_SFLX_prec(i,j)
     end do
     end do
@@ -977,6 +997,7 @@ contains
        SFC_PRES,   &
        SFLX_LW,    &
        SFLX_SW,    &
+       cosSZA,     &
        SFLX_prec   )
     implicit none
 
@@ -991,6 +1012,7 @@ contains
     real(RP), intent(out) :: SFC_PRES (IA,JA)
     real(RP), intent(out) :: SFLX_LW  (IA,JA)
     real(RP), intent(out) :: SFLX_SW  (IA,JA)
+    real(RP), intent(out) :: cosSZA   (IA,JA)
     real(RP), intent(out) :: SFLX_prec(IA,JA)
 
     integer :: i, j
@@ -1009,6 +1031,7 @@ contains
        SFC_PRES (i,j) = LND_ATM_SFC_PRES (i,j)
        SFLX_LW  (i,j) = LND_ATM_SFLX_LW  (i,j)
        SFLX_SW  (i,j) = LND_ATM_SFLX_SW  (i,j)
+       cosSZA   (i,j) = LND_ATM_cosSZA   (i,j)
        SFLX_prec(i,j) = LND_ATM_SFLX_prec(i,j)
     end do
     end do
@@ -1031,6 +1054,7 @@ contains
        SFC_PRES,   &
        SFLX_LW,    &
        SFLX_SW,    &
+       cosSZA,     &
        SFLX_prec   )
     implicit none
 
@@ -1045,6 +1069,7 @@ contains
     real(RP), intent(out) :: SFC_PRES (IA,JA)
     real(RP), intent(out) :: SFLX_LW  (IA,JA)
     real(RP), intent(out) :: SFLX_SW  (IA,JA)
+    real(RP), intent(out) :: cosSZA   (IA,JA)
     real(RP), intent(out) :: SFLX_prec(IA,JA)
 
     integer :: i, j
@@ -1063,6 +1088,7 @@ contains
        SFC_PRES (i,j) = URB_ATM_SFC_PRES (i,j)
        SFLX_LW  (i,j) = URB_ATM_SFLX_LW  (i,j)
        SFLX_SW  (i,j) = URB_ATM_SFLX_SW  (i,j)
+       cosSZA   (i,j) = URB_ATM_cosSZA   (i,j)
        SFLX_prec(i,j) = URB_ATM_SFLX_prec(i,j)
     end do
     end do

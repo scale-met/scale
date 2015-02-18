@@ -146,6 +146,7 @@ contains
        ATMOS_SFC_PRES,    &
        ATMOS_SFLX_LW,     &
        ATMOS_SFLX_SW,     &
+       ATMOS_cosSZA,      &
        ATMOS_SFLX_prec
     implicit none
 
@@ -212,7 +213,7 @@ contains
                       dt                                  ) ! [IN]
 
        call ATMOS_THERMODYN_templhv( lhv, ATMOS_TEMP )
- 
+
        do j = JS, JE
        do i = IS, IE
           LAND_SFLX_evap(i,j) = LAND_SFLX_LH(i,j) / lhv(i,j)

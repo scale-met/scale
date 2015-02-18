@@ -61,7 +61,9 @@ contains
        TOAFLX_LW_up => ATMOS_PHY_RD_TOAFLX_LW_up, &
        TOAFLX_LW_dn => ATMOS_PHY_RD_TOAFLX_LW_dn, &
        TOAFLX_SW_up => ATMOS_PHY_RD_TOAFLX_SW_up, &
-       TOAFLX_SW_dn => ATMOS_PHY_RD_TOAFLX_SW_dn
+       TOAFLX_SW_dn => ATMOS_PHY_RD_TOAFLX_SW_dn, &
+       solins       => ATMOS_PHY_RD_solins,       &
+       cosSZA       => ATMOS_PHY_RD_cosSZA
     implicit none
     !---------------------------------------------------------------------------
 
@@ -90,6 +92,8 @@ contains
        TOAFLX_LW_dn(:,:) = 0.0_RP
        TOAFLX_SW_up(:,:) = 0.0_RP
        TOAFLX_SW_dn(:,:) = 0.0_RP
+       solins      (:,:) = 0.0_RP
+       cosSZA      (:,:) = 0.0_RP
 
     endif
 
@@ -156,7 +160,9 @@ contains
        TOAFLX_LW_up => ATMOS_PHY_RD_TOAFLX_LW_up, &
        TOAFLX_LW_dn => ATMOS_PHY_RD_TOAFLX_LW_dn, &
        TOAFLX_SW_up => ATMOS_PHY_RD_TOAFLX_SW_up, &
-       TOAFLX_SW_dn => ATMOS_PHY_RD_TOAFLX_SW_dn
+       TOAFLX_SW_dn => ATMOS_PHY_RD_TOAFLX_SW_dn, &
+       solins       => ATMOS_PHY_RD_solins,       &
+       cosSZA       => ATMOS_PHY_RD_cosSZA
     implicit none
 
     logical, intent(in) :: update_flag
@@ -171,8 +177,6 @@ contains
     real(RP) :: flux_net_toa(   IA,JA,2)
     real(RP) :: flux_net_sfc(   IA,JA,2)
 
-    real(RP) :: solins(IA,JA)
-    real(RP) :: cosSZA(IA,JA)
     real(RP) :: LON   (IA,JA)
     real(RP) :: LAT   (IA,JA)
 
@@ -378,7 +382,7 @@ contains
        endif
 
        call HIST_in( solins(:,:), 'SOLINS', 'solar insolation',        'W/m2', nohalo=.true. )
-       call HIST_in( cosSZA(:,:), 'COSZ',   'cos(solar zenith angle)', '0-1',  nohalo=.true.)
+       call HIST_in( cosSZA(:,:), 'COSZ',   'cos(solar zenith angle)', '0-1',  nohalo=.true. )
 
        call HIST_in( SFCFLX_LW_up(:,:), 'SFLX_LW_up',   'SFC upward   longwave  radiation flux', 'W/m2', nohalo=.true. )
        call HIST_in( SFCFLX_LW_dn(:,:), 'SFLX_LW_dn',   'SFC downward longwave  radiation flux', 'W/m2', nohalo=.true. )
