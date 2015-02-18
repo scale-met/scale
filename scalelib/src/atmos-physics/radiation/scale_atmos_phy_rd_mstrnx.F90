@@ -208,8 +208,8 @@ module scale_atmos_phy_rd_mstrnx
   ! for ocean albedo
   real(RP), private :: c_ocean_albedo(5,3)
   data c_ocean_albedo / -2.8108_RP   , -1.3651_RP,  2.9210E1_RP, -4.3907E1_RP,  1.8125E1_RP, &
-          6.5626E-1_RP, -8.7253_RP, -2.7749E1_RP,  4.9486E1_RP, -1.8345E1_RP, &
-         -6.5423E-1_RP,  9.9967_RP,  2.7769_RP  , -1.7620E1_RP,  7.0838_RP    /
+                         6.5626E-1_RP, -8.7253_RP, -2.7749E1_RP,  4.9486E1_RP, -1.8345E1_RP, &
+                        -6.5423E-1_RP,  9.9967_RP,  2.7769_RP  , -1.7620E1_RP,  7.0838_RP    /
 
   !-----------------------------------------------------------------------------
 contains
@@ -1459,33 +1459,35 @@ contains
        !        Original scheme calculates albedo by using land-use index (and surface wetness).
        !        In the atmospheric model, albedo is calculated by surface model.
        do icloud = 1, MSTRN_ncloud
-          !$acc kernels pcopy(tau_column) pcopyin(tauPR) async(0)
-          !$acc loop gang
-          do j = JS, JE
-          !$acc loop gang private(valsum)
-          do i = IS, IE
-             valsum = 0.0_RP
-             !$acc loop gang vector(32) reduction(+:valsum)
-             do k = 1, rd_kmax
-                valsum = valsum + tauPR(k,i,j,icloud) ! layer-total(for ocean albedo)
-             enddo
-             tau_column(i,j,icloud) = valsum
-          enddo
-          enddo
-          !$acc end kernels
+!           !$acc kernels pcopy(tau_column) pcopyin(tauPR) async(0)
+!           !$acc loop gang
+!           do j = JS, JE
+!           !$acc loop gang private(valsum)
+!           do i = IS, IE
+!              valsum = 0.0_RP
+!              !$acc loop gang vector(32) reduction(+:valsum)
+!              do k = 1, rd_kmax
+!                 valsum = valsum + tauPR(k,i,j,icloud) ! layer-total(for ocean albedo)
+!              enddo
+!              tau_column(i,j,icloud) = valsum
+!           enddo
+!           enddo
+!           !$acc end kernels
 
-          call RD_albedo_ocean( cosSZA      (:,:),          & ! [IN]
-                                tau_column  (:,:,icloud),   & ! [IN]
-                                albedo_ocean(:,:,:,icloud) )  ! [OUT]
+!          call RD_albedo_ocean( cosSZA      (:,:),          & ! [IN]
+!                                tau_column  (:,:,icloud),   & ! [IN]
+!                                albedo_ocean(:,:,:,icloud) )  ! [OUT]
 
-          !$acc kernels pcopy(albedo_sfc) pcopyin(fact_ocean, fact_land, fact_urban, albedo_ocean, albedo_land) async(0)
+!          !$acc kernels pcopy(albedo_sfc) pcopyin(fact_ocean, fact_land, fact_urban, albedo_ocean, albedo_land) async(0)
+          !$acc kernels pcopy(albedo_sfc) pcopyin(albedo_land) async(0)
           !$acc loop gang vector(4)
           do j = JS, JE
           !$acc loop gang vector(32)
           do i = IS, IE
-             albedo_sfc(i,j,icloud) = fact_ocean(i,j) * albedo_ocean(i,j,irgn,icloud) &
-                                    + fact_land (i,j) * albedo_land (i,j,irgn) &
-                                    + fact_urban(i,j) * albedo_land (i,j,irgn) ! tentative
+             albedo_sfc(i,j,icloud) = albedo_land(i,j,irgn)
+!             albedo_sfc(i,j,icloud) = fact_ocean(i,j) * albedo_ocean(i,j,irgn,icloud) &
+!                                    + fact_land (i,j) * albedo_land (i,j,irgn) &
+!                                    + fact_urban(i,j) * albedo_land (i,j,irgn) ! tentative
           enddo
           enddo
           !$acc end kernels
@@ -2140,10 +2142,10 @@ contains
                 + c_ocean_albedo(n,3) * tr1**(n-1) * am1*am1
        enddo
 
-       albedo_ocean(i,j,I_LW) = ( 1.0_RP-sw ) * 0.05_RP &
+       albedo_ocean(i,j,I_SW) = ( 1.0_RP-sw ) * 0.05_RP &
                               + (        sw ) * exp(s)
 
-       albedo_ocean(i,j,I_SW) = 0.05_RP
+       albedo_ocean(i,j,I_LW) = 0.05_RP
     enddo
     enddo
     !$acc end kernels

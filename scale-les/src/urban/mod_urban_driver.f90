@@ -212,6 +212,7 @@ contains
        ATMOS_SFC_PRES, &
        ATMOS_SFLX_LW,  &
        ATMOS_SFLX_SW,  &
+       ATMOS_cosSZA,   &
        ATMOS_SFLX_prec
     use mod_cpl_vars, only: &
        CPL_getATM_URB
@@ -230,6 +231,7 @@ contains
                             ATMOS_SFC_PRES (:,:), & ! [OUT]
                             ATMOS_SFLX_LW  (:,:), & ! [OUT]
                             ATMOS_SFLX_SW  (:,:), & ! [OUT]
+                            ATMOS_cosSZA   (:,:), & ! [OUT]
                             ATMOS_SFLX_prec(:,:)  ) ! [OUT]
     endif
 

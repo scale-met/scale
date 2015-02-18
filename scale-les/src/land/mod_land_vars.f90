@@ -89,6 +89,7 @@ module mod_land_vars
   real(RP), public, allocatable :: ATMOS_SFC_PRES (:,:)
   real(RP), public, allocatable :: ATMOS_SFLX_LW  (:,:)
   real(RP), public, allocatable :: ATMOS_SFLX_SW  (:,:)
+  real(RP), public, allocatable :: ATMOS_cosSZA   (:,:)
   real(RP), public, allocatable :: ATMOS_SFLX_prec(:,:)
 
   real(RP), public, allocatable :: LAND_PROPERTY  (:,:,:) !< land surface property
@@ -262,6 +263,7 @@ contains
     allocate( ATMOS_SFC_PRES (IA,JA) )
     allocate( ATMOS_SFLX_LW  (IA,JA) )
     allocate( ATMOS_SFLX_SW  (IA,JA) )
+    allocate( ATMOS_cosSZA   (IA,JA) )
     allocate( ATMOS_SFLX_prec(IA,JA) )
     ATMOS_TEMP     (:,:) = UNDEF
     ATMOS_PRES     (:,:) = UNDEF
@@ -274,6 +276,7 @@ contains
     ATMOS_SFC_PRES (:,:) = UNDEF
     ATMOS_SFLX_LW  (:,:) = UNDEF
     ATMOS_SFLX_SW  (:,:) = UNDEF
+    ATMOS_cosSZA   (:,:) = UNDEF
     ATMOS_SFLX_prec(:,:) = UNDEF
 
     LAND_QA_comm = LKMAX &

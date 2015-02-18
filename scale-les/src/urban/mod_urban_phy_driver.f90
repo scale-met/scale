@@ -156,6 +156,7 @@ contains
        ATMOS_SFC_PRES,   &
        ATMOS_SFLX_LW,    &
        ATMOS_SFLX_SW,    &
+       ATMOS_cosSZA,     &
        ATMOS_SFLX_prec
     implicit none
 
