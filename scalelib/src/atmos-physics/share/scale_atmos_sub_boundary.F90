@@ -82,8 +82,31 @@ module scale_atmos_boundary
   private :: ATMOS_BOUNDARY_initialize_online
   private :: ATMOS_BOUNDARY_update_file
   private :: ATMOS_BOUNDARY_update_online
-  private :: ATMOS_BOUNDARY_increment_get_lerp_initpoint
-  private :: ATMOS_BOUNDARY_increment_get_lerp_midpoint
+
+  abstract interface
+     subroutine getinc( &
+          inc_DENS, &
+          inc_VELZ, &
+          inc_VELX, &
+          inc_VELY, &
+          inc_POTT, &
+          inc_QTRC  )
+       use scale_precision
+       implicit none
+
+       real(RP), intent(out) :: inc_DENS(:,:,:)
+       real(RP), intent(out) :: inc_VELZ(:,:,:)
+       real(RP), intent(out) :: inc_VELX(:,:,:)
+       real(RP), intent(out) :: inc_VELY(:,:,:)
+       real(RP), intent(out) :: inc_POTT(:,:,:)
+       real(RP), intent(out) :: inc_QTRC(:,:,:,:)
+     end subroutine getinc
+  end interface
+
+  procedure(getinc), pointer :: get_increment => NULL()
+  private :: get_increment
+  private :: get_increment_lerp_initpoint
+  private :: get_increment_lerp_midpoint
 
   !
   !-----------------------------------------------------------------------------
@@ -316,15 +339,15 @@ contains
 
     if ( l_bnd ) then
 
-!       select case(ATMOS_BOUNDARY_increment_TYPE)
-!       case ('lerp-initpoint')
-!          ATMOS_BOUNDARY_increment_get => ATMOS_BOUNDARY_increment_get_lerp_initpoint
-!       case ('lerp-midpoint')
-!          ATMOS_BOUNDARY_increment_get => ATMOS_BOUNDARY_increment_get_lerp_midpoint
-!       case default
-!          write(*,*) 'xxx Wrong parameter in ATMOS_BOUNDARY_increment_TYPE. Check!'
-!          call PRC_MPIstop
-!       end select
+       select case(ATMOS_BOUNDARY_increment_TYPE)
+       case ('lerp-initpoint')
+          get_increment => get_increment_lerp_initpoint
+       case ('lerp-midpoint')
+          get_increment => get_increment_lerp_midpoint
+       case default
+          write(*,*) 'xxx Wrong parameter in ATMOS_BOUNDARY_increment_TYPE. Check!'
+          call PRC_MPIstop
+       end select
        if( IO_L ) write(IO_FID_LOG,*) '+++ BOUNDARY increment TYPE: ', ATMOS_BOUNDARY_increment_TYPE
 
        COMM_FILL_BND = .false.
@@ -1245,12 +1268,12 @@ contains
     end if
 
     ! set time increment
-    call ATMOS_BOUNDARY_increment_get_lerp_initpoint( ATMOS_BOUNDARY_increment_DENS(:,:,:),   & ! [OUT]
-                                                      ATMOS_BOUNDARY_increment_VELZ(:,:,:),   & ! [OUT]
-                                                      ATMOS_BOUNDARY_increment_VELX(:,:,:),   & ! [OUT]
-                                                      ATMOS_BOUNDARY_increment_VELY(:,:,:),   & ! [OUT]
-                                                      ATMOS_BOUNDARY_increment_POTT(:,:,:),   & ! [OUT]
-                                                      ATMOS_BOUNDARY_increment_QTRC(:,:,:,:)  ) ! [OUT]
+    call get_increment( ATMOS_BOUNDARY_increment_DENS(:,:,:),   & ! [OUT]
+                        ATMOS_BOUNDARY_increment_VELZ(:,:,:),   & ! [OUT]
+                        ATMOS_BOUNDARY_increment_VELX(:,:,:),   & ! [OUT]
+                        ATMOS_BOUNDARY_increment_VELY(:,:,:),   & ! [OUT]
+                        ATMOS_BOUNDARY_increment_POTT(:,:,:),   & ! [OUT]
+                        ATMOS_BOUNDARY_increment_QTRC(:,:,:,:)  ) ! [OUT]
 
     ! free buffer
     do j = JSB, JEB
@@ -1436,12 +1459,12 @@ contains
     end if
 
     ! set time increment
-    call ATMOS_BOUNDARY_increment_get_lerp_initpoint( ATMOS_BOUNDARY_increment_DENS(:,:,:),   & ! [OUT]
-                                                      ATMOS_BOUNDARY_increment_VELZ(:,:,:),   & ! [OUT]
-                                                      ATMOS_BOUNDARY_increment_VELX(:,:,:),   & ! [OUT]
-                                                      ATMOS_BOUNDARY_increment_VELY(:,:,:),   & ! [OUT]
-                                                      ATMOS_BOUNDARY_increment_POTT(:,:,:),   & ! [OUT]
-                                                      ATMOS_BOUNDARY_increment_QTRC(:,:,:,:)  ) ! [OUT]
+    call get_increment( ATMOS_BOUNDARY_increment_DENS(:,:,:),   & ! [OUT]
+                        ATMOS_BOUNDARY_increment_VELZ(:,:,:),   & ! [OUT]
+                        ATMOS_BOUNDARY_increment_VELX(:,:,:),   & ! [OUT]
+                        ATMOS_BOUNDARY_increment_VELY(:,:,:),   & ! [OUT]
+                        ATMOS_BOUNDARY_increment_POTT(:,:,:),   & ! [OUT]
+                        ATMOS_BOUNDARY_increment_QTRC(:,:,:,:)  ) ! [OUT]
 
     ! free buffer
     do j = JSB, JEB
@@ -1575,12 +1598,12 @@ contains
           end if
 
           ! set time increment
-          call ATMOS_BOUNDARY_increment_get_lerp_initpoint( ATMOS_BOUNDARY_increment_DENS(:,:,:),   & ! [OUT]
-                                                            ATMOS_BOUNDARY_increment_VELZ(:,:,:),   & ! [OUT]
-                                                            ATMOS_BOUNDARY_increment_VELX(:,:,:),   & ! [OUT]
-                                                            ATMOS_BOUNDARY_increment_VELY(:,:,:),   & ! [OUT]
-                                                            ATMOS_BOUNDARY_increment_POTT(:,:,:),   & ! [OUT]
-                                                            ATMOS_BOUNDARY_increment_QTRC(:,:,:,:)  ) ! [OUT]
+          call get_increment( ATMOS_BOUNDARY_increment_DENS(:,:,:),   & ! [OUT]
+                              ATMOS_BOUNDARY_increment_VELZ(:,:,:),   & ! [OUT]
+                              ATMOS_BOUNDARY_increment_VELX(:,:,:),   & ! [OUT]
+                              ATMOS_BOUNDARY_increment_VELY(:,:,:),   & ! [OUT]
+                              ATMOS_BOUNDARY_increment_POTT(:,:,:),   & ! [OUT]
+                              ATMOS_BOUNDARY_increment_QTRC(:,:,:,:)  ) ! [OUT]
 
           ! free buffer
           do j  = JSB, JEB
@@ -2055,13 +2078,13 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Get incremental coefficient with linear interpotation between initial points
-  subroutine ATMOS_BOUNDARY_increment_get_lerp_initpoint( &
-       inc_DENS, & ! [OUT]
-       inc_VELZ, & ! [OUT]
-       inc_VELX, & ! [OUT]
-       inc_VELY, & ! [OUT]
-       inc_POTT, & ! [OUT]
-       inc_QTRC  ) ! [OUT]
+  subroutine get_increment_lerp_initpoint( &
+       inc_DENS, &
+       inc_VELZ, &
+       inc_VELX, &
+       inc_VELY, &
+       inc_POTT, &
+       inc_QTRC  )
     use scale_time, only: &
        TIME_DTSEC
     use scale_grid_nest, only: &
@@ -2100,25 +2123,17 @@ contains
     end do
 
     return
-  end subroutine ATMOS_BOUNDARY_increment_get_lerp_initpoint
+  end subroutine get_increment_lerp_initpoint
 
   !-----------------------------------------------------------------------------
   !> Get incremental coefficient with linear interpotation between mid-points
-  subroutine ATMOS_BOUNDARY_increment_get_lerp_midpoint( &
-       inc_DENS,  & ! [OUT]
-       inc_VELZ,  & ! [OUT]
-       inc_VELX,  & ! [OUT]
-       inc_VELY,  & ! [OUT]
-       inc_POTT,  & ! [OUT]
-       inc_QTRC,  & ! [OUT]
-       ref_DENS,  & ! [IN]
-       ref_VELZ,  & ! [IN]
-       ref_VELX,  & ! [IN]
-       ref_VELY,  & ! [IN]
-       ref_POTT,  & ! [IN]
-       ref_QTRC,  & ! [IN]
-       dt_child,  & ! [IN]
-       dt_parent  ) ! [IN]
+  subroutine get_increment_lerp_midpoint( &
+       inc_DENS, &
+       inc_VELZ, &
+       inc_VELX, &
+       inc_VELY, &
+       inc_POTT, &
+       inc_QTRC  )
     implicit none
 
     ! arguments
@@ -2128,16 +2143,6 @@ contains
     real(RP), intent(out) :: inc_VELY(:,:,:)
     real(RP), intent(out) :: inc_POTT(:,:,:)
     real(RP), intent(out) :: inc_QTRC(:,:,:,:)
-
-    real(RP), intent(in)  :: ref_DENS(:,:,:,:)
-    real(RP), intent(in)  :: ref_VELZ(:,:,:,:)
-    real(RP), intent(in)  :: ref_VELX(:,:,:,:)
-    real(RP), intent(in)  :: ref_VELY(:,:,:,:)
-    real(RP), intent(in)  :: ref_POTT(:,:,:,:)
-    real(RP), intent(in)  :: ref_QTRC(:,:,:,:,:)
-
-    real(RP), intent(in)  :: dt_child
-    real(RP), intent(in)  :: dt_parent
 
     ! works
     integer :: i, j, k, iq
@@ -2163,6 +2168,6 @@ contains
 !    end do
 
     return
-  end subroutine ATMOS_BOUNDARY_increment_get_lerp_midpoint
+  end subroutine get_increment_lerp_midpoint
 
 end module scale_atmos_boundary
