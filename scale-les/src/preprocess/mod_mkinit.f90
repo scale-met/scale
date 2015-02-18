@@ -2007,6 +2007,13 @@ contains
   !-----------------------------------------------------------------------------
   !> Make initial state for squallline experiment
   subroutine MKINIT_squallline
+    use mod_ocean_vars, only: &
+       OCEAN_TEMP,       &
+       OCEAN_SFC_albedo, &
+       OCEAN_SFC_TEMP,   &
+       OCEAN_SFC_Z0M,    &
+       OCEAN_SFC_Z0H,    &
+       OCEAN_SFC_Z0E
     implicit none
 
     character(len=H_LONG) :: ENV_IN_SOUNDING_file = ''
@@ -2162,6 +2169,14 @@ contains
        SFLX_snow(i,j) = 0.0_RP
     enddo
     enddo
+
+    OCEAN_TEMP    (:,:)      = SFC_THETA
+    OCEAN_SFC_TEMP(:,:)      = SFC_THETA
+    OCEAN_SFC_albedo(:,:,I_LW) = 0.04D0
+    OCEAN_SFC_albedo(:,:,I_SW) = 0.05D0
+    OCEAN_SFC_Z0M (:,:)      = 1.0E-4_RP
+    OCEAN_SFC_Z0H (:,:)      = 1.0E-4_RP
+    OCEAN_SFC_Z0E (:,:)      = 1.0E-4_RP
 
     return
   end subroutine MKINIT_squallline
