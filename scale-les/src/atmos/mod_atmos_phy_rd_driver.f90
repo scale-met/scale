@@ -107,9 +107,7 @@ contains
        REAL_CZ,            &
        REAL_FZ,            &
        REAL_LON,           &
-       REAL_LAT,           &
-       REAL_BASEPOINT_LON, &
-       REAL_BASEPOINT_LAT
+       REAL_LAT
     use scale_const, only: &
        PRE00 => CONST_PRE00, &
        Rdry  => CONST_Rdry,  &
@@ -129,7 +127,6 @@ contains
     use mod_atmos_admin, only: &
        ATMOS_PHY_RD_TYPE
     use scale_atmos_solarins, only: &
-       SOLARINS_fixedlatlon => ATMOS_SOLARINS_fixedlatlon, &
        SOLARINS_insolation  => ATMOS_SOLARINS_insolation
     use scale_atmos_phy_rd, only: &
        ATMOS_PHY_RD
@@ -203,15 +200,6 @@ contains
     !---------------------------------------------------------------------------
 
     if ( update_flag ) then
-
-       ! calc solar insolation
-       if ( SOLARINS_fixedlatlon ) then
-          LON(:,:) = REAL_BASEPOINT_LON
-          LAT(:,:) = REAL_BASEPOINT_LAT
-       else
-          LON(:,:) = REAL_LON(:,:)
-          LAT(:,:) = REAL_LAT(:,:)
-       endif
 
        call SOLARINS_insolation( solins(:,:),    & ! [OUT]
                                  cosSZA(:,:),    & ! [OUT]
