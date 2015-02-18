@@ -100,12 +100,12 @@ module mod_atmos_phy_sf_vars
   character(len=H_MID),   private            :: VAR_DESC(VMAX) !< desc. of the variables
   character(len=H_SHORT), private            :: VAR_UNIT(VMAX) !< unit  of the variables
 
-  data VAR_NAME / 'SFC_TEMP',  &
-                  'ALB_LW',    &
-                  'ALB_SW',    &
-                  'SFC_Z0M',   &
-                  'SFC_Z0H',   &
-                  'SFC_Z0E'    /
+  data VAR_NAME / 'SFC_TEMP',   &
+                  'SFC_ALB_LW', &
+                  'SFC_ALB_SW', &
+                  'SFC_Z0M',    &
+                  'SFC_Z0H',    &
+                  'SFC_Z0E'     /
 
   data VAR_DESC / 'surface skin temperature',            &
                   'surface albedo for longwave',         &
@@ -275,7 +275,7 @@ contains
     call COMM_wait ( ATMOS_PHY_SF_SFC_Z0M   (:,:),       4 )
     call COMM_wait ( ATMOS_PHY_SF_SFC_Z0H   (:,:),       5 )
     call COMM_wait ( ATMOS_PHY_SF_SFC_Z0E   (:,:),       6 )
-    
+
     return
   end subroutine ATMOS_PHY_SF_vars_fillhalo
 
