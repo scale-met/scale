@@ -2140,10 +2140,10 @@ contains
                 + c_ocean_albedo(n,3) * tr1**(n-1) * am1*am1
        enddo
 
-       albedo_ocean(i,j,I_LW) = ( 1.0_RP-sw ) * 0.05_RP &
+       albedo_ocean(i,j,I_SW) = ( 1.0_RP-sw ) * 0.05_RP &
                               + (        sw ) * exp(s)
 
-       albedo_ocean(i,j,I_SW) = 0.05_RP
+       albedo_ocean(i,j,I_LW) = 0.05_RP
     enddo
     enddo
     !$acc end kernels
