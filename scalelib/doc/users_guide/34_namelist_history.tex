@@ -1,0 +1,79 @@
+\subsection{Namelist for history output}
+出力ファイルへの変数の追加は、2段階の手続きが必要である。
+\begin{enumerate}
+\item ソースファイル内の設定。対象の変数をhistory出力するための設定で、この手続きにより、出力のための準備が行われる。
+\item run.conf内の設定。実際にhistoryに出力するかどうかを指定。コンパイルし直すことなく、実験毎に変更可能。
+\end{enumerate}
+予報変数や主要な変数についてはすでに1の手続きは行われているため、2だけを行えばよい。
+対象となる変数リストは、Appendix\ref{sec:vari_hist}を参照。
+これ以外の変数をユーザーが書き出したい場合は、1の手続きが必要であるが、ここでは2の手続きのみ説明する。
+
+
+出力ファイルへの変数の追加は、下記のフォーマットに従ってrun.confに追記すればよい。
+%\begin{screen}
+\begin{verbatim}
+ &HISTITEM ITEM     = "character"
+         (,BASENAME = "character",
+           TINTERVAL= real,
+           TUNIT    = "character", 
+           TAVERAGE = logical,
+           ZINTERP  = logical, 
+           DATATYPE = "character")
+ /
+\end{verbatim}
+%\end{screen}
+$\left( \right)$内はオプション。
+特に指定がない場合には、\verb|&PARAM_HISTORY|の設定がdefaultとして設定される。
+%\begin{screen}
+\begin{verbatim}
+ &PARAM_HISTORY
+  HISTORY_DEFAULT_BASENAME  = "character",
+  HISTORY_DEFAULT_TINTERVAL = real,
+  HISTORY_DEFAULT_TUNIT     = "character",
+  HISTORY_DEFAULT_TAVERAGE  = logical,
+  HISTORY_DEFAULT_ZINTERP   = logical,
+  HISTORY_DEFAULT_DATATYPE  = "character",
+  HISTORY_OUTPUT_STEP0      = logical,
+ /
+\end{verbatim}
+%\end{screen}
+各namelist内変数の説明は以下の通りである。\\
+%\begin{table}[h]
+{\renewcommand\arraystretch{1.2}
+\begin{tabular}{ll}
+\hline
+ITEM                   & 変数名。 Appendix\ref{sec:vari_hist}の\ref{tb:vari_hist}を参照。\\                       
+BASENEME               & 出力ファイル名。\\
+                       & BASENAME\_xxxxxx.ncとなる。xxxxxxはノード番号。\\
+TINTERVAL              & 出力間隔。\\
+TUNIT                  & TINTERVALで指定した出力間隔の単位。\\
+TAVERAGE               & .false.=瞬間値、.true.=平均値として出力。\\
+                       & 平均値の場合、出力タイミングの直前のTINTERVAL間の平均値。\\
+DATATYPE               & 出力値の型。''REAL4'',''REAL8''など。\\
+ZINTERP                & .false.=モデル面、.true.=Z面（FZ面$?$、CZ面$?$）の値として出力。\\
+HISTORY\_OUTPUT\_STEP0 & .false.=初期時刻(t=0)の値を出力、.true.=出力しない。\\
+                       & \verb|&PARAM_HISTORY|でのみ有効。\\
+\hline
+\end{tabular}
+}\\
+%\end{table}
+
+\vspace{1cm}
+\noindent {\Large\em Example}
+\begin{verbatim}
+ &PARAM_HISTORY
+  HISTORY_DEFAULT_BASENAME  = "history_d03",
+  HISTORY_DEFAULT_TINTERVAL = 3600.D0,
+  HISTORY_DEFAULT_TUNIT     = "SEC",
+  HISTORY_DEFAULT_TAVERAGE  = .false.,
+  HISTORY_DEFAULT_DATATYPE  = "REAL4",
+  HISTORY_DEFAULT_ZINTERP   = .false.,
+  HISTORY_OUTPUT_STEP0      = .true.,
+ /
+
+ &HISTITEM item="RAIN", taverage=.true., tinterval=600.D0 /
+\end{verbatim}
+
+
+
+

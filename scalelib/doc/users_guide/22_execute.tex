@@ -1,0 +1,77 @@
+\section{Running the SCALE-LES}
+
+\subsection{モデル実行方法の概要}
+SCALE-LESモデルの実行過程は，基本的に
+\begin{enumerate}
+\item pp : 地形・海陸分布データの作成．
+\item init : 初期値・境界値データの作成．
+\item run : 時間積分を行う
+\end{enumerate}
+という手順である．
+
+
+\subsection{現実事例の実行方法}
+
+\subsubsection{pp}
+理想実験の場合との違いは地形，土地利用といった下準備が必要になる点が違いである．
+まず，地形データを作成するためにtopo/のもとでpp.confを目的の実験に合わせて編集する．
+
+Preprocessプログラムは、地形および土地利用データの生成を行う。
+地形にはGTOPO30またはDEM50M、土地利用にはGLCCv2またはLU100Mのデータセットを用いる。
+pp.confのサンプルは付録参照。
+
+
+\begin{enumerate}
+\item 下記のコマンドで，事前処理(地形作成)を実行する．ここの例ではMPI並列として
+6プロセスを使用している．
+\begin{verbatim}
+$ mpirun -n 6 ./scale-les_pp pp.conf
+\end{verbatim}
+正常にJOBが終了すれば，topo.pe\verb|#####|.ncというファイルがMPIプロセス数だけ生成される（\verb|#####|はMPIプロセスの番号）．
+
+\item 同様に土地利用データを作成するためにlanduse/のもとでpp.confを適宜編集する．
+MPIプロセスの設定や，格子，領域中心(basepointの緯度・経度)の設定はtopoを作成したときのpp.confと揃えておくこと．
+
+\item 下記のコマンドで，事前処理(土地利用作成)を実行する．
+\begin{verbatim}
+$ mpirun -n 6 ./scale-les_pp pp.conf
+\end{verbatim}
+正常にJOBが終了すれば，landuse.pe\verb|#####|.ncというファイルがMPIプロセス数だけ生成される．
+\end{enumerate}
+
+
+\subsubsection{init}
+
+Initialプログラムは、初期値および境界値を生成する。
+データソースとして、SCALE、WRF、NICAM、一般バイナリを想定している。
+init.confのサンプルは付録参照。
+任意のデータを使用する場合のバイナリデータの作成手順については\ref{sec:adv_bnddata}を参照。
+
+\begin{enumerate}
+\item 次に入力する外部データに合わせてinit.confを適宜編集し，事前処理(初期値・境界値作成)を実行する．
+ここでも，MPIプロセスの設定や，格子，領域中心(basepointの緯度・経度)の設定はここまでの作業で指定したものと揃えておくこと． 
+\begin{verbatim}
+$ mpirun -n 6 ./scale-les_init init.conf
+\end{verbatim}
+\end{enumerate}
+
+
+
+\subsubsection{run}
+SCALE-LESプログラムは、実行プログラム本体となる。
+run.confのサンプルは付録参照。
+
+
+\begin{enumerate}
+\item run.confを適宜編集する．MPIプロセスの設定や，格子，領域中心(basepointの緯度・経度)の設定，およびinit.confで指定した雲微物理モデルの指定などを揃えておくこと．
+また，init.conf中にある，外部データとして読み込ませる親モデルデータのOutput時間間隔を正しく設定すること．
+
+\item 以上の設定，確認を終えたら下記のコマンドによってモデルを実行する．
+\begin{verbatim}
+$ mpirun -n 6 ./scale-les run.conf
+\end{verbatim}
+configurationファイルの設定によるが，history.pe\verb|#####|.ncという名前のファイルが作成され，この中に出力変数が含まれている．
+\end{enumerate}
+
+
+

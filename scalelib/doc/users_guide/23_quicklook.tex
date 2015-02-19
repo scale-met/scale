@@ -1,0 +1,37 @@
+\section{Quicklook SCALE-LES output}
+
+scale-lesのファイルはMPIプロセス毎に分割ファイルとして
+netcdfフォーマットでアウトプットされる．
+ここではgpviewもしくはgradsを使用した描画方法について説明する。
+
+\subsection{gpview}
+
+Dennou系のRubyベースコマンドgpviewによって直接描画することができる．
+Ruby DCL / GPhysのインストールにあたってはCentOS6, 7，Fedora，SUSE11.2,
+11.3, Vine Linux 6に対しては，リポジトリを用意しています．
+どのような変数がhistoryファイルに含まれているかは，netcdfに付属している
+ncdumpのほか，GPhysに含まれているgpdumpを用いても調べることが出来る．
+以下に簡単な描画例を示す．その他のオプション等については--helpを使って
+ヘルプを表示させるか，電脳倶楽部のWebページを参照のこと．
+
+historyの描画例
+\begin{itemize}
+\item 水平風東西成分を描画する：\\
+高度1000m指定，時刻3600秒指定，コンターなし，（画面をクリックするか''q''を打つことで終了する）\\
+\verb|>$ gpview history.pe00*@U,z=1000,time=3600 --nocont|
+\item 水平風南北成分を描画する：\\
+高度1000m指定，カンバスの縦横比＝1，変数の描画範囲=4.8～5.2 [m/s]，時間軸をアニメーション（クリックで進む）\\
+\verb|>$ gpview history.pe00*@V,z=1000 --aspect 1 --range=4.8:5.2 --anim time|
+\item 水蒸気混合比の南北-鉛直断面図を描画する：\\
+東西方向に50kmの位置を指定，コンターなし，時間軸をアニメーション，Gawのオプションにより自動でアニメが進む，横軸と縦軸を交換 (exch)\\
+\verb|>$ gpview history.pe00*@QV,x=50000 --aspect 1 --nocont --anim time --Gaw --exch|
+\end{itemize}
+
+下記のように\verb|init_****.pe#####.nc|ファイルなどを指定することで，初期値・境界値や下端境界条件のファイルの中身も見ることが出来る．
+\begin{itemize}
+\item \verb|>$ gpview init_00000000000.000.pe00*@MOMX,z=1000 --aspect 1 --nocont|
+\item \verb|>$ gpview boundary.pe00*@VELX,z=1000 --nocont --anim time|
+\item \verb|>$ gpview topo.pe00*@TOPO --aspect 1|
+\item \verb|>$ gpview landuse.pe00*@FRAC_LAND --aspect 1|
+\end{itemize}
+
