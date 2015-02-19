@@ -2123,28 +2123,11 @@ contains
 
     ! works
     integer :: ref_tmp
-integer :: i, j, k, iq
     !---------------------------------------------------------------------------
 
-! free buffer
-do j = JSB, JEB
-do i = ISB, IEB
-do k = 1, KA
-   ATMOS_BOUNDARY_ref_DENS(k,i,j,ref_now) = ATMOS_BOUNDARY_ref_DENS(k,i,j,ref_new)
-   ATMOS_BOUNDARY_ref_VELZ(k,i,j,ref_now) = ATMOS_BOUNDARY_ref_VELZ(k,i,j,ref_new)
-   ATMOS_BOUNDARY_ref_VELX(k,i,j,ref_now) = ATMOS_BOUNDARY_ref_VELX(k,i,j,ref_new)
-   ATMOS_BOUNDARY_ref_VELY(k,i,j,ref_now) = ATMOS_BOUNDARY_ref_VELY(k,i,j,ref_new)
-   ATMOS_BOUNDARY_ref_POTT(k,i,j,ref_now) = ATMOS_BOUNDARY_ref_POTT(k,i,j,ref_new)
-   do iq = 1, BND_QA
-      ATMOS_BOUNDARY_ref_QTRC(k,i,j,iq,ref_now) = ATMOS_BOUNDARY_ref_QTRC(k,i,j,iq,ref_new)
-   end do
-end do
-end do
-end do
-
-    !ref_tmp = ref_now
-    !ref_now = ref_new
-    !ref_new = ref_tmp
+    ref_tmp = ref_now
+    ref_now = ref_new
+    ref_new = ref_tmp
 
     return
   end subroutine  update_ref_index
