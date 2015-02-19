@@ -472,8 +472,8 @@ module scale_atmos_phy_mp_sn14
   real(RP), private, allocatable, save :: rgs_d    (:,:,:)
   real(RP), private, allocatable, save :: rgsh_d   (:,:,:)
 
-  logical, private, save :: doautoconversion = .true.
-  logical, private, save :: doprecipitation  = .true.
+  logical, private, save :: MP_doautoconversion = .true.
+  logical, private, save :: MP_doprecipitation  = .true.
   real(RP), private, save :: MP_ssw_lim = 1.E+1_RP
 
   !-----------------------------------------------------------------------------
@@ -495,8 +495,8 @@ contains
     character(len=*), intent(in) :: MP_TYPE
 
     NAMELIST / PARAM_ATMOS_PHY_MP / &
-       doautoconversion, &
-       doprecipitation,  &
+       MP_doautoconversion, &
+       MP_doprecipitation,  &
        MP_ssw_lim,       &
        MP_ntmax_sedimentation
 
@@ -1728,7 +1728,7 @@ contains
 
     ! Auto-conversion, Accretion, Self-collection, Break-up
     ! [Mod] T.Seiki
-    if ( doautoconversion ) then
+    if ( MP_doautoconversion ) then
        call aut_acc_slc_brk_kij(  &
             PQ, &
             rhoq2, xq, dq_xa, &
@@ -1978,7 +1978,7 @@ contains
     !----------------------------------------------------------------------------
     call PROF_rapstart('MP Sedimentation', 2)
 
-    if ( doprecipitation ) then
+    if ( MP_doprecipitation ) then
 
     do j = JS, JE
     do i = IS, IE
