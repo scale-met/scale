@@ -1270,6 +1270,8 @@ contains
        end do
     end if
 
+    now_step = fillgaps_steps
+
     ! get time increment
     call get_increment( inc_DENS(:,:,:),   & ! [OUT]
                         inc_VELZ(:,:,:),   & ! [OUT]
@@ -1303,7 +1305,6 @@ contains
        call PRC_MPIstop
     end if
 
-    now_step = fillgaps_steps
     inc_skip_at_1st = .true.
 
     return
@@ -1524,7 +1525,7 @@ contains
     if ( do_parent_process ) then !online [parent]
        ! should be called every time step
        handle = 1
-       call ATMOS_BOUNDARY_update_online( DENS,MOMZ,MOMX,MOMY,RHOT,QTRC,handle,now_step )
+       call ATMOS_BOUNDARY_update_online( DENS,MOMZ,MOMX,MOMY,RHOT,QTRC,handle )
     endif
 
     if ( present(last) ) then
@@ -1553,7 +1554,7 @@ contains
           now_step = 1
           if ( do_daughter_process ) then !online [daughter]
              handle = 2
-             call ATMOS_BOUNDARY_update_online( DENS,MOMZ,MOMX,MOMY,RHOT,QTRC,handle,now_step )
+             call ATMOS_BOUNDARY_update_online( DENS,MOMZ,MOMX,MOMY,RHOT,QTRC,handle )
           else
              call ATMOS_BOUNDARY_update_file
           end if
@@ -1944,8 +1945,7 @@ contains
        MOMY,    & ! [in]
        RHOT,    & ! [in]
        QTRC,    & ! [in]
-       handle,  & ! [in]
-       now_step ) ! [in]
+       handle   ) ! [in]
     use scale_process, only: &
        PRC_myrank
     use scale_history, only: &
@@ -1981,7 +1981,6 @@ contains
     real(RP), intent(in) :: RHOT(KA,IA,JA)
     real(RP), intent(in) :: QTRC(KA,IA,JA,QA)
     integer,  intent(in) :: handle
-    integer,  intent(in) :: now_step
 
     real(RP) :: dummy1_p(PARENT_KA(handle),  PARENT_IA(handle),  PARENT_JA(handle))
     real(RP) :: dummy1_d(DAUGHTER_KA(handle),DAUGHTER_IA(handle),DAUGHTER_JA(handle),2)
@@ -2129,18 +2128,18 @@ contains
     real(RP) :: dt
     !---------------------------------------------------------------------------
 
-    dt = ATMOS_BOUNDARY_UPDATE_DT / TIME_DTSEC 
+    dt = TIME_DTSEC / ATMOS_BOUNDARY_UPDATE_DT 
 
     do j = 1, JA
     do i = 1, IA
     do k = 1, KA
-       inc_DENS(k,i,j) = ( ATMOS_BOUNDARY_ref_DENS(k,i,j,ref_new) - ATMOS_BOUNDARY_ref_DENS(k,i,j,ref_now) ) / dt
-       inc_VELZ(k,i,j) = ( ATMOS_BOUNDARY_ref_VELZ(k,i,j,ref_new) - ATMOS_BOUNDARY_ref_VELZ(k,i,j,ref_now) ) / dt
-       inc_VELX(k,i,j) = ( ATMOS_BOUNDARY_ref_VELX(k,i,j,ref_new) - ATMOS_BOUNDARY_ref_VELX(k,i,j,ref_now) ) / dt
-       inc_VELY(k,i,j) = ( ATMOS_BOUNDARY_ref_VELY(k,i,j,ref_new) - ATMOS_BOUNDARY_ref_VELY(k,i,j,ref_now) ) / dt
-       inc_POTT(k,i,j) = ( ATMOS_BOUNDARY_ref_POTT(k,i,j,ref_new) - ATMOS_BOUNDARY_ref_POTT(k,i,j,ref_now) ) / dt
+       inc_DENS(k,i,j) = ( ATMOS_BOUNDARY_ref_DENS(k,i,j,ref_new) - ATMOS_BOUNDARY_ref_DENS(k,i,j,ref_now) ) * dt
+       inc_VELZ(k,i,j) = ( ATMOS_BOUNDARY_ref_VELZ(k,i,j,ref_new) - ATMOS_BOUNDARY_ref_VELZ(k,i,j,ref_now) ) * dt
+       inc_VELX(k,i,j) = ( ATMOS_BOUNDARY_ref_VELX(k,i,j,ref_new) - ATMOS_BOUNDARY_ref_VELX(k,i,j,ref_now) ) * dt
+       inc_VELY(k,i,j) = ( ATMOS_BOUNDARY_ref_VELY(k,i,j,ref_new) - ATMOS_BOUNDARY_ref_VELY(k,i,j,ref_now) ) * dt
+       inc_POTT(k,i,j) = ( ATMOS_BOUNDARY_ref_POTT(k,i,j,ref_new) - ATMOS_BOUNDARY_ref_POTT(k,i,j,ref_now) ) * dt
        do iq = 1, BND_QA
-          inc_QTRC(k,i,j,iq) = ( ATMOS_BOUNDARY_ref_QTRC(k,i,j,iq,ref_new) - ATMOS_BOUNDARY_ref_QTRC(k,i,j,iq,ref_now) ) / dt
+          inc_QTRC(k,i,j,iq) = ( ATMOS_BOUNDARY_ref_QTRC(k,i,j,iq,ref_new) - ATMOS_BOUNDARY_ref_QTRC(k,i,j,iq,ref_now) ) * dt
        end do
     end do
     end do
@@ -2150,7 +2149,7 @@ contains
   end subroutine get_increment_lerp_midpoint
 
   !-----------------------------------------------------------------------------
-  !> Updat indices of array of boundary references
+  !> Update indices of array of boundary references
   subroutine update_ref_index
     implicit none
 
@@ -2164,6 +2163,6 @@ contains
     ref_new = ref_tmp
 
     return
-  end subroutine  update_ref_index
+  end subroutine update_ref_index
 
 end module scale_atmos_boundary
