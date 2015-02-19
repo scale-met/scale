@@ -427,10 +427,6 @@ contains
 
        endif
 
-    else
-       ! to avoid adding UNDEF to RHOT_t in the next block
-       RHOT_t_RD(:,:,:) = 0.0_RP
-
     endif
 
     do j = JS, JE
