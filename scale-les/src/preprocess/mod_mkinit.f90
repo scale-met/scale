@@ -592,7 +592,7 @@ contains
     real(RP) :: R_MAX        = 1.E-06_RP
     real(RP) :: R_MIN        = 1.E-08_RP
     real(RP) :: A_ALPHA      = 3.0_RP
-    real(RP) :: rhoa         = 2.25E+03_RP
+    real(RP) :: RHO_AERO         = 2.25E+03_RP
     integer  :: nbin_i       = 33
     integer  :: nccn_i       = 20
 
@@ -602,7 +602,7 @@ contains
        R_MAX,        &
        R_MIN,        &
        A_ALPHA,      &
-       rhoa,         &
+       RHO_AERO,         &
        nccn_i,       &
        nbin_i
 
@@ -630,8 +630,8 @@ contains
     allocate( xactr(nccn_i) )
     allocate( xabnd(nccn_i+1) )
 
-    xasta = log( rhoa*4.0_RP/3.0_RP*pi * ( R_MIN )**3 )
-    xaend = log( rhoa*4.0_RP/3.0_RP*pi * ( R_MAX )**3 )
+    xasta = log( RHO_AERO*4.0_RP/3.0_RP*pi * ( R_MIN )**3 )
+    xaend = log( RHO_AERO*4.0_RP/3.0_RP*pi * ( R_MAX )**3 )
     dxaer = ( xaend-xasta )/nccn_i
     do iq = 1, nccn_i+1
       xabnd( iq ) = xasta + dxaer*( iq-1 )
@@ -640,7 +640,7 @@ contains
       xactr( iq ) = ( xabnd( iq )+xabnd( iq+1 ) )*0.5_RP
     enddo
     do iq = 1, nccn_i
-      gan( iq ) = faero( F0_AERO,R0_AERO,xactr( iq ), A_ALPHA, rhoa )*exp( xactr(iq) )
+      gan( iq ) = faero( F0_AERO,R0_AERO,xactr( iq ), A_ALPHA, RHO_AERO )*exp( xactr(iq) )
     enddo
 
     !--- Hydrometeor is zero at initial time for Bin method
@@ -675,17 +675,17 @@ contains
   end subroutine SBMAERO_setup
 
   !-----------------------------------------------------------------------------
-  function faero( f0,r0,x,alpha,rhoa )
+  function faero( f0,r0,x,alpha,RHO_AERO )
     use scale_const, only: &
        pi => CONST_PI
     implicit none
 
-    real(RP), intent(in) ::  x, f0, r0, alpha, rhoa
+    real(RP), intent(in) ::  x, f0, r0, alpha, RHO_AERO
     real(RP) :: faero
     real(RP) :: rad
     !---------------------------------------------------------------------------
 
-    rad = ( exp(x) * 3.0_RP / 4.0_RP / pi / rhoa )**(1.0_RP/3.0_RP)
+    rad = ( exp(x) * 3.0_RP / 4.0_RP / pi / RHO_AERO )**(1.0_RP/3.0_RP)
 
     faero = f0 * (rad/r0)**(-alpha)
 
