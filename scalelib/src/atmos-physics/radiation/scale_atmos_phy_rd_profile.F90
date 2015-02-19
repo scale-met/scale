@@ -122,6 +122,8 @@ module scale_atmos_phy_rd_profile
   integer,  private, parameter :: I_SO2    = 29
   integer,  private, parameter :: I_SF6    = 30
 
+  logical, private :: report_firsttime = .true. !< true at only first report
+
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -619,7 +621,8 @@ contains
     cldfrac     (:)   = 0.0_RP
 
     !----- report data -----
-    if ( debug ) then
+    if ( debug .AND. report_firsttime ) then
+       report_firsttime = .false.
 
        if( IO_L ) write(IO_FID_LOG,*)
        if( IO_L ) write(IO_FID_LOG,'(1x,A)') &
