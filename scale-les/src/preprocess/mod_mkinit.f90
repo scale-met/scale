@@ -81,18 +81,6 @@ module mod_mkinit
      MOMZ, &
      RHOT, &
      QTRC
-  use mod_atmos_phy_mp_vars, only: &
-     SFLX_rain    => ATMOS_PHY_MP_SFLX_rain, &
-     SFLX_snow    => ATMOS_PHY_MP_SFLX_snow
-  use mod_atmos_phy_rd_vars, only: &
-     SFLX_LW_up   => ATMOS_PHY_RD_SFLX_LW_up,   &
-     SFLX_LW_dn   => ATMOS_PHY_RD_SFLX_LW_dn,   &
-     SFLX_SW_up   => ATMOS_PHY_RD_SFLX_SW_up,   &
-     SFLX_SW_dn   => ATMOS_PHY_RD_SFLX_SW_dn,   &
-     TOAFLX_LW_up => ATMOS_PHY_RD_TOAFLX_LW_up, &
-     TOAFLX_LW_dn => ATMOS_PHY_RD_TOAFLX_LW_dn, &
-     TOAFLX_SW_up => ATMOS_PHY_RD_TOAFLX_SW_up, &
-     TOAFLX_SW_dn => ATMOS_PHY_RD_TOAFLX_SW_dn
   use mod_realinput
   !-----------------------------------------------------------------------------
   implicit none
@@ -693,8 +681,136 @@ contains
   end function faero
 
   !-----------------------------------------------------------------------------
-  !> Make initial state ( horizontally uniform + random disturbance )
-  subroutine MKINIT_planestate
+  !> flux setup
+  subroutine flux_setup
+    use mod_atmos_phy_mp_vars, only: &
+       SFLX_rain    => ATMOS_PHY_MP_SFLX_rain, &
+       SFLX_snow    => ATMOS_PHY_MP_SFLX_snow
+    use mod_atmos_phy_rd_vars, only: &
+       SFLX_LW_up   => ATMOS_PHY_RD_SFLX_LW_up,   &
+       SFLX_LW_dn   => ATMOS_PHY_RD_SFLX_LW_dn,   &
+       SFLX_SW_up   => ATMOS_PHY_RD_SFLX_SW_up,   &
+       SFLX_SW_dn   => ATMOS_PHY_RD_SFLX_SW_dn,   &
+       TOAFLX_LW_up => ATMOS_PHY_RD_TOAFLX_LW_up, &
+       TOAFLX_LW_dn => ATMOS_PHY_RD_TOAFLX_LW_dn, &
+       TOAFLX_SW_up => ATMOS_PHY_RD_TOAFLX_SW_up, &
+       TOAFLX_SW_dn => ATMOS_PHY_RD_TOAFLX_SW_dn
+    implicit none
+    ! Flux from Atmosphere
+    real(RP) :: FLX_rain      = 0.0_RP ! surface rain flux                         [kg/m2/s]
+    real(RP) :: FLX_snow      = 0.0_RP ! surface snow flux                         [kg/m2/s]
+    real(RP) :: FLX_LW_dn     = 0.0_RP ! surface downwad long-wave  radiation flux [J/m2/s]
+    real(RP) :: FLX_SW_dn     = 0.0_RP ! surface downwad short-wave radiation flux [J/m2/s]
+
+    NAMELIST / PARAM_MKINIT_FLUX / &
+       FLX_rain,      &
+       FLX_snow,      &
+       FLX_LW_dn,     &
+       FLX_SW_dn
+
+    integer :: i, j
+    integer :: ierr
+    !---------------------------------------------------------------------------
+
+    !--- read namelist
+    rewind(IO_FID_CONF)
+    read(IO_FID_CONF,nml=PARAM_MKINIT_FLUX,iostat=ierr)
+    if( ierr < 0 ) then !--- missing
+       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+    elseif( ierr > 0 ) then !--- fatal error
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_FLUX. Check!'
+       call PRC_MPIstop
+    endif
+    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_FLUX)
+
+    do j = JS, JE
+    do i = IS, IE
+       SFLX_rain   (i,j) = FLX_rain
+       SFLX_snow   (i,j) = FLX_snow
+       SFLX_LW_up  (i,j) = 0.0_RP
+       SFLX_LW_dn  (i,j) = FLX_LW_dn
+       SFLX_SW_up  (i,j) = 0.0_RP
+       SFLX_SW_dn  (i,j) = FLX_SW_dn
+
+       TOAFLX_LW_up(i,j) = 0.0_RP
+       TOAFLX_LW_dn(i,j) = 0.0_RP
+       TOAFLX_SW_up(i,j) = 0.0_RP
+       TOAFLX_SW_dn(i,j) = 0.0_RP
+    end do
+    end do
+
+    return
+  end subroutine flux_setup
+
+  !-----------------------------------------------------------------------------
+  !> Land setup
+  subroutine land_setup
+    use mod_land_vars, only: &
+       I_ThermalCond,   &
+       I_HeatCapacity,  &
+       I_Z0M,           &
+       LAND_TEMP,       &
+       LAND_WATER,      &
+       LAND_SFC_TEMP,   &
+       LAND_SFC_albedo, &
+       LAND_PROPERTY
+    implicit none
+    ! Land state
+    real(RP) :: LND_TEMP                ! soil temperature           [K]
+    real(RP) :: LND_WATER     = 0.15_RP ! soil moisture              [m3/m3]
+    real(RP) :: SFC_TEMP                ! land skin temperature      [K]
+    real(RP) :: SFC_albedo_LW = 0.01_RP ! land surface albedo for LW [0-1]
+    real(RP) :: SFC_albedo_SW = 0.20_RP ! land surface albedo for SW [0-1]
+    real(RP) :: LND_SFC_ThermalCond        ! land thermal conductivity  [W/m/K]
+    real(RP) :: LND_SFC_HeatCapa           ! land heat capacity         [J/m3/K]
+    real(RP) :: LND_SFC_Z0                 ! land roughness length      [m]
+
+    integer :: i, j
+    integer :: ierr
+
+    NAMELIST /PARAM_MKINIT_LAND/ &
+       LND_TEMP,      &
+       LND_WATER,     &
+       SFC_TEMP,      &
+       SFC_albedo_LW, &
+       SFC_albedo_SW, &
+       LND_SFC_ThermalCond, &
+       LND_SFC_HeatCapa, &
+       LND_SFC_Z0
+
+    LND_TEMP = THETAstd
+    SFC_TEMP = THETAstd
+
+    !--- read namelist
+    rewind(IO_FID_CONF)
+    read(IO_FID_CONF,nml=PARAM_MKINIT_LAND,iostat=ierr)
+    if( ierr < 0 ) then !--- missing
+       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+    elseif( ierr > 0 ) then !--- fatal error
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_LAND. Check!'
+       call PRC_MPIstop
+    endif
+    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_LAND)
+
+    do j = JS, JE
+    do i = IS, IE
+       LAND_TEMP      (:,i,j)    = LND_TEMP
+       LAND_WATER     (:,i,j)    = LND_WATER
+       LAND_SFC_TEMP  (i,j)      = SFC_TEMP
+       LAND_SFC_albedo(i,j,I_LW) = SFC_albedo_LW
+       LAND_SFC_albedo(i,j,I_SW) = SFC_albedo_SW
+       LAND_PROPERTY  (i,j,I_ThermalCond)  = LND_SFC_ThermalCond
+       LAND_PROPERTY  (i,j,I_HeatCapacity) = LND_SFC_HeatCapa
+       LAND_PROPERTY  (i,j,I_Z0M)          = LND_SFC_z0
+    end do
+    end do
+
+    return
+  end subroutine land_setup
+
+  !-----------------------------------------------------------------------------
+  !> Ocean setup
+  subroutine ocean_setup
     use mod_ocean_vars, only: &
        OCEAN_TEMP,       &
        OCEAN_SFC_TEMP,   &
@@ -702,6 +818,305 @@ contains
        OCEAN_SFC_Z0M,    &
        OCEAN_SFC_Z0H,    &
        OCEAN_SFC_Z0E
+    implicit none
+    ! Ocean state
+    real(RP) :: OCN_TEMP                  ! ocean temperature           [K]
+    real(RP) :: SFC_TEMP                  ! ocean skin temperature      [K]
+    real(RP) :: SFC_albedo_LW = 0.04_RP   ! ocean surface albedo for LW [0-1]
+    real(RP) :: SFC_albedo_SW = 0.05_RP   ! ocean surface albedo for SW [0-1]
+    real(RP) :: SFC_Z0M       = 1.0e-4_RP ! ocean surface roughness length (momentum) [m]
+    real(RP) :: SFC_Z0H       = 1.0e-4_RP ! ocean surface roughness length (heat) [m]
+    real(RP) :: SFC_Z0E       = 1.0e-4_RP ! ocean surface roughness length (vapor) [m]
+
+    integer :: i, j
+    integer :: ierr
+
+    NAMELIST /PARAM_MKINIT_OCEAN/ &
+       OCN_TEMP,      &
+       SFC_TEMP,      &
+       SFC_albedo_LW, &
+       SFC_albedo_SW, &
+       SFC_Z0M,       &
+       SFC_Z0H,       &
+       SFC_Z0E
+
+    OCN_TEMP = THETAstd
+    SFC_TEMP = THETAstd
+
+    !--- read namelist
+    rewind(IO_FID_CONF)
+    read(IO_FID_CONF,nml=PARAM_MKINIT_OCEAN,iostat=ierr)
+    if( ierr < 0 ) then !--- missing
+       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+    elseif( ierr > 0 ) then !--- fatal error
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_OCEAN. Check!'
+       call PRC_MPIstop
+    endif
+    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_OCEAN)
+
+
+    do j = JS, JE
+    do i = IS, IE
+       OCEAN_TEMP      (i,j)      = OCN_TEMP
+       OCEAN_SFC_TEMP  (i,j)      = SFC_TEMP
+       OCEAN_SFC_albedo(i,j,I_LW) = SFC_albedo_LW
+       OCEAN_SFC_albedo(i,j,I_SW) = SFC_albedo_SW
+       OCEAN_SFC_Z0M   (i,j)      = SFC_Z0M
+       OCEAN_SFC_Z0H   (i,j)      = SFC_Z0H
+       OCEAN_SFC_Z0E   (i,j)      = SFC_Z0E
+    end do
+    end do
+
+    return
+  end subroutine ocean_setup
+
+  !-----------------------------------------------------------------------------
+  !> Urban setup
+  subroutine urban_setup
+    use mod_urban_vars, only: &
+       URBAN_TR,         &
+       URBAN_TB,         &
+       URBAN_TG,         &
+       URBAN_TC,         &
+       URBAN_QC,         &
+       URBAN_UC,         &
+       URBAN_TRL,        &
+       URBAN_TBL,        &
+       URBAN_TGL,        &
+       URBAN_RAINR,      &
+       URBAN_RAINB,      &
+       URBAN_RAING,      &
+       URBAN_ROFF,       &
+       URBAN_SFC_TEMP,   &
+       URBAN_SFC_albedo
+    implicit none
+    ! urban state
+    real(RP) :: URB_ROOF_TEMP          ! Surface temperature of roof [K]
+    real(RP) :: URB_BLDG_TEMP          ! Surface temperature of building [K
+    real(RP) :: URB_GRND_TEMP          ! Surface temperature of ground [K]
+    real(RP) :: URB_CNPY_TEMP          ! Diagnostic canopy air temperature
+    real(RP) :: URB_CNPY_HMDT = 0.0_RP ! Diagnostic canopy humidity [-]
+    real(RP) :: URB_CNPY_WIND = 0.0_RP ! Diagnostic canopy wind [m/s]
+    real(RP) :: URB_ROOF_LAYER_TEMP    ! temperature in layer of roof [K]
+    real(RP) :: URB_BLDG_LAYER_TEMP    ! temperature in layer of building [
+    real(RP) :: URB_GRND_LAYER_TEMP    ! temperature in layer of ground [K]
+    real(RP) :: URB_ROOF_RAIN = 0.0_RP ! temperature in layer of roof [K]
+    real(RP) :: URB_BLDG_RAIN = 0.0_RP ! temperature in layer of building [
+    real(RP) :: URB_GRND_RAIN = 0.0_RP ! temperature in layer of ground [K]
+    real(RP) :: URB_RUNOFF    = 0.0_RP ! temperature in layer of ground [K]
+    real(RP) :: URB_SFC_TEMP           ! Grid average of surface temperature [K]
+    real(RP) :: URB_ALB_LW    = 0.0_RP ! Grid average of surface albedo for LW [0-1]
+    real(RP) :: URB_ALB_SW    = 0.0_RP ! Grid average of surface albedo for SW [0-1]
+
+    integer :: i, j
+    integer :: ierr
+
+    NAMELIST /PARAM_MKINIT_URBAN/ &
+       URB_ROOF_TEMP,       &
+       URB_BLDG_TEMP,       &
+       URB_GRND_TEMP,       &
+       URB_CNPY_TEMP,       &
+       URB_CNPY_HMDT,       &
+       URB_CNPY_WIND,       &
+       URB_ROOF_LAYER_TEMP, &
+       URB_BLDG_LAYER_TEMP, &
+       URB_GRND_LAYER_TEMP, &
+       URB_ROOF_RAIN,       &
+       URB_BLDG_RAIN,       &
+       URB_GRND_RAIN,       &
+       URB_RUNOFF,          &
+       URB_SFC_TEMP,        &
+       URB_ALB_LW,          &
+       URB_ALB_SW
+
+    URB_ROOF_TEMP       = THETAstd
+    URB_BLDG_TEMP       = THETAstd
+    URB_GRND_TEMP       = THETAstd
+    URB_CNPY_TEMP       = THETAstd
+    URB_ROOF_LAYER_TEMP = THETAstd
+    URB_BLDG_LAYER_TEMP = THETAstd
+    URB_GRND_LAYER_TEMP = THETAstd
+
+    URB_SFC_TEMP        = THETAstd
+
+    !--- read namelist
+    rewind(IO_FID_CONF)
+    read(IO_FID_CONF,nml=PARAM_MKINIT_URBAN,iostat=ierr)
+    if( ierr < 0 ) then !--- missing
+       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+    elseif( ierr > 0 ) then !--- fatal error
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_URBAN. Check!'
+       call PRC_MPIstop
+    endif
+    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_URBAN)
+
+
+    do j = JS, JE
+    do i = IS, IE
+       URBAN_TR   (i,j)   = URB_ROOF_TEMP
+       URBAN_TB   (i,j)   = URB_BLDG_TEMP
+       URBAN_TG   (i,j)   = URB_GRND_TEMP
+       URBAN_TC   (i,j)   = URB_CNPY_TEMP
+       URBAN_QC   (i,j)   = URB_CNPY_HMDT
+       URBAN_UC   (i,j)   = URB_CNPY_WIND
+       URBAN_TRL  (:,i,j) = URB_ROOF_LAYER_TEMP
+       URBAN_TBL  (:,i,j) = URB_BLDG_LAYER_TEMP
+       URBAN_TGL  (:,i,j) = URB_GRND_LAYER_TEMP
+       URBAN_RAINR(i,j)   = URB_ROOF_RAIN
+       URBAN_RAINB(i,j)   = URB_BLDG_RAIN
+       URBAN_RAING(i,j)   = URB_GRND_RAIN
+       URBAN_ROFF (i,j)   = URB_RUNOFF
+       URBAN_SFC_TEMP  (i,j)      = URB_SFC_TEMP
+       URBAN_SFC_albedo(i,j,I_LW) = URB_ALB_LW
+       URBAN_SFC_albedo(i,j,I_SW) = URB_ALB_SW
+    end do
+    end do
+
+    return
+  end subroutine urban_setup
+
+  !-----------------------------------------------------------------------------
+  !> Read sounding data from file
+  subroutine read_sounding( &
+       DENS, VELX, VELY, POTT, QV )
+    implicit none
+    real(RP), intent(out) :: DENS(KA)
+    real(RP), intent(out) :: VELX(KA)
+    real(RP), intent(out) :: VELY(KA)
+    real(RP), intent(out) :: POTT(KA)
+    real(RP), intent(out) :: QV  (KA)
+
+    real(RP) :: TEMP(KA)
+    real(RP) :: PRES(KA)
+    real(RP) :: QC  (KA)
+
+    character(len=H_LONG) :: ENV_IN_SOUNDING_file = ''
+
+    integer, parameter :: EXP_klim = 100
+    integer            :: EXP_kmax
+
+    real(RP) :: SFC_THETA            ! surface potential temperature [K]
+    real(RP) :: SFC_PRES             ! surface pressure [hPa]
+    real(RP) :: SFC_QV               ! surface watervapor [g/kg]
+
+    real(RP) :: EXP_z   (EXP_klim+1) ! height      [m]
+    real(RP) :: EXP_pott(EXP_klim+1) ! potential temperature [K]
+    real(RP) :: EXP_qv  (EXP_klim+1) ! water vapor [g/kg]
+    real(RP) :: EXP_u   (EXP_klim+1) ! velocity u  [m/s]
+    real(RP) :: EXP_v   (EXP_klim+1) ! velocity v  [m/s]
+
+    real(RP) :: fact1, fact2
+    integer :: k, kref
+    integer :: fid
+    integer :: ierr
+
+    NAMELIST /PARAM_MKINIT_SOUNDING/ &
+         ENV_IN_SOUNDING_file
+
+    !--- read namelist
+    rewind(IO_FID_CONF)
+    read(IO_FID_CONF,nml=PARAM_MKINIT_SOUNDING,iostat=ierr)
+
+    if( ierr < 0 ) then !--- missing
+       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+    elseif( ierr > 0 ) then !--- fatal error
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_SOUNDING. Check!'
+       call PRC_MPIstop
+    endif
+    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_SOUNDING)
+
+    !--- prepare sounding profile
+    if( IO_L ) write(IO_FID_LOG,*) '+++ Input sounding file:', trim(ENV_IN_SOUNDING_file)
+    fid = IO_get_available_fid()
+    open( fid,                                 &
+          file   = trim(ENV_IN_SOUNDING_file), &
+          form   = 'formatted',                &
+          status = 'old',                      &
+          iostat = ierr                        )
+
+       if ( ierr /= 0 ) then
+          if( IO_L ) write(*,*) 'xxx Input file not found!'
+       endif
+
+       !--- read sounding file till end
+       read(fid,*) SFC_PRES, SFC_THETA, SFC_QV
+
+       if( IO_L ) write(IO_FID_LOG,*) '+++ Surface pressure [hPa]',     SFC_PRES
+       if( IO_L ) write(IO_FID_LOG,*) '+++ Surface pot. temp  [K]',     SFC_THETA
+       if( IO_L ) write(IO_FID_LOG,*) '+++ Surface water vapor [g/kg]', SFC_QV
+
+       do k = 2, EXP_klim
+          read(fid,*,iostat=ierr) EXP_z(k), EXP_pott(k), EXP_qv(k), EXP_u(k), EXP_v(k)
+          if ( ierr /= 0 ) exit
+       enddo
+
+       EXP_kmax = k - 1
+    close(fid)
+
+    ! Boundary
+    EXP_z   (1)          = 0.0_RP
+    EXP_pott(1)          = SFC_THETA
+    EXP_qv  (1)          = SFC_QV
+    EXP_u   (1)          = EXP_u   (2)
+    EXP_v   (1)          = EXP_v   (2)
+    EXP_z   (EXP_kmax+1) = 100.E3_RP
+    EXP_pott(EXP_kmax+1) = EXP_pott(EXP_kmax)
+    EXP_qv  (EXP_kmax+1) = EXP_qv  (EXP_kmax)
+    EXP_u   (EXP_kmax+1) = EXP_u   (EXP_kmax)
+    EXP_v   (EXP_kmax+1) = EXP_v   (EXP_kmax)
+
+    do k = 1, EXP_kmax+1
+       EXP_qv(k) = EXP_qv(k) * 1.E-3_RP ! [g/kg]->[kg/kg]
+    enddo
+
+    ! calc in dry condition
+    pres_sfc = SFC_PRES * 1.E2_RP ! [hPa]->[Pa]
+    pott_sfc = SFC_THETA
+    qv_sfc   = SFC_QV * 1.E-3_RP ! [g/kg]->[kg/kg]
+    qc_sfc   = 0.0_RP
+
+    !--- linear interpolate to model grid
+    do k = KS, KE
+       qc(k) = 0.0_RP
+
+       do kref = 2, EXP_kmax+1
+          if (       GRID_CZ(k) >  EXP_z(kref-1) &
+               .AND. GRID_CZ(k) <= EXP_z(kref  ) ) then
+
+             fact1 = ( EXP_z(kref) - GRID_CZ(k)   ) / ( EXP_z(kref)-EXP_z(kref-1) )
+             fact2 = ( GRID_CZ(k) - EXP_z(kref-1) ) / ( EXP_z(kref)-EXP_z(kref-1) )
+
+             pott(k) = EXP_pott(kref-1) * fact1 &
+                     + EXP_pott(kref  ) * fact2
+             qv  (k) = EXP_qv  (kref-1) * fact1 &
+                     + EXP_qv  (kref  ) * fact2
+             velx(k) = EXP_u   (kref-1) * fact1 &
+                     + EXP_u   (kref  ) * fact2
+             vely(k) = EXP_v   (kref-1) * fact1 &
+                     + EXP_v   (kref  ) * fact2
+          endif
+       enddo
+    enddo
+
+    ! make density & pressure profile in moist condition
+    call HYDROSTATIC_buildrho( DENS(:),         & ! [OUT]
+                               temp(:),         & ! [OUT]
+                               pres(:),         & ! [OUT]
+                               pott(:),         & ! [IN]
+                               qv  (:),         & ! [IN]
+                               qc  (:),         & ! [IN]
+                               temp_sfc(1,1,1), & ! [OUT]
+                               pres_sfc(1,1,1), & ! [IN]
+                               pott_sfc(1,1,1), & ! [IN]
+                               qv_sfc  (1,1,1), & ! [IN]
+                               qc_sfc  (1,1,1) ) ! [IN]
+
+    return
+  end subroutine read_sounding
+
+  !-----------------------------------------------------------------------------
+  !> Make initial state ( horizontally uniform + random disturbance )
+  subroutine MKINIT_planestate
     implicit none
 
     ! Surface state
@@ -880,28 +1295,9 @@ contains
     enddo
     enddo
 
-    do j = JS, JE
-    do i = IS, IE
-       SFLX_rain   (i,j) = 0.0_RP
-       SFLX_snow   (i,j) = 0.0_RP
-       SFLX_LW_up  (i,j) = 0.0_RP
-       SFLX_LW_dn  (i,j) = 0.0_RP
-       SFLX_SW_up  (i,j) = 0.0_RP
-       SFLX_SW_dn  (i,j) = 0.0_RP
-       TOAFLX_LW_up(i,j) = 0.0_RP
-       TOAFLX_LW_dn(i,j) = 0.0_RP
-       TOAFLX_SW_up(i,j) = 0.0_RP
-       TOAFLX_SW_dn(i,j) = 0.0_RP
+    call flux_setup
 
-       OCEAN_TEMP      (i,j)      = THETAstd
-       OCEAN_SFC_TEMP  (i,j)      = THETAstd
-       OCEAN_SFC_albedo(i,j,I_LW) = 0.04_RP
-       OCEAN_SFC_albedo(i,j,I_SW) = 0.05_RP
-       OCEAN_SFC_Z0M   (i,j)      = 0.0_RP
-       OCEAN_SFC_Z0H   (i,j)      = 0.0_RP
-       OCEAN_SFC_Z0E   (i,j)      = 0.0_RP
-    enddo
-    enddo
+    call ocean_setup
 
     return
   end subroutine MKINIT_planestate
@@ -1827,20 +2223,7 @@ contains
     enddo
     enddo
 
-    do j = JS, JE
-    do i = IS, IE
-       SFLX_rain   (i,j) = 0.0_RP
-       SFLX_snow   (i,j) = 0.0_RP
-       SFLX_LW_up  (i,j) = 0.0_RP
-       SFLX_LW_dn  (i,j) = 0.0_RP
-       SFLX_SW_up  (i,j) = 0.0_RP
-       SFLX_SW_dn  (i,j) = 0.0_RP
-       TOAFLX_LW_up(i,j) = 0.0_RP
-       TOAFLX_LW_dn(i,j) = 0.0_RP
-       TOAFLX_SW_up(i,j) = 0.0_RP
-       TOAFLX_SW_dn(i,j) = 0.0_RP
-    enddo
-    enddo
+    call flux_setup
 
     return
   end subroutine MKINIT_warmbubble
@@ -1850,31 +2233,20 @@ contains
   subroutine MKINIT_supercell
     implicit none
 
-    character(len=H_LONG) :: ENV_IN_SOUNDING_file = ''
+    real(RP) :: RHO(KA)
+    real(RP) :: VELX(KA)
+    real(RP) :: VELY(KA)
+    real(RP) :: POTT(KA)
+    real(RP) :: QV(KA)
+
     ! Bubble
     real(RP) :: BBL_THETA = 3.D0 ! extremum of temperature in bubble [K]
 
     NAMELIST / PARAM_MKINIT_SUPERCELL / &
-       ENV_IN_SOUNDING_file, &
        BBL_THETA
 
-    integer, parameter :: EXP_klim = 100
-    integer            :: EXP_kmax
-
-    real(RP) :: SFC_THETA            ! surface potential temperature [K]
-    real(RP) :: SFC_PRES             ! surface pressure [hPa]
-    real(RP) :: SFC_QV               ! surface watervapor [g/kg]
-
-    real(RP) :: EXP_z   (EXP_klim+1) ! height      [m]
-    real(RP) :: EXP_pott(EXP_klim+1) ! potential temperature [K]
-    real(RP) :: EXP_qv  (EXP_klim+1) ! water vapor [g/kg]
-    real(RP) :: EXP_u   (EXP_klim+1) ! velocity u  [m/s]
-    real(RP) :: EXP_v   (EXP_klim+1) ! velocity v  [m/s]
-
-    real(RP) :: fact1, fact2
-
-    integer :: ierr, fid
-    integer :: k, i, j, kref
+    integer :: ierr
+    integer :: k, i, j
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -1892,114 +2264,25 @@ contains
     endif
     if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_SUPERCELL)
 
-    !--- prepare sounding profile
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Input sounding file:', trim(ENV_IN_SOUNDING_file)
-    fid = IO_get_available_fid()
-    open( fid,                                 &
-          file   = trim(ENV_IN_SOUNDING_file), &
-          form   = 'formatted',                &
-          status = 'old',                      &
-          iostat = ierr                        )
-
-       if ( ierr /= 0 ) then
-          if( IO_L ) write(*,*) 'xxx Input file not found!'
-       endif
-
-       !--- read sounding file till end
-       read(fid,*) SFC_PRES, SFC_THETA, SFC_QV
-
-       if( IO_L ) write(IO_FID_LOG,*) '+++ Surface pressure [hPa]',     SFC_PRES
-       if( IO_L ) write(IO_FID_LOG,*) '+++ Surface pot. temp  [K]',     SFC_THETA
-       if( IO_L ) write(IO_FID_LOG,*) '+++ Surface water vapor [g/kg]', SFC_QV
-
-       do k = 2, EXP_klim
-          read(fid,*,iostat=ierr) EXP_z(k), EXP_pott(k), EXP_qv(k), EXP_u(k), EXP_v(k)
-          if ( ierr /= 0 ) exit
-       enddo
-
-       EXP_kmax = k - 1
-    close(fid)
-
-    ! Boundary
-    EXP_z   (1)          = 0.0_RP
-    EXP_pott(1)          = SFC_THETA
-    EXP_qv  (1)          = SFC_QV
-    EXP_u   (1)          = EXP_u   (2)
-    EXP_v   (1)          = EXP_v   (2)
-    EXP_z   (EXP_kmax+1) = 100.E3_RP
-    EXP_pott(EXP_kmax+1) = EXP_pott(EXP_kmax)
-    EXP_qv  (EXP_kmax+1) = EXP_qv  (EXP_kmax)
-    EXP_u   (EXP_kmax+1) = EXP_u   (EXP_kmax)
-    EXP_v   (EXP_kmax+1) = EXP_v   (EXP_kmax)
-
-    do k = 1, EXP_kmax+1
-       EXP_qv(k) = EXP_qv(k) * 1.E-3_RP ! [g/kg]->[kg/kg]
-    enddo
-
-    ! calc in dry condition
-    pres_sfc(1,1,1) = SFC_PRES * 1.E2_RP ! [hPa]->[Pa]
-    pott_sfc(1,1,1) = SFC_THETA
-    qv_sfc  (1,1,1) = SFC_QV * 1.E-3_RP ! [g/kg]->[kg/kg]
-    qc_sfc  (1,1,1) = 0.0_RP
-
-    !--- linear interpolate to model grid
-    do k = KS, KE
-       qc(k,1,1) = 0.0_RP
-
-       do kref = 2, EXP_kmax+1
-          if (       GRID_CZ(k) >  EXP_z(kref-1) &
-               .AND. GRID_CZ(k) <= EXP_z(kref  ) ) then
-
-             fact1 = ( EXP_z(kref) - GRID_CZ(k)   ) / ( EXP_z(kref)-EXP_z(kref-1) )
-             fact2 = ( GRID_CZ(k) - EXP_z(kref-1) ) / ( EXP_z(kref)-EXP_z(kref-1) )
-
-             pott(k,1,1) = EXP_pott(kref-1) * fact1 &
-                         + EXP_pott(kref  ) * fact2
-             qv  (k,1,1) = EXP_qv  (kref-1) * fact1 &
-                         + EXP_qv  (kref  ) * fact2
-             velx(k,1,1) = EXP_u   (kref-1) * fact1 &
-                         + EXP_u   (kref  ) * fact2
-             vely(k,1,1) = EXP_v   (kref-1) * fact1 &
-                         + EXP_v   (kref  ) * fact2
-          endif
-       enddo
-    enddo
-
-    ! make density & pressure profile in moist condition
-    call HYDROSTATIC_buildrho( DENS    (:,1,1), & ! [OUT]
-                               temp    (:,1,1), & ! [OUT]
-                               pres    (:,1,1), & ! [OUT]
-                               pott    (:,1,1), & ! [IN]
-                               qv      (:,1,1), & ! [IN]
-                               qc      (:,1,1), & ! [IN]
-                               temp_sfc(1,1,1), & ! [OUT]
-                               pres_sfc(1,1,1), & ! [IN]
-                               pott_sfc(1,1,1), & ! [IN]
-                               qv_sfc  (1,1,1), & ! [IN]
-                               qc_sfc  (1,1,1)  ) ! [IN]
+    call read_sounding( RHO, VELX, VELY, POTT, QV ) ! (out)
 
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       DENS(k,i,j) = DENS(k,1,1)
+       DENS(k,i,j) = RHO(k)
        MOMZ(k,i,j) = 0.0_RP
-       MOMX(k,i,j) = DENS(k,1,1) * velx(k,1,1)
-       MOMY(k,i,j) = DENS(k,1,1) * vely(k,1,1)
+       MOMX(k,i,j) = RHO(k) * VELX(k)
+       MOMY(k,i,j) = RHO(k) * VELY(k)
 
        ! make warm bubble
-       RHOT(k,i,j) = DENS(k,1,1) * ( pott(k,1,1) + BBL_THETA * bubble(k,i,j) )
+       RHOT(k,i,j) = RHO(k) * ( POTT(k) + BBL_THETA * bubble(k,i,j) )
 
-       QTRC(k,i,j,I_QV) = qv(k,1,1)
+       QTRC(k,i,j,I_QV) = QV(k)
     enddo
     enddo
     enddo
 
-    do j = JS, JE
-    do i = IS, IE
-       SFLX_rain(i,j) = 0.0_RP
-       SFLX_snow(i,j) = 0.0_RP
-    enddo
-    enddo
+    call flux_setup
 
     return
   end subroutine MKINIT_supercell
@@ -2007,44 +2290,25 @@ contains
   !-----------------------------------------------------------------------------
   !> Make initial state for squallline experiment
   subroutine MKINIT_squallline
-    use mod_ocean_vars, only: &
-       OCEAN_TEMP,       &
-       OCEAN_SFC_albedo, &
-       OCEAN_SFC_TEMP,   &
-       OCEAN_SFC_Z0M,    &
-       OCEAN_SFC_Z0H,    &
-       OCEAN_SFC_Z0E
     implicit none
 
-    character(len=H_LONG) :: ENV_IN_SOUNDING_file = ''
+    real(RP) :: RHO(KA)
+    real(RP) :: VELX(KA)
+    real(RP) :: VELY(KA)
+    real(RP) :: POTT(KA)
+    real(RP) :: QV(KA)
 
     real(RP) :: RANDOM_THETA =  0.01_RP
     real(RP) :: OFFSET_velx  = 12.0_RP
     real(RP) :: OFFSET_vely  = -2.0_RP
 
     NAMELIST / PARAM_MKINIT_SQUALLLINE / &
-       ENV_IN_SOUNDING_file, &
        RANDOM_THETA,         &
        OFFSET_velx,          &
        OFFSET_vely
 
-    integer, parameter :: EXP_klim = 100
-    integer            :: EXP_kmax
-
-    real(RP) :: SFC_THETA          ! surface potential temperature [K]
-    real(RP) :: SFC_PRES           ! surface pressure [hPa]
-    real(RP) :: SFC_QV             ! surface watervapor [g/kg]
-
-    real(RP) :: EXP_z   (EXP_klim) ! height      [m]
-    real(RP) :: EXP_pott(EXP_klim) ! potential temperature [K]
-    real(RP) :: EXP_qv  (EXP_klim) ! water vapor [g/kg]
-    real(RP) :: EXP_u   (EXP_klim) ! velocity u  [m/s]
-    real(RP) :: EXP_v   (EXP_klim) ! velocity v  [m/s]
-
-    real(RP) :: fact1, fact2
-
-    integer :: ierr, fid
-    integer :: k, i, j, kref
+    integer :: ierr
+    integer :: k, i, j
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -2062,121 +2326,26 @@ contains
     endif
     if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_SQUALLLINE)
 
-    !--- prepare sounding profile
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Input sounding file:', trim(ENV_IN_SOUNDING_file)
-    fid = IO_get_available_fid()
-    open( fid,                                 &
-          file   = trim(ENV_IN_SOUNDING_file), &
-          form   = 'formatted',                &
-          status = 'old',                      &
-          iostat = ierr                        )
-
-       if ( ierr /= 0 ) then
-          if( IO_L ) write(*,*) 'xxx Input file not found!'
-       endif
-
-       !--- read sounding file till end
-       read(fid,*) SFC_PRES, SFC_THETA, SFC_QV
-
-       if( IO_L ) write(IO_FID_LOG,*) '+++ Surface pressure [hPa]',     SFC_PRES
-       if( IO_L ) write(IO_FID_LOG,*) '+++ Surface pot. temp  [K]',     SFC_THETA
-       if( IO_L ) write(IO_FID_LOG,*) '+++ Surface water vapor [g/kg]', SFC_QV
-
-       do k = 2, EXP_klim
-          read(fid,*,iostat=ierr) EXP_z(k), EXP_pott(k), EXP_qv(k), EXP_u(k), EXP_v(k)
-          if ( ierr /= 0 ) exit
-       enddo
-
-       EXP_kmax = k - 1
-    close(fid)
-
-    ! Boundary
-    EXP_z   (1)          = 0.0_RP
-    EXP_pott(1)          = SFC_THETA
-    EXP_qv  (1)          = SFC_QV
-    EXP_u   (1)          = EXP_u   (2)
-    EXP_v   (1)          = EXP_v   (2)
-    EXP_z   (EXP_kmax+1) = 100.E3_RP
-    EXP_pott(EXP_kmax+1) = EXP_pott(EXP_kmax)
-    EXP_qv  (EXP_kmax+1) = EXP_qv  (EXP_kmax)
-    EXP_u   (EXP_kmax+1) = EXP_u   (EXP_kmax)
-    EXP_v   (EXP_kmax+1) = EXP_v   (EXP_kmax)
-
-    do k = 1, EXP_kmax+1
-       EXP_qv(k) = EXP_qv(k) * 1.E-3_RP ! [g/kg]->[kg/kg]
-    enddo
-
-    ! calc in dry condition
-    pres_sfc(1,1,1) = SFC_PRES * 1.E2_RP ! [hPa]->[Pa]
-    pott_sfc(1,1,1) = SFC_THETA
-    qv_sfc  (1,1,1) = SFC_QV * 1.E-3_RP ! [g/kg]->[kg/kg]
-    qc_sfc  (1,1,1) = 0.0_RP
-
-    !--- linear interpolate to model grid
-    do k = KS, KE
-       qc(k,1,1) = 0.0_RP
-
-       do kref = 2, EXP_kmax+1
-          if (       GRID_CZ(k) >  EXP_z(kref-1) &
-               .AND. GRID_CZ(k) <= EXP_z(kref  ) ) then
-
-             fact1 = ( EXP_z(kref) - GRID_CZ(k)   ) / ( EXP_z(kref)-EXP_z(kref-1) )
-             fact2 = ( GRID_CZ(k) - EXP_z(kref-1) ) / ( EXP_z(kref)-EXP_z(kref-1) )
-
-             pott(k,1,1) = EXP_pott(kref-1) * fact1 &
-                         + EXP_pott(kref  ) * fact2
-             qv  (k,1,1) = EXP_qv  (kref-1) * fact1 &
-                         + EXP_qv  (kref  ) * fact2
-             velx(k,1,1) = EXP_u   (kref-1) * fact1 &
-                         + EXP_u   (kref  ) * fact2
-             vely(k,1,1) = EXP_v   (kref-1) * fact1 &
-                         + EXP_v   (kref  ) * fact2
-          endif
-       enddo
-    enddo
-
-    ! make density & pressure profile in moist condition
-    call HYDROSTATIC_buildrho( DENS    (:,1,1), & ! [OUT]
-                               temp    (:,1,1), & ! [OUT]
-                               pres    (:,1,1), & ! [OUT]
-                               pott    (:,1,1), & ! [IN]
-                               qv      (:,1,1), & ! [IN]
-                               qc      (:,1,1), & ! [IN]
-                               temp_sfc(1,1,1), & ! [OUT]
-                               pres_sfc(1,1,1), & ! [IN]
-                               pott_sfc(1,1,1), & ! [IN]
-                               qv_sfc  (1,1,1), & ! [IN]
-                               qc_sfc  (1,1,1)  ) ! [IN]
+    call read_sounding( RHO, VELX, VELY, POTT, QV ) ! (out)
 
     call RANDOM_get(rndm) ! make random
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       DENS(k,i,j) = DENS(k,1,1)
+       DENS(k,i,j) = RHO(k)
        MOMZ(k,i,j) = 0.0_RP
-       MOMX(k,i,j) = ( velx(k,1,1) - OFFSET_velx ) * DENS(k,1,1)
-       MOMY(k,i,j) = ( vely(k,1,1) - OFFSET_vely ) * DENS(k,1,1)
-       RHOT(k,i,j) = DENS(k,1,1) * ( pott(k,1,1) + rndm(k,i,j) * RANDOM_THETA )
+       MOMX(k,i,j) = ( VELX(k) - OFFSET_velx ) * RHO(k)
+       MOMY(k,i,j) = ( VELY(k) - OFFSET_vely ) * RHO(k)
+       RHOT(k,i,j) = RHO(k) * ( POTT(k) + rndm(k,i,j) * RANDOM_THETA )
 
-       QTRC(k,i,j,I_QV) = qv(k,1,1)
+       QTRC(k,i,j,I_QV) = QV(k)
     enddo
-    enddo
-    enddo
-
-    do j = JS, JE
-    do i = IS, IE
-       SFLX_rain(i,j) = 0.0_RP
-       SFLX_snow(i,j) = 0.0_RP
     enddo
     enddo
 
-    OCEAN_TEMP    (:,:)      = SFC_THETA
-    OCEAN_SFC_TEMP(:,:)      = SFC_THETA
-    OCEAN_SFC_albedo(:,:,I_LW) = 0.04D0
-    OCEAN_SFC_albedo(:,:,I_SW) = 0.05D0
-    OCEAN_SFC_Z0M (:,:)      = 1.0E-4_RP
-    OCEAN_SFC_Z0H (:,:)      = 1.0E-4_RP
-    OCEAN_SFC_Z0E (:,:)      = 1.0E-4_RP
+    call flux_setup
+
+    call ocean_setup
 
     return
   end subroutine MKINIT_squallline
@@ -2350,12 +2519,7 @@ enddo
     endif
 #endif
 
-    do j = JS, JE
-    do i = IS, IE
-       SFLX_rain(i,j) = 0.0_RP
-       SFLX_snow(i,j) = 0.0_RP
-    enddo
-    enddo
+    call flux_setup
 
     return
   end subroutine MKINIT_wk1982
@@ -3796,74 +3960,14 @@ enddo
   !-----------------------------------------------------------------------------
   !> Make initial state ( ocean variables )
   subroutine MKINIT_oceancouple
-    use mod_ocean_vars, only: &
-       OCEAN_TEMP,       &
-       OCEAN_SFC_TEMP,   &
-       OCEAN_SFC_albedo, &
-       OCEAN_SFC_Z0M,    &
-       OCEAN_SFC_Z0H,    &
-       OCEAN_SFC_Z0E
     implicit none
-
-    ! Flux from Atmosphere
-    real(RP) :: FLX_rain      = 0.0_RP ! surface rain flux                         [kg/m2/s]
-    real(RP) :: FLX_snow      = 0.0_RP ! surface snow flux                         [kg/m2/s]
-    real(RP) :: FLX_LW_dn     = 0.0_RP ! surface downwad long-wave  radiation flux [J/m2/s]
-    real(RP) :: FLX_SW_dn     = 0.0_RP ! surface downwad short-wave radiation flux [J/m2/s]
-    ! Ocean state
-    real(RP) :: OCN_TEMP               ! soil temperature           [K]
-    real(RP) :: SFC_TEMP               ! ocean skin temperature      [K]
-    real(RP) :: SFC_albedo_LW = 0.0_RP ! ocean surface albedo for LW [0-1]
-    real(RP) :: SFC_albedo_SW = 0.0_RP ! ocean surface albedo for SW [0-1]
-    real(RP) :: SFC_Z0M       = 0.0_RP ! ocean surface roughness length (momentum) [m]
-    real(RP) :: SFC_Z0H       = 0.0_RP ! ocean surface roughness length (heat) [m]
-    real(RP) :: SFC_Z0E       = 0.0_RP ! ocean surface roughness length (vapor) [m]
-
-    NAMELIST / PARAM_MKINIT_OCEANCOUPLE / &
-       FLX_rain,      &
-       FLX_snow,      &
-       FLX_LW_dn,     &
-       FLX_SW_dn,     &
-       OCN_TEMP,      &
-       SFC_TEMP,      &
-       SFC_albedo_LW, &
-       SFC_albedo_SW, &
-       SFC_Z0M,       &
-       SFC_Z0H,       &
-       SFC_Z0E
-
-    integer :: ierr
-    !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[OceanCouple]/Categ[MKINIT]'
 
-    OCN_TEMP = THETAstd
-    SFC_TEMP = THETAstd
+    call flux_setup
 
-    !--- read namelist
-    rewind(IO_FID_CONF)
-    read(IO_FID_CONF,nml=PARAM_MKINIT_OCEANCOUPLE,iostat=ierr)
-    if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
-    elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_OCEANCOUPLE. Check!'
-       call PRC_MPIstop
-    endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_OCEANCOUPLE)
-
-    SFLX_rain (:,:) = FLX_rain
-    SFLX_snow (:,:) = FLX_snow
-    SFLX_LW_dn(:,:) = FLX_LW_dn
-    SFLX_SW_dn(:,:) = FLX_SW_dn
-
-    OCEAN_TEMP      (:,:)      = OCN_TEMP
-    OCEAN_SFC_TEMP  (:,:)      = SFC_TEMP
-    OCEAN_SFC_albedo(:,:,I_LW) = SFC_albedo_LW
-    OCEAN_SFC_albedo(:,:,I_SW) = SFC_albedo_SW
-    OCEAN_SFC_Z0M   (:,:)      = SFC_Z0M
-    OCEAN_SFC_Z0H   (:,:)      = SFC_Z0H
-    OCEAN_SFC_Z0E   (:,:)      = SFC_Z0E
+    call ocean_setup
 
     return
   end subroutine MKINIT_oceancouple
@@ -3871,66 +3975,14 @@ enddo
   !-----------------------------------------------------------------------------
   !> Make initial state ( land variables )
   subroutine MKINIT_landcouple
-    use mod_land_vars, only: &
-       LAND_TEMP,       &
-       LAND_WATER,      &
-       LAND_SFC_TEMP,   &
-       LAND_SFC_albedo
     implicit none
-
-    ! Flux from Atmosphere
-    real(RP) :: FLX_rain      = 0.0_RP ! surface rain flux                         [kg/m2/s]
-    real(RP) :: FLX_snow      = 0.0_RP ! surface snow flux                         [kg/m2/s]
-    real(RP) :: FLX_LW_dn     = 0.0_RP ! surface downwad long-wave  radiation flux [J/m2/s]
-    real(RP) :: FLX_SW_dn     = 0.0_RP ! surface downwad short-wave radiation flux [J/m2/s]
-    ! Land state
-    real(RP) :: LND_TEMP               ! soil temperature           [K]
-    real(RP) :: LND_WATER     = 0.0_RP ! soil moisture              [m3/m3]
-    real(RP) :: SFC_TEMP               ! land skin temperature      [K]
-    real(RP) :: SFC_albedo_LW = 0.0_RP ! land surface albedo for LW [0-1]
-    real(RP) :: SFC_albedo_SW = 0.0_RP ! land surface albedo for SW [0-1]
-
-    NAMELIST / PARAM_MKINIT_LANDCOUPLE / &
-       FLX_rain,      &
-       FLX_snow,      &
-       FLX_LW_dn,     &
-       FLX_SW_dn,     &
-       LND_TEMP,      &
-       LND_WATER,     &
-       SFC_TEMP,      &
-       SFC_albedo_LW, &
-       SFC_albedo_SW
-
-    integer :: ierr
-    !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[LandCouple]/Categ[MKINIT]'
 
-    LND_TEMP = THETAstd
-    SFC_TEMP = THETAstd
+    call flux_setup
 
-    !--- read namelist
-    rewind(IO_FID_CONF)
-    read(IO_FID_CONF,nml=PARAM_MKINIT_LANDCOUPLE,iostat=ierr)
-    if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
-    elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_LANDCOUPLE. Check!'
-       call PRC_MPIstop
-    endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_LANDCOUPLE)
-
-    SFLX_rain (:,:) = FLX_rain
-    SFLX_snow (:,:) = FLX_snow
-    SFLX_LW_dn(:,:) = FLX_LW_dn
-    SFLX_SW_dn(:,:) = FLX_SW_dn
-
-    LAND_TEMP      (:,:,:)    = LND_TEMP
-    LAND_WATER     (:,:,:)    = LND_WATER
-    LAND_SFC_TEMP  (:,:)      = SFC_TEMP
-    LAND_SFC_albedo(:,:,I_LW) = SFC_albedo_LW
-    LAND_SFC_albedo(:,:,I_SW) = SFC_albedo_SW
+    call land_setup
 
     return
   end subroutine MKINIT_landcouple
@@ -3938,119 +3990,14 @@ enddo
   !-----------------------------------------------------------------------------
   !> Make initial state ( urban variables )
   subroutine MKINIT_urbancouple
-    use mod_urban_vars, only: &
-       URBAN_TR,         &
-       URBAN_TB,         &
-       URBAN_TG,         &
-       URBAN_TC,         &
-       URBAN_QC,         &
-       URBAN_UC,         &
-       URBAN_TRL,        &
-       URBAN_TBL,        &
-       URBAN_TGL,        &
-       URBAN_RAINR,      &
-       URBAN_RAINB,      &
-       URBAN_RAING,      &
-       URBAN_ROFF,       &
-       URBAN_SFC_TEMP,   &
-       URBAN_SFC_albedo
     implicit none
-
-    ! Flux from Atmosphere
-    real(RP) :: FLX_rain      = 0.0_RP ! surface rain flux                         [kg/m2/s]
-    real(RP) :: FLX_snow      = 0.0_RP ! surface snow flux                         [kg/m2/s]
-    real(RP) :: FLX_LW_dn     = 0.0_RP ! surface downwad long-wave  radiation flux [J/m2/s]
-    real(RP) :: FLX_SW_dn     = 0.0_RP ! surface downwad short-wave radiation flux [J/m2/s]
-    ! urban state
-    real(RP) :: URB_ROOF_TEMP          ! Surface temperature of roof [K]
-    real(RP) :: URB_BLDG_TEMP          ! Surface temperature of building [K
-    real(RP) :: URB_GRND_TEMP          ! Surface temperature of ground [K]
-    real(RP) :: URB_CNPY_TEMP          ! Diagnostic canopy air temperature
-    real(RP) :: URB_CNPY_HMDT = 0.0_RP ! Diagnostic canopy humidity [-]
-    real(RP) :: URB_CNPY_WIND = 0.0_RP ! Diagnostic canopy wind [m/s]
-    real(RP) :: URB_ROOF_LAYER_TEMP    ! temperature in layer of roof [K]
-    real(RP) :: URB_BLDG_LAYER_TEMP    ! temperature in layer of building [
-    real(RP) :: URB_GRND_LAYER_TEMP    ! temperature in layer of ground [K]
-    real(RP) :: URB_ROOF_RAIN = 0.0_RP ! temperature in layer of roof [K]
-    real(RP) :: URB_BLDG_RAIN = 0.0_RP ! temperature in layer of building [
-    real(RP) :: URB_GRND_RAIN = 0.0_RP ! temperature in layer of ground [K]
-    real(RP) :: URB_RUNOFF    = 0.0_RP ! temperature in layer of ground [K]
-    real(RP) :: URB_SFC_TEMP           ! Grid average of surface temperature [K]
-    real(RP) :: URB_ALB_LW    = 0.0_RP ! Grid average of surface albedo for LW [0-1]
-    real(RP) :: URB_ALB_SW    = 0.0_RP ! Grid average of surface albedo for SW [0-1]
-
-    NAMELIST / PARAM_MKINIT_URBANCOUPLE / &
-       FLX_rain,            &
-       FLX_snow,            &
-       FLX_LW_dn,           &
-       FLX_SW_dn,           &
-       URB_ROOF_TEMP,       &
-       URB_BLDG_TEMP,       &
-       URB_GRND_TEMP,       &
-       URB_CNPY_TEMP,       &
-       URB_CNPY_HMDT,       &
-       URB_CNPY_WIND,       &
-       URB_ROOF_LAYER_TEMP, &
-       URB_BLDG_LAYER_TEMP, &
-       URB_GRND_LAYER_TEMP, &
-       URB_ROOF_RAIN,       &
-       URB_BLDG_RAIN,       &
-       URB_GRND_RAIN,       &
-       URB_RUNOFF,          &
-       URB_SFC_TEMP,        &
-       URB_ALB_LW,          &
-       URB_ALB_SW
-
-    integer :: ierr
-    !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[UrbanCouple]/Categ[MKINIT]'
 
-    URB_ROOF_TEMP       = THETAstd
-    URB_BLDG_TEMP       = THETAstd
-    URB_GRND_TEMP       = THETAstd
-    URB_CNPY_TEMP       = THETAstd
-    URB_ROOF_LAYER_TEMP = THETAstd
-    URB_BLDG_LAYER_TEMP = THETAstd
-    URB_GRND_LAYER_TEMP = THETAstd
+    call flux_setup
 
-    URB_SFC_TEMP        = THETAstd
-
-    !--- read namelist
-    rewind(IO_FID_CONF)
-    read(IO_FID_CONF,nml=PARAM_MKINIT_URBANCOUPLE,iostat=ierr)
-
-    if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
-    elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_URBANCOUPLE. Check!'
-       call PRC_MPIstop
-    endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_URBANCOUPLE)
-
-    SFLX_rain (:,:) = FLX_rain
-    SFLX_snow (:,:) = FLX_snow
-    SFLX_LW_dn(:,:) = FLX_LW_dn
-    SFLX_SW_dn(:,:) = FLX_SW_dn
-
-    URBAN_TR   (:,:)   = URB_ROOF_TEMP
-    URBAN_TB   (:,:)   = URB_BLDG_TEMP
-    URBAN_TG   (:,:)   = URB_GRND_TEMP
-    URBAN_TC   (:,:)   = URB_CNPY_TEMP
-    URBAN_QC   (:,:)   = URB_CNPY_HMDT
-    URBAN_UC   (:,:)   = URB_CNPY_WIND
-    URBAN_TRL  (:,:,:) = URB_ROOF_LAYER_TEMP
-    URBAN_TBL  (:,:,:) = URB_BLDG_LAYER_TEMP
-    URBAN_TGL  (:,:,:) = URB_GRND_LAYER_TEMP
-    URBAN_RAINR(:,:)   = URB_ROOF_RAIN
-    URBAN_RAINB(:,:)   = URB_BLDG_RAIN
-    URBAN_RAING(:,:)   = URB_GRND_RAIN
-    URBAN_ROFF (:,:)   = URB_RUNOFF
-
-    URBAN_SFC_TEMP  (:,:)      = URB_SFC_TEMP
-    URBAN_SFC_albedo(:,:,I_LW) = URB_ALB_LW
-    URBAN_SFC_albedo(:,:,I_SW) = URB_ALB_SW
+    call urban_setup
 
     return
   end subroutine MKINIT_urbancouple
@@ -4062,100 +4009,21 @@ enddo
        PRC_NUM_X
     use scale_landuse, only: &
        LANDUSE_frac_land
-    use mod_ocean_vars, only: &
-       OCEAN_TEMP,       &
-       OCEAN_SFC_TEMP,   &
-       OCEAN_SFC_albedo, &
-       OCEAN_SFC_Z0M,    &
-       OCEAN_SFC_Z0H,    &
-       OCEAN_SFC_Z0E
-    use mod_land_vars, only: &
-       LAND_TEMP,       &
-       LAND_WATER,      &
-       LAND_SFC_TEMP,   &
-       LAND_SFC_albedo
     implicit none
-
-    ! Flux from Atmosphere
-    real(RP) :: FLX_rain          = 0.0_RP ! surface rain flux                         [kg/m2/s]
-    real(RP) :: FLX_snow          = 0.0_RP ! surface snow flux                         [kg/m2/s]
-    real(RP) :: FLX_LW_dn         = 0.0_RP ! surface downwad long-wave  radiation flux [J/m2/s]
-    real(RP) :: FLX_SW_dn         = 0.0_RP ! surface downwad short-wave radiation flux [J/m2/s]
-    ! Ocean state
-    real(RP) :: OCN_TEMP                   ! soil temperature           [K]
-    real(RP) :: OCN_SFC_TEMP               ! ocean skin temperature      [K]
-    real(RP) :: OCN_SFC_albedo_LW = 0.0_RP ! ocean surface albedo for LW [0-1]
-    real(RP) :: OCN_SFC_albedo_SW = 0.0_RP ! ocean surface albedo for SW [0-1]
-    real(RP) :: OCN_SFC_Z0M       = 0.0_RP ! ocean surface roughness length (momentum) [m]
-    real(RP) :: OCN_SFC_Z0H       = 0.0_RP ! ocean surface roughness length (heat) [m]
-    real(RP) :: OCN_SFC_Z0E       = 0.0_RP ! ocean surface roughness length (vapor) [m]
-    ! Land state
-    real(RP) :: LND_TEMP                   ! soil temperature           [K]
-    real(RP) :: LND_WATER         = 0.0_RP ! soil moisture              [m3/m3]
-    real(RP) :: LND_SFC_TEMP               ! land skin temperature      [K]
-    real(RP) :: LND_SFC_albedo_LW = 0.0_RP ! land surface albedo for LW [0-1]
-    real(RP) :: LND_SFC_albedo_SW = 0.0_RP ! land surface albedo for SW [0-1]
-
-    NAMELIST / PARAM_MKINIT_SEABREEZE / &
-       FLX_rain,          &
-       FLX_snow,          &
-       FLX_LW_dn,         &
-       FLX_SW_dn,         &
-       OCN_TEMP,          &
-       OCN_SFC_TEMP,      &
-       OCN_SFC_albedo_LW, &
-       OCN_SFC_albedo_SW, &
-       OCN_SFC_Z0M,       &
-       OCN_SFC_Z0H,       &
-       OCN_SFC_Z0E,       &
-       LND_TEMP,          &
-       LND_WATER,         &
-       LND_SFC_TEMP,      &
-       LND_SFC_albedo_LW, &
-       LND_SFC_albedo_SW
 
     real(RP) :: dist
 
-    integer  :: ierr
     integer  :: i, j
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Sea Breeze]/Categ[MKINIT]'
 
-    OCN_TEMP  = THETAstd
-    LND_TEMP  = THETAstd
+    call flux_setup
 
-    !--- read namelist
-    rewind(IO_FID_CONF)
-    read(IO_FID_CONF,nml=PARAM_MKINIT_SEABREEZE,iostat=ierr)
-    if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
-    elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_SEABREEZE. Check!'
-       call PRC_MPIstop
-    endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_SEABREEZE)
+    call land_setup
 
-    ! make surface, land, and ocean conditions
-    SFLX_rain (:,:) = FLX_rain
-    SFLX_snow (:,:) = FLX_snow
-    SFLX_LW_dn(:,:) = FLX_LW_dn
-    SFLX_SW_dn(:,:) = FLX_SW_dn
-
-    OCEAN_TEMP      (:,:)      = OCN_TEMP
-    OCEAN_SFC_TEMP  (:,:)      = OCN_SFC_TEMP
-    OCEAN_SFC_albedo(:,:,I_LW) = OCN_SFC_albedo_LW
-    OCEAN_SFC_albedo(:,:,I_SW) = OCN_SFC_albedo_SW
-    OCEAN_SFC_Z0M   (:,:)      = OCN_SFC_Z0M
-    OCEAN_SFC_Z0H   (:,:)      = OCN_SFC_Z0H
-    OCEAN_SFC_Z0E   (:,:)      = OCN_SFC_Z0E
-
-    LAND_TEMP       (:,:,:)    = LND_TEMP
-    LAND_WATER      (:,:,:)    = LND_WATER
-    LAND_SFC_TEMP   (:,:)      = LND_SFC_TEMP
-    LAND_SFC_albedo (:,:,I_LW) = LND_SFC_albedo_LW
-    LAND_SFC_albedo (:,:,I_SW) = LND_SFC_albedo_SW
+    call ocean_setup
 
     ! quartor size of domain
     dist = ( GRID_CXG(IMAX*PRC_NUM_X) - GRID_CXG(1) ) / 8.0_RP
@@ -4183,132 +4051,21 @@ enddo
     use scale_landuse, only: &
        LANDUSE_frac_land,    &
        LANDUSE_frac_urban
-    use mod_land_vars, only: &
-       I_ThermalCond,   &
-       I_HeatCapacity,  &
-       I_Z0M,           &
-       LAND_TEMP,       &
-       LAND_WATER,      &
-       LAND_SFC_TEMP,   &
-       LAND_SFC_albedo, &
-       LAND_PROPERTY
-    use mod_urban_vars, only: &
-       URBAN_TR,       &
-       URBAN_TB,       &
-       URBAN_TG,       &
-       URBAN_TC,       &
-       URBAN_QC,       &
-       URBAN_UC,       &
-       URBAN_TRL,      &
-       URBAN_TBL,      &
-       URBAN_TGL,      &
-       URBAN_SFC_TEMP
     implicit none
-
-    ! Flux from Atmosphere
-    real(RP) :: FLX_rain          = 0.0_RP ! surface rain flux                         [kg/m2/s]
-    real(RP) :: FLX_snow          = 0.0_RP ! surface snow flux                         [kg/m2/s]
-    real(RP) :: FLX_LW_dn         = 0.0_RP ! surface downwad long-wave  radiation flux [J/m2/s]
-    real(RP) :: FLX_SW_dn         = 0.0_RP ! surface downwad short-wave radiation flux [J/m2/s]
-    ! Land state
-    real(RP) :: LND_TEMP                   ! soil temperature           [K]
-    real(RP) :: LND_WATER         = 0.0_RP ! soil moisture              [m3/m3]
-    real(RP) :: LND_SFC_TEMP               ! land skin temperature      [K]
-    real(RP) :: LND_SFC_albedo_LW = 0.0_RP ! land surface albedo for LW [0-1]
-    real(RP) :: LND_SFC_albedo_SW = 0.0_RP ! land surface albedo for SW [0-1]
-    real(RP) :: LND_SFC_ThermalCond        ! land thermal conductivity  [W/m/K]
-    real(RP) :: LND_SFC_HeatCapa           ! land heat capacity         [J/m3/K]
-    real(RP) :: LND_SFC_Z0                 ! land roughness length      [m]
-
-    ! urban state
-    real(RP) :: URB_ROOF_TEMP          ! Surface temperature of roof [K]
-    real(RP) :: URB_BLDG_TEMP          ! Surface temperature of building [K
-    real(RP) :: URB_GRND_TEMP          ! Surface temperature of ground [K]
-    real(RP) :: URB_CNPY_TEMP          ! Diagnostic canopy air temperature
-    real(RP) :: URB_CNPY_HMDT = 0.0_RP ! Diagnostic canopy humidity [-]
-    real(RP) :: URB_CNPY_WIND = 0.0_RP ! Diagnostic canopy wind [m/s]
-    real(RP) :: URB_ROOF_LAYER_TEMP    ! temperature in layer of roof [K]
-    real(RP) :: URB_BLDG_LAYER_TEMP    ! temperature in layer of building [
-    real(RP) :: URB_GRND_LAYER_TEMP
-
-    NAMELIST / PARAM_MKINIT_HEATISLAND / &
-       FLX_rain,            &
-       FLX_snow,            &
-       FLX_LW_dn,           &
-       FLX_SW_dn,           &
-       LND_TEMP,            &
-       LND_WATER,           &
-       LND_SFC_TEMP,        &
-       LND_SFC_albedo_LW,   &
-       LND_SFC_albedo_SW,   &
-       LND_SFC_ThermalCond, &
-       LND_SFC_HeatCapa,    &
-       LND_SFC_Z0,          &
-       URB_ROOF_TEMP,       &
-       URB_BLDG_TEMP,       &
-       URB_GRND_TEMP,       &
-       URB_CNPY_TEMP,       &
-       URB_CNPY_HMDT,       &
-       URB_CNPY_WIND,       &
-       URB_ROOF_LAYER_TEMP, &
-       URB_BLDG_LAYER_TEMP, &
-       URB_GRND_LAYER_TEMP
 
     real(RP) :: dist
 
-    integer  :: ierr
     integer  :: i, j
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Heat island]/Categ[MKINIT]'
 
-    LND_TEMP  = THETAstd
-    URB_ROOF_TEMP       = THETAstd
-    URB_BLDG_TEMP       = THETAstd
-    URB_GRND_TEMP       = THETAstd
-    URB_CNPY_TEMP       = THETAstd
-    URB_ROOF_LAYER_TEMP = THETAstd
-    URB_BLDG_LAYER_TEMP = THETAstd
-    URB_GRND_LAYER_TEMP = THETAstd
+    call flux_setup
 
-    !--- read namelist
-    rewind(IO_FID_CONF)
-    read(IO_FID_CONF,nml=PARAM_MKINIT_HEATISLAND,iostat=ierr)
-    if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
-    elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_HEATISLAND. Check!'
-       call PRC_MPIstop
-    endif
-    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_HEATISLAND)
+    call land_setup
 
-    ! make surface, land, and ocean conditions
-    SFLX_rain (:,:) = FLX_rain
-    SFLX_snow (:,:) = FLX_snow
-    SFLX_LW_dn(:,:) = FLX_LW_dn
-    SFLX_SW_dn(:,:) = FLX_SW_dn
-
-    LAND_TEMP       (:,:,:)              = LND_TEMP
-    LAND_WATER      (:,:,:)              = LND_WATER
-    LAND_SFC_TEMP   (:,:)                = LND_SFC_TEMP
-    LAND_SFC_albedo (:,:,I_LW)           = LND_SFC_albedo_LW
-    LAND_SFC_albedo (:,:,I_SW)           = LND_SFC_albedo_SW
-    LAND_PROPERTY   (:,:,I_ThermalCond)  = LND_SFC_ThermalCond
-    LAND_PROPERTY   (:,:,I_HeatCapacity) = LND_SFC_HeatCapa
-    LAND_PROPERTY   (:,:,I_Z0M)          = LND_SFC_z0
-
-    URBAN_TR (:,:)   = URB_ROOF_TEMP
-    URBAN_TB (:,:)   = URB_BLDG_TEMP
-    URBAN_TG (:,:)   = URB_GRND_TEMP
-    URBAN_TC (:,:)   = URB_CNPY_TEMP
-    URBAN_QC (:,:)   = URB_CNPY_HMDT
-    URBAN_UC (:,:)   = URB_CNPY_WIND
-    URBAN_TRL(:,:,:) = URB_ROOF_LAYER_TEMP
-    URBAN_TBL(:,:,:) = URB_BLDG_LAYER_TEMP
-    URBAN_TGL(:,:,:) = URB_GRND_LAYER_TEMP
-
-    URBAN_SFC_TEMP(:,:) = URB_CNPY_TEMP
+    call urban_setup
 
     ! 1/9 size of domain
     dist = ( GRID_CXG(IMAX*PRC_NUM_X) - GRID_CXG(1) ) / 9.0_RP
@@ -4335,7 +4092,12 @@ enddo
   subroutine MKINIT_grayzone
     implicit none
 
-    character(len=H_LONG) :: ENV_IN_SOUNDING_file = ''
+    real(RP) :: RHO(KA)
+    real(RP) :: VELX(KA)
+    real(RP) :: VELY(KA)
+    real(RP) :: POTT(KA)
+    real(RP) :: QV(KA)
+
     ! Bubble
     real(RP) :: PERTURB_AMP = 0.0_RP
     integer  :: RANDOM_LIMIT = 0
@@ -4344,27 +4106,12 @@ enddo
                                        ! 2 -> perturbation for u, v, w
 
     NAMELIST / PARAM_MKINIT_GRAYZONE / &
-       ENV_IN_SOUNDING_file, &
-      PERTURB_AMP,     &
+       PERTURB_AMP,     &
        RANDOM_LIMIT,    &
        RANDOM_FLAG
-    integer, parameter :: EXP_klim = 100
-    integer            :: EXP_kmax
 
-    real(RP) :: SFC_THETA            ! surface potential temperature [K]
-    real(RP) :: SFC_PRES             ! surface pressure [hPa]
-    real(RP) :: SFC_QV               ! surface watervapor [g/kg]
-
-    real(RP) :: EXP_z   (EXP_klim+1) ! height      [m]
-    real(RP) :: EXP_pott(EXP_klim+1) ! potential temperature [K]
-    real(RP) :: EXP_qv  (EXP_klim+1) ! water vapor [g/kg]
-    real(RP) :: EXP_u   (EXP_klim+1) ! velocity u  [m/s]
-    real(RP) :: EXP_v   (EXP_klim+1) ! velocity v  [m/s]
-
-    real(RP) :: fact1, fact2
-
-    integer :: ierr, fid
-    integer :: k, i, j, kref
+    integer :: ierr
+    integer :: k, i, j
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -4382,105 +4129,21 @@ enddo
     endif
     if( IO_L ) write(IO_FID_LOG,nml=PARAM_MKINIT_GRAYZONE)
 
-    !--- prepare sounding profile
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Input sounding file:', trim(ENV_IN_SOUNDING_file)
-    fid = IO_get_available_fid()
-    open( fid,                                 &
-          file   = trim(ENV_IN_SOUNDING_file), &
-          form   = 'formatted',                &
-          status = 'old',                      &
-          iostat = ierr                        )
-
-       if ( ierr /= 0 ) then
-          if( IO_L ) write(*,*) 'xxx Input file not found!'
-       endif
-
-       !--- read sounding file till end
-       read(fid,*) SFC_PRES, SFC_THETA, SFC_QV
-
-       if( IO_L ) write(IO_FID_LOG,*) '+++ Surface pressure [hPa]',     SFC_PRES
-       if( IO_L ) write(IO_FID_LOG,*) '+++ Surface pot. temp  [K]',     SFC_THETA
-       if( IO_L ) write(IO_FID_LOG,*) '+++ Surface water vapor [g/kg]', SFC_QV
-
-       do k = 2, EXP_klim
-          read(fid,*,iostat=ierr) EXP_z(k), EXP_pott(k), EXP_qv(k), EXP_u(k), EXP_v(k)
-          if ( ierr /= 0 ) exit
-       enddo
-
-       EXP_kmax = k - 1
-    close(fid)
-
-    ! Boundary
-    EXP_z   (1)          = 0.0_RP
-    EXP_pott(1)          = SFC_THETA
-    EXP_qv  (1)          = SFC_QV
-    EXP_u   (1)          = EXP_u   (2)
-    EXP_v   (1)          = EXP_v   (2)
-    EXP_z   (EXP_kmax+1) = 100.E3_RP
-    EXP_pott(EXP_kmax+1) = EXP_pott(EXP_kmax)
-    EXP_qv  (EXP_kmax+1) = EXP_qv  (EXP_kmax)
-    EXP_u   (EXP_kmax+1) = EXP_u   (EXP_kmax)
-    EXP_v   (EXP_kmax+1) = EXP_v   (EXP_kmax)
-
-    do k = 1, EXP_kmax+1
-       EXP_qv(k) = EXP_qv(k) * 1.E-3_RP ! [g/kg]->[kg/kg]
-    enddo
-
-    ! calc in dry condition
-    pres_sfc(1,1,1) = SFC_PRES * 1.E2_RP ! [hPa]->[Pa]
-    pott_sfc(1,1,1) = SFC_THETA
-    qv_sfc  (1,1,1) = SFC_QV * 1.E-3_RP ! [g/kg]->[kg/kg]
-    qc_sfc  (1,1,1) = 0.0_RP
-
-    !--- linear interpolate to model grid
-    do k = KS, KE
-       qc(k,1,1) = 0.0_RP
-
-       do kref = 2, EXP_kmax+1
-          if (       GRID_CZ(k) >  EXP_z(kref-1) &
-               .AND. GRID_CZ(k) <= EXP_z(kref  ) ) then
-
-             fact1 = ( EXP_z(kref) - GRID_CZ(k)   ) / ( EXP_z(kref)-EXP_z(kref-1) )
-             fact2 = ( GRID_CZ(k) - EXP_z(kref-1) ) / ( EXP_z(kref)-EXP_z(kref-1) )
-
-             pott(k,1,1) = EXP_pott(kref-1) * fact1 &
-                         + EXP_pott(kref  ) * fact2
-             qv  (k,1,1) = EXP_qv  (kref-1) * fact1 &
-                         + EXP_qv  (kref  ) * fact2
-             velx(k,1,1) = EXP_u   (kref-1) * fact1 &
-                         + EXP_u   (kref  ) * fact2
-             vely(k,1,1) = EXP_v   (kref-1) * fact1 &
-                         + EXP_v   (kref  ) * fact2
-          endif
-       enddo
-    enddo
-
-    ! make density & pressure profile in moist condition
-    call HYDROSTATIC_buildrho( DENS    (:,1,1), & ! [OUT]
-                               temp    (:,1,1), & ! [OUT]
-                               pres    (:,1,1), & ! [OUT]
-                               pott    (:,1,1), & ! [IN]
-                               qv      (:,1,1), & ! [IN]
-                               qc      (:,1,1), & ! [IN]
-                               temp_sfc(1,1,1), & ! [OUT]
-                               pres_sfc(1,1,1), & ! [IN]
-                               pott_sfc(1,1,1), & ! [IN]
-                               qv_sfc  (1,1,1), & ! [IN]
-                               qc_sfc  (1,1,1)  ) ! [IN]
+    call read_sounding( RHO, VELX, VELY, POTT, QV ) ! (out)
 
 !   do j = JS, JE
 !   do i = IS, IE
     do j = 1, ja
     do i = 1, ia
     do k = KS, KE
-       DENS(k,i,j) = DENS(k,1,1)
+       DENS(k,i,j) = RHO(k)
 !      MOMZ(k,i,j) = 0.0_RP
-!      MOMX(k,i,j) = DENS(k,1,1) * velx(k,1,1)
-!      MOMY(k,i,j) = DENS(k,1,1) * vely(k,1,1)
+!      MOMX(k,i,j) = RHO(k) * VELX(k)
+!      MOMY(k,i,j) = RHO(k) * VELY(k)
 
-!      RHOT(k,i,j) = DENS(k,1,1) * pott(k,1,1)
+!      RHOT(k,i,j) = RHO(k) * POTT(k)
 
-       QTRC(k,i,j,I_QV) = qv(k,1,1)
+       QTRC(k,i,j,I_QV) = QV(k)
     enddo
     enddo
     enddo
@@ -4511,10 +4174,10 @@ enddo
     do i = IS, IE
     do k = KS, KE
        if ( RANDOM_FLAG == 2 .AND. k <= RANDOM_LIMIT ) then ! below initial cloud top
-          MOMX(k,i,j) = ( velx(k,1,1) + 2.0_RP * ( rndm(k,i,j)-0.5_RP ) * PERTURB_AMP ) &
+          MOMX(k,i,j) = ( velx(k) + 2.0_RP * ( rndm(k,i,j)-0.5_RP ) * PERTURB_AMP ) &
                       * 0.5_RP * ( DENS(k,i+1,j) + DENS(k,i,j) )
        else
-          MOMX(k,i,j) = velx(k,1,1) * 0.5_RP * ( DENS(k,i+1,j) + DENS(k,i,j) )
+          MOMX(k,i,j) = velx(k) * 0.5_RP * ( DENS(k,i+1,j) + DENS(k,i,j) )
        endif
     enddo
     enddo
@@ -4525,10 +4188,10 @@ enddo
     do i = IS, IE
     do k = KS, KE
        if ( RANDOM_FLAG == 2 .AND. k <= RANDOM_LIMIT ) then ! below initial cloud top
-          MOMY(k,i,j) = ( vely(k,1,1) + 2.0_RP * ( rndm(k,i,j)-0.5_RP ) * PERTURB_AMP ) &
+          MOMY(k,i,j) = ( vely(k) + 2.0_RP * ( rndm(k,i,j)-0.5_RP ) * PERTURB_AMP ) &
                       * 0.5_RP * ( DENS(k,i,j+1) + DENS(k,i,j) )
        else
-          MOMY(k,i,j) = vely(k,1,1) * 0.5_RP * ( DENS(k,i,j+1) + DENS(k,i,j) )
+          MOMY(k,i,j) = vely(k) * 0.5_RP * ( DENS(k,i,j+1) + DENS(k,i,j) )
        endif
     enddo
     enddo
@@ -4539,10 +4202,10 @@ enddo
     do i = IS, IE
     do k = KS, KE
        if ( RANDOM_FLAG == 1 .and. k <= RANDOM_LIMIT ) then ! below initial cloud top
-          RHOT(k,i,j) = ( pott(k,1,1) + 2.0_RP * ( rndm(k,i,j)-0.5_RP ) * PERTURB_AMP ) &
+          RHOT(k,i,j) = ( pott(k) + 2.0_RP * ( rndm(k,i,j)-0.5_RP ) * PERTURB_AMP ) &
                       * DENS(k,i,j)
        else
-          RHOT(k,i,j) = pott(k,1,1) * DENS(k,i,j)
+          RHOT(k,i,j) = pott(k) * DENS(k,i,j)
        endif
     enddo
     enddo
@@ -4766,20 +4429,7 @@ enddo
                              mdlid,                   &
                              SERIAL_PROC_READ         )
 
-    do j = 1, JA
-    do i = 1, IA
-       SFLX_rain   (i,j) = 0.0_RP
-       SFLX_snow   (i,j) = 0.0_RP
-       SFLX_LW_up  (i,j) = 0.0_RP
-       SFLX_LW_dn  (i,j) = 0.0_RP
-       SFLX_SW_up  (i,j) = 0.0_RP
-       SFLX_SW_dn  (i,j) = 0.0_RP
-       TOAFLX_LW_up(i,j) = 0.0_RP
-       TOAFLX_LW_dn(i,j) = 0.0_RP
-       TOAFLX_SW_up(i,j) = 0.0_RP
-       TOAFLX_SW_dn(i,j) = 0.0_RP
-    enddo
-    enddo
+    call flux_setup
 
     deallocate( dens_org )
     deallocate( momz_org )
