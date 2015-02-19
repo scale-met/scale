@@ -11,7 +11,6 @@ SCALE-LESモデルの実行過程は，基本的に
 
 
 \subsection{現実事例の実行方法}
-
 \subsubsection{pp}
 理想実験の場合との違いは地形，土地利用といった下準備が必要になる点が違いである．
 まず，地形データを作成するためにtopo/のもとでpp.confを目的の実験に合わせて編集する．
@@ -19,7 +18,6 @@ SCALE-LESモデルの実行過程は，基本的に
 Preprocessプログラムは、地形および土地利用データの生成を行う。
 地形にはGTOPO30またはDEM50M、土地利用にはGLCCv2またはLU100Mのデータセットを用いる。
 pp.confのサンプルは付録参照。
-
 
 \begin{enumerate}
 \item 下記のコマンドで，事前処理(地形作成)を実行する．ここの例ではMPI並列として
@@ -49,7 +47,7 @@ init.confのサンプルは付録参照。
 
 \begin{enumerate}
 \item 次に入力する外部データに合わせてinit.confを適宜編集し，事前処理(初期値・境界値作成)を実行する．
-ここでも，MPIプロセスの設定や，格子，領域中心(basepointの緯度・経度)の設定はここまでの作業で指定したものと揃えておくこと． 
+ここでも，MPIプロセスの設定や，格子，領域中心(basepointの緯度・経度)の設定はここまでの作業で指定したものと揃えておくこと．
 \begin{verbatim}
 $ mpirun -n 6 ./scale-les_init init.conf
 \end{verbatim}
