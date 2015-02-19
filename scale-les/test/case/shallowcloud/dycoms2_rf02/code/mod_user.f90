@@ -167,8 +167,8 @@ contains
        Q_rate( :,:,:,: ) = 0.0_RP
 
        do k = KS-1, KE
-          V_GEOS(k) = -5.5_RP
-          U_GEOS(k) =  7.0_RP
+          U_GEOS(k) =  3.0_RP + 4.3 * CZ(k)*1.E-3_RP
+          V_GEOS(k) = -9.0_RP + 5.6 * CZ(k)*1.E-3_RP
        enddo
        corioli = 7.6E-5_RP
 
