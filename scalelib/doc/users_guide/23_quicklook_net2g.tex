@@ -1,3 +1,24 @@
 \subsection{netcdf2grads}
 
-netcdf2grads の使用方法について説明する。
+SCALE-LESの出力ファイル（\verb|history.******.nc|）を
+GrADSで図化するためのnetcdf2grads の使用方法について説明する。
+並列処理に対応したnetcdf2grads\_Hも用意されているが、
+ここではシングルノード用のnetcdf2gradsの使用方法を示す。
+ソースファイルは \verb|scale/scale-les/util/netcdf2grads/|にある。
+
+\subsubsection{コンパイル}
+
+\begin{description}
+\item[Intel compiler]\mbox{}\\
+ \begin{verbatim}
+  ifort -convert big_endian -assume byterecl
+    -I${NETCDF4}/include -L${NETCDF4}/lib -lnetcdff -lnetcdf make_grads_file.f90 -o convine
+  \end{verbatim}
+\item[gfortran]\mbox{}\\
+\begin{verbatim}
+gfortran
+\end{verbatim}
+\end{description}
+
+\subsubsection{使用方法}
+

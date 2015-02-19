@@ -9,6 +9,9 @@ SCALE-LESモデルの実行過程は，基本的に
 \end{enumerate}
 という手順である．
 
+{\Huge word p.7 にあった図}
+
+
 
 \subsection{現実事例の実行方法}
 \subsubsection{pp}
@@ -58,6 +61,10 @@ $ mpirun -n 6 ./scale-les_init init.conf
 \subsubsection{run}
 SCALE-LESプログラムは、実行プログラム本体となる。
 run.confのサンプルは付録参照。
+
+scale-lesは通常のoutputとしてhistoryファイル，リスタート用のoutputとしてrestartファイル，モデル監視用変数のoutputとしてmonitorファイル，そして，実行時のログを吐くファイルとしてLOGファイルをoutputする．
+historyファイルとrestartファイルをHDF5を介してデータ圧縮を行ったnetcdf4フォーマットのファイルである．
+scale-lesでは，各MPIプロセスが個別にファイルをoutputする．
 
 
 \begin{enumerate}
