@@ -2125,7 +2125,8 @@ contains
     integer :: ref_tmp
     !---------------------------------------------------------------------------
 
-    ref_tmp = ref_now
+    ref_tmp = ref_old
+    ref_old = ref_now
     ref_now = ref_new
     ref_new = ref_tmp
 
