@@ -363,15 +363,8 @@ contains
     if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_NEST)
 
     call INTRPNEST_setup ( interp_search_divnum, NEST_INTERP_LEVEL, OFFLINE )
-
-    select case( NEST_INTERP_LEVEL )
-    case( 3 )
-       itp_nh = 3
-       itp_nv = 2
-    case( 4 )
-       itp_nh = 4
-       itp_nv = 2
-    endselect
+    itp_nh = int( NEST_INTERP_LEVEL )
+    itp_nv = 2
 
     ! only for register
     if ( ONLINE_IAM_PARENT .or. ONLINE_IAM_DAUGHTER ) then

@@ -189,15 +189,8 @@ contains
                                     interp_search_divnum
     if( IO_L ) write(IO_FID_LOG,*) '+++ Horizontal Interpolation Level:', &
                                     NEST_INTERP_LEVEL
-
-    select case( NEST_INTERP_LEVEL )
-    case( 3 )
-       itp_nh = 3
-       itp_nv = 2
-    case( 4 )
-       itp_nh = 4
-       itp_nv = 2
-    endselect
+    itp_nh = int( NEST_INTERP_LEVEL )
+    itp_nv = 2
 
     return
   end subroutine ParentAtomSetup
