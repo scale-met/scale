@@ -1533,9 +1533,8 @@ contains
        TIME_DTSEC,     &
        TIME_NOWDAYSEC
     use scale_grid_nest, only: &
-       NEST_COMM_recvwait_issue, &
-       ONLINE_USE_VELZ,          &
-       PARENT_DTSEC,             &
+       ONLINE_USE_VELZ,       &
+       PARENT_DTSEC,          &
        NESTQA => NEST_BND_QA
     implicit none
 
@@ -1553,7 +1552,6 @@ contains
     real(RP) :: inc_POTT(KA,IA,JA)        ! damping coefficient for POTT [0-1]
     real(RP) :: inc_QTRC(KA,IA,JA,BND_QA) ! damping coefficient for QTRC [0-1]
 
-    logical :: ref_updated
     integer :: handle
     integer :: i, j, k, iq
     !---------------------------------------------------------------------------
@@ -1571,7 +1569,6 @@ contains
           call update_ref_index
 
           boundary_timestep = boundary_timestep + 1
-          ref_updated = .true.
           now_step = 1
           if ( do_daughter_process ) then !online [daughter]
              handle = 2
@@ -1579,12 +1576,7 @@ contains
           else
              call ATMOS_BOUNDARY_update_file
           end if
-       else
-          ref_updated = .false.
-          now_step = now_step + 1
-       end if
 
-       if ( ref_updated ) then
           do j = 1, JA
           do i = 1, IA
           do k = 1, KA
@@ -1607,14 +1599,9 @@ contains
              end do
              end do
           end if
+       else
+          now_step = now_step + 1
 
-          ! issue receive
-          if ( do_daughter_process ) then
-             handle = 2
-             call NEST_COMM_recvwait_issue( handle, NESTQA )
-          end if
-
-       else ! update boundary using increment
           if ( .NOT. inc_skip_at_1st ) then ! to avoid increment at the 1st step
              call get_increment( inc_DENS(:,:,:),   & ! [OUT]
                                  inc_VELZ(:,:,:),   & ! [OUT]
@@ -1648,8 +1635,7 @@ contains
           else
              inc_skip_at_1st = .false.
           endif
-
-       end if ! ref_updated
+       end if
 
        ! fill HALO in western region
        if ( .not. PRC_HAS_W ) then
@@ -2060,6 +2046,8 @@ contains
        call HIST_in( ATMOS_BOUNDARY_ref_VELY(:,:,:,ref_new), 'BND_ref_VELY', 'reference VELZ', 'm/s'   )
        call HIST_in( ATMOS_BOUNDARY_ref_POTT(:,:,:,ref_new), 'BND_ref_POTT', 'reference VELZ', 'K'     )
 
+       ! issue receive
+       call NEST_COMM_recvwait_issue( handle, NESTQA )
     endif
 
     return
