@@ -1349,16 +1349,14 @@ contains
 
     integer, parameter  :: handle = 2
 
-    real(RP) :: dummy1_p(PARENT_KA(handle), PARENT_IA(handle), PARENT_JA(handle)        )
-    real(RP) :: dummy2_p(PARENT_KA(handle), PARENT_IA(handle), PARENT_JA(handle), NESTQA)
+    real(RP) :: dummy_p( PARENT_KA(handle), PARENT_IA(handle), PARENT_JA(handle), NESTQA )
 
     integer  :: i, j, k, iq, ierr
     !---------------------------------------------------------------------------
 
     ATMOS_BOUNDARY_UPDATE_DT = PARENT_DTSEC(handle)
 
-    dummy1_p(:,:,:)   = 0.0_RP
-    dummy2_p(:,:,:,:) = 0.0_RP
+    dummy_p(:,:,:,:) = 0.0_RP
 
     if ( NESTQA .ne. BND_QA ) then
        write(*,*) 'xxx ERROR: NEST_BND_QA exceeds BND_QA [initialize/ATMOS_BOUNDARY]'
@@ -1374,12 +1372,12 @@ contains
     call NEST_COMM_recvwait_issue( handle, NESTQA )
     call NEST_COMM_nestdown( handle,                                       &
                              NESTQA,                                       &
-                             dummy1_p(:,:,:),                              &   !(KA,IA,JA)
-                             dummy1_p(:,:,:),                              &   !(KA,IA,JA)
-                             dummy1_p(:,:,:),                              &   !(KA,IA,JA)
-                             dummy1_p(:,:,:),                              &   !(KA,IA,JA)
-                             dummy1_p(:,:,:),                              &   !(KA,IA,JA)
-                             dummy2_p(:,:,:,1:NESTQA),                     &   !(KA,IA,JA,QA)
+                             dummy_p(:,:,:,1),                             &   !(KA,IA,JA)
+                             dummy_p(:,:,:,1),                             &   !(KA,IA,JA)
+                             dummy_p(:,:,:,1),                             &   !(KA,IA,JA)
+                             dummy_p(:,:,:,1),                             &   !(KA,IA,JA)
+                             dummy_p(:,:,:,1),                             &   !(KA,IA,JA)
+                             dummy_p(:,:,:,1:NESTQA),                      &   !(KA,IA,JA,QA)
                              ATMOS_BOUNDARY_ref_DENS(:,:,:,ref_now),       &   !(KA,IA,JA)
                              ATMOS_BOUNDARY_ref_VELZ(:,:,:,ref_now),       &   !(KA,IA,JA)
                              ATMOS_BOUNDARY_ref_VELX(:,:,:,ref_now),       &   !(KA,IA,JA)
@@ -1393,12 +1391,12 @@ contains
     call NEST_COMM_recvwait_issue( handle, NESTQA )
     call NEST_COMM_nestdown( handle,                                       &
                              NESTQA,                                       &
-                             dummy1_p(:,:,:),                              &   !(KA,IA,JA)
-                             dummy1_p(:,:,:),                              &   !(KA,IA,JA)
-                             dummy1_p(:,:,:),                              &   !(KA,IA,JA)
-                             dummy1_p(:,:,:),                              &   !(KA,IA,JA)
-                             dummy1_p(:,:,:),                              &   !(KA,IA,JA)
-                             dummy2_p(:,:,:,1:NESTQA),                     &   !(KA,IA,JA,QA)
+                             dummy_p(:,:,:,1),                             &   !(KA,IA,JA)
+                             dummy_p(:,:,:,1),                             &   !(KA,IA,JA)
+                             dummy_p(:,:,:,1),                             &   !(KA,IA,JA)
+                             dummy_p(:,:,:,1),                             &   !(KA,IA,JA)
+                             dummy_p(:,:,:,1),                             &   !(KA,IA,JA)
+                             dummy_p(:,:,:,1:NESTQA),                      &   !(KA,IA,JA,QA)
                              ATMOS_BOUNDARY_ref_DENS(:,:,:,ref_new),       &   !(KA,IA,JA)
                              ATMOS_BOUNDARY_ref_VELZ(:,:,:,ref_new),       &   !(KA,IA,JA)
                              ATMOS_BOUNDARY_ref_VELX(:,:,:,ref_new),       &   !(KA,IA,JA)
@@ -1496,7 +1494,6 @@ contains
     use scale_grid_nest, only: &
        NEST_COMM_recvwait_issue, &
        NEST_COMM_recv_cancel,    &
-       NEST_COMM_test,           &
        ONLINE_USE_VELZ,          &
        PARENT_DTSEC,             &
        NESTQA => NEST_BND_QA
@@ -1876,16 +1873,6 @@ contains
        call HIST_in( ATMOS_BOUNDARY_QTRC(:,:,:,iq), trim(AQ_NAME(iq))//'_BND', 'Boundary '//trim(AQ_NAME(iq)), 'kg/kg' )
     enddo
 
-    if ( do_parent_process ) then !online [parent]
-       handle = 1
-       call NEST_COMM_test( handle )
-    endif
-
-    if ( do_daughter_process ) then !online [daughter]
-       handle = 2
-       call NEST_COMM_test( handle )
-    endif
-
     return
   end subroutine ATMOS_BOUNDARY_update
 
@@ -1982,18 +1969,14 @@ contains
     real(RP), intent(in) :: QTRC(KA,IA,JA,QA)
     integer,  intent(in) :: handle
 
-    real(RP) :: dummy1_p(PARENT_KA(handle),  PARENT_IA(handle),  PARENT_JA(handle))
-    real(RP) :: dummy1_d(DAUGHTER_KA(handle),DAUGHTER_IA(handle),DAUGHTER_JA(handle),2)
-    real(RP) :: dummy2_p(PARENT_KA(handle),  PARENT_IA(handle),  PARENT_JA(handle),  NESTQA)
-    real(RP) :: dummy2_d(DAUGHTER_KA(handle),DAUGHTER_IA(handle),DAUGHTER_JA(handle),NESTQA,2)
+    real(RP) :: dummy_p( PARENT_KA  (handle), PARENT_IA  (handle), PARENT_JA  (handle), NESTQA )
+    real(RP) :: dummy_d( DAUGHTER_KA(handle), DAUGHTER_IA(handle), DAUGHTER_JA(handle), NESTQA )
 
     integer :: i, j, k, iq
     !---------------------------------------------------------------------------
 
-    dummy1_p(:,:,:)     = 0.0_RP
-    dummy1_d(:,:,:,:)   = 0.0_RP
-    dummy2_p(:,:,:,:)   = 0.0_RP
-    dummy2_d(:,:,:,:,:) = 0.0_RP
+    dummy_p(:,:,:,:) = 0.0_RP
+    dummy_d(:,:,:,:) = 0.0_RP
 
     if ( handle == 1 .and. do_parent_process ) then ! [parent]
        if ( IO_L ) write(IO_FID_LOG,*)"*** ATMOS BOUNDARY update online: PARENT"
@@ -2006,20 +1989,20 @@ contains
        endif
 
        ! issue send
-       call NEST_COMM_nestdown( handle,                    &
-                                NESTQA,                    &
-                                DENS(:,:,:),               &  !(KA,IA,JA)
-                                MOMZ(:,:,:),               &  !(KA,IA,JA)
-                                MOMX(:,:,:),               &  !(KA,IA,JA)
-                                MOMY(:,:,:),               &  !(KA,IA,JA)
-                                RHOT(:,:,:),               &  !(KA,IA,JA)
-                                QTRC(:,:,:,1:NESTQA),      &  !(KA,IA,JA,QA)
-                                dummy1_d(:,:,:,2),         &  !(KA,IA,JA)
-                                dummy1_d(:,:,:,2),         &  !(KA,IA,JA)
-                                dummy1_d(:,:,:,2),         &  !(KA,IA,JA)
-                                dummy1_d(:,:,:,2),         &  !(KA,IA,JA)
-                                dummy1_d(:,:,:,2),         &  !(KA,IA,JA)
-                                dummy2_d(:,:,:,1:NESTQA,2) )  !(KA,IA,JA,QA)
+       call NEST_COMM_nestdown( handle,                 &
+                                NESTQA,                 &
+                                DENS(:,:,:),            &  !(KA,IA,JA)
+                                MOMZ(:,:,:),            &  !(KA,IA,JA)
+                                MOMX(:,:,:),            &  !(KA,IA,JA)
+                                MOMY(:,:,:),            &  !(KA,IA,JA)
+                                RHOT(:,:,:),            &  !(KA,IA,JA)
+                                QTRC(:,:,:,1:NESTQA),   &  !(KA,IA,JA,QA)
+                                dummy_d(:,:,:,1),       &  !(KA,IA,JA)
+                                dummy_d(:,:,:,1),       &  !(KA,IA,JA)
+                                dummy_d(:,:,:,1),       &  !(KA,IA,JA)
+                                dummy_d(:,:,:,1),       &  !(KA,IA,JA)
+                                dummy_d(:,:,:,1),       &  !(KA,IA,JA)
+                                dummy_d(:,:,:,1:NESTQA) )  !(KA,IA,JA,QA)
 
     elseif ( handle == 2 .and. do_daughter_process ) then ! [daughter]
        if( IO_L ) write(IO_FID_LOG,'(1X,A,I5)') '*** ATMOS BOUNDARY update online: DAUGHTER', boundary_timestep
@@ -2027,12 +2010,12 @@ contains
        ! issue wait
        call NEST_COMM_nestdown( handle,                                         &
                                 NESTQA,                                         &
-                                dummy1_p(:,:,:),                                & !(KA,IA,JA)
-                                dummy1_p(:,:,:),                                & !(KA,IA,JA)
-                                dummy1_p(:,:,:),                                & !(KA,IA,JA)
-                                dummy1_p(:,:,:),                                & !(KA,IA,JA)
-                                dummy1_p(:,:,:),                                & !(KA,IA,JA)
-                                dummy2_p(:,:,:,1:NESTQA),                       & !(KA,IA,JA,QA)
+                                dummy_p(:,:,:,1),                               & !(KA,IA,JA)
+                                dummy_p(:,:,:,1),                               & !(KA,IA,JA)
+                                dummy_p(:,:,:,1),                               & !(KA,IA,JA)
+                                dummy_p(:,:,:,1),                               & !(KA,IA,JA)
+                                dummy_p(:,:,:,1),                               & !(KA,IA,JA)
+                                dummy_p(:,:,:,1:NESTQA),                        & !(KA,IA,JA,QA)
                                 ATMOS_BOUNDARY_ref_DENS(:,:,:,ref_new),         & !(KA,IA,JA)
                                 ATMOS_BOUNDARY_ref_VELZ(:,:,:,ref_new),         & !(KA,IA,JA)
                                 ATMOS_BOUNDARY_ref_VELX(:,:,:,ref_new),         & !(KA,IA,JA)
@@ -2081,18 +2064,18 @@ contains
     real(RP) :: dt
     !---------------------------------------------------------------------------
 
-    dt = ATMOS_BOUNDARY_UPDATE_DT / TIME_DTSEC 
+    dt = TIME_DTSEC / ATMOS_BOUNDARY_UPDATE_DT
 
     do j = 1, JA
     do i = 1, IA
     do k = 1, KA
-       inc_DENS(k,i,j) = ( ATMOS_BOUNDARY_ref_DENS(k,i,j,ref_new) - ATMOS_BOUNDARY_ref_DENS(k,i,j,ref_now) ) / dt
-       inc_VELZ(k,i,j) = ( ATMOS_BOUNDARY_ref_VELZ(k,i,j,ref_new) - ATMOS_BOUNDARY_ref_VELZ(k,i,j,ref_now) ) / dt
-       inc_VELX(k,i,j) = ( ATMOS_BOUNDARY_ref_VELX(k,i,j,ref_new) - ATMOS_BOUNDARY_ref_VELX(k,i,j,ref_now) ) / dt
-       inc_VELY(k,i,j) = ( ATMOS_BOUNDARY_ref_VELY(k,i,j,ref_new) - ATMOS_BOUNDARY_ref_VELY(k,i,j,ref_now) ) / dt
-       inc_POTT(k,i,j) = ( ATMOS_BOUNDARY_ref_POTT(k,i,j,ref_new) - ATMOS_BOUNDARY_ref_POTT(k,i,j,ref_now) ) / dt
+       inc_DENS(k,i,j) = ( ATMOS_BOUNDARY_ref_DENS(k,i,j,ref_new) - ATMOS_BOUNDARY_ref_DENS(k,i,j,ref_now) ) * dt
+       inc_VELZ(k,i,j) = ( ATMOS_BOUNDARY_ref_VELZ(k,i,j,ref_new) - ATMOS_BOUNDARY_ref_VELZ(k,i,j,ref_now) ) * dt
+       inc_VELX(k,i,j) = ( ATMOS_BOUNDARY_ref_VELX(k,i,j,ref_new) - ATMOS_BOUNDARY_ref_VELX(k,i,j,ref_now) ) * dt
+       inc_VELY(k,i,j) = ( ATMOS_BOUNDARY_ref_VELY(k,i,j,ref_new) - ATMOS_BOUNDARY_ref_VELY(k,i,j,ref_now) ) * dt
+       inc_POTT(k,i,j) = ( ATMOS_BOUNDARY_ref_POTT(k,i,j,ref_new) - ATMOS_BOUNDARY_ref_POTT(k,i,j,ref_now) ) * dt
        do iq = 1, BND_QA
-          inc_QTRC(k,i,j,iq) = ( ATMOS_BOUNDARY_ref_QTRC(k,i,j,iq,ref_new) - ATMOS_BOUNDARY_ref_QTRC(k,i,j,iq,ref_now) ) / dt
+          inc_QTRC(k,i,j,iq) = ( ATMOS_BOUNDARY_ref_QTRC(k,i,j,iq,ref_new) - ATMOS_BOUNDARY_ref_QTRC(k,i,j,iq,ref_now) ) * dt
        end do
     end do
     end do
