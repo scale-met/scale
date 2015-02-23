@@ -208,7 +208,14 @@ contains
     real(RP) :: C0 ! initial drag coefficient [no unit]
     real(RP) :: fm, fh, t0th, q0qe
     real(RP) :: TH1, TH0
+    real(RP) :: logZ1Z0M
+    real(RP) :: logZ0MZ0E
+    real(RP) :: logZ0MZ0H
     !---------------------------------------------------------------------------
+
+    logZ1Z0m = log( Z1/Z0M )
+    logZ0MZ0E = max( log( Z0M/Z0E ), 1.0_RP )
+    logZ0MZ0H = max( log( Z0M/Z0H ), 1.0_RP )
 
     Uabs = max( sqrt( U1**2 + V1**2 ), BULKFLUX_Uabs_min )
     TH1  = T1 * ( PRE00 / P1 )**( Rdry / CPdry )
@@ -219,7 +226,7 @@ contains
       RiB0 = sign( BULKFLUX_RiB_min, RiB0 )
     end if
 
-    C0  = ( KARMAN / log( Z1/Z0M ) )**2
+    C0  = ( KARMAN / logZ1Z0M )**2
     RiB = RiB0
 
     if( RiB0 >= 0.0_RP ) then
@@ -232,8 +239,8 @@ contains
       fh = 1.0_RP - LFb * RiB / ( 1.0_RP + LFb * LFdh * C0 * sqrt( Z1/Z0M ) * sqrt( abs( RiB ) ) )
     end if
 
-    t0th = 1.0_RP / ( 1.0_RP + log( Z0M/Z0H ) / log( Z1/Z0M ) / sqrt( fm ) * fh )
-    q0qe = 1.0_RP / ( 1.0_RP + log( Z0M/Z0E ) / log( Z1/Z0M ) / sqrt( fm ) * fh )
+    t0th = 1.0_RP / ( 1.0_RP + logZ0MZ0H / logZ1Z0M / sqrt( fm ) * fh )
+    q0qe = 1.0_RP / ( 1.0_RP + logZ0MZ0E / logZ1Z0M / sqrt( fm ) * fh )
     RiB  = RiB * t0th
 
     if( RiB0 >= 0.0_RP ) then
@@ -246,8 +253,8 @@ contains
       fh = 1.0_RP - LFb * RiB / ( 1.0_RP + LFb * LFdh * C0 * sqrt( Z1/Z0M ) * sqrt( abs( RiB ) ) )
     end if
 
-    t0th = 1.0_RP / ( 1.0_RP + log( Z0M/Z0H ) / log( Z1/Z0M ) / sqrt( fm ) * fh )
-    q0qe = 1.0_RP / ( 1.0_RP + log( Z0M/Z0E ) / log( Z1/Z0M ) / sqrt( fm ) * fh )
+    t0th = 1.0_RP / ( 1.0_RP + logZ0MZ0H / logZ1Z0M / sqrt( fm ) * fh )
+    q0qe = 1.0_RP / ( 1.0_RP + logZ0MZ0E / logZ1Z0M / sqrt( fm ) * fh )
 
     Ustar = sqrt( C0 * fm ) * Uabs
     Tstar = C0 * fh * t0th / tPrn * Uabs / Ustar * ( TH1 - TH0 )
