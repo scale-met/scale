@@ -39,6 +39,7 @@ module scale_atmos_boundary
   !++ Public procedure
   !
   public :: ATMOS_BOUNDARY_setup
+  public :: ATMOS_BOUNDARY_finalize
   public :: ATMOS_BOUNDARY_update
 
   !-----------------------------------------------------------------------------
@@ -1473,27 +1474,66 @@ contains
   end subroutine ATMOS_BOUNDARY_initialize_online
 
   !-----------------------------------------------------------------------------
+  !> Finalize boundary value
+  subroutine ATMOS_BOUNDARY_finalize( &
+       DENS, MOMZ, MOMX, MOMY, RHOT, QTRC )
+    use scale_grid_nest, only: &
+       NEST_COMM_recvwait_issue, &
+       NEST_COMM_recv_cancel,    &
+       NESTQA => NEST_BND_QA
+    implicit none
+
+    ! arguments
+    real(RP), intent(in) :: DENS(KA,IA,JA)
+    real(RP), intent(in) :: MOMZ(KA,IA,JA)
+    real(RP), intent(in) :: MOMX(KA,IA,JA)
+    real(RP), intent(in) :: MOMY(KA,IA,JA)
+    real(RP), intent(in) :: RHOT(KA,IA,JA)
+    real(RP), intent(in) :: QTRC(KA,IA,JA,QA)
+
+    ! works
+    integer :: handle
+    !---------------------------------------------------------------------------
+
+    if ( do_parent_process ) then !online [parent]
+       ! should be called every time step
+       handle = 1
+       call ATMOS_BOUNDARY_update_online( DENS,MOMZ,MOMX,MOMY,RHOT,QTRC,handle )
+    endif
+
+    if ( do_parent_process ) then !online [parent]
+       handle = 1
+       call NEST_COMM_recvwait_issue( handle, NESTQA )
+    endif
+
+    if ( do_daughter_process ) then !online [daughter]
+       handle = 2
+       call NEST_COMM_recv_cancel( handle )
+    endif
+
+    return
+  end subroutine ATMOS_BOUNDARY_finalize
+
+  !-----------------------------------------------------------------------------
   !> Update boundary value with a constant time increment
   subroutine ATMOS_BOUNDARY_update( &
-       DENS, MOMZ, MOMX, MOMY, RHOT, QTRC, &
-       last )
+       DENS, MOMZ, MOMX, MOMY, RHOT, QTRC )
     use scale_process, only: &
-       PRC_myrank, &
+       PRC_myrank,  &
        PRC_MPIstop, &
-       PRC_HAS_W, &
-       PRC_HAS_E, &
-       PRC_HAS_S, &
+       PRC_HAS_W,   &
+       PRC_HAS_E,   &
+       PRC_HAS_S,   &
        PRC_HAS_N
     use scale_const, only: &
        EPS => CONST_EPS
     use scale_history, only: &
        HIST_in
     use scale_time, only: &
-       TIME_DTSEC, &
+       TIME_DTSEC,     &
        TIME_NOWDAYSEC
     use scale_grid_nest, only: &
        NEST_COMM_recvwait_issue, &
-       NEST_COMM_recv_cancel,    &
        ONLINE_USE_VELZ,          &
        PARENT_DTSEC,             &
        NESTQA => NEST_BND_QA
@@ -1505,7 +1545,6 @@ contains
     real(RP), intent(inout) :: MOMY(KA,IA,JA)
     real(RP), intent(inout) :: RHOT(KA,IA,JA)
     real(RP), intent(inout) :: QTRC(KA,IA,JA,QA)
-    logical,  intent(in), optional :: last
 
     real(RP) :: inc_DENS(KA,IA,JA)        ! damping coefficient for DENS [0-1]
     real(RP) :: inc_VELZ(KA,IA,JA)        ! damping coefficient for VELZ [0-1]
@@ -1523,21 +1562,6 @@ contains
        ! should be called every time step
        handle = 1
        call ATMOS_BOUNDARY_update_online( DENS,MOMZ,MOMX,MOMY,RHOT,QTRC,handle )
-    endif
-
-    if ( present(last) ) then
-    if (last) then
-       if ( do_parent_process ) then !online [parent]
-          handle = 1
-          call NEST_COMM_recvwait_issue( handle, NESTQA )
-       endif
-
-       if ( do_daughter_process ) then !online [daughter]
-          handle = 2
-          call NEST_COMM_recv_cancel( handle )
-       endif
-       return
-    endif
     endif
 
     if ( l_bnd ) then
@@ -1627,6 +1651,7 @@ contains
 
        end if ! ref_updated
 
+       ! fill HALO in western region
        if ( .not. PRC_HAS_W ) then
           do j = 1, JA
           do i = 1, IS-1
@@ -1679,6 +1704,7 @@ contains
           end if
        end if
 
+       ! fill HALO in eastern region
        if ( .not. PRC_HAS_E ) then
           do j = 1, JA
           do i = IE+1, IA
@@ -1742,6 +1768,7 @@ contains
           end if
        end if
 
+       ! fill HALO in southern region
        if ( .not. PRC_HAS_S ) then
           do j = 1, JS-1
           do i = 1, IA
@@ -1794,6 +1821,7 @@ contains
           end if
        end if
 
+       ! fill HALO in northern region
        if ( .not. PRC_HAS_N ) then
           do j = JE+1, JA
           do i = 1, IA

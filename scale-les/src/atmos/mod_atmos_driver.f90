@@ -241,7 +241,7 @@ contains
 
     !########## Lateral/Top Boundary Condition ###########
     if ( ATMOS_BOUNDARY_UPDATE_FLAG ) then
-       call ATMOS_BOUNDARY_update( DENS, MOMZ, MOMX, MOMY, RHOT, QTRC ) ! (in)
+       call ATMOS_BOUNDARY_update( DENS, MOMZ, MOMX, MOMY, RHOT, QTRC ) ! (inout)
     endif
 
     !########## Get Surface Boundary Condition ##########
@@ -331,7 +331,7 @@ contains
   subroutine ATMOS_driver_finalize
     use scale_atmos_boundary, only: &
        ATMOS_BOUNDARY_UPDATE_FLAG, &
-       ATMOS_BOUNDARY_update
+       ATMOS_BOUNDARY_finalize
     use scale_grid_nest, only: &
        NEST_COMM_disconnect
     use mod_atmos_vars, only: &
@@ -345,7 +345,7 @@ contains
     !########## Lateral/Top Boundary Condition ###########
     if ( ATMOS_BOUNDARY_UPDATE_FLAG ) then
        ! If this run is parent of online nesting, boundary data must be sent
-       call ATMOS_BOUNDARY_update( DENS, MOMZ, MOMX, MOMY, RHOT, QTRC, .true. ) ! (in)
+       call ATMOS_BOUNDARY_finalize( DENS, MOMZ, MOMX, MOMY, RHOT, QTRC ) ! (in)
 
        ! Finialize Inter-Communicators
        call NEST_COMM_disconnect
