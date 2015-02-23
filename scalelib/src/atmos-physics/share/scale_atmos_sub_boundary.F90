@@ -167,7 +167,6 @@ module scale_atmos_boundary
   logical,               private :: do_daughter_process     = .false.
   logical,               private :: l_bnd = .false.
   logical,               private :: firsttime = .false.                ! firsttime switch for online-nesting
-  logical,               private :: inc_skip_at_1st = .false.          ! firsttime switch for boundary increment
 
   integer,               private :: ref_size = 3
   integer,               private :: ref_old  = 1
@@ -1306,8 +1305,6 @@ contains
        call PRC_MPIstop
     end if
 
-    inc_skip_at_1st = .true.
-
     return
   end subroutine ATMOS_BOUNDARY_initialize_file
 
@@ -1467,8 +1464,7 @@ contains
        call PRC_MPIstop
     end if
 
-    now_step = 0  ! should be set as zero in initialize process
-    inc_skip_at_1st = .true.
+    now_step = 0 ! should be set as zero in initialize process
 
     return
   end subroutine ATMOS_BOUNDARY_initialize_online
@@ -1564,8 +1560,40 @@ contains
 
     if ( l_bnd ) then
 
+       ! get incremental coefficients
+       call get_increment( inc_DENS(:,:,:),   & ! [OUT]
+                           inc_VELZ(:,:,:),   & ! [OUT]
+                           inc_VELX(:,:,:),   & ! [OUT]
+                           inc_VELY(:,:,:),   & ! [OUT]
+                           inc_POTT(:,:,:),   & ! [OUT]
+                           inc_QTRC(:,:,:,:)  ) ! [OUT]
+
+       ! update boundary vars
+       do j  = 1, JA
+       do i  = 1, IA
+       do k  = 1, KA
+          ATMOS_BOUNDARY_DENS(k,i,j) = ATMOS_BOUNDARY_DENS(k,i,j) + inc_DENS(k,i,j)
+          ATMOS_BOUNDARY_VELX(k,i,j) = ATMOS_BOUNDARY_VELX(k,i,j) + inc_VELX(k,i,j)
+          ATMOS_BOUNDARY_VELY(k,i,j) = ATMOS_BOUNDARY_VELY(k,i,j) + inc_VELY(k,i,j)
+          ATMOS_BOUNDARY_POTT(k,i,j) = ATMOS_BOUNDARY_POTT(k,i,j) + inc_POTT(k,i,j)
+          do iq = 1, BND_QA
+             ATMOS_BOUNDARY_QTRC(k,i,j,iq) = ATMOS_BOUNDARY_QTRC(k,i,j,iq) + inc_QTRC(k,i,j,iq)
+          end do
+       end do
+       end do
+       end do
+       if ( ONLINE_USE_VELZ ) then
+          do j  = 1, JA
+          do i  = 1, IA
+          do k  = 1, KA
+             ATMOS_BOUNDARY_VELZ(k,i,j) = ATMOS_BOUNDARY_VELZ(k,i,j) + inc_VELZ(k,i,j)
+          end do
+          end do
+          end do
+       end if
+
+       ! update referce vars
        if ( now_step == UPDATE_NSTEP ) then
-          ! update index of reference vars
           call update_ref_index
 
           boundary_timestep = boundary_timestep + 1
@@ -1576,65 +1604,8 @@ contains
           else
              call ATMOS_BOUNDARY_update_file
           end if
-
-          do j = 1, JA
-          do i = 1, IA
-          do k = 1, KA
-             ATMOS_BOUNDARY_DENS(k,i,j) = ATMOS_BOUNDARY_ref_DENS(k,i,j,ref_now)
-             ATMOS_BOUNDARY_VELX(k,i,j) = ATMOS_BOUNDARY_ref_VELX(k,i,j,ref_now)
-             ATMOS_BOUNDARY_VELY(k,i,j) = ATMOS_BOUNDARY_ref_VELY(k,i,j,ref_now)
-             ATMOS_BOUNDARY_POTT(k,i,j) = ATMOS_BOUNDARY_ref_POTT(k,i,j,ref_now)
-             do iq = 1, BND_QA
-                ATMOS_BOUNDARY_QTRC(k,i,j,iq) = ATMOS_BOUNDARY_ref_QTRC(k,i,j,iq,ref_now)
-             end do
-          end do
-          end do
-          end do
-          if ( ONLINE_USE_VELZ ) then
-             do j = 1, JA
-             do i = 1, IA
-             do k = 1, KA
-                ATMOS_BOUNDARY_VELZ(k,i,j) = ATMOS_BOUNDARY_ref_VELZ(k,i,j,ref_now)
-             end do
-             end do
-             end do
-          end if
        else
           now_step = now_step + 1
-
-          if ( .NOT. inc_skip_at_1st ) then ! to avoid increment at the 1st step
-             call get_increment( inc_DENS(:,:,:),   & ! [OUT]
-                                 inc_VELZ(:,:,:),   & ! [OUT]
-                                 inc_VELX(:,:,:),   & ! [OUT]
-                                 inc_VELY(:,:,:),   & ! [OUT]
-                                 inc_POTT(:,:,:),   & ! [OUT]
-                                 inc_QTRC(:,:,:,:)  ) ! [OUT]
-
-             do j  = 1, JA
-             do i  = 1, IA
-             do k  = 1, KA
-                ATMOS_BOUNDARY_DENS(k,i,j) = ATMOS_BOUNDARY_DENS(k,i,j) + inc_DENS(k,i,j)
-                ATMOS_BOUNDARY_VELX(k,i,j) = ATMOS_BOUNDARY_VELX(k,i,j) + inc_VELX(k,i,j)
-                ATMOS_BOUNDARY_VELY(k,i,j) = ATMOS_BOUNDARY_VELY(k,i,j) + inc_VELY(k,i,j)
-                ATMOS_BOUNDARY_POTT(k,i,j) = ATMOS_BOUNDARY_POTT(k,i,j) + inc_POTT(k,i,j)
-                do iq = 1, BND_QA
-                   ATMOS_BOUNDARY_QTRC(k,i,j,iq) = ATMOS_BOUNDARY_QTRC(k,i,j,iq) + inc_QTRC(k,i,j,iq)
-                end do
-             end do
-             end do
-             end do
-             if ( ONLINE_USE_VELZ ) then
-                do j  = 1, JA
-                do i  = 1, IA
-                do k  = 1, KA
-                   ATMOS_BOUNDARY_VELZ(k,i,j) = ATMOS_BOUNDARY_VELZ(k,i,j) + inc_VELZ(k,i,j)
-                end do
-                end do
-                end do
-             end if
-          else
-             inc_skip_at_1st = .false.
-          endif
        end if
 
        ! fill HALO in western region
@@ -2109,6 +2080,8 @@ contains
        inc_VELY, &
        inc_POTT, &
        inc_QTRC  )
+    use scale_const, only: &
+       EPS => CONST_EPS
     use scale_time, only: &
        TIME_DTSEC
     implicit none
@@ -2124,25 +2097,47 @@ contains
     ! works
     integer :: i, j, k, iq
 
+    real(RP) :: half_nstep
     real(RP) :: dt
     !---------------------------------------------------------------------------
 
     dt = TIME_DTSEC / ATMOS_BOUNDARY_UPDATE_DT 
 
-    do j = 1, JA
-    do i = 1, IA
-    do k = 1, KA
-       inc_DENS(k,i,j) = ( ATMOS_BOUNDARY_ref_DENS(k,i,j,ref_new) - ATMOS_BOUNDARY_ref_DENS(k,i,j,ref_now) ) * dt
-       inc_VELZ(k,i,j) = ( ATMOS_BOUNDARY_ref_VELZ(k,i,j,ref_new) - ATMOS_BOUNDARY_ref_VELZ(k,i,j,ref_now) ) * dt
-       inc_VELX(k,i,j) = ( ATMOS_BOUNDARY_ref_VELX(k,i,j,ref_new) - ATMOS_BOUNDARY_ref_VELX(k,i,j,ref_now) ) * dt
-       inc_VELY(k,i,j) = ( ATMOS_BOUNDARY_ref_VELY(k,i,j,ref_new) - ATMOS_BOUNDARY_ref_VELY(k,i,j,ref_now) ) * dt
-       inc_POTT(k,i,j) = ( ATMOS_BOUNDARY_ref_POTT(k,i,j,ref_new) - ATMOS_BOUNDARY_ref_POTT(k,i,j,ref_now) ) * dt
-       do iq = 1, BND_QA
-          inc_QTRC(k,i,j,iq) = ( ATMOS_BOUNDARY_ref_QTRC(k,i,j,iq,ref_new) - ATMOS_BOUNDARY_ref_QTRC(k,i,j,iq,ref_now) ) * dt
+    half_nstep = real( UPDATE_NSTEP, kind=RP ) / 2.0_RP
+
+    if( ( real( now_step,   kind=RP ) - EPS ) < half_nstep .and. &
+        ( real( now_step+1, kind=RP ) - EPS ) < half_nstep       ) then
+       do j = 1, JA
+       do i = 1, IA
+       do k = 1, KA
+          inc_DENS(k,i,j) = ( ATMOS_BOUNDARY_ref_DENS(k,i,j,ref_now) - ATMOS_BOUNDARY_ref_DENS(k,i,j,ref_old) ) * dt
+          inc_VELZ(k,i,j) = ( ATMOS_BOUNDARY_ref_VELZ(k,i,j,ref_now) - ATMOS_BOUNDARY_ref_VELZ(k,i,j,ref_old) ) * dt
+          inc_VELX(k,i,j) = ( ATMOS_BOUNDARY_ref_VELX(k,i,j,ref_now) - ATMOS_BOUNDARY_ref_VELX(k,i,j,ref_old) ) * dt
+          inc_VELY(k,i,j) = ( ATMOS_BOUNDARY_ref_VELY(k,i,j,ref_now) - ATMOS_BOUNDARY_ref_VELY(k,i,j,ref_old) ) * dt
+          inc_POTT(k,i,j) = ( ATMOS_BOUNDARY_ref_POTT(k,i,j,ref_now) - ATMOS_BOUNDARY_ref_POTT(k,i,j,ref_old) ) * dt
+          do iq = 1, BND_QA
+             inc_QTRC(k,i,j,iq) = ( ATMOS_BOUNDARY_ref_QTRC(k,i,j,iq,ref_now) - ATMOS_BOUNDARY_ref_QTRC(k,i,j,iq,ref_old) ) * dt
+          end do
        end do
-    end do
-    end do
-    end do
+       end do
+       end do
+    else if( real( now_step, kind=RP ) > half_nstep ) then
+       do j = 1, JA
+       do i = 1, IA
+       do k = 1, KA
+          inc_DENS(k,i,j) = ( ATMOS_BOUNDARY_ref_DENS(k,i,j,ref_new) - ATMOS_BOUNDARY_ref_DENS(k,i,j,ref_now) ) * dt
+          inc_VELZ(k,i,j) = ( ATMOS_BOUNDARY_ref_VELZ(k,i,j,ref_new) - ATMOS_BOUNDARY_ref_VELZ(k,i,j,ref_now) ) * dt
+          inc_VELX(k,i,j) = ( ATMOS_BOUNDARY_ref_VELX(k,i,j,ref_new) - ATMOS_BOUNDARY_ref_VELX(k,i,j,ref_now) ) * dt
+          inc_VELY(k,i,j) = ( ATMOS_BOUNDARY_ref_VELY(k,i,j,ref_new) - ATMOS_BOUNDARY_ref_VELY(k,i,j,ref_now) ) * dt
+          inc_POTT(k,i,j) = ( ATMOS_BOUNDARY_ref_POTT(k,i,j,ref_new) - ATMOS_BOUNDARY_ref_POTT(k,i,j,ref_now) ) * dt
+          do iq = 1, BND_QA
+             inc_QTRC(k,i,j,iq) = ( ATMOS_BOUNDARY_ref_QTRC(k,i,j,iq,ref_new) - ATMOS_BOUNDARY_ref_QTRC(k,i,j,iq,ref_now) ) * dt
+          end do
+       end do
+       end do
+       end do
+    else
+    end if
 
     return
   end subroutine get_increment_lerp_midpoint

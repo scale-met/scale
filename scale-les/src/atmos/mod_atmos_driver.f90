@@ -239,11 +239,6 @@ contains
        call ATMOS_REFSTATE_update( DENS, RHOT, QTRC ) ! (in)
     endif
 
-    !########## Lateral/Top Boundary Condition ###########
-    if ( ATMOS_BOUNDARY_UPDATE_FLAG ) then
-       call ATMOS_BOUNDARY_update( DENS, MOMZ, MOMX, MOMY, RHOT, QTRC ) ! (inout)
-    endif
-
     !########## Get Surface Boundary Condition ##########
     call ATMOS_SURFACE_GET
 
@@ -252,6 +247,11 @@ contains
        call PROF_rapstart('ATM Dynamics', 1)
        call ATMOS_DYN_driver( do_dyn )
        call PROF_rapend  ('ATM Dynamics', 1)
+    endif
+
+    !########## Lateral/Top Boundary Condition ###########
+    if ( ATMOS_BOUNDARY_UPDATE_FLAG ) then
+       call ATMOS_BOUNDARY_update( DENS, MOMZ, MOMX, MOMY, RHOT, QTRC ) ! (inout)
     endif
 
     !########## reset tendencies ##########
