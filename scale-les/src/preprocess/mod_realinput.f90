@@ -61,7 +61,11 @@ module mod_realinput
      LCZ  => GRID_LCZ
   use scale_comm, only: &
      COMM_bcast
-  use scale_interpolation_nest
+  use scale_interpolation_nest, only: &
+     INTRPNEST_interp_fact_llz,  &
+     INTRPNEST_interp_2d,        &
+     INTRPNEST_interp_3d
+
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -100,7 +104,7 @@ module mod_realinput
   integer, private, parameter :: iNICAM  = 3
   integer, private, parameter :: iJMAMSM = 4
 
-  integer, private :: itp_nh = 3
+  integer, private :: itp_nh = 4
   integer, private :: itp_nv = 2
 
   integer, private :: interp_search_divnum = 10
@@ -687,6 +691,10 @@ contains
        rotc => GTRANS_ROTC
     use scale_topography, only: &
        topo => TOPO_Zsfc
+    use scale_interpolation_nest, only: &
+       INTRPNEST_interp_fact_llz,  &
+       INTRPNEST_interp_2d,        &
+       INTRPNEST_interp_3d
     implicit none
 
     real(RP),         intent(out) :: dens(:,:,:,:)
@@ -1441,6 +1449,10 @@ contains
        THERMODYN_pott => ATMOS_THERMODYN_pott
     use scale_gridtrans, only: &
        rotc => GTRANS_ROTC
+    use scale_interpolation_nest, only: &
+       INTRPNEST_interp_fact_llz,  &
+       INTRPNEST_interp_2d,        &
+       INTRPNEST_interp_3d
     implicit none
 
     real(RP),         intent(out)  :: dens(:,:,:,:)
@@ -2122,6 +2134,10 @@ contains
        rotc => GTRANS_ROTC
     use scale_topography, only: &
        topo => TOPO_Zsfc
+    use scale_interpolation_nest, only: &
+       INTRPNEST_interp_fact_llz,  &
+       INTRPNEST_interp_2d,        &
+       INTRPNEST_interp_3d
     implicit none
 
     real(RP),         intent(out) :: dens(:,:,:,:)
@@ -2915,6 +2931,10 @@ contains
        NEST_TILE_ID
     use mod_land_vars, only: &
        convert_WS2VWC
+    use scale_interpolation_nest, only: &
+       INTRPNEST_interp_fact_llz,  &
+       INTRPNEST_interp_2d,        &
+       INTRPNEST_interp_3d
     implicit none
 
     real(RP), intent(out) :: tg   (:,:,:)
@@ -3321,6 +3341,10 @@ contains
       convert_WS2VWC
     use scale_landuse, only: &
       frac_land  => LANDUSE_frac_land
+    use scale_interpolation_nest, only: &
+       INTRPNEST_interp_fact_llz,  &
+       INTRPNEST_interp_2d,        &
+       INTRPNEST_interp_3d
     implicit none
 
     real(RP),         intent(out)  :: tg(:,:,:)
@@ -3734,6 +3758,10 @@ contains
        frac_land  => LANDUSE_frac_land
     use mod_land_vars, only: &
       convert_WS2VWC
+    use scale_interpolation_nest, only: &
+       INTRPNEST_interp_fact_llz,  &
+       INTRPNEST_interp_2d,        &
+       INTRPNEST_interp_3d
     implicit none
 
     real(RP), intent(out) :: tg   (:,:,:)
