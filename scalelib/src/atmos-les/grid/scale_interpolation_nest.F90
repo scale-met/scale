@@ -96,7 +96,7 @@ module scale_interpolation_nest
      end subroutine INTRPNEST_intfc_search_h
   end interface
   procedure(INTRPNEST_intfc_search_h), pointer :: INTRPNEST_search_horiz => NULL()
-  public :: INTRPNEST_search_horiz
+  private :: INTRPNEST_search_horiz
 
   !-----------------------------------------------------------------------------
   abstract interface
@@ -131,7 +131,7 @@ module scale_interpolation_nest
      end subroutine INTRPNEST_intfc_search_v
   end interface
   procedure(INTRPNEST_intfc_search_v), pointer :: INTRPNEST_search_vert => NULL()
-  public :: INTRPNEST_search_vert
+  private :: INTRPNEST_search_vert
 
   !-----------------------------------------------------------------------------
   abstract interface
