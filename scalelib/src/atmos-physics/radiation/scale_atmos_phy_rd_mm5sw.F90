@@ -300,9 +300,9 @@ module scale_atmos_phy_rd_mm5sw
 !------------------------------------------------------------------
    SUBROUTINE SWPARA(TTEN,SDOWN,GSW,ALBEDO,cosSZA,  &
                      T,QV,QC,QR,QI,QS,QG,P,         &
-                     RHO0, DZ,             	    &
+                     RHO0, DZ,                      &
                      R,CP,G,solins,                 &
-                     XXLAT,XXLON,                  &
+                     XXLAT,XXLON,                   &
                      ICLOUD,aer_dry1,aer_water1,    &
                      kts,kte                        )
 

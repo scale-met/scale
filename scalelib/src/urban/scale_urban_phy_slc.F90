@@ -1147,7 +1147,7 @@ contains
 
       if ( abs(resi1) < sqrt(EPS) .and. abs(resi2) < sqrt(EPS) ) then
          TB = TBL(1)
-	 TG = TGL(1)
+         TG = TGL(1)
          TB = max( TBP - DTS_MAX_onestep, min( TBP + DTS_MAX_onestep, TB ) )
          TG = max( TGP - DTS_MAX_onestep, min( TGP + DTS_MAX_onestep, TG ) )
          exit

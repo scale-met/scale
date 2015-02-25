@@ -13,7 +13,7 @@ dt=86400
 #
 start_year='1999'
 start_month='05'
-start_day='16'
+start_day='01'
 start_hour='06'
 start_min='00'
 start_sec='00'
@@ -22,8 +22,8 @@ start_sec='00'
 #
 end_year='1999'
 end_month='05'
-end_day='16'
-end_hour='12'
+end_day='02'
+end_hour='00'
 end_min='00'
 end_sec='00'
 #
