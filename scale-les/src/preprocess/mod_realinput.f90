@@ -3041,6 +3041,7 @@ contains
     real(RP)             :: lvars(lvars_limit) = large_number_one     ! values for levels
     integer              :: startrec=1                                ! record position
     integer              :: totalrec=1                                ! total record number per one time
+    real(RP)             :: undef                                     ! undefined value
     character(H_SHORT)   :: fendian='big_endian'                      ! option
 
     namelist /grdvar/ &
@@ -3054,6 +3055,7 @@ contains
         lvars,     &  ! for levels data
         startrec,  &  ! for map data
         totalrec,  &  ! for map data
+        undef,     &  ! option
         knum,      &  ! option
         fendian       ! option
 
@@ -3091,6 +3093,7 @@ contains
     integer               :: grads_startrec(num_item_list)
     integer               :: grads_totalrec(num_item_list)
     integer               :: grads_knum    (num_item_list)
+    real(RP)              :: grads_undef   (num_item_list)
 
     ! data
     character(len=H_LONG) :: gfile
@@ -3263,6 +3266,7 @@ contains
              startrec = 0
              totalrec = 0
              knum     = -99
+             undef    = large_number_one
              fendian  = 'big'
 
              ! read namelist
@@ -3285,6 +3289,7 @@ contains
                 grads_startrec(ielem) = startrec
                 grads_totalrec(ielem) = totalrec
                 grads_knum    (ielem) = knum
+                grads_undef   (ielem) = undef
                 grads_fendian (ielem) = fendian
                 data_available(ielem) = .true.
                 exit
@@ -3346,6 +3351,7 @@ contains
           dtype    = grads_dtype   (ielem)
           fname    = grads_fname   (ielem)
           lnum     = grads_lnum    (ielem)
+          undef    = grads_undef   (ielem)
 
           if ( dims(3) < grads_knum(ielem) ) then
              write(IO_FID_LOG,*) '*** please check plev data! knum must be less than or equal to outer_nz',knum,dims(3)
@@ -5341,9 +5347,10 @@ contains
     real(RP)             :: dd                                        ! dlon,dlat for linear
     integer, parameter   :: lvars_limit = 1000                        ! limit of values for levels data
     integer              :: lnum                                      ! number of data
-    real(RP)             :: lvars(lvars_limit) = large_number_one  ! values for levels
+    real(RP)             :: lvars(lvars_limit) = large_number_one     ! values for levels
     integer              :: startrec=1                                ! record position
     integer              :: totalrec=1                                ! total record number per one time
+    real(RP)             :: undef                                     ! option
     character(H_SHORT)   :: fendian='big_endian'                      ! option
 
     namelist /grdvar/ &
@@ -5358,6 +5365,7 @@ contains
         startrec,  &  ! for map data
         totalrec,  &  ! for map data
         knum,      &  ! option
+        undef,     &  ! option
         fendian       ! option
 
     !> grads data
@@ -5389,6 +5397,7 @@ contains
     integer               :: grads_startrec(num_item_list)
     integer               :: grads_totalrec(num_item_list)
     integer               :: grads_knum    (num_item_list)
+    real(RP)              :: grads_undef   (num_item_list)
 
     character(len=H_LONG) :: gfile
 
@@ -5526,6 +5535,7 @@ contains
              startrec = 0
              totalrec = 0
              knum     = -99
+             undef    = large_number_one
              fendian  = 'big'
 
              ! read namelist
@@ -5548,6 +5558,7 @@ contains
                 grads_startrec(ielem) = startrec
                 grads_totalrec(ielem) = totalrec
                 grads_knum    (ielem) = knum
+                grads_undef   (ielem) = undef
                 grads_fendian (ielem) = fendian
                 data_available(ielem) = .true.
                 exit
@@ -5599,6 +5610,7 @@ contains
           dtype    = grads_dtype   (ielem)
           fname    = grads_fname   (ielem)
           lnum     = grads_lnum    (ielem)
+          undef    = grads_undef   (ielem)
 
           if ( grads_knum(ielem) > 0 )then
              knum = grads_knum(ielem)
@@ -5758,9 +5770,14 @@ contains
           end select
        enddo loop_InputSurfaceGrADS
 
+       !--SST: use skin temp
+       if (.not. data_available(Ig_sst)) then
+          sst_org(:,:,:) = skint_org(:,:,:)
+       endif
+
        !do it = 1, nt
        !   i=int(dims(4)/2) ; j=int(dims(5)/2)
-       !   write(*,*) "read 2D grads data",it
+       !   write(*,*) "read 2D grads data",dims(4),dims(5),i,j,it
        !   write(*,*) "lon_org    ",lon_org  (i,j,fstep)
        !   write(*,*) "lat_org    ",lat_org  (i,j,fstep)
        !   write(*,*) "sst_org    ",sst_org  (i,j,it)
@@ -5770,6 +5787,30 @@ contains
        !      write(*,*) "strg_org  ",strg_org (k,i,j,it)," k= ",k
        !   enddo
        !enddo
+
+       ! Interpolate over the ocean or land
+       if(data_available(Ig_lsmask))then
+          !--Land temp
+          do k=1,dims(7)
+             work(:,:,1) = tg_org(k,:,:,1)
+             call interp_OceanLand_data(work(:,:,:),lsmask_org(:,:,fstep),dims(4),dims(5), 1, landdata=.true.)
+             tg_org(k,:,:,1) = work(:,:,1)
+          enddo
+          !--Land water
+          do k=1,dims(7)
+             work(:,:,1) = strg_org(k,:,:,1)
+             call interp_OceanLand_data(work(:,:,:),lsmask_org(:,:,fstep),dims(4),dims(5), 1, landdata=.true.)
+             strg_org(k,:,:,1) = work(:,:,1)
+          enddo
+          !--Surface skin temp
+          work(:,:,1) = skint_org(:,:,1)
+          call interp_OceanLand_data(work(:,:,:),lsmask_org(:,:,fstep),dims(4),dims(5), 1,landdata=.true.)
+          skint_org(:,:,1) = work(:,:,1)
+          !--SST
+          work(:,:,1) = sst_org(:,:,1)
+          call interp_OceanLand_data(work(:,:,:),lsmask_org(:,:,fstep),dims(4),dims(5), 1,landdata=.false.)
+          sst_org(:,:,1) = work(:,:,1)
+       endif
 
     endif  ! do_read
 
@@ -5788,6 +5829,7 @@ contains
     enddo
     enddo
 
+    ! land
     call INTRPNEST_interp_fact_llz( hfact  (:,:,:),          & ! [OUT]
                                     vfact  (:,:,:,:,:),      & ! [OUT]
                                     kgrd   (:,:,:,:,:),      & ! [OUT]
@@ -5803,20 +5845,47 @@ contains
                                     dims(7),dims(4),dims(5), & ! [IN]
                                     landgrid=.true.          ) ! [IN]
 
+    !if( myrank == 9 ) then
+    !print *,IA,JA
+    !open(99,file='check2.grd',status='unknown',      &
+    !     form='unformatted',access='direct',recl=IA*JA*4)
+    !i=0
+    !do k=1,itp_nh
+    !   i=i+1
+    !   write(99,rec=i) real(hfact(:,:,k),kind=SP)     !!!! for check
+    !enddo
+    !   i=i+1
+    !   write(99,rec=i) real(vfact(1,:,:,1,1),kind=SP) !!!! for check
+    !   i=i+1
+    !   write(99,rec=i) real(vfact(1,:,:,1,2),kind=SP) !!!! for check
+    !do k=1,itp_nh
+    !   i=i+1
+    !   write(99,rec=i) real(igrd(:,:,k),kind=SP)      !!!! for check
+    !enddo
+    !do k=1,itp_nh
+    !   i=i+1
+    !   write(99,rec=i) real(jgrd(:,:,k),kind=SP)      !!!! for check
+    !enddo
+    !   i=i+1
+    !   write(99,rec=i) real(kgrd(1,:,:,1,1),kind=SP)  !!!! for check
+    !   i=i+1
+    !   write(99,rec=i) real(kgrd(1,:,:,1,2),kind=SP)  !!!! for check
+    !   i=i+1
+    !   write(99,rec=i) real(frac_land(:,:),kind=SP)
+    !   i=i+1
+    !   write(99,rec=i) real(LAT(:,:),kind=SP)
+    !   i=i+1
+    !   write(99,rec=i) real(LON(:,:),kind=SP)
+    !close(99)
+    !endif
+
     ! replace missing value
      maskval_tg   = 298.0_RP    ! mask value => 298K
      maskval_strg = 0.02_RP     ! mask value => 0.02
                                 ! default value 0.02: set as value of forest at 40% of evapolation rate.
                                 ! forest is considered as a typical landuse over Japan area.
 
-    !--Land temp: interpolate over the ocean
-     if(data_available(Ig_lsmask))then
-      do k=1,dims(7)
-        work(:,:,1) = tg_org(k,:,:,1)
-        call interp_OceanLand_data(work(:,:,:),lsmask_org(:,:,fstep),dims(4),dims(5), 1,landdata=.true.)
-        tg_org(k,:,:,1) = work(:,:,1)
-      enddo
-     endif
+
      ! interpolation
      it = 1
      call INTRPNEST_interp_3d( tg    (:,:,:),     &
@@ -5838,15 +5907,7 @@ contains
       call replace_misval( tg(k,:,:), maskval_tg, frac_land )
      enddo
 
-    !--Land water: interpolate over the ocean
     if( use_file_landwater ) then
-      if(data_available(Ig_lsmask))then
-       do k=1,dims(7)
-         work(:,:,1) = strg_org(k,:,:,1)
-         call interp_OceanLand_data(work(:,:,:),lsmask_org(:,:,fstep),dims(4),dims(5), 1,landdata=.true.)
-         strg_org(k,:,:,1) = work(:,:,1)
-       enddo
-      endif
       ! interpolation
       it = 1
       call INTRPNEST_interp_3d( strg    (:,:,:),     &
@@ -5874,22 +5935,6 @@ contains
       end do
     endif
 
-    !--Surface skin temp: interpolate over the ocean
-     if(data_available(Ig_lsmask))then
-       work(:,:,1) = skint_org(:,:,1)
-       call interp_OceanLand_data(work(:,:,:),lsmask_org(:,:,fstep),dims(4),dims(5), 1,landdata=.true.)
-       skint_org(:,:,1) = work(:,:,1)
-     endif
-
-    !--SST:interpolate over the land
-     if (.not. data_available(Ig_sst)) then
-        sst_org(:,:,1) = skint_org(:,:,1)
-        if(data_available(Ig_lsmask))then
-          work(:,:,1) = sst_org(:,:,1)
-          call interp_OceanLand_data(work(:,:,:),lsmask_org(:,:,fstep),dims(4),dims(5), 1,landdata=.false.)
-          sst_org(:,:,1) = work(:,:,1)
-        endif
-     endif
      it = 1
      call INTRPNEST_interp_2d( sst(:,:),    sst_org(:,:,it), hfact(:,:,:),   &
                                igrd(:,:,:), jgrd(:,:,:), IA, JA )
@@ -5950,7 +5995,7 @@ contains
       ny,        & ! (in)
       tcount,    & ! (in)
       landdata,  & ! (in)
-      maskval    & ! (in)
+      maskval    & ! (out)
       )
     use scale_const, only: &
        EPS => CONST_EPS
@@ -6111,7 +6156,6 @@ contains
      imask(:,:) = imaskr(:,:)
      data(:,:,n)  = newdata(:,:)
     enddo ! kk
-
     enddo ! n
 
     deallocate( imask   )
