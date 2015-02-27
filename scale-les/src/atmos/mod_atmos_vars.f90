@@ -135,7 +135,7 @@ module mod_atmos_vars
   integer, private, allocatable :: AQ_HIST_id(:)
 
   ! history & monitor output of diagnostic variables
-  integer, private, parameter :: AD_nmax = 53 ! number of diagnostic variables for history output
+  integer, private, parameter :: AD_nmax = 62 ! number of diagnostic variables for history output
 
   integer, private, parameter :: I_W     =  1 ! velocity w at cell center
   integer, private, parameter :: I_U     =  2 ! velocity u at cell center
@@ -201,10 +201,21 @@ module mod_atmos_vars
   integer, private, parameter :: I_PRCP         = 50
 
   integer, private, parameter :: I_DENS_MEAN    = 51
+  integer, private, parameter :: I_W_MEAN       = 52
+  integer, private, parameter :: I_U_MEAN       = 53
+  integer, private, parameter :: I_V_MEAN       = 54
+  integer, private, parameter :: I_POTT_MEAN    = 55
+  integer, private, parameter :: I_T_MEAN       = 56
 
-  integer, private, parameter :: I_QSAT         = 52
+  integer, private, parameter :: I_QV_MEAN      = 57
+  integer, private, parameter :: I_QHYD_MEAN    = 58
+  integer, private, parameter :: I_QLIQ_MEAN    = 59
+  integer, private, parameter :: I_QICE_MEAN    = 60
 
-  integer, private, parameter :: I_Uabs         = 53
+
+  integer, private, parameter :: I_QSAT         = 61
+
+  integer, private, parameter :: I_Uabs         = 62
 
   integer, private            :: AD_HIST_id (AD_nmax)
   integer, private            :: AD_PREP_sw (AD_nmax)
@@ -414,6 +425,17 @@ contains
     call HIST_reg( AD_HIST_id(I_HDIV) , zinterp, 'HDIV',  'horizontal divergence',  '1/s',    ndim=3 )
     call HIST_reg( AD_HIST_id(I_Uabs) , zinterp, 'Uabs',  'absolute velocity',      'm/s',    ndim=3 )
 
+    call HIST_reg( AD_HIST_id(I_DENS_MEAN), zinterp, 'DENS_MEAN', 'horiz. mean of density',    'kg/m3', ndim=1 )
+    call HIST_reg( AD_HIST_id(I_W_MEAN),    zinterp, 'W_MEAN',    'horiz. mean of w',           'm/s',  ndim=1 )
+    call HIST_reg( AD_HIST_id(I_U_MEAN),    zinterp, 'U_MEAN',    'horiz. mean of u',           'm/s',  ndim=1 )
+    call HIST_reg( AD_HIST_id(I_V_MEAN),    zinterp, 'V_MEAN',    'horiz. mean of v',           'm/s',  ndim=1 )
+    call HIST_reg( AD_HIST_id(I_POTT_MEAN), zinterp, 'PT_MEAN',   'horiz. mean of pot.',        'K',    ndim=1 )
+    call HIST_reg( AD_HIST_id(I_T_MEAN),    zinterp, 'T_MEAN',    'horiz. mean of t',           'K',    ndim=1 )
+    call HIST_reg( AD_HIST_id(I_QV_MEAN),   zinterp, 'QV_MEAN',   'horiz. mean of QV',          '1',    ndim=1 )
+    call HIST_reg( AD_HIST_id(I_QHYD_MEAN), zinterp, 'QHYD_MEAN', 'horiz. mean of QHYD',        '1',    ndim=1 )
+    call HIST_reg( AD_HIST_id(I_QLIQ_MEAN), zinterp, 'QLIQ_MEAN', 'horiz. mean of QLIQ',        '1',    ndim=1 )
+    call HIST_reg( AD_HIST_id(I_QICE_MEAN), zinterp, 'QICE_MEAN', 'horiz. mean of QICE',        '1',    ndim=1 )
+
     call HIST_reg( AD_HIST_id(I_DENS_PRIM), zinterp, 'DENS_PRIM', 'horiz. deviation of density',    'kg/m3', ndim=3 )
     call HIST_reg( AD_HIST_id(I_W_PRIM   ), zinterp, 'W_PRIM',    'horiz. deviation of w',          'm/s',   ndim=3 )
     call HIST_reg( AD_HIST_id(I_U_PRIM   ), zinterp, 'U_PRIM',    'horiz. deviation of u',          'm/s',   ndim=3 )
@@ -565,31 +587,79 @@ contains
        AD_PREP_sw(I_W)      = 1
        AD_PREP_sw(I_W_PRIM) = 1
        AD_PREP_sw(I_DENS_MEAN) = 1
+       AD_PREP_sw(I_W_MEAN) = 1
     endif
 
     if ( AD_HIST_id(I_U_PRIM) > 0 ) then
        AD_PREP_sw(I_U)      = 1
        AD_PREP_sw(I_U_PRIM) = 1
        AD_PREP_sw(I_DENS_MEAN) = 1
+       AD_PREP_sw(I_U_MEAN) = 1
     endif
 
     if ( AD_HIST_id(I_V_PRIM) > 0 ) then
        AD_PREP_sw(I_V)      = 1
        AD_PREP_sw(I_V_PRIM) = 1
        AD_PREP_sw(I_DENS_MEAN) = 1
+       AD_PREP_sw(I_V_MEAN) = 1
     endif
 
     if ( AD_HIST_id(I_POTT_PRIM) > 0 ) then
        AD_PREP_sw(I_POTT)      = 1
        AD_PREP_sw(I_POTT_PRIM) = 1
        AD_PREP_sw(I_DENS_MEAN) = 1
+       AD_PREP_sw(I_POTT_MEAN) = 1
     endif
+
+    if ( AD_HIST_id(I_DENS_MEAN) > 0 ) then
+       AD_PREP_sw(I_DENS_MEAN) = 1
+    endif
+
+    if ( AD_HIST_id(I_W_MEAN) > 0 ) then
+       AD_PREP_sw(I_W_MEAN) = 1
+    endif
+
+    if ( AD_HIST_id(I_U_MEAN) > 0 ) then
+       AD_PREP_sw(I_U_MEAN) = 1
+    endif
+
+    if ( AD_HIST_id(I_V_MEAN) > 0 ) then
+       AD_PREP_sw(I_V_MEAN) = 1
+    endif
+
+    if ( AD_HIST_id(I_POTT_MEAN) > 0 ) then
+       AD_PREP_sw(I_POTT_MEAN) = 1
+    end if
+
+    if ( AD_HIST_id(I_T_MEAN) > 0 ) then
+       AD_PREP_sw(I_T_MEAN) = 1
+    end if
+
+    if ( AD_HIST_id(I_QV_MEAN) > 0 ) then
+       AD_PREP_sw(I_QV_MEAN) = 1
+    end if
+
+    if ( AD_HIST_id(I_QHYD_MEAN) > 0 ) then
+       AD_PREP_sw(I_QHYD) = 1
+       AD_PREP_sw(I_QHYD_MEAN) = 1
+    end if
+
+    if ( AD_HIST_id(I_QLIQ_MEAN) > 0 ) then
+       AD_PREP_sw(I_QLIQ) = 1
+       AD_PREP_sw(I_QLIQ_MEAN) = 1
+    end if
+
+    if ( AD_HIST_id(I_QICE_MEAN) > 0 ) then
+       AD_PREP_sw(I_QICE) = 1
+       AD_PREP_sw(I_QICE_MEAN) = 1
+    end if
 
     if ( AD_HIST_id(I_W_PRIM2) > 0 ) then
        AD_PREP_sw(I_W)       = 1
        AD_PREP_sw(I_W_PRIM)  = 1
        AD_PREP_sw(I_W_PRIM2) = 1
        AD_PREP_sw(I_DENS_MEAN) = 1
+       AD_PREP_sw(I_W_MEAN)    = 1
     endif
 
     if ( AD_HIST_id(I_PT_W_PRIM) > 0 ) then
@@ -599,6 +669,8 @@ contains
        AD_PREP_sw(I_POTT_PRIM) = 1
        AD_PREP_sw(I_PT_W_PRIM) = 1
        AD_PREP_sw(I_DENS_MEAN) = 1
+       AD_PREP_sw(I_W_MEAN)    = 1
+       AD_PREP_sw(I_POTT_MEAN) = 1
     endif
 
     if ( AD_HIST_id(I_W_PRIM3) > 0 ) then
@@ -606,6 +678,7 @@ contains
        AD_PREP_sw(I_W_PRIM)  = 1
        AD_PREP_sw(I_W_PRIM3) = 1
        AD_PREP_sw(I_DENS_MEAN) = 1
+       AD_PREP_sw(I_W_MEAN)  = 1
     endif
 
     if ( AD_HIST_id(I_TKE_RS) > 0 ) then
@@ -617,6 +690,9 @@ contains
        AD_PREP_sw(I_V_PRIM) = 1
        AD_PREP_sw(I_TKE_RS) = 1
        AD_PREP_sw(I_DENS_MEAN) = 1
+       AD_PREP_sw(I_W_MEAN) = 1
+       AD_PREP_sw(I_U_MEAN) = 1
+       AD_PREP_sw(I_V_MEAN) = 1
     endif
 
     if (      AD_HIST_id (I_ENGP) > 0 &
@@ -1069,6 +1145,7 @@ contains
     real(RP) :: QHYD  (KA,IA,JA) ! total hydrometeor  [kg/kg]
     real(RP) :: QLIQ  (KA,IA,JA) ! total liquid water [kg/kg]
     real(RP) :: QICE  (KA,IA,JA) ! total ice water    [kg/kg]
+    real(RP) :: RHOQ  (KA,IA,JA)
 
     real(RP) :: LWP   (IA,JA)    ! liquid water path  [g/m2]
     real(RP) :: IWP   (IA,JA)    ! ice    water path  [g/m2]
@@ -1097,6 +1174,15 @@ contains
     real(RP) :: W_PRIM3  (KA,IA,JA) ! skewness of w                  [m3/s3]
     real(RP) :: TKE_RS   (KA,IA,JA) ! resolved scale TKE             [m2/s2]
     real(RP) :: DENS_MEAN(KA)       ! horiz. mean of density         [kg/m3]
+    real(RP) :: W_MEAN   (KA)       ! horiz. mean of w               [m/s]
+    real(RP) :: U_MEAN   (KA)       ! horiz. mean of u               [m/s]
+    real(RP) :: V_MEAN   (KA)       ! horiz. mean of v               [m/s]
+    real(RP) :: PT_MEAN  (KA)       ! horiz. mean of pot.            [K]
+    real(RP) :: T_MEAN   (KA)       ! horiz. mean of t               [K]
+    real(RP) :: QV_MEAN  (KA)       ! horiz. mean of QV
+    real(RP) :: QHYD_MEAN(KA)       ! horiz. mean of QHYD
+    real(RP) :: QLIQ_MEAN(KA)       ! horiz. mean of QLIQ
+    real(RP) :: QICE_MEAN(KA)       ! horiz. mean of QICE
 
     real(RP) :: ENGT  (KA,IA,JA) ! total     energy [J/m3]
     real(RP) :: ENGP  (KA,IA,JA) ! potential energy [J/m3]
@@ -1106,8 +1192,6 @@ contains
     real(RP) :: QSAT  (KA,IA,JA)
     real(RP) :: UH    (KA,IA,JA)
     real(RP) :: VH    (KA,IA,JA)
-
-    real(RP) :: mean1d(KA)
 
     integer :: k, i, j, iq
     !---------------------------------------------------------------------------
@@ -1465,7 +1549,7 @@ contains
        enddo
     endif
 
-    if ( AD_PREP_sw(I_W_PRIM) > 0 ) then
+    if ( AD_PREP_sw(I_W_MEAN) > 0 ) then
        do j = 1, JA
        do i = 1, IA
        do k = KS, KE
@@ -1473,17 +1557,22 @@ contains
        enddo
        enddo
        enddo
-       call COMM_horizontal_mean( mean1d(:), W_PRIM(:,:,:) )
+       call COMM_horizontal_mean( W_MEAN(:), W_PRIM(:,:,:) )
+       do k = KS, KE
+          W_MEAN(k) = W_MEAN(k) / DENS_MEAN(k)
+       enddo
+    end if
+    if ( AD_PREP_sw(I_W_PRIM) > 0 ) then
        do j = 1, JA
        do i = 1, IA
        do k = KS, KE
-          W_PRIM(k,i,j) = ( W_PRIM(k,i,j) - mean1d(k) ) / DENS_MEAN(k)
+          W_PRIM(k,i,j) = W(k,i,j) - W_MEAN(k)
        enddo
        enddo
        enddo
     endif
 
-    if ( AD_PREP_sw(I_U_PRIM) > 0 ) then
+    if ( AD_PREP_sw(I_U_MEAN) > 0 ) then
        do j = 1, JA
        do i = 1, IA
        do k = KS, KE
@@ -1491,17 +1580,22 @@ contains
        enddo
        enddo
        enddo
-       call COMM_horizontal_mean( mean1d(:), U_PRIM(:,:,:) )
+       call COMM_horizontal_mean( U_MEAN(:), U_PRIM(:,:,:) )
+       do k = KS, KE
+          U_MEAN(k) = U_MEAN(k) / DENS_MEAN(k)
+       enddo
+    end if
+    if ( AD_PREP_sw(I_U_PRIM) > 0 ) then
        do j = 1, JA
        do i = 1, IA
        do k = KS, KE
-          U_PRIM(k,i,j) = ( U_PRIM(k,i,j) - mean1d(k) ) / DENS_MEAN(k)
+          U_PRIM(k,i,j) = U(k,i,j) - U_MEAN(k)
        enddo
        enddo
        enddo
     endif
 
-    if ( AD_PREP_sw(I_V_PRIM) > 0 ) then
+    if ( AD_PREP_sw(I_V_MEAN) > 0 ) then
        do j = 1, JA
        do i = 1, IA
        do k = KS, KE
@@ -1509,26 +1603,106 @@ contains
        enddo
        enddo
        enddo
-       call COMM_horizontal_mean( mean1d(:), V_PRIM(:,:,:) )
+       call COMM_horizontal_mean( V_MEAN(:), V_PRIM(:,:,:) )
+       do k = KS, KE
+          V_MEAN(k) = V_MEAN(k) / DENS_MEAN(k)
+       enddo
+    end if
+    if ( AD_PREP_sw(I_V_PRIM) > 0 ) then
        do j = 1, JA
        do i = 1, IA
        do k = KS, KE
-          V_PRIM(k,i,j) = ( V_PRIM(k,i,j) - mean1d(k) ) / DENS_MEAN(k)
+          V_PRIM(k,i,j) = V(k,i,j) - V_MEAN(k)
        enddo
        enddo
        enddo
     endif
 
-    if ( AD_PREP_sw(I_POTT_PRIM) > 0 ) then
-       call COMM_horizontal_mean( mean1d(:), RHOT(:,:,:) )
+    if ( AD_PREP_sw(I_T_MEAN) > 0 ) then
        do j = 1, JA
        do i = 1, IA
        do k = KS, KE
-          POTT_PRIM(k,i,j) = ( RHOT(k,i,j) - mean1d(k) ) / DENS_MEAN(k)
+          POTT_PRIM(k,i,j) = TEMP(k,i,j) * DENS(k,i,j)
+       enddo
+       enddo
+       enddo
+       call COMM_horizontal_mean( T_MEAN(:), POTT_PRIM(:,:,:) )
+       do k = KS, KE
+          T_MEAN(k) = T_MEAN(k) / DENS_MEAN(k)
+       enddo
+    end if
+
+    if ( AD_PREP_sw(I_POTT_MEAN) > 0 ) then
+       call COMM_horizontal_mean( PT_MEAN(:), RHOT(:,:,:) )
+       do k = KS, KE
+          PT_MEAN(k) = PT_MEAN(k) / DENS_MEAN(k)
+       enddo
+    end if
+    if ( AD_PREP_sw(I_POTT_PRIM) > 0 ) then
+       do j = 1, JA
+       do i = 1, IA
+       do k = KS, KE
+          POTT_PRIM(k,i,j) = POTT(k,i,j) - PT_MEAN(k)
        enddo
        enddo
        enddo
     endif
+
+    if ( AD_PREP_sw(I_QV_MEAN) > 0 ) then
+       do j = 1, JA
+       do i = 1, IA
+       do k = KS, KE
+          RHOQ(k,i,j) = QTRC(k,i,j,I_QV) * DENS(k,i,j)
+       enddo
+       enddo
+       enddo
+       call COMM_horizontal_mean( QV_MEAN(:), RHOQ(:,:,:) )
+       do k = KS, KE
+          QV_MEAN(k) = QV_MEAN(k) / DENS_MEAN(k)
+       enddo
+    end if
+
+    if ( AD_PREP_sw(I_QHYD_MEAN) > 0 ) then
+       do j = 1, JA
+       do i = 1, IA
+       do k = KS, KE
+          RHOQ(k,i,j) = QHYD(k,i,j) * DENS(k,i,j)
+       enddo
+       enddo
+       enddo
+       call COMM_horizontal_mean( QHYD_MEAN(:), RHOQ(:,:,:) )
+       do k = KS, KE
+          QHYD_MEAN(k) = QHYD_MEAN(k) / DENS_MEAN(k)
+       enddo
+    end if
+
+    if ( AD_PREP_sw(I_QLIQ_MEAN) > 0 ) then
+       do j = 1, JA
+       do i = 1, IA
+       do k = KS, KE
+          RHOQ(k,i,j) = QLIQ(k,i,j) * DENS(k,i,j)
+       enddo
+       enddo
+       enddo
+       call COMM_horizontal_mean( QLIQ_MEAN(:), RHOQ(:,:,:) )
+       do k = KS, KE
+          QLIQ_MEAN(k) = QLIQ_MEAN(k) / DENS_MEAN(k)
+       enddo
+    end if
+
+    if ( AD_PREP_sw(I_QICE_MEAN) > 0 ) then
+       do j = 1, JA
+       do i = 1, IA
+       do k = KS, KE
+          RHOQ(k,i,j) = QICE(k,i,j) * DENS(k,i,j)
+       enddo
+       enddo
+       enddo
+       call COMM_horizontal_mean( QICE_MEAN(:), RHOQ(:,:,:) )
+       do k = KS, KE
+          QICE_MEAN(k) = QICE_MEAN(k) / DENS_MEAN(k)
+       enddo
+    end if
 
     if ( AD_PREP_sw(I_W_PRIM2) > 0 ) then
        do j = 1, JA
@@ -1658,6 +1832,17 @@ contains
     call HIST_in( DIV  (:,:,:), 'DIV',   'divergence',             '1/s'    )
     call HIST_in( HDIV (:,:,:), 'HDIV',  'horizontal divergence',  '1/s'    )
     call HIST_in( Uabs (:,:,:), 'Uabs',  'absolute velocity',      'm/s'    )
+
+    call HIST_in( DENS_MEAN(:), 'DENS_MEAN', 'horiz. mean of density',    'kg/m3' )
+    call HIST_in( W_MEAN   (:), 'W_MEAN',    'horiz. mean of w',          'm/s' )
+    call HIST_in( U_MEAN   (:), 'U_MEAN',    'horiz. mean of u',          'm/s' )
+    call HIST_in( V_MEAN   (:), 'V_MEAN',    'horiz. mean of v',          'm/s' )
+    call HIST_in( PT_MEAN  (:), 'PT_MEAN',   'horiz. mean of pot.',       'K' )
+    call HIST_in( T_MEAN   (:), 'T_MEAN',    'horiz. mean of t',          'K' )
+    call HIST_in( QV_MEAN  (:), 'QV_MEAN',   'horiz. mean of QV',         '1' )
+    call HIST_in( QHYD_MEAN(:), 'QHYD_MEAN', 'horiz. mean of QHYD',       '1' )
+    call HIST_in( QLIQ_MEAN(:), 'QLIQ_MEAN', 'horiz. mean of QLIQ',       '1' )
+    call HIST_in( QICE_MEAN(:), 'QICE_MEAN', 'horiz. mean of QICE',       '1' )
 
     call HIST_in( DENS_PRIM(:,:,:), 'DENS_PRIM', 'horiz. deviation of density',    'kg/m3' )
     call HIST_in( W_PRIM   (:,:,:), 'W_PRIM',    'horiz. deviation of w',          'm/s'   )

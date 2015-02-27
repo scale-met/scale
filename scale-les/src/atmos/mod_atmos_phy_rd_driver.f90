@@ -107,9 +107,7 @@ contains
        REAL_CZ,            &
        REAL_FZ,            &
        REAL_LON,           &
-       REAL_LAT,           &
-       REAL_BASEPOINT_LON, &
-       REAL_BASEPOINT_LAT
+       REAL_LAT
     use scale_const, only: &
        PRE00 => CONST_PRE00, &
        Rdry  => CONST_Rdry,  &
@@ -129,7 +127,6 @@ contains
     use mod_atmos_admin, only: &
        ATMOS_PHY_RD_TYPE
     use scale_atmos_solarins, only: &
-       SOLARINS_fixedlatlon => ATMOS_SOLARINS_fixedlatlon, &
        SOLARINS_insolation  => ATMOS_SOLARINS_insolation
     use scale_atmos_phy_rd, only: &
        ATMOS_PHY_RD
@@ -177,9 +174,6 @@ contains
     real(RP) :: flux_net_toa(   IA,JA,2)
     real(RP) :: flux_net_sfc(   IA,JA,2)
 
-    real(RP) :: LON   (IA,JA)
-    real(RP) :: LAT   (IA,JA)
-
     ! for WRF radiation scheme added by Adachi; array order is (i,k,j)
     real(RP) :: RTHRATENSW(IA,KA,JA)
     real(RP) :: SDOWN3D   (IA,KA,JA)  ! downward short wave flux (W/m2)
@@ -204,19 +198,10 @@ contains
 
     if ( update_flag ) then
 
-       ! calc solar insolation
-       if ( SOLARINS_fixedlatlon ) then
-          LON(:,:) = REAL_BASEPOINT_LON
-          LAT(:,:) = REAL_BASEPOINT_LAT
-       else
-          LON(:,:) = REAL_LON(:,:)
-          LAT(:,:) = REAL_LAT(:,:)
-       endif
-
-       call SOLARINS_insolation( solins(:,:),    & ! [OUT]
-                                 cosSZA(:,:),    & ! [OUT]
-                                 LON   (:,:),    & ! [IN]
-                                 LAT   (:,:),    & ! [IN]
+       call SOLARINS_insolation( solins  (:,:),  & ! [OUT]
+                                 cosSZA  (:,:),  & ! [OUT]
+                                 REAL_LON(:,:),  & ! [IN]
+                                 REAL_LAT(:,:),  & ! [IN]
                                  TIME_NOWDATE(:) ) ! [IN]
 
        call ATMOS_PHY_RD( DENS, RHOT, QTRC,   & ! [IN]
@@ -309,8 +294,8 @@ contains
                       RTHRATENSW,           & ! [INOUT]
                       SDOWN3D,              & ! [INOUT]
                       GSW,                  & ! [INOUT]
-                      LAT,                  & ! [IN]
-                      LON,                  & ! [IN]
+                      REAL_LAT,             & ! [IN]
+                      REAL_LON,             & ! [IN]
                       SFC_albedo(:,:,I_SW), & ! [IN]
                       RHO3D,                & ! [IN]
                       T3D,                  & ! [IN]
