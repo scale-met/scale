@@ -3012,6 +3012,10 @@ contains
        qsat => ATMOS_SATURATION_pres2qsat_all
     use scale_gridtrans, only: &
        rotc => GTRANS_ROTC
+    use scale_interpolation_nest, only: &
+       INTRPNEST_interp_fact_llz,  &
+       INTRPNEST_interp_2d,        &
+       INTRPNEST_interp_3d
     implicit none
 
     real(RP),         intent(out) :: dens(:,:,:,:)
