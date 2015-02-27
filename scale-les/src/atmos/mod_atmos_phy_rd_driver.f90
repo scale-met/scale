@@ -174,9 +174,6 @@ contains
     real(RP) :: flux_net_toa(   IA,JA,2)
     real(RP) :: flux_net_sfc(   IA,JA,2)
 
-    real(RP) :: LON   (IA,JA)
-    real(RP) :: LAT   (IA,JA)
-
     ! for WRF radiation scheme added by Adachi; array order is (i,k,j)
     real(RP) :: RTHRATENSW(IA,KA,JA)
     real(RP) :: SDOWN3D   (IA,KA,JA)  ! downward short wave flux (W/m2)
@@ -201,10 +198,10 @@ contains
 
     if ( update_flag ) then
 
-       call SOLARINS_insolation( solins(:,:),    & ! [OUT]
-                                 cosSZA(:,:),    & ! [OUT]
-                                 LON   (:,:),    & ! [IN]
-                                 LAT   (:,:),    & ! [IN]
+       call SOLARINS_insolation( solins  (:,:),  & ! [OUT]
+                                 cosSZA  (:,:),  & ! [OUT]
+                                 REAL_LON(:,:),  & ! [IN]
+                                 REAL_LAT(:,:),  & ! [IN]
                                  TIME_NOWDATE(:) ) ! [IN]
 
        call ATMOS_PHY_RD( DENS, RHOT, QTRC,   & ! [IN]
@@ -297,8 +294,8 @@ contains
                       RTHRATENSW,           & ! [INOUT]
                       SDOWN3D,              & ! [INOUT]
                       GSW,                  & ! [INOUT]
-                      LAT,                  & ! [IN]
-                      LON,                  & ! [IN]
+                      REAL_LAT,             & ! [IN]
+                      REAL_LON,             & ! [IN]
                       SFC_albedo(:,:,I_SW), & ! [IN]
                       RHO3D,                & ! [IN]
                       T3D,                  & ! [IN]

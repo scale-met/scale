@@ -59,7 +59,6 @@ module scale_atmos_phy_rd_profile
   !++ Private parameters & variables
   !
   real(RP),              private :: PROFILE_TOA = 100.0_RP              !< top of atmosphere [km]
-  integer,               private :: PROFILE_fixed_date(6)   = -1        !< fix reference date for climatology?
   character(len=H_LONG), private :: PROFILE_CIRA86_fname    = "cira.nc" !< file (CIRA86,netCDF format)
   character(len=H_LONG), private :: PROFILE_MIPAS2001_dir   = "."       !< dir  (MIPAS2001,ASCII format)
   character(len=H_LONG), private :: PROFILE_USER_fname      = ""        !< file (user,ASCII format)
@@ -134,7 +133,6 @@ contains
     implicit none
 
     real(RP)              :: ATMOS_PHY_RD_PROFILE_TOA
-    integer               :: ATMOS_PHY_RD_PROFILE_fixed_date(6)
     character(len=H_LONG) :: ATMOS_PHY_RD_PROFILE_CIRA86_IN_FILENAME
     character(len=H_LONG) :: ATMOS_PHY_RD_PROFILE_MIPAS2001_IN_BASENAME
     character(len=H_LONG) :: ATMOS_PHY_RD_PROFILE_USER_IN_FILENAME
@@ -142,7 +140,6 @@ contains
     namelist / PARAM_ATMOS_PHY_RD_PROFILE / &
        ATMOS_PHY_RD_PROFILE_TOA,                   &
        ATMOS_PHY_RD_PROFILE_use_climatology,       &
-       ATMOS_PHY_RD_PROFILE_fixed_date,            &
        ATMOS_PHY_RD_PROFILE_CIRA86_IN_FILENAME,    &
        ATMOS_PHY_RD_PROFILE_MIPAS2001_IN_BASENAME, &
        ATMOS_PHY_RD_PROFILE_USER_IN_FILENAME,      &
@@ -156,7 +153,6 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '+++ climatological profile'
 
     ATMOS_PHY_RD_PROFILE_TOA                   = PROFILE_TOA
-    ATMOS_PHY_RD_PROFILE_fixed_date(:)         = PROFILE_fixed_date(:)
     ATMOS_PHY_RD_PROFILE_CIRA86_IN_FILENAME    = PROFILE_CIRA86_fname
     ATMOS_PHY_RD_PROFILE_MIPAS2001_IN_BASENAME = PROFILE_MIPAS2001_dir
     ATMOS_PHY_RD_PROFILE_USER_IN_FILENAME      = PROFILE_USER_fname
@@ -174,7 +170,6 @@ contains
     if( IO_L ) write(IO_FID_LOG,nml=PARAM_ATMOS_PHY_RD_PROFILE)
 
     PROFILE_TOA             = ATMOS_PHY_RD_PROFILE_TOA
-    PROFILE_fixed_date(:)   = ATMOS_PHY_RD_PROFILE_fixed_date(:)
     PROFILE_CIRA86_fname    = ATMOS_PHY_RD_PROFILE_CIRA86_IN_FILENAME
     PROFILE_MIPAS2001_dir   = ATMOS_PHY_RD_PROFILE_MIPAS2001_IN_BASENAME
     PROFILE_USER_fname      = ATMOS_PHY_RD_PROFILE_USER_IN_FILENAME
@@ -528,7 +523,7 @@ contains
        ngas,         &
        ncfc,         &
        naero,        &
-       lat,          &
+       real_lat,     &
        now_date,     &
        zh,           &
        z,            &
@@ -544,13 +539,18 @@ contains
        cldfrac       )
     use scale_const, only: &
        GRAV  => CONST_GRAV
+    use scale_atmos_solarins, only: &
+       SOLARINS_fixedlatlon => ATMOS_SOLARINS_fixedlatlon, &
+       SOLARINS_fixeddate   => ATMOS_SOLARINS_fixeddate,   &
+       SOLARINS_lat         => ATMOS_SOLARINS_lat,         &
+       SOLARINS_date        => ATMOS_SOLARINS_date
     implicit none
 
     integer,  intent(in)  :: kmax                     !< Number of layer
     integer,  intent(in)  :: ngas                     !< Number of gas species
     integer,  intent(in)  :: ncfc                     !< Number of CFCs
     integer,  intent(in)  :: naero                    !< Number of aerosol(particle) categories
-    real(RP), intent(in)  :: lat                      !< latitude [rad]
+    real(RP), intent(in)  :: real_lat                 !< latitude [rad]
     integer,  intent(in)  :: now_date(6)              !< date
     real(RP), intent(in)  :: zh(kmax+1)               !< altitude    at the interface [km]
     real(RP), intent(in)  :: z (kmax)                 !< altitude    at the center    [km]
@@ -565,17 +565,28 @@ contains
     real(RP), intent(out) :: aerosol_radi(kmax,naero) !< cloud/aerosol effective radius    [cm]
     real(RP), intent(out) :: cldfrac     (kmax)       !< cloud fraction    [0-1]
 
-    integer :: date(6) !< used date
+    real(RP) :: lat     !< used lat
+    integer  :: date(6) !< used date
 
     integer :: k
     !---------------------------------------------------------------------------
 
     if ( ATMOS_PHY_RD_PROFILE_use_climatology ) then
 
-       if ( minval(PROFILE_fixed_date(:)) > 0 ) then
-          date(:) = PROFILE_fixed_date(:)
+       if ( SOLARINS_fixedlatlon ) then
+          lat = SOLARINS_lat
        else
-          date(:) = now_date(:)
+          lat = real_lat
+       endif
+
+       date = now_date
+       if ( SOLARINS_fixeddate ) then
+          if( SOLARINS_date(1) >= 0 ) date(1) = SOLARINS_date(1)
+          if( SOLARINS_date(2) >= 1 ) date(2) = SOLARINS_date(2)
+          if( SOLARINS_date(3) >= 1 ) date(3) = SOLARINS_date(3)
+          if( SOLARINS_date(4) >= 0 ) date(4) = SOLARINS_date(4)
+          if( SOLARINS_date(5) >= 0 ) date(5) = SOLARINS_date(5)
+          if( SOLARINS_date(6) >= 0 ) date(6) = SOLARINS_date(6)
        endif
 
        call PROFILE_read_climatology( kmax,  & ! [IN]
