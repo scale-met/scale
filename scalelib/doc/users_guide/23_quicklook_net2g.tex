@@ -3,6 +3,7 @@
 SCALE-LESの出力ファイル（\verb|history.******.nc|）を
 GrADSで図化するためのnetcdf2grads の使用方法について説明する。
 並列処理に対応したnetcdf2grads\_Hも用意されているが、
+これは最後に簡単に説明する。
 ここではシングルノード用のnetcdf2gradsの使用方法を示す。
 ソースファイルは \verb|scale/scale-les/util/netcdf2grads/|にある。
 
@@ -21,4 +22,41 @@ gfortran
 \end{description}
 
 \subsubsection{使用方法}
+
+
+\subsubsection{並列処理: netcdf2grads\_h}
+
+スパコンなどの大型計算機で並列計算を行った場合、
+出力ファイルの数が多く、それぞれのファイルのデータ容量も大きい。
+netcdf2gradsを並列処理したい場合にはこちらを使用する。
+ここでは、K上での使用方法を簡単に説明する。
+
+\begin{enumerate}
+\item ファイルをコピー\\
+ \verb|scale/scale-les/util/netcdf2grads_h| を \verb|/data/GROUP/USER/WORK_directory/| など、作業したいディレクトリにコピー。
+\item コンパイル\\
+ \verb|.bashrc| などに下記を設定
+ \begin{verbatim}
+  #--SCALE
+   export SCALE_SYS=''K''
+   export AGGRESIVE=''F''
+   export FAST=''T''
+   export DEBUG=''F''
+ \end{verbatim}
+ そして、コンパイル．\\
+ \verb|$ make|\\
+ うまくいけば、\verb|net2g|が作成される。
+\item \verb|microで実行する| \\
+ \verb|/scratch/GROUP/USER/|の下に、作業ディレクトリを用意する。そこに、
+ \begin{verbatim}
+   net2g         : copy executive file
+   net2g.conf    : copy configure file
+   run.12hours/  : link to directory with scale history files
+   bindata/      : create directory for grads file output
+   job.sh        : job script for K (option)
+ \end{verbatim}
+ を用意する。\verb|net2g.conf|の設定と\verb|job.sh|の設定をする。
+ 使用するノード数は、計算に使用したノード数の約数である必要がある。
+\end{enumerate}
+
 
