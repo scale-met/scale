@@ -3034,7 +3034,6 @@ contains
     integer              :: grads_vars_nmax = 0     !> number of variables in grads file
 
     character(H_SHORT)   :: item                                      ! up to 16 characters
-    character(H_SHORT)   :: ktype                                     ! '1D','2D','3D'
     integer              :: knum                                      ! optional: vertical level
     character(H_SHORT)   :: dtype                                     ! 'linear','levels','map'
     character(H_LONG)    :: fname                                     ! head of file name
@@ -3050,7 +3049,6 @@ contains
 
     namelist /grdvar/ &
         item,      &  ! necessary
-        ktype,     &  ! necessary
         dtype,     &  ! necessary
         fname,     &  ! necessary except for linear data
         swpoint,   &  ! for linear data
@@ -3260,7 +3258,6 @@ contains
 
              ! set default
              item     = ''
-             ktype    = ''
              dtype    = ''
              fname    = ''
              swpoint  = large_number_one
@@ -3282,7 +3279,6 @@ contains
              if(item == item_list(ielem))then
                 grads_item    (ielem) = item
                 grads_fname   (ielem) = fname
-                grads_kytpe   (ielem) = ktype
                 grads_dtype   (ielem) = dtype
                 grads_swpoint (ielem) = swpoint
                 grads_dd      (ielem) = dd
@@ -3351,7 +3347,6 @@ contains
              endif
           end select
 
-          ktype    = grads_kytpe   (ielem)
           dtype    = grads_dtype   (ielem)
           fname    = grads_fname   (ielem)
           lnum     = grads_lnum    (ielem)
@@ -5343,7 +5338,6 @@ contains
     integer              :: grads_vars_nmax = 0     !> number of variables in grads file
 
     character(H_SHORT)   :: item                                      ! up to 16 characters
-    character(H_SHORT)   :: ktype                                     ! '1D','2D','3D'
     integer              :: knum                                      ! optional: vertical level
     character(H_SHORT)   :: dtype                                     ! 'linear','levels','map'
     character(H_LONG)    :: fname                                     ! head of file name
@@ -5359,7 +5353,6 @@ contains
 
     namelist /grdvar/ &
         item,      &  ! necessary
-        ktype,     &  ! necessary
         dtype,     &  ! necessary
         fname,     &  ! necessary except for linear data
         swpoint,   &  ! for linear data
@@ -5529,7 +5522,6 @@ contains
 
              ! set default
              item     = ''
-             ktype    = ''
              dtype    = ''
              fname    = ''
              swpoint  = large_number_one
@@ -5551,7 +5543,6 @@ contains
              if(item == item_list(ielem))then
                 grads_item    (ielem) = item
                 grads_fname   (ielem) = fname
-                grads_kytpe   (ielem) = ktype
                 grads_dtype   (ielem) = dtype
                 grads_swpoint (ielem) = swpoint
                 grads_dd      (ielem) = dd
@@ -5610,7 +5601,6 @@ contains
              endif
           end select
 
-          ktype    = grads_kytpe   (ielem)
           dtype    = grads_dtype   (ielem)
           fname    = grads_fname   (ielem)
           lnum     = grads_lnum    (ielem)

@@ -13,25 +13,24 @@
 #
 # Variables
 #
-&grdvar  item='lon',    ktype='2D', dtype='linear',  swpoint=110.0d0, dd=0.25d0 /
-&grdvar  item='lat',    ktype='2D', dtype='linear',  swpoint=10.0d0,  dd=0.2d0 /
-&grdvar  item='plev',   ktype='1D', dtype='levels',  lnum=21, lvars=1000,975,950,925,900,850,800,700,600,500,400,300,250,200,150,100,70,50,30,20,10, /
-&grdvar  item='PSFC',   ktype='2D', dtype='map',     fname='GSMjp', startrec=1,  totalrec=101 /
-&grdvar  item='U10',    ktype='2D', dtype='map',     fname='GSMjp', startrec=2,  totalrec=101 /
-&grdvar  item='V10',    ktype='2D', dtype='map',     fname='GSMjp', startrec=3,  totalrec=101 /
-&grdvar  item='T2',     ktype='2D', dtype='map',     fname='GSMjp', startrec=4,  totalrec=101 /
-&grdvar  item='RH2',    ktype='2D', dtype='map',     fname='GSMjp', startrec=5,  totalrec=101 /
-&grdvar  item='HGT',    ktype='3D', dtype='map',     fname='GSMjp', startrec=6,  totalrec=101 /
-&grdvar  item='U',      ktype='3D', dtype='map',     fname='GSMjp', startrec=27, totalrec=101 /
-&grdvar  item='V',      ktype='3D', dtype='map',     fname='GSMjp', startrec=48, totalrec=101 /
-&grdvar  item='T',      ktype='3D', dtype='map',     fname='GSMjp', startrec=69, totalrec=101 /
-&grdvar  item='RH',     ktype='3D', dtype='map',     fname='GSMjp', startrec=90, totalrec=101, knum=12 /
-&grdvar  item='lon_sfc', ktype='2D', dtype='linear', swpoint=0.0d0,   dd=1.0d0 /
-&grdvar  item='lat_sfc', ktype='2D', dtype='linear', swpoint=-90.0d0, dd=1.0d0 /
-&grdvar  item='llev',    ktype='1D', dtype='levels', lnum=4, lvars=0.05,0.25,0.70,1.50 /
-&grdvar  item='lsmask',  ktype='2D', dtype='map',    fname='FNL', startrec=1, totalrec=10 /
-&grdvar  item='SKINT',   ktype='2D', dtype='map',    fname='FNL', startrec=2, totalrec=10 /
-&grdvar  item='SST',     ktype='2D', dtype='map',    fname='FNL', startrec=2, totalrec=10 /
-&grdvar  item='STEMP',   ktype='3D', dtype='map',    fname='FNL', startrec=3, totalrec=10, undef=9.999e+20 /
-&grdvar  item='SMOIS',   ktype='3D', dtype='map',    fname='FNL', startrec=7, totalrec=10, undef=9.999e+20 /
-
+&grdvar  item='lon',     dtype='linear',  swpoint=110.0d0, dd=0.25d0 /
+&grdvar  item='lat',     dtype='linear',  swpoint=10.0d0,  dd=0.2d0 /
+&grdvar  item='plev',    dtype='levels',  lnum=21, lvars=1000,975,950,925,900,850,800,700,600,500,400,300,250,200,150,100,70,50,30,20,10, /
+&grdvar  item='PSFC',    dtype='map',     fname='GSMjp', startrec=1,  totalrec=101 /
+&grdvar  item='U10',     dtype='map',     fname='GSMjp', startrec=2,  totalrec=101 /
+&grdvar  item='V10',     dtype='map',     fname='GSMjp', startrec=3,  totalrec=101 /
+&grdvar  item='T2',      dtype='map',     fname='GSMjp', startrec=4,  totalrec=101 /
+&grdvar  item='RH2',     dtype='map',     fname='GSMjp', startrec=5,  totalrec=101 /
+&grdvar  item='HGT',     dtype='map',     fname='GSMjp', startrec=6,  totalrec=101 /
+&grdvar  item='U',       dtype='map',     fname='GSMjp', startrec=27, totalrec=101 /
+&grdvar  item='V',       dtype='map',     fname='GSMjp', startrec=48, totalrec=101 /
+&grdvar  item='T',       dtype='map',     fname='GSMjp', startrec=69, totalrec=101 /
+&grdvar  item='RH',      dtype='map',     fname='GSMjp', startrec=90, totalrec=101, knum=12 /
+&grdvar  item='lon_sfc', dtype='linear',  swpoint=0.0d0,   dd=1.0d0 /
+&grdvar  item='lat_sfc', dtype='linear',  swpoint=-90.0d0, dd=1.0d0 /
+&grdvar  item='llev',    dtype='levels',  lnum=4, lvars=0.05,0.25,0.70,1.50 /
+&grdvar  item='lsmask',  dtype='map',     fname='FNL', startrec=1, totalrec=10 /
+&grdvar  item='SKINT',   dtype='map',     fname='FNL', startrec=2, totalrec=10 /
+&grdvar  item='SST',     dtype='map',     fname='FNL', startrec=2, totalrec=10 /
+&grdvar  item='STEMP',   dtype='map',     fname='FNL', startrec=3, totalrec=10, undef=9.999e+20 /
+&grdvar  item='SMOIS',   dtype='map',     fname='FNL', startrec=7, totalrec=10, undef=9.999e+20 /
