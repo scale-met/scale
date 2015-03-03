@@ -2397,6 +2397,7 @@ contains
                                     lat_org(:,:,  fstep),     & ! [IN]
                                     lon_org(:,:,  fstep),     & ! [IN]
                                     dims(3), dims(1), dims(2) ) ! [IN]
+
     deallocate( hgt_org  )
 
     if( do_read ) then
@@ -5839,40 +5840,6 @@ contains
                                     dims(7),dims(4),dims(5), & ! [IN]
                                     landgrid=.true.          ) ! [IN]
 
-    !if( myrank == 9 ) then
-    !print *,IA,JA
-    !open(99,file='check2.grd',status='unknown',      &
-    !     form='unformatted',access='direct',recl=IA*JA*4)
-    !i=0
-    !do k=1,itp_nh
-    !   i=i+1
-    !   write(99,rec=i) real(hfact(:,:,k),kind=SP)     !!!! for check
-    !enddo
-    !   i=i+1
-    !   write(99,rec=i) real(vfact(1,:,:,1,1),kind=SP) !!!! for check
-    !   i=i+1
-    !   write(99,rec=i) real(vfact(1,:,:,1,2),kind=SP) !!!! for check
-    !do k=1,itp_nh
-    !   i=i+1
-    !   write(99,rec=i) real(igrd(:,:,k),kind=SP)      !!!! for check
-    !enddo
-    !do k=1,itp_nh
-    !   i=i+1
-    !   write(99,rec=i) real(jgrd(:,:,k),kind=SP)      !!!! for check
-    !enddo
-    !   i=i+1
-    !   write(99,rec=i) real(kgrd(1,:,:,1,1),kind=SP)  !!!! for check
-    !   i=i+1
-    !   write(99,rec=i) real(kgrd(1,:,:,1,2),kind=SP)  !!!! for check
-    !   i=i+1
-    !   write(99,rec=i) real(frac_land(:,:),kind=SP)
-    !   i=i+1
-    !   write(99,rec=i) real(LAT(:,:),kind=SP)
-    !   i=i+1
-    !   write(99,rec=i) real(LON(:,:),kind=SP)
-    !close(99)
-    !endif
-
     ! replace missing value
      maskval_tg   = 298.0_RP    ! mask value => 298K
      maskval_strg = 0.02_RP     ! mask value => 0.02
@@ -6297,7 +6264,7 @@ contains
     if ( do_zdirec ) then
        max_ref = maxval( lev_org(:,:,:) )
        !min_ref = minval( lev_org(:,:,:) )
-       max_loc = maxval( lev_loc(KS-1:KE,:,:) ) ! HALO + 1
+       max_loc = maxval( lev_loc(KS-1:KE+1,:,:) ) ! HALO + 1
        !min_loc = minval( lev_loc(3:KA,:,:) ) ! HALO + 1
 
        if ( max_ref < max_loc ) then
