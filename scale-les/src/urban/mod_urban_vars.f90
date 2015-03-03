@@ -749,6 +749,9 @@ contains
     URBAN_SFC_TEMP  (:,:)   = URBAN_SFC_TEMP_in  (:,:)
     URBAN_SFC_albedo(:,:,:) = URBAN_SFC_albedo_in(:,:,:)
 
+    URBAN_Z0M      (:,:) = 2.0_RP ! tentative, will be replace in urban scheme
+    URBAN_Z0H      (:,:) = 0.2_RP ! tentative, will be replace in urban scheme
+    URBAN_Z0E      (:,:) = 0.2_RP ! tentative, will be replace in urban scheme
     URBAN_SFLX_MW  (:,:) = 0.0_RP
     URBAN_SFLX_MU  (:,:) = 0.0_RP
     URBAN_SFLX_MV  (:,:) = 0.0_RP

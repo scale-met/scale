@@ -89,9 +89,11 @@ module mod_realinput
   private :: InputAtomSCALE
   private :: InputAtomWRF
   private :: InputAtomNICAM
+  private :: InputAtomGrADS
   private :: InputSurfaceSCALE
   private :: InputSurfaceWRF
   private :: InputSurfaceNICAM
+  private :: InputSurfaceGrADS
   private :: interp_OceanLand_data
   private :: diagnose_number_concentration
 
@@ -102,7 +104,7 @@ module mod_realinput
   integer, private, parameter :: iSCALE  = 1
   integer, private, parameter :: iWRFARW = 2
   integer, private, parameter :: iNICAM  = 3
-  integer, private, parameter :: iJMAMSM = 4
+  integer, private, parameter :: iGrADS  = 4
 
   integer, private :: itp_nh = 4
   integer, private :: itp_nv = 2
@@ -112,6 +114,11 @@ module mod_realinput
 
   integer, parameter :: cosin = 1
   integer, parameter :: sine  = 2
+
+  integer, private   :: io_fid_grads_nml  = -1
+  integer, private   :: io_fid_grads_data = -1
+
+  real(RP), private, parameter :: large_number_one   = 9.999E+15_RP
 
   !-----------------------------------------------------------------------------
 contains
@@ -124,7 +131,8 @@ contains
       basename_org,     &
       filetype,         &
       search_divnum_in, &
-      wrf_file_type_in  )
+      wrf_file_type_in, &
+      grads_boundary_namelist  )
     implicit none
 
     integer,          intent(out) :: dims(:)
@@ -134,9 +142,27 @@ contains
     character(len=*), intent(in)  :: filetype
     integer,          intent(in)  :: search_divnum_in
     logical,          intent(in)  :: wrf_file_type_in
+    character(len=*), intent(in)  :: grads_boundary_namelist
 
     integer :: dims_ncm(4)
     character(len=H_LONG) :: basename
+
+    ! for grads
+    integer                       :: outer_nx     = 0
+    integer                       :: outer_ny     = 0
+    integer                       :: outer_nz     = 0 ! number of atmos layers
+    integer                       :: outer_nl     = 0 ! number of land layers
+    integer                       :: outer_nx_sfc = -99
+    integer                       :: outer_ny_sfc = -99
+    NAMELIST / nml_grads_grid / &
+        outer_nx,     &
+        outer_ny,     &
+        outer_nz,     &
+        outer_nl,     &
+        outer_nx_sfc, &
+        outer_ny_sfc
+    integer                       :: ierr
+
     intrinsic shape
     !---------------------------------------------------------------------------
 
@@ -179,9 +205,44 @@ contains
        call FileGetShape( dims_ncm(:), trim(basename), "la_tg", 1, single=.true. )
        dims(7) = dims_ncm(3) ! vertical grid of land model [tentative]
 
-    !case('JMA-MSM')
+    case('GrADS')
+       if( IO_L ) write(IO_FID_LOG,*) '+++ Real Case/Atom Input File Type: GrADS format'
+       mdlid = iGrADS
 
-    !case('NCEP-FNL')
+       !--- read namelist
+       io_fid_grads_nml = IO_get_available_fid()
+       open( io_fid_grads_nml,                    &
+          file   = trim(grads_boundary_namelist), &
+          form   = 'formatted',                   &
+          status = 'old',                         &
+          iostat = ierr                           )
+       if ( ierr /= 0 ) then
+          write(*,*) 'xxx Input data file does not found! ', trim(grads_boundary_namelist)
+          stop
+       endif
+
+       read(io_fid_grads_nml,nml=nml_grads_grid,iostat=ierr)
+       if( ierr /= 0 ) then !--- missing or fatal error
+          write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_REAL_GrADS_grid. Check!'
+          call PRC_MPIstop
+       endif
+       if( IO_LNML ) write(IO_FID_LOG,nml=nml_grads_grid)
+       timelen = 0        ! will be replaced later
+       dims(:) = 0
+       dims(1) = outer_nx ! west_east
+       dims(2) = outer_ny ! south_north
+       dims(3) = outer_nz ! bottom_top
+       dims(4) = outer_nx ! west_east_stag
+       dims(5) = outer_ny ! south_north_stag
+       dims(6) = outer_nz ! bottom_top_stag
+       dims(7) = outer_nl ! soil_layers_stag
+
+       if(outer_nx_sfc > 0)then
+          dims(4) = outer_nx_sfc ! west_east for 2dim data
+       endif
+       if(outer_ny_sfc > 0)then
+          dims(5) = outer_ny_sfc ! south_north for 2dim data
+       endif
 
     case default
        write(*,*) ' xxx Unsupported FILE TYPE:', trim(filetype)
@@ -293,7 +354,17 @@ contains
                             dims(:),             &
                             1,                   &  ! start time
                             timelen              )  ! end time
-
+    elseif( mdlid == iGrADS ) then ! TYPE: GrADS format
+       call InputAtomGrADS( dens    (:,:,:,:),   &
+                            momz    (:,:,:,:),   &
+                            momx    (:,:,:,:),   &
+                            momy    (:,:,:,:),   &
+                            rhot    (:,:,:,:),   &
+                            qtrc    (:,:,:,:,:), &
+                            basename_org,        &
+                            dims(:),             &
+                            1,                   &  ! start time
+                            timelen              )  ! end time
     endif
 
     return
@@ -564,6 +635,27 @@ contains
                              serial                )
     elseif( mdlid == iNICAM ) then ! TYPE: NICAM-NETCDF
        call InputSurfaceNICAM( tg   (:,:,:),        &
+                               strg (:,:,:),        &
+                               roff (:,:),          &
+                               qvef (:,:),          &
+                               tw   (:,:),          &
+                               lst  (:,:),          &
+                               ust  (:,:),          &
+                               sst  (:,:),          &
+                               albw (:,:,:),        &
+                               albg (:,:,:),        &
+                               z0w  (:,:),          &
+                               skint(:,:),          &
+                               skinw(:,:),          &
+                               snowq(:,:),          &
+                               snowt(:,:),          &
+                               basename_org,        &
+                               dims(:),             &
+                               skiplen,             &   ! the number of skipped data
+                               use_file_landwater,  &   ! use land water data from files
+                               init_landwater_ratio )   ! Ratio of land water to storage is constant
+    elseif( mdlid == iGrADS ) then ! TYPE: GrADS
+       call InputSurfaceGrADS( tg   (:,:,:),        &
                                strg (:,:,:),        &
                                roff (:,:),          &
                                qvef (:,:),          &
@@ -2117,8 +2209,8 @@ contains
       qtrc,             & ! (out)
       basename_num,     & ! (in)
       dims,             & ! (in)
-      sstep,       & ! (in)
-      estep          ) ! (in)
+      sstep,            & ! (in)
+      estep             ) ! (in)
     use scale_const, only: &
        D2R => CONST_D2R,   &
        EPS => CONST_EPS
@@ -2840,13 +2932,13 @@ contains
        do j = 1, JA
        do i = 1, IA
        do k = KS, KE-1
-          momz(k,i,j,n) = velz(k,i,j,n) * ( dens(k+1,i  ,j  ,n) + dens(k,i,j,n) ) * 0.5_RP
+          momz(k,i,j,n) = velz(k,i,j,n) * ( dens(k+1,i,j,n) + dens(k,i,j,n) ) * 0.5_RP
        end do
        end do
        end do
        do j = 1, JA
        do i = 1, IA
-          momz(k,i,j,n) = 0.0_RP
+          momz(KE,i,j,n) = 0.0_RP
        end do
        end do
        do j = 1, JA
@@ -2866,7 +2958,7 @@ contains
        end do
        do j = 1, JA
        do k = KS, KE
-          momx(k,IA,j,n) = velx(k,i,j,n) * dens(k,i,j,n)
+          momx(k,IA,j,n) = velx(k,IA,j,n) * dens(k,IA,j,n)
        end do
        end do
        call COMM_vars8( momx(:,:,:,n), 1 )
@@ -2881,7 +2973,7 @@ contains
        end do
        do i = 1, IA
        do k = KS, KE
-          momy(k,i,JA,n) = vely(k,i,j,n) * dens(k,i,j,n)
+          momy(k,i,JA,n) = vely(k,i,JA,n) * dens(k,i,JA,n)
        end do
        end do
        call COMM_vars8( momy(:,:,:,n), 1 )
@@ -2891,6 +2983,978 @@ contains
 
     return
   end subroutine InputAtomNICAM
+
+  !-----------------------------------------------------------------------------
+  subroutine InputAtomGrADS( &
+      dens,             & ! (out)
+      momz,             & ! (out)
+      momx,             & ! (out)
+      momy,             & ! (out)
+      rhot,             & ! (out)
+      qtrc,             & ! (out)
+      basename_num,     & ! (in)
+      dims,             & ! (in)
+      sstep,            & ! (in)
+      estep             ) ! (in)
+    use scale_const, only: &
+       D2R => CONST_D2R,   &
+       EPS => CONST_EPS,   &
+       GRAV => CONST_GRAV
+    use scale_comm, only: &
+       COMM_vars8, &
+       COMM_wait
+    use scale_atmos_hydrostatic, only: &
+       HYDROSTATIC_buildrho_real => ATMOS_HYDROSTATIC_buildrho_real
+    use scale_atmos_thermodyn, only: &
+       THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres, &
+       THERMODYN_pott      => ATMOS_THERMODYN_pott
+    use scale_atmos_saturation, only: &
+       qsat => ATMOS_SATURATION_pres2qsat_all
+    use scale_gridtrans, only: &
+       rotc => GTRANS_ROTC
+    use scale_interpolation_nest, only: &
+       INTRPNEST_interp_fact_llz,  &
+       INTRPNEST_interp_2d,        &
+       INTRPNEST_interp_3d
+    implicit none
+
+    real(RP),         intent(out) :: dens(:,:,:,:)
+    real(RP),         intent(out) :: momz(:,:,:,:)
+    real(RP),         intent(out) :: momx(:,:,:,:)
+    real(RP),         intent(out) :: momy(:,:,:,:)
+    real(RP),         intent(out) :: rhot(:,:,:,:)
+    real(RP),         intent(out) :: qtrc(:,:,:,:,:)
+    character(LEN=*), intent(in)  :: basename_num
+    integer,          intent(in)  :: dims(:)
+    integer,          intent(in)  :: sstep
+    integer,          intent(in)  :: estep
+
+    ! namelist.grads_boundary
+    integer, parameter   :: grads_vars_limit = 1000 !> limit of number of values
+    integer              :: grads_vars_nmax = 0     !> number of variables in grads file
+
+    character(H_SHORT)   :: item                                      ! up to 16 characters
+    integer              :: knum                                      ! optional: vertical level
+    character(H_SHORT)   :: dtype                                     ! 'linear','levels','map'
+    character(H_LONG)    :: fname                                     ! head of file name
+    real(RP)             :: swpoint                                   ! start point (south-west point) for linear
+    real(RP)             :: dd                                        ! dlon,dlat for linear
+    integer, parameter   :: lvars_limit = 1000                        ! limit of values for levels data
+    integer              :: lnum                                      ! number of data
+    real(RP)             :: lvars(lvars_limit) = large_number_one     ! values for levels
+    integer              :: startrec=1                                ! record position
+    integer              :: totalrec=1                                ! total record number per one time
+    real(RP)             :: undef                                     ! undefined value
+    character(H_SHORT)   :: fendian='big_endian'                      ! option
+
+    namelist /grdvar/ &
+        item,      &  ! necessary
+        dtype,     &  ! necessary
+        fname,     &  ! necessary except for linear data
+        swpoint,   &  ! for linear data
+        dd,        &  ! for linear data
+        lnum,      &  ! for levels data
+        lvars,     &  ! for levels data
+        startrec,  &  ! for map data
+        totalrec,  &  ! for map data
+        undef,     &  ! option
+        knum,      &  ! option
+        fendian       ! option
+
+    !> grads data
+    integer,  parameter   :: num_item_list = 15
+    logical               :: data_available(num_item_list)
+    character(H_SHORT)    :: item_list     (num_item_list)
+    data item_list /'lon','lat','plev','U','V','T','HGT','QV','RH','PSFC','U10','V10','T2','Q2','RH2'/
+
+    integer,  parameter   :: Ig_lon    = 1
+    integer,  parameter   :: Ig_lat    = 2
+    integer,  parameter   :: Ig_p      = 3
+    integer,  parameter   :: Ig_u      = 4
+    integer,  parameter   :: Ig_v      = 5
+    integer,  parameter   :: Ig_t      = 6
+    integer,  parameter   :: Ig_hgt    = 7  ! geopotential height (m2/s2)
+    integer,  parameter   :: Ig_qv     = 8
+    integer,  parameter   :: Ig_rh     = 9
+    integer,  parameter   :: Ig_ps     = 10
+    integer,  parameter   :: Ig_u10    = 11
+    integer,  parameter   :: Ig_v10    = 12
+    integer,  parameter   :: Ig_t2     = 13
+    integer,  parameter   :: Ig_q2     = 14
+    integer,  parameter   :: Ig_rh2    = 15
+
+    character(H_SHORT)    :: grads_item    (num_item_list)
+    character(H_SHORT)    :: grads_kytpe   (num_item_list)
+    character(H_LONG)     :: grads_dtype   (num_item_list)
+    character(H_LONG)     :: grads_fname   (num_item_list)
+    character(H_SHORT)    :: grads_fendian (num_item_list)
+    real(RP)              :: grads_swpoint (num_item_list)
+    real(RP)              :: grads_dd      (num_item_list)
+    integer               :: grads_lnum    (num_item_list)
+    real(RP)              :: grads_lvars   (num_item_list,lvars_limit)
+    integer               :: grads_startrec(num_item_list)
+    integer               :: grads_totalrec(num_item_list)
+    integer               :: grads_knum    (num_item_list)
+    real(RP)              :: grads_undef   (num_item_list)
+
+    ! data
+    character(len=H_LONG) :: gfile
+
+    real(SP), allocatable :: gdata2D (:,:,:)
+    real(SP), allocatable :: gdata3D (:,:,:,:)
+    real(SP), allocatable :: gland   (:,:,:,:)
+
+    real(RP), allocatable :: lon_org (:,:,:)
+    real(RP), allocatable :: lat_org (:,:,:)
+
+    real(RP), allocatable :: psfc_org (:,:,:)
+    real(RP), allocatable :: usfc_org (:,:,:)
+    real(RP), allocatable :: vsfc_org (:,:,:)
+    real(RP), allocatable :: tsfc_org (:,:,:)
+    real(RP), allocatable :: qsfc_org (:,:,:,:)
+    real(RP), allocatable :: rhsfc_org(:,:,:)
+
+    real(RP), allocatable :: pres_org (:,:,:,:)
+    real(RP), allocatable :: velx_org (:,:,:,:)
+    real(RP), allocatable :: vely_org (:,:,:,:)
+    real(RP), allocatable :: temp_org (:,:,:,:)
+    real(RP), allocatable :: hgt_org  (:,:,:,:)
+    real(RP), allocatable :: qtrc_org (:,:,:,:,:)
+    real(RP), allocatable :: rhprs_org(:,:,:,:)
+
+    integer  :: QA_outer = 1
+    real(RP) :: qvsat, qm
+
+    ! scale grid
+    real(RP) :: velz  (KA,IA,JA,sstep:estep)
+    real(RP) :: velx  (KA,IA,JA,sstep:estep)
+    real(RP) :: vely  (KA,IA,JA,sstep:estep)
+    real(RP) :: llvelx(KA,IA,JA,sstep:estep)
+    real(RP) :: llvely(KA,IA,JA,sstep:estep)
+    real(RP) :: pott  (KA,IA,JA,sstep:estep)
+    real(RP) :: temp  (KA,IA,JA,sstep:estep)
+    real(RP) :: pres  (KA,IA,JA,sstep:estep)
+    real(RP) :: work  (KA,IA,JA,sstep:estep)
+
+    real(RP) :: pott_sfc(1,IA,JA,sstep:estep)
+    real(RP) :: pres_sfc(1,IA,JA,sstep:estep)
+    real(RP) :: temp_sfc(1,IA,JA,sstep:estep)
+    real(RP) :: qtrc_sfc(1,IA,JA,sstep:estep,QA)
+
+    real(RP), allocatable :: hfact(:,:,:)
+    real(RP), allocatable :: vfact(:,:,:,:,:)
+    integer,  allocatable :: igrd (:,:,:)
+    integer,  allocatable :: jgrd (:,:,:)
+    integer,  allocatable :: kgrd (:,:,:,:,:)
+
+    real(RP) :: qc(KA,IA,JA)
+    real(RP) :: qc_sfc(1,IA,JA)
+
+    real(RP) :: sw
+    real(RP) :: wgt_up, wgt_bt
+
+    integer  :: fstep = 1  ! fixed target step
+    integer  :: bottom, upper
+
+    integer  :: i, j, k, it, n, ielem
+    integer  :: kk, kks, kke
+    integer  :: iq, ierr
+    integer  :: nt
+    logical  :: do_read, lack_of_val
+    !---------------------------------------------------------------------------
+
+    nt = estep - sstep + 1
+
+    if( myrank == PRC_master ) then
+       do_read = .true.
+    else
+       do_read = .false.
+    endif
+
+    if( do_read ) then
+       allocate( gdata2D ( dims(1), dims(2),          nt ) )
+       allocate( gdata3D ( dims(1), dims(2), dims(3), nt ) )
+       allocate( gland   ( dims(1), dims(2), dims(7), nt ) )
+    endif
+
+    allocate( hfact(     IA, JA,itp_nh         ) )
+    allocate( vfact( KA, IA, JA,itp_nh, itp_nv ) )
+    allocate( igrd (     IA, JA,itp_nh         ) )
+    allocate( jgrd (     IA, JA,itp_nh         ) )
+    allocate( kgrd ( KA, IA, JA,itp_nh, itp_nv ) )
+
+    allocate( lon_org   (          dims(1), dims(2), fstep ) )
+    allocate( lat_org   (          dims(1), dims(2), fstep ) )
+    allocate( pres_org  ( dims(3), dims(1), dims(2), fstep ) )
+
+    allocate( psfc_org  (          dims(1), dims(2),    nt ) )
+    allocate( tsfc_org  (          dims(1), dims(2),    nt ) )
+    allocate( usfc_org  (          dims(1), dims(2),    nt ) )
+    allocate( vsfc_org  (          dims(1), dims(2),    nt ) )
+    allocate( qsfc_org  (          dims(1), dims(2),    nt, QA_outer) )
+    allocate( rhsfc_org (          dims(1), dims(2),    nt ) )
+
+    allocate( velx_org  ( dims(3), dims(1), dims(2),    nt ) )
+    allocate( vely_org  ( dims(3), dims(1), dims(2),    nt ) )
+    allocate( temp_org  ( dims(3), dims(1), dims(2),    nt ) )
+    allocate( hgt_org   ( dims(3), dims(1), dims(2),    nt ) )
+    allocate( qtrc_org  ( dims(3), dims(1), dims(2),    nt, QA_outer) )
+    allocate( rhprs_org ( dims(3), dims(1), dims(2),    nt) )
+
+
+    if( IO_L ) write(IO_FID_LOG,*) ''
+    if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[realinput]/Categ[InputGrADS reanalysis]'
+
+    !--- read grads data
+    if( do_read )then
+
+       lon_org    = large_number_one
+       lat_org    = large_number_one
+       pres_org   = large_number_one
+       psfc_org   = large_number_one
+       usfc_org   = large_number_one
+       vsfc_org   = large_number_one
+       tsfc_org   = large_number_one
+       qsfc_org   = large_number_one
+       rhsfc_org  = large_number_one
+       velx_org   = large_number_one
+       vely_org   = large_number_one
+       temp_org   = large_number_one
+       hgt_org    = large_number_one
+       qtrc_org   = large_number_one
+       rhprs_org  = large_number_one
+
+       ! listup variables
+       if ( io_fid_grads_nml > 0 ) then
+          rewind( io_fid_grads_nml )
+          grads_vars_nmax = 0
+          do n = 1, grads_vars_limit
+             read(io_fid_grads_nml, nml=grdvar, iostat=ierr)
+             if( ierr > 0 )then
+                write(IO_FID_LOG,*) '*** cannot read namelist successfully! '
+                call PRC_MPIstop
+             else if( ierr < 0 )then
+                exit
+             endif
+             grads_vars_nmax = grads_vars_nmax + 1
+          enddo
+       else
+          write(IO_FID_LOG,*) '*** namelist file is not open! '
+          call PRC_MPIstop
+       endif
+
+       if ( grads_vars_nmax > grads_vars_limit ) then
+          write(IO_FID_LOG,*) '*** number of grads vars is exceed! ',grads_vars_nmax,' >', grads_vars_limit
+          call PRC_MPIstop
+       endif
+
+    endif
+
+    if( do_read )then
+       data_available = .false.     ! check data availability
+       do ielem = 1, num_item_list
+          if ( io_fid_grads_nml > 0 ) rewind( io_fid_grads_nml )
+          do n = 1, grads_vars_nmax
+
+             ! set default
+             item     = ''
+             dtype    = ''
+             fname    = ''
+             swpoint  = large_number_one
+             dd       = large_number_one
+             lnum     = -99
+             lvars    = large_number_one
+             startrec = 0
+             totalrec = 0
+             knum     = -99
+             undef    = large_number_one
+             fendian  = 'big'
+
+             ! read namelist
+             if ( io_fid_grads_nml > 0 ) then
+                read(io_fid_grads_nml, nml=grdvar, iostat=ierr)
+                if( ierr /= 0 ) exit
+             endif
+
+             if(item == item_list(ielem))then
+                grads_item    (ielem) = item
+                grads_fname   (ielem) = fname
+                grads_dtype   (ielem) = dtype
+                grads_swpoint (ielem) = swpoint
+                grads_dd      (ielem) = dd
+                grads_lnum    (ielem) = lnum
+                do k = 1, lvars_limit
+                   grads_lvars(ielem,k) = lvars(k)
+                enddo
+                grads_startrec(ielem) = startrec
+                grads_totalrec(ielem) = totalrec
+                grads_knum    (ielem) = knum
+                grads_undef   (ielem) = undef
+                grads_fendian (ielem) = fendian
+                data_available(ielem) = .true.
+                exit
+             endif
+          enddo ! n
+          if( IO_L ) write(IO_FID_LOG,*) 'GrADS data availability ',trim(item_list(ielem)),data_available(ielem)
+       enddo ! ielem
+
+       loop_InputAtomGrADS : do ielem = 1, num_item_list
+
+          item  = item_list(ielem)
+
+          !--- check data
+          select case(trim(item))
+          case('QV')
+             if (.not. data_available(Ig_qv)) then
+                if (.not.data_available(Ig_rh)) then
+                   write(IO_FID_LOG,*) '*** cannot found QV and RH in grads namelist! '
+                   call PRC_MPIstop
+                else ! will read RH
+                   cycle
+                endif
+             endif
+          case('RH')
+             if ( .not. data_available(Ig_rh)) then
+                if (.not.data_available(Ig_qv)) then
+                   write(IO_FID_LOG,*) '*** cannot found QV and RH in grads namelist! '
+                   call PRC_MPIstop
+                else ! will read QV
+                   cycle
+                endif
+             endif
+          case('Q2')
+             if (.not. data_available(Ig_q2)) then
+                if (.not.data_available(Ig_rh2)) then
+                   write(IO_FID_LOG,*) '*** cannot found Q2 and RH2 in grads namelist! '
+                   call PRC_MPIstop
+                else
+                   cycle ! will read RH2
+                endif
+             endif
+          case('RH2')
+             if (.not. data_available(Ig_rh2)) then
+                if (.not.data_available(Ig_q2)) then
+                   write(IO_FID_LOG,*) '*** cannot found Q2 and RH2 in grads namelist! ',trim(item)
+                   call PRC_MPIstop
+                else
+                   cycle ! will read Q2
+                endif
+             endif
+          case default
+             if ( .not. data_available(ielem) ) then
+                write(IO_FID_LOG,*) '*** cannot found data in grads namelist! ',trim(item),trim(item_list(ielem))
+                call PRC_MPIstop
+             endif
+          end select
+
+          dtype    = grads_dtype   (ielem)
+          fname    = grads_fname   (ielem)
+          lnum     = grads_lnum    (ielem)
+          undef    = grads_undef   (ielem)
+
+          if ( dims(3) < grads_knum(ielem) ) then
+             write(IO_FID_LOG,*) '*** please check plev data! knum must be less than or equal to outer_nz',knum,dims(3)
+             call PRC_MPIstop
+          else if ( grads_knum(ielem) > 0 )then
+             knum = grads_knum(ielem)  ! not missing
+          else
+             knum = dims(3)
+          endif
+
+          select case (trim(dtype))
+          case("linear")
+             swpoint = grads_swpoint (ielem)
+             dd      = grads_dd      (ielem)
+             if( (abs(swpoint-large_number_one)<EPS).or.(abs(dd-large_number_one)<EPS) )then
+                write(IO_FID_LOG,*) '*** "swpoint" is required in grads namelist! ',swpoint
+                write(IO_FID_LOG,*) '*** "dd"      is required in grads namelist! ',dd
+                call PRC_MPIstop
+             endif
+          case("levels")
+             if ( lnum < 0 )then
+                write(IO_FID_LOG,*) '*** "lnum" in grads namelist is required for levels data! '
+                call PRC_MPIstop
+             endif
+             do k=1, lnum
+                lvars(k)=grads_lvars(ielem,k)
+             enddo
+             if(abs(lvars(1)-large_number_one)<EPS)then
+                write(IO_FID_LOG,*) '*** "lvars" must be specified in grads namelist for levels data! '
+                call PRC_MPIstop
+             endif
+          case("map")
+             startrec = grads_startrec(ielem)
+             totalrec = grads_totalrec(ielem)
+             fendian  = grads_fendian (ielem)
+             if( (startrec==0).or.(totalrec==0) )then
+                write(IO_FID_LOG,*) '*** "startrec" is required in grads namelist! ',startrec
+                write(IO_FID_LOG,*) '*** "totalrec" is required in grads namelist! ',totalrec
+                call PRC_MPIstop
+             endif
+             ! get file_id
+             if(io_fid_grads_data < 0)then
+                io_fid_grads_data = IO_get_available_fid()
+             endif
+             gfile=trim(fname)//trim(basename_num)//'.grd'
+          end select
+
+          ! read data
+          select case (trim(item))
+          case("lon")
+             if ( trim(dtype) == "linear" ) then
+                do j = 1, dims(2)
+                do i = 1, dims(1)
+                   lon_org(i,j,fstep) = real(swpoint+real(i-1)*dd, kind=RP) * D2R
+                enddo
+                enddo
+             else if ( trim(dtype) == "map" ) then
+                call read_grads_file_2d(io_fid_grads_data,gfile,dims(1),dims(2),1,1,item,startrec,totalrec,gdata2D)
+                lon_org(:,:,fstep) = real(gdata2D(:,:,1), kind=RP) * D2R
+             endif
+          case("lat")
+             if ( trim(dtype) == "linear" ) then
+                do j = 1, dims(2)
+                do i = 1, dims(1)
+                   lat_org(i,j,fstep) = real(swpoint+real(j-1)*dd, kind=RP) * D2R
+                enddo
+                enddo
+             else if ( trim(dtype) == "map" ) then
+                call read_grads_file_2d(io_fid_grads_data,gfile,dims(1),dims(2),1,1,item,startrec,totalrec,gdata2D)
+                lat_org(:,:,fstep) = real(gdata2D(:,:,1), kind=RP) * D2R
+             endif
+          case("plev")
+             if(dims(3)/=knum)then
+                write(IO_FID_LOG,*) '*** please check plev data! ',dims(3),knum
+                stop
+             endif
+             if ( trim(dtype) == "levels" ) then
+                if(dims(3)/=lnum)then
+                   write(IO_FID_LOG,*) '*** lnum must be same as the outer_nz! ',dims(3),lnum
+                   stop
+                endif
+                do it = 1, nt
+                do k = 1, dims(3)
+                do j = 1, dims(2)
+                do i = 1, dims(1)
+                   pres_org(k,i,j,it) = real(lvars(k), kind=RP) * 100.0_RP
+                enddo
+                enddo
+                enddo
+                enddo
+             else if ( trim(dtype) == "map" ) then
+                call read_grads_file_3d(io_fid_grads_data,gfile,dims(1),dims(2),dims(3),nt,item,startrec,totalrec,gdata3D)
+                do it = 1, nt
+                do k = 1, dims(3)
+                do j = 1, dims(2)
+                do i = 1, dims(1)
+                   pres_org(k,i,j,it) = real(gdata3D(i,j,k,it), kind=RP)  * 100.0_RP
+                enddo
+                enddo
+                enddo
+                enddo
+             endif
+          case('U')
+             if ( trim(dtype) == "map" ) then
+                call read_grads_file_3d(io_fid_grads_data,gfile,dims(1),dims(2),knum,nt,item,startrec,totalrec,gdata3D)
+                do it = 1, nt
+                do j = 1, dims(2)
+                do i = 1, dims(1)
+                   do k = 1, knum
+                      velx_org(k,i,j,it) = real(gdata3D(i,j,k,it), kind=RP)
+                   enddo
+                   if(dims(3)>knum)then
+                      do k = knum+1, dims(3)
+                         velx_org(k,i,j,it) = velx_org(knum,i,j,it)
+                      enddo
+                   endif
+                enddo
+                enddo
+                enddo
+             endif
+          case('V')
+             if ( trim(dtype) == "map" ) then
+                call read_grads_file_3d(io_fid_grads_data,gfile,dims(1),dims(2),knum,nt,item,startrec,totalrec,gdata3D)
+                do it = 1, nt
+                do j = 1, dims(2)
+                do i = 1, dims(1)
+                   do k = 1, knum
+                      vely_org(k,i,j,it) = real(gdata3D(i,j,k,it), kind=RP)
+                   enddo
+                   if(dims(3)>knum)then
+                      do k = knum+1, dims(3)
+                         vely_org(k,i,j,it) = vely_org(knum,i,j,it)
+                      enddo
+                   endif
+                enddo
+                enddo
+                enddo
+             endif
+          case('T')
+             if ( trim(dtype) == "map" ) then
+                call read_grads_file_3d(io_fid_grads_data,gfile,dims(1),dims(2),knum,nt,item,startrec,totalrec,gdata3D)
+                do it = 1, nt
+                do j = 1, dims(2)
+                do i = 1, dims(1)
+                   do k = 1, knum
+                      temp_org(k,i,j,it) = real(gdata3D(i,j,k,it), kind=RP)
+                   enddo
+                   if(dims(3)>knum)then
+                      do k = knum+1, dims(3)
+                         temp_org(k,i,j,it) = temp_org(knum,i,j,it)
+                      enddo
+                   endif
+                enddo
+                enddo
+                enddo
+             endif
+          case('HGT')
+             if(dims(3)/=knum)then
+                write(IO_FID_LOG,*) '*** The number of levels for HGT must be same as plevs! ',dims(3),knum
+                stop
+             endif
+             if ( trim(dtype) == "map" ) then
+                call read_grads_file_3d(io_fid_grads_data,gfile,dims(1),dims(2),dims(3),nt,item,startrec,totalrec,gdata3D)
+                do it = 1, nt
+                do k = 1, dims(3)
+                do j = 1, dims(2)
+                do i = 1, dims(1)
+                   hgt_org(k,i,j,it) = real(gdata3D(i,j,k,it), kind=RP)
+                enddo
+                enddo
+                enddo
+                enddo
+             endif
+          case('QV')
+             if ( trim(dtype) == "map" ) then
+                call read_grads_file_3d(io_fid_grads_data,gfile,dims(1),dims(2),knum,nt,item,startrec,totalrec,gdata3D)
+                qtrc_org  = 0.0_RP
+                do it = 1, nt
+                do j = 1, dims(2)
+                do i = 1, dims(1)
+                   do k = 1, knum
+                      qtrc_org(k,i,j,it,QA_outer) = real(gdata3D(i,j,k,it), kind=RP)
+                   enddo
+                   if(dims(3)>knum)then
+                      do k = knum+1, dims(3)
+                         qtrc_org(k,i,j,it,QA_outer) = qtrc_org(knum,i,j,it,QA_outer)
+                      enddo
+                   endif
+                enddo
+                enddo
+                enddo
+             endif
+          case('RH')
+             if (data_available(Ig_qv)) cycle  ! use QV
+             if ((.not. data_available(Ig_t)).or.(.not. data_available(Ig_p))) then
+                write(IO_FID_LOG,*) '*** Temperature and pressure are required to convert from RH to QV ! '
+                stop
+             endif
+             if ( trim(dtype) == "map" ) then
+                call read_grads_file_3d(io_fid_grads_data,gfile,dims(1),dims(2),knum,nt,item,startrec,totalrec,gdata3D)
+                qtrc_org  = 0.0_RP
+                do it = 1, nt
+                do j = 1, dims(2)
+                do i = 1, dims(1)
+                   do k = 1, knum
+                      rhprs_org(k,i,j,it) = real(gdata3D(i,j,k,it), kind=RP)       ! relative humidity
+                      call qsat( qvsat, temp_org(k,i,j,it), pres_org(k,i,j,it) )   ! satulated specific humidity
+                      qm = (rhprs_org(k,i,j,it)/100.0_RP) * (qvsat/(1.0_RP-qvsat)) ! mixing ratio
+                      qtrc_org(k,i,j,it,QA_outer) = qm * ( 1.0_RP + qm )
+                   enddo
+                   if(dims(3)>knum)then
+                      do k = knum+1, dims(3)
+                         qtrc_org(k,i,j,it,QA_outer) = qtrc_org(knum,i,j,it,QA_outer)
+                      enddo
+                   endif
+                enddo
+                enddo
+                enddo
+             endif
+          case('PSFC')
+             if ( trim(dtype) == "map" ) then
+                call read_grads_file_2d(io_fid_grads_data,gfile,dims(1),dims(2),1,nt,item,startrec,totalrec,gdata2D)
+                do it = 1, nt
+                do j = 1, dims(2)
+                do i = 1, dims(1)
+                   psfc_org(i,j,it) = real(gdata2D(i,j,it), kind=RP)
+                enddo
+                enddo
+                enddo
+             endif
+          case('U10')
+             if ( trim(dtype) == "map" ) then
+                call read_grads_file_2d(io_fid_grads_data,gfile,dims(1),dims(2),1,nt,item,startrec,totalrec,gdata2D)
+                do it = 1, nt
+                do j = 1, dims(2)
+                do i = 1, dims(1)
+                   usfc_org(i,j,it) = real(gdata2D(i,j,it), kind=RP)
+                enddo
+                enddo
+                enddo
+             endif
+          case('V10')
+             if ( trim(dtype) == "map" ) then
+                call read_grads_file_2d(io_fid_grads_data,gfile,dims(1),dims(2),1,nt,item,startrec,totalrec,gdata2D)
+                do it = 1, nt
+                do j = 1, dims(2)
+                do i = 1, dims(1)
+                   vsfc_org(i,j,it) = real(gdata2D(i,j,it), kind=RP)
+                enddo
+                enddo
+                enddo
+             endif
+          case('T2')
+             if ( trim(dtype) == "map" ) then
+                call read_grads_file_2d(io_fid_grads_data,gfile,dims(1),dims(2),1,nt,item,startrec,totalrec,gdata2D)
+                do it = 1, nt
+                do j = 1, dims(2)
+                do i = 1, dims(1)
+                   tsfc_org(i,j,it) = real(gdata2D(i,j,it), kind=RP)
+                enddo
+                enddo
+                enddo
+             endif
+          case('Q2')
+             if ( trim(dtype) == "map" ) then
+                call read_grads_file_2d(io_fid_grads_data,gfile,dims(1),dims(2),1,nt,item,startrec,totalrec,gdata2D)
+                qsfc_org = 0.0_RP
+                do it = 1, nt
+                do j = 1, dims(2)
+                do i = 1, dims(1)
+                   qsfc_org(i,j,it,QA_outer) = real(gdata2D(i,j,it), kind=RP)
+                enddo
+                enddo
+                enddo
+             endif
+          case('RH2')
+             if (data_available(Ig_q2)) cycle  ! use QV
+             if ((.not. data_available(Ig_t2)).or.(.not. data_available(Ig_ps))) then
+                write(IO_FID_LOG,*) '*** T2 and PSFC are required to convert from RH2 to Q2 ! '
+                stop
+             endif
+             if ( trim(dtype) == "map" ) then
+                call read_grads_file_2d(io_fid_grads_data,gfile,dims(1),dims(2),1,nt,item,startrec,totalrec,gdata2D)
+                qsfc_org = 0.0_RP
+                do it = 1, nt
+                do j = 1, dims(2)
+                do i = 1, dims(1)
+                   rhsfc_org(i,j,it) = real(gdata2D(i,j,it), kind=RP)         ! relative humidity
+                   call qsat( qvsat, tsfc_org(i,j,it), psfc_org(i,j,it) )     ! satulated specific humidity
+                   qm = (rhsfc_org(i,j,it)/100.0_RP) * (qvsat/(1.0_RP-qvsat)) ! satulated mixing ratio
+                   qsfc_org(i,j,it,QA_outer) = qm * ( 1.0_RP + qm )           ! specific humidity
+                enddo
+                enddo
+                enddo
+             endif
+          end select
+       enddo loop_InputAtomGrADS
+
+       !do it = 1, nt
+       !   k=1 ; j=int(dims(2)/2) ; i=int(dims(1)/2) ; iq = 1
+       !   write(*,*) "read 3D grads data",i,j,k,it
+       !   write(*,*) "lon_org    ",lon_org   (i,j,fstep)/D2R
+       !   write(*,*) "lat_org    ",lat_org   (i,j,fstep)/D2R
+       !   write(*,*) "pres_org   ",pres_org  (k,i,j,fstep)
+       !   write(*,*) "usfc_org   ",usfc_org  (i,j,it)
+       !   write(*,*) "vsfc_org   ",vsfc_org  (i,j,it)
+       !   write(*,*) "tsfc_org   ",tsfc_org  (i,j,it)
+       !   write(*,*) "qsfc_org   ",qsfc_org  (i,j,it,iq)
+       !   write(*,*) "rhsfc_org  ",rhsfc_org (i,j,it)
+       !   write(*,*) "velx_org   ",velx_org  (k,i,j,it)
+       !   write(*,*) "vely_org   ",vely_org  (k,i,j,it)
+       !   write(*,*) "temp_org   ",temp_org  (k,i,j,it)
+       !   write(*,*) "hgt_org    ",hgt_org   (k,i,j,it)
+       !   write(*,*) "qtrc_org   ",qtrc_org  (k,i,j,it,iq)
+       !   write(*,*) "rhprs_org  ",rhprs_org (k,i,j,it)
+       !enddo
+
+   endif  ! do_read
+
+       call COMM_bcast( lon_org (:,:,:),               dims(1), dims(2), fstep )
+       call COMM_bcast( lat_org (:,:,:),               dims(1), dims(2), fstep )
+       call COMM_bcast( pres_org(:,:,:,:),    dims(3), dims(1), dims(2), fstep )
+       call COMM_bcast( usfc_org(:,:,:),               dims(1), dims(2),    nt )
+       call COMM_bcast( vsfc_org(:,:,:),               dims(1), dims(2),    nt )
+       call COMM_bcast( tsfc_org(:,:,:),               dims(1), dims(2),    nt )
+       call COMM_bcast( psfc_org(:,:,:),               dims(1), dims(2),    nt )
+       call COMM_bcast( velx_org(:,:,:,:),    dims(3), dims(1), dims(2),    nt )
+       call COMM_bcast( vely_org(:,:,:,:),    dims(3), dims(1), dims(2),    nt )
+       call COMM_bcast( temp_org(:,:,:,:),    dims(3), dims(1), dims(2),    nt )
+       call COMM_bcast( hgt_org (:,:,:,:),    dims(3), dims(1), dims(2),    nt )
+      do iq = 1, QA_outer
+       call COMM_bcast( qsfc_org(:,:,:,iq),            dims(1), dims(2),    nt )
+       call COMM_bcast( qtrc_org(:,:,:,:,iq), dims(3), dims(1), dims(2),    nt )
+      enddo
+
+    do it = 1, nt !--- time loop
+
+       call check_domain_compatibility( lon_org(:,:,fstep),  lat_org(:,:,fstep),  hgt_org(:,:,:,it), &
+                                        LON(:,:),        LAT(:,:),        CZ(:,:,:) )
+       call check_domain_compatibility( lon_org(:,:,fstep),  lat_org(:,:,fstep),  hgt_org(:,:,:,it), &
+                                        LONX(:,:),       LAT(:,:),        CZ(:,:,:), skip_y=.true., skip_z=.true. )
+       call check_domain_compatibility( lon_org(:,:,fstep),  lat_org(:,:,fstep),  hgt_org(:,:,:,it), &
+                                        LON(:,:),        LATY(:,:),       CZ(:,:,:), skip_x=.true., skip_z=.true. )
+       call check_domain_compatibility( lon_org(:,:,fstep),  lat_org(:,:,fstep),  hgt_org(:,:,:,it), &
+                                        LON(:,:),        LAT(:,:),        FZ(:,:,:), skip_x=.true., skip_y=.true. )
+
+       call INTRPNEST_interp_fact_llz( hfact  (:,:,:),           & ! [OUT]
+                                       vfact  (:,:,:,:,:),       & ! [OUT]
+                                       kgrd   (:,:,:,:,:),       & ! [OUT]
+                                       igrd   (:,:,:),           & ! [OUT]
+                                       jgrd   (:,:,:),           & ! [OUT]
+                                       CZ     (:,:,:),           & ! [IN]
+                                       LAT    (:,:),             & ! [IN]
+                                       LON    (:,:),             & ! [IN]
+                                       KS, KE, IA, JA,           & ! [IN]
+                                       hgt_org(:,:,:,it),        & ! [IN]
+                                       lat_org(:,:,fstep),       & ! [IN]
+                                       lon_org(:,:,fstep),       & ! [IN]
+                                       dims(3), dims(1), dims(2) ) ! [IN]
+
+       ! interpolate from outer grid to SCALE grid
+       call INTRPNEST_interp_3d( llvelx  (:,:,:,it),   &
+                                 velx_org(:,:,:,it),   &
+                                 hfact   (:,:,:),     &
+                                 vfact   (:,:,:,:,:), &
+                                 kgrd    (:,:,:,:,:), &
+                                 igrd    (:,:,:),     &
+                                 jgrd    (:,:,:),     &
+                                 IA, JA, KS-1, KE+1   )
+       call INTRPNEST_interp_3d( llvely  (:,:,:,it),   &
+                                 vely_org(:,:,:,it),   &
+                                 hfact   (:,:,:),     &
+                                 vfact   (:,:,:,:,:), &
+                                 kgrd    (:,:,:,:,:), &
+                                 igrd    (:,:,:),     &
+                                 jgrd    (:,:,:),     &
+                                 IA, JA, KS-1, KE+1   )
+
+       call INTRPNEST_interp_2d( pres_sfc(1,:,:,it), &
+                                 psfc_org(  :,:,it), &
+                                 hfact   (:,:,:),    &
+                                 igrd    (:,:,:),    &
+                                 jgrd    (:,:,:),    &
+                                 IA, JA              )
+       call INTRPNEST_interp_2d( temp_sfc(1,:,:,it), &
+                                 tsfc_org(  :,:,it), &
+                                 hfact   (:,:,:),    &
+                                 igrd    (:,:,:),    &
+                                 jgrd    (:,:,:),    &
+                                 IA, JA              )
+       !> QTRC_sfc are set zero, except for QV; set q2.
+       qtrc_sfc(1,:,:,it,:) = 0.0_RP
+       call INTRPNEST_interp_2d( qtrc_sfc(1,:,:,it,I_QV), &
+                                 qsfc_org(  :,:,it,I_QV), &
+                                 hfact   (:,:,:),         &
+                                 igrd    (:,:,:),         &
+                                 jgrd    (:,:,:),         &
+                                 IA, JA                   )
+       do j = 1, JA
+       do i = 1, IA
+          sw = sign(0.5_RP, qtrc_sfc(1,i,j,it,I_QV)) + 0.5_RP
+          qtrc_sfc(1,i,j,it,I_QV) = qtrc_sfc(1,i,j,it,I_QV) * sw !> --fix negative value
+
+          call THERMODYN_pott( pott_sfc(1,i,j,it),  & ! [OUT]
+                               temp_sfc(1,i,j,it),  & ! [IN]
+                               pres_sfc(1,i,j,it),  & ! [IN]
+                               qtrc_sfc(1,i,j,it,:) ) ! [IN]
+       end do
+       end do
+
+
+
+       qtrc(:,:,:,it,:) = 0.0_RP !> cold initialize for hydrometeor
+       call INTRPNEST_interp_3d( qtrc    (:,:,:,it,I_QV), &
+                                 qtrc_org(:,:,:,it,I_QV), &
+                                 hfact   (:,:,:),         &
+                                 vfact   (:,:,:,:,:),     &
+                                 kgrd    (:,:,:,:,:),     &
+                                 igrd    (:,:,:),         &
+                                 jgrd    (:,:,:),         &
+                                 IA, JA, KS-1, KE+1       )
+
+       call INTRPNEST_interp_3d( pres    (:,:,:,it),   &
+                                 pres_org(:,:,:,it),   &
+                                 hfact   (:,:,:),      &
+                                 vfact   (:,:,:,:,:),  &
+                                 kgrd    (:,:,:,:,:),  &
+                                 igrd    (:,:,:),      &
+                                 jgrd    (:,:,:),      &
+                                 IA, JA, KS-1, KE+1    )
+       call INTRPNEST_interp_3d( temp    (:,:,:,it),   &
+                                 temp_org(:,:,:,it),   &
+                                 hfact   (:,:,:),      &
+                                 vfact   (:,:,:,:,:),  &
+                                 kgrd    (:,:,:,:,:),  &
+                                 igrd    (:,:,:),      &
+                                 jgrd    (:,:,:),      &
+                                 IA, JA, KS-1, KE+1    )
+
+       do j = 1, JA
+       do i = 1, IA
+       do k = KS-1, KE+1
+          call THERMODYN_pott( pott(k,i,j,it),  & ! [OUT]
+                               temp(k,i,j,it),  & ! [IN]
+                               pres(k,i,j,it),  & ! [IN]
+                               qtrc(k,i,j,it,:) ) ! [IN]
+       end do
+       end do
+       end do
+
+#ifdef DRY
+       qc     = 0.0_RP
+       qc_sfc = 0.0_RP
+#else
+       qc     = qtrc(:,:,:,it,I_QC)
+       qc_sfc = qtrc_sfc(:,:,:,it,I_QC)
+#endif
+       !> make density in moist condition
+       call HYDROSTATIC_buildrho_real( dens    (:,:,:,it),      & ! [OUT]
+                                       temp    (:,:,:,it),      & ! [OUT] not-used
+                                       pres    (:,:,:,it),      & ! [OUT] not-used
+                                       pott    (:,:,:,it),      & ! [IN]
+                                       qtrc    (:,:,:,it,I_QV), & ! [IN]
+                                       qc      (:,:,:),         & ! [IN]
+                                       temp_sfc(:,:,:,it),      & ! [OUT] not-used
+                                       pres_sfc(:,:,:,it),      & ! [IN]
+                                       pott_sfc(:,:,:,it),      & ! [IN]
+                                       qtrc_sfc(:,:,:,it,I_QV), & ! [IN]
+                                       qc_sfc  (:,:,:)          ) ! [IN]
+
+       call COMM_vars8( dens(:,:,:,it), 3 )
+       call COMM_wait ( dens(:,:,:,it), 3 )
+
+       !! convert from latlon coordinate to local mapping (x)
+       do j = 1, JA
+       do i = 1, IA
+       do k = KS-1, KE+1
+          work(k,i,j,it) = llvelx(k,i,j,it) * rotc(i,j,cosin) + llvely(k,i,j,it) * rotc(i,j,sine)
+       end do
+       end do
+       end do
+       ! from scalar point to staggered point
+       do j = 1, JA
+       do i = 1, IA-1
+       do k = KS, KE
+          velx(k,i,j,it) = ( work(k,i+1,j,it) + work(k,i,j,it) ) * 0.5_RP
+       end do
+       end do
+       end do
+       do j = 1, JA
+       do k = KS, KE
+          velx(k,IA,j,it) = work(k,IA,j,it)
+       end do
+       end do
+       velx(KS-1,:,:,it) = 0.0_RP
+       velx(KS-2,:,:,it) = 0.0_RP
+       call COMM_vars8( velx(:,:,:,it), 1 )
+       call COMM_wait ( velx(:,:,:,it), 1, .false. )
+
+       ! convert from latlon coordinate to local mapping (y)
+       do j = 1, JA
+       do i = 1, IA
+       do k = KS-1, KE+1
+          work(k,i,j,it) = - llvelx(k,i,j,it) * rotc(i,j,sine) + llvely(k,i,j,it) * rotc(i,j,cosin)
+       end do
+       end do
+       end do
+       ! from scalar point to staggered point
+       do j = 1, JA-1
+       do i = 1, IA
+       do k = KS, KE
+          vely(k,i,j,it) = ( work(k,i,j+1,it) + work(k,i,j,it) ) * 0.5_RP
+       end do
+       end do
+       end do
+       do i = 1, IA
+       do k = KS, KE
+          vely(k,i,JA,it) = work(k,i,JA,it)
+       end do
+       end do
+       vely(KS-1,:,:,it) = 0.0_RP
+       vely(KS-2,:,:,it) = 0.0_RP
+
+       call COMM_vars8( vely(:,:,:,it), 1 )
+       call COMM_wait ( vely(:,:,:,it), 1, .false. )
+
+       velz(:,:,:,it)   = 0.0_RP !> cold initialize for vertical velocity
+
+       do j = 1, JA
+       do i = 1, IA
+       do k = KS, KE-1
+          momz(k,i,j,it) = velz(k,i,j,it) * ( dens(k+1,i,j,it) + dens(k,i,j,it) ) * 0.5_RP
+       end do
+       end do
+       end do
+       do j = 1, JA
+       do i = 1, IA
+          momz(KE,i,j,it) = 0.0_RP
+       end do
+       end do
+       do j = 1, JA
+       do i = 1, IA
+       do k = KS, KE
+          rhot(k,i,j,it) = pott(k,i,j,it) * dens(k,i,j,it)
+       end do
+       end do
+       end do
+
+       do j = 1, JA
+       do i = 1, IA-1
+       do k = KS, KE
+          momx(k,i,j,it) = velx(k,i,j,it) * ( dens(k,i+1,j,it) + dens(k,i,j,it) ) * 0.5_RP
+       end do
+       end do
+       end do
+       do j = 1, JA
+       do k = KS, KE
+          momx(k,IA,j,it) = velx(k,IA,j,it) * dens(k,IA,j,it)
+       end do
+       end do
+       call COMM_vars8( momx(:,:,:,it), 1 )
+       call COMM_wait ( momx(:,:,:,it), 1, .false. )
+
+       do j = 1, JA-1
+       do i = 1, IA
+       do k = KS, KE
+          momy(k,i,j,it) = vely(k,i,j,it) * ( dens(k,i,j+1,it) + dens(k,i,j,it) ) * 0.5_RP
+       end do
+       end do
+       end do
+       do i = 1, IA
+       do k = KS, KE
+          momy(k,i,JA,it) = vely(k,i,JA,it) * dens(k,i,JA,it)
+       end do
+       end do
+       call COMM_vars8( momy(:,:,:,it), 1 )
+       call COMM_wait ( momy(:,:,:,it), 1, .false. )
+
+    enddo ! time loop
+
+    if( do_read ) then
+       deallocate( gdata2D )
+       deallocate( gdata3D )
+       deallocate( gland   )
+    endif
+
+    deallocate( lon_org   )
+    deallocate( lat_org   )
+    deallocate( pres_org  )
+    deallocate( psfc_org  )
+    deallocate( tsfc_org  )
+    deallocate( usfc_org  )
+    deallocate( vsfc_org  )
+    deallocate( qsfc_org  )
+    deallocate( rhsfc_org )
+    deallocate( velx_org  )
+    deallocate( vely_org  )
+    deallocate( temp_org  )
+    deallocate( hgt_org   )
+    deallocate( qtrc_org  )
+    deallocate( rhprs_org )
+
+    return
+  end subroutine InputAtomGrADS
 
   !-----------------------------------------------------------------------------
   subroutine InputSurfaceSCALE( &
@@ -3758,10 +4822,6 @@ contains
        frac_land  => LANDUSE_frac_land
     use mod_land_vars, only: &
       convert_WS2VWC
-    use scale_interpolation_nest, only: &
-       INTRPNEST_interp_fact_llz,  &
-       INTRPNEST_interp_2d,        &
-       INTRPNEST_interp_3d
     implicit none
 
     real(RP), intent(out) :: tg   (:,:,:)
@@ -4214,6 +5274,714 @@ contains
   end subroutine InputSurfaceNICAM
 
   !-----------------------------------------------------------------------------
+  subroutine InputSurfaceGrADS( &
+      tg,                  & ! (out)
+      strg,                & ! (out)
+      roff,                & ! (out)
+      qvef,                & ! (out)
+      tw,                  & ! (out)
+      lst,                 & ! (out)
+      ust,                 & ! (out)
+      sst,                 & ! (out)
+      albw,                & ! (out)
+      albg,                & ! (out)
+      z0w,                 & ! (out)
+      skint,               & ! (out)
+      skinw,               & ! (out)
+      snowq,               & ! (out)
+      snowt,               & ! (out)
+      basename_num,        & ! (in)
+      dims,                & ! (in)
+      skiplen,             & ! (in)
+      use_file_landwater,  & ! (in)
+      init_landwater_ratio ) ! (in)
+    use scale_const, only: &
+       D2R   => CONST_D2R,   &
+       TEM00 => CONST_TEM00, &
+       EPS   => CONST_EPS
+    use scale_landuse, only: &
+       frac_land  => LANDUSE_frac_land
+    use mod_land_vars, only: &
+      convert_WS2VWC
+    use scale_interpolation_nest, only: &
+       INTRPNEST_interp_fact_llz,  &
+       INTRPNEST_interp_2d,        &
+       INTRPNEST_interp_3d
+    implicit none
+
+    real(RP), intent(out) :: tg   (:,:,:)
+    real(RP), intent(out) :: strg (:,:,:)
+    real(RP), intent(out) :: roff (:,:)
+    real(RP), intent(out) :: qvef (:,:)
+    real(RP), intent(out) :: tw   (:,:)
+    real(RP), intent(out) :: lst  (:,:)
+    real(RP), intent(out) :: ust  (:,:)
+    real(RP), intent(out) :: sst  (:,:)
+    real(RP), intent(out) :: albw (:,:,:)
+    real(RP), intent(out) :: albg (:,:,:)
+    real(RP), intent(out) :: z0w  (:,:)
+    real(RP), intent(out) :: skint(:,:)
+    real(RP), intent(out) :: skinw(:,:)
+    real(RP), intent(out) :: snowq(:,:)
+    real(RP), intent(out) :: snowt(:,:)
+
+    character(LEN=*), intent(in) :: basename_num
+    integer,          intent(in) :: dims(:)
+    integer,          intent(in) :: skiplen
+    logical,          intent(in) :: use_file_landwater   ! use land water data from files
+    real(RP),         intent(in) :: init_landwater_ratio ! Ratio of land water to storage is constant,
+                                                         !              if use_file_landwater is ".false."
+    ! ----------------------------------------------------------------
+
+    ! namelist.grads_boundary
+    integer, parameter   :: grads_vars_limit = 1000 !> limit of values for levels data
+    integer              :: grads_vars_nmax = 0     !> number of variables in grads file
+
+    character(H_SHORT)   :: item                                      ! up to 16 characters
+    integer              :: knum                                      ! optional: vertical level
+    character(H_SHORT)   :: dtype                                     ! 'linear','levels','map'
+    character(H_LONG)    :: fname                                     ! head of file name
+    real(RP)             :: swpoint                                   ! start point (south-west point) for linear
+    real(RP)             :: dd                                        ! dlon,dlat for linear
+    integer, parameter   :: lvars_limit = 1000                        ! limit of values for levels data
+    integer              :: lnum                                      ! number of data
+    real(RP)             :: lvars(lvars_limit) = large_number_one     ! values for levels
+    integer              :: startrec=1                                ! record position
+    integer              :: totalrec=1                                ! total record number per one time
+    real(RP)             :: undef                                     ! option
+    character(H_SHORT)   :: fendian='big_endian'                      ! option
+
+    namelist /grdvar/ &
+        item,      &  ! necessary
+        dtype,     &  ! necessary
+        fname,     &  ! necessary except for linear data
+        swpoint,   &  ! for linear data
+        dd,        &  ! for linear data
+        lnum,      &  ! for levels data
+        lvars,     &  ! for levels data
+        startrec,  &  ! for map data
+        totalrec,  &  ! for map data
+        knum,      &  ! option
+        undef,     &  ! option
+        fendian       ! option
+
+    !> grads data
+    integer,  parameter   :: num_item_list = 10
+    logical               :: data_available(num_item_list)
+    character(H_SHORT)    :: item_list     (num_item_list)
+    data item_list /'lsmask','lon','lat','lon_sfc','lat_sfc','llev','STEMP','SMOIS','SKINT','SST'/
+
+    integer,  parameter   :: Ig_lsmask     = 1
+    integer,  parameter   :: Ig_lon        = 2
+    integer,  parameter   :: Ig_lat        = 3
+    integer,  parameter   :: Ig_lon_sfc    = 4
+    integer,  parameter   :: Ig_lat_sfc    = 5
+    integer,  parameter   :: Ig_lz         = 6
+    integer,  parameter   :: Ig_stemp      = 7
+    integer,  parameter   :: Ig_smois      = 8
+    integer,  parameter   :: Ig_skint      = 9
+    integer,  parameter   :: Ig_sst        = 10
+
+    character(H_SHORT)    :: grads_item    (num_item_list)
+    character(H_SHORT)    :: grads_kytpe   (num_item_list)
+    character(H_LONG)     :: grads_dtype   (num_item_list)
+    character(H_LONG)     :: grads_fname   (num_item_list)
+    character(H_SHORT)    :: grads_fendian (num_item_list)
+    real(RP)              :: grads_swpoint (num_item_list)
+    real(RP)              :: grads_dd      (num_item_list)
+    integer               :: grads_lnum    (num_item_list)
+    real(RP)              :: grads_lvars   (num_item_list,lvars_limit)
+    integer               :: grads_startrec(num_item_list)
+    integer               :: grads_totalrec(num_item_list)
+    integer               :: grads_knum    (num_item_list)
+    real(RP)              :: grads_undef   (num_item_list)
+
+    character(len=H_LONG) :: gfile
+
+    real(SP), allocatable :: gdata2D (:,:,:)
+    real(SP), allocatable :: gland   (:,:,:,:)
+
+    ! work
+    real(RP), allocatable :: lon_org(:,:,:)
+    real(RP), allocatable :: lat_org(:,:,:)
+    real(RP), allocatable :: lz_org (:,:,:,:)
+
+    real(RP), allocatable :: lsmask_org(:,:,:)
+    real(RP), allocatable :: tg_org    (:,:,:,:)
+    real(RP), allocatable :: strg_org  (:,:,:,:)
+    real(RP), allocatable :: skint_org (:,:,:)
+    real(RP), allocatable :: sst_org   (:,:,:)
+    real(RP), allocatable :: sh2o(:,:,:)
+
+    real(RP) :: qvsat, qm
+
+    real(RP), allocatable :: hfact(:,:,:)
+    real(RP), allocatable :: vfact(:,:,:,:,:)
+    integer,  allocatable :: igrd(:,:,:)
+    integer,  allocatable :: jgrd(:,:,:)
+    integer,  allocatable :: kgrd(:,:,:,:,:)
+
+    real(RP) :: lcz_3D(LKMAX,IA,JA)
+
+    real(RP)              :: maskval_tg
+    real(RP)              :: maskval_strg
+    real(RP)              :: maskval_lst
+    real(RP), parameter   :: sst_missval=273.1506_RP
+    real(RP), allocatable :: work (:,:,:)
+
+    integer :: fstep = 1
+    integer :: start_step
+    integer :: end_step
+    integer :: i, j, k, it, ielem, n, nt
+    integer :: ierr
+
+    logical :: do_read
+    !---------------------------------------------------------------------------
+
+    ! read data for initial condition
+    start_step = 1
+    end_step   = 1
+    nt = end_step - start_step + 1
+
+    if( myrank == PRC_master ) then
+       do_read = .true.
+    else
+       do_read = .false.
+    endif
+
+    if( do_read ) then
+       allocate( gdata2D ( dims(4), dims(5),          nt ) )
+       allocate( gland   ( dims(4), dims(5), dims(7), nt ) )
+    endif
+
+    allocate( lsmask_org (          dims(4), dims(5), fstep ) )
+    allocate( lon_org    (          dims(4), dims(5), fstep ) )
+    allocate( lat_org    (          dims(4), dims(5), fstep ) )
+    allocate( lz_org     ( dims(7), dims(4), dims(5), fstep ) )
+    allocate( tg_org     ( dims(7), dims(4), dims(5), nt ) )
+    allocate( strg_org   ( dims(7), dims(4), dims(5), nt ) )
+    allocate( skint_org  (          dims(4), dims(5), nt ) )
+    allocate( sst_org    (          dims(4), dims(5), nt ) )
+    allocate( work       (          dims(4), dims(5), nt ) )
+
+    allocate( sh2o (LKMAX,IA,JA) )
+
+    allocate( hfact(        IA, JA, itp_nh         ) )
+    allocate( vfact( LKMAX, IA, JA, itp_nh, itp_nv ) )
+    allocate( igrd (        IA, JA, itp_nh         ) )
+    allocate( jgrd (        IA, JA, itp_nh         ) )
+    allocate( kgrd ( LKMAX, IA, JA, itp_nh, itp_nv ) )
+
+    if( IO_L ) write(IO_FID_LOG,*) ''
+    if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[realinput]/Categ[InputNICAM-Surface]'
+
+    !--- read grads data
+    if( do_read )then
+
+       lsmask_org = large_number_one
+       lon_org    = large_number_one
+       lat_org    = large_number_one
+       lz_org     = large_number_one
+       tg_org     = large_number_one
+       strg_org   = large_number_one
+       skint_org  = large_number_one
+       sst_org    = large_number_one
+       sh2o       = large_number_one
+
+       ! listup variables
+       if ( io_fid_grads_nml > 0 ) then
+          rewind( io_fid_grads_nml )
+          grads_vars_nmax = 0
+          do n = 1, grads_vars_limit
+             read(io_fid_grads_nml, nml=grdvar, iostat=ierr)
+             if( ierr > 0 )then
+                write(IO_FID_LOG,*) '*** cannot read namelist for 2D data successfully! '
+                call PRC_MPIstop
+             else if( ierr < 0 )then
+                exit
+             endif
+             grads_vars_nmax = grads_vars_nmax + 1
+          enddo
+       else
+          write(IO_FID_LOG,*) '*** namelist file is not open! '
+          call PRC_MPIstop
+       endif
+
+       if ( grads_vars_nmax > grads_vars_limit ) then
+          write(IO_FID_LOG,*) '*** number of grads vars is exceed! ',n,' >', grads_vars_limit
+          call PRC_MPIstop
+       endif
+
+    endif
+
+    if( do_read )then
+       data_available = .false.     ! check data availability
+       do ielem = 1, num_item_list
+          if ( io_fid_grads_nml > 0 )  rewind( io_fid_grads_nml )
+          do n = 1, grads_vars_nmax
+
+             ! set default
+             item     = ''
+             dtype    = ''
+             fname    = ''
+             swpoint  = large_number_one
+             dd       = large_number_one
+             lnum     = -99
+             lvars    = large_number_one
+             startrec = 0
+             totalrec = 0
+             knum     = -99
+             undef    = large_number_one
+             fendian  = 'big'
+
+             ! read namelist
+             if ( io_fid_grads_nml > 0 ) then
+                read(io_fid_grads_nml, nml=grdvar,iostat=ierr)
+                if( ierr /= 0 ) exit
+             endif
+
+             if(item == item_list(ielem))then
+                grads_item    (ielem) = item
+                grads_fname   (ielem) = fname
+                grads_dtype   (ielem) = dtype
+                grads_swpoint (ielem) = swpoint
+                grads_dd      (ielem) = dd
+                grads_lnum    (ielem) = lnum
+                do k=1,dims(3)
+                   grads_lvars(ielem,k) = lvars(k)
+                enddo
+                grads_startrec(ielem) = startrec
+                grads_totalrec(ielem) = totalrec
+                grads_knum    (ielem) = knum
+                grads_undef   (ielem) = undef
+                grads_fendian (ielem) = fendian
+                data_available(ielem) = .true.
+                exit
+             endif
+          enddo ! n
+          if( IO_L ) write(IO_FID_LOG,*) 'GrADS data availability ',trim(item_list(ielem)),data_available(ielem)
+       enddo ! ielem
+
+       loop_InputSurfaceGrADS : do ielem = 1, num_item_list
+
+          item  = item_list(ielem)
+
+          !--- check data
+          select case(trim(item))
+          case('lsmask')
+             if ( .not. data_available(Ig_lsmask) ) then
+                write(IO_FID_LOG,*) '*** not use ',trim(item),' data!'
+                cycle
+             endif
+          case('lon')
+             if ( data_available(Ig_lon_sfc) ) then
+                cycle
+             endif
+          case('lat')
+             if ( data_available(Ig_lat_sfc) ) then
+                cycle
+             endif
+          case('lon_sfc')
+             if (.not. data_available(Ig_lon_sfc) ) then
+                cycle
+             endif
+          case('lat_sfc')
+             if (.not. data_available(Ig_lat_sfc) ) then
+                cycle
+             endif
+          case('SST')
+             if (.not. data_available(Ig_sst)) then
+                write(IO_FID_LOG,*) '*** cannot found SST. SKINT is used for SST! '
+                cycle
+             endif
+          case default
+             if ( .not. data_available(ielem) ) then
+                write(IO_FID_LOG,*) '*** cannot found data in grads namelist! ',trim(item),trim(item_list(ielem))
+                call PRC_MPIstop
+             endif
+          end select
+
+          dtype    = grads_dtype   (ielem)
+          fname    = grads_fname   (ielem)
+          lnum     = grads_lnum    (ielem)
+          undef    = grads_undef   (ielem)
+
+          if ( grads_knum(ielem) > 0 )then
+             knum = grads_knum(ielem)
+          else
+             knum = dims(7)
+          endif
+
+          select case (trim(dtype))
+          case("linear")
+             swpoint = grads_swpoint (ielem)
+             dd      = grads_dd      (ielem)
+             if( (abs(swpoint-large_number_one)<EPS).or.(abs(swpoint-large_number_one)<EPS) )then
+                write(IO_FID_LOG,*) '*** "swpoint" is required in grads namelist! ',swpoint
+                write(IO_FID_LOG,*) '*** "dd"      is required in grads namelist! ',dd
+                call PRC_MPIstop
+             endif
+          case("levels")
+             if ( lnum < 0 )then
+                write(IO_FID_LOG,*) '*** "lnum" in grads namelist is required for levels data! '
+                call PRC_MPIstop
+             endif
+             do k=1, lnum
+                lvars(k)=grads_lvars(ielem,k)
+             enddo
+             if(abs(lvars(1)-large_number_one)<EPS)then
+                write(IO_FID_LOG,*) '*** "lvars" is required in grads namelist! ',(lvars(k),k=1,lnum)
+                call PRC_MPIstop
+             endif
+          case("map")
+             startrec = grads_startrec(ielem)
+             totalrec = grads_totalrec(ielem)
+             fendian  = grads_fendian (ielem)
+             if( (startrec==0).or.(totalrec==0) )then
+                write(IO_FID_LOG,*) '*** "startrec" is required in grads namelist! ',startrec
+                write(IO_FID_LOG,*) '*** "totalrec" is required in grads namelist! ',totalrec
+                call PRC_MPIstop
+             endif
+             ! get file_io
+             if(io_fid_grads_data < 0)then
+                io_fid_grads_data = IO_get_available_fid()
+             endif
+             gfile=trim(fname)//trim(basename_num)//'.grd'
+          end select
+
+          ! read data
+          select case (trim(item))
+          case("lsmask")
+             if ( trim(dtype) == "map" ) then
+                call read_grads_file_2d(io_fid_grads_data,gfile,dims(4),dims(5),1,1,item,startrec,totalrec,gdata2D)
+                lsmask_org(:,:,fstep) = real(gdata2D(:,:,1), kind=RP)
+             endif
+          case("lon","lon_sfc")
+             if ( trim(dtype) == "linear" ) then
+                do j = 1, dims(5)
+                do i = 1, dims(4)
+                   lon_org(i,j,fstep) = real(swpoint+real(i-1)*dd, kind=RP) * D2R
+                enddo
+                enddo
+             else if ( trim(dtype) == "map" ) then
+                call read_grads_file_2d(io_fid_grads_data,gfile,dims(4),dims(5),1,1,item,startrec,totalrec,gdata2D)
+                lon_org(:,:,fstep) = real(gdata2D(:,:,1), kind=RP) * D2R
+             endif
+          case("lat","lat_sfc")
+             if ( trim(dtype) == "linear" ) then
+                do j = 1, dims(5)
+                do i = 1, dims(4)
+                   lat_org(i,j,fstep) = real(swpoint+real(j-1)*dd, kind=RP) * D2R
+                enddo
+                enddo
+             else if ( trim(dtype) == "map" ) then
+                call read_grads_file_2d(io_fid_grads_data,gfile,dims(4),dims(5),1,1,item,startrec,totalrec,gdata2D)
+                lat_org(:,:,fstep) = real(gdata2D(:,:,1), kind=RP) * D2R
+             endif
+          case("llev")
+             if(dims(7)/=knum)then
+                write(IO_FID_LOG,*) '*** please check llev data! ',dims(7),knum
+                call PRC_MPIstop
+             endif
+             if ( trim(dtype) == "levels" ) then
+                if(dims(7)/=lnum)then
+                   write(IO_FID_LOG,*) '*** lnum must be same as the outer_nz! ',dims(7),lnum
+                   call PRC_MPIstop
+                endif
+                do k = 1, dims(7)
+                do j = 1, dims(5)
+                do i = 1, dims(4)
+                   lz_org(k,i,j,fstep) = real(lvars(k), kind=RP)
+                enddo
+                enddo
+                enddo
+             else if ( trim(dtype) == "map" ) then
+                call read_grads_file_3d(io_fid_grads_data,gfile,dims(4),dims(5),dims(7),nt,item,startrec,totalrec,gland)
+                do k = 1, dims(7)
+                do j = 1, dims(5)
+                do i = 1, dims(4)
+                   lz_org(k,i,j,fstep) = real(gland(i,j,k,fstep), kind=RP)  * 100.0_RP
+                enddo
+                enddo
+                enddo
+             endif
+          case('STEMP')
+             if(dims(7)/=knum)then
+                write(IO_FID_LOG,*) '*** The number of levels for STEMP must be same as llevs! ',dims(7),knum
+                call PRC_MPIstop
+             endif
+             if ( trim(dtype) == "map" ) then
+                call read_grads_file_3d(io_fid_grads_data,gfile,dims(4),dims(5),dims(7),nt,item,startrec,totalrec,gland)
+                do it = 1, nt
+                do k = 1, dims(7)
+                do j = 1, dims(5)
+                do i = 1, dims(4)
+                   tg_org(k,i,j,it) = real(gland(i,j,k,it), kind=RP)
+                enddo
+                enddo
+                enddo
+                enddo
+             endif
+          case('SMOIS')
+             if(dims(7)/=knum)then
+                write(IO_FID_LOG,*) '*** The number of levels for SMOIS must be same as llevs! ',dims(7),knum
+                call PRC_MPIstop
+             endif
+             if ( trim(dtype) == "map" ) then
+                call read_grads_file_3d(io_fid_grads_data,gfile,dims(4),dims(5),dims(7),nt,item,startrec,totalrec,gland)
+                do it = 1, nt
+                do k = 1, dims(7)
+                do j = 1, dims(5)
+                do i = 1, dims(4)
+                   strg_org(k,i,j,it) = real(gland(i,j,k,it), kind=RP)
+                enddo
+                enddo
+                enddo
+                enddo
+             endif
+          case('SKINT')
+             if ( trim(dtype) == "map" ) then
+                call read_grads_file_2d(io_fid_grads_data,gfile,dims(4),dims(5),1,nt,item,startrec,totalrec,gdata2D)
+                do it = 1, nt
+                do j = 1, dims(5)
+                do i = 1, dims(4)
+                   skint_org(i,j,it) = real(gdata2D(i,j,it), kind=RP)
+                enddo
+                enddo
+                enddo
+             endif
+          case('SST')
+             if ( trim(dtype) == "map" ) then
+                call read_grads_file_2d(io_fid_grads_data,gfile,dims(4),dims(5),1,nt,item,startrec,totalrec,gdata2D)
+                do it = 1, nt
+                do j = 1, dims(5)
+                do i = 1, dims(4)
+                   sst_org(i,j,it) = real(gdata2D(i,j,it), kind=RP)
+                enddo
+                enddo
+                enddo
+             endif
+          end select
+       enddo loop_InputSurfaceGrADS
+
+       !--SST: use skin temp
+       if (.not. data_available(Ig_sst)) then
+          sst_org(:,:,:) = skint_org(:,:,:)
+       endif
+
+       !do it = 1, nt
+       !   i=int(dims(4)/2) ; j=int(dims(5)/2)
+       !   write(*,*) "read 2D grads data",dims(4),dims(5),i,j,it
+       !   write(*,*) "lon_org    ",lon_org  (i,j,fstep)
+       !   write(*,*) "lat_org    ",lat_org  (i,j,fstep)
+       !   write(*,*) "sst_org    ",sst_org  (i,j,it)
+       !   write(*,*) "skint_org  ",skint_org(i,j,it)
+       !   do k=1,dims(7)
+       !      write(*,*) "tg_org    ",tg_org   (k,i,j,it)," k= ",k
+       !      write(*,*) "strg_org  ",strg_org (k,i,j,it)," k= ",k
+       !   enddo
+       !enddo
+
+       ! Interpolate over the ocean or land
+       if(data_available(Ig_lsmask))then
+          !--Land temp
+          do k=1,dims(7)
+             work(:,:,1) = tg_org(k,:,:,1)
+             call interp_OceanLand_data(work(:,:,:),lsmask_org(:,:,fstep),dims(4),dims(5), 1, landdata=.true.)
+             tg_org(k,:,:,1) = work(:,:,1)
+          enddo
+          !--Land water
+          do k=1,dims(7)
+             work(:,:,1) = strg_org(k,:,:,1)
+             call interp_OceanLand_data(work(:,:,:),lsmask_org(:,:,fstep),dims(4),dims(5), 1, landdata=.true.)
+             strg_org(k,:,:,1) = work(:,:,1)
+          enddo
+          !--Surface skin temp
+          work(:,:,1) = skint_org(:,:,1)
+          call interp_OceanLand_data(work(:,:,:),lsmask_org(:,:,fstep),dims(4),dims(5), 1,landdata=.true.)
+          skint_org(:,:,1) = work(:,:,1)
+          !--SST
+          work(:,:,1) = sst_org(:,:,1)
+          call interp_OceanLand_data(work(:,:,:),lsmask_org(:,:,fstep),dims(4),dims(5), 1,landdata=.false.)
+          sst_org(:,:,1) = work(:,:,1)
+       endif
+
+    endif  ! do_read
+
+    call COMM_bcast( lsmask_org(:,:,:),          dims(4), dims(5), fstep )
+    call COMM_bcast( lon_org   (:,:,:),          dims(4), dims(5), fstep )
+    call COMM_bcast( lat_org   (:,:,:),          dims(4), dims(5), fstep )
+    call COMM_bcast( lz_org  (:,:,:,:), dims(7), dims(4), dims(5), fstep )
+    call COMM_bcast( tg_org  (:,:,:,:), dims(7), dims(4), dims(5), nt    )
+    call COMM_bcast( strg_org(:,:,:,:), dims(7), dims(4), dims(5), nt    )
+    call COMM_bcast( skint_org (:,:,:),          dims(4), dims(5), nt    )
+    call COMM_bcast( sst_org   (:,:,:),          dims(4), dims(5), nt    )
+
+    do j = 1, JA
+    do i = 1, IA
+      lcz_3D(:,i,j) = LCZ(:)
+    enddo
+    enddo
+
+    ! land
+    call INTRPNEST_interp_fact_llz( hfact  (:,:,:),          & ! [OUT]
+                                    vfact  (:,:,:,:,:),      & ! [OUT]
+                                    kgrd   (:,:,:,:,:),      & ! [OUT]
+                                    igrd   (:,:,:),          & ! [OUT]
+                                    jgrd   (:,:,:),          & ! [OUT]
+                                    lcz_3D (:,:,:),          & ! [IN]
+                                    LAT    (:,:),            & ! [IN]
+                                    LON    (:,:),            & ! [IN]
+                                    KS, KE, IA, JA,          & ! [IN]
+                                    lz_org (:,:,:,fstep),    & ! [IN]
+                                    lat_org(:,:,  fstep),    & ! [IN]
+                                    lon_org(:,:,  fstep),    & ! [IN]
+                                    dims(7),dims(4),dims(5), & ! [IN]
+                                    landgrid=.true.          ) ! [IN]
+
+    !if( myrank == 9 ) then
+    !print *,IA,JA
+    !open(99,file='check2.grd',status='unknown',      &
+    !     form='unformatted',access='direct',recl=IA*JA*4)
+    !i=0
+    !do k=1,itp_nh
+    !   i=i+1
+    !   write(99,rec=i) real(hfact(:,:,k),kind=SP)     !!!! for check
+    !enddo
+    !   i=i+1
+    !   write(99,rec=i) real(vfact(1,:,:,1,1),kind=SP) !!!! for check
+    !   i=i+1
+    !   write(99,rec=i) real(vfact(1,:,:,1,2),kind=SP) !!!! for check
+    !do k=1,itp_nh
+    !   i=i+1
+    !   write(99,rec=i) real(igrd(:,:,k),kind=SP)      !!!! for check
+    !enddo
+    !do k=1,itp_nh
+    !   i=i+1
+    !   write(99,rec=i) real(jgrd(:,:,k),kind=SP)      !!!! for check
+    !enddo
+    !   i=i+1
+    !   write(99,rec=i) real(kgrd(1,:,:,1,1),kind=SP)  !!!! for check
+    !   i=i+1
+    !   write(99,rec=i) real(kgrd(1,:,:,1,2),kind=SP)  !!!! for check
+    !   i=i+1
+    !   write(99,rec=i) real(frac_land(:,:),kind=SP)
+    !   i=i+1
+    !   write(99,rec=i) real(LAT(:,:),kind=SP)
+    !   i=i+1
+    !   write(99,rec=i) real(LON(:,:),kind=SP)
+    !close(99)
+    !endif
+
+    ! replace missing value
+     maskval_tg   = 298.0_RP    ! mask value => 298K
+     maskval_strg = 0.02_RP     ! mask value => 0.02
+                                ! default value 0.02: set as value of forest at 40% of evapolation rate.
+                                ! forest is considered as a typical landuse over Japan area.
+
+
+     ! interpolation
+     it = 1
+     call INTRPNEST_interp_3d( tg    (:,:,:),     &
+                               tg_org(:,:,:,it),  &
+                               hfact (:,:,:),     &
+                               vfact (:,:,:,:,:), &
+                               kgrd  (:,:,:,:,:), &
+                               igrd  (:,:,:),     &
+                               jgrd  (:,:,:),     &
+                               IA, JA, 1, LKMAX-1 )
+     do j = 1, JA
+     do i = 1, IA
+        tg  (LKMAX,i,j) = tg  (LKMAX-1,i,j)
+     enddo
+     enddo
+
+     ! replace values over the ocean
+     do k = 1, LKMAX
+      call replace_misval( tg(k,:,:), maskval_tg, frac_land )
+     enddo
+
+    if( use_file_landwater ) then
+      ! interpolation
+      it = 1
+      call INTRPNEST_interp_3d( strg    (:,:,:),     &
+                                strg_org(:,:,:,it),  &
+                                hfact   (:,:,:),     &
+                                vfact   (:,:,:,:,:), &
+                                kgrd    (:,:,:,:,:), &
+                                igrd    (:,:,:),     &
+                                jgrd    (:,:,:),     &
+                                IA, JA, 1, LKMAX-1   )
+      do j = 1, JA
+      do i = 1, IA
+         strg(LKMAX,i,j) = strg(LKMAX-1,i,j)
+      enddo
+      enddo
+      ! replace values over the ocean
+      do k = 1, LKMAX
+       call replace_misval( strg(k,:,:), maskval_strg, frac_land )
+      enddo
+    else
+      sh2o(:,:,:) = init_landwater_ratio
+      ! conversion from water saturation [fraction] to volumetric water content [m3/m3]
+      do k = 1, LKMAX
+         strg(k,:,:) = convert_WS2VWC( sh2o(k,:,:), critical=.true. )
+      end do
+    endif
+
+     it = 1
+     call INTRPNEST_interp_2d( sst(:,:),    sst_org(:,:,it), hfact(:,:,:),   &
+                               igrd(:,:,:), jgrd(:,:,:), IA, JA )
+     call INTRPNEST_interp_2d( skint(:,:),  skint_org(:,:,it), hfact(:,:,:), &
+                               igrd(:,:,:), jgrd(:,:,:), IA, JA )
+
+    ! input data
+     tw   (:,:)      = sst(:,:)
+     lst  (:,:)      = skint(:,:)
+     ust  (:,:)      = skint(:,:)
+     ! cold start approach
+     albw (:,:,I_LW) = 0.04_RP  ! emissivity of water surface : 0.96
+     albw (:,:,I_SW) = 0.10_RP
+     albg (:,:,I_LW) = 0.03_RP  ! emissivity of general ground surface : 0.95-0.98
+     albg (:,:,I_SW) = 0.22_RP
+     z0w  (:,:)      = 0.001_RP
+     skinw(:,:)      = 0.0_RP
+     snowq(:,:)      = 0.0_RP
+     snowt(:,:)      = TEM00
+     roff (:,:)      = 0.0_RP ! not necessary
+     qvef (:,:)      = 0.0_RP ! not necessary
+
+    ! replace values over the ocean
+     do j = 1, JA
+     do i = 1, IA
+        if( abs(frac_land(i,j)-0.0_RP) < EPS )then ! ocean grid
+           skint(i,j) = sst(i,j)
+           lst(i,j)   = sst(i,j)
+           ust(i,j)   = sst(i,j)
+        endif
+     enddo
+     enddo
+
+    deallocate( lsmask_org )
+    deallocate( lon_org    )
+    deallocate( lat_org    )
+    deallocate( lz_org     )
+    deallocate( tg_org     )
+    deallocate( strg_org   )
+    deallocate( skint_org  )
+    deallocate( sst_org    )
+
+    deallocate( sh2o )
+    deallocate( hfact )
+    deallocate( vfact )
+    deallocate( igrd  )
+    deallocate( jgrd  )
+    deallocate( kgrd  )
+
+    return
+  end subroutine InputSurfaceGrADS
+
+  !-----------------------------------------------------------------------------
   subroutine interp_OceanLand_data( &
       data,      & ! (inout)
       lsmask,    & ! (in)
@@ -4221,7 +5989,7 @@ contains
       ny,        & ! (in)
       tcount,    & ! (in)
       landdata,  & ! (in)
-      maskval    & ! (in)
+      maskval    & ! (out)
       )
     use scale_const, only: &
        EPS => CONST_EPS
@@ -4382,7 +6150,6 @@ contains
      imask(:,:) = imaskr(:,:)
      data(:,:,n)  = newdata(:,:)
     enddo ! kk
-
     enddo ! n
 
     deallocate( imask   )
@@ -4643,6 +6410,120 @@ contains
 
     return
   end subroutine wrf_arwpost_calc_uvmet
+
+  !-----------------------------------------------------------------------------
+  subroutine open_grads_file(io_fid,filename,irecl)
+    implicit none
+    integer,intent(in)      :: io_fid
+    character(*),intent(in) :: filename
+    integer,intent(in)      :: irecl
+    integer  :: ierr
+
+    open(io_fid,                   &
+         file   = trim(filename),  &
+         form   = 'unformatted',   &
+         access = 'direct',        &
+         recl   = irecl,           &
+         status = 'old',           &
+         iostat = ierr             )
+    if ( ierr /= 0 ) then
+       write(IO_FID_LOG,*) 'xxx grads file does not found! ', trim(filename)
+       stop
+    endif
+    return
+  end subroutine open_grads_file
+
+  !-----------------------------------------------------------------------------
+  subroutine read_grads_file_2d(  &
+       io_fid,                    &
+       gfile,                     &
+       nx,ny,nz,nt,               &
+       item,                      &
+       startrec,                  &
+       totalrec,                  &
+       gdata                      )
+    implicit none
+    integer,     intent(in)  :: io_fid
+    character(*),intent(in)  :: gfile
+    integer,     intent(in)  :: nx,ny,nz,nt
+    character(*),intent(in)  :: item
+    integer,     intent(in)  :: startrec
+    integer,     intent(in)  :: totalrec
+    real(SP),    intent(out) :: gdata(:,:,:)
+
+    integer  :: ierr
+    integer  :: irec, irecl
+    integer  :: i,j,k,it
+
+    irecl=nx*ny*4
+    call open_grads_file(io_fid, gfile, irecl)
+    do it = 1, nt
+       irec = totalrec * (it-1) + startrec
+       read(io_fid, rec=irec, iostat=ierr) gdata(:,:,it)
+       if ( ierr /= 0 ) then
+          write(IO_FID_LOG,*) 'xxx grads data does not found! ',trim(item),it
+          stop
+       endif
+    enddo
+    call close_grads_file(io_fid,gfile)
+
+    return
+  end subroutine read_grads_file_2d
+
+  !-----------------------------------------------------------------------------
+  subroutine read_grads_file_3d(  &
+       io_fid,                    &
+       gfile,                     &
+       nx,ny,nz,nt,               &
+       item,                      &
+       startrec,                  &
+       totalrec,                  &
+       gdata                      )
+    implicit none
+    integer,intent(in)      :: io_fid
+    character(*),intent(in) :: gfile
+    integer,     intent(in) :: nx,ny,nz,nt
+    character(*),intent(in) :: item
+    integer,intent(in)      :: startrec
+    integer,intent(in)      :: totalrec
+    real(SP),intent(out)    :: gdata(:,:,:,:)
+
+    integer  :: ierr
+    integer  :: irec,irecl
+    integer  :: i,j,k,it
+
+    irecl=nx*ny*4
+    call open_grads_file(io_fid, gfile, irecl)
+    do it = 1, nt
+       do k = 1, nz
+          irec = totalrec * (it-1) + startrec + (k-1)
+          read(io_fid, rec=irec, iostat=ierr) gdata(:,:,k,it)
+          if ( ierr /= 0 ) then
+             write(IO_FID_LOG,*) 'xxx grads data does not found! ',trim(item),k,it
+             stop
+          endif
+       enddo
+    enddo
+    call close_grads_file(io_fid,gfile)
+
+    return
+  end subroutine read_grads_file_3d
+
+  !-----------------------------------------------------------------------------
+  subroutine close_grads_file(io_fid,filename)
+    implicit none
+    integer,intent(in)      :: io_fid
+    character(*),intent(in) :: filename
+    integer                 :: ierr
+
+    close(io_fid, iostat=ierr)
+    if ( ierr /= 0 ) then
+       write(IO_FID_LOG,*) 'xxx grads file was not closed peacefully! ',trim(filename)
+       stop
+    endif
+
+    return
+  end subroutine close_grads_file
 
 end module mod_realinput
 !-------------------------------------------------------------------------------
