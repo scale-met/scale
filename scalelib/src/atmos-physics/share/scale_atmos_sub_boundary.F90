@@ -2076,11 +2076,12 @@ contains
        inc_VELY, &
        inc_POTT, &
        inc_QTRC  )
-    use scale_const, only: &
-       EPS => CONST_EPS
     use scale_time, only: &
        TIME_DTSEC
     implicit none
+
+    ! parameters
+    real(RP) :: EPS = 1.0E-4_RP
 
     ! arguments
     real(RP), intent(out) :: inc_DENS(:,:,:)
@@ -2092,7 +2093,6 @@ contains
 
     ! works
     integer :: i, j, k, iq
-    integer :: ref1, ref2, ref3
 
     real(RP) :: real_nstep
     real(RP) :: half_nstep
@@ -2113,25 +2113,25 @@ contains
        do j = 1, JA
        do i = 1, IA
        do k = 1, KA
-          inc_DENS(k,i,j) = ( ( ATMOS_BOUNDARY_ref_DENS(k,i,j,ref2) - ATMOS_BOUNDARY_ref_DENS(k,i,j,ref1) ) &
-                              * ( t1 + t2 ) + 2.0_RP * ATMOS_BOUNDARY_ref_DENS(k,i,j,ref1) &
-                            ) * dt * 0.5_RP - ATMOS_BOUNDARY_DENS(k,i,j)
-          inc_VELZ(k,i,j) = ( ( ATMOS_BOUNDARY_ref_VELZ(k,i,j,ref2) - ATMOS_BOUNDARY_ref_VELZ(k,i,j,ref1) ) &
-                              * ( t1 + t2 ) + 2.0_RP * ATMOS_BOUNDARY_ref_VELZ(k,i,j,ref1) &
-                            ) * dt * 0.5_RP - ATMOS_BOUNDARY_VELZ(k,i,j)
-          inc_VELX(k,i,j) = ( ( ATMOS_BOUNDARY_ref_VELX(k,i,j,ref2) - ATMOS_BOUNDARY_ref_VELX(k,i,j,ref1) ) &
-                              * ( t1 + t2 ) + 2.0_RP * ATMOS_BOUNDARY_ref_VELX(k,i,j,ref1) &
-                            ) * dt * 0.5_RP - ATMOS_BOUNDARY_VELX(k,i,j)
-          inc_VELY(k,i,j) = ( ( ATMOS_BOUNDARY_ref_VELY(k,i,j,ref2) - ATMOS_BOUNDARY_ref_VELY(k,i,j,ref1) ) &
-                              * ( t1 + t2 ) + 2.0_RP * ATMOS_BOUNDARY_ref_VELY(k,i,j,ref1) &
-                            ) * dt * 0.5_RP - ATMOS_BOUNDARY_VELY(k,i,j)
-          inc_POTT(k,i,j) = ( ( ATMOS_BOUNDARY_ref_POTT(k,i,j,ref2) - ATMOS_BOUNDARY_ref_POTT(k,i,j,ref1) ) &
-                              * ( t1 + t2 ) + 2.0_RP * ATMOS_BOUNDARY_ref_POTT(k,i,j,ref1) &
-                            ) * dt * 0.5_RP - ATMOS_BOUNDARY_POTT(k,i,j)
+          inc_DENS(k,i,j) = ( ATMOS_BOUNDARY_ref_DENS(k,i,j,ref_now) - ATMOS_BOUNDARY_ref_DENS(k,i,j,ref_old) ) &
+                            * ( t1 + t2 ) * 0.5_RP &
+                          + ATMOS_BOUNDARY_ref_DENS(k,i,j,ref_old) - ATMOS_BOUNDARY_DENS(k,i,j)
+          inc_VELZ(k,i,j) = ( ATMOS_BOUNDARY_ref_VELZ(k,i,j,ref_now) - ATMOS_BOUNDARY_ref_VELZ(k,i,j,ref_old) ) &
+                            * ( t1 + t2 ) * 0.5_RP &
+                          + ATMOS_BOUNDARY_ref_VELZ(k,i,j,ref_old) - ATMOS_BOUNDARY_VELZ(k,i,j)
+          inc_VELX(k,i,j) = ( ATMOS_BOUNDARY_ref_VELX(k,i,j,ref_now) - ATMOS_BOUNDARY_ref_VELX(k,i,j,ref_old) ) &
+                            * ( t1 + t2 ) * 0.5_RP &
+                          + ATMOS_BOUNDARY_ref_VELX(k,i,j,ref_old) - ATMOS_BOUNDARY_VELX(k,i,j)
+          inc_VELY(k,i,j) = ( ATMOS_BOUNDARY_ref_VELY(k,i,j,ref_now) - ATMOS_BOUNDARY_ref_VELY(k,i,j,ref_old) ) &
+                            * ( t1 + t2 ) * 0.5_RP &
+                          + ATMOS_BOUNDARY_ref_VELY(k,i,j,ref_old) - ATMOS_BOUNDARY_VELY(k,i,j)
+          inc_POTT(k,i,j) = ( ATMOS_BOUNDARY_ref_POTT(k,i,j,ref_now) - ATMOS_BOUNDARY_ref_POTT(k,i,j,ref_old) ) &
+                            * ( t1 + t2 ) * 0.5_RP &
+                          + ATMOS_BOUNDARY_ref_POTT(k,i,j,ref_old) - ATMOS_BOUNDARY_POTT(k,i,j)
           do iq = 1, BND_QA
-             inc_QTRC(k,i,j,iq) = ( ( ATMOS_BOUNDARY_ref_QTRC(k,i,j,iq,ref2) - ATMOS_BOUNDARY_ref_QTRC(k,i,j,iq,ref1) ) &
-                                    * ( t1 + t2 ) + 2.0_RP * ATMOS_BOUNDARY_ref_QTRC(k,i,j,iq,ref1) &
-                                  ) * dt * 0.5_RP - ATMOS_BOUNDARY_QTRC(k,i,j,iq)
+             inc_QTRC(k,i,j,iq) = ( ATMOS_BOUNDARY_ref_QTRC(k,i,j,iq,ref_now) - ATMOS_BOUNDARY_ref_QTRC(k,i,j,iq,ref_old) ) &
+                                  * ( t1 + t2 ) * 0.5_RP &
+                                + ATMOS_BOUNDARY_ref_QTRC(k,i,j,iq,ref_old) - ATMOS_BOUNDARY_QTRC(k,i,j,iq)
           end do
        end do
        end do
@@ -2147,25 +2147,25 @@ contains
        do j = 1, JA
        do i = 1, IA
        do k = 1, KA
-          inc_DENS(k,i,j) = ( ( ATMOS_BOUNDARY_ref_DENS(k,i,j,ref3) - ATMOS_BOUNDARY_ref_DENS(k,i,j,ref2) ) &
-                              * ( t1 + t2 ) + 2.0_RP * ATMOS_BOUNDARY_ref_DENS(k,i,j,ref2) &
-                            ) * dt * 0.5_RP - ATMOS_BOUNDARY_DENS(k,i,j)
-          inc_VELZ(k,i,j) = ( ( ATMOS_BOUNDARY_ref_VELZ(k,i,j,ref3) - ATMOS_BOUNDARY_ref_VELZ(k,i,j,ref2) ) &
-                              * ( t1 + t2 ) + 2.0_RP * ATMOS_BOUNDARY_ref_VELZ(k,i,j,ref2) &
-                            ) * dt * 0.5_RP - ATMOS_BOUNDARY_VELZ(k,i,j)
-          inc_VELX(k,i,j) = ( ( ATMOS_BOUNDARY_ref_VELX(k,i,j,ref3) - ATMOS_BOUNDARY_ref_VELX(k,i,j,ref2) ) &
-                              * ( t1 + t2 ) + 2.0_RP * ATMOS_BOUNDARY_ref_VELX(k,i,j,ref2) &
-                            ) * dt * 0.5_RP - ATMOS_BOUNDARY_VELX(k,i,j)
-          inc_VELY(k,i,j) = ( ( ATMOS_BOUNDARY_ref_VELY(k,i,j,ref3) - ATMOS_BOUNDARY_ref_VELY(k,i,j,ref2) ) &
-                              * ( t1 + t2 ) + 2.0_RP * ATMOS_BOUNDARY_ref_VELY(k,i,j,ref2) &
-                            ) * dt * 0.5_RP - ATMOS_BOUNDARY_VELY(k,i,j)
-          inc_POTT(k,i,j) = ( ( ATMOS_BOUNDARY_ref_POTT(k,i,j,ref3) - ATMOS_BOUNDARY_ref_POTT(k,i,j,ref2) ) &
-                              * ( t1 + t2 ) + 2.0_RP * ATMOS_BOUNDARY_ref_POTT(k,i,j,ref2) &
-                            ) * dt * 0.5_RP - ATMOS_BOUNDARY_POTT(k,i,j)
+          inc_DENS(k,i,j) = ( ATMOS_BOUNDARY_ref_DENS(k,i,j,ref_new) - ATMOS_BOUNDARY_ref_DENS(k,i,j,ref_now) ) &
+                            * ( t1 + t2 ) * 0.5_RP &
+                          + ATMOS_BOUNDARY_ref_DENS(k,i,j,ref_now) - ATMOS_BOUNDARY_DENS(k,i,j)
+          inc_VELZ(k,i,j) = ( ATMOS_BOUNDARY_ref_VELZ(k,i,j,ref_new) - ATMOS_BOUNDARY_ref_VELZ(k,i,j,ref_now) ) &
+                            * ( t1 + t2 ) * 0.5_RP &
+                          + ATMOS_BOUNDARY_ref_VELZ(k,i,j,ref_now) - ATMOS_BOUNDARY_VELZ(k,i,j)
+          inc_VELX(k,i,j) = ( ATMOS_BOUNDARY_ref_VELX(k,i,j,ref_new) - ATMOS_BOUNDARY_ref_VELX(k,i,j,ref_now) ) &
+                            * ( t1 + t2 ) * 0.5_RP &
+                          + ATMOS_BOUNDARY_ref_VELX(k,i,j,ref_now) - ATMOS_BOUNDARY_VELX(k,i,j)
+          inc_VELY(k,i,j) = ( ATMOS_BOUNDARY_ref_VELY(k,i,j,ref_new) - ATMOS_BOUNDARY_ref_VELY(k,i,j,ref_now) ) &
+                            * ( t1 + t2 ) * 0.5_RP &
+                          + ATMOS_BOUNDARY_ref_VELY(k,i,j,ref_now) - ATMOS_BOUNDARY_VELY(k,i,j)
+          inc_POTT(k,i,j) = ( ATMOS_BOUNDARY_ref_POTT(k,i,j,ref_new) - ATMOS_BOUNDARY_ref_POTT(k,i,j,ref_now) ) &
+                            * ( t1 + t2 ) * 0.5_RP &
+                          + ATMOS_BOUNDARY_ref_POTT(k,i,j,ref_now) - ATMOS_BOUNDARY_POTT(k,i,j)
           do iq = 1, BND_QA
-             inc_QTRC(k,i,j,iq) = ( ( ATMOS_BOUNDARY_ref_QTRC(k,i,j,iq,ref3) - ATMOS_BOUNDARY_ref_QTRC(k,i,j,iq,ref2) ) &
-                                    * ( t1 + t2 ) + 2.0_RP * ATMOS_BOUNDARY_ref_QTRC(k,i,j,iq,ref2) &
-                                  ) * dt * 0.5_RP - ATMOS_BOUNDARY_QTRC(k,i,j,iq)
+             inc_QTRC(k,i,j,iq) = ( ATMOS_BOUNDARY_ref_QTRC(k,i,j,iq,ref_new) - ATMOS_BOUNDARY_ref_QTRC(k,i,j,iq,ref_now) ) &
+                                  * ( t1 + t2 ) * 0.5_RP &
+                                + ATMOS_BOUNDARY_ref_QTRC(k,i,j,iq,ref_now) - ATMOS_BOUNDARY_QTRC(k,i,j,iq)
           end do
        end do
        end do
@@ -2173,6 +2173,61 @@ contains
 
     ! this step across half of the parent step
     else
+
+       dt = TIME_DTSEC / ATMOS_BOUNDARY_UPDATE_DT
+       t1 = dt * ( real_nstep + half_nstep - 1.0_RP )
+       t2 = dt * ( real_nstep - half_nstep )
+
+       do j = 1, JA
+       do i = 1, IA
+       do k = 1, KA
+          inc_DENS(k,i,j) = ( ATMOS_BOUNDARY_ref_DENS(k,i,j,ref_now) - ATMOS_BOUNDARY_ref_DENS(k,i,j,ref_old) ) &
+                            * ( t1 + 1.0_RP ) * 0.25_RP &
+                          + ( ATMOS_BOUNDARY_ref_DENS(k,i,j,ref_new) - ATMOS_BOUNDARY_ref_DENS(k,i,j,ref_now) ) &
+                            * t2 * 0.25_RP &
+                          + ATMOS_BOUNDARY_ref_DENS(k,i,j,ref_old) * 0.5_RP &
+                          + ATMOS_BOUNDARY_ref_DENS(k,i,j,ref_now) * 0.5_RP &
+                          - ATMOS_BOUNDARY_DENS(k,i,j) 
+          inc_VELZ(k,i,j) = ( ATMOS_BOUNDARY_ref_VELZ(k,i,j,ref_now) - ATMOS_BOUNDARY_ref_VELZ(k,i,j,ref_old) ) &
+                            * ( t1 + 1.0_RP ) * 0.25_RP &
+                          + ( ATMOS_BOUNDARY_ref_VELZ(k,i,j,ref_new) - ATMOS_BOUNDARY_ref_VELZ(k,i,j,ref_now) ) &
+                            * t2 * 0.25_RP &
+                          + ATMOS_BOUNDARY_ref_VELZ(k,i,j,ref_old) * 0.5_RP &
+                          + ATMOS_BOUNDARY_ref_VELZ(k,i,j,ref_now) * 0.5_RP &
+                          - ATMOS_BOUNDARY_VELZ(k,i,j)
+          inc_VELX(k,i,j) = ( ATMOS_BOUNDARY_ref_VELX(k,i,j,ref_now) - ATMOS_BOUNDARY_ref_VELX(k,i,j,ref_old) ) &
+                            * ( t1 + 1.0_RP ) * 0.25_RP &
+                          + ( ATMOS_BOUNDARY_ref_VELX(k,i,j,ref_new) - ATMOS_BOUNDARY_ref_VELX(k,i,j,ref_now) ) &
+                            * t2 * 0.25_RP &
+                          + ATMOS_BOUNDARY_ref_VELX(k,i,j,ref_old) * 0.5_RP &
+                          + ATMOS_BOUNDARY_ref_VELX(k,i,j,ref_now) * 0.5_RP &
+                          - ATMOS_BOUNDARY_VELX(k,i,j)
+          inc_VELY(k,i,j) = ( ATMOS_BOUNDARY_ref_VELY(k,i,j,ref_now) - ATMOS_BOUNDARY_ref_VELY(k,i,j,ref_old) ) &
+                            * ( t1 + 1.0_RP ) * 0.25_RP &
+                          + ( ATMOS_BOUNDARY_ref_VELY(k,i,j,ref_new) - ATMOS_BOUNDARY_ref_VELY(k,i,j,ref_now) ) &
+                            * t2 * 0.25_RP &
+                          + ATMOS_BOUNDARY_ref_VELY(k,i,j,ref_old) * 0.5_RP &
+                          + ATMOS_BOUNDARY_ref_VELY(k,i,j,ref_now) * 0.5_RP &
+                          - ATMOS_BOUNDARY_VELY(k,i,j)
+          inc_POTT(k,i,j) = ( ATMOS_BOUNDARY_ref_POTT(k,i,j,ref_now) - ATMOS_BOUNDARY_ref_POTT(k,i,j,ref_old) ) &
+                            * ( t1 + 1.0_RP ) * 0.25_RP &
+                          + ( ATMOS_BOUNDARY_ref_POTT(k,i,j,ref_new) - ATMOS_BOUNDARY_ref_POTT(k,i,j,ref_now) ) &
+                            * t2 * 0.25_RP &
+                          + ATMOS_BOUNDARY_ref_POTT(k,i,j,ref_old) * 0.5_RP &
+                          + ATMOS_BOUNDARY_ref_POTT(k,i,j,ref_now) * 0.5_RP &
+                          - ATMOS_BOUNDARY_POTT(k,i,j)
+          do iq = 1, BND_QA
+             inc_QTRC(k,i,j,iq) = ( ATMOS_BOUNDARY_ref_QTRC(k,i,j,iq,ref_now) - ATMOS_BOUNDARY_ref_QTRC(k,i,j,iq,ref_old) ) &
+                                  * ( t1 + 1.0_RP ) * 0.25_RP &
+                                + ( ATMOS_BOUNDARY_ref_QTRC(k,i,j,iq,ref_new) - ATMOS_BOUNDARY_ref_QTRC(k,i,j,iq,ref_now) ) &
+                                  * t2 * 0.25_RP &
+                                + ATMOS_BOUNDARY_ref_QTRC(k,i,j,iq,ref_old) * 0.5_RP &
+                                + ATMOS_BOUNDARY_ref_QTRC(k,i,j,iq,ref_now) * 0.5_RP &
+                                - ATMOS_BOUNDARY_QTRC(k,i,j,iq)
+          end do
+       end do
+       end do
+       end do
 
     end if
 
