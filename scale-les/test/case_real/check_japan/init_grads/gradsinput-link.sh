@@ -18,7 +18,7 @@ dt=21600
 start_year='2010'
 start_month='05'
 start_day='01'
-start_hour='06'
+start_hour='00'
 start_min='00'
 start_sec='00'
 #
