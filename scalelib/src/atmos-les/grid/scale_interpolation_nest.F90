@@ -1165,6 +1165,8 @@ contains
       lndgrd   ) ! (in)
     use scale_const, only: &
        eps => CONST_EPS
+    use scale_process, only: &
+       PRC_MPIstop
     implicit none
 
     real(RP), intent(out) :: vfact(:,:,:,:,:)   ! vertical interp factor
@@ -1184,6 +1186,7 @@ contains
     real(RP) :: distance
     real(RP) :: denom
     real(RP) :: dist(2)
+    logical  :: dflag                           ! flag: data found or not
     integer  :: ii, jj
     integer  :: k, kk, kks, kke
     integer  :: idx
@@ -1199,30 +1202,82 @@ contains
        ii = igrd(idx)
        jj = jgrd(idx)
 
+       !do k = kks, kke
+       !   dist(1) = large_number_2
+       !   dist(2) = large_number_1
+       !   kgrd(k,iloc,jloc,idx,:) = -1
+       !
+       !   do kk = 1, inKA
+       !      distance = abs( myhgt(k) - inhgt(kk,ii,jj) )
+       !      if ( distance <= dist(1) ) then
+       !         dist(2) = dist(1);     kgrd(k,iloc,jloc,idx,2) = kgrd(k,iloc,jloc,idx,1)
+       !         dist(1) = distance;    kgrd(k,iloc,jloc,idx,1) = kk
+       !      elseif ( dist(1) < distance .and. distance <= dist(2) ) then
+       !         dist(2) = distance;    kgrd(k,iloc,jloc,idx,2) = kk
+       !      endif
+       !   enddo
+       !
+       !   if ( abs(dist(1)) < eps ) then
+       !      vfact(k,iloc,jloc,idx,1) = 1.0_RP
+       !      vfact(k,iloc,jloc,idx,2) = 0.0_RP
+       !   else
+       !      denom = 1.0_RP / ( (1.0_RP/dist(1)) + (1.0_RP/dist(2)) )
+       !      vfact(k,iloc,jloc,idx,1) = ( 1.0_RP/dist(1) ) * denom
+       !      vfact(k,iloc,jloc,idx,2) = ( 1.0_RP/dist(2) ) * denom
+       !   endif
+       !enddo
+
        do k = kks, kke
           dist(1) = large_number_2
           dist(2) = large_number_1
           kgrd(k,iloc,jloc,idx,:) = -1
+          dflag = .false.
 
-          do kk = 1, inKA
-             distance = abs( myhgt(k) - inhgt(kk,ii,jj) )
-             if ( distance <= dist(1) ) then
-                dist(2) = dist(1);     kgrd(k,iloc,jloc,idx,2) = kgrd(k,iloc,jloc,idx,1)
-                dist(1) = distance;    kgrd(k,iloc,jloc,idx,1) = kk
-             elseif ( dist(1) < distance .and. distance <= dist(2) ) then
-                dist(2) = distance;    kgrd(k,iloc,jloc,idx,2) = kk
-             endif
-          enddo
-
-          if ( abs(dist(1)) < eps ) then
+          if( myhgt(k) < inhgt(1,ii,jj) )then ! copy
+             kgrd(k,iloc,jloc,idx,:)  = 1
              vfact(k,iloc,jloc,idx,1) = 1.0_RP
              vfact(k,iloc,jloc,idx,2) = 0.0_RP
+             dflag = .true.
+          else if( abs(inhgt(inKA,ii,jj)-myhgt(k))<eps )then
+             kgrd(k,iloc,jloc,idx,:)  = inKA
+             vfact(k,iloc,jloc,idx,1) = 1.0_RP
+             vfact(k,iloc,jloc,idx,2) = 0.0_RP
+             dflag = .true.
+          else if( inhgt(inKA,ii,jj) < myhgt(k) )then
+             write(*,*) 'xxx internal error [INTRPNEST_search_vert_offline]'
+             write(*,*) 'xxx data level is beyond parent data'
+             write(*,*) 'in',ii,jj,inKA,inhgt(inKA,ii,jj),'my',k,myhgt(k)
+             call PRC_MPIstop
           else
-             denom = 1.0_RP / ( (1.0_RP/dist(1)) + (1.0_RP/dist(2)) )
-             vfact(k,iloc,jloc,idx,1) = ( 1.0_RP/dist(1) ) * denom
-             vfact(k,iloc,jloc,idx,2) = ( 1.0_RP/dist(2) ) * denom
+
+             do kk = 1, inKA-1
+                if( (inhgt(kk,ii,jj)<=myhgt(k)).and.(myhgt(k)<inhgt(kk+1,ii,jj)) )then
+                   kgrd(k,iloc,jloc,idx,1) = kk
+                   kgrd(k,iloc,jloc,idx,2) = kk+1
+                   dist(1) = abs( myhgt(k) - inhgt(kk,ii,jj)   )
+                   dist(2) = abs( myhgt(k) - inhgt(kk+1,ii,jj) )
+                   dflag = .true.
+                   if ( abs(dist(1))<eps )then
+                      vfact(k,iloc,jloc,idx,1) = 1.0_RP
+                      vfact(k,iloc,jloc,idx,2) = 0.0_RP
+                   else
+                      denom = 1.0_RP / ( (1.0_RP/dist(1)) + (1.0_RP/dist(2)) )
+                      vfact(k,iloc,jloc,idx,1) = ( 1.0_RP/dist(1) ) * denom
+                      vfact(k,iloc,jloc,idx,2) = ( 1.0_RP/dist(2) ) * denom
+                   endif
+                   exit
+                endif
+             enddo
+          endif
+
+          if( .not. dflag )then
+             write(*,*) 'xxx internal error [INTRPNEST_search_vert_offline]'
+             write(*,*) 'xxx data for interpolation was not found.'
+             write(*,*) 'xxx iloc=',iloc,' jloc=',jloc,' k=',k,' idx=',idx
+             call PRC_MPIstop
           endif
        enddo
+
     enddo
 
     return
