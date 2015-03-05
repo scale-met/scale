@@ -1077,10 +1077,11 @@ contains
     real(RP) :: distance
     real(RP) :: denom
     real(RP) :: dist(2)
+    logical  :: dflag                           ! flag: data found or not
     integer  :: ii, jj, idx
     integer  :: k, kk
-    integer  :: KS_local
-    integer  :: ncopy
+    integer  :: inKS, inKE
+    integer  :: ncopy(itp_nh)
     logical  :: copy
     !---------------------------------------------------------------------------
 
@@ -1090,47 +1091,98 @@ contains
        call PRC_MPIstop
     endif
 
-    KS_local = 1 + KHALO
+    inKS = 1 + KHALO
+    inKE = inKA - KHALO
+
+    ncopy = 0
     do idx = 1, itp_nh
        ii = igrd(idx)
        jj = jgrd(idx)
-       ncopy = 0
+
+
+       !do k = ks, ke
+       !   dist(1) = large_number_2
+       !   dist(2) = large_number_1
+       !   kgrd(k,iloc,jloc,idx,:) = -1
+       !   copy = .false.
+       !
+       !   do kk = 1+KHALO, inKA-KHALO
+       !      distance = abs( myhgt(k) - inhgt(kk,ii,jj) )
+       !      if ( distance <= dist(1) ) then
+       !         dist(2) = dist(1);     kgrd(k,iloc,jloc,idx,2) = kgrd(k,iloc,jloc,idx,1)
+       !         dist(1) = distance;    kgrd(k,iloc,jloc,idx,1) = kk
+       !      elseif ( dist(1) < distance .and. distance <= dist(2) ) then
+       !         dist(2) = distance;    kgrd(k,iloc,jloc,idx,2) = kk
+       !      endif
+       !   enddo
+       !
+       !   if( inhgt(KS_local,ii,jj) > myhgt(k) ) then
+       !      copy = .true.
+       !   endif
+       !
+       !   if( copy ) then
+       !      kgrd(k,iloc,jloc,idx,1)  = KS_local
+       !      kgrd(k,iloc,jloc,idx,2)  = KS_local + 1 ! not used
+       !      vfact(k,iloc,jloc,idx,1) = 1.0_RP
+       !      vfact(k,iloc,jloc,idx,2) = 0.0_RP
+       !      ncopy = ncopy + 1
+       !   elseif( (.NOT. copy) .and. abs(dist(1)) < eps ) then
+       !      vfact(k,iloc,jloc,idx,1) = 1.0_RP
+       !      vfact(k,iloc,jloc,idx,2) = 0.0_RP
+       !   elseif( .NOT. copy ) then
+       !      denom = 1.0_RP / ( (1.0_RP/dist(1)) + (1.0_RP/dist(2)) )
+       !      vfact(k,iloc,jloc,idx,1) = ( 1.0_RP/dist(1) ) * denom
+       !      vfact(k,iloc,jloc,idx,2) = ( 1.0_RP/dist(2) ) * denom
+       !   else
+       !      write(*,*) 'xxx internal error [interporation: nest/interp]'
+       !      call PRC_MPIstop
+       !   endif
+       !enddo
 
        do k = ks, ke
           dist(1) = large_number_2
           dist(2) = large_number_1
           kgrd(k,iloc,jloc,idx,:) = -1
-          copy = .false.
+          copy    = .false.
+          dflag   = .false.
 
-          do kk = 1+KHALO, inKA-KHALO
-             distance = abs( myhgt(k) - inhgt(kk,ii,jj) )
-             if ( distance <= dist(1) ) then
-                dist(2) = dist(1);     kgrd(k,iloc,jloc,idx,2) = kgrd(k,iloc,jloc,idx,1)
-                dist(1) = distance;    kgrd(k,iloc,jloc,idx,1) = kk
-             elseif ( dist(1) < distance .and. distance <= dist(2) ) then
-                dist(2) = distance;    kgrd(k,iloc,jloc,idx,2) = kk
-             endif
-          enddo
-
-          if( inhgt(KS_local,ii,jj) > myhgt(k) ) then
-             copy = .true.
+          if( myhgt(k) < inhgt(inKS,ii,jj) ) then
+             copy       = .true.
+             ncopy(idx) = ncopy(idx) + 1
+             kgrd(k,iloc,jloc,idx,:)  = inKS
+             vfact(k,iloc,jloc,idx,1) = 1.0_RP
+             vfact(k,iloc,jloc,idx,2) = 0.0_RP
+             dflag = .true.
+          else if( abs(myhgt(k)-inhgt(inKE,ii,jj))<eps ) then
+             kgrd(k,iloc,jloc,idx,:)  = inKE
+             vfact(k,iloc,jloc,idx,1) = 1.0_RP
+             vfact(k,iloc,jloc,idx,2) = 0.0_RP
+             dflag = .true.
+          else
+             do kk = inKS, inKE
+                if( (inhgt(kk,ii,jj)<=myhgt(k)) .and. (myhgt(k)<inhgt(kk+1,ii,jj)) )then
+                   kgrd(k,iloc,jloc,idx,1) = kk
+                   kgrd(k,iloc,jloc,idx,2) = kk+1
+                   dflag = .true.
+                   if( abs(dist(1)) < eps ) then
+                      vfact(k,iloc,jloc,idx,1) = 1.0_RP
+                      vfact(k,iloc,jloc,idx,2) = 0.0_RP
+                   else
+                      dist(1) = abs( myhgt(k) - inhgt(kk,ii,jj) )
+                      dist(2) = abs( myhgt(k) - inhgt(kk+1,ii,jj) )
+                      denom = 1.0_RP / ( (1.0_RP/dist(1)) + (1.0_RP/dist(2)) )
+                      vfact(k,iloc,jloc,idx,1) = ( 1.0_RP/dist(1) ) * denom
+                      vfact(k,iloc,jloc,idx,2) = ( 1.0_RP/dist(2) ) * denom
+                   endif
+                   exit
+                endif
+             enddo
           endif
 
-          if( copy ) then
-             kgrd(k,iloc,jloc,idx,1)  = KS_local
-             kgrd(k,iloc,jloc,idx,2)  = KS_local + 1 ! not used
-             vfact(k,iloc,jloc,idx,1) = 1.0_RP
-             vfact(k,iloc,jloc,idx,2) = 0.0_RP
-             ncopy = ncopy + 1
-          elseif( (.NOT. copy) .and. abs(dist(1)) < eps ) then
-             vfact(k,iloc,jloc,idx,1) = 1.0_RP
-             vfact(k,iloc,jloc,idx,2) = 0.0_RP
-          elseif( .NOT. copy ) then
-             denom = 1.0_RP / ( (1.0_RP/dist(1)) + (1.0_RP/dist(2)) )
-             vfact(k,iloc,jloc,idx,1) = ( 1.0_RP/dist(1) ) * denom
-             vfact(k,iloc,jloc,idx,2) = ( 1.0_RP/dist(2) ) * denom
-          else
-             write(*,*) 'xxx internal error [interporation: nest/interp]'
+          if(.not. dflag)then
+             write(*,*) 'xxx internal error [INTRPNEST_search_vert_online]'
+             write(*,*) 'xxx data for interpolation was not found.'
+             write(*,*) 'xxx iloc=',iloc,' jloc=',jloc,' k=',k,' idx=',idx
              call PRC_MPIstop
           endif
        enddo
