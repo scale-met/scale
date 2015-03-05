@@ -4296,7 +4296,8 @@ contains
   subroutine ATMOS_PHY_MP_sn14_EffectiveRadius( &
        Re,    &
        QTRC0, &
-       DENS0  )
+       DENS0, &
+       TEMP0  )
     use scale_grid_index
     use scale_tracer, only: &
        QAD => QA, &
@@ -4306,6 +4307,7 @@ contains
     real(RP), intent(out) :: Re   (KA,IA,JA,MP_QAD) ! effective radius          [cm]
     real(RP), intent(in)  :: QTRC0(KA,IA,JA,QAD)    ! tracer mass concentration [kg/kg]
     real(RP), intent(in)  :: DENS0(KA,IA,JA)        ! density                   [kg/m3]
+    real(RP), intent(in)  :: TEMP0(KA,IA,JA)        ! temperature               [K]
 
     ! mass concentration[kg/m3] and mean particle mass[kg]
     real(RP) :: xc(KA,IA,JA)

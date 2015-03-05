@@ -462,7 +462,8 @@ contains
 
     call MP_EffectiveRadius( MP_Re(:,:,:,:), & ! [OUT]
                              QTRC (:,:,:,:), & ! [IN]
-                             DENS (:,:,:)    ) ! [IN]
+                             DENS (:,:,:)  , & ! [IN]
+                             TEMP (:,:,:)    ) ! [IN]
 
     call AE_EffectiveRadius( AE_Re(:,:,:,:), & ! [OUT]
                              QTRC (:,:,:,:), & ! [IN]
