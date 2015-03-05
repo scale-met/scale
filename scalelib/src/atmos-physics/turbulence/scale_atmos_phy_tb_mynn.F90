@@ -166,7 +166,7 @@ contains
        tke,                                         & ! (inout)
        Nu, Ri, Pr,                                  & ! (out) diagnostic variables
        MOMZ, MOMX, MOMY, RHOT, DENS, QTRC,          & ! (in)
-       SFLX_MW, SFLX_MU, SFLX_MV, SFLX_SH,          & ! (in)
+       SFLX_MW, SFLX_MU, SFLX_MV, SFLX_SH, SFLX_QV, & ! (in)
        GSQRT, J13G, J23G, J33G, MAPF, dt            ) ! (in)
     use scale_precision
     use scale_grid_index
@@ -231,6 +231,7 @@ contains
     real(RP), intent(in)  :: SFLX_MU(IA,JA)
     real(RP), intent(in)  :: SFLX_MV(IA,JA)
     real(RP), intent(in)  :: SFLX_SH(IA,JA)
+    real(RP), intent(in)  :: SFLX_QV(IA,JA)
 
     real(RP), intent(in)  :: GSQRT   (KA,IA,JA,7) !< vertical metrics {G}^1/2
     real(RP), intent(in)  :: J13G    (KA,IA,JA,7) !< (1,3) element of Jacobian matrix
@@ -608,7 +609,8 @@ contains
           c(KE_PBL,i,j) = ap * RCDZ(KE_PBL) / ( DENS(KE_PBL,i,j) * GSQRT(KE_PBL,i,j,I_XYZ) )
           b(KE_PBL,i,j) = - c(KE_PBL,i,j) + 1.0_RP
 
-          do k = KS, KE_PBL
+          d(KS) = U(KS,i,j) + dt * SFLX_MU(i,j) * RCDZ(KS) / ( DENS(KS,i,j) * GSQRT(KS,i,j,I_XYZ) )
+          do k = KS+1, KE_PBL
              d(k) = U(k,i,j)
           end do
           call diffusion_solver( &
@@ -660,7 +662,8 @@ contains
        ! integration V
        do j = JJS, JJE
        do i = IIS, IIE
-          do k = KS, KE_PBL
+          d(KS) = V(KS,i,j) + dt * SFLX_MV(i,j) * RCDZ(KS) / ( DENS(KS,i,j) * GSQRT(KS,i,j,I_XYZ) )
+          do k = KS+1, KE_PBL
              d(k) = V(k,i,j)
           end do
           call diffusion_solver( &
@@ -732,7 +735,8 @@ contains
        ! integration POTT
        do j = JJS, JJE
        do i = IIS, IIE
-          do k = KS, KE_PBL
+          d(KS) = POTT(KS,i,j) + dt * SFLX_SH(i,j) * RCDZ(KS) / ( CP * DENS(KS,i,j) * GSQRT(KS,i,j,I_XYZ) )
+          do k = KS+1, KE_PBL
              d(k) = POTT(k,i,j)
           end do
           call diffusion_solver( &
@@ -772,6 +776,9 @@ contains
              do k = KS, KE_PBL
                 d(k) = QTRC(k,i,j,iq)
              end do
+             if ( iq == I_QV ) then
+                d(KS) = d(KS) + dt * SFLX_QV(i,j) * RCDZ(KS) / ( DENS(KS,i,j) * GSQRT(KS,i,j,I_XYZ) )
+             end if
              call diffusion_solver( &
                   phiN(:,i,j),                     & ! (out)
                   a(:,i,j), b(:,i,j), c(:,i,j), d, & ! (in)

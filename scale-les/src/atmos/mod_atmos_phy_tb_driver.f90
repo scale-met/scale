@@ -162,7 +162,8 @@ contains
        SFLX_MW => ATMOS_PHY_SF_SFLX_MW, &
        SFLX_MU => ATMOS_PHY_SF_SFLX_MU, &
        SFLX_MV => ATMOS_PHY_SF_SFLX_MV, &
-       SFLX_SH => ATMOS_PHY_SF_SFLX_SH
+       SFLX_SH => ATMOS_PHY_SF_SFLX_SH, &
+       SFLX_Q  => ATMOS_PHY_SF_SFLX_QTRC
     implicit none
 
     logical, intent(in) :: update_flag
@@ -206,6 +207,7 @@ contains
                           SFLX_MU,   & ! [IN]
                           SFLX_MV,   & ! [IN]
                           SFLX_SH,   & ! [IN]
+                          SFLX_Q(:,:,I_QV), & ! [IN]
                           GSQRT,     & ! [IN]
                           J13G,      & ! [IN]
                           J23G,      & ! [IN]
