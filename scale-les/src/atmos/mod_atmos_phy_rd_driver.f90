@@ -217,6 +217,7 @@ contains
 
        ! apply radiative flux convergence -> heating rate
        call RD_heating( flux_rad (:,:,:,:,:), & ! [IN]
+                        DENS     (:,:,:),     & ! [IN]
                         RHOT     (:,:,:),     & ! [IN]
                         QTRC     (:,:,:,:),   & ! [IN]
                         REAL_FZ  (:,:,:),     & ! [IN]
