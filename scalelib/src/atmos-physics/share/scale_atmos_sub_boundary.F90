@@ -713,8 +713,8 @@ contains
        endif
 
        if ( ATMOS_BOUNDARY_LINEAR_H ) then
-          alpha_y1 = coef_x * ee1
-          alpha_y2 = coef_x * ee2
+          alpha_y1 = coef_y * ee1
+          alpha_y2 = coef_y * ee2
        else
           alpha_y1 = coef_y * ee1 * exp( -(1.0_RP-ee1) * ATMOS_BOUNDARY_EXP_H )
           alpha_y2 = coef_y * ee2 * exp( -(1.0_RP-ee2) * ATMOS_BOUNDARY_EXP_H )
