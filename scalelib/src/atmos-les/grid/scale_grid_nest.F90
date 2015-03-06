@@ -261,6 +261,7 @@ module scale_grid_nest
   integer,  private, allocatable :: kgrd (:,:,:,:,:,:)       ! interpolation target grids in z-axis
   integer,  private, allocatable :: igrd (:,:,:,:)           ! interpolation target grids in x-axis
   integer,  private, allocatable :: jgrd (:,:,:,:)           ! interpolation target grids in y-axis
+  integer,  private, allocatable :: ncopy(:,:,:,:)           ! number of daughter's layers below parent lowest layer
 
   integer(8), private :: nwait_p, nwait_d, nrecv, nsend
   !-----------------------------------------------------------------------------
@@ -641,6 +642,7 @@ contains
             allocate( igrd (            DAUGHTER_IA(HANDLING_NUM),DAUGHTER_JA(HANDLING_NUM),itp_nh,       itp_ng) )
             allocate( jgrd (            DAUGHTER_IA(HANDLING_NUM),DAUGHTER_JA(HANDLING_NUM),itp_nh,       itp_ng) )
             allocate( kgrd (DAUGHTER_KA(HANDLING_NUM),DAUGHTER_IA(HANDLING_NUM),DAUGHTER_JA(HANDLING_NUM),itp_nh,itp_nv,itp_ng) )
+            allocate( ncopy(            DAUGHTER_IA(HANDLING_NUM),DAUGHTER_JA(HANDLING_NUM),itp_nh,       itp_ng) )
 
             call NEST_COMM_setup_nestdown( HANDLING_NUM )
 
@@ -651,6 +653,7 @@ contains
                                             kgrd           (:,:,:,:,:,I_SCLR), & ! [OUT]
                                             igrd           (:,:,:,I_SCLR),     & ! [OUT]
                                             jgrd           (:,:,:,I_SCLR),     & ! [OUT]
+                                            ncopy          (:,:,:,I_SCLR),     & ! [OUT]
                                             MY_CZ          (:,:,:),            & ! [IN]
                                             MY_LAT         (:,:),              & ! [IN]
                                             MY_LON         (:,:),              & ! [IN]
@@ -672,6 +675,7 @@ contains
                                             kgrd           (:,:,:,:,:,I_ZSTG), & ! [OUT]
                                             igrd           (:,:,:,I_ZSTG),     & ! [OUT]
                                             jgrd           (:,:,:,I_ZSTG),     & ! [OUT]
+                                            ncopy          (:,:,:,I_ZSTG),     & ! [OUT]
                                             MY_FZ          (:,:,:),            & ! [IN]
                                             MY_LAT         (:,:),              & ! [IN]
                                             MY_LON         (:,:),              & ! [IN]
@@ -693,6 +697,7 @@ contains
                                             kgrd           (:,:,:,:,:,I_XSTG), & ! [OUT]
                                             igrd           (:,:,:,I_XSTG),     & ! [OUT]
                                             jgrd           (:,:,:,I_XSTG),     & ! [OUT]
+                                            ncopy          (:,:,:,I_XSTG),     & ! [OUT]
                                             MY_CZ          (:,:,:),            & ! [IN]
                                             MY_LATX        (:,:),              & ! [IN]
                                             MY_LONX        (:,:),              & ! [IN]
@@ -713,6 +718,7 @@ contains
                                             kgrd           (:,:,:,:,:,I_YSTG), & ! [OUT]
                                             igrd           (:,:,:,I_YSTG),     & ! [OUT]
                                             jgrd           (:,:,:,I_YSTG),     & ! [OUT]
+                                            ncopy          (:,:,:,I_YSTG),     & ! [OUT]
                                             MY_CZ          (:,:,:),            & ! [IN]
                                             MY_LATY        (:,:),              & ! [IN]
                                             MY_LONY        (:,:),              & ! [IN]
@@ -2099,7 +2105,7 @@ contains
        rq_ctl_d = rq
 
        call PROF_rapstart('NESTCOM interp')
-       dvar(:,:,:) = 0.0_RP 
+       dvar(:,:,:) = 0.0_RP
 
        if ( no_zstag ) then
           call INTRPNEST_interp_3d( dvar,                 &

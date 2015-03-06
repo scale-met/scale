@@ -838,6 +838,7 @@ contains
     integer,  allocatable :: igrd (:,:,:)
     integer,  allocatable :: jgrd (:,:,:)
     integer,  allocatable :: kgrd (:,:,:,:,:)
+    integer,  allocatable :: ncopy(:,:,:)
 
     real(RP) :: velz  (KA,IA,JA,sstep:estep)
     real(RP) :: velx  (KA,IA,JA,sstep:estep)
@@ -882,6 +883,7 @@ contains
     allocate( igrd (     IA, JA,itp_nh         ) )
     allocate( jgrd (     IA, JA,itp_nh         ) )
     allocate( kgrd ( KA, IA, JA,itp_nh, itp_nv ) )
+    allocate( ncopy(     IA, JA,itp_nh ) )
 
     allocate( read2D( PARENT_IMAX(handle), PARENT_JMAX(handle)                      ) )
     allocate( read3D( PARENT_IMAX(handle), PARENT_JMAX(handle), PARENT_KMAX(handle) ) )
@@ -1044,6 +1046,7 @@ contains
                                      kgrd(:,:,:,:,:),       & ! [OUT]
                                      igrd(:,:,:),           & ! [OUT]
                                      jgrd(:,:,:),           & ! [OUT]
+                                     ncopy(:,:,:),          & ! [OUT]
                                      FZ(:,:,:),             & ! [IN]
                                      LAT(:,:),              & ! [IN]
                                      LON(:,:),              & ! [IN]
@@ -1088,6 +1091,7 @@ contains
                                      kgrd(:,:,:,:,:),       & ! [OUT]
                                      igrd(:,:,:),           & ! [OUT]
                                      jgrd(:,:,:),           & ! [OUT]
+                                     ncopy(:,:,:),          & ! [OUT]
                                      CZ(:,:,:),             & ! [IN]
                                      LAT(:,:),              & ! [IN]
                                      LONX(:,:),             & ! [IN]
@@ -1149,6 +1153,7 @@ contains
                                     kgrd    (:,:,:,:,:),   & ! [OUT]
                                     igrd    (:,:,:),       & ! [OUT]
                                     jgrd    (:,:,:),       & ! [OUT]
+                                    ncopy   (:,:,:),       & ! [OUT]
                                     CZ      (:,:,:),       & ! [IN]
                                     LATY    (:,:),         & ! [IN]
                                     LON     (:,:),         & ! [IN]
@@ -1269,6 +1274,7 @@ contains
                                     kgrd    (:,:,:,:,:),   & ! [OUT]
                                     igrd    (:,:,:),       & ! [OUT]
                                     jgrd    (:,:,:),       & ! [OUT]
+                                    ncopy   (:,:,:),       & ! [OUT]
                                     CZ      (:,:,:),       & ! [IN]
                                     LAT     (:,:),         & ! [IN]
                                     LON     (:,:),         & ! [IN]
@@ -1607,6 +1613,7 @@ contains
     integer,  allocatable :: igrd (:,:,:)
     integer,  allocatable :: jgrd (:,:,:)
     integer,  allocatable :: kgrd (:,:,:,:,:)
+    integer,  allocatable :: ncopy(:,:,:)
 
     real(RP) :: velz  (KA,IA,JA)
     real(RP) :: velx  (KA,IA,JA)
@@ -1651,6 +1658,7 @@ contains
     allocate( igrd (     IA, JA,itp_nh         ) )
     allocate( jgrd (     IA, JA,itp_nh         ) )
     allocate( kgrd ( KA, IA, JA,itp_nh, itp_nv ) )
+    allocate( ncopy(     IA, JA,itp_nh ) )
 
     allocate( read_xy  (        dims(2),dims(3),ts:te   ) )
     allocate( read_uy  (        dims(5),dims(3),ts:te   ) )
@@ -1874,6 +1882,7 @@ contains
                                        kgrd    (:,:,:,:,:),      & ! [OUT]
                                        igrd    (:,:,:),          & ! [OUT]
                                        jgrd    (:,:,:),          & ! [OUT]
+                                       ncopy   (:,:,:),          & ! [OUT]
                                        FZ      (:,:,:),          & ! [IN]
                                        LAT     (:,:),            & ! [IN]
                                        LON     (:,:),            & ! [IN]
@@ -1898,6 +1907,7 @@ contains
                                        kgrd    (:,:,:,:,:),      & ! [OUT]
                                        igrd    (:,:,:),          & ! [OUT]
                                        jgrd    (:,:,:),          & ! [OUT]
+                                       ncopy   (:,:,:),          & ! [OUT]
                                        CZ      (:,:,:),          & ! [IN]
                                        LAT     (:,:),            & ! [IN]
                                        LON     (:,:),            & ! [IN]
@@ -1923,6 +1933,7 @@ contains
                                        kgrd    (:,:,:,:,:),      & ! [OUT]
                                        igrd    (:,:,:),          & ! [OUT]
                                        jgrd    (:,:,:),          & ! [OUT]
+                                       ncopy   (:,:,:),          & ! [OUT]
                                        CZ      (:,:,:),          & ! [IN]
                                        LAT     (:,:),            & ! [IN]
                                        LON     (:,:),            & ! [IN]
@@ -2008,6 +2019,7 @@ contains
                                        kgrd    (:,:,:,:,:),      & ! [OUT]
                                        igrd    (:,:,:),          & ! [OUT]
                                        jgrd    (:,:,:),          & ! [OUT]
+                                       ncopy   (:,:,:),          & ! [OUT]
                                        CZ      (:,:,:),          & ! [IN]
                                        LAT     (:,:),            & ! [IN]
                                        LON     (:,:),            & ! [IN]
@@ -2271,6 +2283,7 @@ contains
     integer,  allocatable :: igrd (:,:,:)
     integer,  allocatable :: jgrd (:,:,:)
     integer,  allocatable :: kgrd (:,:,:,:,:)
+    integer,  allocatable :: ncopy(:,:,:)
 
     real(RP) :: velz  (KA,IA,JA,sstep:estep)
     real(RP) :: velx  (KA,IA,JA,sstep:estep)
@@ -2332,6 +2345,7 @@ contains
     allocate( igrd (     IA, JA,itp_nh         ) )
     allocate( jgrd (     IA, JA,itp_nh         ) )
     allocate( kgrd ( KA, IA, JA,itp_nh, itp_nv ) )
+    allocate( ncopy(     IA, JA,itp_nh ) )
 
     allocate( lon_org(           dims(1), dims(2), fstep ) )
     allocate( lat_org(           dims(1), dims(2), fstep ) )
@@ -2389,6 +2403,7 @@ contains
                                     kgrd   (:,:,:,:,:),       & ! [OUT]
                                     igrd   (:,:,:),           & ! [OUT]
                                     jgrd   (:,:,:),           & ! [OUT]
+                                    ncopy  (:,:,:),           & ! [OUT]
                                     CZ     (:,:,:),           & ! [IN]
                                     LAT    (:,:),             & ! [IN]
                                     LON    (:,:),             & ! [IN]
@@ -2678,6 +2693,7 @@ contains
                                     kgrd   (:,:,:,:,:),       & ! [OUT]
                                     igrd   (:,:,:),           & ! [OUT]
                                     jgrd   (:,:,:),           & ! [OUT]
+                                    ncopy  (:,:,:),           & ! [OUT]
                                     CZ     (:,:,:),           & ! [IN]
                                     LAT    (:,:),             & ! [IN]
                                     LON    (:,:),             & ! [IN]
@@ -2805,6 +2821,7 @@ contains
                                     kgrd   (:,:,:,:,:),       & ! [OUT]
                                     igrd   (:,:,:),           & ! [OUT]
                                     jgrd   (:,:,:),           & ! [OUT]
+                                    ncopy  (:,:,:),           & ! [OUT]
                                     CZ     (:,:,:),           & ! [IN]
                                     LAT    (:,:),             & ! [IN]
                                     LON    (:,:),             & ! [IN]
@@ -3147,6 +3164,7 @@ contains
     integer,  allocatable :: igrd (:,:,:)
     integer,  allocatable :: jgrd (:,:,:)
     integer,  allocatable :: kgrd (:,:,:,:,:)
+    integer,  allocatable :: ncopy(:,:,:)
 
     real(RP) :: qc(KA,IA,JA)
     real(RP) :: qc_sfc(1,IA,JA)
@@ -3183,6 +3201,7 @@ contains
     allocate( igrd (     IA, JA,itp_nh         ) )
     allocate( jgrd (     IA, JA,itp_nh         ) )
     allocate( kgrd ( KA, IA, JA,itp_nh, itp_nv ) )
+    allocate( ncopy(     IA, JA,itp_nh ) )
 
     allocate( lon_org   (          dims(1), dims(2), fstep ) )
     allocate( lat_org   (          dims(1), dims(2), fstep ) )
@@ -3703,6 +3722,7 @@ contains
                                        kgrd   (:,:,:,:,:),       & ! [OUT]
                                        igrd   (:,:,:),           & ! [OUT]
                                        jgrd   (:,:,:),           & ! [OUT]
+                                       ncopy  (:,:,:),           & ! [OUT]
                                        CZ     (:,:,:),           & ! [IN]
                                        LAT    (:,:),             & ! [IN]
                                        LON    (:,:),             & ! [IN]
@@ -4052,10 +4072,10 @@ contains
 
     real(RP), allocatable :: hfact(:,:,:)
     real(RP), allocatable :: vfact(:,:,:,:,:)
-
-    integer, allocatable :: igrd(:,:,:)
-    integer, allocatable :: jgrd(:,:,:)
-    integer, allocatable :: kgrd(:,:,:,:,:)
+    integer,  allocatable :: igrd (:,:,:)
+    integer,  allocatable :: jgrd (:,:,:)
+    integer,  allocatable :: kgrd (:,:,:,:,:)
+    integer,  allocatable :: ncopy(:,:,:)
 
     real(RP) :: lcz_3D(LKMAX,IA,JA)
 
@@ -4107,6 +4127,7 @@ contains
     allocate( igrd (        IA, JA, itp_nh         ) )
     allocate( jgrd (        IA, JA, itp_nh         ) )
     allocate( kgrd ( LKMAX, IA, JA, itp_nh, itp_nv ) )
+    allocate( ncopy(        IA, JA, itp_nh ) )
 
     if( IO_L ) write(IO_FID_LOG,*) ''
     if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[realinput]/Categ[InputSCALE-Surface]'
@@ -4197,6 +4218,7 @@ contains
                                     kgrd   (:,:,:,:,:),   & ! [OUT]
                                     igrd   (:,:,:),       & ! [OUT]
                                     jgrd   (:,:,:),       & ! [OUT]
+                                    ncopy  (:,:,:),       & ! [OUT]
                                     lcz_3D (:,:,:),       & ! [IN]
                                     LAT    (:,:),         & ! [IN]
                                     LON    (:,:),         & ! [IN]
@@ -4374,6 +4396,7 @@ contains
     deallocate( igrd  )
     deallocate( jgrd  )
     deallocate( kgrd  )
+    deallocate( ncopy  )
 
     return
   end subroutine InputSurfaceSCALE
@@ -4450,10 +4473,10 @@ contains
     real(RP), allocatable :: lcz_3D(:,:,:)
     real(RP), allocatable :: hfact(:,:,:)
     real(RP), allocatable :: vfact(:,:,:,:,:)
-
-    integer, allocatable :: igrd(:,:,:)
-    integer, allocatable :: jgrd(:,:,:)
-    integer, allocatable :: kgrd(:,:,:,:,:)
+    integer,  allocatable :: igrd(:,:,:)
+    integer,  allocatable :: jgrd(:,:,:)
+    integer,  allocatable :: kgrd(:,:,:,:,:)
+    integer,  allocatable :: ncopy(:,:,:)
 
     real(RP) :: d2r
     real(RP) :: maskval
@@ -4467,13 +4490,14 @@ contains
     !---------------------------------------------------------------------------
     d2r = pi / 180.0_RP
 
-    allocate( lcz_3D(LKMAX,IA,JA) )
-    allocate( sh2o(LKMAX,IA,JA) )
-    allocate( hfact(IA,JA,itp_nh) )
-    allocate( vfact(LKMAX,IA,JA,itp_nh,itp_nv) )
-    allocate( igrd(IA,JA,itp_nh) )
-    allocate( jgrd(IA,JA,itp_nh) )
-    allocate( kgrd(LKMAX,IA,JA,itp_nh,itp_nv) )
+    allocate( lcz_3D(LKMAX,IA,JA)               )
+    allocate( sh2o  (LKMAX,IA,JA)               )
+    allocate( hfact (      IA,JA,itp_nh)        )
+    allocate( vfact (LKMAX,IA,JA,itp_nh,itp_nv) )
+    allocate( igrd  (      IA,JA,itp_nh)        )
+    allocate( jgrd  (      IA,JA,itp_nh)        )
+    allocate( kgrd  (LKMAX,IA,JA,itp_nh,itp_nv) )
+    allocate( ncopy (      IA,JA,itp_nh)        )
 
     allocate( landmask(dims(2),dims(3)) )
     allocate( org_3D(dims(2),dims(3),tcount) )
@@ -4540,6 +4564,7 @@ contains
                                     kgrd   (:,:,:,:,:),      & ! [OUT]
                                     igrd   (:,:,:),          & ! [OUT]
                                     jgrd   (:,:,:),          & ! [OUT]
+                                    ncopy  (:,:,:),          & ! [OUT]
                                     lcz_3D (:,:,:),          & ! [IN]
                                     LAT    (:,:),            & ! [IN]
                                     LON    (:,:),            & ! [IN]
@@ -4789,6 +4814,7 @@ contains
     deallocate( igrd )
     deallocate( jgrd )
     deallocate( kgrd )
+    deallocate( ncopy )
 
     return
   end subroutine InputSurfaceWRF
@@ -4885,10 +4911,10 @@ contains
 
     real(RP), allocatable :: hfact(:,:,:)
     real(RP), allocatable :: vfact(:,:,:,:,:)
-
     integer,  allocatable :: igrd(:,:,:)
     integer,  allocatable :: jgrd(:,:,:)
     integer,  allocatable :: kgrd(:,:,:,:,:)
+    integer,  allocatable :: ncopy(:,:,:)
 
     real(RP) :: lcz_3D(LKMAX,IA,JA)
 
@@ -4953,6 +4979,7 @@ contains
     allocate( igrd (        IA, JA, itp_nh         ) )
     allocate( jgrd (        IA, JA, itp_nh         ) )
     allocate( kgrd ( LKMAX, IA, JA, itp_nh, itp_nv ) )
+    allocate( ncopy(        IA, JA, itp_nh         ) )
 
     allocate( sh2o (LKMAX,IA,JA) )
 
@@ -4993,6 +5020,7 @@ contains
                                     kgrd   (:,:,:,:,:),      & ! [OUT]
                                     igrd   (:,:,:),          & ! [OUT]
                                     jgrd   (:,:,:),          & ! [OUT]
+                                    ncopy  (:,:,:),          & ! [OUT]
                                     lcz_3D (:,:,:),          & ! [IN]
                                     LAT    (:,:),            & ! [IN]
                                     LON    (:,:),            & ! [IN]
@@ -5274,6 +5302,7 @@ contains
     deallocate( igrd  )
     deallocate( jgrd  )
     deallocate( kgrd  )
+    deallocate( ncopy  )
 
     return
   end subroutine InputSurfaceNICAM
@@ -5422,9 +5451,10 @@ contains
 
     real(RP), allocatable :: hfact(:,:,:)
     real(RP), allocatable :: vfact(:,:,:,:,:)
-    integer,  allocatable :: igrd(:,:,:)
-    integer,  allocatable :: jgrd(:,:,:)
-    integer,  allocatable :: kgrd(:,:,:,:,:)
+    integer,  allocatable :: igrd (:,:,:)
+    integer,  allocatable :: jgrd (:,:,:)
+    integer,  allocatable :: kgrd (:,:,:,:,:)
+    integer,  allocatable :: ncopy(:,:,:)
 
     real(RP) :: lcz_3D(LKMAX,IA,JA)
 
@@ -5476,6 +5506,7 @@ contains
     allocate( igrd (        IA, JA, itp_nh         ) )
     allocate( jgrd (        IA, JA, itp_nh         ) )
     allocate( kgrd ( LKMAX, IA, JA, itp_nh, itp_nv ) )
+    allocate( ncopy(        IA, JA, itp_nh         ) )
 
     if( IO_L ) write(IO_FID_LOG,*) ''
     if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[realinput]/Categ[InputNICAM-Surface]'
@@ -5834,6 +5865,7 @@ contains
                                     kgrd   (:,:,:,:,:),      & ! [OUT]
                                     igrd   (:,:,:),          & ! [OUT]
                                     jgrd   (:,:,:),          & ! [OUT]
+                                    ncopy  (:,:,:),          & ! [OUT]
                                     lcz_3D (:,:,:),          & ! [IN]
                                     LAT    (:,:),            & ! [IN]
                                     LON    (:,:),            & ! [IN]
@@ -5948,6 +5980,7 @@ contains
     deallocate( igrd  )
     deallocate( jgrd  )
     deallocate( kgrd  )
+    deallocate( ncopy  )
 
     return
   end subroutine InputSurfaceGrADS

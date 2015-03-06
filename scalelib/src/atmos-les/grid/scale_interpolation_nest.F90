@@ -103,6 +103,7 @@ module scale_interpolation_nest
      subroutine INTRPNEST_intfc_search_v(  &
           vfact,   & ! (out)
           kgrd,    & ! (out)
+          ncopy,   & ! (out)
           igrd,    & ! (in)
           jgrd,    & ! (in)
           myhgt,   & ! (in)
@@ -118,6 +119,7 @@ module scale_interpolation_nest
 
        real(RP), intent(out) :: vfact(:,:,:,:,:)  ! vertical interp factor
        integer,  intent(out) :: kgrd (:,:,:,:,:)  ! grid points of interp target
+       integer,  intent(out) :: ncopy(:)          ! number of daughter's layers below the parent's lowest layer
        integer,  intent(in)  :: igrd(:)           ! grid points of interp target
        integer,  intent(in)  :: jgrd(:)           ! grid points of interp target
        real(RP), intent(in)  :: myhgt(:)          ! height data of mine
@@ -363,6 +365,7 @@ contains
       kgrd,       & ! (out)
       igrd,       & ! (out)
       jgrd,       & ! (out)
+      ncopy,      & ! (out)
       myhgt,      & ! (in)
       mylat,      & ! (in)
       mylon,      & ! (in)
@@ -386,6 +389,7 @@ contains
     integer,  intent(out) :: kgrd (:,:,:,:,:)   ! grid points of interp target
     integer,  intent(out) :: igrd (:,:,:)       ! grid points of interp target
     integer,  intent(out) :: jgrd (:,:,:)       ! grid points of interp target
+    integer,  intent(out) :: ncopy(:,:,:)       ! number of daughter's layers below parent lowest layer
 
     real(RP), intent(in)  :: myhgt(:,:,:)       ! height data of mine
     real(RP), intent(in)  :: mylat(:,:)         ! latitude data of mine
@@ -419,6 +423,7 @@ contains
 
     hfact(:,:,:) = 0.0_RP
     vfact(:,:,:,:,:) = 0.0_RP
+    ncopy(:,:,:) = 0
 
     do j = 1, myJA
     do i = 1, myIA
@@ -443,6 +448,7 @@ contains
 
        call INTRPNEST_search_vert( vfact,         &
                                    kgrd,          &
+                                   ncopy(i,j,:),  &
                                    igrd(i,j,:),   &
                                    jgrd(i,j,:),   &
                                    myhgt(:,i,j),  &
@@ -1044,6 +1050,7 @@ contains
   subroutine INTRPNEST_search_vert_online( &
       vfact,   & ! (out)
       kgrd,    & ! (out)
+      ncopy,   & ! (out)
       igrd,    & ! (in)
       jgrd,    & ! (in)
       myhgt,   & ! (in)
@@ -1062,6 +1069,7 @@ contains
 
     real(RP), intent(out) :: vfact(:,:,:,:,:)   ! vertical interp factor
     integer,  intent(out) :: kgrd (:,:,:,:,:)   ! grid points of interp target
+    integer,  intent(out) :: ncopy(:)           ! number of daughter's layers below inKS
 
     integer,  intent(in)  :: igrd(:)            ! grid points of interp target
     integer,  intent(in)  :: jgrd(:)            ! grid points of interp target
@@ -1081,7 +1089,6 @@ contains
     integer  :: ii, jj, idx
     integer  :: k, kk
     integer  :: inKS, inKE
-    integer  :: ncopy(itp_nh)
     logical  :: copy
     !---------------------------------------------------------------------------
 
@@ -1094,7 +1101,6 @@ contains
     inKS = 1 + KHALO
     inKE = inKA - KHALO
 
-    ncopy = 0
     do idx = 1, itp_nh
        ii = igrd(idx)
        jj = jgrd(idx)
@@ -1205,6 +1211,7 @@ contains
   subroutine INTRPNEST_search_vert_offline( &
       vfact,   & ! (out)
       kgrd,    & ! (out)
+      ncopy,   & ! (out)
       igrd,    & ! (in)
       jgrd,    & ! (in)
       myhgt,   & ! (in)
@@ -1223,6 +1230,7 @@ contains
 
     real(RP), intent(out) :: vfact(:,:,:,:,:)   ! vertical interp factor
     integer,  intent(out) :: kgrd (:,:,:,:,:)   ! grid points of interp target
+    integer,  intent(out) :: ncopy(:)           ! number of daughter's layers below inKS
 
     integer,  intent(in)  :: igrd(:)            ! grid points of interp target
     integer,  intent(in)  :: jgrd(:)            ! grid points of interp target
@@ -1250,6 +1258,7 @@ contains
        kks = ks-1;  kke = ke+1
     endif
 
+    ncopy = 0  ! dummy
     do idx = 1, itp_nh
        ii = igrd(idx)
        jj = jgrd(idx)
