@@ -345,7 +345,6 @@ contains
     use scale_atmos_dyn_rk, only: &
        ATMOS_DYN_rk
     use scale_atmos_boundary, only: &
-       BND_POTT => ATMOS_BOUNDARY_POTT, &
        BND_QA, &
        BND_SMOOTHER_FACT => ATMOS_BOUNDARY_SMOOTHER_FACT
 #if defined( HIST_TEND ) || defined( CHECK_MASS )
@@ -835,8 +834,8 @@ contains
           do k = KS, KE
              mflx_hi(k,IS-1,j,XDIR) = GSQRT(k,IS-1,j,I_UYZ) * MOMX(k,IS-1,j)
              tflx_hi(k,IS-1,j,XDIR) = mflx_hi(k,IS-1,j,XDIR) &
-                  * ( FACT_N * ( BND_POTT(k,IS  ,j)+BND_POTT(k,IS-1,j) ) &
-                    + FACT_F * ( BND_POTT(k,IS+1,j)+BND_POTT(k,IS-2,j) ) )
+                                    * ( FACT_N * ( DAMP_POTT(k,IS  ,j)+DAMP_POTT(k,IS-1,j) ) &
+                                      + FACT_F * ( DAMP_POTT(k,IS+1,j)+DAMP_POTT(k,IS-2,j) ) )
           enddo
           enddo
        end if
@@ -846,8 +845,8 @@ contains
           do k = KS, KE
              mflx_hi(k,IE,j,XDIR) = GSQRT(k,IE,j,I_UYZ) * MOMX(k,IE,j)
              tflx_hi(k,IE,j,XDIR) = mflx_hi(k,IE,j,XDIR) &
-                  * ( FACT_N * ( BND_POTT(k,IE+1,j)+BND_POTT(k,IE  ,j) ) &
-                    + FACT_F * ( BND_POTT(k,IE+2,j)+BND_POTT(k,IE-1,j) ) )
+                                  * ( FACT_N * ( DAMP_POTT(k,IE+1,j)+DAMP_POTT(k,IE  ,j) ) &
+                                    + FACT_F * ( DAMP_POTT(k,IE+2,j)+DAMP_POTT(k,IE-1,j) ) )
           enddo
           enddo
        end if
@@ -857,8 +856,8 @@ contains
           do k = KS, KE
              mflx_hi(k,i,JS-1,YDIR) = GSQRT(k,i,JS-1,I_XVZ) * MOMY0(k,i,JS-1)
              tflx_hi(k,i,JS-1,YDIR) = mflx_hi(k,i,JS-1,YDIR) &
-                  * ( FACT_N * ( BND_POTT(k,i,JS  )+BND_POTT(k,i,JS-1) ) &
-                    + FACT_F * ( BND_POTT(k,i,JS+1)+BND_POTT(k,i,JS-2) ) )
+                                    * ( FACT_N * ( DAMP_POTT(k,i,JS  )+DAMP_POTT(k,i,JS-1) ) &
+                                      + FACT_F * ( DAMP_POTT(k,i,JS+1)+DAMP_POTT(k,i,JS-2) ) )
           enddo
           enddo
        end if
@@ -868,8 +867,8 @@ contains
           do k = KS, KE
              mflx_hi(k,i,JE,YDIR) = GSQRT(k,i,JE,I_XVZ) * MOMY0(k,i,JE)
              tflx_hi(k,i,JE,YDIR) = mflx_hi(k,i,JE,YDIR) &
-                  * ( FACT_N * ( BND_POTT(k,i,JE+1)+BND_POTT(k,i,JE  ) ) &
-                    + FACT_F * ( BND_POTT(k,i,JE+2)+BND_POTT(k,i,JE-1) ) )
+                                  * ( FACT_N * ( DAMP_POTT(k,i,JE+1)+DAMP_POTT(k,i,JE  ) ) &
+                                    + FACT_F * ( DAMP_POTT(k,i,JE+2)+DAMP_POTT(k,i,JE-1) ) )
           enddo
           enddo
        end if
@@ -1128,7 +1127,7 @@ contains
        mflx_lb_horizontal(:)    = 0.0_RP
        allmflx_lb_horizontal(:) = 0.0_RP
 
-       if ( .not. PRC_HAS_W ) then ! for western boundary
+       if ( BND_W ) then ! for western boundary
           i = IS
           do j = JS, JE
           do k = KS, KE
@@ -1140,7 +1139,7 @@ contains
           end do
           end do
        end if
-       if ( .not. PRC_HAS_E ) then ! for eastern boundary
+       if ( BND_E ) then ! for eastern boundary
           i = IE
           do j = JS, JE
           do k = KS, KE
@@ -1151,7 +1150,7 @@ contains
           end do
           end do
        end if
-       if ( .not. PRC_HAS_S ) then ! for sourthern boundary
+       if ( BND_S ) then ! for sourthern boundary
           j = JS
           do i = IS, IE
           do k = KS, KE
@@ -1162,7 +1161,7 @@ contains
           end do
           end do
        end if
-       if ( .not. PRC_HAS_N ) then ! for northern boundary
+       if ( BND_N ) then ! for northern boundary
           j = JE
           do i = IS, IE
           do k = KS, KE
@@ -1340,8 +1339,8 @@ contains
              do j = JS, JE
              do k = KS, KE
                 qflx_hi(k,IS-1,j,XDIR) = mflx_hi(k,IS-1,j,XDIR) &
-                     * ( FACT_N * ( DAMP_QTRC(k,IS  ,j,iq)+DAMP_QTRC(k,IS-1,j,iq) ) &
-                       + FACT_F * ( DAMP_QTRC(k,IS+1,j,iq)+DAMP_QTRC(k,IS-2,j,iq) ) )
+                                       * ( FACT_N * ( DAMP_QTRC(k,IS  ,j,iq)+DAMP_QTRC(k,IS-1,j,iq) ) &
+                                         + FACT_F * ( DAMP_QTRC(k,IS+1,j,iq)+DAMP_QTRC(k,IS-2,j,iq) ) )
              enddo
              enddo
           else
@@ -1359,8 +1358,8 @@ contains
              do j = JS, JE
              do k = KS, KE
                 qflx_hi(k,IE,j,XDIR) = mflx_hi(k,IE,j,XDIR) &
-                     * ( FACT_N * ( DAMP_QTRC(k,IE+1,j,iq)+DAMP_QTRC(k,IE  ,j,iq) ) &
-                       + FACT_F * ( DAMP_QTRC(k,IE+2,j,iq)+DAMP_QTRC(k,IE-1,j,iq) ) )
+                                     * ( FACT_N * ( DAMP_QTRC(k,IE+1,j,iq)+DAMP_QTRC(k,IE  ,j,iq) ) &
+                                       + FACT_F * ( DAMP_QTRC(k,IE+2,j,iq)+DAMP_QTRC(k,IE-1,j,iq) ) )
              enddo
              enddo
           else
@@ -1378,8 +1377,8 @@ contains
              do i = IS, IE
              do k = KS, KE
                 qflx_hi(k,i,JS-1,YDIR) = mflx_hi(k,i,JS-1,YDIR) &
-                     * ( FACT_N * ( DAMP_QTRC(k,i,JS  ,iq)+DAMP_QTRC(k,i,JS-1,iq) ) &
-                       + FACT_F * ( DAMP_QTRC(k,i,JS+1,iq)+DAMP_QTRC(k,i,JS-2,iq) ) )
+                                       * ( FACT_N * ( DAMP_QTRC(k,i,JS  ,iq)+DAMP_QTRC(k,i,JS-1,iq) ) &
+                                         + FACT_F * ( DAMP_QTRC(k,i,JS+1,iq)+DAMP_QTRC(k,i,JS-2,iq) ) )
              enddo
              enddo
           else
@@ -1397,8 +1396,8 @@ contains
              do i = IS, IE
              do k = KS, KE
                 qflx_hi(k,i,JE,YDIR) = mflx_hi(k,i,JE,YDIR) &
-                     * ( FACT_N * ( DAMP_QTRC(k,i,JE+1,iq)+DAMP_QTRC(k,i,JE  ,iq) ) &
-                       + FACT_F * ( DAMP_QTRC(k,i,JE+2,iq)+DAMP_QTRC(k,i,JE-1,iq) ) )
+                                     * ( FACT_N * ( DAMP_QTRC(k,i,JE+1,iq)+DAMP_QTRC(k,i,JE  ,iq) ) &
+                                       + FACT_F * ( DAMP_QTRC(k,i,JE+2,iq)+DAMP_QTRC(k,i,JE-1,iq) ) )
              enddo
              enddo
           else
@@ -1425,11 +1424,11 @@ contains
           do i = IIS-1, IIE+1
           do k = KS+1, KE-2
              qflx_lo(k,i,j,ZDIR) = 0.5_RP * (     mflx_hi(k,i,j,ZDIR)  * ( QTRC(k+1,i,j,iq)+QTRC(k,i,j,iq) ) &
-                                               - abs(mflx_hi(k,i,j,ZDIR)) * ( QTRC(k+1,i,j,iq)-QTRC(k,i,j,iq) ) )
+                                            - abs(mflx_hi(k,i,j,ZDIR)) * ( QTRC(k+1,i,j,iq)-QTRC(k,i,j,iq) ) )
 
              qflx_hi(k,i,j,ZDIR) = mflx_hi(k,i,j,ZDIR) * ( FACT_N * ( QTRC(k+1,i,j,iq)+QTRC(k  ,i,j,iq) ) &
-                                                            + FACT_F * ( QTRC(k+2,i,j,iq)+QTRC(k-1,i,j,iq) ) ) &
-                                    + GSQRT(k,i,j,I_XYW) * num_diff_q(k,i,j,ZDIR)
+                                                         + FACT_F * ( QTRC(k+2,i,j,iq)+QTRC(k-1,i,j,iq) ) ) &
+                                 + GSQRT(k,i,j,I_XYW) * num_diff_q(k,i,j,ZDIR)
           enddo
           enddo
           enddo
@@ -1439,11 +1438,11 @@ contains
           do i = IIS-1, IIE+1
              qflx_lo(KS-1,i,j,ZDIR) = 0.0_RP
              qflx_lo(KS  ,i,j,ZDIR) = 0.5_RP * (     mflx_hi(KS  ,i,j,ZDIR)  * ( QTRC(KS+1,i,j,iq)+QTRC(KS,i,j,iq) ) &
-                                                  - abs(mflx_hi(KS  ,i,j,ZDIR)) * ( QTRC(KS+1,i,j,iq)-QTRC(KS,i,j,iq) ) )
+                                               - abs(mflx_hi(KS  ,i,j,ZDIR)) * ( QTRC(KS+1,i,j,iq)-QTRC(KS,i,j,iq) ) )
 
              qflx_hi(KS-1,i,j,ZDIR) = 0.0_RP
              qflx_hi(KS  ,i,j,ZDIR) = 0.5_RP * mflx_hi(KS  ,i,j,ZDIR) * ( QTRC(KS+1,i,j,iq)+QTRC(KS,i,j,iq) ) &
-                                       + GSQRT(k,i,j,I_XYW) * num_diff_q(KS,i,j,ZDIR)
+                                    + GSQRT(k,i,j,I_XYW) * num_diff_q(KS,i,j,ZDIR)
           enddo
           enddo
 
@@ -1451,11 +1450,11 @@ contains
           do j = JJS-1, JJE+1
           do i = IIS-1, IIE+1
              qflx_lo(KE-1,i,j,ZDIR) = 0.5_RP * (     mflx_hi(KE-1,i,j,ZDIR)  * ( QTRC(KE,i,j,iq)+QTRC(KE-1,i,j,iq) ) &
-                                                  - abs(mflx_hi(KE-1,i,j,ZDIR)) * ( QTRC(KE,i,j,iq)-QTRC(KE-1,i,j,iq) ) )
+                                               - abs(mflx_hi(KE-1,i,j,ZDIR)) * ( QTRC(KE,i,j,iq)-QTRC(KE-1,i,j,iq) ) )
              qflx_lo(KE  ,i,j,ZDIR) = 0.0_RP
 
              qflx_hi(KE-1,i,j,ZDIR) = 0.5_RP * mflx_hi(KE-1,i,j,ZDIR) * ( QTRC(KE,i,j,iq)+QTRC(KE-1,i,j,iq) ) &
-                                       + GSQRT(k,i,j,I_XYW) * num_diff_q(KE-1,i,j,ZDIR)
+                                    + GSQRT(k,i,j,I_XYW) * num_diff_q(KE-1,i,j,ZDIR)
              qflx_hi(KE  ,i,j,ZDIR) = 0.0_RP
           enddo
           enddo
@@ -1465,7 +1464,7 @@ contains
           do i = IIS-2, IIE+1
           do k = KS, KE
              qflx_lo(k,i,j,XDIR) = 0.5_RP * (     mflx_hi(k,i,j,XDIR)  * ( QTRC(k,i+1,j,iq)+QTRC(k,i,j,iq) ) &
-                                               - abs(mflx_hi(k,i,j,XDIR)) * ( QTRC(k,i+1,j,iq)-QTRC(k,i,j,iq) ) )
+                                            - abs(mflx_hi(k,i,j,XDIR)) * ( QTRC(k,i+1,j,iq)-QTRC(k,i,j,iq) ) )
           enddo
           enddo
           enddo
@@ -1475,8 +1474,8 @@ contains
           do i = IIS-1, IIE
           do k = KS, KE
              qflx_hi(k,i,j,XDIR) = mflx_hi(k,i,j,XDIR) * ( FACT_N * ( QTRC(k,i+1,j,iq)+QTRC(k,i  ,j,iq) ) &
-                                                            + FACT_F * ( QTRC(k,i+2,j,iq)+QTRC(k,i-1,j,iq) ) ) &
-                                    + GSQRT(k,i,j,I_UYZ) * num_diff_q(k,i,j,XDIR)
+                                                         + FACT_F * ( QTRC(k,i+2,j,iq)+QTRC(k,i-1,j,iq) ) ) &
+                                 + GSQRT(k,i,j,I_UYZ) * num_diff_q(k,i,j,XDIR)
           enddo
           enddo
           enddo
@@ -1487,7 +1486,7 @@ contains
           do i = IIS-1, IIE+1
           do k = KS, KE
              qflx_lo(k,i,j,YDIR) = 0.5_RP * (     mflx_hi(k,i,j,YDIR)  * ( QTRC(k,i,j+1,iq)+QTRC(k,i,j,iq) ) &
-                                               - abs(mflx_hi(k,i,j,YDIR)) * ( QTRC(k,i,j+1,iq)-QTRC(k,i,j,iq) ) )
+                                            - abs(mflx_hi(k,i,j,YDIR)) * ( QTRC(k,i,j+1,iq)-QTRC(k,i,j,iq) ) )
           enddo
           enddo
           enddo
@@ -1497,8 +1496,8 @@ contains
           do i = IIS,   IIE
           do k = KS, KE
              qflx_hi(k,i,j,YDIR) = mflx_hi(k,i,j,YDIR) * ( FACT_N * ( QTRC(k,i,j+1,iq)+QTRC(k,i,j  ,iq) ) &
-                                                            + FACT_F * ( QTRC(k,i,j+2,iq)+QTRC(k,i,j-1,iq) ) ) &
-                                    + GSQRT(k,i,j,I_XVZ) * num_diff_q(k,i,j,YDIR)
+                                                         + FACT_F * ( QTRC(k,i,j+2,iq)+QTRC(k,i,j-1,iq) ) ) &
+                                 + GSQRT(k,i,j,I_XVZ) * num_diff_q(k,i,j,YDIR)
           enddo
           enddo
           enddo
@@ -1516,8 +1515,8 @@ contains
              do j = JS-1, JE+1
              do k = KS, KE
                 qflx_hi(k,IS-1,j,XDIR) = mflx_hi(k,IS-1,j,XDIR) &
-                     * ( FACT_N * ( DAMP_QTRC(k,IS  ,j,iq)+DAMP_QTRC(k,IS-1,j,iq) ) &
-                       + FACT_F * ( DAMP_QTRC(k,IS+1,j,iq)+DAMP_QTRC(k,IS-2,j,iq) ) )
+                                       * ( FACT_N * ( DAMP_QTRC(k,IS  ,j,iq)+DAMP_QTRC(k,IS-1,j,iq) ) &
+                                         + FACT_F * ( DAMP_QTRC(k,IS+1,j,iq)+DAMP_QTRC(k,IS-2,j,iq) ) )
              enddo
              enddo
           else
@@ -1541,8 +1540,8 @@ contains
              do j = JS-1, JE+1
              do k = KS, KE
                 qflx_hi(k,IE,j,XDIR) = mflx_hi(k,IE,j,XDIR) &
-                     * ( FACT_N * ( DAMP_QTRC(k,IE+1,j,iq)+DAMP_QTRC(k,IE  ,j,iq) ) &
-                       + FACT_F * ( DAMP_QTRC(k,IE+2,j,iq)+DAMP_QTRC(k,IE-1,j,iq) ) )
+                                     * ( FACT_N * ( DAMP_QTRC(k,IE+1,j,iq)+DAMP_QTRC(k,IE  ,j,iq) ) &
+                                       + FACT_F * ( DAMP_QTRC(k,IE+2,j,iq)+DAMP_QTRC(k,IE-1,j,iq) ) )
              enddo
              enddo
           else
@@ -1567,8 +1566,8 @@ contains
              do i = IS-1, IE+1
              do k = KS, KE
                 qflx_hi(k,i,JS-1,YDIR) = mflx_hi(k,i,JS-1,YDIR) &
-                     * ( FACT_N * ( DAMP_QTRC(k,i,JS  ,iq)+DAMP_QTRC(k,i,JS-1,iq) ) &
-                       + FACT_F * ( DAMP_QTRC(k,i,JS+1,iq)+DAMP_QTRC(k,i,JS-2,iq) ) )
+                                       * ( FACT_N * ( DAMP_QTRC(k,i,JS  ,iq)+DAMP_QTRC(k,i,JS-1,iq) ) &
+                                         + FACT_F * ( DAMP_QTRC(k,i,JS+1,iq)+DAMP_QTRC(k,i,JS-2,iq) ) )
              enddo
              enddo
           else
@@ -1592,8 +1591,8 @@ contains
              do i = IS-1, IE+1
              do k = KS, KE
                 qflx_hi(k,i,JE,YDIR) = mflx_hi(k,i,JE,YDIR) &
-                     * ( FACT_N * ( DAMP_QTRC(k,i,JE+1,iq)+DAMP_QTRC(k,i,JE  ,iq) ) &
-                       + FACT_F * ( DAMP_QTRC(k,i,JE+2,iq)+DAMP_QTRC(k,i,JE-1,iq) ) )
+                                     * ( FACT_N * ( DAMP_QTRC(k,i,JE+1,iq)+DAMP_QTRC(k,i,JE  ,iq) ) &
+                                       + FACT_F * ( DAMP_QTRC(k,i,JE+2,iq)+DAMP_QTRC(k,i,JE-1,iq) ) )
              enddo
              enddo
           else
@@ -1677,6 +1676,5 @@ contains
 
     return
   end subroutine ATMOS_DYN
-
 
 end module scale_atmos_dyn
