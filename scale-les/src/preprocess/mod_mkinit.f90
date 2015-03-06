@@ -746,14 +746,10 @@ contains
   !> Land setup
   subroutine land_setup
     use mod_land_vars, only: &
-       I_ThermalCond,   &
-       I_HeatCapacity,  &
-       I_Z0M,           &
        LAND_TEMP,       &
        LAND_WATER,      &
        LAND_SFC_TEMP,   &
-       LAND_SFC_albedo, &
-       LAND_PROPERTY
+       LAND_SFC_albedo
     implicit none
     ! Land state
     real(RP) :: LND_TEMP                ! soil temperature           [K]
@@ -761,9 +757,6 @@ contains
     real(RP) :: SFC_TEMP                ! land skin temperature      [K]
     real(RP) :: SFC_albedo_LW = 0.01_RP ! land surface albedo for LW [0-1]
     real(RP) :: SFC_albedo_SW = 0.20_RP ! land surface albedo for SW [0-1]
-    real(RP) :: LND_SFC_ThermalCond        ! land thermal conductivity  [W/m/K]
-    real(RP) :: LND_SFC_HeatCapa           ! land heat capacity         [J/m3/K]
-    real(RP) :: LND_SFC_Z0                 ! land roughness length      [m]
 
     integer :: i, j
     integer :: ierr
@@ -773,10 +766,7 @@ contains
        LND_WATER,     &
        SFC_TEMP,      &
        SFC_albedo_LW, &
-       SFC_albedo_SW, &
-       LND_SFC_ThermalCond, &
-       LND_SFC_HeatCapa, &
-       LND_SFC_Z0
+       SFC_albedo_SW
 
     LND_TEMP = THETAstd
     SFC_TEMP = THETAstd
@@ -799,9 +789,6 @@ contains
        LAND_SFC_TEMP  (i,j)      = SFC_TEMP
        LAND_SFC_albedo(i,j,I_LW) = SFC_albedo_LW
        LAND_SFC_albedo(i,j,I_SW) = SFC_albedo_SW
-       LAND_PROPERTY  (i,j,I_ThermalCond)  = LND_SFC_ThermalCond
-       LAND_PROPERTY  (i,j,I_HeatCapacity) = LND_SFC_HeatCapa
-       LAND_PROPERTY  (i,j,I_Z0M)          = LND_SFC_z0
     end do
     end do
 
