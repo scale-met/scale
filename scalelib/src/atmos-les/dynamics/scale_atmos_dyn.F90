@@ -614,6 +614,55 @@ contains
 
     call PROF_rapend  ("DYN Tendency", 2)
 
+    call PROF_rapstart("DYN Boundary", 2)
+
+    if ( BND_W ) then
+       !$omp parallel do private(j,k) OMP_SCHEDULE_ collapse(2)
+       do j = JS, JE
+       do k = KS, KE
+          mflx_hi(k,IS-1,j,XDIR) = GSQRT(k,IS-1,j,I_UYZ) * MOMX(k,IS-1,j)
+          tflx_hi(k,IS-1,j,XDIR) = mflx_hi(k,IS-1,j,XDIR) &
+                                 * ( FACT_N * ( DAMP_POTT(k,IS  ,j)+DAMP_POTT(k,IS-1,j) ) &
+                                   + FACT_F * ( DAMP_POTT(k,IS+1,j)+DAMP_POTT(k,IS-2,j) ) )
+       enddo
+       enddo
+    end if
+    if ( BND_E ) then
+       !$omp parallel do private(j,k) OMP_SCHEDULE_ collapse(2)
+       do j = JS, JE
+       do k = KS, KE
+          mflx_hi(k,IE,j,XDIR) = GSQRT(k,IE,j,I_UYZ) * MOMX(k,IE,j)
+          tflx_hi(k,IE,j,XDIR) = mflx_hi(k,IE,j,XDIR) &
+                               * ( FACT_N * ( DAMP_POTT(k,IE+1,j)+DAMP_POTT(k,IE  ,j) ) &
+                                 + FACT_F * ( DAMP_POTT(k,IE+2,j)+DAMP_POTT(k,IE-1,j) ) )
+       enddo
+       enddo
+    end if
+    if ( BND_S ) then
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+       do i = IS, IE
+       do k = KS, KE
+          mflx_hi(k,i,JS-1,YDIR) = GSQRT(k,i,JS-1,I_XVZ) * MOMY(k,i,JS-1)
+          tflx_hi(k,i,JS-1,YDIR) = mflx_hi(k,i,JS-1,YDIR) &
+                                 * ( FACT_N * ( DAMP_POTT(k,i,JS  )+DAMP_POTT(k,i,JS-1) ) &
+                                   + FACT_F * ( DAMP_POTT(k,i,JS+1)+DAMP_POTT(k,i,JS-2) ) )
+       enddo
+       enddo
+    end if
+    if ( BND_N ) then
+       !$omp parallel do private(i,k) OMP_SCHEDULE_ collapse(2)
+       do i = IS, IE
+       do k = KS, KE
+          mflx_hi(k,i,JE,YDIR) = GSQRT(k,i,JE,I_XVZ) * MOMY(k,i,JE)
+          tflx_hi(k,i,JE,YDIR) = mflx_hi(k,i,JE,YDIR) &
+                               * ( FACT_N * ( DAMP_POTT(k,i,JE+1)+DAMP_POTT(k,i,JE  ) ) &
+                                 + FACT_F * ( DAMP_POTT(k,i,JE+2)+DAMP_POTT(k,i,JE-1) ) )
+       enddo
+       enddo
+    end if
+
+    call PROF_rapend  ("DYN Boundary", 2)
+
 
     do step = 1, NSTEP_ATMOS_DYN
 
@@ -825,55 +874,6 @@ contains
        MOMX0(:,:,:) = MOMX(:,:,:)
        MOMY0(:,:,:) = MOMY(:,:,:)
        RHOT0(:,:,:) = RHOT(:,:,:)
-
-       call PROF_rapstart("DYN Boundary", 2)
-
-       if ( BND_W ) then
-          !$omp parallel do private(j,k) OMP_SCHEDULE_ collapse(2)
-          do j = JS, JE
-          do k = KS, KE
-             mflx_hi(k,IS-1,j,XDIR) = GSQRT(k,IS-1,j,I_UYZ) * MOMX(k,IS-1,j)
-             tflx_hi(k,IS-1,j,XDIR) = mflx_hi(k,IS-1,j,XDIR) &
-                                    * ( FACT_N * ( DAMP_POTT(k,IS  ,j)+DAMP_POTT(k,IS-1,j) ) &
-                                      + FACT_F * ( DAMP_POTT(k,IS+1,j)+DAMP_POTT(k,IS-2,j) ) )
-          enddo
-          enddo
-       end if
-       if ( BND_E ) then
-          !$omp parallel do private(j,k) OMP_SCHEDULE_ collapse(2)
-          do j = JS, JE
-          do k = KS, KE
-             mflx_hi(k,IE,j,XDIR) = GSQRT(k,IE,j,I_UYZ) * MOMX(k,IE,j)
-             tflx_hi(k,IE,j,XDIR) = mflx_hi(k,IE,j,XDIR) &
-                                  * ( FACT_N * ( DAMP_POTT(k,IE+1,j)+DAMP_POTT(k,IE  ,j) ) &
-                                    + FACT_F * ( DAMP_POTT(k,IE+2,j)+DAMP_POTT(k,IE-1,j) ) )
-          enddo
-          enddo
-       end if
-       if ( BND_S ) then
-          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-          do i = IS, IE
-          do k = KS, KE
-             mflx_hi(k,i,JS-1,YDIR) = GSQRT(k,i,JS-1,I_XVZ) * MOMY0(k,i,JS-1)
-             tflx_hi(k,i,JS-1,YDIR) = mflx_hi(k,i,JS-1,YDIR) &
-                                    * ( FACT_N * ( DAMP_POTT(k,i,JS  )+DAMP_POTT(k,i,JS-1) ) &
-                                      + FACT_F * ( DAMP_POTT(k,i,JS+1)+DAMP_POTT(k,i,JS-2) ) )
-          enddo
-          enddo
-       end if
-       if ( BND_N ) then
-          !$omp parallel do private(i,k) OMP_SCHEDULE_ collapse(2)
-          do i = IS, IE
-          do k = KS, KE
-             mflx_hi(k,i,JE,YDIR) = GSQRT(k,i,JE,I_XVZ) * MOMY0(k,i,JE)
-             tflx_hi(k,i,JE,YDIR) = mflx_hi(k,i,JE,YDIR) &
-                                  * ( FACT_N * ( DAMP_POTT(k,i,JE+1)+DAMP_POTT(k,i,JE  ) ) &
-                                    + FACT_F * ( DAMP_POTT(k,i,JE+2)+DAMP_POTT(k,i,JE-1) ) )
-          enddo
-          enddo
-       end if
-
-       call PROF_rapend  ("DYN Boundary", 2)
 
        call PROF_rapstart("DYN RK", 2)
 
