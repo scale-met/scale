@@ -590,6 +590,8 @@ contains
     arcsec2d = 1.0_RP / (60.0_RP*60.0_RP)
     arcsec2r = arcsec2d * CONST_D2R
 
+    year = iyear
+
     if ( ATMOS_SOLARINS_fixeddate ) then
        if( ATMOS_SOLARINS_date(1) >= 0 ) year = ATMOS_SOLARINS_date(1)
     endif
