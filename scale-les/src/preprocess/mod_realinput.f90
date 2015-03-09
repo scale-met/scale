@@ -4823,6 +4823,10 @@ contains
        frac_land  => LANDUSE_frac_land
     use mod_land_vars, only: &
       convert_WS2VWC
+    use scale_interpolation_nest, only: &
+       INTRPNEST_interp_fact_llz,  &
+       INTRPNEST_interp_2d,        &
+       INTRPNEST_interp_3d
     implicit none
 
     real(RP), intent(out) :: tg   (:,:,:)
