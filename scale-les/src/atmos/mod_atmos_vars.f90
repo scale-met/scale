@@ -135,7 +135,7 @@ module mod_atmos_vars
   integer, private, allocatable :: AQ_HIST_id(:)
 
   ! history & monitor output of diagnostic variables
-  integer, private, parameter :: AD_nmax = 62 ! number of diagnostic variables for history output
+  integer, private, parameter :: AD_nmax = 63 ! number of diagnostic variables for history output
 
   integer, private, parameter :: I_W     =  1 ! velocity w at cell center
   integer, private, parameter :: I_U     =  2 ! velocity u at cell center
@@ -148,74 +148,75 @@ module mod_atmos_vars
   integer, private, parameter :: I_QLIQ  =  8 ! ratio of total liquid water to total mass
   integer, private, parameter :: I_QICE  =  9 ! ratio of total ice    water to total mass
 
-  integer, private, parameter :: I_LWP   = 10 ! liquid water potential temperature
-  integer, private, parameter :: I_IWP   = 11 ! relative humidity (liquid+ice)
+  integer, private, parameter :: I_LWP   = 10 ! liquid water path
+  integer, private, parameter :: I_IWP   = 11 ! ice water path
+  integer, private, parameter :: I_PW    = 12 ! ice water path
 
-  integer, private, parameter :: I_RTOT  = 12 ! total gas constant
-  integer, private, parameter :: I_CPTOT = 13 ! total heat capacity (constant pressure)
-  integer, private, parameter :: I_PRES  = 14 ! pressure
-  integer, private, parameter :: I_TEMP  = 15 ! temperature
+  integer, private, parameter :: I_RTOT  = 13 ! total gas constant
+  integer, private, parameter :: I_CPTOT = 14 ! total heat capacity (constant pressure)
+  integer, private, parameter :: I_PRES  = 15 ! pressure
+  integer, private, parameter :: I_TEMP  = 16 ! temperature
 
-  integer, private, parameter :: I_POTL  = 16 ! liquid water potential temperature
-  integer, private, parameter :: I_RH    = 17 ! relative humidity (liquid+ice)
-  integer, private, parameter :: I_RHL   = 18 ! relative humidity against to liquid
-  integer, private, parameter :: I_RHI   = 19 ! relative humidity against to ice
+  integer, private, parameter :: I_POTL  = 17 ! liquid water potential temperature
+  integer, private, parameter :: I_RH    = 18 ! relative humidity (liquid+ice)
+  integer, private, parameter :: I_RHL   = 19 ! relative humidity against to liquid
+  integer, private, parameter :: I_RHI   = 20 ! relative humidity against to ice
 
-  integer, private, parameter :: I_VOR   = 20 ! vertical vorticity
-  integer, private, parameter :: I_DIV   = 21 ! divergence
-  integer, private, parameter :: I_HDIV  = 22 ! horizontal divergence
+  integer, private, parameter :: I_VOR   = 21 ! vertical vorticity
+  integer, private, parameter :: I_DIV   = 22 ! divergence
+  integer, private, parameter :: I_HDIV  = 23 ! horizontal divergence
 
-  integer, private, parameter :: I_DENS_PRIM = 23 ! prime term of density
-  integer, private, parameter :: I_W_PRIM    = 24 ! prime term of w
-  integer, private, parameter :: I_U_PRIM    = 25 ! prime term of u
-  integer, private, parameter :: I_V_PRIM    = 26 ! prime term of v
-  integer, private, parameter :: I_POTT_PRIM = 27 ! prime term of potential temperature
-  integer, private, parameter :: I_W_PRIM2   = 28 ! variance of w
-  integer, private, parameter :: I_PT_W_PRIM = 29 ! resolved scale heat flux
-  integer, private, parameter :: I_W_PRIM3   = 30 ! skewness of w
-  integer, private, parameter :: I_TKE_RS    = 31 ! resolved scale TKE
+  integer, private, parameter :: I_DENS_PRIM = 24 ! prime term of density
+  integer, private, parameter :: I_W_PRIM    = 25 ! prime term of w
+  integer, private, parameter :: I_U_PRIM    = 26 ! prime term of u
+  integer, private, parameter :: I_V_PRIM    = 27 ! prime term of v
+  integer, private, parameter :: I_POTT_PRIM = 28 ! prime term of potential temperature
+  integer, private, parameter :: I_W_PRIM2   = 29 ! variance of w
+  integer, private, parameter :: I_PT_W_PRIM = 30 ! resolved scale heat flux
+  integer, private, parameter :: I_W_PRIM3   = 31 ! skewness of w
+  integer, private, parameter :: I_TKE_RS    = 32 ! resolved scale TKE
 
-  integer, private, parameter :: I_ENGP  = 32 ! potential energy
-  integer, private, parameter :: I_ENGK  = 33 ! kinetic   energy
-  integer, private, parameter :: I_ENGI  = 34 ! internal  energy
-  integer, private, parameter :: I_ENGT  = 35 ! total     energy
+  integer, private, parameter :: I_ENGP  = 33 ! potential energy
+  integer, private, parameter :: I_ENGK  = 34 ! kinetic   energy
+  integer, private, parameter :: I_ENGI  = 35 ! internal  energy
+  integer, private, parameter :: I_ENGT  = 36 ! total     energy
 
-  integer, private, parameter :: I_ENGSFC_SH = 36
-  integer, private, parameter :: I_ENGSFC_LH = 37
-  integer, private, parameter :: I_ENGSFC_RD = 38
-  integer, private, parameter :: I_ENGTOA_RD = 39
+  integer, private, parameter :: I_ENGSFC_SH = 37
+  integer, private, parameter :: I_ENGSFC_LH = 38
+  integer, private, parameter :: I_ENGSFC_RD = 39
+  integer, private, parameter :: I_ENGTOA_RD = 40
 
-  integer, private, parameter :: I_ENGSFC_LW_up = 40
-  integer, private, parameter :: I_ENGSFC_LW_dn = 41
-  integer, private, parameter :: I_ENGSFC_SW_up = 42
-  integer, private, parameter :: I_ENGSFC_SW_dn = 43
+  integer, private, parameter :: I_ENGSFC_LW_up = 41
+  integer, private, parameter :: I_ENGSFC_LW_dn = 42
+  integer, private, parameter :: I_ENGSFC_SW_up = 43
+  integer, private, parameter :: I_ENGSFC_SW_dn = 44
 
-  integer, private, parameter :: I_ENGTOA_LW_up = 44
-  integer, private, parameter :: I_ENGTOA_LW_dn = 45
-  integer, private, parameter :: I_ENGTOA_SW_up = 46
-  integer, private, parameter :: I_ENGTOA_SW_dn = 47
+  integer, private, parameter :: I_ENGTOA_LW_up = 45
+  integer, private, parameter :: I_ENGTOA_LW_dn = 46
+  integer, private, parameter :: I_ENGTOA_SW_up = 47
+  integer, private, parameter :: I_ENGTOA_SW_dn = 48
 
-  integer, private, parameter :: I_ENGFLXT      = 48
+  integer, private, parameter :: I_ENGFLXT      = 49
 
-  integer, private, parameter :: I_EVAP         = 49
-  integer, private, parameter :: I_PRCP         = 50
+  integer, private, parameter :: I_EVAP         = 50
+  integer, private, parameter :: I_PRCP         = 51
 
-  integer, private, parameter :: I_DENS_MEAN    = 51
-  integer, private, parameter :: I_W_MEAN       = 52
-  integer, private, parameter :: I_U_MEAN       = 53
-  integer, private, parameter :: I_V_MEAN       = 54
-  integer, private, parameter :: I_POTT_MEAN    = 55
-  integer, private, parameter :: I_T_MEAN       = 56
+  integer, private, parameter :: I_DENS_MEAN    = 52
+  integer, private, parameter :: I_W_MEAN       = 53
+  integer, private, parameter :: I_U_MEAN       = 54
+  integer, private, parameter :: I_V_MEAN       = 55
+  integer, private, parameter :: I_POTT_MEAN    = 56
+  integer, private, parameter :: I_T_MEAN       = 57
 
-  integer, private, parameter :: I_QV_MEAN      = 57
-  integer, private, parameter :: I_QHYD_MEAN    = 58
-  integer, private, parameter :: I_QLIQ_MEAN    = 59
-  integer, private, parameter :: I_QICE_MEAN    = 60
+  integer, private, parameter :: I_QV_MEAN      = 58
+  integer, private, parameter :: I_QHYD_MEAN    = 59
+  integer, private, parameter :: I_QLIQ_MEAN    = 60
+  integer, private, parameter :: I_QICE_MEAN    = 61
 
 
-  integer, private, parameter :: I_QSAT         = 61
+  integer, private, parameter :: I_QSAT         = 62
 
-  integer, private, parameter :: I_Uabs         = 62
+  integer, private, parameter :: I_Uabs         = 63
 
   integer, private            :: AD_HIST_id (AD_nmax)
   integer, private            :: AD_PREP_sw (AD_nmax)
@@ -408,7 +409,8 @@ contains
     call HIST_reg( AD_HIST_id(I_QICE) , zinterp, 'QICE',  'total ice water',        'kg/kg',  ndim=3 )
 
     call HIST_reg( AD_HIST_id(I_LWP)  , zinterp, 'LWP',   'liquid water path',      'g/m2',   ndim=2 )
-    call HIST_reg( AD_HIST_id(I_IWP)  , zinterp, 'IWP',   'ice    water path',      'g/m2',   ndim=2 )
+    call HIST_reg( AD_HIST_id(I_IWP)  , zinterp, 'IWP',   'ice water path',         'g/m2',   ndim=2 )
+    call HIST_reg( AD_HIST_id(I_PW )  , zinterp, 'PW',    'precipitable water',     'g/m2',   ndim=2 )
 
     call HIST_reg( AD_HIST_id(I_RTOT) , zinterp, 'RTOT',  'Total gas constant',     'J/kg/K', ndim=3 )
     call HIST_reg( AD_HIST_id(I_CPTOT), zinterp, 'CPTOT', 'Total heat capacity',    'J/kg/K', ndim=3 )
@@ -519,6 +521,9 @@ contains
     if ( AD_HIST_id(I_IWP)  > 0 ) then
        AD_PREP_sw(I_QICE) = 1
        AD_PREP_sw(I_IWP)  = 1
+    endif
+    if ( AD_HIST_id(I_PW)  > 0 ) then
+       AD_PREP_sw(I_PW)  = 1
     endif
 
     if ( AD_HIST_id(I_RTOT) > 0 ) then
@@ -1149,6 +1154,7 @@ contains
 
     real(RP) :: LWP   (IA,JA)    ! liquid water path  [g/m2]
     real(RP) :: IWP   (IA,JA)    ! ice    water path  [g/m2]
+    real(RP) :: PW    (IA,JA)    ! precipitable water [g/m2]
 
     real(RP) :: RTOT  (KA,IA,JA) ! Total gas constant  [J/kg/K]
     real(RP) :: CPTOT (KA,IA,JA) ! Total heat capacity [J/kg/K]
@@ -1319,6 +1325,18 @@ contains
           do k  = KS, KE
              IWP(i,j) = IWP(i,j) &
                       + QICE(k,i,j) * DENS(k,i,j) * ( REAL_FZ(k,i,j)-REAL_FZ(k-1,i,j) ) * 1.E3_RP ! [kg/m2->g/m2]
+          enddo
+       enddo
+       enddo
+    endif
+
+    if ( AD_PREP_sw(I_PW) > 0 ) then
+       do j  = JSB, JEB
+       do i  = ISB, IEB
+          PW(i,j) = 0.0_RP
+          do k  = KS, KE
+             PW(i,j) = PW(i,j) &
+                      + QTRC(k,i,j,I_QV) * DENS(k,i,j) * ( REAL_FZ(k,i,j)-REAL_FZ(k-1,i,j) ) * 1.E3_RP ! [kg/m2->g/m2]
           enddo
        enddo
        enddo
@@ -1817,6 +1835,7 @@ contains
 
     call HIST_in( LWP  (:,:),   'LWP',   'liquid water path',      'g/m2'   )
     call HIST_in( IWP  (:,:),   'IWP',   'ice    water path',      'g/m2'   )
+    call HIST_in( PW   (:,:),   'PW',    'precipitable water',     'g/m2'   )
 
     call HIST_in( RTOT (:,:,:), 'RTOT',  'Total gas constant',     'J/kg/K' )
     call HIST_in( CPTOT(:,:,:), 'CPTOT', 'Total heat capacity',    'J/kg/K' )
