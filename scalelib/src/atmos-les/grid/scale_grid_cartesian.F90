@@ -613,13 +613,6 @@ contains
        GRID_RFDZ(k) = 1.0_RP / GRID_FDZ(k)
     enddo
 
-    GRID_DOMAIN_CENTER_X = 0.5_RP * ( GRID_FXG(0) + GRID_FXG(IAG) )
-    GRID_DOMAIN_CENTER_Y = 0.5_RP * ( GRID_FYG(0) + GRID_FYG(JAG) )
-    GRID_FXG(:) = GRID_FXG(:) - GRID_DOMAIN_CENTER_X
-    GRID_CXG(:) = GRID_CXG(:) - GRID_DOMAIN_CENTER_X
-    GRID_FYG(:) = GRID_FYG(:) - GRID_DOMAIN_CENTER_Y
-    GRID_CYG(:) = GRID_CYG(:) - GRID_DOMAIN_CENTER_Y
-
     ! X-direction
     ! horizontal coordinate (local domaim)
     do i = 0, IA
