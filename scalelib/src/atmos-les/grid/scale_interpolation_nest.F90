@@ -103,6 +103,7 @@ module scale_interpolation_nest
      subroutine INTRPNEST_intfc_search_v(  &
           vfact,   & ! (out)
           kgrd,    & ! (out)
+          ncopy,   & ! (out)
           igrd,    & ! (in)
           jgrd,    & ! (in)
           myhgt,   & ! (in)
@@ -118,6 +119,7 @@ module scale_interpolation_nest
 
        real(RP), intent(out) :: vfact(:,:,:,:,:)  ! vertical interp factor
        integer,  intent(out) :: kgrd (:,:,:,:,:)  ! grid points of interp target
+       integer,  intent(out) :: ncopy(:)          ! number of daughter's layers below the parent's lowest layer
        integer,  intent(in)  :: igrd(:)           ! grid points of interp target
        integer,  intent(in)  :: jgrd(:)           ! grid points of interp target
        real(RP), intent(in)  :: myhgt(:)          ! height data of mine
@@ -363,6 +365,7 @@ contains
       kgrd,       & ! (out)
       igrd,       & ! (out)
       jgrd,       & ! (out)
+      ncopy,      & ! (out)
       myhgt,      & ! (in)
       mylat,      & ! (in)
       mylon,      & ! (in)
@@ -386,6 +389,7 @@ contains
     integer,  intent(out) :: kgrd (:,:,:,:,:)   ! grid points of interp target
     integer,  intent(out) :: igrd (:,:,:)       ! grid points of interp target
     integer,  intent(out) :: jgrd (:,:,:)       ! grid points of interp target
+    integer,  intent(out) :: ncopy(:,:,:)       ! number of daughter's layers below parent lowest layer
 
     real(RP), intent(in)  :: myhgt(:,:,:)       ! height data of mine
     real(RP), intent(in)  :: mylat(:,:)         ! latitude data of mine
@@ -419,6 +423,7 @@ contains
 
     hfact(:,:,:) = 0.0_RP
     vfact(:,:,:,:,:) = 0.0_RP
+    ncopy(:,:,:) = 0
 
     do j = 1, myJA
     do i = 1, myIA
@@ -443,6 +448,7 @@ contains
 
        call INTRPNEST_search_vert( vfact,         &
                                    kgrd,          &
+                                   ncopy(i,j,:),  &
                                    igrd(i,j,:),   &
                                    jgrd(i,j,:),   &
                                    myhgt(:,i,j),  &
@@ -1044,6 +1050,7 @@ contains
   subroutine INTRPNEST_search_vert_online( &
       vfact,   & ! (out)
       kgrd,    & ! (out)
+      ncopy,   & ! (out)
       igrd,    & ! (in)
       jgrd,    & ! (in)
       myhgt,   & ! (in)
@@ -1062,6 +1069,7 @@ contains
 
     real(RP), intent(out) :: vfact(:,:,:,:,:)   ! vertical interp factor
     integer,  intent(out) :: kgrd (:,:,:,:,:)   ! grid points of interp target
+    integer,  intent(out) :: ncopy(:)           ! number of daughter's layers below inKS
 
     integer,  intent(in)  :: igrd(:)            ! grid points of interp target
     integer,  intent(in)  :: jgrd(:)            ! grid points of interp target
@@ -1077,10 +1085,10 @@ contains
     real(RP) :: distance
     real(RP) :: denom
     real(RP) :: dist(2)
+    logical  :: dflag                           ! flag: data found or not
     integer  :: ii, jj, idx
     integer  :: k, kk
-    integer  :: KS_local
-    integer  :: ncopy
+    integer  :: inKS, inKE
     logical  :: copy
     !---------------------------------------------------------------------------
 
@@ -1090,47 +1098,97 @@ contains
        call PRC_MPIstop
     endif
 
-    KS_local = 1 + KHALO
+    inKS = 1 + KHALO
+    inKE = inKA - KHALO
+
     do idx = 1, itp_nh
        ii = igrd(idx)
        jj = jgrd(idx)
-       ncopy = 0
+
+
+       !do k = ks, ke
+       !   dist(1) = large_number_2
+       !   dist(2) = large_number_1
+       !   kgrd(k,iloc,jloc,idx,:) = -1
+       !   copy = .false.
+       !
+       !   do kk = 1+KHALO, inKA-KHALO
+       !      distance = abs( myhgt(k) - inhgt(kk,ii,jj) )
+       !      if ( distance <= dist(1) ) then
+       !         dist(2) = dist(1);     kgrd(k,iloc,jloc,idx,2) = kgrd(k,iloc,jloc,idx,1)
+       !         dist(1) = distance;    kgrd(k,iloc,jloc,idx,1) = kk
+       !      elseif ( dist(1) < distance .and. distance <= dist(2) ) then
+       !         dist(2) = distance;    kgrd(k,iloc,jloc,idx,2) = kk
+       !      endif
+       !   enddo
+       !
+       !   if( inhgt(KS_local,ii,jj) > myhgt(k) ) then
+       !      copy = .true.
+       !   endif
+       !
+       !   if( copy ) then
+       !      kgrd(k,iloc,jloc,idx,1)  = KS_local
+       !      kgrd(k,iloc,jloc,idx,2)  = KS_local + 1 ! not used
+       !      vfact(k,iloc,jloc,idx,1) = 1.0_RP
+       !      vfact(k,iloc,jloc,idx,2) = 0.0_RP
+       !      ncopy = ncopy + 1
+       !   elseif( (.NOT. copy) .and. abs(dist(1)) < eps ) then
+       !      vfact(k,iloc,jloc,idx,1) = 1.0_RP
+       !      vfact(k,iloc,jloc,idx,2) = 0.0_RP
+       !   elseif( .NOT. copy ) then
+       !      denom = 1.0_RP / ( (1.0_RP/dist(1)) + (1.0_RP/dist(2)) )
+       !      vfact(k,iloc,jloc,idx,1) = ( 1.0_RP/dist(1) ) * denom
+       !      vfact(k,iloc,jloc,idx,2) = ( 1.0_RP/dist(2) ) * denom
+       !   else
+       !      write(*,*) 'xxx internal error [interporation: nest/interp]'
+       !      call PRC_MPIstop
+       !   endif
+       !enddo
 
        do k = ks, ke
           dist(1) = large_number_2
           dist(2) = large_number_1
           kgrd(k,iloc,jloc,idx,:) = -1
-          copy = .false.
+          copy    = .false.
+          dflag   = .false.
 
-          do kk = 1+KHALO, inKA-KHALO
-             distance = abs( myhgt(k) - inhgt(kk,ii,jj) )
-             if ( distance <= dist(1) ) then
-                dist(2) = dist(1);     kgrd(k,iloc,jloc,idx,2) = kgrd(k,iloc,jloc,idx,1)
-                dist(1) = distance;    kgrd(k,iloc,jloc,idx,1) = kk
-             elseif ( dist(1) < distance .and. distance <= dist(2) ) then
-                dist(2) = distance;    kgrd(k,iloc,jloc,idx,2) = kk
-             endif
-          enddo
-
-          if( inhgt(KS_local,ii,jj) > myhgt(k) ) then
-             copy = .true.
+          if( myhgt(k) < inhgt(inKS,ii,jj) ) then
+             copy       = .true.
+             ncopy(idx) = ncopy(idx) + 1
+             kgrd(k,iloc,jloc,idx,:)  = inKS
+             vfact(k,iloc,jloc,idx,1) = 1.0_RP
+             vfact(k,iloc,jloc,idx,2) = 0.0_RP
+             dflag = .true.
+          else if( abs(myhgt(k)-inhgt(inKE,ii,jj))<eps ) then
+             kgrd(k,iloc,jloc,idx,:)  = inKE
+             vfact(k,iloc,jloc,idx,1) = 1.0_RP
+             vfact(k,iloc,jloc,idx,2) = 0.0_RP
+             dflag = .true.
+          else
+             do kk = inKS, inKE
+                if( (inhgt(kk,ii,jj)<=myhgt(k)) .and. (myhgt(k)<inhgt(kk+1,ii,jj)) )then
+                   kgrd(k,iloc,jloc,idx,1) = kk
+                   kgrd(k,iloc,jloc,idx,2) = kk+1
+                   dflag = .true.
+                   if( abs(dist(1)) < eps ) then
+                      vfact(k,iloc,jloc,idx,1) = 1.0_RP
+                      vfact(k,iloc,jloc,idx,2) = 0.0_RP
+                   else
+                      dist(1) = abs( myhgt(k) - inhgt(kk,ii,jj) )
+                      dist(2) = abs( myhgt(k) - inhgt(kk+1,ii,jj) )
+                      denom = 1.0_RP / ( (1.0_RP/dist(1)) + (1.0_RP/dist(2)) )
+                      vfact(k,iloc,jloc,idx,1) = ( 1.0_RP/dist(1) ) * denom
+                      vfact(k,iloc,jloc,idx,2) = ( 1.0_RP/dist(2) ) * denom
+                   endif
+                   exit
+                endif
+             enddo
           endif
 
-          if( copy ) then
-             kgrd(k,iloc,jloc,idx,1)  = KS_local
-             kgrd(k,iloc,jloc,idx,2)  = KS_local + 1 ! not used
-             vfact(k,iloc,jloc,idx,1) = 1.0_RP
-             vfact(k,iloc,jloc,idx,2) = 0.0_RP
-             ncopy = ncopy + 1
-          elseif( (.NOT. copy) .and. abs(dist(1)) < eps ) then
-             vfact(k,iloc,jloc,idx,1) = 1.0_RP
-             vfact(k,iloc,jloc,idx,2) = 0.0_RP
-          elseif( .NOT. copy ) then
-             denom = 1.0_RP / ( (1.0_RP/dist(1)) + (1.0_RP/dist(2)) )
-             vfact(k,iloc,jloc,idx,1) = ( 1.0_RP/dist(1) ) * denom
-             vfact(k,iloc,jloc,idx,2) = ( 1.0_RP/dist(2) ) * denom
-          else
-             write(*,*) 'xxx internal error [interporation: nest/interp]'
+          if(.not. dflag)then
+             write(*,*) 'xxx internal error [INTRPNEST_search_vert_online]'
+             write(*,*) 'xxx data for interpolation was not found.'
+             write(*,*) 'xxx iloc=',iloc,' jloc=',jloc,' k=',k,' idx=',idx
              call PRC_MPIstop
           endif
        enddo
@@ -1153,6 +1211,7 @@ contains
   subroutine INTRPNEST_search_vert_offline( &
       vfact,   & ! (out)
       kgrd,    & ! (out)
+      ncopy,   & ! (out)
       igrd,    & ! (in)
       jgrd,    & ! (in)
       myhgt,   & ! (in)
@@ -1171,6 +1230,7 @@ contains
 
     real(RP), intent(out) :: vfact(:,:,:,:,:)   ! vertical interp factor
     integer,  intent(out) :: kgrd (:,:,:,:,:)   ! grid points of interp target
+    integer,  intent(out) :: ncopy(:)           ! number of daughter's layers below inKS
 
     integer,  intent(in)  :: igrd(:)            ! grid points of interp target
     integer,  intent(in)  :: jgrd(:)            ! grid points of interp target
@@ -1198,6 +1258,7 @@ contains
        kks = ks-1;  kke = ke+1
     endif
 
+    ncopy = 0  ! dummy
     do idx = 1, itp_nh
        ii = igrd(idx)
        jj = jgrd(idx)
