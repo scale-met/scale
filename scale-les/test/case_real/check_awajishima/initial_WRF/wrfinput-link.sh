@@ -25,7 +25,7 @@ end_year='2011'
 end_month='09'
 end_day='07'
 end_hour='06'
-end_min='00'
+end_min='10'
 end_sec='00'
 #
 #-----------------------------------------
