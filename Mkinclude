@@ -57,3 +57,7 @@ endif
 ifneq ($(TRACER),)
       FFLAGS += -DTRACER=$(TRACER)
 endif
+
+ifeq ($(CHECK_MASS),T)
+      FFLAGS += -DCHECK_MASS
+endif
