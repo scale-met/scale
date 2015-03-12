@@ -405,7 +405,6 @@ contains
     if( USE_NESTING ) then
 
        if ( OFFLINE .or. ONLINE_IAM_DAUGHTER ) then
-
           ims = IS-1
           ime = IE
           jms = JS-1
@@ -422,6 +421,8 @@ contains
           corner_loc(I_NE,I_LAT) = REAL_LATXY(ime,jme) / D2R
           corner_loc(I_SW,I_LAT) = REAL_LATXY(ims,jms) / D2R
           corner_loc(I_SE,I_LAT) = REAL_LATXY(ime,jms) / D2R
+
+          allocate( ncopy(IA,JA,itp_nh,itp_ng) )
        end if
 
       if( OFFLINE ) then
@@ -642,7 +643,6 @@ contains
             allocate( igrd (            DAUGHTER_IA(HANDLING_NUM),DAUGHTER_JA(HANDLING_NUM),itp_nh,       itp_ng) )
             allocate( jgrd (            DAUGHTER_IA(HANDLING_NUM),DAUGHTER_JA(HANDLING_NUM),itp_nh,       itp_ng) )
             allocate( kgrd (DAUGHTER_KA(HANDLING_NUM),DAUGHTER_IA(HANDLING_NUM),DAUGHTER_JA(HANDLING_NUM),itp_nh,itp_nv,itp_ng) )
-            allocate( ncopy(            DAUGHTER_IA(HANDLING_NUM),DAUGHTER_JA(HANDLING_NUM),itp_nh,       itp_ng) )
 
             call NEST_COMM_setup_nestdown( HANDLING_NUM )
 
