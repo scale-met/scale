@@ -48,7 +48,6 @@ module mod_copytopo
   private :: COPYTOPO_setalpha
   private :: COPYTOPO_input_data
   private :: COPYTOPO_mix_data
-  private :: check_domain_compatibility
 
   !-----------------------------------------------------------------------------
   !
@@ -434,7 +433,7 @@ contains
        NEST_TILE_ID,    &
        NEST_domain_shape
     use scale_interpolation_nest, only: &
-    !   INTRPNEST_domain_compatibility,  &
+       INTRPNEST_domain_compatibility,  &
        INTRPNEST_interp_fact_latlon,    &
        INTRPNEST_interp_2d
     use scale_grid_real, only: &
@@ -496,12 +495,12 @@ contains
        deallocate( read2D )
     end do
 
-    !call INTRPNEST_domain_compatibility( lon_org(:,:), lat_org(:,:), dummy(:,:,:), &
-    !                                     LON(:,:),     LAT(:,:),     dummy(:,:,:), &
-    !                                     skip_z=.true.                             )
-    call check_domain_compatibility( lon_org(:,:), lat_org(:,:), dummy(:,:,:), &
-                                     LON(:,:),     LAT(:,:),     dummy(:,:,:), &
-                                     skip_z=.true.                             )
+    call INTRPNEST_domain_compatibility( lon_org(:,:), lat_org(:,:), dummy(:,:,:), &
+                                         LON(:,:),     LAT(:,:),     dummy(:,:,:), &
+                                         skip_z=.true.                             )
+    !call check_domain_compatibility( lon_org(:,:), lat_org(:,:), dummy(:,:,:), &
+    !                                 LON(:,:),     LAT(:,:),     dummy(:,:,:), &
+    !                                 skip_z=.true.                             )
 
     call INTRPNEST_interp_fact_latlon( hfact  (:,:,:),   & ! (out)
                                        igrd   (:,:,:),   & ! (out)
@@ -553,109 +552,5 @@ contains
 
     return
   end subroutine COPYTOPO_mix_data
-
-  !-----------------------------------------------------------------------------
-  subroutine check_domain_compatibility( &
-      lon_org,     & ! (in)
-      lat_org,     & ! (in)
-      lev_org,     & ! (in)
-      lon_loc,     & ! (in)
-      lat_loc,     & ! (in)
-      lev_loc,     & ! (in)
-      skip_x,      & ! (in)
-      skip_y,      & ! (in)
-      skip_z       ) ! (in)
-    use scale_process, only: &
-       PRC_MPIstop
-    use scale_const, only: &
-       D2R => CONST_D2R
-    implicit none
-    real(RP), intent(in) :: lon_org(:,:)
-    real(RP), intent(in) :: lat_org(:,:)
-    real(RP), intent(in) :: lev_org(:,:,:)
-    real(RP), intent(in) :: lon_loc(:,:)
-    real(RP), intent(in) :: lat_loc(:,:)
-    real(RP), intent(in) :: lev_loc(:,:,:)
-    logical,  intent(in), optional :: skip_x
-    logical,  intent(in), optional :: skip_y
-    logical,  intent(in), optional :: skip_z
-
-    real(RP) :: max_ref, min_ref
-    real(RP) :: max_loc, min_loc
-
-    logical :: do_xdirec
-    logical :: do_ydirec
-    logical :: do_zdirec
-    !---------------------------------------------------------------------------
-
-    do_xdirec = .true.
-    if ( present(skip_x) .and. skip_x ) then
-       do_xdirec = .false.
-    endif
-
-    do_ydirec = .true.
-    if ( present(skip_y) .and. skip_y ) then
-       do_ydirec = .false.
-    endif
-
-    do_zdirec = .true.
-    if ( present(skip_z) .and. skip_z ) then
-       do_zdirec = .false.
-    endif
-
-    if ( do_xdirec ) then
-       max_ref = maxval( lon_org(:,:) / D2R )
-       min_ref = minval( lon_org(:,:) / D2R )
-       max_loc = maxval( lon_loc(:,:) / D2R )
-       min_loc = minval( lon_loc(:,:) / D2R )
-
-       if ( max_ref < max_loc .or. min_ref > min_loc ) then
-          write(*,*) 'xxx ERROR: REQUESTED DOMAIN IS TOO MUCH BROAD'
-          write(*,*) 'xxx -- LONGITUDINAL direction over the limit'
-          write(*,*) 'xxx -- reference max: ', max_ref
-          write(*,*) 'xxx -- reference min: ', min_ref
-          write(*,*) 'xxx --     local max: ', max_loc
-          write(*,*) 'xxx --     local min: ', min_loc
-          call PRC_MPIstop
-       endif
-    endif
-
-    if ( do_ydirec ) then
-       max_ref = maxval( lat_org(:,:) / D2R )
-       min_ref = minval( lat_org(:,:) / D2R )
-       max_loc = maxval( lat_loc(:,:) / D2R )
-       min_loc = minval( lat_loc(:,:) / D2R )
-
-       if ( max_ref < max_loc .or. min_ref > min_loc ) then
-          write(*,*) 'xxx ERROR: REQUESTED DOMAIN IS TOO MUCH BROAD'
-          write(*,*) 'xxx -- LATITUDINAL direction over the limit'
-          write(*,*) 'xxx -- reference max: ', max_ref
-          write(*,*) 'xxx -- reference min: ', min_ref
-          write(*,*) 'xxx --     local max: ', max_loc
-          write(*,*) 'xxx --     local min: ', min_loc
-          call PRC_MPIstop
-       endif
-    endif
-
-!    if ( do_zdirec ) then
-!       max_ref = maxval( lev_org(:,:,:) )
-!       !min_ref = minval( lev_org(:,:,:) )
-!       max_loc = maxval( lev_loc(KS-1:KE+1,:,:) ) ! HALO + 1
-!       !min_loc = minval( lev_loc(3:KA,:,:) ) ! HALO + 1
-
-!       if ( max_ref < max_loc ) then
-!       !if ( max_ref < max_loc .or. min_ref > min_loc ) then
-!          write(*,*) 'xxx ERROR: REQUESTED DOMAIN IS TOO MUCH BROAD'
-!          write(*,*) 'xxx -- VERTICAL direction over the limit'
-!          write(*,*) 'xxx -- reference max: ', max_ref
-!          !write(*,*) 'xxx -- reference min: ', min_ref
-!          write(*,*) 'xxx --     local max: ', max_loc
-!          !write(*,*) 'xxx --     local min: ', min_loc
-!          call PRC_MPIstop
-!       endif
-!    endif
-
-    return
-  end subroutine check_domain_compatibility
 
 end module mod_copytopo
