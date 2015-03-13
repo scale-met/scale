@@ -167,6 +167,8 @@ contains
     use scale_const, only: &
        D2R => CONST_D2R
     use scale_grid, only: &
+       GRID_DOMAIN_CENTER_X, &
+       GRID_DOMAIN_CENTER_Y, &
        GRID_CX, &
        GRID_CY, &
        GRID_FX, &
@@ -187,6 +189,8 @@ contains
 
     real(RP), allocatable :: mine(:,:)    !< send buffer of lon-lat [deg]
     real(RP), allocatable :: whole(:,:)   !< recieve buffer of lon-lat [deg]
+
+    real(RP) :: CX, CY, FX, FY
 
     integer, parameter :: I_LON  = 1
     integer, parameter :: I_LAT  = 2
@@ -226,6 +230,12 @@ contains
 
     do j = 1, JA
     do i = 1, IA
+       ! apply offset
+       CX = GRID_CX(i) - GRID_DOMAIN_CENTER_X
+       CY = GRID_CY(i) - GRID_DOMAIN_CENTER_Y
+       FX = GRID_FX(i) - GRID_DOMAIN_CENTER_X
+       FY = GRID_FY(i) - GRID_DOMAIN_CENTER_Y
+
        call MPRJ_xy2lonlat( GRID_CX(i), GRID_CY(j), REAL_LON  (i,j), REAL_LAT  (i,j) )
        call MPRJ_xy2lonlat( GRID_FX(i), GRID_CY(j), REAL_LONX (i,j), REAL_LATX (i,j) )
        call MPRJ_xy2lonlat( GRID_CX(i), GRID_FY(j), REAL_LONY (i,j), REAL_LATY (i,j) )
