@@ -53,8 +53,9 @@ module mod_cnvtopo
   !
   real(RP), private :: CNVTOPO_smooth_maxslope
   real(RP), private :: CNVTOPO_smooth_maxslope_bnd
-  logical,  private :: CNVTOPO_smooth_local = .false.
+  logical,  private :: CNVTOPO_smooth_local  = .false.
   integer, private  :: CNVTOPO_smooth_itelim = 1000
+  logical,  private :: CNVTOPO_copy_parent   = .false.
   character(len=H_SHORT), private :: CNVTOPO_smooth_type = 'LAPLACIAN'
   !-----------------------------------------------------------------------------
 contains
@@ -73,13 +74,14 @@ contains
 
     character(len=H_SHORT) :: CNVTOPO_name = 'NONE'
 
-    NAMELIST / PARAM_CNVTOPO / &
-       CNVTOPO_name,            &
-       CNVTOPO_smooth_maxslope, &
+    NAMELIST / PARAM_CNVTOPO /      &
+       CNVTOPO_name,                &
+       CNVTOPO_smooth_maxslope,     &
        CNVTOPO_smooth_maxslope_bnd, &
-       CNVTOPO_smooth_local, &
-       CNVTOPO_smooth_itelim, &
-       CNVTOPO_smooth_type
+       CNVTOPO_smooth_local,        &
+       CNVTOPO_smooth_itelim,       &
+       CNVTOPO_smooth_type,         &
+       CNVTOPO_copy_parent
 
     real(RP) :: minslope, DZDX, DZDY
 
@@ -150,6 +152,8 @@ contains
        TOPO_fillhalo, &
        TOPO_Zsfc, &
        TOPO_write
+    use mod_copytopo, only: &
+       COPYTOPO
     implicit none
 
     real(RP) :: Zsfc(IA,JA,2)
@@ -198,6 +202,8 @@ contains
        end do
 
        call TOPO_fillhalo
+
+       if( CNVTOPO_copy_parent ) call COPYTOPO( TOPO_Zsfc )
 
        if( IO_L ) write(IO_FID_LOG,*) '++++++ END   CONVERT TOPOGRAPHY DATA ++++++'
 

@@ -42,6 +42,11 @@ module scale_grid
   real(RP), public              :: DX = 500.0_RP !< length in the main region [m]: x
   real(RP), public              :: DY = 500.0_RP !< length in the main region [m]: y
 
+  real(RP), public              :: BUFFER_DZ = 0.0_RP   !< thickness of buffer region [m]: z
+  real(RP), public              :: BUFFER_DX = 0.0_RP   !< thickness of buffer region [m]: x
+  real(RP), public              :: BUFFER_DY = 0.0_RP   !< thickness of buffer region [m]: y
+  real(RP), public              :: BUFFFACT  = 1.0_RP   !< strech factor for dx/dy/dz of buffer region
+
   real(RP), public              :: GRID_DOMAIN_CENTER_X !< center position of global domain [m]: x
   real(RP), public              :: GRID_DOMAIN_CENTER_Y !< center position of global domain [m]: y
 
@@ -95,11 +100,6 @@ module scale_grid
   character(len=H_LONG), private :: GRID_OUT_BASENAME = ''
   real(RP),              private :: GRID_OFFSET_X     = 0.0_RP
   real(RP),              private :: GRID_OFFSET_Y     = 0.0_RP
-
-  real(RP), private :: BUFFER_DZ = 0.0_RP ! thickness of buffer region [m]: z
-  real(RP), private :: BUFFER_DX = 0.0_RP ! thickness of buffer region [m]: x
-  real(RP), private :: BUFFER_DY = 0.0_RP ! thickness of buffer region [m]: y
-  real(RP), private :: BUFFFACT  = 1.0_RP ! strech factor for dx/dy/dz of buffer region
 
   integer,  private, parameter :: KMAX_user_lim = 300 !< limit of index size for user defined z
   real(RP), private            :: FZ(KMAX_user_lim)   !< user defined center coordinate [m]: z, local=global

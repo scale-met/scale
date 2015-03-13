@@ -41,6 +41,7 @@ module scale_grid_nest
   !
   public :: NEST_setup
   public :: NEST_domain_relate
+  public :: NEST_domain_shape
   public :: NEST_COMM_nestdown
   public :: NEST_COMM_recvwait_issue
   public :: NEST_COMM_recv_cancel
@@ -405,7 +406,6 @@ contains
     if( USE_NESTING ) then
 
        if ( OFFLINE .or. ONLINE_IAM_DAUGHTER ) then
-
           ims = IS-1
           ime = IE
           jms = JS-1
@@ -422,6 +422,8 @@ contains
           corner_loc(I_NE,I_LAT) = REAL_LATXY(ime,jme) / D2R
           corner_loc(I_SW,I_LAT) = REAL_LATXY(ims,jms) / D2R
           corner_loc(I_SE,I_LAT) = REAL_LATXY(ime,jms) / D2R
+
+          allocate( ncopy(IA,JA,itp_nh,itp_ng) )
        end if
 
       if( OFFLINE ) then
@@ -642,7 +644,6 @@ contains
             allocate( igrd (            DAUGHTER_IA(HANDLING_NUM),DAUGHTER_JA(HANDLING_NUM),itp_nh,       itp_ng) )
             allocate( jgrd (            DAUGHTER_IA(HANDLING_NUM),DAUGHTER_JA(HANDLING_NUM),itp_nh,       itp_ng) )
             allocate( kgrd (DAUGHTER_KA(HANDLING_NUM),DAUGHTER_IA(HANDLING_NUM),DAUGHTER_JA(HANDLING_NUM),itp_nh,itp_nv,itp_ng) )
-            allocate( ncopy(            DAUGHTER_IA(HANDLING_NUM),DAUGHTER_JA(HANDLING_NUM),itp_nh,       itp_ng) )
 
             call NEST_COMM_setup_nestdown( HANDLING_NUM )
 
@@ -877,6 +878,67 @@ contains
 
     return
   end subroutine NEST_domain_relate
+
+  !-----------------------------------------------------------------------------
+  !> Return shape of ParentDomain at the specified rank (for offline)
+  !  including definition array size with BND or not in Parent domain
+  subroutine NEST_domain_shape ( &
+      tilei,     & ! [out]
+      tilej,     & ! [out]
+      cxs, cxe,  & ! [out]
+      cys, cye,  & ! [out]
+      pxs, pxe,  & ! [out]
+      pys, pye,  & ! [out]
+      iloc       ) ! [in ]
+    implicit none
+
+    integer, intent(out) :: tilei, tilej
+    integer, intent(out) :: cxs, cxe, cys, cye
+    integer, intent(out) :: pxs, pxe, pys, pye
+    integer, intent(in)  :: iloc      ! rank number; start from 1
+
+    integer :: hdl = 1  ! handler number
+    integer :: rank
+    integer :: xloc,  yloc
+    integer :: xlocg, ylocg  ! location over whole domain
+    !---------------------------------------------------------------------------
+
+    rank  = NEST_TILE_ID(iloc)
+    xloc  = mod( iloc-1, NEST_TILE_NUM_X ) + 1
+    yloc  = int( real(iloc-1) / real(NEST_TILE_NUM_X) ) + 1
+    xlocg = mod( rank, OFFLINE_PARENT_PRC_NUM_X ) + 1
+    ylocg = int( real(rank) / real(OFFLINE_PARENT_PRC_NUM_X) ) + 1
+    tilei = PARENT_IMAX(hdl)
+    tilej = PARENT_JMAX(hdl)
+
+    cxs   = tilei * (xloc-1) + 1
+    cxe   = tilei * xloc
+    cys   = tilej * (yloc-1) + 1
+    cye   = tilej * yloc
+    pxs   = 1
+    pxe   = tilei
+    pys   = 1
+    pye   = tilej
+
+    if ( xlocg == 1 ) then ! BND_W
+       tilei = tilei + 2
+       pxs = pxs + 2
+       pxe = pxe + 2
+    endif
+    if ( xlocg == OFFLINE_PARENT_PRC_NUM_X ) then ! BND_E
+       tilei = tilei + 2
+    endif
+    if ( ylocg == 1 ) then ! BND_S
+       tilej = tilej + 2
+       pys = pys + 2
+       pye = pye + 2
+    endif
+    if ( ylocg == OFFLINE_PARENT_PRC_NUM_Y ) then ! BND_N
+       tilej = tilej + 2
+    endif
+
+    return
+  end subroutine NEST_domain_shape
 
   !-----------------------------------------------------------------------------
   !> Get parent domain size
