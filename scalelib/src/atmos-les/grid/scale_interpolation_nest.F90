@@ -1084,7 +1084,6 @@ contains
     logical,  intent(in)  :: lndgrd             ! flag of land grid
 
     real(RP) :: distance
-    real(RP) :: denom
     real(RP) :: dist(2)
     logical  :: dflag                           ! flag: data found or not
     integer  :: ii, jj, idx
@@ -1149,44 +1148,42 @@ contains
        do k = ks, ke
           dist(1) = large_number_2
           dist(2) = large_number_1
-          kgrd(k,iloc,jloc,idx,:) = -1
           copy    = .false.
+
+          kgrd(k,iloc,jloc,idx,:) = -1
+
           dflag   = .false.
 
           if( myhgt(k) < inhgt(inKS,ii,jj) ) then
              copy       = .true.
              ncopy(idx) = ncopy(idx) + 1
+
              kgrd(k,iloc,jloc,idx,:)  = inKS
+
              vfact(k,iloc,jloc,idx,1) = 1.0_RP
              vfact(k,iloc,jloc,idx,2) = 0.0_RP
-             dflag = .true.
-          else if( abs(myhgt(k)-inhgt(inKE,ii,jj))<eps ) then
-             kgrd(k,iloc,jloc,idx,:)  = inKE
-             vfact(k,iloc,jloc,idx,1) = 1.0_RP
-             vfact(k,iloc,jloc,idx,2) = 0.0_RP
+
              dflag = .true.
           else
              do kk = inKS, inKE
-                if( (inhgt(kk,ii,jj)<=myhgt(k)) .and. (myhgt(k)<inhgt(kk+1,ii,jj)) )then
+                dist(1) = myhgt(k) - inhgt(kk  ,ii,jj)
+                dist(2) = myhgt(k) - inhgt(kk+1,ii,jj)
+
+                if( dist(1) >= 0.0_RP .and. dist(2) < 0.0_RP ) then
                    kgrd(k,iloc,jloc,idx,1) = kk
                    kgrd(k,iloc,jloc,idx,2) = kk+1
+
+                   vfact(k,iloc,jloc,idx,1) = abs(dist(2)) / ( abs(dist(1)) + abs(dist(2)) )
+                   vfact(k,iloc,jloc,idx,2) = abs(dist(1)) / ( abs(dist(1)) + abs(dist(2)) )
+
                    dflag = .true.
-                   if( abs(dist(1)) < eps ) then
-                      vfact(k,iloc,jloc,idx,1) = 1.0_RP
-                      vfact(k,iloc,jloc,idx,2) = 0.0_RP
-                   else
-                      dist(1) = abs( myhgt(k) - inhgt(kk,ii,jj) )
-                      dist(2) = abs( myhgt(k) - inhgt(kk+1,ii,jj) )
-                      denom = 1.0_RP / ( (1.0_RP/dist(1)) + (1.0_RP/dist(2)) )
-                      vfact(k,iloc,jloc,idx,1) = ( 1.0_RP/dist(1) ) * denom
-                      vfact(k,iloc,jloc,idx,2) = ( 1.0_RP/dist(2) ) * denom
-                   endif
-                   exit
+
+                   exit ! loop end
                 endif
              enddo
           endif
 
-          if(.not. dflag)then
+          if( .not. dflag ) then
              write(*,*) 'xxx internal error [INTRPNEST_search_vert_online]'
              write(*,*) 'xxx data for interpolation was not found.'
              write(*,*) 'xxx iloc=',iloc,' jloc=',jloc,' k=',k,' idx=',idx
@@ -1205,7 +1202,6 @@ contains
 
     return
   end subroutine INTRPNEST_search_vert_online
-
 
   !-----------------------------------------------------------------------------
   ! vertical search of interpolation points for two-points (offline)
@@ -1344,7 +1340,6 @@ contains
 
     return
   end subroutine INTRPNEST_search_vert_offline
-
 
   !-----------------------------------------------------------------------------
   ! interpolation using one-points for 2D data (nearest-neighbor)
