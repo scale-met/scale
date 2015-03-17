@@ -1658,6 +1658,7 @@ contains
     real(RP) :: u_lld(DAUGHTER_KA(HANDLE),DAUGHTER_IA(HANDLE),DAUGHTER_JA(HANDLE))
     real(RP) :: v_lld(DAUGHTER_KA(HANDLE),DAUGHTER_IA(HANDLE),DAUGHTER_JA(HANDLE))
     real(RP) :: work1(DAUGHTER_KA(HANDLE),DAUGHTER_IA(HANDLE),DAUGHTER_JA(HANDLE))
+    real(RP) :: work2(DAUGHTER_KA(HANDLE),DAUGHTER_IA(HANDLE),DAUGHTER_JA(HANDLE))
 
     real(RP) :: u_on_map, v_on_map
     integer :: ierr
@@ -1704,11 +1705,42 @@ contains
        rq_ctl_p = 0
 
        if ( .not. ONLINE_DAUGHTER_NO_ROTATE ) then
+          ! from staggered point to scalar point
+          do j = 1, PARENT_JA(HANDLE)
+          do i = 2, PARENT_IA(HANDLE)
+          do k = PRNT_KS(HANDLE)-1, PRNT_KE(HANDLE)+1
+             work1(k,i,j) = ( org_MOMX(k,i-1,j) + org_MOMX(k,i,j) ) * 0.5_RP
+          end do
+          end do
+          end do
+          do j = 1, PARENT_JA(HANDLE)
+          do k = PRNT_KS(HANDLE)-1, PRNT_KE(HANDLE)+1
+             work1(k,1,j) = org_MOMX(k,1,j)
+          end do
+          end do
+          call COMM_vars8( work1(:,:,:), 1 )
+          do j = 2, PARENT_JA(HANDLE)
+          do i = 1, PARENT_IA(HANDLE)
+          do k = PRNT_KS(HANDLE)-1, PRNT_KE(HANDLE)+1
+             work2(k,i,j) = ( org_MOMY(k,i,j-1) + org_MOMY(k,i,j) ) * 0.5_RP
+          end do
+          end do
+          end do
+          do i = 1, PARENT_IA(HANDLE)
+          do k = PRNT_KS(HANDLE)-1, PRNT_KE(HANDLE)+1
+             work2(k,i,1) = org_MOMY(k,i,1)
+          end do
+          end do
+          call COMM_vars8( work2(:,:,:), 2 )
+          call COMM_wait ( work1(:,:,:), 1, .false. )
+          call COMM_wait ( work2(:,:,:), 2, .false. )
+
+          ! rotation from map-projected field to latlon field
           do j = PRNT_JS(HANDLE), PRNT_JE(HANDLE)
           do i = PRNT_IS(HANDLE), PRNT_IE(HANDLE)
           do k = PRNT_KS(HANDLE), PRNT_KE(HANDLE)
-             u_on_map = org_MOMX(k,i,j) / ( org_DENS(k,i+1,j) + org_DENS(k,i,j) ) * 2.0_RP
-             v_on_map = org_MOMY(k,i,j) / ( org_DENS(k,i,j+1) + org_DENS(k,i,j) ) * 2.0_RP
+             u_on_map = work1(k,i,j) / org_DENS(k,i,j)
+             v_on_map = work2(k,i,j) / org_DENS(k,i,j)
 
              u_llp(k,i,j) = u_on_map * rotc(i,j,cosin) - v_on_map * rotc(i,j,sine )
              v_llp(k,i,j) = u_on_map * rotc(i,j,sine ) + v_on_map * rotc(i,j,cosin)
@@ -1844,14 +1876,45 @@ contains
           call COMM_wait ( interped_ref_VELX, 2, .false. )
           call COMM_wait ( interped_ref_VELY, 3, .false. )
        else ! rotate
+          ! rotation from latlon field to map-projected field
           do j = 1, DAUGHTER_JA(HANDLE)
           do i = 1, DAUGHTER_IA(HANDLE)
           do k = DATR_KS(HANDLE), DATR_KE(HANDLE)
-             interped_ref_VELX(k,i,j) =   u_lld(k,i,j) * rotc(i,j,cosin) + v_lld(k,i,j) * rotc(i,j,sine )
-             interped_ref_VELY(k,i,j) = - u_lld(k,i,j) * rotc(i,j,sine ) + v_lld(k,i,j) * rotc(i,j,cosin)
+             work1(k,i,j) =   u_lld(k,i,j) * rotc(i,j,cosin) + v_lld(k,i,j) * rotc(i,j,sine )
+             work2(k,i,j) = - u_lld(k,i,j) * rotc(i,j,sine ) + v_lld(k,i,j) * rotc(i,j,cosin)
           enddo
           enddo
           enddo
+
+          ! from scalar point to staggered point
+          do j = 1, DAUGHTER_JA(HANDLE)
+          do i = 1, DAUGHTER_IA(HANDLE)-1
+          do k = DATR_KS(HANDLE), DATR_KE(HANDLE)
+             interped_ref_VELX(k,i,j) = ( work1(k,i+1,j) + work1(k,i,j) ) * 0.5_RP
+          end do
+          end do
+          end do
+          do j = 1, DAUGHTER_JA(HANDLE)
+          do k = DATR_KS(HANDLE), DATR_KE(HANDLE)
+             interped_ref_VELX(k,DAUGHTER_IA(HANDLE),j) = work1(k,DAUGHTER_IA(HANDLE),j)
+          enddo
+          enddo
+          call COMM_vars8( interped_ref_VELX, 2 )
+          do j = 1, DAUGHTER_JA(HANDLE)-1
+          do i = 1, DAUGHTER_IA(HANDLE)
+          do k = DATR_KS(HANDLE), DATR_KE(HANDLE)
+             interped_ref_VELY(k,i,j) = ( work2(k,i,j+1) + work2(k,i,j) ) * 0.5_RP
+          end do
+          end do
+          end do
+          do i = 1, DAUGHTER_IA(HANDLE)
+          do k = DATR_KS(HANDLE), DATR_KE(HANDLE)
+             interped_ref_VELY(k,i,DAUGHTER_JA(HANDLE)) = work2(k,i,DAUGHTER_JA(HANDLE))
+          enddo
+          enddo
+          call COMM_vars8( interped_ref_VELY, 3 )
+          call COMM_wait ( interped_ref_VELX, 2, .false. )
+          call COMM_wait ( interped_ref_VELY, 3, .false. )
        end if
 
        tagbase = tagcomm + tag_rhot*order_tag_var
