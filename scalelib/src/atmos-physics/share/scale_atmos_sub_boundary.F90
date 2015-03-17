@@ -225,8 +225,8 @@ contains
        ATMOS_BOUNDARY_USE_QV,         &
        ATMOS_BOUNDARY_USE_QHYD,       &
        ATMOS_BOUNDARY_VALUE_VELZ,     &
-       ATMOS_BOUNDARY_VALUE_VELY,     &
        ATMOS_BOUNDARY_VALUE_VELX,     &
+       ATMOS_BOUNDARY_VALUE_VELY,     &
        ATMOS_BOUNDARY_VALUE_POTT,     &
        ATMOS_BOUNDARY_VALUE_QTRC,     &
        ATMOS_BOUNDARY_SMOOTHER_FACT,  &
@@ -249,6 +249,10 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Boundary]/Categ[ATMOS]'
 
+    ATMOS_BOUNDARY_tauz = DT * 10.0_RP
+    ATMOS_BOUNDARY_taux = DT * 10.0_RP
+    ATMOS_BOUNDARY_tauy = DT * 10.0_RP
+
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_ATMOS_BOUNDARY,iostat=ierr)
@@ -258,7 +262,7 @@ contains
        write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_BOUNDARY. Check!'
        call PRC_MPIstop
     endif
-    if( IO_LNML) write(IO_FID_LOG,nml=PARAM_ATMOS_BOUNDARY)
+    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_ATMOS_BOUNDARY)
 
     ! setting switches
     if( .NOT. USE_NESTING ) then
@@ -285,16 +289,12 @@ contains
           do_daughter_process = .true.
        endif
     endif
-    if( IO_L ) write(IO_FID_LOG,*) '*** Online Nesting for Lateral Boundary:', ATMOS_BOUNDARY_ONLINE
-
-
 
     if( ATMOS_BOUNDARY_USE_QHYD ) then
        BND_QA = QA
     else
        BND_QA = I_QV
     end if
-
 
     allocate( ATMOS_BOUNDARY_DENS(KA,IA,JA) )
     allocate( ATMOS_BOUNDARY_VELZ(KA,IA,JA) )
@@ -322,10 +322,6 @@ contains
     ATMOS_BOUNDARY_alpha_POTT(:,:,:)   = 0.0_RP
     ATMOS_BOUNDARY_alpha_QTRC(:,:,:,:) = 0.0_RP
 
-    ATMOS_BOUNDARY_tauz = DT * 10.0_RP
-    ATMOS_BOUNDARY_taux = DT * 10.0_RP
-    ATMOS_BOUNDARY_tauy = DT * 10.0_RP
-
     if ( ATMOS_BOUNDARY_TYPE == 'REAL' .or. do_daughter_process ) then
        l_bnd = .true.
     else
@@ -347,7 +343,6 @@ contains
           write(*,*) 'xxx Wrong parameter in ATMOS_BOUNDARY_increment_TYPE. Check!'
           call PRC_MPIstop
        end select
-       if( IO_L ) write(IO_FID_LOG,*) '+++ BOUNDARY increment TYPE: ', ATMOS_BOUNDARY_increment_TYPE
 
        COMM_FILL_BND = .false.
 
@@ -419,10 +414,49 @@ contains
 
     if ( USE_NESTING ) ATMOS_BOUNDARY_UPDATE_FLAG = .true.
 
-
-
     if( ATMOS_BOUNDARY_OUT_BASENAME /= '' ) then
        call ATMOS_BOUNDARY_write
+    endif
+
+    !----- report data -----
+    if( IO_L ) write(IO_FID_LOG,*) ''
+    if( IO_L ) write(IO_FID_LOG,*) '*** atmospheric boundary parameters'
+    if( IO_L ) write(IO_FID_LOG,*) '*** atmospheric boundary type                       :', ATMOS_BOUNDARY_TYPE
+    if( IO_L ) write(IO_FID_LOG,*) ''
+    if( IO_L ) write(IO_FID_LOG,*) '*** is VELZ used in atmospheric boundary?           :', ATMOS_BOUNDARY_USE_VELZ
+    if( IO_L ) write(IO_FID_LOG,*) '*** is VELX used in atmospheric boundary?           :', ATMOS_BOUNDARY_USE_VELX
+    if( IO_L ) write(IO_FID_LOG,*) '*** is VELY used in atmospheric boundary?           :', ATMOS_BOUNDARY_USE_VELY
+    if( IO_L ) write(IO_FID_LOG,*) '*** is POTT used in atmospheric boundary?           :', ATMOS_BOUNDARY_USE_POTT
+    if( IO_L ) write(IO_FID_LOG,*) '*** is DENS used in atmospheric boundary?           :', ATMOS_BOUNDARY_USE_DENS
+    if( IO_L ) write(IO_FID_LOG,*) '*** is QV   used in atmospheric boundary?           :', ATMOS_BOUNDARY_USE_QV
+    if( IO_L ) write(IO_FID_LOG,*) '*** is QHYD used in atmospheric boundary?           :', ATMOS_BOUNDARY_USE_QHYD
+    if( IO_L ) write(IO_FID_LOG,*) ''
+    if( IO_L ) write(IO_FID_LOG,*) '*** atmospheric boundary VELZ values                :', ATMOS_BOUNDARY_VALUE_VELZ
+    if( IO_L ) write(IO_FID_LOG,*) '*** atmospheric boundary VELX values                :', ATMOS_BOUNDARY_VALUE_VELX
+    if( IO_L ) write(IO_FID_LOG,*) '*** atmospheric boundary VELY values                :', ATMOS_BOUNDARY_VALUE_VELY
+    if( IO_L ) write(IO_FID_LOG,*) '*** atmospheric boundary POTT values                :', ATMOS_BOUNDARY_VALUE_POTT
+    if( IO_L ) write(IO_FID_LOG,*) '*** atmospheric boundary QTRC values                :', ATMOS_BOUNDARY_VALUE_QTRC
+    if( IO_L ) write(IO_FID_LOG,*) ''
+    if( IO_L ) write(IO_FID_LOG,*) '*** atmospheric boundary smoother factor            :', ATMOS_BOUNDARY_SMOOTHER_FACT
+    if( IO_L ) write(IO_FID_LOG,*) '*** atmospheric boundary z-fraction                 :', ATMOS_BOUNDARY_FRACZ
+    if( IO_L ) write(IO_FID_LOG,*) '*** atmospheric boundary x-fraction                 :', ATMOS_BOUNDARY_FRACX
+    if( IO_L ) write(IO_FID_LOG,*) '*** atmospheric boundary y-fraction                 :', ATMOS_BOUNDARY_FRACY
+    if( IO_L ) write(IO_FID_LOG,*) '*** atmospheric boundary z-relaxation time          :', ATMOS_BOUNDARY_TAUZ
+    if( IO_L ) write(IO_FID_LOG,*) '*** atmospheric boundary x-relaxation time          :', ATMOS_BOUNDARY_TAUX
+    if( IO_L ) write(IO_FID_LOG,*) '*** atmospheric boundary y-relaxation time          :', ATMOS_BOUNDARY_TAUY
+    if( IO_L ) write(IO_FID_LOG,*) ''
+    if( IO_L ) write(IO_FID_LOG,*) '*** atmospheric boundary update dt                  :', ATMOS_BOUNDARY_UPDATE_DT
+    if( IO_L ) write(IO_FID_LOG,*) '*** atmospheric boundary start date                 :', ATMOS_BOUNDARY_START_DATE(:)
+    if( IO_L ) write(IO_FID_LOG,*) ''
+    if( IO_L ) write(IO_FID_LOG,*) '*** linear profile in vertically relax region       :', ATMOS_BOUNDARY_LINEAR_V
+    if( IO_L ) write(IO_FID_LOG,*) '*** linear profile in horizontally relax region     :', ATMOS_BOUNDARY_LINEAR_H
+    if( IO_L ) write(IO_FID_LOG,*) '*** non-linear factor in horizontally relax region  :', ATMOS_BOUNDARY_EXP_H
+    if( IO_L ) write(IO_FID_LOG,*) ''
+    if( IO_L ) write(IO_FID_LOG,*) '*** online nesting for lateral boundary             :', ATMOS_BOUNDARY_ONLINE
+
+    if( IO_L ) write(IO_FID_LOG,*) '*** does lateral boundary exist in this domain?     :', l_bnd
+    if ( l_bnd ) then
+       if( IO_L ) write(IO_FID_LOG,*) '*** lateral boundary increment type                 :', ATMOS_BOUNDARY_increment_TYPE
     endif
 
     return

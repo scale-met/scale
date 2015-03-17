@@ -76,9 +76,9 @@ program scaleles_launcher
      LOG_SPLIT
   !-----------------------------------------------------------
 
-  NUM_DOMAIN    = 1
-  PRC_DOMAINS   = 0
-  CONF_FILES(:) = ""
+  NUM_DOMAIN     = 1
+  PRC_DOMAINS(:) = 0
+  CONF_FILES (:) = ""
 
   ! start MPI
   call PRC_MPIstart
