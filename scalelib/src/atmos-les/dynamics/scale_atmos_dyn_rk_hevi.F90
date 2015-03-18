@@ -321,7 +321,6 @@ contains
 
 
     qflx_hi(:,:,:,:) = UNDEF
-    tflx_hi(:,:,:,:) = UNDEF
     qflx_J (:,:,:)   = UNDEF
 #endif
 
