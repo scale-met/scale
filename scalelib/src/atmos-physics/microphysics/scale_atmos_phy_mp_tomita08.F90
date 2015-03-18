@@ -351,7 +351,7 @@ contains
     if ( IO_L ) write(IO_FID_LOG,*) '*** Enable negative fixer?                    : ', MP_donegative_fixer
     if ( IO_L ) write(IO_FID_LOG,*) '*** Enable sedimentation (precipitation)?     : ', MP_doprecipitation
 
-    nstep_max = int( ( TIME_DTSEC_ATMOS_PHY_MP * max_term_vel ) / minval( CDZ(:) ) )
+    nstep_max = ceiling( ( TIME_DTSEC_ATMOS_PHY_MP * max_term_vel ) / minval( CDZ(:) ) )
     MP_ntmax_sedimentation = max( MP_ntmax_sedimentation, nstep_max )
 
     MP_NSTEP_SEDIMENTATION  = MP_ntmax_sedimentation
