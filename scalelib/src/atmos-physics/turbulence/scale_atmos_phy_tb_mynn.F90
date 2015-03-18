@@ -81,6 +81,8 @@ module scale_atmos_phy_tb_mynn
 
   integer :: KE_PBL
   logical :: ATMOS_PHY_TB_MYNN_TKE_INIT = .false. !< set tke with that of level 2 at the first time if .true.
+  real(RP) :: ATMOS_PHY_TB_MYNN_NU_MIN = 0.1_RP
+  real(RP) :: ATMOS_PHY_TB_MYNN_KH_MIN = 0.1_RP
 
   !-----------------------------------------------------------------------------
 contains
@@ -104,7 +106,9 @@ contains
 
     NAMELIST / PARAM_ATMOS_PHY_TB_MYNN / &
          ATMOS_PHY_TB_MYNN_TKE_INIT, &
-         ATMOS_PHY_TB_MYNN_KMAX_PBL
+         ATMOS_PHY_TB_MYNN_KMAX_PBL, &
+         ATMOS_PHY_TB_MYNN_NU_MIN, &
+         ATMOS_PHY_TB_MYNN_KH_MIN
 
     integer :: ierr
     !---------------------------------------------------------------------------
@@ -169,7 +173,9 @@ contains
     use scale_tracer
     use scale_const, only: &
        GRAV   => CONST_GRAV, &
-       EPS    => CONST_EPS
+       CP     => CONST_CPdry, &
+       EPS    => CONST_EPS, &
+       EPSTvap => CONST_EPSTvap
     use scale_grid, only: &
        CDZ  => GRID_CDZ,  &
        FDZ  => GRID_FDZ,  &
@@ -197,6 +203,10 @@ contains
        COMM_wait
     use scale_atmos_phy_tb_common, only: &
        diffusion_solver => ATMOS_PHY_TB_diffusion_solver
+    use scale_atmos_thermodyn, only: &
+       ATMOS_THERMODYN_temp_pres, &
+       ATMOS_THERMODYN_templhv, &
+       ATMOS_THERMODYN_templhs
     implicit none
 
     real(RP), intent(out) :: qflx_sgs_momz(KA,IA,JA,3)
@@ -232,6 +242,8 @@ contains
     real(RP) :: U(KA,IA,JA)    !< velocity in x-direction (full level)
     real(RP) :: V(KA,IA,JA)    !< velocity in y-direction (full level)
     real(RP) :: POTT(KA,IA,JA) !< potential temperature (full level)
+    real(RP) :: POTV(KA,IA,JA) !< virtual potential temperature (full level)
+    real(RP) :: Qw(KA,IA,JA)   !< total water
     real(RP) :: phiN(KA,IA,JA)
 
 
@@ -249,6 +261,16 @@ contains
     real(RP) :: d(KA)
     real(RP) :: ap
     real(RP) :: tke_N(KE_PBL,IA,JA)
+
+    real(RP) :: temp         !< temperature
+    real(RP) :: pres         !< pressure
+
+    real(RP) :: ptl          !< liquid water potential temperature
+    real(RP) :: ql           !< liquid water
+    real(RP) :: qs           !< solid water
+
+    real(RP) :: lhv
+    real(RP) :: lhs
 
     real(RP) :: l2q2         !< L^2/q^2
     real(RP) :: q2           !< q^2
@@ -399,43 +421,48 @@ contains
 
        do j = JJS, JJE+1
        do i = IIS, IIE+1
-       do k = KS, KE_PBL+1
-          POTT(k,i,j) = RHOT(k,i,j) / DENS(k,i,j)
-       end do
-       end do
-       end do
+          do k = KS, KE_PBL+1
+             ql = 0.0_RP
+             do iq = QWS, QWE
+                ql = ql + QTRC(k,i,j,iq)
+             end do
+             qs = 0.0_RP
+             do iq = QIS, QIE
+                qs = qs + QTRC(k,i,j,iq)
+             end do
+             Qw(k,i,j) = QTRC(k,i,j,I_QV) + ql + qs
 
-       do j = JJS, JJE+1
-       do i = IIS, IIE+1
-       do k = KS+1, KE_PBL
-          n2(k,i,j) = GRAV * ( POTT(k+1,i,j) - POTT(k-1,i,j)) * J33G &
-               / ( (FDZ(k)+FDZ(k-1)) * GSQRT(k,i,j,I_XYZ) * PT0(k,i,j) )
-       end do
-       end do
-       end do
-       do j = JJS, JJE+1
-       do i = IIS, IIE+1
-          n2(KS,i,j) = GRAV * ( POTT(KS+1,i,j) - POTT(KS,i,j)) * J33G &
-               * RFDZ(KS) / ( GSQRT(KS,i,j,I_XYZ) * PT0(KS,i,j) )
-       end do
-       end do
+             call ATMOS_THERMODYN_temp_pres( temp, pres, & ! (out)
+                  DENS(k,i,j), RHOT(k,i,j), QTRC(k,i,j,:) ) ! (in)
+             call ATMOS_THERMODYN_templhv( lhv, temp )
+             call ATMOS_THERMODYN_templhs( lhs, temp )
 
-       do j = JJS, JJE+1
-       do i = IIS, IIE+1
-       do k = KS, KE_PBL
-          dudz2(k,i,j) = ( ( U(k+1,i,j) - U(k-1,i,j) )**2 + ( V(k+1,i,j) - V(k-1,i,j) )**2 ) &
-               / ( FDZ(k-1)*GSQRT(k-1,i,j,I_XYZ) + FDZ(k)*GSQRT(k,i,j,I_XYZ) )**2
-          sw = sign(0.5_RP, dudz2(k,i,j)-EPS) + 0.5_RP
-          dudz2(k,i,j) = dudz2(k,i,j)*sw + 1.E-10_RP*(1.0_RP-sw)
-       end do
-       end do
-       end do
+             POTT(k,i,j) = RHOT(k,i,j) / DENS(k,i,j)
+             ! liquid water potential temperature
+             ptl = POTT(k,i,j) * (1.0_RP - 1.0_RP * (lhv * ql + lhs * qs) / ( temp * CP ) )
 
-       do j = JJS, JJE+1
-       do i = IIS, IIE+1
-       do k = KS, KE_PBL
-          Ri(k,i,j) = n2(k,i,j)/dudz2(k,i,j)
-       end do
+             ! virtual potential temperature for derivertive
+             POTV(k,i,j) = ( 1.0_RP + EPSTvap * Qw(k,i,j) - (1.0_RP+EPSTvap) * ql ) * ptl 
+          end do
+
+          do k = KS+1, KE_PBL
+             n2(k,i,j) = GRAV * ( POTV(k+1,i,j) - POTV(k-1,i,j)) * J33G &
+                       / ( (FDZ(k)+FDZ(k-1)) * GSQRT(k,i,j,I_XYZ) * POTV(k,i,j) )
+          end do
+          n2(KS,i,j) = GRAV * ( POTV(KS+1,i,j) - POTV(KS,i,j)) * J33G &
+               * RFDZ(KS) / ( GSQRT(KS,i,j,I_XYZ) * POTV(KS,i,j) )
+
+          do k = KS, KE_PBL
+             dudz2(k,i,j) = ( ( U(k+1,i,j) - U(k-1,i,j) )**2 + ( V(k+1,i,j) - V(k-1,i,j) )**2 ) &
+                 / ( FDZ(k-1)*GSQRT(k-1,i,j,I_XYZ) + FDZ(k)*GSQRT(k,i,j,I_XYZ) )**2
+             sw = sign(0.5_RP, dudz2(k,i,j)-EPS) + 0.5_RP
+             dudz2(k,i,j) = dudz2(k,i,j)*sw + 1.E-10_RP*(1.0_RP-sw)
+          end do
+
+          do k = KS, KE_PBL
+             Ri(k,i,j) = n2(k,i,j)/dudz2(k,i,j)
+          end do
+
        end do
        end do
 
@@ -475,7 +502,7 @@ contains
        end do
        call COMM_vars8(tke, 1)
        call COMM_wait (tke, 1)
-       end if
+    end if
 
     do JJS = JS, JE, JBLOCK
     JJE = JJS+JBLOCK-1
@@ -520,7 +547,8 @@ contains
              Nu(k,i,j) = 0.0_RP
           end do
           do k = KS, KE_PBL
-             Nu(k,i,j) = l(k,i,j) * q(k,i,j) * sm(k,i,j)
+             Nu(k,i,j) = max( l(k,i,j) * q(k,i,j) * sm(k,i,j), &
+                              ATMOS_PHY_TB_MYNN_NU_MIN )
           end do
           do k = KE_PBL+1, KA
              Nu(k,i,j) = 0.0_RP
@@ -534,6 +562,9 @@ contains
           sw = 0.5_RP - sign(0.5_RP, sh(k,i,j)-EPS)
           Pr(k,i,j) = sm(k,i,j) / (sh(k,i,j)+sw) * (1.0_RP-sw) &
                     + 1.0_RP * sw
+          if ( Nu(k,i,j)/Pr(k,i,j) < ATMOS_PHY_TB_MYNN_KH_MIN ) then
+            Pr(k,i,j) = Nu(k,i,j) / ATMOS_PHY_TB_MYNN_KH_MIN
+          end if
        end do
        end do
        end do
@@ -917,7 +948,7 @@ contains
     real(RP) :: z
     real(RP) :: qdz
 
-    real(RP) :: sw, sw2
+    real(RP) :: sw
     integer :: k, i, j
 
     do j = JJS, JJE
@@ -934,7 +965,7 @@ contains
        lt = max(0.23_RP * int_qz / (int_q + EPS), LT_min)
        rlt = 1.0_RP / lt
 
-       us = ( (SFLX_MU(i,j)**2 + SFLX_MV(i,j)**2)*0.5_RP )**0.25_RP / DENS(KS,i,j) ! friction velocity
+       us = ( SFLX_MU(i,j)**2 + SFLX_MV(i,j)**2 )**0.25_RP / DENS(KS,i,j) ! friction velocity
        us = max(us, Us_min)
        wtg = SFLX_SH(i,j) / (CP * DENS(KS,i,j)) ! surface heat flux
        rlm = - KARMAN * GRAV * wtg / (PT0(KS,i,j) * us**3 )

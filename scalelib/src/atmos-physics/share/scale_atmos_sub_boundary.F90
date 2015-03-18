@@ -922,6 +922,8 @@ contains
        GRID_CBFZ, &
        GRID_CBFX, &
        GRID_CBFY
+    use scale_const, only: &
+       EPS => CONST_EPS
     implicit none
 
     real(RP) :: reference_atmos(KMAX,IMAXB,JMAXB) !> restart file (no HALO)
@@ -998,20 +1000,20 @@ contains
     call FileRead( tmp_CBFY(:),  bname, 'CBFY', 1, PRC_myrank )
 
     do i = 1, IA
-       if( tmp_CBFX(i) /= GRID_CBFX(i) ) then
-           write( IO_FID_LOG,'(A)')  '*** Buffer layer in ATMOS_BOUNDARY_IN_BASENAME is different from GRID_IN_BASENAME ***'
+       if( abs(tmp_CBFX(i) - GRID_CBFX(i)) > EPS ) then
+           write( IO_FID_LOG,*)  '*** Buffer layer (X) in ATMOS_BOUNDARY_IN_BASENAME is different from GRID_IN_BASENAME ***: i=', i, tmp_CBFX(i), GRID_CBFX(i)
            call PRC_MPIstop
        endif
     enddo
     do j = 1, JA
-       if( tmp_CBFY(j) /= GRID_CBFY(j) ) then
-           write( IO_FID_LOG,'(A)')  '*** Buffer layer in ATMOS_BOUNDARY_IN_BASENAME is different from GRID_IN_BASENAME ***'
+       if( abs(tmp_CBFY(j) - GRID_CBFY(j)) > EPS ) then
+           write( IO_FID_LOG,*)  '*** Buffer layer (Y) in ATMOS_BOUNDARY_IN_BASENAME is different from GRID_IN_BASENAME ***: j=', j, tmp_CBFY(j), GRID_CBFY(j)
            call PRC_MPIstop
        endif
     enddo
     do k = 1, KA
-       if( tmp_CBFZ(k) /= GRID_CBFZ(k) ) then
-           write( IO_FID_LOG,'(A)')  '*** Buffer layer in ATMOS_BOUNDARY_IN_BASENAME is different from GRID_IN_BASENAME ***'
+       if( abs(tmp_CBFZ(k) - GRID_CBFZ(k)) > EPS ) then
+           write( IO_FID_LOG,*)  '*** Buffer layer (Z) in ATMOS_BOUNDARY_IN_BASENAME is different from GRID_IN_BASENAME ***: k=', k, tmp_CBFZ(k), GRID_CBFZ(k)
            call PRC_MPIstop
        endif
     enddo
