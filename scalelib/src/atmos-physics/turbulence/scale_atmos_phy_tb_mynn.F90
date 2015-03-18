@@ -965,7 +965,7 @@ contains
        lt = max(0.23_RP * int_qz / (int_q + EPS), LT_min)
        rlt = 1.0_RP / lt
 
-       us = ( (SFLX_MU(i,j)**2 + SFLX_MV(i,j)**2)*0.5_RP )**0.25_RP / DENS(KS,i,j) ! friction velocity
+       us = ( SFLX_MU(i,j)**2 + SFLX_MV(i,j)**2 )**0.25_RP / DENS(KS,i,j) ! friction velocity
        us = max(us, Us_min)
        wtg = SFLX_SH(i,j) / (CP * DENS(KS,i,j)) ! surface heat flux
        rlm = - KARMAN * GRAV * wtg / (PT0(KS,i,j) * us**3 )
