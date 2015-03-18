@@ -1105,46 +1105,6 @@ contains
        ii = igrd(idx)
        jj = jgrd(idx)
 
-
-       !do k = ks, ke
-       !   dist(1) = large_number_2
-       !   dist(2) = large_number_1
-       !   kgrd(k,iloc,jloc,idx,:) = -1
-       !   copy = .false.
-       !
-       !   do kk = 1+KHALO, inKA-KHALO
-       !      distance = abs( myhgt(k) - inhgt(kk,ii,jj) )
-       !      if ( distance <= dist(1) ) then
-       !         dist(2) = dist(1);     kgrd(k,iloc,jloc,idx,2) = kgrd(k,iloc,jloc,idx,1)
-       !         dist(1) = distance;    kgrd(k,iloc,jloc,idx,1) = kk
-       !      elseif ( dist(1) < distance .and. distance <= dist(2) ) then
-       !         dist(2) = distance;    kgrd(k,iloc,jloc,idx,2) = kk
-       !      endif
-       !   enddo
-       !
-       !   if( inhgt(KS_local,ii,jj) > myhgt(k) ) then
-       !      copy = .true.
-       !   endif
-       !
-       !   if( copy ) then
-       !      kgrd(k,iloc,jloc,idx,1)  = KS_local
-       !      kgrd(k,iloc,jloc,idx,2)  = KS_local + 1 ! not used
-       !      vfact(k,iloc,jloc,idx,1) = 1.0_RP
-       !      vfact(k,iloc,jloc,idx,2) = 0.0_RP
-       !      ncopy = ncopy + 1
-       !   elseif( (.NOT. copy) .and. abs(dist(1)) < eps ) then
-       !      vfact(k,iloc,jloc,idx,1) = 1.0_RP
-       !      vfact(k,iloc,jloc,idx,2) = 0.0_RP
-       !   elseif( .NOT. copy ) then
-       !      denom = 1.0_RP / ( (1.0_RP/dist(1)) + (1.0_RP/dist(2)) )
-       !      vfact(k,iloc,jloc,idx,1) = ( 1.0_RP/dist(1) ) * denom
-       !      vfact(k,iloc,jloc,idx,2) = ( 1.0_RP/dist(2) ) * denom
-       !   else
-       !      write(*,*) 'xxx internal error [interporation: nest/interp]'
-       !      call PRC_MPIstop
-       !   endif
-       !enddo
-
        do k = ks, ke
           dist(1) = large_number_2
           dist(2) = large_number_1
@@ -1191,13 +1151,6 @@ contains
           endif
        enddo
 
-       ! not to output message: tentative
-       !if( ncopy > 1 )then ! copy is allowed only one time.
-       !   write(*,*) 'xxx ERROR: times of copying is exceeded allowed times'
-       !   write(*,*) 'xxx domain number: ', ONLINE_DOMAIN_NUM
-       !   write(*,*) 'xxx copy times: ', ncopy
-       !   call PRC_MPIstop
-       !endif
     enddo
 
     return
@@ -1259,31 +1212,6 @@ contains
     do idx = 1, itp_nh
        ii = igrd(idx)
        jj = jgrd(idx)
-
-       !do k = kks, kke
-       !   dist(1) = large_number_2
-       !   dist(2) = large_number_1
-       !   kgrd(k,iloc,jloc,idx,:) = -1
-       !
-       !   do kk = 1, inKA
-       !      distance = abs( myhgt(k) - inhgt(kk,ii,jj) )
-       !      if ( distance <= dist(1) ) then
-       !         dist(2) = dist(1);     kgrd(k,iloc,jloc,idx,2) = kgrd(k,iloc,jloc,idx,1)
-       !         dist(1) = distance;    kgrd(k,iloc,jloc,idx,1) = kk
-       !      elseif ( dist(1) < distance .and. distance <= dist(2) ) then
-       !         dist(2) = distance;    kgrd(k,iloc,jloc,idx,2) = kk
-       !      endif
-       !   enddo
-       !
-       !   if ( abs(dist(1)) < eps ) then
-       !      vfact(k,iloc,jloc,idx,1) = 1.0_RP
-       !      vfact(k,iloc,jloc,idx,2) = 0.0_RP
-       !   else
-       !      denom = 1.0_RP / ( (1.0_RP/dist(1)) + (1.0_RP/dist(2)) )
-       !      vfact(k,iloc,jloc,idx,1) = ( 1.0_RP/dist(1) ) * denom
-       !      vfact(k,iloc,jloc,idx,2) = ( 1.0_RP/dist(2) ) * denom
-       !   endif
-       !enddo
 
        do k = kks, kke
           dist(1) = large_number_2
