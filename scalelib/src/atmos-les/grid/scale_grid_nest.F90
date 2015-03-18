@@ -1657,13 +1657,17 @@ contains
     real(RP) :: dens (DAUGHTER_KA(HANDLE),DAUGHTER_IA(HANDLE),DAUGHTER_JA(HANDLE))
     real(RP) :: u_lld(DAUGHTER_KA(HANDLE),DAUGHTER_IA(HANDLE),DAUGHTER_JA(HANDLE))
     real(RP) :: v_lld(DAUGHTER_KA(HANDLE),DAUGHTER_IA(HANDLE),DAUGHTER_JA(HANDLE))
-    real(RP) :: work1(DAUGHTER_KA(HANDLE),DAUGHTER_IA(HANDLE),DAUGHTER_JA(HANDLE))
+    real(RP) :: work1d(DAUGHTER_KA(HANDLE),DAUGHTER_IA(HANDLE),DAUGHTER_JA(HANDLE))
+    real(RP) :: work2d(DAUGHTER_KA(HANDLE),DAUGHTER_IA(HANDLE),DAUGHTER_JA(HANDLE))
+
+    real(RP) :: work1p(PARENT_KA(HANDLE),PARENT_IA(HANDLE),PARENT_JA(HANDLE))
+    real(RP) :: work2p(PARENT_KA(HANDLE),PARENT_IA(HANDLE),PARENT_JA(HANDLE))
 
     real(RP) :: u_on_map, v_on_map
-    integer :: ierr
-    integer :: tagbase, tagcomm
-    integer :: isu_tag, isu_tagf
-    integer :: i, j, k, iq
+    integer  :: ierr
+    integer  :: tagbase, tagcomm
+    integer  :: isu_tag, isu_tagf
+    integer  :: i, j, k, iq
 
     integer, parameter :: cosin = 1
     integer, parameter :: sine  = 2
@@ -1704,11 +1708,42 @@ contains
        rq_ctl_p = 0
 
        if ( .not. ONLINE_DAUGHTER_NO_ROTATE ) then
+          ! from staggered point to scalar point
+          do j = 1, PARENT_JA(HANDLE)
+          do i = 2, PARENT_IA(HANDLE)
+          do k = PRNT_KS(HANDLE)-1, PRNT_KE(HANDLE)+1
+             work1p(k,i,j) = ( org_MOMX(k,i-1,j) + org_MOMX(k,i,j) ) * 0.5_RP
+          end do
+          end do
+          end do
+          do j = 1, PARENT_JA(HANDLE)
+          do k = PRNT_KS(HANDLE)-1, PRNT_KE(HANDLE)+1
+             work1p(k,1,j) = org_MOMX(k,1,j)
+          end do
+          end do
+          call COMM_vars8( work1p(:,:,:), 1 )
+          do j = 2, PARENT_JA(HANDLE)
+          do i = 1, PARENT_IA(HANDLE)
+          do k = PRNT_KS(HANDLE)-1, PRNT_KE(HANDLE)+1
+             work2p(k,i,j) = ( org_MOMY(k,i,j-1) + org_MOMY(k,i,j) ) * 0.5_RP
+          end do
+          end do
+          end do
+          do i = 1, PARENT_IA(HANDLE)
+          do k = PRNT_KS(HANDLE)-1, PRNT_KE(HANDLE)+1
+             work2p(k,i,1) = org_MOMY(k,i,1)
+          end do
+          end do
+          call COMM_vars8( work2p(:,:,:), 2 )
+          call COMM_wait ( work1p(:,:,:), 1, .false. )
+          call COMM_wait ( work2p(:,:,:), 2, .false. )
+
+          ! rotation from map-projected field to latlon field
           do j = PRNT_JS(HANDLE), PRNT_JE(HANDLE)
           do i = PRNT_IS(HANDLE), PRNT_IE(HANDLE)
           do k = PRNT_KS(HANDLE), PRNT_KE(HANDLE)
-             u_on_map = org_MOMX(k,i,j) / ( org_DENS(k,i+1,j) + org_DENS(k,i,j) ) * 2.0_RP
-             v_on_map = org_MOMY(k,i,j) / ( org_DENS(k,i,j+1) + org_DENS(k,i,j) ) * 2.0_RP
+             u_on_map = work1p(k,i,j) / org_DENS(k,i,j)
+             v_on_map = work2p(k,i,j) / org_DENS(k,i,j)
 
              u_llp(k,i,j) = u_on_map * rotc(i,j,cosin) - v_on_map * rotc(i,j,sine )
              v_llp(k,i,j) = u_on_map * rotc(i,j,sine ) + v_on_map * rotc(i,j,cosin)
@@ -1787,11 +1822,11 @@ contains
 
        tagbase = tagcomm + tag_momz*order_tag_var
        if ( ONLINE_USE_VELZ ) then
-          call NEST_COMM_intercomm_nestdown( dummy, work1, tagbase, I_ZSTG, HANDLE, isu_tag, isu_tagf )
+          call NEST_COMM_intercomm_nestdown( dummy, work1d, tagbase, I_ZSTG, HANDLE, isu_tag, isu_tagf )
           do j = 1, DAUGHTER_JA(HANDLE)
           do i = 1, DAUGHTER_IA(HANDLE)
           do k = DATR_KS(HANDLE), DATR_KE(HANDLE)-1
-             interped_ref_VELZ(k,i,j) = work1(k,i,j) / ( dens(k,i,j) + dens(k+1,i,j) ) * 2.0_RP
+             interped_ref_VELZ(k,i,j) = work1d(k,i,j) / ( dens(k,i,j) + dens(k+1,i,j) ) * 2.0_RP
           enddo
           enddo
           enddo
@@ -1799,14 +1834,18 @@ contains
 
        tagbase = tagcomm + tag_momx*order_tag_var
        if ( ONLINE_NO_ROTATE ) then
+          ! u_lld receives MOMX
           call NEST_COMM_intercomm_nestdown( dummy, u_lld, tagbase, I_XSTG, HANDLE, isu_tag, isu_tagf )
        else
+          ! u_lld receives MOMX/DENS
           call NEST_COMM_intercomm_nestdown( dummy, u_lld, tagbase, I_SCLR, HANDLE, isu_tag, isu_tagf )
        endif
        tagbase = tagcomm + tag_momy*order_tag_var
        if ( ONLINE_NO_ROTATE ) then
+          ! v_lld receives MOMY
           call NEST_COMM_intercomm_nestdown( dummy, v_lld, tagbase, I_YSTG, HANDLE, isu_tag, isu_tagf )
        else
+          ! v_lld receives MOMY/DENS
           call NEST_COMM_intercomm_nestdown( dummy, v_lld, tagbase, I_SCLR, HANDLE, isu_tag, isu_tagf )
        endif
 
@@ -1844,33 +1883,64 @@ contains
           call COMM_wait ( interped_ref_VELX, 2, .false. )
           call COMM_wait ( interped_ref_VELY, 3, .false. )
        else ! rotate
+          ! rotation from latlon field to map-projected field
           do j = 1, DAUGHTER_JA(HANDLE)
           do i = 1, DAUGHTER_IA(HANDLE)
           do k = DATR_KS(HANDLE), DATR_KE(HANDLE)
-             interped_ref_VELX(k,i,j) =   u_lld(k,i,j) * rotc(i,j,cosin) + v_lld(k,i,j) * rotc(i,j,sine )
-             interped_ref_VELY(k,i,j) = - u_lld(k,i,j) * rotc(i,j,sine ) + v_lld(k,i,j) * rotc(i,j,cosin)
+             work1d(k,i,j) =   u_lld(k,i,j) * rotc(i,j,cosin) + v_lld(k,i,j) * rotc(i,j,sine )
+             work2d(k,i,j) = - u_lld(k,i,j) * rotc(i,j,sine ) + v_lld(k,i,j) * rotc(i,j,cosin)
           enddo
           enddo
           enddo
+
+          ! from scalar point to staggered point
+          do j = 1, DAUGHTER_JA(HANDLE)
+          do i = 1, DAUGHTER_IA(HANDLE)-1
+          do k = DATR_KS(HANDLE), DATR_KE(HANDLE)
+             interped_ref_VELX(k,i,j) = ( work1d(k,i+1,j) + work1d(k,i,j) ) * 0.5_RP
+          end do
+          end do
+          end do
+          do j = 1, DAUGHTER_JA(HANDLE)
+          do k = DATR_KS(HANDLE), DATR_KE(HANDLE)
+             interped_ref_VELX(k,DAUGHTER_IA(HANDLE),j) = work1d(k,DAUGHTER_IA(HANDLE),j)
+          enddo
+          enddo
+          call COMM_vars8( interped_ref_VELX, 2 )
+          do j = 1, DAUGHTER_JA(HANDLE)-1
+          do i = 1, DAUGHTER_IA(HANDLE)
+          do k = DATR_KS(HANDLE), DATR_KE(HANDLE)
+             interped_ref_VELY(k,i,j) = ( work2d(k,i,j+1) + work2d(k,i,j) ) * 0.5_RP
+          end do
+          end do
+          end do
+          do i = 1, DAUGHTER_IA(HANDLE)
+          do k = DATR_KS(HANDLE), DATR_KE(HANDLE)
+             interped_ref_VELY(k,i,DAUGHTER_JA(HANDLE)) = work2d(k,i,DAUGHTER_JA(HANDLE))
+          enddo
+          enddo
+          call COMM_vars8( interped_ref_VELY, 3 )
+          call COMM_wait ( interped_ref_VELX, 2, .false. )
+          call COMM_wait ( interped_ref_VELY, 3, .false. )
        end if
 
        tagbase = tagcomm + tag_rhot*order_tag_var
-       call NEST_COMM_intercomm_nestdown( dummy, work1, tagbase, I_SCLR, HANDLE, isu_tag, isu_tagf )
+       call NEST_COMM_intercomm_nestdown( dummy, work1d, tagbase, I_SCLR, HANDLE, isu_tag, isu_tagf )
        do j = 1, DAUGHTER_JA(HANDLE)
        do i = 1, DAUGHTER_IA(HANDLE)
        do k = DATR_KS(HANDLE), DATR_KE(HANDLE)
-          interped_ref_POTT(k,i,j) = work1(k,i,j) / interped_ref_DENS(k,i,j)
+          interped_ref_POTT(k,i,j) = work1d(k,i,j) / interped_ref_DENS(k,i,j)
        enddo
        enddo
        enddo
 
        do iq = 1, BND_QA
           tagbase = tagcomm + (tag_qx*10+iq)*order_tag_var
-          call NEST_COMM_intercomm_nestdown( dummy, work1, tagbase, I_SCLR, HANDLE, isu_tag, isu_tagf )
+          call NEST_COMM_intercomm_nestdown( dummy, work1d, tagbase, I_SCLR, HANDLE, isu_tag, isu_tagf )
           do j = 1, DAUGHTER_JA(HANDLE)
           do i = 1, DAUGHTER_IA(HANDLE)
           do k = DATR_KS(HANDLE), DATR_KE(HANDLE)
-             interped_ref_QTRC(k,i,j,iq) = work1(k,i,j)
+             interped_ref_QTRC(k,i,j,iq) = work1d(k,i,j)
           enddo
           enddo
           enddo
