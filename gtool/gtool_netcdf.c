@@ -74,9 +74,10 @@ typedef struct {
   size_t *count;
 } varinfo_t;
 
-
-#define FILE_MAX 64
-#define VAR_MAX 64000
+// Keep consistency with "File_nfile_max" in gtool_file.f90
+#define FILE_MAX 512
+// Keep consistency with "File_nvar_max" in gtool_file.f90
+#define VAR_MAX 40960
 
 static fileinfo_t *files[FILE_MAX];
 static int nfile = 0;
