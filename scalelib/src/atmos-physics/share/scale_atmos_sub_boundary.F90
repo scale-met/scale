@@ -168,7 +168,6 @@ module scale_atmos_boundary
   logical,               private :: do_parent_process       = .false.
   logical,               private :: do_daughter_process     = .false.
   logical,               private :: l_bnd = .false.
-  logical,               private :: firsttime = .false.                ! firsttime switch for online-nesting
 
   integer,               private :: ref_size = 3
   integer,               private :: ref_old  = 1
@@ -199,10 +198,15 @@ contains
     use scale_time, only: &
        DT => TIME_DTSEC
     use scale_grid_nest, only: &
-       USE_NESTING,     &
-       OFFLINE,         &
-       ONLINE_IAM_PARENT,   &
-       ONLINE_IAM_DAUGHTER
+       NEST_COMM_nestdown,    &
+       USE_NESTING,           &
+       OFFLINE,               &
+       ONLINE_IAM_PARENT,     &
+       ONLINE_IAM_DAUGHTER,   &
+       DAUGHTER_KA,           &
+       DAUGHTER_IA,           &
+       DAUGHTER_JA,           &
+       NESTQA => NEST_BND_QA
     implicit none
 
     real(RP), intent(in) :: DENS(KA,IA,JA)
@@ -243,11 +247,17 @@ contains
        ATMOS_BOUNDARY_EXP_H,          &
        ATMOS_BOUNDARY_increment_TYPE
 
+    integer, parameter  :: handle = 1
+
+    real(RP) :: dummy_d( DAUGHTER_KA(handle), DAUGHTER_IA(handle), DAUGHTER_JA(handle), NESTQA )
+
     integer :: ierr
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Boundary]/Categ[ATMOS]'
+
+    dummy_d(:,:,:,:) = 0.0_RP
 
     ATMOS_BOUNDARY_tauz = DT * 10.0_RP
     ATMOS_BOUNDARY_taux = DT * 10.0_RP
@@ -272,7 +282,6 @@ contains
           ATMOS_BOUNDARY_ONLINE = .false.
        else
           ATMOS_BOUNDARY_ONLINE = .true.
-          firsttime = .true.
        endif
     endif
     do_parent_process   = .false.
@@ -416,6 +425,25 @@ contains
 
     if( ATMOS_BOUNDARY_OUT_BASENAME /= '' ) then
        call ATMOS_BOUNDARY_write
+    endif
+
+    ! send data at the first time
+    if ( do_parent_process ) then !online [parent]
+       ! issue send
+       call NEST_COMM_nestdown( handle,                 &
+                                NESTQA,                 &
+                                DENS(:,:,:),            &  !(KA,IA,JA)
+                                MOMZ(:,:,:),            &  !(KA,IA,JA)
+                                MOMX(:,:,:),            &  !(KA,IA,JA)
+                                MOMY(:,:,:),            &  !(KA,IA,JA)
+                                RHOT(:,:,:),            &  !(KA,IA,JA)
+                                QTRC(:,:,:,1:NESTQA),   &  !(KA,IA,JA,QA)
+                                dummy_d(:,:,:,1),       &  !(KA,IA,JA)
+                                dummy_d(:,:,:,1),       &  !(KA,IA,JA)
+                                dummy_d(:,:,:,1),       &  !(KA,IA,JA)
+                                dummy_d(:,:,:,1),       &  !(KA,IA,JA)
+                                dummy_d(:,:,:,1),       &  !(KA,IA,JA)
+                                dummy_d(:,:,:,1:NESTQA) )  !(KA,IA,JA,QA)
     endif
 
     !----- report data -----
@@ -1367,29 +1395,14 @@ contains
        TIME_NOWDAYSEC,    &
        TIME_NSTEP
     use scale_grid_nest, only: &
-       NEST_COMM_nestdown, &
+       NEST_COMM_nestdown,       &
        NEST_COMM_recvwait_issue, &
-       ONLINE_USE_VELZ,    &
-       PARENT_KA,          &
-       PARENT_IA,          &
-       PARENT_JA,          &
-       DAUGHTER_KA,        &
-       DAUGHTER_IA,        &
-       DAUGHTER_JA,        &
-       PRNT_KS,            &
-       PRNT_KE,            &
-       PRNT_IS,            &
-       PRNT_IE,            &
-       PRNT_JS,            &
-       PRNT_JE,            &
-       DATR_KS,            &
-       DATR_KE,            &
-       DATR_IS,            &
-       DATR_IE,            &
-       DATR_JS,            &
-       DATR_JE,            &
-       PARENT_DTSEC,       &
-       PARENT_NSTEP,       &
+       ONLINE_USE_VELZ,          &
+       PARENT_KA,                &
+       PARENT_IA,                &
+       PARENT_JA,                &
+       PARENT_DTSEC,             &
+       PARENT_NSTEP,             &
        NESTQA => NEST_BND_QA
     implicit none
 
@@ -1449,6 +1462,9 @@ contains
                              ATMOS_BOUNDARY_ref_VELY(:,:,:,ref_new),       &   !(KA,IA,JA)
                              ATMOS_BOUNDARY_ref_POTT(:,:,:,ref_new),       &   !(KA,IA,JA)
                              ATMOS_BOUNDARY_ref_QTRC(:,:,:,1:NESTQA,ref_new) ) !(KA,IA,JA,QA)
+
+    ! cast receive-buffers on ahead for the next communication
+    call NEST_COMM_recvwait_issue( handle, NESTQA )
 
     ! copy now to old
     do j = 1, JA
@@ -1537,13 +1553,8 @@ contains
     !---------------------------------------------------------------------------
 
     if ( do_parent_process ) then !online [parent]
-       ! should be called every time step
        handle = 1
        call ATMOS_BOUNDARY_update_online( DENS,MOMZ,MOMX,MOMY,RHOT,QTRC,handle )
-    endif
-
-    if ( do_parent_process ) then !online [parent]
-       handle = 1
        call NEST_COMM_recvwait_issue( handle, NESTQA )
     endif
 
@@ -1575,8 +1586,8 @@ contains
        TIME_NOWDAYSEC
     use scale_grid_nest, only: &
        ONLINE_USE_VELZ,       &
-       PARENT_DTSEC,          &
-       NESTQA => NEST_BND_QA
+       NESTQA => NEST_BND_QA, &
+       NEST_COMM_test
     implicit none
 
     real(RP), intent(inout) :: DENS(KA,IA,JA)
@@ -1902,6 +1913,16 @@ contains
        call HIST_in( ATMOS_BOUNDARY_QTRC(:,:,:,iq), trim(AQ_NAME(iq))//'_BND', 'Boundary '//trim(AQ_NAME(iq)), 'kg/kg' )
     enddo
 
+    ! To be enable to do asynchronous communicaton
+    if ( do_parent_process ) then !online [parent]
+       handle = 1
+       call NEST_COMM_test( handle )
+    endif
+    if ( do_daughter_process ) then !online [daughter]
+       handle = 2
+       call NEST_COMM_test( handle )
+    endif
+
     return
   end subroutine ATMOS_BOUNDARY_update
 
@@ -1975,18 +1996,6 @@ contains
        DAUGHTER_KA,        &
        DAUGHTER_IA,        &
        DAUGHTER_JA,        &
-       PRNT_KS,            &
-       PRNT_KE,            &
-       PRNT_IS,            &
-       PRNT_IE,            &
-       PRNT_JS,            &
-       PRNT_JE,            &
-       DATR_KS,            &
-       DATR_KE,            &
-       DATR_IS,            &
-       DATR_IE,            &
-       DATR_JS,            &
-       DATR_JE,            &
        NESTQA => NEST_BND_QA
     implicit none
 
@@ -2011,11 +2020,7 @@ contains
        if ( IO_L ) write(IO_FID_LOG,*)"*** ATMOS BOUNDARY update online: PARENT"
 
        ! issue wait
-       if ( .NOT. firsttime ) then
-           call NEST_COMM_recvwait_issue( handle, NESTQA )
-       else
-          firsttime = .false.
-       endif
+       call NEST_COMM_recvwait_issue( handle, NESTQA )
 
        ! issue send
        call NEST_COMM_nestdown( handle,                 &
