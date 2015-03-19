@@ -1484,9 +1484,6 @@ contains
     real(RP), intent(in) :: MOMY(KA,IA,JA)
     real(RP), intent(in) :: RHOT(KA,IA,JA)
     real(RP), intent(in) :: QTRC(KA,IA,JA,QA)
-
-    ! works
-    integer :: handle
     !---------------------------------------------------------------------------
 
     ! send data at the first time
@@ -1974,31 +1971,34 @@ contains
     !---------------------------------------------------------------------------
 
     if ( handle == 1 .and. do_parent_process ) then ! [parent]
+
        if ( IO_L ) write(IO_FID_LOG,*)"*** ATMOS BOUNDARY update online: PARENT"
 
        ! issue wait
        call NEST_COMM_recvwait_issue( handle, NESTQA )
 
        ! issue send
-       call ATMOS_BOUNDARY_send( DENS, MOMZ, MOMY, MOMX, RHOT, QTRC )
+       call ATMOS_BOUNDARY_send( DENS, MOMZ, MOMX, MOMY, RHOT, QTRC )
 
     elseif ( handle == 2 .and. do_daughter_process ) then ! [daughter]
+
        if( IO_L ) write(IO_FID_LOG,'(1X,A,I5)') '*** ATMOS BOUNDARY update online: DAUGHTER', boundary_timestep
 
        ! issue wait
        call ATMOS_BOUNDARY_recv( ref_new )
 
-       ! issue receive
-       call NEST_COMM_recvwait_issue( handle, NESTQA )
-
        ! fill HALO in reference
        call ATMOS_BOUNDARY_ref_fillhalo( ref_new )
+
+       ! issue receive
+       call NEST_COMM_recvwait_issue( handle, NESTQA )
 
        call HIST_in( ATMOS_BOUNDARY_ref_DENS(:,:,:,ref_new), 'BND_ref_DENS', 'reference DENS', 'kg/m3' )
        call HIST_in( ATMOS_BOUNDARY_ref_VELZ(:,:,:,ref_new), 'BND_ref_VELZ', 'reference VELZ', 'm/s'   )
        call HIST_in( ATMOS_BOUNDARY_ref_VELX(:,:,:,ref_new), 'BND_ref_VELX', 'reference VELZ', 'm/s'   )
        call HIST_in( ATMOS_BOUNDARY_ref_VELY(:,:,:,ref_new), 'BND_ref_VELY', 'reference VELZ', 'm/s'   )
        call HIST_in( ATMOS_BOUNDARY_ref_POTT(:,:,:,ref_new), 'BND_ref_POTT', 'reference VELZ', 'K'     )
+
     endif
 
     return
