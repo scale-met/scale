@@ -93,9 +93,10 @@ module gtool_file
   !
   !++ Private parameters & variables
   !
-  integer,                   private, parameter :: File_nfile_max = 64   ! number limit of file
-  integer,                   private, parameter :: File_nvar_max  = 512  ! number limit of variables
-  integer,                   private, parameter :: File_nstep_max = 2500 ! number limit of time step
+  integer,                   private, parameter :: File_nfile_max = 512   ! number limit of file
+                                                 ! Keep consistency with "FILE_MAX" in gtool_netcdf.c
+  integer,                   private, parameter :: File_nvar_max  = 40960 ! number limit of variables
+                                                 ! Keep consistency with "VAR_MAX" in gtool_netcdf.c
 
   character(LEN=File_HLONG), private,      save :: File_fname_list(File_nfile_max)
   integer,                   private,      save :: File_fid_list  (File_nfile_max)
