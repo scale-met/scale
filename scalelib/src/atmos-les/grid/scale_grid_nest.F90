@@ -1309,6 +1309,12 @@ contains
        endif
        call COMM_bcast(ONLINE_DAUGHTER_NO_ROTATE)
 
+       if( ONLINE_NO_ROTATE .neqv. ONLINE_DAUGHTER_NO_ROTATE ) then
+          write(*,*) 'xxx Flag of NO_ROTATE is not consistent with the child domain'
+          if( IO_L ) write(IO_FID_LOG,*) 'xxx ONLINE_NO_ROTATE = ', ONLINE_NO_ROTATE
+          if( IO_L ) write(IO_FID_LOG,*) 'xxx ONLINE_DAUGHTER_NO_ROTATE =', ONLINE_DAUGHTER_NO_ROTATE
+          call PRC_MPIstop
+       endif
        if( IO_L ) write(IO_FID_LOG,'(1x,A,L2)') '*** NEST: ONLINE_DAUGHTER_NO_ROTATE =', ONLINE_DAUGHTER_NO_ROTATE
 
        call NEST_COMM_importgrid_nestdown( HANDLE )
