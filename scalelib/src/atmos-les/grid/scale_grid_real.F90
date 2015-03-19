@@ -232,9 +232,9 @@ contains
     do i = 1, IA
        ! apply offset
        CX = GRID_CX(i) - GRID_DOMAIN_CENTER_X
-       CY = GRID_CY(i) - GRID_DOMAIN_CENTER_Y
+       CY = GRID_CY(j) - GRID_DOMAIN_CENTER_Y
        FX = GRID_FX(i) - GRID_DOMAIN_CENTER_X
-       FY = GRID_FY(i) - GRID_DOMAIN_CENTER_Y
+       FY = GRID_FY(j) - GRID_DOMAIN_CENTER_Y
 
        call MPRJ_xy2lonlat( GRID_CX(i), GRID_CY(j), REAL_LON  (i,j), REAL_LAT  (i,j) )
        call MPRJ_xy2lonlat( GRID_FX(i), GRID_CY(j), REAL_LONX (i,j), REAL_LATX (i,j) )
