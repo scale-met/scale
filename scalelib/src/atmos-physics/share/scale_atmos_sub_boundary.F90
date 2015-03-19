@@ -39,6 +39,7 @@ module scale_atmos_boundary
   !++ Public procedure
   !
   public :: ATMOS_BOUNDARY_setup
+  public :: ATMOS_BOUNDARY_firstsend
   public :: ATMOS_BOUNDARY_finalize
   public :: ATMOS_BOUNDARY_update
 
@@ -83,6 +84,8 @@ module scale_atmos_boundary
   private :: ATMOS_BOUNDARY_initialize_online
   private :: ATMOS_BOUNDARY_update_file
   private :: ATMOS_BOUNDARY_update_online
+  private :: ATMOS_BOUNDARY_send
+  private :: ATMOS_BOUNDARY_recv
 
   abstract interface
      subroutine getinc( &
@@ -198,15 +201,10 @@ contains
     use scale_time, only: &
        DT => TIME_DTSEC
     use scale_grid_nest, only: &
-       NEST_COMM_nestdown,    &
-       USE_NESTING,           &
-       OFFLINE,               &
-       ONLINE_IAM_PARENT,     &
-       ONLINE_IAM_DAUGHTER,   &
-       DAUGHTER_KA,           &
-       DAUGHTER_IA,           &
-       DAUGHTER_JA,           &
-       NESTQA => NEST_BND_QA
+       USE_NESTING,         &
+       OFFLINE,             &
+       ONLINE_IAM_PARENT,   &
+       ONLINE_IAM_DAUGHTER
     implicit none
 
     real(RP), intent(in) :: DENS(KA,IA,JA)
@@ -247,17 +245,11 @@ contains
        ATMOS_BOUNDARY_EXP_H,          &
        ATMOS_BOUNDARY_increment_TYPE
 
-    integer, parameter  :: handle = 1
-
-    real(RP) :: dummy_d( DAUGHTER_KA(handle), DAUGHTER_IA(handle), DAUGHTER_JA(handle), NESTQA )
-
     integer :: ierr
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Boundary]/Categ[ATMOS]'
-
-    dummy_d(:,:,:,:) = 0.0_RP
 
     ATMOS_BOUNDARY_tauz = DT * 10.0_RP
     ATMOS_BOUNDARY_taux = DT * 10.0_RP
@@ -425,25 +417,6 @@ contains
 
     if( ATMOS_BOUNDARY_OUT_BASENAME /= '' ) then
        call ATMOS_BOUNDARY_write
-    endif
-
-    ! send data at the first time
-    if ( do_parent_process ) then !online [parent]
-       ! issue send
-       call NEST_COMM_nestdown( handle,                 &
-                                NESTQA,                 &
-                                DENS(:,:,:),            &  !(KA,IA,JA)
-                                MOMZ(:,:,:),            &  !(KA,IA,JA)
-                                MOMX(:,:,:),            &  !(KA,IA,JA)
-                                MOMY(:,:,:),            &  !(KA,IA,JA)
-                                RHOT(:,:,:),            &  !(KA,IA,JA)
-                                QTRC(:,:,:,1:NESTQA),   &  !(KA,IA,JA,QA)
-                                dummy_d(:,:,:,1),       &  !(KA,IA,JA)
-                                dummy_d(:,:,:,1),       &  !(KA,IA,JA)
-                                dummy_d(:,:,:,1),       &  !(KA,IA,JA)
-                                dummy_d(:,:,:,1),       &  !(KA,IA,JA)
-                                dummy_d(:,:,:,1),       &  !(KA,IA,JA)
-                                dummy_d(:,:,:,1:NESTQA) )  !(KA,IA,JA,QA)
     endif
 
     !----- report data -----
@@ -1395,27 +1368,21 @@ contains
        TIME_NOWDAYSEC,    &
        TIME_NSTEP
     use scale_grid_nest, only: &
-       NEST_COMM_nestdown,       &
        NEST_COMM_recvwait_issue, &
        ONLINE_USE_VELZ,          &
-       PARENT_KA,                &
-       PARENT_IA,                &
-       PARENT_JA,                &
        PARENT_DTSEC,             &
        PARENT_NSTEP,             &
        NESTQA => NEST_BND_QA
     implicit none
 
+    ! parameters
     integer, parameter  :: handle = 2
 
-    real(RP) :: dummy_p( PARENT_KA(handle), PARENT_IA(handle), PARENT_JA(handle), NESTQA )
-
+    ! works
     integer  :: i, j, k, iq, ierr
     !---------------------------------------------------------------------------
 
     ATMOS_BOUNDARY_UPDATE_DT = PARENT_DTSEC(handle)
-
-    dummy_p(:,:,:,:) = 0.0_RP
 
     if ( NESTQA .ne. BND_QA ) then
        write(*,*) 'xxx ERROR: NEST_BND_QA exceeds BND_QA [initialize/ATMOS_BOUNDARY]'
@@ -1429,39 +1396,13 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '+++ BOUNDARY TIMESTEP NUMBER FOR INIT:', boundary_timestep
 
     call NEST_COMM_recvwait_issue( handle, NESTQA )
-    call NEST_COMM_nestdown( handle,                                       &
-                             NESTQA,                                       &
-                             dummy_p(:,:,:,1),                             &   !(KA,IA,JA)
-                             dummy_p(:,:,:,1),                             &   !(KA,IA,JA)
-                             dummy_p(:,:,:,1),                             &   !(KA,IA,JA)
-                             dummy_p(:,:,:,1),                             &   !(KA,IA,JA)
-                             dummy_p(:,:,:,1),                             &   !(KA,IA,JA)
-                             dummy_p(:,:,:,1:NESTQA),                      &   !(KA,IA,JA,QA)
-                             ATMOS_BOUNDARY_ref_DENS(:,:,:,ref_now),       &   !(KA,IA,JA)
-                             ATMOS_BOUNDARY_ref_VELZ(:,:,:,ref_now),       &   !(KA,IA,JA)
-                             ATMOS_BOUNDARY_ref_VELX(:,:,:,ref_now),       &   !(KA,IA,JA)
-                             ATMOS_BOUNDARY_ref_VELY(:,:,:,ref_now),       &   !(KA,IA,JA)
-                             ATMOS_BOUNDARY_ref_POTT(:,:,:,ref_now),       &   !(KA,IA,JA)
-                             ATMOS_BOUNDARY_ref_QTRC(:,:,:,1:NESTQA,ref_now) ) !(KA,IA,JA,QA)
+    call ATMOS_BOUNDARY_recv( ref_now )
 
     boundary_timestep = boundary_timestep + 1
     if( IO_L ) write(IO_FID_LOG,*) '+++ BOUNDARY TIMESTEP NUMBER FOR INIT:', boundary_timestep
 
     call NEST_COMM_recvwait_issue( handle, NESTQA )
-    call NEST_COMM_nestdown( handle,                                       &
-                             NESTQA,                                       &
-                             dummy_p(:,:,:,1),                             &   !(KA,IA,JA)
-                             dummy_p(:,:,:,1),                             &   !(KA,IA,JA)
-                             dummy_p(:,:,:,1),                             &   !(KA,IA,JA)
-                             dummy_p(:,:,:,1),                             &   !(KA,IA,JA)
-                             dummy_p(:,:,:,1),                             &   !(KA,IA,JA)
-                             dummy_p(:,:,:,1:NESTQA),                      &   !(KA,IA,JA,QA)
-                             ATMOS_BOUNDARY_ref_DENS(:,:,:,ref_new),       &   !(KA,IA,JA)
-                             ATMOS_BOUNDARY_ref_VELZ(:,:,:,ref_new),       &   !(KA,IA,JA)
-                             ATMOS_BOUNDARY_ref_VELX(:,:,:,ref_new),       &   !(KA,IA,JA)
-                             ATMOS_BOUNDARY_ref_VELY(:,:,:,ref_new),       &   !(KA,IA,JA)
-                             ATMOS_BOUNDARY_ref_POTT(:,:,:,ref_new),       &   !(KA,IA,JA)
-                             ATMOS_BOUNDARY_ref_QTRC(:,:,:,1:NESTQA,ref_new) ) !(KA,IA,JA,QA)
+    call ATMOS_BOUNDARY_recv( ref_new )
 
     ! cast receive-buffers on ahead for the next communication
     call NEST_COMM_recvwait_issue( handle, NESTQA )
@@ -1529,6 +1470,33 @@ contains
 
     return
   end subroutine ATMOS_BOUNDARY_initialize_online
+
+  !-----------------------------------------------------------------------------
+  !> First send boundary value
+  subroutine ATMOS_BOUNDARY_firstsend( &
+       DENS, MOMZ, MOMX, MOMY, RHOT, QTRC )
+    implicit none
+
+    ! arguments
+    real(RP), intent(in) :: DENS(KA,IA,JA)
+    real(RP), intent(in) :: MOMZ(KA,IA,JA)
+    real(RP), intent(in) :: MOMX(KA,IA,JA)
+    real(RP), intent(in) :: MOMY(KA,IA,JA)
+    real(RP), intent(in) :: RHOT(KA,IA,JA)
+    real(RP), intent(in) :: QTRC(KA,IA,JA,QA)
+
+    ! works
+    integer :: handle
+    !---------------------------------------------------------------------------
+
+    ! send data at the first time
+    if ( do_parent_process ) then !online [parent]
+       ! issue send
+       call ATMOS_BOUNDARY_send( DENS, MOMZ, MOMX, MOMY, RHOT, QTRC )
+    endif
+
+    return
+  end subroutine ATMOS_BOUNDARY_firstsend
 
   !-----------------------------------------------------------------------------
   !> Finalize boundary value
@@ -1988,17 +1956,11 @@ contains
     use scale_history, only: &
        HIST_in
     use scale_grid_nest, only: &
-       NEST_COMM_nestdown, &
        NEST_COMM_recvwait_issue, &
-       PARENT_KA,          &
-       PARENT_IA,          &
-       PARENT_JA,          &
-       DAUGHTER_KA,        &
-       DAUGHTER_IA,        &
-       DAUGHTER_JA,        &
        NESTQA => NEST_BND_QA
     implicit none
 
+    ! arguments
     real(RP), intent(in) :: DENS(KA,IA,JA)
     real(RP), intent(in) :: MOMZ(KA,IA,JA)
     real(RP), intent(in) :: MOMX(KA,IA,JA)
@@ -2007,14 +1969,9 @@ contains
     real(RP), intent(in) :: QTRC(KA,IA,JA,QA)
     integer,  intent(in) :: handle
 
-    real(RP) :: dummy_p( PARENT_KA  (handle), PARENT_IA  (handle), PARENT_JA  (handle), NESTQA )
-    real(RP) :: dummy_d( DAUGHTER_KA(handle), DAUGHTER_IA(handle), DAUGHTER_JA(handle), NESTQA )
-
+    ! works
     integer :: i, j, k, iq
     !---------------------------------------------------------------------------
-
-    dummy_p(:,:,:,:) = 0.0_RP
-    dummy_d(:,:,:,:) = 0.0_RP
 
     if ( handle == 1 .and. do_parent_process ) then ! [parent]
        if ( IO_L ) write(IO_FID_LOG,*)"*** ATMOS BOUNDARY update online: PARENT"
@@ -2023,39 +1980,16 @@ contains
        call NEST_COMM_recvwait_issue( handle, NESTQA )
 
        ! issue send
-       call NEST_COMM_nestdown( handle,                 &
-                                NESTQA,                 &
-                                DENS(:,:,:),            &  !(KA,IA,JA)
-                                MOMZ(:,:,:),            &  !(KA,IA,JA)
-                                MOMX(:,:,:),            &  !(KA,IA,JA)
-                                MOMY(:,:,:),            &  !(KA,IA,JA)
-                                RHOT(:,:,:),            &  !(KA,IA,JA)
-                                QTRC(:,:,:,1:NESTQA),   &  !(KA,IA,JA,QA)
-                                dummy_d(:,:,:,1),       &  !(KA,IA,JA)
-                                dummy_d(:,:,:,1),       &  !(KA,IA,JA)
-                                dummy_d(:,:,:,1),       &  !(KA,IA,JA)
-                                dummy_d(:,:,:,1),       &  !(KA,IA,JA)
-                                dummy_d(:,:,:,1),       &  !(KA,IA,JA)
-                                dummy_d(:,:,:,1:NESTQA) )  !(KA,IA,JA,QA)
+       call ATMOS_BOUNDARY_send( DENS, MOMZ, MOMY, MOMX, RHOT, QTRC )
 
     elseif ( handle == 2 .and. do_daughter_process ) then ! [daughter]
        if( IO_L ) write(IO_FID_LOG,'(1X,A,I5)') '*** ATMOS BOUNDARY update online: DAUGHTER', boundary_timestep
 
        ! issue wait
-       call NEST_COMM_nestdown( handle,                                         &
-                                NESTQA,                                         &
-                                dummy_p(:,:,:,1),                               & !(KA,IA,JA)
-                                dummy_p(:,:,:,1),                               & !(KA,IA,JA)
-                                dummy_p(:,:,:,1),                               & !(KA,IA,JA)
-                                dummy_p(:,:,:,1),                               & !(KA,IA,JA)
-                                dummy_p(:,:,:,1),                               & !(KA,IA,JA)
-                                dummy_p(:,:,:,1:NESTQA),                        & !(KA,IA,JA,QA)
-                                ATMOS_BOUNDARY_ref_DENS(:,:,:,ref_new),         & !(KA,IA,JA)
-                                ATMOS_BOUNDARY_ref_VELZ(:,:,:,ref_new),         & !(KA,IA,JA)
-                                ATMOS_BOUNDARY_ref_VELX(:,:,:,ref_new),         & !(KA,IA,JA)
-                                ATMOS_BOUNDARY_ref_VELY(:,:,:,ref_new),         & !(KA,IA,JA)
-                                ATMOS_BOUNDARY_ref_POTT(:,:,:,ref_new),         & !(KA,IA,JA)
-                                ATMOS_BOUNDARY_ref_QTRC(:,:,:,1:NESTQA,ref_new) ) !(KA,IA,JA,QA)
+       call ATMOS_BOUNDARY_recv( ref_new )
+
+       ! issue receive
+       call NEST_COMM_recvwait_issue( handle, NESTQA )
 
        ! fill HALO in reference
        call ATMOS_BOUNDARY_ref_fillhalo( ref_new )
@@ -2065,13 +1999,99 @@ contains
        call HIST_in( ATMOS_BOUNDARY_ref_VELX(:,:,:,ref_new), 'BND_ref_VELX', 'reference VELZ', 'm/s'   )
        call HIST_in( ATMOS_BOUNDARY_ref_VELY(:,:,:,ref_new), 'BND_ref_VELY', 'reference VELZ', 'm/s'   )
        call HIST_in( ATMOS_BOUNDARY_ref_POTT(:,:,:,ref_new), 'BND_ref_POTT', 'reference VELZ', 'K'     )
-
-       ! issue receive
-       call NEST_COMM_recvwait_issue( handle, NESTQA )
     endif
 
     return
   end subroutine ATMOS_BOUNDARY_update_online
+
+  !-----------------------------------------------------------------------------
+  !> Send boundary value
+  subroutine ATMOS_BOUNDARY_send( &
+       DENS, MOMZ, MOMX, MOMY, RHOT, QTRC )
+    use scale_grid_nest, only: &
+       NEST_COMM_nestdown,    &
+       DAUGHTER_KA,           &
+       DAUGHTER_IA,           &
+       DAUGHTER_JA,           &
+       NESTQA => NEST_BND_QA
+    implicit none
+
+    ! parameters
+    integer, parameter  :: handle = 1
+
+    ! arguments
+    real(RP), intent(in) :: DENS(KA,IA,JA)
+    real(RP), intent(in) :: MOMZ(KA,IA,JA)
+    real(RP), intent(in) :: MOMX(KA,IA,JA)
+    real(RP), intent(in) :: MOMY(KA,IA,JA)
+    real(RP), intent(in) :: RHOT(KA,IA,JA)
+    real(RP), intent(in) :: QTRC(KA,IA,JA,QA)
+
+    ! works
+    real(RP) :: dummy_d( DAUGHTER_KA(handle), DAUGHTER_IA(handle), DAUGHTER_JA(handle), NESTQA )
+    !---------------------------------------------------------------------------
+
+    dummy_d(:,:,:,:) = 0.0_RP
+
+    call NEST_COMM_nestdown( handle,                 &
+                             NESTQA,                 &
+                             DENS(:,:,:),            &  !(KA,IA,JA)
+                             MOMZ(:,:,:),            &  !(KA,IA,JA)
+                             MOMX(:,:,:),            &  !(KA,IA,JA)
+                             MOMY(:,:,:),            &  !(KA,IA,JA)
+                             RHOT(:,:,:),            &  !(KA,IA,JA)
+                             QTRC(:,:,:,1:NESTQA),   &  !(KA,IA,JA,QA)
+                             dummy_d(:,:,:,1),       &  !(KA,IA,JA)
+                             dummy_d(:,:,:,1),       &  !(KA,IA,JA)
+                             dummy_d(:,:,:,1),       &  !(KA,IA,JA)
+                             dummy_d(:,:,:,1),       &  !(KA,IA,JA)
+                             dummy_d(:,:,:,1),       &  !(KA,IA,JA)
+                             dummy_d(:,:,:,1:NESTQA) )  !(KA,IA,JA,QA)
+
+    return
+  end subroutine ATMOS_BOUNDARY_send
+
+  !-----------------------------------------------------------------------------
+  !> Recieve boundary value
+  subroutine ATMOS_BOUNDARY_recv( &
+       ref_idx )
+    use scale_grid_nest, only: &
+       NEST_COMM_nestdown,    &
+       PARENT_KA,             &
+       PARENT_IA,             &
+       PARENT_JA,             &
+       NESTQA => NEST_BND_QA
+    implicit none
+
+    ! parameters
+    integer, parameter  :: handle = 2
+
+    ! arguments
+    integer, intent(in) :: ref_idx
+
+    ! works
+    real(RP) :: dummy_p( PARENT_KA(handle), PARENT_IA(handle), PARENT_JA(handle), NESTQA )
+    !---------------------------------------------------------------------------
+
+    dummy_p(:,:,:,:) = 0.0_RP
+
+    call NEST_COMM_nestdown( handle,                                         &
+                             NESTQA,                                         &
+                             dummy_p(:,:,:,1),                               & !(KA,IA,JA)
+                             dummy_p(:,:,:,1),                               & !(KA,IA,JA)
+                             dummy_p(:,:,:,1),                               & !(KA,IA,JA)
+                             dummy_p(:,:,:,1),                               & !(KA,IA,JA)
+                             dummy_p(:,:,:,1),                               & !(KA,IA,JA)
+                             dummy_p(:,:,:,1:NESTQA),                        & !(KA,IA,JA,QA)
+                             ATMOS_BOUNDARY_ref_DENS(:,:,:,ref_idx),         & !(KA,IA,JA)
+                             ATMOS_BOUNDARY_ref_VELZ(:,:,:,ref_idx),         & !(KA,IA,JA)
+                             ATMOS_BOUNDARY_ref_VELX(:,:,:,ref_idx),         & !(KA,IA,JA)
+                             ATMOS_BOUNDARY_ref_VELY(:,:,:,ref_idx),         & !(KA,IA,JA)
+                             ATMOS_BOUNDARY_ref_POTT(:,:,:,ref_idx),         & !(KA,IA,JA)
+                             ATMOS_BOUNDARY_ref_QTRC(:,:,:,1:NESTQA,ref_idx) ) !(KA,IA,JA,QA)
+
+    return
+  end subroutine ATMOS_BOUNDARY_recv
 
   !-----------------------------------------------------------------------------
   !> Get incremental coefficient with same parent data

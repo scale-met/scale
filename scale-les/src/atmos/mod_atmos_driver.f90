@@ -33,6 +33,7 @@ module mod_atmos_driver
   public :: ATMOS_driver_setup1
   public :: ATMOS_driver_setup2
   public :: ATMOS_driver
+  public :: ATMOS_driver_firstsend
   public :: ATMOS_driver_finalize
   public :: ATMOS_SURFACE_GET
   public :: ATMOS_SURFACE_SET
@@ -327,6 +328,27 @@ contains
   end subroutine ATMOS_driver
 
   !-----------------------------------------------------------------------------
+  !> First send
+  subroutine ATMOS_driver_firstsend
+    use scale_atmos_boundary, only: &
+       ATMOS_BOUNDARY_firstsend
+    use mod_atmos_vars, only: &
+       DENS, &
+       MOMZ, &
+       MOMX, &
+       MOMY, &
+       RHOT, &
+       QTRC
+    implicit none
+    !---------------------------------------------------------------------------
+
+    ! If this run is parent of online nesting, boundary data must be sent
+    call ATMOS_BOUNDARY_firstsend( DENS, MOMZ, MOMX, MOMY, RHOT, QTRC ) ! (in)
+
+    return
+  end subroutine ATMOS_driver_firstsend
+
+  !-----------------------------------------------------------------------------
   !> Finalize
   subroutine ATMOS_driver_finalize
     use scale_atmos_boundary, only: &
@@ -341,6 +363,8 @@ contains
        MOMY, &
        RHOT, &
        QTRC
+    implicit none
+    !---------------------------------------------------------------------------
 
     !########## Lateral/Top Boundary Condition ###########
     if ( ATMOS_BOUNDARY_UPDATE_FLAG ) then
@@ -351,6 +375,7 @@ contains
        call NEST_COMM_disconnect
     endif
 
+    return
   end subroutine ATMOS_driver_finalize
 
   !-----------------------------------------------------------------------------

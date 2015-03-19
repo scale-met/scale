@@ -149,10 +149,11 @@ contains
        ATMOS_sw_check => ATMOS_RESTART_CHECK,    &
        ATMOS_vars_restart_check
     use mod_atmos_driver, only: &
-       ATMOS_driver_setup1,   &
-       ATMOS_driver_setup2,   &
-       ATMOS_driver,          &
-       ATMOS_driver_finalize, &
+       ATMOS_driver_setup1,    &
+       ATMOS_driver_setup2,    &
+       ATMOS_driver,           &
+       ATMOS_driver_firstsend, &
+       ATMOS_driver_finalize,  &
        ATMOS_SURFACE_SET
     use mod_ocean_admin, only: &
        OCEAN_admin_setup, &
@@ -364,6 +365,8 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '++++++ START TIMESTEP ++++++'
     call PROF_rapstart('Main Loop(Total)', 0)
   
+    if( ATMOS_do ) call ATMOS_driver_firstsend
+
     do
   
       ! report current time
