@@ -1333,7 +1333,7 @@ contains
              do icfc = 1, ncfc
                 valsum = valsum + 10.0_RP**acfc(icfc,iw) * cfc(k,i,j,icfc)
              enddo
-             valsum = valsum * dz_std(k,i,j)
+             valsum = valsum * dz_std(k,i,j) * PPM
 
              do ich = 1, chmax
              !$acc loop seq
