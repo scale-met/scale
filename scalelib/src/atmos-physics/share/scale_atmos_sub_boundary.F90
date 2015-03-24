@@ -1517,6 +1517,11 @@ contains
     integer :: handle
     !---------------------------------------------------------------------------
 
+    if ( do_parent_process ) then !online [parent]
+       handle = 1
+       call NEST_COMM_recvwait_issue( handle, NESTQA )
+    endif
+
     if ( do_daughter_process ) then !online [daughter]
        handle = 2
        call NEST_COMM_recv_cancel( handle )
