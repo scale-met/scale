@@ -23,7 +23,7 @@ start_sec='00'
 end_year='1999'
 end_month='05'
 end_day='02'
-end_hour='12'
+end_hour='00'
 end_min='00'
 end_sec='00'
 #
@@ -36,7 +36,7 @@ start_unix_sec=`date -u -d "${start_year}-${start_month}-${start_day} ${start_ho
 end_unix_sec=`date -u -d "${end_year}-${end_month}-${end_day} ${end_hour}:${end_min}:${end_sec}" +%s`
 
 unix_sec=${start_unix_sec}
-while [ ${unix_sec} -le ${end_unix_sec} ];
+while [ ${unix_sec} -lt ${end_unix_sec} ];
 do
   year=`date -u -d "@${unix_sec}" +%Y`
   month=`date -u -d "@${unix_sec}" +%m`

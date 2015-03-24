@@ -1575,7 +1575,7 @@ contains
 
     if ( l_bnd ) then
        ! update referce vars
-       if ( now_step > UPDATE_NSTEP ) then
+       if ( now_step >= UPDATE_NSTEP ) then
           now_step          = 0
           boundary_timestep = boundary_timestep + 1
 
