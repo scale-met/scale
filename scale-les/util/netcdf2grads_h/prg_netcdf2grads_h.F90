@@ -12,6 +12,7 @@ program netcdf2grads_h
   implicit none
 
   !--- parameters
+  integer,  parameter :: CSHT       = 16
   integer,  parameter :: CMID       = 64
   integer,  parameter :: CLNG       = 128
   integer,  parameter :: SP         = 4
@@ -52,19 +53,22 @@ program netcdf2grads_h
   integer         :: DOMAIN_NUM     = 1
   integer         :: VCOUNT         = 1
   integer         :: ZCOUNT         = 1
+  integer         :: ZSTART         = 3
   integer         :: TARGET_ZLEV(max_zcount) = 3
   real(DP)        :: EXTRA_TINTERVAL = -9.999
   character(5)    :: EXTRA_TUNIT    = ""
   character(CLNG) :: IDIR           = "./data"
   character(CLNG) :: ODIR           = "."
   character(CLNG) :: CONFFILE       = "./run.conf"
-  character(CMID) :: VNAME(max_vcount) = ""
-  character(CMID) :: ANALYSIS       = "SLICE"
+  character(CSHT) :: VNAME(max_vcount) = ""
+  character(CSHT) :: ANALYSIS       = "SLICE"
+  character(CSHT) :: Z_LEV_TYPE     = "GRID"
   character(5)    :: DELT           = "1mn"
   character(15)   :: STIME          = "00:00Z01JAN2000"
   character(15)   :: FTIME          = "2000010100"
   character(CLNG) :: LOG_BASENAME   = "LOG"
   logical         :: LOG_ALL_OUTPUT = .false.
+  logical         :: Z_LEV_LIST     = .true.
   logical         :: Z_MERGE_OUT    = .false.  ! only for slice
 
   integer         :: PRC_NUM_X
@@ -176,12 +180,15 @@ program netcdf2grads_h
     DOMAIN_NUM,                &
     VCOUNT,                    &
     ZCOUNT,                    &
+    ZSTART,                    &
     ANALYSIS,                  &
     CONFFILE,                  &
     IDIR,                      &
     ODIR,                      &
     EXTRA_TINTERVAL,           &
     EXTRA_TUNIT,               &
+    Z_LEV_LIST,                &
+    Z_LEV_TYPE,                &
     Z_MERGE_OUT
   namelist /VARI/              &
     VNAME,                     &
@@ -876,7 +883,6 @@ contains
     integer,         intent(in) :: idom, it, zz
 
     character(2)    :: cdom
-    character(3)    :: ctim
     character(3)    :: clev
     character(CLNG) :: fname
     character(CLNG) :: fname2
@@ -885,7 +891,11 @@ contains
      write(cdom,'(i2.2)') idom
      select case( atype )
      case ( a_slice )
-        write(clev,'(i3.3)') zz
+        if ( Z_MERGE_OUT ) then
+           clev = "-3d"
+        else
+           write(clev,'(i3.3)') zz
+        endif
      case ( a_max )
         clev = "max"
      case ( a_min )
@@ -956,7 +966,6 @@ contains
     integer         :: irec
     integer(8)      :: irecl
     character(2)    :: cdom
-    character(3)    :: ctim
     character(3)    :: clev
     character(CLNG) :: fname
     !---------------------------------------------------------------------------
@@ -1045,7 +1054,7 @@ contains
   subroutine read_conf()
     implicit none
 
-    integer :: n
+    integer :: n, m
     !---------------------------------------------------------------------------
 
     !--- read namelist file
@@ -1063,9 +1072,6 @@ contains
        if ( LOUT ) write (*, *) "ERROR: overflow maximum of zcount"
        call err_abort( 1, __LINE__ )
     endif
-    do n=1, ZCOUNT
-       if ( LOUT ) write( FID_LOG, '(1X,A,I3,A,I3)' ) "+++ Listing Levs: (", n, ") ", TARGET_ZLEV(n)
-    enddo
 
     if ( VCOUNT > max_vcount ) then
        if ( LOUT ) write (*, *) "ERROR: overflow maximum of vcount"
@@ -1075,15 +1081,29 @@ contains
        call err_abort( 1, __LINE__ )
     endif
 
-    if ( VCOUNT /= 0 ) then !case1: target variables are specified
-       rewind( FID_CONF )
-       read  ( FID_CONF, nml=VARI, iostat=ierr )
-       if ( LOUT ) write ( FID_LOG, nml=VARI )
-       do n=1, VCOUNT
-          VNAME(n) = trim(VNAME(n))
-          if ( LOUT ) write( FID_LOG, '(1X,A,I3,A,A)' ) "+++ Listing Vars: (", n, ") ", VNAME(n)
+    rewind( FID_CONF )
+    read  ( FID_CONF, nml=VARI, iostat=ierr )
+    if ( LOUT ) write ( FID_LOG, nml=VARI )
+    if ( LOUT ) write( FID_LOG,* ) ""
+    do n=1, VCOUNT
+       VNAME(n) = trim(VNAME(n))
+       if ( LOUT ) write( FID_LOG, '(1X,A,I3,A,A)' ) "+++ Listing Vars: (", n, ") ", VNAME(n)
+    enddo
+    if ( LOUT ) write( FID_LOG,* ) ""
+
+    if ( Z_LEV_LIST ) then
+       do n=1, ZCOUNT
+          if ( LOUT ) write( FID_LOG, '(1X,A,I3,A,I5)' ) "+++ Listing Levs: (", n, ") ", TARGET_ZLEV(n)
+       enddo
+    else
+       m = ZSTART
+       do n=1, ZCOUNT
+          TARGET_ZLEV(n) = m
+          if ( LOUT ) write( FID_LOG, '(1X,A,I3,A,I5)' ) "+++ Listing Levs: (", n, ") ", TARGET_ZLEV(n)
+          m = m + 1
        enddo
     endif
+    if ( LOUT ) write( FID_LOG,* ) ""
 
     rewind( FID_CONF )
     read  ( FID_CONF, nml=GRADS, iostat=ierr )
@@ -1101,7 +1121,7 @@ contains
     endif
 
     read  ( FID_RCNF, nml=PARAM_TIME, iostat=ierr )
-    if ( LOUT ) write ( FID_LOG, nml=PARAM_PRC )
+    if ( LOUT ) write ( FID_LOG, nml=PARAM_TIME )
 
     read  ( FID_RCNF, nml=PARAM_PRC, iostat=ierr )
     if ( LOUT ) write ( FID_LOG, nml=PARAM_PRC )
@@ -1670,14 +1690,41 @@ contains
   subroutine make_vgrid()
     implicit none
 
-    integer :: iz
+    integer :: iz, ik, k
+    real(DP) :: diff, mini
     !---------------------------------------------------------------------------
 
     allocate( vgrid( ZCOUNT ) )
 
-    do iz = 1, ZCOUNT
-       vgrid(iz) = cz( TARGET_ZLEV(iz) )
-    enddo
+    select case( Z_LEV_TYPE )
+    case ( "GRID", "grid" )
+       do iz = 1, ZCOUNT
+          vgrid(iz) = cz( TARGET_ZLEV(iz) )
+          if ( LOUT ) write( FID_LOG, '(1X,A,I3,A,F8.2)' ) "+++ Target Height: (", iz, ") ", vgrid(iz)
+       enddo
+
+    case ( "HEIGHT", "height", "HGT", "hgt" )
+       do iz = 1, ZCOUNT
+          mini = 9.9999D+10
+          do k=nzh+1, nz+nzh+1
+             diff = abs(real(TARGET_ZLEV(iz)) - cz(k))
+             if ( diff < mini ) then
+                mini = diff
+                ik = k
+             endif
+          enddo
+          if ( LOUT ) write( FID_LOG, '(1X,A,I5,A,F8.3)' ) &
+          "+++ Search Nearest - request: ", TARGET_ZLEV(iz), "  diff: ", mini
+
+          TARGET_ZLEV(iz) = ik
+          vgrid(iz) = cz( TARGET_ZLEV(iz) )
+          if ( LOUT ) write( FID_LOG, '(1X,A,I3,A,F8.2)' ) "+++ Target Height: (", iz, ") ", vgrid(iz)
+       enddo
+
+    case default
+       if ( LOUT ) write (*, *) "ERROR: requested Z_LEV_TYPE is not supported"
+       call err_abort( 1, __LINE__ )
+    end select
 
     return
   end subroutine make_vgrid
