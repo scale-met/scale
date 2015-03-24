@@ -70,6 +70,8 @@ module scale_atmos_phy_mp_tomita08
                                                     !   graupel : 400
                                                     !   hail    : 917
   real(RP), private            :: drag_g = 0.6_RP   !< drag coefficient for graupel
+  real(RP), private            :: re_qc  =  8.E-6_RP ! effective radius for cloud water
+  real(RP), private            :: re_qi  = 40.E-6_RP ! effective radius for cloud ice
 
   ! Empirical parameter
   real(RP), private            :: Ar, As, Ag
@@ -301,6 +303,8 @@ contains
        param_roh14,    &
        dens_s,         &
        dens_g,         &
+       re_qc,          &
+       re_qi,          &
        debug
 
     real(RP), parameter :: max_term_vel = 10.0_RP  !-- terminal velocity for calculate dt of sedimentation
@@ -1789,8 +1793,8 @@ contains
     integer  :: k, i, j, iq
     !---------------------------------------------------------------------------
 
-    Re(:,:,:,I_mp_QC) =   8.E-6_RP * um2cm
-    Re(:,:,:,I_mp_QI) =  20.E-6_RP * um2cm
+    Re(:,:,:,I_mp_QC) =  re_qc * um2cm
+    Re(:,:,:,I_mp_QI) =  re_qi * um2cm
 
     do j  = JS, JE
     do i  = IS, IE
