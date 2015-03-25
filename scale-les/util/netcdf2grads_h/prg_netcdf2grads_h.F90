@@ -65,7 +65,7 @@ program netcdf2grads_h
   character(CSHT) :: Z_LEV_TYPE     = "GRID"
   character(5)    :: DELT           = "1mn"
   character(15)   :: STIME          = "00:00Z01JAN2000"
-  character(15)   :: FTIME          = "2000010100"
+  character(15)   :: FTIME          = "200001010000"
   character(CLNG) :: LOG_BASENAME   = "LOG"
   logical         :: LOG_ALL_OUTPUT = .false.
   logical         :: Z_LEV_LIST     = .true.
@@ -976,7 +976,11 @@ contains
     write(cdom,'(i2.2)') idom
     select case( atype )
     case ( a_slice )
-       write(clev,'(i3.3)') zz
+        if ( Z_MERGE_OUT ) then
+           clev = "-3d"
+        else
+           write(clev,'(i3.3)') zz
+        endif
     case ( a_max )
        clev = "max"
     case ( a_min )
@@ -1626,17 +1630,18 @@ contains
   subroutine set_calender()
     implicit none
 
-    character(2) :: cmn, chh, cdd, cmm2
+    character(2) :: csc, cmn, chh, cdd, cmm2
     character(4) :: cyy
     !---------------------------------------------------------------------------
 
+    write(csc, '(I2.2)') sc
     write(cmn, '(I2.2)') mn
     write(chh, '(I2.2)') hh
     write(cdd, '(I2.2)') dd
     write(cmm2,'(I2.2)') mm
     write(cyy, '(I4.4)') yy
     STIME = chh//':'//cmn//'Z'//cdd//cmm(mm)//cyy
-    FTIME = cyy//cmm2//cdd//chh//cmn
+    FTIME = cyy//cmm2//cdd//chh//cmn//csc
 
     return
   end subroutine set_calender
