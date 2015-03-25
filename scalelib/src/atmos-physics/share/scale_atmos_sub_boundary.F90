@@ -1519,7 +1519,6 @@ contains
 
     if ( do_parent_process ) then !online [parent]
        handle = 1
-       call ATMOS_BOUNDARY_update_online( DENS,MOMZ,MOMX,MOMY,RHOT,QTRC,handle )
        call NEST_COMM_recvwait_issue( handle, NESTQA )
     endif
 
@@ -1580,6 +1579,22 @@ contains
     endif
 
     if ( l_bnd ) then
+       ! update referce vars
+       if ( now_step >= UPDATE_NSTEP ) then
+          now_step          = 0
+          boundary_timestep = boundary_timestep + 1
+
+          call update_ref_index
+
+          if ( do_daughter_process ) then !online [daughter]
+             handle = 2
+             call ATMOS_BOUNDARY_update_online( DENS,MOMZ,MOMX,MOMY,RHOT,QTRC,handle )
+          else
+             call ATMOS_BOUNDARY_update_file
+          end if
+       end if
+
+       ! step increment
        now_step = now_step + 1
 
        ! get incremental coefficients
@@ -1612,20 +1627,6 @@ contains
           end do
           end do
           end do
-       end if
-
-       ! update referce vars
-       if ( now_step >= UPDATE_NSTEP ) then
-          call update_ref_index
-
-          boundary_timestep = boundary_timestep + 1
-          now_step = 0
-          if ( do_daughter_process ) then !online [daughter]
-             handle = 2
-             call ATMOS_BOUNDARY_update_online( DENS,MOMZ,MOMX,MOMY,RHOT,QTRC,handle )
-          else
-             call ATMOS_BOUNDARY_update_file
-          end if
        end if
 
        ! fill HALO in western region
