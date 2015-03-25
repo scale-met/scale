@@ -957,7 +957,7 @@ contains
     if( IO_L ) write(IO_FID_LOG,'(1x,A,F12.7)') '*** Baseline of total solar insolation : ', fsol_tot
 
     !---< constant parameter for main scheme >---
-    RHO_std = Pstd * ( Rdry * TEM00 ) ! [kg/m3]
+    RHO_std = Pstd / ( Rdry * TEM00 ) ! [kg/m3]
 
     M   (I_SW) = 1.0_RP / sqrt(3.0_RP)
     W   (I_SW) = 1.0_RP
