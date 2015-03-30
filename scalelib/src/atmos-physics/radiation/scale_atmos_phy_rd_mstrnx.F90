@@ -198,7 +198,7 @@ module scale_atmos_phy_rd_mstrnx
   integer,  private, parameter :: I_Cloud    = 2
 
   ! pre-calc
-  real(RP), private :: RRHO_std         ! 1 / rho(0C,1atm) * 100 [cm*m2/kg]
+  real(RP), private :: RHO_std          ! rho(0C,1atm) [kg/m3]
 
   real(RP), private :: M(2)             ! discrete quadrature mu for two-stream approximation
   real(RP), private :: W(2)             ! discrete quadrature w  for two-stream approximation
@@ -593,7 +593,7 @@ contains
        k = KS + RD_KMAX - RD_k ! reverse axis
 
        aerosol_conc_merge(RD_k,i,j,ihydro) = max( MP_Qe(k,i,j,ihydro), 0.0_RP ) &
-                                           / MP_DENS(ihydro) * DENS(k,i,j) / PPM ! [PPM]
+                                           / MP_DENS(ihydro) * RHO_std / PPM ! [PPM to standard air]
        aerosol_radi_merge(RD_k,i,j,ihydro) = MP_Re(k,i,j,ihydro)
     enddo
     enddo
@@ -608,7 +608,7 @@ contains
              k = KS + RD_KMAX - RD_k ! reverse axis
 
              aerosol_conc_merge(RD_k,i,j,MP_QA+iaero) = max( QTRC(k,i,j,I_AE2ALL(iaero)), 0.0_RP ) &
-                                                      / AE_DENS(iaero) * DENS(k,i,j) / PPM ! [PPM]
+                                                      / AE_DENS(iaero) * RHO_std / PPM ! [PPM to standard air]
              aerosol_radi_merge(RD_k,i,j,MP_QA+iaero) = AE_Re(k,i,j,iaero)
           enddo
           enddo
@@ -957,7 +957,7 @@ contains
     if( IO_L ) write(IO_FID_LOG,'(1x,A,F12.7)') '*** Baseline of total solar insolation : ', fsol_tot
 
     !---< constant parameter for main scheme >---
-    RRHO_std = Rdry * TEM00 / Pstd * 100.0_RP ! [cm*m2/kg]
+    RHO_std = Pstd / ( Rdry * TEM00 ) ! [kg/m3]
 
     M   (I_SW) = 1.0_RP / sqrt(3.0_RP)
     W   (I_SW) = 1.0_RP
@@ -1116,7 +1116,7 @@ contains
     do i = IS, IE
     !$acc loop gang vector(32)
     do k = 1, rd_kmax
-       dz_std(k,i,j) = rhodz(k,i,j) * RRHO_std ! [cm]
+       dz_std(k,i,j) = rhodz(k,i,j) / RHO_std * 100.0_RP ! [cm]
     enddo
     enddo
     enddo
@@ -1334,7 +1334,7 @@ contains
              do icfc = 1, ncfc
                 valsum = valsum + 10.0_RP**acfc(icfc,iw) * cfc(k,i,j,icfc)
              enddo
-             valsum = valsum * dz_std(k,i,j) * PPM
+             valsum = valsum * PPM * dz_std(k,i,j)
 
              do ich = 1, chmax
              !$acc loop seq
