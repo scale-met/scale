@@ -62,6 +62,13 @@ module scale_atmos_phy_rd_profile
   character(len=H_LONG), private :: PROFILE_CIRA86_fname    = "cira.nc" !< file (CIRA86,netCDF format)
   character(len=H_LONG), private :: PROFILE_MIPAS2001_dir   = "."       !< dir  (MIPAS2001,ASCII format)
   character(len=H_LONG), private :: PROFILE_USER_fname      = ""        !< file (user,ASCII format)
+  logical,               private :: ATMOS_PHY_RD_PROFILE_USE_CO2   = .true.
+  logical,               private :: ATMOS_PHY_RD_PROFILE_USE_O3    = .true.
+  logical,               private :: ATMOS_PHY_RD_PROFILE_USE_N2O   = .true.
+  logical,               private :: ATMOS_PHY_RD_PROFILE_USE_CO    = .true.
+  logical,               private :: ATMOS_PHY_RD_PROFILE_USE_CH4   = .true.
+  logical,               private :: ATMOS_PHY_RD_PROFILE_USE_O2    = .true.
+  logical,               private :: ATMOS_PHY_RD_PROFILE_USE_CFC   = .true.
   logical,               private :: debug                   = .false.   !< debug mode?
 
   integer,  private              :: CIRA_ntime
@@ -143,6 +150,13 @@ contains
        ATMOS_PHY_RD_PROFILE_CIRA86_IN_FILENAME,    &
        ATMOS_PHY_RD_PROFILE_MIPAS2001_IN_BASENAME, &
        ATMOS_PHY_RD_PROFILE_USER_IN_FILENAME,      &
+       ATMOS_PHY_RD_PROFILE_USE_CO2,               &
+       ATMOS_PHY_RD_PROFILE_USE_O3,                &
+       ATMOS_PHY_RD_PROFILE_USE_N2O,               &
+       ATMOS_PHY_RD_PROFILE_USE_CO,                &
+       ATMOS_PHY_RD_PROFILE_USE_CH4,               &
+       ATMOS_PHY_RD_PROFILE_USE_O2,                &
+       ATMOS_PHY_RD_PROFILE_USE_CFC,               &
        debug
 
     integer :: ierr
@@ -630,6 +644,14 @@ contains
     aerosol_conc(:,:) = 0.0_RP
     aerosol_radi(:,:) = 0.0_RP
     cldfrac     (:)   = 0.0_RP
+
+    if ( .not. ATMOS_PHY_RD_PROFILE_use_CO2 ) gas(:,2) = 0.0_RP
+    if ( .not. ATMOS_PHY_RD_PROFILE_use_O3  ) gas(:,3) = 0.0_RP
+    if ( .not. ATMOS_PHY_RD_PROFILE_use_N2O ) gas(:,4) = 0.0_RP
+    if ( .not. ATMOS_PHY_RD_PROFILE_use_CO  ) gas(:,5) = 0.0_RP
+    if ( .not. ATMOS_PHY_RD_PROFILE_use_CH4 ) gas(:,6) = 0.0_RP
+    if ( .not. ATMOS_PHY_RD_PROFILE_use_O2  ) gas(:,7) = 0.0_RP
+    if ( .not. ATMOS_PHY_RD_PROFILE_use_CFC ) cfc(:,:) = 0.0_RP
 
     !----- report data -----
     if ( debug .AND. report_firsttime ) then
