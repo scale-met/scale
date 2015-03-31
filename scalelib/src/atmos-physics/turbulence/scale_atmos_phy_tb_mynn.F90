@@ -386,6 +386,16 @@ contains
     end do
     end do
     end do
+!OCL XFILL
+    do iq = I_QV+1, QA
+    do j = JS-1, JE
+    do i = IS  , IE
+    do k = KS-1, KE+1
+       qflx_sgs_rhoq(k,i,j,ZDIR,iq) = 0.0_RP
+    end do
+    end do
+    end do
+    end do
 
 
 
@@ -770,15 +780,14 @@ contains
 
 
        ! integration QTRC
-       do iq = 1, QA
+!       do iq = 1, QA
+       iq = I_QV
           do j = JJS, JJE
           do i = IIS, IIE
-             do k = KS, KE_PBL
-                d(k) = QTRC(k,i,j,iq)
+             d(KS) = Qw(KS,i,j) + dt * SFLX_QV(i,j) * RCDZ(KS) / ( DENS(KS,i,j) * GSQRT(KS,i,j,I_XYZ) )
+             do k = KS+1, KE_PBL
+                d(k) = Qw(k,i,j)
              end do
-             if ( iq == I_QV ) then
-                d(KS) = d(KS) + dt * SFLX_QV(i,j) * RCDZ(KS) / ( DENS(KS,i,j) * GSQRT(KS,i,j,I_XYZ) )
-             end if
              call diffusion_solver( &
                   phiN(:,i,j),                     & ! (out)
                   a(:,i,j), b(:,i,j), c(:,i,j), d, & ! (in)
@@ -807,7 +816,7 @@ contains
           end do
           end do
           end do
-       end do
+!       end do
 
        ! time integration tke
        do j = JJS, JJE
