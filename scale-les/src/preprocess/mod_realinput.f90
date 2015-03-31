@@ -1543,6 +1543,7 @@ contains
        COMM_vars8, &
        COMM_wait
     use scale_atmos_hydrostatic, only: &
+       HYDROSTATIC_buildrho      => ATMOS_HYDROSTATIC_buildrho,   &
        HYDROSTATIC_buildrho_real => ATMOS_HYDROSTATIC_buildrho_real
     use scale_atmos_thermodyn, only: &
        THERMODYN_pott => ATMOS_THERMODYN_pott
@@ -1640,7 +1641,24 @@ contains
     character(len=H_MID) :: varname_W
     character(len=H_MID) :: varname_U
     character(len=H_MID) :: varname_V
+
+    logical :: use_buildrho_real = .false.
+
+    NAMELIST / PARAM_INPUT_ATOM_WRF / &
+       use_buildrho_real
+
+    integer :: ierr
     !---------------------------------------------------------------------------
+
+    !--- read namelist
+    rewind(IO_FID_CONF)
+    read(IO_FID_CONF,nml=PARAM_INPUT_ATOM_WRF,iostat=ierr)
+
+    if( ierr > 0 ) then
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_INPUT_ATOM_WRF. Check!'
+       call PRC_MPIstop
+    endif
+    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_INPUT_ATOM_WRF)
 
     if ( wrfout ) then
        varname_T = "T"
@@ -2109,17 +2127,31 @@ contains
        qc_sfc = qtrc_sfc(:,:,:,I_QC)
 #endif
        ! make density & pressure profile in moist condition
-       call HYDROSTATIC_buildrho_real( dens    (:,:,:,n),      & ! [OUT]
-                                       temp    (:,:,:),        & ! [OUT]
-                                       pres    (:,:,:),        & ! [OUT]
-                                       pott    (:,:,:),        & ! [IN]
-                                       qtrc    (:,:,:,n,I_QV), & ! [IN]
-                                       qc      (:,:,:),        & ! [IN]
-                                       temp_sfc(:,:,:),        & ! [OUT]
-                                       pres_sfc(:,:,:),        & ! [IN]
-                                       pott_sfc(:,:,:),        & ! [IN]
-                                       qtrc_sfc(:,:,:,I_QV),   & ! [IN]
-                                       qc_sfc  (:,:,:)         ) ! [IN]
+       if ( use_buildrho_real ) then
+          call HYDROSTATIC_buildrho_real( dens    (:,:,:,n),      & ! [OUT]
+                                          temp    (:,:,:),        & ! [OUT]
+                                          pres    (:,:,:),        & ! [OUT]
+                                          pott    (:,:,:),        & ! [IN]
+                                          qtrc    (:,:,:,n,I_QV), & ! [IN]
+                                          qc      (:,:,:),        & ! [IN]
+                                          temp_sfc(:,:,:),        & ! [OUT]
+                                          pres_sfc(:,:,:),        & ! [IN]
+                                          pott_sfc(:,:,:),        & ! [IN]
+                                          qtrc_sfc(:,:,:,I_QV),   & ! [IN]
+                                          qc_sfc  (:,:,:)         ) ! [IN]
+       else
+          call HYDROSTATIC_buildrho( dens    (:,:,:,n),      & ! [OUT]
+                                     temp    (:,:,:),        & ! [OUT]
+                                     pres    (:,:,:),        & ! [OUT]
+                                     pott    (:,:,:),        & ! [IN]
+                                     qtrc    (:,:,:,n,I_QV), & ! [IN]
+                                     qc      (:,:,:),        & ! [IN]
+                                     temp_sfc(:,:,:),        & ! [OUT]
+                                     pres_sfc(:,:,:),        & ! [IN]
+                                     pott_sfc(:,:,:),        & ! [IN]
+                                     qtrc_sfc(:,:,:,I_QV),   & ! [IN]
+                                     qc_sfc  (:,:,:)         ) ! [IN]
+       endif
 
        call COMM_vars8( dens(:,:,:,n), 1 )
        call COMM_wait ( dens(:,:,:,n), 1 )
