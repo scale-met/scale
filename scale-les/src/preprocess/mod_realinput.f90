@@ -112,7 +112,6 @@ module mod_realinput
 
   integer, private :: interp_search_divnum = 10
   logical, private :: wrfout = .false.  ! file type switch (wrfout or wrfrst)
-  logical, private :: use_ = .false.  ! file type switch (wrfout or wrfrst)
 
   integer, parameter :: cosin = 1
   integer, parameter :: sine  = 2
