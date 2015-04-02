@@ -45,7 +45,7 @@ module scale_process
   integer, public, parameter   :: PRC_master = 0      !< master node
 
   integer, public, parameter   :: GLOBAL_master = 0   !< master node
-  integer, public, parameter   :: max_depth = 5       !< max depth of domains
+  integer, public, parameter   :: max_depth = 10      !< max depth of domains
   integer, public, parameter   :: split_root = 0      !< root process in each color
 
   integer, public              :: GLOBAL_COMM_WORLD   !< global communicator
