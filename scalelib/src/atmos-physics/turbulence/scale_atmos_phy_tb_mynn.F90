@@ -242,9 +242,6 @@ contains
 
     real(RP) :: U(KA,IA,JA)    !< velocity in x-direction (full level)
     real(RP) :: V(KA,IA,JA)    !< velocity in y-direction (full level)
-    real(RP) :: POTT(KA,IA,JA) !< potential temperature (full level)
-    real(RP) :: POTV(KA,IA,JA) !< virtual potential temperature (full level)
-    real(RP) :: Qw(KA,IA,JA)   !< total water
     real(RP) :: phiN(KA,IA,JA)
 
 
@@ -263,12 +260,16 @@ contains
     real(RP) :: ap
     real(RP) :: tke_N(KE_PBL,IA,JA)
 
-    real(RP) :: temp         !< temperature
-    real(RP) :: pres         !< pressure
+    real(RP) :: POTT(KA,IA,JA) !< potential temperature
+    real(RP) :: POTV(KA,IA,JA) !< virtual potential temperature
+    real(RP) :: POTL(KA,IA,JA) !< liquid water potential temperature
 
-    real(RP) :: ptl          !< liquid water potential temperature
+    real(RP) :: Qw(KA,IA,JA) !< total water
     real(RP) :: ql           !< liquid water
     real(RP) :: qs           !< solid water
+
+    real(RP) :: temp         !< temperature
+    real(RP) :: pres         !< pressure
 
     real(RP) :: lhv
     real(RP) :: lhs
@@ -450,10 +451,11 @@ contains
 
              POTT(k,i,j) = RHOT(k,i,j) / DENS(k,i,j)
              ! liquid water potential temperature
-             ptl = POTT(k,i,j) * (1.0_RP - 1.0_RP * (lhv * ql + lhs * qs) / ( temp * CP ) )
+             POTL(k,i,j) = POTT(k,i,j) * (1.0_RP - 1.0_RP * (lhv * ql + lhs * qs) / ( temp * CP ) )
 
              ! virtual potential temperature for derivertive
-             POTV(k,i,j) = ( 1.0_RP + EPSTvap * Qw(k,i,j) - (1.0_RP+EPSTvap) * ql ) * ptl 
+!             POTV(k,i,j) = ( 1.0_RP + EPSTvap * Qw(k,i,j) ) * POTL(k,i,j)
+             POTV(k,i,j) = ( 1.0_RP + EPSTvap * Qw(k,i,j) - (1.0_RP+EPSTvap) * (ql + qs) ) * POTL(k,i,j)
           end do
 
           do k = KS+1, KE_PBL
@@ -484,7 +486,7 @@ contains
             DENS, & ! (in)
             tke, n2, & ! (in)
             SFLX_MU, SFLX_MV, SFLX_SH, & ! (in)
-            PT0, & ! (in)
+            POTT, & ! (in)
             GSQRT(:,:,:,I_XYZ), & ! (in)
             IIS, IIE, JJS, JJE )
 
@@ -745,9 +747,9 @@ contains
        ! integration POTT
        do j = JJS, JJE
        do i = IIS, IIE
-          d(KS) = POTT(KS,i,j) + dt * SFLX_SH(i,j) * RCDZ(KS) / ( CP * DENS(KS,i,j) * GSQRT(KS,i,j,I_XYZ) )
+          d(KS) = POTL(KS,i,j) + dt * SFLX_SH(i,j) * RCDZ(KS) / ( CP * DENS(KS,i,j) * GSQRT(KS,i,j,I_XYZ) )
           do k = KS+1, KE_PBL
-             d(k) = POTT(k,i,j)
+             d(k) = POTL(k,i,j)
           end do
           call diffusion_solver( &
                phiN(:,i,j),                     & ! (out)
@@ -821,7 +823,7 @@ contains
        ! time integration tke
        do j = JJS, JJE
        do i = IIS, IIE
-          ap = - dt * 0.5_RP * ( DENS(KS  ,i,j)*Nu(KS  ,i,j) &
+          ap = - dt * 1.5_RP * ( DENS(KS  ,i,j)*Nu(KS  ,i,j) &
                                + DENS(KS+1,i,j)*Nu(KS+1,i,j) ) &
              * RFDZ(KS) / GSQRT(KS,i,j,I_XYW)
           a(KS,i,j) = ap * RCDZ(KS) / ( DENS(KS,i,j) * GSQRT(KS,i,j,I_XYZ) )
@@ -844,8 +846,8 @@ contains
                                      - advc )
           do k = KS+1, KE_PBL-1
              c(k,i,j) = ap * RCDZ(k) / ( DENS(k,i,j) * GSQRT(k,i,j,I_XYZ) )
-             ap = - dt * 0.5_RP * ( DENS(k  ,i,j)*Nu(k  ,i,j) &
-                                  + DENS(k+1,i,j)*Nu(k+1,i,j) ) &
+             ap = - dt * 1.5_RP * ( DENS(k  ,i,j)*Nu(k  ,i,j) &
+                                  + DENS(k+1,i,j)*Nu(k+1,i,j))  &
                 * RFDZ(k) / GSQRT(k,i,j,I_XYW)
              a(k,i,j) = ap * RCDZ(k) / ( DENS(k,i,j) * GSQRT(k,i,j,I_XYZ) )
              b(k,i,j) = - a(k,i,j) - c(k,i,j) + 1.0_RP + 2.0_RP * dt * q(k,i,j) / ( B1 * l(k,i,j) )
