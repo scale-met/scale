@@ -56,6 +56,8 @@ program scaleles_launcher
   integer :: icomm_child              ! inter communicator with child
   integer :: NUM_DOMAIN               ! number of domains
   integer :: PRC_DOMAINS(max_depth)   ! # of total process in each domain
+  integer :: PRC_ORDER(max_depth)     ! reordered number of process
+  integer :: COLOR_DOMAINS(max_depth) ! # of color in each domain
 
   logical :: flag_parent              ! flag of "I am parent domain"
   logical :: flag_child               ! flag of "I am child domain"
@@ -65,25 +67,28 @@ program scaleles_launcher
   character(len=H_LONG) :: fname_launch           ! config file for launcher
   character(len=H_LONG) :: fname_local            ! config file for local domain
 
-  integer :: i
+  integer :: i, j, is, ie
+  integer :: previous, shift
   integer :: ierr
   integer :: LNC_FID_CONF
 
   namelist / PARAM_LAUNCHER / &
      NUM_DOMAIN,     &
      PRC_DOMAINS,    &
+     COLOR_DOMAINS,  &
      CONF_FILES,     &
      LOG_SPLIT
   !-----------------------------------------------------------
 
-  NUM_DOMAIN     = 1
-  PRC_DOMAINS(:) = 0
-  CONF_FILES (:) = ""
+  NUM_DOMAIN       = 1
+  PRC_DOMAINS      = 0
+  CONF_FILES(:)    = ""
+  COLOR_DOMAINS(:) = -1
 
   ! start MPI
   call PRC_MPIstart
 
-  !--- Read from argument
+  !--- read from argument
   if ( COMMAND_ARGUMENT_COUNT() < 1 ) then
      if (GLOBAL_LOG) write(*,*) 'WARNING: No config file specified!'
      if (GLOBAL_LOG) write(*,*) '         Default values are used.'
@@ -92,7 +97,7 @@ program scaleles_launcher
   endif
   CONF_FILES(1) = fname_launch
 
-  !--- Open config file till end
+  !--- open config file till end
   LNC_FID_CONF = IO_get_available_fid()
   open( LNC_FID_CONF,                &
         file   = trim(fname_launch), &
@@ -117,14 +122,50 @@ program scaleles_launcher
 
   close( LNC_FID_CONF )
 
+  !--- make color order
+  is = 1
+  ie = NUM_DOMAIN
+  previous = -999
+  shift    = 1
+  PRC_ORDER(:) = PRC_DOMAINS(:)
+  call sort_ascd( PRC_ORDER(is:ie), is, ie )
+print *, PRC_ORDER(is:ie)
+print *, "-----------------"
+print *, PRC_DOMAINS(is:ie)
+print *, "-----------------"
+  do i = is, ie
+     do j = is, ie
+print *, PRC_DOMAINS(i), PRC_ORDER(j)
+        if ( PRC_DOMAINS(i) .eq. PRC_ORDER(j) ) then
+print *, i, j
+           COLOR_DOMAINS(i) = j - 1
+           if ( previous .eq. COLOR_DOMAINS(i) ) then
+              COLOR_DOMAINS(i) = COLOR_DOMAINS(i) + shift
+              shift = shift + 1
+           else
+              previous = COLOR_DOMAINS(i)
+              shift    = 1
+           endif
+           exit
+        endif
+     enddo
+  enddo
+
+do i = is, ie
+if ( GLOBAL_LOG ) write (*,*) "[DEBUG] ", i, PRC_DOMAINS(i), COLOR_DOMAINS(i)
+enddo
+stop
+
   if ( NUM_DOMAIN == 1 ) then
-     PRC_DOMAINS(1) = GLOBAL_nmax
+     PRC_DOMAINS(1)   = GLOBAL_nmax
+     COLOR_DOMAINS(1) = 0
   endif
 
   if ( GLOBAL_LOG ) write(*,*) '*** Start Launch System for SCALE-LES'
   if ( GLOBAL_LOG ) write ( *, * ) "NUM_DOMAIN = ", NUM_DOMAIN
   do i = 1, NUM_DOMAIN
      if ( GLOBAL_LOG ) write ( *, '(1X,A,I1,A,I5)' ) "PRC_DOMAINS(",i,") = ", PRC_DOMAINS(i)
+     if ( GLOBAL_LOG ) write ( *, '(1X,A,I1,A,I3)' ) "COLOR_DOMAINS(",i,") = ", COLOR_DOMAINS(i)
      if ( GLOBAL_LOG ) write ( *, '(1X,A,I1,A,A)' ) "CONF_FILES(",i,")  = ", trim(CONF_FILES(i))
   enddo
 
@@ -132,6 +173,7 @@ program scaleles_launcher
   call PRC_MPIsplit(    &
       NUM_DOMAIN,       & ! [in ]
       PRC_DOMAINS,      & ! [in ]
+      COLOR_DOMAINS,    & ! [in ]
       CONF_FILES,       & ! [in ]
       LOG_SPLIT,        & ! [in ]
       nmax_parent,      & ! [out]
@@ -160,4 +202,35 @@ program scaleles_launcher
 
   stop
   !=============================================================================
+  !
+  !-----------------------------------------------------------------------------
+contains
+  !-----------------------------------------------------------------------------
+  !> quicksort (ascending order)
+  recursive subroutine sort_ascd(a, top, bottom)
+    implicit none
+    integer, intent(inout) :: a(:)
+    integer, intent(in)    :: top, bottom
+    integer :: i, j, cnt, trg
+    !---------------------------------------------------------------------------
+    cnt = a( (top+bottom) / 2 )
+    i = top; j = bottom
+    do
+       do while ( a(i) > cnt ) !ascending evaluation
+          i = i + 1
+       enddo
+       do while ( cnt > a(j) ) !ascending evaluation
+          j = j - 1
+       enddo
+       if ( i >= j ) exit
+       trg = a(i);  a(i) = a(j);  a(j) = trg
+       i = i + 1
+       j = j - 1
+    enddo
+    if ( top < i-1    ) call sort_ascd( a, top, i-1    )
+    if ( j+1 < bottom ) call sort_ascd( a, j+1, bottom )
+    return
+  end subroutine sort_ascd
+  !-----------------------------------------------------------------------------
+  !
 end program scaleles_launcher

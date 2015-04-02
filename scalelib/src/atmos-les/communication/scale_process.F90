@@ -411,14 +411,16 @@ contains
   subroutine PRC_setup
     implicit none
 
-    logical :: PRC_PERIODIC_X = .true. !< periodic condition or not (X)?
-    logical :: PRC_PERIODIC_Y = .true. !< periodic condition or not (Y)?
+    logical :: PRC_PERIODIC_X   = .true.  !< periodic condition or not (X)?
+    logical :: PRC_PERIODIC_Y   = .true.  !< periodic condition or not (Y)?
+    logical :: PRC_CART_REORDER = .false. !< flag for rank reordering over the cartesian map
 
     namelist / PARAM_PRC / &
        PRC_NUM_X,      &
        PRC_NUM_Y,      &
        PRC_PERIODIC_X, &
-       PRC_PERIODIC_Y
+       PRC_PERIODIC_Y, &
+       PRC_CART_REORDER
 
     logical :: period(2)
     integer :: divide(2)
@@ -476,7 +478,7 @@ contains
     period(1) = PRC_PERIODIC_Y
     period(2) = PRC_PERIODIC_X
     if ( PRC_mpi_alive ) then
-       call MPI_CART_CREATE(LOCAL_COMM_WORLD,2,divide,period,.false.,iptbl,ierr)
+       call MPI_CART_CREATE(LOCAL_COMM_WORLD,2,divide,period,PRC_CART_REORDER,iptbl,ierr)
        call MPI_CART_SHIFT(iptbl,0,1,PRC_next(PRC_S),PRC_next(PRC_N),ierr) ! next rank search Down/Up
        call MPI_CART_SHIFT(iptbl,1,1,PRC_next(PRC_W),PRC_next(PRC_E),ierr) ! next rank search Left/Right
 
@@ -553,6 +555,7 @@ contains
   subroutine PRC_MPIsplit( &
       NUM_DOMAIN,       & ! [in ]
       PRC_DOMAINS,      & ! [in ]
+      COLOR_DOMAINS,    & ! [in ]
       CONF_FILES,       & ! [in ]
       LOG_SPLIT,        & ! [in ]
       nmax_parent,      & ! [out]
@@ -568,6 +571,7 @@ contains
 
     integer, intent(in)  :: NUM_DOMAIN
     integer, intent(in)  :: PRC_DOMAINS(:)
+    integer, intent(in)  :: COLOR_DOMAINS(:)
     character(len=H_LONG), intent(in) :: CONF_FILES(:)
     logical, intent(in)  :: LOG_SPLIT
 
@@ -627,7 +631,7 @@ contains
 
        do i = 0, GLOBAL_nmax-1
           if ( key == 0 ) PRC_ROOT(color) = i
-          COLOR_LIST(i) = color
+          COLOR_LIST(i) = COLOR_DOMAINS(color)
           KEY_LIST(i)   = key
           if ( LOG_SPLIT .and. GLOBAL_LOG ) write ( *, '(1X,4(A,I5))' ) "PE:", i, "   COLOR:", COLOR_LIST(i), &
                                   "   KEY:", KEY_LIST(i), "   PRC_ROOT:", PRC_ROOT(color)
