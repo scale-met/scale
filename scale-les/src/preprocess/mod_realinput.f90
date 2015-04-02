@@ -1653,7 +1653,7 @@ contains
     character(len=H_MID) :: varname_V
 
     logical :: lack_of_val
-    logical :: use_buildrho_real = .false.
+    logical :: use_buildrho_real = .true.
 
     NAMELIST / PARAM_INPUT_ATOM_WRF / &
        use_buildrho_real
