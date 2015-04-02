@@ -1543,12 +1543,15 @@ contains
        COMM_vars8, &
        COMM_wait
     use scale_atmos_hydrostatic, only: &
-       HYDROSTATIC_buildrho      => ATMOS_HYDROSTATIC_buildrho,   &
-       HYDROSTATIC_buildrho_real => ATMOS_HYDROSTATIC_buildrho_real
+       HYDROSTATIC_buildrho      => ATMOS_HYDROSTATIC_buildrho,       &
+       HYDROSTATIC_buildrho_real => ATMOS_HYDROSTATIC_buildrho_real,  &
+       HYDROSTATIC_barometric_law => ATMOS_HYDROSTATIC_barometric_law_mslp
     use scale_atmos_thermodyn, only: &
        THERMODYN_pott => ATMOS_THERMODYN_pott
     use scale_gridtrans, only: &
        rotc => GTRANS_ROTC
+    use scale_topography, only: &
+       topo => TOPO_Zsfc
     use scale_interpolation_nest, only: &
        INTRPNEST_interp_fact_llz,  &
        INTRPNEST_interp_2d,        &
@@ -1597,6 +1600,7 @@ contains
 
     real(RP), allocatable :: tsfc_org(:,:,:)
     real(RP), allocatable :: psfc_org(:,:,:)
+    real(RP), allocatable :: topo_org(:,:,:)
     real(RP), allocatable :: qsfc_org(:,:,:,:)
 
     real(RP), allocatable :: ph_org  (:,:,:,:)
@@ -1630,10 +1634,16 @@ contains
     real(RP) :: pott_sfc(1,IA,JA)
     real(RP) :: temp_sfc(1,IA,JA)
     real(RP) :: pres_sfc(1,IA,JA)
+    real(RP) :: psfc_wrf(1,IA,JA)
+    real(RP) :: topo_wrf(1,IA,JA)
+    real(RP) :: mslp_wrf(1,IA,JA)
     real(RP) :: qtrc_sfc(1,IA,JA,QA)
 
     real(RP) :: qc(KA,IA,JA)
     real(RP) :: qc_sfc(1,IA,JA)
+
+    real(RP) :: wgt_up, wgt_bt
+    real(RP) :: z1, z2, pres1, pres2
 
     integer :: n, k, i, j, iq
 
@@ -1642,7 +1652,8 @@ contains
     character(len=H_MID) :: varname_U
     character(len=H_MID) :: varname_V
 
-    logical :: use_buildrho_real = .false.
+    logical :: lack_of_val
+    logical :: use_buildrho_real = .true.
 
     NAMELIST / PARAM_INPUT_ATOM_WRF / &
        use_buildrho_real
@@ -1699,6 +1710,7 @@ contains
 
     allocate( tsfc_org (        dims(2),dims(3),ts:te   ) )
     allocate( psfc_org (        dims(2),dims(3),ts:te   ) )
+    allocate( topo_org (        dims(2),dims(3),ts:te   ) )
     allocate( qsfc_org (        dims(2),dims(3),ts:te,QA) )
 
     allocate( ph_org   (dims(4),dims(2),dims(3),ts:te   ) )
@@ -1760,6 +1772,9 @@ contains
 
        call ExternalFileRead( read_xy(:,:,:),    BASENAME, "PSFC",    ts, te, myrank, mdlid, single=.true.               )
        psfc_org (:,:,:) = real( read_xy(:,:,:), kind=RP )
+
+       call ExternalFileRead( read_xy(:,:,:),    BASENAME, "HGT",     ts, te, myrank, mdlid, single=.true.               )
+       topo_org (:,:,:) = real( read_xy(:,:,:), kind=RP )
 
        call ExternalFileRead( read_xy(:,:,:),    BASENAME, "T2",      ts, te, myrank, mdlid, single=.true.               )
        tsfc_org (:,:,:) = real( read_xy(:,:,:), kind=RP )
@@ -1866,6 +1881,7 @@ contains
        call COMM_bcast( pres_org(:,:,:,:), dims(1),dims(2),dims(3),te )
        call COMM_bcast( psfc_org(:,:,:),           dims(2),dims(3),te )
        call COMM_bcast( tsfc_org(:,:,:),           dims(2),dims(3),te )
+       call COMM_bcast( topo_org(:,:,:),           dims(2),dims(3),te )
 
        do iq = 1, QA
           call COMM_bcast( qtrc_org(:,:,:,:,iq), dims(1),dims(2),dims(3),te )
@@ -2094,8 +2110,15 @@ contains
                                  jgrd    (:,:,:),   &
                                  IA, JA             )
 
-       call INTRPNEST_interp_2d( pres_sfc(1,:,:),   &
+       call INTRPNEST_interp_2d( psfc_wrf(1,:,:),   &
                                  psfc_org(  :,:,n), &
+                                 hfact   (:,:,:),   &
+                                 igrd    (:,:,:),   &
+                                 jgrd    (:,:,:),   &
+                                 IA, JA             )
+
+       call INTRPNEST_interp_2d( topo_wrf(1,:,:),   &
+                                 topo_org(  :,:,n), &
                                  hfact   (:,:,:),   &
                                  igrd    (:,:,:),   &
                                  jgrd    (:,:,:),   &
@@ -2109,6 +2132,43 @@ contains
                                  jgrd    (:,:,:),        &
                                  IA, JA                  )
 
+
+       ! make mean sea level pressure using topography
+       call HYDROSTATIC_barometric_law( mslp_wrf(1,:,:), & ! [OUT]
+                                        psfc_wrf(1,:,:), & ! [IN]
+                                        temp_sfc(1,:,:), & ! [IN]
+                                        topo_wrf(1,:,:)  ) ! [IN]
+
+       ! interpolate surface pressure from MSLP and PRES
+       do j = 1, JA
+       do i = 1, IA
+          lack_of_val = .true.
+          do k = KS-1, KE
+             if(k == KS-1)then
+               z1=0.0_RP
+               z2=CZ(k+1,i,j)
+               pres1=mslp_wrf(1,i,j)
+               pres2=pres(k+1,i,j)
+             else
+               z1=CZ(k,i,j)
+               z2=CZ(k+1,i,j)
+               pres1=pres(k,i,j)
+               pres2=pres(k+1,i,j)
+             endif
+             if((topo(i,j)>=z1).and.(topo(i,j)<z2))then
+                lack_of_val = .false.                  ! found
+                wgt_bt = (z2        - topo(i,j)) / (z2 - z1)
+                wgt_up = (topo(i,j) - z1       ) / (z2 - z1)
+                pres_sfc(1,i,j) = exp( log(pres1)*wgt_bt + log(pres2)*wgt_up )
+                exit ! exit loop
+             endif
+          enddo
+          if( lack_of_val )then
+             write(IO_FID_LOG,*) 'realinput ATM WRF : cannot estimate pres_sfc',i,j,n
+             call PRC_MPIstop
+          endif
+       enddo
+       enddo
 
        do j = 1, JA
        do i = 1, IA
