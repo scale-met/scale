@@ -59,7 +59,7 @@ module scale_atmos_phy_tb_hybrid
        tke,                                         & ! (inout)
        nu_C, Ri, Pr,                                & ! (out) diagnostic variables
        MOMZ, MOMX, MOMY, RHOT, DENS, QTRC,          & ! (in)
-       SFLX_MW, SFLX_MU, SFLX_MV, SFLX_SH,          & ! (in)
+       SFLX_MW, SFLX_MU, SFLX_MV, SFLX_SH, SFLX_QV, & ! (in)
        GSQRT, J13G, J23G, J33G, MAPF, dt            ) ! (in)
        use scale_precision
        use scale_grid_index
@@ -87,6 +87,7 @@ module scale_atmos_phy_tb_hybrid
        real(RP), intent(in)  :: SFLX_MU(IA,JA)
        real(RP), intent(in)  :: SFLX_MV(IA,JA)
        real(RP), intent(in)  :: SFLX_SH(IA,JA)
+       real(RP), intent(in)  :: SFLX_QV(IA,JA)
 
        real(RP), intent(in)  :: GSQRT   (KA,IA,JA,7) !< vertical metrics {G}^1/2
        real(RP), intent(in)  :: J13G    (KA,IA,JA,7) !< (1,3) element of Jacobian matrix
@@ -209,7 +210,7 @@ contains
        tke,                                         & ! (inout)
        Nu, Ri, Pr,                                  & ! (out) diagnostic variables
        MOMZ, MOMX, MOMY, RHOT, DENS, QTRC,          & ! (in)
-       SFLX_MW, SFLX_MU, SFLX_MV, SFLX_SH,          & ! (in)
+       SFLX_MW, SFLX_MU, SFLX_MV, SFLX_SH, SFLX_QV, & ! (in)
        GSQRT, J13G, J23G, J33G, MAPF, dt            ) ! (in)
     use scale_precision
     use scale_grid_index
@@ -246,6 +247,7 @@ contains
     real(RP), intent(in)  :: SFLX_MU(IA,JA)
     real(RP), intent(in)  :: SFLX_MV(IA,JA)
     real(RP), intent(in)  :: SFLX_SH(IA,JA)
+    real(RP), intent(in)  :: SFLX_QV(IA,JA)
 
     real(RP), intent(in)  :: GSQRT   (KA,IA,JA,7) !< vertical metrics {G}^1/2
     real(RP), intent(in)  :: J13G    (KA,IA,JA,7) !< (1,3) element of Jacobian matrix
@@ -283,7 +285,7 @@ contains
          w_tke(:,:,:,1),                                         & ! (inout)
          w_Nu(:,:,:,1), w_Ri(:,:,:,1), w_Pr(:,:,:,1),            & ! (out)
          MOMZ, MOMX, MOMY, RHOT, DENS, QTRC,                     & ! (in)
-         SFLX_MW, SFLX_MU, SFLX_MV, SFLX_SH,                     & ! (in)
+         SFLX_MW, SFLX_MU, SFLX_MV, SFLX_SH, SFLX_QV,            & ! (in)
          GSQRT, J13G, J23G, J33G, MAPF, dt                       ) ! (in)
 
     call PRM_TB( &
@@ -293,7 +295,7 @@ contains
          w_tke(:,:,:,2),                                         & ! (inout)
          w_Nu(:,:,:,2), w_Ri(:,:,:,2), w_Pr(:,:,:,2),            & ! (out)
          MOMZ, MOMX, MOMY, RHOT, DENS, QTRC,                     & ! (in)
-         SFLX_MW, SFLX_MU, SFLX_MV, SFLX_SH,                     & ! (in)
+         SFLX_MW, SFLX_MU, SFLX_MV, SFLX_SH, SFLX_QV,            & ! (in)
          GSQRT, J13G, J23G, J33G, MAPF, dt                       ) ! (in)
 
     do j = 1, JA

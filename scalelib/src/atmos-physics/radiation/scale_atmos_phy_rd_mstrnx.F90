@@ -133,7 +133,7 @@ module scale_atmos_phy_rd_mstrnx
                                                       !  25: N2O5
                                                       !  26: C2F6
                                                       !  27: HNO4
-  integer,  private, parameter :: MSTRN_nptype   = 11 !< # of particle species
+  integer,  private, save :: MSTRN_nptype   = 11 !< # of particle species
                                                       !  1: water cloud
                                                       !  2: ice cloud
                                                       !  3: dust-like
@@ -156,9 +156,10 @@ module scale_atmos_phy_rd_mstrnx
   integer,  private, parameter :: MSTRN_nfitPLK  =  5 !< # of fitting point for planck function
   integer,  private, parameter :: MSTRN_nplkord  =  3 !< # of orders for planck function
   integer,  private, parameter :: MSTRN_nmoment  =  6 !< absorption + # of moments for scattering phase function
-  integer,  private, parameter :: MSTRN_nradius  =  6 !< # of radius mode for hygroscopic parameter
+  integer,  private, save :: MSTRN_nradius  =  6 !< # of radius mode for hygroscopic parameter
   integer,  private, parameter :: MSTRN_ncloud   =  2 !< # of cloud types [ClearSky/Cloud]
 
+  logical,  private, save :: ATMOS_PHY_RD_MSTRN_ONLY_QCI = .false.
 
 
   real(RP), private, allocatable :: waveh   (:)         ! wavenumbers at band boundary [1/cm]
@@ -235,13 +236,18 @@ contains
     character(len=H_LONG) :: ATMOS_PHY_RD_MSTRN_AEROPARA_IN_FILENAME
     character(len=H_LONG) :: ATMOS_PHY_RD_MSTRN_HYGROPARA_IN_FILENAME
     integer               :: ATMOS_PHY_RD_MSTRN_nband
+    integer               :: ATMOS_PHY_RD_MSTRN_nptype
+    integer               :: ATMOS_PHY_RD_MSTRN_nradius
 
     namelist / PARAM_ATMOS_PHY_RD_MSTRN / &
        ATMOS_PHY_RD_MSTRN_KADD,                  &
        ATMOS_PHY_RD_MSTRN_GASPARA_IN_FILENAME,   &
        ATMOS_PHY_RD_MSTRN_AEROPARA_IN_FILENAME,  &
        ATMOS_PHY_RD_MSTRN_HYGROPARA_IN_FILENAME, &
-       ATMOS_PHY_RD_MSTRN_nband
+       ATMOS_PHY_RD_MSTRN_nband, &
+       ATMOS_PHY_RD_MSTRN_nptype, &
+       ATMOS_PHY_RD_MSTRN_nradius, &
+       ATMOS_PHY_RD_MSTRN_ONLY_QCI
 
     integer :: ngas, ncfc
     integer :: ihydro, iaero
@@ -263,6 +269,8 @@ contains
     ATMOS_PHY_RD_MSTRN_AEROPARA_IN_FILENAME  = MSTRN_AEROPARA_INPUTFILE
     ATMOS_PHY_RD_MSTRN_HYGROPARA_IN_FILENAME = MSTRN_HYGROPARA_INPUTFILE
     ATMOS_PHY_RD_MSTRN_nband                 = MSTRN_nband
+    ATMOS_PHY_RD_MSTRN_nptype                = MSTRN_nptype
+    ATMOS_PHY_RD_MSTRN_nradius               = MSTRN_nradius
 
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_ATMOS_PHY_RD_MSTRN,iostat=ierr)
@@ -279,6 +287,8 @@ contains
     MSTRN_AEROPARA_INPUTFILE  = ATMOS_PHY_RD_MSTRN_AEROPARA_IN_FILENAME
     MSTRN_HYGROPARA_INPUTFILE = ATMOS_PHY_RD_MSTRN_HYGROPARA_IN_FILENAME
     MSTRN_nband               = ATMOS_PHY_RD_MSTRN_nband
+    MSTRN_nptype              = ATMOS_PHY_RD_MSTRN_nptype
+    MSTRN_nradius             = ATMOS_PHY_RD_MSTRN_nradius
 
     !--- setup MSTRN parameter
     call RD_MSTRN_setup( ngas, & ! [OUT]
@@ -433,7 +443,7 @@ contains
 
     real(RP) :: zerosw
 
-    integer :: ihydro, iaero
+    integer :: ihydro, iaero, iq
     integer :: RD_k, k, i, j, v
     !---------------------------------------------------------------------------
 
@@ -470,7 +480,16 @@ contains
                              rh   (:,:,:)    ) ! [IN]
 
     call MP_Mixingratio( MP_Qe(:,:,:,:), & ! [OUT]
-                         QTRC (:,:,:,:)  ) ! [IN]
+         QTRC (:,:,:,:)  ) ! [IN]
+
+    if ( ATMOS_PHY_RD_MSTRN_ONLY_QCI ) then
+       do ihydro = 1, MP_QA
+          iq = I_MP2ALL(ihydro)
+          if ( iq .ne. I_QC .and. iq .ne. I_QI ) then
+             MP_Qe(:,:,:,ihydro) = 0.0_RP
+          end if
+       end do
+    end if
 
     ! marge basic profile and value in LES domain
 

@@ -79,7 +79,7 @@ contains
        tke,                                         & ! (inout) diagnostic variables
        nu_C, Ri, Pr,                                & ! (out) diagnostic variables
        MOMZ, MOMX, MOMY, RHOT, DENS, QTRC,          & ! (in)
-       sflx_mw, sflx_mu, sflx_mv, sflx_sh,          & ! (in)
+       sflx_mw, sflx_mu, sflx_mv, sflx_sh, sflx_qv, & ! (in)
        GSQRT, J13G, J23G, J33G, MAPF, dt            ) ! (in)
     implicit none
 
@@ -107,6 +107,7 @@ contains
     real(RP), intent(in)    :: sflx_mu(IA,JA)
     real(RP), intent(in)    :: sflx_mv(IA,JA)
     real(RP), intent(in)    :: sflx_sh(IA,JA)
+    real(RP), intent(in)    :: sflx_qv(IA,JA)
 
     real(RP), intent(in)    :: GSQRT(KA,IA,JA,7) !< vertical metrics {G}^1/2
     real(RP), intent(in)    :: J13G (KA,IA,JA,7) !< (1,3) element of Jacobian matrix

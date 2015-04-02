@@ -166,7 +166,7 @@ contains
        tke,                                         & ! (inout)
        Nu, Ri, Pr,                                  & ! (out) diagnostic variables
        MOMZ, MOMX, MOMY, RHOT, DENS, QTRC,          & ! (in)
-       SFLX_MW, SFLX_MU, SFLX_MV, SFLX_SH,          & ! (in)
+       SFLX_MW, SFLX_MU, SFLX_MV, SFLX_SH, SFLX_QV, & ! (in)
        GSQRT, J13G, J23G, J33G, MAPF, dt            ) ! (in)
     use scale_precision
     use scale_grid_index
@@ -231,6 +231,7 @@ contains
     real(RP), intent(in)  :: SFLX_MU(IA,JA)
     real(RP), intent(in)  :: SFLX_MV(IA,JA)
     real(RP), intent(in)  :: SFLX_SH(IA,JA)
+    real(RP), intent(in)  :: SFLX_QV(IA,JA)
 
     real(RP), intent(in)  :: GSQRT   (KA,IA,JA,7) !< vertical metrics {G}^1/2
     real(RP), intent(in)  :: J13G    (KA,IA,JA,7) !< (1,3) element of Jacobian matrix
@@ -241,9 +242,6 @@ contains
 
     real(RP) :: U(KA,IA,JA)    !< velocity in x-direction (full level)
     real(RP) :: V(KA,IA,JA)    !< velocity in y-direction (full level)
-    real(RP) :: POTT(KA,IA,JA) !< potential temperature (full level)
-    real(RP) :: POTV(KA,IA,JA) !< virtual potential temperature (full level)
-    real(RP) :: Qw(KA,IA,JA)   !< total water
     real(RP) :: phiN(KA,IA,JA)
 
 
@@ -262,12 +260,16 @@ contains
     real(RP) :: ap
     real(RP) :: tke_N(KE_PBL,IA,JA)
 
-    real(RP) :: temp         !< temperature
-    real(RP) :: pres         !< pressure
+    real(RP) :: POTT(KA,IA,JA) !< potential temperature
+    real(RP) :: POTV(KA,IA,JA) !< virtual potential temperature
+    real(RP) :: POTL(KA,IA,JA) !< liquid water potential temperature
 
-    real(RP) :: ptl          !< liquid water potential temperature
+    real(RP) :: Qw(KA,IA,JA) !< total water
     real(RP) :: ql           !< liquid water
     real(RP) :: qs           !< solid water
+
+    real(RP) :: temp         !< temperature
+    real(RP) :: pres         !< pressure
 
     real(RP) :: lhv
     real(RP) :: lhs
@@ -385,6 +387,16 @@ contains
     end do
     end do
     end do
+!OCL XFILL
+    do iq = I_QV+1, QA
+    do j = JS-1, JE
+    do i = IS  , IE
+    do k = KS-1, KE+1
+       qflx_sgs_rhoq(k,i,j,ZDIR,iq) = 0.0_RP
+    end do
+    end do
+    end do
+    end do
 
 
 
@@ -439,10 +451,11 @@ contains
 
              POTT(k,i,j) = RHOT(k,i,j) / DENS(k,i,j)
              ! liquid water potential temperature
-             ptl = POTT(k,i,j) * (1.0_RP - 1.0_RP * (lhv * ql + lhs * qs) / ( temp * CP ) )
+             POTL(k,i,j) = POTT(k,i,j) * (1.0_RP - 1.0_RP * (lhv * ql + lhs * qs) / ( temp * CP ) )
 
              ! virtual potential temperature for derivertive
-             POTV(k,i,j) = ( 1.0_RP + EPSTvap * Qw(k,i,j) - (1.0_RP+EPSTvap) * ql ) * ptl 
+!             POTV(k,i,j) = ( 1.0_RP + EPSTvap * Qw(k,i,j) ) * POTL(k,i,j)
+             POTV(k,i,j) = ( 1.0_RP + EPSTvap * Qw(k,i,j) - (1.0_RP+EPSTvap) * (ql + qs) ) * POTL(k,i,j)
           end do
 
           do k = KS+1, KE_PBL
@@ -473,7 +486,7 @@ contains
             DENS, & ! (in)
             tke, n2, & ! (in)
             SFLX_MU, SFLX_MV, SFLX_SH, & ! (in)
-            PT0, & ! (in)
+            POTT, & ! (in)
             GSQRT(:,:,:,I_XYZ), & ! (in)
             IIS, IIE, JJS, JJE )
 
@@ -608,7 +621,8 @@ contains
           c(KE_PBL,i,j) = ap * RCDZ(KE_PBL) / ( DENS(KE_PBL,i,j) * GSQRT(KE_PBL,i,j,I_XYZ) )
           b(KE_PBL,i,j) = - c(KE_PBL,i,j) + 1.0_RP
 
-          do k = KS, KE_PBL
+          d(KS) = U(KS,i,j) + dt * SFLX_MU(i,j) * RCDZ(KS) / ( DENS(KS,i,j) * GSQRT(KS,i,j,I_XYZ) )
+          do k = KS+1, KE_PBL
              d(k) = U(k,i,j)
           end do
           call diffusion_solver( &
@@ -660,7 +674,8 @@ contains
        ! integration V
        do j = JJS, JJE
        do i = IIS, IIE
-          do k = KS, KE_PBL
+          d(KS) = V(KS,i,j) + dt * SFLX_MV(i,j) * RCDZ(KS) / ( DENS(KS,i,j) * GSQRT(KS,i,j,I_XYZ) )
+          do k = KS+1, KE_PBL
              d(k) = V(k,i,j)
           end do
           call diffusion_solver( &
@@ -732,8 +747,9 @@ contains
        ! integration POTT
        do j = JJS, JJE
        do i = IIS, IIE
-          do k = KS, KE_PBL
-             d(k) = POTT(k,i,j)
+          d(KS) = POTL(KS,i,j) + dt * SFLX_SH(i,j) * RCDZ(KS) / ( CP * DENS(KS,i,j) * GSQRT(KS,i,j,I_XYZ) )
+          do k = KS+1, KE_PBL
+             d(k) = POTL(k,i,j)
           end do
           call diffusion_solver( &
                phiN(:,i,j),                     & ! (out)
@@ -766,11 +782,13 @@ contains
 
 
        ! integration QTRC
-       do iq = 1, QA
+!       do iq = 1, QA
+       iq = I_QV
           do j = JJS, JJE
           do i = IIS, IIE
-             do k = KS, KE_PBL
-                d(k) = QTRC(k,i,j,iq)
+             d(KS) = Qw(KS,i,j) + dt * SFLX_QV(i,j) * RCDZ(KS) / ( DENS(KS,i,j) * GSQRT(KS,i,j,I_XYZ) )
+             do k = KS+1, KE_PBL
+                d(k) = Qw(k,i,j)
              end do
              call diffusion_solver( &
                   phiN(:,i,j),                     & ! (out)
@@ -800,12 +818,12 @@ contains
           end do
           end do
           end do
-       end do
+!       end do
 
        ! time integration tke
        do j = JJS, JJE
        do i = IIS, IIE
-          ap = - dt * 0.5_RP * ( DENS(KS  ,i,j)*Nu(KS  ,i,j) &
+          ap = - dt * 1.5_RP * ( DENS(KS  ,i,j)*Nu(KS  ,i,j) &
                                + DENS(KS+1,i,j)*Nu(KS+1,i,j) ) &
              * RFDZ(KS) / GSQRT(KS,i,j,I_XYW)
           a(KS,i,j) = ap * RCDZ(KS) / ( DENS(KS,i,j) * GSQRT(KS,i,j,I_XYZ) )
@@ -828,8 +846,8 @@ contains
                                      - advc )
           do k = KS+1, KE_PBL-1
              c(k,i,j) = ap * RCDZ(k) / ( DENS(k,i,j) * GSQRT(k,i,j,I_XYZ) )
-             ap = - dt * 0.5_RP * ( DENS(k  ,i,j)*Nu(k  ,i,j) &
-                                  + DENS(k+1,i,j)*Nu(k+1,i,j) ) &
+             ap = - dt * 1.5_RP * ( DENS(k  ,i,j)*Nu(k  ,i,j) &
+                                  + DENS(k+1,i,j)*Nu(k+1,i,j))  &
                 * RFDZ(k) / GSQRT(k,i,j,I_XYW)
              a(k,i,j) = ap * RCDZ(k) / ( DENS(k,i,j) * GSQRT(k,i,j,I_XYZ) )
              b(k,i,j) = - a(k,i,j) - c(k,i,j) + 1.0_RP + 2.0_RP * dt * q(k,i,j) / ( B1 * l(k,i,j) )
