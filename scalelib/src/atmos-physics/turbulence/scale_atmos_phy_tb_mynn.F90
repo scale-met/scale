@@ -173,6 +173,7 @@ contains
     use scale_tracer
     use scale_const, only: &
        GRAV   => CONST_GRAV, &
+       R      => CONST_Rdry, &
        CP     => CONST_CPdry, &
        EPS    => CONST_EPS, &
        EPSTvap => CONST_EPSTvap
@@ -252,6 +253,8 @@ contains
     real(RP) :: q(KA,IA,JA) !< q
     real(RP) :: dudz2(KA,IA,JA) !< (dudz)^2 + (dvdz)^2
     real(RP) :: q2_2(KA,IA,JA)  !< q^2 for level 2
+
+    real(RP) :: SFLX_PT(IA,JA) ! surface potential temperature flux
 
     real(RP) :: a(KA,IA,JA)
     real(RP) :: b(KA,IA,JA)
@@ -456,6 +459,12 @@ contains
              ! virtual potential temperature for derivertive
 !             POTV(k,i,j) = ( 1.0_RP + EPSTvap * Qw(k,i,j) ) * POTL(k,i,j)
              POTV(k,i,j) = ( 1.0_RP + EPSTvap * Qw(k,i,j) - (1.0_RP+EPSTvap) * (ql + qs) ) * POTL(k,i,j)
+
+             if ( k == KS ) then
+                SFLX_PT(i,j) = SFLX_SH(i,j) / ( CP * DENS(KS,i,j) ) &
+                             * RHOT(KS,i,j) * R / pres ! = POTT / TEMP
+
+             end if
           end do
 
           do k = KS+1, KE_PBL
@@ -485,7 +494,7 @@ contains
             l, & ! (out)
             DENS, & ! (in)
             tke, n2, & ! (in)
-            SFLX_MU, SFLX_MV, SFLX_SH, & ! (in)
+            SFLX_MU, SFLX_MV, SFLX_PT, & ! (in)
             POTT, & ! (in)
             GSQRT(:,:,:,I_XYZ), & ! (in)
             IIS, IIE, JJS, JJE )
@@ -747,7 +756,7 @@ contains
        ! integration POTT
        do j = JJS, JJE
        do i = IIS, IIE
-          d(KS) = POTL(KS,i,j) + dt * SFLX_SH(i,j) * RCDZ(KS) / ( CP * DENS(KS,i,j) * GSQRT(KS,i,j,I_XYZ) )
+          d(KS) = POTL(KS,i,j) + dt * SFLX_PT(i,j) * RCDZ(KS) / GSQRT(KS,i,j,I_XYZ)
           do k = KS+1, KE_PBL
              d(k) = POTL(k,i,j)
           end do
@@ -920,7 +929,7 @@ contains
        l, &
        DENS, &
        tke, n2, &
-       SFLX_MU, SFLX_MV, SFLX_SH, &
+       SFLX_MU, SFLX_MV, SFLX_PT, &
        PT0, &
        GSQRT, &
        IIS, IIE, JJS, JJE )
@@ -940,7 +949,7 @@ contains
     real(RP), intent(in) :: n2(KA,IA,JA)
     real(RP), intent(in) :: SFLX_MU(IA,JA)
     real(RP), intent(in) :: SFLX_MV(IA,JA)
-    real(RP), intent(in) :: SFLX_SH(IA,JA)
+    real(RP), intent(in) :: SFLX_PT(IA,JA)
     real(RP), intent(in) :: GSQRT(KA,IA,JA)
     real(RP), intent(in) :: PT0(KA,IA,JA)
     integer,  intent(in) :: IIS
@@ -960,7 +969,6 @@ contains
     real(RP) :: int_qz       !< \int qz dz
     real(RP) :: rn2sr         !< 1/N
     real(RP) :: us           !< friction velocity
-    real(RP) :: wtg          !< heat flux at the surface
     real(RP) :: zeta         !< height normalized by the Obukhov length
 
     real(RP) :: z
@@ -985,10 +993,9 @@ contains
 
        us = ( SFLX_MU(i,j)**2 + SFLX_MV(i,j)**2 )**0.25_RP / DENS(KS,i,j) ! friction velocity
        us = max(us, Us_min)
-       wtg = SFLX_SH(i,j) / (CP * DENS(KS,i,j)) ! surface heat flux
-       rlm = - KARMAN * GRAV * wtg / (PT0(KS,i,j) * us**3 )
+       rlm = - KARMAN * GRAV * SFLX_PT(i,j) / (PT0(KS,i,j) * us**3 )
 
-       qc = (GRAV/PT0(KS,i,j)*max(wtg,0.0_RP)*lt)**OneOverThree
+       qc = (GRAV/PT0(KS,i,j)*max(SFLX_PT(i,j),0.0_RP)*lt)**OneOverThree
 
        do k = KS, KE_PBL
           z = ( FZ(k,i,j)+FZ(k-1,i,j) )*0.5_RP - FZ(KS-1,i,j)
@@ -1005,7 +1012,7 @@ contains
           q = sqrt(tke(k,i,j) * 2.0_RP)*sw + 1.E-10_RP*(1.0_RP-sw)
           sw  = sign(0.5_RP, n2(k,i,j)-EPS) + 0.5_RP ! 1 for dptdz >0, 0 for dptdz < 0
           rn2sr = 1.0_RP / ( sqrt(n2(k,i,j)*sw) + 1.0_RP-sw)
-          lb = (1.0_RP + 5.0_RP * sqrt(qc*rn2sr/lt)) * q * rn2sr * sw & ! qc=0 when wtg < 0
+          lb = (1.0_RP + 5.0_RP * sqrt(qc*rn2sr/lt)) * q * rn2sr * sw & ! qc=0 when SFLX_PT < 0
              +  999.E10_RP * (1.0_RP-sw)
 
           ! L

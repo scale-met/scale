@@ -115,6 +115,9 @@ contains
   !> Driver
   subroutine ATMOS_PHY_SF_driver( update_flag )
     use scale_const, only: &
+       PRE00 => CONST_PRE00, &
+       Rdry  => CONST_Rdry, &
+       Rvap  => CONST_Rvap, &
        CPdry => CONST_CPdry
     use scale_comm, only: &
        COMM_vars8, &
@@ -144,6 +147,9 @@ contains
        BOTTOM_estimate => ATMOS_BOTTOM_estimate
     use scale_atmos_hydrostatic, only: &
        barometric_law_mslp => ATMOS_HYDROSTATIC_barometric_law_mslp
+    use scale_atmos_thermodyn, only: &
+       THERMODYN_qd => ATMOS_THERMODYN_qd, &
+       THERMODYN_cp => ATMOS_THERMODYN_cp
     use scale_atmos_phy_sf, only: &
        ATMOS_PHY_SF
     use mod_atmos_vars, only: &
@@ -202,6 +208,12 @@ contains
     real(RP) :: MSLP  (IA,JA) ! mean sea-level pressure [Pa]
     real(RP) :: beta  (IA,JA)
     real(RP) :: total ! dummy
+
+    real(RP) :: q(QA)
+    real(RP) :: qdry
+    real(RP) :: Rtot
+    real(RP) :: CPtot
+
     real(RP) :: work
 
     integer :: i, j, iq
@@ -306,7 +318,12 @@ contains
 
        do j = JS, JE
        do i = IS, IE
-          RHOT_t_SF(i,j) = SFLX_SH(i,j) / CPdry * RCDZ(KS) / GSQRT(KS,i,j,I_XYZ)
+          q(:) = QTRC(KS,i,j,:)
+          call THERMODYN_qd( qdry, q )
+          call THERMODYN_cp( CPtot, q, qdry )
+          Rtot  = Rdry * qdry + Rvap * q(I_QV)
+          RHOT_t_SF(i,j) = ( SFLX_SH(i,j) * RCDZ(KS) / ( CPtot * GSQRT(KS,i,j,I_XYZ) ) ) &
+                         * RHOT(KS,i,j) * Rtot / PRES(KS,i,j) ! = POTT/TEMP
        enddo
        enddo
 
