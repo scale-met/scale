@@ -556,12 +556,10 @@ contains
       NUM_DOMAIN,       & ! [in ]
       PRC_DOMAINS,      & ! [in ]
       COLOR_DOMAINS,    & ! [in ]
-      PARENT_COLOR,    & ! [in ]
-      CHILD_COLOR,    & ! [in ]
-      PARENT_PRC,    & ! [in ]
-      CHILD_PRC,    & ! [in ]
-      HAVE_PARENT,    & ! [in ]
-      HAVE_CHILD,    & ! [in ]
+      PARENT_COLOR,     & ! [in ]
+      CHILD_COLOR,      & ! [in ]
+      PARENT_PRC,       & ! [in ]
+      CHILD_PRC,        & ! [in ]
       CONF_FILES,       & ! [in ]
       LOG_SPLIT,        & ! [in ]
       nmax_parent,      & ! [out]
@@ -582,8 +580,6 @@ contains
     integer, intent(in)  :: CHILD_COLOR(:)
     integer, intent(in)  :: PARENT_PRC(:)
     integer, intent(in)  :: CHILD_PRC(:)
-    logical, intent(in)  :: HAVE_PARENT(:)
-    logical, intent(in)  :: HAVE_CHILD(:)
     character(len=H_LONG), intent(in) :: CONF_FILES(:)
     logical, intent(in)  :: LOG_SPLIT
 
@@ -701,17 +697,14 @@ contains
        do i = 1, NUM_DOMAIN-1
           itag = i*100
           if ( do_create_p(i) ) then ! as a parent
-print *, "p: ", GLOBAL_myrank, myrank_local, my_color, LOCAL_COMM_WORLD, CHILD_COLOR(i), PRC_ROOT(CHILD_COLOR(i)), itag
-                call MPI_INTERCOMM_CREATE(LOCAL_COMM_WORLD,   split_root,           &
-                                          GLOBAL_COMM_WORLD,  PRC_ROOT(CHILD_COLOR(i)), &
-                                          itag, icomm_child,  ierr)
+             call MPI_INTERCOMM_CREATE( LOCAL_COMM_WORLD,   split_root,           &
+                                        GLOBAL_COMM_WORLD,  PRC_ROOT(CHILD_COLOR(i)), &
+                                        itag, icomm_child,  ierr)
           elseif ( do_create_c(i) ) then ! as a child
-print *, "c: ", GLOBAL_myrank, myrank_local, my_color, LOCAL_COMM_WORLD, PARENT_COLOR(i), PRC_ROOT(PARENT_COLOR(i)), itag
-                call MPI_INTERCOMM_CREATE(LOCAL_COMM_WORLD,   split_root,           &
-                                          GLOBAL_COMM_WORLD,  PRC_ROOT(PARENT_COLOR(i)), &
-                                          itag, icomm_parent, ierr)
+             call MPI_INTERCOMM_CREATE( LOCAL_COMM_WORLD,   split_root,           &
+                                        GLOBAL_COMM_WORLD,  PRC_ROOT(PARENT_COLOR(i)), &
+                                        itag, icomm_parent, ierr)
           endif
-
           call MPI_BARRIER(GLOBAL_COMM_WORLD, ierr)
        enddo
 
