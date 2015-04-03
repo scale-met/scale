@@ -52,7 +52,7 @@ module scale_process
   integer, public              :: LOCAL_COMM_WORLD    !< local communicator (split)
   integer, public              :: GLOBAL_myrank       !< myrank in global communicator
   integer, public              :: GLOBAL_nmax         !< process num in global communicator
-  integer, public              :: PRC_ROOT(max_depth) !< root process in the color
+  integer, public              :: PRC_ROOT(0:max_depth) !< root process in the color
   integer, public, allocatable :: COLOR_LIST(:)       !< member list in each color
   integer, public, allocatable :: KEY_LIST(:)         !< local process number in each color
   logical, public              :: GLOBAL_LOG
@@ -556,6 +556,12 @@ contains
       NUM_DOMAIN,       & ! [in ]
       PRC_DOMAINS,      & ! [in ]
       COLOR_DOMAINS,    & ! [in ]
+      PARENT_COLOR,    & ! [in ]
+      CHILD_COLOR,    & ! [in ]
+      PARENT_PRC,    & ! [in ]
+      CHILD_PRC,    & ! [in ]
+      HAVE_PARENT,    & ! [in ]
+      HAVE_CHILD,    & ! [in ]
       CONF_FILES,       & ! [in ]
       LOG_SPLIT,        & ! [in ]
       nmax_parent,      & ! [out]
@@ -572,6 +578,12 @@ contains
     integer, intent(in)  :: NUM_DOMAIN
     integer, intent(in)  :: PRC_DOMAINS(:)
     integer, intent(in)  :: COLOR_DOMAINS(:)
+    integer, intent(in)  :: PARENT_COLOR(:)
+    integer, intent(in)  :: CHILD_COLOR(:)
+    integer, intent(in)  :: PARENT_PRC(:)
+    integer, intent(in)  :: CHILD_PRC(:)
+    logical, intent(in)  :: HAVE_PARENT(:)
+    logical, intent(in)  :: HAVE_CHILD(:)
     character(len=H_LONG), intent(in) :: CONF_FILES(:)
     logical, intent(in)  :: LOG_SPLIT
 
@@ -587,11 +599,14 @@ contains
 
     integer :: total_nmax
     integer :: nprc
-    integer :: color, key
+    integer :: order, key
     integer :: my_color, my_key
 
     logical :: do_create_p(max_depth)
     logical :: do_create_c(max_depth)
+
+    integer :: COL_NMAX(0:max_depth)
+    character(len=H_LONG) :: COL_FILE(0:max_depth)
 
     integer :: i
     integer :: itag, ierr
@@ -624,22 +639,26 @@ contains
        allocate ( KEY_LIST  (0:GLOBAL_nmax-1) )
 
        ! make a process table
-       color = 1
+       order = 1
        key   = 0
-       nprc  = PRC_DOMAINS(color)
+       nprc  = PRC_DOMAINS(order)
        PRC_ROOT(:) = -999
 
        do i = 0, GLOBAL_nmax-1
-          if ( key == 0 ) PRC_ROOT(color) = i
-          COLOR_LIST(i) = COLOR_DOMAINS(color)
+          COLOR_LIST(i) = COLOR_DOMAINS(order)
           KEY_LIST(i)   = key
+          if ( key == 0 ) then
+             PRC_ROOT(COLOR_LIST(i)) = i
+             COL_NMAX(COLOR_LIST(i)) = PRC_DOMAINS(order)
+             COL_FILE(COLOR_LIST(i)) = CONF_FILES(order)
+          endif
           if ( LOG_SPLIT .and. GLOBAL_LOG ) write ( *, '(1X,4(A,I5))' ) "PE:", i, "   COLOR:", COLOR_LIST(i), &
-                                  "   KEY:", KEY_LIST(i), "   PRC_ROOT:", PRC_ROOT(color)
+                                  "   KEY:", KEY_LIST(i), "   PRC_ROOT:", PRC_ROOT(COLOR_LIST(i))
           key = key + 1
           if ( key >= nprc ) then
-             color = color + 1
+             order = order + 1
              key   = 0
-             nprc  = PRC_DOMAINS(color)
+             nprc  = PRC_DOMAINS(order)
           endif
        enddo
 
@@ -652,8 +671,8 @@ contains
        nmax_parent  = 0
        nmax_child   = 0
        myrank_local = my_key
-       nmax_local   = PRC_DOMAINS(my_color)
-       fname_local  = CONF_FILES(my_color)
+       nmax_local   = COL_NMAX(my_color)
+       fname_local  = COL_FILE(my_color)
 
        flag_parent    = .false.
        flag_child     = .false.
@@ -663,15 +682,18 @@ contains
        ! set parent-child relationship
        do i = 1, NUM_DOMAIN-1
           if ( GLOBAL_LOG ) write ( *, '(1X,A,I2)' ) "relationship: ", i
-          if ( GLOBAL_LOG ) write ( *, '(1X,A,I2,A,I2)' ) "--- parent color = ", i, "  child color = ", i+1
-          if ( my_color == i ) then
+          if ( GLOBAL_LOG ) write ( *, '(1X,A,I2,A,I2)' ) &
+                            "--- parent color = ", PARENT_COLOR(i), "  child color = ", CHILD_COLOR(i)
+          if ( GLOBAL_LOG ) write ( *, '(1X,A,I5,A,I5)' ) &
+                            "--- parent prc = ", PARENT_PRC(i), "  child prc = ", CHILD_PRC(i)
+          if ( my_color == PARENT_COLOR(i) ) then
              flag_parent  = .true.
              do_create_p(i) = .true.
-             nmax_child   = PRC_DOMAINS(my_color+1)
-          elseif ( my_color == i+1 ) then
+             nmax_child   = CHILD_PRC(i)
+          elseif ( my_color == CHILD_COLOR(i) ) then
              flag_child   = .true.
              do_create_c(i) = .true.
-             nmax_parent  = PRC_DOMAINS(my_color-1)
+             nmax_parent  = PARENT_PRC(i)
           endif
        enddo
 
@@ -679,12 +701,14 @@ contains
        do i = 1, NUM_DOMAIN-1
           itag = i*100
           if ( do_create_p(i) ) then ! as a parent
+print *, "p: ", GLOBAL_myrank, myrank_local, my_color, LOCAL_COMM_WORLD, CHILD_COLOR(i), PRC_ROOT(CHILD_COLOR(i)), itag
                 call MPI_INTERCOMM_CREATE(LOCAL_COMM_WORLD,   split_root,           &
-                                          GLOBAL_COMM_WORLD,  PRC_ROOT(my_color+1), &
+                                          GLOBAL_COMM_WORLD,  PRC_ROOT(CHILD_COLOR(i)), &
                                           itag, icomm_child,  ierr)
           elseif ( do_create_c(i) ) then ! as a child
+print *, "c: ", GLOBAL_myrank, myrank_local, my_color, LOCAL_COMM_WORLD, PARENT_COLOR(i), PRC_ROOT(PARENT_COLOR(i)), itag
                 call MPI_INTERCOMM_CREATE(LOCAL_COMM_WORLD,   split_root,           &
-                                          GLOBAL_COMM_WORLD,  PRC_ROOT(my_color-1), &
+                                          GLOBAL_COMM_WORLD,  PRC_ROOT(PARENT_COLOR(i)), &
                                           itag, icomm_parent, ierr)
           endif
 
