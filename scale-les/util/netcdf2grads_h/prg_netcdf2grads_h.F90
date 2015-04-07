@@ -53,8 +53,8 @@ program netcdf2grads_h
   integer         :: DOMAIN_NUM     = 1
   integer         :: VCOUNT         = 1
   integer         :: ZCOUNT         = 1
-  integer         :: ZSTART         = 3
-  integer         :: TARGET_ZLEV(max_zcount) = 3
+  integer         :: ZSTART         = 1
+  integer         :: TARGET_ZLEV(max_zcount) = 1
   real(DP)        :: EXTRA_TINTERVAL = -9.999
   character(5)    :: EXTRA_TUNIT    = ""
   character(CLNG) :: IDIR           = "./data"
@@ -81,7 +81,7 @@ program netcdf2grads_h
   logical         :: HIST_BND = .true.
 
   !--- variables for work
-  real(SP),allocatable :: cz(:), cdz(:)
+  real(SP),allocatable :: zlev(:), cz(:), cdz(:)
   real(SP),allocatable :: cx(:), cdx(:)
   real(SP),allocatable :: cy(:), cdy(:)
   real(SP),allocatable :: var_2d(:,:)
@@ -472,6 +472,10 @@ contains
     istat = nf90_open( trim(ncfile), nf90_nowrite, ncid )
     if (istat .ne. nf90_noerr) call handle_err(istat, __LINE__)
  
+    istat = nf90_inq_varid( ncid, 'z', varid )
+    istat = nf90_get_var( ncid, varid, zlev )
+    if (istat .ne. nf90_noerr) call handle_err(istat, __LINE__)
+
     istat = nf90_inq_varid( ncid, 'CZ', varid )
     istat = nf90_get_var( ncid, varid, cz )
     if (istat .ne. nf90_noerr) call handle_err(istat, __LINE__)
@@ -923,13 +927,13 @@ contains
      case ( vt_urban, vt_land, vt_tpmsk )
         write( FID_CTL, '(a,3x,i7,1x,a,1x,a)') "ZDEF", 1, "linear", "1 1"
      case ( vt_height, vt_2d )
-        write( FID_CTL, '(a,3x,i7,1x,a,1x,e15.7)') "ZDEF", 1, "LEVELS", cz(zz)*1.d-3
+        write( FID_CTL, '(a,3x,i7,1x,a,1x,e15.7)') "ZDEF", 1, "LEVELS", zlev(zz)*1.d-3
      case ( vt_3d )
         if ( Z_MERGE_OUT ) then
            write( FID_CTL, '(a,3x,i7,1x,a)') "ZDEF", ZCOUNT, "LEVELS"
            write( FID_CTL, '(5(1x,e15.7))') vgrid(1:ZCOUNT)*1.d-3
         else
-           write( FID_CTL, '(a,3x,i7,1x,a,1x,e15.7)') "ZDEF", 1, "LEVELS", cz(zz)*1.d-3
+           write( FID_CTL, '(a,3x,i7,1x,a,1x,e15.7)') "ZDEF", 1, "LEVELS", zlev(zz)*1.d-3
         endif
 
      end select
@@ -1704,15 +1708,15 @@ contains
     select case( Z_LEV_TYPE )
     case ( "GRID", "grid" )
        do iz = 1, ZCOUNT
-          vgrid(iz) = cz( TARGET_ZLEV(iz) )
+          vgrid(iz) = zlev( TARGET_ZLEV(iz) )
           if ( LOUT ) write( FID_LOG, '(1X,A,I3,A,F8.2)' ) "+++ Target Height: (", iz, ") ", vgrid(iz)
        enddo
 
     case ( "HEIGHT", "height", "HGT", "hgt" )
        do iz = 1, ZCOUNT
           mini = 9.9999D+10
-          do k=nzh+1, nz+nzh+1
-             diff = abs(real(TARGET_ZLEV(iz)) - cz(k))
+          do k=1, nz
+             diff = abs(real(TARGET_ZLEV(iz)) - zlev(k))
              if ( diff < mini ) then
                 mini = diff
                 ik = k
@@ -1722,7 +1726,7 @@ contains
           "+++ Search Nearest - request: ", TARGET_ZLEV(iz), "  diff: ", mini
 
           TARGET_ZLEV(iz) = ik
-          vgrid(iz) = cz( TARGET_ZLEV(iz) )
+          vgrid(iz) = zlev( TARGET_ZLEV(iz) )
           if ( LOUT ) write( FID_LOG, '(1X,A,I3,A,F8.2)' ) "+++ Target Height: (", iz, ") ", vgrid(iz)
        enddo
 
@@ -2012,6 +2016,7 @@ contains
     allocate( p_cy        (nygp*nmnge                    ) )
     allocate( cdz         (nz+2*nzh                      ) )
     allocate( cz          (nz+2*nzh                      ) )
+    allocate( zlev        (nz                            ) )
 
     allocate( sendbuf     (mnxp,       mnyp*nmnge        ) )
     allocate( sendbuf_gx  (nxgp*nmnge                    ) )
