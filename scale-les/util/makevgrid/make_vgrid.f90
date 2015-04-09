@@ -12,26 +12,33 @@ program scaleles_make_vgrid
   !-----------------------------------------------------------------------------
   !
   implicit none
-  integer :: num_levs            = 30
-  integer :: cnst_nlevs_low      = 10
-  integer :: nonlinear_nlevs_mid = 10
-  integer :: cnst_nlevs_upp      = 10
+  integer :: num_levs             = 50
+  integer :: cnst_nlevs_low       = 10
+  integer :: cnst_nlevs_mid       = 10
+  integer :: cnst_nlevs_upp       = 10
+  integer :: nonlinear_nlevs_mid  = 10
+  integer :: nonlinear_nlevs_mid2 = 10
+  integer :: nonlinear_nlevs_upp  = 10
 
-  real(4) :: top_height          = 16000.D0
-  real(4) :: cnst_thick_low      = 100.D0
-  real(4) :: nonlinear_rate_mid  = 8.D0
-  real(4) :: cnst_thick_upp      = 1000.D0
-  real(4) :: nonlinear_rate_top  = 3.D0
+  real(4) :: top_height           = 16000.D0
+  real(4) :: cnst_thick_low       = 100.D0
+  real(4) :: nonlinear_rate_mid   = 8.D0
+  real(4) :: nonlinear_rate_mid2  = 8.D0
+  real(4) :: cnst_thick_mid       = 500.D0
+  real(4) :: nonlinear_rate_upp   = 5.D0
+  real(4) :: cnst_thick_upp       = 1000.D0
+  real(4) :: nonlinear_rate_top   = 3.D0
 
+  logical :: cnst_middle         = .false.
   logical :: nonlinear_top       = .false.
   logical :: force_skip          = .false.
 
   real(4),       allocatable :: fz   (:)
   real(4),       allocatable :: dz1  (:)
   real(4),       allocatable :: dz2  (:)
-  character(1), allocatable :: label(:)
+  character(2),  allocatable :: label(:)
 
-  integer :: i, is, ie
+  integer :: i, is, ie, integ
   real(4) :: work
   !-----------------------------------------------------------------------------
   
@@ -40,12 +47,19 @@ program scaleles_make_vgrid
     top_height,            &
     cnst_thick_low,        &
     cnst_nlevs_low,        &
-    nonlinear_rate_mid,    &
-    nonlinear_nlevs_mid,   &
+    cnst_thick_mid,        &
+    cnst_nlevs_mid,        &
     cnst_thick_upp,        &
     cnst_nlevs_upp,        &
-    nonlinear_top,         &
-    nonlinear_rate_top
+    nonlinear_rate_mid,    &
+    nonlinear_nlevs_mid,   &
+    nonlinear_rate_mid2,   &
+    nonlinear_nlevs_mid2,  &
+    nonlinear_nlevs_upp,   &
+    nonlinear_rate_upp,    &
+    nonlinear_rate_top,    &
+    cnst_middle,           &
+    nonlinear_top
 
   open  ( 20, file='vgrid.conf', status='old', delim='apostrophe' )
   read  ( 20, nml=make_vgrid )
@@ -53,16 +67,27 @@ program scaleles_make_vgrid
 
   write (*,*) "### SCALE-LES: make setting of vertical grid arrangement"
   write (*,*) "### Prototype 1:"
-  write (*,*) "Number of Total Levels:                  ", num_levs
-  write (*,*) "Top Height Request (m):                  ", top_height
-  write (*,*) "Constant Thickness [Low Level]:          ", cnst_thick_low
-  write (*,*) "Number of Constant Levels [Low Level]:   ", cnst_nlevs_low
-  write (*,*) "Increasing Rate (%) [Mid Level]:         ", nonlinear_rate_mid
-  write (*,*) "Number of Increasing Levels [Mid Level]: ", nonlinear_nlevs_mid
-  write (*,*) "Constant Thickness [Upper Level]:        ", cnst_thick_upp
-  write (*,*) "Number of Constant Levels [Upper Level]: ", cnst_nlevs_upp
-  write (*,*) "Top Level Non-linear Configuration:      ", nonlinear_top
-  write (*,*) "Percent of Increasing (%) [Top Level]:   ", nonlinear_rate_top
+  write (*,*) "Number of Total Levels:                    ", num_levs
+  write (*,*) "Top Height Request (m):                    ", top_height
+  write (*,*) "Constant Thickness [Low Level]:            ", cnst_thick_low
+  write (*,*) "Number of Constant Levels [Low Level]:     ", cnst_nlevs_low
+  write (*,*) "Increasing Rate (%) [Mid Level]:           ", nonlinear_rate_mid
+  write (*,*) "Number of Increasing Levels [Mid Level]:   ", nonlinear_nlevs_mid
+  write (*,*) "Constant Thickness [Upper Level]:          ", cnst_thick_upp
+  write (*,*) "Number of Constant Levels [Upper Level]:   ", cnst_nlevs_upp
+  if ( cnst_middle ) then
+    write (*,*) "Increasing Rate (%) [Mid Level 2]:         ", nonlinear_rate_mid2
+    write (*,*) "Number of Increasing Levels [Mid Level 2]: ", nonlinear_nlevs_mid2
+    write (*,*) "Constant Thickness [Mid Level]:            ", cnst_thick_mid
+    write (*,*) "Number of Constant Levels [Mid Level]:     ", cnst_nlevs_mid
+    write (*,*) "Increasing Rate (%) [Upper Level]:         ", nonlinear_rate_upp
+    write (*,*) "Number of Increasing Levels [Upper Level]: ", nonlinear_nlevs_upp
+  endif
+  if ( nonlinear_top ) then
+    write (*,*) "Percent of Increasing (%) [Top Level]:     ", nonlinear_rate_top
+  endif
+  write (*,*) "Switch for Constant Middle:  ", cnst_middle
+  write (*,*) "Switch for Non-linear Top:   ", nonlinear_top
   write (*,*) "------------------------------------------------"
 
   allocate( fz   (0:num_levs) )
@@ -71,6 +96,7 @@ program scaleles_make_vgrid
   allocate( label(0:num_levs) )
 
   fz(0) = 0.D0
+  integ = 0
 
   ! setting check
   work = cnst_thick_low * float(cnst_nlevs_low)
@@ -87,39 +113,79 @@ program scaleles_make_vgrid
   ! constant layer [low]
   is = 1
   ie = is + cnst_nlevs_low - 1
+  integ = integ + cnst_nlevs_low
   do i=is, ie
      fz(i) = fz(i-1) + cnst_thick_low
-     label(i) = "L"
+     label(i) = "LC"
   enddo
 
   ! nonlinear layer [mid]
-  is = cnst_nlevs_low + 1
+  is = integ + 1
   ie = is + nonlinear_nlevs_mid - 1
+  integ = integ + nonlinear_nlevs_mid
   do i=is, ie
      fz(i) = fz(i-1) + (fz(i-1)-fz(i-2))*(nonlinear_rate_mid*1.D-2)
-     label(i) = "M"
+     label(i) = "MN"
      if( fz(i) > top_height ) then
-        write(*,*) "Over Shoot [M]: at",i,fz(i)
+        write(*,*) "Over Shoot [MN]: at",i,fz(i)
         stop
      endif
   enddo
 
+  if ( cnst_middle ) then
+     ! nonlinear layer [mid:2] for connect cnst layer
+     is = integ + 1
+     ie = is + nonlinear_nlevs_mid2 - 1
+     integ = integ + nonlinear_nlevs_mid2
+     do i=is, ie
+        fz(i) = fz(i-1) + (fz(i-1)-fz(i-2))*(nonlinear_rate_mid2*1.D-2)
+        label(i) = "M2"
+        if( fz(i) > top_height ) then
+           write(*,*) "Over Shoot [M2]: at",i,fz(i)
+           stop
+        endif
+     enddo
+
+     ! constant layer [mid]
+     is = integ + 1
+     ie = is + cnst_nlevs_mid - 1
+     integ = integ + cnst_nlevs_mid
+     do i=is, ie
+        fz(i) = fz(i-1) + cnst_thick_mid
+        label(i) = "MC"
+     enddo
+
+     ! nonlinear layer [upper]
+     is = integ + 1
+     ie = is + nonlinear_nlevs_upp - 1
+     integ = integ + nonlinear_nlevs_upp
+     do i=is, ie
+        fz(i) = fz(i-1) + (fz(i-1)-fz(i-2))*(nonlinear_rate_upp*1.D-2)
+        label(i) = "UN"
+        if( fz(i) > top_height ) then
+           write(*,*) "Over Shoot [UN]: at",i,fz(i)
+           stop
+        endif
+     enddo
+  endif
+
   ! constant layer [upper]
-  is = cnst_nlevs_low + nonlinear_nlevs_mid + 1
+  is = integ + 1
   if ( nonlinear_top ) then
      ie = is + cnst_nlevs_upp - 1
   else
      ie = num_levs
   endif
+  integ = integ + cnst_nlevs_upp
   if ( ie >= num_levs ) then
      ie = num_levs
      force_skip = .true.
   endif
   do i=is, ie
      fz(i) = fz(i-1) + cnst_thick_upp
-     label(i) = "U"
+     label(i) = "UC"
      if( fz(i) > top_height ) then
-        write(*,*) "Over Shoot [U]: at",i,fz(i)
+        write(*,*) "Over Shoot [UC]: at",i,fz(i)
         stop
      endif
   enddo
@@ -129,14 +195,14 @@ program scaleles_make_vgrid
      write(*,*) "WARNING: Constant Upper Layer has reached top already!"
   else
      if ( nonlinear_top ) then
-        is = cnst_nlevs_low + nonlinear_nlevs_mid + cnst_nlevs_upp + 1
+        is = integ + 1
         ie = num_levs
         do i=is, ie
            work = (fz(i-1)-fz(i-2)) - (fz(i-1)-fz(i-2))*(1.0D0 - nonlinear_rate_top*1.D-2)
            fz(i) = fz(i-1) + work
-           label(i) = "T"
+           label(i) = "TN"
            if( fz(i) > top_height*1.2D0 ) then
-              write(*,*) "Over Shoot [T]: at",i,fz(i)
+              write(*,*) "Over Shoot [TN]: at",i,fz(i)
               stop
            endif
         enddo
