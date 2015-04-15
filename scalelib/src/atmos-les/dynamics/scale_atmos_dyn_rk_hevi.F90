@@ -515,7 +515,7 @@ contains
                                  + J23G(k,i,j,I_XYW) * 0.25_RP / MAPF(i,j,1,I_XY) &
                                  * ( MOMY(k+1,i,j)+MOMY(k+1,i,j-1) &
                                    + MOMY(k  ,i,j)+MOMY(k  ,i,j-1) ) &
-                                 + GSQRT(k,i,j,I_XYW) * num_diff(k,i,j,I_DENS,ZDIR)
+                                 + GSQRT(k,i,j,I_XYW) / ( MAPF(i,j,1,I_XY)*MAPF(i,j,2,I_XY) ) * num_diff(k,i,j,I_DENS,ZDIR)
           enddo
           mflx_hi(KE  ,i,j,ZDIR) = 0.0_RP
        enddo
@@ -715,7 +715,7 @@ contains
                               * ( 0.5_RP * ( VELX(k+1,i,j)+VELX(k,i,j) ) &
                                 * ( FACT_N * ( MOMZ(k,i+1,j)+MOMZ(k,i  ,j) ) &
                                   + FACT_F * ( MOMZ(k,i+2,j)+MOMZ(k,i-1,j) ) ) &
-                                + num_diff(k,i,j,I_MOMZ,XDIR) )
+                                + num_diff(k,i,j,I_MOMZ,XDIR) / MAPF(i,j,2,I_UY) )
        enddo
        enddo
        enddo
@@ -742,7 +742,7 @@ contains
                               * ( 0.5_RP * ( VELY(k+1,i,j)+VELY(k,i,j) ) &
                                 * ( FACT_N * ( MOMZ(k,i,j+1)+MOMZ(k,i,j  ) ) &
                                   + FACT_F * ( MOMZ(k,i,j+2)+MOMZ(k,i,j-1) ) ) &
-                                + num_diff(k,i,j,I_MOMZ,YDIR) )
+                                + num_diff(k,i,j,I_MOMZ,YDIR) / MAPF(i,j,1,I_XV) )
        enddo
        enddo
        enddo
@@ -774,10 +774,11 @@ contains
           advch = - ( ( qflx_J (k+1,i,j)      - qflx_J (k,i  ,j  )      ) * RFDZ(k) &
                     + ( qflx_hi(k  ,i,j,XDIR) - qflx_hi(k,i-1,j  ,XDIR) ) * RCDX(i) &
                     + ( qflx_hi(k  ,i,j,YDIR) - qflx_hi(k,i  ,j-1,YDIR) ) * RCDY(j) ) &
-                  * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY)
+                * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY)
           cf = 0.0_RP
-          div = divdmp_coef * dtrk  * ( DDIV(k+1,i,j)-DDIV(k,i,j) ) * FDZ(k) ! divergence damping
-          Sw(k,i,j) = ( advcv + advch ) / GSQRT(k,i,j,I_XYW) + div + MOMZ_t(k,i,j)
+          div = divdmp_coef * dtrk * ( DDIV(k+1,i,j)-DDIV(k,i,j) ) * FDZ(k) ! divergence damping
+          Sw(k,i,j) = ( advcv + advch ) / GSQRT(k,i,j,I_XYW) &
+                    + div + MOMZ_t(k,i,j)
 #ifdef HIST_TEND
           if ( lhist ) then
              advcv_t(k,i,j,I_MOMZ) = advcv / GSQRT(k,i,j,I_XYW)
@@ -819,7 +820,7 @@ contains
        do i = IIS, IIE
           tflx_hi(KS-1,i,j,ZDIR) = 0.0_RP
           tflx_hi(KS  ,i,j,ZDIR) = mflx_hi(KS  ,i,j,ZDIR) * 0.5_RP * ( POTT(KS+1,i,j) + POTT(KS  ,i,j) ) &
-                                 + GSQRT(KS,i,j,I_XYW) * num_diff(KS  ,i,j,I_RHOT,ZDIR)
+                                 + GSQRT(KS,i,j,I_XYW) / (MAPF(i,j,1,I_XY)*MAPF(i,j,2,I_XY)) * num_diff(KS  ,i,j,I_RHOT,ZDIR)
           do k = KS+1, KE-2
 #ifdef DEBUG
              call CHECK( __LINE__, mflx_hi(k,i,j,ZDIR) )
@@ -832,10 +833,10 @@ contains
              tflx_hi(k,i,j,ZDIR) = mflx_hi(k,i,j,ZDIR) &
                                  * ( FACT_N * ( POTT(k+1,i,j) + POTT(k  ,i,j) ) &
                                    + FACT_F * ( POTT(k+2,i,j) + POTT(k-1,i,j) ) ) &
-                                 + GSQRT(k,i,j,I_XYW) * num_diff(k,i,j,I_RHOT,ZDIR)
+                                 + GSQRT(k,i,j,I_XYW) / (MAPF(i,j,1,I_XY)*MAPF(i,j,2,I_XY)) * num_diff(k,i,j,I_RHOT,ZDIR)
           enddo
           tflx_hi(KE-1,i,j,ZDIR) = mflx_hi(KE-1,i,j,ZDIR) * 0.5_RP * ( POTT(KE  ,i,j) + POTT(KE-1,i,j) ) &
-                                 + GSQRT(KE-1,i,j,ZDIR) * num_diff(KE-1,i,j,I_RHOT,ZDIR)
+                                 + GSQRT(KE-1,i,j,ZDIR) / (MAPF(i,j,1,I_XY)*MAPF(i,j,2,I_XY)) * num_diff(KE-1,i,j,I_RHOT,ZDIR)
           tflx_hi(KE  ,i,j,ZDIR) = 0.0_RP
        enddo
        enddo
@@ -861,7 +862,7 @@ contains
           tflx_hi(k,i,j,XDIR) = mflx_hi(k,i,j,XDIR) &
                                 * ( FACT_N * ( POTT(k,i+1,j)+POTT(k,i  ,j) ) &
                                   + FACT_F * ( POTT(k,i+2,j)+POTT(k,i-1,j) ) ) &
-                                + GSQRT(k,i,j,I_UYZ) * num_diff(k,i,j,I_RHOT,XDIR)
+                                + GSQRT(k,i,j,I_UYZ) / MAPF(i,j,2,I_UY) * num_diff(k,i,j,I_RHOT,XDIR)
        enddo
        enddo
        enddo
@@ -884,7 +885,7 @@ contains
           tflx_hi(k,i,j,YDIR) = mflx_hi(k,i,j,YDIR) &
                                 * ( FACT_N * ( POTT(k,i,j+1)+POTT(k,i,j  ) ) &
                                   + FACT_F * ( POTT(k,i,j+2)+POTT(k,i,j-1) ) ) &
-                                + GSQRT(k,i,j,I_XVZ) * num_diff(k,i,j,I_RHOT,YDIR)
+                                + GSQRT(k,i,j,I_XVZ) / MAPF(i,j,1,I_XV) * num_diff(k,i,j,I_RHOT,YDIR)
        enddo
        enddo
        enddo
@@ -991,22 +992,23 @@ contains
 #endif
 
           do k = KS, KE-1
-             ! z-momentum flux
-             mflx_hi(k,i,j,ZDIR) = mflx_hi(k,i,j,ZDIR) * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) &
-                                 + J33G * C(k-KS+1,i,j)
-             ! z-momentum
-             MOMZ_RK(k,i,j) = MOMZ0(k,i,j) &
-                            + ( C(k-KS+1,i,j) - MOMZ(k,i,j) )
 #ifdef DEBUG_HEVI2HEVE
           ! for debug (change to explicit integration)
              C(k-KS+1,i,j) = MOMZ(k,i,j)
-             mflx_hi(k,i,j,ZDIR) = mflx_hi(k,i,j,ZDIR) * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) &
-                                 + J33G * MOMZ(k,i,j)
+             mflx_hi(k,i,j,ZDIR) = mflx_hi(k,i,j,ZDIR) &
+                                 + J33G * MOMZ(k,i,j) / ( MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) )
              MOMZ_RK(k,i,j) = MOMZ0(k,i,j) &
                   + dtrk*( &
                   - J33G * ( DPRES(k+1,i,j)-DPRES(k,i,j) ) * RFDZ(k) / GSQRT(k,i,j,i_XYW) &
                   - 0.5_RP * GRAV * ( (DENS(k,i,j)-REF_dens(k,i,j))+(DENS(k+1,i,j)-REF_dens(k+1,i,j)) ) &
                   + Sw(k,i,j) )
+#else
+             ! z-momentum flux
+             mflx_hi(k,i,j,ZDIR) = mflx_hi(k,i,j,ZDIR) &
+                                 + J33G * C(k-KS+1,i,j) / ( MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) )
+             ! z-momentum
+             MOMZ_RK(k,i,j) = MOMZ0(k,i,j) &
+                            + ( C(k-KS+1,i,j) - MOMZ(k,i,j) )
 #endif
           end do
 
@@ -1178,7 +1180,7 @@ contains
                               * ( 0.5_RP * ( VELX(k,i,j)+VELX(k,i-1,j) ) &
                                 * ( FACT_N * ( MOMX(k,i  ,j)+MOMX(k,i-1,j) ) &
                                   + FACT_F * ( MOMX(k,i+1,j)+MOMX(k,i-2,j) ) ) &
-                                + num_diff(k,i,j,I_MOMX,XDIR) )
+                                + num_diff(k,i,j,I_MOMX,XDIR) / MAPF(i,j,2,I_XY) )
        enddo
        enddo
        enddo
@@ -1203,7 +1205,7 @@ contains
                               * ( 0.5_RP * ( VELY(k,i+1,j)+VELY(k,i,j) ) &
                                 * ( FACT_N * ( MOMX(k,i,j+1)+MOMX(k,i,j  ) ) &
                                   + FACT_F * ( MOMX(k,i,j+2)+MOMX(k,i,j-1) ) ) &
-                                + num_diff(k,i,j,I_MOMX,YDIR) )
+                                + num_diff(k,i,j,I_MOMX,YDIR) / MAPF(i,j,1,I_XY) )
        enddo
        enddo
        enddo
@@ -1250,7 +1252,7 @@ contains
           cf = 0.125_RP * ( CORIOLI(1,i,j)+CORIOLI(1,i+1,j) ) &
                         * ( MOMY(k,i,j)+MOMY(k,i+1,j)+MOMY(k,i,j-1)+MOMY(k,i+1,j-1) ) & ! coriolis force
              + 0.25_RP * MAPF(i,j,1,I_UY) * MAPF(i,j,2,I_UY) &
-             * ( MOMY(k,i,j) + MOMY(k,i,j-1) + MOMY(k,i+1,j) + MOMY(k,i+1,j-1) )&
+             * ( MOMY(k,i,j) + MOMY(k,i,j-1) + MOMY(k,i+1,j) + MOMY(k,i+1,j-1) ) &
              * ( ( MOMY(k,i,j) + MOMY(k,i,j-1) + MOMY(k,i+1,j) + MOMY(k,i+1,j-1) ) * 0.25_RP &
                  * ( 1.0_RP/MAPF(i+1,j,2,I_XY) - 1.0_RP/MAPF(i,j,2,I_XY) ) * RCDX(i) &
                - MOMX(k,i,j) &
@@ -1305,7 +1307,7 @@ contains
           qflx_hi(KS-1,i,j,ZDIR) = 0.0_RP
           qflx_hi(KS  ,i,j,ZDIR) = J33G * 0.25_RP &
                                  * ( VELZ(KS,i,j+1) + VELZ(KS,i,j) ) &
-                                 * ( MOMY(KS+1,i,j)+MOMY(KS,i,j) ) &
+                                 * ( MOMY(KS+1,i,j) + MOMY(KS,i,j) ) &
                                  + GSQRT(KS,i,j,I_XVW) * num_diff(KS  ,i,j,I_MOMY,ZDIR)
           do k = KS+1, KE-2
 #ifdef DEBUG
@@ -1322,13 +1324,13 @@ contains
              call CHECK( __LINE__, num_diff(k,i,j,I_MOMY,ZDIR) )
 #endif
              qflx_hi(k,i,j,ZDIR) = J33G * 0.5_RP * ( VELZ(k,i,j+1) + VELZ(k,i,j) ) &
-                                 * ( FACT_N * ( MOMY(k+1,i,j)+MOMY(k  ,i,j) ) &
-                                   + FACT_F * ( MOMY(k+2,i,j)+MOMY(k-1,i,j) ) ) &
+                                 * ( FACT_N * ( MOMY(k+1,i,j) + MOMY(k  ,i,j) ) &
+                                   + FACT_F * ( MOMY(k+2,i,j) + MOMY(k-1,i,j) ) ) &
                                  + GSQRT(k,i,j,I_XVW) * num_diff(k,i,j,I_MOMY,ZDIR)
           enddo
           qflx_hi(KE-1,i,j,ZDIR) = J33G * 0.25_RP &
                                  * ( VELZ(KE-1,i,j+1) + VELZ(KE-1,i,j) ) &
-                                 * ( MOMY(KE,i,j)+MOMY(KE-1,i,j) ) &
+                                 * ( MOMY(KE,i,j) + MOMY(KE-1,i,j) ) &
                                  + GSQRT(KE-1,i,j,I_XVW) * num_diff(KE-1,i,j,I_MOMY,ZDIR)
           qflx_hi(KE  ,i,j,ZDIR) = 0.0_RP
        enddo
@@ -1387,7 +1389,7 @@ contains
                               * ( 0.5_RP * ( VELX(k,i,j+1)+VELX(k,i,j) ) &
                                 * ( FACT_N * ( MOMY(k,i+1,j)+MOMY(k,i  ,j) ) &
                                   + FACT_F * ( MOMY(k,i+2,j)+MOMY(k,i-1,j) ) ) &
-                                + num_diff(k,i,j,I_MOMY,XDIR) )
+                                + num_diff(k,i,j,I_MOMY,XDIR) / MAPF(i,j,2,I_UV) )
        enddo
        enddo
        enddo
@@ -1412,7 +1414,7 @@ contains
                               * ( 0.5_RP * ( VELY(k,i,j)+VELY(k,i,j-1) ) &
                                 * ( FACT_N * ( MOMY(k,i,j  )+MOMY(k,i,j-1) ) &
                                   + FACT_F * ( MOMY(k,i,j+1)+MOMY(k,i,j-2) ) ) &
-                                + num_diff(k,i,j,I_MOMY,YDIR) )
+                                + num_diff(k,i,j,I_MOMY,YDIR) / MAPF(i,j,1,I_XY) )
        enddo
        enddo
        enddo
