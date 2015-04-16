@@ -279,16 +279,10 @@ contains
 
     real(RP) :: l2q2         !< L^2/q^2
     real(RP) :: q2           !< q^2
-    real(RP) :: ac           !< \alpha_c
-    real(RP) :: ac2          !< \alpha_c^2
-    real(RP) :: p1           !< \Phi_1
-    real(RP) :: p2           !< \Phi_2
-    real(RP) :: p3           !< \Phi_3
-    real(RP) :: p4           !< \Phi_4
-    real(RP) :: p5           !< \Phi_5
-    real(RP) :: rd25         !< 1/D_2.5
-    real(RP) :: gh           !< G_H
     
+    real(RP) :: flux_z(KA,IA,JA)
+    real(RP) :: flux_x(KA,IA,JA)
+    real(RP) :: flux_y(KA,IA,JA)
     real(RP) :: advc
 
     real(RP) :: sw
@@ -434,78 +428,75 @@ contains
        end do
        end do
 
-       do j = JJS, JJE+1
-       do i = IIS, IIE+1
-          do k = KS, KE_PBL+1
-             ql = 0.0_RP
-             do iq = QWS, QWE
-                ql = ql + QTRC(k,i,j,iq)
-             end do
-             qs = 0.0_RP
-             do iq = QIS, QIE
-                qs = qs + QTRC(k,i,j,iq)
-             end do
-             Qw(k,i,j) = QTRC(k,i,j,I_QV) + ql + qs
+    end do
+    end do
 
-             call ATMOS_THERMODYN_temp_pres( temp, pres, & ! (out)
-                  DENS(k,i,j), RHOT(k,i,j), QTRC(k,i,j,:) ) ! (in)
-             call ATMOS_THERMODYN_templhv( lhv, temp )
-             call ATMOS_THERMODYN_templhs( lhs, temp )
+    do j = JS, JE+1
+    do i = IS, IE+1
+       do k = KS, KE_PBL+1
+          ql = 0.0_RP
+          do iq = QWS, QWE
+             ql = ql + QTRC(k,i,j,iq)
+          end do
+          qs = 0.0_RP
+          do iq = QIS, QIE
+             qs = qs + QTRC(k,i,j,iq)
+          end do
+          Qw(k,i,j) = QTRC(k,i,j,I_QV) + ql + qs
 
-             POTT(k,i,j) = RHOT(k,i,j) / DENS(k,i,j)
-             ! liquid water potential temperature
-             POTL(k,i,j) = POTT(k,i,j) * (1.0_RP - 1.0_RP * (lhv * ql + lhs * qs) / ( temp * CP ) )
+          call ATMOS_THERMODYN_temp_pres( temp, pres, & ! (out)
+               DENS(k,i,j), RHOT(k,i,j), QTRC(k,i,j,:) ) ! (in)
+          call ATMOS_THERMODYN_templhv( lhv, temp )
+          call ATMOS_THERMODYN_templhs( lhs, temp )
 
-             ! virtual potential temperature for derivertive
+          POTT(k,i,j) = RHOT(k,i,j) / DENS(k,i,j)
+          ! liquid water potential temperature
+          POTL(k,i,j) = POTT(k,i,j) * (1.0_RP - 1.0_RP * (lhv * ql + lhs * qs) / ( temp * CP ) )
+
+          ! virtual potential temperature for derivertive
 !             POTV(k,i,j) = ( 1.0_RP + EPSTvap * Qw(k,i,j) ) * POTL(k,i,j)
-             POTV(k,i,j) = ( 1.0_RP + EPSTvap * Qw(k,i,j) - (1.0_RP+EPSTvap) * (ql + qs) ) * POTL(k,i,j)
+          POTV(k,i,j) = ( 1.0_RP + EPSTvap * Qw(k,i,j) - (1.0_RP+EPSTvap) * (ql + qs) ) * POTL(k,i,j)
 
-             if ( k == KS ) then
-                SFLX_PT(i,j) = SFLX_SH(i,j) / ( CP * DENS(KS,i,j) ) &
-                             * RHOT(KS,i,j) * R / pres ! = POTT / TEMP
+          if ( k == KS ) then
+             SFLX_PT(i,j) = SFLX_SH(i,j) / ( CP * DENS(KS,i,j) ) &
+                  * RHOT(KS,i,j) * R / pres ! = POTT / TEMP
 
-             end if
-          end do
+          end if
+       end do
 
-          do k = KS+1, KE_PBL
-             n2(k,i,j) = GRAV * ( POTV(k+1,i,j) - POTV(k-1,i,j)) * J33G &
-                       / ( (FDZ(k)+FDZ(k-1)) * GSQRT(k,i,j,I_XYZ) * POTV(k,i,j) )
-          end do
-          n2(KS,i,j) = GRAV * ( POTV(KS+1,i,j) - POTV(KS,i,j)) * J33G &
+       do k = KS+1, KE_PBL
+          n2(k,i,j) = GRAV * ( POTV(k+1,i,j) - POTV(k-1,i,j)) * J33G &
+                    / ( (FDZ(k)+FDZ(k-1)) * GSQRT(k,i,j,I_XYZ) * POTV(k,i,j) )
+       end do
+       n2(KS,i,j) = GRAV * ( POTV(KS+1,i,j) - POTV(KS,i,j)) * J33G &
                * RFDZ(KS) / ( GSQRT(KS,i,j,I_XYZ) * POTV(KS,i,j) )
 
-          do k = KS, KE_PBL
-             dudz2(k,i,j) = ( ( U(k+1,i,j) - U(k-1,i,j) )**2 + ( V(k+1,i,j) - V(k-1,i,j) )**2 ) &
+       do k = KS, KE_PBL
+          dudz2(k,i,j) = ( ( U(k+1,i,j) - U(k-1,i,j) )**2 + ( V(k+1,i,j) - V(k-1,i,j) )**2 ) &
                  / ( FDZ(k-1)*GSQRT(k-1,i,j,I_XYZ) + FDZ(k)*GSQRT(k,i,j,I_XYZ) )**2
-             sw = sign(0.5_RP, dudz2(k,i,j)-EPS) + 0.5_RP
-             dudz2(k,i,j) = dudz2(k,i,j)*sw + 1.E-10_RP*(1.0_RP-sw)
-          end do
-
-          do k = KS, KE_PBL
-             Ri(k,i,j) = n2(k,i,j)/dudz2(k,i,j)
-          end do
-
-       end do
+          sw = sign(0.5_RP, dudz2(k,i,j)-EPS) + 0.5_RP
+          dudz2(k,i,j) = dudz2(k,i,j)*sw + 1.E-10_RP*(1.0_RP-sw)
        end do
 
-
-       ! length
-       call get_length( &
-            l, & ! (out)
-            DENS, & ! (in)
-            tke, n2, & ! (in)
-            SFLX_MU, SFLX_MV, SFLX_PT, & ! (in)
-            POTT, & ! (in)
-            GSQRT(:,:,:,I_XYZ), & ! (in)
-            IIS, IIE, JJS, JJE )
-
-       call get_q2_level2( &
-            q2_2, & ! (out)
-            dudz2, Ri, l, & ! (in)
-            IIS, IIE, JJS, JJE ) ! (in)
+       do k = KS, KE_PBL
+          Ri(k,i,j) = n2(k,i,j)/dudz2(k,i,j)
+       end do
 
     end do
     end do
+
+
+    ! length
+    call get_length( &
+         l, & ! (out)
+         DENS, & ! (in)
+         tke, n2, & ! (in)
+         SFLX_MU, SFLX_MV, SFLX_PT, & ! (in)
+         POTT ) ! (in)
+
+    call get_q2_level2( &
+         q2_2, & ! (out)
+         dudz2, Ri, l ) ! (in)
 
     if ( ATMOS_PHY_TB_MYNN_TKE_INIT ) then
        do j = JS, JE
@@ -524,126 +515,101 @@ contains
        end do
        call COMM_vars8(tke, 1)
        call COMM_wait (tke, 1)
+
+       ATMOS_PHY_TB_MYNN_TKE_INIT = .false.
+
     end if
 
-    do JJS = JS, JE, JBLOCK
-    JJE = JJS+JBLOCK-1
-    do IIS = IS, IE, IBLOCK
-    IIE = IIS+IBLOCK-1
-
-       do j = JJS, JJE
-       do i = IIS, IIE
-       do k = KS, KE_PBL
-          sw = sign(0.5_RP, tke(k,i,j)-EPS) + 0.5_RP
-          q(k,i,j) = sqrt( tke(k,i,j)*2.0_RP*sw + 1.E-10_RP*(1.0_RP-sw) )
-       end do
-       end do
-       end do
-
-       do j = JJS, JJE
-       do i = IIS, IIE
-       do k = KS, KE_PBL
-
-          ! level 2.5
-          ac = min(q(k,i,j)/sqrt(q2_2(k,i,j)), 1.0_RP)
-          ac2 = ac**2
-          l2q2 = ( l(k,i,j) / q(k,i,j) )**2
-          gh = - n2(k,i,j) * l2q2
-
-          p1 = 1.0_RP - 3.0_RP * ac2 * A2 * B2 * (1.0_RP-C3) * gh
-          p2 = 1.0_RP - 9.0_RP * ac2 * A1 * A2 * (1.0_RP-C2) * gh
-          p3 = p1 + 9.0_RP * ac2 * A2**2 * (1.0_RP-C2) * (1.0_RP-C5) * gh
-          p4 = p1 - 12.0_RP * ac2 * A1 * A2 * (1.0_RP-C2) * gh
-          p5 = 6.0_RP * ac2 * A1**2 * dudz2(k,i,j) * l2q2
-
-          rd25 = 1.0_RP / max(p2 * p4 + p5 * p3, 1.E-20_RP)
-          sm(k,i,j) = ac * A1 * (p3 - 3.0_RP * C1 * p4) * rd25
-          sh(k,i,j) = ac * A2 * (p2 + 3.0_RP * C1 * p5) * rd25
-       end do
-       end do
-       end do
-
-       do j = JJS, JJE
-       do i = IIS, IIE
-          do k = 1, KS-1
-             Nu(k,i,j) = 0.0_RP
-          end do
-          do k = KS, KE_PBL
-             Nu(k,i,j) = max( l(k,i,j) * q(k,i,j) * sm(k,i,j), &
-                              ATMOS_PHY_TB_MYNN_NU_MIN )
-          end do
-          do k = KE_PBL+1, KA
-             Nu(k,i,j) = 0.0_RP
-          end do
-       end do
-       end do
-
-       do j = JJS, JJE
-       do i = IIS, IIE
-       do k = KS, KE_PBL
-          sw = 0.5_RP - sign(0.5_RP, sh(k,i,j)-EPS)
-          Pr(k,i,j) = sm(k,i,j) / (sh(k,i,j)+sw) * (1.0_RP-sw) &
-                    + 1.0_RP * sw
-          if ( Nu(k,i,j)/Pr(k,i,j) < ATMOS_PHY_TB_MYNN_KH_MIN ) then
-            Pr(k,i,j) = Nu(k,i,j) / ATMOS_PHY_TB_MYNN_KH_MIN
-          end if
-       end do
-       end do
-       end do
-       do j = JJS, JJE
-       do i = IIS, IIE
-       do k = KE_PBL+1, KE
-          Pr(k,i,j) = 1.0_RP
-       end do
-       end do
-       end do
-
-       do j = JJS, JJE
-       do i = IIS, IIE
-       do k = KE_PBL+1, KE
-          Ri(k,i,j) = 0.0_RP
-       end do
-       end do
-       end do
-
-       ! time integration
-
-       !  for velocities
-       do j = JJS, JJE
-       do i = IIS, IIE
-
-          ap = - dt * 0.5_RP * ( DENS(KS  ,i,j)*Nu(KS  ,i,j) &
-                               + DENS(KS+1,i,j)*Nu(KS+1,i,j) ) &
-             * RFDZ(KS) / GSQRT(KS,i,j,I_XYW)
-          a(KS,i,j) = ap * RCDZ(KS) / ( DENS(KS,i,j) * GSQRT(KS,i,j,I_XYZ) )
-          c(KS,i,j) = 0.0_RP
-          b(KS,i,j) = - a(KS,i,j) + 1.0_RP
-          do k = KS+1, KE_PBL-1
-             c(k,i,j) = ap * RCDZ(k) / ( DENS(k,i,j) * GSQRT(k,i,j,I_XYZ) )
-             ap = - dt * 0.5_RP * ( DENS(k  ,i,j)*Nu(k  ,i,j) &
-                                  + DENS(k+1,i,j)*Nu(k+1,i,j) ) &
-                * RFDZ(k) / GSQRT(k,i,j,I_XYW)
-             a(k,i,j) = ap * RCDZ(k) / ( DENS(k,i,j) * GSQRT(k,i,j,I_XYZ) )
-             b(k,i,j) = - a(k,i,j) - c(k,i,j) + 1.0_RP
-          end do
-          a(KE_PBL,i,j) = 0.0_RP
-          c(KE_PBL,i,j) = ap * RCDZ(KE_PBL) / ( DENS(KE_PBL,i,j) * GSQRT(KE_PBL,i,j,I_XYZ) )
-          b(KE_PBL,i,j) = - c(KE_PBL,i,j) + 1.0_RP
-
-          d(KS) = U(KS,i,j) + dt * SFLX_MU(i,j) * RCDZ(KS) / ( DENS(KS,i,j) * GSQRT(KS,i,j,I_XYZ) )
-          do k = KS+1, KE_PBL
-             d(k) = U(k,i,j)
-          end do
-          call diffusion_solver( &
-               phiN(:,i,j),                     & ! (out)
-               a(:,i,j), b(:,i,j), c(:,i,j), d, & ! (in)
-               KE_PBL                           ) ! (in)
-       end do
-       end do
-
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE_PBL
+       sw = sign(0.5_RP, tke(k,i,j)-EPS) + 0.5_RP
+       q(k,i,j) = sqrt( tke(k,i,j)*2.0_RP*sw + 1.E-10_RP*(1.0_RP-sw) )
+    end do
     end do
     end do
 
+    call get_smsh( sm, sh, & ! (out)
+                   q, q2_2, & ! (in)
+                   l, n2, dudz2 ) ! (in)
+
+    do j = JS, JE
+    do i = IS, IE
+       do k = 1, KS-1
+          Nu(k,i,j) = 0.0_RP
+       end do
+       do k = KS, KE_PBL
+          Nu(k,i,j) = max( l(k,i,j) * q(k,i,j) * sm(k,i,j), &
+                      ATMOS_PHY_TB_MYNN_NU_MIN )
+       end do
+       do k = KE_PBL+1, KA
+          Nu(k,i,j) = 0.0_RP
+       end do
+    end do
+    end do
+
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE_PBL
+       sw = 0.5_RP - sign(0.5_RP, sh(k,i,j)-EPS)
+       Pr(k,i,j) = sm(k,i,j) / (sh(k,i,j)+sw) * (1.0_RP-sw) &
+                 + 1.0_RP * sw
+       if ( Nu(k,i,j)/Pr(k,i,j) < ATMOS_PHY_TB_MYNN_KH_MIN ) then
+          Pr(k,i,j) = Nu(k,i,j) / ATMOS_PHY_TB_MYNN_KH_MIN
+       end if
+    end do
+    end do
+    end do
+    do j = JS, JE
+    do i = IS, IE
+    do k = KE_PBL+1, KE
+       Pr(k,i,j) = 1.0_RP
+    end do
+    end do
+    end do
+
+    do j = JS, JE
+    do i = IS, IE
+    do k = KE_PBL+1, KE
+       Ri(k,i,j) = 0.0_RP
+    end do
+    end do
+    end do
+
+    ! time integration
+
+    !  for velocities
+    do j = JS, JE
+    do i = IS, IE
+
+       ap = - dt * 0.5_RP * ( DENS(KS  ,i,j)*Nu(KS  ,i,j) &
+                            + DENS(KS+1,i,j)*Nu(KS+1,i,j) ) &
+                          * RFDZ(KS) / GSQRT(KS,i,j,I_XYW)
+       a(KS,i,j) = ap * RCDZ(KS) / ( DENS(KS,i,j) * GSQRT(KS,i,j,I_XYZ) )
+       c(KS,i,j) = 0.0_RP
+       b(KS,i,j) = - a(KS,i,j) + 1.0_RP
+       do k = KS+1, KE_PBL-1
+          c(k,i,j) = ap * RCDZ(k) / ( DENS(k,i,j) * GSQRT(k,i,j,I_XYZ) )
+          ap = - dt * 0.5_RP * ( DENS(k  ,i,j)*Nu(k  ,i,j) &
+                               + DENS(k+1,i,j)*Nu(k+1,i,j) ) &
+                             * RFDZ(k) / GSQRT(k,i,j,I_XYW)
+          a(k,i,j) = ap * RCDZ(k) / ( DENS(k,i,j) * GSQRT(k,i,j,I_XYZ) )
+          b(k,i,j) = - a(k,i,j) - c(k,i,j) + 1.0_RP
+       end do
+       a(KE_PBL,i,j) = 0.0_RP
+       c(KE_PBL,i,j) = ap * RCDZ(KE_PBL) / ( DENS(KE_PBL,i,j) * GSQRT(KE_PBL,i,j,I_XYZ) )
+       b(KE_PBL,i,j) = - c(KE_PBL,i,j) + 1.0_RP
+
+       d(KS) = U(KS,i,j) + dt * SFLX_MU(i,j) * RCDZ(KS) / ( DENS(KS,i,j) * GSQRT(KS,i,j,I_XYZ) )
+       do k = KS+1, KE_PBL
+          d(k) = U(k,i,j)
+       end do
+       call diffusion_solver( &
+            phiN(:,i,j),                     & ! (out)
+            a(:,i,j), b(:,i,j), c(:,i,j), d, & ! (in)
+            KE_PBL                           ) ! (in)
+    end do
+    end do
 
     call COMM_vars( Nu,   1 )
     call COMM_vars( phiN, 2 )
@@ -830,6 +796,34 @@ contains
 !       end do
 
        ! time integration tke
+
+       do j = JJS, JJE
+       do i = IIS, IIE
+       do k = KS , KE_PBL-1
+          flux_z(k,i,j) = ( J33G * MOMZ(k,i,j) &
+                          + J13G(k,i,j,I_XYW) * 0.25_RP * ( MOMX(k,i-1,j)+MOMX(k,i,j)+MOMX(k+1,i-1,j)+MOMX(k+1,i,j) ) &
+                          + J23G(k,i,j,I_XYW) * 0.25_RP * ( MOMY(k,i,j-1)+MOMY(k,i,j)+MOMY(k+1,i,j-1)+MOMY(k+1,i,j) ) ) &
+                          * ( tke(k,i,j)+tke(k+1,i,j) ) * 0.5_RP
+       end do
+       end do
+       end do
+       do j = JJS  , JJE
+       do i = IIS-1, IIE
+       do k = KS   , KE_PBL
+          flux_x(k,i,j) = MOMX(k,i,j) * ( tke(k,i,j)+tke(k,i+1,j) ) * 0.5_RP &
+                        * GSQRT(k,i,j,I_UYZ) / MAPF(i,j,2,I_UY)
+       end do
+       end do
+       end do
+       do j = JJS-1, JJE
+       do i = IIS  , IIE
+       do k = KS   , KE_PBL
+          flux_y(k,i,j) = MOMY(k,i,j) * ( tke(k,i,j)+tke(k,i,j+1) ) * 0.5_RP &
+                        * GSQRT(k,i,j,I_XVZ) / MAPF(i,j,1,I_XV)
+       end do
+       end do
+       end do
+
        do j = JJS, JJE
        do i = IIS, IIE
           ap = - dt * 1.5_RP * ( DENS(KS  ,i,j)*Nu(KS  ,i,j) &
@@ -838,19 +832,11 @@ contains
           a(KS,i,j) = ap * RCDZ(KS) / ( DENS(KS,i,j) * GSQRT(KS,i,j,I_XYZ) )
           c(KS,i,j) = 0.0_RP
           b(KS,i,j) = - a(KS,i,j) + 1.0_RP + 2.0_RP * dt * q(KS,i,j) / ( B1 * l(KS,i,j) )
-          advc =  0.5_RP * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) &
-                * ( ( GSQRT(KS,i  ,j,I_UYZ) * MOMX(KS,i  ,j) * (tke(KS,i+1,j)+tke(KS,i  ,j)) / MAPF(i  ,j,2,I_UY) &
-                    - GSQRT(KS,i-1,j,I_UYZ) * MOMX(KS,i-1,j) * (tke(KS,i  ,j)+tke(KS,i-1,j)) / MAPF(i-1,j,2,I_UY) ) * RCDX(i) &
-                  + ( GSQRT(KS,i,j  ,I_XVZ) * MOMY(KS,i,j  ) * (tke(KS,i,j+1)+tke(KS,i,j  )) / MAPF(i,j  ,1,I_XV) &
-                    - GSQRT(KS,i,j-1,I_XVZ) * MOMY(KS,i,j-1) * (tke(KS,i,j  )+tke(KS,i,j-1)) / MAPF(i,j-1,1,I_XV) ) * RCDY(j) &
-                  + ( ( J13G(KS+1,i,j,I_XYZ) * (MOMX(KS+1,i,j)+MOMX(KS+1,i-1,j)) * tke(KS+1,i,j) &
-                      - J13G(KS  ,i,j,I_XYZ) * (MOMX(KS  ,i,j)+MOMX(KS  ,i-1,j)) * tke(KS  ,i,j) ) / MAPF(i,j,2,I_XY) &
-                    + ( J23G(KS+1,i,j,I_XYZ) * (MOMY(KS+1,i,j)+MOMY(KS+1,i,j-1)) * tke(KS+1,i,j) &
-                      - J23G(KS  ,i,j,I_XYZ) * (MOMY(KS  ,i,j)+MOMY(KS  ,i,j-1)) * tke(KS  ,i,j) ) / MAPF(i,j,1,I_XY) &
-                    ) * RFDZ(KS) &
-                    + ( J33G * MOMZ(KS  ,i,j) * (tke(KS+1,i,j)+tke(KS  ,i,j)) ) &
-                      * RCDZ(KS) / ( MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) ) &
-                  ) / ( DENS(KS,i,j) * GSQRT(KS,i,j,I_XYZ) )
+          advc = ( MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) &
+                 * ( ( flux_x(KS,i,j) - flux_x(KS,i-1,j) ) * RCDX(i) &
+                   + ( flux_y(KS,i,j) - flux_y(KS,i,j-1) ) * RCDY(j) ) &
+                 + flux_z(KS,i,j) * RCDZ(KS) ) &
+                 / ( GSQRT(KS,i,j,I_XYZ) * DENS(KS,i,j) )
           d(KS) = tke(KS,i,j) + dt * ( Nu(KS,i,j) * (dudz2(KS,i,j) - n2(KS,i,j)/Pr(KS,i,j)) &
                                      - advc )
           do k = KS+1, KE_PBL-1
@@ -860,20 +846,11 @@ contains
                 * RFDZ(k) / GSQRT(k,i,j,I_XYW)
              a(k,i,j) = ap * RCDZ(k) / ( DENS(k,i,j) * GSQRT(k,i,j,I_XYZ) )
              b(k,i,j) = - a(k,i,j) - c(k,i,j) + 1.0_RP + 2.0_RP * dt * q(k,i,j) / ( B1 * l(k,i,j) )
-             advc =  0.5_RP * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) &
-                * ( ( GSQRT(k,i  ,j,I_UYZ) * MOMX(k,i  ,j) * (tke(k,i+1,j)+tke(k,i  ,j)) / MAPF(i  ,j,2,I_UY) &
-                    - GSQRT(k,i-1,j,I_UYZ) * MOMX(k,i-1,j) * (tke(k,i  ,j)+tke(k,i-1,j)) / MAPF(i-1,j,2,I_UY) ) * RCDX(i) &
-                  + ( GSQRT(k,i,j  ,I_XVZ) * MOMY(k,i,j  ) * (tke(k,i,j+1)+tke(k,i,j  )) / MAPF(i,j  ,1,I_XV) &
-                    - GSQRT(k,i,j-1,I_XVZ) * MOMY(k,i,j-1) * (tke(k,i,j  )+tke(k,i,j-1)) / MAPF(i,j-1,1,I_XV) ) * RCDY(j) &
-                  + ( ( J13G(k+1,i,j,I_XYZ) * (MOMX(k+1,i,j)+MOMX(k+1,i-1,j)) * tke(k+1,i,j) &
-                      - J13G(k-1,i,j,I_XYZ) * (MOMX(k-1,i,j)+MOMX(k-1,i-1,j)) * tke(k-1,i,j) ) / MAPF(i,j,2,I_XY) &
-                    + ( J23G(k+1,i,j,I_XYZ) * (MOMY(k+1,i,j)+MOMY(k+1,i,j-1)) * tke(k+1,i,j) &
-                      - J23G(k-1,i,j,I_XYZ) * (MOMY(k-1,i,j)+MOMY(k-1,i,j-1)) * tke(k-1,i,j) ) / MAPF(i,j,1,I_XY) &
-                    ) / (FDZ(k)+FDZ(k-1)) &
-                    + ( J33G * MOMZ(k  ,i,j) * (tke(k+1,i,j)+tke(k  ,i,j)) &
-                      - J33G * MOMZ(k-1,i,j) * (tke(k  ,i,j)+tke(k-1,i,j)) ) &
-                      * RCDZ(k) / ( MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) ) &
-                  ) / ( DENS(k,i,j) * GSQRT(k,i,j,I_XYZ) )
+             advc = ( MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) &
+                    * ( ( flux_x(k,i,j) - flux_x(k,i-1,j) ) * RCDX(i) &
+                      + ( flux_y(k,i,j) - flux_y(k,i,j-1) ) * RCDY(j) ) &
+                    + ( flux_z(k,i,j) - flux_z(k-1,i,j) ) * RCDZ(k) ) &
+                    / ( GSQRT(k,i,j,I_XYZ) * DENS(k,i,j) )
              d(k) = tke(k,i,j) &
                   + dt * ( Nu(k,i,j) * (dudz2(k,i,j) - n2(k,i,j)/Pr(k,i,j)) &
                          - advc )
@@ -881,29 +858,48 @@ contains
           a(KE_PBL,i,j) = 0.0_RP
           c(KE_PBL,i,j) = ap * RCDZ(KE_PBL) / ( DENS(KE_PBL,i,j) * GSQRT(KE_PBL,i,j,I_XYZ) )
           b(KE_PBL,i,j) = - c(KE_PBL,i,j) + 1.0_RP + 2.0_RP * dt * q(KE_PBL,i,j) / ( B1 * l(KE_PBL,i,j) )
-          advc =  0.5_RP * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) &
-               * ( ( GSQRT(KE_PBL,i  ,j,I_UYZ) * MOMX(KE_PBL,i  ,j) * (tke(KE_PBL,i+1,j)+tke(KE_PBL,i  ,j)) / MAPF(i  ,j,2,I_UY) &
-                   - GSQRT(KE_PBL,i-1,j,I_UYZ) * MOMX(KE_PBL,i-1,j) * (tke(KE_PBL,i  ,j)+tke(KE_PBL,i-1,j)) / MAPF(i-1,j,2,I_UY) ) &
-                   * RCDX(i) &
-                 + ( GSQRT(KE_PBL,i,j  ,I_XVZ) * MOMY(KE_PBL,i,j  ) * (tke(KE_PBL,i,j+1)+tke(KE_PBL,i,j  )) / MAPF(i,j  ,1,I_XV) &
-                   - GSQRT(KE_PBL,i,j-1,I_XVZ) * MOMY(KE_PBL,i,j-1) * (tke(KE_PBL,i,j  )+tke(KE_PBL,i,j-1)) / MAPF(i,j-1,1,I_XV) ) &
-                   * RCDY(j) &
-                 + ( ( J13G(KE_PBL  ,i,j,I_XYZ) * (MOMX(KE_PBL  ,i,j)+MOMX(KE_PBL  ,i-1,j)) * tke(KE_PBL  ,i,j) &
-                     - J13G(KE_PBL-1,i,j,I_XYZ) * (MOMX(KE_PBL-1,i,j)+MOMX(KE_PBL-1,i-1,j)) * tke(KE_PBL-1,i,j) ) &
-                     / MAPF(i,j,2,I_XY) &
-                   + ( J23G(KE_PBL  ,i,j,I_XYZ) * (MOMY(KE_PBL  ,i,j)+MOMY(KE_PBL  ,i,j-1)) * tke(KE_PBL  ,i,j) &
-                     - J23G(KE_PBL-1,i,j,I_XYZ) * (MOMY(KE_PBL-1,i,j)+MOMY(KE_PBL-1,i,j-1)) * tke(KE_PBL-1,i,j) ) &
-                     / MAPF(i,j,1,I_XY) &
-                   ) * RFDZ(KE_PBL) &
-                   + ( - J33G * MOMZ(KE_PBL-1,i,j) * (tke(KE_PBL  ,i,j)+tke(KE_PBL-1,i,j)) ) &
-                     * RCDZ(KE_PBL) / ( MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) ) &
-                 ) / ( DENS(KE_PBL,i,j) * GSQRT(KE_PBL,i,j,I_XYZ) )
+          advc = ( MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) &
+                 * ( ( flux_x(KE_PBL,i,j) - flux_x(KE_PBL,i-1,j) ) * RCDX(i) &
+                   + ( flux_y(KE_PBL,i,j) - flux_y(KE_PBL,i,j-1) ) * RCDY(j) ) &
+                 + ( - flux_z(KE_PBL-1,i,j) ) * RCDZ(KE_PBL) ) &
+                 / ( GSQRT(KE_PBL,i,j,I_XYZ) * DENS(KE_PBL,i,j) )
           d(KE_PBL) = tke(KE_PBL,i,j) + dt * ( Nu(KE_PBL,i,j) * (dudz2(KE_PBL,i,j) - n2(KE_PBL,i,j)/Pr(KE_PBL,i,j)) &
                                              - advc )
           call diffusion_solver( &
                tke_N(:,i,j),     & ! (out)
                a(:,i,j), b(:,i,j), c(:,i,j), d, & ! (in)
                KE_PBL                           ) ! (in)
+#ifdef DEBUG
+          do k = KS+1, KE_PBL
+             tke(1,i,j) = d(k) &
+               + ( ( (tke_N(k+1,i,j)-tke_N(k,i,j)) * RFDZ(k) / GSQRT(k,i,j,I_XYW) &
+                   * (NU(k+1,i,j)*DENS(k+1,i,j)+NU(k,i,j)*DENS(k,i,j))*1.5_RP &
+                   - (tke_N(k,i,j)-tke_N(k-1,i,j)) * RFDZ(k-1) / GSQRT(k-1,i,j,I_XYW) &
+                   * (NU(k,i,j)*DENS(k,i,j)+NU(k-1,i,j)*DENS(k-1,i,j))*1.5_RP ) &
+                 * RCDZ(k) / GSQRT(k,i,j,I_XYZ) / DENS(k,i,j) &
+                 - 2.0_RP*tke_N(k,i,j) * q(k,i,j) / (B1 * l(k,i,j)) ) &
+                 * dt 
+             if ( tke_N(k,i,j) > 0.1_RP .and. abs(tke(1,i,j) - tke_N(k,i,j))/tke_N(k,i,j) > 1e-10_RP ) then
+                advc = ( tke(k,i,j) - d(k) ) / dt + Nu(k,i,j) * (dudz2(k,i,j) - n2(k,i,j)/Pr(k,i,j))
+                write(*,*)k,i,j,tke(1,i,j),tke_N(k,i,j), tke(k,i,j),nu(k,i,j),dudz2(k,i,j),n2(k,i,j),pr(k,i,j),advc
+                open(90, file="mynn.dat")
+                write(90,*)KE_PBL-KS+1
+                write(90,*)dt, B1
+                write(90,*)tke(KS:KE_PBL,i,j)
+                write(90,*)q(KS:KE_PBL,i,j)
+                write(90,*)l(KS:KE_PBL,i,j)
+                write(90,*)rcdz(KS:KE_PBL)
+                write(90,*)rfdz(KS:KE_PBL)
+                write(90,*)nu(KS:KE_PBL,i,j)
+                write(90,*)dens(KS:KE_PBL,i,j)
+                write(90,*)dudz2(KS:KE_PBL,i,j)
+                write(90,*)n2(KS:KE_PBL,i,j)
+                write(90,*)pr(KS:KE_PBL,i,j)
+                close(90)
+                call abort
+             end if
+          end do
+#endif
        end do
        end do
     end do
@@ -920,8 +916,6 @@ contains
     end do
     end do
 
-    ATMOS_PHY_TB_MYNN_TKE_INIT = .false.
-
     return
   end subroutine ATMOS_PHY_TB_mynn
 
@@ -930,9 +924,7 @@ contains
        DENS, &
        tke, n2, &
        SFLX_MU, SFLX_MV, SFLX_PT, &
-       PT0, &
-       GSQRT, &
-       IIS, IIE, JJS, JJE )
+       PT0 )
     use scale_grid, only: &
        CDZ  => GRID_CDZ
     use scale_grid_real, only: &
@@ -950,12 +942,7 @@ contains
     real(RP), intent(in) :: SFLX_MU(IA,JA)
     real(RP), intent(in) :: SFLX_MV(IA,JA)
     real(RP), intent(in) :: SFLX_PT(IA,JA)
-    real(RP), intent(in) :: GSQRT(KA,IA,JA)
     real(RP), intent(in) :: PT0(KA,IA,JA)
-    integer,  intent(in) :: IIS
-    integer,  intent(in) :: IIE
-    integer,  intent(in) :: JJS
-    integer,  intent(in) :: JJE
 
     real(RP) :: ls           !< L_S
     real(RP) :: lt           !< L_T
@@ -977,13 +964,14 @@ contains
     real(RP) :: sw
     integer :: k, i, j
 
-    do j = JJS, JJE
-    do i = IIS, IIE
+    do j = JS, JE
+    do i = IS, IE
        int_qz = 0.0_RP
        int_q = 0.0_RP
        do k = KS, KE_PBL
-          q = sqrt(tke(k,i,j) * 2.0_RP)
-          qdz =  q * CDZ(k) * GSQRT(k,i,j)
+          sw = sign(0.5_RP, tke(k,i,j)-EPS) + 0.5_RP
+          q = sqrt(tke(k,i,j) * 2.0_RP)*sw + 1.E-10_RP*(1.0_RP-sw)
+          qdz = q * ( FZ(k,i,j) - FZ(k-1,i,j) )
           int_qz = int_qz + ((FZ(k,i,j)+FZ(k-1,i,j))*0.5_RP-FZ(KS-1,i,j)) * qdz
           int_q  = int_q + qdz
        end do
@@ -1004,13 +992,13 @@ contains
           ! LS
           sw = sign(0.5_RP, zeta) + 0.5_RP ! 1 for zeta >= 0, 0 for zeta < 0
           ls = KARMAN * z &
-             * ( 1.0_RP / (1.0_RP + 2.7_RP*min(zeta,1.0_RP)*sw ) * sw &
-               + ((1.0_RP - 100.0_RP*zeta)*(1.0_RP-sw))**0.2_RP )
+             * ( sw / (1.0_RP + 2.7_RP*min(zeta,1.0_RP)*sw ) &
+               + ( (1.0_RP - 100.0_RP*zeta)*(1.0_RP-sw) )**0.2_RP )
 
           ! LB
           sw = sign(0.5_RP, tke(k,i,j)-EPS) + 0.5_RP
           q = sqrt(tke(k,i,j) * 2.0_RP)*sw + 1.E-10_RP*(1.0_RP-sw)
-          sw  = sign(0.5_RP, n2(k,i,j)-EPS) + 0.5_RP ! 1 for dptdz >0, 0 for dptdz < 0
+          sw  = sign(0.5_RP, n2(k,i,j)) + 0.5_RP ! 1 for dptdz >0, 0 for dptdz < 0
           rn2sr = 1.0_RP / ( sqrt(n2(k,i,j)*sw) + 1.0_RP-sw)
           lb = (1.0_RP + 5.0_RP * sqrt(qc*rn2sr/lt)) * q * rn2sr * sw & ! qc=0 when SFLX_PT < 0
              +  999.E10_RP * (1.0_RP-sw)
@@ -1026,8 +1014,7 @@ contains
 
   subroutine get_q2_level2( &
        q2_2, &
-       dudz2, Ri, l, &
-       IIS, IIE, JJS, JJE)
+       dudz2, Ri, l )
     use scale_const, only: &
        EPS    => CONST_EPS
     implicit none
@@ -1035,10 +1022,6 @@ contains
     real(RP), intent(in)  :: dudz2(KA,IA,JA)
     real(RP), intent(in)  :: Ri(KA,IA,JA)
     real(RP), intent(in)  :: l(KA,IA,JA)
-    integer,  intent(in)  :: IIS
-    integer,  intent(in)  :: IIE
-    integer,  intent(in)  :: JJS
-    integer,  intent(in)  :: JJE
 
     real(RP) :: rf           !< Rf
     real(RP) :: sm_2         !< sm for level 2
@@ -1048,8 +1031,8 @@ contains
     real(RP) :: sw
     integer :: k, i, j
 
-    do j = JJS, JJE
-    do i = IIS, IIE
+    do j = JS, JE
+    do i = IS, IE
     do k = KS, KE_PBL
        rf = min(0.5_RP / AF12 * ( Ri(k,i,j) &
                               + AF12*Rf1 &
@@ -1066,5 +1049,72 @@ contains
 
     return
   end subroutine get_q2_level2
+
+  subroutine get_smsh( &
+         sm, sh, & ! (out)
+         q, q2_2, & ! (in)
+         l, n2, dudz2 ) ! (in)
+    implicit none
+    real(RP), intent(out) :: sm(KA,IA,JA)
+    real(RP), intent(out) :: sh(KA,IA,JA)
+    real(RP), intent(in)  :: q(KA,IA,JA)
+    real(RP), intent(in)  :: q2_2(KA,IA,JA)
+    real(RP), intent(in)  :: l(KA,IA,JA)
+    real(RP), intent(in)  :: n2(KA,IA,JA)
+    real(RP), intent(in)  :: dudz2(KA,IA,JA)
+
+    real(RP) :: l2q2         !< L^2/q^2
+    real(RP) :: ac          !< \alpha_c
+    real(RP) :: ac2          !< \alpha_c^2
+    real(RP) :: p1           !< \Phi_1
+    real(RP) :: p2           !< \Phi_2
+    real(RP) :: p3           !< \Phi_3
+    real(RP) :: p4           !< \Phi_4
+    real(RP) :: p5           !< \Phi_5
+    real(RP) :: rd25         !< 1/D_2.5
+    real(RP) :: gh           !< G_H
+
+    integer :: k, i, j
+
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE_PBL
+
+       ! level 2.5
+       ac = min(q(k,i,j)/sqrt(q2_2(k,i,j)), 1.0_RP)
+       ac2 = ac**2
+       l2q2 = ( l(k,i,j) / q(k,i,j) )**2
+       gh = - n2(k,i,j) * l2q2
+
+       p1 = 1.0_RP - 3.0_RP * ac2 * A2 * B2 * (1.0_RP-C3) * gh
+       p2 = 1.0_RP - 9.0_RP * ac2 * A1 * A2 * (1.0_RP-C2) * gh
+       p3 = p1 + 9.0_RP * ac2 * A2**2 * (1.0_RP-C2) * (1.0_RP-C5) * gh
+       p4 = p1 - 12.0_RP * ac2 * A1 * A2 * (1.0_RP-C2) * gh
+       p5 = 6.0_RP * ac2 * A1**2 * dudz2(k,i,j) * l2q2
+
+       rd25 = 1.0_RP / max(p2 * p4 + p5 * p3, 1.E-20_RP)
+       sm(k,i,j) = ac * A1 * (p3 - 3.0_RP * C1 * p4) * rd25
+       sh(k,i,j) = ac * A2 * (p2 + 3.0_RP * C1 * p5) * rd25
+    end do
+    end do
+    end do
+
+    return
+  end subroutine get_smsh
+
+  function erf(x)
+    real(RP), parameter :: a = 0.1400122886866665_RP     ! -8(pi-3)/(3pi(pi-4))
+    real(RP), parameter :: fourpi = 1.2732395447351628_RP ! 4/pi
+
+    real(RP), intent(in) :: x
+    real(RP) :: erf
+
+    real(RP) :: x2
+
+    x2 = x**2
+    erf = sign( sqrt( 1.0_RP - exp(-x2 * (fourpi+a*x2)/(1.0_RP+a*x2) ) ), x )
+
+    return
+  end function erf
 
 end module scale_atmos_phy_tb_mynn
