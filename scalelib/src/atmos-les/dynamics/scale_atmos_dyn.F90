@@ -331,7 +331,9 @@ contains
        I_XYW, &
        I_UYZ, &
        I_XVZ, &
-       I_XY
+       I_XY,  &
+       I_UY,  &
+       I_XV
 #ifdef CHECK_MASS
     use scale_grid_real, only: &
        vol => REAL_VOL

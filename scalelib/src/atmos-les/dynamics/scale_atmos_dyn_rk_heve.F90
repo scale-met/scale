@@ -157,7 +157,8 @@ contains
        I_UVZ, &
        I_XY,  &
        I_UY,  &
-       I_XV
+       I_XV,  &
+       I_UV
 #ifdef HIST_TEND
     use scale_history, only: &
        HIST_in
@@ -1903,7 +1904,7 @@ contains
                          - J23G(k-1,i,j,I_XVW) &
                          * 0.25_RP * ( DPRES(k,i,j+1)+DPRES(k-1,i,j+1) &
                                      + DPRES(k,i,j  )+DPRES(k-1,i,j  ) ) & ! [x,y,z->x,v,w]
-                         ) * RCDZ(k) &
+                         ) * RCDZ(k) ) &
                       * MAPF(i,j,2,I_XV)
        enddo
        enddo
@@ -1998,7 +1999,7 @@ contains
              call CHECK( __LINE__, VELY(k+1,i,j) )
              call CHECK( __LINE__, VELY(k  ,i,j) )
 #endif
-             qflx_lo(k,i,j,ZDIR) = 0.25_RP * (    ( VELZ(k,i,j+1)+VELZ(k,i,j) ) * ( MOMY(k+1,i,j)+MONY(k,i,j) ) &
+             qflx_lo(k,i,j,ZDIR) = 0.25_RP * (    ( VELZ(k,i,j+1)+VELZ(k,i,j) ) * ( MOMY(k+1,i,j)+MOMY(k,i,j) ) &
                                              - abs( VELZ(k,i,j+1)+VELZ(k,i,j) ) * ( MOMY(k+1,i,j)-MOMY(k,i,j) ) ) &
                                  / ( MAPF(i,j,1,I_XV) * MAPF(i,j,2,I_XV) )
           enddo
