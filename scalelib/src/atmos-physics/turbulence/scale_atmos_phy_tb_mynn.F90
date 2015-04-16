@@ -81,8 +81,10 @@ module scale_atmos_phy_tb_mynn
 
   integer :: KE_PBL
   logical :: ATMOS_PHY_TB_MYNN_TKE_INIT = .false. !< set tke with that of level 2 at the first time if .true.
-  real(RP) :: ATMOS_PHY_TB_MYNN_NU_MIN = 0.1_RP
-  real(RP) :: ATMOS_PHY_TB_MYNN_KH_MIN = 0.1_RP
+  real(RP) :: ATMOS_PHY_TB_MYNN_NU_MIN = 1.E-6_RP
+  real(RP) :: ATMOS_PHY_TB_MYNN_NU_MAX = 10000_RP
+  real(RP) :: ATMOS_PHY_TB_MYNN_KH_MIN = 1.E-6_RP
+  real(RP) :: ATMOS_PHY_TB_MYNN_KH_MAX = 10000_RP
 
   !-----------------------------------------------------------------------------
 contains
@@ -108,7 +110,9 @@ contains
          ATMOS_PHY_TB_MYNN_TKE_INIT, &
          ATMOS_PHY_TB_MYNN_KMAX_PBL, &
          ATMOS_PHY_TB_MYNN_NU_MIN, &
-         ATMOS_PHY_TB_MYNN_KH_MIN
+         ATMOS_PHY_TB_MYNN_NU_MAX, &
+         ATMOS_PHY_TB_MYNN_KH_MIN, &
+         ATMOS_PHY_TB_MYNN_KH_MAX
 
     integer :: ierr
     !---------------------------------------------------------------------------
@@ -253,6 +257,7 @@ contains
     real(RP) :: q(KA,IA,JA) !< q
     real(RP) :: dudz2(KA,IA,JA) !< (dudz)^2 + (dvdz)^2
     real(RP) :: q2_2(KA,IA,JA)  !< q^2 for level 2
+    real(RP) :: kh           !< eddy diffusion coefficient
 
     real(RP) :: SFLX_PT(IA,JA) ! surface potential temperature flux
 
@@ -539,8 +544,9 @@ contains
           Nu(k,i,j) = 0.0_RP
        end do
        do k = KS, KE_PBL
-          Nu(k,i,j) = max( l(k,i,j) * q(k,i,j) * sm(k,i,j), &
-                      ATMOS_PHY_TB_MYNN_NU_MIN )
+          Nu(k,i,j) = max( min( l(k,i,j) * q(k,i,j) * sm(k,i,j), &
+                           ATMOS_PHY_TB_MYNN_NU_MAX ), &
+                           ATMOS_PHY_TB_MYNN_NU_MIN )
        end do
        do k = KE_PBL+1, KA
           Nu(k,i,j) = 0.0_RP
@@ -551,12 +557,10 @@ contains
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE_PBL
-       sw = 0.5_RP - sign(0.5_RP, sh(k,i,j)-EPS)
-       Pr(k,i,j) = sm(k,i,j) / (sh(k,i,j)+sw) * (1.0_RP-sw) &
-                 + 1.0_RP * sw
-       if ( Nu(k,i,j)/Pr(k,i,j) < ATMOS_PHY_TB_MYNN_KH_MIN ) then
-          Pr(k,i,j) = Nu(k,i,j) / ATMOS_PHY_TB_MYNN_KH_MIN
-       end if
+       kh = max( min( l(k,i,j) * q(k,i,j) * sh(k,i,j), &
+                 ATMOS_PHY_TB_MYNN_KH_MAX ), &
+                 ATMOS_PHY_TB_MYNN_KH_MIN )
+       Pr(k,i,j) = Nu(k,i,j) / kh
     end do
     end do
     end do
