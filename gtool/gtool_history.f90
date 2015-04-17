@@ -134,6 +134,7 @@ module gtool_history
   character(len=File_HMID)   :: HISTORY_TIME_SINCE
 
   logical                    :: HISTORY_OUTPUT_STEP0  = .false. !> output value of step=0?
+  real(DP)                   :: HISTORY_OUTPUT_START  = 0.0_DP  !> start time for output in second
   logical                    :: HISTORY_ERROR_PUTMISS = .false. !> Abort if the value is never stored after last output?
 
   integer, parameter         :: History_req_limit = 1000 !> number limit for history item request
@@ -154,6 +155,7 @@ module gtool_history
   logical,                    allocatable :: History_zinterp(:)
   real(DP),                   allocatable :: History_varsum (:,:)
   integer,                    allocatable :: History_size   (:)
+  real(DP),                   allocatable :: History_tstart (:)
   real(DP),                   allocatable :: History_tstrsec(:)
   real(DP),                   allocatable :: History_tlstsec(:)
   real(DP),                   allocatable :: History_tsumsec(:)
@@ -233,6 +235,7 @@ contains
          HISTORY_DEFAULT_ZINTERP,   &
          HISTORY_DEFAULT_DATATYPE,  &
          HISTORY_OUTPUT_STEP0,      &
+         HISTORY_OUTPUT_START,      &
          HISTORY_ERROR_PUTMISS
 
     character(len=File_HLONG)  :: BASENAME  !> file base name
@@ -357,6 +360,7 @@ contains
 
     allocate( History_varsum (array_size,History_req_nmax) )
     allocate( History_size   (History_req_nmax) )
+    allocate( History_tstart (History_req_nmax) )
     allocate( History_tstrsec(History_req_nmax) )
     allocate( History_tlstsec(History_req_nmax) )
     allocate( History_tsumsec(History_req_nmax) )
@@ -550,6 +554,7 @@ contains
              History_zinterp (id) = History_req_zinterp(reqid)
 
              History_varsum(:,id) = 0.D0
+
              if ( HISTORY_OUTPUT_STEP0 ) then
                 History_tstrsec(id) = -History_tintsec(id)
              else
@@ -557,6 +562,11 @@ contains
              endif
              if ( History_tavg(id) ) then
                 History_tstrsec(id) = time_start
+             end if
+             if ( History_output_start > 0.0_DP ) then
+                History_tstart(id) = time_start + History_output_start
+             else
+                History_tstart(id) = History_tstrsec(id)
              end if
              History_tlstsec (id) = History_tstrsec(id)
              History_tsumsec (id) = 0.D0
@@ -1744,10 +1754,15 @@ contains
     call CalendarSec2ymdhms( time_str, time_str, HISTORY_TIME_UNITS )
     call CalendarSec2ymdhms( time_end, time_end, HISTORY_TIME_UNITS )
 
-    call FileWrite( History_vid   (itemid),         & ! id
-                    History_varsum(1:isize,itemid), & ! data
-                    time_str,                       & ! start time
-                    time_end                        ) ! end   time
+    if ( time_end .ge.  History_tstart(itemid) ) then
+       call FileWrite( History_vid   (itemid),         & ! id
+                       History_varsum(1:isize,itemid), & ! data
+                       time_str,                       & ! start time
+                       time_end                        ) ! end   time
+    else
+       write(message,*) 'History output suppressed', time_end, History_tstart(itemid)
+       call Log('W', message)
+    end if
 
     History_varsum(:,itemid) = 0.0_DP
     History_tstrsec (itemid) = time_now
