@@ -3123,6 +3123,8 @@ contains
        qsat => ATMOS_SATURATION_pres2qsat_all
     use scale_gridtrans, only: &
        rotc => GTRANS_ROTC
+    use scale_topography, only: &
+       topo => TOPO_Zsfc
     use scale_interpolation_nest, only: &
        INTRPNEST_interp_fact_llz,  &
        INTRPNEST_interp_2d,        &
@@ -3173,10 +3175,10 @@ contains
         fendian       ! option
 
     !> grads data
-    integer,  parameter   :: num_item_list = 15
+    integer,  parameter   :: num_item_list = 16
     logical               :: data_available(num_item_list)
     character(H_SHORT)    :: item_list     (num_item_list)
-    data item_list /'lon','lat','plev','U','V','T','HGT','QV','RH','PSFC','U10','V10','T2','Q2','RH2'/
+    data item_list /'lon','lat','plev','U','V','T','HGT','QV','RH','MSLP','PSFC','U10','V10','T2','Q2','RH2'/
 
     integer,  parameter   :: Ig_lon    = 1
     integer,  parameter   :: Ig_lat    = 2
@@ -3184,15 +3186,16 @@ contains
     integer,  parameter   :: Ig_u      = 4
     integer,  parameter   :: Ig_v      = 5
     integer,  parameter   :: Ig_t      = 6
-    integer,  parameter   :: Ig_hgt    = 7  ! geopotential height (m2/s2)
+    integer,  parameter   :: Ig_hgt    = 7  ! geopotential height (m)
     integer,  parameter   :: Ig_qv     = 8
     integer,  parameter   :: Ig_rh     = 9
-    integer,  parameter   :: Ig_ps     = 10
-    integer,  parameter   :: Ig_u10    = 11
-    integer,  parameter   :: Ig_v10    = 12
-    integer,  parameter   :: Ig_t2     = 13
-    integer,  parameter   :: Ig_q2     = 14
-    integer,  parameter   :: Ig_rh2    = 15
+    integer,  parameter   :: Ig_slp    = 10
+    integer,  parameter   :: Ig_ps     = 11
+    integer,  parameter   :: Ig_u10    = 12
+    integer,  parameter   :: Ig_v10    = 13
+    integer,  parameter   :: Ig_t2     = 14
+    integer,  parameter   :: Ig_q2     = 15
+    integer,  parameter   :: Ig_rh2    = 16
 
     character(H_SHORT)    :: grads_item    (num_item_list)
     character(H_SHORT)    :: grads_kytpe   (num_item_list)
@@ -3218,6 +3221,7 @@ contains
     real(RP), allocatable :: lon_org (:,:,:)
     real(RP), allocatable :: lat_org (:,:,:)
 
+    real(RP), allocatable :: mslp_org (:,:,:)
     real(RP), allocatable :: psfc_org (:,:,:)
     real(RP), allocatable :: usfc_org (:,:,:)
     real(RP), allocatable :: vsfc_org (:,:,:)
@@ -3248,6 +3252,7 @@ contains
     real(RP) :: work  (KA,IA,JA,sstep:estep)
 
     real(RP) :: pott_sfc(1,IA,JA,sstep:estep)
+    real(RP) :: mslp_sfc(1,IA,JA,sstep:estep)
     real(RP) :: pres_sfc(1,IA,JA,sstep:estep)
     real(RP) :: temp_sfc(1,IA,JA,sstep:estep)
     real(RP) :: qtrc_sfc(1,IA,JA,sstep:estep,QA)
@@ -3264,6 +3269,7 @@ contains
 
     real(RP) :: sw
     real(RP) :: wgt_up, wgt_bt
+    real(RP) :: z1,z2,pres1,pres2
 
     integer  :: fstep = 1  ! fixed target step
     integer  :: bottom, upper
@@ -3300,6 +3306,7 @@ contains
     allocate( lat_org   (          dims(1), dims(2), fstep ) )
     allocate( pres_org  ( dims(3), dims(1), dims(2), fstep ) )
 
+    allocate( mslp_org  (          dims(1), dims(2),    nt ) )
     allocate( psfc_org  (          dims(1), dims(2),    nt ) )
     allocate( tsfc_org  (          dims(1), dims(2),    nt ) )
     allocate( usfc_org  (          dims(1), dims(2),    nt ) )
@@ -3324,6 +3331,7 @@ contains
        lon_org    = large_number_one
        lat_org    = large_number_one
        pres_org   = large_number_one
+       mslp_org   = large_number_one
        psfc_org   = large_number_one
        usfc_org   = large_number_one
        vsfc_org   = large_number_one
@@ -3683,6 +3691,17 @@ contains
                 enddo
                 enddo
              endif
+          case('MSLP')
+             if ( trim(dtype) == "map" ) then
+                call read_grads_file_2d(io_fid_grads_data,gfile,dims(1),dims(2),1,nt,item,startrec,totalrec,gdata2D)
+                do it = 1, nt
+                do j = 1, dims(2)
+                do i = 1, dims(1)
+                   mslp_org(i,j,it) = real(gdata2D(i,j,it), kind=RP)
+                enddo
+                enddo
+                enddo
+             endif
           case('PSFC')
              if ( trim(dtype) == "map" ) then
                 call read_grads_file_2d(io_fid_grads_data,gfile,dims(1),dims(2),1,nt,item,startrec,totalrec,gdata2D)
@@ -3789,6 +3808,7 @@ contains
        call COMM_bcast( usfc_org(:,:,:),               dims(1), dims(2),    nt )
        call COMM_bcast( vsfc_org(:,:,:),               dims(1), dims(2),    nt )
        call COMM_bcast( tsfc_org(:,:,:),               dims(1), dims(2),    nt )
+       call COMM_bcast( mslp_org(:,:,:),               dims(1), dims(2),    nt )
        call COMM_bcast( psfc_org(:,:,:),               dims(1), dims(2),    nt )
        call COMM_bcast( velx_org(:,:,:,:),    dims(3), dims(1), dims(2),    nt )
        call COMM_bcast( vely_org(:,:,:,:),    dims(3), dims(1), dims(2),    nt )
@@ -3843,6 +3863,12 @@ contains
                                  jgrd    (:,:,:),     &
                                  IA, JA, KS-1, KE+1   )
 
+       call INTRPNEST_interp_2d( mslp_sfc(1,:,:,it), &
+                                 mslp_org(  :,:,it), &
+                                 hfact   (:,:,:),    &
+                                 igrd    (:,:,:),    &
+                                 jgrd    (:,:,:),    &
+                                 IA, JA              )
        call INTRPNEST_interp_2d( pres_sfc(1,:,:,it), &
                                  psfc_org(  :,:,it), &
                                  hfact   (:,:,:),    &
@@ -3914,6 +3940,37 @@ contains
        end do
        end do
        end do
+
+       ! Estimate surface pressure from SLP and PRES
+       do j = 1, JA
+       do i = 1, IA
+          lack_of_val = .true.
+          do k = KS-1, KE
+             if(k == KS-1)then
+               z1=0.0_RP
+               z2=CZ(k+1,i,j)
+               pres1=mslp_sfc(1,i,j,it)
+               pres2=pres(k+1,i,j,it)
+             else
+               z1=CZ(k,i,j)
+               z2=CZ(k+1,i,j)
+               pres1=pres(k,i,j,it)
+               pres2=pres(k+1,i,j,it)
+             endif
+             if((topo(i,j)>=z1).and.(topo(i,j)<z2))then
+                lack_of_val = .false.                  ! found
+                wgt_bt = (z2        - topo(i,j)) / (z2 - z1)
+                wgt_up = (topo(i,j) - z1       ) / (z2 - z1)
+                pres_sfc(1,i,j,it) = exp( log(pres1)*wgt_bt + log(pres2)*wgt_up )
+                exit ! exit loop
+             endif
+          enddo
+          if( lack_of_val )then
+             write(IO_FID_LOG,*) 'realinput atom NICAM : cannot estimate pres_sfc',i,j,n
+             call PRC_MPIstop
+          endif
+       enddo
+       enddo
 
 #ifdef DRY
        qc     = 0.0_RP
@@ -4054,6 +4111,7 @@ contains
     deallocate( lon_org   )
     deallocate( lat_org   )
     deallocate( pres_org  )
+    deallocate( mslp_org  )
     deallocate( psfc_org  )
     deallocate( tsfc_org  )
     deallocate( usfc_org  )
