@@ -263,6 +263,9 @@ contains
     RHOT_tp(:,:,:)   = 0.0_RP
     RHOQ_tp(:,:,:,:) = 0.0_RP
 
+    !########## Calculate diagnostic variables ##########
+    call ATMOS_vars_diagnostics
+
     !########## Microphysics ##########
     if ( ATMOS_sw_phy_mp ) then
        call PROF_rapstart('ATM Microphysics', 1)
@@ -311,9 +314,6 @@ contains
        call ATMOS_PHY_CP_driver( update_flag = do_phy_cp )
        call PROF_rapend  ('ATM Cumulus', 1)
     endif
-
-    !########## Calculate diagnostic variables ##########
-    call ATMOS_vars_diagnostics
 
     !########## Set Surface Boundary Condition ##########
     call ATMOS_SURFACE_SET( countup =.true. )
