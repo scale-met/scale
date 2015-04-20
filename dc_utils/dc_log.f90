@@ -44,7 +44,7 @@ module dc_log
   !
   !++ Public parameters & variables
   !
-  integer, public, parameter :: LOG_LMSG = 1024
+  integer, public, parameter :: LOG_LMSG = 4096
   integer, public            :: LOG_fid  = STDOUT
 
   !-----------------------------------------------------------------------------
