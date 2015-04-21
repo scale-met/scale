@@ -1,15 +1,11 @@
 #!/bin/sh
 #-----------------------------------------
-#   Test Script for XXX  (Ver.0.1)
-#   2009/10/26 --- Ryuji Yoshida.
-#   2014/07/08 --- Tsuyoshi Yamaura
+#   Sample Script for GSM file
 #-----------------------------------------
-dir=${SCALE_DB}'/GrADS_output/GSM_output'
-gpre=GANALjp
-opre=GSMjp
-#dir=${SCALE_DB}'/GrADS_output/FNL4GSM_output'
-#gpre=FNL4GANALjp
-#opre=FNL
+
+rm -f ./*_?????.grd
+
+for BND in GSM FNL ; do
 #
 dt=21600
 #
@@ -32,9 +28,20 @@ end_min='00'
 end_sec='00'
 #
 #-----------------------------------------
+case ${BND} in
+GSM)
+ dir=${SCALE_DB}'/GrADS_output/GSM_output'
+ gpre=GANALjp
+ opre=GSMjp
+ ;;
+FNL)
+ dir=${SCALE_DB}'/GrADS_output/FNL4GSM_output'
+ gpre=FNL4GANALjp
+ opre=FNL
+ ;;
+esac
 #
 fn=0
-rm -f ./*_?????.nc
 
 start_unix_sec=`date -u -d "${start_year}-${start_month}-${start_day} ${start_hour}:${start_min}:${start_sec}" +%s`
 end_unix_sec=`date -u -d "${end_year}-${end_month}-${end_day} ${end_hour}:${end_min}:${end_sec}" +%s`
@@ -58,3 +65,5 @@ do
   fn=`expr ${fn} \+ 1`
   unix_sec=`expr ${unix_sec} \+ ${dt}`
 done
+
+done # BND

@@ -22,7 +22,7 @@ PPNAME      = NONE
 INITNAME    = scale-les_init
 BINNAME     = NONE
 PPCONF      = NONE
-INITCONF    = init.conf
+INITCONF    = init.L35.conf
 RUNCONF     = NONE
 TPROC       = 16
 
@@ -38,4 +38,5 @@ include $(TESTDIR)/Makefile.common
 
 # special execute
 run: jobshell
+	$(JOBSUB) gradsinput-link.sh
 	$(JOBSUB) run.sh
