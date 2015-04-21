@@ -1214,7 +1214,7 @@ contains
        vtype = vt_land
     case ( "height" )
        vtype = vt_height
-    case ( "topo", "lsmask" )
+    case ( "topo", "lsmask", "lon", "lat" )
        vtype = vt_tpmsk
        Z_MERGE_OUT = .false.
     case default
