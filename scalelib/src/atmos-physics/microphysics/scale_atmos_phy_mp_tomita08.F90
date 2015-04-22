@@ -762,6 +762,8 @@ contains
     call ATMOS_THERMODYN_templhf( LHFEx, TEMP0 )
     call ATMOS_THERMODYN_templhs( LHSEx, TEMP0 )
 
+!OCL TEMP_PRIVATE(coef_bt, coef_at, q)
+!OCL NORECURRENCE(w)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -1121,6 +1123,7 @@ contains
 !    if( IO_L ) write(IO_FID_LOG,*) "ijk_warm/cold:", ijk_warm, ijk_cold
 
     !---< Solve tendencies (Warm Rain) >---
+!OCL NORECURRENCE(w)
     do indirect = 1, ijk_warm
        ijk = index_warm(indirect)
 
@@ -1194,6 +1197,7 @@ contains
 
 
 
+!OCL NORECURRENCE(w,tend)
     do indirect = 1, ijk_warm
        ijk = index_warm(indirect)
 
@@ -1231,6 +1235,7 @@ contains
     enddo
 
     !---< Solve tendencies (Cold Rain) >---
+!OCL NORECURRENCE(w)
     do indirect = 1, ijk_cold
        ijk = index_cold(indirect)
 
@@ -1385,6 +1390,7 @@ contains
 
 
 
+!OCL NORECURRENCE(w,tend)
     do indirect = 1, ijk_cold
        ijk = index_cold(indirect)
 
@@ -1451,6 +1457,7 @@ contains
     enddo
 
     ! mass & energy update
+!OCL NORECURRENCE(tend)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -1490,6 +1497,7 @@ contains
                            do_put        ) ! [OUT]
 
           if ( do_put ) then
+!OCL NORECURRENCE(w)
              do j = JS, JE
              do i = IS, IE
              do k = KS, KE
