@@ -3233,6 +3233,7 @@ contains
     real(RP), allocatable :: velx_org (:,:,:,:)
     real(RP), allocatable :: vely_org (:,:,:,:)
     real(RP), allocatable :: temp_org (:,:,:,:)
+    real(RP), allocatable :: pott_org (:,:,:,:)  ! calculated in this program
     real(RP), allocatable :: hgt_org  (:,:,:,:)
     real(RP), allocatable :: qtrc_org (:,:,:,:,:)
     real(RP), allocatable :: rhprs_org(:,:,:,:)
@@ -3317,6 +3318,7 @@ contains
     allocate( velx_org  ( dims(3), dims(1), dims(2),    nt ) )
     allocate( vely_org  ( dims(3), dims(1), dims(2),    nt ) )
     allocate( temp_org  ( dims(3), dims(1), dims(2),    nt ) )
+    allocate( pott_org  ( dims(3), dims(1), dims(2),    nt ) )
     allocate( hgt_org   ( dims(3), dims(1), dims(2),    nt ) )
     allocate( qtrc_org  ( dims(3), dims(1), dims(2),    nt, QA_outer) )
     allocate( rhprs_org ( dims(3), dims(1), dims(2),    nt) )
@@ -3341,6 +3343,7 @@ contains
        velx_org   = large_number_one
        vely_org   = large_number_one
        temp_org   = large_number_one
+       pott_org   = large_number_one
        hgt_org    = large_number_one
        qtrc_org   = large_number_one
        rhprs_org  = large_number_one
@@ -3800,6 +3803,20 @@ contains
        !   write(*,*) "rhprs_org  ",rhprs_org (k,i,j,it)
        !enddo
 
+       ! calculated potential temp from T and pres
+       do it = 1, nt
+       do j = 1, dims(2)
+       do i = 1, dims(1)
+       do k = 1, dims(3)
+          call THERMODYN_pott( pott_org(k,i,j,it),  & ! [OUT]
+                               temp_org(k,i,j,it),  & ! [IN]
+                               pres_org(k,i,j,it),  & ! [IN]
+                               qtrc_org(k,i,j,it,:) ) ! [IN]
+       end do
+       end do
+       end do
+       end do
+
    endif  ! do_read
 
        call COMM_bcast( lon_org (:,:,:),               dims(1), dims(2), fstep )
@@ -3813,6 +3830,7 @@ contains
        call COMM_bcast( velx_org(:,:,:,:),    dims(3), dims(1), dims(2),    nt )
        call COMM_bcast( vely_org(:,:,:,:),    dims(3), dims(1), dims(2),    nt )
        call COMM_bcast( temp_org(:,:,:,:),    dims(3), dims(1), dims(2),    nt )
+       call COMM_bcast( pott_org(:,:,:,:),    dims(3), dims(1), dims(2),    nt )
        call COMM_bcast( hgt_org (:,:,:,:),    dims(3), dims(1), dims(2),    nt )
       do iq = 1, QA_outer
        call COMM_bcast( qsfc_org(:,:,:,iq),            dims(1), dims(2),    nt )
@@ -3929,17 +3947,25 @@ contains
                                  igrd    (:,:,:),      &
                                  jgrd    (:,:,:),      &
                                  IA, JA, KS-1, KE+1    )
+       call INTRPNEST_interp_3d( pott    (:,:,:,it),   &
+                                 pott_org(:,:,:,it),   &
+                                 hfact   (:,:,:),      &
+                                 vfact   (:,:,:,:,:),  &
+                                 kgrd    (:,:,:,:,:),  &
+                                 igrd    (:,:,:),      &
+                                 jgrd    (:,:,:),      &
+                                 IA, JA, KS-1, KE+1    )
 
-       do j = 1, JA
-       do i = 1, IA
-       do k = KS-1, KE+1
-          call THERMODYN_pott( pott(k,i,j,it),  & ! [OUT]
-                               temp(k,i,j,it),  & ! [IN]
-                               pres(k,i,j,it),  & ! [IN]
-                               qtrc(k,i,j,it,:) ) ! [IN]
-       end do
-       end do
-       end do
+       !do j = 1, JA
+       !do i = 1, IA
+       !do k = KS-1, KE+1
+       !   call THERMODYN_pott( pott(k,i,j,it),  & ! [OUT]
+       !                        temp(k,i,j,it),  & ! [IN]
+       !                        pres(k,i,j,it),  & ! [IN]
+       !                        qtrc(k,i,j,it,:) ) ! [IN]
+       !end do
+       !end do
+       !end do
 
        ! Estimate surface pressure from SLP and PRES
        do j = 1, JA
@@ -4121,6 +4147,7 @@ contains
     deallocate( velx_org  )
     deallocate( vely_org  )
     deallocate( temp_org  )
+    deallocate( pott_org  )
     deallocate( hgt_org   )
     deallocate( qtrc_org  )
     deallocate( rhprs_org )
