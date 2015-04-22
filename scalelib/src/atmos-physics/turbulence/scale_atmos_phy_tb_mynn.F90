@@ -273,14 +273,15 @@ contains
     real(RP) :: q(KA,IA,JA) !< q
     real(RP) :: dudz2(KA,IA,JA) !< (dudz)^2 + (dvdz)^2
     real(RP) :: q2_2(KA,IA,JA)  !< q^2 for level 2
-    real(RP) :: kh           !< eddy diffusion coefficient
+    real(RP) :: Kh              !< eddy diffusion coefficient
+    real(RP) :: RHOKh (KA,IA,JA)!< mass-weighted eddy diffusion coefficient
 
     real(RP) :: SFLX_PT(IA,JA) ! surface potential temperature flux
 
     real(RP) :: a(KA,IA,JA)
     real(RP) :: b(KA,IA,JA)
     real(RP) :: c(KA,IA,JA)
-    real(RP) :: d(KA)
+    real(RP) :: d(KA,IA,JA)
     real(RP) :: ap
     real(RP) :: tke_N(KE_PBL,IA,JA)
 
@@ -297,14 +298,14 @@ contains
     real(RP) :: pres(KA,IA,JA) !< pressure
 
     real(RP) :: lh(KA,IA,JA)
-    real(RP) :: lhv
-    real(RP) :: lhs
-    real(RP) :: alpha
+    real(RP) :: lhv(KA,IA,JA)
+    real(RP) :: lhs(KA,IA,JA)
+    real(RP) :: alpha(KA,IA,JA)
 
     real(RP) :: ac           !< \alpha_c
     
     real(RP) :: Q1
-    real(RP) :: Qsl
+    real(RP) :: Qsl(KA,IA,JA)
     real(RP) :: dQsl
     real(RP) :: sigma_s
     real(RP) :: RR
@@ -459,8 +460,13 @@ contains
     call ATMOS_THERMODYN_temp_pres( temp, pres, & ! (out)
                                     DENS, RHOT, QTRC ) ! (in)
 
-    do j = JS, JE+1
-    do i = IS, IE+1
+
+    call ATMOS_THERMODYN_templhv( lhv, temp )
+    call ATMOS_THERMODYN_templhs( lhs, temp )
+    call ATMOS_SATURATION_alpha( alpha, temp )
+
+    do j = JS, JE
+    do i = IS, IE
        do k = KS, KE_PBL+1
           ql = 0.0_RP
           do iq = QWS, QWE
@@ -477,14 +483,11 @@ contains
 
           Qw(k,i,j) = QTRC(k,i,j,I_QV) + ql + qs
 
-          call ATMOS_THERMODYN_templhv( lhv, temp(k,i,j) )
-          call ATMOS_THERMODYN_templhs( lhs, temp(k,i,j) )
-          call ATMOS_SATURATION_alpha( alpha, temp(k,i,j) )
-          lh(k,i,j) = lhv * alpha + lhs * ( 1.0_RP-alpha )
+          lh(k,i,j) = lhv(k,i,j) * alpha(k,i,j) + lhs(k,i,j) * ( 1.0_RP-alpha(k,i,j) )
 
           POTT(k,i,j) = RHOT(k,i,j) / DENS(k,i,j)
           ! liquid water potential temperature
-          POTL(k,i,j) = POTT(k,i,j) * (1.0_RP - 1.0_RP * (lhv * ql + lhs * qs) / ( temp(k,i,j) * CP ) )
+          POTL(k,i,j) = POTT(k,i,j) * (1.0_RP - 1.0_RP * (lhv(k,i,j) * ql + lhs(k,i,j) * qs) / ( temp(k,i,j) * CP ) )
 
           ! virtual potential temperature for derivertive
 !          POTV(k,i,j) = ( 1.0_RP + EPSTvap * Qw(k,i,j) ) * POTL(k,i,j)
@@ -572,14 +575,14 @@ contains
                    q, q2_2, & ! (in)
                    l, n2, dudz2 ) ! (in)
 
+    call ATMOS_SATURATION_pres2qsat( Qsl, & ! (out)
+                                     POTL * temp / POTT, pres ) ! (in)
+
     do j = JS, JE 
     do i = IS, IE
        do k = KS+1, KE_PBL
 
-          call ATMOS_SATURATION_pres2qsat( Qsl, & ! (out)
-               POTL(k,i,j) * temp(k,i,j) / POTT(k,i,j), pres(k,i,j) ) ! (in)
-
-          dQsl = Qsl * lh(k,i,j) / ( Rvap * POTL(k,i,j)**2 )
+          dQsl = Qsl(k,i,j) * lh(k,i,j) / ( Rvap * POTL(k,i,j)**2 )
           aa = 1.0_RP / ( 1.0_RP + lh(k,i,j)/CP * dQsl )
           bb = TEMP(k,i,j) / POTT(k,i,j) * dQsl
           ac = min( q(k,i,j)/sqrt(q2_2(k,i,j)), 1.0_RP )
@@ -587,7 +590,7 @@ contains
                        * abs( Qw(k+1,i,j) - Qw(k-1,i,j) - bb * ( POTL(k+1,i,j)-POTL(k-1,i,j) ) ) &
                        / ( CZ(k+1,i,j) - CZ(k-1,i,j) ), &
                        1e-10_RP )
-          Q1 = aa * ( Qw(k,i,j) - Qsl ) * 0.5_RP / sigma_s
+          Q1 = aa * ( Qw(k,i,j) - Qsl(k,i,j) ) * 0.5_RP / sigma_s
           RR = min( max( 0.5_RP * ( 1.0_RP + erf(Q1*rsqrt_2) ), 0.0_RP ), 1.0_RP )
           Ql = min( max( 2.0_RP * sigma_s * ( RR * Q1 + rsqrt_2pi * exp(-0.5_RP*Q1**2) ), &
                     0.0_RP ), &
@@ -647,10 +650,11 @@ Rt = 0.0_RP
        end do
 
        do k = KS, KE_PBL
-          kh = max( min( l(k,i,j) * q(k,i,j) * sh(k,i,j), &
+          Kh = max( min( l(k,i,j) * q(k,i,j) * sh(k,i,j), &
                     ATMOS_PHY_TB_MYNN_KH_MAX ), &
                     ATMOS_PHY_TB_MYNN_KH_MIN )
-          Pr(k,i,j) = Nu(k,i,j) / kh
+          RHOKh(k,i,j) = DENS(k,i,j) * Kh
+          Pr(k,i,j) = Nu(k,i,j) / Kh
        end do
        do k = KE_PBL+1, KE
           Pr(k,i,j) = 1.0_RP
@@ -661,6 +665,7 @@ Rt = 0.0_RP
     ! time integration
 
     !  for velocities
+!OCL INDEPENDENT
     do j = JS, JE
     do i = IS, IE
 
@@ -682,13 +687,13 @@ Rt = 0.0_RP
        c(KE_PBL,i,j) = ap * RCDZ(KE_PBL) / ( DENS(KE_PBL,i,j) * GSQRT(KE_PBL,i,j,I_XYZ) )
        b(KE_PBL,i,j) = - c(KE_PBL,i,j) + 1.0_RP
 
-       d(KS) = U(KS,i,j) + dt * SFLX_MU(i,j) * RCDZ(KS) / ( DENS(KS,i,j) * GSQRT(KS,i,j,I_XYZ) )
+       d(KS,i,j) = U(KS,i,j) + dt * SFLX_MU(i,j) * RCDZ(KS) / ( DENS(KS,i,j) * GSQRT(KS,i,j,I_XYZ) )
        do k = KS+1, KE_PBL
-          d(k) = U(k,i,j)
+          d(k,i,j) = U(k,i,j)
        end do
        call diffusion_solver( &
             phiN(:,i,j),                     & ! (out)
-            a(:,i,j), b(:,i,j), c(:,i,j), d, & ! (in)
+            a(:,i,j), b(:,i,j), c(:,i,j), d(:,i,j), & ! (in)
             KE_PBL                           ) ! (in)
     end do
     end do
@@ -698,6 +703,7 @@ Rt = 0.0_RP
     call COMM_wait( Nu,   1 )
     call COMM_wait( phiN, 2 )
 
+!OCL INDEPENDENT
     do JJS = JS, JE, JBLOCK
     JJE = JJS+JBLOCK-1
     do IIS = IS, IE, IBLOCK
@@ -729,15 +735,16 @@ Rt = 0.0_RP
 
 
        ! integration V
+!OCL INDEPENDENT
        do j = JJS, JJE
        do i = IIS, IIE
-          d(KS) = V(KS,i,j) + dt * SFLX_MV(i,j) * RCDZ(KS) / ( DENS(KS,i,j) * GSQRT(KS,i,j,I_XYZ) )
+          d(KS,i,j) = V(KS,i,j) + dt * SFLX_MV(i,j) * RCDZ(KS) / ( DENS(KS,i,j) * GSQRT(KS,i,j,I_XYZ) )
           do k = KS+1, KE_PBL
-             d(k) = V(k,i,j)
+             d(k,i,j) = V(k,i,j)
           end do
           call diffusion_solver( &
                phiN(:,i,j),                     & ! (out)
-               a(:,i,j), b(:,i,j), c(:,i,j), d, & ! (in)
+               a(:,i,j), b(:,i,j), c(:,i,j), d(:,i,j), & ! (in)
                KE_PBL                           ) ! (in)
        end do
        end do
@@ -755,42 +762,34 @@ Rt = 0.0_RP
 
        do j = JJS, JJE
        do i = IIS, IIE
-       do k = KS, KE_PBL-1
-          qflx_sgs_momy(k,i,j,ZDIR) = - 0.03125_RP & ! 1/4/4/2
+          qflx_sgs_momy(KS-1,i,j,ZDIR) = 0.0_RP
+          do k = KS, KE_PBL-1
+             qflx_sgs_momy(k,i,j,ZDIR) = - 0.03125_RP & ! 1/4/4/2
                * ( DENS(k,i,j) + DENS(k+1,i,j) + DENS(k,i,j+1) + DENS(k+1,i,j+1) ) &
                * ( Nu(k,i,j) + Nu(k+1,i,j) + Nu(k,i,j+1) + Nu(k+1,i,j+1) ) &
                * ( (phiN(k+1,i,j)+phiN(k+1,i,j+1)) - (phiN(k,i,j)+phiN(k,i,j+1)) ) &
                * J33G * RFDZ(k) / GSQRT(k,i,j,I_XVW)
-       end do
-       end do
-       end do
-       do j = JJS, JJE
-       do i = IIS, IIE
-          qflx_sgs_momy(KS-1,i,j,ZDIR) = 0.0_RP
-       end do
-       end do
-       do j = JJS, JJE
-       do i = IIS, IIE
-       do k = KE_PBL, KE
-          qflx_sgs_momy(k,i,j,ZDIR) = 0.0_RP
-       end do
+          end do
+          do k = KE_PBL, KE
+             qflx_sgs_momy(k,i,j,ZDIR) = 0.0_RP
+          end do
        end do
        end do
 
 
-       !  for scalars
+       ! for scalars
+       ! integration POTT
+!OCL INDEPENDENT
        do j = JJS, JJE
        do i = IIS, IIE
-          ap = - dt * 0.5_RP * ( DENS(KS  ,i,j)*Nu(KS  ,i,j)/Pr(KS  ,i,j) &
-                               + DENS(KS+1,i,j)*Nu(KS+1,i,j)/Pr(KS+1,i,j) ) &
+          ap = - dt * 0.5_RP * ( RHOKh(KS,i,j) + RHOKh(KS+1,i,j) ) &
              * RFDZ(KS) / GSQRT(KS,i,j,I_XYW)
           a(KS,i,j) = ap * RCDZ(KS) / (DENS(KS,i,j) * GSQRT(KS,i,j,I_XYZ) )
           c(KS,i,j) = 0.0_RP
           b(KS,i,j) = - a(KS,i,j) + 1.0_RP
           do k = KS+1, KE_PBL-1
              c(k,i,j) = ap * RCDZ(k) / (DENS(k,i,j) * GSQRT(k,i,j,I_XYZ) )
-             ap = - dt * 0.5_RP * ( DENS(k  ,i,j)*Nu(k  ,i,j)/Pr(k  ,i,j) &
-                                  + DENS(k+1,i,j)*Nu(k+1,i,j)/Pr(k+1,i,j) ) &
+             ap = - dt * 0.5_RP * ( RHOKh(k,i,j) + RHOKh(k+1,i,j) ) &
                 * RFDZ(k) / GSQRT(k,i,j,I_XYW)
              a(k,i,j) = ap * RCDZ(k) / ( DENS(k,i,j) * GSQRT(k,i,j,I_XYZ) )
              b(k,i,j) = - a(k,i,j) - c(k,i,j) + 1.0_RP
@@ -798,82 +797,62 @@ Rt = 0.0_RP
           a(KE_PBL,i,j) = 0.0_RP
           c(KE_PBL,i,j) = ap * RCDZ(KE_PBL) / (DENS(KE_PBL,i,j) * GSQRT(KE_PBL,i,j,I_XYZ) )
           b(KE_PBL,i,j) = - c(KE_PBL,i,j) + 1.0_RP
-       end do
-       end do
-
-       ! integration POTT
-       do j = JJS, JJE
-       do i = IIS, IIE
-          d(KS) = POTL(KS,i,j) + dt * SFLX_PT(i,j) * RCDZ(KS) / GSQRT(KS,i,j,I_XYZ)
+          d(KS,i,j) = POTL(KS,i,j) + dt * SFLX_PT(i,j) * RCDZ(KS) / GSQRT(KS,i,j,I_XYZ)
           do k = KS+1, KE_PBL
-             d(k) = POTL(k,i,j)
+             d(k,i,j) = POTL(k,i,j)
           end do
           call diffusion_solver( &
                phiN(:,i,j),                     & ! (out)
-               a(:,i,j), b(:,i,j), c(:,i,j), d, & ! (in)
+               a(:,i,j), b(:,i,j), c(:,i,j), d(:,i,j), & ! (in)
                KE_PBL                           ) ! (in)
        end do
        end do
-       do j = JJS, JJE
-       do i = IIS, IIE
-       do k = KS, KE_PBL-1
-          qflx_sgs_rhot(k,i,j,ZDIR) = - 0.25_RP & ! 1/2/2
-               * ( DENS(k,i,j) + DENS(k+1,i,j) ) &
-               * ( Nu(k,i,j)/Pr(k,i,j) + Nu(k+1,i,j)/Pr(k+1,i,j) ) &
-               * J33G * ( phiN(k+1,i,j) - PhiN(k,i,j) ) * RFDZ(k) / GSQRT(k,i,j,I_XYW)
-       end do
-       end do
-       end do
+
        do j = JJS, JJE
        do i = IIS, IIE
           qflx_sgs_rhot(KS-1,i,j,ZDIR) = 0.0_RP
-       end do
-       end do
-       do j = JJS, JJE
-       do i = IIS, IIE
-       do k = KE_PBL, KE
-          qflx_sgs_rhot(k,i,j,ZDIR) = 0.0_RP
-       end do
+          do k = KS, KE_PBL-1
+             qflx_sgs_rhot(k,i,j,ZDIR) = - 0.5_RP & ! 1/2
+               * ( RHOKh(k,i,j) + RHOKh(k+1,i,j) ) &
+               * J33G * ( phiN(k+1,i,j) - PhiN(k,i,j) ) * RFDZ(k) / GSQRT(k,i,j,I_XYW)
+          end do
+          do k = KE_PBL, KE
+             qflx_sgs_rhot(k,i,j,ZDIR) = 0.0_RP
+          end do
        end do
        end do
 
 
        ! integration QV
        iq = I_QV
+!OCL INDEPENDENT
        do j = JJS, JJE
        do i = IIS, IIE
-          d(KS) = Qw(KS,i,j) + dt * SFLX_QV(i,j) * RCDZ(KS) / ( DENS(KS,i,j) * GSQRT(KS,i,j,I_XYZ) )
+          d(KS,i,j) = Qw(KS,i,j) + dt * SFLX_QV(i,j) * RCDZ(KS) / ( DENS(KS,i,j) * GSQRT(KS,i,j,I_XYZ) )
           do k = KS+1, KE_PBL
-             d(k) = Qw(k,i,j)
+             d(k,i,j) = Qw(k,i,j)
           end do
           call diffusion_solver( &
                phiN(:,i,j),                     & ! (out)
-               a(:,i,j), b(:,i,j), c(:,i,j), d, & ! (in)
+               a(:,i,j), b(:,i,j), c(:,i,j), d(:,i,j), & ! (in)
                KE_PBL                           ) ! (in)
        end do
        end do
-       do j = JJS, JJE
-       do i = IIS, IIE
-       do k = KS, KE_PBL-1
-          qflx_sgs_rhoq(k,i,j,ZDIR,iq) = - 0.25_RP & ! 1/2/2
-                  * ( Nu(k,i,j)/Pr(k,i,j) + Nu(k+1,i,j)/Pr(k+1,i,j) ) &
-                  * ( DENS(k,i,j) + DENS(k+1,i,j) ) &
-                  * J33G * ( phiN(k+1,i,j) - phiN(k,i,j) ) * RFDZ(k) / GSQRT(k,i,j,I_XYW)
-       end do
-       end do
-       end do
+
        do j = JJS, JJE
        do i = IIS, IIE
           qflx_sgs_rhoq(KS-1,i,j,ZDIR,iq) = 0.0_RP
+          do k = KS, KE_PBL-1
+             qflx_sgs_rhoq(k,i,j,ZDIR,iq) = - 0.5_RP & ! 1/2
+                  * ( RHOKh(k,i,j) + RHOKh(k+1,i,j) ) &
+                  * J33G * ( phiN(k+1,i,j) - phiN(k,i,j) ) * RFDZ(k) / GSQRT(k,i,j,I_XYW)
+          end do
+          do k = KE_PBL, KE
+             qflx_sgs_rhoq(k,i,j,ZDIR,iq) = 0.0_RP
+          end do
        end do
        end do
-       do j = JJS, JJE
-       do i = IIS, IIE
-       do k = KE_PBL, KE
-          qflx_sgs_rhoq(k,i,j,ZDIR,iq) = 0.0_RP
-       end do
-       end do
-       end do
+
 
        ! time integration tke
 
@@ -906,19 +885,42 @@ Rt = 0.0_RP
 
        do j = JJS, JJE
        do i = IIS, IIE
+          advc = ( MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) &
+                 * ( ( flux_x(KS,i,j) - flux_x(KS,i-1,j) ) * RCDX(i) &
+                   + ( flux_y(KS,i,j) - flux_y(KS,i,j-1) ) * RCDY(j) ) &
+                 + flux_z(KS,i,j) * RCDZ(KS) ) &
+                 / ( GSQRT(KS,i,j,I_XYZ) * DENS(KS,i,j) )
+          d(KS,i,j) = tke(KS,i,j) + dt * ( Nu(KS,i,j) * (dudz2(KS,i,j) - n2(KS,i,j)/Pr(KS,i,j)) &
+                                     - advc )
+          do k = KS+1, KE_PBL-1
+             advc = ( MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) &
+                    * ( ( flux_x(k,i,j) - flux_x(k,i-1,j) ) * RCDX(i) &
+                      + ( flux_y(k,i,j) - flux_y(k,i,j-1) ) * RCDY(j) ) &
+                    + ( flux_z(k,i,j) - flux_z(k-1,i,j) ) * RCDZ(k) ) &
+                    / ( GSQRT(k,i,j,I_XYZ) * DENS(k,i,j) )
+             d(k,i,j) = tke(k,i,j) &
+                  + dt * ( Nu(k,i,j) * (dudz2(k,i,j) - n2(k,i,j)/Pr(k,i,j)) &
+                         - advc )
+          end do
+          advc = ( MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) &
+                 * ( ( flux_x(KE_PBL,i,j) - flux_x(KE_PBL,i-1,j) ) * RCDX(i) &
+                   + ( flux_y(KE_PBL,i,j) - flux_y(KE_PBL,i,j-1) ) * RCDY(j) ) &
+                 + ( - flux_z(KE_PBL-1,i,j) ) * RCDZ(KE_PBL) ) &
+                 / ( GSQRT(KE_PBL,i,j,I_XYZ) * DENS(KE_PBL,i,j) )
+          d(KE_PBL,i,j) = tke(KE_PBL,i,j) + dt * ( Nu(KE_PBL,i,j) * (dudz2(KE_PBL,i,j) - n2(KE_PBL,i,j)/Pr(KE_PBL,i,j)) &
+                                             - advc )
+       end do
+       end do
+
+!OCL INDEPENDENT
+       do j = JJS, JJE
+       do i = IIS, IIE
           ap = - dt * 1.5_RP * ( DENS(KS  ,i,j)*Nu(KS  ,i,j) &
                                + DENS(KS+1,i,j)*Nu(KS+1,i,j) ) &
              * RFDZ(KS) / GSQRT(KS,i,j,I_XYW)
           a(KS,i,j) = ap * RCDZ(KS) / ( DENS(KS,i,j) * GSQRT(KS,i,j,I_XYZ) )
           c(KS,i,j) = 0.0_RP
           b(KS,i,j) = - a(KS,i,j) + 1.0_RP + 2.0_RP * dt * q(KS,i,j) / ( B1 * l(KS,i,j) )
-          advc = ( MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) &
-                 * ( ( flux_x(KS,i,j) - flux_x(KS,i-1,j) ) * RCDX(i) &
-                   + ( flux_y(KS,i,j) - flux_y(KS,i,j-1) ) * RCDY(j) ) &
-                 + flux_z(KS,i,j) * RCDZ(KS) ) &
-                 / ( GSQRT(KS,i,j,I_XYZ) * DENS(KS,i,j) )
-          d(KS) = tke(KS,i,j) + dt * ( Nu(KS,i,j) * (dudz2(KS,i,j) - n2(KS,i,j)/Pr(KS,i,j)) &
-                                     - advc )
           do k = KS+1, KE_PBL-1
              c(k,i,j) = ap * RCDZ(k) / ( DENS(k,i,j) * GSQRT(k,i,j,I_XYZ) )
              ap = - dt * 1.5_RP * ( DENS(k  ,i,j)*Nu(k  ,i,j) &
@@ -926,32 +928,18 @@ Rt = 0.0_RP
                 * RFDZ(k) / GSQRT(k,i,j,I_XYW)
              a(k,i,j) = ap * RCDZ(k) / ( DENS(k,i,j) * GSQRT(k,i,j,I_XYZ) )
              b(k,i,j) = - a(k,i,j) - c(k,i,j) + 1.0_RP + 2.0_RP * dt * q(k,i,j) / ( B1 * l(k,i,j) )
-             advc = ( MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) &
-                    * ( ( flux_x(k,i,j) - flux_x(k,i-1,j) ) * RCDX(i) &
-                      + ( flux_y(k,i,j) - flux_y(k,i,j-1) ) * RCDY(j) ) &
-                    + ( flux_z(k,i,j) - flux_z(k-1,i,j) ) * RCDZ(k) ) &
-                    / ( GSQRT(k,i,j,I_XYZ) * DENS(k,i,j) )
-             d(k) = tke(k,i,j) &
-                  + dt * ( Nu(k,i,j) * (dudz2(k,i,j) - n2(k,i,j)/Pr(k,i,j)) &
-                         - advc )
           end do
+
           a(KE_PBL,i,j) = 0.0_RP
           c(KE_PBL,i,j) = ap * RCDZ(KE_PBL) / ( DENS(KE_PBL,i,j) * GSQRT(KE_PBL,i,j,I_XYZ) )
           b(KE_PBL,i,j) = - c(KE_PBL,i,j) + 1.0_RP + 2.0_RP * dt * q(KE_PBL,i,j) / ( B1 * l(KE_PBL,i,j) )
-          advc = ( MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) &
-                 * ( ( flux_x(KE_PBL,i,j) - flux_x(KE_PBL,i-1,j) ) * RCDX(i) &
-                   + ( flux_y(KE_PBL,i,j) - flux_y(KE_PBL,i,j-1) ) * RCDY(j) ) &
-                 + ( - flux_z(KE_PBL-1,i,j) ) * RCDZ(KE_PBL) ) &
-                 / ( GSQRT(KE_PBL,i,j,I_XYZ) * DENS(KE_PBL,i,j) )
-          d(KE_PBL) = tke(KE_PBL,i,j) + dt * ( Nu(KE_PBL,i,j) * (dudz2(KE_PBL,i,j) - n2(KE_PBL,i,j)/Pr(KE_PBL,i,j)) &
-                                             - advc )
           call diffusion_solver( &
                tke_N(:,i,j),     & ! (out)
-               a(:,i,j), b(:,i,j), c(:,i,j), d, & ! (in)
+               a(:,i,j), b(:,i,j), c(:,i,j), d(:,i,j), & ! (in)
                KE_PBL                           ) ! (in)
 #ifdef DEBUG
           do k = KS+1, KE_PBL-1
-             tke(1,i,j) = d(k) &
+             tke(1,i,j) = d(k,i,j) &
                + ( ( (tke_N(k+1,i,j)-tke_N(k,i,j)) * RFDZ(k) / GSQRT(k,i,j,I_XYW) &
                    * (NU(k+1,i,j)*DENS(k+1,i,j)+NU(k,i,j)*DENS(k,i,j))*1.5_RP &
                    - (tke_N(k,i,j)-tke_N(k-1,i,j)) * RFDZ(k-1) / GSQRT(k-1,i,j,I_XYW) &
@@ -960,7 +948,7 @@ Rt = 0.0_RP
                  - 2.0_RP*tke_N(k,i,j) * q(k,i,j) / (B1 * l(k,i,j)) ) &
                  * dt 
              if ( tke_N(k,i,j) > 0.1_RP .and. abs(tke(1,i,j) - tke_N(k,i,j))/tke_N(k,i,j) > 1e-10_RP ) then
-                advc = ( tke(k,i,j) - d(k) ) / dt + Nu(k,i,j) * (dudz2(k,i,j) - n2(k,i,j)/Pr(k,i,j))
+                advc = ( tke(k,i,j) - d(k,i,j) ) / dt + Nu(k,i,j) * (dudz2(k,i,j) - n2(k,i,j)/Pr(k,i,j))
                 write(*,*)k,i,j,tke(1,i,j),tke_N(k,i,j), tke(k,i,j),nu(k,i,j),dudz2(k,i,j),n2(k,i,j),pr(k,i,j),advc
                 open(90, file="mynn.dat")
                 write(90,*)KE_PBL-KS+1
@@ -980,18 +968,14 @@ Rt = 0.0_RP
              end if
           end do
 #endif
-       end do
-       end do
-    end do
-    end do
+          do k = KS, KE_PBL
+             tke(k,i,j) = max(tke_N(k,i,j), TKE_min)
+          end do
+          do k = KE_PBL+1, KE
+             tke(k,i,j) = 0.0_RP
+          end do
 
-    do j = JS, JE
-    do i = IS, IE
-       do k = KS, KE_PBL
-          tke(k,i,j) = max(tke_N(k,i,j), TKE_min)
        end do
-       do k = KE_PBL+1, KE
-          tke(k,i,j) = 0.0_RP
        end do
     end do
     end do

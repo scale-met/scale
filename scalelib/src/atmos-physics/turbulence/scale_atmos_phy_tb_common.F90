@@ -447,6 +447,7 @@ contains
     return
   end subroutine ATMOS_PHY_TB_calc_tend_phi
 
+!OCL SERIAL
   subroutine ATMOS_PHY_TB_diffusion_solver( &
        phi, &
        a, b, c, d, &
