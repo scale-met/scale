@@ -341,8 +341,6 @@ contains
 
     allocate( Nc_def(IA,JA) )
 
-    allocate( w(w_nmax,KMAX*IMAX*JMAX) )
-
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_ATMOS_PHY_MP,iostat=ierr)
@@ -718,12 +716,12 @@ contains
     real(RP) :: dt1                 !< time during which the an ice particle of 40um grows to 50um
     real(RP) :: Ni50                !< number concentration of ice particle of 50um
 
-    integer  :: ijk_warm, ijk_cold
-    integer  :: index_warm(KMAX*IMAX*JMAX)
-    integer  :: index_cold(KMAX*IMAX*JMAX)
+    real(RP) :: ice
 
-    real(RP) :: net, fac, fac_sw
-    real(RP) :: tend(I_QV:I_QG,KMAX*IMAX*JMAX)
+    real(RP) :: net, fac, fac_sw, fac_warm, fac_ice
+    real(RP) :: w(w_nmax)
+
+    real(RP) :: tend(I_QV:I_QG)
 
     real(RP) :: zerosw
     real(RP) :: tmp
@@ -732,7 +730,8 @@ contains
     real(RP) :: LHSEx(KA,IA,JA)
 
     logical  :: do_put
-    integer  :: k, i, j, iq, ijk, indirect, ip
+    integer  :: k, i, j, iq, ip
+
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('MP_tomita08', 3)
@@ -782,15 +781,23 @@ contains
     call ATMOS_THERMODYN_templhf( LHFEx, TEMP0 )
     call ATMOS_THERMODYN_templhs( LHSEx, TEMP0 )
 
-!OCL TEMP_PRIVATE(coef_bt, coef_at, q)
-!OCL NORECURRENCE(w)
+!$omp parallel do &
+!$omp private(tend, coef_bt, coef_at, q, w) &
+!$omp private(dens, rhoe, temp, pres) &
+!$omp private(Sliq, Sice, Rdens, rho_fact, temc) &
+!$omp private(Bergeron_sw, zerosw) &
+!$omp private(RLMDr, RLMDr_dr, RLMDr_2, RLMDr_3, RLMDr_7, RLMDr_1br, RLMDr_2br, RLMDr_3br, RLMDr_3dr, RLMDr_5dr, RLMDr_6dr) &
+!$omp private(RLMDs, RLMDs_ds, RLMDs_2, RLMDs_3,          RLMDs_1bs, RLMDs_2bs, RLMDs_3bs, RLMDs_3ds, RLMDs_5ds) &
+!$omp private(MOMs_0, MOMs_1, MOMs_2, MOMs_0bs, MOMs_1bs, MOMs_2bs, MOMs_2ds, MOMs_5ds_h, RMOMs_Vt) &
+!$omp private(rhoqc, rhoqs, Xs2, tems, loga_, b_, nm) &
+!$omp private(RLMDg, RLMDg_dg, RLMDg_2, RLMDg_3, RLMDg_3dg, RLMDg_5dg) &
+!$omp private(Vti, Vtr, Vts, Vtg, Esi_mod, Egs_mod, Dc, Praut_berry, Praut_kk, betai, betas, Da, Kd, NU, Glv, Giv, Gil, ventr, vents, ventg) &
+!$omp private(tmp, dt1, Ni50, ice, net, fac_sw, fac, fac_warm, fac_ice) &
+!$omp collapse(3)
+!OCL TEMP_PRIVATE(tend, coef_bt, coef_at, q, w)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       ijk = ( j - JS ) * KMAX * IMAX &
-           + ( i - IS ) * KMAX        &
-           + ( k - KS )               &
-           + 1
 
        ! store to work
        dens = DENS0(k,i,j)
@@ -809,19 +816,19 @@ contains
        rho_fact = sqrt( dens00 * Rdens )
        temc     = temp - TEM00
 
-       w(I_delta1,ijk) = ( 0.5_RP + sign(0.5_RP, q(I_QR) - 1.E-4_RP ) )
+       w(I_delta1) = ( 0.5_RP + sign(0.5_RP, q(I_QR) - 1.E-4_RP ) )
 
-       w(I_delta2,ijk) = ( 0.5_RP + sign(0.5_RP, 1.E-4_RP - q(I_QR) ) ) &
+       w(I_delta2) = ( 0.5_RP + sign(0.5_RP, 1.E-4_RP - q(I_QR) ) ) &
                        * ( 0.5_RP + sign(0.5_RP, 1.E-4_RP - q(I_QS) ) )
 
-       w(I_delta3,ijk) = 0.5_RP + sign(0.5_RP, Sice - 1.0_RP )
+       w(I_delta3) = 0.5_RP + sign(0.5_RP, Sice - 1.0_RP )
 
-       w(I_dqv_dt,ijk) = q(I_QV) * rdt
-       w(I_dqc_dt,ijk) = q(I_QC) * rdt
-       w(I_dqr_dt,ijk) = q(I_QR) * rdt
-       w(I_dqi_dt,ijk) = q(I_QI) * rdt
-       w(I_dqs_dt,ijk) = q(I_QS) * rdt
-       w(I_dqg_dt,ijk) = q(I_QG) * rdt
+       w(I_dqv_dt) = q(I_QV) * rdt
+       w(I_dqc_dt) = q(I_QC) * rdt
+       w(I_dqr_dt) = q(I_QR) * rdt
+       w(I_dqi_dt) = q(I_QI) * rdt
+       w(I_dqs_dt) = q(I_QS) * rdt
+       w(I_dqg_dt) = q(I_QG) * rdt
 
        Bergeron_sw = ( 0.5_RP + sign(0.5_RP, temc + 30.0_RP ) ) &
                    * ( 0.5_RP + sign(0.5_RP, 0.0_RP - temc  ) )
@@ -940,9 +947,9 @@ contains
        RLMDg_3dg = RLMDg**3 * RLMDg_dg
        RLMDg_5dg = RLMDg**5 * RLMDg_dg
 
-       w(I_RLMDr,ijk) = RLMDr
-       w(I_RLMDs,ijk) = RLMDs
-       w(I_RLMDg,ijk) = RLMDg
+       w(I_RLMDr) = RLMDr
+       w(I_RLMDs) = RLMDs
+       w(I_RLMDg) = RLMDg
 
        !---< terminal velocity >
        zerosw = 0.5_RP + sign(0.5_RP, q(I_QI) - 1.E-8_RP )
@@ -956,46 +963,46 @@ contains
        Egs_mod = min( Egs, Egs * exp( gamma_gacs * temc ) )
 
        ! [Pracw] accretion rate of cloud water by rain
-       w(I_Pracw,ijk) = q(I_QC) * 0.25_RP * PI * Erw * N0r * Cr * GAM_3dr * RLMDr_3dr * rho_fact
+       w(I_Pracw) = q(I_QC) * 0.25_RP * PI * Erw * N0r * Cr * GAM_3dr * RLMDr_3dr * rho_fact
 
        ! [Psacw] accretion rate of cloud water by snow
-       w(I_Psacw,ijk) = q(I_QC) * 0.25_RP * PI * Esw       * Cs * MOMs_2ds            * rho_fact
+       w(I_Psacw) = q(I_QC) * 0.25_RP * PI * Esw       * Cs * MOMs_2ds            * rho_fact
 
        ! [Pgacw] accretion rate of cloud water by graupel
-       w(I_Pgacw,ijk) = q(I_QC) * 0.25_RP * PI * Egw * N0g * Cg * GAM_3dg * RLMDg_3dg * rho_fact
+       w(I_Pgacw) = q(I_QC) * 0.25_RP * PI * Egw * N0g * Cg * GAM_3dg * RLMDg_3dg * rho_fact
 
        ! [Praci] accretion rate of cloud ice by rain
-       w(I_Praci,ijk) = q(I_QI) * 0.25_RP * PI * Eri * N0r * Cr * GAM_3dr * RLMDr_3dr * rho_fact
+       w(I_Praci) = q(I_QI) * 0.25_RP * PI * Eri * N0r * Cr * GAM_3dr * RLMDr_3dr * rho_fact
 
        ! [Psaci] accretion rate of cloud ice by snow
-       w(I_Psaci,ijk) = q(I_QI) * 0.25_RP * PI * Esi_mod   * Cs * MOMs_2ds            * rho_fact
+       w(I_Psaci) = q(I_QI) * 0.25_RP * PI * Esi_mod   * Cs * MOMs_2ds            * rho_fact
 
        ! [Pgaci] accretion rate of cloud ice by grupel
-       w(I_Pgaci,ijk) = q(I_QI) * 0.25_RP * PI * Egi * N0g * Cg * GAM_3dg * RLMDg_3dg * rho_fact * ( 1.0_RP-roh_flag )
+       w(I_Pgaci) = q(I_QI) * 0.25_RP * PI * Egi * N0g * Cg * GAM_3dg * RLMDg_3dg * rho_fact * ( 1.0_RP-roh_flag )
 
        ! [Piacr] accretion rate of rain by cloud ice
-       w(I_Piacr,ijk) = q(I_QI) * Ar / 4.19E-13_RP * 0.25_RP * PI * Eri * N0r * Cr * GAM_6dr * RLMDr_6dr * rho_fact
+       w(I_Piacr) = q(I_QI) * Ar / 4.19E-13_RP * 0.25_RP * PI * Eri * N0r * Cr * GAM_6dr * RLMDr_6dr * rho_fact
 
        ! [Psacr] accretion rate of rain by snow
-       w(I_Psacr,ijk) = Ar * 0.25_RP * PI * Rdens * Esr * N0r       * abs(Vtr-Vts) &
+       w(I_Psacr) = Ar * 0.25_RP * PI * Rdens * Esr * N0r       * abs(Vtr-Vts) &
                       * (          GAM_1br * RLMDr_1br * MOMs_2          &
                         + 2.0_RP * GAM_2br * RLMDr_2br * MOMs_1          &
                         +          GAM_3br * RLMDr_3br * MOMs_0          )
 
        ! [Pgacr] accretion rate of rain by graupel
-       w(I_Pgacr,ijk) = Ar * 0.25_RP * PI * Rdens * Egr * N0g * N0r * abs(Vtg-Vtr) &
+       w(I_Pgacr) = Ar * 0.25_RP * PI * Rdens * Egr * N0g * N0r * abs(Vtg-Vtr) &
                       * (          GAM_1br * RLMDr_1br * GAM_3 * RLMDg_3 &
                         + 2.0_RP * GAM_2br * RLMDr_2br * GAM_2 * RLMDg_2 &
                         +          GAM_3br * RLMDr_3br * GAM   * RLMDg   )
 
        ! [Pracs] accretion rate of snow by rain
-       w(I_Pracs,ijk) = As * 0.25_RP * PI * Rdens * Esr       *  N0r * abs(Vtr-Vts) &
+       w(I_Pracs) = As * 0.25_RP * PI * Rdens * Esr       *  N0r * abs(Vtr-Vts) &
                       * (          MOMs_0bs            * GAM_3 * RLMDr_3 &
                         + 2.0_RP * MOMs_1bs            * GAM_2 * RLMDr_2 &
                         +          MOMs_2bs            * GAM   * RLMDr   )
 
        ! [Pgacs] accretion rate of snow by graupel
-       w(I_Pgacs,ijk) = As * 0.25_RP * PI * Rdens * Egs_mod   * N0g * abs(Vtg-Vts) * ( 1.0_RP-roh_flag ) &
+       w(I_Pgacs) = As * 0.25_RP * PI * Rdens * Egs_mod   * N0g * abs(Vtg-Vts) * ( 1.0_RP-roh_flag ) &
                       * (          MOMs_0bs            * GAM_3 * RLMDg_3 &
                         + 2.0_RP * MOMs_1bs            * GAM_2 * RLMDg_2 &
                         +          MOMs_2bs            * GAM   * RLMDg   )
@@ -1009,16 +1016,16 @@ contains
        Praut_kk       = 1350.0_RP * q(I_QC)**2.47_RP * Nc(k,i,j)**(-1.79_RP)
 
        ! switch berry / k-k scheme
-       w(I_Praut,ijk) = ( 1.0_RP - sw_raut_kk ) * Praut_berry &
-                      + (          sw_raut_kk ) * Praut_kk
+       w(I_Praut) = ( 1.0_RP - sw_raut_kk ) * Praut_berry &
+                    + (          sw_raut_kk ) * Praut_kk
 
        ! [Psaut] auto-conversion rate from cloud ice to snow
        betai = min( beta_saut, beta_saut * exp( gamma_saut * temc ) )
-       w(I_Psaut,ijk) = max( betai*(q(I_QI)-qicrt_saut), 0.0_RP )
+       w(I_Psaut) = max( betai*(q(I_QI)-qicrt_saut), 0.0_RP )
 
        ! [Pgaut] auto-conversion rate from snow to graupel
        betas = min( beta_gaut, beta_gaut * exp( gamma_gaut * temc ) )
-       w(I_Pgaut,ijk) = max( betas*(q(I_QS)-qscrt_gaut), 0.0_RP )
+       w(I_Pgaut) = max( betas*(q(I_QS)-qscrt_gaut), 0.0_RP )
 
        !---< Evaporation, Sublimation >---
        Da = ( Da0 + dDa_dT * temc )
@@ -1032,471 +1039,373 @@ contains
        ! [Prevp] evaporation rate of rain
        ventr = f1r * GAM_2 * RLMDr_2 + f2r * sqrt( Cr * rho_fact / NU * RLMDr_5dr ) * GAM_5dr_h
 
-       w(I_Prevp,ijk) = 2.0_RP * PI * Rdens * N0r * ( 1.0_RP-min(Sliq,1.0_RP) ) * Glv * ventr
+       w(I_Prevp) = 2.0_RP * PI * Rdens * N0r * ( 1.0_RP-min(Sliq,1.0_RP) ) * Glv * ventr
 
        ! [Psdep,Pssub] deposition/sublimation rate for snow
        vents = f1s * MOMs_1          + f2s * sqrt( Cs * rho_fact / NU             ) * MOMs_5ds_h
 
        tmp = 2.0_RP * PI * Rdens *       ( Sice-1.0_RP ) * Giv * vents
 
-       w(I_Psdep,ijk) = ( w(I_delta3,ijk)        ) * tmp ! Sice < 1
-       w(I_Pssub,ijk) = ( w(I_delta3,ijk)-1.0_RP ) * tmp ! Sice > 1
+       w(I_Psdep) = ( w(I_delta3)        ) * tmp ! Sice < 1
+       w(I_Pssub) = ( w(I_delta3)-1.0_RP ) * tmp ! Sice > 1
 
        ! [Psmlt] melting rate of snow
-       w(I_Psmlt,ijk) = 2.0_RP * PI * Rdens *       Gil * vents &
-                      + CL * temc / LHF0 * ( w(I_Psacw,ijk) + w(I_Psacr,ijk) )
+       w(I_Psmlt) = 2.0_RP * PI * Rdens *       Gil * vents &
+                  + CL * temc / LHF0 * ( w(I_Psacw) + w(I_Psacr) )
 
        ! [Pgdep/pgsub] deposition/sublimation rate for graupel
        ventg = f1g * GAM_2 * RLMDg_2 + f2g * sqrt( Cg * rho_fact / NU * RLMDg_5dg ) * GAM_5dg_h
 
        tmp = 2.0_RP * PI * Rdens * N0g * ( Sice-1.0_RP ) * Giv * ventg
 
-       w(I_Pgdep,ijk) = ( w(I_delta3,ijk)        ) * tmp ! Sice < 1
-       w(I_Pgsub,ijk) = ( w(I_delta3,ijk)-1.0_RP ) * tmp ! Sice > 1
+       w(I_Pgdep) = ( w(I_delta3)        ) * tmp ! Sice < 1
+       w(I_Pgsub) = ( w(I_delta3)-1.0_RP ) * tmp ! Sice > 1
 
        ! [Pgmlt] melting rate of graupel
-       w(I_Pgmlt,ijk) = 2.0_RP * PI * Rdens * N0g * Gil * ventg &
-                      + CL * temc / LHF0 * ( w(I_Pgacw,ijk) + w(I_Pgacr,ijk) )
+       w(I_Pgmlt) = 2.0_RP * PI * Rdens * N0g * Gil * ventg &
+                      + CL * temc / LHF0 * ( w(I_Pgacw) + w(I_Pgacr) )
 
        ! [Pgfrz] freezing rate of graupel
-       w(I_Pgfrz,ijk) = 2.0_RP * PI * Rdens * N0r * 60.0_RP * B_gfrz * Ar * ( exp(-A_gfrz*temc) - 1.0_RP ) * RLMDr_7
+       w(I_Pgfrz) = 2.0_RP * PI * Rdens * N0r * 60.0_RP * B_gfrz * Ar * ( exp(-A_gfrz*temc) - 1.0_RP ) * RLMDr_7
 
        ! [Psfw,Psfi] ( Bergeron process ) growth rate of snow by Bergeron process from cloud water/ice
        dt1  = ( mi50**ma2(k,i,j) - mi40**ma2(k,i,j) ) / ( a1(k,i,j) * ma2(k,i,j) )
        Ni50 = q(I_QI) * dt / ( mi50 * dt1 )
 
-       w(I_Psfw,ijk) = Bergeron_sw * Ni50 * ( a1(k,i,j) * mi50**a2(k,i,j) &
+       w(I_Psfw) = Bergeron_sw * Ni50 * ( a1(k,i,j) * mi50**a2(k,i,j) &
                                             + PI * Eiw * dens * q(I_QC) * Ri50*Ri50 * vti50 )
-       w(I_Psfi,ijk) = Bergeron_sw * q(I_QI) / dt1
+       w(I_Psfi) = Bergeron_sw * q(I_QI) / dt1
 
-    enddo
-    enddo
-    enddo
+       w(I_Psdep) = min( w(I_Psdep), w(I_dqv_dt) )
+       w(I_Pgdep) = min( w(I_Pgdep), w(I_dqv_dt) )
 
-!    do ip = 1, w_nmax
-!       if( IO_L ) write(IO_FID_LOG,*) w_name(ip), "MAX/MIN:", maxval(w(ip,:)), minval(w(ip,:))
-!    enddo
+       w(I_Praut) = min( w(I_Praut), w(I_dqc_dt) )
+       w(I_Pracw) = min( w(I_Pracw), w(I_dqc_dt) )
+       w(I_Psacw) = min( w(I_Psacw), w(I_dqc_dt) )
+       w(I_Pgacw) = min( w(I_Pgacw), w(I_dqc_dt) )
+       w(I_Psfw ) = min( w(I_Psfw ), w(I_dqc_dt) )
 
-    do ijk = 1, KMAX*IMAX*JMAX
-       w(I_Psdep,ijk) = min( w(I_Psdep,ijk), w(I_dqv_dt,ijk) )
-       w(I_Pgdep,ijk) = min( w(I_Pgdep,ijk), w(I_dqv_dt,ijk) )
+       w(I_Prevp) = min( w(I_Prevp), w(I_dqr_dt) )
+       w(I_Piacr) = min( w(I_Piacr), w(I_dqr_dt) )
+       w(I_Psacr) = min( w(I_Psacr), w(I_dqr_dt) )
+       w(I_Pgacr) = min( w(I_Pgacr), w(I_dqr_dt) )
+       w(I_Pgfrz) = min( w(I_Pgfrz), w(I_dqr_dt) )
 
-       w(I_Praut,ijk) = min( w(I_Praut,ijk), w(I_dqc_dt,ijk) )
-       w(I_Pracw,ijk) = min( w(I_Pracw,ijk), w(I_dqc_dt,ijk) )
-       w(I_Psacw,ijk) = min( w(I_Psacw,ijk), w(I_dqc_dt,ijk) )
-       w(I_Pgacw,ijk) = min( w(I_Pgacw,ijk), w(I_dqc_dt,ijk) )
-       w(I_Psfw ,ijk) = min( w(I_Psfw ,ijk), w(I_dqc_dt,ijk) )
+       w(I_Psaut) = min( w(I_Psaut), w(I_dqi_dt) )
+       w(I_Praci) = min( w(I_Praci), w(I_dqi_dt) )
+       w(I_Psaci) = min( w(I_Psaci), w(I_dqi_dt) )
+       w(I_Pgaci) = min( w(I_Pgaci), w(I_dqi_dt) )
+       w(I_Psfi ) = min( w(I_Psfi ), w(I_dqi_dt) )
 
-       w(I_Prevp,ijk) = min( w(I_Prevp,ijk), w(I_dqr_dt,ijk) )
-       w(I_Piacr,ijk) = min( w(I_Piacr,ijk), w(I_dqr_dt,ijk) )
-       w(I_Psacr,ijk) = min( w(I_Psacr,ijk), w(I_dqr_dt,ijk) )
-       w(I_Pgacr,ijk) = min( w(I_Pgacr,ijk), w(I_dqr_dt,ijk) )
-       w(I_Pgfrz,ijk) = min( w(I_Pgfrz,ijk), w(I_dqr_dt,ijk) )
+       w(I_Pgaut) = min( w(I_Pgaut), w(I_dqs_dt) )
+       w(I_Pracs) = min( w(I_Pracs), w(I_dqs_dt) )
+       w(I_Pgacs) = min( w(I_Pgacs), w(I_dqs_dt) )
+       w(I_Psmlt) = max( w(I_Psmlt), 0.0_RP      )
+       w(I_Psmlt) = min( w(I_Psmlt), w(I_dqs_dt) )
+       w(I_Pssub) = min( w(I_Pssub), w(I_dqs_dt) )
 
-       w(I_Psaut,ijk) = min( w(I_Psaut,ijk), w(I_dqi_dt,ijk) )
-       w(I_Praci,ijk) = min( w(I_Praci,ijk), w(I_dqi_dt,ijk) )
-       w(I_Psaci,ijk) = min( w(I_Psaci,ijk), w(I_dqi_dt,ijk) )
-       w(I_Pgaci,ijk) = min( w(I_Pgaci,ijk), w(I_dqi_dt,ijk) )
-       w(I_Psfi ,ijk) = min( w(I_Psfi ,ijk), w(I_dqi_dt,ijk) )
+       w(I_Pgmlt) = max( w(I_Pgmlt), 0.0_RP        )
+       w(I_Pgmlt) = min( w(I_Pgmlt), w(I_dqg_dt) )
+       w(I_Pgsub) = min( w(I_Pgsub), w(I_dqg_dt) )
 
-       w(I_Pgaut,ijk) = min( w(I_Pgaut,ijk), w(I_dqs_dt,ijk) )
-       w(I_Pracs,ijk) = min( w(I_Pracs,ijk), w(I_dqs_dt,ijk) )
-       w(I_Pgacs,ijk) = min( w(I_Pgacs,ijk), w(I_dqs_dt,ijk) )
-       w(I_Psmlt,ijk) = max( w(I_Psmlt,ijk), 0.0_RP          )
-       w(I_Psmlt,ijk) = min( w(I_Psmlt,ijk), w(I_dqs_dt,ijk) )
-       w(I_Pssub,ijk) = min( w(I_Pssub,ijk), w(I_dqs_dt,ijk) )
+       w(I_Piacr_s) = ( 1.0_RP - w(I_delta1) ) * w(I_Piacr)
+       w(I_Piacr_g) = (          w(I_delta1) ) * w(I_Piacr)
+       w(I_Praci_s) = ( 1.0_RP - w(I_delta1) ) * w(I_Praci)
+       w(I_Praci_g) = (          w(I_delta1) ) * w(I_Praci)
+       w(I_Psacr_s) = (          w(I_delta2) ) * w(I_Psacr)
+       w(I_Psacr_g) = ( 1.0_RP - w(I_delta2) ) * w(I_Psacr)
+       w(I_Pracs  ) = ( 1.0_RP - w(I_delta2) ) * w(I_Pracs)
 
-       w(I_Pgmlt,ijk) = max( w(I_Pgmlt,ijk), 0.0_RP          )
-       w(I_Pgmlt,ijk) = min( w(I_Pgmlt,ijk), w(I_dqg_dt,ijk) )
-       w(I_Pgsub,ijk) = min( w(I_Pgsub,ijk), w(I_dqg_dt,ijk) )
-
-       w(I_Piacr_s,ijk) = ( 1.0_RP - w(I_delta1,ijk) ) * w(I_Piacr,ijk)
-       w(I_Piacr_g,ijk) = (          w(I_delta1,ijk) ) * w(I_Piacr,ijk)
-       w(I_Praci_s,ijk) = ( 1.0_RP - w(I_delta1,ijk) ) * w(I_Praci,ijk)
-       w(I_Praci_g,ijk) = (          w(I_delta1,ijk) ) * w(I_Praci,ijk)
-       w(I_Psacr_s,ijk) = (          w(I_delta2,ijk) ) * w(I_Psacr,ijk)
-       w(I_Psacr_g,ijk) = ( 1.0_RP - w(I_delta2,ijk) ) * w(I_Psacr,ijk)
-       w(I_Pracs  ,ijk) = ( 1.0_RP - w(I_delta2,ijk) ) * w(I_Pracs,ijk)
-    enddo
-
-    ijk_warm = 0
-    ijk_cold = 0
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       ijk = ( j - JS ) * KMAX * IMAX &
-           + ( i - IS ) * KMAX        &
-           + ( k - KS )               &
-           + 1
-
-       if ( TEMP0(k,i,j)-TEM00 > 0.0_RP ) then ! warm rain
-          ijk_warm = ijk_warm + 1
-          index_warm(ijk_warm) = ijk
-       else
-          ijk_cold = ijk_cold + 1
-          index_cold(ijk_cold) = ijk
-       endif
-    enddo
-    enddo
-    enddo
-
-!    if( IO_L ) write(IO_FID_LOG,*) "ijk_warm/cold:", ijk_warm, ijk_cold
-
-    !---< Solve tendencies (Warm Rain) >---
-!OCL NORECURRENCE(w)
-    do indirect = 1, ijk_warm
-       ijk = index_warm(indirect)
+       ice = 0.5_RP - sign( 0.5_RP, TEMP0(k,i,j)-TEM00 ) ! 0: warm, 1: ice
 
        ! [QC]
-       net = &                ! [prod]
-           - w(I_Praut,ijk) & ! [loss] c->r
-           - w(I_Pracw,ijk) & ! [loss] c->r
-           - w(I_Psacw,ijk) & ! [loss] c->s=r
-           - w(I_Pgacw,ijk)   ! [loss] c->g=r
+       net = &            ! [prod]
+           - w(I_Praut) & ! [loss] c->r
+           - w(I_Pracw) & ! [loss] c->r
+           - w(I_Psacw) & ! [loss] c->s
+           - w(I_Pgacw) & ! [loss] c->g
+           - w(I_Psfw ) * ice ! [loss] c->s
 
        fac_sw = 0.5_RP + sign( 0.5_RP, net+EPS ) ! if production > loss , fac_sw=1
        fac    = (          fac_sw ) &
-              + ( 1.0_RP - fac_sw ) * min( -w(I_dqc_dt,ijk)/(net-fac_sw), 1.0_RP ) ! loss limiter
+              + ( 1.0_RP - fac_sw ) * min( -w(I_dqc_dt)/(net-fac_sw), 1.0_RP ) ! loss limiter
 
-       w(I_Praut,ijk) = w(I_Praut,ijk) * fac
-       w(I_Pracw,ijk) = w(I_Pracw,ijk) * fac
-       w(I_Psacw,ijk) = w(I_Psacw,ijk) * fac
-       w(I_Pgacw,ijk) = w(I_Pgacw,ijk) * fac
+       w(I_Praut) = w(I_Praut) * fac
+       w(I_Pracw) = w(I_Pracw) * fac
+       w(I_Psacw) = w(I_Psacw) * fac
+       w(I_Pgacw) = w(I_Pgacw) * fac
+       w(I_Psfw ) = w(I_Psfw ) * fac
 
        ! [QI]
-       ! no [prod] & [loss]
+       net = &              ! [prod]
+           - w(I_Psaut  ) & ! [loss] i->s
+           - w(I_Praci_s) & ! [loss] i->s
+           - w(I_Psaci  ) & ! [loss] i->s
+           - w(I_Psfi   ) & ! [loss] i->s
+           - w(I_Praci_g) & ! [loss] i->g
+           - w(I_Pgaci  )   ! [loss] i->g
+
+       fac_sw = 0.5_RP + sign( 0.5_RP, net+EPS ) ! if production > loss , fac_sw=1
+       fac    = (          fac_sw ) &
+              + ( 1.0_RP - fac_sw ) * min( -w(I_dqi_dt)/(net-fac_sw), 1.0_RP ) ! loss limiter
+
+       w(I_Praci_s) = w(I_Praci_s) * fac
+       w(I_Psaut  ) = w(I_Psaut  ) * fac
+       w(I_Psaci  ) = w(I_Psaci  ) * fac
+       w(I_Psfi   ) = w(I_Psfi   ) * fac
+       w(I_Praci_g) = w(I_Praci_g) * fac
+       w(I_Pgaci  ) = w(I_Pgaci  ) * fac
 
        ! [QR]
-       net = w(I_Praut,ijk) & ! [prod] c->r
-           + w(I_Pracw,ijk) & ! [prod] c->r
-           + w(I_Psacw,ijk) & ! [prod] c->s=r
-           + w(I_Pgacw,ijk) & ! [prod] c->g=r
-           + w(I_Psmlt,ijk) & ! [prod] s->r
-           + w(I_Pgmlt,ijk) & ! [prod] g->r
-           - w(I_Prevp,ijk)   ! [loss] r->v
+       net = w(I_Praut) & ! [prod] c->r
+           + w(I_Pracw) & ! [prod] c->r
+           - w(I_Prevp) &  ! [loss] r->v
+           + ( &
+           + w(I_Psacw) & ! [prod] c->s
+           + w(I_Pgacw) & ! [prod] c->g
+           + w(I_Psmlt) & ! [prod] s->r
+           + w(I_Pgmlt) & ! [prod] g->r
+           ) * ( 1.0_RP - ice ) &
+           + ( &
+           - w(I_Piacr_s) & ! [loss] r->s
+           - w(I_Psacr_s) & ! [loss] r->s
+           - w(I_Piacr_g) & ! [loss] r->g
+           - w(I_Psacr_g) & ! [loss] r->g
+           - w(I_Pgacr  ) & ! [loss] r->g
+           - w(I_Pgfrz  ) & ! [loss] r->g
+           ) * ice
 
        fac_sw = 0.5_RP + sign( 0.5_RP, net+EPS ) ! if production > loss , fac_sw=1
        fac    = (          fac_sw ) &
-              + ( 1.0_RP - fac_sw ) * min( -w(I_dqr_dt,ijk)/(net-fac_sw), 1.0_RP ) ! loss limiter
+              + ( 1.0_RP - fac_sw ) * min( -w(I_dqr_dt)/(net-fac_sw), 1.0_RP ) ! loss limiter
 
-       w(I_Praut,ijk) = w(I_Praut,ijk) * fac
-       w(I_Pracw,ijk) = w(I_Pracw,ijk) * fac
-       w(I_Psacw,ijk) = w(I_Psacw,ijk) * fac
-       w(I_Pgacw,ijk) = w(I_Pgacw,ijk) * fac
-       w(I_Psmlt,ijk) = w(I_Psmlt,ijk) * fac
-       w(I_Pgmlt,ijk) = w(I_Pgmlt,ijk) * fac
-       w(I_Prevp,ijk) = w(I_Prevp,ijk) * fac
+       fac_warm = fac * (1.0_RP-ice) + 1.0_RP * ice
+       fac_ice  = fac * ice + 1.0_RP * (1.0_RP-ice)
 
-       ! [QS]
-       net = &                ! [prod]
-           - w(I_Psmlt,ijk) & ! [loss] s->r
-           - w(I_Pgacs,ijk)   ! [loss] s->g
+       w(I_Praut) = w(I_Praut) * fac
+       w(I_Pracw) = w(I_Pracw) * fac
+       w(I_Prevp) = w(I_Prevp) * fac
 
-       fac_sw = 0.5_RP + sign( 0.5_RP, net+EPS ) ! if production > loss , fac_sw=1
-       fac    = (          fac_sw ) &
-              + ( 1.0_RP - fac_sw ) * min( -w(I_dqs_dt,ijk)/(net-fac_sw), 1.0_RP ) ! loss limiter
+       w(I_Psacw) = w(I_Psacw) * fac_warm
+       w(I_Pgacw) = w(I_Pgacw) * fac_warm
+       w(I_Psmlt) = w(I_Psmlt) * fac_warm
+       w(I_Pgmlt) = w(I_Pgmlt) * fac_warm
 
-       w(I_Psmlt,ijk) = w(I_Psmlt,ijk) * fac
-       w(I_Pgacs,ijk) = w(I_Pgacs,ijk) * fac
-
-       ! [QG]
-       net = w(I_Pgacs,ijk) & ! [prod] s->g
-           - w(I_Pgmlt,ijk)   ! [loss] g->r
-
-       fac_sw = 0.5_RP + sign( 0.5_RP, net+EPS ) ! if production > loss , fac_sw=1
-       fac    = (          fac_sw ) &
-              + ( 1.0_RP - fac_sw ) * min( -w(I_dqg_dt,ijk)/(net-fac_sw), 1.0_RP ) ! loss limiter
-
-       w(I_Pgacs,ijk) = w(I_Pgacs,ijk) * fac
-       w(I_Pgmlt,ijk) = w(I_Pgmlt,ijk) * fac
-
-       net = &                ! [prod]
-           - w(I_Psmlt,ijk) & ! [loss] s->r
-           - w(I_Pgacs,ijk)   ! [loss] s->g
-    enddo
-
-
-
-!OCL NORECURRENCE(w,tend)
-    do indirect = 1, ijk_warm
-       ijk = index_warm(indirect)
-
-       ! re-calc net production & loss
-       tend(I_QC,ijk) = &                ! [prod]
-                      - w(I_Praut,ijk) & ! [loss] c->r
-                      - w(I_Pracw,ijk) & ! [loss] c->r
-                      - w(I_Psacw,ijk) & ! [loss] c->s=r
-                      - w(I_Pgacw,ijk)   ! [loss] c->g=r
-       tend(I_QR,ijk) = w(I_Praut,ijk) & ! [prod] c->r
-                      + w(I_Pracw,ijk) & ! [prod] c->r
-                      + w(I_Psacw,ijk) & ! [prod] c->s=r
-                      + w(I_Pgacw,ijk) & ! [prod] c->g=r
-                      + w(I_Psmlt,ijk) & ! [prod] s->r
-                      + w(I_Pgmlt,ijk) & ! [prod] g->r
-                      - w(I_Prevp,ijk)   ! [loss] r->v
-       tend(I_QI,ijk) = 0.0_RP
-       tend(I_QS,ijk) = &                ! [prod]
-                      - w(I_Psmlt,ijk) & ! [loss] s->r
-                      - w(I_Pgacs,ijk)   ! [loss] s->g
-       tend(I_QG,ijk) = w(I_Pgacs,ijk) & ! [prod] s->g
-                      - w(I_Pgmlt,ijk)   ! [loss] g->r
-
-       tend(I_QC,ijk) = max( tend(I_QC,ijk), -w(I_dqc_dt,ijk) )
-       tend(I_QR,ijk) = max( tend(I_QR,ijk), -w(I_dqr_dt,ijk) )
-       tend(I_QI,ijk) = max( tend(I_QI,ijk), -w(I_dqi_dt,ijk) )
-       tend(I_QS,ijk) = max( tend(I_QS,ijk), -w(I_dqs_dt,ijk) )
-       tend(I_QG,ijk) = max( tend(I_QG,ijk), -w(I_dqg_dt,ijk) )
-
-       tend(I_QV,ijk) = - ( tend(I_QC,ijk) &
-                          + tend(I_QR,ijk) &
-                          + tend(I_QI,ijk) &
-                          + tend(I_QS,ijk) &
-                          + tend(I_QG,ijk) )
-    enddo
-
-    !---< Solve tendencies (Cold Rain) >---
-!OCL NORECURRENCE(w)
-    do indirect = 1, ijk_cold
-       ijk = index_cold(indirect)
-
-       ! [QC]
-       net = &                  ! [prod]
-           - w(I_Praut  ,ijk) & ! [loss] c->r
-           - w(I_Pracw  ,ijk) & ! [loss] c->r
-           - w(I_Psacw  ,ijk) & ! [loss] c->s
-           - w(I_Psfw   ,ijk) & ! [loss] c->s
-           - w(I_Pgacw  ,ijk)   ! [loss] c->g
-
-       fac_sw = 0.5_RP + sign( 0.5_RP, net+EPS ) ! if production > loss , fac_sw=1
-       fac    = (          fac_sw ) &
-              + ( 1.0_RP - fac_sw ) * min( -w(I_dqc_dt,ijk)/(net-fac_sw), 1.0_RP ) ! loss limiter
-
-       w(I_Praut,ijk) = w(I_Praut,ijk) * fac
-       w(I_Pracw,ijk) = w(I_Pracw,ijk) * fac
-       w(I_Psacw,ijk) = w(I_Psacw,ijk) * fac
-       w(I_Psfw ,ijk) = w(I_Psfw ,ijk) * fac
-       w(I_Pgacw,ijk) = w(I_Pgacw,ijk) * fac
-
-       ! [QI]
-       net = &                  ! [prod]
-           - w(I_Psaut  ,ijk) & ! [loss] i->s
-           - w(I_Praci_s,ijk) & ! [loss] i->s
-           - w(I_Psaci  ,ijk) & ! [loss] i->s
-           - w(I_Psfi   ,ijk) & ! [loss] i->s
-           - w(I_Praci_g,ijk) & ! [loss] i->g
-           - w(I_Pgaci  ,ijk)   ! [loss] i->g
-
-       fac_sw = 0.5_RP + sign( 0.5_RP, net+EPS ) ! if production > loss , fac_sw=1
-       fac    = (          fac_sw ) &
-              + ( 1.0_RP - fac_sw ) * min( -w(I_dqi_dt,ijk)/(net-fac_sw), 1.0_RP ) ! loss limiter
-
-       w(I_Praci_s,ijk) = w(I_Praci_s,ijk) * fac
-       w(I_Psaut  ,ijk) = w(I_Psaut  ,ijk) * fac
-       w(I_Psaci  ,ijk) = w(I_Psaci  ,ijk) * fac
-       w(I_Psfi   ,ijk) = w(I_Psfi   ,ijk) * fac
-       w(I_Praci_g,ijk) = w(I_Praci_g,ijk) * fac
-       w(I_Pgaci  ,ijk) = w(I_Pgaci  ,ijk) * fac
-
-       ! [QR]
-       net = w(I_Praut  ,ijk) & ! [prod] c->r
-           + w(I_Pracw  ,ijk) & ! [prod] c->r
-           - w(I_Prevp  ,ijk) & ! [loss] r->v
-           - w(I_Piacr_s,ijk) & ! [loss] r->s
-           - w(I_Psacr_s,ijk) & ! [loss] r->s
-           - w(I_Piacr_g,ijk) & ! [loss] r->g
-           - w(I_Psacr_g,ijk) & ! [loss] r->g
-           - w(I_Pgacr  ,ijk) & ! [loss] r->g
-           - w(I_Pgfrz  ,ijk)   ! [loss] r->g
-
-       fac_sw = 0.5_RP + sign( 0.5_RP, net+EPS ) ! if production > loss , fac_sw=1
-       fac    = (          fac_sw ) &
-              + ( 1.0_RP - fac_sw ) * min( -w(I_dqr_dt,ijk)/(net-fac_sw), 1.0_RP ) ! loss limiter
-
-       w(I_Praut  ,ijk) = w(I_Praut  ,ijk) * fac
-       w(I_Pracw  ,ijk) = w(I_Pracw  ,ijk) * fac
-       w(I_Prevp  ,ijk) = w(I_Prevp  ,ijk) * fac
-       w(I_Piacr_s,ijk) = w(I_Piacr_s,ijk) * fac
-       w(I_Psacr_s,ijk) = w(I_Psacr_s,ijk) * fac
-       w(I_Piacr_g,ijk) = w(I_Piacr_g,ijk) * fac
-       w(I_Psacr_g,ijk) = w(I_Psacr_g,ijk) * fac
-       w(I_Pgacr  ,ijk) = w(I_Pgacr  ,ijk) * fac
-       w(I_Pgfrz  ,ijk) = w(I_Pgfrz  ,ijk) * fac
+       w(I_Piacr_s) = w(I_Piacr_s) * fac_ice
+       w(I_Psacr_s) = w(I_Psacr_s) * fac_ice
+       w(I_Piacr_g) = w(I_Piacr_g) * fac_ice
+       w(I_Psacr_g) = w(I_Psacr_g) * fac_ice
+       w(I_Pgacr  ) = w(I_Pgacr  ) * fac_ice
+       w(I_Pgfrz  ) = w(I_Pgfrz  ) * fac_ice
 
        !### in the case of Sice-1 > 0, limiter is applied to qv before qs,qg
        ! [QV]
-       net = w(I_Prevp,ijk) & ! [prod] r->v
-           + w(I_Pssub,ijk) & ! [prod] s->v
-           + w(I_Pgsub,ijk) & ! [prod] g->v
-           - w(I_Psdep,ijk) & ! [loss] v->s
-           - w(I_Pgdep,ijk)   ! [loss] v->g
+       net = w(I_Prevp) & ! [prod] r->v
+           + w(I_Pssub) & ! [prod] s->v
+           + w(I_Pgsub) & ! [prod] g->v
+           - w(I_Psdep) & ! [loss] v->s
+           - w(I_Pgdep)   ! [loss] v->g
 
        fac_sw = 0.5_RP + sign( 0.5_RP, net+EPS ) ! if production > loss , fac_sw=1
        fac    = (          fac_sw ) &
-              + ( 1.0_RP - fac_sw ) * min( -w(I_dqv_dt,ijk)/(net-fac_sw), 1.0_RP ) ! loss limiter
+              + ( 1.0_RP - fac_sw ) * min( -w(I_dqv_dt)/(net-fac_sw), 1.0_RP ) ! loss limiter
 
-       fac    = (          w(I_delta3,ijk) ) * fac &
-              + ( 1.0_RP - w(I_delta3,ijk) )
+       fac    = (          w(I_delta3) ) * fac &
+              + ( 1.0_RP - w(I_delta3) )
 
-       w(I_Prevp,ijk) = w(I_Prevp,ijk) * fac
-       w(I_Pssub,ijk) = w(I_Pssub,ijk) * fac
-       w(I_Pgsub,ijk) = w(I_Pgsub,ijk) * fac
-       w(I_Psdep,ijk) = w(I_Psdep,ijk) * fac
-       w(I_Pgdep,ijk) = w(I_Pgdep,ijk) * fac
+       fac = fac * ice + 1.0_RP * (1.0_RP - ice)
+
+       w(I_Prevp) = w(I_Prevp) * fac
+       w(I_Pssub) = w(I_Pssub) * fac
+       w(I_Pgsub) = w(I_Pgsub) * fac
+       w(I_Psdep) = w(I_Psdep) * fac
+       w(I_Pgdep) = w(I_Pgdep) * fac
 
        ! [QS]
-       net = w(I_Psdep  ,ijk) & ! [prod] v->s
-           + w(I_Psacw  ,ijk) & ! [prod] c->s
-           + w(I_Psfw   ,ijk) & ! [prod] c->s
-           + w(I_Piacr_s,ijk) & ! [prod] r->s
-           + w(I_Psacr_s,ijk) & ! [prod] r->s
-           + w(I_Psaut  ,ijk) & ! [prod] i->s
-           + w(I_Praci_s,ijk) & ! [prod] i->s
-           + w(I_Psaci  ,ijk) & ! [prod] i->s
-           + w(I_Psfi   ,ijk) & ! [prod] i->s
-           - w(I_Pssub  ,ijk) & ! [loss] s->v
-           - w(I_Pgaut  ,ijk) & ! [loss] s->g
-           - w(I_Pracs  ,ijk) & ! [loss] s->g
-           - w(I_Pgacs  ,ijk)   ! [loss] s->g
+       net = &
+           - w(I_Pgacs) & ! [loss] s->g
+           + ( &
+           - w(I_Psmlt) & ! [loss] s->r
+           ) * ( 1.0_RP - ice ) &
+           + ( &
+           + w(I_Psdep  ) & ! [prod] v->s
+           + w(I_Psacw  ) & ! [prod] c->s
+           + w(I_Psfw   ) & ! [prod] c->s
+           + w(I_Piacr_s) & ! [prod] r->s
+           + w(I_Psacr_s) & ! [prod] r->s
+           + w(I_Psaut  ) & ! [prod] i->s
+           + w(I_Praci_s) & ! [prod] i->s
+           + w(I_Psaci  ) & ! [prod] i->s
+           + w(I_Psfi   ) & ! [prod] i->s
+           - w(I_Pssub  ) & ! [loss] s->v
+           - w(I_Pgaut  ) & ! [loss] s->g
+           - w(I_Pracs  ) & ! [loss] s->g
+           )
 
        fac_sw = 0.5_RP + sign( 0.5_RP, net+EPS ) ! if production > loss , fac_sw=1
        fac    = (          fac_sw ) &
-              + ( 1.0_RP - fac_sw ) * min( -w(I_dqs_dt,ijk)/(net-fac_sw), 1.0_RP ) ! loss limiter
+              + ( 1.0_RP - fac_sw ) * min( -w(I_dqs_dt)/(net-fac_sw), 1.0_RP ) ! loss limiter
 
-       w(I_Psdep  ,ijk) = w(I_Psdep  ,ijk) * fac
-       w(I_Psacw  ,ijk) = w(I_Psacw  ,ijk) * fac
-       w(I_Psfw   ,ijk) = w(I_Psfw   ,ijk) * fac
-       w(I_Piacr_s,ijk) = w(I_Piacr_s,ijk) * fac
-       w(I_Psacr_s,ijk) = w(I_Psacr_s,ijk) * fac
-       w(I_Psaut  ,ijk) = w(I_Psaut  ,ijk) * fac
-       w(I_Praci_s,ijk) = w(I_Praci_s,ijk) * fac
-       w(I_Psaci  ,ijk) = w(I_Psaci  ,ijk) * fac
-       w(I_Psfi   ,ijk) = w(I_Psfi   ,ijk) * fac
-       w(I_Pssub  ,ijk) = w(I_Pssub  ,ijk) * fac
-       w(I_Pracs  ,ijk) = w(I_Pracs  ,ijk) * fac
-       w(I_Pgaut  ,ijk) = w(I_Pgaut  ,ijk) * fac
-       w(I_Pgacs  ,ijk) = w(I_Pgacs  ,ijk) * fac
+       fac_warm = fac * (1.0_RP - ice) + 1.0_RP * ice
+       fac_ice  = fac * ice + 1.0_RP * (1.0_RP-ice)
+
+       w(I_Pgacs) = w(I_Pgacs) * fac
+
+       w(I_Psmlt) = w(I_Psmlt) * fac_warm
+
+       w(I_Psdep  ) = w(I_Psdep  ) * fac_ice
+       w(I_Psacw  ) = w(I_Psacw  ) * fac_ice
+       w(I_Psfw   ) = w(I_Psfw   ) * fac_ice
+       w(I_Piacr_s) = w(I_Piacr_s) * fac_ice
+       w(I_Psacr_s) = w(I_Psacr_s) * fac_ice
+       w(I_Psaut  ) = w(I_Psaut  ) * fac_ice
+       w(I_Praci_s) = w(I_Praci_s) * fac_ice
+       w(I_Psaci  ) = w(I_Psaci  ) * fac_ice
+       w(I_Psfi   ) = w(I_Psfi   ) * fac_ice
+       w(I_Pssub  ) = w(I_Pssub  ) * fac_ice
+       w(I_Pracs  ) = w(I_Pracs  ) * fac_ice
+       w(I_Pgaut  ) = w(I_Pgaut  ) * fac_ice
 
        ! [QG]
-       net = w(I_Pgdep  ,ijk) & ! [prod] v->g
-           + w(I_Pgacw  ,ijk) & ! [prod] c->g
-           + w(I_Piacr_g,ijk) & ! [prod] r->g
-           + w(I_Psacr_g,ijk) & ! [prod] r->g
-           + w(I_Pgacr  ,ijk) & ! [prod] r->g
-           + w(I_Pgfrz  ,ijk) & ! [prod] r->g
-           + w(I_Praci_g,ijk) & ! [prod] i->g
-           + w(I_Pgaci  ,ijk) & ! [prod] i->g
-           + w(I_Pgaut  ,ijk) & ! [prod] s->g
-           + w(I_Pracs  ,ijk) & ! [prod] s->g
-           + w(I_Pgacs  ,ijk) & ! [prod] s->g
-           - w(I_Pgsub  ,ijk)   ! [loss] g->v
+       net = w(I_Pgacs) & ! [prod] s->g
+           + ( &
+           - w(I_Pgmlt) & ! [loss] g->r
+           ) * ( 1.0_RP - ice ) &
+           + ( &
+           + w(I_Pgdep  ) & ! [prod] v->g
+           + w(I_Pgacw  ) & ! [prod] c->g
+           + w(I_Piacr_g) & ! [prod] r->g
+           + w(I_Psacr_g) & ! [prod] r->g
+           + w(I_Pgacr  ) & ! [prod] r->g
+           + w(I_Pgfrz  ) & ! [prod] r->g
+           + w(I_Praci_g) & ! [prod] i->g
+           + w(I_Pgaci  ) & ! [prod] i->g
+           + w(I_Pgaut  ) & ! [prod] s->g
+           + w(I_Pracs  ) & ! [prod] s->g
+           - w(I_Pgsub  ) & ! [loss] g->v
+           ) * ice
 
        fac_sw = 0.5_RP + sign( 0.5_RP, net+EPS ) ! if production > loss , fac_sw=1
        fac    = (          fac_sw ) &
-              + ( 1.0_RP - fac_sw ) * min( -w(I_dqg_dt,ijk)/(net-fac_sw), 1.0_RP ) ! loss limiter
+              + ( 1.0_RP - fac_sw ) * min( -w(I_dqg_dt)/(net-fac_sw), 1.0_RP ) ! loss limiter
 
-       w(I_Pgdep  ,ijk) = w(I_Pgdep  ,ijk) * fac
-       w(I_Pgacw  ,ijk) = w(I_Pgacw  ,ijk) * fac
-       w(I_Piacr_g,ijk) = w(I_Piacr_g,ijk) * fac
-       w(I_Psacr_g,ijk) = w(I_Psacr_g,ijk) * fac
-       w(I_Pgacr  ,ijk) = w(I_Pgacr  ,ijk) * fac
-       w(I_Pgfrz  ,ijk) = w(I_Pgfrz  ,ijk) * fac
-       w(I_Praci_g,ijk) = w(I_Praci_g,ijk) * fac
-       w(I_Pgaci  ,ijk) = w(I_Pgaci  ,ijk) * fac
-       w(I_Pgaut  ,ijk) = w(I_Pgaut  ,ijk) * fac
-       w(I_Pracs  ,ijk) = w(I_Pracs  ,ijk) * fac
-       w(I_Pgacs  ,ijk) = w(I_Pgacs  ,ijk) * fac
-       w(I_Pgsub  ,ijk) = w(I_Pgsub  ,ijk) * fac
-    enddo
+       fac_warm = fac * (1.0_RP - ice) + 1.0_RP * ice
+       fac_ice  = fac * ice + 1.0_RP * (1.0_RP-ice)
+
+       w(I_Pgacs) = w(I_Pgacs) * fac
+
+       w(I_Pgmlt) = w(I_Pgmlt) * fac_warm
+
+       w(I_Pgdep  ) = w(I_Pgdep  ) * fac_ice
+       w(I_Pgacw  ) = w(I_Pgacw  ) * fac_ice
+       w(I_Piacr_g) = w(I_Piacr_g) * fac_ice
+       w(I_Psacr_g) = w(I_Psacr_g) * fac_ice
+       w(I_Pgacr  ) = w(I_Pgacr  ) * fac_ice
+       w(I_Pgfrz  ) = w(I_Pgfrz  ) * fac_ice
+       w(I_Praci_g) = w(I_Praci_g) * fac_ice
+       w(I_Pgaci  ) = w(I_Pgaci  ) * fac_ice
+       w(I_Pgaut  ) = w(I_Pgaut  ) * fac_ice
+       w(I_Pracs  ) = w(I_Pracs  ) * fac_ice
+       w(I_Pgsub  ) = w(I_Pgsub  ) * fac_ice
 
 
-
-!OCL NORECURRENCE(w,tend)
-    do indirect = 1, ijk_cold
-       ijk = index_cold(indirect)
 
        ! re-calc net production & loss
-       tend(I_QC,ijk) = &                  ! [prod]
-                      - w(I_Praut  ,ijk) & ! [loss] c->r
-                      - w(I_Pracw  ,ijk) & ! [loss] c->r
-                      - w(I_Psacw  ,ijk) & ! [loss] c->s
-                      - w(I_Psfw   ,ijk) & ! [loss] c->s
-                      - w(I_Pgacw  ,ijk)   ! [loss] c->g
-       tend(I_QR,ijk) = w(I_Praut  ,ijk) & ! [prod] c->r
-                      + w(I_Pracw  ,ijk) & ! [prod] c->r
-                      - w(I_Prevp  ,ijk) & ! [loss] r->v
-                      - w(I_Piacr_s,ijk) & ! [loss] r->s
-                      - w(I_Psacr_s,ijk) & ! [loss] r->s
-                      - w(I_Piacr_g,ijk) & ! [loss] r->g
-                      - w(I_Psacr_g,ijk) & ! [loss] r->g
-                      - w(I_Pgacr  ,ijk) & ! [loss] r->g
-                      - w(I_Pgfrz  ,ijk)   ! [loss] r->g
-       tend(I_QI,ijk) = &                  ! [prod]
-                      - w(I_Psaut  ,ijk) & ! [loss] i->s
-                      - w(I_Praci_s,ijk) & ! [loss] i->s
-                      - w(I_Psaci  ,ijk) & ! [loss] i->s
-                      - w(I_Psfi   ,ijk) & ! [loss] i->s
-                      - w(I_Praci_g,ijk) & ! [loss] i->g
-                      - w(I_Pgaci  ,ijk)   ! [loss] i->g
-       tend(I_QS,ijk) = w(I_Psdep  ,ijk) & ! [prod] v->s
-                      + w(I_Psacw  ,ijk) & ! [prod] c->s
-                      + w(I_Psfw   ,ijk) & ! [prod] c->s
-                      + w(I_Piacr_s,ijk) & ! [prod] r->s
-                      + w(I_Psacr_s,ijk) & ! [prod] r->s
-                      + w(I_Psaut  ,ijk) & ! [prod] i->s
-                      + w(I_Psaci  ,ijk) & ! [prod] i->s
-                      + w(I_Praci_s,ijk) & ! [prod] i->s
-                      + w(I_Psfi   ,ijk) & ! [prod] i->s
-                      - w(I_Pssub  ,ijk) & ! [loss] s->v
-                      - w(I_Pgaut  ,ijk) & ! [loss] s->g
-                      - w(I_Pracs  ,ijk) & ! [loss] s->g
-                      - w(I_Pgacs  ,ijk)   ! [loss] s->g
-       tend(I_QG,ijk) = w(I_Pgdep  ,ijk) & ! [prod] v->g
-                      + w(I_Pgacw  ,ijk) & ! [prod] c->g
-                      + w(I_Piacr_g,ijk) & ! [prod] r->g
-                      + w(I_Psacr_g,ijk) & ! [prod] r->g
-                      + w(I_Pgacr  ,ijk) & ! [prod] r->g
-                      + w(I_Pgfrz  ,ijk) & ! [prod] r->g
-                      + w(I_Praci_g,ijk) & ! [prod] i->g
-                      + w(I_Pgaci  ,ijk) & ! [prod] i->g
-                      + w(I_Pgaut  ,ijk) & ! [prod] s->g
-                      + w(I_Pracs  ,ijk) & ! [prod] s->g
-                      + w(I_Pgacs  ,ijk) & ! [prod] s->g
-                      - w(I_Pgsub  ,ijk)   ! [loss] g->v
+       tend(I_QC) = &                ! [prod]
+                  - w(I_Praut) & ! [loss] c->r
+                  - w(I_Pracw) & ! [loss] c->r
+                  - w(I_Psacw) & ! [loss] c->s
+                  - w(I_Pgacw) & ! [loss] c->g
+                  - w(I_Psfw ) * ice
 
-       tend(I_QC,ijk) = max( tend(I_QC,ijk), -w(I_dqc_dt,ijk) )
-       tend(I_QR,ijk) = max( tend(I_QR,ijk), -w(I_dqr_dt,ijk) )
-       tend(I_QI,ijk) = max( tend(I_QI,ijk), -w(I_dqi_dt,ijk) )
-       tend(I_QS,ijk) = max( tend(I_QS,ijk), -w(I_dqs_dt,ijk) )
-       tend(I_QG,ijk) = max( tend(I_QG,ijk), -w(I_dqg_dt,ijk) )
+       tend(I_QR) = w(I_Praut) & ! [prod] c->r
+                  + w(I_Pracw) & ! [prod] c->r
+                  - w(I_Prevp) & ! [loss] r->v
+                  + ( &
+                  + w(I_Psacw) & ! [prod] c->s=r
+                  + w(I_Pgacw) & ! [prod] c->g=r
+                  + w(I_Psmlt) & ! [prod] s->r
+                  + w(I_Pgmlt) & ! [prod] g->r
+                  ) * ( 1.0_RP - ice ) &
+                  + ( &
+                  - w(I_Piacr_s) & ! [loss] r->s
+                  - w(I_Psacr_s) & ! [loss] r->s
+                  - w(I_Piacr_g) & ! [loss] r->g
+                  - w(I_Psacr_g) & ! [loss] r->g
+                  - w(I_Pgacr  ) & ! [loss] r->g
+                  - w(I_Pgfrz  ) & ! [loss] r->g
+                  ) * ice
 
-       tend(I_QV,ijk) = - ( tend(I_QC,ijk) &
-                          + tend(I_QR,ijk) &
-                          + tend(I_QI,ijk) &
-                          + tend(I_QS,ijk) &
-                          + tend(I_QG,ijk) )
-    enddo
+       tend(I_QI) = ( &
+                  - w(I_Psaut  ) & ! [loss] i->s
+                  - w(I_Praci_s) & ! [loss] i->s
+                  - w(I_Psaci  ) & ! [loss] i->s
+                  - w(I_Psfi   ) & ! [loss] i->s
+                  - w(I_Praci_g) & ! [loss] i->g
+                  - w(I_Pgaci  ) & ! [loss] i->g
+                  ) * ice
 
-    ! mass & energy update
-!OCL NORECURRENCE(tend)
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       ijk = ( j - JS ) * KMAX * IMAX &
-           + ( i - IS ) * KMAX        &
-           + ( k - KS )               &
-           + 1
+       tend(I_QS) = &                ! [prod]
+                  - w(I_Pgacs) & ! [loss] s->g
+                  + ( &
+                  - w(I_Psmlt) & ! [loss] s->r
+                  ) * ( 1.0_RP - ice ) &
+                  + ( &
+                  + w(I_Psdep  ) & ! [prod] v->s
+                  + w(I_Psacw  ) & ! [prod] c->s
+                  + w(I_Psfw   ) & ! [prod] c->s
+                  + w(I_Piacr_s) & ! [prod] r->s
+                  + w(I_Psacr_s) & ! [prod] r->s
+                  + w(I_Psaut  ) & ! [prod] i->s
+                  + w(I_Psaci  ) & ! [prod] i->s
+                  + w(I_Praci_s) & ! [prod] i->s
+                  + w(I_Psfi   ) & ! [prod] i->s
+                  - w(I_Pssub  ) & ! [loss] s->v
+                  - w(I_Pgaut  ) & ! [loss] s->g
+                  - w(I_Pracs  ) & ! [loss] s->g
+                  ) * ice
 
-       QTRC_t(k,i,j,I_QV) = QTRC_t(k,i,j,I_QV) + tend(I_QV,ijk)
-       QTRC_t(k,i,j,I_QC) = QTRC_t(k,i,j,I_QC) + tend(I_QC,ijk)
-       QTRC_t(k,i,j,I_QR) = QTRC_t(k,i,j,I_QR) + tend(I_QR,ijk)
-       QTRC_t(k,i,j,I_QI) = QTRC_t(k,i,j,I_QI) + tend(I_QI,ijk)
-       QTRC_t(k,i,j,I_QS) = QTRC_t(k,i,j,I_QS) + tend(I_QS,ijk)
-       QTRC_t(k,i,j,I_QG) = QTRC_t(k,i,j,I_QG) + tend(I_QG,ijk)
+       tend(I_QG) = w(I_Pgacs) & ! [prod] s->g
+                      + ( &
+                      - w(I_Pgmlt) & ! [loss] g->r
+                      ) * ( 1.0_RP - ice ) &
+                      + ( &
+                      + w(I_Pgdep  ) & ! [prod] v->g
+                      + w(I_Pgacw  ) & ! [prod] c->g
+                      + w(I_Piacr_g) & ! [prod] r->g
+                      + w(I_Psacr_g) & ! [prod] r->g
+                      + w(I_Pgacr  ) & ! [prod] r->g
+                      + w(I_Pgfrz  ) & ! [prod] r->g
+                      + w(I_Praci_g) & ! [prod] i->g
+                      + w(I_Pgaci  ) & ! [prod] i->g
+                      + w(I_Pgaut  ) & ! [prod] s->g
+                      + w(I_Pracs  ) & ! [prod] s->g
+                      - w(I_Pgsub  ) & ! [loss] g->v
+                      ) * ice
 
-       RHOE_t(k,i,j) = RHOE_t(k,i,j) - DENS0(k,i,j) * ( LHV * tend(I_QV,ijk) &
-                                                      - LHF * tend(I_QI,ijk) &
-                                                      - LHF * tend(I_QS,ijk) &
-                                                      - LHF * tend(I_QG,ijk) )
+       tend(I_QC) = max( tend(I_QC), -w(I_dqc_dt) )
+       tend(I_QR) = max( tend(I_QR), -w(I_dqr_dt) )
+       tend(I_QI) = max( tend(I_QI), -w(I_dqi_dt) )
+       tend(I_QS) = max( tend(I_QS), -w(I_dqs_dt) )
+       tend(I_QG) = max( tend(I_QG), -w(I_dqg_dt) )
+
+       tend(I_QV) = - ( tend(I_QC) &
+                      + tend(I_QR) &
+                      + tend(I_QI) &
+                      + tend(I_QS) &
+                      + tend(I_QG) )
+
+       QTRC_t(k,i,j,I_QV) = QTRC_t(k,i,j,I_QV) + tend(I_QV)
+       QTRC_t(k,i,j,I_QC) = QTRC_t(k,i,j,I_QC) + tend(I_QC)
+       QTRC_t(k,i,j,I_QR) = QTRC_t(k,i,j,I_QR) + tend(I_QR)
+       QTRC_t(k,i,j,I_QI) = QTRC_t(k,i,j,I_QI) + tend(I_QI)
+       QTRC_t(k,i,j,I_QS) = QTRC_t(k,i,j,I_QS) + tend(I_QS)
+       QTRC_t(k,i,j,I_QG) = QTRC_t(k,i,j,I_QG) + tend(I_QG)
+
+       RHOE_t(k,i,j) = RHOE_t(k,i,j) - DENS0(k,i,j) * ( LHV * tend(I_QV) &
+                                                      - LHF * tend(I_QI) &
+                                                      - LHF * tend(I_QS) &
+                                                      - LHF * tend(I_QG) )
 
        QTRC0(k,i,j,I_QV) = QTRC0(k,i,j,I_QV) + QTRC_t(k,i,j,I_QV) * dt
        QTRC0(k,i,j,I_QC) = QTRC0(k,i,j,I_QC) + QTRC_t(k,i,j,I_QC) * dt
@@ -1510,35 +1419,29 @@ contains
     enddo
     enddo
 
-    do ip = 1, w_nmax
-       if ( w_histid(ip) > 0 ) then
+!    do ip = 1, w_nmax
+!       if ( w_histid(ip) > 0 ) then
 
-          call HIST_query( w_histid(ip), & ! [IN]
-                           do_put        ) ! [OUT]
+!          call HIST_query( w_histid(ip), & ! [IN]
+!                           do_put        ) ! [OUT]
 
-          if ( do_put ) then
-!OCL NORECURRENCE(w)
-             do j = JS, JE
-             do i = IS, IE
-             do k = KS, KE
-                ijk = ( j - JS ) * KMAX * IMAX &
-                    + ( i - IS ) * KMAX        &
-                    + ( k - KS )               &
-                    + 1
-
-                work3D(k,i,j) = w(ip,ijk)
-             enddo
-             enddo
-             enddo
+!          if ( do_put ) then
+!             do j = JS, JE
+!             do i = IS, IE
+!             do k = KS, KE
+!                work3D(k,i,j) = w(ip)
+!             enddo
+!             enddo
+!             enddo
 
 !          if( IO_L ) write(IO_FID_LOG,*) w_name(ip), "MAX/MIN:", &
 !                     maxval(work3D(KS:KE,IS:IE,JS:JE)), minval(work3D(KS:KE,IS:IE,JS:JE))
 
 
-             call HIST_put( w_histid(ip), work3D(:,:,:), w_zinterp(ip) )
-          endif
-       endif
-    enddo
+!             call HIST_put( w_histid(ip), work3D(:,:,:), w_zinterp(ip) )
+!          endif
+!       endif
+!    enddo
 
 !    if( IO_L ) write(IO_FID_LOG,*) "tend QV MAX/MIN:", maxval(tend(I_QV,:)), minval(tend(I_QV,:))
 !    if( IO_L ) write(IO_FID_LOG,*) "tend QC MAX/MIN:", maxval(tend(I_QC,:)), minval(tend(I_QC,:))
