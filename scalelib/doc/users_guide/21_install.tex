@@ -1,23 +1,30 @@
+ここでは，日本域を対象とした実事例実験のチュートリアルを通して，SCALE-LESモデルを実行する一連の作業を説明する．
+
+
 \section{Installation of SCALE-LES}
+%####################################################################################
 
 ここでは，SCALE-LESモデルパッケージを含むSCALEライブラリの
 インストール方法を説明する．
-SCALEライブラリのインストールに必要となる
-ライブラリ環境のインストール方法については，
-必要に応じてAppendix \ref{sec:env_setting}を参照されたい．
+SCALEライブラリのインストールに必要となるライブラリ環境のインストール方法については，
+必要に応じてAppendix \ref{sec:env_setting}を参照して事前にインストールすること．
+以降のチュートリアルでは，Ruby DCL/GPhysに含まれるgpviewがインストールされていると想定して描画の説明を行う．
+SCALEのインストールにはコマンドライン端末を使う．コマンドラインのシンボル（\verb|$|）があれば、コマンドの実行を示す．
+
 
 \subsection{Required Environment}
+%====================================================================================
 
 \begin{itemize}
   \item {\bf 計算機環境} : Linux互換OS (Mac OS-Xを含む)が動作する環境．
         マルチコアCPU環境以上を推奨する．
         実験サイズによるが4GB以上のメモリがインストールされているマシン環境が好ましい．
-  \item {\bf OS} : Linux OS（Fedora, CentOS, SUSE等），Max OS-X
+  \item {\bf OS} : Linux OS（Fedora, CentOS, SUSE等），Max OS-X．ここではLinux (CentOS7)を使用して説明する．
   \item {\bf コンパイラ} : Fortran 2003をサポートするC，Fortranコンパイラを必要とする．
-        GNU 4.6.x以上，Intel compiler 2012以上を推奨する．
-  \item {\bf MPIライブラリ} : MPICH2, OpenMPI, Intel MPI等をサポートする．
+        GNU 4.6.x以上，Intel compiler 2012以上を推奨する．ここでは，gcc/gfortranを使用して説明する．
+  \item {\bf MPIライブラリ} : MPICH2, OpenMPI, Intel MPI等をサポートする．ここではopenMPIを使用して説明する．
   \item {\bf netcdf3 もしくは HDF5/netcdf4} : gzip, szipをサポートするHDF5，
-        およびそのHDF5をサポートするnetcdf4を必要とする（netcdf 4.2.xは未調査）．
+        およびそのHDF5をサポートするnetcdf4を必要とする．
         ただし，netcdf3の環境下ではscaleライブラリが提供する全ての機能をサポートできない可能性がある．
   \item {\bf 描画環境（非必須）} : Dennou Club提供のRuby DCL/GPhysに含まれるgpview，
         もしくはGrads等の描画環境があると計算結果を簡単にチェックできる．gpviewの使用を推奨する．
@@ -28,61 +35,74 @@ SCALEライブラリのインストールに必要となる
 
 
 
-\subsection{Building the source code}
+\subsection{Building the source code} \label{sec:source_code}
+%====================================================================================
 
 \subsubsection{ソースコードの入手}
-\url{http://scale.aics.riken.jp/download/} から安定版ソースコードのtarballをダウンロードすることができる．
-開発版ソースコード、最新版の開発版ソースコードが必要な場合には、SCALE-developerまでご連絡下さい．
-今後，開発版ソースコードについてもWebページでtarballを設置を計画中です．
+%-----------------------------------------------------------------------------------
+
+\url{http://scale.aics.riken.jp/download/scale.tar.gz} の安定版ソースコードのtarballをダウンロードすることができる．
+ソースコードのtarballファイルを展開すると\verb|scale/|というディレクトリができる．
+以降の説明で\verb|${TOPDIR}|は，scaleディレクトリが存在する絶対PATHを差す．
 
 実事例のシミュレーションを行うには，ソースコードに加えて外部データが必要になる．
-日本領域の地形，土地利用については国土地理院のデータをscale用のフォーマットに
-変換したデータベース\verb|scale_database.tar.gz|も入手し，適当な場所に展開しておくこと．\\
-\verb|scale_database/topo/DEM50M/Product| に地形データ，\\
-\verb|scale_database/landuse/LU100M/Product| に土地利用データ\\
+このチュートリアル用の気象場のデータ，日本領域の地形・土地利用のデータが収められた
+\url{http://scale.aics.riken.jp/download/tutorial_data.tar.gz}も入手し，\verb|${TOPDIR}|の下，
+つまりscaleディレクトリと同じ場所に展開しておくこと．\\
+\begin{itemize}
+ \item \verb|tutorial_data/input_atom| に気象場データ，\\
+ \item \verb|tutorial_data/input_topo| に地形データ，\\
+ \item \verb|tutorial_data/input_landuse| に土地利用データ\\
+\end{itemize}
 がそれぞれ格納されている．
+
+\verb|tutorial_data|には，本チュートリアルに必要な最低限のデータのみが納めされているため，
+その他の設定で実験を行う場合には別途，気象場，地形，および土地利用データが必要となる．
 
 
 \subsubsection{configure ファイルと環境変数の設定}
+%-----------------------------------------------------------------------------------
+
 \verb|scale/sysdep|内にいくつかのコンフィグファイル（\verb|Makedef.***|）が準備されている．
-これらの内から自分の環境にあったものを探す．たとえば，OSがLinuxでintel compiler
-とintel MPIの環境下では，\verb|"Makedef.Linux-intel-impi"|が該当する．
-自分の環境に合うものがなければ既存ファイルをベースにして作成する．
-\verb|Makedef.***|の\verb|"***"|の部分を下記の例のように環境変数として設定する．
+これらの内から自分の環境にあったものを設定する．
+ここでは，OSはLinux，gcc/gfortran コンパイラ，およびopenMPIを使用するため，
+\verb|"Makedef.Linux-gnu-ompi"|が設定すべきコンフィグファイルである．
+自分の環境に合うものがなければ既存ファイルをベースにして作成する必要がある．
+\verb|Makedef.***|の\verb|"***"|の部分を下記のように環境変数として設定する．
+\verb|.bashrc|などのファイルに記述しておくと便利である．
 
 また、現実実験のための地形データ、
-SCALEをコンパイルするのに必要な外部ライブラリ（HDF5, netcdf4）についても、
-下記のようにPATHを設定する．
-下記の例では、HDF5は\verb|/usr/local/hdf|の下，netcdf4は\verb|/usr/local/netcdf4|に
-インストールされていると仮定しています．
+SCALEをコンパイルするのに必要な外部ライブラリについても下記のようにPATHを設定する．
+ここでは，Appendix \ref{sec:env_setting}に従ったとして，
+HDF5，netcdf4ともに\verb|/usr|の下にインストールされている場合の例を示す．
 
 \begin{verbatim}
-~>$ export SCALE_SYS="Linux-intel-impi"
-~>$ export SCALE_DB="/path_to_scale-database/scale_database"
-~>$ export HDF5="/usr/local/hdf"
-~>$ export NETCDF4="/usr/local/netcdf"
+ $ export SCALE_SYS="Linux-gnu-ompi"
+ $ export HDF5="/usr"
+ $ export NETCDF4="/usr"
 \end{verbatim}
-
 
 
 \subsubsection{コンパイル}
-SCALE-LESは各テスト環境下においてコンパイルする．
-まず，目的のテスト環境ディレクトリ（例えば \verb|scale/scale-les/test/case/gravitywave/500m|）へ移動し，
-makeコマンドを使ってコンパイルします．
-SCALEでは並列makeも可能で，例えば下記のようにmakeコマンドを実行することで4並列でのコンパイルが可能です．
+%-----------------------------------------------------------------------------------
+
+下記のディレクトリに移動して，makeコマンドによってコンパイルを行う．
 \begin{verbatim}
-~>$ make -j 4
+ $ cd scale-les/test/tutorial/bin
+ $ make -j 4
 \end{verbatim}
 
-このmakeによってSCALEライブラリ，SCALE-LESのコンパイルが行われる．
-makeを行ったディレクトリ下に\verb|scale-les, scale-les_init, scale-les_pp|の
-3つの実行ファイルが生成されていればコンパイルは成功である．
-SCALEライブラリは，scaleのTOPディレクトリ直下の\verb|scalelib/|というディレクトリ内でコンパイル，
-およびアーカイブが行われ，\verb|"./lib"|という名前の隠しディレクトリとしてテスト環境ディレクトリへリンクされています．\\
+\verb|make|のあとの \verb|"-j 4"| は，並列コンパイルを指示するオプションで，4並列コンパイルを行うことを指示する．
+コンパイルを実行する環境によっては並列数を増やすこともできる．
+
+このmakeによってSCALEライブラリ，およびSCALE-LESモデルのコンパイルが行われ，結果として
+\verb|scale-les, scale-les_init, scale-les_pp|の3つの実行ファイルが生成されていればコンパイルは成功である．
 
 
 {\bf 注意点}
 \begin{itemize}
+\item SCALEライブラリは，scaleのTOPディレクトリ直下の\verb|scale/scalelib/|というディレクトリ内でコンパイルと
+アーカイブが行われ，\verb|"./lib"|という名前の隠しディレクトリとして\verb|bin/|ディレクトリ内へコピーされている．\\
 \item Debugモードでコンパイルしたい場合や，コンパイルオプションを変更したい場合は，
       \verb|Makedef.***|のファイルを編集してください．
 \item 開発版ソースコードをコンパイルしている場合，一部のコンパイラバージョンにおいて
@@ -91,5 +111,5 @@ SCALEライブラリは，scaleのTOPディレクトリ直下の\verb|scalelib/|
 
 
 
-
+%####################################################################################
 

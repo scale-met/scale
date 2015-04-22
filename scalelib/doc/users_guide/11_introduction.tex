@@ -7,7 +7,7 @@
 \subsection{SCALEライブラリ}
 SCALEとは''Scalable Computing for Advanced Library and Environment''の略であり，
 理化学研究所 計算科学研究機構（AICS）を中心に開発が進められている次世代気象・気候科学における基盤ライブラリである．
-このライブラリは次世代のスーパーコンピュータから汎用計算機に至るまで広く用いられる事を念頭において開発されており，
+Figure \ref{fig:scale}に示されるように，このライブラリは次世代のスーパーコンピュータから汎用計算機に至るまで広く用いられる事を念頭において開発されており，
 気候・気象科学を専門とする科学者と計算機科学を専門とする科学者が共同で開発を行っている．
 
 今後も並列計算機は、気象・気候研究に欠かせないツールであり続け、利用頻度はより高くなると予想される。
@@ -18,12 +18,28 @@ SCALEライブラリは京コンピュータをはじめとする並列計算機
 SCALEライブラリ（SCALE-LESモデルを含む）はBSD-2ライセンスにおいてフリーソフトウェアとして提供されており、
 ユーザーの自由な利用・改変が許されている点も特徴といえる．
 
+\begin{figure}[t]
+\begin{center}
+  \includegraphics[width=0.6\hsize]{./figure/library.eps}\\
+  \caption{SCALEライブラリのねらい}
+  \label{fig:scale}
+\end{center}
+\end{figure}
+
 
 \subsection{SCALEとSCALE-LESモデル}
-SCALEライブラリを使用して構築された数値モデルの1例がSCALE-LESモデルである。
+SCALEライブラリを使用して構築された数値モデルの1例がSCALE-LESモデルである(Fig. \ref{fig:scale-les})。
 格子系や力学コア，物理過程といったモデル構築に必要な基本的なコンポーネントはSCALEライブラリが提供するため、
 SCALE-LESとして新たに用意されたのは、これらのコンポーネントをmanageするためのモデルドライバーや変数セットである。
 SCALEライブラリをインストールしておくことで、SCALE-LESと同様な方法によってユーザーは新たなモデル作ることができる。
+
+\begin{figure}[t]
+\begin{center}
+  \includegraphics[width=0.9\hsize]{./figure/scale_and_scale-les.eps}\\
+  \caption{SCALEライブラリとSCALE-LESモデルの関係}
+  \label{fig:scale-les}
+\end{center}
+\end{figure}
 
 
 \subsection{SCALE-LESモデルの構成}
