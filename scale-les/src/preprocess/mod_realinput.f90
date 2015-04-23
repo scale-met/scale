@@ -3305,7 +3305,7 @@ contains
 
     allocate( lon_org   (          dims(1), dims(2), fstep ) )
     allocate( lat_org   (          dims(1), dims(2), fstep ) )
-    allocate( pres_org  ( dims(3), dims(1), dims(2), fstep ) )
+    allocate( pres_org  ( dims(3), dims(1), dims(2),    nt ) )
 
     allocate( mslp_org  (          dims(1), dims(2),    nt ) )
     allocate( psfc_org  (          dims(1), dims(2),    nt ) )
@@ -3821,7 +3821,7 @@ contains
 
        call COMM_bcast( lon_org (:,:,:),               dims(1), dims(2), fstep )
        call COMM_bcast( lat_org (:,:,:),               dims(1), dims(2), fstep )
-       call COMM_bcast( pres_org(:,:,:,:),    dims(3), dims(1), dims(2), fstep )
+       call COMM_bcast( pres_org(:,:,:,:),    dims(3), dims(1), dims(2),    nt )
        call COMM_bcast( usfc_org(:,:,:),               dims(1), dims(2),    nt )
        call COMM_bcast( vsfc_org(:,:,:),               dims(1), dims(2),    nt )
        call COMM_bcast( tsfc_org(:,:,:),               dims(1), dims(2),    nt )
