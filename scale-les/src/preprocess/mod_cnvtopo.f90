@@ -286,8 +286,8 @@ contains
     endif
     if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_CNVTOPO_GTOPO30)
 
-    do j = JS, JE
-    do i = IS, IE
+    do j = 1, JA
+    do i = 1, IA
        area_sum (i,j) = 0.0_RP
        TOPO_Zsfc(i,j) = 0.0_RP
     enddo
