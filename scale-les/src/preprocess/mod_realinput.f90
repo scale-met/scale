@@ -3236,7 +3236,6 @@ contains
     real(RP), allocatable :: pott_org (:,:,:,:)  ! calculated in this program
     real(RP), allocatable :: hgt_org  (:,:,:,:)
     real(RP), allocatable :: qtrc_org (:,:,:,:,:)
-    real(RP), allocatable :: qtrc_org_qa (:,:,:,:,:)
     real(RP), allocatable :: rhprs_org(:,:,:,:)
 
     integer  :: QA_outer = 1
@@ -3258,6 +3257,7 @@ contains
     real(RP) :: pres_sfc(1,IA,JA,sstep:estep)
     real(RP) :: temp_sfc(1,IA,JA,sstep:estep)
     real(RP) :: qtrc_sfc(1,IA,JA,sstep:estep,QA)
+    real(RP) :: qtrc_org_qa (QA)
 
     real(RP), allocatable :: hfact(:,:,:)
     real(RP), allocatable :: vfact(:,:,:,:,:)
@@ -3314,7 +3314,6 @@ contains
     allocate( usfc_org  (          dims(1), dims(2),    nt ) )
     allocate( vsfc_org  (          dims(1), dims(2),    nt ) )
     allocate( qsfc_org  (          dims(1), dims(2),    nt, QA_outer) )
-    allocate( qsfc_org_qa (        dims(1), dims(2),    nt, QA) )
     allocate( rhsfc_org (          dims(1), dims(2),    nt ) )
 
     allocate( velx_org  ( dims(3), dims(1), dims(2),    nt ) )
