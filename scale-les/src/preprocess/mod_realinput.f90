@@ -6233,8 +6233,10 @@ contains
            cycle
        else
 
-         if ( present(maskval).and.(abs(maskval-999.99_RP)<EPS) ) then
+         if ( present(maskval) ) then
+         if ( abs(maskval-999.99_RP)<EPS ) then
             if (abs(lsmask(i,j)-0.0_RP) < EPS) maskval = data(i,j,n)
+         endif
          endif
 
         !--------------------------------------

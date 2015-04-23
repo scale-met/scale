@@ -1940,18 +1940,24 @@ contains
     !---------------------------------------------------------------------------
 
     do_xdirec = .true.
-    if ( present(skip_x) .and. skip_x ) then
+    if ( present(skip_x) ) then
+    if ( skip_x ) then
        do_xdirec = .false.
+    endif
     endif
 
     do_ydirec = .true.
-    if ( present(skip_y) .and. skip_y ) then
+    if ( present(skip_y) ) then
+    if ( skip_y ) then
        do_ydirec = .false.
+    endif
     endif
 
     do_zdirec = .true.
-    if ( present(skip_z) .and. skip_z ) then
+    if ( present(skip_z) ) then
+    if ( skip_z ) then
        do_zdirec = .false.
+    endif
     endif
 
     if ( do_xdirec ) then
