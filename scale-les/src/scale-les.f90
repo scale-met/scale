@@ -226,6 +226,7 @@ program scaleles_launcher
      enddo
 
   else ! single domain case
+     REF_DOMAIN(1)      = 1
      F_PRC_DOMAINS(1)   = GLOBAL_nmax
      F_COLOR_DOMAINS(1) = 0
      F_CONF_FILES(1)    = CONF_FILES(1)
