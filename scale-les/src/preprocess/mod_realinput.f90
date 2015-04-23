@@ -3236,6 +3236,7 @@ contains
     real(RP), allocatable :: pott_org (:,:,:,:)  ! calculated in this program
     real(RP), allocatable :: hgt_org  (:,:,:,:)
     real(RP), allocatable :: qtrc_org (:,:,:,:,:)
+    real(RP), allocatable :: qtrc_org_qa (:,:,:,:,:)
     real(RP), allocatable :: rhprs_org(:,:,:,:)
 
     integer  :: QA_outer = 1
@@ -3312,8 +3313,8 @@ contains
     allocate( tsfc_org  (          dims(1), dims(2),    nt ) )
     allocate( usfc_org  (          dims(1), dims(2),    nt ) )
     allocate( vsfc_org  (          dims(1), dims(2),    nt ) )
-    !allocate( qsfc_org  (          dims(1), dims(2),    nt, QA_outer) )
-    allocate( qsfc_org  (          dims(1), dims(2),    nt, QA) )
+    allocate( qsfc_org  (          dims(1), dims(2),    nt, QA_outer) )
+    allocate( qsfc_org_qa (        dims(1), dims(2),    nt, QA) )
     allocate( rhsfc_org (          dims(1), dims(2),    nt ) )
 
     allocate( velx_org  ( dims(3), dims(1), dims(2),    nt ) )
@@ -3809,10 +3810,14 @@ contains
        do j = 1, dims(2)
        do i = 1, dims(1)
        do k = 1, dims(3)
-          call THERMODYN_pott( pott_org(k,i,j,it),  & ! [OUT]
-                               temp_org(k,i,j,it),  & ! [IN]
-                               pres_org(k,i,j,it),  & ! [IN]
-                               qtrc_org(k,i,j,it,:) ) ! [IN]
+          qtrc_org_qa(:) = 0.0_RP
+          do iq = 1, QA_outer
+             qtrc_org_qa(iq) = qtrc_org(iq)
+          enddo
+          call THERMODYN_pott( pott_org   (k,i,j,it),  & ! [OUT]
+                               temp_org   (k,i,j,it),  & ! [IN]
+                               pres_org   (k,i,j,it),  & ! [IN]
+                               qtrc_org_qa(:)          ) ! [IN]
        end do
        end do
        end do
