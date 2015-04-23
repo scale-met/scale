@@ -3312,7 +3312,8 @@ contains
     allocate( tsfc_org  (          dims(1), dims(2),    nt ) )
     allocate( usfc_org  (          dims(1), dims(2),    nt ) )
     allocate( vsfc_org  (          dims(1), dims(2),    nt ) )
-    allocate( qsfc_org  (          dims(1), dims(2),    nt, QA_outer) )
+    !allocate( qsfc_org  (          dims(1), dims(2),    nt, QA_outer) )
+    allocate( qsfc_org  (          dims(1), dims(2),    nt, QA) )
     allocate( rhsfc_org (          dims(1), dims(2),    nt ) )
 
     allocate( velx_org  ( dims(3), dims(1), dims(2),    nt ) )
