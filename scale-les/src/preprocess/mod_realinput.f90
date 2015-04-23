@@ -3811,7 +3811,7 @@ contains
        do k = 1, dims(3)
           qtrc_org_qa(:) = 0.0_RP
           do iq = 1, QA_outer
-             qtrc_org_qa(iq) = qtrc_org(iq)
+             qtrc_org_qa(iq) = qtrc_org(k,i,j,it,iq)
           enddo
           call THERMODYN_pott( pott_org   (k,i,j,it),  & ! [OUT]
                                temp_org   (k,i,j,it),  & ! [IN]
