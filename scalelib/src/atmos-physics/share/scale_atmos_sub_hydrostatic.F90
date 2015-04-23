@@ -638,6 +638,10 @@ contains
                                               dz      (KE+1,:,:), & ! [IN]
                                               KE+1                ) ! [IN]
 
+    ! density at TOA
+    dens(   1:KS-1,:,:) = 0.D0 ! fill dummy
+    dens(KE+2:KA  ,:,:) = 0.D0 ! fill dummy
+
     return
   end subroutine ATMOS_HYDROSTATIC_buildrho_real_3D
 
