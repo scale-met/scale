@@ -118,8 +118,8 @@ module scale_interpolation_nest
        use scale_precision
        implicit none
 
-       real(RP), intent(out) :: vfact(:,:,:,:,:)  ! vertical interp factor
-       integer,  intent(out) :: kgrd (:,:,:,:,:)  ! grid points of interp target
+       real(RP), intent(inout) :: vfact(:,:,:,:,:)! vertical interp factor
+       integer,  intent(inout) :: kgrd (:,:,:,:,:)! grid points of interp target
        integer,  intent(out) :: ncopy(:)          ! number of daughter's layers below the parent's lowest layer
        integer,  intent(in)  :: igrd(:)           ! grid points of interp target
        integer,  intent(in)  :: jgrd(:)           ! grid points of interp target
@@ -1049,8 +1049,8 @@ contains
   !-----------------------------------------------------------------------------
   ! vertical search of interpolation points for two-points (online)
   subroutine INTRPNEST_search_vert_online( &
-      vfact,   & ! (out)
-      kgrd,    & ! (out)
+      vfact,   & ! (inout)
+      kgrd,    & ! (inout)
       ncopy,   & ! (out)
       igrd,    & ! (in)
       jgrd,    & ! (in)
@@ -1068,8 +1068,8 @@ contains
        eps => CONST_EPS
     implicit none
 
-    real(RP), intent(out) :: vfact(:,:,:,:,:)   ! vertical interp factor
-    integer,  intent(out) :: kgrd (:,:,:,:,:)   ! grid points of interp target
+    real(RP), intent(inout) :: vfact(:,:,:,:,:) ! vertical interp factor
+    integer,  intent(inout) :: kgrd (:,:,:,:,:) ! grid points of interp target
     integer,  intent(out) :: ncopy(:)           ! number of daughter's layers below inKS
 
     integer,  intent(in)  :: igrd(:)            ! grid points of interp target
@@ -1159,8 +1159,8 @@ contains
   !-----------------------------------------------------------------------------
   ! vertical search of interpolation points for two-points (offline)
   subroutine INTRPNEST_search_vert_offline( &
-      vfact,   & ! (out)
-      kgrd,    & ! (out)
+      vfact,   & ! (inout)
+      kgrd,    & ! (inout)
       ncopy,   & ! (out)
       igrd,    & ! (in)
       jgrd,    & ! (in)
@@ -1178,8 +1178,8 @@ contains
        PRC_MPIstop
     implicit none
 
-    real(RP), intent(out) :: vfact(:,:,:,:,:)   ! vertical interp factor
-    integer,  intent(out) :: kgrd (:,:,:,:,:)   ! grid points of interp target
+    real(RP), intent(inout) :: vfact(:,:,:,:,:) ! vertical interp factor
+    integer,  intent(inout) :: kgrd (:,:,:,:,:) ! grid points of interp target
     integer,  intent(out) :: ncopy(:)           ! number of daughter's layers below inKS
 
     integer,  intent(in)  :: igrd(:)            ! grid points of interp target
