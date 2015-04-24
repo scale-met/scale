@@ -445,6 +445,9 @@ contains
                                               KE+1                ) ! [IN]
 
     ! density at TOA
+    dens(   1:KS-1,:,:) = 0.D0 ! fill dummy
+    dens(KE+2:KA  ,:,:) = 0.D0 ! fill dummy
+
     call COMM_horizontal_mean( dens_1D(:), dens(:,:,:) )
     do j = JSB, JEB
     do i = ISB, IEB
@@ -634,6 +637,10 @@ contains
                                               qc      (KE  ,:,:), & ! [IN]
                                               dz      (KE+1,:,:), & ! [IN]
                                               KE+1                ) ! [IN]
+
+    ! density at TOA
+    dens(   1:KS-1,:,:) = 0.D0 ! fill dummy
+    dens(KE+2:KA  ,:,:) = 0.D0 ! fill dummy
 
     return
   end subroutine ATMOS_HYDROSTATIC_buildrho_real_3D

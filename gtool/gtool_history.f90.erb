@@ -889,6 +889,7 @@ contains
 
     integer  :: isize
     real(DP) :: time_str, time_end
+    real(DP) :: sec_str,  sec_end
     logical, save :: firsttime = .true.
     !---------------------------------------------------------------------------
 
@@ -928,14 +929,14 @@ contains
     time_end = time_now
 
     ! convert time units
-    call CalendarSec2ymdhms( time_str, time_str, HISTORY_TIME_UNITS )
-    call CalendarSec2ymdhms( time_end, time_end, HISTORY_TIME_UNITS )
+    call CalendarSec2ymdhms( sec_str, time_str, HISTORY_TIME_UNITS )
+    call CalendarSec2ymdhms( sec_end, time_end, HISTORY_TIME_UNITS )
 
-    if ( time_end .ge.  History_tstart(itemid) ) then
+    if ( sec_end .ge.  History_tstart(itemid) ) then
        call FileWrite( History_vid   (itemid),         & ! id
                        History_varsum(1:isize,itemid), & ! data
-                       time_str,                       & ! start time
-                       time_end                        ) ! end   time
+                       sec_str,                        & ! start time
+                       sec_end                         ) ! end   time
     else
        write(message,*) 'History output suppressed', time_end, History_tstart(itemid)
        call Log('W', message)

@@ -277,7 +277,7 @@ contains
           iostat = ierr         )
 
        if ( ierr /= 0 ) then
-          write(*,*) 'xxx catalogue file not found!'
+          write(*,*) 'xxx catalogue file not found!', trim(fname)
           call PRC_MPIstop
        endif
 
@@ -640,7 +640,7 @@ contains
           iostat = ierr         )
 
        if ( ierr /= 0 ) then
-          write(*,*) 'xxx catalogue file not found!'
+          write(*,*) 'xxx catalogue file not found!', trim(fname)
           call PRC_MPIstop
        endif
 

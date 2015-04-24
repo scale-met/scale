@@ -3257,6 +3257,7 @@ contains
     real(RP) :: pres_sfc(1,IA,JA,sstep:estep)
     real(RP) :: temp_sfc(1,IA,JA,sstep:estep)
     real(RP) :: qtrc_sfc(1,IA,JA,sstep:estep,QA)
+    real(RP) :: qtrc_org_qa (QA)
 
     real(RP), allocatable :: hfact(:,:,:)
     real(RP), allocatable :: vfact(:,:,:,:,:)
@@ -3305,7 +3306,7 @@ contains
 
     allocate( lon_org   (          dims(1), dims(2), fstep ) )
     allocate( lat_org   (          dims(1), dims(2), fstep ) )
-    allocate( pres_org  ( dims(3), dims(1), dims(2), fstep ) )
+    allocate( pres_org  ( dims(3), dims(1), dims(2),    nt ) )
 
     allocate( mslp_org  (          dims(1), dims(2),    nt ) )
     allocate( psfc_org  (          dims(1), dims(2),    nt ) )
@@ -3808,10 +3809,14 @@ contains
        do j = 1, dims(2)
        do i = 1, dims(1)
        do k = 1, dims(3)
-          call THERMODYN_pott( pott_org(k,i,j,it),  & ! [OUT]
-                               temp_org(k,i,j,it),  & ! [IN]
-                               pres_org(k,i,j,it),  & ! [IN]
-                               qtrc_org(k,i,j,it,:) ) ! [IN]
+          qtrc_org_qa(:) = 0.0_RP
+          do iq = 1, QA_outer
+             qtrc_org_qa(iq) = qtrc_org(k,i,j,it,iq)
+          enddo
+          call THERMODYN_pott( pott_org   (k,i,j,it),  & ! [OUT]
+                               temp_org   (k,i,j,it),  & ! [IN]
+                               pres_org   (k,i,j,it),  & ! [IN]
+                               qtrc_org_qa(:)          ) ! [IN]
        end do
        end do
        end do
@@ -3821,7 +3826,7 @@ contains
 
        call COMM_bcast( lon_org (:,:,:),               dims(1), dims(2), fstep )
        call COMM_bcast( lat_org (:,:,:),               dims(1), dims(2), fstep )
-       call COMM_bcast( pres_org(:,:,:,:),    dims(3), dims(1), dims(2), fstep )
+       call COMM_bcast( pres_org(:,:,:,:),    dims(3), dims(1), dims(2),    nt )
        call COMM_bcast( usfc_org(:,:,:),               dims(1), dims(2),    nt )
        call COMM_bcast( vsfc_org(:,:,:),               dims(1), dims(2),    nt )
        call COMM_bcast( tsfc_org(:,:,:),               dims(1), dims(2),    nt )
@@ -6228,8 +6233,10 @@ contains
            cycle
        else
 
-         if ( present(maskval).and.(abs(maskval-999.99_RP)<EPS) ) then
+         if ( present(maskval) ) then
+         if ( abs(maskval-999.99_RP)<EPS ) then
             if (abs(lsmask(i,j)-0.0_RP) < EPS) maskval = data(i,j,n)
+         endif
          endif
 
         !--------------------------------------

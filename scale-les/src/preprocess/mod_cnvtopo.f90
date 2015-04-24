@@ -286,8 +286,8 @@ contains
     endif
     if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_CNVTOPO_GTOPO30)
 
-    do j = JS, JE
-    do i = IS, IE
+    do j = 1, JA
+    do i = 1, IA
        area_sum (i,j) = 0.0_RP
        TOPO_Zsfc(i,j) = 0.0_RP
     enddo
@@ -313,7 +313,7 @@ contains
           iostat = ierr         )
 
        if ( ierr /= 0 ) then
-          write(*,*) 'xxx catalogue file not found!'
+          write(*,*) 'xxx catalogue file not found!', trim(fname)
           call PRC_MPIstop
        endif
 
@@ -541,8 +541,8 @@ contains
     endif
     if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_CNVTOPO_DEM50M)
 
-    do j = JS, JE
-    do i = IS, IE
+    do j = 1, JA
+    do i = 1, IA
        area_sum (i,j) = 0.0_RP
        TOPO_Zsfc(i,j) = 0.0_RP
     enddo
@@ -568,7 +568,7 @@ contains
           iostat = ierr         )
 
        if ( ierr /= 0 ) then
-          write(*,*) 'xxx catalogue file not found!'
+          write(*,*) 'xxx catalogue file not found!', trim(fname)
           call PRC_MPIstop
        endif
 
@@ -829,7 +829,7 @@ contains
           DZsfc_DX(1,i,j,1) = atan2( ( Zsfc(i+1,j)-Zsfc(i,j) ), DXL(i) ) / D2R
        enddo
        enddo
-       DZsfc_DY(1,IA,:,1) = 0.0_RP
+       DZsfc_DX(1,IA,:,1) = 0.0_RP
        do j = 1, JA-1
        do i = 1, IA
           DZsfc_DY(1,i,j,1) = atan2( ( Zsfc(i,j+1)-Zsfc(i,j) ), DYL(j) ) / D2R
