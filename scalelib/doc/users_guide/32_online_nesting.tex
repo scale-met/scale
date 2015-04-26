@@ -1,17 +1,17 @@
 \section{実験設定の変更方法}
-\subsection{Domain setting}
+%\subsection{Domain setting}
 
 \subsection{Online nesting}
 
-現在，scale-lesでは，単一ドメインの計算と複数ドメイン，つまりNesting計算をサポートしている．
+現在，scale-lesでは，単一ドメインの他に、複数ドメインをもつNesting計算をサポートしている．
 Nesting計算は1-way（親ドメインから娘ドメインへのデータ受け渡し）のみをサポートしている．
 
 Online Nestingを行う場合は，Nestingの段数分だけpp.conf，init.conf，run.confファイルをそれぞれ用意する必要がある．
 それぞれのドメイン毎に地形，土地利用，初期値・境界値を作成し，一番外側のドメインを下記のコマンドによって起動すると，
 外側のドメインが順次，内側のドメインを起動する．
-configureファイルの記述例はscale-les/test/case\_real/kobe\_prodの下にあるので適宜参照して欲しい．
+configureファイルの記述例は\verb|scale-les/test/case_real/kobe_prod|の下にあるので適宜参照して欲しい．
 \begin{verbatim}
-$ mpirun -n 6 ./scale-les run.d01.conf
+ $ mpirun -n 6 ./scale-les run.d01.conf
 \end{verbatim}
 このとき注意することは，Online Nesting計算の場合，実際に起動されるMPIプロセス数は外側のドメインを起動する時に指定したプロセス数(np)とドメイン段数を掛けた数になる．
 たとえば，上記のコマンドで3段ドメインのOnline Nesting計算を行うことを考えると，total\_mpi\_processes = 3 (domain levels)×6 (np) = 36 processesとなる．
