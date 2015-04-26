@@ -12,9 +12,12 @@ SCALE-LESモデルの実行過程は，Fig. \ref{fig:howto}に示されるよう
 \end{enumerate}
 といった手順で実行する．
 以降，この順序でチュートリアルの説明を進める．
-また，
+このチュートリアルでは，Fig. \ref{fig:domain}に示した日本域を対象とした
+現実大気実験を行う．
+計算領域（ドメイン）の設定はTable \ref{tab:grids}のようになっている．
 
-\begin{figure}[t]
+
+\begin{figure}[h]
 \begin{center}
   \includegraphics[width=0.9\hsize]{./figure/how_to_run.eps}\\
   \caption{SCALE-LESモデルの実行過程}
@@ -22,32 +25,24 @@ SCALE-LESモデルの実行過程は，Fig. \ref{fig:howto}に示されるよう
 \end{center}
 \end{figure}
 
-
-
-\subsection{チュートリアル：現実事例の実行方法}
-%====================================================================================
-
-ここでは，Fig. \ref{fig:domain}に示した日本域を対象とした実事例実験を行う．
-計算領域（ドメイン）の設定はTable \ref{tab:grids}のようになっている．
-
-\begin{figure}[t]
+\begin{figure}[h]
 \begin{center}
   \includegraphics[width=0.5\hsize]{./figure/domain.eps}\\
-  \caption{計算領域：コンターは海岸線，カラーシェードは地形の高度を示す．}
+  \caption{計算領域．コンターは海岸線，カラーシェードは地形の高度を示す．}
   \label{fig:domain}
 \end{center}
 \end{figure}
 
-\begin{table}[t]
+\begin{table}[h]
 \begin{center}
   \caption{実験設定の概略}
   \label{tab:grids}
   \begin{tabularx}{150mm}{|l|X|} \hline
     \rowcolor[gray]{0.9} 項目 & 設定 \\ \hline
+    MPIプロセス分割 (東西 x 南北) & 3 x 3 (合計9プロセス) \\ \hline
     水平格子数 (東西 x 南北) & 180格子点 x 180格子点 \\ \hline
     鉛直層数                 & 36層                  \\ \hline
     水平格子間隔             & dx = dy = 7500m       \\ \hline
-    MPIプロセス分割 (東西 x 南北) & 3 x 3 (合計9プロセス) \\ \hline
     積分期間 & 1999年5月5日 00UTC～12UTC (12時間積分) \\ \hline
     時間ステップ間隔 & 30 sec (1440 steps) \\ \hline
   \end{tabularx}
@@ -55,56 +50,58 @@ SCALE-LESモデルの実行過程は，Fig. \ref{fig:howto}に示されるよう
 \end{table}
 
 
+\subsection{現実大気実験の実行方法}
+%====================================================================================
+
 \subsubsection{地形・土地利用データの作成：pp}
 %-----------------------------------------------------------------------------------
 
 ここでは，\ref{sec:source_code}節でダウンロードした\verb|tutorial_data|は，
-\verb|${TOPDIR}|の下に展開されていると想定する．
+\verb|${TOPDIR}|の下に展開されていると想定している．
 
-まず，ppディレクトリへ移動する．\\
+まず，ppディレクトリへ移動する．
+ppでは現実実験のための地形データ、土地利用データを作成する．
 \begin{verbatim}
-$ cd scale/scale-les/test/tutorial/pp
+ $ cd scale/scale-les/test/tutorial/pp
 \end{verbatim}
-
-ppディレクトリの中には，\verb|pp.conf|という名前のコンフィグファイルが準備されている．
-地形・土地利用データを実験設定，およびSCALE-LESモデルの格子点に合わせたデータを
-作成するために\verb|pp.conf|を編集するが，
-チュートリアルでは，すでに編集済みの\verb|pp.conf|が与えられているためそのまま利用する．
-\verb|pp.conf|の設定の中で特に注意するべき事は，\verb|PARAM_CONVERT|の項目である．
-
+ppディレクトリの中には，\verb|pp.conf|という名前の
+コンフィグファイルが準備されている．
+地球上でのドメインの位置や格子点数など、実験設定に合わせて，
+適宜\verb|pp.conf|を編集する必要があるが,
+チュートリアルでは，すでに編集済みの\verb|pp.conf|が
+与えられているためそのまま利用する．
+\verb|pp.conf|の設定の中で特に注意するべき項目は，\verb|PARAM_CONVERT|である．
 \begin{verbatim}
-&PARAM_CONVERT
- CONVERT_TOPO = .true.,
- CONVERT_LANDUSE = .true.,
-/
+ &PARAM_CONVERT
+  CONVERT_TOPO = .true.,
+  CONVERT_LANDUSE = .true.,
+ /
 \end{verbatim}
-
-上記のように\verb|CONVERT_TOPO|と\verb|CONVERT_LANDUSE|が\verb|.true.|となっていることが，
+上記のように\verb|CONVERT_TOPO|と\verb|CONVERT_LANDUSE|が
+\verb|.true.|となっていることが，
 それぞれ地形と土地利用の処理を行うことを意味している．
-詳細なコンフィグファイルの内容については，Appendix \ref{app:namelist}を参照されたい．
-
+詳細なコンフィグファイルの内容については，
+Appendix \ref{app:namelist}を参照されたい．
 
 次に，コンパイル済みのバイナリと入力データをppディレクトリへリンクする．
-
 \begin{verbatim}
-$ ln -s ${TOPDIR}/scale/scale-les/test/tutorial/bin/scale-les_pp ./
-$ ln -s ${TOPDIR}/tutorial_data/input_topo    ./
-$ ln -s ${TOPDIR}/tutorial_data/input_landuse ./
+ $ ln -s ${TOPDIR}/scale/scale-les/test/tutorial/bin/scale-les_pp ./
+ $ ln -s ${TOPDIR}/tutorial_data/input_topo    ./
+ $ ln -s ${TOPDIR}/tutorial_data/input_landuse ./
 \end{verbatim}
-
-
-今回は，Table \ref{tab:grids}に示されているように，9つのMPIプロセスを使用する設定なので次のように実行する．
+今回は，Table \ref{tab:grids}に示されているように，
+9つのMPIプロセスを使用する設定なので次のように実行する．
 \begin{verbatim}
-$ mpirun -n 9 ./scale-les_pp pp.conf
+ $ mpirun -n 9 ./scale-les_pp pp.conf
 \end{verbatim}
-
 正常にジョブが終了すれば，\verb|topo_d01.pe######.nc|と\verb|landuse_d01.pe######.nc|というファイルがMPIプロセス数だけ，つまり9つずつ生成される（\verb|######|にはMPIプロセスの番号が入る）．
 それぞれ，ドメインの格子点に内挿された地形と土地利用の情報が入ってる．
 
-処理内容のログとして，\verb|pp_LOG_d01.pe000000|という名前でログファイルも出力されるので内容を確かめておくこと．
-gpviewがインストールされていれば，次のコマンドによって作成された地形と土地利用データを描画してチェックすることができる．
+処理内容のログとして，\verb|pp_LOG_d01.pe000000|という名前でログファイルも
+出力されるので内容を確かめておくこと．
+gpviewがインストールされていれば，次のコマンドによって作成された地形と土地利用データを
+描画してチェックすることができる．
 正しく作成されていれば，Fig. \ref{fig:domain}と同じように描かれる．
-
 \begin{verbatim}
 $ gpview topo_d01.pe00000*@TOPO --aspect=1
 $ gpview landuse_d01.pe00000*@FRAC_LAND --aspect=1
@@ -114,65 +111,59 @@ $ gpview landuse_d01.pe00000*@FRAC_LAND --aspect=1
 \subsubsection{初期値・境界値データの作成：init}
 %-----------------------------------------------------------------------------------
 
-まず，initディレクトリへ移動する．\\
+init では，SCALE計算に必要な初期値・境界値データを作成する．
+まず，initディレクトリへ移動する．
 \begin{verbatim}
-$ cd scale/scale-les/test/tutorial/init
+ $ cd scale/scale-les/test/tutorial/init
 \end{verbatim}
 
-initディレクトリの中には，ppディレクトリと同様に\verb|init.conf|という名前のコンフィグファイルが準備されている．
-チュートリアル用の\verb|init.conf|ファイルは，地球上でのドメインの位置や格子点数などは前節の設定にすでに合わせられている．
-初期値・境界値データの作成には前節で作成した地形・土地利用データを利用するが，これは相対PATHを用いて参照するように設定されている．
+initディレクトリの中には，\verb|init.conf|という名前のコンフィグファイルが準備されている．
+\verb|pp.conf|と同様に，実験設定に合わせて、この\verb|init.conf|を書き換える必要があるが、
+チュートリアル用の\verb|init.conf|ファイルはTable\ref{tab:grids}の設定に
+すでに合わせてある．
+初期値・境界値データの作成には前節で作成した地形・土地利用データを利用する．
+これは，下記のように，相対PATHを用いて参照するように設定されている．
 
 \begin{verbatim}
 &PARAM_TOPO
  TOPO_IN_BASENAME = "../pp/topo_d01",
 /
-
 &PARAM_LANDUSE
  LANDUSE_IN_BASENAME  = "../pp/landuse_d01",
 /
 \end{verbatim}
-
-
-その他に\verb|init.conf|の設定の中で特に注意するべき事は，\verb|PARAM_MKINIT_REAL|の項目である．
+その他に\verb|init.conf|の設定の中で特に注意するべき項目は，
+\verb|PARAM_MKINIT_REAL|である．
 
 \begin{verbatim}
 &PARAM_MKINIT_REAL
- BASENAME_BOUNDARY   = "boundary_d01",
+ BASENAME_BOUNDARY   = "boundary_d01",  <- 境界値データの出力名
  FILETYPE_ORG        = "NICAM-NETCDF",
- NUMBER_OF_FILES     = 2,
- BOUNDARY_UPDATE_DT  = 21600.D0,
- INTERP_SERC_DIV_NUM = 20,
+ NUMBER_OF_FILES     = 2,               <- 読み込むファイルの数
+ BOUNDARY_UPDATE_DT  = 21600.D0,        <- 入力データの時間間隔
+ INTERP_SERC_DIV_NUM = 20,              <- 内挿計算用のチューニングパラメータ
 /
 \end{verbatim}
 
-このなかで\verb|BASENAME_BOUNDARY|は境界値データの出力名を指定している．
-初期値データの出力名は別途\verb|PARAM_RESTART|の中の項目\verb|RESTART_OUT_BASENAME|で指定されている．
-\verb|FILETYPE_ORG|は入力する気象場データのファイルフォーマットに関するパラメータを設定しており，
-ここではNICAMモデルのnetcdf形式データのフォーマットで読み込むことを指定している．
-\verb|NUMBER_OF_FILES|は読み込むファイルの数，\verb|BOUNDARY_UPDATE_DT|は読み込む入力データの
-時間間隔をそれぞれ指定しており，最後の\verb|INTERP_SERC_DIV_NUM|は内挿計算用のチューニングパラメータである．
+\verb|FILETYPE_ORG|は入力する気象場データのファイルフォーマットに
+関するパラメータを設定しており，ここでは
+NICAMモデルのnetcdf形式データのフォーマットで読み込むことを指定している．
 詳細なコンフィグファイルの内容については，Appendix \ref{app:namelist}を参照されたい．
 
-
 次に，コンパイル済みのバイナリをinitディレクトリへリンクする．
-
 \begin{verbatim}
-$ ln -s ${TOPDIR}/scale/scale-les/test/tutorial/bin/scale-les_init ./
+ $ ln -s ${TOPDIR}/scale/scale-les/test/tutorial/bin/scale-les_init ./
 \end{verbatim}
-
 入力データはinitディレクトリの中に準備されている，\verb|"inputdata-link.sh"|を用いてリンクする．
-このスクリプトにあるstart dateとend dateの設定項目を実験設定に対応するように編集する．
-ここでは，start dateは1999/05/05 00:00:00，end dateは1999/05/06 00:00:00と設定しておく．
-もし，\verb|tutorial_data|を\verb|${TOPDIR}|以外の場所に展開している場合は，
-\verb|"dir"|の項目も適切なディレクトリに変更すること．
-
 \begin{verbatim}
-$ sh inputdata-link.sh
+ $ sh inputdata-link.sh
 \end{verbatim}
 としてスクリプトを実行することで，気象場の入力データがリンクされ，initディレクトリ内に下記のファイルがリンクされる．
+このスクリプトにあるstart dateとend dateの設定項目を実験設定に対応するように編集するが、ここでは，start dateは1999/05/05 00:00:00，end dateは1999/05/06 00:00:00と設定している．もし，\verb|tutorial_data|を\verb|${TOPDIR}|以外の場所に展開している場合は，スクリプト内の
+\verb|"dir"|の項目も適切なディレクトリに変更すること．下記ファイルにリンクが張れれば成功．
+{\small
+\begin{verbatim}
 
-{\small \begin{verbatim}
 la_tg_00000.peall.nc    ms_qv_00000.peall.nc   oa_sst_00000.peall.nc  ss_tem_sfc_00000.peall.nc
 la_tg_00001.peall.nc    ms_qv_00001.peall.nc   oa_sst_00001.peall.nc  ss_tem_sfc_00001.peall.nc
 la_wg_00000.peall.nc    ms_tem_00000.peall.nc  ss_q2m_00000.peall.nc  ss_u10m_00000.peall.nc
@@ -181,26 +172,24 @@ lsmask_00000.peall.nc   ms_u_00000.peall.nc    ss_slp_00000.peall.nc  ss_v10m_00
 lsmask_00001.peall.nc   ms_u_00001.peall.nc    ss_slp_00001.peall.nc  ss_v10m_00001.peall.nc
 ms_pres_00000.peall.nc  ms_v_00000.peall.nc    ss_t2m_00000.peall.nc
 ms_pres_00001.peall.nc  ms_v_00001.peall.nc    ss_t2m_00001.peall.nc
+
 \end{verbatim} }
 
-さらに初期値・境界値データの作成過程ではモデルのほぼ全てのコンポーネントが起動される．
-そのため陸面過程や放射過程のモデルを起動するためのパラメータファイルも用意しておく．
-
+次に、陸面過程や放射過程のモデルを起動するためのパラメータファイルにリンクをはる．
 \begin{verbatim}
-$ ln -s ${TOPDIR}/scale/scale-les/test/data/land/*  ./
-$ ln -s ${TOPDIR}/scale/scale-les/test/data/rad/*   ./
+ $ ln -s ${TOPDIR}/scale/scale-les/test/data/land/*  ./
+ $ ln -s ${TOPDIR}/scale/scale-les/test/data/rad/*   ./
 \end{verbatim}
 上の行のリンクコマンドによって陸面過程のパラメータファイルがリンクされ，
 下の行のコマンドによって放射過程のパラメータファイルがリンクされる．
-
-
 準備が整ったら，9つのMPIプロセスを使用してinitを実行する．
 \begin{verbatim}
-$ mpirun -n 9 ./scale-les_init init.conf
+ $ mpirun -n 9 ./scale-les_init init.conf
 \end{verbatim}
 
-正常にジョブが終了すれば，\verb|boundary_d01.pe######.nc|と\verb|init_d01_00010713600.000.pe######.nc|という
-ファイルがMPIプロセス数だけ，つまり9つずつ生成される（\verb|######|にはMPIプロセスの番号が入る）．
+正常にジョブが終了すれば，
+\verb|boundary_d01.pe######.nc|と\verb|init_d01_00010713600.000.pe######.nc|というファイルが
+MPIプロセス数だけ，つまり9つずつ生成される（\verb|######|にはMPIプロセスの番号が入る）．
 それぞれ，境界値データと初期値データが入ってるおり，境界値データには複数の時刻のデータが1つのファイルに含まれている．
 初期値ファイルの名前のうち\verb|"00010713600.000"|の部分は，モデル内で算出された実験開始時刻を表している．
 
@@ -215,10 +204,10 @@ $ gpvect --scalar --slice z=1500 --nocont --aspect=1 --range=0.001:0.015        
 \end{verbatim}
 
 
-\begin{figure}[t]
+\begin{figure}[h]
 \begin{center}
   \includegraphics[width=0.7\hsize]{./figure/init_qv-momxy.eps}\\
-  \caption{チュートリアル実験の初期場の様子：カラーシェードは高度1.5kmにおける水蒸気混合比の分布，ベクトルは高度1.5kmにおける水平運動量フラックスを表している．}
+  \caption{チュートリアル実験の初期場の様子：カラーシェードは高度1.5kmにおける比湿の分布，ベクトルは高度1.5kmにおける水平運動量フラックスを表している．}
   \label{fig:init}
 \end{center}
 \end{figure}
@@ -228,16 +217,19 @@ $ gpvect --scalar --slice z=1500 --nocont --aspect=1 --range=0.001:0.015        
 %-----------------------------------------------------------------------------------
 
 ここではいよいよSCALE-LESモデルを実行する．
-まず，runディレクトリへ移動する．\\
+まず，runディレクトリへ移動する．
 \begin{verbatim}
-$ cd scale/scale-les/test/tutorial/run
+  $ cd scale/scale-les/test/tutorial/run
 \end{verbatim}
 
+
 runディレクトリの中には，これまでと同様に\verb|run.conf|という名前のコンフィグファイルが準備されている．
-チュートリアル用の\verb|run.conf|ファイルは，ドメインの位置や格子点数などは前節の設定に合わせられている．
-モデル本体の実行には事前に作成した地形・土地利用データや初期値・境界値データを利用するが，
-これは相対PATHを用いて参照するように，それぞれ\verb|TOPO_IN_BASENAME|，\verb|LANDUSE_IN_BASENAME|，
-\verb|RESTART_IN_BASENAME|，および\verb|ATMOS_BOUNDARY_IN_BASENAME|の項目で設定されている．
+チュートリアル用の\verb|run.conf|ファイルのドメインの位置や格子点数などはTable\ref{tab:grids}の設定に合わせてある．
+モデル本体の実行には事前に作成した地形・土地利用データや初期値・境界値データを利用する．
+これらのファイルを参照するために，
+\verb|TOPO_IN_BASENAME|，\verb|LANDUSE_IN_BASENAME|，
+\verb|RESTART_IN_BASENAME|，および\verb|ATMOS_BOUNDARY_IN_BASENAME|で
+それぞれ場所を指定する．
 
 \begin{verbatim}
 &PARAM_TOPO
@@ -266,7 +258,6 @@ runディレクトリの中には，これまでと同様に\verb|run.conf|と�
 
 
 \verb|run.conf|の設定の中で時間積分に関する設定は，\verb|PARAM_TIME|の項目にある．
-
 \begin{verbatim}
 &PARAM_TIME
  TIME_STARTDATE             = 1999, 5, 5, 0, 0, 0,
@@ -284,12 +275,12 @@ runディレクトリの中には，これまでと同様に\verb|run.conf|と�
 \end{verbatim}
 
 \verb|TIME_STARTDATE|は時間積分を開始する時刻を設定する項目で，チュートリアルでは1999年5月5日0時UTCと設定する．
-\verb|TIME_DURATION|は時間積分期間を設定する項目で，ここでは12時間積分を行う設定になっている．
-最後に確認しておきたいのは，\verb|TIME_DT|，および\verb|TIME_DT_ATMOS_DYN|で，これらは時間積分の間隔（時間ステップ間隔：DT = Delta Time）を設定する項目である．前者は移流計算，後者はそれ以外の力学過程の計算に関する時間積分間隔である．
+\verb|TIME_DURATION|は積分期間を設定する項目で，ここでは12時間積分を行う設定になっている．
+\verb|TIME_DT|，および\verb|TIME_DT_ATMOS_DYN|は，時間積分の間隔（時間ステップ間隔：DT = Delta Time）を設定する項目である．前者は移流計算，後者はそれ以外の力学過程の計算に関する時間積分間隔である．
 SCALE-LESモデルでは，そのほかの物理過程についても細かく時間積分間隔を設定できるようになっている．
 
 
-出力データの設定である\verb|PARAM_HISTORY|も確認しておきたい．
+出力データに関する設定は\verb|PARAM_HISTORY|で行う．
 
 \begin{verbatim}
 &PARAM_HISTORY
@@ -306,6 +297,8 @@ SCALE-LESモデルでは，そのほかの物理過程についても細かく�
 \verb|HISTORY_DEFAULT_TINTERVAL|と\verb|HISTORY_DEFAULT_TUNIT|によってヒストリー出力時間間隔が設定される．
 ここでは1800秒（30分）間隔での出力として設定されている．
 この設定で，\verb|HISTITEM|として羅列された変数について出力される．
+\verb|HISTITEM|では、オプション変数を加えることで、出力間隔を変数毎に変更したり、平均値を出力したりすることも出来る。
+これらの説明は\ref{sec:output}を参照されたい．
 
 \begin{verbatim}
 &HISTITEM item="DENS" /           ! density (3D)
@@ -340,34 +333,31 @@ SCALE-LESモデルでは，そのほかの物理過程についても細かく�
 
 \end{verbatim}
 
-たとえば，\verb|T|は温度（3次元変数），\verb|U|は水平風東西成分（3次元変数），
-\verb|PREC|は積算地上降水量（2次元変数）などである．
 
-
-その他に実験で使用される物理過程の設定は，\verb|PARAM_TRACER，PARAM_ATMOS，PARAM_OCEAN，PARAM_LAND，PARAM_URBAN|
-の項目に記述されているので，実行前にチェックすること．
+その他に実験で使用される物理過程の設定は，
+\verb|PARAM_TRACER，PARAM_ATMOS，PARAM_OCEAN，PARAM_LAND，PARAM_URBAN|の項目に
+記述されているので，実行前にチェックすること．
 詳細なコンフィグファイルの内容については，Appendix \ref{app:namelist}を参照されたい．
 
 
 次に，コンパイル済みのバイナリをrunディレクトリへリンクする．
 
 \begin{verbatim}
-$ ln -s ${TOPDIR}/scale/scale-les/test/tutorial/bin/scale-les ./
+  $ ln -s ${TOPDIR}/scale/scale-les/test/tutorial/bin/scale-les ./
 \end{verbatim}
 
-また，前節と同様に陸面過程や放射過程のモデルを起動するためのパラメータファイルも用意しておく．
+また，前節と同様に陸面過程や放射過程のモデルを起動するためのパラメータファイルも
+リンクしておく．
 
 \begin{verbatim}
-$ ln -s ${TOPDIR}/scale/scale-les/test/data/land/*  ./
-$ ln -s ${TOPDIR}/scale/scale-les/test/data/rad/*   ./
+  $ ln -s ${TOPDIR}/scale/scale-les/test/data/land/*  ./
+  $ ln -s ${TOPDIR}/scale/scale-les/test/data/rad/*   ./
 \end{verbatim}
 上の行のリンクコマンドによって陸面過程のパラメータファイルがリンクされ，
 下の行のコマンドによって放射過程のパラメータファイルがリンクされる．
-
-
 準備が整ったら，9つのMPIプロセスを使用してscale-lesを実行する．
 \begin{verbatim}
-$ mpirun -n 9 ./scale-les run.conf < /dev/null >&log&
+  $ mpirun -n 9 ./scale-les run.conf < /dev/null >&log&
 \end{verbatim}
 
 
@@ -376,19 +366,16 @@ $ mpirun -n 9 ./scale-les run.conf < /dev/null >&log&
 計算が開始されれば，処理内容のログとして，\verb|"LOG_d01.pe000000"|ファイルが生成されるので，
 例えば下記のようなコマンドで\verb|"LOG_d01.pe000000"|ファイルを参照すれば，
 どこまで計算が進んでいるかチェックすることができる．
-
 \begin{verbatim}
-$ tail -n 50 LOG_d01.pe000000
+  $ tail -n 50 LOG_d01.pe000000
 \end{verbatim}
-
-
 正常にジョブが終了すれば，\verb|history_d01.pe######.nc|と\verb|restart_d01.pe######.nc|と
-いう名前のファイルがMPIプロセス数だけ，つまり9つずつ生成される（\verb|######|にはMPIプロセスの番号が入る）．
+いう名前のファイルがMPIプロセス数だけ，つまり9つずつ生成される
+（\verb|######|にはMPIプロセスの番号が入る）．
 historyファイルは実行結果のプロダクトであり，restartファイルは対応する時刻を開始時刻として
 再計算を開始するための初期値ファイルである．
 
 次節でhistoryデータを描画して結果を調べる方法を説明する．
-
 
 %####################################################################################
 

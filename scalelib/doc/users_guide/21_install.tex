@@ -1,18 +1,17 @@
-ここでは，日本域を対象とした実事例実験のチュートリアルを通して，SCALE-LESモデルを実行する一連の作業を説明する．
-
-
 \section{Installation of SCALE-LES}
 %####################################################################################
 
-ここでは，SCALE-LESモデルパッケージを含むSCALEライブラリの
-インストール方法を説明する．
-SCALEライブラリのインストールに必要となるライブラリ環境のインストール方法については，
-必要に応じてAppendix \ref{sec:env_setting}を参照して事前にインストールすること．
-以降のチュートリアルでは，Ruby DCL/GPhysに含まれるgpviewがインストールされていると想定して描画の説明を行う．
-SCALEのインストールにはコマンドライン端末を使う．コマンドラインのシンボル（\verb|$|）があれば、コマンドの実行を示す．
+本章では，日本域を対象とした現実大気再現実験のチュートリアルを通して，
+SCALE-LESモデルを実行する一連の作業を説明する．
+SCALEライブラリのインストールに必要な環境、ライブラリのインストール方法については，
+\ref{sec:req_env}節とAppendix \ref{sec:env_setting}を参照して
+事前にインストールしておく必要がある．
+\ref{sec:source_code}以降のチュートリアルは，それらのライブラリ環境が
+インストールされていることを想定して進める．
 
 
 \subsection{Required Environment}
+\label{sec:req_env}
 %====================================================================================
 
 \begin{itemize}
@@ -26,13 +25,13 @@ SCALEのインストールにはコマンドライン端末を使う．コマン
   \item {\bf netcdf3 もしくは HDF5/netcdf4} : gzip, szipをサポートするHDF5，
         およびそのHDF5をサポートするnetcdf4を必要とする．
         ただし，netcdf3の環境下ではscaleライブラリが提供する全ての機能をサポートできない可能性がある．
-  \item {\bf 描画環境（非必須）} : Dennou Club提供のRuby DCL/GPhysに含まれるgpview，
-        もしくはGrads等の描画環境があると計算結果を簡単にチェックできる．gpviewの使用を推奨する．
-  \item SCALEは演算性能評価のためにPAPIライブラリを使用が可能です．
+  \item {\bf 描画環境（非必須）} : Dennou Club提供のRuby DCL/GPhysに含まれるgpviewがあると
+        計算結果を簡単にチェックできる．チュートリアルではgpviewを使用する．
+        それ以外に，netcdfからGrADS用にフォーマットを変換するためのpostprocess(\verb|netcdf2grads_h|)も用意している．
+  \item SCALEは演算性能評価のためにPAPIライブラリを使用が可能．
         PAPIライブラリがインストールされている環境下では，
         以下で説明するconfigureファイルの編集によってPAPIを適用することができます．
 \end{itemize}
-
 
 
 \subsection{Building the source code} \label{sec:source_code}
@@ -41,38 +40,46 @@ SCALEのインストールにはコマンドライン端末を使う．コマン
 \subsubsection{ソースコードの入手}
 %-----------------------------------------------------------------------------------
 
-\url{http://scale.aics.riken.jp/download/scale.tar.gz} の安定版ソースコードのtarballをダウンロードすることができる．
-ソースコードのtarballファイルを展開すると\verb|scale/|というディレクトリができる．
-以降の説明で\verb|${TOPDIR}|は，scaleディレクトリが存在する絶対PATHを差す．
+安定版ソースコードは，\url{http://scale.aics.riken.jp/download/scale.tar.gz}
+よりダウンロードすることができる．
+ソースコードのtarballファイルを展開すると
+\begin{verbatim}
+  scale/
+\end{verbatim}
+というディレクトリができる．
+以降の説明で\verb|${TOPDIR}|は，scaleディレクトリが存在する絶対PATHを指す．
+\begin{verbatim}
+  ${TOPDIR}/scale/
+\end{verbatim}
 
-実事例のシミュレーションを行うには，ソースコードに加えて外部データが必要になる．
-このチュートリアル用の気象場のデータ，日本領域の地形・土地利用のデータが収められた
-\url{http://scale.aics.riken.jp/download/tutorial_data.tar.gz}も入手し，\verb|${TOPDIR}|の下，
-つまりscaleディレクトリと同じ場所に展開しておくこと．\\
-\begin{itemize}
- \item \verb|tutorial_data/input_atom| に気象場データ，\\
- \item \verb|tutorial_data/input_topo| に地形データ，\\
- \item \verb|tutorial_data/input_landuse| に土地利用データ\\
-\end{itemize}
-がそれぞれ格納されている．
 
-\verb|tutorial_data|には，本チュートリアルに必要な最低限のデータのみが納めされているため，
+現実大気実験のシミュレーションを行う場合，SCALE本体に加えて境界値データが必要になる．
+本チュートリアル用の気象場のデータ，日本領域の地形・土地利用のデータを\\
+ \url{http://scale.aics.riken.jp/download/tutorial_data.tar.gz}\\
+より入手し，\verb|${TOPDIR}|の下に展開しておく．
+\begin{verbatim}
+  ${TOPDIR}/tutorial_data/input_atom/    <- 気象場データ
+  ${TOPDIR}/tutorial_data/input_topo/    <- 地形データ
+  ${TOPDIR}/tutorial_data/input_landuse/ <- 土地利用データ
+\end{verbatim}
+\verb|tutorial_data/|には，本チュートリアルに必要な最低限のデータのみが納めされているため，
 その他の設定で実験を行う場合には別途，気象場，地形，および土地利用データが必要となる．
 
 
 \subsubsection{configure ファイルと環境変数の設定}
 %-----------------------------------------------------------------------------------
 
-\verb|scale/sysdep|内にいくつかのコンフィグファイル（\verb|Makedef.***|）が準備されている．
-これらの内から自分の環境にあったものを設定する．
-ここでは，OSはLinux，gcc/gfortran コンパイラ，およびopenMPIを使用するため，
-\verb|"Makedef.Linux-gnu-ompi"|が設定すべきコンフィグファイルである．
-自分の環境に合うものがなければ既存ファイルをベースにして作成する必要がある．
-\verb|Makedef.***|の\verb|"***"|の部分を下記のように環境変数として設定する．
-\verb|.bashrc|などのファイルに記述しておくと便利である．
+\verb|scale/sysdep/|内にいくつかのコンフィグファイル（\verb|Makedef.***|）が準備されている．
+これらの中から自分の環境にあったものを設定する．
+ここでは，OSはLinux，コンパイラはgcc/gfortran，およびopenMPIを使用するため，
+\verb|"Makedef.Linux-gnu-ompi"|が対応するファイルとなる．
+自分の環境に合うものがなければ既存ファイルをベースにして作成する．
 
-また、現実実験のための地形データ、
-SCALEをコンパイルするのに必要な外部ライブラリについても下記のようにPATHを設定する．
+常にこのコンフィグファイルをしようするために、
+\verb|Makedef.***|の\verb|"***"|の部分を、\verb|SCALE_SYS|という環境変数として設定し、
+\verb|.bashrc|などのファイルに記述しておくと便利である．
+さらに、SCALEをコンパイルするのに必要な外部ライブラリについても
+下記のようにPATHを設定する．
 ここでは，Appendix \ref{sec:env_setting}に従ったとして，
 HDF5，netcdf4ともに\verb|/usr|の下にインストールされている場合の例を示す．
 
@@ -88,27 +95,32 @@ HDF5，netcdf4ともに\verb|/usr|の下にインストールされている場�
 
 下記のディレクトリに移動して，makeコマンドによってコンパイルを行う．
 \begin{verbatim}
- $ cd scale-les/test/tutorial/bin
+ $ cd ${TOPDIR}/scale/scale-les/test/tutorial/bin
  $ make -j 4
 \end{verbatim}
-
-\verb|make|のあとの \verb|"-j 4"| は，並列コンパイルを指示するオプションで，4並列コンパイルを行うことを指示する．
+\verb|make|のあとの \verb|"-j 4"| は，並列コンパイルを指示するオプションで，
+4並列コンパイルを行うことを指示している．
 コンパイルを実行する環境によっては並列数を増やすこともできる．
-
-このmakeによってSCALEライブラリ，およびSCALE-LESモデルのコンパイルが行われ，結果として
-\verb|scale-les, scale-les_init, scale-les_pp|の3つの実行ファイルが生成されていればコンパイルは成功である．
+このmakeによってSCALEライブラリ，およびSCALE-LESモデルのコンパイルが行われ，
+結果として
+\begin{verbatim}
+ scale-les  scale-les_init  scale-les_pp
+\end{verbatim}
+の3つの実行ファイルが生成されていればコンパイルは成功である．\\
 
 
 {\bf 注意点}
 \begin{itemize}
-\item SCALEライブラリは，scaleのTOPディレクトリ直下の\verb|scale/scalelib/|というディレクトリ内でコンパイルと
-アーカイブが行われ，\verb|"./lib"|という名前の隠しディレクトリとして\verb|bin/|ディレクトリ内へコピーされている．\\
-\item Debugモードでコンパイルしたい場合や，コンパイルオプションを変更したい場合は，
-      \verb|Makedef.***|のファイルを編集してください．
-\item 開発版ソースコードをコンパイルしている場合，一部のコンパイラバージョンにおいて
-      コンパイルが正常に終了しないケースがあります．そのような場合はぜひSCALE開発チームまでご報告ください．
+\item SCALEライブラリは，scaleのTOPディレクトリ直下の
+ \verb|scale/scalelib/|というディレクトリ内でコンパイルとアーカイブが行われ，
+ \verb|"./lib"|という名前の隠しディレクトリとして
+ \verb|bin/|ディレクトリ内へコピーされている．
+\item Debugモードでコンパイルしたい場合や，
+ コンパイルオプションを変更したい場合は，
+ \verb|Makedef.***|のファイルを編集してください．
+\item 開発版ソースコードをコンパイルしている場合，
+ 一部のコンパイラバージョンにおいてコンパイルが正常に終了しないケースがあります．そのような場合はぜひSCALE開発チームまでご報告ください．
 \end{itemize}
-
 
 
 %####################################################################################

@@ -4,29 +4,19 @@
 \subsubsection{インストールに関する基礎知識}
 
 Linuxをインストール後、各種プログラムのインストールにはコマンドライン端末を使う。
-コマンドラインのシンボル（\verb|$, #|）があれば、コマンドの実行を示す。
-
-\begin{verbatim}
- $ vi
-\end{verbatim}
-
-上記のコマンドは、vi（汎用テキストエディタ）プログラムを実行する。
-他に、gedit、emacsなどのテキストエディタがある。
-マニュアルではviコマンドの実行指示があるが、各自の使いやすいエディタへ適宜読み替えること。
+コマンドラインのシンボル（\verb|$, #|）は、コマンドの実行を示す。
+下記の表記の違いは、プログラムを実行する権限の違いを示している。
 
 \begin{verbatim}
  #        <- root権限で実行するコマンド
  $        <- ユーザ権限で実行するコマンド
 \end{verbatim}
-
-上記の表記の違いは、プログラムを実行する権限の違いを示している。
 権限の一時的な切り替えにはsuコマンドを用いる。
 \verb|{User_Name}|は実際のユーザ名に読み替えること。
-
 \begin{verbatim}
- $ su {User_Name}
- $ exit
- $ su -
+ $ su {User_Name}   <- {User_Name}のユーザー名でログイン
+ $ exit             <- {User_Name}のユーザー名でログインを修了
+ $ su -             <- root権限に変更
  #
 \end{verbatim}
 
@@ -37,44 +27,47 @@ Linuxをインストール後、各種プログラムのインストールには
 他のディレクトリにダウンロードしてある場合は、mvコマンド等を用いて/tmpに移動しておくことを勧める。
 コード表記のうち、ダブルスラッシュ（//）で始まる行は解説のためのもので、実際に記述する必要はない。
 
+
+\begin{verbatim}
+ $ vi
+\end{verbatim}
+
+上記のコマンドは、vi（汎用テキストエディタ）プログラムを実行する。
+他に、gedit、emacsなどのテキストエディタがある。
+マニュアルではviコマンドの実行指示があるが、各自の使いやすいエディタへ適宜読み替えること。
+
 \subsubsection{各種インストールの事前準備}
 
-はじめに、SCALEのインストールには開発ツールやライブラリが必要となる。
-以降のインストールにおける依存性を解決するソフトウェアをインストールしておく。
-パッケージマネージャを利用すると簡単に追加のソフトウェアをインストールできる。
-
-ここではRed Had Enterpise LinuxのクローンOSとして有名なCentOSを例にとりあげる。
+SCALEのインストールに必要な開発ツールやライブラリのインストール方法について説明する。
+ここでは簡単のため、Red Had Enterpise LinuxのクローンOSとして有名なCentOSを例に、
+パッケージマネージャを利用した方法を紹介する。
 他のOSでは適宜読み替えること。例えばUbuntuなどではyumではなくapt系コマンドを用いる。
-CentOSではいくつかの開発ツール、ライブラリが外部リポジトリから持ってくる必要がある。
-具体的にはepelリポジトリ。管理ツールをインストールする前に、外部リポジトリを認識させる。
 
+CentOSではいくつかの開発ツール、ライブラリを外部リポジトリから持ってくる必要がある。
+具体的にはepelリポジトリ。ルート権限になり，外部リポジトリを認識させる。
 \begin{verbatim}
  # yum install epel-release
 \end{verbatim}
-
-yumのグループインストール機能を用いて、開発ツールをまとめてインストールする。
-
+yumのグループインストール機能を用いて，開発ツールをまとめてインストールする。
 \begin{verbatim}
  # yum groupinstall "development tools"
 \end{verbatim}
-
 グループインストールではインストールされないパッケージを個別に追加する。
-
 \begin{verbatim}
  # yum install hdf5-devel hdf5-static
  # yum install netcdf-devel netcdf-static
  # yum install openmpi-devel
 \end{verbatim}
 
+
 \subsubsection{MPI設定}
 
 SCALEをマルチプロセッサで走らせるため、OpenMPIの設定を行う。
-ユーザ権限に移動し、環境設定を記述しておく。
-
+ユーザ権限に移動して.bashrcをエディタで開き，
 \begin{verbatim}
  $ vi ~/.bashrc
 \end{verbatim}
-
+下記をファイルの最後に追加して，環境変数の設定を記述する。
 \begin{verbatim}
  // ---------------- Add to end of the file ----------------
  # OpenMPI
@@ -82,16 +75,16 @@ SCALEをマルチプロセッサで走らせるため、OpenMPIの設定を行�
  export PATH="$PATH:$MPI/bin"
  export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$MPI/lib"
 \end{verbatim}
-
 編集が終わったら、環境設定を有効にする。
-
 \begin{verbatim}
  $ . ~/.bashrc
 \end{verbatim}
 
-\subsection{Installation of Gphys}
 
-CentOSの場合、yumリポジトリに地球電脳倶楽部のGFD-Dennouリポジトリを登録することで、簡単にGphysをインストールできる。
+\subsubsection{Installation of Gphys}
+
+CentOSの場合、yumリポジトリに地球電脳倶楽部のGFD-Dennouリポジトリを登録することで、
+簡単にGphysをインストールできる。
 root権限で、GFD-Dennouリポジトリを次のような内容で登録する。
 
 \begin{verbatim}
@@ -106,9 +99,8 @@ root権限で、GFD-Dennouリポジトリを次のような内容で登録する
  enabled=1
  gpgcheck=0
 \end{verbatim}
-
 編集が終わったら、yumでGphysをインストールする。
-
 \begin{verbatim}
  # yum install gphys
 \end{verbatim}
+
