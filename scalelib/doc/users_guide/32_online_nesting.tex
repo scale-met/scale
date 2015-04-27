@@ -3,17 +3,47 @@
 
 \subsection{Online nesting}
 
-現在，scale-lesでは，単一ドメインの他に、複数ドメインをもつNesting計算をサポートしている．
-Nesting計算は1-way（親ドメインから娘ドメインへのデータ受け渡し）のみをサポートしている．
+SCALE-LESモデルは単一の計算領域（Domain）を使用した計算の他に，
+複数のDomainを使用したもつDomain nesting計算をサポートしている．
+広い領域に渡る環境場の再現と高解像度計算による詳細な構造と過程を再現したい場合に有用な機能である．
+ここでは，広い領域をとった比較的粗い解像度のDomainをParent domainと称し，
+相対的に狭い領域ではあるが高解像度のDomainをChild domainと称する．
+Child domainの領域はParent domainの領域内に完全に包含されていなければならない．
 
-Online Nestingを行う場合は，Nestingの段数分だけpp.conf，init.conf，run.confファイルをそれぞれ用意する必要がある．
-それぞれのドメイン毎に地形，土地利用，初期値・境界値を作成し，一番外側のドメインを下記のコマンドによって起動すると，
-外側のドメインが順次，内側のドメインを起動する．
-configureファイルの記述例は\verb|scale-les/test/case_real/kobe_prod|の下にあるので適宜参照して欲しい．
+SCALE-LESモデルでは現在，各Domainを単一Domain計算として順番に実行していくOffline nestingと
+各Domainを同時に実行させるOnline Nestingの両方をサポートしている．
+現在Online Nestingにおいては，1-way nesting（Parent domainからChild domainへのデータ受け渡し）のみをサポートしている．
+Nesting実験を行う場合は，Domainの数だけ各コンフィグファイル（\verb|pp_d##.conf，init_d##.conf，run_d##.conf|）を
+用意する必要がある．そして，各Domainについて地形・土地利用の作成，初期値・境界値の作成を事前に行っておく．
+Offline Nestingを行う場合は，まずParent domainの時間積分を実行し，そのhistory outputをChild domainへの
+入力データとして，初期値・境界値作成を行えばよい．NestingするDomainの数が増えても，この手順を繰り返すだけである．
+Online Nestingを行う場合は，\verb|run_d##.conf|の他に，起動用コンフィグファイル（\verb|launch.conf|）が必要になる．
+
+\vspace{0.5cm}
+\noindent {\em launch.conf}
 \begin{verbatim}
- $ mpirun -n 6 ./scale-les run.d01.conf
+&PARAM_LAUNCHER
+ NUM_DOMAIN  = 3,
+ CONF_FILES  = run.d01.conf,run.d02.conf,run.d03.conf,
+ PRC_DOMAINS = 9,27,72,
+/
 \end{verbatim}
-このとき注意することは，Online Nesting計算の場合，実際に起動されるMPIプロセス数は外側のドメインを起動する時に指定したプロセス数(np)とドメイン段数を掛けた数になる．
-たとえば，上記のコマンドで3段ドメインのOnline Nesting計算を行うことを考えると，total\_mpi\_processes = 3 (domain levels)×6 (np) = 36 processesとなる．
-実行時のマシン環境に合わせて実験を行う必要がある．
+
+上記は3つのDomainを使用したOnline Nesting計算における起動用コンフィグファイルの例である．
+\verb|NUM_DOMAIN = 3|が「3つのDomainを使用する」ことを表している．
+\verb|CONF_FILES|は各Domainで読み込む実行コンフィグファイル（\verb|run_d##.conf|）を指定する．
+\verb|PRC_DOMAINS|は各Domainで使用するMPIプロセスの数を指定する．\verb|CONF_FILES|で羅列した
+順番で指定しなければならない．従って，この場合，Domain 1（最外）は9プロセス，
+Domain 2（中間）は27プロセス，そしてDomain 3（最内）は72プロセスを使用するように指定されている．
+ここで指定するプロセス数はrun.confで指定されているプロセス数と合致させなければならない．
+この3段のOnline Nesting計算で使用するMPIプロセスの全数は，\verb|9 + 27 + 72 = 108|プロセスである．
+
+実行時には，単一Domainの計算とは異なり，\verb|launch.conf|を引数に指定し，
+全体で使用するMPIプロセス数を指定して実行する．
+\begin{verbatim}
+ $ mpirun -n 108 ./scale-les launch.conf
+\end{verbatim}
+
+実行にあたって注意することは，3つのDomainを同時に実行するため，出力されるファイルの名前等をDomain毎に変更しておく必要があることである．たとえば，\verb|history.pe######.nc|は，\verb|history_d01.pe######.nc, history_d02.pe######.nc, history_d03.pe######.nc|といったようにDomain毎に名前を変えながらどのDomainの出力であるか判別がつくようにする．
+ほかにLOGファイル，topoファイル，landuseファイル，boundaryファイル，initファイル，restartファイル，そしてmonitorファイルの名前を変更しておく必要がある．
 
