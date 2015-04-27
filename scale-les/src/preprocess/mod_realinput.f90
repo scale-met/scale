@@ -3120,7 +3120,8 @@ contains
        THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres, &
        THERMODYN_pott      => ATMOS_THERMODYN_pott
     use scale_atmos_saturation, only: &
-       qsat => ATMOS_SATURATION_pres2qsat_all
+       qsat => ATMOS_SATURATION_pres2qsat_liq
+       !qsat => ATMOS_SATURATION_pres2qsat_all
     use scale_gridtrans, only: &
        rotc => GTRANS_ROTC
     use scale_topography, only: &
@@ -3688,9 +3689,23 @@ contains
                    enddo
                    if(dims(3)>knum)then
                       do k = knum+1, dims(3)
-                         qtrc_org(k,i,j,it,QA_outer) = qtrc_org(knum,i,j,it,QA_outer)
+                         rhprs_org(k,i,j,it) = rhprs_org(knum,i,j,it)                 ! relative humidity
+                         call qsat( qvsat, temp_org(k,i,j,it), pres_org(k,i,j,it) )   ! satulated specific humidity
+                         qm = (rhprs_org(k,i,j,it)/100.0_RP) * (qvsat/(1.0_RP-qvsat)) ! mixing ratio
+                         qtrc_org(k,i,j,it,QA_outer) = qm * ( 1.0_RP + qm )
                       enddo
                    endif
+                   !do k = 1, knum
+                   !   rhprs_org(k,i,j,it) = real(gdata3D(i,j,k,it), kind=RP)       ! relative humidity
+                   !   call qsat( qvsat, temp_org(k,i,j,it), pres_org(k,i,j,it) )   ! satulated specific humidity
+                   !   qm = (rhprs_org(k,i,j,it)/100.0_RP) * (qvsat/(1.0_RP-qvsat)) ! mixing ratio
+                   !   qtrc_org(k,i,j,it,QA_outer) = qm * ( 1.0_RP + qm )
+                   !enddo
+                   !if(dims(3)>knum)then
+                   !   do k = knum+1, dims(3)
+                   !      qtrc_org(k,i,j,it,QA_outer) = qtrc_org(knum,i,j,it,QA_outer)
+                   !   enddo
+                   !endif
                 enddo
                 enddo
                 enddo
