@@ -3682,19 +3682,19 @@ contains
                 do j = 1, dims(2)
                 do i = 1, dims(1)
                    do k = 1, knum
-                      rhprs_org(k,i,j,it) = real(gdata3D(i,j,k,it), kind=RP)    ! relative humidity
-                      call psat( p_sat, temp_org(k,i,j,it) )                    ! satulation pressure
+                      rhprs_org(k,i,j,it) = real(gdata3D(i,j,k,it), kind=RP) / 100.0_RP  ! relative humidity
+                      call psat( p_sat, temp_org(k,i,j,it) )                             ! satulation pressure
                       qm = EPSvap * rhprs_org(k,i,j,it) * p_sat &
-                         / ( pres_org(k,i,j,it) - rhprs_org(k,i,j,it) * p_sat ) ! mixing ratio
-                      qtrc_org(k,i,j,it,QA_outer) = qm / ( 1.0_RP + qm )        ! specific humidity
+                         / ( pres_org(k,i,j,it) - rhprs_org(k,i,j,it) * p_sat )          ! mixing ratio
+                      qtrc_org(k,i,j,it,QA_outer) = qm / ( 1.0_RP + qm )                 ! specific humidity
                    enddo
                    if(dims(3)>knum)then
                       do k = knum+1, dims(3)
-                         rhprs_org(k,i,j,it) = rhprs_org(knum,i,j,it)                  ! relative humidity
-                         call psat( p_sat, temp_org(k,i,j,it) )                        ! satulated specific humidity
+                         rhprs_org(k,i,j,it) = rhprs_org(knum,i,j,it)                    ! relative humidity
+                         call psat( p_sat, temp_org(k,i,j,it) )                          ! satulated specific humidity
                          qm = EPSvap * rhprs_org(k,i,j,it) * p_sat &
-                            / ( pres_org(k,i,j,it) - rhprs_org(k,i,j,it) * p_sat )     ! mixing ratio
-                         qtrc_org(k,i,j,it,QA_outer) = qm / ( 1.0_RP + qm )            ! specific humidity
+                            / ( pres_org(k,i,j,it) - rhprs_org(k,i,j,it) * p_sat )       ! mixing ratio
+                         qtrc_org(k,i,j,it,QA_outer) = qm / ( 1.0_RP + qm )              ! specific humidity
                          qtrc_org(k,i,j,it,QA_outer) = min(qtrc_org(k,i,j,it,QA_outer),qtrc_org(k-1,i,j,it,QA_outer))
                       enddo
                    endif
