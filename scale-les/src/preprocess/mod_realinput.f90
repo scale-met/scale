@@ -3682,30 +3682,22 @@ contains
                 do j = 1, dims(2)
                 do i = 1, dims(1)
                    do k = 1, knum
+                      !qtrc_org(k,i,j,it,QA_outer) = (rhprs_org(k,i,j,it)/100.0_RP) * qvsat ! qsat*RH
                       rhprs_org(k,i,j,it) = real(gdata3D(i,j,k,it), kind=RP)       ! relative humidity
                       call qsat( qvsat, temp_org(k,i,j,it), pres_org(k,i,j,it) )   ! satulated specific humidity
                       qm = (rhprs_org(k,i,j,it)/100.0_RP) * (qvsat/(1.0_RP-qvsat)) ! mixing ratio
-                      qtrc_org(k,i,j,it,QA_outer) = qm * ( 1.0_RP + qm )
+                      qtrc_org(k,i,j,it,QA_outer) = qm / ( 1.0_RP + qm )           ! specific humidity
                    enddo
                    if(dims(3)>knum)then
                       do k = knum+1, dims(3)
+                         !qtrc_org(k,i,j,it,QA_outer) = (rhprs_org(k,i,j,it)/100.0_RP) * qvsat ! qsat*RH
                          rhprs_org(k,i,j,it) = rhprs_org(knum,i,j,it)                 ! relative humidity
                          call qsat( qvsat, temp_org(k,i,j,it), pres_org(k,i,j,it) )   ! satulated specific humidity
                          qm = (rhprs_org(k,i,j,it)/100.0_RP) * (qvsat/(1.0_RP-qvsat)) ! mixing ratio
-                         qtrc_org(k,i,j,it,QA_outer) = qm * ( 1.0_RP + qm )
+                         qtrc_org(k,i,j,it,QA_outer) = qm / ( 1.0_RP + qm )           ! specific humidity
+                         qtrc_org(k,i,j,it,QA_outer) = min(qtrc_org(k,i,j,it,QA_outer),qtrc_org(k-1,i,j,it,QA_outer))
                       enddo
                    endif
-                   !do k = 1, knum
-                   !   rhprs_org(k,i,j,it) = real(gdata3D(i,j,k,it), kind=RP)       ! relative humidity
-                   !   call qsat( qvsat, temp_org(k,i,j,it), pres_org(k,i,j,it) )   ! satulated specific humidity
-                   !   qm = (rhprs_org(k,i,j,it)/100.0_RP) * (qvsat/(1.0_RP-qvsat)) ! mixing ratio
-                   !   qtrc_org(k,i,j,it,QA_outer) = qm * ( 1.0_RP + qm )
-                   !enddo
-                   !if(dims(3)>knum)then
-                   !   do k = knum+1, dims(3)
-                   !      qtrc_org(k,i,j,it,QA_outer) = qtrc_org(knum,i,j,it,QA_outer)
-                   !   enddo
-                   !endif
                 enddo
                 enddo
                 enddo
