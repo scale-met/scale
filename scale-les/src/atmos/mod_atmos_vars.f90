@@ -158,7 +158,7 @@ module mod_atmos_vars
   integer, private, parameter :: I_TEMP  = 16 ! temperature
 
   integer, private, parameter :: I_POTL  = 17 ! liquid water potential temperature
-  integer, private, parameter :: I_RH    = 18 ! relative humidity (liquid+ice)
+  integer, private, parameter :: I_RHA   = 18 ! relative humidity (liquid+ice)
   integer, private, parameter :: I_RHL   = 19 ! relative humidity against to liquid
   integer, private, parameter :: I_RHI   = 20 ! relative humidity against to ice
 
@@ -418,8 +418,8 @@ contains
     call HIST_reg( AD_HIST_id(I_TEMP) , zinterp, 'T',     'temperature',            'K',      ndim=3 )
 
     call HIST_reg( AD_HIST_id(I_POTL) , zinterp, 'LWPT',  'liq. potential temp.',   'K',      ndim=3 )
-    call HIST_reg( AD_HIST_id(I_RH)   , zinterp, 'RH',    'relative humidity',      '%',      ndim=3 )
-    call HIST_reg( AD_HIST_id(I_RHL)  , zinterp, 'RHL',   'relative humidity(liq)', '%',      ndim=3 )
+    call HIST_reg( AD_HIST_id(I_RHA)  , zinterp, 'RHA',   'relative humidity(liq+ice)', '%', ndim=3 )
+    call HIST_reg( AD_HIST_id(I_RHL)  , zinterp, 'RH',    'relative humidity(liq)', '%',      ndim=3 )
     call HIST_reg( AD_HIST_id(I_RHI)  , zinterp, 'RHI',   'relative humidity(ice)', '%',      ndim=3 )
 
     call HIST_reg( AD_HIST_id(I_VOR)  , zinterp, 'VOR',   'vertical vorticity',     '1/s',    ndim=3 )
@@ -557,7 +557,7 @@ contains
        AD_PREP_sw(I_TEMP)  = 1
        AD_PREP_sw(I_POTL)  = 1
     endif
-    if (      AD_HIST_id(I_RH)  > 0 &
+    if (      AD_HIST_id(I_RHA) > 0 &
          .OR. AD_HIST_id(I_RHL) > 0 &
          .OR. AD_HIST_id(I_RHI) > 0 ) then
        AD_PREP_sw(I_QDRY)  = 1
@@ -1140,9 +1140,9 @@ contains
        CPw => AQ_CP,                       &
        CVw => AQ_CV
     use scale_atmos_saturation, only: &
-       SATURATION_dens2qsat_all => ATMOS_SATURATION_dens2qsat_all, &
-       SATURATION_dens2qsat_liq => ATMOS_SATURATION_dens2qsat_liq, &
-       SATURATION_dens2qsat_ice => ATMOS_SATURATION_dens2qsat_ice
+       SATURATION_psat_all => ATMOS_SATURATION_psat_all, &
+       SATURATION_psat_liq => ATMOS_SATURATION_psat_liq, &
+       SATURATION_psat_ice => ATMOS_SATURATION_psat_ice
     implicit none
 
     real(RP) :: QDRY  (KA,IA,JA) ! dry air            [kg/kg]
@@ -1161,7 +1161,7 @@ contains
     real(RP) :: CPovCV(KA,IA,JA) ! Cp/Cv
 
     real(RP) :: POTL  (KA,IA,JA) ! liquid water potential temperature [K]
-    real(RP) :: RH    (KA,IA,JA) ! relative humidity (liquid+ice)      [%]
+    real(RP) :: RHA   (KA,IA,JA) ! relative humidity (liquid+ice)      [%]
     real(RP) :: RHL   (KA,IA,JA) ! relative humidity against to liquid [%]
     real(RP) :: RHI   (KA,IA,JA) ! relative humidity against to ice    [%]
 
@@ -1195,7 +1195,7 @@ contains
     real(RP) :: ENGK  (KA,IA,JA) ! kinetic   energy [J/m3]
     real(RP) :: ENGI  (KA,IA,JA) ! internal  energy [J/m3]
 
-    real(RP) :: QSAT  (KA,IA,JA)
+    real(RP) :: PSAT  (KA,IA,JA)
     real(RP) :: UH    (KA,IA,JA)
     real(RP) :: VH    (KA,IA,JA)
 
@@ -1419,38 +1419,51 @@ contains
     endif
 
     if ( AD_PREP_sw(I_QSAT) > 0 ) then
-       call SATURATION_dens2qsat_all( QSAT(:,:,:), & ! [OUT]
-                                      TEMP(:,:,:), & ! [IN]
-                                      DENS(:,:,:)  ) ! [IN]
+!       call SATURATION_dens2qsat_all( QSAT(:,:,:), & ! [OUT]
+!                                      TEMP(:,:,:), & ! [IN]
+!                                      DENS(:,:,:)  ) ! [IN]
     end if
 
-    if ( AD_HIST_id(I_RH) > 0 ) then
+    if ( AD_HIST_id(I_RHA) > 0 ) then
+       call SATURATION_psat_all( PSAT(:,:,:), & ! [OUT]
+                                 TEMP(:,:,:)  ) ! [IN]
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j  = JSB, JEB
        do i  = ISB, IEB
        do k  = KS, KE
-          RH(k,i,j) = QTRC(k,i,j,I_QV) / QSAT(k,i,j) * 1.0E2_RP
+          RHA(k,i,j) = DENS(k,i,j) * QTRC(k,i,j,I_QV) &
+                     / PSAT(k,i,j) * Rvap * TEMP(k,i,j) &
+                     * 100.0_RP
        enddo
        enddo
        enddo
     endif
 
     if ( AD_HIST_id(I_RHL) > 0 ) then
+       call SATURATION_psat_liq( PSAT(:,:,:), & ! [OUT]
+                                 TEMP(:,:,:)  ) ! [IN]
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j  = JSB, JEB
        do i  = ISB, IEB
        do k  = KS, KE
-          RHL(k,i,j) = QTRC(k,i,j,I_QV) / QSAT(k,i,j) * 1.0E2_RP
+          RHL(k,i,j) = DENS(k,i,j) * QTRC(k,i,j,I_QV) &
+                     / PSAT(k,i,j) * Rvap * TEMP(k,i,j) &
+                     * 100.0_RP
        enddo
        enddo
        enddo
     endif
 
     if ( AD_HIST_id(I_RHI) > 0 ) then
+       call SATURATION_psat_ice( PSAT(:,:,:), & ! [OUT]
+                                 TEMP(:,:,:)  ) ! [IN]
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j  = JSB, JEB
        do i  = ISB, IEB
        do k  = KS, KE
-          RHI(k,i,j) = QTRC(k,i,j,I_QV) / QSAT(k,i,j) * 1.0E2_RP
+          RHI(k,i,j) = DENS(k,i,j) * QTRC(k,i,j,I_QV) &
+                     / PSAT(k,i,j) * Rvap * TEMP(k,i,j) &
+                     * 100.0_RP
        enddo
        enddo
        enddo
@@ -1843,8 +1856,8 @@ contains
     call HIST_in( TEMP (:,:,:), 'T',     'temperature',            'K'      )
 
     call HIST_in( POTL (:,:,:), 'LWPT',  'liq. potential temp.',   'K'      )
-    call HIST_in( RH   (:,:,:), 'RH',    'relative humidity',      '%'      )
-    call HIST_in( RHL  (:,:,:), 'RHL',   'relative humidity(liq)', '%'      )
+    call HIST_in( RHA  (:,:,:), 'RHA',   'relative humidity(liq+ice)','%'   )
+    call HIST_in( RHL  (:,:,:), 'RH' ,   'relative humidity(liq)', '%'      )
     call HIST_in( RHI  (:,:,:), 'RHI',   'relative humidity(ice)', '%'      )
 
     call HIST_in( VOR  (:,:,:), 'VOR',   'vertical vorticity',     '1/s'    )
