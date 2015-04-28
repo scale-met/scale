@@ -3781,11 +3781,11 @@ contains
                 do it = 1, nt
                 do j = 1, dims(2)
                 do i = 1, dims(1)
-                   rhsfc_org(i,j,it) = real(gdata2D(i,j,it), kind=RP)    ! relative humidity
+                   rhsfc_org(i,j,it) = real(gdata2D(i,j,it), kind=RP) / 100.0_RP   ! relative humidity
                    call psat( p_sat, tsfc_org(i,j,it) )                  ! satulation pressure
                    qm = EPSvap * rhsfc_org(i,j,it) * p_sat &
                       / ( psfc_org(i,j,it) - rhsfc_org(i,j,it) * p_sat ) ! mixing ratio
-                   qsfc_org(i,j,it,QA_outer) = qm * ( 1.0_RP + qm )      ! specific humidity
+                   qsfc_org(i,j,it,QA_outer) = qm / ( 1.0_RP + qm )      ! specific humidity
                 enddo
                 enddo
                 enddo
