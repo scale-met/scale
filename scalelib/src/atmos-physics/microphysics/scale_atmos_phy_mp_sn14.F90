@@ -73,6 +73,7 @@ module scale_atmos_phy_mp_sn14
   use scale_grid_index
 
   use scale_tracer_sn14
+  use scale_tracer, only: QA
   use scale_const, only: &
      GRAV   => CONST_GRAV,   &
      PI     => CONST_PI,     &

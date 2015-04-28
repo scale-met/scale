@@ -27,6 +27,7 @@ module scale_atmos_phy_mp_kessler
   use scale_grid_index
 
   use scale_tracer_kessler
+  use scale_tracer, only: QA
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -186,12 +187,12 @@ contains
     real(RP), intent(out)   :: SFLX_snow(IA,JA)
 
     real(RP) :: RHOE_t(KA,IA,JA)
-    real(RP) :: QTRC_t(KA,IA,JA,QA)
+    real(RP) :: QTRC_t(KA,IA,JA,QAD)
     real(RP) :: RHOE  (KA,IA,JA)
     real(RP) :: temp  (KA,IA,JA)
     real(RP) :: pres  (KA,IA,JA)
 
-    real(RP) :: vterm   (KA,IA,JA,QA) ! terminal velocity of each tracer [m/s]
+    real(RP) :: vterm   (KA,IA,JA,QAD) ! terminal velocity of each tracer [m/s]
     real(RP) :: FLX_rain(KA,IA,JA)
     real(RP) :: FLX_snow(KA,IA,JA)
     real(RP) :: wflux_rain(KA,IA,JA)

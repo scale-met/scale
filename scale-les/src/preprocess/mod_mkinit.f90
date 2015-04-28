@@ -23,6 +23,7 @@
 !! @li      2014-03-27 (A.Noda)     [mod] add DYCOMS2_RF02_DNS
 !! @li      2014-04-28 (R.Yoshida)  [add] real case experiment
 !! @li      2014-08-26 (A.Noda)     [mod] add GRAYZONE
+!! @li      2015-03-27 (Y.Sato)     [mod] add Box aero
 !!
 !<
 !-------------------------------------------------------------------------------
@@ -133,6 +134,7 @@ module mod_mkinit
   integer, public, parameter :: I_REAL          = 25
 
   integer, public, parameter :: I_GRAYZONE      = 26
+  integer, public, parameter :: I_BOXAERO       = 27
 
   !-----------------------------------------------------------------------------
   !
@@ -140,6 +142,7 @@ module mod_mkinit
   !
   private :: BUBBLE_setup
   private :: SBMAERO_setup
+  private :: AEROSOL_setup
 
   private :: MKINIT_planestate
   private :: MKINIT_tracerbubble
@@ -172,6 +175,7 @@ module mod_mkinit
 
   private :: MKINIT_grayzone
 
+  private :: MKINIT_boxaero
   !-----------------------------------------------------------------------------
   !
   !++ Private parameters & variables
@@ -315,6 +319,8 @@ contains
        MKINIT_TYPE = I_REAL
     case('GRAYZONE')
        MKINIT_TYPE = I_GRAYZONE
+    case('BOXAERO')
+       MKINIT_TYPE = I_BOXAERO
     case default
        write(*,*) ' xxx Unsupported TYPE:', trim(MKINIT_initname)
        call PRC_MPIstop
@@ -458,6 +464,8 @@ contains
          call MKINIT_real
       case(I_GRAYZONE)
          call MKINIT_grayzone
+      case(I_BOXAERO)
+         call MKINIT_boxaero
       case default
          write(*,*) ' xxx Unsupported TYPE:', MKINIT_TYPE
          call PRC_MPIstop
@@ -565,6 +573,224 @@ contains
   end subroutine BUBBLE_setup
 
   !-----------------------------------------------------------------------------
+  !> Setup aerosol condition for Kajino 2013 scheme
+  subroutine AEROSOL_setup
+
+    use scale_tracer
+    use scale_const, only: &
+       PI => CONST_PI
+    implicit none
+
+    integer, parameter ::  ia_m0  = 1             !1. number conc        [#/m3]
+    integer, parameter ::  ia_m2  = 2             !2. 2nd mom conc       [m2/m3]
+    integer, parameter ::  ia_m3  = 3             !3. 3rd mom conc       [m3/m3]
+    integer, parameter ::  ia_ms  = 4             !4. mass conc          [ug/m3]
+    integer, parameter ::  ia_kp  = 5
+
+    real(RP) :: m0_init = 0.0_RP    ! initial total num. conc. of modes (Atk,Acm,Cor) [#/m3]   
+    real(RP) :: dg_init = 80.e-9_RP ! initial number equivalen diameters of modes     [m]      
+    real(RP) :: sg_init = 1.6_RP    ! initial standard deviation                      [-]    
+
+    real(RP), allocatable :: d_min_inp(:)
+    real(RP), allocatable :: d_max_inp(:)
+    real(RP), allocatable :: k_min_inp(:)
+    real(RP), allocatable :: k_max_inp(:)
+    integer, allocatable :: n_kap_inp(:)
+
+    real(RP), parameter :: d_min_def = 1.e-9_RP ! default lower bound of 1st size bin
+    real(RP), parameter :: d_max_def = 1.e-5_RP ! upper bound of last size bin
+    integer,  parameter :: n_kap_def = 1        ! number of kappa bins
+    real(RP), parameter :: k_min_def = 0.e0_RP  ! lower bound of 1st kappa bin
+    real(RP), parameter :: k_max_def = 1.e0_RP  ! upper bound of last kappa bin
+
+    NAMELIST / PARAM_AERO / &
+       m0_init, &
+       dg_init, &
+       sg_init, &
+       d_min_inp, &
+       d_max_inp, &
+       k_min_inp, &
+       k_max_inp, &
+       n_kap_inp
+
+    ! local variables
+    real(RP), parameter  :: rhod_ae    = 1.83_RP              ! particle density [g/cm3] sulfate assumed
+    real(RP), parameter  :: conv_vl_ms = rhod_ae/1.e-12_RP     ! M3(volume)[m3/m3] to mass[m3/m3]
+
+    integer :: ia, ik, is0, ic, k, i, j
+    integer :: ierr, n_trans
+    real(RP) :: m0t, dgt, sgt, m2t, m3t, mst
+    real(RP),allocatable :: aerosol_procs(:,:,:,:) !(n_atr,n_siz_max,n_kap_max,n_ctg)
+    real(RP),allocatable :: aerosol_activ(:,:,:,:) !(n_atr,n_siz_max,n_kap_max,n_ctg)
+    real(RP),allocatable :: emis_procs(:,:,:,:)    !(n_atr,n_siz_max,n_kap_max,n_ctg)
+    !--- gas
+    real(RP) :: conc_gas(GAS_CTG)    !concentration [ug/m3]
+    integer :: n_siz_max, n_kap_max, n_ctg
+    integer, allocatable :: it_procs2trans(:,:,:,:) !procs to trans conversion
+    integer, allocatable :: ia_trans2procs(:) !trans to procs conversion
+    integer, allocatable :: is_trans2procs(:) !trans to procs conversion
+    integer, allocatable :: ik_trans2procs(:) !trans to procs conversion
+    integer, allocatable :: ic_trans2procs(:)
+    !--- bin settings (lower bound, center, upper bound)
+    real(RP),allocatable :: d_lw(:,:), d_ct(:,:), d_up(:,:)  !diameter [m]
+    real(RP),allocatable :: k_lw(:,:), k_ct(:,:), k_up(:,:)  !kappa    [-]
+    real(RP) :: dlogd, dk                                    !delta log(D), delta K
+    real(RP) :: deltt
+    real(RP),allocatable :: d_min(:)              !lower bound of 1st size bin   (n_ctg)
+    real(RP),allocatable :: d_max(:)              !upper bound of last size bin  (n_ctg)
+    integer, allocatable :: n_kap(:)              !number of kappa bins          (n_ctg)
+    real(RP),allocatable :: k_min(:)              !lower bound of 1st kappa bin  (n_ctg)
+    real(RP),allocatable :: k_max(:)
+
+    real(RP) :: pi6
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[AEROSOL]/Categ[MKINIT]'
+
+    pi6   = pi / 6._RP
+    n_ctg = AE_CTG
+
+    allocate( d_min(n_ctg) )
+    allocate( d_max(n_ctg) )
+    allocate( n_kap(n_ctg) )
+    allocate( k_min(n_ctg) )
+    allocate( k_max(n_ctg) )
+    allocate( d_min_inp(n_ctg) )
+    allocate( d_max_inp(n_ctg) )
+    allocate( n_kap_inp(n_ctg) )
+    allocate( k_min_inp(n_ctg) )
+    allocate( k_max_inp(n_ctg) )
+
+    d_min(1:n_ctg) = d_min_def ! lower bound of 1st size bin
+    d_max(1:n_ctg) = d_max_def ! upper bound of last size bin
+    n_kap(1:n_ctg) = n_kap_def ! number of kappa bins
+    k_min(1:n_ctg) = k_min_def ! lower bound of 1st kappa bin
+    k_max(1:n_ctg) = k_max_def
+
+    !--- read namelist
+    rewind(IO_FID_CONF)
+    read(IO_FID_CONF,nml=PARAM_AERO,iostat=ierr)
+
+    if( ierr < 0 ) then !--- missing
+       if( IO_L ) write(IO_FID_LOG,*) 'xxx Not found namelist. Default used!'
+!       call PRC_MPIstop
+    elseif( ierr > 0 ) then !--- fatal error
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_AERO. Check!'
+       call PRC_MPIstop
+    else
+       d_min(1:n_ctg) = d_min_inp(1:n_ctg)  ! lower bound of 1st size bin
+       d_max(1:n_ctg) = d_max_inp(1:n_ctg)  ! upper bound of last size bin
+       n_kap(1:n_ctg) = n_kap_inp(1:n_ctg)  ! number of kappa bins
+       k_min(1:n_ctg) = k_min_inp(1:n_ctg)  ! lower bound of 1st kappa bin
+       k_max(1:n_ctg) = k_max_inp(1:n_ctg)  ! upper bound of last kappa bin
+    endif
+    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_AERO)
+
+    !--- diagnose parameters (n_trans, n_siz_max, n_kap_max)
+    n_trans   = 0
+    n_siz_max = 0
+    n_kap_max = 0
+    do ic = 1, n_ctg
+      n_trans   = n_trans + NSIZ(ic) * NKAP(ic) * N_ATR
+      n_siz_max = max(n_siz_max, NSIZ(ic))
+      n_kap_max = max(n_kap_max, NKAP(ic))
+    enddo
+
+    allocate( aerosol_procs (N_ATR,n_siz_max,n_kap_max,n_ctg)  )
+    allocate( aerosol_activ (N_ATR,n_siz_max,n_kap_max,n_ctg)  )
+    allocate( emis_procs    (N_ATR,n_siz_max,n_kap_max,n_ctg)  )
+
+    allocate( it_procs2trans(N_ATR,n_siz_max,n_kap_max,n_ctg)  )
+    allocate( ia_trans2procs(n_trans) )
+    allocate( is_trans2procs(n_trans) )
+    allocate( ik_trans2procs(n_trans) )
+    allocate( ic_trans2procs(n_trans) )
+
+    !bin setting
+    allocate(d_lw(n_siz_max,n_ctg))
+    allocate(d_ct(n_siz_max,n_ctg))
+    allocate(d_up(n_siz_max,n_ctg))
+    allocate(k_lw(n_kap_max,n_ctg))
+    allocate(k_ct(n_kap_max,n_ctg))
+    allocate(k_up(n_kap_max,n_ctg))
+    d_lw(:,:) = 0._RP
+    d_ct(:,:) = 0._RP
+    d_up(:,:) = 0._RP
+    k_lw(:,:) = 0._RP
+    k_ct(:,:) = 0._RP
+    k_up(:,:) = 0._RP
+
+    do ic = 1, n_ctg
+
+      dlogd = (log(d_max(ic)) - log(d_min(ic)))/float(NSIZ(ic))
+      do is0 = 1, NSIZ(ic)  !size bin
+        d_lw(is0,ic) = exp(log(d_min(ic))+dlogd* float(is0-1)      )
+        d_ct(is0,ic) = exp(log(d_min(ic))+dlogd*(float(is0)-0.5_RP))
+        d_up(is0,ic) = exp(log(d_min(ic))+dlogd* float(is0)        )
+      enddo !is (1:n_siz(ic))
+      dk    = (k_max(ic) - k_min(ic))/float(n_kap(ic))
+      do ik = 1, n_kap(ic)  !size bin
+        k_lw(ik,ic) = k_min(ic) + dk  * float(ik-1)
+        k_ct(ik,ic) = k_min(ic) + dk  *(float(ik)-0.5_RP)
+        k_up(ik,ic) = k_min(ic) + dk  * float(ik)
+      enddo !ik (1:n_kap(ic))
+
+    enddo !ic (1:n_ctg)
+!    ik  = 1       !only one kappa bin
+
+    m0t = m0_init !total M0 [#/m3]
+    dgt = dg_init ![m]
+    sgt = sg_init ![-]
+    m2t = m0t*dgt**(2.d0) *dexp(2.0d0 *(dlog(sgt)**2.d0)) !total M2 [m2/m3]
+    m3t = m0t*dgt**(3.d0) *dexp(4.5d0 *(dlog(sgt)**2.d0)) !total M3 [m3/m3]
+    mst = m3t*pi6*conv_vl_ms                              !total Ms [ug/m3]
+
+    do ic = 1, n_ctg
+    !aerosol_procs initial condition
+    do ik = 1, n_kap(ic)   !kappa bin
+    do is0 = 1, NSIZ(ic)
+       if (dgt >= d_lw(is0,ic) .and. dgt < d_up(is0,ic)) then
+         aerosol_procs(ia_m0,is0,ik,ic) = aerosol_procs(ia_m0,is0,ik,ic) + m0t
+         aerosol_procs(ia_m2,is0,ik,ic) = aerosol_procs(ia_m2,is0,ik,ic) + m2t
+         aerosol_procs(ia_m3,is0,ik,ic) = aerosol_procs(ia_m3,is0,ik,ic) + m3t
+         aerosol_procs(ia_ms,is0,ik,ic) = aerosol_procs(ia_ms,is0,ik,ic) + mst
+       elseif (dgt < d_lw(1,ic)) then
+         aerosol_procs(ia_m0,1 ,ik,ic) = aerosol_procs(ia_m0,1 ,ik,ic) + m0t
+         aerosol_procs(ia_m2,1 ,ik,ic) = aerosol_procs(ia_m2,1 ,ik,ic) + m2t
+         aerosol_procs(ia_m3,1 ,ik,ic) = aerosol_procs(ia_m3,1 ,ik,ic) + m3t
+         aerosol_procs(ia_ms,1 ,ik,ic) = aerosol_procs(ia_ms,1 ,ik,ic) + mst
+       elseif (dgt >= d_up(NSIZ(ic),ic)) then
+         aerosol_procs(ia_m0,NSIZ(ic),ik,ic) = aerosol_procs(ia_m0,NSIZ(ic),ik,ic) + m0t
+         aerosol_procs(ia_m2,NSIZ(ic),ik,ic) = aerosol_procs(ia_m2,NSIZ(ic),ik,ic) + m2t
+         aerosol_procs(ia_m3,NSIZ(ic),ik,ic) = aerosol_procs(ia_m3,NSIZ(ic),ik,ic) + m3t
+         aerosol_procs(ia_ms,NSIZ(ic),ik,ic) = aerosol_procs(ia_ms,NSIZ(ic),ik,ic) + mst
+       endif
+    enddo
+    enddo
+    enddo
+
+    conc_gas(:) = 0.0_RP
+    do k = KS, KE
+    do i = IS, IE
+    do j = JS, JE
+     do ic = 1, n_ctg       !category
+     do ik = 1, NKAP(ic)   !kappa bin
+     do is0 = 1, NSIZ(ic)   !size bin
+     do ia = 1, N_ATR       !attributes
+        QTRC(k,i,j,QAES-1+it_procs2trans(ia,is0,ik,ic)) = aerosol_procs(ia,is0,ik,ic)
+     enddo !ia (1:N_ATR )
+     enddo !is (1:n_siz(ic)  )
+     enddo !ik (1:n_kap(ic)  )
+     enddo !ic (1:n_ctg      )
+     QTRC(k,i,j,QAEE-GAS_CTG+1:QAEE-GAS_CTG+GAS_CTG) = conc_gas(1:GAS_CTG)*DENS(k,i,j)*1.E-6_RP !mixing ratio [kg/kg]
+    enddo
+    enddo
+    enddo
+ 
+    return       
+
+  end subroutine AEROSOL_setup
+  !--------------------------------------------------------------
   !> Setup aerosol condition for Spectral Bin Microphysics (SBM) model
   subroutine SBMAERO_setup
     use scale_const, only: &
@@ -580,7 +806,7 @@ contains
     real(RP) :: R_MAX        = 1.E-06_RP
     real(RP) :: R_MIN        = 1.E-08_RP
     real(RP) :: A_ALPHA      = 3.0_RP
-    real(RP) :: RHO_AERO         = 2.25E+03_RP
+    real(RP) :: rhoa         = 2.25E+03_RP
     integer  :: nbin_i       = 33
     integer  :: nccn_i       = 20
 
@@ -590,7 +816,7 @@ contains
        R_MAX,        &
        R_MIN,        &
        A_ALPHA,      &
-       RHO_AERO,         &
+       rhoa,         &
        nccn_i,       &
        nbin_i
 
@@ -618,8 +844,8 @@ contains
     allocate( xactr(nccn_i) )
     allocate( xabnd(nccn_i+1) )
 
-    xasta = log( RHO_AERO*4.0_RP/3.0_RP*pi * ( R_MIN )**3 )
-    xaend = log( RHO_AERO*4.0_RP/3.0_RP*pi * ( R_MAX )**3 )
+    xasta = log( rhoa*4.0_RP/3.0_RP*pi * ( R_MIN )**3 )
+    xaend = log( rhoa*4.0_RP/3.0_RP*pi * ( R_MAX )**3 )
     dxaer = ( xaend-xasta )/nccn_i
     do iq = 1, nccn_i+1
       xabnd( iq ) = xasta + dxaer*( iq-1 )
@@ -628,7 +854,7 @@ contains
       xactr( iq ) = ( xabnd( iq )+xabnd( iq+1 ) )*0.5_RP
     enddo
     do iq = 1, nccn_i
-      gan( iq ) = faero( F0_AERO,R0_AERO,xactr( iq ), A_ALPHA, RHO_AERO )*exp( xactr(iq) )
+      gan( iq ) = faero( F0_AERO,R0_AERO,xactr( iq ), A_ALPHA, rhoa )*exp( xactr(iq) )
     enddo
 
     !--- Hydrometeor is zero at initial time for Bin method
@@ -663,17 +889,17 @@ contains
   end subroutine SBMAERO_setup
 
   !-----------------------------------------------------------------------------
-  function faero( f0,r0,x,alpha,RHO_AERO )
+  function faero( f0,r0,x,alpha,rhoa )
     use scale_const, only: &
        pi => CONST_PI
     implicit none
 
-    real(RP), intent(in) ::  x, f0, r0, alpha, RHO_AERO
+    real(RP), intent(in) ::  x, f0, r0, alpha, rhoa
     real(RP) :: faero
     real(RP) :: rad
     !---------------------------------------------------------------------------
 
-    rad = ( exp(x) * 3.0_RP / 4.0_RP / pi / RHO_AERO )**(1.0_RP/3.0_RP)
+    rad = ( exp(x) * 3.0_RP / 4.0_RP / pi / rhoa )**(1.0_RP/3.0_RP)
 
     faero = f0 * (rad/r0)**(-alpha)
 
@@ -4200,8 +4426,59 @@ enddo
 
     return
   end subroutine MKINIT_grayzone
+  !-----------------------------------------------------------------------------
+  !> Make initial state of Box model experiment for zerochemical module
+  subroutine MKINIT_boxaero
 
+    implicit none
 
+    real(RP) :: init_dens  = 1.12_RP   ![kg/m3]
+    real(RP) :: init_temp  = 298.18_RP ![K]
+    real(RP) :: init_pres  = 1.E+5_RP  ![Pa]
+    real(RP) :: init_ssliq = 0.01_RP   ![%]
+
+    NAMELIST / PARAM_MKINIT_BOXAERO / &
+         init_dens, &
+         init_temp, &
+         init_pres, &
+         init_ssliq
+
+    real(RP) :: qsat
+    integer :: i, j, k, ierr
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Box model of aerosol]/Categ[MKINIT]'
+
+    !--- read namelist
+    rewind(IO_FID_CONF)
+    read(IO_FID_CONF,nml=PARAM_MKINIT_BOXAERO,iostat=ierr)
+    if( ierr < 0 ) then !--- missing
+       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+    elseif( ierr > 0 ) then !--- fatal error
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_BOXAERO. Check!'
+       call PRC_MPIstop
+    endif
+    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_BOXAERO)
+
+    QTRC(:,:,:,:) = 0.0_RP
+    do k = KS, KE
+    do i = IS, IE
+    do j = JS, JE
+      DENS(k,i,j) = init_dens
+      MOMX(k,i,j) = 0.0_RP
+      MOMY(k,i,j) = 0.0_RP
+      MOMZ(k,i,j) = 0.0_RP
+      pott(k,i,j) = init_temp * ( P00/init_pres )**( Rdry/CPdry )
+      RHOT(k,i,j) = DENS(k,i,j) * pott(k,i,j)
+      call SATURATION_pres2qsat_all( qsat,init_temp,init_pres )
+      QTRC(k,i,j,I_QV) = ( init_ssliq + 1.0_RP )*qsat
+    enddo
+    enddo 
+    enddo 
+
+    call AEROSOL_setup
+
+  end subroutine MKINIT_boxaero
   !-----------------------------------------------------------------------------
   !> Make initial state ( real case )
   subroutine MKINIT_real

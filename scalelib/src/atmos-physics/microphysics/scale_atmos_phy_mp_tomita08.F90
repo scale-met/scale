@@ -23,6 +23,7 @@ module scale_atmos_phy_mp_tomita08
   use scale_grid_index
 
   use scale_tracer_tomita08
+  use scale_tracer, only: QA
   !-----------------------------------------------------------------------------
   implicit none
   private

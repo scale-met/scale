@@ -83,6 +83,8 @@ contains
           MOMX, &
           MOMY, &
           RHOT, &
+          CN,   &
+          CCN,  &
           QTRC  )
     use scale_grid_index
     use scale_tracer
@@ -92,9 +94,14 @@ contains
     real(RP), intent(inout) :: MOMX(KA,IA,JA)
     real(RP), intent(inout) :: MOMY(KA,IA,JA)
     real(RP), intent(inout) :: RHOT(KA,IA,JA)
+    real(RP), intent(out)   :: CN(KA,IA,JA)
+    real(RP), intent(out)   :: CCN(KA,IA,JA)
     real(RP), intent(inout) :: QTRC(KA,IA,JA,QA)
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Aerosol(dummy)'
+
+    CN(:,:,:) = 0.0_RP
+    CCN(:,:,:) = 0.0_RP
 
     return
   end subroutine ATMOS_PHY_AE_dummy

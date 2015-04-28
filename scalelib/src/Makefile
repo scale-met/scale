@@ -15,6 +15,7 @@ LIBNAME = libscale.a
 DEPENDLIB = $(LIBDIR)/libgtool.a $(LIBDIR)/libdcutils.a
 
 VPATH = common:                     \
+        common/tracer:              \
         coupler:                    \
         io:                         \
         atmos-physics:              \
@@ -60,6 +61,13 @@ else
   FFLAGS += -DMP=$(MP)
 endif
 
+ifeq ($(AE),)
+  OBJS_AE = scale_atmos_phy_ae_dummy.o \
+	    scale_atmos_phy_ae_kajino13.o
+else
+  OBJS_AE = scale_atmos_phy_ae_$(AE).o
+endif
+
 ifeq ($(RD),)
   OBJS_RD = scale_atmos_phy_rd_mstrnx.o	\
             scale_atmos_phy_rd_mm5sw.o	\
@@ -91,6 +99,13 @@ else
   FFLAGS += -DTRACER=$(TRACER)
 endif
 
+ifeq ($(AETRACER),)
+  OBJS_AETRACER = scale_aetracer_none.o	\
+                scale_aetracer_kajino13.o
+else
+  OBJS_AETRACER = scale_aetracer_$(AETRACER).o
+endif
+
 OBJS_NAME = $(scale_rdma)	\
 	scale_atmos_dyn.o	\
 	scale_atmos_dyn_common.o	\
@@ -100,6 +115,7 @@ OBJS_NAME = $(scale_rdma)	\
 	scale_atmos_dyn_rk_hivi.o	\
 	scale_atmos_phy_ae.o	\
 	scale_atmos_phy_ae_dummy.o	\
+	$(OBJS_AE)	\
 	scale_atmos_phy_mp.o	\
 	scale_atmos_phy_mp_common.o	\
 	$(OBJS_MP)	\
@@ -163,6 +179,7 @@ OBJS_NAME = $(scale_rdma)	\
 	scale_topography.o	\
 	scale_tracer.o	\
 	$(OBJS_TRACER)	\
+	$(OBJS_AETRACER)	\
 	scale_urban_grid.o	\
 	scale_urban_grid_index.o	\
 	scale_urban_phy.o	\

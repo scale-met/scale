@@ -16,7 +16,7 @@
   integer, public :: kphase = 0
   integer, public :: ICEFLG = 1
   integer, public :: I_QV =  1
-  integer, public :: QA
+  integer, public :: QA_MP
   integer, public :: QQA
   integer, public :: QQS
   integer, public :: QQE
@@ -44,9 +44,9 @@
   integer, public, parameter :: I_NS =  11
   integer, public, parameter :: I_NG =  12
 
-  character(len=H_SHORT), public, allocatable :: AQ_NAME(:)
-  character(len=H_MID)  , public, allocatable :: AQ_DESC(:)
-  character(len=H_SHORT), public, allocatable :: AQ_UNIT(:)
+  character(len=H_SHORT), public, allocatable :: AQ_MP_NAME(:)
+  character(len=H_MID)  , public, allocatable :: AQ_MP_DESC(:)
+  character(len=H_SHORT), public, allocatable :: AQ_MP_UNIT(:)
 !  character(len=16), public :: AQ_NAME(QA)
 !  character(len=64), public :: AQ_DESC(QA)
 !  character(len=16), public :: AQ_UNIT(QA)
@@ -94,12 +94,12 @@
                   2,    & ! I_mp_QG => MSTRN_nptype=2: ice cloud (graupel)
                   2     / ! I_mp_QH => MSTRN_nptype=2: ice cloud (hail)
 
-  integer, public, parameter :: AE_QA = 1 ! number of aerosol tracer
-  integer, public, parameter :: I_ae_dummy = 1
-
-  integer, public :: I_AE2ALL(AE_QA)
-  data I_AE2ALL / -999 / ! dummy
-
-  integer, public :: I_AE2RD(AE_QA)
-  data I_AE2RD  / 3    / ! dummy => MSTRN_nptype=3: dust
+!  integer, public, parameter :: AE_QA = 1 ! number of aerosol tracer
+!  integer, public, parameter :: I_ae_dummy = 1
+!
+!  integer, public :: I_AE2ALL(AE_QA)
+!  data I_AE2ALL / -999 / ! dummy
+!
+!  integer, public :: I_AE2RD(AE_QA)
+!  data I_AE2RD  / 3    / ! dummy => MSTRN_nptype=3: dust
   integer :: m, n, ierr

@@ -37,6 +37,7 @@ module scale_atmos_phy_mp_suzuki10
   use scale_grid_index
 
   use scale_tracer_suzuki10
+  use scale_tracer, only: QA
   use scale_const, only: &
      pi => CONST_PI, &
      CONST_CPdry,  &

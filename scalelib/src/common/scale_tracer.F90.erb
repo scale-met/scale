@@ -1,8 +1,12 @@
 % # -*- f90 -*-
 % # vi: set sw=4 ts=8:
 % types = %w(dry kessler tomita08 sn14 suzuki10)
-% vars_int =  %w(QA I_QV I_QC I_QR I_QI I_QS I_QG I_NC I_NR I_NI I_NS I_NG QQA QQS QQE QWS QWE QIS QIE MP_QA AE_QA I_ae_dummy)
-% vars_ary =  %w(AQ_NAME AQ_DESC AQ_UNIT I_MP2ALL I_MP2RD I_AE2ALL I_AE2RD)
+% atypes = %w(none kajino13)
+% vars_int =  %w(QA_MP I_QV I_QC I_QR I_QI I_QS I_QG I_NC I_NR I_NI I_NS I_NG QQA QQS QQE QWS QWE QIS QIE MP_QA)
+% avars_int =  %w(QA_AE AE_CTG N_ATR GAS_CTG)
+% avars2_int =  %w(NSIZ NKAP IC_MIX IC_SEA IC_DUS IG_H2SO4 IG_CGAS QAES QAEE AE_QA I_ae_dummy)
+% vars_ary =  %w(AQ_MP_NAME AQ_MP_DESC AQ_MP_UNIT I_MP2ALL I_MP2RD)
+% avars_ary =  %w(AQ_AE_NAME AQ_AE_DESC AQ_AE_UNIT I_AE2ALL I_AE2RD)
 
 !-------------------------------------------------------------------------------
 !> module TRACER
@@ -48,6 +52,7 @@ module scale_tracer
 #else
   integer, public :: QA
 
+  integer, public :: QA_MP 
   integer, public :: I_QV
   integer, public :: I_QC
   integer, public :: I_QR
@@ -69,9 +74,29 @@ module scale_tracer
   integer, public :: QIS ! start index for ice tracer
   integer, public :: QIE ! end   index for ice tracer
 
+  integer, public :: QA_AE   ! number of tracer for aerosol
+  integer, public :: AE_CTG  ! category number of aerosol
+  integer, public :: GAS_CTG ! category number of gas
+  integer, public :: N_ATR   ! number of attribute
+  integer, public, allocatable :: NKAP(:)
+  integer, public, allocatable :: NSIZ(:)
+  integer, public :: IC_MIX 
+  integer, public :: IC_SEA
+  integer, public :: IC_DUS
+  integer, public :: IG_H2SO4
+  integer, public :: IG_CGAS
+  integer, public :: QAES ! start index for aerosol tracer
+  integer, public :: QAEE ! end   index for aerosol tracer
+
   character(len=H_SHORT), public, allocatable :: AQ_NAME(:)
+  character(len=H_SHORT), public, allocatable :: AQ_MP_NAME(:)
+  character(len=H_SHORT), public, allocatable :: AQ_AE_NAME(:)
   character(len=H_MID)  , public, allocatable :: AQ_DESC(:)
+  character(len=H_MID)  , public, allocatable :: AQ_MP_DESC(:)
+  character(len=H_MID)  , public, allocatable :: AQ_AE_DESC(:)
   character(len=H_SHORT), public, allocatable :: AQ_UNIT(:)
+  character(len=H_SHORT), public, allocatable :: AQ_MP_UNIT(:)
+  character(len=H_SHORT), public, allocatable :: AQ_AE_UNIT(:)
 
   !-----------------------------------------------------------------------------
   !
@@ -91,6 +116,7 @@ module scale_tracer
   integer, public, allocatable :: I_AE2RD(:)
 
   character(len=H_SHORT), public :: TRACER_TYPE = 'NONE'
+  character(len=H_SHORT), public :: AETRACER_TYPE = 'NONE'
 #endif
   !-----------------------------------------------------------------------------
   !
@@ -124,12 +150,22 @@ contains
 %   end
     TRACER_<%=type%>_setup
 % end
+% atypes.each do |atype|
+  use scale_aetracer_<%=atype%>, only: &
+%   (avars_int).each do |avar|
+    <%=avar%>_<%=atype%> => <%=avar%>, &
+%   end
+%   (avars2_int+avars_ary).each do |avar|
+    <%=avar%>_<%=atype%> => <%=avar%>, &
+%   end
+    AETRACER_<%=atype%>_setup
+% end
 #endif
     implicit none
-
 #ifndef TRACER
     namelist / PARAM_TRACER / &
-         TRACER_TYPE
+         TRACER_TYPE, &
+         AETRACER_TYPE
 #endif
 
     integer :: ierr
@@ -160,21 +196,56 @@ contains
 %   vars_int.each do |var|
        <%=var%> = <%=var%>_<%=type%>
 %   end
-       allocate( AQ_NAME(QA) )
-       allocate( AQ_DESC(QA) )
-       allocate( AQ_UNIT(QA) )
+       allocate( AQ_MP_NAME(QA_MP) )
+       allocate( AQ_MP_DESC(QA_MP) )
+       allocate( AQ_MP_UNIT(QA_MP) )
        allocate( I_MP2ALL(MP_QA) )
        allocate( I_MP2RD(MP_QA) )
-       allocate( I_AE2ALL(AE_QA) )
-       allocate( I_AE2RD(AE_QA) )
 %   vars_ary.each do |var|
        <%=var%> = <%=var%>_<%=type%>
 %   end
 % end
      case default
-        write(*,*) 'xxx Unsupported TRACER_TYPE (', trim(TRACER_TYPE), '). Check!'
+        write(*,*) 'xxx Unsupported AETRACER_TYPE (', trim(AETRACER_TYPE), '). Check!'
         call PRC_MPIstop
      end select
+     select case (AETRACER_TYPE)
+% atypes.each do |atype|
+     case ("<%=atype.upcase%>")
+       call AETRACER_<%=atype%>_setup
+%    avars_int.each do |avar|
+       <%=avar%> = <%=avar%>_<%=atype%>
+%    end
+       allocate( NSIZ(AE_CTG) )
+       allocate( NKAP(AE_CTG) )
+%    avars2_int.each do |avar|
+       <%=avar%> = <%=avar%>_<%=atype%>
+%    end
+       allocate( AQ_AE_NAME(QA_AE) )
+       allocate( AQ_AE_DESC(QA_AE) )
+       allocate( AQ_AE_UNIT(QA_AE) )
+       allocate( I_AE2ALL(AE_QA) )
+       allocate( I_AE2RD(AE_QA) )
+%    avars_ary.each do |avar|
+       <%=avar%> = <%=avar%>_<%=atype%>
+%    end
+% end
+     case default
+        write(*,*) 'xxx Unsupported AETRACER_TYPE (', trim(AETRACER_TYPE), '). Check!'
+        call PRC_MPIstop
+     end select
+     QAES = QA_MP+1
+     QAEE = QA_MP+QA_AE
+     QA = QA_MP + QA_AE
+     allocate( AQ_NAME(QA) )
+     allocate( AQ_DESC(QA) )
+     allocate( AQ_UNIT(QA) )
+     AQ_NAME(1:QA_MP) = AQ_MP_NAME(1:QA_MP)
+     AQ_DESC(1:QA_MP) = AQ_MP_DESC(1:QA_MP)
+     AQ_UNIT(1:QA_MP) = AQ_MP_UNIT(1:QA_MP)
+     AQ_NAME(QA_MP+1:QA_MP+QA_AE) = AQ_AE_NAME(1:QA_AE)
+     AQ_DESC(QA_MP+1:QA_MP+QA_AE) = AQ_AE_DESC(1:QA_AE)
+     AQ_UNIT(QA_MP+1:QA_MP+QA_AE) = AQ_AE_UNIT(1:QA_AE)
 #endif
 
   end subroutine TRACER_setup

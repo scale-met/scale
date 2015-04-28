@@ -41,6 +41,8 @@ module scale_atmos_phy_ae
           MOMX, &
           MOMY, &
           RHOT, &
+          CN,   &
+          CCN,  &
           QTRC  )
        use scale_precision
        use scale_grid_index
@@ -50,6 +52,8 @@ module scale_atmos_phy_ae
        real(RP), intent(inout) :: MOMX(KA,IA,JA)
        real(RP), intent(inout) :: MOMY(KA,IA,JA)
        real(RP), intent(inout) :: RHOT(KA,IA,JA)
+       real(RP), intent(out)   :: CN(KA,IA,JA)
+       real(RP), intent(out)   :: CCN(KA,IA,JA)
        real(RP), intent(inout) :: QTRC(KA,IA,JA,QA)
      end subroutine ae
 
@@ -97,6 +101,10 @@ contains
        ATMOS_PHY_AE_dummy_setup, &
        ATMOS_PHY_AE_dummy, &
        ATMOS_PHY_AE_dummy_EffectiveRadius
+    use scale_atmos_phy_ae_kajino13, only: &
+       ATMOS_PHY_AE_kajino13_setup, &
+       ATMOS_PHY_AE_kajino13, &
+       ATMOS_PHY_AE_kajino13_EffectiveRadius
 #endif
     implicit none
 
@@ -108,6 +116,10 @@ contains
        call ATMOS_PHY_AE_dummy_setup( AE_TYPE )
        ATMOS_PHY_AE                 => ATMOS_PHY_AE_dummy
        ATMOS_PHY_AE_EffectiveRadius => ATMOS_PHY_AE_dummy_EffectiveRadius
+    case ( 'KAJINO13' )
+       call ATMOS_PHY_AE_kajino13_setup( AE_TYPE )
+       ATMOS_PHY_AE                 => ATMOS_PHY_AE_kajino13
+       ATMOS_PHY_AE_EffectiveRadius => ATMOS_PHY_AE_kajino13_EffectiveRadius
     case default
        write(*,*) 'xxx invalid aerosol type(', AE_TYPE, '). CHECK!'
        call PRC_MPIstop
