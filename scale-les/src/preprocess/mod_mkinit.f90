@@ -617,7 +617,7 @@ contains
     real(RP), parameter  :: rhod_ae    = 1.83_RP              ! particle density [g/cm3] sulfate assumed
     real(RP), parameter  :: conv_vl_ms = rhod_ae/1.e-12_RP     ! M3(volume)[m3/m3] to mass[m3/m3]
 
-    integer :: ia, ik, is0, ic, k, i, j
+    integer :: ia, ik, is0, ic, k, i, j, it
     integer :: ierr, n_trans
     real(RP) :: m0t, dgt, sgt, m2t, m3t, mst
     real(RP),allocatable :: aerosol_procs(:,:,:,:) !(n_atr,n_siz_max,n_kap_max,n_ctg)
@@ -626,11 +626,11 @@ contains
     !--- gas
     real(RP) :: conc_gas(GAS_CTG)    !concentration [ug/m3]
     integer :: n_siz_max, n_kap_max, n_ctg
-    integer, allocatable :: it_procs2trans(:,:,:,:) !procs to trans conversion
-    integer, allocatable :: ia_trans2procs(:) !trans to procs conversion
-    integer, allocatable :: is_trans2procs(:) !trans to procs conversion
-    integer, allocatable :: ik_trans2procs(:) !trans to procs conversion
-    integer, allocatable :: ic_trans2procs(:)
+!   integer, allocatable :: it_procs2trans(:,:,:,:) !procs to trans conversion
+!   integer, allocatable :: ia_trans2procs(:) !trans to procs conversion
+!   integer, allocatable :: is_trans2procs(:) !trans to procs conversion
+!   integer, allocatable :: ik_trans2procs(:) !trans to procs conversion
+!   integer, allocatable :: ic_trans2procs(:)
     !--- bin settings (lower bound, center, upper bound)
     real(RP),allocatable :: d_lw(:,:), d_ct(:,:), d_up(:,:)  !diameter [m]
     real(RP),allocatable :: k_lw(:,:), k_ct(:,:), k_up(:,:)  !kappa    [-]
@@ -666,6 +666,11 @@ contains
     n_kap(1:n_ctg) = n_kap_def ! number of kappa bins
     k_min(1:n_ctg) = k_min_def ! lower bound of 1st kappa bin
     k_max(1:n_ctg) = k_max_def
+    d_min_inp(1:n_ctg) = d_min(1:n_ctg) !def value used if not defined in namelist
+    d_max_inp(1:n_ctg) = d_max(1:n_ctg) !def value used if not defined in namelist
+    n_kap_inp(1:n_ctg) = n_kap(1:n_ctg) !def value used if not defined in namelist
+    k_min_inp(1:n_ctg) = k_min(1:n_ctg) !def value used if not defined in namelist
+    k_max_inp(1:n_ctg) = k_max(1:n_ctg) !def value used if not defined in namelist
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -699,12 +704,15 @@ contains
     allocate( aerosol_procs (N_ATR,n_siz_max,n_kap_max,n_ctg)  )
     allocate( aerosol_activ (N_ATR,n_siz_max,n_kap_max,n_ctg)  )
     allocate( emis_procs    (N_ATR,n_siz_max,n_kap_max,n_ctg)  )
+    aerosol_procs(:,:,:,:) = 0._RP
+    aerosol_activ(:,:,:,:) = 0._RP
+    emis_procs   (:,:,:,:) = 0._RP
 
-    allocate( it_procs2trans(N_ATR,n_siz_max,n_kap_max,n_ctg)  )
-    allocate( ia_trans2procs(n_trans) )
-    allocate( is_trans2procs(n_trans) )
-    allocate( ik_trans2procs(n_trans) )
-    allocate( ic_trans2procs(n_trans) )
+!   allocate( it_procs2trans(N_ATR,n_siz_max,n_kap_max,n_ctg)  )
+!   allocate( ia_trans2procs(n_trans) )
+!   allocate( is_trans2procs(n_trans) )
+!   allocate( ik_trans2procs(n_trans) )
+!   allocate( ic_trans2procs(n_trans) )
 
     !bin setting
     allocate(d_lw(n_siz_max,n_ctg))
@@ -723,6 +731,7 @@ contains
     do ic = 1, n_ctg
 
       dlogd = (log(d_max(ic)) - log(d_min(ic)))/float(NSIZ(ic))
+
       do is0 = 1, NSIZ(ic)  !size bin
         d_lw(is0,ic) = exp(log(d_min(ic))+dlogd* float(is0-1)      )
         d_ct(is0,ic) = exp(log(d_min(ic))+dlogd*(float(is0)-0.5_RP))
@@ -750,20 +759,20 @@ contains
     do ik = 1, n_kap(ic)   !kappa bin
     do is0 = 1, NSIZ(ic)
        if (dgt >= d_lw(is0,ic) .and. dgt < d_up(is0,ic)) then
-         aerosol_procs(ia_m0,is0,ik,ic) = aerosol_procs(ia_m0,is0,ik,ic) + m0t
-         aerosol_procs(ia_m2,is0,ik,ic) = aerosol_procs(ia_m2,is0,ik,ic) + m2t
-         aerosol_procs(ia_m3,is0,ik,ic) = aerosol_procs(ia_m3,is0,ik,ic) + m3t
-         aerosol_procs(ia_ms,is0,ik,ic) = aerosol_procs(ia_ms,is0,ik,ic) + mst
+         aerosol_procs(ia_m0,is0,ik,ic) = aerosol_procs(ia_m0,is0,ik,ic) + m0t          ![#/m3]
+         aerosol_procs(ia_m2,is0,ik,ic) = aerosol_procs(ia_m2,is0,ik,ic) + m2t          ![m2/m3]
+         aerosol_procs(ia_m3,is0,ik,ic) = aerosol_procs(ia_m3,is0,ik,ic) + m3t          ![m3/m3]
+         aerosol_procs(ia_ms,is0,ik,ic) = aerosol_procs(ia_ms,is0,ik,ic) + mst*1.E-9_RP ![kg/m3]
        elseif (dgt < d_lw(1,ic)) then
-         aerosol_procs(ia_m0,1 ,ik,ic) = aerosol_procs(ia_m0,1 ,ik,ic) + m0t
-         aerosol_procs(ia_m2,1 ,ik,ic) = aerosol_procs(ia_m2,1 ,ik,ic) + m2t
-         aerosol_procs(ia_m3,1 ,ik,ic) = aerosol_procs(ia_m3,1 ,ik,ic) + m3t
-         aerosol_procs(ia_ms,1 ,ik,ic) = aerosol_procs(ia_ms,1 ,ik,ic) + mst
+         aerosol_procs(ia_m0,1 ,ik,ic) = aerosol_procs(ia_m0,1 ,ik,ic) + m0t          ![#/m3]
+         aerosol_procs(ia_m2,1 ,ik,ic) = aerosol_procs(ia_m2,1 ,ik,ic) + m2t          ![m2/m3]
+         aerosol_procs(ia_m3,1 ,ik,ic) = aerosol_procs(ia_m3,1 ,ik,ic) + m3t          ![m3/m3]
+         aerosol_procs(ia_ms,1 ,ik,ic) = aerosol_procs(ia_ms,1 ,ik,ic) + mst*1.E-9_RP ![kg/m3]
        elseif (dgt >= d_up(NSIZ(ic),ic)) then
-         aerosol_procs(ia_m0,NSIZ(ic),ik,ic) = aerosol_procs(ia_m0,NSIZ(ic),ik,ic) + m0t
-         aerosol_procs(ia_m2,NSIZ(ic),ik,ic) = aerosol_procs(ia_m2,NSIZ(ic),ik,ic) + m2t
-         aerosol_procs(ia_m3,NSIZ(ic),ik,ic) = aerosol_procs(ia_m3,NSIZ(ic),ik,ic) + m3t
-         aerosol_procs(ia_ms,NSIZ(ic),ik,ic) = aerosol_procs(ia_ms,NSIZ(ic),ik,ic) + mst
+         aerosol_procs(ia_m0,NSIZ(ic),ik,ic) = aerosol_procs(ia_m0,NSIZ(ic),ik,ic) + m0t          ![#/m3]
+         aerosol_procs(ia_m2,NSIZ(ic),ik,ic) = aerosol_procs(ia_m2,NSIZ(ic),ik,ic) + m2t          ![m2/m3]
+         aerosol_procs(ia_m3,NSIZ(ic),ik,ic) = aerosol_procs(ia_m3,NSIZ(ic),ik,ic) + m3t          ![m3/m3]
+         aerosol_procs(ia_ms,NSIZ(ic),ik,ic) = aerosol_procs(ia_ms,NSIZ(ic),ik,ic) + mst*1.E-9_RP ![kg/m3]
        endif
     enddo
     enddo
@@ -773,16 +782,18 @@ contains
     do k = KS, KE
     do i = IS, IE
     do j = JS, JE
+     it = 0
      do ic = 1, n_ctg       !category
      do ik = 1, NKAP(ic)   !kappa bin
      do is0 = 1, NSIZ(ic)   !size bin
      do ia = 1, N_ATR       !attributes
-        QTRC(k,i,j,QAES-1+it_procs2trans(ia,is0,ik,ic)) = aerosol_procs(ia,is0,ik,ic)
+        it = it + 1
+        QTRC(k,i,j,QAES-1+it) = aerosol_procs(ia,is0,ik,ic)/DENS(k,i,j) !#,m2,m3,kg/m3 -> #,m2,m3,kg/kg
      enddo !ia (1:N_ATR )
      enddo !is (1:n_siz(ic)  )
      enddo !ik (1:n_kap(ic)  )
      enddo !ic (1:n_ctg      )
-     QTRC(k,i,j,QAEE-GAS_CTG+1:QAEE-GAS_CTG+GAS_CTG) = conc_gas(1:GAS_CTG)*DENS(k,i,j)*1.E-6_RP !mixing ratio [kg/kg]
+     QTRC(k,i,j,QAEE-GAS_CTG+1:QAEE-GAS_CTG+GAS_CTG) = conc_gas(1:GAS_CTG)/DENS(k,i,j)*1.E-9_RP !mixing ratio [kg/kg]
     enddo
     enddo
     enddo
