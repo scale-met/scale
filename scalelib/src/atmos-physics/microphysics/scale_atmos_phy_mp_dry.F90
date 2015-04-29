@@ -85,6 +85,7 @@ contains
        MOMY,      &
        RHOT,      &
        QTRC,      &
+       CCN ,      &
        SFLX_rain, &
        SFLX_snow  )
     use scale_grid_index
@@ -98,6 +99,7 @@ contains
     real(RP), intent(inout) :: MOMY(KA,IA,JA)
     real(RP), intent(inout) :: RHOT(KA,IA,JA)
     real(RP), intent(inout) :: QTRC(KA,IA,JA,QAD)
+    real(RP), intent(in)    :: CCN(KA,IA,JA)
     real(RP), intent(out)   :: SFLX_rain(IA,JA)
     real(RP), intent(out)   :: SFLX_snow(IA,JA)
     !---------------------------------------------------------------------------

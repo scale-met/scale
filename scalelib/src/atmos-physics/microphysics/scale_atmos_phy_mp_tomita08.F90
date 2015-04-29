@@ -57,6 +57,7 @@ module scale_atmos_phy_mp_tomita08
   !
   logical,  private :: MP_donegative_fixer = .true.  ! apply negative fixer?
   logical,  private :: MP_doprecipitation  = .true.  ! apply sedimentation (precipitation)?
+  logical,  private :: MP_couple_aerosol   = .false. ! apply CCN effect?
 
 
   real(RP), private            :: dens00 = 1.28_RP !< standard density [kg/m3]
@@ -296,7 +297,8 @@ contains
     NAMELIST / PARAM_ATMOS_PHY_MP / &
        MP_doprecipitation, &
        MP_donegative_fixer, &
-       MP_ntmax_sedimentation
+       MP_ntmax_sedimentation, &
+       MP_couple_aerosol
 
     NAMELIST / PARAM_ATMOS_PHY_MP_TOMITA08 / &
        autoconv_nc,    &
@@ -470,6 +472,7 @@ contains
        MOMY,      &
        RHOT,      &
        QTRC,      &
+       CCN,       &
        SFLX_rain, &
        SFLX_snow  )
     use scale_grid_index
@@ -495,6 +498,7 @@ contains
     real(RP), intent(inout) :: MOMY(KA,IA,JA)
     real(RP), intent(inout) :: RHOT(KA,IA,JA)
     real(RP), intent(inout) :: QTRC(KA,IA,JA,QAD)
+    real(RP), intent(in)    :: CCN(KA,IA,JA)
     real(RP), intent(out)   :: SFLX_rain(IA,JA)
     real(RP), intent(out)   :: SFLX_snow(IA,JA)
 
@@ -533,6 +537,7 @@ contains
                       QTRC_t(:,:,:,:), & ! [OUT]
                       RHOE  (:,:,:),   & ! [INOUT]
                       QTRC  (:,:,:,:), & ! [INOUT]
+                      CCN   (:,:,:),   & ! [IN]
                       DENS  (:,:,:)    ) ! [IN]
 
     if ( MP_doprecipitation ) then
@@ -619,6 +624,7 @@ contains
        QTRC_t, &
        RHOE0,  &
        QTRC0,  &
+       CCN,    &
        DENS0   )
     use scale_const, only: &
        PI    => CONST_PI,    &
@@ -651,6 +657,7 @@ contains
     real(RP), intent(inout) :: QTRC_t(KA,IA,JA,QA) ! tendency tracer           [kg/kg/s]
     real(RP), intent(inout) :: RHOE0 (KA,IA,JA)    ! density * internal energy [J/m3]
     real(RP), intent(inout) :: QTRC0 (KA,IA,JA,QA) ! mass concentration        [kg/kg]
+    real(RP), intent(in)    :: CCN(KA,IA,JA)       ! CCN number concentration  [#/m3]
     real(RP), intent(in)    :: DENS0 (KA,IA,JA)    ! density                   [kg/m3]
 
     ! working
@@ -730,14 +737,25 @@ contains
 
     call PROF_rapstart('MP_tomita08', 3)
 
+    if( MP_couple_aerosol ) then
 !OCL XFILL
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       Nc(k,i,j) = Nc_def(i,j)
-    enddo
-    enddo
-    enddo
+     do j = JS, JE
+     do i = IS, IE
+     do k = KS, KE
+        Nc(k,i,j) = CCN(k,i,j)*1.E-6_RP  ! [#/m3] -> [#/cc]
+     enddo
+     enddo
+     enddo
+    else
+!OCL XFILL
+     do j = JS, JE
+     do i = IS, IE
+     do k = KS, KE
+        Nc(k,i,j) = Nc_def(i,j)
+     enddo
+     enddo
+     enddo
+    endif
 
     rdt = 1.0_RP / dt
 
