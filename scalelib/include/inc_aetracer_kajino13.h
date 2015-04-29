@@ -9,7 +9,7 @@
   !------------------------------------------------------------
   character(len=H_SHORT), public, parameter :: AETRACER_TYPE = "KAJINO13"
 
-  integer, public, parameter :: AE_CTG = 1
+  integer, public :: AE_CTG = 1
   integer, public, parameter :: GAS_CTG = 2
   integer, public, parameter :: N_ATR = 5
   integer, public, allocatable :: NKAP(:) 
@@ -19,8 +19,8 @@
   integer, public :: QAEE
 
   integer, public, parameter :: IC_MIX   =  1
-  integer, public, parameter :: IC_SEA   =  0
-  integer, public, parameter :: IC_DUS   =  0
+  integer, public, parameter :: IC_SEA   =  2
+  integer, public, parameter :: IC_DUS   =  3
 
   integer, public, parameter :: IG_H2SO4 =  1
   integer, public, parameter :: IG_CGAS  =  2

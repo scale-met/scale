@@ -38,32 +38,46 @@ contains
     implicit none
 
     integer, allocatable :: aero_idx(:,:,:,:)
-    integer :: n_kap_max, n_siz_max
+    integer :: n_kap_max, n_siz_max, ncat_max
+    real(RP),allocatable :: NASIZ(:), NAKAP(:)
 
-    NAMELIST / PARAM_KAJINO13_BIN / &
-       NSIZ, &
-       NKAP 
+    NAMELIST / PARAM_TRACER_KAJINO13 / &
+       AE_CTG, &
+       NASIZ,  &
+       NAKAP 
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ READ NUMBER of TRACER for Aerosol'
 
-    allocate( NSIZ(AE_CTG) )
-    allocate( NKAP(AE_CTG) )
+    ncat_max = max( IC_MIX, IC_SEA, IC_DUS )
+    allocate( NASIZ(ncat_max) )
+    allocate( NAKAP(ncat_max) )
 
-    NKAP(1:AE_CTG) = 1
-    NSIZ(1:AE_CTG) = 64
+    NASIZ(:) = 64
+    NAKAP(:) = 1
 
     rewind(IO_FID_CONF)
-    read(IO_FID_CONF,nml=PARAM_KAJINO13_BIN,iostat=ierr)
+    read(IO_FID_CONF,nml=PARAM_TRACER_KAJINO13,iostat=ierr)
 
     if( ierr < 0 ) then !--- missing
      if( IO_L ) write(IO_FID_LOG,*)  '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
-     write(*,*) 'xxx Not appropriate names in namelist PARAM_KAJINO13_BIN, Check!'
+     write(*,*) 'xxx Not appropriate names in namelist PARAM_TRACER_KAJINO13, Check!'
      call PRC_MPIstop
     end if
 
-    if( IO_L ) write(IO_FID_LOG,nml=PARAM_KAJINO13_BIN)
+    if( IO_L ) write(IO_FID_LOG,nml=PARAM_TRACER_KAJINO13)
+
+    if( AE_CTG > ncat_max ) then
+     write(*,*) 'xxx AE_CTG should be smaller than', ncat_max+1, 'stop'
+     call PRC_MPIstop
+    endif
+
+    allocate( NSIZ(AE_CTG) )
+    allocate( NKAP(AE_CTG) )
+
+    NKAP(1:AE_CTG) = NAKAP(1:AE_CTG)
+    NSIZ(1:AE_CTG) = NASIZ(1:AE_CTG)
 
     if( maxval( NKAP ) /= 1 .or. minval( NKAP ) /= 1 ) then
      write(*,*) 'xxx NKAP(:) /= 1 is not supported now, Stop!'
