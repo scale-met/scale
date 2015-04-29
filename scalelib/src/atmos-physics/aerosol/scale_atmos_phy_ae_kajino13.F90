@@ -472,6 +472,8 @@ contains
     enddo
 
     !---- Calculate aerosol processs
+    CN(:,:,:) = 0.0_RP
+    CCN(:,:,:) = 0.0_RP
     do k = KS, KE
     do j = JS, JE
     do i = IS, IE
@@ -499,13 +501,18 @@ contains
          emis_procs,                    & !--- out
          aerosol_activ                  ) !--- out
 
-       call trans_ccn(aerosol_procs, aerosol_activ, t_ccn, t_cn,  &
-            n_ctg, n_kap_max, n_siz_max, N_ATR,         &
-            ic_mix, ia_m0, ia_m2, ia_m3, ik_out, n_siz, &
-            rnum_out, nbins_out)
+       do is0 = 1, n_siz(ic_mix)
+         CCN(k,i,j) = CCN(k,i,j) + aerosol_activ(ia_m0,is0,ik_out,ic_mix)
+         CN(k,i,j)  = CN(k,i,j)  + aerosol_procs(ia_m0,is0,ik_out,ic_mix)
+       enddo
 
-       CN(k,i,j) = t_cn
-       CCN(k,i,j) = t_ccn
+!       call trans_ccn(aerosol_procs, aerosol_activ, t_ccn, t_cn,  &
+!            n_ctg, n_kap_max, n_siz_max, N_ATR,         &
+!            ic_mix, ia_m0, ia_m2, ia_m3, ik_out, n_siz, &
+!            rnum_out, nbins_out)
+
+!       CN(k,i,j) = t_cn
+!       CCN(k,i,j) = t_ccn
 
        ! [xx/m3] -> [xx/kg]
        do ic = 1, n_ctg       !category
@@ -1692,39 +1699,39 @@ contains
     real(RP), parameter :: d_min = 1.E-9_RP
     real(RP) :: d_lw(nbins_out), d_up(nbins_out)
   
-    rnum_out(:) = 0._RP
-  
-    dlogd = (log(d_max) - log(d_min))/float(nbins_out)
-    dlog10d_out = (log10(d_max)-log10(d_min))/float(nbins_out)
-  
-    do is_out = 1, nbins_out  !size bin
-      d_lw(is_out) = exp(log(d_min)+dlogd* float(is_out-1) )
-      d_up(is_out) = exp(log(d_min)+dlogd* float(is_out)   )
-    enddo !is_out
-  
+!    rnum_out(:) = 0._RP
+!  
+!    dlogd = (log(d_max) - log(d_min))/float(nbins_out)
+!    dlog10d_out = (log10(d_max)-log10(d_min))/float(nbins_out)
+!  
+!    do is_out = 1, nbins_out  !size bin
+!      d_lw(is_out) = exp(log(d_min)+dlogd* float(is_out-1) )
+!      d_up(is_out) = exp(log(d_min)+dlogd* float(is_out)   )
+!    enddo !is_out
+!  
     t_ccn = 0._RP
     t_cn  = 0._RP
     do is0 = 1, n_siz(ic_out)
-      if (aerosol_procs(ia_m0,is0,ik_out,ic_out) > 0._RP) then
-        m0t = aerosol_procs(ia_m0,is0,ik_out,ic_out)
-        m2t = aerosol_procs(ia_m2,is0,ik_out,ic_out)
-        m3t = aerosol_procs(ia_m3,is0,ik_out,ic_out)
-        call diag_ds(m0t,m2t,m3t,dgt,sgt,dm2)
-        if (dgt <= 0._RP) dgt = d_ct(is0,ic_out)
-        if (sgt <= 0._RP) sgt = 1.3_RP
-  
-        do is_out = 1, nbins_out
-          sgt   = max(sgt,1.0000001_RP) !to avoid floating divide by zero
-          d_lw2 = log(d_lw(is_out))
-          d_up2 = log(d_up(is_out))
-          dg2   = log(dgt)
-          sg2   = log(sgt)
-          fnum0 = m0t*0.5_RP*(1._RP+erf((d_lw2-dg2)/(sqrt(2.0_RP)*sg2)))
-          fnum1 = m0t*0.5_RP*(1._RP+erf((d_up2-dg2)/(sqrt(2.0_RP)*sg2)))
-          rnum_out(is_out) = rnum_out(is_out) + fnum1 - fnum0
-        enddo
-  
-      endif !number>0
+!      if (aerosol_procs(ia_m0,is0,ik_out,ic_out) > 0._RP) then
+!        m0t = aerosol_procs(ia_m0,is0,ik_out,ic_out)
+!        m2t = aerosol_procs(ia_m2,is0,ik_out,ic_out)
+!        m3t = aerosol_procs(ia_m3,is0,ik_out,ic_out)
+!        call diag_ds(m0t,m2t,m3t,dgt,sgt,dm2)
+!        if (dgt <= 0._RP) dgt = d_ct(is0,ic_out)
+!        if (sgt <= 0._RP) sgt = 1.3_RP
+!  
+!        do is_out = 1, nbins_out
+!          sgt   = max(sgt,1.0000001_RP) !to avoid floating divide by zero
+!          d_lw2 = log(d_lw(is_out))
+!          d_up2 = log(d_up(is_out))
+!          dg2   = log(dgt)
+!          sg2   = log(sgt)
+!          fnum0 = m0t*0.5_RP*(1._RP+erf((d_lw2-dg2)/(sqrt(2.0_RP)*sg2)))
+!          fnum1 = m0t*0.5_RP*(1._RP+erf((d_up2-dg2)/(sqrt(2.0_RP)*sg2)))
+!          rnum_out(is_out) = rnum_out(is_out) + fnum1 - fnum0
+!        enddo
+!  
+!      endif !number>0
   
       t_ccn = t_ccn + aerosol_activ(ia_m0,is0,ik_out,ic_out)
       t_cn  = t_cn  + aerosol_procs(ia_m0,is0,ik_out,ic_out)

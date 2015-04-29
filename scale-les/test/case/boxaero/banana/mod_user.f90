@@ -106,7 +106,8 @@ contains
     do k = KS, KE
     do j = JS, JE
     do i = IS, IE
-    do iq = 1, QA
+!    do iq = 1, QA
+    do iq = QAES, QAEE
        QTRC(k,i,j,iq) = max( QTRC(k,i,j,iq) &
                       + RHOQ_t_AE(k,i,j,iq) * dtae / DENS(k,i,j), 0.0_RP )
     enddo
