@@ -42,4 +42,4 @@
 
   integer, public :: I_AE2RD(AE_QA)
   data I_AE2RD  / 3    / ! dummy => MSTRN_nptype=3: dust
-  integer :: m, n, ierr, is, ik, ic, ia
+  integer :: m, n, ierr, ik, ic, ia0, is0

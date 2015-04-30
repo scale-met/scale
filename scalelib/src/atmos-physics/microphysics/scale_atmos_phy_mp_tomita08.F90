@@ -742,7 +742,7 @@ contains
      do j = JS, JE
      do i = IS, IE
      do k = KS, KE
-        Nc(k,i,j) = CCN(k,i,j)*1.E-6_RP  ! [#/m3] -> [#/cc]
+        Nc(k,i,j) = max( CCN(k,i,j)*1.E-6_RP,Nc_def(i,j) )  ! [#/m3] -> [#/cc]
      enddo
      enddo
      enddo

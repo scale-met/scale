@@ -85,10 +85,10 @@ contains
     end if
 
     QA_AE = 0
-    do ia = 1, N_ATR
+    do ia0 = 1, N_ATR
     do ic = 1, AE_CTG
     do ik = 1, NKAP(ic)
-    do is = 1, NSIZ(ic)
+    do is0 = 1, NSIZ(ic)
       QA_AE   = QA_AE + 1
     enddo
     enddo
@@ -110,12 +110,12 @@ contains
 
     allocate( aero_idx(N_ATR,AE_CTG,n_kap_max,n_siz_max) )
     m = 0
-    do ia = 1, N_ATR
+    do ia0 = 1, N_ATR
     do ic = 1, AE_CTG
     do ik = 1, NKAP(ic)
-    do is = 1, NSIZ(ic)
+    do is0 = 1, NSIZ(ic)
       m = m+1
-      aero_idx(ia,ic,ik,is) = m 
+      aero_idx(ia0,ic,ik,is0) = m 
     enddo
     enddo
     enddo
@@ -137,13 +137,13 @@ contains
 !    do ic = 1, n_ctg       !aerosol category
 !    do ik = 1, n_kap(ic)   !kappa bin
 !    do is = 1, n_siz(ic)  
-    do ia = 1, N_ATR
+    do ia0 = 1, N_ATR
     do ic = 1, AE_CTG       !aerosol category
     do ik = 1, NKAP(ic)   !kappa bin
-    do is = 1, NSIZ(ic) 
+    do is0 = 1, NSIZ(ic) 
 !     write(*,*) aero_idx(ia,ic,ik,is), ia,ic,ik,is, size(AQ_AE_NAME)
 !     write(AQ_AE_NAME(aero_idx(ia,ic,ik,is)),'(4(a,i0))') 'AEROSOL(atl)', ia, 'cat', ic, 'kappa', ik, 'size', is
-     write(AQ_AE_NAME(aero_idx(ia,ic,ik,is)),'((a,i0))') 'AEROSOL(atl)', aero_idx(ia,ic,ik,is)
+     write(AQ_AE_NAME(aero_idx(ia0,ic,ik,is0)),'((a,i0))') 'AEROSOL(atl)', aero_idx(ia0,ic,ik,is0)
     enddo
     enddo
     enddo
@@ -154,11 +154,11 @@ contains
     write(AQ_AE_NAME(ic),'(a)') 'Condensable GAS'
     
 
-    do ia = 1, N_ATR
+    do ia0 = 1, N_ATR
     do ic = 1, AE_CTG     !aerosol category
     do ik = 1, NKAP(ic)   !kappa bin
-    do is = 1, NSIZ(ic) 
-     write(AQ_AE_DESC(aero_idx(ia,ic,ik,is)),'(a,i0,a5,i0,a4,i0)') 'Mixing radio of aerosol(cat)', ic, 'kappa', ik, 'size', is
+    do is0 = 1, NSIZ(ic) 
+     write(AQ_AE_DESC(aero_idx(ia0,ic,ik,is0)),'(a,i0,a5,i0,a4,i0)') 'Mixing radio of aerosol(cat)', ic, 'kappa', ik, 'size', is0
     enddo
     enddo
     enddo

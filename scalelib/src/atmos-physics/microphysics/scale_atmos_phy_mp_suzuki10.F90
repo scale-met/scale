@@ -672,7 +672,7 @@ call START_COLLECTION("MICROPHYSICS")
     endif
 
     if( MP_couple_aerosol ) then
-      ccn_num(:,:,:) = CCN(:,:,:)
+      ccn_num(:,:,:) = max( CCN(:,:,:),c_ccn )
     else
       ccn_num(:,:,:) = 0.0_RP
     endif 

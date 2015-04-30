@@ -120,7 +120,7 @@ module scale_atmos_phy_ae_kajino13
   integer, allocatable :: ik_i(:), ik_j(:), ik_k(:)    !(mcomb)
   integer, allocatable :: ic_i(:), ic_j(:), ic_k(:)    !(mcomb)
   integer :: mcomb !combinations of sections
-  integer :: is1, is2, mc, ik, is0, ic
+  integer :: is1, is2, mc, ik, is0, ic, ia0
 
   logical :: flag_npf = .false.
   logical :: flag_cond = .true.
@@ -241,7 +241,7 @@ contains
 !    n_kap(1:n_ctg) = n_kap_inp(1:n_ctg)  ! number of kappa bins
 !    k_min(1:n_ctg) = k_min_inp(1:n_ctg)  ! lower bound of 1st kappa bin
 !    k_max(1:n_ctg) = k_max_inp(1:n_ctg)  ! upper bound of last kappa bin
-  
+ 
     !--- diagnose parameters (n_trans, n_siz_max, n_kap_max)
     n_trans   = 0
     n_siz_max = 0
@@ -353,10 +353,10 @@ contains
     do ic = 1, n_ctg       !aerosol category
     do ik = 1, n_kap(ic)   !kappa bin
     do is0 = 1, n_siz(ic)  !size bin
-    do ia = 1, N_ATR       !attributes
+    do ia0 = 1, N_ATR       !attributes
       it = it + 1
-      it_procs2trans(ia,is0,ik,ic)= it
-      ia_trans2procs(it)         = ia
+      it_procs2trans(ia0,is0,ik,ic)= it
+      ia_trans2procs(it)         = ia0
       is_trans2procs(it)         = is0
       ik_trans2procs(it)         = ik
       ic_trans2procs(it)         = ic
@@ -518,8 +518,8 @@ contains
        do ic = 1, n_ctg       !category
        do ik = 1, n_kap(ic)   !kappa bin
        do is0 = 1, n_siz(ic)   !size bin
-       do ia = 1, N_ATR       !attributes
-          QTRC(k,i,j,QAES-1+it_procs2trans(ia,is0,ik,ic)) = aerosol_procs(ia,is0,ik,ic) / DENS(k,i,j)  
+       do ia0 = 1, N_ATR       !attributes
+          QTRC(k,i,j,QAES-1+it_procs2trans(ia0,is0,ik,ic)) = aerosol_procs(ia0,is0,ik,ic) / DENS(k,i,j)  
        enddo !ia (1:N_ATR )
        enddo !is (1:n_siz(ic)  )
        enddo !ik (1:n_kap(ic)  )
@@ -591,10 +591,10 @@ contains
     do ic = 1, n_ctg       !aerosol category
     do ik = 1, n_kap(ic)   !kappa bin
     do is0 = 1, n_siz(ic)   !size bin
-    do ia = 1, N_ATR       !attributes (prognostic)
-      aerosol_procs(ia,is0,ik,ic) = aerosol_procs(ia,is0,ik,ic) &
-                                  + emis_procs(ia,is0,ik,ic) * deltt
-    enddo !ia (1:n_atr      )
+    do ia0 = 1, N_ATR       !attributes (prognostic)
+      aerosol_procs(ia0,is0,ik,ic) = aerosol_procs(ia0,is0,ik,ic) &
+                                  + emis_procs(ia0,is0,ik,ic) * deltt
+    enddo !ia0 (1:n_atr      )
     enddo !is (1:n_siz(ic)  )
     enddo !ik (1:n_kap(ic)  )
     enddo !ic (1:n_ctg      )

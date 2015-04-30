@@ -2304,7 +2304,7 @@ contains
          do j = JS, JE
          do i = IS, IE
          do k = KS, KE
-              nc_new(k,i,j) = CCN(k,i,j) 
+              nc_new(k,i,j) = max( CCN(k,i,j), c_ccn )
          enddo
          enddo
          enddo
