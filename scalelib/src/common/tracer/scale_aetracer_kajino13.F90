@@ -40,6 +40,7 @@ contains
     integer, allocatable :: aero_idx(:,:,:,:)
     integer :: n_kap_max, n_siz_max, ncat_max
     real(RP),allocatable :: NASIZ(:), NAKAP(:)
+    character(len=16) :: attribute, catego, aunit
 
     NAMELIST / PARAM_TRACER_KAJINO13 / &
        AE_CTG, &
@@ -85,10 +86,11 @@ contains
     end if
 
     QA_AE = 0
-    do ia0 = 1, N_ATR
+!    do ia0 = 1, N_ATR
     do ic = 1, AE_CTG
     do ik = 1, NKAP(ic)
     do is0 = 1, NSIZ(ic)
+    do ia0 = 1, N_ATR
       QA_AE   = QA_AE + 1
     enddo
     enddo
@@ -98,8 +100,6 @@ contains
     allocate( AQ_AE_NAME(QA_AE) )
     allocate( AQ_AE_DESC(QA_AE) )
     allocate( AQ_AE_UNIT(QA_AE) )
-!    QAES = QA_MP + 1
-!    QAEE = QA_MP + QA_AE
 
     n_siz_max = 0
     n_kap_max = 0
@@ -110,10 +110,11 @@ contains
 
     allocate( aero_idx(N_ATR,AE_CTG,n_kap_max,n_siz_max) )
     m = 0
-    do ia0 = 1, N_ATR
+!    do ia0 = 1, N_ATR
     do ic = 1, AE_CTG
     do ik = 1, NKAP(ic)
     do is0 = 1, NSIZ(ic)
+    do ia0 = 1, N_ATR
       m = m+1
       aero_idx(ia0,ic,ik,is0) = m 
     enddo
@@ -126,43 +127,67 @@ contains
     !++ calculate each category and aerosol
     !
     !-----------------------------------------------------------------------------
-    do n = 1, QA_AE-GAS_CTG
-     write(AQ_AE_UNIT(n),'(a)')  '#/kg'
-    enddo
     ic = QA_AE-GAS_CTG+IG_H2SO4
     write(AQ_AE_UNIT(ic),'(a)')  'kg/kg'
     ic = QA_AE-GAS_CTG+IG_CGAS
     write(AQ_AE_UNIT(ic),'(a)')  'kg/kg'
 
-!    do ic = 1, n_ctg       !aerosol category
-!    do ik = 1, n_kap(ic)   !kappa bin
-!    do is = 1, n_siz(ic)  
-    do ia0 = 1, N_ATR
+!    do ia0 = 1, N_ATR
+!      if( ia0 == 1 ) then
+!         write(attribute,'(a)') "Number"
+!         write(aunit,'(a)') "#/kg"
+!      elseif( ia0 == 2 ) then
+!         write(attribute,'(a)') "Section"
+!         write(aunit,'(a)') "m2/kg"
+!      elseif( ia0 == 3 ) then
+!         write(attribute,'(a)') "Volume"
+!         write(aunit,'(a)') "m3/kg"
+!      elseif( ia0 == 4 ) then
+!         write(attribute,'(a)') "Mass"
+!         write(aunit,'(a)') "kg/kg"
+!      elseif( ia0 == 5 ) then
+!         write(attribute,'(a)') "kpXmass"
+!         write(aunit,'(a)') "kg/kg"
+!      endif
     do ic = 1, AE_CTG       !aerosol category
     do ik = 1, NKAP(ic)   !kappa bin
     do is0 = 1, NSIZ(ic) 
-!     write(*,*) aero_idx(ia,ic,ik,is), ia,ic,ik,is, size(AQ_AE_NAME)
-!     write(AQ_AE_NAME(aero_idx(ia,ic,ik,is)),'(4(a,i0))') 'AEROSOL(atl)', ia, 'cat', ic, 'kappa', ik, 'size', is
-     write(AQ_AE_NAME(aero_idx(ia0,ic,ik,is0)),'((a,i0))') 'AEROSOL(atl)', aero_idx(ia0,ic,ik,is0)
+    do ia0 = 1, N_ATR
+      if( ia0 == 1 ) then
+         write(attribute,'(a)') "Number"
+         write(aunit,'(a)') "#/kg"
+      elseif( ia0 == 2 ) then
+         write(attribute,'(a)') "Section"
+         write(aunit,'(a)') "m2/kg"
+      elseif( ia0 == 3 ) then
+         write(attribute,'(a)') "Volume"
+         write(aunit,'(a)') "m3/kg"
+      elseif( ia0 == 4 ) then
+         write(attribute,'(a)') "Mass"
+         write(aunit,'(a)') "kg/kg"
+      elseif( ia0 == 5 ) then
+         write(attribute,'(a)') "kXm"
+         write(aunit,'(a)') "kg/kg"
+      endif
+     if( ic == IC_MIX ) then
+      write(catego,'(a)') "Sulf_"
+     elseif( ic == IC_SEA ) then
+      write(catego,'(a)') "Salt_"
+     elseif( ic == IC_DUS ) then
+      write(catego,'(a)') "Dust_"
+     endif
+     write(AQ_AE_UNIT(aero_idx(ia0,ic,ik,is0)),'(a)')  trim(aunit)
+     write(AQ_AE_NAME(aero_idx(ia0,ic,ik,is0)),'(a,a,i0)') trim(catego), trim(attribute), is0
+     write(AQ_AE_DESC(aero_idx(ia0,ic,ik,is0)),'(a,a,a,i0)') trim(attribute), ' mixing radio of ', trim(catego), is0
     enddo
     enddo
     enddo
     enddo
     ic = QA_AE-GAS_CTG+IG_H2SO4
-    write(AQ_AE_NAME(ic),'(a)') 'H2SO4 Gas'
+    write(AQ_AE_NAME(ic),'(a)') 'H2SO4-Gas'
     ic = QA_AE-GAS_CTG+IG_CGAS
-    write(AQ_AE_NAME(ic),'(a)') 'Condensable GAS'
+    write(AQ_AE_NAME(ic),'(a)') 'Condensable-GAS'
     
-
-    do ia0 = 1, N_ATR
-    do ic = 1, AE_CTG     !aerosol category
-    do ik = 1, NKAP(ic)   !kappa bin
-    do is0 = 1, NSIZ(ic) 
-     write(AQ_AE_DESC(aero_idx(ia0,ic,ik,is0)),'(a,i0,a5,i0,a4,i0)') 'Mixing radio of aerosol(cat)', ic, 'kappa', ik, 'size', is0
-    enddo
-    enddo
-    enddo
-    enddo
     ic = QA_AE-GAS_CTG+IG_H2SO4
     write(AQ_AE_DESC(ic),'(a)') 'Mixing ratio of H2SO4 Gas'
     ic = QA_AE-GAS_CTG+IG_CGAS
