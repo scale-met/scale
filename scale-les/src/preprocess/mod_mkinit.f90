@@ -24,6 +24,7 @@
 !! @li      2014-04-28 (R.Yoshida)  [add] real case experiment
 !! @li      2014-08-26 (A.Noda)     [mod] add GRAYZONE
 !! @li      2015-03-27 (Y.Sato)     [mod] add Box aero
+!! @li      2015-04-30 (Y.Sato)     [mod] add WARMBUBBLE-AERO
 !!
 !<
 !-------------------------------------------------------------------------------
@@ -73,7 +74,8 @@ module mod_mkinit
      HYDROSTATIC_buildrho_atmos  => ATMOS_HYDROSTATIC_buildrho_atmos, &
      HYDROSTATIC_buildrho_bytemp => ATMOS_HYDROSTATIC_buildrho_bytemp
   use scale_atmos_saturation, only: &
-     SATURATION_pres2qsat_all => ATMOS_SATURATION_pres2qsat_all
+     SATURATION_pres2qsat_all => ATMOS_SATURATION_pres2qsat_all, &
+     SATURATION_pres2qsat_liq => ATMOS_SATURATION_pres2qsat_liq
 
   use mod_atmos_vars, only: &
      DENS, &
@@ -82,6 +84,8 @@ module mod_mkinit
      MOMZ, &
      RHOT, &
      QTRC
+  use mod_atmos_phy_ae_vars, only: &
+     CCN => ATMOS_PHY_AE_CCN 
   use mod_realinput
   !-----------------------------------------------------------------------------
   implicit none
@@ -135,6 +139,7 @@ module mod_mkinit
 
   integer, public, parameter :: I_GRAYZONE      = 26
   integer, public, parameter :: I_BOXAERO       = 27
+  integer, public, parameter :: I_WARMBUBBLEAERO = 28
 
   !-----------------------------------------------------------------------------
   !
@@ -176,6 +181,7 @@ module mod_mkinit
   private :: MKINIT_grayzone
 
   private :: MKINIT_boxaero
+  private :: MKINIT_warmbubbleaero
   !-----------------------------------------------------------------------------
   !
   !++ Private parameters & variables
@@ -321,6 +327,9 @@ contains
        MKINIT_TYPE = I_GRAYZONE
     case('BOXAERO')
        MKINIT_TYPE = I_BOXAERO
+    case('WARMBUBBLEAERO')
+       MKINIT_TYPE = I_WARMBUBBLEAERO
+       call BUBBLE_setup
     case default
        write(*,*) ' xxx Unsupported TYPE:', trim(MKINIT_initname)
        call PRC_MPIstop
@@ -466,6 +475,8 @@ contains
          call MKINIT_grayzone
       case(I_BOXAERO)
          call MKINIT_boxaero
+      case(I_WARMBUBBLEAERO)
+         call MKINIT_warmbubbleaero
       case default
          write(*,*) ' xxx Unsupported TYPE:', MKINIT_TYPE
          call PRC_MPIstop
@@ -578,7 +589,13 @@ contains
 
     use scale_tracer
     use scale_const, only: &
-       PI => CONST_PI
+       PI => CONST_PI, &
+       CONST_CVdry, &
+       CONST_Rdry, &
+       CONST_Rvap, &
+       CONST_PRE00
+    use scale_atmos_thermodyn, only: &
+       AQ_CV
     implicit none
 
     integer, parameter ::  ia_m0  = 1             !1. number conc        [#/m3]
@@ -586,6 +603,7 @@ contains
     integer, parameter ::  ia_m3  = 3             !3. 3rd mom conc       [m3/m3]
     integer, parameter ::  ia_ms  = 4             !4. mass conc          [ug/m3]
     integer, parameter ::  ia_kp  = 5
+    integer, parameter ::  ik_out  = 1
 
     real(RP) :: m0_init = 0.0_RP    ! initial total num. conc. of modes (Atk,Acm,Cor) [#/m3]   
     real(RP) :: dg_init = 80.e-9_RP ! initial number equivalen diameters of modes     [m]      
@@ -602,6 +620,7 @@ contains
     integer,  parameter :: n_kap_def = 1        ! number of kappa bins
     real(RP), parameter :: k_min_def = 0.e0_RP  ! lower bound of 1st kappa bin
     real(RP), parameter :: k_max_def = 1.e0_RP  ! upper bound of last kappa bin
+    real(RP) :: c_kappa = 0.3_RP     ! hygroscopicity of condensable mass              [-]  
 
     NAMELIST / PARAM_AERO / &
        m0_init, &
@@ -617,7 +636,7 @@ contains
     real(RP), parameter  :: rhod_ae    = 1.83_RP              ! particle density [g/cm3] sulfate assumed
     real(RP), parameter  :: conv_vl_ms = rhod_ae/1.e-12_RP     ! M3(volume)[m3/m3] to mass[m3/m3]
 
-    integer :: ia, ik, is0, ic, k, i, j, it
+    integer :: ia0, ik, is0, ic, k, i, j, it, iq
     integer :: ierr, n_trans
     real(RP) :: m0t, dgt, sgt, m2t, m3t, mst
     real(RP),allocatable :: aerosol_procs(:,:,:,:) !(n_atr,n_siz_max,n_kap_max,n_ctg)
@@ -635,13 +654,14 @@ contains
     real(RP),allocatable :: d_lw(:,:), d_ct(:,:), d_up(:,:)  !diameter [m]
     real(RP),allocatable :: k_lw(:,:), k_ct(:,:), k_up(:,:)  !kappa    [-]
     real(RP) :: dlogd, dk                                    !delta log(D), delta K
-    real(RP) :: deltt
     real(RP),allocatable :: d_min(:)              !lower bound of 1st size bin   (n_ctg)
     real(RP),allocatable :: d_max(:)              !upper bound of last size bin  (n_ctg)
     integer, allocatable :: n_kap(:)              !number of kappa bins          (n_ctg)
     real(RP),allocatable :: k_min(:)              !lower bound of 1st kappa bin  (n_ctg)
     real(RP),allocatable :: k_max(:)
 
+    real(RP) :: pott, qdry, pres
+    real(RP) :: temp, cpa, cva, ssliq, Rmoist
     real(RP) :: pi6
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -778,6 +798,41 @@ contains
     enddo
     enddo
 
+    CCN(:,:,:) = 0.0_RP
+    do j = JS, JE
+    do i = IS, IE
+
+       do k = KS, KE
+          pott = RHOT(k,i,j) / DENS(k,i,j)
+          qdry = 1.0_RP
+          do iq = QQS, QQE
+             qdry = qdry - QTRC(k,i,j,iq)
+          enddo
+          cva = qdry * CONST_CVdry
+          do iq = QQS, QQE
+             cva = cva + QTRC(k,i,j,iq) * AQ_CV(iq)
+          enddo
+          Rmoist = CONST_Rdry * qdry + CONST_Rvap * QTRC(k,i,j,I_QV)
+          cpa = cva + Rmoist
+          pres = CONST_PRE00 &
+                * ( DENS(k,i,j)*Rmoist*pott/CONST_PRE00 )**( cpa/(cpa-Rmoist) )
+          temp = pres / ( DENS(k,i,j) * Rmoist )
+          !--- calculate super saturation of water
+          call SATURATION_pres2qsat_liq( ssliq,temp,pres )
+          call aerosol_activation_kajino13 &
+                                 (c_kappa, ssliq, temp, ia_m0, ia_m2, ia_m3, &
+                                  N_ATR,n_siz_max,n_kap_max,n_ctg,NSIZ,n_kap, &
+                                  d_ct,aerosol_procs, aerosol_activ)
+
+         do is0 = 1, NSIZ(ic_mix)
+           CCN(k,i,j) = CCN(k,i,j) + aerosol_activ(ia_m0,is0,ik_out,ic_mix)
+         enddo
+
+       enddo
+
+    enddo
+    enddo
+
     conc_gas(:) = 0.0_RP
     do k = KS, KE
     do i = IS, IE
@@ -786,10 +841,10 @@ contains
      do ic = 1, n_ctg       !category
      do ik = 1, NKAP(ic)   !kappa bin
      do is0 = 1, NSIZ(ic)   !size bin
-     do ia = 1, N_ATR       !attributes
+     do ia0 = 1, N_ATR       !attributes
         it = it + 1
-        QTRC(k,i,j,QAES-1+it) = aerosol_procs(ia,is0,ik,ic)/DENS(k,i,j) !#,m2,m3,kg/m3 -> #,m2,m3,kg/kg
-     enddo !ia (1:N_ATR )
+        QTRC(k,i,j,QAES-1+it) = aerosol_procs(ia0,is0,ik,ic)/DENS(k,i,j) !#,m2,m3,kg/m3 -> #,m2,m3,kg/kg
+     enddo !ia0 (1:N_ATR )
      enddo !is (1:n_siz(ic)  )
      enddo !ik (1:n_kap(ic)  )
      enddo !ic (1:n_ctg      )
@@ -801,6 +856,167 @@ contains
     return       
 
   end subroutine AEROSOL_setup
+  !----------------------------------------------------------------------------------------
+  ! subroutine 4. aerosol_activation   
+  !   Abdul-Razzak et al.,   JGR, 1998 [AR98]
+  !   Abdul-Razzak and Ghan, JGR, 2000 [AR00]
+  !----------------------------------------------------------------------------------------
+  subroutine aerosol_activation_kajino13(c_kappa, super, temp_k, &
+                                ia_m0, ia_m2, ia_m3, &
+                                n_atr,n_siz_max,n_kap_max,n_ctg,n_siz,n_kap, &
+                                d_ct, aerosol_procs, aerosol_activ)
+  use scale_const, only: &
+      CONST_Mvap, &            ! mean molecular weight for water vapor [g/mol]
+      CONST_DWATR, &           ! water density   [kg/m3]
+      CONST_R, &               ! universal gas constant             [J/mol/K]
+      CONST_TEM00  
+  implicit none
+    !i/o variables
+      real(RP),intent(in) :: super      ! supersaturation                                 [-]   
+      real(RP),intent(in) :: c_kappa    ! hygroscopicity of condensable mass              [-]   
+      real(RP),intent(in) :: temp_k     ! temperature
+      integer, intent(in) :: ia_m0, ia_m2, ia_m3
+      integer, intent(in) :: n_atr
+      integer, intent(in) :: n_siz_max
+      integer, intent(in) :: n_kap_max
+      integer, intent(in) :: n_ctg
+      real(RP),intent(in) :: d_ct(n_siz_max,n_ctg)
+      real(RP) :: aerosol_procs(n_atr,n_siz_max,n_kap_max,n_ctg)
+      real(RP) :: aerosol_activ(n_atr,n_siz_max,n_kap_max,n_ctg)
+      integer, intent(in) :: n_siz(n_ctg), n_kap(n_ctg)
+    !local variables
+      real(RP),parameter :: two3 = 2._RP/3._RP
+      real(RP),parameter :: rt2  = sqrt(2._RP)
+      real(RP),parameter :: twort2  = rt2       ! 2/sqrt(2) = sqrt(2)
+      real(RP),parameter :: thrrt2  = 3._RP/rt2 ! 3/sqrt(2)
+      real(RP) :: smax_inv                ! inverse
+      real(RP) :: am,scrit_am,aa,tc,st,bb,ac
+      real(RP) :: m0t,m2t,m3t,dgt,sgt,dm2
+      real(RP) :: d_crit                  ! critical diameter
+      real(RP) :: tmp1, tmp2, tmp3        ! 
+      real(RP) :: ccn_frc,cca_frc,ccv_frc ! activated number,area,volume
+      integer  :: is0, ik, ic
+
+      aerosol_activ(:,:,:,:) = 0._RP
+      smax_inv = 1._RP / super
+
+    !--- surface tension of water
+      tc = temp_k - CONST_TEM00
+      if (tc >= 0._RP ) then
+        st  = 75.94_RP-0.1365_RP*tc-0.3827e-3_RP*tc**2._RP !Gittens, JCIS, 69, Table 4.
+      else !t[deg C].lt.0.
+        st  = 75.93_RP                +0.115_RP*tc        &  !Eq.5-12, pp.130, PK97
+            + 6.818e-2_RP*tc**2._RP+6.511e-3_RP*tc**3._RP &
+            + 2.933e-4_RP*tc**4._RP+6.283e-6_RP*tc**5._RP &
+            + 5.285e-8_RP*tc**6._RP
+      endif
+      st      = st * 1.E-3_RP                    ![J/m2]
+
+    !-- Kelvin effect
+    !          [J m-2]  [kg mol-1]       [m3 kg-1] [mol K J-1] [K-1]
+      aa  = 2._RP * st * CONST_Mvap * 1.E-3_RP / (CONST_DWATR * CONST_R * temp_k ) ![m] Eq.5 in AR98
+
+      do ic = 1, n_ctg
+      do ik = 1, n_kap(ic)
+      do is0 = 1, n_siz(ic)
+        m0t = aerosol_procs(ia_m0,is0,ik,ic)
+        m2t = aerosol_procs(ia_m2,is0,ik,ic)
+        m3t = aerosol_procs(ia_m3,is0,ik,ic)
+        call diag_ds(m0t,m2t,m3t,dgt,sgt,dm2)
+        if (dgt <= 0._RP) dgt = d_ct(is0,ic)
+        if (sgt <= 0._RP) sgt = 1.3_RP
+        am  = dgt * 0.5_RP  !geometric dry mean radius [m]
+        bb  = c_kappa
+        if (bb > 0._RP .and. am > 0._RP ) then
+          scrit_am = 2._RP/sqrt(bb)*(aa/(3._RP*am))**1.5_RP !AR00 Eq.9 
+        else
+          scrit_am = 0._RP
+        endif
+        ac     = am * (scrit_am * smax_inv)**two3      !AR00 Eq.12
+        d_crit = ac * 2._RP
+        tmp1   = log(d_crit) - log(dgt)
+        tmp2   = 1._RP/(rt2*log(sgt))
+        tmp3   = log(sgt)
+        ccn_frc= 0.5_RP*(1._RP-erf(tmp1*tmp2))
+        cca_frc= 0.5_RP*(1._RP-erf(tmp1*tmp2-twort2*tmp3))
+        ccv_frc= 0.5_RP*(1._RP-erf(tmp1*tmp2-thrrt2*tmp3))
+        aerosol_activ(ia_m0,is0,ik,ic) = ccn_frc * aerosol_procs(ia_m0,is0,ik,ic)
+        aerosol_activ(ia_m2,is0,ik,ic) = cca_frc * aerosol_procs(ia_m2,is0,ik,ic)
+        aerosol_activ(ia_m3,is0,ik,ic) = ccv_frc * aerosol_procs(ia_m3,is0,ik,ic)
+      enddo !is(1:n_siz(ic))
+      enddo !ik(1:n_kap(ic))
+      enddo !ic(1:n_ctg)
+
+      return
+  end subroutine aerosol_activation_kajino13
+  !----------------------------------------------------------------------------------------
+  subroutine diag_ds(m0,m2,m3,  & !i
+                     dg,sg,dm2)   !o
+    implicit none
+    real(RP)            :: m0,m2,m3,dg,sg,m3_bar,m2_bar
+    real(RP)            :: m2_new,m2_old,dm2
+    real(RP), parameter :: sgmax=2.5_RP
+    real(RP), parameter :: rk1=2._RP
+    real(RP), parameter :: rk2=3._RP
+    real(RP), parameter :: ratio  =rk1/rk2
+    real(RP), parameter :: rk1_hat=1._RP/(ratio*(rk2-rk1))
+    real(RP), parameter :: rk2_hat=ratio/(rk1-rk2)
+
+    dm2=0._RP
+
+    if (m0 <= 0._RP .or. m2 <= 0._RP .or. m3 <= 0._RP) then
+      m0=0._RP
+      m2=0._RP
+      m3=0._RP
+      dg=-1._RP
+      sg=-1._RP
+      return
+    endif
+
+    m2_old = m2
+    m3_bar = m3/m0
+    m2_bar = m2/m0
+    dg     = m2_bar**rk1_hat*m3_bar**rk2_hat
+
+    if (m2_bar/m3_bar**ratio < 1._RP) then !stdev > 1.
+      sg     = exp(sqrt(2._RP/(rk1*(rk1-rk2))  &
+             * log(m2_bar/m3_bar**ratio) ))
+    endif
+
+    if (sg > sgmax) then
+      print *,'sg=',sg
+      sg = sgmax
+      call diag_d2(m0,m3,sg, & !i
+                   m2,dg     ) !o
+  !   print *,'warning! modified as sg exceeded sgmax (diag_ds)'
+    endif
+
+    if (m2_bar/m3_bar**ratio >= 1._RP) then !stdev < 1.
+      sg = 1._RP
+      call diag_d2(m0,m3,sg, & !i
+                   m2,dg     ) !o
+  !   print *,'warning! modified as sg < 1. (diag_ds)'
+    endif
+
+    m2_new = m2
+    dm2    = m2_old - m2_new !m2_pres - m2_diag
+
+    return
+  end subroutine diag_ds
+  !----------------------------------------------------------------------------------------
+  ! subroutine 6. diag_d2
+  !----------------------------------------------------------------------------------------
+  subroutine diag_d2(m0,m3,sg, & !i
+                       m2,dg     ) !o
+    implicit none
+    real(RP)            :: dg,sg,m0,m2,m3,aaa
+    real(RP), parameter :: one3=1._RP/3._RP
+    aaa = m0               * exp( 4.5_RP * (log(sg)**2._RP) )
+    dg  =(m3/aaa)**one3
+    m2  = m0 * dg ** 2._RP * exp( 2.0_RP * (log(sg)**2._RP) )
+
+    return
+  end subroutine diag_d2
   !--------------------------------------------------------------
   !> Setup aerosol condition for Spectral Bin Microphysics (SBM) model
   subroutine SBMAERO_setup
@@ -4490,6 +4706,141 @@ enddo
     call AEROSOL_setup
 
   end subroutine MKINIT_boxaero
+  !-----------------------------------------------------------------------------
+  !> Make initial state for warm bubble experiment
+  subroutine MKINIT_warmbubbleaero
+    implicit none
+
+    ! Surface state
+    real(RP) :: SFC_THETA               ! surface potential temperature [K]
+    real(RP) :: SFC_PRES                ! surface pressure [Pa]
+    real(RP) :: SFC_RH       =  80.0_RP ! surface relative humidity [%]
+    ! Environment state
+    real(RP) :: ENV_U        =   0.0_RP ! velocity u of environment [m/s]
+    real(RP) :: ENV_V        =   0.0_RP ! velocity v of environment [m/s]
+    real(RP) :: ENV_RH       =  80.0_RP ! Relative Humidity of environment [%]
+    real(RP) :: ENV_L1_ZTOP  =  1.E3_RP ! top height of the layer1 (constant THETA)       [m]
+    real(RP) :: ENV_L2_ZTOP  = 14.E3_RP ! top height of the layer2 (small THETA gradient) [m]
+    real(RP) :: ENV_L2_TLAPS = 4.E-3_RP ! Lapse rate of THETA in the layer2 (small THETA gradient) [K/m]
+    real(RP) :: ENV_L3_TLAPS = 3.E-2_RP ! Lapse rate of THETA in the layer3 (large THETA gradient) [K/m]
+    ! Bubble
+    real(RP) :: BBL_THETA    =   1.0_RP ! extremum of temperature in bubble [K]
+
+    NAMELIST / PARAM_MKINIT_WARMBUBBLE / &
+       SFC_THETA,    &
+       SFC_PRES,     &
+       ENV_U,        &
+       ENV_V,        &
+       ENV_RH,       &
+       ENV_L1_ZTOP,  &
+       ENV_L2_ZTOP,  &
+       ENV_L2_TLAPS, &
+       ENV_L3_TLAPS, &
+       BBL_THETA
+
+    integer :: ierr
+    integer :: k, i, j
+    !---------------------------------------------------------------------------
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[WARMBUBBLEAERO]/Categ[MKINIT]'
+
+    SFC_THETA = THETAstd
+    SFC_PRES  = Pstd
+
+    !--- read namelist
+    rewind(IO_FID_CONF)
+    read(IO_FID_CONF,nml=PARAM_MKINIT_WARMBUBBLE,iostat=ierr)
+
+    if( ierr < 0 ) then !--- missing
+       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+    elseif( ierr > 0 ) then !--- fatal error
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_WARMBUBBLE. Check!'
+       call PRC_MPIstop
+    endif
+    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_WARMBUBBLE)
+
+    ! calc in dry condition
+    pres_sfc(1,1,1) = SFC_PRES
+    pott_sfc(1,1,1) = SFC_THETA
+    qv_sfc  (1,1,1) = 0.0_RP
+    qc_sfc  (1,1,1) = 0.0_RP
+
+    do k = KS, KE
+       if    ( GRID_CZ(k) <= ENV_L1_ZTOP ) then ! Layer 1
+          pott(k,1,1) = SFC_THETA
+       elseif( GRID_CZ(k) <  ENV_L2_ZTOP ) then ! Layer 2
+          pott(k,1,1) = pott(k-1,1,1) + ENV_L2_TLAPS * ( GRID_CZ(k)-GRID_CZ(k-1) )
+       else                                ! Layer 3
+          pott(k,1,1) = pott(k-1,1,1) + ENV_L3_TLAPS * ( GRID_CZ(k)-GRID_CZ(k-1) )
+       endif
+       qv(k,1,1) = 0.0_RP
+       qc(k,1,1) = 0.0_RP
+    enddo
+
+    ! make density & pressure profile in dry condition
+    call HYDROSTATIC_buildrho( DENS    (:,1,1), & ! [OUT]
+                               temp    (:,1,1), & ! [OUT]
+                               pres    (:,1,1), & ! [OUT]
+                               pott    (:,1,1), & ! [IN]
+                               qv      (:,1,1), & ! [IN]
+                               qc      (:,1,1), & ! [IN]
+                               temp_sfc(1,1,1), & ! [OUT]
+                               pres_sfc(1,1,1), & ! [IN]
+                               pott_sfc(1,1,1), & ! [IN]
+                               qv_sfc  (1,1,1), & ! [IN]
+                               qc_sfc  (1,1,1)  ) ! [IN]
+
+    ! calc QV from RH
+    call SATURATION_pres2qsat_all( qsat_sfc(1,1,1), temp_sfc(1,1,1), pres_sfc(1,1,1) )
+    call SATURATION_pres2qsat_all( qsat    (:,1,1), temp    (:,1,1), pres    (:,1,1) )
+
+    qv_sfc(1,1,1) = SFC_RH * 1.E-2_RP * qsat_sfc(1,1,1)
+    do k = KS, KE
+       if    ( GRID_CZ(k) <= ENV_L1_ZTOP ) then ! Layer 1
+          qv(k,1,1) = ENV_RH * 1.E-2_RP * qsat(k,1,1)
+       elseif( GRID_CZ(k) <= ENV_L2_ZTOP ) then ! Layer 2
+          qv(k,1,1) = ENV_RH * 1.E-2_RP * qsat(k,1,1)
+       else                                ! Layer 3
+          qv(k,1,1) = 0.0_RP
+       endif
+    enddo
+
+    ! make density & pressure profile in moist condition
+    call HYDROSTATIC_buildrho( DENS    (:,1,1), & ! [OUT]
+                               temp    (:,1,1), & ! [OUT]
+                               pres    (:,1,1), & ! [OUT]
+                               pott    (:,1,1), & ! [IN]
+                               qv      (:,1,1), & ! [IN]
+                               qc      (:,1,1), & ! [IN]
+                               temp_sfc(1,1,1), & ! [OUT]
+                               pres_sfc(1,1,1), & ! [IN]
+                               pott_sfc(1,1,1), & ! [IN]
+                               qv_sfc  (1,1,1), & ! [IN]
+                               qc_sfc  (1,1,1)  ) ! [IN]
+
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       DENS(k,i,j) = DENS(k,1,1)
+       MOMZ(k,i,j) = 0.0_RP
+       MOMX(k,i,j) = ENV_U * DENS(k,i,j)
+       MOMY(k,i,j) = ENV_V * DENS(k,i,j)
+
+       ! make warm bubble
+       RHOT(k,i,j) = DENS(k,1,1) * ( pott(k,1,1) + BBL_THETA * bubble(k,i,j) )
+
+       QTRC(k,i,j,I_QV) = qv(k,1,1)
+    enddo
+    enddo
+    enddo
+
+    call flux_setup
+    call AEROSOL_setup
+
+    return
+  end subroutine MKINIT_warmbubbleaero
+
   !-----------------------------------------------------------------------------
   !> Make initial state ( real case )
   subroutine MKINIT_real
