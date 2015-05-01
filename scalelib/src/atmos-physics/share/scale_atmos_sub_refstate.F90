@@ -270,6 +270,7 @@ contains
   !> Generate reference state profile (International Standard Atmosphere)
   subroutine ATMOS_REFSTATE_generate_isa
     use scale_const, only: &
+       EPSvap => CONST_EPSvap, &
        Pstd => CONST_Pstd
     use scale_grid_real, only: &
        REAL_CZ
@@ -280,7 +281,8 @@ contains
     use scale_atmos_hydrostatic, only: &
        HYDROSTATIC_buildrho => ATMOS_HYDROSTATIC_buildrho
     use scale_atmos_saturation, only: &
-       SATURATION_pres2qsat_all => ATMOS_SATURATION_pres2qsat_all
+       SATURATION_psat_all => ATMOS_SATURATION_psat_all, &
+       SATURATION_dens2qsat_all => ATMOS_SATURATION_dens2qsat_all
     implicit none
 
     real(RP) :: z(KA)
@@ -299,7 +301,7 @@ contains
     real(RP) :: qc_sfc
 
     real(RP) :: qsat(KA)
-    real(RP) :: qsat_sfc
+    real(RP) :: psat_sfc
 
     integer  :: k
     !---------------------------------------------------------------------------
@@ -334,10 +336,11 @@ contains
                                qc_sfc    ) ! [IN]
 
     ! calc QV from RH
-    call SATURATION_pres2qsat_all( qsat_sfc, temp_sfc, pres_sfc )
-    call SATURATION_pres2qsat_all( qsat(:),  temp(:),  pres(:)  )
+    call SATURATION_psat_all( psat_sfc, temp_sfc )
+    call SATURATION_dens2qsat_all( qsat(:),  temp(:),  dens(:)  )
 
-    qv_sfc = ATMOS_REFSTATE_RH * 1.E-2_RP * qsat_sfc
+    psat_sfc = ATMOS_REFSTATE_RH * 1.E-2_RP * psat_sfc ! rh * e
+    qv_sfc = EPSvap * psat_sfc / ( pres_sfc - (1.0_RP-EPSvap) * psat_sfc )
     do k = KS, KE
        qv(k) = ATMOS_REFSTATE_RH * 1.E-2_RP * qsat(k)
     enddo
@@ -370,11 +373,13 @@ contains
   !> Generate reference state profile (Uniform Potential Temperature)
   subroutine ATMOS_REFSTATE_generate_uniform
     use scale_const, only: &
+       EPSvap => CONST_EPSvap, &
        Pstd   => CONST_Pstd
     use scale_atmos_hydrostatic, only: &
        HYDROSTATIC_buildrho => ATMOS_HYDROSTATIC_buildrho
     use scale_atmos_saturation, only: &
-       SATURATION_pres2qsat_all => ATMOS_SATURATION_pres2qsat_all
+       SATURATION_psat_all => ATMOS_SATURATION_psat_all, &
+       SATURATION_dens2qsat_all => ATMOS_SATURATION_dens2qsat_all
     implicit none
 
     real(RP) :: temp(KA)
@@ -391,7 +396,7 @@ contains
     real(RP) :: qc_sfc
 
     real(RP) :: qsat(KA)
-    real(RP) :: qsat_sfc
+    real(RP) :: psat_sfc
 
     integer  :: k
     !---------------------------------------------------------------------------
@@ -421,10 +426,11 @@ contains
                                qc_sfc    ) ! [IN]
 
     ! calc QV from RH
-    call SATURATION_pres2qsat_all( qsat_sfc, temp_sfc, pres_sfc )
-    call SATURATION_pres2qsat_all( qsat(:),  temp(:),  pres(:)  )
+    call SATURATION_psat_all( psat_sfc, temp_sfc )
+    call SATURATION_dens2qsat_all( qsat(:),  temp(:),  pres(:)  )
 
-    qv_sfc = ATMOS_REFSTATE_RH * 1.E-2_RP * qsat_sfc
+    psat_sfc = ATMOS_REFSTATE_RH * 1.E-2_RP * psat_sfc ! rh * e
+    qv_sfc = EPSvap * psat_sfc / ( pres_sfc * (1.0_RP - EPSvap) * psat_sfc )
     do k = KS, KE
        qv(k) = ATMOS_REFSTATE_RH * 1.E-2_RP * qsat(k)
     enddo

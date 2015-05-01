@@ -3110,6 +3110,7 @@ contains
     use scale_const, only: &
        D2R => CONST_D2R,   &
        EPS => CONST_EPS,   &
+       EPSvap => CONST_EPSvap, &
        GRAV => CONST_GRAV
     use scale_comm, only: &
        COMM_vars8, &
@@ -3120,7 +3121,7 @@ contains
        THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres, &
        THERMODYN_pott      => ATMOS_THERMODYN_pott
     use scale_atmos_saturation, only: &
-       qsat => ATMOS_SATURATION_pres2qsat_all
+       psat => ATMOS_SATURATION_psat_liq
     use scale_gridtrans, only: &
        rotc => GTRANS_ROTC
     use scale_topography, only: &
@@ -3239,7 +3240,7 @@ contains
     real(RP), allocatable :: rhprs_org(:,:,:,:)
 
     integer  :: QA_outer = 1
-    real(RP) :: qvsat, qm
+    real(RP) :: p_sat, qm
 
     ! scale grid
     real(RP) :: velz  (KA,IA,JA,sstep:estep)
@@ -3681,14 +3682,20 @@ contains
                 do j = 1, dims(2)
                 do i = 1, dims(1)
                    do k = 1, knum
-                      rhprs_org(k,i,j,it) = real(gdata3D(i,j,k,it), kind=RP)       ! relative humidity
-                      call qsat( qvsat, temp_org(k,i,j,it), pres_org(k,i,j,it) )   ! satulated specific humidity
-                      qm = (rhprs_org(k,i,j,it)/100.0_RP) * (qvsat/(1.0_RP-qvsat)) ! mixing ratio
-                      qtrc_org(k,i,j,it,QA_outer) = qm * ( 1.0_RP + qm )
+                      rhprs_org(k,i,j,it) = real(gdata3D(i,j,k,it), kind=RP) / 100.0_RP  ! relative humidity
+                      call psat( p_sat, temp_org(k,i,j,it) )                             ! satulation pressure
+                      qm = EPSvap * rhprs_org(k,i,j,it) * p_sat &
+                         / ( pres_org(k,i,j,it) - rhprs_org(k,i,j,it) * p_sat )          ! mixing ratio
+                      qtrc_org(k,i,j,it,QA_outer) = qm / ( 1.0_RP + qm )                 ! specific humidity
                    enddo
                    if(dims(3)>knum)then
                       do k = knum+1, dims(3)
-                         qtrc_org(k,i,j,it,QA_outer) = qtrc_org(knum,i,j,it,QA_outer)
+                         rhprs_org(k,i,j,it) = rhprs_org(knum,i,j,it)                    ! relative humidity
+                         call psat( p_sat, temp_org(k,i,j,it) )                          ! satulated specific humidity
+                         qm = EPSvap * rhprs_org(k,i,j,it) * p_sat &
+                            / ( pres_org(k,i,j,it) - rhprs_org(k,i,j,it) * p_sat )       ! mixing ratio
+                         qtrc_org(k,i,j,it,QA_outer) = qm / ( 1.0_RP + qm )              ! specific humidity
+                         qtrc_org(k,i,j,it,QA_outer) = min(qtrc_org(k,i,j,it,QA_outer),qtrc_org(k-1,i,j,it,QA_outer))
                       enddo
                    endif
                 enddo
@@ -3774,10 +3781,11 @@ contains
                 do it = 1, nt
                 do j = 1, dims(2)
                 do i = 1, dims(1)
-                   rhsfc_org(i,j,it) = real(gdata2D(i,j,it), kind=RP)         ! relative humidity
-                   call qsat( qvsat, tsfc_org(i,j,it), psfc_org(i,j,it) )     ! satulated specific humidity
-                   qm = (rhsfc_org(i,j,it)/100.0_RP) * (qvsat/(1.0_RP-qvsat)) ! satulated mixing ratio
-                   qsfc_org(i,j,it,QA_outer) = qm * ( 1.0_RP + qm )           ! specific humidity
+                   rhsfc_org(i,j,it) = real(gdata2D(i,j,it), kind=RP) / 100.0_RP   ! relative humidity
+                   call psat( p_sat, tsfc_org(i,j,it) )                  ! satulation pressure
+                   qm = EPSvap * rhsfc_org(i,j,it) * p_sat &
+                      / ( psfc_org(i,j,it) - rhsfc_org(i,j,it) * p_sat ) ! mixing ratio
+                   qsfc_org(i,j,it,QA_outer) = qm / ( 1.0_RP + qm )      ! specific humidity
                 enddo
                 enddo
                 enddo
