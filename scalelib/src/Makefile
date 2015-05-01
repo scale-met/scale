@@ -57,6 +57,7 @@ ifeq ($(MP),)
             scale_atmos_phy_mp_tomita08.o
 else
   OBJS_MP = scale_atmos_phy_mp_$(MP).o
+  FFLAGS += -DMP=$(MP)
 endif
 
 ifeq ($(RD),)
@@ -65,6 +66,7 @@ ifeq ($(RD),)
             scale_atmos_phy_rd_profile.o
 else
   OBJS_RD = scale_atmos_phy_rd_$(RD).o
+  FFLAGS += -DRD=$(RD)
 endif
 
 ifeq ($(TB),)
@@ -75,6 +77,7 @@ ifeq ($(TB),)
             scale_atmos_phy_tb_hybrid.o
 else
   OBJS_TB = scale_atmos_phy_tb_$(TB).o
+  FFLAGS += -DTB=$(TB)
 endif
 
 ifeq ($(TRACER),)
@@ -85,8 +88,8 @@ ifeq ($(TRACER),)
                 scale_tracer_tomita08.o
 else
   OBJS_TRACER = scale_tracer_$(TRACER).o
+  FFLAGS += -DTRACER=$(TRACER)
 endif
-
 
 OBJS = $(scale_rdma)	\
 	scale_atmos_dyn.o	\
