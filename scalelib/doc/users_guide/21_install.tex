@@ -18,7 +18,7 @@ SCALEライブラリのインストールに必要な環境、ライブラリの
   \item {\bf 計算機環境} : Linux互換OS (Mac OS-Xを含む)が動作する環境．
         マルチコアCPU環境以上を推奨する．
         実験サイズによるが4GB以上のメモリがインストールされているマシン環境が好ましい．
-  \item {\bf OS} : Linux OS（Fedora, CentOS, SUSE等），Max OS-X．ここではLinux (CentOS7)を使用して説明する．
+  \item {\bf OS} : Linux OS（Fedora, CentOS, SUSE等），Max OS-X．ここではLinux (CentOS6)を使用して説明する．
   \item {\bf コンパイラ} : Fortran 2003をサポートするC，Fortranコンパイラを必要とする．
         GNU 4.6.x以上，Intel compiler 2012以上を推奨する．ここでは，gcc/gfortranを使用して説明する．
   \item {\bf MPIライブラリ} : MPICH2, OpenMPI, Intel MPI等をサポートする．ここではopenMPIを使用して説明する．
@@ -40,7 +40,7 @@ SCALEライブラリのインストールに必要な環境、ライブラリの
 \subsubsection{ソースコードの入手}
 %-----------------------------------------------------------------------------------
 
-安定版ソースコードは，\url{http://scale.aics.riken.jp/download/scale.tar.gz}
+安定版ソースコードは，\url{http://scale.aics.riken.jp/ja/download/index.html}
 よりダウンロードすることができる．
 ソースコードのtarballファイルを展開すると
 \begin{verbatim}
@@ -72,7 +72,7 @@ SCALEライブラリのインストールに必要な環境、ライブラリの
 \verb|scale/sysdep/|内にいくつかのコンフィグファイル（\verb|Makedef.***|）が準備されている．
 これらの中から自分の環境にあったものを設定する．
 ここでは，OSはLinux，コンパイラはgcc/gfortran，およびopenMPIを使用するため，
-\verb|"Makedef.Linux-gnu-ompi"|が対応するファイルとなる．
+\verb|"Makedef.Linux64-gnu-ompi"|が対応するファイルとなる．
 自分の環境に合うものがなければ既存ファイルをベースにして作成する．
 
 常にこのコンフィグファイルをしようするために、
