@@ -1761,8 +1761,8 @@ contains
                        sec_str,                        & ! start time
                        sec_end                         ) ! end   time
     else
-       write(message,*) 'History output suppressed', time_end, History_tstart(itemid)
-       call Log('W', message)
+       write(message,*) 'History output suppressed', sec_end, History_tstart(itemid)
+       call Log('I', message)
     end if
 
     History_varsum(:,itemid) = 0.0_DP
