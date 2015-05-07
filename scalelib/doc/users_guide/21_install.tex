@@ -15,10 +15,10 @@ SCALEライブラリのインストールに必要な環境、ライブラリの
 %====================================================================================
 
 \begin{itemize}
-  \item {\bf 計算機環境} : Linux互換OS (Mac OS-Xを含む)が動作する環境．
+  \item {\bf 計算機環境} : Unix互換OS (Mac OS Xを含む)が動作する環境．
         マルチコアCPU環境以上を推奨する．
         実験サイズによるが4GB以上のメモリがインストールされているマシン環境が好ましい．
-  \item {\bf OS} : Linux OS（Fedora, CentOS, SUSE等），Max OS-X．ここではLinux (CentOS6)を使用して説明する．
+  \item {\bf OS} : Linux OS（Fedora, CentOS, SUSE等），Mac OS X．ここではLinux (CentOS6)を使用して説明する．
   \item {\bf コンパイラ} : Fortran 2003をサポートするC，Fortranコンパイラを必要とする．
         GNU 4.6.x以上，Intel compiler 2012以上を推奨する．ここでは，gcc/gfortranを使用して説明する．
   \item {\bf MPIライブラリ} : MPICH2, OpenMPI, Intel MPI等をサポートする．ここではopenMPIを使用して説明する．
@@ -84,7 +84,7 @@ SCALEライブラリのインストールに必要な環境、ライブラリの
 HDF5，netcdf4ともに\verb|/usr|の下にインストールされている場合の例を示す．
 
 \begin{verbatim}
- $ export SCALE_SYS="Linux-gnu-ompi"
+ $ export SCALE_SYS="Linux64-gnu-ompi"
  $ export HDF5="/usr"
  $ export NETCDF4="/usr"
 \end{verbatim}
