@@ -1,7 +1,7 @@
 \chapter{ライブラリ環境のインストール}
 \label{sec:env_setting}
 
-\subsubsection{インストールに関する基礎知識}
+\section{インストールに関する基礎知識}
 
 Linuxをインストール後、各種プログラムのインストールにはコマンドライン端末を使う。
 コマンドラインのシンボル（\verb|$, #|）は、コマンドの実行を示す。
@@ -35,6 +35,8 @@ Linuxをインストール後、各種プログラムのインストールには
 上記のコマンドは、vi（汎用テキストエディタ）プログラムを実行する。
 他に、gedit、emacsなどのテキストエディタがある。
 マニュアルではviコマンドの実行指示があるが、各自の使いやすいエディタへ適宜読み替えること。
+
+\section{インストール(Linux,CentOS編)}
 
 \subsubsection{各種インストールの事前準備}
 
@@ -104,4 +106,136 @@ root権限で、GFD-Dennouリポジトリを次のような内容で登録する
 \begin{verbatim}
  # yum install gphys
 \end{verbatim}
+
+\section{インストール(MacOSX編)}
+
+\subsubsection{macportsを用いたインストール}
+
+Apple MacOSXでのSCALE実行環境を整備する方法について説明する。
+ここではMacOSXのパッケージマネージャの一つであるmacportsを用いる方法を紹介する。
+その他の主要なパッケージマネージャとしては、homebrewが挙げられる。homebrewを利用しても環境は手軽に揃えられるので、
+興味のある方は利用してもらいたい。
+
+まずはAppleの開発ツールであるXcodeをインストールする。
+大元のgccコンパイラを導入するために、必ずインストールする必要がある。
+最近のOSのバージョンのものは、App Store経由で入手できる（無料）。
+古いOSでは、インストールディスクから追加することが出来る。
+最近のOSのXcodeの場合、最初に以下の様な設定をターミナルから行う必要がある。
+\begin{verbatim}
+ コマンドラインツールのインストール
+ # xcode-select --install
+\end{verbatim}
+\begin{verbatim}
+ ライセンス条項の承認
+ # xcodebuild -license
+\end{verbatim}
+
+次にmacports本体をインストールする。
+\url{https://www.macports.org/}
+
+macportsとmacportsが管理するパッケージは/opt/local以下に配置される。
+インストール時に\verb|.bash_profile|に、/opt/local/binへのパスが張られているので確認されたし。
+macportsはコマンドラインから操作する。主要なコマンドは以下の通り。
+
+\begin{verbatim}
+ インストール可能なソフトウェアを検索する
+ $ port search <検索文字>
+\end{verbatim}
+\begin{verbatim}
+ ソフトウェアのインストール時に選択可能なオプション(variants)を確認する
+ $ port variants <アプリ名>
+\end{verbatim}
+\begin{verbatim}
+ ソフトウェアのインストール（root権限必要）
+ $ sudo port install <アプリ名> [variants]
+\end{verbatim}
+\begin{verbatim}
+ ソフトウェアのアンインストール（root権限必要）
+ $ sudo port uninstall <アプリ名> [variants]
+\end{verbatim}
+\begin{verbatim}
+ macports本体とパッケージカタログの更新（root権限必要）
+ $ sudo port selfupdate
+\end{verbatim}
+\begin{verbatim}
+ パッケージの更新（root権限必要）
+ $ sudo port upgrade outdated
+\end{verbatim}
+\begin{verbatim}
+ 不要なパッケージ（activateされていない過去のバージョン等）の削除
+ $ sudo port -u uninstall
+\end{verbatim}
+
+\subsubsection{gccからNetCDFまでのインストール}
+
+macportsはパッケージの依存関係を解決してくれるが、必要なvariantsを備えたセットを作るには、
+順番にインストールしていく方が問題が少ない。以下にsudo port installしていく順番とvariantsの設定を示す。
+今回はgcc4.9の利用を想定している。
+\begin{verbatim}
+ $ gcc49
+ $ openmpi-gcc49 +threads
+ $ hdf4 +gcc49 +szip
+ $ hdf5 +gcc49 +szip +fortran +cxx +openmpi +threadsafe
+ $ netcdf +gcc49 +openmpi +netcdf4 +hdf4
+ $ netcdf-fortran +gcc49 +openmpi
+\end{verbatim}
+
+最近のmacportsでは、gccとmpiライブラリはselectで選択する。
+この操作を行うと、gfortran等の一般的な名前でエイリアスが作られてパスが通るようになる。
+\begin{verbatim}
+ $ sudo port select --set gcc mp-gcc49
+ $ sudo port select --set mpi openmpi-gcc49-fortran
+\end{verbatim}
+
+SCALEは陰解法計算の部分で、数値計算ライブラリを利用するオプションがある。
+もし必要ならば、macportsからATLASをインストールすることが出来る。
+\begin{verbatim}
+ $ atlas +gcc49
+\end{verbatim}
+
+\subsubsection{rubyからGphysまでのインストール}
+
+macports-JPが作成しているリポジトリから、MacOSX用のGPhysをインストールできる。
+以下のように、MacPorts-JPのリポジトリをチェックアウトして配置する。場所は好きな場所でよい。
+\begin{verbatim}
+ $ sudo svn co http://svn.sourceforge.jp/svnroot/macports-jp/trunk/ \
+ $ /opt/local/var/sources/svn.sourceforge.jp/svnroot/macports-jp/trunk
+\end{verbatim}
+/opt/local/etc/macports/sources.confに、チェックアウトしたリポジトリを追加する。
+\begin{verbatim}
+ file:///opt/local/var/sources/svn.sourceforge.jp/svnroot/macports-jp/trunk/dports
+\end{verbatim}
+これで、Gphysと関連ライブラリをmacportsで一括インストールできるようになる。
+今回はruby1.9向けのrb19-gphysをインストールすることにする。
+
+\begin{verbatim}
+ rubyのインストールと1.9の選択
+ $ sudo port install ruby19
+ $ sudo port select --set ruby ruby19
+\end{verbatim}
+\begin{verbatim}
+ 依存関係の解決を任せるかたちで、gphysのインストール
+ $ sudo port install rb19-gphys
+\end{verbatim}
+
+インストールされたruby1.9版gphysコマンドは、末尾に1.9が付いている。
+これを無くしたい場合は/opt/local/bin内でシンボリックリンクを張る。
+以下では特に頻繁に使う３つを例に挙げる。
+\begin{verbatim}
+ $ sudo ln -s gpvlist1.9 gplist
+ $ sudo ln -s gpvect1.9 gpvect
+ $ sudo ln -s gpview1.9 gpview
+\end{verbatim}
+
+\subsubsection{その他のインストール}
+
+macportsでインストールできるパッケージのうち、重要なものを以下に紹介する。
+
+\begin{itemize}
+\item git, git-flow : ソースコード開発時に利用する。
+\item coreutils : GNU core utils。様々な場面で必要になる。
+\item gawk, gsed : MacOSXに付属するawk,sedはGNU版と機能が異なるため、こちらが必要になる時がある。
+\item gnuplot : グラフ描画に利用。
+\item ImageMagick : Gphysから出力したPostScriptファイルをpngやアニメーションgifに変換する時に利用。
+\end{itemize}
 
