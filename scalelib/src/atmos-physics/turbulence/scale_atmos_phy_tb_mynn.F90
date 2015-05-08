@@ -475,13 +475,15 @@ contains
     do i = IS, IE
        do k = KS, KE_PBL+1
           ql = 0.0_RP
-          do iq = QWS, QWE
-             ql = ql + QTRC(k,i,j,iq)
-          end do
+          if ( I_QC > 0 ) ql = QTRC(k,i,j,I_QC)
+!          do iq = QWS, QWE
+!             ql = ql + QTRC(k,i,j,iq)
+!          end do
           qs = 0.0_RP
-          do iq = QIS, QIE
-             qs = qs + QTRC(k,i,j,iq)
-          end do
+          if ( I_QI > 0 ) qs = QTRC(k,i,j,I_QI)
+!          do iq = QIS, QIE
+!             qs = qs + QTRC(k,i,j,iq)
+!          end do
           qdry = 1.0_RP
           do iq = QQS, QQE
              qdry = qdry - QTRC(k,i,j,iq)
