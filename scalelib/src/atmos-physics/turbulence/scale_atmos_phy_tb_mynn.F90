@@ -228,6 +228,10 @@ contains
     use scale_atmos_saturation, only: &
        ATMOS_SATURATION_alpha, &
        ATMOS_SATURATION_pres2qsat => ATMOS_SATURATION_pres2qsat_all
+#ifdef MORE_HIST
+    use scale_history, only: &
+       HIST_in
+#endif
     implicit none
 
     real(RP), intent(out) :: qflx_sgs_momz(KA,IA,JA,3)
@@ -321,7 +325,13 @@ contains
     real(RP) :: flux_y(KA,IA,JA)
     real(RP) :: advc
 
+#ifdef MORE_HIST
+    real(RP) :: adv(KA,IA,JA)
+    real(RP) :: gen(KA,IA,JA)
+#endif
+
     real(RP) :: sw
+
 
     integer :: k, i, j, iq
     integer :: IIS, IIE, JJS, JJE
@@ -900,6 +910,10 @@ Rt = 0.0_RP
                  / ( GSQRT(KS,i,j,I_XYZ) * DENS(KS,i,j) )
           d(KS,i,j) = tke(KS,i,j) + dt * ( Nu(KS,i,j) * (dudz2(KS,i,j) - n2(KS,i,j)/Pr(KS,i,j)) &
                                      - advc )
+#ifdef MORE_HIST
+          adv(KS,i,j) = advc
+          gen(KS,i,j) = Nu(KS,i,j) * (dudz2(KS,i,j) - n2(KS,i,j)/Pr(KS,i,j))
+#endif
           do k = KS+1, KE_PBL-1
              advc = ( MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) &
                     * ( ( flux_x(k,i,j) - flux_x(k,i-1,j) ) * RCDX(i) &
@@ -909,6 +923,10 @@ Rt = 0.0_RP
              d(k,i,j) = tke(k,i,j) &
                   + dt * ( Nu(k,i,j) * (dudz2(k,i,j) - n2(k,i,j)/Pr(k,i,j)) &
                          - advc )
+#ifdef MORE_HIST
+             adv(k,i,j) = advc
+             gen(k,i,j) = Nu(k,i,j) * (dudz2(k,i,j) - n2(k,i,j)/Pr(k,i,j))
+#endif
           end do
           advc = ( MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) &
                  * ( ( flux_x(KE_PBL,i,j) - flux_x(KE_PBL,i-1,j) ) * RCDX(i) &
@@ -917,6 +935,10 @@ Rt = 0.0_RP
                  / ( GSQRT(KE_PBL,i,j,I_XYZ) * DENS(KE_PBL,i,j) )
           d(KE_PBL,i,j) = tke(KE_PBL,i,j) + dt * ( Nu(KE_PBL,i,j) * (dudz2(KE_PBL,i,j) - n2(KE_PBL,i,j)/Pr(KE_PBL,i,j)) &
                                              - advc )
+#ifdef MORE_HIST
+          adv(KE_PBL,i,j) = advc
+          gen(KE_PBL,i,j) = Nu(KE_PBL,i,j) * (dudz2(KE_PBL,i,j) - n2(KE_PBL,i,j)/Pr(KE_PBL,i,j))
+#endif
        end do
        end do
 
@@ -988,6 +1010,21 @@ Rt = 0.0_RP
     end do
     end do
 
+#ifdef MORE_HIST
+    adv(KE_PBL+1:KE,:,:) = 0.0_RP
+    gen(KE_PBL+1:KE,:,:) = 0.0_RP
+    dudz2(KE_PBL+1:KE,:,:) = 0.0_RP
+    l(KE_PBL+1:KE,:,:) = 0.0_RP
+    POTV(KE_PBL+1:KE,:,:) = 0.0_RP
+    POTL(KE_PBL+1:KE,:,:) = 0.0_RP
+    call HIST_in(adv, 'TKE_advc', 'advection of TKE', 'm2/s3', nohalo=.true.)
+    call HIST_in(gen, 'TKE_gen', 'generation of TKE', 'm2/s3', nohalo=.true.)
+    call HIST_in(dudz2, 'dUdZ2', 'dudz2', 'm2/s2', nohalo=.true.)
+    call HIST_in(l, 'L_mix', 'minxing length', 'm', nohalo=.true.)
+    call HIST_in(POTV, 'POTV', 'virtual potential temperature', 'K', nohalo=.true.)
+    call HIST_in(POTL, 'POTL', 'liquid potential temperature', 'K', nohalo=.true.)
+#endif
+
     return
   end subroutine ATMOS_PHY_TB_mynn
 
@@ -1045,7 +1082,9 @@ Rt = 0.0_RP
           int_q  = int_q + qdz
        end do
        ! LT
-       lt = max(0.23_RP * int_qz / (int_q + EPS), LT_min)
+       lt = min( max(0.23_RP * int_qz / (int_q + EPS), &
+                    LT_min), &
+                    ATMOS_PHY_TB_MYNN_Lt_MAX )
        rlt = 1.0_RP / lt
 
        us = ( SFLX_MU(i,j)**2 + SFLX_MV(i,j)**2 )**0.25_RP / DENS(KS,i,j) ! friction velocity
