@@ -856,9 +856,6 @@ Rt = 0.0_RP
 
        ! time integration tke
 
-       call COMM_vars8(tke, 1)
-       call COMM_wait (tke, 1)
-
        do j = JJS, JJE
        do i = IIS, IIE
        do k = KS , KE_PBL-1
