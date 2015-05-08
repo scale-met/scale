@@ -57,7 +57,7 @@ module scale_atmos_phy_tb_hybrid
        qflx_sgs_momz, qflx_sgs_momx, qflx_sgs_momy, & ! (out)
        qflx_sgs_rhot, qflx_sgs_rhoq,                & ! (out)
        tke,                                         & ! (inout)
-       nu_C, Ri, Pr,                                & ! (out) diagnostic variables
+       nu_C, Ri, Pr, N2,                            & ! (out) diagnostic variables
        MOMZ, MOMX, MOMY, RHOT, DENS, QTRC,          & ! (in)
        SFLX_MW, SFLX_MU, SFLX_MV, SFLX_SH, SFLX_QV, & ! (in)
        GSQRT, J13G, J23G, J33G, MAPF, dt            ) ! (in)
@@ -73,8 +73,9 @@ module scale_atmos_phy_tb_hybrid
 
        real(RP), intent(inout) :: tke (KA,IA,JA) ! TKE
        real(RP), intent(out)   :: nu_C(KA,IA,JA) ! eddy viscosity (center)
-       real(RP), intent(out)   :: Pr  (KA,IA,JA) ! Prantle number
        real(RP), intent(out)   :: Ri  (KA,IA,JA) ! Richardson number
+       real(RP), intent(out)   :: Pr  (KA,IA,JA) ! Prantle number
+       real(RP), intent(out)   :: N2  (KA,IA,JA) ! squared Brunt-Vaisala frequency
 
        real(RP), intent(in)  :: MOMZ(KA,IA,JA)
        real(RP), intent(in)  :: MOMX(KA,IA,JA)
@@ -208,7 +209,7 @@ contains
        qflx_sgs_momz, qflx_sgs_momx, qflx_sgs_momy, & ! (out)
        qflx_sgs_rhot, qflx_sgs_rhoq,                & ! (out)
        tke,                                         & ! (inout)
-       Nu, Ri, Pr,                                  & ! (out) diagnostic variables
+       Nu, Ri, Pr, N2,                              & ! (out) diagnostic variables
        MOMZ, MOMX, MOMY, RHOT, DENS, QTRC,          & ! (in)
        SFLX_MW, SFLX_MU, SFLX_MV, SFLX_SH, SFLX_QV, & ! (in)
        GSQRT, J13G, J23G, J33G, MAPF, dt            ) ! (in)
@@ -235,6 +236,7 @@ contains
     real(RP), intent(out) :: Nu(KA,IA,JA) ! eddy viscosity (center)
     real(RP), intent(out) :: Pr(KA,IA,JA) ! Plandtle number
     real(RP), intent(out) :: Ri(KA,IA,JA) ! Richardson number
+    real(RP), intent(out) :: N2(KA,IA,JA) ! squared Brunt-Vaisala frequency
 
     real(RP), intent(in)  :: MOMZ(KA,IA,JA)
     real(RP), intent(in)  :: MOMX(KA,IA,JA)
@@ -264,8 +266,9 @@ contains
 
     real(RP) :: w_tke (KA,IA,JA,2)
     real(RP) :: w_Nu(KA,IA,JA,2)
-    real(RP) :: w_Pr(KA,IA,JA,2)
     real(RP) :: w_Ri(KA,IA,JA,2)
+    real(RP) :: w_Pr(KA,IA,JA,2)
+    real(RP) :: w_N2(KA,IA,JA,2)
 
     integer :: k, i, j, iq
 
@@ -283,7 +286,7 @@ contains
          w_qflx_sgs_momy(:,:,:,:,1), w_qflx_sgs_rhot(:,:,:,:,1), & ! (out
          w_qflx_sgs_rhoq(:,:,:,:,:,1),                           & ! (out)
          w_tke(:,:,:,1),                                         & ! (inout)
-         w_Nu(:,:,:,1), w_Ri(:,:,:,1), w_Pr(:,:,:,1),            & ! (out)
+         w_Nu(:,:,:,1), w_Ri(:,:,:,1), w_Pr(:,:,:,1), w_N2(:,:,:,1), & ! (out)
          MOMZ, MOMX, MOMY, RHOT, DENS, QTRC,                     & ! (in)
          SFLX_MW, SFLX_MU, SFLX_MV, SFLX_SH, SFLX_QV,            & ! (in)
          GSQRT, J13G, J23G, J33G, MAPF, dt                       ) ! (in)
@@ -293,7 +296,7 @@ contains
          w_qflx_sgs_momy(:,:,:,:,2), w_qflx_sgs_rhot(:,:,:,:,2), & ! (out
          w_qflx_sgs_rhoq(:,:,:,:,:,2),                           & ! (out)
          w_tke(:,:,:,2),                                         & ! (inout)
-         w_Nu(:,:,:,2), w_Ri(:,:,:,2), w_Pr(:,:,:,2),            & ! (out)
+         w_Nu(:,:,:,2), w_Ri(:,:,:,2), w_Pr(:,:,:,2), w_N2(:,:,:,2), & ! (out)
          MOMZ, MOMX, MOMY, RHOT, DENS, QTRC,                     & ! (in)
          SFLX_MW, SFLX_MU, SFLX_MV, SFLX_SH, SFLX_QV,            & ! (in)
          GSQRT, J13G, J23G, J33G, MAPF, dt                       ) ! (in)
@@ -397,6 +400,15 @@ contains
     do k = KS, KE
        Pr(k,i,j) = w_Pr(k,i,j,1) * (1.0_RP - frac(i,j)) &
                  + w_Pr(k,i,j,2) * frac(i,j)
+    end do
+    end do
+    end do
+
+    do j = 1, JA
+    do i = 1, IA
+    do k = KS, KE
+       N2(k,i,j) = w_N2(k,i,j,1) * (1.0_RP - frac(i,j)) &
+                 + w_N2(k,i,j,2) * frac(i,j)
     end do
     end do
     end do

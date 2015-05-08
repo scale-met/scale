@@ -175,8 +175,9 @@ contains
     real(RP) :: QFLX_RHOT(KA,IA,JA,3)
     real(RP) :: QFLX_RHOQ(KA,IA,JA,3,QA)
 
-    real(RP) :: Ri(KA,IA,JA)
-    real(RP) :: Pr(KA,IA,JA)
+    real(RP) :: Ri(KA,IA,JA) ! Richardson number
+    real(RP) :: Pr(KA,IA,JA) ! Prandtl number
+    real(RP) :: N2(KA,IA,JA) ! squared Brunt-Vaisala frequency
 
     integer :: JJS, JJE
     integer :: IIS, IIE
@@ -197,6 +198,7 @@ contains
                           NU,        & ! [OUT]
                           Ri,        & ! [OUT]
                           Pr,        & ! [OUT]
+                          N2,        & ! [OUT]
                           MOMZ,      & ! [IN]
                           MOMX,      & ! [IN]
                           MOMY,      & ! [IN]
@@ -276,11 +278,11 @@ contains
        call COMM_vars8( TKE(:,:,:), 1 )
        call COMM_wait ( TKE(:,:,:), 1 )
 
-
        call HIST_in( TKE(:,:,:), 'TKE', 'turburent kinetic energy', 'm2/s2', nohalo=.true. )
        call HIST_in( NU (:,:,:), 'NU',  'eddy viscosity',           'm2/s' , nohalo=.true. )
        call HIST_in( Ri (:,:,:), 'Ri',  'Richardson number',        'NIL'  , nohalo=.true. )
        call HIST_in( Pr (:,:,:), 'Pr',  'Prantle number',           'NIL'  , nohalo=.true. )
+       call HIST_in( N2 (:,:,:), 'N2',  'squared Brunt-Vaisala frequency', '1/s2', nohalo=.true. )
 
        call HIST_in( MOMZ_t_TB(:,:,:), 'MOMZ_t_TB', 'MOMZ tendency (TB)', 'kg/m2/s2',  nohalo=.true. )
        call HIST_in( MOMX_t_TB(:,:,:), 'MOMX_t_TB', 'MOMX tendency (TB)', 'kg/m2/s2',  nohalo=.true. )

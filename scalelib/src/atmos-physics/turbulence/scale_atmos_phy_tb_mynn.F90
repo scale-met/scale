@@ -179,7 +179,7 @@ contains
        qflx_sgs_momz, qflx_sgs_momx, qflx_sgs_momy, & ! (out)
        qflx_sgs_rhot, qflx_sgs_rhoq,                & ! (out)
        tke,                                         & ! (inout)
-       Nu, Ri, Pr,                                  & ! (out) diagnostic variables
+       Nu, Ri, Pr, N2,                              & ! (out) diagnostic variables
        MOMZ, MOMX, MOMY, RHOT, DENS, QTRC,          & ! (in)
        SFLX_MW, SFLX_MU, SFLX_MV, SFLX_SH, SFLX_QV, & ! (in)
        GSQRT, J13G, J23G, J33G, MAPF, dt            ) ! (in)
@@ -238,8 +238,9 @@ contains
 
     real(RP), intent(inout) :: tke (KA,IA,JA) ! TKE
     real(RP), intent(out) :: Nu(KA,IA,JA) ! eddy viscosity (center)
-    real(RP), intent(out) :: Pr(KA,IA,JA) ! Plandtle number
     real(RP), intent(out) :: Ri(KA,IA,JA) ! Richardson number
+    real(RP), intent(out) :: Pr(KA,IA,JA) ! Plandtle number
+    real(RP), intent(out) :: N2(KA,IA,JA) ! squared Brunt-Vaisala frequency
 
     real(RP), intent(in)  :: MOMZ(KA,IA,JA)
     real(RP), intent(in)  :: MOMX(KA,IA,JA)
@@ -266,7 +267,6 @@ contains
     real(RP) :: phiN(KA,IA,JA)
 
 
-    real(RP) :: n2(KA,IA,JA) !< square of the Brunt-Vaisala frequency, N^2
     real(RP) :: sm(KA,IA,JA) !< stability function for velocity
     real(RP) :: sh(KA,IA,JA) !< stability function for scalars
     real(RP) :: l(KA,IA,JA) !< length scale L

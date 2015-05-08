@@ -48,7 +48,7 @@ module scale_atmos_phy_tb
        qflx_sgs_momz, qflx_sgs_momx, qflx_sgs_momy, & ! (out)
        qflx_sgs_rhot, qflx_sgs_rhoq,                & ! (out)
        tke,                                         & ! (inout)
-       nu_C, Ri, Pr,                                & ! (out) diagnostic variables
+       nu_C, Ri, Pr, N2,                            & ! (out) diagnostic variables
        MOMZ, MOMX, MOMY, RHOT, DENS, QTRC,          & ! (in)
        SFLX_MW, SFLX_MU, SFLX_MV, SFLX_SH, SFLX_QV, & ! (in)
        GSQRT, J13G, J23G, J33G, MAPF, dt            ) ! (in)
@@ -64,8 +64,9 @@ module scale_atmos_phy_tb
 
        real(RP), intent(inout) :: tke (KA,IA,JA) ! TKE
        real(RP), intent(out)   :: nu_C(KA,IA,JA) ! eddy viscosity (center)
-       real(RP), intent(out)   :: Pr  (KA,IA,JA) ! Prantle number
        real(RP), intent(out)   :: Ri  (KA,IA,JA) ! Richardson number
+       real(RP), intent(out)   :: Pr  (KA,IA,JA) ! Prantle number
+       real(RP), intent(out)   :: N2  (KA,IA,JA) ! squared Brunt-Vaisala frequency
 
        real(RP), intent(in)  :: MOMZ(KA,IA,JA)
        real(RP), intent(in)  :: MOMX(KA,IA,JA)
