@@ -90,6 +90,7 @@ module scale_atmos_phy_tb_mynn
   real(RP) :: ATMOS_PHY_TB_MYNN_NU_MAX = 10000_RP
   real(RP) :: ATMOS_PHY_TB_MYNN_KH_MIN = 1.E-6_RP
   real(RP) :: ATMOS_PHY_TB_MYNN_KH_MAX = 10000_RP
+  real(RP) :: ATMOS_PHY_TB_MYNN_Lt_MAX = 300_RP
 
   !-----------------------------------------------------------------------------
 contains
@@ -111,16 +112,18 @@ contains
     real(RP), intent(in) :: CDY(JA)
     real(RP), intent(in) :: CZ (KA,IA,JA)
 
-    integer ATMOS_PHY_TB_MYNN_KMAX_PBL !< number of layers for planetary boundary layer (must be equal or less than KMAX)
+    real(RP) :: ATMOS_PHY_TB_MYNN_PBL_MAX = 1e10_RP !< maximum height of the PBL
 
     NAMELIST / PARAM_ATMOS_PHY_TB_MYNN / &
          ATMOS_PHY_TB_MYNN_TKE_INIT, &
-         ATMOS_PHY_TB_MYNN_KMAX_PBL, &
+         ATMOS_PHY_TB_MYNN_PBL_MAX, &
          ATMOS_PHY_TB_MYNN_NU_MIN, &
          ATMOS_PHY_TB_MYNN_NU_MAX, &
          ATMOS_PHY_TB_MYNN_KH_MIN, &
-         ATMOS_PHY_TB_MYNN_KH_MAX
+         ATMOS_PHY_TB_MYNN_KH_MAX, &
+         ATMOS_PHY_TB_MYNN_Lt_MAX
 
+    integer :: k, i, j
     integer :: ierr
     !---------------------------------------------------------------------------
 
@@ -134,8 +137,6 @@ contains
     endif
 
 
-    ATMOS_PHY_TB_MYNN_KMAX_PBL = KMAX - 1
-
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_ATMOS_PHY_TB_MYNN,iostat=ierr)
@@ -147,12 +148,15 @@ contains
     endif
     if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_ATMOS_PHY_TB_MYNN)
 
-    if ( ATMOS_PHY_TB_MYNN_KMAX_PBL > KMAX-1 ) then
-       write(*,*) 'xxx ATMOS_PHY_TB_MYNN_KMAX_PBL must be equal or less than KMAX-1'
-       call PRC_MPIstop
-    end if
-    KE_PBL = ATMOS_PHY_TB_MYNN_KMAX_PBL + KHALO
-
+    do k = KS, KE-1
+       do j = JS, JE
+       do i = IS, IE
+          if ( ATMOS_PHY_TB_MYNN_PBL_MAX >= CZ(k,i,j) ) then
+             KE_PBL = k
+          end if
+       end do
+       end do
+    end do
 
     A1 = B1 * (1.0_RP - 3.0_RP * G1) / 6.0_RP
     A2 = 1.0_RP / (3.0_RP * G1 * B1**(1.0_RP/3.0_RP) * PrN )
