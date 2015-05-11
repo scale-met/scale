@@ -183,7 +183,7 @@ contains
        qflx_sgs_momz, qflx_sgs_momx, qflx_sgs_momy, & ! (out)
        qflx_sgs_rhot, qflx_sgs_rhoq,                & ! (out)
        tke,                                         & ! (inout)
-       Nu, Ri, Pr, N2,                              & ! (out) diagnostic variables
+       tke_t, Nu, Ri, Pr, N2,                       & ! (out) diagnostic variables
        MOMZ, MOMX, MOMY, RHOT, DENS, QTRC,          & ! (in)
        SFLX_MW, SFLX_MU, SFLX_MV, SFLX_SH, SFLX_QV, & ! (in)
        GSQRT, J13G, J23G, J33G, MAPF, dt            ) ! (in)
@@ -245,6 +245,7 @@ contains
     real(RP), intent(out) :: qflx_sgs_rhoq(KA,IA,JA,3,QA)
 
     real(RP), intent(inout) :: tke (KA,IA,JA) ! TKE
+    real(RP), intent(out) :: tke_t(KA,IA,JA) ! tendency of TKE
     real(RP), intent(out) :: Nu(KA,IA,JA) ! eddy viscosity (center)
     real(RP), intent(out) :: Ri(KA,IA,JA) ! Richardson number
     real(RP), intent(out) :: Pr(KA,IA,JA) ! Plandtle number
@@ -1003,10 +1004,10 @@ Rt = 0.0_RP
           end do
 #endif
           do k = KS, KE_PBL
-             tke(k,i,j) = max(tke_N(k,i,j), TKE_min)
+             tke_t(k,i,j) = ( max(tke_N(k,i,j), TKE_min) - tke(k,i,j) ) / dt
           end do
           do k = KE_PBL+1, KE
-             tke(k,i,j) = 0.0_RP
+             tke_t(k,i,j) = 0.0_RP
           end do
 
        end do
