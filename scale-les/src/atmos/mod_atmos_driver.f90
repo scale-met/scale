@@ -176,7 +176,7 @@ contains
   !-----------------------------------------------------------------------------
   !> advance atmospheric state
   subroutine ATMOS_driver
-    use scale_time, only: &
+    use mod_admin_time, only: &
        do_dyn    => TIME_DOATMOS_DYN,    &
        do_phy_mp => TIME_DOATMOS_PHY_MP, &
        do_phy_ae => TIME_DOATMOS_PHY_AE, &

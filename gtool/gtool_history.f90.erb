@@ -124,6 +124,8 @@ module gtool_history
   character(len=File_HMID)   :: HISTORY_INSTITUTION
   character(len=File_HMID)   :: HISTORY_TIME_UNITS
   character(len=File_HMID)   :: HISTORY_TIME_SINCE
+  real(DP)                   :: HISTORY_DTSEC
+  real(DP)                   :: HISTORY_STARTDAYSEC
 
   logical                    :: HISTORY_OUTPUT_STEP0  = .false. !> output value of step=0?
   real(DP)                   :: HISTORY_OUTPUT_START  = 0.0_DP  !> start time for output in second
@@ -133,24 +135,26 @@ module gtool_history
   character(len=File_HLONG)  :: History_req_basename(History_req_limit)
   character(len=File_HSHORT) :: History_req_item    (History_req_limit)
   real(DP)                   :: History_req_tintsec (History_req_limit)
+  integer                    :: History_req_tintstep(History_req_limit)
   logical                    :: History_req_tavg    (History_req_limit)
   logical                    :: History_req_zinterp (History_req_limit)
   integer                    :: History_req_dtype   (History_req_limit)
 
   integer                                 :: History_req_nmax = 0 !> number of requested item
   integer                                 :: History_id_count = 0 !> number of registered item
-  character(len=File_HSHORT), allocatable :: History_item   (:)
-  integer,                    allocatable :: History_fid    (:)
-  integer,                    allocatable :: History_vid    (:)
-  real(DP),                   allocatable :: History_tintsec(:)
-  logical,                    allocatable :: History_tavg   (:)
-  logical,                    allocatable :: History_zinterp(:)
-  real(DP),                   allocatable :: History_varsum (:,:)
-  integer,                    allocatable :: History_size   (:)
-  real(DP),                   allocatable :: History_tstart (:)
-  real(DP),                   allocatable :: History_tstrsec(:)
-  real(DP),                   allocatable :: History_tlstsec(:)
-  real(DP),                   allocatable :: History_tsumsec(:)
+  character(len=File_HSHORT), allocatable :: History_item    (:)
+  integer,                    allocatable :: History_fid     (:)
+  integer,                    allocatable :: History_vid     (:)
+  real(DP),                   allocatable :: History_tintsec (:)
+  integer,                    allocatable :: History_tintstep(:)
+  logical,                    allocatable :: History_tavg    (:)
+  logical,                    allocatable :: History_zinterp (:)
+  real(DP),                   allocatable :: History_varsum  (:,:)
+  integer,                    allocatable :: History_size    (:)
+  real(DP),                   allocatable :: History_tstart  (:)
+  integer,                    allocatable :: History_tstrstep(:)
+  integer,                    allocatable :: History_tlststep(:)
+  real(DP),                   allocatable :: History_tsumsec (:)
 
 
   real(DP), parameter  :: eps = 1.D-10 !> epsilon for timesec
@@ -174,7 +178,8 @@ contains
        title, source, institution,                         & ! (in)
        array_size,                                         & ! (in)
        master, myrank, rankidx,                            & ! (in)
-       time_units, time_since,                             & ! (in) optional
+       time_start, time_interval,                          & ! (in)
+       time_units, time_since,                             & ! (in)
        default_basename,                                   & ! (in) optional
        default_tinterval, default_tunit, default_taverage, & ! (in) optional
        default_zinterp,                                    & ! (in) optional
@@ -196,10 +201,12 @@ contains
     integer,          intent(in)           :: master
     integer,          intent(in)           :: myrank
     integer,          intent(in)           :: rankidx(:)
+    real(DP),         intent(in)           :: time_start
+    real(DP),         intent(in)           :: time_interval
     character(len=*), intent(in), optional :: time_units
     character(len=*), intent(in), optional :: time_since
     character(len=*), intent(in), optional :: default_basename
-    real(DP)        , intent(in), optional :: default_tinterval
+    real(DP),         intent(in), optional :: default_tinterval
     character(len=*), intent(in), optional :: default_tunit
     logical,          intent(in), optional :: default_taverage
     logical,          intent(in), optional :: default_zinterp
@@ -262,6 +269,8 @@ contains
     HISTORY_TITLE       = title
     HISTORY_SOURCE      = source
     HISTORY_INSTITUTION = institution
+    HISTORY_STARTDAYSEC = time_start
+    HISTORY_DTSEC       = time_interval
     if ( present(time_units) ) then
        HISTORY_TIME_UNITS  = time_units
     else
@@ -343,19 +352,20 @@ contains
        return
     endif
 
-    allocate( History_item   (History_req_nmax) ); History_item(:) = ''
-    allocate( History_fid    (History_req_nmax) )
-    allocate( History_vid    (History_req_nmax) )
-    allocate( History_tintsec(History_req_nmax) )
-    allocate( History_tavg   (History_req_nmax) )
-    allocate( History_zinterp(History_req_nmax) )
+    allocate( History_item    (History_req_nmax) ); History_item(:) = ''
+    allocate( History_fid     (History_req_nmax) )
+    allocate( History_vid     (History_req_nmax) )
+    allocate( History_tintsec (History_req_nmax) )
+    allocate( History_tintstep(History_req_nmax) )
+    allocate( History_tavg    (History_req_nmax) )
+    allocate( History_zinterp (History_req_nmax) )
 
-    allocate( History_varsum (array_size,History_req_nmax) )
-    allocate( History_size   (History_req_nmax) )
-    allocate( History_tstart (History_req_nmax) )
-    allocate( History_tstrsec(History_req_nmax) )
-    allocate( History_tlstsec(History_req_nmax) )
-    allocate( History_tsumsec(History_req_nmax) )
+    allocate( History_varsum  (array_size,History_req_nmax) )
+    allocate( History_size    (History_req_nmax) )
+    allocate( History_tstart  (History_req_nmax) )
+    allocate( History_tstrstep(History_req_nmax) )
+    allocate( History_tlststep(History_req_nmax) )
+    allocate( History_tsumsec (History_req_nmax) )
 
     if ( fid_conf > 0 ) rewind(fid_conf)
     memsize = 0
@@ -377,11 +387,19 @@ contains
        History_req_item    (n) = ITEM
        History_req_basename(n) = BASENAME
        call CalendarYmdhms2sec( History_req_tintsec(n), TINTERVAL, TUNIT )
+       History_req_tintstep(n) = int( History_req_tintsec(n) / HISTORY_DTSEC )
+
        History_req_tavg    (n) = TAVERAGE
        History_req_zinterp (n) = ZINTERP
 
        if ( History_req_tintsec(n) <= 0.D0 ) then
           write(message,*) 'xxx Not appropriate time interval. Check!', ITEM, TINTERVAL
+          call Log('E', message)
+       endif
+
+       if ( abs(History_req_tintsec(n)-real(History_req_tintstep(n),kind=DP)*HISTORY_DTSEC) > 0.D0 ) then
+          write(message,*) 'xxx time interval must be a multiple of delta t ', &
+                           History_req_tintsec(n), real(History_req_tintstep(n),kind=DP)*HISTORY_DTSEC
           call Log('E', message)
        endif
 
@@ -422,7 +440,6 @@ contains
        dims,       &
        desc,       &
        units,      &
-       time_start, &
        id,         &
        zinterp,    &
        existed,    &
@@ -440,7 +457,6 @@ contains
     character(len=*), intent(in)  :: dims(:)
     character(len=*), intent(in)  :: desc
     character(len=*), intent(in)  :: units
-    real(DP),         intent(in)  :: time_start
     integer,          intent(out) :: id
     logical,          intent(out) :: zinterp
     logical,          intent(out) :: existed
@@ -541,26 +557,27 @@ contains
              endif
 
              History_item    (id) = varname
-             History_tintsec (id) = History_req_tintsec(reqid)
-             History_tavg    (id) = History_req_tavg   (reqid)
-             History_zinterp (id) = History_req_zinterp(reqid)
+             History_tintsec (id) = History_req_tintsec (reqid)
+             History_tintstep(id) = History_req_tintstep(reqid)
+             History_tavg    (id) = History_req_tavg    (reqid)
+             History_zinterp (id) = History_req_zinterp (reqid)
 
              History_varsum(:,id) = 0.D0
 
              if ( HISTORY_OUTPUT_STEP0 ) then
-                History_tstrsec(id) = -History_tintsec(id)
+                History_tstrstep(id) = 1 - History_tintstep(id)
              else
-                History_tstrsec(id) = time_start
+                History_tstrstep(id) = 1
              endif
              if ( History_tavg(id) ) then
-                History_tstrsec(id) = time_start
+                History_tstrstep(id) = 1
              end if
              if ( History_output_start > 0.0_DP ) then
-                History_tstart(id) = time_start + History_output_start
+                History_tstart(id) = History_output_start
              else
-                History_tstart(id) = History_tstrsec(id)
+                History_tstart(id) = HISTORY_STARTDAYSEC
              end if
-             History_tlstsec (id) = History_tstrsec(id)
+             History_tlststep(id) = History_tstrstep(id)
              History_tsumsec (id) = 0.D0
 
              call FileAddVariable( History_vid(id),            & ! (out)
@@ -586,11 +603,13 @@ contains
              call Log('I', message)
              write(message,*) '] Unit                : ', trim(units)
              call Log('I', message)
-             write(message,*) '] Interval [sec]      : ', History_tintsec(id)
+             write(message,*) '] Interval [sec]      : ', History_tintsec (id)
              call Log('I', message)
-             write(message,*) '] Time Average?       : ', History_tavg   (id)
+             write(message,*) '] Interval [step]     : ', History_tintstep(id)
              call Log('I', message)
-             write(message,*) '] z* -> z conversion? : ', History_zinterp(id)
+             write(message,*) '] Time Average?       : ', History_tavg    (id)
+             call Log('I', message)
+             write(message,*) '] z* -> z conversion? : ', History_zinterp (id)
              call Log('I', message)
              call Log('I', '')
 
@@ -761,20 +780,20 @@ contains
   ! HistoryQuery
   subroutine HistoryQuery( &
        itemid,    &
-       time_next, &
+       step_next, &
        answer     )
     implicit none
 
-    integer,  intent(in)  :: itemid
-    real(DP), intent(in)  :: time_next
-    logical,  intent(out) :: answer
+    integer, intent(in)  :: itemid
+    integer, intent(in)  :: step_next
+    logical, intent(out) :: answer
     !---------------------------------------------------------------------------
 
     answer = .false.
 
     if    ( History_tavg(itemid) ) then
        answer = .true.
-    elseif( time_next - History_tstrsec(itemid) - History_tintsec(itemid) > -eps ) then
+    elseif( step_next == History_tstrstep(itemid) + History_tintstep(itemid) ) then
        answer = .true.
     endif
 
@@ -787,13 +806,13 @@ contains
 %   idx = ([":"]*n).join(",")
 %   ["SP", "DP"].each do |rp|
   subroutine HistoryPut<%=n%>DName<%=rp%>( &
-       varname,  &
-       time_now, &
-       var       )
+       varname,   &
+       step_next, &
+       var        )
     implicit none
 
     character(len=*), intent(in) :: varname
-    real(DP),         intent(in) :: time_now
+    integer,          intent(in) :: step_next
     real(<%=rp%>),         intent(in) :: var(<%=idx%>)
 
     integer :: itemid, n
@@ -808,7 +827,7 @@ contains
        endif
     enddo
 
-    call HistoryPut<%=n%>DId<%=rp%>(itemid, time_now, var)
+    call HistoryPut<%=n%>DId<%=rp%>(itemid, step_next, var)
 
     return
   end subroutine HistoryPut<%=n%>DName<%=rp%>
@@ -817,12 +836,12 @@ contains
   ! interface HistoryPut(by ID)
   subroutine HistoryPut<%=n%>DId<%=rp%>( &
        itemid,    &
-       time_next, &
+       step_next, &
        var        )
     implicit none
 
     integer,  intent(in) :: itemid
-    real(DP), intent(in) :: time_next
+    integer,  intent(in) :: step_next
     real(<%=rp%>), intent(in) :: var(<%=idx%>)
 
     real(DP) :: dt
@@ -834,7 +853,7 @@ contains
     if ( itemid < 0 ) return
 
     ijk = shape(var)
-    dt  = time_next - History_tlstsec(itemid)
+    dt  = ( step_next - History_tlststep(itemid) ) * HISTORY_DTSEC
 
     if ( dt < eps .AND. ( .NOT. History_tavg(itemid) ) ) then
        write(message,*) 'xxx History variable was put two times before output!: ', &
@@ -864,9 +883,9 @@ contains
 % end
     endif
 
-    History_size   (itemid) = idx
-    History_tlstsec(itemid) = time_next
-    History_tsumsec(itemid) = History_tsumsec(itemid) + dt
+    History_size    (itemid) = idx
+    History_tlststep(itemid) = step_next
+    History_tsumsec (itemid) = History_tsumsec(itemid) + dt
 
     return
   end subroutine HistoryPut<%=n%>DId<%=rp%>
@@ -877,15 +896,15 @@ contains
   ! HistoryWrite
   subroutine HistoryWrite( &
        itemid,  &
-       time_now )
+       step_now )
     use dc_calendar, only: &
        CalendarSec2ymdhms
     use gtool_file, only: &
        FileWrite
     implicit none
 
-    integer,  intent(in) :: itemid
-    real(DP), intent(in) :: time_now
+    integer, intent(in) :: itemid
+    integer, intent(in) :: step_now
 
     integer  :: isize
     real(DP) :: time_str, time_end
@@ -895,11 +914,11 @@ contains
 
     if( History_id_count == 0 ) return
 
-    if ( time_now - History_tstrsec(itemid) - History_tintsec(itemid) <= -eps ) then
+    if ( step_now < History_tstrstep(itemid) + History_tintstep(itemid) ) then
        return
     endif
 
-    if ( History_tlstsec(itemid) - History_tstrsec(itemid) < eps ) then
+    if ( History_tlststep(itemid) == History_tstrstep(itemid) ) then
        write(message,*) 'xxx History variable was never put after the last output!: ', &
                         trim(History_item(itemid))
        if ( HISTORY_ERROR_PUTMISS ) then
@@ -921,12 +940,12 @@ contains
        call HistoryOutputList
 
        if ( HISTORY_OUTPUT_STEP0 ) then
-          History_tstrsec(itemid) = time_now
+          History_tstrstep(itemid) = step_now
        endif
     endif
 
-    time_str = History_tstrsec(itemid)
-    time_end = time_now
+    time_str = HISTORY_STARTDAYSEC + real(History_tstrstep(itemid)-1,kind=DP) * HISTORY_DTSEC
+    time_end = HISTORY_STARTDAYSEC + real(step_now-1                ,kind=DP) * HISTORY_DTSEC
 
     ! convert time units
     call CalendarSec2ymdhms( sec_str, time_str, HISTORY_TIME_UNITS )
@@ -943,8 +962,8 @@ contains
     end if
 
     History_varsum(:,itemid) = 0.0_DP
-    History_tstrsec (itemid) = time_now
-    History_tlstsec (itemid) = time_now
+    History_tstrstep(itemid) = step_now
+    History_tlststep(itemid) = step_now
     History_tsumsec (itemid) = 0.0_DP
 
     return
@@ -953,16 +972,16 @@ contains
   !-----------------------------------------------------------------------------
   ! HistoryWritaAll
   subroutine HistoryWriteAll( &
-       time_now )
+       step_now )
     implicit none
 
-    real(DP), intent(in) :: time_now
+    integer, intent(in) :: step_now
 
     integer :: n
     !---------------------------------------------------------------------------
 
     do n = 1, History_id_count
-       call HistoryWrite( n, time_now )
+       call HistoryWrite( n, step_now )
     enddo
 
     return
@@ -1016,14 +1035,14 @@ contains
     call Log('I', message)
     write(message,*) '*** Number of history item :', History_req_nmax
     call Log('I', message)
-    write(message,*) 'NAME            :size    :interval[sec]:timeavg?:zinterp?'
+    write(message,*) 'NAME            :size    :interval[sec]:  [step]:timeavg?:zinterp?'
     call Log('I', message)
     write(message,*) '============================================================================'
     call Log('I', message)
 
     do n = 1, History_id_count
-       write(message,'(1x,A,1x,I8,1x,f13.3,1x,L8,1x,L8)') &
-                     History_item(n), History_size(n), History_tintsec(n), History_tavg(n), History_zinterp(n)
+       write(message,'(1x,A,1x,I8,1x,f13.3,1x,I8,1x,L8,1x,L8)') &
+                     History_item(n), History_size(n), History_tintsec(n), History_tintstep(n), History_tavg(n), History_zinterp(n)
        call Log('I', message)
     enddo
 

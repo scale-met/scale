@@ -115,8 +115,7 @@ contains
        REAL_lon
     use scale_time, only: &
        dt_RD => TIME_DTSEC_ATMOS_PHY_RD, &
-       TIME_NOWDATE,                     &
-       TIME_DOATMOS_PHY_RD               !< execute physics(radiation   )?
+       TIME_NOWDATE
     use scale_landuse, only: &
        LANDUSE_fact_ocean, &
        LANDUSE_fact_land,  &
@@ -131,6 +130,8 @@ contains
    use scale_atmos_phy_rd_common, only: &
        I_SW, &
        I_LW
+    use mod_admin_time, only: &
+       TIME_DOATMOS_PHY_RD !< execute physics(radiation)
     use mod_atmos_phy_sf_vars, only: &
        SFC_TEMP   => ATMOS_PHY_SF_SFC_TEMP,  &
        SFC_albedo => ATMOS_PHY_SF_SFC_albedo
