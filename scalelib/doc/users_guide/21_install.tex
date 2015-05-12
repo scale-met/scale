@@ -47,20 +47,22 @@ SCALEライブラリのインストールに必要な環境、ライブラリの
   scale/
 \end{verbatim}
 というディレクトリができる．
-以降の説明で\verb|${TOPDIR}|は，scaleディレクトリが存在する絶対PATHを指す．
-\begin{verbatim}
-  ${TOPDIR}/scale/
-\end{verbatim}
-
 
 現実大気実験のシミュレーションを行う場合，SCALE本体に加えて境界値データが必要になる．
 本チュートリアル用の気象場のデータ，日本領域の地形・土地利用のデータを\\
  \url{http://scale.aics.riken.jp/download/tutorial_data.tar.gz}\\
-より入手し，\verb|${TOPDIR}|の下に展開しておく．
+より入手し，チュートリアルの入力ファイル用ディレクトリ
 \begin{verbatim}
-  ${TOPDIR}/tutorial_data/input_atom/    <- 気象場データ
-  ${TOPDIR}/tutorial_data/input_topo/    <- 地形データ
-  ${TOPDIR}/tutorial_data/input_landuse/ <- 土地利用データ
+  scale/scale-les/test/tutorial/data/
+\end{verbatim}
+の下に展開しておく．
+
+以降の説明で\verb|${TOPDIR}|は，\verb|scale/scale-les/test/tutorial/|がある絶対PATHを指す．
+
+\begin{verbatim}
+  ${TOPDIR}/data/tutorial_data/input_atom/    <- 気象場データ
+  ${TOPDIR}/data/tutorial_data/input_topo/    <- 地形データ
+  ${TOPDIR}/data/tutorial_data/input_landuse/ <- 土地利用データ
 \end{verbatim}
 \verb|tutorial_data/|には，本チュートリアルに必要な最低限のデータのみが納めされているため，
 その他の設定で実験を行う場合には別途，気象場，地形，および土地利用データが必要となる．
@@ -95,7 +97,7 @@ HDF5，netcdf4ともに\verb|/usr|の下にインストールされている場�
 
 下記のディレクトリに移動して，makeコマンドによってコンパイルを行う．
 \begin{verbatim}
- $ cd ${TOPDIR}/scale/scale-les/test/tutorial/bin
+ $ cd ${TOPDIR}/bin
  $ make -j 4
 \end{verbatim}
 \verb|make|のあとの \verb|"-j 4"| は，並列コンパイルを指示するオプションで，
@@ -113,7 +115,7 @@ HDF5，netcdf4ともに\verb|/usr|の下にインストールされている場�
 \begin{itemize}
 \item SCALEライブラリは，scaleのTOPディレクトリ直下の
  \verb|scale/scalelib/|というディレクトリ内でコンパイルとアーカイブが行われ，
- \verb|"./lib"|という名前の隠しディレクトリとして
+ \verb|".lib"|という名前の隠しディレクトリとして
  \verb|bin/|ディレクトリ内へコピーされている．
 \item Debugモードでコンパイルしたい場合や，
  コンパイルオプションを変更したい場合は，

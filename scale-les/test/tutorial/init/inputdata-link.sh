@@ -4,7 +4,7 @@
 #   2009/10/26 --- Ryuji Yoshida.
 #   2014/07/08 --- Tsuyoshi Yamaura
 #-----------------------------------------
-dir='../../../../../tutorial_data/input_atom'
+dir='../data/tutorial_data/input_atom'
 ftype='peall'
 #
 dt=86400

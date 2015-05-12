@@ -1,29 +1,9 @@
-\section{Running the SCALE-LES}
-%####################################################################################
-
-\subsection{モデル実行方法の概要}
+\section{現実大気実験の実行方法}
 %====================================================================================
 
-SCALE-LESモデルの実行過程は，Fig. \ref{fig:howto}に示されるように
-\begin{enumerate}
-\item pp : 地形・海陸分布データの作成
-\item init : 初期値・境界値データの作成
-\item run : 時間積分を行う（モデル本体の実行）
-\end{enumerate}
-といった手順で実行する．
-以降，この順序でチュートリアルの説明を進める．
 このチュートリアルでは，Fig. \ref{fig:domain}に示した日本域を対象とした
 現実大気実験を行う．
 計算領域（ドメイン）の設定はTable \ref{tab:grids}のようになっている．
-
-
-\begin{figure}[h]
-\begin{center}
-  \includegraphics[width=0.9\hsize]{./figure/how_to_run.eps}\\
-  \caption{SCALE-LESモデルの実行過程}
-  \label{fig:howto}
-\end{center}
-\end{figure}
 
 \begin{figure}[h]
 \begin{center}
@@ -50,14 +30,12 @@ SCALE-LESモデルの実行過程は，Fig. \ref{fig:howto}に示されるよう
 \end{table}
 
 
-\subsection{現実大気実験の実行方法}
-%====================================================================================
 
-\subsubsection{地形・土地利用データの作成：pp}
+\subsection{地形・土地利用データの作成：pp}
 %-----------------------------------------------------------------------------------
 
 ここでは，\ref{sec:source_code}節でダウンロードした\verb|tutorial_data|は，
-\verb|${TOPDIR}|の下に展開されていると想定している．
+\verb|${TOPDIR}/data/|の下に展開されていると想定している．
 
 まず，ppディレクトリへ移動する．
 ppでは現実実験のための地形データ、土地利用データを作成する．
@@ -85,9 +63,9 @@ Appendix \ref{app:namelist}を参照されたい．
 
 次に，コンパイル済みのバイナリと入力データをppディレクトリへリンクする．
 \begin{verbatim}
- $ ln -s ${TOPDIR}/scale/scale-les/test/tutorial/bin/scale-les_pp ./
- $ ln -s ${TOPDIR}/tutorial_data/input_topo    ./
- $ ln -s ${TOPDIR}/tutorial_data/input_landuse ./
+ $ ln -s ${TOPDIR}/bin/scale-les_pp ./
+ $ ln -s ${TOPDIR}/data/tutorial_data/data/input_topo    ./
+ $ ln -s ${TOPDIR}/data/tutorial_data/data/input_landuse ./
 \end{verbatim}
 今回は，Table \ref{tab:grids}に示されているように，
 9つのMPIプロセスを使用する設定なので次のように実行する．
@@ -108,7 +86,7 @@ $ gpview landuse_d01.pe00000*@FRAC_LAND --aspect=1
 \end{verbatim}
 
 
-\subsubsection{初期値・境界値データの作成：init}
+\subsection{初期値・境界値データの作成：init}
 %-----------------------------------------------------------------------------------
 
 init では，SCALE計算に必要な初期値・境界値データを作成する．
@@ -152,14 +130,14 @@ NICAMモデルのnetcdf形式データのフォーマットで読み込むこと
 
 次に，コンパイル済みのバイナリをinitディレクトリへリンクする．
 \begin{verbatim}
- $ ln -s ${TOPDIR}/scale/scale-les/test/tutorial/bin/scale-les_init ./
+ $ ln -s ${TOPDIR}/bin/scale-les_init ./
 \end{verbatim}
 入力データはinitディレクトリの中に準備されている，\verb|"inputdata-link.sh"|を用いてリンクする．
 \begin{verbatim}
  $ sh inputdata-link.sh
 \end{verbatim}
 としてスクリプトを実行することで，気象場の入力データがリンクされ，initディレクトリ内に下記のファイルがリンクされる．
-このスクリプトにあるstart dateとend dateの設定項目を実験設定に対応するように編集するが、ここでは，start dateは1999/05/05 00:00:00，end dateは1999/05/06 00:00:00と設定している．もし，\verb|tutorial_data|を\verb|${TOPDIR}|以外の場所に展開している場合は，スクリプト内の
+このスクリプトにあるstart dateとend dateの設定項目を実験設定に対応するように編集するが、ここでは，start dateは1999/05/05 00:00:00，end dateは1999/05/06 00:00:00と設定している．もし，\verb|tutorial_data|を\verb|${TOPDIR}/data|以外の場所に展開している場合は，スクリプト内の
 \verb|"dir"|の項目も適切なディレクトリに変更すること．下記ファイルにリンクが張れれば成功．
 {\small
 \begin{verbatim}
@@ -177,8 +155,8 @@ ms_pres_00001.peall.nc  ms_v_00001.peall.nc    ss_t2m_00001.peall.nc
 
 次に、陸面過程や放射過程のモデルを起動するためのパラメータファイルにリンクをはる．
 \begin{verbatim}
- $ ln -s ${TOPDIR}/scale/scale-les/test/data/land/*  ./
- $ ln -s ${TOPDIR}/scale/scale-les/test/data/rad/*   ./
+ $ ln -s scale/scale-les/test/data/land/*  ./
+ $ ln -s scale/scale-les/test/data/rad/*   ./
 \end{verbatim}
 上の行のリンクコマンドによって陸面過程のパラメータファイルがリンクされ，
 下の行のコマンドによって放射過程のパラメータファイルがリンクされる．
@@ -213,7 +191,7 @@ $ gpvect --scalar --slice z=1500 --nocont --aspect=1 --range=0.001:0.015        
 \end{figure}
 
 
-\subsubsection{時間積分を行う：run}
+\subsection{時間積分を行う：run}
 %-----------------------------------------------------------------------------------
 
 ここではいよいよSCALE-LESモデルを実行する．
@@ -343,15 +321,15 @@ SCALE-LESモデルでは，そのほかの物理過程についても細かく�
 次に，コンパイル済みのバイナリをrunディレクトリへリンクする．
 
 \begin{verbatim}
-  $ ln -s ${TOPDIR}/scale/scale-les/test/tutorial/bin/scale-les ./
+  $ ln -s ${TOPDIR}/bin/scale-les ./
 \end{verbatim}
 
 また，前節と同様に陸面過程や放射過程のモデルを起動するためのパラメータファイルも
 リンクしておく．
 
 \begin{verbatim}
-  $ ln -s ${TOPDIR}/scale/scale-les/test/data/land/*  ./
-  $ ln -s ${TOPDIR}/scale/scale-les/test/data/rad/*   ./
+  $ ln -s scale/scale-les/test/data/land/*  ./
+  $ ln -s scale/scale-les/test/data/rad/*   ./
 \end{verbatim}
 上の行のリンクコマンドによって陸面過程のパラメータファイルがリンクされ，
 下の行のコマンドによって放射過程のパラメータファイルがリンクされる．
