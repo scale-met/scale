@@ -369,7 +369,7 @@ contains
     !########## Lateral/Top Boundary Condition ###########
     if ( ATMOS_BOUNDARY_UPDATE_FLAG ) then
        ! If this run is parent of online nesting, boundary data must be sent
-       call ATMOS_BOUNDARY_finalize( DENS, MOMZ, MOMX, MOMY, RHOT, QTRC ) ! (in)
+       call ATMOS_BOUNDARY_finalize
 
        ! Finialize Inter-Communicators
        call NEST_COMM_disconnect

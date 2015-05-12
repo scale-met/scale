@@ -83,7 +83,8 @@ module scale_atmos_boundary
   private :: ATMOS_BOUNDARY_initialize_file
   private :: ATMOS_BOUNDARY_initialize_online
   private :: ATMOS_BOUNDARY_update_file
-  private :: ATMOS_BOUNDARY_update_online
+  private :: ATMOS_BOUNDARY_update_online_parent
+  private :: ATMOS_BOUNDARY_update_online_daughter
   private :: ATMOS_BOUNDARY_send
   private :: ATMOS_BOUNDARY_recv
 
@@ -168,7 +169,6 @@ module scale_atmos_boundary
   integer,               private :: ATMOS_BOUNDARY_START_DATE(6) = (/ -9999, 0, 0, 0, 0, 0 /) ! boundary initial date
 
   integer,               private :: now_step
-  real(DP),              private :: integrated_sec    = 0.0_DP
   integer,               private :: boundary_timestep = 0
   logical,               private :: ATMOS_BOUNDARY_LINEAR_V = .false.  ! linear or non-linear profile of relax region
   logical,               private :: ATMOS_BOUNDARY_LINEAR_H = .true.   ! linear or non-linear profile of relax region
@@ -196,11 +196,7 @@ contains
        RHOT, &
        QTRC  )
     use scale_process, only: &
-       PRC_MPIstop, &
-       PRC_HAS_W, &
-       PRC_HAS_E, &
-       PRC_HAS_S, &
-       PRC_HAS_N
+       PRC_MPIstop
     use scale_comm, only: &
        COMM_FILL_BND
     use scale_const, only: &
@@ -472,6 +468,17 @@ contains
     if ( l_bnd ) then
        if( IO_L ) write(IO_FID_LOG,*) '*** lateral boundary increment type                 :', ATMOS_BOUNDARY_increment_TYPE
     endif
+
+    if ( ATMOS_BOUNDARY_UPDATE_FLAG ) then
+
+       call history_bnd( &
+            ATMOS_BOUNDARY_DENS, &
+            ATMOS_BOUNDARY_VELZ, &
+            ATMOS_BOUNDARY_VELX, &
+            ATMOS_BOUNDARY_VELY, &
+            ATMOS_BOUNDARY_POTT, &
+            ATMOS_BOUNDARY_QTRC )
+    end if
 
     return
   end subroutine ATMOS_BOUNDARY_setup
@@ -1183,18 +1190,15 @@ contains
     use scale_const, only: &
        EPS => CONST_EPS
     use scale_process, only: &
-       PRC_myrank, &
        PRC_MPIstop
     use scale_time, only: &
        TIME_NOWDATE,      &
        TIME_OFFSET_YEAR,  &
-       TIME_DTSEC,        &
-       TIME_NOWDAYSEC
+       TIME_DTSEC
     use scale_calendar, only: &
        CALENDAR_date2daysec,    &
        CALENDAR_combine_daysec
     implicit none
-    real(RP) :: reference_atmos(KMAX,IMAXB,JMAXB) !> restart file (no HALO)
 
     real(RP) :: inc_DENS(KA,IA,JA)        ! damping coefficient for DENS [0-1]
     real(RP) :: inc_VELZ(KA,IA,JA)        ! damping coefficient for VELZ [0-1]
@@ -1260,32 +1264,10 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '+++ BOUNDARY FILLGAPS STEPS:', fillgaps_steps
 
     ! read boundary data from input file
-    call FileRead( reference_atmos(:,:,:), bname, 'DENS', boundary_timestep, PRC_myrank )
-    ATMOS_BOUNDARY_ref_DENS(KS:KE,ISB:IEB,JSB:JEB,ref_now) = reference_atmos(:,:,:)
-    call FileRead( reference_atmos(:,:,:), bname, 'VELX', boundary_timestep, PRC_myrank )
-    ATMOS_BOUNDARY_ref_VELX(KS:KE,ISB:IEB,JSB:JEB,ref_now) = reference_atmos(:,:,:)
-    call FileRead( reference_atmos(:,:,:), bname, 'VELY', boundary_timestep, PRC_myrank )
-    ATMOS_BOUNDARY_ref_VELY(KS:KE,ISB:IEB,JSB:JEB,ref_now) = reference_atmos(:,:,:)
-    call FileRead( reference_atmos(:,:,:), bname, 'POTT', boundary_timestep, PRC_myrank )
-    ATMOS_BOUNDARY_ref_POTT(KS:KE,ISB:IEB,JSB:JEB,ref_now) = reference_atmos(:,:,:)
-    do iq = 1, BND_QA
-       call FileRead( reference_atmos(:,:,:), bname, AQ_NAME(iq), boundary_timestep, PRC_myrank )
-       ATMOS_BOUNDARY_ref_QTRC(KS:KE,ISB:IEB,JSB:JEB,iq,ref_now) = reference_atmos(:,:,:)
-    end do
+    call ATMOS_BOUNDARY_update_file( ref_now )
 
     boundary_timestep = boundary_timestep + 1
-    call FileRead( reference_atmos(:,:,:), bname, 'DENS', boundary_timestep, PRC_myrank )
-    ATMOS_BOUNDARY_ref_DENS(KS:KE,ISB:IEB,JSB:JEB,ref_new) = reference_atmos(:,:,:)
-    call FileRead( reference_atmos(:,:,:), bname, 'VELX', boundary_timestep, PRC_myrank )
-    ATMOS_BOUNDARY_ref_VELX(KS:KE,ISB:IEB,JSB:JEB,ref_new) = reference_atmos(:,:,:)
-    call FileRead( reference_atmos(:,:,:), bname, 'VELY', boundary_timestep, PRC_myrank )
-    ATMOS_BOUNDARY_ref_VELY(KS:KE,ISB:IEB,JSB:JEB,ref_new) = reference_atmos(:,:,:)
-    call FileRead( reference_atmos(:,:,:), bname, 'POTT', boundary_timestep, PRC_myrank )
-    ATMOS_BOUNDARY_ref_POTT(KS:KE,ISB:IEB,JSB:JEB,ref_new) = reference_atmos(:,:,:)
-    do iq = 1, BND_QA
-       call FileRead( reference_atmos(:,:,:), bname, AQ_NAME(iq), boundary_timestep, PRC_myrank )
-       ATMOS_BOUNDARY_ref_QTRC(KS:KE,ISB:IEB,JSB:JEB,iq,ref_new) = reference_atmos(:,:,:)
-    end do
+    call ATMOS_BOUNDARY_update_file( ref_new )
 
     ! copy now to old
     do j = 1, JA
@@ -1301,11 +1283,6 @@ contains
     end do
     end do
     end do
-
-    ! fill HALO in reference
-    call ATMOS_BOUNDARY_ref_fillhalo( ref_old )
-    call ATMOS_BOUNDARY_ref_fillhalo( ref_now )
-    call ATMOS_BOUNDARY_ref_fillhalo( ref_new )
 
     ! set boundary data
     do j = 1, JA
@@ -1374,11 +1351,9 @@ contains
   !> Initialize boundary value for real case experiment [online daughter]
   subroutine ATMOS_BOUNDARY_initialize_online
     use scale_process, only: &
-       PRC_myrank, &
        PRC_MPIstop
     use scale_time, only: &
        TIME_DTSEC,        &
-       TIME_NOWDAYSEC,    &
        TIME_NSTEP
     use scale_grid_nest, only: &
        NEST_COMM_recvwait_issue, &
@@ -1392,7 +1367,7 @@ contains
     integer, parameter  :: handle = 2
 
     ! works
-    integer  :: i, j, k, iq, ierr
+    integer  :: i, j, k, iq
     !---------------------------------------------------------------------------
 
     ATMOS_BOUNDARY_UPDATE_DT = PARENT_DTSEC(handle)
@@ -1409,16 +1384,13 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '+++ BOUNDARY TIMESTEP NUMBER FOR INIT:', boundary_timestep
 
     call NEST_COMM_recvwait_issue( handle, NESTQA )
-    call ATMOS_BOUNDARY_recv( ref_now )
+
+    call ATMOS_BOUNDARY_update_online_daughter( ref_now )
 
     boundary_timestep = boundary_timestep + 1
     if( IO_L ) write(IO_FID_LOG,*) '+++ BOUNDARY TIMESTEP NUMBER FOR INIT:', boundary_timestep
 
-    call NEST_COMM_recvwait_issue( handle, NESTQA )
-    call ATMOS_BOUNDARY_recv( ref_new )
-
-    ! cast receive-buffers on ahead for the next communication
-    call NEST_COMM_recvwait_issue( handle, NESTQA )
+    call ATMOS_BOUNDARY_update_online_daughter( ref_new )
 
     ! copy now to old
     do j = 1, JA
@@ -1434,11 +1406,6 @@ contains
     end do
     end do
     end do
-
-    ! fill HALO in reference
-    call ATMOS_BOUNDARY_ref_fillhalo( ref_old )
-    call ATMOS_BOUNDARY_ref_fillhalo( ref_now )
-    call ATMOS_BOUNDARY_ref_fillhalo( ref_new )
 
     ! set boundary data
     do j = 1, JA
@@ -1510,21 +1477,12 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Finalize boundary value
-  subroutine ATMOS_BOUNDARY_finalize( &
-       DENS, MOMZ, MOMX, MOMY, RHOT, QTRC )
+  subroutine ATMOS_BOUNDARY_finalize
     use scale_grid_nest, only: &
        NEST_COMM_recvwait_issue, &
        NEST_COMM_recv_cancel,    &
        NESTQA => NEST_BND_QA
     implicit none
-
-    ! arguments
-    real(RP), intent(in) :: DENS(KA,IA,JA)
-    real(RP), intent(in) :: MOMZ(KA,IA,JA)
-    real(RP), intent(in) :: MOMX(KA,IA,JA)
-    real(RP), intent(in) :: MOMY(KA,IA,JA)
-    real(RP), intent(in) :: RHOT(KA,IA,JA)
-    real(RP), intent(in) :: QTRC(KA,IA,JA,QA)
 
     ! works
     integer :: handle
@@ -1548,22 +1506,13 @@ contains
   subroutine ATMOS_BOUNDARY_update( &
        DENS, MOMZ, MOMX, MOMY, RHOT, QTRC )
     use scale_process, only: &
-       PRC_myrank,  &
        PRC_MPIstop, &
        PRC_HAS_W,   &
        PRC_HAS_E,   &
        PRC_HAS_S,   &
        PRC_HAS_N
-    use scale_const, only: &
-       EPS => CONST_EPS
-    use scale_history, only: &
-       HIST_in
-    use scale_time, only: &
-       TIME_DTSEC,     &
-       TIME_NOWDAYSEC
     use scale_grid_nest, only: &
        ONLINE_USE_VELZ,       &
-       NESTQA => NEST_BND_QA, &
        NEST_COMM_test
     implicit none
 
@@ -1587,8 +1536,7 @@ contains
 
     if ( do_parent_process ) then !online [parent]
        ! should be called every time step
-       handle = 1
-       call ATMOS_BOUNDARY_update_online( DENS,MOMZ,MOMX,MOMY,RHOT,QTRC,handle )
+       call ATMOS_BOUNDARY_update_online_parent( DENS,MOMZ,MOMX,MOMY,RHOT,QTRC )
     endif
 
     if ( l_bnd ) then
@@ -1600,10 +1548,9 @@ contains
           call update_ref_index
 
           if ( do_daughter_process ) then !online [daughter]
-             handle = 2
-             call ATMOS_BOUNDARY_update_online( DENS,MOMZ,MOMX,MOMY,RHOT,QTRC,handle )
+             call ATMOS_BOUNDARY_update_online_daughter( ref_new )
           else
-             call ATMOS_BOUNDARY_update_file
+             call ATMOS_BOUNDARY_update_file( ref_new )
           end if
        end if
 
@@ -1883,14 +1830,12 @@ contains
        call PRC_MPIstop
     end if
 
-    call HIST_in( ATMOS_BOUNDARY_DENS(:,:,:), 'DENS_BND', 'Boundary Density',               'kg/m3'             )
-    call HIST_in( ATMOS_BOUNDARY_VELZ(:,:,:), 'VELZ_BND', 'Boundary velocity z-direction',  'm/s',  zdim='half' )
-    call HIST_in( ATMOS_BOUNDARY_VELX(:,:,:), 'VELX_BND', 'Boundary velocity x-direction',  'm/s',  xdim='half' )
-    call HIST_in( ATMOS_BOUNDARY_VELY(:,:,:), 'VELY_BND', 'Boundary velocity y-direction',  'm/s',  ydim='half' )
-    call HIST_in( ATMOS_BOUNDARY_POTT(:,:,:), 'POTT_BND', 'Boundary potential temperature', 'K'                 )
-    do iq = 1, BND_QA
-       call HIST_in( ATMOS_BOUNDARY_QTRC(:,:,:,iq), trim(AQ_NAME(iq))//'_BND', 'Boundary '//trim(AQ_NAME(iq)), 'kg/kg' )
-    enddo
+    call history_bnd( ATMOS_BOUNDARY_DENS, &
+                      ATMOS_BOUNDARY_VELZ, &
+                      ATMOS_BOUNDARY_VELX, &
+                      ATMOS_BOUNDARY_VELY, &
+                      ATMOS_BOUNDARY_POTT, &
+                      ATMOS_BOUNDARY_QTRC )
 
     ! To be enable to do asynchronous communicaton
     if ( do_parent_process ) then !online [parent]
@@ -1907,20 +1852,19 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Update reference boundary from file
-  subroutine ATMOS_BOUNDARY_update_file
+  subroutine ATMOS_BOUNDARY_update_file( ref )
     use gtool_file, only: &
        FileRead
-    use scale_history, only: &
-       HIST_in
     use scale_process, only: &
        PRC_myrank
     implicit none
 
+    integer, intent(in) :: ref
     real(RP) :: reference_atmos(KMAX,IMAXB,JMAXB) !> restart file (no HALO)
 
     character(len=H_LONG) :: bname
 
-    integer :: i, j, k, iq
+    integer :: iq
     !---------------------------------------------------------------------------
 
     if (IO_L) write(IO_FID_LOG,*)"*** Atmos Boundary: read from boundary file(timestep=", boundary_timestep, ")"
@@ -1928,44 +1872,33 @@ contains
     bname = ATMOS_BOUNDARY_IN_BASENAME
 
     call FileRead( reference_atmos(:,:,:), bname, 'DENS', boundary_timestep, PRC_myrank )
-    ATMOS_BOUNDARY_ref_DENS(KS:KE,ISB:IEB,JSB:JEB,ref_new) = reference_atmos(:,:,:)
+    ATMOS_BOUNDARY_ref_DENS(KS:KE,ISB:IEB,JSB:JEB,ref) = reference_atmos(:,:,:)
     call FileRead( reference_atmos(:,:,:), bname, 'VELX', boundary_timestep, PRC_myrank )
-    ATMOS_BOUNDARY_ref_VELX(KS:KE,ISB:IEB,JSB:JEB,ref_new) = reference_atmos(:,:,:)
+    ATMOS_BOUNDARY_ref_VELX(KS:KE,ISB:IEB,JSB:JEB,ref) = reference_atmos(:,:,:)
     call FileRead( reference_atmos(:,:,:), bname, 'VELY', boundary_timestep, PRC_myrank )
-    ATMOS_BOUNDARY_ref_VELY(KS:KE,ISB:IEB,JSB:JEB,ref_new) = reference_atmos(:,:,:)
+    ATMOS_BOUNDARY_ref_VELY(KS:KE,ISB:IEB,JSB:JEB,ref) = reference_atmos(:,:,:)
     call FileRead( reference_atmos(:,:,:), bname, 'POTT', boundary_timestep, PRC_myrank )
-    ATMOS_BOUNDARY_ref_POTT(KS:KE,ISB:IEB,JSB:JEB,ref_new) = reference_atmos(:,:,:)
+    ATMOS_BOUNDARY_ref_POTT(KS:KE,ISB:IEB,JSB:JEB,ref) = reference_atmos(:,:,:)
     do iq = 1, BND_QA
        call FileRead( reference_atmos(:,:,:), bname, AQ_NAME(iq), boundary_timestep, PRC_myrank )
-       ATMOS_BOUNDARY_ref_QTRC(KS:KE,ISB:IEB,JSB:JEB,iq,ref_new) = reference_atmos(:,:,:)
+       ATMOS_BOUNDARY_ref_QTRC(KS:KE,ISB:IEB,JSB:JEB,iq,ref) = reference_atmos(:,:,:)
     end do
 
     ! fill HALO in reference
-    call ATMOS_BOUNDARY_ref_fillhalo( ref_new )
-
-    call HIST_in( ATMOS_BOUNDARY_ref_DENS(:,:,:,ref_new), 'BND_ref_DENS', 'reference DENS', 'kg/m3' )
-    call HIST_in( ATMOS_BOUNDARY_ref_VELZ(:,:,:,ref_new), 'BND_ref_VELZ', 'reference VELZ', 'm/s'   )
-    call HIST_in( ATMOS_BOUNDARY_ref_VELX(:,:,:,ref_new), 'BND_ref_VELX', 'reference VELZ', 'm/s'   )
-    call HIST_in( ATMOS_BOUNDARY_ref_VELY(:,:,:,ref_new), 'BND_ref_VELY', 'reference VELZ', 'm/s'   )
-    call HIST_in( ATMOS_BOUNDARY_ref_POTT(:,:,:,ref_new), 'BND_ref_POTT', 'reference VELZ', 'K'     )
+    call ATMOS_BOUNDARY_ref_fillhalo( ref )
 
     return
   end subroutine ATMOS_BOUNDARY_update_file
 
   !-----------------------------------------------------------------------------
-  !> Update reference boundary by communicate with parent domain
-  subroutine ATMOS_BOUNDARY_update_online( &
-       DENS,    & ! [in]
-       MOMZ,    & ! [in]
-       MOMX,    & ! [in]
-       MOMY,    & ! [in]
-       RHOT,    & ! [in]
-       QTRC,    & ! [in]
-       handle   ) ! [in]
-    use scale_process, only: &
-       PRC_myrank
-    use scale_history, only: &
-       HIST_in
+  !> Send reference boundary value to daughter domain by communicate
+  subroutine ATMOS_BOUNDARY_update_online_parent( &
+       DENS, & ! [in]
+       MOMZ, & ! [in]
+       MOMX, & ! [in]
+       MOMY, & ! [in]
+       RHOT, & ! [in]
+       QTRC )  ! [in]
     use scale_grid_nest, only: &
        NEST_COMM_recvwait_issue, &
        NESTQA => NEST_BND_QA
@@ -1978,45 +1911,49 @@ contains
     real(RP), intent(in) :: MOMY(KA,IA,JA)
     real(RP), intent(in) :: RHOT(KA,IA,JA)
     real(RP), intent(in) :: QTRC(KA,IA,JA,QA)
-    integer,  intent(in) :: handle
 
-    ! works
-    integer :: i, j, k, iq
+    integer, parameter :: handle = 1
     !---------------------------------------------------------------------------
 
-    if ( handle == 1 .and. do_parent_process ) then ! [parent]
+    if ( IO_L ) write(IO_FID_LOG,*)"*** ATMOS BOUNDARY update online: PARENT"
 
-       if ( IO_L ) write(IO_FID_LOG,*)"*** ATMOS BOUNDARY update online: PARENT"
+    ! issue wait
+    call NEST_COMM_recvwait_issue( handle, NESTQA )
 
-       ! issue wait
-       call NEST_COMM_recvwait_issue( handle, NESTQA )
-
-       ! issue send
-       call ATMOS_BOUNDARY_send( DENS, MOMZ, MOMX, MOMY, RHOT, QTRC )
-
-    elseif ( handle == 2 .and. do_daughter_process ) then ! [daughter]
-
-       if( IO_L ) write(IO_FID_LOG,'(1X,A,I5)') '*** ATMOS BOUNDARY update online: DAUGHTER', boundary_timestep
-
-       ! issue wait
-       call ATMOS_BOUNDARY_recv( ref_new )
-
-       ! fill HALO in reference
-       call ATMOS_BOUNDARY_ref_fillhalo( ref_new )
-
-       ! issue receive
-       call NEST_COMM_recvwait_issue( handle, NESTQA )
-
-       call HIST_in( ATMOS_BOUNDARY_ref_DENS(:,:,:,ref_new), 'BND_ref_DENS', 'reference DENS', 'kg/m3' )
-       call HIST_in( ATMOS_BOUNDARY_ref_VELZ(:,:,:,ref_new), 'BND_ref_VELZ', 'reference VELZ', 'm/s'   )
-       call HIST_in( ATMOS_BOUNDARY_ref_VELX(:,:,:,ref_new), 'BND_ref_VELX', 'reference VELZ', 'm/s'   )
-       call HIST_in( ATMOS_BOUNDARY_ref_VELY(:,:,:,ref_new), 'BND_ref_VELY', 'reference VELZ', 'm/s'   )
-       call HIST_in( ATMOS_BOUNDARY_ref_POTT(:,:,:,ref_new), 'BND_ref_POTT', 'reference VELZ', 'K'     )
-
-    endif
+    ! issue send
+    call ATMOS_BOUNDARY_send( DENS, MOMZ, MOMX, MOMY, RHOT, QTRC )
 
     return
-  end subroutine ATMOS_BOUNDARY_update_online
+  end subroutine ATMOS_BOUNDARY_update_online_parent
+
+  !-----------------------------------------------------------------------------
+  !> Update reference boundary by communicate with parent domain
+  subroutine ATMOS_BOUNDARY_update_online_daughter( &
+       ref ) ! [in]
+    use scale_grid_nest, only: &
+       NEST_COMM_recvwait_issue, &
+       NESTQA => NEST_BND_QA
+    implicit none
+
+    ! arguments
+    integer,  intent(in) :: ref
+
+    integer, parameter :: handle = 2
+    !---------------------------------------------------------------------------
+
+    if( IO_L ) write(IO_FID_LOG,'(1X,A,I5)') '*** ATMOS BOUNDARY update online: DAUGHTER', boundary_timestep
+
+    ! issue wait
+    call ATMOS_BOUNDARY_recv( ref )
+
+    ! fill HALO in reference
+    call ATMOS_BOUNDARY_ref_fillhalo( ref )
+
+    ! issue receive
+    call NEST_COMM_recvwait_issue( handle, NESTQA )
+
+    return
+  end subroutine ATMOS_BOUNDARY_update_online_daughter
 
   !-----------------------------------------------------------------------------
   !> Send boundary value
@@ -2419,5 +2356,37 @@ contains
 
     return
   end subroutine update_ref_index
+
+  subroutine history_bnd( &
+       ATMOS_BOUNDARY_DENS, &
+       ATMOS_BOUNDARY_VELZ, &
+       ATMOS_BOUNDARY_VELX, &
+       ATMOS_BOUNDARY_VELY, &
+       ATMOS_BOUNDARY_POTT, &
+       ATMOS_BOUNDARY_QTRC )
+    use scale_history, only: &
+       HIST_in
+    implicit none
+    real(RP), intent(in) :: ATMOS_BOUNDARY_DENS(KA,IA,JA)
+    real(RP), intent(in) :: ATMOS_BOUNDARY_VELZ(KA,IA,JA)
+    real(RP), intent(in) :: ATMOS_BOUNDARY_VELX(KA,IA,JA)
+    real(RP), intent(in) :: ATMOS_BOUNDARY_VELY(KA,IA,JA)
+    real(RP), intent(in) :: ATMOS_BOUNDARY_POTT(KA,IA,JA)
+    real(RP), intent(in) :: ATMOS_BOUNDARY_QTRC(KA,IA,JA,BND_QA)
+
+    integer :: iq
+
+    call HIST_in( ATMOS_BOUNDARY_DENS(:,:,:), 'DENS_BND', 'Boundary Density',               'kg/m3'             )
+    call HIST_in( ATMOS_BOUNDARY_VELZ(:,:,:), 'VELZ_BND', 'Boundary velocity z-direction',  'm/s',  zdim='half' )
+    call HIST_in( ATMOS_BOUNDARY_VELX(:,:,:), 'VELX_BND', 'Boundary velocity x-direction',  'm/s',  xdim='half' )
+    call HIST_in( ATMOS_BOUNDARY_VELY(:,:,:), 'VELY_BND', 'Boundary velocity y-direction',  'm/s',  ydim='half' )
+    call HIST_in( ATMOS_BOUNDARY_POTT(:,:,:), 'POTT_BND', 'Boundary potential temperature', 'K'                 )
+    do iq = 1, BND_QA
+       call HIST_in( ATMOS_BOUNDARY_QTRC(:,:,:,iq), trim(AQ_NAME(iq))//'_BND', 'Boundary '//trim(AQ_NAME(iq)), 'kg/kg' )
+    enddo
+
+    return
+  end subroutine history_bnd
+
 
 end module scale_atmos_boundary
