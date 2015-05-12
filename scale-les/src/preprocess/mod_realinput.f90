@@ -3279,10 +3279,30 @@ contains
 
     integer  :: i, j, k, it, n, ielem
     integer  :: kk, kks, kke
-    integer  :: iq, ierr
+    integer  :: iq
     integer  :: nt
     logical  :: do_read, lack_of_val
+
+    character(len=H_SHORT) :: upper_qv_type = "ZERO" !< how qv is given at higher level than outer model
+                                                     !< "ZERO": 0
+                                                     !< "COPY": copy values from the highest level of outer model
+
+    NAMELIST / PARAM_INPUT_ATOM_GrADS / &
+         upper_qv_type
+
+    integer :: ierr
     !---------------------------------------------------------------------------
+
+    !--- read namelist
+    rewind(IO_FID_CONF)
+    read(IO_FID_CONF,nml=PARAM_INPUT_ATOM_GrADS,iostat=ierr)
+
+    if( ierr > 0 ) then
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_INPUT_ATOM_GrADS. Check!'
+       call PRC_MPIstop
+    endif
+    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_INPUT_ATOM_GrADS)
+
 
     nt = estep - sstep + 1
 
@@ -3655,18 +3675,30 @@ contains
                 call read_grads_file_3d(io_fid_grads_data,gfile,dims(1),dims(2),knum,nt,item,startrec,totalrec,gdata3D)
                 qtrc_org  = 0.0_RP
                 do it = 1, nt
-                do j = 1, dims(2)
-                do i = 1, dims(1)
+                   do j = 1, dims(2)
+                   do i = 1, dims(1)
                    do k = 1, knum
                       qtrc_org(k,i,j,it,QA_outer) = real(gdata3D(i,j,k,it), kind=RP)
                    enddo
-                   if(dims(3)>knum)then
-                      do k = knum+1, dims(3)
-                         qtrc_org(k,i,j,it,QA_outer) = qtrc_org(knum,i,j,it,QA_outer)
-                      enddo
+                   enddo
+                   enddo
+                   if( dims(3)>knum ) then
+                      select case ( upper_qv_type )
+                      case ("COPY")
+                         do j = 1, dims(2)
+                         do i = 1, dims(1)
+                         do k = knum+1, dims(3)
+                            qtrc_org(k,i,j,it,QA_outer) = qtrc_org(knum,i,j,it,QA_outer)
+                         enddo
+                         enddo
+                         enddo
+                      case ("ZERO")
+                         ! do nothing
+                      case default
+                         write(*,*) 'xxx upper_qv_type is invalid! ', upper_qv_type
+                         call PRC_MPIstop
+                      end select
                    endif
-                enddo
-                enddo
                 enddo
              endif
           case('RH')
@@ -3679,8 +3711,8 @@ contains
                 call read_grads_file_3d(io_fid_grads_data,gfile,dims(1),dims(2),knum,nt,item,startrec,totalrec,gdata3D)
                 qtrc_org  = 0.0_RP
                 do it = 1, nt
-                do j = 1, dims(2)
-                do i = 1, dims(1)
+                   do j = 1, dims(2)
+                   do i = 1, dims(1)
                    do k = 1, knum
                       rhprs_org(k,i,j,it) = real(gdata3D(i,j,k,it), kind=RP) / 100.0_RP  ! relative humidity
                       call psat( p_sat, temp_org(k,i,j,it) )                             ! satulation pressure
@@ -3688,18 +3720,30 @@ contains
                          / ( pres_org(k,i,j,it) - rhprs_org(k,i,j,it) * p_sat )          ! mixing ratio
                       qtrc_org(k,i,j,it,QA_outer) = qm / ( 1.0_RP + qm )                 ! specific humidity
                    enddo
-                   if(dims(3)>knum)then
-                      do k = knum+1, dims(3)
-                         rhprs_org(k,i,j,it) = rhprs_org(knum,i,j,it)                    ! relative humidity
-                         call psat( p_sat, temp_org(k,i,j,it) )                          ! satulated specific humidity
-                         qm = EPSvap * rhprs_org(k,i,j,it) * p_sat &
-                            / ( pres_org(k,i,j,it) - rhprs_org(k,i,j,it) * p_sat )       ! mixing ratio
-                         qtrc_org(k,i,j,it,QA_outer) = qm / ( 1.0_RP + qm )              ! specific humidity
-                         qtrc_org(k,i,j,it,QA_outer) = min(qtrc_org(k,i,j,it,QA_outer),qtrc_org(k-1,i,j,it,QA_outer))
-                      enddo
+                   enddo
+                   enddo
+                   if( dims(3)>knum ) then
+                      select case ( upper_qv_type )
+                      case ("COPY")
+                         do j = 1, dims(2)
+                         do i = 1, dims(1)
+                         do k = knum+1, dims(3)
+                            rhprs_org(k,i,j,it) = rhprs_org(knum,i,j,it)              ! relative humidity
+                            call psat( p_sat, temp_org(k,i,j,it) )                    ! satulated specific humidity
+                            qm = EPSvap * rhprs_org(k,i,j,it) * p_sat &
+                               / ( pres_org(k,i,j,it) - rhprs_org(k,i,j,it) * p_sat ) ! mixing ratio
+                            qtrc_org(k,i,j,it,QA_outer) = qm / ( 1.0_RP + qm )        ! specific humidity
+                            qtrc_org(k,i,j,it,QA_outer) = min(qtrc_org(k,i,j,it,QA_outer),qtrc_org(k-1,i,j,it,QA_outer))
+                         enddo
+                         enddo
+                         enddo
+                      case ("ZERO")
+                         ! do nothing
+                      case default
+                         write(*,*) 'xxx upper_qv_type is invalid! ', upper_qv_type
+                         call PRC_MPIstop
+                      end select
                    endif
-                enddo
-                enddo
                 enddo
              endif
           case('MSLP')
