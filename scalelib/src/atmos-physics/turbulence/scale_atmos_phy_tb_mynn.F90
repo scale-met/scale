@@ -90,7 +90,7 @@ module scale_atmos_phy_tb_mynn
   real(RP) :: ATMOS_PHY_TB_MYNN_NU_MAX = 10000_RP
   real(RP) :: ATMOS_PHY_TB_MYNN_KH_MIN = 1.E-6_RP
   real(RP) :: ATMOS_PHY_TB_MYNN_KH_MAX = 10000_RP
-  real(RP) :: ATMOS_PHY_TB_MYNN_Lt_MAX = 300_RP
+  real(RP) :: ATMOS_PHY_TB_MYNN_Lt_MAX = 700_RP ! ~ 0.23 * 3 km
 
   !-----------------------------------------------------------------------------
 contains
