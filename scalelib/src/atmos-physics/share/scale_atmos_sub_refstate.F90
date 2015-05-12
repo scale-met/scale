@@ -430,7 +430,7 @@ contains
     call SATURATION_dens2qsat_all( qsat(:),  temp(:),  pres(:)  )
 
     psat_sfc = ATMOS_REFSTATE_RH * 1.E-2_RP * psat_sfc ! rh * e
-    qv_sfc = EPSvap * psat_sfc / ( pres_sfc * (1.0_RP - EPSvap) * psat_sfc )
+    qv_sfc = EPSvap * psat_sfc / ( pres_sfc - (1.0_RP - EPSvap) * psat_sfc )
     do k = KS, KE
        qv(k) = ATMOS_REFSTATE_RH * 1.E-2_RP * qsat(k)
     enddo
