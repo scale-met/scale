@@ -1,29 +1,50 @@
 \section{理想実験の実行方法}
+理想実験は
+\begin{verbatim}
+  scale/uguide/scale/scale-les/test/case/
+\end{verbatim}
+にいくつか用意されている。
+\ref{sec:req_env}の実行環境で動かせる理想実験は、
+今日時点ではないため、使い方のみ説明する。
+
+
+\subsubsection{コンパイル}
+実験したい実験のディレクトリに移動して、コンパイルする．
+\begin{verbatim}
+  $ cd scale/uguide/scale/scale-les/test/case/HOGEHOGE/
+  $ make -j 4
+\end{verbatim}
+
+\subsubsection{実行方法}
 理想実験は，コンパイルが完了したディレクトリ上で，下記のコマンドによって
 実行することができる．
 \begin{verbatim}
-$ make run
+  $ make run
 \end{verbatim}
 この場合，デフォルトのconfigurationファイルを使用して自動的に実験設定に
 合った初期値・境界値を作成し，その後scale-lesモデル本体を実行する．
 "make run"のコマンドを使用せず，以下のように手動で実行過程を進めることもできる．
 
 \begin{enumerate}
-\item まず，実験設定を記述したconfigurationファイル，init.confを編集して目的の実験にあった設定を構築する．
+\item 実験設定を記述したconfigurationファイル，init.confを編集して目的の実験にあった設定を構築する．
 
 \item 下記のコマンドによって事前処理(初期値・境界値作成)を実行する．ここの例ではMPI並列として6プロセスを使用している．
 \begin{verbatim}
 $ mpirun -n 6 ./scale-les_init init.conf
 \end{verbatim}
-正常にJOBが終了すれば，init\_****.pe\verb|#####|.nc，およびboundary.pe\verb|#####|.ncといったファイルが，それぞれMPIプロセス数ずつ生成される（\verb|#####|はMPIプロセスの番号）．
+正常にJOBが終了すれば，
+\verb|init_****.pe#####.nc|，および\verb|boundary.pe#####.nc|
+といったファイルが，それぞれMPIプロセス数ずつ生成される（\verb|#####|はMPIプロセスの番号）．
 
 \item モデルを実行するためにrun.confを適宜編集する．MPIプロセスの数や，格子，境界の取り方の設定については，init.confの時の設定と相違ないように注意すること．
-正常にJOBが終了すれば，init\_****.pe\verb|#####|.nc，およびboundary.pe\verb|#####|.ncといったファイルが，それぞれMPIプロセス数ずつ生成される（\verb|#####|はMPIプロセスの番号）．
+正常にJOBが終了すれば，\verb|init_****.pe#####.nc|，
+および\verb|boundary.pe#####.nc|といったファイルが，それぞれMPIプロセス数ずつ生成される（\verb|#####|はMPIプロセスの番号）．
 
 \item 下記のコマンドによってモデルを実行する．
 \begin{verbatim}
 $ mpirun -n 6 ./scale-les run.conf
 \end{verbatim}
-configurationファイルの設定によるが，history.pe\verb|#####|.ncという名前のファイルが作成され，この中に出力変数が含まれている．
+configurationファイルの設定によるが，\verb|history.pe#####.nc|
+という名前のファイルが作成され，この中に出力変数が含まれている．
 \end{enumerate}
 

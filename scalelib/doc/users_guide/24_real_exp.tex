@@ -30,6 +30,28 @@
 \end{table}
 
 
+\subsection{境界データの入手}
+
+現実大気実験のシミュレーションを行う場合，SCALE本体に加えて境界値データが必要になる．
+本チュートリアル用の気象場のデータ，日本領域の地形・土地利用のデータを\\
+ \url{http://scale.aics.riken.jp/download/tutorial_data.tar.gz}\\
+より入手し，チュートリアルの入力ファイル用ディレクトリ
+\begin{verbatim}
+  scale/scale-les/test/tutorial/data/
+\end{verbatim}
+の下に展開しておく．
+
+以降の説明で\verb|${TOPDIR}|は，\verb|scale/scale-les/test/tutorial/|がある絶対PATHを指す．
+
+\begin{verbatim}
+  ${TOPDIR}/data/tutorial_data/input_atom/    <- 気象場データ
+  ${TOPDIR}/data/tutorial_data/input_topo/    <- 地形データ
+  ${TOPDIR}/data/tutorial_data/input_landuse/ <- 土地利用データ
+\end{verbatim}
+\verb|tutorial_data/|には，本チュートリアルに必要な最低限のデータのみが納めされているため，
+その他の設定で実験を行う場合には別途，気象場，地形，および土地利用データが必要となる．
+
+
 
 \subsection{地形・土地利用データの作成：pp}
 %-----------------------------------------------------------------------------------

@@ -1,27 +1,26 @@
-\section{Installation of SCALE-LES}
+本章では，SCALE-LESの使用方法と、
+SCALEチュートリアルを実行するための環境の準備について説明する。
+
+\section{SCALEのインストール}
 %####################################################################################
-
-本章では，日本域を対象とした現実大気再現実験のチュートリアルを通して，
-SCALE-LESモデルを実行する一連の作業を説明する．
-SCALEライブラリのインストールに必要な環境、ライブラリのインストール方法については，
-\ref{sec:req_env}節とAppendix \ref{sec:env_setting}を参照して
-事前にインストールしておく必要がある．
-\ref{sec:source_code}以降のチュートリアルは，それらのライブラリ環境が
-インストールされていることを想定して進める．
-
 
 \subsection{Required Environment}
 \label{sec:req_env}
 %====================================================================================
+SCALEの実行環境は下記を想定している。
 
 \begin{itemize}
   \item {\bf 計算機環境} : Unix互換OS (Mac OS Xを含む)が動作する環境．
         マルチコアCPU環境以上を推奨する．
-        実験サイズによるが4GB以上のメモリがインストールされているマシン環境が好ましい．
-  \item {\bf OS} : Linux OS（Fedora, CentOS, SUSE等），Mac OS X．ここではLinux (CentOS6)を使用して説明する．
+        実験サイズによるが、最低4GB以上のメモリが
+        インストールされているマシン環境が好ましい．
+  \item {\bf OS} : Linux OS（Fedora, CentOS, SUSE等），Mac OS X．
+        チュートリアルでは、Linux (CentOS6)を使用して説明する．
   \item {\bf コンパイラ} : Fortran 2003をサポートするC，Fortranコンパイラを必要とする．
-        GNU 4.6.x以上，Intel compiler 2012以上を推奨する．ここでは，gcc/gfortranを使用して説明する．
-  \item {\bf MPIライブラリ} : MPICH2, OpenMPI, Intel MPI等をサポートする．ここではopenMPIを使用して説明する．
+        GNU 4.6.x以上，Intel compiler 2012以上を推奨する．
+        チュートリアルでは，gcc/gfortranを使用して説明する．
+  \item {\bf MPIライブラリ} : MPICH2, OpenMPI, Intel MPI等をサポートする．
+        チュートリアルではopenMPIを使用して説明する．
   \item {\bf netcdf3 もしくは HDF5/netcdf4} : gzip, szipをサポートするHDF5，
         およびそのHDF5をサポートするnetcdf4を必要とする．
         ただし，netcdf3の環境下ではscaleライブラリが提供する全ての機能をサポートできない可能性がある．
@@ -32,6 +31,16 @@ SCALEライブラリのインストールに必要な環境、ライブラリの
         PAPIライブラリがインストールされている環境下では，
         以下で説明するconfigureファイルの編集によってPAPIを適用することができます．
 \end{itemize}
+
+
+
+\subsection{ライブラリ環境のインストール}
+%====================================================================================
+SCALEライブラリのインストールに必要な環境、ライブラリのインストールを行う。
+実行環境に合わせて、Appendix \ref{sec:env_setting}を参照してインストールを行う。
+\ref{sec:source_code}以降のチュートリアルは，
+それらのライブラリ環境がインストールされていることを想定して進める．
+
 
 
 \subsection{Building the source code} \label{sec:source_code}
@@ -48,41 +57,22 @@ SCALEライブラリのインストールに必要な環境、ライブラリの
 \end{verbatim}
 というディレクトリができる．
 
-現実大気実験のシミュレーションを行う場合，SCALE本体に加えて境界値データが必要になる．
-本チュートリアル用の気象場のデータ，日本領域の地形・土地利用のデータを\\
- \url{http://scale.aics.riken.jp/download/tutorial_data.tar.gz}\\
-より入手し，チュートリアルの入力ファイル用ディレクトリ
-\begin{verbatim}
-  scale/scale-les/test/tutorial/data/
-\end{verbatim}
-の下に展開しておく．
-
-以降の説明で\verb|${TOPDIR}|は，\verb|scale/scale-les/test/tutorial/|がある絶対PATHを指す．
-
-\begin{verbatim}
-  ${TOPDIR}/data/tutorial_data/input_atom/    <- 気象場データ
-  ${TOPDIR}/data/tutorial_data/input_topo/    <- 地形データ
-  ${TOPDIR}/data/tutorial_data/input_landuse/ <- 土地利用データ
-\end{verbatim}
-\verb|tutorial_data/|には，本チュートリアルに必要な最低限のデータのみが納めされているため，
-その他の設定で実験を行う場合には別途，気象場，地形，および土地利用データが必要となる．
-
 
 \subsubsection{configure ファイルと環境変数の設定}
 %-----------------------------------------------------------------------------------
 
 \verb|scale/sysdep/|内にいくつかのコンフィグファイル（\verb|Makedef.***|）が準備されている．
 これらの中から自分の環境にあったものを設定する．
-ここでは，OSはLinux，コンパイラはgcc/gfortran，およびopenMPIを使用するため，
+チュートリアルでは，OSはLinux，コンパイラはgcc/gfortran，およびopenMPIを使用するため，
 \verb|"Makedef.Linux64-gnu-ompi"|が対応するファイルとなる．
 自分の環境に合うものがなければ既存ファイルをベースにして作成する．
 
-常にこのコンフィグファイルをしようするために、
+常にこのコンフィグファイルを使用するために、
 \verb|Makedef.***|の\verb|"***"|の部分を、\verb|SCALE_SYS|という環境変数として設定し、
 \verb|.bashrc|などのファイルに記述しておくと便利である．
 さらに、SCALEをコンパイルするのに必要な外部ライブラリについても
 下記のようにPATHを設定する．
-ここでは，Appendix \ref{sec:env_setting}に従ったとして，
+ここでは，Appendix \ref{sec:env_setting}（Linux編）に従ったとして，
 HDF5，netcdf4ともに\verb|/usr|の下にインストールされている場合の例を示す．
 
 \begin{verbatim}
@@ -94,15 +84,19 @@ HDF5，netcdf4ともに\verb|/usr|の下にインストールされている場�
 
 \subsubsection{コンパイル}
 %-----------------------------------------------------------------------------------
+コンパイルは、各テストケースのディレクトリ内で実行可能である．
+ここではコンパイルに必要な環境が整っているかどうかの確認だけ行い、
+詳細な説明は、次章以降に譲る．
 
-下記のディレクトリに移動して，makeコマンドによってコンパイルを行う．
+チュートリアル用のディレクトリに移動して，makeコマンドによってコンパイルを行う．
 \begin{verbatim}
- $ cd ${TOPDIR}/bin
+ $ cd scale/scale-les/test/tutorial/bin
  $ make -j 4
 \end{verbatim}
-\verb|make|のあとの \verb|"-j 4"| は，並列コンパイルを指示するオプションで，
-4並列コンパイルを行うことを指示している．
-コンパイルを実行する環境によっては並列数を増やすこともできる．
+\verb|make|のあとの \verb|"-j 4"| は，
+コンパイル時の並列数を示しており，
+例では4並列コンパイルを行うことを指示している．
+実行環境によっては並列数を増やすこともできる．
 このmakeによってSCALEライブラリ，およびSCALE-LESモデルのコンパイルが行われ，
 結果として
 \begin{verbatim}
@@ -121,7 +115,8 @@ HDF5，netcdf4ともに\verb|/usr|の下にインストールされている場�
  コンパイルオプションを変更したい場合は，
  \verb|Makedef.***|のファイルを編集してください．
 \item 開発版ソースコードをコンパイルしている場合，
- 一部のコンパイラバージョンにおいてコンパイルが正常に終了しないケースがあります．そのような場合はぜひSCALE開発チームまでご報告ください．
+ 一部のコンパイラバージョンにおいてコンパイルが正常に終了しないケースがあります．
+ そのような場合はぜひSCALE開発チームまでご報告ください．
 \end{itemize}
 
 
