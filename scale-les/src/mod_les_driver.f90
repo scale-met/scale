@@ -58,7 +58,7 @@ contains
     use scale_precision
     use scale_stdio
     use scale_prof
-  
+
     use scale_process, only: &
        PRC_setup,    &
        PRC_MPIsetup, &
@@ -71,19 +71,6 @@ contains
        CALENDAR_setup
     use scale_random, only: &
        RANDOM_setup
-    use scale_time, only: &
-       TIME_setup,           &
-       TIME_checkstate,      &
-       TIME_advance,         &
-       TIME_DOATMOS_step,    &
-       TIME_DOLAND_step,     &
-       TIME_DOURBAN_step,    &
-       TIME_DOOCEAN_step,    &
-       TIME_DOATMOS_restart, &
-       TIME_DOLAND_restart,  &
-       TIME_DOURBAN_restart, &
-       TIME_DOOCEAN_restart, &
-       TIME_DOend
     use scale_grid_index, only: &
        GRID_INDEX_setup
     use scale_grid, only: &
@@ -133,9 +120,22 @@ contains
        BULKFLUX_setup
     use scale_roughness, only: &
        ROUGHNESS_setup
-  
+
     use mod_admin_restart, only: &
        ADMIN_restart_setup
+    use mod_admin_time, only: &
+       ADMIN_TIME_setup,      &
+       ADMIN_TIME_checkstate, &
+       ADMIN_TIME_advance,    &
+       TIME_DOATMOS_step,     &
+       TIME_DOLAND_step,      &
+       TIME_DOURBAN_step,     &
+       TIME_DOOCEAN_step,     &
+       TIME_DOATMOS_restart,  &
+       TIME_DOLAND_restart,   &
+       TIME_DOURBAN_restart,  &
+       TIME_DOOCEAN_restart,  &
+       TIME_DOend
     use mod_atmos_admin, only: &
        ATMOS_admin_setup, &
        ATMOS_do
@@ -203,7 +203,7 @@ contains
     !-----------------------------------------------------------------------------
 #include "scale-les.h"
     !-----------------------------------------------------------------------------
-  
+
     integer, intent(in)  :: LOCAL_myrank
     integer, intent(in)  :: LOCAL_nmax
     integer, intent(in)  :: parent_prc
@@ -213,73 +213,73 @@ contains
     logical, intent(in)  :: flag_parent
     logical, intent(in)  :: flag_child
     character(len=H_LONG), intent(in) :: fname
-  
+
     character(len=H_MID), parameter :: MODELNAME = "SCALE-LES ver. "//VERSION
     !=============================================================================
-  
+
     !########## Initial setup ##########
-  
+
     ! setup standard I/O
     call IO_setup( MODELNAME, .true., fname )
-  
+
     ! setup MPI
     call PRC_MPIsetup( .true., LOCAL_nmax, LOCAL_myrank )
-  
+
     ! setup process
     call PRC_setup
-  
+
     ! setup Log
     call LogInit(IO_FID_CONF, IO_FID_LOG, IO_L)
-  
+
     ! setup PROF
     call PROF_setup
-  
+
     ! setup constants
     call CONST_setup
-  
+
     ! setup calendar
     call CALENDAR_setup
-  
+
     ! setup random number
     call RANDOM_setup
-  
+
     ! setup time
-    call TIME_setup( setup_TimeIntegration = .true. )
-  
+    call ADMIN_TIME_setup( setup_TimeIntegration = .true. )
+
     call PROF_rapstart('Initialize', 0)
-  
+
     ! setup horizontal/vertical grid coordinates (cartesian,idealized)
     call GRID_INDEX_setup
-  
+
     call GRID_setup
-  
+
     call LAND_GRID_INDEX_setup
     call LAND_GRID_setup
-  
+
     call URBAN_GRID_INDEX_setup
     call URBAN_GRID_setup
-  
+
     ! setup tracer index
     call TRACER_setup
-  
+
     ! setup file I/O
     call FILEIO_setup
-  
+
     ! setup mpi communication
     call COMM_setup
-  
+
     ! setup topography
     call TOPO_setup
     ! setup land use category index/fraction
     call LANDUSE_setup
     ! setup grid coordinates (real world)
     call REAL_setup
-  
+
     ! setup grid transfer metrics (uses in ATMOS_dynamics)
     call GTRANS_setup
     ! setup Z-ZS interpolation factor (uses in History)
     call INTERP_setup
-  
+
     ! setup restart
     call ADMIN_restart_setup
     ! setup statistics
@@ -288,11 +288,11 @@ contains
     call HIST_setup
     ! setup monitor I/O
     call MONIT_setup
-  
+
     ! setup nesting grid
     call NEST_setup ( icomm_parent, icomm_child, &
                       flag_parent,  flag_child   )
-  
+
     ! setup common tools
     call ATMOS_HYDROSTATIC_setup
     call ATMOS_THERMODYN_setup
@@ -307,26 +307,26 @@ contains
     call LAND_admin_setup
     call URBAN_admin_setup
     call CPL_admin_setup
-  
+
     ! setup variable container
     call ATMOS_vars_setup
     call OCEAN_vars_setup
     call LAND_vars_setup
     call URBAN_vars_setup
     call CPL_vars_setup
-  
+
     ! read restart data
     if( ATMOS_do ) call ATMOS_vars_restart_read
     if( OCEAN_do ) call OCEAN_vars_restart_read
     if( LAND_do  ) call LAND_vars_restart_read
     if( URBAN_do ) call URBAN_vars_restart_read
-  
+
     ! setup user-defined procedure before setup of other components
     call USER_setup0
 
     ! calc diagnostics
     call ATMOS_vars_diagnostics
-  
+
     ! first monitor
     call ATMOS_vars_monitor
 
@@ -335,7 +335,7 @@ contains
     call OCEAN_SURFACE_SET( countup=.false. )
     call LAND_SURFACE_SET ( countup=.false. )
     call URBAN_SURFACE_SET( countup=.false. )
-  
+
     ! setup submodel driver
     call ATMOS_driver_setup1
     call OCEAN_driver_setup
@@ -349,9 +349,9 @@ contains
     ! history&monitor file output
     call HIST_write ! if needed
     call MONIT_write('MAIN')
-  
+
     call PROF_rapend('Initialize', 0)
-  
+
     !########## main ##########
 
 #ifdef _FIPP_
@@ -364,42 +364,42 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ START TIMESTEP ++++++'
     call PROF_rapstart('Main Loop(Total)', 0)
-  
+
     if( ATMOS_do ) call ATMOS_driver_firstsend
 
     do
-  
+
       ! report current time
-      call TIME_checkstate
-  
+      call ADMIN_TIME_checkstate
+
       ! time advance
-      call TIME_advance
-  
+      call ADMIN_TIME_advance
+
       ! user-defined procedure
       call USER_step
-  
+
       ! change to next state
       if( OCEAN_do .AND. TIME_DOOCEAN_step ) call OCEAN_driver
       if( LAND_do  .AND. TIME_DOLAND_step  ) call LAND_driver
       if( URBAN_do .AND. TIME_DOURBAN_step ) call URBAN_driver
       if( ATMOS_do .AND. TIME_DOATMOS_step ) call ATMOS_driver
-  
+
       ! history&monitor file output
       call HIST_write
       call MONIT_write('MAIN')
-  
+
       ! restart output
       if( OCEAN_sw_restart .AND. TIME_DOOCEAN_restart ) call OCEAN_vars_restart_write
       if( LAND_sw_restart  .AND. TIME_DOLAND_restart  ) call LAND_vars_restart_write
       if( URBAN_sw_restart .AND. TIME_DOURBAN_restart ) call URBAN_vars_restart_write
       if( ATMOS_sw_restart .AND. TIME_DOATMOS_restart ) call ATMOS_vars_restart_write
-  
+
       if( TIME_DOend ) exit
-  
+
       if( IO_L ) call flush(IO_FID_LOG)
 
     enddo
-  
+
     call PROF_rapend('Main Loop(Total)', 0)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ END TIMESTEP ++++++'
     if( IO_L ) write(IO_FID_LOG,*)

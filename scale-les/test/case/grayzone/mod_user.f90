@@ -372,12 +372,6 @@ contains
          RCDZ => GRID_RCDZ, &
          RFDZ => GRID_RFDZ
     use scale_time, only: &
-        do_phy_sf => TIME_DOATMOS_PHY_SF, &
-        dtdyn => TIME_DTSEC_ATMOS_DYN, &
-        dtrd => TIME_DTSEC_ATMOS_PHY_RD, &
-        dttb => TIME_DTSEC_ATMOS_PHY_TB, &
-        dtmp => TIME_DTSEC_ATMOS_PHY_MP, &
-        dtsf => TIME_DTSEC_ATMOS_PHY_SF, &
         TIME_NOWSEC
     use scale_const, only: &
         GRAV   => CONST_GRAV,   &
@@ -392,6 +386,13 @@ contains
         LHV    => CONST_LHV,    &
         EPSvap => CONST_EPSvap, &
         PSAT0  => CONST_PSAT0
+    use mod_admin_time, only: &
+       do_phy_sf => TIME_DOATMOS_PHY_SF,     &
+       dtdyn     => TIME_DTSEC_ATMOS_DYN,    &
+       dtmp      => TIME_DTSEC_ATMOS_PHY_MP, &
+       dtrd      => TIME_DTSEC_ATMOS_PHY_RD, &
+       dtsf      => TIME_DTSEC_ATMOS_PHY_SF, &
+       dttb      => TIME_DTSEC_ATMOS_PHY_TB
     use scale_atmos_thermodyn, only: &
        THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres, &
        CPw => AQ_CP, &
@@ -464,7 +465,7 @@ contains
     real(RP) :: pres_evap ! partial pressure of water vapor at surface [Pa]
     real(RP) :: qv_evap   ! saturation water vapor mixing ratio at surface[kg/kg]
     integer :: iw
-  
+
     real(RP) :: lhv_t_1d, lhv_t(IA,JA)
 
     !---------------------------------------------------------------------------
@@ -947,8 +948,8 @@ contains
 
           !--- saturation at surface
           pres_1d   = P00 * ( RHOT(KS,i,j) * Rtot / P00 )**CPovCV
-          temp_1d   = ( RHOT(KS,i,j) / DENS(KS,i,j) ) * ( P00 / pres_1d )**RovCP 
-          call ATMOS_THERMODYN_templhv( lhv_t_1d, temp_1d ) 
+          temp_1d   = ( RHOT(KS,i,j) / DENS(KS,i,j) ) * ( P00 / pres_1d )**RovCP
+          call ATMOS_THERMODYN_templhv( lhv_t_1d, temp_1d )
           pres_evap = PSAT0 * exp( lhv_t_1d/Rvap * ( 1.0_RP/T00 - 1.0_RP/SST(i,j) ) )
 !          pres_evap = PSAT0 * exp( LHV/Rvap * ( 1.0_RP/T00 - 1.0_RP/SST(i,j) ) )
 !          pres_evap = PSAT0 * exp( LHV/Rvap * ( 1.0_RP/T00 - 1.0_RP/SST_loc(i,j) )
@@ -1038,8 +1039,8 @@ contains
 
           !--- saturation at surface
           pres_1d   = P00 * ( RHOT(KS,i,j) * Rtot / P00 )**CPovCV
-          temp_1d   = ( RHOT(KS,i,j) / DENS(KS,i,j) ) * ( P00 / pres_1d )**RovCP 
-          call ATMOS_THERMODYN_templhv( lhv_t(i,j), temp_1d ) 
+          temp_1d   = ( RHOT(KS,i,j) / DENS(KS,i,j) ) * ( P00 / pres_1d )**RovCP
+          call ATMOS_THERMODYN_templhv( lhv_t(i,j), temp_1d )
       enddo
       enddo
 

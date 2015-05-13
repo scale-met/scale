@@ -38,8 +38,6 @@ program scaleles_init
      CALENDAR_setup
   use scale_random, only: &
      RANDOM_setup
-  use scale_time, only: &
-     TIME_setup
   use scale_grid_index, only: &
      GRID_INDEX_setup
   use scale_grid, only: &
@@ -84,6 +82,8 @@ program scaleles_init
 
   use mod_admin_restart, only: &
      ADMIN_restart_setup
+  use mod_admin_time, only: &
+     ADMIN_TIME_setup
   use mod_atmos_admin, only: &
      ATMOS_admin_setup
   use mod_atmos_vars, only: &
@@ -152,7 +152,7 @@ program scaleles_init
   call RANDOM_setup
 
   ! setup time
-  call TIME_setup( setup_TimeIntegration = .false. )
+  call ADMIN_TIME_setup( setup_TimeIntegration = .false. )
 
   call PROF_rapstart('Initialize')
 

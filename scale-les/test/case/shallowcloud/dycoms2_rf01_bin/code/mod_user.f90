@@ -267,8 +267,9 @@ contains
          CVdry => CONST_CVdry, &
          P00   => CONST_PRE00
     use scale_time, only: &
-         do_phy_rd => TIME_DOATMOS_PHY_RD, &
-         dtrd =>  TIME_DTSEC_ATMOS_PHY_RD
+       dtrd =>  TIME_DTSEC_ATMOS_PHY_RD
+    use mod_admin_time, only: &
+       do_phy_rd => TIME_DOATMOS_PHY_RD
     implicit none
 
     real(RP) :: ratesum
