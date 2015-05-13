@@ -334,7 +334,7 @@ contains
     imain = IAG - 2*ibuff - 2*IHALO
 
     if ( imain < 1 ) then
-       write(*,*) 'xxx Not appropriate buffer length for global domain(X). Check!', BUFFER_DX
+       write(*,*) 'xxx Buffer size (', bufftotx*2.0_RP, ') must be smaller than global domain size (X). Use smaller BUFFER_DX!'
        call PRC_MPIstop
     endif
 
@@ -415,7 +415,7 @@ contains
     jmain = JAG - 2*jbuff - 2*JHALO
 
     if ( jmain < 1 ) then
-       write(*,*) 'xxx Not appropriate buffer length for global domain(Y). Check!', BUFFER_DY
+       write(*,*) 'xxx Buffer size (', bufftoty*2.0_RP, ') must be smaller than global domain size (Y). Use smaller BUFFER_DY!'
        call PRC_MPIstop
     endif
 
@@ -508,7 +508,7 @@ contains
        kmain = k
 
        if ( kmain == 1 ) then
-          write(*,*) 'xxx Not appropriate buffer length for global domain(Z). Check!', BUFFER_DZ
+          write(*,*) 'xxx Buffer size (', bufftotz, ') must be smaller than domain size (z). Use smaller BUFFER_DZ!'
           call PRC_MPIstop
        endif
 
@@ -550,7 +550,7 @@ contains
        kmain = KE - KS + 1 - kbuff
 
        if ( kmain < 1 ) then
-          write(*,*) 'xxx Not appropriate buffer length for global domain(Z). Check!', BUFFER_DZ
+          write(*,*) 'xxx Buffer size (', bufftotz, ') must be smaller than domain size (z). Use smaller BUFFER_DZ!'
           call PRC_MPIstop
        endif
 
