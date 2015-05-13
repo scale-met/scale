@@ -326,6 +326,12 @@ contains
     integer :: k, i, j, iq
     integer :: IIS, IIE, JJS, JJE
 
+#ifdef DEBUG
+    POTT(:,:,:) = UNDEF
+    POTL(:,:,:) = UNDEF
+    temp(:,:,:) = UNDEF
+#endif
+
 !OCL XFILL
     do j = JS  , JE
     do i = IS-1, IE
