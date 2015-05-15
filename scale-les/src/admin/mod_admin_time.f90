@@ -761,10 +761,10 @@ contains
 
     TIME_DOend = .false.
 
-    TIME_NOWSTEP   = TIME_NOWSTEP + 1
-    TIME_NOWSEC    = real(TIME_NOWSTEP-1,kind=DP) * TIME_DTSEC
-    TIME_NOWDAYSEC = TIME_STARTDAYSEC + TIME_NOWSEC
+    TIME_NOWSTEP = TIME_NOWSTEP + 1
+    TIME_NOWSEC  = TIME_STARTSEC + real(TIME_NOWSTEP-1,kind=DP) * TIME_DTSEC
 
+    ! reallocate day & sub-day
     call CALENDAR_adjust_daysec( TIME_NOWDAY, TIME_NOWSEC ) ! [INOUT]
 
     call CALENDAR_daysec2date( TIME_NOWDATE(:), & ! [OUT]
@@ -772,6 +772,8 @@ contains
                                TIME_NOWDAY,     & ! [IN]
                                TIME_NOWSEC,     & ! [IN]
                                TIME_OFFSET_YEAR ) ! [IN]
+
+    TIME_NOWDAYSEC = CALENDAR_combine_daysec( TIME_NOWDAY, TIME_NOWSEC )
 
     if ( TIME_NOWSTEP > TIME_NSTEP ) then
        TIME_DOend = .true.
