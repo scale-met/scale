@@ -581,7 +581,7 @@ contains
                 History_tstrstep(id) = 1
              end if
              if ( History_output_start > 0.0_DP ) then
-                History_tstart(id) = History_output_start
+                History_tstart(id) = HISTORY_STARTDAYSEC - History_output_start
              else
                 History_tstart(id) = HISTORY_STARTDAYSEC
              end if
@@ -1732,7 +1732,9 @@ contains
     integer  :: isize
     real(DP) :: time_str, time_end
     real(DP) :: sec_str,  sec_end
-    logical, save :: firsttime = .true.
+
+    real(DP), save :: sec_end_last = -1.0_DP
+    logical,  save :: firsttime    = .true.
     !---------------------------------------------------------------------------
 
     if( History_id_count == 0 ) return
@@ -1775,19 +1777,28 @@ contains
     call CalendarSec2ymdhms( sec_end, time_end, HISTORY_TIME_UNITS )
 
     if ( sec_end .ge.  History_tstart(itemid) ) then
+       if ( sec_end_last < sec_end ) then
+          write(message,'(A)') '*** Output History'
+          call Log('I', message)
+       endif
+
        call FileWrite( History_vid   (itemid),         & ! id
                        History_varsum(1:isize,itemid), & ! data
                        sec_str,                        & ! start time
                        sec_end                         ) ! end   time
     else
-       write(message,*) 'History output suppressed', sec_end, History_tstart(itemid)
-       call Log('I', message)
-    end if
+       if ( sec_end_last < sec_end ) then
+          write(message,'(A,2F15.3)') '*** Output History: Suppressed ', sec_end, History_tstart(itemid)
+          call Log('I', message)
+       endif
+    endif
 
     History_varsum(:,itemid) = 0.0_DP
     History_tstrstep(itemid) = step_now
     History_tlststep(itemid) = step_now
     History_tsumsec (itemid) = 0.0_DP
+
+    sec_end_last = sec_end
 
     return
   end subroutine HistoryWrite
