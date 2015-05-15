@@ -107,7 +107,7 @@ contains
   subroutine ATMOS_PHY_TB_dns( &
        qflx_sgs_MOMZ, qflx_sgs_MOMX, qflx_sgs_MOMY, &
        qflx_sgs_rhot, qflx_sgs_rhoq,                &
-       tke, nu, Ri, Pr,                             &
+       tke, nu, Ri, Pr, N2,                         &
        MOMZ, MOMX, MOMY, RHOT, DENS, QTRC,          &
        SFLX_MW, SFLX_MU, SFLX_MV, SFLX_SH, SFLX_QV, &
        GSQRT, J13G, J23G, J33G, MAPF, dt            )
@@ -147,8 +147,9 @@ contains
 
     real(RP), intent(inout) :: tke(KA,IA,JA) ! TKE
     real(RP), intent(out) :: nu (KA,IA,JA) ! eddy viscosity (center)
-    real(RP), intent(out) :: Pr (KA,IA,JA) ! Prantle number
     real(RP), intent(out) :: Ri (KA,IA,JA) ! Richardson number
+    real(RP), intent(out) :: Pr (KA,IA,JA) ! Prantle number
+    real(RP), intent(out) :: N2 (KA,IA,JA) ! squared Brunt-Vaisala frequency
 
     real(RP), intent(in)  :: MOMZ(KA,IA,JA)
     real(RP), intent(in)  :: MOMX(KA,IA,JA)
@@ -190,8 +191,9 @@ contains
 
     tke(:,:,:) = 0.0_RP
     nu (:,:,:) = 0.0_RP
-    Pr (:,:,:) = 1.0_RP
     Ri (:,:,:) = 0.0_RP
+    Pr (:,:,:) = 1.0_RP
+    N2 (:,:,:) = 0.0_RP
 
     ! potential temperature
     do j = JS-1, JE+1
