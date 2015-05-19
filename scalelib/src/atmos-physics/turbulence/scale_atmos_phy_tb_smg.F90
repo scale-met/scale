@@ -172,7 +172,7 @@ contains
   subroutine ATMOS_PHY_TB_smg( &
        qflx_sgs_momz, qflx_sgs_momx, qflx_sgs_momy, &
        qflx_sgs_rhot, qflx_sgs_rhoq,                &
-       tke, nu, Ri, Pr, N2,                         &
+       tke, tke_t, nu, Ri, Pr, N2,                  &
        MOMZ, MOMX, MOMY, RHOT, DENS, QTRC,          &
        SFLX_MW, SFLX_MU, SFLX_MV, SFLX_SH, SFLX_QV, &
        GSQRT, J13G, J23G, J33G, MAPF, dt            )
@@ -218,6 +218,7 @@ contains
     real(RP), intent(out) :: qflx_sgs_rhoq(KA,IA,JA,3,QA)
 
     real(RP), intent(inout) :: tke(KA,IA,JA) ! TKE
+    real(RP), intent(out) :: tke_t(KA,IA,JA) ! tendency TKE
     real(RP), intent(out) :: nu (KA,IA,JA) ! eddy viscosity (center)
     real(RP), intent(out) :: Ri (KA,IA,JA) ! Richardson number
     real(RP), intent(out) :: Pr (KA,IA,JA) ! Prantle number
@@ -291,8 +292,11 @@ contains
     qflx_sgs_rhot(:,:,:,:)   = UNDEF
     qflx_sgs_rhoq(:,:,:,:,:) = UNDEF
 
+    tke_t(:,:,:) = UNDEF
+
     nu (:,:,:) = UNDEF
     tke(:,:,:) = UNDEF
+    Pr (:,:,:) = UNDEF
     Ri (:,:,:) = UNDEF
     Pr (:,:,:) = UNDEF
     N2 (:,:,:) = UNDEF
@@ -2337,6 +2341,8 @@ contains
 #ifdef DEBUG
        iq = IUNDEF
 #endif
+
+       tke_t = 0.0_RP
 
     return
   end subroutine ATMOS_PHY_TB_smg

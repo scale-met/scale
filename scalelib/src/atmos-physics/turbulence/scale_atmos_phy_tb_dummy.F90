@@ -77,7 +77,7 @@ contains
        qflx_sgs_momz, qflx_sgs_momx, qflx_sgs_momy, & ! (out)
        qflx_sgs_rhot, qflx_sgs_rhoq,                & ! (out)
        tke,                                         & ! (inout) diagnostic variables
-       nu_C, Ri, Pr, N2,                            & ! (out) diagnostic variables
+       tke_t, nu_C, Ri, Pr, N2,                     & ! (out) diagnostic variables
        MOMZ, MOMX, MOMY, RHOT, DENS, QTRC,          & ! (in)
        sflx_mw, sflx_mu, sflx_mv, sflx_sh, sflx_qv, & ! (in)
        GSQRT, J13G, J23G, J33G, MAPF, dt            ) ! (in)
@@ -90,7 +90,8 @@ contains
     real(RP), intent(out)   :: qflx_sgs_rhot(KA,IA,JA,3)
     real(RP), intent(out)   :: qflx_sgs_rhoq(KA,IA,JA,QA,3)
 
-    real(RP), intent(inout) :: tke (KA,IA,JA) ! TKE
+    real(RP), intent(inout) :: TKE(KA,IA,JA)
+    real(RP), intent(out)   :: tke_t(KA,IA,JA) ! tendency TKE
 
     real(RP), intent(out)   :: nu_C(KA,IA,JA) ! eddy viscosity (center)
     real(RP), intent(out)   :: Ri  (KA,IA,JA) ! Richardson number
@@ -127,8 +128,9 @@ contains
     qflx_sgs_rhot(:,:,:,:)   = 0.0_RP
     qflx_sgs_rhoq(:,:,:,:,:) = 0.0_RP
 
-    tke (:,:,:) = 0.0_RP
+    tke_t(:,:,:) = 0.0_RP
 
+    tke (:,:,:) = 0.0_RP
     nu_C(:,:,:) = 0.0_RP
     Ri  (:,:,:) = 0.0_RP
     Pr  (:,:,:) = 1.0_RP

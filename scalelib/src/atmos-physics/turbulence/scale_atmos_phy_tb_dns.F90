@@ -107,7 +107,7 @@ contains
   subroutine ATMOS_PHY_TB_dns( &
        qflx_sgs_MOMZ, qflx_sgs_MOMX, qflx_sgs_MOMY, &
        qflx_sgs_rhot, qflx_sgs_rhoq,                &
-       tke, nu, Ri, Pr, N2,                         &
+       tke, tke_t, nu, Ri, Pr, N2,                  &
        MOMZ, MOMX, MOMY, RHOT, DENS, QTRC,          &
        SFLX_MW, SFLX_MU, SFLX_MV, SFLX_SH, SFLX_QV, &
        GSQRT, J13G, J23G, J33G, MAPF, dt            )
@@ -146,6 +146,7 @@ contains
     real(RP), intent(out) :: qflx_sgs_rhoq(KA,IA,JA,3,QA)
 
     real(RP), intent(inout) :: tke(KA,IA,JA) ! TKE
+    real(RP), intent(out) :: tke_t(KA,IA,JA) ! tendency TKE
     real(RP), intent(out) :: nu (KA,IA,JA) ! eddy viscosity (center)
     real(RP), intent(out) :: Ri (KA,IA,JA) ! Richardson number
     real(RP), intent(out) :: Pr (KA,IA,JA) ! Prantle number
@@ -189,6 +190,7 @@ contains
     POTT(:,:,:) = UNDEF
 #endif
 
+    tke_t(:,:,:) = 0.0_RP
     tke(:,:,:) = 0.0_RP
     nu (:,:,:) = 0.0_RP
     Ri (:,:,:) = 0.0_RP

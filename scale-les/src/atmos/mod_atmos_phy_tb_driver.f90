@@ -62,13 +62,15 @@ contains
     use scale_atmos_phy_tb, only: &
        ATMOS_PHY_TB_setup
     use mod_atmos_phy_tb_vars, only: &
+       TKE       => ATMOS_PHY_TB_TKE,    &
+       TKE_t_TB  => ATMOS_PHY_TB_TKE_t,  &
        MOMZ_t_TB => ATMOS_PHY_TB_MOMZ_t
     implicit none
 
 !    NAMELIST / PARAM_ATMOS_PHY_TB / &
 
-    integer :: i, j
-    integer :: ierr
+    integer :: k, i, j
+!    integer :: ierr
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -91,6 +93,14 @@ contains
     do i = IS, IE
        MOMZ_t_TB(KS-1,i,j) = 0.0_RP
        MOMZ_t_TB(KE  ,i,j) = 0.0_RP
+    enddo
+    enddo
+
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       TKE_t_TB(k,i,j) = 0.0_RP
+    enddo
     enddo
     enddo
 
@@ -156,6 +166,7 @@ contains
        MOMY_t_TB => ATMOS_PHY_TB_MOMY_t, &
        RHOT_t_TB => ATMOS_PHY_TB_RHOT_t, &
        RHOQ_t_TB => ATMOS_PHY_TB_RHOQ_t, &
+       TKE_t_TB  => ATMOS_PHY_TB_TKE_t,  &
        TKE       => ATMOS_PHY_TB_TKE,    &
        NU        => ATMOS_PHY_TB_NU
     use mod_atmos_phy_sf_vars, only: &
@@ -184,17 +195,36 @@ contains
 
     real(RP) :: total ! dummy
 
-    integer :: n, k, i, j, iq
+    integer :: k, i, j, iq
     !---------------------------------------------------------------------------
 
     if ( update_flag ) then
+
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          TKE(k,i,j) = max( TKE(k,i,j) + TKE_t_TB(k,i,j) * dt_TB, 0.0_RP )
+       end do
+       end do
+       end do
+
+       do j = JS, JE
+       do i = IS, IE
+          TKE(1:KS-1,i,j) = TKE(KS,i,j)
+          TKE(KE+1:KA,i,j) = TKE(KE,i,j)
+       end do
+       end do
+
+       call COMM_vars8( TKE(:,:,:), 1 )
+       call COMM_wait ( TKE(:,:,:), 1 )
 
        call ATMOS_PHY_TB( QFLX_MOMZ, & ! [OUT]
                           QFLX_MOMX, & ! [OUT]
                           QFLX_MOMY, & ! [OUT]
                           QFLX_RHOT, & ! [OUT]
                           QFLX_RHOQ, & ! [OUT]
-                          TKE,       & ! [OUT]
+                          TKE,       & ! [INOUT]
+                          TKE_t_TB,  & ! [OUT]
                           NU,        & ! [OUT]
                           Ri,        & ! [OUT]
                           Pr,        & ! [OUT]
@@ -273,10 +303,6 @@ contains
           end do
           end do
        end do
-
-
-       call COMM_vars8( TKE(:,:,:), 1 )
-       call COMM_wait ( TKE(:,:,:), 1 )
 
        call HIST_in( TKE(:,:,:), 'TKE', 'turburent kinetic energy', 'm2/s2', nohalo=.true. )
        call HIST_in( NU (:,:,:), 'NU',  'eddy viscosity',           'm2/s' , nohalo=.true. )
