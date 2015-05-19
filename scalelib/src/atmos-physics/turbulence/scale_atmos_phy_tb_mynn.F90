@@ -327,6 +327,7 @@ contains
     real(RP) :: flux_z(KA,IA,JA)
     real(RP) :: flux_x(KA,IA,JA)
     real(RP) :: flux_y(KA,IA,JA)
+    real(RP) :: mflx
     real(RP) :: advc
 
 #ifdef MORE_HIST
@@ -881,37 +882,39 @@ Rt = 0.0_RP
        do j = JJS, JJE
        do i = IIS, IIE
        do k = KS , KE_PBL-1
-          flux_z(k,i,j) = ( J33G * MOMZ(k,i,j) &
-                          + J13G(k,i,j,I_XYW) * 0.25_RP * ( MOMX(k,i-1,j)+MOMX(k,i,j)+MOMX(k+1,i-1,j)+MOMX(k+1,i,j) ) &
-                          + J23G(k,i,j,I_XYW) * 0.25_RP * ( MOMY(k,i,j-1)+MOMY(k,i,j)+MOMY(k+1,i,j-1)+MOMY(k+1,i,j) ) ) &
-                          * ( tke(k,i,j)+tke(k+1,i,j) ) * 0.5_RP
+          mflx = J33G * MOMZ(k,i,j) / ( MAPF(i,j,1,I_XY)*MAPF(i,j,2,I_XY) ) &
+               + J13G(k,i,j,I_XYW) * 0.25_RP * ( MOMX(k,i-1,j)+MOMX(k,i,j)+MOMX(k+1,i-1,j)+MOMX(k+1,i,j) ) / MAPF(i,j,2,I_XY) &
+               + J23G(k,i,j,I_XYW) * 0.25_RP * ( MOMY(k,i,j-1)+MOMY(k,i,j)+MOMY(k+1,i,j-1)+MOMY(k+1,i,j) ) / MAPF(i,j,1,I_XY)
+          flux_z(k,i,j) = 0.5_RP * (    mflx  * ( tke(k+1,i,j)+tke(k,i,j) ) &
+                                   -abs(mflx) * ( tke(k+1,i,j)-tke(k,i,j) ) )
        end do
        end do
        end do
        do j = JJS  , JJE
        do i = IIS-1, IIE
        do k = KS   , KE_PBL
-          flux_x(k,i,j) = MOMX(k,i,j) * ( tke(k,i,j)+tke(k,i+1,j) ) * 0.5_RP &
-                        * GSQRT(k,i,j,I_UYZ) / MAPF(i,j,2,I_UY)
+          mflx = MOMX(k,i,j) * GSQRT(k,i,j,I_UYZ) / MAPF(i,j,2,I_UY)
+          flux_x(k,i,j) = 0.5_RP * (    mflx  * ( tke(k,i+1,j)+tke(k,i,j) ) &
+                                   -abs(mflx) * ( tke(k,i+1,j)-tke(k,i,j) ) )
        end do
        end do
        end do
        do j = JJS-1, JJE
        do i = IIS  , IIE
        do k = KS   , KE_PBL
-          flux_y(k,i,j) = MOMY(k,i,j) * ( tke(k,i,j)+tke(k,i,j+1) ) * 0.5_RP &
-                        * GSQRT(k,i,j,I_XVZ) / MAPF(i,j,1,I_XV)
+          mflx = MOMY(k,i,j) * GSQRT(k,i,j,I_XVZ) / MAPF(i,j,1,I_XV)
+          flux_y(k,i,j) = 0.5_RP * (    mflx  * ( tke(k,i,j+1)+tke(k,i,j) ) &
+                                   -abs(mflx) * ( tke(k,i,j+1)-tke(k,i,j) ) )
        end do
        end do
        end do
 
        do j = JJS, JJE
        do i = IIS, IIE
-          advc = ( MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) &
-                 * ( ( flux_x(KS,i,j) - flux_x(KS,i-1,j) ) * RCDX(i) &
-                   + ( flux_y(KS,i,j) - flux_y(KS,i,j-1) ) * RCDY(j) ) &
-                 + flux_z(KS,i,j) * RCDZ(KS) ) &
-                 / ( GSQRT(KS,i,j,I_XYZ) * DENS(KS,i,j) )
+          advc = ( ( flux_z(KS,i,j)                    ) * RCDZ(KS) &
+                 + ( flux_x(KS,i,j) - flux_x(KS,i-1,j) ) * RCDX(i) &
+                 + ( flux_y(KS,i,j) - flux_y(KS,i,j-1) ) * RCDY(j) ) &
+                 * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / ( GSQRT(KS,i,j,I_XYZ) * DENS(KS,i,j) )
           d(KS,i,j) = tke(KS,i,j) + dt * ( Nu(KS,i,j) * (dudz2(KS,i,j) - n2(KS,i,j)/Pr(KS,i,j)) &
                                      - advc )
 #ifdef MORE_HIST
@@ -919,11 +922,10 @@ Rt = 0.0_RP
           gen(KS,i,j) = Nu(KS,i,j) * (dudz2(KS,i,j) - n2(KS,i,j)/Pr(KS,i,j))
 #endif
           do k = KS+1, KE_PBL-1
-             advc = ( MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) &
-                    * ( ( flux_x(k,i,j) - flux_x(k,i-1,j) ) * RCDX(i) &
-                      + ( flux_y(k,i,j) - flux_y(k,i,j-1) ) * RCDY(j) ) &
-                    + ( flux_z(k,i,j) - flux_z(k-1,i,j) ) * RCDZ(k) ) &
-                    / ( GSQRT(k,i,j,I_XYZ) * DENS(k,i,j) )
+             advc = ( ( flux_z(k,i,j) - flux_z(k-1,i,j) ) * RCDZ(k) &
+                    + ( flux_x(k,i,j) - flux_x(k,i-1,j) ) * RCDX(i) &
+                    + ( flux_y(k,i,j) - flux_y(k,i,j-1) ) * RCDY(j) ) &
+                    * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / ( GSQRT(k,i,j,I_XYZ) * DENS(k,i,j) )
              d(k,i,j) = tke(k,i,j) &
                   + dt * ( Nu(k,i,j) * (dudz2(k,i,j) - n2(k,i,j)/Pr(k,i,j)) &
                          - advc )
@@ -932,11 +934,10 @@ Rt = 0.0_RP
              gen(k,i,j) = Nu(k,i,j) * (dudz2(k,i,j) - n2(k,i,j)/Pr(k,i,j))
 #endif
           end do
-          advc = ( MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) &
-                 * ( ( flux_x(KE_PBL,i,j) - flux_x(KE_PBL,i-1,j) ) * RCDX(i) &
-                   + ( flux_y(KE_PBL,i,j) - flux_y(KE_PBL,i,j-1) ) * RCDY(j) ) &
-                 + ( - flux_z(KE_PBL-1,i,j) ) * RCDZ(KE_PBL) ) &
-                 / ( GSQRT(KE_PBL,i,j,I_XYZ) * DENS(KE_PBL,i,j) )
+          advc = ( (                    - flux_z(KE_PBL-1,i,j) ) * RCDZ(KE_PBL) &
+                 + ( flux_x(KE_PBL,i,j) - flux_x(KE_PBL,i-1,j) ) * RCDX(i) &
+                 + ( flux_y(KE_PBL,i,j) - flux_y(KE_PBL,i,j-1) ) * RCDY(j) ) &
+                 * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / ( GSQRT(KE_PBL,i,j,I_XYZ) * DENS(KE_PBL,i,j) )
           d(KE_PBL,i,j) = tke(KE_PBL,i,j) + dt * ( Nu(KE_PBL,i,j) * (dudz2(KE_PBL,i,j) - n2(KE_PBL,i,j)/Pr(KE_PBL,i,j)) &
                                              - advc )
 #ifdef MORE_HIST
