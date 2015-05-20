@@ -5865,6 +5865,11 @@ contains
                 write(IO_FID_LOG,*) '*** cannot found SST. SKINT is used for SST! '
                 cycle
              endif
+          case('SMOIS')
+             if (use_file_landwater .and. (.not. data_available(Ig_smois))) then
+                write(IO_FID_LOG,*) '*** cannot found data in grads namelist! ',trim(item),trim(item_list(ielem))
+                call PRC_MPIstop
+             endif
           case default
              if ( .not. data_available(ielem) ) then
                 write(IO_FID_LOG,*) '*** cannot found data in grads namelist! ',trim(item),trim(item_list(ielem))
@@ -5994,21 +5999,23 @@ contains
                 enddo
              endif
           case('SMOIS')
-             if(dims(7)/=knum)then
-                write(IO_FID_LOG,*) '*** The number of levels for SMOIS must be same as llevs! ',dims(7),knum
-                call PRC_MPIstop
-             endif
-             if ( trim(dtype) == "map" ) then
-                call read_grads_file_3d(io_fid_grads_data,gfile,dims(4),dims(5),dims(7),nt,item,startrec,totalrec,gland)
-                do it = 1, nt
-                do k = 1, dims(7)
-                do j = 1, dims(5)
-                do i = 1, dims(4)
-                   strg_org(k,i,j,it) = real(gland(i,j,k,it), kind=RP)
-                enddo
-                enddo
-                enddo
-                enddo
+             if ( use_file_landwater ) then
+                if(dims(7)/=knum)then
+                   write(IO_FID_LOG,*) '*** The number of levels for SMOIS must be same as llevs! ',dims(7),knum
+                   call PRC_MPIstop
+                endif
+                if ( trim(dtype) == "map" ) then
+                   call read_grads_file_3d(io_fid_grads_data,gfile,dims(4),dims(5),dims(7),nt,item,startrec,totalrec,gland)
+                   do it = 1, nt
+                   do k = 1, dims(7)
+                   do j = 1, dims(5)
+                   do i = 1, dims(4)
+                      strg_org(k,i,j,it) = real(gland(i,j,k,it), kind=RP)
+                   enddo
+                   enddo
+                   enddo
+                   enddo
+                endif
              endif
           case('SKINT')
              if ( trim(dtype) == "map" ) then
@@ -6062,11 +6069,13 @@ contains
              tg_org(k,:,:,1) = work(:,:,1)
           enddo
           !--Land water
-          do k=1,dims(7)
-             work(:,:,1) = strg_org(k,:,:,1)
-             call interp_OceanLand_data(work(:,:,:),lsmask_org(:,:,fstep),dims(4),dims(5), 1, landdata=.true.)
-             strg_org(k,:,:,1) = work(:,:,1)
-          enddo
+          if ( use_file_landwater ) then
+             do k=1,dims(7)
+                work(:,:,1) = strg_org(k,:,:,1)
+                call interp_OceanLand_data(work(:,:,:),lsmask_org(:,:,fstep),dims(4),dims(5), 1, landdata=.true.)
+                strg_org(k,:,:,1) = work(:,:,1)
+             enddo
+          endif
           !--Surface skin temp
           work(:,:,1) = skint_org(:,:,1)
           call interp_OceanLand_data(work(:,:,:),lsmask_org(:,:,fstep),dims(4),dims(5), 1,landdata=.true.)
@@ -6084,7 +6093,9 @@ contains
     call COMM_bcast( lat_org   (:,:,:),          dims(4), dims(5), fstep )
     call COMM_bcast( lz_org  (:,:,:,:), dims(7), dims(4), dims(5), fstep )
     call COMM_bcast( tg_org  (:,:,:,:), dims(7), dims(4), dims(5), nt    )
-    call COMM_bcast( strg_org(:,:,:,:), dims(7), dims(4), dims(5), nt    )
+    if( use_file_landwater ) then
+       call COMM_bcast( strg_org(:,:,:,:), dims(7), dims(4), dims(5), nt    )
+    endif
     call COMM_bcast( skint_org (:,:,:),          dims(4), dims(5), nt    )
     call COMM_bcast( sst_org   (:,:,:),          dims(4), dims(5), nt    )
 
