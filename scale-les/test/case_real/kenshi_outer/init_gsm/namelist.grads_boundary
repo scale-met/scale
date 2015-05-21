@@ -15,7 +15,7 @@
 #
 &grdvar  item='lon',     dtype='linear',  swpoint=110.0d0, dd=0.25d0 /
 &grdvar  item='lat',     dtype='linear',  swpoint=10.0d0,  dd=0.2d0 /
-&grdvar  item='plev',    dtype='levels',  lnum=21, lvars=1000,975,950,925,900,850,800,700,600,500,400,300,250,200,150,100,70,50,30,20,10, /
+&grdvar  item='plev',    dtype='levels',  lnum=21, lvars=100000,97500,95000,92500,90000,85000,80000,70000,60000,50000,40000,30000,25000,20000,15000,10000,7000,5000,3000,2000,1000, /
 &grdvar  item='MSLP',    dtype='map',     fname='GSMjp', startrec=1,  totalrec=101 /
 &grdvar  item='PSFC',    dtype='map',     fname='GSMjp', startrec=2,  totalrec=101 /
 &grdvar  item='U10',     dtype='map',     fname='GSMjp', startrec=3,  totalrec=101 /
