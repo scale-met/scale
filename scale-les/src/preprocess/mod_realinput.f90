@@ -3189,14 +3189,14 @@ contains
     integer,  parameter   :: Ig_t      = 6
     integer,  parameter   :: Ig_hgt    = 7  ! geopotential height (m)
     integer,  parameter   :: Ig_qv     = 8
-    integer,  parameter   :: Ig_rh     = 9
+    integer,  parameter   :: Ig_rh     = 9  ! percentile (%)
     integer,  parameter   :: Ig_slp    = 10
     integer,  parameter   :: Ig_ps     = 11
     integer,  parameter   :: Ig_u10    = 12
     integer,  parameter   :: Ig_v10    = 13
     integer,  parameter   :: Ig_t2     = 14
     integer,  parameter   :: Ig_q2     = 15
-    integer,  parameter   :: Ig_rh2    = 16
+    integer,  parameter   :: Ig_rh2    = 16 ! percentile (%)
 
     character(H_SHORT)    :: grads_item    (num_item_list)
     character(H_SHORT)    :: grads_kytpe   (num_item_list)
@@ -3228,7 +3228,7 @@ contains
     real(RP), allocatable :: vsfc_org (:,:,:)
     real(RP), allocatable :: tsfc_org (:,:,:)
     real(RP), allocatable :: qsfc_org (:,:,:,:)
-    real(RP), allocatable :: rhsfc_org(:,:,:)
+    real(RP), allocatable :: rhsfc_org(:,:,:)    ! percentile %
 
     real(RP), allocatable :: pres_org (:,:,:,:)
     real(RP), allocatable :: velx_org (:,:,:,:)
@@ -3237,7 +3237,7 @@ contains
     real(RP), allocatable :: pott_org (:,:,:,:)  ! calculated in this program
     real(RP), allocatable :: hgt_org  (:,:,:,:)
     real(RP), allocatable :: qtrc_org (:,:,:,:,:)
-    real(RP), allocatable :: rhprs_org(:,:,:,:)
+    real(RP), allocatable :: rhprs_org(:,:,:,:)  ! percentile %
 
     integer  :: QA_outer = 1
     real(RP) :: p_sat, qm
@@ -3582,7 +3582,7 @@ contains
                 do k = 1, dims(3)
                 do j = 1, dims(2)
                 do i = 1, dims(1)
-                   pres_org(k,i,j,it) = real(lvars(k), kind=RP) * 100.0_RP
+                   pres_org(k,i,j,it) = real(lvars(k), kind=RP)
                 enddo
                 enddo
                 enddo
@@ -3593,7 +3593,7 @@ contains
                 do k = 1, dims(3)
                 do j = 1, dims(2)
                 do i = 1, dims(1)
-                   pres_org(k,i,j,it) = real(gdata3D(i,j,k,it), kind=RP)  * 100.0_RP
+                   pres_org(k,i,j,it) = real(gdata3D(i,j,k,it), kind=RP)
                 enddo
                 enddo
                 enddo
@@ -5976,7 +5976,7 @@ contains
                 do k = 1, dims(7)
                 do j = 1, dims(5)
                 do i = 1, dims(4)
-                   lz_org(k,i,j,fstep) = real(gland(i,j,k,fstep), kind=RP)  * 100.0_RP
+                   lz_org(k,i,j,fstep) = real(gland(i,j,k,fstep), kind=RP)
                 enddo
                 enddo
                 enddo
