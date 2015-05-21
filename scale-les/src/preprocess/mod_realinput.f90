@@ -1128,19 +1128,19 @@ contains
                                  kgrd    (:,:,:,:,:), &
                                  igrd    (:,:,:),     &
                                  jgrd    (:,:,:),     &
-                                 IA, JA, KS-1, KE+1   )
+                                 IA, JA, KS, KE       )
     end do
     ! from staggered point to scalar point
     do n = sstep, estep
        do j = 1, JA
        do i = 2, IA
-       do k = KS-1, KE+1
+       do k = KS, KE
           llvelx(k,i,j,n) = ( work(k,i-1,j,n) + work(k,i,j,n) ) * 0.5_RP
        end do
        end do
        end do
        do j = 1, JA
-       do k = KS-1, KE+1
+       do k = KS, KE
           llvelx(k,1,j,n) = work(k,1,j,n)
        end do
        end do
@@ -1190,19 +1190,19 @@ contains
                                  kgrd    (:,:,:,:,:), &
                                  igrd    (:,:,:),     &
                                  jgrd    (:,:,:),     &
-                                 IA, JA, KS-1, KE+1   )
+                                 IA, JA, KS, KE       )
     end do
     ! from staggered point to scalar point
     do n = sstep, estep
        do j = 2, JA
        do i = 1, IA
-       do k = KS-1, KE+1
+       do k = KS, KE
           llvely(k,i,j,n) = ( work(k,i,j-1,n) + work(k,i,j,n) ) * 0.5_RP
        end do
        end do
        end do
        do i = 1, IA
-       do k = KS-1, KE+1
+       do k = KS, KE
           llvely(k,i,1,n) = work(k,i,1,n)
        end do
        end do
@@ -1315,7 +1315,7 @@ contains
                                  kgrd    (:,:,:,:,:), &
                                  igrd    (:,:,:),     &
                                  jgrd    (:,:,:),     &
-                                 IA, JA, KS-1, KE+1   )
+                                 IA, JA, KS, KE       )
 
        call INTRPNEST_interp_3d( pres    (:,:,:,n),   &
                                  pres_org(:,:,:,n),   &
@@ -1324,7 +1324,7 @@ contains
                                  kgrd    (:,:,:,:,:), &
                                  igrd    (:,:,:),     &
                                  jgrd    (:,:,:),     &
-                                 IA, JA, KS-1, KE+1   )
+                                 IA, JA, KS, KE       )
 
        do iq = 1, QA
           call INTRPNEST_interp_3d( qtrc    (:,:,:,n,iq), &
@@ -1334,7 +1334,7 @@ contains
                                     kgrd    (:,:,:,:,:),  &
                                     igrd    (:,:,:),      &
                                     jgrd    (:,:,:),      &
-                                    IA, JA, KS-1, KE+1    )
+                                    IA, JA, KS, KE        )
        end do
     end do
 
@@ -1348,7 +1348,7 @@ contains
                                  kgrd    (:,:,:,:,:), &
                                  igrd    (:,:,:),     &
                                  jgrd    (:,:,:),     &
-                                 IA, JA, KS-1, KE+1,  &
+                                 IA, JA, KS, KE,      &
                                  logwegt=.true.       )
        end do
     else
@@ -2544,7 +2544,7 @@ contains
                                  kgrd    (:,:,:,:,:), &
                                  igrd    (:,:,:),     &
                                  jgrd    (:,:,:),     &
-                                 IA, JA, KS-1, KE+1   )
+                                 IA, JA, KS, KE       )
     end do
     deallocate( velx_org )
 
@@ -2584,7 +2584,7 @@ contains
                                  kgrd    (:,:,:,:,:), &
                                  igrd    (:,:,:),     &
                                  jgrd    (:,:,:),     &
-                                 IA, JA, KS-1, KE+1   )
+                                 IA, JA, KS, KE       )
     end do
     deallocate( vely_org )
 
@@ -2592,7 +2592,7 @@ contains
        ! convert from latlon coordinate to local mapping (x)
        do j = 1, JA
        do i = 1, IA
-       do k = KS-1, KE+1
+       do k = KS, KE
           work(k,i,j,n) = llvelx(k,i,j,n) * rotc(i,j,cosin) + llvely(k,i,j,n) * rotc(i,j,sine)
        end do
        end do
@@ -2624,7 +2624,7 @@ contains
        ! convert from latlon coordinate to local mapping (y)
        do j = 1, JA
        do i = 1, IA
-       do k = KS-1, KE+1
+       do k = KS, KE
           work(k,i,j,n) = - llvelx(k,i,j,n) * rotc(i,j,sine) + llvely(k,i,j,n) * rotc(i,j,cosin)
        end do
        end do
@@ -2764,7 +2764,7 @@ contains
                                  kgrd    (:,:,:,:,:),    &
                                  igrd    (:,:,:),        &
                                  jgrd    (:,:,:),        &
-                                 IA, JA, KS-1, KE+1      )
+                                 IA, JA, KS, KE          )
     end do
     deallocate( qtrc_org )
 
@@ -2847,7 +2847,7 @@ contains
                                  kgrd    (:,:,:,:,:), &
                                  igrd    (:,:,:),     &
                                  jgrd    (:,:,:),     &
-                                 IA, JA, KS-1, KE+1   )
+                                 IA, JA, KS, KE       )
     end do
     deallocate( pres_org )
 
@@ -2985,7 +2985,7 @@ contains
                                  kgrd    (:,:,:,:,:), &
                                  igrd    (:,:,:),     &
                                  jgrd    (:,:,:),     &
-                                 IA, JA, KS-1, KE+1   )
+                                 IA, JA, KS, KE       )
     end do
     deallocate( temp_org )
     deallocate( slp_org )
@@ -3004,7 +3004,7 @@ contains
     do n = sstep, estep
     do j = 1, JA
     do i = 1, IA
-    do k = KS-1, KE+1
+    do k = KS, KE
           call THERMODYN_pott( pott(k,i,j,n),  & ! [OUT]
                                temp(k,i,j,n),  & ! [IN]
                                pres(k,i,j,n),  & ! [IN]
@@ -3921,22 +3921,22 @@ contains
                                        dims(3), dims(1), dims(2) ) ! [IN]
 
        ! interpolate from outer grid to SCALE grid
-       call INTRPNEST_interp_3d( llvelx  (:,:,:,it),   &
-                                 velx_org(:,:,:,it),   &
+       call INTRPNEST_interp_3d( llvelx  (:,:,:,it),  &
+                                 velx_org(:,:,:,it),  &
                                  hfact   (:,:,:),     &
                                  vfact   (:,:,:,:,:), &
                                  kgrd    (:,:,:,:,:), &
                                  igrd    (:,:,:),     &
                                  jgrd    (:,:,:),     &
-                                 IA, JA, KS-1, KE+1   )
-       call INTRPNEST_interp_3d( llvely  (:,:,:,it),   &
-                                 vely_org(:,:,:,it),   &
+                                 IA, JA, KS, KE       )
+       call INTRPNEST_interp_3d( llvely  (:,:,:,it),  &
+                                 vely_org(:,:,:,it),  &
                                  hfact   (:,:,:),     &
                                  vfact   (:,:,:,:,:), &
                                  kgrd    (:,:,:,:,:), &
                                  igrd    (:,:,:),     &
                                  jgrd    (:,:,:),     &
-                                 IA, JA, KS-1, KE+1   )
+                                 IA, JA, KS, KE       )
 
        call INTRPNEST_interp_2d( mslp_sfc(1,:,:,it), &
                                  mslp_org(  :,:,it), &
@@ -3986,7 +3986,7 @@ contains
                                  kgrd    (:,:,:,:,:),     &
                                  igrd    (:,:,:),         &
                                  jgrd    (:,:,:),         &
-                                 IA, JA, KS-1, KE+1       )
+                                 IA, JA, KS, KE           )
 
        call INTRPNEST_interp_3d( pres    (:,:,:,it),   &
                                  pres_org(:,:,:,it),   &
@@ -3995,7 +3995,7 @@ contains
                                  kgrd    (:,:,:,:,:),  &
                                  igrd    (:,:,:),      &
                                  jgrd    (:,:,:),      &
-                                 IA, JA, KS-1, KE+1    )
+                                 IA, JA, KS, KE        )
        call INTRPNEST_interp_3d( temp    (:,:,:,it),   &
                                  temp_org(:,:,:,it),   &
                                  hfact   (:,:,:),      &
@@ -4003,7 +4003,7 @@ contains
                                  kgrd    (:,:,:,:,:),  &
                                  igrd    (:,:,:),      &
                                  jgrd    (:,:,:),      &
-                                 IA, JA, KS-1, KE+1    )
+                                 IA, JA, KS, KE        )
        call INTRPNEST_interp_3d( pott    (:,:,:,it),   &
                                  pott_org(:,:,:,it),   &
                                  hfact   (:,:,:),      &
@@ -4011,11 +4011,11 @@ contains
                                  kgrd    (:,:,:,:,:),  &
                                  igrd    (:,:,:),      &
                                  jgrd    (:,:,:),      &
-                                 IA, JA, KS-1, KE+1    )
+                                 IA, JA, KS, KE        )
 
        !do j = 1, JA
        !do i = 1, IA
-       !do k = KS-1, KE+1
+       !do k = KS, KE
        !   call THERMODYN_pott( pott(k,i,j,it),  & ! [OUT]
        !                        temp(k,i,j,it),  & ! [IN]
        !                        pres(k,i,j,it),  & ! [IN]
@@ -4081,7 +4081,7 @@ contains
        !! convert from latlon coordinate to local mapping (x)
        do j = 1, JA
        do i = 1, IA
-       do k = KS-1, KE+1
+       do k = KS, KE
           work(k,i,j,it) = llvelx(k,i,j,it) * rotc(i,j,cosin) + llvely(k,i,j,it) * rotc(i,j,sine)
        end do
        end do
@@ -4107,7 +4107,7 @@ contains
        ! convert from latlon coordinate to local mapping (y)
        do j = 1, JA
        do i = 1, IA
-       do k = KS-1, KE+1
+       do k = KS, KE
           work(k,i,j,it) = - llvelx(k,i,j,it) * rotc(i,j,sine) + llvely(k,i,j,it) * rotc(i,j,cosin)
        end do
        end do

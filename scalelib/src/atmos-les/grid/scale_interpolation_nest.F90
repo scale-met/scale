@@ -1205,7 +1205,7 @@ contains
     if ( lndgrd ) then
        kks = 1;     kke = LKMAX
     else
-       kks = ks-1;  kke = ke+1
+       kks = ks;  kke = ke
     endif
 
     ncopy = 0  ! dummy
