@@ -1033,13 +1033,13 @@ contains
     end do
 
     call INTRPNEST_domain_compatibility( lon_org(:,:,1),  lat_org(:,:,1),  geoh_org(:,:,:,1), &
-                                         LON(:,:),  LAT(:,:),  CZ(:,:,:) )
+                                         LON(:,:),  LAT(:,:),  CZ(KS:KE,:,:) )
     call INTRPNEST_domain_compatibility( lonu_org(:,:,1), latu_org(:,:,1), geoh_org(:,:,:,1), &
-                                         LONX(:,:), LAT(:,:),  CZ(:,:,:), skip_z=.true. )
+                                         LONX(:,:), LAT(:,:),  CZ(KS:KE,:,:), skip_z=.true. )
     call INTRPNEST_domain_compatibility( lonv_org(:,:,1), latv_org(:,:,1), geoh_org(:,:,:,1), &
-                                         LON(:,:),  LATY(:,:), CZ(:,:,:), skip_z=.true. )
+                                         LON(:,:),  LATY(:,:), CZ(KS:KE,:,:), skip_z=.true. )
     call INTRPNEST_domain_compatibility( lon_org(:,:,1),  lat_org(:,:,1),  geof_org(:,:,:,1), &
-                                         LON(:,:),  LAT(:,:),  FZ(:,:,:), skip_x=.true., skip_y=.true. )
+                                         LON(:,:),  LAT(:,:),  FZ(KS:KE,:,:), skip_x=.true., skip_y=.true. )
 
     ! for vector (w) points
      call INTRPNEST_interp_fact_llz( hfact(:,:,:),          & ! [OUT]
@@ -1128,19 +1128,19 @@ contains
                                  kgrd    (:,:,:,:,:), &
                                  igrd    (:,:,:),     &
                                  jgrd    (:,:,:),     &
-                                 IA, JA, KS-1, KE+1   )
+                                 IA, JA, KS, KE       )
     end do
     ! from staggered point to scalar point
     do n = sstep, estep
        do j = 1, JA
        do i = 2, IA
-       do k = KS-1, KE+1
+       do k = KS, KE
           llvelx(k,i,j,n) = ( work(k,i-1,j,n) + work(k,i,j,n) ) * 0.5_RP
        end do
        end do
        end do
        do j = 1, JA
-       do k = KS-1, KE+1
+       do k = KS, KE
           llvelx(k,1,j,n) = work(k,1,j,n)
        end do
        end do
@@ -1190,19 +1190,19 @@ contains
                                  kgrd    (:,:,:,:,:), &
                                  igrd    (:,:,:),     &
                                  jgrd    (:,:,:),     &
-                                 IA, JA, KS-1, KE+1   )
+                                 IA, JA, KS, KE       )
     end do
     ! from staggered point to scalar point
     do n = sstep, estep
        do j = 2, JA
        do i = 1, IA
-       do k = KS-1, KE+1
+       do k = KS, KE
           llvely(k,i,j,n) = ( work(k,i,j-1,n) + work(k,i,j,n) ) * 0.5_RP
        end do
        end do
        end do
        do i = 1, IA
-       do k = KS-1, KE+1
+       do k = KS, KE
           llvely(k,i,1,n) = work(k,i,1,n)
        end do
        end do
@@ -1315,7 +1315,7 @@ contains
                                  kgrd    (:,:,:,:,:), &
                                  igrd    (:,:,:),     &
                                  jgrd    (:,:,:),     &
-                                 IA, JA, KS-1, KE+1   )
+                                 IA, JA, KS, KE       )
 
        call INTRPNEST_interp_3d( pres    (:,:,:,n),   &
                                  pres_org(:,:,:,n),   &
@@ -1324,7 +1324,7 @@ contains
                                  kgrd    (:,:,:,:,:), &
                                  igrd    (:,:,:),     &
                                  jgrd    (:,:,:),     &
-                                 IA, JA, KS-1, KE+1   )
+                                 IA, JA, KS, KE       )
 
        do iq = 1, QA
           call INTRPNEST_interp_3d( qtrc    (:,:,:,n,iq), &
@@ -1334,7 +1334,7 @@ contains
                                     kgrd    (:,:,:,:,:),  &
                                     igrd    (:,:,:),      &
                                     jgrd    (:,:,:),      &
-                                    IA, JA, KS-1, KE+1    )
+                                    IA, JA, KS, KE        )
        end do
     end do
 
@@ -1348,7 +1348,7 @@ contains
                                  kgrd    (:,:,:,:,:), &
                                  igrd    (:,:,:),     &
                                  jgrd    (:,:,:),     &
-                                 IA, JA, KS-1, KE+1,  &
+                                 IA, JA, KS, KE,      &
                                  logwegt=.true.       )
        end do
     else
@@ -1382,7 +1382,7 @@ contains
           ! Interpolate Surface pressure from SLP and PRES
           lack_of_val = .true.
 
-          do k = KS-1, KE
+          do k = KS-1, KE-1
              if( k == KS-1 ) then
                z1    = 0.0_RP
                z2    = CZ      (k+1,i,j  )
@@ -1409,6 +1409,7 @@ contains
 
           if( lack_of_val ) then
              write(IO_FID_LOG,*) 'realinput ATM SCALE: cannot estimate pres_sfc',i,j,n
+             write(IO_FID_LOG,*) 'SCALE topo= ',topo(i,j),'CZ(KE)= ',CZ(KE,i,j)
              call PRC_MPIstop
           endif
 
@@ -1901,13 +1902,13 @@ contains
     end do
 
     call INTRPNEST_domain_compatibility( lon_org(:,:,1),  lat_org(:,:,1),  geoh_org(:,:,:,1), &
-                                         LON(:,:),  LAT(:,:),  CZ(:,:,:) )
+                                         LON(:,:),  LAT(:,:),  CZ(KS:KE,:,:) )
     call INTRPNEST_domain_compatibility( lonu_org(:,:,1), latu_org(:,:,1), geoh_org(:,:,:,1), &
-                                         LONX(:,:), LAT(:,:),  CZ(:,:,:), skip_z=.true. )
+                                         LONX(:,:), LAT(:,:),  CZ(KS:KE,:,:), skip_z=.true. )
     call INTRPNEST_domain_compatibility( lonv_org(:,:,1), latv_org(:,:,1), geoh_org(:,:,:,1), &
-                                         LON(:,:),  LATY(:,:), CZ(:,:,:), skip_z=.true. )
+                                         LON(:,:),  LATY(:,:), CZ(KS:KE,:,:), skip_z=.true. )
     call INTRPNEST_domain_compatibility( lon_org(:,:,1),  lat_org(:,:,1),  geof_org(:,:,:,1), &
-                                         LON(:,:),  LAT(:,:),  FZ(:,:,:), skip_x=.true., skip_y=.true. )
+                                         LON(:,:),  LAT(:,:),  FZ(KS:KE,:,:), skip_x=.true., skip_y=.true. )
 
     do n = ts, te !--- time loop
 
@@ -2143,7 +2144,7 @@ contains
        do j = 1, JA
        do i = 1, IA
           lack_of_val = .true.
-          do k = KS-1, KE
+          do k = KS-1, KE-1
              if(k == KS-1)then
                z1=0.0_RP
                z2=CZ(k+1,i,j)
@@ -2165,6 +2166,7 @@ contains
           enddo
           if( lack_of_val )then
              write(IO_FID_LOG,*) 'realinput ATM WRF : cannot estimate pres_sfc',i,j,n
+             write(IO_FID_LOG,*) 'SCALE topo= ',topo(i,j),'CZ(KE)= ',CZ(KE,i,j)
              call PRC_MPIstop
           endif
        enddo
@@ -2483,13 +2485,13 @@ contains
     call COMM_bcast( hgt_org (:,:,:,:),      dims(3), dims(1), dims(2), fstep )
 
     call INTRPNEST_domain_compatibility( lon_org(:,:,1),  lat_org(:,:,1),  hgt_org(:,:,:,1), &
-                                         LON(:,:),  LAT(:,:),  CZ(:,:,:) )
+                                         LON(:,:),  LAT(:,:),  CZ(KS:KE,:,:) )
     call INTRPNEST_domain_compatibility( lon_org(:,:,1),  lat_org(:,:,1),  hgt_org(:,:,:,1), &
-                                         LONX(:,:), LAT(:,:),  CZ(:,:,:), skip_y=.true., skip_z=.true. )
+                                         LONX(:,:), LAT(:,:),  CZ(KS:KE,:,:), skip_y=.true., skip_z=.true. )
     call INTRPNEST_domain_compatibility( lon_org(:,:,1),  lat_org(:,:,1),  hgt_org(:,:,:,1), &
-                                         LON(:,:),  LATY(:,:), CZ(:,:,:), skip_x=.true., skip_z=.true. )
+                                         LON(:,:),  LATY(:,:), CZ(KS:KE,:,:), skip_x=.true., skip_z=.true. )
     call INTRPNEST_domain_compatibility( lon_org(:,:,1),  lat_org(:,:,1),  hgt_org(:,:,:,1), &
-                                         LON(:,:),  LAT(:,:),  FZ(:,:,:), skip_x=.true., skip_y=.true. )
+                                         LON(:,:),  LAT(:,:),  FZ(KS:KE,:,:), skip_x=.true., skip_y=.true. )
 
     call INTRPNEST_interp_fact_llz( hfact  (:,:,:),           & ! [OUT]
                                     vfact  (:,:,:,:,:),       & ! [OUT]
@@ -2544,7 +2546,7 @@ contains
                                  kgrd    (:,:,:,:,:), &
                                  igrd    (:,:,:),     &
                                  jgrd    (:,:,:),     &
-                                 IA, JA, KS-1, KE+1   )
+                                 IA, JA, KS, KE       )
     end do
     deallocate( velx_org )
 
@@ -2584,7 +2586,7 @@ contains
                                  kgrd    (:,:,:,:,:), &
                                  igrd    (:,:,:),     &
                                  jgrd    (:,:,:),     &
-                                 IA, JA, KS-1, KE+1   )
+                                 IA, JA, KS, KE       )
     end do
     deallocate( vely_org )
 
@@ -2592,7 +2594,7 @@ contains
        ! convert from latlon coordinate to local mapping (x)
        do j = 1, JA
        do i = 1, IA
-       do k = KS-1, KE+1
+       do k = KS, KE
           work(k,i,j,n) = llvelx(k,i,j,n) * rotc(i,j,cosin) + llvely(k,i,j,n) * rotc(i,j,sine)
        end do
        end do
@@ -2624,7 +2626,7 @@ contains
        ! convert from latlon coordinate to local mapping (y)
        do j = 1, JA
        do i = 1, IA
-       do k = KS-1, KE+1
+       do k = KS, KE
           work(k,i,j,n) = - llvelx(k,i,j,n) * rotc(i,j,sine) + llvely(k,i,j,n) * rotc(i,j,cosin)
        end do
        end do
@@ -2764,7 +2766,7 @@ contains
                                  kgrd    (:,:,:,:,:),    &
                                  igrd    (:,:,:),        &
                                  jgrd    (:,:,:),        &
-                                 IA, JA, KS-1, KE+1      )
+                                 IA, JA, KS, KE          )
     end do
     deallocate( qtrc_org )
 
@@ -2847,7 +2849,7 @@ contains
                                  kgrd    (:,:,:,:,:), &
                                  igrd    (:,:,:),     &
                                  jgrd    (:,:,:),     &
-                                 IA, JA, KS-1, KE+1   )
+                                 IA, JA, KS, KE       )
     end do
     deallocate( pres_org )
 
@@ -2856,7 +2858,7 @@ contains
     do j = 1, JA
     do i = 1, IA
        lack_of_val = .true.
-       do k = KS-1, KE
+       do k = KS-1, KE-1
           if(k == KS-1)then
             z1=0.0_RP
             z2=CZ(k+1,i,j)
@@ -2878,6 +2880,7 @@ contains
        enddo
        if( lack_of_val )then
           write(IO_FID_LOG,*) 'realinput atom NICAM : cannot estimate pres_sfc',i,j,n
+          write(IO_FID_LOG,*) 'SCALE topo= ',topo(i,j),'CZ(KE)= ',CZ(KE,i,j)
           call PRC_MPIstop
        endif
     enddo
@@ -2985,7 +2988,7 @@ contains
                                  kgrd    (:,:,:,:,:), &
                                  igrd    (:,:,:),     &
                                  jgrd    (:,:,:),     &
-                                 IA, JA, KS-1, KE+1   )
+                                 IA, JA, KS, KE       )
     end do
     deallocate( temp_org )
     deallocate( slp_org )
@@ -3004,7 +3007,7 @@ contains
     do n = sstep, estep
     do j = 1, JA
     do i = 1, IA
-    do k = KS-1, KE+1
+    do k = KS, KE
           call THERMODYN_pott( pott(k,i,j,n),  & ! [OUT]
                                temp(k,i,j,n),  & ! [IN]
                                pres(k,i,j,n),  & ! [IN]
@@ -3897,13 +3900,13 @@ contains
     do it = 1, nt !--- time loop
 
        call INTRPNEST_domain_compatibility( lon_org(:,:,fstep),  lat_org(:,:,fstep),  hgt_org(:,:,:,it), &
-                                            LON(:,:),  LAT(:,:),  CZ(:,:,:) )
+                                            LON(:,:),  LAT(:,:),  CZ(KS:KE,:,:) )
        call INTRPNEST_domain_compatibility( lon_org(:,:,fstep),  lat_org(:,:,fstep),  hgt_org(:,:,:,it), &
-                                            LONX(:,:), LAT(:,:),  CZ(:,:,:), skip_y=.true., skip_z=.true. )
+                                            LONX(:,:), LAT(:,:),  CZ(KS:KE,:,:), skip_y=.true., skip_z=.true. )
        call INTRPNEST_domain_compatibility( lon_org(:,:,fstep),  lat_org(:,:,fstep),  hgt_org(:,:,:,it), &
-                                            LON(:,:),  LATY(:,:), CZ(:,:,:), skip_x=.true., skip_z=.true. )
+                                            LON(:,:),  LATY(:,:), CZ(KS:KE,:,:), skip_x=.true., skip_z=.true. )
        call INTRPNEST_domain_compatibility( lon_org(:,:,fstep),  lat_org(:,:,fstep),  hgt_org(:,:,:,it), &
-                                            LON(:,:),  LAT(:,:),  FZ(:,:,:), skip_x=.true., skip_y=.true. )
+                                            LON(:,:),  LAT(:,:),  FZ(KS:KE,:,:), skip_x=.true., skip_y=.true. )
 
        call INTRPNEST_interp_fact_llz( hfact  (:,:,:),           & ! [OUT]
                                        vfact  (:,:,:,:,:),       & ! [OUT]
@@ -3921,22 +3924,22 @@ contains
                                        dims(3), dims(1), dims(2) ) ! [IN]
 
        ! interpolate from outer grid to SCALE grid
-       call INTRPNEST_interp_3d( llvelx  (:,:,:,it),   &
-                                 velx_org(:,:,:,it),   &
+       call INTRPNEST_interp_3d( llvelx  (:,:,:,it),  &
+                                 velx_org(:,:,:,it),  &
                                  hfact   (:,:,:),     &
                                  vfact   (:,:,:,:,:), &
                                  kgrd    (:,:,:,:,:), &
                                  igrd    (:,:,:),     &
                                  jgrd    (:,:,:),     &
-                                 IA, JA, KS-1, KE+1   )
-       call INTRPNEST_interp_3d( llvely  (:,:,:,it),   &
-                                 vely_org(:,:,:,it),   &
+                                 IA, JA, KS, KE       )
+       call INTRPNEST_interp_3d( llvely  (:,:,:,it),  &
+                                 vely_org(:,:,:,it),  &
                                  hfact   (:,:,:),     &
                                  vfact   (:,:,:,:,:), &
                                  kgrd    (:,:,:,:,:), &
                                  igrd    (:,:,:),     &
                                  jgrd    (:,:,:),     &
-                                 IA, JA, KS-1, KE+1   )
+                                 IA, JA, KS, KE       )
 
        call INTRPNEST_interp_2d( mslp_sfc(1,:,:,it), &
                                  mslp_org(  :,:,it), &
@@ -3986,7 +3989,7 @@ contains
                                  kgrd    (:,:,:,:,:),     &
                                  igrd    (:,:,:),         &
                                  jgrd    (:,:,:),         &
-                                 IA, JA, KS-1, KE+1       )
+                                 IA, JA, KS, KE           )
 
        call INTRPNEST_interp_3d( pres    (:,:,:,it),   &
                                  pres_org(:,:,:,it),   &
@@ -3995,7 +3998,7 @@ contains
                                  kgrd    (:,:,:,:,:),  &
                                  igrd    (:,:,:),      &
                                  jgrd    (:,:,:),      &
-                                 IA, JA, KS-1, KE+1    )
+                                 IA, JA, KS, KE        )
        call INTRPNEST_interp_3d( temp    (:,:,:,it),   &
                                  temp_org(:,:,:,it),   &
                                  hfact   (:,:,:),      &
@@ -4003,7 +4006,7 @@ contains
                                  kgrd    (:,:,:,:,:),  &
                                  igrd    (:,:,:),      &
                                  jgrd    (:,:,:),      &
-                                 IA, JA, KS-1, KE+1    )
+                                 IA, JA, KS, KE        )
        call INTRPNEST_interp_3d( pott    (:,:,:,it),   &
                                  pott_org(:,:,:,it),   &
                                  hfact   (:,:,:),      &
@@ -4011,11 +4014,11 @@ contains
                                  kgrd    (:,:,:,:,:),  &
                                  igrd    (:,:,:),      &
                                  jgrd    (:,:,:),      &
-                                 IA, JA, KS-1, KE+1    )
+                                 IA, JA, KS, KE        )
 
        !do j = 1, JA
        !do i = 1, IA
-       !do k = KS-1, KE+1
+       !do k = KS, KE
        !   call THERMODYN_pott( pott(k,i,j,it),  & ! [OUT]
        !                        temp(k,i,j,it),  & ! [IN]
        !                        pres(k,i,j,it),  & ! [IN]
@@ -4028,7 +4031,7 @@ contains
        do j = 1, JA
        do i = 1, IA
           lack_of_val = .true.
-          do k = KS-1, KE
+          do k = KS-1, KE-1
              if(k == KS-1)then
                z1=0.0_RP
                z2=CZ(k+1,i,j)
@@ -4049,7 +4052,8 @@ contains
              endif
           enddo
           if( lack_of_val )then
-             write(IO_FID_LOG,*) 'realinput atom NICAM : cannot estimate pres_sfc',i,j,n
+             write(IO_FID_LOG,*) 'realinput atom GrADS : cannot estimate pres_sfc',i,j,n
+             write(IO_FID_LOG,*) 'SCALE topo= ',topo(i,j),'CZ(KE)= ',CZ(KE,i,j)
              call PRC_MPIstop
           endif
        enddo
@@ -4081,7 +4085,7 @@ contains
        !! convert from latlon coordinate to local mapping (x)
        do j = 1, JA
        do i = 1, IA
-       do k = KS-1, KE+1
+       do k = KS, KE
           work(k,i,j,it) = llvelx(k,i,j,it) * rotc(i,j,cosin) + llvely(k,i,j,it) * rotc(i,j,sine)
        end do
        end do
@@ -4107,7 +4111,7 @@ contains
        ! convert from latlon coordinate to local mapping (y)
        do j = 1, JA
        do i = 1, IA
-       do k = KS-1, KE+1
+       do k = KS, KE
           work(k,i,j,it) = - llvelx(k,i,j,it) * rotc(i,j,sine) + llvely(k,i,j,it) * rotc(i,j,cosin)
        end do
        end do
