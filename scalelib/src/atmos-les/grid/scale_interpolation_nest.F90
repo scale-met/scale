@@ -1996,8 +1996,9 @@ contains
 
     if ( do_zdirec ) then
        max_ref = maxval( lev_org(:,:,:) )
+       !max_loc = maxval( lev_loc(KS-1:KE+1,:,:) ) ! HALO + 1
+       max_loc = maxval( lev_loc(:,:,:) ) ! HALO + 1
        !min_ref = minval( lev_org(:,:,:) )
-       max_loc = maxval( lev_loc(KS-1:KE+1,:,:) ) ! HALO + 1
        !min_loc = minval( lev_loc(3:KA,:,:) ) ! HALO + 1
 
        if ( max_ref < max_loc ) then

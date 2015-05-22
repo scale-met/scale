@@ -1033,13 +1033,13 @@ contains
     end do
 
     call INTRPNEST_domain_compatibility( lon_org(:,:,1),  lat_org(:,:,1),  geoh_org(:,:,:,1), &
-                                         LON(:,:),  LAT(:,:),  CZ(:,:,:) )
+                                         LON(:,:),  LAT(:,:),  CZ(KS:KE,:,:) )
     call INTRPNEST_domain_compatibility( lonu_org(:,:,1), latu_org(:,:,1), geoh_org(:,:,:,1), &
-                                         LONX(:,:), LAT(:,:),  CZ(:,:,:), skip_z=.true. )
+                                         LONX(:,:), LAT(:,:),  CZ(KS:KE,:,:), skip_z=.true. )
     call INTRPNEST_domain_compatibility( lonv_org(:,:,1), latv_org(:,:,1), geoh_org(:,:,:,1), &
-                                         LON(:,:),  LATY(:,:), CZ(:,:,:), skip_z=.true. )
+                                         LON(:,:),  LATY(:,:), CZ(KS:KE,:,:), skip_z=.true. )
     call INTRPNEST_domain_compatibility( lon_org(:,:,1),  lat_org(:,:,1),  geof_org(:,:,:,1), &
-                                         LON(:,:),  LAT(:,:),  FZ(:,:,:), skip_x=.true., skip_y=.true. )
+                                         LON(:,:),  LAT(:,:),  FZ(KS:KE,:,:), skip_x=.true., skip_y=.true. )
 
     ! for vector (w) points
      call INTRPNEST_interp_fact_llz( hfact(:,:,:),          & ! [OUT]
@@ -1382,7 +1382,7 @@ contains
           ! Interpolate Surface pressure from SLP and PRES
           lack_of_val = .true.
 
-          do k = KS-1, KE
+          do k = KS-1, KE-1
              if( k == KS-1 ) then
                z1    = 0.0_RP
                z2    = CZ      (k+1,i,j  )
@@ -1409,6 +1409,7 @@ contains
 
           if( lack_of_val ) then
              write(IO_FID_LOG,*) 'realinput ATM SCALE: cannot estimate pres_sfc',i,j,n
+             write(IO_FID_LOG,*) 'SCALE topo= ',topo(i,j),'CZ(KE)= ',CZ(KE,i,j)
              call PRC_MPIstop
           endif
 
@@ -1901,13 +1902,13 @@ contains
     end do
 
     call INTRPNEST_domain_compatibility( lon_org(:,:,1),  lat_org(:,:,1),  geoh_org(:,:,:,1), &
-                                         LON(:,:),  LAT(:,:),  CZ(:,:,:) )
+                                         LON(:,:),  LAT(:,:),  CZ(KS:KE,:,:) )
     call INTRPNEST_domain_compatibility( lonu_org(:,:,1), latu_org(:,:,1), geoh_org(:,:,:,1), &
-                                         LONX(:,:), LAT(:,:),  CZ(:,:,:), skip_z=.true. )
+                                         LONX(:,:), LAT(:,:),  CZ(KS:KE,:,:), skip_z=.true. )
     call INTRPNEST_domain_compatibility( lonv_org(:,:,1), latv_org(:,:,1), geoh_org(:,:,:,1), &
-                                         LON(:,:),  LATY(:,:), CZ(:,:,:), skip_z=.true. )
+                                         LON(:,:),  LATY(:,:), CZ(KS:KE,:,:), skip_z=.true. )
     call INTRPNEST_domain_compatibility( lon_org(:,:,1),  lat_org(:,:,1),  geof_org(:,:,:,1), &
-                                         LON(:,:),  LAT(:,:),  FZ(:,:,:), skip_x=.true., skip_y=.true. )
+                                         LON(:,:),  LAT(:,:),  FZ(KS:KE,:,:), skip_x=.true., skip_y=.true. )
 
     do n = ts, te !--- time loop
 
@@ -2143,7 +2144,7 @@ contains
        do j = 1, JA
        do i = 1, IA
           lack_of_val = .true.
-          do k = KS-1, KE
+          do k = KS-1, KE-1
              if(k == KS-1)then
                z1=0.0_RP
                z2=CZ(k+1,i,j)
@@ -2165,6 +2166,7 @@ contains
           enddo
           if( lack_of_val )then
              write(IO_FID_LOG,*) 'realinput ATM WRF : cannot estimate pres_sfc',i,j,n
+             write(IO_FID_LOG,*) 'SCALE topo= ',topo(i,j),'CZ(KE)= ',CZ(KE,i,j)
              call PRC_MPIstop
           endif
        enddo
@@ -2483,13 +2485,13 @@ contains
     call COMM_bcast( hgt_org (:,:,:,:),      dims(3), dims(1), dims(2), fstep )
 
     call INTRPNEST_domain_compatibility( lon_org(:,:,1),  lat_org(:,:,1),  hgt_org(:,:,:,1), &
-                                         LON(:,:),  LAT(:,:),  CZ(:,:,:) )
+                                         LON(:,:),  LAT(:,:),  CZ(KS:KE,:,:) )
     call INTRPNEST_domain_compatibility( lon_org(:,:,1),  lat_org(:,:,1),  hgt_org(:,:,:,1), &
-                                         LONX(:,:), LAT(:,:),  CZ(:,:,:), skip_y=.true., skip_z=.true. )
+                                         LONX(:,:), LAT(:,:),  CZ(KS:KE,:,:), skip_y=.true., skip_z=.true. )
     call INTRPNEST_domain_compatibility( lon_org(:,:,1),  lat_org(:,:,1),  hgt_org(:,:,:,1), &
-                                         LON(:,:),  LATY(:,:), CZ(:,:,:), skip_x=.true., skip_z=.true. )
+                                         LON(:,:),  LATY(:,:), CZ(KS:KE,:,:), skip_x=.true., skip_z=.true. )
     call INTRPNEST_domain_compatibility( lon_org(:,:,1),  lat_org(:,:,1),  hgt_org(:,:,:,1), &
-                                         LON(:,:),  LAT(:,:),  FZ(:,:,:), skip_x=.true., skip_y=.true. )
+                                         LON(:,:),  LAT(:,:),  FZ(KS:KE,:,:), skip_x=.true., skip_y=.true. )
 
     call INTRPNEST_interp_fact_llz( hfact  (:,:,:),           & ! [OUT]
                                     vfact  (:,:,:,:,:),       & ! [OUT]
@@ -2856,7 +2858,7 @@ contains
     do j = 1, JA
     do i = 1, IA
        lack_of_val = .true.
-       do k = KS-1, KE
+       do k = KS-1, KE-1
           if(k == KS-1)then
             z1=0.0_RP
             z2=CZ(k+1,i,j)
@@ -2878,6 +2880,7 @@ contains
        enddo
        if( lack_of_val )then
           write(IO_FID_LOG,*) 'realinput atom NICAM : cannot estimate pres_sfc',i,j,n
+          write(IO_FID_LOG,*) 'SCALE topo= ',topo(i,j),'CZ(KE)= ',CZ(KE,i,j)
           call PRC_MPIstop
        endif
     enddo
@@ -3897,13 +3900,13 @@ contains
     do it = 1, nt !--- time loop
 
        call INTRPNEST_domain_compatibility( lon_org(:,:,fstep),  lat_org(:,:,fstep),  hgt_org(:,:,:,it), &
-                                            LON(:,:),  LAT(:,:),  CZ(:,:,:) )
+                                            LON(:,:),  LAT(:,:),  CZ(KS:KE,:,:) )
        call INTRPNEST_domain_compatibility( lon_org(:,:,fstep),  lat_org(:,:,fstep),  hgt_org(:,:,:,it), &
-                                            LONX(:,:), LAT(:,:),  CZ(:,:,:), skip_y=.true., skip_z=.true. )
+                                            LONX(:,:), LAT(:,:),  CZ(KS:KE,:,:), skip_y=.true., skip_z=.true. )
        call INTRPNEST_domain_compatibility( lon_org(:,:,fstep),  lat_org(:,:,fstep),  hgt_org(:,:,:,it), &
-                                            LON(:,:),  LATY(:,:), CZ(:,:,:), skip_x=.true., skip_z=.true. )
+                                            LON(:,:),  LATY(:,:), CZ(KS:KE,:,:), skip_x=.true., skip_z=.true. )
        call INTRPNEST_domain_compatibility( lon_org(:,:,fstep),  lat_org(:,:,fstep),  hgt_org(:,:,:,it), &
-                                            LON(:,:),  LAT(:,:),  FZ(:,:,:), skip_x=.true., skip_y=.true. )
+                                            LON(:,:),  LAT(:,:),  FZ(KS:KE,:,:), skip_x=.true., skip_y=.true. )
 
        call INTRPNEST_interp_fact_llz( hfact  (:,:,:),           & ! [OUT]
                                        vfact  (:,:,:,:,:),       & ! [OUT]
@@ -4028,7 +4031,7 @@ contains
        do j = 1, JA
        do i = 1, IA
           lack_of_val = .true.
-          do k = KS-1, KE
+          do k = KS-1, KE-1
              if(k == KS-1)then
                z1=0.0_RP
                z2=CZ(k+1,i,j)
@@ -4049,7 +4052,8 @@ contains
              endif
           enddo
           if( lack_of_val )then
-             write(IO_FID_LOG,*) 'realinput atom NICAM : cannot estimate pres_sfc',i,j,n
+             write(IO_FID_LOG,*) 'realinput atom GrADS : cannot estimate pres_sfc',i,j,n
+             write(IO_FID_LOG,*) 'SCALE topo= ',topo(i,j),'CZ(KE)= ',CZ(KE,i,j)
              call PRC_MPIstop
           endif
        enddo
