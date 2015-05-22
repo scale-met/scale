@@ -8,6 +8,8 @@
  outer_nl     = 4
  outer_nx_sfc = 360
  outer_ny_sfc = 181
+ outer_nx_sst = 360
+ outer_ny_sst = 181
 /
 
 #
@@ -31,7 +33,7 @@
 &grdvar  item='lat_sfc', dtype='linear',  swpoint=-90.0d0, dd=1.0d0 /
 &grdvar  item='llev',    dtype='levels',  lnum=4, lvars=0.05,0.25,0.70,1.50 /
 &grdvar  item='lsmask',  dtype='map',     fname='FNL', startrec=1, totalrec=10 /
-&grdvar  item='SKINT',   dtype='map',     fname='FNL', startrec=2, totalrec=10 /
-&grdvar  item='SST',     dtype='map',     fname='FNL', startrec=2, totalrec=10 /
-&grdvar  item='STEMP',   dtype='map',     fname='FNL', startrec=3, totalrec=10, undef=9.999e+20 /
-&grdvar  item='SMOIS',   dtype='map',     fname='FNL', startrec=7, totalrec=10, undef=9.999e+20 /
+&grdvar  item='SKINT',   dtype='map',     fname='FNL', startrec=2, totalrec=10, intrp='mask' /
+&grdvar  item='STEMP',   dtype='map',     fname='FNL', startrec=3, totalrec=10, intrp='mask', undef=9.999e+20 /
+&grdvar  item='SMOIS',   dtype='map',     fname='FNL', startrec=7, totalrec=10, intrp='mask', undef=9.999e+20 /
+&grdvar  item='SST',     dtype='map',     fname='FNL', startrec=2, totalrec=10, intrp='mask', undef=-1.00e+35 /

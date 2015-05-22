@@ -3180,7 +3180,8 @@ contains
     integer              :: startrec=1                                ! record position
     integer              :: totalrec=1                                ! total record number per one time
     real(RP)             :: undef                                     ! undefined value
-    character(H_SHORT)   :: fendian='big_endian'                      ! option
+    character(H_SHORT)   :: fendian='big'                             ! option
+    character(H_SHORT)   :: intrp='off'                               ! not use. this is for surface data
 
     namelist /grdvar/ &
         item,      &  ! necessary
@@ -3194,7 +3195,8 @@ contains
         totalrec,  &  ! for map data
         undef,     &  ! option
         knum,      &  ! option
-        fendian       ! option
+        fendian,   &  ! option
+        intrp
 
     !> grads data
     integer,  parameter   :: num_item_list = 16
@@ -5638,7 +5640,8 @@ contains
     integer              :: startrec=1                                ! record position
     integer              :: totalrec=1                                ! total record number per one time
     real(RP)             :: undef                                     ! option
-    character(H_SHORT)   :: fendian='big_endian'                      ! option
+    character(H_SHORT)   :: fendian='big'                             ! option
+    character(H_SHORT)   :: intrp='off'                               ! option: 'off', 'mask', 'fill'
 
     namelist /grdvar/ &
         item,      &  ! necessary
@@ -5652,7 +5655,8 @@ contains
         totalrec,  &  ! for map data
         knum,      &  ! option
         undef,     &  ! option
-        fendian       ! option
+        fendian,   &  ! option
+        intrp         ! option
 
     !> grads data
     integer,  parameter   :: num_item_list = 12
@@ -5686,6 +5690,7 @@ contains
     integer               :: grads_totalrec(num_item_list)
     integer               :: grads_knum    (num_item_list)
     real(RP)              :: grads_undef   (num_item_list)
+    character(H_SHORT)    :: grads_intrp   (num_item_list)
 
     character(len=H_LONG) :: gfile
 
@@ -5722,8 +5727,10 @@ contains
     real(RP)              :: maskval_strg
     real(RP)              :: maskval_lst
     real(RP), parameter   :: sst_missval=273.1506_RP
-    real(RP), allocatable :: work (:,:,:)
+    real(RP), allocatable :: work  (:,:,:)
     real(RP), allocatable :: work2 (:,:,:)
+    real(RP), allocatable :: gmask (:,:)
+    real(RP), allocatable :: gmask2(:,:)
 
     integer :: fstep = 1
     integer :: start_step
@@ -5759,11 +5766,13 @@ contains
     allocate( strg_org   ( dims(7), dims(4), dims(5), nt ) )
     allocate( skint_org  (          dims(4), dims(5), nt ) )
     allocate( work       (          dims(4), dims(5), nt ) )
+    allocate( gmask      (          dims(4), dims(5)     ) )
 
     allocate( lon_sst_org(          dims(8), dims(9), fstep ) )
     allocate( lat_sst_org(          dims(8), dims(9), fstep ) )
     allocate( sst_org    (          dims(8), dims(9), nt ) )
     allocate( work2      (          dims(8), dims(9), nt ) )
+    allocate( gmask2     (          dims(8), dims(9)     ) )
 
     allocate( sh2o (LKMAX,IA,JA) )
 
@@ -5835,8 +5844,9 @@ contains
              startrec = 0
              totalrec = 0
              knum     = -99
-             undef    = large_number_one
              fendian  = 'big'
+             undef    = large_number_one
+             intrp    = 'off'
 
              ! read namelist
              if ( io_fid_grads_nml > 0 ) then
@@ -5858,6 +5868,7 @@ contains
                 grads_totalrec(ielem) = totalrec
                 grads_knum    (ielem) = knum
                 grads_undef   (ielem) = undef
+                grads_intrp   (ielem) = intrp
                 grads_fendian (ielem) = fendian
                 data_available(ielem) = .true.
                 exit
@@ -5896,6 +5907,7 @@ contains
           case('lon_sst')
              if (.not. data_available(Ig_lon_sst) ) then
                 if((dims(8)==dims(4)).and.(dims(9)==dims(5)))then
+                   lon_sst_org(:,:,fstep) = lon_org(:,:,fstep)
                    cycle
                 else
                    write(IO_FID_LOG,*) '*** error: namelist of "lon_sst" is not found in grads namelist!'
@@ -5907,6 +5919,7 @@ contains
           case('lat_sst')
              if (.not. data_available(Ig_lat_sst) ) then
                 if((dims(8)==dims(4)).and.(dims(9)==dims(5)))then
+                   lat_sst_org(:,:,fstep) = lat_org(:,:,fstep)
                    cycle
                 else
                    write(IO_FID_LOG,*) '*** error: namelist of "lat_sst" is not found in grads namelist!'
@@ -5919,6 +5932,8 @@ contains
              if (.not. data_available(Ig_sst)) then
                 write(IO_FID_LOG,*) '*** warning: cannot found SST. SKINT is used for SST! '
                 if((dims(8)==dims(4)).and.(dims(9)==dims(5)))then
+                   !--SST: use skin temp
+                   sst_org(:,:,:) = skint_org(:,:,:)
                    cycle
                 else
                    write(IO_FID_LOG,*) '*** error: dimension is different: outer_nx/outer_nx_sfc and outer_nx_sst! ',dims(4),dims(8)
@@ -5942,6 +5957,7 @@ contains
           fname    = grads_fname   (ielem)
           lnum     = grads_lnum    (ielem)
           undef    = grads_undef   (ielem)
+          intrp    = grads_intrp   (ielem)
 
           if ( grads_knum(ielem) > 0 )then
              knum = grads_knum(ielem)
@@ -5953,7 +5969,7 @@ contains
           case("linear")
              swpoint = grads_swpoint (ielem)
              dd      = grads_dd      (ielem)
-             if( (abs(swpoint-large_number_one)<EPS).or.(abs(swpoint-large_number_one)<EPS) )then
+             if( (abs(swpoint-large_number_one)<EPS).or.(abs(dd-large_number_one)<EPS) )then
                 write(IO_FID_LOG,*) '*** "swpoint" is required in grads namelist! ',swpoint
                 write(IO_FID_LOG,*) '*** "dd"      is required in grads namelist! ',dd
                 call PRC_MPIstop
@@ -6123,19 +6139,98 @@ contains
                 enddo
              endif
           end select
-       enddo loop_InputSurfaceGrADS
 
-       !--SST: use skin temp
-       if (.not. data_available(Ig_sst)) then
-          sst_org(:,:,:) = skint_org(:,:,:)
-       endif
-       !
-       if (.not. data_available(Ig_lon_sst)) then
-             lon_sst_org(:,:,fstep) = lon_org(:,:,fstep)
-       endif
-       if (.not. data_available(Ig_lat_sst)) then
-             lat_sst_org(:,:,fstep) = lat_org(:,:,fstep)
-       endif
+          ! Interpolate over the ocean or land
+          select case (trim(intrp))
+          case('mask')
+             if(.not.data_available(Ig_lsmask))then
+                write(IO_FID_LOG,*) '*** If interp="mask", lsmask data is required. '
+                call PRC_MPIstop
+             else
+                select case (trim(item))
+                case('STEMP') !--Land temp
+                   do it = 1, nt
+                   do k  = 1, dims(7)
+                      work(:,:,1) = tg_org(k,:,:,it)
+                      call interp_OceanLand_data(work(:,:,:),lsmask_org(:,:,fstep),dims(4),dims(5), 1, landdata=.true.)
+                      tg_org(k,:,:,it) = work(:,:,1)
+                   enddo
+                   enddo
+                case('SMOIS') !--Land water
+                   if ( use_file_landwater ) then
+                   do it = 1, nt
+                   do k  = 1, dims(7)
+                      work(:,:,1) = strg_org(k,:,:,it)
+                      call interp_OceanLand_data(work(:,:,:),lsmask_org(:,:,fstep),dims(4),dims(5), 1, landdata=.true.)
+                      strg_org(k,:,:,it) = work(:,:,1)
+                   enddo
+                   enddo
+                   endif
+                case('SKINT') !--Surface skin temp
+                   do it = 1, nt
+                      work(:,:,1) = skint_org(:,:,it)
+                      call interp_OceanLand_data(work(:,:,:),lsmask_org(:,:,fstep),dims(4),dims(5), 1,landdata=.true.)
+                      skint_org(:,:,it) = work(:,:,1)
+                   enddo
+                case('SST') !--SST
+                   if((dims(8)/=dims(4)).or.(dims(9)/=dims(5)))then
+                      write(IO_FID_LOG,*) '*** error: interp="mask" is not available. '
+                      write(IO_FID_LOG,*) '*** error: dimension is different: outer_nx/outer_nx_sfc and outer_nx_sst! ',dims(4),dims(8)
+                      write(IO_FID_LOG,*) '                                 : outer_ny/outer_ny_sfc and outer_ny_sst! ',dims(5),dims(9)
+                      call PRC_MPIstop
+                   endif
+                   do it = 1, nt
+                      work(:,:,1) = sst_org(:,:,it)
+                      call interp_OceanLand_data(work(:,:,:),lsmask_org(:,:,fstep),dims(4),dims(5), 1,landdata=.false.)
+                      sst_org(:,:,it) = work(:,:,1)
+                   enddo
+                end select
+             endif
+          case('fill')
+             if( abs(undef-large_number_one)<EPS )then
+                write(IO_FID_LOG,*) '*** If interp="fill","undef" is required in grads namelist! '
+                call PRC_MPIstop
+             else
+                select case (trim(item))
+                case('STEMP') !--Land temp
+                   do it = 1, nt
+                   do k  = 1, dims(7)
+                      work(:,:,1) = tg_org(k,:,:,it)
+                      call make_mask(gmask(:,:),work(:,:,1),dims(4),dims(5),undef,landdata=.true.)
+                      call interp_OceanLand_data(work(:,:,:),gmask(:,:),dims(4),dims(5), 1, landdata=.true.)
+                      tg_org(k,:,:,it) = work(:,:,1)
+                   enddo
+                   enddo
+                case('SMOIS') !--Land water
+                   if ( use_file_landwater ) then
+                   do it = 1, nt
+                   do k  = 1, dims(7)
+                      work(:,:,1) = strg_org(k,:,:,it)
+                      call make_mask(gmask(:,:),work(:,:,1),dims(4),dims(5),undef,landdata=.true.)
+                      call interp_OceanLand_data(work(:,:,:),gmask(:,:),dims(4),dims(5), 1, landdata=.true.)
+                      strg_org(k,:,:,it) = work(:,:,1)
+                   enddo
+                   enddo
+                   endif
+                case('SKINT') !--Surface skin temp
+                   do it = 1, nt
+                      work(:,:,1) = skint_org(:,:,it)
+                      call make_mask(gmask(:,:),work(:,:,1),dims(4),dims(5),undef,landdata=.true.)
+                      call interp_OceanLand_data(work(:,:,:),gmask(:,:),dims(4),dims(5), 1,landdata=.true.)
+                      skint_org(:,:,it) = work(:,:,1)
+                   enddo
+                case('SST') !--SST
+                   do it = 1, nt
+                      work2(:,:,1) = sst_org(:,:,it)
+                      call make_mask(gmask2(:,:),work2(:,:,1),dims(8),dims(9),undef,landdata=.false.)
+                      call interp_OceanLand_data(work2(:,:,:),gmask2(:,:),dims(8),dims(9), 1,landdata=.false.)
+                      sst_org(:,:,it) = work2(:,:,1)
+                   enddo
+                end select
+             endif
+          end select
+
+       enddo loop_InputSurfaceGrADS
 
        !do it = 1, nt
        !   i=int(dims(4)/2) ; j=int(dims(5)/2)
@@ -6150,35 +6245,9 @@ contains
        !   enddo
        !enddo
 
-       ! Interpolate over the ocean or land
-       if(data_available(Ig_lsmask))then
-          !--Land temp
-          do k=1,dims(7)
-             work(:,:,1) = tg_org(k,:,:,1)
-             call interp_OceanLand_data(work(:,:,:),lsmask_org(:,:,fstep),dims(4),dims(5), 1, landdata=.true.)
-             tg_org(k,:,:,1) = work(:,:,1)
-          enddo
-          !--Land water
-          if ( use_file_landwater ) then
-             do k=1,dims(7)
-                work(:,:,1) = strg_org(k,:,:,1)
-                call interp_OceanLand_data(work(:,:,:),lsmask_org(:,:,fstep),dims(4),dims(5), 1, landdata=.true.)
-                strg_org(k,:,:,1) = work(:,:,1)
-             enddo
-          endif
-          !--Surface skin temp
-          work(:,:,1) = skint_org(:,:,1)
-          call interp_OceanLand_data(work(:,:,:),lsmask_org(:,:,fstep),dims(4),dims(5), 1,landdata=.true.)
-          skint_org(:,:,1) = work(:,:,1)
-          !--SST
-          work(:,:,1) = sst_org(:,:,1)
-          call interp_OceanLand_data(work(:,:,:),lsmask_org(:,:,fstep),dims(4),dims(5), 1,landdata=.false.)
-          sst_org(:,:,1) = work(:,:,1)
-       endif
 
     endif  ! do_read
 
-    call COMM_bcast( lsmask_org(:,:,:),          dims(4), dims(5), fstep )
     call COMM_bcast( lon_org   (:,:,:),          dims(4), dims(5), fstep )
     call COMM_bcast( lat_org   (:,:,:),          dims(4), dims(5), fstep )
     call COMM_bcast( lz_org  (:,:,:,:), dims(7), dims(4), dims(5), fstep )
@@ -6341,6 +6410,45 @@ contains
     return
   end subroutine InputSurfaceGrADS
 
+!-------------------------------
+  subroutine make_mask( &
+      gmask,     & ! (out)
+      data,      & ! (in)
+      nx,        & ! (in)
+      ny,        & ! (in)
+      misval,    & ! (in)
+      landdata   ) ! (in)
+    use scale_const, only: &
+       EPS => CONST_EPS
+    implicit none
+    real(RP), intent(out)  :: gmask(:,:)
+    real(RP), intent(in)   :: data(:,:)
+    integer,  intent(in)   :: nx
+    integer,  intent(in)   :: ny
+    real(RP), intent(in)   :: misval
+    logical,  intent(in)   :: landdata   ! .true. => land data , .false. => ocean data
+
+    real(RP)               :: dd
+    integer                :: i,j
+
+    if( landdata )then
+       gmask(:,:) = 1.0_RP  ! gmask=1 will be skip in "interp_OceanLand_data"
+       dd         = 0.0_RP
+    else
+       gmask(:,:) = 0.0_RP  ! gmask=0 will be skip in "interp_OceanLand_data"
+       dd         = 1.0_RP
+    endif
+
+    do j=1,ny
+    do i=1,nx
+      if( abs(data(i,j)-misval) < EPS )then
+         gmask(i,j) = dd
+      endif
+   enddo
+   enddo
+
+    return
+  end subroutine make_mask
   !-----------------------------------------------------------------------------
   subroutine interp_OceanLand_data( &
       data,      & ! (inout)
