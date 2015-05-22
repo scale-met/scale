@@ -762,6 +762,7 @@ contains
     TIME_DOend = .false.
 
     TIME_NOWSTEP = TIME_NOWSTEP + 1
+    TIME_NOWDAY  = TIME_STARTDAY
     TIME_NOWSEC  = TIME_STARTSEC + real(TIME_NOWSTEP-1,kind=DP) * TIME_DTSEC
 
     ! reallocate day & sub-day
