@@ -63,8 +63,9 @@ module mod_realinput
      COMM_bcast
   use scale_interpolation_nest, only: &
      INTRPNEST_domain_compatibility, &
-     INTRPNEST_interp_fact_llz,  &
-     INTRPNEST_interp_2d,        &
+     INTRPNEST_interp_fact_llz,      &
+     INTRPNEST_interp_fact_latlon,   &
+     INTRPNEST_interp_2d,            &
      INTRPNEST_interp_3d
 
   !-----------------------------------------------------------------------------
@@ -146,6 +147,7 @@ contains
     character(len=*), intent(in)  :: grads_boundary_namelist
 
     integer :: dims_ncm(4)
+    integer :: dims_wrf(7)
     character(len=H_LONG) :: basename
 
     ! for grads
@@ -153,15 +155,19 @@ contains
     integer                       :: outer_ny     = 0
     integer                       :: outer_nz     = 0 ! number of atmos layers
     integer                       :: outer_nl     = 0 ! number of land layers
-    integer                       :: outer_nx_sfc = -99
+    integer                       :: outer_nx_sfc = -99 ! surface data
     integer                       :: outer_ny_sfc = -99
+    integer                       :: outer_nx_sst = -99 ! sst data
+    integer                       :: outer_ny_sst = -99
     NAMELIST / nml_grads_grid / &
         outer_nx,     &
         outer_ny,     &
         outer_nz,     &
         outer_nl,     &
         outer_nx_sfc, &
-        outer_ny_sfc
+        outer_ny_sfc, &
+        outer_nx_sst, &
+        outer_ny_sst
     integer                       :: ierr
 
     intrinsic shape
@@ -180,7 +186,9 @@ contains
     case('WRF-ARW')
        if( IO_L ) write(IO_FID_LOG,*) '+++ Real Case/Atom Input File Type: WRF-ARW'
        mdlid = iWRFARW
-       call ExternalFileGetShape( dims(:), timelen, mdlid, basename_org, myrank, single=.true. )
+       call ExternalFileGetShape( dims_wrf(:), timelen, mdlid, basename_org, myrank, single=.true. )
+       dims(:)=0
+       dims(1:7)=dims_wrf(1:7)
        if ( wrf_file_type_in ) then
           wrfout = .true.
           if( IO_L ) write(IO_FID_LOG,*) '+++ WRF-ARW FILE-TYPE: WRF History Output'
@@ -243,6 +251,16 @@ contains
        endif
        if(outer_ny_sfc > 0)then
           dims(5) = outer_ny_sfc ! south_north for 2dim data
+       endif
+
+       ! sst
+       dims(8) = dims(4) ! sst nx is same as the surface nx
+       dims(9) = dims(5) ! sst ny is same as the surface ny
+       if(outer_nx_sst > 0)then
+          dims(8) = outer_nx_sst ! west_east for sst data
+       endif
+       if(outer_ny_sst > 0)then
+          dims(9) = outer_ny_sst ! south_north for sst data
        endif
 
     case default
@@ -3220,7 +3238,6 @@ contains
 
     real(SP), allocatable :: gdata2D (:,:,:)
     real(SP), allocatable :: gdata3D (:,:,:,:)
-    real(SP), allocatable :: gland   (:,:,:,:)
 
     real(RP), allocatable :: lon_org (:,:,:)
     real(RP), allocatable :: lat_org (:,:,:)
@@ -3318,7 +3335,6 @@ contains
     if( do_read ) then
        allocate( gdata2D ( dims(1), dims(2),          nt ) )
        allocate( gdata3D ( dims(1), dims(2), dims(3), nt ) )
-       allocate( gland   ( dims(1), dims(2), dims(7), nt ) )
     endif
 
     allocate( hfact(     IA, JA,itp_nh         ) )
@@ -4192,7 +4208,6 @@ contains
     if( do_read ) then
        deallocate( gdata2D )
        deallocate( gdata3D )
-       deallocate( gland   )
     endif
 
     deallocate( lon_org   )
@@ -5577,8 +5592,9 @@ contains
     use mod_land_vars, only: &
       convert_WS2VWC
     use scale_interpolation_nest, only: &
-       INTRPNEST_interp_fact_llz,  &
-       INTRPNEST_interp_2d,        &
+       INTRPNEST_interp_fact_llz,    &
+       INTRPNEST_interp_fact_latlon, &
+       INTRPNEST_interp_2d,          &
        INTRPNEST_interp_3d
     implicit none
 
@@ -5639,21 +5655,23 @@ contains
         fendian       ! option
 
     !> grads data
-    integer,  parameter   :: num_item_list = 10
+    integer,  parameter   :: num_item_list = 12
     logical               :: data_available(num_item_list)
     character(H_SHORT)    :: item_list     (num_item_list)
-    data item_list /'lsmask','lon','lat','lon_sfc','lat_sfc','llev','STEMP','SMOIS','SKINT','SST'/
+    data item_list /'lsmask','lon','lat','lon_sfc','lat_sfc','lon_sst','lat_sst','llev','STEMP','SMOIS','SKINT','SST'/
 
     integer,  parameter   :: Ig_lsmask     = 1
     integer,  parameter   :: Ig_lon        = 2
     integer,  parameter   :: Ig_lat        = 3
     integer,  parameter   :: Ig_lon_sfc    = 4
     integer,  parameter   :: Ig_lat_sfc    = 5
-    integer,  parameter   :: Ig_lz         = 6  ! Level(depth) of stemp & smois (m)
-    integer,  parameter   :: Ig_stemp      = 7
-    integer,  parameter   :: Ig_smois      = 8
-    integer,  parameter   :: Ig_skint      = 9
-    integer,  parameter   :: Ig_sst        = 10
+    integer,  parameter   :: Ig_lon_sst    = 6
+    integer,  parameter   :: Ig_lat_sst    = 7
+    integer,  parameter   :: Ig_lz         = 8  ! Level(depth) of stemp & smois (m)
+    integer,  parameter   :: Ig_stemp      = 9
+    integer,  parameter   :: Ig_smois      = 10
+    integer,  parameter   :: Ig_skint      = 11
+    integer,  parameter   :: Ig_sst        = 12
 
     character(H_SHORT)    :: grads_item    (num_item_list)
     character(H_SHORT)    :: grads_kytpe   (num_item_list)
@@ -5673,10 +5691,13 @@ contains
 
     real(SP), allocatable :: gdata2D (:,:,:)
     real(SP), allocatable :: gland   (:,:,:,:)
+    real(SP), allocatable :: gocean  (:,:,:)
 
     ! work
     real(RP), allocatable :: lon_org(:,:,:)
     real(RP), allocatable :: lat_org(:,:,:)
+    real(RP), allocatable :: lon_sst_org(:,:,:)
+    real(RP), allocatable :: lat_sst_org(:,:,:)
     real(RP), allocatable :: lz_org (:,:,:,:)
 
     real(RP), allocatable :: lsmask_org(:,:,:)
@@ -5702,6 +5723,7 @@ contains
     real(RP)              :: maskval_lst
     real(RP), parameter   :: sst_missval=273.1506_RP
     real(RP), allocatable :: work (:,:,:)
+    real(RP), allocatable :: work2 (:,:,:)
 
     integer :: fstep = 1
     integer :: start_step
@@ -5726,6 +5748,7 @@ contains
     if( do_read ) then
        allocate( gdata2D ( dims(4), dims(5),          nt ) )
        allocate( gland   ( dims(4), dims(5), dims(7), nt ) )
+       allocate( gocean  ( dims(8), dims(9),          nt ) )
     endif
 
     allocate( lsmask_org (          dims(4), dims(5), fstep ) )
@@ -5735,8 +5758,12 @@ contains
     allocate( tg_org     ( dims(7), dims(4), dims(5), nt ) )
     allocate( strg_org   ( dims(7), dims(4), dims(5), nt ) )
     allocate( skint_org  (          dims(4), dims(5), nt ) )
-    allocate( sst_org    (          dims(4), dims(5), nt ) )
     allocate( work       (          dims(4), dims(5), nt ) )
+
+    allocate( lon_sst_org(          dims(8), dims(9), fstep ) )
+    allocate( lat_sst_org(          dims(8), dims(9), fstep ) )
+    allocate( sst_org    (          dims(8), dims(9), nt ) )
+    allocate( work2      (          dims(8), dims(9), nt ) )
 
     allocate( sh2o (LKMAX,IA,JA) )
 
@@ -5753,15 +5780,17 @@ contains
     !--- read grads data
     if( do_read )then
 
-       lsmask_org = large_number_one
-       lon_org    = large_number_one
-       lat_org    = large_number_one
-       lz_org     = large_number_one
-       tg_org     = large_number_one
-       strg_org   = large_number_one
-       skint_org  = large_number_one
-       sst_org    = large_number_one
-       sh2o       = large_number_one
+       lsmask_org     = large_number_one
+       lon_org        = large_number_one
+       lat_org        = large_number_one
+       lz_org         = large_number_one
+       tg_org         = large_number_one
+       strg_org       = large_number_one
+       skint_org      = large_number_one
+       sst_org        = large_number_one
+       sh2o           = large_number_one
+       lon_sst_org    = large_number_one
+       lat_sst_org    = large_number_one
 
        ! listup variables
        if ( io_fid_grads_nml > 0 ) then
@@ -5864,19 +5893,47 @@ contains
              if (.not. data_available(Ig_lat_sfc) ) then
                 cycle
              endif
+          case('lon_sst')
+             if (.not. data_available(Ig_lon_sst) ) then
+                if((dims(8)==dims(4)).and.(dims(9)==dims(5)))then
+                   cycle
+                else
+                   write(IO_FID_LOG,*) '*** error: namelist of "lon_sst" is not found in grads namelist!'
+                   write(IO_FID_LOG,*) '*** error: dimension is different: outer_nx/outer_nx_sfc and outer_nx_sst! ',dims(4),dims(8)
+                   write(IO_FID_LOG,*) '                                 : outer_ny/outer_ny_sfc and outer_ny_sst! ',dims(5),dims(9)
+                   call PRC_MPIstop
+                endif
+             endif
+          case('lat_sst')
+             if (.not. data_available(Ig_lat_sst) ) then
+                if((dims(8)==dims(4)).and.(dims(9)==dims(5)))then
+                   cycle
+                else
+                   write(IO_FID_LOG,*) '*** error: namelist of "lat_sst" is not found in grads namelist!'
+                   write(IO_FID_LOG,*) '*** error: dimension is different: outer_nx/outer_nx_sfc and outer_nx_sst! ',dims(4),dims(8)
+                   write(IO_FID_LOG,*) '                                 : outer_ny/outer_ny_sfc and outer_ny_sst! ',dims(5),dims(9)
+                   call PRC_MPIstop
+                endif
+             endif
           case('SST')
              if (.not. data_available(Ig_sst)) then
-                write(IO_FID_LOG,*) '*** cannot found SST. SKINT is used for SST! '
-                cycle
+                write(IO_FID_LOG,*) '*** warning: cannot found SST. SKINT is used for SST! '
+                if((dims(8)==dims(4)).and.(dims(9)==dims(5)))then
+                   cycle
+                else
+                   write(IO_FID_LOG,*) '*** error: dimension is different: outer_nx/outer_nx_sfc and outer_nx_sst! ',dims(4),dims(8)
+                   write(IO_FID_LOG,*) '                                 : outer_ny/outer_ny_sfc and outer_ny_sst! ',dims(5),dims(9)
+                   call PRC_MPIstop
+                endif
              endif
           case('SMOIS')
              if (use_file_landwater .and. (.not. data_available(Ig_smois))) then
-                write(IO_FID_LOG,*) '*** cannot found data in grads namelist! ',trim(item),trim(item_list(ielem))
+                write(IO_FID_LOG,*) '*** error: cannot found SMOIS in grads namelist! ',trim(item),trim(item_list(ielem))
                 call PRC_MPIstop
              endif
           case default
              if ( .not. data_available(ielem) ) then
-                write(IO_FID_LOG,*) '*** cannot found data in grads namelist! ',trim(item),trim(item_list(ielem))
+                write(IO_FID_LOG,*) '*** error: cannot found data in grads namelist! ',trim(item),trim(item_list(ielem))
                 call PRC_MPIstop
              endif
           end select
@@ -5958,6 +6015,28 @@ contains
                 call read_grads_file_2d(io_fid_grads_data,gfile,dims(4),dims(5),1,1,item,startrec,totalrec,gdata2D)
                 lat_org(:,:,fstep) = real(gdata2D(:,:,1), kind=RP) * D2R
              endif
+          case("lon_sst")
+             if ( trim(dtype) == "linear" ) then
+                do j = 1, dims(9)
+                do i = 1, dims(8)
+                   lon_sst_org(i,j,fstep) = real(swpoint+real(i-1)*dd, kind=RP) * D2R
+                enddo
+                enddo
+             else if ( trim(dtype) == "map" ) then
+                call read_grads_file_2d(io_fid_grads_data,gfile,dims(8),dims(9),1,1,item,startrec,totalrec,gocean)
+                lon_sst_org(:,:,fstep) = real(gocean(:,:,1), kind=RP) * D2R
+             endif
+          case("lat_sst")
+             if ( trim(dtype) == "linear" ) then
+                do j = 1, dims(9)
+                do i = 1, dims(8)
+                   lat_sst_org(i,j,fstep) = real(swpoint+real(j-1)*dd, kind=RP) * D2R
+                enddo
+                enddo
+             else if ( trim(dtype) == "map" ) then
+                call read_grads_file_2d(io_fid_grads_data,gfile,dims(8),dims(9),1,1,item,startrec,totalrec,gocean)
+                lat_sst_org(:,:,fstep) = real(gocean(:,:,1), kind=RP) * D2R
+             endif
           case("llev")
              if(dims(7)/=knum)then
                 write(IO_FID_LOG,*) '*** please check llev data! ',dims(7),knum
@@ -6034,11 +6113,11 @@ contains
              endif
           case('SST')
              if ( trim(dtype) == "map" ) then
-                call read_grads_file_2d(io_fid_grads_data,gfile,dims(4),dims(5),1,nt,item,startrec,totalrec,gdata2D)
+                call read_grads_file_2d(io_fid_grads_data,gfile,dims(8),dims(9),1,nt,item,startrec,totalrec,gocean)
                 do it = 1, nt
-                do j = 1, dims(5)
-                do i = 1, dims(4)
-                   sst_org(i,j,it) = real(gdata2D(i,j,it), kind=RP)
+                do j = 1, dims(9)
+                do i = 1, dims(8)
+                   sst_org(i,j,it) = real(gocean(i,j,it), kind=RP)
                 enddo
                 enddo
                 enddo
@@ -6049,6 +6128,13 @@ contains
        !--SST: use skin temp
        if (.not. data_available(Ig_sst)) then
           sst_org(:,:,:) = skint_org(:,:,:)
+       endif
+       !
+       if (.not. data_available(Ig_lon_sst)) then
+             lon_sst_org(:,:,fstep) = lon_org(:,:,fstep)
+       endif
+       if (.not. data_available(Ig_lat_sst)) then
+             lat_sst_org(:,:,fstep) = lat_org(:,:,fstep)
        endif
 
        !do it = 1, nt
@@ -6101,7 +6187,10 @@ contains
        call COMM_bcast( strg_org(:,:,:,:), dims(7), dims(4), dims(5), nt    )
     endif
     call COMM_bcast( skint_org (:,:,:),          dims(4), dims(5), nt    )
-    call COMM_bcast( sst_org   (:,:,:),          dims(4), dims(5), nt    )
+    !
+    call COMM_bcast( lon_sst_org(:,:,:),         dims(8), dims(9), fstep )
+    call COMM_bcast( lat_sst_org(:,:,:),         dims(8), dims(9), fstep )
+    call COMM_bcast( sst_org   (:,:,:),          dims(8), dims(9), nt    )
 
     do j = 1, JA
     do i = 1, IA
@@ -6183,9 +6272,22 @@ contains
     endif
 
      it = 1
-     call INTRPNEST_interp_2d( sst(:,:),    sst_org(:,:,it), hfact(:,:,:),   &
-                               igrd(:,:,:), jgrd(:,:,:), IA, JA )
      call INTRPNEST_interp_2d( skint(:,:),  skint_org(:,:,it), hfact(:,:,:), &
+                               igrd(:,:,:), jgrd(:,:,:), IA, JA )
+
+
+    ! ocean
+     call INTRPNEST_interp_fact_latlon( hfact  (:,:,:),           & ! [OUT]
+                                        igrd   (:,:,:),           & ! [OUT]
+                                        jgrd   (:,:,:),           & ! [OUT]
+                                        LAT    (:,:),             & ! [IN]
+                                        LON    (:,:),             & ! [IN]
+                                        IA, JA,                   & ! [IN]
+                                        lat_sst_org(:,:,  fstep), & ! [IN]
+                                        lon_sst_org(:,:,  fstep), & ! [IN]
+                                        dims(8),dims(9)         )   ! [IN]
+
+     call INTRPNEST_interp_2d( sst(:,:),    sst_org(:,:,it), hfact(:,:,:),   &
                                igrd(:,:,:), jgrd(:,:,:), IA, JA )
 
     ! input data
@@ -6218,6 +6320,8 @@ contains
     deallocate( lsmask_org )
     deallocate( lon_org    )
     deallocate( lat_org    )
+    deallocate( lon_sst_org )
+    deallocate( lat_sst_org )
     deallocate( lz_org     )
     deallocate( tg_org     )
     deallocate( strg_org   )
@@ -6231,6 +6335,8 @@ contains
     deallocate( jgrd  )
     deallocate( kgrd  )
     deallocate( ncopy  )
+    deallocate( work  )
+    deallocate( work2 )
 
     return
   end subroutine InputSurfaceGrADS
