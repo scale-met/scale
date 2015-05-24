@@ -1,4 +1,4 @@
-\documentclass[a4paper]{report}
+\documentclass[a4paper]{jreport}
 \title{{\Huge SCALE-LES USERS GUIDE \\
    \vspace{1cm}{\Large  SCALE Version 0.2.0 (SCALE-LES Version: 4.2.0) 版} }}
 \author{\Large Team SCALE\\ UGC working group}
@@ -12,6 +12,8 @@
 \usepackage{tabularx}
 \usepackage{colortbl}
 \usepackage{url}
+%\setlength{\textwidth}{42zw}
+%\setlength{\textheight}{40\baselineskip}
 \usepackage[top=30mm,bottom=35mm,left=30mm,right=30mm]{geometry}
 
 
@@ -21,22 +23,28 @@
 
 \chapter{Overview}
 \input{11_introduction}
+\input{12_exp_intro}
 
-\chapter{SCALE-LES Tutrial}
-%\label{chap:tutrial}
+\chapter{Installation}
 \input{21_install}
-\input{22_exp_intro}
-\input{23_ideal_exp}
-\input{24_real_exp}
-\input{25_quicklook_gpview}
-\input{25_quicklook_net2g}
+
+\chapter{SCALE-LES Tutrial: Ideal case}
+\input{31_ideal_exp}
+
+\chapter{SCALE-LES Tutrial: Real case}
+\input{41_real_exp_prep}
+\input{42_real_exp_pp}
+\input{43_real_exp_init}
+\input{44_real_exp_run}
+\input{45_quicklook_gpview}
 
 
 \chapter{SCALE-LES Advance use}
-\input{31_advance_use}
-\input{32_online_nesting}
-\input{33_scheme_list}
-\input{34_namelist_history}
+\input{51_advance_use}
+\input{52_online_nesting}
+\input{53_scheme_list}
+\input{54_namelist_history}
+\input{55_quicklook_net2g}
 
 \bibliographystyle{plainnat}
 \bibliography{reference}

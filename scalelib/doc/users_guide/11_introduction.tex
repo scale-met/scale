@@ -55,22 +55,23 @@ SCALEライブラリをインストールしておくことで、SCALE-LESと同
 \item WRF-ARW，NICAM向け外部データ読み込み
 {\bf 力学コア関係}
 \item 方程式系: ３次元完全圧縮流体方程式
-\item 数値解法：HE-VE,  HE-VI，HI-VIスキームから選択可能
-\item 空間差分：4次中央差分
-\item 時間差分：3次ルンゲクッタスキーム
-\item 非負保証：FCTスキーム
-\item 数値フィルター：4次Hyper diffusion
-\item 地形：Terrain-followingスキーム
+\item 数値解法: HE-VE,  HE-VI，HI-VIスキームから選択可能
+\item 空間差分: 4次中央差分
+\item 時間差分: 3次ルンゲクッタスキーム
+\item 非負保証: FCTスキーム
+\item 数値フィルター: 4次Hyper diffusion
+\item 地形: Terrain-followingスキーム
 {\bf 物理過程}
-\item 乱流過程：Smagorinsky typeのサブグリッドモデル, MYNN2.5境界層モデルから選択可能
-\item 雲微物理：Kessler type バルクモデル(Kessler 1969)，6-class single moment バルクモデル(tomita 2006)，6-class double moment バルクモデル(\cite{sn_2014})，ビン法雲モデル(\cite{suzuki_etal_2010})から選択可能
-\item 放射過程：MSTRN-X (Sekiguchi and Nakajima 2008)
-\item 陸面モデル：バケツモデル（Louis 1994，Beljoursから選択可能）
-\item 海洋モデル（スラブモデル）
-\item 都市キャノピーモデル
+\item 乱流過程: Smagorinsky typeのサブグリッドモデル, MYNN2.5境界層モデルから選択可能
+\item 雲微物理: Kessler type バルクモデル(Kessler 1969)，6-class single moment バルクモデル(tomita 2006)，6-class double moment バルクモデル(\cite{sn_2014})，ビン法雲モデル(\cite{suzuki_etal_2010})から選択可能
+\item 放射過程: MSTRN-X (Sekiguchi and Nakajima 2008)
+\item 地表面モデル
+ \begin{itemize}
+  \item 陸面モデル: バケツモデル（バルク交換係数はLouis 1994, Beljours）
+  \item 海洋モデル:（スラブモデル）
+  \item 都市モデル: 単層キャノピーモデル(\cite{kusaka_2001})
+ \end{itemize}
 \end{itemize}
 
 上記に加えて，SCALE-LESモデル本体のドライバー、現実事例の計算に必要な地形や土地利用データを作成するツール、
 理想実験の初期値・境界値、もしくは外部モデルから初期値・境界値を作成するツールが提供されている。
-
-なお、本ユーザーズガイド内の説明で、コマンドラインのシンボル（\verb|$|）があれば、コマンドの実行を示す．

@@ -1,10 +1,8 @@
 本章では，SCALE-LESの使用方法と、
 SCALEチュートリアルを実行するための環境の準備について説明する。
+なお、本ユーザーズガイド内の説明で、コマンドラインのシンボル（\verb|$|）があれば、コマンドの実行を示す．
 
-\section{SCALEのインストール}
-%####################################################################################
-
-\subsection{Required Environment}
+\section{Required Environment}
 \label{sec:req_env}
 %====================================================================================
 SCALEの実行環境は下記を想定している。
@@ -34,28 +32,31 @@ SCALEの実行環境は下記を想定している。
 
 
 
-\subsection{ライブラリ環境のインストール}
+\section{ライブラリ環境のインストール}
 %====================================================================================
-SCALEライブラリのインストールに必要な環境、ライブラリのインストールを行う。
-実行環境に合わせて、Appendix \ref{sec:env_setting}を参照してインストールを行う。
+実行環境に合わせて、SCALEライブラリのインストールに必要な環境、ライブラリのインストールを行う。詳細は、Appendix \ref{sec:env_setting}を参照。
 \ref{sec:source_code}以降のチュートリアルは，
 それらのライブラリ環境がインストールされていることを想定して進める．
 
 
 
-\subsection{Building the source code} \label{sec:source_code}
+\section{Building the source code} \label{sec:source_code}
 %====================================================================================
+
 
 \subsubsection{ソースコードの入手}
 %-----------------------------------------------------------------------------------
-
-安定版ソースコードは，\url{http://scale.aics.riken.jp/ja/download/index.html}
-よりダウンロードすることができる．
+安定版ソースコードは，\\
+ \url{http://scale.aics.riken.jp/ja/download/index.html}\\
+よりダウンロードできる．
 ソースコードのtarballファイルを展開すると
+\verb|scale/|というディレクトリができる．
 \begin{verbatim}
+ $ tar -zxvf SCALE_v020.tar.gz
+ $ ls
   scale/
 \end{verbatim}
-というディレクトリができる．
+
 
 
 \subsubsection{configure ファイルと環境変数の設定}
@@ -65,18 +66,19 @@ SCALEライブラリのインストールに必要な環境、ライブラリの
 これらの中から自分の環境にあったものを設定する．
 チュートリアルでは，OSはLinux，コンパイラはgcc/gfortran，およびopenMPIを使用するため，
 \verb|"Makedef.Linux64-gnu-ompi"|が対応するファイルとなる．
-自分の環境に合うものがなければ既存ファイルをベースにして作成する．
-
 常にこのコンフィグファイルを使用するために、
 \verb|Makedef.***|の\verb|"***"|の部分を、\verb|SCALE_SYS|という環境変数として設定し、
 \verb|.bashrc|などのファイルに記述しておくと便利である．
+\begin{verbatim}
+ $ export SCALE_SYS="Linux64-gnu-ompi"
+\end{verbatim}
+自分の環境に合うものがなければ既存ファイルをベースにして作成する．
+
 さらに、SCALEをコンパイルするのに必要な外部ライブラリについても
 下記のようにPATHを設定する．
 ここでは，Appendix \ref{sec:env_setting}（Linux編）に従ったとして，
 HDF5，netcdf4ともに\verb|/usr|の下にインストールされている場合の例を示す．
-
 \begin{verbatim}
- $ export SCALE_SYS="Linux64-gnu-ompi"
  $ export HDF5="/usr"
  $ export NETCDF4="/usr"
 \end{verbatim}
@@ -110,13 +112,13 @@ HDF5，netcdf4ともに\verb|/usr|の下にインストールされている場�
 \item SCALEライブラリは，scaleのTOPディレクトリ直下の
  \verb|scale/scalelib/|というディレクトリ内でコンパイルとアーカイブが行われ，
  \verb|".lib"|という名前の隠しディレクトリとして
- \verb|bin/|ディレクトリ内へコピーされている．
+ \verb|bin/|ディレクトリ内へコピーされる．
 \item Debugモードでコンパイルしたい場合や，
  コンパイルオプションを変更したい場合は，
- \verb|Makedef.***|のファイルを編集してください．
+ \verb|Makedef.***|のファイルを編集する．
 \item 開発版ソースコードをコンパイルしている場合，
- 一部のコンパイラバージョンにおいてコンパイルが正常に終了しないケースがあります．
- そのような場合はぜひSCALE開発チームまでご報告ください．
+ 一部のコンパイラバージョンにおいて、コンパイルが正常に終了しないケースがある．
+ そのような場合はSCALE開発チームまでご報告ください．
 \end{itemize}
 
 

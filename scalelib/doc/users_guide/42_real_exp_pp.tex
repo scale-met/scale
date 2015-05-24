@@ -1,0 +1,57 @@
+
+%-------------------------------------------------------%
+\section{地形・土地利用データの作成：pp}
+%-------------------------------------------------------%
+
+ここでは，\ref{sec:source_code}節でダウンロードした\verb|tutorial_data|は，
+\verb|${TOPDIR}/data/|の下に展開されていると想定している．
+
+まず，ppディレクトリへ移動する．
+ppでは現実実験のための地形データ、土地利用データを作成する．
+\begin{verbatim}
+ $ cd scale/scale-les/test/tutorial/pp
+\end{verbatim}
+ppディレクトリの中には，\verb|pp.conf|という名前の
+コンフィグファイルが準備されている．
+地球上でのドメインの位置や格子点数など、実験設定に合わせて，
+適宜\verb|pp.conf|を編集する必要があるが,
+チュートリアルでは，すでに編集済みの\verb|pp.conf|が
+与えられているためそのまま利用する．
+\verb|pp.conf|の設定の中で特に注意するべき項目は，\verb|PARAM_CONVERT|である．
+\begin{verbatim}
+ &PARAM_CONVERT
+  CONVERT_TOPO = .true.,
+  CONVERT_LANDUSE = .true.,
+ /
+\end{verbatim}
+上記のように\verb|CONVERT_TOPO|と\verb|CONVERT_LANDUSE|が
+\verb|.true.|となっていることが，
+それぞれ地形と土地利用の処理を行うことを意味している．
+詳細なコンフィグファイルの内容については，
+Appendix \ref{app:namelist}を参照されたい．
+
+次に，コンパイル済みのバイナリと入力データをppディレクトリへリンクする．
+\begin{verbatim}
+ $ ln -s ${TOPDIR}/bin/scale-les_pp ./
+ $ ln -s ${TOPDIR}/data/tutorial_data/data/input_topo    ./
+ $ ln -s ${TOPDIR}/data/tutorial_data/data/input_landuse ./
+\end{verbatim}
+今回は，Table \ref{tab:grids}に示されているように，
+9つのMPIプロセスを使用する設定なので次のように実行する．
+\begin{verbatim}
+ $ mpirun -n 9 ./scale-les_pp pp.conf
+\end{verbatim}
+正常にジョブが終了すれば，\verb|topo_d01.pe######.nc|と\verb|landuse_d01.pe######.nc|というファイルがMPIプロセス数だけ，つまり9つずつ生成される（\verb|######|にはMPIプロセスの番号が入る）．
+それぞれ，ドメインの格子点に内挿された地形と土地利用の情報が入ってる．
+
+処理内容のログとして，\verb|pp_LOG_d01.pe000000|という名前でログファイルも
+出力されるので内容を確かめておくこと．
+gpviewがインストールされていれば，次のコマンドによって作成された地形と土地利用データを
+描画してチェックすることができる．
+正しく作成されていれば，Fig. \ref{fig:domain}と同じように描かれる．
+\begin{verbatim}
+$ gpview topo_d01.pe00000*@TOPO --aspect=1
+$ gpview landuse_d01.pe00000*@FRAC_LAND --aspect=1
+\end{verbatim}
+
+
