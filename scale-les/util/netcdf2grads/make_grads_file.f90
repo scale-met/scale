@@ -13,7 +13,7 @@ program convine
   implicit none
 
   include 'netcdf.inc'
- 
+
   character*2 :: ARG           ! s:silent , i:interactive
 
   integer(4) :: nst, nen       !--- time for average profile
@@ -40,7 +40,7 @@ program convine
   data odir  /"./"/
   data conffile /"./run.conf"/
 
-  integer(4) :: xproc=2, yproc=3         !--- process number 
+  integer(4) :: xproc=2, yproc=3         !--- process number
   integer(4) :: nx, ny, nz, nxp, nyp
   integer(4) :: nzhalo, nxhalo, nyhalo
 
@@ -89,7 +89,7 @@ program convine
 !-----------------------------------------------
 
   call GETARG(1,ARG)
-   
+
 !-----------------------------------------------
 !  read information
 !-----------------------------------------------
@@ -142,7 +142,7 @@ program convine
      read(11,nml=vari)
      write(6,nml=vari)
      do n = 1, vcount
-        vname(n) = trim(vname(n)) 
+        vname(n) = trim(vname(n))
      enddo
      read(11,nml=grads)
      write(6,nml=grads)
@@ -205,7 +205,7 @@ program convine
    do ix = 1, xproc
     nrec = nrec + 1
     write(cfile,'(a,i6.6,a)') trim(HISTORY_DEFAULT_BASENAME)//".pe",nrec,".nc"
-  
+
     cfile=trim(idir)//'/'//trim(cfile)
     !write(6,*) trim(cfile)
 
@@ -214,7 +214,7 @@ program convine
      write(*,*) "Stop at nf open"
      stop
     endif
- 
+
     !if( ofirst ) then
     !  ofirst = .false.
 
@@ -363,7 +363,7 @@ program convine
      write(*,*) "stop at nf inq_varid ", trim(vname(n))
      stop
     end if
- 
+
     status = nf_inq_varndims( ncid,id01,ndim )
     if( status /= nf_noerr) then
      write(*,*) "stop at nf inq_varid dim", trim(vname(n))
@@ -372,14 +372,14 @@ program convine
 
     if( (trim(vname(n)) == "TRL_URB").or.  &
         (trim(vname(n)) == "TBL_URB").or.  &
-        (trim(vname(n)) == "TGL_URB") ) then 
+        (trim(vname(n)) == "TGL_URB") ) then
      status = nf_get_vara_double( ncid,id01,start,count_urban,p_urban_3d )
      if( status /= nf_noerr) then
       write(*,*) "stop at nf get_var_double land ", trim(vname(n))
       stop
      end if
     elseif( (trim(vname(n)) == "LAND_TEMP").or.  &
-            (trim(vname(n)) == "LAND_WATER") ) then 
+            (trim(vname(n)) == "LAND_WATER") ) then
      status = nf_get_vara_double( ncid,id01,start,count_land,p_land_3d )
      if( status /= nf_noerr) then
       write(*,*) "stop at nf get_var_double urban ", trim(vname(n))
@@ -391,7 +391,13 @@ program convine
       write(*,*) "stop at nf get_var_double height ", trim(vname(n))
       stop
      end if
-    elseif( ndim == 4 ) then 
+    elseif( (trim(vname(n)) == "topo").or.(trim(vname(n)) == "lsmask") )then
+     status = nf_get_vara_double( ncid,id01,start2,count2,p_2d )
+     if( status /= nf_noerr) then
+      write(*,*) "stop at nf get_var_double 2 ", trim(vname(n))
+      stop
+     end if
+    elseif( ndim == 4 ) then
      status = nf_get_vara_double( ncid,id01,start,count,p_3d )
      if( status /= nf_noerr) then
       write(*,*) "stop at nf get_var_double 3 ", trim(vname(n))
@@ -404,10 +410,10 @@ program convine
       stop
      end if
     end if
- 
+
     status = nf_close(ncid)
 
-    !--- conbine variables in each processor to single  
+    !--- conbine variables in each processor to single
 
     if ( HIST_BND ) then  ! .true.
       if(ix==1)then
@@ -495,7 +501,13 @@ program convine
       var3d(iix,jjy,1:nz) = real(p_height(iix-is+1,jjy-js+1,1:nz))
      enddo
      enddo
-    elseif( ndim == 4 ) then 
+    elseif( (trim(vname(n)) == "topo").or.(trim(vname(n)) == "lsmask") )then
+     do iix = is,ie
+     do jjy = js,je
+      var2d(iix,jjy) = real(p_2d(iix-is+1,jjy-js+1,1))
+     enddo
+     enddo
+    elseif( ndim == 4 ) then
      do iix = is,ie
      do jjy = js,je
       var3d(iix,jjy,1:nz) = real(p_3d(iix-is+1,jjy-js+1,1:nz,1))
@@ -504,7 +516,7 @@ program convine
     elseif( ndim == 3 ) then
      do iix = is,ie
      do jjy = js,je
-      var2d(iix,jjy) = real(p_2d(iix-is+1,jjy-js+1,1)) 
+      var2d(iix,jjy) = real(p_2d(iix-is+1,jjy-js+1,1))
      enddo
      enddo
     endif
@@ -547,12 +559,14 @@ program convine
      elseif( (trim(vname(n)) == "height") )then
         write(10,'(a,3x,i7,1x,a)') "ZDEF", nz, "LEVELS"
         write(10,'(5(1x,e15.7))') cz(nzhalo+1:nz+nzhalo)*1.d-3
+     elseif( (trim(vname(n)) == "topo").or.(trim(vname(n)) == "lsmask") )then
+        write(10,'(a,3x,i7,1x,a,1x,e15.7)') "ZDEF", 1, "LEVELS", cz(nzhalo+1)*1.d-3
      elseif( ndim == 4 ) then
         write(10,'(a,3x,i7,1x,a)') "ZDEF", nz, "LEVELS"
         write(10,'(5(1x,e15.7))') cz(nzhalo+1:nz+nzhalo)*1.d-3
      elseif( ndim == 3 ) then
         write(10,'(a,3x,i7,1x,a,1x,e15.7)') "ZDEF", 1, "LEVELS", cz(nzhalo+1)*1.d-3
-     endif 
+     endif
 
      write(10,'(a,3x,i5,1x,a,1x,a,3x,a)') "TDEF", nen-nst+1, "LINEAR", trim(stime), trim(delt)
 
@@ -566,11 +580,13 @@ program convine
         write(10,'(a,1x,i7,1x,i2,1x,a)') trim(vname(n)), lz, 99, "NONE"
      elseif( (trim(vname(n)) == "height") )then
         write(10,'(a,1x,i7,1x,i2,1x,a)') trim(vname(n)), nz, 99, "NONE"
+     elseif( (trim(vname(n)) == "topo").or.(trim(vname(n)) == "lsmask") )then
+        write(10,'(a,1x,i7,1x,i2,1x,a)') trim(vname(n)), 0, 99, "NONE"
      elseif( ndim == 4 ) then
         write(10,'(a,1x,i7,1x,i2,1x,a)') trim(vname(n)), nz, 99, "NONE"
      elseif( ndim == 3 ) then
         write(10,'(a,1x,i7,1x,i2,1x,a)') trim(vname(n)), 0, 99, "NONE"
-     endif 
+     endif
      write(10,'(a)') "ENDVARS"
 
      close(10)
@@ -599,19 +615,25 @@ program convine
       open(10,file=trim(odir)//'/'//trim(vname(n))//'_d'//trim(cnest)//".grd", &
            form="unformatted", access="direct", recl=4*nx*ny*nz)
       write(10,rec=it-nst+1) (((var3d(ix,jy,kz),ix=1,nx),jy=1,ny),kz=1,nz)
-      close(10)   
+      close(10)
+   elseif( (trim(vname(n)) == "topo").or.(trim(vname(n)) == "lsmask") ) then
+      print *, maxval(var2d), minval(var2d)
+      open(10,file=trim(odir)//'/'//trim(vname(n))//'_d'//trim(cnest)//".grd", &
+           form="unformatted", access="direct", recl=4*nx*ny)
+      write(10,rec=it-nst+1) ((var2d(ix,jy),ix=1,nx),jy=1,ny)
+      close(10)
    elseif( ndim == 4 ) then
       print *, maxval(var3d), minval(var3d)
       open(10,file=trim(odir)//'/'//trim(vname(n))//'_d'//trim(cnest)//".grd", &
            form="unformatted", access="direct", recl=4*nx*ny*nz)
       write(10,rec=it-nst+1) (((var3d(ix,jy,kz),ix=1,nx),jy=1,ny),kz=1,nz)
-      close(10)   
+      close(10)
    elseif( ndim == 3 ) then
       print *, maxval(var2d), minval(var2d)
       open(10,file=trim(odir)//'/'//trim(vname(n))//'_d'//trim(cnest)//".grd", &
            form="unformatted", access="direct", recl=4*nx*ny)
       write(10,rec=it-nst+1) ((var2d(ix,jy),ix=1,nx),jy=1,ny)
-      close(10)   
+      close(10)
    endif
 
   enddo !--- for variable (n)
