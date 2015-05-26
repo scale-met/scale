@@ -6181,7 +6181,7 @@ contains
                    endif
                    do it = 1, nt
                       work(:,:,1) = sst_org(:,:,it)
-                      call interp_OceanLand_data(work(:,:,:),lsmask_org(:,:,fstep),dims(4),dims(5), 1,landdata=.false.)
+                      call interp_OceanLand_data(work(:,:,:),lsmask_org(:,:,fstep),dims(8),dims(9), 1,landdata=.false.)
                       sst_org(:,:,it) = work(:,:,1)
                    enddo
                 end select
@@ -6428,6 +6428,7 @@ contains
     real(RP), intent(in)   :: misval
     logical,  intent(in)   :: landdata   ! .true. => land data , .false. => ocean data
 
+    real(SP)               :: sdata,smisval
     real(RP)               :: dd
     integer                :: i,j
 
@@ -6439,11 +6440,13 @@ contains
        dd         = 1.0_RP
     endif
 
-    do j=1,ny
-    do i=1,nx
-      if( abs(data(i,j)-misval) < EPS )then
-         gmask(i,j) = dd
-      endif
+    do j = 1, ny
+    do i = 1, nx
+       sdata   = real(data(i,j), kind=SP)
+       smisval = real(misval, kind=SP)
+       if( abs(sdata-smisval) < sqrt(EPS) )then
+          gmask(i,j) = dd
+       endif
    enddo
    enddo
 
