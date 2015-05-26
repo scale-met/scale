@@ -4205,7 +4205,12 @@ enddo
   !-----------------------------------------------------------------------------
   !> Make initial state ( real case )
   subroutine MKINIT_real
-    use mod_realinput
+    use mod_realinput, only: &
+         NDIMS, &
+         ParentAtomSetup, &
+         ParentAtomInput, &
+         ParentAtomBoundary, &
+         ParentSurfaceInput
     implicit none
 
     integer                  :: NUMBER_OF_FILES     = 1
@@ -4219,18 +4224,19 @@ enddo
     real(RP)                 :: BOUNDARY_UPDATE_DT  = 0.0_RP    ! inteval time of boudary data update [s]
     logical                  :: USE_FILE_LANDWATER  = .true.    ! use land water data from files
     real(RP)                 :: INIT_LANDWATER_RATIO = 0.5_RP   ! Ratio of land water to storage is constant,
+    character(len=H_SHORT)   :: INTRP_LAND_TEMP
+    character(len=H_SHORT)   :: INTRP_LAND_WATER
+    character(len=H_SHORT)   :: INTRP_LAND_SFC_TEMP
+    character(len=H_SHORT)   :: INTRP_OCEAN_TEMP
+    character(len=H_SHORT)   :: INTRP_OCEAN_SFC_TEMP
                                                                 !            if USE_FILE_LANDWATER is ".false."
     integer                  :: INTERP_SERC_DIV_NUM = 10        ! num of dividing blocks in interpolation search
-    logical                  :: SERIAL_PROC_READ    = .false.   ! read by one MPI process and broadcast
+    logical                  :: SERIAL_PROC_READ    = .true.    ! read by one MPI process and broadcast
 
     ! only for SCALE boundary
     logical                  :: USE_FILE_DENSITY    = .false.   ! use density data from files
-    ! only for WRF boundary
-    logical                  :: WRF_FILE_TYPE       = .false.   ! wrf filetype: T=wrfout, F=wrfrst
     ! only for NICAM boundary
     integer                  :: NUMBER_OF_SKIP_TSTEPS  = 0      ! num of skipped first several data
-    ! only for GrADS format boundary
-    character(len=H_LONG)    :: GrADS_BOUNDARY_namelist = 'namelist.grads_boundary'    ! information about grads boundary file
 
 
     NAMELIST / PARAM_MKINIT_REAL / &
@@ -4246,9 +4252,12 @@ enddo
          USE_FILE_DENSITY,       &
          USE_FILE_LANDWATER,     &
          INIT_LANDWATER_RATIO,   &
+         INTRP_LAND_TEMP,        &
+         INTRP_LAND_WATER,       &
+         INTRP_LAND_SFC_TEMP,    &
+         INTRP_OCEAN_TEMP,       &
+         INTRP_OCEAN_SFC_TEMP,   &
          PARENT_MP_TYPE,         &
-         WRF_FILE_TYPE,          &
-         GrADS_BOUNDARY_namelist, &
          SERIAL_PROC_READ
 
     character(len=H_LONG) :: BASENAME_WITHNUM  = ''
@@ -4262,7 +4271,7 @@ enddo
     real(RP), allocatable :: QTRC_ORG(:,:,:,:,:)
 
     integer :: mdlid
-    integer :: dims(9) ! dims 1-3: normal, 4-6: staggerd, 7: soil-layer, 8-9: sst for grads
+    integer :: dims(NDIMS) ! dims 1-3: normal, 4-6: staggerd, 7-9: soil-layer, 10-11: sst
 
     integer :: totaltimesteps = 1
     integer :: timelen = 1           ! NUMBER_OF_TSTEPS for nicam data
@@ -4305,19 +4314,16 @@ enddo
       BASENAME_WITHNUM = trim(BASENAME_ORG)//"_00000"
     else if( FILETYPE_ORG == 'GrADS' ) then
       BASENAME_WITHNUM = trim(BASENAME_ORG)//"_00000"
-      if ( len_trim(GrADS_BOUNDARY_namelist) == 0 ) then
-         write(*,*) 'xxx "GrADS_BOUNDARY_namelist" is not specified in "PARAM_MKINIT_REAL"!',trim(GrADS_BOUNDARY_namelist)
-         call PRC_MPIstop
-      endif
     else
       write(*,*) ' xxx Unsupported FILE TYPE:', trim(FILETYPE_ORG)
       call PRC_MPIstop
     end if
 
-    call ParentAtomSetup( dims(:), timelen, mdlid,            & ![OUT]
-                          BASENAME_WITHNUM, FILETYPE_ORG,     & ![IN]
-                          INTERP_SERC_DIV_NUM, WRF_FILE_TYPE, & ![IN]
-                          GrADS_BOUNDARY_namelist             ) ![IN]
+    call ParentAtomSetup( dims(:), timelen, mdlid,        & ![OUT]
+                          BASENAME_WITHNUM, FILETYPE_ORG, & ![IN]
+                          USE_FILE_DENSITY,               & ![IN]
+                          SERIAL_PROC_READ,               & ![IN]
+                          INTERP_SERC_DIV_NUM             ) ![IN]
 
     if ( FILETYPE_ORG == 'NICAM-NETCDF' ) then
        NUMBER_OF_TSTEPS = timelen
@@ -4331,35 +4337,31 @@ enddo
     allocate( momx_org(KA,IA,JA,totaltimesteps   ) )
     allocate( momy_org(KA,IA,JA,totaltimesteps   ) )
     allocate( rhot_org(KA,IA,JA,totaltimesteps   ) )
-    allocate( qtrc_org(KA,IA,JA,totaltimesteps,QA) )
+    allocate( qtrc_org(KA,IA,JA,QA,totaltimesteps) )
 
     !--- read external file
     do n = 1, NUMBER_OF_FILES
        write(NUM,'(I5.5)') n-1
 
-       if     ( FILETYPE_ORG == 'WRF-ARW' ) then
-         BASENAME_WITHNUM = trim(BASENAME_ORG)//"_"//NUM
-       else if( FILETYPE_ORG == 'SCALE-LES' ) then
-         BASENAME_WITHNUM = trim(BASENAME_ORG)
-       else if( FILETYPE_ORG == 'NICAM-NETCDF' ) then
-         BASENAME_WITHNUM = trim(BASENAME_ORG)//"_"//NUM
-       else if( FILETYPE_ORG == 'GrADS' ) then
-         BASENAME_WITHNUM = trim(BASENAME_ORG)//"_"//NUM
-       else
-         write(*,*) ' xxx Unsupported FILE TYPE:', trim(FILETYPE_ORG)
-         call PRC_MPIstop
-       end if
+       select case ( FILETYPE_ORG )
+       case ( 'WRF-ARW' )
+          BASENAME_WITHNUM = trim(BASENAME_ORG)//"_"//NUM
+       case ( 'SCALE-LES' )
+          BASENAME_WITHNUM = trim(BASENAME_ORG)
+       case ( 'NICAM-NETCDF' )
+          BASENAME_WITHNUM = trim(BASENAME_ORG)//"_"//NUM
+       case ( 'GrADS' )
+          BASENAME_WITHNUM = trim(BASENAME_ORG)//"_"//NUM
+       case default
+          write(*,*) ' xxx Unsupported FILE TYPE:', trim(FILETYPE_ORG)
+          call PRC_MPIstop
+       end select
 
        if( IO_L ) write(IO_FID_LOG,*) '+++ Target File Name: ',trim(BASENAME_WITHNUM)
        if( IO_L ) write(IO_FID_LOG,*) '    Time Steps in One File: ', NUMBER_OF_TSTEPS
 
-       if( NUMBER_OF_TSTEPS > 1 ) then
-          ns = NUMBER_OF_TSTEPS * (n - 1) + 1
-          ne = ns + (NUMBER_OF_TSTEPS - 1)
-       else
-          ns = n
-          ne = n
-       endif
+       ns = NUMBER_OF_TSTEPS * (n - 1) + 1
+       ne = ns + (NUMBER_OF_TSTEPS - 1)
 
        ! read all prepared data
        call ParentAtomInput( DENS_org(:,:,:,ns:ne),   &
@@ -4367,14 +4369,12 @@ enddo
                              MOMX_org(:,:,:,ns:ne),   &
                              MOMY_org(:,:,:,ns:ne),   &
                              RHOT_org(:,:,:,ns:ne),   &
-                             QTRC_org(:,:,:,ns:ne,:), &
+                             QTRC_org(:,:,:,:,ns:ne), &
                              BASENAME_WITHNUM,        &
-                             USE_FILE_DENSITY,        &
                              dims(:),                 &
                              mdlid,                   &
                              PARENT_MP_TYPE,          &
-                             NUMBER_OF_TSTEPS,        &
-                             SERIAL_PROC_READ         )
+                             NUMBER_OF_TSTEPS         )
     enddo
 
     !--- input initial data
@@ -4389,7 +4389,7 @@ enddo
        RHOT(k,i,j) = RHOT_ORG(k,i,j,ns)
 
        do iq = 1, QA
-          QTRC(k,i,j,iq) = QTRC_ORG(k,i,j,ns,iq)
+          QTRC(k,i,j,iq) = QTRC_ORG(k,i,j,iq,ns)
        enddo
     enddo
     enddo
@@ -4402,7 +4402,7 @@ enddo
                              MOMX_ORG(:,:,:,ns:ne),   &
                              MOMY_ORG(:,:,:,ns:ne),   &
                              RHOT_ORG(:,:,:,ns:ne),   &
-                             QTRC_ORG(:,:,:,ns:ne,:), &
+                             QTRC_ORG(:,:,:,:,ns:ne), &
                              totaltimesteps,          &
                              BOUNDARY_UPDATE_DT,      &
                              BASENAME_BOUNDARY,       &
@@ -4425,20 +4425,23 @@ enddo
       call PRC_MPIstop
     end if
 
-    call ParentSurfaceInput( DENS_ORG(:,:,:,ns:ne),   &
-                             MOMZ_ORG(:,:,:,ns:ne),   &
-                             MOMX_ORG(:,:,:,ns:ne),   &
-                             MOMY_ORG(:,:,:,ns:ne),   &
-                             RHOT_ORG(:,:,:,ns:ne),   &
-                             QTRC_ORG(:,:,:,ns:ne,:), &
-                             BASENAME_WITHNUM,        &
-                             dims,                    &
-                             1,                       &
-                             NUMBER_OF_SKIP_TSTEPS,   & ! skip first several data for 6 hourly data
-                             USE_FILE_LANDWATER,      &
-                             INIT_LANDWATER_RATIO,    &
-                             mdlid,                   &
-                             SERIAL_PROC_READ         )
+    call ParentSurfaceInput( DENS_ORG(:,:,:,ns),    &
+                             MOMZ_ORG(:,:,:,ns),    &
+                             MOMX_ORG(:,:,:,ns),    &
+                             MOMY_ORG(:,:,:,ns),    &
+                             RHOT_ORG(:,:,:,ns),    &
+                             QTRC_ORG(:,:,:,:,ns),  &
+                             BASENAME_WITHNUM,      &
+                             dims,                  &
+                             ns,                    &
+                             USE_FILE_LANDWATER,    &
+                             INIT_LANDWATER_RATIO,  &
+                             INTRP_LAND_TEMP,       &
+                             INTRP_LAND_WATER,      &
+                             INTRP_LAND_SFC_TEMP,   &
+                             INTRP_OCEAN_TEMP,      &
+                             INTRP_OCEAN_SFC_TEMP,  &
+                             mdlid                  )
 
     call flux_setup
 

@@ -88,6 +88,11 @@ OBJS_INIT =	\
 	mod_cnvlanduse.o             \
 	mod_convert.o                \
 	mod_mktopo.o                 \
+	mod_realinput_scale.o        \
+	mod_realinput_wrfarw.o       \
+	mod_realinput_nicam.o        \
+	mod_realinput_grads.o        \
+	mod_realinput_scale.o        \
 	mod_realinput.o              \
 	mod_mkinit.o
 
@@ -197,7 +202,11 @@ $(BUILD_DIR)/mod_cpl_driver.o             : mod_cpl_driver.f90 $(DEPENDLIB) mod_
 
 $(BUILD_DIR)/mod_mktopo.o                 : mod_mktopo.f90     $(DEPENDLIB)
 $(BUILD_DIR)/mod_mkinit.o                 : mod_mkinit.f90     $(DEPENDLIB) mod_atmos_vars.o mod_ocean_vars.o mod_land_vars.o mod_urban_vars.o mod_realinput.o
-$(BUILD_DIR)/mod_realinput.o              : mod_realinput.f90  $(DEPENDLIB) mod_atmos_vars.o mod_ocean_vars.o mod_land_vars.o mod_urban_vars.o
+$(BUILD_DIR)/mod_realinput_scale.o        : mod_realinput_scale.f90 $(DEPENDLIB)
+$(BUILD_DIR)/mod_realinput_wrfarw.o       : mod_realinput_wrfarw.f90 $(DEPENDLIB)
+$(BUILD_DIR)/mod_realinput_nicam.o        : mod_realinput_nicam.f90 $(DEPENDLIB)
+$(BUILD_DIR)/mod_realinput_grads.o        : mod_realinput_grads.f90 $(DEPENDLIB)
+$(BUILD_DIR)/mod_realinput.o              : mod_realinput.f90  $(DEPENDLIB) mod_atmos_vars.o mod_ocean_vars.o mod_land_vars.o mod_urban_vars.o mod_realinput_scale.o mod_realinput_wrfarw.o mod_realinput_nicam.o mod_realinput_grads.o
 $(BUILD_DIR)/mod_convert.o                : mod_convert.f90    $(DEPENDLIB) mod_cnvtopo.o mod_cnvlanduse.o
 $(BUILD_DIR)/mod_cnvtopo.o                : mod_cnvtopo.f90    $(DEPENDLIB) mod_copytopo.o
 $(BUILD_DIR)/mod_copytopo.o               : mod_copytopo.f90   $(DEPENDLIB)

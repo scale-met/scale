@@ -1232,7 +1232,7 @@ contains
           else if( inhgt(inKA,ii,jj) < myhgt(k) )then
              write(*,*) 'xxx internal error [INTRPNEST_search_vert_offline]'
              write(*,*) 'xxx data level is beyond parent data'
-             write(*,*) 'in',ii,jj,inKA,inhgt(inKA,ii,jj),'my',k,myhgt(k)
+             write(*,*) 'in',ii,jj,inKA,inhgt(inKA,ii,jj),'my',iloc,jloc,k,myhgt(k)
              call PRC_MPIstop
           else
 
