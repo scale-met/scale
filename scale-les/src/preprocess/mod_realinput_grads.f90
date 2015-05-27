@@ -153,6 +153,43 @@ contains
         outer_nx_sst, &
         outer_ny_sst
 
+
+    ! namelist.grads_boundary
+    integer, parameter   :: grads_vars_limit = 1000 !> limit of number of values
+    integer              :: grads_vars_nmax = 0     !> number of variables in grads file
+
+    character(H_SHORT)   :: item                                      ! up to 16 characters
+    integer              :: knum                                      ! optional: vertical level
+    character(H_SHORT)   :: dtype                                     ! 'linear','levels','map'
+    character(H_LONG)    :: fname                                     ! head of file name
+    real(RP)             :: swpoint                                   ! start point (south-west point) for linear
+    real(RP)             :: dd                                        ! dlon,dlat for linear
+    integer              :: lnum                                      ! number of data
+    real(RP)             :: lvars(lvars_limit) = large_number_one     ! values for levels
+    integer              :: startrec=1                                ! record position
+    integer              :: totalrec=1                                ! total record number per one time
+    real(RP)             :: missval                                   ! missing value
+    character(H_SHORT)   :: fendian='big'                             ! option
+
+    namelist /grdvar/ &
+        item,      &  ! necessary
+        dtype,     &  ! necessary
+        fname,     &  ! necessary except for linear data
+        swpoint,   &  ! for linear data
+        dd,        &  ! for linear data
+        lnum,      &  ! for levels data
+        lvars,     &  ! for levels data
+        startrec,  &  ! for map data
+        totalrec,  &  ! for map data
+        missval,   &  ! option
+        knum,      &  ! option
+        fendian       ! option
+
+
+    integer :: ielem
+    integer :: k, n
+
+
     integer                       :: ierr
     !---------------------------------------------------------------------------
 
@@ -184,7 +221,7 @@ contains
          iostat = ierr                           )
     if ( ierr /= 0 ) then
        write(*,*) 'xxx Input data file does not found! ', trim(grads_boundary_namelist)
-       stop
+       call PRC_MPIstop
     endif
 
     read(io_fid_grads_nml,nml=nml_grads_grid,iostat=ierr)
@@ -236,50 +273,6 @@ contains
 
     allocate( gsst2D ( dims(10), dims(11)        ) )
 
-    return
-  end subroutine ParentAtomSetupGrADS
-
-  !-----------------------------------------------------------------------------
-  subroutine ParentAtomOpenGrADS
-    implicit none
-
-    ! namelist.grads_boundary
-    integer, parameter   :: grads_vars_limit = 1000 !> limit of number of values
-    integer              :: grads_vars_nmax = 0     !> number of variables in grads file
-
-    character(H_SHORT)   :: item                                      ! up to 16 characters
-    integer              :: knum                                      ! optional: vertical level
-    character(H_SHORT)   :: dtype                                     ! 'linear','levels','map'
-    character(H_LONG)    :: fname                                     ! head of file name
-    real(RP)             :: swpoint                                   ! start point (south-west point) for linear
-    real(RP)             :: dd                                        ! dlon,dlat for linear
-    integer              :: lnum                                      ! number of data
-    real(RP)             :: lvars(lvars_limit) = large_number_one     ! values for levels
-    integer              :: startrec=1                                ! record position
-    integer              :: totalrec=1                                ! total record number per one time
-    real(SP)             :: missval                                   ! missing value
-    character(H_SHORT)   :: fendian                                   ! option
-
-    namelist /grdvar/ &
-        item,      &  ! necessary
-        dtype,     &  ! necessary
-        fname,     &  ! necessary except for linear data
-        swpoint,   &  ! for linear data
-        dd,        &  ! for linear data
-        lnum,      &  ! for levels data
-        lvars,     &  ! for levels data
-        startrec,  &  ! for map data
-        totalrec,  &  ! for map data
-        missval,   &  ! option
-        knum,      &  ! option
-        fendian       ! option
-
-
-    integer :: ielem
-    integer :: ierr
-    integer :: k, n
-
-    !---------------------------------------------------------------------------
 
     ! listup variables
     if ( io_fid_grads_nml > 0 ) then
@@ -288,7 +281,7 @@ contains
        do n = 1, grads_vars_limit
           read(io_fid_grads_nml, nml=grdvar, iostat=ierr)
           if( ierr > 0 )then
-             write(IO_FID_LOG,*) '*** cannot read namelist successfully! '
+             write(*,*) 'xxx cannot read namelist successfully! '
              call PRC_MPIstop
           else if( ierr < 0 )then
              exit
@@ -296,12 +289,12 @@ contains
           grads_vars_nmax = grads_vars_nmax + 1
        enddo
     else
-       write(IO_FID_LOG,*) '*** namelist file is not open! '
+       write(*,*) 'xxx namelist file is not open! '
        call PRC_MPIstop
     endif
 
     if ( grads_vars_nmax > grads_vars_limit ) then
-       write(IO_FID_LOG,*) '*** number of grads vars is exceed! ',grads_vars_nmax,' >', grads_vars_limit
+       write(*,*) 'xxx number of grads vars is exceed! ',grads_vars_nmax,' >', grads_vars_limit
        call PRC_MPIstop
     endif
 
@@ -363,7 +356,7 @@ contains
        case('QV')
           if (.not. data_available(Ig_qv)) then
              if (.not.data_available(Ig_rh)) then
-                write(IO_FID_LOG,*) '*** cannot found QV and RH in grads namelist! '
+                write(*,*) 'xxx cannot found QV and RH in grads namelist! '
                 call PRC_MPIstop
              else ! will read RH
                 cycle
@@ -372,12 +365,12 @@ contains
        case('RH')
           if ( data_available(Ig_rh)) then
              if ((.not. data_available(Ig_t)).or.(.not. data_available(Ig_p))) then
-                write(IO_FID_LOG,*) '*** Temperature and pressure are required to convert from RH to QV ! '
+                write(*,*) 'xxx Temperature and pressure are required to convert from RH to QV ! '
                 call PRC_MPIstop
              endif
           else
              if (.not.data_available(Ig_qv)) then
-                write(IO_FID_LOG,*) '*** cannot found QV and RH in grads namelist! '
+                write(*,*) 'xxx cannot found QV and RH in grads namelist! '
                 call PRC_MPIstop
              else ! will read QV
                 cycle
@@ -386,7 +379,7 @@ contains
        case('Q2')
           if (.not. data_available(Ig_q2)) then
              if (.not.data_available(Ig_rh2)) then
-                write(IO_FID_LOG,*) '*** cannot found Q2 and RH2 in grads namelist! '
+                write(*,*) 'xxx cannot found Q2 and RH2 in grads namelist! '
                 call PRC_MPIstop
              else
                 cycle ! will read RH2
@@ -395,27 +388,32 @@ contains
        case('RH2')
           if ( data_available(Ig_rh2)) then
              if ((.not. data_available(Ig_t2)).or.(.not. data_available(Ig_ps))) then
-                write(IO_FID_LOG,*) '*** T2 and PSFC are required to convert from RH2 to Q2 ! '
-                stop
+                write(*,*) 'xxx T2 and PSFC are required to convert from RH2 to Q2 ! '
+                call PRC_MPIstop
              endif
           else
              if (.not.data_available(Ig_q2)) then
-                write(IO_FID_LOG,*) '*** cannot found Q2 and RH2 in grads namelist! ',trim(item)
+                write(*,*) 'xxx cannot found Q2 and RH2 in grads namelist! ',trim(item)
                 call PRC_MPIstop
              else
                 cycle ! will read Q2
              endif
           endif
+       case('TOPO')
+          if ( .not. data_available(Ig_topo) ) then
+             if (IO_L) write(IO_FID_LOG,*) '*** not use ',trim(item),' data!'
+             cycle
+          endif
        case('lsmask')
           if ( .not. data_available(Ig_lsmask) ) then
-             write(IO_FID_LOG,*) '*** not use ',trim(item),' data!'
+             if (IO_L) write(IO_FID_LOG,*) '*** not use ',trim(item),' data!'
              cycle
           endif
        case('lon_sfc', 'lat_sfc', 'lon_sst', 'lat_sst')
           cycle
        case('SST')
           if (.not. data_available(Ig_sst)) then
-             write(IO_FID_LOG,*) 'warning: cannot found SST. SKINT is used for SST! '
+             if (IO_L) write(IO_FID_LOG,*) 'warning: cannot found SST. SKINT is used for SST! '
              cycle
           endif
        case('SMOIS')
@@ -430,6 +428,15 @@ contains
        end select
 
     end do
+
+    return
+  end subroutine ParentAtomSetupGrADS
+
+  !-----------------------------------------------------------------------------
+  subroutine ParentAtomOpenGrADS
+    implicit none
+    
+    if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[realinput]/Categ[OpenGrADS]'
 
     return
   end subroutine ParentAtomOpenGrADS
@@ -504,10 +511,7 @@ contains
 
     !---------------------------------------------------------------------------
 
-
-
-    if( IO_L ) write(IO_FID_LOG,*) ''
-    if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[realinput]/Categ[InputGrADS reanalysis]'
+    if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[realinput]/Categ[InputGrADS]'
 
     qtrc_org = 0.0_RP
 
@@ -520,7 +524,7 @@ contains
        lnum     = grads_lnum    (ielem)
 
        if ( dims(1) < grads_knum(ielem) ) then
-          write(IO_FID_LOG,*) '*** please check plev data! knum must be less than or equal to outer_nz',knum,dims(1)
+          write(*,*) 'xxx please check plev data! knum must be less than or equal to outer_nz',knum,dims(1)
           call PRC_MPIstop
        else if ( grads_knum(ielem) > 0 )then
           knum = grads_knum(ielem)  ! not missing
@@ -533,20 +537,20 @@ contains
           swpoint = grads_swpoint (ielem)
           dd      = grads_dd      (ielem)
           if( (abs(swpoint-large_number_one)<EPS).or.(abs(dd-large_number_one)<EPS) )then
-             write(IO_FID_LOG,*) '*** "swpoint" is required in grads namelist! ',swpoint
-             write(IO_FID_LOG,*) '*** "dd"      is required in grads namelist! ',dd
+             write(*,*) 'xxx "swpoint" is required in grads namelist! ',swpoint
+             write(*,*) 'xxx "dd"      is required in grads namelist! ',dd
              call PRC_MPIstop
           endif
        case("levels")
           if ( lnum < 0 )then
-             write(IO_FID_LOG,*) '*** "lnum" in grads namelist is required for levels data! '
+             write(*,*) 'xxx "lnum" in grads namelist is required for levels data! '
              call PRC_MPIstop
           endif
           do k=1, lnum
              lvars(k)=grads_lvars(ielem,k)
           enddo
           if(abs(lvars(1)-large_number_one)<EPS)then
-             write(IO_FID_LOG,*) '*** "lvars" must be specified in grads namelist for levels data! '
+             write(*,*) 'xxx "lvars" must be specified in grads namelist for levels data! '
              call PRC_MPIstop
           endif
        case("map")
@@ -554,8 +558,8 @@ contains
           totalrec = grads_totalrec(ielem)
           fendian  = grads_fendian (ielem)
           if( (startrec==0).or.(totalrec==0) )then
-             write(IO_FID_LOG,*) '*** "startrec" is required in grads namelist! ',startrec
-             write(IO_FID_LOG,*) '*** "totalrec" is required in grads namelist! ',totalrec
+             write(*,*) 'xxx "startrec" is required in grads namelist! ',startrec
+             write(*,*) 'xxx "totalrec" is required in grads namelist! ',totalrec
              call PRC_MPIstop
           endif
           ! get file_id
@@ -591,13 +595,13 @@ contains
           endif
        case("plev")
           if(dims(1)/=knum)then
-             write(IO_FID_LOG,*) '*** please check plev data! ',dims(1),knum
-             stop
+             write(*,*) 'xxx please check plev data! ',dims(1),knum
+             call PRC_MPIstop
           endif
           if ( trim(dtype) == "levels" ) then
              if(dims(1)/=lnum)then
-                write(IO_FID_LOG,*) '*** lnum must be same as the outer_nz! ',dims(1),lnum
-                stop
+                write(*,*) 'xxx lnum must be same as the outer_nz! ',dims(1),lnum
+                call PRC_MPIstop
              endif
              do j = 1, dims(3)
              do i = 1, dims(2)
@@ -668,8 +672,8 @@ contains
           endif
        case('HGT')
           if(dims(1)/=knum)then
-             write(IO_FID_LOG,*) '*** The number of levels for HGT must be same as plevs! ',dims(1),knum
-             stop
+             write(*,*) 'xxx The number of levels for HGT must be same as plevs! ',dims(1),knum
+             call PRC_MPIstop
           endif
           if ( trim(dtype) == "map" ) then
              call read_grads_file_3d(io_fid_grads_data,gfile,dims(2),dims(3),dims(1),nt,item,startrec,totalrec,gdata3D)
@@ -970,7 +974,6 @@ contains
 
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) ''
     if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[realinput]/Categ[InputGrADS-Surface]'
 
 
@@ -994,20 +997,20 @@ contains
           swpoint = grads_swpoint (ielem)
           dd      = grads_dd      (ielem)
           if( (abs(swpoint-large_number_one)<EPS).or.(abs(dd-large_number_one)<EPS) )then
-             write(IO_FID_LOG,*) '*** "swpoint" is required in grads namelist! ',swpoint
-             write(IO_FID_LOG,*) '*** "dd"      is required in grads namelist! ',dd
+             write(*,*) 'xxx "swpoint" is required in grads namelist! ',swpoint
+             write(*,*) 'xxx "dd"      is required in grads namelist! ',dd
              call PRC_MPIstop
           endif
        case("levels")
           if ( lnum < 0 )then
-             write(IO_FID_LOG,*) '*** "lnum" in grads namelist is required for levels data! '
+             write(*,*) 'xxx "lnum" in grads namelist is required for levels data! '
              call PRC_MPIstop
           endif
           do k=1, lnum
              lvars(k)=grads_lvars(ielem,k)
           enddo
           if(abs(lvars(1)-large_number_one)<EPS)then
-             write(IO_FID_LOG,*) '*** "lvars" is required in grads namelist! ',(lvars(k),k=1,lnum)
+             write(*,*) 'xxx "lvars" is required in grads namelist! ',(lvars(k),k=1,lnum)
              call PRC_MPIstop
           endif
        case("map")
@@ -1015,8 +1018,8 @@ contains
           totalrec = grads_totalrec(ielem)
           fendian  = grads_fendian (ielem)
           if( (startrec==0).or.(totalrec==0) )then
-             write(IO_FID_LOG,*) '*** "startrec" is required in grads namelist! ',startrec
-             write(IO_FID_LOG,*) '*** "totalrec" is required in grads namelist! ',totalrec
+             write(*,*) 'xxx "startrec" is required in grads namelist! ',startrec
+             write(*,*) 'xxx "totalrec" is required in grads namelist! ',totalrec
              call PRC_MPIstop
           endif
           ! get file_io
@@ -1092,12 +1095,12 @@ contains
           if ( trim(dtype) == "linear" ) then
              do j = 1, dims(11)
              do i = 1, dims(10)
-                llon_org(i,j) = real(swpoint+real(i-1)*dd, kind=RP) * D2R
+                olon_org(i,j) = real(swpoint+real(i-1)*dd, kind=RP) * D2R
              enddo
              enddo
           else if ( trim(dtype) == "map" ) then
              call read_grads_file_2d(io_fid_grads_data,gfile,dims(10),dims(11),1,1,item,startrec,totalrec,gsst2D)
-             llon_org(:,:) = real(gsst2D(:,:), kind=RP) * D2R
+             olon_org(:,:) = real(gsst2D(:,:), kind=RP) * D2R
           endif
        case("lat")
           if ( .not. data_available(Ig_lat_sfc) ) then
@@ -1163,12 +1166,12 @@ contains
           endif
        case("llev")
           if(dims(7)/=knum)then
-             write(IO_FID_LOG,*) '*** please check llev data! ',dims(7),knum
+             write(*,*) 'xxx please check llev data! ',dims(7),knum
              call PRC_MPIstop
           endif
           if ( trim(dtype) == "levels" ) then
              if(dims(7)/=lnum)then
-                write(IO_FID_LOG,*) '*** lnum must be same as the outer_nz! ',dims(7),lnum
+                write(*,*) 'xxx lnum must be same as the outer_nz! ',dims(7),lnum
                 call PRC_MPIstop
              endif
              do k = 1, dims(7)
@@ -1186,7 +1189,7 @@ contains
           endif
        case('STEMP')
           if(dims(7)/=knum)then
-             write(IO_FID_LOG,*) '*** The number of levels for STEMP must be same as llevs! ',dims(7),knum
+             write(*,*) 'xxx The number of levels for STEMP must be same as llevs! ',dims(7),knum
              call PRC_MPIstop
           endif
           if ( trim(dtype) == "map" ) then
@@ -1194,8 +1197,11 @@ contains
              do j = 1, dims(9)
              do i = 1, dims(8)
              do k = 1, dims(7)
-                tg_org(k,i,j) = real(gland3D(i,j,k), kind=RP)
-                if ( abs(tg_org(k,i,j)-missval)<EPS ) tg_org(k,i,j) = UNDEF
+                if ( abs(gland3D(i,j,k)-missval) < EPS ) then
+                   tg_org(k,i,j) = UNDEF
+                else
+                   tg_org(k,i,j) = real(gland3D(i,j,k), kind=RP)
+                end if
              enddo
              enddo
              enddo
@@ -1203,11 +1209,11 @@ contains
        case('SMOIS')
           if ( use_file_landwater ) then
              if ( .not. data_available(Ig_smois) ) then
-                write(IO_FID_LOG,*) '*** cannot found SMOIS in grads namelist! ',trim(item),trim(item_list(ielem))
+                write(*,*) 'xxx cannot found SMOIS in grads namelist! ',trim(item),trim(item_list(ielem))
                 call PRC_MPIstop
              end if
              if(dims(7)/=knum)then
-                write(IO_FID_LOG,*) '*** The number of levels for SMOIS must be same as llevs! ',dims(7),knum
+                write(*,*) 'xxx The number of levels for SMOIS must be same as llevs! ',dims(7),knum
                 call PRC_MPIstop
              endif
              if ( trim(dtype) == "map" ) then
@@ -1215,8 +1221,11 @@ contains
                 do j = 1, dims(9)
                 do i = 1, dims(8)
                 do k = 1, dims(7)
-                   strg_org(k,i,j) = real(gland3D(i,j,k), kind=RP)
-                   if ( abs(strg_org(k,i,j)-missval)<EPS ) strg_org(k,i,j) = UNDEF
+                   if ( abs(gland3D(i,j,k)-missval) < EPS ) then
+                      strg_org(k,i,j) = UNDEF
+                   else
+                      strg_org(k,i,j) = real(gland3D(i,j,k), kind=RP)
+                   end if
                 enddo
                 enddo
                 enddo
@@ -1227,8 +1236,11 @@ contains
              call read_grads_file_2d(io_fid_grads_data,gfile,dims(8),dims(9),1,nt,item,startrec,totalrec,gland2D)
              do j = 1, dims(9)
              do i = 1, dims(8)
-                lst_org(i,j) = real(gland2D(i,j), kind=RP)
-                if ( abs(lst_org(i,j)-missval)<EPS ) lst_org(i,j) = UNDEF
+                if ( abs(gland2D(i,j)-missval) < EPS ) then
+                   lst_org(i,j) = UNDEF
+                else
+                   lst_org(i,j) = real(gland2D(i,j), kind=RP)
+                end if
              enddo
              enddo
           endif
@@ -1238,8 +1250,11 @@ contains
              call read_grads_file_2d(io_fid_grads_data,gfile,dims(10),dims(11),1,nt,item,startrec,totalrec,gsst2D)
              do j = 1, dims(11)
              do i = 1, dims(10)
-                sst_org(i,j) = real(gsst2D(i,j), kind=RP)
-                if ( abs(sst_org(i,j)-missval)<EPS ) sst_org(i,j) = UNDEF
+                if ( abs(gsst2D(i,j)-missval) < EPS ) then
+                   sst_org(i,j) = UNDEF
+                else
+                   sst_org(i,j) = real(gsst2D(i,j), kind=RP)
+                end if
              enddo
              enddo
           end if
@@ -1257,6 +1272,8 @@ contains
           call PRC_MPIstop
        end if
     endif
+
+    tw_org = sst_org
 
     !do it = 1, nt
     !   i=int(dims(8)/2) ; j=int(dims(9)/2)
@@ -1290,8 +1307,8 @@ contains
          status = 'old',           &
          iostat = ierr             )
     if ( ierr /= 0 ) then
-       if (IO_L) write(IO_FID_LOG,*) 'xxx grads file does not found! ', trim(filename)
-       stop
+       write(*,*) 'xxx grads file does not found! ', trim(filename)
+       call PRC_MPIstop
     endif
     return
   end subroutine open_grads_file
@@ -1323,8 +1340,8 @@ contains
     irec = totalrec * (it-1) + startrec
     read(io_fid, rec=irec, iostat=ierr) gdata(:,:)
     if ( ierr /= 0 ) then
-       if (IO_L) write(IO_FID_LOG,*) 'xxx grads data does not found! ',trim(item),it
-       stop
+       write(*,*) 'xxx grads data does not found! ',trim(item),it
+       call PRC_MPIstop
     endif
     call close_grads_file(io_fid,gfile)
 
@@ -1359,8 +1376,8 @@ contains
        irec = totalrec * (it-1) + startrec + (k-1)
        read(io_fid, rec=irec, iostat=ierr) gdata(:,:,k)
        if ( ierr /= 0 ) then
-          if (IO_L) write(IO_FID_LOG,*) 'xxx grads data does not found! ',trim(item),k,it
-          stop
+          write(*,*) 'xxx grads data does not found! ',trim(item),k,it
+          call PRC_MPIstop
        endif
     enddo
     call close_grads_file(io_fid,gfile)
@@ -1377,8 +1394,8 @@ contains
 
     close(io_fid, iostat=ierr)
     if ( ierr /= 0 ) then
-       if (IO_L) write(IO_FID_LOG,*) 'xxx grads file was not closed peacefully! ',trim(filename)
-       stop
+       write(*,*) 'xxx grads file was not closed peacefully! ',trim(filename)
+       call PRC_MPIstop
     endif
 
     return

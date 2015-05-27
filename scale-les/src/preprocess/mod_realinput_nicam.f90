@@ -145,6 +145,8 @@ contains
 
     integer :: k, i, j
 
+    if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[realinput]/Categ[OpenNICAM]'
+
     basename = "ms_pres"//trim(basename_num)
     call FileRead( read1DX(:), trim(basename), "lon", 1, 1, single=.true. )
     do j = 1, dims(2)
@@ -226,7 +228,6 @@ contains
     character(len=H_LONG) :: basename
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) ''
     if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[realinput]/Categ[InputNICAM]'
 
     !> [scale-offset]
@@ -381,7 +382,6 @@ contains
     character(len=H_LONG) :: basename
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) ''
     if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[realinput]/Categ[InputNICAM-Surface]'
 
     basename = "la_tg"//trim(basename_num)

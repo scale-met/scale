@@ -126,7 +126,6 @@ contains
 
     integer :: i, k
 
-    if( IO_L ) write(IO_FID_LOG,*) ''
     if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[realinput]/Categ[OpenSCALE]'
 
     do i = 1, size( NEST_TILE_ID(:) )
@@ -226,7 +225,7 @@ contains
     logical :: lack_of_val
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) ''
+
     if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[realinput]/Categ[InputSCALE]'
 
     do i = 1, size( NEST_TILE_ID(:) )
@@ -401,7 +400,6 @@ contains
     integer :: ys, ye
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) ''
     if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[realinput]/Categ[InputSCALE-Surface]'
 
     do i = 1, size( NEST_TILE_ID(:) )

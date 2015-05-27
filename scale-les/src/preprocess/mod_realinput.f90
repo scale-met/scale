@@ -64,7 +64,7 @@ module mod_realinput
   !
   !++ Public parameters & variables
   !
-  integer, public :: ndims = 10 !> 1-3: normal, 4-6: staggerd, 7-9: soil-layer, 10-11: sst
+  integer, public :: ndims = 11 !> 1-3: normal, 4-6: staggerd, 7-9: soil-layer, 10-11: sst
 
   !-----------------------------------------------------------------------------
   !
@@ -917,15 +917,13 @@ contains
     real(RP) :: temp
     real(RP) :: pres
 
+    ! land
     real(RP) :: tg_org    (dims(7),dims(8),dims(9))
     real(RP) :: strg_org  (dims(7),dims(8),dims(9))
     real(RP) :: sh2o_org  (dims(7),dims(8),dims(9))
-    real(RP) :: tw_org    (        dims(8),dims(9))
     real(RP) :: skint_org (        dims(8),dims(9))
     real(RP) :: lst_org   (        dims(8),dims(9))
     real(RP) :: ust_org   (        dims(8),dims(9))
-    real(RP) :: sst_org   (        dims(8),dims(9))
-    real(RP) :: albw_org  (        dims(8),dims(9),2)
     real(RP) :: albg_org  (        dims(8),dims(9),2)
     real(RP) :: z0w_org   (        dims(8),dims(9))
     real(RP) :: lsmask_org(        dims(8),dims(9))
@@ -933,11 +931,16 @@ contains
     real(RP) :: lz3d_org  (dims(7),dims(8),dims(9))
     real(RP) :: llon_org  (        dims(8),dims(9))
     real(RP) :: llat_org  (        dims(8),dims(9))
+    real(RP) :: work      (        dims(8),dims(9))
+    real(RP) :: lmask     (        dims(8),dims(9))
+
+    ! ocean
+    real(RP) :: tw_org    (        dims(10),dims(11))
+    real(RP) :: sst_org   (        dims(10),dims(11))
+    real(RP) :: albw_org  (        dims(10),dims(11),2)
     real(RP) :: olon_org  (        dims(10),dims(11))
     real(RP) :: olat_org  (        dims(10),dims(11))
-    real(RP) :: work      (        dims(8),dims(9))
-    real(RP) :: lmask(dims(8),dims(9))
-    real(RP) :: omask(dims(10),dims(11))
+    real(RP) :: omask     (        dims(10),dims(11))
 
 
     real(RP) :: tg   (LKMAX,IA,JA)
@@ -1053,12 +1056,8 @@ contains
        else
           call COMM_bcast( strg_org, dims(7), dims(8), dims(9) )
        end if
-       call COMM_bcast( tw_org,          dims(8), dims(9) )
        call COMM_bcast( lst_org,         dims(8), dims(9) )
        call COMM_bcast( ust_org,         dims(8), dims(9) )
-       call COMM_bcast( sst_org,         dims(8), dims(9) )
-       call COMM_bcast( albw_org(:,:,1), dims(8), dims(9) )
-       call COMM_bcast( albw_org(:,:,2), dims(8), dims(9) )
        call COMM_bcast( albg_org(:,:,1), dims(8), dims(9) )
        call COMM_bcast( albg_org(:,:,2), dims(8), dims(9) )
        call COMM_bcast( z0w_org(:,:),    dims(8), dims(9) )
@@ -1066,6 +1065,11 @@ contains
        call COMM_bcast( lz_org,          dims(7) )
        call COMM_bcast( llon_org(:,:),   dims(8), dims(9) )
        call COMM_bcast( llat_org(:,:),   dims(8), dims(9) )
+
+       call COMM_bcast( tw_org,          dims(10), dims(11) )
+       call COMM_bcast( sst_org,         dims(10), dims(11) )
+       call COMM_bcast( albw_org(:,:,1), dims(10), dims(11) )
+       call COMM_bcast( albw_org(:,:,2), dims(10), dims(11) )
        call COMM_bcast( olon_org(:,:),   dims(10), dims(11) )
        call COMM_bcast( olat_org(:,:),   dims(10), dims(11) )
     end if
@@ -1271,7 +1275,7 @@ contains
           write(*,*) 'xxx INTRP_LAND_SFC_TEMP is invalid. ', INTRP_LAND_SFC_TEMP
           call PRC_MPIstop
        end select
-       call interp_OceanLand_data(lst_org, omask, dims(8), dims(9), landdata=.true.)
+       call interp_OceanLand_data(lst_org, lmask, dims(8), dims(9), landdata=.true.)
     end if
 
     ! Urban surface temp: interpolate over the ocean
@@ -1280,12 +1284,12 @@ contains
     !   case ( 'mask' )
     !      lmask = lsmask_org
     !   case ( 'fill' )
-    !      call make_mask( lmask, lst_org, dims(8), dims(9), landdata=.true.)
+    !      call make_mask( lmask, ust_org, dims(8), dims(9), landdata=.true.)
     !   case default
     !      write(*,*) 'xxx INTRP_URB_SFC_TEMP is invalid. ', INTRP_URB_SFC_TEMP
     !      call PRC_MPIstop
     !   end select
-    !   call interp_OceanLand_data(ust_org, omask, dims(8), dims(9), landdata=.true.)
+    !   call interp_OceanLand_data(ust_org, lmask, dims(8), dims(9), landdata=.true.)
     !end if
 
     do j = 1, dims(9)
@@ -1294,11 +1298,15 @@ contains
 !       if ( skinw_org(i,j) == UNDEF ) skinw_org(i,j) = 0.0_RP
 !       if ( snowq_org(i,j) == UNDEF ) snowq_org(i,j) = 0.0_RP
 !       if ( snowt_org(i,j) == UNDEF ) snowt_org(i,j) = TEM00
-       if ( albw_org(i,j,I_LW) == UNDEF ) albw_org(i,j,I_LW) = 0.04_RP  ! emissivity of water surface : 0.96
-       if ( albw_org(i,j,I_SW) == UNDEF ) albw_org(i,j,I_SW) = 0.10_RP
        if ( albg_org(i,j,I_LW) == UNDEF ) albg_org(i,j,I_LW) = 0.03_RP  ! emissivity of general ground surface : 0.95-0.98
        if ( albg_org(i,j,I_SW) == UNDEF ) albg_org(i,j,I_SW) = 0.22_RP
        if ( z0w_org(i,j) == UNDEF ) z0w_org(i,j) = 0.001_RP
+    end do
+    end do
+    do j = 1, dims(11)
+    do i = 1, dims(10)
+       if ( albw_org(i,j,I_LW) == UNDEF ) albw_org(i,j,I_LW) = 0.04_RP  ! emissivity of water surface : 0.96
+       if ( albw_org(i,j,I_SW) == UNDEF ) albw_org(i,j,I_SW) = 0.10_RP
     end do
     end do
 
@@ -1314,6 +1322,10 @@ contains
 !                              igrd(:,:,:), jgrd(:,:,:), IA, JA )
 !    call INTRPNEST_interp_2d( snowt(:,:), snowt_org(:,:), hfact(:,:,:), &
 !                              igrd(:,:,:), jgrd(:,:,:), IA, JA )
+    do n = 1, 2 ! 1:LW, 2:SW
+       call INTRPNEST_interp_2d( albg(:,:,n), albg_org(:,:,n), hfact(:,:,:), &
+                                 igrd(:,:,:), jgrd(:,:,:), IA, JA )
+    enddo
 
 
     call INTRPNEST_interp_fact_latlon( hfact(:,:,:),                 & ! [OUT]
@@ -1323,10 +1335,15 @@ contains
                                        olat_org(:,:), olon_org(:,:), & ! [IN]
                                        dims(10), dims(11)            ) ! [IN]
 
-    call INTRPNEST_interp_2d( tw(:,:),    tw_org(:,:),    hfact(:,:,:), &
+    call INTRPNEST_interp_2d( tw(:,:), tw_org(:,:), hfact(:,:,:), &
                               igrd(:,:,:), jgrd(:,:,:), IA, JA )
-    call INTRPNEST_interp_2d( sst(:,:),   sst_org(:,:),   hfact(:,:,:), &
+    call INTRPNEST_interp_2d( sst(:,:), sst_org(:,:), hfact(:,:,:), &
                               igrd(:,:,:), jgrd(:,:,:), IA, JA )
+    do n = 1, 2 ! 1:LW, 2:SW
+       call INTRPNEST_interp_2d( albw(:,:,n), albw_org(:,:,n), hfact(:,:,:), &
+                                 igrd(:,:,:), jgrd(:,:,:), IA, JA )
+    enddo
+
 
     ! replace values over the ocean ####
      do j = 1, JA
@@ -1340,14 +1357,6 @@ contains
                    + fact_urban(i,j) * ust(i,j)
      enddo
      enddo
-
-    do n = 1, 2 ! 1:LW, 2:SW
-       call INTRPNEST_interp_2d( albw(:,:,n), albw_org(:,:,n), hfact(:,:,:), &
-                                 igrd(:,:,:), jgrd(:,:,:), IA, JA )
-       call INTRPNEST_interp_2d( albg(:,:,n), albg_org(:,:,n), hfact(:,:,:), &
-                                 igrd(:,:,:), jgrd(:,:,:), IA, JA )
-    enddo
-
 
     do j = 1, JA
     do i = 1, IA

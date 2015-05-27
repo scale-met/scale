@@ -157,7 +157,6 @@ contains
   subroutine ParentAtomOpenWRFARW
     implicit none
 
-    if( IO_L ) write(IO_FID_LOG,*) ''
     if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[realinput]/Categ[OpenWRFARW]'
     return
   end subroutine ParentAtomOpenWRFARW
@@ -226,6 +225,8 @@ contains
     integer :: ierr
     !---------------------------------------------------------------------------
 
+    if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[realinput]/Categ[InputWRF]'
+
     if ( wrfout ) then
        varname_T = "T"
        varname_W = "W"
@@ -238,9 +239,6 @@ contains
        varname_V = "V_1"
     endif
 
-
-    if( IO_L ) write(IO_FID_LOG,*) ''
-    if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[realinput]/Categ[InputWRF]'
 
     call ExternalFileRead( read_xy(:,:,:),    BASENAME, "XLAT",    it, it, myrank, mdlid, single=.true.               )
     lat_org (:,:) = real( read_xy(:,:,1), kind=RP ) * D2R
@@ -453,7 +451,6 @@ contains
 
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) ''
     if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[realinput]/Categ[InputWRF-Surface]'
 
     ! depth
@@ -496,9 +493,9 @@ contains
     ! SEA SURFACE TEMPERATURE [K]
     call ExternalFileRead( read_xy(:,:,:),                             &
                       BASENAME, "SST",  it, 1, myrank, mdlid, single=.true. )
-    tw_org(:,:) = read_xy(:,:,1)
+    sst_org(:,:) = read_xy(:,:,1)
 
-    sst_org(:,:) = tw_org(:,:)
+    tw_org(:,:) = sst_org(:,:)
 
     ! SURFACE SKIN TEMPERATURE [K]
     call ExternalFileRead( read_xy(:,:,:),                             &

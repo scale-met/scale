@@ -4224,11 +4224,11 @@ enddo
     real(RP)                 :: BOUNDARY_UPDATE_DT  = 0.0_RP    ! inteval time of boudary data update [s]
     logical                  :: USE_FILE_LANDWATER  = .true.    ! use land water data from files
     real(RP)                 :: INIT_LANDWATER_RATIO = 0.5_RP   ! Ratio of land water to storage is constant,
-    character(len=H_SHORT)   :: INTRP_LAND_TEMP
-    character(len=H_SHORT)   :: INTRP_LAND_WATER
-    character(len=H_SHORT)   :: INTRP_LAND_SFC_TEMP
-    character(len=H_SHORT)   :: INTRP_OCEAN_TEMP
-    character(len=H_SHORT)   :: INTRP_OCEAN_SFC_TEMP
+    character(len=H_SHORT)   :: INTRP_LAND_TEMP      = 'off'
+    character(len=H_SHORT)   :: INTRP_LAND_WATER     = 'off'
+    character(len=H_SHORT)   :: INTRP_LAND_SFC_TEMP  = 'off'
+    character(len=H_SHORT)   :: INTRP_OCEAN_TEMP     = 'off'
+    character(len=H_SHORT)   :: INTRP_OCEAN_SFC_TEMP = 'off'
                                                                 !            if USE_FILE_LANDWATER is ".false."
     integer                  :: INTERP_SERC_DIV_NUM = 10        ! num of dividing blocks in interpolation search
     logical                  :: SERIAL_PROC_READ    = .true.    ! read by one MPI process and broadcast
@@ -4357,6 +4357,7 @@ enddo
           call PRC_MPIstop
        end select
 
+       if( IO_L ) write(IO_FID_LOG,*) ' '
        if( IO_L ) write(IO_FID_LOG,*) '+++ Target File Name: ',trim(BASENAME_WITHNUM)
        if( IO_L ) write(IO_FID_LOG,*) '    Time Steps in One File: ', NUMBER_OF_TSTEPS
 
