@@ -4262,7 +4262,7 @@ enddo
     real(RP), allocatable :: QTRC_ORG(:,:,:,:,:)
 
     integer :: mdlid
-    integer :: dims(7) ! dims 1-3: normal, 4-6: staggerd, 7: soil-layer
+    integer :: dims(9) ! dims 1-3: normal, 4-6: staggerd, 7: soil-layer, 8-9: sst for grads
 
     integer :: totaltimesteps = 1
     integer :: timelen = 1           ! NUMBER_OF_TSTEPS for nicam data

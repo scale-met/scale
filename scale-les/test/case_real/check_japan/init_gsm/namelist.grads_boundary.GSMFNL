@@ -1,0 +1,39 @@
+#
+# Dimension 
+#
+&nml_grads_grid
+ outer_nx     = 201
+ outer_ny     = 251
+ outer_nz     = 21
+ outer_nl     = 4
+ outer_nx_sfc = 360
+ outer_ny_sfc = 181
+ outer_nx_sst = 360
+ outer_ny_sst = 181
+/
+
+#
+# Variables
+#
+&grdvar  item='lon',     dtype='linear',  swpoint=110.0d0, dd=0.25d0 /
+&grdvar  item='lat',     dtype='linear',  swpoint=10.0d0,  dd=0.2d0 /
+&grdvar  item='plev',    dtype='levels',  lnum=21, lvars=100000,97500,95000,92500,90000,85000,80000,70000,60000,50000,40000,30000,25000,20000,15000,10000,7000,5000,3000,2000,1000, /
+&grdvar  item='MSLP',    dtype='map',     fname='GSMjp', startrec=1,  totalrec=101 /
+&grdvar  item='PSFC',    dtype='map',     fname='GSMjp', startrec=2,  totalrec=101 /
+&grdvar  item='U10',     dtype='map',     fname='GSMjp', startrec=3,  totalrec=101 /
+&grdvar  item='V10',     dtype='map',     fname='GSMjp', startrec=4,  totalrec=101 /
+&grdvar  item='T2',      dtype='map',     fname='GSMjp', startrec=5,  totalrec=101 /
+&grdvar  item='RH2',     dtype='map',     fname='GSMjp', startrec=6,  totalrec=101 /
+&grdvar  item='HGT',     dtype='map',     fname='GSMjp', startrec=7,  totalrec=101 /
+&grdvar  item='U',       dtype='map',     fname='GSMjp', startrec=28, totalrec=101 /
+&grdvar  item='V',       dtype='map',     fname='GSMjp', startrec=49, totalrec=101 /
+&grdvar  item='T',       dtype='map',     fname='GSMjp', startrec=70, totalrec=101 /
+&grdvar  item='RH',      dtype='map',     fname='GSMjp', startrec=91, totalrec=101, knum=12 /
+&grdvar  item='lon_sfc', dtype='linear',  swpoint=0.0d0,   dd=1.0d0 /
+&grdvar  item='lat_sfc', dtype='linear',  swpoint=-90.0d0, dd=1.0d0 /
+&grdvar  item='llev',    dtype='levels',  lnum=4, lvars=0.05,0.25,0.70,1.50 /
+&grdvar  item='lsmask',  dtype='map',     fname='FNL', startrec=1, totalrec=10 /
+&grdvar  item='SKINT',   dtype='map',     fname='FNL', startrec=2, totalrec=10, intrp='mask' /
+&grdvar  item='STEMP',   dtype='map',     fname='FNL', startrec=3, totalrec=10, intrp='mask', undef=9.999e+20 /
+&grdvar  item='SMOIS',   dtype='map',     fname='FNL', startrec=7, totalrec=10, intrp='mask', undef=9.999e+20 /
+&grdvar  item='SST',     dtype='map',     fname='FNL', startrec=2, totalrec=10, intrp='mask', undef=-1.00e+35 /
