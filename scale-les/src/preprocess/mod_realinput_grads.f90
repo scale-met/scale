@@ -46,11 +46,11 @@ module mod_realinput_grads
   !
   !++ Private parameters & variables
   !
-  integer,  parameter   :: num_item_list = 26
-  integer,  parameter   :: num_item_list_atm = 16
+  integer,  parameter   :: num_item_list = 27
+  integer,  parameter   :: num_item_list_atm = 17
   logical               :: data_available(num_item_list)
   character(H_SHORT)    :: item_list     (num_item_list)
-  data item_list /'lon','lat','plev','U','V','T','HGT','QV','RH','MSLP','PSFC','U10','V10','T2','Q2','RH2', &
+  data item_list /'lon','lat','plev','U','V','T','HGT','QV','RH','MSLP','PSFC','U10','V10','T2','Q2','RH2','TOPO', &
                   'lsmask','lon_sfc','lat_sfc','lon_sst','lat_sst','llev','STEMP','SMOIS','SKINT','SST'/
 
   integer,  parameter   :: Ig_lon    = 1
@@ -69,17 +69,18 @@ module mod_realinput_grads
   integer,  parameter   :: Ig_t2     = 14
   integer,  parameter   :: Ig_q2     = 15
   integer,  parameter   :: Ig_rh2    = 16 ! Percentage (%)
+  integer,  parameter   :: Ig_topo   = 17
 
-  integer,  parameter   :: Ig_lsmask  = 17
-  integer,  parameter   :: Ig_lon_sfc = 18
-  integer,  parameter   :: Ig_lat_sfc = 19
-  integer,  parameter   :: Ig_lon_sst = 20
-  integer,  parameter   :: Ig_lat_sst = 21
-  integer,  parameter   :: Ig_lz      = 22  ! Level(depth) of stemp & smois (m)
-  integer,  parameter   :: Ig_stemp   = 23
-  integer,  parameter   :: Ig_smois   = 24
-  integer,  parameter   :: Ig_skint   = 25
-  integer,  parameter   :: Ig_sst     = 26
+  integer,  parameter   :: Ig_lsmask  = 18
+  integer,  parameter   :: Ig_lon_sfc = 19
+  integer,  parameter   :: Ig_lat_sfc = 20
+  integer,  parameter   :: Ig_lon_sst = 21
+  integer,  parameter   :: Ig_lat_sst = 22
+  integer,  parameter   :: Ig_lz      = 23  ! Level(depth) of stemp & smois (m)
+  integer,  parameter   :: Ig_stemp   = 24
+  integer,  parameter   :: Ig_smois   = 25
+  integer,  parameter   :: Ig_skint   = 26
+  integer,  parameter   :: Ig_sst     = 27
 
  
   integer,  parameter   :: lvars_limit = 1000 ! limit of values for levels data
@@ -820,6 +821,15 @@ contains
              enddo
              enddo
           endif
+       case('TOPO')
+          if ( trim(dtype) == "map" ) then
+             call read_grads_file_2d(io_fid_grads_data,gfile,dims(2),dims(3),1,nt,item,startrec,totalrec,gdata2D)
+             do j = 1, dims(3)
+             do i = 1, dims(2)
+                cz_org(2,i,j) = real(gdata2D(i,j), kind=RP)
+             enddo
+             enddo
+          endif
        end select
     enddo loop_InputAtomGrADS
 
@@ -827,13 +837,6 @@ contains
     RovCP = Rdry / CPdry
     CPovR = CPdry / Rdry
 
-    if ( .not. data_available(Ig_t2) ) then
-       do j = 1, dims(3)
-       do i = 1, dims(2)
-          temp_org(2,i,j) = temp_org(3,i,j)
-       end do
-       end do
-    end if
     if ( data_available(Ig_t2) .and. data_available(Ig_ps) ) then
        do j = 1, dims(3)
        do i = 1, dims(2)
@@ -847,6 +850,32 @@ contains
        end do
        end do
     end if
+
+    if ( .not. data_available(Ig_t2) ) then
+       if ( data_available(Ig_ps) ) then
+          do j = 1, dims(3)
+          do i = 1, dims(2)
+             temp_org(2,i,j) = pott(i,j) * (pres_org(2,i,j)/P00)**RovCP
+          end do
+          end do
+       else
+          if ( data_available(Ig_topo) ) then
+             do j = 1, dims(3)
+             do i = 1, dims(2)
+                temp_org(2,i,j) = temp_org(3,i,j) &
+                                + LAPS * (cz_org(3,i,j)-cz_org(2,i,j))
+             end do
+             end do
+          else
+             do j = 1, dims(3)
+             do i = 1, dims(2)
+                temp_org(2,i,j) = temp_org(3,i,j)
+             end do
+             end do
+          end if
+       end if
+    end if
+
     if ( .not. data_available(Ig_ps) ) then
        do j = 1, dims(3)
        do i = 1, dims(2)
@@ -854,6 +883,7 @@ contains
        end do
        end do
     end if
+
     if ( data_available(Ig_slp) ) then
        do j = 1, dims(3)
        do i = 1, dims(2)
@@ -861,23 +891,37 @@ contains
        end do
        end do
     else
+       if ( data_available(Ig_t2) .and. data_available(Ig_topo) ) then
+          do j = 1, dims(3)
+          do i = 1, dims(2)
+             temp_org(1,i,j) = temp_org(2,i,j) + LAPS * cz_org(2,i,j)
+          end do
+          end do
+       else
+          do j = 1, dims(3)
+          do i = 1, dims(2)
+             temp_org(1,i,j) = temp_org(3,i,j) + LAPS * cz_org(3,i,j)
+          end do
+          end do
+       end if
        do j = 1, dims(3)
        do i = 1, dims(2)
-          temp_org(1,i,j) = temp_org(3,i,j) + LAPS * cz_org(3,i,j)
           pres_org(1,i,j) = P00 * (temp_org(1,i,j)/pott(i,j))**CPovR
        end do
        end do
     end if
 
-    ! guess surface height (elevation)
-    do j = 1, dims(3)
-    do i = 1, dims(2)
-       cz_org(2,i,j) = max( 0.0_RP, &
-                            cz_org(3,i,j) &
-                            * ( log(pres_org(2,i,j)/pres_org(1,i,j)) ) &
-                            / ( log(pres_org(3,i,j)/pres_org(1,i,j)) ) )
-    end do
-    end do
+    if ( .not. data_available(Ig_topo) ) then
+       ! guess surface height (elevation)
+       do j = 1, dims(3)
+       do i = 1, dims(2)
+          cz_org(2,i,j) = max( 0.0_RP, &
+                               cz_org(3,i,j) &
+                               * ( log(pres_org(2,i,j)/pres_org(1,i,j)) ) &
+                               / ( log(pres_org(3,i,j)/pres_org(1,i,j)) ) )
+       end do
+       end do
+    end if
 
 
     velz_org = 0.0_RP
