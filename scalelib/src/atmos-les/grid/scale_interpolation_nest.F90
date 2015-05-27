@@ -1230,10 +1230,17 @@ contains
              vfact(k,iloc,jloc,idx,2) = 0.0_RP
              dflag = .true.
           else if( inhgt(inKA,ii,jj) < myhgt(k) )then
-             write(*,*) 'xxx internal error [INTRPNEST_search_vert_offline]'
-             write(*,*) 'xxx data level is beyond parent data'
-             write(*,*) 'in',ii,jj,inKA,inhgt(inKA,ii,jj),'my',iloc,jloc,k,myhgt(k)
-             call PRC_MPIstop
+             if ( lndgrd ) then ! copy
+                kgrd(k,iloc,jloc,idx,:)  = inKA
+                vfact(k,iloc,jloc,idx,1) = 1.0_RP
+                vfact(k,iloc,jloc,idx,2) = 0.0_RP
+                dflag = .true.
+             else
+                write(*,*) 'xxx internal error [INTRPNEST_search_vert_offline]'
+                write(*,*) 'xxx data level is beyond parent data'
+                write(*,*) 'in',ii,jj,inKA,inhgt(inKA,ii,jj),'my',iloc,jloc,k,myhgt(k)
+                call PRC_MPIstop
+             end if
           else
 
              do kk = 1, inKA-1
