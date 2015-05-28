@@ -258,12 +258,12 @@ contains
     if(outer_nx_sst > 0)then
        dims(10) = outer_nx_sst
     else
-       dims(10) = outer_nx
+       dims(10) = dims(8)
     endif
     if(outer_ny_sst > 0)then
        dims(11) = outer_ny_sst
     else
-       dims(11) = outer_ny
+       dims(11) = dims(9)
     endif
 
     allocate( gdata2D( dims(2), dims(3)          ) )
