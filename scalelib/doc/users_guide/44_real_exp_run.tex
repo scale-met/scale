@@ -6,12 +6,14 @@
 ここではいよいよSCALE-LESモデルを実行する．
 まず，runディレクトリへ移動する．
 \begin{verbatim}
-  $ cd scale/scale-les/test/tutorial/run
+  $ cd ${TOPDIR}/scale/scale-les/test/tutorial/run
 \end{verbatim}
 
 
-runディレクトリの中には，これまでと同様に\verb|run.conf|という名前のコンフィグファイルが準備されている．
-チュートリアル用の\verb|run.conf|ファイルのドメインの位置や格子点数などはTable\ref{tab:grids}の設定に合わせてある．
+runディレクトリの中には，これまでと同様に\verb|run.conf|という名前の
+コンフィグファイルが準備されている．
+チュートリアル用の\verb|run.conf|ファイルのドメインの位置や格子点数などは
+Table\ref{tab:grids}の設定に合わせてある．
 モデル本体の実行には事前に作成した地形・土地利用データや初期値・境界値データを利用する．
 これらのファイルを参照するために，
 \verb|TOPO_IN_BASENAME|，\verb|LANDUSE_IN_BASENAME|，
@@ -19,27 +21,27 @@ runディレクトリの中には，これまでと同様に\verb|run.conf|と�
 それぞれ場所を指定する．
 
 \begin{verbatim}
-&PARAM_TOPO
- TOPO_IN_BASENAME = "../pp/topo_d01",
-/
+  &PARAM_TOPO
+   TOPO_IN_BASENAME = "../pp/topo_d01",
+  /
 
-&PARAM_LANDUSE
- LANDUSE_IN_BASENAME  = "../pp/landuse_d01",
-/
+  &PARAM_LANDUSE
+   LANDUSE_IN_BASENAME  = "../pp/landuse_d01",
+  /
 
-&PARAM_RESTART
- RESTART_OUTPUT      = .false.,
- RESTART_IN_BASENAME = "../init/init_d01_00010713600.000",
-/
+  &PARAM_RESTART
+   RESTART_OUTPUT      = .false.,
+   RESTART_IN_BASENAME = "../init/init_d01_00010713600.000",
+  /
 
-&PARAM_ATMOS_BOUNDARY
- ATMOS_BOUNDARY_TYPE        = "REAL",
- ATMOS_BOUNDARY_IN_BASENAME = "../init/boundary_d01",
- ATMOS_BOUNDARY_USE_VELZ    = .true.,
- ATMOS_BOUNDARY_USE_QHYD    = .false.,
- ATMOS_BOUNDARY_VALUE_VELZ  = 0.0D0,
- ATMOS_BOUNDARY_UPDATE_DT   = 21600.0D0,
-/
+  &PARAM_ATMOS_BOUNDARY
+   ATMOS_BOUNDARY_TYPE        = "REAL",
+   ATMOS_BOUNDARY_IN_BASENAME = "../init/boundary_d01",
+   ATMOS_BOUNDARY_USE_VELZ    = .true.,
+   ATMOS_BOUNDARY_USE_QHYD    = .false.,
+   ATMOS_BOUNDARY_VALUE_VELZ  = 0.0D0,
+   ATMOS_BOUNDARY_UPDATE_DT   = 21600.0D0,
+  /
 
 \end{verbatim}
 
@@ -47,7 +49,7 @@ runディレクトリの中には，これまでと同様に\verb|run.conf|と�
 \verb|run.conf|の設定の中で時間積分に関する設定は，\verb|PARAM_TIME|の項目にある．
 \begin{verbatim}
 &PARAM_TIME
- TIME_STARTDATE             = 1999, 5, 5, 0, 0, 0,
+ TIME_STARTDATE             = 2014, 8, 10, 0, 0, 0,
  TIME_STARTMS               = 0.D0,
  TIME_DURATION              = 12.0D0,
  TIME_DURATION_UNIT         = "HOUR",
@@ -61,7 +63,7 @@ runディレクトリの中には，これまでと同様に\verb|run.conf|と�
 /
 \end{verbatim}
 
-\verb|TIME_STARTDATE|は時間積分を開始する時刻を設定する項目で，チュートリアルでは1999年5月5日0時UTCと設定する．
+\verb|TIME_STARTDATE|は時間積分を開始する時刻を設定する項目で，チュートリアルでは2014年8月10日0時UTCと設定する．
 \verb|TIME_DURATION|は積分期間を設定する項目で，ここでは12時間積分を行う設定になっている．
 \verb|TIME_DT|，および\verb|TIME_DT_ATMOS_DYN|は，時間積分の間隔（時間ステップ間隔：DT = Delta Time）を設定する項目である．前者は移流計算，後者はそれ以外の力学過程の計算に関する時間積分間隔である．
 SCALE-LESモデルでは，そのほかの物理過程についても細かく時間積分間隔を設定できるようになっている．
@@ -70,16 +72,17 @@ SCALE-LESモデルでは，そのほかの物理過程についても細かく�
 出力データに関する設定は\verb|PARAM_HISTORY|で行う．
 
 \begin{verbatim}
-&PARAM_HISTORY
- HISTORY_DEFAULT_BASENAME  = "history_d01",
- HISTORY_DEFAULT_TINTERVAL = 1800.D0,
- HISTORY_DEFAULT_TUNIT     = "SEC",
- HISTORY_DEFAULT_TAVERAGE  = .false.,
- HISTORY_DEFAULT_DATATYPE  = "REAL4",
- HISTORY_DEFAULT_ZINTERP   = .true.,
-/
-\end{verbatim}
 
+  &PARAM_HISTORY
+   HISTORY_DEFAULT_BASENAME  = "history_d01",
+   HISTORY_DEFAULT_TINTERVAL = 1800.D0,
+   HISTORY_DEFAULT_TUNIT     = "SEC",
+   HISTORY_DEFAULT_TAVERAGE  = .false.,
+   HISTORY_DEFAULT_DATATYPE  = "REAL4",
+   HISTORY_DEFAULT_ZINTERP   = .true.,
+  /
+
+\end{verbatim}
 \verb|HISTORY_DEFAULT_BASENAME|は出力するファイル名である．
 \verb|HISTORY_DEFAULT_TINTERVAL|と\verb|HISTORY_DEFAULT_TUNIT|によってヒストリー出力時間間隔が設定される．
 ここでは1800秒（30分）間隔での出力として設定されている．
@@ -93,10 +96,8 @@ SCALE-LESモデルでは，そのほかの物理過程についても細かく�
 &HISTITEM item="MOMX" /           ! horizontal momentum-x (3D)
 &HISTITEM item="MOMY" /           ! horizontal momentum-y (3D)
 &HISTITEM item="RHOT" /           ! density * potential-temperature (3D)
-
 &HISTITEM item="QV"   /           ! mixing ratio for vapor (3D)
 &HISTITEM item="QHYD" /           ! mixing ratio for hydrometeor (3D)
-
 &HISTITEM item="T"    /           ! temperature (3D)
 &HISTITEM item="PRES" /           ! pressure (3D)
 &HISTITEM item="U"    /           ! horizontal wind component-x (3D)
@@ -104,15 +105,12 @@ SCALE-LESモデルでは，そのほかの物理過程についても細かく�
 &HISTITEM item="W"    /           ! vertical wind component (3D)
 &HISTITEM item="PT"   /           ! potential temperature (3D)
 &HISTITEM item="RH"   /           ! relative humidity (3D)
-
 &HISTITEM item="PREC" /           ! precipitation (2D)
-&HISTITEM item="OLR"  /           ! out-going longwave radiation
-
+&HISTITEM item="OLR"  /           ! out-going longwave radiation(2D)
 &HISTITEM item="U10" /            ! horizontal wind component-x at 10m height(2D)
 &HISTITEM item="V10" /            ! horizontal wind component-y at 10m height(2D)
 &HISTITEM item="T2"  /            ! temperature at 2m height (2D)
 &HISTITEM item="Q2"  /            ! mixing ratio for vapor at 2m height (2D)
-
 &HISTITEM item="SFC_PRES"   /     ! pressure at the bottom surface (2D)
 &HISTITEM item="SFC_TEMP"   /     ! temperature a the bottom surface (2D)
 &HISTITEM item="LAND_SFC_TEMP" /  ! temperature a the bottom surface for land model (2D)
@@ -130,23 +128,22 @@ SCALE-LESモデルでは，そのほかの物理過程についても細かく�
 次に，コンパイル済みのバイナリをrunディレクトリへリンクする．
 
 \begin{verbatim}
-  $ ln -s ${TOPDIR}/bin/scale-les ./
+  $ ln -s ${TOPDIR}/scale/scale-les/test/tutorial/bin/scale-les ./
 \end{verbatim}
 
 また，前節と同様に陸面過程や放射過程のモデルを起動するためのパラメータファイルも
 リンクしておく．
 
 \begin{verbatim}
-  $ ln -s scale/scale-les/test/data/land/*  ./
-  $ ln -s scale/scale-les/test/data/rad/*   ./
+  $ ln -s ${TOPDIR}/scale/scale-les/test/data/land/*  ./
+  $ ln -s ${TOPDIR}/scale/scale-les/test/data/rad/*   ./
 \end{verbatim}
 上の行のリンクコマンドによって陸面過程のパラメータファイルがリンクされ，
 下の行のコマンドによって放射過程のパラメータファイルがリンクされる．
-準備が整ったら，9つのMPIプロセスを使用してscale-lesを実行する．
+準備が整ったら，4つのMPIプロセスを使用してscale-lesを実行する．
 \begin{verbatim}
-  $ mpirun -n 9 ./scale-les run.conf < /dev/null >&log&
+  $ mpirun -n 4 ./scale-les run.conf < /dev/null >&log&
 \end{verbatim}
-
 
 実行にはおおよそ2時間を要するため，上記のように標準出力をファイルへ
 吐き出すようにしてバックグラウンドで実行しておくと便利である．
@@ -157,7 +154,7 @@ SCALE-LESモデルでは，そのほかの物理過程についても細かく�
   $ tail -n 50 LOG_d01.pe000000
 \end{verbatim}
 正常にジョブが終了すれば，\verb|history_d01.pe######.nc|と\verb|restart_d01.pe######.nc|と
-いう名前のファイルがMPIプロセス数だけ，つまり9つずつ生成される
+いう名前のファイルがMPIプロセス数だけ，つまり4つずつ生成される
 （\verb|######|にはMPIプロセスの番号が入る）．
 historyファイルは実行結果のプロダクトであり，restartファイルは対応する時刻を開始時刻として
 再計算を開始するための初期値ファイルである．
