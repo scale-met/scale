@@ -270,10 +270,10 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine NEST_setup ( &
-      icomm_parent,  &
-      icomm_child,   &
-      flag_parent,   &
-      flag_child     )
+      inter_parent,  &
+      inter_child    )
+!      flag_parent,   &
+!      flag_child     )
     use scale_const, only: &
        D2R => CONST_D2R
     use scale_process, only: &
@@ -304,10 +304,8 @@ contains
        INTRPNEST_interp_fact_llz
     implicit none
 
-    integer, intent(in), optional :: icomm_parent
-    integer, intent(in), optional :: icomm_child
-    logical, intent(in), optional :: flag_parent
-    logical, intent(in), optional :: flag_child
+    integer, intent(in), optional :: inter_parent
+    integer, intent(in), optional :: inter_child
 
     !< metadata files for lat-lon domain for all processes
     character(len=H_LONG)  :: LATLON_CATALOGUE_FNAME = 'latlon_domain_catalogue.txt'
@@ -322,6 +320,9 @@ contains
     integer :: jms, jme
 
     character(2) :: dom_num
+
+    logical :: flag_parent = .false.
+    logical :: flag_child  = .false.
 
     namelist / PARAM_NEST /      &
        USE_NESTING,              &
@@ -348,6 +349,9 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*) ''
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[NEST]/Categ[GRID]'
+
+    if( inter_parent /= MPI_COMM_NULL ) flag_child  = .true. ! exist parent, so work as a child
+    if( inter_child  /= MPI_COMM_NULL ) flag_parent = .true. ! exist child, so work as a parent
 
     nwait_p = 0
     nwait_d = 0
@@ -468,15 +472,15 @@ contains
          call NEST_domain_relate(HANDLING_NUM)
 
       else ! ONLINE RELATIONSHIP
-         if ( present(flag_parent) .and. present(flag_child) ) then
-            if( IO_L ) write(IO_FID_LOG,'(1x,A)') &
-                       '*** Setup Online Nesting Inter-Domain Communicator (IDC)'
-         else
-            write(*,*) 'xxx Internal Error:'
-            write(*,*) 'xxx The flag_parent and flag_child are needed.'
-            write(*,*) '    domain: ', ONLINE_DOMAIN_NUM
-            call PRC_MPIstop
-         endif
+!         if ( present(flag_parent) .and. present(flag_child) ) then
+!            if( IO_L ) write(IO_FID_LOG,'(1x,A)') &
+!                       '*** Setup Online Nesting Inter-Domain Communicator (IDC)'
+!         else
+!            write(*,*) 'xxx Internal Error:'
+!            write(*,*) 'xxx The flag_parent and flag_child are needed.'
+!            write(*,*) '    domain: ', ONLINE_DOMAIN_NUM
+!            call PRC_MPIstop
+!         endif
 
          if( ONLINE_BOUNDARY_USE_QHYD ) then
             NEST_BND_QA = QA
@@ -484,10 +488,13 @@ contains
             NEST_BND_QA = I_QV
          endif
 
+if( IO_L ) write(IO_FID_LOG,*) "flag_parent", flag_parent, "flag_child", flag_child
+if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_IAM_DAUGHTER", ONLINE_IAM_DAUGHTER
+
          if( flag_parent ) then ! must do first before daughter processes
          !-------------------------------------------------
             if ( .NOT. ONLINE_IAM_PARENT ) then
-               write(*,*) 'xxx Flag from launcher is not consistent with namelist!'
+               write(*,*) 'xxx Parent Flag from launcher is not consistent with namelist! [NEST/GRID]'
                write(*,*) '    PARENT - domain: ', ONLINE_DOMAIN_NUM
                call PRC_MPIstop
             endif
@@ -496,7 +503,7 @@ contains
             INTERCOMM_ID(HANDLING_NUM) = ONLINE_DOMAIN_NUM
             NEST_Filiation(INTERCOMM_ID(HANDLING_NUM)) = 1
 
-            INTERCOMM_DAUGHTER = icomm_child
+            INTERCOMM_DAUGHTER = inter_child
             if( IO_L ) write(IO_FID_LOG,'(1x,A,I2,A)') '*** Online Nesting - PARENT [INTERCOMM_ID:', &
                                                         INTERCOMM_ID(HANDLING_NUM), ' ]'
             if( IO_L ) write(IO_FID_LOG,*) '*** Online Nesting - INTERCOMM :', INTERCOMM_DAUGHTER
@@ -561,7 +568,7 @@ contains
          if( flag_child ) then
          !-------------------------------------------------
             if ( .NOT. ONLINE_IAM_DAUGHTER ) then
-               write(*,*) 'xxx Flag from launcher is not consistent with namelist!'
+               write(*,*) 'xxx Child Flag from launcher is not consistent with namelist! [NEST/GRID]'
                write(*,*) '    DAUGHTER - domain: ', ONLINE_DOMAIN_NUM
                call PRC_MPIstop
             endif
@@ -570,7 +577,7 @@ contains
             INTERCOMM_ID(HANDLING_NUM) = ONLINE_DOMAIN_NUM - 1
             NEST_Filiation(INTERCOMM_ID(HANDLING_NUM)) = -1
 
-            INTERCOMM_PARENT = icomm_parent
+            INTERCOMM_PARENT = inter_parent
             if( IO_L ) write(IO_FID_LOG,'(1x,A,I2,A)') '*** Online Nesting - DAUGHTER [INTERCOMM_ID:', &
                                                         INTERCOMM_ID(HANDLING_NUM), ' ]'
             if( IO_L ) write(IO_FID_LOG,*) '*** Online Nesting - INTERCOMM :', INTERCOMM_PARENT
