@@ -37,20 +37,33 @@ module scale_process
   public :: PRC_MPIsplit
   public :: PRC_MPItime
   public :: PRC_MPItimestat
+  public :: PRC_BULKsetup
 
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
   !
+  !-----------------------------------------------------------------------------
+  !                          [ communicator system ]
+  !    MPI_COMM_WORLD
+  !          |
+  ! MASTER_COMM_WORLD --split--> BULK_COMM_WORLD
+  !                                     |
+  !                            GLOBAL_COMM_WORLD --split--> LOCAL_COMM_WORLD
+  !-----------------------------------------------------------------------------                    
+
   integer, public, parameter   :: PRC_master = 0      !< master node
 
-  integer, public, parameter   :: GLOBAL_master = 0   !< master node
-  integer, public, parameter   :: max_depth = 10      !< max depth of domains
+!!!!  integer, public, parameter   :: GLOBAL_master = 0   !< master node
+  integer, public, parameter   :: max_depth = 1000    !< max depth of domains
   integer, public, parameter   :: split_root = 0      !< root process in each color
 
   integer, public              :: MASTER_COMM_WORLD   !< master (original) communicator
   integer, public              :: GLOBAL_COMM_WORLD   !< global communicator
+  integer, public              :: ABORT_COMM_WORLD    !< communicator for aborting
   integer, public              :: LOCAL_COMM_WORLD    !< local communicator (split)
+  integer, public              :: MASTER_myrank       !< myrank in master communicator
+  integer, public              :: MASTER_nmax         !< process num in master communicator
   integer, public              :: GLOBAL_myrank       !< myrank in global communicator
   integer, public              :: GLOBAL_nmax         !< process num in global communicator
 !  integer, public              :: PRC_ROOT(0:max_depth) !< root process in the color
@@ -109,17 +122,18 @@ contains
     !---------------------------------------------------------------------------
 
     call MPI_Init(ierr)
+    PRC_mpi_alive = .true.
+    MASTER_COMM_WORLD = MPI_COMM_WORLD
+    ABORT_COMM_WORLD  = MPI_COMM_WORLD
+
     call MPI_COMM_CREATE_ERRHANDLER( PRC_MPI_errorhandler, new_abort, ierr )
     call MPI_COMM_SET_ERRHANDLER   ( MPI_COMM_WORLD,       new_abort, ierr )
     call MPI_COMM_GET_ERRHANDLER   ( MPI_COMM_WORLD,  handler_status, ierr )
 
-    call MPI_Comm_size(MPI_COMM_WORLD,GLOBAL_nmax,  ierr)
-    call MPI_Comm_rank(MPI_COMM_WORLD,GLOBAL_myrank,ierr)
+    call MPI_Comm_size(MPI_COMM_WORLD,MASTER_nmax,  ierr)
+    call MPI_Comm_rank(MPI_COMM_WORLD,MASTER_myrank,ierr)
 
-    MASTER_COMM_WORLD = MPI_COMM_WORLD
-    PRC_mpi_alive = .true.
-
-    if ( GLOBAL_myrank == GLOBAL_master ) then
+    if ( MASTER_myrank == PRC_master ) then
        MASTER_LOG = .true.
     else
        MASTER_LOG = .false.
@@ -339,6 +353,33 @@ contains
 
     return
   end subroutine PRC_NOMPIstart
+
+  !-----------------------------------------------------------------------------
+  !> Setup BULK JOB
+  subroutine PRC_BULKsetup( &
+      BULK_COMM_WORLD,   & ! [in]
+      ABORT_ALL_JOBS     ) ! [in]
+    implicit none
+
+    integer, intent(in) :: BULK_COMM_WORLD
+    logical, intent(in) :: ABORT_ALL_JOBS
+
+    integer :: ierr
+    !---------------------------------------------------------------------------
+
+
+    GLOBAL_COMM_WORLD = BULK_COMM_WORLD
+    call MPI_Comm_size(GLOBAL_COMM_WORLD,GLOBAL_nmax,  ierr)
+    call MPI_Comm_rank(GLOBAL_COMM_WORLD,GLOBAL_myrank,ierr)
+
+    if ( ABORT_ALL_JOBS ) then
+       ABORT_COMM_WORLD = MPI_COMM_WORLD
+    else
+       ABORT_COMM_WORLD = GLOBAL_COMM_WORLD
+    endif
+
+    return
+  end subroutine PRC_BULKsetup
 
   !-----------------------------------------------------------------------------
   !> Abort MPI
@@ -561,6 +602,7 @@ contains
       PRC_DOMAINS,      & ! [in ]
       CONF_FILES,       & ! [in ]
       LOG_SPLIT,        & ! [in ]
+      bulk_split,       & ! [in ]
       INTRA_COMM,       & ! [out]
       inter_parent,     & ! [out]
       inter_child,      & ! [out]
@@ -572,6 +614,7 @@ contains
     integer, intent(in)  :: PRC_DOMAINS(:)
     character(len=H_LONG), intent(in) :: CONF_FILES(:)
     logical, intent(in)  :: LOG_SPLIT
+    logical, intent(in)  :: bulk_split
 
     integer, intent(out) :: intra_comm
     integer, intent(out) :: inter_parent
@@ -587,13 +630,16 @@ contains
     integer :: total_nmax
     integer :: ORG_myrank  ! my rank number in the original communicator
     integer :: ORG_nmax    ! total rank number in the original communicator
-    integer :: my_color, my_key
+!!!    integer :: my_color
+!!!!!, my_key
 
     logical :: do_create_p(max_depth)
     logical :: do_create_c(max_depth)
+    logical :: color_reorder = .false.
 
     integer :: COL_NMAX(0:max_depth)
     character(len=H_LONG) :: COL_FILE(0:max_depth)
+    character(4) :: col_num
 
     integer :: i
     integer :: itag, ierr
@@ -621,73 +667,79 @@ contains
           call PRC_MPIstop
        endif
 
+       if ( bulk_split ) then
+          color_reorder = .false.
+       else
+          color_reorder = .true.
+       endif
        call PRC_MPIcoloring( ORG_COMM,     & ! [in ]
                              NUM_DOMAIN,   & ! [in ]
                              PRC_DOMAINS,  & ! [in ]
                              CONF_FILES,   & ! [in ]
+                             color_reorder, & ! [in ]
+                             LOG_SPLIT,     & ! [in ] 
                              COLOR_LIST,   & ! [out]
                              PRC_ROOT,     & ! [out]
                              KEY_LIST,     & ! [out]
                              PARENT_COL,   & ! [out]
                              CHILD_COL,    & ! [out]
-                             COL_FILE,     & ! [out]
-                             .false.,       & ! [in ]
-                             LOG_SPLIT     ) ! [in ] 
+                             COL_FILE      ) ! [out]
 
 
        ! split comm_world
-!!       my_color = COLOR_LIST(ORG_myrank)  ! equal to domain number
-!!       my_key   = KEY_LIST(ORG_myrank)    ! equal to process number in the local communicator
        call MPI_COMM_SPLIT(ORG_COMM,               &
                            COLOR_LIST(ORG_myrank), &
                            KEY_LIST(ORG_myrank),   &
                            INTRA_COMM, ierr)
-
-!!       nmax_parent  = 0
-!!       nmax_child   = 0
-!       myrank_local = KEY_LIST(ORG_myrank)
-!       nmax_local   = COL_NMAX(my_color)
-       fname_local  = COL_FILE(COLOR_LIST(ORG_myrank))
-!!       flag_parent    = .false.
-!!       flag_child     = .false.
-
+       if ( bulk_split ) then
+          write(col_num,'(I4.4)') COLOR_LIST(ORG_myrank)
+          fname_local = col_num
+       else
+          fname_local = COL_FILE(COLOR_LIST(ORG_myrank))
+       endif
 
        ! set parent-child relationship
        do_create_p(:) = .false.
        do_create_c(:) = .false.
-       do i = 1, NUM_DOMAIN-1
-          if ( MASTER_LOG ) write ( *, '(1X,A,I2)' ) "relationship: ", i
-          if ( MASTER_LOG ) write ( *, '(1X,A,I2,A,I2)' ) &
-                            "--- parent color = ", PARENT_COL(i), "  child color = ", CHILD_COL(i)
+       if ( .NOT. bulk_split ) then
+          do i = 1, NUM_DOMAIN-1
+             if ( MASTER_LOG ) write ( *, '(1X,A,I4)' ) "relationship: ", i
+             if ( MASTER_LOG ) write ( *, '(1X,A,I4,A,I4)' ) &
+                               "--- parent color = ", PARENT_COL(i), "  child color = ", CHILD_COL(i)
 !!          if ( MASTER_LOG ) write ( *, '(1X,A,I5,A,I5)' ) &
 !!                            "--- parent prc = ", PARENT_PRC(i), "  child prc = ", CHILD_PRC(i)
-          if ( COLOR_LIST(ORG_myrank) == PARENT_COL(i) ) then
-!!             flag_parent  = .true.
-             do_create_p(i) = .true.
+             if ( COLOR_LIST(ORG_myrank) == PARENT_COL(i) ) then
+!!            flag_parent  = .true.
+                do_create_p(i) = .true.
 !!             nmax_child   = CHILD_PRC(i)
-          elseif ( COLOR_LIST(ORG_myrank) == CHILD_COL(i) ) then
+             elseif ( COLOR_LIST(ORG_myrank) == CHILD_COL(i) ) then
 !!             flag_child   = .true.
-             do_create_c(i) = .true.
+                do_create_c(i) = .true.
 !!             nmax_parent  = PARENT_PRC(i)
-          endif
-       enddo
+             endif
+          enddo
+       endif
 
        ! create inter-commnunicator
        inter_parent = MPI_COMM_NULL
        inter_child  = MPI_COMM_NULL
-       do i = 1, NUM_DOMAIN-1
-          itag = i*100
-          if ( do_create_p(i) ) then ! as a parent
-             call MPI_INTERCOMM_CREATE( INTRA_COMM, split_root,           &
-                                        ORG_COMM,   PRC_ROOT(CHILD_COL(i)), &
-                                        itag, inter_child,  ierr)
-          elseif ( do_create_c(i) ) then ! as a child
-             call MPI_INTERCOMM_CREATE( INTRA_COMM, split_root,           &
-                                        ORG_COMM,   PRC_ROOT(PARENT_COL(i)), &
-                                        itag, inter_parent, ierr)
-          endif
-          call MPI_BARRIER(ORG_COMM, ierr)
-       enddo
+       if ( .NOT. bulk_split ) then
+          do i = 1, NUM_DOMAIN-1
+             itag = i*100
+             if ( do_create_p(i) ) then ! as a parent
+                call MPI_INTERCOMM_CREATE( INTRA_COMM, split_root,           &
+                                           ORG_COMM,   PRC_ROOT(CHILD_COL(i)), &
+                                           itag, inter_child,  ierr)
+             elseif ( do_create_c(i) ) then ! as a child
+                call MPI_INTERCOMM_CREATE( INTRA_COMM, split_root,           &
+                                           ORG_COMM,   PRC_ROOT(PARENT_COL(i)), &
+                                           itag, inter_parent, ierr)
+             endif
+             call MPI_BARRIER(ORG_COMM, ierr)
+          enddo
+       endif
+
+       deallocate ( COLOR_LIST, KEY_LIST )
 
     elseif ( NUM_DOMAIN == 1 ) then ! single domain run
        if ( MASTER_LOG ) write (*,*) "*** a single comunicator"
@@ -695,8 +747,6 @@ contains
        if ( MASTER_LOG ) write (*,*) "ERROR: REQUESTED DOMAIN NUMBER IS NOT ACCEPTABLE"
        call PRC_MPIstop
     endif
-
-    deallocate ( COLOR_LIST, KEY_LIST )
 
     return
   end subroutine PRC_MPIsplit
@@ -708,14 +758,14 @@ contains
       NUM_DOMAIN,      & ! [in ]
       PRC_DOMAINS,     & ! [in ]
       CONF_FILES,      & ! [in ]
+      color_reorder,   & ! [in ]
+      LOG_SPLIT,       & ! [in ]
       COLOR_LIST,      & ! [out]
       PRC_ROOT,        & ! [out]
       KEY_LIST,        & ! [out]
       PARENT_COL,      & ! [out]
       CHILD_COL,       & ! [out]
-      COL_FILE,        & ! [out]
-      color_reorder,   & ! [in ]
-      LOG_SPLIT        ) ! [in ]
+      COL_FILE         ) ! [out]
     implicit none
 
     integer, intent(in)  :: ORG_COMM
@@ -853,11 +903,11 @@ contains
              RO_CHILD_COL(i) = RO_DOM2COL(id_child)
           endif
    
-          if ( MASTER_LOG .and. LOG_SPLIT ) then
-             write( *, '(1X,A,I2,1X,A,I2,2(2X,A,I2))' )  &
-                  "DOMAIN: ", i, "MY_COL: ", RO_DOM2COL(i), &
-                  "PARENT: COL= ", RO_PARENT_COL(i), "CHILD: COL= ", RO_CHILD_COL(i)
-          endif
+!          if ( MASTER_LOG .and. LOG_SPLIT ) then
+!             write( *, '(1X,A,I2,1X,A,I2,2(2X,A,I2))' )  &
+!                  "DOMAIN: ", i, "MY_COL: ", RO_DOM2COL(i), &
+!                  "PARENT: COL= ", RO_PARENT_COL(i), "CHILD: COL= ", RO_CHILD_COL(i)
+!          endif
        enddo
    
        ! make relationship
@@ -1040,7 +1090,7 @@ contains
           write(*,*) '++++++ Unexpected error code', errcode
        endif
 
-       if ( comm .ne. MPI_COMM_WORLD ) then
+       if ( comm .ne. ABORT_COMM_WORLD ) then
           if ( IO_L ) write(IO_FID_LOG,*) '++++++ Unexpected communicator'
           write(*,*) '++++++ Unexpected communicator'
        endif
@@ -1059,7 +1109,7 @@ contains
     ! Abort MPI
     if ( PRC_mpi_alive ) then
        call sleep(5)
-       call MPI_ABORT(MPI_COMM_WORLD, abort_code, ierr)
+       call MPI_ABORT(ABORT_COMM_WORLD, abort_code, ierr)
     endif
 
     stop

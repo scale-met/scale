@@ -1,5 +1,5 @@
 !-------------------------------------------------------------------------------
-!> Program SCALE-LES init
+!> Program SCALE-LES init (a launcher of main routine)
 !!
 !! @par Description
 !!          This program makes initial data for ideal test cases
@@ -12,7 +12,7 @@
 !!
 !<
 !-------------------------------------------------------------------------------
-program scaleles_init
+program scaleles_init_launcher
   !-----------------------------------------------------------------------------
   !
   !++ used modules
@@ -24,236 +24,175 @@ program scaleles_init
   use scale_precision
   use scale_stdio
   use scale_prof
-
   use scale_process, only: &
-     PRC_setup,    &
-     PRC_MPIstart, &
-     PRC_MPIsetup, &
-     PRC_MPIfinish
-  use scale_prof, only: &
-     PROF_setup
-  use scale_const, only: &
-     CONST_setup
-  use scale_calendar, only: &
-     CALENDAR_setup
-  use scale_random, only: &
-     RANDOM_setup
-  use scale_grid_index, only: &
-     GRID_INDEX_setup
-  use scale_grid, only: &
-     GRID_setup
-  use scale_grid_nest, only: &
-     NEST_setup
-  use scale_land_grid_index, only: &
-     LAND_GRID_INDEX_setup
-  use scale_land_grid, only: &
-     LAND_GRID_setup
-  use scale_urban_grid_index, only: &
-     URBAN_GRID_INDEX_setup
-  use scale_urban_grid, only: &
-     URBAN_GRID_setup
-  use scale_tracer, only: &
-     TRACER_setup
+     PRC_setup,         &
+     PRC_MPIstart,      &
+     PRC_MPIsplit,      &
+     PRC_MPIfinish,     &
+     PRC_MPIstop,       &
+     PRC_BULKsetup,     &
+     MASTER_LOG,        &
+     MASTER_COMM_WORLD, &
+     MASTER_nmax,       &
+     max_depth
   use scale_fileio, only: &
      FILEIO_setup
   use scale_comm, only: &
      COMM_setup
-  use scale_topography, only: &
-     TOPO_setup
-  use scale_landuse, only: &
-     LANDUSE_setup
-  use scale_grid_real, only: &
-     REAL_setup,   &
-     REAL_update_Z
-  use scale_gridtrans, only: &
-     GTRANS_setup
-  use scale_interpolation, only: &
-     INTERP_setup
-  use scale_statistics, only: &
-     STAT_setup
-  use scale_history, only: &
-     HIST_setup
-  use scale_atmos_hydrostatic, only: &
-     ATMOS_HYDROSTATIC_setup
-  use scale_atmos_thermodyn, only: &
-     ATMOS_THERMODYN_setup
-  use scale_atmos_saturation, only: &
-     ATMOS_SATURATION_setup
-
-  use mod_admin_restart, only: &
-     ADMIN_restart_setup
-  use mod_admin_time, only: &
-     ADMIN_TIME_setup
-  use mod_atmos_admin, only: &
-     ATMOS_admin_setup
-  use mod_atmos_vars, only: &
-     ATMOS_vars_setup
-  use mod_ocean_admin, only: &
-     OCEAN_admin_setup
-  use mod_ocean_vars, only: &
-     OCEAN_vars_setup
-  use mod_land_admin, only: &
-     LAND_admin_setup
-  use mod_land_vars, only: &
-     LAND_vars_setup
-  use mod_urban_admin, only: &
-     URBAN_admin_setup
-  use mod_urban_vars, only: &
-     URBAN_vars_setup
-  use mod_cpl_admin, only: &
-     CPL_admin_setup
-  use mod_cpl_vars, only: &
-     CPL_vars_setup
-  use mod_mktopo, only: &
-     MKTOPO_setup, &
-     MKTOPO
-  use mod_mkinit, only: &
-     MKINIT_setup, &
-     MKINIT
+  use mod_init_driver
+  !
   !-----------------------------------------------------------------------------
   implicit none
   !-----------------------------------------------------------------------------
   !
   !++ included parameters
   !
-#include "scale-les.h"
   !-----------------------------------------------------------------------------
   !
   !++ parameters & variables
   !
-  character(len=H_MID), parameter :: MODELNAME = "SCALE-LES ver. "//VERSION
   !=============================================================================
 
-  !########## Initial setup ##########
+  integer :: NUM_BULKJOB                  ! number of bulk jobs
+  integer :: NUM_DOMAIN                   ! number of domains
+  integer :: PRC_BULKJOB(max_depth)       ! # of total process in each bulk job
+  integer :: PRC_DOMAINS(max_depth)       ! # of total process in each domain
+  integer :: BULK_COMM_WORLD              ! split communicator for each bulk job
+  integer :: MY_COMM_WORLD                ! assigned local communicator
+  integer :: inter_parent                 ! inter communicator with parent
+  integer :: inter_child                  ! inter communicator with child
+  integer :: inter_parent_null            ! inter communicator with parent
+  integer :: inter_child_null             ! inter communicator with child
 
-  ! setup standard I/O
-  call IO_setup( MODELNAME, .false. )
+  logical :: ABORT_ALL_JOBS = .false.     ! flag of abort all jobs or not
+  logical :: LOG_SPLIT = .false.          ! flag of log-output for mpi splitting
+
+  character(len=H_LONG) :: CONF_FILES(max_depth)  ! names of configulation files
+  character(len=H_LONG) :: CONF_BULKS(max_depth)  ! names of configulation files (dummy)
+  character(len=H_LONG) :: fname_launch           ! config file for launcher
+  character(len=H_LONG) :: fname_local            ! config file for local domain
+  character(len=H_LONG) :: fname_bulks            ! config file for dummy use
+  character(len=H_LONG) :: fname_scaleles         ! config file for scaleles
+
+  integer :: check, nprocs
+  integer :: ierr
+  integer :: LNC_FID_CONF
+
+  namelist / PARAM_LAUNCHER / &
+     NUM_BULKJOB,     &
+     NUM_DOMAIN,      &
+     PRC_DOMAINS,     &
+     CONF_FILES,      &
+     ABORT_ALL_JOBS,  &
+     LOG_SPLIT
+  !-----------------------------------------------------------
+
+  NUM_BULKJOB      = 1
+  NUM_DOMAIN       = 1
+  PRC_BULKJOB(:)   = 0
+  PRC_DOMAINS(:)   = 0
+  CONF_FILES(:)    = ""
+  CONF_BULKS(:)    = ""
 
   ! start MPI
   call PRC_MPIstart
-  call PRC_MPIsetup( .false. )
+  if ( MASTER_LOG ) write(*,*) '*** Start Launch System for SCALE-LES'
 
-  ! setup process
-  call PRC_setup
+  !--- read from argument
+  if ( COMMAND_ARGUMENT_COUNT() < 1 ) then
+     if (MASTER_LOG) write(*,*) 'WARNING: No config file specified!'
+     if (MASTER_LOG) write(*,*) '         Default values are used.'
+  else
+     call get_command_argument(1,fname_launch)
+  endif
+  CONF_FILES(1) = fname_launch
 
-  ! setup Log
-  call LogInit(IO_FID_CONF, IO_FID_LOG, IO_L)
+  !--- open config file till end
+  LNC_FID_CONF = IO_get_available_fid()
+  open( LNC_FID_CONF,                &
+        file   = trim(fname_launch), &
+        form   = 'formatted',        &
+        status = 'old',              &
+        iostat = ierr                )
+  if ( ierr /= 0 ) then
+     if (MASTER_LOG) write(*,*)
+     if (MASTER_LOG) write(*,*) 'WARNING: Failed to open config file! :', trim(fname_launch)
+     if (MASTER_LOG) write(*,*) '         Default values are used.'
+     if (MASTER_LOG) write(*,*)
+  end if
 
-  ! setup PROF
-  call PROF_setup
+  !--- read PARAM_LAUNCHER
+  rewind(LNC_FID_CONF)
+  read(LNC_FID_CONF,nml=PARAM_LAUNCHER,iostat=ierr)
+  if( ierr > 0 ) then !--- fatal error
+     if (MASTER_LOG) write(*,*) ' xxx Not appropriate names in namelist PARAM_LAUNCHER. Check!'
+     call PRC_MPIstop
+  endif
+  close( LNC_FID_CONF )
+  fname_local = CONF_FILES(1)
 
-  ! setup constants
-  call CONST_setup
+  !--- communicator split for bulk jobs
+  check = mod(MASTER_nmax,NUM_BULKJOB)
+  if( check /= 0 ) then !--- fatal error
+     if (MASTER_LOG) write(*,*) ' xxx Total Num of Processes must be divisible by NUM_BULKJOB. Check!'
+     if (MASTER_LOG) write(*,*) '     Total Num of Processes: ', MASTER_nmax
+     if (MASTER_LOG) write(*,*) '                NUM_BULKJOB: ', NUM_BULKJOB
+     call PRC_MPIstop
+  endif
 
-  ! setup calendar
-  call CALENDAR_setup
+  nprocs = MASTER_nmax / NUM_BULKJOB
+  PRC_BULKJOB(1:NUM_BULKJOB) = nprocs
+  if ( MASTER_LOG ) write ( *, '(1X,A,I4)' ) "TOTAL BULK JOB NUMBER   = ", NUM_BULKJOB
+  if ( MASTER_LOG ) write ( *, '(1X,A,I5)' ) "PROCESS NUM of EACH JOB = ", nprocs
+  if ( MASTER_LOG ) write ( *, '(1X,A,I4)' ) "TOTAL DOMAIN NUMBER     = ", NUM_DOMAIN
+  if ( MASTER_LOG ) write ( *, * ) "Flag of ABORT ALL JOBS  = ", ABORT_ALL_JOBS
 
-  ! setup random number
-  call RANDOM_setup
+  call PRC_MPIsplit(     &
+      MASTER_COMM_WORLD, & ! [in ]
+      NUM_BULKJOB,       & ! [in ]
+      PRC_BULKJOB,       & ! [in ]
+      CONF_BULKS,        & ! [in ] dummy
+      LOG_SPLIT,         & ! [in ]
+      .true.,            & ! [in ] flag bulk_split
+      BULK_COMM_WORLD,   & ! [out]
+      inter_parent_null, & ! [out] dummy
+      inter_child_null,  & ! [out] dummy
+      fname_bulks        ) ! [out]
 
-  ! setup time
-  call ADMIN_TIME_setup( setup_TimeIntegration = .false. )
-
-  call PROF_rapstart('Initialize')
-
-  ! setup horizontal/vertical grid coordinates (cartesian,idealized)
-  call GRID_INDEX_setup
-  call GRID_setup
-
-  call LAND_GRID_INDEX_setup
-  call LAND_GRID_setup
-
-  call URBAN_GRID_INDEX_setup
-  call URBAN_GRID_setup
-
-  ! setup tracer index
-  call TRACER_setup
-
-  ! setup file I/O
-  call FILEIO_setup
-
-  ! setup mpi communication
-  call COMM_setup
-
-  ! setup topography
-  call TOPO_setup
-  ! setup land use category index/fraction
-  call LANDUSE_setup
-  ! setup grid coordinates (real world)
-  call REAL_setup
-
-  ! setup grid transfer metrics (uses in ATMOS_dynamics)
-  call GTRANS_setup
-  ! setup Z-ZS interpolation factor (uses in History)
-  call INTERP_setup
-
-  ! setup restart
-  call ADMIN_restart_setup
-  ! setup statistics
-  call STAT_setup
-  ! setup history I/O
-  call HIST_setup
-
-  ! setup nesting grid
-  call NEST_setup
+  call PRC_BULKsetup(    &
+      BULK_COMM_WORLD,   & ! [in]
+      ABORT_ALL_JOBS     ) ! [in]
 
 
+  !--- communicator split for nesting domains
+  call PRC_MPIsplit(     &
+      BULK_COMM_WORLD,   & ! [in ]
+      NUM_DOMAIN,        & ! [in ]
+      PRC_DOMAINS,       & ! [in ]
+      CONF_FILES,        & ! [in ]
+      LOG_SPLIT,         & ! [in ]
+      .false.,           & ! [in ] flag bulk_split
+      MY_COMM_WORLD,     & ! [out]
+      inter_parent,      & ! [out]
+      inter_child,       & ! [out]
+      fname_local        ) ! [out]
 
-  ! setup common tools
-  call ATMOS_HYDROSTATIC_setup
-  call ATMOS_THERMODYN_setup
-  call ATMOS_SATURATION_setup
 
-  ! setup submodel administrator
-  call ATMOS_admin_setup
-  call OCEAN_admin_setup
-  call LAND_admin_setup
-  call URBAN_admin_setup
-  call CPL_admin_setup
+  ! start main routine
+  if ( NUM_BULKJOB > 1 ) then
+     fname_scaleles = trim(fname_bulks)//"/"//trim(fname_local)
+  else
+     fname_scaleles = fname_local
+  endif
+  call scaleles_init ( MY_COMM_WORLD,     &
+                       inter_parent_null, &
+                       inter_child_null,  &
+                       fname_scaleles     )
 
-  ! setup variable container
-  call ATMOS_vars_setup
-  call OCEAN_vars_setup
-  call LAND_vars_setup
-  call URBAN_vars_setup
-  call CPL_vars_setup
-
-  ! setup mktopo
-  call MKTOPO_setup
-
-  ! setup mkinit
-  call MKINIT_setup
-
-  call PROF_rapend('Initialize')
-
-  !########## main ##########
-
-  call PROF_rapstart('Main')
-
-  ! execute mktopo
-  call PROF_rapstart('MkTopo')
-  call MKTOPO
-  call PROF_rapend  ('MkTopo')
-
-  ! re-setup
-  call REAL_update_Z
-
-  ! execute mkinit
-  call PROF_rapstart('MkInit')
-  call MKINIT
-  call PROF_rapend  ('MkInit')
-
-  call PROF_rapend('Main')
-
-  !########## Finalize ##########
-
-  call PROF_rapreport
-
-  call FileCloseAll
 
   ! stop MPI
   call PRC_MPIfinish
 
   stop
   !=============================================================================
-end program scaleles_init
+end program scaleles_init_launcher
