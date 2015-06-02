@@ -58,7 +58,6 @@ program scaleles_launcher
   integer :: MY_COMM_WORLD                ! assigned local communicator
   integer :: inter_parent                 ! inter communicator with parent
   integer :: inter_child                  ! inter communicator with child
-!  integer :: master_nmax                  ! process num in top-level global comm
 
   logical :: ABORT_ALL_JOBS = .false.     ! flag of abort all jobs or not
   logical :: LOG_SPLIT = .false.          ! flag of log-output for mpi splitting

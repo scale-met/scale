@@ -54,13 +54,9 @@ contains
   use scale_precision
   use scale_stdio
   use scale_prof
-
   use scale_process, only: &
      PRC_setup,    &
-!     PRC_MPIstart, &
      PRC_MPIsetup
-!, &
-!     PRC_MPIfinish
   use scale_prof, only: &
      PROF_setup
   use scale_const, only: &
@@ -167,8 +163,6 @@ contains
 
   ! start MPI
   call PRC_MPIsetup( MY_COMM_WORLD )
-!  call PRC_MPIstart
-!  call PRC_MPIsetup( .false. )
 
   ! setup process
   call PRC_setup

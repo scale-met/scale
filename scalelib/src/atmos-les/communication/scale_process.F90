@@ -54,7 +54,6 @@ module scale_process
 
   integer, public, parameter   :: PRC_master = 0      !< master node
 
-!!!!  integer, public, parameter   :: GLOBAL_master = 0   !< master node
   integer, public, parameter   :: max_depth = 1000    !< max depth of domains
   integer, public, parameter   :: split_root = 0      !< root process in each color
 
@@ -66,7 +65,6 @@ module scale_process
   integer, public              :: MASTER_nmax         !< process num in master communicator
   integer, public              :: GLOBAL_myrank       !< myrank in global communicator
   integer, public              :: GLOBAL_nmax         !< process num in global communicator
-!  integer, public              :: PRC_ROOT(0:max_depth) !< root process in the color
   logical, public              :: MASTER_LOG
 
   integer, public              :: PRC_myrank = 0   !< my node ID (Local)
@@ -145,14 +143,10 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup MPI
   subroutine PRC_MPIsetup( &
-!      flag_local,     & ! [in]
-!      LOCAL_nmax,     & ! [in]
       MY_COMM_WORLD   ) ! [in]
     implicit none
 
-!    logical, intent(in)            :: flag_local
     integer, intent(in) :: MY_COMM_WORLD
-!    integer, intent(in), optional  :: LOCAL_myrank
 
     character(len=H_LONG)  :: fname ! name of logfile for each process
     character(len=H_SHORT) :: info
@@ -160,17 +154,6 @@ contains
     integer :: ierr
     !---------------------------------------------------------------------------
 
-!    if ( flag_local ) then
-!       if ( present(LOCAL_nmax) .and. present(LOCAL_myrank) ) then
-!          PRC_nmax   = LOCAL_nmax
-!          PRC_myrank = LOCAL_myrank
-!       else
-!          write(*,*) 'xxx error :LOCAL_nmax and LOCAL_myrank are not specified!'
-!          call PRC_MPIstop
-!       endif
-!    else
-
-!    endif
     LOCAL_COMM_WORLD = MY_COMM_WORLD
     call MPI_COMM_RANK(LOCAL_COMM_WORLD,PRC_myrank,ierr)
     call MPI_COMM_SIZE(LOCAL_COMM_WORLD,PRC_nmax,  ierr)
@@ -267,11 +250,17 @@ contains
        write(IO_FID_LOG,*) trim(H_MODELNAME)
        write(IO_FID_LOG,*) ''
        write(IO_FID_LOG,*) '++++++ Start MPI'
-       write(IO_FID_LOG,*) '*** total process     : ', PRC_nmax
-       write(IO_FID_LOG,*) '*** master rank       : ', PRC_master
-       write(IO_FID_LOG,*) '*** my process ID     : ', PRC_myrank
-       write(IO_FID_LOG,*) '*** LOCAL_COMM_WORLD  : ', LOCAL_COMM_WORLD
-       write(IO_FID_LOG,*) '*** GLOBAL_COMM_WORLD : ', GLOBAL_COMM_WORLD
+       write(IO_FID_LOG,*) '*** LOCAL_COMM_WORLD        : ', LOCAL_COMM_WORLD
+       write(IO_FID_LOG,*) '*** total process  [LOCAL]  : ', PRC_nmax
+       write(IO_FID_LOG,*) '*** master rank    [LOCAL]  : ', PRC_master
+       write(IO_FID_LOG,*) '*** my process ID  [LOCAL]  : ', PRC_myrank
+       write(IO_FID_LOG,*) '*** GLOBAL_COMM_WORLD       : ', GLOBAL_COMM_WORLD
+       write(IO_FID_LOG,*) '*** total process  [GLOBAL] : ', GLOBAL_nmax
+       write(IO_FID_LOG,*) '*** my process ID  [GLOBAL] : ', GLOBAL_myrank
+       write(IO_FID_LOG,*) '*** MASTER_COMM_WORLD       : ', MASTER_COMM_WORLD
+       write(IO_FID_LOG,*) '*** total process  [MASTER] : ', MASTER_nmax
+       write(IO_FID_LOG,*) '*** my process ID  [MASTER] : ', MASTER_myrank
+       write(IO_FID_LOG,*) '*** ABORT_COMM_WORLD        : ', ABORT_COMM_WORLD
        write(IO_FID_LOG,*) ''
        write(IO_FID_LOG,*) '++++++ Module[STDIO] / Categ[IO] / Origin[SCALElib]'
        write(IO_FID_LOG,*) ''
@@ -630,8 +619,6 @@ contains
     integer :: total_nmax
     integer :: ORG_myrank  ! my rank number in the original communicator
     integer :: ORG_nmax    ! total rank number in the original communicator
-!!!    integer :: my_color
-!!!!!, my_key
 
     logical :: do_create_p(max_depth)
     logical :: do_create_c(max_depth)
@@ -706,16 +693,10 @@ contains
              if ( MASTER_LOG ) write ( *, '(1X,A,I4)' ) "relationship: ", i
              if ( MASTER_LOG ) write ( *, '(1X,A,I4,A,I4)' ) &
                                "--- parent color = ", PARENT_COL(i), "  child color = ", CHILD_COL(i)
-!!          if ( MASTER_LOG ) write ( *, '(1X,A,I5,A,I5)' ) &
-!!                            "--- parent prc = ", PARENT_PRC(i), "  child prc = ", CHILD_PRC(i)
              if ( COLOR_LIST(ORG_myrank) == PARENT_COL(i) ) then
-!!            flag_parent  = .true.
                 do_create_p(i) = .true.
-!!             nmax_child   = CHILD_PRC(i)
              elseif ( COLOR_LIST(ORG_myrank) == CHILD_COL(i) ) then
-!!             flag_child   = .true.
                 do_create_c(i) = .true.
-!!             nmax_parent  = PARENT_PRC(i)
              endif
           enddo
        endif
@@ -902,12 +883,6 @@ contains
           if ( 1 <= id_child  .and. id_child  <= NUM_DOMAIN ) then
              RO_CHILD_COL(i) = RO_DOM2COL(id_child)
           endif
-   
-!          if ( MASTER_LOG .and. LOG_SPLIT ) then
-!             write( *, '(1X,A,I2,1X,A,I2,2(2X,A,I2))' )  &
-!                  "DOMAIN: ", i, "MY_COL: ", RO_DOM2COL(i), &
-!                  "PARENT: COL= ", RO_PARENT_COL(i), "CHILD: COL= ", RO_CHILD_COL(i)
-!          endif
        enddo
    
        ! make relationship
