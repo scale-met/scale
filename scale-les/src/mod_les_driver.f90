@@ -42,14 +42,9 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine scaleles( &
-       LOCAL_myrank,   &
-       LOCAL_nmax,     &
-       flag_parent,    &
-       flag_child,     &
-       parent_prc,     &
-       child_prc,      &
-       icomm_parent,   &
-       icomm_child,    &
+       MY_COMM_WORLD,  &
+       inter_parent,   &
+       inter_child,    &
        fname           )
     use dc_log, only: &
        LogInit
@@ -63,8 +58,6 @@ contains
        PRC_setup,    &
        PRC_MPIsetup, &
        PRC_MPIfinish
-    use scale_prof, only: &
-       PROF_setup
     use scale_const, only: &
        CONST_setup
     use scale_calendar, only: &
@@ -204,14 +197,9 @@ contains
 #include "scale-les.h"
     !-----------------------------------------------------------------------------
 
-    integer, intent(in)  :: LOCAL_myrank
-    integer, intent(in)  :: LOCAL_nmax
-    integer, intent(in)  :: parent_prc
-    integer, intent(in)  :: child_prc
-    integer, intent(in)  :: icomm_parent
-    integer, intent(in)  :: icomm_child
-    logical, intent(in)  :: flag_parent
-    logical, intent(in)  :: flag_child
+    integer, intent(in)  :: MY_COMM_WORLD
+    integer, intent(in)  :: inter_parent
+    integer, intent(in)  :: inter_child
     character(len=H_LONG), intent(in) :: fname
 
     character(len=H_MID), parameter :: MODELNAME = "SCALE-LES ver. "//VERSION
@@ -223,7 +211,7 @@ contains
     call IO_setup( MODELNAME, .true., fname )
 
     ! setup MPI
-    call PRC_MPIsetup( .true., LOCAL_nmax, LOCAL_myrank )
+    call PRC_MPIsetup( MY_COMM_WORLD )
 
     ! setup process
     call PRC_setup
@@ -290,8 +278,7 @@ contains
     call MONIT_setup
 
     ! setup nesting grid
-    call NEST_setup ( icomm_parent, icomm_child, &
-                      flag_parent,  flag_child   )
+    call NEST_setup ( inter_parent, inter_child )
 
     ! setup common tools
     call ATMOS_HYDROSTATIC_setup

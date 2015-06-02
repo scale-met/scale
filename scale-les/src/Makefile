@@ -91,6 +91,10 @@ OBJS_INIT =	\
 	mod_realinput.o              \
 	mod_mkinit.o
 
+OBJS_RUNINIT =	\
+	mod_init_driver.o            \
+	mod_pp_driver.o
+
 all:
 	$(MAKE) makedir
 	$(MAKE) -C $(DCUTILSDIR)
@@ -119,15 +123,15 @@ makebin: $(BINS)
 $(BINDIR)/$(BINNAME)  : $(BUILD_DIR)/$(BINNAME).o  $(patsubst %,$(BUILD_DIR)/%,$(OBJS)) $(patsubst %,$(BUILD_DIR)/%,$(OBJS_RUN))  $(BUILD_DIR)/mod_user.o
 	$(FC) $(LDFLAGS) -o $@ $^ $(DEPENDLIB) $(NETCDF_LIBS) $(LAPACK_LIBS) $(PAPI_LIBS)
 
-$(BINDIR)/$(INITNAME) : $(BUILD_DIR)/$(INITNAME).o $(patsubst %,$(BUILD_DIR)/%,$(OBJS)) $(patsubst %,$(BUILD_DIR)/%,$(OBJS_INIT)) $(BUILD_DIR)/mod_user.o
+$(BINDIR)/$(INITNAME) : $(BUILD_DIR)/$(INITNAME).o $(patsubst %,$(BUILD_DIR)/%,$(OBJS)) $(patsubst %,$(BUILD_DIR)/%,$(OBJS_INIT)) $(patsubst %,$(BUILD_DIR)/%,$(OBJS_RUNINIT)) $(BUILD_DIR)/mod_user.o
 	$(FC) $(LDFLAGS) -o $@ $^ $(DEPENDLIB) $(NETCDF_LIBS) $(LAPACK_LIBS) $(PAPI_LIBS)
 
-$(BINDIR)/$(PPNAME)   : $(BUILD_DIR)/$(PPNAME).o   $(patsubst %,$(BUILD_DIR)/%,$(OBJS)) $(patsubst %,$(BUILD_DIR)/%,$(OBJS_INIT)) $(BUILD_DIR)/mod_user.o
+$(BINDIR)/$(PPNAME)   : $(BUILD_DIR)/$(PPNAME).o   $(patsubst %,$(BUILD_DIR)/%,$(OBJS)) $(patsubst %,$(BUILD_DIR)/%,$(OBJS_INIT)) $(patsubst %,$(BUILD_DIR)/%,$(OBJS_RUNINIT)) $(BUILD_DIR)/mod_user.o
 	$(FC) $(LDFLAGS) -o $@ $^ $(DEPENDLIB) $(NETCDF_LIBS) $(LAPACK_LIBS) $(PAPI_LIBS)
 
 $(BUILD_DIR)/$(BINNAME).o  : $(BINNAME).f90  $(DEPENDLIB) $(patsubst %,$(BUILD_DIR)/%,$(OBJS)) $(patsubst %,$(BUILD_DIR)/%,$(OBJS_RUN))  $(BUILD_DIR)/mod_user.o
-$(BUILD_DIR)/$(INITNAME).o : $(INITNAME).f90 $(DEPENDLIB) $(patsubst %,$(BUILD_DIR)/%,$(OBJS)) $(patsubst %,$(BUILD_DIR)/%,$(OBJS_INIT)) $(BUILD_DIR)/mod_user.o
-$(BUILD_DIR)/$(PPNAME).o   : $(PPNAME).f90   $(DEPENDLIB) $(patsubst %,$(BUILD_DIR)/%,$(OBJS)) $(patsubst %,$(BUILD_DIR)/%,$(OBJS_INIT)) $(BUILD_DIR)/mod_user.o
+$(BUILD_DIR)/$(INITNAME).o : $(INITNAME).f90 $(DEPENDLIB) $(patsubst %,$(BUILD_DIR)/%,$(OBJS)) $(patsubst %,$(BUILD_DIR)/%,$(OBJS_INIT)) $(patsubst %,$(BUILD_DIR)/%,$(OBJS_RUNINIT)) $(BUILD_DIR)/mod_user.o
+$(BUILD_DIR)/$(PPNAME).o   : $(PPNAME).f90   $(DEPENDLIB) $(patsubst %,$(BUILD_DIR)/%,$(OBJS)) $(patsubst %,$(BUILD_DIR)/%,$(OBJS_INIT)) $(patsubst %,$(BUILD_DIR)/%,$(OBJS_RUNINIT)) $(BUILD_DIR)/mod_user.o
 
 $(BUILD_DIR)/mod_admin_restart.o          : mod_admin_restart.f90 $(DEPENDLIB) \
                                             mod_atmos_vars.o        \
@@ -206,6 +210,8 @@ $(BUILD_DIR)/mod_cnvlanduse.o             : mod_cnvlanduse.f90 $(DEPENDLIB)
 $(BUILD_DIR)/mod_user.o                   : mod_user.f90 $(DEPENDLIB) $(patsubst %,$(BUILD_DIR)/%,$(OBJS))
 
 $(BUILD_DIR)/mod_les_driver.o             : mod_les_driver.f90 $(DEPENDLIB) $(patsubst %,$(BUILD_DIR)/%,$(OBJS)) $(BUILD_DIR)/mod_user.o
+$(BUILD_DIR)/mod_init_driver.o            : mod_init_driver.f90 $(DEPENDLIB) $(patsubst %,$(BUILD_DIR)/%,$(OBJS)) $(patsubst %,$(BUILD_DIR)/%,$(OBJS_INIT)) $(BUILD_DIR)/mod_user.o
+$(BUILD_DIR)/mod_pp_driver.o              : mod_pp_driver.f90 $(DEPENDLIB) $(patsubst %,$(BUILD_DIR)/%,$(OBJS)) $(patsubst %,$(BUILD_DIR)/%,$(OBJS_INIT)) $(BUILD_DIR)/mod_user.o
 
 
 allclean: distclean
