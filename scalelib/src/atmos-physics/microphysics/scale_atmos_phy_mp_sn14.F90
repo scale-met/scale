@@ -2304,7 +2304,11 @@ contains
          do j = JS, JE
          do i = IS, IE
          do k = KS, KE
-              nc_new(k,i,j) = max( CCN(k,i,j), c_ccn )
+            if( ssw(k,i,j) > 1.e-10_RP .and. pre(k,i,j) > 300.E+2_RP ) then
+               nc_new(k,i,j) = max( CCN(k,i,j), c_ccn )
+            else
+               nc_new(k,i,j) = 0.0_RP
+            endif
          enddo
          enddo
          enddo
