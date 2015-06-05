@@ -4223,13 +4223,13 @@ enddo
                                                                 ! 0: dry, 3:3-class, 5:5-class, 6:6-class, >6:double moment
     real(RP)                 :: BOUNDARY_UPDATE_DT  = 0.0_RP    ! inteval time of boudary data update [s]
     logical                  :: USE_FILE_LANDWATER  = .true.    ! use land water data from files
-    real(RP)                 :: INIT_LANDWATER_RATIO = 0.5_RP   ! Ratio of land water to storage is constant,
+    real(RP)                 :: INIT_LANDWATER_RATIO = 0.5_RP   ! Ratio of land water to storage is constant, if USE_FILE_LANDWATER is ".false."
     character(len=H_SHORT)   :: INTRP_LAND_TEMP      = 'off'
     character(len=H_SHORT)   :: INTRP_LAND_WATER     = 'off'
     character(len=H_SHORT)   :: INTRP_LAND_SFC_TEMP  = 'off'
     character(len=H_SHORT)   :: INTRP_OCEAN_TEMP     = 'off'
     character(len=H_SHORT)   :: INTRP_OCEAN_SFC_TEMP = 'off'
-                                                                !            if USE_FILE_LANDWATER is ".false."
+
     integer                  :: INTERP_SERC_DIV_NUM = 10        ! num of dividing blocks in interpolation search
     logical                  :: SERIAL_PROC_READ    = .true.    ! read by one MPI process and broadcast
 
@@ -4322,6 +4322,7 @@ enddo
     call ParentAtomSetup( dims(:), timelen, mdlid,        & ![OUT]
                           BASENAME_WITHNUM, FILETYPE_ORG, & ![IN]
                           USE_FILE_DENSITY,               & ![IN]
+                          USE_FILE_LANDWATER,             & ![IN]
                           SERIAL_PROC_READ,               & ![IN]
                           INTERP_SERC_DIV_NUM             ) ![IN]
 

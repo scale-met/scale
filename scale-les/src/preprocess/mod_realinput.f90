@@ -132,14 +132,15 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine ParentAtomSetup( &
-      dims,                &
-      timelen,             &
-      mdlid,               &
-      basename_org,        &
-      filetype,            &
-      use_file_density_in, &
-      serial_in,           &
-      search_divnum_in     )
+      dims,                  &
+      timelen,               &
+      mdlid,                 &
+      basename_org,          &
+      filetype,              &
+      use_file_density_in,   &
+      use_file_landwater_in, &
+      serial_in,             &
+      search_divnum_in       )
     use scale_external_io, only: &
          iSCALE, &
          iWRFARW, &
@@ -160,8 +161,9 @@ contains
     integer,          intent(out) :: mdlid
     character(len=*), intent(in)  :: basename_org
     character(len=*), intent(in)  :: filetype
-    logical,          intent(in)  :: serial_in ! read by a serial process
-    logical,          intent(in)  :: use_file_density_in ! use density data from files
+    logical,          intent(in)  :: serial_in             ! read by a serial process
+    logical,          intent(in)  :: use_file_density_in   ! use density data from files
+    logical,          intent(in)  :: use_file_landwater_in ! use landwater data from files
     integer,          intent(in)  :: search_divnum_in
 
     !---------------------------------------------------------------------------
@@ -218,7 +220,8 @@ contains
     case('GrADS')
 
        mdlid = iGrADS
-       if ( do_read ) call ParentAtomSetupGrADS( dims, timelen ) ! (out)
+       if ( do_read ) call ParentAtomSetupGrADS( dims, timelen,        & ! (out)
+                                                 use_file_landwater_in ) ! (in)
        update_coord = .true.
        use_file_density = .false.
        use_temp = .true.
@@ -954,7 +957,7 @@ contains
     real(RP) :: sst  (IA,JA)
     real(RP) :: albw (IA,JA,2)  ! albedo for ocean
     real(RP) :: albg (IA,JA,2)  ! albedo for land
-    real(RP) :: albu (IA,JA,2)  ! albedo for urban
+    real(RP) :: albu (IA,JA,2)  ! albedo for urban, this is not used.
     real(RP) :: z0w  (IA,JA)
     real(RP) :: skint(IA,JA)
 !    real(RP) :: skinw(IA,JA)
