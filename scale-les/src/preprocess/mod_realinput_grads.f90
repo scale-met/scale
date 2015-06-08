@@ -169,8 +169,8 @@ contains
     real(RP)             :: dd                                        ! dlon,dlat for linear
     integer              :: lnum                                      ! number of data
     real(RP)             :: lvars(lvars_limit) = large_number_one     ! values for levels
-    integer              :: startrec=1                                ! record position
-    integer              :: totalrec=1                                ! total record number per one time
+    integer              :: startrec                                  ! record position
+    integer              :: totalrec                                  ! total record number per one time
     real(SP)             :: missval                                   ! missing value
     character(H_SHORT)   :: fendian='big'                             ! option
 
@@ -935,8 +935,26 @@ contains
        end do
     end if
 
-
     velz_org = 0.0_RP
+
+
+    ! check verticaly extrapolated data in outer model
+    do j = 1, dims(3)
+    do i = 1, dims(2)
+    do k = 3, dims(1)+2
+
+       if( pres_org(k,i,j)>pres_org(2,i,j) )then ! if Pressure is larger than Surface pressure
+          !velz_org(k,i,j)=velz_org(2,i,j)
+          velx_org(k,i,j)=velx_org(2,i,j)
+          vely_org(k,i,j)=vely_org(2,i,j)
+          temp_org(k,i,j)=temp_org(2,i,j)
+          qtrc_org(k,i,j,:)=qtrc_org(2,i,j,:)
+          cz_org(k,i,j)=cz_org(2,i,j)
+      end if
+
+    enddo
+    enddo
+    enddo
 
 
     !do it = 1, nt
