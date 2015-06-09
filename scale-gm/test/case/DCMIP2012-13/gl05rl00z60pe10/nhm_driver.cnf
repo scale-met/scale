@@ -1,0 +1,110 @@
+################################################################################
+#
+# NICAM driver config
+#
+################################################################################
+
+&ADMPARAM
+    glevel      = 5,
+    rlevel      = 0,
+    vlayer      = 60,
+    rgnmngfname = "rl00-prc10.info",
+/
+
+&GRDPARAM
+    hgrid_io_mode = "ADVANCED",
+    hgrid_fname   = "boundary_GL05RL00",
+    VGRID_fname   = "vgrid60_200m_dcmip.dat",
+    topo_io_mode  = "IDEAL",
+/
+
+&TIMEPARAM
+    DTL         = 1200.D0,
+    INTEG_TYPE  = "TRCADV",
+    LSTEP_MAX   = 864,
+    start_date  = 0000,1,1,0,0,0
+/
+
+&RUNCONFPARAM
+    RUNNAME     = 'DCMIP2012-13',
+    THUBURN_LIM = .true.
+    CHEM_TYPE   = 'PASSIVE',
+/
+
+&CHEMVARPARAM
+    CHEM_TRC_vmax = 4,
+/
+
+&BSSTATEPARAM
+    ref_type = 'NOBASE',
+/
+
+&RESTARTPARAM
+    input_io_mode     = 'IDEAL',
+    output_io_mode    = 'ADVANCED',
+    output_basename   = 'restart_all_GL05RL00z40',
+    restart_layername = 'ZS60_200m_DCMIP',
+/
+
+##### DCMIP 2012 Test 1-3: 2D transport of thin cloud-like tracer in the presence of orography
+&DYCORETESTPARAM
+    init_type = 'Traceradvection',
+    test_case = '1-3'
+/
+
+&IDEALTOPOPARAM
+    topo_type = 'Schar_Moderate',
+/
+
+&IDEALTOPOPARAM_Schar_Moderate
+    center_lon =  270.D0,
+    center_lat =    0.D0,
+    H0         = 2000.D0,
+    Rm_deg     =  135.D0,
+    QSIm_deg   = 11.25D0,
+/
+
+&CNSTPARAM
+    earth_radius        = 6.37122D+6,
+    earth_angvel        =   7.292D-5,
+    small_planet_factor =      1.D0,
+    earth_gravity       = 9.80616D0,
+    gas_cnst            =   287.0D0,
+    specific_heat_pre   =  1004.5D0,
+/
+
+&NUMFILTERPARAM
+    hdiff_type        = 'DIRECT',
+    lap_order_hdiff   = 2,
+    gamma_h           = 1.20D16,
+    Kh_coef_minlim    = 0.D0,
+    Kh_coef_maxlim    = 9.9D99,
+    divdamp_type      = 'DIRECT',
+    lap_order_divdamp = 2,
+    alpha_d           = 1.20D16,
+/
+
+&EMBUDGETPARAM
+    MNT_ON   = .true.,
+    MNT_INTV = 72    ,
+/
+
+&NMHISD
+    output_io_mode   = 'ADVANCED' ,
+    histall_fname    = 'history'  ,
+    hist3D_layername = 'Z60_200m_DCMIP',
+    NO_VINTRPL       = .false.    ,
+    output_type      = 'SNAPSHOT' ,
+    step             = 72         ,
+    doout_step0      = .true.     ,
+/
+
+&NMHIST item='ml_u',          file='u',     ktype='3D' /
+&NMHIST item='ml_v',          file='v',     ktype='3D' /
+&NMHIST item='ml_w',          file='w',     ktype='3D' /
+&NMHIST item='ml_passive001', file='pasv1', ktype='3D' /
+&NMHIST item='ml_passive002', file='pasv2', ktype='3D' /
+&NMHIST item='ml_passive003', file='pasv3', ktype='3D' /
+&NMHIST item='ml_passive004', file='pasv4', ktype='3D' /
+
+################################################################################

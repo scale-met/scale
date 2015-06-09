@@ -3,7 +3,7 @@
 !+  program ico2ll (NEW I/O)
 !
 !-------------------------------------------------------------------------------
-program fio_ico2ll_mpi
+program fio_ico2ll
   !-----------------------------------------------------------------------------
   !
   !++ Description:
@@ -1747,6 +1747,6 @@ contains
     return
   end subroutine VINTRPL_Xi2Z
 
-end program fio_ico2ll_mpi
+end program fio_ico2ll
 !-------------------------------------------------------------------------------
 
