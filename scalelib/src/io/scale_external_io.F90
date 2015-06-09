@@ -65,6 +65,12 @@ module scale_external_io
   !
   !++ Public parameters & variables
   !
+  integer, public, parameter :: iSCALE  = 1  ! use gtool, coz it's not external
+  integer, public, parameter :: iWRFARW = 2
+  integer, public, parameter :: iNICAM  = 3
+  integer, public, parameter :: iGrADS  = 4
+
+
   !-----------------------------------------------------------------------------
   !
   !++ Private procedure
@@ -87,12 +93,6 @@ module scale_external_io
   !
   !++ Private parameters & variables
   !
-  integer, private, parameter :: iSCALE  = 1  ! use gtool, coz it's not external
-  integer, private, parameter :: iWRFARW = 2
-  integer, private, parameter :: iNICAM  = 3
-  integer, private, parameter :: iJMAMSM = 4
-
-
   !-----------------------------------------------------------------------------
 contains
 
@@ -1535,7 +1535,7 @@ contains
        else
           call FileMakeFname(fname,trim(basename),'anl.pe',myrank,6)
        endif
-    !elseif( mdlid == iJMAMSM )then      !TYPE: JMA-MSM
+    !elseif( mdlid == iGrADS )then      !TYPE: GrADS
     !   if ( single ) then
     !      fname = trim(basename)//'.anl'
     !   else

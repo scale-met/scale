@@ -69,7 +69,7 @@ module scale_stdio
   !
   !++ Private parameters & variables
   !
-  integer, private, parameter :: IO_MINFID    = 7  !< minimum available fid
+  integer, private, parameter :: IO_MINFID    = 10 !< minimum available fid
   integer, private, parameter :: IO_MAXFID    = 99 !< maximum available fid
   integer, private, parameter :: IO_RGNOFFSET = 0  !< offset number of process file
 
