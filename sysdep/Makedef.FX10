@@ -40,6 +40,9 @@ RDMA = -U_USE_RDMA
 # enable
 #RDMA = -D_USE_RDMA
 
+# Single precision
+#FFLAGS += -DSINGLE
+
 FC     = mpifrtpx
 
 FFLAGS_DYN ?= $(FFLAGS) -Knoprefetch,loop_nofission,loop_nofusion,nounroll,parallel_strong -Ksimd=2
