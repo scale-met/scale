@@ -16,13 +16,11 @@ MPIEXEC="mpirun -nnp ${TPROC} /usr/lib/mpi/mpisep.sh"
 
 RUNDIR=`pwd`
 
-# Generate run.sh
-
 cat << EOF1 > ./run.sh
 #!/bin/sh
 ################################################################################
 #
-# for Earth Simulator 2 (L system)
+# for Earth Simulator 3 (L system)
 #
 ################################################################################
 #PBS -T mpisx
@@ -56,7 +54,7 @@ cat << EOF2 > ./run_S.sh
 #!/bin/sh
 ################################################################################
 #
-# for Earth Simulator 2 (S system)
+# for Earth Simulator 3 (S system)
 #
 ################################################################################
 #PBS -T mpisx
