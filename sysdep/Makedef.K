@@ -19,7 +19,7 @@ FFLAGS_DEBUG = -O0                                                       \
 
 # Performance monitor
 # disable
-PERF_MONIT = -Ntl_notrt -U_FIPP_ -U_FAPP_ -U_FINEPA_
+#PERF_MONIT = -Ntl_notrt -U_FIPP_ -U_FAPP_ -U_FINEPA_
 # fipp
 #PERF_MONIT = -Ntl_trt -D_FIPP_ -U_FAPP_ -U_FINEPA_
 # fapp
@@ -35,28 +35,33 @@ RDMA = -U_USE_RDMA
 
 # Super Droplet Method (SDM)
 # without SDM
-SDM =
+#SDM =
 # with SDM
-#SDM = -D_SDM
+SDM = -D_SDM
 
 FC     = mpifrtpx
-FFLAGS = $(FFLAGS_FAST) $(PERF_MONIT) $(RDMA) $(SDM)
-#FFLAGS = $(FFLAGS_DEBUG) $(PERF_MONIT) $(RDMA $(SDM)
+#FFLAGS = $(FFLAGS_FAST) $(PERF_MONIT) $(RDMA) $(SDM)
+FFLAGS = $(FFLAGS_DEBUG) $(PERF_MONIT) $(RDMA) $(SDM)
 
-FFLAGS_DYN ?= $(FFLAGS) -Knoprefetch,loop_nofission,loop_nofusion,nounroll,parallel_strong -Ksimd=2
-#FFLAGS_DYN ?= $(FFLAGS)
+#FFLAGS_DYN ?= $(FFLAGS) -Knoprefetch,loop_nofission,loop_nofusion,nounroll,parallel_strong -Ksimd=2
+FFLAGS_DYN ?= $(FFLAGS)
 
-FFLAGS_SDM ?= $(FFLAGS) -Kprefetch_indirect
-#FFLAGS_SDM ?= $(FFLAGS)
+#FFLAGS_SDM ?= $(FFLAGS) -Kprefetch_indirect
+FFLAGS_SDM ?= $(FFLAGS)
+
+# without performance monitor or Nrt_tune_func
+#FFLAGS_SDM_MONIT ?= 
+# without performance monitor or Nrt_tune_func (Ntl_trt should be defined in PERF_MONIT shown above)
+FFLAGS_SDM_MONIT ?= -Nrt_tune_func
 
 MODDIROPT ?= -M
 
 CC     = mpifccpx
-CFLAGS_FAST  = -Kfast,parallel,ocl,preex,array_private,region_extension,restp=all -Ksimd
+#CFLAGS_FAST  = -Kfast,parallel,ocl,preex,array_private,region_extension,restp=all -Ksimd
 CFLAGS_DEBUG = -O0
 
-CFLAGS = $(CFLAGS_FAST) $(PERF_MONIT) $(RDMA)
-#CFLAGS = $(CFLAGS_DEBUG) $(PERF_MONIT) $(RDMA)
+#CFLAGS = $(CFLAGS_FAST) $(PERF_MONIT) $(RDMA)
+CFLAGS = $(CFLAGS_DEBUG) $(PERF_MONIT) $(RDMA)
 
 LD      = $(FC)
 LDFLAGS = $(FFLAGS)

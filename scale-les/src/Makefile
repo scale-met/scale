@@ -27,6 +27,8 @@ else
   VERSION := $(VERSION)
 endif
 
+DEPENDLIB = $(LIBDIR)/libscale.a $(LIBDIR)/libgtool.a $(LIBDIR)/libdcutils.a
+
 BINNAME    = scale-les
 INITNAME   = scale-les_init
 PPNAME     = scale-les_pp
@@ -62,7 +64,10 @@ MODS =	\
 
 
 
-all: makedir makescalelib makebin
+all: 
+	$(MAKE) makedir 
+	$(MAKE) makescalelib 
+	$(MAKE) makebin
 
 makedir:
 	mkdir -p $(BINDIR)
@@ -76,58 +81,59 @@ makebin: $(PRJS)
 
 ifeq ($(SDM),-D_SDM)
 $(BINDIR)/$(BINNAME)  : $(BUILD_DIR)/$(BINNAME).o  $(patsubst %,$(BUILD_DIR)/%,$(MODS)) $(LIBDIR)/libscale.a
-	$(FC) $(LDFLAGS) -o $@ $^ $(LIBDIR)/libscale.a $(LIBDIR)/libgtool.a $(NETCDF_LIBS) $(LIBDIR)/libdcutils.a $(CONTRIB_LIBS) $(LAPACK_LIBS) $(PAPI_LIBS)
+	$(FC) $(LDFLAGS) -o $@ $^ $(DEPENDLIB) $(NETCDF_LIBS) $(CONTRIB_LIBS) $(LAPACK_LIBS) $(PAPI_LIBS)
 
 $(BINDIR)/$(INITNAME) : $(BUILD_DIR)/$(INITNAME).o $(patsubst %,$(BUILD_DIR)/%,$(MODS)) $(LIBDIR)/libscale.a
-	$(FC) $(LDFLAGS) -o $@ $^ $(LIBDIR)/libscale.a $(LIBDIR)/libgtool.a $(NETCDF_LIBS) $(LIBDIR)/libdcutils.a $(CONTRIB_LIBS) $(NETCDF_LIBS) $(LAPACK_LIBS) $(PAPI_LIBS)
+	$(FC) $(LDFLAGS) -o $@ $^ $(DEPENDLIB) $(NETCDF_LIBS) $(CONTRIB_LIBS) $(NETCDF_LIBS) $(LAPACK_LIBS) $(PAPI_LIBS)
 
 $(BINDIR)/$(PPNAME)   : $(BUILD_DIR)/$(PPNAME).o   $(patsubst %,$(BUILD_DIR)/%,$(MODS)) $(LIBDIR)/libscale.a
-	$(FC) $(LDFLAGS) -o $@ $^ $(LIBDIR)/libscale.a $(LIBDIR)/libgtool.a $(NETCDF_LIBS) $(LIBDIR)/libdcutils.a $(CONTRIB_LIBS) $(NETCDF_LIBS) $(LAPACK_LIBS) $(PAPI_LIBS)
+	$(FC) $(LDFLAGS) -o $@ $^ $(DEPENDLIB) $(NETCDF_LIBS) $(CONTRIB_LIBS) $(NETCDF_LIBS) $(LAPACK_LIBS) $(PAPI_LIBS)
 else
 $(BINDIR)/$(BINNAME)  : $(BUILD_DIR)/$(BINNAME).o  $(patsubst %,$(BUILD_DIR)/%,$(MODS)) $(LIBDIR)/libscale.a
-	$(FC) $(LDFLAGS) -o $@ $^ $(LIBDIR)/libscale.a $(LIBDIR)/libgtool.a $(NETCDF_LIBS) $(LIBDIR)/libdcutils.a $(LAPACK_LIBS) $(PAPI_LIBS)
+	$(FC) $(LDFLAGS) -o $@ $^ $(DEPENDLIB) $(NETCDF_LIBS) $(LAPACK_LIBS) $(PAPI_LIBS)
 
 $(BINDIR)/$(INITNAME) : $(BUILD_DIR)/$(INITNAME).o $(patsubst %,$(BUILD_DIR)/%,$(MODS)) $(LIBDIR)/libscale.a
-	$(FC) $(LDFLAGS) -o $@ $^ $(LIBDIR)/libscale.a $(LIBDIR)/libgtool.a $(NETCDF_LIBS) $(LIBDIR)/libdcutils.a $(NETCDF_LIBS) $(LAPACK_LIBS) $(PAPI_LIBS)
+	$(FC) $(LDFLAGS) -o $@ $^ $(DEPENDLIB) $(NETCDF_LIBS) $(NETCDF_LIBS) $(LAPACK_LIBS) $(PAPI_LIBS)
 
 $(BINDIR)/$(PPNAME)   : $(BUILD_DIR)/$(PPNAME).o   $(patsubst %,$(BUILD_DIR)/%,$(MODS)) $(LIBDIR)/libscale.a
-	$(FC) $(LDFLAGS) -o $@ $^ $(LIBDIR)/libscale.a $(LIBDIR)/libgtool.a $(NETCDF_LIBS) $(LIBDIR)/libdcutils.a $(NETCDF_LIBS) $(LAPACK_LIBS) $(PAPI_LIBS)
+	$(FC) $(LDFLAGS) -o $@ $^ $(DEPENDLIB) $(NETCDF_LIBS) $(NETCDF_LIBS) $(LAPACK_LIBS) $(PAPI_LIBS)
 endif
 
-$(BUILD_DIR)/$(BINNAME).o  : $(BINNAME).f90  $(patsubst %,$(BUILD_DIR)/%,$(MODS))
-$(BUILD_DIR)/$(INITNAME).o : $(INITNAME).f90 $(patsubst %,$(BUILD_DIR)/%,$(MODS))
-$(BUILD_DIR)/$(PPNAME).o   : $(PPNAME).f90   $(patsubst %,$(BUILD_DIR)/%,$(MODS))
+$(BUILD_DIR)/$(BINNAME).o  : $(BINNAME).f90  $(DEPENDLIB) $(patsubst %,$(BUILD_DIR)/%,$(MODS))
+$(BUILD_DIR)/$(INITNAME).o : $(INITNAME).f90 $(DEPENDLIB) $(patsubst %,$(BUILD_DIR)/%,$(MODS))
+$(BUILD_DIR)/$(PPNAME).o   : $(PPNAME).f90   $(DEPENDLIB) $(patsubst %,$(BUILD_DIR)/%,$(MODS))
 
 
 
-$(BUILD_DIR)/mod_atmos_dyn_driver.o       : mod_atmos_dyn_driver.f90    mod_atmos_vars.o
-$(BUILD_DIR)/mod_atmos_vars_sf.o          : mod_atmos_vars_sf.f90
-$(BUILD_DIR)/mod_atmos_phy_sf_driver.o    : mod_atmos_phy_sf_driver.f90 mod_atmos_vars.o mod_atmos_vars_sf.o mod_cpl_vars.o
-$(BUILD_DIR)/mod_atmos_phy_mp_driver.o    : mod_atmos_phy_mp_driver.f90 mod_atmos_vars.o
-$(BUILD_DIR)/mod_atmos_phy_tb_driver.o    : mod_atmos_phy_tb_driver.f90 mod_atmos_vars.o
-$(BUILD_DIR)/mod_atmos_phy_rd_driver.o    : mod_atmos_phy_rd_driver.f90 mod_atmos_vars.o
-$(BUILD_DIR)/mod_atmos_vars.o             : mod_atmos_vars.f90
-$(BUILD_DIR)/mod_atmos.o                  : mod_atmos.f90 mod_atmos_vars.o mod_cpl_vars.o \
+$(BUILD_DIR)/mod_atmos_dyn_driver.o       : mod_atmos_dyn_driver.f90 $(DEPENDLIB) mod_atmos_vars.o
+$(BUILD_DIR)/mod_atmos_vars_sf.o          : mod_atmos_vars_sf.f90 $(DEPENDLIB) 
+$(BUILD_DIR)/mod_atmos_phy_sf_driver.o    : mod_atmos_phy_sf_driver.f90 $(DEPENDLIB) mod_atmos_vars.o mod_atmos_vars_sf.o mod_cpl_vars.o
+$(BUILD_DIR)/mod_atmos_phy_mp_driver.o    : mod_atmos_phy_mp_driver.f90 $(DEPENDLIB) mod_atmos_vars.o
+$(BUILD_DIR)/mod_atmos_phy_tb_driver.o    : mod_atmos_phy_tb_driver.f90 $(DEPENDLIB) mod_atmos_vars.o
+$(BUILD_DIR)/mod_atmos_phy_rd_driver.o    : mod_atmos_phy_rd_driver.f90 $(DEPENDLIB) mod_atmos_vars.o
+$(BUILD_DIR)/mod_atmos_phy_ae_driver.o    : mod_atmos_phy_ae_driver.f90 $(DEPENDLIB) mod_atmos_vars.o
+$(BUILD_DIR)/mod_atmos_vars.o             : mod_atmos_vars.f90 $(DEPENDLIB) 
+$(BUILD_DIR)/mod_atmos.o                  : mod_atmos.f90 $(DEPENDLIB) mod_atmos_vars.o mod_cpl_vars.o \
                                             mod_atmos_dyn_driver.o mod_atmos_phy_sf_driver.o mod_atmos_phy_mp_driver.o mod_atmos_phy_tb_driver.o mod_atmos_phy_rd_driver.o mod_atmos_phy_ae_driver.o
 
-$(BUILD_DIR)/mod_land_phy_bucket.o        : mod_land_phy_bucket.f90 mod_land_vars.o
-$(BUILD_DIR)/mod_land_vars.o              : mod_land_vars.f90
-$(BUILD_DIR)/mod_land.o                   : mod_land.f90 mod_land_vars.o mod_cpl_vars.o mod_land_phy_bucket.o
+$(BUILD_DIR)/mod_land_phy_bucket.o        : mod_land_phy_bucket.f90 $(DEPENDLIB) mod_land_vars.o
+$(BUILD_DIR)/mod_land_vars.o              : mod_land_vars.f90 $(DEPENDLIB) 
+$(BUILD_DIR)/mod_land.o                   : mod_land.f90 $(DEPENDLIB) mod_land_vars.o mod_cpl_vars.o mod_land_phy_bucket.o
 
-$(BUILD_DIR)/mod_ocean_phy_slab.o         : mod_ocean_phy_slab.f90 mod_ocean_vars.o
-$(BUILD_DIR)/mod_ocean_vars.o             : mod_ocean_vars.f90
-$(BUILD_DIR)/mod_ocean.o                  : mod_ocean.f90 mod_ocean_vars.o mod_cpl_vars.o mod_ocean_phy_slab.o
+$(BUILD_DIR)/mod_ocean_phy_slab.o         : mod_ocean_phy_slab.f90 $(DEPENDLIB) mod_ocean_vars.o
+$(BUILD_DIR)/mod_ocean_vars.o             : mod_ocean_vars.f90 $(DEPENDLIB) 
+$(BUILD_DIR)/mod_ocean.o                  : mod_ocean.f90 $(DEPENDLIB) mod_ocean_vars.o mod_cpl_vars.o mod_ocean_phy_slab.o
 
-$(BUILD_DIR)/mod_cpl_atmos_land_driver.o  : mod_cpl_atmos_land_driver.f90 mod_cpl_vars.o mod_land_phy_bucket.o
-$(BUILD_DIR)/mod_cpl_atmos_ocean_driver.o : mod_cpl_atmos_ocean_driver.f90 mod_cpl_vars.o mod_ocean_phy_slab.o
-$(BUILD_DIR)/mod_cpl_vars.o               : mod_cpl_vars.f90
-$(BUILD_DIR)/mod_cpl.o                    : mod_cpl.f90 mod_cpl_vars.o mod_cpl_atmos_land_driver.o mod_cpl_atmos_ocean_driver.o
+$(BUILD_DIR)/mod_cpl_atmos_land_driver.o  : mod_cpl_atmos_land_driver.f90 $(DEPENDLIB) mod_cpl_vars.o mod_land_phy_bucket.o mod_atmos_phy_sf_driver.o
+$(BUILD_DIR)/mod_cpl_atmos_ocean_driver.o : mod_cpl_atmos_ocean_driver.f90 $(DEPENDLIB) mod_cpl_vars.o mod_ocean_phy_slab.o mod_atmos_phy_sf_driver.o
+$(BUILD_DIR)/mod_cpl_vars.o               : mod_cpl_vars.f90 $(DEPENDLIB) 
+$(BUILD_DIR)/mod_cpl.o                    : mod_cpl.f90 $(DEPENDLIB)  mod_cpl_vars.o mod_cpl_atmos_land_driver.o mod_cpl_atmos_ocean_driver.o
 
-$(BUILD_DIR)/mod_mktopo.o                 : mod_mktopo.f90
-$(BUILD_DIR)/mod_mkinit.o                 : mod_mkinit.f90 mod_atmos_vars.o
-$(BUILD_DIR)/mod_cnvboundary.o            : mod_cnvboundary.f90
+$(BUILD_DIR)/mod_mktopo.o                 : mod_mktopo.f90 $(DEPENDLIB) 
+$(BUILD_DIR)/mod_mkinit.o                 : mod_mkinit.f90 $(DEPENDLIB) mod_atmos_vars.o
+$(BUILD_DIR)/mod_cnvboundary.o            : mod_cnvboundary.f90 $(DEPENDLIB) 
 
-$(BUILD_DIR)/mod_user.o                   : mod_user.f90
+$(BUILD_DIR)/mod_user.o                   : mod_user.f90 $(DEPENDLIB) 
 
 
 

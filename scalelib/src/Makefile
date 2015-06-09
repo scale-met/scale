@@ -123,12 +123,18 @@ OBJS = $(scale_rdma)	\
 	scale_tracer_suzuki10.o	\
 	scale_tracer_tomita08.o
 
-all: makedir makedcutils makegtool makesdm $(LIBDIR)/$(LIBNAME) modules
+all:
+	$(MAKE) makedir
+	$(MAKE) makedcutils 
+	$(MAKE) makegtool 
+	$(MAKE) makesdm 
+	$(MAKE) $(LIBDIR)/$(LIBNAME) 
+	$(MAKE) modules
 
 makedir:
-	mkdir -p $(BUILD_DIR)
 	mkdir -p $(MODDIR)
 	mkdir -p $(LIBDIR)
+	mkdir -p $(BUILD_DIR)
 
 makedcutils:
 	$(MAKE) -C $(DCUTILSDIR)
@@ -151,8 +157,8 @@ makesdm: $(BUILD_DIR)/scale_precision.o \
 	$(BUILD_DIR)/scale_grid_real.o \
 	$(BUILD_DIR)/scale_gridtrans.o \
 	$(BUILD_DIR)/scale_process.o
-	cp -f $(SDMDIR)/scale_atmos_phy_mp_sdm.F90 $(SCALELIBDIR)/src/atmos-physics/microphysics/
-	cp -pf $(SDMDIR)/scale_tracer_sdm.F90 $(SCALELIBDIR)/src/atmos-physics/microphysics/
+	rsync -c $(SDMDIR)/scale_atmos_phy_mp_sdm.F90 $(SCALELIBDIR)/src/atmos-physics/microphysics/
+	rsync -c $(SDMDIR)/scale_tracer_sdm.F90 $(SCALELIBDIR)/src/atmos-physics/microphysics/
 	$(MAKE) -C $(MTDIR)
 	$(MAKE) -C $(GAGETRYDIR)
 	$(MAKE) -C $(SDMDIR)
@@ -239,7 +245,7 @@ $(BUILD_DIR)/scale_atmos_phy_rd_profile.o:
 	$(FC) $(FFLAGS)     $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(VERSION)\" -I$(BUILD_DIR) -I$(GTOOLDIR) -I$(DCUTILSDIR) -I$(SCALELIBDIR)/include $(PAPI_INCLUDE) $(NETCDF_INCLUDE) -o $@ -c $< $(MODDIROPT) $(BUILD_DIR)
 ifeq ($(SDM),-D_SDM)
 $(BUILD_DIR)/scale_atmos_phy_mp_sdm.o:
-	$(FC) $(FFLAGS) -Nrt_tune_func   $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(VERSION)\" -I$(BUILD_DIR) -I$(GTOOLDIR) -I$(DCUTILSDIR) $(CONTRIB_INCLUDE) -I$(SCALELIBDIR)/include $(PAPI_INCLUDE) -o $@ -c $< $(MODDIROPT) $(BUILD_DIR)
+	$(FC) $(FFLAGS) $(FFLAGS_SDM_MONIT) $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(VERSION)\" -I$(BUILD_DIR) -I$(GTOOLDIR) -I$(DCUTILSDIR) $(CONTRIB_INCLUDE) -I$(SCALELIBDIR)/include $(PAPI_INCLUDE) -o $@ -c $< $(MODDIROPT) $(BUILD_DIR)
 else
 endif
 $(BUILD_DIR)/%.o : %.c
