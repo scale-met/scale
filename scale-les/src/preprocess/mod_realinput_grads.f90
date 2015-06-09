@@ -97,6 +97,7 @@ module mod_realinput_grads
   character(H_LONG)     :: grads_dtype   (num_item_list)
   character(H_LONG)     :: grads_fname   (num_item_list)
   character(H_SHORT)    :: grads_fendian (num_item_list)
+  character(H_SHORT)    :: grads_yrev    (num_item_list)
   real(RP)              :: grads_swpoint (num_item_list)
   real(RP)              :: grads_dd      (num_item_list)
   integer               :: grads_lnum    (num_item_list)
@@ -165,14 +166,15 @@ contains
     integer              :: knum                                      ! optional: vertical level
     character(H_SHORT)   :: dtype                                     ! 'linear','levels','map'
     character(H_LONG)    :: fname                                     ! head of file name
-    real(RP)             :: swpoint                                   ! start point (south-west point) for linear
-    real(RP)             :: dd                                        ! dlon,dlat for linear
+    real(RP)             :: swpoint                                   ! start point (south-west point) for "linear"
+    real(RP)             :: dd                                        ! dlon,dlat for "linear"
     integer              :: lnum                                      ! number of data
-    real(RP)             :: lvars(lvars_limit) = large_number_one     ! values for levels
+    real(RP)             :: lvars(lvars_limit) = large_number_one     ! values for "levels"
     integer              :: startrec                                  ! record position
     integer              :: totalrec                                  ! total record number per one time
     real(SP)             :: missval                                   ! missing value
-    character(H_SHORT)   :: fendian='big'                             ! option
+    character(H_SHORT)   :: fendian='big'                             ! option for "map"
+    character(H_SHORT)   :: yrev='off'                                ! option for "map", if yrev=on, order of data is NW to SE.
 
     namelist /grdvar/ &
         item,      &  ! necessary
@@ -186,6 +188,7 @@ contains
         totalrec,  &  ! for map data
         missval,   &  ! option
         knum,      &  ! option
+        yrev,      &  ! option
         fendian       ! option
 
 
@@ -318,6 +321,7 @@ contains
           startrec = -99
           totalrec = -99
           knum     = -99
+          yrev     = 'off'
           fendian  = 'big'
           missval  = large_number_one
 
@@ -340,8 +344,9 @@ contains
              grads_startrec(ielem) = startrec
              grads_totalrec(ielem) = totalrec
              grads_knum    (ielem) = knum
-             grads_missval (ielem) = missval
+             grads_yrev    (ielem) = yrev
              grads_fendian (ielem) = fendian
+             grads_missval (ielem) = missval
              data_available(ielem) = .true.
 
              exit
@@ -505,6 +510,7 @@ contains
     integer              :: startrec                                  ! record position
     integer              :: totalrec                                  ! total record number per one time
     character(H_SHORT)   :: fendian='big_endian'                      ! option
+    character(H_SHORT)   :: yrev                                      ! option
 
     ! data
     character(len=H_LONG) :: gfile
@@ -564,6 +570,7 @@ contains
           startrec = grads_startrec(ielem)
           totalrec = grads_totalrec(ielem)
           fendian  = grads_fendian (ielem)
+          yrev     = grads_yrev (ielem)
           if( (startrec<0).or.(totalrec<0) )then
              write(*,*) 'xxx "startrec" is required in grads namelist! ',startrec
              write(*,*) 'xxx "totalrec" is required in grads namelist! ',totalrec
@@ -590,7 +597,7 @@ contains
              enddo
              enddo
           else if ( trim(dtype) == "map" ) then
-             call read_grads_file_2d(io_fid_grads_data,gfile,dims(2),dims(3),1,1,item,startrec,totalrec,gdata2D)
+             call read_grads_file_2d(io_fid_grads_data,gfile,dims(2),dims(3),1,1,item,startrec,totalrec,yrev,gdata2D)
              lon_org(:,:) = real(gdata2D(:,:), kind=RP) * D2R
           endif
        case("lat")
@@ -601,7 +608,7 @@ contains
              enddo
              enddo
           else if ( trim(dtype) == "map" ) then
-             call read_grads_file_2d(io_fid_grads_data,gfile,dims(2),dims(3),1,1,item,startrec,totalrec,gdata2D)
+             call read_grads_file_2d(io_fid_grads_data,gfile,dims(2),dims(3),1,1,item,startrec,totalrec,yrev,gdata2D)
              lat_org(:,:) = real(gdata2D(:,:), kind=RP) * D2R
           endif
        case("plev")
@@ -622,7 +629,7 @@ contains
              enddo
              enddo
           else if ( trim(dtype) == "map" ) then
-             call read_grads_file_3d(io_fid_grads_data,gfile,dims(2),dims(3),dims(1),nt,item,startrec,totalrec,gdata3D)
+             call read_grads_file_3d(io_fid_grads_data,gfile,dims(2),dims(3),dims(1),nt,item,startrec,totalrec,yrev,gdata3D)
              do j = 1, dims(3)
              do i = 1, dims(2)
              do k = 1, dims(1)
@@ -633,7 +640,7 @@ contains
           endif
        case('U')
           if ( trim(dtype) == "map" ) then
-             call read_grads_file_3d(io_fid_grads_data,gfile,dims(2),dims(3),knum,nt,item,startrec,totalrec,gdata3D)
+             call read_grads_file_3d(io_fid_grads_data,gfile,dims(2),dims(3),knum,nt,item,startrec,totalrec,yrev,gdata3D)
              do j = 1, dims(3)
              do i = 1, dims(2)
                 velx_org(1:2,i,j) = 0.0_RP
@@ -650,7 +657,7 @@ contains
           endif
        case('V')
           if ( trim(dtype) == "map" ) then
-             call read_grads_file_3d(io_fid_grads_data,gfile,dims(2),dims(3),knum,nt,item,startrec,totalrec,gdata3D)
+             call read_grads_file_3d(io_fid_grads_data,gfile,dims(2),dims(3),knum,nt,item,startrec,totalrec,yrev,gdata3D)
              do j = 1, dims(3)
              do i = 1, dims(2)
                 vely_org(1:2,i,j) = 0.0_RP
@@ -667,7 +674,7 @@ contains
           endif
        case('T')
           if ( trim(dtype) == "map" ) then
-             call read_grads_file_3d(io_fid_grads_data,gfile,dims(2),dims(3),knum,nt,item,startrec,totalrec,gdata3D)
+             call read_grads_file_3d(io_fid_grads_data,gfile,dims(2),dims(3),knum,nt,item,startrec,totalrec,yrev,gdata3D)
              do j = 1, dims(3)
              do i = 1, dims(2)
                 do k = 1, knum
@@ -687,7 +694,7 @@ contains
              call PRC_MPIstop
           endif
           if ( trim(dtype) == "map" ) then
-             call read_grads_file_3d(io_fid_grads_data,gfile,dims(2),dims(3),dims(1),nt,item,startrec,totalrec,gdata3D)
+             call read_grads_file_3d(io_fid_grads_data,gfile,dims(2),dims(3),dims(1),nt,item,startrec,totalrec,yrev,gdata3D)
              do j = 1, dims(3)
              do i = 1, dims(2)
                 do k = 1, dims(1)
@@ -699,7 +706,7 @@ contains
           endif
        case('QV')
           if ( trim(dtype) == "map" ) then
-             call read_grads_file_3d(io_fid_grads_data,gfile,dims(2),dims(3),knum,nt,item,startrec,totalrec,gdata3D)
+             call read_grads_file_3d(io_fid_grads_data,gfile,dims(2),dims(3),knum,nt,item,startrec,totalrec,yrev,gdata3D)
              do j = 1, dims(3)
              do i = 1, dims(2)
                 do k = 1, knum
@@ -729,7 +736,7 @@ contains
        case('RH')
           if (data_available(Ig_qv)) cycle  ! use QV
           if ( trim(dtype) == "map" ) then
-             call read_grads_file_3d(io_fid_grads_data,gfile,dims(2),dims(3),knum,nt,item,startrec,totalrec,gdata3D)
+             call read_grads_file_3d(io_fid_grads_data,gfile,dims(2),dims(3),knum,nt,item,startrec,totalrec,yrev,gdata3D)
              do j = 1, dims(3)
              do i = 1, dims(2)
                 do k = 1, knum
@@ -767,7 +774,7 @@ contains
           endif
        case('MSLP')
           if ( trim(dtype) == "map" ) then
-             call read_grads_file_2d(io_fid_grads_data,gfile,dims(2),dims(3),1,nt,item,startrec,totalrec,gdata2D)
+             call read_grads_file_2d(io_fid_grads_data,gfile,dims(2),dims(3),1,nt,item,startrec,totalrec,yrev,gdata2D)
              do j = 1, dims(3)
              do i = 1, dims(2)
                 pres_org(1,i,j) = real(gdata2D(i,j), kind=RP)
@@ -776,7 +783,7 @@ contains
           endif
        case('PSFC')
           if ( trim(dtype) == "map" ) then
-             call read_grads_file_2d(io_fid_grads_data,gfile,dims(2),dims(3),1,nt,item,startrec,totalrec,gdata2D)
+             call read_grads_file_2d(io_fid_grads_data,gfile,dims(2),dims(3),1,nt,item,startrec,totalrec,yrev,gdata2D)
              do j = 1, dims(3)
              do i = 1, dims(2)
                 pres_org(2,i,j) = real(gdata2D(i,j), kind=RP)
@@ -785,7 +792,7 @@ contains
           endif
        case('U10')
           if ( trim(dtype) == "map" ) then
-             call read_grads_file_2d(io_fid_grads_data,gfile,dims(2),dims(3),1,nt,item,startrec,totalrec,gdata2D)
+             call read_grads_file_2d(io_fid_grads_data,gfile,dims(2),dims(3),1,nt,item,startrec,totalrec,yrev,gdata2D)
              do j = 1, dims(3)
              do i = 1, dims(2)
                 velx_org(2,i,j) = real(gdata2D(i,j), kind=RP)
@@ -794,7 +801,7 @@ contains
           endif
        case('V10')
           if ( trim(dtype) == "map" ) then
-             call read_grads_file_2d(io_fid_grads_data,gfile,dims(2),dims(3),1,nt,item,startrec,totalrec,gdata2D)
+             call read_grads_file_2d(io_fid_grads_data,gfile,dims(2),dims(3),1,nt,item,startrec,totalrec,yrev,gdata2D)
              do j = 1, dims(3)
              do i = 1, dims(2)
                 vely_org(2,i,j) = real(gdata2D(i,j), kind=RP)
@@ -803,7 +810,7 @@ contains
           endif
        case('T2')
           if ( trim(dtype) == "map" ) then
-             call read_grads_file_2d(io_fid_grads_data,gfile,dims(2),dims(3),1,nt,item,startrec,totalrec,gdata2D)
+             call read_grads_file_2d(io_fid_grads_data,gfile,dims(2),dims(3),1,nt,item,startrec,totalrec,yrev,gdata2D)
              do j = 1, dims(3)
              do i = 1, dims(2)
                 temp_org(2,i,j) = real(gdata2D(i,j), kind=RP)
@@ -812,7 +819,7 @@ contains
           endif
        case('Q2')
           if ( trim(dtype) == "map" ) then
-             call read_grads_file_2d(io_fid_grads_data,gfile,dims(2),dims(3),1,nt,item,startrec,totalrec,gdata2D)
+             call read_grads_file_2d(io_fid_grads_data,gfile,dims(2),dims(3),1,nt,item,startrec,totalrec,yrev,gdata2D)
              do j = 1, dims(3)
              do i = 1, dims(2)
                 qtrc_org(2,i,j,QA_outer) = real(gdata2D(i,j), kind=RP)
@@ -822,7 +829,7 @@ contains
        case('RH2')
           if (data_available(Ig_q2)) cycle  ! use QV
           if ( trim(dtype) == "map" ) then
-             call read_grads_file_2d(io_fid_grads_data,gfile,dims(2),dims(3),1,nt,item,startrec,totalrec,gdata2D)
+             call read_grads_file_2d(io_fid_grads_data,gfile,dims(2),dims(3),1,nt,item,startrec,totalrec,yrev,gdata2D)
              do j = 1, dims(3)
              do i = 1, dims(2)
                 rhsfc = real(gdata2D(i,j), kind=RP) / 100.0_RP   ! relative humidity
@@ -835,7 +842,7 @@ contains
           endif
        case('TOPO')
           if ( trim(dtype) == "map" ) then
-             call read_grads_file_2d(io_fid_grads_data,gfile,dims(2),dims(3),1,nt,item,startrec,totalrec,gdata2D)
+             call read_grads_file_2d(io_fid_grads_data,gfile,dims(2),dims(3),1,nt,item,startrec,totalrec,yrev,gdata2D)
              do j = 1, dims(3)
              do i = 1, dims(2)
                 cz_org(2,i,j) = real(gdata2D(i,j), kind=RP)
@@ -1037,6 +1044,7 @@ contains
     integer              :: totalrec                                  ! total record number per one time
     real(SP)             :: missval                                   ! option
     character(H_SHORT)   :: fendian                                   ! option
+    character(H_SHORT)   :: yrev                                      ! option
 
     !> grads data
     character(len=H_LONG) :: gfile
@@ -1091,6 +1099,7 @@ contains
           startrec = grads_startrec(ielem)
           totalrec = grads_totalrec(ielem)
           fendian  = grads_fendian (ielem)
+          yrev     = grads_yrev (ielem)
           if( (startrec<0).or.(totalrec<0) )then
              write(*,*) 'xxx "startrec" is required in grads namelist! ',startrec
              write(*,*) 'xxx "totalrec" is required in grads namelist! ',totalrec
@@ -1112,7 +1121,7 @@ contains
        case("lsmask")
           if ( data_available(Ig_lsmask) ) then
              if ( trim(dtype) == "map" ) then
-                call read_grads_file_2d(io_fid_grads_data,gfile,dims(8),dims(9),1,1,item,startrec,totalrec,gland2D)
+                call read_grads_file_2d(io_fid_grads_data,gfile,dims(8),dims(9),1,1,item,startrec,totalrec,yrev,gland2D)
                 lsmask_org(:,:) = real(gland2D(:,:), kind=RP)
              endif
           else
@@ -1133,7 +1142,7 @@ contains
                 enddo
                 enddo
              else if ( trim(dtype) == "map" ) then
-                call read_grads_file_2d(io_fid_grads_data,gfile,dims(8),dims(9),1,1,item,startrec,totalrec,gland2D)
+                call read_grads_file_2d(io_fid_grads_data,gfile,dims(8),dims(9),1,1,item,startrec,totalrec,yrev,gland2D)
                 llon_org(:,:) = real(gland2D(:,:), kind=RP) * D2R
              endif
           end if
@@ -1155,7 +1164,7 @@ contains
              enddo
              enddo
           else if ( trim(dtype) == "map" ) then
-             call read_grads_file_2d(io_fid_grads_data,gfile,dims(8),dims(9),1,1,item,startrec,totalrec,gland2D)
+             call read_grads_file_2d(io_fid_grads_data,gfile,dims(8),dims(9),1,1,item,startrec,totalrec,yrev,gland2D)
              llon_org(:,:) = real(gland2D(:,:), kind=RP) * D2R
           endif
           if ( .not. data_available(Ig_lon_sst) ) then
@@ -1177,7 +1186,7 @@ contains
              enddo
              enddo
           else if ( trim(dtype) == "map" ) then
-             call read_grads_file_2d(io_fid_grads_data,gfile,dims(10),dims(11),1,1,item,startrec,totalrec,gsst2D)
+             call read_grads_file_2d(io_fid_grads_data,gfile,dims(10),dims(11),1,1,item,startrec,totalrec,yrev,gsst2D)
              olon_org(:,:) = real(gsst2D(:,:), kind=RP) * D2R
           endif
        case("lat")
@@ -1195,7 +1204,7 @@ contains
                 enddo
                 enddo
              else if ( trim(dtype) == "map" ) then
-                call read_grads_file_2d(io_fid_grads_data,gfile,dims(8),dims(9),1,1,item,startrec,totalrec,gland2D)
+                call read_grads_file_2d(io_fid_grads_data,gfile,dims(8),dims(9),1,1,item,startrec,totalrec,yrev,gland2D)
                 llat_org(:,:) = real(gland2D(:,:), kind=RP) * D2R
              endif
              if ( .not. data_available(Ig_lat_sst) ) then
@@ -1217,7 +1226,7 @@ contains
              enddo
              enddo
           else if ( trim(dtype) == "map" ) then
-             call read_grads_file_2d(io_fid_grads_data,gfile,dims(8),dims(9),1,1,item,startrec,totalrec,gland2D)
+             call read_grads_file_2d(io_fid_grads_data,gfile,dims(8),dims(9),1,1,item,startrec,totalrec,yrev,gland2D)
              llat_org(:,:) = real(gland2D(:,:), kind=RP) * D2R
           endif
           if ( .not. data_available(Ig_lat_sst) ) then
@@ -1239,7 +1248,7 @@ contains
              enddo
              enddo
           else if ( trim(dtype) == "map" ) then
-             call read_grads_file_2d(io_fid_grads_data,gfile,dims(10),dims(11),1,1,item,startrec,totalrec,gsst2D)
+             call read_grads_file_2d(io_fid_grads_data,gfile,dims(10),dims(11),1,1,item,startrec,totalrec,yrev,gsst2D)
              olat_org(:,:) = real(gsst2D(:,:), kind=RP) * D2R
           endif
        case("llev")
@@ -1256,7 +1265,7 @@ contains
                 lz_org(k) = real(lvars(k), kind=RP)
              enddo
 !          else if ( trim(dtype) == "map" ) then
-!             call read_grads_file_3d(io_fid_grads_data,gfile,dims(8),dims(9),dims(7),nt,item,startrec,totalrec,gland)
+!             call read_grads_file_3d(io_fid_grads_data,gfile,dims(8),dims(9),dims(7),nt,item,startrec,totalrec,yrev,gland)
 !             do j = 1, dims(9)
 !             do i = 1, dims(8)
 !             do k = 1, dims(7)
@@ -1271,7 +1280,7 @@ contains
              call PRC_MPIstop
           endif
           if ( trim(dtype) == "map" ) then
-             call read_grads_file_3d(io_fid_grads_data,gfile,dims(8),dims(9),dims(7),nt,item,startrec,totalrec,gland3D)
+             call read_grads_file_3d(io_fid_grads_data,gfile,dims(8),dims(9),dims(7),nt,item,startrec,totalrec,yrev,gland3D)
              do j = 1, dims(9)
              do i = 1, dims(8)
              do k = 1, dims(7)
@@ -1291,7 +1300,7 @@ contains
                 call PRC_MPIstop
              endif
              if ( trim(dtype) == "map" ) then
-                call read_grads_file_3d(io_fid_grads_data,gfile,dims(8),dims(9),dims(7),nt,item,startrec,totalrec,gland3D)
+                call read_grads_file_3d(io_fid_grads_data,gfile,dims(8),dims(9),dims(7),nt,item,startrec,totalrec,yrev,gland3D)
                 do j = 1, dims(9)
                 do i = 1, dims(8)
                 do k = 1, dims(7)
@@ -1307,7 +1316,7 @@ contains
           endif
        case('SKINT')
           if ( trim(dtype) == "map" ) then
-             call read_grads_file_2d(io_fid_grads_data,gfile,dims(8),dims(9),1,nt,item,startrec,totalrec,gland2D)
+             call read_grads_file_2d(io_fid_grads_data,gfile,dims(8),dims(9),1,nt,item,startrec,totalrec,yrev,gland2D)
              do j = 1, dims(9)
              do i = 1, dims(8)
                 if ( abs(gland2D(i,j)-missval) < EPS ) then
@@ -1321,7 +1330,7 @@ contains
        case('SST')
           if ( .not. data_available(Ig_sst) ) cycle
           if ( trim(dtype) == "map" ) then
-             call read_grads_file_2d(io_fid_grads_data,gfile,dims(10),dims(11),1,nt,item,startrec,totalrec,gsst2D)
+             call read_grads_file_2d(io_fid_grads_data,gfile,dims(10),dims(11),1,nt,item,startrec,totalrec,yrev,gsst2D)
              do j = 1, dims(11)
              do i = 1, dims(10)
                 if ( abs(gsst2D(i,j)-missval) < EPS ) then
@@ -1395,6 +1404,7 @@ contains
        item,                      &
        startrec,                  &
        totalrec,                  &
+       yrev,                      &
        gdata                      )
     implicit none
     integer,     intent(in)  :: io_fid
@@ -1403,7 +1413,10 @@ contains
     character(*),intent(in)  :: item
     integer,     intent(in)  :: startrec
     integer,     intent(in)  :: totalrec
+    character(*),intent(in)  :: yrev
     real(SP),    intent(out) :: gdata(nx,ny)
+
+    real(SP) :: work(nx,ny)
 
     integer  :: ierr
     integer  :: irec, irecl
@@ -1417,6 +1430,16 @@ contains
        write(*,*) 'xxx grads data does not found! ',trim(item),it
        call PRC_MPIstop
     endif
+
+    if( trim(yrev) == "on" )then
+       work(:,:)=gdata(:,:)
+       do j=1,ny
+       do i=1,nx
+          gdata(i,j)=work(i,ny-j+1)
+       enddo
+       enddo
+    endif
+
     call close_grads_file(io_fid,gfile)
 
     return
@@ -1430,15 +1453,19 @@ contains
        item,                      &
        startrec,                  &
        totalrec,                  &
+       yrev,                      &
        gdata                      )
     implicit none
     integer,intent(in)      :: io_fid
     character(*),intent(in) :: gfile
     integer,     intent(in) :: nx,ny,nz,it
     character(*),intent(in) :: item
-    integer,intent(in)      :: startrec
-    integer,intent(in)      :: totalrec
+    integer,     intent(in) :: startrec
+    integer,     intent(in) :: totalrec
+    character(*),intent(in) :: yrev
     real(SP),intent(out)    :: gdata(nx,ny,nz)
+
+    real(SP) :: work(nx,ny,nz)
 
     integer  :: ierr
     integer  :: irec,irecl
@@ -1454,6 +1481,18 @@ contains
           call PRC_MPIstop
        endif
     enddo
+
+    if( trim(yrev) == "on" )then
+       work(:,:,:)=gdata(:,:,:)
+       do k=1,nz
+       do j=1,ny
+       do i=1,nx
+          gdata(i,j,k)=work(i,ny-j+1,k)
+       enddo
+       enddo
+       enddo
+    endif
+
     call close_grads_file(io_fid,gfile)
 
     return
