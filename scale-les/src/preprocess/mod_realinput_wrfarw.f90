@@ -202,6 +202,7 @@ contains
     ! full level
     real(RP) :: velx_org(dims(1)+2,dims(2),dims(3))
     real(RP) :: vely_org(dims(1)+2,dims(2),dims(3))
+    real(RP) :: pott_org(dims(1)+2,dims(2),dims(3))
     real(RP) :: topo_org(          dims(2),dims(3))
 
     ! half level
@@ -210,7 +211,6 @@ contains
     real(RP) :: velys_org(dims(1),dims(2),dims(6))
     real(RP) :: geof_org (dims(4),dims(2),dims(3))
 
-    real(RP) :: pott
     real(RP) :: qhyd
 
     integer :: k, i, j, iq
@@ -366,7 +366,7 @@ contains
 
 
     call ExternalFileRead( read_zxy(:,:,:,:), BASENAME, varname_T, it, it, myrank, mdlid, single=.true.               )
-    temp_org(3:,:,:) = real( read_zxy(:,:,:,1), kind=RP ) + t0
+    pott_org(3:,:,:) = real( read_zxy(:,:,:,1), kind=RP ) + t0
     call ExternalFileRead( read_xy(:,:,:),    BASENAME, "T2",      it, it, myrank, mdlid, single=.true.               )
     temp_org(2,:,:) = real( read_xy(:,:,1), kind=RP )
 
@@ -377,10 +377,11 @@ contains
     do i = 1, dims(2)
        do k = 3, dims(1)+2
           pres_org(k,i,j) = p_org(k,i,j) + pb_org(k,i,j)
+          temp_org(k,i,j) = pott_org(k,i,j) * ( pres_org(k,i,j) / p0 )**RCP
        end do
-       pott = temp_org(2,i,j) * ( p0/pres_org(2,i,j) )**RCP
+       pott_org(2,i,j) = temp_org(2,i,j) * ( p0/pres_org(2,i,j) )**RCP
        temp_org(1,i,j) = temp_org(2,i,j) + LAPS * topo_org(i,j)
-       pres_org(1,i,j) = p0 * ( temp_org(1,i,j) / pott )**(1.0_RP/RCP)
+       pres_org(1,i,j) = p0 * ( temp_org(1,i,j) / pott_org(2,i,j) )**(1.0_RP/RCP) ! pott_org(1,i,j) == pott_org(2,i,j)
     end do
     end do
 
