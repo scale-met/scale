@@ -163,9 +163,9 @@ contains
     call ATMOS_SURFACE_SET( countup =.true. )
 
     !########## History & Monitor ##########
-    call PROF_rapstart('ATM History Vars', 1)
+    call PROF_rapstart('ATM_History', 1)
     call ATMOS_vars_history
-    call PROF_rapend  ('ATM History Vars', 1)
+    call PROF_rapend  ('ATM_History', 1)
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** Finish setup of each atmospheric components.'
@@ -245,9 +245,9 @@ contains
 
     !########## Dynamics ##########
     if ( ATMOS_sw_dyn ) then
-       call PROF_rapstart('ATM Dynamics', 1)
+       call PROF_rapstart('ATM_Dynamics', 1)
        call ATMOS_DYN_driver( do_dyn )
-       call PROF_rapend  ('ATM Dynamics', 1)
+       call PROF_rapend  ('ATM_Dynamics', 1)
     endif
 
     !########## Lateral/Top Boundary Condition ###########
@@ -268,61 +268,61 @@ contains
 
     !########## Microphysics ##########
     if ( ATMOS_sw_phy_mp ) then
-       call PROF_rapstart('ATM Microphysics', 1)
+       call PROF_rapstart('ATM_Microphysics', 1)
        call ATMOS_PHY_MP_driver( update_flag = do_phy_mp )
-       call PROF_rapend  ('ATM Microphysics', 1)
+       call PROF_rapend  ('ATM_Microphysics', 1)
     endif
 
     !########## Aerosol ##########
     if ( ATMOS_sw_phy_ae ) then
-       call PROF_rapstart('ATM Aerosol', 1)
+       call PROF_rapstart('ATM_Aerosol', 1)
        call ATMOS_PHY_AE_driver( update_flag = do_phy_ae )
-       call PROF_rapend  ('ATM Aerosol', 1)
+       call PROF_rapend  ('ATM_Aerosol', 1)
     endif
 
     !########## Chemistry ##########
     if ( ATMOS_sw_phy_ch ) then
-       call PROF_rapstart('ATM Chemistry', 1)
+       call PROF_rapstart('ATM_Chemistry', 1)
        call ATMOS_PHY_CH_driver( update_flag = do_phy_ch )
-       call PROF_rapend  ('ATM Chemistry', 1)
+       call PROF_rapend  ('ATM_Chemistry', 1)
     endif
 
     !########## Radiation ##########
     if ( ATMOS_sw_phy_rd ) then
-       call PROF_rapstart('ATM Radiation', 1)
+       call PROF_rapstart('ATM_Radiation', 1)
        call ATMOS_PHY_RD_driver( update_flag = do_phy_rd )
-       call PROF_rapend  ('ATM Radiation', 1)
+       call PROF_rapend  ('ATM_Radiation', 1)
     endif
 
     !########## Surface Flux ##########
     if ( ATMOS_sw_phy_sf ) then
-       call PROF_rapstart('ATM SurfaceFlux', 1)
+       call PROF_rapstart('ATM_SurfaceFlux', 1)
        call ATMOS_PHY_SF_driver( update_flag = do_phy_sf )
-       call PROF_rapend  ('ATM SurfaceFlux', 1)
+       call PROF_rapend  ('ATM_SurfaceFlux', 1)
     endif
 
     !########## Turbulence ##########
     if ( ATMOS_sw_phy_tb ) then
-       call PROF_rapstart('ATM Turbulence', 1)
+       call PROF_rapstart('ATM_Turbulence', 1)
        call ATMOS_PHY_TB_driver( update_flag = do_phy_tb )
-       call PROF_rapend  ('ATM Turbulence', 1)
+       call PROF_rapend  ('ATM_Turbulence', 1)
     endif
 
     !########## Cumulus ##########
     if ( ATMOS_sw_phy_cp ) then
-       call PROF_rapstart('ATM Cumulus', 1)
+       call PROF_rapstart('ATM_Cumulus', 1)
        call ATMOS_PHY_CP_driver( update_flag = do_phy_cp )
-       call PROF_rapend  ('ATM Cumulus', 1)
+       call PROF_rapend  ('ATM_Cumulus', 1)
     endif
 
     !########## Set Surface Boundary Condition ##########
     call ATMOS_SURFACE_SET( countup =.true. )
 
     !########## History & Monitor ##########
-    call PROF_rapstart('ATM History Vars', 1)
+    call PROF_rapstart('ATM_History', 1)
     call ATMOS_vars_history
     call ATMOS_vars_monitor
-    call PROF_rapend  ('ATM History Vars', 1)
+    call PROF_rapend  ('ATM_History', 1)
 
     return
   end subroutine ATMOS_driver

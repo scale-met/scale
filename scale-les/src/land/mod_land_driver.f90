@@ -74,9 +74,9 @@ contains
 
     !########## History & Monitor ##########
     if ( LAND_sw ) then
-       call PROF_rapstart('LND History', 1)
+       call PROF_rapstart('LND_History', 1)
        call LAND_vars_history
-       call PROF_rapend  ('LND History', 1)
+       call PROF_rapend  ('LND_History', 1)
     endif
 
     return
@@ -112,9 +112,9 @@ contains
 
     !########## Physics ##########
     if ( LAND_sw ) then
-       call PROF_rapstart('LND Physics', 1)
+       call PROF_rapstart('LND_Physics', 1)
        call LAND_PHY_driver( update_flag = .true. )
-       call PROF_rapend  ('LND Physics', 1)
+       call PROF_rapend  ('LND_Physics', 1)
     endif
 
     !########## Update ##########
@@ -166,9 +166,9 @@ contains
     enddo
 
     !########## History & Monitor ##########
-    call PROF_rapstart('LND History', 1)
+    call PROF_rapstart('LND_History', 1)
     call LAND_vars_history
-    call PROF_rapend  ('LND History', 1)
+    call PROF_rapend  ('LND_History', 1)
 
     return
   end subroutine LAND_driver

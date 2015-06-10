@@ -72,9 +72,9 @@ contains
 
        if( .NOT. RESTART_RUN ) then
           ! run once (only for the diagnostic value)
-          call PROF_rapstart('OCN Physics', 1)
+          call PROF_rapstart('OCN_Physics', 1)
           call OCEAN_PHY_driver( update_flag = .true. )
-          call PROF_rapend  ('OCN Physics', 1)
+          call PROF_rapend  ('OCN_Physics', 1)
        else
           ! no update in order to use restart value
        end if

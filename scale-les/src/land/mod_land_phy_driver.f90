@@ -72,9 +72,9 @@ contains
 
        if( .NOT. RESTART_RUN ) then
           ! run once (only for the diagnostic value)
-          call PROF_rapstart('LND Physics', 1)
+          call PROF_rapstart('LND_Physics', 1)
           call LAND_PHY_driver( update_flag = .true. )
-          call PROF_rapend  ('LND Physics', 1)
+          call PROF_rapend  ('LND_Physics', 1)
        else
           ! no update in order to use restart value
        end if

@@ -259,7 +259,7 @@ contains
 
   !########## main ##########
 
-  call PROF_rapstart('Main')
+  call PROF_rapstart('Main_Init(Total)')
 
   ! execute mktopo
   call PROF_rapstart('MkTopo')
@@ -274,7 +274,7 @@ contains
   call MKINIT
   call PROF_rapend  ('MkInit')
 
-  call PROF_rapend('Main')
+  call PROF_rapend('Main_Init(Total)')
 
   !########## Finalize ##########
 

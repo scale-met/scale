@@ -89,9 +89,9 @@ contains
        endif
 
        ! run once (only for the diagnostic value)
-       call PROF_rapstart('ATM SurfaceFlux', 1)
+       call PROF_rapstart('ATM_SurfaceFlux', 1)
        call ATMOS_PHY_SF_driver( update_flag = .true. )
-       call PROF_rapend  ('ATM SurfaceFlux', 1)
+       call PROF_rapend  ('ATM_SurfaceFlux', 1)
 
     else
 

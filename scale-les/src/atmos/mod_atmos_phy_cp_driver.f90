@@ -65,9 +65,9 @@ contains
        !call ATMOS_PHY_CP_setup( ATMOS_PHY_CP_TYPE )
 
        ! run once (only for the diagnostic value)
-       call PROF_rapstart('ATM Cumulus', 1)
+       call PROF_rapstart('ATM_Cumulus', 1)
        call ATMOS_PHY_CP_driver( update_flag = .true. )
-       call PROF_rapend  ('ATM Cumulus', 1)
+       call PROF_rapend  ('ATM_Cumulus', 1)
 
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** this component is never called.'

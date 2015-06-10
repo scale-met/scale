@@ -394,7 +394,7 @@ contains
 
     if( MONIT_id_count == 0 ) return
 
-    call PROF_rapstart('FILE O ASCII', 2)
+    call PROF_rapstart('FILE_O_ASCII', 2)
 
     if (firsttime) then
        firsttime = .false.
@@ -413,7 +413,7 @@ contains
 
     endif
 
-    call PROF_rapend  ('FILE O ASCII', 2)
+    call PROF_rapend  ('FILE_O_ASCII', 2)
 
     return
   end subroutine MONIT_write

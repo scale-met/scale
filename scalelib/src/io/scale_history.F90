@@ -122,7 +122,7 @@ contains
     if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_HIST)
 
 
-    call PROF_rapstart('FILE O NetCDF', 2)
+    call PROF_rapstart('FILE_O_NetCDF', 2)
 
     rankidx(1) = PRC_2Drank(PRC_myrank, 1)
     rankidx(2) = PRC_2Drank(PRC_myrank, 2)
@@ -163,7 +163,7 @@ contains
 
     call HIST_put_axes
 
-    call PROF_rapend  ('FILE O NetCDF', 2)
+    call PROF_rapend  ('FILE_O_NetCDF', 2)
 
     return
   end subroutine HIST_setup
@@ -493,7 +493,7 @@ contains
     character(len=16) :: dims(3)
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('FILE O NetCDF', 2)
+    call PROF_rapstart('FILE_O_NetCDF', 2)
 
     if ( ndim == 1 ) then
 
@@ -565,7 +565,7 @@ contains
                              zinterp,      & ! [OUT]
                              existed       ) ! [OUT]
 
-    call PROF_rapend  ('FILE O NetCDF', 2)
+    call PROF_rapend  ('FILE_O_NetCDF', 2)
 
     return
   end subroutine HIST_reg
@@ -590,11 +590,11 @@ contains
 
     if ( itemid < 0 ) return
 
-    call PROF_rapstart('FILE O NetCDF', 2)
+    call PROF_rapstart('FILE_O_NetCDF', 2)
 
     call HistoryQuery(itemid, TIME_NOWSTEP, answer)
 
-    call PROF_rapend  ('FILE O NetCDF', 2)
+    call PROF_rapend  ('FILE_O_NetCDF', 2)
 
     return
   end subroutine HIST_query
@@ -619,7 +619,7 @@ contains
 
     if ( itemid < 0 ) return
 
-    call PROF_rapstart('FILE O NetCDF', 2)
+    call PROF_rapstart('FILE_O_NetCDF', 2)
 
     do k = 1, KMAX
        var2(k) = var(KS+k-1)
@@ -627,7 +627,7 @@ contains
 
     call HistoryPut(itemid, TIME_NOWSTEP, var2)
 
-    call PROF_rapend  ('FILE O NetCDF', 2)
+    call PROF_rapend  ('FILE_O_NetCDF', 2)
 
     return
   end subroutine HIST_put_1D
@@ -658,7 +658,7 @@ contains
 
     if ( itemid < 0 ) return
 
-    call PROF_rapstart('FILE O NetCDF', 2)
+    call PROF_rapstart('FILE_O_NetCDF', 2)
 
     do j = 1, jm
     do i = 1, im
@@ -698,7 +698,7 @@ contains
 
     call HistoryPut(itemid, TIME_NOWSTEP, var2)
 
-    call PROF_rapend  ('FILE O NetCDF', 2)
+    call PROF_rapend  ('FILE_O_NetCDF', 2)
 
     return
   end subroutine HIST_put_2D
@@ -751,7 +751,7 @@ contains
 
     if ( itemid < 0 ) return
 
-    call PROF_rapstart('FILE O NetCDF', 2)
+    call PROF_rapstart('FILE_O_NetCDF', 2)
 
     xd = ''
     yd = ''
@@ -837,10 +837,10 @@ contains
        if (       ksize == KMAX    &
             .AND. zinterp          &
             .AND. INTERP_available ) then
-          call PROF_rapstart('FILE O Interpolation', 2)
+          call PROF_rapstart('FILE_O_interp', 2)
           call INTERP_vertical_xi2z( var  (:,:,:), & ! [IN]
                                      var_Z(:,:,:)  ) ! [OUT]
-          call PROF_rapend  ('FILE O Interpolation', 2)
+          call PROF_rapend  ('FILE_O_interp', 2)
 
           do k = 1, ksize
           do j = 1, jsize
@@ -898,7 +898,7 @@ contains
 
     endif
 
-    call PROF_rapend  ('FILE O NetCDF', 2)
+    call PROF_rapend  ('FILE_O_NetCDF', 2)
 
     return
   end subroutine HIST_put_3D
@@ -1066,7 +1066,7 @@ contains
     logical :: am
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('FILE I NetCDF', 2)
+    call PROF_rapstart('FILE_I_NetCDF', 2)
 
     am = .false.
     if( present(allow_missing) ) am = allow_missing
@@ -1077,7 +1077,7 @@ contains
                      step,            & ! [IN]
                      allow_missing=am ) ! [IN]
 
-    call PROF_rapend  ('FILE I NetCDF', 2)
+    call PROF_rapend  ('FILE_I_NetCDF', 2)
 
     return
   end subroutine HIST_get_1D
@@ -1104,7 +1104,7 @@ contains
     logical :: am
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('FILE I NetCDF', 2)
+    call PROF_rapstart('FILE_I_NetCDF', 2)
 
     am = .false.
     if( present(allow_missing) ) am = allow_missing
@@ -1115,7 +1115,7 @@ contains
                      step,            & ! [IN]
                      allow_missing=am ) ! [IN]
 
-    call PROF_rapend  ('FILE I NetCDF', 2)
+    call PROF_rapend  ('FILE_I_NetCDF', 2)
 
     return
   end subroutine HIST_get_2D
@@ -1142,7 +1142,7 @@ contains
     logical :: am
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('FILE I NetCDF', 2)
+    call PROF_rapstart('FILE_I_NetCDF', 2)
 
     am = .false.
     if( present(allow_missing) ) am = allow_missing
@@ -1153,7 +1153,7 @@ contains
                      step,            & ! [IN]
                      allow_missing=am ) ! [IN]
 
-    call PROF_rapend  ('FILE I NetCDF', 2)
+    call PROF_rapend  ('FILE_I_NetCDF', 2)
 
     return
   end subroutine HIST_get_3D
@@ -1168,11 +1168,11 @@ contains
     implicit none
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('FILE O NetCDF', 2)
+    call PROF_rapstart('FILE_O_NetCDF', 2)
 
     call HistoryWriteAll( TIME_NOWSTEP ) ![IN]
 
-    call PROF_rapend  ('FILE O NetCDF', 2)
+    call PROF_rapend  ('FILE_O_NetCDF', 2)
 
     return
   end subroutine HIST_write

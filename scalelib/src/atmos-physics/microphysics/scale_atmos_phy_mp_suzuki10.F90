@@ -689,7 +689,7 @@ call START_COLLECTION("MICROPHYSICS")
      enddo
     end if
 
-    call PROF_rapstart('MPX ijkconvert')
+    call PROF_rapstart('MP_ijkconvert')
     dz (:) = GRID_CDZ(:)
     dzh(1) = GRID_FDZ(1)
     dzh(2:KA) = GRID_FDZ(1:KA-1)
@@ -772,7 +772,7 @@ call START_COLLECTION("MICROPHYSICS")
     endif
 
 
-    call PROF_rapend  ('MPX ijkconvert')
+    call PROF_rapend  ('MP_ijkconvert')
 
     !--- Calculate Super saturation
     do k = KS, KE
@@ -898,7 +898,7 @@ call START_COLLECTION("MICROPHYSICS")
      end do
     end if
 
-    call PROF_rapstart('MPX ijkconvert')
+    call PROF_rapstart('MP_ijkconvert')
     AMR(:,:,:) = 0.0_RP
     do j = JS, JE
      do i = IS, IE
@@ -1017,7 +1017,7 @@ call START_COLLECTION("MICROPHYSICS")
     SFLX_rain(:,:) = flux_rain(KS-1,:,:)
     SFLX_snow(:,:) = flux_snow(KS-1,:,:)
 
-    call PROF_rapend  ('MPX ijkconvert')
+    call PROF_rapend  ('MP_ijkconvert')
 
     call COMM_vars8( DENS(:,:,:), 1 )
     call COMM_vars8( MOMZ(:,:,:), 2 )

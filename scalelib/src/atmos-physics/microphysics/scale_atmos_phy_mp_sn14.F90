@@ -1433,7 +1433,7 @@ contains
     ! 1.Nucleation of cloud water and cloud ice
     !
     !----------------------------------------------------------------------------
-    call PROF_rapstart('MP Preprocess', 2)
+    call PROF_rapstart('MP_Preprocess', 2)
 
     do j = JS, JE
     do i = IS, IE
@@ -1517,9 +1517,9 @@ contains
     enddo
     enddo
 
-    call PROF_rapend  ('MP Preprocess', 2)
+    call PROF_rapend  ('MP_Preprocess', 2)
 
-    call PROF_rapstart('MP Nucleation', 2)
+    call PROF_rapstart('MP_Nucleation', 2)
 
     call nucleation_kij(    &
          z, velz,           & ! in
@@ -1573,13 +1573,13 @@ contains
     if( opt_debug_tem ) call debug_tem_kij( 2, temp(:,:,:), DENS(:,:,:), pres(:,:,:), QTRC(:,:,:,I_QV) )
 
 
-    call PROF_rapend  ('MP Nucleation', 2)
+    call PROF_rapend  ('MP_Nucleation', 2)
     !----------------------------------------------------------------------------
     !
     ! 2.Phase change: Freezing, Melting, Vapor deposition
     !
     !----------------------------------------------------------------------------
-    call PROF_rapstart('MP Phase change', 2)
+    call PROF_rapstart('MP_Phase_change', 2)
 
     do j = JS, JE
     do i = IS, IE
@@ -1674,14 +1674,14 @@ contains
 !    if( opt_debug )     call debugreport_phasechange
     if( opt_debug_tem ) call debug_tem_kij( 3, temp(:,:,:), DENS(:,:,:), pres(:,:,:), QTRC(:,:,:,I_QV) )
 
-    call PROF_rapend  ('MP Phase change', 2)
+    call PROF_rapend  ('MP_Phase_change', 2)
 
     !---------------------------------------------------------------------------
     !
     ! 3.Collection process
     !
     !---------------------------------------------------------------------------
-    call PROF_rapstart('MP Collection', 2)
+    call PROF_rapstart('MP_Collection', 2)
 
     ! parameter setting
     do j = JS, JE
@@ -1924,9 +1924,9 @@ contains
     enddo
     PROFILE_STOP("sn14_update_rhoq")
 
-    call PROF_rapend  ('MP Collection', 2)
+    call PROF_rapend  ('MP_Collection', 2)
 
-    call PROF_rapstart('MP Postprocess', 2)
+    call PROF_rapstart('MP_Postprocess', 2)
 
     !--- update mixing ratio
     do j  = JS, JE
@@ -1961,22 +1961,22 @@ contains
        enddo
     enddo
 
-    call PROF_rapend  ('MP Postprocess', 2)
+    call PROF_rapend  ('MP_Postprocess', 2)
 
     !----------------------------------------------------------------------------
     !
     ! 4.Saturation adjustment
     !
     !----------------------------------------------------------------------------
-    call PROF_rapstart('MP Saturation adjustment', 2)
+    call PROF_rapstart('MP_Saturation_adjustment', 2)
     ! nothing to do
-    call PROF_rapend  ('MP Saturation adjustment', 2)
+    call PROF_rapend  ('MP_Saturation_adjustment', 2)
     !----------------------------------------------------------------------------
     !
     ! 5. Sedimentation ( terminal velocity must be negative )
     !
     !----------------------------------------------------------------------------
-    call PROF_rapstart('MP Sedimentation', 2)
+    call PROF_rapstart('MP_Sedimentation', 2)
 
     if ( MP_doprecipitation ) then
 
@@ -2029,7 +2029,7 @@ contains
     end do
     end do
 
-    call PROF_rapend  ('MP Sedimentation', 2)
+    call PROF_rapend  ('MP_Sedimentation', 2)
 
     return
   end subroutine mp_sn14
@@ -4181,7 +4181,7 @@ contains
     integer :: k, i, j, iq
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('MP filter', 2)
+    call PROF_rapstart('MP_filter', 2)
 
     r_xmin = 1.0_RP / xmin_filter
 
@@ -4251,7 +4251,7 @@ contains
     enddo
     enddo
 
-    call PROF_rapend('MP filter', 2)
+    call PROF_rapend('MP_filter', 2)
 
     return
   end subroutine MP_negativefilter

@@ -76,9 +76,9 @@ contains
 
     !########## History & Monitor ##########
     if ( OCEAN_sw ) then
-       call PROF_rapstart('OCN History', 1)
+       call PROF_rapstart('OCN_History', 1)
        call OCEAN_vars_history
-       call PROF_rapend  ('OCN History', 1)
+       call PROF_rapend  ('OCN_History', 1)
     endif
 
     return
@@ -120,16 +120,16 @@ contains
 
     !########## Physics ##########
     if ( OCEAN_sw ) then
-       call PROF_rapstart('OCN Physics', 1)
+       call PROF_rapstart('OCN_Physics', 1)
        call OCEAN_PHY_driver( update_flag = .true. )
-       call PROF_rapend  ('OCN Physics', 1)
+       call PROF_rapend  ('OCN_Physics', 1)
     endif
 
     !########## Forcing ##########
 !    if ( OCEAN_FORCE_sw ) then
-!       call PROF_rapstart('OCN Forcing', 1)
+!       call PROF_rapstart('OCN_Forcing', 1)
 !       call OCEAN_forcing
-!       call PROF_rapend  ('OCN Forcing', 1)
+!       call PROF_rapend  ('OCN_Forcing', 1)
 !    endif
 
     !########## Update ##########
@@ -164,9 +164,9 @@ contains
     enddo
 
     !########## History & Monitor ##########
-    call PROF_rapstart('OCN History', 1)
+    call PROF_rapstart('OCN_History', 1)
     call OCEAN_vars_history
-    call PROF_rapend  ('OCN History', 1)
+    call PROF_rapend  ('OCN_History', 1)
 
     return
   end subroutine OCEAN_driver

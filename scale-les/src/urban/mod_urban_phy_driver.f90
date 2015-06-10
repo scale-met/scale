@@ -68,9 +68,9 @@ contains
 
        if( .NOT. RESTART_RUN ) then
           ! run once (only for the diagnostic value)
-          call PROF_rapstart('URB Physics', 1)
+          call PROF_rapstart('URB_Physics', 1)
           call URBAN_PHY_driver( update_flag = .true. )
-          call PROF_rapend  ('URB Physics', 1)
+          call PROF_rapend  ('URB_Physics', 1)
        else
           ! no update in order to use restart value
        end if

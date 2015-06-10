@@ -68,9 +68,9 @@ contains
        call ATMOS_PHY_MP_setup( ATMOS_PHY_MP_TYPE )
 
        ! run once (only for the diagnostic value)
-       call PROF_rapstart('ATM Microphysics', 1)
+       call PROF_rapstart('ATM_Microphysics', 1)
        call ATMOS_PHY_MP_driver( update_flag = .true. )
-       call PROF_rapend  ('ATM Microphysics', 1)
+       call PROF_rapend  ('ATM_Microphysics', 1)
 
     else
 

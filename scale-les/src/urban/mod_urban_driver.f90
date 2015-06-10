@@ -69,9 +69,9 @@ contains
 
     !########## History & Monitor ##########
     if ( URBAN_sw ) then
-       call PROF_rapstart('URB History', 1)
+       call PROF_rapstart('URB_History', 1)
        call URBAN_vars_history
-       call PROF_rapend  ('URB History', 1)
+       call PROF_rapend  ('URB_History', 1)
     endif
 
     return
@@ -125,9 +125,9 @@ contains
 
     !########## Physics ##########
     if ( URBAN_sw ) then
-       call PROF_rapstart('URB Physics', 1)
+       call PROF_rapstart('URB_Physics', 1)
        call URBAN_PHY_driver( update_flag = .true. )
-       call PROF_rapend  ('URB Physics', 1)
+       call PROF_rapend  ('URB_Physics', 1)
     endif
 
     !########## Update ##########
@@ -188,9 +188,9 @@ contains
     enddo
 
     !########## History & Monitor ##########
-    call PROF_rapstart('URB History', 1)
+    call PROF_rapstart('URB_History', 1)
     call URBAN_vars_history
-    call PROF_rapend  ('URB History', 1)
+    call PROF_rapend  ('URB_History', 1)
 
     return
   end subroutine URBAN_driver
