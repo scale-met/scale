@@ -366,7 +366,7 @@ contains
 
 
     call ExternalFileRead( read_zxy(:,:,:,:), BASENAME, varname_T, it, it, myrank, mdlid, single=.true.               )
-    temp_org(3:,:,:) = real( read_zxy(:,:,:,1), kind=RP )
+    temp_org(3:,:,:) = real( read_zxy(:,:,:,1), kind=RP ) + t0
     call ExternalFileRead( read_xy(:,:,:),    BASENAME, "T2",      it, it, myrank, mdlid, single=.true.               )
     temp_org(2,:,:) = real( read_xy(:,:,1), kind=RP )
 
@@ -399,6 +399,30 @@ contains
     end do
     end do
 
+
+     !k=1 ; i=int(dims(2)/2) ; j=int(dims(3)/2) ; iq = 1
+     k=2 ; i=3 ; j=3 ; iq = 1
+     write(*,*) "read 3D wrf data",i,j,k
+     write(*,*) "lon_org    ",lon_org   (i,j)/D2R
+     write(*,*) "lat_org    ",lat_org   (i,j)/D2R
+     write(*,*) "cz_org     ",cz_org    (k,i,j)
+     write(*,*) "pres_org   ",pres_org  (k,i,j)
+     write(*,*) "velx_org   ",llvelx_org(k,i,j)
+     write(*,*) "vely_org   ",llvely_org(k,i,j)
+     write(*,*) "velz_org   ",velz_org  (k,i,j)
+     write(*,*) "temp_org   ",temp_org  (k,i,j)
+     write(*,*) "qtrc_org   ",qtrc_org  (k,i,j,iq)
+     k=3 ; i=3 ; j=3 ; iq = 1
+     write(*,*) "read 3D wrf data",i,j,k
+     write(*,*) "lon_org    ",lon_org   (i,j)/D2R
+     write(*,*) "lat_org    ",lat_org   (i,j)/D2R
+     write(*,*) "cz_org     ",cz_org    (k,i,j)
+     write(*,*) "pres_org   ",pres_org  (k,i,j)
+     write(*,*) "velx_org   ",llvelx_org(k,i,j)
+     write(*,*) "vely_org   ",llvely_org(k,i,j)
+     write(*,*) "velz_org   ",velz_org  (k,i,j)
+     write(*,*) "temp_org   ",temp_org  (k,i,j)
+     write(*,*) "qtrc_org   ",qtrc_org  (k,i,j,iq)
 
     return
   end subroutine ParentAtomInputWRFARW
