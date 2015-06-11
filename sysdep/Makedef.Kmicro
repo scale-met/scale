@@ -10,10 +10,10 @@ FFLAGS_FAST  = -Kfast,parallel,ocl,preex,array_private,noalias=s,mfunc=2 \
                -Ksimd                                                    \
                -Kauto,threadsafe
 
-FFLAGS_AGGRESSIVE = $(FFLAGS_FAST) \
-                   -Kautoobjstack \
-		   -Ktemparraystack \
-                   -Kinstance=8   \
+FFLAGS_AGGRESSIVE = $(FFLAGS_FAST)  \
+                   -Kautoobjstack   \
+                   -Ktemparraystack \
+                   -Kinstance=8     \
                    -Kswp_strong
 
 # note: Kauto,threadsafe,autoobjstack,temparraystack depends on the stacksize.

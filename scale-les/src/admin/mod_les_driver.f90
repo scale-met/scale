@@ -217,7 +217,7 @@ contains
     call PRC_setup
 
     ! setup Log
-    call LogInit(IO_FID_CONF, IO_FID_LOG, IO_L)
+    call LogInit( IO_FID_CONF, IO_FID_LOG, IO_L )
 
     ! setup PROF
     call PROF_setup
@@ -238,7 +238,6 @@ contains
 
     ! setup horizontal/vertical grid coordinates (cartesian,idealized)
     call GRID_INDEX_setup
-
     call GRID_setup
 
     call LAND_GRID_INDEX_setup

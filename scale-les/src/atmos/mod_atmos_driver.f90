@@ -82,12 +82,12 @@ contains
        ATMOS_DYN_driver_setup
     use mod_atmos_phy_mp_driver, only: &
        ATMOS_PHY_MP_driver_setup
-    use mod_atmos_phy_ae_driver, only: &
-       ATMOS_PHY_AE_driver_setup
-    use mod_atmos_phy_ch_driver, only: &
-       ATMOS_PHY_CH_driver_setup
     use mod_atmos_phy_rd_driver, only: &
        ATMOS_PHY_RD_driver_setup
+    use mod_atmos_phy_ch_driver, only: &
+       ATMOS_PHY_CH_driver_setup
+    use mod_atmos_phy_ae_driver, only: &
+       ATMOS_PHY_AE_driver_setup
     implicit none
     !---------------------------------------------------------------------------
 
@@ -136,12 +136,12 @@ contains
   subroutine ATMOS_driver_setup2
     use mod_atmos_vars, only: &
        ATMOS_vars_history
+    use mod_atmos_phy_cp_driver, only: &
+       ATMOS_PHY_CP_driver_setup
     use mod_atmos_phy_sf_driver, only: &
        ATMOS_PHY_SF_driver_setup
     use mod_atmos_phy_tb_driver, only: &
        ATMOS_PHY_TB_driver_setup
-    use mod_atmos_phy_cp_driver, only: &
-       ATMOS_PHY_CP_driver_setup
     implicit none
     !---------------------------------------------------------------------------
 
