@@ -250,16 +250,16 @@ contains
     topo_org (:,:) = real( read_xy(:,:,1), kind=RP )
 
     call ExternalFileRead( read_wxy(:,:,:,:), BASENAME, "PH",      it, it, myrank, mdlid, single=.true., zstag=.true. )
-    ph_org  (3:,:,:) = real( read_wxy(:,:,:,1), kind=RP )
+    ph_org  (:,:,:) = real( read_wxy(:,:,:,1), kind=RP )
 
     call ExternalFileRead( read_wxy(:,:,:,:), BASENAME, "PHB",     it, it, myrank, mdlid, single=.true., zstag=.true. )
-    phb_org (3:,:,:) = real( read_wxy(:,:,:,1), kind=RP )
+    phb_org (:,:,:) = real( read_wxy(:,:,:,1), kind=RP )
 
     call ExternalFileRead( read_zxy(:,:,:,:), BASENAME, "P",       it, it, myrank, mdlid, single=.true.               )
-    p_org   (3:,:,:) = real( read_zxy(:,:,:,1), kind=RP )
+    p_org   (:,:,:) = real( read_zxy(:,:,:,1), kind=RP )
 
     call ExternalFileRead( read_zxy(:,:,:,:), BASENAME, "PB",      it, it, myrank, mdlid, single=.true.               )
-    pb_org  (3:,:,:) = real( read_zxy(:,:,:,1), kind=RP )
+    pb_org  (:,:,:) = real( read_zxy(:,:,:,1), kind=RP )
 
     call ExternalFileRead( read_wxy(:,:,:,:), BASENAME, varname_W, it, it, myrank, mdlid, single=.true., zstag=.true. )
     velzs_org(:,:,:) = real( read_wxy(:,:,:,1), kind=RP )
@@ -330,7 +330,7 @@ contains
           qhyd = qhyd + qtrc_org(k,i,j,iq)
        end do
        do iq = 1, min( mptype_parent, 6)
-          qtrc_org(k,i,j,iq) = qtrc_org(k,i,j,iq) * ( 1.0_RP - qhyd )
+          qtrc_org(k,i,j,iq) = qtrc_org(k,i,j,iq) / ( 1.0_RP + qhyd )
        end do
     end do
     end do
@@ -376,7 +376,7 @@ contains
     do j = 1, dims(3)
     do i = 1, dims(2)
        do k = 3, dims(1)+2
-          pres_org(k,i,j) = p_org(k,i,j) + pb_org(k,i,j)
+          pres_org(k,i,j) = p_org(k-2,i,j) + pb_org(k-2,i,j)
           temp_org(k,i,j) = pott_org(k,i,j) * ( pres_org(k,i,j) / p0 )**RCP
        end do
        pott_org(2,i,j) = temp_org(2,i,j) * ( p0/pres_org(2,i,j) )**RCP
