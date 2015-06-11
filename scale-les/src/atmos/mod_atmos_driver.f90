@@ -100,12 +100,18 @@ contains
     !--- setup solar insolation
     call ATMOS_SOLARINS_setup( TIME_NOWDATE(1)+TIME_OFFSET_YEAR )
 
-    call ATMOS_REFSTATE_setup( DENS, RHOT, QTRC ) ! (in)
+    call PROF_rapstart('ATMOS_Refstate', 2)
+    call ATMOS_REFSTATE_setup( DENS, RHOT, QTRC )
+    call PROF_rapend  ('ATMOS_Refstate', 2)
 
-    call ATMOS_BOUNDARY_setup( DENS, MOMZ, MOMX, MOMY, RHOT, QTRC ) ! (in)
+    call PROF_rapstart('ATMOS_Boundary', 2)
+    call ATMOS_BOUNDARY_setup( DENS, MOMZ, MOMX, MOMY, RHOT, QTRC )
+    call PROF_rapend  ('ATMOS_Boundary', 2)
 
     !########## Get Surface Boundary Condition ##########
+    call PROF_rapstart('ATMOS_SurfaceExch', 2)
     call ATMOS_SURFACE_GET
+    call PROF_rapend  ('ATMOS_SurfaceExch', 2)
 
     !########## initialize tendencies ##########
     DENS_tp(:,:,:)   = 0.0_RP
@@ -126,7 +132,9 @@ contains
     call ATMOS_vars_diagnostics
 
     !########## Set Surface Boundary Condition ##########
-    call ATMOS_SURFACE_SET( countup =.false. )
+    call PROF_rapstart('ATMOS_SurfaceExch', 2)
+    call ATMOS_SURFACE_SET( countup = .false. )
+    call PROF_rapend  ('ATMOS_SurfaceExch', 2)
 
     return
   end subroutine ATMOS_driver_setup1
@@ -152,7 +160,9 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '*** Setup each atmospheric components 2 ...'
 
     !########## Get Surface Boundary Condition ##########
+    call PROF_rapstart('ATMOS_SurfaceExch', 2)
     call ATMOS_SURFACE_GET
+    call PROF_rapend  ('ATMOS_SurfaceExch', 2)
 
     ! setup each components
     call ATMOS_PHY_SF_driver_setup
@@ -160,7 +170,9 @@ contains
     call ATMOS_PHY_CP_driver_setup
 
     !########## Set Surface Boundary Condition ##########
-    call ATMOS_SURFACE_SET( countup =.true. )
+    call PROF_rapstart('ATMOS_SurfaceExch', 2)
+    call ATMOS_SURFACE_SET( countup = .true. )
+    call PROF_rapend  ('ATMOS_SurfaceExch', 2)
 
     !########## History & Monitor ##########
     call PROF_rapstart('ATM_History', 1)
@@ -237,11 +249,15 @@ contains
 
     !########## Reference State ###########
     if ( ATMOS_REFSTATE_UPDATE_FLAG ) then
-       call ATMOS_REFSTATE_update( DENS, RHOT, QTRC ) ! (in)
+       call PROF_rapstart('ATMOS_Refstate', 2)
+       call ATMOS_REFSTATE_update( DENS, RHOT, QTRC ) ! [IN]
+       call PROF_rapend  ('ATMOS_Refstate', 2)
     endif
 
     !########## Get Surface Boundary Condition ##########
+    call PROF_rapstart('ATMOS_SurfaceExch', 2)
     call ATMOS_SURFACE_GET
+    call PROF_rapend  ('ATMOS_SurfaceExch', 2)
 
     !########## Dynamics ##########
     if ( ATMOS_sw_dyn ) then
@@ -252,7 +268,9 @@ contains
 
     !########## Lateral/Top Boundary Condition ###########
     if ( ATMOS_BOUNDARY_UPDATE_FLAG ) then
-       call ATMOS_BOUNDARY_update( DENS, MOMZ, MOMX, MOMY, RHOT, QTRC ) ! (inout)
+       call PROF_rapstart('ATMOS_Boundary', 2)
+       call ATMOS_BOUNDARY_update( DENS, MOMZ, MOMX, MOMY, RHOT, QTRC ) ! [INOUT]
+       call PROF_rapend  ('ATMOS_Boundary', 2)
     endif
 
     !########## reset tendencies ##########
@@ -264,7 +282,9 @@ contains
     RHOQ_tp(:,:,:,:) = 0.0_RP
 
     !########## Calculate diagnostic variables ##########
+    call PROF_rapstart('ATM_History', 1)
     call ATMOS_vars_diagnostics
+    call PROF_rapend  ('ATM_History', 1)
 
     !########## Microphysics ##########
     if ( ATMOS_sw_phy_mp ) then
@@ -316,7 +336,9 @@ contains
     endif
 
     !########## Set Surface Boundary Condition ##########
-    call ATMOS_SURFACE_SET( countup =.true. )
+    call PROF_rapstart('ATMOS_SurfaceExch', 2)
+    call ATMOS_SURFACE_SET( countup = .true. )
+    call PROF_rapend  ('ATMOS_SurfaceExch', 2)
 
     !########## History & Monitor ##########
     call PROF_rapstart('ATM_History', 1)
@@ -343,7 +365,7 @@ contains
     !---------------------------------------------------------------------------
 
     ! If this run is parent of online nesting, boundary data must be sent
-    call ATMOS_BOUNDARY_firstsend( DENS, MOMZ, MOMX, MOMY, RHOT, QTRC ) ! (in)
+    call ATMOS_BOUNDARY_firstsend( DENS, MOMZ, MOMX, MOMY, RHOT, QTRC ) ! [IN]
 
     return
   end subroutine ATMOS_driver_firstsend

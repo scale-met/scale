@@ -234,14 +234,14 @@ contains
 
   !########## main ##########
 
-  call PROF_rapstart('Main_PP(Total)')
+  call PROF_rapstart('Main_PP')
 
   ! execute preprocess
   call PROF_rapstart('Convert')
   call CONVERT
   call PROF_rapend  ('Convert')
 
-  call PROF_rapend('Main_PP(Total)')
+  call PROF_rapend('Main_PP')
 
   !########## Finalize ##########
 

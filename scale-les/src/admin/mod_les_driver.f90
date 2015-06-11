@@ -349,7 +349,7 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ START TIMESTEP ++++++'
-    call PROF_rapstart('Main_Loop(Total)', 0)
+    call PROF_rapstart('Main_Loop', 0)
 
     if( ATMOS_do ) call ATMOS_driver_firstsend
 
@@ -386,7 +386,7 @@ contains
 
     enddo
 
-    call PROF_rapend('Main_Loop(Total)', 0)
+    call PROF_rapend('Main_Loop', 0)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ END TIMESTEP ++++++'
     if( IO_L ) write(IO_FID_LOG,*)
 
