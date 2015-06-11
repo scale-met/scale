@@ -365,7 +365,9 @@ contains
     !---------------------------------------------------------------------------
 
     ! If this run is parent of online nesting, boundary data must be sent
+    call PROF_rapstart('ATMOS_Boundary', 2)
     call ATMOS_BOUNDARY_firstsend( DENS, MOMZ, MOMX, MOMY, RHOT, QTRC ) ! [IN]
+    call PROF_rapend  ('ATMOS_Boundary', 2)
 
     return
   end subroutine ATMOS_driver_firstsend

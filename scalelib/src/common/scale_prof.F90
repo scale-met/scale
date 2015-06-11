@@ -22,6 +22,7 @@ module scale_prof
   !++ Public procedure
   !
   public :: PROF_setup
+  public :: PROF_setprefx
   public :: PROF_rapstart
   public :: PROF_rapend
   public :: PROF_rapreport
@@ -47,6 +48,7 @@ module scale_prof
   !++ Private parameters & variables
   !
   integer,                  private, parameter :: PROF_rapnlimit = 100
+  character(len=H_SHORT),   private            :: PROF_prefix    = ''
   integer,                  private            :: PROF_rapnmax   = 0
   character(len=H_SHORT*2), private            :: PROF_rapname(PROF_rapnlimit)
   integer,                  private            :: PROF_grpnmax   = 0
@@ -71,7 +73,6 @@ module scale_prof
 
   !-----------------------------------------------------------------------------
 contains
-
   !-----------------------------------------------------------------------------
   subroutine PROF_setup
     use scale_process, only: &
@@ -97,18 +98,40 @@ contains
     endif
     if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_PROF)
 
+    PROF_prefix = ''
+
     return
   end subroutine PROF_setup
 
   !-----------------------------------------------------------------------------
+  subroutine PROF_setprefx( &
+       prefxname )
+    implicit none
+
+    character(len=*), intent(in) :: prefxname !< prefix
+
+    !---------------------------------------------------------------------------
+
+    if ( prefxname == '' ) then !--- no prefix
+       PROF_prefix = ''
+    else
+       PROF_prefix = trim(prefxname)//'_'
+    endif
+
+    return
+  end subroutine PROF_setprefx
+
+  !-----------------------------------------------------------------------------
   !> Start raptime
-  subroutine PROF_rapstart( rapname, level )
+  subroutine PROF_rapstart( rapname_base, level )
     use scale_process, only: &
        PRC_MPItime
     implicit none
 
-    character(len=*), intent(in) :: rapname !< name of item
+    character(len=*), intent(in) :: rapname_base !< name of item
     integer, intent(in), optional :: level  !< level of item (default is 2)
+
+    character(len=H_SHORT*2) :: rapname !< name of item with prefix
 
     integer :: id
     integer :: level_
@@ -118,9 +141,11 @@ contains
        level_ = level
     else
        level_ = PROF_default_rap_level
-    end if
+    endif
 
-    if ( level_ > PROF_rap_level ) return
+    if( level_ > PROF_rap_level ) return
+
+    rapname = trim(PROF_prefix)//trim(rapname_base)
 
     id = get_rapid( rapname, level_ )
 
@@ -141,25 +166,29 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Save raptime
-  subroutine PROF_rapend( rapname, level )
+  subroutine PROF_rapend( rapname_base, level )
     use scale_process, only: &
        PRC_MPItime
     implicit none
 
-    character(len=*), intent(in) :: rapname !< name of item
+    character(len=*), intent(in) :: rapname_base !< name of item
     integer, intent(in), optional :: level  !< level of item
+
+    character(len=H_SHORT*2) :: rapname !< name of item with prefix
 
     integer :: id
     integer :: level_
     !---------------------------------------------------------------------------
 
     if ( present(level) ) then
-       if ( level > PROF_rap_level ) return
-    end if
+       if( level > PROF_rap_level ) return
+    endif
+
+    rapname = trim(PROF_prefix)//trim(rapname_base)
 
     id = get_rapid( rapname, level_ )
 
-    if ( level_ > PROF_rap_level ) return
+    if( level_ > PROF_rap_level ) return
 
     PROF_rapttot(id) = PROF_rapttot(id) + ( PRC_MPItime()-PROF_raptstr(id) )
     PROF_rapnend(id) = PROF_rapnend(id) + 1
@@ -212,7 +241,7 @@ contains
                   IO_L ) then
                 write(IO_FID_LOG,'(1x,A,I3.3,A,A,A,F10.3,A,I9)') &
                      '*** ID=',id,' : ',PROF_rapname(id),' T=',PROF_rapttot(id),' N=',PROF_rapnstr(id)
-             end if
+             endif
           enddo
        enddo
 
@@ -230,10 +259,10 @@ contains
           if ( PRC_myrank == PRC_master ) then
              write(*,*) '*** Computational Time Report'
              fid = 6 ! master node
-          end if
+          endif
        else
           if ( IO_L ) fid = IO_FID_LOG
-       end if
+       endif
 
        do gid = 1, PROF_rapnmax
           do id = 1, PROF_rapnmax
@@ -246,7 +275,7 @@ contains
                      ', T(max)=',maxvar(id),'[',maxidx(id),']', &
                      ', T(min)=',minvar(id),'[',minidx(id),']', &
                      ' N=',PROF_rapnstr(id)
-             end if
+             endif
           enddo
        enddo
 
