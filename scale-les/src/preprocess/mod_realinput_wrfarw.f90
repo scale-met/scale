@@ -401,6 +401,7 @@ contains
     end do
 
 
+#ifdef DEBUG
      !k=1 ; i=int(dims(2)/2) ; j=int(dims(3)/2) ; iq = 1
      k=2 ; i=3 ; j=3 ; iq = 1
      write(*,*) "read 3D wrf data",i,j,k
@@ -424,6 +425,7 @@ contains
      write(*,*) "velz_org   ",velz_org  (k,i,j)
      write(*,*) "temp_org   ",temp_org  (k,i,j)
      write(*,*) "qtrc_org   ",qtrc_org  (k,i,j,iq)
+#endif
 
     return
   end subroutine ParentAtomInputWRFARW
