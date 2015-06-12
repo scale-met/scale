@@ -559,7 +559,9 @@ contains
 
     call PROF_rapstart("DYN_Tendency", 2)
 
+!OCL XFILL
     DENS_tq(:,:,:) = 0.0_RP
+
     do iq = 1, BND_QA
 
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
@@ -572,6 +574,7 @@ contains
        enddo
        enddo
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -694,6 +697,7 @@ contains
        enddo
        enddo
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -725,6 +729,7 @@ contains
        enddo
        enddo
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE-1
@@ -760,6 +765,7 @@ contains
        enddo
        enddo
        enddo
+!OCL XFILL
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -789,6 +795,7 @@ contains
        enddo
        enddo
        enddo
+!OCL XFILL
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -818,6 +825,7 @@ contains
        enddo
        enddo
        enddo
+!OCL XFILL
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
