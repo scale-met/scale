@@ -945,6 +945,13 @@ contains
     real(RP) :: olat_org  (        dims(10),dims(11))
     real(RP) :: omask     (        dims(10),dims(11))
 
+    ! for missing value
+    real(RP) :: hfact_l(dims(8), dims(9), itp_nh)
+    integer  :: igrd_l (dims(8), dims(9), itp_nh)
+    integer  :: jgrd_l (dims(8), dims(9), itp_nh)
+    real(RP) :: hfact_o(dims(10),dims(11),itp_nh)
+    integer  :: igrd_o (dims(10),dims(11),itp_nh)
+    integer  :: jgrd_o (dims(10),dims(11),itp_nh)
 
     real(RP) :: tg   (LKMAX,IA,JA)
     real(RP) :: strg (LKMAX,IA,JA)
@@ -1139,7 +1146,7 @@ contains
 
     ! replace values over the ocean
     do k = 1, LKMAX
-       call replace_misval( tg(k,:,:), maskval_tg, lsmask_nest )
+       call replace_misval_const( tg(k,:,:), maskval_tg, lsmask_nest )
     enddo
 
     ! Land water: interpolate over the ocean
@@ -1214,7 +1221,7 @@ contains
 
        ! replace values over the ocean
        do k = 1, LKMAX
-          call replace_misval( strg(k,:,:), maskval_strg, lsmask_nest )
+          call replace_misval_const( strg(k,:,:), maskval_strg, lsmask_nest )
        enddo
 
     else  ! not read from boundary file
@@ -1295,6 +1302,33 @@ contains
     !   call interp_OceanLand_data(ust_org, lmask, dims(8), dims(9), landdata=.true.)
     !end if
 
+
+    ! replace lmask using SST and omask using SKINT
+      call INTRPNEST_interp_fact_latlon( hfact_l(:,:,:),               & ! [OUT]
+                                         igrd_l(:,:,:), jgrd_l(:,:,:), & ! [OUT]
+                                         llat_org(:,:), llon_org(:,:), & ! [IN]
+                                         dims(8), dims(9),             & ! [IN]
+                                         olat_org(:,:), olon_org(:,:), & ! [IN]
+                                         dims(10), dims(11)            ) ! [IN]
+
+      call INTRPNEST_interp_fact_latlon( hfact_o(:,:,:),               & ! [OUT]
+                                         igrd_o(:,:,:), jgrd_o(:,:,:), & ! [OUT]
+                                         olat_org(:,:), olon_org(:,:), & ! [IN]
+                                         dims(10), dims(11),           & ! [IN]
+                                         llat_org(:,:), llon_org(:,:), & ! [IN]
+                                         dims(8), dims(9)              ) ! [IN]
+
+      call INTRPNEST_interp_2d( lmask(:,:), sst_org(:,:), hfact_l(:,:,:),      &
+                                igrd_l(:,:,:), jgrd_l(:,:,:), dims(8), dims(9) )
+      call INTRPNEST_interp_2d( omask(:,:), lst_org(:,:), hfact_o(:,:,:),        &
+                                igrd_o(:,:,:), jgrd_o(:,:,:), dims(10), dims(11) )
+
+      call replace_misval_map( sst_org, omask, dims(10), dims(11), "SST")
+      call replace_misval_map( tw_org,  omask, dims(10), dims(11), "OCEAN_TEMP")
+      call replace_misval_map( lst_org, lmask, dims(8),  dims(9),  "SKINT")
+
+
+    ! interpolate data to scale grid
     do j = 1, dims(9)
     do i = 1, dims(8)
        if ( ust_org(i,j) == UNDEF ) ust_org(i,j) = lst_org(i,j)
@@ -1638,11 +1672,11 @@ contains
   end subroutine interp_OceanLand_data
 
   !-----------------------------------------------------------------------------
-  subroutine replace_misval( orgdata, maskval, frac_land )
+  subroutine replace_misval_const( data, maskval, frac_land )
     use scale_const, only: &
        EPS => CONST_EPS
     implicit none
-    real(RP), intent(inout) :: orgdata(:,:)
+    real(RP), intent(inout) :: data(:,:)
     real(RP), intent(in)    :: maskval
     real(RP), intent(in)    :: frac_land(:,:)
     integer                 :: i, j
@@ -1650,12 +1684,38 @@ contains
     do j = 1, JA
     do i = 1, IA
        if( abs(frac_land(i,j)-0.0_RP) < EPS )then ! ocean grid
-          orgdata(i,j) = maskval
+          data(i,j) = maskval
        endif
     enddo
     enddo
 
-  end subroutine replace_misval
+  end subroutine replace_misval_const
+
+  !-----------------------------------------------------------------------------
+  subroutine replace_misval_map( data, maskval, nx, ny, elem)
+    use scale_const, only: &
+       EPS => CONST_EPS, &
+       UNDEF => CONST_UNDEF
+    implicit none
+    real(RP),     intent(inout) :: data(:,:)
+    real(RP),     intent(in)    :: maskval(:,:)
+    integer,      intent(in)    :: nx, ny
+    character(*), intent(in)    :: elem
+    integer                     :: i, j
+
+    do j = 1, ny
+    do i = 1, nx
+       if( abs(data(i,j) - UNDEF) < sqrt(EPS) )then
+          if( abs(maskval(i,j) - UNDEF) < sqrt(EPS) )then
+             write(*,*) "Data for mask has missing value. ",trim(elem),i,j
+          else
+             data(i,j) = maskval(i,j)
+          endif
+       endif
+    enddo
+    enddo
+
+  end subroutine replace_misval_map
 
   !-----------------------------------------------------------------------------
   subroutine diagnose_number_concentration( &
