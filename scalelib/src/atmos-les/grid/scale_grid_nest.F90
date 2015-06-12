@@ -1813,7 +1813,6 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
        enddo
 
        call COMM_vars8( interped_ref_DENS, 1 )
-       call COMM_wait ( interped_ref_DENS, 1, .false. )
 
        tagbase = tagcomm + tag_momz*order_tag_var
        if ( ONLINE_USE_VELZ ) then
@@ -1844,6 +1843,8 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
           ! v_lld receives MOMY/DENS
           call NEST_COMM_intercomm_nestdown( dummy, v_lld, tagbase, I_SCLR, HANDLE, isu_tag, isu_tagf )
        endif
+
+       call COMM_wait ( interped_ref_DENS, 1, .false. )
 
        if ( ONLINE_NO_ROTATE ) then
           do j = 1, DAUGHTER_JA(HANDLE)
@@ -1961,7 +1962,7 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
     use scale_process, only: &
        PRC_MPIstop
     use scale_comm, only: &
-       COMM_world
+       COMM_barrier
     implicit none
 
     integer, intent(in) :: HANDLE    !< id number of nesting relation in this process target
@@ -1995,6 +1996,8 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
           call MPI_BARRIER(INTERCOMM_DAUGHTER, ierr)
        endif
 
+       ! tentative insert: evaluate node imbalance of parent due to the P-C comm.
+       call COMM_barrier
 
        call PROF_rapend  ('NEST_wait_P', 2)
 
