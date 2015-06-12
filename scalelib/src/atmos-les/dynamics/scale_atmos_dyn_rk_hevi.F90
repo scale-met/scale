@@ -1529,8 +1529,7 @@ contains
 !OCL SERIAL
   subroutine solve_bicgstab( &
        C,        & ! (inout)
-       F1, F2, F3, & ! (in)
-       G, RFDZ   ) ! (in)
+       F1, F2, F3 ) ! (in)
 
     use scale_process, only: &
        PRC_MPIstop
@@ -1539,8 +1538,6 @@ contains
     real(RP), intent(in)    :: F1(KA)
     real(RP), intent(in)    :: F2(KA)
     real(RP), intent(in)    :: F3(KA)
-    real(RP), intent(in)    :: G(KA)
-    real(RP), intent(in)    :: RFDZ(KA-1)
 
     real(RP) :: r0(KMAX-1)
 
@@ -1646,6 +1643,29 @@ contains
 
     return
   end subroutine solve_bicgstab
+
+
+  subroutine mul_matrix(V, M, C)
+    implicit none
+    real(RP), intent(out) :: V(KMAX-1)
+    real(RP), intent(in)  :: M(5, KMAX-1)
+    real(RP), intent(in)  :: C(KMAX-1)
+
+    integer :: k
+
+    V(1) = M(5,1)*C(3) + M(4,1)*C(2) + M(3,1)*C(1)
+    V(2) = M(5,2)*C(4) + M(4,2)*C(3) + M(3,2)*C(2) + M(2,2)*C(1)
+    do k = 3, KMAX-3
+       V(k) = M(5,k)*C(k+2) + M(4,k)*C(k+1) + M(3,k)*C(k) + M(2,k)*C(k-1) + M(1,k)*C(k-2)
+    enddo
+    ! k = KE-2
+    V(KMAX-2) = M(4,KMAX-2)*C(KMAX-1) + M(3,KMAX-2)*C(KMAX-2) + M(2,KMAX-2)*C(KMAX-3) + M(1,KMAX-2)*C(KMAX-4)
+    ! k = KE-1
+    V(KMAX-1) = M(3,KMAX-1)*C(KMAX-1) + M(2,KMAX-1)*C(KMAX-2) + M(1,KMAX-1)*C(KMAX-3)
+
+    return
+  end subroutine mul_matrix
+
 
 #elif defined(HEVI_LAPACK)
 !OCL SERIAL
