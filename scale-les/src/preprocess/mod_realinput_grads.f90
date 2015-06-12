@@ -1427,7 +1427,8 @@ contains
     irec = totalrec * (it-1) + startrec
     read(io_fid, rec=irec, iostat=ierr) gdata(:,:)
     if ( ierr /= 0 ) then
-       write(*,*) 'xxx grads data does not found! ',trim(item),it
+       write(*,*) 'xxx grads data is not found! ',trim(item),it
+       write(*,*) 'xxx namelist or grads data might be wrong.'
        call PRC_MPIstop
     endif
 
