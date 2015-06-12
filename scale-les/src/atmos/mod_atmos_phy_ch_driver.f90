@@ -120,7 +120,9 @@ contains
 !                          O3             ) ! [INOUT]
 
        ! tentative!
+!OCL XFILL
        RHOQ_t_CH(:,:,:,:) = 0.0_RP
+!OCL XFILL
        O3       (:,:,:)   = 0.0_RP
 
        call HIST_in( O3(:,:,:), 'Ozone', 'Ozone', 'PPM' )

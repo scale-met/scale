@@ -207,6 +207,7 @@ contains
 
        call ATMOS_THERMODYN_templhv( lhv, ATMOS_TEMP )
 
+!OCL XFILL
        do j = JS, JE
        do i = IS, IE
           OCEAN_SFLX_evap(i,j) = OCEAN_SFLX_LH(i,j) / lhv(i,j)

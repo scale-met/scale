@@ -166,6 +166,7 @@ contains
     call PROF_rapend  ('URB_SfcExch', 2)
 
     !########## reset tendencies ##########
+!OCL XFILL
     do j = JS, JE
     do i = IS, IE
     do k = UKS, UKE
@@ -176,6 +177,7 @@ contains
     end do
     end do
 
+!OCL XFILL
     do j = JS, JE
     do i = IS, IE
        URBAN_TR_t(i,j) = 0.0_RP

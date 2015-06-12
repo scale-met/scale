@@ -155,6 +155,7 @@ contains
     call PROF_rapend  ('OCN_SfcExch', 2)
 
     !########## reset tendencies ##########
+!OCL XFILL
     do j = JS, JE
     do i = IS, IE
        OCEAN_TEMP_t      (i,j)      = 0.0_RP

@@ -114,11 +114,17 @@ contains
     call PROF_rapend  ('ATM_SfcExch', 2)
 
     !########## initialize tendencies ##########
+!OCL XFILL
     DENS_tp(:,:,:)   = 0.0_RP
+!OCL XFILL
     MOMZ_tp(:,:,:)   = 0.0_RP
+!OCL XFILL
     MOMX_tp(:,:,:)   = 0.0_RP
+!OCL XFILL
     MOMY_tp(:,:,:)   = 0.0_RP
+!OCL XFILL
     RHOT_tp(:,:,:)   = 0.0_RP
+!OCL XFILL
     RHOQ_tp(:,:,:,:) = 0.0_RP
 
     ! setup each components
@@ -274,11 +280,17 @@ contains
     endif
 
     !########## reset tendencies ##########
+!OCL XFILL
     DENS_tp(:,:,:)   = 0.0_RP
+!OCL XFILL
     MOMZ_tp(:,:,:)   = 0.0_RP
+!OCL XFILL
     MOMX_tp(:,:,:)   = 0.0_RP
+!OCL XFILL
     MOMY_tp(:,:,:)   = 0.0_RP
+!OCL XFILL
     RHOT_tp(:,:,:)   = 0.0_RP
+!OCL XFILL
     RHOQ_tp(:,:,:,:) = 0.0_RP
 
     !########## Calculate diagnostic variables ##########

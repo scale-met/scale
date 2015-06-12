@@ -1804,6 +1804,7 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
 
        tagbase = tagcomm + tag_dens*order_tag_var
        call NEST_COMM_intercomm_nestdown( dummy, dens, tagbase, I_SCLR, HANDLE, isu_tag, isu_tagf, .true. )
+!OCL XFILL
        do j = 1, DAUGHTER_JA(HANDLE)
        do i = 1, DAUGHTER_IA(HANDLE)
        do k = DATR_KS(HANDLE), DATR_KE(HANDLE)
@@ -1817,6 +1818,7 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
        tagbase = tagcomm + tag_momz*order_tag_var
        if ( ONLINE_USE_VELZ ) then
           call NEST_COMM_intercomm_nestdown( dummy, work1d, tagbase, I_ZSTG, HANDLE, isu_tag, isu_tagf )
+!OCL XFILL
           do j = 1, DAUGHTER_JA(HANDLE)
           do i = 1, DAUGHTER_IA(HANDLE)
           do k = DATR_KS(HANDLE), DATR_KE(HANDLE)-1
@@ -2208,12 +2210,14 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
              isu_tag = isu_tag + 1
 
              if ( .not. logarithmic ) then
+!OCL XFILL
                 ! linear interpolation
                 do k = 1, PARENT_KA(HANDLE)
                    buffer_ref_3D(k,xs:xe,ys:ye) &
                    = recvbuf_3D(k,PRNT_IS(HANDLE):PRNT_IE(HANDLE),PRNT_JS(HANDLE):PRNT_JE(HANDLE),isu_tag)
                 enddo
              else
+!OCL XFILL
                 ! logarithmic weighted interpolation
                 do k = 1, PARENT_KA(HANDLE)
                    buffer_ref_3D(k,xs:xe,ys:ye) &
@@ -2222,7 +2226,7 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
              endif
           else
              isu_tagf = isu_tagf + 1
-
+!OCL XFILL
              do k = 0, PARENT_KA(HANDLE)
                 buffer_ref_3DF(k,xs:xe,ys:ye) &
                 = recvbuf_3DF(k,PRNT_IS(HANDLE):PRNT_IE(HANDLE),PRNT_JS(HANDLE):PRNT_JE(HANDLE),isu_tagf)
@@ -2239,6 +2243,7 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
        enddo ! YP Loop
        rq_ctl_d = rq
 
+!OCL XFILL
        dvar(:,:,:) = 0.0_RP
 
        if ( no_zstag ) then

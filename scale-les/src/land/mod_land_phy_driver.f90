@@ -170,6 +170,7 @@ contains
 
     if ( update_flag ) then
 
+!OCL XFILL
        do j = JS, JE
        do i = IS, IE
           LAND_QVEF(i,j) = min( LAND_WATER(LKS,i,j) / LAND_PROPERTY(i,j,I_WaterCritical), BETA_MAX )
@@ -214,6 +215,7 @@ contains
 
        call ATMOS_THERMODYN_templhv( lhv, ATMOS_TEMP )
 
+!OCL XFILL
        do j = JS, JE
        do i = IS, IE
           LAND_SFLX_evap(i,j) = LAND_SFLX_LH(i,j) / lhv(i,j)
@@ -235,6 +237,7 @@ contains
                       dt                                   ) ! [IN]
 
        ! no albedo update (tentative)
+!OCL XFILL
        LAND_SFC_albedo_t(:,:,:) = 0.0_RP
 
        call HIST_in( LAND_TEMP_t (:,:,:), 'LAND_TEMP_t',  'tendency of LAND_TEMP',  'K',     zdim='land' )

@@ -515,20 +515,29 @@ contains
     qflx_lo(:,:,:,:) = UNDEF
 #endif
 
+!OCL XFILL
     DENS00(:,:,:) = DENS(:,:,:)
 
     if ( USE_AVERAGE ) then
+!OCL XFILL
        DENS_av(:,:,:) = 0.0_RP
+!OCL XFILL
        MOMZ_av(:,:,:) = 0.0_RP
+!OCL XFILL
        MOMX_av(:,:,:) = 0.0_RP
+!OCL XFILL
        MOMY_av(:,:,:) = 0.0_RP
+!OCL XFILL
        RHOT_av(:,:,:) = 0.0_RP
     endif
 
 #ifndef DRY
+!OCL XFILL
     mflx_av(:,:,:,:) = 0.0_RP
 
+!OCL XFILL
     CVtot(:,:,:) = 0.0_RP
+!OCL XFILL
     QDRY (:,:,:) = 1.0_RP
     do iq = QQS, QQE
        CVtot(:,:,:) = CVtot(:,:,:) + AQ_CV(iq) * QTRC(:,:,:,iq)
@@ -554,6 +563,7 @@ contains
     do iq = 1, BND_QA
 
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
        do j = JS-1, JE+2
        do i = IS-1, IE+2
        do k = KS, KE
@@ -582,6 +592,7 @@ contains
        call HIST_in(damp_t,            trim(AQ_NAME(iq))//'_t_damp',                         &
                     'tendency of '//trim(AQ_NAME(iq))//' due to rayleigh damping', 'kg/kg/s' )
 #endif
+!OCL XFILL
        do j = JS, JE
        do i = IS, IE
           RHOQ_t(   1:KS-1,i,j,iq) = 0.0_RP
@@ -604,6 +615,7 @@ contains
     end do
 
     !$omp parallel do private(i,j,k,iq) OMP_SCHEDULE_ collapse(3)
+!OCL XFILL
     do iq = BND_QA+1, QA
        do j = 1, JA
        do i = 1, IA
@@ -673,6 +685,7 @@ contains
        call PROF_rapstart("DYN_Tendency", 2)
 
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
        do j = JS-1, JE+2
        do i = IS-1, IE+2
        do k = KS, KE
@@ -703,6 +716,7 @@ contains
 #endif
 
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
        do j = JS-1, JE+1
        do i = IS-1, IE+1
        do k = KS, KE-1
@@ -726,6 +740,7 @@ contains
        enddo
        enddo
        enddo
+!OCL XFILL
        do j = JS, JE
        do i = IS, IE
           MOMZ_t(KE,i,j) = 0.0_RP
@@ -737,6 +752,7 @@ contains
 #endif
 
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
        do j = JS-1, JE+2
        do i = IS-2, IE+1
        do k = KS, KE
@@ -765,6 +781,7 @@ contains
 #endif
 
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
        do j = JS-2, JE+1
        do i = IS-1, IE+2
        do k = KS, KE
@@ -793,6 +810,7 @@ contains
 #endif
 
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
        do j = JS-1, JE+2
        do i = IS-1, IE+2
        do k = KS, KE
@@ -820,6 +838,7 @@ contains
        call HIST_in(damp_t,  'RHOT_t_damp', 'tendency of rho*theta temperature due to rayleigh damping', 'K kg/m3/s' )
 #endif
 
+!OCL XFILL
        do j = JS, JE
        do i = IS, IE
           DENS_t(   1:KS-1,i,j) = 0.0_RP
@@ -855,6 +874,7 @@ contains
        !-----< prepare numerical diffusion coefficient >-----
 
        if ( ND_COEF == 0.0_RP ) then
+!OCL XFILL
           num_diff(:,:,:,:,:) = 0.0_RP
        else
           call ATMOS_DYN_numfilter_coef( num_diff(:,:,:,:,:),                    & ! [OUT]
@@ -871,10 +891,15 @@ contains
        !------------------------------------------------------------------------
 
        !##### SAVE #####
+!OCL XFILL
        DENS0(:,:,:) = DENS(:,:,:)
+!OCL XFILL
        MOMZ0(:,:,:) = MOMZ(:,:,:)
+!OCL XFILL
        MOMX0(:,:,:) = MOMX(:,:,:)
+!OCL XFILL
        MOMY0(:,:,:) = MOMY(:,:,:)
+!OCL XFILL
        RHOT0(:,:,:) = RHOT(:,:,:)
 
        call PROF_rapstart("DYN_RK", 2)
@@ -904,6 +929,7 @@ contains
 
        if ( BND_W ) then
           !$omp parallel do private(j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
           do j = 1, JA
           do i = 1, IS-1
           do k = KS, KE
@@ -918,6 +944,7 @@ contains
        end if
        if ( BND_E ) then
           !$omp parallel do private(j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
           do j = 1, JA
           do i = IE+1, IA
           do k = KS, KE
@@ -930,6 +957,7 @@ contains
           enddo
           enddo
           !$omp parallel do private(j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
           do j = 1, JA
           do k = KS, KE
              MOMX_RK1(k,IE,j) = MOMX0(k,IE,j)
@@ -938,6 +966,7 @@ contains
        end if
        if ( BND_S ) then
           !$omp parallel do private(j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
           do j = 1, JS-1
           do i = 1, IA
           do k = KS, KE
@@ -952,6 +981,7 @@ contains
        end if
        if ( BND_N ) then
           !$omp parallel do private(j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
           do j = JE+1, JA
           do i = 1, IA
           do k = KS, KE
@@ -964,6 +994,7 @@ contains
           enddo
           enddo
           !$omp parallel do private(i,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
           do i = 1, IA
           do k = KS, KE
              MOMY_RK1(k,i,JE) = MOMY0(k,i,JE)
@@ -1012,6 +1043,7 @@ contains
 
        if ( BND_W ) then
           !$omp parallel do private(j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
           do j = 1, JA
           do i = 1, IS-1
           do k = KS, KE
@@ -1026,6 +1058,7 @@ contains
        end if
        if ( BND_E ) then
           !$omp parallel do private(j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
           do j = 1, JA
           do i = IE+1, IA
           do k = KS, KE
@@ -1038,6 +1071,7 @@ contains
           enddo
           enddo
           !$omp parallel do private(j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
           do j = 1, JA
           do k = KS, KE
              MOMX_RK2(k,IE,j) = MOMX0(k,IE,j)
@@ -1046,6 +1080,7 @@ contains
        end if
        if ( BND_S ) then
           !$omp parallel do private(j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
           do j = 1, JS-1
           do i = 1, IA
           do k = KS, KE
@@ -1060,6 +1095,7 @@ contains
        end if
        if ( BND_N ) then
           !$omp parallel do private(j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
           do j = JE+1, JA
           do i = 1, IA
           do k = KS, KE
@@ -1072,6 +1108,7 @@ contains
           enddo
           enddo
           !$omp parallel do private(i,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
           do i = 1, IA
           do k = KS, KE
              MOMY_RK2(k,i,JE) = MOMY0(k,i,JE)
@@ -1301,6 +1338,7 @@ contains
 
     dt = real(DTSEC,kind=RP)
 
+!OCL XFILL
     mflx_hi(:,:,:,:) = mflx_av(:,:,:,:) / real(NSTEP_ATMOS_DYN,kind=RP)
 
     call COMM_vars8( mflx_hi(:,:,:,ZDIR), I_COMM_mflx_z )
@@ -1311,6 +1349,7 @@ contains
     call COMM_wait ( mflx_hi(:,:,:,YDIR), I_COMM_mflx_y, .false. )
 
     if ( USE_AVERAGE ) then
+!OCL XFILL
        QTRC_av(:,:,:,:) = 0.0_RP
     endif
 
@@ -1322,6 +1361,7 @@ contains
        call PROF_rapstart("DYN_Numfilter", 2)
 
        if ( ND_COEF_Q == 0.0_RP ) then
+!OCL XFILL
           num_diff_q(:,:,:,:) = 0.0_RP
        else
           call ATMOS_DYN_numfilter_coef_q( num_diff_q(:,:,:,:),                    & ! [OUT]
@@ -1385,6 +1425,7 @@ contains
              enddo
           else
              !$omp parallel do private(j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
              do j = JS, JE
              do k = KS, KE
                 qflx_hi(k,i,JS-1,YDIR) = 0.0_RP
@@ -1404,6 +1445,7 @@ contains
              enddo
           else
              !$omp parallel do private(j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
              do j = JS, JE
              do k = KS, KE
                 qflx_hi(k,i,JE,YDIR) = 0.0_RP

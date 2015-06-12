@@ -137,6 +137,7 @@ contains
 
     if ( update_flag ) then
 
+!OCL XFILL
        do j  = 1, JA
        do i  = 1, IA
        do k  = 1, KA
@@ -149,6 +150,7 @@ contains
        enddo
        enddo
 
+!OCL XFILL
        do iq = 1, QA
        do j  = 1, JA
        do i  = 1, IA
@@ -168,6 +170,7 @@ contains
                           SFLX_rain(:,:),     & ! [OUT]
                           SFLX_snow(:,:)      ) ! [OUT]
 
+!OCL XFILL
        do j  = JS, JE
        do i  = IS, IE
        do k  = KS, KE
@@ -180,6 +183,7 @@ contains
        enddo
        enddo
 
+!OCL XFILL
        do iq = 1, QA
        do j  = JS, JE
        do i  = IS, IE
@@ -191,6 +195,7 @@ contains
        enddo
        enddo
 
+!OCL XFILL
        do j  = JS, JE
        do i  = IS, IE
           precip(i,j) = SFLX_rain(i,j) + SFLX_snow(i,j)

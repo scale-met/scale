@@ -236,6 +236,7 @@ contains
 
        call ATMOS_THERMODYN_templhv( lhv, ATMOS_TEMP )
 
+!OCL XFILL
        do j = JS, JE
        do i = IS, IE
           URBAN_SFLX_evap(i,j) = URBAN_SFLX_LH(i,j) / lhv(i,j)

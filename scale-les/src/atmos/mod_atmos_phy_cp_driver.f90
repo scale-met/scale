@@ -132,11 +132,17 @@ contains
 !                          MFLX_cloudbase ) ! [INOUT]
 
        ! tentative!
+!OCL XFILL
        MOMZ_t_CP(:,:,:)    = 0.0_RP
+!OCL XFILL
        MOMX_t_CP(:,:,:)    = 0.0_RP
+!OCL XFILL
        MOMY_t_CP(:,:,:)    = 0.0_RP
+!OCL XFILL
        RHOT_t_CP(:,:,:)    = 0.0_RP
+!OCL XFILL
        RHOQ_t_CP(:,:,:,:)  = 0.0_RP
+!OCL XFILL
        MFLX_cloudbase(:,:) = 0.0_RP
 
        call HIST_in( MFLX_cloudbase(:,:), 'CBMFX', 'cloud base mass flux', 'kg/m2/s' )

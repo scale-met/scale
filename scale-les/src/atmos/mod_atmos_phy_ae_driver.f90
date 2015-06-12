@@ -113,6 +113,7 @@ contains
 
     if ( update_flag ) then
 
+!OCL XFILL
        do iq = 1, QA
        do j  = JS, JE
        do i  = IS, IE
@@ -140,6 +141,7 @@ contains
        enddo
        enddo
 
+!OCL XFILL
        CCN(:,:,:) = 0.0_RP ! tentative
 
        call HIST_in( CCN(:,:,:), 'CCN', 'cloud condensation nucrei', '' )

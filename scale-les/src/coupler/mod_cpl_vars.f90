@@ -961,6 +961,7 @@ contains
     integer :: i, j
     !---------------------------------------------------------------------------
 
+!OCL XFILL
     do j = JS, JE
     do i = IS, IE
        TEMP     (i,j) = OCN_ATM_TEMP     (i,j)
@@ -1018,6 +1019,7 @@ contains
     integer :: i, j
     !---------------------------------------------------------------------------
 
+!OCL XFILL
     do j = JS, JE
     do i = IS, IE
        TEMP     (i,j) = LND_ATM_TEMP     (i,j)
@@ -1075,6 +1077,7 @@ contains
     integer :: i, j
     !---------------------------------------------------------------------------
 
+!OCL XFILL
     do j = JS, JE
     do i = IS, IE
        TEMP     (i,j) = URB_ATM_TEMP     (i,j)

@@ -264,6 +264,7 @@ contains
                              Q2        (:,:)       ) ! [OUT]
        endif
 
+!OCL XFILL
        do j = JS, JE
        do i = IS, IE
           Uabs10(i,j) = sqrt( U10(i,j)**2 + V10(i,j)**2 )
@@ -298,18 +299,21 @@ contains
        call COMM_wait ( SFLX_MU(:,:), 1 )
        call COMM_wait ( SFLX_MV(:,:), 2 )
 
+!OCL XFILL
        do j = JS, JE
        do i = IS, IE
           MOMZ_t_SF(i,j) = SFLX_MW(i,j) * RFDZ(KS) / GSQRT(KS,i,j,I_XYW)
        enddo
        enddo
 
+!OCL XFILL
        do j = JS, JE
        do i = IS, IE
           MOMX_t_SF(i,j) = 0.5_RP * ( SFLX_MU(i,j) + SFLX_MU(i+1,j) ) * RCDZ(KS) / GSQRT(KS,i,j,I_UYZ)
        enddo
        enddo
 
+!OCL XFILL
        do j = JS, JE
        do i = IS, IE
           MOMY_t_SF(i,j) = 0.5_RP * ( SFLX_MV(i,j) + SFLX_MV(i,j+1) ) * RCDZ(KS) / GSQRT(KS,i,j,I_XVZ)

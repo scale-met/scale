@@ -153,6 +153,7 @@ contains
     call PROF_rapend  ('LND_SfcExch', 2)
 
     !########## reset tendencies ##########
+!OCL XFILL
     do j = JS, JE
     do i = IS, IE
     do k = LKS, LKE
@@ -162,6 +163,7 @@ contains
     enddo
     enddo
 
+!OCL XFILL
     do j = JS, JE
     do i = IS, IE
        LAND_SFC_TEMP_t  (i,j)      = 0.0_RP

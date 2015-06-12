@@ -461,6 +461,7 @@ contains
                                    TEMP(:,:,:), & ! [IN]
                                    DENS(:,:,:)  ) ! [IN]
 
+!OCL XFILL
     do j  = JS, JE
     do i  = IS, IE
     do k  = KS, KE
@@ -488,6 +489,7 @@ contains
        do ihydro = 1, MP_QA
           iq = I_MP2ALL(ihydro)
           if ( iq .ne. I_QC .and. iq .ne. I_QI ) then
+!OCL XFILL
              MP_Qe(:,:,:,ihydro) = 0.0_RP
           end if
        end do
@@ -518,6 +520,7 @@ contains
 
     ! marge basic profile and value in LES domain
 
+!OCL XFILL
     do j = JS, JE
     do i = IS, IE
        do RD_k = 1, RD_KADD
@@ -534,6 +537,7 @@ contains
     enddo
     enddo
 
+!OCL XFILL
     do j = JS, JE
     do i = IS, IE
        do RD_k = 1, RD_KADD
@@ -552,6 +556,7 @@ contains
     enddo
     enddo
 
+!OCL XFILL
     do v = 1,  MSTRN_ngas
     do j = JS, JE
     do i = IS, IE
@@ -572,6 +577,7 @@ contains
     enddo
     enddo
 
+!OCL XFILL
     do v = 1,  MSTRN_ncfc
     do j = JS, JE
     do i = IS, IE
@@ -596,6 +602,7 @@ contains
     enddo
     enddo
 
+!OCL XFILL
     do v = 1,  RD_naero
     do j = JS, JE
     do i = IS, IE
@@ -635,6 +642,7 @@ contains
           enddo
           enddo
        else
+!OCL XFILL
           do j = JS, JE
           do i = IS, IE
           do RD_k = RD_KADD+1, RD_KMAX
@@ -693,6 +701,7 @@ contains
     enddo
     enddo
 
+!OCL XFILL
     do j = JS, JE
     do i = IS, IE
        flux_rad_top(i,j,I_LW,I_up) = flux_rad_merge(1,i,j,I_LW,I_up)
@@ -1135,6 +1144,7 @@ contains
     !$acc& create(bbar, bbarh, b_sfc) &
     !$acc& create(tau, omg, g, b, fsol_rgn, flux, flux_direct)
 
+!OCL XFILL
     !$acc kernels pcopy(dz_std) pcopyin(rhodz)
     !$acc loop gang
     do j = JS, JE
@@ -1148,6 +1158,7 @@ contains
     enddo
     !$acc end kernels
 
+!OCL XFILL
     !$acc kernels pcopy(logP, logT) pcopyin(pres, temp)
     !$acc loop gang
     do j = JS, JE
@@ -1263,6 +1274,7 @@ contains
        chmax = nch(iw)
 
        !---< interpolation of gas parameters (P-T fitting) >---
+!OCL XFILL
        do ich = 1, chmax
           !$acc kernels pcopy(tauGAS) async(0)
           !$acc loop gang
@@ -1550,6 +1562,7 @@ contains
           !--- bn
           if ( irgn == I_SW ) then ! solar
 
+!OCL XFILL
              do icloud = 1, 2
                 !$acc kernels pcopy(b) async(0)
                 !$acc loop gang
@@ -1666,6 +1679,7 @@ contains
              enddo
              !$acc end kernels
 
+!OCL XFILL
              !$acc kernels pcopy(fsol_rgn) async(0)
              !$acc loop gang vector(4)
              do j = JS, JE
@@ -2051,6 +2065,7 @@ contains
 
        if ( direction == I_SFC2TOA ) then ! adding: surface to TOA
 
+!OCL LOOP_NOFUSION,XFILL
           !$acc loop gang vector(4)
           do j = JS, JE
           !$acc loop gang vector(32)
@@ -2076,6 +2091,7 @@ contains
 
        else ! adding: TOA to surface
 
+!OCL LOOP_NOFUSION,XFILL
           !$acc loop gang vector(4)
           do j = JS, JE
           !$acc loop gang vector(32)
