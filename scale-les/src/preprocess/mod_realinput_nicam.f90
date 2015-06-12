@@ -171,7 +171,7 @@ contains
        do k = dims(1)+2, 3, -1
           ! missing data implies under ground
           ! For more accurate surface height, we need topograph data
-          if ( read4D(k,i,j,1) <= 0.0_RP ) then
+          if ( read4D(k-2,i,j,1) <= 0.0_RP ) then
              cz_org(k,i,j) = ( cz_org(k+1,i,j) + cz_org(k,i,j) ) * 0.5_RP
              cz_org(k-1,i,j) = 0.0_RP
              cz_org(1:k-2,i,j) = -1e5_RP
@@ -385,8 +385,8 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[realinput]/Categ[InputNICAM-Surface]'
 
     basename = "la_tg"//trim(basename_num)
-    call FileRead( read1DZ(:), trim(basename), "lev", 1, 1, single=.true. )
-    lz_org(:) = read1DZ(:)
+    call FileRead( read1DLZ(:), trim(basename), "lev", 1, 1, single=.true. )
+    lz_org(:) = read1DLZ(:)
 
     basename = "lsmask"//trim(basename_num)
     call ExternalFileRead( read3DS(:,:,:,:), &
@@ -399,25 +399,25 @@ contains
     lsmask_org(:,:) = real( read3DS(1,:,:,1), kind=RP )
 
     basename = "la_tg"//trim(basename_num)
-    call ExternalFileReadOffset( read4D(:,:,:,:),  &
+    call ExternalFileReadOffset( read4DL(:,:,:,:), &
                                  trim(basename),   &
                                  "la_tg",          &
                                  it, it,      &
                                  myrank,           &
                                  iNICAM,           &
                                  single=.true.     )
-    tg_org(:,:,:) = real( read4D(:,:,:,1), kind=RP )
+    tg_org(:,:,:) = real( read4DL(:,:,:,1), kind=RP )
 
     if( use_file_landwater ) then
        basename = "la_wg"//trim(basename_num)
-       call ExternalFileReadOffset( read4D(:,:,:,:),  &
+       call ExternalFileReadOffset( read4DL(:,:,:,:), &
                                     trim(basename),   &
                                     "la_wg",          &
                                     it, it,      &
                                     myrank,           &
                                     iNICAM,           &
                                     single=.true.     )
-       strg_org(:,:,:) = real( read4D(:,:,:,1), kind=RP )
+       strg_org(:,:,:) = real( read4DL(:,:,:,1), kind=RP )
     end if
 
     basename = "ss_tem_sfc"//trim(basename_num)
