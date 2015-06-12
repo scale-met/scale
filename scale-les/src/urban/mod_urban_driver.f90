@@ -175,6 +175,7 @@ contains
     end do
     end do
     end do
+
     do j = JS, JE
     do i = IS, IE
        URBAN_TR_t(i,j) = 0.0_RP

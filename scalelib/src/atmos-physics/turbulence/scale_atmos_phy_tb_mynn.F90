@@ -312,7 +312,7 @@ contains
     real(RP) :: alpha(KA,IA,JA)
 
     real(RP) :: ac           !< \alpha_c
-    
+
     real(RP) :: Q1
     real(RP) :: Qsl(KA,IA,JA)
     real(RP) :: dQsl
@@ -602,7 +602,7 @@ contains
     call ATMOS_SATURATION_pres2qsat( Qsl, & ! (out)
                                      POTL * temp / POTT, pres ) ! (in)
 
-    do j = JS, JE 
+    do j = JS, JE
     do i = IS, IE
        do k = KS+1, KE_PBL
 
@@ -981,7 +981,7 @@ contains
                    * (NU(k,i,j)*DENS(k,i,j)+NU(k-1,i,j)*DENS(k-1,i,j))*1.5_RP ) &
                  * RCDZ(k) / GSQRT(k,i,j,I_XYZ) / DENS(k,i,j) &
                  - 2.0_RP*tke_N(k,i,j) * q(k,i,j) / (B1 * l(k,i,j)) ) &
-                 * dt 
+                 * dt
              if ( tke_N(k,i,j) > 0.1_RP .and. abs(tke(1,i,j) - tke_N(k,i,j))/tke_N(k,i,j) > 1e-10_RP ) then
                 advc = ( tke(k,i,j) - d(k,i,j) ) / dt + Nu(k,i,j) * (dudz2(k,i,j) - n2(k,i,j)/Pr(k,i,j))
                 write(*,*)k,i,j,tke(1,i,j),tke_N(k,i,j), tke(k,i,j),nu(k,i,j),dudz2(k,i,j),n2(k,i,j),pr(k,i,j),advc

@@ -493,8 +493,6 @@ contains
        qc    )
     use scale_process, only: &
        PRC_MPIstop
-    use scale_comm, only: &
-       COMM_horizontal_mean
     implicit none
 
     real(RP), intent(out) :: dens(KA,IA,JA) !< density               [kg/m3]

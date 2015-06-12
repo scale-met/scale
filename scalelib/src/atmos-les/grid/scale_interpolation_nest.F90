@@ -1574,7 +1574,6 @@ contains
     endif
     endif
 
-
        ! linear interpolation
        do j = 1, ja
        do i = 1, ia

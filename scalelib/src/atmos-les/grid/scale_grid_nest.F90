@@ -1227,8 +1227,7 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
     use scale_grid_real, only: &
        REAL_DOMAIN_CATALOGUE
     use scale_comm, only: &
-       COMM_datatype,  &
-       COMM_world,     &
+       COMM_world, &
        COMM_bcast
     implicit none
 
@@ -1619,10 +1618,8 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
     use scale_grid_real, only: &
        REAL_DOMAIN_CATALOGUE
     use scale_comm, only: &
-       COMM_vars8,  &
-       COMM_wait,   &
-       COMM_world,  &
-       COMM_datatype
+       COMM_vars8, &
+       COMM_wait
     use scale_gridtrans, only: &
        rotc => GTRANS_ROTC
     implicit none
@@ -1814,6 +1811,7 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
        enddo
        enddo
        enddo
+
        call COMM_vars8( interped_ref_DENS, 1 )
        call COMM_wait ( interped_ref_DENS, 1, .false. )
 
@@ -1837,6 +1835,7 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
           ! u_lld receives MOMX/DENS
           call NEST_COMM_intercomm_nestdown( dummy, u_lld, tagbase, I_SCLR, HANDLE, isu_tag, isu_tagf )
        endif
+
        tagbase = tagcomm + tag_momy*order_tag_var
        if ( ONLINE_NO_ROTATE ) then
           ! v_lld receives MOMY

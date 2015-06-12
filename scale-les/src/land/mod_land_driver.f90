@@ -161,6 +161,7 @@ contains
     enddo
     enddo
     enddo
+
     do j = JS, JE
     do i = IS, IE
        LAND_SFC_TEMP_t  (i,j)      = 0.0_RP

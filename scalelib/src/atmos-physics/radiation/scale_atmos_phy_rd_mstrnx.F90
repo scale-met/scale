@@ -482,7 +482,7 @@ contains
                              rh   (:,:,:)    ) ! [IN]
 
     call MP_Mixingratio( MP_Qe(:,:,:,:), & ! [OUT]
-         QTRC (:,:,:,:)  ) ! [IN]
+                         QTRC (:,:,:,:)  ) ! [IN]
 
     if ( ATMOS_PHY_RD_MSTRN_ONLY_QCI ) then
        do ihydro = 1, MP_QA
@@ -1010,7 +1010,7 @@ contains
   !-----------------------------------------------------------------------------
   !> DTRN v3.2
   subroutine RD_MSTRN_DTRN3( &
-       rd_kmax,         &
+       rd_kmax,      &
        ngas,         &
        ncfc,         &
        naero,        &
@@ -1856,7 +1856,6 @@ contains
 
 !OCL SERIAL
     do icloud = 1, 2
-
        !$acc kernels pcopy(tdir0, r0, t0, em_lw, ep_lw, em_sw, ep_sw) &
        !$acc& pcopyin(wmns, tau, g, omg, cossza, b, m, w) async(0)
 !OCL PARALLEL
