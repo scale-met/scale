@@ -202,6 +202,7 @@ contains
     ! full level
     real(RP) :: velx_org(dims(1)+2,dims(2),dims(3))
     real(RP) :: vely_org(dims(1)+2,dims(2),dims(3))
+    real(RP) :: pott_org(dims(1)+2,dims(2),dims(3))
     real(RP) :: topo_org(          dims(2),dims(3))
 
     ! half level
@@ -210,7 +211,6 @@ contains
     real(RP) :: velys_org(dims(1),dims(2),dims(6))
     real(RP) :: geof_org (dims(4),dims(2),dims(3))
 
-    real(RP) :: pott
     real(RP) :: qhyd
 
     integer :: k, i, j, iq
@@ -250,16 +250,16 @@ contains
     topo_org (:,:) = real( read_xy(:,:,1), kind=RP )
 
     call ExternalFileRead( read_wxy(:,:,:,:), BASENAME, "PH",      it, it, myrank, mdlid, single=.true., zstag=.true. )
-    ph_org  (3:,:,:) = real( read_wxy(:,:,:,1), kind=RP )
+    ph_org  (:,:,:) = real( read_wxy(:,:,:,1), kind=RP )
 
     call ExternalFileRead( read_wxy(:,:,:,:), BASENAME, "PHB",     it, it, myrank, mdlid, single=.true., zstag=.true. )
-    phb_org (3:,:,:) = real( read_wxy(:,:,:,1), kind=RP )
+    phb_org (:,:,:) = real( read_wxy(:,:,:,1), kind=RP )
 
     call ExternalFileRead( read_zxy(:,:,:,:), BASENAME, "P",       it, it, myrank, mdlid, single=.true.               )
-    p_org   (3:,:,:) = real( read_zxy(:,:,:,1), kind=RP )
+    p_org   (:,:,:) = real( read_zxy(:,:,:,1), kind=RP )
 
     call ExternalFileRead( read_zxy(:,:,:,:), BASENAME, "PB",      it, it, myrank, mdlid, single=.true.               )
-    pb_org  (3:,:,:) = real( read_zxy(:,:,:,1), kind=RP )
+    pb_org  (:,:,:) = real( read_zxy(:,:,:,1), kind=RP )
 
     call ExternalFileRead( read_wxy(:,:,:,:), BASENAME, varname_W, it, it, myrank, mdlid, single=.true., zstag=.true. )
     velzs_org(:,:,:) = real( read_wxy(:,:,:,1), kind=RP )
@@ -330,7 +330,7 @@ contains
           qhyd = qhyd + qtrc_org(k,i,j,iq)
        end do
        do iq = 1, min( mptype_parent, 6)
-          qtrc_org(k,i,j,iq) = qtrc_org(k,i,j,iq) * ( 1.0_RP - qhyd )
+          qtrc_org(k,i,j,iq) = qtrc_org(k,i,j,iq) / ( 1.0_RP + qhyd )
        end do
     end do
     end do
@@ -366,7 +366,7 @@ contains
 
 
     call ExternalFileRead( read_zxy(:,:,:,:), BASENAME, varname_T, it, it, myrank, mdlid, single=.true.               )
-    temp_org(3:,:,:) = real( read_zxy(:,:,:,1), kind=RP )
+    pott_org(3:,:,:) = real( read_zxy(:,:,:,1), kind=RP ) + t0
     call ExternalFileRead( read_xy(:,:,:),    BASENAME, "T2",      it, it, myrank, mdlid, single=.true.               )
     temp_org(2,:,:) = real( read_xy(:,:,1), kind=RP )
 
@@ -376,11 +376,12 @@ contains
     do j = 1, dims(3)
     do i = 1, dims(2)
        do k = 3, dims(1)+2
-          pres_org(k,i,j) = p_org(k,i,j) + pb_org(k,i,j)
+          pres_org(k,i,j) = p_org(k-2,i,j) + pb_org(k-2,i,j)
+          temp_org(k,i,j) = pott_org(k,i,j) * ( pres_org(k,i,j) / p0 )**RCP
        end do
-       pott = temp_org(2,i,j) * ( p0/pres_org(2,i,j) )**RCP
+       pott_org(2,i,j) = temp_org(2,i,j) * ( p0/pres_org(2,i,j) )**RCP
        temp_org(1,i,j) = temp_org(2,i,j) + LAPS * topo_org(i,j)
-       pres_org(1,i,j) = p0 * ( temp_org(1,i,j) / pott )**(1.0_RP/RCP)
+       pres_org(1,i,j) = p0 * ( temp_org(1,i,j) / pott_org(2,i,j) )**(1.0_RP/RCP) ! pott_org(1,i,j) == pott_org(2,i,j)
     end do
     end do
 
@@ -399,6 +400,32 @@ contains
     end do
     end do
 
+
+#ifdef DEBUG
+     !k=1 ; i=int(dims(2)/2) ; j=int(dims(3)/2) ; iq = 1
+     k=2 ; i=3 ; j=3 ; iq = 1
+     write(*,*) "read 3D wrf data",i,j,k
+     write(*,*) "lon_org    ",lon_org   (i,j)/D2R
+     write(*,*) "lat_org    ",lat_org   (i,j)/D2R
+     write(*,*) "cz_org     ",cz_org    (k,i,j)
+     write(*,*) "pres_org   ",pres_org  (k,i,j)
+     write(*,*) "velx_org   ",llvelx_org(k,i,j)
+     write(*,*) "vely_org   ",llvely_org(k,i,j)
+     write(*,*) "velz_org   ",velz_org  (k,i,j)
+     write(*,*) "temp_org   ",temp_org  (k,i,j)
+     write(*,*) "qtrc_org   ",qtrc_org  (k,i,j,iq)
+     k=3 ; i=3 ; j=3 ; iq = 1
+     write(*,*) "read 3D wrf data",i,j,k
+     write(*,*) "lon_org    ",lon_org   (i,j)/D2R
+     write(*,*) "lat_org    ",lat_org   (i,j)/D2R
+     write(*,*) "cz_org     ",cz_org    (k,i,j)
+     write(*,*) "pres_org   ",pres_org  (k,i,j)
+     write(*,*) "velx_org   ",llvelx_org(k,i,j)
+     write(*,*) "vely_org   ",llvely_org(k,i,j)
+     write(*,*) "velz_org   ",velz_org  (k,i,j)
+     write(*,*) "temp_org   ",temp_org  (k,i,j)
+     write(*,*) "qtrc_org   ",qtrc_org  (k,i,j,iq)
+#endif
 
     return
   end subroutine ParentAtomInputWRFARW

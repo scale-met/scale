@@ -917,6 +917,16 @@ contains
     character(LEN=*), intent(in) :: intrp_ocean_sfc_temp
     integer,          intent(in) :: mdlid                ! model type id
 
+    integer, parameter :: i_intrp_off  = 0
+    integer, parameter :: i_intrp_mask = 1
+    integer, parameter :: i_intrp_fill = 2
+
+    integer :: i_intrp_land_temp
+    integer :: i_intrp_land_water
+    integer :: i_intrp_land_sfc_temp
+    integer :: i_intrp_ocean_temp
+    integer :: i_intrp_ocean_sfc_temp
+
     real(RP) :: temp
     real(RP) :: pres
 
@@ -988,6 +998,7 @@ contains
        write(*,*) 'xxx in Real Case, LKMAX should be set more than 4'
        call PRC_MPIstop
     endif
+
 
     if ( do_read ) then
 
@@ -1084,6 +1095,72 @@ contains
        call COMM_bcast( olat_org(:,:),   dims(10), dims(11) )
     end if
 
+    select case ( INTRP_LAND_TEMP )
+    case ( 'off' )
+       i_intrp_land_temp = i_intrp_off
+    case ( 'mask' )
+       i_intrp_land_temp = i_intrp_mask
+    case ( 'fill' )
+       i_intrp_land_temp = i_intrp_fill
+    case default
+       write(*,*) 'xxx INTRP_LAND_TEMP is invalid. ', INTRP_LAND_TEMP
+       call PRC_MPIstop
+    end select
+    select case ( INTRP_LAND_SFC_TEMP )
+    case ( 'off' )
+       i_intrp_land_sfc_temp = i_intrp_off
+    case ( 'mask' )
+       i_intrp_land_sfc_temp = i_intrp_mask
+    case ( 'fill' )
+       i_intrp_land_sfc_temp = i_intrp_fill
+    case default
+       write(*,*) 'xxx INTRP_LAND_SFC_TEMP is invalid. ', INTRP_LAND_SFC_TEMP
+       call PRC_MPIstop
+    end select
+    select case ( INTRP_LAND_WATER )
+    case ( 'off' )
+       i_intrp_land_water = i_intrp_off
+    case ( 'mask' )
+       i_intrp_land_water = i_intrp_mask
+    case ( 'fill' )
+       i_intrp_land_water = i_intrp_fill
+    case default
+       write(*,*) 'xxx INTRP_LAND_WATER is invalid. ', INTRP_LAND_WATER
+       call PRC_MPIstop
+    end select
+    select case ( INTRP_OCEAN_TEMP )
+    case ( 'off' )
+       i_intrp_ocean_temp = i_intrp_off
+    case ( 'mask' )
+       i_intrp_ocean_temp = i_intrp_mask
+    case ( 'fill' )
+       i_intrp_ocean_temp = i_intrp_fill
+    case default
+       write(*,*) 'xxx INTRP_OCEAN_TEMP is invalid. ', INTRP_OCEAN_TEMP
+       call PRC_MPIstop
+    end select
+    select case ( INTRP_OCEAN_SFC_TEMP )
+    case ( 'off' )
+       i_intrp_ocean_sfc_temp = i_intrp_off
+    case ( 'mask' )
+       i_intrp_ocean_sfc_temp = i_intrp_mask
+    case ( 'fill' )
+       i_intrp_ocean_sfc_temp = i_intrp_fill
+    case default
+       write(*,*) 'xxx INTRP_OCEAN_SFC_TEMP is invalid. ', INTRP_OCEAN_SFC_TEMP
+       call PRC_MPIstop
+    end select
+
+    select case ( mdlid )
+    case ( iSCALE, iWRFARW, iNICAM )
+       i_intrp_land_temp      = i_intrp_mask
+       i_intrp_land_sfc_temp  = i_intrp_mask
+       i_intrp_land_water     = i_intrp_mask
+       i_intrp_ocean_temp     = i_intrp_mask
+       i_intrp_ocean_sfc_temp = i_intrp_mask
+    end select
+
+
     ! fill grid data
     do j = 1, dims(9)
     do i = 1, dims(8)
@@ -1111,17 +1188,14 @@ contains
                                     landgrid=.true.               ) ! [IN]
 
     ! Land temp: interpolate over the ocean
-    if ( INTRP_LAND_TEMP .ne. 'off' ) then
+    if ( i_INTRP_LAND_TEMP .ne. i_intrp_off ) then
        do k = 1, dims(7)
           work(:,:) = tg_org(k,:,:)
-          select case ( INTRP_LAND_TEMP )
-          case ( 'mask' )
+          select case ( i_INTRP_LAND_TEMP )
+          case ( i_intrp_mask )
              lmask = lsmask_org
-          case ( 'fill' )
+          case ( i_intrp_fill )
              call make_mask( lmask, work, dims(8), dims(9), landdata=.true.)
-          case default
-             write(*,*) 'xxx INTRP_LAND_TEMP is invalid. ', INTRP_LAND_TEMP
-             call PRC_MPIstop
           end select
           call interp_OceanLand_data( work, lmask, dims(8), dims(9), landdata=.true. )
           tg_org(k,:,:) = work(:,:)
@@ -1154,17 +1228,14 @@ contains
 
        if ( use_waterratio ) then
 
-          if ( INTRP_LAND_WATER .ne. 'off' ) then
+          if ( i_INTRP_LAND_WATER .ne. i_intrp_off ) then
              do k = 1, dims(7)
                 work(:,:) = sh2o_org(k,:,:)
-                select case ( INTRP_LAND_WATER )
-                case ( 'mask' )
+                select case ( i_INTRP_LAND_WATER )
+                case ( i_intrp_mask )
                    lmask = lsmask_org
-                case ( 'fill' )
+                case ( i_intrp_fill )
                    call make_mask( lmask, work, dims(8), dims(9), landdata=.true.)
-                case default
-                   write(*,*) 'xxx INTRP_LAND_WATER is invalid. ', INTRP_LAND_WATER
-                   call PRC_MPIstop
                 end select
                 call interp_OceanLand_data(work, lmask, dims(8), dims(9), landdata=.true.)
                 sh2o_org(k,:,:) = work(:,:)
@@ -1185,17 +1256,14 @@ contains
 
        else
 
-          if ( INTRP_LAND_WATER .ne. 'off' ) then
+          if ( i_INTRP_LAND_WATER .ne. i_intrp_off ) then
              do k = 1, dims(7)
                 work(:,:) = strg_org(k,:,:)
-                select case ( INTRP_LAND_WATER )
-                case ( 'mask' )
+                select case ( i_INTRP_LAND_WATER )
+                case ( i_intrp_mask )
                    lmask = lsmask_org
-                case ( 'fill' )
+                case ( i_intrp_fill )
                    call make_mask( lmask, work, dims(8), dims(9), landdata=.true.)
-                case default
-                   write(*,*) 'xxx INTRP_LAND_WATER is invalid. ', INTRP_LAND_WATER
-                   call PRC_MPIstop
                 end select
                 call interp_OceanLand_data(work, lmask, dims(8),dims(9), landdata=.true.)
                 strg_org(k,:,:) = work(:,:)
@@ -1235,9 +1303,9 @@ contains
     endif
 
     ! Ocean temp: interpolate over the land
-    if ( INTRP_OCEAN_TEMP .ne. 'off' ) then
-       select case ( INTRP_OCEAN_TEMP )
-       case ( 'mask' )
+    if ( i_INTRP_OCEAN_TEMP .ne. i_intrp_off ) then
+       select case ( i_INTRP_OCEAN_TEMP )
+       case ( i_intrp_mask )
           if ( dims(8)==dims(10) .and. dims(9)==dims(11) ) then
              omask = lsmask_org
           else
@@ -1245,19 +1313,16 @@ contains
              write(*,*) '"mask" option is not available for INTRP_OCEAN_TEMP'
              call PRC_MPIstop
           end if
-       case ( 'fill' )
+       case ( i_intrp_fill )
           call make_mask( omask, tw_org, dims(10), dims(11), landdata=.false.)
-       case default
-          write(*,*) 'xxx INTRP_OCEAN_TEMP is invalid. ', INTRP_OCEAN_TEMP
-          call PRC_MPIstop
        end select
        call interp_OceanLand_data(tw_org, omask, dims(10), dims(11), landdata=.false.)
     end if
 
     ! SST: interpolate over the land
-    if ( INTRP_OCEAN_SFC_TEMP .ne. 'off' ) then
-       select case ( INTRP_OCEAN_SFC_TEMP )
-       case ( 'mask' )
+    if ( i_INTRP_OCEAN_SFC_TEMP .ne. i_intrp_off ) then
+       select case ( i_INTRP_OCEAN_SFC_TEMP )
+       case ( i_intrp_mask )
           if ( dims(8)==dims(10) .and. dims(9)==dims(11) ) then
              omask = lsmask_org
           else
@@ -1265,21 +1330,18 @@ contains
              write(*,*) '"mask" option is not available for INTRP_OCEAN_SFC_TEMP'
              call PRC_MPIstop
           end if
-       case ( 'fill' )
+       case ( i_intrp_fill )
           call make_mask( omask, sst_org, dims(10), dims(11), landdata=.false.)
-       case default
-          write(*,*) 'xxx INTRP_OCEAN_SFC_TEMP is invalid. ', INTRP_OCEAN_SFC_TEMP
-          call PRC_MPIstop
        end select
        call interp_OceanLand_data(sst_org, omask, dims(10), dims(11), landdata=.false.)
     end if
 
     ! Surface skin temp: interpolate over the ocean
-    if ( INTRP_LAND_SFC_TEMP .ne. 'off' ) then
-       select case ( INTRP_LAND_SFC_TEMP )
-       case ( 'mask' )
+    if ( i_INTRP_LAND_SFC_TEMP .ne. i_intrp_off ) then
+       select case ( i_INTRP_LAND_SFC_TEMP )
+       case ( i_intrp_mask )
           lmask = lsmask_org
-       case ( 'fill' )
+       case ( i_intrp_fill )
           call make_mask( lmask, lst_org, dims(8), dims(9), landdata=.true.)
        case default
           write(*,*) 'xxx INTRP_LAND_SFC_TEMP is invalid. ', INTRP_LAND_SFC_TEMP
@@ -1289,11 +1351,11 @@ contains
     end if
 
     ! Urban surface temp: interpolate over the ocean
-    ! if ( INTRP_URB_SFC_TEMP .ne. 'off' ) then
-    !   select case ( INTRP_URB_SFC_TEMP )
-    !   case ( 'mask' )
+    ! if ( i_INTRP_URB_SFC_TEMP .ne. i_intrp_off ) then
+    !   select case ( i_INTRP_URB_SFC_TEMP )
+    !   case ( i_intrp_mask )
     !      lmask = lsmask_org
-    !   case ( 'fill' )
+    !   case ( i_intrp_fill )
     !      call make_mask( lmask, ust_org, dims(8), dims(9), landdata=.true.)
     !   case default
     !      write(*,*) 'xxx INTRP_URB_SFC_TEMP is invalid. ', INTRP_URB_SFC_TEMP
