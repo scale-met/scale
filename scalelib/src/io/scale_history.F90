@@ -898,6 +898,9 @@ contains
 
     endif
 
+    deallocate( var_Z )
+    deallocate( var2  )
+
     call PROF_rapend  ('FILE_O_NetCDF', 2)
 
     return
