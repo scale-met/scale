@@ -1365,8 +1365,8 @@ contains
 
     end if
 
-    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
     if ( IO == 0 ) then
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JS, JE
        do i = IS, IE
        do k = KS, KEE
@@ -1384,6 +1384,7 @@ contains
        enddo
        enddo
     else
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JS, JE
        do i = IS, IE
        do k = KS, KEE
@@ -1402,6 +1403,7 @@ contains
        enddo
     end if
 
+    !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
     do i = IS, IE
        diff(   1:KS-1,i,j,XDIR) = 0.0_RP
@@ -1447,6 +1449,7 @@ contains
        enddo
     end if
 
+    !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
     do i = IS, IE
        diff(   1:KS-1,i,j,YDIR) = 0.0_RP

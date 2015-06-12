@@ -603,8 +603,8 @@ contains
 
     end do
 
+    !$omp parallel do private(i,j,k,iq) OMP_SCHEDULE_ collapse(3)
     do iq = BND_QA+1, QA
-       !$omp parallel do private(i,j,k,iq) OMP_SCHEDULE_ collapse(2)
        do j = 1, JA
        do i = 1, IA
        do k = 1, KA
@@ -641,7 +641,7 @@ contains
        enddo
     end if
     if ( BND_S ) then
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+       !$omp parallel do private(i,k) OMP_SCHEDULE_ collapse(2)
        do i = IS, IE
        do k = KS, KE
           mflx_hi(k,i,JS-1,YDIR) = GSQRT(k,i,JS-1,I_XVZ) * MOMY(k,i,JS-1) / MAPF(i,JS-1,1,I_XV)

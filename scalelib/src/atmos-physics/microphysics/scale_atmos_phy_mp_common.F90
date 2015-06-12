@@ -792,7 +792,6 @@ contains
 
     ! save previous value
     do iq = 1, QA
-       !$omp parallel do private(i,j,k,iq,rhoq) OMP_SCHEDULE_ collapse(2)
        do j = JS, JE
        do i = IS, IE
           rhoq(KS-1,i,j,iq) = DENS(KS,i,j) * QTRC(KS,i,j,iq)
@@ -802,7 +801,6 @@ contains
        enddo
        enddo
     enddo
-
 
     !--- mass flux for each tracer, upwind with vel < 0
     do iq = I_QC, QA
