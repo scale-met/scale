@@ -108,7 +108,9 @@ contains
     !---------------------------------------------------------------------------
 
     !########## Get Surface Boundary from coupler ##########
+    call PROF_rapstart('LND_SfcExch', 2)
     call LAND_SURFACE_GET
+    call PROF_rapend  ('LND_SfcExch', 2)
 
     !########## Physics ##########
     if ( LAND_sw ) then
@@ -146,7 +148,9 @@ contains
     call LAND_vars_total
 
     !########## Set Surface Boundary to coupler ##########
+    call PROF_rapstart('LND_SfcExch', 2)
     call LAND_SURFACE_SET( countup=.true. )
+    call PROF_rapend  ('LND_SfcExch', 2)
 
     !########## reset tendencies ##########
     do j = JS, JE

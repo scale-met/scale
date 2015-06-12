@@ -727,7 +727,7 @@ contains
     integer  :: k, i, j, iq, ijk, indirect, ip
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('MP_tomita08')
+    call PROF_rapstart('MP_tomita08', 3)
 
     do j = JS, JE
     do i = IS, IE
@@ -1544,7 +1544,7 @@ contains
 !    if( IO_L ) write(IO_FID_LOG,*) "RHOE0  MAX/MIN:", maxval(RHOE0(:,:,:)), minval(RHOE0(:,:,:))
 !    if( IO_L ) write(IO_FID_LOG,*) "RHOE_t MAX/MIN:", maxval(RHOE_t(:,:,:)), minval(RHOE_t(:,:,:))
 
-    call PROF_rapend  ('MP_tomita08')
+    call PROF_rapend  ('MP_tomita08', 3)
 
     return
   end subroutine MP_tomita08

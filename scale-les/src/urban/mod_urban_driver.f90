@@ -121,7 +121,9 @@ contains
     !---------------------------------------------------------------------------
 
     !########## Get Surface Boundary from coupler ##########
+    call PROF_rapstart('URB_SfcExch', 2)
     call URBAN_SURFACE_GET
+    call PROF_rapend  ('URB_SfcExch', 2)
 
     !########## Physics ##########
     if ( URBAN_sw ) then
@@ -159,7 +161,9 @@ contains
     call URBAN_vars_total
 
     !########## Set Surface Boundary to coupler ##########
+    call PROF_rapstart('URB_SfcExch', 2)
     call URBAN_SURFACE_SET( countup=.true. )
+    call PROF_rapend  ('URB_SfcExch', 2)
 
     !########## reset tendencies ##########
     do j = JS, JE

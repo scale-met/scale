@@ -449,6 +449,8 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Radiation(mstrnX)'
 
+    call PROF_rapstart('RD_Profile', 3)
+
     call THERMODYN_temp_pres( temp(:,:,:),  & ! [OUT]
                               pres(:,:,:),  & ! [OUT]
                               DENS(:,:,:),  & ! [IN]
@@ -644,6 +646,9 @@ contains
        endif
     enddo
 
+    call PROF_rapend  ('RD_Profile', 3)
+    call PROF_rapstart('RD_MSTRN_DTRN3', 3)
+
     ! calc radiative transfer
     call RD_MSTRN_DTRN3( RD_KMAX,                      & ! [IN]
                          MSTRN_ngas,                   & ! [IN]
@@ -671,6 +676,8 @@ contains
                          fact_land         (:,:),      & ! [IN]
                          fact_urban        (:,:),      & ! [IN]
                          flux_rad_merge    (:,:,:,:,:) ) ! [OUT]
+
+    call PROF_rapend  ('RD_MSTRN_DTRN3', 3)
 
     ! return to grid coordinate of LES domain
     do j = JS, JE
@@ -1679,7 +1686,8 @@ contains
           !if( IO_L ) write(IO_FID_LOG,*) "omg min", iw, ich, minval(omg(:,IS:IE,JS:JE,1)), minval(omg(:,IS:IE,JS:JE,2))
 
           ! two-stream transfer
-          call RD_MSTRN_two_stream( rd_kmax,                   & ! [IN]
+          call PROF_rapstart('RD_MSTRN_twst', 3)
+          call RD_MSTRN_two_stream( rd_kmax,                & ! [IN]
                                     iw, ich,                & ! [IN]
                                     cosSZA     (:,:),       & ! [IN]
                                     fsol_rgn   (:,:),       & ! [IN]
@@ -1693,6 +1701,7 @@ contains
                                     cldfrac    (:,:,:),     & ! [IN]
                                     flux       (:,:,:,:),   & ! [OUT]
                                     flux_direct(:,:,:)      ) ! [OUT]
+          call PROF_rapend  ('RD_MSTRN_twst', 3)
 
           !$acc kernels pcopy(rflux) pcopyin(flux, wgtch) async(0)
           !$acc loop gang

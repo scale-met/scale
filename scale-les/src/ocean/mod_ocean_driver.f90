@@ -116,7 +116,9 @@ contains
     !---------------------------------------------------------------------------
 
     !########## Get Surface Boundary from coupler ##########
+    call PROF_rapstart('OCN_SfcExch', 2)
     call OCEAN_SURFACE_GET
+    call PROF_rapend  ('OCN_SfcExch', 2)
 
     !########## Physics ##########
     if ( OCEAN_sw ) then
@@ -148,7 +150,9 @@ contains
     call OCEAN_vars_total
 
     !########## Set Surface Boundary to coupler ##########
+    call PROF_rapstart('OCN_SfcExch', 2)
     call OCEAN_SURFACE_SET( countup=.true. )
+    call PROF_rapend  ('OCN_SfcExch', 2)
 
     !########## reset tendencies ##########
     do j = JS, JE

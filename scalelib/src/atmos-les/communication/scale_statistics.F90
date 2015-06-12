@@ -136,7 +136,7 @@ contains
     endif
 
     if ( STATISTICS_use_globalcomm ) then
-       call PROF_rapstart('COMM_Allreduce_MPI')
+       call PROF_rapstart('COMM_Allreduce', 2)
        ! All reduce
        call MPI_Allreduce( statval,              &
                            allstatval,           &
@@ -146,7 +146,7 @@ contains
                            LOCAL_COMM_WORLD,     &
                            ierr                  )
 
-       call PROF_rapend  ('COMM_Allreduce_MPI')
+       call PROF_rapend  ('COMM_Allreduce', 2)
 
        ! statistics over the all node
        if ( varname_trim /= "" ) then ! if varname is empty, suppress output
@@ -207,7 +207,7 @@ contains
     endif
 
     if ( STATISTICS_use_globalcomm ) then
-       call PROF_rapstart('COMM_Allreduce_MPI')
+       call PROF_rapstart('COMM_Allreduce', 2)
        ! All reduce
        call MPI_Allreduce( statval,              &
                            allstatval,           &
@@ -217,7 +217,7 @@ contains
                            LOCAL_COMM_WORLD,     &
                            ierr                  )
 
-       call PROF_rapend  ('COMM_Allreduce_MPI')
+       call PROF_rapend  ('COMM_Allreduce', 2)
 
        ! statistics over the all node
        if ( varname_trim /= "" ) then ! if varname is empty, suppress output
@@ -291,7 +291,7 @@ contains
     enddo
 
     if ( STATISTICS_use_globalcomm ) then
-       call PROF_rapstart('COMM_Bcast_MPI')
+       call PROF_rapstart('COMM_Bcast', 2)
        do p = 0, PRC_nmax-1
           call MPI_Bcast( statval(1,1,p),   &
                           vsize*2,          &
@@ -306,7 +306,7 @@ contains
                           LOCAL_COMM_WORLD, &
                           ierr              )
        enddo
-       call PROF_rapend  ('COMM_Bcast_MPI')
+       call PROF_rapend  ('COMM_Bcast', 2)
 
        do v = 1, vsize
           allstatval(v,1)   = maxval(statval(v,1,:))

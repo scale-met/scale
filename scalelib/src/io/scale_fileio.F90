@@ -85,7 +85,6 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '*** Data source : ', trim(H_SOURCE)
     if( IO_L ) write(IO_FID_LOG,*) '*** Institute   : ', trim(H_INSTITUTE)
 
-
     allocate( AXIS_LON (IMAXB,JMAXB) )
     allocate( AXIS_LONX(IMAXB,JMAXB) )
     allocate( AXIS_LONY(IMAXB,JMAXB) )
@@ -94,18 +93,6 @@ contains
     allocate( AXIS_LATX(IMAXB,JMAXB) )
     allocate( AXIS_LATY(IMAXB,JMAXB) )
     allocate( AXIS_LATXY(IMAXB,JMAXB) )
-
-    ! only for register
-    call PROF_rapstart('FILE_I_NetCDF', 2)
-    call PROF_rapend  ('FILE_I_NetCDF', 2)
-    call PROF_rapstart('FILE_O_NetCDF', 2)
-    call PROF_rapend  ('FILE_O_NetCDF', 2)
-    call PROF_rapstart('FILE_I_ASCII', 2)
-    call PROF_rapend  ('FILE_I_ASCII', 2)
-    call PROF_rapstart('FILE_O_ASCII', 2)
-    call PROF_rapend  ('FILE_O_ASCII', 2)
-    call PROF_rapstart('FILE_O_interp', 2)
-    call PROF_rapend  ('FILE_O_interp')
 
     return
   end subroutine FILEIO_setup
