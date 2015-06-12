@@ -1300,6 +1300,7 @@ contains
     integer :: i, j
     !---------------------------------------------------------------------------
 
+!OCL PREFETCH
     do j = 1, ja
     do i = 1, ia
        intp(i,j) = ref(igrd(i,j,1),jgrd(i,j,1)) * hfact(i,j,1)
@@ -1354,6 +1355,7 @@ contains
     endif
 
        ! linear interpolation
+!OCL PREFETCH
        do j = 1, ja
        do i = 1, ia
        do k = ks, ke
@@ -1404,6 +1406,7 @@ contains
     integer :: i, j
     !---------------------------------------------------------------------------
 
+!OCL PREFETCH
     do j = 1, ja
     do i = 1, ia
        intp(i,j) = ref(igrd(i,j,1),jgrd(i,j,1)) * hfact(i,j,1)  &
@@ -1460,6 +1463,7 @@ contains
     endif
 
        ! linear interpolation
+!OCL PREFETCH
        do j = 1, ja
        do i = 1, ia
        do k = ks, ke
@@ -1518,6 +1522,7 @@ contains
     integer :: i, j
     !---------------------------------------------------------------------------
 
+!OCL PREFETCH
     do j = 1, ja
     do i = 1, ia
        intp(i,j) = ref(igrd(i,j,1),jgrd(i,j,1)) * hfact(i,j,1)  &
@@ -1575,6 +1580,7 @@ contains
     endif
 
        ! linear interpolation
+!OCL PREFETCH
        do j = 1, ja
        do i = 1, ia
        do k = ks, ke
@@ -1637,6 +1643,7 @@ contains
     integer :: i, j
     !---------------------------------------------------------------------------
 
+!OCL PREFETCH
     do j = 1, ja
     do i = 1, ia
        intp(i,j) = ref(igrd(i,j,1),jgrd(i,j,1)) * hfact(i,j,1)  &
@@ -1698,6 +1705,7 @@ contains
     endif
 
        ! linear interpolation
+!OCL PREFETCH
        do j = 1, ja
        do i = 1, ia
        do k = ks, ke
@@ -1776,6 +1784,7 @@ contains
     integer :: i, j
     !---------------------------------------------------------------------------
 
+!OCL PREFETCH
     do j = 1, ja
     do i = 1, ia
        intp(i,j) = ref(igrd(i,j,1), jgrd(i,j,1))  * hfact(i,j,1)  &
@@ -1841,6 +1850,7 @@ contains
     endif
 
        ! linear interpolation
+!OCL PREFETCH
        do j = 1, ja
        do i = 1, ia
        do k = ks, ke
