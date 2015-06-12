@@ -1529,8 +1529,7 @@ contains
 !OCL SERIAL
   subroutine solve_bicgstab( &
        C,        & ! (inout)
-       F1, F2, F3, & ! (in)
-       G, RFDZ   ) ! (in)
+       F1, F2, F3 ) ! (in)
 
     use scale_process, only: &
        PRC_MPIstop
@@ -1539,8 +1538,6 @@ contains
     real(RP), intent(in)    :: F1(KA)
     real(RP), intent(in)    :: F2(KA)
     real(RP), intent(in)    :: F3(KA)
-    real(RP), intent(in)    :: G(KA)
-    real(RP), intent(in)    :: RFDZ(KA-1)
 
     real(RP) :: r0(KMAX-1)
 
@@ -1646,6 +1643,27 @@ contains
 
     return
   end subroutine solve_bicgstab
+
+
+  subroutine mul_matrix(V, M, C)
+    implicit none
+    real(RP), intent(out) :: V(KMAX-1)
+    real(RP), intent(in)  :: M(3, KMAX-1)
+    real(RP), intent(in)  :: C(KMAX-1)
+
+    integer :: k
+
+    ! k = 1
+    V(1) = M(3,1)*C(2) + M(2,1)*C(1)
+    do k = 2, KMAX-2
+       V(k) = M(3,k)*C(k+1) + M(2,k)*C(k) + M(1,k)*C(k-1)
+    enddo
+    ! k = KE-1
+    V(KMAX-1) = M(2,KMAX-1)*C(KMAX-1) + M(1,KMAX-1)*C(KMAX-2)
+
+    return
+  end subroutine mul_matrix
+
 
 #elif defined(HEVI_LAPACK)
 !OCL SERIAL
