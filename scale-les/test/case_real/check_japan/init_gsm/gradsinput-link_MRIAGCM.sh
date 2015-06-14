@@ -49,7 +49,7 @@ do
 case ${BND} in
 MRI)
  dir=${SCALE_DB}'/GrADS_output/MRIAGCM_output/regional'
- gfile=invariant_105E-170E_10N-65N_TL959.dr
+ gfile=invariant_TL959.dr
  opre=${BND}
  ;;
 MRIpres)

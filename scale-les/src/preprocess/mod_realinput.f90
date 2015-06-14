@@ -1187,120 +1187,20 @@ contains
                                     dims(7), dims(8), dims(9),    & ! [IN]
                                     landgrid=.true.               ) ! [IN]
 
-    ! Land temp: interpolate over the ocean
-    if ( i_INTRP_LAND_TEMP .ne. i_intrp_off ) then
-       do k = 1, dims(7)
-          work(:,:) = tg_org(k,:,:)
-          select case ( i_INTRP_LAND_TEMP )
-          case ( i_intrp_mask )
-             lmask = lsmask_org
-          case ( i_intrp_fill )
-             call make_mask( lmask, work, dims(8), dims(9), landdata=.true.)
-          end select
-          call interp_OceanLand_data( work, lmask, dims(8), dims(9), landdata=.true. )
-          tg_org(k,:,:) = work(:,:)
-       end do
-    end if
+    ! interpolation facter between outer land grid and ocean grid
+    call INTRPNEST_interp_fact_latlon( hfact_l(:,:,:),               & ! [OUT]
+                                       igrd_l(:,:,:), jgrd_l(:,:,:), & ! [OUT]
+                                       llat_org(:,:), llon_org(:,:), & ! [IN]
+                                       dims(8), dims(9),             & ! [IN]
+                                       olat_org(:,:), olon_org(:,:), & ! [IN]
+                                       dims(10), dims(11)            ) ! [IN]
 
-     call INTRPNEST_interp_3d( tg    (:,:,:),     &
-                               tg_org(:,:,:),     &
-                               hfact (:,:,:),     &
-                               vfactl(:,:,:,:,:), &
-                               kgrdl (:,:,:,:,:), &
-                               igrd  (:,:,:),     &
-                               jgrd  (:,:,:),     &
-                               IA, JA, 1, LKMAX-1 )
-
-    ! interpolation
-    do j = 1, JA
-    do i = 1, IA
-       tg(LKMAX,i,j) = tg(LKMAX-1,i,j)
-    enddo ! i
-    enddo ! j
-
-    ! replace values over the ocean
-    do k = 1, LKMAX
-       call replace_misval_const( tg(k,:,:), maskval_tg, lsmask_nest )
-    enddo
-
-    ! Land water: interpolate over the ocean
-    if( use_file_landwater )then
-
-       if ( use_waterratio ) then
-
-          if ( i_INTRP_LAND_WATER .ne. i_intrp_off ) then
-             do k = 1, dims(7)
-                work(:,:) = sh2o_org(k,:,:)
-                select case ( i_INTRP_LAND_WATER )
-                case ( i_intrp_mask )
-                   lmask = lsmask_org
-                case ( i_intrp_fill )
-                   call make_mask( lmask, work, dims(8), dims(9), landdata=.true.)
-                end select
-                call interp_OceanLand_data(work, lmask, dims(8), dims(9), landdata=.true.)
-                sh2o_org(k,:,:) = work(:,:)
-             enddo
-          end if
-
-          call INTRPNEST_interp_3d( sh2o    (:,:,:),     &
-                                    sh2o_org(:,:,:),     &
-                                    hfact   (:,:,:),     &
-                                    vfactl  (:,:,:,:,:), &
-                                    kgrdl   (:,:,:,:,:), &
-                                    igrd    (:,:,:),     &
-                                    jgrd    (:,:,:),     &
-                                    IA, JA, 1, LKMAX-1   )
-          do k = 1, LKMAX
-             strg(k,:,:) = convert_WS2VWC( sh2o(k,:,:), critical=.true. )
-          end do
-
-       else
-
-          if ( i_INTRP_LAND_WATER .ne. i_intrp_off ) then
-             do k = 1, dims(7)
-                work(:,:) = strg_org(k,:,:)
-                select case ( i_INTRP_LAND_WATER )
-                case ( i_intrp_mask )
-                   lmask = lsmask_org
-                case ( i_intrp_fill )
-                   call make_mask( lmask, work, dims(8), dims(9), landdata=.true.)
-                end select
-                call interp_OceanLand_data(work, lmask, dims(8),dims(9), landdata=.true.)
-                strg_org(k,:,:) = work(:,:)
-             enddo
-          end if
-
-          call INTRPNEST_interp_3d( strg    (:,:,:),     &
-                                    strg_org(:,:,:),     &
-                                    hfact   (:,:,:),     &
-                                    vfactl  (:,:,:,:,:), &
-                                    kgrdl   (:,:,:,:,:), &
-                                    igrd    (:,:,:),     &
-                                    jgrd    (:,:,:),     &
-                                    IA, JA, 1, LKMAX-1   )
-          ! interpolation
-          do j = 1, JA
-          do i = 1, IA
-             strg(LKMAX,i,j) = strg(LKMAX-1,i,j)
-          enddo
-          enddo
-
-       end if
-
-       ! replace values over the ocean
-       do k = 1, LKMAX
-          call replace_misval_const( strg(k,:,:), maskval_strg, lsmask_nest )
-       enddo
-
-    else  ! not read from boundary file
-
-       sh2o(:,:,:) = init_landwater_ratio
-       ! conversion from water saturation [fraction] to volumetric water content [m3/m3]
-       do k = 1, LKMAX
-          strg(k,:,:) = convert_WS2VWC( sh2o(k,:,:), critical=.true. )
-       end do
-
-    endif
+    call INTRPNEST_interp_fact_latlon( hfact_o(:,:,:),               & ! [OUT]
+                                       igrd_o(:,:,:), jgrd_o(:,:,:), & ! [OUT]
+                                       olat_org(:,:), olon_org(:,:), & ! [IN]
+                                       dims(10), dims(11),           & ! [IN]
+                                       llat_org(:,:), llon_org(:,:), & ! [IN]
+                                       dims(8), dims(9)              ) ! [IN]
 
     ! Ocean temp: interpolate over the land
     if ( i_INTRP_OCEAN_TEMP .ne. i_intrp_off ) then
@@ -1365,32 +1265,17 @@ contains
     !end if
 
 
-    ! replace lmask using SST and omask using SKINT
-      call INTRPNEST_interp_fact_latlon( hfact_l(:,:,:),               & ! [OUT]
-                                         igrd_l(:,:,:), jgrd_l(:,:,:), & ! [OUT]
-                                         llat_org(:,:), llon_org(:,:), & ! [IN]
-                                         dims(8), dims(9),             & ! [IN]
-                                         olat_org(:,:), olon_org(:,:), & ! [IN]
-                                         dims(10), dims(11)            ) ! [IN]
+    !replace lmask using SST and omask using SKINT
+    call INTRPNEST_interp_2d( lmask(:,:), sst_org(:,:), hfact_l(:,:,:),      &
+                              igrd_l(:,:,:), jgrd_l(:,:,:), dims(8), dims(9) )
+    call INTRPNEST_interp_2d( omask(:,:), lst_org(:,:), hfact_o(:,:,:),        &
+                              igrd_o(:,:,:), jgrd_o(:,:,:), dims(10), dims(11) )
 
-      call INTRPNEST_interp_fact_latlon( hfact_o(:,:,:),               & ! [OUT]
-                                         igrd_o(:,:,:), jgrd_o(:,:,:), & ! [OUT]
-                                         olat_org(:,:), olon_org(:,:), & ! [IN]
-                                         dims(10), dims(11),           & ! [IN]
-                                         llat_org(:,:), llon_org(:,:), & ! [IN]
-                                         dims(8), dims(9)              ) ! [IN]
+    call replace_misval_map( sst_org, omask, dims(10), dims(11), "SST")
+    call replace_misval_map( tw_org,  omask, dims(10), dims(11), "OCEAN_TEMP")
+    call replace_misval_map( lst_org, lmask, dims(8),  dims(9),  "SKINT")
 
-      call INTRPNEST_interp_2d( lmask(:,:), sst_org(:,:), hfact_l(:,:,:),      &
-                                igrd_l(:,:,:), jgrd_l(:,:,:), dims(8), dims(9) )
-      call INTRPNEST_interp_2d( omask(:,:), lst_org(:,:), hfact_o(:,:,:),        &
-                                igrd_o(:,:,:), jgrd_o(:,:,:), dims(10), dims(11) )
-
-      call replace_misval_map( sst_org, omask, dims(10), dims(11), "SST")
-      call replace_misval_map( tw_org,  omask, dims(10), dims(11), "OCEAN_TEMP")
-      call replace_misval_map( lst_org, lmask, dims(8),  dims(9),  "SKINT")
-
-
-    ! interpolate data to scale grid
+    !!! interpolate data to scale grid
     do j = 1, dims(9)
     do i = 1, dims(8)
        if ( ust_org(i,j) == UNDEF ) ust_org(i,j) = lst_org(i,j)
@@ -1456,6 +1341,132 @@ contains
                    + fact_urban(i,j) * ust(i,j)
      enddo
      enddo
+
+
+    ! Land temp: interpolate over the ocean
+    if ( i_INTRP_LAND_TEMP .ne. i_intrp_off ) then
+       do k = 1, dims(7)
+          work(:,:) = tg_org(k,:,:)
+          select case ( i_INTRP_LAND_TEMP )
+          case ( i_intrp_mask )
+             lmask = lsmask_org
+          case ( i_intrp_fill )
+             call make_mask( lmask, work, dims(8), dims(9), landdata=.true.)
+          end select
+          call interp_OceanLand_data( work, lmask, dims(8), dims(9), landdata=.true. )
+          !replace land temp using skin temp
+          call replace_misval_map( work, lst_org, dims(8),  dims(9),  "STEMP")
+          tg_org(k,:,:) = work(:,:)
+       end do
+    end if
+
+     call INTRPNEST_interp_3d( tg    (:,:,:),     &
+                               tg_org(:,:,:),     &
+                               hfact (:,:,:),     &
+                               vfactl(:,:,:,:,:), &
+                               kgrdl (:,:,:,:,:), &
+                               igrd  (:,:,:),     &
+                               jgrd  (:,:,:),     &
+                               IA, JA, 1, LKMAX-1 )
+
+    ! interpolation
+    do j = 1, JA
+    do i = 1, IA
+       tg(LKMAX,i,j) = tg(LKMAX-1,i,j)
+    enddo ! i
+    enddo ! j
+
+    ! replace values over the ocean
+    do k = 1, LKMAX
+       call replace_misval_const( tg(k,:,:), maskval_tg, lsmask_nest )
+    enddo
+
+    ! Land water: interpolate over the ocean
+    if( use_file_landwater )then
+
+       if ( use_waterratio ) then
+
+          if ( i_INTRP_LAND_WATER .ne. i_intrp_off ) then
+             do k = 1, dims(7)
+                work(:,:) = sh2o_org(k,:,:)
+                select case ( i_INTRP_LAND_WATER )
+                case ( i_intrp_mask )
+                   lmask = lsmask_org
+                case ( i_intrp_fill )
+                   call make_mask( lmask, work, dims(8), dims(9), landdata=.true.)
+                end select
+                call interp_OceanLand_data(work, lmask, dims(8), dims(9), landdata=.true.)
+                lmask(:,:) = init_landwater_ratio
+                !replace missing value to init_landwater_ratio
+                call replace_misval_map( work, lmask, dims(8),  dims(9),  "SH2O")
+                sh2o_org(k,:,:) = work(:,:)
+             enddo
+          end if
+
+          call INTRPNEST_interp_3d( sh2o    (:,:,:),     &
+                                    sh2o_org(:,:,:),     &
+                                    hfact   (:,:,:),     &
+                                    vfactl  (:,:,:,:,:), &
+                                    kgrdl   (:,:,:,:,:), &
+                                    igrd    (:,:,:),     &
+                                    jgrd    (:,:,:),     &
+                                    IA, JA, 1, LKMAX-1   )
+          do k = 1, LKMAX
+             strg(k,:,:) = convert_WS2VWC( sh2o(k,:,:), critical=.true. )
+          end do
+
+       else
+
+          if ( i_INTRP_LAND_WATER .ne. i_intrp_off ) then
+             do k = 1, dims(7)
+                work(:,:) = strg_org(k,:,:)
+                select case ( i_INTRP_LAND_WATER )
+                case ( i_intrp_mask )
+                   lmask = lsmask_org
+                case ( i_intrp_fill )
+                   call make_mask( lmask, work, dims(8), dims(9), landdata=.true.)
+                end select
+                call interp_OceanLand_data(work, lmask, dims(8),dims(9), landdata=.true.)
+                lmask(:,:) = maskval_strg
+                !replace missing value to init_landwater_ratio
+                call replace_misval_map( work, lmask, dims(8),  dims(9),  "SMOIS")
+                strg_org(k,:,:) = work(:,:)
+             enddo
+          end if
+
+          call INTRPNEST_interp_3d( strg    (:,:,:),     &
+                                    strg_org(:,:,:),     &
+                                    hfact   (:,:,:),     &
+                                    vfactl  (:,:,:,:,:), &
+                                    kgrdl   (:,:,:,:,:), &
+                                    igrd    (:,:,:),     &
+                                    jgrd    (:,:,:),     &
+                                    IA, JA, 1, LKMAX-1   )
+          ! interpolation
+          do j = 1, JA
+          do i = 1, IA
+             strg(LKMAX,i,j) = strg(LKMAX-1,i,j)
+          enddo
+          enddo
+
+       end if
+
+       ! replace values over the ocean
+       do k = 1, LKMAX
+          call replace_misval_const( strg(k,:,:), maskval_strg, lsmask_nest )
+       enddo
+
+    else  ! not read from boundary file
+
+       sh2o(:,:,:) = init_landwater_ratio
+       ! conversion from water saturation [fraction] to volumetric water content [m3/m3]
+       do k = 1, LKMAX
+          strg(k,:,:) = convert_WS2VWC( sh2o(k,:,:), critical=.true. )
+       end do
+
+    endif
+
+
 
     do j = 1, JA
     do i = 1, IA
