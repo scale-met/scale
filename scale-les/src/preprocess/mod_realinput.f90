@@ -1174,19 +1174,6 @@ contains
     enddo
     enddo
 
-    call INTRPNEST_interp_fact_llz( hfact  (:,:,:),               & ! [OUT]
-                                    vfactl (:,:,:,:,:),           & ! [OUT]
-                                    kgrdl  (:,:,:,:,:),           & ! [OUT]
-                                    igrd   (:,:,:), jgrd(:,:,:),  & ! [OUT]
-                                    ncopy  (:,:,:),               & ! [OUT]
-                                    lcz_3D (:,:,:),               & ! [IN]
-                                    LAT    (:,:), LON    (:,:),   & ! [IN]
-                                    1, LKMAX, IA, JA,             & ! [IN]
-                                    lz3d_org(:,:,:),              & ! [IN]
-                                    llat_org(:,:), llon_org(:,:), & ! [IN]
-                                    dims(7), dims(8), dims(9),    & ! [IN]
-                                    landgrid=.true.               ) ! [IN]
-
     ! interpolation facter between outer land grid and ocean grid
     call INTRPNEST_interp_fact_latlon( hfact_l(:,:,:),               & ! [OUT]
                                        igrd_l(:,:,:), jgrd_l(:,:,:), & ! [OUT]
@@ -1275,7 +1262,7 @@ contains
     call replace_misval_map( tw_org,  omask, dims(10), dims(11), "OCEAN_TEMP")
     call replace_misval_map( lst_org, lmask, dims(8),  dims(9),  "SKINT")
 
-    !!! interpolate data to scale grid
+    !!! replace missing value
     do j = 1, dims(9)
     do i = 1, dims(8)
        if ( ust_org(i,j) == UNDEF ) ust_org(i,j) = lst_org(i,j)
@@ -1293,6 +1280,38 @@ contains
        if ( albw_org(i,j,I_SW) == UNDEF ) albw_org(i,j,I_SW) = 0.10_RP
     end do
     end do
+
+    ! Land temp: interpolate over the ocean
+    if ( i_INTRP_LAND_TEMP .ne. i_intrp_off ) then
+       do k = 1, dims(7)
+          work(:,:) = tg_org(k,:,:)
+          select case ( i_INTRP_LAND_TEMP )
+          case ( i_intrp_mask )
+             lmask = lsmask_org
+          case ( i_intrp_fill )
+             call make_mask( lmask, work, dims(8), dims(9), landdata=.true.)
+          end select
+          call interp_OceanLand_data( work, lmask, dims(8), dims(9), landdata=.true. )
+          !replace land temp using skin temp
+          call replace_misval_map( work, lst_org, dims(8),  dims(9),  "STEMP")
+          tg_org(k,:,:) = work(:,:)
+       end do
+    end if
+
+
+
+    call INTRPNEST_interp_fact_llz( hfact  (:,:,:),               & ! [OUT]
+                                    vfactl (:,:,:,:,:),           & ! [OUT]
+                                    kgrdl  (:,:,:,:,:),           & ! [OUT]
+                                    igrd   (:,:,:), jgrd(:,:,:),  & ! [OUT]
+                                    ncopy  (:,:,:),               & ! [OUT]
+                                    lcz_3D (:,:,:),               & ! [IN]
+                                    LAT    (:,:), LON    (:,:),   & ! [IN]
+                                    1, LKMAX, IA, JA,             & ! [IN]
+                                    lz3d_org(:,:,:),              & ! [IN]
+                                    llat_org(:,:), llon_org(:,:), & ! [IN]
+                                    dims(7), dims(8), dims(9),    & ! [IN]
+                                    landgrid=.true.               ) ! [IN]
 
     call INTRPNEST_interp_2d( z0w(:,:),   z0w_org(:,:),   hfact(:,:,:), &
                               igrd(:,:,:), jgrd(:,:,:), IA, JA )
@@ -1312,62 +1331,14 @@ contains
     enddo
 
 
-    call INTRPNEST_interp_fact_latlon( hfact(:,:,:),                 & ! [OUT]
-                                       igrd(:,:,:), jgrd(:,:,:),     & ! [OUT]
-                                       LAT(:,:), LON(:,:),           & ! [IN]
-                                       IA, JA,                       & ! [IN]
-                                       olat_org(:,:), olon_org(:,:), & ! [IN]
-                                       dims(10), dims(11)            ) ! [IN]
-
-    call INTRPNEST_interp_2d( tw(:,:), tw_org(:,:), hfact(:,:,:), &
-                              igrd(:,:,:), jgrd(:,:,:), IA, JA )
-    call INTRPNEST_interp_2d( sst(:,:), sst_org(:,:), hfact(:,:,:), &
-                              igrd(:,:,:), jgrd(:,:,:), IA, JA )
-    do n = 1, 2 ! 1:LW, 2:SW
-       call INTRPNEST_interp_2d( albw(:,:,n), albw_org(:,:,n), hfact(:,:,:), &
-                                 igrd(:,:,:), jgrd(:,:,:), IA, JA )
-    enddo
-
-
-    ! replace values over the ocean ####
-     do j = 1, JA
-     do i = 1, IA
-        if( abs(lsmask_nest(i,j)-0.0_RP) < EPS )then ! ocean grid
-           lst(i,j)   = sst(i,j)
-           ust(i,j)   = sst(i,j)
-        endif
-        skint(i,j) = fact_ocean(i,j) * sst(i,j) &
-                   + fact_land (i,j) * lst(i,j) &
-                   + fact_urban(i,j) * ust(i,j)
-     enddo
-     enddo
-
-
-    ! Land temp: interpolate over the ocean
-    if ( i_INTRP_LAND_TEMP .ne. i_intrp_off ) then
-       do k = 1, dims(7)
-          work(:,:) = tg_org(k,:,:)
-          select case ( i_INTRP_LAND_TEMP )
-          case ( i_intrp_mask )
-             lmask = lsmask_org
-          case ( i_intrp_fill )
-             call make_mask( lmask, work, dims(8), dims(9), landdata=.true.)
-          end select
-          call interp_OceanLand_data( work, lmask, dims(8), dims(9), landdata=.true. )
-          !replace land temp using skin temp
-          call replace_misval_map( work, lst_org, dims(8),  dims(9),  "STEMP")
-          tg_org(k,:,:) = work(:,:)
-       end do
-    end if
-
-     call INTRPNEST_interp_3d( tg    (:,:,:),     &
-                               tg_org(:,:,:),     &
-                               hfact (:,:,:),     &
-                               vfactl(:,:,:,:,:), &
-                               kgrdl (:,:,:,:,:), &
-                               igrd  (:,:,:),     &
-                               jgrd  (:,:,:),     &
-                               IA, JA, 1, LKMAX-1 )
+    call INTRPNEST_interp_3d( tg    (:,:,:),     &
+                              tg_org(:,:,:),     &
+                              hfact (:,:,:),     &
+                              vfactl(:,:,:,:,:), &
+                              kgrdl (:,:,:,:,:), &
+                              igrd  (:,:,:),     &
+                              jgrd  (:,:,:),     &
+                              IA, JA, 1, LKMAX-1 )
 
     ! interpolation
     do j = 1, JA
@@ -1466,6 +1437,38 @@ contains
 
     endif
 
+
+    ! interporation for ocean variables
+    call INTRPNEST_interp_fact_latlon( hfact(:,:,:),                 & ! [OUT]
+                                       igrd(:,:,:), jgrd(:,:,:),     & ! [OUT]
+                                       LAT(:,:), LON(:,:),           & ! [IN]
+                                       IA, JA,                       & ! [IN]
+                                       olat_org(:,:), olon_org(:,:), & ! [IN]
+                                       dims(10), dims(11)            ) ! [IN]
+
+    call INTRPNEST_interp_2d( tw(:,:), tw_org(:,:), hfact(:,:,:), &
+                              igrd(:,:,:), jgrd(:,:,:), IA, JA )
+    call INTRPNEST_interp_2d( sst(:,:), sst_org(:,:), hfact(:,:,:), &
+                              igrd(:,:,:), jgrd(:,:,:), IA, JA )
+    do n = 1, 2 ! 1:LW, 2:SW
+       call INTRPNEST_interp_2d( albw(:,:,n), albw_org(:,:,n), hfact(:,:,:), &
+                                 igrd(:,:,:), jgrd(:,:,:), IA, JA )
+    enddo
+
+
+
+    ! replace values over the ocean ####
+     do j = 1, JA
+     do i = 1, IA
+        if( abs(lsmask_nest(i,j)-0.0_RP) < EPS )then ! ocean grid
+           lst(i,j)   = sst(i,j)
+           ust(i,j)   = sst(i,j)
+        endif
+        skint(i,j) = fact_ocean(i,j) * sst(i,j) &
+                   + fact_land (i,j) * lst(i,j) &
+                   + fact_urban(i,j) * ust(i,j)
+     enddo
+     enddo
 
 
     do j = 1, JA
