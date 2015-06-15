@@ -172,9 +172,10 @@ contains
        do k = dims(1)+2, 3, -1
           ! missing data implies under ground
           ! For more accurate surface height, we need topograph data
+          ! So surface data is not used at this moment
           if ( read4D(k-2,i,j,1) <= 0.0_RP ) then
-             cz_org(k,i,j) = max( ( cz_org(k+1,i,j) + cz_org(k,i,j) ) * 0.5_RP, 0.0_RP )
-             cz_org(1:k-1,i,j) = 0.0_RP
+!             cz_org(k,i,j) = max( ( cz_org(k+1,i,j) + cz_org(k,i,j) ) * 0.5_RP, 0.0_RP )
+             cz_org(1:k,i,j) = 0.0_RP
              exit
           endif
        enddo
@@ -223,8 +224,6 @@ contains
     real(RP) :: RovCP
     real(RP) :: CPovR
 
- real(RP) :: work1, work2
-
     integer :: k, i, j
 
     character(len=H_LONG) :: basename
@@ -272,21 +271,22 @@ contains
     velz_org(:,:,:) = 0.0_RP !> cold initialize for vertical velocity
 
 
-    basename = "ss_t2m"//trim(basename_num)
-    call ExternalFileRead( read3DS(:,:,:,:), trim(basename), "ss_t2m", it, it, myrank, iNICAM, single=.true. )
-    tsfc_org(:,:) = real( read3DS(1,:,:,1), kind=RP )
+    ! The surface height is not available, so t2 is not used, at this moment.
+!    basename = "ss_t2m"//trim(basename_num)
+!    call ExternalFileRead( read3DS(:,:,:,:), trim(basename), "ss_t2m", it, it, myrank, iNICAM, single=.true. )
+!    tsfc_org(:,:) = real( read3DS(1,:,:,1), kind=RP )
     basename = "ms_tem"//trim(basename_num)
     call ExternalFileReadOffset( read4D(:,:,:,:), trim(basename), "ms_tem", it, it, myrank, iNICAM, single=.true. )
     do j = 1, dims(3)
     do i = 1, dims(2)
        do k = dims(1), 1, -1
           if ( read4D(k,i,j,1) <= 50.0_SP ) then ! missing value
-             temp_org(k+2,i,j) = tsfc_org(i,j)
+!             temp_org(k+2,i,j) = tsfc_org(i,j)
              exit
           else
              temp_org(1:k+2,i,j) = real( read4D(k,i,j,1), kind=RP )
           end if
-          if( k==-1 ) temp_org(2,i,j) = tsfc_org(i,j) ! no missing value case
+!          if( k==1 ) temp_org(2,i,j) = tsfc_org(i,j) ! no missing value case
        end do
     end do
     end do
@@ -312,9 +312,9 @@ contains
        ! If data has missing value, k is the top layer having missing value,
        ! otherwise k is zero.
        pott = temp_org(k+3,i,j) * (P00/pres_org(k+3,i,j))**RovCP ! lowest level
-       pres_org(k+2,i,j) = P00 * (temp_org(k+2,i,j)/pott)**CPovR ! surface]
-       pres_org(1:k+1,i,j) = slp_org(i,j)                          ! sea level
-       temp_org(1:k+1,i,j) = pott * (pres_org(k+1,i,j)/P00)**RovCP ! sea level
+!       pres_org(k+2,i,j) = P00 * (temp_org(k+2,i,j)/pott)**CPovR ! surface
+       pres_org(1:k+2,i,j) = slp_org(i,j)                        ! sea level
+       temp_org(1:k+2,i,j) = pott * (slp_org(i,j)/P00)**RovCP    ! sea level
     end do
     end do
 
@@ -328,7 +328,7 @@ contains
     do i = 1, dims(2)
        do k = dims(1), 1, -1
           if ( read4D(k,i,j,1) < 0.0_SP ) then ! missing value
-             qtrc_org(k+1:k+2,i,j,I_QV) = qvsfc_org(i,j) ! surface and sealevel
+             qtrc_org(1:k+2,i,j,I_QV) = qvsfc_org(i,j) ! surface and sealevel
              exit
           else
              qtrc_org(k+2,i,j,I_QV) = real( read4D(k,i,j,1), kind=RP )
