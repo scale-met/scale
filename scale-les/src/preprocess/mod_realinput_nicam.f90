@@ -174,7 +174,7 @@ contains
           if ( read4D(k-2,i,j,1) <= 0.0_RP ) then
              cz_org(k,i,j) = ( cz_org(k+1,i,j) + cz_org(k,i,j) ) * 0.5_RP
              cz_org(k-1,i,j) = 0.0_RP
-             cz_org(1:k-2,i,j) = -1e5_RP
+             cz_org(1:k-2,i,j) = 0.0_RP !-1e5_RP
              exit
           endif
        enddo
@@ -222,6 +222,8 @@ contains
     real(RP) :: pott
     real(RP) :: RovCP
     real(RP) :: CPovR
+
+ real(RP) :: work1, work2
 
     integer :: k, i, j
 
@@ -282,7 +284,7 @@ contains
              temp_org(k+2,i,j) = tsfc_org(i,j)
              exit
           else
-             temp_org(k+2,i,j) = real( read4D(k,i,j,1), kind=RP )
+             temp_org(1:k+2,i,j) = real( read4D(k,i,j,1), kind=RP )
           end if
           if( k==-1 ) temp_org(2,i,j) = tsfc_org(i,j) ! no missing value case
        end do
@@ -310,12 +312,11 @@ contains
        ! If data has missing value, k is the top layer having missing value,
        ! otherwise k is zero.
        pott = temp_org(k+3,i,j) * (P00/pres_org(k+3,i,j))**RovCP ! lowest level
-       pres_org(k+2,i,j) = P00 * (temp_org(k+2,i,j)/pott)**CPovR ! surface
-       temp_org(k+1,i,j) = pott * (pres_org(k+1,i,j)/P00)**RovCP ! sea level
-       pres_org(k+1,i,j) = slp_org(i,j)                          ! sea level
+       pres_org(k+2,i,j) = P00 * (temp_org(k+2,i,j)/pott)**CPovR ! surface]
+       pres_org(1:k+1,i,j) = slp_org(i,j)                          ! sea level
+       temp_org(1:k+1,i,j) = pott * (pres_org(k+1,i,j)/P00)**RovCP ! sea level
     end do
     end do
-
 
     basename = "ss_q2m"//trim(basename_num)
     call ExternalFileRead( read3DS(:,:,:,:), trim(basename), "ss_q2m", it, it, myrank, iNICAM, single=.true. )
