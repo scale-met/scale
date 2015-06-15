@@ -150,12 +150,12 @@ contains
 
     basename = "ms_pres"//trim(basename_num)
     call FileRead( read1DX(:), trim(basename), "lon", 1, 1, single=.true. )
-    do j = 1, dims(2)
+    do j = 1, dims(3)
        lon_org (:,j)  = read1DX(:) * D2R
     enddo
 
     call FileRead( read1DY(:), trim(basename), "lat", 1, 1, single=.true. )
-    do i = 1, dims(3)
+    do i = 1, dims(2)
        lat_org (i,:)  = read1DY(:) * D2R
     enddo
 
