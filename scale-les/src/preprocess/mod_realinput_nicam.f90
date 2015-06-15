@@ -94,18 +94,19 @@ contains
     dims(2) = dims_ncm(1)
     dims(3) = dims_ncm(2)
     ! half level
-    dims(4) = dims_ncm(1) ! nicam lat-lon data doesn't have staggered grid system
-    dims(5) = dims_ncm(2) ! nicam lat-lon data doesn't have staggered grid system
-    dims(6) = dims_ncm(3) ! nicam lat-lon data doesn't have staggered grid system
+    ! nicam lat-lon data doesn't have staggered grid system
+    dims(4) = dims(1)
+    dims(5) = dims(2)
+    dims(6) = dims(3)
     basename = "la_tg"//trim(basename_org)
     call FileGetShape( dims_ncm(:), trim(basename), "la_tg", 1, single=.true. )
     ! land
-    dims(7) = dims_ncm(3) ! vertical grid of land model [tentative]
-    dims(8) = dims(2)
-    dims(9) = dims(3)
+    dims(7) = dims_ncm(3) ! vertical grid of land model
+    dims(8) = dims_ncm(1)
+    dims(9) = dims_ncm(2)
     ! sst
-    dims(10) = dims(2)
-    dims(11) = dims(3)
+    dims(10) = dims(8)
+    dims(11) = dims(9)
 
     allocate( read1DX( dims(2)                      ) )
     allocate( read1DY( dims(3)                      ) )
@@ -154,7 +155,7 @@ contains
     enddo
 
     call FileRead( read1DY(:), trim(basename), "lat", 1, 1, single=.true. )
-    do i = 1, dims(1)
+    do i = 1, dims(3)
        lat_org (i,:)  = read1DY(:) * D2R
     enddo
 
@@ -172,9 +173,8 @@ contains
           ! missing data implies under ground
           ! For more accurate surface height, we need topograph data
           if ( read4D(k-2,i,j,1) <= 0.0_RP ) then
-             cz_org(k,i,j) = ( cz_org(k+1,i,j) + cz_org(k,i,j) ) * 0.5_RP
-             cz_org(k-1,i,j) = 0.0_RP
-             cz_org(1:k-2,i,j) = 0.0_RP !-1e5_RP
+             cz_org(k,i,j) = max( ( cz_org(k+1,i,j) + cz_org(k,i,j) ) * 0.5_RP, 0.0_RP )
+             cz_org(1:k-1,i,j) = 0.0_RP
              exit
           endif
        enddo
@@ -212,7 +212,7 @@ contains
     real(RP),         intent(out) :: temp_org(:,:,:)
     real(RP),         intent(out) :: qtrc_org(:,:,:,:)
     character(LEN=*), intent(in)  :: basename_num
-    integer,          intent(in)  :: dims(7)
+    integer,          intent(in)  :: dims(11)
     integer,          intent(in)  :: it
 
     real(RP) :: tsfc_org (dims(2),dims(3))
