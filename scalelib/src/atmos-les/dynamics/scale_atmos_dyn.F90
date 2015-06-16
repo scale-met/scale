@@ -622,7 +622,7 @@ contains
        !$omp parallel do private(j,k) OMP_SCHEDULE_ collapse(2)
        do j = JS, JE
        do k = KS, KE
-          mflx_hi(k,IS-1,j,XDIR) = GSQRT(k,IS-1,j,I_UYZ) * MOMX(k,IS-1,j) / MAPF(i,j,2,I_UY)
+          mflx_hi(k,IS-1,j,XDIR) = GSQRT(k,IS-1,j,I_UYZ) * MOMX(k,IS-1,j) / MAPF(IS-1,j,2,I_UY)
           tflx_hi(k,IS-1,j,XDIR) = mflx_hi(k,IS-1,j,XDIR) &
                                  * ( FACT_N * ( DAMP_POTT(k,IS  ,j)+DAMP_POTT(k,IS-1,j) ) &
                                    + FACT_F * ( DAMP_POTT(k,IS+1,j)+DAMP_POTT(k,IS-2,j) ) )
@@ -633,7 +633,7 @@ contains
        !$omp parallel do private(j,k) OMP_SCHEDULE_ collapse(2)
        do j = JS, JE
        do k = KS, KE
-          mflx_hi(k,IE,j,XDIR) = GSQRT(k,IE,j,I_UYZ) * MOMX(k,IE,j) / MAPF(i,j,2,I_UY)
+          mflx_hi(k,IE,j,XDIR) = GSQRT(k,IE,j,I_UYZ) * MOMX(k,IE,j) / MAPF(IE,j,2,I_UY)
           tflx_hi(k,IE,j,XDIR) = mflx_hi(k,IE,j,XDIR) &
                                * ( FACT_N * ( DAMP_POTT(k,IE+1,j)+DAMP_POTT(k,IE  ,j) ) &
                                  + FACT_F * ( DAMP_POTT(k,IE+2,j)+DAMP_POTT(k,IE-1,j) ) )
@@ -644,7 +644,7 @@ contains
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do i = IS, IE
        do k = KS, KE
-          mflx_hi(k,i,JS-1,YDIR) = GSQRT(k,i,JS-1,I_XVZ) * MOMY(k,i,JS-1) / MAPF(i,j,1,I_XV)
+          mflx_hi(k,i,JS-1,YDIR) = GSQRT(k,i,JS-1,I_XVZ) * MOMY(k,i,JS-1) / MAPF(i,JS-1,1,I_XV)
           tflx_hi(k,i,JS-1,YDIR) = mflx_hi(k,i,JS-1,YDIR) &
                                  * ( FACT_N * ( DAMP_POTT(k,i,JS  )+DAMP_POTT(k,i,JS-1) ) &
                                    + FACT_F * ( DAMP_POTT(k,i,JS+1)+DAMP_POTT(k,i,JS-2) ) )
@@ -655,7 +655,7 @@ contains
        !$omp parallel do private(i,k) OMP_SCHEDULE_ collapse(2)
        do i = IS, IE
        do k = KS, KE
-          mflx_hi(k,i,JE,YDIR) = GSQRT(k,i,JE,I_XVZ) * MOMY(k,i,JE) / MAPF(i,j,1,I_XV)
+          mflx_hi(k,i,JE,YDIR) = GSQRT(k,i,JE,I_XVZ) * MOMY(k,i,JE) / MAPF(i,JE,1,I_XV)
           tflx_hi(k,i,JE,YDIR) = mflx_hi(k,i,JE,YDIR) &
                                * ( FACT_N * ( DAMP_POTT(k,i,JE+1)+DAMP_POTT(k,i,JE  ) ) &
                                  + FACT_F * ( DAMP_POTT(k,i,JE+2)+DAMP_POTT(k,i,JE-1) ) )
