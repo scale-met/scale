@@ -622,7 +622,6 @@ contains
           cc = ( 1.0_RP + EPSTvap * Qw(k,i,j) - (1.0_RP+EPSTvap) * Ql ) * POTT(k,i,j)/TEMP(k,i,j) * lh(k,i,j) / CP &
                - (1.0_RP+EPSTvap) * POTT(k,i,j)
           Rt = min( max( RR - Ql / (2.0_RP*sigma_s*sqrt_2pi) * exp(-Q1**2 * 0.5_RP), 0.0_RP ), 1.0_RP )
-Rt = 0.0_RP
           betat = 1.0_RP + EPSTvap * Qw(k,i,j) - (1.0_RP+EPSTvap) * Ql - Rt * aa * bb * cc
           betaq = EPSTvap * POTT(k,i,j) + Rt * aa * cc
           n2(k,i,j) = GRAV * ( ( POTL(k+1,i,j) - POTL(k-1,i,j) ) * betat &
