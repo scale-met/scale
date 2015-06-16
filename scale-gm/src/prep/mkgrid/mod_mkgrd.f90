@@ -1134,7 +1134,7 @@ contains
     write(ADM_LOG_FID,*) '--- ratio max/min grid interval = ', sqarea_max / sqarea_min
     write(ADM_LOG_FID,*) '--- average length of arc(side) = ', length_avg * 1.E-3_RP,' [km]'
     write(ADM_LOG_FID,*)
-    write(ADM_LOG_FID,*) '--- max length distortion       = ', length_max * 1.D-3,' [km]'
+    write(ADM_LOG_FID,*) '--- max length distortion       = ', length_max * 1.E-3_RP,' [km]'
     write(ADM_LOG_FID,*) '--- max angle distortion        = ', angle_max*180.0_RP/PI,' [deg]'
 
     return

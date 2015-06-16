@@ -75,7 +75,6 @@ module mod_cnst
   !<----- unit : [Pa]
   !
   !------ Latent heat of vaporizaion at 0C
-!  real(RP), public :: CNST_LH0   = 2.5008D+6 [mod] 20120704 H.Yashiro
   real(RP), public :: CNST_LH0   = 2.501E+6_RP
   !
   !------ Latent heat of vaporizaion at 0K
@@ -83,7 +82,6 @@ module mod_cnst
   !<----- calculated in sub[CNST_setup].
   !
   !------ Latent heat of sublimation at 0C
-!  real(RP), public :: CNST_LHS0  = 2.8342D+6 [mod] 20120704 H.Yashiro
   real(RP), public :: CNST_LHS0  = 2.834E+6_RP
   !
   !------ Latent heat of sublimation at 0K

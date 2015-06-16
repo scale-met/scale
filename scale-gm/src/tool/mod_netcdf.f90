@@ -1428,7 +1428,7 @@ contains
 
     if( lon_start == nc%var_missing .or. lon_int == nc%var_missing ) then
        write(fid_ctl,fmt='(a,i5,a)')    'XDEF ',nc%imax, ' LEVELS'
-       !write(fid_ctl,fmt='(5x,5f10.3)')    (lon(i)*180.0D0/pi,i=1,imax)
+       !write(fid_ctl,fmt='(5x,5f10.3)')    (lon(i)*180.0_RP/pi,i=1,imax)
        !write(fid_ctl,fmt='(5x,5f10.3)') (nc%lon(i),i=1,nc%imax)
        write(fid_ctl,fmt='(5x,5f10.4)') (nc%lon(i),i=1,nc%imax)  ! [mod] C.Kodama: follow prg_ico2ll.f90.
     else
@@ -1439,7 +1439,7 @@ contains
 
     if( lat_start == nc%var_missing .or. lat_int == nc%var_missing ) then
        write(fid_ctl,fmt='(a,i5,a)')    'YDEF ',nc%jmax, ' LEVELS'
-       !write(fid_ctl,fmt='(5x,5f10.3)')(lat(j)*180.0D0/pi,j=1,jmax)
+       !write(fid_ctl,fmt='(5x,5f10.3)')(lat(j)*180.0_RP/pi,j=1,jmax)
        !write(fid_ctl,fmt='(5x,5f10.3)') (nc%lat(j),j=1,nc%jmax)
        write(fid_ctl,fmt='(5x,5f10.4)') (nc%lat(j),j=1,nc%jmax)
     else

@@ -23,18 +23,18 @@ program prg_mkmnginfo
      ADM_NE,      &
      ADM_SE
   !-----------------------------------------------------------------------------
-  Implicit None
+  implicit none
   !-----------------------------------------------------------------------------
   !
   !++ Private parameters
   !
-  Integer,Parameter :: fid=10
+  integer, parameter :: fid=10
   !-----------------------------------------------------------------------------
   !
   !++ Private variables
   !
-  Integer :: rlevel
-  Integer :: prc_num
+  integer :: rlevel
+  integer :: prc_num
   character(128) :: output_fname
   character(128) :: HGRID_SYSTEM = 'ICO' ! S.Iga100607
                                   !'LCP' ! S.Iga100607
@@ -57,8 +57,8 @@ program prg_mkmnginfo
        MAPPING_TYPE            !--- mapping method : [add] C.Kodama 2011/12/14
   !=============================================================================
   !
-  Open(fid,file='mkmnginfo.cnf',form='formatted')
-  Read(fid,nml=mkmnginfo_cnf)
+  open(fid,file='mkmnginfo.cnf',form='formatted')
+  read(fid,nml=mkmnginfo_cnf)
 
   !
   if (trim(HGRID_SYSTEM).eq.'LCP') then!S.Iga100607
@@ -78,56 +78,56 @@ program prg_mkmnginfo
   Stop
   !
   !=============================================================================
-Contains
+contains
   !-----------------------------------------------------------------------------
-  Subroutine generate_mngtab( rl, nmax_prc, fname )
+  subroutine generate_mngtab( rl, nmax_prc, fname )
 !!$ [Add] 07.10.22 T.Mitsui
     use mod_adm, only: &
          nmax_mng => PRC_RGN_NMAX
-    Implicit None
+    implicit none
     !
-    Integer, Intent(in) :: rl
-    Integer, intent(in) :: nmax_prc
-    Character(len=*), Intent(in) :: fname
+    integer, intent(in) :: rl
+    integer, intent(in) :: nmax_prc
+    character(len=*), intent(in) :: fname
     !
-    Integer :: i,j,d
-    Integer :: i_nb,j_nb,d_nb,edgid_nb
-    Integer :: l,l_nb
-    Integer :: k,m,p
-    Integer :: rgnlen
+    integer :: i,j,d
+    integer :: i_nb,j_nb,d_nb,edgid_nb
+    integer :: l,l_nb
+    integer :: k,m,p
+    integer :: rgnlen
     integer :: tmp, tmp_4r, tmp_m  ! ! [add] C.Kodama 2011/12/14
-    Integer, Parameter :: nmax_dmd=10
+    integer, parameter :: nmax_dmd=10
     ![Mod] 07.10.22 T.Mitsui
-!!$    Integer, Parameter :: nmax_mng=2048
+!!$    integer, parameter :: nmax_mng=2048
     !
-    Integer :: all_rgn
+    integer :: all_rgn
     !
-    Integer, Allocatable :: rgn_tab(:,:,:)
-    Integer, Allocatable :: mngrgn(:)
-    Integer, Allocatable :: prc_tab(:,:)
+    integer, allocatable :: rgn_tab(:,:,:)
+    integer, allocatable :: mngrgn(:)
+    integer, allocatable :: prc_tab(:,:)
     !
-    Integer,Parameter :: fid=20
+    integer, parameter :: fid=20
     !
-    Integer :: num_of_rgn
-    Namelist / rgn_info / num_of_rgn
+    integer :: num_of_rgn
+    namelist / rgn_info / num_of_rgn
     !
-    Integer :: rgnid
-    Integer :: &
+    integer :: rgnid
+    integer :: &
          sw(ADM_RID:ADM_DIR),&
          nw(ADM_RID:ADM_DIR),&
          ne(ADM_RID:ADM_DIR),&
          se(ADM_RID:ADM_DIR)
-    Namelist / rgn_link_info / rgnid, sw, nw, ne, se
+    namelist / rgn_link_info / rgnid, sw, nw, ne, se
     !
-    Integer :: num_of_proc
-    Namelist /proc_info/ num_of_proc
+    integer :: num_of_proc
+    namelist /proc_info/ num_of_proc
     !
-    Integer :: peid
-    Integer :: num_of_mng
-    Integer :: mng_rgnid(nmax_mng)
-    Namelist /rgn_mng_info/ peid, num_of_mng,mng_rgnid
+    integer :: peid
+    integer :: num_of_mng
+    integer :: mng_rgnid(nmax_mng)
+    namelist /rgn_mng_info/ peid, num_of_mng,mng_rgnid
     !
-    Integer :: dmd_data(ADM_SW:ADM_SE,nmax_dmd)
+    integer :: dmd_data(ADM_SW:ADM_SE,nmax_dmd)
     !
     dmd_data(ADM_SW:ADM_SE, 1)=(/ 6, 5, 2,10/)
     dmd_data(ADM_SW:ADM_SE, 2)=(/10, 1, 3, 9/)
@@ -145,93 +145,93 @@ Contains
     rgnlen=2**rl
     all_rgn=nmax_dmd*rgnlen*rgnlen
     !
-    Allocate(rgn_tab(ADM_RID:ADM_DIR,ADM_SW:ADM_SE,all_rgn))
+    allocate(rgn_tab(ADM_RID:ADM_DIR,ADM_SW:ADM_SE,all_rgn))
     !
-    Do d=1,nmax_dmd
-       Do i=1,rgnlen
-          Do j=1,rgnlen
+    do d=1,nmax_dmd
+       do i=1,rgnlen
+          do j=1,rgnlen
              !
              l=(rgnlen*rgnlen)*(d-1)+rgnlen*(j-1)+i
              !
-             Do k=ADM_SW,ADM_SE
-                Select Case(k)
-                Case(ADM_SW)
-                   If(j==1) Then
-                      If(d<=5) Then
+             do k=ADM_SW,ADM_SE
+                select case(k)
+                case(ADM_SW)
+                   if(j==1) then
+                      if(d<=5) then
                          i_nb=i
                          j_nb=rgnlen
                          d_nb=dmd_data(ADM_SW,d)
                          edgid_nb=ADM_NE
-                      Else
+                      else
                          i_nb=rgnlen
                          j_nb=rgnlen+1-i
                          d_nb=dmd_data(ADM_SW,d)
                          edgid_nb=ADM_SE
                       endif
-                   Else
+                   else
                       i_nb=i
                       j_nb=j-1
                       d_nb=d
                       edgid_nb=ADM_NE
                    endif
-                Case(ADM_NW)
-                   If(i==1) Then
-                      If(d<=5) Then
+                case(ADM_NW)
+                   if(i==1) then
+                      if(d<=5) then
                          i_nb=rgnlen+1-j
                          j_nb=rgnlen
                          d_nb=dmd_data(ADM_NW,d)
                          edgid_nb=ADM_NE
-                      Else
+                      else
                          i_nb=rgnlen
                          j_nb=j
                          d_nb=dmd_data(ADM_NW,d)
                          edgid_nb=ADM_SE
                       endif
-                   Else
+                   else
                       i_nb=i-1
                       j_nb=j
                       d_nb=d
                       edgid_nb=ADM_SE
                    endif
-                Case(ADM_NE)
-                   If(j==rgnlen) Then
-                      If(d<=5) Then
+                case(ADM_NE)
+                   if(j==rgnlen) then
+                      if(d<=5) then
                          i_nb=1
                          j_nb=rgnlen+1-i
                          d_nb=dmd_data(ADM_NE,d)
                          edgid_nb=ADM_NW
-                      Else
+                      else
                          i_nb=i
                          j_nb=1
                          d_nb=dmd_data(ADM_NE,d)
                          edgid_nb=ADM_SW
                       endif
-                   Else
+                   else
                       i_nb=i
                       j_nb=j+1
                       d_nb=d
                       edgid_nb=ADM_SW
                    endif
-                Case(ADM_SE)
-                   If(i==rgnlen) Then
-                      If(d<=5) Then
+                case(ADM_SE)
+                   if(i==rgnlen) then
+                      if(d<=5) then
                          i_nb=1
                          j_nb=j
                          d_nb=dmd_data(ADM_SE,d)
                          edgid_nb=ADM_NW
-                      Else
+                      else
                          i_nb=rgnlen+1-j
                          j_nb=1
                          d_nb=dmd_data(ADM_SE,d)
                          edgid_nb=ADM_SW
                       endif
-                   Else
+                   else
                       i_nb=i+1
                       j_nb=j
                       d_nb=d
                       edgid_nb=ADM_NW
                    endif
-                End Select
+                end select
                 !
                 l_nb=(rgnlen*rgnlen)*(d_nb-1)+rgnlen*(j_nb-1)+i_nb
                 rgn_tab(ADM_RID,k,l)=l_nb
@@ -244,9 +244,9 @@ Contains
     !
 !    nmax_prc=all_rgn
     !
-    Allocate(mngrgn(nmax_prc))
-    Allocate(prc_tab(nmax_mng,nmax_prc))
-    Do m=1,nmax_prc
+    allocate(mngrgn(nmax_prc))
+    allocate(prc_tab(nmax_mng,nmax_prc))
+    do m=1,nmax_prc
        if(Mod(all_rgn,nmax_prc)/=0) then
           write(*,*) 'Invalid number of process!'
           stop
@@ -285,82 +285,82 @@ Contains
        enddo
     enddo
     !
-    Open(fid,file=Trim(fname),form='formatted')
+    open(fid,file=Trim(fname),form='formatted')
     !
     num_of_rgn=all_rgn
-    Write(fid,nml=rgn_info)
+    write(fid,nml=rgn_info)
     !
-    Do l=1,all_rgn
+    do l=1,all_rgn
        rgnid=l
        sw=rgn_tab(:,ADM_SW,l)
        nw=rgn_tab(:,ADM_NW,l)
        ne=rgn_tab(:,ADM_NE,l)
        se=rgn_tab(:,ADM_SE,l)
-       Write(fid,nml=rgn_link_info)
+       write(fid,nml=rgn_link_info)
     enddo
     num_of_proc=nmax_prc
-    Write(fid,nml=proc_info)
-    Do m=1,nmax_prc
+    write(fid,nml=proc_info)
+    do m=1,nmax_prc
        peid=m
        num_of_mng=mngrgn(m)
        mng_rgnid=prc_tab(:,m)
-       Write(fid,nml=rgn_mng_info)
+       write(fid,nml=rgn_mng_info)
     enddo
     !
-    Close(fid)
+    close(fid)
     !
-  End Subroutine generate_mngtab
+  end subroutine generate_mngtab
 
 !---------------- for LCP
-  Subroutine generate_mngtab_lcp( rl, nmax_prc, fname )
+  subroutine generate_mngtab_lcp( rl, nmax_prc, fname )
     use mod_adm, only: &
          nmax_mng => PRC_RGN_NMAX
 !         ADM_XTMS_K
-    Implicit None
+    implicit none
     !
-    Integer, Intent(in) :: rl
-    Integer, intent(in) :: nmax_prc
-    Character(len=*), Intent(in) :: fname
+    integer, intent(in) :: rl
+    integer, intent(in) :: nmax_prc
+    character(len=*), intent(in) :: fname
     !
-    Integer :: i,j,d
-    Integer :: i_nb,j_nb,d_nb,edgid_nb
-    Integer :: l,l_nb
-    Integer :: k,m,p
-    Integer :: rgnlen
-!    Integer, Parameter :: nmax_dmd=24!10
-    Integer :: nmax_dmd=-1
+    integer :: i,j,d
+    integer :: i_nb,j_nb,d_nb,edgid_nb
+    integer :: l,l_nb
+    integer :: k,m,p
+    integer :: rgnlen
+!    integer, parameter :: nmax_dmd=24!10
+    integer :: nmax_dmd=-1
     ![Mod] 07.10.22 T.Mitsui
-!!$    Integer, Parameter :: nmax_mng=2048
+!!$    integer, parameter :: nmax_mng=2048
     !
-    Integer :: all_rgn
+    integer :: all_rgn
     !
-    Integer, Allocatable :: rgn_tab(:,:,:)
-    Integer, Allocatable :: mngrgn(:)
-    Integer, Allocatable :: prc_tab(:,:)
+    integer, allocatable :: rgn_tab(:,:,:)
+    integer, allocatable :: mngrgn(:)
+    integer, allocatable :: prc_tab(:,:)
     !
-    Integer,Parameter :: fid=20
+    integer, parameter :: fid=20
     !
-    Integer :: num_of_rgn
-    Namelist / rgn_info / num_of_rgn
+    integer :: num_of_rgn
+    namelist / rgn_info / num_of_rgn
     !
-    Integer :: rgnid
-    Integer :: &
+    integer :: rgnid
+    integer :: &
          sw(ADM_RID:ADM_DIR),&
          nw(ADM_RID:ADM_DIR),&
          ne(ADM_RID:ADM_DIR),&
          se(ADM_RID:ADM_DIR)
-    Namelist / rgn_link_info / rgnid, sw, nw, ne, se
+    namelist / rgn_link_info / rgnid, sw, nw, ne, se
     !
-    Integer :: num_of_proc
-    Namelist /proc_info/ num_of_proc
+    integer :: num_of_proc
+    namelist /proc_info/ num_of_proc
     !
-    Integer :: peid
-    Integer :: num_of_mng
-    Integer :: mng_rgnid(nmax_mng)
-    Namelist /rgn_mng_info/ peid, num_of_mng,mng_rgnid
+    integer :: peid
+    integer :: num_of_mng
+    integer :: mng_rgnid(nmax_mng)
+    namelist /rgn_mng_info/ peid, num_of_mng,mng_rgnid
     !
-!    Integer :: dmd_data(ADM_SW:ADM_SE,nmax_dmd)
-    Integer,allocatable :: dmd_data(:,:)
+!    integer :: dmd_data(ADM_SW:ADM_SE,nmax_dmd)
+    integer,allocatable :: dmd_data(:,:)
 
 
     nmax_dmd = XTMS_K * 4
@@ -431,24 +431,24 @@ Contains
     rgnlen=2**rl
     all_rgn=nmax_dmd*rgnlen*rgnlen
     !
-    Allocate(rgn_tab(ADM_RID:ADM_DIR,ADM_SW:ADM_SE,all_rgn))
+    allocate(rgn_tab(ADM_RID:ADM_DIR,ADM_SW:ADM_SE,all_rgn))
     !
-    Do d=1,nmax_dmd
-       Do i=1,rgnlen
-          Do j=1,rgnlen
+    do d=1,nmax_dmd
+       do i=1,rgnlen
+          do j=1,rgnlen
              !
              l=(rgnlen*rgnlen)*(d-1)+rgnlen*(j-1)+i
              !
-             Do k=ADM_SW,ADM_SE
-                Select Case(k)
-                Case(ADM_SW)
-                   If(j==1) Then
-                      If(d<=XTMS_K) Then
+             do k=ADM_SW,ADM_SE
+                select case(k)
+                case(ADM_SW)
+                   if(j==1) then
+                      if(d<=XTMS_K) then
                          i_nb=i
                          j_nb=rgnlen
                          d_nb=dmd_data(ADM_SW,d)
                          edgid_nb=ADM_NE
-                      Elseif (d<=XTMS_K*2) then
+                      elseif (d<=XTMS_K*2) then
                          i_nb=i
                          j_nb=rgnlen
                          d_nb=dmd_data(ADM_SW,d)
@@ -464,15 +464,15 @@ Contains
                          d_nb=dmd_data(ADM_SW,d)
                          edgid_nb=ADM_SE
                       endif
-                   Else
+                   else
                       i_nb=i
                       j_nb=j-1
                       d_nb=d
                       edgid_nb=ADM_NE
                    endif
-                Case(ADM_NW)
-                   If(i==1) Then
-                      If(d<=XTMS_K) Then
+                case(ADM_NW)
+                   if(i==1) then
+                      if(d<=XTMS_K) then
                          i_nb=rgnlen+1-j
                          j_nb=rgnlen
                          d_nb=dmd_data(ADM_NW,d)
@@ -493,15 +493,15 @@ Contains
                          d_nb=dmd_data(ADM_NW,d)
                          edgid_nb=ADM_SE
                       endif
-                   Else
+                   else
                       i_nb=i-1
                       j_nb=j
                       d_nb=d
                       edgid_nb=ADM_SE
                    endif
-                Case(ADM_NE)
-                   If(j==rgnlen) Then
-                      If(d<=XTMS_K) Then
+                case(ADM_NE)
+                   if(j==rgnlen) then
+                      if(d<=XTMS_K) then
                          i_nb=1
                          j_nb=rgnlen+1-i
                          d_nb=dmd_data(ADM_NE,d)
@@ -522,15 +522,15 @@ Contains
                          d_nb=dmd_data(ADM_NE,d)
                          edgid_nb=ADM_SW
                       endif
-                   Else
+                   else
                       i_nb=i
                       j_nb=j+1
                       d_nb=d
                       edgid_nb=ADM_SW
                    endif
-                Case(ADM_SE)
-                   If(i==rgnlen) Then
-                      If(d<=XTMS_K) Then
+                case(ADM_SE)
+                   if(i==rgnlen) then
+                      if(d<=XTMS_K) then
                          i_nb=1
                          j_nb=j
                          d_nb=dmd_data(ADM_SE,d)
@@ -551,13 +551,13 @@ Contains
                          d_nb=dmd_data(ADM_SE,d)
                          edgid_nb=ADM_SW
                       endif
-                   Else
+                   else
                       i_nb=i+1
                       j_nb=j
                       d_nb=d
                       edgid_nb=ADM_NW
                    endif
-                End Select
+                end select
                 !
                 l_nb=(rgnlen*rgnlen)*(d_nb-1)+rgnlen*(j_nb-1)+i_nb
                 rgn_tab(ADM_RID,k,l)=l_nb
@@ -570,9 +570,9 @@ Contains
     !
 !    nmax_prc=all_rgn
     !
-    Allocate(mngrgn(nmax_prc))
-    Allocate(prc_tab(nmax_mng,nmax_prc))
-    Do m=1,nmax_prc
+    allocate(mngrgn(nmax_prc))
+    allocate(prc_tab(nmax_mng,nmax_prc))
+    do m=1,nmax_prc
        if(Mod(all_rgn,nmax_prc)/=0) then
           write(*,*) 'Invalid number of process!'
           stop
@@ -585,82 +585,82 @@ Contains
        enddo
     enddo
     !
-    Open(fid,file=Trim(fname),form='formatted')
+    open(fid,file=Trim(fname),form='formatted')
     !
     num_of_rgn=all_rgn
-    Write(fid,nml=rgn_info)
+    write(fid,nml=rgn_info)
     !
-    Do l=1,all_rgn
+    do l=1,all_rgn
        rgnid=l
        sw=rgn_tab(:,ADM_SW,l)
        nw=rgn_tab(:,ADM_NW,l)
        ne=rgn_tab(:,ADM_NE,l)
        se=rgn_tab(:,ADM_SE,l)
-       Write(fid,nml=rgn_link_info)
+       write(fid,nml=rgn_link_info)
     enddo
     num_of_proc=nmax_prc
-    Write(fid,nml=proc_info)
-    Do m=1,nmax_prc
+    write(fid,nml=proc_info)
+    do m=1,nmax_prc
        peid=m
        num_of_mng=mngrgn(m)
        mng_rgnid=prc_tab(:,m)
-       Write(fid,nml=rgn_mng_info)
+       write(fid,nml=rgn_mng_info)
     enddo
     !
-    Close(fid)
+    close(fid)
     !
-  End Subroutine generate_mngtab_lcp
+  end subroutine generate_mngtab_lcp
   !-----------------------------------------------------------------------------!
   !---------------- for MLCP
-  Subroutine generate_mngtab_mlcp( rl, nmax_prc, fname )
+  subroutine generate_mngtab_mlcp( rl, nmax_prc, fname )
     use mod_adm, only: &
          nmax_mng => PRC_RGN_NMAX
 !         ADM_XTMS_K
-    Implicit None
+    implicit none
     !
-    Integer, Intent(in) :: rl
-    Integer, intent(in) :: nmax_prc
-    Character(len=*), Intent(in) :: fname
+    integer, intent(in) :: rl
+    integer, intent(in) :: nmax_prc
+    character(len=*), intent(in) :: fname
     !
-    Integer :: i,j,d
-    Integer :: i_nb,j_nb,d_nb,edgid_nb
-    Integer :: l,l_nb
-    Integer :: k,m,p
-    Integer :: rgnlen
-!    Integer, Parameter :: nmax_dmd=24!10
-    Integer,save :: nmax_dmd=-1
+    integer :: i,j,d
+    integer :: i_nb,j_nb,d_nb,edgid_nb
+    integer :: l,l_nb
+    integer :: k,m,p
+    integer :: rgnlen
+!    integer, parameter :: nmax_dmd=24!10
+    integer,save :: nmax_dmd=-1
     ![Mod] 07.10.22 T.Mitsui
-!!$    Integer, Parameter :: nmax_mng=2048
+!!$    integer, parameter :: nmax_mng=2048
     !
-    Integer :: all_rgn
+    integer :: all_rgn
     !
-    Integer, Allocatable :: rgn_tab(:,:,:)
-    Integer, Allocatable :: mngrgn(:)
-    Integer, Allocatable :: prc_tab(:,:)
+    integer, allocatable :: rgn_tab(:,:,:)
+    integer, allocatable :: mngrgn(:)
+    integer, allocatable :: prc_tab(:,:)
     !
-    Integer,Parameter :: fid=20
+    integer, parameter :: fid=20
     !
-    Integer :: num_of_rgn
-    Namelist / rgn_info / num_of_rgn
+    integer :: num_of_rgn
+    namelist / rgn_info / num_of_rgn
     !
-    Integer :: rgnid
-    Integer :: &
+    integer :: rgnid
+    integer :: &
          sw(ADM_RID:ADM_DIR),&
          nw(ADM_RID:ADM_DIR),&
          ne(ADM_RID:ADM_DIR),&
          se(ADM_RID:ADM_DIR)
-    Namelist / rgn_link_info / rgnid, sw, nw, ne, se
+    namelist / rgn_link_info / rgnid, sw, nw, ne, se
     !
-    Integer :: num_of_proc
-    Namelist /proc_info/ num_of_proc
+    integer :: num_of_proc
+    namelist /proc_info/ num_of_proc
     !
-    Integer :: peid
-    Integer :: num_of_mng
-    Integer :: mng_rgnid(nmax_mng)
-    Namelist /rgn_mng_info/ peid, num_of_mng,mng_rgnid
+    integer :: peid
+    integer :: num_of_mng
+    integer :: mng_rgnid(nmax_mng)
+    namelist /rgn_mng_info/ peid, num_of_mng,mng_rgnid
     !
-!    Integer :: dmd_data(ADM_SW:ADM_SE,nmax_dmd)
-    Integer,allocatable :: dmd_data(:,:)
+!    integer :: dmd_data(ADM_SW:ADM_SE,nmax_dmd)
+    integer,allocatable :: dmd_data(:,:)
 
     integer::s
 
@@ -722,68 +722,68 @@ Contains
     rgnlen=2**rl
     all_rgn=nmax_dmd*rgnlen*rgnlen
     !
-    Allocate(rgn_tab(ADM_RID:ADM_DIR,ADM_SW:ADM_SE,all_rgn))
+    allocate(rgn_tab(ADM_RID:ADM_DIR,ADM_SW:ADM_SE,all_rgn))
     !
-    Do d=1,nmax_dmd
-       Do i=1,rgnlen
-          Do j=1,rgnlen
+    do d=1,nmax_dmd
+       do i=1,rgnlen
+          do j=1,rgnlen
              !
              l=(rgnlen*rgnlen)*(d-1)+rgnlen*(j-1)+i
              !
-             Do k=ADM_SW,ADM_SE
-                Select Case(k)
-                Case(ADM_SW)
-                   If(j==1) Then
-                      If(mod(d,(XTMS_MLCP_S+1))==0) Then
+             do k=ADM_SW,ADM_SE
+                select case(k)
+                case(ADM_SW)
+                   if(j==1) then
+                      if(mod(d,(XTMS_MLCP_S+1))==0) then
                          i_nb=rgnlen
                          j_nb=rgnlen+1-i
                          d_nb=dmd_data(ADM_SW,d)
                          edgid_nb=ADM_SE
-                      Else
+                      else
                          i_nb=i
                          j_nb=rgnlen
                          d_nb=dmd_data(ADM_SW,d)
                          edgid_nb=ADM_NE
                       endif
-                   Else
+                   else
                       i_nb=i
                       j_nb=j-1
                       d_nb=d
                       edgid_nb=ADM_NE
                    endif
-                Case(ADM_NW)
-                   If(i==1) Then
-                      If(mod(d,(XTMS_MLCP_S+1))==1) Then
+                case(ADM_NW)
+                   if(i==1) then
+                      if(mod(d,(XTMS_MLCP_S+1))==1) then
                          i_nb=rgnlen+1-j
                          j_nb=rgnlen
                          d_nb=dmd_data(ADM_NW,d)
                          edgid_nb=ADM_NE
-                      Else
+                      else
                          i_nb=rgnlen
                          j_nb=j
                          d_nb=dmd_data(ADM_NW,d)
                          edgid_nb=ADM_SE
                       endif
-                   Else
+                   else
                       i_nb=i-1
                       j_nb=j
                       d_nb=d
                       edgid_nb=ADM_SE
                    endif
-                Case(ADM_NE)
-                   If(j==rgnlen) Then
-                      If(mod(d,(XTMS_MLCP_S+1))==1) Then
+                case(ADM_NE)
+                   if(j==rgnlen) then
+                      if(mod(d,(XTMS_MLCP_S+1))==1) then
                          i_nb=1
                          j_nb=rgnlen+1-i
                          d_nb=dmd_data(ADM_NE,d)
                          edgid_nb=ADM_NW
-                      Else
+                      else
                          i_nb=i
                          j_nb=1
                          d_nb=dmd_data(ADM_NE,d)
                          edgid_nb=ADM_SW
                       endif
-                   Else
+                   else
                       i_nb=i
                       j_nb=j+1
                       d_nb=d
@@ -791,26 +791,26 @@ Contains
                    endif
 
 
-                Case(ADM_SE)
-                   If(i==rgnlen) Then
-                      If(mod(d,(XTMS_MLCP_S+1))==0) Then
+                case(ADM_SE)
+                   if(i==rgnlen) then
+                      if(mod(d,(XTMS_MLCP_S+1))==0) then
                          i_nb=rgnlen+1-j
                          j_nb=1
                          d_nb=dmd_data(ADM_SE,d)
                          edgid_nb=ADM_SW
-                      Else
+                      else
                          i_nb=1
                          j_nb=j
                          d_nb=dmd_data(ADM_SE,d)
                          edgid_nb=ADM_NW
                       endif
-                   Else
+                   else
                       i_nb=i+1
                       j_nb=j
                       d_nb=d
                       edgid_nb=ADM_NW
                    endif
-                End Select
+                end select
                 !
                 l_nb=(rgnlen*rgnlen)*(d_nb-1)+rgnlen*(j_nb-1)+i_nb
                 rgn_tab(ADM_RID,k,l)=l_nb
@@ -823,9 +823,9 @@ Contains
     !
 !    nmax_prc=all_rgn
     !
-    Allocate(mngrgn(nmax_prc))
-    Allocate(prc_tab(nmax_mng,nmax_prc))
-    Do m=1,nmax_prc
+    allocate(mngrgn(nmax_prc))
+    allocate(prc_tab(nmax_mng,nmax_prc))
+    do m=1,nmax_prc
        if(Mod(all_rgn,nmax_prc)/=0) then
           write(*,*) 'Invalid number of process!'
           stop
@@ -838,82 +838,82 @@ Contains
        enddo
     enddo
     !
-    Open(fid,file=Trim(fname),form='formatted')
+    open(fid,file=Trim(fname),form='formatted')
     !
     num_of_rgn=all_rgn
-    Write(fid,nml=rgn_info)
+    write(fid,nml=rgn_info)
     !
-    Do l=1,all_rgn
+    do l=1,all_rgn
        rgnid=l
        sw=rgn_tab(:,ADM_SW,l)
        nw=rgn_tab(:,ADM_NW,l)
        ne=rgn_tab(:,ADM_NE,l)
        se=rgn_tab(:,ADM_SE,l)
-       Write(fid,nml=rgn_link_info)
+       write(fid,nml=rgn_link_info)
     enddo
     num_of_proc=nmax_prc
-    Write(fid,nml=proc_info)
-    Do m=1,nmax_prc
+    write(fid,nml=proc_info)
+    do m=1,nmax_prc
        peid=m
        num_of_mng=mngrgn(m)
        mng_rgnid=prc_tab(:,m)
-       Write(fid,nml=rgn_mng_info)
+       write(fid,nml=rgn_mng_info)
     enddo
     !
-    Close(fid)
+    close(fid)
     !
-  End Subroutine generate_mngtab_mlcp
+  end subroutine generate_mngtab_mlcp
   !-----------------------------------------------------------------------------
   !---------------- for MLCP
-  Subroutine generate_mngtab_mlcp_old( rl, nmax_prc, fname )
+  subroutine generate_mngtab_mlcp_old( rl, nmax_prc, fname )
     use mod_adm, only: &
          nmax_mng => PRC_RGN_NMAX
 !         ADM_XTMS_K
-    Implicit None
+    implicit none
     !
-    Integer, Intent(in) :: rl
-    Integer, intent(in) :: nmax_prc
-    Character(len=*), Intent(in) :: fname
+    integer, intent(in) :: rl
+    integer, intent(in) :: nmax_prc
+    character(len=*), intent(in) :: fname
     !
-    Integer :: i,j,d
-    Integer :: i_nb,j_nb,d_nb,edgid_nb
-    Integer :: l,l_nb
-    Integer :: k,m,p
-    Integer :: rgnlen
-!    Integer, Parameter :: nmax_dmd=24!10
-    Integer,save :: nmax_dmd=-1
+    integer :: i,j,d
+    integer :: i_nb,j_nb,d_nb,edgid_nb
+    integer :: l,l_nb
+    integer :: k,m,p
+    integer :: rgnlen
+!    integer, parameter :: nmax_dmd=24!10
+    integer,save :: nmax_dmd=-1
     ![Mod] 07.10.22 T.Mitsui
-!!$    Integer, Parameter :: nmax_mng=2048
+!!$    integer, parameter :: nmax_mng=2048
     !
-    Integer :: all_rgn
+    integer :: all_rgn
     !
-    Integer, Allocatable :: rgn_tab(:,:,:)
-    Integer, Allocatable :: mngrgn(:)
-    Integer, Allocatable :: prc_tab(:,:)
+    integer, allocatable :: rgn_tab(:,:,:)
+    integer, allocatable :: mngrgn(:)
+    integer, allocatable :: prc_tab(:,:)
     !
-    Integer,Parameter :: fid=20
+    integer, parameter :: fid=20
     !
-    Integer :: num_of_rgn
-    Namelist / rgn_info / num_of_rgn
+    integer :: num_of_rgn
+    namelist / rgn_info / num_of_rgn
     !
-    Integer :: rgnid
-    Integer :: &
+    integer :: rgnid
+    integer :: &
          sw(ADM_RID:ADM_DIR),&
          nw(ADM_RID:ADM_DIR),&
          ne(ADM_RID:ADM_DIR),&
          se(ADM_RID:ADM_DIR)
-    Namelist / rgn_link_info / rgnid, sw, nw, ne, se
+    namelist / rgn_link_info / rgnid, sw, nw, ne, se
     !
-    Integer :: num_of_proc
-    Namelist /proc_info/ num_of_proc
+    integer :: num_of_proc
+    namelist /proc_info/ num_of_proc
     !
-    Integer :: peid
-    Integer :: num_of_mng
-    Integer :: mng_rgnid(nmax_mng)
-    Namelist /rgn_mng_info/ peid, num_of_mng,mng_rgnid
+    integer :: peid
+    integer :: num_of_mng
+    integer :: mng_rgnid(nmax_mng)
+    namelist /rgn_mng_info/ peid, num_of_mng,mng_rgnid
     !
-!    Integer :: dmd_data(ADM_SW:ADM_SE,nmax_dmd)
-    Integer,allocatable :: dmd_data(:,:)
+!    integer :: dmd_data(ADM_SW:ADM_SE,nmax_dmd)
+    integer,allocatable :: dmd_data(:,:)
 
 
     nmax_dmd = XTMS_K * 2
@@ -952,93 +952,93 @@ Contains
     rgnlen=2**rl
     all_rgn=nmax_dmd*rgnlen*rgnlen
     !
-    Allocate(rgn_tab(ADM_RID:ADM_DIR,ADM_SW:ADM_SE,all_rgn))
+    allocate(rgn_tab(ADM_RID:ADM_DIR,ADM_SW:ADM_SE,all_rgn))
     !
-    Do d=1,nmax_dmd
-       Do i=1,rgnlen
-          Do j=1,rgnlen
+    do d=1,nmax_dmd
+       do i=1,rgnlen
+          do j=1,rgnlen
              !
              l=(rgnlen*rgnlen)*(d-1)+rgnlen*(j-1)+i
              !
-             Do k=ADM_SW,ADM_SE
-                Select Case(k)
-                Case(ADM_SW)
-                   If(j==1) Then
-                      If(d<=XTMS_K) Then
+             do k=ADM_SW,ADM_SE
+                select case(k)
+                case(ADM_SW)
+                   if(j==1) then
+                      if(d<=XTMS_K) then
                          i_nb=i
                          j_nb=rgnlen
                          d_nb=dmd_data(ADM_SW,d)
                          edgid_nb=ADM_NE
-                      Else
+                      else
                          i_nb=rgnlen
                          j_nb=rgnlen+1-i
                          d_nb=dmd_data(ADM_SW,d)
                          edgid_nb=ADM_SE
                       endif
-                   Else
+                   else
                       i_nb=i
                       j_nb=j-1
                       d_nb=d
                       edgid_nb=ADM_NE
                    endif
-                Case(ADM_NW)
-                   If(i==1) Then
-                      If(d<=XTMS_K) Then
+                case(ADM_NW)
+                   if(i==1) then
+                      if(d<=XTMS_K) then
                          i_nb=rgnlen+1-j
                          j_nb=rgnlen
                          d_nb=dmd_data(ADM_NW,d)
                          edgid_nb=ADM_NE
-                      Else
+                      else
                          i_nb=rgnlen
                          j_nb=j
                          d_nb=dmd_data(ADM_NW,d)
                          edgid_nb=ADM_SE
                       endif
-                   Else
+                   else
                       i_nb=i-1
                       j_nb=j
                       d_nb=d
                       edgid_nb=ADM_SE
                    endif
-                Case(ADM_NE)
-                   If(j==rgnlen) Then
-                      If(d<=XTMS_K) Then
+                case(ADM_NE)
+                   if(j==rgnlen) then
+                      if(d<=XTMS_K) then
                          i_nb=1
                          j_nb=rgnlen+1-i
                          d_nb=dmd_data(ADM_NE,d)
                          edgid_nb=ADM_NW
-                      Else
+                      else
                          i_nb=i
                          j_nb=1
                          d_nb=dmd_data(ADM_NE,d)
                          edgid_nb=ADM_SW
                       endif
-                   Else
+                   else
                       i_nb=i
                       j_nb=j+1
                       d_nb=d
                       edgid_nb=ADM_SW
                    endif
-                Case(ADM_SE)
-                   If(i==rgnlen) Then
-                      If(d<=XTMS_K) Then
+                case(ADM_SE)
+                   if(i==rgnlen) then
+                      if(d<=XTMS_K) then
                          i_nb=1
                          j_nb=j
                          d_nb=dmd_data(ADM_SE,d)
                          edgid_nb=ADM_NW
-                      Else
+                      else
                          i_nb=rgnlen+1-j
                          j_nb=1
                          d_nb=dmd_data(ADM_SE,d)
                          edgid_nb=ADM_SW
                       endif
-                   Else
+                   else
                       i_nb=i+1
                       j_nb=j
                       d_nb=d
                       edgid_nb=ADM_NW
                    endif
-                End Select
+                end select
                 !
                 l_nb=(rgnlen*rgnlen)*(d_nb-1)+rgnlen*(j_nb-1)+i_nb
                 rgn_tab(ADM_RID,k,l)=l_nb
@@ -1051,9 +1051,9 @@ Contains
     !
 !    nmax_prc=all_rgn
     !
-    Allocate(mngrgn(nmax_prc))
-    Allocate(prc_tab(nmax_mng,nmax_prc))
-    Do m=1,nmax_prc
+    allocate(mngrgn(nmax_prc))
+    allocate(prc_tab(nmax_mng,nmax_prc))
+    do m=1,nmax_prc
        if(Mod(all_rgn,nmax_prc)/=0) then
           write(*,*) 'Invalid number of process!'
           stop
@@ -1066,141 +1066,141 @@ Contains
        enddo
     enddo
     !
-    Open(fid,file=Trim(fname),form='formatted')
+    open(fid,file=Trim(fname),form='formatted')
     !
     num_of_rgn=all_rgn
-    Write(fid,nml=rgn_info)
+    write(fid,nml=rgn_info)
     !
-    Do l=1,all_rgn
+    do l=1,all_rgn
        rgnid=l
        sw=rgn_tab(:,ADM_SW,l)
        nw=rgn_tab(:,ADM_NW,l)
        ne=rgn_tab(:,ADM_NE,l)
        se=rgn_tab(:,ADM_SE,l)
-       Write(fid,nml=rgn_link_info)
+       write(fid,nml=rgn_link_info)
     enddo
     num_of_proc=nmax_prc
-    Write(fid,nml=proc_info)
-    Do m=1,nmax_prc
+    write(fid,nml=proc_info)
+    do m=1,nmax_prc
        peid=m
        num_of_mng=mngrgn(m)
        mng_rgnid=prc_tab(:,m)
-       Write(fid,nml=rgn_mng_info)
+       write(fid,nml=rgn_mng_info)
     enddo
     !
-    Close(fid)
+    close(fid)
     !
-  End Subroutine generate_mngtab_mlcp_old
+  end subroutine generate_mngtab_mlcp_old
 
   !-----------------------------------------------------------------------------
   subroutine generate_mngtab_periodic_1dmd( rl, nmax_prc, fname )
     use mod_adm, only: &
          nmax_mng => PRC_RGN_NMAX
-    Implicit None
+    implicit none
     !
-    Integer, Intent(in)          :: rl
-    Integer, intent(in)          :: nmax_prc
-    Character(len=*), Intent(in) :: fname
+    integer, intent(in)          :: rl
+    integer, intent(in)          :: nmax_prc
+    character(len=*), intent(in) :: fname
     !
-    Integer :: i,j,d
-    Integer :: i_nb,j_nb,d_nb,edgid_nb
-    Integer :: l,l_nb
-    Integer :: k,m,p
-    Integer :: rgnlen
-    Integer, Parameter :: nmax_dmd=1
-    Integer :: all_rgn
+    integer :: i,j,d
+    integer :: i_nb,j_nb,d_nb,edgid_nb
+    integer :: l,l_nb
+    integer :: k,m,p
+    integer :: rgnlen
+    integer, parameter :: nmax_dmd=1
+    integer :: all_rgn
     !
-    Integer, Allocatable :: rgn_tab(:,:,:)
-    Integer, Allocatable :: mngrgn(:)
-    Integer, Allocatable :: prc_tab(:,:)
+    integer, allocatable :: rgn_tab(:,:,:)
+    integer, allocatable :: mngrgn(:)
+    integer, allocatable :: prc_tab(:,:)
     !
-    Integer,Parameter :: fid=20
+    integer, parameter :: fid=20
     !
-    Integer :: num_of_rgn
-    Namelist / rgn_info / num_of_rgn
+    integer :: num_of_rgn
+    namelist / rgn_info / num_of_rgn
     !
-    Integer :: rgnid
-    Integer :: &
+    integer :: rgnid
+    integer :: &
          sw(ADM_RID:ADM_DIR),&
          nw(ADM_RID:ADM_DIR),&
          ne(ADM_RID:ADM_DIR),&
          se(ADM_RID:ADM_DIR)
-    Namelist / rgn_link_info / rgnid, sw, nw, ne, se
+    namelist / rgn_link_info / rgnid, sw, nw, ne, se
     !
-    Integer :: num_of_proc
-    Namelist /proc_info/ num_of_proc
+    integer :: num_of_proc
+    namelist /proc_info/ num_of_proc
     !
-    Integer :: peid
-    Integer :: num_of_mng
-    Integer :: mng_rgnid(nmax_mng)
-    Namelist /rgn_mng_info/ peid, num_of_mng, mng_rgnid
+    integer :: peid
+    integer :: num_of_mng
+    integer :: mng_rgnid(nmax_mng)
+    namelist /rgn_mng_info/ peid, num_of_mng, mng_rgnid
     !
-    Integer :: dmd_data(ADM_SW:ADM_SE,nmax_dmd)
+    integer :: dmd_data(ADM_SW:ADM_SE,nmax_dmd)
     !
     dmd_data(ADM_SW:ADM_SE, 1)=(/1,1,1,1/)
     !
     rgnlen  = 2**rl
     all_rgn = nmax_dmd*rgnlen**2
     !
-    Allocate(rgn_tab(ADM_RID:ADM_DIR,ADM_SW:ADM_SE,all_rgn))
+    allocate(rgn_tab(ADM_RID:ADM_DIR,ADM_SW:ADM_SE,all_rgn))
     !
-    Do d=1,nmax_dmd
-       Do i=1,rgnlen
-          Do j=1,rgnlen
+    do d=1,nmax_dmd
+       do i=1,rgnlen
+          do j=1,rgnlen
              !
              l=(rgnlen*rgnlen)*(d-1)+rgnlen*(j-1)+i
              !
-             Do k=ADM_SW,ADM_SE
-                Select Case(k)
-                Case(ADM_SW)
-                   If(j==1) Then
+             do k=ADM_SW,ADM_SE
+                select case(k)
+                case(ADM_SW)
+                   if(j==1) then
                     i_nb=i
                     j_nb=rgnlen
                     d_nb=dmd_data(ADM_SW,d)
                     edgid_nb=ADM_NE
-                   Else
+                   else
                       i_nb=i
                       j_nb=j-1
                       d_nb=d
                       edgid_nb=ADM_NE
                    endif
-                Case(ADM_NW)
-                   If(i==1) Then
+                case(ADM_NW)
+                   if(i==1) then
                     i_nb=rgnlen
                     j_nb=j
                     d_nb=dmd_data(ADM_NW,d)
                     edgid_nb=ADM_SE
-                   Else
+                   else
                       i_nb=i-1
                       j_nb=j
                       d_nb=d
                       edgid_nb=ADM_SE
                    endif
-                Case(ADM_NE)
-                   If(j==rgnlen) Then
+                case(ADM_NE)
+                   if(j==rgnlen) then
                     i_nb=i
                     j_nb=1
                     d_nb=dmd_data(ADM_NE,d)
                     edgid_nb=ADM_SW
-                   Else
+                   else
                       i_nb=i
                       j_nb=j+1
                       d_nb=d
                       edgid_nb=ADM_SW
                    endif
-                Case(ADM_SE)
-                   If(i==rgnlen) Then
+                case(ADM_SE)
+                   if(i==rgnlen) then
                     i_nb=1
                     j_nb=j
                     d_nb=dmd_data(ADM_SE,d)
                     edgid_nb=ADM_NW
-                   Else
+                   else
                       i_nb=i+1
                       j_nb=j
                       d_nb=d
                       edgid_nb=ADM_NW
                    endif
-                End Select
+                end select
                 !
                 l_nb=(rgnlen*rgnlen)*(d_nb-1)+rgnlen*(j_nb-1)+i_nb
                 rgn_tab(ADM_RID,k,l)=l_nb
@@ -1211,9 +1211,9 @@ Contains
        enddo
     enddo
     !
-    Allocate(mngrgn(nmax_prc))
-    Allocate(prc_tab(nmax_mng,nmax_prc))
-    Do m=1,nmax_prc
+    allocate(mngrgn(nmax_prc))
+    allocate(prc_tab(nmax_mng,nmax_prc))
+    do m=1,nmax_prc
        if(Mod(all_rgn,nmax_prc)/=0) then
           write(*,*) 'Invalid number of process!'
           stop
@@ -1226,77 +1226,77 @@ Contains
        enddo
     enddo
     !
-    Open(fid,file=Trim(fname),form='formatted')
+    open(fid,file=Trim(fname),form='formatted')
     !
     num_of_rgn=all_rgn
-    Write(fid,nml=rgn_info)
+    write(fid,nml=rgn_info)
     !
-    Do l=1,all_rgn
+    do l=1,all_rgn
        rgnid = l
        sw    = rgn_tab(:,ADM_SW,l)
        nw    = rgn_tab(:,ADM_NW,l)
        ne    = rgn_tab(:,ADM_NE,l)
        se    = rgn_tab(:,ADM_SE,l)
-       Write(fid,nml=rgn_link_info)
+       write(fid,nml=rgn_link_info)
     enddo
     num_of_proc=nmax_prc
-    Write(fid,nml=proc_info)
-    Do m=1,nmax_prc
+    write(fid,nml=proc_info)
+    do m=1,nmax_prc
        peid=m
        num_of_mng=mngrgn(m)
        mng_rgnid=prc_tab(:,m)
-       Write(fid,nml=rgn_mng_info)
+       write(fid,nml=rgn_mng_info)
     enddo
     !
-    Close(fid)
+    close(fid)
     !
   end subroutine generate_mngtab_periodic_1dmd
 
   !-----------------------------------------------------------------------------
-  Subroutine generate_mngtab_1dmd_on_sphere( rl, nmax_prc, fname )
+  subroutine generate_mngtab_1dmd_on_sphere( rl, nmax_prc, fname )
     use mod_adm, only: &
          nmax_mng => PRC_RGN_NMAX
-    Implicit None
+    implicit none
     !
-    Integer, Intent(in) :: rl
-    Integer, intent(in) :: nmax_prc
-    Character(len=*), Intent(in) :: fname
+    integer, intent(in) :: rl
+    integer, intent(in) :: nmax_prc
+    character(len=*), intent(in) :: fname
     !
-    Integer :: i,j,d
-    Integer :: i_nb,j_nb,d_nb,edgid_nb
-    Integer :: l,l_nb
-    Integer :: k,m,p
-    Integer :: rgnlen
-    Integer, Parameter :: nmax_dmd=10
+    integer :: i,j,d
+    integer :: i_nb,j_nb,d_nb,edgid_nb
+    integer :: l,l_nb
+    integer :: k,m,p
+    integer :: rgnlen
+    integer, parameter :: nmax_dmd=10
     !
-    Integer :: all_rgn
+    integer :: all_rgn
     !
-    Integer, Allocatable :: rgn_tab(:,:,:)
-    Integer, Allocatable :: mngrgn(:)
-    Integer, Allocatable :: prc_tab(:,:)
+    integer, allocatable :: rgn_tab(:,:,:)
+    integer, allocatable :: mngrgn(:)
+    integer, allocatable :: prc_tab(:,:)
     !
-    Integer,Parameter :: fid=20
+    integer, parameter :: fid=20
     !
-    Integer :: num_of_rgn
-    Namelist / rgn_info / num_of_rgn
+    integer :: num_of_rgn
+    namelist / rgn_info / num_of_rgn
     !
-    Integer :: rgnid
-    Integer :: &
+    integer :: rgnid
+    integer :: &
          sw(ADM_RID:ADM_DIR),&
          nw(ADM_RID:ADM_DIR),&
          ne(ADM_RID:ADM_DIR),&
          se(ADM_RID:ADM_DIR)
-    Namelist / rgn_link_info / rgnid, sw, nw, ne, se
+    namelist / rgn_link_info / rgnid, sw, nw, ne, se
     !
-    Integer :: num_of_proc
-    Namelist /proc_info/ num_of_proc
+    integer :: num_of_proc
+    namelist /proc_info/ num_of_proc
     !
-    Integer :: peid
-    Integer :: num_of_mng
-    Integer :: mng_rgnid(nmax_mng)
-    Namelist /rgn_mng_info/ peid, num_of_mng,mng_rgnid
+    integer :: peid
+    integer :: num_of_mng
+    integer :: mng_rgnid(nmax_mng)
+    namelist /rgn_mng_info/ peid, num_of_mng,mng_rgnid
     !
-    Integer :: dmd_data(ADM_SW:ADM_SE,nmax_dmd)
+    integer :: dmd_data(ADM_SW:ADM_SE,nmax_dmd)
     !
     dmd_data(ADM_SW:ADM_SE, 1)=(/ 6, 5, 2,10/)
 
@@ -1304,93 +1304,93 @@ Contains
     rgnlen=2**rl
     all_rgn=nmax_dmd*rgnlen*rgnlen
     !
-    Allocate(rgn_tab(ADM_RID:ADM_DIR,ADM_SW:ADM_SE,all_rgn))
+    allocate(rgn_tab(ADM_RID:ADM_DIR,ADM_SW:ADM_SE,all_rgn))
     !
-    Do d=1,nmax_dmd
-       Do i=1,rgnlen
-          Do j=1,rgnlen
+    do d=1,nmax_dmd
+       do i=1,rgnlen
+          do j=1,rgnlen
              !
              l=(rgnlen*rgnlen)*(d-1)+rgnlen*(j-1)+i
              !
-             Do k=ADM_SW,ADM_SE
-                Select Case(k)
-                Case(ADM_SW)
-                   If(j==1) Then
-                      If(d<=5) Then
+             do k=ADM_SW,ADM_SE
+                select case(k)
+                case(ADM_SW)
+                   if(j==1) then
+                      if(d<=5) then
                          i_nb=i
                          j_nb=rgnlen
                          d_nb=dmd_data(ADM_SW,d)
                          edgid_nb=ADM_NE
-                      Else
+                      else
                          i_nb=rgnlen
                          j_nb=rgnlen+1-i
                          d_nb=dmd_data(ADM_SW,d)
                          edgid_nb=ADM_SE
                       endif
-                   Else
+                   else
                       i_nb=i
                       j_nb=j-1
                       d_nb=d
                       edgid_nb=ADM_NE
                    endif
-                Case(ADM_NW)
-                   If(i==1) Then
-                      If(d<=5) Then
+                case(ADM_NW)
+                   if(i==1) then
+                      if(d<=5) then
                          i_nb=rgnlen+1-j
                          j_nb=rgnlen
                          d_nb=dmd_data(ADM_NW,d)
                          edgid_nb=ADM_NE
-                      Else
+                      else
                          i_nb=rgnlen
                          j_nb=j
                          d_nb=dmd_data(ADM_NW,d)
                          edgid_nb=ADM_SE
                       endif
-                   Else
+                   else
                       i_nb=i-1
                       j_nb=j
                       d_nb=d
                       edgid_nb=ADM_SE
                    endif
-                Case(ADM_NE)
-                   If(j==rgnlen) Then
-                      If(d<=5) Then
+                case(ADM_NE)
+                   if(j==rgnlen) then
+                      if(d<=5) then
                          i_nb=1
                          j_nb=rgnlen+1-i
                          d_nb=dmd_data(ADM_NE,d)
                          edgid_nb=ADM_NW
-                      Else
+                      else
                          i_nb=i
                          j_nb=1
                          d_nb=dmd_data(ADM_NE,d)
                          edgid_nb=ADM_SW
                       endif
-                   Else
+                   else
                       i_nb=i
                       j_nb=j+1
                       d_nb=d
                       edgid_nb=ADM_SW
                    endif
-                Case(ADM_SE)
-                   If(i==rgnlen) Then
-                      If(d<=5) Then
+                case(ADM_SE)
+                   if(i==rgnlen) then
+                      if(d<=5) then
                          i_nb=1
                          j_nb=j
                          d_nb=dmd_data(ADM_SE,d)
                          edgid_nb=ADM_NW
-                      Else
+                      else
                          i_nb=rgnlen+1-j
                          j_nb=1
                          d_nb=dmd_data(ADM_SE,d)
                          edgid_nb=ADM_SW
                       endif
-                   Else
+                   else
                       i_nb=i+1
                       j_nb=j
                       d_nb=d
                       edgid_nb=ADM_NW
                    endif
-                End Select
+                end select
                 !
                 l_nb=(rgnlen*rgnlen)*(d_nb-1)+rgnlen*(j_nb-1)+i_nb
                 rgn_tab(ADM_RID,k,l)=l_nb
@@ -1403,9 +1403,9 @@ Contains
     !
 !    nmax_prc=all_rgn
     !
-    Allocate(mngrgn(nmax_prc))
-    Allocate(prc_tab(nmax_mng,nmax_prc))
-    Do m=1,nmax_prc
+    allocate(mngrgn(nmax_prc))
+    allocate(prc_tab(nmax_mng,nmax_prc))
+    do m=1,nmax_prc
        if(Mod(all_rgn,nmax_prc)/=0) then
           write(*,*) 'Invalid number of process!'
           write(*,*) all_rgn, nmax_prc
@@ -1419,48 +1419,48 @@ Contains
        enddo
     enddo
     !
-    Open(fid,file=Trim(fname),form='formatted')
+    open(fid,file=Trim(fname),form='formatted')
     !
     num_of_rgn=all_rgn
 
     num_of_rgn = num_of_rgn/10
-    Do l=1,num_of_rgn
-       Do k=ADM_SW,ADM_SE
+    do l=1,num_of_rgn
+       do k=ADM_SW,ADM_SE
           IF (rgn_tab(ADM_RID,k,l) > num_of_rgn) then
              rgn_tab(ADM_RID,k,l) = l
              rgn_tab(ADM_DIR,k,l) = k
           endif
        enddo
     enddo
-    Write(fid,nml=rgn_info)
-    Write(6,nml=rgn_info)
+    write(fid,nml=rgn_info)
+    write(6,nml=rgn_info)
     !
-    Do l=1,num_of_rgn ! M.Hara110604
+    do l=1,num_of_rgn ! M.Hara110604
        rgnid=l
        sw=rgn_tab(:,ADM_SW,l)
        nw=rgn_tab(:,ADM_NW,l)
        ne=rgn_tab(:,ADM_NE,l)
        se=rgn_tab(:,ADM_SE,l)
-       Write(fid,nml=rgn_link_info)
-       Write(6,nml=rgn_link_info)
+       write(fid,nml=rgn_link_info)
+       write(6,nml=rgn_link_info)
     enddo
     num_of_proc=nmax_prc
     PRINT *, nmax_prc, num_of_proc
     num_of_proc = num_of_proc/10
-    Write(fid,nml=proc_info)
-    Write(6,nml=proc_info)
-    Do m=1,num_of_proc ! M.Hara110604
+    write(fid,nml=proc_info)
+    write(6,nml=proc_info)
+    do m=1,num_of_proc ! M.Hara110604
        peid=m
        num_of_mng=mngrgn(m)
        mng_rgnid=prc_tab(:,m)
-       Write(fid,nml=rgn_mng_info)
-       Write(6,nml=rgn_mng_info)
+       write(fid,nml=rgn_mng_info)
+       write(6,nml=rgn_mng_info)
     enddo
     !
-    Close(fid)
+    close(fid)
     !
-  End Subroutine generate_mngtab_1dmd_on_sphere
+  end subroutine generate_mngtab_1dmd_on_sphere
   !-------------------------------------------------------------------------------
-End Program prg_mkmnginfo
+end Program prg_mkmnginfo
 !-------------------------------------------------------------------------------
 

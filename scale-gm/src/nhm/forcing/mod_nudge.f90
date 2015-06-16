@@ -103,7 +103,7 @@ contains
     real(RP) :: NDG_hwgt_center_lat =  35.0_RP      ! lat. of the pole ( -90<=v<=90 )
     real(RP) :: NDG_hwgt_center_lon = 135.0_RP      ! lon. of the pole (-180<=v<=180)
     real(RP) :: NDG_hwgt_halo1_dist =   0.0_RP      ! distance from the pole to the halo1 in [m] (0<=v<=NDG_hwgt_halo2_dist)
-    real(RP) :: NDG_hwgt_halo2_dist = 2.0015778D7 ! distance from the pole to the halo2 in [m] (wt_ngd_halo1<=v<=pi*r_e)
+    real(RP) :: NDG_hwgt_halo2_dist = 2.0015778E7_RP ! distance from the pole to the halo2 in [m] (wt_ngd_halo1<=v<=pi*r_e)
     real(RP) :: NDG_hwgt_halo1_coef =   0.0_RP      ! min. coefficient (0<=v<=wt_ngd_max)
     real(RP) :: NDG_hwgt_halo2_coef =   1.0_RP      ! max. coefficient (wt_ngd_min<=v<=1)
 

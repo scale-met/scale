@@ -87,11 +87,11 @@ program fio_sel
   character(LEN=FIO_HSHORT) :: var_name (max_nvar)
   integer                   :: var_nstep(max_nvar)
 
-  integer              :: GALL
-  integer              :: KALL
-  integer              :: LALL
-  real(4), allocatable :: data4_1D(:)
-  real(8), allocatable :: data8_1D(:)
+  integer               :: GALL
+  integer               :: KALL
+  integer               :: LALL
+  real(SP), allocatable :: data4_1D(:)
+  real(DP), allocatable :: data8_1D(:)
 
   ! for MPI
   integer              :: pe_all

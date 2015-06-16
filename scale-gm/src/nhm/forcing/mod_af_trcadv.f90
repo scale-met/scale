@@ -45,7 +45,7 @@ module mod_af_trcadv
   real(RP), private, parameter :: Rd = 287.0_RP            ! Ideal gas const dry air [J/kg*K]
   real(RP), private, parameter :: g  = 9.80616_RP         ! Gravity [m/s2]
   real(RP), private, parameter :: cp = 1004.5_RP          ! Specific heat capacity [J/kg*K]
-  real(RP), private, parameter :: pi = 3.141592653589793238D0 ! pi
+  real(RP), private, parameter :: pi = 3.141592653589793238_RP ! pi
 
   !-----------------------------------------------------------------------------
 contains

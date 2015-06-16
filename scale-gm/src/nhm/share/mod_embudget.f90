@@ -99,8 +99,8 @@ contains
 
     if(.not.MNT_ON) return
 
-    Mass_budget_factor   = 1.0_RP / ( TIME_DTL * real(MNT_INTV,kind=RP) * 4.D0 * PI * ERADIUS * ERADIUS ) ! [kg/step] -> [kg/m2/s]
-    Energy_budget_factor = 1.0_RP / ( TIME_DTL * real(MNT_INTV,kind=RP) * 4.D0 * PI * ERADIUS * ERADIUS ) ! [J /step] -> [W/m2]
+    Mass_budget_factor   = 1.0_RP / ( TIME_DTL * real(MNT_INTV,kind=RP) * 4.0_RP * PI * ERADIUS * ERADIUS ) ! [kg/step] -> [kg/m2/s]
+    Energy_budget_factor = 1.0_RP / ( TIME_DTL * real(MNT_INTV,kind=RP) * 4.0_RP * PI * ERADIUS * ERADIUS ) ! [J /step] -> [W/m2]
     write(ADM_LOG_FID,*) "Mass_budget_factor   = ", Mass_budget_factor
     write(ADM_LOG_FID,*) "Energy_budget_factor = ", Energy_budget_factor
 
@@ -384,16 +384,16 @@ contains
 
     if ( first ) then
        ! [kg/m2], absolute value
-       rhoqd_sum_diff   = rhoqd_sum   / ( 4.D0 * PI * ERADIUS * ERADIUS )
-       rhoqv_sum_diff   = rhoqv_sum   / ( 4.D0 * PI * ERADIUS * ERADIUS )
-       rhoql_sum_diff   = rhoql_sum   / ( 4.D0 * PI * ERADIUS * ERADIUS )
-       rhoqi_sum_diff   = rhoqi_sum   / ( 4.D0 * PI * ERADIUS * ERADIUS )
-       rhoqt_sum_diff   = rhoqt_sum   / ( 4.D0 * PI * ERADIUS * ERADIUS )
+       rhoqd_sum_diff   = rhoqd_sum   / ( 4.0_RP * PI * ERADIUS * ERADIUS )
+       rhoqv_sum_diff   = rhoqv_sum   / ( 4.0_RP * PI * ERADIUS * ERADIUS )
+       rhoql_sum_diff   = rhoql_sum   / ( 4.0_RP * PI * ERADIUS * ERADIUS )
+       rhoqi_sum_diff   = rhoqi_sum   / ( 4.0_RP * PI * ERADIUS * ERADIUS )
+       rhoqt_sum_diff   = rhoqt_sum   / ( 4.0_RP * PI * ERADIUS * ERADIUS )
        ! [J/m2], absolute value
-       rhophi_sum_diff  = rhophi_sum  / ( 4.D0 * PI * ERADIUS * ERADIUS )
-       rhoein_sum_diff  = rhoein_sum  / ( 4.D0 * PI * ERADIUS * ERADIUS )
-       rhokin_sum_diff  = rhokin_sum  / ( 4.D0 * PI * ERADIUS * ERADIUS )
-       rhoetot_sum_diff = rhoetot_sum / ( 4.D0 * PI * ERADIUS * ERADIUS )
+       rhophi_sum_diff  = rhophi_sum  / ( 4.0_RP * PI * ERADIUS * ERADIUS )
+       rhoein_sum_diff  = rhoein_sum  / ( 4.0_RP * PI * ERADIUS * ERADIUS )
+       rhokin_sum_diff  = rhokin_sum  / ( 4.0_RP * PI * ERADIUS * ERADIUS )
+       rhoetot_sum_diff = rhoetot_sum / ( 4.0_RP * PI * ERADIUS * ERADIUS )
     else
        ! [kg/m2/s], difference from previous step
        rhoqd_sum_diff   = ( rhoqd_sum   - rhoqd_sum_old   ) * Mass_budget_factor
@@ -430,7 +430,7 @@ contains
 
        ! mass budget
        write(MNT_m_fid,'(I6)'    ,advance='no') TIME_CSTEP
-       write(MNT_m_fid,'(ES16.8)',advance='no') TIME_CSTEP * TIME_DTL / 86400.D0
+       write(MNT_m_fid,'(ES16.8)',advance='no') TIME_CSTEP * TIME_DTL / 86400.0_RP
        write(MNT_m_fid,'(ES16.8)',advance='no') rhoqd_sum_diff
        write(MNT_m_fid,'(ES16.8)',advance='no') rhoqv_sum_diff
        write(MNT_m_fid,'(ES16.8)',advance='no') rhoql_sum_diff
@@ -440,7 +440,7 @@ contains
 
        ! energy budget
        write(MNT_e_fid,'(I6)'    ,advance='no') TIME_CSTEP
-       write(MNT_e_fid,'(ES16.8)',advance='no') TIME_CSTEP * TIME_DTL / 86400.D0
+       write(MNT_e_fid,'(ES16.8)',advance='no') TIME_CSTEP * TIME_DTL / 86400.0_RP
        write(MNT_e_fid,'(ES16.8)',advance='no') rhophi_sum_diff
        write(MNT_e_fid,'(ES16.8)',advance='no') rhoein_sum_diff
        write(MNT_e_fid,'(ES16.8)',advance='no') rhokin_sum_diff
