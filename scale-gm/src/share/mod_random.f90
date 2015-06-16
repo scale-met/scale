@@ -1,12 +1,12 @@
 !-------------------------------------------------------------------------------
-!> module RANDOM
+!> Module random number
 !!
 !! @par Description
 !!          random number generation module
 !!
-!! @author NICAM developers
-!!
+!! @author Team SCALE
 !<
+!-------------------------------------------------------------------------------
 module mod_random
   !-----------------------------------------------------------------------------
   !
@@ -142,4 +142,3 @@ contains
   end subroutine RANDOM_get
 
 end module mod_random
-!-------------------------------------------------------------------------------

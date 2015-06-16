@@ -1,26 +1,16 @@
 !-------------------------------------------------------------------------------
-!
-!+  Program mkllmap
-!
+!> Program mkllmap
+!!
+!! @par Description
+!!          Making remapping coefficient between lat-lon and icosahedral grid
+!!
+!! @author NICAM developers, Team SCALE
+!<
 !-------------------------------------------------------------------------------
 program prg_mkllmap
   !-----------------------------------------------------------------------------
   !
-  !++ Description:
-  !
-  !++ Current Corresponding Author :
-  !
-  !++ History:
-  !       This program originate from 'cnvlatlon.f90'(by H.Tomita) ver 4.38 .
-  !
-  !      Version   Date       Comment
-  !      -----------------------------------------------------------------------
-  !                 11-11-09  H.Yashiro [mod] Avoid arc-cos, precise calculation
-  !      -----------------------------------------------------------------------
-  !
-  !-----------------------------------------------------------------------------
-  !
-  !++ Used modules (shared)
+  !++ Used modules
   !
   use mod_precision
   use mod_debug

@@ -1,24 +1,13 @@
 !-------------------------------------------------------------------------------
-!
-!+  vertical interpolation
-!
+!> Module vertical interpolation
+!!
+!! @par Description
+!!          This module contains vertical interpolation subroutines
+!!
+!! @author NICAM developers, Team SCALE
+!<
 !-------------------------------------------------------------------------------
 module mod_vintrpl
-  !-----------------------------------------------------------------------------
-  !
-  !++ Description:
-  !       This module contains vertical interpolation subroutines.
-  !
-  !++ Current Corresponding Author : H.Tomita
-  !
-  !++ History:
-  !      Version    Date      Comment
-  !      -----------------------------------------------------------------------
-  !      0.00       04-02-17  Imported from igdc-4.33
-  !                 07-01-24  added VINTRPL_z_level2 (linear interpolation) and
-  !                           consider undefined value (K.Suzuki)
-  !      -----------------------------------------------------------------------
-  !
   !-----------------------------------------------------------------------------
   !
   !++ Used modules
@@ -668,6 +657,5 @@ contains
        enddo
     endif
   end subroutine VINTRPL_sigma_level
-  !-----------------------------------------------------------------------------
+
 end module mod_vintrpl
-!-------------------------------------------------------------------------------

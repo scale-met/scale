@@ -1,17 +1,12 @@
 !-------------------------------------------------------------------------------
-!>
-!! 3D Operator module
+!> Module 3D Operator
 !!
 !! @par Description
-!!         This module contains the subroutines for differential oeprators using vertical metrics.
+!!          This module contains the subroutines for differential operators using vertical metrics.
 !!
-!! @author  H.Tomita
-!!
-!! @par History
-!! @li      2004-02-17 (H.Tomita)    Imported from igdc-4.33
-!! @li      2011-09-27 (T.Seiki)     merge optimization by RIST and M.Terai
-!!
+!! @author NICAM developers, Team SCALE
 !<
+!-------------------------------------------------------------------------------
 module mod_oprt3d
   !-----------------------------------------------------------------------------
   !
@@ -421,4 +416,3 @@ contains
   end function suf
 
 end module mod_oprt3d
-!-------------------------------------------------------------------------------

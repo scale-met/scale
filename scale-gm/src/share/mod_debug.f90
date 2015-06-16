@@ -1,15 +1,12 @@
 !-------------------------------------------------------------------------------
-!>
-!! Debug utility module
+!> Module debug
 !!
 !! @par Description
-!!         This module is for dubug.
+!!         Debug utility module
 !!
-!! @author  H.Tomita
-!!
-!! @par History
-!! @li      2012-06-29 (H.Yashiro)  [NEW]
+!! @author Team SCALE
 !<
+!-------------------------------------------------------------------------------
 module mod_debug
   !-----------------------------------------------------------------------------
   !
@@ -67,11 +64,8 @@ module mod_debug
 
   !-----------------------------------------------------------------------------
 contains
-
   !-----------------------------------------------------------------------------
-  !>
   !> Damp all data
-  !>
   subroutine DEBUG_dampdata( &
       basename, & !--- [IN]
       var,      & !--- [IN]
@@ -131,9 +125,7 @@ contains
   end subroutine DEBUG_dampdata
 
   !-----------------------------------------------------------------------------
-  !>
   !> Damp all data
-  !>
   subroutine DEBUG_dampascii4D( &
       basename, & !--- [IN]
       var,      & !--- [IN]
@@ -206,9 +198,7 @@ contains
   end subroutine DEBUG_dampascii4D
 
   !-----------------------------------------------------------------------------
-  !>
   !> Damp all data
-  !>
   subroutine DEBUG_dampascii3D( &
       basename, & !--- [IN]
       var,      & !--- [IN]

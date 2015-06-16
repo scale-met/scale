@@ -1,20 +1,12 @@
 !-------------------------------------------------------------------------------
-!>
-!! Geometrics module
+!> Module geometrics
 !!
 !! @par Description
-!!          In this module, the geometrics of the icosahedral grid such as
-!!          area are calculated.
+!!         In this module, the geometrics of the icosahedral grid such as area are calculated
 !!
-!! @author  H.Tomita
-!!
-!! @par History
-!! @li      2004-02-17 (H.Tomita)  Imported from igdc-4.33
-!! @li      2010-06-08 (S.Iga)     a new grid is implemented
-!! @li      2011-07-22 (T.Ohno)    a new grid is implemented
-!! @li      2011-08-18 (T.Ohno)    bugfix
-!!
+!! @author NICAM developers, Team SCALE
 !<
+!-------------------------------------------------------------------------------
 module mod_gmtr
   !-----------------------------------------------------------------------------
   !
@@ -1132,4 +1124,3 @@ contains
   end function suf
 
 end module mod_gmtr
-!-------------------------------------------------------------------------------

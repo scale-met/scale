@@ -1,16 +1,10 @@
 !-------------------------------------------------------------------------------
-!>
-!! Energy/mass budget monitoring module
+!> Module budget monitoring
 !!
 !! @par Description
-!!         This module is for monitoring the energy/mass budget
+!!          This module is for monitoring the energy/mass budget
 !!
-!! @author H.Tomita
-!!
-!! @par History
-!! @li      2009-07-10 (H.Tomita)   [NEW]
-!! @li      2009-07-28 (H.Tomita)   Bug fix
-!!
+!! @author NICAM developers, Team SCALE
 !<
 !-------------------------------------------------------------------------------
 module mod_embudget

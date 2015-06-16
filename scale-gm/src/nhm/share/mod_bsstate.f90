@@ -1,25 +1,13 @@
 !-------------------------------------------------------------------------------
-!
-!+  Basic state module
-!
+!> Module basic state
+!!
+!! @par Description
+!!          This module is for the set of basic state for non-hydrostatic model
+!!
+!! @author NICAM developers, Team SCALE
+!<
 !-------------------------------------------------------------------------------
 module mod_bsstate
-  !-----------------------------------------------------------------------------
-  !
-  !++ Description:
-  !       This module is for the set of basic state for non-hydrostatic
-  !       model.
-  !
-  !
-  !++ Current Corresponding Author : H.Tomita
-  !
-  !++ History:
-  !      Version   Date       Comment
-  !      -----------------------------------------------------------------------
-  !      0.00      04-02-17   Imported from igdc-4.34
-  !                11-08-13   A.Noda : add twp-ice exp
-  !      -----------------------------------------------------------------------
-  !
   !-----------------------------------------------------------------------------
   !
   !++ Used modules
@@ -955,11 +943,12 @@ contains
        Close(fid)
        !
     endif
-    !
+
+    return
   end subroutine bsstate_output_ref
+
   !-----------------------------------------------------------------------------
   subroutine bsstate_input_ref( basename )
-    !
     use mod_misc, only : &
          MISC_get_available_fid
     use mod_cnst, only : &
@@ -972,8 +961,8 @@ contains
          ADM_kall
     use mod_grd, only :  &
          GRD_gz
-    !
     implicit none
+
     Character(*), Intent(in) :: basename
     integer :: fid
     !
@@ -995,8 +984,7 @@ contains
        phi_ref(k) = CNST_EGRAV * GRD_gz(k)
        rho_ref(k) = pre_ref(k)/ ( (1.0_RP-qv_ref(k))*CNST_RAIR+qv_ref(k)*CNST_RVAP )/ tem_ref(k)
     enddo
-    !
+
   end subroutine bsstate_input_ref
-  !-----------------------------------------------------------------------------
+
 end module mod_bsstate
-!-------------------------------------------------------------------------------

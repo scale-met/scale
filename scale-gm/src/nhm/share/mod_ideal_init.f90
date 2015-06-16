@@ -1,26 +1,13 @@
 !-------------------------------------------------------------------------------
-!
-!+  Module of Dynamical Core Test initial condition
-!
+!> Module ideal initial condition
+!!
+!! @par Description
+!!          This module calculates initial condition of ideal test cases
+!!
+!! @author Team SCALE
+!<
 !-------------------------------------------------------------------------------
 module mod_ideal_init
-  !-----------------------------------------------------------------------------
-  !
-  !++ Description:
-  !       This module is for the Dyn Core Test Initialization.
-  !
-  !
-  !++ Current Corresponding Author : R.Yoshida
-  !
-  !++ History:
-  !      Version   Date       Comment
-  !      -----------------------------------------------------------------------
-  !      0.00      12-10-19   Imported from mod_restart.f90 of NICAM
-  !      0.01      13-06-12   Test cases in DCMIP2012 were imported
-  !      0.02      14-01-28   Test case in Tomita and Satoh 2004 was imported
-  !
-  !      -----------------------------------------------------------------------
-  !
   !-----------------------------------------------------------------------------
   !
   !++ Used modules

@@ -1,19 +1,10 @@
 !-------------------------------------------------------------------------------
-!>
-!! Generic tool module
+!> Module generic tool
 !!
 !! @par Description
 !!         This module is for the generic subroutine, e.g., global mean.
 !!
-!! @author  H.Tomita
-!!
-!! @par History
-!! @li      2004-02-17 (H.Tomita)  Imported from igdc-4.33
-!! @li      2004-06-23 (        )  [add] GTL_input_var2]
-!! @li      2011-03-02 (        )  [add] GTL_clip_region_1layer_k
-!! @li      2011-07-22 (T.Ohno)    MPI_Bcasts of poles data are suppressed when poles are excluded from communication.
-!! @li      2012-06-06 (M.Terai)   Modification to reduce communication by FJSE
-!!
+!! @author NICAM developers, Team SCALE
 !<
 !-------------------------------------------------------------------------------
 module mod_gtl
@@ -952,7 +943,6 @@ contains
   end subroutine GTL_clip_region_1layer
 
   !-----------------------------------------------------------------------------
-  ! 2011/03/02 NEC [Add]
   subroutine GTL_clip_region_1layer_k(v,v_clip,ksize,k)
     use mod_adm, only: &
        ADM_gall,        &
@@ -982,4 +972,3 @@ contains
   end subroutine GTL_clip_region_1layer_k
 
 end module mod_gtl
-!-------------------------------------------------------------------------------

@@ -1,20 +1,12 @@
 !-------------------------------------------------------------------------------
-!>
-!! File I/O module
+!> Module file I/O
 !!
 !! @par Description
-!!         This module is continer for file I/O
+!!         In this module, the geometrics of the icosahedral grid such as area are calculated
 !!
-!! @author H.Tomita, H.Yashiro
-!!
-!! @par History
-!! @li      2011-07-27 (H.Tomita)  [NEW]
-!! @li      2011-08-19 (H.Yashiro) Incorporate into NICAM
-!! @li      2011-09-03 (H.Yashiro) Complete format specification
-!! @li      2011-12-14 (T.Seiki)   allocatable => pointer in type structure
-!! @li      2012-02-01 (T.Seiki)   fix array size over in array assignment
-!!
+!! @author NICAM developers, Team SCALE
 !<
+!-------------------------------------------------------------------------------
 module mod_fio
   !-----------------------------------------------------------------------------
   !
@@ -552,4 +544,3 @@ contains
   end subroutine FIO_finalize
 
 end module mod_fio
-!-------------------------------------------------------------------------------

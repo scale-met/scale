@@ -1,49 +1,13 @@
 !-------------------------------------------------------------------------------
-!
-!+  communication module
-!
+!> Module communication
+!!
+!! @par Description
+!!         this module is for the communication based on mpi library.
+!!
+!! @author NICAM developers, Team SCALE
+!<
 !-------------------------------------------------------------------------------
 module mod_comm
-  !-----------------------------------------------------------------------------
-  !
-  !++ description:
-  !       this module is for the communication based on mpi library.
-  !
-  !++ Current Corresponding Author : K.Goto, H.Tomita
-  !
-  !++ History:
-  !      Version    Date      Comment
-  !      -----------------------------------------------------------------------
-  !      0.00       04-02-17  Imported from igdc-4.33
-  !                 06-09-??  K.Goto bug fix
-  !                 06-10-08  S.Iga  add namelist (&COMMPARAM  max_varmax)
-  !                 07-11-07  T.Mitsui add varmax check option(opt_check_varmax)
-  !                 09-03-10  H.Tomita : Transplanting COMM_data_transfer2 from
-  !                                      mod[mod_varcomm].
-  !                 09-03-10  H.Tomita : rename COMM_data_transfer2 to COMM_var.
-  !                 09-09-17  S.Iga : Add debug option and barrier option
-  !                 10-06-07  S.Iga: new grid is implemented
-  !                              (only the attribute of max_comm_xxx and
-  !                              max_comm is changed from parameter to variable)
-  !                 11-01-24  C.Kodama: Reduce memory usage in large rlevel.
-  !                              (provided by Terai-san @ RIKEN)
-  !                              Modified line: (20101207 teraim)
-  !                 11-04-26  C.Kodama: default value of opt_check_varmax is changed to .true.
-  !                                     and modify its behavior to abort when cmax exceeds max_maxvar*ADM_kall.
-  !                 11-05-06  Y.Yamada: Merge tuning code with original code
-  !                              (provided by Yamamoto-san @ NEC)
-  !                              Modified line: !=org=
-  !                 11-07-21  T.Ohno: A public variable 'comm_pl' is added.
-  !                           If 'comm_pl' is false, pole data is not used in
-  !                           COMM_data_transfer and COMM_var.
-  !                 11-11-30  S.Iga (commit) : Modification around COMM_var,
-  !                              suggested and modified by T.Inoue on 11-10-24
-  !                 11-12-14  T.Seiki : allocatable variables are not permitted in type structure.
-  !                              allocatable => pointer  (only @ SR16000 and ES)
-  !                 12-03-26  T.Seiki : bug-fix if opt_comm_dbg=.true.
-  !                 12-06-27  T.Ohno : bug fix for simulations at which 'comm_pl' is false
-  !      -----------------------------------------------------------------------
-  !
   !-----------------------------------------------------------------------------
   !
   !++ Used modules
@@ -284,7 +248,6 @@ module mod_comm
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
-  !(20101207) added by teraim
   subroutine init_tempsb
     use mod_adm, only : ADM_rgn_nmax
     implicit none
@@ -300,7 +263,8 @@ contains
       tempsb(i)%val(:)=-1
     enddo
   end subroutine
-  !(20101207) added by teraim
+
+  !-----------------------------------------------------------------------------
   subroutine finalize_tempsb
     use mod_adm, only : ADM_rgn_nmax
     implicit none
@@ -312,7 +276,8 @@ contains
     enddo
     deallocate(tempsb)
   end subroutine
-  !(20101207) added by teraim
+
+  !-----------------------------------------------------------------------------
   subroutine add_tempsb(icol, irow, ival)
     implicit none
     integer,intent(in) :: icol,irow,ival
@@ -329,7 +294,7 @@ contains
     endif
   end subroutine
 
-  !(20101207) added by teraim
+  !-----------------------------------------------------------------------------
   subroutine get_tempsb(icol, irow, ret)
     implicit none
     integer,intent(in) :: icol,irow
@@ -2149,6 +2114,7 @@ contains
     end subroutine re_setup_pl_comm_info
 
   end subroutine COMM_setup
+
   !-----------------------------------------------------------------------------
   subroutine output_info
     use mod_adm, only :    &
@@ -3076,4 +3042,3 @@ contains
   end subroutine COMM_Stat_min
 
 end module mod_comm
-!-------------------------------------------------------------------------------

@@ -1,18 +1,12 @@
 !-------------------------------------------------------------------------------
-!>
-!! variable conversion module
+!> Module variable conversion
 !!
 !! @par Description
-!!         Conversion tools for prognostic variables
+!!          Conversion tools for prognostic variables
 !!
-!! @author H.Tomita
-!!
-!! @par History
-!! @li      2004-02-17 (H.Tomita)   Imported from igdc-4.34
-!! @li      2009-07-10 (H.Tomita)   Change the cnvvar_rhokin, cnvvar_kin for the energy conservation.
-!! @li      2011-07-22 (T.Ohno)     add subroutines for plane hgrid systems
-!!
+!! @author NICAM developers, Team SCALE
 !<
+!-------------------------------------------------------------------------------
 module mod_cnvvar
   !-----------------------------------------------------------------------------
   !
@@ -479,4 +473,3 @@ contains
   end subroutine cnvvar_rhogkin
 
 end module mod_cnvvar
-!-------------------------------------------------------------------------------

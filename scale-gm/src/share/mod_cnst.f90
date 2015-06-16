@@ -1,17 +1,12 @@
 !-------------------------------------------------------------------------------
-!>
-!! Constant definition module
+!> Module constant
 !!
 !! @par Description
-!!         This module defines constant numbers.
+!!         This module defines constant numbers
 !!
-!! @author H.Tomita
-!!
-!! @par History
-!! @li      2004-02-17 (H.Tomita) Imported from igdc-4.33
-!! @li      2009-09-28 (      )   add CNST_undef2 for 2 byte integer
-!!
+!! @author NICAM developers, Team SCALE
 !<
+!-------------------------------------------------------------------------------
 module mod_cnst
   !-----------------------------------------------------------------------------
   !
@@ -175,11 +170,8 @@ module mod_cnst
   !
   !-----------------------------------------------------------------------------
 contains
-
   !-----------------------------------------------------------------------------
-  !>
-  !> Description of the subroutine CNST_setup
-  !>
+  !> Setup
   subroutine CNST_setup
     use mod_adm, only: &
        ADM_LOG_FID, &
@@ -326,4 +318,3 @@ contains
   end subroutine CNST_setup
 
 end module mod_cnst
-!-------------------------------------------------------------------------------

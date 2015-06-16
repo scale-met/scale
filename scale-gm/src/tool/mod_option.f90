@@ -1,27 +1,18 @@
 !-------------------------------------------------------------------------------
-!
-!+ module option interpreter
-!
+!> Module option interpreter
+!!
+!! @par Description
+!!          Read argument and convert to namelist format
+!!          (This idea is referenced from GTOOL3 suite)
+!!
+!! @author Team SCALE
+!<
 !-------------------------------------------------------------------------------
 module mod_tool_option
   !-----------------------------------------------------------------------------
   !
-  !++ Description: 
-  !      Read argument and convert to namelist format
-  !      This idea is referenced from GTOOL3 suite
-  !
-  !++ Current Corresponding Author: H.Yashiro
-  ! 
-  !++ History: 
-  !      Version   Date      Comment 
-  !      -----------------------------------------------------------------------
-  !      0.90      11-09-01  H.Yashiro : [NEW]
-  !
-  !-----------------------------------------------------------------------------
-  !
   !++ Used modules
   !
-  !-----------------------------------------------------------------------------
   implicit none
   private
   !-----------------------------------------------------------------------------
@@ -29,11 +20,13 @@ module mod_tool_option
   !++ public procedure
   !
   public :: OPT_convert
+
   !-----------------------------------------------------------------------------
   !
   !++ public param & variable
   !
   integer, public :: OPT_fid !< fileunit number for namelist
+
   !-----------------------------------------------------------------------------
   !
   !++ private procedure
@@ -46,7 +39,6 @@ module mod_tool_option
 contains
   !-----------------------------------------------------------------------------
   !> Read argument and convert to namelist format
-  !-----------------------------------------------------------------------------
   subroutine OPT_convert( ninfile )
     implicit none
 
@@ -112,4 +104,3 @@ contains
   end subroutine OPT_convert
 
 end module mod_tool_option
-!-------------------------------------------------------------------------------

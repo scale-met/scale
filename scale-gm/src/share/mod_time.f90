@@ -1,14 +1,12 @@
 !-------------------------------------------------------------------------------
-!>
-!! Time management module
+!> Module time management
 !!
 !! @par Description
-!!         This module is for the time management.
-!! @author  H.Tomita
-!! @par History
-!! @li      2004-02-17 (H.Tomita) Imported from igdc-4.33
-!! @li      2004-05-31 (      )   Calculation of "num_of_iteration_[sl]step" are moved to mod[onestep].
+!!          This module is for the time management
+!!
+!! @author NICAM developers, Team SCALE
 !<
+!-------------------------------------------------------------------------------
 module mod_time
   !-----------------------------------------------------------------------------
   !
@@ -66,7 +64,6 @@ module mod_time
   !
   !-----------------------------------------------------------------------------
 contains
-
   !-----------------------------------------------------------------------------
   !> Setup the temporal scheme and time management
   subroutine TIME_setup
@@ -240,4 +237,3 @@ contains
   end subroutine TIME_advance
 
 end module mod_time
-!-------------------------------------------------------------------------------

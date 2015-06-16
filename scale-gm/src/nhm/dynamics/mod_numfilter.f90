@@ -1,34 +1,12 @@
 !-------------------------------------------------------------------------------
-!>
-!! Numerical filter module
+!> Module numerical filter
 !!
 !! @par Description
-!!         This module contains subroutines for numerical smoothings or filters
+!!          This module contains subroutines for numerical smoothings or filters
 !!
-!! @author  H.Tomita
-!!
-!! @par History
-!! @li      2004-02-17 (H.Tomita)  Imported from igdc-4.34
-!! @li      2005-11-02 (N.Hirota)  Add 2 dimensional damping
-!! @li      2005-11-10 (N.Hirota)  Add z dependent horizontal diffusion
-!! @li      2005-12-09 (M.Satoh)   Bug fix
-!! @li      2005-12-10 (N.Hirota)  1/gamma -> tau when type==E_FOLD_TIME
-!! @li      2005-12-17 (M.Satoh)   Read namelist twice for compatibility
-!! @li      2006-01-10 (S.Iga)     Add 'Kh_coef_lap1'
-!! @li      2006-04-17 (H.Tomita)  Add nonlinear diffusion
-!! @li      2006-10-20 (K.Suzuki)  Not calling tracer diffusion in using Miura2004
-!! @li      2007-01-26 (H.Tomita)  Some change in numfilter_rayleigh_damping
-!! @li      2007-08-07 (T.Mitsui)  Trivial fix
-!! @li      2008-01-24 (Y.Niwa)    Add MIURA2004OLD in numerical_hdiff hdiff_fact_q = 0.D0
-!! @li      2008-01-30 (Y.Niwa)    Bug fix
-!! @li      2008-04-12 (T.Mitsui)  Omit needless calculation in hdiff
-!! @li      2009-04-14 (H.Tomita)  Add the initilization for Kh_coef_lap1.
-!! @li      2012-02-10 (T.Yamaura) Optimized numfilter_divdamp and numfilter_hdiffusion
-!! @li      2012-03-28 (T.Seiki)   Change the method to calculate AREA_ave collective communication => analytic diagnosis
-!! @li      2012-05-30 (T.Yashiro) Change arguments from character to index/switch
-!! @li      2012-07-21 (S.Iga)     Add switch smooth_1var which control smooth_1var
-!!
+!! @author NICAM developers, Team SCALE
 !<
+!-------------------------------------------------------------------------------
 module mod_numfilter
   !-----------------------------------------------------------------------------
   !
@@ -2462,4 +2440,3 @@ contains
   end subroutine
 
 end module mod_numfilter
-!-------------------------------------------------------------------------------

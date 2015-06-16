@@ -1,19 +1,13 @@
 !-------------------------------------------------------------------------------
-!>
-!! Calendar module
+!> Module calendar
 !!
 !! @par Description
-!!         This module contains subroutines w.r.t. the calender.
-!!         Orginal code is from CCSR/NIES/AGCM5.4.01, Modified by M.Satoh
+!!         This module contains subroutines the calendar.
+!!         Orginal code is from CCSR/NIES/AGCM5.4
 !!
-!! @author H.Tomita
-!!
-!! @par History
-!! @li      2004-02-18 (H.Tomita) Imported from the NICAM-subset model
-!! @li      2004-05-31 (      )   Sub[calenar_ss2yh] belongs to "public".
-!! @li      2007-03-23 (Y.Niwa)   calendar_daymo, private --> public
-!!
+!! @author NICAM developers, Team SCALE
 !<
+!-------------------------------------------------------------------------------
 module mod_calendar
   !-----------------------------------------------------------------------------
   !
@@ -45,7 +39,7 @@ module mod_calendar
   public :: calendar_yh2ss
   public :: calendar_PERPR
   public :: calendar_dd2ym
-  public :: calendar_daymo  ! 07/03/23 Y.Niwa [add]
+  public :: calendar_daymo
 
   !-----------------------------------------------------------------------------
   !
@@ -104,11 +98,8 @@ module mod_calendar
 
   !-----------------------------------------------------------------------------
 contains
-
   !-----------------------------------------------------------------------------
-  !>
-  !> Description of the subroutine calendar_setup
-  !>
+  !> Setup
   subroutine calendar_setup
     use mod_adm, only: &
        ADM_LOG_FID, &
@@ -151,10 +142,7 @@ contains
   end subroutine calendar_setup
 
   !-----------------------------------------------------------------------------
-  !>
-  !> Description of the subroutine calendar_perpt
   !> fixed date
-  !>
   subroutine calendar_perpt( &
        iyear ,               & !--- in : year
        imonth,               & !--- in : month
@@ -176,10 +164,7 @@ contains
   end subroutine calendar_perpt
 
   !-----------------------------------------------------------------------------
-  !>
-  !> Description of the subroutine calendar_PERPR
   !> calendar, refer to fixed date
-  !>
   subroutine calendar_PERPR( &
        IYEAR ,               & !--- OUT
        IMONTH,               & !--- OUT
@@ -203,10 +188,7 @@ contains
   end subroutine calendar_PERPR
 
   !-----------------------------------------------------------------------------
-  !>
-  !> Description of the subroutine calendar_perpo
   !> fixed date(on/off)
-  !>
   subroutine calendar_perpo( &
        ooperp                &
        )
@@ -221,10 +203,7 @@ contains
   end subroutine calendar_perpo
 
   !-----------------------------------------------------------------------------
-  !>
-  !> Description of the subroutine calendar_daymo
   !> calendar, no.of day in a month
-  !>
   subroutine calendar_daymo(&
        ndaymo,              & !--- OUT : day
        iyear,               & !--- IN : year
@@ -268,10 +247,7 @@ contains
   end subroutine calendar_daymo
 
   !-----------------------------------------------------------------------------
-  !>
-  !> Description of the subroutine calendar_dayyr
   !> calendar, no.of day in an year
-  !>
   subroutine calendar_dayyr(&
        ndayyr,              & !-- OUT : day
        iyear                & !---IN : year
@@ -313,10 +289,7 @@ contains
   end subroutine calendar_dayyr
 
   !-----------------------------------------------------------------------------
-  !>
-  !> Description of the subroutine calendar_monyr
   !> calendar, no.of month in an year
-  !>
   subroutine calendar_monyr( &
        nmonyr,               & !--- OUT : month
        iyear                 & !--- IN : year
@@ -337,10 +310,7 @@ contains
   end subroutine calendar_monyr
 
   !-----------------------------------------------------------------------------
-  !>
-  !> Description of the subroutine calendar_secdy
   !> calendar, no.of sec. in a day
-  !>
   subroutine calendar_secdy( &
        nsecdy                &
        )
@@ -355,10 +325,7 @@ contains
   end subroutine calendar_secdy
 
   !-----------------------------------------------------------------------------
-  !>
-  !> Description of the subroutine calendar_secmi
   !> calendar, no of sec. in a minute
-  !>
   subroutine calendar_secmi( &
        nsecmi                & !--- OUT
        )
@@ -373,10 +340,7 @@ contains
   end subroutine calendar_secmi
 
   !-----------------------------------------------------------------------------
-  !>
-  !> Description of the subroutine calendar_sechr
   !> calendar, no.of sec. in an hour
-  !>
   subroutine calendar_sechr( &
        nsechr                &
        )
@@ -391,10 +355,7 @@ contains
   end subroutine calendar_sechr
 
   !-----------------------------------------------------------------------------
-  !>
-  !> Description of the subroutine calendar_ss2ds
   !> calendar, sec. -> ddss
-  !>
   subroutine calendar_ss2ds( &
        idays ,               & !--- OUT
        rsec  ,               & !--- OUT
@@ -420,10 +381,7 @@ contains
   end subroutine calendar_ss2ds
 
   !-----------------------------------------------------------------------------
-  !>
-  !> Description of the subroutine calendar_ds2ss
   !> calendar, ddss -> sec.
-  !>
   subroutine calendar_ds2ss( &
        dsec  ,               & !--- OUT
        idays ,               & !--- IN
@@ -443,10 +401,7 @@ contains
   end subroutine calendar_ds2ss
 
   !-----------------------------------------------------------------------------
-  !>
-  !> Description of the subroutine calendar_rs2hm
   !> calendar, sec. -> hhmmss
-  !>
   subroutine calendar_rs2hm( &
        ihour ,               & !--- OUT
        imin  ,               & !--- OUT
@@ -480,10 +435,7 @@ contains
   end subroutine calendar_rs2hm
 
   !-----------------------------------------------------------------------------
-  !>
-  !> Description of the subroutine calendar_hm2rs
   !> calendar, hhmmss -> sec.
-  !>
   subroutine calendar_hm2rs( &
        rsec  ,               & !--- OUT
        ihour ,               & !--- IN
@@ -504,10 +456,7 @@ contains
   end subroutine calendar_hm2rs
 
   !-----------------------------------------------------------------------------
-  !>
-  !> Description of the subroutine calendar_dd2ym
   !> calendar, day -> yymmdd
-  !>
   subroutine calendar_dd2ym( &
        iyear ,               & !--- OUT
        imonth,               & !--- OUT
@@ -591,10 +540,7 @@ contains
   end subroutine calendar_dd2ym
 
   !-----------------------------------------------------------------------------
-  !>
-  !> Description of the subroutine calendar_ym2dd
   !> calendar, yymmdd -> day
-  !>
   subroutine calendar_ym2dd( &
        idays ,               & !--- OUT
        iyear ,               & !--- IN
@@ -665,10 +611,7 @@ contains
   end subroutine calendar_ym2dd
 
   !-----------------------------------------------------------------------------
-  !>
-  !> Description of the subroutine calendar_ym2yd
   !> calendar, yymmdd -> yydd
-  !>
   subroutine calendar_ym2yd( &
        idaysy,               & !--- OUT
        iyear ,               & !--- IN
@@ -733,10 +676,7 @@ contains
   end subroutine calendar_ym2yd
 
   !-----------------------------------------------------------------------------
-  !>
-  !> Description of the subroutine calendar_ss2yh
   !> calendar, sec. -> date
-  !>
   subroutine calendar_ss2yh( &
        idate ,               & !--- OUT
        dsec                  & !--- IN
@@ -766,10 +706,7 @@ contains
   end subroutine calendar_ss2yh
 
   !-----------------------------------------------------------------------------
-  !>
-  !> Description of the subroutine calendar_yh2ss
   !> calendar, date -> sec.
-  !>
   subroutine calendar_yh2ss( &
        dsec  ,               & !--- OUT
        idate                 & !--- IN
@@ -799,10 +736,7 @@ contains
   end subroutine calendar_yh2ss
 
   !-----------------------------------------------------------------------------
-  !>
-  !> Description of the subroutine calendar_dd2yd
   !> calendar, day -> yydd
-  !>
   subroutine calendar_dd2yd( &
        iyear ,               & !--- OUT
        idaysy,               & !--- OUT
@@ -829,10 +763,7 @@ contains
   end subroutine calendar_dd2yd
 
   !-----------------------------------------------------------------------------
-  !>
-  !> Description of the subroutine calendar_ss2yd
   !> calendar, sec. -> yydd
-  !>
   subroutine calendar_ss2yd( &
        iyear ,               & !--- OUT
        idaysy,               & !--- OUT
@@ -859,10 +790,7 @@ contains
   end subroutine calendar_ss2yd
 
   !-----------------------------------------------------------------------------
-  !>
-  !> Description of the subroutine calendar_ss2ym
   !> calendar, sec. -> yymmdd
-  !>
   subroutine calendar_ss2ym( &
        iyear ,               & !--- OUT
        imonth,               & !--- OUT
@@ -892,10 +820,7 @@ contains
   end subroutine calendar_ss2ym
 
   !-----------------------------------------------------------------------------
-  !>
-  !> Description of the subroutine calendar_xx2ss
   !> calendar, hour ->sec.
-  !>
   subroutine calendar_xx2ss( &
        ddsec ,               & !--- OUT
        rtdur ,               & !--- IN
@@ -955,10 +880,7 @@ contains
   end subroutine calendar_xx2ss
 
   !-----------------------------------------------------------------------------
-  !>
-  !> Description of the subroutine calendar_cc2yh
   !> calendar, character -> date
-  !>
   subroutine calendar_cc2yh( &
        itime ,               & !--- OUT
        htime                 & !--- IN
@@ -977,10 +899,7 @@ contains
   end subroutine calendar_cc2yh
 
   !-----------------------------------------------------------------------------
-  !>
-  !> Description of the subroutine calendar_yh2cc
   !> calendar, date -> character
-  !>
   subroutine calendar_yh2cc( &
        htime ,               & !--- OUT
        itime                 & !--- IN
@@ -999,10 +918,7 @@ contains
   end subroutine calendar_yh2cc
 
   !-----------------------------------------------------------------------------
-  !>
-  !> Description of the subroutine calendar_ss2cc
   !> calendar, sec. -> character
-  !>
   subroutine calendar_ss2cc( &
        htime ,               & !--- OUT
        dsec                  & !--- IN
@@ -1025,11 +941,8 @@ contains
   end subroutine calendar_ss2cc
 
   !-----------------------------------------------------------------------------
-  !>
-  !> Description of the function %NAME
   !> calendar :bissextile or not
   !> @return ocleap
-  !>
   function ocleap( &
        iyear       & !--- IN
        )
@@ -1055,10 +968,7 @@ contains
   end function ocleap
 
   !-----------------------------------------------------------------------------
-  !>
-  !> Description of the subroutine calendar_ssaft
   !> calendar, time advancing
-  !>
   subroutine calendar_ssaft( &
        dseca ,               & !--- OUT
        dsec  ,               & !--- IN
@@ -1107,11 +1017,8 @@ contains
   end subroutine calendar_ssaft
 
   !-----------------------------------------------------------------------------
-  !>
-  !> Description of the function %NAME
   !> time step passed ?
   !> @return calendar_ointvl
-  !>
   function   calendar_ointvl( &
        dtime ,                & !--- IN
        dtprev ,               & !--- IN
@@ -1186,11 +1093,8 @@ contains
   end function calendar_ointvl
 
   !-----------------------------------------------------------------------------
-  !>
-  !> Description of the function %NAME
   !> dicard gaussian
   !> @return calendar_dgaus
-  !>
   function calendar_dgaus( &
         dx                 & !--- IN
         )
@@ -1205,4 +1109,3 @@ contains
   end function calendar_dgaus
 
 end module mod_calendar
-!-------------------------------------------------------------------------------

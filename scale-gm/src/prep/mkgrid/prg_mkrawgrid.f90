@@ -1,17 +1,12 @@
 !-------------------------------------------------------------------------------
-!>
-!! Program mkrawgrid
+!> Program mkrawgrid
 !!
 !! @par Description
-!!          Making grid systems based on the icosahedral grid configuration
+!!          Making horizontal grid systems based on the icosahedral grid configuration
 !!
-!! @author  H.Tomita
-!!
-!! @par History
-!! @li      2004-02-17 (H.Tomita)  Imported from igdc-4.33
-!! @li      2013-05-1  (H.Yashiro) NICAM-DC
-!!
+!! @author NICAM developers, Team SCALE
 !<
+!-------------------------------------------------------------------------------
 program mkrawgrid
   !-----------------------------------------------------------------------------
   !

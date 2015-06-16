@@ -1,35 +1,13 @@
 !-------------------------------------------------------------------------------
-!
-!+  Source calculation module
-!
+!> Module source
+!!
+!! @par Description
+!!          This module is for the caluculation of source terms
+!!
+!! @author NICAM developers, Team SCALE
+!<
 !-------------------------------------------------------------------------------
 module mod_src
-  !-----------------------------------------------------------------------------
-  !
-  !++ Description:
-  !       This module is for the caluculation of source terms
-  !       in the nhm-model.
-  !
-  !
-  !++ Current Corresponding Author : H.Tomita
-  !
-  !++ History:
-  !      Version   Date       Comment
-  !      -----------------------------------------------------------------------
-  !      0.00      04-02-17   Imported from igdc-4.34
-  !                06-08-11   Add sub[src_update_tracer] for tracer advection.
-  !                07-04-25   K.Suzuki: branch for save_memory in src_update_tracer
-  !                07-11-13   H.Tomita: Change the vertical advection limiter.
-  !                                     apply the limiter from rho q to q.
-  !                07-11-14   Y.Niwa: bug fix /rho_h => /rho_h_pl
-  !                08-01-24   Y.Niwa: add src_update_tracer
-  !                08-04-28   Y.Niwa: add initialization and avoid zero-dividing.
-  !                09-05-26   Y.Yamada: add directive, derected by T.Asano
-  !                11-09-27   T.Seiki: merge optimized routines for K by RIST and M.Terai
-  !                12-03-29   T.Yamaura: optimized for K
-  !                12-05-30   T.Yashiro: Change arguments from character to index/switch
-  !      -----------------------------------------------------------------------
-  !
   !-----------------------------------------------------------------------------
   !
   !++ Used modules

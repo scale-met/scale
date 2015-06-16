@@ -1,22 +1,14 @@
 !-------------------------------------------------------------------------------
-!
-!+  Program FIO dump
-!
+!> Program FIO dump
+!!
+!! @par Description
+!!          header/data veiwer for new format data
+!!          ( packaged NICAM data format : PaNDa )
+!!
+!! @author Team SCALE
+!<
 !-------------------------------------------------------------------------------
 program prg_fio_dump
-  !-----------------------------------------------------------------------------
-  !
-  !++ Description: 
-  !      header/data veiwer for new format data
-  !      ( packaged NICAM data format : PaNDa )
-  !
-  !++ Current Corresponding Author: H. Yashiro
-  ! 
-  !++ History: 
-  !      Version   Date       Comment 
-  !      -----------------------------------------------------------------------
-  !      0.90      11-09-01  H.Yashiro : [NEW]
-  !
   !-----------------------------------------------------------------------------
   !
   !++ Used modules
@@ -77,7 +69,7 @@ program prg_fio_dump
 #endif
 
      if ( argstr(1:1) == '-' ) then
-        select case(argstr(2:2)) 
+        select case(argstr(2:2))
         case('h')
            if(.not. modelok) mode = FIO_DUMP_HEADER
            modelok = .true.
@@ -107,4 +99,3 @@ program prg_fio_dump
   call fio_dump_finfo(fid,endian,mode)
 
 end program prg_fio_dump
-!-------------------------------------------------------------------------------

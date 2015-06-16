@@ -1,24 +1,13 @@
 !-------------------------------------------------------------------------------
-!
-!+ Nudging module
-!
+!> Module nudging
+!!
+!! @par Description
+!!          This module is for the artificial forcing by nudging
+!!
+!! @author NICAM developers, Team SCALE
+!<
 !-------------------------------------------------------------------------------
 module mod_nudge
-  !-----------------------------------------------------------------------------
-  !
-  !++ Current Corresponding Author: Y.Niwa
-  !
-  !++ History:
-  !      Version   Date       Comment
-  !      -----------------------------------------------------------------------
-  !      1.00      08-09-09   Y.Niwa renew
-  !                08-09-10   M.Hara : modified nudging routines to calculate
-  !                                    nudging coeffient depending on the distance
-  !                                    from a point.
-  !                09-09-08   S.Iga  frhog and frhog_pl in nudge are deleted ( suggested by ES staff)
-  !                12-02-07   T.Seiki: add option to use yearly data
-  !      -----------------------------------------------------------------------
-  !
   !-----------------------------------------------------------------------------
   !
   !++ Used modules
@@ -816,4 +805,3 @@ contains
   end subroutine calc_wgt_horizontal
 
 end module mod_nudge
-!-------------------------------------------------------------------------------

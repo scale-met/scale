@@ -1,35 +1,15 @@
 !-------------------------------------------------------------------------------
-!
-!+  program ico2ll (NEW I/O)
-!
+!> Program FIO ico2ll
+!!
+!! @par Description
+!!          This program converts from data on dataicosahedral grid (new I/O format)
+!!          to that on latitude-longitude grid.
+!!          ( packaged NICAM data format : PaNDa )
+!!
+!! @author NICAM developers, Team SCALE
+!<
 !-------------------------------------------------------------------------------
 program fio_ico2ll
-  !-----------------------------------------------------------------------------
-  !
-  !++ Description:
-  !       This program converts from data on dataicosahedral grid (new I/O format)
-  !       to that on latitude-longitude grid.
-  !       (some part of source code is imported from ico2ll.f90)
-  !
-  !++ Current Corresponding Author : H.Yashiro
-  !
-  !++ Contributer of ico2ll.f90 : M.Satoh, S.Iga, Y.Niwa, H.Tomita, T.Mitsui,
-  !                               W.Yanase,  H.Taniguchi, Y.Yamada, C.Kodama
-  !
-  !++ History:
-  !      Version   Date      Comment
-  !      -----------------------------------------------------------------------
-  !      0.90      11-09-07  H.Yashiro : [NEW] partially imported from ico2ll.f90
-  !      0.95      12-04-19  H.Yashiro : [mod] deal large record length
-  !      0.95      12-06-28  H.Yashiro : [mod] parallelization
-  !      0.96      13-04-18  C.Kodama  : [mod] support NetCDF output
-  !                                            and reduce number of opened file at once
-  !                                            (thanks to Yamada-san)
-  !      1.00      13-06-17  H.Yashiro : [mod] reduce file open frequency
-  !      1.10      14-02-03  H.Yashiro : [mod] integrate NetCDF support by C.Kodama
-  !      1.20      14-02-05  H.Yashiro : [mod] integrate Xi2Z conversion & NN method by T.Seiki
-  !      -----------------------------------------------------------------------
-  !
   !-----------------------------------------------------------------------------
   !
   !++ Used modules
@@ -1177,10 +1157,10 @@ program fio_ico2ll
 
   close(ADM_LOG_FID)
 
+  !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
   !> read option
-  !-----------------------------------------------------------------------------
   subroutine readoption
     use mod_misc, only : &
       MISC_get_available_fid
@@ -1211,7 +1191,6 @@ contains
 
   !-----------------------------------------------------------------------------
   !> display help for option and abort
-  !-----------------------------------------------------------------------------
   subroutine helpoption
     implicit none
     !---------------------------------------------------------------------------
@@ -1541,15 +1520,12 @@ contains
 
   end subroutine makegtoolheader
 
-  !S.Iga051226 =>
   !-----------------------------------------------------------------------------
+  !> output grads-like template part  like 01JAN0000
   function sec2initplate(datesec) result(template)
-    !-- output grads-like template part  like 01JAN0000
     implicit none
 
     integer(8)        :: datesec
-    ! [mod] 10/08/03 T.Mitsui, can be compiled by gfortran
-!!$  character(*):: template
     character(LEN=20) :: template
 
     integer :: d(6)
@@ -1558,10 +1534,6 @@ contains
     data nmonth / 'JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC' /
     !---------------------------------------------------------------------------
 
-    ! [Comment] H.Yashiro 20110903
-    ! Prefer not to use calendar_dd2ym subroutine
-    ! Epoch time is different between calendar_ss2yh and calendar_dd2ym
-    ! New I/O stores timestamp, which is generated via calendar_yh2ss
     call calendar_ss2yh( d(:), real(datesec,kind=RP) )
 
     write(template,'(I2.2,A1,I2.2,A1,I2.2,A3,I4.4)') &
@@ -1570,22 +1542,16 @@ contains
   end function sec2initplate
 
   !-----------------------------------------------------------------------------
+  !> output grads-like template part  like 2005-12-01-23h50m
   function sec2template(datesec) result(template)
-    !-- output grads-like template part  like 2005-12-01-23h50m
     implicit none
 
     integer(8)        :: datesec
-    ! [mod] 10/08/03 T.Mitsui, can be compiled by gfortran
-!!$  character(*):: template
     character(LEN=20) :: template
 
     integer :: d(6)
     !---------------------------------------------------------------------------
 
-    ! [Comment] H.Yashiro 20110903
-    ! Prefer not to use calendar_dd2ym subroutine
-    ! Epoch time is different between calendar_ss2yh and calendar_dd2ym
-    ! New I/O stores timestamp, which is generated via calendar_yh2ss
     call calendar_ss2yh( d(:), real(datesec,kind=RP) )
 
     write(template,'(I4.4,A1,I2.2,A1,I2.2,A1,I2.2,A1,I2.2,A1)') &
@@ -1608,11 +1574,10 @@ contains
     template = trim(tmp)//'mn'
 
   end function timeincrement
-  !S.Iga051226 <=
 
   !-----------------------------------------------------------------------------
+  !> calendar, sec. -> character (YYYYMMDD HHMMSS)
   function calendar_ss2cc_gtool(datesec) result(template)
-    !--- calendar, sec. -> character (YYYYMMDD HHMMSS)
     implicit none
 
     integer(8)        :: datesec
@@ -1621,10 +1586,6 @@ contains
     integer :: d(6), i
     !---------------------------------------------------------------------------
 
-    ! [Comment] H.Yashiro 20110903
-    ! Prefer not to use calendar_dd2ym subroutine
-    ! Epoch time is different between calendar_ss2yh and calendar_dd2ym
-    ! New I/O stores timestamp, which is generated via calendar_yh2ss
     call calendar_ss2yh( d(:), real(datesec,kind=RP) )
 
     write (template,'(i4.4,i2.2,i2.2,1x,i2.2,i2.2,i2.2,1x)') (d(i),i=1,6)
@@ -1748,5 +1709,3 @@ contains
   end subroutine VINTRPL_Xi2Z
 
 end program fio_ico2ll
-!-------------------------------------------------------------------------------
-

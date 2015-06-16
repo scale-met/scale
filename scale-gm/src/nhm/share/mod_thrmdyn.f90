@@ -1,26 +1,13 @@
 !-------------------------------------------------------------------------------
-!
-!+  Thermodynamics variables module
-!
+!> Module thermodyanics
+!!
+!! @par Description
+!!          This module calculates thermodyanical variables
+!!
+!! @author NICAM developers, Team SCALE
+!<
 !-------------------------------------------------------------------------------
 module mod_thrmdyn
-  !-----------------------------------------------------------------------------
-  !
-  !++ Description:
-  !       This module contains subroutines in which the thermodyanics variables
-  !       are calculated.
-  !
-  !
-  !++ Current Corresponding Author : H.Tomita
-  !
-  !++ History:
-  !      Version   Date       Comment
-  !      -----------------------------------------------------------------------
-  !      0.00      04-02-17   Imported from igdc-4.34
-  !                07-01-26   H.Tomita: Support all type of EIN_TYPE
-  !                08-06-13   T.Mitsui: mod THRMDYN_ent as strict difinition
-  !      -----------------------------------------------------------------------
-  !
   !-----------------------------------------------------------------------------
   !
   !++ Used modules
@@ -809,4 +796,3 @@ contains
   end subroutine THRMDYN_tempre_ijkl
 
 end module mod_thrmdyn
-!-------------------------------------------------------------------------------

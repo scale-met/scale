@@ -1,28 +1,12 @@
 !-------------------------------------------------------------------------------
-!>
-!! Geodesic (Lat-Lon) grid module
+!> Module Lat-Lon grid
 !!
 !! @par Description
-!!         This module contains the tools to convert between icosaheral grid
-!!         and lat-lon grid
+!!         This module contains the tools to convert between icosaheral grid and lat-lon grid
 !!
-!! @author S.Iga
-!!
-!! @par History
-!! @li      2004-02-17 (S.Iga)    Imported from igdc-4.39
-!! @li      2004-03-05 (S.Iga)    'mod_latlon2.f90' is merged into this module.
-!! @li      2004-05-31 (H.Tomita) Delete debug write statements
-!! @li      2005-11-10 (M.Satoh)  bug fix: output_lldata_type_in
-!! @li      2005-12-17 (M.Satoh)  add namelist options for lat/lon max/min_deg
-!! @li      2006-02-10 (S.Iga)    bug fix: for the case LL grid is near to
-!! @li                            ICO grid (in the past, for gl11, weight at
-!! @li                            ix=8197,iy=4176 was NaN)
-!! @li      2007-07-12 (T.Mitsui) bug fix: "fid" had been undefined in mkllmap.
-!! @li      2009-07-17 (Y.Yamada) bug fix: negative area had existed in mkllmap.
-!! @li      2011-01-11 (S.Iga)    handling "lon>180"
-!! @li      2011-11-09  H.Yashiro [mod] Avoid arc-cos, precise calculation
-!!
+!! @author NICAM developers, Team SCALE
 !<
+!-------------------------------------------------------------------------------
 module mod_latlon
   !-----------------------------------------------------------------------------
   !
@@ -476,9 +460,6 @@ contains
   end subroutine LATLON_setup
 
   !-----------------------------------------------------------------------------
-  !>
-  !> Description of the subroutine mkrelmap_ico2ll
-  !>
   subroutine mkrelmap_ico2ll( what_is_done )
     use mod_misc, only: &
        MISC_get_latlon,      &
@@ -944,9 +925,6 @@ contains
   end subroutine LL_outputsample
 
   !-----------------------------------------------------------------------------
-  !>
-  !> Description of the subroutine setup_latlon
-  !>
   subroutine setup_latlon
     use mod_cnst, only: &
          CNST_PI
@@ -970,9 +948,6 @@ contains
   end subroutine setup_latlon
 
   !-----------------------------------------------------------------------------
-  !>
-  !> Description of the subroutine set_equidist_grid
-  !>
   subroutine set_equidist_grid
     implicit none
 
@@ -1002,9 +977,6 @@ contains
   end subroutine set_equidist_grid
 
   !-----------------------------------------------------------------------------
-  !>
-  !> Description of the subroutine set_gaussian_grid
-  !>
   subroutine set_gaussian_grid
     use mod_cnst, only: &
          CNST_PI
@@ -1090,10 +1062,7 @@ contains
     return
   end subroutine set_gaussian_grid
 
-  !-----------------------------------------------------------------------------
-  !>
-  !> Description of the subroutine intrpl_2
-  !>
+!  !-----------------------------------------------------------------------------
 !  subroutine intrpl_2( var_ll, var, var_pl, kmin, kmax )
 !    !
 !    use mod_adm, only :              &
@@ -1318,4 +1287,3 @@ contains
 !  end subroutine intrpl_2
 
 end module mod_latlon
-!-------------------------------------------------------------------------------

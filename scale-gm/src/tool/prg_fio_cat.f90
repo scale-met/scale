@@ -1,22 +1,14 @@
 !-------------------------------------------------------------------------------
-!
-!+  Program FIO cat
-!
+!> Program FIO cat
+!!
+!! @par Description
+!!          combine pe0000x format data
+!!          ( packaged NICAM data format : PaNDa )
+!!
+!! @author Team SCALE
+!<
 !-------------------------------------------------------------------------------
 program fio_cat
-  !-----------------------------------------------------------------------------
-  !
-  !++ Description:
-  !      combine pe0000x format data
-  !      ( packaged NICAM data format : PaNDa )
-  !
-  !++ Current Corresponding Author: H. Yashiro
-  !
-  !++ History:
-  !      Version   Date       Comment
-  !      -----------------------------------------------------------------------
-  !      1.00      13-09-30  H.Yashiro : [NEW]
-  !
   !-----------------------------------------------------------------------------
   !
   !++ Used modules
@@ -298,7 +290,6 @@ program fio_cat
 contains
   !-----------------------------------------------------------------------------
   !> read option
-  !-----------------------------------------------------------------------------
   subroutine readoption
     use mod_misc, only : &
       MISC_get_available_fid
@@ -329,7 +320,6 @@ contains
 
   !-----------------------------------------------------------------------------
   !> display help for option and abort
-  !-----------------------------------------------------------------------------
   subroutine helpoption
     implicit none
     !---------------------------------------------------------------------------
@@ -340,4 +330,3 @@ contains
   end subroutine helpoption
 
 end program fio_cat
-!-------------------------------------------------------------------------------

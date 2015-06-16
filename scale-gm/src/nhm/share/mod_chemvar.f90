@@ -1,16 +1,12 @@
 !-------------------------------------------------------------------------------
-!>
-!! Tracer variable module
+!> Module tracer variable
 !!
 !! @par Description
-!!         This module contains the chemical or general-perpose tracer variables
+!!          This module contains the chemical or general-perpose tracer variables
 !!
-!! @author H.Yashiro
-!!
-!! @par History
-!! @li      2012-11-07 (H.Yashiro)  [NEW]
-!!
+!! @author Team SCALE
 !<
+!-------------------------------------------------------------------------------
 module mod_chemvar
   !-----------------------------------------------------------------------------
   !
@@ -123,4 +119,3 @@ contains
   end function chemvar_getid
 
 end module mod_chemvar
-!-------------------------------------------------------------------------------

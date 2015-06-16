@@ -1,17 +1,12 @@
 !-------------------------------------------------------------------------------
-!>
-!! Boundary conditions module
+!> Module boundary conditions
 !!
 !! @par Description
-!!         This module provides the subroutines for boundary conditions.
+!!          This module provides the subroutines for boundary conditions
 !!
-!! @author H.Tomita
-!!
-!! @par History
-!! @li      2004-02-17 (H.Tomita) Imported from igdc-4.33
-!! @li      2011-07-22 (T.Ohno)   Add subroutines for plane hgrid systems.
-!!
+!! @author NICAM developers, Team SCALE
 !<
+!-------------------------------------------------------------------------------
 module mod_bndcnd
   !-----------------------------------------------------------------------------
   !
@@ -78,9 +73,7 @@ module mod_bndcnd
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
-  !>
-  !> Description of the subroutine CNST_setup
-  !>
+  !> Setup
   subroutine BNDCND_setup
     use mod_adm, only: &
        ADM_CTL_FID, &
@@ -511,4 +504,3 @@ contains
   end subroutine BNDCND_rhow
 
 end module mod_bndcnd
-!-------------------------------------------------------------------------------

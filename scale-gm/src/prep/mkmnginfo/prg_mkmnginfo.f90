@@ -1,28 +1,13 @@
 !-------------------------------------------------------------------------------
-!
-!+  Program mkmnginfo
-!
+!> Program mkmnginfo
+!!
+!! @par Description
+!!          Making information file for paralell computation
+!!
+!! @author NICAM developers, Team SCALE
+!<
 !-------------------------------------------------------------------------------
-Program prg_mkmnginfo
-  !-----------------------------------------------------------------------------
-  !
-  !++ Description:
-  !       This program makes managing infomation file for paralell computation.
-  !
-  !
-  !++ Current Corresponding Author : H.Tomita
-  !
-  !++ History:
-  !      Version   Date       Comment
-  !      -----------------------------------------------------------------------
-  !      0.00      04-02-17   Imported from igdc-4.34
-  !      0.01      07-10-22   T.Mitsui:change value of nmax_mng
-  !                10-06-07   S.Iga: new grid (Iga 2010) is implemented
-  !                11-07-21   T.Ohno: two new hgrid systems are added.
-  !                           * Modified lines for '1DMD-ON-SPHERE' are added
-  !                             by Hara-san @ JAMSTEC
-  !      -----------------------------------------------------------------------
-  !
+program prg_mkmnginfo
   !-----------------------------------------------------------------------------
   !
   !++ Used modules
@@ -1106,9 +1091,9 @@ Contains
     Close(fid)
     !
   End Subroutine generate_mngtab_mlcp_old
+
   !-----------------------------------------------------------------------------
   subroutine generate_mngtab_periodic_1dmd( rl, nmax_prc, fname )
-!!$ [Add] 11.07,21 T.Ohno
     use mod_adm, only: &
          nmax_mng => PRC_RGN_NMAX
     Implicit None
@@ -1266,9 +1251,9 @@ Contains
     Close(fid)
     !
   end subroutine generate_mngtab_periodic_1dmd
+
   !-----------------------------------------------------------------------------
   Subroutine generate_mngtab_1dmd_on_sphere( rl, nmax_prc, fname )
-!!$ [Add] 11.07,01 M.Hara
     use mod_adm, only: &
          nmax_mng => PRC_RGN_NMAX
     Implicit None

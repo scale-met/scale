@@ -1,24 +1,13 @@
 !-------------------------------------------------------------------------------
-!
-!+  Module of Updating UVW for Tracer Advection Test
-!
+!> Module tracer advection forcing
+!!
+!! @par Description
+!!          This module contains subroutines for forcing term of Tracer Advection Test
+!!
+!! @author Team SCALE
+!<
 !-------------------------------------------------------------------------------
 module mod_af_trcadv
-  !-----------------------------------------------------------------------------
-  !
-  !++ Description:
-  !       This module is for the Dyn Core Test Initialization.
-  !
-  !
-  !++ Current Corresponding Author : R.Yoshida
-  !
-  !++ History:
-  !      Version   Date       Comment
-  !      -----------------------------------------------------------------------
-  !      0.00      12-10-19   artificial updating  R.Yoshida
-  !
-  !      -----------------------------------------------------------------------
-  !
   !-----------------------------------------------------------------------------
   !
   !++ Used modules
@@ -61,7 +50,6 @@ module mod_af_trcadv
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
-  !> original by H.Miura, 20130612 R.Yoshida
   subroutine test11_velocity( &
        time, &
        lon,  &
@@ -138,7 +126,6 @@ contains
   end subroutine test11_velocity
 
   !-----------------------------------------------------------------------------
-  !> original by H.Miura, 20130612 R.Yoshida
   subroutine test12_velocity( &
        time, &
        lon,  &

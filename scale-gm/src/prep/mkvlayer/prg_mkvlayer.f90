@@ -1,29 +1,26 @@
 !-------------------------------------------------------------------------------
-!
-!+  Program mkvlayer
-!
+!> Program mkrawgrid
+!!
+!! @par Description
+!!          Making vertical grid systems based on lorenz coordinate
+!!
+!! @author NICAM developers, Team SCALE
+!<
 !-------------------------------------------------------------------------------
 program prg_mkvlayer
   !-----------------------------------------------------------------------------
   !
-  !++ Description:
-  !       This program makes grid systems based on the icosahedral grid
-  !       configuration.
-  !
-  !++ Current Corresponding Author : H.Tomita
-  !
-  !++ History:
-  !      Version   Date       Comment
-  !      -----------------------------------------------------------------------
-  !      0.00      04-02-17  Imported from igdc-4.34
-  !      -----------------------------------------------------------------------
-  !
-  !-----------------------------------------------------------------------------
-  !
-  !++ Used modules ( shared )
+  !++ Used modules
   !
   use mod_precision
+  !-----------------------------------------------------------------------------
+  implicit none
+  !-----------------------------------------------------------------------------
+  !
+  !++ parameters & variables
+  !
   !=============================================================================
+
   integer, parameter :: kdum=1
   integer, parameter :: fid=11
   integer :: num_of_layer = 10

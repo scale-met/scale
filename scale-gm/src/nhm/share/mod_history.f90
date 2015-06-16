@@ -1,33 +1,12 @@
 !-------------------------------------------------------------------------------
-!>
-!! History module
+!> Module history
 !!
 !! @par Description
-!!         This module is for managing the output variables
+!!          This module is for managing the output variables
 !!
-!! @author M.Satoh
-!!
-!! @par History
-!! @li      2005-11-29 (M.Satoh)    [new]
-!! @li      2005-12-14 (S.Iga)      ADM_gall
-!! @li      2006-02-16 (M.Satoh)    T. Mitsui: correct timing
-!! @li      2006-08-07 (W.Yanase)   v_save=0 in history_setup, NO_VINTRPL
-!! @li      2007-01-19 (K.Suzuki)   higher vectorized rate and allowing undefined value in average
-!! @li      2007-06-27 (Y.Niwa)     add MONTHLY_AVERAGE option add ktype 'GL' 'GO' options
-!! @li      2007-07-02 (Y.Niwa)     bug fix
-!! @li      2007-11-30 (Y.Niwa)     add option for output at pressure levels
-!! @li      2007-12-05 (T.Mitsui)   bug fix
-!! @li      2008-05-30 (T.Mitsui)   distinguish w-grid, and option of v_interpolation
-!! @li      2009-07-13 (S.Iga)      check_count is added. (nmhist miswriting checker)
-!! @li      2010-05-11 (M.Satoh)    add l_region in history_in
-!! @li      2011-04-26 (C.Kodama)   support >10000 time steps
-!! @li      2011-09-03 (H.Yashiro)  New I/O
-!! @li      2012-01-26 (Y.Yamada)   trivial bug fix
-!! @li      2012-03-28 (T.Seiki)    fix undefined reference
-!! @li      2012-06-07 (T.Seiki)    add output_path for multi-job run
-!! @li      2012-11-05 (H.Yashiro)  NICAM milestone project (Phase I:cleanup of shared module)
-!!
+!! @author NICAM developers, Team SCALE
 !<
+!-------------------------------------------------------------------------------
 module mod_history
   !-----------------------------------------------------------------------------
   !
@@ -1167,4 +1146,3 @@ contains
   end subroutine diag_pre_sfc
 
 end module mod_history
-!-------------------------------------------------------------------------------

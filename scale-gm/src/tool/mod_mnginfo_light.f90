@@ -1,27 +1,19 @@
 !-------------------------------------------------------------------------------
-!
-!+  Module manageinfo light
-!
+!> Module mnginfo light
+!!
+!! @par Description
+!!          mnginfo reader (extraced from mod_adm)
+!!
+!! @author NICAM developers, Team SCALE
+!<
 !-------------------------------------------------------------------------------
 module mod_mnginfo_light
-  !-----------------------------------------------------------------------------
-  !
-  !++ Description: 
-  !      mnginfo reader (extraced from mod_adm)
-  !
-  !++ Current Corresponding Author: H.Yashiro
-  ! 
-  !++ History: 
-  !      Version   Date      Comment 
-  !      -----------------------------------------------------------------------
-  !      0.90      11-09-01  H.Yashiro : [NEW]
-  !
   !-----------------------------------------------------------------------------
   !
   !++ Used modules
   !
   use mod_misc, only : &
-    MISC_get_available_fid
+     MISC_get_available_fid
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -31,6 +23,7 @@ module mod_mnginfo_light
   !
   public :: MNG_mnginfo_input
   public :: MNG_mnginfo_noinput
+
   !-----------------------------------------------------------------------------
   !
   !++ public param & variable
@@ -40,11 +33,11 @@ module mod_mnginfo_light
   integer, allocatable, public :: MNG_prc_rnum(:)
   integer, allocatable, public :: MNG_prc_tab (:,:)
   integer, allocatable, public :: MNG_rgn2prc (:)
+
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
   !> read mnginfo (light ver.)
-  !-----------------------------------------------------------------------------
   subroutine MNG_mnginfo_input( rlevel,fname )
     implicit none
 
@@ -85,7 +78,7 @@ contains
           stop
        endif
 
-       read(fid,nml=rgn_info) 
+       read(fid,nml=rgn_info)
        if ( num_of_rgn /= lall ) then ! [add] H.Yashiro 20120621
           write(*,*) "Inconsintent between rlevel and mnginfo."
           write(*,*) "rlevel,  num_of_mng=", rlevel, lall
@@ -93,7 +86,7 @@ contains
           stop
        endif
 
-       read(fid,nml=proc_info) 
+       read(fid,nml=proc_info)
        MNG_PALL = num_of_proc
 
        allocate( MNG_prc_rnum(num_of_proc) )
@@ -102,7 +95,7 @@ contains
        MNG_prc_tab(:,:) = -1
 
        do m = 1, num_of_proc
-          read(fid,nml=rgn_mng_info) 
+          read(fid,nml=rgn_mng_info)
 
           MNG_prc_rnum(m)                = num_of_mng
           MNG_prc_tab(1:num_of_mng,peid) = mng_rgnid(1:num_of_mng)
@@ -119,7 +112,6 @@ contains
 
   !-----------------------------------------------------------------------------
   !> read mnginfo (light ver.)
-  !-----------------------------------------------------------------------------
   subroutine MNG_mnginfo_noinput(rlevel)
     implicit none
 
@@ -149,5 +141,3 @@ contains
   end subroutine MNG_mnginfo_noinput
 
 end module mod_mnginfo_light
-!-----------------------------------------------------------------------------
-

@@ -1,51 +1,12 @@
 !-------------------------------------------------------------------------------
-!>
-!! History history variables
+!> Module history variables
 !!
 !! @par Description
-!!         This module prepares diagnostic/prognostic variavles for histroy output
+!!          This module prepares diagnostic/prognostic variables for history output
 !!
-!! @author W.Yanase, S.Iga, H.Tomita, Y.Niwa
-!!
-!! @par History
-!! @li      2007-06-27   Y.Niwa  : Imported from mod_history_vars_cfmip
-!! @li      2007-07-31   K.Suzuki: add SPRINTARS variables
-!! @li      2007-08-06   Y.Niwa  : bug fix  'th' => 'ml_th' 'rh' => 'ml_rh'
-!! @li      2007-08-06   K.Suzuki: move SPRINTARS variables from mod_postphystep
-!! @li      2007-08-20   W.Yanase: debug in "call getr1_in_mat"
-!! @li      2007-11-22   T.Mitsui: Effective Radius is calculated in rd_driver => mp_driver
-!!                                 and some variables are moved from aerovar
-!! @li      2007-11-30   T.Mitsui: del double use(trivial)
-!! @li      2007-12-05   T.Mitsui: add radiative flux categolized as ISCCP-D series
-!! @li      2008-02-19   T.Mitsui: Add output for slice-cloud normalized by cot
-!!                                 and trivial fix for output option
-!! @li      2008-03-06   H.Tomita: add mp_wsm3_wcdiag.
-!! @li      2008-05-24   T.Mitsui: add nc, nr, ni, ns, ng for 2moment option
-!! @li      2008-06-13   T.Mitsui: change adiabat_diag => adiabat_diag2
-!!                                 and add arguments (positive only cape, and all cin)
-!! @li      2008-07-30   W.Yanase: add sl_u10m, sl_v10m, sl_tauu, sl_tauv
-!! @li      2009-01-23   H.Tomita: add ml_omg, ml_hgt
-!! @li      2009-04-14   H.Tomita: bugfix : zero clear of lwpqc,lwpqr.
-!! @li      2009-04-14   T.Mitsui: sl_nc,r,i,s,g and sl_tauc,r,i,s,g
-!!                                 sl_qi, sl_qg
-!! @li      2009-07-10   H.Tomita: 1. The energy conservation terms are added.
-!!                                 2. Some tag names were changed to avoid the confusion.
-!!                                   'sl_swi' -> 'sl_swd_sfc'
-!!                                   'sl_sswr' -> 'sl_swu_sfc'
-!!                                   'sl_slwd' -> 'sl_lwd_sfc'
-!!                                   'sl_slwu' -> 'sl_lwu_sfc'
-!!                                   'sl_slh' ->  'sl_lh_sfc'
-!!                                   'sl_ssh' ->  'sl_sh_sfc'
-!!                                   'sl_sw_toai' ->  'sl_swd_toa'
-!!                                   'sl_sw_toar' ->  'sl_swu_toa'
-!!                                   'sl_lw_toa' ->  'sl_lwu_toa'
-!! @li      2009-07-13   S.Iga   : Bug fix 'sl_lw_toa' ->  'sl_lwu_toa'
-!! @li      2010-06-19   A.T.Noda: Allow to use a convection parameterization
-!!                                 with an advanced microphysics schemes, such as G98, NSW?,
-!! @li      2010-08-20   C.Kodama: land model output is filled with undef values over the ocean.
-!! @li      2012-11-05 (H.Yashiro)  NICAM milestone project (Phase I:cleanup of shared module)
-!!
+!! @author NICAM developers, Team SCALE
 !<
+!-------------------------------------------------------------------------------
 module mod_history_vars
   !-----------------------------------------------------------------------------
   !
@@ -518,7 +479,6 @@ contains
   end subroutine sv_pre_sfc
 
   !-----------------------------------------------------------------------------
-  ! [add] 20130705 R.Yoshida
   subroutine sv_plev_uvwt( &
        ijdim, &
        pre,   &
@@ -590,4 +550,3 @@ contains
   end subroutine sv_plev_uvwt
 
 end module mod_history_vars
-!-------------------------------------------------------------------------------

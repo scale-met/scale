@@ -1,31 +1,12 @@
 !-------------------------------------------------------------------------------
-!>
-!! Dynamical core
+!> Module dynamics
 !!
 !! @par Description
-!!         This module is the core module of fluid dynamics
+!!          This module contains the core component of fluid dynamics on icosahedral grid system
 !!
-!! @author  H.Tomita
-!!
-!! @par History
-!! @li      2004-02-17 (H.Tomita ) Imported from igdc-4.33
-!! @li      2006-04-17 (H.Tomita ) Add IN_LARGE_STEP2
-!! @li      2007-05-08 (H.Tomita ) Change the treatment of I_TKE.
-!! @li      2008-01-24 (Y.Niwa   ) add revised MIURA2004 for tracer advection
-!! @li      2008-05-24 (T.Mitsui ) fix miss-conditioning for frcvar
-!! @li      2008-09-09 (Y.Niwa   ) move nudging routine here
-!! @li      2009-09-08 (S.Iga    ) frhog and frhog_pl in ndg are deleted ( suggested by ES staff)
-!! @li      2010-05-06 (M.Satoh  ) define QV_conv only if CP_TYPE='TDK' .or. 'KUO'
-!! @li      2010-07-16 (A.T.Noda ) bug fix for TDK
-!! @li      2010-08-16 (A.T.Noda ) Bug fix (Qconv not diveded by density)
-!! @li      2010-08-20 (A.T.Noda ) Bug fix (Qconv should be TEND, and not be multiplied by DT)
-!! @li      2010-11-29 (A.T.Noda ) Introduce the Smagorinsky model
-!! @li      2011-08-16 (M.Satoh  ) Bug fix for TDK: conv => TEND; qv_dyn_tend = v grad q = ( div(rho v q) - div(rho v)*q )/rho
-!! @li      2011-08-16 (M.Satoh  ) Move codes related to CP_TYPE below the tracer calculation
-!! @li      2013-08-23 (H.Yashiro) Change arguments from character to index/switch
-!! @li      2013-06-13 (R.Yoshida) Add tracer advection mode
-!!
+!! @author NICAM developers, Team SCALE
 !<
+!-------------------------------------------------------------------------------
 module mod_dynamics
   !-----------------------------------------------------------------------------
   !

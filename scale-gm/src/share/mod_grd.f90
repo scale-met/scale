@@ -1,36 +1,12 @@
 !-------------------------------------------------------------------------------
-!>
-!! Grid system module
+!> Module grid
 !!
 !! @par Description
 !!         This module is for the management of the icosahedral grid system
 !!
-!! @author  H.Tomita
-!!
-!! @par History
-!! @li      2004-02-17 (H.Tomita)  Imported from igdc-4.33
-!! @li      2009-01-23 (H.Tomita)  extend the vertical grid method, introducing "hflat".
-!! @li      2009-03-10 (H.Tomita)  1. add sub[GRD_gen_plgrid]
-!!                                    ( This subroutine generates
-!!                                      the pole grids from the regular region grids. )
-!!                                 2. support direct access of grid file without pole data.
-!!                                    sub[GRD_input_hgrid,GRD_output_hgrid].
-!!                                 3. add 'da_access_hgrid' in the namelist.
-!! @li      2009-03-10 (H.Tomita)  add error handling in GRD_input_hgrid.
-!! @li      2009-05-27 (M.Hara)    1. bug fix of error handling in GRD_input_hgrid.
-!!                                 2. remove "optional" declaration from
-!!                                    da_access in GRD_input_hgrid and GRD_output_hgrid.
-!! @li      2011-07-22 (T.Ohno)    add parameters
-!!                                 1.GRD_grid_type 'ON_SPHERE' / 'ON_PLANE'
-!!                                 2.hgrid_comm_flg
-!!                                   the grid data should be communicated or not. ( default:.true. )
-!!                                 3.triangle_size
-!!                                   scale factor when GRD_grid_type is 'ON_PLANE'
-!! @li      2011-09-03 (H.Yashiro) New I/O
-!! @li      2012-05-25 (H.Yashiro) Avoid irregal ISEND/IRECV comm.
-!! @li      2012-10-20 (R.Yoshida) Topography for Jablonowski test
-!!
+!! @author NICAM developers, Team SCALE
 !<
+!-------------------------------------------------------------------------------
 module mod_grd
   !-----------------------------------------------------------------------------
   !
@@ -1233,4 +1209,3 @@ contains
   end function suf
 
 end module mod_grd
-!-------------------------------------------------------------------------------

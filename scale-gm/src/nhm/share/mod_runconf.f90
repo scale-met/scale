@@ -1,62 +1,12 @@
 !-------------------------------------------------------------------------------
-!>
-!! run configuration module
+!> Module run configuration
 !!
 !! @par Description
-!!         admin modlue for 3D-model
+!!          This module is for managing run configuration
 !!
-!! @author H.Tomita
-!!
-!! @par History
-!! @li      2004-02-17 (H.Tomita)   Imported from igdc-4.34
-!! @li      2005-10-28 (M.Satoh)    add ISCCP parameter
-!! @li      2005-12-27 (M.Satoh)    introduce RAD_DIV_NUM
-!! @li      2006-04-19 (H.Tomita)   Add 'DRY' option.
-!! @li      2006-05-06 (H.Tomita)   abolish TURB_DIV_NUM.
-!! @li      2006-08-11 (H.Tomita)   Add TRC_ADV_TYPE, TRC_NEG_FIX
-!! @li      2006-09-28 (S.Iga)      Add OUT_FILE_TYPE
-!! @li      2007-01-26 (H.Tomita)   Add the 'SIMPLE2' EIN_TYPE.
-!!                                  Control the EIN_TYPE in thie module. as CVW(I_Q?) and LHV,LHF, and LHS.
-!! @li      2007-03-23 (Y.Niwa)     add FLAG_NUDGING
-!! @li      2007-05-08 (H.Tomita)   1. Move physics type configuration from mod_physicsinit.f90 to here.
-!!                                  2. Add TRC_ADD_MAX for future implementation of turbulence scheme.
-!! @li      2007-06-26 (Y.Niwa)     move LAND_TYPE from mod_land_driver to here
-!!                                  move OCEAN_TYPE from mod_ocean_driver to here
-!! @li      2007-07-17 (A.T.Noda)   Add RAD_CLOUD_TYPE for use of the partial cloud in rd_driver
-!! @li      2007-07-23 (K.Suzuki)   SPRINTARS aerosol model
-!!                                  1. Add number of aerosol tracers
-!!                                  2. Add KAPCL: number of aerosol for radiation
-!!                                  3. Add AE_TYPE for aerosol type configuration
-!! @li      2007-11-07 (T.Mitsui)   add "OPT_OUTPUT_ALL" to omit output_all
-!! @li      2008-01-24 (Y.Niwa)     add MIURA2004OLD
-!!                                     TRC_ADV_TYPE='DEFAULT', TRC_NEG_FIX='ON'
-!!                                  => TRC_ADV_TYPE='MIURA2004', TRC_NEG_FIX='OFF'
-!!                                  add TRC_SAVE_MEMORY
-!! @li      2008-01-30 (Y.Niwa)     bug fixes
-!! @li      2008-03-10 (T.Mitsui)   add intermediate output of restart file
-!! @li      2008-04-12 (T.Mitsui)   add 2-moment hydrometeors, incloud aerosol and their labeling
-!! @li      2008-04-23 (H.Tomita)   Add MP_DIVNUM for microphysics.
-!! @li      2008-08-11 (H.Tomita)   Add SFC_DIV_NUM and TB_DIV_NUM.
-!! @li      2008-10-05 (T.Mitsui)   add option : ALL_PHYSTEP_POST
-!! @li      2009-01-28 (A.T.Noda)   Implement MYNN
-!! @li      2009-04-14 (T.Mitsui)   add opt_carb, opt_dust, opt_salt, opt_sulf trivial changing incloud aerosols
-!!                                  add opt_aerosol_forcing for ARF
-!! @li      2009-07-28 (H.Tomita)   add PRCIP_TRN_ECORRECT
-!!                                  for energy adjustment in the rain-sedimentation process
-!! @li      2010-03-08 (C.Kodama)   Add overwrite_restart option
-!! @li      2010-04-26 (M.Satoh)    add ROUGHNESS_SEA_TYPE
-!! @li      2010-06-19 (A.T.Noda)   Allow to use a convection parameterization
-!!                                  with an advanced microphysics schemes, such as G98, NSW?,
-!! @li      2010-11-11 (A.T.Noda)   1. add CORIOLIS, RAD_FIX_LAT/LON for Giga-LES
-!! @li      2011-06-30 (T.Seiki)    fill undefined indices
-!! @li      2011-07-22 (T.Ohno)     add CORIOLIS_PARAM
-!! @li      2011-09-03 (H.Yashiro)  add TRC_name for New I/O
-!! @li      2012-02-01 (T.Seiki)    add incloud aerosol indices+initialization
-!! @li      2012-07-23 (H.Yashiro)  [add] River         by K.Yoshimura
-!! @li      2012-07-23 (H.Yashiro)  [add] Water Isotope by K.Yoshimura
-!! @li      2012-11-05 (H.Yashiro)  NICAM milestone project (Phase I:cleanup of shared module)
-!!
+!! @author NICAM developers, Team SCALE
 !<
+!-------------------------------------------------------------------------------
 module mod_runconf
   !-----------------------------------------------------------------------------
   !
@@ -504,4 +454,3 @@ contains
   end subroutine RUNCONF_thermodyn_setup
 
 end module mod_runconf
-!-------------------------------------------------------------------------------

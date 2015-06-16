@@ -1,24 +1,12 @@
 !-------------------------------------------------------------------------------
-!>
-!! miscellaneous module
+!> Module miscellaneous
 !!
 !! @par Description
-!!         This module contains miscellaneous subroutines.
+!!          This module contains miscellaneous subroutines
 !!
-!! @author  H.Tomita
-!!
-!! @par History
-!! @li      2004-02-17 (H.Tomita)  Imported from igdc-4.33
-!! @li      2005-11-15 (M.Satoh)   [mod] MISC_make_idstr
-!! @li      2006-02-12 (S.Iga)     add critical value in MISC_triangle_area for the case angle=0
-!!                                 integer(4) -> integer  for 'second'
-!! @li      2006-02-25 (S.Iga)     bugfix on 06-02-12
-!! @li      2006-08-10 (W.Yanase)  bug(?)fix on 06-08-10
-!! @li      2006-08-22 (Y.Niwa)    bug fix
-!! @li      2009-07-17 (Y.Yamada)  Add func[MISC_triangle_area_q].
-!! @li      2011-11-11 (H.Yashiro) [Add] vector calculation suite
-!!
+!! @author NICAM developers, Team SCALE
 !<
+!-------------------------------------------------------------------------------
 module mod_misc
   !-----------------------------------------------------------------------------
   !
@@ -73,9 +61,6 @@ module mod_misc
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
-  !>
-  !> Description of the subroutine MISC_make_idstr
-  !>
   subroutine MISC_make_idstr( &
        str,     & !--- [OUT]
        prefix,  & !--- [IN]
@@ -116,10 +101,6 @@ contains
   end subroutine MISC_make_idstr
 
   !-----------------------------------------------------------------------------
-  !>
-  !> Description of the function %NAME
-  !> @return
-  !>
   function MISC_get_available_fid()  &
        result(fid)                     !--- file id
     !
@@ -136,10 +117,6 @@ contains
   end function MISC_get_available_fid
 
   !-----------------------------------------------------------------------------
-  !>
-  !> Description of the function %NAME
-  !> @return
-  !>
   function MISC_get_fid( fname )  &
        result(fid)                   !--- file ID
     !
@@ -156,9 +133,6 @@ contains
   end function MISC_get_fid
 
   !-----------------------------------------------------------------------------
-  !>
-  !> Description of the subroutine MISC_get_latlon
-  !>
   subroutine MISC_get_latlon( &
        lat, lon,              & !--- INOUT : latitude and longitude
        x, y, z )                !--- IN : Cartesian coordinate ( on the sphere )
@@ -212,10 +186,6 @@ contains
   end subroutine MISC_get_latlon
 
   !-----------------------------------------------------------------------------
-  !>
-  !> Description of the function %NAME
-  !> @return
-  !>
   function MISC_triangle_area( &
        a, b, c,                & !--- IN : three points vectors on a sphere.
        polygon_type,           & !--- IN : sphere triangle or plane one?
@@ -398,10 +368,7 @@ contains
   end function MISC_triangle_area
 
   !-----------------------------------------------------------------------------
-  !>
-  !> Description of the function %NAME
-  !> @return
-  !>
+  !> @return area
   function MISC_triangle_area_q( &
        a, b, c,                & !--- IN : three points vectors on a sphere.
        polygon_type,           & !--- IN : sphere triangle or plane one?
@@ -587,9 +554,6 @@ contains
   end function MISC_triangle_area_q
 
   !-----------------------------------------------------------------------------
-  !>
-  !> Description of the subroutine MISC_mk_gmtrvec
-  !>
   subroutine MISC_mk_gmtrvec( &
        vs, ve,                & !--- IN : vectors at the start and the end
        tv,                    & !--- INOUT : tangential vector
@@ -662,9 +626,6 @@ contains
   end subroutine MISC_mk_gmtrvec
 
   !-----------------------------------------------------------------------------
-  !>
-  !> Description of the subroutine MISC_msg_nmerror
-  !>
   subroutine MISC_msg_nmerror( &
        ierr,                 & !--- IN : error id
        fid,                  & !--- IN : file id
@@ -695,8 +656,8 @@ contains
   end subroutine MISC_msg_nmerror
 
   !-----------------------------------------------------------------------------
+  !> exterior product of vector a->b and c->d
   subroutine MISC_3dvec_cross( nv, a, b, c, d )
-    ! exterior product of vector a->b and c->d
     implicit none
 
     real(RP), intent(out) :: nv(3)                  ! normal vector
@@ -714,8 +675,8 @@ contains
   end subroutine MISC_3dvec_cross
 
   !-----------------------------------------------------------------------------
+  !> interior product of vector a->b and c->d
   subroutine MISC_3dvec_dot( l, a, b, c, d )
-    ! interior product of vector a->b and c->d
     implicit none
 
     real(RP), intent(out) :: l
@@ -731,8 +692,8 @@ contains
   end subroutine MISC_3dvec_dot
 
   !-----------------------------------------------------------------------------
+  !> length of vector o->a
   subroutine MISC_3dvec_abs( l, a )
-    ! length of vector o->a
     implicit none
 
     real(RP), intent(out) :: l
@@ -746,8 +707,8 @@ contains
   end subroutine MISC_3dvec_abs
 
   !---------------------------------------------------------------------
+  !> calc angle between two vector(b->a,b->c)
   subroutine MISC_3dvec_angle( angle, a, b, c )
-    ! calc angle between two vector(b->a,b->c)
     implicit none
 
     real(RP), intent(out) :: angle
@@ -872,8 +833,8 @@ contains
   end function MISC_3Dvec_triangle
 
   !-----------------------------------------------------------------------------
+  !> judge intersection of two vector
   subroutine MISC_3dvec_intersec( ifcross, p, a, b, c, d )
-    ! judge intersection of two vector
     implicit none
 
     logical, intent(out) :: ifcross
@@ -931,8 +892,8 @@ contains
   end subroutine MISC_3dvec_intersec
 
   !---------------------------------------------------------------------
+  !> bubble sort anticlockwise by angle
   subroutine MISC_3dvec_anticlockwise( vertex, nvert )
-    ! bubble sort anticlockwise by angle
     implicit none
 
     integer, intent(in)    :: nvert
@@ -1002,7 +963,6 @@ contains
     return
   end subroutine MISC_3dvec_anticlockwise
 
-  ![Add] H.Yashiro 11/06/01
   !-----------------------------------------------------------------------------
   subroutine MISC_get_cartesian( &
        x, y, z,  & !--- INOUT : Cartesian coordinate ( on the sphere )
@@ -1023,11 +983,7 @@ contains
   end subroutine MISC_get_cartesian
 
   !-----------------------------------------------------------------------
-  ! Get horizontal distance on the sphere
-  !  2008/09/10 [Add] M.Hara
-  !  The formuation is Vincentry (1975)
-  !  http://www.ngs.noaa.gov/PUBS_LIB/inverse.pdf
-  !  2012/11/07 [Mod] H.Yashiro
+  !> Get horizontal distance on the sphere
   subroutine MISC_get_distance( &
        r,    &
        lon1, &
@@ -1057,8 +1013,4 @@ contains
     return
   end subroutine MISC_get_distance
 
-  !-----------------------------------------------------------------------------
 end module mod_misc
-!-------------------------------------------------------------------------------
-
-

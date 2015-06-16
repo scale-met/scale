@@ -1,29 +1,12 @@
 !-------------------------------------------------------------------------------
-!>
-!! Prognostic variable module
+!> Module prognostic variables
 !!
 !! @par Description
-!!         This module contains the prognostic variables
+!!          This module is container of the prognostic variables
 !!
-!! @author H.Tomita
-!!
-!! @par History
-!! @li      2004-02-17 (H.Tomita)   Imported from igdc-4.34
-!! @li      2006-05-17 (H.Tomita)   Add optiion 'no_input'.
-!! @li      2006-06-02 (H.Tomita)   Avoid the blocking of communication in prgvar_set_in.
-!! @li      2007-02-09 (M.Satoh)    Change default: input_direct_access, output_direct_access
-!! @li      2007-06-05 (M.Satoh)    add option: TRC_VMAX_INPUT
-!! @li      2008-04-12 (T.Mitsui)   add prgvar_get_noq
-!! @li      2008-04-12 (T.Mitsui)   add Nc,Nr,Ni,Ns,Ng restart and diagnosis option
-!! @li      2008-05-24 (T.Mitsui)   trivial fix (only for log file)
-!! @li      2009-04-14 (T.Mitsui)   add option diag_qi (Re-analysis data implicitly contains ice)
-!! @li      2009-08-18 (T.Mitusi)   add option opt_qcqi_to_qv (qc and qi derived from Re-analysis may not be reliable)
-!! @li      2011-07-22 (T.Ohno)     add subroutines for plane hgrid systems
-!! @li      2011-09-03 (H.Yashiro)  New I/O
-!! @li      2011-11-30 (S.Iga)      Avoid irregal isend/irecv buffer array (thanks to T.Inoue)
-!! @li      2012-07-23 (H.Yashiro)  [add] Water Isotope by K.Yoshimura
-!!
+!! @author NICAM developers, Team SCALE
 !<
+!-------------------------------------------------------------------------------
 module mod_prgvar
   !-----------------------------------------------------------------------------
   !
@@ -107,9 +90,7 @@ module mod_prgvar
 contains
 
   !-----------------------------------------------------------------------------
-  !>
-  !> Description of the subroutine prgvar_setup
-  !>
+  !> Setup
   subroutine prgvar_setup
     use mod_adm, only: &
        ADM_CTL_FID,   &
@@ -198,9 +179,7 @@ contains
   end subroutine prgvar_setup
 
   !-----------------------------------------------------------------------------
-  !>
   !> get prognostic variables from prg[num].
-  !>
   subroutine prgvar_get( &
        rhog,   rhog_pl,   &
        rhogvx, rhogvx_pl, &
@@ -416,9 +395,7 @@ contains
   end subroutine prgvar_get_noq
 
   !-----------------------------------------------------------------------------
-  !>
   !> get prognostic variables from prg[num].
-  !>
   subroutine prgvar_get_withdiag( &
        rhog,   rhog_pl,   &
        rhogvx, rhogvx_pl, &
@@ -564,9 +541,7 @@ contains
   end subroutine prgvar_get_withdiag
 
   !-----------------------------------------------------------------------------
-  !>
   !> set prognostic variables to prg[num]- and COMMUNICATION.
-  !>
   subroutine prgvar_set( &
        rhog,   rhog_pl,   &
        rhogvx, rhogvx_pl, &
@@ -736,9 +711,6 @@ contains
   end subroutine prgvar_set
 
   !-----------------------------------------------------------------------------
-  !>
-  !> Description of the subroutine prgvar_get_in
-  !>
   subroutine prgvar_get_in( &
        rhog,   &
        rhogvx, &
@@ -799,9 +771,6 @@ contains
   end subroutine prgvar_get_in
 
   !-----------------------------------------------------------------------------
-  !>
-  !> Description of the subroutine prgvar_get_in
-  !>
   subroutine prgvar_get_in_withdiag( &
        rhog,   &
        rhogvx, &
@@ -896,9 +865,7 @@ contains
   end subroutine prgvar_get_in_withdiag
 
   !-----------------------------------------------------------------------------
-  !>
   !> set prognostic variables to prg[num] and COMMUNICATION.
-  !>
   subroutine prgvar_set_in( &
        rhog,   &
        rhogvx, &
@@ -1269,4 +1236,3 @@ contains
   end subroutine restart_output
 
 end module mod_prgvar
-!-------------------------------------------------------------------------------

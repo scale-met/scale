@@ -1,28 +1,14 @@
-!-------------------------------------------------------------------------
-!>
-!! Administration module
+!-------------------------------------------------------------------------------
+!> Module administration
 !!
 !! @par Description
-!!         This module is for the management of process and region on
-!!         the icosahedral grid configuration.
+!!         This module is for the management of process and region
 !!
-!! @author  H.Tomita
-!!
-!! @par History
-!! @li      2004-02-17 (H.Tomita)  Imported from igdc-4.33
-!! @li      2007-10-22 (T.Mitsui)  change value of PRC_RGN_NMAX
-!! @li      2008-01-30 (S.Iga)     private procedure mk_suffix is changed to public procedure
-!! @li      2009-08-18 (T.Mitsui)  modify adm_proc_stop to keep out extra process from main routines.
-!! @li      2010-04-26 (M.Satoh)   add ADM_l_me
-!! @li      2010-06-07 (S.Iga)     new grid (Iga 2010) is implemented. (see string XTMS)
-!! @li      2011-06-30 (T.Seiki)   fix undefined value (after, 07-10-22)
-!! @li      2011-07-21 (T.Ohno)    2 new grid systems (1DMD-ON-SPHERE are added by Hara-san@JAMSTEC)
-!! @li      2012-01-12 (H.Yashiro) add filename specification for logfile(optional)
-!! @li      2012-06-11 (H.Yashiro) Milestone-project, code cleanup
-!!
+!! @author NICAM developers, Team SCALE
 !<
+!-------------------------------------------------------------------------------
 module mod_adm
-  !-----------------------------------------------------------------------
+  !-----------------------------------------------------------------------------
   !
   !++ used modules
   !
@@ -31,7 +17,7 @@ module mod_adm
   !-----------------------------------------------------------------------------
   implicit none
   private
-  !-----------------------------------------------------------------------
+  !-----------------------------------------------------------------------------
   !
   !++ Public procedure
   !
@@ -42,7 +28,7 @@ module mod_adm
   public :: ADM_mk_suffix
   public :: ADM_MPItime
 
-  !-----------------------------------------------------------------------
+  !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
   !
@@ -282,7 +268,7 @@ module mod_adm
   !-----------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------
-  !> Description of the subroutine ADM_proc_init
+  !> MPI initialization
   subroutine ADM_proc_init( &
        rtype )
 #ifdef JCUP
@@ -404,9 +390,7 @@ contains
   end subroutine ADM_proc_finish
 
   !-----------------------------------------------------------------------
-  !>
-  !> Description of the subroutine ADM_setup
-  !>
+  !> Setup
   subroutine ADM_setup( &
        param_fname, &
        msg_base     )
@@ -631,9 +615,7 @@ contains
   end subroutine ADM_setup
 
   !-----------------------------------------------------------------------
-  !>
-  !> Description of the subroutine input_mnginfo
-  !>
+  !> Read mnginfo file
   subroutine input_mnginfo( fname )
     use mod_misc,  only :&
        MISC_get_available_fid
@@ -751,9 +733,6 @@ contains
   end subroutine input_mnginfo
 
   !-----------------------------------------------------------------------
-  !>
-  !> Description of the subroutine setup_vtab
-  !>
   subroutine setup_vtab
     implicit none
 
@@ -816,9 +795,6 @@ contains
   end subroutine setup_vtab
 
   !-----------------------------------------------------------------------
-  !>
-  !> Description of the subroutine set_vinfo
-  !>
   subroutine set_vinfo( vert_num, nrgnid, nvertid, rgnid, vertid )
     implicit none
 
@@ -869,9 +845,6 @@ contains
   end subroutine set_vinfo
 
   !-----------------------------------------------------------------------
-  !>
-  !> Description of the subroutine ADM_mk_suffix
-  !>
   subroutine ADM_mk_suffix
     implicit none
 
@@ -1161,9 +1134,6 @@ contains
   end subroutine ADM_mk_suffix
 
   !-----------------------------------------------------------------------
-  !>
-  !> Description of the subroutine output_info
-  !>
   subroutine output_info
     implicit none
 
@@ -1262,4 +1232,3 @@ contains
   end function suf
 
 end module mod_adm
-!-------------------------------------------------------------------------------
