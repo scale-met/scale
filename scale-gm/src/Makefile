@@ -168,9 +168,9 @@ $(BUILD_DIR)/prg_fio_cat.o    : prg_fio_cat.f90    $(patsubst %,$(BUILD_DIR)/%,$
 $(BUILD_DIR)/prg_fio_sel.o    : prg_fio_sel.f90    $(patsubst %,$(BUILD_DIR)/%,$(OBJS))
 $(BUILD_DIR)/prg_fio_ico2ll.o : prg_fio_ico2ll.f90 $(patsubst %,$(BUILD_DIR)/%,$(OBJS))
 
-$(BUILD_DIR)/fio.o                : fio.c fio.h fio_def.h
-$(BUILD_DIR)/fiof.o               : fiof.c fiof.h fio.h fio_def.h
-$(BUILD_DIR)/orgico.o             : orgico.c orgico.h fio_def.h
+$(BUILD_DIR)/fio.o                : fio.c $(SCALEGMDIR)/include/fio.h $(SCALEGMDIR)/include/fio_def.h
+$(BUILD_DIR)/fiof.o               : fiof.c $(SCALEGMDIR)/include/fiof.h $(SCALEGMDIR)/include/fio.h $(SCALEGMDIR)/include/fio_def.h
+$(BUILD_DIR)/orgico.o             : orgico.c $(SCALEGMDIR)/include/orgico.h $(SCALEGMDIR)/include/fio_def.h
 $(BUILD_DIR)/mod_precision.o      : mod_precision.f90
 $(BUILD_DIR)/mod_misc.o           : mod_misc.f90           mod_precision.o
 $(BUILD_DIR)/mod_adm.o            : mod_adm.f90            mod_precision.o mod_misc.o
@@ -242,7 +242,7 @@ clean:
 $(BUILD_DIR)/%.o : %.f90
 	$(FC) $(FFLAGS) $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(VERSION)\" -I$(BUILD_DIR) -I$(DCUTILSDIR) -I$(GTOOLDIR) -I$(MODDIR) -I$(SCALELIBDIR)/include -I$(SCALEGMDIR)/include $(PAPI_INCLUDE) $(NETCDF_INCLUDE) -o $@ -c $< $(MODDIROPT) $(BUILD_DIR)
 $(BUILD_DIR)/%.o : %.c
-	$(CC) $(CFLAGS) -o $@ -c $< $(MODDIROPT) $(BUILD_DIR)
+	$(CC) $(CFLAGS) -o $@ -c $< $(MODDIROPT) $(BUILD_DIR) -I$(SCALEGMDIR)/include
 
 %.mod: %.f90
 	make $(patsubst %.f90,%.o,$<)
