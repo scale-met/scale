@@ -854,7 +854,7 @@ contains
        enddo
        if ( MASTER_LOG ) write ( *, * ) ""
    
-       do i=1, max_depth
+       do i=1, NUM_DOMAIN
           COL_FILE(i-1) = RO_CONF_FILES(i) ! final copy
        enddo
 
