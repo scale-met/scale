@@ -30,17 +30,18 @@ endif
 
 DEPENDLIB = $(LIBDIR)/libscale.a $(LIBDIR)/libgtool.a $(LIBDIR)/libdcutils.a
 
-VPATH = $(BUILD_DIR):    \
-        nhm/driver:      \
-        nhm/dynamics:    \
-        nhm/forcing:     \
-        nhm/share/dcmip: \
-        nhm/share:       \
-        share:           \
-        prep/mkgrid:     \
-        prep/mkmnginfo:  \
-        prep/mkllmap:    \
-        prep/mkvlayer:   \
+VPATH = $(BUILD_DIR):           \
+        admin:                  \
+        atmos:                  \
+        atmos/dcmip:            \
+        atmos-gm/communication: \
+        atmos-gm/dynamics:      \
+        atmos-gm/grid:          \
+        atmos-physics/forcing:  \
+        atmos-physics/share:    \
+        common:                 \
+        io:                     \
+        preprocess:             \
         tool:
 
 VERSION = $(shell git rev-parse --short HEAD 2> /dev/null)
