@@ -94,18 +94,19 @@ contains
     dims(2) = dims_ncm(1)
     dims(3) = dims_ncm(2)
     ! half level
-    dims(4) = dims_ncm(1) ! nicam lat-lon data doesn't have staggered grid system
-    dims(5) = dims_ncm(2) ! nicam lat-lon data doesn't have staggered grid system
-    dims(6) = dims_ncm(3) ! nicam lat-lon data doesn't have staggered grid system
+    ! nicam lat-lon data doesn't have staggered grid system
+    dims(4) = dims(1)
+    dims(5) = dims(2)
+    dims(6) = dims(3)
     basename = "la_tg"//trim(basename_org)
     call FileGetShape( dims_ncm(:), trim(basename), "la_tg", 1, single=.true. )
     ! land
-    dims(7) = dims_ncm(3) ! vertical grid of land model [tentative]
-    dims(8) = dims(2)
-    dims(9) = dims(3)
+    dims(7) = dims_ncm(3) ! vertical grid of land model
+    dims(8) = dims_ncm(1)
+    dims(9) = dims_ncm(2)
     ! sst
-    dims(10) = dims(2)
-    dims(11) = dims(3)
+    dims(10) = dims(8)
+    dims(11) = dims(9)
 
     allocate( read1DX( dims(2)                      ) )
     allocate( read1DY( dims(3)                      ) )
@@ -149,12 +150,12 @@ contains
 
     basename = "ms_pres"//trim(basename_num)
     call FileRead( read1DX(:), trim(basename), "lon", 1, 1, single=.true. )
-    do j = 1, dims(2)
+    do j = 1, dims(3)
        lon_org (:,j)  = read1DX(:) * D2R
     enddo
 
     call FileRead( read1DY(:), trim(basename), "lat", 1, 1, single=.true. )
-    do i = 1, dims(1)
+    do i = 1, dims(2)
        lat_org (i,:)  = read1DY(:) * D2R
     enddo
 
@@ -171,10 +172,10 @@ contains
        do k = dims(1)+2, 3, -1
           ! missing data implies under ground
           ! For more accurate surface height, we need topograph data
-          if ( read4D(k,i,j,1) <= 0.0_RP ) then
-             cz_org(k,i,j) = ( cz_org(k+1,i,j) + cz_org(k,i,j) ) * 0.5_RP
-             cz_org(k-1,i,j) = 0.0_RP
-             cz_org(1:k-2,i,j) = -1e5_RP
+          ! So surface data is not used at this moment
+          if ( read4D(k-2,i,j,1) <= 0.0_RP ) then
+!             cz_org(k,i,j) = max( ( cz_org(k+1,i,j) + cz_org(k,i,j) ) * 0.5_RP, 0.0_RP )
+             cz_org(1:k,i,j) = 0.0_RP
              exit
           endif
        enddo
@@ -212,7 +213,7 @@ contains
     real(RP),         intent(out) :: temp_org(:,:,:)
     real(RP),         intent(out) :: qtrc_org(:,:,:,:)
     character(LEN=*), intent(in)  :: basename_num
-    integer,          intent(in)  :: dims(7)
+    integer,          intent(in)  :: dims(11)
     integer,          intent(in)  :: it
 
     real(RP) :: tsfc_org (dims(2),dims(3))
@@ -270,21 +271,22 @@ contains
     velz_org(:,:,:) = 0.0_RP !> cold initialize for vertical velocity
 
 
-    basename = "ss_t2m"//trim(basename_num)
-    call ExternalFileRead( read3DS(:,:,:,:), trim(basename), "ss_t2m", it, it, myrank, iNICAM, single=.true. )
-    tsfc_org(:,:) = real( read3DS(1,:,:,1), kind=RP )
+    ! The surface height is not available, so t2 is not used, at this moment.
+!    basename = "ss_t2m"//trim(basename_num)
+!    call ExternalFileRead( read3DS(:,:,:,:), trim(basename), "ss_t2m", it, it, myrank, iNICAM, single=.true. )
+!    tsfc_org(:,:) = real( read3DS(1,:,:,1), kind=RP )
     basename = "ms_tem"//trim(basename_num)
     call ExternalFileReadOffset( read4D(:,:,:,:), trim(basename), "ms_tem", it, it, myrank, iNICAM, single=.true. )
     do j = 1, dims(3)
     do i = 1, dims(2)
        do k = dims(1), 1, -1
           if ( read4D(k,i,j,1) <= 50.0_SP ) then ! missing value
-             temp_org(k+2,i,j) = tsfc_org(i,j)
+!             temp_org(k+2,i,j) = tsfc_org(i,j)
              exit
           else
-             temp_org(k+2,i,j) = real( read4D(k,i,j,1), kind=RP )
+             temp_org(1:k+2,i,j) = real( read4D(k,i,j,1), kind=RP )
           end if
-          if( k==-1 ) temp_org(2,i,j) = tsfc_org(i,j) ! no missing value case
+!          if( k==1 ) temp_org(2,i,j) = tsfc_org(i,j) ! no missing value case
        end do
     end do
     end do
@@ -310,12 +312,11 @@ contains
        ! If data has missing value, k is the top layer having missing value,
        ! otherwise k is zero.
        pott = temp_org(k+3,i,j) * (P00/pres_org(k+3,i,j))**RovCP ! lowest level
-       pres_org(k+2,i,j) = P00 * (temp_org(k+2,i,j)/pott)**CPovR ! surface
-       temp_org(k+1,i,j) = pott * (pres_org(k+1,i,j)/P00)**RovCP ! sea level
-       pres_org(k+1,i,j) = slp_org(i,j)                          ! sea level
+!       pres_org(k+2,i,j) = P00 * (temp_org(k+2,i,j)/pott)**CPovR ! surface
+       pres_org(1:k+2,i,j) = slp_org(i,j)                        ! sea level
+       temp_org(1:k+2,i,j) = pott * (slp_org(i,j)/P00)**RovCP    ! sea level
     end do
     end do
-
 
     basename = "ss_q2m"//trim(basename_num)
     call ExternalFileRead( read3DS(:,:,:,:), trim(basename), "ss_q2m", it, it, myrank, iNICAM, single=.true. )
@@ -327,7 +328,7 @@ contains
     do i = 1, dims(2)
        do k = dims(1), 1, -1
           if ( read4D(k,i,j,1) < 0.0_SP ) then ! missing value
-             qtrc_org(k+1:k+2,i,j,I_QV) = qvsfc_org(i,j) ! surface and sealevel
+             qtrc_org(1:k+2,i,j,I_QV) = qvsfc_org(i,j) ! surface and sealevel
              exit
           else
              qtrc_org(k+2,i,j,I_QV) = real( read4D(k,i,j,1), kind=RP )
@@ -385,8 +386,8 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[realinput]/Categ[InputNICAM-Surface]'
 
     basename = "la_tg"//trim(basename_num)
-    call FileRead( read1DZ(:), trim(basename), "lev", 1, 1, single=.true. )
-    lz_org(:) = read1DZ(:)
+    call FileRead( read1DLZ(:), trim(basename), "lev", 1, 1, single=.true. )
+    lz_org(:) = read1DLZ(:)
 
     basename = "lsmask"//trim(basename_num)
     call ExternalFileRead( read3DS(:,:,:,:), &
@@ -399,25 +400,25 @@ contains
     lsmask_org(:,:) = real( read3DS(1,:,:,1), kind=RP )
 
     basename = "la_tg"//trim(basename_num)
-    call ExternalFileReadOffset( read4D(:,:,:,:),  &
+    call ExternalFileReadOffset( read4DL(:,:,:,:), &
                                  trim(basename),   &
                                  "la_tg",          &
                                  it, it,      &
                                  myrank,           &
                                  iNICAM,           &
                                  single=.true.     )
-    tg_org(:,:,:) = real( read4D(:,:,:,1), kind=RP )
+    tg_org(:,:,:) = real( read4DL(:,:,:,1), kind=RP )
 
     if( use_file_landwater ) then
        basename = "la_wg"//trim(basename_num)
-       call ExternalFileReadOffset( read4D(:,:,:,:),  &
+       call ExternalFileReadOffset( read4DL(:,:,:,:), &
                                     trim(basename),   &
                                     "la_wg",          &
                                     it, it,      &
                                     myrank,           &
                                     iNICAM,           &
                                     single=.true.     )
-       strg_org(:,:,:) = real( read4D(:,:,:,1), kind=RP )
+       strg_org(:,:,:) = real( read4DL(:,:,:,1), kind=RP )
     end if
 
     basename = "ss_tem_sfc"//trim(basename_num)
