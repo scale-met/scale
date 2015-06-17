@@ -568,8 +568,8 @@ contains
 #endif
 
        !--- update density
-       !$omp parallel do private(i,j,k,advch) OMP_SCHEDULE_ collapse(2)
        PROFILE_START("hevi_sr")
+       !$omp parallel do private(i,j,k,advch) OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE
        do i = IIS, IIE
        do k = KS, KE
@@ -930,6 +930,7 @@ contains
        PROFILE_START("hevi_solver")
 
 !OCL INDEPENDENT(solve_*)
+!OCL PREFETCH_SEQUENTIAL(SOFT)
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE
        do i = IIS, IIE
@@ -969,7 +970,7 @@ contains
                       + ( DENS(k  ,i,j) - REF_dens(k  ,i,j) ) &
                       + dtrk * ( Sr(k+1,i,j) + Sr(k,i,j) ) )
              C(k-KS+1,i,j) = MOMZ(k,i,j) + dtrk * ( pg + Sw(k,i,j) )
-#if HIST_TEND
+#ifdef HIST_TEND
              if ( lhist ) pg_t(k,i,j,1) = pg
 #endif
           end do
