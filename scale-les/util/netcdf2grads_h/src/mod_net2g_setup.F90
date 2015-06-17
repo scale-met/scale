@@ -30,6 +30,7 @@ module mod_net2g_setup
   !
   public :: set_vtype
   public :: set_atype
+  public :: set_ctype
   public :: set_flag_bnd
   public :: set_index
   public :: set_index_grid
@@ -102,7 +103,7 @@ contains
           vtype = vt_2d
           Z_MERGE_OUT = .false.
        else
-          call err_abort( 0, __LINE__ )
+          call err_abort( 0, __LINE__, loc_setup )
        end if
     end select
 
@@ -138,15 +139,40 @@ contains
        atype = a_ave
        ZCOUNT  = 1
        Z_MERGE_OUT = .false.
+    case ( "CONV", "conv", "CONVERT", "convert" )
+       atype = a_conv
     case default
        if ( LOUT ) write (*, *) "ERROR: specified analysis type is not appropiate"
        if ( LOUT ) write (*, *) "***** ", trim(ANALYSIS)
-       call err_abort( 1, __LINE__ )
+       call err_abort( 1, __LINE__, loc_setup )
     end select
 
     return
   end subroutine set_atype
 
+  !> setting of flag level convert
+  !-----------------------------------------------------------------------------------------
+  subroutine set_ctype( &
+      ctype    ) ! [out]
+    implicit none
+
+    integer, intent(out) :: ctype
+    !---------------------------------------------------------------------------
+
+    select case( trim(CONV_TYPE) )
+    case ( "HGT", "hgt", "HEIGHT", "height" )
+       if ( LOUT ) write( FID_LOG, '(1x,A)' ) "+++ reference var: height"
+       ctype = c_height
+    case ( "PRES", "pres", "PRESSURE", "pressure" )
+       if ( LOUT ) write( FID_LOG, '(1x,A)' ) "+++ reference var: PRES"
+       ctype = c_pres
+    case default
+       ctype = -1
+       if ( LOUT ) write( FID_LOG, '(1x,A)' ) "+++ No Vertical Interpolation: "
+    end select
+
+    return
+  end subroutine set_ctype
 
   !> setting of flag boundary
   !-----------------------------------------------------------------------------------------
@@ -466,7 +492,7 @@ contains
        count_height(1:3) = (/ ie, je, 1      /)
        start_3d    (1:4) = (/ 1,  1,  zz, it /)
        nzn = 1
-    case ( a_max, a_min, a_sum, a_ave )
+    case ( a_max, a_min, a_sum, a_ave, a_conv )
        count_3d    (1:4) = (/ ie, je, nz(1), 1  /)
        count_2d    (1:3) = (/ ie, je,        1  /)
        count_urban (1:4) = (/ ie, je, nz(2), 1  /)
@@ -484,13 +510,13 @@ contains
        case ( vt_2d, vt_height, vt_tpmsk )
           if ( LOUT ) write (*, *) "ERROR: specified anal-type is not appropiate for the var"
           if ( LOUT ) write (*, *) "***** ", trim(ANALYSIS), trim(varname)
-          call err_abort( 1, __LINE__ )
+          call err_abort( 1, __LINE__, loc_setup )
        case default
-          call err_abort( 0, __LINE__ )
+          call err_abort( 0, __LINE__, loc_setup )
        end select
   
     case default
-       call err_abort( 0, __LINE__ )
+       call err_abort( 0, __LINE__, loc_setup )
     end select
 
     return

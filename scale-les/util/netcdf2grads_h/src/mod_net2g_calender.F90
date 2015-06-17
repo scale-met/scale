@@ -121,7 +121,7 @@ contains
        tint  = int(inc)
        tunit = "hr"
     case default
-        call err_abort( 0, __LINE__ )
+        call err_abort( 0, __LINE__, loc_cal )
     end select
 
     if ( tint <= 0 ) then
@@ -176,7 +176,7 @@ contains
     case ( "HOUR", "hour" )
        call cal_inc_hour( int(inc), yy, mm, dd, hh )
     case default
-        call err_abort( 0, __LINE__ )
+        call err_abort( 0, __LINE__, loc_cal )
     end select
 
     return
@@ -342,7 +342,7 @@ contains
           endif
        endif
     case default
-        call err_abort( 0, __LINE__ )
+        call err_abort( 0, __LINE__, loc_cal )
     end select
 
     return

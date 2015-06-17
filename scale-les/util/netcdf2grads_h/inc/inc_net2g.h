@@ -26,6 +26,7 @@
   integer,  parameter :: err_internal = 0
   integer,  parameter :: err_netcdf   = -1
   real(SP), parameter :: UNDEF_SP     = -9.9999D7
+  real(SP), parameter :: EPS_SP       = 1.0D-6
 
   integer,  parameter :: vt_2d     = 0  ! vtype index
   integer,  parameter :: vt_3d     = 1  ! vtype index
@@ -39,6 +40,18 @@
   integer,  parameter :: a_min     = 2  ! atype index
   integer,  parameter :: a_sum     = 3  ! atype index
   integer,  parameter :: a_ave     = 4  ! atype index
+  integer,  parameter :: a_conv    = 5  ! atype index
+
+  integer,  parameter :: c_height  = 0  ! ctype index
+  integer,  parameter :: c_pres    = 1  ! ctype index
+
+  integer,  parameter :: loc_main   = 0
+  integer,  parameter :: loc_anal   = 1
+  integer,  parameter :: loc_cal    = 2
+  integer,  parameter :: loc_comm   = 3
+  integer,  parameter :: loc_netcdf = 4
+  integer,  parameter :: loc_setup  = 5
+  integer,  parameter :: loc_vars   = 6
 
   character(3) :: cmm(12)
   data cmm / "JAN", "FEB", "MAR", "APL", "MAY", "JUN", &

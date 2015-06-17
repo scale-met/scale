@@ -21,6 +21,7 @@ program netcdf2grads_h
   use mod_net2g_comm
   use mod_net2g_netcdf
   use mod_net2g_setup
+  use mod_net2g_anal
 
   implicit none
 
@@ -34,6 +35,7 @@ program netcdf2grads_h
   real(SP),allocatable :: cy(:), cdy(:)
   real(SP),allocatable :: var_2d(:,:)
   real(SP),allocatable :: p_var(:,:)
+  real(SP),allocatable :: p_ref(:,:,:)
 
   real(SP),allocatable :: recvbuf(:,:)
   real(SP),allocatable :: cx_gather(:)
@@ -61,8 +63,9 @@ program netcdf2grads_h
 !  integer :: count_height(3)
 !  integer :: count_tpmsk(2)
 
-  integer :: vtype
-  integer :: atype
+  integer :: vtype = -1
+  integer :: atype = -1
+  integer :: ctype = -1
   integer :: nt
   integer :: nx   ! num of x-dimension in the combined file
   integer :: ny   ! num of y-dimension in the combined file
@@ -123,7 +126,6 @@ program netcdf2grads_h
     VCOUNT,                    &
     ZCOUNT,                    &
     ZSTART,                    &
-    ANALYSIS,                  &
     CONFFILE,                  &
     IDIR,                      &
     ODIR,                      &
@@ -132,6 +134,9 @@ program netcdf2grads_h
     Z_LEV_LIST,                &
     Z_LEV_TYPE,                &
     Z_MERGE_OUT
+  namelist /ANAL/              &
+    ANALYSIS,                  &
+    CONV_TYPE
   namelist /VARI/              &
     VNAME,                     &
     TARGET_ZLEV
@@ -162,7 +167,7 @@ program netcdf2grads_h
   !--- Read from argument
   if ( COMMAND_ARGUMENT_COUNT() /= 1 ) then
      write(*, *) "ERROR: Program needs a config file!"
-     call err_abort( 1, __LINE__ )
+     call err_abort( 1, __LINE__, loc_main )
   else
      call get_command_argument(1,fconf)
   endif
@@ -185,10 +190,10 @@ program netcdf2grads_h
   if ( work /= 0 ) then
      if ( LOUT ) write (*, *) "ERROR: specified num of mpi processes is not adequate."
      if ( LOUT ) write (*, *) "*** specify the num; PRC_X*PRC_Y shuold be divisable by the num."
-     call err_abort( 1, __LINE__ )
+     call err_abort( 1, __LINE__, loc_main )
   elseif ( isize > tproc ) then
      if ( LOUT ) write (*, *) "ERROR: num of mpi processes is larger than that of the scale-les run."
-     call err_abort( 1, __LINE__ )
+     call err_abort( 1, __LINE__, loc_main )
   endif
 
   allocate ( rk_mnge (nmnge) )
@@ -208,7 +213,18 @@ program netcdf2grads_h
                        mnxp, mnyp, nxg_tproc, nyg_tproc         )
   call allocation( irank ) ! "irank" is right, not "rk_mnge"
   call comm_setup( mnxp, mnyp, nxgp, nygp, nmnge )
-  call netcdf_setup( mnxp, mnyp, nz_all ) 
+  call netcdf_setup( mnxp, mnyp, nz_all )
+
+  call set_atype( atype )
+  call set_ctype( ctype )
+  if ( atype == a_conv ) then
+     call anal_setup( mnxp, mnyp, nz_all, nmnge )
+     do nm = 1, nmnge
+        call netcdf_read_ref( rk_mnge(nm), nxp, nyp, mnxp, mnyp, &
+                              nz_all, ctype, p_ref )
+        call anal_input_ref( p_ref, nm )
+     enddo
+  endif
 
   do nm = 1, nmnge
      call netcdf_read_grid( rk_mnge(nm), nm, nxgp, nygp,            &
@@ -222,13 +238,14 @@ program netcdf2grads_h
 
   if ( Z_MERGE_OUT ) call make_vgrid
 
+
   !--- read data and combine
   nst = START_TSTEP
   nen = END_TSTEP
   nt  = (nen - nst + 1) / INC_TSTEP
   if ( nt > max_tcount ) then
      if ( LOUT ) write (*, *) "ERROR: overflow maximum of tcount"
-     call err_abort( 1, __LINE__ )
+     call err_abort( 1, __LINE__, loc_main )
   endif
 
   call cal_init( yy, mm, dd, hh, mn, sc, DELT )
@@ -243,7 +260,6 @@ program netcdf2grads_h
         varname = trim( VNAME(iv) )
         call netcdf_var_dim( ncfile, varname, ndim )
         call set_vtype( ndim, varname, vtype )
-        call set_atype( atype )
         if ( LOUT ) write( FID_LOG, '(1X,A,A,A,I1,A)' ) &
         "+++ VARIABLE: ", trim(varname), " (vtype = ", vtype, ")"
 
@@ -256,11 +272,18 @@ program netcdf2grads_h
                  zz = TARGET_ZLEV(iz)
                  if ( LOUT ) write( FID_LOG, '(1X,A,I3)' ) "+++ Z LEVEL: ", zz
                  call check_targ_zlev( zz )
+              elseif ( atype == a_conv ) then
+                 zz = TARGET_ZLEV(iz)
+                 if ( ctype == c_pres ) then
+                    if ( LOUT ) write( FID_LOG, '(1X,A,I3,A)' ) "+++ Z LEVEL: ", zz, " [hPa]"
+                 elseif ( ctype == c_height ) then
+                    if ( LOUT ) write( FID_LOG, '(1X,A,I3,A)' ) "+++ Z LEVEL: ", zz, " [m]"
+                 endif
               endif
 
               do nm = 1, nmnge
                  call netcdf_read_var( rk_mnge(nm), nm, nxp, nyp, mnxp, mnyp,  &
-                                       it, zz, nz_all, varname, atype, vtype, p_var )
+                                       it, zz, nz_all, varname, atype, ctype, vtype, p_var )
               enddo
 
               call comm_gather_vars( mnxp, mnyp, nmnge, p_var, recvbuf )
@@ -279,20 +302,15 @@ program netcdf2grads_h
         case ( vt_2d, vt_tpmsk )
         !-----------------------------------------------------------------------------------
 
-           !if ( atype == a_slice ) then
-           !   zz = TARGET_ZLEV(1)
-           !   call check_targ_zlev( zz )
-           !endif
-
            zz = 1
            do nm = 1, nmnge
               call netcdf_read_var( rk_mnge(nm), nm, nxp, nyp, mnxp, mnyp,   &
-                                    it, zz, nz_all, varname, atype, vtype, p_var )
+                                    it, zz, nz_all, varname, atype, ctype, vtype, p_var )
            enddo
 
            call comm_gather_vars( mnxp, mnyp, nmnge, p_var, recvbuf )
 
-           zz = 0
+           zz = 0 ! used as file name
            if ( irank == master ) then
               call combine_vars_2d( recvbuf, var_2d )
               call create_ctl( varname, atype, idom, it, zz )
@@ -301,7 +319,7 @@ program netcdf2grads_h
 
         case default
         !-----------------------------------------------------------------------------------
-           call err_abort( 0, __LINE__ )
+           call err_abort( 0, __LINE__, loc_main )
         end select
 
      enddo !--- var loop
@@ -458,7 +476,7 @@ contains
 
      write(cdom,'(i2.2)') idom
      select case( atype )
-     case ( a_slice )
+     case ( a_slice, a_conv )
         if ( Z_MERGE_OUT ) then
            clev = "-3d"
         else
@@ -495,7 +513,11 @@ contains
      case ( vt_3d )
         if ( Z_MERGE_OUT ) then
            write( FID_CTL, '(a,3x,i7,1x,a)') "ZDEF", ZCOUNT, "LEVELS"
-           write( FID_CTL, '(5(1x,e15.7))') vgrid(1:ZCOUNT)*1.d-3
+           if ( atype == a_conv .and. ctype == c_pres ) then
+              write( FID_CTL, '(5(1x,e15.7))') vgrid(1:ZCOUNT)
+           else      
+              write( FID_CTL, '(5(1x,e15.7))') vgrid(1:ZCOUNT)*1.d-3
+           endif
         else
            write( FID_CTL, '(a,3x,i7,1x,a,1x,e15.7)') "ZDEF", 1, "LEVELS", zlev(zz)*1.d-3
         endif
@@ -543,7 +565,7 @@ contains
 
     write(cdom,'(i2.2)') idom
     select case( atype )
-    case ( a_slice )
+    case ( a_slice, a_conv )
         if ( Z_MERGE_OUT ) then
            clev = "-3d"
         else
@@ -606,13 +628,13 @@ contains
            form="formatted", delim='apostrophe', iostat=ierr )
     if ( ierr /= 0 ) then
        write (*, *) "ERROR: fail to open net2g.conf file"
-       call err_abort( 1, __LINE__ )
+       call err_abort( 1, __LINE__, loc_main )
     endif
 
     read  ( FID_CONF, nml=LOGOUT, iostat=ierr )
     if ( ierr /= 0 ) then
        write (*, *) "ERROR: fail to read LOGOUT"
-       call err_abort( 1, __LINE__ )
+       call err_abort( 1, __LINE__, loc_main )
     endif
 
     close ( FID_CONF )
@@ -634,7 +656,7 @@ contains
            form="formatted", delim='apostrophe', iostat=ierr )
     if ( ierr /= 0 ) then
        if ( LOUT ) write (*, *) "ERROR: fail to open net2g.conf file"
-       call err_abort( 1, __LINE__ )
+       call err_abort( 1, __LINE__, loc_main )
     endif
 
     read  ( FID_CONF, nml=INFO, iostat=ierr )
@@ -642,16 +664,19 @@ contains
 
     if ( ZCOUNT > max_zcount ) then
        if ( LOUT ) write (*, *) "ERROR: overflow maximum of zcount"
-       call err_abort( 1, __LINE__ )
+       call err_abort( 1, __LINE__, loc_main )
     endif
 
     if ( VCOUNT > max_vcount ) then
        if ( LOUT ) write (*, *) "ERROR: overflow maximum of vcount"
-       call err_abort( 1, __LINE__ )
+       call err_abort( 1, __LINE__, loc_main )
     elseif( VCOUNT < 1 ) then
        if ( LOUT ) write (*, *) "ERROR: specify at least one target variable"
-       call err_abort( 1, __LINE__ )
+       call err_abort( 1, __LINE__, loc_main )
     endif
+
+    read  ( FID_CONF, nml=ANAL, iostat=ierr )
+    if ( LOUT ) write ( FID_LOG, nml=ANAL )
 
     rewind( FID_CONF )
     read  ( FID_CONF, nml=VARI, iostat=ierr )
@@ -689,7 +714,7 @@ contains
            form="formatted", delim='apostrophe', iostat=ierr )
     if ( ierr /= 0 ) then
        if ( LOUT ) write (*, *) "ERROR: fail to open running *.conf file"
-       call err_abort( 1, __LINE__ )
+       call err_abort( 1, __LINE__, loc_main )
     endif
 
     read  ( FID_RCNF, nml=PARAM_TIME, iostat=ierr )
@@ -718,7 +743,7 @@ contains
     !--- tentative
     if ( HIST_BND ) then
        if ( LOUT ) write (*, *) "HIST_BND is currently unsupported"
-       call err_abort( 1, __LINE__ )
+       call err_abort( 1, __LINE__, loc_main )
     endif
 
     return
@@ -738,30 +763,30 @@ contains
     case ( vt_urban )
        if ( zz < 1 .or. zz > uz ) then
           if ( LOUT ) write (*, *) "ERROR: requested level is in K-HALO [urban]"
-          call err_abort( 1, __LINE__ )
+          call err_abort( 1, __LINE__, loc_main )
        endif
     case ( vt_land )
        if ( zz < 1 .or. zz > lz ) then
           if ( LOUT ) write (*, *) "ERROR: requested level is in K-HALO [land]"
-          call err_abort( 1, __LINE__ )
+          call err_abort( 1, __LINE__, loc_main )
        endif
     case ( vt_height )
        if ( zz < ks .or. zz > ke ) then
           if ( LOUT ) write (*, *) "ERROR: requested level is in K-HALO [height]"
-          call err_abort( 1, __LINE__ )
+          call err_abort( 1, __LINE__, loc_main )
        endif
     case ( vt_3d )
        if ( zz < ks .or. zz > ke ) then
           if ( LOUT ) write (*, *) "ERROR: requested level is in K-HALO [3D data]"
-          call err_abort( 1, __LINE__ )
+          call err_abort( 1, __LINE__, loc_main )
        endif
     case ( vt_2d, vt_tpmsk )
        if ( zz /= 1 ) then
           if ( LOUT ) write (*, *) "ERROR: requested level is not exist [2D data]"
-          call err_abort( 1, __LINE__ )
+          call err_abort( 1, __LINE__, loc_main )
        endif
     case default
-        call err_abort( 0, __LINE__ )
+        call err_abort( 0, __LINE__, loc_main )
     end select
 
     return
@@ -778,6 +803,13 @@ contains
     !---------------------------------------------------------------------------
 
     allocate( vgrid( ZCOUNT ) )
+
+    if ( atype == a_conv ) then
+       do iz = 1, ZCOUNT
+          vgrid(iz) = TARGET_ZLEV(iz)
+          if ( LOUT ) write( FID_LOG, '(1X,A,I3,A,F8.2)' ) "+++ Target Height: (", iz, ") ", vgrid(iz)
+       enddo
+    else
 
     select case( Z_LEV_TYPE )
     case ( "GRID", "grid" )
@@ -806,8 +838,10 @@ contains
 
     case default
        if ( LOUT ) write (*, *) "ERROR: requested Z_LEV_TYPE is not supported"
-       call err_abort( 1, __LINE__ )
+       call err_abort( 1, __LINE__, loc_main )
     end select
+
+    endif
 
     return
   end subroutine make_vgrid
@@ -827,14 +861,15 @@ contains
 !    allocate( p_3d        (mnxp,       mnyp,       nz, 1 ) )
 !    allocate( p_3d_urban  (mnxp,       mnyp,       uz, 1 ) )
 !    allocate( p_3d_land   (mnxp,       mnyp,       lz, 1 ) )
-    allocate( p_var       (mnxp,       mnyp*nmnge        ) )
-    allocate( p_cdx       (nxgp*nmnge                    ) )
-    allocate( p_cdy       (nygp*nmnge                    ) )
-    allocate( p_cx        (nxgp*nmnge                    ) )
-    allocate( p_cy        (nygp*nmnge                    ) )
-    allocate( cdz         (nz+2*nzh                      ) )
-    allocate( cz          (nz+2*nzh                      ) )
-    allocate( zlev        (nz                            ) )
+    allocate( p_var       (mnxp,       mnyp*nmnge     ) )
+    allocate( p_ref       (mnxp,       mnyp,       nz ) )
+    allocate( p_cdx       (nxgp*nmnge                 ) )
+    allocate( p_cdy       (nygp*nmnge                 ) )
+    allocate( p_cx        (nxgp*nmnge                 ) )
+    allocate( p_cy        (nygp*nmnge                 ) )
+    allocate( cdz         (nz+2*nzh                   ) )
+    allocate( cz          (nz+2*nzh                   ) )
+    allocate( zlev        (nz                         ) )
 
 !    allocate( sendbuf     (mnxp,       mnyp*nmnge        ) )
 !    allocate( sendbuf_gx  (nxgp*nmnge                    ) )

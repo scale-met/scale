@@ -43,7 +43,6 @@ module mod_net2g_vars
   character(CLNG), public :: ODIR           = "."
   character(CLNG), public :: CONFFILE       = "./run.conf"
   character(CSHT), public :: VNAME(max_vcount) = ""
-  character(CSHT), public :: ANALYSIS       = "SLICE"
   character(CSHT), public :: Z_LEV_TYPE     = "GRID"
   character(5),    public :: DELT           = "1mn"
   character(15),   public :: STIME          = "00:00Z01JAN2000"
@@ -52,6 +51,9 @@ module mod_net2g_vars
   logical,         public :: LOG_ALL_OUTPUT = .false.
   logical,         public :: Z_LEV_LIST     = .true.
   logical,         public :: Z_MERGE_OUT    = .false.  ! only for slice
+
+  character(CSHT), public :: ANALYSIS       = "SLICE"
+  character(CSHT), public :: CONV_TYPE      = "PRES"
 
   integer,         public :: PRC_NUM_X
   integer,         public :: PRC_NUM_Y
