@@ -10,10 +10,10 @@ FFLAGS_FAST  = -Kfast,parallel,ocl,preex,array_private,noalias=s,mfunc=2 \
                -Ksimd                                                    \
                -Kauto,threadsafe
 
-FFLAGS_AGGRESSIVE = $(FFLAGS_FAST) \
-                   -Kautoobjstack \
-		   -Ktemparraystack \
-                   -Kinstance=8   \
+FFLAGS_AGGRESSIVE = $(FFLAGS_FAST)  \
+                   -Kautoobjstack   \
+                   -Ktemparraystack \
+                   -Kinstance=8     \
                    -Kswp_strong
 
 # note: Kauto,threadsafe,autoobjstack,temparraystack depends on the stacksize.
@@ -40,10 +40,10 @@ RDMA = -U_USE_RDMA
 # enable
 #RDMA = -D_USE_RDMA
 
+# Single precision
+#FFLAGS += -DSINGLE
+
 FC     = mpifrtpx
-#FFLAGS = $(FFLAGS_AGGRESIVE) $(PERF_MONIT) $(RDMA)
-FFLAGS = $(FFLAGS_FAST) $(PERF_MONIT) $(RDMA)
-#FFLAGS = $(FFLAGS_DEBUG) $(PERF_MONIT) $(RDMA)
 
 FFLAGS_DYN ?= $(FFLAGS) -Knoprefetch,loop_nofission,loop_nofusion,nounroll,parallel_strong -Ksimd=2
 #FFLAGS_DYN ?= $(FFLAGS)
@@ -51,7 +51,11 @@ FFLAGS_DYN ?= $(FFLAGS) -Knoprefetch,loop_nofission,loop_nofusion,nounroll,paral
 MODDIROPT ?= -M
 
 CC     = mpifccpx
-CFLAGS = -Kfast,parallel,ocl,preex,array_private,region_extension,restp=all -Qt -Ksimd $(PERF_MONIT)
+CFLAGS_FAST  = -Kfast,parallel,ocl,preex,array_private,region_extension,restp=all -Ksimd
+CFLAGS_DEBUG = -O0
+
+CFLAGS = $(CFLAGS_FAST) $(PERF_MONIT) $(RDMA)
+#CFLAGS = $(CFLAGS_DEBUG) $(PERF_MONIT) $(RDMA)
 
 LD      = $(FC)
 LDFLAGS = $(FFLAGS)

@@ -72,7 +72,7 @@ contains
     integer :: k, i, j, iq
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('MP filter', 2)
+    call PROF_rapstart('MP_filter', 3)
 
     !$omp parallel do private(i,j,diffq) OMP_SCHEDULE_ collapse(2)
     do j = 1, JA
@@ -111,7 +111,7 @@ contains
     enddo
     enddo
 
-    call PROF_rapend('MP filter')
+    call PROF_rapend('MP_filter', 3)
 
     return
   end subroutine ATMOS_PHY_MP_negative_fixer
@@ -164,7 +164,7 @@ contains
 
 #ifndef DRY
 
-    call PROF_rapstart('MP Saturation_adjustment', 2)
+    call PROF_rapstart('MP_Saturation_adjustment', 3)
 
     rdt = 1.0_RP / dt
 
@@ -309,7 +309,7 @@ contains
     enddo
     enddo
 
-    call PROF_rapend  ('MP Saturation_adjustment', 2)
+    call PROF_rapend  ('MP_Saturation_adjustment', 3)
 
 #else
     RHOE_t = UNDEF
@@ -690,7 +690,7 @@ contains
     integer :: k, i, j, iq
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('MP Precipitation', 2)
+    call PROF_rapstart('MP_Precipitation', 3)
 
     do iq = I_QC, QQE
        call COMM_vars8( vterm(:,:,:,iq), iq )
@@ -792,7 +792,6 @@ contains
 
     ! save previous value
     do iq = 1, QA
-       !$omp parallel do private(i,j,k,iq,rhoq) OMP_SCHEDULE_ collapse(2)
        do j = JS, JE
        do i = IS, IE
           rhoq(KS-1,i,j,iq) = DENS(KS,i,j) * QTRC(KS,i,j,iq)
@@ -802,7 +801,6 @@ contains
        enddo
        enddo
     enddo
-
 
     !--- mass flux for each tracer, upwind with vel < 0
     do iq = I_QC, QA
@@ -873,7 +871,7 @@ contains
     endif
 
 
-    call PROF_rapend  ('MP Precipitation', 2)
+    call PROF_rapend  ('MP_Precipitation', 3)
 
     return
   end subroutine ATMOS_PHY_MP_precipitation

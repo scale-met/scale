@@ -91,12 +91,13 @@ program scaleles_launcher
 
   ! start MPI
   call PRC_MPIstart
-  if ( MASTER_LOG ) write(*,*) '*** Start Launch System for SCALE-LES'
+
+  if( MASTER_LOG ) write(*,*) '*** Start Launch System for SCALE-LES'
 
   !--- read from argument
   if ( COMMAND_ARGUMENT_COUNT() < 1 ) then
-     if (MASTER_LOG) write(*,*) 'WARNING: No config file specified!'
-     if (MASTER_LOG) write(*,*) '         Default values are used.'
+     if( MASTER_LOG ) write(*,*) 'WARNING: No config file specified!'
+     if( MASTER_LOG ) write(*,*) '         Default values are used.'
   else
      call get_command_argument(1,fname_launch)
   endif
@@ -110,68 +111,63 @@ program scaleles_launcher
         status = 'old',              &
         iostat = ierr                )
   if ( ierr /= 0 ) then
-     if (MASTER_LOG) write(*,*)
-     if (MASTER_LOG) write(*,*) 'WARNING: Failed to open config file! :', trim(fname_launch)
-     if (MASTER_LOG) write(*,*) '         Default values are used.'
-     if (MASTER_LOG) write(*,*)
-  end if
+     if( MASTER_LOG ) write(*,*)
+     if( MASTER_LOG ) write(*,*) 'WARNING: Failed to open config file! :', trim(fname_launch)
+     if( MASTER_LOG ) write(*,*) '         Default values are used.'
+     if( MASTER_LOG ) write(*,*)
+  endif
 
   !--- read PARAM_LAUNCHER
   rewind(LNC_FID_CONF)
   read(LNC_FID_CONF,nml=PARAM_LAUNCHER,iostat=ierr)
-  if( ierr > 0 ) then !--- fatal error
-     if (MASTER_LOG) write(*,*) ' xxx Not appropriate names in namelist PARAM_LAUNCHER. Check!'
+  if ( ierr > 0 ) then !--- fatal error
+     if( MASTER_LOG ) write(*,*) 'xxx Not appropriate names in namelist PARAM_LAUNCHER. Check!'
      call PRC_MPIstop
   endif
   close( LNC_FID_CONF )
 
-
   !--- communicator split for bulk jobs
   check = mod(MASTER_nmax,NUM_BULKJOB)
-  if( check /= 0 ) then !--- fatal error
-     if (MASTER_LOG) write(*,*) ' xxx Total Num of Processes must be divisible by NUM_BULKJOB. Check!'
-     if (MASTER_LOG) write(*,*) '     Total Num of Processes: ', MASTER_nmax
-     if (MASTER_LOG) write(*,*) '                NUM_BULKJOB: ', NUM_BULKJOB
+  if ( check /= 0 ) then !--- fatal error
+     if( MASTER_LOG ) write(*,*) 'xxx Total Num of Processes must be divisible by NUM_BULKJOB. Check!'
+     if( MASTER_LOG ) write(*,*) 'xxx Total Num of Processes = ', MASTER_nmax
+     if( MASTER_LOG ) write(*,*) 'xxx            NUM_BULKJOB = ', NUM_BULKJOB
      call PRC_MPIstop
   endif
 
   nprocs = MASTER_nmax / NUM_BULKJOB
   PRC_BULKJOB(1:NUM_BULKJOB) = nprocs
-  if ( MASTER_LOG ) write ( *, '(1X,A,I4)' ) "TOTAL BULK JOB NUMBER   = ", NUM_BULKJOB
-  if ( MASTER_LOG ) write ( *, '(1X,A,I5)' ) "PROCESS NUM of EACH JOB = ", nprocs
-  if ( MASTER_LOG ) write ( *, '(1X,A,I4)' ) "TOTAL DOMAIN NUMBER     = ", NUM_DOMAIN
-  if ( MASTER_LOG ) write ( *, * ) "Flag of ABORT ALL JOBS  = ", ABORT_ALL_JOBS
+  if( MASTER_LOG ) write(*,'(1X,A,I4)') "*** TOTAL BULK JOB NUMBER   = ", NUM_BULKJOB
+  if( MASTER_LOG ) write(*,'(1X,A,I5)') "*** PROCESS NUM of EACH JOB = ", nprocs
+  if( MASTER_LOG ) write(*,'(1X,A,I4)') "*** TOTAL DOMAIN NUMBER     = ", NUM_DOMAIN
+  if( MASTER_LOG ) write(*,*)           "*** Flag of ABORT ALL JOBS  = ", ABORT_ALL_JOBS
 
-  call PRC_MPIsplit(     &
-      MASTER_COMM_WORLD, & ! [in ]
-      NUM_BULKJOB,       & ! [in ]
-      PRC_BULKJOB,       & ! [in ]
-      CONF_BULKS,        & ! [in ] dummy
-      LOG_SPLIT,         & ! [in ]
-      .true.,            & ! [in ] flag bulk_split
-      BULK_COMM_WORLD,   & ! [out]
-      inter_parent,      & ! [out] dummy
-      inter_child,       & ! [out] dummy
-      fname_bulks        ) ! [out]
+  !--- communicator split for bulk/ensemble
+  call PRC_MPIsplit( MASTER_COMM_WORLD, & ! [IN]
+                     NUM_BULKJOB,       & ! [IN]
+                     PRC_BULKJOB,       & ! [IN]
+                     CONF_BULKS,        & ! [IN]  dummy
+                     LOG_SPLIT,         & ! [IN]
+                     .true.,            & ! [IN]  flag bulk_split
+                     BULK_COMM_WORLD,   & ! [OUT]
+                     inter_parent,      & ! [OUT] dummy
+                     inter_child,       & ! [OUT] dummy
+                     fname_bulks        ) ! [OUT]
 
-  call PRC_BULKsetup(    &
-      BULK_COMM_WORLD,   & ! [in]
-      ABORT_ALL_JOBS     ) ! [in]
-
+  call PRC_BULKsetup( BULK_COMM_WORLD,   & ! [IN]
+                      ABORT_ALL_JOBS     ) ! [IN]
 
   !--- communicator split for nesting domains
-  call PRC_MPIsplit(     &
-      BULK_COMM_WORLD,   & ! [in ]
-      NUM_DOMAIN,        & ! [in ]
-      PRC_DOMAINS,       & ! [in ]
-      CONF_FILES,        & ! [in ]
-      LOG_SPLIT,         & ! [in ]
-      .false.,           & ! [in ] flag bulk_split
-      MY_COMM_WORLD,     & ! [out]
-      inter_parent,      & ! [out]
-      inter_child,       & ! [out]
-      fname_local        ) ! [out]
-
+  call PRC_MPIsplit( BULK_COMM_WORLD,   & ! [IN]
+                     NUM_DOMAIN,        & ! [IN]
+                     PRC_DOMAINS,       & ! [IN]
+                     CONF_FILES,        & ! [IN]
+                     LOG_SPLIT,         & ! [IN]
+                     .false.,           & ! [IN] flag bulk_split
+                     MY_COMM_WORLD,     & ! [OUT]
+                     inter_parent,      & ! [OUT]
+                     inter_child,       & ! [OUT]
+                     fname_local        ) ! [OUT]
 
   ! start main routine
   if ( NUM_BULKJOB > 1 ) then
@@ -179,11 +175,11 @@ program scaleles_launcher
   else
      fname_scaleles = fname_local
   endif
-  call scaleles ( MY_COMM_WORLD,   &
-                  inter_parent,    &
-                  inter_child,     &
-                  fname_scaleles   )
 
+  call scaleles( MY_COMM_WORLD, & ! [IN]
+                 inter_parent,  & ! [IN]
+                 inter_child,   & ! [IN]
+                 fname_scaleles ) ! [IN]
 
   ! stop MPI
   call PRC_MPIfinish

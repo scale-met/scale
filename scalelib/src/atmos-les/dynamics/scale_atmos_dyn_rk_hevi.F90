@@ -845,9 +845,9 @@ contains
 #endif
 
        ! at (u, y, z)
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        iss = max(IIS-1,IS-IFS_OFF)
        iee = min(IIE,IEH)
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JJS,   JJE
        do i = iss, iee
        do k = KS, KE
@@ -1644,7 +1644,6 @@ contains
     return
   end subroutine solve_bicgstab
 
-
   subroutine mul_matrix(V, M, C)
     implicit none
     real(RP), intent(out) :: V(KMAX-1)
@@ -1663,7 +1662,6 @@ contains
 
     return
   end subroutine mul_matrix
-
 
 #elif defined(HEVI_LAPACK)
 !OCL SERIAL

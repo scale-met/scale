@@ -449,6 +449,8 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Radiation(mstrnX)'
 
+    call PROF_rapstart('RD_Profile', 3)
+
     call THERMODYN_temp_pres( temp(:,:,:),  & ! [OUT]
                               pres(:,:,:),  & ! [OUT]
                               DENS(:,:,:),  & ! [IN]
@@ -459,6 +461,7 @@ contains
                                    TEMP(:,:,:), & ! [IN]
                                    DENS(:,:,:)  ) ! [IN]
 
+!OCL XFILL
     do j  = JS, JE
     do i  = IS, IE
     do k  = KS, KE
@@ -480,12 +483,13 @@ contains
                              rh   (:,:,:)    ) ! [IN]
 
     call MP_Mixingratio( MP_Qe(:,:,:,:), & ! [OUT]
-         QTRC (:,:,:,:)  ) ! [IN]
+                         QTRC (:,:,:,:)  ) ! [IN]
 
     if ( ATMOS_PHY_RD_MSTRN_ONLY_QCI ) then
        do ihydro = 1, MP_QA
           iq = I_MP2ALL(ihydro)
           if ( iq .ne. I_QC .and. iq .ne. I_QI ) then
+!OCL XFILL
              MP_Qe(:,:,:,ihydro) = 0.0_RP
           end if
        end do
@@ -516,6 +520,7 @@ contains
 
     ! marge basic profile and value in LES domain
 
+!OCL XFILL
     do j = JS, JE
     do i = IS, IE
        do RD_k = 1, RD_KADD
@@ -532,6 +537,7 @@ contains
     enddo
     enddo
 
+!OCL XFILL
     do j = JS, JE
     do i = IS, IE
        do RD_k = 1, RD_KADD
@@ -550,6 +556,7 @@ contains
     enddo
     enddo
 
+!OCL XFILL
     do v = 1,  MSTRN_ngas
     do j = JS, JE
     do i = IS, IE
@@ -570,6 +577,7 @@ contains
     enddo
     enddo
 
+!OCL XFILL
     do v = 1,  MSTRN_ncfc
     do j = JS, JE
     do i = IS, IE
@@ -594,6 +602,7 @@ contains
     enddo
     enddo
 
+!OCL XFILL
     do v = 1,  RD_naero
     do j = JS, JE
     do i = IS, IE
@@ -633,6 +642,7 @@ contains
           enddo
           enddo
        else
+!OCL XFILL
           do j = JS, JE
           do i = IS, IE
           do RD_k = RD_KADD+1, RD_KMAX
@@ -643,6 +653,9 @@ contains
           enddo
        endif
     enddo
+
+    call PROF_rapend  ('RD_Profile', 3)
+    call PROF_rapstart('RD_MSTRN_DTRN3', 3)
 
     ! calc radiative transfer
     call RD_MSTRN_DTRN3( RD_KMAX,                      & ! [IN]
@@ -672,6 +685,8 @@ contains
                          fact_urban        (:,:),      & ! [IN]
                          flux_rad_merge    (:,:,:,:,:) ) ! [OUT]
 
+    call PROF_rapend  ('RD_MSTRN_DTRN3', 3)
+
     ! return to grid coordinate of LES domain
     do j = JS, JE
     do i = IS, IE
@@ -686,6 +701,7 @@ contains
     enddo
     enddo
 
+!OCL XFILL
     do j = JS, JE
     do i = IS, IE
        flux_rad_top(i,j,I_LW,I_up) = flux_rad_merge(1,i,j,I_LW,I_up)
@@ -1003,7 +1019,7 @@ contains
   !-----------------------------------------------------------------------------
   !> DTRN v3.2
   subroutine RD_MSTRN_DTRN3( &
-       rd_kmax,         &
+       rd_kmax,      &
        ngas,         &
        ncfc,         &
        naero,        &
@@ -1128,6 +1144,7 @@ contains
     !$acc& create(bbar, bbarh, b_sfc) &
     !$acc& create(tau, omg, g, b, fsol_rgn, flux, flux_direct)
 
+!OCL XFILL
     !$acc kernels pcopy(dz_std) pcopyin(rhodz)
     !$acc loop gang
     do j = JS, JE
@@ -1141,6 +1158,7 @@ contains
     enddo
     !$acc end kernels
 
+!OCL XFILL
     !$acc kernels pcopy(logP, logT) pcopyin(pres, temp)
     !$acc loop gang
     do j = JS, JE
@@ -1256,6 +1274,7 @@ contains
        chmax = nch(iw)
 
        !---< interpolation of gas parameters (P-T fitting) >---
+!OCL XFILL
        do ich = 1, chmax
           !$acc kernels pcopy(tauGAS) async(0)
           !$acc loop gang
@@ -1543,6 +1562,7 @@ contains
           !--- bn
           if ( irgn == I_SW ) then ! solar
 
+!OCL XFILL
              do icloud = 1, 2
                 !$acc kernels pcopy(b) async(0)
                 !$acc loop gang
@@ -1659,6 +1679,7 @@ contains
              enddo
              !$acc end kernels
 
+!OCL XFILL
              !$acc kernels pcopy(fsol_rgn) async(0)
              !$acc loop gang vector(4)
              do j = JS, JE
@@ -1679,7 +1700,8 @@ contains
           !if( IO_L ) write(IO_FID_LOG,*) "omg min", iw, ich, minval(omg(:,IS:IE,JS:JE,1)), minval(omg(:,IS:IE,JS:JE,2))
 
           ! two-stream transfer
-          call RD_MSTRN_two_stream( rd_kmax,                   & ! [IN]
+          call PROF_rapstart('RD_MSTRN_twst', 3)
+          call RD_MSTRN_two_stream( rd_kmax,                & ! [IN]
                                     iw, ich,                & ! [IN]
                                     cosSZA     (:,:),       & ! [IN]
                                     fsol_rgn   (:,:),       & ! [IN]
@@ -1693,6 +1715,7 @@ contains
                                     cldfrac    (:,:,:),     & ! [IN]
                                     flux       (:,:,:,:),   & ! [OUT]
                                     flux_direct(:,:,:)      ) ! [OUT]
+          call PROF_rapend  ('RD_MSTRN_twst', 3)
 
           !$acc kernels pcopy(rflux) pcopyin(flux, wgtch) async(0)
           !$acc loop gang
@@ -1847,7 +1870,6 @@ contains
 
 !OCL SERIAL
     do icloud = 1, 2
-
        !$acc kernels pcopy(tdir0, r0, t0, em_lw, ep_lw, em_sw, ep_sw) &
        !$acc& pcopyin(wmns, tau, g, omg, cossza, b, m, w) async(0)
 !OCL PARALLEL
@@ -2043,6 +2065,7 @@ contains
 
        if ( direction == I_SFC2TOA ) then ! adding: surface to TOA
 
+!OCL LOOP_NOFUSION,XFILL
           !$acc loop gang vector(4)
           do j = JS, JE
           !$acc loop gang vector(32)
@@ -2068,6 +2091,7 @@ contains
 
        else ! adding: TOA to surface
 
+!OCL LOOP_NOFUSION,XFILL
           !$acc loop gang vector(4)
           do j = JS, JE
           !$acc loop gang vector(32)

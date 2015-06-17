@@ -85,7 +85,6 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '*** Data source : ', trim(H_SOURCE)
     if( IO_L ) write(IO_FID_LOG,*) '*** Institute   : ', trim(H_INSTITUTE)
 
-
     allocate( AXIS_LON (IMAXB,JMAXB) )
     allocate( AXIS_LONX(IMAXB,JMAXB) )
     allocate( AXIS_LONY(IMAXB,JMAXB) )
@@ -94,18 +93,6 @@ contains
     allocate( AXIS_LATX(IMAXB,JMAXB) )
     allocate( AXIS_LATY(IMAXB,JMAXB) )
     allocate( AXIS_LATXY(IMAXB,JMAXB) )
-
-    ! only for register
-    call PROF_rapstart('FILE I NetCDF', 2)
-    call PROF_rapend  ('FILE I NetCDF', 2)
-    call PROF_rapstart('FILE O NetCDF', 2)
-    call PROF_rapend  ('FILE O NetCDF', 2)
-    call PROF_rapstart('FILE I ASCII', 2)
-    call PROF_rapend  ('FILE I ASCII', 2)
-    call PROF_rapstart('FILE O ASCII', 2)
-    call PROF_rapend  ('FILE O ASCII', 2)
-    call PROF_rapstart('FILE O Interpolation', 2)
-    call PROF_rapend  ('FILE O Interpolation')
 
     return
   end subroutine FILEIO_setup
@@ -320,7 +307,7 @@ contains
     real(RP), allocatable :: var1D(:)
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('FILE I NetCDF', 2)
+    call PROF_rapstart('FILE_I_NetCDF', 2)
 
     if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Read 1D var: ', trim(varname)
 
@@ -348,7 +335,7 @@ contains
 
     deallocate( var1D )
 
-    call PROF_rapend  ('FILE I NetCDF', 2)
+    call PROF_rapend  ('FILE_I_NetCDF', 2)
 
     return
   end subroutine FILEIO_read_1D
@@ -379,7 +366,7 @@ contains
     real(RP), allocatable :: var2D(:,:)
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('FILE I NetCDF', 2)
+    call PROF_rapstart('FILE_I_NetCDF', 2)
 
     if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Read 2D var: ', trim(varname)
 
@@ -409,7 +396,7 @@ contains
 
     deallocate( var2D )
 
-    call PROF_rapend  ('FILE I NetCDF', 2)
+    call PROF_rapend  ('FILE_I_NetCDF', 2)
 
     return
   end subroutine FILEIO_read_2D
@@ -441,7 +428,7 @@ contains
     real(RP), allocatable :: var3D(:,:,:)
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('FILE I NetCDF', 2)
+    call PROF_rapstart('FILE_I_NetCDF', 2)
 
     if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Read 3D var: ', trim(varname)
 
@@ -487,7 +474,7 @@ contains
 
     deallocate( var3D )
 
-    call PROF_rapend  ('FILE I NetCDF', 2)
+    call PROF_rapend  ('FILE_I_NetCDF', 2)
 
     return
   end subroutine FILEIO_read_3D
@@ -520,7 +507,7 @@ contains
     real(RP), allocatable :: var4D(:,:,:,:)
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('FILE I NetCDF', 2)
+    call PROF_rapstart('FILE_I_NetCDF', 2)
 
     if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Read 4D var: ', trim(varname)
 
@@ -549,7 +536,7 @@ contains
 
     deallocate( var4D )
 
-    call PROF_rapend  ('FILE I NetCDF', 2)
+    call PROF_rapend  ('FILE_I_NetCDF', 2)
 
     return
   end subroutine FILEIO_read_4D
@@ -603,7 +590,7 @@ contains
     integer :: fid, vid
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('FILE O NetCDF', 2)
+    call PROF_rapstart('FILE_O_NetCDF', 2)
 
     rankidx(1) = PRC_2Drank(PRC_myrank,1)
     rankidx(2) = PRC_2Drank(PRC_myrank,2)
@@ -667,7 +654,7 @@ contains
 
     deallocate( var1D )
 
-    call PROF_rapend  ('FILE O NetCDF', 2)
+    call PROF_rapend  ('FILE_O_NetCDF', 2)
 
     return
   end subroutine FILEIO_write_1D
@@ -729,7 +716,7 @@ contains
     logical :: nohalo_
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('FILE O NetCDF', 2)
+    call PROF_rapstart('FILE_O_NetCDF', 2)
 
     nohalo_ = .false.
     if ( present(nohalo) ) nohalo_ = nohalo
@@ -850,7 +837,7 @@ contains
 
     deallocate( var2D )
 
-    call PROF_rapend  ('FILE O NetCDF', 2)
+    call PROF_rapend  ('FILE_O_NetCDF', 2)
 
     return
   end subroutine FILEIO_write_2D
@@ -915,7 +902,7 @@ contains
     logical :: nohalo_
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('FILE O NetCDF', 2)
+    call PROF_rapstart('FILE_O_NetCDF', 2)
 
     nohalo_ = .false.
     if ( present(nohalo) ) nohalo_ = nohalo
@@ -1075,7 +1062,7 @@ contains
 
     deallocate( var3D )
 
-    call PROF_rapend  ('FILE O NetCDF', 2)
+    call PROF_rapend  ('FILE_O_NetCDF', 2)
 
     return
   end subroutine FILEIO_write_3D
@@ -1148,7 +1135,7 @@ contains
     logical :: nohalo_
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('FILE O NetCDF', 2)
+    call PROF_rapstart('FILE_O_NetCDF', 2)
 
     nohalo_ = .false.
     if ( present(nohalo) ) nohalo_ = nohalo
@@ -1215,7 +1202,7 @@ contains
 
     if ( present(timetarg) ) then
        varhalo(:,:,:) = var(:,:,:,timetarg)
- 
+
        if ( nohalo_ ) then
           ! W halo
           do k = 1, dim1_max
@@ -1302,7 +1289,7 @@ contains
 
     deallocate( var3D )
 
-    call PROF_rapend  ('FILE O NetCDF', 2)
+    call PROF_rapend  ('FILE_O_NetCDF', 2)
 
     return
   end subroutine FILEIO_write_4D

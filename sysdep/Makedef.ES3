@@ -1,5 +1,5 @@
 #
-# ------ FOR Earth Simulator 2 -----
+# ------ FOR Earth Simulator 3 -----
 #
 
 ##### for computation
@@ -7,15 +7,14 @@
 FFLAGS_FAST  = -C hopt                    \
                -Ep -f2003 -dW             \
                -Wf"-L fmtlist transform"  \
-               -Wf"-pvctl chgpwr fullmsg" \
-               -Wf"-O extendreorder"
+               -Wf"-pvctl chgpwr fullmsg"
 
-FFLAGS_DEBUG = -C debug                   \
-               -Ep -f2003 -dW             \
-               -Wf"-L fmtlist transform"  \
-               -Wf"-pvctl fullmsg"        \
-               -Wf"-init heap=nan stack=nan"
-#               -DDEBUG
+FFLAGS_DEBUG = -C vsafe                      \
+               -Ep -f2003 -dW                \
+               -Wf"-L fmtlist transform"     \
+               -Wf"-pvctl fullmsg"           \
+               -Wf"-init heap=nan stack=nan" \
+               -DDEBUG
 
 # Performance monitor
 # disable

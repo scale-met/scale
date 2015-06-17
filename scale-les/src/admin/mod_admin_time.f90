@@ -616,10 +616,6 @@ contains
 
     endif
 
-    ! only for register
-    call PROF_rapstart('Debug')
-    call PROF_rapend  ('Debug')
-
     return
   end subroutine ADMIN_TIME_setup
 

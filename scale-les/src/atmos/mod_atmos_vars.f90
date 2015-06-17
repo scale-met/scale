@@ -1273,6 +1273,7 @@ contains
     endif
 
     if ( AD_PREP_sw(I_QTOT) > 0 ) then
+!OCL XFILL
        do j  = JSB, JEB
        do i  = ISB, IEB
        do k  = KS, KE
@@ -1283,7 +1284,9 @@ contains
     endif
 
     if ( AD_PREP_sw(I_QHYD) > 0 ) then
+!OCL XFILL
        QHYD(:,:,:) = 0.0_RP
+
        do iq = QWS, QWE
          QHYD(:,:,:) = QHYD(:,:,:) + QTRC(:,:,:,iq)
        enddo
@@ -1293,14 +1296,18 @@ contains
     endif
 
     if ( AD_PREP_sw(I_QLIQ) > 0 ) then
+!OCL XFILL
        QLIQ(:,:,:) = 0.0_RP
+
        do iq = QWS, QWE
          QLIQ(:,:,:) = QLIQ(:,:,:) + QTRC(:,:,:,iq)
        enddo
     endif
 
     if ( AD_PREP_sw(I_QICE) > 0 ) then
+!OCL XFILL
        QICE(:,:,:) = 0.0_RP
+
        do iq = QIS, QIE
          QICE(:,:,:) = QICE(:,:,:) + QTRC(:,:,:,iq)
        enddo
@@ -1344,6 +1351,7 @@ contains
 
     if ( AD_PREP_sw(I_RTOT) > 0 ) then
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
        do j  = JSB, JEB
        do i  = ISB, IEB
        do k  = KS, KE
@@ -1355,6 +1363,7 @@ contains
 
     if ( AD_PREP_sw(I_CPTOT) > 0 ) then
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
        do j  = JSB, JEB
        do i  = ISB, IEB
        do k  = KS, KE
@@ -1375,6 +1384,7 @@ contains
        enddo
 
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
        do j  = JSB, JEB
        do i  = ISB, IEB
        do k  = KS, KE
@@ -1408,6 +1418,7 @@ contains
 
     if ( AD_PREP_sw(I_POTL) > 0 ) then
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
        do j  = JSB, JEB
        do i  = ISB, IEB
        do k = KS, KE
@@ -1428,6 +1439,7 @@ contains
        call SATURATION_psat_all( PSAT(:,:,:), & ! [OUT]
                                  TEMP(:,:,:)  ) ! [IN]
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
        do j  = JSB, JEB
        do i  = ISB, IEB
        do k  = KS, KE
@@ -1443,6 +1455,7 @@ contains
        call SATURATION_psat_liq( PSAT(:,:,:), & ! [OUT]
                                  TEMP(:,:,:)  ) ! [IN]
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
        do j  = JSB, JEB
        do i  = ISB, IEB
        do k  = KS, KE
@@ -1458,6 +1471,7 @@ contains
        call SATURATION_psat_ice( PSAT(:,:,:), & ! [OUT]
                                  TEMP(:,:,:)  ) ! [IN]
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
        do j  = JSB, JEB
        do i  = ISB, IEB
        do k  = KS, KE
@@ -1472,6 +1486,7 @@ contains
     if ( AD_PREP_sw(I_VOR) > 0 ) then
        ! at x, v, layer
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
        do j = 1, JA-1
        do i = 2, IA
        do k = KS, KE
@@ -1483,6 +1498,7 @@ contains
 
        ! at u, y, layer
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
        do j = 2, JA
        do i = 1, IA-1
        do k = KS, KE
@@ -1493,6 +1509,7 @@ contains
        enddo
 
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
        do j = 2, JA-1
        do i = 2, IA-1
        do k = KS, KE
@@ -1521,6 +1538,7 @@ contains
 
     if ( AD_PREP_sw(I_HDIV) > 0 ) then
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
        do j = 2, JA
        do i = 2, IA
        do k = KS, KE
@@ -1545,6 +1563,7 @@ contains
 
     if ( AD_PREP_sw(I_DIV) > 0 ) then
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
        do j = 1, JA
        do i = 1, IA
        do k = KS, KE
@@ -1556,6 +1575,7 @@ contains
     endif
 
     if ( AD_PREP_sw(I_Uabs) > 0 ) then
+!OCL XFILL
        do j = 1, JA
        do i = 1, IA
        do k = KS, KE
@@ -1571,6 +1591,7 @@ contains
     end if
 
     if ( AD_PREP_sw(I_DENS_PRIM) > 0 ) then
+!OCL XFILL
        do j = 1, JA
        do i = 1, IA
        do k = KS, KE
@@ -1581,6 +1602,7 @@ contains
     endif
 
     if ( AD_PREP_sw(I_W_MEAN) > 0 ) then
+!OCL XFILL
        do j = 1, JA
        do i = 1, IA
        do k = KS, KE
@@ -1594,6 +1616,7 @@ contains
        enddo
     end if
     if ( AD_PREP_sw(I_W_PRIM) > 0 ) then
+!OCL XFILL
        do j = 1, JA
        do i = 1, IA
        do k = KS, KE
@@ -1604,6 +1627,7 @@ contains
     endif
 
     if ( AD_PREP_sw(I_U_MEAN) > 0 ) then
+!OCL XFILL
        do j = 1, JA
        do i = 1, IA
        do k = KS, KE
@@ -1617,6 +1641,7 @@ contains
        enddo
     end if
     if ( AD_PREP_sw(I_U_PRIM) > 0 ) then
+!OCL XFILL
        do j = 1, JA
        do i = 1, IA
        do k = KS, KE
@@ -1627,6 +1652,7 @@ contains
     endif
 
     if ( AD_PREP_sw(I_V_MEAN) > 0 ) then
+!OCL XFILL
        do j = 1, JA
        do i = 1, IA
        do k = KS, KE
@@ -1640,6 +1666,7 @@ contains
        enddo
     end if
     if ( AD_PREP_sw(I_V_PRIM) > 0 ) then
+!OCL XFILL
        do j = 1, JA
        do i = 1, IA
        do k = KS, KE
@@ -1650,6 +1677,7 @@ contains
     endif
 
     if ( AD_PREP_sw(I_T_MEAN) > 0 ) then
+!OCL XFILL
        do j = 1, JA
        do i = 1, IA
        do k = KS, KE
@@ -1670,6 +1698,7 @@ contains
        enddo
     end if
     if ( AD_PREP_sw(I_POTT_PRIM) > 0 ) then
+!OCL XFILL
        do j = 1, JA
        do i = 1, IA
        do k = KS, KE
@@ -1680,6 +1709,7 @@ contains
     endif
 
     if ( AD_PREP_sw(I_QV_MEAN) > 0 ) then
+!OCL XFILL
        do j = 1, JA
        do i = 1, IA
        do k = KS, KE
@@ -1694,6 +1724,7 @@ contains
     end if
 
     if ( AD_PREP_sw(I_QHYD_MEAN) > 0 ) then
+!OCL XFILL
        do j = 1, JA
        do i = 1, IA
        do k = KS, KE
@@ -1708,6 +1739,7 @@ contains
     end if
 
     if ( AD_PREP_sw(I_QLIQ_MEAN) > 0 ) then
+!OCL XFILL
        do j = 1, JA
        do i = 1, IA
        do k = KS, KE
@@ -1722,6 +1754,7 @@ contains
     end if
 
     if ( AD_PREP_sw(I_QICE_MEAN) > 0 ) then
+!OCL XFILL
        do j = 1, JA
        do i = 1, IA
        do k = KS, KE
@@ -1736,6 +1769,7 @@ contains
     end if
 
     if ( AD_PREP_sw(I_W_PRIM2) > 0 ) then
+!OCL XFILL
        do j = 1, JA
        do i = 1, IA
        do k = KS, KE
@@ -1746,6 +1780,7 @@ contains
     endif
 
     if ( AD_PREP_sw(I_PT_W_PRIM) > 0 ) then
+!OCL XFILL
        do j = 1, JA
        do i = 1, IA
        do k = KS, KE
@@ -1756,6 +1791,7 @@ contains
     endif
 
     if ( AD_PREP_sw(I_W_PRIM3) > 0 ) then
+!OCL XFILL
        do j = 1, JA
        do i = 1, IA
        do k = KS, KE
@@ -1766,6 +1802,7 @@ contains
     endif
 
     if ( AD_PREP_sw(I_TKE_RS) > 0 ) then
+!OCL XFILL
        do j = 1, JA
        do i = 1, IA
        do k = KS, KE
@@ -1779,6 +1816,7 @@ contains
 
     if ( AD_PREP_sw(I_ENGP) > 0 ) then
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
        do j = 1, JA
        do i = 1, IA
        do k = KS, KE
@@ -1790,6 +1828,7 @@ contains
 
     if ( AD_PREP_sw(I_ENGK) > 0 ) then
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
        do j = 1, JA
        do i = 1, IA
        do k = KS, KE
@@ -1803,6 +1842,7 @@ contains
 
     if ( AD_PREP_sw(I_ENGI) > 0 ) then
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
        do j  = JSB, JEB
        do i  = ISB, IEB
        do k = KS, KE
@@ -1826,6 +1866,7 @@ contains
 
     if ( AD_PREP_sw(I_ENGT) > 0 ) then
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
        do j  = JSB, JEB
        do i  = ISB, IEB
        do k  = KS, KE
@@ -2017,6 +2058,7 @@ contains
                               RHOT(:,:,:),  & ! [IN]
                               QTRC(:,:,:,:) ) ! [IN]
 
+!OCL XFILL
     do j = 1, JA
     do i = 1, IA
     do k = KS+1, KE-1
@@ -2024,17 +2066,20 @@ contains
     enddo
     enddo
     enddo
+!OCL XFILL
     do j = 1, JA
     do i = 1, IA
        W(KS,i,j) = 0.5_RP * (               MOMZ(KS,i,j) ) / DENS(KS,i,j)
     enddo
     enddo
+!OCL XFILL
     do j = 1, JA
     do i = 1, IA
        W(KE,i,j) = 0.5_RP * ( MOMZ(KE-1,i,j)             ) / DENS(KE,i,j)
     enddo
     enddo
 
+!OCL XFILL
     do j = 1, JA
     do i = 2, IA
     do k = KS, KE
@@ -2042,12 +2087,14 @@ contains
     enddo
     enddo
     enddo
+!OCL XFILL
     do j = 1, JA
     do k = KS, KE
        U(k,1,j) = MOMX(k,1,j) / DENS(k,1,j)
     enddo
     enddo
 
+!OCL XFILL
     do j = 2, JA
     do i = 1, IA
     do k = KS, KE
@@ -2055,6 +2102,7 @@ contains
     enddo
     enddo
     enddo
+!OCL XFILL
     do i = 1, IA
     do k = KS, KE
        V(k,i,1) = MOMY(k,i,1) / DENS(k,i,1)
@@ -2078,6 +2126,7 @@ contains
     call COMM_wait ( U(:,:,:), 1, .false. )
     call COMM_wait ( V(:,:,:), 2, .false. )
 
+!OCL XFILL
     do j = 1, JA
     do i = 1, IA
     do k = KS, KE
@@ -2159,6 +2208,7 @@ contains
     !##### Mass Budget #####
     do iq = 1, QA
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -2176,6 +2226,7 @@ contains
                        QTRC(:,:,:,:) ) ! [IN]
 
     !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -2187,6 +2238,7 @@ contains
 
     ! total vapor,liquid,solid tracers
     !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -2200,6 +2252,7 @@ contains
     call MONIT_put( AD_MONIT_id(I_EVAP), SFLX_QTRC(:,:,I_QV) )
 
     ! total precipitation
+!OCL XFILL
     do j = JS, JE
     do i = IS, IE
        PRCP(i,j) = SFLX_rain(i,j) + SFLX_snow(i,j)
@@ -2235,6 +2288,7 @@ contains
     enddo
 
     !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -2243,6 +2297,7 @@ contains
     enddo
     enddo
 
+!OCL XFILL
     do j = JS, JE
     do i = IS, IE
        SFLX_RD_net(i,j) = ( SFLX_LW_up(i,j) - SFLX_LW_dn(i,j) ) &
@@ -2254,6 +2309,7 @@ contains
     enddo
 
     !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
     do j = JS, JE
     do i = IS, IE
        ENGFLXT(i,j) = SFLX_SH(i,j) + SFLX_LH(i,j) &
@@ -2285,8 +2341,11 @@ contains
     call MONIT_put( AD_MONIT_id(I_ENGTOA_SW_dn), TOAFLX_SW_dn(:,:) )
 
     if ( ATMOS_VARS_CHECKRANGE ) then
+!OCL XFILL
        WORK(:,:,:,1) = W(:,:,:)
+!OCL XFILL
        WORK(:,:,:,2) = U(:,:,:)
+!OCL XFILL
        WORK(:,:,:,3) = V(:,:,:)
 
        WNAME(1) = "W"

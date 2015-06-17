@@ -76,9 +76,9 @@ contains
        call ATMOS_PHY_RD_setup( ATMOS_PHY_RD_TYPE )
 
        ! run once (only for the diagnostic value)
-       call PROF_rapstart('ATM Radiation', 1)
+       call PROF_rapstart('ATM_Radiation', 1)
        call ATMOS_PHY_RD_driver( update_flag = .true. )
-       call PROF_rapend  ('ATM Radiation', 1)
+       call PROF_rapend  ('ATM_Radiation', 1)
 
     else
 
@@ -226,6 +226,7 @@ contains
                         RHOT_t_RD(:,:,:)      ) ! [OUT]
 
 
+!OCL XFILL
        do j = JS, JE
        do i = IS, IE
           SFCFLX_LW_up(i,j)      = flux_rad(KS-1,i,j,I_LW,I_up)
@@ -238,6 +239,7 @@ contains
        enddo
        enddo
 
+!OCL XFILL
        do j = JS, JE
        do i = IS, IE
           TOAFLX_LW_up(i,j)      = flux_rad_top(i,j,I_LW,I_up)
@@ -250,6 +252,7 @@ contains
        enddo
        enddo
 
+!OCL XFILL
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE

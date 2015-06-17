@@ -361,7 +361,7 @@ contains
     integer :: k, i, j
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('MP_kessler')
+    call PROF_rapstart('MP_kessler', 3)
 
     rdt = 1.0_RP / dt
 
@@ -446,7 +446,7 @@ contains
     enddo
     enddo
 
-    call PROF_rapend  ('MP_kessler')
+    call PROF_rapend  ('MP_kessler', 3)
 
     return
   end subroutine MP_kessler

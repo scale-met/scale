@@ -69,9 +69,9 @@ contains
 
     !########## History & Monitor ##########
     if ( URBAN_sw ) then
-       call PROF_rapstart('URB History', 1)
+       call PROF_rapstart('URB_History', 1)
        call URBAN_vars_history
-       call PROF_rapend  ('URB History', 1)
+       call PROF_rapend  ('URB_History', 1)
     endif
 
     return
@@ -121,13 +121,15 @@ contains
     !---------------------------------------------------------------------------
 
     !########## Get Surface Boundary from coupler ##########
+    call PROF_rapstart('URB_SfcExch', 2)
     call URBAN_SURFACE_GET
+    call PROF_rapend  ('URB_SfcExch', 2)
 
     !########## Physics ##########
     if ( URBAN_sw ) then
-       call PROF_rapstart('URB Physics', 1)
+       call PROF_rapstart('URB_Physics', 1)
        call URBAN_PHY_driver( update_flag = .true. )
-       call PROF_rapend  ('URB Physics', 1)
+       call PROF_rapend  ('URB_Physics', 1)
     endif
 
     !########## Update ##########
@@ -159,9 +161,12 @@ contains
     call URBAN_vars_total
 
     !########## Set Surface Boundary to coupler ##########
+    call PROF_rapstart('URB_SfcExch', 2)
     call URBAN_SURFACE_SET( countup=.true. )
+    call PROF_rapend  ('URB_SfcExch', 2)
 
     !########## reset tendencies ##########
+!OCL XFILL
     do j = JS, JE
     do i = IS, IE
     do k = UKS, UKE
@@ -171,6 +176,8 @@ contains
     end do
     end do
     end do
+
+!OCL XFILL
     do j = JS, JE
     do i = IS, IE
        URBAN_TR_t(i,j) = 0.0_RP
@@ -188,9 +195,9 @@ contains
     enddo
 
     !########## History & Monitor ##########
-    call PROF_rapstart('URB History', 1)
+    call PROF_rapstart('URB_History', 1)
     call URBAN_vars_history
-    call PROF_rapend  ('URB History', 1)
+    call PROF_rapend  ('URB_History', 1)
 
     return
   end subroutine URBAN_driver

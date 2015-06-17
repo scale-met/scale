@@ -312,7 +312,7 @@ contains
     real(RP) :: alpha(KA,IA,JA)
 
     real(RP) :: ac           !< \alpha_c
-    
+
     real(RP) :: Q1
     real(RP) :: Qsl(KA,IA,JA)
     real(RP) :: dQsl
@@ -460,6 +460,7 @@ contains
     do IIS = IS, IE, IBLOCK
     IIE = IIS+IBLOCK-1
 
+!OCL XFILL
        do j = JJS  , JJE+1
        do i = IIS-1, IIE+1
        do k = KS, KE_PBL+1
@@ -468,6 +469,7 @@ contains
        end do
        end do
 
+!OCL XFILL
        do j = JJS-1, JJE+1
        do i = IIS  , IIE+1
        do k = KS, KE_PBL+1
@@ -487,6 +489,7 @@ contains
     call ATMOS_THERMODYN_templhs( lhs, temp )
     call ATMOS_SATURATION_alpha( alpha, temp )
 
+!OCL LOOP_NOFUSION,PREFETCH_SEQUENTIAL(SOFT),SWP
     do j = JS, JE
     do i = IS, IE
        do k = KS, KE_PBL+1
@@ -544,6 +547,7 @@ contains
     end do
 
     if ( ATMOS_PHY_TB_MYNN_TKE_INIT ) then
+!OCL XFILL
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE_PBL
@@ -552,6 +556,7 @@ contains
        end do
        end do
     else
+!OCL XFILL
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE_PBL
@@ -574,6 +579,7 @@ contains
          dudz2, Ri, l ) ! (in)
 
     if ( ATMOS_PHY_TB_MYNN_TKE_INIT ) then
+!OCL XFILL
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE_PBL
@@ -582,6 +588,7 @@ contains
        end do
        end do
        end do
+!OCL XFILL
        do j = JS, JE
        do i = IS, IE
        do k = KE_PBL+1, KE
@@ -602,7 +609,8 @@ contains
     call ATMOS_SATURATION_pres2qsat( Qsl, & ! (out)
                                      POTL * temp / POTT, pres ) ! (in)
 
-    do j = JS, JE 
+!OCL LOOP_NOFUSION,PREFETCH_SEQUENTIAL(SOFT),SWP
+    do j = JS, JE
     do i = IS, IE
        do k = KS+1, KE_PBL
 
@@ -981,7 +989,7 @@ contains
                    * (NU(k,i,j)*DENS(k,i,j)+NU(k-1,i,j)*DENS(k-1,i,j))*1.5_RP ) &
                  * RCDZ(k) / GSQRT(k,i,j,I_XYZ) / DENS(k,i,j) &
                  - 2.0_RP*tke_N(k,i,j) * q(k,i,j) / (B1 * l(k,i,j)) ) &
-                 * dt 
+                 * dt
              if ( tke_N(k,i,j) > 0.1_RP .and. abs(tke(1,i,j) - tke_N(k,i,j))/tke_N(k,i,j) > 1e-10_RP ) then
                 advc = ( tke(k,i,j) - d(k,i,j) ) / dt + Nu(k,i,j) * (dudz2(k,i,j) - n2(k,i,j)/Pr(k,i,j))
                 write(*,*)k,i,j,tke(1,i,j),tke_N(k,i,j), tke(k,i,j),nu(k,i,j),dudz2(k,i,j),n2(k,i,j),pr(k,i,j),advc
@@ -1077,6 +1085,7 @@ contains
     real(RP) :: sw
     integer :: k, i, j
 
+!OCL LOOP_NOFUSION,PREFETCH_SEQUENTIAL(SOFT),SWP
     do j = JS, JE
     do i = IS, IE
        int_qz = 0.0_RP
@@ -1141,6 +1150,7 @@ contains
     real(RP) :: q2
     integer :: k, i, j
 
+!OCL LOOP_NOFUSION,PREFETCH_SEQUENTIAL(SOFT),SWP
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE_PBL
@@ -1185,6 +1195,7 @@ contains
 
     integer :: k, i, j
 
+!OCL LOOP_NOFUSION,PREFETCH_SEQUENTIAL(SOFT),SWP
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE_PBL

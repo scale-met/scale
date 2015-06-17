@@ -400,7 +400,7 @@ contains
 
     if ( .not. ND_USE_RS ) then
 
-       call PROF_rapstart("NumFilter Main", 3)
+       call PROF_rapstart("NumFilter_Main", 3)
 
        do j = JS-2, JE+2
        do i = IS-2, IE+2
@@ -455,9 +455,9 @@ contains
        end do
        end do
 
-       call PROF_rapend  ("NumFilter Main", 3)
+       call PROF_rapend  ("NumFilter_Main", 3)
 
-       call PROF_rapstart("NumFilter Comm", 3)
+       call PROF_rapstart("NumFilter_Comm", 3)
 
        call COMM_vars8( dens_diff,  1 )
        call COMM_vars8( pott_diff,  2 )
@@ -465,7 +465,7 @@ contains
        call COMM_wait ( dens_diff,  1 )
        call COMM_wait ( pott_diff,  2 )
 
-       call PROF_rapend  ("NumFilter Comm", 3)
+       call PROF_rapend  ("NumFilter_Comm", 3)
 
     end if
 
@@ -474,7 +474,7 @@ contains
 
     if ( ND_USE_RS ) then
 
-       call PROF_rapstart("NumFilter Main", 3)
+       call PROF_rapstart("NumFilter_Main", 3)
 
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JS-1, JE+2
@@ -485,7 +485,7 @@ contains
        enddo
        enddo
 
-       call PROF_rapend("NumFilter Main", 3)
+       call PROF_rapend("NumFilter_Main", 3)
 
     endif
 
@@ -494,7 +494,7 @@ contains
                        nd_order, & ! (in)
                        0, 0, 0, KE )
 
-    call PROF_rapstart("NumFilter Main", 3)
+    call PROF_rapstart("NumFilter_Main", 3)
 
     !-----< density >-----
 
@@ -545,20 +545,20 @@ contains
     enddo
     enddo
 
-    call PROF_rapend  ("NumFilter Main", 3)
+    call PROF_rapend  ("NumFilter_Main", 3)
 
-    call PROF_rapstart("NumFilter Comm", 3)
+    call PROF_rapstart("NumFilter_Comm", 3)
 
     call COMM_vars8( num_diff(:,:,:,I_DENS,ZDIR),  I_COMM_DENS_Z )
     call COMM_vars8( num_diff(:,:,:,I_DENS,XDIR),  I_COMM_DENS_X )
     call COMM_vars8( num_diff(:,:,:,I_DENS,YDIR),  I_COMM_DENS_Y )
 
-    call PROF_rapend  ("NumFilter Comm", 3)
+    call PROF_rapend  ("NumFilter_Comm", 3)
 
 
     !-----< z-momentum >-----
 
-    call PROF_rapstart("NumFilter Main", 3)
+    call PROF_rapstart("NumFilter_Main", 3)
 
     !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
     do j = JS-2, JE+2
@@ -569,14 +569,14 @@ contains
     enddo
     enddo
 
-    call PROF_rapend  ("NumFilter Main", 3)
+    call PROF_rapend  ("NumFilter_Main", 3)
 
     call calc_numdiff( work, iwork, & ! (out)
                        VELZ, & ! (in)
                        nd_order, & ! (in)
                        1, 0, 0, KE-1 )
 
-    call PROF_rapstart("NumFilter Main", 3)
+    call PROF_rapstart("NumFilter_Main", 3)
 
     !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
@@ -629,20 +629,20 @@ contains
     enddo
     enddo
 
-    call PROF_rapend  ("NumFilter Main", 3)
+    call PROF_rapend  ("NumFilter_Main", 3)
 
-    call PROF_rapstart("NumFilter Comm", 3)
+    call PROF_rapstart("NumFilter_Comm", 3)
 
     call COMM_vars8( num_diff(:,:,:,I_MOMZ,ZDIR), I_COMM_MOMZ_Z )
     call COMM_vars8( num_diff(:,:,:,I_MOMZ,XDIR), I_COMM_MOMZ_X )
     call COMM_vars8( num_diff(:,:,:,I_MOMZ,YDIR), I_COMM_MOMZ_Y )
 
-    call PROF_rapend  ("NumFilter Comm", 3)
+    call PROF_rapend  ("NumFilter_Comm", 3)
 
 
     !-----< x-momentum >-----
 
-    call PROF_rapstart("NumFilter Main", 3)
+    call PROF_rapstart("NumFilter_Main", 3)
 
     !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
     do j = JS-2, JE+2
@@ -653,7 +653,7 @@ contains
     enddo
     enddo
 
-    call PROF_rapend  ("NumFilter Main", 3)
+    call PROF_rapend  ("NumFilter_Main", 3)
 
     call calc_numdiff( work, iwork, & ! (out)
                        VELX, & ! (in)
@@ -661,7 +661,7 @@ contains
                        0, 1, 0, KE )
 
 
-    call PROF_rapstart("NumFilter Main", 3)
+    call PROF_rapstart("NumFilter_Main", 3)
 
     !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
@@ -714,20 +714,20 @@ contains
     enddo
     enddo
 
-    call PROF_rapend  ("NumFilter Main", 3)
+    call PROF_rapend  ("NumFilter_Main", 3)
 
-    call PROF_rapstart("NumFilter Comm", 3)
+    call PROF_rapstart("NumFilter_Comm", 3)
 
     call COMM_vars8( num_diff(:,:,:,I_MOMX,ZDIR), I_COMM_MOMX_Z )
     call COMM_vars8( num_diff(:,:,:,I_MOMX,XDIR), I_COMM_MOMX_X )
     call COMM_vars8( num_diff(:,:,:,I_MOMX,YDIR), I_COMM_MOMX_Y )
 
-    call PROF_rapend  ("NumFilter Comm", 3)
+    call PROF_rapend  ("NumFilter_Comm", 3)
 
 
     !-----< y-momentum >-----
 
-    call PROF_rapstart("NumFilter Main", 3)
+    call PROF_rapstart("NumFilter_Main", 3)
 
     !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
     do j = JS-2, JE+1
@@ -738,14 +738,14 @@ contains
     enddo
     enddo
 
-    call PROF_rapend  ("NumFilter Main", 3)
+    call PROF_rapend  ("NumFilter_Main", 3)
 
     call calc_numdiff( work, iwork, & ! (out)
                        VELY, & ! (in)
                        nd_order, & ! (in)
                        0, 0, 1, KE )
 
-    call PROF_rapstart("NumFilter Main", 3)
+    call PROF_rapstart("NumFilter_Main", 3)
 
     !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
@@ -797,19 +797,19 @@ contains
     enddo
     enddo
 
-    call PROF_rapend  ("NumFilter Main", 3)
+    call PROF_rapend  ("NumFilter_Main", 3)
 
-    call PROF_rapstart("NumFilter Comm", 3)
+    call PROF_rapstart("NumFilter_Comm", 3)
 
     call COMM_vars8( num_diff(:,:,:,I_MOMY,ZDIR), I_COMM_MOMY_Z )
     call COMM_vars8( num_diff(:,:,:,I_MOMY,XDIR), I_COMM_MOMY_X )
     call COMM_vars8( num_diff(:,:,:,I_MOMY,YDIR), I_COMM_MOMY_Y )
 
-    call PROF_rapend  ("NumFilter Comm", 3)
+    call PROF_rapend  ("NumFilter_Comm", 3)
 
     !-----< rho * theta >-----
 
-    call PROF_rapstart("NumFilter Main", 3)
+    call PROF_rapstart("NumFilter_Main", 3)
 
     if ( ND_USE_RS ) then
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
@@ -822,14 +822,14 @@ contains
        enddo
     endif
 
-    call PROF_rapend  ("NumFilter Main", 3)
+    call PROF_rapend  ("NumFilter_Main", 3)
 
     call calc_numdiff( work, iwork, & ! (out)
                        pott_diff, & ! (in)
                        nd_order, & ! (in)
                        0, 0, 0, KE )
 
-    call PROF_rapstart("NumFilter Main", 3)
+    call PROF_rapstart("NumFilter_Main", 3)
 
     !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
@@ -885,9 +885,9 @@ contains
     enddo
     enddo
 
-    call PROF_rapend  ("NumFilter Main", 3)
+    call PROF_rapend  ("NumFilter_Main", 3)
 
-    call PROF_rapstart("NumFilter Comm", 3)
+    call PROF_rapstart("NumFilter_Comm", 3)
 
     call COMM_vars8( num_diff(:,:,:,I_RHOT,ZDIR), I_COMM_RHOT_Z )
     call COMM_vars8( num_diff(:,:,:,I_RHOT,XDIR), I_COMM_RHOT_X )
@@ -909,7 +909,7 @@ contains
     call COMM_wait ( num_diff(:,:,:,I_RHOT,XDIR), I_COMM_RHOT_X )
     call COMM_wait ( num_diff(:,:,:,I_RHOT,YDIR), I_COMM_RHOT_Y )
 
-    call PROF_rapend  ("NumFilter Comm", 3)
+    call PROF_rapend  ("NumFilter_Comm", 3)
 
     return
   end subroutine ATMOS_DYN_numfilter_coef
@@ -978,7 +978,7 @@ contains
 
     if ( iq == I_QV .and. (.not. ND_USE_RS) ) then
 
-       call PROF_rapstart("NumFilter Main", 3)
+       call PROF_rapstart("NumFilter_Main", 3)
 
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JS-1, JE+2
@@ -1009,14 +1009,14 @@ contains
        end do
        end do
 
-       call PROF_rapend  ("NumFilter Main", 3)
+       call PROF_rapend  ("NumFilter_Main", 3)
 
-       call PROF_rapstart("NumFilter Comm", 3)
+       call PROF_rapstart("NumFilter_Comm", 3)
 
        call COMM_vars8(qv_diff, 1)
        call COMM_wait (qv_diff, 1)
 
-       call PROF_rapend  ("NumFilter Comm", 3)
+       call PROF_rapend  ("NumFilter_Comm", 3)
 
     end if
 
@@ -1024,7 +1024,7 @@ contains
 
        if ( ND_USE_RS ) then
 
-          call PROF_rapstart("NumFilter Main", 3)
+          call PROF_rapstart("NumFilter_Main", 3)
 
           !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           do j = JS-1, JE+2
@@ -1035,7 +1035,7 @@ contains
           enddo
           enddo
 
-          call PROF_rapend  ("NumFilter Main", 3)
+          call PROF_rapend  ("NumFilter_Main", 3)
 
        endif
 
@@ -1054,7 +1054,7 @@ contains
     endif ! QV or not?
 
 
-    call PROF_rapstart("NumFilter Main", 3)
+    call PROF_rapstart("NumFilter_Main", 3)
 
 
     !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
@@ -1111,9 +1111,9 @@ contains
     enddo
     enddo
 
-    call PROF_rapend  ("NumFilter Main", 3)
+    call PROF_rapend  ("NumFilter_Main", 3)
 
-    call PROF_rapstart("NumFilter Comm", 3)
+    call PROF_rapstart("NumFilter_Comm", 3)
 
     call COMM_vars8( num_diff_q(:,:,:,ZDIR), I_COMM_QTRC_Z )
     call COMM_vars8( num_diff_q(:,:,:,XDIR), I_COMM_QTRC_X )
@@ -1123,7 +1123,7 @@ contains
     call COMM_wait ( num_diff_q(:,:,:,XDIR), I_COMM_QTRC_X )
     call COMM_wait ( num_diff_q(:,:,:,YDIR), I_COMM_QTRC_Y )
 
-    call PROF_rapend  ("NumFilter Comm", 3)
+    call PROF_rapend  ("NumFilter_Comm", 3)
 
     return
   end subroutine ATMOS_DYN_numfilter_coef_q
@@ -1196,13 +1196,13 @@ contains
 
     integer :: no
 
-    call PROF_rapstart("NumFilter Main", 3)
+    call PROF_rapstart("NumFilter_Main", 3)
 
     call calc_diff3( work(:,:,:,:,1), & ! (out)
                      data, & ! (in)
                      KO, IO, JO ) ! (in)
 
-    call PROF_rapend  ("NumFilter Main", 3)
+    call PROF_rapend  ("NumFilter_Main", 3)
 
     !###########################################################################
     ! High order coefficients
@@ -1213,7 +1213,7 @@ contains
 
     do no = 2, nd_order
 
-       call PROF_rapstart("NumFilter Comm", 3)
+       call PROF_rapstart("NumFilter_Comm", 3)
 
        call COMM_vars8( work(:,:,:,ZDIR,i_in),  16 )
        call COMM_vars8( work(:,:,:,XDIR,i_in),  17 )
@@ -1223,9 +1223,9 @@ contains
        call COMM_wait ( work(:,:,:,XDIR,i_in),  17 )
        call COMM_wait ( work(:,:,:,YDIR,i_in),  18 )
 
-       call PROF_rapend  ("NumFilter Comm", 3)
+       call PROF_rapend  ("NumFilter_Comm", 3)
 
-       call PROF_rapstart("NumFilter Main", 3)
+       call PROF_rapstart("NumFilter_Main", 3)
 
        call calc_diff4( work(:,:,:,:,i_out), & ! (out)
                         work(:,:,:,:,i_in),  & ! (in)
@@ -1234,7 +1234,7 @@ contains
                         CNY4(:,:,1+JO),      & ! (in)
                         KEE                  ) ! (in)
 
-       call PROF_rapend  ("NumFilter Main", 3)
+       call PROF_rapend  ("NumFilter_Main", 3)
 
        ! swap pointer target
        i_tmp = i_in
@@ -1265,7 +1265,7 @@ contains
     KEE = KE-KO
 
     if ( KO == 0 ) then
- 
+
       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JS, JE
        do i = IS, IE
@@ -1365,8 +1365,8 @@ contains
 
     end if
 
-    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
     if ( IO == 0 ) then
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JS, JE
        do i = IS, IE
        do k = KS, KEE
@@ -1384,6 +1384,7 @@ contains
        enddo
        enddo
     else
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JS, JE
        do i = IS, IE
        do k = KS, KEE
@@ -1402,6 +1403,7 @@ contains
        enddo
     end if
 
+    !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
     do i = IS, IE
        diff(   1:KS-1,i,j,XDIR) = 0.0_RP
@@ -1447,6 +1449,7 @@ contains
        enddo
     end if
 
+    !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
     do i = IS, IE
        diff(   1:KS-1,i,j,YDIR) = 0.0_RP

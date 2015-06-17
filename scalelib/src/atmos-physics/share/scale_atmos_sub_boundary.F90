@@ -1982,6 +1982,7 @@ contains
     real(RP) :: dummy_d( DAUGHTER_KA(handle), DAUGHTER_IA(handle), DAUGHTER_JA(handle), NESTQA )
     !---------------------------------------------------------------------------
 
+!OCL XFILL
     dummy_d(:,:,:,:) = 0.0_RP
 
     call NEST_COMM_nestdown( handle,                 &
@@ -2024,6 +2025,7 @@ contains
     real(RP) :: dummy_p( PARENT_KA(handle), PARENT_IA(handle), PARENT_JA(handle), NESTQA )
     !---------------------------------------------------------------------------
 
+!OCL XFILL
     dummy_p(:,:,:,:) = 0.0_RP
 
     call NEST_COMM_nestdown( handle,                                         &

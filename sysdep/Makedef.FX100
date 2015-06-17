@@ -1,10 +1,10 @@
 #
-# ------ FOR K computer -----
+# ------ FOR FX100 -----
 #
 
 ##### for computation
 
-FFLAGS_FAST  = -Kfast,parallel,ocl,preex,array_private,noalias=s,mfunc=2 \
+FFLAGS_FAST  = -Kfast,parallel,ocl,preex,array_private,noalias=s,mfunc=1 \
                -Qi -Qt -X03 -Ncompdisp -Koptmsg=1 -Cpp                   \
                -x-                                                       \
                -Ksimd                                                    \
@@ -13,7 +13,7 @@ FFLAGS_FAST  = -Kfast,parallel,ocl,preex,array_private,noalias=s,mfunc=2 \
 FFLAGS_AGGRESSIVE = $(FFLAGS_FAST)  \
                    -Kautoobjstack   \
                    -Ktemparraystack \
-                   -Kinstance=8     \
+                   -Kinstance=16    \
                    -Kswp_strong
 
 # note: Kauto,threadsafe,autoobjstack,temparraystack depends on the stacksize.
@@ -61,8 +61,8 @@ LD      = $(FC)
 LDFLAGS = $(FFLAGS)
 
 ###### NetCDF library
-NETCDF_INCLUDE ?= -I/opt/aics/netcdf/k-serial-noszip/include
-NETCDF_LIBS    ?= -L/opt/aics/netcdf/k-serial-noszip/lib-static -lnetcdff -lnetcdf -lhdf5_hl -lhdf5 -lz -lm
+NETCDF_INCLUDE ?= -I/data/yashiro/tool/cross-K/include
+NETCDF_LIBS    ?= -L/data/yashiro/tool/cross-K/lib -lnetcdff -lnetcdf -lhdf5_hl -lhdf5 -lsz -lz
 
 ###### Lapack
 LAPACK_LIBS    ?= -SSL2

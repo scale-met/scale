@@ -213,7 +213,7 @@ clean:
 	rm -f *.o *.mod *.lst
 
 dependency:
-	../tools/makedepend .
+	./makedepend .
 
 
 

@@ -1,5 +1,5 @@
 #
-# ------ FOR K computer -----
+# ------ FOR FX10 -----
 #
 
 ##### for computation
@@ -61,15 +61,15 @@ LD      = $(FC)
 LDFLAGS = $(FFLAGS)
 
 ###### NetCDF library
-NETCDF_INCLUDE ?= -I/opt/aics/netcdf/k-serial-noszip/include
-NETCDF_LIBS    ?= -L/opt/aics/netcdf/k-serial-noszip/lib-static -lnetcdff -lnetcdf -lhdf5_hl -lhdf5 -lz -lm
+NETCDF_INCLUDE ?=
+NETCDF_LIBS    ?= -lnetcdff -lnetcdf -lhdf5_hl -lhdf5 -lsz -lz -lm
 
 ###### Lapack
-LAPACK_LIBS    ?= -SSL2
+LAPACK_LIBS    ?= -SSL2BLAMP
 
 ##### for frontend
 INSTALL = install
 AR      = ar
 ARFLAGS = r
 RANLIB  = ranlib
-JOBSUB  = pjsub
+JOBSUB  = pjsub -g gh22

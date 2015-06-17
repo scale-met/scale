@@ -217,7 +217,7 @@ contains
     call PRC_setup
 
     ! setup Log
-    call LogInit(IO_FID_CONF, IO_FID_LOG, IO_L)
+    call LogInit( IO_FID_CONF, IO_FID_LOG, IO_L )
 
     ! setup PROF
     call PROF_setup
@@ -234,11 +234,11 @@ contains
     ! setup time
     call ADMIN_TIME_setup( setup_TimeIntegration = .true. )
 
+    call PROF_setprefx('INIT')
     call PROF_rapstart('Initialize', 0)
 
     ! setup horizontal/vertical grid coordinates (cartesian,idealized)
     call GRID_INDEX_setup
-
     call GRID_setup
 
     call LAND_GRID_INDEX_setup
@@ -350,7 +350,8 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ START TIMESTEP ++++++'
-    call PROF_rapstart('Main Loop(Total)', 0)
+    call PROF_setprefx('MAIN')
+    call PROF_rapstart('Main_Loop', 0)
 
     if( ATMOS_do ) call ATMOS_driver_firstsend
 
@@ -387,7 +388,9 @@ contains
 
     enddo
 
-    call PROF_rapend('Main Loop(Total)', 0)
+    if( ATMOS_do ) call ATMOS_driver_finalize
+
+    call PROF_rapend('Main_Loop', 0)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ END TIMESTEP ++++++'
     if( IO_L ) write(IO_FID_LOG,*)
 
@@ -399,8 +402,6 @@ contains
 #endif
 
     !########## Finalize ##########
-
-    if( ATMOS_do ) call ATMOS_driver_finalize
 
     ! check data
     if( ATMOS_sw_check ) call ATMOS_vars_restart_check

@@ -12,19 +12,36 @@ DATPARAM=(`echo ${8} | tr -s ',' ' '`)
 DATDISTS=(`echo ${9} | tr -s ',' ' '`)
 
 # System specific
-MPIEXEC="mpirun -np ${TPROC}"
+MPIEXEC="mpiexec"
 
-# Generate run.sh
+array=( `echo ${TPROC} | tr -s 'x' ' '`)
+x=${array[0]}
+y=${array[1]:-1}
+let xy="${x} * ${y}"
+
+# for RICC-FX100
+NNODE=`expr $NMPI / 2`
 
 cat << EOF1 > ./run.sh
 #! /bin/bash -x
 ################################################################################
 #
-# ------ FOR MacOSX & gfortran4.9 & OpenMPI1.7 -----
+# for FX100
 #
 ################################################################################
-export FORT_FMT_RECL=400
-export GFORTRAN_UNBUFFERED_ALL=Y
+#PJM -L rscunit=gwmpc
+#PJM -L rscgrp=batch
+#PJM -L node=${NNODE}
+#PJM --mpi proc=${NMPI}
+#PJM -L elapse=12:00:00
+#PJM -j
+#PJM -s
+#
+. /work/system/Env_base
+#
+export PARALLEL=16
+export OMP_NUM_THREADS=16
+#export fu08bf=1
 
 EOF1
 
@@ -47,22 +64,21 @@ if [ ! ${DATDISTS[0]} = "" ]; then
       PE=`printf %06d ${prcm1}`
       for f in ${DATDISTS[@]}
       do
-         if [ -f ${DATDIR}/${f}.pe${PE} ]; then
-            echo "ln -svf ${DATDIR}/${f}.pe${PE} ." >> ./run.sh
+         if [ -f ${f}.pe${PE}.nc ]; then
+            echo "ln -svf ${f}.pe${PE}.nc ." >> ./run.sh
          else
-            echo "datafile does not found! : ${DATDIR}/${f}.pe${PE}"
+            echo "datafile does not found! : ${f}.pe${PE}.nc"
             exit 1
          fi
       done
    done
 fi
 
-
 cat << EOF2 >> ./run.sh
 
 # run
-${MPIEXEC} ${BINDIR}/${INITNAME} ${INITCONF} || exit 1
-${MPIEXEC} ${BINDIR}/${BINNAME}  ${RUNCONF}  || exit 1
+${MPIEXEC} ${BINDIR}/${INITNAME} ${INITCONF} || exit
+${MPIEXEC} ${BINDIR}/${BINNAME}  ${RUNCONF}  || exit
 
 ################################################################################
 EOF2

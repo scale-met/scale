@@ -379,28 +379,6 @@ contains
     itp_nh = int( NEST_INTERP_LEVEL )
     itp_nv = 2
 
-    ! only for register
-    if ( ONLINE_IAM_PARENT .or. ONLINE_IAM_DAUGHTER ) then
-       call PROF_rapstart('NESTCOM total parent')
-       call PROF_rapend  ('NESTCOM total parent')
-       call PROF_rapstart('NESTCOM send parent')
-       call PROF_rapend  ('NESTCOM send parent')
-       call PROF_rapstart('NESTCOM test parent')
-       call PROF_rapend  ('NESTCOM test parent')
-       call PROF_rapstart('NESTCOM wait parent')
-       call PROF_rapend  ('NESTCOM wait parent')
-       call PROF_rapstart('NESTCOM total child')
-       call PROF_rapend  ('NESTCOM total child')
-       call PROF_rapstart('NESTCOM recv child')
-       call PROF_rapend  ('NESTCOM recv child')
-       call PROF_rapstart('NESTCOM test child')
-       call PROF_rapend  ('NESTCOM test child')
-       call PROF_rapstart('NESTCOM wait child')
-       call PROF_rapend  ('NESTCOM wait child')
-       call PROF_rapstart('NESTCOM interp')
-       call PROF_rapend  ('NESTCOM interp')
-    endif
-
     DEBUG_DOMAIN_NUM = ONLINE_DOMAIN_NUM
     if( ONLINE_SPECIFIED_MAXRQ > max_rq ) max_rq = ONLINE_SPECIFIED_MAXRQ
     allocate( ireq_p(max_rq)     )
@@ -1249,8 +1227,7 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
     use scale_grid_real, only: &
        REAL_DOMAIN_CATALOGUE
     use scale_comm, only: &
-       COMM_datatype,  &
-       COMM_world,     &
+       COMM_world, &
        COMM_bcast
     implicit none
 
@@ -1641,10 +1618,8 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
     use scale_grid_real, only: &
        REAL_DOMAIN_CATALOGUE
     use scale_comm, only: &
-       COMM_vars8,  &
-       COMM_wait,   &
-       COMM_world,  &
-       COMM_datatype
+       COMM_vars8, &
+       COMM_wait
     use scale_gridtrans, only: &
        rotc => GTRANS_ROTC
     implicit none
@@ -1699,10 +1674,12 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
 
     if ( NEST_Filiation( INTERCOMM_ID(HANDLE) ) > 0 ) then
     !-------------------------------------------------------- parent [send issue]
-       call PROF_rapstart('NESTCOM total parent')
+       call PROF_rapstart('NEST_total_P', 2)
 
        nsend = nsend + 1
        if( IO_L ) write(IO_FID_LOG,'(1X,A,I5,A)') "*** NestIDC [P]: que send ( ", nsend, " )"
+
+       call PROF_rapstart('NEST_pack_P', 2)
 
        ! to keep values at that time by finish of sending process
        org_DENS(:,:,:) = ipt_DENS(:,:,:)
@@ -1713,7 +1690,6 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
        do iq = 1, BND_QA
           org_QTRC(:,:,:,iq) = ipt_QTRC(:,:,:,iq)
        enddo
-
 
        !*** request control
        !--- do not change the calling order below;
@@ -1797,11 +1773,13 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
 
        rq_tot_p = rq_ctl_p
 
-       call PROF_rapend('NESTCOM total parent')
+       call PROF_rapend  ('NEST_pack_P', 2)
+
+       call PROF_rapend  ('NEST_total_P', 2)
 
     elseif ( NEST_Filiation( INTERCOMM_ID(HANDLE) ) < 0 ) then
     !-------------------------------------------------------- daughter [wait issue]
-       call PROF_rapstart('NESTCOM total child')
+       call PROF_rapstart('NEST_total_C', 2)
 
        nwait_d = nwait_d + 1
        !if( IO_L ) write(IO_FID_LOG,'(1X,A,I5,A)') "*** NestIDC [C]: que wait ( ", nwait_d, " )"
@@ -1812,17 +1790,21 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
        isu_tag  = 0
        isu_tagf = 0
 
-       call PROF_rapstart('NESTCOM wait child')
+       call PROF_rapstart('NEST_wait_C', 2)
        call NEST_COMM_waitall( rq_tot_d, ireq_d )
+
        if ( ONLINE_AGGRESSIVE_COMM ) then
           ! nothing to do
        else
           call MPI_BARRIER(INTERCOMM_PARENT, ierr)
        endif
-       call PROF_rapend  ('NESTCOM wait child')
+       call PROF_rapend  ('NEST_wait_C', 2)
+
+       call PROF_rapstart('NEST_unpack_C', 2)
 
        tagbase = tagcomm + tag_dens*order_tag_var
        call NEST_COMM_intercomm_nestdown( dummy, dens, tagbase, I_SCLR, HANDLE, isu_tag, isu_tagf, .true. )
+!OCL XFILL
        do j = 1, DAUGHTER_JA(HANDLE)
        do i = 1, DAUGHTER_IA(HANDLE)
        do k = DATR_KS(HANDLE), DATR_KE(HANDLE)
@@ -1830,12 +1812,13 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
        enddo
        enddo
        enddo
+
        call COMM_vars8( interped_ref_DENS, 1 )
-       call COMM_wait ( interped_ref_DENS, 1, .false. )
 
        tagbase = tagcomm + tag_momz*order_tag_var
        if ( ONLINE_USE_VELZ ) then
           call NEST_COMM_intercomm_nestdown( dummy, work1d, tagbase, I_ZSTG, HANDLE, isu_tag, isu_tagf )
+!OCL XFILL
           do j = 1, DAUGHTER_JA(HANDLE)
           do i = 1, DAUGHTER_IA(HANDLE)
           do k = DATR_KS(HANDLE), DATR_KE(HANDLE)-1
@@ -1853,6 +1836,7 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
           ! u_lld receives MOMX/DENS
           call NEST_COMM_intercomm_nestdown( dummy, u_lld, tagbase, I_SCLR, HANDLE, isu_tag, isu_tagf )
        endif
+
        tagbase = tagcomm + tag_momy*order_tag_var
        if ( ONLINE_NO_ROTATE ) then
           ! v_lld receives MOMY
@@ -1861,6 +1845,8 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
           ! v_lld receives MOMY/DENS
           call NEST_COMM_intercomm_nestdown( dummy, v_lld, tagbase, I_SCLR, HANDLE, isu_tag, isu_tagf )
        endif
+
+       call COMM_wait ( interped_ref_DENS, 1, .false. )
 
        if ( ONLINE_NO_ROTATE ) then
           do j = 1, DAUGHTER_JA(HANDLE)
@@ -1959,7 +1945,9 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
           enddo
        enddo
 
-       call PROF_rapend('NESTCOM total child')
+       call PROF_rapend  ('NEST_unpack_C', 2)
+
+       call PROF_rapend  ('NEST_total_C', 2)
     else
        write(*,*) 'xxx internal error [nestdown: nest/grid]'
        call PRC_MPIstop
@@ -1976,7 +1964,7 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
     use scale_process, only: &
        PRC_MPIstop
     use scale_comm, only: &
-       COMM_world
+       COMM_barrier
     implicit none
 
     integer, intent(in) :: HANDLE    !< id number of nesting relation in this process target
@@ -1997,11 +1985,11 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
 
     if ( NEST_Filiation( INTERCOMM_ID(HANDLE) ) > 0 ) then
     !-------------------------------------------------------- parent [wait issue]
-       call PROF_rapstart('NESTCOM total parent')
+       call PROF_rapstart('NEST_total_P', 2)
        nwait_p = nwait_p + 1
        !if( IO_L ) write(IO_FID_LOG,'(1X,A,I5,A)') "*** NestIDC [P]: que wait ( ", nwait_p, " )"
 
-       call PROF_rapstart('NESTCOM wait parent')
+       call PROF_rapstart('NEST_wait_P', 2)
        call NEST_COMM_issuer_of_wait( HANDLE )
 
        if ( ONLINE_AGGRESSIVE_COMM ) then
@@ -2009,12 +1997,16 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
        else
           call MPI_BARRIER(INTERCOMM_DAUGHTER, ierr)
        endif
-       call PROF_rapend  ('NESTCOM wait parent')
 
-       call PROF_rapend('NESTCOM total parent')
+       ! tentative insert: evaluate node imbalance of parent due to the P-C comm.
+       ! call COMM_barrier
+
+       call PROF_rapend  ('NEST_wait_P', 2)
+
+       call PROF_rapend('NEST_total_P', 2)
     elseif ( NEST_Filiation( INTERCOMM_ID(HANDLE) ) < 0 ) then
     !-------------------------------------------------------- daughter [receive issue]
-       call PROF_rapstart('NESTCOM total child')
+       call PROF_rapstart('NEST_total_C', 2)
        nrecv = nrecv + 1
        if( IO_L ) write(IO_FID_LOG,'(1X,A,I5,A)') "*** NestIDC [C]: que recv ( ", nrecv, " )"
 
@@ -2057,7 +2049,7 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
 
        rq_tot_d = rq_ctl_d
 
-       call PROF_rapend('NESTCOM total child')
+       call PROF_rapend('NEST_total_C', 2)
     else
        write(*,*) 'xxx internal error [issue: nest/grid]'
        call PRC_MPIstop
@@ -2182,17 +2174,16 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
 
     if ( NEST_Filiation( INTERCOMM_ID(HANDLE) ) > 0 ) then
     !--------------------------------------------------- parent
+
        rq = rq_ctl_p
 
        do yp = 1, NUM_YP
           rq = rq + 1
 
-          call PROF_rapstart('NESTCOM send parent')
           ! send data to multiple daughter processes
           target_rank = NEST_TILE_LIST_YP(yp)
           tag = tagbase  + yp
           call MPI_ISEND(pvar, ileng, COMM_datatype, target_rank, tag, INTERCOMM_DAUGHTER, ireq_p(rq), ierr)
-          call PROF_rapend('NESTCOM send parent')
 
           dvar(:,:,:) = -1.0_RP  ! input as a dummy value
        enddo
@@ -2201,6 +2192,7 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
 
     elseif ( NEST_Filiation( INTERCOMM_ID(HANDLE) ) < 0 ) then
     !--------------------------------------------------- daughter
+
        rq = rq_ctl_d
 
        do yp = 1, NEST_TILE_ALL ! YP Loop
@@ -2218,12 +2210,14 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
              isu_tag = isu_tag + 1
 
              if ( .not. logarithmic ) then
+!OCL XFILL
                 ! linear interpolation
                 do k = 1, PARENT_KA(HANDLE)
                    buffer_ref_3D(k,xs:xe,ys:ye) &
                    = recvbuf_3D(k,PRNT_IS(HANDLE):PRNT_IE(HANDLE),PRNT_JS(HANDLE):PRNT_JE(HANDLE),isu_tag)
                 enddo
              else
+!OCL XFILL
                 ! logarithmic weighted interpolation
                 do k = 1, PARENT_KA(HANDLE)
                    buffer_ref_3D(k,xs:xe,ys:ye) &
@@ -2232,7 +2226,7 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
              endif
           else
              isu_tagf = isu_tagf + 1
-
+!OCL XFILL
              do k = 0, PARENT_KA(HANDLE)
                 buffer_ref_3DF(k,xs:xe,ys:ye) &
                 = recvbuf_3DF(k,PRNT_IS(HANDLE):PRNT_IE(HANDLE),PRNT_JS(HANDLE):PRNT_JE(HANDLE),isu_tagf)
@@ -2249,7 +2243,7 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
        enddo ! YP Loop
        rq_ctl_d = rq
 
-       call PROF_rapstart('NESTCOM interp')
+!OCL XFILL
        dvar(:,:,:) = 0.0_RP
 
        if ( no_zstag ) then
@@ -2280,9 +2274,6 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
                                     DATR_KE(HANDLE),      &
                                     logarithmic           )
        endif
-
-       call PROF_rapend('NESTCOM interp')
-
     else
     !---------------------------------------------------
        write(*,*) 'xxx internal error [nest/grid]'
@@ -2358,12 +2349,12 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
        ! rq_ctl_p = rq
     elseif ( NEST_Filiation( INTERCOMM_ID(HANDLE) ) < 0 ) then
     !--------------------------------------------------- daughter
+
        rq = rq_ctl_d
 
        do yp = 1, NEST_TILE_ALL ! YP Loop
           rq = rq + 1
 
-          call PROF_rapstart('NESTCOM recv child')
           target_rank = NEST_TILE_LIST_d(yp,PRC_myrank+1)
 
           tag = tagbase + call_order(yp)
@@ -2378,7 +2369,6 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
                              INTERCOMM_PARENT,          &
                              ireq_d(rq),                &
                              ierr                       )
-             call PROF_rapend('NESTCOM recv child')
           else
              isu_tagf = isu_tagf + 1
              recvbuf_3DF(:,:,:,isu_tagf) = 0.0_RP
@@ -2390,7 +2380,6 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
                              INTERCOMM_PARENT,            &
                              ireq_d(rq),                  &
                              ierr                         )
-             call PROF_rapend('NESTCOM recv child')
           endif
 
        enddo ! YP Loop
@@ -2403,6 +2392,7 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
        endif
 
        rq_ctl_d = rq
+
     else
     !---------------------------------------------------
        write(*,*) 'xxx internal error [receive: nest/grid]'
@@ -2425,6 +2415,7 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
 
     if ( NEST_Filiation( INTERCOMM_ID(HANDLE) ) > 0 ) then
     !--------------------------------------------------- parent
+
        call NEST_COMM_waitall( rq_tot_p, ireq_p )
 
     elseif ( NEST_Filiation( INTERCOMM_ID(HANDLE) ) < 0 ) then
@@ -2491,15 +2482,15 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
 
     if ( NEST_Filiation( INTERCOMM_ID(HANDLE) ) > 0 ) then
     !--------------------------------------------------- parent
-       call PROF_rapstart('NESTCOM test parent')
+       call PROF_rapstart('NEST_test_P', 2)
        if ( rq_ctl_p > 0 ) call MPI_TEST(ireq_p(1), flag, istatus, ierr)
-       call PROF_rapend('NESTCOM test parent')
+       call PROF_rapend('NEST_test_P', 2)
 
     elseif ( NEST_Filiation( INTERCOMM_ID(HANDLE) ) < 0 ) then
     !--------------------------------------------------- daughter
-       call PROF_rapstart('NESTCOM test child')
+       call PROF_rapstart('NEST_test_C', 2)
        if ( rq_ctl_d > 0 ) call MPI_TEST(ireq_d(1), flag, istatus, ierr)
-       call PROF_rapend('NESTCOM test child')
+       call PROF_rapend('NEST_test_C', 2)
     else
     !---------------------------------------------------
        write(*,*) 'xxx internal error [test: nest/grid]'
