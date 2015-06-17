@@ -714,6 +714,14 @@ contains
        enddo
        enddo
        enddo
+!OCL XFILL
+       do j = JS, JE
+       do i = IS, IE
+          DENS_t(   1:KS-1,i,j) = 0.0_RP
+          DENS_t(KE+1:KA  ,i,j) = 0.0_RP
+       enddo
+       enddo
+       call COMM_vars8( DENS_t(:,:,:), I_COMM_DENS_t )
 #ifdef HIST_TEND
        call HIST_in(DENS_tp, 'DENS_t_phys', 'tendency of dencity due to physics',          'kg/m3/s' )
        call HIST_in(damp_t,  'DENS_t_damp', 'tendency of dencity due to rayleigh damping', 'kg/m3/s' )
@@ -748,9 +756,11 @@ contains
 !OCL XFILL
        do j = JS, JE
        do i = IS, IE
-          MOMZ_t(KE,i,j) = 0.0_RP
+          MOMZ_t( 1:KS-1,i,j) = 0.0_RP
+          MOMZ_t(KE:KA  ,i,j) = 0.0_RP
        enddo
        enddo
+       call COMM_vars8( MOMZ_t(:,:,:), I_COMM_MOMZ_t )
 #ifdef HIST_TEND
        call HIST_in(MOMZ_tp, 'MOMZ_t_phys', 'tendency of momentum z due to physics',          'kg/m2/s2', zdim='half' )
        call HIST_in(damp_t,  'MOMZ_t_damp', 'tendency of momentum z due to rayleigh damping', 'kg/m2/s2', zdim='half' )
@@ -781,6 +791,14 @@ contains
        enddo
        enddo
        enddo
+!OCL XFILL
+       do j = JS, JE
+       do i = IS, IE
+          MOMX_t(   1:KS-1,i,j) = 0.0_RP
+          MOMX_t(KE+1:KA  ,i,j) = 0.0_RP
+       enddo
+       enddo
+       call COMM_vars8( MOMX_t(:,:,:), I_COMM_MOMX_t )
 #ifdef HIST_TEND
        call HIST_in(MOMX_tp, 'MOMX_t_phys', 'tendency of momentum x due to physics',          'kg/m2/s2', xdim='half' )
        call HIST_in(damp_t,  'MOMX_t_damp', 'tendency of momentum x due to rayleigh damping', 'kg/m2/s2', xdim='half' )
@@ -811,6 +829,14 @@ contains
        enddo
        enddo
        enddo
+!OCL XFILL
+       do j = JS, JE
+       do i = IS, IE
+          MOMY_t(   1:KS-1,i,j) = 0.0_RP
+          MOMY_t(KE+1:KA  ,i,j) = 0.0_RP
+       enddo
+       enddo
+       call COMM_vars8( MOMY_t(:,:,:), I_COMM_MOMY_t )
 #ifdef HIST_TEND
        call HIST_in(MOMY_tp, 'MOMY_t_phys', 'tendency of momentum y due to physics',          'kg/m2/s2', ydim='half' )
        call HIST_in(damp_t,  'MOMY_t_damp', 'tendency of momentum y due to rayleigh damping', 'kg/m2/s2', ydim='half' )
@@ -841,32 +867,19 @@ contains
        enddo
        enddo
        enddo
+!OCL XFILL
+       do j = JS, JE
+       do i = IS, IE
+          RHOT_t(   1:KS-1,i,j) = 0.0_RP
+          RHOT_t(KE+1:KA  ,i,j) = 0.0_RP
+       enddo
+       enddo
+       call COMM_vars8( RHOT_t(:,:,:), I_COMM_RHOT_t )
 #ifdef HIST_TEND
        call HIST_in(RHOT_tp, 'RHOT_t_phys', 'tendency of rho*theta temperature due to physics',          'K kg/m3/s' )
        call HIST_in(damp_t,  'RHOT_t_damp', 'tendency of rho*theta temperature due to rayleigh damping', 'K kg/m3/s' )
 #endif
 
-!OCL XFILL
-       do j = JS, JE
-       do i = IS, IE
-          DENS_t(   1:KS-1,i,j) = 0.0_RP
-          MOMZ_t(   1:KS-1,i,j) = 0.0_RP
-          MOMX_t(   1:KS-1,i,j) = 0.0_RP
-          MOMY_t(   1:KS-1,i,j) = 0.0_RP
-          RHOT_t(   1:KS-1,i,j) = 0.0_RP
-          DENS_t(KE+1:KA  ,i,j) = 0.0_RP
-          MOMZ_t(KE+1:KA  ,i,j) = 0.0_RP
-          MOMX_t(KE+1:KA  ,i,j) = 0.0_RP
-          MOMY_t(KE+1:KA  ,i,j) = 0.0_RP
-          RHOT_t(KE+1:KA  ,i,j) = 0.0_RP
-       enddo
-       enddo
-
-       call COMM_vars8( DENS_t(:,:,:), I_COMM_DENS_t )
-       call COMM_vars8( MOMZ_t(:,:,:), I_COMM_MOMZ_t )
-       call COMM_vars8( MOMX_t(:,:,:), I_COMM_MOMX_t )
-       call COMM_vars8( MOMY_t(:,:,:), I_COMM_MOMY_t )
-       call COMM_vars8( RHOT_t(:,:,:), I_COMM_RHOT_t )
        call COMM_wait ( DENS_t(:,:,:), I_COMM_DENS_t, .false. )
        call COMM_wait ( MOMZ_t(:,:,:), I_COMM_MOMZ_t, .false. )
        call COMM_wait ( MOMX_t(:,:,:), I_COMM_MOMX_t, .false. )
