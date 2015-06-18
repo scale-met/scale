@@ -12,9 +12,9 @@
   integer,  parameter :: CLNG       = 128
   integer,  parameter :: SP         = 4
   integer,  parameter :: DP         = 8
-  integer,  parameter :: max_vcount = 500
+  integer,  parameter :: max_vcount = 100
   integer,  parameter :: max_tcount = 1000
-  integer,  parameter :: max_zcount = 200
+  integer,  parameter :: max_zcount = 192
   integer,  parameter :: master     = 0
   integer,  parameter :: FID_STD    = 6
   integer,  parameter :: FID_CONF   = 20
@@ -58,4 +58,13 @@
   character(3) :: cmm(12)
   data cmm / "JAN", "FEB", "MAR", "APL", "MAY", "JUN", &
              "JUL", "AUG", "SEP", "OCT", "NOV", "DEC" /
+
+  integer,  parameter :: num_std_plev = 14
+  real(SP) :: std_plev(num_std_plev)
+  data std_plev / 1000, 975, 950, 925, 900, 850, 800, &
+                   700, 600, 500, 400, 300, 250, 200 /
+
+  integer,  parameter :: num_std_vname = 6
+  character(CSHT) :: std_vname(num_std_vname)
+  data std_vname / "PT", "PRES", "U", "V", "W", "QHYD" /
 

@@ -104,16 +104,16 @@ program netcdf2grads_h
     END_TSTEP,                 &
     INC_TSTEP,                 &
     DOMAIN_NUM,                &
-    VCOUNT,                    &
     ZCOUNT,                    &
     ZSTART,                    &
     CONFFILE,                  &
     IDIR,                      &
     ODIR,                      &
-    EXTRA_TINTERVAL,           &
-    EXTRA_TUNIT,               &
     Z_LEV_TYPE,                &
     Z_MERGE_OUT
+  namelist /EXTRA/             &
+    EXTRA_TINTERVAL,           &
+    EXTRA_TUNIT
   namelist /ANAL/              &
     ANALYSIS,                  &
     CONV_TYPE
@@ -154,7 +154,7 @@ program netcdf2grads_h
   call logio_init( irank, LOUT )
 
   if ( LOUT ) write( FID_LOG, '(1X,A)') "-----------------------------------"
-  if ( LOUT ) write( FID_LOG, '(1X,A)') "      START netcdf to grads"
+  if ( LOUT ) write( FID_LOG, '(1X,A)') "     START : netcdf to grads"
   if ( LOUT ) write( FID_LOG, '(1X,A)') "-----------------------------------"
   if ( LOUT ) write( FID_LOG, '(1X,"isize:",I6,2X,"irank:",I6)') isize, irank
   call read_conf
@@ -166,11 +166,11 @@ program netcdf2grads_h
   nmnge = tproc / isize
   work = mod( tproc, isize )
   if ( work /= 0 ) then
-     if ( LOUT ) write (*, *) "ERROR: specified num of mpi processes is not adequate."
-     if ( LOUT ) write (*, *) "*** specify the num; PRC_X*PRC_Y shuold be divisable by the num."
+     write (*, *) "ERROR: specified num of mpi processes is not adequate."
+     write (*, *) "*** specify the num; PRC_X*PRC_Y shuold be divisable by the num."
      call err_abort( 1, __LINE__, loc_main )
   elseif ( isize > tproc ) then
-     if ( LOUT ) write (*, *) "ERROR: num of mpi processes is larger than that of the scale-les run."
+     write (*, *) "ERROR: num of mpi processes is larger than that of the scale-les run."
      call err_abort( 1, __LINE__, loc_main )
   endif
 
@@ -219,7 +219,7 @@ program netcdf2grads_h
   nen = END_TSTEP
   nt  = (nen - nst + 1) / INC_TSTEP
   if ( nt > max_tcount ) then
-     if ( LOUT ) write (*, *) "ERROR: overflow maximum of tcount"
+     write (*, *) "ERROR: overflow maximum of tcount"
      call err_abort( 1, __LINE__, loc_main )
   endif
 
@@ -235,7 +235,7 @@ program netcdf2grads_h
      do iv = 1, vcount !--- var loop
         varname = trim( VNAME(iv) )
         call netcdf_var_dim( ncfile, varname, ndim )
-        call set_vtype( ndim, varname, vtype )
+        call set_vtype( ndim, varname, vtype, atype )
         if ( LOUT ) write( FID_LOG, '(1X,A)' ) "|"
         if ( LOUT ) write( FID_LOG, '(1X,A,A,A,I1,A)' ) &
         "+++ VARIABLE: ", trim(varname), " (vtype = ", vtype, ")"
@@ -270,7 +270,7 @@ program netcdf2grads_h
                  if ( iz /= 1 .and. Z_MERGE_OUT ) then
                     call write_vars_zmerge( var_2d, iz )
                  else
-                    call create_ctl( varname, atype, idom, it, zz )
+                    call create_ctl( varname, atype, vtype, idom, it, zz )
                     call write_vars( var_2d, varname, idom, it, zz )
                  endif
               endif
@@ -287,10 +287,10 @@ program netcdf2grads_h
 
            call comm_gather_vars( mnxp, mnyp, nmnge, p_var, recvbuf )
 
-           zz = 0 ! used as file name
+           !zz = 0 ! used as file name
            if ( irank == master ) then
               call combine_vars_2d( recvbuf, var_2d )
-              call create_ctl( varname, atype, idom, it, zz )
+              call create_ctl( varname, atype, vtype, idom, it, zz )
               call write_vars( var_2d, varname, idom, it, zz )
            endif
 
@@ -305,6 +305,9 @@ program netcdf2grads_h
   enddo !--- time loop
 
   ! finalization
+  if ( LOUT ) write( FID_LOG, '(1X,A)') ""
+  if ( LOUT ) write( FID_LOG, '(1X,A)') "     FINISH : netcdf to grads"
+  if ( LOUT ) write( FID_LOG, '(1X,A)') "-----------------------------------"
   if ( open_file .and. LOUT ) close ( FID_LOG )
   call comm_finalize
 
@@ -442,13 +445,15 @@ contains
   subroutine create_ctl( &
       varname,  & ! [in]
       atype,    & ! [in]
+      vtype,    & ! [in]
       idom,     & ! [in]
       it,       & ! [in]
       zz        ) ! [in]
     implicit none
 
     character(CMID), intent(in) :: varname
-    integer,         intent(in) :: atype, idom, it, zz
+    integer,         intent(in) :: atype, vtype
+    integer,         intent(in) :: idom, it, zz
 
     character(2)    :: cdom
     character(3)    :: clev
@@ -473,6 +478,7 @@ contains
      case ( a_ave )
         clev = "ave"
      end select
+     if ( vtype == vt_2d ) clev = "-2d"
      fname = trim(ODIR)//'/'//trim(varname)//'_d'//cdom//'z'//clev//'_'//trim(FTIME)
      fname2 = trim(varname)//'_d'//cdom//'z'//clev//'_'//trim(FTIME)
      if ( LOUT .and. LOG_DBUG ) write( FID_LOG, '(1X,A,A)') "Create ctl file: ", trim(fname)
@@ -561,6 +567,7 @@ contains
     case ( a_ave )
        clev = "ave"
     end select
+    if ( vtype == vt_2d ) clev = "-2d"
     fname = trim(ODIR)//'/'//trim(varname)//'_d'//cdom//'z'//clev//'_'//trim(FTIME)//".grd"
     if ( Z_MERGE_OUT ) fname_save = fname
     if ( LOUT ) write( FID_LOG, '(1X,A,A)') "+++ Output data file: ", trim(fname)
@@ -608,13 +615,7 @@ contains
     open ( FID_CONF, file=trim(fconf), status='old', &
            form="formatted", delim='apostrophe', iostat=ierr )
     if ( ierr /= 0 ) then
-       write (*, *) "ERROR: fail to open net2g.conf file"
-       call err_abort( 1, __LINE__, loc_main )
-    endif
-
-    read  ( FID_CONF, nml=LOGOUT, iostat=ierr )
-    if ( ierr /= 0 ) then
-       write (*, *) "ERROR: fail to read LOGOUT"
+       write (*, *) "ERROR: fail to open configuration file"
        call err_abort( 1, __LINE__, loc_main )
     endif
 
@@ -635,7 +636,7 @@ contains
     open ( FID_CONF, file=trim(fconf), status='old', &
            form="formatted", delim='apostrophe', iostat=ierr )
     if ( ierr /= 0 ) then
-       if ( LOUT ) write (*, *) "ERROR: fail to open net2g.conf file"
+       write (*, *) "ERROR: fail to open net2g.conf file"
        call err_abort( 1, __LINE__, loc_main )
     endif
 
@@ -643,18 +644,15 @@ contains
     if ( LOUT .and. LOG_DBUG ) write ( FID_LOG, nml=INFO )
 
     if ( ZCOUNT > max_zcount ) then
-       if ( LOUT ) write (*, *) "ERROR: overflow maximum of zcount"
+       write (*, *) "ERROR: overflow maximum of zcount"
        call err_abort( 1, __LINE__, loc_main )
     endif
 
-    if ( VCOUNT > max_vcount ) then
-       if ( LOUT ) write (*, *) "ERROR: overflow maximum of vcount"
-       call err_abort( 1, __LINE__, loc_main )
-    elseif( VCOUNT < 1 ) then
-       if ( LOUT ) write (*, *) "ERROR: specify at least one target variable"
-       call err_abort( 1, __LINE__, loc_main )
-    endif
+    rewind( FID_CONF )
+    read  ( FID_CONF, nml=EXTRA, iostat=ierr )
+    if ( LOUT .and. LOG_DBUG ) write ( FID_LOG, nml=EXTRA )
 
+    rewind( FID_CONF )
     read  ( FID_CONF, nml=ANAL, iostat=ierr )
     if ( LOUT .and. LOG_DBUG ) write ( FID_LOG, nml=ANAL )
 
@@ -662,6 +660,23 @@ contains
     read  ( FID_CONF, nml=VARI, iostat=ierr )
     if ( LOUT .and. LOG_DBUG ) write ( FID_LOG, nml=VARI )
     if ( LOUT .and. LOG_DBUG ) write( FID_LOG,* ) ""
+
+    VCOUNT = 0
+    do n=1, max_vcount
+       if ( trim(VNAME(n)).eq."" ) exit
+       VCOUNT = VCOUNT + 1
+    enddo
+    if ( VCOUNT >= max_vcount ) then
+       write (*, *) "ERROR: overflow maximum of vcount"
+       call err_abort( 1, __LINE__, loc_main )
+    elseif( VCOUNT < 1 ) then
+       if ( LOUT ) write( FID_LOG, '(1X,A)' ) "+++ Use Default set of VNAME"
+       VCOUNT = num_std_vname
+       do n=1, VCOUNT
+          VNAME(n) = trim(std_vname(n))
+       enddo
+    endif
+
     do n=1, VCOUNT
        VNAME(n) = trim(VNAME(n))
        if ( LOUT ) write( FID_LOG, '(1X,A,I3,A,A)' ) "+++ Listing Vars: (", n, ") ", VNAME(n)
@@ -674,13 +689,25 @@ contains
           if ( LOUT ) write( FID_LOG, '(1X,A,I3,A,I5)' ) "+++ Listing Levs: (", n, ") ", TARGET_ZLEV(n)
        enddo
     else
-       Z_LEV_LIST = .false.
-       m = ZSTART
-       do n=1, ZCOUNT
-          TARGET_ZLEV(n) = m
-          if ( LOUT ) write( FID_LOG, '(1X,A,I3,A,I5)' ) "+++ Listing Levs: (", n, ") ", TARGET_ZLEV(n)
-          m = m + 1
-       enddo
+       select case( trim(ANALYSIS) )
+       case ( "CONV", "conv", "CONVERT", "convert" )
+          Z_LEV_LIST = .true.
+          CONV_TYPE  = "PRES"
+          if ( LOUT ) write( FID_LOG, '(1X,A)' ) "+++ Use Default set of PRESSURE LEVELs"
+          ZCOUNT = num_std_plev
+          do n=1, ZCOUNT
+             TARGET_ZLEV(n) = std_plev(n)
+             if ( LOUT ) write( FID_LOG, '(1X,A,I3,A,I5)' ) "+++ Listing Levs: (", n, ") ", TARGET_ZLEV(n)
+          enddo
+       case default
+          Z_LEV_LIST = .false.
+          m = ZSTART
+          do n=1, ZCOUNT
+             TARGET_ZLEV(n) = m
+             if ( LOUT ) write( FID_LOG, '(1X,A,I3,A,I5)' ) "+++ Listing Levs: (", n, ") ", TARGET_ZLEV(n)
+             m = m + 1
+          enddo
+       end select
     endif
     if ( LOUT ) write( FID_LOG,* ) ""
 
@@ -695,13 +722,14 @@ contains
     open ( FID_RCNF, file=trim(CONFFILE), status='old', &
            form="formatted", delim='apostrophe', iostat=ierr )
     if ( ierr /= 0 ) then
-       if ( LOUT ) write (*, *) "ERROR: fail to open running *.conf file"
+       write (*, *) "ERROR: fail to open running *.conf file"
        call err_abort( 1, __LINE__, loc_main )
     endif
 
     read  ( FID_RCNF, nml=PARAM_TIME, iostat=ierr )
     if ( LOUT .and. LOG_DBUG ) write ( FID_LOG, nml=PARAM_TIME )
 
+    rewind( FID_RCNF )
     read  ( FID_RCNF, nml=PARAM_PRC, iostat=ierr )
     if ( LOUT .and. LOG_DBUG ) write ( FID_LOG, nml=PARAM_PRC )
 
@@ -744,27 +772,27 @@ contains
     select case( vtype )
     case ( vt_urban )
        if ( zz < 1 .or. zz > uz ) then
-          if ( LOUT ) write (*, *) "ERROR: requested level is in K-HALO [urban]"
+          write (*, *) "ERROR: requested level is in K-HALO [urban]"
           call err_abort( 1, __LINE__, loc_main )
        endif
     case ( vt_land )
        if ( zz < 1 .or. zz > lz ) then
-          if ( LOUT ) write (*, *) "ERROR: requested level is in K-HALO [land]"
+          write (*, *) "ERROR: requested level is in K-HALO [land]"
           call err_abort( 1, __LINE__, loc_main )
        endif
     case ( vt_height )
        if ( zz < ks .or. zz > ke ) then
-          if ( LOUT ) write (*, *) "ERROR: requested level is in K-HALO [height]"
+           write (*, *) "ERROR: requested level is in K-HALO [height]"
           call err_abort( 1, __LINE__, loc_main )
        endif
     case ( vt_3d )
        if ( zz < ks .or. zz > ke ) then
-          if ( LOUT ) write (*, *) "ERROR: requested level is in K-HALO [3D data]"
+          write (*, *) "ERROR: requested level is in K-HALO [3D data]"
           call err_abort( 1, __LINE__, loc_main )
        endif
     case ( vt_2d, vt_tpmsk )
        if ( zz /= 1 ) then
-          if ( LOUT ) write (*, *) "ERROR: requested level is not exist [2D data]"
+          write (*, *) "ERROR: requested level is not exist [2D data]"
           call err_abort( 1, __LINE__, loc_main )
        endif
     case default
@@ -791,37 +819,48 @@ contains
           vgrid(iz) = TARGET_ZLEV(iz)
           if ( LOUT ) write( FID_LOG, '(1X,A,I3,A,F8.2)' ) "+++ Target Height: (", iz, ") ", vgrid(iz)
        enddo
+
     else
+       if ( Z_LEV_TYPE .eq. "" ) then
+          if ( LOUT ) write( FID_LOG, '(1X,A)' ) "*** Guess Z_LEV_TYPE"
+          if ( max_zcount > maxval( TARGET_ZLEV ) ) then
+             write (*, *) "ERROR: cannot guess Z_LEV_TYPE, please specify it!"
+             call err_abort( 1, __LINE__, loc_main )
+          else
+             if ( LOUT ) write( FID_LOG, '(1X,A)' ) "    assumed as Z_LEV_TYPE = HEIGHT"
+             Z_LEV_TYPE = "HEIGHT"
+          endif
+       endif
 
-    select case( Z_LEV_TYPE )
-    case ( "GRID", "grid" )
-       do iz = 1, ZCOUNT
-          vgrid(iz) = zlev( TARGET_ZLEV(iz) )
-          if ( LOUT ) write( FID_LOG, '(1X,A,I3,A,F8.2)' ) "+++ Target Height: (", iz, ") ", vgrid(iz)
-       enddo
-
-    case ( "HEIGHT", "height", "HGT", "hgt" )
-       do iz = 1, ZCOUNT
-          mini = 9.9999D+10
-          do k=1, nz
-             diff = abs(real(TARGET_ZLEV(iz)) - zlev(k))
-             if ( diff < mini ) then
-                mini = diff
-                ik = k
-             endif
+       select case( Z_LEV_TYPE )
+       case ( "GRID", "grid" )
+          do iz = 1, ZCOUNT
+             vgrid(iz) = zlev( TARGET_ZLEV(iz) )
+             if ( LOUT ) write( FID_LOG, '(1X,A,I3,A,F8.2)' ) "+++ Target Height: (", iz, ") ", vgrid(iz)
           enddo
-          if ( LOUT ) write( FID_LOG, '(1X,A,I5,A,F8.3)' ) &
-          "+++ Search Nearest - request: ", TARGET_ZLEV(iz), "  diff: ", mini
 
-          TARGET_ZLEV(iz) = ik
-          vgrid(iz) = zlev( TARGET_ZLEV(iz) )
-          if ( LOUT ) write( FID_LOG, '(1X,A,I3,A,F8.2)' ) "+++ Target Height: (", iz, ") ", vgrid(iz)
-       enddo
+       case ( "HEIGHT", "height", "HGT", "hgt" )
+          do iz = 1, ZCOUNT
+             mini = 9.9999D+10
+             do k=1, nz
+                diff = abs(real(TARGET_ZLEV(iz)) - zlev(k))
+                if ( diff < mini ) then
+                   mini = diff
+                   ik = k
+                endif
+             enddo
+             if ( LOUT ) write( FID_LOG, '(1X,A,I5,A,F8.3)' ) &
+             "+++ Search Nearest - request: ", TARGET_ZLEV(iz), "  diff: ", mini
 
-    case default
-       if ( LOUT ) write (*, *) "ERROR: requested Z_LEV_TYPE is not supported"
-       call err_abort( 1, __LINE__, loc_main )
-    end select
+             TARGET_ZLEV(iz) = ik
+             vgrid(iz) = zlev( TARGET_ZLEV(iz) )
+             if ( LOUT ) write( FID_LOG, '(1X,A,I3,A,F8.2)' ) "+++ Target Height: (", iz, ") ", vgrid(iz)
+          enddo
+
+       case default
+          write (*, *) "ERROR: requested Z_LEV_TYPE is not supported"
+          call err_abort( 1, __LINE__, loc_main )
+       end select
 
     endif
     if ( LOUT ) write( FID_LOG, '(1X,A)' ) ""

@@ -146,8 +146,8 @@ contains
     istat = nf90_inq_varid( ncid, trim(varname), varid )
     istat = nf90_inquire_variable(ncid, varid, ndims=ndim )
     if (istat .ne. nf90_noerr) then
-       if ( LOUT ) write( FID_LOG, '(1x,A,A)' ) "ERROR: Such a variable was not found: ", trim(varname)
-       if ( LOUT ) write( *, '(1x,A,A)' ) "ERROR: Such a variable was not found: ", trim(varname)
+       write( FID_LOG, '(1x,A,A)' ) "ERROR: Such a variable was not found: ", trim(varname)
+       write( *, '(1x,A,A)' ) "ERROR: Such a variable was not found: ", trim(varname)
        call handle_err(istat, __LINE__)
     endif
 

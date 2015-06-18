@@ -63,28 +63,19 @@ contains
   subroutine set_vtype( &
       ndim,      & ! [in ]
       varname,   & ! [in ]
-      vtype      ) ! [out]
-!      ndim       ) ! [out]
+      vtype,     & ! [out]
+      atype      ) ! [inout]
     implicit none
 
-!    character(CLNG), intent(in) :: ncfile
     integer, intent(in)         :: ndim
     character(CMID), intent(in) :: varname
     integer, intent(out)        :: vtype
+    integer, intent(inout)      :: atype
 
 
     integer :: ncid, varid
     integer :: istat
     !---------------------------------------------------------------------------
-
-!    istat = nf90_open( trim(ncfile), nf90_nowrite, ncid )
-!    if (istat .ne. nf90_noerr) call handle_err(istat, __LINE__)
-! 
-!    istat = nf90_inq_varid( ncid, trim(varname), varid )
-!    istat = nf90_inquire_variable(ncid, varid, ndims=ndim )
-!    if (istat .ne. nf90_noerr) call handle_err(istat, __LINE__)
-
-!    istat = nf90_close(ncid)
 
     select case( trim(varname) )
     case ( "TRL_URB", "TBL_URB", "TGL_URB" )
@@ -102,6 +93,8 @@ contains
        elseif( ndim == 3 ) then
           vtype = vt_2d
           Z_MERGE_OUT = .false.
+          ANALYSIS    = "SLICE"
+          atype       = a_slice
        else
           call err_abort( 0, __LINE__, loc_setup )
        end if
@@ -109,7 +102,6 @@ contains
 
     return
   end subroutine set_vtype
-
 
   !> setting of flag analysis
   !-----------------------------------------------------------------------------------------
@@ -122,34 +114,34 @@ contains
 
     select case( trim(ANALYSIS) )
     case ( "SLICE", "slice" )
-       if ( LOUT ) write( FID_LOG, '(1x,A)' ) "+++ ANALISYS TYPE: slice"
+       if ( LOUT ) write( FID_LOG, '(1x,A)' ) "+++ ANALYSYS TYPE: slice"
        atype = a_slice
     case ( "MAX", "max", "MAXIMUM", "maximum" )
-       if ( LOUT ) write( FID_LOG, '(1x,A)' ) "+++ ANALISYS TYPE: column max"
+       if ( LOUT ) write( FID_LOG, '(1x,A)' ) "+++ ANALYSYS TYPE: column max"
        atype = a_max
        ZCOUNT  = 1
        Z_MERGE_OUT = .false.
     case ( "MIN", "min", "MINIMUM", "minimum" )
-       if ( LOUT ) write( FID_LOG, '(1x,A)' ) "+++ ANALISYS TYPE: column min"
+       if ( LOUT ) write( FID_LOG, '(1x,A)' ) "+++ ANALYSYS TYPE: column min"
        atype = a_min
        ZCOUNT  = 1
        Z_MERGE_OUT = .false.
     case ( "SUM", "sum", "SUMMATION", "summation" )
-       if ( LOUT ) write( FID_LOG, '(1x,A)' ) "+++ ANALISYS TYPE: column sum"
+       if ( LOUT ) write( FID_LOG, '(1x,A)' ) "+++ ANALYSYS TYPE: column sum"
        atype = a_sum
        ZCOUNT  = 1
        Z_MERGE_OUT = .false.
     case ( "AVE", "ave", "AVERAGE", "average" )
-       if ( LOUT ) write( FID_LOG, '(1x,A)' ) "+++ ANALISYS TYPE: column ave"
+       if ( LOUT ) write( FID_LOG, '(1x,A)' ) "+++ ANALYSYS TYPE: column ave"
        atype = a_ave
        ZCOUNT  = 1
        Z_MERGE_OUT = .false.
     case ( "CONV", "conv", "CONVERT", "convert" )
-       if ( LOUT ) write( FID_LOG, '(1x,A)' ) "+++ ANALISYS TYPE: vertical interp"
+       if ( LOUT ) write( FID_LOG, '(1x,A)' ) "+++ ANALYSYS TYPE: vertical interp"
        atype = a_conv
     case default
-       if ( LOUT ) write (*, *) "ERROR: specified analysis type is not appropiate"
-       if ( LOUT ) write (*, *) "***** ", trim(ANALYSIS)
+       write (*, *) "ERROR: specified analysis type is not appropiate"
+       write (*, *) "***** ", trim(ANALYSIS)
        call err_abort( 1, __LINE__, loc_setup )
     end select
 
@@ -210,7 +202,6 @@ contains
     return
   end subroutine set_flag_bnd
 
-
   !> setting of indices
   !-----------------------------------------------------------------------------------------
   subroutine set_index( &
@@ -263,7 +254,6 @@ contains
     return
   end subroutine set_index
 
-
   !> setting of indices for grid data
   !-----------------------------------------------------------------------------------------
   subroutine set_index_grid( &
@@ -291,7 +281,6 @@ contains
 
     return
   end subroutine set_index_grid
-
 
   !> setting of indices for grid data
   !-----------------------------------------------------------------------------------------
@@ -342,7 +331,6 @@ contains
 
     return
   end subroutine set_index_gathered
-
 
   !> setting of indices for reading buffer
   !-----------------------------------------------------------------------------------------
@@ -415,7 +403,6 @@ contains
 
     return
   end subroutine set_index_readbuf_grid
-
 
   !> setting of indices for reading buffer (netcdf) with counts
   !-----------------------------------------------------------------------------------------
@@ -514,8 +501,8 @@ contains
        case ( vt_3d )
           nzn = nz(1)
        case ( vt_2d, vt_height, vt_tpmsk )
-          if ( LOUT ) write (*, *) "ERROR: specified anal-type is not appropiate for the var"
-          if ( LOUT ) write (*, *) "***** ", trim(ANALYSIS), trim(varname)
+          write (*, *) "ERROR: specified anal-type is not appropiate for the var"
+          write (*, *) "***** ", trim(ANALYSIS), " --> ", trim(varname)
           call err_abort( 1, __LINE__, loc_setup )
        case default
           call err_abort( 0, __LINE__, loc_setup )
@@ -527,7 +514,6 @@ contains
 
     return
   end subroutine set_index_netcdf
-
 
   !> setting of ranks should be managed in the process
   !-----------------------------------------------------------------------------------------
@@ -554,7 +540,6 @@ contains
 
     return
   end subroutine set_rank_manage
-
 
   !> setting of indices
   !-----------------------------------------------------------------------------------------
@@ -602,7 +587,6 @@ contains
 
     return
   end subroutine set_array_size
-
 
   !> setting of calender indices
   !-----------------------------------------------------------------------------------------
