@@ -84,6 +84,8 @@ contains
 
     if ( ecode == err_internal ) then
        write (*, *) "##### ERROR: internal error"
+    elseif ( ecode == err_known ) then
+       write (*, *) "##### ERROR: known error"
     elseif ( ecode == err_netcdf ) then
        write (*, *) "##### ERROR: netcdf fuction error"
     endif

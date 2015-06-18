@@ -122,24 +122,30 @@ contains
 
     select case( trim(ANALYSIS) )
     case ( "SLICE", "slice" )
+       if ( LOUT ) write( FID_LOG, '(1x,A)' ) "+++ ANALISYS TYPE: slice"
        atype = a_slice
     case ( "MAX", "max", "MAXIMUM", "maximum" )
+       if ( LOUT ) write( FID_LOG, '(1x,A)' ) "+++ ANALISYS TYPE: column max"
        atype = a_max
        ZCOUNT  = 1
        Z_MERGE_OUT = .false.
     case ( "MIN", "min", "MINIMUM", "minimum" )
+       if ( LOUT ) write( FID_LOG, '(1x,A)' ) "+++ ANALISYS TYPE: column min"
        atype = a_min
        ZCOUNT  = 1
        Z_MERGE_OUT = .false.
     case ( "SUM", "sum", "SUMMATION", "summation" )
+       if ( LOUT ) write( FID_LOG, '(1x,A)' ) "+++ ANALISYS TYPE: column sum"
        atype = a_sum
        ZCOUNT  = 1
        Z_MERGE_OUT = .false.
     case ( "AVE", "ave", "AVERAGE", "average" )
+       if ( LOUT ) write( FID_LOG, '(1x,A)' ) "+++ ANALISYS TYPE: column ave"
        atype = a_ave
        ZCOUNT  = 1
        Z_MERGE_OUT = .false.
     case ( "CONV", "conv", "CONVERT", "convert" )
+       if ( LOUT ) write( FID_LOG, '(1x,A)' ) "+++ ANALISYS TYPE: vertical interp"
        atype = a_conv
     case default
        if ( LOUT ) write (*, *) "ERROR: specified analysis type is not appropiate"

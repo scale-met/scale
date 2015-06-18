@@ -165,7 +165,9 @@ contains
     sendcounts = nxgp*nmnge
     recvcounts = nxgp*nmnge
 
+!OCL XFILL
     sendbuf_gx(:) = UNDEF_SP
+!OCL XFILL
     do iix = 1, nxgp*nmnge
        sendbuf_gx(iix) = real( p_cx(iix) )
     enddo
@@ -179,7 +181,9 @@ contains
                      MPI_COMM_WORLD, &
                      ierr            )
 
+!OCL XFILL
     sendbuf_gx(:) = UNDEF_SP
+!OCL XFILL
     do iix = 1, nxgp*nmnge
        sendbuf_gx(iix) = real( p_cdx(iix) )
     enddo
@@ -197,7 +201,9 @@ contains
     sendcounts = nygp*nmnge
     recvcounts = nygp*nmnge
 
+!OCL XFILL
     sendbuf_gy(:) = UNDEF_SP
+!OCL XFILL
     do jjy = 1, nygp*nmnge
        sendbuf_gy(jjy) = real( p_cy(jjy) )
     enddo
@@ -211,7 +217,9 @@ contains
                      MPI_COMM_WORLD, &
                      ierr            )
 
+!OCL XFILL
     sendbuf_gy(:) = UNDEF_SP
+!OCL XFILL
     do jjy = 1, nygp*nmnge
        sendbuf_gy(jjy) = real( p_cdy(jjy) )
     enddo
@@ -252,7 +260,9 @@ contains
     sendcounts = mnxp * mnyp * nmnge 
     recvcounts = mnxp * mnyp * nmnge 
 
+!OCL XFILL
     sendbuf(:,:) = UNDEF_SP
+!OCL XFILL
     do jjy = 1, mnyp*nmnge 
     do iix = 1, mnxp
        sendbuf(iix,jjy) = invar(iix,jjy)

@@ -12,8 +12,8 @@ program netcdf2grads_h
   !<
   !-----------------------------------------------------------------------------------------
 
-  use mpi
-  use netcdf
+!  use mpi
+!  use netcdf
 
   use mod_net2g_vars
   use mod_net2g_error
@@ -143,6 +143,7 @@ program netcdf2grads_h
   namelist /GRADS/             &
     DELT,                      &
     STIME
+
   namelist  / PARAM_TIME /     &
     TIME_STARTDATE
   namelist  / PARAM_PRC /      &
@@ -270,14 +271,14 @@ program netcdf2grads_h
            do iz = 1, ZCOUNT        !--- level loop
               if ( atype == a_slice ) then
                  zz = TARGET_ZLEV(iz)
-                 if ( LOUT ) write( FID_LOG, '(1X,A,I3)' ) "+++ Z LEVEL: ", zz
+                 if ( LOUT ) write( FID_LOG, '(1X,A,I6)' ) "+++ Z LEVEL: ", zz
                  call check_targ_zlev( zz )
               elseif ( atype == a_conv ) then
                  zz = TARGET_ZLEV(iz)
                  if ( ctype == c_pres ) then
-                    if ( LOUT ) write( FID_LOG, '(1X,A,I3,A)' ) "+++ Z LEVEL: ", zz, " [hPa]"
+                    if ( LOUT ) write( FID_LOG, '(1X,A,I6,A)' ) "+++ Z LEVEL: ", zz, " [hPa]"
                  elseif ( ctype == c_height ) then
-                    if ( LOUT ) write( FID_LOG, '(1X,A,I3,A)' ) "+++ Z LEVEL: ", zz, " [m]"
+                    if ( LOUT ) write( FID_LOG, '(1X,A,I6,A)' ) "+++ Z LEVEL: ", zz, " [m]"
                  endif
               endif
 

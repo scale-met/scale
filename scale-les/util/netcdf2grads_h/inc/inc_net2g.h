@@ -23,10 +23,12 @@
   integer,  parameter :: FID_CTL    = 23
   integer,  parameter :: FID_DAT    = 24
 
-  integer,  parameter :: err_internal = 0
-  integer,  parameter :: err_netcdf   = -1
   real(SP), parameter :: UNDEF_SP     = -9.9999D7
   real(SP), parameter :: EPS_SP       = 1.0D-6
+
+  integer,  parameter :: err_internal = 0
+  integer,  parameter :: err_known    = 1
+  integer,  parameter :: err_netcdf   = -1
 
   integer,  parameter :: vt_2d     = 0  ! vtype index
   integer,  parameter :: vt_3d     = 1  ! vtype index
