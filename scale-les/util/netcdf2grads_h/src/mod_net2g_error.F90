@@ -60,7 +60,7 @@ contains
 
     integer, intent(in) :: istat
     integer, intent(in) :: nline
-    !---------------------------------------------------------------------------
+    !-------------------------------------------------------------------------
 
     if ( LOUT ) write (*, *) nf90_strerror(istat)
     call err_abort( -1, nline, loc_netcdf )
@@ -80,7 +80,7 @@ contains
     integer, intent(in) :: ecode
     integer, intent(in) :: nline
     integer, intent(in) :: err_loc
-    !---------------------------------------------------------------------------
+    !-------------------------------------------------------------------------
 
     if ( ecode == err_internal ) then
        write (*, *) "##### ERROR: internal error"
@@ -90,7 +90,6 @@ contains
        write (*, *) "##### ERROR: netcdf fuction error"
     endif
 
-!    write (*, *) "***** Abort: by rank =", irank
     write (*, *) "***** Abort: at Line =", nline
 
     if ( err_loc == loc_main ) then
@@ -114,6 +113,5 @@ contains
 
     stop
   end subroutine err_abort
-
 
 end module mod_net2g_error

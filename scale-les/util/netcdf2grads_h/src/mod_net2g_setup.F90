@@ -598,6 +598,7 @@ contains
     nyg_tproc = nygp * tproc
 
     if ( LOUT ) write( FID_LOG, '(1X,"+++ nx:",I7,2X,"ny:",I7)') nx, ny
+    if ( LOUT ) write( FID_LOG, '(1X,A)') ""
 
     return
   end subroutine set_array_size

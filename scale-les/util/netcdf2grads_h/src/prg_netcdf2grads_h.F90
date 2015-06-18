@@ -12,9 +12,6 @@ program netcdf2grads_h
   !<
   !-----------------------------------------------------------------------------------------
 
-!  use mpi
-!  use netcdf
-
   use mod_net2g_vars
   use mod_net2g_error
   use mod_net2g_calender
@@ -45,23 +42,8 @@ program netcdf2grads_h
 
   real(SP),allocatable :: p_cx(:), p_cdx(:)     ! partial grid data
   real(SP),allocatable :: p_cy(:), p_cdy(:)     ! partial grid data
-!  real(DP),allocatable :: p_3d(:,:,:,:)         ! partial grid data
-!  real(DP),allocatable :: p_3d_urban(:,:,:,:)   ! partial grid data
-!  real(DP),allocatable :: p_3d_land(:,:,:,:)    ! partial grid data
-!  real(DP),allocatable :: p_2d(:,:,:)           ! partial grid data
-!  real(DP),allocatable :: p_2dt(:,:)            ! partial grid data
 
   real(SP),allocatable :: vgrid(:)
-
-!  integer :: start_3d(4)
-!  integer :: start_2d(3)
-!  integer :: start_2dt(2)
-!  integer :: count_3d(4)
-!  integer :: count_2d(3)
-!  integer :: count_urban(4)
-!  integer :: count_land(4)
-!  integer :: count_height(3)
-!  integer :: count_tpmsk(2)
 
   integer :: vtype = -1
   integer :: atype = -1
@@ -85,8 +67,6 @@ program netcdf2grads_h
   integer :: zz
   integer :: ndim
   integer :: idom
-!  integer :: irank
-!  integer :: isize
   integer :: ierr
 
   integer :: nxp   ! num of x-dimension in partial file
@@ -117,7 +97,8 @@ program netcdf2grads_h
 
   namelist /LOGOUT/            &
     LOG_BASENAME,              &
-    LOG_ALL_OUTPUT
+    LOG_ALL_OUTPUT,            &
+    LOG_LEVEL
   namelist /INFO/              &
     START_TSTEP,               &
     END_TSTEP,                 &
@@ -131,7 +112,6 @@ program netcdf2grads_h
     ODIR,                      &
     EXTRA_TINTERVAL,           &
     EXTRA_TUNIT,               &
-    Z_LEV_LIST,                &
     Z_LEV_TYPE,                &
     Z_MERGE_OUT
   namelist /ANAL/              &
@@ -160,9 +140,6 @@ program netcdf2grads_h
 
   !### initialization
   !-----------------------------------------------------------------------------------------
-!  call MPI_INIT( ierr )
-!  call MPI_COMM_SIZE( MPI_COMM_WORLD, isize, ierr )
-!  call MPI_COMM_RANK( MPI_COMM_WORLD, irank, ierr )
   call comm_initialize
 
   !--- Read from argument
@@ -204,12 +181,11 @@ program netcdf2grads_h
   !-----------------------------------------------------------------------------------------
   write ( num,'(I6.6)' ) rk_mnge(1)
   ncfile = trim(IDIR)//"/"//trim(HISTORY_DEFAULT_BASENAME)//".pe"//num//".nc"
-  if ( LOUT ) write( FID_LOG, '(1x,A,A)' ) "+++ Target File: ", trim(ncfile)
-
   call netcdf_retrieve_dims( ncfile,                          &
                              nxp, nxgp, nxh, nyp, nygp, nyh,  &
                              nz,  nzg,  nzh, uz, lz, ks, ke   )
   nz_all(1) = nz; nz_all(2) = uz; nz_all(3) = lz
+
   call set_array_size( nxp, nyp, nxgp, nygp, nx, ny, mnx, mny,  &
                        mnxp, mnyp, nxg_tproc, nyg_tproc         )
   call allocation( irank ) ! "irank" is right, not "rk_mnge"
@@ -236,9 +212,7 @@ program netcdf2grads_h
                          cx_gather, cdx_gather, cy_gather, cdy_gather )
 
   if ( irank == master ) call combine_grid
-
   if ( Z_MERGE_OUT ) call make_vgrid
-
 
   !--- read data and combine
   nst = START_TSTEP
@@ -254,6 +228,7 @@ program netcdf2grads_h
   do it = nst, nen, INC_TSTEP !--- time loop
 
      call set_calender( yy, mm, dd, hh, mn, sc, STIME, FTIME )
+     if ( LOUT ) write( FID_LOG, '(1X,A)' ) ""
      if ( LOUT ) write( FID_LOG, '(1X,A,I3)' ) "+++ TIME STEP:   ", it
      if ( LOUT ) write( FID_LOG, * ) "+++ Date: ", STIME
 
@@ -261,6 +236,7 @@ program netcdf2grads_h
         varname = trim( VNAME(iv) )
         call netcdf_var_dim( ncfile, varname, ndim )
         call set_vtype( ndim, varname, vtype )
+        if ( LOUT ) write( FID_LOG, '(1X,A)' ) "|"
         if ( LOUT ) write( FID_LOG, '(1X,A,A,A,I1,A)' ) &
         "+++ VARIABLE: ", trim(varname), " (vtype = ", vtype, ")"
 
@@ -330,7 +306,6 @@ program netcdf2grads_h
 
   ! finalization
   if ( open_file .and. LOUT ) close ( FID_LOG )
-!  call MPI_FINALIZE( ierr )
   call comm_finalize
 
   !-----------------------------------------------------------------------------------------
@@ -368,6 +343,12 @@ contains
     else
        FID_LOG = FID_LOGF
        open_file = .true.
+    endif
+
+    if ( LOG_LEVEL > 0 ) then
+       LOG_DBUG = .false.
+    else
+       LOG_DBUG = .true.
     endif
 
     if ( open_file .and. LOUT ) then
@@ -494,7 +475,7 @@ contains
      end select
      fname = trim(ODIR)//'/'//trim(varname)//'_d'//cdom//'z'//clev//'_'//trim(FTIME)
      fname2 = trim(varname)//'_d'//cdom//'z'//clev//'_'//trim(FTIME)
-     if ( LOUT ) write( FID_LOG, '(1X,A,A)') "Create ctl file: ", trim(fname)
+     if ( LOUT .and. LOG_DBUG ) write( FID_LOG, '(1X,A,A)') "Create ctl file: ", trim(fname)
      open ( FID_CTL, file=trim(fname)//".ctl", form="formatted", access="sequential" )
 
      write( FID_CTL, '(a,1x,a)') "DSET", "^"//trim(fname2)//".grd"
@@ -535,7 +516,6 @@ contains
      write( FID_CTL, '(a)') "ENDVARS"
 
      close( FID_CTL )
-
     return
   end subroutine create_ctl
 
@@ -584,7 +564,7 @@ contains
     fname = trim(ODIR)//'/'//trim(varname)//'_d'//cdom//'z'//clev//'_'//trim(FTIME)//".grd"
     if ( Z_MERGE_OUT ) fname_save = fname
     if ( LOUT ) write( FID_LOG, '(1X,A,A)') "+++ Output data file: ", trim(fname)
-    if ( LOUT ) write( FID_LOG, *) "+++ Check data range: ", maxval(var_2d), minval(var_2d)
+    if ( LOUT .and. LOG_DBUG ) write( FID_LOG, *) "+++ Check data range: ", maxval(var_2d), minval(var_2d)
 
     open( FID_DAT, file=trim(fname), form="unformatted", access="direct", recl=irecl)
     write( FID_DAT, rec=irec ) var_2d(:,:)
@@ -609,7 +589,7 @@ contains
 
     irecl = int(nx,kind=8) * int(ny,kind=8) * 4_8
     if ( LOUT ) write( FID_LOG, '(1X,A,A)') "+++ Merged output to: ", trim(fname_save)
-    if ( LOUT ) write( FID_LOG, *) "+++ Check data range: ", maxval(var_2d), minval(var_2d)
+    if ( LOUT .and. LOG_DBUG ) write( FID_LOG, *) "+++ Check data range: ", maxval(var_2d), minval(var_2d)
 
     open( FID_DAT, file=trim(fname_save), form="unformatted", access="direct", recl=irecl)
     write( FID_DAT, rec=irec ) var_2d(:,:)
@@ -639,7 +619,6 @@ contains
     endif
 
     close ( FID_CONF )
-
     return
   end subroutine read_conf_logout
 
@@ -661,7 +640,7 @@ contains
     endif
 
     read  ( FID_CONF, nml=INFO, iostat=ierr )
-    if ( LOUT ) write ( FID_LOG, nml=INFO )
+    if ( LOUT .and. LOG_DBUG ) write ( FID_LOG, nml=INFO )
 
     if ( ZCOUNT > max_zcount ) then
        if ( LOUT ) write (*, *) "ERROR: overflow maximum of zcount"
@@ -677,23 +656,25 @@ contains
     endif
 
     read  ( FID_CONF, nml=ANAL, iostat=ierr )
-    if ( LOUT ) write ( FID_LOG, nml=ANAL )
+    if ( LOUT .and. LOG_DBUG ) write ( FID_LOG, nml=ANAL )
 
     rewind( FID_CONF )
     read  ( FID_CONF, nml=VARI, iostat=ierr )
-    if ( LOUT ) write ( FID_LOG, nml=VARI )
-    if ( LOUT ) write( FID_LOG,* ) ""
+    if ( LOUT .and. LOG_DBUG ) write ( FID_LOG, nml=VARI )
+    if ( LOUT .and. LOG_DBUG ) write( FID_LOG,* ) ""
     do n=1, VCOUNT
        VNAME(n) = trim(VNAME(n))
        if ( LOUT ) write( FID_LOG, '(1X,A,I3,A,A)' ) "+++ Listing Vars: (", n, ") ", VNAME(n)
     enddo
     if ( LOUT ) write( FID_LOG,* ) ""
 
-    if ( Z_LEV_LIST ) then
+    if ( TARGET_ZLEV(1) >= 0 ) then
+       Z_LEV_LIST = .true.
        do n=1, ZCOUNT
           if ( LOUT ) write( FID_LOG, '(1X,A,I3,A,I5)' ) "+++ Listing Levs: (", n, ") ", TARGET_ZLEV(n)
        enddo
     else
+       Z_LEV_LIST = .false.
        m = ZSTART
        do n=1, ZCOUNT
           TARGET_ZLEV(n) = m
@@ -705,7 +686,7 @@ contains
 
     rewind( FID_CONF )
     read  ( FID_CONF, nml=GRADS, iostat=ierr )
-    if ( LOUT ) write ( FID_LOG, nml=GRADS )
+    if ( LOUT .and. LOG_DBUG ) write ( FID_LOG, nml=GRADS )
 
     close ( FID_CONF )
 
@@ -719,18 +700,18 @@ contains
     endif
 
     read  ( FID_RCNF, nml=PARAM_TIME, iostat=ierr )
-    if ( LOUT ) write ( FID_LOG, nml=PARAM_TIME )
+    if ( LOUT .and. LOG_DBUG ) write ( FID_LOG, nml=PARAM_TIME )
 
     read  ( FID_RCNF, nml=PARAM_PRC, iostat=ierr )
-    if ( LOUT ) write ( FID_LOG, nml=PARAM_PRC )
+    if ( LOUT .and. LOG_DBUG ) write ( FID_LOG, nml=PARAM_PRC )
 
     rewind( FID_RCNF )
     read  ( FID_RCNF, nml=PARAM_HIST, iostat=ierr )
-    if ( LOUT ) write ( FID_LOG, nml=PARAM_HIST )
+    if ( LOUT .and. LOG_DBUG ) write ( FID_LOG, nml=PARAM_HIST )
 
     rewind( FID_RCNF )
     read  ( FID_RCNF, nml=PARAM_HISTORY, iostat=ierr )
-    if ( LOUT ) write ( FID_LOG, nml=PARAM_HISTORY )
+    if ( LOUT .and. LOG_DBUG ) write ( FID_LOG, nml=PARAM_HISTORY )
 
     close(FID_RCNF)
 
@@ -843,6 +824,7 @@ contains
     end select
 
     endif
+    if ( LOUT ) write( FID_LOG, '(1X,A)' ) ""
 
     return
   end subroutine make_vgrid
@@ -857,11 +839,6 @@ contains
     integer, intent(in) :: irank
     !---------------------------------------------------------------------------
 
-!    allocate( p_2dt       (mnxp,       mnyp              ) )
-!    allocate( p_2d        (mnxp,       mnyp,       1     ) )
-!    allocate( p_3d        (mnxp,       mnyp,       nz, 1 ) )
-!    allocate( p_3d_urban  (mnxp,       mnyp,       uz, 1 ) )
-!    allocate( p_3d_land   (mnxp,       mnyp,       lz, 1 ) )
     allocate( p_var       (mnxp,       mnyp*nmnge     ) )
     allocate( p_ref       (mnxp,       mnyp,       nz ) )
     allocate( p_cdx       (nxgp*nmnge                 ) )
@@ -871,10 +848,6 @@ contains
     allocate( cdz         (nz+2*nzh                   ) )
     allocate( cz          (nz+2*nzh                   ) )
     allocate( zlev        (nz                         ) )
-
-!    allocate( sendbuf     (mnxp,       mnyp*nmnge        ) )
-!    allocate( sendbuf_gx  (nxgp*nmnge                    ) )
-!    allocate( sendbuf_gy  (nygp*nmnge                    ) )
 
     if ( irank == master ) then
        allocate( var_2d    (nx,               ny               ) )
@@ -897,6 +870,5 @@ contains
 
     return
   end subroutine allocation
-
 
 end program netcdf2grads_h

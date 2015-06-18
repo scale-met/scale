@@ -87,6 +87,7 @@ contains
     integer :: istat
     !---------------------------------------------------------------------------
 
+    if ( LOUT .and. LOG_DBUG ) write( FID_LOG, '(1x,A,A)' ) "+++ Target File (dim): ", trim(ncfile)
     istat = nf90_open( trim(ncfile), nf90_nowrite, ncid )
     if (istat .ne. nf90_noerr) call handle_err(istat, __LINE__)
  
@@ -243,7 +244,6 @@ contains
     return
   end subroutine netcdf_read_grid
 
-
   !> read from netcdf: variables data
   !-----------------------------------------------------------------------------------------
   subroutine netcdf_read_var( &
@@ -292,7 +292,7 @@ contains
 
     write ( num,'(I6.6)' ) imnge
     ncfile = trim(IDIR)//"/"//trim(HISTORY_DEFAULT_BASENAME)//".pe"//num//".nc"
-    if ( LOUT ) write( FID_LOG, '(1x,A,A)' ) "+++ Target File (var): ", trim(ncfile)
+    if ( LOUT .and. LOG_DBUG ) write( FID_LOG, '(1x,A,A)' ) "+++ Target File (var): ", trim(ncfile)
 
     if ( atype == a_conv ) then
        if ( ctype == c_height ) then
@@ -306,12 +306,12 @@ contains
     call set_flag_bnd( ix, jy, flag_bnd )
     call set_index_readbuf( nm, nxp, nyp, mnxp, mnyp,       &
                             is, ie, js, je, im_bnd=flag_bnd )
-    call set_index_netcdf( atype, vtype, ix, jy, nxp, nyp,       & ! [in]
-                           mnxp, mnyp, it, nz, zz, varname,      & ! [in]
-                           isn, ien, jsn, jen, nzn,              & ! [out]
-                           start_3d, start_2d, start_2dt,        & ! [out]
-                           count_3d, count_2d, count_urban,      & ! [out]
-                           count_land, count_height, count_tpmsk ) ! [out]
+    call set_index_netcdf( atype, vtype, ix, jy, nxp, nyp,       &
+                           mnxp, mnyp, it, nz, zz, varname,      &
+                           isn, ien, jsn, jen, nzn,              &
+                           start_3d, start_2d, start_2dt,        &
+                           count_3d, count_2d, count_urban,      &
+                           count_land, count_height, count_tpmsk )
 
     istat = nf90_open( trim(ncfile), nf90_nowrite, ncid )
     if (istat .ne. nf90_noerr) call handle_err(istat, __LINE__)
@@ -368,12 +368,10 @@ contains
     return
   end subroutine netcdf_read_var
 
-
   !> read from netcdf: reference data for convert
   !-----------------------------------------------------------------------------------------
   subroutine netcdf_read_ref( &
       imnge,      & ! [in ]
-!      nm,         & ! [in ]
       nxp,  nyp,  & ! [in ]
       mnxp, mnyp, & ! [in ]
       nz,         & ! [in ]
@@ -392,7 +390,6 @@ contains
     integer :: count_3d(4)
     integer :: count_2d(3)
 
-!    integer :: is, ie, js, je
     integer :: isn, ien, jsn, jen, nzn
     integer :: ix, jy
     character(CLNG) :: ncfile
@@ -409,12 +406,9 @@ contains
 
     write ( num,'(I6.6)' ) imnge
     ncfile = trim(IDIR)//"/"//trim(HISTORY_DEFAULT_BASENAME)//".pe"//num//".nc"
-    if ( LOUT ) write( FID_LOG, '(1x,A,A)' ) "+++ Target File (ref): ", trim(ncfile)
+    if ( LOUT .and. LOG_DBUG ) write( FID_LOG, '(1x,A,A)' ) "+++ Target File (ref): ", trim(ncfile)
 
     call irank2ixjy( imnge, ix, jy )
-!    call set_flag_bnd( ix, jy, flag_bnd )
-!    call set_index_readbuf( nm, nxp, nyp, mnxp, mnyp,       &
-!                            is, ie, js, je, im_bnd=flag_bnd )
 
     nzn = nz(1)
     isn = 1
@@ -466,7 +460,6 @@ contains
     istat = nf90_close(ncid)
     return
   end subroutine netcdf_read_ref
-
 
   !> assignment of tile position corresponding to the rank
   !-----------------------------------------------------------------------------------------

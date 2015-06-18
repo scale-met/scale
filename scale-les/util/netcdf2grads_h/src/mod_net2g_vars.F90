@@ -36,7 +36,7 @@ module mod_net2g_vars
   integer,         public :: VCOUNT         = 1
   integer,         public :: ZCOUNT         = 1
   integer,         public :: ZSTART         = 1
-  integer,         public :: TARGET_ZLEV(max_zcount) = 1
+  integer,         public :: TARGET_ZLEV(max_zcount) = -1
   real(DP),        public :: EXTRA_TINTERVAL = -9.999
   character(5),    public :: EXTRA_TUNIT    = ""
   character(CLNG), public :: IDIR           = "./data"
@@ -49,7 +49,9 @@ module mod_net2g_vars
   character(15),   public :: FTIME          = "200001010000"
   character(CLNG), public :: LOG_BASENAME   = "LOG"
   logical,         public :: LOG_ALL_OUTPUT = .false.
-  logical,         public :: Z_LEV_LIST     = .true.
+  logical,         public :: LOG_DBUG       = .false.
+  integer,         public :: LOG_LEVEL      = 1
+  logical,         public :: Z_LEV_LIST     = .false.
   logical,         public :: Z_MERGE_OUT    = .false.  ! only for slice
 
   character(CSHT), public :: ANALYSIS       = "SLICE"

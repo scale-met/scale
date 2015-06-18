@@ -44,9 +44,8 @@ mod_net2g_comm.o: src/mod_net2g_comm.F90 mod_net2g_vars.o mod_net2g_error.o mod_
 	$(FC) $(FFLAGS) $(INCLUDES) -o $@ -c $<
 mod_net2g_netcdf.o: src/mod_net2g_netcdf.F90 mod_net2g_vars.o mod_net2g_error.o mod_net2g_anal.o
 	$(FC) $(FFLAGS) $(INCLUDES) -o $@ -c $<
-prg_netcdf2grads_h.o: src/prg_netcdf2grads_h.F90 \
-        mod_net2g_vars.o mod_net2g_error.o mod_net2g_setup.o mod_net2g_anal.o mod_net2g_calender.o \
-        mod_net2g_comm.o mod_net2g_netcdf.o
+prg_netcdf2grads_h.o: src/prg_netcdf2grads_h.F90 mod_net2g_vars.o mod_net2g_error.o \
+        mod_net2g_setup.o mod_net2g_anal.o mod_net2g_calender.o mod_net2g_comm.o mod_net2g_netcdf.o
 	$(FC) $(FFLAGS) $(INCLUDES) -o $@ -c $<
 
 clean:

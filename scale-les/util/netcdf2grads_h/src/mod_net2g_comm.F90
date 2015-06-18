@@ -18,6 +18,7 @@ module mod_net2g_comm
   !
   use mpi
 
+  use mod_net2g_vars
   use mod_net2g_error
 
   !-----------------------------------------------------------------------------------------
@@ -53,11 +54,6 @@ module mod_net2g_comm
   real(SP),allocatable :: sendbuf(:,:)
   real(SP),allocatable :: sendbuf_gx(:)
   real(SP),allocatable :: sendbuf_gy(:)
-!  real(SP),allocatable :: recvbuf(:,:)
-!  real(SP),allocatable :: cx_gather(:)
-!  real(SP),allocatable :: cy_gather(:)
-!  real(SP),allocatable :: cdx_gather(:)
-!  real(SP),allocatable :: cdy_gather(:)
 
   !-----------------------------------------------------------------------------------------
 contains
@@ -75,7 +71,7 @@ contains
     call MPI_INIT( ierr )
     call MPI_COMM_SIZE( MPI_COMM_WORLD, isize, ierr )
     call MPI_COMM_RANK( MPI_COMM_WORLD, irank, ierr )
-    if ( irank == master ) write( *, * ) "+++ MPI COMM: Corrective Initialize"
+    if ( irank == master .and. LOG_DBUG ) write( *, * ) "+++ MPI COMM: Corrective Initialize"
 
     return
   end subroutine comm_initialize
@@ -88,32 +84,16 @@ contains
       nxgp,      & ! [in]
       nygp,      & ! [in]
       nmnge      ) ! [in]
-!      tproc      ) ! [in]
     implicit none
 
     integer, intent(in) :: mnxp, mnyp
     integer, intent(in) :: nxgp, nygp
     integer, intent(in) :: nmnge
-!    integer, intent(in) :: tproc
     !---------------------------------------------------------------------------
 
     allocate( sendbuf     (mnxp,       mnyp*nmnge) )
     allocate( sendbuf_gx  (nxgp*nmnge            ) )
     allocate( sendbuf_gy  (nygp*nmnge            ) )
-
-!    if ( irank == master ) then
-!       allocate( recvbuf   (mnxp,             mnyp*nmnge*tproc) )
-!       allocate( cx_gather (nxgp*nmnge*tproc                  ) )
-!       allocate( cy_gather (nygp*nmnge*tproc                  ) )
-!       allocate( cdx_gather(nxgp*nmnge*tproc                  ) )
-!       allocate( cdy_gather(nygp*nmnge*tproc                  ) )
-!    else
-!       allocate( recvbuf   (1,                1               ) )
-!       allocate( cx_gather (1                                 ) )
-!       allocate( cy_gather (1                                 ) )
-!       allocate( cdx_gather(1                                 ) )
-!       allocate( cdy_gather(1                                 ) )
-!    endif
 
     return
   end subroutine comm_setup
@@ -126,7 +106,7 @@ contains
     integer :: ierr
     !---------------------------------------------------------------------------
 
-    if ( irank == master ) write( *, * ) "+++ MPI COMM: Corrective Finalize"
+    if ( irank == master .and. LOG_DBUG ) write( *, * ) "+++ MPI COMM: Corrective Finalize"
     call MPI_FINALIZE( ierr )
 
     return
