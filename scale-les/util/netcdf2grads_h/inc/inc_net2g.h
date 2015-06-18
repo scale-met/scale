@@ -1,4 +1,4 @@
-  !-----------------------------------------------------------------------------
+!-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
   !
@@ -56,7 +56,7 @@
   integer,  parameter :: loc_vars   = 6
 
   character(3) :: cmm(12)
-  data cmm / "JAN", "FEB", "MAR", "APL", "MAY", "JUN", &
+  data cmm / "JAN", "FEB", "MAR", "APR", "MAY", "JUN", &
              "JUL", "AUG", "SEP", "OCT", "NOV", "DEC" /
 
   integer,  parameter :: num_std_plev = 14
@@ -67,4 +67,3 @@
   integer,  parameter :: num_std_vname = 6
   character(CSHT) :: std_vname(num_std_vname)
   data std_vname / "PT", "PRES", "U", "V", "W", "QHYD" /
-
