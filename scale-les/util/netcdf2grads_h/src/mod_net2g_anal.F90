@@ -122,6 +122,7 @@ contains
     select case( atype )
     case ( a_slice )
        nj = jsn
+!OCL XFILL
        do j = js, je
        ni = isn
        do i = is, ie
@@ -132,6 +133,7 @@ contains
        enddo
     case ( a_max )
        nj = jsn
+!OCL PREFETCH
        do j = js, je
        ni = isn
        do i = is, ie
@@ -142,6 +144,7 @@ contains
        enddo
     case ( a_min )
        nj = jsn
+!OCL PREFETCH
        do j = js, je
        ni = isn
        do i = is, ie
@@ -152,6 +155,7 @@ contains
        enddo
     case ( a_sum )
        nj = jsn
+!OCL PREFETCH
        do j = js, je
        ni = isn
        do i = is, ie
@@ -166,6 +170,7 @@ contains
        enddo
     case ( a_ave )
        nj = jsn
+!OCL PREFETCH
        do j = js, je
        ni = isn
        do i = is, ie
@@ -216,6 +221,7 @@ contains
                           jsn, jen, nzn, nm      )
 
     jj = jsn
+!OCL PREFETCH
     do j = js, je
     ii = isn
     do i = is, ie
@@ -258,6 +264,7 @@ contains
 
     select case( ctype )
     case ( c_height )
+!OCL PREFETCH
        do jj = jsn, jen
        do ii = isn, ien
           !allow extrapolation
@@ -273,12 +280,13 @@ contains
           hgt_l = ref(ii,jj,kk-1,nm)
           hgt_u = ref(ii,jj,kk,  nm)
 
-          wght_l(ii,jj) = (plog-plog_u) / (plog_l-plog_u)
-          wght_u(ii,jj) = (plog_l-plog) / (plog_l-plog_u)
+          wght_l(ii,jj) = (hgt-hgt_u) / (hgt_l-hgt_u)
+          wght_u(ii,jj) = (hgt_l-hgt) / (hgt_l-hgt_u)
        enddo
        enddo
 
     case ( c_pres )
+!OCL PREFETCH
        do jj = jsn, jen
        do ii = isn, ien
           !allow extrapolation
