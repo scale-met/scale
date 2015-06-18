@@ -71,10 +71,6 @@ contains
     character(CMID), intent(in) :: varname
     integer, intent(out)        :: vtype
     integer, intent(inout)      :: atype
-
-
-    integer :: ncid, varid
-    integer :: istat
     !---------------------------------------------------------------------------
 
     select case( trim(varname) )

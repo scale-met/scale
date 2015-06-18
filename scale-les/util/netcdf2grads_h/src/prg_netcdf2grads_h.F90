@@ -270,8 +270,8 @@ program netcdf2grads_h
                  if ( iz /= 1 .and. Z_MERGE_OUT ) then
                     call write_vars_zmerge( var_2d, iz )
                  else
-                    call create_ctl( varname, atype, vtype, idom, it, zz )
-                    call write_vars( var_2d, varname, idom, it, zz )
+                    call create_ctl( varname, atype, vtype, idom, zz )
+                    call write_vars( var_2d, varname, idom, zz )
                  endif
               endif
            enddo !--- level loop
@@ -290,8 +290,8 @@ program netcdf2grads_h
            !zz = 0 ! used as file name
            if ( irank == master ) then
               call combine_vars_2d( recvbuf, var_2d )
-              call create_ctl( varname, atype, vtype, idom, it, zz )
-              call write_vars( var_2d, varname, idom, it, zz )
+              call create_ctl( varname, atype, vtype, idom, zz )
+              call write_vars( var_2d, varname, idom, zz )
            endif
 
         case default
@@ -447,13 +447,12 @@ contains
       atype,    & ! [in]
       vtype,    & ! [in]
       idom,     & ! [in]
-      it,       & ! [in]
       zz        ) ! [in]
     implicit none
 
     character(CMID), intent(in) :: varname
     integer,         intent(in) :: atype, vtype
-    integer,         intent(in) :: idom, it, zz
+    integer,         intent(in) :: idom, zz
 
     character(2)    :: cdom
     character(3)    :: clev
@@ -532,13 +531,12 @@ contains
       var_2d,   & ! [in]
       varname,  & ! [in]
       idom,     & ! [in]
-      it,       & ! [in]
       zz        ) ! [in]
     implicit none
 
     real(SP),        intent(in) :: var_2d(:,:)
     character(CMID), intent(in) :: varname
-    integer,         intent(in) :: idom, it, zz
+    integer,         intent(in) :: idom, zz
 
     integer         :: irec
     integer(8)      :: irecl
