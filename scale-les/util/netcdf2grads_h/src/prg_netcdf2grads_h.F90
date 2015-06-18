@@ -619,6 +619,8 @@ contains
        call err_abort( 1, __LINE__, loc_main )
     endif
 
+    read  ( FID_CONF, nml=LOGOUT, iostat=ierr )
+
     close ( FID_CONF )
     return
   end subroutine read_conf_logout
