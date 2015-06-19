@@ -277,7 +277,12 @@ contains
              do kk = 2, nz
                 if ( ref(ii,jj,kk,nm) > lev ) exit
              enddo
-             if ( kk == nz ) call err_abort( 0, __LINE__, loc_anal )
+             if ( kk > nz ) then
+                write (*, '(1X,A)' ) "ERROR: requested vertical level is too high."
+                write (*, '(1X,A,F12.2,A)' ) "       requested vertical level: ", lev, " [m]"
+                write (*, '(1X,A,F12.2,A)' ) "       input data top level: ", ref(ii,jj,nz,nm), " [m]"
+                call err_abort( 1, __LINE__, loc_main )
+             endif
 
              ku(ii,jj) = kk
              kl(ii,jj) = kk - 1
@@ -305,7 +310,12 @@ contains
              do kk = 2, nz
                 if ( ref(ii,jj,kk,nm) < lev ) exit
              enddo
-             if ( kk == nz ) call err_abort( 0, __LINE__, loc_anal )
+             if ( kk > nz ) then
+                write (*, '(1X,A)' ) "ERROR: requested vertical level is too high."
+                write (*, '(1X,A,F12.2,A)' ) "       requested vertical level: ", lev, " [Pa]"
+                write (*, '(1X,A,F12.2,A)' ) "       input data top level: ", ref(ii,jj,nz,nm), " [Pa]"
+                call err_abort( 1, __LINE__, loc_main )
+             endif
 
              ku(ii,jj) = kk
              kl(ii,jj) = kk - 1
