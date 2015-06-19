@@ -47,8 +47,8 @@ module mod_net2g_anal
   !
   !++ Private parameters & variables
   !
-  real(SP),allocatable, private :: ref(:,:,:,:)
-  real(SP),allocatable, private :: wght_l(:,:), wght_u(:,:)
+  real(DP),allocatable, private :: ref(:,:,:,:)
+  real(DP),allocatable, private :: wght_l(:,:), wght_u(:,:)
   integer, allocatable, private :: kl(:,:), ku(:,:)
 
   !-----------------------------------------------------------------------------------------
@@ -89,7 +89,7 @@ contains
     integer,  intent(in) :: nm
     !---------------------------------------------------------------------------
 
-    ref(:,:,:,nm) = inp(:,:,:)
+    ref(:,:,:,nm) = dble( inp(:,:,:) )
 
     return
   end subroutine anal_input_ref
@@ -225,13 +225,13 @@ contains
     do j = js, je
     ii = isn
     do i = is, ie
-       diff_l = abs( wght_l(ii,jj) - UNDEF_SP )
-       diff_u = abs( wght_u(ii,jj) - UNDEF_SP )
+       diff_l = abs( wght_l(ii,jj) - UNDEF_DP )
+       diff_u = abs( wght_u(ii,jj) - UNDEF_DP )
        if ( diff_l < EPS_SP .or. diff_u < EPS_SP ) then
-          interp(i,j) = UNDEF_SP
+          interp(i,j) = real( UNDEF_DP )
        else
-          interp(i,j) =  wght_l(ii,jj) * real( org(ii,jj,kl(ii,jj),1) ) &
-                       + wght_u(ii,jj) * real( org(ii,jj,ku(ii,jj),1) )
+          interp(i,j) = real(  wght_l(ii,jj) * org(ii,jj,kl(ii,jj),1) &
+                             + wght_u(ii,jj) * org(ii,jj,ku(ii,jj),1) )
        endif
     ii = ii + 1
     enddo
@@ -258,8 +258,9 @@ contains
     integer,  intent(in)  :: nz, nm
 
     integer  :: ii, jj, kk
-    real(SP) :: hgt,  hgt_l,  hgt_u
-    real(SP) :: plog, plog_l, plog_u
+    real(DP) :: hgt,  hgt_l,  hgt_u
+    real(DP) :: plog, plog_l, plog_u
+    real(DP) :: diff
     !---------------------------------------------------------------------------
 
     select case( ctype )
@@ -276,12 +277,18 @@ contains
           ku(ii,jj) = kk
           kl(ii,jj) = kk - 1
 
-          hgt   = lev
-          hgt_l = ref(ii,jj,kk-1,nm)
-          hgt_u = ref(ii,jj,kk,  nm)
+          diff = ref(ii,jj,1,nm) - dble( lev )
+          if ( diff > 0 ) then
+             wght_l(ii,jj) = UNDEF_DP
+             wght_u(ii,jj) = UNDEF_DP
+          else
+             hgt   = dble( lev )
+             hgt_l = ref(ii,jj,kk-1,nm)
+             hgt_u = ref(ii,jj,kk,  nm)
 
-          wght_l(ii,jj) = (hgt-hgt_u) / (hgt_l-hgt_u)
-          wght_u(ii,jj) = (hgt_l-hgt) / (hgt_l-hgt_u)
+             wght_l(ii,jj) = (hgt-hgt_u) / (hgt_l-hgt_u)
+             wght_u(ii,jj) = (hgt_l-hgt) / (hgt_l-hgt_u)
+          endif
        enddo
        enddo
 
@@ -298,12 +305,18 @@ contains
           ku(ii,jj) = kk
           kl(ii,jj) = kk - 1
 
-          plog   = log( lev             )
-          plog_l = log( ref(ii,jj,kk-1,nm) )
-          plog_u = log( ref(ii,jj,kk,  nm) )
+          diff = ref(ii,jj,1,nm) - dble( lev )
+          if ( diff < 0 ) then
+             wght_l(ii,jj) = UNDEF_DP
+             wght_u(ii,jj) = UNDEF_DP
+          else
+             plog   = log( dble( lev )        )
+             plog_l = log( ref(ii,jj,kk-1,nm) )
+             plog_u = log( ref(ii,jj,kk,  nm) )
 
-          wght_l(ii,jj) = (plog-plog_u) / (plog_l-plog_u)
-          wght_u(ii,jj) = (plog_l-plog) / (plog_l-plog_u)
+             wght_l(ii,jj) = (plog-plog_u) / (plog_l-plog_u)
+             wght_u(ii,jj) = (plog_l-plog) / (plog_l-plog_u)
+          endif
        enddo
        enddo
 

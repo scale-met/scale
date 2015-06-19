@@ -115,8 +115,7 @@ program netcdf2grads_h
     EXTRA_TINTERVAL,           &
     EXTRA_TUNIT
   namelist /ANAL/              &
-    ANALYSIS,                  &
-    CONV_TYPE
+    ANALYSIS
   namelist /VARI/              &
     VNAME,                     &
     TARGET_ZLEV
@@ -495,9 +494,9 @@ contains
      select case( vtype )
      case ( vt_urban, vt_land, vt_tpmsk )
         write( FID_CTL, '(a,3x,i7,1x,a,1x,a)') "ZDEF", 1, "linear", "1 1"
-     case ( vt_height, vt_2d )
+     case ( vt_2d )
         write( FID_CTL, '(a,3x,i7,1x,a,1x,e15.7)') "ZDEF", 1, "LEVELS", zlev(zz)*1.d-3
-     case ( vt_3d )
+     case ( vt_3d, vt_height )
         if ( Z_MERGE_OUT ) then
            write( FID_CTL, '(a,3x,i7,1x,a)') "ZDEF", ZCOUNT, "LEVELS"
            if ( atype == a_conv .and. ctype == c_pres ) then
@@ -689,10 +688,17 @@ contains
           if ( LOUT ) write( FID_LOG, '(1X,A,I3,A,I5)' ) "+++ Listing Levs: (", n, ") ", TARGET_ZLEV(n)
        enddo
     else
-       select case( trim(ANALYSIS) )
-       case ( "CONV", "conv", "CONVERT", "convert" )
+       select case( trim(Z_LEV_TYPE) )
+       case ( "ZLEV", "zlev" )
           Z_LEV_LIST = .true.
-          CONV_TYPE  = "PRES"
+          if ( LOUT ) write( FID_LOG, '(1X,A)' ) "+++ Use Default set of HEGIHT LEVELs"
+          ZCOUNT = num_std_zlev
+          do n=1, ZCOUNT
+             TARGET_ZLEV(n) = std_zlev(n)
+             if ( LOUT ) write( FID_LOG, '(1X,A,I3,A,I5)' ) "+++ Listing Levs: (", n, ") ", TARGET_ZLEV(n)
+          enddo
+       case ( "PLEV", "plev" )
+          Z_LEV_LIST = .true.
           if ( LOUT ) write( FID_LOG, '(1X,A)' ) "+++ Use Default set of PRESSURE LEVELs"
           ZCOUNT = num_std_plev
           do n=1, ZCOUNT
@@ -802,7 +808,6 @@ contains
     return
   end subroutine check_targ_zlev
 
-
   !> make vgrid for merged-z output
   !-----------------------------------------------------------------------------------------
   subroutine make_vgrid()
@@ -821,46 +826,11 @@ contains
        enddo
 
     else
-       if ( Z_LEV_TYPE .eq. "" ) then
-          if ( LOUT ) write( FID_LOG, '(1X,A)' ) "*** Guess Z_LEV_TYPE"
-          if ( max_zcount > maxval( TARGET_ZLEV ) ) then
-             write (*, *) "ERROR: cannot guess Z_LEV_TYPE, please specify it!"
-             call err_abort( 1, __LINE__, loc_main )
-          else
-             if ( LOUT ) write( FID_LOG, '(1X,A)' ) "    assumed as Z_LEV_TYPE = HEIGHT"
-             Z_LEV_TYPE = "HEIGHT"
-          endif
-       endif
-
-       select case( Z_LEV_TYPE )
-       case ( "GRID", "grid" )
-          do iz = 1, ZCOUNT
-             vgrid(iz) = zlev( TARGET_ZLEV(iz) )
-             if ( LOUT ) write( FID_LOG, '(1X,A,I3,A,F8.2)' ) "+++ Target Height: (", iz, ") ", vgrid(iz)
-          enddo
-
-       case ( "HEIGHT", "height", "HGT", "hgt" )
-          do iz = 1, ZCOUNT
-             mini = 9.9999D+10
-             do k=1, nz
-                diff = abs(real(TARGET_ZLEV(iz)) - zlev(k))
-                if ( diff < mini ) then
-                   mini = diff
-                   ik = k
-                endif
-             enddo
-             if ( LOUT ) write( FID_LOG, '(1X,A,I5,A,F8.3)' ) &
-             "+++ Search Nearest - request: ", TARGET_ZLEV(iz), "  diff: ", mini
-
-             TARGET_ZLEV(iz) = ik
-             vgrid(iz) = zlev( TARGET_ZLEV(iz) )
-             if ( LOUT ) write( FID_LOG, '(1X,A,I3,A,F8.2)' ) "+++ Target Height: (", iz, ") ", vgrid(iz)
-          enddo
-
-       case default
-          write (*, *) "ERROR: requested Z_LEV_TYPE is not supported"
-          call err_abort( 1, __LINE__, loc_main )
-       end select
+       do iz = 1, ZCOUNT
+          vgrid(iz) = zlev( TARGET_ZLEV(iz) )
+          if ( LOUT ) write( FID_LOG, '(1X,A,I3,A,F8.2,A,I3)' ) &
+                      "+++ Target Height: (", iz, ") ", vgrid(iz), " - req. lev = ", TARGET_ZLEV(iz)
+       enddo
 
     endif
     if ( LOUT ) write( FID_LOG, '(1X,A)' ) ""

@@ -24,6 +24,7 @@
   integer,  parameter :: FID_DAT    = 24
 
   real(SP), parameter :: UNDEF_SP     = -9.9999D7
+  real(DP), parameter :: UNDEF_DP     = -0.9999900E+31
   real(SP), parameter :: EPS_SP       = 1.0D-6
 
   integer,  parameter :: err_internal = 0
@@ -63,6 +64,11 @@
   real(SP) :: std_plev(num_std_plev)
   data std_plev / 1000, 975, 950, 925, 900, 850, 800, &
                    700, 600, 500, 400, 300, 250, 200 /
+
+  integer,  parameter :: num_std_zlev = 14
+  real(SP) :: std_zlev(num_std_zlev)
+  data std_zlev /  500, 1000, 1500, 2000,  3000,  4000,  5000, &
+                  6000, 7000, 8000, 9000, 10000, 11000, 12000 /
 
   integer,  parameter :: num_std_vname = 6
   character(CSHT) :: std_vname(num_std_vname)

@@ -108,37 +108,49 @@ contains
     integer, intent(out) :: atype
     !---------------------------------------------------------------------------
 
-    select case( trim(ANALYSIS) )
-    case ( "SLICE", "slice" )
-       if ( LOUT ) write( FID_LOG, '(1x,A)' ) "+++ ANALYSYS TYPE: slice"
-       atype = a_slice
-    case ( "MAX", "max", "MAXIMUM", "maximum" )
-       if ( LOUT ) write( FID_LOG, '(1x,A)' ) "+++ ANALYSYS TYPE: column max"
-       atype = a_max
-       ZCOUNT  = 1
-       Z_MERGE_OUT = .false.
-    case ( "MIN", "min", "MINIMUM", "minimum" )
-       if ( LOUT ) write( FID_LOG, '(1x,A)' ) "+++ ANALYSYS TYPE: column min"
-       atype = a_min
-       ZCOUNT  = 1
-       Z_MERGE_OUT = .false.
-    case ( "SUM", "sum", "SUMMATION", "summation" )
-       if ( LOUT ) write( FID_LOG, '(1x,A)' ) "+++ ANALYSYS TYPE: column sum"
-       atype = a_sum
-       ZCOUNT  = 1
-       Z_MERGE_OUT = .false.
-    case ( "AVE", "ave", "AVERAGE", "average" )
-       if ( LOUT ) write( FID_LOG, '(1x,A)' ) "+++ ANALYSYS TYPE: column ave"
-       atype = a_ave
-       ZCOUNT  = 1
-       Z_MERGE_OUT = .false.
-    case ( "CONV", "conv", "CONVERT", "convert" )
-       if ( LOUT ) write( FID_LOG, '(1x,A)' ) "+++ ANALYSYS TYPE: vertical interp"
+    select case( trim(Z_LEV_TYPE) )
+    case ( "ZLEV", "zlev" )
        atype = a_conv
+
+    case ( "PLEV", "plev" )
+       atype = a_conv
+
+    case ( "ORIGINAL", "original" )
+       select case( trim(ANALYSIS) )
+       case ( "SLICE", "slice" )
+          if ( LOUT ) write( FID_LOG, '(1x,A)' ) "+++ ANALYSYS TYPE: slice"
+          atype = a_slice
+       case ( "MAX", "max", "MAXIMUM", "maximum" )
+          if ( LOUT ) write( FID_LOG, '(1x,A)' ) "+++ ANALYSYS TYPE: column max"
+          atype = a_max
+          ZCOUNT  = 1
+          Z_MERGE_OUT = .false.
+       case ( "MIN", "min", "MINIMUM", "minimum" )
+          if ( LOUT ) write( FID_LOG, '(1x,A)' ) "+++ ANALYSYS TYPE: column min"
+          atype = a_min
+          ZCOUNT  = 1
+          Z_MERGE_OUT = .false.
+       case ( "SUM", "sum", "SUMMATION", "summation" )
+          if ( LOUT ) write( FID_LOG, '(1x,A)' ) "+++ ANALYSYS TYPE: column sum"
+          atype = a_sum
+          ZCOUNT  = 1
+          Z_MERGE_OUT = .false.
+       case ( "AVE", "ave", "AVERAGE", "average" )
+          if ( LOUT ) write( FID_LOG, '(1x,A)' ) "+++ ANALYSYS TYPE: column ave"
+          atype = a_ave
+          ZCOUNT  = 1
+          Z_MERGE_OUT = .false.
+       case default
+          write (*, *) "ERROR: specified analysis type is not appropiate"
+          write (*, *) "***** ", trim(ANALYSIS)
+          call err_abort( 1, __LINE__, loc_setup )
+       end select
+
     case default
-       write (*, *) "ERROR: specified analysis type is not appropiate"
-       write (*, *) "***** ", trim(ANALYSIS)
+       write (*, *) "ERROR: specified Z_LEV_TYPE is not appropiate"
+       write (*, *) "***** ", trim(Z_LEV_TYPE)
        call err_abort( 1, __LINE__, loc_setup )
+
     end select
 
     return
@@ -153,11 +165,11 @@ contains
     integer, intent(out) :: ctype
     !---------------------------------------------------------------------------
 
-    select case( trim(CONV_TYPE) )
-    case ( "HGT", "hgt", "HEIGHT", "height" )
+    select case( trim(Z_LEV_TYPE) )
+    case ( "ZLEV", "zlev" )
        if ( LOUT ) write( FID_LOG, '(1x,A)' ) "+++ reference var: height"
        ctype = c_height
-    case ( "PRES", "pres", "PRESSURE", "pressure" )
+    case ( "PLEV", "plev" )
        if ( LOUT ) write( FID_LOG, '(1x,A)' ) "+++ reference var: PRES"
        ctype = c_pres
     case default
@@ -494,9 +506,9 @@ contains
           nzn = nz(2)
        case ( vt_land )
           nzn = nz(3)
-       case ( vt_3d )
+       case ( vt_3d, vt_height )
           nzn = nz(1)
-       case ( vt_2d, vt_height, vt_tpmsk )
+       case ( vt_2d, vt_tpmsk )
           write (*, *) "ERROR: specified anal-type is not appropiate for the var"
           write (*, *) "***** ", trim(ANALYSIS), " --> ", trim(varname)
           call err_abort( 1, __LINE__, loc_setup )
