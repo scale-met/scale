@@ -269,19 +269,19 @@ contains
        do jj = jsn, jen
        do ii = isn, ien
           !allow extrapolation
-          do kk = 2, nz
-             if ( ref(ii,jj,kk,nm) > lev ) exit
-          enddo
-          if ( kk == nz ) call err_abort( 0, __LINE__, loc_anal )
-
-          ku(ii,jj) = kk
-          kl(ii,jj) = kk - 1
-
           diff = ref(ii,jj,1,nm) - dble( lev )
           if ( diff > 0 ) then
              wght_l(ii,jj) = UNDEF_DP
              wght_u(ii,jj) = UNDEF_DP
           else
+             do kk = 2, nz
+                if ( ref(ii,jj,kk,nm) > lev ) exit
+             enddo
+             if ( kk == nz ) call err_abort( 0, __LINE__, loc_anal )
+
+             ku(ii,jj) = kk
+             kl(ii,jj) = kk - 1
+
              hgt   = dble( lev )
              hgt_l = ref(ii,jj,kk-1,nm)
              hgt_u = ref(ii,jj,kk,  nm)
@@ -297,19 +297,19 @@ contains
        do jj = jsn, jen
        do ii = isn, ien
           !allow extrapolation
-          do kk = 2, nz
-             if ( ref(ii,jj,kk,nm) < lev ) exit
-          enddo
-          if ( kk == nz ) call err_abort( 0, __LINE__, loc_anal )
-
-          ku(ii,jj) = kk
-          kl(ii,jj) = kk - 1
-
           diff = ref(ii,jj,1,nm) - dble( lev )
           if ( diff < 0 ) then
              wght_l(ii,jj) = UNDEF_DP
              wght_u(ii,jj) = UNDEF_DP
           else
+             do kk = 2, nz
+                if ( ref(ii,jj,kk,nm) < lev ) exit
+             enddo
+             if ( kk == nz ) call err_abort( 0, __LINE__, loc_anal )
+
+             ku(ii,jj) = kk
+             kl(ii,jj) = kk - 1
+
              plog   = log( dble( lev )        )
              plog_l = log( ref(ii,jj,kk-1,nm) )
              plog_u = log( ref(ii,jj,kk,  nm) )

@@ -34,7 +34,7 @@ module mod_net2g_vars
   integer,         public :: INC_TSTEP      = 1
   integer,         public :: DOMAIN_NUM     = 1
   integer,         public :: VCOUNT         = 1
-  integer,         public :: ZCOUNT         = 1
+  integer,         public :: ZCOUNT         = 0
   integer,         public :: ZSTART         = 1
   integer,         public :: TARGET_ZLEV(max_zcount) = -1
   real(DP),        public :: EXTRA_TINTERVAL = -9.999

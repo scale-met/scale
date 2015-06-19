@@ -684,9 +684,21 @@ contains
 
     if ( TARGET_ZLEV(1) >= 0 ) then
        Z_LEV_LIST = .true.
-       do n=1, ZCOUNT
-          if ( LOUT ) write( FID_LOG, '(1X,A,I3,A,I5)' ) "+++ Listing Levs: (", n, ") ", TARGET_ZLEV(n)
-       enddo
+       select case( trim(Z_LEV_TYPE) )
+       case ( "ZLEV", "zlev" )
+          do n=1, ZCOUNT
+             if ( LOUT ) write( FID_LOG, '(1X,A,I3,A,I5,A)' ) "+++ Listing Levs: (", n, ") ",TARGET_ZLEV(n)," [m]"
+          enddo
+       case ( "PLEV", "plev" )
+          do n=1, ZCOUNT
+             if ( LOUT ) write( FID_LOG, '(1X,A,I3,A,I5,A)' ) "+++ Listing Levs: (", n, ") ",TARGET_ZLEV(n)," [hPa]"
+          enddo
+       case default
+          do n=1, ZCOUNT
+             if ( LOUT ) write( FID_LOG, '(1X,A,I3,A,I5,A)' ) "+++ Listing Levs: (", n, ") ",TARGET_ZLEV(n)," [grid]"
+          enddo
+       end select
+
     else
        select case( trim(Z_LEV_TYPE) )
        case ( "ZLEV", "zlev" )
@@ -695,7 +707,7 @@ contains
           ZCOUNT = num_std_zlev
           do n=1, ZCOUNT
              TARGET_ZLEV(n) = std_zlev(n)
-             if ( LOUT ) write( FID_LOG, '(1X,A,I3,A,I5)' ) "+++ Listing Levs: (", n, ") ", TARGET_ZLEV(n)
+             if ( LOUT ) write( FID_LOG, '(1X,A,I3,A,I5,A)' ) "+++ Listing Levs: (", n, ") ",TARGET_ZLEV(n)," [m]"
           enddo
        case ( "PLEV", "plev" )
           Z_LEV_LIST = .true.
@@ -703,14 +715,18 @@ contains
           ZCOUNT = num_std_plev
           do n=1, ZCOUNT
              TARGET_ZLEV(n) = std_plev(n)
-             if ( LOUT ) write( FID_LOG, '(1X,A,I3,A,I5)' ) "+++ Listing Levs: (", n, ") ", TARGET_ZLEV(n)
+             if ( LOUT ) write( FID_LOG, '(1X,A,I3,A,I5,A)' ) "+++ Listing Levs: (", n, ") ",TARGET_ZLEV(n)," [hPa]"
           enddo
        case default
+          if ( ZCOUNT == 0 ) then
+             write (*, *) "ERROR: plz, specify ZCOUNT or TARGET_ZLEV."
+             call err_abort( 1, __LINE__, loc_main )
+          endif
           Z_LEV_LIST = .false.
           m = ZSTART
           do n=1, ZCOUNT
              TARGET_ZLEV(n) = m
-             if ( LOUT ) write( FID_LOG, '(1X,A,I3,A,I5)' ) "+++ Listing Levs: (", n, ") ", TARGET_ZLEV(n)
+             if ( LOUT ) write( FID_LOG, '(1X,A,I3,A,I5,A)' ) "+++ Listing Levs: (", n, ") ",TARGET_ZLEV(n)," [grid]"
              m = m + 1
           enddo
        end select

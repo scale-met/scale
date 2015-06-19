@@ -332,18 +332,22 @@ contains
        call anal_simple( atype, is,  ie,  js,  je,  &
                          isn, jsn, nzn, p_3d_land, p_var )
 
-    case ( vt_height )
-       istat = nf90_get_var( ncid, varid, p_2d(isn:ien,jsn:jen,1), start=start_2d, count=count_height )
-       if (istat .ne. nf90_noerr) call handle_err(istat, __LINE__)
-       p_var(is:ie,js:je) = real( p_2d(isn:ien,jsn:jen,1) )
+!    case ( vt_height )
+!       istat = nf90_get_var( ncid, varid, p_2d(isn:ien,jsn:jen,1), start=start_2d, count=count_height )
+!       if (istat .ne. nf90_noerr) call handle_err(istat, __LINE__)
+!       p_var(is:ie,js:je) = real( p_2d(isn:ien,jsn:jen,1) )
 
     case ( vt_tpmsk )
        istat = nf90_get_var( ncid, varid, p_2dt(isn:ien,jsn:jen), start=start_2dt, count=count_tpmsk )
        if (istat .ne. nf90_noerr) call handle_err(istat, __LINE__)
        p_var(is:ie,js:je) = real( p_2dt(isn:ien,jsn:jen) )
 
-    case ( vt_3d )
-       istat = nf90_get_var( ncid, varid, p_3d(isn:ien,jsn:jen,1:nzn,1), start=start_3d, count=count_3d )
+    case ( vt_3d, vt_height )
+       if ( vtype == vt_3d ) then
+          istat = nf90_get_var( ncid, varid, p_3d(isn:ien,jsn:jen,1:nzn,1), start=start_3d, count=count_3d )
+       elseif ( vtype == vt_height ) then
+          istat = nf90_get_var( ncid, varid, p_3d(isn:ien,jsn:jen,1:nzn,1), start=start_3d, count=count_height )
+       endif
        if (istat .ne. nf90_noerr) call handle_err(istat, __LINE__)
 
        if ( atype == a_conv ) then
