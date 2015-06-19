@@ -83,6 +83,7 @@ contains
           MOMX, &
           MOMY, &
           RHOT, &
+          EMIT, &
           CN,   &
           CCN,  &
           QTRC  )
@@ -94,6 +95,7 @@ contains
     real(RP), intent(inout) :: MOMX(KA,IA,JA)
     real(RP), intent(inout) :: MOMY(KA,IA,JA)
     real(RP), intent(inout) :: RHOT(KA,IA,JA)
+    real(RP), intent(inout) :: EMIT(KA,IA,JA,QA_AE)
     real(RP), intent(out)   :: CN(KA,IA,JA)
     real(RP), intent(out)   :: CCN(KA,IA,JA)
     real(RP), intent(inout) :: QTRC(KA,IA,JA,QA)

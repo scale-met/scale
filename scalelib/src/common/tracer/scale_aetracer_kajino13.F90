@@ -155,7 +155,7 @@ contains
     do ia0 = 1, N_ATR
       if( ia0 == 1 ) then
          write(attribute,'(a)') "Number"
-         write(aunit,'(a)') "#/kg"
+         write(aunit,'(a)') "/kg"
       elseif( ia0 == 2 ) then
          write(attribute,'(a)') "Section"
          write(aunit,'(a)') "m2/kg"
@@ -184,9 +184,9 @@ contains
     enddo
     enddo
     ic = QA_AE-GAS_CTG+IG_H2SO4
-    write(AQ_AE_NAME(ic),'(a)') 'H2SO4-Gas'
+    write(AQ_AE_NAME(ic),'(a)') 'H2SO4_Gas'
     ic = QA_AE-GAS_CTG+IG_CGAS
-    write(AQ_AE_NAME(ic),'(a)') 'Condensable-GAS'
+    write(AQ_AE_NAME(ic),'(a)') 'Condensable_GAS'
     
     ic = QA_AE-GAS_CTG+IG_H2SO4
     write(AQ_AE_DESC(ic),'(a)') 'Mixing ratio of H2SO4 Gas'

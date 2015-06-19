@@ -379,6 +379,7 @@ contains
           MOMX, &
           MOMY, &
           RHOT, &
+          EMIT, &
           CN,   &
           CCN,  &
           QTRC  )
@@ -403,6 +404,7 @@ contains
     real(RP), intent(inout) :: MOMX(KA,IA,JA)
     real(RP), intent(inout) :: MOMY(KA,IA,JA)
     real(RP), intent(inout) :: RHOT(KA,IA,JA)
+    real(RP), intent(inout) :: EMIT(KA,IA,JA,QA_AE)
     real(RP), intent(out)   :: CN(KA,IA,JA)
     real(RP), intent(out)   :: CCN(KA,IA,JA)
     real(RP), intent(inout) :: QTRC(KA,IA,JA,QA)
@@ -424,6 +426,7 @@ contains
     real(RP),allocatable :: aerosol_procs(:,:,:,:) !(n_atr,n_siz_max,n_kap_max,n_ctg)
     real(RP),allocatable :: aerosol_activ(:,:,:,:) !(n_atr,n_siz_max,n_kap_max,n_ctg)
     real(RP),allocatable :: emis_procs(:,:,:,:)    !(n_atr,n_siz_max,n_kap_max,n_ctg)
+    real(RP),allocatable :: emis_gas(:)            !emission of gas
     !--- gas
 !    real(RP),allocatable :: conc_h2so4(:,:,:,:)    !concentration [ug/m3]
 !    real(RP) :: conc_gas(KA,IA,JA,GAS_CTG)    !concentration [ug/m3]
@@ -435,12 +438,14 @@ contains
     allocate( aerosol_procs (N_ATR,n_siz_max,n_kap_max,n_ctg)  )
     allocate( aerosol_activ (N_ATR,n_siz_max,n_kap_max,n_ctg)  )
     allocate( emis_procs    (N_ATR,n_siz_max,n_kap_max,n_ctg)  )
+    allocate( emis_gas      (GAS_CTG)  )
 
     !--- convert SCALE variable to zerochem variable
     
     aerosol_procs(:,:,:,:) = 0.0_RP
     aerosol_activ(:,:,:,:) = 0.0_RP
     emis_procs(:,:,:,:) = 0.0_RP
+    emis_gas(:) = 0.0_RP
     pres_ae(:,:,:) = 0.0_RP
     temp_ae(:,:,:) = 0.0_RP
     qv_ae(:,:,:) = 0.0_RP
@@ -485,10 +490,16 @@ contains
                           is_trans2procs(it), &
                           ik_trans2procs(it), &
                           ic_trans2procs(it)) = QTRC(k,i,j,QAES-1+it)*DENS(k,i,j) 
+            emis_procs(ia_trans2procs(it), &
+                          is_trans2procs(it), &
+                          ik_trans2procs(it), &
+                          ic_trans2procs(it)) = EMIT(k,i,j,it)*DENS(k,i,j) 
        enddo !it(1:n_trans)
        ! mixing ratio [kg/kg] -> concentration [ug/m3]
        conc_gas(1:GAS_CTG) &
                = QTRC(k,i,j,QAEE-GAS_CTG+1:QAEE-GAS_CTG+GAS_CTG)*DENS(k,i,j)*1.E+9_RP
+
+       emis_gas(1:GAS_CTG) = EMIT(k,i,j,QA_AE-GAS_CTG+IG_H2SO4:QA_AE-GAS_CTG+IG_CGAS)
 
        call aerosol_zerochem(           &
          TIME_DTSEC_ATMOS_PHY_AE,       & !--- in
@@ -499,6 +510,7 @@ contains
          aerosol_procs,                 & !--- inout
          conc_gas,                      & !--- inout
          emis_procs,                    & !--- out
+         emis_gas,                      & !--- out
          aerosol_activ                  ) !--- out
 
        do is0 = 1, n_siz(ic_mix)
@@ -535,6 +547,7 @@ contains
     deallocate( aerosol_procs )
     deallocate( aerosol_activ )
     deallocate( emis_procs )
+    deallocate( emis_gas )
 
     return
   end subroutine ATMOS_PHY_AE_kajino13
@@ -549,6 +562,7 @@ contains
         aerosol_procs,                 & !--- inout
         conc_gas,                      & !--- inout
         emis_procs,                    & !--- out
+        emis_gas,                      & !--- out
         aerosol_activ                  )
 
     use scale_time, only: &
@@ -571,12 +585,17 @@ contains
     real(RP),intent(inout) :: conc_gas(GAS_CTG)
     real(RP),intent(out) :: aerosol_activ(N_ATR,n_siz_max,n_kap_max,n_ctg)
     real(RP),intent(in) :: emis_procs(N_ATR,n_siz_max,n_kap_max,n_ctg)
+    real(RP),intent(in) :: emis_gas(GAS_CTG)
   ! local variables
     real(RP)            :: J_1nm      ! nucleation rate of 1nm particles [#/cm3/s]
     integer             :: ic_nuc     ! category  for 1nm new particles
     integer             :: ik_nuc     ! kappa bin for 1nm new particles
     integer             :: is_nuc     ! size bin  for 1nm new particles
     real(RP)            :: c_ratio, t_elaps
+    real(RP)            :: chem_gas(GAS_CTG)
+
+    chem_gas(IG_H2SO4) = h2so4dt
+    chem_gas(IG_CGAS) = ocgasdt 
 
     !--- convert unit of aerosol mass [ia=ia_ms]
     do ic = 1, n_ctg       !aerosol category
@@ -601,10 +620,15 @@ contains
   
   ! update conc_h2so4
 !    conc_h2so4 = conc_h2so4 + h2so4dt * deltt  ! [ug/m3] 
-    conc_gas(IG_H2SO4) = conc_gas(IG_H2SO4) + h2so4dt * deltt  ! [ug/m3]
-    conc_gas(IG_CGAS) = conc_gas(IG_CGAS) + ocgasdt * deltt  ! [ug/m3]
-    if( h2so4dt /= 0.0_RP ) then
-      c_ratio = ocgasdt / h2so4dt
+    conc_gas(IG_H2SO4) = conc_gas(IG_H2SO4) + chem_gas(IG_H2SO4) * deltt  ! [ug/m3]
+    conc_gas(IG_CGAS) = conc_gas(IG_CGAS) + chem_gas(IG_CGAS) * deltt  ! [ug/m3]
+ 
+    conc_gas(IG_H2SO4) = conc_gas(IG_H2SO4) + emis_gas(IG_H2SO4) * deltt  ! [ug/m3]
+    conc_gas(IG_CGAS) = conc_gas(IG_CGAS) + emis_gas(IG_CGAS) * deltt  ! [ug/m3]
+
+    if( chem_gas(IG_H2SO4)+emis_gas(IG_H2SO4) /= 0.0_RP ) then
+      c_ratio = ( chem_gas(IG_H2SO4)+emis_gas(IG_H2SO4)+chem_gas(IG_CGAS)+emis_gas(IG_CGAS) ) &
+              / ( chem_gas(IG_H2SO4)+emis_gas(IG_H2SO4) )
     else
       c_ratio = 0.0_RP
     endif
@@ -1150,8 +1174,8 @@ contains
       icount = icount + 1
     
       if (icount >= icount_max) then
-        print *,'number of time split in aerosol_coagulation'
-        print *,'exceeded the limit =', icount_max
+        if( IO_L ) write(IO_FID_LOG,*) 'number of time split in aerosol_coagulation'
+        if( IO_L ) write(IO_FID_LOG,*) 'exceeded the limit =', icount_max
         goto 777
       endif
 
@@ -1286,7 +1310,7 @@ contains
     endif
   
     if (sg > sgmax) then
-      print *,'sg=',sg
+  !    print *,'sg=',sg
       sg = sgmax
       call diag_d2(m0,m3,sg, & !i
                    m2,dg     ) !o
@@ -1649,7 +1673,7 @@ contains
     endif
   
     if (sg > sgmax) then
-      print *,'sg=',sg
+ !     print *,'sg=',sg
       sg = sgmax
       call diag_d2(m0,m3,sg, & !input
                    m2,dg     ) !output

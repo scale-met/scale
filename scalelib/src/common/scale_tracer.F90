@@ -281,8 +281,6 @@ contains
     IC_DUS_none => IC_DUS, &
     IG_H2SO4_none => IG_H2SO4, &
     IG_CGAS_none => IG_CGAS, &
-    QAES_none => QAES, &
-    QAEE_none => QAEE, &
     AE_QA_none => AE_QA, &
     I_ae_dummy_none => I_ae_dummy, &
     AQ_AE_NAME_none => AQ_AE_NAME, &
@@ -303,8 +301,6 @@ contains
     IC_DUS_kajino13 => IC_DUS, &
     IG_H2SO4_kajino13 => IG_H2SO4, &
     IG_CGAS_kajino13 => IG_CGAS, &
-    QAES_kajino13 => QAES, &
-    QAEE_kajino13 => QAEE, &
     AE_QA_kajino13 => AE_QA, &
     I_ae_dummy_kajino13 => I_ae_dummy, &
     AQ_AE_NAME_kajino13 => AQ_AE_NAME, &
@@ -523,8 +519,6 @@ contains
        IC_DUS = IC_DUS_none
        IG_H2SO4 = IG_H2SO4_none
        IG_CGAS = IG_CGAS_none
-       QAES = QAES_none
-       QAEE = QAEE_none
        AE_QA = AE_QA_none
        I_ae_dummy = I_ae_dummy_none
        allocate( AQ_AE_NAME(QA_AE) )
@@ -552,8 +546,6 @@ contains
        IC_DUS = IC_DUS_kajino13
        IG_H2SO4 = IG_H2SO4_kajino13
        IG_CGAS = IG_CGAS_kajino13
-       QAES = QAES_kajino13
-       QAEE = QAEE_kajino13
        AE_QA = AE_QA_kajino13
        I_ae_dummy = I_ae_dummy_kajino13
        allocate( AQ_AE_NAME(QA_AE) )

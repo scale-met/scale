@@ -41,6 +41,7 @@ module scale_atmos_phy_ae
           MOMX, &
           MOMY, &
           RHOT, &
+          EMIT, &
           CN,   &
           CCN,  &
           QTRC  )
@@ -52,6 +53,7 @@ module scale_atmos_phy_ae
        real(RP), intent(inout) :: MOMX(KA,IA,JA)
        real(RP), intent(inout) :: MOMY(KA,IA,JA)
        real(RP), intent(inout) :: RHOT(KA,IA,JA)
+       real(RP), intent(inout) :: EMIT(KA,IA,JA,QA_AE)
        real(RP), intent(out)   :: CN(KA,IA,JA)
        real(RP), intent(out)   :: CCN(KA,IA,JA)
        real(RP), intent(inout) :: QTRC(KA,IA,JA,QA)
@@ -73,7 +75,6 @@ module scale_atmos_phy_ae
   public :: ATMOS_PHY_AE_EffectiveRadius
 
   real(RP), public, pointer :: AE_DENS(:) ! aerosol density [kg/m3]=[g/L]
-
   !-----------------------------------------------------------------------------
   !
   !++ Private procedure

@@ -99,7 +99,8 @@ contains
        RHOQ_t => RHOQ_tp
     use mod_atmos_phy_ae_vars, only: &
        RHOQ_t_AE => ATMOS_PHY_AE_RHOQ_t, &
-       CCN       => ATMOS_PHY_AE_CCN
+       CCN       => ATMOS_PHY_AE_CCN, &
+       AE_EMIT   => ATMOS_PHY_AE_EMIT
     implicit none
 
     logical, intent(in) :: update_flag
@@ -133,6 +134,7 @@ contains
                           MOMX, & ! [IN]
                           MOMY, & ! [IN]
                           RHOT, & ! [IN]
+                          AE_EMIT, & ! [IN}
                           CN ,  & ! [OUT]
                           CCN,  & ! [OUT]
                           QTRC0 ) ! [INOUT]
@@ -147,8 +149,10 @@ contains
        enddo
        enddo
 
-       call HIST_in( CN(:,:,:),  'CN',  'condensation nucrei', '' )
-       call HIST_in( CCN(:,:,:), 'CCN', 'cloud condensation nucrei', '' )
+!       CCN(:,:,:) = 0.0_RP ! tentative
+
+       call HIST_in( CN(:,:,:)*1e-6_RP,  'CN',  'condensation nucrei', '/cc' )
+       call HIST_in( CCN(:,:,:)*1e-6_RP, 'CCN', 'cloud condensation nucrei', '/cc' )
 
     endif
 
