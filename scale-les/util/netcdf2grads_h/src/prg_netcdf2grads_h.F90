@@ -683,6 +683,14 @@ contains
     if ( LOUT ) write( FID_LOG,* ) ""
 
     if ( TARGET_ZLEV(1) >= 0 ) then
+       if ( ZCOUNT == 0 ) then
+          ZCOUNT = 0
+          do n=1, max_zcount
+             if ( TARGET_ZLEV(n) < 0 ) exit
+             ZCOUNT = ZCOUNT + 1
+          enddo
+       endif
+
        Z_LEV_LIST = .true.
        select case( trim(Z_LEV_TYPE) )
        case ( "ZLEV", "zlev" )
@@ -698,7 +706,6 @@ contains
              if ( LOUT ) write( FID_LOG, '(1X,A,I3,A,I5,A)' ) "+++ Listing Levs: (", n, ") ",TARGET_ZLEV(n)," [grid]"
           enddo
        end select
-
     else
        select case( trim(Z_LEV_TYPE) )
        case ( "ZLEV", "zlev" )
