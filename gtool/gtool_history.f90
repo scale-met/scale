@@ -577,9 +577,6 @@ contains
              else
                 History_tstrstep(id) = 1
              endif
-             if ( History_tavg(id) ) then
-                History_tstrstep(id) = 1
-             end if
              if ( History_output_start > 0.0_DP ) then
                 History_tstart(id) = HISTORY_STARTDAYSEC - History_output_start
              else

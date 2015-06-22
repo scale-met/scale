@@ -62,9 +62,6 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[DRIVER] / Categ[ATMOS PHY_MP] / Origin[SCALE-LES]'
 
-    SFLX_rain(:,:) = 0.0_RP
-    SFLX_snow(:,:) = 0.0_RP
-
     if ( ATMOS_sw_phy_mp ) then
 
        ! setup library component
@@ -78,6 +75,9 @@ contains
     else
 
        if( IO_L ) write(IO_FID_LOG,*) '*** this component is never called.'
+       if( IO_L ) write(IO_FID_LOG,*) '*** SFLX_rain and SFLX_snow is set to zero.'
+       SFLX_rain(:,:) = 0.0_RP
+       SFLX_snow(:,:) = 0.0_RP
 
     endif
 
