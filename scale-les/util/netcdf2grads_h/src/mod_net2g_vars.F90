@@ -54,7 +54,7 @@ module mod_net2g_vars
   logical,         public :: Z_LEV_LIST     = .false.
   logical,         public :: Z_MERGE_OUT    = .true.  ! only for slice and conv
 
-  character(CSHT), public :: ANALYSIS       = "SLICE"
+  character(CSHT), public :: ANALYSIS       = "ave" ! max, min, sum, ave
 
   integer,         public :: PRC_NUM_X
   integer,         public :: PRC_NUM_Y

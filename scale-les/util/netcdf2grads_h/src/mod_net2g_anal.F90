@@ -196,6 +196,7 @@ contains
       ctype,     & ! [in ]
       lev,       & ! [in ]
       org,       & ! [in ]
+      logwgt,    & ! [in ]
       is,  ie,   & ! [in ]
       js,  je,   & ! [in ]
       isn, ien,  & ! [in ]
@@ -207,6 +208,7 @@ contains
     integer,  intent(in)  :: ctype
     real(SP), intent(in)  :: lev
     real(DP), intent(in)  :: org(:,:,:,:)
+    logical,  intent(in)  :: logwgt
     integer,  intent(in)  :: is, ie, js, je
     integer,  intent(in)  :: isn, ien
     integer,  intent(in)  :: jsn, jen
@@ -230,8 +232,14 @@ contains
        if ( diff_l < EPS_SP .or. diff_u < EPS_SP ) then
           interp(i,j) = real( UNDEF_DP )
        else
-          interp(i,j) = real(  wght_l(ii,jj) * org(ii,jj,kl(ii,jj),1) &
-                             + wght_u(ii,jj) * org(ii,jj,ku(ii,jj),1) )
+          if ( logwgt ) then
+             interp(i,j) = real(  wght_l(ii,jj) * log(org(ii,jj,kl(ii,jj),1)) &
+                                + wght_u(ii,jj) * log(org(ii,jj,ku(ii,jj),1)) )
+             interp(i,j) = exp (interp(i,j))
+          else
+             interp(i,j) = real(  wght_l(ii,jj) * org(ii,jj,kl(ii,jj),1) &
+                                + wght_u(ii,jj) * org(ii,jj,ku(ii,jj),1) )
+          endif
        endif
     ii = ii + 1
     enddo

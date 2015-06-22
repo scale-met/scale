@@ -193,15 +193,17 @@ program netcdf2grads_h
 
   call set_atype( atype )
   call set_ctype( ctype )
-  if ( atype == a_conv ) then
+  if ( atype == a_conv ) then ! allocation
      call anal_setup( mnxp, mnyp, nz_all, nmnge )
-     do nm = 1, nmnge
-        call netcdf_read_ref( rk_mnge(nm), nxp, nyp, mnxp, mnyp, &
-                              nz_all, ctype, p_ref )
-        call anal_input_ref( p_ref, nm )
-     enddo
+     if ( ctype == c_height ) then !--- get reference height
+        do nm = 1, nmnge
+           it = START_TSTEP
+           call netcdf_read_ref( rk_mnge(nm), nxp, nyp, mnxp, mnyp, &
+                                 it, nz_all, ctype, p_ref )
+           call anal_input_ref( p_ref, nm )
+        enddo
+     endif
   endif
-
   do nm = 1, nmnge
      call netcdf_read_grid( rk_mnge(nm), nm, nxgp, nygp,            &
                             zlev, cz, cdz, p_cx, p_cdx, p_cy, p_cdy )
@@ -230,6 +232,14 @@ program netcdf2grads_h
      if ( LOUT ) write( FID_LOG, '(1X,A)' ) ""
      if ( LOUT ) write( FID_LOG, '(1X,A,I3)' ) "+++ TIME STEP:   ", it
      if ( LOUT ) write( FID_LOG, * ) "+++ Date: ", STIME
+
+     if ( ctype == c_pres ) then !--- update reference pressure
+        do nm = 1, nmnge
+           call netcdf_read_ref( rk_mnge(nm), nxp, nyp, mnxp, mnyp, &
+                                 it, nz_all, ctype, p_ref )
+           call anal_input_ref( p_ref, nm )
+        enddo
+     endif
 
      do iv = 1, vcount !--- var loop
         varname = trim( VNAME(iv) )
