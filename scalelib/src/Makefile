@@ -244,7 +244,7 @@ $(BUILD_DIR)/scale_atmos_dyn_rk_hivi.o:
 $(BUILD_DIR)/scale_atmos_phy_rd_profile.o:
 	$(FC) $(FFLAGS)     $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(VERSION)\" -I$(BUILD_DIR) -I$(GTOOLDIR) -I$(DCUTILSDIR) -I$(SCALELIBDIR)/include $(PAPI_INCLUDE) $(NETCDF_INCLUDE) -o $@ -c $< $(MODDIROPT) $(BUILD_DIR)
 ifeq ($(SDM),-D_SDM)
-$(BUILD_DIR)/scale_atmos_phy_mp_sdm.o:
+$(BUILD_DIR)/scale_atmos_phy_mp_sdm.o: 
 	$(FC) $(FFLAGS) $(FFLAGS_SDM_MONIT) $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(VERSION)\" -I$(BUILD_DIR) -I$(GTOOLDIR) -I$(DCUTILSDIR) $(CONTRIB_INCLUDE) -I$(SCALELIBDIR)/include $(PAPI_INCLUDE) -o $@ -c $< $(MODDIROPT) $(BUILD_DIR)
 else
 endif

@@ -64,6 +64,7 @@
 !! @li      2014-07-25 (Y.Sato)  [rev] Add COMM_var, and COMM_wait for filling u_scale, v_scale, and w_scale
 !! @li      2014-12-12 (Y.Sato)  [mod] Modify for using QTRC_sdm in sdm_sd2qcqr in sdm_iniset 
 !! @li      2014-12-17 (Y.Sato)  [mod] Add initialization of prr_crs for Restart
+!! @li      2015-06-22 (S.Shima) [add] Add section specification call for profiling (fipp and fapp)
 !<
 !-------------------------------------------------------------------------------
 #include "macro_thermodyn.h"
@@ -616,6 +617,12 @@ contains
 
     !---------------------------------------------------------------------------
 
+    ! Section specification for fipp profiler
+    call fipp_start()
+
+    ! Section specification for fapp profiler
+    call fapp_start("sdm_all",0,0)
+    
     ! QTRC except QV (and QDRY) are diagnosed from super-droplets
     ! To make this doubly sure, reset QTRC to zero
     do iq = QQS, QQE
@@ -802,6 +809,11 @@ contains
     call HIST_in( QTRC_sdm(:,:,:,I_QR), 'QR_sd', 'mixing ratio of rain in SDM', 'kg/kg', dt)
     call HIST_in( QHYD_sdm(:,:,:), 'QHYD_sd', 'mixing ratio of liquid in SDM', 'kg/kg', dt)
 
+    ! Section specification for fipp profiler
+    call fipp_stop()
+    ! Section specification for fapp profiler
+    call fapp_stop("sdm_all",0,0)
+
     return
   end subroutine ATMOS_PHY_MP_sdm
   !-----------------------------------------------------------------------------
@@ -929,6 +941,7 @@ contains
 !!$      enddo
 !!$      enddo
 
+      
       if( .not. sdm_calvar(1) .and. &
           .not. sdm_calvar(2) .and. &
           .not. sdm_calvar(3)        ) return
@@ -1403,6 +1416,8 @@ contains
          !### Run SDM  ###!
 
          !=== 1 : condensation / evaporation ===!
+         ! Section specification for fapp profiler
+         call fapp_start("sdm_condevp",0,0)
 
          if( sdm_calvar(1) .and.                                 &
              mod(t,istep_sdm/istep_evl)==0 .and. sdm_dtevl>0.d0 ) then
@@ -1442,7 +1457,14 @@ contains
             call COMM_wait ( DENS(:,:,:), 3 )
 
          end if
+
+         ! Section specification for fapp profiler
+         call fapp_stop("sdm_condevp",0,0)
+
          !=== 2 : stochastic coalescence ===!
+         ! Section specification for fapp profiler
+         call fapp_start("sdm_coales",0,0)
+
          if( sdm_calvar(2) .and.                                 &
              mod(t,istep_sdm/istep_col)==0 .and. sdm_dtcol>0.d0 ) then
 
@@ -1473,7 +1495,12 @@ contains
 
          end if
 
+         ! Section specification for fapp profiler
+         call fapp_stop("sdm_coales",0,0)
+
          !=== 3 : motion of super-droplets ===!
+         ! Section specification for fapp profiler
+         call fapp_start("sdm_motion",0,0)
 
          if( sdm_calvar(3) .and.                                 &
              mod(t,istep_sdm/istep_adv)==0 .and. sdm_dtadv>0.d0 ) then
@@ -1564,6 +1591,9 @@ contains
             end if
 
          end if
+
+         ! Section specification for fapp profiler
+         call fapp_stop("sdm_motion",0,0)
 
       end do
 
