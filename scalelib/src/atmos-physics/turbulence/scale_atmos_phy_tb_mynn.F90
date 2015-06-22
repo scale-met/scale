@@ -297,6 +297,7 @@ contains
     real(RP) :: POTT(KA,IA,JA) !< potential temperature
     real(RP) :: POTV(KA,IA,JA) !< virtual potential temperature
     real(RP) :: POTL(KA,IA,JA) !< liquid water potential temperature
+    real(RP) :: TEML(KA,IA,JA) !< liquid water temperature
 
     real(RP) :: Qw(KA,IA,JA)   !< total water
     real(RP) :: ql             !< liquid water
@@ -515,6 +516,7 @@ contains
           POTT(k,i,j) = RHOT(k,i,j) / DENS(k,i,j)
           ! liquid water potential temperature
           POTL(k,i,j) = POTT(k,i,j) * (1.0_RP - 1.0_RP * (lhv(k,i,j) * ql + lhs(k,i,j) * qs) / ( temp(k,i,j) * CP ) )
+          TEML(k,i,j) = POTL(k,i,j) * temp(k,i,j) / POTT(k,i,j)
 
           ! virtual potential temperature for derivertive
 !          POTV(k,i,j) = ( 1.0_RP + EPSTvap * Qw(k,i,j) ) * POTL(k,i,j)
@@ -607,7 +609,7 @@ contains
                    l, n2, dudz2 ) ! (in)
 
     call ATMOS_SATURATION_pres2qsat( Qsl, & ! (out)
-                                     POTL * temp / POTT, pres ) ! (in)
+                                     TEML, pres ) ! (in)
 
 !OCL LOOP_NOFUSION,PREFETCH_SEQUENTIAL(SOFT),SWP
     do j = JS, JE
@@ -693,6 +695,8 @@ contains
     end do
     end do
 
+    call COMM_vars( Nu,   1 )
+
     ! time integration
 
     !  for velocities
@@ -729,7 +733,6 @@ contains
     end do
     end do
 
-    call COMM_vars( Nu,   1 )
     call COMM_vars( phiN, 2 )
     call COMM_wait( Nu,   1 )
     call COMM_wait( phiN, 2 )

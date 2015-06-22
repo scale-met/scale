@@ -91,7 +91,7 @@ else
   FFLAGS += -DTRACER=$(TRACER)
 endif
 
-OBJS = $(scale_rdma)	\
+OBJS_NAME = $(scale_rdma)	\
 	scale_atmos_dyn.o	\
 	scale_atmos_dyn_common.o	\
 	scale_atmos_dyn_rk.o	\
@@ -168,6 +168,7 @@ OBJS = $(scale_rdma)	\
 	scale_urban_phy.o	\
 	scale_urban_phy_slc.o
 
+OBJS =  $(patsubst %,$(OBJ_DIR)/%,$(OBJS_NAME))
 
 
 all:
@@ -229,25 +230,25 @@ dependency:
 $(MODDIR)/%.mod : %.mod
 	install $< $@
 
-%.o : %.F90
-	$(FC) $(FFLAGS)     $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(LIBVERSION)\" -I$(DCUTILSDIR) -I$(GTOOLDIR) -I$(INDEX_DIR) -I$(SCALELIBDIR)/include $(PAPI_INCLUDE) $(NETCDF_INCLUDE) -o $@ -c $<
-scale_atmos_dyn.o:
-	$(FC) $(FFLAGS_DYN) $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(LIBVERSION)\" -I$(DCUTILSDIR) -I$(GTOOLDIR) -I$(INDEX_DIR) -I$(SCALELIBDIR)/include $(PAPI_INCLUDE) -o $@ -c $<
-scale_atmos_dyn_common.o:
-	$(FC) $(FFLAGS_DYN) $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(LIBVERSION)\" -I$(DCUTILSDIR) -I$(GTOOLDIR) -I$(INDEX_DIR) -I$(SCALELIBDIR)/include $(PAPI_INCLUDE) -o $@ -c $<
-scale_atmos_dyn_rk.o:
-	$(FC) $(FFLAGS_DYN) $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(LIBVERSION)\" -I$(DCUTILSDIR) -I$(GTOOLDIR) -I$(INDEX_DIR) -I$(SCALELIBDIR)/include $(PAPI_INCLUDE) -o $@ -c $<
-scale_atmos_dyn_rk_heve.o:
-	$(FC) $(FFLAGS_DYN) $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(LIBVERSION)\" -I$(DCUTILSDIR) -I$(GTOOLDIR) -I$(INDEX_DIR) -I$(SCALELIBDIR)/include $(PAPI_INCLUDE) -o $@ -c $<
-scale_atmos_dyn_rk_hevi.o:
-	$(FC) $(FFLAGS_DYN) $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(LIBVERSION)\" -I$(DCUTILSDIR) -I$(GTOOLDIR) -I$(INDEX_DIR) -I$(SCALELIBDIR)/include $(PAPI_INCLUDE) -o $@ -c $<
-scale_atmos_dyn_rk_hivi.o:
-	$(FC) $(FFLAGS_DYN) $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(LIBVERSION)\" -I$(DCUTILSDIR) -I$(GTOOLDIR) -I$(INDEX_DIR) -I$(SCALELIBDIR)/include $(PAPI_INCLUDE) -o $@ -c $<
+$(OBJ_DIR)/%.o : %.F90
+	$(FC) $(FFLAGS)     $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(LIBVERSION)\" -I$(DCUTILSDIR) -I$(GTOOLDIR) -I$(INDEX_DIR) -I$(SCALELIBDIR)/include -I$(OBJ_DIR) $(PAPI_INCLUDE) $(NETCDF_INCLUDE) $(MODDIROPT) $(OBJ_DIR) -o $@ -c $<
+$(OBJ_DIR)/scale_atmos_dyn.o:
+	$(FC) $(FFLAGS_DYN) $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(LIBVERSION)\" -I$(DCUTILSDIR) -I$(GTOOLDIR) -I$(INDEX_DIR) -I$(SCALELIBDIR)/include -I$(OBJ_DIR) $(PAPI_INCLUDE) $(MODDIROPT) $(OBJ_DIR) -o $@ -c $<
+$(OBJ_DIR)/scale_atmos_dyn_common.o:
+	$(FC) $(FFLAGS_DYN) $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(LIBVERSION)\" -I$(DCUTILSDIR) -I$(GTOOLDIR) -I$(INDEX_DIR) -I$(SCALELIBDIR)/include -I$(OBJ_DIR) $(PAPI_INCLUDE) $(MODDIROPT) $(OBJ_DIR) -o $@ -c $<
+$(OBJ_DIR)/scale_atmos_dyn_rk.o:
+	$(FC) $(FFLAGS_DYN) $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(LIBVERSION)\" -I$(DCUTILSDIR) -I$(GTOOLDIR) -I$(INDEX_DIR) -I$(SCALELIBDIR)/include -I$(OBJ_DIR) $(PAPI_INCLUDE) $(MODDIROPT) $(OBJ_DIR) -o $@ -c $<
+$(OBJ_DIR)/scale_atmos_dyn_rk_heve.o:
+	$(FC) $(FFLAGS_DYN) $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(LIBVERSION)\" -I$(DCUTILSDIR) -I$(GTOOLDIR) -I$(INDEX_DIR) -I$(SCALELIBDIR)/include -I$(OBJ_DIR) $(PAPI_INCLUDE) $(MODDIROPT) $(OBJ_DIR) -o $@ -c $<
+$(OBJ_DIR)/scale_atmos_dyn_rk_hevi.o:
+	$(FC) $(FFLAGS_DYN) $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(LIBVERSION)\" -I$(DCUTILSDIR) -I$(GTOOLDIR) -I$(INDEX_DIR) -I$(SCALELIBDIR)/include -I$(OBJ_DIR) $(PAPI_INCLUDE) $(MODDIROPT) $(OBJ_DIR) -o $@ -c $<
+$(OBJ_DIR)/scale_atmos_dyn_rk_hivi.o:
+	$(FC) $(FFLAGS_DYN) $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(LIBVERSION)\" -I$(DCUTILSDIR) -I$(GTOOLDIR) -I$(INDEX_DIR) -I$(SCALELIBDIR)/include -I$(OBJ_DIR) $(PAPI_INCLUDE) $(MODDIROPT) $(OBJ_DIR) -o $@ -c $<
 
-%.o : %.c
+$(OBJ_DIR)/%.o : %.c
 	$(CC) $(CFLAGS) -I$(SCALELIBDIR)/include -o $@ -c $<
 
-scale_rdma.o : scale_rdma.c
+$(OBJ_DIR)/scale_rdma.o : scale_rdma.c
 
 .PHONY : clean distclean allclean depend modules dependency
 

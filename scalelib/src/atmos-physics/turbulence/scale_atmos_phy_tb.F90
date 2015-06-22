@@ -135,6 +135,13 @@ contains
     real(RP), intent(in) :: CZ (KA,IA,JA)
     !---------------------------------------------------------------------------
 
+#ifdef TB
+    call NAME(ATMOS_PHY_TB_, TB, _setup)( &
+              TB_TYPE,       &
+              CDZ, CDX, CDY, &
+              CZ             )
+    ATMOS_PHY_TB                 => NAME(ATMOS_PHY_TB_, TB, )
+#else
     select case( TB_TYPE )
     case ( 'SMAGORINSKY' )
        call ATMOS_PHY_tb_smg_setup( &
@@ -174,6 +181,7 @@ contains
        call PRC_MPIstop
 
     end select
+#endif
 
     return
   end subroutine ATMOS_PHY_TB_setup
