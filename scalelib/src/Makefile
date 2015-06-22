@@ -190,10 +190,12 @@ $(LIBDIR)/libdcutils.a:
 $(LIBDIR)/libgtool.a: $(LIBDIR)/libdcutils.a
 	$(MAKE) -C $(GTOOLDIR)
 
+$(LIBNAME): $(LIBDIR)/$(LIBNAME)
+	install $< $@
+
 $(LIBDIR)/$(LIBNAME): $(OBJS)
 	$(AR) $(ARFLAGS) $@ $?
 	$(RANLIB) $@
-	install $< $@
 
 modules: $(OBJS)
 	install $(MODS) $(MODDIR)
