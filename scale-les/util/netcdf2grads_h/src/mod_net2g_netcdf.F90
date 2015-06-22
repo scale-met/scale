@@ -90,7 +90,7 @@ contains
     if ( LOUT .and. LOG_DBUG ) write( FID_LOG, '(1x,A,A)' ) "+++ Target File (dim): ", trim(ncfile)
     istat = nf90_open( trim(ncfile), nf90_nowrite, ncid )
     if (istat .ne. nf90_noerr) call handle_err(istat, __LINE__)
- 
+
     istat = nf90_inq_dimid ( ncid,  'x',  dimid )
     istat = nf90_inquire_dimension( ncid, dimid, len=nxp )
     istat = nf90_inq_dimid ( ncid,  'CX', dimid )
@@ -211,7 +211,7 @@ contains
 
     istat = nf90_open( trim(ncfile), nf90_nowrite, ncid )
     if (istat .ne. nf90_noerr) call handle_err(istat, __LINE__)
- 
+
     istat = nf90_inq_varid( ncid, 'z', varid )
     istat = nf90_get_var( ncid, varid, zlev )
     if (istat .ne. nf90_noerr) call handle_err(istat, __LINE__)
@@ -284,6 +284,7 @@ contains
     real(SP) :: lev = 0.0
     character(CLNG) :: ncfile
     character(6)    :: num
+    logical         :: logwgt = .false.
 
     integer :: ncid, varid
     integer :: istat
@@ -300,6 +301,13 @@ contains
        elseif ( ctype == c_pres ) then
           lev = real( zz ) * 100.D0
        endif
+
+       select case ( trim(varname) )
+       case("PRES","pres", "DENS","dens")
+          logwgt = .true.
+       case default
+          logwgt = .false.
+       end select
     endif
 
     call irank2ixjy( imnge, ix, jy )
@@ -315,7 +323,7 @@ contains
 
     istat = nf90_open( trim(ncfile), nf90_nowrite, ncid )
     if (istat .ne. nf90_noerr) call handle_err(istat, __LINE__)
- 
+
     istat = nf90_inq_varid( ncid, trim(varname), varid )
     if (istat .ne. nf90_noerr) call handle_err(istat, __LINE__)
 
@@ -351,7 +359,7 @@ contains
        if (istat .ne. nf90_noerr) call handle_err(istat, __LINE__)
 
        if ( atype == a_conv ) then
-          call anal_ref_interp( ctype, lev, p_3d, is, ie, js, je, &
+          call anal_ref_interp( ctype, lev, p_3d, logwgt, is, ie, js, je, &
                                 isn, ien, jsn, jen, nzn, nm, p_var )
        else
           call anal_simple( atype, is,  ie,  js,  je,  &
@@ -378,6 +386,7 @@ contains
       imnge,      & ! [in ]
       nxp,  nyp,  & ! [in ]
       mnxp, mnyp, & ! [in ]
+      it,         & ! [in ]
       nz,         & ! [in ]
       ctype,      & ! [in ]
       p_var       ) ! [out]
@@ -385,6 +394,7 @@ contains
 
     integer, intent(in) :: imnge
     integer, intent(in) :: nxp, nyp, mnxp, mnyp
+    integer, intent(in) :: it
     integer, intent(in) :: nz(3)
     integer,         intent(in)  :: ctype
     real(SP),        intent(out) :: p_var(:,:,:)
@@ -433,14 +443,14 @@ contains
        jen = nyp
     endif
 
-    start_2d(1:3) = (/   1,   1,   1     /)
-    start_3d(1:4) = (/   1,   1,   1,  1 /)
-    count_2d(1:3) = (/ ien, jen, nzn     /)
-    count_3d(1:4) = (/ ien, jen, nzn,  1 /)
+    start_2d(1:3) = (/   1,   1,   1      /)
+    start_3d(1:4) = (/   1,   1,   1,  it /)
+    count_2d(1:3) = (/ ien, jen, nzn      /)
+    count_3d(1:4) = (/ ien, jen, nzn,  1  /)
 
     istat = nf90_open( trim(ncfile), nf90_nowrite, ncid )
     if (istat .ne. nf90_noerr) call handle_err(istat, __LINE__)
- 
+
     select case( ctype )
     case ( c_height )
        istat = nf90_inq_varid( ncid, 'height', varid )

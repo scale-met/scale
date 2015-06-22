@@ -116,10 +116,11 @@ contains
        atype = a_conv
 
     case ( "ORIGINAL", "original" )
+       atype = a_slice
+       if ( LOUT ) write( FID_LOG, '(1x,A)' ) "+++ ANALYSYS TYPE: slice"
+
+    case ( "ANAL", "anal" )
        select case( trim(ANALYSIS) )
-       case ( "SLICE", "slice" )
-          if ( LOUT ) write( FID_LOG, '(1x,A)' ) "+++ ANALYSYS TYPE: slice"
-          atype = a_slice
        case ( "MAX", "max", "MAXIMUM", "maximum" )
           if ( LOUT ) write( FID_LOG, '(1x,A)' ) "+++ ANALYSYS TYPE: column max"
           atype = a_max
@@ -515,7 +516,7 @@ contains
        case default
           call err_abort( 0, __LINE__, loc_setup )
        end select
-  
+
     case default
        call err_abort( 0, __LINE__, loc_setup )
     end select
