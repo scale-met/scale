@@ -200,7 +200,7 @@ contains
 !     call get_command_argument(1,fconf)
 !  endif
 
-  CONFFILE = trim( CONFFILE_IN )
+  fconf = trim( CONFFILE_IN )
 
   call read_conf_logout
   call logio_init( irank, LOUT )
