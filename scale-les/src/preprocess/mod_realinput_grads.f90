@@ -46,12 +46,12 @@ module mod_realinput_grads
   !
   !++ Private parameters & variables
   !
-  integer,  parameter   :: num_item_list = 27
-  integer,  parameter   :: num_item_list_atm = 17
+  integer,  parameter   :: num_item_list = 28
+  integer,  parameter   :: num_item_list_atm = 18
   logical               :: data_available(num_item_list)
   character(H_SHORT)    :: item_list     (num_item_list) ! Order and below number are very important
   data item_list /'lon','lat','plev','U','V','T','HGT','QV','RH','MSLP','PSFC','U10','V10','T2','Q2','RH2','TOPO', &
-                  'lsmask','lon_sfc','lat_sfc','lon_sst','lat_sst','llev','STEMP','SMOIS','SKINT','SST'/
+                  'lsmask','lon_sfc','lat_sfc','lon_sst','lat_sst','llev','STEMP','SMOISVC','SMOISDS','SKINT','SST'/
 
   integer,  parameter   :: Ig_lon    = 1
   integer,  parameter   :: Ig_lat    = 2
@@ -78,9 +78,10 @@ module mod_realinput_grads
   integer,  parameter   :: Ig_lat_sst = 22
   integer,  parameter   :: Ig_lz      = 23  ! Level(depth) of stemp & smois (m)
   integer,  parameter   :: Ig_stemp   = 24
-  integer,  parameter   :: Ig_smois   = 25
-  integer,  parameter   :: Ig_skint   = 26
-  integer,  parameter   :: Ig_sst     = 27
+  integer,  parameter   :: Ig_smoisvc = 25  ! soil moisture (vormetric water content)
+  integer,  parameter   :: Ig_smoisds = 26  ! soil moisture (degree of saturation)
+  integer,  parameter   :: Ig_skint   = 27
+  integer,  parameter   :: Ig_sst     = 28
 
 
   integer,  parameter   :: lvars_limit = 1000 ! limit of values for levels data
@@ -122,11 +123,13 @@ contains
   subroutine ParentAtomSetupGrADS( &
       dims,                        & ! (out)
       timelen,                     & ! (out)
+      use_waterratio,              & ! (out)
       use_file_landwater           ) ! (in)
     implicit none
 
     integer,          intent(out) :: dims(11)
     integer,          intent(out) :: timelen
+    logical,          intent(out) :: use_waterratio
     logical,          intent(in)  :: use_file_landwater ! use landwater data from files
 
     character(len=H_LONG) :: GrADS_BOUNDARY_namelist = "namelist.grads_boundary"
@@ -421,12 +424,13 @@ contains
              if (IO_L) write(IO_FID_LOG,*) 'warning: cannot found SST in grads namelist. SKINT is used for SST.'
              cycle
           endif
-       case('SMOIS')
+       case('SMOISVC', 'SMOISDDS')
           if ( use_file_landwater ) then
-             if (.not. data_available(Ig_smois)) then
-                write(*,*) 'xxx cannot found SMOIS in grads namelist! ',trim(item_list(ielem))
+             if (.not. data_available(Ig_smoisvc) .and. .not. data_available(Ig_smoisds)) then
+                write(*,*) 'xxx cannot found SMOISVC or SMOISDS in grads namelist! ',trim(item_list(ielem))
                 call PRC_MPIstop
              end if
+             use_waterratio =  data_available(Ig_smoisds)
           else
              cycle
           end if
@@ -990,6 +994,7 @@ contains
   subroutine ParentSurfaceInputGrADS( &
       tg_org,             & ! (out)
       strg_org,           & ! (out)
+      smds_org,           & ! (out)
       tw_org,             & ! (out)
       lst_org,            & ! (out)
       sst_org,            & ! (out)
@@ -1012,6 +1017,7 @@ contains
 
     real(RP), intent(out) :: tg_org    (:,:,:)
     real(RP), intent(out) :: strg_org  (:,:,:)
+    real(RP), intent(out) :: smds_org  (:,:,:)
     real(RP), intent(out) :: tw_org    (:,:)
     real(RP), intent(out) :: lst_org   (:,:)
     real(RP), intent(out) :: sst_org   (:,:)
@@ -1293,10 +1299,10 @@ contains
              enddo
              enddo
           endif
-       case('SMOIS')
+       case('SMOISVC')
           if ( use_file_landwater ) then
              if(dims(7)/=knum)then
-                write(*,*) 'xxx The number of levels for SMOIS must be same as llevs! ',dims(7),knum
+                write(*,*) 'xxx The number of levels for SMOISVC must be same as llevs! ',dims(7),knum
                 call PRC_MPIstop
              endif
              if ( trim(dtype) == "map" ) then
@@ -1308,6 +1314,27 @@ contains
                       strg_org(k,i,j) = UNDEF
                    else
                       strg_org(k,i,j) = real(gland3D(i,j,k), kind=RP)
+                   end if
+                enddo
+                enddo
+                enddo
+             endif
+          endif
+       case('SMOISDS')
+          if ( use_file_landwater ) then
+             if(dims(7)/=knum)then
+                write(*,*) 'xxx The number of levels for SMOISDS must be same as llevs! ',dims(7),knum
+                call PRC_MPIstop
+             endif
+             if ( trim(dtype) == "map" ) then
+                call read_grads_file_3d(io_fid_grads_data,gfile,dims(8),dims(9),dims(7),nt,item,startrec,totalrec,yrev,gland3D)
+                do j = 1, dims(9)
+                do i = 1, dims(8)
+                do k = 1, dims(7)
+                   if ( abs(gland3D(i,j,k)-missval) < EPS ) then
+                      smds_org(k,i,j) = UNDEF
+                   else
+                      smds_org(k,i,j) = real(gland3D(i,j,k), kind=RP)
                    end if
                 enddo
                 enddo

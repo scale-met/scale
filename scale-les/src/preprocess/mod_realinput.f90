@@ -221,12 +221,12 @@ contains
 
        mdlid = iGrADS
        if ( do_read ) call ParentAtomSetupGrADS( dims, timelen,        & ! (out)
+                                                 use_waterratio,       & ! (out)
                                                  use_file_landwater_in ) ! (in)
        update_coord = .true.
        use_file_density = .false.
        use_temp = .true.
        rotate = .true.
-       use_waterratio = .false.
 
     case default
 
@@ -238,6 +238,7 @@ contains
     if( serial ) then
        call COMM_bcast( dims(:), ndims )
        call COMM_bcast( timelen )
+       call COMM_bcast( use_waterratio )
     endif
 
     interp_search_divnum = search_divnum_in
@@ -935,7 +936,7 @@ contains
     ! land
     real(RP) :: tg_org    (dims(7),dims(8),dims(9))
     real(RP) :: strg_org  (dims(7),dims(8),dims(9))
-    real(RP) :: sh2o_org  (dims(7),dims(8),dims(9))
+    real(RP) :: smds_org  (dims(7),dims(8),dims(9))
     real(RP) :: skint_org (        dims(8),dims(9))
     real(RP) :: lst_org   (        dims(8),dims(9))
     real(RP) :: ust_org   (        dims(8),dims(9))
@@ -967,7 +968,7 @@ contains
 
     real(RP) :: tg   (LKMAX,IA,JA)
     real(RP) :: strg (LKMAX,IA,JA)
-    real(RP) :: sh2o (LKMAX,IA,JA)
+    real(RP) :: smds (LKMAX,IA,JA)
 !    real(RP) :: roff (IA,JA)
 !    real(RP) :: qvef (IA,JA)
     real(RP) :: tw   (IA,JA)
@@ -1023,7 +1024,7 @@ contains
        case ( iWRFARW ) ! TYPE: WRF-ARW
 
           call ParentSurfaceInputWRFARW( &
-               tg_org, sh2o_org, tw_org,     & ! (out)
+               tg_org, smds_org, tw_org,     & ! (out)
                lst_org, ust_org, sst_org,    & ! (out)
                albw_org, albg_org, z0w_org,  & ! (out)
                lsmask_org, lz_org,           & ! (out)
@@ -1055,8 +1056,8 @@ contains
        case ( iGrADS ) ! TYPE: GrADS
 
           call ParentSurfaceInputGrADS( &
-               tg_org, strg_org, tw_org,   & ! (out)
-               lst_org, sst_org,           & ! (out)
+               tg_org, strg_org, smds_org, & ! (out)
+               tw_org, lst_org, sst_org,   & ! (out)
                lsmask_org,                 & ! (out)
                lz_org,                     & ! (out)
                llon_org, llat_org,         & ! (out)
@@ -1075,7 +1076,7 @@ contains
     if ( serial ) then
        call COMM_bcast( tg_org, dims(7), dims(8), dims(9) )
        if ( use_waterratio ) then
-          call COMM_bcast( sh2o_org, dims(7), dims(8), dims(9) )
+          call COMM_bcast( smds_org, dims(7), dims(8), dims(9) )
        else
           call COMM_bcast( strg_org, dims(7), dims(8), dims(9) )
        end if
@@ -1361,7 +1362,7 @@ contains
 
           if ( i_INTRP_LAND_WATER .ne. i_intrp_off ) then
              do k = 1, dims(7)
-                work(:,:) = sh2o_org(k,:,:)
+                work(:,:) = smds_org(k,:,:)
                 select case ( i_INTRP_LAND_WATER )
                 case ( i_intrp_mask )
                    lmask = lsmask_org
@@ -1371,13 +1372,13 @@ contains
                 call interp_OceanLand_data(work, lmask, dims(8), dims(9), landdata=.true.)
                 lmask(:,:) = init_landwater_ratio
                 !replace missing value to init_landwater_ratio
-                call replace_misval_map( work, lmask, dims(8),  dims(9),  "SH2O")
-                sh2o_org(k,:,:) = work(:,:)
+                call replace_misval_map( work, lmask, dims(8),  dims(9),  "SMOISDS")
+                smds_org(k,:,:) = work(:,:)
              enddo
           end if
 
-          call INTRPNEST_interp_3d( sh2o    (:,:,:),     &
-                                    sh2o_org(:,:,:),     &
+          call INTRPNEST_interp_3d( smds    (:,:,:),     &
+                                    smds_org(:,:,:),     &
                                     hfact   (:,:,:),     &
                                     vfactl  (:,:,:,:,:), &
                                     kgrdl   (:,:,:,:,:), &
@@ -1385,7 +1386,7 @@ contains
                                     jgrd    (:,:,:),     &
                                     IA, JA, 1, LKMAX-1   )
           do k = 1, LKMAX
-             strg(k,:,:) = convert_WS2VWC( sh2o(k,:,:), critical=.true. )
+             strg(k,:,:) = convert_WS2VWC( smds(k,:,:), critical=.true. )
           end do
 
        else
@@ -1431,10 +1432,10 @@ contains
 
     else  ! not read from boundary file
 
-       sh2o(:,:,:) = init_landwater_ratio
+       smds(:,:,:) = init_landwater_ratio
        ! conversion from water saturation [fraction] to volumetric water content [m3/m3]
        do k = 1, LKMAX
-          strg(k,:,:) = convert_WS2VWC( sh2o(k,:,:), critical=.true. )
+          strg(k,:,:) = convert_WS2VWC( smds(k,:,:), critical=.true. )
        end do
 
     endif
