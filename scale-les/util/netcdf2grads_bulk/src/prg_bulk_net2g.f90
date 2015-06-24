@@ -182,7 +182,7 @@ program netcdf2grads_h_launcher
   else
      fname_scaleles = fname_local
   endif
-  call popsca( MY_COMM_WORLD )
+  call popsca( MY_COMM_WORLD, fname_local )
 
 
   ! stop MPI

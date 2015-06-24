@@ -177,10 +177,12 @@ contains
   !> main routine of POPSCA
   !-----------------------------------------------------------------------------------------
   subroutine popsca( &
-      LOCAL_COMM_WORLD   ) ! [in]
+      LOCAL_COMM_WORLD,   &
+      CONFFILE_IN         ) ! [in]
     implicit none
 
-    integer, intent(in) :: LOCAL_COMM_WORLD
+    integer,        intent(in) :: LOCAL_COMM_WORLD
+    character(256), intent(in) :: CONFFILE_IN
     !---------------------------------------------------------------------------
 
 
@@ -190,13 +192,15 @@ contains
   !-----------------------------------------------------------------------------------------
   call comm_initialize( LOCAL_COMM_WORLD )
 
-  !--- Read from argument
-  if ( COMMAND_ARGUMENT_COUNT() /= 1 ) then
-     write(*, *) "ERROR: Program needs a config file!"
-     call err_abort( 1, __LINE__, loc_main )
-  else
-     call get_command_argument(1,fconf)
-  endif
+!  !--- Read from argument
+!  if ( COMMAND_ARGUMENT_COUNT() /= 1 ) then
+!     write(*, *) "ERROR: Program needs a config file!"
+!     call err_abort( 1, __LINE__, loc_main )
+!  else
+!     call get_command_argument(1,fconf)
+!  endif
+
+  CONFFILE = trim( CONFFILE_IN )
 
   call read_conf_logout
   call logio_init( irank, LOUT )
