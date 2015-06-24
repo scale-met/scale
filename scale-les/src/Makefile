@@ -177,4 +177,6 @@ $(BUILD_DIR)/%.o : %.c
 .PHONY : clean distclean allclean dcutils gtool scalelib depend dependency
 
 
+ifeq ($(IGNOREDEP),)
 -include depend
+endif

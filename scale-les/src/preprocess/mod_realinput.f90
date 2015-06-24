@@ -268,10 +268,7 @@ contains
     allocate( temp_org( dims(1)+2, dims(2), dims(3) ) )
     allocate( pres_org( dims(1)+2, dims(2), dims(3) ) )
     allocate( qtrc_org( dims(1)+2, dims(2), dims(3), QA ) )
-
-    if ( use_file_density ) then
-       allocate( dens_org( dims(1), dims(2), dims(3) ) )
-    end if
+    allocate( dens_org( dims(1)+2, dims(2), dims(3) ) )
 
     return
   end subroutine ParentAtomSetup
@@ -457,13 +454,18 @@ contains
           else
              call COMM_bcast( pres_org, dims(1)+2, dims(2), dims(3) )
           end if
+
+          if ( first .or. update_coord ) then
+
+             call COMM_bcast( lon_org, dims(2), dims(3) )
+             call COMM_bcast( lat_org, dims(2), dims(3) )
+             call COMM_bcast( cz_org,  dims(1)+2, dims(2), dims(3) )
+
+          end if
+
        end if
 
        if ( first .or. update_coord ) then
-
-          call COMM_bcast( lon_org, dims(2), dims(3) )
-          call COMM_bcast( lat_org, dims(2), dims(3) )
-          call COMM_bcast( cz_org,  dims(1)+2, dims(2), dims(3) )
 
           call INTRPNEST_domain_compatibility( lon_org(:,:), lat_org(:,:), cz_org(:,:,:), &
                                                LON(:,:), LAT(:,:), CZ(KS:KE,:,:) )
