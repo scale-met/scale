@@ -95,9 +95,9 @@ contains
 
     timelen = 1 !temtative approach
 
-    allocate( read2D ( dims(2), dims(3)          ) )
-    allocate( read3D ( dims(2), dims(3), dims(1) ) )
-    allocate( read3DL( dims(8), dims(9), dims(7) ) )
+    allocate( read2D ( PARENT_IMAX(handle), PARENT_JMAX(handle) ) )
+    allocate( read3D ( PARENT_IMAX(handle), PARENT_JMAX(handle), dims(1) ) )
+    allocate( read3DL( PARENT_IMAX(handle), PARENT_JMAX(handle), dims(7) ) )
 
     return
   end subroutine ParentAtomSetupSCALE
@@ -414,13 +414,13 @@ contains
        ys = PARENT_JMAX(handle) * (yloc-1) + 1
        ye = PARENT_JMAX(handle) * yloc
 
-       call FileRead( read3D(:,:,:), BASENAME_ORG, "LAND_TEMP",  it, rank )
+       call FileRead( read3DL(:,:,:), BASENAME_ORG, "LAND_TEMP",  it, rank )
        do k = 1, dims(7)
          tg_org(k,xs:xe,ys:ye) = read3D(:,:,k)
        end do
 
        if( use_file_landwater )then
-          call FileRead( read3D(:,:,:), BASENAME_ORG, "LAND_WATER", it, rank )
+          call FileRead( read3DL(:,:,:), BASENAME_ORG, "LAND_WATER", it, rank )
           do k = 1, dims(7)
              strg_org(k,xs:xe,ys:ye) = read3D(:,:,k)
           end do
