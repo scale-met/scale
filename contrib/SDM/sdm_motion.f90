@@ -16,6 +16,7 @@
 !! @li      2014-07-11 (S.Shima) [new] Separated from scale_atmos_phy_mp_sdm.F90
 !! @li      2014-07-11 (S.Shima) [rev] Fixed the bug of interpolation in sdm_getvel
 !! @li      2015-06-25 (S.Shima) [add] fapp_start/stop added for performance monitoring
+!! @li      2015-06-26 (S.Shima) [add] OCL added for Auto parallelization on K/FX10
 !!
 !<
 !-------------------------------------------------------------------------------
@@ -363,6 +364,7 @@ contains
     scnt = 0
     mcnt = 0
     lcnt = 0      
+
     do n=1,sd_num
        if( sd_rk(n)<VALID2INVALID ) cycle
 
@@ -405,6 +407,7 @@ contains
 
        if( tlist_s>0 ) then
 
+!OCL NORECURRENCE
           do m=1,tlist_s
              n = ilist_s(m)
 
@@ -507,6 +510,7 @@ contains
 
        if( tlist_m>0 ) then
 
+!OCL NORECURRENCE
           do m=1,tlist_m
              n = ilist_m(m)
 
@@ -629,6 +633,7 @@ contains
 
        if( tlist_l>0 ) then
 
+!OCL NORECURRENCE
           do m=1,tlist_l
              n = ilist_l(m)
 
@@ -769,6 +774,7 @@ contains
 
        if( tlist_s>0 ) then
 
+!OCL NORECURRENCE
           do m=1,tlist_s
              n = ilist_s(m)
 
@@ -836,6 +842,7 @@ contains
 
        if( tlist_m>0 ) then
 
+!OCL NORECURRENCE
           do m=1,tlist_m
              n = ilist_m(m)
 
@@ -923,6 +930,7 @@ contains
 
        if( tlist_l>0 ) then
 
+!OCL NORECURRENCE
           do m=1,tlist_l
              n = ilist_l(m)
 

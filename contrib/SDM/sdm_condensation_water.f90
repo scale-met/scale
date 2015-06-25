@@ -20,6 +20,7 @@
 !! @li      2014-12-19 (Y.Sato)  [mod] modify the location for defining LatHet
 !! @li      2014-12-24 (Y.Sato)  [mod] Modify the Latent Heat for SCALE library 
 !! @li      2015-06-25 (S.Shima) [add] fapp_start/stop added for performance monitoring
+!! @li      2015-06-26 (S.Shima) [add] OCL added for Auto parallelization on K/FX10
 !!
 !<
 !-------------------------------------------------------------------------------
@@ -185,6 +186,7 @@ contains
 
 
     ! Condensation of water
+!OCL INDEPENDENT
     do n=1,sd_num
 
        !### Skip invalid super-droplets ###!

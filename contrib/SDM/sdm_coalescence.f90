@@ -15,6 +15,7 @@
 !! @par History
 !! @li      2014-07-12 (S.Shima) [new] Separated from scale_atmos_phy_mp_sdm.F90
 !! @li      2015-06-25 (S.Shima) [add] fapp_start/stop added for performance monitring
+!! @li      2015-06-26 (S.Shima) [add] OCL added for Auto parallelization on K/FX10
 !!
 !<
 !-------------------------------------------------------------------------------
@@ -292,6 +293,7 @@ contains
 !!$
 !!$            m = fsort_id(t)
 
+!OCL NORECURRENCE
     do m=1,gnum
        if( sort_freq(m) <= 1 ) cycle
        sort_tag0m = sort_tag0(m)
@@ -338,6 +340,7 @@ contains
 !!$               tc = sort_tag0(m) + n
 !!$               tp = tc + int(sort_freq(m)/2)
 
+!OCL NORECURRENCE
        do m=1,gnum
           if( sort_freq(m) <= 1 ) cycle
 
@@ -375,6 +378,7 @@ contains
 !!$               tc = sort_tag0(m) + n
 !!$               tp = tc + int(sort_freq(m)/2)
 
+!OCL NORECURRENCE
        do m=1,gnum
           if( sort_freq(m) <= 1 ) cycle
 
@@ -420,6 +424,7 @@ contains
 !!$               tc = sort_tag0(m) + n
 !!$               tp = tc + int(sort_freq(m)/2)
 
+!OCL NORECURRENCE
        do m=1,gnum
           if( sort_freq(m) <= 1 ) cycle
 
@@ -570,6 +575,7 @@ contains
 !!$               tc = sort_tag0(m) + n
 !!$               tp = tc + sort_freq(m)/2
 
+!OCL NORECURRENCE
        do m=1,gnum
           if( sort_freq(m) <= 1 ) cycle
 
@@ -606,6 +612,7 @@ contains
 !!$               tc = sort_tag0(m) + n
 !!$               tp = tc + sort_freq(m)/2
 !!$
+!OCL NORECURRENCE
        do m=1,gnum
           if( sort_freq(m) <= 1 ) cycle
 
@@ -647,6 +654,7 @@ contains
 !!$               tc = sort_tag0(m) + n
 !!$               tp = tc + sort_freq(m)/2
        
+!OCL NORECURRENCE
        do m=1,gnum
           if( sort_freq(m) <= 1 ) cycle
 
@@ -695,6 +703,7 @@ contains
 !!$            tc = sort_tag0(m) + n
 !!$            tp = tc + sort_freq(m)/2
 !!$
+!OCL NORECURRENCE
        do m=1,gnum
           if( sort_freq(m) <= 1 ) cycle
 
@@ -837,6 +846,7 @@ contains
 !!$            tc = sort_tag0(m) + n
 !!$            tp = tc + sort_freq(m)/2
 !!$
+!OCL NORECURRENCE
     do m=1,gnum
        if( sort_freq(m) <= 1 ) cycle
 
@@ -869,6 +879,7 @@ contains
 !!$            tc = sort_tag0(m) + n
 !!$            tp = tc + sort_freq(m)/2
 
+!OCL NORECURRENCE
     do m=1,gnum
        if( sort_freq(m) <= 1 ) cycle
 

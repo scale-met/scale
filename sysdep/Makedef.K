@@ -4,13 +4,13 @@
 
 ##### for computation
 
-#FFLAGS_FAST  = -Kfast,parallel,ocl,preex,array_private,noalias=s,mfunc=2 \
-#               -Qi -Qt -X03 -Ncompdisp -Koptmsg=1 -Cpp                   \
-#               -Kdynamic_iteration -Ksimd                                \
-#               -Kauto,threadsafe
+FFLAGS_FAST  = -Kfast,parallel,ocl,preex,array_private,noalias=s,mfunc=2 \
+               -Qi -Qt -X03 -Ncompdisp -Koptmsg=1 -Cpp                   \
+               -Kdynamic_iteration -Ksimd                                \
+               -Kauto,threadsafe
 
 # This option can reudce compilation time considerably
-FFLAGS_FAST  = -Kparallel,ocl,array_private -Cpp -Kauto,threadsafe
+# FFLAGS_FAST  = -Kparallel,ocl,array_private -Cpp -Kauto,threadsafe
 
 # note: Kauto,threadsafe,autoobjstack,temparraystack depends on the stacksize.
 # If you find the segmentation fault error, please check.
@@ -53,7 +53,7 @@ FFLAGS_DYN ?= $(FFLAGS)
 
 #FFLAGS_SDM ?= $(FFLAGS) -Kprefetch_indirect
 #FFLAGS_SDM ?= $(FFLAGS)
-FFLAGS_SDM ?= -Kfast,parallel,openmp,optmsg=2,ocl,preex,mfunc=3 -Nlst=t
+FFLAGS_SDM ?= -Kfast,parallel,optmsg=2,ocl,preex,mfunc=3 -Nlst=t
 
 # without performance monitor or Nrt_tune_func
 FFLAGS_SDM_MONIT ?= 

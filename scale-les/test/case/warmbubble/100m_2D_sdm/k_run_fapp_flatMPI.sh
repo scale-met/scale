@@ -31,7 +31,7 @@ export OMP_NUM_THREADS=1
 export FLIB_CNTL_BARRIER_ERR="FALSE"
 
 # run
-LD="./scale-les run.conf"
+LD="./scale-les run_flatMPI.conf"
 MPIEXEC="mpiexec"
 #
 #fapp -C -d Fprofd_cache -L1 -Hevent=Cache ${MPIEXEC} ${LD}

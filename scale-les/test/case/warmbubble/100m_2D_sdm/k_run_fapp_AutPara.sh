@@ -6,7 +6,7 @@
 ################################################################################
 ##PJM --rsc-list "rscgrp=small"
 #PJM --rsc-list "node=1"
-#PJM --mpi "proc=8"
+#PJM --mpi "proc=1"
 #PJM --rsc-list "elapse=01:00:00"
 #PJM --mail-list shinichiro.shima@gmail.com
 #PJM --mpi "use-rankdir"
@@ -26,12 +26,12 @@
 #
 . /work/system/Env_base
 #
-export PARALLEL=1
-export OMP_NUM_THREADS=1
+export PARALLEL=8
+export OMP_NUM_THREADS=8
 export FLIB_CNTL_BARRIER_ERR="FALSE"
 
 # run
-LD="./scale-les run.conf"
+LD="./scale-les run_AutPara.conf"
 MPIEXEC="mpiexec"
 #
 #fapp -C -d Fprofd_cache -L1 -Hevent=Cache ${MPIEXEC} ${LD}
