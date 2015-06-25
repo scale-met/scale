@@ -203,6 +203,9 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*) '+++ Real Case/Atom Input File Type: GrADS format'
 
+    !--- initialization
+    use_waterratio = .false.
+
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_MKINIT_REAL_GrADS,iostat=ierr)
