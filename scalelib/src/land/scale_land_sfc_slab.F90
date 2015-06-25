@@ -46,7 +46,7 @@ module scale_land_sfc_slab
   real(RP), private :: LAND_SFC_SLAB_res_min = 1.0E+0_RP ! minimum number of residual
   real(RP), private :: LAND_SFC_SLAB_dTS_max = 5.0E-2_RP ! maximum delta surface temperature [K/s]
 
-  logical, allocatable, private :: is_FLX(:,:) ! is atmos-land coupler run?
+  logical, allocatable, private :: is_LND(:,:)
 
 contains
   !-----------------------------------------------------------------------------
@@ -93,14 +93,14 @@ contains
     end if
 
     ! judge to run slab land model
-    allocate( is_FLX(IA,JA) )
+    allocate( is_LND(IA,JA) )
 
     do j = JS, JE
     do i = IS, IE
       if( LANDUSE_fact_land(i,j) > 0.0_RP ) then
-        is_FLX(i,j) = .true.
+        is_LND(i,j) = .true.
       else
-        is_FLX(i,j) = .false.
+        is_LND(i,j) = .false.
       end if
     end do
     end do
@@ -240,7 +240,7 @@ contains
       do j = JS, JE
       do i = IS, IE
 
-        if( is_FLX(i,j) ) then
+        if( is_LND(i,j) ) then
 
           redf   = 1.0_RP
           oldres = 1.0E+10_RP
@@ -442,7 +442,7 @@ contains
     do j = JS, JE
     do i = IS, IE
 
-      if( is_FLX(i,j) ) then
+      if( is_LND(i,j) ) then
 
         call qsat( SQV,       & ! [OUT]
                    LST1(i,j), & ! [IN]

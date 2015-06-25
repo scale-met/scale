@@ -42,7 +42,7 @@ module scale_ocean_sfc_slab
   !-----------------------------------------------------------------------------
   logical, private :: SST_UPDATE
 
-  logical, allocatable, private :: is_FLX(:,:)
+  logical, allocatable, private :: is_OCN(:,:)
 
 contains
   !-----------------------------------------------------------------------------
@@ -72,14 +72,14 @@ contains
     end if
 
     ! judge to run slab ocean model
-    allocate( is_FLX(IA,JA) )
+    allocate( is_OCN(IA,JA) )
 
     do j = JS, JE
     do i = IS, IE
       if( LANDUSE_fact_ocean(i,j) > 0.0_RP ) then
-        is_FLX(i,j) = .true.
+        is_OCN(i,j) = .true.
       else
-        is_FLX(i,j) = .false.
+        is_OCN(i,j) = .false.
       end if
     end do
     end do
@@ -194,7 +194,7 @@ contains
     do j = JS, JE
     do i = IS, IE
 
-      if( is_FLX(i,j) ) then
+      if( is_OCN(i,j) ) then
 
         ! saturation at the surface
         call qsat( SQV,       & ! [OUT]
