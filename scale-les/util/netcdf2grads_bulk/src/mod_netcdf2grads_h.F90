@@ -692,7 +692,7 @@ contains
     open ( FID_CONF, file=trim(fconf), status='old', &
            form="formatted", delim='apostrophe', iostat=ierr )
     if ( ierr /= 0 ) then
-       write (*, *) "ERROR: fail to open net2g.conf file"
+       write (*, *) "ERROR: fail to open net2g.conf file", trim(fconf)
        call err_abort( 1, __LINE__, loc_main )
     endif
 
@@ -808,7 +808,7 @@ contains
     open ( FID_RCNF, file=trim(CONFFILE), status='old', &
            form="formatted", delim='apostrophe', iostat=ierr )
     if ( ierr /= 0 ) then
-       write (*, *) "ERROR: fail to open running *.conf file"
+       write (*, *) "ERROR: fail to open running *.conf file", trim(CONFFILE)
        call err_abort( 1, __LINE__, loc_main )
     endif
 
