@@ -26,7 +26,7 @@ program netcdf2grads_h_launcher
      PRC_setup,         &
      PRC_MPIstart,      &
      PRC_MPIsplit,      &
-     PRC_MPIfinish,     &
+!     PRC_MPIfinish,     &
      PRC_MPIstop,       &
      PRC_BULKsetup,     &
      MASTER_LOG,        &
@@ -37,6 +37,7 @@ program netcdf2grads_h_launcher
 !     FILEIO_setup
 !  use scale_comm, only: &
 !     COMM_setup
+  use mod_net2g_comm
   use mod_netcdf2grads_h
   !
   !-----------------------------------------------------------------------------
@@ -186,7 +187,8 @@ program netcdf2grads_h_launcher
 
 
   ! stop MPI
-  call PRC_MPIfinish
+  !call PRC_MPIfinish
+  call comm_finalize
 
   stop
   !=============================================================================

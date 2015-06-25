@@ -110,6 +110,11 @@ contains
     integer :: ierr
     !---------------------------------------------------------------------------
 
+    ! free splitted communicator
+    if ( INTRA_COMM_WORLD .ne. MPI_COMM_WORLD ) then
+       call MPI_COMM_FREE( INTRA_COMM_WORLD, ierr )
+    endif
+
     if ( irank == master .and. LOG_DBUG ) write( *, * ) "+++ MPI COMM: Corrective Finalize"
     call MPI_FINALIZE( ierr )
 
