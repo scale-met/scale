@@ -15,6 +15,7 @@
 !! @par History
 !! @li      2014-07-11 (S.Shima) [new] Separated from scale_atmos_phy_mp_sdm.F90
 !! @li      2014-07-11 (S.Shima) [rev] Fixed the bug of interpolation in sdm_getvel
+!! @li      2015-06-25 (S.Shima) [add] fapp_start/stop added for performance monitoring
 !!
 !<
 !-------------------------------------------------------------------------------
@@ -48,6 +49,10 @@ contains
     !---------------------------------------------------------------------
     ! The advection process of Super-Droplets.
     ! now only support uniform grid
+
+    ! Section specification for fapp profiler
+    call fapp_start("sdm_move",1,1)
+
     dz_inv=1.0_RP/DZ
     do n=1,sd_num
 
@@ -61,6 +66,9 @@ contains
        sd_rk(n) = sd_rk(n) + sd_vz(n) * real(sdm_dtadv,kind=RP) * dz_inv
     enddo
     
+    ! Section specification for fapp profiler
+    call fapp_stop("sdm_move",1,1)
+
     return
   end subroutine sdm_move
   !----------------------------------------------------------------------------
@@ -112,6 +120,9 @@ contains
     integer :: n, i, j, k      ! index
     !-------------------------------------------------------------------
     ! The advection process of Super-Droplets.
+
+    ! Section specification for fapp profiler
+    call fapp_start("sdm_getvel",1,1)
 
     call sdm_x2ri(sd_num,sd_x,sd_ri,sd_rk)
     call sdm_y2rj(sd_num,sd_y,sd_rj,sd_rk)
@@ -213,6 +224,9 @@ contains
 
        sd_vzw(n) = sd_w - sd_vz
     end do
+
+    ! Section specification for fapp profiler
+    call fapp_stop("sdm_getvel",1,1)
 
     return
   end subroutine sdm_getvel
@@ -324,6 +338,10 @@ contains
 
     integer :: i, j, k, n, m   ! index
     !---------------------------------------------------------------------
+
+    ! Section specification for fapp profiler
+    call fapp_start("sdm_getvz",1,1)
+
     if( .not. doprecipitation ) then
        sd_vz(:) = 0.0_RP
        return
@@ -1007,6 +1025,9 @@ contains
        end if
 
     end if
+
+    ! Section specification for fapp profiler
+    call fapp_stop("sdm_getvz",1,1)
 
     return
   end subroutine sdm_getvz

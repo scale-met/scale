@@ -19,6 +19,7 @@
 !! @li      2014-12-12 (Y.Sato)  [mod] modify epsva, LatHet, and DNS_RL as those used in SCALE Library
 !! @li      2014-12-19 (Y.Sato)  [mod] modify the location for defining LatHet
 !! @li      2014-12-24 (Y.Sato)  [mod] Modify the Latent Heat for SCALE library 
+!! @li      2015-06-25 (S.Shima) [add] fapp_start/stop added for performance monitoring
 !!
 !<
 !-------------------------------------------------------------------------------
@@ -115,6 +116,9 @@ contains
 !!$    real(RP), parameter :: epsva = 0.622_RP   ! Molecular weight ratio of vapor/air
     !---------------------------------------------------------------------
       
+    ! Section specification for fapp profiler
+    call fapp_start("sdm_condevp",1,1)
+
     call sdm_x2ri(sd_num,sd_x,sd_ri,sd_rk)
     call sdm_y2rj(sd_num,sd_y,sd_rj,sd_rk)
 
@@ -290,6 +294,9 @@ contains
        sd_r(n) = rdi   !! particle radius at future
 
     end do
+
+    ! Section specification for fapp profiler
+    call fapp_stop("sdm_condevp",1,1)
 
     return
   end subroutine sdm_condevp

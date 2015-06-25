@@ -14,6 +14,7 @@
 !!
 !! @par History
 !! @li      2014-07-12 (S.Shima) [new] Separated from scale_atmos_phy_mp_sdm.F90
+!! @li      2015-06-25 (S.Shima) [add] fapp_start/stop added for performance monitring
 !!
 !<
 !-------------------------------------------------------------------------------
@@ -168,6 +169,9 @@ contains
     integer :: sort_freqm
     integer :: icptc, icptp
     !--------------------------------------------------------------------
+
+    ! Section specification for fapp profiler
+    call fapp_start("sdm_coales",1,1)
 
     call sdm_x2ri(sd_num,sd_x,sd_ri,sd_rk)
     call sdm_y2rj(sd_num,sd_y,sd_rj,sd_rk)
@@ -1020,6 +1024,9 @@ contains
     ! Deallocate
     deallocate( fsort_tag  )
     deallocate( fsort_freq )
+
+    ! Section specification for fapp profiler
+    call fapp_stop("sdm_coales",1,1)
 
     return
   end subroutine sdm_coales
