@@ -2,6 +2,7 @@
 
 # Fortran Compiler
 FC     = mpiifort
+SFC    = ifort
 FFLAGS = -mmic -fpp3 -g -O3 -parallel -openmp -assume byterecl -ftz -heap-arrays \
          -assume byterecl -convert big_endian \
          -fno-alias
