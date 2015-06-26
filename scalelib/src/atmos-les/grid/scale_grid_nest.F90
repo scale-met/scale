@@ -2461,7 +2461,7 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
           ireq2(req_count2) = ireq(i)
        endif
     enddo
-    call MPI_WAITALL( req_count2, ireq2, istatus, ierr )
+    if ( req_count2 .ne. 0 ) call MPI_WAITALL( req_count2, ireq2, istatus, ierr )
 
 !    do while ( .not. flag )
 !       num = num + 1
