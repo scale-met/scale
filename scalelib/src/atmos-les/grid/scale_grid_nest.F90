@@ -2442,25 +2442,37 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
     integer, intent(in)    :: req_count
     integer, intent(inout) :: ireq(max_rq)
 
+    integer :: i
     integer :: ierr
     integer :: istatus(MPI_STATUS_SIZE,req_count)
+    integer :: req_count2
+    integer :: ireq2(max_rq)
 
-    logical    :: flag
-    integer(8) :: num
+!    logical    :: flag
+!    integer(8) :: num
     !---------------------------------------------------------------------------
-    num  = 0
-    flag = .false.
+!    num  = 0
+!    flag = .false.
 
-    do while ( .not. flag )
-       num = num + 1
-       call MPI_TESTALL( req_count, ireq, flag, istatus, ierr )
-
-       if ( num > ONLINE_WAIT_LIMIT ) then
-          if( IO_L ) write(IO_FID_LOG,'(1x,A)') '*** ERROR: over the limit of waiting time [NESTCOM]'
-          write(*,'(1x,A)') '*** ERROR: over the limit of waiting time [NESTCOM]'
-          call PRC_MPIstop
+    req_count2 = 0
+    do i=1, req_count
+       if (ireq(i) .ne. MPI_REQUEST_NULL) then
+          req_count2 = req_count2 + 1
+          ireq2(req_count2) = ireq(i)
        endif
     enddo
+    call MPI_WAITALL( req_count2, ireq2, istatus, ierr )
+
+!    do while ( .not. flag )
+!       num = num + 1
+!       call MPI_TESTALL( req_count, ireq, flag, istatus, ierr )
+
+!       if ( num > ONLINE_WAIT_LIMIT ) then
+!          if( IO_L ) write(IO_FID_LOG,'(1x,A)') '*** ERROR: over the limit of waiting time [NESTCOM]'
+!          write(*,'(1x,A)') '*** ERROR: over the limit of waiting time [NESTCOM]'
+!          call PRC_MPIstop
+!       endif
+!    enddo
 
     return
   end subroutine NEST_COMM_waitall
