@@ -2071,7 +2071,7 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
     integer, intent(in) :: HANDLE   !< id number of nesting relation in this process target
 
     integer :: ierr
-    integer :: istatus(MPI_STATUS_SIZE)
+    !integer :: istatus(MPI_STATUS_SIZE)
 
     integer :: rq
     logical :: flag
@@ -2087,7 +2087,7 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
        do rq = 1, rq_tot_d
           if ( ireq_d(rq) .ne. MPI_REQUEST_NULL ) then
              call MPI_CANCEL(ireq_d(rq), ierr)
-             call MPI_TEST_CANCELLED(istatus, flag, ierr)
+             !call MPI_TEST_CANCELLED(istatus, flag, ierr)
              !if ( .NOT. flag ) then
              !   write(IO_FID_LOG,*) 'XXX ERROR: receive actions do not cancelled, req = ', rq
              !endif
