@@ -17,6 +17,8 @@
 !! @li      2014-07-14 (S.Shima) [rev] sdm_sd2prec added
 !! @li      2014-07-22 (Y.Sato ) [mod] Modify the definition of kl and ku for calculating drate
 !! @li      2014-07-24 (Y.Sato ) [mod] Modify bugs accessing upper/lower boundary
+!! @li      2015-06-27 (S.Shima) [add] Add fapp_start/stop calls to monitor the performance
+!! @li      2015-06-27 (S.Shima) [mod] Working arrays are introduced to parallelize sd2rhow and sd2rhocr 
 !!
 !<
 !-------------------------------------------------------------------------------
@@ -161,6 +163,7 @@ contains
     integer, intent(out) :: sd_itmp2(1:sd_num)    ! temporary array of the size of the number of super-droplets.
     ! Work variables
     integer :: n, i, j, k   ! index
+
     !-------------------------------------------------------------------
 
     ! Get density of water hydrometeor
@@ -198,7 +201,7 @@ contains
     use scale_const, only: &
          rw => CONST_DWATR
     use m_sdm_common, only: &
-         F_THRD, ONE_PI, dxiv_sdm, dyiv_sdm, VALID2INVALID
+         F_THRD, ONE_PI, dxiv_sdm, dyiv_sdm, VALID2INVALID, num_threads
     use m_sdm_coordtrans, only: &
          sdm_x2ri, sdm_y2rj
     ! Input variables
@@ -234,8 +237,13 @@ contains
     integer :: ku                 ! index
     integer :: m                  ! index
     integer :: n                  ! index
+    integer :: i_threads
+    real(RP) :: tmp_liq_sdm(num_threads,KA,IA,JA)
     !-----------------------------------------------------------------------------
     
+    ! Section specification for fapp profiler
+    call fapp_start("sdm_sd2rhocr",1,1)
+
     call sdm_x2ri(sd_num,sd_x,sd_ri,sd_rk)
     call sdm_y2rj(sd_num,sd_y,sd_rj,sd_rk)
     
@@ -296,17 +304,43 @@ contains
 
     if( tlist_c>0 ) then
 
-       do m=1,tlist_c
+       tmp_liq_sdm(:,:,:,:) = 0.0_RP
+
+       do i_threads=1,num_threads
+       do m=i_threads,tlist_c,num_threads
           n = ilist_c(m)
 
           i = floor(sd_ri(n))+1
           j = floor(sd_rj(n))+1
           k = floor(sd_rk(n))+1
 
-          liqc_sdm(k,i,j) = liqc_sdm(k,i,j)                     &
-               + sd_r(n) * sd_r(n) * sd_r(n)         &
-               * real(sd_n(n),kind=RP)
+          tmp_liq_sdm(i_threads,k,i,j) = tmp_liq_sdm(i_threads,k,i,j)                        &
+               &                         + sd_r(n) * sd_r(n) * sd_r(n)            &
+               &                         * real(sd_n(n),kind=RP)
        end do
+       end do
+
+       do k=1,KA
+       do j=1,JA
+       do i=1,IA
+       do i_threads=1,num_threads
+          liqc_sdm(k,i,j)=liqc_sdm(k,i,j)+tmp_liq_sdm(i_threads,k,i,j)
+       end do
+       end do
+       end do
+       end do
+
+!!$       do m=1,tlist_c
+!!$          n = ilist_c(m)
+!!$
+!!$          i = floor(sd_ri(n))+1
+!!$          j = floor(sd_rj(n))+1
+!!$          k = floor(sd_rk(n))+1
+!!$
+!!$          liqc_sdm(k,i,j) = liqc_sdm(k,i,j)                     &
+!!$               + sd_r(n) * sd_r(n) * sd_r(n)         &
+!!$               * real(sd_n(n),kind=RP)
+!!$       end do
 
        !=== adjust cloud-water in verical boundary. ===!
 
@@ -354,17 +388,43 @@ contains
 
     if( tlist_r>0 ) then
 
-       do m=1,tlist_r
+       tmp_liq_sdm(:,:,:,:) = 0.0_RP
+
+       do i_threads=1,num_threads
+       do m=i_threads,tlist_r,num_threads
           n = ilist_r(m)
 
           i = floor(sd_ri(n))+1
           j = floor(sd_rj(n))+1
           k = floor(sd_rk(n))+1
 
-          liqr_sdm(k,i,j) = liqr_sdm(k,i,j)                     &
-               + sd_r(n) * sd_r(n) * sd_r(n)         &
-               * real(sd_n(n),kind=RP)
+          tmp_liq_sdm(i_threads,k,i,j) = tmp_liq_sdm(i_threads,k,i,j)                        &
+               &                         + sd_r(n) * sd_r(n) * sd_r(n)            &
+               &                         * real(sd_n(n),kind=RP)
        end do
+       end do
+
+       do k=1,KA
+       do j=1,JA
+       do i=1,IA
+       do i_threads=1,num_threads
+          liqr_sdm(k,i,j)=liqr_sdm(k,i,j)+tmp_liq_sdm(i_threads,k,i,j)
+       end do
+       end do
+       end do
+       end do
+
+!!$       do m=1,tlist_r
+!!$          n = ilist_r(m)
+!!$
+!!$          i = floor(sd_ri(n))+1
+!!$          j = floor(sd_rj(n))+1
+!!$          k = floor(sd_rk(n))+1
+!!$
+!!$          liqr_sdm(k,i,j) = liqr_sdm(k,i,j)                     &
+!!$               + sd_r(n) * sd_r(n) * sd_r(n)         &
+!!$               * real(sd_n(n),kind=RP)
+!!$       end do
        
        !=== adjust rain-water in verical boundary. ===!
 
@@ -408,6 +468,9 @@ contains
 
     end if
 
+    ! Section specification for fapp profiler
+    call fapp_stop("sdm_sd2rhocr",1,1)
+
     return
   end subroutine sdm_sd2rhocr
   !-----------------------------------------------------------------------------
@@ -419,7 +482,7 @@ contains
     use scale_const, only: &
          rw => CONST_DWATR
     use m_sdm_common, only: &
-         F_THRD, ONE_PI, dxiv_sdm, dyiv_sdm, VALID2INVALID
+         F_THRD, ONE_PI, dxiv_sdm, dyiv_sdm, VALID2INVALID, num_threads
     use m_sdm_coordtrans, only: &
          sdm_x2ri, sdm_y2rj
     ! Input variables
@@ -444,7 +507,13 @@ contains
     integer :: cnt                ! counter
     integer :: i, j, k, kl, ku, m, n    ! index
     integer :: tlist
+    integer :: i_threads
+    real(RP) :: tmp_liqw_sdm(num_threads,KA,IA,JA)
     !--------------------------------------------------------------------
+
+    ! Section specification for fapp profiler
+    call fapp_start("sdm_sd2rhow",1,1)
+
     call sdm_x2ri(sd_num,sd_x,sd_ri,sd_rk)
     call sdm_y2rj(sd_num,sd_y,sd_rj,sd_rk)
 
@@ -480,17 +549,44 @@ contains
 
     ! Get density of liquid-water.
     !### count voulme of super-droplets ###!
-    do m=1,tlist
+
+    tmp_liqw_sdm(:,:,:,:) = 0.0_RP
+
+    do i_threads=1,num_threads
+    do m=i_threads,tlist,num_threads
        n = ilist(m)
 
        i = floor(sd_ri(n))+1
        j = floor(sd_rj(n))+1
        k = floor(sd_rk(n))+1
 
-       liqw_sdm(k,i,j) = liqw_sdm(k,i,j)                        &
+       tmp_liqw_sdm(i_threads,k,i,j) = tmp_liqw_sdm(i_threads,k,i,j)                        &
             &                         + sd_r(n) * sd_r(n) * sd_r(n)            &
             &                         * real(sd_n(n),kind=RP)
     end do
+    end do
+
+    do k=1,KA
+    do j=1,JA
+    do i=1,IA
+    do i_threads=1,num_threads
+       liqw_sdm(k,i,j)=liqw_sdm(k,i,j)+tmp_liqw_sdm(i_threads,k,i,j)
+    end do
+    end do
+    end do
+    end do
+    
+!!$    do m=1,tlist
+!!$       n = ilist(m)
+!!$
+!!$       i = floor(sd_ri(n))+1
+!!$       j = floor(sd_rj(n))+1
+!!$       k = floor(sd_rk(n))+1
+!!$
+!!$       liqw_sdm(k,i,j) = liqw_sdm(k,i,j)                        &
+!!$            &                         + sd_r(n) * sd_r(n) * sd_r(n)            &
+!!$            &                         * real(sd_n(n),kind=RP)
+!!$    end do
 
     ! Adjust liquid-water in verical boundary.
     do j=JS,JE
@@ -523,6 +619,9 @@ contains
     end do
     end do
     end do
+
+    ! Section specification for fapp profiler
+    call fapp_stop("sdm_sd2rhow",1,1)
 
     return
   end subroutine sdm_sd2rhow

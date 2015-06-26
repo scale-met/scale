@@ -20,6 +20,7 @@
 !! @li      2014-12-12 (Y.Sato)  [mod] modify characteristics of aeorosl from ammonium sulfate to ammonium bisulfate
 !! @li      2014-12-19 (Y.Sato)  [mod] modify the location for defining LatHet and DNS_RL, and modify some typo
 !! @li      2014-12-25 (Y.Sato)  [mod] modify LatHet to LH0
+!! @li      2015-06-27 (S.Shima) [add] Add num_threads to store the threads number of auto parallelization on K/FX10
 !!
 !<
 !-------------------------------------------------------------------------------
@@ -61,6 +62,7 @@ module m_sdm_common
   integer, save :: fid_random_i, fid_random_o
   logical, save :: sd_rest_flg_in = .false. ! restart flg of Super Droplet
   logical, save :: sd_first = .true. 
+  integer, save :: num_threads ! number of threads of auto parallelization on K/FX10
   !
   !++ Basic variable for SDM
   !

@@ -72,7 +72,7 @@ sdm_sd2fluid.o: sdm_sd2fluid.f90 \
 	sdm_coordtrans.o \
 	$(BUILD_DIR)/scale_const.o \
 	$(BUILD_DIR)/scale_precision.o
-	$(FC) $(FFLAGS_SDM) $(FFLAGS_SDM_MONIT) -I$(BUILD_DIR) -I$(MODDIR) -I$(DCUTILSDIR) -I$(GTOOLDIR) -I$(MTDIR) -I$(GAGETRYDIR) -I$(SDMDIR) -o $@ -c $<
+	$(FC) $(FFLAGS_SDM) -Ksimd=2 $(FFLAGS_SDM_MONIT) -I$(BUILD_DIR) -I$(MODDIR) -I$(DCUTILSDIR) -I$(GTOOLDIR) -I$(MTDIR) -I$(GAGETRYDIR) -I$(SDMDIR) -o $@ -c $<
 
 sdm_coalescence.o: sdm_coalescence.f90 \
 	$(DEPENDLIB) \

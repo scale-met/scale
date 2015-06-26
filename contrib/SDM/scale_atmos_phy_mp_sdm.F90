@@ -65,6 +65,8 @@
 !! @li      2014-12-12 (Y.Sato)  [mod] Modify for using QTRC_sdm in sdm_sd2qcqr in sdm_iniset 
 !! @li      2014-12-17 (Y.Sato)  [mod] Add initialization of prr_crs for Restart
 !! @li      2015-06-22 (S.Shima) [add] Add section specification call for profiling (fipp and fapp)
+!! @li      2015-06-27 (S.Shima) [add] Add more section specification call for profiling (fapp)
+!! @li      2015-06-27 (S.Shima) [add] Store environmental variable PARALELL to num_threads 
 !<
 !-------------------------------------------------------------------------------
 #include "macro_thermodyn.h"
@@ -220,6 +222,8 @@ contains
     integer :: bndsdmdim, bufsiz
     integer :: tmppe, ilcm, igcd
     character(len=17) :: fmt1="(A, '.', A, I*.*)"
+    character(:), allocatable :: tmp_value
+    integer len, status
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -230,6 +234,17 @@ contains
        write(*,*) 'xxx ATMOS_TYPE_PHY_MP is not SDM. Check!'
        call PRC_MPIstop
     endif
+
+    ! Get the number of threads of Auto Parallelization on K/FX10
+    call get_environment_variable('PARALLEL', status = status, length = len)
+    if (status /= 0) then
+       num_threads=1
+    else
+       allocate (character(len) :: tmp_value)
+       call get_environment_variable('PARALLEL', value = tmp_value)
+       read(tmp_value,*) num_threads
+       deallocate(tmp_value)
+    end if
 
     buffact = 0.0_RP
     do k = KS, KE
@@ -631,6 +646,9 @@ contains
        end if
     end do
 
+    ! Section specification for fapp profiler
+    call fapp_start("sdm_initialization",0,0)
+
     if( sd_first ) then
       sd_first = .false.
       if( IO_L ) write(IO_FID_LOG,*) '*** S.D.: setup'
@@ -659,6 +677,9 @@ contains
       end if
     endif
 
+    ! Section specification for fapp profiler
+    call fapp_stop("sdm_initialization",0,0)
+
     if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Microphysics(Super Droplet Method)'
 
     ! -----
@@ -680,6 +701,10 @@ contains
 
     !--
     ! SD data output
+
+    ! Section specification for fapp profiler
+    call fapp_start("sdm_out",0,0)
+
     if( (mod(sdm_dmpvar,10)==1) .and. sdm_dmpitva>0.0_RP .and. &
          mod(10*int(1.E+2_RP*(TIME_NOWSEC+0.0010_RP)), &
              int(1.E+3_RP*(sdm_dmpitva+0.00010_RP))) == 0 ) then
@@ -701,6 +726,9 @@ contains
     else if(sdm_dmpvar>1)then
        write(*,*) 'ERROR: sdm_dmpvar>1 not supported for now. Set sdm_dmpvar=1 (Output Super Droplet Data in ASCII)'
     end if
+
+    ! Section specification for fapp profiler
+    call fapp_stop("sdm_out",0,0)
 
     !== run SDM at future ==!
      call sdm_calc(MOMX,MOMY,MOMZ,DENS,RHOT,QTRC,                 & 
@@ -738,12 +766,19 @@ contains
      !! We need to rethink whether it's okay to evaluate QC QR here
      !! For example, when we diagnose pressure or rhod during the dynamical process, 
      !! qc and qr should be 0 because they are not included in the total density
+
+     ! Section specification for fapp profiler
+     call fapp_start("sdm_sd2qcqr",0,0)
+
      call sdm_sd2qcqr(DENS,QTRC_sdm(:,:,:,I_QC),QTRC_sdm(:,:,:,I_QR),        &
                       zph_crs,                                               &
                       sdnum_s2c,sdn_s2c,sdx_s2c,sdy_s2c,                     &
                       sdr_s2c,sdri_s2c,sdrj_s2c,sdrk_s2c,sdrkl_s2c,sdrku_s2c,&
                       rhoc_scale,rhor_scale,                                 &
                       sd_itmp1,sd_itmp2,crs_dtmp1,crs_dtmp2)
+
+     ! Section specification for fapp profiler
+     call fapp_stop("sdm_sd2qcqr",0,0)
 
 ! not supported yet. S.Shima
 !!$     ! Aerosol formation process of super-droplets
@@ -1599,10 +1634,16 @@ contains
 
     ! Convert super-droplets to precipitation
 
+      ! Section specification for fapp profiler
+      call fapp_start("sdm_sd2prec",0,0)
+
       call sdm_sd2prec(dt,                                &
                        prec_crs,                          &
                        sd_num,sd_n,sd_x,sd_y,sd_r,sd_ri,sd_rj,sd_rk,  &
                        sd_itmp1(1:sd_num,1),crs_val1c(1,1:IA,1:JA))
+
+      ! Section specification for fapp profiler
+      call fapp_stop("sdm_sd2prec",0,0)
 
     return
   end subroutine sdm_calc
