@@ -16,7 +16,9 @@ module mod_net2g_error
   !
   !++ used modules
   !
+#ifdef MPIUSE
   use mpi
+#endif
   use netcdf
 
   use mod_net2g_vars
@@ -80,7 +82,12 @@ contains
     integer, intent(in) :: ecode
     integer, intent(in) :: nline
     integer, intent(in) :: err_loc
+
+    integer :: irank, ierr
     !-------------------------------------------------------------------------
+
+    ! flush 1kbyte
+    write(*,'(32A32)') '                                '
 
     if ( ecode == err_internal ) then
        write (*, *) "##### ERROR: internal error"
@@ -90,6 +97,10 @@ contains
        write (*, *) "##### ERROR: netcdf fuction error"
     endif
 
+#ifdef MPIUSE
+    call MPI_COMM_RANK( MPI_COMM_WORLD, irank, ierr )
+    write (*, *) "***** Abort: at process =", irank
+#endif
     write (*, *) "***** Abort: at Line =", nline
 
     if ( err_loc == loc_main ) then
@@ -109,7 +120,9 @@ contains
     endif
 
     if ( LOUT ) close ( FID_LOG )
+#ifdef MPIUSE
     call MPI_ABORT( MPI_COMM_WORLD, ecode, ierr )
+#endif
 
     stop
   end subroutine err_abort
