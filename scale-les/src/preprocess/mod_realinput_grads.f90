@@ -427,7 +427,7 @@ contains
              if (IO_L) write(IO_FID_LOG,*) 'warning: cannot found SST in grads namelist. SKINT is used for SST.'
              cycle
           endif
-       case('SMOISVC', 'SMOISDDS')
+       case('SMOISVC', 'SMOISDS')
           if ( use_file_landwater ) then
              if (.not. data_available(Ig_smoisvc) .and. .not. data_available(Ig_smoisds)) then
                 write(*,*) 'xxx cannot found SMOISVC or SMOISDS in grads namelist! ',trim(item_list(ielem))
