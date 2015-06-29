@@ -4231,7 +4231,7 @@ enddo
     character(len=H_SHORT)   :: INTRP_OCEAN_SFC_TEMP = 'off'
 
     integer                  :: INTERP_SERC_DIV_NUM = 10        ! num of dividing blocks in interpolation search
-    character(len=H_SHORT)   :: SOILWATER_DS2VC     = 'critical' ! 'critical' or 'limit'
+    character(len=H_SHORT)   :: SOILWATER_DS2VC     = 'limit' ! 'critical' or 'limit'
     logical                  :: SERIAL_PROC_READ    = .true.    ! read by one MPI process and broadcast
 
     ! only for SCALE boundary
