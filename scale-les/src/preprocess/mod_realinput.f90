@@ -857,6 +857,7 @@ contains
       intrp_land_sfc_temp,  &
       intrp_ocean_temp,     &
       intrp_ocean_sfc_temp, &
+      soilwater_DS2VC_flag, &
       mdlid                 )
     use scale_land_grid, only: &
          LCZ  => GRID_LCZ
@@ -918,6 +919,7 @@ contains
     character(LEN=*), intent(in) :: intrp_land_sfc_temp
     character(LEN=*), intent(in) :: intrp_ocean_temp
     character(LEN=*), intent(in) :: intrp_ocean_sfc_temp
+    logical,          intent(in) :: soilwater_DS2VC_flag
     integer,          intent(in) :: mdlid                ! model type id
 
     integer, parameter :: i_intrp_off  = 0
@@ -1386,7 +1388,7 @@ contains
                                     jgrd    (:,:,:),     &
                                     IA, JA, 1, LKMAX-1   )
           do k = 1, LKMAX
-             strg(k,:,:) = convert_WS2VWC( smds(k,:,:), critical=.true. )
+             strg(k,:,:) = convert_WS2VWC( smds(k,:,:), critical=soilwater_DS2VC_flag )
           end do
 
        else

@@ -26,7 +26,7 @@
 &grdvar  item='STEMP',   dtype='map',     fname='MRIsfc', startrec=2, totalrec=11, missval=-9.99e+33 /
 &grdvar  item='SKINT',   dtype='map',     fname='MRIsfc', startrec=6, totalrec=11, missval=-9.99e+33 /
 &grdvar  item='PSFC',    dtype='map',     fname='MRIsfc', startrec=7, totalrec=11, missval=-9.99e+33 /
-&grdvar  item='SMOIS',   dtype='map',     fname='MRIsfc', startrec=8, totalrec=11, missval=-9.99e+33 /
+&grdvar  item='SMOISDS', dtype='map',     fname='MRIsfc', startrec=8, totalrec=11, missval=-9.99e+33 /
 #
 ##----------------------------------------------------------------------------------#
 #&grdvar  item='MSLP',    dtype='map',     fname='GSMjp', startrec=1,  totalrec=101 /
