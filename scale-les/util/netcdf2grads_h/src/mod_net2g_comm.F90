@@ -16,6 +16,7 @@ module mod_net2g_comm
   !
   !++ used modules
   !
+#ifdef MPIUSE
   use mpi
 
   use mod_net2g_vars
@@ -261,5 +262,7 @@ contains
 
     return
   end subroutine comm_gather_vars
+
+#endif
 
 end module mod_net2g_comm

@@ -44,6 +44,7 @@ RDMA = -U_USE_RDMA
 #FFLAGS += -DSINGLE
 
 FC     = mpifrtpx
+SFC    = frtpx
 
 FFLAGS_DYN ?= $(FFLAGS) -Knoprefetch,loop_nofission,loop_nofusion,nounroll,parallel_strong -Ksimd=2
 #FFLAGS_DYN ?= $(FFLAGS)

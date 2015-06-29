@@ -17,6 +17,7 @@ FFLAGS_DEBUG = -cpp -O0 -m64 \
                -DDEBUG
 
 FC     = mpif90
+SFC    = gfortran
 FFLAGS = $(FFLAGS_FAST)
 #FFLAGS = $(FFLAGS_DEBUG)
 

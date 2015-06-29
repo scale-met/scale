@@ -32,6 +32,7 @@ FFLAGS_DEBUG = -O0 $(FFLAGS_CORE) $(GNUCPPOPT) \
                -DDEBUG
 
 FC     = mpif90
+SFC    = gfortran
 FFLAGS = $(FFLAGS_FAST)
 #FFLAGS = $(FFLAGS_DEBUG)
 

@@ -11,6 +11,14 @@ LIBS=$(NETCDF_LIBS)
 INCLUDES=$(NETCDF_INCLUDE) -Iinc
 
 OBJECT=net2g
+
+ifeq ($(NOMPI),T)
+  FC=$(SFC)
+  FFLAGS += -UMPIUSE
+else
+  FFLAGS += -DMPIUSE
+endif
+
 MODS=mod_net2g_vars.o     \
      mod_net2g_error.o    \
      mod_net2g_setup.o    \

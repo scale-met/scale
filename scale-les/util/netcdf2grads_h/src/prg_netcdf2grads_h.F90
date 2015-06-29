@@ -15,7 +15,9 @@ program netcdf2grads_h
   use mod_net2g_vars
   use mod_net2g_error
   use mod_net2g_calender
+#ifdef MPIUSE
   use mod_net2g_comm
+#endif
   use mod_net2g_netcdf
   use mod_net2g_setup
   use mod_net2g_anal
@@ -68,6 +70,11 @@ program netcdf2grads_h
   integer :: ndim
   integer :: idom
   integer :: ierr
+
+#ifndef MPIUSE
+  integer :: irank = 0
+  integer :: isize = 1
+#endif
 
   integer :: nxp   ! num of x-dimension in partial file
   integer :: nyp   ! num of y-dimension in partial file
@@ -139,7 +146,9 @@ program netcdf2grads_h
 
   !### initialization
   !-----------------------------------------------------------------------------------------
+#ifdef MPIUSE
   call comm_initialize
+#endif
 
   !--- Read from argument
   if ( COMMAND_ARGUMENT_COUNT() /= 1 ) then
@@ -188,7 +197,9 @@ program netcdf2grads_h
   call set_array_size( nxp, nyp, nxgp, nygp, nx, ny, mnx, mny,  &
                        mnxp, mnyp, nxg_tproc, nyg_tproc         )
   call allocation( irank ) ! "irank" is right, not "rk_mnge"
+#ifdef MPIUSE
   call comm_setup( mnxp, mnyp, nxgp, nygp, nmnge )
+#endif
   call netcdf_setup( mnxp, mnyp, nz_all )
 
   call set_atype( atype )
@@ -209,10 +220,14 @@ program netcdf2grads_h
                             zlev, cz, cdz, p_cx, p_cdx, p_cy, p_cdy )
   enddo
 
+#ifdef MPIUSE
   call comm_gather_grid( nxgp, nygp, nmnge, p_cx, p_cdx, p_cy, p_cdy, &
                          cx_gather, cdx_gather, cy_gather, cdy_gather )
 
-  if ( irank == master ) call combine_grid
+  if ( irank == master ) call combine_grid( cx_gather, cdx_gather, cy_gather, cdy_gather )
+#else
+  call combine_grid( p_cx, p_cdx, p_cy, p_cdy )
+#endif
   if ( Z_MERGE_OUT ) call make_vgrid
 
   !--- read data and combine
@@ -272,10 +287,16 @@ program netcdf2grads_h
                                        it, zz, nz_all, varname, atype, ctype, vtype, p_var )
               enddo
 
+#ifdef MPIUSE
               call comm_gather_vars( mnxp, mnyp, nmnge, p_var, recvbuf )
+#endif
 
               if ( irank == master ) then
+#ifdef MPIUSE
                  call combine_vars_2d( recvbuf, var_2d )
+#else
+                 call combine_vars_2d( p_var, var_2d )
+#endif
                  if ( iz /= 1 .and. Z_MERGE_OUT ) then
                     call write_vars_zmerge( var_2d, iz )
                  else
@@ -294,11 +315,17 @@ program netcdf2grads_h
                                     it, zz, nz_all, varname, atype, ctype, vtype, p_var )
            enddo
 
+#ifdef MPIUSE
            call comm_gather_vars( mnxp, mnyp, nmnge, p_var, recvbuf )
+#endif
 
            !zz = 0 ! used as file name
            if ( irank == master ) then
+#ifdef MPIUSE
               call combine_vars_2d( recvbuf, var_2d )
+#else
+              call combine_vars_2d( p_var, var_2d )
+#endif
               call create_ctl( varname, atype, vtype, idom, zz )
               call write_vars( var_2d, varname, idom, zz )
            endif
@@ -318,7 +345,10 @@ program netcdf2grads_h
   if ( LOUT ) write( FID_LOG, '(1X,A)') "     FINISH : netcdf to grads"
   if ( LOUT ) write( FID_LOG, '(1X,A)') "-----------------------------------"
   if ( open_file .and. LOUT ) close ( FID_LOG )
+
+#ifdef MPIUSE
   call comm_finalize
+#endif
 
   !-----------------------------------------------------------------------------------------
   !> END MAIN ROUTINE
@@ -375,8 +405,17 @@ contains
 
   !> combine region divided data: grid data
   !-----------------------------------------------------------------------------------------
-  subroutine combine_grid()
+  subroutine combine_grid( &
+      cx_gather,   & ! [in]
+      cdx_gather,  & ! [in]
+      cy_gather,   & ! [in]
+      cdy_gather   ) ! [in]
     implicit none
+
+    real(SP), intent(in) :: cx_gather (:)
+    real(SP), intent(in) :: cdx_gather(:)
+    real(SP), intent(in) :: cy_gather (:)
+    real(SP), intent(in) :: cdy_gather(:)
 
     integer :: ix, jy, iix, jjy
     integer :: is, ie, js, je
@@ -891,6 +930,7 @@ contains
     allocate( cz          (nz+2*nzh                   ) )
     allocate( zlev        (nz                         ) )
 
+#ifdef MPIUSE
     if ( irank == master ) then
        allocate( var_2d    (nx,               ny               ) )
        allocate( cx        (nx                                 ) )
@@ -909,6 +949,13 @@ contains
        allocate( cdx_gather(1                                  ) )
        allocate( cdy_gather(1                                  ) )
     endif
+#else
+    allocate( var_2d    (nx, ny) )
+    allocate( cx        (nx    ) )
+    allocate( cy        (ny    ) )
+    allocate( cdx       (nx    ) )
+    allocate( cdy       (ny    ) )
+#endif
 
     return
   end subroutine allocation

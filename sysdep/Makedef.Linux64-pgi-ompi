@@ -37,6 +37,7 @@ FFLAGS_DEBUG = -Mpreprocess -O2 -m64 \
 #              -Msmartalloc=huge
 
 FC     = mpif90
+SFC    = pgfortran
 FFLAGS = $(FFLAGS_FAST)
 #FFLAGS = $(FFLAGS_DEBUG)
 
