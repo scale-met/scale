@@ -4231,6 +4231,7 @@ enddo
     character(len=H_SHORT)   :: INTRP_OCEAN_SFC_TEMP = 'off'
 
     integer                  :: INTERP_SERC_DIV_NUM = 10        ! num of dividing blocks in interpolation search
+    character(len=H_SHORT)   :: SOILWATER_DS2VC     = 'critical' ! 'critical' or 'limit'
     logical                  :: SERIAL_PROC_READ    = .true.    ! read by one MPI process and broadcast
 
     ! only for SCALE boundary
@@ -4238,6 +4239,7 @@ enddo
     ! only for NICAM boundary
     integer                  :: NUMBER_OF_SKIP_TSTEPS  = 0      ! num of skipped first several data
 
+    logical                  :: soilwater_DS2VC_flag            ! true: 'critical', false: 'limit'
 
     NAMELIST / PARAM_MKINIT_REAL / &
          NUMBER_OF_FILES,        &
@@ -4258,6 +4260,7 @@ enddo
          INTRP_OCEAN_TEMP,       &
          INTRP_OCEAN_SFC_TEMP,   &
          PARENT_MP_TYPE,         &
+         SOILWATER_DS2VC,        &
          SERIAL_PROC_READ
 
     character(len=H_LONG) :: BASENAME_WITHNUM  = ''
@@ -4427,6 +4430,16 @@ enddo
       call PRC_MPIstop
     end if
 
+    select case ( SOILWATER_DS2VC )
+    case ( 'critical' )
+       SOILWATER_DS2VC_flag = .true.
+    case ('limit' )
+       SOILWATER_DS2VC_flag = .false.
+    case default
+      write(*,*) ' xxx Unsupported SOILWATER_DS2CV TYPE:', trim(SOILWATER_DS2VC)
+      call PRC_MPIstop
+    end select
+
     call ParentSurfaceInput( DENS_ORG(:,:,:,ns),    &
                              MOMZ_ORG(:,:,:,ns),    &
                              MOMX_ORG(:,:,:,ns),    &
@@ -4443,6 +4456,7 @@ enddo
                              INTRP_LAND_SFC_TEMP,   &
                              INTRP_OCEAN_TEMP,      &
                              INTRP_OCEAN_SFC_TEMP,  &
+                             SOILWATER_DS2VC_flag,  &
                              mdlid                  )
 
     call flux_setup
