@@ -27,6 +27,7 @@ MODDIROPT ?= -J
 
 CC     = mpicc
 CFLAGS = -O3 -m64 -g
+CFLAGS_DEBUG = -O0 -m64 -g
 
 LD      = $(FC)
 LDFLAGS = $(FFLAGS)
