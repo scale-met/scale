@@ -109,7 +109,8 @@ contains
        CALENDAR_daysec2date,    &
        CALENDAR_adjust_daysec,  &
        CALENDAR_combine_daysec, &
-       CALENDAR_unit2sec
+       CALENDAR_unit2sec,       &
+       CALENDAR_date2char
     use scale_time, only: &
        TIME_DTSEC,              &
        TIME_NOWDATE,            &
@@ -225,7 +226,9 @@ contains
        TIME_DT_URBAN_RESTART,      &
        TIME_DT_URBAN_RESTART_UNIT
 
-    real(DP) :: TIME_DURATIONSEC
+    real(DP)          :: TIME_DURATIONSEC
+    character(len=27) :: startchardate
+    character(len=27) :: endchardate
 
     integer :: ierr
     !---------------------------------------------------------------------------
@@ -403,6 +406,11 @@ contains
                                TIME_STARTMS,      & ! [IN]
                                TIME_OFFSET_YEAR   ) ! [IN]
 
+    call CALENDAR_date2char( startchardate,     & ! [OUT]
+                             TIME_STARTDATE(:), & ! [IN]
+                             TIME_STARTMS,      & ! [IN]
+                             TIME_OFFSET_YEAR   ) ! [IN]
+
     TIME_STARTDAYSEC  = CALENDAR_combine_daysec( TIME_STARTDAY, TIME_STARTSEC )
 
     TIME_NOWDATE(:)   = TIME_STARTDATE(:)
@@ -428,16 +436,15 @@ contains
                                TIME_ENDSEC,     & ! [IN]
                                TIME_OFFSET_YEAR ) ! [IN]
 
+    call CALENDAR_date2char( endchardate,     & ! [OUT]
+                             TIME_ENDDATE(:), & ! [IN]
+                             TIME_ENDMS,      & ! [IN]
+                             TIME_OFFSET_YEAR ) ! [IN]
+
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** Date/time setting ***'
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,I4.4,A,I2.2,A,I2.2,A,I2.2,A,I2.2,A,I2.2,A,F6.3)') '*** START Date     : ', &
-         TIME_STARTDATE(1)+TIME_OFFSET_YEAR,'/',TIME_STARTDATE(2),'/',TIME_STARTDATE(3),' ',  &
-         TIME_STARTDATE(4),':',TIME_STARTDATE(5),':',TIME_STARTDATE(6),' +', &
-         TIME_STARTMS
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,I4.4,A,I2.2,A,I2.2,A,I2.2,A,I2.2,A,I2.2,A,F6.3)') '*** END   Date     : ', &
-         TIME_ENDDATE(1)+TIME_OFFSET_YEAR,'/',TIME_ENDDATE(2),'/',TIME_ENDDATE(3),' ',  &
-         TIME_ENDDATE(4),':',TIME_ENDDATE(5),':',TIME_ENDDATE(6),' +', &
-         TIME_ENDMS
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,A)') '*** START Date     : ', startchardate
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,A)') '*** END   Date     : ', endchardate
 
     if ( setup_TimeIntegration ) then
 
@@ -622,6 +629,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Evaluate component execution
   subroutine ADMIN_TIME_checkstate
+    use scale_calendar, only: &
+       CALENDAR_date2char
     use scale_time, only: &
        TIME_NOWDATE,            &
        TIME_NOWMS,              &
@@ -640,6 +649,8 @@ contains
        TIME_DSTEP_URBAN,        &
        TIME_OFFSET_YEAR
     implicit none
+
+    character(len=27) :: nowchardate
     !---------------------------------------------------------------------------
 
     TIME_DOATMOS_step      = .false.
@@ -721,10 +732,12 @@ contains
        TIME_RES_URBAN    = 0
     endif
 
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,I4.4,A,I2.2,A,I2.2,A,I2.2,A,I2.2,A,I2.2,A,F6.3,A,I6,A,I6)') &
-               '*** TIME: ', TIME_NOWDATE(1)+TIME_OFFSET_YEAR,'/',TIME_NOWDATE(2),'/',TIME_NOWDATE(3),' ', &
-                             TIME_NOWDATE(4),':',TIME_NOWDATE(5),':',TIME_NOWDATE(6),' +', &
-                             TIME_NOWMS,' STEP:',TIME_NOWSTEP, '/', TIME_NSTEP
+    call CALENDAR_date2char( nowchardate,     & ! [OUT]
+                             TIME_NOWDATE(:), & ! [IN]
+                             TIME_NOWMS,      & ! [IN]
+                             TIME_OFFSET_YEAR ) ! [IN]
+
+    if( IO_L ) write(IO_FID_LOG,'(1x,3A,I6,A,I6)') '*** TIME: ', nowchardate,' STEP:',TIME_NOWSTEP, '/', TIME_NSTEP
 
     return
   end subroutine ADMIN_TIME_checkstate

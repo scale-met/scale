@@ -741,12 +741,13 @@ contains
   !-----------------------------------------------------------------------------
   !> calc factor of Earths solar insolation
   subroutine ATMOS_SOLARINS_insolation_0D( &
-      solins,    &
-      cosSZA,    &
-      Re_factor, &
-      real_lon,  &
-      real_lat,  &
-      now_date   )
+       solins,     &
+       cosSZA,     &
+       Re_factor,  &
+       real_lon,   &
+       real_lat,   &
+       now_date,   &
+       offset_year )
     use scale_const, only: &
        PI  => CONST_PI,  &
        EPS => CONST_EPS
@@ -764,10 +765,12 @@ contains
     real(RP), intent(in)  :: real_lon    ! longitude
     real(RP), intent(in)  :: real_lat    ! latitude
     integer,  intent(in)  :: now_date(6) ! date(yyyy,mm,dd,hh,mm,ss)
+    integer,  intent(in)  :: offset_year ! year offset
 
     real(RP) :: lon     !< used lon
     real(RP) :: lat     !< used lat
     integer  :: date(6) !< used date
+    integer  :: oyear   !< used year offset
 
     real(RP) :: lambda_m       ! mean longitude from vernal equinox
     real(RP) :: lambda         !
@@ -789,7 +792,9 @@ contains
     endif
 
     date(:) = now_date(:)
+    oyear   = offset_year
     if ( ATMOS_SOLARINS_fixeddate ) then
+       if( ATMOS_SOLARINS_date(1) >= 0 ) oyear   = 0
        if( ATMOS_SOLARINS_date(1) >= 0 ) date(1) = ATMOS_SOLARINS_date(1)
        if( ATMOS_SOLARINS_date(2) >= 1 ) date(2) = ATMOS_SOLARINS_date(2)
        if( ATMOS_SOLARINS_date(3) >= 1 ) date(3) = ATMOS_SOLARINS_date(3)
@@ -803,12 +808,14 @@ contains
     call CALENDAR_ymd2absday( absday,        & ! [OUT]
                               date(I_year),  & ! [IN]
                               date(I_month), & ! [IN]
-                              date(I_day)    ) ! [IN]
+                              date(I_day),   & ! [IN]
+                              oyear          ) ! [IN]
 
     call CALENDAR_ymd2absday( absday_ve,        & ! [OUT]
                               date   (I_year),  & ! [IN]
                               ve_date(I_month), & ! [IN]
-                              ve_date(I_day)    ) ! [IN]
+                              ve_date(I_day),   & ! [IN]
+                              oyear             ) ! [IN]
 
     call CALENDAR_hms2abssec( abssec,        & ! [OUT]
                               date(I_hour),  & ! [IN]
@@ -852,11 +859,12 @@ contains
   !-----------------------------------------------------------------------------
   !> calc factor of Earths solar insolation
   subroutine ATMOS_SOLARINS_insolation_2D( &
-      solins,   &
-      cosSZA,   &
-      real_lon, &
-      real_lat, &
-      now_date  )
+       solins,     &
+       cosSZA,     &
+       real_lon,   &
+       real_lat,   &
+       now_date,   &
+       offset_year )
     use scale_grid_index
     use scale_const, only: &
        PI  => CONST_PI,  &
@@ -874,10 +882,12 @@ contains
     real(RP), intent(in)  :: real_lon(IA,JA) ! longitude [rad]
     real(RP), intent(in)  :: real_lat(IA,JA) ! latitude  [rad]
     integer,  intent(in)  :: now_date(6)     ! date(yyyy,mm,dd,hh,mm,ss)
+    integer,  intent(in)  :: offset_year     ! year offset
 
     real(RP) :: lon(IA,JA) !< used lon
     real(RP) :: lat(IA,JA) !< used lat
     integer  :: date(6)    !< used date
+    integer  :: oyear      !< used year offset
 
     real(RP) :: lambda_m       ! mean longitude from vernal equinox
     real(RP) :: lambda         !
@@ -900,7 +910,9 @@ contains
     endif
 
     date(:) = now_date(:)
+    oyear   = offset_year
     if ( ATMOS_SOLARINS_fixeddate ) then
+       if( ATMOS_SOLARINS_date(1) >= 0 ) oyear   = 0
        if( ATMOS_SOLARINS_date(1) >= 0 ) date(1) = ATMOS_SOLARINS_date(1)
        if( ATMOS_SOLARINS_date(2) >= 1 ) date(2) = ATMOS_SOLARINS_date(2)
        if( ATMOS_SOLARINS_date(3) >= 1 ) date(3) = ATMOS_SOLARINS_date(3)
@@ -914,12 +926,14 @@ contains
     call CALENDAR_ymd2absday( absday,        & ! [OUT]
                               date(I_year),  & ! [IN]
                               date(I_month), & ! [IN]
-                              date(I_day)    ) ! [IN]
+                              date(I_day),   & ! [IN]
+                              oyear          ) ! [IN]
 
     call CALENDAR_ymd2absday( absday_ve,        & ! [OUT]
                               date   (I_year),  & ! [IN]
                               ve_date(I_month), & ! [IN]
-                              ve_date(I_day)    ) ! [IN]
+                              ve_date(I_day),   & ! [IN]
+                              oyear             ) ! [IN]
 
     call CALENDAR_hms2abssec( abssec,       & ! [OUT]
                               date(I_hour), & ! [IN]
