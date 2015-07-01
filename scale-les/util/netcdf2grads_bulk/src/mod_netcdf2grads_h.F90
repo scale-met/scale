@@ -192,14 +192,6 @@ contains
   !-----------------------------------------------------------------------------------------
   call comm_initialize( LOCAL_COMM_WORLD )
 
-!  !--- Read from argument
-!  if ( COMMAND_ARGUMENT_COUNT() /= 1 ) then
-!     write(*, *) "ERROR: Program needs a config file!"
-!     call err_abort( 1, __LINE__, loc_main )
-!  else
-!     call get_command_argument(1,fconf)
-!  endif
-
   fconf = trim( CONFFILE_IN )
 
   call read_conf_logout
@@ -371,7 +363,6 @@ contains
   if ( LOUT ) write( FID_LOG, '(1X,A)') "     FINISH : netcdf to grads"
   if ( LOUT ) write( FID_LOG, '(1X,A)') "-----------------------------------"
   if ( open_file .and. LOUT ) close ( FID_LOG )
-!  call comm_finalize( LOCAL_COMM )
 
     return
   end subroutine popsca

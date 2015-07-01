@@ -15,10 +15,6 @@ program netcdf2grads_h_launcher
   !
   !++ used modules
   !
-  use dc_log  !, only: &
-!     LogInit
-  use gtool_file  !, only: &
-!     FileCloseAll
   use scale_precision
   use scale_stdio
   use scale_prof
@@ -26,17 +22,12 @@ program netcdf2grads_h_launcher
      PRC_setup,         &
      PRC_MPIstart,      &
      PRC_MPIsplit,      &
-!     PRC_MPIfinish,     &
      PRC_MPIstop,       &
      PRC_BULKsetup,     &
      MASTER_LOG,        &
      MASTER_COMM_WORLD, &
      MASTER_nmax,       &
      max_depth
-!  use scale_fileio, only: &
-!     FILEIO_setup
-!  use scale_comm, only: &
-!     COMM_setup
   use mod_net2g_comm
   use mod_netcdf2grads_h
   !
@@ -187,7 +178,6 @@ program netcdf2grads_h_launcher
 
 
   ! stop MPI
-  !call PRC_MPIfinish
   call comm_finalize
 
   stop
