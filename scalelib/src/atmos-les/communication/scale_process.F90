@@ -389,6 +389,7 @@ contains
     write(*,*) ''
 
     if ( PRC_mpi_alive ) then
+        ! tentative approach; input "MPI_COMM_WORLD".
         call MPI_COMM_CALL_ERRHANDLER(MPI_COMM_WORLD, abort_code, ierr)
     endif
 
