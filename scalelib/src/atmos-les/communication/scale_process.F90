@@ -361,11 +361,11 @@ contains
     call MPI_Comm_size(GLOBAL_COMM_WORLD,GLOBAL_nmax,  ierr)
     call MPI_Comm_rank(GLOBAL_COMM_WORLD,GLOBAL_myrank,ierr)
 
-    if ( ABORT_ALL_JOBS ) then
-       ABORT_COMM_WORLD = MPI_COMM_WORLD
-    else
-       ABORT_COMM_WORLD = GLOBAL_COMM_WORLD
-    endif
+!    if ( ABORT_ALL_JOBS ) then
+!       ABORT_COMM_WORLD = MPI_COMM_WORLD
+!    else
+!       ABORT_COMM_WORLD = GLOBAL_COMM_WORLD
+!    endif
 
     return
   end subroutine PRC_BULKsetup
