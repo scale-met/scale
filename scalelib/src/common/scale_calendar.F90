@@ -185,23 +185,27 @@ contains
     integer, intent(in)  :: gday   !< day
     integer, intent(in)  :: oyear  !< offset year
 
+    integer :: gyear_mod, gmonth_mod
     integer :: yearday, monthday
     integer :: m, ileap
     !---------------------------------------------------------------------------
 
-    yearday = int( CALENDAR_DOI * gyear )                   &
-            + int( real(gyear+oyear-1,kind=DP) /   4.0_DP ) &
-            - int( real(gyear+oyear-1,kind=DP) / 100.0_DP ) &
-            + int( real(gyear+oyear-1,kind=DP) / 400.0_DP ) &
-            - int( real(      oyear-1,kind=DP) /   4.0_DP ) &
-            + int( real(      oyear-1,kind=DP) / 100.0_DP ) &
-            - int( real(      oyear-1,kind=DP) / 400.0_DP )
+    gmonth_mod = mod( gmonth-1, 12 ) + 1
+    gyear_mod  = gyear + ( gmonth-gmonth_mod ) / 12
+
+    yearday = int( CALENDAR_DOI * gyear_mod )                   &
+            + int( real(gyear_mod+oyear-1,kind=DP) /   4.0_DP ) &
+            - int( real(gyear_mod+oyear-1,kind=DP) / 100.0_DP ) &
+            + int( real(gyear_mod+oyear-1,kind=DP) / 400.0_DP ) &
+            - int( real(          oyear-1,kind=DP) /   4.0_DP ) &
+            + int( real(          oyear-1,kind=DP) / 100.0_DP ) &
+            - int( real(          oyear-1,kind=DP) / 400.0_DP )
 
     ileap = I_nonleapyear
-    if( checkleap(gyear+oyear) ) ileap = I_leapyear
+    if( checkleap(gyear_mod+oyear) ) ileap = I_leapyear
 
     monthday = 0
-    do m = 1, gmonth-1
+    do m = 1, gmonth_mod-1
        monthday = monthday + dayofmonth(m,ileap)
     enddo
 
