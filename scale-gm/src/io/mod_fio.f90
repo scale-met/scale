@@ -338,24 +338,32 @@ contains
        opt_periodic_year )
     use mod_adm, only: &
        ADM_proc_stop
-    use mod_calendar, only: &
-       calendar_ss2yh, &
-       calendar_yh2ss
+    use scale_calendar, only: &
+       CALENDAR_daysec2date,    &
+       CALENDAR_date2daysec,    &
+       CALENDAR_adjust_daysec,  &
+       CALENDAR_combine_daysec
     implicit none
 
     integer,          intent(inout) :: start_step
     integer,          intent(inout) :: num_of_step
     integer,          intent(inout) :: data_date(6,max_num_of_data)
     integer,          intent(inout) :: prec
-    character(len=*), intent(in) :: basename
-    character(len=*), intent(in) :: varname
-    character(len=*), intent(in) :: layername
-    integer,          intent(in) :: k_start, k_end
-    real(RP),          intent(in) :: ctime
-    integer,          intent(in) :: cdate(6)
-    logical,          intent(in) :: opt_periodic_year
+    character(len=*), intent(in)    :: basename
+    character(len=*), intent(in)    :: varname
+    character(len=*), intent(in)    :: layername
+    integer,          intent(in)    :: k_start, k_end
+    real(RP),         intent(in)    :: ctime
+    integer,          intent(in)    :: cdate(6)
+    logical,          intent(in)    :: opt_periodic_year
 
     real(RP) :: midtime !--- [sec]
+
+    integer  :: midday
+    real(DP) :: midsec
+    real(DP) :: midms
+    integer  :: offset_year
+
     logical :: startflag
     integer :: did, fid
     integer :: i
@@ -403,11 +411,29 @@ contains
 
        ! [fix] H.Yashiro 20111011 : specify int kind=8
        midtime = real( int( (dinfo%time_start+dinfo%time_end)*0.5_RP+1.0_RP,kind=8 ),kind=RP )
-       call calendar_ss2yh( data_date(:,i), midtime )
+
+       midday      = 0
+       midsec      = midtime
+       offset_year = 0
+
+       call CALENDAR_adjust_daysec( midday, midsec ) ! [INOUT]
+
+       call CALENDAR_daysec2date( data_date(:,i), & ! [OUT]
+                                  midms,          & ! [OUT]
+                                  midday,         & ! [IN]
+                                  midsec,         & ! [IN]
+                                  offset_year     ) ! [IN]
 
        if ( opt_periodic_year ) then
           data_date(1,i) = cdate(1)
-          call calendar_yh2ss( midtime, data_date(:,i) )
+
+          call CALENDAR_date2daysec( midday,         & ! [OUT]
+                                     midsec,         & ! [OUT]
+                                     data_date(:,i), & ! [IN]
+                                     midms,          & ! [IN]
+                                     offset_year     ) ! [IN]
+
+          midtime = CALENDAR_combine_daysec( midday, midsec )
        endif
 
        if (       ( .not. startflag ) &

@@ -28,8 +28,9 @@ program fio_ico2ll
   use mod_cnst, only: &
      CNST_UNDEF, &
      CNST_UNDEF4
-  use mod_calendar, only: &
-     calendar_ss2yh
+  use scale_calendar, only: &
+     CALENDAR_daysec2date,   &
+     CALENDAR_adjust_daysec
   use mod_fio, only: &
      FIO_HSHORT,      &
      FIO_HMID,        &
@@ -204,6 +205,11 @@ program fio_ico2ll
   integer(8)               :: nowsec
   integer(8)               :: recsize ! [mod] 12-04-19 H.Yashiro
   integer                  :: kmax, num_of_step, step, date_str(6)
+
+  integer :: histday
+  real(8) :: histsec
+  real(8) :: histms
+  integer :: offset_year
 
   logical :: addvar
   logical :: exist_topo
@@ -718,7 +724,18 @@ program fio_ico2ll
   write(ADM_LOG_FID,*) '########## Variable List ########## '
   write(ADM_LOG_FID,*) 'ID |NAME            |STEPS|Layername       |START FROM         |DT [sec]|Xi2Z?'
   do v = 1, nvar
-     call calendar_ss2yh( date_str(:), real(var_time_str(v),kind=RP) )
+     histday     = 0
+     histsec     = real(var_time_str(v),kind=RP)
+     offset_year = 0
+
+     call CALENDAR_adjust_daysec( histday, histsec ) ! [INOUT]
+
+     call CALENDAR_daysec2date( date_str(:), & ! [OUT]
+                                histms,      & ! [OUT]
+                                histday,     & ! [IN]
+                                histsec,     & ! [IN]
+                                offset_year  ) ! [IN]
+
      write(tmpl,'(I4.4,"/",I2.2,"/",I2.2,1x,I2.2,":",I2.2,":",I2.2)') date_str(:)
      write(ADM_LOG_FID,'(1x,I3,A1,A16,A1,I5,A1,A16,A1,A19,A1,I8,A1,L5)') &
               v,'|',var_name(v),'|',var_nstep(v),'|',var_layername(v),'|', tmpl,'|', var_dt(v), '|', var_xi2z(v)
@@ -812,7 +829,17 @@ program fio_ico2ll
            write(ADM_LOG_FID,*) 'Output: ', trim(outbase)//'.nc'
            write(*          ,*) 'Output: ', trim(outbase)//'.nc'
 
-           call calendar_ss2yh( date_str(:), real(var_time_str(v),kind=RP) )
+           histday     = 0
+           histsec     = real(var_time_str(v),kind=RP)
+           offset_year = 0
+
+           call CALENDAR_adjust_daysec( histday, histsec ) ! [INOUT]
+
+           call CALENDAR_daysec2date( date_str(:), & ! [OUT]
+                                      histms,      & ! [OUT]
+                                      histday,     & ! [IN]
+                                      histsec,     & ! [IN]
+                                      offset_year  ) ! [IN]
 
            do j = 1, 6
               write( date_str_tmp(j), '(I4)' ) date_str(j)
@@ -1534,7 +1561,17 @@ contains
     data nmonth / 'JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC' /
     !---------------------------------------------------------------------------
 
-    call calendar_ss2yh( d(:), real(datesec,kind=RP) )
+    histday     = 0
+    histsec     = real(datesec,kind=RP)
+    offset_year = 0
+
+    call CALENDAR_adjust_daysec( histday, histsec ) ! [INOUT]
+
+    call CALENDAR_daysec2date( d(:),        & ! [OUT]
+                               histms,      & ! [OUT]
+                               histday,     & ! [IN]
+                               histsec,     & ! [IN]
+                               offset_year  ) ! [IN]
 
     write(template,'(I2.2,A1,I2.2,A1,I2.2,A3,I4.4)') &
                               d(4), ':', d(5), 'Z', d(3), nmonth(d(2)), d(1)
@@ -1552,7 +1589,17 @@ contains
     integer :: d(6)
     !---------------------------------------------------------------------------
 
-    call calendar_ss2yh( d(:), real(datesec,kind=RP) )
+    histday     = 0
+    histsec     = real(datesec,kind=RP)
+    offset_year = 0
+
+    call CALENDAR_adjust_daysec( histday, histsec ) ! [INOUT]
+
+    call CALENDAR_daysec2date( d(:),        & ! [OUT]
+                               histms,      & ! [OUT]
+                               histday,     & ! [IN]
+                               histsec,     & ! [IN]
+                               offset_year  ) ! [IN]
 
     write(template,'(I4.4,A1,I2.2,A1,I2.2,A1,I2.2,A1,I2.2,A1)') &
                           d(1), '-', d(2), '-', d(3), '-', d(4), 'h', d(5), 'm'
@@ -1586,7 +1633,17 @@ contains
     integer :: d(6), i
     !---------------------------------------------------------------------------
 
-    call calendar_ss2yh( d(:), real(datesec,kind=RP) )
+    histday     = 0
+    histsec     = real(datesec,kind=RP)
+    offset_year = 0
+
+    call CALENDAR_adjust_daysec( histday, histsec ) ! [INOUT]
+
+    call CALENDAR_daysec2date( d(:),        & ! [OUT]
+                               histms,      & ! [OUT]
+                               histday,     & ! [IN]
+                               histsec,     & ! [IN]
+                               offset_year  ) ! [IN]
 
     write (template,'(i4.4,i2.2,i2.2,1x,i2.2,i2.2,i2.2,1x)') (d(i),i=1,6)
 

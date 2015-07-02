@@ -84,9 +84,11 @@ contains
        ADM_proc_stop
     use mod_fio, only: &
        FIO_seek
-    use mod_calendar, only: &
-       calendar_yh2ss, &
-       calendar_ss2yh
+    use scale_calendar, only: &
+       CALENDAR_daysec2date,    &
+       CALENDAR_date2daysec,    &
+       CALENDAR_adjust_daysec,  &
+       CALENDAR_combine_daysec
     use mod_time, only: &
        ctime => TIME_CTIME
     implicit none
@@ -127,14 +129,28 @@ contains
          opt_periodic_year, &
          defval
 
-    real(RP) :: csec !!! [Add] T.Seiki, xxxxxx
-    integer :: cdate(6)
+    integer  :: cdate(6)
+
+    integer  :: extday
+    real(DP) :: extsec
+    real(DP) :: extms
+    integer  :: offset_year
 
     integer :: ierr
     integer :: np, im
     !---------------------------------------------------------------------------
 
-    call calendar_ss2yh( cdate, ctime )
+    extday      = 0
+    extsec      = ctime
+    offset_year = 0
+
+    call CALENDAR_adjust_daysec( extday, extsec ) ! [INOUT]
+
+    call CALENDAR_daysec2date( cdate(:),   & ! [OUT]
+                               extms,      & ! [OUT]
+                               extday,     & ! [IN]
+                               extsec,     & ! [IN]
+                               offset_year ) ! [IN]
 
     !--- search the number of data files.
     max_extdata = 0
@@ -220,14 +236,24 @@ contains
                          opt_periodic_year     ) !--- [in]
 
        elseif( input_io_mode == 'LEGACY' ) then
-          ! [Add] 12/02/01 T.Seiki
-          if (opt_increment_date)then
-             do im=2, num_of_data
+          if (opt_increment_date) then
+             do im = 2, num_of_data
                 data_date(1:6,im) = data_date(1:6,im-1) + ddata_date(1:6)
-                call calendar_yh2ss( csec, data_date(:,im))
-                call calendar_ss2yh( data_date(:,im), csec )
+
+                call CALENDAR_date2daysec( extday,          & ! [OUT]
+                                           extsec,          & ! [OUT]
+                                           data_date(:,im), & ! [IN]
+                                           extms,           & ! [IN]
+                                           offset_year      ) ! [IN]
+
+                call CALENDAR_daysec2date( data_date(:,im), & ! [OUT]
+                                           extms,           & ! [OUT]
+                                           extday,          & ! [IN]
+                                           extsec,          & ! [IN]
+                                           offset_year      ) ! [IN]
              enddo
           endif
+
           if (opt_periodic_year) then ! [add] C.Kodama 2010.07.26
              data_date(1,1:num_of_data) = cdate(1)
           endif
@@ -269,7 +295,16 @@ contains
 
        info(np)%data_date(:,1:num_of_data) = data_date(:,1:num_of_data)
        do im = 1, num_of_data
-          call calendar_yh2ss( info(np)%data_time(im), info(np)%data_date(:,im) )
+          extms       = 0
+          offset_year = 0
+
+          call CALENDAR_date2daysec( extday,                   & ! [OUT]
+                                     extsec,                   & ! [OUT]
+                                     info(np)%data_date(:,im), & ! [IN]
+                                     extms,                    & ! [IN]
+                                     offset_year               ) ! [IN]
+
+          info(np)%data_time(im) = CALENDAR_combine_daysec( extday, extsec )
        enddo
 
     enddo
@@ -383,27 +418,34 @@ contains
       ADM_IopJop,      &
       ADM_GIoJo,       &
       ADM_proc_stop
-    use mod_calendar, only: &
-      calendar_yh2ss, &
-      calendar_ss2yh
+    use scale_calendar, only: &
+       CALENDAR_daysec2date,    &
+       CALENDAR_date2daysec,    &
+       CALENDAR_adjust_daysec,  &
+       CALENDAR_combine_daysec
     implicit none
 
-    real(RP),          intent(inout) :: gdata(:,:) ! data is inout to retain initilized value.
+    real(RP),         intent(inout) :: gdata(:,:) ! data is inout to retain initilized value.
     character(len=*), intent(in)    :: DNAME      ! data name
     integer,          intent(in)    :: l_region
-    real(RP),          intent(in)    :: ctime      ! current time
+    real(RP),         intent(in)    :: ctime      ! current time
     logical,          intent(out)   :: eflag
     !
     real(RP) :: dt !-- delta t between two timestep data
     real(RP) :: wt !-- t weight of two timestep data
 
     !--- data ID
-    integer :: np
-    integer :: data_date_prev(6), cdate(6)
+    integer  :: np
+    integer  :: data_date_prev(6), cdate(6)
     real(RP) :: data_time_prev
 
-    integer :: kall, gall
-    integer :: im, n, k
+    integer  :: extday
+    real(DP) :: extsec
+    real(DP) :: extms
+    integer  :: offset_year
+
+    integer  :: kall, gall
+    integer  :: im, n, k
     !---------------------------------------------------------------------------
 
     eflag = .false.
@@ -434,7 +476,17 @@ contains
        !--- data time advance
        if ( info(np)%opt_monthly_cnst ) then
 
-          call calendar_ss2yh(cdate,ctime)
+          extday      = 0
+          extsec      = ctime
+          offset_year = 0
+
+          call CALENDAR_adjust_daysec( extday, extsec ) ! [INOUT]
+
+          call CALENDAR_daysec2date( cdate(:),   & ! [OUT]
+                                     extms,      & ! [OUT]
+                                     extday,     & ! [IN]
+                                     extsec,     & ! [IN]
+                                     offset_year ) ! [IN]
 
           if (cdate(2) /= info(np)%data_rec(1)) then
              info(np)%data_rec(1) = cdate(2)
@@ -467,7 +519,16 @@ contains
                 !--- re-setting of data_date and data_time
                 info(np)%data_date(1,1:info(np)%num_of_data) = info(np)%data_date(1,1:info(np)%num_of_data) + 1
                 do im = 1, info(np)%num_of_data
-                   call calendar_yh2ss(info(np)%data_time(im),info(np)%data_date(:,im))
+                   extms       = 0
+                   offset_year = 0
+
+                   call CALENDAR_date2daysec( extday,                   & ! [OUT]
+                                              extsec,                   & ! [OUT]
+                                              info(np)%data_date(:,im), & ! [IN]
+                                              extms,                    & ! [IN]
+                                              offset_year               ) ! [IN]
+
+                   info(np)%data_time(im) = CALENDAR_combine_daysec( extday, extsec )
                 enddo
 
                 !--- output of message.
@@ -489,7 +550,17 @@ contains
     elseif(info(np)%data_rec(1) == 1) then !<--- this case is only periodic one.
        data_date_prev(:) = info(np)%data_date(:,info(np)%num_of_data)
        data_date_prev(1) = data_date_prev(1) - 1
-       call calendar_yh2ss(data_time_prev,data_date_prev(:))
+
+       extms       = 0
+       offset_year = 0
+
+       call CALENDAR_date2daysec( extday,            & ! [OUT]
+                                  extsec,            & ! [OUT]
+                                  data_date_prev(:), & ! [IN]
+                                  extms,             & ! [IN]
+                                  offset_year        ) ! [IN]
+
+       data_time_prev = CALENDAR_combine_daysec( extday, extsec )
 
        dt = info(np)%data_time(info(np)%data_rec(1)) &
           - data_time_prev

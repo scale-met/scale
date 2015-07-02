@@ -26,8 +26,8 @@ program prg_driver
      RANDOM_setup
   use mod_cnst, only: &
      CNST_setup
-  use mod_calendar, only: &
-     calendar_setup
+  use scale_calendar, only: &
+     CALENDAR_setup
   use mod_fio, only: &
      FIO_setup
   use mod_comm, only: &
@@ -181,7 +181,7 @@ program prg_driver
   call CNST_setup
 
   !---< calendar module setup >---
-  call calendar_setup
+  call CALENDAR_setup
 
   !---< I/O module setup >---
   call FIO_setup

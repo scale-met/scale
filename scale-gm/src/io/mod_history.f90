@@ -115,8 +115,9 @@ contains
        ADM_vlayer
     use mod_cnst, only: &
        CNST_PRE00
-    use mod_calendar, only: &
-       calendar_ss2yh
+    use scale_calendar, only: &
+       CALENDAR_daysec2date,   &
+       CALENDAR_adjust_daysec
     use mod_grd, only: &
        GRD_gz
     use mod_fio, only: &
@@ -195,7 +196,12 @@ contains
 
     character(len=ADM_NSYS) :: lname
 
-    integer :: idate(6)
+    integer  :: idate(6)
+    integer  :: histday
+    real(DP) :: histsec
+    real(DP) :: histms
+    integer  :: offset_year
+
     integer :: ierr
     integer :: n
     !---------------------------------------------------------------------------
@@ -334,7 +340,17 @@ contains
     l_region_save     (:) = 0
     flag_save         (:) = .false.
 
-    call calendar_ss2yh( idate, TIME_CTIME )
+    histday     = 0
+    histsec     = TIME_CTIME
+    offset_year = 0
+
+    call CALENDAR_adjust_daysec( histday, histsec ) ! [INOUT]
+
+    call CALENDAR_daysec2date( idate(:),   & ! [OUT]
+                               histms,     & ! [OUT]
+                               histday,    & ! [IN]
+                               histsec,    & ! [IN]
+                               offset_year ) ! [IN]
 
     rewind(ADM_CTL_FID)
     do n = 1, HIST_req_limit
@@ -513,8 +529,6 @@ contains
     use mod_time, only: &
        TIME_CSTEP, &
        TIME_DTL
-    use mod_calendar, only: &
-       calendar_ss2yh
     implicit none
 
     character(len=*), intent(in) :: item
@@ -694,12 +708,13 @@ contains
        ADM_kall,      &
        ADM_kmax,      &
        ADM_kmin
+    use scale_calendar, only: &
+       CALENDAR_daysec2date,   &
+       CALENDAR_adjust_daysec, &
+       CALENDAR_date2char
     use mod_time, only: &
        TIME_CSTEP, &
        TIME_CTIME
-    use mod_calendar, only : &
-       calendar_ss2yh, &
-       Calendar_SS2CC
     use mod_comm, only : &
        COMM_var
     use mod_fio, only: &
@@ -716,13 +731,19 @@ contains
     real(RP) :: tmp_pl(ADM_gall_pl,ADM_kall,ADM_lall_pl)
     real(RP) :: val_max, val_min
 
-    character(len=20)           :: HTIME
     character(len=ADM_NSYS)     :: item
     character(len=ADM_MAXFNAME) :: basename
 
     logical, save :: first = .true.
 
     integer :: idate(6)
+
+    integer           :: histday
+    real(DP)          :: histsec
+    real(DP)          :: histms
+    integer           :: offset_year
+    character(len=27) :: histchardate
+
     logical :: out_var(HIST_req_limit)
     integer :: num_output
     integer :: g, k, l, n
@@ -733,7 +754,17 @@ contains
        first = .false.
     endif
 
-    call calendar_ss2yh( idate, TIME_CTIME )
+    histday     = 0
+    histsec     = TIME_CTIME
+    offset_year = 0
+
+    call CALENDAR_adjust_daysec( histday, histsec ) ! [INOUT]
+
+    call CALENDAR_daysec2date( idate(:),   & ! [OUT]
+                               histms,     & ! [OUT]
+                               histday,    & ! [IN]
+                               histsec,    & ! [IN]
+                               offset_year ) ! [IN]
 
     ! count up output vars at this time
     out_var(:) = .false.
@@ -760,8 +791,11 @@ contains
     ! At least one variable will output, do communication
     if ( num_output > 0 ) then
        write(ADM_LOG_FID,*) '### HISTORY num_output = ', num_output
-       call Calendar_SS2CC ( HTIME, TIME_CTIME )
-       write(ADM_LOG_FID,*) '###         date-time  = ', HTIME
+       call CALENDAR_date2char( histchardate, & ! [OUT]
+                                idate(:),     & ! [IN]
+                                histms,       & ! [IN]
+                                offset_year   ) ! [IN]
+       write(ADM_LOG_FID,*) '###         date-time  = ', histchardate
 
        call COMM_var( v_save, v_save_pl, KSUM, 1 )
     else

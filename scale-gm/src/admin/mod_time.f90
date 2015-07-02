@@ -38,21 +38,21 @@ module mod_time
   !                                                  = 'RK4'    ! Runge-Kutta 4th
   !                                                  = 'TRCADV' ! Tracer advection only
 
-  logical, public :: TIME_SPLIT     = .true. ! Horizontally splitting?
+  logical,  public :: TIME_SPLIT     = .true. ! Horizontally splitting?
 
-  integer, public :: TIME_LSTEP_MAX = 10     ! Max steps of large step
-  integer, public :: TIME_SSTEP_MAX          ! Max steps of small step
+  integer,  public :: TIME_LSTEP_MAX = 10     ! Max steps of large step
+  integer,  public :: TIME_SSTEP_MAX          ! Max steps of small step
 
-  real(RP), public :: TIME_DTL       = 5.0_RP   ! Time interval for large step [sec]
+  real(RP), public :: TIME_DTL      = 5.0_RP  ! Time interval for large step [sec]
   real(RP), public :: TIME_DTS                ! Time interval for small step [sec]
   !
   real(RP), public :: TIME_START              ! Start time [sec]
   real(RP), public :: TIME_END                ! End   time [sec]
-  integer, public :: TIME_NSTART             ! Time step at the start
-  integer, public :: TIME_NEND               ! Time step at the end
+  integer,  public :: TIME_NSTART             ! Time step at the start
+  integer,  public :: TIME_NEND               ! Time step at the end
 
   real(RP), public :: TIME_CTIME              ! Current time [sec]
-  integer, public :: TIME_CSTEP              ! Current time step
+  integer,  public :: TIME_CSTEP              ! Current time step
 
   !-----------------------------------------------------------------------------
   !
@@ -62,6 +62,16 @@ module mod_time
   !
   !++ Private parameters & variables
   !
+  integer,  private :: TIME_STARTDATE(6) = (/ 0, 1, 1, 0, 0, 0 /)
+  real(DP), private :: TIME_STARTMS      = 0.0_DP !< [millisec]
+  integer,  private :: TIME_STARTDAY
+  real(DP), private :: TIME_STARTSEC
+
+  integer,  private :: TIME_ENDDATE(6)
+  real(DP), private :: TIME_ENDMS
+  integer,  private :: TIME_ENDDAY
+  real(DP), private :: TIME_ENDSEC
+
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -70,9 +80,20 @@ contains
     use mod_adm, only: &
        ADM_CTL_FID, &
        ADM_proc_stop
-    use mod_calendar, only: &
-       calendar_yh2ss, &
-       calendar_ss2cc
+    use scale_calendar, only: &
+       CALENDAR_daysec2date,    &
+       CALENDAR_date2daysec,    &
+       CALENDAR_adjust_daysec,  &
+       CALENDAR_combine_daysec, &
+       CALENDAR_date2char
+    use scale_time, only: &
+       TIME_NOWDATE,     &
+       TIME_NOWMS,       &
+       TIME_NOWDAY,      &
+       TIME_NOWSEC,      &
+       TIME_NOWSTEP,     &
+       TIME_NSTEP,       &
+       TIME_OFFSET_YEAR
     implicit none
 
     character(len=ADM_NSYS) :: integ_type !--- integration method
@@ -103,8 +124,8 @@ contains
          start_min,   &
          start_sec
 
-    character(len=20) :: HTIME_start
-    character(len=20) :: HTIME_end
+    character(len=27) :: startchardate
+    character(len=27) :: endchardate
 
     integer :: ierr
     !---------------------------------------------------------------------------
@@ -169,7 +190,26 @@ contains
     if ( start_date(4) == -999 ) start_date(4) = start_hour
     if ( start_date(5) == -999 ) start_date(5) = start_min
     if ( start_date(6) == -999 ) start_date(6) = start_sec
-    call calendar_yh2ss( TIME_start, start_date )
+
+    TIME_OFFSET_YEAR = 0
+    TIME_NOWSTEP     = 0
+    TIME_NSTEP       = TIME_DTL
+
+    TIME_STARTDATE(:) = start_date(:)
+    TIME_STARTMS      = 0
+
+    call CALENDAR_date2daysec( TIME_STARTDAY,     & ! [OUT]
+                               TIME_STARTSEC,     & ! [OUT]
+                               TIME_STARTDATE(:), & ! [IN]
+                               TIME_STARTMS,      & ! [IN]
+                               TIME_OFFSET_YEAR   ) ! [IN]
+
+    TIME_start = CALENDAR_combine_daysec( TIME_STARTDAY, TIME_STARTSEC )
+
+    call CALENDAR_date2char( startchardate,     & ! [OUT]
+                             TIME_STARTDATE(:), & ! [IN]
+                             TIME_STARTMS,      & ! [IN]
+                             TIME_OFFSET_YEAR   ) ! [IN]
 
     TIME_END    = TIME_START  + TIME_LSTEP_MAX * TIME_DTL
     TIME_NSTART = 0
@@ -178,9 +218,26 @@ contains
     TIME_CTIME  = TIME_START
     TIME_CSTEP  = TIME_NSTART
 
-    !--- output the information for debug
-    call calendar_ss2cc ( HTIME_start, TIME_START )
-    call calendar_ss2cc ( HTIME_end,   TIME_END   )
+    TIME_NOWDATE(:)   = TIME_STARTDATE(:)
+    TIME_NOWMS        = TIME_STARTMS
+    TIME_NOWDAY       = TIME_STARTDAY
+    TIME_NOWSEC       = TIME_STARTSEC
+
+    TIME_ENDDAY = 0
+    TIME_ENDSEC = TIME_END
+
+    call CALENDAR_adjust_daysec( TIME_ENDDAY, TIME_ENDSEC ) ! [INOUT]
+
+    call CALENDAR_daysec2date( TIME_ENDDATE(:), & ! [OUT]
+                               TIME_ENDMS,      & ! [OUT]
+                               TIME_ENDDAY,     & ! [IN]
+                               TIME_ENDSEC,     & ! [IN]
+                               TIME_OFFSET_YEAR ) ! [IN]
+
+    call CALENDAR_date2char( endchardate,     & ! [OUT]
+                             TIME_ENDDATE(:), & ! [IN]
+                             TIME_ENDMS,      & ! [IN]
+                             TIME_OFFSET_YEAR ) ! [IN]
 
     write(ADM_LOG_FID,*)
     write(ADM_LOG_FID,*) '====== Time management ======'
@@ -191,8 +248,8 @@ contains
     write(ADM_LOG_FID,*) '--- Max steps of small step             : ', TIME_SSTEP_MAX
     write(ADM_LOG_FID,*) '--- Start time (sec)                    : ', TIME_START
     write(ADM_LOG_FID,*) '--- End time   (sec)                    : ', TIME_END
-    write(ADM_LOG_FID,*) '--- Start time (date)                   : ', HTIME_start
-    write(ADM_LOG_FID,*) '--- End time   (date)                   : ', HTIME_end
+    write(ADM_LOG_FID,*) '--- Start time (date)                   : ', startchardate
+    write(ADM_LOG_FID,*) '--- End time   (date)                   : ', endchardate
     write(ADM_LOG_FID,*) '--- total integration time              : ', TIME_END - TIME_START
     write(ADM_LOG_FID,*) '--- Time step at the start              : ', TIME_NSTART
     write(ADM_LOG_FID,*) '--- Time step at the end                : ', TIME_NEND
@@ -205,18 +262,27 @@ contains
     use mod_adm, only: &
        ADM_prc_run_master, &
        ADM_prc_me
-    use mod_calendar, only: &
-       calendar_ss2cc
+    use scale_calendar, only: &
+       CALENDAR_date2char
+    use scale_time, only: &
+       TIME_NOWDATE,     &
+       TIME_NOWMS,       &
+       TIME_NOWSTEP,     &
+       TIME_NSTEP,       &
+       TIME_OFFSET_YEAR
     implicit none
 
-    character(len=20) :: HTIME
+    character(len=27) :: nowchardate
     !---------------------------------------------------------------------------
 
-    call calendar_ss2cc ( HTIME, TIME_CTIME )
+    call CALENDAR_date2char( nowchardate,     & ! [OUT]
+                             TIME_NOWDATE(:), & ! [IN]
+                             TIME_NOWMS,      & ! [IN]
+                             TIME_OFFSET_YEAR ) ! [IN]
 
-    write(ADM_LOG_FID,*) '### TIME =', HTIME,'( step = ', TIME_CSTEP, ' )'
+    write(ADM_LOG_FID,'(1x,3A,I6,A,I6)') '*** TIME: ', nowchardate,' STEP:',TIME_NOWSTEP, '/', TIME_NSTEP
     if( ADM_prc_me == ADM_prc_run_master ) then
-       write(*,*) '### TIME = ', HTIME,'( step = ', TIME_CSTEP, ' )'
+       write(*,'(1x,3A,I6,A,I6)') '*** TIME: ', nowchardate,' STEP:',TIME_NOWSTEP, '/', TIME_NSTEP
     endif
 
     return
@@ -224,12 +290,35 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine TIME_advance
+    use scale_calendar, only: &
+       CALENDAR_daysec2date,    &
+       CALENDAR_adjust_daysec
+    use scale_time, only: &
+       TIME_NOWDATE,     &
+       TIME_NOWMS,       &
+       TIME_NOWDAY,      &
+       TIME_NOWSEC,      &
+       TIME_NOWSTEP,     &
+       TIME_NSTEP,       &
+       TIME_OFFSET_YEAR
     implicit none
     !---------------------------------------------------------------------------
 
     ! time advance
     TIME_CTIME = TIME_CTIME + TIME_DTL
     TIME_CSTEP = TIME_CSTEP + 1
+
+    TIME_NOWSTEP = TIME_CSTEP
+    TIME_NOWSEC  = TIME_CTIME
+
+    ! reallocate day & sub-day
+    call CALENDAR_adjust_daysec( TIME_NOWDAY, TIME_NOWSEC ) ! [INOUT]
+
+    call CALENDAR_daysec2date( TIME_NOWDATE(:), & ! [OUT]
+                               TIME_NOWMS,      & ! [OUT]
+                               TIME_NOWDAY,     & ! [IN]
+                               TIME_NOWSEC,     & ! [IN]
+                               TIME_OFFSET_YEAR ) ! [IN]
 
     call TIME_report
 

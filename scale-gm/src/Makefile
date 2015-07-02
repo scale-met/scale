@@ -60,7 +60,6 @@ OBJS =	\
 	mod_debug.o          \
 	mod_random.o         \
 	mod_cnst.o           \
-	mod_calendar.o       \
 	mod_fio.o            \
 	mod_comm.o           \
 	mod_ideal_topo.o     \
@@ -178,8 +177,7 @@ $(BUILD_DIR)/mod_adm.o            : mod_adm.f90            mod_precision.o mod_m
 $(BUILD_DIR)/mod_debug.o          : mod_debug.f90          mod_precision.o mod_adm.o
 $(BUILD_DIR)/mod_random.o         : mod_random.f90         mod_precision.o mod_adm.o mod_debug.o
 $(BUILD_DIR)/mod_cnst.o           : mod_cnst.f90           mod_precision.o mod_adm.o mod_debug.o
-$(BUILD_DIR)/mod_calendar.o       : mod_calendar.f90       mod_precision.o mod_adm.o mod_debug.o
-$(BUILD_DIR)/mod_fio.o            : mod_fio.f90            mod_precision.o mod_adm.o mod_debug.o mod_calendar.o mod_cnst.o fio.o fiof.o
+$(BUILD_DIR)/mod_fio.o            : mod_fio.f90            mod_precision.o mod_adm.o mod_debug.o mod_cnst.o fio.o fiof.o
 $(BUILD_DIR)/mod_comm.o           : mod_comm.f90           mod_precision.o mod_adm.o mod_debug.o mod_cnst.o
 $(BUILD_DIR)/mod_grd.o            : mod_grd.f90            mod_precision.o mod_adm.o mod_debug.o mod_cnst.o mod_comm.o mod_misc.o mod_fio.o mod_ideal_topo.o
 $(BUILD_DIR)/mod_ideal_topo.o     : mod_ideal_topo.f90     mod_precision.o mod_adm.o mod_debug.o mod_cnst.o
@@ -187,7 +185,7 @@ $(BUILD_DIR)/mod_gmtr.o           : mod_gmtr.f90           mod_precision.o mod_a
 $(BUILD_DIR)/mod_oprt.o           : mod_oprt.f90           mod_precision.o mod_adm.o mod_debug.o mod_grd.o mod_gmtr.o mod_comm.o mod_cnst.o
 $(BUILD_DIR)/mod_oprt3d.o         : mod_oprt3d.f90         mod_precision.o mod_adm.o mod_debug.o mod_grd.o mod_gmtr.o mod_vmtr.o
 $(BUILD_DIR)/mod_vmtr.o           : mod_vmtr.f90           mod_precision.o mod_adm.o mod_debug.o mod_grd.o mod_comm.o mod_gmtr.o mod_oprt.o mod_cnst.o
-$(BUILD_DIR)/mod_time.o           : mod_time.f90           mod_precision.o mod_adm.o mod_debug.o mod_calendar.o
+$(BUILD_DIR)/mod_time.o           : mod_time.f90           mod_precision.o mod_adm.o mod_debug.o
 $(BUILD_DIR)/mod_gtl.o            : mod_gtl.f90            mod_precision.o mod_adm.o mod_debug.o mod_comm.o mod_gmtr.o mod_vmtr.o mod_cnst.o mod_misc.o mod_grd.o
 $(BUILD_DIR)/mod_vintrpl.o        : mod_vintrpl.f90        mod_precision.o mod_adm.o mod_debug.o mod_grd.o mod_cnst.o
 $(BUILD_DIR)/mod_latlon.o         : mod_latlon.f90         mod_precision.o mod_adm.o mod_debug.o mod_cnst.o mod_misc.o mod_grd.o mod_oprt.o mod_comm.o mod_gmtr.o
@@ -196,10 +194,10 @@ $(BUILD_DIR)/mod_cnvvar.o         : mod_cnvvar.f90         mod_precision.o mod_a
 $(BUILD_DIR)/mod_thrmdyn.o        : mod_thrmdyn.f90        mod_precision.o mod_adm.o mod_debug.o mod_cnst.o mod_runconf.o
 $(BUILD_DIR)/mod_bndcnd.o         : mod_bndcnd.f90         mod_precision.o mod_adm.o mod_debug.o mod_cnst.o mod_grd.o mod_runconf.o
 $(BUILD_DIR)/mod_bsstate.o        : mod_bsstate.f90        mod_precision.o mod_adm.o mod_debug.o mod_cnst.o mod_grd.o mod_misc.o mod_runconf.o mod_vintrpl.o mod_bndcnd.o mod_thrmdyn.o
-$(BUILD_DIR)/mod_history.o        : mod_history.f90        mod_precision.o mod_adm.o mod_debug.o mod_cnst.o mod_time.o mod_runconf.o mod_grd.o mod_calendar.o mod_fio.o mod_comm.o mod_gtl.o mod_vintrpl.o mod_misc.o mod_cnvvar.o mod_thrmdyn.o mod_vmtr.o mod_prgvar.o
+$(BUILD_DIR)/mod_history.o        : mod_history.f90        mod_precision.o mod_adm.o mod_debug.o mod_cnst.o mod_time.o mod_runconf.o mod_grd.o mod_fio.o mod_comm.o mod_gtl.o mod_vintrpl.o mod_misc.o mod_cnvvar.o mod_thrmdyn.o mod_vmtr.o mod_prgvar.o
 $(BUILD_DIR)/mod_prgvar.o         : mod_prgvar.f90         mod_precision.o mod_adm.o mod_debug.o mod_runconf.o mod_comm.o mod_ideal_init.o
 $(BUILD_DIR)/mod_chemvar.o        : mod_chemvar.f90        mod_precision.o mod_adm.o mod_debug.o
-$(BUILD_DIR)/mod_extdata.o        : mod_extdata.f90        mod_precision.o mod_adm.o mod_debug.o mod_fio.o mod_calendar.o mod_gtl.o mod_comm.o
+$(BUILD_DIR)/mod_extdata.o        : mod_extdata.f90        mod_precision.o mod_adm.o mod_debug.o mod_fio.o mod_gtl.o mod_comm.o
 $(BUILD_DIR)/mod_embudget.o       : mod_embudget.f90       mod_precision.o mod_adm.o mod_debug.o mod_cnst.o mod_misc.o mod_time.o mod_grd.o mod_vmtr.o mod_gtl.o mod_runconf.o mod_cnvvar.o mod_bsstate.o mod_thrmdyn.o mod_prgvar.o
 $(BUILD_DIR)/mod_numfilter.o      : mod_numfilter.f90      mod_precision.o mod_adm.o mod_debug.o mod_cnst.o mod_grd.o mod_time.o mod_gmtr.o mod_gtl.o mod_oprt.o mod_oprt3d.o mod_comm.o mod_src.o mod_vmtr.o mod_runconf.o mod_bsstate.o
 $(BUILD_DIR)/mod_src_tracer.o     : mod_src_tracer.f90     mod_precision.o mod_adm.o mod_debug.o mod_cnst.o mod_grd.o mod_comm.o mod_gmtr.o mod_vmtr.o
@@ -209,7 +207,7 @@ $(BUILD_DIR)/mod_dynamics.o       : mod_dynamics.f90       mod_precision.o mod_a
 $(BUILD_DIR)/mod_forcing_driver.o : mod_forcing_driver.f90 mod_precision.o mod_adm.o mod_debug.o mod_cnst.o mod_grd.o mod_gmtr.o mod_vmtr.o mod_time.o mod_runconf.o mod_cnvvar.o mod_prgvar.o mod_thrmdyn.o mod_gtl.o mod_bsstate.o mod_bndcnd.o mod_misc.o mod_af_heldsuarez.o mod_history.o mod_af_trcadv.o
 $(BUILD_DIR)/mod_af_heldsuarez.o  : mod_af_heldsuarez.f90  mod_precision.o mod_adm.o mod_debug.o mod_cnst.o
 $(BUILD_DIR)/mod_af_trcadv.o      : mod_af_trcadv.f90      mod_precision.o mod_adm.o mod_debug.o mod_cnst.o
-$(BUILD_DIR)/mod_nudge.o          : mod_nudge.f90          mod_precision.o mod_adm.o mod_debug.o mod_cnst.o mod_misc.o mod_time.o mod_calendar.o mod_grd.o mod_vmtr.o mod_history.o mod_gmtr.o mod_oprt.o mod_runconf.o mod_gtl.o mod_comm.o mod_extdata.o
+$(BUILD_DIR)/mod_nudge.o          : mod_nudge.f90          mod_precision.o mod_adm.o mod_debug.o mod_cnst.o mod_misc.o mod_time.o mod_grd.o mod_vmtr.o mod_history.o mod_gmtr.o mod_oprt.o mod_runconf.o mod_gtl.o mod_comm.o mod_extdata.o
 $(BUILD_DIR)/mod_ideal_init.o     : mod_ideal_init.f90     mod_precision.o mod_adm.o mod_debug.o mod_random.o mod_cnst.o mod_runconf.o mod_misc.o mod_vmtr.o mod_fio.o mod_time.o mod_cnvvar.o mod_vintrpl.o mod_comm.o mod_thrmdyn.o mod_vmtr.o mod_src.o dcmip_initial_conditions_test_1_2_3_v5.o
 $(BUILD_DIR)/mod_history_vars.o   : mod_history_vars.f90   mod_precision.o mod_adm.o mod_debug.o mod_cnst.o mod_history.o mod_runconf.o mod_gmtr.o mod_gtl.o mod_vmtr.o mod_prgvar.o mod_bsstate.o mod_cnvvar.o mod_thrmdyn.o mod_bndcnd.o mod_grd.o
 $(BUILD_DIR)/mod_mkgrd.o          : mod_mkgrd.f90          mod_precision.o mod_adm.o mod_debug.o mod_grd.o mod_cnst.o mod_comm.o mod_gtl.o mod_misc.o mod_gmtr.o
