@@ -125,11 +125,11 @@ contains
     ABORT_COMM_WORLD  = MPI_COMM_WORLD
 
     call MPI_COMM_CREATE_ERRHANDLER( PRC_MPI_errorhandler, new_abort, ierr )
-    call MPI_COMM_SET_ERRHANDLER   ( MPI_COMM_WORLD,       new_abort, ierr )
-    call MPI_COMM_GET_ERRHANDLER   ( MPI_COMM_WORLD,  handler_status, ierr )
+    call MPI_COMM_SET_ERRHANDLER   ( ABORT_COMM_WORLD, new_abort, ierr )
+    call MPI_COMM_GET_ERRHANDLER   ( ABORT_COMM_WORLD, handler_status, ierr )
 
-    call MPI_Comm_size(MPI_COMM_WORLD,MASTER_nmax,  ierr)
-    call MPI_Comm_rank(MPI_COMM_WORLD,MASTER_myrank,ierr)
+    call MPI_Comm_size(MASTER_COMM_WORLD,MASTER_nmax,  ierr)
+    call MPI_Comm_rank(MASTER_COMM_WORLD,MASTER_myrank,ierr)
 
     if ( MASTER_myrank == PRC_master ) then
        MASTER_LOG = .true.
