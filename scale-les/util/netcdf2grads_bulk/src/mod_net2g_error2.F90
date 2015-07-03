@@ -80,6 +80,8 @@ contains
     integer, intent(in) :: ecode
     integer, intent(in) :: nline
     integer, intent(in) :: err_loc
+
+    integer :: irank, ierr
     !-------------------------------------------------------------------------
 
     if ( ecode == err_internal ) then
@@ -90,10 +92,12 @@ contains
        write (*, *) "##### ERROR: netcdf fuction error"
     endif
 
+    call MPI_COMM_RANK( MPI_COMM_WORLD, irank, ierr )
+    write (*, *) "***** Abort: at process =", irank
     write (*, *) "***** Abort: at Line =", nline
 
     if ( err_loc == loc_main ) then
-       write (*, *) "   location: prg_netcdf2grads_h.F90"
+       write (*, *) "   location: mod_netcdf2grads_h.F90"
     elseif ( err_loc == loc_anal ) then
        write (*, *) "   location: mod_net2g_anal.F90"
     elseif ( err_loc == loc_cal ) then
