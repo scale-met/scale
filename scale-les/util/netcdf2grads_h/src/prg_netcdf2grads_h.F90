@@ -18,6 +18,7 @@ program netcdf2grads_h
 #ifdef MPIUSE
   use mod_net2g_comm
 #endif
+  use mod_net2g_io
   use mod_net2g_netcdf
   use mod_net2g_setup
   use mod_net2g_anal
@@ -93,7 +94,6 @@ program netcdf2grads_h
   integer :: yy, mm, dd, hh, mn, sc
   integer,allocatable :: rk_mnge(:)
 
-  integer :: nfile = 0
   integer :: irec_time
   integer :: irec_timelev
 
@@ -102,8 +102,6 @@ program netcdf2grads_h
   character(CMID) :: varname
   character(CMID) :: fconf
   character(CLNG) :: fname_save
-
-  logical :: open_file      = .false.
   !-----------------------------------------------------------------------------------------
 
   namelist /LOGOUT/            &
@@ -164,7 +162,7 @@ program netcdf2grads_h
   endif
 
   call read_conf_logout
-  call logio_init( irank, LOUT )
+  call io_log_init( irank, LOUT )
 
   if ( LOUT ) write( FID_LOG, '(1X,A)') "-----------------------------------"
   if ( LOUT ) write( FID_LOG, '(1X,A)') "     START : netcdf to grads"
@@ -305,14 +303,18 @@ program netcdf2grads_h
                  call combine_vars_2d( p_var, var_2d )
 #endif
                  if ( iz /= 1 .and. Z_MERGE_OUT ) then
-                    call write_vars_zmerge( var_2d, varname, idom, zz, irec_timelev )
+                    call io_write_vars( var_2d, varname, atype, vtype, &
+                                        idom, nx, ny, zz, irec_timelev )
                  else
                     if ( T_MERGE_OUT ) then
-                       if (irec_time == 1) call create_ctl( varname, atype, vtype, idom, zz )
+                       if (irec_time==1) call io_create_ctl( varname, atype, ctype, vtype, idom, &
+                                                             nx, ny, zz, nt, cx, cy, vgrid, zlev )
                     else
-                       call create_ctl( varname, atype, vtype, idom, zz )
+                       call io_create_ctl( varname, atype, ctype, vtype, idom, &
+                                           nx, ny, zz, 1, cx, cy, vgrid, zlev )
                     endif
-                    call write_vars( var_2d, varname, idom, zz, irec_timelev )
+                    call io_write_vars( var_2d, varname, atype, vtype, &
+                                        idom, nx, ny, zz, irec_timelev )
                  endif
               endif
 
@@ -340,11 +342,14 @@ program netcdf2grads_h
               call combine_vars_2d( p_var, var_2d )
 #endif
               if ( T_MERGE_OUT ) then
-                 if (irec_time == 1) call create_ctl( varname, atype, vtype, idom, zz )
+                 if (irec_time == 1) call io_create_ctl( varname, atype, ctype, vtype, idom, &
+                                                         nx, ny, zz, nt, cx, cy, vgrid, zlev )
               else
-                 call create_ctl( varname, atype, vtype, idom, zz )
+                 call io_create_ctl( varname, atype, ctype, vtype, idom, &
+                                     nx, ny, zz, 1, cx, cy, vgrid, zlev )
               endif
-              call write_vars( var_2d, varname, idom, zz, irec_time )
+              call io_write_vars( var_2d, varname, atype, vtype, &
+                                  idom, nx, ny, zz, irec_time )
            endif
 
         case default
@@ -363,11 +368,10 @@ program netcdf2grads_h
   enddo !--- time loop
 
   ! finalization
-  call close_all_fid
   if ( LOUT ) write( FID_LOG, '(1X,A)') ""
   if ( LOUT ) write( FID_LOG, '(1X,A)') "     FINISH : netcdf to grads"
   if ( LOUT ) write( FID_LOG, '(1X,A)') "-----------------------------------"
-  if ( open_file .and. LOUT ) close ( FID_LOG )
+  call io_close_all
 
 #ifdef MPIUSE
   call comm_finalize
@@ -381,50 +385,6 @@ contains
   !-----------------------------------------------------------------------------------------
   !> Individual Procedures
   !-----------------------------------------------------------------------------------------
-
-  !> open logfile
-  !-----------------------------------------------------------------------------------------
-  subroutine logio_init( &
-      irank,   & ! [in   ]
-      LOUT     ) ! [inout]
-    implicit none
-
-    integer, intent(in)    :: irank
-    logical, intent(inout) :: LOUT
-
-    character(6) :: num
-    !---------------------------------------------------------------------------
-
-    LOUT = .false.
-    if ( LOG_ALL_OUTPUT ) then
-       LOUT = .true.
-    else
-       if ( irank == master ) LOUT = .true.
-    endif
-
-    if ( trim(LOG_BASENAME) .eq. "STDOUT" ) then
-       FID_LOG = FID_STD
-       open_file = .false.
-    else
-       FID_LOG = FID_LOGF
-       open_file = .true.
-    endif
-
-    if ( LOG_LEVEL > 0 ) then
-       LOG_DBUG = .false.
-    else
-       LOG_DBUG = .true.
-    endif
-
-    if ( open_file .and. LOUT ) then
-       write( num,'(I6.6)' ) irank
-       open ( FID_LOG, file=trim(LOG_BASENAME)//".pe"//num, &
-              status='replace', form='formatted' )
-    endif
-
-    return
-  end subroutine logio_init
-
 
   !> combine region divided data: grid data
   !-----------------------------------------------------------------------------------------
@@ -509,287 +469,6 @@ contains
 
     return
   end subroutine combine_vars_2d
-
-
-  !> create control file
-  !-----------------------------------------------------------------------------------------
-  subroutine create_ctl( &
-      varname,  & ! [in]
-      atype,    & ! [in]
-      vtype,    & ! [in]
-      idom,     & ! [in]
-      zz        ) ! [in]
-    implicit none
-
-    character(CMID), intent(in) :: varname
-    integer,         intent(in) :: atype, vtype
-    integer,         intent(in) :: idom, zz
-
-    character(2)    :: cdom
-    character(3)    :: clev
-    character(CLNG) :: fname
-    character(CLNG) :: fname2
-    !---------------------------------------------------------------------------
-
-     write(cdom,'(i2.2)') idom
-     select case( atype )
-     case ( a_slice, a_conv )
-        if ( Z_MERGE_OUT ) then
-           clev = "-3d"
-        else
-           write(clev,'(i3.3)') zz
-        endif
-     case ( a_max )
-        clev = "max"
-     case ( a_min )
-        clev = "min"
-     case ( a_sum )
-        clev = "sum"
-     case ( a_ave )
-        clev = "ave"
-     end select
-     if ( vtype == vt_2d ) clev = "-2d"
-     fname = trim(ODIR)//'/'//trim(varname)//'_d'//cdom//'z'//clev//'_'//trim(FTIME)
-     fname2 = trim(varname)//'_d'//cdom//'z'//clev//'_'//trim(FTIME)
-     if ( LOUT .and. LOG_DBUG ) write( FID_LOG, '(1X,A,A)') "Create ctl file: ", trim(fname)
-     open ( FID_CTL, file=trim(fname)//".ctl", form="formatted", access="sequential" )
-
-     write( FID_CTL, '(a,1x,a)') "DSET", "^"//trim(fname2)//".grd"
-     write( FID_CTL, '(a)') "TITLE SCALE3 data output"
-     write( FID_CTL, '(a)') "OPTIONS BIG_ENDIAN"
-     write( FID_CTL, '(a,1x,e15.7)') "UNDEF", -9.9999001E+30
-     write( FID_CTL, '(a,3x,i7,1x,a)') "XDEF", nx, "LEVELS"
-     write( FID_CTL, '(5(1x,e15.7))') cx(1:nx)*1.d-3
-     write( FID_CTL, '(a,3x,i7,1x,a)') "YDEF", ny, "LEVELS"
-     write( FID_CTL, '(5(1x,e15.7))') cy(1:ny)*1.d-3
-
-     select case( vtype )
-     case ( vt_urban, vt_land, vt_tpmsk )
-        write( FID_CTL, '(a,3x,i7,1x,a,1x,a)') "ZDEF", 1, "linear", "1 1"
-     case ( vt_2d )
-        write( FID_CTL, '(a,3x,i7,1x,a,1x,e15.7)') "ZDEF", 1, "LEVELS", zlev(zz)*1.d-3
-     case ( vt_3d, vt_height )
-        if ( Z_MERGE_OUT ) then
-           write( FID_CTL, '(a,3x,i7,1x,a)') "ZDEF", ZCOUNT, "LEVELS"
-           if ( atype == a_conv .and. ctype == c_pres ) then
-              write( FID_CTL, '(5(1x,e15.7))') vgrid(1:ZCOUNT)
-           else      
-              write( FID_CTL, '(5(1x,e15.7))') vgrid(1:ZCOUNT)*1.d-3
-           endif
-        else
-           write( FID_CTL, '(a,3x,i7,1x,a,1x,e15.7)') "ZDEF", 1, "LEVELS", zlev(zz)*1.d-3
-        endif
-
-     end select
-
-     write( FID_CTL, '(a,3x,i5,1x,a,1x,a,3x,a)') "TDEF", nt, "LINEAR", trim(STIME), trim(DELT)
-     write( FID_CTL, '(a,3x,i2)') "VARS", 1
-     if ( Z_MERGE_OUT ) then
-        write( FID_CTL, '(a,1x,i7,1x,i2,1x,a)') trim(varname), ZCOUNT, 99, "NONE"
-     else
-        write( FID_CTL, '(a,1x,i7,1x,i2,1x,a)') trim(varname), 0, 99, "NONE"
-     endif
-     write( FID_CTL, '(a)') "ENDVARS"
-
-     close( FID_CTL )
-    return
-  end subroutine create_ctl
-
-
-  !> write data file
-  !-----------------------------------------------------------------------------------------
-  subroutine write_vars( &
-      var_2d,   & ! [in]
-      varname,  & ! [in]
-      idom,     & ! [in]
-      zz,       & ! [in]
-      irec      ) ! [in]
-    implicit none
-
-    real(SP),        intent(in) :: var_2d(:,:)
-    character(CMID), intent(in) :: varname
-    integer,         intent(in) :: idom, zz
-    integer,         intent(in) :: irec
-
-!    integer         :: irec
-    integer         :: fid
-!    integer(8)      :: irecl
-!    character(2)    :: cdom
-!    character(3)    :: clev
-    character(CLNG) :: fname
-    !---------------------------------------------------------------------------
-
-!    irec  = 1
-!    irecl = int(nx,kind=8) * int(ny,kind=8) * 4_8
-
-!    write(cdom,'(i2.2)') idom
-!    select case( atype )
-!    case ( a_slice, a_conv )
-!        if ( Z_MERGE_OUT ) then
-!           clev = "-3d"
-!        else
-!           write(clev,'(i3.3)') zz
-!        endif
-!    case ( a_max )
-!       clev = "max"
-!    case ( a_min )
-!       clev = "min"
-!    case ( a_sum )
-!       clev = "sum"
-!    case ( a_ave )
-!       clev = "ave"
-!    end select
-!    if ( vtype == vt_2d ) clev = "-2d"
-!    fname = trim(ODIR)//'/'//trim(varname)//'_d'//cdom//'z'//clev//'_'//trim(FTIME)//".grd"
-!    if ( Z_MERGE_OUT ) fname_save = fname
-
-    call set_fname( varname, idom, zz, fname )
-    call control_output_fid( fname, fid )
-    if ( LOUT ) write( FID_LOG, '(1X,A,A)') "+++ Output data file: ", trim(fname)
-    if ( LOUT .and. LOG_DBUG ) write( FID_LOG, '(1X,A,I5,A,I4)') "+++ Data record num:", irec, "  FID:", fid
-    if ( LOUT .and. LOG_DBUG ) write( FID_LOG, *) "+++ Check data range: ", maxval(var_2d), minval(var_2d)
-
-!    open( FID_DAT, file=trim(fname), form="unformatted", access="direct", recl=irecl)
-    write( fid, rec=irec ) var_2d(:,:)
-!    close( FID_DAT )
-
-    return
-  end subroutine write_vars
-
-
-  !> write data file
-  !-----------------------------------------------------------------------------------------
-  subroutine write_vars_zmerge( &
-      var_2d,   & ! [in]
-      varname,  & ! [in]
-      idom,     & ! [in]
-      zz,       & ! [in]
-      irec      ) ! [in]
-    implicit none
-
-    real(SP),        intent(in) :: var_2d(:,:)
-    character(CMID), intent(in) :: varname
-    integer,         intent(in) :: idom, zz
-    integer,         intent(in) :: irec
-
-    integer    :: fid
-!    integer(8) :: irecl
-    character(CLNG) :: fname
-    !---------------------------------------------------------------------------
-
-!    irecl = int(nx,kind=8) * int(ny,kind=8) * 4_8
-    call set_fname( varname, idom, zz, fname )
-    call control_output_fid( fname, fid )
-    if ( LOUT ) write( FID_LOG, '(1X,A,A)') "+++ Merged output to: ", trim(fname)
-    if ( LOUT .and. LOG_DBUG ) write( FID_LOG, *) "+++ Check data range: ", maxval(var_2d), minval(var_2d)
-
-
-!    open( FID_DAT, file=trim(fname_save), form="unformatted", access="direct", recl=irecl)
-    write( fid, rec=irec ) var_2d(:,:)
-!    close( FID_DAT )
-
-    return
-  end subroutine write_vars_zmerge
-
-
-  !> set file name for binary data output
-  !-----------------------------------------------------------------------------------------
-  subroutine set_fname( &
-      varname,  & ! [in]
-      idom,     & ! [in]
-      zz,       & ! [in]
-      fname     ) ! [out]
-    implicit none
-
-    character(CMID), intent(in)  :: varname
-    integer,         intent(in)  :: idom, zz
-    character(CLNG), intent(out) :: fname
-
-    character(2) :: cdom
-    character(3) :: clev
-    !---------------------------------------------------------------------------
-
-    write(cdom,'(i2.2)') idom
-    select case( atype )
-    case ( a_slice, a_conv )
-        if ( Z_MERGE_OUT ) then
-           clev = "-3d"
-        else
-           write(clev,'(i3.3)') zz
-        endif
-    case ( a_max )
-       clev = "max"
-    case ( a_min )
-       clev = "min"
-    case ( a_sum )
-       clev = "sum"
-    case ( a_ave )
-       clev = "ave"
-    end select
-    if ( vtype == vt_2d ) clev = "-2d"
-    fname = trim(ODIR)//'/'//trim(varname)//'_d'//cdom//'z'//clev//'_'//trim(FTIME)//".grd"
-
-    return
-  end subroutine set_fname
-
-
-  !> control fid for binary data output
-  !-----------------------------------------------------------------------------------------
-  subroutine control_output_fid( &
-      fname,    & ! [in]
-      fid       ) ! [out]
-    implicit none
-
-    character(CLNG), intent(in)  :: fname
-    integer,         intent(out) :: fid
-
-    integer    :: i
-    integer(8) :: irecl
-    logical    :: existence
-    !---------------------------------------------------------------------------
-
-    existence = .false.
-    if ( nfile > 0 ) then
-       do i=1, nfile
-          if ( trim(fname_bank(i)) .eq. trim(fname) ) then
-             existence = .true.
-             exit
-          endif
-       enddo
-    else
-       i = 1
-    endif
-
-    if ( existence ) then
-       fid = FID_DAT + i
-    else
-       fid = FID_DAT + i
-       fname_bank(i) = trim(fname)
-       nfile = nfile + 1
-
-       irecl = int(nx,kind=8) * int(ny,kind=8) * 4_8
-       open( fid, file=trim(fname), form="unformatted", access="direct", recl=irecl)
-    endif
-
-    return
-  end subroutine control_output_fid
-
-
-  !> close all files for binary data output
-  !-----------------------------------------------------------------------------------------
-  subroutine close_all_fid()
-    implicit none
-
-    integer :: i, fid
-    !---------------------------------------------------------------------------
-
-    do i=1, nfile
-       fid = FID_DAT + i
-       close( fid )
-    enddo
-
-    return
-  end subroutine close_all_fid
 
 
   !> read configulation namelists
