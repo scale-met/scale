@@ -15,13 +15,14 @@
   integer,  parameter :: max_vcount = 100
   integer,  parameter :: max_tcount = 1000
   integer,  parameter :: max_zcount = 192
+  integer,  parameter :: max_fcount = 1000
   integer,  parameter :: master     = 0
   integer,  parameter :: FID_STD    = 6
   integer,  parameter :: FID_CONF   = 20
   integer,  parameter :: FID_RCNF   = 21
   integer,  parameter :: FID_LOGF   = 22
   integer,  parameter :: FID_CTL    = 23
-  integer,  parameter :: FID_DAT    = 24
+  integer,  parameter :: FID_DAT    = 30
 
   real(SP), parameter :: UNDEF_SP     = -9.9999D7
   real(DP), parameter :: UNDEF_DP     = -0.9999900E+31

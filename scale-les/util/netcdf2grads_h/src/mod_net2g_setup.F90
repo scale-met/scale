@@ -54,6 +54,8 @@ module mod_net2g_setup
   !
   !++ Private parameters & variables
   !
+  logical, private :: first_time = .true.
+
   !-----------------------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------------------
@@ -626,7 +628,18 @@ contains
     write(cmm2,'(I2.2)') mm
     write(cyy, '(I4.4)') yy
     STIME = chh//':'//cmn//'Z'//cdd//cmm(mm)//cyy
-    FTIME = cyy//cmm2//cdd//chh//cmn//csc
+
+    if ( T_MERGE_OUT ) then
+       if ( first_time ) then
+          FTIME = cyy//cmm2//cdd//chh//cmn//csc
+          FTIME_SAVE = FTIME
+          first_time = .false.
+       else
+          FTIME = FTIME_SAVE
+       endif
+    else
+       FTIME = cyy//cmm2//cdd//chh//cmn//csc
+    endif
 
     return
   end subroutine set_calender
