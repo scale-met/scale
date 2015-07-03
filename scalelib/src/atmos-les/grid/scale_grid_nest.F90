@@ -280,6 +280,7 @@ contains
        PRC_nmax,          &
        PRC_master,        &
        PRC_myrank,        &
+       PRC_mydom,         &
        PRC_MPIstop,       &
        PRC_HAS_W,         &
        PRC_HAS_E,         &
@@ -374,6 +375,8 @@ contains
        call PRC_MPIstop
     endif
     if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_NEST)
+
+    PRC_mydom = ONLINE_DOMAIN_NUM
 
     call INTRPNEST_setup ( interp_search_divnum, NEST_INTERP_LEVEL, OFFLINE )
     itp_nh = int( NEST_INTERP_LEVEL )

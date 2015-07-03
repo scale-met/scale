@@ -67,6 +67,8 @@ module scale_process
   integer, public              :: GLOBAL_nmax         !< process num in global communicator
   logical, public              :: MASTER_LOG
 
+  integer, public              :: PRC_mybulk = 0   !< my bulk ID (Master)
+  integer, public              :: PRC_mydom  = 0   !< my domain ID (Global)
   integer, public              :: PRC_myrank = 0   !< my node ID (Local)
   integer, public              :: PRC_nmax   = 1   !< total number of processors (Local)
   integer, public              :: PRC_NUM_X  = 1   !< x length of 2D processor topology
@@ -682,6 +684,7 @@ contains
        if ( bulk_split ) then
           write(col_num,'(I4.4)') COLOR_LIST(ORG_myrank)
           fname_local = col_num
+          PRC_mybulk  = COLOR_LIST(ORG_myrank)
        else
           fname_local = COL_FILE(COLOR_LIST(ORG_myrank))
        endif
@@ -1054,6 +1057,15 @@ contains
           write(IO_FID_LOG,'(32A32)') '                                '
           write(IO_FID_LOG,*) '++++++ Abort MPI'
           write(IO_FID_LOG,*) ''
+       end if
+
+       if ( IO_L ) then
+          write(*,*) '++++++ BULK   ID: ',PRC_mybulk
+          write(*,*) '++++++ DOMAIN ID: ',PRC_mydom
+          write(*,*) '++++++ MASTER LOCATION: ',MASTER_myrank,'/',MASTER_nmax
+          write(*,*) '++++++ GLOBAL LOCATION: ',GLOBAL_myrank,'/',GLOBAL_nmax
+          write(*,*) '++++++ LOCAL  LOCATION: ',PRC_myrank,'/',PRC_nmax
+          write(*,*) ''
        end if
 
        if ( errcode .eq. abort_code ) then ! called from PRC_MPIstop
