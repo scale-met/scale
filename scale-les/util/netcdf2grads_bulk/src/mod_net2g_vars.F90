@@ -47,12 +47,14 @@ module mod_net2g_vars
   character(5),    public :: DELT           = "1mn"
   character(15),   public :: STIME          = "00:00Z01JAN2000"
   character(15),   public :: FTIME          = "200001010000"
+  character(15),   public :: FTIME_SAVE     = "200001010000"
   character(CLNG), public :: LOG_BASENAME   = "LOG"
   logical,         public :: LOG_ALL_OUTPUT = .false.
   logical,         public :: LOG_DBUG       = .false.
   integer,         public :: LOG_LEVEL      = 1
   logical,         public :: Z_LEV_LIST     = .false.
   logical,         public :: Z_MERGE_OUT    = .true.  ! only for slice and conv
+  logical,         public :: T_MERGE_OUT    = .true.
 
   character(CSHT), public :: ANALYSIS       = "ave" ! max, min, sum, ave
 
@@ -67,5 +69,7 @@ module mod_net2g_vars
 
   integer,         public :: FID_LOG        = 22
   logical,         public :: LOUT           = .false.
+
+  character(CLNG), public :: fname_bank(max_fcount)
 
 end module mod_net2g_vars
