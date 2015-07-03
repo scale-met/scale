@@ -1,4 +1,5 @@
 program unit
+  use mpi
   use scale_precision
   use scale_stdio
   use scale_grid_index
@@ -33,7 +34,7 @@ program unit
   call IO_setup( MODELNAME, .false. )
 
   ! setup MPI
-  call PRC_MPIsetup( .false. )
+  call PRC_MPIsetup( MPI_COMM_WORLD )
 
   ! setup process
   call PRC_setup
