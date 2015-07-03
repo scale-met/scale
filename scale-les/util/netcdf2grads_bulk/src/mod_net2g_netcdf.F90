@@ -376,6 +376,11 @@ contains
 
     end select
 
+#ifdef DEBUG
+    if ( LOUT .and. LOG_DBUG ) write( FID_LOG, '(1X,A,A,A,F14.5,A,F14.5)' ) &
+       "read check: ", trim(varname), " - max: ", maxval(p_var), " - min: ", minval(p_var)
+#endif
+
     istat = nf90_close(ncid)
     return
   end subroutine netcdf_read_var
@@ -392,12 +397,12 @@ contains
       p_var       ) ! [out]
     implicit none
 
-    integer, intent(in) :: imnge
-    integer, intent(in) :: nxp, nyp, mnxp, mnyp
-    integer, intent(in) :: it
-    integer, intent(in) :: nz(3)
-    integer,         intent(in)  :: ctype
-    real(SP),        intent(out) :: p_var(:,:,:)
+    integer,  intent(in) :: imnge
+    integer,  intent(in) :: nxp, nyp, mnxp, mnyp
+    integer,  intent(in) :: it
+    integer,  intent(in) :: nz(3)
+    integer,  intent(in)  :: ctype
+    real(SP), intent(out) :: p_var(:,:,:)
 
     integer :: start_3d(4)
     integer :: start_2d(3)
@@ -423,6 +428,7 @@ contains
     if ( LOUT .and. LOG_DBUG ) write( FID_LOG, '(1x,A,A)' ) "+++ Target File (ref): ", trim(ncfile)
 
     call irank2ixjy( imnge, ix, jy )
+    call set_flag_bnd( ix, jy, flag_bnd )
 
     nzn = nz(1)
     isn = 1
