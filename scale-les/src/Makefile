@@ -139,6 +139,8 @@ $(BUILD_DIR)/$(BINNAME).o  : $(BINNAME).f90  $(LIBS) $(patsubst %,$(BUILD_DIR)/%
 $(BUILD_DIR)/$(INITNAME).o : $(INITNAME).f90 $(LIBS) $(patsubst %,$(BUILD_DIR)/%,$(OBJS)) $(patsubst %,$(BUILD_DIR)/%,$(OBJS_INIT)) $(BUILD_DIR)/mod_user.o
 $(BUILD_DIR)/$(PPNAME).o   : $(PPNAME).f90   $(LIBS) $(patsubst %,$(BUILD_DIR)/%,$(OBJS)) $(patsubst %,$(BUILD_DIR)/%,$(OBJS_INIT)) $(BUILD_DIR)/mod_user.o
 
+$(BUILD_DIR)/mod_user.o : mod_user.f90 $(LIBS) $(patsubst %,$(BUILD_DIR)/%,$(OBJS))
+
 
 
 allclean: distclean
