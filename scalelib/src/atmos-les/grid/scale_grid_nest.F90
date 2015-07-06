@@ -280,6 +280,7 @@ contains
        PRC_nmax,          &
        PRC_master,        &
        PRC_myrank,        &
+       PRC_mydom,         &
        PRC_MPIstop,       &
        PRC_HAS_W,         &
        PRC_HAS_E,         &
@@ -374,6 +375,8 @@ contains
        call PRC_MPIstop
     endif
     if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_NEST)
+
+    PRC_mydom = ONLINE_DOMAIN_NUM
 
     call INTRPNEST_setup ( interp_search_divnum, NEST_INTERP_LEVEL, OFFLINE )
     itp_nh = int( NEST_INTERP_LEVEL )
@@ -2071,7 +2074,7 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
     integer, intent(in) :: HANDLE   !< id number of nesting relation in this process target
 
     integer :: ierr
-    integer :: istatus(MPI_STATUS_SIZE)
+    !integer :: istatus(MPI_STATUS_SIZE)
 
     integer :: rq
     logical :: flag
@@ -2087,7 +2090,7 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
        do rq = 1, rq_tot_d
           if ( ireq_d(rq) .ne. MPI_REQUEST_NULL ) then
              call MPI_CANCEL(ireq_d(rq), ierr)
-             call MPI_TEST_CANCELLED(istatus, flag, ierr)
+             !call MPI_TEST_CANCELLED(istatus, flag, ierr)
              !if ( .NOT. flag ) then
              !   write(IO_FID_LOG,*) 'XXX ERROR: receive actions do not cancelled, req = ', rq
              !endif
@@ -2442,25 +2445,37 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
     integer, intent(in)    :: req_count
     integer, intent(inout) :: ireq(max_rq)
 
+    integer :: i
     integer :: ierr
     integer :: istatus(MPI_STATUS_SIZE,req_count)
+    integer :: req_count2
+    integer :: ireq2(max_rq)
 
-    logical    :: flag
-    integer(8) :: num
+!    logical    :: flag
+!    integer(8) :: num
     !---------------------------------------------------------------------------
-    num  = 0
-    flag = .false.
+!    num  = 0
+!    flag = .false.
 
-    do while ( .not. flag )
-       num = num + 1
-       call MPI_TESTALL( req_count, ireq, flag, istatus, ierr )
-
-       if ( num > ONLINE_WAIT_LIMIT ) then
-          if( IO_L ) write(IO_FID_LOG,'(1x,A)') '*** ERROR: over the limit of waiting time [NESTCOM]'
-          write(*,'(1x,A)') '*** ERROR: over the limit of waiting time [NESTCOM]'
-          call PRC_MPIstop
+    req_count2 = 0
+    do i=1, req_count
+       if (ireq(i) .ne. MPI_REQUEST_NULL) then
+          req_count2 = req_count2 + 1
+          ireq2(req_count2) = ireq(i)
        endif
     enddo
+    if ( req_count2 .ne. 0 ) call MPI_WAITALL( req_count2, ireq2, istatus, ierr )
+
+!    do while ( .not. flag )
+!       num = num + 1
+!       call MPI_TESTALL( req_count, ireq, flag, istatus, ierr )
+
+!       if ( num > ONLINE_WAIT_LIMIT ) then
+!          if( IO_L ) write(IO_FID_LOG,'(1x,A)') '*** ERROR: over the limit of waiting time [NESTCOM]'
+!          write(*,'(1x,A)') '*** ERROR: over the limit of waiting time [NESTCOM]'
+!          call PRC_MPIstop
+!       endif
+!    enddo
 
     return
   end subroutine NEST_COMM_waitall

@@ -67,6 +67,8 @@ module scale_process
   integer, public              :: GLOBAL_nmax         !< process num in global communicator
   logical, public              :: MASTER_LOG
 
+  integer, public              :: PRC_mybulk = 0   !< my bulk ID (Master)
+  integer, public              :: PRC_mydom  = 0   !< my domain ID (Global)
   integer, public              :: PRC_myrank = 0   !< my node ID (Local)
   integer, public              :: PRC_nmax   = 1   !< total number of processors (Local)
   integer, public              :: PRC_NUM_X  = 1   !< x length of 2D processor topology
@@ -125,11 +127,11 @@ contains
     ABORT_COMM_WORLD  = MPI_COMM_WORLD
 
     call MPI_COMM_CREATE_ERRHANDLER( PRC_MPI_errorhandler, new_abort, ierr )
-    call MPI_COMM_SET_ERRHANDLER   ( MPI_COMM_WORLD,       new_abort, ierr )
-    call MPI_COMM_GET_ERRHANDLER   ( MPI_COMM_WORLD,  handler_status, ierr )
+    call MPI_COMM_SET_ERRHANDLER   ( ABORT_COMM_WORLD, new_abort, ierr )
+    call MPI_COMM_GET_ERRHANDLER   ( ABORT_COMM_WORLD, handler_status, ierr )
 
-    call MPI_Comm_size(MPI_COMM_WORLD,MASTER_nmax,  ierr)
-    call MPI_Comm_rank(MPI_COMM_WORLD,MASTER_myrank,ierr)
+    call MPI_Comm_size(MASTER_COMM_WORLD,MASTER_nmax,  ierr)
+    call MPI_Comm_rank(MASTER_COMM_WORLD,MASTER_myrank,ierr)
 
     if ( MASTER_myrank == PRC_master ) then
        MASTER_LOG = .true.
@@ -361,11 +363,11 @@ contains
     call MPI_Comm_size(GLOBAL_COMM_WORLD,GLOBAL_nmax,  ierr)
     call MPI_Comm_rank(GLOBAL_COMM_WORLD,GLOBAL_myrank,ierr)
 
-    if ( ABORT_ALL_JOBS ) then
-       ABORT_COMM_WORLD = MPI_COMM_WORLD
-    else
-       ABORT_COMM_WORLD = GLOBAL_COMM_WORLD
-    endif
+!    if ( ABORT_ALL_JOBS ) then
+!       ABORT_COMM_WORLD = MPI_COMM_WORLD
+!    else
+!       ABORT_COMM_WORLD = GLOBAL_COMM_WORLD
+!    endif
 
     return
   end subroutine PRC_BULKsetup
@@ -389,6 +391,7 @@ contains
     write(*,*) ''
 
     if ( PRC_mpi_alive ) then
+        ! tentative approach; input "MPI_COMM_WORLD".
         call MPI_COMM_CALL_ERRHANDLER(MPI_COMM_WORLD, abort_code, ierr)
     endif
 
@@ -681,6 +684,7 @@ contains
        if ( bulk_split ) then
           write(col_num,'(I4.4)') COLOR_LIST(ORG_myrank)
           fname_local = col_num
+          PRC_mybulk  = COLOR_LIST(ORG_myrank)
        else
           fname_local = COL_FILE(COLOR_LIST(ORG_myrank))
        endif
@@ -1053,6 +1057,15 @@ contains
           write(IO_FID_LOG,'(32A32)') '                                '
           write(IO_FID_LOG,*) '++++++ Abort MPI'
           write(IO_FID_LOG,*) ''
+       end if
+
+       if ( IO_L ) then
+          write(*,*) '++++++ BULK   ID: ',PRC_mybulk
+          write(*,*) '++++++ DOMAIN ID: ',PRC_mydom
+          write(*,*) '++++++ MASTER LOCATION: ',MASTER_myrank,'/',MASTER_nmax
+          write(*,*) '++++++ GLOBAL LOCATION: ',GLOBAL_myrank,'/',GLOBAL_nmax
+          write(*,*) '++++++ LOCAL  LOCATION: ',PRC_myrank,'/',PRC_nmax
+          write(*,*) ''
        end if
 
        if ( errcode .eq. abort_code ) then ! called from PRC_MPIstop
