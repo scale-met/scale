@@ -9,16 +9,17 @@ SCALEチュートリアルを実行するための環境の準備について説
 
 {\bf 必須のシステム環境}
 \begin{itemize}
-  \item {\bf システム構成}
-\begin{itemize}
-  \item {\bf CPU} : 理想実験は物理コアが2コア以上、現実大気実験は4コア以上を搭載したシステムが望ましい。
-  \item {\bf メモリ} : 理想実験は512MB以上、現実大気実験は2GB以上のメモリ容量が搭載されたシステムが必要となる。
-  \item {\bf HDD} : 実験内容によって変化するがTutorialの現実大気実験を実行するには約3GBのディスク空き容量が必要となる。
-\end{itemize}
+  \item {\bf システムハードウェア構成}
+  \begin{itemize}
+    \item {\bf CPU} : 理想実験は物理コアが2コア以上、現実大気実験は4コア以上を搭載したシステムが望ましい。
+    \item {\bf Memory} : 理想実験は512MB以上、現実大気実験は2GB以上のメモリ容量が搭載されたシステムが必要となる。
+    \item {\bf HDD} : 実験内容によって変化するがTutorialの現実大気実験を実行するには約3GBのディスク空き容量が必要となる。
+  \end{itemize}
 
-  \item {\bf OS} : Linux OS（Fedora, CentOS, SUSE等），Mac OS X．
-        チュートリアルでは、Linux (CentOS6)を使用して説明する．
-  \item {\bf コンパイラ} : Fortran 2003をサポートするC，Fortranコンパイラを必要とする．
+  \item {\bf システムソフトウェア構成}
+  \begin{itemize}
+  \item {\bf OS} : Linux OS（Fedora, CentOS, SUSE等）、Mac OS X。
+  \item {\bf コンパイラ} : Fortran 2003をサポートするC、Fortranコンパイラを必要とする。
         GNU 4.6.x以上，Intel compiler 2012以上を推奨する．
         チュートリアルでは，gcc/gfortranを使用して説明する．
   \item {\bf MPIライブラリ} : MPICH2, OpenMPI, Intel MPI等をサポートする．
@@ -26,25 +27,32 @@ SCALEチュートリアルを実行するための環境の準備について説
   \item {\bf netcdf3 もしくは HDF5/netcdf4} : gzip, szipをサポートするHDF5，
         およびそのHDF5をサポートするnetcdf4を必要とする．
         ただし，netcdf3の環境下ではscaleライブラリが提供する全ての機能をサポートできない可能性がある．
-  \item {\bf 描画環境（非必須）} : Dennou Club提供のRuby DCL/GPhysに含まれるgpviewがあると
-        計算結果を簡単にチェックできる．チュートリアルではgpviewを使用する．
-        それ以外に，netcdfからGrADS用にフォーマットを変換するためのpostprocess(\verb|netcdf2grads_h|)も用意している．
-  \item SCALEは演算性能評価のためにPAPIライブラリを使用が可能．
-        PAPIライブラリがインストールされている環境下では，
-        以下で説明するconfigureファイルの編集によってPAPIを適用することができます．
+  \end{itemize}
 \end{itemize}
 
 
+{\bf あると便利なシステム環境}
+\begin{itemize}
+  \item {\bf 描画環境}：GrADS、GPhys/Ruby-DCL、ncviewなどがあれば計算結果を描画することができる。
+  \item {\bf 演算性能評価}：演算性能評価としてPAPIライブラリを使用が可能である。
+\end{itemize}
+
 
 \section{ライブラリ環境のインストール}
+\label{sec:inst_env}
 %====================================================================================
 実行環境に合わせて、SCALEライブラリのインストールに必要な環境、ライブラリのインストールを行う。詳細は、Appendix \ref{sec:env_setting}を参照。
-\ref{sec:source_code}以降のチュートリアルは，
+\ref{sec:source_code}節以降のチュートリアルは，
 それらのライブラリ環境がインストールされていることを想定して進める．
 
+描画ツールは何を使っても良いが、対応を確認している描画ツールについての詳細とインストール方法についての情報は
+Appendix \ref{sec:env_vis_tools}を参照のこと。
+第3章および第4章のチュートリアルではGrADSを使って描画する方法を紹介する。
+その他にGphysを使って、結果のクイックビューを行う方法については、\label{sec:quicklook}節にて説明する。
 
 
-\section{Building the source code} \label{sec:source_code}
+
+\section{SCALEのコンパイル} \label{sec:source_code}
 %====================================================================================
 
 
@@ -52,8 +60,7 @@ SCALEチュートリアルを実行するための環境の準備について説
 \begin{itemize}
 \item CPU: Intel Core i5 2410M (sandybridge)
 \item Memory: DDR3-1333 4GB
-\item OS: CentOS 7.1 (kernel: 3.10.0-229.7.2.el7.x86\_64）\\
-{\small ＊インストール時、"日本語"、 "Gnome デスクトップ"、"Kdump有り"を選択}
+\item OS: CentOS 6.6 x86-64, CentOS 7.1 x86-64, openSUSE 13.2 x86-64
 \end{itemize}
 
 \subsubsection{ソースコードの入手}
@@ -125,13 +132,37 @@ HDF5，netcdf4ともに\verb|/usr|の下にインストールされている場�
  \verb|scale/scalelib/|というディレクトリ内でコンパイルとアーカイブが行われ，
  \verb|".lib"|という名前の隠しディレクトリとして
  \verb|bin/|ディレクトリ内へコピーされる．
-\item Debugモードでコンパイルしたい場合や，
- コンパイルオプションを変更したい場合は，
- \verb|Makedef.***|のファイルを編集する．
-\item 開発版ソースコードをコンパイルしている場合，
- 一部のコンパイラバージョンにおいて、コンパイルが正常に終了しないケースがある．
- そのような場合はSCALE開発チームまでご報告ください．
+\item Debugモードでコンパイルしたい場合は、\verb|"make -j 4 DEBUG=T"|としてコンパイルする。
+\item 細かくコンパイルオプションを変更したい場合は、\verb|Makedef.***|のファイルを編集する。
+%\item 開発版ソースコードをコンパイルしている場合，
+% 一部のコンパイラバージョンにおいて、コンパイルが正常に終了しないケースがある．
+% そのような場合はSCALE開発チームまでご報告ください．
 \end{itemize}
+
+
+\subsubsection{configure ファイルと環境変数の設定}
+%-----------------------------------------------------------------------------------
+
+\verb|scale/sysdep/|内にいくつかのコンフィグファイル（\verb|Makedef.***|）が準備されている．
+これらの中から自分の環境にあったものを設定する．
+チュートリアルでは，OSはLinux，コンパイラはgcc/gfortran，およびopenMPIを使用するため，
+\verb|"Makedef.Linux64-gnu-ompi"|が対応するファイルとなる．
+常にこのコンフィグファイルを使用するために、
+\verb|Makedef.***|の\verb|"***"|の部分を、\verb|SCALE_SYS|という環境変数として設定し、
+\verb|.bashrc|などのファイルに記述しておくと便利である．
+\begin{verbatim}
+ $ export SCALE_SYS="Linux64-gnu-ompi"
+\end{verbatim}
+自分の環境に合うものがなければ既存ファイルをベースにして作成する．
+
+さらに、SCALEをコンパイルするのに必要な外部ライブラリについても
+下記のようにPATHを設定する．
+ここでは，Appendix \ref{sec:env_setting}（Linux編）に従ったとして，
+HDF5，netcdf4ともに\verb|/usr|の下にインストールされている場合の例を示す．
+\begin{verbatim}
+ $ export HDF5="/usr"
+ $ export NETCDF4="/usr"
+\end{verbatim}
 
 
 %####################################################################################

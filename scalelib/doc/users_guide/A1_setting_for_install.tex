@@ -14,9 +14,9 @@ GNU compiler以外のIntel compilerなどを利用する場合は、各自でイ
 \noindent ここでインストールするライブラリ環境は、主に下記の4点である。
 \begin{itemize}
 \item GNU C/C++, fortran compiler
-\item HDF5 Library (https://www.hdfgroup.org/HDF5/)
-\item NetCDF Library (http://www.unidata.ucar.edu/software/netcdf/)
-\item Message Passing Interface (MPI) Library (openMPI版、http://www.open-mpi.org/)
+\item HDF5 Library (\url{https://www.hdfgroup.org/HDF5/})
+\item NetCDF Library (\url{http://www.unidata.ucar.edu/software/netcdf/})
+\item Message Passing Interface (MPI) Library (openMPI版、\url{http://www.open-mpi.org/})
 \end{itemize}
 これらのインストール方法について、本書では下記の5種類のOperating System (OS）について説明する。
 \begin{itemize}
@@ -77,6 +77,14 @@ Linuxをインストール後、各種プログラムのインストールには
 \section{インストール方法 (Linux - CentOS 6.6 編)}
 %==========================================================================================
 
+以下の説明で使用した環境は次のとおりである。
+\begin{itemize}
+\item CPU: Intel Core i5 2410M (sandybridge)
+\item Memory: DDR3-1333 4GB
+\item OS: CentOS 6.6 (kernel: 2.6.32-504.23.4.el6.x86\_64）\\
+{\small ＊インストール時、"日本語"、 "Desktop"、"Kdump有り"を選択}
+\end{itemize}
+
 \subsubsection{ライブラリのインストール}
 
 CentOS 6.6では、一部のライブラリを外部リポジトリからインストールする。
@@ -94,13 +102,15 @@ CentOS 6.6では、ソフトウェアのインストールに"yum"コマンド�
 {\small ＊この時点で、yumによるインストールに失敗する場合は、
 プロキシ設定等を含めた通信環境、yumリポジトリの登録状況等を再確認すること。}
 
-\noindent yumのグループインストール機能を用いて，開発ツール（ここでの対象は主にGNU compilerとmakeシステム）をまとめてインストールする。
+\noindent yumのグループインストール機能を用いて，開発ツール
+（ここでの対象は主にGNU compilerとmakeシステム）をまとめてインストールする。
 \begin{verbatim}
  # yum groupinstall "development tools"
 \end{verbatim}
 
 \noindent グループインストールではインストールされないライブラリを個別に追加する。
 \begin{verbatim}
+ # yum install zlib-devel
  # yum install hdf5-devel hdf5-static
  # yum install netcdf-devel netcdf-static
  # yum install openmpi-devel
@@ -189,7 +199,8 @@ CentOS 7.1では、ソフトウェアのインストールに"yum"コマンド�
 {\small ＊この時点で、yumによるインストールに失敗する場合は、
 プロキシ設定等を含めた通信環境、yumリポジトリの登録状況等を再確認すること。}
 
-\noindent yumのグループインストール機能を用いて，開発ツール（ここでの対象は主にGNU compilerとmakeシステム）をまとめてインストールする。
+\noindent yumのグループインストール機能を用いて，開発ツール
+（ここでの対象は主にGNU compilerとmakeシステム）をまとめてインストールする。
 \begin{verbatim}
  # yum groupinstall "development tools"
 \end{verbatim}
@@ -373,6 +384,7 @@ macportsでインストールできるパッケージのうち、重要なもの
 
 
 \section{描画ツールのインストール}
+\label{sec:env_vis_tools}
 %==========================================================================================
 
 SCALEの計算結果や、初期値/境界値データなどを描画するのに利用可能である描画ツールの例を挙げる。
@@ -382,28 +394,28 @@ SCALEの計算結果や、初期値/境界値データなどを描画するの�
 \begin{itemize}
 \item Gphys / Ruby-DCL by 地球電脳倶楽部\\
  \begin{itemize}
-  \item URL： \verb|http://ruby.gfd-dennou.org/products/gphys/|
+  \item URL： \url{http://ruby.gfd-dennou.org/products/gphys/}
   \item 概略：SCALEの出力ファイルは、MPI並列の計算領域分割に従ってMPIプロセスごとに
               NetCDF形式の分割ファイルとして出力される。Gphysの"gpview"や"gpvect"といった
               描画ツールを使えば、分割ファイルを後処理なしに直接開いて描画することができる。
   \item インストール方法：本書で使用したCentOS6、CentOS7については、下記のWebページにインストール方法が記載されている。\\
-                         \verb|http://www.gfd-dennou.org/arch/davis/gfdnavi/doc/install/install-ruby-gphys.htm|
+                        \url{http://www.gfd-dennou.org/arch/davis/gfdnavi/doc/install/install-ruby-gphys.htm}
  \end{itemize}
 \item Grid Analysis and Display System (GrADS) by COLA\\
  \begin{itemize}
-  \item URL： \verb|http://iges.org/grads/|
+  \item URL： \url{http://iges.org/grads/}
   \item 概略：言わずと知れた描画ツール。SCALEのNetCDF形式の分割ファイルをそのまま読むことはできない
              ため、SCALEで提供している出力データの後処理ツール"\verb|netcdf2grads_h|"を使用して分割ファイルを結合し、
-             GrADSで読み込めるファイル形式に変換する必要ある。"\verb|netcdf2grads_h|"の使用方法は本書の第3章、
-             および第4章を参照のこと。
-  \item インストール方法：\verb|http://iges.org/grads/downloads.html|を参照のこと。
+             GrADSで読み込めるファイル形式に変換する必要ある。"\verb|netcdf2grads_h|"のインストール方法は、
+本書の第\ref{sec:inst_env}章、使用方法は第3章、および第4章を参照のこと。
+  \item インストール方法：\url{http://iges.org/grads/downloads.html}を参照のこと。
  \end{itemize}
 \item Ncview: a netCDF visual browser by David W. Pierce\\
  \begin{itemize}
-  \item URL： \verb|http://meteora.ucsd.edu/~pierce/ncview_home_page.html|
+  \item URL： \url{http://meteora.ucsd.edu/~pierce/ncview_home_page.html}
   \item 概略：NetCDF形式ファイルのクイックビューアーである。SCALEの分割ファイルを結合して描画することは
              できないが、分割ファイルを１つずつ描画してチェックすることはできる。
-  \item インストール方法：\verb|http://meteora.ucsd.edu/~pierce/ncview_home_page.html|を参照のこと。
+  \item インストール方法：\url{http://meteora.ucsd.edu/~pierce/ncview_home_page.html}を参照のこと。
                         また、CentOS6、CentOS7などでepelリポジトリを登録していれば、yumコマンドによって
                         インストールできる。
  \end{itemize}
