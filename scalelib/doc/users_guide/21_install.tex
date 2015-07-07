@@ -2,16 +2,20 @@
 SCALEチュートリアルを実行するための環境の準備について説明する。
 なお、本ユーザーズガイド内の説明で、コマンドラインのシンボル（\verb|$|）があれば、コマンドの実行を示す．
 
-\section{Required Environment}
+\section{必要なシステム環境}
 \label{sec:req_env}
 %====================================================================================
-SCALEの実行環境は下記を想定している。
+ここでは、SCALEのインストール、および実行に必要な環境について説明する。
 
+{\bf 必須のシステム環境}
 \begin{itemize}
-  \item {\bf 計算機環境} : Unix互換OS (Mac OS Xを含む)が動作する環境．
-        マルチコアCPU環境以上を推奨する．
-        実験サイズによるが、最低4GB以上のメモリが
-        インストールされているマシン環境が好ましい．
+  \item {\bf システム構成}
+\begin{itemize}
+  \item {\bf CPU} : 理想実験は物理コアが2コア以上、現実大気実験は4コア以上を搭載したシステムが望ましい。
+  \item {\bf メモリ} : 理想実験は512MB以上、現実大気実験は2GB以上のメモリ容量が搭載されたシステムが必要となる。
+  \item {\bf HDD} : 実験内容によって変化するがTutorialの現実大気実験を実行するには約3GBのディスク空き容量が必要となる。
+\end{itemize}
+
   \item {\bf OS} : Linux OS（Fedora, CentOS, SUSE等），Mac OS X．
         チュートリアルでは、Linux (CentOS6)を使用して説明する．
   \item {\bf コンパイラ} : Fortran 2003をサポートするC，Fortranコンパイラを必要とする．
@@ -43,6 +47,14 @@ SCALEの実行環境は下記を想定している。
 \section{Building the source code} \label{sec:source_code}
 %====================================================================================
 
+
+以下の説明で使用した環境は次のとおりである。
+\begin{itemize}
+\item CPU: Intel Core i5 2410M (sandybridge)
+\item Memory: DDR3-1333 4GB
+\item OS: CentOS 7.1 (kernel: 3.10.0-229.7.2.el7.x86\_64）\\
+{\small ＊インストール時、"日本語"、 "Gnome デスクトップ"、"Kdump有り"を選択}
+\end{itemize}
 
 \subsubsection{ソースコードの入手}
 %-----------------------------------------------------------------------------------
