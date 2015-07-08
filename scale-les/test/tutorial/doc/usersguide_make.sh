@@ -7,6 +7,10 @@
 platex scale_users_guide.tex
 # second time
 platex scale_users_guide.tex
+# bibtex
+bibtex scale_users_guide
+# final time
+platex scale_users_guide.tex
 # dvi to pdf
 dvipdfmx scale_users_guide.dvi
 #

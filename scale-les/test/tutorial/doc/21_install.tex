@@ -140,30 +140,5 @@ HDF5，netcdf4ともに\verb|/usr|の下にインストールされている場�
 \end{itemize}
 
 
-\subsubsection{configure ファイルと環境変数の設定}
-%-----------------------------------------------------------------------------------
-
-\verb|scale/sysdep/|内にいくつかのコンフィグファイル（\verb|Makedef.***|）が準備されている．
-これらの中から自分の環境にあったものを設定する．
-チュートリアルでは，OSはLinux，コンパイラはgcc/gfortran，およびopenMPIを使用するため，
-\verb|"Makedef.Linux64-gnu-ompi"|が対応するファイルとなる．
-常にこのコンフィグファイルを使用するために、
-\verb|Makedef.***|の\verb|"***"|の部分を、\verb|SCALE_SYS|という環境変数として設定し、
-\verb|.bashrc|などのファイルに記述しておくと便利である．
-\begin{verbatim}
- $ export SCALE_SYS="Linux64-gnu-ompi"
-\end{verbatim}
-自分の環境に合うものがなければ既存ファイルをベースにして作成する．
-
-さらに、SCALEをコンパイルするのに必要な外部ライブラリについても
-下記のようにPATHを設定する．
-ここでは，Appendix \ref{sec:env_setting}（Linux編）に従ったとして，
-HDF5，netcdf4ともに\verb|/usr|の下にインストールされている場合の例を示す．
-\begin{verbatim}
- $ export HDF5="/usr"
- $ export NETCDF4="/usr"
-\end{verbatim}
-
-
 %####################################################################################
 
