@@ -10,7 +10,7 @@ platex scale_users_guide.tex
 # dvi to pdf
 dvipdfmx scale_users_guide.dvi
 #
-acroread scale_users_guide.pdf
+#acroread scale_users_guide.pdf
 #
 #-----------------------------------------
 #EOF
