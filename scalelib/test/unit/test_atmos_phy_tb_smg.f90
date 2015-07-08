@@ -131,6 +131,7 @@ contains
 
   ZERO(:,:,:,:) = 0.0_RP
 
+  KME = KE
   do k = KS+1, KE
      if ( GRID_CBFZ(k) > 0.0_RP ) then
         KME = k - 1
