@@ -389,7 +389,7 @@ contains
                 call PRC_MPIstop
              endif
           endif
-       case('MSLP','PRES','U10','V10','T2')
+       case('MSLP','PSFC','U10','V10','T2')
           if (.not. data_available(ielem)) then
              if (IO_L) write(IO_FID_LOG,*) 'warning: ',trim(item),' cannot found and will be estimated.'
              cycle
