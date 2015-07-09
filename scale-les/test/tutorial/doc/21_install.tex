@@ -18,7 +18,7 @@ SCALEチュートリアルを実行するための環境の準備について説
 
   \item {\bf システムソフトウェア構成}
   \begin{itemize}
-  \item {\bf OS} : Linux OS（Fedora, CentOS, SUSE等）、Mac OS X。
+  \item {\bf OS} : Linux OS（Fedora, CentOS, openSUSE等）、Mac OS X。
   \item {\bf コンパイラ} : Fortran 2003をサポートするC、Fortranコンパイラを必要とする。
         GNU 4.6.x以上，Intel compiler 2012以上を推奨する．
         チュートリアルでは，gcc/gfortranを使用して説明する．
@@ -42,7 +42,7 @@ SCALEチュートリアルを実行するための環境の準備について説
 \label{sec:inst_env}
 %====================================================================================
 実行環境に合わせて、SCALEライブラリのインストールに必要な環境、ライブラリのインストールを行う。詳細は、Appendix \ref{sec:env_setting}を参照。
-\ref{sec:source_code}節以降のチュートリアルは，
+第\ref{sec:tuto_ideal}章、第\ref{sec:tuto_real}章のチュートリアルは，
 それらのライブラリ環境がインストールされていることを想定して進める．
 
 描画ツールは何を使っても良いが、対応を確認している描画ツールについての詳細とインストール方法についての情報は
@@ -124,6 +124,16 @@ HDF5，netcdf4ともに\verb|/usr|の下にインストールされている場�
  scale-les  scale-les_init  scale-les_pp
 \end{verbatim}
 の3つの実行ファイルが生成されていればコンパイルは成功である．\\
+
+下記のコマンドで作成された実行バイナリを消去できる。
+\begin{verbatim}
+ $ make clean
+\end{verbatim}
+ただし、この場合はコンパイルされたライブラリは消去されないため、全てのコンパイル済みファイルを消去したい場合は、
+\begin{verbatim}
+ $ make allclean
+\end{verbatim}
+とする。コンパイラを変更したり、コンパイルオプションを変更して再コンパイルする場合は、"allclean"を実行すること。
 
 
 {\bf 注意点}

@@ -11,6 +11,7 @@
 \usepackage[round]{natbib}
 \usepackage{tabularx}
 \usepackage{colortbl}
+\usepackage{fancybox}
 \usepackage{url}
 %\setlength{\textwidth}{42zw}
 %\setlength{\textheight}{40\baselineskip}
@@ -22,24 +23,28 @@
 \tableofcontents
 
 \chapter{Overview}
+\label{sec:overview}
 \input{11_introduction}
 %\input{12_exp_intro}
 
 \chapter{Installation}
+\label{sec:install}
 \input{21_install}
 
-\chapter{SCALE-LES Tutrial: Ideal case}
+\chapter{SCALE-LES Tutorial: Ideal case}
+\label{sec:tuto_ideal}
 \input{31_ideal_exp}
 
-\chapter{SCALE-LES Tutrial: Real case}
+\chapter{SCALE-LES Tutorial: Real case}
+\label{sec:tuto_real}
 \input{41_real_exp_prep}
 \input{42_real_exp_pp}
 \input{43_real_exp_init}
 \input{44_real_exp_run}
 \input{45_quicklook_gpview}
 
-
 \chapter{SCALE-LES Advance use}
+\label{sec:advance}
 \input{51_advance_use}
 \input{52_online_nesting}
 \input{53_scheme_list}
