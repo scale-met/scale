@@ -3,18 +3,26 @@
 #   Test Script for XXX  (Ver.0.1)
 #   2009/10/26 --- Ryuji Yoshida.
 #-----------------------------------------
-# first time
-platex scale_users_guide.tex
-# second time
-platex scale_users_guide.tex
-# bibtex
-bibtex scale_users_guide
-# final time
-platex scale_users_guide.tex
-# dvi to pdf
-dvipdfmx scale_users_guide.dvi
 #
-#acroread scale_users_guide.pdf
+FNAME="scale_users_guide"
+#
+# first time
+platex ${FNAME}.tex
+# bibtex first time
+bibtex ${FNAME}
+# second time
+platex ${FNAME}.tex
+# bibtex second time
+bibtex ${FNAME}
+# final time
+platex ${FNAME}.tex
+#
+# dvi to pdf
+dvipdfmx -p a4 ${FNAME}.dvi
+#
+if [ -e /etc/vine-release ]; then
+ evince ${FNAME}.pdf
+fi
 #
 #-----------------------------------------
 #EOF
