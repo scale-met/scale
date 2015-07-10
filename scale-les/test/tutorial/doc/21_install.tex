@@ -1,54 +1,98 @@
-本章では，SCALE-LESの使用方法と、
-SCALEチュートリアルを実行するための環境の準備について説明する。
-なお、本ユーザーズガイド内の説明で、コマンドラインのシンボル（\verb|$|）があれば、コマンドの実行を示す．
+本章では、SCALE-LESの使用方法と、SCALEチュートリアルを実行するための環境の準備について説明する。
 
 \section{必要なシステム環境}
 \label{sec:req_env}
 %====================================================================================
 ここでは、SCALEのインストール、および実行に必要な環境について説明する。
+以下に説明するもの以外に、SCALEは、理化学研究所 計算科学研究機構のスーパーコンピュータ「京」、
+及びFujitsu PRIME-HPC FX10の環境に対応している。
 
-{\bf 必須のシステム環境}
+\noindent {\bf 必須のシステム環境}
 \begin{itemize}
   \item {\bf システムハードウェア構成}
   \begin{itemize}
     \item {\bf CPU} : 理想実験は物理コアが2コア以上、現実大気実験は4コア以上を搭載したシステムが望ましい。
     \item {\bf Memory} : 理想実験は512MB以上、現実大気実験は2GB以上のメモリ容量が搭載されたシステムが必要となる。
-    \item {\bf HDD} : 実験内容によって変化するがTutorialの現実大気実験を実行するには約3GBのディスク空き容量が必要となる。
+    \item {\bf HDD} : 実験内容によって変化するが、Tutorialの現実大気実験を実行するには約3GBのディスク空き容量が必要となる。
   \end{itemize}
 
   \item {\bf システムソフトウェア構成}
   \begin{itemize}
-  \item {\bf OS} : Linux OS（Fedora, CentOS, openSUSE等）、Mac OS X。
-  \item {\bf コンパイラ} : Fortran 2003をサポートするC、Fortranコンパイラを必要とする。
-        GNU 4.6.x以上，Intel compiler 2012以上を推奨する．
-        チュートリアルでは，gcc/gfortranを使用して説明する．
-  \item {\bf MPIライブラリ} : MPICH2, OpenMPI, Intel MPI等をサポートする．
-        チュートリアルではopenMPIを使用して説明する．
-  \item {\bf netcdf3 もしくは HDF5/netcdf4} : gzip, szipをサポートするHDF5，
-        およびそのHDF5をサポートするnetcdf4を必要とする．
-        ただし，netcdf3の環境下ではscaleライブラリが提供する全ての機能をサポートできない可能性がある．
+  \item {\bf OS} : Linux OS、Mac OS X\\
+        対応確認済みOSについては、表\ref{tab:compatible_os}を参照のこと。
+  \item {\bf コンパイラ} : Cコンパイラ、Fortran\\
+        FortranコンパイラはFortran2003をサポートするコンパイラを必要とする。
+        対応確認済みコンパイラについては、表\ref{tab:compatible_compiler}を参照のこと。
+  \item {\bf MPIライブラリ} : MPI1.0/2.0 に対応するMPIライブラリを必要とする。
+        対応確認済みMPIライブラリについては、表\ref{tab:compatible_mpi}を参照のこと。
+  \item {\bf ファイルI/Oライブラリ} : gzip、HDF5、NetCDF4を必要とする。\\
+        HDF5/NetCDF4の代わりに、NetCDF3でも動作するが、この場合はSCALEが提供する全ての機能が有効にならない可能性がある。
   \end{itemize}
 \end{itemize}
 
 
-{\bf あると便利なシステム環境}
+\noindent {\bf あると便利なシステム環境}
 \begin{itemize}
+  \item {\bf データ変換ツール}：wgrib、wgrib2やNCL等があれば、SCALEで直接サポートしないデータを外部入力データとして利用できる。現実大気実験のTutorialでは、実際にwgrib2を利用する。
   \item {\bf 描画環境}：GrADS、GPhys/Ruby-DCL、ncviewなどがあれば計算結果を描画することができる。
   \item {\bf 演算性能評価}：演算性能評価としてPAPIライブラリを使用が可能である。
 \end{itemize}
 
 
+\begin{table}[htb]
+\begin{center}
+\caption{対応確認済みOS（全てx86-64の64bit版）}
+\begin{tabularx}{150mm}{|l|l|X|} \hline
+ \rowcolor[gray]{0.9} OS名 & 確認済みバージョン & 備考 \\ \hline
+ CentOS                & 6.5、6.6、7.0、7.1 & 左記以外も正常動作する可能性が高い \\ \hline
+ openSUSE              & 13.2               &  \\ \hline
+ SUSE Enterprise Linux & 11.1、11.3         & 11.1ではGNUコンパイラは使用不可 \\ \hline
+ fedora                & 20                 & 左記以外も正常動作する可能性が高い \\ \hline
+ Vine Linux            & 6.2、6.3           &  \\ \hline
+ Mac OS X              & 10.10 Yosemite     &  \\ \hline
+\end{tabularx}
+\label{tab:compatible_os}
+\end{center}
+\end{table}
+
+\begin{table}[htb]
+\begin{center}
+\caption{対応確認済みコンパイラ}
+\begin{tabularx}{150mm}{|l|l|X|} \hline
+ \rowcolor[gray]{0.9} コンパイラ名 & 確認済みバージョン & 備考 \\ \hline
+ GNU (gcc/gfortran)    & 4.4.x, 4.8.x           & 4.4.xではコンパイル時にWarningが出ることがある \\ \hline
+ Intel (icc/ifort)     & 13.0.1、14.0.2、15.0.0 & 2013年以降のバージョンであれば左記以外も正常動作する可能性が高い\\ \hline
+ PGI (gcc/pgfortran)   & 14.3                   &  \\ \hline
+\end{tabularx}
+\label{tab:compatible_compiler}
+\end{center}
+\end{table}
+
+\begin{table}[htb]
+\begin{center}
+\caption{対応確認済みMPIライブラリ}
+\begin{tabularx}{150mm}{|l|l|X|} \hline
+ \rowcolor[gray]{0.9} MPIライブラリ名 & 確認済みバージョン & 備考 \\ \hline
+ openMPI   & 1.8.5                    & 左記以外も正常動作する可能性が高い \\ \hline
+ Intel MPI & 4.0 Update 3、4.1.0、5.0 & 2013年以降のバージョンであれば左記以外も正常動作する可能性が高い \\ \hline
+ SGI MPT   & 2.05、2.09               & Intel Compilerとの組み合わせで確認済み \\ \hline
+\end{tabularx}
+\label{tab:compatible_mpi}
+\end{center}
+\end{table}
+
+
 \section{ライブラリ環境のインストール}
 \label{sec:inst_env}
 %====================================================================================
-実行環境に合わせて、SCALEライブラリのインストールに必要な環境、ライブラリのインストールを行う。詳細は、Appendix \ref{sec:env_setting}を参照。
+実行環境に合わせて、SCALEライブラリのインストールに必要な環境、ライブラリのインストールを行う。詳細は、Appendix \ref{sec:env_setting}章を参照。
 第\ref{sec:tuto_ideal}章、第\ref{sec:tuto_real}章のチュートリアルは，
 それらのライブラリ環境がインストールされていることを想定して進める．
 
 描画ツールは何を使っても良いが、対応を確認している描画ツールについての詳細とインストール方法についての情報は
 Appendix \ref{sec:env_vis_tools}を参照のこと。
 第3章および第4章のチュートリアルではGrADSを使って描画する方法を紹介する。
-その他にGphysを使って、結果のクイックビューを行う方法については、\label{sec:quicklook}節にて説明する。
+その他にGphysを使って、結果のクイックビューを行う方法については、\ref{sec:quicklook}節にて説明する。
 
 
 
