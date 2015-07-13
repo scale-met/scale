@@ -48,8 +48,8 @@ FC     = mpifrtpx
 FFLAGS = $(FFLAGS_FAST) $(PERF_MONIT) $(RDMA) $(SDM)
 #FFLAGS = $(FFLAGS_DEBUG) $(PERF_MONIT) $(RDMA) $(SDM)
 
-#FFLAGS_DYN ?= $(FFLAGS) -Knoprefetch,loop_nofission,loop_nofusion,nounroll,parallel_strong -Ksimd=2
-FFLAGS_DYN ?= $(FFLAGS)
+FFLAGS_DYN ?= $(FFLAGS) -Knoprefetch,loop_nofission,loop_nofusion,nounroll,parallel_strong -Ksimd=2
+#FFLAGS_DYN ?= $(FFLAGS)
 
 #FFLAGS_SDM ?= $(FFLAGS) -Kprefetch_indirect
 #FFLAGS_SDM ?= $(FFLAGS)
