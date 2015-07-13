@@ -68,7 +68,7 @@ CentOS 6.6では、ソフトウェアのインストールに"yum"コマンド�
 
 {\small {\gt
 \fbox{
-\begin{tabular}{l}
+\begin{tabularx}{140mm}{l}
 読み込んだプラグイン:fastestmirror, refresh-packagekit, security\\
 インストール処理の設定をしています\\
 Loading mirror speeds from cached hostfile\\
@@ -108,7 +108,7 @@ rpm\_check\_debug を実行しています\\
   epel-release.noarch 0:6-8\\
 \\
 完了しました!\\
-\end{tabular}
+\end{tabularx}
 }}}\\
 {\small ＊この時点で、yumによるインストールに失敗する場合は、
 プロキシ設定等を含めた通信環境、yumリポジトリの登録状況等を再確認すること。}
@@ -149,7 +149,7 @@ rpm\_check\_debug を実行しています\\
 
 {\gt
 \ovalbox{
-\begin{tabular}{l}
+\begin{tabularx}{140mm}{l}
  \\
  \verb|// ---------------- Add to end of the file ----------------|\\
  \verb|# OpenMPI|\\
@@ -157,7 +157,7 @@ rpm\_check\_debug を実行しています\\
  \verb|export PATH="$PATH:$MPI/bin"|\\
  \verb|export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$MPI/lib"|\\
  \\
-\end{tabular}
+\end{tabularx}
 }}\\
 
 編集が終わったら、環境設定を有効にする。
@@ -223,7 +223,7 @@ CentOS 7.1では、ソフトウェアのインストールに"yum"コマンド�
 
 {\small {\gt
 \fbox{
-\begin{tabular}{l}
+\begin{tabularx}{140mm}{l}
 読み込んだプラグイン:fastestmirror, langpacks\\
 base                                                      3.6 kB     00:00\\
 extras                                                    3.4 kB     00:00\\
@@ -266,7 +266,7 @@ Running transaction\\
   epel-release.noarch 0:7-5\\
 \\
 完了しました!\\
-\end{tabular}
+\end{tabularx}
 }}}\\
 
 {\small ＊この時点で、yumによるインストールに失敗する場合は、
@@ -310,7 +310,7 @@ Running transaction\\
 
 {\gt
 \ovalbox{
-\begin{tabular}{l}
+\begin{tabularx}{140mm}{l}
  \\
  \verb|// ---------------- Add to end of the file ----------------|\\
  \verb|# OpenMPI|\\
@@ -318,7 +318,7 @@ Running transaction\\
  \verb|export PATH="$PATH:$MPI/bin"|\\
  \verb|export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$MPI/lib"|\\
  \\
-\end{tabular}
+\end{tabularx}
 }}\\
 
 編集が終わったら、環境設定を有効にする。
@@ -366,14 +366,14 @@ openSUSEでは一般にユーザーがrootユーザーにスイッチするこ�
 
 {\small {\gt
 \fbox{
-\begin{tabular}{l}
+\begin{tabularx}{140mm}{l}
  リポジトリ 'home\_ocefpaf' を追加しています ...............................完了 \\
  リポジトリ 'home\_ocefpaf' を正常に追加しました\\
  有効         : はい (Y)\\
  自動更新     : いいえ (N)\\
  GPG チェック : はい (Y)\\
  URI          : \url{http://download.opensuse.org/repositories/home:/ocefpaf/openSUSE_13.2/}
-\end{tabular}
+\end{tabularx}
 }}}\\
 
 {\small ＊この時点で、zypperによるインストールに失敗する場合は、
@@ -392,10 +392,10 @@ home\_ocefpafリポジトリを登録して最初のインストールの場合�
 
 {\small {\gt
 \fbox{
-\begin{tabular}{l} 
+\begin{tabularx}{140mm}{l}
  鍵を拒否しますか (R)？ 一時的に信頼しますか (T)？ \\
  それとも今後ずっと信頼しますか (A)？ [r/t/a/? 全てのオプションを表示] (r): a
-\end{tabular}
+\end{tabularx}
 }}}\\
 
 \noindent つづいて、devel\_basisパッケージに含まれないライブラリを個別に追加する。
@@ -427,7 +427,7 @@ home\_ocefpafリポジトリを登録して最初のインストールの場合�
 
 {\gt
 \ovalbox{
-\begin{tabular}{l}
+\begin{tabularx}{140mm}{l}
  \\
  \verb|// ---------------- Add to end of the file ----------------|\\
  \verb|# OpenMPI|\\
@@ -435,7 +435,7 @@ home\_ocefpafリポジトリを登録して最初のインストールの場合�
  \verb|export PATH="$PATH:$MPI/bin"|\\
  \verb|export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$MPI/lib64"|\\
  \\
-\end{tabular}
+\end{tabularx}
 }}\\
 
 編集が終わったら、環境設定を有効にする。

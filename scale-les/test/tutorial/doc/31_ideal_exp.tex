@@ -1,111 +1,319 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%  File 31_ideal_exp.tex
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-前節までで、SCALEのコンパイル方法を説明した．ここでは前節までのコンパイルが正常に終了し，
+本章では、チュートリアルにおける1つめの実験として、SCALEを使った理想実験（Ideal case）の
+実行方法を説明する。簡単な実験であるが、第\ref{sec:install}章で実行したSCALEのコンパイルが
+正常に完了しているかどうかのチェックも含めてぜひ実施してもらいたい。
 
+
+ここでは、SCALEのコンパイルが正常に終了し、
 \begin{verbatim}
   scale-les/test/tutorial/bin
 \end{verbatim}
-にscale-les，scale-les\_init，scale-les\_ppが生成されているもととして，このチュートリアル（その１）では理想実験の例を示す．
-なお，理想化実験の実験セットは
-
+に\verb|scale-les|、および\verb|scale-les_init|が生成されており、
 \begin{verbatim}
-  scale-les/test/case
+  scale-les/util/netcdf2grads_h
 \end{verbatim}
-に以下に複数用意されているが，このチュートリアルでは，4MPIプロセスで実行できるSUPERCELLの実験事例を紹介する．
-正常に実験が終了した場合，図\cite{fig3.1}のような鉛直断面の画像が出力される．
-なお，現実事例を想定したNestingによる実験については次節を参照されたい．
+に\verb|net2g|が生成されているものとして説明を行う。
+これらに加えて、本章のチュートリアルでは、描画ツールとしてGrADSを使用する。
+GrADSの詳細やインストール方法については、Appendix \ref{sec:env_vis_tools}節を参照のこと。
 
-\subsection{実行方法}
-チュートリアルのための，理想実験は，
+
+ここで実行する理想実験は、「スコールライン」と呼ばれる積乱雲群を発生させる実験である。
+実験設定の概要を表\ref{tab:setting_ideal}に示す。この実験は、積乱雲が発生する場合の
+典型的な大気の成層構造を表現した鉛直プロファイルを与え、対流圏下層に置いた初期擾乱から
+積乱雲が発達する様子を準2次元モデル実験する内容となっている。
+
+\begin{table}[htb]
+\begin{center}
+\caption{チュートリアル理想実験の実験設定}
+\begin{tabularx}{150mm}{|l|l|X|} \hline
+ \rowcolor[gray]{0.9} 項目 & 設定内容 & 備考 \\ \hline
+ 水平格子間隔     & 東西：500 m、南北：1000 m    & 東西-鉛直の面を切り取った準2次元実験である \\ \hline
+ 水平格子点数     & 東西：40、南北：2 & 東西-鉛直の面を切り取った準2次元実験である \\ \hline
+ 鉛直層数         & 97層（トップ：20 km）& 下層ほど細かい層間隔をとったストレッチ設定である \\ \hline
+ 側面境界条件     & 周期境界 & 東西、南北とも \\ \hline
+ 積分時間間隔     & 5 sec                       & 雲微物理スキームは10 sec毎 \\ \hline
+ 積分期間         & 3,600 sec                   & 720 steps \\ \hline
+ データ出力間隔   & 300 sec                      &  \\ \hline
+ 物理スキーム & 雲微物理モデルのみ使用 & 6-class single moment bulk model (tomita 2006) \\ \hline
+ 初期鉛直プロファイル & GCSS Case1 squall-line & 風のプロファイルは、Ooyama (2001)に基づいた鉛直シアをもっている \\ \hline
+ 初期擾乱 & ウォームバブル & 水平半径4 km、鉛直半径3 kmの大きさを持つ最大プラス3Kの強度のウォームバブルを置く。\\ \hline
+\end{tabularx}
+\label{tab:setting_ideal}
+\end{center}
+\end{table}
+
+このチュートリアルを実行するには、最低でも2コア/4スレッドの演算コアを持つCPU、
+512MB以上のメモリを搭載した計算機が必要である。本節の説明で使用した環境は次のとおりである。
+\begin{itemize}
+\item CPU: Intel Core i5 2410M 2コア/4スレッド
+\item Memory: DDR3-1333 4GB
+\item OS: CentOS 6.6 x86-64, CentOS 7.1 x86-64, openSUSE 13.2 x86-64
+\end{itemize}
+
+
+\section{実行方法}
+%====================================================================================
+
+実行の流れとしては、下準備、初期値の作成、モデル本体の実行、後処理、そして描画といった順番で作業を進める。
+
+\subsection{下準備}
+%------------------------------------------------------
+チュートリアル理想実験は、\verb|scale-les/test/tutorial/ideal|のディレクトリにて実行するので、
+まずこのディレクトリに移動する。
 \begin{verbatim}
-  scale-les/test/tutorial/ideal/tutorial
+  $ cd scale-les/test/tutorial/ideal
 \end{verbatim}
-にて実行する．このチュートリアルにおいては，このディレクトリの中で前節までに生成された実行バイナリにリンクを張り，それを実行する．
-実行するためには，まず上記のディレクトリに移動する．
-
+次に、このディレクトリに対して、前章までに作成したSCALEの実行バイナリの静的リンクを張る。
 \begin{verbatim}
-  $ cd scale-les/test/tutorial/ideal/tutorial
+  $ ln -s ../bin/scale-les       ./
+  $ ln -s ../bin/scale-les_init  ./
 \end{verbatim}
-このディレクトリに於いて，tutorial\_test.shを実行することで，4MPI並列にて「初期値作成」，および「実験の実行」を行う．
-この際行われる実験では，HEVI，1-moment雲微物理モデルを用いた計算を行う（放射やサブグリッドスケールモデルは考慮しない）．
+``\verb|scale-les|''はモデル本体、``\verb|scale-les_init|''は初期値・境界値作成ツールである。
+もし、ここで説明するディレクトリとは異なる場所で実行している場合は、リンクを張る時のディレクトリ指定に注意すること。
 
+\subsection{初期値作成}
+%------------------------------------------------------
+ここでは、``\verb|scale-les_init|''を実行して初期値を作成する。
+``\verb|scale-les_init|''を実行する際にはconfigファイルを与える。
+例えば、``\verb|init_R20kmDX500m.conf|''のファイルには、表\ref{tab:setting_ideal}に対応した実験設定が書き込まれており、
+このconfigファイルの指示に従って\verb|scale-les_init|は大気の成層構造を計算し、ウォームバブルを設置する。
+
+
+SCALEの基本的な実行コマンドは下記のとおりである。
 \begin{verbatim}
-  $ sh tutorial_test.sh
+  $ mpirun  -n  [プロセス数]  [実行バイナリ名]  [configファイル]
+\end{verbatim}
+[プロセス数]の部分にはMPI並列で使用したいプロセス数を記述する。[実行バイナリ]には、\verb|scale-les|や\verb|scale-les_init|が入る。そして、実験設定を記述したconfigファイルを[configファイル]の部分に指定する。
+ここでは、\textcolor{red}{2つのMPIプロセス}を用いて実行する。以降、これを「2-MPI並列」のように表現する。
+従って、\verb|init_R20kmDX500m.conf|をconfigファイルとして与えて、2-MPI並列で\verb|scale-les_init|を実行する場合の
+コマンドはつぎのようになる。
+\begin{verbatim}
+  $ mpirun  -n  2  ./scale-les_init  init_R20kmDX500m.conf
 \end{verbatim}
 
-Core i7搭載のiMacにて，計算におおよそ15分程度程度を要する．正常に終了すると，t=600, 1200, 1800, 2400[sec]のx-z断面が順次描画される．
-この描画にはgphysが必要なため，gphysが正しくインストールされている必要がある．図\cite{fig3.1}はt=1200[sec]の鉛直断面である．
+\noindent 実行が成功した場合には、コマンドラインのメッセージは下記のように表示される。\\
+{\small {\gt
+\fbox{
+\begin{tabularx}{100mm}{l}
+ *** Start Launch System for SCALE-LES\\
+ TOTAL BULK JOB NUMBER   =    1\\
+ PROCESS NUM of EACH JOB =     2\\
+ TOTAL DOMAIN NUMBER     =    1\\
+ Flag of ABORT ALL JOBS  =  F\\
+ *** a single comunicator\\
+ *** a single comunicator\\
+\end{tabularx}
+}}}\\
+
+\noindent この実行によって、\\
+``init\_LOG.pe000000''\\
+``init\_00000000000.000.pe000000.nc''\\
+``init\_00000000000.000.pe000000.nc''\\
+の3つのファイルが、現在のディレクトリ下に作成されているはずである。
+``init\_LOG.pe000000''には、コマンドラインには表示されない詳しい実行ログが記録されている。
+実行が正常に終了している場合、このLOGファイルの最後に\\
+
+{\small {\gt
+\ovalbox{
+\begin{tabularx}{100mm}{l}
+ ++++++ Stop MPI\\
+ *** Broadcast STOP signal\\
+ *** MPI is peacefully finalized\\
+\end{tabularx}
+}}}\\
+\noindent と記述される。
+
+そして、``init\_00000000000.000.pe000000.nc''と``init\_00000000000.000.pe000001.nc''の2つのファイルが
+初期値ファイルである。計算領域全体を2つのMPIプロセスで分割し、担当するため、2つのファイルが生成される。
+もし、4-MPI並列で実行すれば、4つの初期値ファイルが生成される。
+これらのファイル名の末尾が``.nc''で終わるファイルはNetCDF形式のファイルであり、
+Gphys/Ruby-DCLやncviewといったツールで直接読むことができる。
+
+
+\subsection{モデル本体の実行}
+%------------------------------------------------------
+いよいよ、モデル本体を実行する。初期値作成のときと同じように2-MPI並列だが、
+しかしconfigファイルは実行用の``run\_R20kmDX500m.conf''を指定する。
+\begin{verbatim}
+  $ mpirun  -n  2  ./scale-les  run_R20kmDX500m.conf
+\end{verbatim}
+
+本書の必要要件にあった計算機であれば、2分程度で計算が終わる。
+\noindent この実行によって、\\
+``LOG.pe000000''\\
+``history.pe000000.nc''\\
+``history.pe000000.nc''\\
+``monitor.pe000000''\\
+の4つのファイルが、現在のディレクトリ下に作成されているはずである。
+``LOG.pe000000''には、コマンドラインには表示されない詳しい実行ログが記録されている。
+実行が正常に終了している場合、このLOGファイルの最後に\\
+
+{\small {\gt
+\ovalbox{
+\begin{tabularx}{100mm}{l}
+ ++++++ Stop MPI\\
+ *** Broadcast STOP signal\\
+ *** MPI is peacefully finalized\\
+\end{tabularx}
+}}}\\
+\noindent と記述される。
+
+そして、``history.pe000000.nc''と``history.pe000001.nc''の2つのファイルが
+計算経過のデータが記録されたhistoryファイルである。このファイルもNetCDF形式のファイルであり、
+2-MPI並列で実行したため、やはり2つのファイルが生成される。
+
+``monitor.pe000000''は、計算中にモニタリングしている物理変数の時間変化を記録したテキストファイルである。
+
+
+
+\subsection{後処理と描画}
+%------------------------------------------------------
+ここでは、計算結果を描画するための後処理について説明する。
+本書のチュートリアルでは、NetCDF形式の分散ファイルを1つのファイルにまとめ、
+ユーザーが解析しやすいDirect-Accessの単純バイナリ形式（GrADS形式）に変換する方法を説明する。
+Gphys/Ruby-DCLを使うと分割ファイルのまま直接描画することができるが、
+この方法については\ref{sec:quicklook}節を参照してもらいたい。
+
+まず、\ref{sec:source_net2g}節でコンパイルした後処理ツール``net2g''を、現在のディレクトリへリンクを張る。
+\begin{verbatim}
+  $ ln -s ../../../util/netcdf2grads_h/net2g  ./
+\end{verbatim}
+もし、ここで説明するディレクトリとは異なる場所で実行している場合は、リンクを張る時のディレクトリ指定に注意すること。
+
+net2gも実行方法は基本的にSCALE本体と同じである。
+\begin{verbatim}
+  $ mpirun  -n  [プロセス数]  ./net2g  [configファイル]
+\end{verbatim}
+net2g専用の``\verb|net2g.conf|''をconfigファイルとして与えて、つぎのように実行する。
+\begin{verbatim}
+  $ mpirun  -n  2  ./net2g  net2g.conf
+\end{verbatim}
+
+\noindent net2gの実行にあたっては、SCALE本体の実行時に使用したMPIプロセス数と同じか、
+それを割り切れる数のプロセス数を用いて実行しなければならない。
+HDDの読み書き速度に依存するが、本書の必要要件にあった計算機であれば、2分程度で計算が終わる。
+この実行によって、\\
+``QHYD\_d01z-3d.ctl''、 ``U\_d01z-3d.ctl''、 ``W\_d01z-3d.ctl''\\
+``QHYD\_d01z-3d.grd''、 ``U\_d01z-3d.grd''、 ``W\_d01z-3d.grd''\\
+の6つのファイルが、現在のディレクトリ下に作成される。
+
+これらのファイルはぞれぞれ、3次元変数、U（水平風東西成分）、W（鉛直風）、QHYD（全凝結物混合比）について、
+分割ファイルを1つにまとめ、Direct-Accessの単純バイナリ形式（GrADS形式）に変換されたgrdファイルとGrADSに
+読み込ませるためのctlファイルである。従って、このctlファイルをGrADSに読み込ませれば直ちに計算結果の描画が可能である。
+図\ref{fig_ideal}は、積分開始後 1200秒における、U-WとQHYDについての鉛直断面図である。
+
+
+``\verb|net2g.conf|''の下記の行を編集することによって、net2gを用いて他の様々な変数の変換を行うことができる。\\
+
+{\small {\gt
+\ovalbox{
+\begin{tabularx}{100mm}{l}
+\verb|&VARI|\\
+\verb| VNAME       = "U","W","QHYD"|\\
+\verb|/|\\
+\end{tabularx}
+}}}\\
+
+\noindent この``VNAME''の項目を例えば、\verb|"PT","RH"|と変更して実行すれば温位と相対湿度の変数について変換する。
+どの変数が出力されているのかを調べるには、NetCDFのncdumpツールなどを使えば簡単に調べられる。
+net2gの詳しい使用方法は、\ref{sec:net2g}を参照してほしい。
+
 
 \begin{figure}[t]
 \begin{center}
-  \includegraphics[width=0.9\hsize]{./figure/gpview_hist_ideal.eps}\\
-  \caption{$CASE=3$を選択した際の，t=1200secにおける，y=10kmの水物質混合比のx-z断面（シェード）と風速（矢羽）}
-  \label{fig3.1}
+  \includegraphics[width=1.0\hsize]{./figure/grads_hist_ideal.eps}\\
+  \caption{積分開始後 1200 sec のY=1 kmにおける東西-鉛直断面図；(a)のカラーシェードは全凝結物の混合比、
+           (b)は鉛直速度をそれぞれ示す。ベクトルは東西-鉛直断面内の風の流れを表す。}
+  \label{fig_ideal}
 \end{center}
 \end{figure}
 
-なお，この方法では，20km x 20km x 20km（解像度はdx=dy=500m）の３次元の実験を行うが，
-\begin{verbatim}
-  tutorial_test.sh
-\end{verbatim}
-をviなどのエディタで開き，最上部にあるCASEの値を1〜5に変更することで，２次元の実験や，解像度を変更した実験や，
-雲微物理モデルを2-moment bulk雲モデルを用いた実験を行うことができる．CASEを1〜5に設定した際のそれぞれの意味は
-tutorial\_test.shの中の，CASEの直下に書かれている説明書きを参照されたい．
+%なお，この方法では，20km x 20km x 20km（解像度はdx=dy=500m）の３次元の実験を行うが，
+%\begin{verbatim}
+%  tutorial_test.sh
+%\end{verbatim}
+%をviなどのエディタで開き，最上部にあるCASEの値を1〜5に変更することで，２次元の実験や，解像度を変更した実験や，
+%雲微物理モデルを2-moment bulk雲モデルを用いた実験を行うことができる．CASEを1〜5に設定した際のそれぞれの意味は
+%tutorial\_test.shの中の，CASEの直下に書かれている説明書きを参照されたい．
 
-\subsection{実験の詳細}
-次に上記シェルを実行した際に行われたことを説明しながら，SCALEを用いて理想化実験を行う方法を説明する．
-viなどのエディタで開くと，tutorial\_test.shは，
+\subsection{MPIプロセス数の変更}
+%------------------------------------------------------
+今後、様々な実験を行う上で必須の設定変更であるMPIプロセス数の変更方法について説明する。
+その他の設定方法については次節を参照して欲しい。
 
-\begin{enumerate}
-\item 実行に必要な設定ファイル（init.conf，run.conf），および実行バイナリにリンクを張る
-\item ジョブを実行するシェル（run.sh）を作成し（make jobshell），実行する(sh run.sh)．
-\item リンクを削除する
-\item 描画する
-\end{enumerate}
 
-の４つの部分に分かれていることがわかる．SCALEの操作に慣れてきたら２の「ジョブ実行するシェルの実行」のみの
-処理で実験を行うことができるようになる．実際にジョブを実行するシェル(run.sh)をviなどのエディタで開くと，このシェルでは
 
-\begin{enumerate}
-\item 初期値の作成(mpirun -np *** scale-les\_init init.conf)
-\item 実験の実行(mpirun -np *** scale-les run.conf)
-\end{enumerate}
+以上で、理想実験の最も簡単な実行方法についてのチュートリアルは終了である。
+このスコールラインの理想実験については、同じディレクトリ下の``sample''ディレクトリ内に、
+解像度設定、領域設定、そして使用する物理スキームについて変更を加えたconfigファイルのサンプルが用意されている。
+これらについても実験してみることで、よりSCALEのシステムについて理解が深まることと思う。
 
-の２つの処理が行われている．１：初期値作成の詳細な設定はinit.conf（実際にはCASEの設定で選択されたそれぞれのinit\_***.conf）で行う．
-２：実験の実行時の詳細な設定はrun.conf（実際にはCASEの設定によって選択されたそれぞれのrun\_***.conf）で行う．
-init.confに書かれているNamelistを編集することで，様々な実験の初期設定をすることができ，実験の詳細な設定はrun.confを編集することで
-可能になる．run.confおよびinit.confに含まれるNamelistの詳細はAppendiex\cite{appendixA2}を参照されたい．\\
+また、SCALEには他にも理想実験セットが``\verb|scale-les/test/case|''以下に複数用意されているので、
+興味があれば他の理想実験にもチャレンジしてもよい。少々ディレクトリ構造がチュートリアルとは
+異なる部分もあるが、実行に関しては本章のチュートリアルと同じであるため、容易に実験できるだろう。
 
-また，上記のチュートリアルでは，tutorial\_test.shを実行することで、run.confとinit.confにリンクを張って，実行し，描画するという一連の
-処理を行ってきたが，各ユーザーの行いたい実験設定に合わせたrun.confやinit.confを作成し，run.shを実行することで，各ユーザーが行いたい
-実験を行うことが可能になる．以下では，本チュートリアルで行った実験を例にして，解像度，計算領域のサイズ，物理モデルを仕様する手続き，
-実行時間の変更方法などを説明していくが，ここでは，テンプレートとしてCASE=3を選択した時に利用したrun\_R40kmDX500m.confと
-init\_R40kmDX500m.confをテンプレートとしてinit.confとrun.confを用意しておく．例えば
 
-\begin{verbatim}
- cp run\_R40kmDX500m.conf. run.conf
- cp init\_R40kmDX500m.conf init.conf
-\end{verbatim}
+%次に上記シェルを実行した際に行われたことを説明しながら，SCALEを用いて理想化実験を行う方法を説明する．
+%viなどのエディタで開くと，tutorial\_test.shは，
 
-のようにして，あらかじめrun.confとinit.confをしておく．その後以下に示すような変更をrun.confやinit.confに加え，実行バイナリにリンクを張る
-その上で
+%\begin{enumerate}
+%\item 実行に必要な設定ファイル（init.conf，run.conf），および実行バイナリにリンクを張る
+%\item ジョブを実行するシェル（run.sh）を作成し（make jobshell），実行する(sh run.sh)．
+%\item リンクを削除する
+%\item 描画する
+%\end{enumerate}
 
-\begin{verbatim}
- sh run.sh 
-\end{verbatim}
+%の４つの部分に分かれていることがわかる．SCALEの操作に慣れてきたら２の「ジョブ実行するシェルの実行」のみの
+%処理で実験を行うことができるようになる．実際にジョブを実行するシェル(run.sh)をviなどのエディタで開くと，このシェルでは
 
-として実験設定を変更した計算を実行することができる．
+%\begin{enumerate}
+%\item 初期値の作成(mpirun -np *** scale-les\_init init.conf)
+%\item 実験の実行(mpirun -np *** scale-les run.conf)
+%\end{enumerate}
 
-\textcolor{red}{\large ここに出力ファイルの形式についての説明を加える；
-init, history, restartが出力されること、NetCDF/CF形式、領域分割であることを説明する。}
+%の２つの処理が行われている．１：初期値作成の詳細な設定はinit.conf（実際にはCASEの設定で選択されたそれぞれのinit\_***.conf）で行う．
+%２：実験の実行時の詳細な設定はrun.conf（実際にはCASEの設定によって選択されたそれぞれのrun\_***.conf）で行う．
+%init.confに書かれているNamelistを編集することで，様々な実験の初期設定をすることができ，実験の詳細な設定はrun.confを編集することで
+%可能になる．run.confおよびinit.confに含まれるNamelistの詳細はAppendiex\cite{appendixA2}を参照されたい．\\
 
-\subsection{解像度，計算領域のサイズの設定方法}
+%また，上記のチュートリアルでは，tutorial\_test.shを実行することで、run.confとinit.confにリンクを張って，実行し，描画するという一連の
+%処理を行ってきたが，各ユーザーの行いたい実験設定に合わせたrun.confやinit.confを作成し，run.shを実行することで，各ユーザーが行いたい
+%実験を行うことが可能になる．以下では，本チュートリアルで行った実験を例にして，解像度，計算領域のサイズ，物理モデルを仕様する手続き，
+%実行時間の変更方法などを説明していくが，ここでは，テンプレートとしてCASE=3を選択した時に利用したrun\_R40kmDX500m.confと
+%init\_R40kmDX500m.confをテンプレートとしてinit.confとrun.confを用意しておく．例えば
+
+%\begin{verbatim}
+% cp run\_R40kmDX500m.conf. run.conf
+% cp init\_R40kmDX500m.conf init.conf
+%\end{verbatim}
+
+%のようにして，あらかじめrun.confとinit.confをしておく．その後以下に示すような変更をrun.confやinit.confに加え，実行バイナリにリンクを張る
+%その上で
+
+%\begin{verbatim}
+% sh run.sh 
+%\end{verbatim}
+
+%として実験設定を変更した計算を実行することができる．
+
+
+
+
+
+
+
+\section{解像度，計算領域のサイズの設定方法}
+%====================================================================================
 解像度、および問題サイズは，init.conf，run.confのPARAM\_PRC，PARAM\_INDEX，PARAM\_GRIDに設定する．この際に
 
 \underline{{\bf init.confとrun.confのPARAM\_PRC，PARAM\_INDEX，PARAM\_GRIDは}}\\
 \underline{{\bf 必ず同一になる必要がある}}\\
 ことに注意されたい．\\
 
-\subsubsection{解像度}
+\subsection{解像度}
 解像度は，PARAM\_GRIDのDX，DY，DZによって格子間隔を設定する場合と，または直接グリッドの位置を指定することで設定する．\\
 格子間隔を指定する場合は，PARAM\_GRIDにDX=xxx（単位は[m]）のように設定する．x方向はDX，y方向はDY，z方向はDZで設定する．
 この際，BUFFER\_DX，BUFFER\_DY，BUFFER\_DZ，BUFFFACTによって計算領域の両端（水平方向）とモデル上端に入れるスポンジ層を設定する．
@@ -123,7 +331,7 @@ init\_R40kmDX500m.confを例にとると，水平解像度はDX，DYで指定し
 記述する形で指定されている．同時にrun\_R40kmDX500m.confにおいても同一の値が設定されていることも確認されたい．
 
 
-\subsubsection{問題サイズ}
+\subsection{問題サイズ}
 問題サイズの設定はプロセス数と1MPIプロセスあたりが計算する格子点数によって設定する．1MPIプロセスあたりが計算する
 格子点数はPARAM\_INDEXに記載される，KMAX，IMAX，JMAXによって決まる．これらはそれぞれ，1MPIプロセスが計算する
 鉛直(z)方向，x方向，およびy方向の格子点数を示す．\\
@@ -202,7 +410,7 @@ init\_R40kmDX500m.confを例にとると，水平解像度はDX，DYで指定し
 
 のように設定する．上記の\cite{eq3.1}を参考にBUFFFACTを調整することで，スポンジ層が何層になるかを設定できる．\\
 
-\subsubsection{側面境界条件}
+\subsection{側面境界条件}
 また，理想実験にて，水平方向にスポンジ層を設定しない場合は側面境界条件を周期境界条件を用いなければ人工的な
 波が反射するなどして，計算結果に影響を及ぼす．そのため，理想化実験においてデフォルトでは周期境界条件が適用されている．
 周期境界条件をやめ，開放条件で実験する際はinit.conf，run.confの中にあるNamelist，PARAM\_PRCに
@@ -230,7 +438,7 @@ init\_R40kmDX500m.confを例にとると，水平解像度はDX，DYで指定し
 
 各Namelistの詳細はAppendixを参照されたい．
 
-\subsubsection{計算時間とdtの設定}
+\subsection{計算時間とdtの設定}
 上記の実験では1時間（3600秒）分の時間積分を力学のタイムステップ0.6秒，雲物理のタイムステップ3.0秒で行った．
 積分時間を伸ばしたい場合や，タイムステップの長さの感度を確認する場合にはタイムステップを変更する必要がある．
 それらの時間はrun.confに含まれるNamelistのPARAM\_TIMEで設定する．以下に例としてtutorial\_test.shで
@@ -257,7 +465,7 @@ CASE=3を選択した際に使用されるrun\_R20kmx20kmDX500m.confの例を示
 run.conf（例としてtutorial\_test.shでCASE=3を選択した際に使用されるrun\_R20kmx20kmDX500m.conf）を再度確認する．
 
 
-\subsubsection{雲微物理スキームの変更}
+\subsection{雲微物理スキームの変更}
 チュートリアルでは，Tomita (2008)の1-momentバルク法を用いていたが，SCALEには暖かい雲のみを考慮する1-momentバルク法(Kessler 1969)，
 氷雲を含んだ2-momentバルク法(Seiki and Nakajima, 2014)，1-momentビン法の４種類の雲微物理スキームを利用することが可能である．これらの
 雲微物理スキームの選択は，init.confとrun.confに記載されているPARAM\_TRACERに含まれる「TRACER\_TYPE」及び，PARAM\_ATMOSに含まれる
@@ -301,7 +509,7 @@ micpara.datに記載されているnbinが異なれば
 というエラーメッセージを標準出力に出力して計算が落ちるようになっている．そのため，nbinを変更した際は，micpara.datを消去して
 新たに作り直す必要がある（micpara.datを消して再度SCALEをSUZUKI10を用いて実行すれば自動的に新しいmicpara.datが生成される）．
 
-\subsubsection{乱流スキームの導入}
+\subsection{乱流スキームの導入}
 チュートリアルでは乱流スキームは導入されていなかったが，SCALEにはSmagorinsky typeの乱流スキーム(Brown 1994, Scotti et al. 1994)と
 Mellor-Yamada Level 3の乱流スキーム(MYNN, Nakanishi and Niino 2006)導入されている．これらを利用するには，init.confとrun.conf双方の
 PARAM\_ATMOSに「ATMOS\_PHY\_TB\_TYPE」を加える．
@@ -350,3 +558,5 @@ ATMOS_PHY_TB_TYPE="MYNN" (Mellor-Yamada Level 3のRANSモデル）
 %という名前のファイルが作成され，この中に出力変数が含まれている．
 %\end{enumerate}
 
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
