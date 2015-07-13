@@ -82,12 +82,26 @@
 \end{table}
 
 
+\subsection{本書で想定する環境}
+\label{sec:assumed_env}
+%====================================================================================
+本書の以降すべての説明において、下記の環境であることを前提として説明をすすめる。
+
+\begin{itemize}
+ \item {\bf CPU} : 第\ref{sec:tuto_ideal}章は物理コアが2コア、第\ref{sec:tuto_real}章は4コアを搭載
+ \item {\bf Memory} : 第\ref{sec:tuto_ideal}章は512MB、第\ref{sec:tuto_real}章は2GB
+ \item {\bf OS} : Linux OS x86-64 (CentOS 6.6、CentOS 7.1、openSUSE 13.2のいずれか)
+ \item {\bf コンパイラ} : GNU コンパイラ（gcc/gfortran）
+ \item {\bf MPIライブラリ} : openMPI（リポジトリ経由でのインストール）
+\end{itemize}
+
+
 \section{ライブラリ環境のインストール}
 \label{sec:inst_env}
 %====================================================================================
-実行環境に合わせて、SCALEライブラリのインストールに必要な環境、ライブラリのインストールを行う。詳細は、Appendix \ref{sec:env_setting}章を参照。
-第\ref{sec:tuto_ideal}章、第\ref{sec:tuto_real}章のチュートリアルは，
-それらのライブラリ環境がインストールされていることを想定して進める．
+実行環境に合わせて、SCALEライブラリのインストールに必要な環境、ライブラリのインストールを行う。詳細は、Appendix \ref{sec:env_setting}章を参照のこと。
+第\ref{sec:tuto_ideal}章、第\ref{sec:tuto_real}章のチュートリアルは、
+それらのライブラリ環境がインストールされていることを想定して進める。
 
 描画ツールは何を使っても良いが、対応を確認している描画ツールについての詳細とインストール方法についての情報は
 Appendix \ref{sec:env_vis_tools}を参照のこと。
@@ -122,36 +136,37 @@ Appendix \ref{sec:env_vis_tools}を参照のこと。
 
 
 
-\subsubsection{configure ファイルと環境変数の設定}
+\subsubsection{Makedefファイルと環境変数の設定}
 %-----------------------------------------------------------------------------------
 
-\verb|scale/sysdep/|内にいくつかのコンフィグファイル（\verb|Makedef.***|）が準備されている．
-これらの中から自分の環境にあったものを設定する．
-チュートリアルでは，OSはLinux，コンパイラはgcc/gfortran，およびopenMPIを使用するため，
-\verb|"Makedef.Linux64-gnu-ompi"|が対応するファイルとなる．
-常にこのコンフィグファイルを使用するために、
-\verb|Makedef.***|の\verb|"***"|の部分を、\verb|SCALE_SYS|という環境変数として設定し、
-\verb|.bashrc|などのファイルに記述しておくと便利である．
+SCALEはコンパイルするとき、独自の環境変数"\verb|SCALE_SYS|"で与えられた名称に対応した、
+Makedefファイルを使用してコンパイルが行われる。
+Makdefファイルは、\verb|scale/sysdep/|内にいくつかの計算機環境に
+対応するファイル（\verb|Makedef.***|）が準備されており、これらの中から自分の環境にあったものを設定する。
+ここでは、先述のとおりLinux OS、GNUコンパイラ、およびopenMPIを使用することを想定しているため、
+\verb|"Makedef.Linux64-gnu-ompi"|が対応するファイルとなる。下記のコマンドによって環境変数の値を設定する。
 \begin{verbatim}
  $ export SCALE_SYS="Linux64-gnu-ompi"
 \end{verbatim}
-自分の環境に合うものがなければ既存ファイルをベースにして作成する．
+自分の環境に合致するものがなければ、既存ファイルをベースにして作成する。
+実行環境がいつも同じに決まっている場合は、常に同じMakedefファイルを使用するために、
+環境変数設定を\verb|.bashrc|などの環境設定ファイルに記述しておくと便利である。\\
 
-さらに、SCALEをコンパイルするのに必要な外部ライブラリについても
-下記のようにPATHを設定する．
-ここでは，Appendix \ref{sec:env_setting}（Linux編）に従ったとして，
-HDF5，netcdf4ともに\verb|/usr|の下にインストールされている場合の例を示す．
+
+チュートリアル通り進めている場合は、Appendix \ref{sec:env_setting}章で説明する以外にPATHの設定をする
+必要はないが、環境が異なる場合には上述に加えて次の設定が必要になる。
+HDF5とNetCDF4について、下記のようにPATHを設定する。
+例えば、Intel コンパイラを利用して自分で"\verb|/opt|"下にHDF5とNetCDF4を
+インストールした場合を想定して、HDF5は\verb"/opt/hdf5"、netcdf4は\verb|/opt/netcdf|に
+それぞれインストールされている場合の例を示す。
 \begin{verbatim}
- $ export HDF5="/usr"
- $ export NETCDF4="/usr"
+ $ export HDF5="/opt/hdf5"
+ $ export NETCDF4="/opt/netcdf"
 \end{verbatim}
 
 
 \subsubsection{コンパイル}
 %-----------------------------------------------------------------------------------
-コンパイルは、各テストケースのディレクトリ内で実行可能である．
-ここではコンパイルに必要な環境が整っているかどうかの確認だけ行い、
-詳細な説明は、次章以降に譲る．
 
 チュートリアル用のディレクトリに移動して，makeコマンドによってコンパイルを行う．
 \begin{verbatim}
@@ -193,6 +208,47 @@ HDF5，netcdf4ともに\verb|/usr|の下にインストールされている場�
 % そのような場合はSCALE開発チームまでご報告ください．
 \end{itemize}
 
+
+\section{後処理ツールのコンパイル} \label{sec:source_net2g}
+%====================================================================================
+
+第\ref{sec:tuto_ideal}章、第\ref{sec:tuto_real}章のチュートリアルでは、
+GrADSを使用して図化する方法を紹介している。このとき、SCALE-LESの分割
+出力ファイル（\verb|history.******.nc|）を結合し、GrADSで直接読み込めるデータ形式へ
+変換する後処理ツール「net2g」を使用する。
+ここでは、このnet2gのコンパイル方法について説明する。
+
+net2gはSCALE本体から独立したツールになっている（ただしMakedefファイルを除く）ため、
+任意の場所へコピーしてコンパイルすることができるが、
+コンパイルにはNetCDFライブラリが必要であり、また並列実行するためにはMPIライブラリが必要である。
+従って、以降はこれらのライブラリがインストールされている環境であることを想定して進める。\\
+
+
+まず、Makedefファイル設定のために環境変数を設定する。
+SCALE本体のコンパイル時と同じように、使用する環境にあったMakedefファイルを
+選択し、下記のコマンドにて設定する。
+
+\begin{verbatim}
+ $ export SCALE_SYS="Linux64-gnu-ompi"
+\end{verbatim}
+
+その後、net2gのディレクトリに移動して、makeコマンドによってコンパイルを行う。
+MPIライブラリを用いた並列実行を行うためのバイナリは、下記のコマンドによって生成される。
+\begin{verbatim}
+ $ cd scale/scale-les/util/netcdf2grads_h
+ $ make -j 2
+\end{verbatim}
+MPIライブラリが無い場合など、逐次実行バイナリを生成するためには、\\
+\begin{verbatim}
+ $ make -j 2 NOMPI=T
+\end{verbatim}
+としてコンパイルを行う。
+結果として、"net2g"という名前の実行ファイルが生成されていればコンパイルは成功である．\\
+
+下記のコマンドで作成された実行バイナリを消去できる。
+\begin{verbatim}
+ $ make clean
+\end{verbatim}
 
 %####################################################################################
 

@@ -2,73 +2,79 @@
 \label{sec:net2g}
 %====================================================================================
 
+
+%シングル版もnetcdf2grads_hの方で統合されたので、以下は削除予定とする。
+%-----------------------
+%
+%%並列処理に対応したnetcdf2grads\_hも用意されているが、
+%%ここではシングルノード用のnetcdf2gradsの使用方法を示す。
+%%netcdf2grads\_h については、最後に簡単に説明する。
+%netcdf2gradsのソースファイルは \verb|scale/scale-les/util/netcdf2grads_h/|にある。
+%SCALE本体とは独立なので、ディレクトリを任意の場所に移動して
+%使用することが可能である．
+%
+%\subsubsection{コンパイル}
+%\begin{description}
+%\item[Intel compiler]\mbox{}\\
+% \begin{verbatim}
+%  ifort -convert big_endian -assume byterecl -I${NETCDF4}/include 
+%    -L${NETCDF4}/lib -lnetcdff -lnetcdf make_grads_file.f90 -o convine
+%  \end{verbatim}
+%\item[gfortran]\mbox{}\\
+%\begin{verbatim}
+%  gfortran -frecord-marker=4 --convert=big-endian -I${NETCDF4}/include
+%    -L${NETCDF4}/lib -lnetcdff -lnetcdf make_grads_file1.f90 -o convine
+%\end{verbatim}
+%\end{description}
+%
+%
+%\subsubsection{使用方法}
+%実行時に，インタラクティブモードかサイレントモードかを選択することが出来る．
+%\begin{verbatim}
+%   Interactive mode :  ''./convine -i''
+%   Silent mode      :  ''./convine -s''
+%\end{verbatim}
+%\begin{description}
+%\item[インタラクティブモード]\mbox{}\\
+%\begin{verbatim}
+%  cd netcdf2grads/
+%  ./convine -i
+%\end{verbatim}
+%と実行すると、下記のメッセージが出るので、指示通り、必要なファイルのパスを打ち込む．
+%\begin{verbatim}
+%path to configure file for run with the quotation mark
+% '${path to directory of configure file}/run.conf' <- configureファイルへのパス
+%path to directory of history files with the quotation mark
+% '${path to directory of history files}/' <- SCALE-LESの出力ファイルのパス
+%path to directory of output files with the quotation mark
+% './grads/'  <- gradsファイルの出力先
+%start time of convert data
+% 1           <- 任意の番号の時間から変換可能． 
+%end time of convert data
+% 10          <- 変換を修了する時間
+%Imput number of variable
+%0 -> all variable output from model
+% X           <- 変換したい変数の数
+%Imput variable
+% VARIABLE(PRECなど)  <- 変換したい変数名
+%\end{verbatim}
+%うまく実行されれば、指定した出力先にctlファイルとgrdファイルが作成される。
+%\item[サイレントモード]\mbox{}\\
+%サイレントモードの場合は、あらかじめ、\verb|namelist.in|に必要な情報を書き入れておく．
+%\begin{verbatim}
+%  cd netcdf2grads/
+%  ./convine -s
+%\end{verbatim}
+%と実行すれば変換が始まる。
+%\end{description}
+%
+%\subsubsection{並列処理: netcdf2grads\_h}
+
+
 SCALE-LESの出力ファイル（\verb|history.******.nc|）を
 GrADSで図化するためのnetcdf2grads の使用方法について説明する。
-並列処理に対応したnetcdf2grads\_hも用意されているが、
-ここではシングルノード用のnetcdf2gradsの使用方法を示す。
-netcdf2grads\_h については、最後に簡単に説明する。
-netcdf2gradsのソースファイルは \verb|scale/scale-les/util/netcdf2grads/|にある。
-SCALE本体とは独立なので、ディレクトリを任意の場所に移動して
-使用することが可能である．
+\textcolor{red}{\large ここにnet2gのnamelist設定について説明し、2D, 3D、RAINの実行方法について説明する。}
 
-\subsubsection{コンパイル}
-\begin{description}
-\item[Intel compiler]\mbox{}\\
- \begin{verbatim}
-  ifort -convert big_endian -assume byterecl -I${NETCDF4}/include 
-    -L${NETCDF4}/lib -lnetcdff -lnetcdf make_grads_file.f90 -o convine
-  \end{verbatim}
-\item[gfortran]\mbox{}\\
-\begin{verbatim}
-  gfortran -frecord-marker=4 --convert=big-endian -I${NETCDF4}/include
-    -L${NETCDF4}/lib -lnetcdff -lnetcdf make_grads_file1.f90 -o convine
-\end{verbatim}
-\end{description}
-
-
-\subsubsection{使用方法}
-実行時に，インタラクティブモードかサイレントモードかを選択することが出来る．
-\begin{verbatim}
-   Interactive mode :  ''./convine -i''
-   Silent mode      :  ''./convine -s''
-\end{verbatim}
-\begin{description}
-\item[インタラクティブモード]\mbox{}\\
-\begin{verbatim}
-  cd netcdf2grads/
-  ./convine -i
-\end{verbatim}
-と実行すると、下記のメッセージが出るので、指示通り、必要なファイルのパスを打ち込む．
-\begin{verbatim}
-path to configure file for run with the quotation mark
- '${path to directory of configure file}/run.conf' <- configureファイルへのパス
-path to directory of history files with the quotation mark
- '${path to directory of history files}/' <- SCALE-LESの出力ファイルのパス
-path to directory of output files with the quotation mark
- './grads/'  <- gradsファイルの出力先
-start time of convert data
- 1           <- 任意の番号の時間から変換可能． 
-end time of convert data
- 10          <- 変換を修了する時間
-Imput number of variable
-0 -> all variable output from model
- X           <- 変換したい変数の数
-Imput variable
- VARIABLE(PRECなど)  <- 変換したい変数名
-\end{verbatim}
-うまく実行されれば、指定した出力先にctlファイルとgrdファイルが作成される。
-\item[サイレントモード]\mbox{}\\
-サイレントモードの場合は、あらかじめ、\verb|namelist.in|に必要な情報を書き入れておく．
-\begin{verbatim}
-  cd netcdf2grads/
-  ./convine -s
-\end{verbatim}
-と実行すれば変換が始まる。
-\end{description}
-
-
-
-\subsubsection{並列処理: netcdf2grads\_h}
 
 スパコンなどの大型計算機で並列計算を行った場合、
 出力ファイルの数が多く、それぞれのファイルのデータ容量も大きい。
@@ -76,20 +82,6 @@ netcdf2gradsを並列処理したい場合にはこちらを使用する。
 ここでは、K上での使用方法を簡単に説明する。
 
 \begin{enumerate}
-\item ファイルをコピー\\
- \verb|scale/scale-les/util/netcdf2grads_h| を \verb|/data/GROUP/USER/WORK_directory/| など、作業したいディレクトリにコピー。
-\item コンパイル\\
- \verb|.bashrc| などに下記を設定
- \begin{verbatim}
-  #--SCALE
-   export SCALE_SYS=''K''
-   export AGGRESIVE=''F''
-   export FAST=''T''
-   export DEBUG=''F''
- \end{verbatim}
- そして、コンパイル．\\
- \verb|$ make|\\
- うまくいけば、\verb|net2g|が作成される。
 \item \verb|microで実行する| \\
  \verb|/scratch/GROUP/USER/|の下に、作業ディレクトリを用意する。そこに、
  \begin{verbatim}
@@ -102,6 +94,8 @@ netcdf2gradsを並列処理したい場合にはこちらを使用する。
  を用意する。\verb|net2g.conf|の設定と\verb|job.sh|の設定をする。
  使用するノード数は、計算に使用したノード数の約数である必要がある。
 \end{enumerate}
+
+
 
 
 %####################################################################################
