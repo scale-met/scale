@@ -12,5 +12,9 @@
 * texlive (more than 2009) is needed to  make
   the PDF file.
 
+* to make PDF file complitely, "wallpaper.sty" is
+  needed. it can be download freely from
+  http://www.ctan.org/tex-archive/macros/latex/contrib/wallpaper
+
 ----------------------------------------------
 (last update: 9 July, 2015)
