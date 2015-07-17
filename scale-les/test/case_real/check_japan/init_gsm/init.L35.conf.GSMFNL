@@ -50,8 +50,8 @@
  BOUNDARY_UPDATE_DT  = 21600.D0,
  INTERP_SERC_DIV_NUM = 20,
  INTRP_LAND_SFC_TEMP = 'mask',
- INTRP_LAND_TEMP     = 'mask',
- INTRP_LAND_WATER    = 'mask',
+ INTRP_LAND_TEMP     = 'fill',
+ INTRP_LAND_WATER    = 'fill',
  INTRP_OCEAN_SFC_TEMP = 'mask',
  INTRP_OCEAN_TEMP     = 'mask',
 /

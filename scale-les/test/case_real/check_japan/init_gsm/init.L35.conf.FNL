@@ -49,15 +49,18 @@
  NUMBER_OF_TSTEPS    = 1,
  BOUNDARY_UPDATE_DT  = 21600.D0,
  INTERP_SERC_DIV_NUM = 20,
+ PARENT_MP_TYPE       = 3,
+ USE_FILE_DENSITY     = .false.,
+ USE_FILE_LANDWATER   = .true.,
  INTRP_LAND_SFC_TEMP = 'mask',
  INTRP_LAND_TEMP     = 'fill',
  INTRP_LAND_WATER    = 'fill',
- INTRP_OCEAN_SFC_TEMP = 'fill',
- INTRP_OCEAN_TEMP     = 'fill',
+ INTRP_OCEAN_SFC_TEMP = 'mask',
+ INTRP_OCEAN_TEMP     = 'mask',
 /
 
-&PARAM_MKINIT_REAL_GrADS
- grads_boundary_namelist = "namelist.grads_boundary.GSMFNLMGDSST",
+&PARAM_MKINIT_REAL_GRADS
+ grads_boundary_namelist = "namelist.grads_boundary.FNL",
 /
 
 &PARAM_NEST
