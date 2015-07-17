@@ -44,11 +44,11 @@ SCALE-LESモデルの実行過程は，Fig. \ref{fig:howto}に示されるよう
   \begin{tabularx}{150mm}{|l|X|} \hline
     \rowcolor[gray]{0.9} 項目 & 設定 \\ \hline
     MPIプロセス分割 (東西 x 南北) & 2 x 2 (合計4プロセス) \\ \hline
-    水平格子数 (東西 x 南北) & 100格子点 x 100格子点 \\ \hline
+    水平格子数 (東西 x 南北) & 70格子点 x 70格子点 \\ \hline
     鉛直層数                 & 36層                  \\ \hline
     水平格子間隔             & dx = dy = 15km       \\ \hline
     積分期間 & 2014年8月10日 00UTC～12UTC (12時間積分) \\ \hline
-    時間ステップ間隔 & 30 sec (1440 steps) \\ \hline
+    時間ステップ間隔 & 60 sec (720 steps) \\ \hline
   \end{tabularx}
 \end{center}
 \end{table}
@@ -128,7 +128,7 @@ makeを使ったjob scriptを使用する場合には、
 \item データのダウンロード\\
 NCARのサイト
  \url{http://rda.ucar.edu/datasets/ds083.2/}\\
-から、2014年8月10日のデータ4つ
+から、2014年8月10日のgrib2フォーマットのデータ
 \begin{verbatim}
   fnl_20140810_00_00.grib2
   fnl_20140810_06_00.grib2

@@ -6,9 +6,8 @@
 ここではいよいよSCALE-LESモデルを実行する．
 まず，runディレクトリへ移動する．
 \begin{verbatim}
-  $ cd ${TOPDIR}/scale/scale-les/test/tutorial/run
+ $ cd ${Tutrial_DIR}/real/run
 \end{verbatim}
-
 
 runディレクトリの中には，これまでと同様に\verb|run.conf|という名前の
 コンフィグファイルが準備されている．
@@ -31,7 +30,7 @@ Table\ref{tab:grids}の設定に合わせてある．
 
   &PARAM_RESTART
    RESTART_OUTPUT      = .false.,
-   RESTART_IN_BASENAME = "../init/init_d01_00010713600.000",
+   RESTART_IN_BASENAME = "../init/init_d01_00019094400.000",
   /
 
   &PARAM_ATMOS_BOUNDARY
@@ -128,18 +127,16 @@ SCALE-LESモデルでは，そのほかの物理過程についても細かく�
 次に，コンパイル済みのバイナリをrunディレクトリへリンクする．
 
 \begin{verbatim}
-  $ ln -s ${TOPDIR}/scale/scale-les/test/tutorial/bin/scale-les ./
+ $ ln -s ../../bin/scale-les ./
 \end{verbatim}
 
 また，前節と同様に陸面過程や放射過程のモデルを起動するためのパラメータファイルも
 リンクしておく．
 
 \begin{verbatim}
-  $ ln -s ${TOPDIR}/scale/scale-les/test/data/land/*  ./
-  $ ln -s ${TOPDIR}/scale/scale-les/test/data/rad/*   ./
+ $ ln -s ../../../data/land/* ./   <- 陸面スキーム用のパラメータファイル
+ $ ln -s ../../../data/rad/*  ./   <- 放射スキーム用のパラメータファイル
 \end{verbatim}
-上の行のリンクコマンドによって陸面過程のパラメータファイルがリンクされ，
-下の行のコマンドによって放射過程のパラメータファイルがリンクされる．
 準備が整ったら，4つのMPIプロセスを使用してscale-lesを実行する．
 \begin{verbatim}
   $ mpirun -n 4 ./scale-les run.conf < /dev/null >&log&
@@ -151,7 +148,7 @@ SCALE-LESモデルでは，そのほかの物理過程についても細かく�
 例えば下記のようなコマンドで\verb|"LOG_d01.pe000000"|ファイルを参照すれば，
 どこまで計算が進んでいるかチェックすることができる．
 \begin{verbatim}
-  $ tail -n 50 LOG_d01.pe000000
+ $ tail  LOG_d01.pe000000
 \end{verbatim}
 正常にジョブが終了すれば，\verb|history_d01.pe######.nc|と\verb|restart_d01.pe######.nc|と
 いう名前のファイルがMPIプロセス数だけ，つまり4つずつ生成される

@@ -6,7 +6,7 @@
 init では，SCALE計算に必要な初期値・境界値データを作成する．
 まず、initディレクトリへ移動する．
 \begin{verbatim}
-  $ cd ${TOPDIR}/scale/scale-les/test/tutorial/init
+ $ cd ${Tutrial_DIR}/real/init
 \end{verbatim}
 
 initディレクトリの中には，\verb|init.conf|という名前のコンフィグファイルが準備されている．
@@ -44,29 +44,33 @@ grads形式データのフォーマットで読み込むことを指定してい
 
 次に，コンパイル済みのバイナリをinitディレクトリへリンクする．
 \begin{verbatim}
-  $ ln -s ${TOPDIR}/scale/scale-les/test/tutorial/bin/scale-les_init ./
+  $ ln -s ../../bin/scale-les_init ./
 \end{verbatim}
-入力データはinitディレクトリの中に準備されている，\verb|"inputdata-link.sh"|を用いてリンクをはる．
+入力データは、initディレクトリの中に準備されている\verb|"gradsinput-link_FNL.sh"|を用いてリンクをはる．
 \begin{verbatim}
-  $ sh inputdata-link.sh
+  $ sh gradsinput-link_FNL.sh
 \end{verbatim}
-スクリプト内のstart dateとend dateの設定項目を実験設定に対応するように編集するが、
-ここでは，start dateは2014/08/10 00:00:00，end dateは2014/08/10 12:00:00と設定している．
 下記ファイルにリンクが張れれば成功．
 {\small
 \begin{verbatim}
-  FNL_00000.grd
-  FNL_00001.grd
-  FNL_00002.grd
+  FNLatm_00000.grd
+  FNLatm_00001.grd
+  FNLatm_00002.grd
+  FNLatm_00003.grd
+  FNLland_00000.grd
+  FNLland_00001.grd
+  FNLland_00002.grd
+  FNLland_00003.grd
+  FNLsfc_00000.grd
+  FNLsfc_00001.grd
+  FNLsfc_00002.grd
+  FNLsfc_00003.grd
 \end{verbatim} }
 
-次に、陸面過程や放射過程のモデルを起動するためのパラメータファイルにリンクをはる．
+次に、陸面の変数を用意するのに必要なパラメータファイルにリンクをはる．
 \begin{verbatim}
-  $ ln -s ${TOPDIR}/scale/scale-les/test/data/land/*  ./
-  $ ln -s ${TOPDIR}/scale/scale-les/test/data/rad/*   ./
+ $ ln -s ../../../data/land/* ./   <- 陸面スキーム用のパラメータファイル
 \end{verbatim}
-上の行のリンクコマンドによって陸面過程のパラメータファイルがリンクされ，
-下の行のコマンドによって放射過程のパラメータファイルがリンクされる．
 準備が整ったら，4つのMPIプロセスを使用してinitを実行する．
 \begin{verbatim}
  $ mpirun -n 4 ./scale-les_init init.conf
@@ -76,11 +80,16 @@ grads形式データのフォーマットで読み込むことを指定してい
 \verb|boundary_d01.pe######.nc|と\verb|init_d01_00010713600.000.pe######.nc|というファイルが
 MPIプロセス数だけ，つまり4つずつ生成される（\verb|######|にはMPIプロセスの番号が入る）．
 それぞれ，境界値データと初期値データが入ってるおり，境界値データには複数の時刻のデータが1つのファイルに含まれている．
-初期値ファイルの名前のうち\verb|"00010713600.000"|の部分は，モデル内で算出された実験開始時刻を表している．
-
+初期値ファイルの名前のうち\verb|"00019094400.000"|の部分は，モデル内で算出された実験開始時刻を表している．
 処理内容のログとして，\verb|init_LOG_d01.pe000000|という名前でログファイルも出力されるので内容を確かめておくこと．
-gpviewがインストールされていれば，次のコマンドによって作成された地形と土地利用データを描画してチェックすることができる．
-正しく作成されていれば，Fig. \ref{fig:init}と同じように描かれる．
+
+
+\vspace{1cm}
+\noindent {\Large\em OPTION}\\
+gpviewがインストールされていれば，次のコマンドによって
+作成された地形と土地利用データが、正しく作成されているかどうか、
+確認することが出来る．正しく作成されていれば、
+Fig. \ref{fig:init}と同じように描かれる．
 
 \begin{verbatim}
 $ gpvect --scalar --slice z=1500 --nocont --aspect=1 --range=0.001:0.015          \
@@ -96,5 +105,4 @@ $ gpvect --scalar --slice z=1500 --nocont --aspect=1 --range=0.001:0.015        
   \label{fig:init}
 \end{center}
 \end{figure}
-
 
