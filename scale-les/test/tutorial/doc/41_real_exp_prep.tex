@@ -2,7 +2,10 @@
 このチュートリアルでは，Fig. \ref{fig:domain}に示した
 日本域を対象とした現実大気実験を行う．
 現実大気実験用のチュートリアルは
-\verb|scale/scale-les/test/tutorial/real/| の下で行う．
+\begin{verbatim}
+ scale/scale-les/test/tutorial/real/
+\end{verbatim}
+の下で行う．
 以降の説明で\verb|${Tutrial_DIR}|は，\verb|scale/scale-les/test/tutorial/|を絶対PATHで示すこととする．
 
 SCALE-LESモデルの実行過程は，Fig. \ref{fig:howto}に示されるように
@@ -44,7 +47,7 @@ SCALE-LESモデルの実行過程は，Fig. \ref{fig:howto}に示されるよう
   \begin{tabularx}{150mm}{|l|X|} \hline
     \rowcolor[gray]{0.9} 項目 & 設定 \\ \hline
     MPIプロセス分割 (東西 x 南北) & 2 x 2 (合計4プロセス) \\ \hline
-    水平格子数 (東西 x 南北) & 70格子点 x 70格子点 \\ \hline
+    水平格子数 (東西 x 南北) & 60格子点 x 60格子点 \\ \hline
     鉛直層数                 & 36層                  \\ \hline
     水平格子間隔             & dx = dy = 15km       \\ \hline
     積分期間 & 2014年8月10日 00UTC～12UTC (12時間積分) \\ \hline
@@ -107,8 +110,8 @@ SCALE用の地形・土地利用のデータを\\
 \end{verbatim}
 展開したディレクトリには、地形データと土地利用データが格納されている。
 \begin{verbatim}
-  ${SCALE_DB}/topo/    <- 地形データ
-  ${SCALE_DB}/landuse/ <- 土地利用データ
+  scale_database/topo/    <- 地形データ
+  scale_database/landuse/ <- 土地利用データ
 \end{verbatim}
 
 \item パスの設定\\
@@ -121,6 +124,7 @@ makeを使ったjob scriptを使用する場合には、
 \end{enumerate}
 
 \subsubsection{大気・陸面・海面水温データ}
+\label{sec:real_prep}
 初期値境界値データは4-byte バイナリー(grads format)に変換すれば、
 任意のデータを読み込むことが可能である．
 チュートリアルではNCEP FNL(Final) Operational Global Analysis dataを使用する。

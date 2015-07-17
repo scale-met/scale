@@ -2,7 +2,7 @@
 %-------------------------------------------------------%
 \section{時間積分を行う：run}
 %-------------------------------------------------------%
-
+\subsubsection{run.confの準備}
 ここではいよいよSCALE-LESモデルを実行する．
 まず，runディレクトリへ移動する．
 \begin{verbatim}
@@ -48,44 +48,38 @@ Table\ref{tab:grids}の設定に合わせてある．
 \verb|run.conf|の設定の中で時間積分に関する設定は，\verb|PARAM_TIME|の項目にある．
 \begin{verbatim}
 &PARAM_TIME
- TIME_STARTDATE             = 2014, 8, 10, 0, 0, 0,
- TIME_STARTMS               = 0.D0,
- TIME_DURATION              = 12.0D0,
- TIME_DURATION_UNIT         = "HOUR",
- TIME_DT                    = 30.0D0,
- TIME_DT_UNIT               = "SEC",
- TIME_DT_ATMOS_DYN          = 7.5D0,
- TIME_DT_ATMOS_DYN_UNIT     = "SEC",
+ TIME_STARTDATE          = 2014, 8, 10, 0, 0, 0, <- 時間積分を開始する時刻
+ TIME_STARTMS            = 0.D0,
+ TIME_DURATION           = 12.0D0,  <- 積分期間
+ TIME_DURATION_UNIT      = "HOUR",  <- TIME_DURATIONの単位
+ TIME_DT                 = 60.0D0,  <- 移流計算の時間ステップ
+ TIME_DT_UNIT            = "SEC",   <- TIME_DTの単位
+ TIME_DT_ATMOS_DYN       = 15.0D0,  <- 移流計算以外の力学過程の計算の時間ステップ
+ TIME_DT_ATMOS_DYN_UNIT  = "SEC",   <- TIME_DT_ATMOS_DYNの単位
 
  ～～中略～～
 
 /
 \end{verbatim}
 
-\verb|TIME_STARTDATE|は時間積分を開始する時刻を設定する項目で，チュートリアルでは2014年8月10日0時UTCと設定する．
-\verb|TIME_DURATION|は積分期間を設定する項目で，ここでは12時間積分を行う設定になっている．
-\verb|TIME_DT|，および\verb|TIME_DT_ATMOS_DYN|は，時間積分の間隔（時間ステップ間隔：DT = Delta Time）を設定する項目である．前者は移流計算，後者はそれ以外の力学過程の計算に関する時間積分間隔である．
-SCALE-LESモデルでは，そのほかの物理過程についても細かく時間積分間隔を設定できるようになっている．
+\verb|TIME_STARTDATE|はUTCで指定する．
+チュートリアルでは2014年8月10日0時UTCに設定している．
+上記の他に、SCALEモデルでは，それぞれの物理スキーム毎に
+時間間隔を設定できるようになっている．
 
 
-出力データに関する設定は\verb|PARAM_HISTORY|で行う．
-
+計算結果の出力に関する設定は\verb|PARAM_HISTORY|で行う．
 \begin{verbatim}
-
   &PARAM_HISTORY
-   HISTORY_DEFAULT_BASENAME  = "history_d01",
-   HISTORY_DEFAULT_TINTERVAL = 1800.D0,
-   HISTORY_DEFAULT_TUNIT     = "SEC",
+   HISTORY_DEFAULT_BASENAME  = "history_d01", <-出力するファイル名
+   HISTORY_DEFAULT_TINTERVAL = 1800.D0,       <-出力時間間隔
+   HISTORY_DEFAULT_TUNIT     = "SEC",         <-出力時間間隔の単位
    HISTORY_DEFAULT_TAVERAGE  = .false.,
    HISTORY_DEFAULT_DATATYPE  = "REAL4",
-   HISTORY_DEFAULT_ZINTERP   = .true.,
+   HISTORY_DEFAULT_ZINTERP   = .false.,
   /
-
 \end{verbatim}
-\verb|HISTORY_DEFAULT_BASENAME|は出力するファイル名である．
-\verb|HISTORY_DEFAULT_TINTERVAL|と\verb|HISTORY_DEFAULT_TUNIT|によってヒストリー出力時間間隔が設定される．
-ここでは1800秒（30分）間隔での出力として設定されている．
-この設定で，\verb|HISTITEM|として羅列された変数について出力される．
+上記の設定に従って、下記の\verb|HISTITEM|として羅列された変数について出力される．
 \verb|HISTITEM|では、オプション変数を加えることで、出力間隔を変数毎に変更したり、平均値を出力したりすることも出来る。
 これらの説明は\ref{sec:output}を参照されたい．
 
@@ -123,16 +117,15 @@ SCALE-LESモデルでは，そのほかの物理過程についても細かく�
 記述されているので，実行前にチェックすること．
 詳細なコンフィグファイルの内容については，Appendix \ref{app:namelist}を参照されたい．
 
-
-次に，コンパイル済みのバイナリをrunディレクトリへリンクする．
+%
+\subsubsection{実行}
+コンパイル済みのバイナリをrunディレクトリへリンクする．
 
 \begin{verbatim}
  $ ln -s ../../bin/scale-les ./
 \end{verbatim}
-
-また，前節と同様に陸面過程や放射過程のモデルを起動するためのパラメータファイルも
-リンクしておく．
-
+陸面過程や放射過程のモデルを起動するためのパラメータファイルに
+リンクを張る．
 \begin{verbatim}
  $ ln -s ../../../data/land/* ./   <- 陸面スキーム用のパラメータファイル
  $ ln -s ../../../data/rad/*  ./   <- 放射スキーム用のパラメータファイル
@@ -142,21 +135,22 @@ SCALE-LESモデルでは，そのほかの物理過程についても細かく�
   $ mpirun -n 4 ./scale-les run.conf < /dev/null >&log&
 \end{verbatim}
 
-実行にはおおよそ2時間を要するため，上記のように標準出力をファイルへ
-吐き出すようにしてバックグラウンドで実行しておくと便利である．
-計算が開始されれば，処理内容のログとして，\verb|"LOG_d01.pe000000"|ファイルが生成されるので，
+実行にはおおよそ1時間を要するため，上記のように標準出力をファイルへ
+書き出すようにしてバックグラウンドで実行すると便利である．
+計算が開始されれば，処理内容のログとして、
+\verb|"LOG_d01.pe000000"|ファイルが生成されるので，
 例えば下記のようなコマンドで\verb|"LOG_d01.pe000000"|ファイルを参照すれば，
 どこまで計算が進んでいるかチェックすることができる．
 \begin{verbatim}
  $ tail  LOG_d01.pe000000
 \end{verbatim}
-正常にジョブが終了すれば，\verb|history_d01.pe######.nc|と\verb|restart_d01.pe######.nc|と
-いう名前のファイルがMPIプロセス数だけ，つまり4つずつ生成される
-（\verb|######|にはMPIプロセスの番号が入る）．
-historyファイルは実行結果のプロダクトであり，restartファイルは対応する時刻を開始時刻として
+正常にジョブが終了すれば，\verb|history_d01.pe######.nc|と
+\verb|restart_d01.pe######.nc|という名前のファイルがMPIプロセス数だけ，つまり4つずつ生成される（\verb|######|にはMPIプロセスの番号が入る）．
+historyファイルは実行結果のプロダクトであり，
+restartファイルは対応する時刻を開始時刻として
 再計算を開始するための初期値ファイルである．
-
-次節でhistoryデータを描画して結果を調べる方法を説明する．
+次節でhistoryデータをGrADSで描画可能なバイナリーデータに変換して
+結果を調べる方法を説明する．
 
 %####################################################################################
 
