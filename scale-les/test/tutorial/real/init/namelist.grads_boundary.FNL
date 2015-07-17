@@ -1,0 +1,32 @@
+#
+# Dimension 
+#
+&nml_grads_grid
+ outer_nx     = 360
+ outer_ny     = 181
+ outer_nz     = 26
+ outer_nl     = 4
+/
+
+#
+# Variables
+#
+&grdvar  item='lon',     dtype='linear',  swpoint=0.0d0,   dd=1.0d0 /
+&grdvar  item='lat',     dtype='linear',  swpoint=-90.0d0, dd=1.0d0 /
+&grdvar  item='plev',    dtype='levels',  lnum=26, lvars=100000,97500,95000,92500,90000,85000,80000,75000,70000,65000,60000,55000,50000,45000,40000,35000,30000,25000,20000,15000,10000,7000,5000,3000,2000,1000, /
+&grdvar  item='MSLP',    dtype='map',     fname='FNLsfc', startrec=1,  totalrec=6   /
+&grdvar  item='PSFC',    dtype='map',     fname='FNLsfc', startrec=2,  totalrec=6   /
+&grdvar  item='U10',     dtype='map',     fname='FNLsfc', startrec=3,  totalrec=6   /
+&grdvar  item='V10',     dtype='map',     fname='FNLsfc', startrec=4,  totalrec=6   /
+&grdvar  item='T2',      dtype='map',     fname='FNLsfc', startrec=5,  totalrec=6   /
+&grdvar  item='RH2',     dtype='map',     fname='FNLsfc', startrec=6,  totalrec=6   /
+&grdvar  item='HGT',     dtype='map',     fname='FNLatm', startrec=1,  totalrec=125 /
+&grdvar  item='U',       dtype='map',     fname='FNLatm', startrec=27, totalrec=125 /
+&grdvar  item='V',       dtype='map',     fname='FNLatm', startrec=53, totalrec=125 /
+&grdvar  item='T',       dtype='map',     fname='FNLatm', startrec=79, totalrec=125 /
+&grdvar  item='RH',      dtype='map',     fname='FNLatm', startrec=105,totalrec=125, knum=21 /
+&grdvar  item='llev',    dtype='levels',  lnum=4, lvars=0.05,0.25,0.70,1.50, /
+&grdvar  item='lsmask',  dtype='map',     fname='FNLland', startrec=1, totalrec=10 /
+&grdvar  item='SKINT',   dtype='map',     fname='FNLland', startrec=2, totalrec=10 /
+&grdvar  item='STEMP',   dtype='map',     fname='FNLland', startrec=3, totalrec=10, missval=9.999e+20 /
+&grdvar  item='SMOISVC', dtype='map',     fname='FNLland', startrec=7, totalrec=10, missval=9.999e+20 /
