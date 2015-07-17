@@ -4,10 +4,10 @@ title FNL
 options template big_endian
 xdef 360 linear   0.000000 1.000000
 ydef 181 linear -90.000000 1.000000
-zdef 26  levels 1000 975 950 925 900
-     850 800 750 700 650 600 550 
-     500 450 400 350 300 250 200
-     150 100 70 50 30 20 10
+zdef 26  levels 
+ 1000 975 950 925 900 850 800 750 700 650
+  600 550 500 450 400 350 300 250 200 150
+  100  70  50  30  20  10
 tdef 4 linear 00Z10aug2014 6hr
 VARS 5
 HGTprs    26 99  Geopotential Height [gpm]
