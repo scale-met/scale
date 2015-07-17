@@ -510,9 +510,10 @@ configファイル（\verb|run.conf|）を元にして一部の項目を説明�
 
 \subsection{雲微物理スキームの設定} \label{sec:adv_microphys}
 %------------------------------------------------------
-チュートリアルでは、Tomita (2008)の1-momentバルク法を用いていたが、SCALEには暖かい雲のみを考慮する1-momentバルク法
-(Kessler 1969)，氷雲を含んだ2-momentバルク法(Seiki and Nakajima, 2014)、1-momentビン法の４種類の雲微物理スキームも
-利用することが可能である。これらの雲微物理スキームの選択は，init.confとrun.confに記載されているPARAM\_TRACERに含まれる
+チュートリアルでは、\cite{tomita_2008}の1-momentバルク法を用いていたが、SCALEには暖かい雲のみを考慮する1-momentバルク法
+(\cite{kessler_1969})，氷雲を含んだ2-momentバルク法(\cite{sn_2014})、1-momentビン法の４種類の雲微物理スキーム
+(\cite{suzuki_etal_2010})も利用することが可能である。
+これらの雲微物理スキームの選択は，init.confとrun.confに記載されているPARAM\_TRACERに含まれる
 ``TRACER\_TYPE''及び，PARAM\_ATMOSに含まれる``ATMOS\_PHY\_MP\_TYPE''によって設定する。
 {\bf 両者は同じにする必要があり}，選択する雲微物理スキームによって以下のように設定する。
 
@@ -564,7 +565,8 @@ micpara.datに記載されているnbinが異なれば
 \subsection{乱流スキームの設定} \label{sec:adv_turbulence}
 %------------------------------------------------------
 理想実験チュートリアルでは乱流スキームは導入されていなかったが、SCALEにはSmagorinsky typeの乱流スキーム
-(Brown 1994, Scotti et al. 1994)とMellor-Yamada Level 3の乱流スキーム(MYNN, Nakanishi and Niino 2006)導入されている。
+(\cite{smagorinsky_1963}; \cite{lilly_1962}; Brown 1994; Scotti et al. 1994)とMellor-Yamada Level 3の
+乱流スキーム(MYNN, \cite{my_1982},\cite{nakanishi_2004})導入されている。
 これらを利用するには，init.confとrun.conf双方のPARAM\_ATMOSに「ATMOS\_PHY\_TB\_TYPE」を加える。
 
 \begin{verbatim}
@@ -585,7 +587,7 @@ ATMOS_PHY_TB_TYPE="MYNN" (Mellor-Yamada Level 3のRANSモデル）
 
 \subsection{放射過程の設定} \label{sec:adv_radiation}
 %------------------------------------------------------
-SCALEには、放射過程としてMSTRN (Sekiguchi and Nakajima 2008)が実装されている。ここでは、MSTRNの設定方法を説明する。
+SCALEには、放射過程としてMSTRN (\cite{sekiguchi_2008})が実装されている。ここでは、MSTRNの設定方法を説明する。
 
 
 

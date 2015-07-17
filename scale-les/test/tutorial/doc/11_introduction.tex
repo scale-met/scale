@@ -9,8 +9,8 @@
 第\ref{sec:advance}章ではチュートリアルでは説明しなかった実行方法の詳細、
 機能やツールについて説明します。
 
-本書中の不明点やお気づきの点がございましたら、
-SCALE user's メーリングリスト \verb|scale-user@riken.jp|までご連絡ください。
+本書中の不明点やお気づきの点がございましたら、SCALE user's メーリングリスト\\
+ \verb|scale-user@riken.jp|までご連絡ください。
 
 
 
@@ -65,9 +65,9 @@ SCALEの使用前に一読しておくこと。
 \begin{itemize}
  \item 乱流過程: Smagorinsky-Lilly typeのサブグリッドモデル (\cite{smagorinsky_1963}; \cite{lilly_1962}), 
 MYNN2.5境界層モデル (\cite{my_1982},\cite{nakanishi_2004})から選択可能
- \item 雲微物理: Kessler type バルクモデル(Kessler 1969)，6-class single moment バルクモデル(tomita 2006)，
+ \item 雲微物理: Kessler type バルクモデル(\cite{kessler_1969})，6-class single moment バルクモデル(\cite{tomita_2008})，
 6-class double moment バルクモデル(\cite{sn_2014})，ビン法雲モデル(\cite{suzuki_etal_2010})から選択可能
- \item 放射過程: MSTRN (Sekiguchi and Nakajima 2008)
+ \item 放射過程: MSTRN (\cite{sekiguchi_2008})
  \item 地表面モデル
   \begin{itemize}
    \item 陸面モデル: バケツモデル（バルク交換係数は \cite{beljaars_1991}; \cite{wilson_2001}）
@@ -87,7 +87,7 @@ MYNN2.5境界層モデル (\cite{my_1982},\cite{nakanishi_2004})から選択可�
 SCALEは、理化学研究所 計算科学研究機構（AICS）を中心に開発が進められている気象・気候科学向けのライブラリである．
 Figure \ref{fig:scale}に示されるように，このライブラリは次世代のスーパーコンピュータから汎用計算機に至るまで広く
 用いられる事を念頭において開発されており，気候・気象科学を専門とする科学者と計算機科学を専門とする科学者が共同で
-開発を行っている（\cite{abe_2011}）．そのため，スーパーコンピュータ「京」やFujitsu FX10等のスーパーコンピュータ上でも，
+開発を行っている（\cite{abe_etal_2013}）．そのため，スーパーコンピュータ「京」やFujitsu FX10等のスーパーコンピュータ上でも，
 ユーザーがチューニングすることなく高い計算効率で実行可能なようになっている．
 
 SCALEライブラリは京コンピュータをはじめとする並列計算機に対してチューニングされたモデルコンポーネントや
