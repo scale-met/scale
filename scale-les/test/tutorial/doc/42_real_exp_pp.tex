@@ -10,9 +10,9 @@ ppディレクトリへ移動し、現実実験のための地形データ、土
 ppディレクトリの中には，\verb|pp.conf|という名前の
 コンフィグファイルが準備されている．
 ドメインの位置や格子点数など、実験設定に合わせて，
-適宜\verb|pp.conf|を編集する必要があるが,
-チュートリアルでは，すでに編集済みの\verb|pp.conf|が
-与えられているためそのまま利用する．
+適宜\verb|pp.conf|を編集する必要があるが、
+チュートリアルではすでにTable \ref{tab:grids}の設定に
+従って編集済みの\verb|pp.conf|が用意されているためそのまま利用する．
 \verb|pp.conf|の設定の中で特に注意するべき項目は，\verb|PARAM_CONVERT|である．
 \begin{verbatim}
  &PARAM_CONVERT
@@ -42,20 +42,13 @@ Appendix \ref{app:namelist}を参照されたい．
 実行時のログは、\verb|pp_LOG_d01.pe000000|に出力されるので内容を確かめておくこと．
 
 
-%ノード毎に分割されたnetcdfを
-%gradsで開けるバイナリーデータに変換するには、
-%\label{sec:source_net2g}節でコンパイルした\verb|netcdf2grads_h|を使用する．
-%\verb|netcdf2grads_h|の詳しい使用方法や\verb|net2g.conf|の詳細については、
-%\label{sec:net2g}節を参照頂くこととして、
-%ここでは、すでに用意されている \verb|quickview.sh|を使用する．
-
 \vspace{1cm}
 \noindent {\Large\em OPTION}\\
-gpviewがインストールされていれば，次のコマンドによって
-作成された地形と土地利用データが、正しく作成されているかどうか、
+gpviewがインストールされている場合、次のコマンドによって、
+作成された地形と土地利用データが正しく作成されているかどうか
 確認することが出来る．正しく作成されていれば，Fig. \ref{fig:domain}と同様の図ができる．
 \begin{verbatim}
-  $ gpview topo_d01.pe00000*@TOPO --aspect=1
-  $ gpview landuse_d01.pe00000*@FRAC_LAND --aspect=1
+  $ gpview topo_d01.pe00000*@TOPO --aspect=1 --nocont
+  $ gpview landuse_d01.pe00000*@FRAC_LAND --aspect=1 --nocont
 \end{verbatim}
 

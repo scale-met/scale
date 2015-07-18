@@ -9,15 +9,14 @@
  $ cd ${Tutrial_DIR}/real/run
 \end{verbatim}
 
-runディレクトリの中には，これまでと同様に\verb|run.conf|という名前の
-コンフィグファイルが準備されている．
-チュートリアル用の\verb|run.conf|ファイルのドメインの位置や格子点数などは
-Table\ref{tab:grids}の設定に合わせてある．
+runディレクトリの中には，\verb|run.conf|という名前の
+コンフィグファイルが準備されており、
+ドメインの位置や格子点数など、チュートリアル用の設定（Table\ref{tab:grids}）に合わせてある．
 モデル本体の実行には事前に作成した地形・土地利用データや初期値・境界値データを利用する．
-これらのファイルを参照するために，
+これらのファイルの場所は、\verb|run.conf|内の
 \verb|TOPO_IN_BASENAME|，\verb|LANDUSE_IN_BASENAME|，
 \verb|RESTART_IN_BASENAME|，および\verb|ATMOS_BOUNDARY_IN_BASENAME|で
-それぞれ場所を指定する．
+指定している．
 
 \begin{verbatim}
   &PARAM_TOPO
@@ -41,7 +40,6 @@ Table\ref{tab:grids}の設定に合わせてある．
    ATMOS_BOUNDARY_VALUE_VELZ  = 0.0D0,
    ATMOS_BOUNDARY_UPDATE_DT   = 21600.0D0,
   /
-
 \end{verbatim}
 
 
@@ -62,10 +60,10 @@ Table\ref{tab:grids}の設定に合わせてある．
 /
 \end{verbatim}
 
-\verb|TIME_STARTDATE|はUTCで指定する．
+初期時刻\verb|TIME_STARTDATE|はUTCで指定する．
 チュートリアルでは2014年8月10日0時UTCに設定している．
-上記の他に、SCALEモデルでは，それぞれの物理スキーム毎に
-時間間隔を設定できるようになっている．
+積分のための時間ステップは、上記の他、
+それぞれの物理スキーム毎に設定できるようになっている．
 
 
 計算結果の出力に関する設定は\verb|PARAM_HISTORY|で行う．
@@ -76,11 +74,13 @@ Table\ref{tab:grids}の設定に合わせてある．
    HISTORY_DEFAULT_TUNIT     = "SEC",         <-出力時間間隔の単位
    HISTORY_DEFAULT_TAVERAGE  = .false.,
    HISTORY_DEFAULT_DATATYPE  = "REAL4",
-   HISTORY_DEFAULT_ZINTERP   = .false.,
+   HISTORY_DEFAULT_ZINTERP   = .false.,       <- 出力時に高さ面へ内挿するかどうか
+   HISTORY_OUTPUT_STEP0      = .true.,        <- 初期時刻(t=0)の値を出力するかどうか
   /
 \end{verbatim}
-上記の設定に従って、下記の\verb|HISTITEM|として羅列された変数について出力される．
-\verb|HISTITEM|では、オプション変数を加えることで、出力間隔を変数毎に変更したり、平均値を出力したりすることも出来る。
+上記の設定に従って、下記の\verb|HISTITEM|に羅列された変数が出力される．
+\verb|HISTITEM|ではオプション変数を加えることで、変数毎に、出力間隔を変更したり、
+平均値を出力したりすることも可能である．
 これらの説明は\ref{sec:output}を参照されたい．
 
 \begin{verbatim}
@@ -108,9 +108,7 @@ Table\ref{tab:grids}の設定に合わせてある．
 &HISTITEM item="SFC_TEMP"   /     ! temperature a the bottom surface (2D)
 &HISTITEM item="LAND_SFC_TEMP" /  ! temperature a the bottom surface for land model (2D)
 &HISTITEM item="URBAN_SFC_TEMP" / ! temperature a the bottom surface for urban model (2D)
-
 \end{verbatim}
-
 
 その他に実験で使用される物理過程の設定は，
 \verb|PARAM_TRACER，PARAM_ATMOS，PARAM_OCEAN，PARAM_LAND，PARAM_URBAN|の項目に
@@ -142,15 +140,17 @@ Table\ref{tab:grids}の設定に合わせてある．
 例えば下記のようなコマンドで\verb|"LOG_d01.pe000000"|ファイルを参照すれば，
 どこまで計算が進んでいるかチェックすることができる．
 \begin{verbatim}
- $ tail  LOG_d01.pe000000
+ $ tail -f LOG_d01.pe000000
 \end{verbatim}
 正常にジョブが終了すれば，\verb|history_d01.pe######.nc|と
-\verb|restart_d01.pe######.nc|という名前のファイルがMPIプロセス数だけ，つまり4つずつ生成される（\verb|######|にはMPIプロセスの番号が入る）．
-historyファイルは実行結果のプロダクトであり，
+\verb|restart_d01.pe######.nc|という名前のファイルがMPIプロセス数だけ，
+つまり4つずつ生成される（\verb|######|にはMPIプロセスの番号が入る）．
+historyファイルは計算結果の出力ファイルであり，
+\verb|HISTITEM|に指定した変数のみ書き出される．
 restartファイルは対応する時刻を開始時刻として
 再計算を開始するための初期値ファイルである．
 次節でhistoryデータをGrADSで描画可能なバイナリーデータに変換して
-結果を調べる方法を説明する．
+結果を確認する方法について説明する．
 
 %####################################################################################
 

@@ -1,6 +1,6 @@
 
 このチュートリアルでは，Fig. \ref{fig:domain}に示した
-日本域を対象とした現実大気実験を行う．
+領域を対象とした現実大気実験を行う．
 現実大気実験用のチュートリアルは
 \begin{verbatim}
  scale/scale-les/test/tutorial/real/
@@ -34,8 +34,8 @@ SCALE-LESモデルの実行過程は，Fig. \ref{fig:howto}に示されるよう
 
 \begin{figure}[h]
 \begin{center}
-  \includegraphics[width=0.5\hsize]{./figure/domain.eps}\\
-  \caption{計算領域．コンターは海岸線，カラーシェードは地形の高度を示す．}
+  \includegraphics[width=0.5\hsize]{./figure/real_domain.eps}\\
+  \caption{計算領域．カラーシェードは地形の標高を示す．}
   \label{fig:domain}
 \end{center}
 \end{figure}
@@ -66,18 +66,21 @@ SCALE-LESモデルの実行過程は，Fig. \ref{fig:howto}に示されるよう
 {\color{blue}青字}は必須の変数、その他は任意．
 
 \begin{itemize}
-\item {\color{blue}標高データ}
-\item {\color{blue}土地利用データ}
-\item 初期値境界値データ(大気・陸面・海面水温)
+\item 地形データ(SCALEモデルの地形を準備する)
+ \begin{itemize}
+  \item {\color{blue}標高データ}
+  \item {\color{blue}土地利用データ}
+ \end{itemize}
+\item 初期値境界値データ
  \begin{itemize}
    \item {\color{blue}親モデルの緯度・経度}
    \item 3次元大気データ
      \begin{itemize}
-       \item {\color{blue}東西風, 南北風, 温度, 比湿(相対湿度), 気圧, ジオポテンシャル高度}
+       \item {\color{blue}東西風速, 南北風速, 気温, 比湿(相対湿度), 気圧, ジオポテンシャル高度}
      \end{itemize}
    \item 2次元大気データ
      \begin{itemize}
-       \item 海面更正気, 地上気圧, 10m東西風, 10m南北風, 2m気温, 2m比湿(相対湿度)
+       \item 海面更正気圧, 地上気圧, 10m東西風速, 10m南北風速, 2m気温, 2m比湿(相対湿度)
      \end{itemize}
    \item 2次元陸面データ
      \begin{itemize}
@@ -143,7 +146,8 @@ NCARのサイト
 
 \item データフォーマットをgribからbinaryに変換\\
  SCALEは4byte バイナリー（grads format）の境界値データを読み込むことができる。\\
-\verb|${Tutrial_DIR}/real/tools/| の中にある \verb|convert_grib2grads.sh|を実行
+\verb|${Tutrial_DIR}/real/tools/| の中にある \verb|convert_grib2grads.sh|を実行。
+ただし、あらかじめ\verb|wgrib2|がインストールされている必要がある．
 \begin{verbatim}
   $ sh convert_grib2grads.sh
 \end{verbatim}
