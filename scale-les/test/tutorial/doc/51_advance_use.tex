@@ -32,7 +32,7 @@ Face Pointと呼ぶ。そして、これらの頭文字と方向を組み合わ�
 
 例として理想実験のチュートリアルのrun.confファイル（run\_R20kmDX500m.conf）を見てみると次のように記載されている。\\
 
-{\small {\gt
+\noindent {\small {\gt
 \ovalbox{
 \begin{tabularx}{140mm}{l}
 \verb|&PARAM_GRID|\\
@@ -134,7 +134,7 @@ X方向、およびY方向のMPIプロセスの割付設定は、configファイ
 \verb|PRC_NUM_X| $\times$ \verb|PRC_NUM_Y|となる。実行時にMPIコマンドに指定するMPIプロセス数は、
 この総MPIプロセス数を指定しなければならない。この条件を満たさない場合は，LOGファイルなどに\\
 
-{\small {\gt
+\noindent {\small {\gt
 \ovalbox{
 \begin{tabularx}{140mm}{l}
 \verb|xxx total number of node does not match that requested. Check!| \\
@@ -146,7 +146,7 @@ X方向、およびY方向のMPIプロセスの割付設定は、configファイ
 ここまでの復習として、現実大気実験のチュートリアルで使用した\verb|run.conf|ファイルを例にして、
 上述の内容を確認してみる。\\
 
-{\small {\gt
+\noindent {\small {\gt
 \ovalbox{
 \begin{tabularx}{140mm}{l}
 \verb|&PARAM_PRC| \\
@@ -158,8 +158,8 @@ X方向、およびY方向のMPIプロセスの割付設定は、configファイ
  \\
 \verb|&PARAM_INDEX| \\
 \verb| KMAX = 36,| \\
-\verb| IMAX = 30,| \\
-\verb| JMAX = 30,| \\
+\verb| IMAX = 60,| \\
+\verb| JMAX = 60,| \\
 \verb|/| \\
 \end{tabularx}
 }}}\\
@@ -167,9 +167,9 @@ X方向、およびY方向のMPIプロセスの割付設定は、configファイ
 \noindent まずMPIプロセス数については\verb|PRC_NUM_X = 2|、\verb|PRC_NUM_Y = 2|と設定されているため、
 X方向、Y方向ともに2分割されており、総計として4つのMPIプロセスを使用した計算となることがわかる。
 一方、1つのMPIプロセスあたりの格子点数については、\verb|IMAX = 30|、\verb|JMAX = 30|と指定されているため、
-総格子点数としては、X方向、Y方向ともに$2 \times 30 = 60$となり60格子点である。
+総格子点数としては、X方向、Y方向ともに$2 \times 60 = 120$となり120格子点である。
 同じconfigファイル内に記載されている\verb|PARAM_GRID|の項目の\verb|DX|、\verb|DY|はともに15000 m（15 km）
-と指定されているため、$60 grid \times 15 km = 300 km$の計算から、$300 km \times 300 km$の正方形の計算領域
+と指定されているため、$120 grid \times 15 km = 1800 km$の計算から、$1800 km \times 1800 km$の正方形の計算領域
 が設定されていることがわかる。
 
 \verb|PARAM_PRC|の項目の\verb|PRC_PERIODIC_X|、\verb|PRC_PERIODIC_Y|は側面境界条件に関する設定である。
@@ -184,13 +184,13 @@ X方向、Y方向ともに2分割されており、総計として4つのMPIプ�
 {\bf a. MPIプロセス数はそのままに計算領域を4倍に広げる}\\
 
 この設定はとても簡単である。デフォルト設定は、X方向、Y方向ともに2つのMPIプロセスを使用し、格子点数はともに
-30点なので、全領域の格子点数は、$(2 \times 30)_{x} \times (2 \times 30)_{y} = 3600$点である。
+30点なので、全領域の格子点数は、$(2 \times 60)_{x} \times (2 \times 60)_{y} = 14400$点である。
 従って、計算領域を4倍に広げるためには、\verb|IMAX|、\verb|JMAX|の値をデフォルトに対して2倍の値に変更するだけである。
-これで、全領域の格子点数は、$(2 \times 60)_{x} \times (2 \times 60)_{y} = 14400$点となり、3600点の4倍の
+これで、全領域の格子点数は、$(2 \times 120)_{x} \times (2 \times 120)_{y} = 57600$点となり、14400点の4倍の
 計算領域になっている。この変更を施したconfigファイルの例は次のとおりである。
 赤文字の部分がデフォルトからの変更点を意味する。\\
 
-{\small {\gt
+\noindent {\small {\gt
 \ovalbox{
 \begin{tabularx}{140mm}{l}
 \verb|&PARAM_PRC| \\
@@ -202,13 +202,13 @@ X方向、Y方向ともに2分割されており、総計として4つのMPIプ�
  \\
 \verb|&PARAM_INDEX| \\
 \verb| KMAX = 36,| \\
-\textcolor{red}{\verb| IMAX = 60,|} \\
-\textcolor{red}{\verb| JMAX = 60,|} \\
+\textcolor{red}{\verb| IMAX = 120,|} \\
+\textcolor{red}{\verb| JMAX = 120,|} \\
 \verb|/| \\
 \end{tabularx}
 }}}\\
 
-
+\vspace{5mm}
 {\bf b. 1つのMPIプロセスあたりの格子点数はそのままに計算領域を4倍に広げる}\\
 
 先程は、MPIプロセス数を維持して計算領域を広げたが今度は、1つのMPIプロセスあたりの格子点数はそのままに、MPIプロセス数を
@@ -218,11 +218,11 @@ X方向、Y方向ともに2分割されており、総計として4つのMPIプ�
 \footnote{計算科学用語では、この変更、つまりプロセスあたりの演算量一定で総演算量を増やしていくことを``weak scaling''と呼ぶ。}。
 
 計算領域を4倍に広げるためには、\verb|PRC_NUM_X|、\verb|PRC_NUM_Y|の値をデフォルトに対して2倍の値に変更するだけである。
-これで、全領域の格子点数は、$(4 \times 30)_{x} \times (4 \times 30)_{y} = 14400$点となり、3600点の4倍の
+これで、全領域の格子点数は、$(4 \times 60)_{x} \times (4 \times 60)_{y} = 57600$点となり、14400点の4倍の
 計算領域になっている。このとき必要なMPIプロセス数は、$4 \times 4 = 16$プロセス、つまりデフォルトの4倍のMPIプロセス数が必要になる。
 この変更を施したconfigファイルの例は次のとおりである。赤文字の部分がデフォルトからの変更点を意味する。\\
 
-{\small {\gt
+\noindent {\small {\gt
 \ovalbox{
 \begin{tabularx}{140mm}{l}
 \verb|&PARAM_PRC| \\
@@ -234,25 +234,25 @@ X方向、Y方向ともに2分割されており、総計として4つのMPIプ�
  \\
 \verb|&PARAM_INDEX| \\
 \verb| KMAX = 36,| \\
-\verb| IMAX = 30,| \\
-\verb| JMAX = 30,| \\
+\verb| IMAX = 60,| \\
+\verb| JMAX = 60,| \\
 \verb|/| \\
 \end{tabularx}
 }}}\\
 
-
+\vspace{5mm}
 {\bf c. 計算領域はそのままに水平格子間隔を3 kmに変更する}\\
 
-現実大気実験チュートリアルのデフォルト設定は、X方向、Y方向の総格子点数は60点で水平格子間隔が15 kmなので、
-計算領域は900 km $\times$ 900 kmの領域となっている。ここでは、この領域を維持したまま水平格子間隔を3 kmに
+現実大気実験チュートリアルのデフォルト設定は、X方向、Y方向の総格子点数は120点で水平格子間隔が15 kmなので、
+計算領域は1800 km $\times$ 1800 kmの領域となっている。ここでは、この領域を維持したまま水平格子間隔を3 kmに
 狭める設定にトライする。水平格子間隔が15 kmから3 kmへ1/5だけ小さくなるので逆に1方向あたりの総格子点数は5倍、
-つまり300点必要になる。この300点をどのようにMPIプロセス数とプロセスあたりの格子点数として割り振るかは
+つまり600点必要になる。この600点をどのようにMPIプロセス数とプロセスあたりの格子点数として割り振るかは
 ユーザーの環境や計算機リソース量によって異なる。たとえば、X方向、Y方向ともに10プロセスずつ、合計で100プロセスを
-使えば、プロセスあたりの格子点数は30点となり、積分時間間隔が短くなることを無視すれば演算量はデフォルトと変わらない。
+使えば、プロセスあたりの格子点数は60点となり、積分時間間隔が短くなることを無視すれば演算量はデフォルトと変わらない。
 
 しかし、なかなか100プロセスを利用できる計算機を持っている環境にいる人は少ないだろう。そこで、デフォルトから
 各方向に1つずつMPIプロセス数を増やし、$3 \times 3 = 9$プロセスを利用した設定を考えてみる。
-1方向あたりの総格子点数は300点なので、プロセスあたりの格子点数は$300 \div 3 = 100$点となる。
+1方向あたりの総格子点数は600点なので、プロセスあたりの格子点数は$600 \div 3 = 200$点となる。
 
 ここでの変更で気をつけなければならないことは、バッファー領域の幅である。現実大気実験チュートリアルの
 デフォルト設定ではバッファー領域は、計算領域トップと東西南北の側面境界に設定されており、側面境界のバッファー領域の
@@ -264,7 +264,7 @@ X方向、Y方向ともに2分割されており、総計として4つのMPIプ�
 
 この変更を施したconfigファイルの例は次のとおりである。赤文字の部分がデフォルトからの変更点を意味する。\\
 
-{\small {\gt
+\noindent {\small {\gt
 \ovalbox{
 \begin{tabularx}{140mm}{l}
 \verb|&PARAM_PRC| \\
@@ -276,8 +276,8 @@ X方向、Y方向ともに2分割されており、総計として4つのMPIプ�
  \\
 \verb|&PARAM_INDEX| \\
 \verb| KMAX = 36,| \\
-\textcolor{red}{\verb| IMAX = 100,|} \\
-\textcolor{red}{\verb| JMAX = 100,|} \\
+\textcolor{red}{\verb| IMAX = 200,|} \\
+\textcolor{red}{\verb| JMAX = 200,|} \\
 \verb|/| \\
  \\
 \verb|&PARAM_GRID| \\
@@ -301,7 +301,7 @@ X方向、Y方向ともに2分割されており、総計として4つのMPIプ�
 \textcolor{red}{\bf この設定も、pp\_***.conf、init\_***.conf、run\_***.confのconfigファイルの間で
 必ず一致させなければならない。}はじめに下記の例をもとに説明する。\\
 
-{\small {\gt
+\noindent {\small {\gt
 \ovalbox{
 \begin{tabularx}{140mm}{l}
 \verb|&PARAM_MAPPROJ| \\
@@ -343,7 +343,7 @@ SCALEで現在選択できる地図投影法とその指定文字列は次のと
 ランベルト正角円錐図法の設定方法については、設定方法が異なるため以下で説明する。ここでは、現実大気実験
 チュートリアルで使用した\verb|run.conf|ファイルを例に挙げる。\\
 
-{\small {\gt
+\noindent {\small {\gt
 \ovalbox{
 \begin{tabularx}{140mm}{l}
 \verb|&PARAM_MAPPROJ| \\
@@ -365,7 +365,7 @@ SCALEでは``standard parallel type''の実装を採用しているため、投�
 さらに下記のように\verb|MPRJ_basepoint_x|と\verb|MPRJ_basepoint_y|という変数を用いることで、地図投影中心と
 計算領域中心をずらすこともできる。\\
 
-{\small {\gt
+\noindent {\small {\gt
 \ovalbox{
 \begin{tabularx}{140mm}{l}
 \verb|&PARAM_MAPPROJ| \\
@@ -411,7 +411,7 @@ SCALEでは、側面境界条件として「周期境界条件」と「外部入
 ないことがわかるだろう。一方、外部入力データ指定を設定したい場合は、下記のように``\verb|PRERIODIC|''のスイッチを
 ``false''に指定する。\\
 
-{\small {\gt
+\noindent {\small {\gt
 \ovalbox{
 \begin{tabularx}{140mm}{l}
 \verb|&PARAM_PRC| \\
@@ -427,7 +427,7 @@ SCALEでは、側面境界条件として「周期境界条件」と「外部入
 設定はconfigファイルの\verb|PARAM_ATMOS_BOUNDARY|の項目で指定できる。現実大気実験のチュートリアルの
 configファイル（\verb|run.conf|）を元にして一部の項目を説明する。\\
 
-{\small {\gt
+\noindent {\small {\gt
 \ovalbox{
 \begin{tabularx}{140mm}{l}
 \verb|&PARAM_ATMOS_BOUNDARY|\\
@@ -480,7 +480,7 @@ configファイル（\verb|run.conf|）を元にして一部の項目を説明�
 積分時間と積分時間間隔の設定は、configファイル\verb|run_***.conf|の\verb|PARAM_PRC|の項目を編集することで設定できる。
 この項目はモデル本体の実行だけで有効である。理想実験チュートリアルで使用した\verb|run_R20kmDX500m.conf|の例を示す。\\
 
-{\small {\gt
+\noindent {\small {\gt
 \ovalbox{
 \begin{tabularx}{140mm}{l}
 \verb|&PARAM_TIME|\\
@@ -528,7 +528,7 @@ SUZUKI10：1-momentビン法(Suzuki et al. 2010，氷雲を含むか否かはオ
 SUZUKI10以外を選択した場合は、init.conf、run.confのTRACER\_TYPEとATMOS\_PHY\_MP\_TYPEを変更するだけで実行可能である。
 一方SUZUKI10を選択した場合は、init.conf、run.confの双方に\\
 
-{\small {\gt
+\noindent {\small {\gt
 \ovalbox{
 \begin{tabularx}{140mm}{l}
 \verb|&PARAM_BIN| \\
@@ -540,7 +540,7 @@ SUZUKI10以外を選択した場合は、init.conf、run.confのTRACER\_TYPEとA
 
 を追記し、さらにinit.confに記載されているPARAM\_MKINITに「flg\_bin = .true. 」を追加する必要がある。\\
 
-{\small {\gt
+\noindent {\small {\gt
 \ovalbox{
 \begin{tabularx}{140mm}{l}
 \verb|&PARAM_MKINIT| \\
@@ -551,15 +551,22 @@ SUZUKI10以外を選択した場合は、init.conf、run.confのTRACER\_TYPEとA
 \end{tabularx}
 }}}\\
 
-この場合も，{\bf init.confとrun.confに記載されるPARAM\_BINは同一にする必要がある}．SUZUKI10を選択した時には，micpara.datという
-雲微物理の計算に必要なファイルが自動生成される．micpara.datがすでに存在する場合は存在する場合はあるものを利用するが，
-nbinが変わると新たに作成しなければならない．micpara.datにnbinの情報が記載されているが，もしrun.confに記載されるnbinと
-micpara.datに記載されているnbinが異なれば
+この場合も、{\bf init.confとrun.confに記載されるPARAM\_BINは同一にする必要がある}。
+SUZUKI10を選択した時には、micpara.datという
+雲微物理の計算に必要なファイルが自動生成される。micpara.datがすでに存在する場合は存在する場合はあるものを利用するが、
+nbinが変わると新たに作成しなければならない。micpara.datにnbinの情報が記載されているが、もしrun.confに記載されるnbinと
+micpara.datに記載されているnbinが異なれば、\\
 
-\fbox{xxx nbin in inc\_tracer and nbin in micpara.dat is different check!}\\
+\noindent {\gt
+\fbox{
+\begin{tabularx}{140mm}{l}
+\verb|xxx nbin in inc_tracer and nbin in micpara.dat is different check!| \\
+\end{tabularx}
+}}\\
 
-というエラーメッセージを標準出力に出力して計算が落ちるようになっている．そのため，nbinを変更した際は，micpara.datを消去して
-新たに作り直す必要がある（micpara.datを消して再度SCALEをSUZUKI10を用いて実行すれば自動的に新しいmicpara.datが生成される）．
+\noindent というエラーメッセージを標準出力に出力して計算が落ちるようになっている。
+そのため、nbinを変更した際は、micpara.datを消去して
+新たに作り直す必要がある（micpara.datを消して再度SCALEをSUZUKI10を用いて実行すれば自動的に新しいmicpara.datが生成される）。
 
 
 \subsection{乱流スキームの設定} \label{sec:adv_turbulence}
@@ -582,27 +589,38 @@ ATMOS_PHY_TB_TYPE="MYNN" (Mellor-Yamada Level 3のRANSモデル）
 \end{verbatim}
 
 を加える。これらを設定した上で，run.shを実行することで，乱流スキームを考慮した計算が可能になる．
-地表面フラックスのバルク係数を決めるスキーム，放射スキーム，都市スキームなどに関しては，現実事例を対象とした４章を参照されたい．
+地表面フラックスのバルク係数を決めるスキーム，放射スキーム，都市スキームなどに関しては，
+現実事例を対象とした４章を参照されたい．
 
 
 \subsection{放射過程の設定} \label{sec:adv_radiation}
 %------------------------------------------------------
 SCALEには、放射過程としてMSTRN (\cite{sekiguchi_2008})が実装されている。ここでは、MSTRNの設定方法を説明する。
 
+放射モデルを実行するには、各種外部データとパラメタテーブルが必要である。
+オゾンのプロファイルなどの外部データとパラメタテーブルは、``scale-les/test/data/rad/''の中に与えられている。
+放射過程を利用する実験を行う場合は、必ず``scale-les/test/data/rad/''下の外部データとパラメタテーブルが必要である。
+詳細に関しては随時説明を加えていく。
 
 
 \subsection{陸面・海洋上の地表面フラックスモデルの設定} \label{sec:adv_landocean}
 %------------------------------------------------------
-SCALEには、陸面モデルとしてバケツモデル（バルク交換係数は \cite{beljaars_1991}; \cite{wilson_2001}に基づく）が実装されている。
-また海洋上のフラックスモデルとしてスラブモデルが実装されている。
+SCALEには、陸面モデルとしてバケツモデル（バルク交換係数は \cite{beljaars_1991}; \cite{wilson_2001}に基づく）が
+実装されている。また海洋上のフラックスモデルとしてスラブモデルが実装されている。
 ここでは、陸面モデルと海洋モデルの設定方法について説明する。
+
+陸面モデルを実行するには、土地利用データとそれに対応するパラメタテーブルが必要である。
+パラメタテーブルは、``scale-les/test/data/land/''の中に``param.bucket.conf''というファイルで与えられている。
+中には10種類を超える土地利用区分とそれらに対応する粗度長などのパラメタが与えられている。陸面が存在する領域で実験
+を行う場合は、必ず``param.bucket.conf''のパラメタテーブルが必要である。
+詳細に関しては随時説明を加えていく。
 
 
 \subsection{都市モデルの設定} \label{sec:adv_urban}
 %------------------------------------------------------
 SCALEには、都市モデルとして単層キャノピーモデル(\cite{kusaka_2001})が実装されている。
 ここでは都市モデルの設定方法について説明する。
-
+詳細に関しては随時説明を加えていく。
 
 
 \section{任意のデータをSCALEで使用する} \label{sec:adv_datainput}
@@ -617,12 +635,38 @@ SCALEには、都市モデルとして単層キャノピーモデル(\cite{kusak
 %scale-lesでは日本領域については国土地理院のデータをもとにした地形，土地利用に関するデータベースを別途提供している（2.2節を参照）．
 
 
-\subsection{初期値境界値データ} \label{sec:adv_bnddata}
+\subsection{初期値・境界値データ} \label{sec:adv_bnddata}
 %------------------------------------------------------
+現在、SCALEでは下記のデータの読み込みとそれらに基づく初期値・境界値作成に対応している。
 
-現在，scale-lesではWRF-ARW，NICAM，およびscale-lesのデータを
-初期値・境界値としてSCALE用initデータを作成する事ができる．
-この他、任意のデータを境界値に使用したい場合は、grads formatに変換することで読み込ませることができる．
+\begin{table}[htb]
+\begin{center}
+\caption{SCALEが読込に対応する外部入力データフォーマット}
+\begin{tabularx}{150mm}{|l|l|l|X|} \hline
+ \rowcolor[gray]{0.9} データ形式 & 対応状況 & \verb|FILETYPE_ORG| & 備考 \\ \hline
+ バイナリデータ & \textcolor{blue}{対応} & \verb|GrADS| & データ読み込み用のnamelistを別途必要とする。 \\ \hline
+ NICAMデータ & \textcolor{blue}{対応} & \verb|NICAM-NETCDF| & netCDF形式のLatLonデータに対応する。 \\ \hline
+ WRFデータ & \textcolor{blue}{対応} & \verb|WRF-ARW| & ``wrfout''、``wrfrst''の両方に対応する。 \\ \hline
+ SCALEデータ & \textcolor{blue}{対応} & \verb|SCALE-LES| & historyデータのみ対応；latlonカタログを必要とする。 \\ \hline
+\end{tabularx}
+\label{tab:inputdata_format}
+\end{center}
+\end{table}
+
+これらの使い分けは、初期値・境界値作成時、すなわち``scale-les\_init''の実行時のconfigファイルの
+\verb|PARAM_MKINIT_REAL|の項目中の\verb|FILETYPE_ORG|に表\ref{tab:inputdata_format}に示した設定値を
+指定することで使い分ける。
+
+最も汎用的に使用するデータ形式は「バイナリデータ」になることと思う。ここでいうバイナリデータとは、「4バイト単精度
+浮動小数点のダイレクトアクセス方式、Fortran型バイナリデータ」を指す。その主な使用方法は、
+第\ref{sec:tuto_real}章の現実大気実験チュートリアルで説明したとおりである。\textcolor{red}{GRIB/GRIB2のデータ形式は、
+チュートリアルで説明した方法に基づいて、バイナリデータ形式を経由してSCALEに読み込ませることができる。}
+その他に任意のデータを境界値に使用したい場合は、バイナリデータ形式に変換することで読み込ませることができる。
+
+SCALEデータ形式は主にオフライン・ネスティング実験で使用される。詳細については、\ref{sec:nest_offline}節を
+参照されたい。NICAMデータ形式は、nativeのicosahedral grid systemデータではなく、緯度・経度座標に変換されたデータの
+み読み込みに対応している。WRFデータ形式についてはモデル出力データをそのまま使用することができる。
+これらの読み込み方法に関しては随時説明を加えていく。
 
 
 

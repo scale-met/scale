@@ -88,7 +88,7 @@ SCALEではオンライン・ネスティングであっても、親ドメイン
 この設定を``run.parent.conf''に適用すると下記のようになる。赤文字で示した部分が、
 上記の注意点・変更点に対応する部分である。\\
 
-{\small {\gt
+\noindent {\small {\gt
 \ovalbox{
 \begin{tabularx}{140mm}{l}
 \textcolor{red}{\verb|&PARAM_DOMAIN_CATALOGUE|} \\
@@ -125,7 +125,7 @@ SCALEではオンライン・ネスティングであっても、親ドメイン
 実行するプログラムは、通常の初期値/境界値作成と同じ``scale-les\_init''だが、
 ``init.child.conf''を下記のように編集する。\\
 
-{\small {\gt
+\noindent {\small {\gt
 \ovalbox{
 \begin{tabularx}{140mm}{l}
 \verb|&PARAM_MKINIT_REAL| \\
@@ -166,7 +166,7 @@ MPIプロセスあたり$40 \times 40$の格子点を持っており、陸面モ
 
 設定の編集が完了すれば、``scale-les\_init''を実行して子ドメインの初期値/境界値を作成する。\\
 
-{\small {\gt
+\noindent {\small {\gt
 \fbox{
 \begin{tabularx}{140mm}{l}
 \verb|xxx ERROR: REQUESTED DOMAIN IS TOO MUCH BROAD| \\
@@ -184,7 +184,7 @@ MPIプロセスあたり$40 \times 40$の格子点を持っており、陸面モ
 
 1点だけ設定を忘れやすい設定項目を挙げておく。\\
 
-{\small {\gt
+\noindent {\small {\gt
 \ovalbox{
 \begin{tabularx}{140mm}{l}
 \verb|&PARAM_MKINIT_REAL| \\
@@ -242,7 +242,7 @@ SCALEのオンライン・ネスティング実験は、複数のドメインを
 \subsubsection{configファイルの編集}
 まず、親ドメイン、子ドメインそれぞれに``run.***.conf''ファイルを編集する。
 
-{\gt \verb|run.parent.conf|の編集内容}\\
+\noindent {\gt \verb|run.parent.conf|の編集内容}\\
 {\small {\gt
 \ovalbox{
 \begin{tabularx}{140mm}{l}
@@ -260,7 +260,7 @@ SCALEのオンライン・ネスティング実験は、複数のドメインを
 
 \vspace{0.5cm}
 
-{\gt \verb|run.child.conf|の編集内容}\\
+\noindent {\gt \verb|run.child.conf|の編集内容}\\
 {\small {\gt
 \ovalbox{
 \begin{tabularx}{140mm}{l}
@@ -320,7 +320,7 @@ SCALEのオンライン・ネスティング実験は、複数のドメインを
 \end{verbatim}
 などとして、適宜エディタをたちあげて新規ファイルを作成し、下記の内容を記述する。\\
 
-{\small {\gt
+\noindent {\small {\gt
 \ovalbox{
 \begin{tabularx}{140mm}{l}
 \verb|&PARAM_LAUNCHER| \\
@@ -354,14 +354,14 @@ historyファイルのほかに、LOGファイル、topoファイル、landuse�
 
 実行時に次のようなエラーメッセージが出力されて計算が異常終了することがある。\\
 
-{\small {\gt
+\noindent {\small {\gt
 \fbox{
 \begin{tabularx}{140mm}{l}
 \verb|xxx region of daughter domain is larger than that of parent: SW search| \\
 \end{tabularx}
 }}}\\
 
-{\small {\gt
+\noindent {\small {\gt
 \fbox{
 \begin{tabularx}{140mm}{l}
 \verb|xxx region of daughter domain is larger than that of parent: NE search| \\
@@ -371,8 +371,73 @@ historyファイルのほかに、LOGファイル、topoファイル、landuse�
 \noindent これは、子ドメインで設定された計算領域が親ドメインの計算領域よりも大きいことを意味するエラーメッセージである。
 ``SW search''のエラーが出る場合は子ドメインの西側か南側が親ドメインの外側に出ており、``NE search''のエラーが出る場合は
 子ドメインの東側か北側が親ドメインの外側に出ていることを意味している。再度設定を確認し、地形・土地利用データ、および
-初期値/境界値作成からやり直すこと。以上でオンライン・ネスティングの実行方法の説明を終える。
+初期値/境界値作成からやり直すこと。
 
+
+\subsubsection{MPIプロセスの分配ガイドライン}
+SCALEのオンライン・ネスティング実験は、図\ref{fig_mpisplit}のイメージ図で説明したように、MPIプロセスを分割し、複数のドメイン
+に分配する。現在のところ、その分配割合はユーザーに委ねられているため、適切にMPIプロセスを分配しなければ余計な計算時間が
+かかってしまう。ここでは、適切にMPIプロセスを分配するためのガイドラインについて説明する。ガイドラインは、ドメイン毎に
+\textcolor{blue}{「単位あたりの時間積分にかかる1プロセスあたりの演算量を揃える」}という単純なものである。
+ここでは、以下に示す2段オンライン・ネスティング実験を行う場合を想定し、ガイドラインに沿ったプロセス分配方法の例を示す。
+``domain 1''は外側の親ドメイン、``domain 2''は内側の子ドメインを意味する。
+
+\begin{table}[htb]
+\begin{center}
+\caption{2段オンライン・ネスティング実験の設定想定}
+\begin{tabularx}{150mm}{|l|l|X|} \hline
+ \rowcolor[gray]{0.9} 設定項目 & domain 1 & domain 2 \\ \hline
+ 計算領域 & 450 km $\times$ 450 km & 200 km $\times$ 200 km \\ \hline
+ DX \& DY（X,Y同一設定） & 3 km & 1 km \\ \hline
+ 鉛直層設定 & 40層 & 60層 \\ \hline
+ 積分時間間隔（DT）& 30 sec & 10 sec \\ \hline
+ 積分時間 & 3600 sec & 3600 sec \\ \hline
+\end{tabularx}
+\label{tab:nest_proc_guide1}
+\end{center}
+\end{table}
+
+このとき、親ドメインの水平方向の一辺の格子点数は、$450 km \div 3 km = 150$点であるので、総格子点数は
+$X \times Y \times Z = 150 \times 150 \times 40 = 900,000$点である。一方、子ドメインの水平方向の一辺の格子点数は、
+$200 km \div 1 km = 200$点であるので、総格子点数は$200 \times 200 \times 60 = 2,400,000$点である。1つの時間ステップの
+積分を行うのにこれだけの格子点について計算を行わなければならない。
+
+積分時間間隔は格子間隔に依存するためにドメイン毎に異なる。この例では、domain 1は30 secだが、domain 2は10 secであり、
+3倍の差がある。したがって、同じ30 secという積分時間に対してdomain 2は3倍多くの時間ステップ、つまり3倍の演算量を要する。
+これらを考慮して、簡単なドメイン間の演算量比率（Computation Rate）の指標を考えると下記の式で表される。
+\begin{eqnarray}
+ComputationRate=\frac{Xgrd_{child} \times Ygrd_{child} \times Zgrd_{child} \times Ustep_{child}}
+                     {Xgrd_{parent} \times Ygrd_{parent} \times Zgrd_{parent} \times Ustep_{parent}} \nonumber
+\end{eqnarray}
+ここで、Xgrd、Ygrd、ZgrdはそれぞれX方向、Y方向、Z方向の格子点数を表し、Ustepは単位時間積分に必要な時間ステップ数を表す。
+ここでの例をこの式に当てはまると、演算量比率は$(2,400,000 \times 3) \div (900,000 \times 1) = 8$であることがわかる。
+おおよそ、この割合にしたがってMPIプロセスをドメイン毎に分配すればよい。例えばdomain 1は4プロセス、domain 2は32プロセスを
+使用し、全体で36プロセスを使用する設定が考えられる。この場合、例えば次のように設定することができる。
+
+\begin{table}[htb]
+\begin{center}
+\caption{2段オンライン・ネスティング実験のMPIプロセス設定例}
+\begin{tabularx}{150mm}{|l|l|X|} \hline
+ \rowcolor[gray]{0.9} 設定項目 & domain 1 & domain 2 \\ \hline
+ MPIプロセス（X $\times$ Y） & 2 $\times$ 2 & 4 $\times$ 8 \\ \hline
+ 水平格子点数（IMAX $\times$ JMAX） & 75 $\times$ 75 & 50 $\times$ 25 \\ \hline
+\end{tabularx}
+\label{tab:nest_proc_guide2}
+\end{center}
+\end{table}
+
+X方向とY方向に分配するプロセス数には任意性が残るが、この例のdomain 2のようにXとYで大きくプロセス数が異なる場合には、
+X方向の格子点数（IMAX）の値が大きくなる設定を取ると計算機の演算性能を引き出しやすいと考えられる\footnote{SCALEでは
+X方向のDo Loopが最も最内ループになっているため、X方向の回転数が多いとプリフェッチ機能が効果を発揮しやすく、メモリ性能
+へのプレッシャーが緩和される。ただし、京の場合のようにスレッド並列も併用するハイブリッド並列の場合にはY方向の格子点数
+もある程度大きくしてスレッド間の演算量のインバランスを小さくする必要性も出てくる。}。
+
+この設定は一例であり、これ以外の方法で設定しても構わない。また、ここでは格子点数と積分時間間隔だけに着目して演算量比率
+を考えたが、実際の計算には様々な物理過程も含まれるだろうし、それらをCallする時間間隔もドメイン毎に異なるかもしれない。
+さらにドメイン内通信やドメイン間通信のMPI通信にかかる時間も影響を及ぼす。SCALEにおけるオンライン・ネスティングの実装に
+おいて最も重要なことは、最内ドメインが時間積分を実行し続けることである。同じ設定で何度も実験を行うような場合には、上記の
+方法である程度の見通しをつけた上で、いくらかの微調整を行うことをおすすめする。
+以上でオンライン・ネスティングの実行方法の説明を終える。
 
 
 \subsection{子ドメインにおける地形の取り扱い} \label{sec:nest_topo}
@@ -393,7 +458,7 @@ historyファイルのほかに、LOGファイル、topoファイル、landuse�
 まず親ドメインの``pp.d01.conf''ファイルを編集して、計算領域の大きさを子ドメインへ伝えるために緯度経度カタログ
 ファイルを出力するように設定する。具体的には、下記の記述を``pp.d01.conf''ファイルに追記する。\\
 
-{\small {\gt
+\noindent {\small {\gt
 \ovalbox{
 \begin{tabularx}{140mm}{l}
 \verb|&PARAM_DOMAIN_CATALOGUE| \\
@@ -407,7 +472,7 @@ historyファイルのほかに、LOGファイル、topoファイル、landuse�
 scale-les\_ppを実行する）。ここで、出力データは、``topo\_d01.pe***.nc''というファイル名で保存されていると
 想定する。次に、子ドメインの``pp.d02.conf''ファイルを編集する。\\
 
-{\small {\gt
+\noindent {\small {\gt
 \ovalbox{
 \begin{tabularx}{140mm}{l}
 \verb|&PARAM_CNVTOPO| \\
@@ -499,7 +564,7 @@ SCALEには「一括実行機能」、いわゆるバルクジョブ機能が備
 configファイル内にバルクジョブ機能用に追加する設定項目はないが、\textcolor{red}{入出力ファイルのPATHを適切に
 記述する}必要がある。以下にジョブ0000番のrun.d01.confの抜粋を示す。\\
 
-{\small {\gt
+\noindent {\small {\gt
 \ovalbox{
 \begin{tabularx}{140mm}{l}
 \verb|&PARAM_IO| \\
@@ -546,7 +611,7 @@ configファイル内にバルクジョブ機能用に追加する設定項目�
 したがって、ジョブの起動のために``launch.conf''ファイルが必要になる。オンライン・ネスティング実験とバルクジョブ機能を
 併用して実行する今回のような場合もlaunch.confファイルは1つだけで良い。\\
 
-{\small {\gt
+\noindent {\small {\gt
 \ovalbox{
 \begin{tabularx}{140mm}{l}
 \verb|&PARAM_LAUNCHER| \\
@@ -574,7 +639,7 @@ configファイル内にバルクジョブ機能用に追加する設定項目�
 実行すると得られるLOGファイルに、MPIプロセスを分割した時の情報が示されている。LOGファイルを開いて最初の
 「SCALEロゴ」のあとに下記のようなメッセージが出力される。\\
 
-{\small {\gt
+\noindent {\small {\gt
 \ovalbox{
 \begin{tabularx}{140mm}{l}
 \verb| ++++++ Start MPI| \\
