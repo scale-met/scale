@@ -108,9 +108,10 @@ configファイルとして与えて、2-MPI並列で\verb|scale-les_init|を実
 
 \noindent 実行が成功した場合には、コマンドラインのメッセージは
 下記のように表示される。\\
-{\small {\gt
+
+\noindent {\small {\gt
 \fbox{
-\begin{tabularx}{100mm}{l}
+\begin{tabularx}{140mm}{l}
  *** Start Launch System for SCALE-LES\\
  TOTAL BULK JOB NUMBER   =    1\\
  PROCESS NUM of EACH JOB =     2\\
@@ -129,14 +130,15 @@ configファイルとして与えて、2-MPI並列で\verb|scale-les_init|を実
 コマンドラインには表示されない詳しい実行ログが記録されている。
 実行が正常に終了している場合、このLOGファイルの最後に\\
 
-{\small {\gt
+\noindent {\small {\gt
 \ovalbox{
-\begin{tabularx}{100mm}{l}
+\begin{tabularx}{140mm}{l}
  ++++++ Stop MPI\\
  *** Broadcast STOP signal\\
  *** MPI is peacefully finalized\\
 \end{tabularx}
 }}}\\
+
 \noindent と記述される。
 
 そして、``init\_00000000000.000.pe000000.nc''と``init\_00000000000.000.pe000001.nc''の
@@ -164,20 +166,20 @@ Gphys/Ruby-DCLやncviewといったツールで直接読むことができる。
 コマンドラインには表示されない詳しい実行ログが記録されている。
 実行が正常に終了している場合、このLOGファイルの最後に\\
 
-{\small {\gt
+\noindent {\small {\gt
 \ovalbox{
-\begin{tabularx}{100mm}{l}
+\begin{tabularx}{140mm}{l}
  ++++++ Stop MPI\\
  *** Broadcast STOP signal\\
  *** MPI is peacefully finalized\\
 \end{tabularx}
 }}}\\
+
 \noindent と記述される。
 
 そして、``history.pe000000.nc''と``history.pe000001.nc''の2つのファイルが計算経過の
 データが記録されたhistoryファイルである。このファイルもNetCDF形式のファイルであり、
 2-MPI並列で実行したため、やはり2つのファイルが生成される。
-
 ``monitor.pe000000''は、計算中にモニタリングしている
 物理変数の時間変化を記録したテキストファイルである。
 
@@ -210,7 +212,7 @@ net2g専用の``\verb|net2g.conf|''をconfigファイルとして与えて、
 \end{verbatim}
 
 \noindent net2gの実行にあたっては、SCALE本体の実行時に使用したMPIプロセス数と同じか、
-それを割り切れる数のプロセス数を用いて実行しなければならない。
+その約数のプロセス数を用いて実行しなければならない。
 HDDの読み書き速度に依存するが、本書の必要要件にあった計算機であれば2分程度で計算が終わる。
 この実行によって、\\
 ``QHYD\_d01z-3d.ctl''、 ``U\_d01z-3d.ctl''、 ``W\_d01z-3d.ctl''\\
@@ -227,9 +229,9 @@ U-WとQHYDについての鉛直断面図である。
 ``\verb|net2g.conf|''の下記の行を編集することによって、net2gを用いて
 他の様々な変数の変換を行うことができる。\\
 
-{\small {\gt
+\noindent {\small {\gt
 \ovalbox{
-\begin{tabularx}{100mm}{l}
+\begin{tabularx}{140mm}{l}
 \verb|&VARI|\\
 \verb| VNAME       = "U","W","QHYD"|\\
 \verb|/|\\
@@ -278,9 +280,9 @@ configファイルを編集することで、すべての実験設定の変更�
 設定項目がある。チュートリアルでは2-MPI並列で実行するため、デフォルトでは下記に示すような
 設定が記述されている。``PRC''は``Process''を意味する。\\
 
-{\small {\gt
+\noindent {\small {\gt
 \ovalbox{
-\begin{tabularx}{100mm}{l}
+\begin{tabularx}{140mm}{l}
 \verb|&PARAM_PRC|\\
 \verb| PRC_NUM_X       = 2,|\\
 \verb| PRC_NUM_Y       = 1,|\\
@@ -295,9 +297,9 @@ MPI並列分割数、``\verb|PRC_NUM_Y|''は Y方向（南北方向）のMPI並�
 全MPIプロセス数は、${PRC}_{total}={PRC}_{X} \times {PRC}_{Y}$ であるため、$2 \times 1 = 2$で
 全MPIプロセス数は2プロセスである。次に格子点数の設定項目について説明する。\\
 
-{\small {\gt
+\noindent {\small {\gt
 \ovalbox{
-\begin{tabularx}{100mm}{l}
+\begin{tabularx}{140mm}{l}
 \verb|&PARAM_INDEX|\\
 \verb| KMAX = 97,|\\
 \verb| IMAX = 20,|\\
@@ -322,9 +324,9 @@ MPI並列分割数、``\verb|PRC_NUM_Y|''は Y方向（南北方向）のMPI並�
 維持するように設定することである。今回は準2次元実験なので、X方向に4分割して4-MPI並列を達成する。
 この場合の設定方法は下記のとおりである。\\
 
-{\small {\gt
+\noindent {\small {\gt
 \ovalbox{
-\begin{tabularx}{100mm}{l}
+\begin{tabularx}{140mm}{l}
 \verb|&PARAM_INDEX|\\
 \verb| KMAX = 97,|\\
 \verb| IMAX = 10,|\\

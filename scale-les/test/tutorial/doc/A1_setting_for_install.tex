@@ -66,7 +66,7 @@ CentOS 6.6では、ソフトウェアのインストールに"yum"コマンド�
 実行時のコマンドラインの様子は以下のようになる。
 インストール対象がリストされるので、確認して"y"をタイプして先へ進める。\\
 
-{\small {\gt
+\noindent {\small {\gt
 \fbox{
 \begin{tabularx}{140mm}{l}
 読み込んだプラグイン:fastestmirror, refresh-packagekit, security\\
@@ -110,7 +110,8 @@ rpm\_check\_debug を実行しています\\
 完了しました!\\
 \end{tabularx}
 }}}\\
-{\small ＊この時点で、yumによるインストールに失敗する場合は、
+
+\noindent {\small ＊この時点で、yumによるインストールに失敗する場合は、
 プロキシ設定等を含めた通信環境、yumリポジトリの登録状況等を再確認すること。}
 
 \noindent yumのグループインストール機能を用いて，開発ツール
@@ -147,7 +148,7 @@ rpm\_check\_debug を実行しています\\
 \end{verbatim}
 下記をファイルの最後に追加して，環境変数の設定を記述する。\\
 
-{\gt
+\noindent {\gt
 \ovalbox{
 \begin{tabularx}{140mm}{l}
  \\
@@ -166,19 +167,15 @@ rpm\_check\_debug を実行しています\\
 \end{verbatim}
 
 
-\subsubsection{Installation of Gphys}
-
-\textcolor{red}{\large 本節は削除予定；Gphysのインストールは書かない。
-書くなら参考URLのみを挙げてGrads、ncview等と同じ取り扱いとする。}
-
+%\subsubsection{Installation of Gphys}
 %CentOSの場合、yumリポジトリに地球電脳倶楽部のGFD-Dennouリポジトリを登録することで、
 %簡単にGphysをインストールできる。
 %root権限で、GFD-Dennouリポジトリを次のような内容で登録する。
-
+%
 %\begin{verbatim}
 % # vi /etc/yum.repos.d/GFD-Dennou.repo
 %\end{verbatim}
-
+%
 %\begin{verbatim}
 % // ---------------- Edit the file ----------------
 % [gfd-dennou]
@@ -221,7 +218,7 @@ CentOS 7.1では、ソフトウェアのインストールに"yum"コマンド�
 実行時のコマンドラインの様子は以下のようになる。
 インストール対象がリストされるので、確認して"y"をタイプして先へ進める。\\
 
-{\small {\gt
+\noindent {\small {\gt
 \fbox{
 \begin{tabularx}{140mm}{l}
 読み込んだプラグイン:fastestmirror, langpacks\\
@@ -269,7 +266,7 @@ Running transaction\\
 \end{tabularx}
 }}}\\
 
-{\small ＊この時点で、yumによるインストールに失敗する場合は、
+\noindent {\small ＊この時点で、yumによるインストールに失敗する場合は、
 プロキシ設定等を含めた通信環境、yumリポジトリの登録状況等を再確認すること。}
 
 \noindent yumのグループインストール機能を用いて，開発ツール
@@ -308,7 +305,7 @@ Running transaction\\
 \end{verbatim}
 下記をファイルの最後に追加して，環境変数の設定を記述する。\\
 
-{\gt
+\noindent {\gt
 \ovalbox{
 \begin{tabularx}{140mm}{l}
  \\
@@ -364,7 +361,7 @@ openSUSEでは一般にユーザーがrootユーザーにスイッチするこ�
 実際は改行も"\verb|\\|"の記述も必要ない。}
 実行時のコマンドラインの様子は以下のようになる。\\
 
-{\small {\gt
+\noindent {\small {\gt
 \fbox{
 \begin{tabularx}{140mm}{l}
  リポジトリ 'home\_ocefpaf' を追加しています ...............................完了 \\
@@ -390,7 +387,7 @@ home\_ocefpafリポジトリを登録して最初のインストールの場合�
 "a"の「ずっと信頼」を選択して作業を進める。
 その後、インストール対象がリストされるので、確認して"y"をタイプして先へ進める。\\
 
-{\small {\gt
+\noindent {\small {\gt
 \fbox{
 \begin{tabularx}{140mm}{l}
  鍵を拒否しますか (R)？ 一時的に信頼しますか (T)？ \\
@@ -425,7 +422,7 @@ home\_ocefpafリポジトリを登録して最初のインストールの場合�
 \end{verbatim}
 下記をファイルの最後に追加して，環境変数の設定を記述する。\\
 
-{\gt
+\noindent {\gt
 \ovalbox{
 \begin{tabularx}{140mm}{l}
  \\
@@ -532,12 +529,12 @@ SCALEは陰解法計算の部分で、数値計算ライブラリを利用する
 \end{verbatim}
 
 
-\subsubsection{その他のインストール}
-
-\textcolor{red}{\large 本節は部分的に削除予定；UsersGuideの中で使用していないものや、
-単純なユーザーにとって必要のないものには触れないようにする。}
-
-macportsでインストールできるパッケージのうち、重要なものを以下に紹介する。
+%\subsubsection{その他のインストール}
+%
+%\textcolor{red}{\large 本節は部分的に削除予定；UsersGuideの中で使用していないものや、
+%単純なユーザーにとって必要のないものには触れないようにする。}
+%
+%macportsでインストールできるパッケージのうち、重要なものを以下に紹介する。
 %
 %\begin{itemize}
 %\item git, git-flow : ソースコード開発時に利用する。
@@ -616,7 +613,8 @@ SCALEの計算結果や、初期値/境界値データなどを描画するの�
  \end{itemize}
 \end{itemize}
 
-
+\vspace{1cm}
+\noindent {\Large\em COLUMN} \hrulefill
 \subsubsection{Mac OS XにおけるGphys / Ruby-DCLのインストール}
 
 macports-JPが作成しているリポジトリから、Mac OS X用のGPhysをインストールできる。

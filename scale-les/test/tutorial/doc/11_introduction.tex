@@ -30,11 +30,8 @@ SCALEは計算機を用いて気象・気候科学の問題にアプローチす
 SCALEの使用前に一読しておくこと。
 
 \subsection{SCALE-LESモデルの構成}
-現在，SCALE-LESモデルとして組み込まれているコンポーネントは下記のものである．
-詳細なモデル構成や差分化手法については，\cite{scale_2015}や\cite{nishizawa_2015}を参照されたい．\\
-
-\textcolor{red}{\bf 下記のリストは表に置き換えて、選択可能なものと、そうでないものが明確なようにまとめる}
-
+現在，SCALE-LESモデルとして組み込まれているコンポーネントは下記のものである。
+詳細なモデル構成や差分化手法については、\cite{scale_2015}や\cite{nishizawa_2015}を参照されたい。\\
 
 \noindent{\bf フレームワーク関係}
 
@@ -42,19 +39,28 @@ SCALEの使用前に一読しておくこと。
  \item Cartesian グリッドシステム（Arakawa C-grid）
  \item Cartesian ベースMPI通信
  \item Map-projection \& Map-factors
- \item Nesting システム（1-way, offline, and online）
- \item 複数事例一括実行 システム（Bulk Job システム）
+ \item Nesting システム（1-way：親→子のみ）
+   \begin{itemize}
+    \item Option: オフライン実行とオンライン実行を選択可能
+   \end{itemize}
+ \item 複数事例一括実行 システム（バルクジョブシステム）
  \item gtoolベースnetcdf4ファイル I/O
- \item WRF-ARW、NICAM、その他GrADSフォーマットでの初期値・境界値データ読み込み
+ \item 外部データ読み込みによる初期値・境界値データ作成
+   \begin{itemize}
+    \item Option: WRF-ARW、NICAM、その他GrADSフォーマットでの入力に対応
+   \end{itemize}
 \end{itemize}
 
 {\bf 力学コア関係}
 
 \begin{itemize}
  \item 方程式系: ３次元完全圧縮流体方程式
- \item 数値解法: HE-VE,  HE-VI，HI-VIスキームから選択可能
+ \item 数値解法: 陽解法と陰解法の両方を実装済み
+   \begin{itemize}
+    \item Option: HE-VE、HE-VI、HI-VIスキームから選択可能
+   \end{itemize}
  \item 空間差分: 4次中央差分
- \item 時間差分: 3次ルンゲクッタスキーム
+ \item 時間差分: 3段ルンゲクッタスキーム（2次）
  \item 非負保証: FCTスキーム
  \item 数値フィルター: 4次Hyper diffusion
  \item 地形: Terrain-followingスキーム
@@ -63,10 +69,18 @@ SCALEの使用前に一読しておくこと。
 {\bf 物理過程}
 
 \begin{itemize}
- \item 乱流過程: Smagorinsky-Lilly typeのサブグリッドモデル (\cite{smagorinsky_1963}; \cite{lilly_1962}), 
-MYNN2.5境界層モデル (\cite{my_1982},\cite{nakanishi_2004})から選択可能
- \item 雲微物理: Kessler type バルクモデル(\cite{kessler_1969})，6-class single moment バルクモデル(\cite{tomita_2008})，
-6-class double moment バルクモデル(\cite{sn_2014})，ビン法雲モデル(\cite{suzuki_etal_2010})から選択可能
+ \item 乱流過程: 複数から選択可能
+   \begin{itemize}
+    \item Smagorinsky-Lilly typeのサブグリッドモデル (\cite{smagorinsky_1963}; \cite{lilly_1962})
+    \item MYNN2.5境界層モデル (\cite{my_1982},\cite{nakanishi_2004})
+   \end{itemize}
+ \item 雲微物理: 複数から選択可能
+   \begin{itemize}
+    \item Kessler type バルクモデル(\cite{kessler_1969})
+    \item 6-class single moment バルクモデル(\cite{tomita_2008})
+    \item 6-class double moment バルクモデル(\cite{sn_2014})
+    \item ビン法雲モデル(\cite{suzuki_etal_2010})から選択可能
+   \end{itemize}
  \item 放射過程: MSTRN (\cite{sekiguchi_2008})
  \item 地表面モデル
   \begin{itemize}
@@ -76,31 +90,35 @@ MYNN2.5境界層モデル (\cite{my_1982},\cite{nakanishi_2004})から選択可�
   \end{itemize}
 \end{itemize}
 
-上記に加えて，SCALE-LESモデル本体のドライバー，現実事例の計算に必要な地形や土地利用データを作成するツール，
-理想実験の初期値・境界値，もしくは外部モデルから初期値・境界値を作成するツールが提供されている．
+上記に加えて、SCALE-LESモデル本体のドライバー、現実事例の計算に必要な地形や土地利用データを作成するツール、
+理想実験の初期値・境界値、もしくは外部モデルから初期値・境界値を作成するツールが提供されている。
 
-次節でSCALEライブラリの思想とモデルの関係について説明するが、SCALE-LESモデルの実行とは直接関係ないため，
-必要なければ読み飛ばしても構わない．
+次節でSCALEライブラリの思想とモデルの関係について説明するが、SCALE-LESモデルの実行とは直接関係ないため、
+必要なければ読み飛ばしても構わない。
 
 
 \subsection{SCALEのライブラリとモデル}
-SCALEは、理化学研究所 計算科学研究機構（AICS）を中心に開発が進められている気象・気候科学向けのライブラリである．
-Figure \ref{fig:scale}に示されるように，このライブラリは次世代のスーパーコンピュータから汎用計算機に至るまで広く
-用いられる事を念頭において開発されており，気候・気象科学を専門とする科学者と計算機科学を専門とする科学者が共同で
-開発を行っている（\cite{abe_etal_2013}）．そのため，スーパーコンピュータ「京」やFujitsu FX10等のスーパーコンピュータ上でも，
-ユーザーがチューニングすることなく高い計算効率で実行可能なようになっている．
+SCALEは、理化学研究所 計算科学研究機構（RIKEN AICS）を中心に開発が進められている気象・気候科学向けのライブラリである。
+図 \ref{fig:scale}はSCALEのねらいを表したポンチ絵である。この図に示されるように、SCALEプロジェクトは、近い将来もしくは
+現在すでに研究の足かせとなっている諸問題を解決する、もしくは解決の手助けをすることを目指している。
+SCALEは次世代のスーパーコンピュータから汎用計算機に至るまで広く用いられる事を念頭において開発されており、
+気候・気象科学を専門とする科学者と計算機科学を専門とする科学者が共同で開発を行っている（\cite{abe_etal_2013}）。
+そのため、スーパーコンピュータ「京」やFujitsu FX10等のスーパーコンピュータ上でも、
+ユーザーがチューニングすることなく高い計算効率で実行可能なようになっている。
 
-SCALEライブラリは京コンピュータをはじめとする並列計算機に対してチューニングされたモデルコンポーネントや
-解析システム、およびテストセットや知見といった開発環境を提供することによって、これらの問題を解決することを目的としている．
+SCALEライブラリは、ユーザーにスーパーコンピュータ「京」をはじめとする並列計算機に対してチューニングされた
+モデルコンポーネントや解析システム、テストセット、そしてこれらに対する知見といった「開発環境」を提供する。
 
-SCALEライブラリを使用して構築された数値モデルの1例がSCALE-LESモデルである(Fig. \ref{fig:scale-les})。
-格子系や力学コア，物理過程といったモデル構築に必要な基本的なコンポーネントはSCALEライブラリが提供するため、
-SCALE-LESモデルとして新たに用意されたのは、これらのコンポーネントを動かすためのモデルドライバーや変数セットである。
-すでにSCALE-LESモデルを用いて、層積雲の遷移過程を調べる研究などの実績がある（\cite{satoy_2014}、\cite{satoy_2015}）。
-SCALEライブラリをインストールしておくことで、SCALE-LESモデルと同様な方法によってユーザーは新たなモデル作ることができる。
+提供された開発環境利用の例として数値モデルの構築が挙げられる。その一例として、SCALEライブラリを用いて構築した数値モデル、
+SCALE-LESモデルが本ライブラリセットに含まれている(図 \ref{fig:scale-les})。
+格子系、力学コア、そして物理過程といったモデル構築に必要な基本的コンポーネントはSCALEライブラリが提供する。そのため、
+「SCALE-LESモデル」として新たに用意されたのは、これらのコンポーネントを動かすためのモデルドライバーや変数セットである。
+このSCALE-LESモデルは研究に利用できるものである、すでに層積雲の遷移過程を調べる研究などの実績がある
+（\cite{satoy_2014}、\cite{satoy_2015}）。ユーザーは、SCALEライブラリを用いてSCALE-LESモデルと同様な方法によって
+ユーザーは新たなモデル作ることができる。
 
 
-\begin{figure}[t]
+\begin{figure}[th]
 \begin{center}
   \includegraphics[width=0.9\hsize]{./figure/library.eps}\\
   \caption{SCALEライブラリのねらい}
@@ -108,7 +126,7 @@ SCALEライブラリをインストールしておくことで、SCALE-LESモデ
 \end{center}
 \end{figure}
 
-\begin{figure}[t]
+\begin{figure}[th]
 \begin{center}
   \includegraphics[width=0.9\hsize]{./figure/scale_and_scale-les.eps}\\
   \caption{SCALEライブラリとSCALE-LESモデルの関係}
@@ -147,9 +165,10 @@ SCALEライブラリをインストールしておくことで、SCALE-LESモデ
 文章表記のうち、ダブルスラッシュ（//）で始まる行は解説のためのもので、実際に記述する必要はない。
 
 下記のように四角い囲みで区切られた部分は、コマンドラインのメッセージ部分であることを意味する。\\
-{\small {\gt
+
+\noindent {\small {\gt
 \fbox{
-\begin{tabularx}{100mm}{l}
+\begin{tabularx}{140mm}{l}
  -- -- -- -- コマンドラインのメッセージ\\
  -- -- -- -- -- -- -- -- コマンドラインのメッセージ\\
  -- -- -- -- -- -- -- -- -- -- -- -- コマンドラインのメッセージ\\
@@ -158,9 +177,10 @@ SCALEライブラリをインストールしておくことで、SCALE-LESモデ
 
 また、下記のように丸い囲みで区切られた部分は、エディタでファイルを編集する記述内容を表す、
 もしくはファイル内の記述を参照している部分である。\\
-{\small {\gt
+
+\noindent {\small {\gt
 \ovalbox{
-\begin{tabularx}{100mm}{l}
+\begin{tabularx}{140mm}{l}
  -- -- -- -- ファイル中の記述\\
  -- -- -- -- -- -- -- -- ファイル中の記述\\
  -- -- -- -- -- -- -- -- -- -- -- -- ファイル中の記述\\
@@ -175,3 +195,5 @@ SCALEライブラリをインストールしておくことで、SCALE-LESモデ
 上記のコマンドは、vi（汎用テキストエディタ）プログラムを実行する。
 他に、gedit、emacsなどのテキストエディタがある。
 マニュアルではviコマンドの実行指示があるが、各自の使いやすいエディタへ適宜読み替えること。
+
+

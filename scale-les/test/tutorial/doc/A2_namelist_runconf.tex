@@ -54,6 +54,13 @@
  \verb|TIME_DT_OCEAN_UNIT| & 文字列 & \verb|TIME_DT_UNIT| & 海洋スキームの時間単位。 \\ \hline
  \verb|TIME_DT_LAND_UNIT| & 文字列 & \verb|TIME_DT_UNIT| & 陸面スキームの時間単位。 \\ \hline
  \verb|TIME_DT_URBAN_UNIT| & 文字列 & \verb|TIME_DT_UNIT| & 都市スキームの時間単位。 \\ \hline
+\end{tabularx}
+　\\
+\indent ＊次ページへつづく
+
+\subsubsection{PARAM\_TIME：つづき}
+\begin{tabularx}{150mm}{|l|c|c|X|} \hline
+ \rowcolor[gray]{0.9} 名称 & 種類 & 初期値 & 説明 \\ \hline
  \verb|TIME_DT_ATMOS_RESTART| & 実数 & \verb|TIME_DURATION| & 大気のリスタートファイルを出力する時間間隔。 \\ \hline
  \verb|TIME_DT_ATMOS_RESTART_UNIT| & 文字列 & \verb|TIME_DT_UNIT| & 大気のリスタートファイルを出力する時間間隔の時間単位。 \\ \hline
  \verb|TIME_DT_OCEAN_RESTART| & 実数 & \verb|TIME_DURATION| & 海洋のリスタートファイルを出力する時間間隔。 \\ \hline
@@ -321,29 +328,29 @@
 % \verb|MONITOR_STEP_INTERVAL| & 文字列 & "OFF" & 都市スキームの種類。 \\ \hline
 %\end{tabularx}
 
-%\subsubsection{PARAM\_NEST}
-%\begin{tabularx}{150mm}{|l|c|c|X|} \hline
-% \rowcolor[gray]{0.9} 名称 & 種類 & 初期値 & 説明 \\ \hline
-% \verb|USE_NESTING| & logical & .false. & 安全な同期通信を行うかどうか。\verb|USE_NESTING|が真, \verb|OFFLINE|が偽のときのみ有効。 \\ \hline
-% \verb|LATLON_CATALOGUE_FNAME| & logical & .false. & 安全な同期通信を行うかどうか。\verb|USE_NESTING|が真, \verb|OFFLINE|が偽のときのみ有効。 \\ \hline
-% \verb|OFFLINE_PARENT_PRC_NUM_X| & logical & .false. & 安全な同期通信を行うかどうか。\verb|USE_NESTING|が真, \verb|OFFLINE|が偽のときのみ有効。 \\ \hline
-% \verb|OFFLINE_PARENT_PRC_NUM_Y| & logical & .false. & 安全な同期通信を行うかどうか。\verb|USE_NESTING|が真, \verb|OFFLINE|が偽のときのみ有効。 \\ \hline
-% \verb|OFFLINE_PARENT_KMAX| & logical & .false. & 安全な同期通信を行うかどうか。\verb|USE_NESTING|が真, \verb|OFFLINE|が偽のときのみ有効。 \\ \hline
-% \verb|OFFLINE_PARENT_IMAX| & logical & .false. & 安全な同期通信を行うかどうか。\verb|USE_NESTING|が真, \verb|OFFLINE|が偽のときのみ有効。 \\ \hline
-% \verb|OFFLINE_PARENT_JMAX| & logical & .false. & 安全な同期通信を行うかどうか。\verb|USE_NESTING|が真, \verb|OFFLINE|が偽のときのみ有効。 \\ \hline
-% \verb|OFFLINE_PARENT_LKMAX| & logical & .false. & 安全な同期通信を行うかどうか。\verb|USE_NESTING|が真, \verb|OFFLINE|が偽のときのみ有効。 \\ \hline
-% \verb|OFFLINE| & logical & .false. & 安全な同期通信を行うかどうか。\verb|USE_NESTING|が真, \verb|OFFLINE|が偽のときのみ有効。 \\ \hline
-% \verb|ONLINE_DOMAIN_NUM| & logical & .false. & 安全な同期通信を行うかどうか。\verb|USE_NESTING|が真, \verb|OFFLINE|が偽のときのみ有効。 \\ \hline
-% \verb|ONLINE_IAM_PARENT| & logical & .false. & 安全な同期通信を行うかどうか。\verb|USE_NESTING|が真, \verb|OFFLINE|が偽のときのみ有効。 \\ \hline
-% \verb|ONLINE_IAM_DAUGHTER| & logical & .false. & 安全な同期通信を行うかどうか。\verb|USE_NESTING|が真, \verb|OFFLINE|が偽のときのみ有効。 \\ \hline
-% \verb|ONLINE_USE_VELZ| & logical & .false. & 安全な同期通信を行うかどうか。\verb|USE_NESTING|が真, \verb|OFFLINE|が偽のときのみ有効。 \\ \hline
-% \verb|ONLINE_NO_ROTATE| & logical & .false. & 安全な同期通信を行うかどうか。\verb|USE_NESTING|が真, \verb|OFFLINE|が偽のときのみ有効。 \\ \hline
-% \verb|ONLINE_BOUNDARY_USE_QHYD| & logical & .false. & 安全な同期通信を行うかどうか。\verb|USE_NESTING|が真, \verb|OFFLINE|が偽のときのみ有効。 \\ \hline
-% \verb|ONLINE_AGGRESSIVE_COMM| & logical & .false. & 安全な同期通信を行うかどうか。\verb|USE_NESTING|が真, \verb|OFFLINE|が偽のときのみ有効。 \\ \hline
-% \verb|ONLINE_WAIT_LIMIT| & logical & .false. & 安全な同期通信を行うかどうか。\verb|USE_NESTING|が真, \verb|OFFLINE|が偽のときのみ有効。 \\ \hline
-% \verb|ONLINE_SPECIFIED_MAXRQ| & logical & .false. & 安全な同期通信を行うかどうか。\verb|USE_NESTING|が真, \verb|OFFLINE|が偽のときのみ有効。 \\ \hline
-% \verb|NEST_INTERP_LEVEL| & logical & .false. & 安全な同期通信を行うかどうか。\verb|USE_NESTING|が真, \verb|OFFLINE|が偽のときのみ有効。 \\ \hline
-%\end{tabularx}
+\subsubsection{PARAM\_NEST}
+\begin{tabularx}{150mm}{|l|c|c|X|} \hline
+ \rowcolor[gray]{0.9} 名称 & 種類 & 初期値 & 説明 \\ \hline
+ \verb|USE_NESTING| & logical & .false. & ネスティング機能を使うかどうか。 \\ \hline
+ \verb|LATLON_CATALOGUE_FNAME| & 文字列 &  & 入力する親ドメインのlatlonカタログのファイル名。 \\ \hline
+ \verb|OFFLINE_PARENT_PRC_NUM_X| & 整数 &  & 親ドメインのMPIプロセス数（X方向）。\verb|OFFLINE|が真のときのみ有効。 \\ \hline
+ \verb|OFFLINE_PARENT_PRC_NUM_Y| & 整数 &  & 親ドメインのMPIプロセス数（Y方向）。\verb|OFFLINE|が真のときのみ有効。 \\ \hline
+ \verb|OFFLINE_PARENT_KMAX| & 整数 &  & 親ドメインの1プロセスあたりの格子点数（Z方向）。\verb|OFFLINE|が真のときのみ有効。 \\ \hline
+ \verb|OFFLINE_PARENT_IMAX| & 整数 &  & 親ドメインの1プロセスあたりの格子点数（X方向）。\verb|OFFLINE|が真のときのみ有効。 \\ \hline
+ \verb|OFFLINE_PARENT_JMAX| & 整数 &  & 親ドメインの1プロセスあたりの格子点数（Y方向）。\verb|OFFLINE|が真のときのみ有効。 \\ \hline
+ \verb|OFFLINE_PARENT_LKMAX| & 整数 &  & 親ドメインの1プロセスあたりの格子点数（陸面モデル）。\verb|OFFLINE|が真のときのみ有効。 \\ \hline
+ \verb|OFFLINE| & logical & .true. & オフラインかオンラインのどちらのシステムを使うか。\verb|USE_NESTING|が真のときのみ有効。 \\ \hline
+ \verb|ONLINE_DOMAIN_NUM| & 整数 &  & ドメインID番号。オンライン・ネスティングのときのみ有効。 \\ \hline
+ \verb|ONLINE_IAM_PARENT| & logical & .false. & 当該ドメインが親ドメインとして働くかどうか。オンライン・ネスティングのときのみ有効。 \\ \hline
+ \verb|ONLINE_IAM_DAUGHTER| & logical & .false. & 当該ドメインが子ドメインとして働くかどうか。オンライン・ネスティングのときのみ有効。 \\ \hline
+ \verb|ONLINE_USE_VELZ| & logical & .false. & 鉛直速度をバッファー領域のダンピングに使用するかどうか。オンライン・ネスティングのときのみ有効。 \\ \hline
+ \verb|ONLINE_NO_ROTATE| & logical & .false. & 水平速度成分に対して地図投影法の違い基づく回転効果の変換を行うかどうか。オンライン・ネスティングのときのみ有効。 \\ \hline
+ \verb|ONLINE_BOUNDARY_USE_QHYD| & logical & .false. & 凝結物の混合比をバッファー領域のダンピングに使用するかどうか。オンライン・ネスティングのときのみ有効。 \\ \hline
+ \verb|ONLINE_AGGRESSIVE_COMM| & logical & .false. & より安全にドメイン間の同期通信を行うかどうか。オンライン・ネスティングのときのみ有効。 \\ \hline
+% \verb|ONLINE_WAIT_LIMIT| & logical & .false. & 。オンライン・ネスティングのときのみ有効。 \\ \hline
+ \verb|ONLINE_SPECIFIED_MAXRQ| & 整数 & 1000 & 非同期MPI通信の同時Request数の最大値。オンライン・ネスティングのときのみ有効。 \\ \hline
+ \verb|NEST_INTERP_LEVEL| & 整数 & 4 & 水平2次元内挿処理に使用する格子点数の指定；1, 3, 4, 8, 12のうちから指定する。オンライン・ネスティングのときのみ有効。 \\ \hline
+\end{tabularx}
 
 %\subsubsection{PARAM\_ATMOS\_SATURATION}
 %\begin{tabularx}{150mm}{|l|c|c|X|} \hline
@@ -581,6 +588,13 @@
  \verb|ATMOS_BOUNDARY_VALUE_VELX| & 実数 & 0.D0 & X方向の運動量を緩和させる値（\verb|ATMOS_BOUNDARY_TYPE|=.true.の時に有効） \\ \hline
  \verb|ATMOS_BOUNDARY_VALUE_VELY| & 実数 & 0.D0 & Y方向の運動量を緩和させる値（\verb|ATMOS_BOUNDARY_TYPE|=.true.の時に有効） \\ \hline
  \verb|ATMOS_BOUNDARY_VALUE_POTT| & 実数 & 3.D0 & 温位を緩和させる値（\verb|ATMOS_BOUNDARY_TYPE|=.true.の時に有効） \\ \hline
+\end{tabularx}
+　\\
+\indent ＊次ページへつづく
+
+\subsubsection{PARAM\_ATMOS\_BOUNDARY：つづき}
+\begin{tabularx}{150mm}{|l|c|c|X|} \hline
+ \rowcolor[gray]{0.9} 名称 & 種類 & 初期値 & 説明 \\ \hline
  \verb|ATMOS_BOUNDARY_VALUE_QV| & 実数 & 0.D0 & 水蒸気混合比を緩和させる値（\verb|ATMOS_BOUNDARY_TYPE|=.true.の時に有効） \\ \hline
  \verb|ATMOS_BOUNDARY_VALUE_QHYD| & 実数 & 0.D0 & 水物質の混合比を緩和させる値（\verb|ATMOS_BOUNDARY_TYPE|=.true.の時に有効） \\ \hline
 % \verb|ATMOS_BOUNDARY_SMOOTHER_FACT| & logical & .false. & 安全な同期通信を行うかどうか。\verb|USE_NESTING|が真, \verb|OFFLINE|が偽のときのみ有効。 \\ \hline
@@ -602,7 +616,7 @@
 \subsubsection{PARAM\_ATMOS\_DYN}
 \begin{tabularx}{150mm}{|l|c|c|X|} \hline
  \rowcolor[gray]{0.9} 名称 & 種類 & 初期値 & 説明 \\ \hline
- \verb|ATMOS_DYN_NUMERICAL_DIFF_ORDER| & 実数 & 1.D0. & 数値粘性のオーダーを4で割ったもの（\verb|ATMOS_DYN_NUMERICAL_DIFF_ORDER|=1なら4次の数値粘性になる） \\ \hline
+ \verb|ATMOS_DYN_NUMERICAL_DIFF_ORDER| & 実数 & 1.D0. & 数値粘性のオーダーを4で割ったもの（\verb|ATMOS_DYN_NUMERICAL_DIFF_ORDER| =1なら4次の数値粘性になる） \\ \hline
  \verb|ATMOS_DYN_NUMERICAL_DIFF_COEF| & 実数 & 1.D-4 & 混合比以外の予報変数にかかる数値粘性の強さを決める無次元定数\\ \hline
  \verb|ATMOS_DYN_NUMERICAL_DIFF_COEF_Q| & 実数 & 1.D-4 & 混合比にかかる数値粘性の強さを決める無次元定数\\ \hline
 % \verb|ATMOS_DYN_NUMERICAL_DIFF_SFC_FACT| & logical & .false. & 安全な同期通信を行うかどうか。\verb|USE_NESTING|が真, \verb|OFFLINE|が偽のときのみ有効。 \\ \hline
@@ -646,7 +660,8 @@
  \shortstack{\verb|ATMOS_PHY_RD_MSTRN_|\\ \verb|GASPARA_IN_FILENAME|} & 文字列 & 'PARAG.29' & 放射スキームで用いる希ガスパラメータの入力ファイル名 \\ \hline
  \shortstack{\verb|ATMOS_PHY_RD_MSTRN_|\\ \verb|AEROPARA_IN_FILENAME|} & 文字列 & 'PARAC.29' & 放射スキームで用いるエアロゾルパラメータの入力ファイル名 \\ \hline
  \shortstack{\verb|ATMOS_PHY_RD_MSTRN_|\\ \verb|HYGROPARA_IN_FILENAME|} & 文字列 & 'VARDATA.RM29' & 放射スキームで用いる水蒸気と水物質パラメータの入力ファイル名 \\ \hline
- \shortstack{\verb|ATMOS_PHY_RD_MSTRN_|\\ \verb|NBAND|} & 整数 & 29 & MSTRNXで計算に用いる波長バンド数（\verb|ATMOS_PHY_RD_MSTRN_GAS(AERO,HYGRO)PARA_IN_FILENAME|のバンド数と対応する必要がある） \\ \hline
+ \shortstack{\verb|ATMOS_PHY_RD_MSTRN_|\\ \verb|NBAND|} & 整数 & 29 & MSTRNXで計算に用いる波長バンド数
+（\verb|ATMOS_PHY_RD_MSTRN_GAS| \verb|(AERO,HYGRO)| \verb|PARA_IN_FILENAME|のバンド数と対応する必要がある） \\ \hline
 \end{tabularx}
 
 \subsubsection{PARAM\_ATMOS\_PHY\_RD\_PROFILE}

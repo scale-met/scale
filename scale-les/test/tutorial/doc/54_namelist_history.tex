@@ -20,34 +20,37 @@ history出力ファイルへ新たに出力変数を追加するには、正式�
 
 history出力ファイルへの変数の追加は、下記のフォーマットに従ってrun.confに追記すればよい。\\
 
-{\small {\gt
+\noindent {\small {\gt
 \ovalbox{
 \begin{tabularx}{140mm}{l}
-\verb|&HISTITEM ITEM     = "character"| \\
-\verb|         (,BASENAME = "character",| \\
-\verb|           TINTERVAL= real,| \\
-\verb|           TUNIT    = "character", | \\
-\verb|           TAVERAGE = logical,| \\
-\verb|           ZINTERP  = logical, | \\
-\verb|           DATATYPE = "character")| \\
+\verb|&HISTITEM ITEM     = "[character]",| \\
+\textcolor{cyan}{\verb|         BASENAME = "[character]",|} \\
+\textcolor{cyan}{\verb|         TINTERVAL= [real],|} \\
+\textcolor{cyan}{\verb|         TUNIT    = "[character]", |} \\
+\textcolor{cyan}{\verb|         TAVERAGE = [logical],|} \\
+\textcolor{cyan}{\verb|         ZINTERP  = [logical], |} \\
+\textcolor{cyan}{\verb|         DATATYPE = "[character]",|} \\
 \verb|/| \\
 \end{tabularx}
 }}}\\
 
-$\left( \right)$内はオプションである。デフォルト設定は、つぎに説明する\verb|&PARAM_HISTORY|の項目によって定められる。\\
+\textcolor{cyan}{水色文字}の部分はオプションである。\verb|[character]|は任意の文字列、
+\verb|[real]|は任意の浮動小数点値、\verb|[logical]|は任意の論理変数（\verb|.true.| or \verb|.false.|）
+をそれぞれ指定することを意味する。デフォルト設定は、
+つぎに説明する\verb|&PARAM_HISTORY|の項目によって定められる。\\
 
-{\small {\gt
+\noindent {\small {\gt
 \ovalbox{
 \begin{tabularx}{140mm}{l}
-\verb| &PARAM_HISTORY| \\
-\verb|  HISTORY_DEFAULT_BASENAME  = "character",| \\
-\verb|  HISTORY_DEFAULT_TINTERVAL = real,| \\
-\verb|  HISTORY_DEFAULT_TUNIT     = "character",| \\
-\verb|  HISTORY_DEFAULT_TAVERAGE  = logical,| \\
-\verb|  HISTORY_DEFAULT_ZINTERP   = logical,| \\
-\verb|  HISTORY_DEFAULT_DATATYPE  = "character",| \\
-\verb|  HISTORY_OUTPUT_STEP0      = logical,| \\
-\verb| /| \\
+\verb|&PARAM_HISTORY| \\
+\verb|  HISTORY_DEFAULT_BASENAME  = "[character]",| \\
+\verb|  HISTORY_DEFAULT_TINTERVAL = [real],| \\
+\verb|  HISTORY_DEFAULT_TUNIT     = "[character]",| \\
+\verb|  HISTORY_DEFAULT_TAVERAGE  = [logical],| \\
+\verb|  HISTORY_DEFAULT_ZINTERP   = [logical],| \\
+\verb|  HISTORY_DEFAULT_DATATYPE  = "[character]",| \\
+\verb|  HISTORY_OUTPUT_STEP0      = [logical],| \\
+\verb|/| \\
 \end{tabularx}
 }}}\\
 
@@ -80,10 +83,10 @@ $\left( \right)$内はオプションである。デフォルト設定は、つ�
 \verb|&PARAM_HISTORY|の\verb|HISTORY_DEFAULT_TINTERVAL|は、デフォルトのhistory出力間隔を設定する変数だが、
 出力アイテム毎に出力間隔を設定することもできる。一部の変数でhistory出力間隔を変更したい場合の記述例を次に挙げる。\\
 
-{\small {\gt
+\noindent {\small {\gt
 \ovalbox{
 \begin{tabularx}{140mm}{l}
-\verb| &PARAM_HISTORY| \\
+\verb|&PARAM_HISTORY| \\
 \verb|  HISTORY_DEFAULT_BASENAME  = "history_d03",| \\
 \verb|  HISTORY_DEFAULT_TINTERVAL = 3600.D0,| \\
 \verb|  HISTORY_DEFAULT_TUNIT     = "SEC",| \\
@@ -99,7 +102,7 @@ $\left( \right)$内はオプションである。デフォルト設定は、つ�
 \verb|&HISTITEM item="V"    /| \\
 \verb|　 　 　〜　中略　〜|\\
  \\
-\verb| &HISTITEM item="RAIN", taverage=.true., tinterval=600.D0 /| \\
+\verb|&HISTITEM item="RAIN", taverage=.true., tinterval=600.D0 /| \\
 \end{tabularx}
 }}}\\
 
