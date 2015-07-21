@@ -1,20 +1,20 @@
 
-このチュートリアルでは，Fig. \ref{fig:domain}に示した
-領域を対象とした現実大気実験を行う．
+このチュートリアルでは、Fig. \ref{fig:domain}に示した
+領域を対象とした現実大気実験を行う。
 現実大気実験用のチュートリアルは
 \begin{verbatim}
  scale/scale-les/test/tutorial/real/
 \end{verbatim}
-の下で行う．
-以降の説明で\verb|${Tutrial_DIR}|は，\verb|scale/scale-les/test/tutorial/|を絶対PATHで示すこととする．
+の下で行う。
+以降の説明で\verb|${Tutrial_DIR}|は、\verb|scale/scale-les/test/tutorial/|を絶対PATHで示すこととする。
 
-SCALE-LESモデルの実行過程は，Fig. \ref{fig:howto}に示されるように
+SCALE-LESモデルの実行過程は、Fig. \ref{fig:howto}に示されるように
 \begin{enumerate}
 \item pp : 地形・海陸分布データの作成
 \item init : 初期値・境界値データの作成
 \item run : 時間積分を行う（モデル本体の実行）
 \end{enumerate}
-といった手順で実行する．
+といった手順で実行する。
 
 
 \begin{figure}[h]
@@ -25,7 +25,7 @@ SCALE-LESモデルの実行過程は，Fig. \ref{fig:howto}に示されるよう
 \end{center}
 \end{figure}
 
-計算領域（ドメイン）の設定はTable \ref{tab:grids}のようになっている．
+計算領域（ドメイン）の設定はTable \ref{tab:grids}のようになっている。
 チュートリアルは、SCALEの使い方を学ぶことが目的であり、
 短い時間で実行可能な設定にしている。
 領域モデルの実験設定として必ずしも適切な設定を選択しているとは限らないので
@@ -61,9 +61,9 @@ SCALE-LESモデルの実行過程は，Fig. \ref{fig:howto}に示されるよう
 \section{境界データの準備}
 %-------------------------------------------------------%
 
-現実大気実験のシミュレーションを行う場合，SCALE本体に加えて
+現実大気実験のシミュレーションを行う場合、SCALE本体に加えて
 境界値データが必要になる。境界値データとしては下記が必要である。
-{\color{blue}青字}は必須の変数、その他は任意．
+{\color{blue}青字}は必須の変数、その他は任意である。
 
 \begin{itemize}
 \item 地形データ(SCALEモデルの地形を準備する)
@@ -96,12 +96,12 @@ SCALE-LESモデルの実行過程は，Fig. \ref{fig:howto}に示されるよう
 \subsubsection{地形データと土地利用データ}
 標高データと土地利用データは実験設定に従って、
 SCALEのそれぞれの格子点における地形、海陸分布、土地利用を
-作成するために使用する．
+作成するために使用する。
 ユーザーが全球の任意の地域を対象とした計算ができるよう、
-フォマット変換済みの
+フォーマット変換済みの
 標高データ USGS(U.S. Geological Survey) のGTOPO30 と、
 土地利用データ GLCCv2、
-を提供している．
+を提供している。
 
 \begin{enumerate}
 \item データのダウンロード\\
@@ -129,7 +129,7 @@ makeを使ったjob scriptを使用する場合には、
 \subsubsection{大気・陸面・海面水温データ}
 \label{sec:real_prep}
 初期値境界値データは4-byte バイナリー(grads format)に変換すれば、
-任意のデータを読み込むことが可能である．
+任意のデータを読み込むことが可能である。
 チュートリアルではNCEP FNL(Final) Operational Global Analysis dataを使用する。
 \begin{enumerate}
 \item データのダウンロード\\
@@ -142,7 +142,7 @@ NCARのサイト
   fnl_20140810_12_00.grib2
   fnl_20140810_18_00.grib2
 \end{verbatim}
-を\verb|${Tutrial_DIR}/real/tools/|の下にダウンロードする．
+を\verb|${Tutrial_DIR}/real/tools/|の下にダウンロードする。
 
 \item データフォーマットをgribからbinaryに変換\\
  SCALEは4byte バイナリー（grads format）の境界値データを読み込むことができる。\\
