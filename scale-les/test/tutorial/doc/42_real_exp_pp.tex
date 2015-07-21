@@ -42,7 +42,7 @@ Appendix \ref{app:namelist}を参照されたい。
 \begin{verbatim}
  $ mpirun -n 4 ./scale-les_pp pp.conf
 \end{verbatim}
-ジョブが正常に終了すれば、\verb|topo_d01.pe######.nc|と\verb|landuse_d01.pe######.nc|と
+実行にはおおよそ15秒を要する。ジョブが正常に終了すれば、\verb|topo_d01.pe######.nc|と\verb|landuse_d01.pe######.nc|と
 いうファイルがMPIプロセス数だけ、つまり4つずつ生成される（\verb|######|にはMPIプロセスの番号が入る）。
 それぞれ、ドメインの格子点に内挿された地形と土地利用の情報が入っている。
 実行時のログは、\verb|pp_LOG_d01.pe000000|に出力されるので内容を確かめておくこと。
@@ -52,7 +52,7 @@ Appendix \ref{app:namelist}を参照されたい。
 \noindent {\Large\em OPTION} \hrulefill \\
 gpviewがインストールされている場合、次のコマンドによって、
 作成された地形と土地利用データが正しく作成されているかどうか
-確認することが出来る．正しく作成されていれば，Fig. \ref{fig:domain}と同様の図ができる．
+確認することが出来る．正しく作成されていれば，図 \ref{fig:domain}と同様の図ができる．
 \begin{verbatim}
   $ gpview topo_d01.pe00000*@TOPO --aspect=1 --nocont
   $ gpview landuse_d01.pe00000*@FRAC_LAND --aspect=1 --nocont

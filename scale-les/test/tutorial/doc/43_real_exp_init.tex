@@ -95,7 +95,7 @@ initディレクトリの中に準備されている\verb|"gradsinput-link_FNL.s
  $ mpirun -n 4 ./scale-les_init init.conf
 \end{verbatim}
 
-正常にジョブが終了すれば、
+実行にはおおよそ45秒を要する。正常にジョブが終了すれば、
 \verb|boundary_d01.pe######.nc|と\verb|init_d01_00019094400.000.pe######.nc|というファイルが
 MPIプロセス数だけ、つまり4つずつ生成される（\verb|######|にはMPIプロセスの番号が入る）。
 それぞれ、境界値データと初期値データが入ってるおり、境界値データには複数の時刻のデータが1つのファイルに含まれている。
@@ -107,7 +107,7 @@ MPIプロセス数だけ、つまり4つずつ生成される（\verb|######|に
 \noindent {\Large\em OPTION} \hrulefill \\
 gpviewがインストールされている場合，作成された初期値と境界値が
 正しく作成されているかどうかを確認することが出来る。
-正しく作成されていれば、Fig. \ref{fig:init}と同じように描かれる。
+正しく作成されていれば、図 \ref{fig:init}と同じように描かれる。
 
 \begin{verbatim}
 $ gpvect --scalar --slice z=1500 --nocont --aspect=1 --range=0.002:0.016          \

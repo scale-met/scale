@@ -1,5 +1,5 @@
 
-このチュートリアルでは、Fig. \ref{fig:domain}に示した
+このチュートリアルでは、図 \ref{fig:domain}に示した
 領域を対象とした現実大気実験を行う。
 現実大気実験用のチュートリアルは
 \begin{verbatim}
@@ -8,7 +8,7 @@
 の下で行う。
 以降の説明で\verb|${Tutrial_DIR}|は、\verb|scale/scale-les/test/tutorial/|を絶対PATHで示すこととする。
 
-SCALE-LESモデルの実行過程は、Fig. \ref{fig:howto}に示されるように
+SCALE-LESモデルの実行過程は、図 \ref{fig:howto}に示されるように
 \begin{enumerate}
 \item pp : 地形・海陸分布データの作成
 \item init : 初期値・境界値データの作成
@@ -31,6 +31,19 @@ SCALE-LESモデルの実行過程は、Fig. \ref{fig:howto}に示されるよう
 領域モデルの実験設定として必ずしも適切な設定を選択しているとは限らないので
 (例えば、15kmの水平解像度で積雲パラメタリゼーションなし)
 ご留意頂きたい。
+
+このチュートリアルを実行するには、下記の条件を満たす計算機環境が必要である。
+\begin{itemize}
+\item CPU: 2コア/4スレッド以上の演算コアを持つCPU（4コア以上を推奨）
+\item Memory容量: 4GB以上をプログラムに割当可能（8GB以上を搭載した計算機を推奨）
+\item HDD空き容量: 7GB以上の空き容量
+\end{itemize}
+本節の説明で使用した環境は次のとおりである。
+\begin{itemize}
+\item CPU: Intel Xeon E5-2620 2.0GHz 6コア（ただし4コアのみ使用）
+\item Memory: DDR3-1333 (4 channel, 32GB搭載)
+\item OS: CentOS 6.6 x86-64, CentOS 7.1 x86-64, openSUSE 13.2 x86-64
+\end{itemize}
 
 \begin{figure}[h]
 \begin{center}
