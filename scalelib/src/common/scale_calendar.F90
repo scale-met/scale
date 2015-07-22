@@ -28,17 +28,14 @@ module scale_calendar
   !
   public :: CALENDAR_setup
   public :: CALENDAR_getDayOfYear
-  public :: CALENDAR_ymdhms2nd
   public :: CALENDAR_date2daysec
   public :: CALENDAR_daysec2date
   public :: CALENDAR_ymd2absday
-  public :: CALENDAR_absday2ymd
-  public :: CALENDAR_ymdhms2mjd
+  public :: CALENDAR_hms2abssec
   public :: CALENDAR_adjust_daysec
   public :: CALENDAR_combine_daysec
   public :: CALENDAR_unit2sec
-  public :: CALENDAR_hms2abssec
-  public :: CALENDAR_abssec2hms
+  public :: CALENDAR_date2char
 
   !-----------------------------------------------------------------------------
   !
@@ -55,6 +52,10 @@ module scale_calendar
   !
   !++ Private procedure
   !
+  private :: CALENDAR_absday2ymd
+  private :: CALENDAR_abssec2hms
+  private :: CALENDAR_ymdhms2nd
+  private :: CALENDAR_ymdhms2mjd
   private :: checkleap
 
   !-----------------------------------------------------------------------------
@@ -107,25 +108,25 @@ contains
   !-----------------------------------------------------------------------------
   !> Convert from gregorian date to absolute day/second
   subroutine CALENDAR_date2daysec( &
-       absday, &
-       abssec, &
-       ymdhms, &
-       subsec, &
-       oyear   )
+       absday,     &
+       abssec,     &
+       ymdhms,     &
+       subsec,     &
+       offset_year )
     implicit none
 
-    integer,  intent(out) :: absday    !< absolute day
-    real(DP), intent(out) :: abssec    !< absolute second
-    integer,  intent(in)  :: ymdhms(6) !< date
-    real(DP), intent(in)  :: subsec    !< subsecond
-    integer,  intent(in), optional :: oyear     !< offset year
+    integer,  intent(out) :: absday      !< absolute day
+    real(DP), intent(out) :: abssec      !< absolute second
+    integer,  intent(in)  :: ymdhms(6)   !< date
+    real(DP), intent(in)  :: subsec      !< subsecond
+    integer,  intent(in)  :: offset_year !< offset year
     !---------------------------------------------------------------------------
 
     call CALENDAR_ymd2absday( absday,          & ! [OUT]
                               ymdhms(I_year),  & ! [IN]
                               ymdhms(I_month), & ! [IN]
                               ymdhms(I_day),   & ! [IN]
-                              oyear            ) ! [IN]
+                              offset_year      ) ! [IN]
 
     call CALENDAR_hms2abssec( abssec,          & ! [OUT]
                               ymdhms(I_hour),  & ! [IN]
@@ -139,25 +140,25 @@ contains
   !-----------------------------------------------------------------------------
   !> Convert from gregorian date to absolute day/second
   subroutine CALENDAR_daysec2date( &
-       ymdhms, &
-       subsec, &
-       absday, &
-       abssec, &
-       oyear   )
+       ymdhms,     &
+       subsec,     &
+       absday,     &
+       abssec,     &
+       offset_year )
     implicit none
 
-    integer,  intent(out) :: ymdhms(6) !< date
-    real(DP), intent(out) :: subsec    !< subsecond
-    integer,  intent(in)  :: absday    !< absolute day
-    real(DP), intent(in)  :: abssec    !< absolute second
-    integer,  intent(in)  :: oyear     !< offset year
+    integer,  intent(out) :: ymdhms(6)   !< date
+    real(DP), intent(out) :: subsec      !< subsecond
+    integer,  intent(in)  :: absday      !< absolute day
+    real(DP), intent(in)  :: abssec      !< absolute second
+    integer,  intent(in)  :: offset_year !< offset year
     !---------------------------------------------------------------------------
 
     call CALENDAR_absday2ymd( ymdhms(I_year),  & ! [OUT]
                               ymdhms(I_month), & ! [OUT]
                               ymdhms(I_day),   & ! [OUT]
                               absday,          & ! [IN]
-                              oyear            ) ! [IN]
+                              offset_year      ) ! [IN]
 
     call CALENDAR_abssec2hms( ymdhms(I_hour),  & ! [OUT]
                               ymdhms(I_min),   & ! [OUT]
@@ -182,30 +183,29 @@ contains
     integer, intent(in)  :: gyear  !< year
     integer, intent(in)  :: gmonth !< month
     integer, intent(in)  :: gday   !< day
-    integer, intent(in), optional :: oyear  !< offset year
+    integer, intent(in)  :: oyear  !< offset year
 
-    integer :: oyear_ = 0
+    integer :: gyear_mod, gmonth_mod
     integer :: yearday, monthday
     integer :: m, ileap
     !---------------------------------------------------------------------------
 
-    if ( present(oyear) ) then
-       oyear_ = oyear
-    end if
+    gmonth_mod = mod( gmonth-1, 12 ) + 1
+    gyear_mod  = gyear + ( gmonth-gmonth_mod ) / 12
 
-    yearday = int( CALENDAR_DOI ) * ( gyear )         &
-            + int( real(gyear+oyear_-1,kind=DP) /   4.0_DP ) &
-            - int( real(gyear+oyear_-1,kind=DP) / 100.0_DP ) &
-            + int( real(gyear+oyear_-1,kind=DP) / 400.0_DP ) &
-            - int( real(oyear_-1,kind=DP) /   4.0_DP ) &
-            + int( real(oyear_-1,kind=DP) / 100.0_DP ) &
-            - int( real(oyear_-1,kind=DP) / 400.0_DP )
+    yearday = int( CALENDAR_DOI * gyear_mod )                   &
+            + int( real(gyear_mod+oyear-1,kind=DP) /   4.0_DP ) &
+            - int( real(gyear_mod+oyear-1,kind=DP) / 100.0_DP ) &
+            + int( real(gyear_mod+oyear-1,kind=DP) / 400.0_DP ) &
+            - int( real(          oyear-1,kind=DP) /   4.0_DP ) &
+            + int( real(          oyear-1,kind=DP) / 100.0_DP ) &
+            - int( real(          oyear-1,kind=DP) / 400.0_DP )
 
     ileap = I_nonleapyear
-    if( checkleap(gyear+oyear_) ) ileap = I_leapyear
+    if( checkleap(gyear_mod+oyear) ) ileap = I_leapyear
 
     monthday = 0
-    do m = 1, gmonth-1
+    do m = 1, gmonth_mod-1
        monthday = monthday + dayofmonth(m,ileap)
     enddo
 
@@ -256,29 +256,6 @@ contains
 
     return
   end subroutine CALENDAR_absday2ymd
-
-  !-----------------------------------------------------------------------------
-  !> Check leap year
-  !> @return checkleap
-  function checkleap( iyear )
-    implicit none
-
-    integer, intent(in) :: iyear     !< current year
-    logical             :: checkleap
-
-    integer :: check4, check100, check400
-    !---------------------------------------------------------------------------
-
-    check4   = mod(iyear,4  )
-    check100 = mod(iyear,100)
-    check400 = mod(iyear,400)
-
-    checkleap = .false.
-    if( check4   == 0 ) checkleap = .true.
-    if( check100 == 0 ) checkleap = .false.
-    if( check400 == 0 ) checkleap = .true.
-
-  end function checkleap
 
   !-----------------------------------------------------------------------------
   !> Hour, minute, second, subsecond -> absolute second
@@ -412,6 +389,52 @@ contains
 
     return
   end subroutine CALENDAR_unit2sec
+
+  !-----------------------------------------------------------------------------
+  !> Convert from gregorian date to absolute day/second
+  subroutine CALENDAR_date2char( &
+       chardate,   &
+       ymdhms,     &
+       subsec,     &
+       offset_year )
+    implicit none
+
+    character(len=27), intent(out) :: chardate    !< formatted date character
+    integer,           intent(in)  :: ymdhms(6)   !< date
+    real(DP),          intent(in)  :: subsec      !< subsecond
+    integer,           intent(in)  :: offset_year !< offset year
+    !---------------------------------------------------------------------------
+
+    write(chardate,'(I4.4,A1,I2.2,A1,I2.2,A1,I2.2,A1,I2.2,A1,I2.2,A2,F6.3)')   &
+                       ymdhms(1)+offset_year,'/',ymdhms(2),'/',ymdhms(3),' ',  &
+                       ymdhms(4)            ,':',ymdhms(5),':',ymdhms(6),' +', &
+                       subsec
+
+    return
+  end subroutine CALENDAR_date2char
+
+  !-----------------------------------------------------------------------------
+  !> Check leap year
+  !> @return checkleap
+  function checkleap( iyear )
+    implicit none
+
+    integer, intent(in) :: iyear     !< current year
+    logical             :: checkleap
+
+    integer :: check4, check100, check400
+    !---------------------------------------------------------------------------
+
+    check4   = mod(iyear,4  )
+    check100 = mod(iyear,100)
+    check400 = mod(iyear,400)
+
+    checkleap = .false.
+    if( check4   == 0 ) checkleap = .true.
+    if( check100 == 0 ) checkleap = .false.
+    if( check400 == 0 ) checkleap = .true.
+
+  end function checkleap
 
   !-----------------------------------------------------------------------------
   !> Calc number of day

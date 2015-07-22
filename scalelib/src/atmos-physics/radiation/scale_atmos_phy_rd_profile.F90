@@ -215,7 +215,9 @@ contains
 
     integer, allocatable :: CIRA_date(:,:)
     integer  :: nday
-    real(RP) :: nsec, subsec = 0.0_RP
+    real(RP) :: nsec
+    real(RP) :: subsec = 0.0_RP
+    integer  :: offset_year = 0
 
     real(4), allocatable :: tmp1d(:)
     real(4), allocatable :: tmp3d(:,:,:)
@@ -283,8 +285,9 @@ contains
     CIRA_date(:,13) = (/ 1987,  1, 15, 12, 0, 0 /)
 
     do t = 0, CIRA_ntime+1
-       call CALENDAR_date2daysec( nday, nsec,            & ! [OUT]
-                                  CIRA_date(:,t), subsec ) ! [IN]
+       call CALENDAR_date2daysec( nday, nsec,             & ! [OUT]
+                                  CIRA_date(:,t), subsec, & ! [IN]
+                                  offset_year             ) ! [IN]
 
        CIRA_nd(t) = real(nday,kind=RP) + nsec / 86400.0_RP
     enddo
@@ -405,7 +408,9 @@ contains
 
     integer  :: MIPAS_date(6,0:MIPAS_ntime+1)
     integer  :: nday
-    real(RP) :: nsec, subsec = 0.0_RP
+    real(RP) :: nsec
+    real(RP) :: subsec = 0.0_RP
+    integer  :: offset_year = 0
 
     character(len=H_LONG) :: dummy
     integer  :: fid, ierr
@@ -420,8 +425,9 @@ contains
     MIPAS_date(:, 3) = (/ 2002,  6, 21, 12, 0, 0 /)
 
     do t = 0, MIPAS_ntime+1
-       call CALENDAR_date2daysec( nday, nsec,             & ! [OUT]
-                                  MIPAS_date(:,t), subsec ) ! [IN]
+       call CALENDAR_date2daysec( nday, nsec,              & ! [OUT]
+                                  MIPAS_date(:,t), subsec, & ! [IN]
+                                  offset_year              ) ! [IN]
 
        MIPAS_nd(t) = real(nday,kind=RP) + nsec / 86400.0_RP
     enddo
@@ -781,7 +787,7 @@ contains
        pres,     &
        temp      )
     use scale_calendar, only: &
-         CALENDAR_date2daysec
+       CALENDAR_date2daysec
     implicit none
 
     integer,  intent(in)  :: kmax          !< Number of layer
@@ -798,7 +804,10 @@ contains
     real(RP) :: plog (kmax)
 
     integer  :: now_date_mod(6), nday
-    real(RP) :: nd, nsec, subsec = 0.0_RP
+    real(RP) :: nd
+    real(RP) :: nsec
+    real(RP) :: subsec = 0.0_RP
+    integer  :: offset_year = 0
 
     integer  :: nplev_mod
     integer  :: indexLAT, indexD
@@ -828,8 +837,9 @@ contains
     now_date_mod(2:6) = now_date(2:6)
     now_date_mod(1)   = 1986
 
-    call CALENDAR_date2daysec( nday, nsec,             & ! [OUT]
-                               now_date_mod(:), subsec ) ! [IN]
+    call CALENDAR_date2daysec( nday, nsec,              & ! [OUT]
+                               now_date_mod(:), subsec, & ! [IN]
+                               offset_year              ) ! [IN]
 
     nd = real(nday,kind=RP) + nsec / 86400.0_RP
 
@@ -907,7 +917,7 @@ contains
        gas,      &
        cfc       )
     use scale_calendar, only: &
-         CALENDAR_date2daysec
+       CALENDAR_date2daysec
     implicit none
 
     integer,  intent(in)    :: kmax           !< Number of layer
@@ -923,7 +933,10 @@ contains
     real(RP) :: interp_z  (MIPAS_kmax)
 
     integer  :: now_date_mod(6), nday
-    real(RP) :: nd, nsec, subsec = 0.0_RP
+    real(RP) :: nd
+    real(RP) :: nsec
+    real(RP) :: subsec = 0.0_RP
+    integer  :: offset_year = 0
 
     integer  :: indexD1, indexD2
     real(RP) :: factLAT, factD
@@ -933,8 +946,9 @@ contains
     now_date_mod(2:6) = now_date(2:6)
     now_date_mod(1)   = 2001
 
-    call CALENDAR_date2daysec( nday, nsec,             & ! [OUT]
-                               now_date_mod(:), subsec ) ! [IN]
+    call CALENDAR_date2daysec( nday, nsec,              & ! [OUT]
+                               now_date_mod(:), subsec, & ! [IN]
+                               offset_year              ) ! [IN]
 
     nd = real(nday,kind=RP) + nsec / 86400.0_RP
 

@@ -118,7 +118,8 @@ contains
        LANDUSE_fact_urban
     use scale_time, only: &
        dt_RD => TIME_DTSEC_ATMOS_PHY_RD, &
-       TIME_NOWDATE
+       TIME_NOWDATE,                     &
+       TIME_OFFSET_YEAR
     use scale_statistics, only: &
        STATISTICS_checktotal, &
        STAT_total
@@ -198,11 +199,12 @@ contains
 
     if ( update_flag ) then
 
-       call SOLARINS_insolation( solins  (:,:),  & ! [OUT]
-                                 cosSZA  (:,:),  & ! [OUT]
-                                 REAL_LON(:,:),  & ! [IN]
-                                 REAL_LAT(:,:),  & ! [IN]
-                                 TIME_NOWDATE(:) ) ! [IN]
+       call SOLARINS_insolation( solins  (:,:),   & ! [OUT]
+                                 cosSZA  (:,:),   & ! [OUT]
+                                 REAL_LON(:,:),   & ! [IN]
+                                 REAL_LAT(:,:),   & ! [IN]
+                                 TIME_NOWDATE(:), & ! [IN]
+                                 TIME_OFFSET_YEAR ) ! [IN]
 
        call ATMOS_PHY_RD( DENS, RHOT, QTRC,   & ! [IN]
                           REAL_CZ, REAL_FZ,   & ! [IN]

@@ -1197,7 +1197,8 @@ contains
        TIME_DTSEC
     use scale_calendar, only: &
        CALENDAR_date2daysec,    &
-       CALENDAR_combine_daysec
+       CALENDAR_combine_daysec, &
+       CALENDAR_date2char
     implicit none
 
     real(RP) :: inc_DENS(KA,IA,JA)        ! damping coefficient for DENS [0-1]
@@ -1211,24 +1212,35 @@ contains
     integer  :: run_time_startday
     real(RP) :: run_time_startsec
     real(RP) :: run_time_startms
+    integer  :: run_time_offset_year
     real(RP) :: run_time_nowdaysec
+
     integer  :: boundary_time_startday
     real(RP) :: boundary_time_startsec
     real(RP) :: boundary_time_startms
+    integer  :: boundary_time_offset_year
     real(RP) :: boundary_time_initdaysec
+
     real(RP) :: boundary_diff_daysec
     real(RP) :: boundary_inc_offset
     integer  :: fillgaps_steps
 
     character(len=H_LONG) :: bname
+    character(len=27)     :: boundary_chardate
 
     integer  :: i, j, k, iq
     !---------------------------------------------------------------------------
 
     bname = ATMOS_BOUNDARY_IN_BASENAME
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,I5.4,A,I2.2,A,I2.2,A,I2.2,A,I2.2,A,I2.2)') '*** BOUNDARY START Date     : ', &
-         ATMOS_BOUNDARY_START_DATE(1),'/',ATMOS_BOUNDARY_START_DATE(2),'/',ATMOS_BOUNDARY_START_DATE(3),' ',  &
-         ATMOS_BOUNDARY_START_DATE(4),':',ATMOS_BOUNDARY_START_DATE(5),':',ATMOS_BOUNDARY_START_DATE(6)
+
+    boundary_time_startms     = 0.0_DP
+    boundary_time_offset_year = 0
+    call CALENDAR_date2char( boundary_chardate,            & ! [OUT]
+                             ATMOS_BOUNDARY_START_DATE(:), & ! [IN]
+                             boundary_time_startms,        & ! [IN]
+                             boundary_time_offset_year     ) ! [IN]
+
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,A)') '*** BOUNDARY START Date     : ', boundary_chardate
 
     if ( ATMOS_BOUNDARY_START_DATE(1) == -9999 ) then
        boundary_timestep = 1
@@ -1236,27 +1248,35 @@ contains
        fillgaps_steps = 0
     else
        !--- recalculate time of the run [no offset]
-       run_time_startms = 0.0_DP
        run_time_startdate(:) = TIME_NOWDATE(:)
        run_time_startdate(1) = TIME_OFFSET_YEAR
+       run_time_startms      = 0.0_DP
+       run_time_offset_year  = 0
+
        call CALENDAR_date2daysec( run_time_startday,     & ! [OUT]
                                   run_time_startsec,     & ! [OUT]
                                   run_time_startdate(:), & ! [IN]
-                                  run_time_startms       ) ! [IN]
-       run_time_nowdaysec  = CALENDAR_combine_daysec( run_time_startday, run_time_startsec )
+                                  run_time_startms,      & ! [IN]
+                                  run_time_offset_year   ) ! [IN]
+
+       run_time_nowdaysec = CALENDAR_combine_daysec( run_time_startday, run_time_startsec )
 
        !--- calculate time of the initial step in boundary file [no offset]
-       boundary_time_startms = 0.0_DP
+       boundary_time_startms     = 0.0_DP
+       boundary_time_offset_year = 0
+
        call CALENDAR_date2daysec( boundary_time_startday,       & ! [OUT]
                                   boundary_time_startsec,       & ! [OUT]
                                   ATMOS_BOUNDARY_START_DATE(:), & ! [IN]
-                                  boundary_time_startms         ) ! [IN]
-       boundary_time_initdaysec  = CALENDAR_combine_daysec( boundary_time_startday, boundary_time_startsec )
+                                  boundary_time_startms,        & ! [IN]
+                                  boundary_time_offset_year     ) ! [IN]
+
+       boundary_time_initdaysec = CALENDAR_combine_daysec( boundary_time_startday, boundary_time_startsec )
 
        boundary_diff_daysec = run_time_nowdaysec - boundary_time_initdaysec
-       boundary_timestep = 1 + int( boundary_diff_daysec / ATMOS_BOUNDARY_UPDATE_DT )
-       boundary_inc_offset = mod( boundary_diff_daysec, ATMOS_BOUNDARY_UPDATE_DT )
-       fillgaps_steps = int( boundary_inc_offset / TIME_DTSEC )
+       boundary_timestep    = 1 + int( boundary_diff_daysec / ATMOS_BOUNDARY_UPDATE_DT )
+       boundary_inc_offset  = mod( boundary_diff_daysec, ATMOS_BOUNDARY_UPDATE_DT )
+       fillgaps_steps       = int( boundary_inc_offset / TIME_DTSEC )
     endif
 
     if( IO_L ) write(IO_FID_LOG,*) '+++ BOUNDARY TIMESTEP NUMBER FOR INIT:', boundary_timestep
@@ -2310,7 +2330,7 @@ contains
           inc_DENS(k,i,j) = ATMOS_BOUNDARY_ref_DENS(k,i,j,ref_new) * t2 * 0.25_RP                   &
                           + ATMOS_BOUNDARY_ref_DENS(k,i,j,ref_now) * ( t1 - t2 + 3.0_RP ) * 0.25_RP &
                           - ATMOS_BOUNDARY_ref_DENS(k,i,j,ref_old) * ( t1 - 1.0_RP ) * 0.25_RP      &
-                          - ATMOS_BOUNDARY_DENS(k,i,j) 
+                          - ATMOS_BOUNDARY_DENS(k,i,j)
           inc_VELZ(k,i,j) = ATMOS_BOUNDARY_ref_VELZ(k,i,j,ref_new) * t2 * 0.25_RP                   &
                           + ATMOS_BOUNDARY_ref_VELZ(k,i,j,ref_now) * ( t1 - t2 + 3.0_RP ) * 0.25_RP &
                           - ATMOS_BOUNDARY_ref_VELZ(k,i,j,ref_old) * ( t1 - 1.0_RP ) * 0.25_RP      &
