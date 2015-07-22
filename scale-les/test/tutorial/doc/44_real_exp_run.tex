@@ -1,0 +1,171 @@
+
+%-------------------------------------------------------%
+\section{時間積分を行う：run}
+%-------------------------------------------------------%
+\subsubsection{run.confの準備}
+ここではいよいよSCALE-LESモデルを実行する。
+まず、runディレクトリへ移動する。
+\begin{verbatim}
+ $ cd ${Tutrial_DIR}/real/run
+\end{verbatim}
+
+runディレクトリの中には、\verb|run.conf|という名前の
+コンフィグファイルが準備されており、
+ドメインの位置や格子点数など、チュートリアル用の設定（Table\ref{tab:grids}）に合わせてある。
+モデル本体の実行には事前に作成した地形・土地利用データや初期値・境界値データを利用する。
+これらのファイルの場所は、\verb|run.conf|内の
+\verb|TOPO_IN_BASENAME|、\verb|LANDUSE_IN_BASENAME|、
+\verb|RESTART_IN_BASENAME|、および\verb|ATMOS_BOUNDARY_IN_BASENAME|で
+指定している。\\
+
+\noindent {\gt
+\ovalbox{
+\begin{tabularx}{140mm}{l}
+\verb|&PARAM_TOPO| \\
+\verb|   TOPO_IN_BASENAME = "../pp/topo_d01",| \\
+\verb|/| \\
+ \\
+\verb|&PARAM_LANDUSE| \\
+\verb|   LANDUSE_IN_BASENAME  = "../pp/landuse_d01",| \\
+\verb|/| \\
+ \\
+\verb|&PARAM_RESTART| \\
+\verb|   RESTART_OUTPUT      = .false.,| \\
+\verb|   RESTART_IN_BASENAME = "../init/init_d01_00019094400.000",| \\
+\verb|/| \\
+ \\
+\verb|&PARAM_ATMOS_BOUNDARY| \\
+\verb|   ATMOS_BOUNDARY_TYPE        = "REAL",| \\
+\verb|   ATMOS_BOUNDARY_IN_BASENAME = "../init/boundary_d01",| \\
+\verb|   ATMOS_BOUNDARY_USE_VELZ    = .true.,| \\
+\verb|   ATMOS_BOUNDARY_USE_QHYD    = .false.,| \\
+\verb|   ATMOS_BOUNDARY_VALUE_VELZ  = 0.0D0,| \\
+\verb|   ATMOS_BOUNDARY_UPDATE_DT   = 21600.0D0,| \\
+\verb|/| \\
+\end{tabularx}
+}}\\
+
+
+\verb|run.conf|の設定の中で時間積分に関する設定は、\verb|PARAM_TIME|の項目にある。\\
+
+\noindent {\gt
+\ovalbox{
+\begin{tabularx}{140mm}{l}
+\verb|&PARAM_TIME| \\
+\verb| TIME_STARTDATE          = 2014, 8, 10, 0, 0, 0,| 　← 時間積分を開始する時刻 \\
+\verb| TIME_STARTMS            = 0.D0,| \\
+\verb| TIME_DURATION           = 12.0D0,| 　 　 　← 積分期間 \\
+\verb| TIME_DURATION_UNIT      = "HOUR",| 　← \verb|TIME_DURATION|の単位\\
+\verb| TIME_DT                 = 60.0D0,| 　   　　 　　 　← 移流計算の時間ステップ\\
+\verb| TIME_DT_UNIT            = "SEC",| 　 　 　 　 　← \verb|TIME_DT|の単位\\
+\verb| TIME_DT_ATMOS_DYN       = 15.0D0,|   　　　← 移流計算以外の力学過程の時間ステップ\\
+\verb| TIME_DT_ATMOS_DYN_UNIT  = "SEC",| 　← \verb|TIME_DT_ATMOS_DYN|の単位\\
+ \\
+\verb| ～～中略～～| \\
+ \\
+\verb|/| \\
+\end{tabularx}
+}}\\
+
+\noindent 初期時刻\verb|TIME_STARTDATE|はUTCで指定する。
+チュートリアルでは2014年8月10日0時UTCに設定している。
+積分のための時間ステップは、上記の他、
+それぞれの物理スキーム毎に設定できるようになっている。
+
+
+計算結果の出力に関する設定は\verb|PARAM_HISTORY|で行う。\\
+
+\noindent {\gt
+\ovalbox{
+\begin{tabularx}{140mm}{l}
+\verb|&PARAM_HISTORY| \\
+\verb|   HISTORY_DEFAULT_BASENAME  = "history_d01",| 　← 出力するファイル名\\
+\verb|   HISTORY_DEFAULT_TINTERVAL = 1800.D0,| 　 　 　← 出力時間間隔\\
+\verb|   HISTORY_DEFAULT_TUNIT     = "SEC",| 　 　 　 　 　← 出力時間間隔の単位\\
+\verb|   HISTORY_DEFAULT_TAVERAGE  = .false.,| \\
+\verb|   HISTORY_DEFAULT_DATATYPE  = "REAL4",| \\
+\verb|   HISTORY_DEFAULT_ZINTERP   = .false.,| 　← 出力時に高さ面へ内挿するかどうか\\
+\verb|   HISTORY_OUTPUT_STEP0      = .true.,| 　← 初期時刻(t=0)の値を出力するかどうか\\
+\verb|/| \\
+\end{tabularx}
+}}\\
+
+\noindent 上記の設定に従って、下記の\verb|HISTITEM|に羅列された変数が出力される。
+\verb|HISTITEM|ではオプション変数を加えることで、変数毎に、出力間隔を変更したり、
+平均値を出力したりすることも可能である。
+これらの説明は\ref{sec:output}を参照されたい。\\
+
+\noindent {\small {\gt
+\ovalbox{
+\begin{tabularx}{150mm}{l}
+\verb|&HISTITEM item="DENS" / 　  　        　! density (3D)| \\
+\verb|&HISTITEM item="MOMZ" / 　  　        　! vertical momentum (3D)| \\
+\verb|&HISTITEM item="MOMX" / 　  　        　! horizontal momentum-x (3D)| \\
+\verb|&HISTITEM item="MOMY" / 　  　        　! horizontal momentum-y (3D)| \\
+\verb|&HISTITEM item="RHOT" / 　  　        　! density * potential-temperature (3D)| \\
+\verb|&HISTITEM item="QV"   / 　  　    　    　! mixing ratio for vapor (3D)| \\
+\verb|&HISTITEM item="QHYD" / 　  　        　! mixing ratio for hydrometeor (3D)| \\
+\verb|&HISTITEM item="T"    / 　  　     　   　! temperature (3D)| \\
+\verb|&HISTITEM item="PRES" / 　  　        　! pressure (3D)| \\
+\verb|&HISTITEM item="U"    / 　  　      　  　! horizontal wind component-x (3D)| \\
+\verb|&HISTITEM item="V"    / 　  　      　  　! horizontal wind component-y (3D)| \\
+\verb|&HISTITEM item="W"    / 　  　      　  　! vertical wind component (3D)| \\
+\verb|&HISTITEM item="PT"   / 　  　   　     　! potential temperature (3D)| \\
+\verb|&HISTITEM item="RH"   / 　   　   　    　! relative humidity (3D)| \\
+\verb|&HISTITEM item="PREC" / 　   　    　   ! precipitation (2D)| \\
+\verb|&HISTITEM item="OLR"  / 　    　       　 ! out-going longwave radiation(2D)| \\
+\verb|&HISTITEM item="U10" / 　     　       　 ! horizontal wind component-x at 10m height(2D)| \\
+\verb|&HISTITEM item="V10" / 　     　       　 ! horizontal wind component-y at 10m height(2D)| \\
+\verb|&HISTITEM item="T2"  / 　     　  　    　! temperature at 2m height (2D)| \\
+\verb|&HISTITEM item="Q2"  / 　     　  　    　! mixing ratio for vapor at 2m height (2D)| \\
+\verb|&HISTITEM item="SFC_PRES"   / 　    　! pressure at the bottom surface (2D)| \\
+\verb|&HISTITEM item="SFC_TEMP"   / 　    　! temperature a the bottom surface (2D)| \\
+\verb|&HISTITEM item="LAND_SFC_TEMP" /  ! temperature a the bottom surface for land model (2D)| \\
+\verb|&HISTITEM item="URBAN_SFC_TEMP"/ ! temperature a the bottom surface for urban model (2D)| \\
+\end{tabularx}
+}}}\\
+
+\noindent その他に実験で使用される物理過程の設定は、
+\verb|PARAM_TRACER，PARAM_ATMOS，PARAM_OCEAN，PARAM_LAND，PARAM_URBAN|の項目に
+記述されているので、実行前にチェックすること。
+詳細なコンフィグファイルの内容については、Appendix \ref{app:namelist}を参照されたい。
+
+%
+\subsubsection{実行}
+コンパイル済みのバイナリをrunディレクトリへリンクする。
+
+\begin{verbatim}
+ $ ln -s ../../bin/scale-les ./
+\end{verbatim}
+陸面過程や放射過程のモデルを起動するためのパラメータファイルに
+リンクを張る。
+\begin{verbatim}
+ $ ln -s ../../../data/land/* ./   <- 陸面スキーム用のパラメータファイル
+ $ ln -s ../../../data/rad/*  ./   <- 放射スキーム用のパラメータファイル
+\end{verbatim}
+準備が整ったら、4つのMPIプロセスを使用してscale-lesを実行する。
+\begin{verbatim}
+  $ mpirun -n 4 ./scale-les run.conf < /dev/null >&log&
+\end{verbatim}
+
+実行にはおおよそ1〜2時間を要する（評価環境では93分）。長時間の実行になるため、上記のように
+標準出力をファイルへ書き出すようにしてバックグラウンドで実行すると便利である。
+計算が開始されれば，処理内容のログとして、
+\verb|"LOG_d01.pe000000"|ファイルが生成されるので、
+例えば下記のようなコマンドで\verb|"LOG_d01.pe000000"|ファイルを参照すれば、
+どこまで計算が進んでいるかチェックすることができる。
+\begin{verbatim}
+ $ tail -f LOG_d01.pe000000
+\end{verbatim}
+正常にジョブが終了すれば、\verb|history_d01.pe######.nc|と
+\verb|restart_d01.pe######.nc|という名前のファイルがMPIプロセス数だけ、
+つまり4つずつ生成される（\verb|######|にはMPIプロセスの番号が入る）。
+historyファイルは計算結果の出力ファイルであり、
+\verb|HISTITEM|に指定した変数のみ書き出される。
+restartファイルは対応する時刻を開始時刻として
+再計算を開始するための初期値ファイルである。
+次節でhistoryデータをGrADSで描画可能なバイナリーデータに変換して
+結果を確認する方法について説明する。
+
+%####################################################################################
+

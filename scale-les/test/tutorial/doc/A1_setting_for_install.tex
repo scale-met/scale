@@ -1,0 +1,653 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\chapter{ライブラリ環境のインストール}
+\label{sec:env_setting}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+ここでは、SCALEのインストールに必要なライブラリ環境のインストール方法について説明する。
+Linuxをインストール後、各種プログラムのインストールにはコマンドライン端末を使う。
+本書で説明するライブラリ環境のインストールにあたっては、root権限が必要になる。したがって、
+想定する環境は、ユーザーがroot権限を所持しているサーバーや、自前のデスクトップマシンといった環境である。
+別途サーバー管理者が存在し、root権限を取得できない場合等は、必要な環境条件が整っているか問い合わせること。
+
+また本節では、HDF5, NetCDF, MPIについてGNU compilerでコンパイルされたライブラリの説明を行う。
+GNU compiler以外のIntel compilerなどを利用する場合は、各自でインストール方法を調べてインストールすること。\\
+
+\noindent ここでインストールするライブラリ環境は、主に下記の4点である。
+\begin{itemize}
+\item GNU C/C++, fortran compiler
+\item HDF5 Library (\url{https://www.hdfgroup.org/HDF5/})
+\item NetCDF Library (\url{http://www.unidata.ucar.edu/software/netcdf/})
+\item Message Passing Interface (MPI) Library (openMPI版、\url{http://www.open-mpi.org/})
+\end{itemize}
+これらのインストール方法について、本書では下記の5種類のOperating System (OS）について説明する。
+\begin{itemize}
+\item Linux CentOS 6.6 x86-64
+\item Linux CentOS 7.1 x86-64
+\item Linux openSUSE 13.2 x86-64
+\item Apple Mac OS X 10.10 Yosemite
+\item スーパーコンピュータ「京」
+\end{itemize}
+他のOSディストリビューション（下記参照）でもSCALEを利用可能だが、
+本書でサポートするのは上記の範囲とする。\\
+
+\noindent{\bf 動作確認済みの他のOSディストリビューション}
+\begin{itemize}
+\item Linux SUSE Enterprise Linux 11.1, 11.3 x86-64
+\item Linux Vine Linux 6.3 x86-64
+\item Linux Fedora 16 x86-64
+\end{itemize}
+
+
+\section{インストール方法 (Linux - CentOS 6.6 編)}
+%==========================================================================================
+
+以下の説明で使用した環境は次のとおりである。
+\begin{itemize}
+\item CPU: Intel Core i5 2410M (sandybridge)
+\item Memory: DDR3-1333 4GB
+\item OS: CentOS 6.6 (kernel: 2.6.32-504.23.4.el6.x86\_64）\\
+{\small ＊インストール時、"日本語"、 "Desktop"、"Kdump有り"を選択}
+\end{itemize}
+
+\subsubsection{ライブラリのインストール}
+
+CentOS 6.6では、一部のライブラリをエンタープライズLinux用の拡張パッケージ(EPEL)リポジトリからインストールする。
+そこで、はじめにEPELリポジトリをシステムにインストールし登録する。
+CentOS 6.6では、ソフトウェアのインストールに"yum"コマンドを利用する。
+すべての作業を行うまえに、下記のコマンドにてパッケージをアップデートしておくことをおすすめする。
+\begin{verbatim}
+ # yum update
+\end{verbatim}
+
+ルート権限で、下記のコマンドを実行することでリポジトリの登録が可能である。
+\begin{verbatim}
+ # yum install epel-release
+\end{verbatim}
+実行時のコマンドラインの様子は以下のようになる。
+インストール対象がリストされるので、確認して"y"をタイプして先へ進める。\\
+
+\noindent {\small {\gt
+\fbox{
+\begin{tabularx}{140mm}{l}
+読み込んだプラグイン:fastestmirror, refresh-packagekit, security\\
+インストール処理の設定をしています\\
+Loading mirror speeds from cached hostfile\\
+ * base: ftp.***.**.jp\\
+ * extras: ftp.***.**.jp\\
+ * updates: ftp.***.**.jp\\
+依存性の解決をしています\\
+-- トランザクションの確認を実行しています。\\
+--- パッケージ epel-release.noarch 0:7-5 を インストール\\
+-- 依存性解決を終了しました。\\
+\\
+依存性を解決しました\\
+\\
+======================================\\
+ Package                アーキテクチャー バージョン      リポジトリー      容量\\
+======================================\\
+インストール中:\\
+ epel-release           noarch           6-8             extras            14 k\\
+\\
+トランザクションの要約\\
+======================================\\
+インストール  1 パッケージ\\
+\\
+総ダウンロード容量: 14 k\\
+インストール容量: 24 k\\
+Is this ok (y/N): y\\
+パッケージをダウンロードしています:
+epel-release-6-8.noarch.rpm                                   14 kB     00:00\\
+rpm\_check\_debug を実行しています\\
+トランザクションのテストを実行しています\\
+トランザクションのテストを成功しました\\
+トランザクションを実行しています\\
+  インストールしています  : epel-release-6-8.noarch                            1/1\\
+  Verifying               : epel-release-6-8.noarch                            1/1\\
+\\
+インストール:\\
+  epel-release.noarch 0:6-8\\
+\\
+完了しました!\\
+\end{tabularx}
+}}}\\
+
+\noindent {\small ＊この時点で、yumによるインストールに失敗する場合は、
+プロキシ設定等を含めた通信環境、yumリポジトリの登録状況等を再確認すること。}
+
+\noindent yumのグループインストール機能を用いて，開発ツール
+（ここでの対象は主にGNU compilerとmakeシステム）をまとめてインストールする。
+\begin{verbatim}
+ # yum groupinstall "development tools"
+\end{verbatim}
+
+\noindent つづいて、グループインストールではインストールされないライブラリを個別に追加する。
+\begin{verbatim}
+ # yum install zlib-devel
+ # yum install hdf5-devel hdf5-static
+ # yum install netcdf-devel netcdf-static
+ # yum install openmpi-devel
+ # yum install lapack lapack-devel
+ # yum install wgrib wgrib2
+\end{verbatim}
+
+\noindent \textcolor{blue}{\small ＊Lapackは、GNU compilerでSCALEをコンパイルする際に
+デフォルトでLapackを利用する設定であるため、依存関係のあるライブラリとしてインストールが必要になる。}
+
+\noindent \textcolor{blue}{\small ＊wgrib、wgrib2は、第\ref{sec:tuto_real}章：Tutorial: Real case で
+外部入力データのプレ処理を行うために使用する。}
+
+\noindent {\small ＊"yum -y install package name"として実行することで、インストール前の再確認をスキップできる。}
+
+
+\subsubsection{環境変数の設定}
+
+ローカルシステムでMPI並列プログラムを実行するために、OpenMPIライブラリの環境変数設定を行う。
+ユーザ権限に移動して.bashrcをエディタで開き，
+\begin{verbatim}
+ $ vi ~/.bashrc
+\end{verbatim}
+下記をファイルの最後に追加して，環境変数の設定を記述する。\\
+
+\noindent {\gt
+\ovalbox{
+\begin{tabularx}{140mm}{l}
+ \\
+ \verb|// ---------------- Add to end of the file ----------------|\\
+ \verb|# OpenMPI|\\
+ \verb|export MPI="/usr/lib64/openmpi"|\\
+ \verb|export PATH="$PATH:$MPI/bin"|\\
+ \verb|export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$MPI/lib"|\\
+ \\
+\end{tabularx}
+}}\\
+
+編集が終わったら、環境設定を有効にする。
+\begin{verbatim}
+ $ . ~/.bashrc
+\end{verbatim}
+
+
+%\subsubsection{Installation of Gphys}
+%CentOSの場合、yumリポジトリに地球電脳倶楽部のGFD-Dennouリポジトリを登録することで、
+%簡単にGphysをインストールできる。
+%root権限で、GFD-Dennouリポジトリを次のような内容で登録する。
+%
+%\begin{verbatim}
+% # vi /etc/yum.repos.d/GFD-Dennou.repo
+%\end{verbatim}
+%
+%\begin{verbatim}
+% // ---------------- Edit the file ----------------
+% [gfd-dennou]
+% name=GFD DENNOU Club RPMS for CentOS $releasever - $basearch
+% baseurl=http://www.gfd-dennou.org/library/cc-env/rpm-dennou/CentOS/$releasever/$basearch/
+% enabled=1
+% gpgcheck=0
+%\end{verbatim}
+%編集が終わったら、yumでGphysをインストールする。
+%\begin{verbatim}
+% # yum install gphys
+%\end{verbatim}
+
+
+\section{インストール方法 (Linux - CentOS 7.1 編)}
+%==========================================================================================
+
+以下の説明で使用した環境は次のとおりである。
+\begin{itemize}
+\item CPU: Intel Core i5 2410M (sandybridge)
+\item Memory: DDR3-1333 4GB
+\item OS: CentOS 7.1 (kernel: 3.10.0-229.7.2.el7.x86\_64）\\
+{\small ＊インストール時、"日本語"、 "Gnome デスクトップ"、"Kdump有り"を選択}
+\end{itemize}
+
+\subsubsection{ライブラリのインストール}
+
+CentOS 7.1では、一部のライブラリをエンタープライズLinux用の拡張パッケージ(EPEL)リポジトリからインストールする。
+そこで、はじめにEPELリポジトリをシステムにインストールし登録する。
+CentOS 7.1では、ソフトウェアのインストールに"yum"コマンドを利用する。
+すべての作業を行うまえに、下記のコマンドにてパッケージをアップデートしておくことをおすすめする。
+\begin{verbatim}
+ # yum update
+\end{verbatim}
+
+ルート権限で、下記のコマンドを実行することでリポジトリの登録が可能である。
+\begin{verbatim}
+ # yum install epel-release
+\end{verbatim}
+実行時のコマンドラインの様子は以下のようになる。
+インストール対象がリストされるので、確認して"y"をタイプして先へ進める。\\
+
+\noindent {\small {\gt
+\fbox{
+\begin{tabularx}{140mm}{l}
+読み込んだプラグイン:fastestmirror, langpacks\\
+base                                                      3.6 kB     00:00\\
+extras                                                    3.4 kB     00:00\\
+updates                                                   3.4 kB     00:00\\
+Loading mirror speeds from cached hostfile\\
+ * base: ftp.***.**.jp\\
+ * extras: ftp.***.**.jp\\
+ * updates: ftp.***.**.jp\\
+依存性の解決をしています\\
+-- トランザクションの確認を実行しています。\\
+--- パッケージ epel-release.noarch 0:7-5 を インストール\\
+-- 依存性解決を終了しました。\\
+\\
+依存性を解決しました\\
+\\
+======================================\\
+ Package                アーキテクチャー バージョン      リポジトリー      容量\\
+======================================\\
+インストール中:\\
+ epel-release           noarch           7-5             extras            14 k\\
+\\
+トランザクションの要約\\
+======================================\\
+インストール  1 パッケージ\\
+\\
+総ダウンロード容量: 14 k\\
+インストール容量: 24 k\\
+Is this ok (y/d/N): y\\
+Downloading packages:\\
+extras/7/x86\_64/prestodelta                                 7.6 kB   00:00\\
+epel-release-7-5.noarch.rpm                                  14 kB   00:00\\
+Running transaction check\\
+Running transaction test\\
+Transaction test succeeded\\
+Running transaction\\
+  インストール中          : epel-release-7-5.noarch                         1/1\\
+  検証中                  : epel-release-7-5.noarch                         1/1\\
+\\
+インストール:\\
+  epel-release.noarch 0:7-5\\
+\\
+完了しました!\\
+\end{tabularx}
+}}}\\
+
+\noindent {\small ＊この時点で、yumによるインストールに失敗する場合は、
+プロキシ設定等を含めた通信環境、yumリポジトリの登録状況等を再確認すること。}
+
+\noindent yumのグループインストール機能を用いて，開発ツール
+（ここでの対象は主にGNU compilerとmakeシステム）をまとめてインストールする。
+\begin{verbatim}
+ # yum groupinstall "development tools"
+\end{verbatim}
+
+\noindent つづいて、グループインストールではインストールされないライブラリを個別に追加する。
+\begin{verbatim}
+ # yum install hdf5-devel hdf5-static
+ # yum install netcdf-devel netcdf-static
+ # yum install netcdf-fortran-devel
+ # yum install openmpi-devel
+ # yum install lapack lapack-devel
+ # yum install wgrib wgrib2
+\end{verbatim}
+
+\noindent \textcolor{red}{\small ＊fortran用のモジュールファイルは別パッケージになっている。
+"netcdf-fortran-devel"のインストールを忘れないこと。}
+
+\noindent \textcolor{blue}{\small ＊Lapackは、GNU compilerでSCALEをコンパイルする際に
+デフォルトでLapackを利用する設定であるため、依存関係のあるライブラリとしてインストールが必要になる。}
+
+\noindent \textcolor{blue}{\small ＊wgrib、wgrib2は、第\ref{sec:tuto_real}章：Tutorial: Real case で
+外部入力データのプレ処理を行うために使用する。}
+
+\noindent {\small ＊"yum -y install package name"として実行することで、インストール前の再確認をスキップできる。}
+
+\subsubsection{環境変数の設定}
+
+ローカルシステムでMPI並列プログラムを実行するために、OpenMPIライブラリの環境変数設定を行う。
+ユーザ権限に移動して.bashrcをエディタで開き，
+\begin{verbatim}
+ $ vi ~/.bashrc
+\end{verbatim}
+下記をファイルの最後に追加して，環境変数の設定を記述する。\\
+
+\noindent {\gt
+\ovalbox{
+\begin{tabularx}{140mm}{l}
+ \\
+ \verb|// ---------------- Add to end of the file ----------------|\\
+ \verb|# OpenMPI|\\
+ \verb|export MPI="/usr/lib64/openmpi"|\\
+ \verb|export PATH="$PATH:$MPI/bin"|\\
+ \verb|export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$MPI/lib"|\\
+ \\
+\end{tabularx}
+}}\\
+
+編集が終わったら、環境設定を有効にする。
+\begin{verbatim}
+ $ . ~/.bashrc
+\end{verbatim}
+
+
+\section{インストール方法 (Linux - openSUSE 13.2 編)}
+%==========================================================================================
+
+以下の説明で使用した環境は次のとおりである。
+\begin{itemize}
+\item CPU: Intel Core i5 2410M (sandybridge)
+\item Memory: DDR3-1333 4GB
+\item OS: openSUSE 13.2 (kernel: 3.16.7-21-desktop x86\_64）\\
+{\small ＊インストール時、"日本語"、 "Gnome Desktop"を選択}
+\end{itemize}
+
+\subsubsection{ライブラリのインストール}
+
+openSUSE 13.2では、一部のライブラリを外部リポジトリ
+（ocefpaf's Home Project; \url{https://build.opensuse.org/project/show/home:ocefpaf}）からインストールする。
+このため、まずhome\_ocefpafリポジトリをシステムにインストールし登録する。
+このリポジトリには、grads、ncview、GMT、ncl、そしてcdoといったツール群も含まれており便利である。
+
+openSUSE 13.2では、ソフトウェアのインストールに"zypper"コマンドを利用する。
+openSUSEでは一般にユーザーがrootユーザーにスイッチすることを推奨しておらず、
+デフォルトのままOSをインストールすると"su"コマンドによってrootユーザーに
+スイッチすることはできないので、"sudo"コマンドを利用してインストール作業を行う。
+すべての作業を行うまえに、下記のコマンドにてパッケージをアップデートしておくことをおすすめする。
+\begin{verbatim}
+ # sudo zypper update
+\end{verbatim}
+
+下記のコマンドを実行することでリポジトリの登録が可能である。
+\begin{verbatim}
+ $ sudo zypper ar \\
+   http://download.opensuse.org/repositories/home:/ocefpaf/openSUSE_13.2/ \\
+   home_ocefpaf
+\end{verbatim}
+{\small ＊上記コマンド中の"\verb|\\|"は、組版上の改行であることを意味する。
+実際は改行も"\verb|\\|"の記述も必要ない。}
+実行時のコマンドラインの様子は以下のようになる。\\
+
+\noindent {\small {\gt
+\fbox{
+\begin{tabularx}{140mm}{l}
+ リポジトリ 'home\_ocefpaf' を追加しています ...............................完了 \\
+ リポジトリ 'home\_ocefpaf' を正常に追加しました\\
+ 有効         : はい (Y)\\
+ 自動更新     : いいえ (N)\\
+ GPG チェック : はい (Y)\\
+ URI          : \url{http://download.opensuse.org/repositories/home:/ocefpaf/openSUSE_13.2/}
+\end{tabularx}
+}}}\\
+
+{\small ＊この時点で、zypperによるインストールに失敗する場合は、
+プロキシ設定等を含めた通信環境、zypperリポジトリの登録状況等を再確認すること。}
+
+\noindent zypperのパターンインストール機能を用いて，基本開発ツール
+（ここでの対象は主にGNU compilerとmakeシステム）をまとめてインストールする。
+\begin{verbatim}
+ $ sudo zypper install --type pattern devel_basis
+\end{verbatim}
+
+home\_ocefpafリポジトリを登録して最初のインストールの場合、
+下記のようにパッケージの署名鍵の信頼について問われることがある。
+"a"の「ずっと信頼」を選択して作業を進める。
+その後、インストール対象がリストされるので、確認して"y"をタイプして先へ進める。\\
+
+\noindent {\small {\gt
+\fbox{
+\begin{tabularx}{140mm}{l}
+ 鍵を拒否しますか (R)？ 一時的に信頼しますか (T)？ \\
+ それとも今後ずっと信頼しますか (A)？ [r/t/a/? 全てのオプションを表示] (r): a
+\end{tabularx}
+}}}\\
+
+\noindent つづいて、devel\_basisパッケージに含まれないライブラリを個別に追加する。
+\begin{verbatim}
+ $ sudo zypper install gcc-fortran
+ $ sudo zypper install hdf5-devel hdf5-devel-static
+ $ sudo zypper install netcdf-devel netcdf-devel-static
+ $ sudo zypper install netcdf-fortran-devel netcdf-fortran-static
+ $ sudo zypper install lapack-devel lapack-devel-static
+ $ sudo zypper install openmpi-devel openmpi-devel-static
+ $ sudo zypper install wgrib wgrib2
+\end{verbatim}
+
+\noindent \textcolor{blue}{\small ＊Lapackは、GNU compilerでSCALEをコンパイルする際に
+デフォルトでLapackを利用する設定であるため、依存関係のあるライブラリとしてインストールが必要になる。}
+
+\noindent \textcolor{blue}{\small ＊wgrib、wgrib2は、第\ref{sec:tuto_real}章：Tutorial: Real case で
+外部入力データのプレ処理を行うために使用する。}
+
+
+\subsubsection{環境変数の設定}
+
+ローカルシステムでMPI並列プログラムを実行するために、OpenMPIライブラリの環境変数設定を行う。
+ユーザ権限に移動して.bashrcをエディタで開き，
+\begin{verbatim}
+ $ vi ~/.bashrc
+\end{verbatim}
+下記をファイルの最後に追加して，環境変数の設定を記述する。\\
+
+\noindent {\gt
+\ovalbox{
+\begin{tabularx}{140mm}{l}
+ \\
+ \verb|// ---------------- Add to end of the file ----------------|\\
+ \verb|# OpenMPI|\\
+ \verb|export MPI="/usr/lib64/mpi/gcc/openmpi"|\\
+ \verb|export PATH="$PATH:$MPI/bin"|\\
+ \verb|export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$MPI/lib64"|\\
+ \\
+\end{tabularx}
+}}\\
+
+編集が終わったら、環境設定を有効にする。
+\begin{verbatim}
+ $ . ~/.bashrc
+\end{verbatim}
+
+
+\section{インストール方法(Mac OS X 編)}
+%==========================================================================================
+
+\subsubsection{macportsを用いたインストール}
+
+Apple Mac OS XでのSCALE実行環境を整備する方法について説明する。
+ここではMac OS Xのパッケージマネージャの一つであるmacportsを用いる方法を紹介する。
+その他の主要なパッケージマネージャとしては、homebrewが挙げられる。homebrewを利用しても環境は手軽に揃えられるので、
+興味のある方は利用してもらいたい。
+
+まずはAppleの開発ツールであるXcodeをインストールする。
+大元のgccコンパイラを導入するために、必ずインストールする必要がある。
+最近のOSのバージョンのものは、App Store経由で入手できる（無料）。
+古いOSでは、インストールディスクから追加することが出来る。
+最近のOSのXcodeの場合、最初に以下の様な設定をターミナルから行う必要がある。
+\begin{verbatim}
+ コマンドラインツールのインストール
+ # xcode-select --install
+\end{verbatim}
+\begin{verbatim}
+ ライセンス条項の承認
+ # xcodebuild -license
+\end{verbatim}
+
+次にmacports本体をインストールする。
+\url{https://www.macports.org/}
+
+macportsとmacportsが管理するパッケージは/opt/local以下に配置される。
+インストール時に\verb|.bash_profile|に、/opt/local/binへのパスが張られているので確認されたし。
+macportsはコマンドラインから操作する。主要なコマンドは以下の通り。
+
+\begin{verbatim}
+ インストール可能なソフトウェアを検索する
+ $ port search <検索文字>
+\end{verbatim}
+\begin{verbatim}
+ ソフトウェアのインストール時に選択可能なオプション(variants)を確認する
+ $ port variants <アプリ名>
+\end{verbatim}
+\begin{verbatim}
+ ソフトウェアのインストール（root権限必要）
+ $ sudo port install <アプリ名> [variants]
+\end{verbatim}
+\begin{verbatim}
+ ソフトウェアのアンインストール（root権限必要）
+ $ sudo port uninstall <アプリ名> [variants]
+\end{verbatim}
+\begin{verbatim}
+ macports本体とパッケージカタログの更新（root権限必要）
+ $ sudo port selfupdate
+\end{verbatim}
+\begin{verbatim}
+ パッケージの更新（root権限必要）
+ $ sudo port upgrade outdated
+\end{verbatim}
+\begin{verbatim}
+ 不要なパッケージ（activateされていない過去のバージョン等）の削除
+ $ sudo port -u uninstall
+\end{verbatim}
+
+\subsubsection{gccからNetCDFまでのインストール}
+
+macportsはパッケージの依存関係を解決してくれるが、必要なvariantsを備えたセットを作るには、
+順番にインストールしていく方が問題が少ない。以下にsudo port installしていく順番とvariantsの設定を示す。
+今回はgcc4.9の利用を想定している。
+\begin{verbatim}
+ $ gcc49
+ $ openmpi-gcc49 +threads
+ $ hdf4 +gcc49 +szip
+ $ hdf5 +gcc49 +szip +fortran +cxx +openmpi +threadsafe
+ $ netcdf +gcc49 +openmpi +netcdf4 +hdf4
+ $ netcdf-fortran +gcc49 +openmpi
+\end{verbatim}
+
+最近のmacportsでは、gccとmpiライブラリはselectで選択する。
+この操作を行うと、gfortran等の一般的な名前でエイリアスが作られてパスが通るようになる。
+\begin{verbatim}
+ $ sudo port select --set gcc mp-gcc49
+ $ sudo port select --set mpi openmpi-gcc49-fortran
+\end{verbatim}
+
+SCALEは陰解法計算の部分で、数値計算ライブラリを利用するオプションがある。
+もし必要ならば、macportsからATLASをインストールすることが出来る。
+\begin{verbatim}
+ $ atlas +gcc49
+\end{verbatim}
+
+
+%\subsubsection{その他のインストール}
+%
+%\textcolor{red}{\large 本節は部分的に削除予定；UsersGuideの中で使用していないものや、
+%単純なユーザーにとって必要のないものには触れないようにする。}
+%
+%macportsでインストールできるパッケージのうち、重要なものを以下に紹介する。
+%
+%\begin{itemize}
+%\item git, git-flow : ソースコード開発時に利用する。
+%\item coreutils : GNU core utils。様々な場面で必要になる。
+%\item gawk, gsed : Mac OS Xに付属するawk,sedはGNU版と機能が異なるため、こちらが必要になる時がある。
+%\item gnuplot : グラフ描画に利用。
+%\item ImageMagick : Gphysから出力したPostScriptファイルをpngやアニメーションgifに変換する時に利用。
+%\end{itemize}
+
+
+\section{インストール方法 (スーパーコンピュータ「京」 編)}
+%==========================================================================================
+
+以下の説明で使用した環境は次のとおりである。
+\begin{itemize}
+\item 計算機: スーパーコンピュータ「京」
+\item 言語環境: K-1.2.0-18
+\end{itemize}
+
+\subsubsection{ライブラリについて}
+スーパーコンピュータ「京」では、SCALEのコンパイルに
+必要なライブラリがAICSソフトウェアとして準備されている。
+詳細は、京ポータルサイトの「AICSソフトウェア等」の項目、もしくは下記のWebページを参照のこと。\\
+\noindent \url{http://www-sys-aics.riken.jp/releasedsoftware/ksoftware/pnetcdf.html}
+
+一般に、スーパーコンピュータ「京」におけるSCALEのコンパイルには、\\
+\noindent "\verb|/opt/aics/netcdf/k-serial-noszip/|"下にあるHDF5、NetCDFライブラリを用いる。
+コンパイラやMPIライブラリについてもスーパーコンピュータ「京」専用のコンパイラとライブラリを用いるため、
+特別にライブラリ環境を準備する必要はない。
+
+\noindent {\small ＊コンパイル時に参照するライブラリのPATHは、
+SCALEコンパイル時に使用する"Makedef.K"に記述されているため、
+環境変数について特に設定する必要はない。}
+
+
+\section{描画ツールのインストール}
+\label{sec:env_vis_tools}
+%==========================================================================================
+
+SCALEの計算結果や、初期値/境界値データなどを描画するのに利用可能である描画ツールの例を挙げる。
+個人の好みでどのツールを使ってもよいし、出力形式を理解していれば、
+ここに挙げた以外のツールで解析・描画することももちろん可能である。
+
+\begin{itemize}
+\item Gphys / Ruby-DCL by 地球電脳倶楽部\\
+ \begin{itemize}
+  \item URL： \url{http://ruby.gfd-dennou.org/products/gphys/}
+  \item 概略：SCALEの出力ファイルは、MPI並列の計算領域分割に従ってMPIプロセスごとに
+              NetCDF形式の分割ファイルとして出力される。Gphysの"gpview"や"gpvect"といった
+              描画ツールを使えば、分割ファイルを後処理なしに直接開いて描画することができる。
+  \item インストール方法：本書で使用したCentOS6、CentOS7については、下記のWebページにインストール方法が記載されている。\\
+                        \url{http://www.gfd-dennou.org/arch/davis/gfdnavi/doc/install/install-ruby-gphys.htm}\\
+                        Mac OS Xにおけるインストール方法は本節の末尾で説明する。
+ \end{itemize}
+\item Grid Analysis and Display System (GrADS) by COLA\\
+ \begin{itemize}
+  \item URL： \url{http://iges.org/grads/}
+  \item 概略：言わずと知れた描画ツール。SCALEのNetCDF形式の分割ファイルをそのまま読むことはできない
+             ため、SCALEで提供している出力データの後処理ツール"\verb|netcdf2grads_h|"を使用して分割ファイルを結合し、
+             GrADSで読み込めるファイル形式に変換する必要ある。"\verb|netcdf2grads_h|"のインストール方法は、
+本書の第\ref{sec:inst_env}章、使用方法は第3章、および第4章を参照のこと。
+  \item インストール方法：\url{http://iges.org/grads/downloads.html}を参照のこと。
+                        CentOS6、CentOS7ではEPELリポジトリを登録していればyumコマンドによって、
+                        openSUSE 13ではhome\_ocefpafリポジトリを登録していればzypperコマンドによって
+                        インストールできる。
+ \end{itemize}
+\item Ncview: a netCDF visual browser by David W. Pierce\\
+ \begin{itemize}
+  \item URL： \url{http://meteora.ucsd.edu/~pierce/ncview_home_page.html}
+  \item 概略：NetCDF形式ファイルのクイックビューアーである。SCALEの分割ファイルを結合して描画することは
+             できないが、分割ファイルを１つずつ描画してチェックすることはできる。
+  \item インストール方法：\url{http://meteora.ucsd.edu/~pierce/ncview_home_page.html}を参照のこと。
+                        CentOS6、CentOS7ではEPELリポジトリを登録していればyumコマンドによって、
+                        openSUSE 13ではhome\_ocefpafリポジトリを登録していればzypperコマンドによって
+                        インストールできる。
+ \end{itemize}
+\end{itemize}
+
+\vspace{1cm}
+\noindent {\Large\em COLUMN} \hrulefill
+\subsubsection{Mac OS XにおけるGphys / Ruby-DCLのインストール}
+
+macports-JPが作成しているリポジトリから、Mac OS X用のGPhysをインストールできる。
+以下のように、MacPorts-JPのリポジトリをチェックアウトして配置する。場所は好きな場所でよい。
+\begin{verbatim}
+ $ sudo svn co http://svn.sourceforge.jp/svnroot/macports-jp/trunk/ \
+ $ /opt/local/var/sources/svn.sourceforge.jp/svnroot/macports-jp/trunk
+\end{verbatim}
+/opt/local/etc/macports/sources.confに、チェックアウトしたリポジトリを追加する。
+\begin{verbatim}
+ file:///opt/local/var/sources/svn.sourceforge.jp/svnroot/macports-jp/trunk/dports
+\end{verbatim}
+これで、Gphysと関連ライブラリをmacportsで一括インストールできるようになる。
+今回はruby1.9向けのrb19-gphysをインストールすることにする。
+
+\begin{verbatim}
+ rubyのインストールと1.9の選択
+ $ sudo port install ruby19
+ $ sudo port select --set ruby ruby19
+\end{verbatim}
+\begin{verbatim}
+ 依存関係の解決を任せるかたちで、gphysのインストール
+ $ sudo port install rb19-gphys
+\end{verbatim}
+
+インストールされたruby1.9版gphysコマンドは、末尾に1.9が付いている。
+これを無くしたい場合は/opt/local/bin内でシンボリックリンクを張る。
+以下では特に頻繁に使う３つを例に挙げる。
+\begin{verbatim}
+ $ sudo ln -s gplist1.9 gplist
+ $ sudo ln -s gpvect1.9 gpvect
+ $ sudo ln -s gpview1.9 gpview
+\end{verbatim}
+
+
+
