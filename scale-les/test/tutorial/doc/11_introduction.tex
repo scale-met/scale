@@ -27,7 +27,8 @@ SCALEは計算機を用いて気象・気候科学の問題にアプローチす
 \end{itemize}
 
 ライセンスの詳細は、トップディレクトリ直下の``\verb|scale/LICENSE|''のファイルに記述されている。
-SCALEの使用前に一読しておくこと。
+SCALEの使用前に一読しておくこと。またSCALEのWebページにも説明が記載されているので必要に応じて
+参照すること（\url{http://scale.aics.riken.jp/}）。
 
 \subsection{SCALE-LESモデルの構成}
 現在，SCALE-LESモデルとして組み込まれているコンポーネントは下記のものである。
@@ -98,6 +99,15 @@ SCALEの使用前に一読しておくこと。
 
 
 \subsection{SCALEのライブラリとモデル}
+
+\begin{figure}[bh]
+\begin{center}
+  \includegraphics[width=0.9\hsize]{./figure/library.eps}\\
+  \caption{SCALEライブラリのねらい}
+  \label{fig:scale}
+\end{center}
+\end{figure}
+
 SCALEは、理化学研究所 計算科学研究機構（RIKEN AICS）を中心に開発が進められている気象・気候科学向けのライブラリである。
 図 \ref{fig:scale}はSCALEのねらいを表したポンチ絵である。この図に示されるように、SCALEプロジェクトは、近い将来もしくは
 現在すでに研究の足かせとなっている諸問題を解決する、もしくは解決の手助けをすることを目指している。
@@ -118,15 +128,7 @@ SCALE-LESモデルが本ライブラリセットに含まれている(図 \ref{f
 ユーザーは新たなモデル作ることができる。
 
 
-\begin{figure}[th]
-\begin{center}
-  \includegraphics[width=0.9\hsize]{./figure/library.eps}\\
-  \caption{SCALEライブラリのねらい}
-  \label{fig:scale}
-\end{center}
-\end{figure}
-
-\begin{figure}[th]
+\begin{figure}[tb]
 \begin{center}
   \includegraphics[width=0.9\hsize]{./figure/scale_and_scale-les.eps}\\
   \caption{SCALEライブラリとSCALE-LESモデルの関係}
