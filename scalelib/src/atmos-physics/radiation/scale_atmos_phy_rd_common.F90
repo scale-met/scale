@@ -56,6 +56,7 @@ contains
   !> Calc heating rate
   subroutine ATMOS_PHY_RD_heating( &
        flux_rad, &
+       DENS,     &
        RHOT,     &
        QTRC,     &
        FZ,       &
@@ -70,6 +71,7 @@ contains
     implicit none
 
     real(RP), intent(in)  :: flux_rad(KA,IA,JA,2,2)
+    real(RP), intent(in)  :: DENS    (KA,IA,JA)
     real(RP), intent(in)  :: RHOT    (KA,IA,JA)
     real(RP), intent(in)  :: QTRC    (KA,IA,JA,QA)
     real(RP), intent(in)  :: FZ      (0:KA,IA,JA)
@@ -131,8 +133,8 @@ contains
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       TEMP_t(k,i,j,I_LW) = RHOE_t(k,i,j,I_LW) / CVtot(k,i,j) * 86400.0_RP ! [K/day]
-       TEMP_t(k,i,j,I_SW) = RHOE_t(k,i,j,I_SW) / CVtot(k,i,j) * 86400.0_RP ! [K/day]
+       TEMP_t(k,i,j,I_LW) = RHOE_t(k,i,j,I_LW) / DENS(k,i,j) / CVtot(k,i,j) * 86400.0_RP ! [K/day]
+       TEMP_t(k,i,j,I_SW) = RHOE_t(k,i,j,I_SW) / DENS(k,i,j) / CVtot(k,i,j) * 86400.0_RP ! [K/day]
 
        TEMP_t(k,i,j,3)    = TEMP_t(k,i,j,I_LW) + TEMP_t(k,i,j,I_SW)
     enddo

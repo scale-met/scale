@@ -135,7 +135,7 @@ module mod_atmos_vars
   integer, private, allocatable :: AQ_HIST_id(:)
 
   ! history & monitor output of diagnostic variables
-  integer, private, parameter :: AD_nmax = 53 ! number of diagnostic variables for history output
+  integer, private, parameter :: AD_nmax = 63 ! number of diagnostic variables for history output
 
   integer, private, parameter :: I_W     =  1 ! velocity w at cell center
   integer, private, parameter :: I_U     =  2 ! velocity u at cell center
@@ -148,63 +148,75 @@ module mod_atmos_vars
   integer, private, parameter :: I_QLIQ  =  8 ! ratio of total liquid water to total mass
   integer, private, parameter :: I_QICE  =  9 ! ratio of total ice    water to total mass
 
-  integer, private, parameter :: I_LWP   = 10 ! liquid water potential temperature
-  integer, private, parameter :: I_IWP   = 11 ! relative humidity (liquid+ice)
+  integer, private, parameter :: I_LWP   = 10 ! liquid water path
+  integer, private, parameter :: I_IWP   = 11 ! ice water path
+  integer, private, parameter :: I_PW    = 12 ! ice water path
 
-  integer, private, parameter :: I_RTOT  = 12 ! total gas constant
-  integer, private, parameter :: I_CPTOT = 13 ! total heat capacity (constant pressure)
-  integer, private, parameter :: I_PRES  = 14 ! pressure
-  integer, private, parameter :: I_TEMP  = 15 ! temperature
+  integer, private, parameter :: I_RTOT  = 13 ! total gas constant
+  integer, private, parameter :: I_CPTOT = 14 ! total heat capacity (constant pressure)
+  integer, private, parameter :: I_PRES  = 15 ! pressure
+  integer, private, parameter :: I_TEMP  = 16 ! temperature
 
-  integer, private, parameter :: I_POTL  = 16 ! liquid water potential temperature
-  integer, private, parameter :: I_RH    = 17 ! relative humidity (liquid+ice)
-  integer, private, parameter :: I_RHL   = 18 ! relative humidity against to liquid
-  integer, private, parameter :: I_RHI   = 19 ! relative humidity against to ice
+  integer, private, parameter :: I_POTL  = 17 ! liquid water potential temperature
+  integer, private, parameter :: I_RHA   = 18 ! relative humidity (liquid+ice)
+  integer, private, parameter :: I_RHL   = 19 ! relative humidity against to liquid
+  integer, private, parameter :: I_RHI   = 20 ! relative humidity against to ice
 
-  integer, private, parameter :: I_VOR   = 20 ! vertical vorticity
-  integer, private, parameter :: I_DIV   = 21 ! divergence
-  integer, private, parameter :: I_HDIV  = 22 ! horizontal divergence
+  integer, private, parameter :: I_VOR   = 21 ! vertical vorticity
+  integer, private, parameter :: I_DIV   = 22 ! divergence
+  integer, private, parameter :: I_HDIV  = 23 ! horizontal divergence
 
-  integer, private, parameter :: I_DENS_PRIM = 23 ! prime term of density
-  integer, private, parameter :: I_W_PRIM    = 24 ! prime term of w
-  integer, private, parameter :: I_U_PRIM    = 25 ! prime term of u
-  integer, private, parameter :: I_V_PRIM    = 26 ! prime term of v
-  integer, private, parameter :: I_POTT_PRIM = 27 ! prime term of potential temperature
-  integer, private, parameter :: I_W_PRIM2   = 28 ! variance of w
-  integer, private, parameter :: I_PT_W_PRIM = 29 ! resolved scale heat flux
-  integer, private, parameter :: I_W_PRIM3   = 30 ! skewness of w
-  integer, private, parameter :: I_TKE_RS    = 31 ! resolved scale TKE
+  integer, private, parameter :: I_DENS_PRIM = 24 ! prime term of density
+  integer, private, parameter :: I_W_PRIM    = 25 ! prime term of w
+  integer, private, parameter :: I_U_PRIM    = 26 ! prime term of u
+  integer, private, parameter :: I_V_PRIM    = 27 ! prime term of v
+  integer, private, parameter :: I_POTT_PRIM = 28 ! prime term of potential temperature
+  integer, private, parameter :: I_W_PRIM2   = 29 ! variance of w
+  integer, private, parameter :: I_PT_W_PRIM = 30 ! resolved scale heat flux
+  integer, private, parameter :: I_W_PRIM3   = 31 ! skewness of w
+  integer, private, parameter :: I_TKE_RS    = 32 ! resolved scale TKE
 
-  integer, private, parameter :: I_ENGP  = 32 ! potential energy
-  integer, private, parameter :: I_ENGK  = 33 ! kinetic   energy
-  integer, private, parameter :: I_ENGI  = 34 ! internal  energy
-  integer, private, parameter :: I_ENGT  = 35 ! total     energy
+  integer, private, parameter :: I_ENGP  = 33 ! potential energy
+  integer, private, parameter :: I_ENGK  = 34 ! kinetic   energy
+  integer, private, parameter :: I_ENGI  = 35 ! internal  energy
+  integer, private, parameter :: I_ENGT  = 36 ! total     energy
 
-  integer, private, parameter :: I_ENGSFC_SH = 36
-  integer, private, parameter :: I_ENGSFC_LH = 37
-  integer, private, parameter :: I_ENGSFC_RD = 38
-  integer, private, parameter :: I_ENGTOA_RD = 39
+  integer, private, parameter :: I_ENGSFC_SH = 37
+  integer, private, parameter :: I_ENGSFC_LH = 38
+  integer, private, parameter :: I_ENGSFC_RD = 39
+  integer, private, parameter :: I_ENGTOA_RD = 40
 
-  integer, private, parameter :: I_ENGSFC_LW_up = 40
-  integer, private, parameter :: I_ENGSFC_LW_dn = 41
-  integer, private, parameter :: I_ENGSFC_SW_up = 42
-  integer, private, parameter :: I_ENGSFC_SW_dn = 43
+  integer, private, parameter :: I_ENGSFC_LW_up = 41
+  integer, private, parameter :: I_ENGSFC_LW_dn = 42
+  integer, private, parameter :: I_ENGSFC_SW_up = 43
+  integer, private, parameter :: I_ENGSFC_SW_dn = 44
 
-  integer, private, parameter :: I_ENGTOA_LW_up = 44
-  integer, private, parameter :: I_ENGTOA_LW_dn = 45
-  integer, private, parameter :: I_ENGTOA_SW_up = 46
-  integer, private, parameter :: I_ENGTOA_SW_dn = 47
+  integer, private, parameter :: I_ENGTOA_LW_up = 45
+  integer, private, parameter :: I_ENGTOA_LW_dn = 46
+  integer, private, parameter :: I_ENGTOA_SW_up = 47
+  integer, private, parameter :: I_ENGTOA_SW_dn = 48
 
-  integer, private, parameter :: I_ENGFLXT      = 48
+  integer, private, parameter :: I_ENGFLXT      = 49
 
-  integer, private, parameter :: I_EVAP         = 49
-  integer, private, parameter :: I_PRCP         = 50
+  integer, private, parameter :: I_EVAP         = 50
+  integer, private, parameter :: I_PRCP         = 51
 
-  integer, private, parameter :: I_DENS_MEAN    = 51
+  integer, private, parameter :: I_DENS_MEAN    = 52
+  integer, private, parameter :: I_W_MEAN       = 53
+  integer, private, parameter :: I_U_MEAN       = 54
+  integer, private, parameter :: I_V_MEAN       = 55
+  integer, private, parameter :: I_POTT_MEAN    = 56
+  integer, private, parameter :: I_T_MEAN       = 57
 
-  integer, private, parameter :: I_QSAT         = 52
+  integer, private, parameter :: I_QV_MEAN      = 58
+  integer, private, parameter :: I_QHYD_MEAN    = 59
+  integer, private, parameter :: I_QLIQ_MEAN    = 60
+  integer, private, parameter :: I_QICE_MEAN    = 61
 
-  integer, private, parameter :: I_Uabs         = 53
+
+  integer, private, parameter :: I_QSAT         = 62
+
+  integer, private, parameter :: I_Uabs         = 63
 
   integer, private            :: AD_HIST_id (AD_nmax)
   integer, private            :: AD_PREP_sw (AD_nmax)
@@ -397,7 +409,8 @@ contains
     call HIST_reg( AD_HIST_id(I_QICE) , zinterp, 'QICE',  'total ice water',        'kg/kg',  ndim=3 )
 
     call HIST_reg( AD_HIST_id(I_LWP)  , zinterp, 'LWP',   'liquid water path',      'g/m2',   ndim=2 )
-    call HIST_reg( AD_HIST_id(I_IWP)  , zinterp, 'IWP',   'ice    water path',      'g/m2',   ndim=2 )
+    call HIST_reg( AD_HIST_id(I_IWP)  , zinterp, 'IWP',   'ice water path',         'g/m2',   ndim=2 )
+    call HIST_reg( AD_HIST_id(I_PW )  , zinterp, 'PW',    'precipitable water',     'g/m2',   ndim=2 )
 
     call HIST_reg( AD_HIST_id(I_RTOT) , zinterp, 'RTOT',  'Total gas constant',     'J/kg/K', ndim=3 )
     call HIST_reg( AD_HIST_id(I_CPTOT), zinterp, 'CPTOT', 'Total heat capacity',    'J/kg/K', ndim=3 )
@@ -405,14 +418,25 @@ contains
     call HIST_reg( AD_HIST_id(I_TEMP) , zinterp, 'T',     'temperature',            'K',      ndim=3 )
 
     call HIST_reg( AD_HIST_id(I_POTL) , zinterp, 'LWPT',  'liq. potential temp.',   'K',      ndim=3 )
-    call HIST_reg( AD_HIST_id(I_RH)   , zinterp, 'RH',    'relative humidity',      '%',      ndim=3 )
-    call HIST_reg( AD_HIST_id(I_RHL)  , zinterp, 'RHL',   'relative humidity(liq)', '%',      ndim=3 )
+    call HIST_reg( AD_HIST_id(I_RHA)  , zinterp, 'RHA',   'relative humidity(liq+ice)', '%', ndim=3 )
+    call HIST_reg( AD_HIST_id(I_RHL)  , zinterp, 'RH',    'relative humidity(liq)', '%',      ndim=3 )
     call HIST_reg( AD_HIST_id(I_RHI)  , zinterp, 'RHI',   'relative humidity(ice)', '%',      ndim=3 )
 
     call HIST_reg( AD_HIST_id(I_VOR)  , zinterp, 'VOR',   'vertical vorticity',     '1/s',    ndim=3 )
     call HIST_reg( AD_HIST_id(I_DIV)  , zinterp, 'DIV',   'divergence',             '1/s',    ndim=3 )
     call HIST_reg( AD_HIST_id(I_HDIV) , zinterp, 'HDIV',  'horizontal divergence',  '1/s',    ndim=3 )
     call HIST_reg( AD_HIST_id(I_Uabs) , zinterp, 'Uabs',  'absolute velocity',      'm/s',    ndim=3 )
+
+    call HIST_reg( AD_HIST_id(I_DENS_MEAN), zinterp, 'DENS_MEAN', 'horiz. mean of density',    'kg/m3', ndim=1 )
+    call HIST_reg( AD_HIST_id(I_W_MEAN),    zinterp, 'W_MEAN',    'horiz. mean of w',           'm/s',  ndim=1 )
+    call HIST_reg( AD_HIST_id(I_U_MEAN),    zinterp, 'U_MEAN',    'horiz. mean of u',           'm/s',  ndim=1 )
+    call HIST_reg( AD_HIST_id(I_V_MEAN),    zinterp, 'V_MEAN',    'horiz. mean of v',           'm/s',  ndim=1 )
+    call HIST_reg( AD_HIST_id(I_POTT_MEAN), zinterp, 'PT_MEAN',   'horiz. mean of pot.',        'K',    ndim=1 )
+    call HIST_reg( AD_HIST_id(I_T_MEAN),    zinterp, 'T_MEAN',    'horiz. mean of t',           'K',    ndim=1 )
+    call HIST_reg( AD_HIST_id(I_QV_MEAN),   zinterp, 'QV_MEAN',   'horiz. mean of QV',          '1',    ndim=1 )
+    call HIST_reg( AD_HIST_id(I_QHYD_MEAN), zinterp, 'QHYD_MEAN', 'horiz. mean of QHYD',        '1',    ndim=1 )
+    call HIST_reg( AD_HIST_id(I_QLIQ_MEAN), zinterp, 'QLIQ_MEAN', 'horiz. mean of QLIQ',        '1',    ndim=1 )
+    call HIST_reg( AD_HIST_id(I_QICE_MEAN), zinterp, 'QICE_MEAN', 'horiz. mean of QICE',        '1',    ndim=1 )
 
     call HIST_reg( AD_HIST_id(I_DENS_PRIM), zinterp, 'DENS_PRIM', 'horiz. deviation of density',    'kg/m3', ndim=3 )
     call HIST_reg( AD_HIST_id(I_W_PRIM   ), zinterp, 'W_PRIM',    'horiz. deviation of w',          'm/s',   ndim=3 )
@@ -498,6 +522,9 @@ contains
        AD_PREP_sw(I_QICE) = 1
        AD_PREP_sw(I_IWP)  = 1
     endif
+    if ( AD_HIST_id(I_PW)  > 0 ) then
+       AD_PREP_sw(I_PW)  = 1
+    endif
 
     if ( AD_HIST_id(I_RTOT) > 0 ) then
        AD_PREP_sw(I_QDRY) = 1
@@ -530,7 +557,7 @@ contains
        AD_PREP_sw(I_TEMP)  = 1
        AD_PREP_sw(I_POTL)  = 1
     endif
-    if (      AD_HIST_id(I_RH)  > 0 &
+    if (      AD_HIST_id(I_RHA) > 0 &
          .OR. AD_HIST_id(I_RHL) > 0 &
          .OR. AD_HIST_id(I_RHI) > 0 ) then
        AD_PREP_sw(I_QDRY)  = 1
@@ -565,31 +592,79 @@ contains
        AD_PREP_sw(I_W)      = 1
        AD_PREP_sw(I_W_PRIM) = 1
        AD_PREP_sw(I_DENS_MEAN) = 1
+       AD_PREP_sw(I_W_MEAN) = 1
     endif
 
     if ( AD_HIST_id(I_U_PRIM) > 0 ) then
        AD_PREP_sw(I_U)      = 1
        AD_PREP_sw(I_U_PRIM) = 1
        AD_PREP_sw(I_DENS_MEAN) = 1
+       AD_PREP_sw(I_U_MEAN) = 1
     endif
 
     if ( AD_HIST_id(I_V_PRIM) > 0 ) then
        AD_PREP_sw(I_V)      = 1
        AD_PREP_sw(I_V_PRIM) = 1
        AD_PREP_sw(I_DENS_MEAN) = 1
+       AD_PREP_sw(I_V_MEAN) = 1
     endif
 
     if ( AD_HIST_id(I_POTT_PRIM) > 0 ) then
        AD_PREP_sw(I_POTT)      = 1
        AD_PREP_sw(I_POTT_PRIM) = 1
        AD_PREP_sw(I_DENS_MEAN) = 1
+       AD_PREP_sw(I_POTT_MEAN) = 1
     endif
+
+    if ( AD_HIST_id(I_DENS_MEAN) > 0 ) then
+       AD_PREP_sw(I_DENS_MEAN) = 1
+    endif
+
+    if ( AD_HIST_id(I_W_MEAN) > 0 ) then
+       AD_PREP_sw(I_W_MEAN) = 1
+    endif
+
+    if ( AD_HIST_id(I_U_MEAN) > 0 ) then
+       AD_PREP_sw(I_U_MEAN) = 1
+    endif
+
+    if ( AD_HIST_id(I_V_MEAN) > 0 ) then
+       AD_PREP_sw(I_V_MEAN) = 1
+    endif
+
+    if ( AD_HIST_id(I_POTT_MEAN) > 0 ) then
+       AD_PREP_sw(I_POTT_MEAN) = 1
+    end if
+
+    if ( AD_HIST_id(I_T_MEAN) > 0 ) then
+       AD_PREP_sw(I_T_MEAN) = 1
+    end if
+
+    if ( AD_HIST_id(I_QV_MEAN) > 0 ) then
+       AD_PREP_sw(I_QV_MEAN) = 1
+    end if
+
+    if ( AD_HIST_id(I_QHYD_MEAN) > 0 ) then
+       AD_PREP_sw(I_QHYD) = 1
+       AD_PREP_sw(I_QHYD_MEAN) = 1
+    end if
+
+    if ( AD_HIST_id(I_QLIQ_MEAN) > 0 ) then
+       AD_PREP_sw(I_QLIQ) = 1
+       AD_PREP_sw(I_QLIQ_MEAN) = 1
+    end if
+
+    if ( AD_HIST_id(I_QICE_MEAN) > 0 ) then
+       AD_PREP_sw(I_QICE) = 1
+       AD_PREP_sw(I_QICE_MEAN) = 1
+    end if
 
     if ( AD_HIST_id(I_W_PRIM2) > 0 ) then
        AD_PREP_sw(I_W)       = 1
        AD_PREP_sw(I_W_PRIM)  = 1
        AD_PREP_sw(I_W_PRIM2) = 1
        AD_PREP_sw(I_DENS_MEAN) = 1
+       AD_PREP_sw(I_W_MEAN)    = 1
     endif
 
     if ( AD_HIST_id(I_PT_W_PRIM) > 0 ) then
@@ -599,6 +674,8 @@ contains
        AD_PREP_sw(I_POTT_PRIM) = 1
        AD_PREP_sw(I_PT_W_PRIM) = 1
        AD_PREP_sw(I_DENS_MEAN) = 1
+       AD_PREP_sw(I_W_MEAN)    = 1
+       AD_PREP_sw(I_POTT_MEAN) = 1
     endif
 
     if ( AD_HIST_id(I_W_PRIM3) > 0 ) then
@@ -606,6 +683,7 @@ contains
        AD_PREP_sw(I_W_PRIM)  = 1
        AD_PREP_sw(I_W_PRIM3) = 1
        AD_PREP_sw(I_DENS_MEAN) = 1
+       AD_PREP_sw(I_W_MEAN)  = 1
     endif
 
     if ( AD_HIST_id(I_TKE_RS) > 0 ) then
@@ -617,6 +695,9 @@ contains
        AD_PREP_sw(I_V_PRIM) = 1
        AD_PREP_sw(I_TKE_RS) = 1
        AD_PREP_sw(I_DENS_MEAN) = 1
+       AD_PREP_sw(I_W_MEAN) = 1
+       AD_PREP_sw(I_U_MEAN) = 1
+       AD_PREP_sw(I_V_MEAN) = 1
     endif
 
     if (      AD_HIST_id (I_ENGP) > 0 &
@@ -1059,9 +1140,9 @@ contains
        CPw => AQ_CP,                       &
        CVw => AQ_CV
     use scale_atmos_saturation, only: &
-       SATURATION_dens2qsat_all => ATMOS_SATURATION_dens2qsat_all, &
-       SATURATION_dens2qsat_liq => ATMOS_SATURATION_dens2qsat_liq, &
-       SATURATION_dens2qsat_ice => ATMOS_SATURATION_dens2qsat_ice
+       SATURATION_psat_all => ATMOS_SATURATION_psat_all, &
+       SATURATION_psat_liq => ATMOS_SATURATION_psat_liq, &
+       SATURATION_psat_ice => ATMOS_SATURATION_psat_ice
     implicit none
 
     real(RP) :: QDRY  (KA,IA,JA) ! dry air            [kg/kg]
@@ -1069,16 +1150,18 @@ contains
     real(RP) :: QHYD  (KA,IA,JA) ! total hydrometeor  [kg/kg]
     real(RP) :: QLIQ  (KA,IA,JA) ! total liquid water [kg/kg]
     real(RP) :: QICE  (KA,IA,JA) ! total ice water    [kg/kg]
+    real(RP) :: RHOQ  (KA,IA,JA)
 
     real(RP) :: LWP   (IA,JA)    ! liquid water path  [g/m2]
     real(RP) :: IWP   (IA,JA)    ! ice    water path  [g/m2]
+    real(RP) :: PW    (IA,JA)    ! precipitable water [g/m2]
 
     real(RP) :: RTOT  (KA,IA,JA) ! Total gas constant  [J/kg/K]
     real(RP) :: CPTOT (KA,IA,JA) ! Total heat capacity [J/kg/K]
     real(RP) :: CPovCV(KA,IA,JA) ! Cp/Cv
 
     real(RP) :: POTL  (KA,IA,JA) ! liquid water potential temperature [K]
-    real(RP) :: RH    (KA,IA,JA) ! relative humidity (liquid+ice)      [%]
+    real(RP) :: RHA   (KA,IA,JA) ! relative humidity (liquid+ice)      [%]
     real(RP) :: RHL   (KA,IA,JA) ! relative humidity against to liquid [%]
     real(RP) :: RHI   (KA,IA,JA) ! relative humidity against to ice    [%]
 
@@ -1097,17 +1180,24 @@ contains
     real(RP) :: W_PRIM3  (KA,IA,JA) ! skewness of w                  [m3/s3]
     real(RP) :: TKE_RS   (KA,IA,JA) ! resolved scale TKE             [m2/s2]
     real(RP) :: DENS_MEAN(KA)       ! horiz. mean of density         [kg/m3]
+    real(RP) :: W_MEAN   (KA)       ! horiz. mean of w               [m/s]
+    real(RP) :: U_MEAN   (KA)       ! horiz. mean of u               [m/s]
+    real(RP) :: V_MEAN   (KA)       ! horiz. mean of v               [m/s]
+    real(RP) :: PT_MEAN  (KA)       ! horiz. mean of pot.            [K]
+    real(RP) :: T_MEAN   (KA)       ! horiz. mean of t               [K]
+    real(RP) :: QV_MEAN  (KA)       ! horiz. mean of QV
+    real(RP) :: QHYD_MEAN(KA)       ! horiz. mean of QHYD
+    real(RP) :: QLIQ_MEAN(KA)       ! horiz. mean of QLIQ
+    real(RP) :: QICE_MEAN(KA)       ! horiz. mean of QICE
 
     real(RP) :: ENGT  (KA,IA,JA) ! total     energy [J/m3]
     real(RP) :: ENGP  (KA,IA,JA) ! potential energy [J/m3]
     real(RP) :: ENGK  (KA,IA,JA) ! kinetic   energy [J/m3]
     real(RP) :: ENGI  (KA,IA,JA) ! internal  energy [J/m3]
 
-    real(RP) :: QSAT  (KA,IA,JA)
+    real(RP) :: PSAT  (KA,IA,JA)
     real(RP) :: UH    (KA,IA,JA)
     real(RP) :: VH    (KA,IA,JA)
-
-    real(RP) :: mean1d(KA)
 
     integer :: k, i, j, iq
     !---------------------------------------------------------------------------
@@ -1183,6 +1273,7 @@ contains
     endif
 
     if ( AD_PREP_sw(I_QTOT) > 0 ) then
+!OCL XFILL
        do j  = JSB, JEB
        do i  = ISB, IEB
        do k  = KS, KE
@@ -1193,7 +1284,9 @@ contains
     endif
 
     if ( AD_PREP_sw(I_QHYD) > 0 ) then
+!OCL XFILL
        QHYD(:,:,:) = 0.0_RP
+
        do iq = QWS, QWE
          QHYD(:,:,:) = QHYD(:,:,:) + QTRC(:,:,:,iq)
        enddo
@@ -1203,14 +1296,18 @@ contains
     endif
 
     if ( AD_PREP_sw(I_QLIQ) > 0 ) then
+!OCL XFILL
        QLIQ(:,:,:) = 0.0_RP
+
        do iq = QWS, QWE
          QLIQ(:,:,:) = QLIQ(:,:,:) + QTRC(:,:,:,iq)
        enddo
     endif
 
     if ( AD_PREP_sw(I_QICE) > 0 ) then
+!OCL XFILL
        QICE(:,:,:) = 0.0_RP
+
        do iq = QIS, QIE
          QICE(:,:,:) = QICE(:,:,:) + QTRC(:,:,:,iq)
        enddo
@@ -1240,8 +1337,21 @@ contains
        enddo
     endif
 
+    if ( AD_PREP_sw(I_PW) > 0 ) then
+       do j  = JSB, JEB
+       do i  = ISB, IEB
+          PW(i,j) = 0.0_RP
+          do k  = KS, KE
+             PW(i,j) = PW(i,j) &
+                      + QTRC(k,i,j,I_QV) * DENS(k,i,j) * ( REAL_FZ(k,i,j)-REAL_FZ(k-1,i,j) ) * 1.E3_RP ! [kg/m2->g/m2]
+          enddo
+       enddo
+       enddo
+    endif
+
     if ( AD_PREP_sw(I_RTOT) > 0 ) then
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
        do j  = JSB, JEB
        do i  = ISB, IEB
        do k  = KS, KE
@@ -1253,6 +1363,7 @@ contains
 
     if ( AD_PREP_sw(I_CPTOT) > 0 ) then
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
        do j  = JSB, JEB
        do i  = ISB, IEB
        do k  = KS, KE
@@ -1273,6 +1384,7 @@ contains
        enddo
 
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
        do j  = JSB, JEB
        do i  = ISB, IEB
        do k  = KS, KE
@@ -1306,6 +1418,7 @@ contains
 
     if ( AD_PREP_sw(I_POTL) > 0 ) then
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
        do j  = JSB, JEB
        do i  = ISB, IEB
        do k = KS, KE
@@ -1317,38 +1430,54 @@ contains
     endif
 
     if ( AD_PREP_sw(I_QSAT) > 0 ) then
-       call SATURATION_dens2qsat_all( QSAT(:,:,:), & ! [OUT]
-                                      TEMP(:,:,:), & ! [IN]
-                                      DENS(:,:,:)  ) ! [IN]
+!       call SATURATION_dens2qsat_all( QSAT(:,:,:), & ! [OUT]
+!                                      TEMP(:,:,:), & ! [IN]
+!                                      DENS(:,:,:)  ) ! [IN]
     end if
 
-    if ( AD_HIST_id(I_RH) > 0 ) then
+    if ( AD_HIST_id(I_RHA) > 0 ) then
+       call SATURATION_psat_all( PSAT(:,:,:), & ! [OUT]
+                                 TEMP(:,:,:)  ) ! [IN]
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
        do j  = JSB, JEB
        do i  = ISB, IEB
        do k  = KS, KE
-          RH(k,i,j) = QTRC(k,i,j,I_QV) / QSAT(k,i,j) * 1.0E2_RP
+          RHA(k,i,j) = DENS(k,i,j) * QTRC(k,i,j,I_QV) &
+                     / PSAT(k,i,j) * Rvap * TEMP(k,i,j) &
+                     * 100.0_RP
        enddo
        enddo
        enddo
     endif
 
     if ( AD_HIST_id(I_RHL) > 0 ) then
+       call SATURATION_psat_liq( PSAT(:,:,:), & ! [OUT]
+                                 TEMP(:,:,:)  ) ! [IN]
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
        do j  = JSB, JEB
        do i  = ISB, IEB
        do k  = KS, KE
-          RHL(k,i,j) = QTRC(k,i,j,I_QV) / QSAT(k,i,j) * 1.0E2_RP
+          RHL(k,i,j) = DENS(k,i,j) * QTRC(k,i,j,I_QV) &
+                     / PSAT(k,i,j) * Rvap * TEMP(k,i,j) &
+                     * 100.0_RP
        enddo
        enddo
        enddo
     endif
 
     if ( AD_HIST_id(I_RHI) > 0 ) then
+       call SATURATION_psat_ice( PSAT(:,:,:), & ! [OUT]
+                                 TEMP(:,:,:)  ) ! [IN]
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
        do j  = JSB, JEB
        do i  = ISB, IEB
        do k  = KS, KE
-          RHI(k,i,j) = QTRC(k,i,j,I_QV) / QSAT(k,i,j) * 1.0E2_RP
+          RHI(k,i,j) = DENS(k,i,j) * QTRC(k,i,j,I_QV) &
+                     / PSAT(k,i,j) * Rvap * TEMP(k,i,j) &
+                     * 100.0_RP
        enddo
        enddo
        enddo
@@ -1357,6 +1486,7 @@ contains
     if ( AD_PREP_sw(I_VOR) > 0 ) then
        ! at x, v, layer
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
        do j = 1, JA-1
        do i = 2, IA
        do k = KS, KE
@@ -1368,6 +1498,7 @@ contains
 
        ! at u, y, layer
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
        do j = 2, JA
        do i = 1, IA-1
        do k = KS, KE
@@ -1378,6 +1509,7 @@ contains
        enddo
 
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
        do j = 2, JA-1
        do i = 2, IA-1
        do k = KS, KE
@@ -1406,6 +1538,7 @@ contains
 
     if ( AD_PREP_sw(I_HDIV) > 0 ) then
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
        do j = 2, JA
        do i = 2, IA
        do k = KS, KE
@@ -1430,6 +1563,7 @@ contains
 
     if ( AD_PREP_sw(I_DIV) > 0 ) then
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
        do j = 1, JA
        do i = 1, IA
        do k = KS, KE
@@ -1441,6 +1575,7 @@ contains
     endif
 
     if ( AD_PREP_sw(I_Uabs) > 0 ) then
+!OCL XFILL
        do j = 1, JA
        do i = 1, IA
        do k = KS, KE
@@ -1456,6 +1591,7 @@ contains
     end if
 
     if ( AD_PREP_sw(I_DENS_PRIM) > 0 ) then
+!OCL XFILL
        do j = 1, JA
        do i = 1, IA
        do k = KS, KE
@@ -1465,7 +1601,8 @@ contains
        enddo
     endif
 
-    if ( AD_PREP_sw(I_W_PRIM) > 0 ) then
+    if ( AD_PREP_sw(I_W_MEAN) > 0 ) then
+!OCL XFILL
        do j = 1, JA
        do i = 1, IA
        do k = KS, KE
@@ -1473,17 +1610,24 @@ contains
        enddo
        enddo
        enddo
-       call COMM_horizontal_mean( mean1d(:), W_PRIM(:,:,:) )
+       call COMM_horizontal_mean( W_MEAN(:), W_PRIM(:,:,:) )
+       do k = KS, KE
+          W_MEAN(k) = W_MEAN(k) / DENS_MEAN(k)
+       enddo
+    end if
+    if ( AD_PREP_sw(I_W_PRIM) > 0 ) then
+!OCL XFILL
        do j = 1, JA
        do i = 1, IA
        do k = KS, KE
-          W_PRIM(k,i,j) = ( W_PRIM(k,i,j) - mean1d(k) ) / DENS_MEAN(k)
+          W_PRIM(k,i,j) = W(k,i,j) - W_MEAN(k)
        enddo
        enddo
        enddo
     endif
 
-    if ( AD_PREP_sw(I_U_PRIM) > 0 ) then
+    if ( AD_PREP_sw(I_U_MEAN) > 0 ) then
+!OCL XFILL
        do j = 1, JA
        do i = 1, IA
        do k = KS, KE
@@ -1491,17 +1635,24 @@ contains
        enddo
        enddo
        enddo
-       call COMM_horizontal_mean( mean1d(:), U_PRIM(:,:,:) )
+       call COMM_horizontal_mean( U_MEAN(:), U_PRIM(:,:,:) )
+       do k = KS, KE
+          U_MEAN(k) = U_MEAN(k) / DENS_MEAN(k)
+       enddo
+    end if
+    if ( AD_PREP_sw(I_U_PRIM) > 0 ) then
+!OCL XFILL
        do j = 1, JA
        do i = 1, IA
        do k = KS, KE
-          U_PRIM(k,i,j) = ( U_PRIM(k,i,j) - mean1d(k) ) / DENS_MEAN(k)
+          U_PRIM(k,i,j) = U(k,i,j) - U_MEAN(k)
        enddo
        enddo
        enddo
     endif
 
-    if ( AD_PREP_sw(I_V_PRIM) > 0 ) then
+    if ( AD_PREP_sw(I_V_MEAN) > 0 ) then
+!OCL XFILL
        do j = 1, JA
        do i = 1, IA
        do k = KS, KE
@@ -1509,28 +1660,116 @@ contains
        enddo
        enddo
        enddo
-       call COMM_horizontal_mean( mean1d(:), V_PRIM(:,:,:) )
+       call COMM_horizontal_mean( V_MEAN(:), V_PRIM(:,:,:) )
+       do k = KS, KE
+          V_MEAN(k) = V_MEAN(k) / DENS_MEAN(k)
+       enddo
+    end if
+    if ( AD_PREP_sw(I_V_PRIM) > 0 ) then
+!OCL XFILL
        do j = 1, JA
        do i = 1, IA
        do k = KS, KE
-          V_PRIM(k,i,j) = ( V_PRIM(k,i,j) - mean1d(k) ) / DENS_MEAN(k)
+          V_PRIM(k,i,j) = V(k,i,j) - V_MEAN(k)
        enddo
        enddo
        enddo
     endif
 
-    if ( AD_PREP_sw(I_POTT_PRIM) > 0 ) then
-       call COMM_horizontal_mean( mean1d(:), RHOT(:,:,:) )
+    if ( AD_PREP_sw(I_T_MEAN) > 0 ) then
+!OCL XFILL
        do j = 1, JA
        do i = 1, IA
        do k = KS, KE
-          POTT_PRIM(k,i,j) = ( RHOT(k,i,j) - mean1d(k) ) / DENS_MEAN(k)
+          POTT_PRIM(k,i,j) = TEMP(k,i,j) * DENS(k,i,j)
+       enddo
+       enddo
+       enddo
+       call COMM_horizontal_mean( T_MEAN(:), POTT_PRIM(:,:,:) )
+       do k = KS, KE
+          T_MEAN(k) = T_MEAN(k) / DENS_MEAN(k)
+       enddo
+    end if
+
+    if ( AD_PREP_sw(I_POTT_MEAN) > 0 ) then
+       call COMM_horizontal_mean( PT_MEAN(:), RHOT(:,:,:) )
+       do k = KS, KE
+          PT_MEAN(k) = PT_MEAN(k) / DENS_MEAN(k)
+       enddo
+    end if
+    if ( AD_PREP_sw(I_POTT_PRIM) > 0 ) then
+!OCL XFILL
+       do j = 1, JA
+       do i = 1, IA
+       do k = KS, KE
+          POTT_PRIM(k,i,j) = POTT(k,i,j) - PT_MEAN(k)
        enddo
        enddo
        enddo
     endif
+
+    if ( AD_PREP_sw(I_QV_MEAN) > 0 ) then
+!OCL XFILL
+       do j = 1, JA
+       do i = 1, IA
+       do k = KS, KE
+          RHOQ(k,i,j) = QTRC(k,i,j,I_QV) * DENS(k,i,j)
+       enddo
+       enddo
+       enddo
+       call COMM_horizontal_mean( QV_MEAN(:), RHOQ(:,:,:) )
+       do k = KS, KE
+          QV_MEAN(k) = QV_MEAN(k) / DENS_MEAN(k)
+       enddo
+    end if
+
+    if ( AD_PREP_sw(I_QHYD_MEAN) > 0 ) then
+!OCL XFILL
+       do j = 1, JA
+       do i = 1, IA
+       do k = KS, KE
+          RHOQ(k,i,j) = QHYD(k,i,j) * DENS(k,i,j)
+       enddo
+       enddo
+       enddo
+       call COMM_horizontal_mean( QHYD_MEAN(:), RHOQ(:,:,:) )
+       do k = KS, KE
+          QHYD_MEAN(k) = QHYD_MEAN(k) / DENS_MEAN(k)
+       enddo
+    end if
+
+    if ( AD_PREP_sw(I_QLIQ_MEAN) > 0 ) then
+!OCL XFILL
+       do j = 1, JA
+       do i = 1, IA
+       do k = KS, KE
+          RHOQ(k,i,j) = QLIQ(k,i,j) * DENS(k,i,j)
+       enddo
+       enddo
+       enddo
+       call COMM_horizontal_mean( QLIQ_MEAN(:), RHOQ(:,:,:) )
+       do k = KS, KE
+          QLIQ_MEAN(k) = QLIQ_MEAN(k) / DENS_MEAN(k)
+       enddo
+    end if
+
+    if ( AD_PREP_sw(I_QICE_MEAN) > 0 ) then
+!OCL XFILL
+       do j = 1, JA
+       do i = 1, IA
+       do k = KS, KE
+          RHOQ(k,i,j) = QICE(k,i,j) * DENS(k,i,j)
+       enddo
+       enddo
+       enddo
+       call COMM_horizontal_mean( QICE_MEAN(:), RHOQ(:,:,:) )
+       do k = KS, KE
+          QICE_MEAN(k) = QICE_MEAN(k) / DENS_MEAN(k)
+       enddo
+    end if
 
     if ( AD_PREP_sw(I_W_PRIM2) > 0 ) then
+!OCL XFILL
        do j = 1, JA
        do i = 1, IA
        do k = KS, KE
@@ -1541,6 +1780,7 @@ contains
     endif
 
     if ( AD_PREP_sw(I_PT_W_PRIM) > 0 ) then
+!OCL XFILL
        do j = 1, JA
        do i = 1, IA
        do k = KS, KE
@@ -1551,6 +1791,7 @@ contains
     endif
 
     if ( AD_PREP_sw(I_W_PRIM3) > 0 ) then
+!OCL XFILL
        do j = 1, JA
        do i = 1, IA
        do k = KS, KE
@@ -1561,6 +1802,7 @@ contains
     endif
 
     if ( AD_PREP_sw(I_TKE_RS) > 0 ) then
+!OCL XFILL
        do j = 1, JA
        do i = 1, IA
        do k = KS, KE
@@ -1574,6 +1816,7 @@ contains
 
     if ( AD_PREP_sw(I_ENGP) > 0 ) then
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
        do j = 1, JA
        do i = 1, IA
        do k = KS, KE
@@ -1585,6 +1828,7 @@ contains
 
     if ( AD_PREP_sw(I_ENGK) > 0 ) then
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
        do j = 1, JA
        do i = 1, IA
        do k = KS, KE
@@ -1598,6 +1842,7 @@ contains
 
     if ( AD_PREP_sw(I_ENGI) > 0 ) then
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
        do j  = JSB, JEB
        do i  = ISB, IEB
        do k = KS, KE
@@ -1621,6 +1866,7 @@ contains
 
     if ( AD_PREP_sw(I_ENGT) > 0 ) then
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
        do j  = JSB, JEB
        do i  = ISB, IEB
        do k  = KS, KE
@@ -1643,6 +1889,7 @@ contains
 
     call HIST_in( LWP  (:,:),   'LWP',   'liquid water path',      'g/m2'   )
     call HIST_in( IWP  (:,:),   'IWP',   'ice    water path',      'g/m2'   )
+    call HIST_in( PW   (:,:),   'PW',    'precipitable water',     'g/m2'   )
 
     call HIST_in( RTOT (:,:,:), 'RTOT',  'Total gas constant',     'J/kg/K' )
     call HIST_in( CPTOT(:,:,:), 'CPTOT', 'Total heat capacity',    'J/kg/K' )
@@ -1650,14 +1897,25 @@ contains
     call HIST_in( TEMP (:,:,:), 'T',     'temperature',            'K'      )
 
     call HIST_in( POTL (:,:,:), 'LWPT',  'liq. potential temp.',   'K'      )
-    call HIST_in( RH   (:,:,:), 'RH',    'relative humidity',      '%'      )
-    call HIST_in( RHL  (:,:,:), 'RHL',   'relative humidity(liq)', '%'      )
+    call HIST_in( RHA  (:,:,:), 'RHA',   'relative humidity(liq+ice)','%'   )
+    call HIST_in( RHL  (:,:,:), 'RH' ,   'relative humidity(liq)', '%'      )
     call HIST_in( RHI  (:,:,:), 'RHI',   'relative humidity(ice)', '%'      )
 
     call HIST_in( VOR  (:,:,:), 'VOR',   'vertical vorticity',     '1/s'    )
     call HIST_in( DIV  (:,:,:), 'DIV',   'divergence',             '1/s'    )
     call HIST_in( HDIV (:,:,:), 'HDIV',  'horizontal divergence',  '1/s'    )
     call HIST_in( Uabs (:,:,:), 'Uabs',  'absolute velocity',      'm/s'    )
+
+    call HIST_in( DENS_MEAN(:), 'DENS_MEAN', 'horiz. mean of density',    'kg/m3' )
+    call HIST_in( W_MEAN   (:), 'W_MEAN',    'horiz. mean of w',          'm/s' )
+    call HIST_in( U_MEAN   (:), 'U_MEAN',    'horiz. mean of u',          'm/s' )
+    call HIST_in( V_MEAN   (:), 'V_MEAN',    'horiz. mean of v',          'm/s' )
+    call HIST_in( PT_MEAN  (:), 'PT_MEAN',   'horiz. mean of pot.',       'K' )
+    call HIST_in( T_MEAN   (:), 'T_MEAN',    'horiz. mean of t',          'K' )
+    call HIST_in( QV_MEAN  (:), 'QV_MEAN',   'horiz. mean of QV',         '1' )
+    call HIST_in( QHYD_MEAN(:), 'QHYD_MEAN', 'horiz. mean of QHYD',       '1' )
+    call HIST_in( QLIQ_MEAN(:), 'QLIQ_MEAN', 'horiz. mean of QLIQ',       '1' )
+    call HIST_in( QICE_MEAN(:), 'QICE_MEAN', 'horiz. mean of QICE',       '1' )
 
     call HIST_in( DENS_PRIM(:,:,:), 'DENS_PRIM', 'horiz. deviation of density',    'kg/m3' )
     call HIST_in( W_PRIM   (:,:,:), 'W_PRIM',    'horiz. deviation of w',          'm/s'   )
@@ -1800,6 +2058,7 @@ contains
                               RHOT(:,:,:),  & ! [IN]
                               QTRC(:,:,:,:) ) ! [IN]
 
+!OCL XFILL
     do j = 1, JA
     do i = 1, IA
     do k = KS+1, KE-1
@@ -1807,17 +2066,20 @@ contains
     enddo
     enddo
     enddo
+!OCL XFILL
     do j = 1, JA
     do i = 1, IA
        W(KS,i,j) = 0.5_RP * (               MOMZ(KS,i,j) ) / DENS(KS,i,j)
     enddo
     enddo
+!OCL XFILL
     do j = 1, JA
     do i = 1, IA
        W(KE,i,j) = 0.5_RP * ( MOMZ(KE-1,i,j)             ) / DENS(KE,i,j)
     enddo
     enddo
 
+!OCL XFILL
     do j = 1, JA
     do i = 2, IA
     do k = KS, KE
@@ -1825,12 +2087,14 @@ contains
     enddo
     enddo
     enddo
+!OCL XFILL
     do j = 1, JA
     do k = KS, KE
        U(k,1,j) = MOMX(k,1,j) / DENS(k,1,j)
     enddo
     enddo
 
+!OCL XFILL
     do j = 2, JA
     do i = 1, IA
     do k = KS, KE
@@ -1838,6 +2102,7 @@ contains
     enddo
     enddo
     enddo
+!OCL XFILL
     do i = 1, IA
     do k = KS, KE
        V(k,i,1) = MOMY(k,i,1) / DENS(k,i,1)
@@ -1861,6 +2126,7 @@ contains
     call COMM_wait ( U(:,:,:), 1, .false. )
     call COMM_wait ( V(:,:,:), 2, .false. )
 
+!OCL XFILL
     do j = 1, JA
     do i = 1, IA
     do k = KS, KE
@@ -1942,6 +2208,7 @@ contains
     !##### Mass Budget #####
     do iq = 1, QA
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -1959,6 +2226,7 @@ contains
                        QTRC(:,:,:,:) ) ! [IN]
 
     !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -1970,6 +2238,7 @@ contains
 
     ! total vapor,liquid,solid tracers
     !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -1983,6 +2252,7 @@ contains
     call MONIT_put( AD_MONIT_id(I_EVAP), SFLX_QTRC(:,:,I_QV) )
 
     ! total precipitation
+!OCL XFILL
     do j = JS, JE
     do i = IS, IE
        PRCP(i,j) = SFLX_rain(i,j) + SFLX_snow(i,j)
@@ -2018,6 +2288,7 @@ contains
     enddo
 
     !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -2026,6 +2297,7 @@ contains
     enddo
     enddo
 
+!OCL XFILL
     do j = JS, JE
     do i = IS, IE
        SFLX_RD_net(i,j) = ( SFLX_LW_up(i,j) - SFLX_LW_dn(i,j) ) &
@@ -2037,6 +2309,7 @@ contains
     enddo
 
     !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
     do j = JS, JE
     do i = IS, IE
        ENGFLXT(i,j) = SFLX_SH(i,j) + SFLX_LH(i,j) &
@@ -2068,8 +2341,11 @@ contains
     call MONIT_put( AD_MONIT_id(I_ENGTOA_SW_dn), TOAFLX_SW_dn(:,:) )
 
     if ( ATMOS_VARS_CHECKRANGE ) then
+!OCL XFILL
        WORK(:,:,:,1) = W(:,:,:)
+!OCL XFILL
        WORK(:,:,:,2) = U(:,:,:)
+!OCL XFILL
        WORK(:,:,:,3) = V(:,:,:)
 
        WNAME(1) = "W"

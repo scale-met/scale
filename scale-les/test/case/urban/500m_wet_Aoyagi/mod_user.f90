@@ -132,9 +132,10 @@ contains
        SWD   => URB_ATM_SFLX_SW,   &
        PREC  => URB_ATM_SFLX_prec
     use scale_time, only:   &
-       NOWSEC => TIME_NOWSEC,      & !< absolute sec
-       dt_URB => TIME_DTSEC_URBAN, & !< time interval of urban step [sec]
-       TIME_DOURBAN_step
+       NOWSEC => TIME_NOWSEC,      & !< subday part  of current time [sec]
+       dt_URB => TIME_DTSEC_URBAN    !< time interval of urban step  [sec]
+    use mod_admin_time, only: &
+       TIME_DOURBAN_step             !< execute urban component in this step?
     use scale_history, only: &
        HIST_in
     implicit none

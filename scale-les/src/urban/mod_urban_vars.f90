@@ -110,6 +110,7 @@ module mod_urban_vars
   real(RP), public, allocatable :: ATMOS_SFC_PRES (:,:)
   real(RP), public, allocatable :: ATMOS_SFLX_LW  (:,:)
   real(RP), public, allocatable :: ATMOS_SFLX_SW  (:,:)
+  real(RP), public, allocatable :: ATMOS_cosSZA   (:,:)
   real(RP), public, allocatable :: ATMOS_SFLX_prec(:,:)
 
   !-----------------------------------------------------------------------------
@@ -348,6 +349,7 @@ contains
     allocate( ATMOS_SFC_PRES (IA,JA) )
     allocate( ATMOS_SFLX_LW  (IA,JA) )
     allocate( ATMOS_SFLX_SW  (IA,JA) )
+    allocate( ATMOS_cosSZA   (IA,JA) )
     allocate( ATMOS_SFLX_prec(IA,JA) )
     ATMOS_TEMP     (:,:) = UNDEF
     ATMOS_PRES     (:,:) = UNDEF
@@ -360,6 +362,7 @@ contains
     ATMOS_SFC_PRES (:,:) = UNDEF
     ATMOS_SFLX_LW  (:,:) = UNDEF
     ATMOS_SFLX_SW  (:,:) = UNDEF
+    ATMOS_cosSZA   (:,:) = UNDEF
     ATMOS_SFLX_prec(:,:) = UNDEF
 
     !--- read namelist
@@ -746,6 +749,9 @@ contains
     URBAN_SFC_TEMP  (:,:)   = URBAN_SFC_TEMP_in  (:,:)
     URBAN_SFC_albedo(:,:,:) = URBAN_SFC_albedo_in(:,:,:)
 
+    URBAN_Z0M      (:,:) = 2.0_RP ! tentative, will be replace in urban scheme
+    URBAN_Z0H      (:,:) = 0.2_RP ! tentative, will be replace in urban scheme
+    URBAN_Z0E      (:,:) = 0.2_RP ! tentative, will be replace in urban scheme
     URBAN_SFLX_MW  (:,:) = 0.0_RP
     URBAN_SFLX_MU  (:,:) = 0.0_RP
     URBAN_SFLX_MV  (:,:) = 0.0_RP

@@ -26,6 +26,7 @@ FFLAGS_DEBUG = -Mpreprocess -O0 -m64             \
                -mcmodel=medium -DHEVI_BICGSTAB -D__PGI
 
 FC     = mpif90
+SFC    = pgfortran
 FFLAGS = $(FFLAGS_FAST)
 #FFLAGS = $(FFLAGS_DEBUG)
 

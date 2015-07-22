@@ -89,6 +89,7 @@ module mod_land_vars
   real(RP), public, allocatable :: ATMOS_SFC_PRES (:,:)
   real(RP), public, allocatable :: ATMOS_SFLX_LW  (:,:)
   real(RP), public, allocatable :: ATMOS_SFLX_SW  (:,:)
+  real(RP), public, allocatable :: ATMOS_cosSZA   (:,:)
   real(RP), public, allocatable :: ATMOS_SFLX_prec(:,:)
 
   real(RP), public, allocatable :: LAND_PROPERTY  (:,:,:) !< land surface property
@@ -117,19 +118,20 @@ module mod_land_vars
   !
   logical,                private :: LAND_VARS_CHECKRANGE      = .false.
 
-  integer,                private, parameter :: VMAX        = 12 !< number of the variables
+  integer,                private, parameter :: VMAX        = 13 !< number of the variables
   integer,                private, parameter :: I_TEMP      =  1
   integer,                private, parameter :: I_WATER     =  2
-  integer,                private, parameter :: I_SFC_TEMP  =  3
-  integer,                private, parameter :: I_ALB_LW    =  4
-  integer,                private, parameter :: I_ALB_SW    =  5
-  integer,                private, parameter :: I_SFLX_MW   =  6
-  integer,                private, parameter :: I_SFLX_MU   =  7
-  integer,                private, parameter :: I_SFLX_MV   =  8
-  integer,                private, parameter :: I_SFLX_SH   =  9
-  integer,                private, parameter :: I_SFLX_LH   = 10
-  integer,                private, parameter :: I_SFLX_GH   = 11
-  integer,                private, parameter :: I_SFLX_evap = 12
+  integer,                private, parameter :: I_WATERDS   =  3
+  integer,                private, parameter :: I_SFC_TEMP  =  4
+  integer,                private, parameter :: I_ALB_LW    =  5
+  integer,                private, parameter :: I_ALB_SW    =  6
+  integer,                private, parameter :: I_SFLX_MW   =  7
+  integer,                private, parameter :: I_SFLX_MU   =  8
+  integer,                private, parameter :: I_SFLX_MV   =  9
+  integer,                private, parameter :: I_SFLX_SH   = 10
+  integer,                private, parameter :: I_SFLX_LH   = 11
+  integer,                private, parameter :: I_SFLX_GH   = 12
+  integer,                private, parameter :: I_SFLX_evap = 13
 
   character(len=H_SHORT), private            :: VAR_NAME(VMAX) !< name  of the variables
   character(len=H_MID),   private            :: VAR_DESC(VMAX) !< desc. of the variables
@@ -137,6 +139,7 @@ module mod_land_vars
 
   data VAR_NAME / 'LAND_TEMP',      &
                   'LAND_WATER',     &
+                  'LAND_DSAT',      &
                   'LAND_SFC_TEMP',  &
                   'LAND_ALB_LW',    &
                   'LAND_ALB_SW',    &
@@ -149,6 +152,7 @@ module mod_land_vars
                   'LAND_SFLX_evap'  /
   data VAR_DESC / 'temperature at each soil layer',  &
                   'moisture at each soil layer',     &
+                  'degree of saturation at each soil layer', &
                   'land surface skin temperature',   &
                   'land surface albedo (longwave)',  &
                   'land surface albedo (shortwave)', &
@@ -161,6 +165,7 @@ module mod_land_vars
                   'land surface water vapor flux'    /
   data VAR_UNIT / 'K',       &
                   'm3/m3',   &
+                  '0-1',     &
                   'K',       &
                   '0-1',     &
                   '0-1',     &
@@ -262,6 +267,7 @@ contains
     allocate( ATMOS_SFC_PRES (IA,JA) )
     allocate( ATMOS_SFLX_LW  (IA,JA) )
     allocate( ATMOS_SFLX_SW  (IA,JA) )
+    allocate( ATMOS_cosSZA   (IA,JA) )
     allocate( ATMOS_SFLX_prec(IA,JA) )
     ATMOS_TEMP     (:,:) = UNDEF
     ATMOS_PRES     (:,:) = UNDEF
@@ -274,6 +280,7 @@ contains
     ATMOS_SFC_PRES (:,:) = UNDEF
     ATMOS_SFLX_LW  (:,:) = UNDEF
     ATMOS_SFLX_SW  (:,:) = UNDEF
+    ATMOS_cosSZA   (:,:) = UNDEF
     ATMOS_SFLX_prec(:,:) = UNDEF
 
     LAND_QA_comm = LKMAX &
@@ -470,6 +477,8 @@ contains
     use scale_history, only: &
        HIST_in
     implicit none
+    real(RP) :: LAND_WATERDS(LKMAX,IA,JA)
+    integer :: k, i, j
     !---------------------------------------------------------------------------
 
     if ( LAND_VARS_CHECKRANGE ) then
@@ -487,6 +496,15 @@ contains
 
     call HIST_in( LAND_TEMP (:,:,:), VAR_NAME(I_TEMP),  VAR_DESC(I_TEMP),  VAR_UNIT(I_TEMP),  zdim='land' )
     call HIST_in( LAND_WATER(:,:,:), VAR_NAME(I_WATER), VAR_DESC(I_WATER), VAR_UNIT(I_WATER), zdim='land' )
+    do j = JS, JE
+    do i = IS, IE
+    do k = 1, LKMAX
+       LAND_WATERDS(k,i,j) = LAND_WATER(k,i,j) / LAND_PROPERTY(i,j,I_WaterLimit)
+    end do
+    end do
+    end do
+    call HIST_in( LAND_WATERDS(:,:,:), VAR_NAME(I_WATERDS), VAR_DESC(I_WATERDS), VAR_UNIT(I_WATERDS), zdim='land' )
+
 
     call HIST_in( LAND_SFC_TEMP  (:,:),      VAR_NAME(I_SFC_TEMP),   VAR_DESC(I_SFC_TEMP),   VAR_UNIT(I_SFC_TEMP) )
     call HIST_in( LAND_SFC_albedo(:,:,I_LW), VAR_NAME(I_ALB_LW),     VAR_DESC(I_ALB_LW),     VAR_UNIT(I_ALB_LW)   )

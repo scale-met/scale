@@ -61,7 +61,9 @@ contains
        TOAFLX_LW_up => ATMOS_PHY_RD_TOAFLX_LW_up, &
        TOAFLX_LW_dn => ATMOS_PHY_RD_TOAFLX_LW_dn, &
        TOAFLX_SW_up => ATMOS_PHY_RD_TOAFLX_SW_up, &
-       TOAFLX_SW_dn => ATMOS_PHY_RD_TOAFLX_SW_dn
+       TOAFLX_SW_dn => ATMOS_PHY_RD_TOAFLX_SW_dn, &
+       solins       => ATMOS_PHY_RD_solins,       &
+       cosSZA       => ATMOS_PHY_RD_cosSZA
     implicit none
     !---------------------------------------------------------------------------
 
@@ -74,9 +76,9 @@ contains
        call ATMOS_PHY_RD_setup( ATMOS_PHY_RD_TYPE )
 
        ! run once (only for the diagnostic value)
-       call PROF_rapstart('ATM Radiation', 1)
+       call PROF_rapstart('ATM_Radiation', 1)
        call ATMOS_PHY_RD_driver( update_flag = .true. )
-       call PROF_rapend  ('ATM Radiation', 1)
+       call PROF_rapend  ('ATM_Radiation', 1)
 
     else
 
@@ -90,6 +92,8 @@ contains
        TOAFLX_LW_dn(:,:) = 0.0_RP
        TOAFLX_SW_up(:,:) = 0.0_RP
        TOAFLX_SW_dn(:,:) = 0.0_RP
+       solins      (:,:) = 0.0_RP
+       cosSZA      (:,:) = 0.0_RP
 
     endif
 
@@ -103,9 +107,7 @@ contains
        REAL_CZ,            &
        REAL_FZ,            &
        REAL_LON,           &
-       REAL_LAT,           &
-       REAL_BASEPOINT_LON, &
-       REAL_BASEPOINT_LAT
+       REAL_LAT
     use scale_const, only: &
        PRE00 => CONST_PRE00, &
        Rdry  => CONST_Rdry,  &
@@ -125,7 +127,6 @@ contains
     use mod_atmos_admin, only: &
        ATMOS_PHY_RD_TYPE
     use scale_atmos_solarins, only: &
-       SOLARINS_fixedlatlon => ATMOS_SOLARINS_fixedlatlon, &
        SOLARINS_insolation  => ATMOS_SOLARINS_insolation
     use scale_atmos_phy_rd, only: &
        ATMOS_PHY_RD
@@ -156,7 +157,9 @@ contains
        TOAFLX_LW_up => ATMOS_PHY_RD_TOAFLX_LW_up, &
        TOAFLX_LW_dn => ATMOS_PHY_RD_TOAFLX_LW_dn, &
        TOAFLX_SW_up => ATMOS_PHY_RD_TOAFLX_SW_up, &
-       TOAFLX_SW_dn => ATMOS_PHY_RD_TOAFLX_SW_dn
+       TOAFLX_SW_dn => ATMOS_PHY_RD_TOAFLX_SW_dn, &
+       solins       => ATMOS_PHY_RD_solins,       &
+       cosSZA       => ATMOS_PHY_RD_cosSZA
     implicit none
 
     logical, intent(in) :: update_flag
@@ -170,11 +173,6 @@ contains
     real(RP) :: flux_net    (KA,IA,JA,2)
     real(RP) :: flux_net_toa(   IA,JA,2)
     real(RP) :: flux_net_sfc(   IA,JA,2)
-
-    real(RP) :: solins(IA,JA)
-    real(RP) :: cosSZA(IA,JA)
-    real(RP) :: LON   (IA,JA)
-    real(RP) :: LAT   (IA,JA)
 
     ! for WRF radiation scheme added by Adachi; array order is (i,k,j)
     real(RP) :: RTHRATENSW(IA,KA,JA)
@@ -200,19 +198,10 @@ contains
 
     if ( update_flag ) then
 
-       ! calc solar insolation
-       if ( SOLARINS_fixedlatlon ) then
-          LON(:,:) = REAL_BASEPOINT_LON
-          LAT(:,:) = REAL_BASEPOINT_LAT
-       else
-          LON(:,:) = REAL_LON(:,:)
-          LAT(:,:) = REAL_LAT(:,:)
-       endif
-
-       call SOLARINS_insolation( solins(:,:),    & ! [OUT]
-                                 cosSZA(:,:),    & ! [OUT]
-                                 LON   (:,:),    & ! [IN]
-                                 LAT   (:,:),    & ! [IN]
+       call SOLARINS_insolation( solins  (:,:),  & ! [OUT]
+                                 cosSZA  (:,:),  & ! [OUT]
+                                 REAL_LON(:,:),  & ! [IN]
+                                 REAL_LAT(:,:),  & ! [IN]
                                  TIME_NOWDATE(:) ) ! [IN]
 
        call ATMOS_PHY_RD( DENS, RHOT, QTRC,   & ! [IN]
@@ -228,6 +217,7 @@ contains
 
        ! apply radiative flux convergence -> heating rate
        call RD_heating( flux_rad (:,:,:,:,:), & ! [IN]
+                        DENS     (:,:,:),     & ! [IN]
                         RHOT     (:,:,:),     & ! [IN]
                         QTRC     (:,:,:,:),   & ! [IN]
                         REAL_FZ  (:,:,:),     & ! [IN]
@@ -236,6 +226,7 @@ contains
                         RHOT_t_RD(:,:,:)      ) ! [OUT]
 
 
+!OCL XFILL
        do j = JS, JE
        do i = IS, IE
           SFCFLX_LW_up(i,j)      = flux_rad(KS-1,i,j,I_LW,I_up)
@@ -248,6 +239,7 @@ contains
        enddo
        enddo
 
+!OCL XFILL
        do j = JS, JE
        do i = IS, IE
           TOAFLX_LW_up(i,j)      = flux_rad_top(i,j,I_LW,I_up)
@@ -260,6 +252,7 @@ contains
        enddo
        enddo
 
+!OCL XFILL
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -305,8 +298,8 @@ contains
                       RTHRATENSW,           & ! [INOUT]
                       SDOWN3D,              & ! [INOUT]
                       GSW,                  & ! [INOUT]
-                      LAT,                  & ! [IN]
-                      LON,                  & ! [IN]
+                      REAL_LAT,             & ! [IN]
+                      REAL_LON,             & ! [IN]
                       SFC_albedo(:,:,I_SW), & ! [IN]
                       RHO3D,                & ! [IN]
                       T3D,                  & ! [IN]
@@ -378,7 +371,7 @@ contains
        endif
 
        call HIST_in( solins(:,:), 'SOLINS', 'solar insolation',        'W/m2', nohalo=.true. )
-       call HIST_in( cosSZA(:,:), 'COSZ',   'cos(solar zenith angle)', '0-1',  nohalo=.true.)
+       call HIST_in( cosSZA(:,:), 'COSZ',   'cos(solar zenith angle)', '0-1',  nohalo=.true. )
 
        call HIST_in( SFCFLX_LW_up(:,:), 'SFLX_LW_up',   'SFC upward   longwave  radiation flux', 'W/m2', nohalo=.true. )
        call HIST_in( SFCFLX_LW_dn(:,:), 'SFLX_LW_dn',   'SFC downward longwave  radiation flux', 'W/m2', nohalo=.true. )

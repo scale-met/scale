@@ -472,8 +472,8 @@ module scale_atmos_phy_mp_sn14
   real(RP), private, allocatable, save :: rgs_d    (:,:,:)
   real(RP), private, allocatable, save :: rgsh_d   (:,:,:)
 
-  logical, private, save :: doautoconversion = .true.
-  logical, private, save :: doprecipitation  = .true.
+  logical, private, save :: MP_doautoconversion = .true.
+  logical, private, save :: MP_doprecipitation  = .true.
   real(RP), private, save :: MP_ssw_lim = 1.E+1_RP
 
   !-----------------------------------------------------------------------------
@@ -495,8 +495,8 @@ contains
     character(len=*), intent(in) :: MP_TYPE
 
     NAMELIST / PARAM_ATMOS_PHY_MP / &
-       doautoconversion, &
-       doprecipitation,  &
+       MP_doautoconversion, &
+       MP_doprecipitation,  &
        MP_ssw_lim,       &
        MP_ntmax_sedimentation
 
@@ -1433,7 +1433,7 @@ contains
     ! 1.Nucleation of cloud water and cloud ice
     !
     !----------------------------------------------------------------------------
-    call PROF_rapstart('MP Preprocess', 2)
+    call PROF_rapstart('MP_Preprocess', 3)
 
     do j = JS, JE
     do i = IS, IE
@@ -1517,9 +1517,9 @@ contains
     enddo
     enddo
 
-    call PROF_rapend  ('MP Preprocess', 2)
+    call PROF_rapend  ('MP_Preprocess', 3)
 
-    call PROF_rapstart('MP Nucleation', 2)
+    call PROF_rapstart('MP_Nucleation', 3)
 
     call nucleation_kij(    &
          z, velz,           & ! in
@@ -1573,13 +1573,13 @@ contains
     if( opt_debug_tem ) call debug_tem_kij( 2, temp(:,:,:), DENS(:,:,:), pres(:,:,:), QTRC(:,:,:,I_QV) )
 
 
-    call PROF_rapend  ('MP Nucleation', 2)
+    call PROF_rapend  ('MP_Nucleation', 3)
     !----------------------------------------------------------------------------
     !
     ! 2.Phase change: Freezing, Melting, Vapor deposition
     !
     !----------------------------------------------------------------------------
-    call PROF_rapstart('MP Phase change', 2)
+    call PROF_rapstart('MP_Phase_change', 3)
 
     do j = JS, JE
     do i = IS, IE
@@ -1674,14 +1674,14 @@ contains
 !    if( opt_debug )     call debugreport_phasechange
     if( opt_debug_tem ) call debug_tem_kij( 3, temp(:,:,:), DENS(:,:,:), pres(:,:,:), QTRC(:,:,:,I_QV) )
 
-    call PROF_rapend  ('MP Phase change', 2)
+    call PROF_rapend  ('MP_Phase_change', 3)
 
     !---------------------------------------------------------------------------
     !
     ! 3.Collection process
     !
     !---------------------------------------------------------------------------
-    call PROF_rapstart('MP Collection', 2)
+    call PROF_rapstart('MP_Collection', 3)
 
     ! parameter setting
     do j = JS, JE
@@ -1728,7 +1728,7 @@ contains
 
     ! Auto-conversion, Accretion, Self-collection, Break-up
     ! [Mod] T.Seiki
-    if ( doautoconversion ) then
+    if ( MP_doautoconversion ) then
        call aut_acc_slc_brk_kij(  &
             PQ, &
             rhoq2, xq, dq_xa, &
@@ -1924,9 +1924,9 @@ contains
     enddo
     PROFILE_STOP("sn14_update_rhoq")
 
-    call PROF_rapend  ('MP Collection', 2)
+    call PROF_rapend  ('MP_Collection', 3)
 
-    call PROF_rapstart('MP Postprocess', 2)
+    call PROF_rapstart('MP_Postprocess', 3)
 
     !--- update mixing ratio
     do j  = JS, JE
@@ -1961,24 +1961,24 @@ contains
        enddo
     enddo
 
-    call PROF_rapend  ('MP Postprocess', 2)
+    call PROF_rapend  ('MP_Postprocess', 3)
 
     !----------------------------------------------------------------------------
     !
     ! 4.Saturation adjustment
     !
     !----------------------------------------------------------------------------
-    call PROF_rapstart('MP Saturation adjustment', 2)
+    call PROF_rapstart('MP_Saturation_adjustment', 3)
     ! nothing to do
-    call PROF_rapend  ('MP Saturation adjustment', 2)
+    call PROF_rapend  ('MP_Saturation_adjustment', 3)
     !----------------------------------------------------------------------------
     !
     ! 5. Sedimentation ( terminal velocity must be negative )
     !
     !----------------------------------------------------------------------------
-    call PROF_rapstart('MP Sedimentation', 2)
+    call PROF_rapstart('MP_Sedimentation', 3)
 
-    if ( doprecipitation ) then
+    if ( MP_doprecipitation ) then
 
     do j = JS, JE
     do i = IS, IE
@@ -2029,7 +2029,7 @@ contains
     end do
     end do
 
-    call PROF_rapend  ('MP Sedimentation', 2)
+    call PROF_rapend  ('MP_Sedimentation', 3)
 
     return
   end subroutine mp_sn14
@@ -4181,7 +4181,7 @@ contains
     integer :: k, i, j, iq
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('MP filter', 2)
+    call PROF_rapstart('MP_filter', 3)
 
     r_xmin = 1.0_RP / xmin_filter
 
@@ -4251,7 +4251,7 @@ contains
     enddo
     enddo
 
-    call PROF_rapend('MP filter', 2)
+    call PROF_rapend('MP_filter', 3)
 
     return
   end subroutine MP_negativefilter
@@ -4296,7 +4296,8 @@ contains
   subroutine ATMOS_PHY_MP_sn14_EffectiveRadius( &
        Re,    &
        QTRC0, &
-       DENS0  )
+       DENS0, &
+       TEMP0  )
     use scale_grid_index
     use scale_tracer, only: &
        QAD => QA, &
@@ -4306,6 +4307,7 @@ contains
     real(RP), intent(out) :: Re   (KA,IA,JA,MP_QAD) ! effective radius          [cm]
     real(RP), intent(in)  :: QTRC0(KA,IA,JA,QAD)    ! tracer mass concentration [kg/kg]
     real(RP), intent(in)  :: DENS0(KA,IA,JA)        ! density                   [kg/m3]
+    real(RP), intent(in)  :: TEMP0(KA,IA,JA)        ! temperature               [K]
 
     ! mass concentration[kg/m3] and mean particle mass[kg]
     real(RP) :: xc(KA,IA,JA)

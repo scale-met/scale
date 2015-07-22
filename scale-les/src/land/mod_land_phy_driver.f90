@@ -72,9 +72,9 @@ contains
 
        if( .NOT. RESTART_RUN ) then
           ! run once (only for the diagnostic value)
-          call PROF_rapstart('LND Physics', 1)
+          call PROF_rapstart('LND_Physics', 1)
           call LAND_PHY_driver( update_flag = .true. )
-          call PROF_rapend  ('LND Physics', 1)
+          call PROF_rapend  ('LND_Physics', 1)
        else
           ! no update in order to use restart value
        end if
@@ -146,6 +146,7 @@ contains
        ATMOS_SFC_PRES,    &
        ATMOS_SFLX_LW,     &
        ATMOS_SFLX_SW,     &
+       ATMOS_cosSZA,      &
        ATMOS_SFLX_prec
     implicit none
 
@@ -169,6 +170,7 @@ contains
 
     if ( update_flag ) then
 
+!OCL XFILL
        do j = JS, JE
        do i = IS, IE
           LAND_QVEF(i,j) = min( LAND_WATER(LKS,i,j) / LAND_PROPERTY(i,j,I_WaterCritical), BETA_MAX )
@@ -212,7 +214,8 @@ contains
                       dt                                  ) ! [IN]
 
        call ATMOS_THERMODYN_templhv( lhv, ATMOS_TEMP )
- 
+
+!OCL XFILL
        do j = JS, JE
        do i = IS, IE
           LAND_SFLX_evap(i,j) = LAND_SFLX_LH(i,j) / lhv(i,j)
@@ -234,6 +237,7 @@ contains
                       dt                                   ) ! [IN]
 
        ! no albedo update (tentative)
+!OCL XFILL
        LAND_SFC_albedo_t(:,:,:) = 0.0_RP
 
        call HIST_in( LAND_TEMP_t (:,:,:), 'LAND_TEMP_t',  'tendency of LAND_TEMP',  'K',     zdim='land' )

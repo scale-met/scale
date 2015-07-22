@@ -76,9 +76,9 @@ contains
 
     !########## History & Monitor ##########
     if ( OCEAN_sw ) then
-       call PROF_rapstart('OCN History', 1)
+       call PROF_rapstart('OCN_History', 1)
        call OCEAN_vars_history
-       call PROF_rapend  ('OCN History', 1)
+       call PROF_rapend  ('OCN_History', 1)
     endif
 
     return
@@ -116,20 +116,22 @@ contains
     !---------------------------------------------------------------------------
 
     !########## Get Surface Boundary from coupler ##########
+    call PROF_rapstart('OCN_SfcExch', 2)
     call OCEAN_SURFACE_GET
+    call PROF_rapend  ('OCN_SfcExch', 2)
 
     !########## Physics ##########
     if ( OCEAN_sw ) then
-       call PROF_rapstart('OCN Physics', 1)
+       call PROF_rapstart('OCN_Physics', 1)
        call OCEAN_PHY_driver( update_flag = .true. )
-       call PROF_rapend  ('OCN Physics', 1)
+       call PROF_rapend  ('OCN_Physics', 1)
     endif
 
     !########## Forcing ##########
 !    if ( OCEAN_FORCE_sw ) then
-!       call PROF_rapstart('OCN Forcing', 1)
+!       call PROF_rapstart('OCN_Forcing', 1)
 !       call OCEAN_forcing
-!       call PROF_rapend  ('OCN Forcing', 1)
+!       call PROF_rapend  ('OCN_Forcing', 1)
 !    endif
 
     !########## Update ##########
@@ -148,9 +150,12 @@ contains
     call OCEAN_vars_total
 
     !########## Set Surface Boundary to coupler ##########
+    call PROF_rapstart('OCN_SfcExch', 2)
     call OCEAN_SURFACE_SET( countup=.true. )
+    call PROF_rapend  ('OCN_SfcExch', 2)
 
     !########## reset tendencies ##########
+!OCL XFILL
     do j = JS, JE
     do i = IS, IE
        OCEAN_TEMP_t      (i,j)      = 0.0_RP
@@ -164,9 +169,9 @@ contains
     enddo
 
     !########## History & Monitor ##########
-    call PROF_rapstart('OCN History', 1)
+    call PROF_rapstart('OCN_History', 1)
     call OCEAN_vars_history
-    call PROF_rapend  ('OCN History', 1)
+    call PROF_rapend  ('OCN_History', 1)
 
     return
   end subroutine OCEAN_driver
@@ -188,6 +193,7 @@ contains
        ATMOS_SFC_PRES, &
        ATMOS_SFLX_LW,  &
        ATMOS_SFLX_SW,  &
+       ATMOS_cosSZA,   &
        ATMOS_SFLX_prec
     use mod_cpl_vars, only: &
        CPL_getATM_OCN
@@ -206,6 +212,7 @@ contains
                             ATMOS_SFC_PRES (:,:), & ! [OUT]
                             ATMOS_SFLX_LW  (:,:), & ! [OUT]
                             ATMOS_SFLX_SW  (:,:), & ! [OUT]
+                            ATMOS_cosSZA   (:,:), & ! [OUT]
                             ATMOS_SFLX_prec(:,:)  ) ! [OUT]
     endif
 

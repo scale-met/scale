@@ -47,6 +47,8 @@ module scale_land_phy_slab
 
   real(RP), private :: WATER_DENSCS !< Heat Capacity (rho*CS) for soil moisture [J/K/m3]
 
+  logical, allocatable, private :: is_LND(:,:)
+
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -57,6 +59,8 @@ contains
     use scale_const, only: &
        DWATR => CONST_DWATR, &
        CL    => CONST_CL
+    use scale_landuse, only: &
+       LANDUSE_fact_land
     implicit none
 
     character(len=*), intent(in) :: LAND_TYPE
@@ -65,6 +69,7 @@ contains
        LAND_PHY_UPDATE_BOTTOM_TEMP,   &
        LAND_PHY_UPDATE_BOTTOM_WATER
 
+    integer :: i, j
     integer :: ierr
     !---------------------------------------------------------------------------
 
@@ -96,6 +101,19 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** Update soil temperature of bottom layer? : ', LAND_PHY_UPDATE_BOTTOM_TEMP
     if( IO_L ) write(IO_FID_LOG,*) '*** Update soil moisture    of bottom layer? : ', LAND_PHY_UPDATE_BOTTOM_WATER
+
+    ! judge to run slab land model
+    allocate( is_LND(IA,JA) )
+
+    do j = JS, JE
+    do i = IS, IE
+      if( LANDUSE_fact_land(i,j) > 0.0_RP ) then
+        is_LND(i,j) = .true.
+      else
+        is_LND(i,j) = .false.
+      end if
+    end do
+    end do
 
     return
   end subroutine LAND_PHY_SLAB_setup
@@ -326,10 +344,17 @@ contains
     else
        do j = JS, JE
        do i = IS, IE
-       do k = LKS, LKE
-          TEMP_t (k,i,j) = ( TEMP1 (k,i,j) - TEMP (k,i,j) ) / dt
-          WATER_t(k,i,j) = ( WATER1(k,i,j) - WATER(k,i,j) ) / dt
-       enddo
+          if( is_LND(i,j) ) then
+             do k = LKS, LKE
+                TEMP_t (k,i,j) = ( TEMP1 (k,i,j) - TEMP (k,i,j) ) / dt
+                WATER_t(k,i,j) = ( WATER1(k,i,j) - WATER(k,i,j) ) / dt
+             enddo
+          else
+             do k = LKS, LKE
+                TEMP_t (k,i,j) = 0.0_RP 
+                WATER_t(k,i,j) = 0.0_RP 
+             enddo
+          endif
        enddo
        enddo
     endif

@@ -89,10 +89,12 @@ contains
        PRC_HAS_S, &
        PRC_HAS_N
     use scale_time, only: &
+       TIME_DTSEC,       &
+       TIME_STARTDAYSEC, &
        TIME_OFFSET_YEAR
     implicit none
 
-    character(len=H_MID) :: HISTORY_H_TITLE = 'SCALE-LES HISTORY OUTPUT' !< title of the output file
+    character(len=H_MID)   :: HISTORY_H_TITLE = 'SCALE-LES HISTORY OUTPUT' !< title of the output file
     character(len=H_SHORT) :: HISTORY_T_UNITS = 'seconds'
     character(len=H_MID)   :: HISTORY_T_SINCE = ''
 
@@ -120,7 +122,7 @@ contains
     if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_HIST)
 
 
-    call PROF_rapstart('FILE O NetCDF', 2)
+    call PROF_rapstart('FILE_O_NetCDF', 2)
 
     rankidx(1) = PRC_2Drank(PRC_myrank, 1)
     rankidx(2) = PRC_2Drank(PRC_myrank, 2)
@@ -146,20 +148,22 @@ contains
        jme = JE
     end if
 
-    call HistoryInit( HISTORY_H_TITLE,           &
-                      H_SOURCE,                  &
-                      H_INSTITUTE,               &
-                      im*jm*KMAX,                &
-                      PRC_master,                &
-                      PRC_myrank,                &
-                      rankidx,                   &
-                      namelist_fid = IO_FID_CONF, &
-                      time_units = HISTORY_T_UNITS, &
-                      time_since = HISTORY_T_SINCE )
+    call HistoryInit( HISTORY_H_TITLE,                &
+                      H_SOURCE,                       &
+                      H_INSTITUTE,                    &
+                      im*jm*KMAX,                     &
+                      PRC_master,                     &
+                      PRC_myrank,                     &
+                      rankidx,                        &
+                      TIME_STARTDAYSEC,               &
+                      TIME_DTSEC,                     &
+                      time_units   = HISTORY_T_UNITS, &
+                      time_since   = HISTORY_T_SINCE, &
+                      namelist_fid = IO_FID_CONF      )
 
     call HIST_put_axes
 
-    call PROF_rapend  ('FILE O NetCDF', 2)
+    call PROF_rapend  ('FILE_O_NetCDF', 2)
 
     return
   end subroutine HIST_setup
@@ -468,8 +472,6 @@ contains
        zdim     )
     use gtool_history, only: &
        HistoryAddVariable
-    use scale_time, only: &
-       TIME_STARTDAYSEC
     implicit none
 
     integer,          intent(out) :: itemid  !< index number of the item
@@ -491,7 +493,7 @@ contains
     character(len=16) :: dims(3)
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('FILE O NetCDF', 2)
+    call PROF_rapstart('FILE_O_NetCDF', 2)
 
     if ( ndim == 1 ) then
 
@@ -555,16 +557,15 @@ contains
 
     end if
 
-    call HistoryAddVariable( item,             & ! [IN]
-                             dims(1:ndim),     & ! [IN]
-                             desc,             & ! [IN]
-                             unit,             & ! [IN]
-                             TIME_STARTDAYSEC, & ! [IN]
-                             itemid,           & ! [OUT]
-                             zinterp,          & ! [OUT]
-                             existed           ) ! [OUT]
+    call HistoryAddVariable( item,         & ! [IN]
+                             dims(1:ndim), & ! [IN]
+                             desc,         & ! [IN]
+                             unit,         & ! [IN]
+                             itemid,       & ! [OUT]
+                             zinterp,      & ! [OUT]
+                             existed       ) ! [OUT]
 
-    call PROF_rapend  ('FILE O NetCDF', 2)
+    call PROF_rapend  ('FILE_O_NetCDF', 2)
 
     return
   end subroutine HIST_reg
@@ -577,7 +578,7 @@ contains
     use gtool_history, only: &
        HistoryQuery
     use scale_time, only: &
-       TIME_NOWDAYSEC
+       TIME_NOWSTEP
     implicit none
 
     integer, intent(in)  :: itemid !< index number of the item
@@ -589,11 +590,11 @@ contains
 
     if ( itemid < 0 ) return
 
-    call PROF_rapstart('FILE O NetCDF', 2)
+    call PROF_rapstart('FILE_O_NetCDF', 2)
 
-    call HistoryQuery(itemid, TIME_NOWDAYSEC, answer)
+    call HistoryQuery(itemid, TIME_NOWSTEP, answer)
 
-    call PROF_rapend  ('FILE O NetCDF', 2)
+    call PROF_rapend  ('FILE_O_NetCDF', 2)
 
     return
   end subroutine HIST_query
@@ -606,7 +607,7 @@ contains
     use gtool_history, only: &
        HistoryPut
     use scale_time, only: &
-       TIME_NOWDAYSEC
+       TIME_NOWSTEP
     implicit none
 
     integer,  intent(in) :: itemid !< index number of the item
@@ -618,15 +619,15 @@ contains
 
     if ( itemid < 0 ) return
 
-    call PROF_rapstart('FILE O NetCDF', 2)
+    call PROF_rapstart('FILE_O_NetCDF', 2)
 
     do k = 1, KMAX
        var2(k) = var(KS+k-1)
     enddo
 
-    call HistoryPut(itemid, TIME_NOWDAYSEC, var2)
+    call HistoryPut(itemid, TIME_NOWSTEP, var2)
 
-    call PROF_rapend  ('FILE O NetCDF', 2)
+    call PROF_rapend  ('FILE_O_NetCDF', 2)
 
     return
   end subroutine HIST_put_1D
@@ -642,7 +643,7 @@ contains
     use gtool_history, only: &
        HistoryPut
     use scale_time, only: &
-       TIME_NOWDAYSEC
+       TIME_NOWSTEP
     implicit none
 
     integer,  intent(in) :: itemid   !< index number of the item
@@ -657,7 +658,7 @@ contains
 
     if ( itemid < 0 ) return
 
-    call PROF_rapstart('FILE O NetCDF', 2)
+    call PROF_rapstart('FILE_O_NetCDF', 2)
 
     do j = 1, jm
     do i = 1, im
@@ -695,9 +696,9 @@ contains
        enddo
     end if
 
-    call HistoryPut(itemid, TIME_NOWDAYSEC, var2)
+    call HistoryPut(itemid, TIME_NOWSTEP, var2)
 
-    call PROF_rapend  ('FILE O NetCDF', 2)
+    call PROF_rapend  ('FILE_O_NetCDF', 2)
 
     return
   end subroutine HIST_put_2D
@@ -717,7 +718,7 @@ contains
     use gtool_history, only: &
        HistoryPut
     use scale_time, only: &
-       TIME_NOWDAYSEC
+       TIME_NOWSTEP
     use scale_interpolation, only: &
        INTERP_vertical_xi2z, &
        INTERP_available
@@ -750,7 +751,7 @@ contains
 
     if ( itemid < 0 ) return
 
-    call PROF_rapstart('FILE O NetCDF', 2)
+    call PROF_rapstart('FILE_O_NetCDF', 2)
 
     xd = ''
     yd = ''
@@ -830,16 +831,16 @@ contains
           enddo
        end if
 
-       call HistoryPut(itemid, TIME_NOWDAYSEC, var2(1:isize*jsize))
+       call HistoryPut(itemid, TIME_NOWSTEP, var2(1:isize*jsize))
 
     else
        if (       ksize == KMAX    &
             .AND. zinterp          &
             .AND. INTERP_available ) then
-          call PROF_rapstart('FILE O Interpolation', 2)
+          call PROF_rapstart('FILE_O_interp', 2)
           call INTERP_vertical_xi2z( var  (:,:,:), & ! [IN]
                                      var_Z(:,:,:)  ) ! [OUT]
-          call PROF_rapend  ('FILE O Interpolation', 2)
+          call PROF_rapend  ('FILE_O_interp', 2)
 
           do k = 1, ksize
           do j = 1, jsize
@@ -893,11 +894,14 @@ contains
           enddo
        end if
 
-       call HistoryPut(itemid, TIME_NOWDAYSEC, var2)
+       call HistoryPut(itemid, TIME_NOWSTEP, var2)
 
     endif
 
-    call PROF_rapend  ('FILE O NetCDF', 2)
+    deallocate( var_Z )
+    deallocate( var2  )
+
+    call PROF_rapend  ('FILE_O_NetCDF', 2)
 
     return
   end subroutine HIST_put_3D
@@ -1065,7 +1069,7 @@ contains
     logical :: am
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('FILE I NetCDF', 2)
+    call PROF_rapstart('FILE_I_NetCDF', 2)
 
     am = .false.
     if( present(allow_missing) ) am = allow_missing
@@ -1076,7 +1080,7 @@ contains
                      step,            & ! [IN]
                      allow_missing=am ) ! [IN]
 
-    call PROF_rapend  ('FILE I NetCDF', 2)
+    call PROF_rapend  ('FILE_I_NetCDF', 2)
 
     return
   end subroutine HIST_get_1D
@@ -1103,7 +1107,7 @@ contains
     logical :: am
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('FILE I NetCDF', 2)
+    call PROF_rapstart('FILE_I_NetCDF', 2)
 
     am = .false.
     if( present(allow_missing) ) am = allow_missing
@@ -1114,7 +1118,7 @@ contains
                      step,            & ! [IN]
                      allow_missing=am ) ! [IN]
 
-    call PROF_rapend  ('FILE I NetCDF', 2)
+    call PROF_rapend  ('FILE_I_NetCDF', 2)
 
     return
   end subroutine HIST_get_2D
@@ -1141,7 +1145,7 @@ contains
     logical :: am
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('FILE I NetCDF', 2)
+    call PROF_rapstart('FILE_I_NetCDF', 2)
 
     am = .false.
     if( present(allow_missing) ) am = allow_missing
@@ -1152,7 +1156,7 @@ contains
                      step,            & ! [IN]
                      allow_missing=am ) ! [IN]
 
-    call PROF_rapend  ('FILE I NetCDF', 2)
+    call PROF_rapend  ('FILE_I_NetCDF', 2)
 
     return
   end subroutine HIST_get_3D
@@ -1163,15 +1167,15 @@ contains
     use gtool_history, only: &
        HistoryWriteAll
     use scale_time, only: &
-       TIME_NOWDAYSEC
+       TIME_NOWSTEP
     implicit none
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('FILE O NetCDF', 2)
+    call PROF_rapstart('FILE_O_NetCDF', 2)
 
-    call HistoryWriteAll( TIME_NOWDAYSEC ) ![IN]
+    call HistoryWriteAll( TIME_NOWSTEP ) ![IN]
 
-    call PROF_rapend  ('FILE O NetCDF', 2)
+    call PROF_rapend  ('FILE_O_NetCDF', 2)
 
     return
   end subroutine HIST_write

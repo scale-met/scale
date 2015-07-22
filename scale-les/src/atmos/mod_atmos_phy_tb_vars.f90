@@ -49,6 +49,7 @@ module mod_atmos_phy_tb_vars
   real(RP), public, allocatable :: ATMOS_PHY_TB_MOMY_t(:,:,:)   ! tendency MOMY [kg/m2/s2]
   real(RP), public, allocatable :: ATMOS_PHY_TB_RHOT_t(:,:,:)   ! tendency RHOT [K*kg/m3/s]
   real(RP), public, allocatable :: ATMOS_PHY_TB_RHOQ_t(:,:,:,:) ! tendency rho*QTRC [kg/kg/s]
+  real(RP), public, allocatable :: ATMOS_PHY_TB_TKE_t(:,:,:)    ! tendency TKE @m2/s3]
 
   real(RP), public, allocatable :: ATMOS_PHY_TB_TKE(:,:,:) ! turburent kinetic energy [m2/s2]
   real(RP), public, allocatable :: ATMOS_PHY_TB_NU (:,:,:) ! eddy viscosity           [m2/s]
@@ -108,6 +109,7 @@ contains
     allocate( ATMOS_PHY_TB_MOMY_t(KA,IA,JA)    )
     allocate( ATMOS_PHY_TB_RHOT_t(KA,IA,JA)    )
     allocate( ATMOS_PHY_TB_RHOQ_t(KA,IA,JA,QA) )
+    allocate( ATMOS_PHY_TB_TKE_t(KA,IA,JA)     )
 
     allocate( ATMOS_PHY_TB_TKE(KA,IA,JA) )
     allocate( ATMOS_PHY_TB_NU (KA,IA,JA) )
@@ -151,6 +153,7 @@ contains
     ATMOS_PHY_TB_MOMY_t(:,:,:)   = UNDEF
     ATMOS_PHY_TB_RHOT_t(:,:,:)   = UNDEF
     ATMOS_PHY_TB_RHOQ_t(:,:,:,:) = UNDEF
+    ATMOS_PHY_TB_TKE_t (:,:,:)   = UNDEF
 
     ATMOS_PHY_TB_TKE(:,:,:) = ATMOS_PHY_TB_TKE_INIT
     ATMOS_PHY_TB_NU (:,:,:) = UNDEF

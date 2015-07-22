@@ -27,6 +27,11 @@ module scale_grid_nest
   use scale_tracer
   use scale_const, only: &
      r_in_m => CONST_RADIUS
+  use scale_interpolation_nest, only: &
+     INTRPNEST_setup,            &
+     INTRPNEST_interp_fact_llz,  &
+     INTRPNEST_interp_2d,        &
+     INTRPNEST_interp_3d
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -36,6 +41,7 @@ module scale_grid_nest
   !
   public :: NEST_setup
   public :: NEST_domain_relate
+  public :: NEST_domain_shape
   public :: NEST_COMM_nestdown
   public :: NEST_COMM_recvwait_issue
   public :: NEST_COMM_recv_cancel
@@ -94,6 +100,7 @@ module scale_grid_nest
   integer,  public              :: TILEAL_JA(2)         !< cells of all tiles in y-direction
 
   integer,  public              :: NEST_BND_QA = 1      !< number of tracer treated in nesting system
+  integer,  public              :: NEST_INTERP_LEVEL = 4 !< horizontal interpolation level
 
   logical,  public              :: USE_NESTING          = .false.
   logical,  public              :: OFFLINE              = .true.
@@ -116,7 +123,7 @@ module scale_grid_nest
   private :: NEST_COMM_intercomm_nestdown
   private :: NEST_COMM_issuer_of_receive
   private :: NEST_COMM_issuer_of_wait
-  private :: NEST_latlonz_interporation_fact
+!  private :: NEST_latlonz_interporation_fact
 
   interface NEST_COMM_intercomm_nestdown
      module procedure NEST_COMM_intercomm_nestdown_3D
@@ -179,8 +186,8 @@ module scale_grid_nest
   integer, parameter :: I_YSTG   = 4                       !< interpolation kinds of grid point (y-axis staggered)
 
   integer, parameter :: itp_ng   = 4                       !< # of interpolation kinds of grid point
-  integer, parameter :: itp_nh   = 3                       !< # of interpolation kinds of horizontal direction
-  integer, parameter :: itp_nv   = 2                       !< # of interpolation kinds of vertical direction
+  integer, private   :: itp_nh   = 4                       !< # of interpolation kinds of horizontal direction
+  integer, private   :: itp_nv   = 2                       !< # of interpolation kinds of vertical direction
 
   integer, parameter :: tag_lon  = 1
   integer, parameter :: tag_lat  = 2
@@ -203,9 +210,9 @@ module scale_grid_nest
   ! intercomm tag id:  IC | VAR |  YP
   ! (total: 6columns)   X   X X   X X X
 
-  real(RP), private, parameter :: large_number_one   = 9.999E+15_RP
-  real(RP), private, parameter :: large_number_two   = 8.888E+15_RP
-  real(RP), private, parameter :: large_number_three = 7.777E+15_RP
+!  real(RP), private, parameter :: large_number_one   = 9.999E+15_RP
+!  real(RP), private, parameter :: large_number_two   = 8.888E+15_RP
+!  real(RP), private, parameter :: large_number_three = 7.777E+15_RP
   integer,  private            :: interp_search_divnum
 
   integer, private   :: INTERCOMM_ID(2)
@@ -237,7 +244,7 @@ module scale_grid_nest
   real(RP), private, allocatable :: buffer_ref_CZ  (:,:,:)   ! buffer of communicator: VELY (with HALO)
   real(RP), private, allocatable :: buffer_ref_FZ  (:,:,:)   ! buffer of communicator: VELY (with HALO)
 
-  real(RP), private, allocatable :: buffer_ref_2D (:,:)      ! buffer of communicator: 2D data (with HALO)
+  !real(RP), private, allocatable :: buffer_ref_2D (:,:)      ! buffer of communicator: 2D data (with HALO)
   real(RP), private, allocatable :: buffer_ref_3D (:,:,:)    ! buffer of communicator: 3D data (with HALO)
   real(RP), private, allocatable :: buffer_ref_3DF(:,:,:)    ! buffer of communicator: 3D at z-Face (with HALO)
   real(RP), private, allocatable :: u_llp(:,:,:)
@@ -255,6 +262,7 @@ module scale_grid_nest
   integer,  private, allocatable :: kgrd (:,:,:,:,:,:)       ! interpolation target grids in z-axis
   integer,  private, allocatable :: igrd (:,:,:,:)           ! interpolation target grids in x-axis
   integer,  private, allocatable :: jgrd (:,:,:,:)           ! interpolation target grids in y-axis
+  integer,  private, allocatable :: ncopy(:,:,:,:)           ! number of daughter's layers below parent lowest layer
 
   integer(8), private :: nwait_p, nwait_d, nrecv, nsend
   !-----------------------------------------------------------------------------
@@ -262,16 +270,17 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine NEST_setup ( &
-      icomm_parent,  &
-      icomm_child,   &
-      flag_parent,   &
-      flag_child     )
+      inter_parent,  &
+      inter_child    )
+!      flag_parent,   &
+!      flag_child     )
     use scale_const, only: &
        D2R => CONST_D2R
     use scale_process, only: &
        PRC_nmax,          &
        PRC_master,        &
        PRC_myrank,        &
+       PRC_mydom,         &
        PRC_MPIstop,       &
        PRC_HAS_W,         &
        PRC_HAS_E,         &
@@ -291,12 +300,13 @@ contains
        p_latlon_catalog => REAL_DOMAIN_CATALOGUE
     use scale_comm, only: &
        COMM_world
+    use scale_interpolation_nest, only: &
+       INTRPNEST_setup,            &
+       INTRPNEST_interp_fact_llz
     implicit none
 
-    integer, intent(in), optional :: icomm_parent
-    integer, intent(in), optional :: icomm_child
-    logical, intent(in), optional :: flag_parent
-    logical, intent(in), optional :: flag_child
+    integer, intent(in), optional :: inter_parent
+    integer, intent(in), optional :: inter_child
 
     !< metadata files for lat-lon domain for all processes
     character(len=H_LONG)  :: LATLON_CATALOGUE_FNAME = 'latlon_domain_catalogue.txt'
@@ -311,6 +321,9 @@ contains
     integer :: jms, jme
 
     character(2) :: dom_num
+
+    logical :: flag_parent = .false.
+    logical :: flag_child  = .false.
 
     namelist / PARAM_NEST /      &
        USE_NESTING,              &
@@ -330,12 +343,16 @@ contains
        ONLINE_BOUNDARY_USE_QHYD, &
        ONLINE_AGGRESSIVE_COMM,   &
        ONLINE_WAIT_LIMIT,        &
-       ONLINE_SPECIFIED_MAXRQ
+       ONLINE_SPECIFIED_MAXRQ,   &
+       NEST_INTERP_LEVEL
 
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*) ''
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[NEST]/Categ[GRID]'
+
+    if( inter_parent /= MPI_COMM_NULL ) flag_child  = .true. ! exist parent, so work as a child
+    if( inter_child  /= MPI_COMM_NULL ) flag_parent = .true. ! exist child, so work as a parent
 
     nwait_p = 0
     nwait_d = 0
@@ -359,27 +376,11 @@ contains
     endif
     if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_NEST)
 
-    ! only for register
-    if ( ONLINE_IAM_PARENT .or. ONLINE_IAM_DAUGHTER ) then
-       call PROF_rapstart('NESTCOM total parent')
-       call PROF_rapend  ('NESTCOM total parent')
-       call PROF_rapstart('NESTCOM send parent')
-       call PROF_rapend  ('NESTCOM send parent')
-       call PROF_rapstart('NESTCOM test parent')
-       call PROF_rapend  ('NESTCOM test parent')
-       call PROF_rapstart('NESTCOM wait parent')
-       call PROF_rapend  ('NESTCOM wait parent')
-       call PROF_rapstart('NESTCOM total child')
-       call PROF_rapend  ('NESTCOM total child')
-       call PROF_rapstart('NESTCOM recv child')
-       call PROF_rapend  ('NESTCOM recv child')
-       call PROF_rapstart('NESTCOM test child')
-       call PROF_rapend  ('NESTCOM test child')
-       call PROF_rapstart('NESTCOM wait child')
-       call PROF_rapend  ('NESTCOM wait child')
-       call PROF_rapstart('NESTCOM interp')
-       call PROF_rapend  ('NESTCOM interp')
-    endif
+    PRC_mydom = ONLINE_DOMAIN_NUM
+
+    call INTRPNEST_setup ( interp_search_divnum, NEST_INTERP_LEVEL, OFFLINE )
+    itp_nh = int( NEST_INTERP_LEVEL )
+    itp_nv = 2
 
     DEBUG_DOMAIN_NUM = ONLINE_DOMAIN_NUM
     if( ONLINE_SPECIFIED_MAXRQ > max_rq ) max_rq = ONLINE_SPECIFIED_MAXRQ
@@ -390,7 +391,6 @@ contains
     if( USE_NESTING ) then
 
        if ( OFFLINE .or. ONLINE_IAM_DAUGHTER ) then
-
           ims = IS-1
           ime = IE
           jms = JS-1
@@ -407,6 +407,8 @@ contains
           corner_loc(I_NE,I_LAT) = REAL_LATXY(ime,jme) / D2R
           corner_loc(I_SW,I_LAT) = REAL_LATXY(ims,jms) / D2R
           corner_loc(I_SE,I_LAT) = REAL_LATXY(ime,jms) / D2R
+
+          allocate( ncopy(IA,JA,itp_nh,itp_ng) )
        end if
 
       if( OFFLINE ) then
@@ -451,15 +453,15 @@ contains
          call NEST_domain_relate(HANDLING_NUM)
 
       else ! ONLINE RELATIONSHIP
-         if ( present(flag_parent) .and. present(flag_child) ) then
-            if( IO_L ) write(IO_FID_LOG,'(1x,A)') &
-                       '*** Setup Online Nesting Inter-Domain Communicator (IDC)'
-         else
-            write(*,*) 'xxx Internal Error:'
-            write(*,*) 'xxx The flag_parent and flag_child are needed.'
-            write(*,*) '    domain: ', ONLINE_DOMAIN_NUM
-            call PRC_MPIstop
-         endif
+!         if ( present(flag_parent) .and. present(flag_child) ) then
+!            if( IO_L ) write(IO_FID_LOG,'(1x,A)') &
+!                       '*** Setup Online Nesting Inter-Domain Communicator (IDC)'
+!         else
+!            write(*,*) 'xxx Internal Error:'
+!            write(*,*) 'xxx The flag_parent and flag_child are needed.'
+!            write(*,*) '    domain: ', ONLINE_DOMAIN_NUM
+!            call PRC_MPIstop
+!         endif
 
          if( ONLINE_BOUNDARY_USE_QHYD ) then
             NEST_BND_QA = QA
@@ -467,10 +469,13 @@ contains
             NEST_BND_QA = I_QV
          endif
 
+if( IO_L ) write(IO_FID_LOG,*) "flag_parent", flag_parent, "flag_child", flag_child
+if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_IAM_DAUGHTER", ONLINE_IAM_DAUGHTER
+
          if( flag_parent ) then ! must do first before daughter processes
          !-------------------------------------------------
             if ( .NOT. ONLINE_IAM_PARENT ) then
-               write(*,*) 'xxx Flag from launcher is not consistent with namelist!'
+               write(*,*) 'xxx Parent Flag from launcher is not consistent with namelist! [NEST/GRID]'
                write(*,*) '    PARENT - domain: ', ONLINE_DOMAIN_NUM
                call PRC_MPIstop
             endif
@@ -479,7 +484,7 @@ contains
             INTERCOMM_ID(HANDLING_NUM) = ONLINE_DOMAIN_NUM
             NEST_Filiation(INTERCOMM_ID(HANDLING_NUM)) = 1
 
-            INTERCOMM_DAUGHTER = icomm_child
+            INTERCOMM_DAUGHTER = inter_child
             if( IO_L ) write(IO_FID_LOG,'(1x,A,I2,A)') '*** Online Nesting - PARENT [INTERCOMM_ID:', &
                                                         INTERCOMM_ID(HANDLING_NUM), ' ]'
             if( IO_L ) write(IO_FID_LOG,*) '*** Online Nesting - INTERCOMM :', INTERCOMM_DAUGHTER
@@ -537,14 +542,14 @@ contains
 
             call NEST_COMM_setup_nestdown( HANDLING_NUM )
 
-         !---------------------------------- parent routines
+         !---------------------------------- end of parent routines
          endif
 
 
          if( flag_child ) then
          !-------------------------------------------------
             if ( .NOT. ONLINE_IAM_DAUGHTER ) then
-               write(*,*) 'xxx Flag from launcher is not consistent with namelist!'
+               write(*,*) 'xxx Child Flag from launcher is not consistent with namelist! [NEST/GRID]'
                write(*,*) '    DAUGHTER - domain: ', ONLINE_DOMAIN_NUM
                call PRC_MPIstop
             endif
@@ -553,7 +558,7 @@ contains
             INTERCOMM_ID(HANDLING_NUM) = ONLINE_DOMAIN_NUM - 1
             NEST_Filiation(INTERCOMM_ID(HANDLING_NUM)) = -1
 
-            INTERCOMM_PARENT = icomm_parent
+            INTERCOMM_PARENT = inter_parent
             if( IO_L ) write(IO_FID_LOG,'(1x,A,I2,A)') '*** Online Nesting - DAUGHTER [INTERCOMM_ID:', &
                                                         INTERCOMM_ID(HANDLING_NUM), ' ]'
             if( IO_L ) write(IO_FID_LOG,*) '*** Online Nesting - INTERCOMM :', INTERCOMM_PARENT
@@ -618,7 +623,7 @@ contains
             allocate( buffer_ref_CZ  (  PARENT_KA(HANDLING_NUM),TILEAL_IA(HANDLING_NUM),TILEAL_JA(HANDLING_NUM)) )
             allocate( buffer_ref_FZ  (0:PARENT_KA(HANDLING_NUM),TILEAL_IA(HANDLING_NUM),TILEAL_JA(HANDLING_NUM)) )
 
-            allocate( buffer_ref_2D  (                          TILEAL_IA(HANDLING_NUM),TILEAL_JA(HANDLING_NUM)) )
+            !allocate( buffer_ref_2D  (                          TILEAL_IA(HANDLING_NUM),TILEAL_JA(HANDLING_NUM)) )
             allocate( buffer_ref_3D  (  PARENT_KA(HANDLING_NUM),TILEAL_IA(HANDLING_NUM),TILEAL_JA(HANDLING_NUM)) )
             allocate( buffer_ref_3DF (0:PARENT_KA(HANDLING_NUM),TILEAL_IA(HANDLING_NUM),TILEAL_JA(HANDLING_NUM)) )
 
@@ -632,78 +637,96 @@ contains
 
 
             ! for scalar points
-            call NEST_latlonz_interporation_fact( hfact          (:,:,:,I_SCLR),     & ! [OUT]
-                                                  vfact          (:,:,:,:,:,I_SCLR), & ! [OUT]
-                                                  kgrd           (:,:,:,:,:,I_SCLR), & ! [OUT]
-                                                  igrd           (:,:,:,I_SCLR),     & ! [OUT]
-                                                  jgrd           (:,:,:,I_SCLR),     & ! [OUT]
-                                                  MY_CZ          (:,:,:),            & ! [IN]
-                                                  MY_LAT         (:,:),              & ! [IN]
-                                                  MY_LON         (:,:),              & ! [IN]
-                                                  buffer_ref_CZ  (:,:,:),            & ! [IN]
-                                                  buffer_ref_LAT (:,:),              & ! [IN]
-                                                  buffer_ref_LON (:,:),              & ! [IN]
-                                                  TILEAL_KA(HANDLING_NUM),           & ! [IN]
-                                                  TILEAL_IA(HANDLING_NUM),           & ! [IN]
-                                                  TILEAL_JA(HANDLING_NUM),           & ! [IN]
-                                                  HANDLING_NUM                       ) ! [IN]
+            call INTRPNEST_interp_fact_llz( hfact          (:,:,:,I_SCLR),     & ! [OUT]
+                                            vfact          (:,:,:,:,:,I_SCLR), & ! [OUT]
+                                            kgrd           (:,:,:,:,:,I_SCLR), & ! [OUT]
+                                            igrd           (:,:,:,I_SCLR),     & ! [OUT]
+                                            jgrd           (:,:,:,I_SCLR),     & ! [OUT]
+                                            ncopy          (:,:,:,I_SCLR),     & ! [OUT]
+                                            MY_CZ          (:,:,:),            & ! [IN]
+                                            MY_LAT         (:,:),              & ! [IN]
+                                            MY_LON         (:,:),              & ! [IN]
+                                            DATR_KS(HANDLING_NUM),             & ! [IN]
+                                            DATR_KE(HANDLING_NUM),             & ! [IN]
+                                            DAUGHTER_IA(HANDLING_NUM),         & ! [IN]
+                                            DAUGHTER_JA(HANDLING_NUM),         & ! [IN]
+                                            buffer_ref_CZ  (:,:,:),            & ! [IN]
+                                            buffer_ref_LAT (:,:),              & ! [IN]
+                                            buffer_ref_LON (:,:),              & ! [IN]
+                                            TILEAL_KA(HANDLING_NUM),           & ! [IN]
+                                            TILEAL_IA(HANDLING_NUM),           & ! [IN]
+                                            TILEAL_JA(HANDLING_NUM)            ) ! [IN]
+
 
             ! for z staggered points
-            call NEST_latlonz_interporation_fact( hfact          (:,:,:,I_ZSTG),     & ! [OUT]
-                                                  vfact          (:,:,:,:,:,I_ZSTG), & ! [OUT]
-                                                  kgrd           (:,:,:,:,:,I_ZSTG), & ! [OUT]
-                                                  igrd           (:,:,:,I_ZSTG),     & ! [OUT]
-                                                  jgrd           (:,:,:,I_ZSTG),     & ! [OUT]
-                                                  MY_FZ          (:,:,:),            & ! [IN]
-                                                  MY_LAT         (:,:),              & ! [IN]
-                                                  MY_LON         (:,:),              & ! [IN]
-                                                  buffer_ref_FZ  (:,:,:),            & ! [IN]
-                                                  buffer_ref_LAT (:,:),              & ! [IN]
-                                                  buffer_ref_LON (:,:),              & ! [IN]
-                                                  TILEAL_KA(HANDLING_NUM)+1,         & ! [IN]
-                                                  TILEAL_IA(HANDLING_NUM),           & ! [IN]
-                                                  TILEAL_JA(HANDLING_NUM),           & ! [IN]
-                                                  HANDLING_NUM                       ) ! [IN]
+            call INTRPNEST_interp_fact_llz( hfact          (:,:,:,I_ZSTG),     & ! [OUT]
+                                            vfact          (:,:,:,:,:,I_ZSTG), & ! [OUT]
+                                            kgrd           (:,:,:,:,:,I_ZSTG), & ! [OUT]
+                                            igrd           (:,:,:,I_ZSTG),     & ! [OUT]
+                                            jgrd           (:,:,:,I_ZSTG),     & ! [OUT]
+                                            ncopy          (:,:,:,I_ZSTG),     & ! [OUT]
+                                            MY_FZ          (:,:,:),            & ! [IN]
+                                            MY_LAT         (:,:),              & ! [IN]
+                                            MY_LON         (:,:),              & ! [IN]
+                                            DATR_KS(HANDLING_NUM),             & ! [IN]
+                                            DATR_KE(HANDLING_NUM),             & ! [IN]
+                                            DAUGHTER_IA(HANDLING_NUM),         & ! [IN]
+                                            DAUGHTER_JA(HANDLING_NUM),         & ! [IN]
+                                            buffer_ref_FZ  (:,:,:),            & ! [IN]
+                                            buffer_ref_LAT (:,:),              & ! [IN]
+                                            buffer_ref_LON (:,:),              & ! [IN]
+                                            TILEAL_KA(HANDLING_NUM)+1,         & ! [IN]
+                                            TILEAL_IA(HANDLING_NUM),           & ! [IN]
+                                            TILEAL_JA(HANDLING_NUM)            ) ! [IN]
+
 
             ! for x staggered points
-            call NEST_latlonz_interporation_fact( hfact          (:,:,:,I_XSTG),     & ! [OUT]
-                                                  vfact          (:,:,:,:,:,I_XSTG), & ! [OUT]
-                                                  kgrd           (:,:,:,:,:,I_XSTG), & ! [OUT]
-                                                  igrd           (:,:,:,I_XSTG),     & ! [OUT]
-                                                  jgrd           (:,:,:,I_XSTG),     & ! [OUT]
-                                                  MY_CZ          (:,:,:),            & ! [IN]
-                                                  MY_LATX        (:,:),              & ! [IN]
-                                                  MY_LONX        (:,:),              & ! [IN]
-                                                  buffer_ref_CZ  (:,:,:),            & ! [IN]
-                                                  buffer_ref_LATX(:,:),              & ! [IN]
-                                                  buffer_ref_LONX(:,:),              & ! [IN]
-                                                  TILEAL_KA(HANDLING_NUM),           & ! [IN]
-                                                  TILEAL_IA(HANDLING_NUM),           & ! [IN]
-                                                  TILEAL_JA(HANDLING_NUM),           & ! [IN]
-                                                  HANDLING_NUM                       ) ! [IN]
+            call INTRPNEST_interp_fact_llz( hfact          (:,:,:,I_XSTG),     & ! [OUT]
+                                            vfact          (:,:,:,:,:,I_XSTG), & ! [OUT]
+                                            kgrd           (:,:,:,:,:,I_XSTG), & ! [OUT]
+                                            igrd           (:,:,:,I_XSTG),     & ! [OUT]
+                                            jgrd           (:,:,:,I_XSTG),     & ! [OUT]
+                                            ncopy          (:,:,:,I_XSTG),     & ! [OUT]
+                                            MY_CZ          (:,:,:),            & ! [IN]
+                                            MY_LATX        (:,:),              & ! [IN]
+                                            MY_LONX        (:,:),              & ! [IN]
+                                            DATR_KS(HANDLING_NUM),             & ! [IN]
+                                            DATR_KE(HANDLING_NUM),             & ! [IN]
+                                            DAUGHTER_IA(HANDLING_NUM),         & ! [IN]
+                                            DAUGHTER_JA(HANDLING_NUM),         & ! [IN]
+                                            buffer_ref_CZ  (:,:,:),            & ! [IN]
+                                            buffer_ref_LATX(:,:),              & ! [IN]
+                                            buffer_ref_LONX(:,:),              & ! [IN]
+                                            TILEAL_KA(HANDLING_NUM),           & ! [IN]
+                                            TILEAL_IA(HANDLING_NUM),           & ! [IN]
+                                            TILEAL_JA(HANDLING_NUM)            ) ! [IN]
 
             ! for y staggered points
-            call NEST_latlonz_interporation_fact( hfact          (:,:,:,I_YSTG),     & ! [OUT]
-                                                  vfact          (:,:,:,:,:,I_YSTG), & ! [OUT]
-                                                  kgrd           (:,:,:,:,:,I_YSTG), & ! [OUT]
-                                                  igrd           (:,:,:,I_YSTG),     & ! [OUT]
-                                                  jgrd           (:,:,:,I_YSTG),     & ! [OUT]
-                                                  MY_CZ          (:,:,:),            & ! [IN]
-                                                  MY_LATY        (:,:),              & ! [IN]
-                                                  MY_LONY        (:,:),              & ! [IN]
-                                                  buffer_ref_CZ  (:,:,:),            & ! [IN]
-                                                  buffer_ref_LATY(:,:),              & ! [IN]
-                                                  buffer_ref_LONY(:,:),              & ! [IN]
-                                                  TILEAL_KA(HANDLING_NUM),           & ! [IN]
-                                                  TILEAL_IA(HANDLING_NUM),           & ! [IN]
-                                                  TILEAL_JA(HANDLING_NUM),           & ! [IN]
-                                                  HANDLING_NUM                       ) ! [IN]
+            call INTRPNEST_interp_fact_llz( hfact          (:,:,:,I_YSTG),     & ! [OUT]
+                                            vfact          (:,:,:,:,:,I_YSTG), & ! [OUT]
+                                            kgrd           (:,:,:,:,:,I_YSTG), & ! [OUT]
+                                            igrd           (:,:,:,I_YSTG),     & ! [OUT]
+                                            jgrd           (:,:,:,I_YSTG),     & ! [OUT]
+                                            ncopy          (:,:,:,I_YSTG),     & ! [OUT]
+                                            MY_CZ          (:,:,:),            & ! [IN]
+                                            MY_LATY        (:,:),              & ! [IN]
+                                            MY_LONY        (:,:),              & ! [IN]
+                                            DATR_KS(HANDLING_NUM),             & ! [IN]
+                                            DATR_KE(HANDLING_NUM),             & ! [IN]
+                                            DAUGHTER_IA(HANDLING_NUM),         & ! [IN]
+                                            DAUGHTER_JA(HANDLING_NUM),         & ! [IN]
+                                            buffer_ref_CZ  (:,:,:),            & ! [IN]
+                                            buffer_ref_LATY(:,:),              & ! [IN]
+                                            buffer_ref_LONY(:,:),              & ! [IN]
+                                            TILEAL_KA(HANDLING_NUM),           & ! [IN]
+                                            TILEAL_IA(HANDLING_NUM),           & ! [IN]
+                                            TILEAL_JA(HANDLING_NUM)            ) ! [IN]
 
             deallocate( buffer_2D  )
             deallocate( buffer_3D  )
             deallocate( buffer_3DF )
 
-         !---------------------------------- daughter routines
+         !---------------------------------- end of daughter routines
          else
             ONLINE_USE_VELZ = .false.
          endif
@@ -843,6 +866,67 @@ contains
 
     return
   end subroutine NEST_domain_relate
+
+  !-----------------------------------------------------------------------------
+  !> Return shape of ParentDomain at the specified rank (for offline)
+  !  including definition array size with BND or not in Parent domain
+  subroutine NEST_domain_shape ( &
+      tilei,     & ! [out]
+      tilej,     & ! [out]
+      cxs, cxe,  & ! [out]
+      cys, cye,  & ! [out]
+      pxs, pxe,  & ! [out]
+      pys, pye,  & ! [out]
+      iloc       ) ! [in ]
+    implicit none
+
+    integer, intent(out) :: tilei, tilej
+    integer, intent(out) :: cxs, cxe, cys, cye
+    integer, intent(out) :: pxs, pxe, pys, pye
+    integer, intent(in)  :: iloc      ! rank number; start from 1
+
+    integer :: hdl = 1  ! handler number
+    integer :: rank
+    integer :: xloc,  yloc
+    integer :: xlocg, ylocg  ! location over whole domain
+    !---------------------------------------------------------------------------
+
+    rank  = NEST_TILE_ID(iloc)
+    xloc  = mod( iloc-1, NEST_TILE_NUM_X ) + 1
+    yloc  = int( real(iloc-1) / real(NEST_TILE_NUM_X) ) + 1
+    xlocg = mod( rank, OFFLINE_PARENT_PRC_NUM_X ) + 1
+    ylocg = int( real(rank) / real(OFFLINE_PARENT_PRC_NUM_X) ) + 1
+    tilei = PARENT_IMAX(hdl)
+    tilej = PARENT_JMAX(hdl)
+
+    cxs   = tilei * (xloc-1) + 1
+    cxe   = tilei * xloc
+    cys   = tilej * (yloc-1) + 1
+    cye   = tilej * yloc
+    pxs   = 1
+    pxe   = tilei
+    pys   = 1
+    pye   = tilej
+
+    if ( xlocg == 1 ) then ! BND_W
+       tilei = tilei + 2
+       pxs = pxs + 2
+       pxe = pxe + 2
+    endif
+    if ( xlocg == OFFLINE_PARENT_PRC_NUM_X ) then ! BND_E
+       tilei = tilei + 2
+    endif
+    if ( ylocg == 1 ) then ! BND_S
+       tilej = tilej + 2
+       pys = pys + 2
+       pye = pye + 2
+    endif
+    if ( ylocg == OFFLINE_PARENT_PRC_NUM_Y ) then ! BND_N
+       tilej = tilej + 2
+    endif
+
+    return
+  end subroutine NEST_domain_shape
 
   !-----------------------------------------------------------------------------
   !> Get parent domain size
@@ -1146,8 +1230,7 @@ contains
     use scale_grid_real, only: &
        REAL_DOMAIN_CATALOGUE
     use scale_comm, only: &
-       COMM_datatype,  &
-       COMM_world,     &
+       COMM_world, &
        COMM_bcast
     implicit none
 
@@ -1213,6 +1296,12 @@ contains
        endif
        call COMM_bcast(ONLINE_DAUGHTER_NO_ROTATE)
 
+       if( ONLINE_NO_ROTATE .neqv. ONLINE_DAUGHTER_NO_ROTATE ) then
+          write(*,*) 'xxx Flag of NO_ROTATE is not consistent with the child domain'
+          if( IO_L ) write(IO_FID_LOG,*) 'xxx ONLINE_NO_ROTATE = ', ONLINE_NO_ROTATE
+          if( IO_L ) write(IO_FID_LOG,*) 'xxx ONLINE_DAUGHTER_NO_ROTATE =', ONLINE_DAUGHTER_NO_ROTATE
+          call PRC_MPIstop
+       endif
        if( IO_L ) write(IO_FID_LOG,'(1x,A,L2)') '*** NEST: ONLINE_DAUGHTER_NO_ROTATE =', ONLINE_DAUGHTER_NO_ROTATE
 
        call NEST_COMM_importgrid_nestdown( HANDLE )
@@ -1532,10 +1621,8 @@ contains
     use scale_grid_real, only: &
        REAL_DOMAIN_CATALOGUE
     use scale_comm, only: &
-       COMM_vars8,  &
-       COMM_wait,   &
-       COMM_world,  &
-       COMM_datatype
+       COMM_vars8, &
+       COMM_wait
     use scale_gridtrans, only: &
        rotc => GTRANS_ROTC
     implicit none
@@ -1561,13 +1648,17 @@ contains
     real(RP) :: dens (DAUGHTER_KA(HANDLE),DAUGHTER_IA(HANDLE),DAUGHTER_JA(HANDLE))
     real(RP) :: u_lld(DAUGHTER_KA(HANDLE),DAUGHTER_IA(HANDLE),DAUGHTER_JA(HANDLE))
     real(RP) :: v_lld(DAUGHTER_KA(HANDLE),DAUGHTER_IA(HANDLE),DAUGHTER_JA(HANDLE))
-    real(RP) :: work1(DAUGHTER_KA(HANDLE),DAUGHTER_IA(HANDLE),DAUGHTER_JA(HANDLE))
+    real(RP) :: work1d(DAUGHTER_KA(HANDLE),DAUGHTER_IA(HANDLE),DAUGHTER_JA(HANDLE))
+    real(RP) :: work2d(DAUGHTER_KA(HANDLE),DAUGHTER_IA(HANDLE),DAUGHTER_JA(HANDLE))
+
+    real(RP) :: work1p(PARENT_KA(HANDLE),PARENT_IA(HANDLE),PARENT_JA(HANDLE))
+    real(RP) :: work2p(PARENT_KA(HANDLE),PARENT_IA(HANDLE),PARENT_JA(HANDLE))
 
     real(RP) :: u_on_map, v_on_map
-    integer :: ierr
-    integer :: tagbase, tagcomm
-    integer :: isu_tag, isu_tagf
-    integer :: i, j, k, iq
+    integer  :: ierr
+    integer  :: tagbase, tagcomm
+    integer  :: isu_tag, isu_tagf
+    integer  :: i, j, k, iq
 
     integer, parameter :: cosin = 1
     integer, parameter :: sine  = 2
@@ -1586,10 +1677,12 @@ contains
 
     if ( NEST_Filiation( INTERCOMM_ID(HANDLE) ) > 0 ) then
     !-------------------------------------------------------- parent [send issue]
-       call PROF_rapstart('NESTCOM total parent')
+       call PROF_rapstart('NEST_total_P', 2)
 
        nsend = nsend + 1
        if( IO_L ) write(IO_FID_LOG,'(1X,A,I5,A)') "*** NestIDC [P]: que send ( ", nsend, " )"
+
+       call PROF_rapstart('NEST_pack_P', 2)
 
        ! to keep values at that time by finish of sending process
        org_DENS(:,:,:) = ipt_DENS(:,:,:)
@@ -1601,18 +1694,48 @@ contains
           org_QTRC(:,:,:,iq) = ipt_QTRC(:,:,:,iq)
        enddo
 
-
        !*** request control
        !--- do not change the calling order below;
        !--- it should be consistent with the order in "NEST_COMM_recvwait_issue"
        rq_ctl_p = 0
 
        if ( .not. ONLINE_DAUGHTER_NO_ROTATE ) then
+          ! from staggered point to scalar point
+          do j = 1, PARENT_JA(HANDLE)
+          do i = 2, PARENT_IA(HANDLE)
+          do k = PRNT_KS(HANDLE)-1, PRNT_KE(HANDLE)+1
+             work1p(k,i,j) = ( org_MOMX(k,i-1,j) + org_MOMX(k,i,j) ) * 0.5_RP
+          end do
+          end do
+          end do
+          do j = 1, PARENT_JA(HANDLE)
+          do k = PRNT_KS(HANDLE)-1, PRNT_KE(HANDLE)+1
+             work1p(k,1,j) = org_MOMX(k,1,j)
+          end do
+          end do
+          call COMM_vars8( work1p(:,:,:), 1 )
+          do j = 2, PARENT_JA(HANDLE)
+          do i = 1, PARENT_IA(HANDLE)
+          do k = PRNT_KS(HANDLE)-1, PRNT_KE(HANDLE)+1
+             work2p(k,i,j) = ( org_MOMY(k,i,j-1) + org_MOMY(k,i,j) ) * 0.5_RP
+          end do
+          end do
+          end do
+          do i = 1, PARENT_IA(HANDLE)
+          do k = PRNT_KS(HANDLE)-1, PRNT_KE(HANDLE)+1
+             work2p(k,i,1) = org_MOMY(k,i,1)
+          end do
+          end do
+          call COMM_vars8( work2p(:,:,:), 2 )
+          call COMM_wait ( work1p(:,:,:), 1, .false. )
+          call COMM_wait ( work2p(:,:,:), 2, .false. )
+
+          ! rotation from map-projected field to latlon field
           do j = PRNT_JS(HANDLE), PRNT_JE(HANDLE)
           do i = PRNT_IS(HANDLE), PRNT_IE(HANDLE)
           do k = PRNT_KS(HANDLE), PRNT_KE(HANDLE)
-             u_on_map = org_MOMX(k,i,j) / ( org_DENS(k,i+1,j) + org_DENS(k,i,j) ) * 2.0_RP
-             v_on_map = org_MOMY(k,i,j) / ( org_DENS(k,i,j+1) + org_DENS(k,i,j) ) * 2.0_RP
+             u_on_map = work1p(k,i,j) / org_DENS(k,i,j)
+             v_on_map = work2p(k,i,j) / org_DENS(k,i,j)
 
              u_llp(k,i,j) = u_on_map * rotc(i,j,cosin) - v_on_map * rotc(i,j,sine )
              v_llp(k,i,j) = u_on_map * rotc(i,j,sine ) + v_on_map * rotc(i,j,cosin)
@@ -1653,11 +1776,13 @@ contains
 
        rq_tot_p = rq_ctl_p
 
-       call PROF_rapend('NESTCOM total parent')
+       call PROF_rapend  ('NEST_pack_P', 2)
+
+       call PROF_rapend  ('NEST_total_P', 2)
 
     elseif ( NEST_Filiation( INTERCOMM_ID(HANDLE) ) < 0 ) then
     !-------------------------------------------------------- daughter [wait issue]
-       call PROF_rapstart('NESTCOM total child')
+       call PROF_rapstart('NEST_total_C', 2)
 
        nwait_d = nwait_d + 1
        !if( IO_L ) write(IO_FID_LOG,'(1X,A,I5,A)') "*** NestIDC [C]: que wait ( ", nwait_d, " )"
@@ -1668,17 +1793,21 @@ contains
        isu_tag  = 0
        isu_tagf = 0
 
-       call PROF_rapstart('NESTCOM wait child')
+       call PROF_rapstart('NEST_wait_C', 2)
        call NEST_COMM_waitall( rq_tot_d, ireq_d )
+
        if ( ONLINE_AGGRESSIVE_COMM ) then
           ! nothing to do
        else
           call MPI_BARRIER(INTERCOMM_PARENT, ierr)
        endif
-       call PROF_rapend  ('NESTCOM wait child')
+       call PROF_rapend  ('NEST_wait_C', 2)
+
+       call PROF_rapstart('NEST_unpack_C', 2)
 
        tagbase = tagcomm + tag_dens*order_tag_var
        call NEST_COMM_intercomm_nestdown( dummy, dens, tagbase, I_SCLR, HANDLE, isu_tag, isu_tagf, .true. )
+!OCL XFILL
        do j = 1, DAUGHTER_JA(HANDLE)
        do i = 1, DAUGHTER_IA(HANDLE)
        do k = DATR_KS(HANDLE), DATR_KE(HANDLE)
@@ -1686,16 +1815,17 @@ contains
        enddo
        enddo
        enddo
+
        call COMM_vars8( interped_ref_DENS, 1 )
-       call COMM_wait ( interped_ref_DENS, 1, .false. )
 
        tagbase = tagcomm + tag_momz*order_tag_var
        if ( ONLINE_USE_VELZ ) then
-          call NEST_COMM_intercomm_nestdown( dummy, work1, tagbase, I_ZSTG, HANDLE, isu_tag, isu_tagf )
+          call NEST_COMM_intercomm_nestdown( dummy, work1d, tagbase, I_ZSTG, HANDLE, isu_tag, isu_tagf )
+!OCL XFILL
           do j = 1, DAUGHTER_JA(HANDLE)
           do i = 1, DAUGHTER_IA(HANDLE)
           do k = DATR_KS(HANDLE), DATR_KE(HANDLE)-1
-             interped_ref_VELZ(k,i,j) = work1(k,i,j) / ( dens(k,i,j) + dens(k+1,i,j) ) * 2.0_RP
+             interped_ref_VELZ(k,i,j) = work1d(k,i,j) / ( dens(k,i,j) + dens(k+1,i,j) ) * 2.0_RP
           enddo
           enddo
           enddo
@@ -1703,16 +1833,23 @@ contains
 
        tagbase = tagcomm + tag_momx*order_tag_var
        if ( ONLINE_NO_ROTATE ) then
+          ! u_lld receives MOMX
           call NEST_COMM_intercomm_nestdown( dummy, u_lld, tagbase, I_XSTG, HANDLE, isu_tag, isu_tagf )
        else
+          ! u_lld receives MOMX/DENS
           call NEST_COMM_intercomm_nestdown( dummy, u_lld, tagbase, I_SCLR, HANDLE, isu_tag, isu_tagf )
        endif
+
        tagbase = tagcomm + tag_momy*order_tag_var
        if ( ONLINE_NO_ROTATE ) then
+          ! v_lld receives MOMY
           call NEST_COMM_intercomm_nestdown( dummy, v_lld, tagbase, I_YSTG, HANDLE, isu_tag, isu_tagf )
        else
+          ! v_lld receives MOMY/DENS
           call NEST_COMM_intercomm_nestdown( dummy, v_lld, tagbase, I_SCLR, HANDLE, isu_tag, isu_tagf )
        endif
+
+       call COMM_wait ( interped_ref_DENS, 1, .false. )
 
        if ( ONLINE_NO_ROTATE ) then
           do j = 1, DAUGHTER_JA(HANDLE)
@@ -1748,39 +1885,72 @@ contains
           call COMM_wait ( interped_ref_VELX, 2, .false. )
           call COMM_wait ( interped_ref_VELY, 3, .false. )
        else ! rotate
+          ! rotation from latlon field to map-projected field
           do j = 1, DAUGHTER_JA(HANDLE)
           do i = 1, DAUGHTER_IA(HANDLE)
           do k = DATR_KS(HANDLE), DATR_KE(HANDLE)
-             interped_ref_VELX(k,i,j) =   u_lld(k,i,j) * rotc(i,j,cosin) + v_lld(k,i,j) * rotc(i,j,sine )
-             interped_ref_VELY(k,i,j) = - u_lld(k,i,j) * rotc(i,j,sine ) + v_lld(k,i,j) * rotc(i,j,cosin)
+             work1d(k,i,j) =   u_lld(k,i,j) * rotc(i,j,cosin) + v_lld(k,i,j) * rotc(i,j,sine )
+             work2d(k,i,j) = - u_lld(k,i,j) * rotc(i,j,sine ) + v_lld(k,i,j) * rotc(i,j,cosin)
           enddo
           enddo
           enddo
+
+          ! from scalar point to staggered point
+          do j = 1, DAUGHTER_JA(HANDLE)
+          do i = 1, DAUGHTER_IA(HANDLE)-1
+          do k = DATR_KS(HANDLE), DATR_KE(HANDLE)
+             interped_ref_VELX(k,i,j) = ( work1d(k,i+1,j) + work1d(k,i,j) ) * 0.5_RP
+          end do
+          end do
+          end do
+          do j = 1, DAUGHTER_JA(HANDLE)
+          do k = DATR_KS(HANDLE), DATR_KE(HANDLE)
+             interped_ref_VELX(k,DAUGHTER_IA(HANDLE),j) = work1d(k,DAUGHTER_IA(HANDLE),j)
+          enddo
+          enddo
+          call COMM_vars8( interped_ref_VELX, 2 )
+          do j = 1, DAUGHTER_JA(HANDLE)-1
+          do i = 1, DAUGHTER_IA(HANDLE)
+          do k = DATR_KS(HANDLE), DATR_KE(HANDLE)
+             interped_ref_VELY(k,i,j) = ( work2d(k,i,j+1) + work2d(k,i,j) ) * 0.5_RP
+          end do
+          end do
+          end do
+          do i = 1, DAUGHTER_IA(HANDLE)
+          do k = DATR_KS(HANDLE), DATR_KE(HANDLE)
+             interped_ref_VELY(k,i,DAUGHTER_JA(HANDLE)) = work2d(k,i,DAUGHTER_JA(HANDLE))
+          enddo
+          enddo
+          call COMM_vars8( interped_ref_VELY, 3 )
+          call COMM_wait ( interped_ref_VELX, 2, .false. )
+          call COMM_wait ( interped_ref_VELY, 3, .false. )
        end if
 
        tagbase = tagcomm + tag_rhot*order_tag_var
-       call NEST_COMM_intercomm_nestdown( dummy, work1, tagbase, I_SCLR, HANDLE, isu_tag, isu_tagf )
+       call NEST_COMM_intercomm_nestdown( dummy, work1d, tagbase, I_SCLR, HANDLE, isu_tag, isu_tagf )
        do j = 1, DAUGHTER_JA(HANDLE)
        do i = 1, DAUGHTER_IA(HANDLE)
        do k = DATR_KS(HANDLE), DATR_KE(HANDLE)
-          interped_ref_POTT(k,i,j) = work1(k,i,j) / interped_ref_DENS(k,i,j)
+          interped_ref_POTT(k,i,j) = work1d(k,i,j) / interped_ref_DENS(k,i,j)
        enddo
        enddo
        enddo
 
        do iq = 1, BND_QA
           tagbase = tagcomm + (tag_qx*10+iq)*order_tag_var
-          call NEST_COMM_intercomm_nestdown( dummy, work1, tagbase, I_SCLR, HANDLE, isu_tag, isu_tagf )
+          call NEST_COMM_intercomm_nestdown( dummy, work1d, tagbase, I_SCLR, HANDLE, isu_tag, isu_tagf )
           do j = 1, DAUGHTER_JA(HANDLE)
           do i = 1, DAUGHTER_IA(HANDLE)
           do k = DATR_KS(HANDLE), DATR_KE(HANDLE)
-             interped_ref_QTRC(k,i,j,iq) = work1(k,i,j)
+             interped_ref_QTRC(k,i,j,iq) = work1d(k,i,j)
           enddo
           enddo
           enddo
        enddo
 
-       call PROF_rapend('NESTCOM total child')
+       call PROF_rapend  ('NEST_unpack_C', 2)
+
+       call PROF_rapend  ('NEST_total_C', 2)
     else
        write(*,*) 'xxx internal error [nestdown: nest/grid]'
        call PRC_MPIstop
@@ -1797,7 +1967,7 @@ contains
     use scale_process, only: &
        PRC_MPIstop
     use scale_comm, only: &
-       COMM_world
+       COMM_barrier
     implicit none
 
     integer, intent(in) :: HANDLE    !< id number of nesting relation in this process target
@@ -1818,11 +1988,11 @@ contains
 
     if ( NEST_Filiation( INTERCOMM_ID(HANDLE) ) > 0 ) then
     !-------------------------------------------------------- parent [wait issue]
-       call PROF_rapstart('NESTCOM total parent')
+       call PROF_rapstart('NEST_total_P', 2)
        nwait_p = nwait_p + 1
        !if( IO_L ) write(IO_FID_LOG,'(1X,A,I5,A)') "*** NestIDC [P]: que wait ( ", nwait_p, " )"
 
-       call PROF_rapstart('NESTCOM wait parent')
+       call PROF_rapstart('NEST_wait_P', 2)
        call NEST_COMM_issuer_of_wait( HANDLE )
 
        if ( ONLINE_AGGRESSIVE_COMM ) then
@@ -1830,12 +2000,16 @@ contains
        else
           call MPI_BARRIER(INTERCOMM_DAUGHTER, ierr)
        endif
-       call PROF_rapend  ('NESTCOM wait parent')
 
-       call PROF_rapend('NESTCOM total parent')
+       ! tentative insert: evaluate node imbalance of parent due to the P-C comm.
+       ! call COMM_barrier
+
+       call PROF_rapend  ('NEST_wait_P', 2)
+
+       call PROF_rapend('NEST_total_P', 2)
     elseif ( NEST_Filiation( INTERCOMM_ID(HANDLE) ) < 0 ) then
     !-------------------------------------------------------- daughter [receive issue]
-       call PROF_rapstart('NESTCOM total child')
+       call PROF_rapstart('NEST_total_C', 2)
        nrecv = nrecv + 1
        if( IO_L ) write(IO_FID_LOG,'(1X,A,I5,A)') "*** NestIDC [C]: que recv ( ", nrecv, " )"
 
@@ -1878,7 +2052,7 @@ contains
 
        rq_tot_d = rq_ctl_d
 
-       call PROF_rapend('NESTCOM total child')
+       call PROF_rapend('NEST_total_C', 2)
     else
        write(*,*) 'xxx internal error [issue: nest/grid]'
        call PRC_MPIstop
@@ -1900,7 +2074,7 @@ contains
     integer, intent(in) :: HANDLE   !< id number of nesting relation in this process target
 
     integer :: ierr
-    integer :: istatus(MPI_STATUS_SIZE)
+    !integer :: istatus(MPI_STATUS_SIZE)
 
     integer :: rq
     logical :: flag
@@ -1916,7 +2090,7 @@ contains
        do rq = 1, rq_tot_d
           if ( ireq_d(rq) .ne. MPI_REQUEST_NULL ) then
              call MPI_CANCEL(ireq_d(rq), ierr)
-             call MPI_TEST_CANCELLED(istatus, flag, ierr)
+             !call MPI_TEST_CANCELLED(istatus, flag, ierr)
              !if ( .NOT. flag ) then
              !   write(IO_FID_LOG,*) 'XXX ERROR: receive actions do not cancelled, req = ', rq
              !endif
@@ -1948,6 +2122,8 @@ contains
        PRC_MPIstop
     use scale_comm, only: &
        COMM_datatype
+    use scale_interpolation_nest, only: &
+       INTRPNEST_interp_3d
     implicit none
 
     real(RP), intent(in)    :: pvar(:,:,:)        !< variable from parent domain (PARENT_KA,PARENT_IA,PARENT_JA / 1,1,1)
@@ -2001,17 +2177,16 @@ contains
 
     if ( NEST_Filiation( INTERCOMM_ID(HANDLE) ) > 0 ) then
     !--------------------------------------------------- parent
+
        rq = rq_ctl_p
 
        do yp = 1, NUM_YP
           rq = rq + 1
 
-          call PROF_rapstart('NESTCOM send parent')
           ! send data to multiple daughter processes
           target_rank = NEST_TILE_LIST_YP(yp)
           tag = tagbase  + yp
           call MPI_ISEND(pvar, ileng, COMM_datatype, target_rank, tag, INTERCOMM_DAUGHTER, ireq_p(rq), ierr)
-          call PROF_rapend('NESTCOM send parent')
 
           dvar(:,:,:) = -1.0_RP  ! input as a dummy value
        enddo
@@ -2020,6 +2195,7 @@ contains
 
     elseif ( NEST_Filiation( INTERCOMM_ID(HANDLE) ) < 0 ) then
     !--------------------------------------------------- daughter
+
        rq = rq_ctl_d
 
        do yp = 1, NEST_TILE_ALL ! YP Loop
@@ -2037,12 +2213,14 @@ contains
              isu_tag = isu_tag + 1
 
              if ( .not. logarithmic ) then
+!OCL XFILL
                 ! linear interpolation
                 do k = 1, PARENT_KA(HANDLE)
                    buffer_ref_3D(k,xs:xe,ys:ye) &
                    = recvbuf_3D(k,PRNT_IS(HANDLE):PRNT_IE(HANDLE),PRNT_JS(HANDLE):PRNT_JE(HANDLE),isu_tag)
                 enddo
              else
+!OCL XFILL
                 ! logarithmic weighted interpolation
                 do k = 1, PARENT_KA(HANDLE)
                    buffer_ref_3D(k,xs:xe,ys:ye) &
@@ -2051,7 +2229,7 @@ contains
              endif
           else
              isu_tagf = isu_tagf + 1
-
+!OCL XFILL
              do k = 0, PARENT_KA(HANDLE)
                 buffer_ref_3DF(k,xs:xe,ys:ye) &
                 = recvbuf_3DF(k,PRNT_IS(HANDLE):PRNT_IE(HANDLE),PRNT_JS(HANDLE):PRNT_JE(HANDLE),isu_tagf)
@@ -2068,75 +2246,37 @@ contains
        enddo ! YP Loop
        rq_ctl_d = rq
 
-       call PROF_rapstart('NESTCOM interp')
-       dvar(:,:,:) = 0.0_RP 
+!OCL XFILL
+       dvar(:,:,:) = 0.0_RP
 
        if ( no_zstag ) then
-          if ( .not. logarithmic ) then
-             ! linear interpolation
-             do j = 1, DAUGHTER_JA(HANDLE)
-             do i = 1, DAUGHTER_IA(HANDLE)
-             do k = DATR_KS(HANDLE), DATR_KE(HANDLE)
-                dvar(k,i,j) = buffer_ref_3D(kgrd(k,i,j,1,1,ig),igrd(i,j,1,ig),jgrd(i,j,1,ig)) &
-                            * hfact(i,j,1,ig) * vfact(k,i,j,1,1,ig)                           &
-                            + buffer_ref_3D(kgrd(k,i,j,2,1,ig),igrd(i,j,2,ig),jgrd(i,j,2,ig)) &
-                            * hfact(i,j,2,ig) * vfact(k,i,j,2,1,ig)                           &
-                            + buffer_ref_3D(kgrd(k,i,j,3,1,ig),igrd(i,j,3,ig),jgrd(i,j,3,ig)) &
-                            * hfact(i,j,3,ig) * vfact(k,i,j,3,1,ig)                           &
-                            + buffer_ref_3D(kgrd(k,i,j,1,2,ig),igrd(i,j,1,ig),jgrd(i,j,1,ig)) &
-                            * hfact(i,j,1,ig) * vfact(k,i,j,1,2,ig)                           &
-                            + buffer_ref_3D(kgrd(k,i,j,2,2,ig),igrd(i,j,2,ig),jgrd(i,j,2,ig)) &
-                            * hfact(i,j,2,ig) * vfact(k,i,j,2,2,ig)                           &
-                            + buffer_ref_3D(kgrd(k,i,j,3,2,ig),igrd(i,j,3,ig),jgrd(i,j,3,ig)) &
-                            * hfact(i,j,3,ig) * vfact(k,i,j,3,2,ig)
-             end do
-             end do
-             end do
-          else
-             ! logarithmic weighted interpolation
-             do j = 1, DAUGHTER_JA(HANDLE)
-             do i = 1, DAUGHTER_IA(HANDLE)
-             do k = DATR_KS(HANDLE), DATR_KE(HANDLE)
-                dvar(k,i,j) = exp( buffer_ref_3D(kgrd(k,i,j,1,1,ig),igrd(i,j,1,ig),jgrd(i,j,1,ig)) &
-                                 * hfact(i,j,1,ig) * vfact(k,i,j,1,1,ig)                           &
-                                 + buffer_ref_3D(kgrd(k,i,j,2,1,ig),igrd(i,j,2,ig),jgrd(i,j,2,ig)) &
-                                 * hfact(i,j,2,ig) * vfact(k,i,j,2,1,ig)                           &
-                                 + buffer_ref_3D(kgrd(k,i,j,3,1,ig),igrd(i,j,3,ig),jgrd(i,j,3,ig)) &
-                                 * hfact(i,j,3,ig) * vfact(k,i,j,3,1,ig)                           &
-                                 + buffer_ref_3D(kgrd(k,i,j,1,2,ig),igrd(i,j,1,ig),jgrd(i,j,1,ig)) &
-                                 * hfact(i,j,1,ig) * vfact(k,i,j,1,2,ig)                           &
-                                 + buffer_ref_3D(kgrd(k,i,j,2,2,ig),igrd(i,j,2,ig),jgrd(i,j,2,ig)) &
-                                 * hfact(i,j,2,ig) * vfact(k,i,j,2,2,ig)                           &
-                                 + buffer_ref_3D(kgrd(k,i,j,3,2,ig),igrd(i,j,3,ig),jgrd(i,j,3,ig)) &
-                                 * hfact(i,j,3,ig) * vfact(k,i,j,3,2,ig) )
-             end do
-             end do
-             end do
-          endif
+          call INTRPNEST_interp_3d( dvar,                 &
+                                    buffer_ref_3D,        &
+                                    hfact(:,:,:,ig),      &
+                                    vfact(:,:,:,:,:,ig),  &
+                                    kgrd(:,:,:,:,:,ig),   &
+                                    igrd(:,:,:,ig),       &
+                                    jgrd(:,:,:,ig),       &
+                                    DAUGHTER_IA(HANDLE),  &
+                                    DAUGHTER_JA(HANDLE),  &
+                                    DATR_KS(HANDLE),      &
+                                    DATR_KE(HANDLE),      &
+                                    logarithmic           )
        else
           ! linear interpolation (z-staggered)
-          do j = 1, DAUGHTER_JA(HANDLE)
-          do i = 1, DAUGHTER_IA(HANDLE)
-          do k = DATR_KS(HANDLE), DATR_KE(HANDLE)
-             dvar(k,i,j) = buffer_ref_3DF(kgrd(k,i,j,1,1,ig),igrd(i,j,1,ig),jgrd(i,j,1,ig)) &
-                         * hfact(i,j,1,ig) * vfact(k,i,j,1,1,ig)                            &
-                         + buffer_ref_3DF(kgrd(k,i,j,2,1,ig),igrd(i,j,2,ig),jgrd(i,j,2,ig)) &
-                         * hfact(i,j,2,ig) * vfact(k,i,j,2,1,ig)                            &
-                         + buffer_ref_3DF(kgrd(k,i,j,3,1,ig),igrd(i,j,3,ig),jgrd(i,j,3,ig)) &
-                         * hfact(i,j,3,ig) * vfact(k,i,j,3,1,ig)                            &
-                         + buffer_ref_3DF(kgrd(k,i,j,1,2,ig),igrd(i,j,1,ig),jgrd(i,j,1,ig)) &
-                         * hfact(i,j,1,ig) * vfact(k,i,j,1,2,ig)                            &
-                         + buffer_ref_3DF(kgrd(k,i,j,2,2,ig),igrd(i,j,2,ig),jgrd(i,j,2,ig)) &
-                         * hfact(i,j,2,ig) * vfact(k,i,j,2,2,ig)                            &
-                         + buffer_ref_3DF(kgrd(k,i,j,3,2,ig),igrd(i,j,3,ig),jgrd(i,j,3,ig)) &
-                         * hfact(i,j,3,ig) * vfact(k,i,j,3,2,ig)
-          end do
-          end do
-          end do
+          call INTRPNEST_interp_3d( dvar,                 &
+                                    buffer_ref_3DF,       &
+                                    hfact(:,:,:,ig),      &
+                                    vfact(:,:,:,:,:,ig),  &
+                                    kgrd(:,:,:,:,:,ig),   &
+                                    igrd(:,:,:,ig),       &
+                                    jgrd(:,:,:,ig),       &
+                                    DAUGHTER_IA(HANDLE),  &
+                                    DAUGHTER_JA(HANDLE),  &
+                                    DATR_KS(HANDLE),      &
+                                    DATR_KE(HANDLE),      &
+                                    logarithmic           )
        endif
-
-       call PROF_rapend('NESTCOM interp')
-
     else
     !---------------------------------------------------
        write(*,*) 'xxx internal error [nest/grid]'
@@ -2212,12 +2352,12 @@ contains
        ! rq_ctl_p = rq
     elseif ( NEST_Filiation( INTERCOMM_ID(HANDLE) ) < 0 ) then
     !--------------------------------------------------- daughter
+
        rq = rq_ctl_d
 
        do yp = 1, NEST_TILE_ALL ! YP Loop
           rq = rq + 1
 
-          call PROF_rapstart('NESTCOM recv child')
           target_rank = NEST_TILE_LIST_d(yp,PRC_myrank+1)
 
           tag = tagbase + call_order(yp)
@@ -2232,7 +2372,6 @@ contains
                              INTERCOMM_PARENT,          &
                              ireq_d(rq),                &
                              ierr                       )
-             call PROF_rapend('NESTCOM recv child')
           else
              isu_tagf = isu_tagf + 1
              recvbuf_3DF(:,:,:,isu_tagf) = 0.0_RP
@@ -2244,7 +2383,6 @@ contains
                              INTERCOMM_PARENT,            &
                              ireq_d(rq),                  &
                              ierr                         )
-             call PROF_rapend('NESTCOM recv child')
           endif
 
        enddo ! YP Loop
@@ -2257,6 +2395,7 @@ contains
        endif
 
        rq_ctl_d = rq
+
     else
     !---------------------------------------------------
        write(*,*) 'xxx internal error [receive: nest/grid]'
@@ -2279,6 +2418,7 @@ contains
 
     if ( NEST_Filiation( INTERCOMM_ID(HANDLE) ) > 0 ) then
     !--------------------------------------------------- parent
+
        call NEST_COMM_waitall( rq_tot_p, ireq_p )
 
     elseif ( NEST_Filiation( INTERCOMM_ID(HANDLE) ) < 0 ) then
@@ -2305,25 +2445,37 @@ contains
     integer, intent(in)    :: req_count
     integer, intent(inout) :: ireq(max_rq)
 
+    integer :: i
     integer :: ierr
     integer :: istatus(MPI_STATUS_SIZE,req_count)
+    integer :: req_count2
+    integer :: ireq2(max_rq)
 
-    logical    :: flag
-    integer(8) :: num
+!    logical    :: flag
+!    integer(8) :: num
     !---------------------------------------------------------------------------
-    num  = 0
-    flag = .false.
+!    num  = 0
+!    flag = .false.
 
-    do while ( .not. flag )
-       num = num + 1
-       call MPI_TESTALL( req_count, ireq, flag, istatus, ierr )
-
-       if ( num > ONLINE_WAIT_LIMIT ) then
-          if( IO_L ) write(IO_FID_LOG,'(1x,A)') '*** ERROR: over the limit of waiting time [NESTCOM]'
-          write(*,'(1x,A)') '*** ERROR: over the limit of waiting time [NESTCOM]'
-          call PRC_MPIstop
+    req_count2 = 0
+    do i=1, req_count
+       if (ireq(i) .ne. MPI_REQUEST_NULL) then
+          req_count2 = req_count2 + 1
+          ireq2(req_count2) = ireq(i)
        endif
     enddo
+    if ( req_count2 .ne. 0 ) call MPI_WAITALL( req_count2, ireq2, istatus, ierr )
+
+!    do while ( .not. flag )
+!       num = num + 1
+!       call MPI_TESTALL( req_count, ireq, flag, istatus, ierr )
+
+!       if ( num > ONLINE_WAIT_LIMIT ) then
+!          if( IO_L ) write(IO_FID_LOG,'(1x,A)') '*** ERROR: over the limit of waiting time [NESTCOM]'
+!          write(*,'(1x,A)') '*** ERROR: over the limit of waiting time [NESTCOM]'
+!          call PRC_MPIstop
+!       endif
+!    enddo
 
     return
   end subroutine NEST_COMM_waitall
@@ -2345,15 +2497,15 @@ contains
 
     if ( NEST_Filiation( INTERCOMM_ID(HANDLE) ) > 0 ) then
     !--------------------------------------------------- parent
-       call PROF_rapstart('NESTCOM test parent')
+       call PROF_rapstart('NEST_test_P', 2)
        if ( rq_ctl_p > 0 ) call MPI_TEST(ireq_p(1), flag, istatus, ierr)
-       call PROF_rapend('NESTCOM test parent')
+       call PROF_rapend('NEST_test_P', 2)
 
     elseif ( NEST_Filiation( INTERCOMM_ID(HANDLE) ) < 0 ) then
     !--------------------------------------------------- daughter
-       call PROF_rapstart('NESTCOM test child')
+       call PROF_rapstart('NEST_test_C', 2)
        if ( rq_ctl_d > 0 ) call MPI_TEST(ireq_d(1), flag, istatus, ierr)
-       call PROF_rapend('NESTCOM test child')
+       call PROF_rapend('NEST_test_C', 2)
     else
     !---------------------------------------------------
        write(*,*) 'xxx internal error [test: nest/grid]'
@@ -2392,220 +2544,5 @@ contains
 
     return
   end subroutine NEST_COMM_disconnect
-
-  !-----------------------------------------------------------------------------
-  ! WITHOUT TIME DIMENSION
-  subroutine NEST_latlonz_interporation_fact( &
-      hfact,      & ! (out)
-      vfact,      & ! (out)
-      kgrd,       & ! (out)
-      igrd,       & ! (out)
-      jgrd,       & ! (out)
-      myhgt,      & ! (in)
-      mylat,      & ! (in)
-      mylon,      & ! (in)
-      inhgt,      & ! (in)
-      inlat,      & ! (in)
-      inlon,      & ! (in)
-      nz,         & ! (in)
-      nx,         & ! (in)
-      ny,         & ! (in)
-      HANDLE,     & ! (in)
-      landgrid    ) ! (in)
-    use scale_process, only: &
-       PRC_MPIstop
-    implicit none
-
-    real(RP), intent(out) :: hfact(:,:,:)
-    real(RP), intent(out) :: vfact(:,:,:,:,:)
-    integer,  intent(out) :: kgrd (:,:,:,:,:)
-    integer,  intent(out) :: igrd (:,:,:)
-    integer,  intent(out) :: jgrd (:,:,:)
-
-    real(RP), intent(in)  :: myhgt(:,:,:)
-    real(RP), intent(in)  :: mylat(:,:)
-    real(RP), intent(in)  :: mylon(:,:)
-    real(RP), intent(in)  :: inhgt(:,:,:)
-    real(RP), intent(in)  :: inlat(:,:)
-    real(RP), intent(in)  :: inlon(:,:)
-    integer,  intent(in)  :: nz
-    integer,  intent(in)  :: nx
-    integer,  intent(in)  :: ny
-
-    integer,  intent(in)  :: HANDLE
-    logical,  intent(in), optional :: landgrid
-
-    real(RP) :: distance
-    real(RP) :: denom
-    real(RP) :: dist(itp_nh)
-    integer :: i, j, k, ii, jj, kk
-    integer :: idx
-    integer :: istart, iend, iinc, blk_i
-    integer :: jstart, jend, jinc, blk_j
-    integer :: kstart, kend
-
-    integer :: KS_in
-    integer :: ncopy
-
-    logical :: lndgrd
-    logical :: copy
-    !---------------------------------------------------------------------------
-
-    lndgrd = .false.
-    if ( present(landgrid) ) then
-    if ( landgrid ) then
-       lndgrd = .true.
-    endif
-    endif
-
-    hfact(:,:,:) = 0.0_RP
-    vfact(:,:,:,:,:) = 0.0_RP
-
-    do j = 1, DAUGHTER_JA(HANDLE)
-    do i = 1, DAUGHTER_IA(HANDLE)
-       ! nearest block search
-       iinc = max( (nx + 1) / interp_search_divnum, 1 )
-       jinc = max( (ny + 1) / interp_search_divnum, 1 )
-       dist(1) = large_number_one
-       jj = 1 + (jinc/2)
-       do while (jj <= ny)
-          ii = 1 + (iinc/2)
-          do while (ii <= nx)
-             distance = haversine( mylat(i,j),mylon(i,j),inlat(ii,jj),inlon(ii,jj) )
-
-             if( distance < dist(1) )then
-                dist(1) = distance
-                blk_i = ii
-                blk_j = jj
-             endif
-             ii = ii + iinc
-          enddo
-          jj = jj + jinc
-       enddo
-       istart = blk_i - (iinc/2) - 1
-       if( istart < 1 ) istart = 1
-       iend   = blk_i + (iinc/2) + 1
-       if( iend  > nx ) iend   = nx
-       jstart = blk_j - (jinc/2) - 1
-       if( jstart < 1 ) jstart = 1
-       jend   = blk_j + (jinc/2) + 1
-       if( jend  > ny ) jend   = ny
-
-       ! main search
-       dist(1) = large_number_three
-       dist(2) = large_number_two
-       dist(3) = large_number_one
-       igrd(i,j,:) = -1
-       jgrd(i,j,:) = -1
-       do jj = jstart, jend
-       do ii = istart, iend
-          distance = haversine( mylat(i,j),mylon(i,j),inlat(ii,jj),inlon(ii,jj) )
-          if ( distance <= dist(1) ) then
-             dist(3) = dist(2);     igrd(i,j,3) = igrd(i,j,2);  jgrd(i,j,3) = jgrd(i,j,2)
-             dist(2) = dist(1);     igrd(i,j,2) = igrd(i,j,1);  jgrd(i,j,2) = jgrd(i,j,1)
-             dist(1) = distance;    igrd(i,j,1) = ii;           jgrd(i,j,1) = jj
-          elseif ( dist(1) < distance .and. distance <= dist(2) ) then
-             dist(3) = dist(2);     igrd(i,j,3) = igrd(i,j,2);  jgrd(i,j,3) = jgrd(i,j,2)
-             dist(2) = distance;    igrd(i,j,2) = ii;           jgrd(i,j,2) = jj
-          elseif ( dist(2) < distance .and. distance <= dist(3) ) then
-             dist(3) = distance;    igrd(i,j,3) = ii;           jgrd(i,j,3) = jj
-          endif
-       enddo
-       enddo
-       if( dist(1)==0.0_RP )then
-          hfact(i,j,1) = 1.0_RP
-          hfact(i,j,2) = 0.0_RP
-          hfact(i,j,3) = 0.0_RP
-       else
-          denom = 1.0_RP / ( (1.0_RP/dist(1)) + (1.0_RP/dist(2)) + (1.0_RP/dist(3)) )
-          hfact(i,j,1) = ( 1.0_RP/dist(1) ) * denom
-          hfact(i,j,2) = ( 1.0_RP/dist(2) ) * denom
-          hfact(i,j,3) = ( 1.0_RP/dist(3) ) * denom
-       endif
-
-       !if ( lndgrd ) then
-       !   kstart = 1;     kend = LKMAX
-       !else
-          kstart = DATR_KS(HANDLE);  kend = DATR_KE(HANDLE)
-       !endif
-       KS_in = 1 + KHALO
-       do idx = 1, itp_nh
-          ii = igrd(i,j,idx)
-          jj = jgrd(i,j,idx)
-          ncopy = 0
-          do k = kstart, kend
-             dist(1) = large_number_two
-             dist(2) = large_number_one
-             kgrd(k,i,j,idx,:) = -1
-             copy = .false.
-
-             do kk = 1+KHALO, nz-KHALO
-                distance = abs( myhgt(k,i,j) - inhgt(kk,ii,jj) )
-                if ( distance <= dist(1) ) then
-                   dist(2) = dist(1);     kgrd(k,i,j,idx,2) = kgrd(k,i,j,idx,1)
-                   dist(1) = distance;    kgrd(k,i,j,idx,1) = kk
-                elseif ( dist(1) < distance .and. distance <= dist(2) ) then
-                   dist(2) = distance;    kgrd(k,i,j,idx,2) = kk
-                endif
-             enddo
-             if( inhgt(KS_in,ii,jj) > myhgt(k,i,j) ) then
-                copy = .true.
-             endif
-
-             if( copy ) then
-                kgrd(k,i,j,idx,1)  = KS_in
-                kgrd(k,i,j,idx,2)  = KS_in + 1 ! not used
-                vfact(k,i,j,idx,1) = 1.0_RP
-                vfact(k,i,j,idx,2) = 0.0_RP
-                ncopy = ncopy + 1
-             elseif( (.NOT. copy) .and. dist(1)==0.0_RP ) then
-                vfact(k,i,j,idx,1) = 1.0_RP
-                vfact(k,i,j,idx,2) = 0.0_RP
-             elseif( .NOT. copy ) then
-                denom = 1.0_RP / ( (1.0_RP/dist(1)) + (1.0_RP/dist(2)) )
-                vfact(k,i,j,idx,1) = ( 1.0_RP/dist(1) ) * denom
-                vfact(k,i,j,idx,2) = ( 1.0_RP/dist(2) ) * denom
-             else
-                write(*,*) 'xxx internal error [interporation: nest/grid]'
-                call PRC_MPIstop
-             endif
-          enddo
-          ! not to output message: tentative
-          !if( ncopy > 1 )then ! copy is allowed only one time.
-          !   write(*,*) 'xxx ERROR: times of copying is exceeded allowed times'
-          !   write(*,*) 'xxx domain number: ', ONLINE_DOMAIN_NUM
-          !   write(*,*) 'xxx copy times: ', ncopy
-          !   call PRC_MPIstop
-          !endif
-       enddo
-    enddo
-    enddo
-
-    return
-  end subroutine NEST_latlonz_interporation_fact
-
-  !-----------------------------------------------------------------------------
-  ! Haversine Formula (from R.W. Sinnott, "Virtues of the Haversine",
-  ! Sky and Telescope, vol. 68, no. 2, 1984, p. 159):
-  function haversine( &
-      la0,       &
-      lo0,       &
-      la,        &
-      lo )       &
-      result( d )
-    implicit none
-    real(RP), intent(in) :: la0, lo0, la, lo   ! la,la0: Lat, lo,lo0: Lon; [rad]
-    real(RP) :: d, dlon, dlat, work1, work2
-    !---------------------------------------------------------------------------
-
-    ! output unit : [m]
-    dlon = lo0 - lo
-    dlat = la0 - la
-    work1 = (sin(dlat/2.0_RP))**2.0_RP + &
-            cos(la0) * cos(la) * (sin(dlon/2.0_RP))**2.0_RP
-    work2 = 2.0_RP * asin(min( 1.0_RP, sqrt(work1) ))
-    d = r_in_m * work2
-
-  end function haversine
 
 end module scale_grid_nest

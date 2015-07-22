@@ -1,0 +1,398 @@
+<html>
+  <head>
+    <title>mod_atmos_vars module</title>
+  </head>
+ <body>
+  <h1>mod_atmos_vars module</h1>
+  <h2>NAMELIST</h2>
+    <ul>
+      <li>PARAM_ATMOS_VARS</li>
+      <table>
+        <tr><th>name</th><th>type</th><th>default value</th><th>comment</th></tr>
+        <tr>
+          <td>ATMOS_RESTART_IN_BASENAME</td>
+          <td>character(len=H_LONG)</td>
+          <td>''</td>
+          <td>basename of the restart file</td>
+        </tr>
+        <tr>
+          <td>ATMOS_RESTART_IN_ALLOWMISSINGQ</td>
+          <td>logical</td>
+          <td>.false.</td>
+          <td></td>
+        </tr>
+        <tr>
+          <td>ATMOS_RESTART_OUTPUT</td>
+          <td>logical</td>
+          <td>.false.</td>
+          <td>output restart file?</td>
+        </tr>
+        <tr>
+          <td>ATMOS_RESTART_OUT_BASENAME</td>
+          <td>character(len=H_LONG)</td>
+          <td>''</td>
+          <td>basename of the output file</td>
+        </tr>
+        <tr>
+          <td>ATMOS_RESTART_OUT_TITLE</td>
+          <td>character(len=H_MID)</td>
+          <td>'ATMOS restart'</td>
+          <td>title    of the output file</td>
+        </tr>
+        <tr>
+          <td>ATMOS_RESTART_OUT_DTYPE</td>
+          <td>character(len=H_MID)</td>
+          <td>'DEFAULT'</td>
+          <td>REAL4 or REAL8</td>
+        </tr>
+        <tr>
+          <td>ATMOS_RESTART_CHECK</td>
+          <td>logical</td>
+          <td>.false.</td>
+          <td>check value consistency?</td>
+        </tr>
+        <tr>
+          <td>ATMOS_RESTART_CHECK_BASENAME</td>
+          <td>character(len=H_LONG)</td>
+          <td>'restart_check'</td>
+          <td></td>
+        </tr>
+        <tr>
+          <td>ATMOS_RESTART_CHECK_CRITERION</td>
+          <td>real(RP)</td>
+          <td>1.E-6_RP</td>
+          <td></td>
+        </tr>
+        <tr>
+          <td>ATMOS_VARS_CHECKRANGE</td>
+          <td>logical</td>
+          <td>.false.</td>
+          <td></td>
+        </tr>
+      </table>
+    </ul>
+
+  <h2>History</h2>
+    <table>
+      <tr><th>name</th><th>description</th><th>unit</th><th>variable</th></tr>
+      <tr>
+        <td>AQ_NAME(iq)</td>
+        <td>AQ_DESC(iq)</td>
+        <td>AQ_UNIT(iq)</td>
+        <td>QTRC</td>
+      </tr>
+      <tr>
+        <td>CPTOT</td>
+        <td>Total heat capacity</td>
+        <td>J/kg/K</td>
+        <td>CPTOT</td>
+      </tr>
+      <tr>
+        <td>DENS_MEAN</td>
+        <td>horiz. mean of density</td>
+        <td>kg/m3</td>
+        <td>DENS_MEAN</td>
+      </tr>
+      <tr>
+        <td>DENS_PRIM</td>
+        <td>horiz. deviation of density</td>
+        <td>kg/m3</td>
+        <td>DENS_PRIM</td>
+      </tr>
+      <tr>
+        <td>DIV</td>
+        <td>divergence</td>
+        <td>1/s</td>
+        <td>DIV</td>
+      </tr>
+      <tr>
+        <td>ENGI</td>
+        <td>internal energy</td>
+        <td>J/m3</td>
+        <td>ENGI</td>
+      </tr>
+      <tr>
+        <td>ENGK</td>
+        <td>kinetic energy</td>
+        <td>J/m3</td>
+        <td>ENGK</td>
+      </tr>
+      <tr>
+        <td>ENGP</td>
+        <td>potential energy</td>
+        <td>J/m3</td>
+        <td>ENGP</td>
+      </tr>
+      <tr>
+        <td>ENGT</td>
+        <td>total energy</td>
+        <td>J/m3</td>
+        <td>ENGT</td>
+      </tr>
+      <tr>
+        <td>HDIV</td>
+        <td>horizontal divergence</td>
+        <td>1/s</td>
+        <td>HDIV</td>
+      </tr>
+      <tr>
+        <td>IWP</td>
+        <td>ice    water path</td>
+        <td>g/m2</td>
+        <td>IWP</td>
+      </tr>
+      <tr>
+        <td>LWP</td>
+        <td>liquid water path</td>
+        <td>g/m2</td>
+        <td>LWP</td>
+      </tr>
+      <tr>
+        <td>LWPT</td>
+        <td>liq. potential temp.</td>
+        <td>K</td>
+        <td>POTL</td>
+      </tr>
+      <tr>
+        <td>PRES</td>
+        <td>pressure</td>
+        <td>Pa</td>
+        <td>PRES</td>
+      </tr>
+      <tr>
+        <td>PT</td>
+        <td>potential temp.</td>
+        <td>K</td>
+        <td>POTT</td>
+      </tr>
+      <tr>
+        <td>PT_MEAN</td>
+        <td>horiz. mean of pot.</td>
+        <td>K</td>
+        <td>PT_MEAN</td>
+      </tr>
+      <tr>
+        <td>PT_PRIM</td>
+        <td>horiz. deviation of pot. temp.</td>
+        <td>K</td>
+        <td>POTT_PRIM</td>
+      </tr>
+      <tr>
+        <td>PT_W_PRIM</td>
+        <td>resolved scale heat flux</td>
+        <td>W/s</td>
+        <td>PT_W_PRIM</td>
+      </tr>
+      <tr>
+        <td>PW</td>
+        <td>precipitable water</td>
+        <td>g/m2</td>
+        <td>PW</td>
+      </tr>
+      <tr>
+        <td>QDRY</td>
+        <td>dry air</td>
+        <td>kg/kg</td>
+        <td>QDRY</td>
+      </tr>
+      <tr>
+        <td>QHYD</td>
+        <td>total hydrometeors</td>
+        <td>kg/kg</td>
+        <td>QHYD</td>
+      </tr>
+      <tr>
+        <td>QHYD_MEAN</td>
+        <td>horiz. mean of QHYD</td>
+        <td>1</td>
+        <td>QHYD_MEAN</td>
+      </tr>
+      <tr>
+        <td>QICE</td>
+        <td>total ice water</td>
+        <td>kg/kg</td>
+        <td>QICE</td>
+      </tr>
+      <tr>
+        <td>QICE_MEAN</td>
+        <td>horiz. mean of QICE</td>
+        <td>1</td>
+        <td>QICE_MEAN</td>
+      </tr>
+      <tr>
+        <td>QLIQ</td>
+        <td>total liquid water</td>
+        <td>kg/kg</td>
+        <td>QLIQ</td>
+      </tr>
+      <tr>
+        <td>QLIQ_MEAN</td>
+        <td>horiz. mean of QLIQ</td>
+        <td>1</td>
+        <td>QLIQ_MEAN</td>
+      </tr>
+      <tr>
+        <td>QTOT</td>
+        <td>total water</td>
+        <td>kg/kg</td>
+        <td>QTOT</td>
+      </tr>
+      <tr>
+        <td>QV_MEAN</td>
+        <td>horiz. mean of QV</td>
+        <td>1</td>
+        <td>QV_MEAN</td>
+      </tr>
+      <tr>
+        <td>RH</td>
+        <td>relative humidity(liq)</td>
+        <td>%</td>
+        <td>RHL</td>
+      </tr>
+      <tr>
+        <td>RHA</td>
+        <td>relative humidity(liq+ice)</td>
+        <td>%</td>
+        <td>RHA</td>
+      </tr>
+      <tr>
+        <td>RHI</td>
+        <td>relative humidity(ice)</td>
+        <td>%</td>
+        <td>RHI</td>
+      </tr>
+      <tr>
+        <td>RTOT</td>
+        <td>Total gas constant</td>
+        <td>J/kg/K</td>
+        <td>RTOT</td>
+      </tr>
+      <tr>
+        <td>T</td>
+        <td>temperature</td>
+        <td>K</td>
+        <td>TEMP</td>
+      </tr>
+      <tr>
+        <td>TKE_RS</td>
+        <td>resolved scale TKE</td>
+        <td>m2/s2</td>
+        <td>TKE_RS</td>
+      </tr>
+      <tr>
+        <td>T_MEAN</td>
+        <td>horiz. mean of t</td>
+        <td>K</td>
+        <td>T_MEAN</td>
+      </tr>
+      <tr>
+        <td>U</td>
+        <td>velocity u</td>
+        <td>m/s</td>
+        <td>U</td>
+      </tr>
+      <tr>
+        <td>U_MEAN</td>
+        <td>horiz. mean of u</td>
+        <td>m/s</td>
+        <td>U_MEAN</td>
+      </tr>
+      <tr>
+        <td>U_PRIM</td>
+        <td>horiz. deviation of u</td>
+        <td>m/s</td>
+        <td>U_PRIM</td>
+      </tr>
+      <tr>
+        <td>Uabs</td>
+        <td>absolute velocity</td>
+        <td>m/s</td>
+        <td>Uabs</td>
+      </tr>
+      <tr>
+        <td>V</td>
+        <td>velocity v</td>
+        <td>m/s</td>
+        <td>V</td>
+      </tr>
+      <tr>
+        <td>VAR_NAME(I_DENS)</td>
+        <td>VAR_DESC(I_DENS)</td>
+        <td>VAR_UNIT(I_DENS)</td>
+        <td>DENS</td>
+      </tr>
+      <tr>
+        <td>VAR_NAME(I_MOMX)</td>
+        <td>VAR_DESC(I_MOMX)</td>
+        <td>VAR_UNIT(I_MOMX)</td>
+        <td>MOMX</td>
+      </tr>
+      <tr>
+        <td>VAR_NAME(I_MOMY)</td>
+        <td>VAR_DESC(I_MOMY)</td>
+        <td>VAR_UNIT(I_MOMY)</td>
+        <td>MOMY</td>
+      </tr>
+      <tr>
+        <td>VAR_NAME(I_MOMZ)</td>
+        <td>VAR_DESC(I_MOMZ)</td>
+        <td>VAR_UNIT(I_MOMZ)</td>
+        <td>MOMZ</td>
+      </tr>
+      <tr>
+        <td>VAR_NAME(I_RHOT)</td>
+        <td>VAR_DESC(I_RHOT)</td>
+        <td>VAR_UNIT(I_RHOT)</td>
+        <td>RHOT</td>
+      </tr>
+      <tr>
+        <td>VOR</td>
+        <td>vertical vorticity</td>
+        <td>1/s</td>
+        <td>VOR</td>
+      </tr>
+      <tr>
+        <td>V_MEAN</td>
+        <td>horiz. mean of v</td>
+        <td>m/s</td>
+        <td>V_MEAN</td>
+      </tr>
+      <tr>
+        <td>V_PRIM</td>
+        <td>horiz. deviation of v</td>
+        <td>m/s</td>
+        <td>V_PRIM</td>
+      </tr>
+      <tr>
+        <td>W</td>
+        <td>velocity w</td>
+        <td>m/s</td>
+        <td>W</td>
+      </tr>
+      <tr>
+        <td>W_MEAN</td>
+        <td>horiz. mean of w</td>
+        <td>m/s</td>
+        <td>W_MEAN</td>
+      </tr>
+      <tr>
+        <td>W_PRIM</td>
+        <td>horiz. deviation of w</td>
+        <td>m/s</td>
+        <td>W_PRIM</td>
+      </tr>
+      <tr>
+        <td>W_PRIM2</td>
+        <td>variance of w</td>
+        <td>m2/s2</td>
+        <td>W_PRIM2</td>
+      </tr>
+      <tr>
+        <td>W_PRIM3</td>
+        <td>skewness of w</td>
+        <td>m3/s3</td>
+        <td>W_PRIM3</td>
+      </tr>
+    </table>
+  </body>
+</html>

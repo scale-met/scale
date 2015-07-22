@@ -133,7 +133,7 @@ module scale_atmos_phy_rd_mstrnx
                                                       !  25: N2O5
                                                       !  26: C2F6
                                                       !  27: HNO4
-  integer,  private, parameter :: MSTRN_nptype   = 11 !< # of particle species
+  integer,  private, save :: MSTRN_nptype   = 11 !< # of particle species
                                                       !  1: water cloud
                                                       !  2: ice cloud
                                                       !  3: dust-like
@@ -156,9 +156,10 @@ module scale_atmos_phy_rd_mstrnx
   integer,  private, parameter :: MSTRN_nfitPLK  =  5 !< # of fitting point for planck function
   integer,  private, parameter :: MSTRN_nplkord  =  3 !< # of orders for planck function
   integer,  private, parameter :: MSTRN_nmoment  =  6 !< absorption + # of moments for scattering phase function
-  integer,  private, parameter :: MSTRN_nradius  =  6 !< # of radius mode for hygroscopic parameter
+  integer,  private, save :: MSTRN_nradius  =  6 !< # of radius mode for hygroscopic parameter
   integer,  private, parameter :: MSTRN_ncloud   =  2 !< # of cloud types [ClearSky/Cloud]
 
+  logical,  private, save :: ATMOS_PHY_RD_MSTRN_ONLY_QCI = .false.
 
 
   real(RP), private, allocatable :: waveh   (:)         ! wavenumbers at band boundary [1/cm]
@@ -198,7 +199,7 @@ module scale_atmos_phy_rd_mstrnx
   integer,  private, parameter :: I_Cloud    = 2
 
   ! pre-calc
-  real(RP), private :: RRHO_std         ! 1 / rho(0C,1atm) * 100 [cm*m2/kg]
+  real(RP), private :: RHO_std          ! rho(0C,1atm) [kg/m3]
 
   real(RP), private :: M(2)             ! discrete quadrature mu for two-stream approximation
   real(RP), private :: W(2)             ! discrete quadrature w  for two-stream approximation
@@ -208,8 +209,8 @@ module scale_atmos_phy_rd_mstrnx
   ! for ocean albedo
   real(RP), private :: c_ocean_albedo(5,3)
   data c_ocean_albedo / -2.8108_RP   , -1.3651_RP,  2.9210E1_RP, -4.3907E1_RP,  1.8125E1_RP, &
-          6.5626E-1_RP, -8.7253_RP, -2.7749E1_RP,  4.9486E1_RP, -1.8345E1_RP, &
-         -6.5423E-1_RP,  9.9967_RP,  2.7769_RP  , -1.7620E1_RP,  7.0838_RP    /
+                         6.5626E-1_RP, -8.7253_RP, -2.7749E1_RP,  4.9486E1_RP, -1.8345E1_RP, &
+                        -6.5423E-1_RP,  9.9967_RP,  2.7769_RP  , -1.7620E1_RP,  7.0838_RP    /
 
   !-----------------------------------------------------------------------------
 contains
@@ -235,13 +236,18 @@ contains
     character(len=H_LONG) :: ATMOS_PHY_RD_MSTRN_AEROPARA_IN_FILENAME
     character(len=H_LONG) :: ATMOS_PHY_RD_MSTRN_HYGROPARA_IN_FILENAME
     integer               :: ATMOS_PHY_RD_MSTRN_nband
+    integer               :: ATMOS_PHY_RD_MSTRN_nptype
+    integer               :: ATMOS_PHY_RD_MSTRN_nradius
 
     namelist / PARAM_ATMOS_PHY_RD_MSTRN / &
        ATMOS_PHY_RD_MSTRN_KADD,                  &
        ATMOS_PHY_RD_MSTRN_GASPARA_IN_FILENAME,   &
        ATMOS_PHY_RD_MSTRN_AEROPARA_IN_FILENAME,  &
        ATMOS_PHY_RD_MSTRN_HYGROPARA_IN_FILENAME, &
-       ATMOS_PHY_RD_MSTRN_nband
+       ATMOS_PHY_RD_MSTRN_nband, &
+       ATMOS_PHY_RD_MSTRN_nptype, &
+       ATMOS_PHY_RD_MSTRN_nradius, &
+       ATMOS_PHY_RD_MSTRN_ONLY_QCI
 
     integer :: ngas, ncfc
     integer :: ihydro, iaero
@@ -263,6 +269,8 @@ contains
     ATMOS_PHY_RD_MSTRN_AEROPARA_IN_FILENAME  = MSTRN_AEROPARA_INPUTFILE
     ATMOS_PHY_RD_MSTRN_HYGROPARA_IN_FILENAME = MSTRN_HYGROPARA_INPUTFILE
     ATMOS_PHY_RD_MSTRN_nband                 = MSTRN_nband
+    ATMOS_PHY_RD_MSTRN_nptype                = MSTRN_nptype
+    ATMOS_PHY_RD_MSTRN_nradius               = MSTRN_nradius
 
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_ATMOS_PHY_RD_MSTRN,iostat=ierr)
@@ -279,6 +287,8 @@ contains
     MSTRN_AEROPARA_INPUTFILE  = ATMOS_PHY_RD_MSTRN_AEROPARA_IN_FILENAME
     MSTRN_HYGROPARA_INPUTFILE = ATMOS_PHY_RD_MSTRN_HYGROPARA_IN_FILENAME
     MSTRN_nband               = ATMOS_PHY_RD_MSTRN_nband
+    MSTRN_nptype              = ATMOS_PHY_RD_MSTRN_nptype
+    MSTRN_nradius             = ATMOS_PHY_RD_MSTRN_nradius
 
     !--- setup MSTRN parameter
     call RD_MSTRN_setup( ngas, & ! [OUT]
@@ -433,11 +443,13 @@ contains
 
     real(RP) :: zerosw
 
-    integer :: ihydro, iaero
+    integer :: ihydro, iaero, iq
     integer :: RD_k, k, i, j, v
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Radiation(mstrnX)'
+
+    call PROF_rapstart('RD_Profile', 3)
 
     call THERMODYN_temp_pres( temp(:,:,:),  & ! [OUT]
                               pres(:,:,:),  & ! [OUT]
@@ -449,6 +461,7 @@ contains
                                    TEMP(:,:,:), & ! [IN]
                                    DENS(:,:,:)  ) ! [IN]
 
+!OCL XFILL
     do j  = JS, JE
     do i  = IS, IE
     do k  = KS, KE
@@ -462,7 +475,8 @@ contains
 
     call MP_EffectiveRadius( MP_Re(:,:,:,:), & ! [OUT]
                              QTRC (:,:,:,:), & ! [IN]
-                             DENS (:,:,:)    ) ! [IN]
+                             DENS (:,:,:)  , & ! [IN]
+                             TEMP (:,:,:)    ) ! [IN]
 
     call AE_EffectiveRadius( AE_Re(:,:,:,:), & ! [OUT]
                              QTRC (:,:,:,:), & ! [IN]
@@ -470,6 +484,16 @@ contains
 
     call MP_Mixingratio( MP_Qe(:,:,:,:), & ! [OUT]
                          QTRC (:,:,:,:)  ) ! [IN]
+
+    if ( ATMOS_PHY_RD_MSTRN_ONLY_QCI ) then
+       do ihydro = 1, MP_QA
+          iq = I_MP2ALL(ihydro)
+          if ( iq .ne. I_QC .and. iq .ne. I_QI ) then
+!OCL XFILL
+             MP_Qe(:,:,:,ihydro) = 0.0_RP
+          end if
+       end do
+    end if
 
     ! marge basic profile and value in LES domain
 
@@ -496,6 +520,7 @@ contains
 
     ! marge basic profile and value in LES domain
 
+!OCL XFILL
     do j = JS, JE
     do i = IS, IE
        do RD_k = 1, RD_KADD
@@ -512,6 +537,7 @@ contains
     enddo
     enddo
 
+!OCL XFILL
     do j = JS, JE
     do i = IS, IE
        do RD_k = 1, RD_KADD
@@ -530,6 +556,7 @@ contains
     enddo
     enddo
 
+!OCL XFILL
     do v = 1,  MSTRN_ngas
     do j = JS, JE
     do i = IS, IE
@@ -550,6 +577,7 @@ contains
     enddo
     enddo
 
+!OCL XFILL
     do v = 1,  MSTRN_ncfc
     do j = JS, JE
     do i = IS, IE
@@ -574,6 +602,7 @@ contains
     enddo
     enddo
 
+!OCL XFILL
     do v = 1,  RD_naero
     do j = JS, JE
     do i = IS, IE
@@ -592,7 +621,7 @@ contains
        k = KS + RD_KMAX - RD_k ! reverse axis
 
        aerosol_conc_merge(RD_k,i,j,ihydro) = max( MP_Qe(k,i,j,ihydro), 0.0_RP ) &
-                                           / MP_DENS(ihydro) * DENS(k,i,j) / PPM ! [PPM]
+                                           / MP_DENS(ihydro) * RHO_std / PPM ! [PPM to standard air]
        aerosol_radi_merge(RD_k,i,j,ihydro) = MP_Re(k,i,j,ihydro)
     enddo
     enddo
@@ -607,12 +636,13 @@ contains
              k = KS + RD_KMAX - RD_k ! reverse axis
 
              aerosol_conc_merge(RD_k,i,j,MP_QA+iaero) = max( QTRC(k,i,j,I_AE2ALL(iaero)), 0.0_RP ) &
-                                                      / AE_DENS(iaero) * DENS(k,i,j) / PPM ! [PPM]
+                                                      / AE_DENS(iaero) * RHO_std / PPM ! [PPM to standard air]
              aerosol_radi_merge(RD_k,i,j,MP_QA+iaero) = AE_Re(k,i,j,iaero)
           enddo
           enddo
           enddo
        else
+!OCL XFILL
           do j = JS, JE
           do i = IS, IE
           do RD_k = RD_KADD+1, RD_KMAX
@@ -623,6 +653,9 @@ contains
           enddo
        endif
     enddo
+
+    call PROF_rapend  ('RD_Profile', 3)
+    call PROF_rapstart('RD_MSTRN_DTRN3', 3)
 
     ! calc radiative transfer
     call RD_MSTRN_DTRN3( RD_KMAX,                      & ! [IN]
@@ -652,6 +685,8 @@ contains
                          fact_urban        (:,:),      & ! [IN]
                          flux_rad_merge    (:,:,:,:,:) ) ! [OUT]
 
+    call PROF_rapend  ('RD_MSTRN_DTRN3', 3)
+
     ! return to grid coordinate of LES domain
     do j = JS, JE
     do i = IS, IE
@@ -666,6 +701,7 @@ contains
     enddo
     enddo
 
+!OCL XFILL
     do j = JS, JE
     do i = IS, IE
        flux_rad_top(i,j,I_LW,I_up) = flux_rad_merge(1,i,j,I_LW,I_up)
@@ -956,7 +992,7 @@ contains
     if( IO_L ) write(IO_FID_LOG,'(1x,A,F12.7)') '*** Baseline of total solar insolation : ', fsol_tot
 
     !---< constant parameter for main scheme >---
-    RRHO_std = Rdry * TEM00 / Pstd * 100.0_RP ! [cm*m2/kg]
+    RHO_std = Pstd / ( Rdry * TEM00 ) ! [kg/m3]
 
     M   (I_SW) = 1.0_RP / sqrt(3.0_RP)
     W   (I_SW) = 1.0_RP
@@ -983,7 +1019,7 @@ contains
   !-----------------------------------------------------------------------------
   !> DTRN v3.2
   subroutine RD_MSTRN_DTRN3( &
-       rd_kmax,         &
+       rd_kmax,      &
        ngas,         &
        ncfc,         &
        naero,        &
@@ -1108,6 +1144,7 @@ contains
     !$acc& create(bbar, bbarh, b_sfc) &
     !$acc& create(tau, omg, g, b, fsol_rgn, flux, flux_direct)
 
+!OCL XFILL
     !$acc kernels pcopy(dz_std) pcopyin(rhodz)
     !$acc loop gang
     do j = JS, JE
@@ -1115,12 +1152,13 @@ contains
     do i = IS, IE
     !$acc loop gang vector(32)
     do k = 1, rd_kmax
-       dz_std(k,i,j) = rhodz(k,i,j) * RRHO_std ! [cm]
+       dz_std(k,i,j) = rhodz(k,i,j) / RHO_std * 100.0_RP ! [cm]
     enddo
     enddo
     enddo
     !$acc end kernels
 
+!OCL XFILL
     !$acc kernels pcopy(logP, logT) pcopyin(pres, temp)
     !$acc loop gang
     do j = JS, JE
@@ -1236,6 +1274,7 @@ contains
        chmax = nch(iw)
 
        !---< interpolation of gas parameters (P-T fitting) >---
+!OCL XFILL
        do ich = 1, chmax
           !$acc kernels pcopy(tauGAS) async(0)
           !$acc loop gang
@@ -1333,7 +1372,7 @@ contains
              do icfc = 1, ncfc
                 valsum = valsum + 10.0_RP**acfc(icfc,iw) * cfc(k,i,j,icfc)
              enddo
-             valsum = valsum * dz_std(k,i,j) * PPM
+             valsum = valsum * PPM * dz_std(k,i,j)
 
              do ich = 1, chmax
              !$acc loop seq
@@ -1459,33 +1498,35 @@ contains
        !        Original scheme calculates albedo by using land-use index (and surface wetness).
        !        In the atmospheric model, albedo is calculated by surface model.
        do icloud = 1, MSTRN_ncloud
-          !$acc kernels pcopy(tau_column) pcopyin(tauPR) async(0)
-          !$acc loop gang
-          do j = JS, JE
-          !$acc loop gang private(valsum)
-          do i = IS, IE
-             valsum = 0.0_RP
-             !$acc loop gang vector(32) reduction(+:valsum)
-             do k = 1, rd_kmax
-                valsum = valsum + tauPR(k,i,j,icloud) ! layer-total(for ocean albedo)
-             enddo
-             tau_column(i,j,icloud) = valsum
-          enddo
-          enddo
-          !$acc end kernels
+!           !$acc kernels pcopy(tau_column) pcopyin(tauPR) async(0)
+!           !$acc loop gang
+!           do j = JS, JE
+!           !$acc loop gang private(valsum)
+!           do i = IS, IE
+!              valsum = 0.0_RP
+!              !$acc loop gang vector(32) reduction(+:valsum)
+!              do k = 1, rd_kmax
+!                 valsum = valsum + tauPR(k,i,j,icloud) ! layer-total(for ocean albedo)
+!              enddo
+!              tau_column(i,j,icloud) = valsum
+!           enddo
+!           enddo
+!           !$acc end kernels
 
-          call RD_albedo_ocean( cosSZA      (:,:),          & ! [IN]
-                                tau_column  (:,:,icloud),   & ! [IN]
-                                albedo_ocean(:,:,:,icloud) )  ! [OUT]
+!          call RD_albedo_ocean( cosSZA      (:,:),          & ! [IN]
+!                                tau_column  (:,:,icloud),   & ! [IN]
+!                                albedo_ocean(:,:,:,icloud) )  ! [OUT]
 
-          !$acc kernels pcopy(albedo_sfc) pcopyin(fact_ocean, fact_land, fact_urban, albedo_ocean, albedo_land) async(0)
+!          !$acc kernels pcopy(albedo_sfc) pcopyin(fact_ocean, fact_land, fact_urban, albedo_ocean, albedo_land) async(0)
+          !$acc kernels pcopy(albedo_sfc) pcopyin(albedo_land) async(0)
           !$acc loop gang vector(4)
           do j = JS, JE
           !$acc loop gang vector(32)
           do i = IS, IE
-             albedo_sfc(i,j,icloud) = fact_ocean(i,j) * albedo_ocean(i,j,irgn,icloud) &
-                                    + fact_land (i,j) * albedo_land (i,j,irgn) &
-                                    + fact_urban(i,j) * albedo_land (i,j,irgn) ! tentative
+             albedo_sfc(i,j,icloud) = albedo_land(i,j,irgn)
+!             albedo_sfc(i,j,icloud) = fact_ocean(i,j) * albedo_ocean(i,j,irgn,icloud) &
+!                                    + fact_land (i,j) * albedo_land (i,j,irgn) &
+!                                    + fact_urban(i,j) * albedo_land (i,j,irgn) ! tentative
           enddo
           enddo
           !$acc end kernels
@@ -1521,6 +1562,7 @@ contains
           !--- bn
           if ( irgn == I_SW ) then ! solar
 
+!OCL XFILL
              do icloud = 1, 2
                 !$acc kernels pcopy(b) async(0)
                 !$acc loop gang
@@ -1637,6 +1679,7 @@ contains
              enddo
              !$acc end kernels
 
+!OCL XFILL
              !$acc kernels pcopy(fsol_rgn) async(0)
              !$acc loop gang vector(4)
              do j = JS, JE
@@ -1657,7 +1700,8 @@ contains
           !if( IO_L ) write(IO_FID_LOG,*) "omg min", iw, ich, minval(omg(:,IS:IE,JS:JE,1)), minval(omg(:,IS:IE,JS:JE,2))
 
           ! two-stream transfer
-          call RD_MSTRN_two_stream( rd_kmax,                   & ! [IN]
+          call PROF_rapstart('RD_MSTRN_twst', 3)
+          call RD_MSTRN_two_stream( rd_kmax,                & ! [IN]
                                     iw, ich,                & ! [IN]
                                     cosSZA     (:,:),       & ! [IN]
                                     fsol_rgn   (:,:),       & ! [IN]
@@ -1671,6 +1715,7 @@ contains
                                     cldfrac    (:,:,:),     & ! [IN]
                                     flux       (:,:,:,:),   & ! [OUT]
                                     flux_direct(:,:,:)      ) ! [OUT]
+          call PROF_rapend  ('RD_MSTRN_twst', 3)
 
           !$acc kernels pcopy(rflux) pcopyin(flux, wgtch) async(0)
           !$acc loop gang
@@ -1825,7 +1870,6 @@ contains
 
 !OCL SERIAL
     do icloud = 1, 2
-
        !$acc kernels pcopy(tdir0, r0, t0, em_lw, ep_lw, em_sw, ep_sw) &
        !$acc& pcopyin(wmns, tau, g, omg, cossza, b, m, w) async(0)
 !OCL PARALLEL
@@ -2021,6 +2065,7 @@ contains
 
        if ( direction == I_SFC2TOA ) then ! adding: surface to TOA
 
+!OCL LOOP_NOFUSION,XFILL
           !$acc loop gang vector(4)
           do j = JS, JE
           !$acc loop gang vector(32)
@@ -2046,6 +2091,7 @@ contains
 
        else ! adding: TOA to surface
 
+!OCL LOOP_NOFUSION,XFILL
           !$acc loop gang vector(4)
           do j = JS, JE
           !$acc loop gang vector(32)

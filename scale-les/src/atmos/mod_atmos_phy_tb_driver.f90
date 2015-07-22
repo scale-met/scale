@@ -62,13 +62,15 @@ contains
     use scale_atmos_phy_tb, only: &
        ATMOS_PHY_TB_setup
     use mod_atmos_phy_tb_vars, only: &
+       TKE       => ATMOS_PHY_TB_TKE,    &
+       TKE_t_TB  => ATMOS_PHY_TB_TKE_t,  &
        MOMZ_t_TB => ATMOS_PHY_TB_MOMZ_t
     implicit none
 
 !    NAMELIST / PARAM_ATMOS_PHY_TB / &
 
-    integer :: i, j
-    integer :: ierr
+    integer :: k, i, j
+!    integer :: ierr
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -94,6 +96,14 @@ contains
     enddo
     enddo
 
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       TKE_t_TB(k,i,j) = 0.0_RP
+    enddo
+    enddo
+    enddo
+
     if ( ATMOS_sw_phy_tb ) then
 
        ! setup library component
@@ -101,9 +111,9 @@ contains
                                 CDZ, CDX, CDY, CZ  ) ! [IN]
 
        ! run once (only for the diagnostic value)
-       call PROF_rapstart('ATM Turbulence', 1)
+       call PROF_rapstart('ATM_Turbulence', 1)
        call ATMOS_PHY_TB_driver( update_flag = .true. )
-       call PROF_rapend  ('ATM Turbulence', 1)
+       call PROF_rapend  ('ATM_Turbulence', 1)
 
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** this component is never called.'
@@ -156,13 +166,15 @@ contains
        MOMY_t_TB => ATMOS_PHY_TB_MOMY_t, &
        RHOT_t_TB => ATMOS_PHY_TB_RHOT_t, &
        RHOQ_t_TB => ATMOS_PHY_TB_RHOQ_t, &
+       TKE_t_TB  => ATMOS_PHY_TB_TKE_t,  &
        TKE       => ATMOS_PHY_TB_TKE,    &
        NU        => ATMOS_PHY_TB_NU
     use mod_atmos_phy_sf_vars, only: &
        SFLX_MW => ATMOS_PHY_SF_SFLX_MW, &
        SFLX_MU => ATMOS_PHY_SF_SFLX_MU, &
        SFLX_MV => ATMOS_PHY_SF_SFLX_MV, &
-       SFLX_SH => ATMOS_PHY_SF_SFLX_SH
+       SFLX_SH => ATMOS_PHY_SF_SFLX_SH, &
+       SFLX_Q  => ATMOS_PHY_SF_SFLX_QTRC
     implicit none
 
     logical, intent(in) :: update_flag
@@ -174,28 +186,49 @@ contains
     real(RP) :: QFLX_RHOT(KA,IA,JA,3)
     real(RP) :: QFLX_RHOQ(KA,IA,JA,3,QA)
 
-    real(RP) :: Ri(KA,IA,JA)
-    real(RP) :: Pr(KA,IA,JA)
+    real(RP) :: Ri(KA,IA,JA) ! Richardson number
+    real(RP) :: Pr(KA,IA,JA) ! Prandtl number
+    real(RP) :: N2(KA,IA,JA) ! squared Brunt-Vaisala frequency
 
     integer :: JJS, JJE
     integer :: IIS, IIE
 
     real(RP) :: total ! dummy
 
-    integer :: n, k, i, j, iq
+    integer :: k, i, j, iq
     !---------------------------------------------------------------------------
 
     if ( update_flag ) then
+
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          TKE(k,i,j) = max( TKE(k,i,j) + TKE_t_TB(k,i,j) * dt_TB, 0.0_RP )
+       end do
+       end do
+       end do
+
+       do j = JS, JE
+       do i = IS, IE
+          TKE(1:KS-1,i,j) = TKE(KS,i,j)
+          TKE(KE+1:KA,i,j) = TKE(KE,i,j)
+       end do
+       end do
+
+       call COMM_vars8( TKE(:,:,:), 1 )
+       call COMM_wait ( TKE(:,:,:), 1 )
 
        call ATMOS_PHY_TB( QFLX_MOMZ, & ! [OUT]
                           QFLX_MOMX, & ! [OUT]
                           QFLX_MOMY, & ! [OUT]
                           QFLX_RHOT, & ! [OUT]
                           QFLX_RHOQ, & ! [OUT]
-                          TKE,       & ! [OUT]
+                          TKE,       & ! [INOUT]
+                          TKE_t_TB,  & ! [OUT]
                           NU,        & ! [OUT]
                           Ri,        & ! [OUT]
                           Pr,        & ! [OUT]
+                          N2,        & ! [OUT]
                           MOMZ,      & ! [IN]
                           MOMX,      & ! [IN]
                           MOMY,      & ! [IN]
@@ -206,6 +239,7 @@ contains
                           SFLX_MU,   & ! [IN]
                           SFLX_MV,   & ! [IN]
                           SFLX_SH,   & ! [IN]
+                          SFLX_Q(:,:,I_QV), & ! [IN]
                           GSQRT,     & ! [IN]
                           J13G,      & ! [IN]
                           J23G,      & ! [IN]
@@ -270,15 +304,11 @@ contains
           end do
        end do
 
-
-       call COMM_vars8( TKE(:,:,:), 1 )
-       call COMM_wait ( TKE(:,:,:), 1 )
-
-
        call HIST_in( TKE(:,:,:), 'TKE', 'turburent kinetic energy', 'm2/s2', nohalo=.true. )
        call HIST_in( NU (:,:,:), 'NU',  'eddy viscosity',           'm2/s' , nohalo=.true. )
        call HIST_in( Ri (:,:,:), 'Ri',  'Richardson number',        'NIL'  , nohalo=.true. )
        call HIST_in( Pr (:,:,:), 'Pr',  'Prantle number',           'NIL'  , nohalo=.true. )
+       call HIST_in( N2 (:,:,:), 'N2',  'squared Brunt-Vaisala frequency', '1/s2', nohalo=.true. )
 
        call HIST_in( MOMZ_t_TB(:,:,:), 'MOMZ_t_TB', 'MOMZ tendency (TB)', 'kg/m2/s2',  nohalo=.true. )
        call HIST_in( MOMX_t_TB(:,:,:), 'MOMX_t_TB', 'MOMX tendency (TB)', 'kg/m2/s2',  nohalo=.true. )

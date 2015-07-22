@@ -18,6 +18,7 @@ FFLAGS_DEBUG = -fpp -m64 -O0                        \
                -DDEBUG
 
 FC     = mpif90
+SFC    = ifort
 FFLAGS = $(FFLAGS_FAST)
 #FFLAGS = $(FFLAGS_DEBUG)
 

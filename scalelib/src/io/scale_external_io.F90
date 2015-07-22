@@ -65,6 +65,12 @@ module scale_external_io
   !
   !++ Public parameters & variables
   !
+  integer, public, parameter :: iSCALE  = 1  ! use gtool, coz it's not external
+  integer, public, parameter :: iWRFARW = 2
+  integer, public, parameter :: iNICAM  = 3
+  integer, public, parameter :: iGrADS  = 4
+
+
   !-----------------------------------------------------------------------------
   !
   !++ Private procedure
@@ -87,12 +93,6 @@ module scale_external_io
   !
   !++ Private parameters & variables
   !
-  integer, private, parameter :: iSCALE  = 1  ! use gtool, coz it's not external
-  integer, private, parameter :: iWRFARW = 2
-  integer, private, parameter :: iNICAM  = 3
-  integer, private, parameter :: iJMAMSM = 4
-
-
   !-----------------------------------------------------------------------------
 contains
 
@@ -685,12 +685,16 @@ contains
     ! retrieve dimension size in data original order
     call ExternalTakeDimension( dims(:),ncid,mdlid )
     nx = dims(1)
-    if ( present(xstag) .and. xstag ) then
+    if ( present(xstag) ) then
+    if ( xstag ) then
        nx = dims(4)
     endif
+    endif
     ny = dims(2)
-    if ( present(ystag) .and. ystag ) then
+    if ( present(ystag) ) then
+    if ( ystag ) then
        ny = dims(5)
+    endif
     endif
     allocate( var_org(nx,ny,tcount) )
 
@@ -774,12 +778,16 @@ contains
     ! retrieve dimension size in data original order
     call ExternalTakeDimension( dims(:),ncid,mdlid )
     nx = dims(1)
-    if ( present(xstag) .and. xstag ) then
+    if ( present(xstag) ) then
+    if ( xstag ) then
        nx = dims(4)
     endif
+    endif
     ny = dims(2)
-    if ( present(ystag) .and. ystag ) then
+    if ( present(ystag) ) then
+    if ( ystag ) then
        ny = dims(5)
+    endif
     endif
     allocate( var_org(nx,ny,tcount) )
 
@@ -870,19 +878,27 @@ contains
     ! retrieve dimension size in data original order
     call ExternalTakeDimension( dims(:),ncid,mdlid )
     nx = dims(1)
-    if ( present(xstag) .and. xstag ) then
+    if ( present(xstag) ) then
+    if ( xstag ) then
        nx = dims(4)
     endif
+    endif
     ny = dims(2)
-    if ( present(ystag) .and. ystag ) then
+    if ( present(ystag) ) then
+    if ( ystag ) then
        ny = dims(5)
     endif
+    endif
     nz = dims(3)
-    if ( present(zstag) .and. zstag ) then
+    if ( present(zstag) ) then
+    if ( zstag ) then
        nz = dims(6)
     endif
-    if ( present(landgrid) .and. landgrid ) then
+    endif
+    if ( present(landgrid) ) then
+    if ( landgrid ) then
        nz = dims(7)
+    endif
     endif
     allocate( var_org(nx,ny,nz,tcount) )
 
@@ -970,19 +986,27 @@ contains
     ! retrieve dimension size in data original order
     call ExternalTakeDimension( dims(:),ncid,mdlid )
     nx = dims(1)
-    if ( present(xstag) .and. xstag ) then
+    if ( present(xstag) ) then
+    if ( xstag ) then
        nx = dims(4)
     endif
+    endif
     ny = dims(2)
-    if ( present(ystag) .and. ystag ) then
+    if ( present(ystag) ) then
+    if ( ystag ) then
        ny = dims(5)
     endif
+    endif
     nz = dims(3)
-    if ( present(zstag) .and. zstag ) then
+    if ( present(zstag) ) then
+    if ( zstag ) then
        nz = dims(6)
     endif
-    if ( present(landgrid) .and. landgrid ) then
+    endif
+    if ( present(landgrid) ) then
+    if ( landgrid ) then
        nz = dims(7)
+    endif
     endif
     allocate( var_org(nx,ny,nz,tcount) )
 
@@ -1071,12 +1095,16 @@ contains
     ! retrieve dimension size in data original order
     call ExternalTakeDimension( dims(:),ncid,mdlid )
     nx = dims(1)
-    if ( present(xstag) .and. xstag ) then
+    if ( present(xstag) ) then
+    if ( xstag ) then
        nx = dims(4)
     endif
+    endif
     ny = dims(2)
-    if ( present(ystag) .and. ystag ) then
+    if ( present(ystag) ) then
+    if ( ystag ) then
        ny = dims(5)
+    endif
     endif
     allocate( var_org(nx,ny,tcount) )
     allocate( short  (nx,ny,tcount) )
@@ -1176,12 +1204,16 @@ contains
     ! retrieve dimension size in data original order
     call ExternalTakeDimension( dims(:),ncid,mdlid )
     nx = dims(1)
-    if ( present(xstag) .and. xstag ) then
+    if ( present(xstag) ) then
+    if ( xstag ) then
        nx = dims(4)
     endif
+    endif
     ny = dims(2)
-    if ( present(ystag) .and. ystag ) then
+    if ( present(ystag) ) then
+    if ( ystag ) then
        ny = dims(5)
+    endif
     endif
     allocate( var_org(nx,ny,tcount) )
     allocate( short  (nx,ny,tcount) )
@@ -1285,19 +1317,27 @@ contains
     ! retrieve dimension size in data original order
     call ExternalTakeDimension( dims(:),ncid,mdlid )
     nx = dims(1)
-    if ( present(xstag) .and. xstag ) then
+    if ( present(xstag) ) then
+    if ( xstag ) then
        nx = dims(4)
     endif
+    endif
     ny = dims(2)
-    if ( present(ystag) .and. ystag ) then
+    if ( present(ystag) ) then
+    if ( ystag ) then
        ny = dims(5)
     endif
+    endif
     nz = dims(3)
-    if ( present(zstag) .and. zstag ) then
+    if ( present(zstag) ) then
+    if ( zstag ) then
        nz = dims(6)
     endif
-    if ( present(landgrid) .and. landgrid ) then
+    endif
+    if ( present(landgrid) ) then
+    if ( landgrid ) then
        nz = dims(7)
+    endif
     endif
     allocate( var_org(nx,ny,nz,tcount) )
     allocate( short  (nx,ny,nz,tcount) )
@@ -1401,19 +1441,27 @@ contains
     ! retrieve dimension size in data original order
     call ExternalTakeDimension( dims(:),ncid,mdlid )
     nx = dims(1)
-    if ( present(xstag) .and. xstag ) then
+    if ( present(xstag) ) then
+    if ( xstag ) then
        nx = dims(4)
     endif
+    endif
     ny = dims(2)
-    if ( present(ystag) .and. ystag ) then
+    if ( present(ystag) ) then
+    if ( ystag ) then
        ny = dims(5)
     endif
+    endif
     nz = dims(3)
-    if ( present(zstag) .and. zstag ) then
+    if ( present(zstag) ) then
+    if ( zstag ) then
        nz = dims(6)
     endif
-    if ( present(landgrid) .and. landgrid ) then
+    endif
+    if ( present(landgrid) ) then
+    if ( landgrid ) then
        nz = dims(7)
+    endif
     endif
     allocate( var_org(nx,ny,nz,tcount) )
     allocate( short  (nx,ny,nz,tcount) )
@@ -1487,7 +1535,7 @@ contains
        else
           call FileMakeFname(fname,trim(basename),'anl.pe',myrank,6)
        endif
-    !elseif( mdlid == iJMAMSM )then      !TYPE: JMA-MSM
+    !elseif( mdlid == iGrADS )then      !TYPE: GrADS
     !   if ( single ) then
     !      fname = trim(basename)//'.anl'
     !   else

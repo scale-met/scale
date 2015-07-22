@@ -62,7 +62,7 @@ module scale_atmos_hydrostatic
   end interface ATMOS_HYDROSTATIC_buildrho
 
   interface ATMOS_HYDROSTATIC_buildrho_real
-     module procedure ATMOS_HYDROSTATIC_buildrho_1D ! buildrho_real_1D is completely equal to buildrho_1D
+!     module procedure ATMOS_HYDROSTATIC_buildrho_1D ! buildrho_real_1D is completely equal to buildrho_1D
      module procedure ATMOS_HYDROSTATIC_buildrho_real_3D
   end interface ATMOS_HYDROSTATIC_buildrho_real
 
@@ -108,6 +108,7 @@ module scale_atmos_hydrostatic
   integer,  private, parameter :: itelim = 100 !< itelation number limit
   real(RP), private              :: criteria                            !< convergence judgement criteria
   logical,  private              :: HYDROSTATIC_uselapserate  = .false. !< use lapse rate?
+  integer,  private              :: HYDROSTATIC_buildrho_real_kref = 1
 
 
   real(RP), private :: CV_qv
@@ -125,7 +126,8 @@ contains
     implicit none
 
     NAMELIST / PARAM_ATMOS_HYDROSTATIC / &
-       HYDROSTATIC_uselapserate
+       HYDROSTATIC_uselapserate, &
+       HYDROSTATIC_buildrho_real_kref
 
     integer :: ierr
     !---------------------------------------------------------------------------
@@ -445,6 +447,9 @@ contains
                                               KE+1                ) ! [IN]
 
     ! density at TOA
+    dens(   1:KS-1,:,:) = 0.D0 ! fill dummy
+    dens(KE+2:KA  ,:,:) = 0.D0 ! fill dummy
+
     call COMM_horizontal_mean( dens_1D(:), dens(:,:,:) )
     do j = JSB, JEB
     do i = ISB, IEB
@@ -480,53 +485,35 @@ contains
   !-----------------------------------------------------------------------------
   !> Build up density from surface (3D), not to reverse from TOA
   subroutine ATMOS_HYDROSTATIC_buildrho_real_3D( &
-       dens,     &
-       temp,     &
-       pres,     &
-       pott,     &
-       qv,       &
-       qc,       &
-       temp_sfc, &
-       pres_sfc, &
-       pott_sfc, &
-       qv_sfc,   &
-       qc_sfc    )
+       dens, &
+       temp, &
+       pres, &
+       pott, &
+       qv,   &
+       qc    )
     use scale_process, only: &
        PRC_MPIstop
-    use scale_comm, only: &
-       COMM_horizontal_mean
     implicit none
 
     real(RP), intent(out) :: dens(KA,IA,JA) !< density               [kg/m3]
     real(RP), intent(out) :: temp(KA,IA,JA) !< temperature           [K]
-    real(RP), intent(out) :: pres(KA,IA,JA) !< pressure              [Pa]
+    real(RP), intent(inout) :: pres(KA,IA,JA) !< pressure              [Pa]
     real(RP), intent(in)  :: pott(KA,IA,JA) !< potential temperature [K]
     real(RP), intent(in)  :: qv  (KA,IA,JA) !< water vapor           [kg/kg]
     real(RP), intent(in)  :: qc  (KA,IA,JA) !< liquid water          [kg/kg]
 
-    real(RP), intent(out) :: temp_sfc(1,IA,JA) !< surface temperature           [K]
-    real(RP), intent(in)  :: pres_sfc(1,IA,JA) !< surface pressure              [Pa]
-    real(RP), intent(in)  :: pott_sfc(1,IA,JA) !< surface potential temperature [K]
-    real(RP), intent(in)  :: qv_sfc  (1,IA,JA) !< surface water vapor           [kg/kg]
-    real(RP), intent(in)  :: qc_sfc  (1,IA,JA) !< surface liquid water          [kg/kg]
-
     real(RP) :: dz(KA,IA,JA)
 
-    real(RP) :: dens_sfc  (1,IA,JA)
     real(RP) :: pott_toa  (IA,JA) !< surface potential temperature [K]
     real(RP) :: qv_toa    (IA,JA) !< surface water vapor           [kg/kg]
     real(RP) :: qc_toa    (IA,JA) !< surface liquid water          [kg/kg]
     real(RP) :: dens_1D   (KA)
 
-    real(RP) :: Rtot_sfc  (IA,JA)
-    real(RP) :: CVtot_sfc (IA,JA)
-    real(RP) :: CPovCV_sfc(IA,JA)
-    real(RP) :: Rtot      (IA,JA)
-    real(RP) :: CVtot     (IA,JA)
-    real(RP) :: CPovCV    (IA,JA)
+    real(RP) :: Rtot
+    real(RP) :: CVtot
+    real(RP) :: CVovCP
 
-    real(RP) :: CVovCP_sfc, CPovR, CVovCP
-
+    integer  :: kref
     integer  :: k, i, j
     !---------------------------------------------------------------------------
 
@@ -550,68 +537,20 @@ contains
     enddo
     enddo
 
-    ! density at surface
+    kref = HYDROSTATIC_buildrho_real_kref + KS - 1
+
+    ! calc density at reference level
     do j = JSB, JEB
     do i = ISB, IEB
-       Rtot_sfc  (i,j) = Rdry  * ( 1.0_RP - qv_sfc(1,i,j) - qc_sfc(1,i,j) ) &
-                       + Rvap  * qv_sfc(1,i,j)
-       CVtot_sfc (i,j) = CVdry * ( 1.0_RP - qv_sfc(1,i,j) - qc_sfc(1,i,j) ) &
-                       + CV_qv * qv_sfc(1,i,j)                              &
-                       + CV_qc * qc_sfc(1,i,j)
-       CPovCV_sfc(i,j) = ( CVtot_sfc(i,j) + Rtot_sfc(i,j) ) / CVtot_sfc(i,j)
+       Rtot = Rdry  * ( 1.0_RP - qv(kref,i,j) - qc(kref,i,j) ) &
+            + Rvap  * qv(kref,i,j)
+       CVtot = CVdry * ( 1.0_RP - qv(kref,i,j) - qc(kref,i,j) ) &
+             + CV_qv * qv(kref,i,j)                           &
+             + CV_qc * qc(kref,i,j)
+       CVovCP = CVtot / ( CVtot + Rtot )
+       dens(kref,i,j) = P00 / ( Rtot * pott(kref,i,j) ) * ( pres(kref,i,j)/P00 )**CVovCP
     enddo
     enddo
-
-    do j = JSB, JEB
-    do i = ISB, IEB
-       Rtot  (i,j) = Rdry  * ( 1.0_RP - qv(KS,i,j) - qc(KS,i,j) ) &
-                   + Rvap  * qv(KS,i,j)
-       CVtot (i,j) = CVdry * ( 1.0_RP - qv(KS,i,j) - qc(KS,i,j) ) &
-                   + CV_qv * qv(KS,i,j)                           &
-                   + CV_qc * qc(KS,i,j)
-       CPovCV(i,j) = ( CVtot(i,j) + Rtot(i,j) ) / CVtot(i,j)
-    enddo
-    enddo
-
-    ! density at surface
-    do j = JSB, JEB
-    do i = ISB, IEB
-       CVovCP_sfc      = 1.0_RP / CPovCV_sfc(i,j)
-       dens_sfc(1,i,j) = P00 / Rtot_sfc(i,j) / pott_sfc(1,i,j) * ( pres_sfc(1,i,j)/P00 )**CVovCP_sfc
-       temp_sfc(1,i,j) = pres_sfc(1,i,j) / ( dens_sfc(1,i,j) * Rtot_sfc(i,j) )
-    enddo
-    enddo
-
-    ! make density at lowermost cell center
-    if ( HYDROSTATIC_uselapserate ) then
-
-       do j = JSB, JEB
-       do i = ISB, IEB
-          CPovR  = ( CVtot(i,j) + Rtot(i,j) ) / Rtot(i,j)
-          CVovCP = 1.0_RP / CPovCV(i,j)
-
-          temp(KS,i,j) = pott_sfc(1,i,j) - LAPSdry * ( REAL_CZ(KS,i,j) - REAL_FZ(KS-1,i,j) ) ! use dry lapse rate
-          pres(KS,i,j) = P00 * ( temp(KS,i,j)/pott(KS,i,j) )**CPovR
-          dens(KS,i,j) = P00 / Rtot(i,j) / pott(KS,i,j) * ( pres(KS,i,j)/P00 )**CVovCP
-       enddo
-       enddo
-
-    else ! use itelation
-
-       call ATMOS_HYDROSTATIC_buildrho_atmos_2D( dens    (KS,:,:), & ! [OUT]
-                                                 temp    (KS,:,:), & ! [OUT]->not used
-                                                 pres    (KS,:,:), & ! [OUT]->not used
-                                                 pott    (KS,:,:), & ! [IN]
-                                                 qv      (KS,:,:), & ! [IN]
-                                                 qc      (KS,:,:), & ! [IN]
-                                                 dens_sfc(1,:,:),  & ! [IN]
-                                                 pott_sfc(1,:,:),  & ! [IN]
-                                                 qv_sfc  (1,:,:),  & ! [IN]
-                                                 qc_sfc  (1,:,:),  & ! [IN]
-                                                 dz      (KS,:,:), & ! [IN]
-                                                 KS                ) ! [IN]
-
-    endif
 
     !--- from lowermost atmosphere to top of atmosphere
     call ATMOS_HYDROSTATIC_buildrho_atmos_3D( dens(:,:,:), & ! [INOUT]
@@ -620,7 +559,16 @@ contains
                                               pott(:,:,:), & ! [IN]
                                               qv  (:,:,:), & ! [IN]
                                               qc  (:,:,:), & ! [IN]
-                                              dz  (:,:,:)  ) ! [IN]
+                                              dz  (:,:,:), & ! [IN]
+                                              kref         ) ! [IN]
+    call ATMOS_HYDROSTATIC_buildrho_atmos_rev_3D( dens(:,:,:), & ! [INOUT]
+                                                  temp(:,:,:), & ! [OUT]
+                                                  pres(:,:,:), & ! [OUT]
+                                                  pott(:,:,:), & ! [IN]
+                                                  qv  (:,:,:), & ! [IN]
+                                                  qc  (:,:,:), & ! [IN]
+                                                  dz  (:,:,:), & ! [IN]
+                                                  kref         ) ! [IN]
 
     call ATMOS_HYDROSTATIC_buildrho_atmos_2D( dens    (KE+1,:,:), & ! [OUT]
                                               temp    (KE+1,:,:), & ! [OUT]->not used
@@ -634,6 +582,10 @@ contains
                                               qc      (KE  ,:,:), & ! [IN]
                                               dz      (KE+1,:,:), & ! [IN]
                                               KE+1                ) ! [IN]
+
+    ! density at TOA
+    dens(   1:KS-1,:,:) = 0.D0 ! fill dummy
+    dens(KE+2:KA  ,:,:) = 0.D0 ! fill dummy
 
     return
   end subroutine ATMOS_HYDROSTATIC_buildrho_real_3D
@@ -935,7 +887,8 @@ contains
        pott, &
        qv,   &
        qc,   &
-       dz    )
+       dz,   &
+       kref_in )
     use scale_process, only: &
        PRC_MPIstop
     implicit none
@@ -947,6 +900,7 @@ contains
     real(RP), intent(in)    :: qv  (KA,IA,JA) !< water vapor           [kg/kg]
     real(RP), intent(in)    :: qc  (KA,IA,JA) !< liquid water          [kg/kg]
     real(RP), intent(in)    :: dz  (KA,IA,JA) !< distance between the layer (center) [m]
+    integer, intent(in), optional :: kref_in
 
     real(RP) :: Rtot  (KA,IA,JA)
     real(RP) :: CVtot (KA,IA,JA)
@@ -957,12 +911,19 @@ contains
     integer  :: ite
     logical  :: converged
 
+    integer  :: kref
     integer  :: k, i, j
     !---------------------------------------------------------------------------
 
+    if ( present(kref_in) ) then
+       kref = kref_in
+    else
+       kref = KS
+    end if
+
     do j = JSB, JEB
     do i = ISB, IEB
-    do k = KS, KE
+    do k = kref, KE
        Rtot  (k,i,j) = Rdry  * ( 1.0_RP - qv(k,i,j) - qc(k,i,j) ) &
                      + Rvap  * qv(k,i,j)
        CVtot (k,i,j) = CVdry * ( 1.0_RP - qv(k,i,j) - qc(k,i,j) ) &
@@ -975,7 +936,7 @@ contains
 
     do j = JSB, JEB
     do i = ISB, IEB
-    do k = KS+1, KE
+    do k = kref+1, KE
        RovCV = Rtot(k,i,j) / CVtot(k,i,j)
 
        dens_s      = 0.0_RP
@@ -1014,7 +975,7 @@ contains
 
     do j = JSB, JEB
     do i = ISB, IEB
-    do k = KS, KE
+    do k = kref, KE
        pres(k,i,j) = P00 * ( dens(k,i,j) * Rtot(k,i,j) * pott(k,i,j) / P00 )**CPovCV(k,i,j)
        temp(k,i,j) = pres(k,i,j) / ( dens(k,i,j) * Rtot(k,i,j) )
     enddo
@@ -1142,7 +1103,8 @@ contains
        pott, &
        qv,   &
        qc,   &
-       dz    )
+       dz,   &
+       kref_in )
     use scale_process, only: &
        PRC_MPIstop
     implicit none
@@ -1154,6 +1116,7 @@ contains
     real(RP), intent(in)    :: qv  (KA,IA,JA) !< water vapor           [kg/kg]
     real(RP), intent(in)    :: qc  (KA,IA,JA) !< liquid water          [kg/kg]
     real(RP), intent(in)    :: dz  (KA,IA,JA) !< distance between the layer (center) [m]
+    integer, intent(in), optional :: kref_in
 
     real(RP) :: Rtot  (KA,IA,JA)
     real(RP) :: CVtot (KA,IA,JA)
@@ -1164,12 +1127,19 @@ contains
     integer  :: ite
     logical  :: converged
 
+    integer  :: kref
     integer  :: k, i, j
     !---------------------------------------------------------------------------
 
+    if ( present(kref_in) ) then
+       kref = kref_in
+    else
+       kref = KE
+    end if
+
     do j = JSB, JEB
     do i = ISB, IEB
-    do k = KS, KE
+    do k = KS, kref
        Rtot  (k,i,j) = Rdry  * ( 1.0_RP - qv(k,i,j) - qc(k,i,j) ) &
                      + Rvap  * qv(k,i,j)
        CVtot (k,i,j) = CVdry * ( 1.0_RP - qv(k,i,j) - qc(k,i,j) ) &
@@ -1182,7 +1152,7 @@ contains
 
     do j = JSB, JEB
     do i = ISB, IEB
-    do k = KE-1, KS, -1
+    do k = kref-1, KS, -1
        RovCV = Rtot(k,i,j) / CVtot(k,i,j)
 
        dens_s      = 0.0_RP
@@ -1221,7 +1191,7 @@ contains
 
     do j = JSB, JEB
     do i = ISB, IEB
-    do k = KS, KE
+    do k = KS, kref
        pres(k,i,j) = P00 * ( dens(k,i,j) * Rtot(k,i,j) * pott(k,i,j) / P00 )**CPovCV(k,i,j)
        temp(k,i,j) = pres(k,i,j) / ( dens(k,i,j) * Rtot(k,i,j) )
     enddo

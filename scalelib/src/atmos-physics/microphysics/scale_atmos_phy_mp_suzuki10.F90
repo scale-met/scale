@@ -134,9 +134,9 @@ module scale_atmos_phy_mp_suzuki10
   logical :: flg_icenucl=.false.           ! flag ice nucleation
   logical :: flg_sf_aero =.false.          ! flag surface flux of aerosol
   integer, private, save :: rndm_flgp = 0  ! flag for sthastic integration for coll.-coag.
-  logical, private, save :: doautoconversion = .true.  ! apply collision process ?
-  logical, private, save :: doprecipitation  = .true.  ! apply sedimentation of hydrometeor ?
-  logical, private, save :: donegative_fixer = .true.  ! apply negative fixer?
+  logical, private, save :: MP_doautoconversion = .true.  ! apply collision process ?
+  logical, private, save :: MP_doprecipitation  = .true.  ! apply sedimentation of hydrometeor ?
+  logical, private, save :: MP_donegative_fixer = .true.  ! apply negative fixer?
 
   real(RP), allocatable :: marate( : )               ! mass rate of each aerosol bin to total aerosol mass
   integer, private, save       :: K10_1, K10_2        ! scaling factor for 10m value (momentum)
@@ -212,36 +212,38 @@ contains
 
     character(len=*), intent(in) :: MP_TYPE
 
-    real(RP) :: ATMOS_PHY_MP_RHOA  !--- density of aerosol
-    real(RP) :: ATMOS_PHY_MP_EMAER !--- moleculer weight of aerosol
-    real(RP) :: ATMOS_PHY_MP_RAMIN !--- minimum radius of aerosol (um)
-    real(RP) :: ATMOS_PHY_MP_RAMAX !--- maximum radius of aerosol (um)
-    real(RP) :: ATMOS_PHY_MP_R0A   !--- maximum radius of aerosol (um)
-    logical :: ATMOS_PHY_MP_FLAG_REGENE  !--- flag of regeneration
-    logical :: ATMOS_PHY_MP_FLAG_NUCLEAT !--- flag of regeneration
-    logical :: ATMOS_PHY_MP_FLAG_ICENUCLEAT !--- flag of regeneration
-    logical :: ATMOS_PHY_MP_FLAG_SFAERO  !--- flag of surface flux of aeorol
-    integer :: ATMOS_PHY_MP_RNDM_FLGP  !--- flag of surface flux of aeorol
-    integer :: ATMOS_PHY_MP_RNDM_MSPC
-    integer :: ATMOS_PHY_MP_RNDM_MBIN
+    real(RP) :: RHO_AERO  !--- density of aerosol
+    real(RP) :: R0_AERO   !--- center radius of aerosol (um)
+    real(RP) :: R_MIN     !--- minimum radius of aerosol (um)
+    real(RP) :: R_MAX     !--- maximum radius of aerosol (um)
+    real(RP) :: S10_EMAER !--- moleculer weight of aerosol
+    logical :: S10_FLAG_REGENE  !--- flag of regeneration
+    logical :: S10_FLAG_NUCLEAT !--- flag of regeneration
+    logical :: S10_FLAG_ICENUCLEAT !--- flag of regeneration
+    logical :: S10_FLAG_SFAERO  !--- flag of surface flux of aeorol
+    integer :: S10_RNDM_FLGP  !--- flag of surface flux of aeorol
+    integer :: S10_RNDM_MSPC
+    integer :: S10_RNDM_MBIN
 
     NAMELIST / PARAM_ATMOS_PHY_MP / &
-       ATMOS_PHY_MP_RHOA,  &
-       ATMOS_PHY_MP_EMAER, &
-       ATMOS_PHY_MP_RAMIN, &
-       ATMOS_PHY_MP_RAMAX, &
-       ATMOS_PHY_MP_FLAG_REGENE,  &
-       ATMOS_PHY_MP_FLAG_NUCLEAT, &
-       ATMOS_PHY_MP_FLAG_ICENUCLEAT, &
-       ATMOS_PHY_MP_FLAG_SFAERO,  &
-       ATMOS_PHY_MP_R0A,   &
-       ATMOS_PHY_MP_RNDM_FLGP, &
-       ATMOS_PHY_MP_RNDM_MSPC, &
-       ATMOS_PHY_MP_RNDM_MBIN, &
        MP_ntmax_sedimentation, &
-       doautoconversion, &
-       doprecipitation, &
-       donegative_fixer, &
+       MP_doautoconversion, &
+       MP_doprecipitation, &
+       MP_donegative_fixer
+
+    NAMELIST / PARAM_ATMOS_PHY_MP_SUZUKI10 / &
+       RHO_AERO,  &
+       R_MIN, &
+       R_MAX, &
+       R0_AERO,   &
+       S10_EMAER, &
+       S10_FLAG_REGENE,  &
+       S10_FLAG_NUCLEAT, &
+       S10_FLAG_ICENUCLEAT, &
+       S10_FLAG_SFAERO,  &
+       S10_RNDM_FLGP, &
+       S10_RNDM_MSPC, &
+       S10_RNDM_MBIN, &
        c_ccn, kappa, &
        sigma, vhfct
 
@@ -281,18 +283,18 @@ contains
        call PRC_MPIstop
     end if
 
-    ATMOS_PHY_MP_RHOA = rhoa
-    ATMOS_PHY_MP_EMAER = emaer
-    ATMOS_PHY_MP_RAMIN = rasta
-    ATMOS_PHY_MP_RAMAX = raend
-    ATMOS_PHY_MP_R0A = r0a
-    ATMOS_PHY_MP_FLAG_REGENE = flg_regeneration
-    ATMOS_PHY_MP_FLAG_NUCLEAT = flg_nucl
-    ATMOS_PHY_MP_FLAG_ICENUCLEAT = flg_icenucl
-    ATMOS_PHY_MP_FLAG_SFAERO = flg_sf_aero
-    ATMOS_PHY_MP_RNDM_FLGP = rndm_flgp
-    ATMOS_PHY_MP_RNDM_MSPC = mspc
-    ATMOS_PHY_MP_RNDM_MBIN = mbin
+    RHO_AERO = rhoa
+    S10_EMAER = emaer
+    R_MIN = rasta
+    R_MAX = raend
+    R0_AERO = r0a
+    S10_FLAG_REGENE = flg_regeneration
+    S10_FLAG_NUCLEAT = flg_nucl
+    S10_FLAG_ICENUCLEAT = flg_icenucl
+    S10_FLAG_SFAERO = flg_sf_aero
+    S10_RNDM_FLGP = rndm_flgp
+    S10_RNDM_MSPC = mspc
+    S10_RNDM_MBIN = mbin
 
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_ATMOS_PHY_MP,iostat=ierr)
@@ -305,23 +307,34 @@ contains
     end if
     if( IO_L ) write(IO_FID_LOG,nml=PARAM_ATMOS_PHY_MP)
 
+    rewind(IO_FID_CONF)
+    read(IO_FID_CONF,nml=PARAM_ATMOS_PHY_MP_SUZUKI10,iostat=ierr)
+
+    if( ierr < 0 ) then !--- missing
+     if( IO_L ) write(IO_FID_LOG,*)  '*** Not found namelist. Default used.'
+    elseif( ierr > 0 ) then !--- fatal error
+     write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_PHY_MP_SUZUKI10, Check!'
+     call PRC_MPIstop
+    end if
+    if( IO_L ) write(IO_FID_LOG,nml=PARAM_ATMOS_PHY_MP_SUZUKI10)
+
     if ( nspc /= 1 .and. nspc /= 7 ) then
        write(*,*) 'xxx nspc should be set as 1(warm rain) or 7(mixed phase) check!'
        call PRC_MPIstop
     end if
 
-    rhoa = ATMOS_PHY_MP_RHOA
-    emaer = ATMOS_PHY_MP_EMAER
-    rasta = ATMOS_PHY_MP_RAMIN
-    raend = ATMOS_PHY_MP_RAMAX
-    r0a   = ATMOS_PHY_MP_R0A
-    flg_regeneration = ATMOS_PHY_MP_FLAG_REGENE
-    flg_nucl = ATMOS_PHY_MP_FLAG_NUCLEAT
-    flg_icenucl = ATMOS_PHY_MP_FLAG_ICENUCLEAT
-    flg_sf_aero = ATMOS_PHY_MP_FLAG_SFAERO
-    rndm_flgp = ATMOS_PHY_MP_RNDM_FLGP
-    mspc = ATMOS_PHY_MP_RNDM_MSPC
-    mbin = ATMOS_PHY_MP_RNDM_MBIN
+    rhoa = RHO_AERO
+    emaer = S10_EMAER
+    rasta = R_MIN
+    raend = R_MAX
+    r0a   = R0_AERO
+    flg_regeneration = S10_FLAG_REGENE
+    flg_nucl = S10_FLAG_NUCLEAT
+    flg_icenucl = S10_FLAG_ICENUCLEAT
+    flg_sf_aero = S10_FLAG_SFAERO
+    rndm_flgp = S10_RNDM_FLGP
+    mspc = S10_RNDM_MSPC
+    mbin = S10_RNDM_MBIN
 
     !--- read micpara.dat (microphysical parameter) and broad cast
     if( PRC_myrank == PRC_master ) then
@@ -646,7 +659,7 @@ contains
 call START_COLLECTION("MICROPHYSICS")
 #endif
 
-     if( donegative_fixer ) then
+     if( MP_donegative_fixer ) then
        call MP_negative_fixer( DENS(:,:,:),  & ! [INOUT]
                                RHOT(:,:,:),  & ! [INOUT]
                                QTRC(:,:,:,:) ) ! [INOUT]
@@ -676,7 +689,7 @@ call START_COLLECTION("MICROPHYSICS")
      enddo
     end if
 
-    call PROF_rapstart('MPX ijkconvert')
+    call PROF_rapstart('MP_ijkconvert', 3)
     dz (:) = GRID_CDZ(:)
     dzh(1) = GRID_FDZ(1)
     dzh(2:KA) = GRID_FDZ(1:KA-1)
@@ -759,7 +772,7 @@ call START_COLLECTION("MICROPHYSICS")
     endif
 
 
-    call PROF_rapend  ('MPX ijkconvert')
+    call PROF_rapend  ('MP_ijkconvert', 3)
 
     !--- Calculate Super saturation
     do k = KS, KE
@@ -885,7 +898,7 @@ call START_COLLECTION("MICROPHYSICS")
      end do
     end if
 
-    call PROF_rapstart('MPX ijkconvert')
+    call PROF_rapstart('MP_ijkconvert', 3)
     AMR(:,:,:) = 0.0_RP
     do j = JS, JE
      do i = IS, IE
@@ -939,7 +952,7 @@ call START_COLLECTION("MICROPHYSICS")
     endif
 
     !--- gravitational falling
-    if ( doprecipitation ) then
+    if ( MP_doprecipitation ) then
     do j = JS, JE
     do i = IS, IE
     do k = KS-1, KE
@@ -994,7 +1007,7 @@ call START_COLLECTION("MICROPHYSICS")
 
     endif
 
-    if( donegative_fixer ) then
+    if( MP_donegative_fixer ) then
        call MP_negative_fixer( DENS(:,:,:),  & ! [INOUT]
                                RHOT(:,:,:),  & ! [INOUT]
                                QTRC(:,:,:,:) ) ! [INOUT]
@@ -1004,7 +1017,7 @@ call START_COLLECTION("MICROPHYSICS")
     SFLX_rain(:,:) = flux_rain(KS-1,:,:)
     SFLX_snow(:,:) = flux_snow(KS-1,:,:)
 
-    call PROF_rapend  ('MPX ijkconvert')
+    call PROF_rapend  ('MP_ijkconvert', 3)
 
     call COMM_vars8( DENS(:,:,:), 1 )
     call COMM_vars8( MOMZ(:,:,:), 2 )
@@ -1061,7 +1074,7 @@ call STOP_COLLECTION("MICROPHYSICS")
            gc, ga, qvap, temp   ) !--- inout
 
   !--- collision-coagulation
-  if( doautoconversion ) then
+  if( MP_doautoconversion ) then
    call  collmain               &
           ( dtime,              & !--- in
             gc                  ) !--- inout
@@ -1099,7 +1112,7 @@ call STOP_COLLECTION("MICROPHYSICS")
            gc, qvap, temp       ) !--- inout
 
   !--- collision-coagulation
-  if( doautoconversion ) then
+  if( MP_doautoconversion ) then
    call  collmain               &
           ( dtime,              & !--- in
             gc                  ) !--- inout
@@ -1151,7 +1164,7 @@ call STOP_COLLECTION("MICROPHYSICS")
            dens, pres,          & !--- in
            gc, qvap, temp       ) !--- inout
 
-  if( doautoconversion ) then
+  if( MP_doautoconversion ) then
   !--- collision-coagulation
    call  collmainf              &
            ( temp, dtime,       & !--- in
@@ -1206,7 +1219,7 @@ call STOP_COLLECTION("MICROPHYSICS")
            dens, pres,          & !--- in
            gc, ga, qvap, temp   ) !--- inout
 
-  if( doautoconversion ) then
+  if( MP_doautoconversion ) then
   !--- collision-coagulation
    call  collmainf              &
            ( temp, dtime,       & !--- in
@@ -3005,7 +3018,8 @@ call STOP_COLLECTION("MICROPHYSICS")
   subroutine ATMOS_PHY_MP_suzuki10_EffectiveRadius( &
        Re,    &
        QTRC0, &
-       DENS0  )
+       DENS0, &
+       TEMP0  )
     use scale_grid_index
     use scale_const, only: &
        EPS => CONST_EPS
@@ -3017,6 +3031,7 @@ call STOP_COLLECTION("MICROPHYSICS")
     real(RP), intent(out) :: Re   (KA,IA,JA,MP_QAD) ! effective radius          [cm]
     real(RP), intent(in)  :: QTRC0(KA,IA,JA,QAD)    ! tracer mass concentration [kg/kg]
     real(RP), intent(in)  :: DENS0(KA,IA,JA)        ! density                   [kg/m3]
+    real(RP), intent(in)  :: TEMP0(KA,IA,JA)        ! temperature               [K]
 
     real(RP), parameter :: um2cm = 100.0_RP
 

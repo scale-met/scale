@@ -33,6 +33,7 @@ module mod_atmos_driver
   public :: ATMOS_driver_setup1
   public :: ATMOS_driver_setup2
   public :: ATMOS_driver
+  public :: ATMOS_driver_firstsend
   public :: ATMOS_driver_finalize
   public :: ATMOS_SURFACE_GET
   public :: ATMOS_SURFACE_SET
@@ -81,12 +82,12 @@ contains
        ATMOS_DYN_driver_setup
     use mod_atmos_phy_mp_driver, only: &
        ATMOS_PHY_MP_driver_setup
-    use mod_atmos_phy_ae_driver, only: &
-       ATMOS_PHY_AE_driver_setup
-    use mod_atmos_phy_ch_driver, only: &
-       ATMOS_PHY_CH_driver_setup
     use mod_atmos_phy_rd_driver, only: &
        ATMOS_PHY_RD_driver_setup
+    use mod_atmos_phy_ch_driver, only: &
+       ATMOS_PHY_CH_driver_setup
+    use mod_atmos_phy_ae_driver, only: &
+       ATMOS_PHY_AE_driver_setup
     implicit none
     !---------------------------------------------------------------------------
 
@@ -99,19 +100,31 @@ contains
     !--- setup solar insolation
     call ATMOS_SOLARINS_setup( TIME_NOWDATE(1)+TIME_OFFSET_YEAR )
 
-    call ATMOS_REFSTATE_setup( DENS, RHOT, QTRC ) ! (in)
+    call PROF_rapstart('ATM_Refstate', 2)
+    call ATMOS_REFSTATE_setup( DENS, RHOT, QTRC )
+    call PROF_rapend  ('ATM_Refstate', 2)
 
-    call ATMOS_BOUNDARY_setup( DENS, MOMZ, MOMX, MOMY, RHOT, QTRC ) ! (in)
+    call PROF_rapstart('ATM_Boundary', 2)
+    call ATMOS_BOUNDARY_setup( DENS, MOMZ, MOMX, MOMY, RHOT, QTRC )
+    call PROF_rapend  ('ATM_Boundary', 2)
 
     !########## Get Surface Boundary Condition ##########
+    call PROF_rapstart('ATM_SfcExch', 2)
     call ATMOS_SURFACE_GET
+    call PROF_rapend  ('ATM_SfcExch', 2)
 
     !########## initialize tendencies ##########
+!OCL XFILL
     DENS_tp(:,:,:)   = 0.0_RP
+!OCL XFILL
     MOMZ_tp(:,:,:)   = 0.0_RP
+!OCL XFILL
     MOMX_tp(:,:,:)   = 0.0_RP
+!OCL XFILL
     MOMY_tp(:,:,:)   = 0.0_RP
+!OCL XFILL
     RHOT_tp(:,:,:)   = 0.0_RP
+!OCL XFILL
     RHOQ_tp(:,:,:,:) = 0.0_RP
 
     ! setup each components
@@ -125,7 +138,9 @@ contains
     call ATMOS_vars_diagnostics
 
     !########## Set Surface Boundary Condition ##########
-    call ATMOS_SURFACE_SET( countup =.false. )
+    call PROF_rapstart('ATM_SfcExch', 2)
+    call ATMOS_SURFACE_SET( countup = .false. )
+    call PROF_rapend  ('ATM_SfcExch', 2)
 
     return
   end subroutine ATMOS_driver_setup1
@@ -135,12 +150,12 @@ contains
   subroutine ATMOS_driver_setup2
     use mod_atmos_vars, only: &
        ATMOS_vars_history
+    use mod_atmos_phy_cp_driver, only: &
+       ATMOS_PHY_CP_driver_setup
     use mod_atmos_phy_sf_driver, only: &
        ATMOS_PHY_SF_driver_setup
     use mod_atmos_phy_tb_driver, only: &
        ATMOS_PHY_TB_driver_setup
-    use mod_atmos_phy_cp_driver, only: &
-       ATMOS_PHY_CP_driver_setup
     implicit none
     !---------------------------------------------------------------------------
 
@@ -151,7 +166,9 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '*** Setup each atmospheric components 2 ...'
 
     !########## Get Surface Boundary Condition ##########
+    call PROF_rapstart('ATM_SfcExch', 2)
     call ATMOS_SURFACE_GET
+    call PROF_rapend  ('ATM_SfcExch', 2)
 
     ! setup each components
     call ATMOS_PHY_SF_driver_setup
@@ -159,12 +176,14 @@ contains
     call ATMOS_PHY_CP_driver_setup
 
     !########## Set Surface Boundary Condition ##########
-    call ATMOS_SURFACE_SET( countup =.true. )
+    call PROF_rapstart('ATM_SfcExch', 2)
+    call ATMOS_SURFACE_SET( countup = .true. )
+    call PROF_rapend  ('ATM_SfcExch', 2)
 
     !########## History & Monitor ##########
-    call PROF_rapstart('ATM History Vars', 1)
+    call PROF_rapstart('ATM_History', 1)
     call ATMOS_vars_history
-    call PROF_rapend  ('ATM History Vars', 1)
+    call PROF_rapend  ('ATM_History', 1)
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** Finish setup of each atmospheric components.'
@@ -175,7 +194,7 @@ contains
   !-----------------------------------------------------------------------------
   !> advance atmospheric state
   subroutine ATMOS_driver
-    use scale_time, only: &
+    use mod_admin_time, only: &
        do_dyn    => TIME_DOATMOS_DYN,    &
        do_phy_mp => TIME_DOATMOS_PHY_MP, &
        do_phy_ae => TIME_DOATMOS_PHY_AE, &
@@ -236,102 +255,141 @@ contains
 
     !########## Reference State ###########
     if ( ATMOS_REFSTATE_UPDATE_FLAG ) then
-       call ATMOS_REFSTATE_update( DENS, RHOT, QTRC ) ! (in)
+       call PROF_rapstart('ATM_Refstate', 2)
+       call ATMOS_REFSTATE_update( DENS, RHOT, QTRC ) ! [IN]
+       call PROF_rapend  ('ATM_Refstate', 2)
+    endif
+
+    !########## Get Surface Boundary Condition ##########
+    call PROF_rapstart('ATM_SfcExch', 2)
+    call ATMOS_SURFACE_GET
+    call PROF_rapend  ('ATM_SfcExch', 2)
+
+    !########## Dynamics ##########
+    if ( ATMOS_sw_dyn ) then
+       call PROF_rapstart('ATM_Dynamics', 1)
+       call ATMOS_DYN_driver( do_dyn )
+       call PROF_rapend  ('ATM_Dynamics', 1)
     endif
 
     !########## Lateral/Top Boundary Condition ###########
     if ( ATMOS_BOUNDARY_UPDATE_FLAG ) then
-       call ATMOS_BOUNDARY_update( DENS, MOMZ, MOMX, MOMY, RHOT, QTRC ) ! (in)
-    endif
-
-    !########## Get Surface Boundary Condition ##########
-    call ATMOS_SURFACE_GET
-
-    !########## Dynamics ##########
-    if ( ATMOS_sw_dyn ) then
-       call PROF_rapstart('ATM Dynamics', 1)
-       call ATMOS_DYN_driver( do_dyn )
-       call PROF_rapend  ('ATM Dynamics', 1)
+       call PROF_rapstart('ATM_Boundary', 2)
+       call ATMOS_BOUNDARY_update( DENS, MOMZ, MOMX, MOMY, RHOT, QTRC ) ! [INOUT]
+       call PROF_rapend  ('ATM_Boundary', 2)
     endif
 
     !########## reset tendencies ##########
+!OCL XFILL
     DENS_tp(:,:,:)   = 0.0_RP
+!OCL XFILL
     MOMZ_tp(:,:,:)   = 0.0_RP
+!OCL XFILL
     MOMX_tp(:,:,:)   = 0.0_RP
+!OCL XFILL
     MOMY_tp(:,:,:)   = 0.0_RP
+!OCL XFILL
     RHOT_tp(:,:,:)   = 0.0_RP
+!OCL XFILL
     RHOQ_tp(:,:,:,:) = 0.0_RP
+
+    !########## Calculate diagnostic variables ##########
+    call PROF_rapstart('ATM_History', 1)
+    call ATMOS_vars_diagnostics
+    call PROF_rapend  ('ATM_History', 1)
 
     !########## Microphysics ##########
     if ( ATMOS_sw_phy_mp ) then
-       call PROF_rapstart('ATM Microphysics', 1)
+       call PROF_rapstart('ATM_Microphysics', 1)
        call ATMOS_PHY_MP_driver( update_flag = do_phy_mp )
-       call PROF_rapend  ('ATM Microphysics', 1)
+       call PROF_rapend  ('ATM_Microphysics', 1)
     endif
 
     !########## Aerosol ##########
     if ( ATMOS_sw_phy_ae ) then
-       call PROF_rapstart('ATM Aerosol', 1)
+       call PROF_rapstart('ATM_Aerosol', 1)
        call ATMOS_PHY_AE_driver( update_flag = do_phy_ae )
-       call PROF_rapend  ('ATM Aerosol', 1)
+       call PROF_rapend  ('ATM_Aerosol', 1)
     endif
 
     !########## Chemistry ##########
     if ( ATMOS_sw_phy_ch ) then
-       call PROF_rapstart('ATM Chemistry', 1)
+       call PROF_rapstart('ATM_Chemistry', 1)
        call ATMOS_PHY_CH_driver( update_flag = do_phy_ch )
-       call PROF_rapend  ('ATM Chemistry', 1)
+       call PROF_rapend  ('ATM_Chemistry', 1)
     endif
 
     !########## Radiation ##########
     if ( ATMOS_sw_phy_rd ) then
-       call PROF_rapstart('ATM Radiation', 1)
+       call PROF_rapstart('ATM_Radiation', 1)
        call ATMOS_PHY_RD_driver( update_flag = do_phy_rd )
-       call PROF_rapend  ('ATM Radiation', 1)
+       call PROF_rapend  ('ATM_Radiation', 1)
     endif
 
     !########## Surface Flux ##########
     if ( ATMOS_sw_phy_sf ) then
-       call PROF_rapstart('ATM SurfaceFlux', 1)
+       call PROF_rapstart('ATM_SurfaceFlux', 1)
        call ATMOS_PHY_SF_driver( update_flag = do_phy_sf )
-       call PROF_rapend  ('ATM SurfaceFlux', 1)
+       call PROF_rapend  ('ATM_SurfaceFlux', 1)
     endif
 
     !########## Turbulence ##########
     if ( ATMOS_sw_phy_tb ) then
-       call PROF_rapstart('ATM Turbulence', 1)
+       call PROF_rapstart('ATM_Turbulence', 1)
        call ATMOS_PHY_TB_driver( update_flag = do_phy_tb )
-       call PROF_rapend  ('ATM Turbulence', 1)
+       call PROF_rapend  ('ATM_Turbulence', 1)
     endif
 
     !########## Cumulus ##########
     if ( ATMOS_sw_phy_cp ) then
-       call PROF_rapstart('ATM Cumulus', 1)
+       call PROF_rapstart('ATM_Cumulus', 1)
        call ATMOS_PHY_CP_driver( update_flag = do_phy_cp )
-       call PROF_rapend  ('ATM Cumulus', 1)
+       call PROF_rapend  ('ATM_Cumulus', 1)
     endif
 
-    !########## Calculate diagnostic variables ##########
-    call ATMOS_vars_diagnostics
-
     !########## Set Surface Boundary Condition ##########
-    call ATMOS_SURFACE_SET( countup =.true. )
+    call PROF_rapstart('ATM_SfcExch', 2)
+    call ATMOS_SURFACE_SET( countup = .true. )
+    call PROF_rapend  ('ATM_SfcExch', 2)
 
     !########## History & Monitor ##########
-    call PROF_rapstart('ATM History Vars', 1)
+    call PROF_rapstart('ATM_History', 1)
     call ATMOS_vars_history
     call ATMOS_vars_monitor
-    call PROF_rapend  ('ATM History Vars', 1)
+    call PROF_rapend  ('ATM_History', 1)
 
     return
   end subroutine ATMOS_driver
+
+  !-----------------------------------------------------------------------------
+  !> First send
+  subroutine ATMOS_driver_firstsend
+    use scale_atmos_boundary, only: &
+       ATMOS_BOUNDARY_firstsend
+    use mod_atmos_vars, only: &
+       DENS, &
+       MOMZ, &
+       MOMX, &
+       MOMY, &
+       RHOT, &
+       QTRC
+    implicit none
+    !---------------------------------------------------------------------------
+
+    ! If this run is parent of online nesting, boundary data must be sent
+    call PROF_rapstart('ATM_Boundary', 2)
+    call ATMOS_BOUNDARY_firstsend( DENS, MOMZ, MOMX, MOMY, RHOT, QTRC ) ! [IN]
+    call PROF_rapend  ('ATM_Boundary', 2)
+
+    return
+  end subroutine ATMOS_driver_firstsend
 
   !-----------------------------------------------------------------------------
   !> Finalize
   subroutine ATMOS_driver_finalize
     use scale_atmos_boundary, only: &
        ATMOS_BOUNDARY_UPDATE_FLAG, &
-       ATMOS_BOUNDARY_update
+       ATMOS_BOUNDARY_finalize
     use scale_grid_nest, only: &
        NEST_COMM_disconnect
     use mod_atmos_vars, only: &
@@ -341,16 +399,19 @@ contains
        MOMY, &
        RHOT, &
        QTRC
+    implicit none
+    !---------------------------------------------------------------------------
 
     !########## Lateral/Top Boundary Condition ###########
     if ( ATMOS_BOUNDARY_UPDATE_FLAG ) then
        ! If this run is parent of online nesting, boundary data must be sent
-       call ATMOS_BOUNDARY_update( DENS, MOMZ, MOMX, MOMY, RHOT, QTRC, .true. ) ! (in)
+       call ATMOS_BOUNDARY_finalize
 
        ! Finialize Inter-Communicators
        call NEST_COMM_disconnect
     endif
 
+    return
   end subroutine ATMOS_driver_finalize
 
   !-----------------------------------------------------------------------------
@@ -425,7 +486,8 @@ contains
        SFLX_snow => ATMOS_PHY_MP_SFLX_snow
     use mod_atmos_phy_rd_vars, only: &
        SFLX_LW_dn => ATMOS_PHY_RD_SFLX_LW_dn, &
-       SFLX_SW_dn => ATMOS_PHY_RD_SFLX_SW_dn
+       SFLX_SW_dn => ATMOS_PHY_RD_SFLX_SW_dn, &
+       cosSZA     => ATMOS_PHY_RD_cosSZA
     use mod_cpl_admin, only: &
        CPL_sw
     use mod_cpl_vars, only: &
@@ -464,6 +526,7 @@ contains
                         SFC_PRES  (:,:),      & ! [IN]
                         SFLX_LW_dn(:,:),      & ! [IN]
                         SFLX_SW_dn(:,:),      & ! [IN]
+                        cosSZA    (:,:),      & ! [IN]
                         SFLX_rain (:,:),      & ! [IN]
                         SFLX_snow (:,:),      & ! [IN]
                         countup               ) ! [IN]

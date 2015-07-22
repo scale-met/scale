@@ -67,52 +67,51 @@ contains
     real(RP), intent(inout) :: RHOT(KA,IA,JA)
     real(RP), intent(inout) :: QTRC(KA,IA,JA,QA)
 
-    real(RP) :: diffq(KA)
+    real(RP) :: diffq
 
-    integer :: i, j, iq
+    integer :: k, i, j, iq
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('MP filter', 2)
+    call PROF_rapstart('MP_filter', 3)
 
     !$omp parallel do private(i,j,diffq) OMP_SCHEDULE_ collapse(2)
     do j = 1, JA
     do i = 1, IA
-       diffq(:) = 0.0_RP
+    do k = KS, KE
 
-       ! total hydrometeor (before correction)
+       diffq = 0.0_RP
        do iq = QQS+1, QQE
-          diffq(:) = diffq(:) + QTRC(:,i,j,iq)
+          ! total hydrometeor (before correction)
+          diffq = diffq + QTRC(k,i,j,iq)
+          ! remove negative value of hydrometeors (mass)
+          QTRC(k,i,j,iq) = max( QTRC(k,i,j,iq), 0.0_RP )
        enddo
 
-       ! remove negative value of hydrometeors (mass)
        do iq = QQS+1, QQE
-          QTRC(:,i,j,iq) = max( QTRC(:,i,j,iq), 0.0_RP )
-       enddo
-
-       ! difference between before and after correction
-       do iq = QQS+1, QQE
-          diffq(:) = diffq(:) - QTRC(:,i,j,iq)
+          ! difference between before and after correction
+          diffq = diffq - QTRC(k,i,j,iq)
        enddo
 
        ! Compensate for the lack of hydrometeors by the water vapor
-       QTRC(:,i,j,I_QV) = QTRC(:,i,j,I_QV) + diffq(:)
+       QTRC(k,i,j,I_QV) = QTRC(k,i,j,I_QV) + diffq
 
        ! TODO: We have to consider energy conservation (but very small)
 
        ! remove negative value of water vapor (mass)
-       diffq(:) = QTRC(:,i,j,I_QV)
-       QTRC(:,i,j,I_QV) = max( QTRC(:,i,j,I_QV), 0.0_RP )
-       diffq(:) = diffq(:) - QTRC(:,i,j,I_QV)
+       diffq = QTRC(k,i,j,I_QV)
+       QTRC(k,i,j,I_QV) = max( QTRC(k,i,j,I_QV), 0.0_RP )
+       diffq = diffq - QTRC(k,i,j,I_QV)
 
        ! Apply correction to total density
        ! TODO: We have to consider energy conservation (but very small)
-       DENS(:,i,j) = DENS(:,i,j) * ( 1.0_RP - diffq(:) ) ! diffq is negative
-       RHOT(:,i,j) = RHOT(:,i,j) * ( 1.0_RP - diffq(:) )
+       DENS(k,i,j) = DENS(k,i,j) * ( 1.0_RP - diffq ) ! diffq is negative
+       RHOT(k,i,j) = RHOT(k,i,j) * ( 1.0_RP - diffq )
 
     enddo
     enddo
+    enddo
 
-    call PROF_rapend('MP filter')
+    call PROF_rapend('MP_filter', 3)
 
     return
   end subroutine ATMOS_PHY_MP_negative_fixer
@@ -165,7 +164,7 @@ contains
 
 #ifndef DRY
 
-    call PROF_rapstart('MP Saturation_adjustment', 2)
+    call PROF_rapstart('MP_Saturation_adjustment', 3)
 
     rdt = 1.0_RP / dt
 
@@ -310,7 +309,7 @@ contains
     enddo
     enddo
 
-    call PROF_rapend  ('MP Saturation_adjustment', 2)
+    call PROF_rapend  ('MP_Saturation_adjustment', 3)
 
 #else
     RHOE_t = UNDEF
@@ -691,7 +690,7 @@ contains
     integer :: k, i, j, iq
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('MP Precipitation', 2)
+    call PROF_rapstart('MP_Precipitation', 3)
 
     do iq = I_QC, QQE
        call COMM_vars8( vterm(:,:,:,iq), iq )
@@ -793,7 +792,6 @@ contains
 
     ! save previous value
     do iq = 1, QA
-       !$omp parallel do private(i,j,k,iq,rhoq) OMP_SCHEDULE_ collapse(2)
        do j = JS, JE
        do i = IS, IE
           rhoq(KS-1,i,j,iq) = DENS(KS,i,j) * QTRC(KS,i,j,iq)
@@ -803,7 +801,6 @@ contains
        enddo
        enddo
     enddo
-
 
     !--- mass flux for each tracer, upwind with vel < 0
     do iq = I_QC, QA
@@ -874,7 +871,7 @@ contains
     endif
 
 
-    call PROF_rapend  ('MP Precipitation', 2)
+    call PROF_rapend  ('MP_Precipitation', 3)
 
     return
   end subroutine ATMOS_PHY_MP_precipitation

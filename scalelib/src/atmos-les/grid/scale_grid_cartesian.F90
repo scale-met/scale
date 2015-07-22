@@ -42,6 +42,11 @@ module scale_grid
   real(RP), public              :: DX = 500.0_RP !< length in the main region [m]: x
   real(RP), public              :: DY = 500.0_RP !< length in the main region [m]: y
 
+  real(RP), public              :: BUFFER_DZ = 0.0_RP   !< thickness of buffer region [m]: z
+  real(RP), public              :: BUFFER_DX = 0.0_RP   !< thickness of buffer region [m]: x
+  real(RP), public              :: BUFFER_DY = 0.0_RP   !< thickness of buffer region [m]: y
+  real(RP), public              :: BUFFFACT  = 1.0_RP   !< strech factor for dx/dy/dz of buffer region
+
   real(RP), public              :: GRID_DOMAIN_CENTER_X !< center position of global domain [m]: x
   real(RP), public              :: GRID_DOMAIN_CENTER_Y !< center position of global domain [m]: y
 
@@ -95,11 +100,6 @@ module scale_grid
   character(len=H_LONG), private :: GRID_OUT_BASENAME = ''
   real(RP),              private :: GRID_OFFSET_X     = 0.0_RP
   real(RP),              private :: GRID_OFFSET_Y     = 0.0_RP
-
-  real(RP), private :: BUFFER_DZ = 0.0_RP ! thickness of buffer region [m]: z
-  real(RP), private :: BUFFER_DX = 0.0_RP ! thickness of buffer region [m]: x
-  real(RP), private :: BUFFER_DY = 0.0_RP ! thickness of buffer region [m]: y
-  real(RP), private :: BUFFFACT  = 1.0_RP ! strech factor for dx/dy/dz of buffer region
 
   integer,  private, parameter :: KMAX_user_lim = 300 !< limit of index size for user defined z
   real(RP), private            :: FZ(KMAX_user_lim)   !< user defined center coordinate [m]: z, local=global
@@ -334,7 +334,7 @@ contains
     imain = IAG - 2*ibuff - 2*IHALO
 
     if ( imain < 1 ) then
-       write(*,*) 'xxx Not appropriate buffer length for global domain(X). Check!', BUFFER_DX
+       write(*,*) 'xxx Buffer size (', bufftotx*2.0_RP, ') must be smaller than global domain size (X). Use smaller BUFFER_DX!'
        call PRC_MPIstop
     endif
 
@@ -415,7 +415,7 @@ contains
     jmain = JAG - 2*jbuff - 2*JHALO
 
     if ( jmain < 1 ) then
-       write(*,*) 'xxx Not appropriate buffer length for global domain(Y). Check!', BUFFER_DY
+       write(*,*) 'xxx Buffer size (', bufftoty*2.0_RP, ') must be smaller than global domain size (Y). Use smaller BUFFER_DY!'
        call PRC_MPIstop
     endif
 
@@ -508,7 +508,7 @@ contains
        kmain = k
 
        if ( kmain == 1 ) then
-          write(*,*) 'xxx Not appropriate buffer length for global domain(Z). Check!', BUFFER_DZ
+          write(*,*) 'xxx Buffer size (', bufftotz, ') must be smaller than domain size (z). Use smaller BUFFER_DZ!'
           call PRC_MPIstop
        endif
 
@@ -550,7 +550,7 @@ contains
        kmain = KE - KS + 1 - kbuff
 
        if ( kmain < 1 ) then
-          write(*,*) 'xxx Not appropriate buffer length for global domain(Z). Check!', BUFFER_DZ
+          write(*,*) 'xxx Buffer size (', bufftotz, ') must be smaller than domain size (z). Use smaller BUFFER_DZ!'
           call PRC_MPIstop
        endif
 

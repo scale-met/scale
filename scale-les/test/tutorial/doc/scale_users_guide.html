@@ -1,0 +1,835 @@
+<h1 id="overview">Overview</h1>
+<h2 id="introduction">Introduction</h2>
+<p>本書は初めてSCALE-LESモデルを利用するユーザー向けに，SCALE-LESモデルのインストールから実行までを解説したユーザーズガイドです． 本書中のシェルコマンド等はbash を想定して記述しています．異なる環境下では適宜読み替えて対応してください． 本書中の不明点やお気づきの点がございましたら<code>＊＊＊＊@riken.jp</code>（複合系気候科学研究チームの誰か）までご連絡ください．</p>
+<h3 id="scaleライブラリ">SCALEライブラリ</h3>
+<p>SCALEとは”Scalable Computing for Advanced Library and Environment”の略であり， 理化学研究所 計算科学研究機構（AICS）を中心に開発が進められている次世代気象・気候科学における基盤ライブラリである． Figure [fig:scale]に示されるように，このライブラリは次世代のスーパーコンピュータから汎用計算機に至るまで広く用いられる事を念頭において開発されており， 気候・気象科学を専門とする科学者と計算機科学を専門とする科学者が共同で開発を行っている．</p>
+<p>SCALEライブラリは京コンピュータをはじめとする並列計算機に対してチューニングされたモデルコンポーネントや 解析システム、およびテストセットや知見といった開発環境を提供することによって、 これらの問題を解決することを目的としている． SCALEライブラリ（SCALE-LESモデルを含む）はBSD-2ライセンスにおいてフリーソフトウェアとして提供されており、 ユーザーの自由な利用・改変が許されている点も特徴といえる．</p>
+<p><embed src="./figure/library.eps" title="fig:" /><br /></p>
+<h3 id="scaleとscale-lesモデル">SCALEとSCALE-LESモデル</h3>
+<p>SCALEライブラリを使用して構築された数値モデルの1例がSCALE-LESモデルである(Fig. [fig:scale-les])。 格子系や力学コア，物理過程といったモデル構築に必要な基本的なコンポーネントはSCALEライブラリが提供するため、 SCALE-LESとして新たに用意されたのは、これらのコンポーネントをmanageするためのモデルドライバーや変数セットである。 SCALEライブラリをインストールしておくことで、SCALE-LESと同様な方法によってユーザーは新たなモデル作ることができる。</p>
+<p><embed src="./figure/scale_and_scale-les.eps" title="fig:" /><br /></p>
+<h3 id="scale-lesモデルの構成">SCALE-LESモデルの構成</h3>
+<p>詳細なモデル構成や差分化手法については，Sato et al. (2014) を参照されたい． 現在，SCALE-LESモデルとして組み込まれているコンポーネントは下記のものである．</p>
+<p><span><strong>フレームワーク関係</strong></span></p>
+<ul>
+<li><p>Cartesian グリッドシステム（Arakawa C-grid）</p></li>
+<li><p>Cartesian ベースMPI通信</p></li>
+<li><p>Map-projection &amp; Map-factors</p></li>
+<li><p>Nestingシステム（1-way, offline, and online）</p></li>
+<li><p>gtoolベースnetcdf4ファイル I/O</p></li>
+<li><p>WRF-ARW，NICAM向け外部データ読み込み <span><strong>力学コア関係</strong></span></p></li>
+<li><p>方程式系: ３次元完全圧縮流体方程式</p></li>
+<li><p>数値解法：HE-VE, HE-VI，HI-VIスキームから選択可能</p></li>
+<li><p>空間差分：4次中央差分</p></li>
+<li><p>時間差分：3次ルンゲクッタスキーム</p></li>
+<li><p>非負保証：FCTスキーム</p></li>
+<li><p>数値フィルター：4次Hyper diffusion</p></li>
+<li><p>地形：Terrain-followingスキーム <span><strong>物理過程</strong></span></p></li>
+<li><p>乱流過程：Smagorinsky typeのサブグリッドモデル, MYNN2.5境界層モデルから選択可能</p></li>
+<li><p>雲微物理：Kessler type バルクモデル(Kessler 1969)，6-class single moment バルクモデル(tomita 2006)，6-class double moment バルクモデル(Seiki and Nakajima 2014)，ビン法雲モデル(Suzuki et al. 2010)から選択可能</p></li>
+<li><p>放射過程：MSTRN-X (Sekiguchi and Nakajima 2008)</p></li>
+<li><p>陸面モデル：バケツモデル（Louis 1994，Beljoursから選択可能）</p></li>
+<li><p>海洋モデル（スラブモデル）</p></li>
+<li><p>都市キャノピーモデル</p></li>
+</ul>
+<p>上記に加えて，SCALE-LESモデル本体のドライバー、現実事例の計算に必要な地形や土地利用データを作成するツール、 理想実験の初期値・境界値、もしくは外部モデルから初期値・境界値を作成するツールが提供されている。</p>
+<p>なお、本ユーザーズガイド内の説明で、コマンドラインのシンボル（<code>$</code>）があれば、コマンドの実行を示す．</p>
+<h1 id="scale-les-tutrial">SCALE-LES Tutrial</h1>
+<h2 id="installation-of-scale-les">Installation of SCALE-LES</h2>
+<p>本章では，日本域を対象とした現実大気再現実験のチュートリアルを通して， SCALE-LESモデルを実行する一連の作業を説明する． SCALEライブラリのインストールに必要な環境、ライブラリのインストール方法については， [sec:req<sub>e</sub>nv]節とAppendix [sec:env<sub>s</sub>etting]を参照して 事前にインストールしておく必要がある． [sec:source<sub>c</sub>ode]以降のチュートリアルは，それらのライブラリ環境が インストールされていることを想定して進める．</p>
+<h3 id="sec:req_env">Required Environment</h3>
+<ul>
+<li><p><span><strong>計算機環境</strong></span> : Unix互換OS (Mac OS Xを含む)が動作する環境． マルチコアCPU環境以上を推奨する． 実験サイズによるが4GB以上のメモリがインストールされているマシン環境が好ましい．</p></li>
+<li><p><span><strong>OS</strong></span> : Linux OS（Fedora, CentOS, SUSE等），Mac OS X．ここではLinux (CentOS6)を使用して説明する．</p></li>
+<li><p><span><strong>コンパイラ</strong></span> : Fortran 2003をサポートするC，Fortranコンパイラを必要とする． GNU 4.6.x以上，Intel compiler 2012以上を推奨する．ここでは，gcc/gfortranを使用して説明する．</p></li>
+<li><p><span><strong>MPIライブラリ</strong></span> : MPICH2, OpenMPI, Intel MPI等をサポートする．ここではopenMPIを使用して説明する．</p></li>
+<li><p><span><strong>netcdf3 もしくは HDF5/netcdf4</strong></span> : gzip, szipをサポートするHDF5， およびそのHDF5をサポートするnetcdf4を必要とする． ただし，netcdf3の環境下ではscaleライブラリが提供する全ての機能をサポートできない可能性がある．</p></li>
+<li><p><span><strong>描画環境（非必須）</strong></span> : Dennou Club提供のRuby DCL/GPhysに含まれるgpviewがあると 計算結果を簡単にチェックできる．チュートリアルではgpviewを使用する． それ以外に，netcdfからGrADS用にフォーマットを変換するためのpostprocess(<code>netcdf2grads_h</code>)も用意している．</p></li>
+<li><p>SCALEは演算性能評価のためにPAPIライブラリを使用が可能． PAPIライブラリがインストールされている環境下では， 以下で説明するconfigureファイルの編集によってPAPIを適用することができます．</p></li>
+</ul>
+<h3 id="sec:source_code">Building the source code</h3>
+<h4 id="ソースコードの入手">ソースコードの入手</h4>
+<p>安定版ソースコードは，<a href="http://scale.aics.riken.jp/ja/download/index.html" class="uri">http://scale.aics.riken.jp/ja/download/index.html</a> よりダウンロードすることができる． ソースコードのtarballファイルを展開すると</p>
+<pre><code>  scale/</code></pre>
+<p>というディレクトリができる． 以降の説明で<code>${TOPDIR}</code>は，scaleディレクトリが存在する絶対PATHを指す．</p>
+<pre><code>  ${TOPDIR}/scale/</code></pre>
+<p>現実大気実験のシミュレーションを行う場合，SCALE本体に加えて境界値データが必要になる． 本チュートリアル用の気象場のデータ，日本領域の地形・土地利用のデータを<br /><a href="http://scale.aics.riken.jp/download/tutorial_data.tar.gz" class="uri">http://scale.aics.riken.jp/download/tutorial_data.tar.gz</a><br />より入手し，<code>${TOPDIR}</code>の下に展開しておく．</p>
+<pre><code>  ${TOPDIR}/tutorial_data/input_atom/    &lt;- 気象場データ
+  ${TOPDIR}/tutorial_data/input_topo/    &lt;- 地形データ
+  ${TOPDIR}/tutorial_data/input_landuse/ &lt;- 土地利用データ</code></pre>
+<p><code>tutorial_data/</code>には，本チュートリアルに必要な最低限のデータのみが納めされているため， その他の設定で実験を行う場合には別途，気象場，地形，および土地利用データが必要となる．</p>
+<h4 id="configure-ファイルと環境変数の設定">configure ファイルと環境変数の設定</h4>
+<p><code>scale/sysdep/</code>内にいくつかのコンフィグファイル（<code>Makedef.***</code>）が準備されている． これらの中から自分の環境にあったものを設定する． ここでは，OSはLinux，コンパイラはgcc/gfortran，およびopenMPIを使用するため， <code>&quot;Makedef.Linux64-gnu-ompi&quot;</code>が対応するファイルとなる． 自分の環境に合うものがなければ既存ファイルをベースにして作成する．</p>
+<p>常にこのコンフィグファイルをしようするために、 <code>Makedef.***</code>の<code>&quot;***&quot;</code>の部分を、<code>SCALE_SYS</code>という環境変数として設定し、 <code>.bashrc</code>などのファイルに記述しておくと便利である． さらに、SCALEをコンパイルするのに必要な外部ライブラリについても 下記のようにPATHを設定する． ここでは，Appendix [sec:env<sub>s</sub>etting]に従ったとして， HDF5，netcdf4ともに<code>/usr</code>の下にインストールされている場合の例を示す．</p>
+<pre><code> $ export SCALE_SYS=&quot;Linux64-gnu-ompi&quot;
+ $ export HDF5=&quot;/usr&quot;
+ $ export NETCDF4=&quot;/usr&quot;</code></pre>
+<h4 id="コンパイル">コンパイル</h4>
+<p>下記のディレクトリに移動して，makeコマンドによってコンパイルを行う．</p>
+<pre><code> $ cd ${TOPDIR}/scale/scale-les/test/tutorial/bin
+ $ make -j 4</code></pre>
+<p><code>make</code>のあとの <code>&quot;-j 4&quot;</code> は，並列コンパイルを指示するオプションで， 4並列コンパイルを行うことを指示している． コンパイルを実行する環境によっては並列数を増やすこともできる． このmakeによってSCALEライブラリ，およびSCALE-LESモデルのコンパイルが行われ， 結果として</p>
+<pre><code> scale-les  scale-les_init  scale-les_pp</code></pre>
+<p>の3つの実行ファイルが生成されていればコンパイルは成功である．<br /></p>
+<p><span><strong>注意点</strong></span></p>
+<ul>
+<li><p>SCALEライブラリは，scaleのTOPディレクトリ直下の <code>scale/scalelib/</code>というディレクトリ内でコンパイルとアーカイブが行われ， <code>&quot;./lib&quot;</code>という名前の隠しディレクトリとして <code>bin/</code>ディレクトリ内へコピーされている．</p></li>
+<li><p>Debugモードでコンパイルしたい場合や， コンパイルオプションを変更したい場合は， <code>Makedef.***</code>のファイルを編集してください．</p></li>
+<li><p>開発版ソースコードをコンパイルしている場合， 一部のコンパイラバージョンにおいてコンパイルが正常に終了しないケースがあります．そのような場合はぜひSCALE開発チームまでご報告ください．</p></li>
+</ul>
+<h2 id="running-the-scale-les">Running the SCALE-LES</h2>
+<h3 id="モデル実行方法の概要">モデル実行方法の概要</h3>
+<p>SCALE-LESモデルの実行過程は，Fig. [fig:howto]に示されるように</p>
+<ol>
+<li><p>pp : 地形・海陸分布データの作成</p></li>
+<li><p>init : 初期値・境界値データの作成</p></li>
+<li><p>run : 時間積分を行う（モデル本体の実行）</p></li>
+</ol>
+<p>といった手順で実行する． 以降，この順序でチュートリアルの説明を進める． このチュートリアルでは，Fig. [fig:domain]に示した日本域を対象とした 現実大気実験を行う． 計算領域（ドメイン）の設定はTable [tab:grids]のようになっている．</p>
+<p><embed src="./figure/how_to_run.eps" title="fig:" /><br /></p>
+<p><embed src="./figure/domain.eps" title="fig:" /><br /></p>
+<p><span>150mm</span><span>|l|X|</span> 項目 &amp; 設定<br />MPIプロセス分割 (東西 x 南北) &amp; 3 x 3 (合計9プロセス)<br />水平格子数 (東西 x 南北) &amp; 180格子点 x 180格子点<br />鉛直層数 &amp; 36層<br />水平格子間隔 &amp; dx = dy = 7500m<br />積分期間 &amp; 1999年5月5日 00UTC～12UTC (12時間積分)<br />時間ステップ間隔 &amp; 30 sec (1440 steps)<br /></p>
+<h3 id="現実大気実験の実行方法">現実大気実験の実行方法</h3>
+<h4 id="地形土地利用データの作成pp">地形・土地利用データの作成：pp</h4>
+<p>ここでは，[sec:source<sub>c</sub>ode]節でダウンロードした<code>tutorial_data</code>は， <code>${TOPDIR}</code>の下に展開されていると想定している．</p>
+<p>まず，ppディレクトリへ移動する． ppでは現実実験のための地形データ、土地利用データを作成する．</p>
+<pre><code> $ cd scale/scale-les/test/tutorial/pp</code></pre>
+<p>ppディレクトリの中には，<code>pp.conf</code>という名前の コンフィグファイルが準備されている． 地球上でのドメインの位置や格子点数など、実験設定に合わせて， 適宜<code>pp.conf</code>を編集する必要があるが, チュートリアルでは，すでに編集済みの<code>pp.conf</code>が 与えられているためそのまま利用する． <code>pp.conf</code>の設定の中で特に注意するべき項目は，<code>PARAM_CONVERT</code>である．</p>
+<pre><code> &amp;PARAM_CONVERT
+  CONVERT_TOPO = .true.,
+  CONVERT_LANDUSE = .true.,
+ /</code></pre>
+<p>上記のように<code>CONVERT_TOPO</code>と<code>CONVERT_LANDUSE</code>が <code>.true.</code>となっていることが， それぞれ地形と土地利用の処理を行うことを意味している． 詳細なコンフィグファイルの内容については， Appendix [app:namelist]を参照されたい．</p>
+<p>次に，コンパイル済みのバイナリと入力データをppディレクトリへリンクする．</p>
+<pre><code> $ ln -s ${TOPDIR}/scale/scale-les/test/tutorial/bin/scale-les_pp ./
+ $ ln -s ${TOPDIR}/tutorial_data/input_topo    ./
+ $ ln -s ${TOPDIR}/tutorial_data/input_landuse ./</code></pre>
+<p>今回は，Table [tab:grids]に示されているように， 9つのMPIプロセスを使用する設定なので次のように実行する．</p>
+<pre><code> $ mpirun -n 9 ./scale-les_pp pp.conf</code></pre>
+<p>正常にジョブが終了すれば，<code>topo_d01.pe######.nc</code>と<code>landuse_d01.pe######.nc</code>というファイルがMPIプロセス数だけ，つまり9つずつ生成される（<code>######</code>にはMPIプロセスの番号が入る）． それぞれ，ドメインの格子点に内挿された地形と土地利用の情報が入ってる．</p>
+<p>処理内容のログとして，<code>pp_LOG_d01.pe000000</code>という名前でログファイルも 出力されるので内容を確かめておくこと． gpviewがインストールされていれば，次のコマンドによって作成された地形と土地利用データを 描画してチェックすることができる． 正しく作成されていれば，Fig. [fig:domain]と同じように描かれる．</p>
+<pre><code>$ gpview topo_d01.pe00000*@TOPO --aspect=1
+$ gpview landuse_d01.pe00000*@FRAC_LAND --aspect=1</code></pre>
+<h4 id="初期値境界値データの作成init">初期値・境界値データの作成：init</h4>
+<p>init では，SCALE計算に必要な初期値・境界値データを作成する． まず，initディレクトリへ移動する．</p>
+<pre><code> $ cd scale/scale-les/test/tutorial/init</code></pre>
+<p>initディレクトリの中には，<code>init.conf</code>という名前のコンフィグファイルが準備されている． <code>pp.conf</code>と同様に，実験設定に合わせて、この<code>init.conf</code>を書き換える必要があるが、 チュートリアル用の<code>init.conf</code>ファイルはTable[tab:grids]の設定に すでに合わせてある． 初期値・境界値データの作成には前節で作成した地形・土地利用データを利用する． これは，下記のように，相対PATHを用いて参照するように設定されている．</p>
+<pre><code>&amp;PARAM_TOPO
+ TOPO_IN_BASENAME = &quot;../pp/topo_d01&quot;,
+/
+&amp;PARAM_LANDUSE
+ LANDUSE_IN_BASENAME  = &quot;../pp/landuse_d01&quot;,
+/</code></pre>
+<p>その他に<code>init.conf</code>の設定の中で特に注意するべき項目は， <code>PARAM_MKINIT_REAL</code>である．</p>
+<pre><code>&amp;PARAM_MKINIT_REAL
+ BASENAME_BOUNDARY   = &quot;boundary_d01&quot;,  &lt;- 境界値データの出力名
+ FILETYPE_ORG        = &quot;NICAM-NETCDF&quot;,
+ NUMBER_OF_FILES     = 2,               &lt;- 読み込むファイルの数
+ BOUNDARY_UPDATE_DT  = 21600.D0,        &lt;- 入力データの時間間隔
+ INTERP_SERC_DIV_NUM = 20,              &lt;- 内挿計算用のチューニングパラメータ
+/</code></pre>
+<p><code>FILETYPE_ORG</code>は入力する気象場データのファイルフォーマットに 関するパラメータを設定しており，ここでは NICAMモデルのnetcdf形式データのフォーマットで読み込むことを指定している． 詳細なコンフィグファイルの内容については，Appendix [app:namelist]を参照されたい．</p>
+<p>次に，コンパイル済みのバイナリをinitディレクトリへリンクする．</p>
+<pre><code> $ ln -s ${TOPDIR}/scale/scale-les/test/tutorial/bin/scale-les_init ./</code></pre>
+<p>入力データはinitディレクトリの中に準備されている，<code>&quot;inputdata-link.sh&quot;</code>を用いてリンクする．</p>
+<pre><code> $ sh inputdata-link.sh</code></pre>
+<p>としてスクリプトを実行することで，気象場の入力データがリンクされ，initディレクトリ内に下記のファイルがリンクされる． このスクリプトにあるstart dateとend dateの設定項目を実験設定に対応するように編集するが、ここでは，start dateは1999/05/05 00:00:00，end dateは1999/05/06 00:00:00と設定している．もし，<code>tutorial_data</code>を<code>${TOPDIR}</code>以外の場所に展開している場合は，スクリプト内の <code>&quot;dir&quot;</code>の項目も適切なディレクトリに変更すること．下記ファイルにリンクが張れれば成功．</p>
+<pre><code>
+la_tg_00000.peall.nc    ms_qv_00000.peall.nc   oa_sst_00000.peall.nc  ss_tem_sfc_00000.peall.nc
+la_tg_00001.peall.nc    ms_qv_00001.peall.nc   oa_sst_00001.peall.nc  ss_tem_sfc_00001.peall.nc
+la_wg_00000.peall.nc    ms_tem_00000.peall.nc  ss_q2m_00000.peall.nc  ss_u10m_00000.peall.nc
+la_wg_00001.peall.nc    ms_tem_00001.peall.nc  ss_q2m_00001.peall.nc  ss_u10m_00001.peall.nc
+lsmask_00000.peall.nc   ms_u_00000.peall.nc    ss_slp_00000.peall.nc  ss_v10m_00000.peall.nc
+lsmask_00001.peall.nc   ms_u_00001.peall.nc    ss_slp_00001.peall.nc  ss_v10m_00001.peall.nc
+ms_pres_00000.peall.nc  ms_v_00000.peall.nc    ss_t2m_00000.peall.nc
+ms_pres_00001.peall.nc  ms_v_00001.peall.nc    ss_t2m_00001.peall.nc</code></pre>
+<p>次に、陸面過程や放射過程のモデルを起動するためのパラメータファイルにリンクをはる．</p>
+<pre><code> $ ln -s ${TOPDIR}/scale/scale-les/test/data/land/*  ./
+ $ ln -s ${TOPDIR}/scale/scale-les/test/data/rad/*   ./</code></pre>
+<p>上の行のリンクコマンドによって陸面過程のパラメータファイルがリンクされ， 下の行のコマンドによって放射過程のパラメータファイルがリンクされる． 準備が整ったら，9つのMPIプロセスを使用してinitを実行する．</p>
+<pre><code> $ mpirun -n 9 ./scale-les_init init.conf</code></pre>
+<p>正常にジョブが終了すれば， <code>boundary_d01.pe######.nc</code>と<code>init_d01_00010713600.000.pe######.nc</code>というファイルが MPIプロセス数だけ，つまり9つずつ生成される（<code>######</code>にはMPIプロセスの番号が入る）． それぞれ，境界値データと初期値データが入ってるおり，境界値データには複数の時刻のデータが1つのファイルに含まれている． 初期値ファイルの名前のうち<code>&quot;00010713600.000&quot;</code>の部分は，モデル内で算出された実験開始時刻を表している．</p>
+<p>処理内容のログとして，<code>init_LOG_d01.pe000000</code>という名前でログファイルも出力されるので内容を確かめておくこと． gpviewがインストールされていれば，次のコマンドによって作成された地形と土地利用データを描画してチェックすることができる． 正しく作成されていれば，Fig. [fig:init]と同じように描かれる．</p>
+<pre><code>$ gpvect --scalar --slice z=1500 --nocont --aspect=1 --range=0.001:0.015          \
+         --xintv=10 --yintv=10 --unit_vect init_d01_00010713600.000.pe00*@QV      \
+         init_d01_00010713600.000.pe00*@MOMX init_d01_00010713600.000.pe00*@MOMY</code></pre>
+<p><embed src="./figure/init_qv-momxy.eps" title="fig:" /><br /></p>
+<h4 id="時間積分を行うrun">時間積分を行う：run</h4>
+<p>ここではいよいよSCALE-LESモデルを実行する． まず，runディレクトリへ移動する．</p>
+<pre><code>  $ cd scale/scale-les/test/tutorial/run</code></pre>
+<p>runディレクトリの中には，これまでと同様に<code>run.conf</code>という名前のコンフィグファイルが準備されている． チュートリアル用の<code>run.conf</code>ファイルのドメインの位置や格子点数などはTable[tab:grids]の設定に合わせてある． モデル本体の実行には事前に作成した地形・土地利用データや初期値・境界値データを利用する． これらのファイルを参照するために， <code>TOPO_IN_BASENAME</code>，<code>LANDUSE_IN_BASENAME</code>， <code>RESTART_IN_BASENAME</code>，および<code>ATMOS_BOUNDARY_IN_BASENAME</code>で それぞれ場所を指定する．</p>
+<pre><code>&amp;PARAM_TOPO
+ TOPO_IN_BASENAME = &quot;../pp/topo_d01&quot;,
+/
+
+&amp;PARAM_LANDUSE
+ LANDUSE_IN_BASENAME  = &quot;../pp/landuse_d01&quot;,
+/
+
+&amp;PARAM_RESTART
+ RESTART_OUTPUT      = .false.,
+ RESTART_IN_BASENAME = &quot;../init/init_d01_00010713600.000&quot;,
+/
+
+&amp;PARAM_ATMOS_BOUNDARY
+ ATMOS_BOUNDARY_TYPE        = &quot;REAL&quot;,
+ ATMOS_BOUNDARY_IN_BASENAME = &quot;../init/boundary_d01&quot;,
+ ATMOS_BOUNDARY_USE_VELZ    = .true.,
+ ATMOS_BOUNDARY_USE_QHYD    = .false.,
+ ATMOS_BOUNDARY_VALUE_VELZ  = 0.0D0,
+ ATMOS_BOUNDARY_UPDATE_DT   = 21600.0D0,
+/</code></pre>
+<p><code>run.conf</code>の設定の中で時間積分に関する設定は，<code>PARAM_TIME</code>の項目にある．</p>
+<pre><code>&amp;PARAM_TIME
+ TIME_STARTDATE             = 1999, 5, 5, 0, 0, 0,
+ TIME_STARTMS               = 0.D0,
+ TIME_DURATION              = 12.0D0,
+ TIME_DURATION_UNIT         = &quot;HOUR&quot;,
+ TIME_DT                    = 30.0D0,
+ TIME_DT_UNIT               = &quot;SEC&quot;,
+ TIME_DT_ATMOS_DYN          = 7.5D0,
+ TIME_DT_ATMOS_DYN_UNIT     = &quot;SEC&quot;,
+
+ ～～中略～～
+
+/</code></pre>
+<p><code>TIME_STARTDATE</code>は時間積分を開始する時刻を設定する項目で，チュートリアルでは1999年5月5日0時UTCと設定する． <code>TIME_DURATION</code>は積分期間を設定する項目で，ここでは12時間積分を行う設定になっている． <code>TIME_DT</code>，および<code>TIME_DT_ATMOS_DYN</code>は，時間積分の間隔（時間ステップ間隔：DT = Delta Time）を設定する項目である．前者は移流計算，後者はそれ以外の力学過程の計算に関する時間積分間隔である． SCALE-LESモデルでは，そのほかの物理過程についても細かく時間積分間隔を設定できるようになっている．</p>
+<p>出力データに関する設定は<code>PARAM_HISTORY</code>で行う．</p>
+<pre><code>&amp;PARAM_HISTORY
+ HISTORY_DEFAULT_BASENAME  = &quot;history_d01&quot;,
+ HISTORY_DEFAULT_TINTERVAL = 1800.D0,
+ HISTORY_DEFAULT_TUNIT     = &quot;SEC&quot;,
+ HISTORY_DEFAULT_TAVERAGE  = .false.,
+ HISTORY_DEFAULT_DATATYPE  = &quot;REAL4&quot;,
+ HISTORY_DEFAULT_ZINTERP   = .true.,
+/</code></pre>
+<p><code>HISTORY_DEFAULT_BASENAME</code>は出力するファイル名である． <code>HISTORY_DEFAULT_TINTERVAL</code>と<code>HISTORY_DEFAULT_TUNIT</code>によってヒストリー出力時間間隔が設定される． ここでは1800秒（30分）間隔での出力として設定されている． この設定で，<code>HISTITEM</code>として羅列された変数について出力される． <code>HISTITEM</code>では、オプション変数を加えることで、出力間隔を変数毎に変更したり、平均値を出力したりすることも出来る。 これらの説明は[sec:output]を参照されたい．</p>
+<pre><code>&amp;HISTITEM item=&quot;DENS&quot; /           ! density (3D)
+&amp;HISTITEM item=&quot;MOMZ&quot; /           ! vertical momentum (3D)
+&amp;HISTITEM item=&quot;MOMX&quot; /           ! horizontal momentum-x (3D)
+&amp;HISTITEM item=&quot;MOMY&quot; /           ! horizontal momentum-y (3D)
+&amp;HISTITEM item=&quot;RHOT&quot; /           ! density * potential-temperature (3D)
+
+&amp;HISTITEM item=&quot;QV&quot;   /           ! mixing ratio for vapor (3D)
+&amp;HISTITEM item=&quot;QHYD&quot; /           ! mixing ratio for hydrometeor (3D)
+
+&amp;HISTITEM item=&quot;T&quot;    /           ! temperature (3D)
+&amp;HISTITEM item=&quot;PRES&quot; /           ! pressure (3D)
+&amp;HISTITEM item=&quot;U&quot;    /           ! horizontal wind component-x (3D)
+&amp;HISTITEM item=&quot;V&quot;    /           ! horizontal wind component-y (3D)
+&amp;HISTITEM item=&quot;W&quot;    /           ! vertical wind component (3D)
+&amp;HISTITEM item=&quot;PT&quot;   /           ! potential temperature (3D)
+&amp;HISTITEM item=&quot;RH&quot;   /           ! relative humidity (3D)
+
+&amp;HISTITEM item=&quot;PREC&quot; /           ! precipitation (2D)
+&amp;HISTITEM item=&quot;OLR&quot;  /           ! out-going longwave radiation
+
+&amp;HISTITEM item=&quot;U10&quot; /            ! horizontal wind component-x at 10m height(2D)
+&amp;HISTITEM item=&quot;V10&quot; /            ! horizontal wind component-y at 10m height(2D)
+&amp;HISTITEM item=&quot;T2&quot;  /            ! temperature at 2m height (2D)
+&amp;HISTITEM item=&quot;Q2&quot;  /            ! mixing ratio for vapor at 2m height (2D)
+
+&amp;HISTITEM item=&quot;SFC_PRES&quot;   /     ! pressure at the bottom surface (2D)
+&amp;HISTITEM item=&quot;SFC_TEMP&quot;   /     ! temperature a the bottom surface (2D)
+&amp;HISTITEM item=&quot;LAND_SFC_TEMP&quot; /  ! temperature a the bottom surface for land model (2D)
+&amp;HISTITEM item=&quot;URBAN_SFC_TEMP&quot; / ! temperature a the bottom surface for urban model (2D)</code></pre>
+<p>その他に実験で使用される物理過程の設定は， <code>PARAM_TRACER，PARAM_ATMOS，PARAM_OCEAN，PARAM_LAND，PARAM_URBAN</code>の項目に 記述されているので，実行前にチェックすること． 詳細なコンフィグファイルの内容については，Appendix [app:namelist]を参照されたい．</p>
+<p>次に，コンパイル済みのバイナリをrunディレクトリへリンクする．</p>
+<pre><code>  $ ln -s ${TOPDIR}/scale/scale-les/test/tutorial/bin/scale-les ./</code></pre>
+<p>また，前節と同様に陸面過程や放射過程のモデルを起動するためのパラメータファイルも リンクしておく．</p>
+<pre><code>  $ ln -s ${TOPDIR}/scale/scale-les/test/data/land/*  ./
+  $ ln -s ${TOPDIR}/scale/scale-les/test/data/rad/*   ./</code></pre>
+<p>上の行のリンクコマンドによって陸面過程のパラメータファイルがリンクされ， 下の行のコマンドによって放射過程のパラメータファイルがリンクされる． 準備が整ったら，9つのMPIプロセスを使用してscale-lesを実行する．</p>
+<pre><code>  $ mpirun -n 9 ./scale-les run.conf &lt; /dev/null &gt;&amp;log&amp;</code></pre>
+<p>実行にはおおよそ2時間を要するため，上記のように標準出力をファイルへ 吐き出すようにしてバックグラウンドで実行しておくと便利である． 計算が開始されれば，処理内容のログとして，<code>&quot;LOG_d01.pe000000&quot;</code>ファイルが生成されるので， 例えば下記のようなコマンドで<code>&quot;LOG_d01.pe000000&quot;</code>ファイルを参照すれば， どこまで計算が進んでいるかチェックすることができる．</p>
+<pre><code>  $ tail -n 50 LOG_d01.pe000000</code></pre>
+<p>正常にジョブが終了すれば，<code>history_d01.pe######.nc</code>と<code>restart_d01.pe######.nc</code>と いう名前のファイルがMPIプロセス数だけ，つまり9つずつ生成される （<code>######</code>にはMPIプロセスの番号が入る）． historyファイルは実行結果のプロダクトであり，restartファイルは対応する時刻を開始時刻として 再計算を開始するための初期値ファイルである．</p>
+<p>次節でhistoryデータを描画して結果を調べる方法を説明する．</p>
+<h2 id="quicklook-scale-les-output">Quicklook SCALE-LES output</h2>
+<p>SCALE-LESモデルの出力ファイルはMPIプロセス毎に出力され，計算領域が分割された状態で出力されている． ファイル自体のフォーマットは気候・予報（CF）メタデータ規約に対応したnetcdf4形式でアウトプットされている． ここでは，gpviewとgradsを使用した2通りの描画方法について説明する。</p>
+<h3 id="rubydclgphys-gplist-gpprint-gpview-gpvect">RubyDCL/Gphys: gplist, gpprint, gpview, gpvect</h3>
+<p>Dennou系のRubyベースコマンドgpviewによって直接描画することができる． RubyDCL/Gphysがインストールされていない場合は，Appendix [sec:env<sub>s</sub>etting]を参照して 事前にインストールすること． 以下にチュートリアルで実行した結果を描画する方法についていくつか例を挙げる．</p>
+<h4 id="ファイル内の変数を確認する">ファイル内の変数を確認する</h4>
+<p>まず，gplistコマンドを用いてヒストリーファイル内の変数を確認する．</p>
+<pre><code>$ gplist history_d01.pe000000.nc</code></pre>
+<p><code>history_d01.pe######.nc</code>のファイルはMPI並列数分だけ存在するが， ファイルに収められている変数は基本的に同じであるため， どれか1つのファイルについて中身を確認すればよい． 上記のコマンドを実行すると，下記のように変数リストが表示される．</p>
+<pre><code>history_d01.pe000000.nc:
+  x	[x=62]	&#39;X&#39;	(m)
+  y	[y=62]	&#39;Y&#39;	(m)
+  z	[z=36]	&#39;Z&#39;	(m)
+  xh	[xh=62]	&#39;X (half level)&#39;	(m)
+  yh	[yh=62]	&#39;Y (half level)&#39;	(m)
+  zh	[zh=36]	&#39;Z (half level)&#39;	(m)
+
+　～～中略～～
+
+  topo	[x=62,y=62]	&#39;topography&#39;	(m)
+  lsmask	[x=62,y=62]	&#39;fraction for land-sea mask&#39;	(0-1)
+  time	[time=24]	&#39;time&#39;	(seconds since 1999-01-01 00:00:00)
+  time_bnds	[nv=2,time=24]	&#39;&#39;	(seconds since 1999-01-01 00:00:00)
+  DENS	[x=62,y=62,z=36,time=24]	&#39;density&#39;	(kg/m3)
+  MOMZ	[x=62,y=62,zh=36,time=24]	&#39;momentum z&#39;	(kg/m2/s)
+  MOMX	[xh=62,y=62,z=36,time=24]	&#39;momentum x&#39;	(kg/m2/s)
+  MOMY	[x=62,yh=62,z=36,time=24]	&#39;momentum y&#39;	(kg/m2/s)
+  RHOT	[x=62,y=62,z=36,time=24]	&#39;rho * theta&#39;	(kg/m3*K)
+  QV	[x=62,y=62,z=36,time=24]	&#39;Water Vapor mixing ratio&#39;	(kg/kg)
+  W	[x=62,y=62,z=36,time=24]	&#39;velocity w&#39;	(m/s)
+  U	[x=62,y=62,z=36,time=24]	&#39;velocity u&#39;	(m/s)
+  V	[x=62,y=62,z=36,time=24]	&#39;velocity v&#39;	(m/s)
+  PT	[x=62,y=62,z=36,time=24]	&#39;potential temp.&#39;	(K)
+  QHYD	[x=62,y=62,z=36,time=24]	&#39;total hydrometeors&#39;	(kg/kg)
+  PRES	[x=62,y=62,z=36,time=24]	&#39;pressure&#39;	(Pa)
+  T	[x=62,y=62,z=36,time=24]	&#39;temperature&#39;	(K)
+  RH	[x=62,y=62,z=36,time=24]	&#39;relative humidity&#39;	(%)
+  PREC	[x=62,y=62,time=24]	&#39;surface precipitation rate&#39;	(kg/m2/s)
+  OLR	[x=62,y=62,time=24]	&#39;TOA net longwave  radiation flux&#39;	(W/m2)
+
+　～～中略～～</code></pre>
+<p>x, y, zなどの変数は格子情報を表しており，<code>DENS, MOMZ, MOMX</code>や <code>PT, QHYD, PRES</code>といった変数が気象場のデータである． この中から1つ，もしくは複数の変数を選んで描画する．</p>
+<p>各気象場の変数に対してデータの軸構成が書かれている． 例えば，<code>DENS</code>は空間を構成するx軸，y軸，z軸と時間を構成するtime軸によってデータが構成されている． 高度や時刻を指定して描画するためには，このようにデータを構成する軸についてあらかじめ知っておく必要がある． 例えばヒストリー出力されている時刻を調べるには次のようにコマンドを実行する．</p>
+<pre><code>$ gpprint history_d01.pe000000.nc@time</code></pre>
+<p>そうすると下記のようにtime変数の値が標準出力へ表示される．</p>
+<pre><code> 1.07154e+07, 1.07172e+07, 1.0719e+07, 1.07208e+07, 1.07226e+07, 1.07244e+07,
+ 1.07262e+07, 1.0728e+07, 1.07298e+07, 1.07316e+07, 1.07334e+07, 1.07352e+07,
+ 1.0737e+07, 1.07388e+07, 1.07406e+07, 1.07424e+07, 1.07442e+07, 1.0746e+07,
+ 1.07478e+07, 1.07496e+07, 1.07514e+07, 1.07532e+07, 1.0755e+07, 1.07568e+07,</code></pre>
+<p>SCALE-LESモデル内では日時が全て秒単位で表現されているため，ここで表記される 時刻も日時が全て秒として積算された値が時刻として表示される． SCALE-LESモデルはデフォルト設定で，一番始めに初期値がヒストリー出力され， そのあと<code>HISTORY_DEFAULT_TINTERVAL</code>に従った時間間隔でヒストリー出力されている． チュートリアルでは12時間積分する中で，30分ごとに出力したため， 1（初期値）＋23ステップ＝24ステップの時刻のデータが出力されていることがわかる．</p>
+<p><span>＊netcdfに付属している<code>&quot;ncdump&quot;</code>を用いてもよい．</span></p>
+<h4 id="ファイル内の変数を描画する">ファイル内の変数を描画する</h4>
+<p>gpviewを用いて次のように描画できる．</p>
+<p>（例 1）高度1500mにおける温度の水平分布</p>
+<ul>
+<li><p>積分開始3時間後の様子</p>
+<pre><code>  gpview history_d01.pe00000*@T,z=1500,time=1.07262e+07 --range=270:291 --aspect=1
+  </code></pre>
+<p>実行結果はFig. [fig:hist<sub>t</sub>]aのようになる（画面をクリックするか<code>&quot;q&quot;</code>を打つことで終了する）． オプションの<code>z=1500,time=1.07262e+07</code>によって描画する高度，および時刻を指定している． <code>--range=270:291</code>のオプションは描画する値のレンジを指定している． また，<code>&quot;--wsn=2&quot;</code>のオプションを付けて実行することで，<code>&quot;dcl.ps&quot;</code>というファイル名で 画像をPSファイルに保存することができる．</p></li>
+<li><p>積分開始6時間後の様子：実行結果はFig. [fig:hist<sub>t</sub>]bのようになる．</p>
+<pre><code>  gpview history_d01.pe00000*@T,z=1500,time=1.0737e+07 --range=270:291 --aspect=1
+  </code></pre>
+<p>先との変更点はtimeオプションの引数だけである．</p></li>
+<li><p>積分開始9時間後の様子：実行結果はFig. [fig:hist<sub>t</sub>]cのようになる．</p>
+<pre><code>  gpview history_d01.pe00000*@T,z=1500,time=1.07478e+07 --range=270:291 --aspect=1
+  </code></pre></li>
+</ul>
+<p><embed src="./figure/gpview_hist_t.eps" title="fig:" /><br /></p>
+<p>（例 2）高度1500mにおける相対湿度と水平風の分布</p>
+<ul>
+<li><p>積分開始3時間後の様子</p>
+<pre><code>  gpvect --scalar --slice z=1500,time=1.07262e+07 --nocont --range=10:102        \
+         --aspect=1 --xintv=10 --yintv=10 --unit_vect history_d01.pe00000*@RH    \
+         history_d01.pe00000*@U history_d01.pe00000*@V
+  </code></pre>
+<p>実行結果はFig. [fig:hist<sub>r</sub>h]aのようになる． ここでは<code>gpview</code>ではなくベクトルを描画することができる<code>gpvect</code>を使用して描画する． オプションの<code>--xintv=10 --yintv=10</code>は，ベクトルを描画する格子点間隔を指定している．</p></li>
+<li><p>積分開始6時間後の様子：実行結果はFig. [fig:hist<sub>r</sub>h]bのようになる．</p>
+<pre><code>  gpvect --scalar --slice z=1500,time=1.0737e+07 --nocont --range=10:102        \
+         --aspect=1 --xintv=10 --yintv=10 --unit_vect history_d01.pe00000*@RH    \
+         history_d01.pe00000*@U history_d01.pe00000*@V
+  </code></pre></li>
+<li><p>積分開始9時間後の様子：実行結果はFig. [fig:hist<sub>r</sub>h]cのようになる．</p>
+<pre><code>  gpvect --scalar --slice z=1500,time=1.07478e+07 --nocont --range=10:102        \
+         --aspect=1 --xintv=10 --yintv=10 --unit_vect history_d01.pe00000*@RH    \
+         history_d01.pe00000*@U history_d01.pe00000*@V
+  </code></pre></li>
+</ul>
+<p><embed src="./figure/gpview_hist_rh.eps" title="fig:" /><br /></p>
+<p>（例 3）QHYD(凝結物の混合比)についての計算領域西端から800kmの地点における鉛直-南北断面図</p>
+<pre><code>gpview history_d01.pe00000*@QHYD,x=800000,y=100000:600000,z=0:16000,time=1.0737e+07</code></pre>
+<p>積分開始6時間後の様子で，実行結果はFig. [fig:hist<sub>q</sub>hyd]のようになる． オプションの<code>x=800000,y=100000:600000,z=0:16000</code>によって，xは800kmの地点， yは100kmから600kmの範囲，zは0kmから16kmの範囲を描画するように指定している．</p>
+<p>その他の描画例を下記に挙げる．</p>
+<ul>
+<li><p>水平風南北成分を描画する：<br />高度1000m指定，カンバスの縦横比＝1，コンターなし，変数の描画範囲=4.8～5.2 [m/s]， 時間軸をアニメーション（クリックで進む）<br /><code>$ gpview history.pe00*@V,z=1000 --aspect 1 --nocont --range=4.8:5.2 --anim time</code></p></li>
+<li><p>水蒸気混合比の南北-鉛直断面図を描画する：<br />東西方向に50kmの位置を指定，コンターなし，時間軸をアニメーション，<code>&quot;--Gaw&quot;</code>のオプションに 　より自動でアニメが進む，横軸と縦軸を交換 (exch)<br /><code>$ gpview history.pe00*@QV,x=50000 --aspect 1 --nocont --anim time --Gaw --exch</code></p></li>
+</ul>
+<p><embed src="./figure/gpview_hist_qhyd.eps" title="fig:" /><br /></p>
+<p>また，チュートリアルの中でも使用してきたが，下記のように<code>init_****.pe#####.nc</code>ファイルなどを 指定することで，初期値・境界値や下端境界条件のファイルの中身も見ることが出来る．</p>
+<ul>
+<li><p><code>$ gpview init_00000000000.000.pe00*@MOMX,z=1000 --aspect 1 --nocont</code></p></li>
+<li><p><code>$ gpview boundary.pe00*@VELX,z=1000 --nocont --anim time</code></p></li>
+<li><p><code>$ gpview topo.pe00*@TOPO --aspect 1</code></p></li>
+<li><p><code>$ gpview landuse.pe00*@FRAC_LAND --aspect 1</code></p></li>
+</ul>
+<p>その他のオプション等については–helpを使ってヘルプを表示させるか，電脳倶楽部のWebページ （<a href="http://ruby.gfd-dennou.org/products/gphys/doc/gpview.html" class="uri">http://ruby.gfd-dennou.org/products/gphys/doc/gpview.html</a>）を参照すること．</p>
+<h3 id="netcdf2grads">netcdf2grads</h3>
+<p>SCALE-LESの出力ファイル（<code>history.******.nc</code>）を GrADSで図化するためのnetcdf2grads の使用方法について説明する。 並列処理に対応したnetcdf2grads_hも用意されているが、 ここではシングルノード用のnetcdf2gradsの使用方法を示す。 netcdf2grads_h については、最後に簡単に説明する。 netcdf2gradsのソースファイルは <code>scale/scale-les/util/netcdf2grads/</code>にある。 SCALE本体とは独立なので、ディレクトリを任意の場所に移動して 使用することが可能である．</p>
+<h4 id="コンパイル-1">コンパイル</h4>
+<dl>
+<dt>Intel compiler</dt>
+<dd><p><br /></p>
+<pre><code>  ifort -convert big_endian -assume byterecl -I${NETCDF4}/include 
+    -L${NETCDF4}/lib -lnetcdff -lnetcdf make_grads_file.f90 -o convine
+  </code></pre>
+</dd>
+<dt>gfortran</dt>
+<dd><p><br /></p>
+<pre><code>  gfortran -frecord-marker=4 --convert=big-endian -I${NETCDF4}/include
+    -L${NETCDF4}/lib -lnetcdff -lnetcdf make_grads_file1.f90 -o convine</code></pre>
+</dd>
+</dl>
+<h4 id="使用方法">使用方法</h4>
+<p>実行時に，インタラクティブモードかサイレントモードかを選択することが出来る．</p>
+<pre><code>   Interactive mode :  &#39;&#39;./convine -i&#39;&#39;
+   Silent mode      :  &#39;&#39;./convine -s&#39;&#39;</code></pre>
+<dl>
+<dt>インタラクティブモード</dt>
+<dd><p><br /></p>
+<pre><code>  cd netcdf2grads/
+  ./convine -i</code></pre>
+<p>と実行すると、下記のメッセージが出るので、指示通り、必要なファイルのパスを打ち込む．</p>
+<pre><code>path to configure file for run with the quotation mark
+ &#39;${path to directory of configure file}/run.conf&#39; &lt;- configureファイルへのパス
+path to directory of history files with the quotation mark
+ &#39;${path to directory of history files}/&#39; &lt;- SCALE-LESの出力ファイルのパス
+path to directory of output files with the quotation mark
+ &#39;./grads/&#39;  &lt;- gradsファイルの出力先
+start time of convert data
+ 1           &lt;- 任意の番号の時間から変換可能． 
+end time of convert data
+ 10          &lt;- 変換を修了する時間
+Imput number of variable
+0 -&gt; all variable output from model
+ X           &lt;- 変換したい変数の数
+Imput variable
+ VARIABLE(PRECなど)  &lt;- 変換したい変数名</code></pre>
+<p>うまく実行されれば、指定した出力先にctlファイルとgrdファイルが作成される。</p>
+</dd>
+<dt>サイレントモード</dt>
+<dd><p><br />サイレントモードの場合は、あらかじめ、<code>namelist.in</code>に必要な情報を書き入れておく．</p>
+<pre><code>  cd netcdf2grads/
+  ./convine -s</code></pre>
+<p>と実行すれば変換が始まる。</p>
+</dd>
+</dl>
+<h4 id="並列処理-netcdf2grads_h">並列処理: netcdf2grads_h</h4>
+<p>スパコンなどの大型計算機で並列計算を行った場合、 出力ファイルの数が多く、それぞれのファイルのデータ容量も大きい。 netcdf2gradsを並列処理したい場合にはこちらを使用する。 ここでは、K上での使用方法を簡単に説明する。</p>
+<ol>
+<li><p>ファイルをコピー<br /><code>scale/scale-les/util/netcdf2grads_h</code> を <code>/data/GROUP/USER/WORK_directory/</code> など、作業したいディレクトリにコピー。</p></li>
+<li><p>コンパイル<br /><code>.bashrc</code> などに下記を設定</p>
+<pre><code>  #--SCALE
+   export SCALE_SYS=&#39;&#39;K&#39;&#39;
+   export AGGRESIVE=&#39;&#39;F&#39;&#39;
+   export FAST=&#39;&#39;T&#39;&#39;
+   export DEBUG=&#39;&#39;F&#39;&#39;
+ </code></pre>
+<p>そして、コンパイル．<br /><code>$ make</code><br />うまくいけば、<code>net2g</code>が作成される。</p></li>
+<li><p><code>microで実行する</code><br /><code>/scratch/GROUP/USER/</code>の下に、作業ディレクトリを用意する。そこに、</p>
+<pre><code>   net2g         : copy executive file
+   net2g.conf    : copy configure file
+   output/  : link to directory with scale history files
+   bindata/      : create directory for grads file output
+   job.sh        : job script for K (option)
+ </code></pre>
+<p>を用意する。<code>net2g.conf</code>の設定と<code>job.sh</code>の設定をする。 使用するノード数は、計算に使用したノード数の約数である必要がある。</p></li>
+</ol>
+<h1 id="scale-les-advance-use">SCALE-LES Advance use</h1>
+<h2 id="任意のデータをscaleで使用する">任意のデータをSCALEで使用する</h2>
+<h3 id="sec:adv_bnddata">Initial and Boundary data</h3>
+<p>現在，scale-lesではWRF-ARWモデル，NICAM，およびscale-lesのデータを 初期値・境界値としてSCALE用initデータを作成する事ができる．</p>
+<h2 id="実験設定の変更方法">実験設定の変更方法</h2>
+<h3 id="online-nesting">Online nesting</h3>
+<p>SCALE-LESモデルは単一の計算領域（Domain）を使用した計算の他に， 複数のDomainを使用したもつDomain nesting計算をサポートしている． 広い領域に渡る環境場の再現と高解像度計算による詳細な構造と過程を再現したい場合に有用な機能である． ここでは，広い領域をとった比較的粗い解像度のDomainをParent domainと称し， 相対的に狭い領域ではあるが高解像度のDomainをChild domainと称する． Child domainの領域はParent domainの領域内に完全に包含されていなければならない．</p>
+<p>SCALE-LESモデルでは現在，各Domainを単一Domain計算として順番に実行していくOffline nestingと 各Domainを同時に実行させるOnline Nestingの両方をサポートしている． 現在Online Nestingにおいては，1-way nesting（Parent domainからChild domainへのデータ受け渡し）のみをサポートしている． Nesting実験を行う場合は，Domainの数だけ各コンフィグファイル（<code>pp_d##.conf，init_d##.conf，run_d##.conf</code>）を 用意する必要がある．そして，各Domainについて地形・土地利用の作成，初期値・境界値の作成を事前に行っておく． Offline Nestingを行う場合は，まずParent domainの時間積分を実行し，そのhistory outputをChild domainへの 入力データとして，初期値・境界値作成を行えばよい．NestingするDomainの数が増えても，この手順を繰り返すだけである． Online Nestingを行う場合は，<code>run_d##.conf</code>の他に，起動用コンフィグファイル（<code>launch.conf</code>）が必要になる．</p>
+<p><span><em>launch.conf</em></span></p>
+<pre><code>&amp;PARAM_LAUNCHER
+ NUM_DOMAIN  = 3,
+ CONF_FILES  = run.d01.conf,run.d02.conf,run.d03.conf,
+ PRC_DOMAINS = 9,27,72,
+/</code></pre>
+<p>上記は3つのDomainを使用したOnline Nesting計算における起動用コンフィグファイルの例である． <code>NUM_DOMAIN = 3</code>が「3つのDomainを使用する」ことを表している． <code>CONF_FILES</code>は各Domainで読み込む実行コンフィグファイル（<code>run_d##.conf</code>）を指定する． <code>PRC_DOMAINS</code>は各Domainで使用するMPIプロセスの数を指定する．<code>CONF_FILES</code>で羅列した 順番で指定しなければならない．従って，この場合，Domain 1（最外）は9プロセス， Domain 2（中間）は27プロセス，そしてDomain 3（最内）は72プロセスを使用するように指定されている． ここで指定するプロセス数はrun.confで指定されているプロセス数と合致させなければならない． この3段のOnline Nesting計算で使用するMPIプロセスの全数は，<code>9 + 27 + 72 = 108</code>プロセスである．</p>
+<p>実行時には，単一Domainの計算とは異なり，<code>launch.conf</code>を引数に指定し， 全体で使用するMPIプロセス数を指定して実行する．</p>
+<pre><code> $ mpirun -n 108 ./scale-les launch.conf</code></pre>
+<p>実行にあたって注意することは，3つのDomainを同時に実行するため，出力されるファイルの名前等をDomain毎に変更しておく必要があることである．たとえば，<code>history.pe######.nc</code>は，<code>history_d01.pe######.nc, history_d02.pe######.nc, history_d03.pe######.nc</code>といったようにDomain毎に名前を変えながらどのDomainの出力であるか判別がつくようにする． ほかにLOGファイル，topoファイル，landuseファイル，boundaryファイル，initファイル，restartファイル，そしてmonitorファイルの名前を変更しておく必要がある．</p>
+<h3 id="setting-of-output-variables-to-history-file">Setting of output variables to history file</h3>
+<p>出力ファイルへの変数の追加は、2段階の手続きが必要である。</p>
+<ol>
+<li><p>ソースファイル内の設定。対象の変数をhistory出力するための設定で、この手続きにより、出力のための準備が行われる。</p></li>
+<li><p>run.conf内の設定。実際にhistoryに出力するかどうかを指定。コンパイルし直すことなく、実験毎に変更可能。</p></li>
+</ol>
+<p>予報変数や主要な変数についてはすでに1の手続きは行われているため、2だけを行えばよい。 対象となる変数リストは、Appendix[app:vari<sub>h</sub>ist]を参照。 これ以外の変数をユーザーが書き出したい場合は、1の手続きが必要であるが、ここでは2の手続きのみ説明する。</p>
+<p>出力ファイルへの変数の追加は、下記のフォーマットに従ってrun.confに追記すればよい。</p>
+<pre><code> &amp;HISTITEM ITEM     = &quot;character&quot;
+         (,BASENAME = &quot;character&quot;,
+           TINTERVAL= real,
+           TUNIT    = &quot;character&quot;, 
+           TAVERAGE = logical,
+           ZINTERP  = logical, 
+           DATATYPE = &quot;character&quot;)
+ /</code></pre>
+<p><span class="math">()</span>内はオプション。 特に指定がない場合には、<code>&amp;PARAM_HISTORY</code>の設定がdefaultとして設定される。</p>
+<pre><code> &amp;PARAM_HISTORY
+  HISTORY_DEFAULT_BASENAME  = &quot;character&quot;,
+  HISTORY_DEFAULT_TINTERVAL = real,
+  HISTORY_DEFAULT_TUNIT     = &quot;character&quot;,
+  HISTORY_DEFAULT_TAVERAGE  = logical,
+  HISTORY_DEFAULT_ZINTERP   = logical,
+  HISTORY_DEFAULT_DATATYPE  = &quot;character&quot;,
+  HISTORY_OUTPUT_STEP0      = logical,
+ /</code></pre>
+<p>各namelist内変数の説明は以下の通りである。<br /></p>
+<table>
+<tbody>
+<tr class="odd">
+<td align="left">ITEM</td>
+<td align="left">変数名。 Appendix [app:vari<sub>h</sub>ist]のTable [tb:vari<sub>h</sub>ist]を参照。</td>
+</tr>
+<tr class="even">
+<td align="left">BASENEME</td>
+<td align="left">出力ファイル名。</td>
+</tr>
+<tr class="odd">
+<td align="left"></td>
+<td align="left">BASENAME_xxxxxx.ncとなる。xxxxxxはノード番号。</td>
+</tr>
+<tr class="even">
+<td align="left">TINTERVAL</td>
+<td align="left">出力間隔。</td>
+</tr>
+<tr class="odd">
+<td align="left">TUNIT</td>
+<td align="left">TINTERVALで指定した出力間隔の単位。</td>
+</tr>
+<tr class="even">
+<td align="left">TAVERAGE</td>
+<td align="left">.false.=瞬間値、.true.=平均値として出力。</td>
+</tr>
+<tr class="odd">
+<td align="left"></td>
+<td align="left">平均値の場合、出力タイミングの直前のTINTERVAL間の平均値。</td>
+</tr>
+<tr class="even">
+<td align="left">DATATYPE</td>
+<td align="left">出力値の型。”REAL4”,”REAL8”など。</td>
+</tr>
+<tr class="odd">
+<td align="left">ZINTERP</td>
+<td align="left">.false.=モデル面、.true.=Z面（FZ面<span class="math">?</span>、CZ面<span class="math">?</span>）の値として出力。</td>
+</tr>
+<tr class="even">
+<td align="left">HISTORY_OUTPUT_STEP0</td>
+<td align="left">.false.=初期時刻(t=0)の値を出力、.true.=出力しない。</td>
+</tr>
+<tr class="odd">
+<td align="left"></td>
+<td align="left"><code>&amp;PARAM_HISTORY</code>でのみ有効。</td>
+</tr>
+</tbody>
+</table>
+<p><br /></p>
+<p><span><em>Example</em></span></p>
+<pre><code> &amp;PARAM_HISTORY
+  HISTORY_DEFAULT_BASENAME  = &quot;history_d03&quot;,
+  HISTORY_DEFAULT_TINTERVAL = 3600.D0,
+  HISTORY_DEFAULT_TUNIT     = &quot;SEC&quot;,
+  HISTORY_DEFAULT_TAVERAGE  = .false.,
+  HISTORY_DEFAULT_DATATYPE  = &quot;REAL4&quot;,
+  HISTORY_DEFAULT_ZINTERP   = .false.,
+  HISTORY_OUTPUT_STEP0      = .true.,
+ /
+
+ &amp;HISTITEM item=&quot;RAIN&quot;, taverage=.true., tinterval=600.D0 /</code></pre>
+<h1 id="sec:env_setting">ライブラリ環境のインストール</h1>
+<h2 id="インストールに関する基礎知識">インストールに関する基礎知識</h2>
+<p>Linuxをインストール後、各種プログラムのインストールにはコマンドライン端末を使う。 コマンドラインのシンボル（<code>$, #</code>）は、コマンドの実行を示す。 下記の表記の違いは、プログラムを実行する権限の違いを示している。</p>
+<pre><code> #        &lt;- root権限で実行するコマンド
+ $        &lt;- ユーザ権限で実行するコマンド</code></pre>
+<p>権限の一時的な切り替えにはsuコマンドを用いる。 <code>{User_Name}</code>は実際のユーザ名に読み替えること。</p>
+<pre><code> $ su {User_Name}   &lt;- {User_Name}のユーザー名でログイン
+ $ exit             &lt;- {User_Name}のユーザー名でログインを修了
+ $ su -             &lt;- root権限に変更
+ #</code></pre>
+<p>コマンドオプションにハイフンを用いると、そのユーザでのログインを行う。 用いない場合、権限のみの変更となる。またユーザ名を省略するとrootでのログインを試す。 ユーザの一時切り替えを終わるには、exitコマンドを用いる。 各プログラムをインストールするための圧縮ファイルは、/tmpにダウンロードされていると仮定する。 他のディレクトリにダウンロードしてある場合は、mvコマンド等を用いて/tmpに移動しておくことを勧める。 コード表記のうち、ダブルスラッシュ（//）で始まる行は解説のためのもので、実際に記述する必要はない。</p>
+<pre><code> $ vi</code></pre>
+<p>上記のコマンドは、vi（汎用テキストエディタ）プログラムを実行する。 他に、gedit、emacsなどのテキストエディタがある。 マニュアルではviコマンドの実行指示があるが、各自の使いやすいエディタへ適宜読み替えること。</p>
+<h2 id="インストールlinuxcentos編">インストール(Linux,CentOS編)</h2>
+<h4 id="各種インストールの事前準備">各種インストールの事前準備</h4>
+<p>SCALEのインストールに必要な開発ツールやライブラリのインストール方法について説明する。 ここでは簡単のため、Red Had Enterpise LinuxのクローンOSとして有名なCentOSを例に、 パッケージマネージャを利用した方法を紹介する。 他のOSでは適宜読み替えること。例えばUbuntuなどではyumではなくapt系コマンドを用いる。</p>
+<p>CentOSではいくつかの開発ツール、ライブラリを外部リポジトリから持ってくる必要がある。 具体的にはepelリポジトリ。ルート権限になり，外部リポジトリを認識させる。</p>
+<pre><code> # yum install epel-release</code></pre>
+<p>yumのグループインストール機能を用いて，開発ツールをまとめてインストールする。</p>
+<pre><code> # yum groupinstall &quot;development tools&quot;</code></pre>
+<p>グループインストールではインストールされないパッケージを個別に追加する。</p>
+<pre><code> # yum install hdf5-devel hdf5-static
+ # yum install netcdf-devel netcdf-static
+ # yum install openmpi-devel
+ # yum install lapack lapack-devel</code></pre>
+<h4 id="mpi設定">MPI設定</h4>
+<p>SCALEをマルチプロセッサで走らせるため、OpenMPIの設定を行う。 ユーザ権限に移動して.bashrcをエディタで開き，</p>
+<pre><code> $ vi ~/.bashrc</code></pre>
+<p>下記をファイルの最後に追加して，環境変数の設定を記述する。</p>
+<pre><code> // ---------------- Add to end of the file ----------------
+ # OpenMPI
+ export MPI=&quot;/usr/lib64/openmpi&quot;
+ export PATH=&quot;$PATH:$MPI/bin&quot;
+ export LD_LIBRARY_PATH=&quot;$LD_LIBRARY_PATH:$MPI/lib&quot;</code></pre>
+<p>編集が終わったら、環境設定を有効にする。</p>
+<pre><code> $ . ~/.bashrc</code></pre>
+<h4 id="installation-of-gphys">Installation of Gphys</h4>
+<p>CentOSの場合、yumリポジトリに地球電脳倶楽部のGFD-Dennouリポジトリを登録することで、 簡単にGphysをインストールできる。 root権限で、GFD-Dennouリポジトリを次のような内容で登録する。</p>
+<pre><code> # vi /etc/yum.repos.d/GFD-Dennou.repo</code></pre>
+<pre><code> // ---------------- Edit the file ----------------
+ [gfd-dennou]
+ name=GFD DENNOU Club RPMS for CentOS $releasever - $basearch
+ baseurl=http://www.gfd-dennou.org/library/cc-env/rpm-dennou/CentOS/$releasever/$basearch/
+ enabled=1
+ gpgcheck=0</code></pre>
+<p>編集が終わったら、yumでGphysをインストールする。</p>
+<pre><code> # yum install gphys</code></pre>
+<h2 id="インストールmacosx編">インストール(MacOSX編)</h2>
+<h4 id="macportsを用いたインストール">macportsを用いたインストール</h4>
+<p>Apple MacOSXでのSCALE実行環境を整備する方法について説明する。 ここではMacOSXのパッケージマネージャの一つであるmacportsを用いる方法を紹介する。 その他の主要なパッケージマネージャとしては、homebrewが挙げられる。homebrewを利用しても環境は手軽に揃えられるので、 興味のある方は利用してもらいたい。</p>
+<p>まずはAppleの開発ツールであるXcodeをインストールする。 大元のgccコンパイラを導入するために、必ずインストールする必要がある。 最近のOSのバージョンのものは、App Store経由で入手できる（無料）。 古いOSでは、インストールディスクから追加することが出来る。 最近のOSのXcodeの場合、最初に以下の様な設定をターミナルから行う必要がある。</p>
+<pre><code> コマンドラインツールのインストール
+ # xcode-select --install</code></pre>
+<pre><code> ライセンス条項の承認
+ # xcodebuild -license</code></pre>
+<p>次にmacports本体をインストールする。</p>
+<p><a href="https://www.macports.org/" class="uri">https://www.macports.org/</a></p>
+<p>macportsとmacportsが管理するパッケージは/opt/local以下に配置される。 インストール時に<code>.bash_profile</code>に、/opt/local/binへのパスが張られているので確認されたし。 macportsはコマンドラインから操作する。主要なコマンドは以下の通り。</p>
+<pre><code> インストール可能なソフトウェアを検索する
+ $ port search &lt;検索文字&gt;</code></pre>
+<pre><code> ソフトウェアのインストール時に選択可能なオプション(variants)を確認する
+ $ port variants &lt;アプリ名&gt;</code></pre>
+<pre><code> ソフトウェアのインストール（root権限必要）
+ $ sudo port install &lt;アプリ名&gt; [variants]</code></pre>
+<pre><code> ソフトウェアのアンインストール（root権限必要）
+ $ sudo port uninstall &lt;アプリ名&gt; [variants]</code></pre>
+<pre><code> macports本体とパッケージカタログの更新（root権限必要）
+ $ sudo port selfupdate</code></pre>
+<pre><code> パッケージの更新（root権限必要）
+ $ sudo port upgrade installed</code></pre>
+<pre><code> 不要なパッケージ（activateされていない過去のバージョン等）の削除
+ $ sudo port -u uninstall</code></pre>
+<h4 id="gccからnetcdfまでのインストール">gccからNetCDFまでのインストール</h4>
+<p>macportsはパッケージの依存関係を解決してくれるが、必要なvariantsを備えたセットを作るには、 順番にインストールしていく方が問題が少ない。以下にsudo port installしていく順番とvariantsの設定を示す。 今回はgcc4.9の利用を想定している。</p>
+<pre><code> $ gcc49
+ $ openmpi-gcc49 +threads
+ $ hdf4 +gcc49 +szip
+ $ hdf5 +gcc49 +szip +fortran +cxx +openmpi +threadsafe
+ $ netcdf +gcc49 +openmpi +netcdf4 +hdf4
+ $ netcdf-fortran +gcc49 +openmpi</code></pre>
+<p>最近のmacportsでは、gccとmpiライブラリはselectで選択する。 この操作を行うと、gfortran等の一般的な名前でエイリアスが作られてパスが通るようになる。</p>
+<pre><code> $ sudo port select --set gcc mp-gcc49
+ $ sudo port select --set mpi openmpi-gcc49-fortran</code></pre>
+<p>SCALEは陰解法計算の部分で、数値計算ライブラリを利用するオプションがある。 もし必要ならば、macportsからATLASをインストールすることが出来る。</p>
+<pre><code> $ atlas +gcc49</code></pre>
+<h4 id="rubyからgphysまでのインストール">rubyからGphysまでのインストール</h4>
+<p>macports-JPが作成しているリポジトリから、MacOSX用のGPhysをインストールできる。 以下のように、MacPorts-JPのリポジトリをチェックアウトして配置する。場所は好きな場所でよい。</p>
+<pre><code> $ sudo svn co http://svn.sourceforge.jp/svnroot/macports-jp/trunk/ \
+ $ /opt/local/var/sources/svn.sourceforge.jp/svnroot/macports-jp/trunk</code></pre>
+<p>/opt/local/etc/macports/sources.confに、チェックアウトしたリポジトリを追加する。</p>
+<pre><code> file:///opt/local/var/sources/svn.sourceforge.jp/svnroot/macports-jp/trunk/dports</code></pre>
+<p>これで、Gphysと関連ライブラリをmacportsで一括インストールできるようになる。 今回はruby1.9向けのrb19-gphysをインストールすることにする。</p>
+<pre><code> rubyのインストールと1.9の選択
+ $ sudo port install ruby19
+ $ sudo port select --set ruby ruby19</code></pre>
+<pre><code> 依存関係の解決を任せるかたちで、gphysのインストール
+ $ sudo port install rb19-gphys</code></pre>
+<p>インストールされたruby1.9版gphysコマンドは、末尾に1.9が付いている。 これを無くしたい場合は/opt/local/bin内でシンボリックリンクを張る。 以下では特に頻繁に使う３つを例に挙げる。</p>
+<pre><code> $ sudo ln -s gpvlist1.9 gplist
+ $ sudo ln -s gpvect1.9 gpvect
+ $ sudo ln -s gpview1.9 gpview</code></pre>
+<h4 id="その他のインストール">その他のインストール</h4>
+<p>macportsでインストールできるパッケージのうち、重要なものを以下に紹介する。</p>
+<ul>
+<li><p>git, git-flow : ソースコード開発時に利用する。</p></li>
+<li><p>coreutils : GNU core utils。様々な場面で必要になる。</p></li>
+<li><p>gawk, gsed : MacOSXに付属するawk,sedはGNU版と機能が異なるため、こちらが必要になる時がある。</p></li>
+<li><p>gnuplot : グラフ描画に利用。</p></li>
+<li><p>ImageMagick : Gphysから出力したPostScriptファイルをpngやアニメーションgifに変換する時に利用。</p></li>
+</ul>
+<h1 id="理想実験の実行方法">理想実験の実行方法</h1>
+<p>理想実験は，コンパイルが完了したディレクトリ上で，下記のコマンドによって 実行することができる．</p>
+<pre><code>$ make run</code></pre>
+<p>この場合，デフォルトのconfigurationファイルを使用して自動的に実験設定に 合った初期値・境界値を作成し，その後scale-lesモデル本体を実行する． “make run”のコマンドを使用せず，以下のように手動で実行過程を進めることもできる．</p>
+<ol>
+<li><p>まず，実験設定を記述したconfigurationファイル，init.confを編集して目的の実験にあった設定を構築する．</p></li>
+<li><p>下記のコマンドによって事前処理(初期値・境界値作成)を実行する．ここの例ではMPI並列として6プロセスを使用している．</p>
+<pre><code>$ mpirun -n 6 ./scale-les_init init.conf</code></pre>
+<p>正常にJOBが終了すれば，init_***.pe<code>#####</code>.nc，およびboundary.pe<code>#####</code>.ncといったファイルが，それぞれMPIプロセス数ずつ生成される（<code>#####</code>はMPIプロセスの番号）．</p></li>
+<li><p>モデルを実行するためにrun.confを適宜編集する．MPIプロセスの数や，格子，境界の取り方の設定については，init.confの時の設定と相違ないように注意すること． 正常にJOBが終了すれば，init_***.pe<code>#####</code>.nc，およびboundary.pe<code>#####</code>.ncといったファイルが，それぞれMPIプロセス数ずつ生成される（<code>#####</code>はMPIプロセスの番号）．</p></li>
+<li><p>下記のコマンドによってモデルを実行する．</p>
+<pre><code>$ mpirun -n 6 ./scale-les run.conf</code></pre>
+<p>configurationファイルの設定によるが，history.pe<code>#####</code>.ncという名前のファイルが作成され，この中に出力変数が含まれている．</p></li>
+</ol>
+<h1 id="app:namelist">Namelist in run.conf</h1>
+<h4 id="param_io">PARAM_IO</h4>
+<p><span>150mm</span><span>|l|c|c|X|</span> 名称 &amp; 種類 &amp; 初期値 &amp; 説明<br /><code>IO_LOG_BASENAME</code> &amp; 文字列 &amp; “LOG” &amp; ログファイルの接頭辞。<br /><code>IO_LOG_ALLNODE</code> &amp; logical &amp; .false. &amp; 全ノードログ出力するかどうか。<br /></p>
+<h4 id="param_const">PARAM_CONST</h4>
+<p><span>150mm</span><span>|l|c|c|X|</span> 名称 &amp; 種類 &amp; 初期値 &amp; 説明<br /><code>CONST_RADIUS</code> &amp; 実数 &amp; 6.37122d+6 &amp; 惑星半径(m)（デフォルトは地球）<br /><code>CONST_OHM</code> &amp; 実数 &amp; 7.2920D-5 &amp; 惑星の角速度(1/s)<br /><code>CONST_GRAV</code> &amp; 実数 &amp; 9.80665D0 &amp; 重力加速度(<span class="math"><em>m</em>/<em>s</em><sup>2</sup></span>)<br /><code>CONST_RDRY</code> &amp; 実数 &amp; 287.04D0 &amp; 乾燥気体の気体定数 (J/kg/K)<br /><code>CONST_CPDRY</code> &amp; 実数 &amp; 1004.64D0 &amp; 乾燥気体の定圧比熱 (J/kg/K)<br /><code>CONST_LAPS</code> &amp; 実数 &amp; 6.5D-3 &amp; International Standard Atmosphere (ISA)の気温減率(K/m)<br /><code>CONST_PSTD</code> &amp; 実数 &amp; 101325.D0 &amp; 標準気圧(Pa)<br /><code>CONST_PRE00</code> &amp; 実数 &amp; 100000.D0 &amp; 基準気圧(Pa)<br /><code>CONST_TSTD</code> &amp; 実数 &amp; 288.15D0 &amp; 基準温度(K)<br /><code>CONST_THERMODYN_TYPE</code> &amp; 文字列 &amp; “EXACT” &amp; 内部エネルギーの定義種類。SIMPLEは定数。EXACTは温度依存。<br /></p>
+<h4 id="param_time">PARAM_TIME</h4>
+<p><span>150mm</span><span>|l|c|c|X|</span> 名称 &amp; 種類 &amp; 初期値 &amp; 説明<br /><code>TIME_STARTDATE</code> &amp; 整数配列 &amp; 0000, 1, 1, 0, 0, 0 &amp; 積分実行時の初期時刻。<br /><code>TIME_STARTMS</code> &amp; 実数 &amp; 0.0D0 &amp; 初期時刻マイクロ秒。<br /><code>TIME_DURATION</code> &amp; 実数 &amp; 0.0D0 &amp; 実行する積分時間。<br /><code>TIME_DT</code> &amp; 実数 &amp; 0.0D0 &amp; 積分1STEPに要する時間。<br /><code>TIME_DT_ATMOS_DYN</code> &amp; 実数 &amp; <code>TIME_DT</code> &amp; 力学スキームの時間差分値。<code>TIME_DT</code>の約数である必要がある。<br /><code>TIME_DT_ATMOS_PHY_MP</code> &amp; 実数 &amp; <code>TIME_DT</code> &amp; 雲微物理スキームの時間差分値。<code>TIME_DT</code>の倍数である必要がある。<br /><code>TIME_DT_ATMOS_PHY_RD</code> &amp; 実数 &amp; <code>TIME_DT</code> &amp; 放射スキームの時間差分値。<code>TIME_DT</code>の倍数である必要がある。<br /><code>TIME_DT_ATMOS_PHY_SF</code> &amp; 実数 &amp; <code>TIME_DT</code> &amp; 地表面スキームの時間差分値。<code>TIME_DT</code>の倍数である必要がある。<br /><code>TIME_DT_ATMOS_PHY_TB</code> &amp; 実数 &amp; <code>TIME_DT</code> &amp; 乱流スキームの時間差分値。<code>TIME_DT</code>の倍数である必要がある。<br /><code>TIME_DT_OCEAN</code> &amp; 実数 &amp; <code>TIME_DT</code> &amp; 海洋スキームの時間差分値。<code>TIME_DT</code>の倍数である必要がある。<br /><code>TIME_DT_LAND</code> &amp; 実数 &amp; <code>TIME_DT</code> &amp; 陸面スキームの時間差分値。<code>TIME_DT</code>の倍数である必要がある。<br /><code>TIME_DT_URBAN</code> &amp; 実数 &amp; <code>TIME_DT</code> &amp; 都市スキームの時間差分値。<code>TIME_DT</code>の倍数である必要がある。<br /><code>TIME_DURATION_UNIT</code> &amp; 文字列 &amp; “SEC” &amp; 積分時間単位。<br /><code>TIME_DT_UNIT</code> &amp; 文字列 &amp; “SEC” &amp; 積分1STEPの時間単位。<br /><code>TIME_DT_ATMOS_DYN_UNIT</code> &amp; 文字列 &amp; <code>TIME_DT_UNIT</code> &amp; 力学スキームの時間単位。<br /><code>TIME_DT_ATMOS_PHY_MP_UNIT</code> &amp; 文字列 &amp; <code>TIME_DT_UNIT</code> &amp; 雲微物理スキームの時間単位。<br /><code>TIME_DT_ATMOS_PHY_RD_UNIT</code> &amp; 文字列 &amp; <code>TIME_DT_UNIT</code> &amp; 放射スキームの時間単位。<br /><code>TIME_DT_ATMOS_PHY_SF_UNIT</code> &amp; 文字列 &amp; <code>TIME_DT_UNIT</code> &amp; 地表面スキームの時間単位。<br /><code>TIME_DT_ATMOS_PHY_TB_UNIT</code> &amp; 文字列 &amp; <code>TIME_DT_UNIT</code> &amp; 乱流スキームの時間単位。<br /><code>TIME_DT_OCEAN_UNIT</code> &amp; 文字列 &amp; <code>TIME_DT_UNIT</code> &amp; 海洋スキームの時間単位。<br /><code>TIME_DT_LAND_UNIT</code> &amp; 文字列 &amp; <code>TIME_DT_UNIT</code> &amp; 陸面スキームの時間単位。<br /><code>TIME_DT_URBAN_UNIT</code> &amp; 文字列 &amp; <code>TIME_DT_UNIT</code> &amp; 都市スキームの時間単位。<br /><code>TIME_DT_ATMOS_RESTART</code> &amp; 実数 &amp; <code>TIME_DURATION</code> &amp; 大気のリスタートファイルを出力する時間間隔。<br /><code>TIME_DT_ATMOS_RESTART_UNIT</code> &amp; 文字列 &amp; <code>TIME_DT_UNIT</code> &amp; 大気のリスタートファイルを出力する時間間隔の時間単位。<br /><code>TIME_DT_OCEAN_RESTART</code> &amp; 実数 &amp; <code>TIME_DURATION</code> &amp; 海洋のリスタートファイルを出力する時間間隔。<br /><code>TIME_DT_OCEAN_RESTART_UNIT</code> &amp; 文字列 &amp; <code>TIME_DT_UNIT</code> &amp; 海洋のリスタートファイルを出力する時間間隔の時間単位。<br /><code>TIME_DT_LAND_RESTART</code> &amp; 実数 &amp; <code>TIME_DURATION</code> &amp; 地表面スキーム関係のリスタートファイルを出力する時間間隔。<br /><code>TIME_DT_LAND_RESTART_UNIT</code> &amp; 文字列 &amp; <code>TIME_DT_UNIT</code> &amp; 地表面スキーム関係のリスタートファイルを出力する時間間隔の時間単位。<br /><code>TIME_DT_URBAN_RESTART</code> &amp; 実数 &amp; <code>TIME_DURATION</code> &amp; 都市スキーム関係のリスタートファイルを出力する時間間隔。<br /><code>TIME_DT_URBAN_RESTART_UNIT</code> &amp; 文字列 &amp; <code>TIME_DT_UNIT</code> &amp; 都市スキームのリスタートファイルを出力する時間間隔の時間単位。<br /></p>
+<h4 id="param_grid">PARAM_GRID</h4>
+<p><span>150mm</span><span>|l|c|c|X|</span> 名称 &amp; 種類 &amp; 初期値 &amp; 説明<br /><code>GRID_IN_BASENAME</code> &amp; 文字列 &amp; &amp; Gridを外部から与えるときの入力ファイル（省略時はDX, DY, DZ, BAFFFACTなどから生成する）<br /><code>GRID_OUT_BASENAME</code> &amp; 文字列 &amp; &amp; Grid情報の出力ファイル名<br /> <code>DX</code> &amp; 実数 &amp; 500.D0 &amp; X方向のGridの間隔(m)<br /><code>DY</code> &amp; 実数 &amp; 500.D0 &amp; Y方向のGridの間隔(m)<br /><code>DZ</code> &amp; 実数 &amp; 500.D0 &amp; Z方向のGridの間隔(m)<br /><code>BUFFER_DZ</code> &amp; 実数 &amp; 0.D0 &amp; Z方向のダンピング層（スポンジ層）の厚さ(m)<br /><code>BUFFER_DX</code> &amp; 実数 &amp; 0.D0 &amp; X方向のダンピング層（スポンジ層）の厚さ(m)<br /><code>BUFFER_DY</code> &amp; 実数 &amp; 0.D0 &amp; Y方向のダンピング層（スポンジ層）の厚さ(m)<br /><code>BUFFFACT</code> &amp; 実数 &amp; 1.D0 &amp; ダンピング層でのGridの引き伸ばし度合い（<span class="math">(<em>d</em><em>x</em>)<sub><em>i</em> + 1</sub> = (<em>d</em><em>x</em>)<sub><em>i</em></sub><sup><em>B</em><em>U</em><em>F</em><em>F</em><em>F</em><em>A</em><em>C</em><em>T</em></sup></span>）<br /></p>
+<h4 id="param_nest">PARAM_NEST</h4>
+<p><span>150mm</span><span>|l|c|c|X|</span> 名称 &amp; 種類 &amp; 初期値 &amp; 説明<br /><code>USE_NESTING</code> &amp; logical &amp; .false. &amp; Nestingを使うかどうか。<br /><code>OFFLINE</code> &amp; logical &amp; .true. &amp; Online Nestingかどうか。<code>USE_NESTING</code>が真のときのみ有効。<br /><code>ONLINE_DOMAIN_NUM</code> &amp; 整数 &amp; &amp; ドメイン番号。<code>USE_NESTING</code>が真, <code>OFFLINE</code>が偽のときのみ有効。<br /><code>ONLINE_IAM_PARENT</code> &amp; logical &amp; &amp; 親ドメインをもつかどうか。<code>USE_NESTING</code>が真, <code>OFFLINE</code>が偽のときのみ有効。<br /><code>ONLINE_IAM_DAUGHTER</code> &amp; logical &amp; &amp; 娘ドメインをもつかどうか。<code>USE_NESTING</code>が真, <code>OFFLINE</code>が偽のときのみ有効。<br /><code>ONLINE_BOUNDARY_USE_QHYD</code> &amp; logical &amp; .false. &amp; 娘ドメインにQHYDを渡すかどうか。<code>USE_NESTING</code>が真, <code>OFFLINE</code>が偽のときのみ有効。<br /><code>ONLINE_AGGRESSIVE_COMM</code> &amp; logical &amp; .false. &amp; 安全な同期通信を行うかどうか。<code>USE_NESTING</code>が真, <code>OFFLINE</code>が偽のときのみ有効。<br /></p>
+<h4 id="param_statistics">PARAM_STATISTICS</h4>
+<p><span>150mm</span><span>|l|c|c|X|</span> 名称 &amp; 種類 &amp; 初期値 &amp; 説明<br /><code>STATISTICS_checktotal</code> &amp; logical &amp; .false. &amp; 値のチェックを行うかどうか。<br /><code>STATISTICS_use_globalcomm</code> &amp; logical &amp; .false. &amp; 全ノード通信を行うかどうか。<br /></p>
+<h4 id="param_restrat">PARAM_RESTRAT</h4>
+<p><span>150mm</span><span>|l|c|c|X|</span> 名称 &amp; 種類 &amp; 初期値 &amp; 説明<br /><code>RESTART_OUTPUT</code> &amp; logical &amp; .false. &amp; restartファイルを出力するかどうか。<br /><code>RESTART_OUT_BASENAME</code> &amp; 文字列 &amp; &amp; 書き出すrestartファイルの接頭辞。<code>RESTART_OUTPUT</code>が真のときに有効。<br /><code>RESTART_IN_BASENAME</code> &amp; 文字列 &amp; &amp; 読み込むrestartファイルの接頭辞。<br /></p>
+<h4 id="param_topo">PARAM_TOPO</h4>
+<p><span>150mm</span><span>|l|c|c|X|</span> 名称 &amp; 種類 &amp; 初期値 &amp; 説明<br /><code>TOPO_IN_BASENAME</code> &amp; 文字列 &amp; &amp; 読み込む地形ファイルの接頭辞。<br /></p>
+<h4 id="param_landuse">PARAM_LANDUSE</h4>
+<p><span>150mm</span><span>|l|c|c|X|</span> 名称 &amp; 種類 &amp; 初期値 &amp; 説明<br /><code>LANDUSE_IN_BASENAME</code> &amp; 文字列 &amp; &amp; 読み込む土地利用ファイルの接頭辞。<br /></p>
+<h4 id="param_land_property">PARAM_LAND_PROPERTY</h4>
+<p><span>150mm</span><span>|l|c|c|X|</span> 名称 &amp; 種類 &amp; 初期値 &amp; 説明<br /><code>LAND_PROPERTY_IN_FILENAME</code> &amp; 文字列 &amp; &amp; 読み込む土壌パラメータファイル名。<br /></p>
+<h4 id="param_prc">PARAM_PRC</h4>
+<p><span>150mm</span><span>|l|c|c|X|</span> 名称 &amp; 種類 &amp; 初期値 &amp; 説明<br /><code>PRC_NUM_X</code> &amp; 整数 &amp; &amp; X方向に割り当てるプロセス数。<br /><code>PRC_NUM_Y</code> &amp; 整数 &amp; &amp; Y方向に割り当てるプロセス数。<br /><code>PRC_PERIODIC_X</code> &amp; logical &amp; &amp; X方向に周期境界とするかどうか。<br /><code>PRC_PERIODIC_Y</code> &amp; logical &amp; &amp; Y方向に周期境界とするかどうか。<br /></p>
+<h4 id="param_index">PARAM_INDEX</h4>
+<p><span>150mm</span><span>|l|c|c|X|</span> 名称 &amp; 種類 &amp; 初期値 &amp; 説明<br /><code>KMAX</code> &amp; 整数 &amp; &amp; 大気の鉛直層数。<br /><code>IMAX</code> &amp; 整数 &amp; &amp; プロセスあたりのX方向の格子数。<br /><code>JMAX</code> &amp; 整数 &amp; &amp; プロセスあたりのY方向の格子数。<br /></p>
+<h4 id="param_land_index">PARAM_LAND_INDEX</h4>
+<p><span>150mm</span><span>|l|c|c|X|</span> 名称 &amp; 種類 &amp; 初期値 &amp; 説明<br /><code>LKMAX</code> &amp; 整数 &amp; &amp; 陸面の鉛直層数。<br /></p>
+<h4 id="param_urban_index">PARAM_URBAN_INDEX</h4>
+<p><span>150mm</span><span>|l|c|c|X|</span> 名称 &amp; 種類 &amp; 初期値 &amp; 説明<br /><code>UKMAX</code> &amp; 整数 &amp; &amp; 都市の鉛直層数。<br /></p>
+<h4 id="param_land_grid">PARAM_LAND_GRID</h4>
+<p><span>150mm</span><span>|l|c|c|X|</span> 名称 &amp; 種類 &amp; 初期値 &amp; 説明<br /><code>LDZ</code> &amp; 実数配列 &amp; &amp; 陸面の鉛直層の層厚。鉛直層数分の設定が必要。<br /></p>
+<h4 id="param_urban_grid">PARAM_URBAN_GRID</h4>
+<p><span>150mm</span><span>|l|c|c|X|</span> 名称 &amp; 種類 &amp; 初期値 &amp; 説明<br /><code>UDZ</code> &amp; 実数配列 &amp; &amp; 都市の鉛直層の層厚。鉛直層数分の設定が必要。<br /></p>
+<h4 id="param_mapproj">PARAM_MAPPROJ</h4>
+<p><span>150mm</span><span>|l|c|c|X|</span> 名称 &amp; 種類 &amp; 初期値 &amp; 説明<br /><code>MPRJ_basepoint_lon</code> &amp; 実数 &amp; &amp; 計算領域の中心経度。<br /><code>MPRJ_basepoint_lat</code> &amp; 実数 &amp; &amp; 計算領域の中心緯度。<br /><code>MPRJ_type</code> &amp; 文字列 &amp; &amp; 計算領域の投影図法。<br /><code>MPRJ_LC_lat1</code> &amp; 実数 &amp; &amp; 投影図法がLCの場合の参照緯度1。<br /><code>MPRJ_LC_lat2</code> &amp; 実数 &amp; &amp; 投影図法がLCの場合の参照緯度2。<br /></p>
+<h4 id="param_tracer">PARAM_TRACER</h4>
+<p><span>150mm</span><span>|l|c|c|X|</span> 名称 &amp; 種類 &amp; 初期値 &amp; 説明<br /><code>TRACER_TYPE</code> &amp; 文字列 &amp; “OFF” &amp; トレーサーの種類。通常、<code>ATMOS_PHY_MP_TYPE</code>と同じ。<br /></p>
+<h4 id="param_atmos">PARAM_ATMOS</h4>
+<p><span>150mm</span><span>|l|c|c|X|</span> 名称 &amp; 種類 &amp; 初期値 &amp; 説明<br /><code>ATMOS_DYN_TYPE</code> &amp; 文字列 &amp; “OFF” &amp; 力学スキームの種類。（OFF、HEVE、HEVI、HIVIが選択可能）<br /><code>ATMOS_PHY_MP_TYPE</code> &amp; 文字列 &amp; “OFF” &amp; 雲微物理スキームの種類。（OFF、KESSLER、TOMITA08、SN14、SUZUKI10が選択可能）<br /><code>ATMOS_PHY_RD_TYPE</code> &amp; 文字列 &amp; “OFF” &amp; 放射スキームの種類。 （OFF、MSTRNXが選択可能）<br /><code>ATMOS_PHY_SF_TYPE</code> &amp; 文字列 &amp; “OFF” &amp; 地表面スキームの種類。（OFF、CONST、COUPLEが選択可能）<br /><code>ATMOS_PHY_TB_TYPE</code> &amp; 文字列 &amp; “OFF” &amp; 乱流スキームの種類。 （OFF、SMAGORINSKY、MYNNが選択可能）<br /></p>
+<h4 id="param_ocean">PARAM_OCEAN</h4>
+<p><span>150mm</span><span>|l|c|c|X|</span> 名称 &amp; 種類 &amp; 初期値 &amp; 説明<br /><code>OCEAN_TYPE</code> &amp; 文字列 &amp; “OFF” &amp; 海洋スキームの種類。（OFF、CONSTが選択可能）<br /></p>
+<h4 id="param_land">PARAM_LAND</h4>
+<p><span>150mm</span><span>|l|c|c|X|</span> 名称 &amp; 種類 &amp; 初期値 &amp; 説明<br /><code>LAND_TYPE</code> &amp; 文字列 &amp; “OFF” &amp; 陸面スキームの種類。 （OFF、SLUBが選択可能）<br /></p>
+<h4 id="param_urban">PARAM_URBAN</h4>
+<p><span>150mm</span><span>|l|c|c|X|</span> 名称 &amp; 種類 &amp; 初期値 &amp; 説明<br /><code>URBAN_TYPE</code> &amp; 文字列 &amp; “OFF” &amp; 都市スキームの種類。（OFF、SLCが選択可能）<br /></p>
+<p>*</p>
+<h4 id="param_hist">PARAM_HIST</h4>
+<p><span>150mm</span><span>|l|c|c|X|</span> 名称 &amp; 種類 &amp; 初期値 &amp; 説明<br /><code>HIST_BND</code> &amp; logical &amp; .true. &amp; Nesting時にxy方向のhalo領域をHistoryファイルに出力するか。<br /></p>
+<h4 id="param_history">PARAM_HISTORY</h4>
+<p><span>150mm</span><span>|l|c|c|X|</span> 名称 &amp; 種類 &amp; 初期値 &amp; 説明<br /><code>HISTORY_TITLE</code> &amp; 文字列 &amp; &amp; NetCDF形式のHistoryファイルのタイトル<br /> <code>HISTORY_DEFAULT_BASENAME</code> &amp; 文字列 &amp; ’history’ &amp; Historyファイルのファイル名（相対パス）<br /><code>HISTORY_DEFAULT_TINTERVAL</code> &amp; 実数 &amp; 1.0_DP &amp; Historyを出力する時間間隔。<code>HISTORY_DEFAULT_TUNIT</code>が単位となる。<br /><code>HISTORY_DEFAULT_TUNIT</code> &amp; 文字列 &amp; “SEC” &amp; <code>HISTORY_DEFAULT_TINTERVAL</code>の単位（SEC、HOUR、DAYが利用可能）<br /><code>HISTORY_DEFAULT_TAVERAGE</code> &amp; logical &amp; .false. &amp; Historyに出力する際<code>HISTORY_DEFAULT_TINTERVAL</code>で指定した時間間隔ごとの時間平均を出力するか。<br /><code>HISTORY_DEFAULT_ZINTERP</code> &amp; logical &amp; .false. &amp; 出力時にz面への内挿をするかどうか<br /><code>HISTORY_DEFAULT_DATATYPE</code> &amp; 文字列 &amp; REAL4 &amp; 出力データのprecision<br /><code>HISTORY_OUTPUT_STEP0</code> &amp; logical &amp; .false. &amp; 初期時刻(t<span class="math"> = </span>0)の値を出力するかどうか<br /></p>
+<h4 id="param_atmos_vars">PARAM_ATMOS_VARS</h4>
+<p><span>150mm</span><span>|l|c|c|X|</span> 名称 &amp; 種類 &amp; 初期値 &amp; 説明<br /> <code>ATMOS_VARS_CHECKRANGE</code> &amp; logical &amp; .false. &amp; わかりません。<br /></p>
+<h4 id="param_atmos_refstate">PARAM_ATMOS_REFSTATE</h4>
+<p><span>150mm</span><span>|l|c|c|X|</span> 名称 &amp; 種類 &amp; 初期値 &amp; 説明<br /><code>ATMOS_REFSTATE_TYPE</code> &amp; 文字列 &amp; UNIFORM &amp; Reference stateに何を用いるか。(UNIFORM：一定値で与える。値は<code>ATMOS_REFSTATE_**</code>によって決まる、INIT：初期値（リスタートの時はリスタート時の値）、FILE：<code>ATMOS_REFSTATE_IN_BASENAME</code>から読み出す、ISA：International Standard Atmosphere)<br /><code>ATMOS_REFSTATE_IN_BASENAME</code> &amp; 文字列 &amp; &amp; Reference stateの入力ファイル名<br /><code>ATMOS_REFSTATE_OUT_BASENAME</code> &amp; 文字列 &amp; &amp; Reference stateの出力ファイル名<br /> <code>ATMOS_REFSTATE_UPDATE_DT</code> &amp; 実数 &amp; 0.D0 &amp; Reference Stateをアップデートする時間間隔（0の時はReference stateが更新されない）<br /></p>
+<h4 id="param_atmos_boundary">PARAM_ATMOS_BOUNDARY</h4>
+<p><span>150mm</span><span>|l|c|c|X|</span> 名称 &amp; 種類 &amp; 初期値 &amp; 説明<br /><code>ATMOS_BOUNDARY_TYPE</code> &amp; 文字列 &amp; NONE &amp; バッファ層でどの値に緩和させるか。（CONST：一定値（<code>ATMOS_BOUNDARY_VALUE_**</code>に緩和）、INIT：初期値に緩和、REAL：Nesting時、FILE：入力ファイル（<code>ATMOS_BOUNDARY_IN_BASENAME</code>）から読み込む））<br /><code>ATMOS_BOUNDARY_IN_BASENAME</code> &amp; 文字列 &amp; &amp; <code>ATMOS_BOUNDARY_TYPE</code>=FILEの時に読み込む外部ファイル<br /><code>ATMOS_BOUNDARY_OUT_BASENAME</code> &amp; 文字列 &amp; &amp; バッファ層で緩和させる値を出力する際の出力ファイル名（設定しない場合は出力されない）<br /> <code>ATMOS_BOUNDARY_USE_VELZ</code> &amp; logical &amp; .false. &amp; 鉛直方向の運動量にダンピングを作用させるか否か。<br /><code>ATMOS_BOUNDARY_USE_VELY</code> &amp; logical &amp; .false. &amp; Y方向の運動量にダンピングを作用させるか否か。<br /><code>ATMOS_BOUNDARY_USE_VELX</code> &amp; logical &amp; .false. &amp; X方向の運動量にダンピングを作用させるか否か。<br /><code>ATMOS_BOUNDARY_USE_POTT</code> &amp; logical &amp; .false. &amp; 温位にダンピングを作用させるか否か。<br /><code>ATMOS_BOUNDARY_USE_QV</code> &amp; logical &amp; .false. &amp; 水蒸気混合比にダンピングを作用させるか否か。<br /><code>ATMOS_BOUNDARY_USE_QHYD</code> &amp; logical &amp; .false. &amp; 水物質の混合比ににダンピングを作用させるか否か。<br /><code>ATMOS_BOUNDARY_VALUE_VELZ</code> &amp; 実数 &amp; 0.D0 &amp; 鉛直方向の運動量を緩和させる値（<code>ATMOS_BOUNDARY_TYPE</code>=.true.の時に有効）<br /><code>ATMOS_BOUNDARY_VALUE_VELX</code> &amp; 実数 &amp; 0.D0 &amp; X方向の運動量を緩和させる値（<code>ATMOS_BOUNDARY_TYPE</code>=.true.の時に有効）<br /><code>ATMOS_BOUNDARY_VALUE_VELY</code> &amp; 実数 &amp; 0.D0 &amp; Y方向の運動量を緩和させる値（<code>ATMOS_BOUNDARY_TYPE</code>=.true.の時に有効）<br /><code>ATMOS_BOUNDARY_VALUE_POTT</code> &amp; 実数 &amp; 3.D0 &amp; 温位を緩和させる値（<code>ATMOS_BOUNDARY_TYPE</code>=.true.の時に有効）<br /><code>ATMOS_BOUNDARY_VALUE_QV</code> &amp; 実数 &amp; 0.D0 &amp; 水蒸気混合比を緩和させる値（<code>ATMOS_BOUNDARY_TYPE</code>=.true.の時に有効）<br /><code>ATMOS_BOUNDARY_VALUE_QHYD</code> &amp; 実数 &amp; 0.D0 &amp; 水物質の混合比を緩和させる値（<code>ATMOS_BOUNDARY_TYPE</code>=.true.の時に有効）<br /> <code>ATMOS_BOUNDARY_LINEAR_V</code> &amp; logical &amp; .false. &amp; わかりません<br /><code>ATMOS_BOUNDARY_LINEAR_H</code> &amp; logical &amp; .true. &amp; わかりません<br /><code>ATMOS_BOUNDARY_EXP_H</code> &amp; 実数 &amp; 2.D0 &amp; わかりません<br /></p>
+<h4 id="param_atmos_dyn">PARAM_ATMOS_DYN</h4>
+<p><span>150mm</span><span>|l|c|c|X|</span> 名称 &amp; 種類 &amp; 初期値 &amp; 説明<br /><code>ATMOS_DYN_NUMERICAL_DIFF_ORDER</code> &amp; 実数 &amp; 1.D0. &amp; 数値粘性のオーダーを4で割ったもの（<code>ATMOS_DYN_NUMERICAL_DIFF_ORDER</code>=1なら4次の数値粘性になる）<br /><code>ATMOS_DYN_NUMERICAL_DIFF_COEF</code> &amp; 実数 &amp; 1.D-4 &amp; 混合比以外の予報変数にかかる数値粘性の強さを決める無次元定数<br /><code>ATMOS_DYN_NUMERICAL_DIFF_COEF_Q</code> &amp; 実数 &amp; 1.D-4 &amp; 混合比にかかる数値粘性の強さを決める無次元定数<br /> <code>ATMOS_DYN_ENABLE_CORIOLIS</code> &amp; logical &amp; .false. &amp; コリオリ力を考慮するか<br /> <code>ATMOS_DYN_FLAG_FCT_RHO</code> &amp; logical &amp; .false. &amp; 密度にFCTをかけるか<br /><code>ATMOS_DYN_FLAG_FCT_MOMENTUM</code> &amp; logical &amp; .false. &amp; 運動量にFCTをかけるか。<br /><code>ATMOS_DYN_FLAG_FCT_T</code> &amp; logical &amp; .false. &amp; 温位にFCTをかけるか。<br /></p>
+<h4 id="param_atmos_phy_mp">PARAM_ATMOS_PHY_MP</h4>
+<p><span>150mm</span><span>|l|c|c|X|</span> 名称 &amp; 種類 &amp; 初期値 &amp; 説明<br /><code>MP_DOPRECIPITATION</code> &amp; logical &amp; .true. &amp; 水物質の重力による落下を考慮するか否か<br /><code>MP_DONEGATIVE_FIXER</code> &amp; logical &amp; .false. &amp; 雲物理スキームの前後で負値を０にするか否か。<br /><code>MP_NTMAX_SEDIMENTATION</code> &amp; 整数 &amp; 1 &amp; 水物質の重力落下の計算をする際に区切るステップ数<br /></p>
+<h4 id="param_atmos_phy_rd_mstrn">PARAM_ATMOS_PHY_RD_MSTRN</h4>
+<p><span>150mm</span><span>|l|c|c|X|</span> 名称 &amp; 種類 &amp; 初期値 &amp; 説明<br /> &amp; 整数 &amp; 0 &amp; 放射スキームで計算する際にモデル上端から上に加える層数。<br /> &amp; 文字列 &amp; ’PARAG.29’ &amp; 放射スキームで用いる希ガスパラメータの入力ファイル名<br /> &amp; 文字列 &amp; ’PARAC.29’ &amp; 放射スキームで用いるエアロゾルパラメータの入力ファイル名<br /> &amp; 文字列 &amp; ’VARDATA.RM29’ &amp; 放射スキームで用いる水蒸気と水物質パラメータの入力ファイル名<br /> &amp; 整数 &amp; 29 &amp; MSTRNXで計算に用いる波長バンド数（<code>ATMOS_PHY_RD_MSTRN_GAS(AERO,HYGRO)PARA_IN_FILENAME</code>のバンド数と対応する必要がある）<br /></p>
+<h4 id="param_atmos_phy_rd_profile">PARAM_ATMOS_PHY_RD_PROFILE</h4>
+<p><span>150mm</span><span>|l|c|c|X|</span> 名称 &amp; 種類 &amp; 初期値 &amp; 説明<br /> &amp; 実数 &amp; 100.D0 &amp; 放射スキームで用いるTop Of Atmospher (TOA)の高度(km)<br /> &amp; logical &amp; .true. &amp; 放射スキームに必要な大気のプロファイルに気候値を用いるかどうか。<br /> &amp; 文字列 &amp; ./ &amp; cira.ncの相対パス<br /> &amp; 文字列 &amp; &amp; MIPAS2001が保存されているディレクトリ名（相対パス）<br /> &amp; 文字列 &amp; &amp; 放射スキームに用いる大気のプロファイルの入力ファイル名（省略された場合は気候値が用いられる）<br /> &amp; logical &amp; .true. &amp; 放射計算で二酸化炭素を考慮するか<br /> &amp; logical &amp; .true. &amp; 放射計算でオゾンを考慮するか<br /> &amp; logical &amp; .true. &amp; 放射計算で一酸化炭素を考慮するか<br /> &amp; logical &amp; .true. &amp; 放射計算で一酸化二窒素を考慮するか<br /> &amp; logical &amp; .true. &amp; 放射計算でメタンを考慮するか<br /> &amp; logical &amp; .true. &amp; 放射計算で酸素を考慮するか<br /> &amp; logical &amp; .true. &amp; 放射計算でCFCを考慮するか<br /><code>DEBUG</code> &amp; logical &amp; .false. &amp; 放射計算においてDEBUG情報を出力するか否か<br /></p>
+<h4 id="param_ocean_phy_slab">PARAM_OCEAN_PHY_SLAB</h4>
+<p><span>150mm</span><span>|l|c|c|X|</span> 名称 &amp; 種類 &amp; 初期値 &amp; 説明<br /><code>OCEAN_PHY_SLAB_DEPTH</code> &amp; 実数 &amp; 10.D0 &amp; スラブモデルにおける海洋の深さ<br /></p>
+<h1 id="app:vari_hist">Variables for history output</h1>
+<h4 id="mod_atmos_phy_ae_driver">mod_atmos_phy_ae_driver</h4>
+<p><span>150mm</span><span>|l|X|c|</span> Item/Variable &amp; Description &amp; Unit<br /><code>CCN</code> &amp; cloud condensation nucrei &amp;<br /></p>
+<h4 id="mod_atmos_phy_ch_driver">mod_atmos_phy_ch_driver</h4>
+<p><span>150mm</span><span>|l|X|c|</span> Item/Variable &amp; Description &amp; Unit<br /><code>Ozone</code> &amp; Ozone &amp; <span class="math"><em>P</em><em>P</em><em>M</em></span><br /><code>CBMFX</code> &amp; cloud base mass flux &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em></span><br /></p>
+<h4 id="mod_atmos_phy_cp_driver">mod_atmos_phy_cp_driver</h4>
+<p><span>150mm</span><span>|l|X|c|</span> Item/Variable &amp; Description &amp; Unit<br /><code>CBMFX</code> &amp; cloud base mass flux &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em></span><br /></p>
+<h4 id="mod_atmos_phy_mp_driver">mod_atmos_phy_mp_driver</h4>
+<p><span>150mm</span><span>|l|X|c|</span> Item/Variable &amp; Description &amp; Unit<br /><code>RAIN</code> &amp; surface rain rate &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em></span><br /><code>SNOW</code> &amp; surface snow rate &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em></span><br /><code>PREC</code> &amp; surface precipitation rate &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em></span><br /><code>DENS_t_MP</code> &amp; tendency DENS in MP &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>3/<em>s</em></span><br /><code>MOMZ_t_MP</code> &amp; tendency MOMZ in MP &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em>2</span><br /><code>MOMX_t_MP</code> &amp; tendency MOMX in MP &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em>2</span><br /><code>MOMY_t_MP</code> &amp; tendency MOMY in MP &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em>2</span><br /><code>RHOT_t_MP</code> &amp; tendency RHOT in MP &amp; <span class="math"><em>K</em> * <em>k</em><em>g</em>/<em>m</em>3/<em>s</em></span><br /><code>QV_t_MP</code> &amp; tendency QV in MP &amp; <span class="math"><em>k</em><em>g</em>/<em>k</em><em>g</em></span><br /></p>
+<h4 id="mod_atmos_phy_rd_driver">mod_atmos_phy_rd_driver</h4>
+<p><span>150mm</span><span>|l|X|c|</span> Item/Variable &amp; Description &amp; Unit<br /><code>SOLINS</code> &amp; solar insolation &amp; <span class="math"><em>W</em>/<em>m</em>2</span><br /><code>COSZ</code> &amp; cos(solar zenith angle) &amp; <span class="math">0 − 1</span><br /><code>SFLX_LW_up</code> &amp; SFC upward longwave radiation flux &amp; <span class="math"><em>W</em>/<em>m</em>2</span><br /><code>SFLX_LW_dn</code> &amp; SFC downward longwave radiation flux &amp; <span class="math"><em>W</em>/<em>m</em>2</span><br /><code>SFLX_SW_up</code> &amp; SFC upward shortwave radiation flux &amp; <span class="math"><em>W</em>/<em>m</em>2</span><br /><code>SFLX_SW_dn</code> &amp; SFC downward shortwave radiation flux &amp; <span class="math"><em>W</em>/<em>m</em>2</span><br /><code>TOAFLX_LW_up</code> &amp; TOA upward longwave radiation flux &amp; <span class="math"><em>W</em>/<em>m</em>2</span><br /><code>TOAFLX_LW_dn</code> &amp; TOA downward longwave radiation flux &amp; <span class="math"><em>W</em>/<em>m</em>2</span><br /><code>TOAFLX_SW_up</code> &amp; TOA upward shortwave radiation flux &amp; <span class="math"><em>W</em>/<em>m</em>2</span><br /><code>TOAFLX_SW_dn</code> &amp; TOA downward shortwave radiation flux &amp; <span class="math"><em>W</em>/<em>m</em>2</span><br /><code>SLR</code> &amp; SFC net longwave radiation flux &amp; <span class="math"><em>W</em>/<em>m</em>2</span><br /><code>SSR</code> &amp; SFC net shortwave radiation flux &amp; <span class="math"><em>W</em>/<em>m</em>2</span><br /><code>OLR</code> &amp; TOA net longwave radiation flux &amp; <span class="math"><em>W</em>/<em>m</em>2</span><br /><code>OSR</code> &amp; TOA net shortwave radiation flux &amp; <span class="math"><em>W</em>/<em>m</em>2</span><br /><code>RADFLUX_LWUP</code> &amp; upward longwave radiation flux &amp; <span class="math"><em>W</em>/<em>m</em>2</span><br /><code>RADFLUX_LWDN</code> &amp; downward longwave radiation flux &amp; <span class="math"><em>W</em>/<em>m</em>2</span><br /><code>RADFLUX_LW</code> &amp; net longwave radiation flux &amp; <span class="math"><em>W</em>/<em>m</em>2</span><br /><code>RADFLUX_SWUP</code> &amp; upward shortwave radiation flux &amp; <span class="math"><em>W</em>/<em>m</em>2</span><br /><code>RADFLUX_SWDN</code> &amp; downward shortwave radiation flux &amp; <span class="math"><em>W</em>/<em>m</em>2</span><br /><code>RADFLUX_SW</code> &amp; net shortwave radiation flux &amp; <span class="math"><em>W</em>/<em>m</em>2</span><br /><code>TEMP_t_rd_LW</code> &amp; tendency of temp in rd(LW) &amp; <span class="math"><em>K</em>/<em>d</em><em>a</em><em>y</em></span><br /><code>TEMP_t_rd_SW</code> &amp; tendency of temp in rd(SW) &amp; <span class="math"><em>K</em>/<em>d</em><em>a</em><em>y</em></span><br /><code>TEMP_t_rd</code> &amp; tendency of temp in rd &amp; <span class="math"><em>K</em>/<em>d</em><em>a</em><em>y</em></span><br /><code>RHOT_t_RD</code> &amp; tendency of RHOT in rd &amp; <span class="math"><em>K</em>.<em>k</em><em>g</em>/<em>m</em>3/<em>s</em></span><br /></p>
+<h4 id="mod_atmos_phy_sf_driver">mod_atmos_phy_sf_driver</h4>
+<p><span>150mm</span><span>|l|X|c|</span> Item/Variable &amp; Description &amp; Unit<br /><code>SFC_DENS</code> &amp; surface atmospheric density &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>3</span><br /><code>SFC_PRES</code> &amp; surface atmospheric pressure &amp; <span class="math"><em>P</em><em>a</em></span><br /><code>SFC_TEMP</code> &amp; surface skin temperature (merged) &amp; <span class="math"><em>K</em></span><br /><code>SFC_ALB_LW</code> &amp; surface albedo (longwave,merged) &amp; <span class="math">0 − 1</span><br /><code>SFC_ALB_SW</code> &amp; surface albedo (shortwave,merged) &amp; <span class="math">0 − 1</span><br /><code>SFC_Z0M</code> &amp; roughness length (momentum) &amp; <span class="math"><em>m</em></span><br /><code>SFC_Z0H</code> &amp; roughness length (heat) &amp; <span class="math"><em>m</em></span><br /><code>SFC_Z0E</code> &amp; roughness length (vapor) &amp; <span class="math"><em>m</em></span><br /><code>MWFLX</code> &amp; w-momentum flux (merged) &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em></span><br /><code>MUFLX</code> &amp; u-momentum flux (merged) &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em></span><br /><code>MVFLX</code> &amp; v-momentum flux (merged) &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em></span><br /><code>SHFLX</code> &amp; sensible heat flux (merged) &amp; <span class="math"><em>W</em>/<em>m</em>2</span><br /><code>LHFLX</code> &amp; latent heat flux (merged) &amp; <span class="math"><em>W</em>/<em>m</em>2</span><br /><code>GHFLX</code> &amp; ground heat flux (merged) &amp; <span class="math"><em>W</em>/<em>m</em>2</span><br /><code>Uabs10</code> &amp; 10m absolute wind &amp; <span class="math"><em>m</em>/<em>s</em></span><br /><code>U10</code> &amp; 10m x-wind &amp; <span class="math"><em>m</em>/<em>s</em></span><br /><code>V10</code> &amp; 10m y-wind &amp; <span class="math"><em>m</em>/<em>s</em></span><br /><code>T2 </code> &amp; 2m temperature &amp; <span class="math"><em>K</em></span><br /><code>Q2 </code> &amp; 2m water vapor &amp; <span class="math"><em>k</em><em>g</em>/<em>k</em><em>g</em></span><br /><code>MSLP</code> &amp; mean sea-level pressure &amp; <span class="math"><em>P</em><em>a</em></span><br /></p>
+<h4 id="mod_atmos_phy_tb_driver">mod_atmos_phy_tb_driver</h4>
+<p><span>150mm</span><span>|l|X|c|</span> Item/Variable &amp; Description &amp; Unit<br /><code>TKE</code> &amp; turburent kinetic energy &amp; <span class="math"><em>m</em>2/<em>s</em>2</span><br /><code>NU</code> &amp; eddy viscosity &amp; <span class="math"><em>m</em>2/<em>s</em></span><br /><code>Ri</code> &amp; Richardson number &amp; <span class="math"><em>N</em><em>I</em><em>L</em></span><br /><code>Pr</code> &amp; Prantle number &amp; <span class="math"><em>N</em><em>I</em><em>L</em></span><br /><code>MOMZ_t_TB</code> &amp; MOMZ tendency (TB) &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em>2</span><br /><code>MOMX_t_TB</code> &amp; MOMX tendency (TB) &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em>2</span><br /><code>MOMY_t_TB</code> &amp; MOMY tendency (TB) &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em>2</span><br /><code>RHOT_t_TB</code> &amp; RHOT tendency (TB) &amp; <span class="math"><em>K</em>.<em>k</em><em>g</em>/<em>m</em>3/<em>s</em></span><br /><code>QV_t_TB</code> &amp; QV tendency (TB) &amp; <span class="math"><em>k</em><em>g</em>/<em>k</em><em>g</em></span><br /><code>QC_t_TB</code> &amp; QC tendency (TB) &amp; <span class="math"><em>k</em><em>g</em>/<em>k</em><em>g</em></span><br /><code>QR_t_TB</code> &amp; QR tendency (TB) &amp; <span class="math"><em>k</em><em>g</em>/<em>k</em><em>g</em></span><br /><code>QI_t_TB</code> &amp; QI tendency (TB) &amp; <span class="math"><em>k</em><em>g</em>/<em>k</em><em>g</em></span><br /><code>QS_t_TB</code> &amp; QS tendency (TB) &amp; <span class="math"><em>k</em><em>g</em>/<em>k</em><em>g</em></span><br /><code>QG_t_TB</code> &amp; QG tendency (TB) &amp; <span class="math"><em>k</em><em>g</em>/<em>k</em><em>g</em></span><br /><code>SGS_ZFLX_MOMZ</code> &amp; SGS Z FLUX of MOMZ &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>/<em>s</em>2</span><br /><code>SGS_XFLX_MOMZ</code> &amp; SGS X FLUX of MOMZ &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>/<em>s</em>2</span><br /><code>SGS_YFLX_MOMZ</code> &amp; SGS Y FLUX of MOMZ &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>/<em>s</em>2</span><br /><code>SGS_ZFLX_MOMX</code> &amp; SGS Z FLUX of MOMX &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>/<em>s</em>2</span><br /><code>SGS_XFLX_MOMX</code> &amp; SGS X FLUX of MOMX &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>/<em>s</em>2</span><br /><code>SGS_YFLX_MOMX</code> &amp; SGS Y FLUX of MOMX &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>/<em>s</em>2</span><br /><code>SGS_ZFLX_MOMY</code> &amp; SGS Z FLUX of MOMY &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>/<em>s</em>2</span><br /><code>SGS_XFLX_MOMY</code> &amp; SGS X FLUX of MOMY &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>/<em>s</em>2</span><br /><code>SGS_YFLX_MOMY</code> &amp; SGS Y FLUX of MOMY &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>/<em>s</em>2</span><br /><code>SGS_ZFLX_RHOT</code> &amp; SGS Z FLUX of RHOT &amp; <span class="math"><em>K</em> * <em>k</em><em>g</em>/<em>m</em>2/<em>s</em></span><br /><code>SGS_XFLX_RHOT</code> &amp; SGS X FLUX of RHOT &amp; <span class="math"><em>K</em> * <em>k</em><em>g</em>/<em>m</em>2/<em>s</em></span><br /><code>SGS_YFLX_RHOT</code> &amp; SGS Y FLUX of RHOT &amp; <span class="math"><em>K</em> * <em>k</em><em>g</em>/<em>m</em>2/<em>s</em></span><br /><code>SGS_ZFLX_QV</code> &amp; SGS Z FLUX of QV &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em></span><br /><code>SGS_XFLX_QV</code> &amp; SGS X FLUX of QV &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em></span><br /><code>SGS_YFLX_QV</code> &amp; SGS Y FLUX of QV &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em></span><br /><code>SGS_ZFLX_QC</code> &amp; SGS Z FLUX of QC &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em></span><br /><code>SGS_XFLX_QC</code> &amp; SGS X FLUX of QC &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em></span><br /><code>SGS_YFLX_QC</code> &amp; SGS Y FLUX of QC &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em></span><br /><code>SGS_ZFLX_QR</code> &amp; SGS Z FLUX of QR &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em></span><br /><code>SGS_XFLX_QR</code> &amp; SGS X FLUX of QR &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em></span><br /><code>SGS_YFLX_QR</code> &amp; SGS Y FLUX of QR &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em></span><br /><code>SGS_ZFLX_QI</code> &amp; SGS Z FLUX of QI &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em></span><br /><code>SGS_XFLX_QI</code> &amp; SGS X FLUX of QI &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em></span><br /><code>SGS_YFLX_QI</code> &amp; SGS Y FLUX of QI &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em></span><br /><code>SGS_ZFLX_QS</code> &amp; SGS Z FLUX of QS &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em></span><br /><code>SGS_XFLX_QS</code> &amp; SGS X FLUX of QS &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em></span><br /><code>SGS_YFLX_QS</code> &amp; SGS Y FLUX of QS &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em></span><br /><code>SGS_ZFLX_QG</code> &amp; SGS Z FLUX of QG &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em></span><br /><code>SGS_XFLX_QG</code> &amp; SGS X FLUX of QG &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em></span><br /><code>SGS_YFLX_QG</code> &amp; SGS Y FLUX of QG &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em></span><br /></p>
+<h4 id="mod_atmos_vars">mod_atmos_vars</h4>
+<p><span>150mm</span><span>|l|X|c|</span> Item/Variable &amp; Description &amp; Unit<br /><code>DENS</code> &amp; density &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>3</span><br /><code>MOMZ</code> &amp; momentum z &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em></span><br /><code>MOMX</code> &amp; momentum x &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em></span><br /><code>MOMY</code> &amp; momentum y &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em></span><br /><code>RHOT</code> &amp; rho * theta &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>3 * <em>K</em></span><br /><code>QV</code> &amp; Water Vapor mixing ratio &amp; <span class="math"><em>k</em><em>g</em>/<em>k</em><em>g</em></span><br /><code>QC</code> &amp; Cloud Water mixing ratio &amp; <span class="math"><em>k</em><em>g</em>/<em>k</em><em>g</em></span><br /><code>QR</code> &amp; Rain Water mixing ratio &amp; <span class="math"><em>k</em><em>g</em>/<em>k</em><em>g</em></span><br /><code>QI</code> &amp; Cloud Ice mixing ratio &amp; <span class="math"><em>k</em><em>g</em>/<em>k</em><em>g</em></span><br /><code>QS</code> &amp; Snow mixing ratio &amp; <span class="math"><em>k</em><em>g</em>/<em>k</em><em>g</em></span><br /><code>QG</code> &amp; Graupel mixing ratio &amp; <span class="math"><em>k</em><em>g</em>/<em>k</em><em>g</em></span><br /><code>W</code> &amp; velocity w &amp; <span class="math"><em>m</em>/<em>s</em></span><br /><code>U</code> &amp; velocity u &amp; <span class="math"><em>m</em>/<em>s</em></span><br /><code>V</code> &amp; velocity v &amp; <span class="math"><em>m</em>/<em>s</em></span><br /><code>PT</code> &amp; potential temp. &amp; <span class="math"><em>K</em></span><br /><code>QDRY</code> &amp; dry air &amp; <span class="math"><em>k</em><em>g</em>/<em>k</em><em>g</em></span><br /><code>QTOT</code> &amp; total water &amp; <span class="math"><em>k</em><em>g</em>/<em>k</em><em>g</em></span><br /><code>QHYD</code> &amp; total hydrometeors &amp; <span class="math"><em>k</em><em>g</em>/<em>k</em><em>g</em></span><br /><code>QLIQ</code> &amp; total liquid water &amp; <span class="math"><em>k</em><em>g</em>/<em>k</em><em>g</em></span><br /><code>QICE</code> &amp; total ice water &amp; <span class="math"><em>k</em><em>g</em>/<em>k</em><em>g</em></span><br /><code>LWP</code> &amp; liquid water path &amp; <span class="math"><em>g</em>/<em>m</em>2</span><br /><code>IWP</code> &amp; ice water path &amp; <span class="math"><em>g</em>/<em>m</em>2</span><br /><code>RTOT</code> &amp; Total gas constant &amp; <span class="math"><em>J</em>/<em>k</em><em>g</em>/<em>K</em></span><br /><code>CPTOT</code> &amp; Total heat capacity &amp; <span class="math"><em>J</em>/<em>k</em><em>g</em>/<em>K</em></span><br /><code>PRES</code> &amp; pressure &amp; <span class="math"><em>P</em><em>a</em></span><br /><code>T</code> &amp; temperature &amp; <span class="math"><em>K</em></span><br /><code>LWPT</code> &amp; liq. potential temp. &amp; <span class="math"><em>K</em></span><br /><code>RHA</code> &amp; relative humidity(liq+ice) &amp; <span class="math">%</span><br /><code>RH</code> &amp; relative humidity(liq) &amp; <span class="math">%</span><br /><code>RHI</code> &amp; relative humidity(ice) &amp; <span class="math">%</span><br /><code>VOR</code> &amp; vertical vorticity &amp; <span class="math">1/<em>s</em></span><br /><code>DIV</code> &amp; divergence &amp; <span class="math">1/<em>s</em></span><br /><code>HDIV</code> &amp; horizontal divergence &amp; <span class="math">1/<em>s</em></span><br /><code>Uabs</code> &amp; absolute velocity &amp; <span class="math"><em>m</em>/<em>s</em></span><br /><code>DENS_PRIM</code> &amp; horiz. deviation of density &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>3</span><br /><code>W_PRIM</code> &amp; horiz. deviation of w &amp; <span class="math"><em>m</em>/<em>s</em></span><br /><code>U_PRIM</code> &amp; horiz. deviation of u &amp; <span class="math"><em>m</em>/<em>s</em></span><br /><code>V_PRIM</code> &amp; horiz. deviation of v &amp; <span class="math"><em>m</em>/<em>s</em></span><br /><code>PT_PRIM</code> &amp; horiz. deviation of pot. temp. &amp; <span class="math"><em>K</em></span><br /><code>W_PRIM2</code> &amp; variance of w &amp; <span class="math"><em>m</em>2/<em>s</em>2</span><br /><code>PT_W_PRIM</code> &amp; resolved scale heat flux &amp; <span class="math"><em>W</em>/<em>s</em></span><br /><code>W_PRIM3</code> &amp; skewness of w &amp; <span class="math"><em>m</em>3/<em>s</em>3</span><br /><code>TKE_RS</code> &amp; resolved scale TKE &amp; <span class="math"><em>m</em>2/<em>s</em>2</span><br /><code>ENGT</code> &amp; total energy &amp; <span class="math"><em>J</em>/<em>m</em>3</span><br /><code>ENGP</code> &amp; potential energy &amp; <span class="math"><em>J</em>/<em>m</em>3</span><br /><code>ENGK</code> &amp; kinetic energy &amp; <span class="math"><em>J</em>/<em>m</em>3</span><br /><code>ENGI</code> &amp; internal energy &amp; <span class="math"><em>J</em>/<em>m</em>3</span><br /></p>
+<h4 id="mod_land_phy_driver">mod_land_phy_driver</h4>
+<p><span>150mm</span><span>|l|X|c|</span> Item/Variable &amp; Description &amp; Unit<br /><code>LAND_TEMP_t</code> &amp; tendency of LAND_TEMP &amp; <span class="math"><em>K</em></span><br /><code>LAND_WATER_t</code> &amp; tendency of LAND_WATER &amp; <span class="math"><em>m</em>3/<em>m</em>3</span><br /><code>LAND_SFC_TEMP_t</code> &amp; tendency of LAND_SFC_TEMP &amp; <span class="math"><em>K</em></span><br /><code>LAND_ALB_LW_t</code> &amp; tendency of LAND_ALB_LW &amp; <span class="math">0 − 1</span><br /><code>LAND_ALB_SW_t</code> &amp; tendency of LAND_ALB_SW &amp; <span class="math">0 − 1</span><br /><code>LP_WaterLimit</code> &amp; LAND PROPERTY maximum soil moisture &amp; <span class="math"><em>m</em>3/<em>m</em>3</span><br /><code>LP_WaterCritical</code> &amp; LAND PROPERTY critical soil moisture &amp; <span class="math"><em>m</em>3/<em>m</em>3</span><br /><code>LP_ThermalCond</code> &amp; LAND PROPERTY thermal conductivity for soil &amp; <span class="math"><em>W</em>/<em>K</em>/<em>m</em></span><br /><code>LP_HeatCapacity</code> &amp; LAND PROPERTY heat capacity for soil &amp; <span class="math"><em>J</em>/<em>K</em>/<em>m</em>3</span><br /><code>LP_WaterDiff</code> &amp; LAND PROPERTY moisture diffusivity in the soil &amp; <span class="math"><em>m</em>2/<em>s</em></span><br /><code>LP_Z0M</code> &amp; LAND PROPERTY roughness length for momemtum &amp; <span class="math"><em>m</em></span><br /><code>LP_Z0H</code> &amp; LAND PROPERTY roughness length for heat &amp; <span class="math"><em>m</em></span><br /><code>LP_Z0E</code> &amp; LAND PROPERTY roughness length for vapor &amp; <span class="math"><em>m</em></span><br /></p>
+<h4 id="mod_land_vars">mod_land_vars</h4>
+<p><span>150mm</span><span>|l|X|c|</span> Item/Variable &amp; Description &amp; Unit<br /><code>LAND_TEMP</code> &amp; temperature at each soil layer &amp; <span class="math"><em>K</em></span><br /><code>LAND_WATER</code> &amp; moisture at each soil layer &amp; <span class="math"><em>m</em>3/<em>m</em>3</span><br /><code>LAND_SFC_TEMP</code> &amp; land surface skin temperature &amp; <span class="math"><em>K</em></span><br /><code>LAND_ALB_LW</code> &amp; land surface albedo (longwave) &amp; <span class="math">0 − 1</span><br /><code>LAND_ALB_SW</code> &amp; land surface albedo (shortwave) &amp; <span class="math">0 − 1</span><br /><code>LAND_SFLX_MW</code> &amp; land surface w-momentum flux &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em></span><br /><code>LAND_SFLX_MU</code> &amp; land surface u-momentum flux &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em></span><br /><code>LAND_SFLX_MV</code> &amp; land surface v-momentum flux &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em></span><br /><code>LAND_SFLX_SH</code> &amp; land surface sensible heat flux &amp; <span class="math"><em>J</em>/<em>m</em>2/<em>s</em></span><br /><code>LAND_SFLX_LH</code> &amp; land surface latent heat flux &amp; <span class="math"><em>J</em>/<em>m</em>2/<em>s</em></span><br /><code>LAND_SFLX_GH</code> &amp; land surface ground heat flux &amp; <span class="math"><em>J</em>/<em>m</em>2/<em>s</em></span><br /><code>LAND_SFLX_evap</code> &amp; land surface water vapor flux &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em></span><br /></p>
+<h4 id="mod_ocean_phy_driver">mod_ocean_phy_driver</h4>
+<p><span>150mm</span><span>|l|X|c|</span> Item/Variable &amp; Description &amp; Unit<br /><code>OCEAN_TEMP_t</code> &amp; tendency of OCEAN_TEMP &amp; <span class="math"><em>K</em></span><br /><code>OCEAN_SFC_TEMP_t</code> &amp; tendency of OCEAN_SFC_TEMP &amp; <span class="math"><em>K</em></span><br /><code>OCEAN_ALB_LW_t</code> &amp; tendency of OCEAN_ALB_LW &amp; <span class="math">0 − 1</span><br /><code>OCEAN_ALB_SW_t</code> &amp; tendency of OCEAN_ALB_SW &amp; <span class="math">0 − 1</span><br /><code>OCEAN_SFC_Z0M_t</code> &amp; tendency of OCEAN_SFC_Z0M &amp; <span class="math"><em>m</em></span><br /><code>OCEAN_SFC_Z0H_t</code> &amp; tendency of OCEAN_SFC_Z0H &amp; <span class="math"><em>m</em></span><br /><code>OCEAN_SFC_Z0E_t</code> &amp; tendency of OCEAN_SFC_Z0E &amp; <span class="math"><em>m</em></span><br /></p>
+<h4 id="mod_ocean_vars">mod_ocean_vars</h4>
+<p><span>150mm</span><span>|l|X|c|</span> Item/Variable &amp; Description &amp; Unit<br /><code>OCEAN_TEMP</code> &amp; temperature at uppermost ocean layer &amp; <span class="math"><em>K</em></span><br /><code>OCEAN_SFC_TEMP</code> &amp; ocean surface skin temperature &amp; <span class="math"><em>K</em></span><br /><code>OCEAN_ALB_LW</code> &amp; ocean surface albedo (longwave) &amp; <span class="math">0 − 1</span><br /><code>OCEAN_ALB_SW</code> &amp; ocean surface albedo (shortwave) &amp; <span class="math">0 − 1</span><br /><code>OCEAN_SFC_Z0M</code> &amp; ocean surface roughness length (momentum) &amp; <span class="math"><em>m</em></span><br /><code>OCEAN_SFC_Z0H</code> &amp; ocean surface roughness length (heat) &amp; <span class="math"><em>m</em></span><br /><code>OCEAN_SFC_Z0E</code> &amp; ocean surface roughness length (vapor) &amp; <span class="math"><em>m</em></span><br /><code>OCEAN_SFLX_MW</code> &amp; ocean surface w-momentum flux &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em></span><br /><code>OCEAN_SFLX_MU</code> &amp; ocean surface u-momentum flux &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em></span><br /><code>OCEAN_SFLX_MV</code> &amp; ocean surface v-momentum flux &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em></span><br /><code>OCEAN_SFLX_SH</code> &amp; ocean surface sensible heat flux &amp; <span class="math"><em>J</em>/<em>m</em>2/<em>s</em></span><br /><code>OCEAN_SFLX_LH</code> &amp; ocean surface latent heat flux &amp; <span class="math"><em>J</em>/<em>m</em>2/<em>s</em></span><br /><code>OCEAN_SFLX_WH</code> &amp; ocean surface water heat flux &amp; <span class="math"><em>J</em>/<em>m</em>2/<em>s</em></span><br /><code>OCEAN_SFLX_evap</code> &amp; ocean surface water vapor flux &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em></span><br /></p>
+<h4 id="mod_urban_phy_driver">mod_urban_phy_driver</h4>
+<p><span>150mm</span><span>|l|X|c|</span> Item/Variable &amp; Description &amp; Unit<br /><code>URBAN_TR_t</code> &amp; tendency of URBAN_TR &amp; <span class="math"><em>K</em></span><br /><code>URBAN_TB_t</code> &amp; tendency of URBAN_TB &amp; <span class="math"><em>K</em></span><br /><code>URBAN_TG_t</code> &amp; tendency of URBAN_TG &amp; <span class="math"><em>K</em></span><br /><code>URBAN_TC_t</code> &amp; tendency of URBAN_TC &amp; <span class="math"><em>K</em></span><br /><code>URBAN_QC_t</code> &amp; tendency of URBAN_QC &amp; <span class="math"><em>k</em><em>g</em>/<em>k</em><em>g</em></span><br /><code>URBAN_UC_t</code> &amp; tendency of URBAN_UC &amp; <span class="math"><em>m</em>/<em>s</em></span><br /><code>URBAN_TRL_t</code> &amp; tendency of URBAN_TRL &amp; <span class="math"><em>K</em></span><br /><code>URBAN_TBL_t</code> &amp; tendency of URBAN_TBL &amp; <span class="math"><em>K</em></span><br /><code>URBAN_TGL_t</code> &amp; tendency of URBAN_TGL &amp; <span class="math"><em>K</em></span><br /><code>URBAN_RAINR_t</code> &amp; tendency of URBAN_RAINR &amp; <span class="math"><em>K</em></span><br /><code>URBAN_RAINB_t</code> &amp; tendency of URBAN_RAINB &amp; <span class="math"><em>K</em></span><br /><code>URBAN_RAING_t</code> &amp; tendency of URBAN_RAING &amp; <span class="math"><em>K</em></span><br /><code>URBAN_ROFF_t</code> &amp; tendency of URBAN_ROFF &amp; <span class="math"><em>K</em></span><br /></p>
+<h4 id="mod_urban_vars">mod_urban_vars</h4>
+<p><span>150mm</span><span>|l|X|c|</span> Item/Variable &amp; Description &amp; Unit<br /><code>URBAN_TR</code> &amp; urban surface temperature of roof &amp; <span class="math"><em>K</em></span><br /><code>URBAN_TB</code> &amp; urban surface temperature of wall &amp; <span class="math"><em>K</em></span><br /><code>URBAN_TG</code> &amp; urban surface temperature of road &amp; <span class="math"><em>K</em></span><br /><code>URBAN_TC</code> &amp; urban canopy air temperature &amp; <span class="math"><em>K</em></span><br /><code>URBAN_QC</code> &amp; urban canopy humidity &amp; <span class="math"><em>k</em><em>g</em>/<em>k</em><em>g</em></span><br /><code>URBAN_UC</code> &amp; urban canopy wind &amp; <span class="math"><em>m</em>/<em>s</em></span><br /><code>URBAN_TRL</code> &amp; urban temperature in layer of roof &amp; <span class="math"><em>K</em></span><br /><code>URBAN_TBL</code> &amp; urban temperature in layer of wall &amp; <span class="math"><em>K</em></span><br /><code>URBAN_TGL</code> &amp; urban temperature in layer of road &amp; <span class="math"><em>K</em></span><br /><code>URBAN_RAINR</code> &amp; urban rain strage on roof &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2</span><br /><code>URBAN_RAINB</code> &amp; urban rain strage on wall &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2</span><br /><code>URBAN_RAING</code> &amp; urban rain strage on road &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2</span><br /><code>URBAN_ROFF</code> &amp; urban runoff &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2</span><br /><code>URBAN_SFC_TEMP</code> &amp; urban grid average of temperature &amp; <span class="math"><em>K</em></span><br /><code>URBAN_ALB_LW</code> &amp; urban grid average of albedo LW &amp; <span class="math">0 − 1</span><br /><code>URBAN_ALB_SW</code> &amp; urban grid average of albedo SW &amp; <span class="math">0 − 1</span><br /><code>URBAN_SFLX_MW</code> &amp; urban grid average of w-momentum flux &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em></span><br /><code>URBAN_SFLX_MU</code> &amp; urban grid average of u-momentum flux &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em></span><br /><code>URBAN_SFLX_MV</code> &amp; urban grid average of v-momentum flux &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em></span><br /><code>URBAN_SFLX_SH</code> &amp; urban grid average of sensible heat flux &amp; <span class="math"><em>W</em>/<em>m</em>2</span><br /><code>URBAN_SFLX_LH</code> &amp; urban grid average of latent heat flux &amp; <span class="math"><em>W</em>/<em>m</em>2</span><br /><code>URBAN_SFLX_GH</code> &amp; urban grid average of ground heat flux &amp; <span class="math"><em>W</em>/<em>m</em>2</span><br /><code>URBAN_SFLX_evap</code> &amp; urban grid average of water vapor flux &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em></span><br /></p>
+<h4 id="scale_atmos_dyn">scale_atmos_dyn</h4>
+<p><span>150mm</span><span>|l|X|c|</span> Item/Variable &amp; Description &amp; Unit<br /><code>DENS_t_phys</code> &amp; tendency of density due to physics &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>3/<em>s</em></span><br /><code>MOMZ_t_phys</code> &amp; tendency of momentum z due to physics &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em>2</span><br /><code>MOMX_t_phys</code> &amp; tendency of momentum x due to physics &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em>2</span><br /><code>MOMY_t_phys</code> &amp; tendency of momentum y due to physics &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em>2</span><br /><code>RHOT_t_phys</code> &amp; tendency of rho*theta temperature due to physics &amp; <span class="math"><em>K</em><em>k</em><em>g</em>/<em>m</em>3/<em>s</em></span><br /><code>QV_t_phys</code> &amp; tendency of QV due to physics &amp; <span class="math"><em>k</em><em>g</em>/<em>k</em><em>g</em></span><br /><code>QC_t_phys</code> &amp; tendency of QC due to physics &amp; <span class="math"><em>k</em><em>g</em>/<em>k</em><em>g</em></span><br /><code>QR_t_phys</code> &amp; tendency of QR due to physics &amp; <span class="math"><em>k</em><em>g</em>/<em>k</em><em>g</em></span><br /><code>QI_t_phys</code> &amp; tendency of QI due to physics &amp; <span class="math"><em>k</em><em>g</em>/<em>k</em><em>g</em></span><br /><code>QS_t_phys</code> &amp; tendency of QS due to physics &amp; <span class="math"><em>k</em><em>g</em>/<em>k</em><em>g</em></span><br /><code>QG_t_phys</code> &amp; tendency of QG due to physics &amp; <span class="math"><em>k</em><em>g</em>/<em>k</em><em>g</em></span><br /><code>DENS_t_damp</code> &amp; tendency of density due to rayleigh damping &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>3/<em>s</em></span><br /><code>MOMZ_t_damp</code> &amp; tendency of momentum z due to rayleigh damping &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em>2</span><br /><code>MOMX_t_damp</code> &amp; tendency of momentum x due to rayleigh damping &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em>2</span><br /><code>MOMY_t_damp</code> &amp; tendency of momentum y due to rayleigh damping &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em>2</span><br /><code>RHOT_t_damp</code> &amp; tendency of rho*theta temperature due to rayleigh damping &amp; <span class="math"><em>K</em><em>k</em><em>g</em>/<em>m</em>3/<em>s</em></span><br /><code>QV_t_damp</code> &amp; tendency of QV due to rayleigh damping &amp; <span class="math"><em>k</em><em>g</em>/<em>k</em><em>g</em></span><br /><code>QC_t_damp</code> &amp; tendency of QC due to rayleigh damping &amp; <span class="math"><em>k</em><em>g</em>/<em>k</em><em>g</em></span><br /><code>QR_t_damp</code> &amp; tendency of QR due to rayleigh damping &amp; <span class="math"><em>k</em><em>g</em>/<em>k</em><em>g</em></span><br /><code>QI_t_damp</code> &amp; tendency of QI due to rayleigh damping &amp; <span class="math"><em>k</em><em>g</em>/<em>k</em><em>g</em></span><br /><code>QS_t_damp</code> &amp; tendency of QS due to rayleigh damping &amp; <span class="math"><em>k</em><em>g</em>/<em>k</em><em>g</em></span><br /><code>QG_t_damp</code> &amp; tendency of QG due to rayleigh damping &amp; <span class="math"><em>k</em><em>g</em>/<em>k</em><em>g</em></span><br /></p>
+<h4 id="scale_atmos_dyn-if-check_mass-is-defined-in-compilation-process">scale_atmos_dyn (if CHECK_MASS is defined in compilation process)</h4>
+<p><span>150mm</span><span>|l|X|c|</span> Item/Variable &amp; Description &amp; Unit<br /><code>MFLXZ</code> &amp; momentum flux of z-direction &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em></span><br /><code>MFLXX</code> &amp; momentum flux of x-direction &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em></span><br /><code>MFLXY</code> &amp; momentum flux of y-direction &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em></span><br /><code>TFLXZ</code> &amp; potential temperature flux of z-direction &amp; <span class="math"><em>K</em> * <em>k</em><em>g</em>/<em>m</em>2/<em>s</em></span><br /><code>TFLXX</code> &amp; potential temperature flux of x-direction &amp; <span class="math"><em>K</em> * <em>k</em><em>g</em>/<em>m</em>2/<em>s</em></span><br /><code>TFLXY</code> &amp; potential temperature flux of y-direction &amp; <span class="math"><em>K</em> * <em>k</em><em>g</em>/<em>m</em>2/<em>s</em></span><br /><code>ALLMOM_lb_hz</code> &amp; horizontally total momentum flux from lateral boundary &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em></span><br /></p>
+<h4 id="scale_atmos_dyn_rk-if-hist_tend-is-defined-in-compilation-process">scale_atmos_dyn_rk (if HIST_TEND is defined in compilation process)</h4>
+<p><span>150mm</span><span>|l|X|c|</span> Item/Variable &amp; Description &amp; Unit<br /><code>DENS_t_advcv</code> &amp; tendency of density (vert. advection) &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>3/<em>s</em></span><br /><code>MOMZ_t_advcv</code> &amp; tendency of momentum z (vert. advection) &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em>2</span><br /><code>MOMX_t_advcv</code> &amp; tendency of momentum x (vert. advection) &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em>2</span><br /><code>MOMY_t_advcv</code> &amp; tendency of momentum y (vert. advection) &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em>2</span><br /><code>RHOT_t_advcv</code> &amp; tendency of rho*theta (vert. advection) &amp; <span class="math"><em>K</em><em>k</em><em>g</em>/<em>m</em>3/<em>s</em></span><br /><code>DENS_t_advch</code> &amp; tendency of density (horiz. advection) &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>3/<em>s</em></span><br /><code>MOMZ_t_advch</code> &amp; tendency of momentum z (horiz. advection) &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em>2</span><br /><code>MOMX_t_advch</code> &amp; tendency of momentum x (horiz. advection) &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em>2</span><br /><code>MOMY_t_advch</code> &amp; tendency of momentum y (horiz. advection) &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em>2</span><br /><code>RHOT_t_advch</code> &amp; tendency of rho*theta (horiz. advection) &amp; <span class="math"><em>K</em><em>k</em><em>g</em>/<em>m</em>3/<em>s</em></span><br /><code>MOMZ_t_pg</code> &amp; tendency of momentum z (pressure gradient) &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em>2</span><br /><code>MOMX_t_pg</code> &amp; tendency of momentum x (pressure gradient) &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em>2</span><br /><code>MOMY_t_pg</code> &amp; tendency of momentum y (pressure gradient) &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em>2</span><br /><code>MOMZ_t_ddiv</code> &amp; tendency of momentum z (divergence damping) &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em>2</span><br /><code>MOMX_t_ddiv</code> &amp; tendency of momentum x (divergence damping) &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em>2</span><br /><code>MOMY_t_ddiv</code> &amp; tendency of momentum y (divergence damping) &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em>2</span><br /><code>MOMX_t_cf</code> &amp; tendency of momentum x (coliolis force) &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em>2</span><br /><code>MOMY_t_cf</code> &amp; tendency of momentum y (coliolis force) &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>2/<em>s</em>2</span><br /></p>
+<h4 id="scale_atmos_phy_mp_kessler">scale_atmos_phy_mp_kessler</h4>
+<p><span>150mm</span><span>|l|X|c|</span> Item/Variable &amp; Description &amp; Unit<br /><code>Vterm_QR</code> &amp; terminal velocity of QR &amp; <span class="math"><em>m</em>/<em>s</em></span><br /></p>
+<h4 id="scale_atmos_phy_mp_suzuki10">scale_atmos_phy_mp_suzuki10</h4>
+<p><span>150mm</span><span>|l|X|c|</span> Item/Variable &amp; Description &amp; Unit<br /><code>aerosol</code> &amp; aerosol mass &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em><sup>3</sup></span><br /></p>
+<h4 id="scale_atmos_phy_mp_tomita08">scale_atmos_phy_mp_tomita08</h4>
+<p><span>150mm</span><span>|l|X|c|</span> Item/Variable &amp; Description &amp; Unit<br /><code>Vterm_QR</code> &amp; terminal velocity of QR &amp; <span class="math"><em>m</em>/<em>s</em></span><br /><code>Vterm_QI</code> &amp; terminal velocity of QI &amp; <span class="math"><em>m</em>/<em>s</em></span><br /><code>Vterm_QS</code> &amp; terminal velocity of QS &amp; <span class="math"><em>m</em>/<em>s</em></span><br /><code>Vterm_QG</code> &amp; terminal velocity of QG &amp; <span class="math"><em>m</em>/<em>s</em></span><br /></p>
+<h4 id="scale_atmos_sub_boundary">scale_atmos_sub_boundary</h4>
+<p><span>150mm</span><span>|l|X|c|</span> Item/Variable &amp; Description &amp; Unit<br /><code>DENS_BND</code> &amp; Boundary Density &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>3</span><br /><code>VELX_BND</code> &amp; Boundary velocity x-direction &amp; <span class="math"><em>m</em>/<em>s</em></span><br /><code>VELY_BND</code> &amp; Boundary velocity y-direction &amp; <span class="math"><em>m</em>/<em>s</em></span><br /><code>POTT_BND</code> &amp; Boundary potential temperature &amp; <span class="math"><em>K</em></span><br /><code>VELZ_BND</code> &amp; Boundary velocity z-direction &amp; <span class="math"><em>m</em>/<em>s</em></span><br /><code>QV_BND</code> &amp; Boundary QV &amp; <span class="math"><em>k</em><em>g</em>/<em>k</em><em>g</em></span><br /><code>QC_BND</code> &amp; Boundary QC &amp; <span class="math"><em>k</em><em>g</em>/<em>k</em><em>g</em></span><br /><code>QR_BND</code> &amp; Boundary QR &amp; <span class="math"><em>k</em><em>g</em>/<em>k</em><em>g</em></span><br /><code>QI_BND</code> &amp; Boundary QI &amp; <span class="math"><em>k</em><em>g</em>/<em>k</em><em>g</em></span><br /><code>QS_BND</code> &amp; Boundary QS &amp; <span class="math"><em>k</em><em>g</em>/<em>k</em><em>g</em></span><br /><code>QG_BND</code> &amp; Boundary QG &amp; <span class="math"><em>k</em><em>g</em>/<em>k</em><em>g</em></span><br /></p>
+<h4 id="scale_atmos_sub_boundary-1">scale_atmos_sub_boundary</h4>
+<p><span>150mm</span><span>|l|X|c|</span> Item/Variable &amp; Description &amp; Unit<br /><code>BND_ref_DENS</code> &amp; reference DENS &amp; <span class="math"><em>k</em><em>g</em>/<em>m</em>3</span><br /><code>BND_ref_VELZ</code> &amp; reference VELZ &amp; <span class="math"><em>m</em>/<em>s</em></span><br /><code>BND_ref_VELX</code> &amp; reference VELZ &amp; <span class="math"><em>m</em>/<em>s</em></span><br /><code>BND_ref_VELY</code> &amp; reference VELZ &amp; <span class="math"><em>m</em>/<em>s</em></span><br /><code>BND_ref_POTT</code> &amp; reference VELZ &amp; <span class="math"><em>K</em></span><br /></p>
+<h1 id="scaleに実装されている雲モデルの概要とそれぞれの選択方法">SCALEに実装されている雲モデルの概要とそれぞれの選択方法</h1>
+<p>SCALEライブラリには５種類の雲モデルが実装されている。氷雲の微物理過程を 含まない1-momentバルクモデル（<span class="citation"></span>）、氷雲の微物理過程を 含む1-momentバルクモデル（<span class="citation"></span>）、氷雲を含む2-momentバルクモデル （<span class="citation"></span>）、1-momentビン法（<span class="citation"></span>）、 及び、超水滴法（<span class="citation"></span>）である。1-momentビン法はオプションにより 氷を含む場合とそうでない場合を切り替えられる。また超水滴法に関しては 著作権の関係から公開されていない。使用したい場合はSCALEの開発者に連絡をされたい。<br />これらの雲微物理モデルの違いは雲粒の粒径分布関数の表現方法にある。 ここでは超水滴法を除く４種類の雲モデルの利用法について記述する。</p>
+<ol>
+<li><p><span><strong>氷を含まない1-momentバルク法<span class="citation"></span></strong></span><br /><span class="citation"></span>は後述の<span class="citation"></span>と同様に1-momentバルク法は粒径分布関数を粒径分布関数の ３次のモーメント（質量）のみで表現する。<span class="citation"></span>は雲粒と雨粒のカテゴリを考慮し、 雲粒混合比（QC[kg/kg]）と雨粒混合比（QR[kg/kg]）を予報する。<br />粒径分布関数はデルタ関数（すなわち雲粒のサイズは全て同じと仮定する）で表現する。<br />考慮する雲粒の成長過程は、雲粒生成（飽和調整）、凝結・蒸発、衝突併合、落下である。</p></li>
+<li><p><span><strong>氷を含む1-momentバルク法<span class="citation"></span></strong></span><br />氷を含む1-momentバルク法は雲粒、雨粒、氷粒、雪片、あられの５カテゴリを考慮し、<br />それぞれの混合比（QC、QR、QI、QS、QG[kg/kg]）をそれぞれ予報する。粒径分布は<br />雲物はデルタ分布（半径10µmで一様）、その他はMarshall-Palmer分布を仮定する。<br />考慮する成長過程は雲粒生成（飽和調整）、凝結・蒸発、衝突併合、落下である。</p></li>
+<li><p><span><strong>氷を含む2-momentバルク法<span class="citation"></span></strong></span><br />氷を含む2-momentバルク法は混合比に加えて、粒径分布関数の０次のモーメント（数濃度）で表現する。<br />考慮する水物質のカテゴリは、雲粒、雨粒、氷粒、雪片、あられの５カテゴリであり、<br />それぞれの質量混合比（QC、QR、QI、QS、QG）と数密度混合比（NC、NR、NI、NS、NG）を予報する。 粒径分布は一般ガンマ関数で近似する。考慮する成長過程は雲粒生成、凝結・蒸発、 衝突併合、分裂、落下である。</p></li>
+<li><p><span><strong>1-momentビン法<span class="citation"></span></strong></span><br />1-momentビン法は粒径分布関数を差分化して陽に表現する。差分化された各粒径分布関数を ビンと呼ぶためビン法と呼ばれる。各サイズのビンを質量のみで予報する（各ビンを 質量及び数密度で表現するビン法を2-momentビン法と呼ぶ）。考慮する水物質のカテゴリは 雲粒、雨粒、氷粒、雪片、あられ、ひょうの６種類であり、考慮する成長過程は雲粒生成、 凝結・蒸発、衝突併合、落下である。</p></li>
+</ol>
+<p>上記の４種類の雲微物理は１→４の順に高精度になるが、その分計算コストも高くなる。次にこれらの 雲物理スキームを用いて実験を行う方法を記述する。</p>
+<h3 id="雲微物理スキームの選択方法">雲微物理スキームの選択方法</h3>
+<p>雲微物理スキームを選択するには、init.confおよびrun.confの編集が必要である。まずinit.confをエディタで 開き、<code>TRACER_TYPE</code>を指定する（以下は氷を含む2-momentバルク法を指定する場合の例である）。</p>
+<pre><code>&amp;PARAM_TRACER
+ TRACER_TYPE = &#39;SN14&#39;,
+/</code></pre>
+<p>それぞれの雲微物理スキームを利用する際の<code>TRACER_TYPE</code>は以下の表のようである。<br /></p>
+<table>
+<tbody>
+<tr class="odd">
+<td align="left">氷を含まない1-momentバルク法<span class="citation"></span></td>
+<td align="left">KESSLER</td>
+</tr>
+<tr class="even">
+<td align="left">氷を含む1-momentバルク法<span class="citation"></span></td>
+<td align="left">TOMITA08</td>
+</tr>
+<tr class="odd">
+<td align="left">氷を含む2-momentバルク法<span class="citation"></span></td>
+<td align="left">SN14</td>
+</tr>
+<tr class="even">
+<td align="left">1-momentビン法<span class="citation"></span></td>
+<td align="left">SUZUKI10</td>
+</tr>
+</tbody>
+</table>
+<p><br />次にrun.confをエディタで開き<code>TRACER_TYPE</code>と<code>ATMOS_PHY_MP_TYPE</code>を指定する （以下は氷を含む2-momentバルク法を指定する場合である）<br /></p>
+<pre><code>&amp;PARAM_TRACER
+ TRACER_TYPE = &#39;SN14&#39;,
+/
+&amp;PARAM_ATMOS
+ ATMOS_PHY_MP_TYPE = &quot;SN14&quot;,
+/</code></pre>
+<p>この際、run.conf、init.confに記述される<code>TRACER_TYPE</code>と<code>ATMOS_PHY_MP_TYPE</code>は <span><strong>全て同一でなければならない</strong></span>。<br />加えて、1-momentビン法を用いる際は、init.confに以下の項目を追加する必要がある。<br /></p>
+<pre><code>&amp;PARAM_MKINIT
+ flg_bin = .true.
+/
+
+&amp;PARAM_MKINIT_RF01
+ PERTURB_AMP=0.02d0,
+ RANDOM_LIMIT=5,
+ RANDOM_FLAG=1
+/
+
+&amp;PARAM_BIN
+ nbin   = 33,
+ ICEFLG =  0,
+ nccn   =  0,
+ kphase =  0,
+/
+
+&amp;PARAM_SBMAERO
+ F0_AERO =   1.D7,
+ R0_AERO =   1.D-7,
+ R_MAX   =   1.D-6,
+ R_MIN   =   1.D-8,
+ A_ALPHA =   3.D0,
+ rhoa    = 2.25D3,
+/</code></pre>
+<p>それぞれの意味は「雲微物理スキームのオプションとNamelist」の章を参照されたい。</p>
+<h3 id="実行方法">実行方法</h3>
+<p>上記を設定して他の実験と同様に実行することで各雲微物理スキームを選択することができる。</p>
+<h3 id="各雲物理スキームにのオプションとnamelist">各雲物理スキームにのオプションとNamelist</h3>

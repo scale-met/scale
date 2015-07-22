@@ -51,7 +51,7 @@ module scale_urban_phy_slc
   !
   !-----------------------------------------------------------------------------
   !
-  logical, allocatable, private :: is_FLX(:,:) ! urban tile or not.
+  logical, allocatable, private :: is_URB(:,:) ! urban tile or not.
   ! from namelist
   real(RP), private :: DTS_MAX    =    0.1_RP ! maximum dT during one minute [K/sec]
                                               ! 0.1 [K/sec] = 6.0 [K/min]
@@ -187,14 +187,14 @@ contains
     call urban_param_setup
 
     ! judge to run slab land model
-    allocate( is_FLX(IA,JA) )
+    allocate( is_URB(IA,JA) )
 
     do j = JS, JE
     do i = IS, IE
       if( LANDUSE_fact_urban(i,j) > 0.0_RP )then
-        is_FLX(i,j) = .true.
+        is_URB(i,j) = .true.
       else
-        is_FLX(i,j) = .false.
+        is_URB(i,j) = .false.
       endif
     enddo
     enddo
@@ -386,7 +386,7 @@ contains
     do j = JS, JE
     do i = IS, IE
 
-    if( is_FLX(i,j) ) then
+    if( is_URB(i,j) ) then
 
        Uabs = max( sqrt( U1(i,j)**2 + V1(i,j)**2 + W1(i,j)**2 ), Uabs_min )
 
@@ -1147,7 +1147,7 @@ contains
 
       if ( abs(resi1) < sqrt(EPS) .and. abs(resi2) < sqrt(EPS) ) then
          TB = TBL(1)
-	 TG = TGL(1)
+         TG = TGL(1)
          TB = max( TBP - DTS_MAX_onestep, min( TBP + DTS_MAX_onestep, TB ) )
          TG = max( TGP - DTS_MAX_onestep, min( TGP + DTS_MAX_onestep, TG ) )
          exit

@@ -65,9 +65,9 @@ contains
        !call ATMOS_PHY_CH_setup( ATMOS_PHY_CH_TYPE )
 
        ! run once (only for the diagnostic value)
-       call PROF_rapstart('ATM Chemistry', 1)
+       call PROF_rapstart('ATM_Chemistry', 1)
        call ATMOS_PHY_CH_driver( update_flag = .true. )
-       call PROF_rapend  ('ATM Chemistry', 1)
+       call PROF_rapend  ('ATM_Chemistry', 1)
 
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** this component is never called.'
@@ -120,7 +120,9 @@ contains
 !                          O3             ) ! [INOUT]
 
        ! tentative!
+!OCL XFILL
        RHOQ_t_CH(:,:,:,:) = 0.0_RP
+!OCL XFILL
        O3       (:,:,:)   = 0.0_RP
 
        call HIST_in( O3(:,:,:), 'Ozone', 'Ozone', 'PPM' )

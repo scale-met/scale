@@ -74,9 +74,9 @@ contains
 
     !########## History & Monitor ##########
     if ( LAND_sw ) then
-       call PROF_rapstart('LND History', 1)
+       call PROF_rapstart('LND_History', 1)
        call LAND_vars_history
-       call PROF_rapend  ('LND History', 1)
+       call PROF_rapend  ('LND_History', 1)
     endif
 
     return
@@ -108,13 +108,15 @@ contains
     !---------------------------------------------------------------------------
 
     !########## Get Surface Boundary from coupler ##########
+    call PROF_rapstart('LND_SfcExch', 2)
     call LAND_SURFACE_GET
+    call PROF_rapend  ('LND_SfcExch', 2)
 
     !########## Physics ##########
     if ( LAND_sw ) then
-       call PROF_rapstart('LND Physics', 1)
+       call PROF_rapstart('LND_Physics', 1)
        call LAND_PHY_driver( update_flag = .true. )
-       call PROF_rapend  ('LND Physics', 1)
+       call PROF_rapend  ('LND_Physics', 1)
     endif
 
     !########## Update ##########
@@ -146,9 +148,12 @@ contains
     call LAND_vars_total
 
     !########## Set Surface Boundary to coupler ##########
+    call PROF_rapstart('LND_SfcExch', 2)
     call LAND_SURFACE_SET( countup=.true. )
+    call PROF_rapend  ('LND_SfcExch', 2)
 
     !########## reset tendencies ##########
+!OCL XFILL
     do j = JS, JE
     do i = IS, IE
     do k = LKS, LKE
@@ -157,6 +162,8 @@ contains
     enddo
     enddo
     enddo
+
+!OCL XFILL
     do j = JS, JE
     do i = IS, IE
        LAND_SFC_TEMP_t  (i,j)      = 0.0_RP
@@ -166,9 +173,9 @@ contains
     enddo
 
     !########## History & Monitor ##########
-    call PROF_rapstart('LND History', 1)
+    call PROF_rapstart('LND_History', 1)
     call LAND_vars_history
-    call PROF_rapend  ('LND History', 1)
+    call PROF_rapend  ('LND_History', 1)
 
     return
   end subroutine LAND_driver
@@ -190,6 +197,7 @@ contains
        ATMOS_SFC_PRES, &
        ATMOS_SFLX_LW,  &
        ATMOS_SFLX_SW,  &
+       ATMOS_cosSZA,   &
        ATMOS_SFLX_prec
     use mod_cpl_vars, only: &
        CPL_getATM_LND
@@ -208,6 +216,7 @@ contains
                             ATMOS_SFC_PRES (:,:), & ! [OUT]
                             ATMOS_SFLX_LW  (:,:), & ! [OUT]
                             ATMOS_SFLX_SW  (:,:), & ! [OUT]
+                            ATMOS_cosSZA   (:,:), & ! [OUT]
                             ATMOS_SFLX_prec(:,:)  ) ! [OUT]
     endif
 

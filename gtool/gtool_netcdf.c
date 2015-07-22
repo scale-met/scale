@@ -53,6 +53,9 @@ typedef struct {
   int ncid;
   char time_units[File_HMID+1];
   int deflate_level;
+#ifdef NETCDF3
+  int defmode;
+#endif
 } fileinfo_t;
 
 typedef struct {
@@ -74,9 +77,10 @@ typedef struct {
   size_t *count;
 } varinfo_t;
 
-
-#define FILE_MAX 64
-#define VAR_MAX 64000
+// Keep consistency with "File_nfile_max" in gtool_file.f90
+#define FILE_MAX 512
+// Keep consistency with "File_nvar_max" in gtool_file.f90
+#define VAR_MAX 40960
 
 static fileinfo_t *files[FILE_MAX];
 static int nfile = 0;
@@ -126,6 +130,9 @@ int32_t file_open( int32_t *fid,     // (out)
   files[nfile] = (fileinfo_t*) malloc(sizeof(fileinfo_t));
   files[nfile]->ncid = ncid;
   files[nfile]->deflate_level = DEFAULT_DEFLATE_LEVEL;
+#ifdef NETCDF3
+  files[nfile]->defmode = 1;
+#endif
   *fid = nfile;
   nfile++;
 
@@ -316,7 +323,16 @@ int32_t file_set_tattr( int32_t  fid,   // (in)
   if ( nc_inq_attid(ncid, varid, key, &attid) == NC_NOERR ) // check if existed
     return ALREADY_EXISTED_CODE;
 
+#ifdef NETCDF3
+  if (files[fid]->defmode == 0) CHECK_ERROR( nc_redef(ncid) );
+#endif
+
   CHECK_ERROR( nc_put_att_text(ncid, varid, key, strlen(val), val) );
+
+#ifdef NETCDF3
+  CHECK_ERROR( nc_enddef(ncid) );
+  files[fid]->defmode = 0;
+#endif
 
   return SUCCESS_CODE;
 }
@@ -341,7 +357,7 @@ int32_t file_put_axis( int32_t fid,        // (in)
     return ALREADY_EXISTED_CODE;
 
 #ifdef NETCDF3
-  CHECK_ERROR( nc_redef(ncid) );
+  if (files[fid]->defmode == 0) CHECK_ERROR( nc_redef(ncid) );
 #endif
 
   if ( nc_inq_dimid(ncid, dim_name, &dimid) != NC_NOERR ) // check if existed
@@ -354,6 +370,7 @@ int32_t file_put_axis( int32_t fid,        // (in)
 
 #ifdef NETCDF3
   CHECK_ERROR( nc_enddef(ncid) );
+  files[fid]->defmode = 0;
 #endif
 
   switch ( precision ) {
@@ -392,7 +409,7 @@ int32_t file_put_associated_coordinates( int32_t fid,        // (in)
     return ALREADY_EXISTED_CODE;
 
 #ifdef NETCDF3
-  CHECK_ERROR( nc_redef(ncid) );
+  if (files[fid]->defmode == 0) CHECK_ERROR( nc_redef(ncid) );
 #endif
 
   dimids = malloc(sizeof(int)*ndims);
@@ -408,6 +425,7 @@ int32_t file_put_associated_coordinates( int32_t fid,        // (in)
 
 #ifdef NETCDF3
   CHECK_ERROR( nc_enddef(ncid) );
+  files[fid]->defmode = 0;
 #endif
 
   switch ( precision ) {
@@ -465,7 +483,7 @@ int32_t file_add_variable( int32_t *vid,     // (out)
   vars[nvar]->count = NULL;
 
 #ifdef NETCDF3
-  CHECK_ERROR( nc_redef(ncid) );
+  if (files[fid]->defmode == 0) CHECK_ERROR( nc_redef(ncid) );
 #endif
 
   // get time variable
@@ -619,6 +637,7 @@ int32_t file_add_variable( int32_t *vid,     // (out)
 
 #ifdef NETCDF3
   CHECK_ERROR( nc_enddef(ncid) );
+  files[fid]->defmode = 0;
 #endif
 
   vars[nvar]->varid = varid;

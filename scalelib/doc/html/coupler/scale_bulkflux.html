@@ -1,0 +1,50 @@
+<html>
+  <head>
+    <title>scale_bulkflux module</title>
+  </head>
+ <body>
+  <h1>scale_bulkflux module</h1>
+  <h2>NAMELIST</h2>
+    <ul>
+      <li>PARAM_BULKFLUX</li>
+      <table>
+        <tr><th>name</th><th>type</th><th>default value</th><th>comment</th></tr>
+        <tr>
+          <td>BULKFLUX_TYPE</td>
+          <td>character(len=H_SHORT)</td>
+          <td>'B91W01'</td>
+          <td></td>
+        </tr>
+        <tr>
+          <td>BULKFLUX_WSCF</td>
+          <td>real(RP)</td>
+          <td>1.2E+0_RP</td>
+          <td>empirical scaling factor of Wstar (Beljaars 1994)</td>
+        </tr>
+        <tr>
+          <td>BULKFLUX_UABS_MIN</td>
+          <td>real(RP)</td>
+          <td>1.0E-2_RP</td>
+          <td>minimum of Uabs [m/s]</td>
+        </tr>
+        <tr>
+          <td>BULKFLUX_RIB_MIN</td>
+          <td>real(RP)</td>
+          <td>1.0E-4_RP</td>
+          <td>minimum of RiB [no unit]</td>
+        </tr>
+        <tr>
+          <td>BULKFLUX_WSTAR_MIN</td>
+          <td>real(RP)</td>
+          <td>1.0E-4_RP</td>
+          <td>minimum of W* [m/s]</td>
+        </tr>
+      </table>
+    </ul>
+
+  <h2>History</h2>
+    <table>
+      <tr><th>name</th><th>description</th><th>unit</th><th>variable</th></tr>
+    </table>
+  </body>
+</html>

@@ -89,9 +89,9 @@ contains
        endif
 
        ! run once (only for the diagnostic value)
-       call PROF_rapstart('ATM SurfaceFlux', 1)
+       call PROF_rapstart('ATM_SurfaceFlux', 1)
        call ATMOS_PHY_SF_driver( update_flag = .true. )
-       call PROF_rapend  ('ATM SurfaceFlux', 1)
+       call PROF_rapend  ('ATM_SurfaceFlux', 1)
 
     else
 
@@ -115,6 +115,9 @@ contains
   !> Driver
   subroutine ATMOS_PHY_SF_driver( update_flag )
     use scale_const, only: &
+       PRE00 => CONST_PRE00, &
+       Rdry  => CONST_Rdry, &
+       Rvap  => CONST_Rvap, &
        CPdry => CONST_CPdry
     use scale_comm, only: &
        COMM_vars8, &
@@ -144,6 +147,9 @@ contains
        BOTTOM_estimate => ATMOS_BOTTOM_estimate
     use scale_atmos_hydrostatic, only: &
        barometric_law_mslp => ATMOS_HYDROSTATIC_barometric_law_mslp
+    use scale_atmos_thermodyn, only: &
+       THERMODYN_qd => ATMOS_THERMODYN_qd, &
+       THERMODYN_cp => ATMOS_THERMODYN_cp
     use scale_atmos_phy_sf, only: &
        ATMOS_PHY_SF
     use mod_atmos_vars, only: &
@@ -202,6 +208,12 @@ contains
     real(RP) :: MSLP  (IA,JA) ! mean sea-level pressure [Pa]
     real(RP) :: beta  (IA,JA)
     real(RP) :: total ! dummy
+
+    real(RP) :: q(QA)
+    real(RP) :: qdry
+    real(RP) :: Rtot
+    real(RP) :: CPtot
+
     real(RP) :: work
 
     integer :: i, j, iq
@@ -252,6 +264,7 @@ contains
                              Q2        (:,:)       ) ! [OUT]
        endif
 
+!OCL XFILL
        do j = JS, JE
        do i = IS, IE
           Uabs10(i,j) = sqrt( U10(i,j)**2 + V10(i,j)**2 )
@@ -260,44 +273,47 @@ contains
 
        call barometric_law_mslp( MSLP(:,:), SFC_PRES(:,:), T2(:,:), TOPO_Zsfc(:,:) )
 
-       call HIST_in( SFC_DENS  (:,:),      'SFC_DENS', 'surface atmospheric density',       'kg/m3'   )
-       call HIST_in( SFC_PRES  (:,:),      'SFC_PRES', 'surface atmospheric pressure',      'Pa'      )
-       call HIST_in( SFC_TEMP  (:,:),      'SFC_TEMP', 'surface skin temperature (merged)', 'K'       )
-       call HIST_in( SFC_albedo(:,:,I_LW), 'ALB_LW',   'surface albedo (longwave,merged)',  '0-1'     )
-       call HIST_in( SFC_albedo(:,:,I_SW), 'ALB_SW',   'surface albedo (shortwave,merged)', '0-1'     )
-       call HIST_in( SFC_Z0M   (:,:),      'SFC_Z0M',  'roughness length (momentum)',       'm'       )
-       call HIST_in( SFC_Z0H   (:,:),      'SFC_Z0H',  'roughness length (heat)',           'm'       )
-       call HIST_in( SFC_Z0E   (:,:),      'SFC_Z0E',  'roughness length (vapor)',          'm'       )
-       call HIST_in( SFLX_MW   (:,:),      'MWFLX',    'w-momentum flux (merged)',          'kg/m2/s' )
-       call HIST_in( SFLX_MU   (:,:),      'MUFLX',    'u-momentum flux (merged)',          'kg/m2/s' )
-       call HIST_in( SFLX_MV   (:,:),      'MVFLX',    'v-momentum flux (merged)',          'kg/m2/s' )
-       call HIST_in( SFLX_SH   (:,:),      'SHFLX',    'sensible heat flux (merged)',       'W/m2'    )
-       call HIST_in( SFLX_LH   (:,:),      'LHFLX',    'latent heat flux (merged)',         'W/m2'    )
-       call HIST_in( SFLX_GH   (:,:),      'GHFLX',    'ground heat flux (merged)',         'W/m2'    )
-       call HIST_in( Uabs10    (:,:),      'Uabs10',   '10m absolute wind',                 'm/s'     )
-       call HIST_in( U10       (:,:),      'U10',      '10m x-wind',                        'm/s'     )
-       call HIST_in( V10       (:,:),      'V10',      '10m y-wind',                        'm/s'     )
-       call HIST_in( T2        (:,:),      'T2 ',      '2m temperature',                    'K'       )
-       call HIST_in( Q2        (:,:),      'Q2 ',      '2m water vapor',                    'kg/kg'   )
-       call HIST_in( MSLP      (:,:),      'MSLP',     'mean sea-level pressure',           'Pa'      )
+       call HIST_in( SFC_DENS  (:,:),      'SFC_DENS',   'surface atmospheric density',       'kg/m3'   )
+       call HIST_in( SFC_PRES  (:,:),      'SFC_PRES',   'surface atmospheric pressure',      'Pa'      )
+       call HIST_in( SFC_TEMP  (:,:),      'SFC_TEMP',   'surface skin temperature (merged)', 'K'       )
+       call HIST_in( SFC_albedo(:,:,I_LW), 'SFC_ALB_LW', 'surface albedo (longwave,merged)',  '0-1'     , nohalo=.true. )
+       call HIST_in( SFC_albedo(:,:,I_SW), 'SFC_ALB_SW', 'surface albedo (shortwave,merged)', '0-1'     , nohalo=.true. )
+       call HIST_in( SFC_Z0M   (:,:),      'SFC_Z0M',    'roughness length (momentum)',       'm'       , nohalo=.true. )
+       call HIST_in( SFC_Z0H   (:,:),      'SFC_Z0H',    'roughness length (heat)',           'm'       , nohalo=.true. )
+       call HIST_in( SFC_Z0E   (:,:),      'SFC_Z0E',    'roughness length (vapor)',          'm'       , nohalo=.true. )
+       call HIST_in( SFLX_MW   (:,:),      'MWFLX',      'w-momentum flux (merged)',          'kg/m2/s' )
+       call HIST_in( SFLX_MU   (:,:),      'MUFLX',      'u-momentum flux (merged)',          'kg/m2/s' )
+       call HIST_in( SFLX_MV   (:,:),      'MVFLX',      'v-momentum flux (merged)',          'kg/m2/s' )
+       call HIST_in( SFLX_SH   (:,:),      'SHFLX',      'sensible heat flux (merged)',       'W/m2'    , nohalo=.true. )
+       call HIST_in( SFLX_LH   (:,:),      'LHFLX',      'latent heat flux (merged)',         'W/m2'    , nohalo=.true. )
+       call HIST_in( SFLX_GH   (:,:),      'GHFLX',      'ground heat flux (merged)',         'W/m2'    , nohalo=.true. )
+       call HIST_in( Uabs10    (:,:),      'Uabs10',     '10m absolute wind',                 'm/s'     , nohalo=.true. )
+       call HIST_in( U10       (:,:),      'U10',        '10m x-wind',                        'm/s'     , nohalo=.true. )
+       call HIST_in( V10       (:,:),      'V10',        '10m y-wind',                        'm/s'     , nohalo=.true. )
+       call HIST_in( T2        (:,:),      'T2 ',        '2m temperature',                    'K'       , nohalo=.true. )
+       call HIST_in( Q2        (:,:),      'Q2 ',        '2m water vapor',                    'kg/kg'   , nohalo=.true. )
+       call HIST_in( MSLP      (:,:),      'MSLP',       'mean sea-level pressure',           'Pa'      )
 
        call COMM_vars8( SFLX_MU(:,:), 1 )
        call COMM_vars8( SFLX_MV(:,:), 2 )
        call COMM_wait ( SFLX_MU(:,:), 1 )
        call COMM_wait ( SFLX_MV(:,:), 2 )
 
+!OCL XFILL
        do j = JS, JE
        do i = IS, IE
           MOMZ_t_SF(i,j) = SFLX_MW(i,j) * RFDZ(KS) / GSQRT(KS,i,j,I_XYW)
        enddo
        enddo
 
+!OCL XFILL
        do j = JS, JE
        do i = IS, IE
           MOMX_t_SF(i,j) = 0.5_RP * ( SFLX_MU(i,j) + SFLX_MU(i+1,j) ) * RCDZ(KS) / GSQRT(KS,i,j,I_UYZ)
        enddo
        enddo
 
+!OCL XFILL
        do j = JS, JE
        do i = IS, IE
           MOMY_t_SF(i,j) = 0.5_RP * ( SFLX_MV(i,j) + SFLX_MV(i,j+1) ) * RCDZ(KS) / GSQRT(KS,i,j,I_XVZ)
@@ -306,7 +322,12 @@ contains
 
        do j = JS, JE
        do i = IS, IE
-          RHOT_t_SF(i,j) = SFLX_SH(i,j) / CPdry * RCDZ(KS) / GSQRT(KS,i,j,I_XYZ)
+          q(:) = QTRC(KS,i,j,:)
+          call THERMODYN_qd( qdry, q )
+          call THERMODYN_cp( CPtot, q, qdry )
+          Rtot  = Rdry * qdry + Rvap * q(I_QV)
+          RHOT_t_SF(i,j) = ( SFLX_SH(i,j) * RCDZ(KS) / ( CPtot * GSQRT(KS,i,j,I_XYZ) ) ) &
+                         * RHOT(KS,i,j) * Rtot / PRES(KS,i,j) ! = POTT/TEMP
        enddo
        enddo
 

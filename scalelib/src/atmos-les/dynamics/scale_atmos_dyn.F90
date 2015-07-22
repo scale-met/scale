@@ -331,7 +331,9 @@ contains
        I_XYW, &
        I_UYZ, &
        I_XVZ, &
-       I_XY
+       I_XY,  &
+       I_UY,  &
+       I_XV
 #ifdef CHECK_MASS
     use scale_grid_real, only: &
        vol => REAL_VOL
@@ -345,7 +347,6 @@ contains
     use scale_atmos_dyn_rk, only: &
        ATMOS_DYN_rk
     use scale_atmos_boundary, only: &
-       BND_POTT => ATMOS_BOUNDARY_POTT, &
        BND_QA, &
        BND_SMOOTHER_FACT => ATMOS_BOUNDARY_SMOOTHER_FACT
 #if defined( HIST_TEND ) || defined( CHECK_MASS )
@@ -485,7 +486,7 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Dynamics step: ', NSTEP_ATMOS_DYN, ' small steps'
 
-    call PROF_rapstart("DYN Preparation", 2)
+    call PROF_rapstart("DYN_Preparation", 2)
 
 #ifdef DEBUG
     DENS00  (:,:,:) = UNDEF
@@ -514,20 +515,29 @@ contains
     qflx_lo(:,:,:,:) = UNDEF
 #endif
 
+!OCL XFILL
     DENS00(:,:,:) = DENS(:,:,:)
 
     if ( USE_AVERAGE ) then
+!OCL XFILL
        DENS_av(:,:,:) = 0.0_RP
+!OCL XFILL
        MOMZ_av(:,:,:) = 0.0_RP
+!OCL XFILL
        MOMX_av(:,:,:) = 0.0_RP
+!OCL XFILL
        MOMY_av(:,:,:) = 0.0_RP
+!OCL XFILL
        RHOT_av(:,:,:) = 0.0_RP
     endif
 
 #ifndef DRY
+!OCL XFILL
     mflx_av(:,:,:,:) = 0.0_RP
 
+!OCL XFILL
     CVtot(:,:,:) = 0.0_RP
+!OCL XFILL
     QDRY (:,:,:) = 1.0_RP
     do iq = QQS, QQE
        CVtot(:,:,:) = CVtot(:,:,:) + AQ_CV(iq) * QTRC(:,:,:,iq)
@@ -541,18 +551,21 @@ contains
     damp_t(:,:,:) = 0.0_RP
 #endif
 
-    call PROF_rapend  ("DYN Preparation", 2)
+    call PROF_rapend  ("DYN_Preparation", 2)
 
     !###########################################################################
     ! Update DENS,MONZ,MOMX,MOMY,MOMZ,RHOT
     !###########################################################################
 
-    call PROF_rapstart("DYN Tendency", 2)
+    call PROF_rapstart("DYN_Tendency", 2)
 
+!OCL XFILL
     DENS_tq(:,:,:) = 0.0_RP
+
     do iq = 1, BND_QA
 
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
        do j = JS-1, JE+2
        do i = IS-1, IE+2
        do k = KS, KE
@@ -561,6 +574,7 @@ contains
        enddo
        enddo
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -581,6 +595,7 @@ contains
        call HIST_in(damp_t,            trim(AQ_NAME(iq))//'_t_damp',                         &
                     'tendency of '//trim(AQ_NAME(iq))//' due to rayleigh damping', 'kg/kg/s' )
 #endif
+!OCL XFILL
        do j = JS, JE
        do i = IS, IE
           RHOQ_t(   1:KS-1,i,j,iq) = 0.0_RP
@@ -602,8 +617,9 @@ contains
 
     end do
 
+    !$omp parallel do private(i,j,k,iq) OMP_SCHEDULE_ collapse(3)
+!OCL XFILL
     do iq = BND_QA+1, QA
-       !$omp parallel do private(i,j,k,iq) OMP_SCHEDULE_ collapse(2)
        do j = 1, JA
        do i = 1, IA
        do k = 1, KA
@@ -613,16 +629,66 @@ contains
        enddo
     end do
 
-    call PROF_rapend  ("DYN Tendency", 2)
+    call PROF_rapend  ("DYN_Tendency", 2)
+
+    call PROF_rapstart("DYN_Boundary", 2)
+
+    if ( BND_W ) then
+       !$omp parallel do private(j,k) OMP_SCHEDULE_ collapse(2)
+       do j = JS, JE
+       do k = KS, KE
+          mflx_hi(k,IS-1,j,XDIR) = GSQRT(k,IS-1,j,I_UYZ) * MOMX(k,IS-1,j) / MAPF(IS-1,j,2,I_UY)
+          tflx_hi(k,IS-1,j,XDIR) = mflx_hi(k,IS-1,j,XDIR) &
+                                 * ( FACT_N * ( DAMP_POTT(k,IS  ,j)+DAMP_POTT(k,IS-1,j) ) &
+                                   + FACT_F * ( DAMP_POTT(k,IS+1,j)+DAMP_POTT(k,IS-2,j) ) )
+       enddo
+       enddo
+    end if
+    if ( BND_E ) then
+       !$omp parallel do private(j,k) OMP_SCHEDULE_ collapse(2)
+       do j = JS, JE
+       do k = KS, KE
+          mflx_hi(k,IE,j,XDIR) = GSQRT(k,IE,j,I_UYZ) * MOMX(k,IE,j) / MAPF(IE,j,2,I_UY)
+          tflx_hi(k,IE,j,XDIR) = mflx_hi(k,IE,j,XDIR) &
+                               * ( FACT_N * ( DAMP_POTT(k,IE+1,j)+DAMP_POTT(k,IE  ,j) ) &
+                                 + FACT_F * ( DAMP_POTT(k,IE+2,j)+DAMP_POTT(k,IE-1,j) ) )
+       enddo
+       enddo
+    end if
+    if ( BND_S ) then
+       !$omp parallel do private(i,k) OMP_SCHEDULE_ collapse(2)
+       do i = IS, IE
+       do k = KS, KE
+          mflx_hi(k,i,JS-1,YDIR) = GSQRT(k,i,JS-1,I_XVZ) * MOMY(k,i,JS-1) / MAPF(i,JS-1,1,I_XV)
+          tflx_hi(k,i,JS-1,YDIR) = mflx_hi(k,i,JS-1,YDIR) &
+                                 * ( FACT_N * ( DAMP_POTT(k,i,JS  )+DAMP_POTT(k,i,JS-1) ) &
+                                   + FACT_F * ( DAMP_POTT(k,i,JS+1)+DAMP_POTT(k,i,JS-2) ) )
+       enddo
+       enddo
+    end if
+    if ( BND_N ) then
+       !$omp parallel do private(i,k) OMP_SCHEDULE_ collapse(2)
+       do i = IS, IE
+       do k = KS, KE
+          mflx_hi(k,i,JE,YDIR) = GSQRT(k,i,JE,I_XVZ) * MOMY(k,i,JE) / MAPF(i,JE,1,I_XV)
+          tflx_hi(k,i,JE,YDIR) = mflx_hi(k,i,JE,YDIR) &
+                               * ( FACT_N * ( DAMP_POTT(k,i,JE+1)+DAMP_POTT(k,i,JE  ) ) &
+                                 + FACT_F * ( DAMP_POTT(k,i,JE+2)+DAMP_POTT(k,i,JE-1) ) )
+       enddo
+       enddo
+    end if
+
+    call PROF_rapend  ("DYN_Boundary", 2)
 
 
     do step = 1, NSTEP_ATMOS_DYN
 
        !-----< prepare tendency >-----
 
-       call PROF_rapstart("DYN Tendency", 2)
+       call PROF_rapstart("DYN_Tendency", 2)
 
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
        do j = JS-1, JE+2
        do i = IS-1, IE+2
        do k = KS, KE
@@ -631,6 +697,7 @@ contains
        enddo
        enddo
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -647,12 +714,21 @@ contains
        enddo
        enddo
        enddo
+!OCL XFILL
+       do j = JS, JE
+       do i = IS, IE
+          DENS_t(   1:KS-1,i,j) = 0.0_RP
+          DENS_t(KE+1:KA  ,i,j) = 0.0_RP
+       enddo
+       enddo
+       call COMM_vars8( DENS_t(:,:,:), I_COMM_DENS_t )
 #ifdef HIST_TEND
        call HIST_in(DENS_tp, 'DENS_t_phys', 'tendency of dencity due to physics',          'kg/m3/s' )
        call HIST_in(damp_t,  'DENS_t_damp', 'tendency of dencity due to rayleigh damping', 'kg/m3/s' )
 #endif
 
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
        do j = JS-1, JE+1
        do i = IS-1, IE+1
        do k = KS, KE-1
@@ -661,6 +737,7 @@ contains
        enddo
        enddo
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE-1
@@ -676,17 +753,21 @@ contains
        enddo
        enddo
        enddo
+!OCL XFILL
        do j = JS, JE
        do i = IS, IE
-          MOMZ_t(KE,i,j) = 0.0_RP
+          MOMZ_t( 1:KS-1,i,j) = 0.0_RP
+          MOMZ_t(KE:KA  ,i,j) = 0.0_RP
        enddo
        enddo
+       call COMM_vars8( MOMZ_t(:,:,:), I_COMM_MOMZ_t )
 #ifdef HIST_TEND
        call HIST_in(MOMZ_tp, 'MOMZ_t_phys', 'tendency of momentum z due to physics',          'kg/m2/s2', zdim='half' )
        call HIST_in(damp_t,  'MOMZ_t_damp', 'tendency of momentum z due to rayleigh damping', 'kg/m2/s2', zdim='half' )
 #endif
 
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
        do j = JS-1, JE+2
        do i = IS-2, IE+1
        do k = KS, KE
@@ -694,6 +775,7 @@ contains
        enddo
        enddo
        enddo
+!OCL XFILL
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -709,12 +791,21 @@ contains
        enddo
        enddo
        enddo
+!OCL XFILL
+       do j = JS, JE
+       do i = IS, IE
+          MOMX_t(   1:KS-1,i,j) = 0.0_RP
+          MOMX_t(KE+1:KA  ,i,j) = 0.0_RP
+       enddo
+       enddo
+       call COMM_vars8( MOMX_t(:,:,:), I_COMM_MOMX_t )
 #ifdef HIST_TEND
        call HIST_in(MOMX_tp, 'MOMX_t_phys', 'tendency of momentum x due to physics',          'kg/m2/s2', xdim='half' )
        call HIST_in(damp_t,  'MOMX_t_damp', 'tendency of momentum x due to rayleigh damping', 'kg/m2/s2', xdim='half' )
 #endif
 
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
        do j = JS-2, JE+1
        do i = IS-1, IE+2
        do k = KS, KE
@@ -722,6 +813,7 @@ contains
        enddo
        enddo
        enddo
+!OCL XFILL
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -737,12 +829,21 @@ contains
        enddo
        enddo
        enddo
+!OCL XFILL
+       do j = JS, JE
+       do i = IS, IE
+          MOMY_t(   1:KS-1,i,j) = 0.0_RP
+          MOMY_t(KE+1:KA  ,i,j) = 0.0_RP
+       enddo
+       enddo
+       call COMM_vars8( MOMY_t(:,:,:), I_COMM_MOMY_t )
 #ifdef HIST_TEND
        call HIST_in(MOMY_tp, 'MOMY_t_phys', 'tendency of momentum y due to physics',          'kg/m2/s2', ydim='half' )
        call HIST_in(damp_t,  'MOMY_t_damp', 'tendency of momentum y due to rayleigh damping', 'kg/m2/s2', ydim='half' )
 #endif
 
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
        do j = JS-1, JE+2
        do i = IS-1, IE+2
        do k = KS, KE
@@ -750,6 +851,7 @@ contains
        enddo
        enddo
        enddo
+!OCL XFILL
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -765,46 +867,35 @@ contains
        enddo
        enddo
        enddo
+!OCL XFILL
+       do j = JS, JE
+       do i = IS, IE
+          RHOT_t(   1:KS-1,i,j) = 0.0_RP
+          RHOT_t(KE+1:KA  ,i,j) = 0.0_RP
+       enddo
+       enddo
+       call COMM_vars8( RHOT_t(:,:,:), I_COMM_RHOT_t )
 #ifdef HIST_TEND
        call HIST_in(RHOT_tp, 'RHOT_t_phys', 'tendency of rho*theta temperature due to physics',          'K kg/m3/s' )
        call HIST_in(damp_t,  'RHOT_t_damp', 'tendency of rho*theta temperature due to rayleigh damping', 'K kg/m3/s' )
 #endif
 
-       do j = JS, JE
-       do i = IS, IE
-          DENS_t(   1:KS-1,i,j) = 0.0_RP
-          MOMZ_t(   1:KS-1,i,j) = 0.0_RP
-          MOMX_t(   1:KS-1,i,j) = 0.0_RP
-          MOMY_t(   1:KS-1,i,j) = 0.0_RP
-          RHOT_t(   1:KS-1,i,j) = 0.0_RP
-          DENS_t(KE+1:KA  ,i,j) = 0.0_RP
-          MOMZ_t(KE+1:KA  ,i,j) = 0.0_RP
-          MOMX_t(KE+1:KA  ,i,j) = 0.0_RP
-          MOMY_t(KE+1:KA  ,i,j) = 0.0_RP
-          RHOT_t(KE+1:KA  ,i,j) = 0.0_RP
-       enddo
-       enddo
-
-       call COMM_vars8( DENS_t(:,:,:), I_COMM_DENS_t )
-       call COMM_vars8( MOMZ_t(:,:,:), I_COMM_MOMZ_t )
-       call COMM_vars8( MOMX_t(:,:,:), I_COMM_MOMX_t )
-       call COMM_vars8( MOMY_t(:,:,:), I_COMM_MOMY_t )
-       call COMM_vars8( RHOT_t(:,:,:), I_COMM_RHOT_t )
        call COMM_wait ( DENS_t(:,:,:), I_COMM_DENS_t, .false. )
        call COMM_wait ( MOMZ_t(:,:,:), I_COMM_MOMZ_t, .false. )
        call COMM_wait ( MOMX_t(:,:,:), I_COMM_MOMX_t, .false. )
        call COMM_wait ( MOMY_t(:,:,:), I_COMM_MOMY_t, .false. )
        call COMM_wait ( RHOT_t(:,:,:), I_COMM_RHOT_t, .false. )
 
-       call PROF_rapend  ("DYN Tendency", 2)
+       call PROF_rapend  ("DYN_Tendency", 2)
 
-       call PROF_rapstart("DYN Numfilter", 2)
+       call PROF_rapstart("DYN_Numfilter", 2)
 
        dt = real(DTSEC_ATMOS_DYN,kind=RP)
 
        !-----< prepare numerical diffusion coefficient >-----
 
        if ( ND_COEF == 0.0_RP ) then
+!OCL XFILL
           num_diff(:,:,:,:,:) = 0.0_RP
        else
           call ATMOS_DYN_numfilter_coef( num_diff(:,:,:,:,:),                    & ! [OUT]
@@ -814,69 +905,25 @@ contains
                                          ND_COEF, ND_ORDER, ND_SFC_FACT, ND_USE_RS ) ! [IN]
        endif
 
-       call PROF_rapend  ("DYN Numfilter", 2)
+       call PROF_rapend  ("DYN_Numfilter", 2)
 
        !------------------------------------------------------------------------
        ! Start RK
        !------------------------------------------------------------------------
 
        !##### SAVE #####
+!OCL XFILL
        DENS0(:,:,:) = DENS(:,:,:)
+!OCL XFILL
        MOMZ0(:,:,:) = MOMZ(:,:,:)
+!OCL XFILL
        MOMX0(:,:,:) = MOMX(:,:,:)
+!OCL XFILL
        MOMY0(:,:,:) = MOMY(:,:,:)
+!OCL XFILL
        RHOT0(:,:,:) = RHOT(:,:,:)
 
-       call PROF_rapstart("DYN Boundary", 2)
-
-       if ( BND_W ) then
-          !$omp parallel do private(j,k) OMP_SCHEDULE_ collapse(2)
-          do j = JS, JE
-          do k = KS, KE
-             mflx_hi(k,IS-1,j,XDIR) = GSQRT(k,IS-1,j,I_UYZ) * MOMX(k,IS-1,j)
-             tflx_hi(k,IS-1,j,XDIR) = mflx_hi(k,IS-1,j,XDIR) &
-                  * ( FACT_N * ( BND_POTT(k,IS  ,j)+BND_POTT(k,IS-1,j) ) &
-                    + FACT_F * ( BND_POTT(k,IS+1,j)+BND_POTT(k,IS-2,j) ) )
-          enddo
-          enddo
-       end if
-       if ( BND_E ) then
-          !$omp parallel do private(j,k) OMP_SCHEDULE_ collapse(2)
-          do j = JS, JE
-          do k = KS, KE
-             mflx_hi(k,IE,j,XDIR) = GSQRT(k,IE,j,I_UYZ) * MOMX(k,IE,j)
-             tflx_hi(k,IE,j,XDIR) = mflx_hi(k,IE,j,XDIR) &
-                  * ( FACT_N * ( BND_POTT(k,IE+1,j)+BND_POTT(k,IE  ,j) ) &
-                    + FACT_F * ( BND_POTT(k,IE+2,j)+BND_POTT(k,IE-1,j) ) )
-          enddo
-          enddo
-       end if
-       if ( BND_S ) then
-          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-          do i = IS, IE
-          do k = KS, KE
-             mflx_hi(k,i,JS-1,YDIR) = GSQRT(k,i,JS-1,I_XVZ) * MOMY0(k,i,JS-1)
-             tflx_hi(k,i,JS-1,YDIR) = mflx_hi(k,i,JS-1,YDIR) &
-                  * ( FACT_N * ( BND_POTT(k,i,JS  )+BND_POTT(k,i,JS-1) ) &
-                    + FACT_F * ( BND_POTT(k,i,JS+1)+BND_POTT(k,i,JS-2) ) )
-          enddo
-          enddo
-       end if
-       if ( BND_N ) then
-          !$omp parallel do private(i,k) OMP_SCHEDULE_ collapse(2)
-          do i = IS, IE
-          do k = KS, KE
-             mflx_hi(k,i,JE,YDIR) = GSQRT(k,i,JE,I_XVZ) * MOMY0(k,i,JE)
-             tflx_hi(k,i,JE,YDIR) = mflx_hi(k,i,JE,YDIR) &
-                  * ( FACT_N * ( BND_POTT(k,i,JE+1)+BND_POTT(k,i,JE  ) ) &
-                    + FACT_F * ( BND_POTT(k,i,JE+2)+BND_POTT(k,i,JE-1) ) )
-          enddo
-          enddo
-       end if
-
-       call PROF_rapend  ("DYN Boundary", 2)
-
-       call PROF_rapstart("DYN RK", 2)
+       call PROF_rapstart("DYN_RK", 2)
 
        !##### RK1 : PROG0,PROG->PROG_RK1 #####
 
@@ -897,12 +944,13 @@ contains
                           REF_pres, REF_dens,                               & ! (in)
                           BND_W, BND_E, BND_S, BND_N,                       & ! (in)
                           dtrk, dt                                          ) ! (in)
-       call PROF_rapend  ("DYN RK", 2)
+       call PROF_rapend  ("DYN_RK", 2)
 
-       call PROF_rapstart("DYN Boundary", 2)
+       call PROF_rapstart("DYN_Boundary", 2)
 
        if ( BND_W ) then
           !$omp parallel do private(j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
           do j = 1, JA
           do i = 1, IS-1
           do k = KS, KE
@@ -917,6 +965,7 @@ contains
        end if
        if ( BND_E ) then
           !$omp parallel do private(j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
           do j = 1, JA
           do i = IE+1, IA
           do k = KS, KE
@@ -929,6 +978,7 @@ contains
           enddo
           enddo
           !$omp parallel do private(j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
           do j = 1, JA
           do k = KS, KE
              MOMX_RK1(k,IE,j) = MOMX0(k,IE,j)
@@ -937,6 +987,7 @@ contains
        end if
        if ( BND_S ) then
           !$omp parallel do private(j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
           do j = 1, JS-1
           do i = 1, IA
           do k = KS, KE
@@ -951,6 +1002,7 @@ contains
        end if
        if ( BND_N ) then
           !$omp parallel do private(j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
           do j = JE+1, JA
           do i = 1, IA
           do k = KS, KE
@@ -963,6 +1015,7 @@ contains
           enddo
           enddo
           !$omp parallel do private(i,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
           do i = 1, IA
           do k = KS, KE
              MOMY_RK1(k,i,JE) = MOMY0(k,i,JE)
@@ -970,7 +1023,7 @@ contains
           enddo
        end if
 
-       call PROF_rapend  ("DYN Boundary", 2)
+       call PROF_rapend  ("DYN_Boundary", 2)
 
        call COMM_vars8( DENS_RK1(:,:,:), I_COMM_DENS_RK1 )
        call COMM_vars8( MOMZ_RK1(:,:,:), I_COMM_MOMZ_RK1 )
@@ -985,7 +1038,7 @@ contains
 
        !##### RK2 : PROG0,PROG_RK2->PROG_RK3 #####
 
-       call PROF_rapstart("DYN RK", 2)
+       call PROF_rapstart("DYN_RK", 2)
 
        dtrk = real(DTSEC_ATMOS_DYN,kind=RP) / 2.0_RP
 
@@ -1005,12 +1058,13 @@ contains
                           BND_W, BND_E, BND_S, BND_N,                       & ! (in)
                           dtrk, dt                                          ) ! (in)
 
-       call PROF_rapend  ("DYN RK", 2)
+       call PROF_rapend  ("DYN_RK", 2)
 
-       call PROF_rapstart("DYN Boundary", 2)
+       call PROF_rapstart("DYN_Boundary", 2)
 
        if ( BND_W ) then
           !$omp parallel do private(j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
           do j = 1, JA
           do i = 1, IS-1
           do k = KS, KE
@@ -1025,6 +1079,7 @@ contains
        end if
        if ( BND_E ) then
           !$omp parallel do private(j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
           do j = 1, JA
           do i = IE+1, IA
           do k = KS, KE
@@ -1037,6 +1092,7 @@ contains
           enddo
           enddo
           !$omp parallel do private(j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
           do j = 1, JA
           do k = KS, KE
              MOMX_RK2(k,IE,j) = MOMX0(k,IE,j)
@@ -1045,6 +1101,7 @@ contains
        end if
        if ( BND_S ) then
           !$omp parallel do private(j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
           do j = 1, JS-1
           do i = 1, IA
           do k = KS, KE
@@ -1059,6 +1116,7 @@ contains
        end if
        if ( BND_N ) then
           !$omp parallel do private(j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
           do j = JE+1, JA
           do i = 1, IA
           do k = KS, KE
@@ -1071,6 +1129,7 @@ contains
           enddo
           enddo
           !$omp parallel do private(i,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
           do i = 1, IA
           do k = KS, KE
              MOMY_RK2(k,i,JE) = MOMY0(k,i,JE)
@@ -1078,7 +1137,7 @@ contains
           enddo
        end if
 
-       call PROF_rapend  ("DYN Boundary", 2)
+       call PROF_rapend  ("DYN_Boundary", 2)
 
        call COMM_vars8( DENS_RK2(:,:,:), I_COMM_DENS_RK2 )
        call COMM_vars8( MOMZ_RK2(:,:,:), I_COMM_MOMZ_RK2 )
@@ -1093,7 +1152,7 @@ contains
 
        !##### RK3 : PROG0,PROG_RK3->PROG #####
 
-       call PROF_rapstart("DYN RK", 2)
+       call PROF_rapstart("DYN_RK", 2)
 
        dtrk = real(DTSEC_ATMOS_DYN,kind=RP)
 
@@ -1113,7 +1172,7 @@ contains
                           BND_W, BND_E, BND_S, BND_N,                       & ! (in)
                           dtrk, dt                                          ) ! (in)
 
-       call PROF_rapend  ("DYN RK", 2)
+       call PROF_rapend  ("DYN_RK", 2)
 
 #ifdef CHECK_MASS
        call HIST_in(mflx_hi(:,:,:,ZDIR), 'MFLXZ', 'momentum flux of z-direction', 'kg/m2/s', zdim='half' )
@@ -1128,7 +1187,7 @@ contains
        mflx_lb_horizontal(:)    = 0.0_RP
        allmflx_lb_horizontal(:) = 0.0_RP
 
-       if ( .not. PRC_HAS_W ) then ! for western boundary
+       if ( BND_W ) then ! for western boundary
           i = IS
           do j = JS, JE
           do k = KS, KE
@@ -1140,7 +1199,7 @@ contains
           end do
           end do
        end if
-       if ( .not. PRC_HAS_E ) then ! for eastern boundary
+       if ( BND_E ) then ! for eastern boundary
           i = IE
           do j = JS, JE
           do k = KS, KE
@@ -1151,7 +1210,7 @@ contains
           end do
           end do
        end if
-       if ( .not. PRC_HAS_S ) then ! for sourthern boundary
+       if ( BND_S ) then ! for sourthern boundary
           j = JS
           do i = IS, IE
           do k = KS, KE
@@ -1162,7 +1221,7 @@ contains
           end do
           end do
        end if
-       if ( .not. PRC_HAS_N ) then ! for northern boundary
+       if ( BND_N ) then ! for northern boundary
           j = JE
           do i = IS, IE
           do k = KS, KE
@@ -1300,6 +1359,7 @@ contains
 
     dt = real(DTSEC,kind=RP)
 
+!OCL XFILL
     mflx_hi(:,:,:,:) = mflx_av(:,:,:,:) / real(NSTEP_ATMOS_DYN,kind=RP)
 
     call COMM_vars8( mflx_hi(:,:,:,ZDIR), I_COMM_mflx_z )
@@ -1310,6 +1370,7 @@ contains
     call COMM_wait ( mflx_hi(:,:,:,YDIR), I_COMM_mflx_y, .false. )
 
     if ( USE_AVERAGE ) then
+!OCL XFILL
        QTRC_av(:,:,:,:) = 0.0_RP
     endif
 
@@ -1318,9 +1379,10 @@ contains
     !------------------------------------------------------------------------
     do iq = 1, QA
 
-       call PROF_rapstart("DYN Numfilter", 2)
+       call PROF_rapstart("DYN_Numfilter", 2)
 
        if ( ND_COEF_Q == 0.0_RP ) then
+!OCL XFILL
           num_diff_q(:,:,:,:) = 0.0_RP
        else
           call ATMOS_DYN_numfilter_coef_q( num_diff_q(:,:,:,:),                    & ! [OUT]
@@ -1330,9 +1392,9 @@ contains
                                            ND_COEF_Q, ND_ORDER, ND_SFC_FACT, ND_USE_RS ) ! [IN]
        endif
 
-       call PROF_rapend  ("DYN Numfilter", 2)
+       call PROF_rapend  ("DYN_Numfilter", 2)
 
-       call PROF_rapstart("DYN Boundary", 2)
+       call PROF_rapstart("DYN_Boundary", 2)
 
        if ( BND_W ) then
           if ( iq <= BND_QA ) then
@@ -1340,8 +1402,8 @@ contains
              do j = JS, JE
              do k = KS, KE
                 qflx_hi(k,IS-1,j,XDIR) = mflx_hi(k,IS-1,j,XDIR) &
-                     * ( FACT_N * ( DAMP_QTRC(k,IS  ,j,iq)+DAMP_QTRC(k,IS-1,j,iq) ) &
-                       + FACT_F * ( DAMP_QTRC(k,IS+1,j,iq)+DAMP_QTRC(k,IS-2,j,iq) ) )
+                                       * ( FACT_N * ( DAMP_QTRC(k,IS  ,j,iq)+DAMP_QTRC(k,IS-1,j,iq) ) &
+                                         + FACT_F * ( DAMP_QTRC(k,IS+1,j,iq)+DAMP_QTRC(k,IS-2,j,iq) ) )
              enddo
              enddo
           else
@@ -1359,8 +1421,8 @@ contains
              do j = JS, JE
              do k = KS, KE
                 qflx_hi(k,IE,j,XDIR) = mflx_hi(k,IE,j,XDIR) &
-                     * ( FACT_N * ( DAMP_QTRC(k,IE+1,j,iq)+DAMP_QTRC(k,IE  ,j,iq) ) &
-                       + FACT_F * ( DAMP_QTRC(k,IE+2,j,iq)+DAMP_QTRC(k,IE-1,j,iq) ) )
+                                     * ( FACT_N * ( DAMP_QTRC(k,IE+1,j,iq)+DAMP_QTRC(k,IE  ,j,iq) ) &
+                                       + FACT_F * ( DAMP_QTRC(k,IE+2,j,iq)+DAMP_QTRC(k,IE-1,j,iq) ) )
              enddo
              enddo
           else
@@ -1378,12 +1440,13 @@ contains
              do i = IS, IE
              do k = KS, KE
                 qflx_hi(k,i,JS-1,YDIR) = mflx_hi(k,i,JS-1,YDIR) &
-                     * ( FACT_N * ( DAMP_QTRC(k,i,JS  ,iq)+DAMP_QTRC(k,i,JS-1,iq) ) &
-                       + FACT_F * ( DAMP_QTRC(k,i,JS+1,iq)+DAMP_QTRC(k,i,JS-2,iq) ) )
+                                       * ( FACT_N * ( DAMP_QTRC(k,i,JS  ,iq)+DAMP_QTRC(k,i,JS-1,iq) ) &
+                                         + FACT_F * ( DAMP_QTRC(k,i,JS+1,iq)+DAMP_QTRC(k,i,JS-2,iq) ) )
              enddo
              enddo
           else
              !$omp parallel do private(j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
              do j = JS, JE
              do k = KS, KE
                 qflx_hi(k,i,JS-1,YDIR) = 0.0_RP
@@ -1397,12 +1460,13 @@ contains
              do i = IS, IE
              do k = KS, KE
                 qflx_hi(k,i,JE,YDIR) = mflx_hi(k,i,JE,YDIR) &
-                     * ( FACT_N * ( DAMP_QTRC(k,i,JE+1,iq)+DAMP_QTRC(k,i,JE  ,iq) ) &
-                       + FACT_F * ( DAMP_QTRC(k,i,JE+2,iq)+DAMP_QTRC(k,i,JE-1,iq) ) )
+                                     * ( FACT_N * ( DAMP_QTRC(k,i,JE+1,iq)+DAMP_QTRC(k,i,JE  ,iq) ) &
+                                       + FACT_F * ( DAMP_QTRC(k,i,JE+2,iq)+DAMP_QTRC(k,i,JE-1,iq) ) )
              enddo
              enddo
           else
              !$omp parallel do private(j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
              do j = JS, JE
              do k = KS, KE
                 qflx_hi(k,i,JE,YDIR) = 0.0_RP
@@ -1411,9 +1475,9 @@ contains
           end if
        end if
 
-       call PROF_rapend  ("DYN Boundary", 2)
+       call PROF_rapend  ("DYN_Boundary", 2)
 
-       call PROF_rapstart("DYN Tracer", 2)
+       call PROF_rapstart("DYN_Tracer", 2)
 
        do JJS = JS, JE, JBLOCK
        JJE = JJS+JBLOCK-1
@@ -1425,11 +1489,11 @@ contains
           do i = IIS-1, IIE+1
           do k = KS+1, KE-2
              qflx_lo(k,i,j,ZDIR) = 0.5_RP * (     mflx_hi(k,i,j,ZDIR)  * ( QTRC(k+1,i,j,iq)+QTRC(k,i,j,iq) ) &
-                                               - abs(mflx_hi(k,i,j,ZDIR)) * ( QTRC(k+1,i,j,iq)-QTRC(k,i,j,iq) ) )
+                                            - abs(mflx_hi(k,i,j,ZDIR)) * ( QTRC(k+1,i,j,iq)-QTRC(k,i,j,iq) ) )
 
              qflx_hi(k,i,j,ZDIR) = mflx_hi(k,i,j,ZDIR) * ( FACT_N * ( QTRC(k+1,i,j,iq)+QTRC(k  ,i,j,iq) ) &
-                                                            + FACT_F * ( QTRC(k+2,i,j,iq)+QTRC(k-1,i,j,iq) ) ) &
-                                    + GSQRT(k,i,j,I_XYW) * num_diff_q(k,i,j,ZDIR)
+                                                         + FACT_F * ( QTRC(k+2,i,j,iq)+QTRC(k-1,i,j,iq) ) ) &
+                                 + GSQRT(k,i,j,I_XYW) * num_diff_q(k,i,j,ZDIR)
           enddo
           enddo
           enddo
@@ -1439,11 +1503,11 @@ contains
           do i = IIS-1, IIE+1
              qflx_lo(KS-1,i,j,ZDIR) = 0.0_RP
              qflx_lo(KS  ,i,j,ZDIR) = 0.5_RP * (     mflx_hi(KS  ,i,j,ZDIR)  * ( QTRC(KS+1,i,j,iq)+QTRC(KS,i,j,iq) ) &
-                                                  - abs(mflx_hi(KS  ,i,j,ZDIR)) * ( QTRC(KS+1,i,j,iq)-QTRC(KS,i,j,iq) ) )
+                                               - abs(mflx_hi(KS  ,i,j,ZDIR)) * ( QTRC(KS+1,i,j,iq)-QTRC(KS,i,j,iq) ) )
 
              qflx_hi(KS-1,i,j,ZDIR) = 0.0_RP
              qflx_hi(KS  ,i,j,ZDIR) = 0.5_RP * mflx_hi(KS  ,i,j,ZDIR) * ( QTRC(KS+1,i,j,iq)+QTRC(KS,i,j,iq) ) &
-                                       + GSQRT(k,i,j,I_XYW) * num_diff_q(KS,i,j,ZDIR)
+                                    + GSQRT(k,i,j,I_XYW) * num_diff_q(KS,i,j,ZDIR)
           enddo
           enddo
 
@@ -1451,11 +1515,11 @@ contains
           do j = JJS-1, JJE+1
           do i = IIS-1, IIE+1
              qflx_lo(KE-1,i,j,ZDIR) = 0.5_RP * (     mflx_hi(KE-1,i,j,ZDIR)  * ( QTRC(KE,i,j,iq)+QTRC(KE-1,i,j,iq) ) &
-                                                  - abs(mflx_hi(KE-1,i,j,ZDIR)) * ( QTRC(KE,i,j,iq)-QTRC(KE-1,i,j,iq) ) )
+                                               - abs(mflx_hi(KE-1,i,j,ZDIR)) * ( QTRC(KE,i,j,iq)-QTRC(KE-1,i,j,iq) ) )
              qflx_lo(KE  ,i,j,ZDIR) = 0.0_RP
 
              qflx_hi(KE-1,i,j,ZDIR) = 0.5_RP * mflx_hi(KE-1,i,j,ZDIR) * ( QTRC(KE,i,j,iq)+QTRC(KE-1,i,j,iq) ) &
-                                       + GSQRT(k,i,j,I_XYW) * num_diff_q(KE-1,i,j,ZDIR)
+                                    + GSQRT(k,i,j,I_XYW) * num_diff_q(KE-1,i,j,ZDIR)
              qflx_hi(KE  ,i,j,ZDIR) = 0.0_RP
           enddo
           enddo
@@ -1465,7 +1529,7 @@ contains
           do i = IIS-2, IIE+1
           do k = KS, KE
              qflx_lo(k,i,j,XDIR) = 0.5_RP * (     mflx_hi(k,i,j,XDIR)  * ( QTRC(k,i+1,j,iq)+QTRC(k,i,j,iq) ) &
-                                               - abs(mflx_hi(k,i,j,XDIR)) * ( QTRC(k,i+1,j,iq)-QTRC(k,i,j,iq) ) )
+                                            - abs(mflx_hi(k,i,j,XDIR)) * ( QTRC(k,i+1,j,iq)-QTRC(k,i,j,iq) ) )
           enddo
           enddo
           enddo
@@ -1475,8 +1539,8 @@ contains
           do i = IIS-1, IIE
           do k = KS, KE
              qflx_hi(k,i,j,XDIR) = mflx_hi(k,i,j,XDIR) * ( FACT_N * ( QTRC(k,i+1,j,iq)+QTRC(k,i  ,j,iq) ) &
-                                                            + FACT_F * ( QTRC(k,i+2,j,iq)+QTRC(k,i-1,j,iq) ) ) &
-                                    + GSQRT(k,i,j,I_UYZ) * num_diff_q(k,i,j,XDIR)
+                                                         + FACT_F * ( QTRC(k,i+2,j,iq)+QTRC(k,i-1,j,iq) ) ) &
+                                 + GSQRT(k,i,j,I_UYZ) * num_diff_q(k,i,j,XDIR)
           enddo
           enddo
           enddo
@@ -1487,7 +1551,7 @@ contains
           do i = IIS-1, IIE+1
           do k = KS, KE
              qflx_lo(k,i,j,YDIR) = 0.5_RP * (     mflx_hi(k,i,j,YDIR)  * ( QTRC(k,i,j+1,iq)+QTRC(k,i,j,iq) ) &
-                                               - abs(mflx_hi(k,i,j,YDIR)) * ( QTRC(k,i,j+1,iq)-QTRC(k,i,j,iq) ) )
+                                            - abs(mflx_hi(k,i,j,YDIR)) * ( QTRC(k,i,j+1,iq)-QTRC(k,i,j,iq) ) )
           enddo
           enddo
           enddo
@@ -1497,8 +1561,8 @@ contains
           do i = IIS,   IIE
           do k = KS, KE
              qflx_hi(k,i,j,YDIR) = mflx_hi(k,i,j,YDIR) * ( FACT_N * ( QTRC(k,i,j+1,iq)+QTRC(k,i,j  ,iq) ) &
-                                                            + FACT_F * ( QTRC(k,i,j+2,iq)+QTRC(k,i,j-1,iq) ) ) &
-                                    + GSQRT(k,i,j,I_XVZ) * num_diff_q(k,i,j,YDIR)
+                                                         + FACT_F * ( QTRC(k,i,j+2,iq)+QTRC(k,i,j-1,iq) ) ) &
+                                 + GSQRT(k,i,j,I_XVZ) * num_diff_q(k,i,j,YDIR)
           enddo
           enddo
           enddo
@@ -1506,9 +1570,9 @@ contains
        enddo
        enddo
 
-       call PROF_rapend ("DYN Tracer", 2)
+       call PROF_rapend ("DYN_Tracer", 2)
 
-       call PROF_rapstart("DYN Boundary", 2)
+       call PROF_rapstart("DYN_Boundary", 2)
 
        if ( BND_W ) then
           if ( iq <= BND_QA ) then
@@ -1516,8 +1580,8 @@ contains
              do j = JS-1, JE+1
              do k = KS, KE
                 qflx_hi(k,IS-1,j,XDIR) = mflx_hi(k,IS-1,j,XDIR) &
-                     * ( FACT_N * ( DAMP_QTRC(k,IS  ,j,iq)+DAMP_QTRC(k,IS-1,j,iq) ) &
-                       + FACT_F * ( DAMP_QTRC(k,IS+1,j,iq)+DAMP_QTRC(k,IS-2,j,iq) ) )
+                                       * ( FACT_N * ( DAMP_QTRC(k,IS  ,j,iq)+DAMP_QTRC(k,IS-1,j,iq) ) &
+                                         + FACT_F * ( DAMP_QTRC(k,IS+1,j,iq)+DAMP_QTRC(k,IS-2,j,iq) ) )
              enddo
              enddo
           else
@@ -1541,8 +1605,8 @@ contains
              do j = JS-1, JE+1
              do k = KS, KE
                 qflx_hi(k,IE,j,XDIR) = mflx_hi(k,IE,j,XDIR) &
-                     * ( FACT_N * ( DAMP_QTRC(k,IE+1,j,iq)+DAMP_QTRC(k,IE  ,j,iq) ) &
-                       + FACT_F * ( DAMP_QTRC(k,IE+2,j,iq)+DAMP_QTRC(k,IE-1,j,iq) ) )
+                                     * ( FACT_N * ( DAMP_QTRC(k,IE+1,j,iq)+DAMP_QTRC(k,IE  ,j,iq) ) &
+                                       + FACT_F * ( DAMP_QTRC(k,IE+2,j,iq)+DAMP_QTRC(k,IE-1,j,iq) ) )
              enddo
              enddo
           else
@@ -1567,8 +1631,8 @@ contains
              do i = IS-1, IE+1
              do k = KS, KE
                 qflx_hi(k,i,JS-1,YDIR) = mflx_hi(k,i,JS-1,YDIR) &
-                     * ( FACT_N * ( DAMP_QTRC(k,i,JS  ,iq)+DAMP_QTRC(k,i,JS-1,iq) ) &
-                       + FACT_F * ( DAMP_QTRC(k,i,JS+1,iq)+DAMP_QTRC(k,i,JS-2,iq) ) )
+                                       * ( FACT_N * ( DAMP_QTRC(k,i,JS  ,iq)+DAMP_QTRC(k,i,JS-1,iq) ) &
+                                         + FACT_F * ( DAMP_QTRC(k,i,JS+1,iq)+DAMP_QTRC(k,i,JS-2,iq) ) )
              enddo
              enddo
           else
@@ -1592,8 +1656,8 @@ contains
              do i = IS-1, IE+1
              do k = KS, KE
                 qflx_hi(k,i,JE,YDIR) = mflx_hi(k,i,JE,YDIR) &
-                     * ( FACT_N * ( DAMP_QTRC(k,i,JE+1,iq)+DAMP_QTRC(k,i,JE  ,iq) ) &
-                       + FACT_F * ( DAMP_QTRC(k,i,JE+2,iq)+DAMP_QTRC(k,i,JE-1,iq) ) )
+                                     * ( FACT_N * ( DAMP_QTRC(k,i,JE+1,iq)+DAMP_QTRC(k,i,JE  ,iq) ) &
+                                       + FACT_F * ( DAMP_QTRC(k,i,JE+2,iq)+DAMP_QTRC(k,i,JE-1,iq) ) )
              enddo
              enddo
           else
@@ -1613,9 +1677,9 @@ contains
           enddo
        end if
 
-       call PROF_rapend  ("DYN Boundary", 2)
+       call PROF_rapend  ("DYN_Boundary", 2)
 
-       call PROF_rapstart("DYN Tracer", 2)
+       call PROF_rapstart("DYN_Tracer", 2)
 
        call ATMOS_DYN_fct( qflx_anti,                    & ! (out)
                            QTRC(:,:,:,iq), DENS00, DENS, & ! (in)
@@ -1651,7 +1715,7 @@ contains
        enddo
        enddo
 
-       call PROF_rapend  ("DYN Tracer", 2)
+       call PROF_rapend  ("DYN_Tracer", 2)
 
        do j  = JS, JE
        do i  = IS, IE
@@ -1677,6 +1741,5 @@ contains
 
     return
   end subroutine ATMOS_DYN
-
 
 end module scale_atmos_dyn

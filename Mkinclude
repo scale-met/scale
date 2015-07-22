@@ -1,13 +1,26 @@
+ifeq ($(ENABLE_FIXEDINDEX),T)
+      FFLAGS += -D_FIXEDINDEX_
+      inc_index = $(INDEX_DIR)/inc_index.h
+      OBJ_DIR = $(BUILD_DIR)
+      INST_DIR = $(BUILD_DIR)
+else
+      inc_index =
+      OBJ_DIR = .
+      INST_DIR = $(TOPDIR)
+endif
+
+
+
 ifeq ($(origin BINDIR), undefined)
-   BINDIR = $(TOPDIR)/bin/$(SCALE_SYS)
+   BINDIR = $(INST_DIR)/bin/$(SCALE_SYS)
 endif
 
 ifeq ($(origin LIBDIR), undefined)
-   LIBDIR = $(TOPDIR)/lib
+   LIBDIR = $(INST_DIR)/lib
 endif
 
 ifeq ($(origin MODDIR), undefined)
-   MODDIR = $(TOPDIR)/include
+   MODDIR = $(INST_DIR)/include
 endif
 
 GTOOLDIR    = $(TOPDIR)/gtool
@@ -21,8 +34,8 @@ ifeq ($(origin INDEX_DIR), undefined)
    INDEX_DIR = $(SCALELIBDIR)/include
 endif
 
-ifeq ($(AGGRESIVE),T)
-  FFLAGS = $(FFLAGS_AGGRESIVE) $(PERF_MONIT) $(RDMA)
+ifeq ($(AGGRESSIVE),T)
+  FFLAGS = $(FFLAGS_AGGRESSIVE) $(PERF_MONIT) $(RDMA)
 else
   ifeq ($(DEBUG),T)
     FFLAGS = $(FFLAGS_DEBUG) $(PERF_MONIT) $(RDMA)
@@ -47,13 +60,6 @@ ifneq ($(USE_NETCDF3),)
       CFLAGS += -DNETCDF3
 endif
 
-ifeq ($(ENABLE_FIXEDINDEX),T)
-      FFLAGS += -D_FIXEDINDEX_
-      inc_index = $(INDEX_DIR)/inc_index.h
-else
-      inc_index =
-endif
-
-ifneq ($(TRACER),)
-      FFLAGS += -DTRACER=$(TRACER)
+ifeq ($(CHECK_MASS),T)
+      FFLAGS += -DCHECK_MASS
 endif

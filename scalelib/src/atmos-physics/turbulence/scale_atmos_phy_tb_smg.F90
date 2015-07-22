@@ -172,9 +172,9 @@ contains
   subroutine ATMOS_PHY_TB_smg( &
        qflx_sgs_momz, qflx_sgs_momx, qflx_sgs_momy, &
        qflx_sgs_rhot, qflx_sgs_rhoq,                &
-       tke, nu, Ri, Pr,                             &
+       tke, tke_t, nu, Ri, Pr, N2,                  &
        MOMZ, MOMX, MOMY, RHOT, DENS, QTRC,          &
-       SFLX_MW, SFLX_MU, SFLX_MV, SFLX_SH,          &
+       SFLX_MW, SFLX_MU, SFLX_MV, SFLX_SH, SFLX_QV, &
        GSQRT, J13G, J23G, J33G, MAPF, dt            )
     use scale_grid_index
     use scale_tracer
@@ -218,9 +218,11 @@ contains
     real(RP), intent(out) :: qflx_sgs_rhoq(KA,IA,JA,3,QA)
 
     real(RP), intent(inout) :: tke(KA,IA,JA) ! TKE
+    real(RP), intent(out) :: tke_t(KA,IA,JA) ! tendency TKE
     real(RP), intent(out) :: nu (KA,IA,JA) ! eddy viscosity (center)
-    real(RP), intent(out) :: Pr (KA,IA,JA) ! Prantle number
     real(RP), intent(out) :: Ri (KA,IA,JA) ! Richardson number
+    real(RP), intent(out) :: Pr (KA,IA,JA) ! Prantle number
+    real(RP), intent(out) :: N2 (KA,IA,JA) ! squared Brunt-Vaisala frequency
 
     real(RP), intent(in)  :: MOMZ(KA,IA,JA)
     real(RP), intent(in)  :: MOMX(KA,IA,JA)
@@ -233,6 +235,7 @@ contains
     real(RP), intent(in)  :: SFLX_MU(IA,JA)
     real(RP), intent(in)  :: SFLX_MV(IA,JA)
     real(RP), intent(in)  :: SFLX_SH(IA,JA)
+    real(RP), intent(in)  :: SFLX_QV(IA,JA)
 
     real(RP), intent(in)  :: GSQRT   (KA,IA,JA,7) !< vertical metrics {G}^1/2
     real(RP), intent(in)  :: J13G    (KA,IA,JA,7) !< (1,3) element of Jacobian matrix
@@ -289,10 +292,14 @@ contains
     qflx_sgs_rhot(:,:,:,:)   = UNDEF
     qflx_sgs_rhoq(:,:,:,:,:) = UNDEF
 
+    tke_t(:,:,:) = UNDEF
+
     nu (:,:,:) = UNDEF
     tke(:,:,:) = UNDEF
     Pr (:,:,:) = UNDEF
     Ri (:,:,:) = UNDEF
+    Pr (:,:,:) = UNDEF
+    N2 (:,:,:) = UNDEF
 
     VELZ_C (:,:,:) = UNDEF
     VELZ_XY(:,:,:) = UNDEF
@@ -1377,8 +1384,9 @@ contains
        call CHECK( __LINE__, FDZ(k-1) )
        call CHECK( __LINE__, S2(k,i,j) )
 #endif
-          Ri(k,i,j) = GRAV * ( POTT(k+1,i,j) - POTT(k-1,i,j) ) * J33G &
-               / ( ( FDZ(k) + FDZ(k-1) ) * GSQRT(k,i,j,I_XYZ) * POTT(k,i,j) * S2(k,i,j) )
+          N2(k,i,j) = GRAV * ( POTT(k+1,i,j) - POTT(k-1,i,j) ) * J33G &
+               / ( ( FDZ(k) + FDZ(k-1) ) * GSQRT(k,i,j,I_XYZ) * POTT(k,i,j) )
+          Ri(k,i,j) = N2(k,i,j) / S2(k,i,j)
        enddo
        enddo
        enddo
@@ -2333,6 +2341,8 @@ contains
 #ifdef DEBUG
        iq = IUNDEF
 #endif
+
+       tke_t = 0.0_RP
 
     return
   end subroutine ATMOS_PHY_TB_smg

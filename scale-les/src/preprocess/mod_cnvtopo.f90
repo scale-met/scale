@@ -53,8 +53,9 @@ module mod_cnvtopo
   !
   real(RP), private :: CNVTOPO_smooth_maxslope
   real(RP), private :: CNVTOPO_smooth_maxslope_bnd
-  logical,  private :: CNVTOPO_smooth_local = .false.
+  logical,  private :: CNVTOPO_smooth_local  = .false.
   integer, private  :: CNVTOPO_smooth_itelim = 1000
+  logical,  private :: CNVTOPO_copy_parent   = .false.
   character(len=H_SHORT), private :: CNVTOPO_smooth_type = 'LAPLACIAN'
   !-----------------------------------------------------------------------------
 contains
@@ -73,13 +74,14 @@ contains
 
     character(len=H_SHORT) :: CNVTOPO_name = 'NONE'
 
-    NAMELIST / PARAM_CNVTOPO / &
-       CNVTOPO_name,            &
-       CNVTOPO_smooth_maxslope, &
+    NAMELIST / PARAM_CNVTOPO /      &
+       CNVTOPO_name,                &
+       CNVTOPO_smooth_maxslope,     &
        CNVTOPO_smooth_maxslope_bnd, &
-       CNVTOPO_smooth_local, &
-       CNVTOPO_smooth_itelim, &
-       CNVTOPO_smooth_type
+       CNVTOPO_smooth_local,        &
+       CNVTOPO_smooth_itelim,       &
+       CNVTOPO_smooth_type,         &
+       CNVTOPO_copy_parent
 
     real(RP) :: minslope, DZDX, DZDY
 
@@ -150,6 +152,8 @@ contains
        TOPO_fillhalo, &
        TOPO_Zsfc, &
        TOPO_write
+    use mod_copytopo, only: &
+       COPYTOPO
     implicit none
 
     real(RP) :: Zsfc(IA,JA,2)
@@ -198,6 +202,8 @@ contains
        end do
 
        call TOPO_fillhalo
+
+       if( CNVTOPO_copy_parent ) call COPYTOPO( TOPO_Zsfc )
 
        if( IO_L ) write(IO_FID_LOG,*) '++++++ END   CONVERT TOPOGRAPHY DATA ++++++'
 
@@ -280,8 +286,8 @@ contains
     endif
     if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_CNVTOPO_GTOPO30)
 
-    do j = JS, JE
-    do i = IS, IE
+    do j = 1, JA
+    do i = 1, IA
        area_sum (i,j) = 0.0_RP
        TOPO_Zsfc(i,j) = 0.0_RP
     enddo
@@ -307,7 +313,7 @@ contains
           iostat = ierr         )
 
        if ( ierr /= 0 ) then
-          write(*,*) 'xxx catalogue file not found!'
+          write(*,*) 'xxx catalogue file not found!', trim(fname)
           call PRC_MPIstop
        endif
 
@@ -535,8 +541,8 @@ contains
     endif
     if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_CNVTOPO_DEM50M)
 
-    do j = JS, JE
-    do i = IS, IE
+    do j = 1, JA
+    do i = 1, IA
        area_sum (i,j) = 0.0_RP
        TOPO_Zsfc(i,j) = 0.0_RP
     enddo
@@ -562,7 +568,7 @@ contains
           iostat = ierr         )
 
        if ( ierr /= 0 ) then
-          write(*,*) 'xxx catalogue file not found!'
+          write(*,*) 'xxx catalogue file not found!', trim(fname)
           call PRC_MPIstop
        endif
 
@@ -823,7 +829,7 @@ contains
           DZsfc_DX(1,i,j,1) = atan2( ( Zsfc(i+1,j)-Zsfc(i,j) ), DXL(i) ) / D2R
        enddo
        enddo
-       DZsfc_DY(1,IA,:,1) = 0.0_RP
+       DZsfc_DX(1,IA,:,1) = 0.0_RP
        do j = 1, JA-1
        do i = 1, IA
           DZsfc_DY(1,i,j,1) = atan2( ( Zsfc(i,j+1)-Zsfc(i,j) ), DYL(j) ) / D2R

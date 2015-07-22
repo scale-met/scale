@@ -78,13 +78,15 @@ module scale_atmos_phy_mp
      subroutine er( &
           Re,    &
           QTRC0, &
-          DENS0  )
+          DENS0, &
+          TEMP0  )
        use scale_precision
        use scale_grid_index
        use scale_tracer
-       real(RP), intent(out) :: Re   (KA,IA,JA,MP_QA) ! effective radius
+       real(RP), intent(out) :: Re   (KA,IA,JA,MP_QA) ! effective radius          [cm]
        real(RP), intent(in)  :: QTRC0(KA,IA,JA,QA)    ! tracer mass concentration [kg/kg]
-       real(RP), intent(in)  :: DENS0(KA,IA,JA)       ! density
+       real(RP), intent(in)  :: DENS0(KA,IA,JA)       ! density                   [kg/m3]
+       real(RP), intent(in)  :: TEMP0(KA,IA,JA)       ! temperature               [K]
      end subroutine er
      subroutine mr( &
           Qe,    &
@@ -124,7 +126,7 @@ contains
        NAME(ATMOS_PHY_MP_, MP, _CloudFraction), &
        NAME(ATMOS_PHY_MP_, MP, _EffectiveRadius), &
        NAME(ATMOS_PHY_MP_, MP, _MixingRatio), &
-       NAME(ATMOS_PHY_MP_, MP, _DENS) => ATMOS_PHY_MP_DENS)
+       NAME(ATMOS_PHY_MP_, MP, _DENS) => ATMOS_PHY_MP_DENS
 #else
     use scale_atmos_phy_mp_dry, only: &
        ATMOS_PHY_MP_dry_setup, &
@@ -167,6 +169,14 @@ contains
     character(len=*), intent(in) :: MP_TYPE
     !---------------------------------------------------------------------------
 
+#ifdef MP
+    call NAME(ATMOS_PHY_MP_, MP, _setup)( MP_TYPE )
+    ATMOS_PHY_MP                 => NAME(ATMOS_PHY_MP_, MP,)
+    ATMOS_PHY_MP_CloudFraction   => NAME(ATMOS_PHY_MP_, MP, _CloudFraction)
+    ATMOS_PHY_MP_EffectiveRadius => NAME(ATMOS_PHY_MP_, MP, _EffectiveRadius)
+    ATMOS_PHY_MP_MixingRatio     => NAME(ATMOS_PHY_MP_, MP, _MixingRatio)
+    ATMOS_PHY_MP_DENS            => NAME(ATMOS_PHY_MP_, MP, _DENS)
+#else
     select case ( MP_TYPE )
     case ( 'DRY' )
        call ATMOS_PHY_MP_dry_setup( MP_TYPE )
@@ -204,6 +214,7 @@ contains
        ATMOS_PHY_MP_MixingRatio     => ATMOS_PHY_MP_suzuki10_MixingRatio
        ATMOS_PHY_MP_DENS            => ATMOS_PHY_MP_suzuki10_DENS
     end select
+#endif
 
     return
   end subroutine ATMOS_PHY_MP_setup

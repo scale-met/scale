@@ -72,9 +72,9 @@ contains
 
        if( .NOT. RESTART_RUN ) then
           ! run once (only for the diagnostic value)
-          call PROF_rapstart('OCN Physics', 1)
+          call PROF_rapstart('OCN_Physics', 1)
           call OCEAN_PHY_driver( update_flag = .true. )
-          call PROF_rapend  ('OCN Physics', 1)
+          call PROF_rapend  ('OCN_Physics', 1)
        else
           ! no update in order to use restart value
        end if
@@ -105,7 +105,8 @@ contains
     use scale_ocean_phy, only: &
        OCEAN_PHY
     use scale_ocean_sfc, only: &
-       OCEAN_SFC
+       OCEAN_SFC,              &
+       OCEAN_SFC_SimpleAlbedo
     use mod_ocean_vars, only: &
        OCEAN_TEMP,         &
        OCEAN_SFC_TEMP,     &
@@ -141,6 +142,7 @@ contains
        ATMOS_SFC_PRES,     &
        ATMOS_SFLX_LW,      &
        ATMOS_SFLX_SW,      &
+       ATMOS_cosSZA,       &
        ATMOS_SFLX_prec
     implicit none
 
@@ -164,6 +166,11 @@ contains
                        ATMOS_V        (:,:), & ! [IN]
                        REAL_Z1        (:,:), & ! [IN]
                        dt                    ) ! [IN]
+
+       call OCEAN_SFC_SimpleAlbedo( OCEAN_SFC_albedo_t(:,:,:), & ! [OUT]
+                                    OCEAN_SFC_albedo  (:,:,:), & ! [IN]
+                                    ATMOS_cosSZA      (:,:),   & ! [IN]
+                                    dt                         ) ! [IN]
 
        call OCEAN_SFC( OCEAN_SFC_TEMP_t(:,:),      & ! [OUT]
                        OCEAN_SFLX_MW   (:,:),      & ! [OUT]
@@ -200,6 +207,7 @@ contains
 
        call ATMOS_THERMODYN_templhv( lhv, ATMOS_TEMP )
 
+!OCL XFILL
        do j = JS, JE
        do i = IS, IE
           OCEAN_SFLX_evap(i,j) = OCEAN_SFLX_LH(i,j) / lhv(i,j)
@@ -212,9 +220,6 @@ contains
                        ATMOS_SFLX_prec(:,:), & ! [IN]
                        OCEAN_SFLX_evap(:,:), & ! [IN]
                        dt                    ) ! [IN]
-
-       ! no albedo update (tentative)
-       OCEAN_SFC_albedo_t(:,:,:) = 0.0_RP
 
        call HIST_in( OCEAN_TEMP_t      (:,:),      'OCEAN_TEMP_t',     'tendency of OCEAN_TEMP',     'K'   )
        call HIST_in( OCEAN_SFC_TEMP_t  (:,:),      'OCEAN_SFC_TEMP_t', 'tendency of OCEAN_SFC_TEMP', 'K'   )

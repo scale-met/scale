@@ -39,6 +39,7 @@ module scale_comm
   !++ Public procedure
   !
   public :: COMM_setup
+  public :: COMM_barrier
   public :: COMM_vars_init
   public :: COMM_vars8_init
   public :: COMM_vars
@@ -121,6 +122,9 @@ module scale_comm
   real(RP), private, allocatable :: recvpack_E2P(:,:)   !< packing packet (receive, from E)
   real(RP), private, allocatable :: sendpack_P2W(:,:)   !< packing packet (send,    to W  )
   real(RP), private, allocatable :: sendpack_P2E(:,:)   !< packing packet (send,    to E  )
+#ifdef DEBUG
+  logical,  private, allocatable :: use_packbuf(:)      !< using flag for packing buffer
+#endif
 
   integer,  private, allocatable :: req_cnt (:)         !< request ID of each MPI send/recv
   integer,  private, allocatable :: req_list(:,:)       !< request ID set of each variables
@@ -178,38 +182,6 @@ contains
     endif
     if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_COMM)
 
-    ! only for register
-    call PROF_rapstart('COMM vars MPI', 2)
-    call PROF_rapend  ('COMM vars MPI', 2)
-    call PROF_rapstart('COMM wait MPI', 2)
-    call PROF_rapend  ('COMM wait MPI', 2)
-    call PROF_rapstart('COMM Bcast MPI', 2)
-    call PROF_rapend  ('COMM Bcast MPI', 2)
-    call PROF_rapstart('COMM Allreduce MPI', 2)
-    call PROF_rapend  ('COMM Allreduce MPI', 2)
-    call PROF_rapstart('COMM PACKING', 3)
-    call PROF_rapend  ('COMM PACKING', 3)
-    call PROF_rapstart('COMM UNPACKING', 3)
-    call PROF_rapend  ('COMM UNPACKING', 3)
-
-    if ( COMM_USE_MPI_PC ) then
-#ifdef _USE_RDMA
-       call PROF_rapstart('COMM init RDMA', 2)
-       call PROF_rapend  ('COMM init RDMA', 2)
-       call PROF_rapstart('COMM vars RDMA', 2)
-       call PROF_rapend  ('COMM vars RDMA', 2)
-       call PROF_rapstart('COMM wait RDMA', 2)
-       call PROF_rapend  ('COMM wait RDMA', 2)
-#else
-       call PROF_rapstart('COMM init MPI PC', 2)
-       call PROF_rapend  ('COMM init MPI PC', 2)
-       call PROF_rapstart('COMM vars MPI PC', 2)
-       call PROF_rapend  ('COMM vars MPI PC', 2)
-       call PROF_rapstart('COMM wait MPI PC', 2)
-       call PROF_rapend  ('COMM wait MPI PC', 2)
-#endif
-    end if
-
     nreq_NS  = 2 * JHALO !--- send x JHALO, recv x JHALO
     nreq_WE  = 2         !--- send x 1    , recv x 1
     nreq_4C  = 2 * JHALO !--- send x JHALO, recv x JHALO
@@ -229,6 +201,10 @@ contains
     allocate( recvpack_E2P(COMM_size2D_WE*KA,COMM_vsize_max) )
     allocate( sendpack_P2W(COMM_size2D_WE*KA,COMM_vsize_max) )
     allocate( sendpack_P2E(COMM_size2D_WE*KA,COMM_vsize_max) )
+#ifdef DEBUG
+    allocate( use_packbuf(COMM_vsize_max) )
+    use_packbuf(:) = .false.
+#endif
 
     allocate( req_cnt (              COMM_vsize_max) )
     allocate( req_list(COMM_nreq_MAX,COMM_vsize_max) )
@@ -294,6 +270,21 @@ contains
   end subroutine COMM_setup
 
   !-----------------------------------------------------------------------------
+  !> MPI_Barrier for Local domain
+  subroutine COMM_barrier
+    implicit none
+
+    integer :: ierr
+    !---------------------------------------------------------------------------
+
+    call PROF_rapstart('COMM_barrier', 2)
+    call MPI_BARRIER(COMM_world,ierr)
+    call PROF_rapend  ('COMM_barrier', 2)
+
+    return
+  end subroutine COMM_barrier
+
+  !-----------------------------------------------------------------------------
   !> Register variables
   subroutine COMM_vars_init(var, vid)
     use scale_process, only: &
@@ -318,13 +309,13 @@ contains
        end if
 
 #ifdef _USE_RDMA
-       call PROF_rapstart('COMM init RDMA', 2)
+       call PROF_rapstart('COMM_init_RDMA', 2)
        call set_rdma_variable(var, COMM_vars_id-1)
-       call PROF_rapend  ('COMM init RDMA', 2)
+       call PROF_rapend  ('COMM_init_RDMA', 2)
 #else
-       call PROF_rapstart('COMM init MPI PC', 2)
+       call PROF_rapstart('COMM_init_pers', 2)
        call vars_init_mpi_pc(var, COMM_vars_id, vid)
-       call PROF_rapend  ('COMM init MPI PC', 2)
+       call PROF_rapend  ('COMM_init_pers', 2)
 #endif
 
        vid = COMM_vars_id + COMM_vsize_max
@@ -360,13 +351,13 @@ contains
        end if
 
 #ifdef _USE_RDMA
-       call PROF_rapstart('COMM init RDMA', 2)
+       call PROF_rapstart('COMM_init_RDMA', 2)
        call set_rdma_variable(var, COMM_vars_id-1)
-       call PROF_rapend  ('COMM init RDMA', 2)
+       call PROF_rapend  ('COMM_init_RDMA', 2)
 #else
-       call PROF_rapstart('COMM init MPI PC', 2)
+       call PROF_rapstart('COMM_init_pers', 2)
        call vars8_init_mpi_pc(var, COMM_vars_id, vid)
-       call PROF_rapend  ('COMM init MPI PC', 2)
+       call PROF_rapend  ('COMM_init_pers', 2)
 #endif
 
        vid = COMM_vars_id + COMM_vsize_max
@@ -387,18 +378,18 @@ contains
 
     if ( vid > COMM_vsize_max ) then
 #ifdef _USE_RDMA
-       call PROF_rapstart('COMM vars RDMA', 2)
+       call PROF_rapstart('COMM_vars_RDMA', 2)
        call rdma_put(vid-COMM_vsize_max-1, 1)
-       call PROF_rapend  ('COMM vars RDMA', 2)
+       call PROF_rapend  ('COMM_vars_RDMA', 2)
 #else
-       call PROF_rapstart('COMM vars MPI PC', 2)
+       call PROF_rapstart('COMM_vars_pers', 2)
        call vars_3D_mpi_pc(var, vid-COMM_vsize_max)
-       call PROF_rapend  ('COMM vars MPI PC', 2)
+       call PROF_rapend  ('COMM_vars_pers', 2)
 #endif
     else
-       call PROF_rapstart('COMM vars MPI', 2)
+       call PROF_rapstart('COMM_vars', 2)
        call vars_3D_mpi(var, vid)
-       call PROF_rapend  ('COMM vars MPI', 2)
+       call PROF_rapend  ('COMM_vars', 2)
     end if
 
     return
@@ -414,18 +405,18 @@ contains
 
     if ( vid > COMM_vsize_max ) then
 #ifdef _USE_RDMA
-       call PROF_rapstart('COMM vars RDMA', 2)
+       call PROF_rapstart('COMM_vars_RDMA', 2)
        call rdma_put8(vid-COMM_vsize_max-1,1)
-       call PROF_rapend  ('COMM vars RDMA', 2)
+       call PROF_rapend  ('COMM_vars_RDMA', 2)
 #else
-       call PROF_rapstart('COMM vars MPI PC', 2)
+       call PROF_rapstart('COMM_vars_pers', 2)
        call vars_3D_mpi_pc(var, vid-COMM_vsize_max)
-       call PROF_rapend  ('COMM vars MPI PC', 2)
+       call PROF_rapend  ('COMM_vars_pers', 2)
 #endif
     else
-       call PROF_rapstart('COMM vars MPI', 2)
+       call PROF_rapstart('COMM_vars', 2)
        call vars8_3D_mpi(var, vid)
-       call PROF_rapend  ('COMM vars MPI', 2)
+       call PROF_rapend  ('COMM_vars', 2)
     end if
 
     return
@@ -449,14 +440,14 @@ contains
 #ifdef _USE_RDMA
        ! do nothing
 #else
-       call PROF_rapstart('COMM wait MPI PC', 2)
+       call PROF_rapstart('COMM_wait_pers', 2)
        call wait_3D_mpi_pc(var, vid-COMM_vsize_max)
-       call PROF_rapend  ('COMM wait MPI PC', 2)
+       call PROF_rapend  ('COMM_wait_pers', 2)
 #endif
     else
-       call PROF_rapstart('COMM wait MPI', 2)
+       call PROF_rapstart('COMM_wait', 2)
        call wait_3D_mpi(var, vid)
-       call PROF_rapend  ('COMM wait MPI', 2)
+       call PROF_rapend  ('COMM_wait', 2)
     end if
 
     ! copy inner data to boundary
@@ -476,9 +467,9 @@ contains
     integer,  intent(in)    :: vid
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('COMM vars MPI', 2)
+    call PROF_rapstart('COMM_vars', 2)
     call vars_2D_mpi(var, vid)
-    call PROF_rapend  ('COMM vars MPI', 2)
+    call PROF_rapend  ('COMM_vars', 2)
 
     return
   end subroutine COMM_vars_2D
@@ -491,9 +482,9 @@ contains
     integer,  intent(in)    :: vid
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('COMM vars MPI', 2)
+    call PROF_rapstart('COMM_vars', 2)
     call vars8_2D_mpi(var, vid)
-    call PROF_rapend  ('COMM vars MPI', 2)
+    call PROF_rapend  ('COMM_vars', 2)
 
     return
   end subroutine COMM_vars8_2D
@@ -512,9 +503,9 @@ contains
     FILL_BND_ = .true.
     if ( present(FILL_BND) ) FILL_BND_ = FILL_BND
 
-    call PROF_rapstart('COMM wait MPI', 2)
+    call PROF_rapstart('COMM_wait', 2)
     call wait_2D_mpi(var, vid)
-    call PROF_rapend  ('COMM wait MPI', 2)
+    call PROF_rapend  ('COMM_wait', 2)
 
     if( .not. COMM_IsAllPeriodic ) then
        if ( FILL_BND_ ) then
@@ -559,7 +550,7 @@ contains
     enddo
 
     ! [NOTE] always communicate globally
-    call PROF_rapstart('COMM Allreduce MPI', 2)
+    call PROF_rapstart('COMM_Allreduce', 2)
     ! All reduce
     call MPI_Allreduce( statval(1),     &
                         allstatval(1),  &
@@ -577,7 +568,7 @@ contains
                         COMM_world, &
                         ierr            )
 
-    call PROF_rapend  ('COMM Allreduce MPI', 2)
+    call PROF_rapend  ('COMM_Allreduce', 2)
 
     do k = 1, KA
        zerosw = 0.5_RP - sign(0.5_RP, allstatcnt(k) - 1.E-12_RP )
@@ -605,7 +596,7 @@ contains
     statval = maxval(var(IS:IE,JS:JE))
 
     ! [NOTE] always communicate globally
-    call PROF_rapstart('COMM Allreduce MPI', 2)
+    call PROF_rapstart('COMM_Allreduce', 2)
     ! All reduce
     call MPI_Allreduce( statval,        &
                         allstatval,     &
@@ -615,7 +606,7 @@ contains
                         COMM_world, &
                         ierr            )
 
-    call PROF_rapend  ('COMM Allreduce MPI', 2)
+    call PROF_rapend  ('COMM_Allreduce', 2)
 
     varmax = allstatval
 
@@ -643,7 +634,7 @@ contains
     enddo
 
     ! [NOTE] always communicate globally
-    call PROF_rapstart('COMM Allreduce MPI', 2)
+    call PROF_rapstart('COMM_Allreduce', 2)
     ! All reduce
     call MPI_Allreduce( statval(1),     &
                         allstatval(1),  &
@@ -653,7 +644,7 @@ contains
                         COMM_world, &
                         ierr            )
 
-    call PROF_rapend  ('COMM Allreduce MPI', 2)
+    call PROF_rapend  ('COMM_Allreduce', 2)
 
     do k = KS, KE
        varmax(k) = allstatval(k)
@@ -742,7 +733,7 @@ contains
     integer :: ierr
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('COMM Bcast MPI', 2)
+    call PROF_rapstart('COMM_Bcast', 2)
 
     counts = 1
 
@@ -753,7 +744,7 @@ contains
                     COMM_world, &
                     ierr            )
 
-    call PROF_rapend('COMM Bcast MPI', 2)
+    call PROF_rapend('COMM_Bcast', 2)
 
     return
   end subroutine COMM_bcast_SCR
@@ -772,7 +763,7 @@ contains
     integer :: ierr
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('COMM Bcast MPI', 2)
+    call PROF_rapstart('COMM_Bcast', 2)
 
     counts = gIA
 
@@ -783,7 +774,7 @@ contains
                      COMM_world, &
                      ierr            )
 
-    call PROF_rapend('COMM Bcast MPI', 2)
+    call PROF_rapend('COMM_Bcast', 2)
 
     return
   end subroutine COMM_bcast_1D
@@ -803,7 +794,7 @@ contains
     integer :: ierr
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('COMM Bcast MPI', 2)
+    call PROF_rapstart('COMM_Bcast', 2)
 
     counts = gIA * gJA
 
@@ -814,7 +805,7 @@ contains
                      COMM_world, &
                      ierr            )
 
-    call PROF_rapend('COMM Bcast MPI', 2)
+    call PROF_rapend('COMM_Bcast', 2)
 
     return
   end subroutine COMM_bcast_2D
@@ -835,7 +826,7 @@ contains
     integer :: ierr
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('COMM Bcast MPI', 2)
+    call PROF_rapstart('COMM_Bcast', 2)
 
     counts = gIA * gJA * gKA
 
@@ -846,7 +837,7 @@ contains
                      COMM_world, &
                      ierr            )
 
-    call PROF_rapend('COMM Bcast MPI', 2)
+    call PROF_rapend('COMM_Bcast', 2)
 
     return
   end subroutine COMM_bcast_3D
@@ -869,7 +860,7 @@ contains
     integer :: ierr
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('COMM Bcast MPI', 2)
+    call PROF_rapstart('COMM_Bcast', 2)
 
     counts = gIA * gJA * gKA * gTime
     if ( gIA>0 .and. gJA>0 .and. gKA>0 .and. gTime>0 .and. &
@@ -885,7 +876,7 @@ contains
                      COMM_world, &
                      ierr            )
 
-    call PROF_rapend('COMM Bcast MPI', 2)
+    call PROF_rapend('COMM_Bcast', 2)
 
     return
   end subroutine COMM_bcast_4D
@@ -903,7 +894,7 @@ contains
     integer :: ierr
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('COMM Bcast MPI', 2)
+    call PROF_rapstart('COMM_Bcast', 2)
 
     counts = 1
 
@@ -914,7 +905,7 @@ contains
                     COMM_world, &
                     ierr            )
 
-    call PROF_rapend('COMM Bcast MPI', 2)
+    call PROF_rapend('COMM_Bcast', 2)
 
     return
   end subroutine COMM_bcast_INT_SCR
@@ -933,7 +924,7 @@ contains
     integer :: ierr
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('COMM Bcast MPI', 2)
+    call PROF_rapstart('COMM_Bcast', 2)
 
     counts = gIA
 
@@ -944,7 +935,7 @@ contains
                     COMM_world, &
                     ierr            )
 
-    call PROF_rapend('COMM Bcast MPI', 2)
+    call PROF_rapend('COMM_Bcast', 2)
 
     return
   end subroutine COMM_bcast_INT_1D
@@ -964,7 +955,7 @@ contains
     integer :: ierr
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('COMM Bcast MPI', 2)
+    call PROF_rapstart('COMM_Bcast', 2)
 
     counts = gIA * gJA
 
@@ -975,7 +966,7 @@ contains
                     COMM_world, &
                     ierr            )
 
-    call PROF_rapend('COMM Bcast MPI', 2)
+    call PROF_rapend('COMM_Bcast', 2)
 
     return
   end subroutine COMM_bcast_INT_2D
@@ -993,7 +984,7 @@ contains
     integer :: ierr
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('COMM Bcast MPI', 2)
+    call PROF_rapstart('COMM_Bcast', 2)
 
     counts = 1
 
@@ -1004,7 +995,7 @@ contains
                     COMM_world, &
                     ierr            )
 
-    call PROF_rapend('COMM Bcast MPI', 2)
+    call PROF_rapend('COMM_Bcast', 2)
 
     return
   end subroutine COMM_bcast_LOGICAL_SCR
@@ -1548,6 +1539,7 @@ contains
 
   subroutine vars_3D_mpi(var, vid)
     use scale_process, only: &
+       PRC_MPIstop, &
        PRC_next, &
        PRC_W,    &
        PRC_N,    &
@@ -1573,6 +1565,14 @@ contains
     ireq = 1
 
     kd = size(var, 1)
+
+#ifdef DEBUG
+    if ( use_packbuf(vid) ) then
+       write(*,*) 'packing buffer is already used', vid
+       call PRC_MPIstop
+    end if
+    use_packbuf(vid) = .true.
+#endif
 
     if ( COMM_IsAllPeriodic ) then ! periodic condition
 
@@ -1679,6 +1679,7 @@ contains
 
   subroutine vars8_3D_mpi(var, vid)
     use scale_process, only: &
+       PRC_MPIstop, &
        PRC_next, &
        PRC_W,    &
        PRC_N,    &
@@ -1709,6 +1710,14 @@ contains
     ireq = 1
 
     kd = size(var, 1)
+
+#ifdef DEBUG
+    if ( use_packbuf(vid) ) then
+       write(*,*) 'packing buffer is already used', vid
+       call PRC_MPIstop
+    end if
+    use_packbuf(vid) = .true.
+#endif
 
     if ( COMM_IsAllPeriodic ) then ! periodic condition
 
@@ -2128,6 +2137,7 @@ contains
 
   subroutine vars_2D_mpi(var, vid)
     use scale_process, only: &
+       PRC_MPIstop, &
        PRC_next, &
        PRC_W,    &
        PRC_N,    &
@@ -2148,6 +2158,13 @@ contains
     tag = vid * 100
     ireq = 1
 
+#ifdef DEBUG
+    if ( use_packbuf(vid) ) then
+       write(*,*) 'packing buffer is already used', vid
+       call PRC_MPIstop
+    end if
+    use_packbuf(vid) = .true.
+#endif
 
     if ( COMM_IsAllPeriodic ) then
     !--- periodic condition
@@ -2280,6 +2297,7 @@ contains
 
   subroutine vars8_2D_mpi(var, vid)
     use scale_process, only: &
+       PRC_MPIstop, &
        PRC_next, &
        PRC_W,    &
        PRC_N,    &
@@ -2307,6 +2325,13 @@ contains
     tag   = vid * 100
     ireq = 1
 
+#ifdef DEBUG
+    if ( use_packbuf(vid) ) then
+       write(*,*) 'packing buffer is already used', vid
+       call PRC_MPIstop
+    end if
+    use_packbuf(vid) = .true.
+#endif
 
     if ( COMM_IsAllPeriodic ) then
     !--- periodic condition
@@ -2782,11 +2807,21 @@ contains
   end subroutine vars8_2D_mpi
 
   subroutine vars_3D_mpi_pc(var, vid)
+    use scale_process, only: &
+       PRC_MPIstop
     implicit none
     real(RP), intent(inout) :: var(:,:,:)
     integer, intent(in)    :: vid
     integer :: ierr
     !---------------------------------------------------------------------------
+
+#ifdef DEBUG
+    if ( use_packbuf(pseqid(vid)) ) then
+       write(*,*) 'packing buffer is already used', vid, pseqid(vid)
+       call PRC_MPIstop
+    end if
+    use_packbuf(pseqid(vid)) = .true.
+#endif
 
     call pack_3D(var, pseqid(vid))
 
@@ -2810,6 +2845,10 @@ contains
                       ierr                          )
     call unpack_3D(var, vid)
 
+#ifdef DEBUG
+    use_packbuf(vid) = .false.
+#endif
+
     return
   end subroutine wait_3D_mpi
 
@@ -2828,6 +2867,10 @@ contains
                       MPI_STATUSES_IGNORE, &
                       ierr )
     call unpack_2D(var, vid)
+
+#ifdef DEBUG
+    use_packbuf(vid) = .false.
+#endif
 
     return
   end subroutine wait_2D_mpi
@@ -2852,6 +2895,10 @@ contains
                       ierr                          )
     call unpack_3D(var, pseqid(vid))
 
+#ifdef DEBUG
+    use_packbuf(pseqid(vid)) = .false.
+#endif
+
     return
   end subroutine wait_3D_mpi_pc
 
@@ -2868,7 +2915,7 @@ contains
 
     kd = size(var, 1)
 
-    call PROF_rapstart('COMM PACKING', 3)
+    call PROF_rapstart('COMM_pack', 3)
 
     if ( COMM_IsAllPeriodic ) then ! periodic condition
 
@@ -2934,7 +2981,7 @@ contains
 
     end if
 
-    call PROF_rapend('COMM PACKING', 3)
+    call PROF_rapend('COMM_pack', 3)
 
     return
   end subroutine pack_3D
@@ -2949,7 +2996,7 @@ contains
 
     integer :: i, j, n
 
-    call PROF_rapstart('COMM PACKING', 3)
+    call PROF_rapstart('COMM_pack', 3)
 
     if ( COMM_IsAllPeriodic ) then ! periodic condition
 
@@ -3007,7 +3054,7 @@ contains
 
     end if
 
-    call PROF_rapend('COMM PACKING', 3)
+    call PROF_rapend('COMM_pack', 3)
 
     return
   end subroutine pack_2D
@@ -3026,7 +3073,7 @@ contains
 
     kd = size(var, 1)
 
-    call PROF_rapstart('COMM UNPACKING', 3)
+    call PROF_rapstart('COMM_unpack', 3)
 
     if ( COMM_IsAllPeriodic ) then ! periodic condition
 
@@ -3090,7 +3137,7 @@ contains
 
     end if
 
-    call PROF_rapend('COMM UNPACKING', 3)
+    call PROF_rapend('COMM_unpack', 3)
 
     return
   end subroutine unpack_3D
@@ -3108,7 +3155,7 @@ contains
     integer :: i, j, n
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('COMM UNPACKING', 3)
+    call PROF_rapstart('COMM_unpack', 3)
 
     if( COMM_IsAllPeriodic ) then
     !--- periodic condition
@@ -3162,7 +3209,7 @@ contains
 
     end if
 
-    call PROF_rapend('COMM UNPACKING', 3)
+    call PROF_rapend('COMM_unpack', 3)
 
     return
   end subroutine unpack_2D
