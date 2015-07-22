@@ -35,6 +35,7 @@ module scale_const
   real(RP), public            :: CONST_D2R                           !< degree to radian
   real(RP), public            :: CONST_EPS     = 1.E-16_RP           !< small number
   real(RP), public            :: CONST_EPS1    = 0.99999999999999_RP !< small number
+  real(RP), public            :: CONST_HUGE    = 1.E+30_RP           !< huge  number
 
   integer,  public, parameter :: CONST_UNDEF2  = -32768              !< undefined value (INT2)
   real(SP), public, parameter :: CONST_UNDEF4  = -9.9999E30          !< undefined value (REAL4)
@@ -85,6 +86,8 @@ module scale_const
   real(RP), public, parameter :: CONST_PSAT0   =  610.7_RP           !< saturate pressure of water vapor at 0C [Pa]
   real(RP), public, parameter :: CONST_DWATR   = 1000.0_RP           !< density of water [kg/m3]
   real(RP), public, parameter :: CONST_DICE    =  916.8_RP           !< density of ice   [kg/m3]
+
+  real(RP), public            :: CONST_SOUND                         !< speed of sound (dry air at 0C) [m/s]
 
   real(RP), public            :: CONST_Pstd    = 101325.0_RP         !< standard pressure [Pa]
   real(RP), public            :: CONST_PRE00   = 100000.0_RP         !< pressure reference [Pa]
@@ -156,6 +159,7 @@ contains
     CONST_D2R     = CONST_PI / 180.0_RP
     CONST_EPS     =          epsilon(0.0_RP)
     CONST_EPS1    = 1.0_RP - epsilon(0.0_RP)
+    CONST_HUGE    =             huge(0.0_RP)
 
     CONST_CVdry   = CONST_CPdry - CONST_Rdry
     CONST_LAPSdry = CONST_GRAV / CONST_CPdry
@@ -183,11 +187,14 @@ contains
        call PRC_MPIstop
     endif
 
+    CONST_SOUND = sqrt( CONST_CPdry * CONST_Rdry / ( CONST_CPdry - CONST_Rdry ) * CONST_TEM00 )
+
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** List of constants ***'
     if( IO_L ) write(IO_FID_LOG,*) '*** PI                                                : PI      = ', CONST_PI
     if( IO_L ) write(IO_FID_LOG,*) '*** Small number                                      : EPS     = ', CONST_EPS
     if( IO_L ) write(IO_FID_LOG,*) '*** Small number (1-EPS)                              : EPS1    = ', CONST_EPS1
+    if( IO_L ) write(IO_FID_LOG,*) '*** Huge  number                                      : HUGE    = ', CONST_HUGE
     if( IO_L ) write(IO_FID_LOG,*) '*** undefined number (INT2)                           : UNDEF2  = ', CONST_UNDEF2
     if( IO_L ) write(IO_FID_LOG,*) '*** undefined number (REAL,general use)               : UNDEF   = ', CONST_UNDEF
     if( IO_L ) write(IO_FID_LOG,*) '*** undefined number (REAL4)                          : UNDEF4  = ', CONST_UNDEF4
@@ -220,10 +227,18 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '*** latent heat of vaporizaion at 0C           [J/kg] : LHV0    = ', CONST_LHV0
     if( IO_L ) write(IO_FID_LOG,*) '*** latent heat of sublimation at 0C           [J/kg] : LHS0    = ', CONST_LHS0
     if( IO_L ) write(IO_FID_LOG,*) '*** latent heat of fusion      at 0C           [J/kg] : LHF0    = ', CONST_LHF0
+    if( IO_L ) write(IO_FID_LOG,*) '*** latent heat of vaporizaion at 0K           [J/kg] : LHV00   = ', CONST_LHV00
+    if( IO_L ) write(IO_FID_LOG,*) '*** latent heat of sublimation at 0K           [J/kg] : LHS00   = ', CONST_LHS00
+    if( IO_L ) write(IO_FID_LOG,*) '*** latent heat of fusion      at 0K           [J/kg] : LHF00   = ', CONST_LHF00
+    if( IO_L ) write(IO_FID_LOG,*) '*** Thermodynamics calculation type : ', trim(CONST_THERMODYN_TYPE)
+    if( IO_L ) write(IO_FID_LOG,*) '*** latent heat of vaporizaion (used)          [J/kg] : LHV     = ', CONST_LHV
+    if( IO_L ) write(IO_FID_LOG,*) '*** latent heat of sublimation (used)          [J/kg] : LHS     = ', CONST_LHS
+    if( IO_L ) write(IO_FID_LOG,*) '*** latent heat of fusion      (used)          [J/kg] : LHF     = ', CONST_LHF
     if( IO_L ) write(IO_FID_LOG,*) '*** saturate pressure of water vapor at 0C       [Pa] : PSAT0   = ', CONST_PSAT0
     if( IO_L ) write(IO_FID_LOG,*) '*** density of water                          [kg/m3] : DWATR   = ', CONST_DWATR
     if( IO_L ) write(IO_FID_LOG,*) '*** density of ice                            [kg/m3] : DICE    = ', CONST_DICE
 
+    if( IO_L ) write(IO_FID_LOG,*) '*** speed of sound (dry air at 0C)              [m/s] : SOUND   = ', CONST_SOUND
     if( IO_L ) write(IO_FID_LOG,*) '*** standard pressure                            [Pa] : Pstd    = ', CONST_Pstd
     if( IO_L ) write(IO_FID_LOG,*) '*** pressure reference                           [Pa] : PRE00   = ', CONST_PRE00
     if( IO_L ) write(IO_FID_LOG,*) '*** standard temperature (15C)                    [K] : Tstd    = ', CONST_Tstd
