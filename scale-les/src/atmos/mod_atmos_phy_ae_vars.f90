@@ -44,10 +44,10 @@ module mod_atmos_phy_ae_vars
   character(len=H_MID),  public :: ATMOS_PHY_AE_RESTART_OUT_TITLE    = 'ATMOS_PHY_AE restart' !< title    of the output file
   character(len=H_MID),  public :: ATMOS_PHY_AE_RESTART_OUT_DTYPE    = 'DEFAULT'              !< REAL4 or REAL8
 
-  real(RP), public, allocatable :: ATMOS_PHY_AE_RHOQ_t(:,:,:,:) ! tendency rho*QTRC [kg/kg/s]
+  real(RP), public, allocatable :: ATMOS_PHY_AE_RHOQ_t(:,:,:,:)                               ! tendency rho*QTRC [kg/kg/s]
 
-  real(RP), public, allocatable :: ATMOS_PHY_AE_CCN(:,:,:) ! cloud condensation nuclei [/m3]
-
+  real(RP), public, allocatable :: ATMOS_PHY_AE_CCN(:,:,:)                                    ! cloud condensation nuclei [/m3]
+  real(RP), public, allocatable :: ATMOS_PHY_AE_EMIT(:,:,:,:)                                 ! emission of aerosol and gas
   !-----------------------------------------------------------------------------
   !
   !++ Private procedure
@@ -97,6 +97,9 @@ contains
 
     allocate( ATMOS_PHY_AE_CCN(KA,IA,JA) )
     ATMOS_PHY_AE_CCN(:,:,:) = UNDEF
+
+    allocate( ATMOS_PHY_AE_EMIT(KA,IA,JA,QA_AE) )
+    ATMOS_PHY_AE_EMIT(:,:,:,:) = 0.0_RP
 
     !--- read namelist
     rewind(IO_FID_CONF)

@@ -118,6 +118,8 @@ contains
        RHOQ_t_MP => ATMOS_PHY_MP_RHOQ_t,    &
        SFLX_rain => ATMOS_PHY_MP_SFLX_rain, &
        SFLX_snow => ATMOS_PHY_MP_SFLX_snow
+    use mod_atmos_phy_ae_vars, only: &
+       CCN => ATMOS_PHY_AE_CCN
     implicit none
 
     logical, intent(in) :: update_flag
@@ -167,6 +169,7 @@ contains
                           MOMY0    (:,:,:),   & ! [INOUT]
                           RHOT0    (:,:,:),   & ! [INOUT]
                           QTRC0    (:,:,:,:), & ! [INOUT]
+                          CCN      (:,:,:),   & ! [IN]
                           SFLX_rain(:,:),     & ! [OUT]
                           SFLX_snow(:,:)      ) ! [OUT]
 

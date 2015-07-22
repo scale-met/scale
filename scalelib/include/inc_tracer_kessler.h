@@ -9,7 +9,7 @@
   !-----------------------------------------------------------------------------
   character(len=H_SHORT), public, parameter :: TRACER_TYPE = "KESSLER"
 
-  integer, public, parameter :: QA = 3
+  integer, public, parameter :: QA_MP = 3
 
   integer, public, parameter :: I_QV =  1
   integer, public, parameter :: I_QC =  2
@@ -32,19 +32,22 @@
   integer, public, parameter :: QIS =  0 ! start index for ice tracer
   integer, public, parameter :: QIE = -1 ! end   index for ice tracer
 
-  character(len=H_SHORT), public :: AQ_NAME(QA)
-  character(len=H_MID)  , public :: AQ_DESC(QA)
-  character(len=H_SHORT), public :: AQ_UNIT(QA)
+  character(len=H_SHORT), public :: AQ_MP_NAME(QA_MP)
+  character(len=H_MID)  , public :: AQ_MP_DESC(QA_MP)
+  character(len=H_SHORT), public :: AQ_MP_UNIT(QA_MP)
 
-  data AQ_NAME / 'QV', &
+  data AQ_MP_NAME / &
+                 'QV', &
                  'QC', &
                  'QR'  /
 
-  data AQ_DESC / 'Water Vapor mixing ratio', &
+  data AQ_MP_DESC / &
+                 'Water Vapor mixing ratio', &
                  'Cloud Water mixing ratio', &
                  'Rain Water mixing ratio'   /
 
-  data AQ_UNIT / 'kg/kg', &
+  data AQ_MP_UNIT / &
+                 'kg/kg', &
                  'kg/kg', &
                  'kg/kg'  /
 
@@ -71,11 +74,11 @@
                 / 1,    &
                   1     /
 
-  integer, public, parameter :: AE_QA = 1 ! number of aerosol tracer
-  integer, public, parameter :: I_ae_dummy = 1
-
-  integer, public :: I_AE2ALL(AE_QA)
-  data I_AE2ALL / -999 / ! dummy
-
-  integer, public :: I_AE2RD(AE_QA)
-  data I_AE2RD  / 3    / ! dummy => MSTRN_nptype=3: dust
+!  integer, public, parameter :: AE_QA = 1 ! number of aerosol tracer
+!  integer, public, parameter :: I_ae_dummy = 1
+!
+!  integer, public :: I_AE2ALL(AE_QA)
+!  data I_AE2ALL / -999 / ! dummy
+!
+!  integer, public :: I_AE2RD(AE_QA)
+!  data I_AE2RD  / 3    / ! dummy => MSTRN_nptype=3: dust

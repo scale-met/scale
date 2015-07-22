@@ -73,6 +73,7 @@ module scale_atmos_phy_mp_sn14
   use scale_grid_index
 
   use scale_tracer_sn14
+  use scale_tracer, only: QA
   use scale_const, only: &
      GRAV   => CONST_GRAV,   &
      PI     => CONST_PI,     &
@@ -474,7 +475,9 @@ module scale_atmos_phy_mp_sn14
 
   logical, private, save :: MP_doautoconversion = .true.
   logical, private, save :: MP_doprecipitation  = .true.
+  logical, private, save :: MP_couple_aerosol   = .false. ! apply CCN effect?
   real(RP), private, save :: MP_ssw_lim = 1.E+1_RP
+
 
   !-----------------------------------------------------------------------------
 contains
@@ -497,7 +500,8 @@ contains
     NAMELIST / PARAM_ATMOS_PHY_MP / &
        MP_doautoconversion, &
        MP_doprecipitation,  &
-       MP_ssw_lim,       &
+       MP_ssw_lim,          &
+       MP_couple_aerosol,   &
        MP_ntmax_sedimentation
 
     real(RP), parameter :: max_term_vel = 10.0_RP  !-- terminal velocity for calculate dt of sedimentation
@@ -603,6 +607,7 @@ contains
        MOMY,      &
        RHOT,      &
        QTRC,      &
+       CCN,       &
        SFLX_rain, &
        SFLX_snow  )
     use scale_grid_index
@@ -617,6 +622,7 @@ contains
     real(RP), intent(inout) :: MOMY(KA,IA,JA)
     real(RP), intent(inout) :: RHOT(KA,IA,JA)
     real(RP), intent(inout) :: QTRC(KA,IA,JA,QAD)
+    real(RP), intent(in)    :: CCN(KA,IA,JA)
     real(RP), intent(out)   :: SFLX_rain(IA,JA)
     real(RP), intent(out)   :: SFLX_snow(IA,JA)
     !---------------------------------------------------------------------------
@@ -635,6 +641,7 @@ contains
                   MOMY,      & ! [INOUT]
                   RHOT,      & ! [INOUT]
                   QTRC,      & ! [INOUT]
+                  CCN,       & ! [IN]
                   SFLX_rain, & ! [OUT]
                   SFLX_snow  ) ! [OUT]
 
@@ -1274,6 +1281,7 @@ contains
        MOMY,      &
        RHOT,      &
        QTRC,      &
+       CCN,       &
        SFLX_rain, &
        SFLX_snow  )
     use scale_time, only: &
@@ -1297,6 +1305,7 @@ contains
     real(RP), intent(inout) :: MOMY(KA,IA,JA)
     real(RP), intent(inout) :: RHOT(KA,IA,JA)
     real(RP), intent(inout) :: QTRC(KA,IA,JA,QA)
+    real(RP), intent(in)    :: CCN(KA,IA,JA)
     real(RP), intent(out)   :: SFLX_rain(IA,JA)
     real(RP), intent(out)   :: SFLX_snow(IA,JA)
 
@@ -1529,6 +1538,7 @@ contains
          cpa,               & ! in
          dTdt_equiv_d,      & ! in
          qke_d,             & ! in
+         CCN,               & ! in
          dt                 ) ! in
 
     do j = JS, JE
@@ -2079,7 +2089,10 @@ contains
        cpa,              & ! in
        dTdt_rad,         & ! in
        qke,              & ! in
+       CCN,               & ! in
        dt                ) ! in
+    use scale_process, only: &
+       PRC_MPIstop
     use scale_atmos_saturation, only: &
        moist_psat_liq       => ATMOS_SATURATION_psat_liq, &
        moist_psat_ice       => ATMOS_SATURATION_psat_ice,   &
@@ -2101,6 +2114,7 @@ contains
     real(RP), intent(in)  :: dTdt_rad(KA,IA,JA) ! 09/08/18 T.Mitsui
     real(RP), intent(in)  :: qke(KA,IA,JA)      ! 09/08/18 T.Mitsui
     real(RP), intent(in)  :: dt
+    real(RP), intent(in)  :: CCN(KA,IA,JA)   
     !
     ! namelist variables
     !
@@ -2195,6 +2209,10 @@ contains
        read(IO_FID_CONF, nml=nm_mp_sn14_nucleation, end=100)
 100    if( IO_L ) write(IO_FID_LOG, nml=nm_mp_sn14_nucleation)
        flag_first=.false.
+       if( MP_couple_aerosol .and. nucl_twomey ) then
+        write(IO_FID_LOG,*) "nucl_twomey should be false when MP_couple_aerosol is true, stop"
+        call PRC_MPIstop
+       endif
     endif
     !
 !    c_ccn_map(1,:,:) = c_ccn
@@ -2282,17 +2300,31 @@ contains
        end do
     else
        ! calculate cloud condensation nuclei
-       do j = JS, JE
-       do i = IS, IE
-       do k = KS, KE
-          if( ssw(k,i,j) > 1.e-10_RP .and. pre(k,i,j) > 300.E+2_RP ) then
-             nc_new(k,i,j) = c_ccn*ssw(k,i,j)**kappa
-          else
-             nc_new(k,i,j) = 0.0_RP
-          endif
-       enddo
-       enddo
-       enddo
+       if( MP_couple_aerosol ) then
+         do j = JS, JE
+         do i = IS, IE
+         do k = KS, KE
+            if( ssw(k,i,j) > 1.e-10_RP .and. pre(k,i,j) > 300.E+2_RP ) then
+               nc_new(k,i,j) = max( CCN(k,i,j), c_ccn )
+            else
+               nc_new(k,i,j) = 0.0_RP
+            endif
+         enddo
+         enddo
+         enddo
+       else
+         do j = JS, JE
+         do i = IS, IE
+         do k = KS, KE
+            if( ssw(k,i,j) > 1.e-10_RP .and. pre(k,i,j) > 300.E+2_RP ) then
+               nc_new(k,i,j) = c_ccn*ssw(k,i,j)**kappa
+            else
+               nc_new(k,i,j) = 0.0_RP
+            endif
+         enddo
+         enddo
+         enddo
+       endif
     endif
 
     do j = JS, JE

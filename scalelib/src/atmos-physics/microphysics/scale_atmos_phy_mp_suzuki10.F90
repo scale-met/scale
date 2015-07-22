@@ -37,6 +37,7 @@ module scale_atmos_phy_mp_suzuki10
   use scale_grid_index
 
   use scale_tracer_suzuki10
+  use scale_tracer, only: QA
   use scale_const, only: &
      pi => CONST_PI, &
      CONST_CPdry,  &
@@ -137,7 +138,7 @@ module scale_atmos_phy_mp_suzuki10
   logical, private, save :: MP_doautoconversion = .true.  ! apply collision process ?
   logical, private, save :: MP_doprecipitation  = .true.  ! apply sedimentation of hydrometeor ?
   logical, private, save :: MP_donegative_fixer = .true.  ! apply negative fixer?
-
+  logical, private, save :: MP_couple_aerosol   = .false. ! apply CCN effect?
   real(RP), allocatable :: marate( : )               ! mass rate of each aerosol bin to total aerosol mass
   integer, private, save       :: K10_1, K10_2        ! scaling factor for 10m value (momentum)
   real(RP), private            :: R10M1, R10M2        ! scaling factor for 10m value (momentum)
@@ -229,7 +230,8 @@ contains
        MP_ntmax_sedimentation, &
        MP_doautoconversion, &
        MP_doprecipitation, &
-       MP_donegative_fixer
+       MP_donegative_fixer, &
+       MP_couple_aerosol 
 
     NAMELIST / PARAM_ATMOS_PHY_MP_SUZUKI10 / &
        RHO_AERO,  &
@@ -575,6 +577,7 @@ contains
        MOMY,      &
        RHOT,      &
        QTRC,      &
+       CCN,       &
        SFLX_rain, &
        SFLX_snow  )
     use scale_grid_index
@@ -610,6 +613,7 @@ contains
     real(RP), intent(inout) :: MOMY(KA,IA,JA)
     real(RP), intent(inout) :: RHOT(KA,IA,JA)
     real(RP), intent(inout) :: QTRC(KA,IA,JA,QAD)
+    real(RP), intent(in)    :: CCN(KA,IA,JA)
     real(RP), intent(out)   :: SFLX_rain(IA,JA)
     real(RP), intent(out)   :: SFLX_snow(IA,JA)
 
@@ -652,6 +656,7 @@ contains
     real(RP) :: wflux_snow(KA,IA,JA)
     real(RP) :: flux_rain (KA,IA,JA)
     real(RP) :: flux_snow (KA,IA,JA)
+    real(RP) :: ccn_num   (KA,IA,JA)
     integer  :: step
     !---------------------------------------------------------------------------
 
@@ -659,13 +664,18 @@ contains
 call START_COLLECTION("MICROPHYSICS")
 #endif
 
-     if( MP_donegative_fixer ) then
+    if( MP_donegative_fixer ) then
        call MP_negative_fixer( DENS(:,:,:),  & ! [INOUT]
                                RHOT(:,:,:),  & ! [INOUT]
                                QTRC(:,:,:,:) ) ! [INOUT]
        QTRC(:,:,:,QQE+1:QA) = max( QTRC(:,:,:,QQE+1:QA),0.0_RP )
-     endif
+    endif
 
+    if( MP_couple_aerosol ) then
+      ccn_num(:,:,:) = max( CCN(:,:,:),c_ccn )
+    else
+      ccn_num(:,:,:) = 0.0_RP
+    endif 
 
     if( nspc == 1 ) then
      if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Cloud microphysics(SBM Liquid water only)'
@@ -847,6 +857,7 @@ call START_COLLECTION("MICROPHYSICS")
       if( ssliq(k,i,j) > 0.0_RP .or. sum1(k,i,j) > cldmin ) then
        call mp_binw_evolve                     &
             ( pres_mp(k,i,j), DENS(k,i,j), dt, &  !--- in
+              ccn_num(k,i,j),                  &  !--- in
               gdgc(k,i,j,1,1:nbin),            &  !--- inout
               qv_mp(k,i,j), temp_mp(k,i,j)     )  !--- inout
       end if
@@ -864,6 +875,7 @@ call START_COLLECTION("MICROPHYSICS")
       if( ssliq(k,i,j) > 0.0_RP .or. ssice(k,i,j) > 0.0_RP .or. sum1(k,i,j) > cldmin ) then
        call mp_binf_evolve                     &
             ( pres_mp(k,i,j), DENS(k,i,j), dt, &  !--- in
+              ccn_num(k,i,j),                  &  !--- in
               gdgc(k,i,j,1:nspc,1:nbin),       &  !--- inout
               qv_mp(k,i,j), temp_mp(k,i,j)     )  !--- inout
       end if
@@ -1087,12 +1099,14 @@ call STOP_COLLECTION("MICROPHYSICS")
   subroutine mp_binw_evolve        &
       ( pres, dens,                 & !--- in
         dtime,                      & !--- in
+        ccn_num,                    &  !--- in
         gc,                         & !--- inout
         qvap, temp                  ) !--- inout
 
   real(RP), intent(in) :: pres   !  pressure
   real(RP), intent(in) :: dens   !  density of dry air
   real(RP), intent(in) :: dtime  !  time interval
+  real(RP), intent(in) :: ccn_num!  number concentration of CCN
 
   real(RP), intent(inout) :: gc( nspc,nbin )
   real(RP), intent(inout) :: qvap  !  specific humidity
@@ -1102,7 +1116,7 @@ call STOP_COLLECTION("MICROPHYSICS")
   !
   !--- nucleat
   call nucleat                        &
-         ( dens, pres, dtime,         & !--- in
+         ( dens, pres, dtime, ccn_num,& !--- in
            gc(il,1:nbin), qvap, temp  ) !--- inout
 
   !--- condensation / evaporation
@@ -1125,6 +1139,7 @@ call STOP_COLLECTION("MICROPHYSICS")
   subroutine mp_binf_evolve         &
       ( pres, dens,                 & !--- in
         dtime,                      & !--- in
+        ccn_num,                    & !--- in
         gc,                         & !--- inout
         qvap, temp                  ) !--- inout
 
@@ -1133,6 +1148,7 @@ call STOP_COLLECTION("MICROPHYSICS")
   real(RP), intent(in) :: pres   !  pressure
   real(RP), intent(in) :: dens   !  density
   real(RP), intent(in) :: dtime  !  time interval
+  real(RP), intent(in) :: ccn_num!  number concentration of CCN
 
   real(RP), intent(inout) :: gc( nspc,nbin )
   real(RP), intent(inout) :: qvap  !  specific humidity
@@ -1140,9 +1156,9 @@ call STOP_COLLECTION("MICROPHYSICS")
   !
   !
   !--- nucleat
-  call nucleat                  &
-         ( dens, pres, dtime,   & !--- in
-           gc(il,1:nbin), qvap, temp )   !--- inout
+  call nucleat                          &
+         ( dens, pres, dtime, ccn_num,  & !--- in
+           gc(il,1:nbin), qvap, temp    )   !--- inout
 
   !--- freezing / melting
   if ( temp < CONST_TEM00 ) then
@@ -1232,6 +1248,7 @@ call STOP_COLLECTION("MICROPHYSICS")
   !-----------------------------------------------------------------------------
   subroutine nucleat        &
       ( dens, pres, dtime,  & !--- in
+        ccn_num,            & !--- in
         gc, qvap, temp      ) !--- inout
   !
   !  liquid nucleation from aerosol particle
@@ -1250,6 +1267,7 @@ call STOP_COLLECTION("MICROPHYSICS")
   real(RP), intent(in) :: dens   !  density  [ kg/m3 ]
   real(RP), intent(in) :: pres   !  pressure [ Pa ]
   real(RP), intent(in) :: dtime
+  real(RP), intent(in) :: ccn_num!  number concentration of CCN
   !
   real(RP), intent(inout) :: gc( nbin )  !  SDF ( hydrometeors )
   real(RP), intent(inout) :: qvap  !  specific humidity [ kg/kg ]
@@ -1284,14 +1302,25 @@ call STOP_COLLECTION("MICROPHYSICS")
   do n = 1, nbin
     sumnum = sumnum + gcn( n )*dxmic
   enddo
-  n_c = c_ccn * ( ssliq * 1.E+2_RP )**( kappa )
-  if( n_c > sumnum ) then
-    dmp = ( n_c - sumnum ) * exp( xctr( 1 ) )
+
+  if( MP_couple_aerosol ) then
+    n_c = ccn_num
+    dmp = n_c * exp( xctr( 1 ) )
     dmp = min( dmp,qvap*dens )
     gc( 1 ) = gc( 1 ) + dmp/dxmic
     qvap = qvap - dmp/dens
     qvap = max( qvap,0.0_RP )
     temp = temp + dmp/dens*qlevp/cp
+  else
+    n_c =  c_ccn * ( ssliq * 1.E+2_RP )**( kappa )
+    if( n_c > sumnum ) then
+      dmp = ( n_c - sumnum ) * exp( xctr( 1 ) )
+      dmp = min( dmp,qvap*dens )
+      gc( 1 ) = gc( 1 ) + dmp/dxmic
+      qvap = qvap - dmp/dens
+      qvap = max( qvap,0.0_RP )
+      temp = temp + dmp/dens*qlevp/cp
+    end if
   end if
   !
   return

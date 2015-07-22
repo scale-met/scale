@@ -99,12 +99,14 @@ contains
        RHOQ_t => RHOQ_tp
     use mod_atmos_phy_ae_vars, only: &
        RHOQ_t_AE => ATMOS_PHY_AE_RHOQ_t, &
-       CCN       => ATMOS_PHY_AE_CCN
+       CCN       => ATMOS_PHY_AE_CCN, &
+       AE_EMIT   => ATMOS_PHY_AE_EMIT
     implicit none
 
     logical, intent(in) :: update_flag
 
     real(RP) :: QTRC0(KA,IA,JA,QA)
+    real(RP) :: CN(KA,IA,JA)
 
     real(RP) :: total ! dummy
 
@@ -124,27 +126,33 @@ contains
        enddo
        enddo
 
+       CCN(:,:,:) = 0.0_RP ! reset
+       RHOQ_t_AE(:,:,:,:) = 0.0_RP ! reset
+
        call ATMOS_PHY_AE( DENS, & ! [IN]
                           MOMZ, & ! [IN]
                           MOMX, & ! [IN]
                           MOMY, & ! [IN]
                           RHOT, & ! [IN]
+                          AE_EMIT, & ! [IN}
+                          CN ,  & ! [OUT]
+                          CCN,  & ! [OUT]
                           QTRC0 ) ! [INOUT]
 
        do iq = 1, QA
        do j  = JS, JE
        do i  = IS, IE
        do k  = KS, KE
-          RHOQ_t_AE(k,i,j,iq) = ( QTRC0(k,i,j,iq) - QTRC(k,i,j,iq) ) * DENS(k,i,j)
+          RHOQ_t_AE(k,i,j,iq) = ( QTRC0(k,i,j,iq) - QTRC(k,i,j,iq) ) * DENS(k,i,j) / dt_AE
        enddo
        enddo
        enddo
        enddo
 
-!OCL XFILL
-       CCN(:,:,:) = 0.0_RP ! tentative
+!       CCN(:,:,:) = 0.0_RP ! tentative
 
-       call HIST_in( CCN(:,:,:), 'CCN', 'cloud condensation nucrei', '' )
+       call HIST_in( CN(:,:,:)*1e-6_RP,  'CN',  'condensation nucrei', '/cc' )
+       call HIST_in( CCN(:,:,:)*1e-6_RP, 'CCN', 'cloud condensation nucrei', '/cc' )
 
     endif
 

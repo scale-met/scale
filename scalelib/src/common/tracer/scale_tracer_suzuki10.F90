@@ -67,13 +67,13 @@ contains
      call PRC_MPIstop
     endif
 
-    !-- setup QA ...
-    QA   = I_QV+nbin*nspc+nccn
-    QQA  = I_QV+nbin*nspc
-    QQS  = I_QV
-    QQE  = I_QV+nbin*nspc
-    QWS =  I_QV+1
-    QWE =  I_QV+nbin
+    !-- setup QA_MP ...
+    QA_MP   = I_QV+nbin*nspc+nccn
+    QQA     = I_QV+nbin*nspc
+    QQS     = I_QV
+    QQE     = I_QV+nbin*nspc
+    QWS     =  I_QV+1
+    QWE     =  I_QV+nbin
     if( ICEFLG == 0 ) then
       QIS =  0
       QIE = -1
@@ -82,9 +82,9 @@ contains
       QIE =  (I_QV+nbin*nspc)*ICEFLG
     endif
 
-    allocate( AQ_NAME(QA) )
-    allocate( AQ_DESC(QA) )
-    allocate( AQ_UNIT(QA) )
+    allocate( AQ_MP_NAME(QA_MP) )
+    allocate( AQ_MP_DESC(QA_MP) )
+    allocate( AQ_MP_UNIT(QA_MP) )
 
 
     !-----------------------------------------------------------------------------
@@ -92,30 +92,30 @@ contains
     !++ calculate each category and aerosol
     !
     !-----------------------------------------------------------------------------
-    do n = 1, QA
-     write(AQ_UNIT(n),'(a)')  'kg/kg'
+    do n = 1, QA_MP
+     write(AQ_MP_UNIT(n),'(a)')  'kg/kg'
     enddo
 
-    write(AQ_NAME(I_QV),'(a)') 'QV'
+    write(AQ_MP_NAME(I_QV),'(a)') 'QV'
     do m = 1, nspc
     do n = 1, nbin
-     write(AQ_NAME(I_QV+nbin*(m-1)+n),'(a,i0)') trim(namspc(m)), n
+     write(AQ_MP_NAME(I_QV+nbin*(m-1)+n),'(a,i0)') trim(namspc(m)), n
     enddo
     enddo
 
     do n = 1, nccn
-     write(AQ_NAME(I_QV+nbin*nspc+n),'(a,i0)') trim(namspc(8)), n
+     write(AQ_MP_NAME(I_QV+nbin*nspc+n),'(a,i0)') trim(namspc(8)), n
     enddo
 
-    write(AQ_DESC(I_QV),'(a)')  'Water Vapor mixing ratio'
+    write(AQ_MP_DESC(I_QV),'(a)')  'Water Vapor mixing ratio'
     do m = 1, nspc
     do n = 1, nbin
-     write(AQ_DESC(I_QV+nbin*(m-1)+n),'(a,i0)') trim(lnamspc(m)), n
+     write(AQ_MP_DESC(I_QV+nbin*(m-1)+n),'(a,i0)') trim(lnamspc(m)), n
     enddo
     enddo
 
     do n = 1, nccn
-     write(AQ_DESC(I_QV+nbin*nspc+n),'(a,i0)') trim(lnamspc(8)), n
+     write(AQ_MP_DESC(I_QV+nbin*nspc+n),'(a,i0)') trim(lnamspc(8)), n
     enddo
 
     return
