@@ -6,6 +6,7 @@ program unit
   use scale_tracer
 
   use scale_process, only: &
+     GLOBAL_COMM_WORLD, &
      PRC_setup,    &
      PRC_MPIstart, &
      PRC_MPIsetup, &
@@ -34,6 +35,7 @@ program unit
   call IO_setup( MODELNAME, .false. )
 
   ! setup MPI
+  GLOBAL_COMM_WORLD = MPI_COMM_WORLD
   call PRC_MPIsetup( MPI_COMM_WORLD )
 
   ! setup process
