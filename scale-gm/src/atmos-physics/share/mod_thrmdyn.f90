@@ -12,8 +12,8 @@ module mod_thrmdyn
   !
   !++ Used modules
   !
-  use mod_precision
-  use mod_debug
+  use scale_precision
+  use scale_prof
   use mod_adm, only: &
      ADM_LOG_FID,      &
      ADM_MAXFNAME,     &
@@ -21,16 +21,15 @@ module mod_thrmdyn
      kdim => ADM_kall, &
      kmin => ADM_kmin, &
      kmax => ADM_kmax
-  use mod_cnst, only: &
-     Rdry  => CNST_RAIR,  &
-     CPdry => CNST_CP,    &
-     CVdry => CNST_CV,    &
-     KAPPA => CNST_KAPPA, &
-     Rvap  => CNST_RVAP,  &
-     PRE00 => CNST_PRE00, &
-     TEM00 => CNST_TEM00, &
-     PSAT0 => CNST_PSAT0, &
-     EPSV  => CNST_EPSV
+  use scale_const, only: &
+     Rdry  => CONST_Rdry,  &
+     CPdry => CONST_CPdry, &
+     CVdry => CONST_CVdry, &
+     Rvap  => CONST_Rvap,  &
+     PRE00 => CONST_PRE00, &
+     TEM00 => CONST_TEM00, &
+     PSAT0 => CONST_PSAT0, &
+     EPSV  => CONST_EPSvap
   use mod_runconf, only: &
      nqmax => TRC_VMAX, &
      NQW_STR,           &
@@ -493,17 +492,18 @@ contains
     real(RP), intent(in)  :: pre(ijdim,kdim) ! pressure    [Pa]
     real(RP), intent(out) :: th (ijdim,kdim) ! potential temperature [K]
 
-    real(RP) :: pre0_kappa
+    real(RP) :: pre0_kappa, kappa
 
     integer :: ij, k
     !---------------------------------------------------------------------------
 
-    pre0_kappa = PRE00**KAPPA
+    kappa = Rdry /Cpdry
+    pre0_kappa = PRE00**kappa
 
     !$acc kernels pcopy(th) pcopyin(tem,pre) async(0)
     do k  = 1, kdim
     do ij = 1, ijdim
-       th(ij,k) = tem(ij,k) + pre(ij,k)**KAPPA * pre0_kappa
+       th(ij,k) = tem(ij,k) + pre(ij,k)**kappa * pre0_kappa
     enddo
     enddo
     !$acc end kernels
@@ -529,18 +529,19 @@ contains
     real(RP), intent(in)  :: pre(ijdim,kdim,ldim) ! pressure    [Pa]
     real(RP), intent(out) :: th (ijdim,kdim,ldim) ! potential temperature [K]
 
-    real(RP) :: pre0_kappa
+    real(RP) :: pre0_kappa, kappa
 
     integer :: ij, k, l
     !---------------------------------------------------------------------------
 
-    pre0_kappa = PRE00**KAPPA
+    kappa = Rdry /Cpdry
+    pre0_kappa = PRE00**kappa
 
     !$acc kernels pcopy(th) pcopyin(tem,pre) async(0)
     do l  = 1, ldim
     do k  = 1, kdim
     do ij = 1, ijdim
-       th(ij,k,l) = tem(ij,k,l) + pre(ij,k,l)**KAPPA * pre0_kappa
+       th(ij,k,l) = tem(ij,k,l) + pre(ij,k,l)**kappa * pre0_kappa
     enddo
     enddo
     enddo

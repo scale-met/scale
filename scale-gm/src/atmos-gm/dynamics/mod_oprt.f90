@@ -12,8 +12,8 @@ module mod_oprt
   !
   !++ used modules
   !
-  use mod_precision
-  use mod_debug
+  use scale_precision
+  use scale_prof
   use mod_adm, only: &
      ADM_LOG_FID,      &
      TI  => ADM_TI,    &
@@ -139,20 +139,20 @@ contains
     write(ADM_LOG_FID,*) '+++ Module[oprt]/Category[common share]'
 
     ! dummy call
-    call DEBUG_rapstart('OPRT_divergence')
-    call DEBUG_rapend  ('OPRT_divergence')
-    call DEBUG_rapstart('OPRT_gradient')
-    call DEBUG_rapend  ('OPRT_gradient')
-    call DEBUG_rapstart('OPRT_laplacian')
-    call DEBUG_rapend  ('OPRT_laplacian')
-    call DEBUG_rapstart('OPRT_diffusion')
-    call DEBUG_rapend  ('OPRT_diffusion')
-    call DEBUG_rapstart('OPRT_horizontalize_vec')
-    call DEBUG_rapend  ('OPRT_horizontalize_vec')
-    call DEBUG_rapstart('OPRT_divdamp')
-    call DEBUG_rapend  ('OPRT_divdamp')
-    call DEBUG_rapstart('OPRT3D_divdamp')
-    call DEBUG_rapend  ('OPRT3D_divdamp')
+    call PROF_rapstart('OPRT_divergence')
+    call PROF_rapend  ('OPRT_divergence')
+    call PROF_rapstart('OPRT_gradient')
+    call PROF_rapend  ('OPRT_gradient')
+    call PROF_rapstart('OPRT_laplacian')
+    call PROF_rapend  ('OPRT_laplacian')
+    call PROF_rapstart('OPRT_diffusion')
+    call PROF_rapend  ('OPRT_diffusion')
+    call PROF_rapstart('OPRT_horizontalize_vec')
+    call PROF_rapend  ('OPRT_horizontalize_vec')
+    call PROF_rapstart('OPRT_divdamp')
+    call PROF_rapend  ('OPRT_divdamp')
+    call PROF_rapstart('OPRT3D_divdamp')
+    call PROF_rapend  ('OPRT3D_divdamp')
 
     OPRT_nstart = suf(ADM_gmin,ADM_gmin)
     OPRT_nend   = suf(ADM_gmax,ADM_gmax)
@@ -1609,7 +1609,7 @@ contains
     integer :: n, k, l, v
     !---------------------------------------------------------------------------
 
-    call DEBUG_rapstart('OPRT_divergence')
+    call PROF_rapstart('OPRT_divergence')
 
     gall    = ADM_gall
     gall_1d = ADM_gall_1d
@@ -1718,7 +1718,7 @@ contains
        scl_pl(:,:,:) = 0.0_RP
     endif
 
-    call DEBUG_rapend('OPRT_divergence')
+    call PROF_rapend('OPRT_divergence')
 
     return
   end subroutine OPRT_divergence
@@ -1753,7 +1753,7 @@ contains
     integer :: n, k, l, v, d
     !---------------------------------------------------------------------------
 
-    call DEBUG_rapstart('OPRT_gradient')
+    call PROF_rapstart('OPRT_gradient')
 
 !OCL SERIAL
     do d = 1, ADM_nxyz
@@ -1799,7 +1799,7 @@ contains
        grad_pl(:,:,:,:) = 0.0_RP
     endif
 
-    call DEBUG_rapend('OPRT_gradient')
+    call PROF_rapend('OPRT_gradient')
 
     return
   end subroutine OPRT_gradient
@@ -1833,7 +1833,7 @@ contains
     integer :: n, k, l, v
     !---------------------------------------------------------------------------
 
-    call DEBUG_rapstart('OPRT_laplacian')
+    call PROF_rapstart('OPRT_laplacian')
 
 !OCL SERIAL
     do l = 1, ADM_lall
@@ -1875,7 +1875,7 @@ contains
        dscl_pl(:,:,:) = 0.0_RP
     endif
 
-    call DEBUG_rapend('OPRT_laplacian')
+    call PROF_rapend('OPRT_laplacian')
 
     return
   end subroutine OPRT_laplacian
@@ -1928,7 +1928,7 @@ contains
     integer :: n, k, l, v
     !---------------------------------------------------------------------------
 
-    call DEBUG_rapstart('OPRT_diffusion')
+    call PROF_rapstart('OPRT_diffusion')
 
     gall    = ADM_gall
     gall_1d = ADM_gall_1d
@@ -2132,7 +2132,7 @@ contains
        dscl_pl(:,:,:) = 0.0_RP
     endif
 
-    call DEBUG_rapend('OPRT_diffusion')
+    call PROF_rapend('OPRT_diffusion')
 
     return
   end subroutine OPRT_diffusion
@@ -2171,7 +2171,7 @@ contains
     integer :: g, k, l
     !---------------------------------------------------------------------------
 
-    call DEBUG_rapstart('OPRT_horizontalize_vec')
+    call PROF_rapstart('OPRT_horizontalize_vec')
 
 !OCL SERIAL
     do l = 1, ADM_lall
@@ -2209,7 +2209,7 @@ contains
        vz_pl(:,:,:) = 0.0_RP
     endif
 
-    call DEBUG_rapend('OPRT_horizontalize_vec')
+    call PROF_rapend('OPRT_horizontalize_vec')
 
     return
   end subroutine OPRT_horizontalize_vec
@@ -2268,7 +2268,7 @@ contains
     integer :: n, k, l, v
     !---------------------------------------------------------------------------
 
-    call DEBUG_rapstart('OPRT_vorticity')
+    call PROF_rapstart('OPRT_vorticity')
 
     do l = 1, ADM_lall
     do k = 1, ADM_kall
@@ -2416,7 +2416,7 @@ contains
        scl_pl(:,:,:) = 0.0_RP
     endif
 
-    call DEBUG_rapend('OPRT_vorticity')
+    call PROF_rapend('OPRT_vorticity')
 
     return
   end subroutine OPRT_vorticity
@@ -2477,7 +2477,7 @@ contains
     integer :: n, k, l, v
     !---------------------------------------------------------------------------
 
-    call DEBUG_rapstart('OPRT_divdamp')
+    call PROF_rapstart('OPRT_divdamp')
 
     gall    = ADM_gall
     gall_1d = ADM_gall_1d
@@ -2668,7 +2668,7 @@ contains
        ddivdz_pl(:,:,:) = 0.0_RP
     endif
 
-    call DEBUG_rapend('OPRT_divdamp')
+    call PROF_rapend('OPRT_divdamp')
 
     return
   end subroutine OPRT_divdamp

@@ -12,8 +12,8 @@ program prg_mkmnginfo
   !
   !++ Used modules
   !
-  use mod_precision
-  use mod_debug
+  use scale_precision
+  use scale_prof
   use mod_adm, only: &
      ADM_LOG_FID, &
      ADM_RID,     &

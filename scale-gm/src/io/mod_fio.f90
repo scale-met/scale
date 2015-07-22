@@ -12,8 +12,8 @@ module mod_fio
   !
   !++ Used modules
   !
-  use mod_precision
-  use mod_debug
+  use scale_precision
+  use scale_prof
   use mod_adm, only: &
      ADM_LOG_FID
   !-----------------------------------------------------------------------------
@@ -138,10 +138,10 @@ contains
     !---------------------------------------------------------------------------
 
     ! dummy call
-    call DEBUG_rapstart('FILEIO_in')
-    call DEBUG_rapend  ('FILEIO_in')
-    call DEBUG_rapstart('FILEIO_out')
-    call DEBUG_rapend  ('FILEIO_out')
+    call PROF_rapstart('FILEIO_in')
+    call PROF_rapend  ('FILEIO_in')
+    call PROF_rapstart('FILEIO_out')
+    call PROF_rapend  ('FILEIO_out')
 
     allocate( prc_tab(ADM_lall) )
     prc_tab(1:ADM_lall) = ADM_prc_tab(1:ADM_lall,ADM_prc_me)-1
@@ -253,7 +253,7 @@ contains
     integer :: did, fid
     !---------------------------------------------------------------------------
 
-    call DEBUG_rapstart('FILEIO_in')
+    call PROF_rapstart('FILEIO_in')
 
     !--- search/register file
     call FIO_getfid( fid, basename, FIO_FREAD, "", "" )
@@ -284,7 +284,7 @@ contains
 
              var(:,k_start:k_end,:) = 0.0_RP
 
-             call DEBUG_rapend('FILEIO_in')
+             call PROF_rapend('FILEIO_in')
              return
           endif
        endif
@@ -317,7 +317,7 @@ contains
 
     endif
 
-    call DEBUG_rapend('FILEIO_in')
+    call PROF_rapend('FILEIO_in')
 
     return
   end subroutine FIO_input
@@ -369,7 +369,7 @@ contains
     integer :: i
     !---------------------------------------------------------------------------
 
-    call DEBUG_rapstart('FILEIO_in')
+    call PROF_rapstart('FILEIO_in')
 
     !--- search/register file
     call FIO_getfid( fid, basename, FIO_FREAD, "", "" )
@@ -444,7 +444,7 @@ contains
        endif
     enddo
 
-    call DEBUG_rapend('FILEIO_in')
+    call PROF_rapend('FILEIO_in')
 
     return
   end subroutine FIO_seek
@@ -470,8 +470,8 @@ contains
        ADM_proc_stop, &
        ADM_gall,      &
        ADM_lall
-    use mod_cnst, only: &
-       CNST_UNDEF4
+    use scale_const, only: &
+       UNDEF4 => CONST_UNDEF4
     implicit none
 
     real(RP),          intent(in) :: var(:,:,:)
@@ -494,7 +494,7 @@ contains
     integer :: did, fid
     !---------------------------------------------------------------------------
 
-    call DEBUG_rapstart('FILEIO_out')
+    call PROF_rapstart('FILEIO_out')
 
     !--- search/register file
     call FIO_getfid( fid, basename, FIO_FWRITE, pkg_desc, pkg_note )
@@ -527,8 +527,8 @@ contains
     if ( dtype == FIO_REAL4 ) then
 
        var4(:,k_start:k_end,:)=real(var(:,k_start:k_end,:),kind=SP)
-       where( var4(:,:,:) < (CNST_UNDEF4+1.0) )
-          var4(:,:,:) = CNST_UNDEF4
+       where( var4(:,:,:) < (UNDEF4+1.0) )
+          var4(:,:,:) = UNDEF4
        endwhere
 
        call fio_put_write_datainfo_data(did,fid,dinfo,var4(:,:,:))
@@ -543,7 +543,7 @@ contains
        call ADM_proc_stop
     endif
 
-    call DEBUG_rapend('FILEIO_out')
+    call PROF_rapend('FILEIO_out')
 
     return
   end subroutine FIO_output

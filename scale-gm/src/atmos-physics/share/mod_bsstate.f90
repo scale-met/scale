@@ -12,8 +12,8 @@ module mod_bsstate
   !
   !++ Used modules
   !
-  use mod_precision
-  use mod_debug
+  use scale_precision
+  use scale_prof
   use mod_adm, only: &
      ADM_LOG_FID,  &
      ADM_MAXFNAME, &
@@ -267,17 +267,17 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine set_referencestate
-    use mod_cnst, only : &
-         CNST_EGRAV,     &
-         CNST_RAIR,      &
-         CNST_RVAP,      &
-         CNST_PRE00,     &
-         CNST_KAPPA
-    use mod_adm, only :  &
+    use scale_const, only: &
+       CONST_GRAV,  &
+       CONST_Rdry,  &
+       CONST_Rvap,  &
+       CONST_CPdry, &
+       CONST_PRE00
+    use mod_adm, only: &
        ADM_have_pl, &
-         ADM_kall,       &
-         ADM_kmin,       &
-         ADM_kmax
+       ADM_kall,       &
+       ADM_kmin,       &
+       ADM_kmax
     use mod_grd, only :  &
          GRD_gz,         &
          GRD_dgz,        &
@@ -289,12 +289,16 @@ contains
     real(RP) :: dpre_ref_k
     real(RP) :: pre_s, rho_s, total_mass0, total_mass, mass_diff_ratio
 
+    real(RP) :: kappa
+
     integer :: k
     !---------------------------------------------------------------------------
 
+    kappa = CONST_Rdry / CONST_CPdry
+
     !--- calculation of reference geopotential
     do k=1,ADM_kall
-       phi_ref(k) = CNST_EGRAV * GRD_gz(k)
+       phi_ref(k) = CONST_GRAV * GRD_gz(k)
     enddo
     !
     if ( ref_type=='NOBASE') then
@@ -319,7 +323,7 @@ contains
        !
        ! 04/12/25 M.Satoh add
        if ( tem_g /= 0.0_RP ) then
-          rho_g = pre_g / CNST_RAIR / tem_g
+          rho_g = pre_g / CONST_Rdry / tem_g
        else
           rho_g = 0.0_RP
        endif
@@ -337,7 +341,7 @@ contains
        enddo
        !
        !--- calculation of density at the surface
-       rho_g = pre_g / CNST_RAIR / tem_g
+       rho_g = pre_g / CONST_Rdry / tem_g
        !
        !--- calculation of reference pressure and density
        !--- just below the ground level
@@ -348,7 +352,7 @@ contains
             * rho_g
        rho_ref(ADM_kmin-1)        &
             = pre_ref(ADM_kmin-1) &
-            / CNST_RAIR           &
+            / CONST_Rdry           &
             / tem_ref(ADM_kmin-1)
        !
        !--- Reference pressure and density at the first level
@@ -357,7 +361,7 @@ contains
             - ( phi_ref(ADM_kmin) - phi_ref(ADM_kmin-1) ) * rho_g
        rho_ref(ADM_kmin)        &
             = pre_ref(ADM_kmin) &
-            / CNST_RAIR         &
+            / CONST_Rdry         &
             / tem_ref(ADM_kmin)
        !
        !--- Reference pressure and density at k level
@@ -373,12 +377,12 @@ contains
        !---              +GRD_bfac(k) * rho_ref(k-1)  )
        !---   * ( phi_ref(k) - phi_ref(k-1) )
        !---
-       !--- rho_ref(k)*CNST_RAIR*tem_ref(k)  - pre_ref(k-1)
+       !--- rho_ref(k)*CONST_Rdry*tem_ref(k)  - pre_ref(k-1)
        !--- = - 0.5_RP * ( GRD_afac(k) * rho_ref(k)
        !---              +GRD_bfac(k) * rho_ref(k-1)  )
        !---   * ( phi_ref(k) - phi_ref(k-1) )
        !
-       !--- rho_ref(k)*( CNST_RAIR*tem_ref(k)
+       !--- rho_ref(k)*( CONST_Rdry*tem_ref(k)
        !---            + 0.5_RP * GRD_afac(k)
        !---            * ( phi_ref(k) - phi_ref(k-1) )
        !---            )
@@ -392,29 +396,29 @@ contains
                - 0.5_RP * GRD_bfac(k) * rho_ref(k-1) &
                * ( phi_ref(k) - phi_ref(k-1) )&
                ) / &
-               ( CNST_RAIR*tem_ref(k) &
+               ( CONST_Rdry*tem_ref(k) &
                + 0.5_RP * GRD_afac(k)  &
                * ( phi_ref(k) - phi_ref(k-1) )  &
                )
-          pre_ref(k) = rho_ref(k) * CNST_RAIR * tem_ref(k)
+          pre_ref(k) = rho_ref(k) * CONST_Rdry * tem_ref(k)
        enddo
        !
        !--- calculation of reference potential temperature
        do k = 1, ADM_kall
           th_ref(k)                                        &
                = tem_ref(k)                                &
-               * ( CNST_PRE00 / pre_ref(k) ) ** CNST_KAPPA
+               * ( CONST_PRE00 / pre_ref(k) )**kappa
        enddo
        !
     else if ( ref_type == 'RHO' ) then
        qv_ref = 0.0_RP
        !
        !---  calculation of reference density
-       total_mass0 = CNST_PRE00/CNST_EGRAV
-       pre_s = CNST_PRE00
+       total_mass0 = CONST_PRE00/CONST_GRAV
+       pre_s = CONST_PRE00
        do
           do k = ADM_kmin-1, ADM_kmax+1
-             rho_ref(k) = pre_s/CNST_RAIR/tem_g / exp(CNST_EGRAV*GRD_gz(k)/CNST_RAIR/tem_g)
+             rho_ref(k) = pre_s/CONST_Rdry/tem_g / exp(CONST_GRAV*GRD_gz(k)/CONST_Rdry/tem_g)
           enddo
           total_mass = 0.0_RP
           do k = ADM_kmin, ADM_kmax
@@ -429,7 +433,7 @@ contains
        enddo
        !
        !--- calculation of density at the surface
-       rho_s = pre_s /CNST_RAIR / tem_g
+       rho_s = pre_s /CONST_Rdry / tem_g
        !
        !--- calculation of reference pressure and density
        !--- just below the ground level
@@ -454,10 +458,10 @@ contains
        !
        !--- calculation of reference temperature & pot temperature
        do k = 1, ADM_kall
-          tem_ref(k) = pre_ref(k) / rho_ref(k) / CNST_RAIR
+          tem_ref(k) = pre_ref(k) / rho_ref(k) / CONST_Rdry
           th_ref(k)                                        &
                = tem_ref(k)                                &
-               * ( CNST_PRE00 / pre_ref(k) ) ** CNST_KAPPA
+               * ( CONST_PRE00 / pre_ref(k) )**kappa
        enddo
        !
     else if ( ref_type == 'TH' ) then
@@ -467,20 +471,20 @@ contains
        !--- just below the surface level.
        th_ref(ADM_kmin-1)                                 &
             = th_g                                         &
-            / exp ( BV_freq**2 / CNST_EGRAV                     &
+            / exp ( BV_freq**2 / CONST_GRAV                     &
                    * ( GRD_gzh(ADM_kmin) - GRD_gz(ADM_kmin-1) ) )
        !
        !--- calculation of reference pot. temp. at the first level.
        th_ref(ADM_kmin)                                   &
             = th_g                                         &
-            * exp ( BV_freq**2 / CNST_EGRAV                     &
+            * exp ( BV_freq**2 / CONST_GRAV                     &
                    * ( GRD_gz(ADM_kmin) - GRD_gzh(ADM_kmin) ) )
        !
        !--- calculation of reference pot. temp. at k level
        do k = ADM_kmin+1, ADM_kmax+1
           if ( GRD_gz(k) <= ZT ) then
              th_ref(k) = th_ref(k-1)                     &
-                  * exp ( BV_freq**2 / CNST_EGRAV              &
+                  * exp ( BV_freq**2 / CONST_GRAV              &
                          * ( GRD_gz(k) - GRD_gz(k-1) ) )
           else
              th_ref(k) = th_ref(k-1)
@@ -488,8 +492,8 @@ contains
        enddo
        !
        !--- calculation of density at the surface
-       tem_g = th_g / ( CNST_PRE00 / pre_g ) ** CNST_KAPPA
-       rho_g = pre_g / CNST_RAIR / tem_g
+       tem_g = th_g / ( CONST_PRE00 / pre_g )**kappa
+       rho_g = pre_g / CONST_Rdry / tem_g
        !
        !--- calculation of reference pressure, temperature, density
        !--- just below the ground level.
@@ -500,10 +504,10 @@ contains
             * rho_g
        tem_ref(ADM_kmin-1)                                        &
             = th_ref(ADM_kmin-1)                                  &
-            / ( CNST_PRE00 / pre_ref(ADM_kmin-1) ) ** CNST_KAPPA
+            / ( CONST_PRE00 / pre_ref(ADM_kmin-1) )**kappa
        rho_ref(ADM_kmin-1)        &
             = pre_ref(ADM_kmin-1) &
-            / CNST_RAIR           &
+            / CONST_Rdry           &
             / tem_ref(ADM_kmin-1)
        !
        !--- calculation of reference pressure and density
@@ -513,9 +517,9 @@ contains
             - ( phi_ref(ADM_kmin) - phi_ref(ADM_kmin-1) ) * rho_g
        tem_ref(ADM_kmin)                                       &
             = th_ref(ADM_kmin)                                 &
-            / ( CNST_PRE00 / pre_ref(ADM_kmin) ) ** CNST_KAPPA
+            / ( CONST_PRE00 / pre_ref(ADM_kmin) )**kappa
        rho_ref(ADM_kmin)                                       &
-            = pre_ref(ADM_kmin) / CNST_RAIR / tem_ref(ADM_kmin)
+            = pre_ref(ADM_kmin) / CONST_Rdry / tem_ref(ADM_kmin)
        !
        !--- Reference pressure and density at k level
        !---    In this caluculation, the hydrostatic balance equation
@@ -533,27 +537,27 @@ contains
                * ( GRD_gz(k)    - GRD_gz(k-1) ) * 0.5_RP )
           tem_ref(k)                                      &
                = th_ref(k)                                &
-               / ( CNST_PRE00 / pre_ref(k) ) ** CNST_KAPPA
+               / ( CONST_PRE00 / pre_ref(k) )**kappa
           rho_ref(k)        &
                = pre_ref(k) &
-               / CNST_RAIR  &
+               / CONST_Rdry  &
                / tem_ref(k)
        enddo
        !--- hydro static balance adjustment
        do k = ADM_kmin+1, ADM_kmax+1
           do
              tem_ref(k) = th_ref(k)                                &
-                  / ( CNST_PRE00 / pre_ref(k) ) ** CNST_KAPPA
+                  / ( CONST_PRE00 / pre_ref(k) )**kappa
              rho_ref(k) = &
                   ( pre_ref(k-1) &
                   - 0.5_RP * GRD_bfac(k) * rho_ref(k-1) &
                   * ( phi_ref(k) - phi_ref(k-1) )&
                   ) / &
-                  ( CNST_RAIR*tem_ref(k) &
+                  ( CONST_Rdry*tem_ref(k) &
                   + 0.5_RP * GRD_afac(k)  &
                   * ( phi_ref(k) - phi_ref(k-1) )  &
                   )
-             dpre_ref_k = rho_ref(k) * CNST_RAIR * tem_ref(k) - pre_ref(k)
+             dpre_ref_k = rho_ref(k) * CONST_Rdry * tem_ref(k) - pre_ref(k)
              pre_ref(k) = pre_ref(k)+ dpre_ref_k
              if ( abs(dpre_ref_k) < 1.E-10_RP ) exit
              if ( ADM_have_pl ) then
@@ -575,8 +579,8 @@ contains
        enddo
        !
        !--- calculation of density at the surface
-       tem_g = th_g / ( CNST_PRE00 / pre_g ) ** CNST_KAPPA
-       rho_g = pre_g / CNST_RAIR / tem_g
+       tem_g = th_g / ( CONST_PRE00 / pre_g )**kappa
+       rho_g = pre_g / CONST_Rdry / tem_g
        !
        !--- calculation of reference pressure, temperature, density
        !--- just below the ground level.
@@ -587,10 +591,10 @@ contains
             * rho_g
        tem_ref(ADM_kmin-1)                                        &
             = th_ref(ADM_kmin-1)                                  &
-            / ( CNST_PRE00 / pre_ref(ADM_kmin-1) ) ** CNST_KAPPA
+            / ( CONST_PRE00 / pre_ref(ADM_kmin-1) )**kappa
        rho_ref(ADM_kmin-1)        &
             = pre_ref(ADM_kmin-1) &
-            / CNST_RAIR           &
+            / CONST_Rdry           &
             / tem_ref(ADM_kmin-1)
        !
        !--- calculation of reference pressure and density
@@ -600,9 +604,9 @@ contains
             - ( phi_ref(ADM_kmin) - phi_ref(ADM_kmin-1) ) * rho_g
        tem_ref(ADM_kmin)                                       &
             = th_ref(ADM_kmin)                                 &
-            / ( CNST_PRE00 / pre_ref(ADM_kmin) ) ** CNST_KAPPA
+            / ( CONST_PRE00 / pre_ref(ADM_kmin) )**kappa
        rho_ref(ADM_kmin)                                       &
-            = pre_ref(ADM_kmin) / CNST_RAIR / tem_ref(ADM_kmin)
+            = pre_ref(ADM_kmin) / CONST_Rdry / tem_ref(ADM_kmin)
        !
        !--- Reference pressure and density at k level
        !---    In this caluculation, the hydrostatic balance equation
@@ -620,27 +624,27 @@ contains
                * ( GRD_gz(k)    - GRD_gz(k-1) ) * 0.5_RP )
           tem_ref(k)                                      &
                = th_ref(k)                                &
-               / ( CNST_PRE00 / pre_ref(k) ) ** CNST_KAPPA
+               / ( CONST_PRE00 / pre_ref(k) )**kappa
           rho_ref(k)        &
                = pre_ref(k) &
-               / CNST_RAIR  &
+               / CONST_Rdry  &
                / tem_ref(k)
        enddo
        !--- hydro static balance adjustment
        do k = ADM_kmin+1, ADM_kmax+1
           do
              tem_ref(k) = th_ref(k)                                &
-                  / ( CNST_PRE00 / pre_ref(k) ) ** CNST_KAPPA
+                  / ( CONST_PRE00 / pre_ref(k) )**kappa
              rho_ref(k) = &
                   ( pre_ref(k-1) &
                   - 0.5_RP * GRD_bfac(k) * rho_ref(k-1) &
                   * ( phi_ref(k) - phi_ref(k-1) )&
                   ) / &
-                  ( CNST_RAIR*tem_ref(k) &
+                  ( CONST_Rdry*tem_ref(k) &
                   + 0.5_RP * GRD_afac(k)  &
                   * ( phi_ref(k) - phi_ref(k-1) )  &
                   )
-             dpre_ref_k = rho_ref(k) * CNST_RAIR * tem_ref(k) - pre_ref(k)
+             dpre_ref_k = rho_ref(k) * CONST_Rdry * tem_ref(k) - pre_ref(k)
              pre_ref(k) = pre_ref(k)+ dpre_ref_k
              if ( abs(dpre_ref_k) < 1.E-10_RP ) exit
              if ( ADM_have_pl ) then
@@ -652,10 +656,10 @@ contains
        call ooyama_reference
        do k = 1, ADM_kall
           pre_ref(k) = rho_ref(k) * tem_ref(k) &
-               * ( (1.0_RP-qv_ref(k))*CNST_RAIR+qv_ref(k)*CNST_RVAP )
+               * ( (1.0_RP-qv_ref(k))*CONST_Rdry+qv_ref(k)*CONST_Rvap )
           th_ref(k)                                        &
                = tem_ref(k)                                &
-               * ( CNST_PRE00 / pre_ref(k) ) ** CNST_KAPPA
+               * ( CONST_PRE00 / pre_ref(k) )**kappa
        enddo
     endif
 
@@ -664,9 +668,9 @@ contains
        call gcss_reference
        do k = 1, ADM_kall
           tem_ref(k) = th_ref(k)                                &
-               / ( CNST_PRE00 / pre_ref(k) ) ** CNST_KAPPA
+               / ( CONST_PRE00 / pre_ref(k) )**kappa
           rho_ref(k) = pre_ref(k)/tem_ref(k) &
-               / ( (1.0_RP-qv_ref(k))*CNST_RAIR+qv_ref(k)*CNST_RVAP )
+               / ( (1.0_RP-qv_ref(k))*CONST_Rdry+qv_ref(k)*CONST_Rvap )
        enddo
     endif
 
@@ -782,8 +786,8 @@ contains
   !-----------------------------------------------------------------------------
   !> generation of basic state from reference state
   subroutine set_basicstate
-    use mod_cnst, only: &
-       CNST_EGRAV
+    use scale_const, only: &
+       CONST_GRAV
     use mod_adm, only: &
        ADM_have_pl, &
        ADM_lall,    &
@@ -817,9 +821,9 @@ contains
     !---------------------------------------------------------------------------
 
     !--- calculation of geo-potential
-    phi(:,:,:) = CNST_EGRAV * GRD_vz(:,:,:,GRD_Z)
+    phi(:,:,:) = CONST_GRAV * GRD_vz(:,:,:,GRD_Z)
     if ( ADM_have_pl ) then
-       phi_pl(:,:,:) = CNST_EGRAV * GRD_vz_pl(:,:,:,GRD_Z)
+       phi_pl(:,:,:) = CONST_GRAV * GRD_vz_pl(:,:,:,GRD_Z)
     endif
 
     if( ref_type == 'NOBASE' ) return
@@ -951,12 +955,12 @@ contains
   subroutine bsstate_input_ref( basename )
     use mod_misc, only : &
          MISC_get_available_fid
-    use mod_cnst, only : &
-         CNST_EGRAV,     &
-         CNST_RAIR,      &
-         CNST_RVAP,      &
-         CNST_KAPPA,     &
-         CNST_PRE00
+    use scale_const, only: &
+         CONST_GRAV,  &
+         CONST_Rdry,  &
+         CONST_Rvap,  &
+         CONST_CPdry, &
+         CONST_PRE00
     use mod_adm, only :  &
          ADM_kall
     use mod_grd, only :  &
@@ -965,9 +969,12 @@ contains
 
     Character(*), Intent(in) :: basename
     integer :: fid
-    !
+
+    real(RP) :: kappa
     integer :: k
-    !
+
+    kappa = CONST_Rdry / CONST_CPdry
+
     !--- input
     fid = MISC_get_available_fid()
     Open(fid,file=Trim(basename),status='old',form='unformatted')
@@ -980,9 +987,9 @@ contains
     do k = 1, ADM_kall
        th_ref(k)                                        &
             = tem_ref(k)                                &
-            * ( CNST_PRE00 / pre_ref(k) ) ** CNST_KAPPA
-       phi_ref(k) = CNST_EGRAV * GRD_gz(k)
-       rho_ref(k) = pre_ref(k)/ ( (1.0_RP-qv_ref(k))*CNST_RAIR+qv_ref(k)*CNST_RVAP )/ tem_ref(k)
+            * ( CONST_PRE00 / pre_ref(k) )**kappa
+       phi_ref(k) = CONST_GRAV * GRD_gz(k)
+       rho_ref(k) = pre_ref(k)/ ( (1.0_RP-qv_ref(k))*CONST_Rdry+qv_ref(k)*CONST_Rvap )/ tem_ref(k)
     enddo
 
   end subroutine bsstate_input_ref

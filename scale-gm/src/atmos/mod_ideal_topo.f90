@@ -12,8 +12,8 @@ module mod_ideal_topo
   !
   !++ Used modules
   !
-  use mod_precision
-  use mod_debug
+  use scale_precision
+  use scale_prof
   use mod_adm, only: &
      ADM_LOG_FID,  &
      ADM_NSYS
@@ -122,9 +122,9 @@ contains
        ADM_KNONE,     &
        ADM_lall,      &
        ADM_gall
-    use mod_cnst, only: &
-       PI     => CNST_PI, &
-       D2R    => CNST_D2R
+    use scale_const, only: &
+       PI     => CONST_PI, &
+       D2R    => CONST_D2R
     implicit none
 
     real(RP), intent(in)  :: lat (ADM_gall,ADM_KNONE,ADM_lall)
@@ -208,10 +208,10 @@ contains
        ADM_KNONE,     &
        ADM_lall,      &
        ADM_gall
-    use mod_cnst, only: &
-       PI     => CNST_PI,      &
-       D2R    => CNST_D2R,     &
-       RADIUS => CNST_ERADIUS
+    use scale_const, only: &
+       PI     => CONST_PI,      &
+       D2R    => CONST_D2R,     &
+       RADIUS => CONST_RADIUS
     implicit none
 
     real(RP), intent(in)  :: lat (ADM_gall,ADM_KNONE,ADM_lall)
@@ -288,11 +288,11 @@ contains
        ADM_KNONE, &
        ADM_lall,  &
        ADM_gall
-    use mod_cnst, only: &
-       PI     => CNST_PI,      &
-       RADIUS => CNST_ERADIUS, &
-       OHM    => CNST_EOHM,    &
-       GRAV   => CNST_EGRAV
+    use scale_const, only: &
+       PI     => CONST_PI,      &
+       RADIUS => CONST_RADIUS, &
+       OHM    => CONST_OHM,    &
+       GRAV   => CONST_GRAV
     implicit none
 
     real(RP), intent(in)  :: lat (ADM_gall,ADM_KNONE,ADM_lall)

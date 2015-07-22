@@ -12,8 +12,8 @@ program prg_mkllmap
   !
   !++ Used modules
   !
-  use mod_precision
-  use mod_debug
+  use scale_precision
+  use scale_prof
   use mod_adm, only: &
      ADM_LOG_FID,     &
      ADM_MULTI_PRC,   &
@@ -27,8 +27,8 @@ program prg_mkllmap
      FIO_setup
   use mod_comm, only: &
      COMM_setup
-  use mod_cnst, only: &
-     CNST_setup
+  use scale_const, only: &
+     CONST_setup
   use mod_grd, only: &
      GRD_setup
   use mod_latlon, only: &
@@ -59,7 +59,7 @@ program prg_mkllmap
   call COMM_setup
   !
   !--- < cnst module setup > ---
-  call CNST_setup
+  call CONST_setup
   !
   !--- < grid module setup > ---
   call GRD_setup

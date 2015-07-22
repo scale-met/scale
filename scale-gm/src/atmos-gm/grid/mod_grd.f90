@@ -13,8 +13,8 @@ module mod_grd
   !++ Used modules
   !
   use mpi
-  use mod_precision
-  use mod_debug
+  use scale_precision
+  use scale_prof
   use mod_adm, only: &
      ADM_LOG_FID, &
      ADM_NSYS,    &
@@ -239,9 +239,9 @@ contains
        ADM_gslf_pl,        &
        ADM_kmin,           &
        ADM_kmax
-    use mod_cnst, only: &
-       CNST_ERADIUS, &
-       CNST_UNDEF
+    use scale_const, only: &
+       CONST_RADIUS, &
+       CONST_UNDEF
     use mod_comm, only:  &
        COMM_data_transfer
     implicit none
@@ -295,12 +295,12 @@ contains
     allocate( GRD_xr   (ADM_gall   ,K0,ADM_lall   ,ADM_AI:ADM_AJ,ADM_nxyz) )
     allocate( GRD_xr_pl(ADM_gall_pl,K0,ADM_lall_pl,              ADM_nxyz) )
 #endif
-    GRD_x    (:,:,:,:)   = CNST_UNDEF
-    GRD_x_pl (:,:,:,:)   = CNST_UNDEF
-    GRD_xt   (:,:,:,:,:) = CNST_UNDEF
-    GRD_xt_pl(:,:,:,:)   = CNST_UNDEF
-    GRD_xr   (:,:,:,:,:) = CNST_UNDEF
-    GRD_xr_pl(:,:,:,:)   = CNST_UNDEF
+    GRD_x    (:,:,:,:)   = CONST_UNDEF
+    GRD_x_pl (:,:,:,:)   = CONST_UNDEF
+    GRD_xt   (:,:,:,:,:) = CONST_UNDEF
+    GRD_xt_pl(:,:,:,:)   = CONST_UNDEF
+    GRD_xr   (:,:,:,:,:) = CONST_UNDEF
+    GRD_xr_pl(:,:,:,:)   = CONST_UNDEF
 
     call GRD_input_hgrid( hgrid_fname,  & ![IN]
                           .true.,       & ![IN]
@@ -313,7 +313,7 @@ contains
     if ( trim(GRD_grid_type) == 'ON_PLANE' ) then
        call GRD_scaling(triangle_size)
     else
-       call GRD_scaling(CNST_ERADIUS)
+       call GRD_scaling(CONST_RADIUS)
     endif
 
     ! calc position of cell arc

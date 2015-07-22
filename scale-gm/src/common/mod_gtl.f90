@@ -13,8 +13,8 @@ module mod_gtl
   !++ Used modules
   !
   use mpi
-  use mod_precision
-  use mod_debug
+  use scale_precision
+  use scale_prof
   use mod_adm, only: &
      ADM_LOG_FID, &
      ADM_NSYS,    &
@@ -539,8 +539,8 @@ contains
        ADM_prc_me,  &
        ADM_gall,    &
        ADM_lall
-    use mod_cnst, only: &
-       CNST_UNDEF4
+    use scale_const, only: &
+       CONST_UNDEF4
     implicit none
 
     character(len=ADM_MAXFNAME), intent(in)  :: basename
@@ -574,8 +574,8 @@ contains
        if ( output_size == 4 ) then
          var4(:,k_start:k_end) = real(var(:,k_start:k_end,l),kind=4)
 
-         where( var4(:,k_start:k_end) < CNST_UNDEF4+1.0_RP )
-            var4(:,k_start:k_end) = CNST_UNDEF4
+         where( var4(:,k_start:k_end) < CONST_UNDEF4+1.0_RP )
+            var4(:,k_start:k_end) = CONST_UNDEF4
          end where
 
          write(fid,rec=recnum) var4(:,:)

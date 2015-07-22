@@ -12,8 +12,8 @@ program mkrawgrid
   !
   !++ Used modules
   !
-  use mod_precision
-  use mod_debug
+  use scale_precision
+  use scale_prof
   use mod_adm, only: &
      ADM_LOG_FID,     &
      ADM_MULTI_PRC,   &
@@ -24,8 +24,8 @@ program mkrawgrid
      FIO_setup
   use mod_comm, only: &
      COMM_setup
-  use mod_cnst, only: &
-     CNST_setup
+  use scale_const, only: &
+     CONST_setup
   use mod_grd, only: &
      GRD_output_hgrid
   use mod_mkgrd, only: &
@@ -54,7 +54,7 @@ program mkrawgrid
   call COMM_setup
 
   !---< cnst module setup >---
-  call CNST_setup
+  call CONST_setup
 
   !---< mkgrid module setup >---
   call MKGRD_setup

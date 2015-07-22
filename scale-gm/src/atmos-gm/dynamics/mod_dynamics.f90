@@ -12,8 +12,8 @@ module mod_dynamics
   !
   !++ Used modules
   !
-  use mod_precision
-  use mod_debug
+  use scale_precision
+  use scale_prof
   use mod_adm, only: &
      ADM_LOG_FID
   !-----------------------------------------------------------------------------
@@ -155,12 +155,12 @@ contains
        ADM_gmin,    &
        ADM_kmax,    &
        ADM_kmin
-    use mod_cnst, only: &
-       Rdry  => CNST_RAIR,  &
-       Rvap  => CNST_RVAP,  &
-       CVdry => CNST_CV,    &
-       KAPPA => CNST_KAPPA, &
-       PRE00 => CNST_PRE00
+    use scale_const, only: &
+       Rdry  => CONST_Rdry,  &
+       Rvap  => CONST_Rvap,  &
+       CPdry => CONST_CPdry, &
+       CVdry => CONST_CVdry, &
+       PRE00 => CONST_PRE00
     use mod_comm, only: &
        COMM_data_transfer
     use mod_vmtr, only: &
@@ -316,7 +316,7 @@ contains
     real(RP) :: cv   (ADM_gall,   ADM_kall,ADM_lall   )
     real(RP) :: cv_pl(ADM_gall_pl,ADM_kall,ADM_lall_pl)
 
-    real(RP) :: pre0_kappa
+    real(RP) :: pre0_kappa, kappa
 
     real(RP), parameter :: TKE_MIN = 0.0_RP
     real(RP)            :: TKEg_corr
@@ -335,14 +335,14 @@ contains
     !---------------------------------------------------------------------------
     !$acc wait
 
-    call DEBUG_rapstart('__Dynamics')
+    call PROF_rapstart('__Dynamics')
 
     !$acc  data &
     !$acc& create(PROG,PROGq,g_TEND,g_TENDq,f_TEND,f_TENDq,PROG0,PROGq0,PROG_split,PROG_mean) &
     !$acc& create(rho,vx,vy,vz,w,ein,tem,pre,eth,th,rhogd,pregd,q,qd,cv) &
     !$acc& pcopy(PRG_var,PRG_var1)
 
-    call DEBUG_rapstart('___Pre_Post')
+    call PROF_rapstart('___Pre_Post')
 
     large_step_dt = TIME_DTL / real(DYN_DIV_NUM,kind=RP)
 
@@ -356,11 +356,11 @@ contains
                      PROGq(:,:,:,:),       PROGq_pl(:,:,:,:),       & ! [OUT]
                      0                                              ) ! [IN]
 
-    call DEBUG_rapend  ('___Pre_Post')
+    call PROF_rapend  ('___Pre_Post')
 
     do ndyn = 1, DYN_DIV_NUM
 
-    call DEBUG_rapstart('___Pre_Post')
+    call PROF_rapstart('___Pre_Post')
 
     !--- save
     !$acc kernels pcopy(PROG0) pcopyin(PROG) async(0)
@@ -381,11 +381,11 @@ contains
        endif
     endif
 
-    call DEBUG_rapend  ('___Pre_Post')
+    call PROF_rapend  ('___Pre_Post')
 
     if ( TIME_INTEG_TYPE == 'TRCADV' ) then  ! TRC-ADV Test Bifurcation
 
-       call DEBUG_rapstart('___Tracer_Advection')
+       call PROF_rapstart('___Tracer_Advection')
 
        !$acc kernels pcopy(f_TEND) async(0)
        f_TEND   (:,:,:,:) = 0.0_RP
@@ -404,7 +404,7 @@ contains
                                   large_step_dt,                                     & ! [IN]
                                   THUBURN_LIM                                        ) ! [IN]
 
-       call DEBUG_rapend  ('___Tracer_Advection')
+       call PROF_rapend  ('___Tracer_Advection')
 
        call forcing_update( PROG(:,:,:,:), PROG_pl(:,:,:,:) ) ! [INOUT]
     endif
@@ -416,7 +416,7 @@ contains
     !---------------------------------------------------------------------------
     do nl = 1, num_of_iteration_lstep
 
-       call DEBUG_rapstart('___Pre_Post')
+       call PROF_rapstart('___Pre_Post')
 
        !---< Generate diagnostic values and set the boudary conditions
        !$acc  kernels pcopy(rho,vx,vy,vz,ein) pcopyin(PROG,VMTR_GSGAM2) async(0)
@@ -504,13 +504,14 @@ contains
                            VMTR_C2WfactGz(:,:,:,l)  ) ! [IN]
        enddo
 
-       pre0_kappa = PRE00**KAPPA
+       kappa      = Rdry / CPdry
+       pre0_kappa = PRE00**kappa
 
        !$acc kernels pcopy(th,eth) pcopyin(tem,pre,rho,ein) async(0)
        do l = 1, ADM_lall
        do k = 1, ADM_kall
        do g = 1, ADM_gall
-          th (g,k,l) = tem(g,k,l) + pre(g,k,l)**KAPPA * pre0_kappa
+          th (g,k,l) = tem(g,k,l) + pre(g,k,l)**kappa * pre0_kappa
           eth(g,k,l) = ein(g,k,l) + pre(g,k,l) / rho(g,k,l)
        enddo
        enddo
@@ -617,11 +618,11 @@ contains
        endif
 
        !$acc wait
-       call DEBUG_rapend  ('___Pre_Post')
+       call PROF_rapend  ('___Pre_Post')
        !------------------------------------------------------------------------
        !> LARGE step
        !------------------------------------------------------------------------
-       call DEBUG_rapstart('___Large_step')
+       call PROF_rapstart('___Large_step')
 
        !--- calculation of advection tendency including Coriolis force
        call src_advection_convergence_momentum( vx,                     vx_pl,                     & ! [IN]
@@ -787,11 +788,11 @@ contains
        g_TEND_pl(:,:,:,:) = g_TEND_pl(:,:,:,:) + f_TEND_pl(:,:,:,:)
 
        !$acc wait
-       call DEBUG_rapend  ('___Large_step')
+       call PROF_rapend  ('___Large_step')
        !------------------------------------------------------------------------
        !> SMALL step
        !------------------------------------------------------------------------
-       call DEBUG_rapstart('___Small_step')
+       call PROF_rapstart('___Small_step')
 
        if ( nl /= 1 ) then ! update split values
           !$acc kernels pcopy(PROG_split) pcopyin(PROG0,PROG) async(0)
@@ -849,11 +850,11 @@ contains
                            small_step_dt                                              ) ! [IN]
 
        !$acc wait
-       call DEBUG_rapend  ('___Small_step')
+       call PROF_rapend  ('___Small_step')
        !------------------------------------------------------------------------
        !>  Tracer advection
        !------------------------------------------------------------------------
-       call DEBUG_rapstart('___Tracer_Advection')
+       call PROF_rapstart('___Tracer_Advection')
        do_tke_correction = .false.
 
        if ( TRC_ADV_TYPE == 'MIURA2004' ) then
@@ -927,9 +928,9 @@ contains
 
        endif
 
-       call DEBUG_rapend  ('___Tracer_Advection')
+       call PROF_rapend  ('___Tracer_Advection')
 
-       call DEBUG_rapstart('___Pre_Post')
+       call PROF_rapstart('___Pre_Post')
 
        !--- TKE fixer [comment] 2011/08/16 M.Satoh: this fixer is needed for every small time steps
        if ( do_tke_correction ) then
@@ -976,13 +977,13 @@ contains
           !$acc end kernels
        endif
 
-       call DEBUG_rapend  ('___Pre_Post')
+       call PROF_rapend  ('___Pre_Post')
 
     enddo !--- large step
 
     enddo !--- divided step for dynamics
 
-    call DEBUG_rapstart('___Pre_Post')
+    call PROF_rapstart('___Pre_Post')
 
     call prgvar_set( PROG(:,:,:,I_RHOG),   PROG_pl(:,:,:,I_RHOG),   & ! [IN]
                      PROG(:,:,:,I_RHOGVX), PROG_pl(:,:,:,I_RHOGVX), & ! [IN]
@@ -993,12 +994,12 @@ contains
                      PROGq(:,:,:,:),       PROGq_pl(:,:,:,:),       & ! [IN]
                      0                                              ) ! [IN]
 
-    call DEBUG_rapend  ('___Pre_Post')
+    call PROF_rapend  ('___Pre_Post')
 
     !$acc end data
 
     !$acc wait
-    call DEBUG_rapend  ('__Dynamics')
+    call PROF_rapend  ('__Dynamics')
 
     return
   end subroutine dynamics_step

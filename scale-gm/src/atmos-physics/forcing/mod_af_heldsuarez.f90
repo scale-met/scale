@@ -12,8 +12,8 @@ module mod_af_heldsuarez
   !
   !++ Used modules
   !
-  use mod_precision
-  use mod_debug
+  use scale_precision
+  use scale_prof
   use mod_adm, only: &
      ADM_LOG_FID
   !-----------------------------------------------------------------------------
@@ -66,10 +66,11 @@ contains
        kdim => ADM_kall, &
        kmin => ADM_kmin, &
        kmax => ADM_kmax
-    use mod_cnst, only: &
-       CV    => CNST_CV,    &
-       KAPPA => CNST_KAPPA, &
-       PRE00 => CNST_PRE00
+    use scale_const, only: &
+       Rdry  => CONST_Rdry,  &
+       CP    => CONST_CPdry, &
+       CV    => CONST_CVdry, &
+       PRE00 => CONST_PRE00
     implicit none
 
     integer, intent(in)  :: ijdim
@@ -97,8 +98,12 @@ contains
     real(RP), parameter :: k_a     = 1.0_RP / (40.0_RP * 86400.0_RP )
     real(RP), parameter :: k_s     = 1.0_RP / ( 4.0_RP * 86400.0_RP )
 
+    real(RP) :: kappa
+
     integer :: n, k
     !---------------------------------------------------------------------------
+
+    KAPPA = Rdry / CP
 
     fvx(:,:) = 0.0_RP
     fvy(:,:) = 0.0_RP

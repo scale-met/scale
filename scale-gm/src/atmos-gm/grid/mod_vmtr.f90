@@ -12,8 +12,8 @@ module mod_vmtr
   !
   !++ Used modules
   !
-  use mod_precision
-  use mod_debug
+  use scale_precision
+  use scale_prof
   use mod_adm, only: &
      ADM_LOG_FID
   use mod_adm, only: &
@@ -147,8 +147,8 @@ contains
        ADM_KNONE,     &
        ADM_kmin,      &
        ADM_kmax
-    use mod_cnst, only: &
-       CNST_EGRAV
+    use scale_const, only: &
+       CONST_GRAV
     use mod_comm, only: &
        COMM_data_transfer
     use mod_grd, only: &
@@ -440,7 +440,7 @@ contains
     do g = 1, ADM_gall
        VMTR_VOLUME(g,k,l) = GMTR_area(g,l) * VMTR_GSGAM2(g,k,l) * GRD_dgz(k)
 
-       VMTR_PHI   (g,k,l) = GRD_vz(g,k,l,GRD_Z) * CNST_EGRAV
+       VMTR_PHI   (g,k,l) = GRD_vz(g,k,l,GRD_Z) * CONST_GRAV
     enddo
     enddo
     enddo
@@ -585,7 +585,7 @@ contains
        do g = 1, ADM_gall_pl
           VMTR_VOLUME_pl(g,k,l) = GMTR_area_pl(g,l) * VMTR_GSGAM2_pl(g,k,l) * GRD_dgz(k)
 
-          VMTR_PHI_pl   (g,k,l) = GRD_vz_pl(g,k,l,GRD_Z) * CNST_EGRAV
+          VMTR_PHI_pl   (g,k,l) = GRD_vz_pl(g,k,l,GRD_Z) * CONST_GRAV
        enddo
        enddo
        enddo

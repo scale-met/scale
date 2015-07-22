@@ -12,8 +12,8 @@ module mod_mkgrd
   !
   !++ Used modules
   !
-  use mod_precision
-  use mod_debug
+  use scale_precision
+  use scale_prof
   use mod_adm, only: &
      ADM_LOG_FID,  &
      ADM_MAXFNAME, &
@@ -156,8 +156,8 @@ contains
        ADM_gslf_pl, &
        ADM_NPL,     &
        ADM_SPL
-    use mod_cnst, only: &
-       PI => CNST_PI
+    use scale_const, only: &
+       PI => CONST_PI
     use mod_comm, only: &
        COMM_data_transfer
     implicit none
@@ -338,8 +338,8 @@ contains
        ADM_GImJm,       &
        ADM_GIoJm,       &
        ADM_gmin
-    use mod_cnst, only: &
-       PI => CNST_PI
+    use scale_const, only: &
+       PI => CONST_PI
     use mod_comm, only: &
        COMM_data_transfer
     use mod_gtl, only: &
@@ -590,8 +590,8 @@ contains
        ADM_KNONE,   &
        ADM_lall,    &
        ADM_lall_pl
-    use mod_cnst, only: &
-       PI => CNST_PI
+    use scale_const, only: &
+       PI => CONST_PI
     use mod_comm, only: &
        COMM_data_transfer
     implicit none
@@ -682,8 +682,8 @@ contains
        ADM_KNONE,   &
        ADM_lall,    &
        ADM_lall_pl
-    use mod_cnst, only: &
-       PI => CNST_PI
+    use scale_const, only: &
+       PI => CONST_PI
     use mod_comm, only: &
        COMM_data_transfer
     implicit none
@@ -848,8 +848,8 @@ contains
        ADM_KNONE,   &
        ADM_lall,    &
        ADM_lall_pl
-    use mod_cnst, only: &
-       PI => CNST_PI
+    use scale_const, only: &
+       PI => CONST_PI
     use mod_comm, only: &
        COMM_data_transfer
     implicit none
@@ -957,9 +957,9 @@ contains
        ADM_TJ,       &
        ADM_gmax,     &
        ADM_gmin
-    use mod_cnst, only: &
-       PI     => CNST_PI,     &
-       RADIUS => CNST_ERADIUS
+    use scale_const, only: &
+       PI     => CONST_PI,     &
+       RADIUS => CONST_RADIUS
     use mod_gmtr, only: &
        GMTR_P_AREA, &
        GMTR_P_var,  &

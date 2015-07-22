@@ -12,7 +12,7 @@ module mod_misc
   !
   !++ used modules
   !
-  use mod_precision
+  use scale_precision
   !-----------------------------------------------------------------------------
   implicit none
   private

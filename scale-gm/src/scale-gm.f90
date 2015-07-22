@@ -12,8 +12,23 @@ program prg_driver
   !
   !++ Used modules
   !
-  use mod_precision
-  use mod_debug
+  use dc_log, only: &
+     LogInit
+  use gtool_file, only: &
+     FileCloseAll
+  use scale_precision
+  use scale_stdio
+  use scale_prof
+
+  use scale_process, only: &
+     PRC_MPIsetup
+  use scale_const, only: &
+     CONST_setup
+  use scale_calendar, only: &
+     CALENDAR_setup
+  use scale_random, only: &
+     RANDOM_setup
+
   use mod_adm, only: &
      ADM_MULTI_PRC,      &
      ADM_LOG_FID,        &
@@ -21,13 +36,8 @@ program prg_driver
      ADM_prc_run_master, &
      ADM_proc_init,      &
      ADM_proc_finish,    &
-     ADM_setup
-  use mod_random, only: &
-     RANDOM_setup
-  use mod_cnst, only: &
-     CNST_setup
-  use scale_calendar, only: &
-     CALENDAR_setup
+     ADM_setup, &
+     MY_COMM_WORLD => ADM_COMM_WORLD
   use mod_fio, only: &
      FIO_setup
   use mod_comm, only: &
@@ -154,34 +164,53 @@ program prg_driver
   !##### OpenACC #####
   implicit none
 
+#include "scale-gm.h"
+
   character(len=14) :: cdate
 
   integer :: n
-  !-----------------------------------------------------------------------------
 
+  character(len=H_LONG) :: fname = 'nhm_driver.cnf'
+
+  character(len=H_MID), parameter :: MODELNAME = "SCALE-LES ver. "//VERSION
+  !=============================================================================
+
+  !########## Initial setup ##########
+
+  ! setup standard I/O
+  call IO_setup( MODELNAME, .true., fname )
+
+  ! setup MPI
   call ADM_proc_init(ADM_MULTI_PRC)
 
-  !---< admin module setup >---
+  ! setup process
   call ADM_setup('nhm_driver.cnf')
 
-  !#############################################################################
+  ! setup MPI
+  call PRC_MPIsetup( MY_COMM_WORLD )
+
+  ! setup Log
+  call LogInit(IO_FID_CONF, IO_FID_LOG, IO_L)
+
+  ! setup PROF
+  call PROF_setup
 
   write(ADM_LOG_FID,*) '##### start  setup     #####'
   if ( ADM_prc_me == ADM_prc_run_master ) then
      write(*,*) '##### start  setup     #####'
   endif
 
-  call DEBUG_rapstart('Total')
-  call DEBUG_rapstart('Setup_ALL')
+  call PROF_rapstart('Total')
+  call PROF_rapstart('Setup_ALL')
 
-  !---< radom module setup >---
-  call RANDOM_setup
+  ! setup constants
+  call CONST_setup
 
-  !---< cnst module setup >---
-  call CNST_setup
-
-  !---< calendar module setup >---
+  ! setup calendar
   call CALENDAR_setup
+
+  ! setup random number
+  call RANDOM_setup
 
   !---< I/O module setup >---
   call FIO_setup
@@ -237,13 +266,13 @@ program prg_driver
   endif
 
 
-  call DEBUG_rapend('Setup_ALL')
+  call PROF_rapend('Setup_ALL')
 
   !#############################################################################
 #ifdef _FIPP_
   call fipp_start()
 #endif
-  call DEBUG_rapstart('Main_ALL')
+  call PROF_rapstart('Main_ALL')
 
   write(ADM_LOG_FID,*) '##### start  main loop #####'
   if ( ADM_prc_me == ADM_prc_run_master ) then
@@ -289,12 +318,12 @@ program prg_driver
 
   do n = 1, TIME_LSTEP_MAX
 
-     call DEBUG_rapstart('_Atmos')
+     call PROF_rapstart('_Atmos')
      call dynamics_step
      call forcing_step
-     call DEBUG_rapend  ('_Atmos')
+     call PROF_rapend  ('_Atmos')
 
-     call DEBUG_rapstart('_History')
+     call PROF_rapstart('_History')
      call history_vars
      call TIME_advance
 
@@ -306,7 +335,7 @@ program prg_driver
         cdate = ""
         call restart_output( restart_output_basename )
      endif
-     call DEBUG_rapend  ('_History')
+     call PROF_rapend  ('_History')
 
   enddo
 
@@ -316,14 +345,16 @@ program prg_driver
      write(*,*) '##### finish main loop #####'
   endif
 
-  call DEBUG_rapend('Main_ALL')
+  call PROF_rapend('Main_ALL')
 #ifdef _FIPP_
   call fipp_stop()
 #endif
   !#############################################################################
 
-  call DEBUG_rapend('Total')
-  call DEBUG_rapreport
+  call PROF_rapend('Total')
+  call PROF_rapreport
+
+  call FileCloseAll
 
   !--- finalize all process
   call ADM_proc_finish

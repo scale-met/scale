@@ -13,7 +13,7 @@ module mod_adm
   !++ used modules
   !
   use mpi
-  use mod_precision
+  use scale_precision
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -43,7 +43,7 @@ module mod_adm
   !
   ! Log file ID & Control file ID
   integer, public      :: ADM_LOG_FID = 6 ! default is STDOUT
-  integer, public, parameter :: ADM_CTL_FID = 35
+  integer, public      :: ADM_CTL_FID = 35
   !
   ! Identifier for single computation or parallel computation
   integer, public, parameter :: ADM_MULTI_PRC  = 1
@@ -396,7 +396,8 @@ contains
        msg_base     )
     use mod_misc, only: &
        MISC_make_idstr, &
-       MISC_get_available_fid
+       MISC_get_available_fid, &
+       MISC_get_fid
     implicit none
 
     character(LEN=*), intent(in) :: param_fname ! namelist file name
@@ -442,6 +443,7 @@ contains
     write(ADM_LOG_FID,*) '#                                                          #'
     write(ADM_LOG_FID,*) '############################################################'
 
+    ADM_CTL_FID = MISC_get_fid( param_fname )
     !--- open control file
     open( unit   = ADM_CTL_FID,       &
           file   = trim(param_fname), &

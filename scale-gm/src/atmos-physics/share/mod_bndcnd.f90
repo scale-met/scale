@@ -12,8 +12,8 @@ module mod_bndcnd
   !
   !++ Used modules
   !
-  use mod_precision
-  use mod_debug
+  use scale_precision
+  use scale_prof
   use mod_adm, only: &
      ADM_LOG_FID,  &
      ADM_NSYS
@@ -60,6 +60,8 @@ module mod_bndcnd
   character(len=ADM_NSYS), private :: BND_TYPE_M_BOTTOM != 'RIGID' : rigid surface
                                                         != 'FREE'  : free surface
 
+  real(RP), private :: BND_FIXED_SFC_T ! surface temperature to fix
+
   logical, private :: is_top_tem   = .true.
   logical, private :: is_top_epl   = .false.
   logical, private :: is_btm_fix   = .false.
@@ -78,11 +80,10 @@ contains
     use mod_adm, only: &
        ADM_CTL_FID, &
        ADM_proc_stop
-    use mod_cnst, only: &
-       CNST_TEMS0
     implicit none
 
     namelist / BNDCNDPARAM / &
+       BND_FIXED_SFC_T,   &
        BND_TYPE_T_TOP,    &
        BND_TYPE_T_BOTTOM, &
        BND_TYPE_M_TOP,    &
@@ -130,7 +131,7 @@ contains
 
     if    ( BND_TYPE_T_BOTTOM == 'FIX' ) then
        write(ADM_LOG_FID,*) '*** Boundary setting type (temperature, bottom) : fixed'
-       write(ADM_LOG_FID,*) '***           boundary temperature (CNST_TEMS0) : ', CNST_TEMS0
+       write(ADM_LOG_FID,*) '***           boundary temperature (BND_FIXED_SFC_T) : ', BND_FIXED_SFC_T
        is_btm_fix = .true.
     elseif( BND_TYPE_T_BOTTOM == 'TEM' ) then
        write(ADM_LOG_FID,*) '*** Boundary setting type (temperature, bottom) : equal to lowermost atmosphere'
@@ -199,8 +200,8 @@ contains
        kdim => ADM_kall, &
        kmin => ADM_kmin, &
        kmax => ADM_kmax
-    use mod_cnst, only: &
-       CVdry => CNST_CV
+    use scale_const, only: &
+       CVdry => CONST_CVdry
     implicit none
 
     integer, intent(in)    :: ijdim           ! number of horizontal grid
@@ -311,13 +312,12 @@ contains
        kdim => ADM_kall, &
        kmin => ADM_kmin, &
        kmax => ADM_kmax
-    use mod_cnst, only: &
-       CNST_RAIR,  &
-       CNST_EGRAV, &
-       CNST_TEMS0
+    use scale_const, only: &
+       CONST_Rdry, &
+       CONST_GRAV
     implicit none
 
-    integer, intent(in)    :: ijdim           ! number of horizontal grid
+    integer,  intent(in)    :: ijdim           ! number of horizontal grid
     real(RP), intent(inout) :: tem(ijdim,kdim) ! temperature
     real(RP), intent(inout) :: rho(ijdim,kdim) ! density
     real(RP), intent(inout) :: pre(ijdim,kdim) ! pressure
@@ -343,10 +343,10 @@ contains
 
        elseif( is_top_epl ) then
 
-          z  = phi(ij,kmax+1) / CNST_EGRAV
-          z1 = phi(ij,kmax  ) / CNST_EGRAV
-          z2 = phi(ij,kmax-1) / CNST_EGRAV
-          z3 = phi(ij,kmax-2) / CNST_EGRAV
+          z  = phi(ij,kmax+1) / CONST_GRAV
+          z1 = phi(ij,kmax  ) / CONST_GRAV
+          z2 = phi(ij,kmax-1) / CONST_GRAV
+          z3 = phi(ij,kmax-2) / CONST_GRAV
 
           tem(ij,kmax+1) = lag_intpl( z ,                 &
                                       z1, tem(ij,kmax  ), &
@@ -356,14 +356,14 @@ contains
        endif
 
        if    ( is_btm_fix ) then
-          tem(ij,kmin-1) = CNST_TEMS0
+          tem(ij,kmin-1) = BND_FIXED_SFC_T
        elseif( is_btm_tem ) then
           tem(ij,kmin-1) = tem(ij,kmin) ! dT/dz = 0
        elseif( is_btm_epl ) then
-          z1 = phi(ij,kmin+2) / CNST_EGRAV
-          z2 = phi(ij,kmin+1) / CNST_EGRAV
-          z3 = phi(ij,kmin  ) / CNST_EGRAV
-          z  = phi(ij,kmin-1) / CNST_EGRAV
+          z1 = phi(ij,kmin+2) / CONST_GRAV
+          z2 = phi(ij,kmin+1) / CONST_GRAV
+          z3 = phi(ij,kmin  ) / CONST_GRAV
+          z  = phi(ij,kmin-1) / CONST_GRAV
 
           tem(ij,kmin-1) = lag_intpl( z,                  &
                                       z1, tem(ij,kmin+2), &
@@ -382,8 +382,8 @@ contains
        pre(ij,kmin-1) = pre(ij,kmin+1) - rho(ij,kmin) * ( phi(ij,kmin-1) - phi(ij,kmin+1) )
 
        !--- set the boundary of density ( equation of state )
-       rho(ij,kmax+1) = pre(ij,kmax+1) / ( CNST_RAIR * tem(ij,kmax+1) )
-       rho(ij,kmin-1) = pre(ij,kmin-1) / ( CNST_RAIR * tem(ij,kmin-1) )
+       rho(ij,kmax+1) = pre(ij,kmax+1) / ( CONST_Rdry * tem(ij,kmax+1) )
+       rho(ij,kmin-1) = pre(ij,kmin-1) / ( CONST_Rdry * tem(ij,kmin-1) )
 
     enddo
     !$acc end kernels

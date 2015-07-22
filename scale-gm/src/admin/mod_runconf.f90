@@ -12,8 +12,8 @@ module mod_runconf
   !
   !++ Used modules
   !
-  use mod_precision
-  use mod_debug
+  use scale_precision
+  use scale_prof
   use mod_adm, only: &
      ADM_LOG_FID,  &
      ADM_NSYS
@@ -408,14 +408,14 @@ contains
   subroutine RUNCONF_thermodyn_setup
     use mod_adm, only: &
        ADM_proc_stop
-    use mod_cnst, only: &
-       CNST_CVV,   &
-       CNST_CPV,   &
-       CNST_CL,    &
-       CNST_CI,    &
-       CNST_LH00,  &
-       CNST_LHS00, &
-       CNST_LHF00
+    use scale_const, only: &
+       CONST_CVvap, &
+       CONST_CPvap, &
+       CONST_CL,    &
+       CONST_CI,    &
+       CONST_LHV00, &
+       CONST_LHS00, &
+       CONST_LHF00
     implicit none
 
     integer :: v
@@ -425,28 +425,28 @@ contains
     allocate( CVW(NQW_STR:NQW_END) )
     allocate( CPW(NQW_STR:NQW_END) )
 
-    LHV = CNST_LH00
-    LHS = CNST_LHS00
-    LHF = CNST_LHF00
+    LHV = CONST_LHV00
+    LHS = CONST_LHS00
+    LHF = CONST_LHF00
     do v = NQW_STR, NQW_END
        if    ( v == I_QV ) then ! vapor
-          CVW(v) = CNST_CVV
-          CPW(v) = CNST_CPV
+          CVW(v) = CONST_CVvap
+          CPW(v) = CONST_CPvap
        elseif( v == I_QC ) then ! cloud
-          CVW(v) = CNST_CL
-          CPW(v) = CNST_CL
+          CVW(v) = CONST_CL
+          CPW(v) = CONST_CL
        elseif( v == I_QR ) then ! rain
-          CVW(v) = CNST_CL
-          CPW(v) = CNST_CL
+          CVW(v) = CONST_CL
+          CPW(v) = CONST_CL
        elseif( v == I_QI ) then ! ice
-          CVW(v) = CNST_CI
-          CPW(v) = CNST_CI
+          CVW(v) = CONST_CI
+          CPW(v) = CONST_CI
        elseif( v == I_QS ) then ! snow
-          CVW(v) = CNST_CI
-          CPW(v) = CNST_CI
+          CVW(v) = CONST_CI
+          CPW(v) = CONST_CI
        elseif( v == I_QG ) then ! graupel
-          CVW(v) = CNST_CI
-          CPW(v) = CNST_CI
+          CVW(v) = CONST_CI
+          CPW(v) = CONST_CI
        endif
     enddo
 

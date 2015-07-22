@@ -12,8 +12,8 @@ module mod_vi
   !
   !++ Used modules
   !
-  use mod_precision
-  use mod_debug
+  use scale_precision
+  use scale_prof
   use mod_adm, only: &
      ADM_LOG_FID
   use mod_adm, only: &
@@ -131,10 +131,10 @@ contains
        ADM_gmin,    &
        ADM_kmax,    &
        ADM_kmin
-    use mod_cnst, only: &
-       GRAV  => CNST_EGRAV, &
-       Rdry  => CNST_RAIR,  &
-       CVdry => CNST_CV
+    use scale_const, only: &
+       GRAV  => CONST_GRAV, &
+       Rdry  => CONST_Rdry,  &
+       CVdry => CONST_CVdry
     use mod_comm, only: &
        COMM_data_transfer
     use mod_grd, only: &
@@ -310,7 +310,7 @@ contains
     suf(i,j) = ADM_gall_1d * ((j)-1) + (i)
     !---------------------------------------------------------------------------
 
-    call DEBUG_rapstart('____vi_path0')
+    call PROF_rapstart('____vi_path0')
 
     ! full level -> half level
     do l = 1, ADM_lall
@@ -497,7 +497,7 @@ contains
                                 gz_tilde, gz_tilde_pl, & ! [IN]
                                 dt                     ) ! [IN]
 
-    call DEBUG_rapend  ('____vi_path0')
+    call PROF_rapend  ('____vi_path0')
 
     !---------------------------------------------------------------------------
     !
@@ -506,7 +506,7 @@ contains
     !---------------------------------------------------------------------------
     do ns = 1, num_of_itr
 
-       call DEBUG_rapstart('____vi_path1')
+       call PROF_rapstart('____vi_path1')
 
        !---< calculation of preg_prim(*) from rhog(*) & rhoge(*) >
 
@@ -680,8 +680,8 @@ contains
        enddo
        enddo
 
-       call DEBUG_rapend  ('____vi_path1')
-       call DEBUG_rapstart('____vi_path2')
+       call PROF_rapend  ('____vi_path1')
+       call PROF_rapstart('____vi_path2')
 
        !---< vertical implicit scheme >
 
@@ -767,7 +767,7 @@ contains
           enddo
        endif
 
-       call DEBUG_rapend  ('____vi_path2')
+       call PROF_rapend  ('____vi_path2')
 
     enddo  ! small step end
 
@@ -851,9 +851,9 @@ contains
        ADM_lall,    &
        ADM_lall_pl, &
        ADM_kall
-    use mod_cnst, only: &
-       Rdry  => CNST_RAIR, &
-       CVdry => CNST_CV
+    use scale_const, only: &
+       Rdry  => CONST_Rdry, &
+       CVdry => CONST_CVdry
     use mod_vmtr, only: &
        VMTR_PHI,          &
        VMTR_PHI_pl,       &
@@ -1214,10 +1214,10 @@ contains
        ADM_kall,    &
        ADM_kmin,    &
        ADM_kmax
-    use mod_cnst, only: &
-       GRAV  => CNST_EGRAV, &
-       Rdry  => CNST_RAIR,  &
-       CVdry => CNST_CV
+    use scale_const, only: &
+       GRAV  => CONST_GRAV, &
+       Rdry  => CONST_Rdry,  &
+       CVdry => CONST_CVdry
     use mod_grd, only: &
        GRD_rdgzh, &
        GRD_rdgz,  &
@@ -1252,9 +1252,9 @@ contains
     ! A_o(:,:,:) = VMTR_RGSGAM2(:,:,:)
     ! A_i(:,:,:) = VMTR_GAM2H(:,:,:) * eth(:,:,:) ! [debug] 20120727 H.Yashiro
     ! B  (:,:,:) = g_tilde(:,:,:)
-    ! C_o(:,:,:) = VMTR_RGAM2H (:,:,:) * ( CNST_CV / CNST_RAIR * CNST_EGRAV )
+    ! C_o(:,:,:) = VMTR_RGAM2H (:,:,:) * ( CONST_CVdry / CONST_Rdry * CONST_GRAV )
     ! C_i(:,:,:) = 1.0_RP / VMTR_RGAM2H(:,:,:)
-    ! D  (:,:,:) = CNST_CV / CNST_RAIR / ( dt*dt ) / VMTR_RGSQRTH(:,:,:)
+    ! D  (:,:,:) = CONST_CVdry / CONST_Rdry / ( dt*dt ) / VMTR_RGSQRTH(:,:,:)
     !
     ! do k = ADM_kmin+1, ADM_kmax
     !    Mc(:,k,:) = dble(NON_HYDRO_ALPHA) *D(:,k,:)              &
@@ -1272,7 +1272,7 @@ contains
     !                * ( B(:,k-1,:) + C_o(:,k,:) * C_i(:,k-1,:) )
     ! enddo
 
-    call DEBUG_rapstart('____vi_rhow_update_matrix')
+    call PROF_rapstart('____vi_rhow_update_matrix')
 
     GCVovR   = GRAV * CVdry / Rdry
     ACVovRt2 = real(NON_HYDRO_ALPHA,kind=RP) * CVdry / Rdry / ( dt*dt )
@@ -1345,7 +1345,7 @@ contains
        enddo
     endif
 
-    call DEBUG_rapend('____vi_rhow_update_matrix')
+    call PROF_rapend('____vi_rhow_update_matrix')
 
     return
   end subroutine vi_rhow_update_matrix
@@ -1369,10 +1369,10 @@ contains
        ADM_kall,    &
        ADM_kmin,    &
        ADM_kmax
-    use mod_cnst, only: &
-       GRAV  => CNST_EGRAV, &
-       Rdry  => CNST_RAIR,  &
-       CVdry => CNST_CV
+    use scale_const, only: &
+       GRAV  => CONST_GRAV, &
+       Rdry  => CONST_Rdry,  &
+       CVdry => CONST_CVdry
     use mod_grd, only: &
        GRD_rdgzh, &
        GRD_afac,  &
@@ -1422,7 +1422,7 @@ contains
     integer :: g, k, l
     !---------------------------------------------------------------------------
 
-    call DEBUG_rapstart('____vi_rhow_solver')
+    call PROF_rapstart('____vi_rhow_solver')
 
     alfa = real(NON_HYDRO_ALPHA,kind=RP)
     CVovRt2 = CVdry / Rdry / (dt*dt)
@@ -1534,7 +1534,7 @@ contains
        enddo
     endif
 
-    call DEBUG_rapend('____vi_rhow_solver')
+    call PROF_rapend('____vi_rhow_solver')
 
     return
   end subroutine vi_rhow_solver

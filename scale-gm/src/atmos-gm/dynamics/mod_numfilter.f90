@@ -12,8 +12,8 @@ module mod_numfilter
   !
   !++ Used modules
   !
-  use mod_precision
-  use mod_debug
+  use scale_precision
+  use scale_prof
   use mod_adm, only: &
      ADM_LOG_FID, &
      ADM_NSYS
@@ -120,9 +120,9 @@ contains
        ADM_proc_stop, &
        ADM_GLEVEL,    &
        ADM_kall
-    use mod_cnst, only: &
-       PI     => CNST_PI, &
-       RADIUS => CNST_ERADIUS
+    use scale_const, only: &
+       PI     => CONST_PI, &
+       RADIUS => CONST_RADIUS
     use mod_grd, only: &
        GRD_gz,   &
        GRD_gzh
@@ -278,8 +278,8 @@ contains
        ADM_kall,    &
        ADM_kmin,    &
        ADM_kmax
-    use mod_cnst, only: &
-       EPS => CNST_EPS_ZERO
+    use scale_const, only: &
+       EPS => CONST_EPS
     use mod_grd, only: &
        GRD_htop, &
        GRD_gz,   &
@@ -351,9 +351,9 @@ contains
        ADM_kall,    &
        ADM_kmin,    &
        ADM_kmax
-    use mod_cnst, only: &
-       PI  => CNST_PI,       &
-       EPS => CNST_EPS_ZERO
+    use scale_const, only: &
+       PI  => CONST_PI,       &
+       EPS => CONST_EPS
     use mod_grd, only: &
        GRD_htop, &
        GRD_gz
@@ -637,9 +637,9 @@ contains
        ADM_kall, &
        ADM_kmin, &
        ADM_kmax
-    use mod_cnst, only: &
-       PI  => CNST_PI,       &
-       EPS => CNST_EPS_ZERO
+    use scale_const, only: &
+       PI  => CONST_PI,       &
+       EPS => CONST_EPS
     use mod_grd, only: &
        GRD_gz,   &
        GRD_gzh,  &
@@ -709,10 +709,10 @@ contains
        ADM_kall,    &
        ADM_kmin,    &
        ADM_kmax
-    use mod_cnst, only: &
-       PI    => CNST_PI,       &
-       EPS   => CNST_EPS_ZERO, &
-       SOUND => CNST_SOUND
+    use scale_const, only: &
+       PI    => CONST_PI,       &
+       EPS   => CONST_EPS, &
+       SOUND => CONST_SOUND
     use mod_grd, only: &
        GRD_gz
     use mod_gmtr, only: &
@@ -873,10 +873,10 @@ contains
        ADM_kall,    &
        ADM_kmin,    &
        ADM_kmax
-    use mod_cnst, only: &
-       PI    => CNST_PI,       &
-       EPS   => CNST_EPS_ZERO, &
-       SOUND => CNST_SOUND
+    use scale_const, only: &
+       PI    => CONST_PI,       &
+       EPS   => CONST_EPS, &
+       SOUND => CONST_SOUND
     use mod_grd, only: &
        GRD_htop, &
        GRD_gz
@@ -1075,7 +1075,7 @@ contains
 
     if( .NOT. NUMFILTER_DOrayleigh ) return
 
-    call DEBUG_rapstart('____numfilter_rayleigh_damping')
+    call PROF_rapstart('____numfilter_rayleigh_damping')
 
     if ( .NOT. rayleigh_damp_only_w ) then
        do l = 1, ADM_lall
@@ -1127,7 +1127,7 @@ contains
        enddo
     endif
 
-    call DEBUG_rapend('____numfilter_rayleigh_damping')
+    call PROF_rapend('____numfilter_rayleigh_damping')
 
     return
   end subroutine numfilter_rayleigh_damping
@@ -1154,8 +1154,8 @@ contains
        ADM_kall,    &
        ADM_kmin,    &
        ADM_kmax
-    use mod_cnst, only: &
-       CVdry => CNST_CV
+    use scale_const, only: &
+       CVdry => CONST_CVdry
     use mod_comm, only: &
        COMM_data_transfer
     use mod_grd, only: &
@@ -1239,7 +1239,7 @@ contains
     integer :: g, k, l, nq, p
     !---------------------------------------------------------------------------
 
-    call DEBUG_rapstart('____numfilter_hdiffusion')
+    call PROF_rapstart('____numfilter_hdiffusion')
 
 
     if ( hdiff_nonlinear ) then
@@ -1561,7 +1561,7 @@ contains
        tendency_q_pl(:,:,:,:) = 0.0_RP
     endif ! apply filter to tracer?
 
-    call DEBUG_rapend('____numfilter_hdiffusion')
+    call PROF_rapend('____numfilter_hdiffusion')
 
     return
   end subroutine numfilter_hdiffusion
@@ -1588,8 +1588,8 @@ contains
        ADM_kall,    &
        ADM_kmin,    &
        ADM_kmax
-    use mod_cnst, only: &
-       CVdry => CNST_CV
+    use scale_const, only: &
+       CVdry => CONST_CVdry
     use mod_grd, only: &
        GRD_rdgz,  &
        GRD_rdgzh
@@ -1653,7 +1653,7 @@ contains
 
     if( .NOT. NUMFILTER_DOverticaldiff ) return
 
-    call DEBUG_rapstart('____numfilter_vdiffusion')
+    call PROF_rapstart('____numfilter_vdiffusion')
 
     do l = 1, ADM_lall
        do k = ADM_kmin, ADM_kmax+1
@@ -2051,7 +2051,7 @@ contains
                                  tendency(:,:,:,I_RHOGVY), tendency_pl(:,:,:,I_RHOGVY), & !--- [INOUT]
                                  tendency(:,:,:,I_RHOGVZ), tendency_pl(:,:,:,I_RHOGVZ)  ) !--- [INOUT]
 
-    call DEBUG_rapend('____numfilter_vdiffusion')
+    call PROF_rapend('____numfilter_vdiffusion')
 
     return
   end subroutine numfilter_vdiffusion
@@ -2118,7 +2118,7 @@ contains
     integer :: k, l, p
     !---------------------------------------------------------------------------
 
-    call DEBUG_rapstart('____numfilter_divdamp')
+    call PROF_rapstart('____numfilter_divdamp')
 
     if ( .NOT. NUMFILTER_DOdivdamp ) then
        gdx    (:,:,:) = 0.0_RP
@@ -2129,7 +2129,7 @@ contains
        gdz_pl (:,:,:) = 0.0_RP
        gdvz   (:,:,:) = 0.0_RP
        gdvz_pl(:,:,:) = 0.0_RP
-       call DEBUG_rapend('____numfilter_divdamp')
+       call PROF_rapend('____numfilter_divdamp')
        return
     endif
 
@@ -2210,7 +2210,7 @@ contains
        gdvz_pl(:,:,:) = 0.0_RP
     endif
 
-    call DEBUG_rapend('____numfilter_divdamp')
+    call PROF_rapend('____numfilter_divdamp')
 
     return
   end subroutine numfilter_divdamp
@@ -2260,7 +2260,7 @@ contains
     integer :: p
     !---------------------------------------------------------------------------
 
-    call DEBUG_rapstart('____numfilter_divdamp_2d')
+    call PROF_rapstart('____numfilter_divdamp_2d')
 
     if ( .NOT. NUMFILTER_DOdivdamp_2d ) then
        gdx   (:,:,:) = 0.0_RP
@@ -2269,7 +2269,7 @@ contains
        gdy_pl(:,:,:) = 0.0_RP
        gdz   (:,:,:) = 0.0_RP
        gdz_pl(:,:,:) = 0.0_RP
-       call DEBUG_rapend('____numfilter_divdamp_2d')
+       call PROF_rapend('____numfilter_divdamp_2d')
        return
     endif
 
@@ -2316,7 +2316,7 @@ contains
                                  gdy(:,:,:), gdy_pl(:,:,:), & !--- [INOUT]
                                  gdz(:,:,:), gdz_pl(:,:,:)  ) !--- [INOUT]
 
-    call DEBUG_rapend('____numfilter_divdamp_2d')
+    call PROF_rapend('____numfilter_divdamp_2d')
 
     return
   end subroutine numfilter_divdamp_2d
@@ -2415,8 +2415,8 @@ contains
        z_top,         &
        z_bottomlimit, &
        factor         )
-    use mod_cnst, only: &
-       PI => CNST_PI
+    use scale_const, only: &
+       PI => CONST_PI
     implicit none
 
     integer, intent(in)  :: kdim          ! number of vertical grid

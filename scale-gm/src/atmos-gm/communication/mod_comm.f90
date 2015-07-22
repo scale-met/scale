@@ -13,8 +13,8 @@ module mod_comm
   !++ Used modules
   !
   use mpi
-  use mod_precision
-  use mod_debug
+  use scale_precision
+  use scale_prof
   use mod_adm, only: &
      ADM_LOG_FID
   !-----------------------------------------------------------------------------
@@ -1806,8 +1806,8 @@ contains
 
 !!    allocate(comm_dbg_recvbuf(maxdatasize_r,romax(halomax),2)) !iga
 !!    allocate(comm_dbg_sendbuf(maxdatasize_s,somax(halomax),2)) !iga
-!!    comm_dbg_recvbuf=CNST_UNDEF !iga
-!!    comm_dbg_sendbuf=CNST_UNDEF !iga
+!!    comm_dbg_recvbuf=CONST_UNDEF !iga
+!!    comm_dbg_sendbuf=CONST_UNDEF !iga
 
     !
     allocate(ncmax_sgp(halomax))
@@ -2300,14 +2300,14 @@ contains
     !---------------------------------------------------------------------------
 
     if ( opt_comm_barrier ) then
-       call DEBUG_rapstart('COMM_barrier')
+       call PROF_rapstart('COMM_barrier')
        call MPI_Barrier( ADM_COMM_world, ierr )
-       call DEBUG_rapend  ('COMM_barrier')
+       call PROF_rapend  ('COMM_barrier')
     endif
 
     !$acc wait
 
-    call DEBUG_rapstart('COMM_data_transfer')
+    call PROF_rapstart('COMM_data_transfer')
 
     shp    = shape(var)
     kmax   = shp(2)
@@ -2666,7 +2666,7 @@ contains
 
     !$acc wait
 
-    call DEBUG_rapend('COMM_data_transfer')
+    call PROF_rapend('COMM_data_transfer')
 
     return
   end subroutine COMM_data_transfer
@@ -2719,12 +2719,12 @@ contains
     !---------------------------------------------------------------------------
 
     if ( opt_comm_barrier ) then
-       call DEBUG_rapstart('COMM_barrier')
+       call PROF_rapstart('COMM_barrier')
        call MPI_Barrier( ADM_COMM_world, ierr )
-       call DEBUG_rapend  ('COMM_barrier')
+       call PROF_rapend  ('COMM_barrier')
     endif
 
-    call DEBUG_rapstart('COMM_var')
+    call PROF_rapstart('COMM_var')
 
     !$acc data present(var)
 
@@ -2844,7 +2844,7 @@ contains
     var(suf(ADM_gmax+1,ADM_gmin-1),:,:,:) = var(suf(ADM_gmax+1,ADM_gmin),:,:,:)
     var(suf(ADM_gmin-1,ADM_gmax+1),:,:,:) = var(suf(ADM_gmin,ADM_gmax+1),:,:,:)
 
-    call DEBUG_rapend('COMM_var')
+    call PROF_rapend('COMM_var')
 
     return
   end subroutine COMM_var

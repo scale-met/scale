@@ -14,7 +14,7 @@ program fio_cat
   !++ Used modules
   !
   use mpi
-  use mod_precision
+  use scale_precision
   use mod_misc, only: &
      MISC_get_available_fid
   use mod_fio, only : &

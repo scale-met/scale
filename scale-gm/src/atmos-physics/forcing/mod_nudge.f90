@@ -12,8 +12,8 @@ module mod_nudge
   !
   !++ Used modules
   !
-  use mod_precision
-  use mod_debug
+  use scale_precision
+  use scale_prof
   use mod_adm, only: &
      ADM_LOG_FID
   !-----------------------------------------------------------------------------
@@ -80,11 +80,11 @@ contains
        ADM_kall,      &
        ADM_kmin,      &
        ADM_vlayer
-    use mod_cnst, only: &
-       CNST_PI,    &
-       CNST_CV,    &
-       CNST_RAIR,  &
-       CNST_UNDEF
+    use scale_const, only: &
+       CONST_PI,    &
+       CONST_CVdry,    &
+       CONST_Rdry,  &
+       CONST_UNDEF
     use mod_grd, only: &
        GRD_gz
     use mod_vmtr, only: &
@@ -208,8 +208,8 @@ contains
 
     allocate( NDG_ref   (ADM_gall   ,ADM_kall,ADM_lall   ,NDG_VMAX) )
     allocate( NDG_ref_pl(ADM_gall_pl,ADM_kall,ADM_lall_pl,NDG_VMAX) )
-    NDG_ref   (:,:,:,:) = CNST_UNDEF
-    NDG_ref_pl(:,:,:,:) = CNST_UNDEF
+    NDG_ref   (:,:,:,:) = CONST_UNDEF
+    NDG_ref_pl(:,:,:,:) = CONST_UNDEF
 
     !---< vertical weight >--- [Add] M.Hara 2008/09/10
     NDG_kmin0 = max( min( NDG_kmin0, ADM_vlayer ), 1 )
@@ -240,10 +240,10 @@ contains
        if ( k < NDG_kmin0 ) then
           wgt_vertical(k) = 0.0_RP
        elseif( k >= NDG_kmin0 .AND. k < NDG_kmin1 ) then
-          wgt_vertical(k) = 0.5_RP * ( 1.0_RP + cos(CNST_PI * (GRD_gz(k)        -GRD_gz(NDG_kmin1) ) &
+          wgt_vertical(k) = 0.5_RP * ( 1.0_RP + cos(CONST_PI * (GRD_gz(k)        -GRD_gz(NDG_kmin1) ) &
                                                          / (GRD_gz(NDG_kmin0)-GRD_gz(NDG_kmin1) ) ) )
        elseif( k >= NDG_kmax0 .AND. k < NDG_kmax1 ) then
-          wgt_vertical(k) = 0.5_RP * ( 1.0_RP + cos(CNST_PI * (GRD_gz(k)        -GRD_gz(NDG_kmax0) ) &
+          wgt_vertical(k) = 0.5_RP * ( 1.0_RP + cos(CONST_PI * (GRD_gz(k)        -GRD_gz(NDG_kmax0) ) &
                                                          / (GRD_gz(NDG_kmax1)-GRD_gz(NDG_kmax0) ) ) )
        elseif( NDG_kmax1 <= k ) then
           wgt_vertical(k) = 0.0_RP
@@ -276,9 +276,9 @@ contains
        NDG_fact(g,k,l,I_vz ) = wgt_vertical(k) * wgt_horizontal(g,ADM_KNONE,l,1) * NDG_rtau_vxvyvz
        NDG_fact(g,k,l,I_w  ) = wgt_vertical(k) * wgt_horizontal(g,ADM_KNONE,l,1) * NDG_rtau_w
        NDG_fact(g,k,l,I_tem) = wgt_vertical(k) * wgt_horizontal(g,ADM_KNONE,l,1) * NDG_rtau_tem &
-                             * CNST_CV
+                             * CONST_CVdry
        NDG_fact(g,k,l,I_pre) = wgt_vertical(k) * wgt_horizontal(g,ADM_KNONE,l,1) * NDG_rtau_pre &
-                             * CNST_CV / CNST_RAIR * VMTR_GSGAM2(g,k,l)
+                             * CONST_CVdry / CONST_Rdry * VMTR_GSGAM2(g,k,l)
        NDG_fact(g,k,l,I_qv ) = wgt_vertical(k) * wgt_horizontal(g,ADM_KNONE,l,1) * NDG_rtau_qv
     enddo
     enddo
@@ -293,9 +293,9 @@ contains
           NDG_fact_pl(g,k,l,I_vz ) = wgt_vertical(k) * wgt_horizontal_pl(g,ADM_KNONE,l,1) * NDG_rtau_vxvyvz
           NDG_fact_pl(g,k,l,I_w  ) = wgt_vertical(k) * wgt_horizontal_pl(g,ADM_KNONE,l,1) * NDG_rtau_w
           NDG_fact_pl(g,k,l,I_tem) = wgt_vertical(k) * wgt_horizontal_pl(g,ADM_KNONE,l,1) * NDG_rtau_tem &
-                                   * CNST_CV
+                                   * CONST_CVdry
           NDG_fact_pl(g,k,l,I_pre) = wgt_vertical(k) * wgt_horizontal_pl(g,ADM_KNONE,l,1) * NDG_rtau_pre &
-                                   * CNST_CV / CNST_RAIR * VMTR_GSGAM2_pl(g,k,l)
+                                   * CONST_CVdry / CONST_Rdry * VMTR_GSGAM2_pl(g,k,l)
           NDG_fact_pl(g,k,l,I_qv ) = wgt_vertical(k) * wgt_horizontal_pl(g,ADM_KNONE,l,1) * NDG_rtau_qv
        enddo
        enddo
@@ -480,9 +480,9 @@ contains
        ADM_kall,    &
        ADM_kmin,    &
        ADM_kmax
-    use mod_cnst, only: &
-       CNST_CV,   &
-       CNST_EGRAV
+    use scale_const, only: &
+       CONST_CVdry,   &
+       CONST_GRAV
     use mod_oprt, only: &
        OPRT_horizontalize_vec
     use mod_vmtr, only: &
@@ -586,7 +586,7 @@ contains
           rhog_h = ( VMTR_C2Wfact(g,k,1,l) * rhog(g,k  ,l) &
                    + VMTR_C2Wfact(g,k,2,l) * rhog(g,k-1,l) )
 
-          NDG_ref_w = NDG_ref(g,k,l,I_w) * VMTR_GSGAM2H(g,k,l) / ( rhog_h * CNST_EGRAV )
+          NDG_ref_w = NDG_ref(g,k,l,I_w) * VMTR_GSGAM2H(g,k,l) / ( rhog_h * CONST_GRAV )
 
           dw(g,k,l) = NDG_fact(g,k,l,I_w) * ( NDG_ref_w - w(g,k,l) )
 
@@ -602,7 +602,7 @@ contains
              rhog_h = ( VMTR_C2Wfact_pl(g,k,1,l) * rhog_pl(g,k  ,l) &
                       + VMTR_C2Wfact_pl(g,k,2,l) * rhog_pl(g,k-1,l) )
 
-             NDG_ref_w = NDG_ref_pl(g,k,l,I_w) * VMTR_GSGAM2H_pl(g,k,l) / ( rhog_h * CNST_EGRAV )
+             NDG_ref_w = NDG_ref_pl(g,k,l,I_w) * VMTR_GSGAM2H_pl(g,k,l) / ( rhog_h * CONST_GRAV )
 
              dw_pl(g,k,l) = NDG_fact_pl(g,k,l,I_w) * ( NDG_ref_w - w_pl(g,k,l) )
 
@@ -621,7 +621,7 @@ contains
                              dvy, dvy_pl, & ! [IN]
                              dvz, dvz_pl  ) ! [IN]
 
-       dtem(:,:,:) = dein(:,:,:) / CNST_CV
+       dtem(:,:,:) = dein(:,:,:) / CONST_CVdry
 
        do l = 1, ADM_lall
           call history_in('nudge_du',   du  (:,:,l))
@@ -710,10 +710,10 @@ contains
        ADM_gall,    &
        ADM_gall_pl, &
        ADM_KNONE
-    use mod_cnst, only: &
-       CNST_PI,      &
-       CNST_ERADIUS, &
-       CNST_UNDEF
+    use scale_const, only: &
+       CONST_PI,      &
+       CONST_RADIUS, &
+       CONST_UNDEF
     use mod_comm, only: &
        COMM_data_transfer
     use mod_gmtr, only: &
@@ -741,13 +741,13 @@ contains
 
     k0 = ADM_KNONE
 
-    center_lon_rad = center_lon / 180.0_RP * CNST_PI
-    center_lat_rad = center_lat / 180.0_RP * CNST_PI
+    center_lon_rad = center_lon / 180.0_RP * CONST_PI
+    center_lat_rad = center_lat / 180.0_RP * CONST_PI
 
     do l = 1, ADM_lall
     do g = 1, ADM_gall
 
-       call MISC_get_distance( CNST_ERADIUS,   & ! [IN]
+       call MISC_get_distance( CONST_RADIUS,   & ! [IN]
                                center_lon_rad, & ! [IN]
                                center_lat_rad, & ! [IN]
                                GMTR_lon(g,l),  & ! [IN]
@@ -772,7 +772,7 @@ contains
        do l = 1, ADM_lall_pl
        do g = 1, ADM_gall_pl
 
-          call MISC_get_distance( CNST_ERADIUS,     & ! [IN]
+          call MISC_get_distance( CONST_RADIUS,     & ! [IN]
                                   center_lon,       & ! [IN]
                                   center_lat,       & ! [IN]
                                   GMTR_lon_pl(g,l), & ! [IN]
@@ -792,7 +792,7 @@ contains
        enddo
        enddo
     else
-       weight_pl(:,:,:,:) = CNST_UNDEF
+       weight_pl(:,:,:,:) = CONST_UNDEF
     endif
 
     call COMM_data_transfer(weight,weight_pl)

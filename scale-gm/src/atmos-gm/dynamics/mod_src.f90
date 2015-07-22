@@ -12,8 +12,8 @@ module mod_src
   !
   !++ Used modules
   !
-  use mod_precision
-  use mod_debug
+  use scale_precision
+  use scale_prof
   use mod_adm, only: &
      ADM_LOG_FID
   !-----------------------------------------------------------------------------
@@ -76,8 +76,8 @@ contains
        ADM_kmin,    &
        ADM_kmax,    &
        ADM_KNONE
-    use mod_cnst, only: &
-       OHM => CNST_EOHM
+    use scale_const, only: &
+       OHM => CONST_OHM
     use mod_grd, only: &
        GRD_rscale, &
        GRD_XDIR,   &
@@ -143,7 +143,7 @@ contains
     integer :: g, k, l
     !---------------------------------------------------------------------------
 
-    call DEBUG_rapstart('____src_advection_convergence_m')
+    call PROF_rapstart('____src_advection_convergence_m')
 
     !---< merge horizontal velocity & vertical velocity >
 
@@ -315,7 +315,7 @@ contains
        grhogw_pl (:,:,:) = 0.0_RP
     endif
 
-    call DEBUG_rapend('____src_advection_convergence_m')
+    call PROF_rapend('____src_advection_convergence_m')
 
     return
   end subroutine src_advection_convergence_momentum
@@ -372,7 +372,7 @@ contains
     integer :: g, k, l
     !---------------------------------------------------------------------------
 
-    call DEBUG_rapstart('____src_advection_convergence')
+    call PROF_rapstart('____src_advection_convergence')
 
     ! rhogvh * scl
 !OCL SERIAL
@@ -460,7 +460,7 @@ contains
                                grhogscl,  grhogscl_pl,  & ! [OUT]
                                fluxtype                 ) ! [IN]
 
-    call DEBUG_rapend('____src_advection_convergence')
+    call PROF_rapend('____src_advection_convergence')
 
     return
   end subroutine src_advection_convergence
@@ -533,7 +533,7 @@ contains
     integer :: g, k, l
     !---------------------------------------------------------------------------
 
-    call DEBUG_rapstart('____src_flux_convergence')
+    call PROF_rapstart('____src_flux_convergence')
 
     if ( fluxtype == I_SRC_default ) then ! Default
        vertical_flag = 1.0_RP
@@ -638,7 +638,7 @@ contains
        enddo
     endif
 
-    call DEBUG_rapend('____src_flux_convergence')
+    call PROF_rapend('____src_flux_convergence')
 
     return
   end subroutine src_flux_convergence
@@ -700,7 +700,7 @@ contains
     integer :: g, k, l, d
     !---------------------------------------------------------------------------
 
-    call DEBUG_rapstart('____src_pres_gradient')
+    call PROF_rapstart('____src_pres_gradient')
 
     !---< horizontal gradient, horizontal contribution >---
 
@@ -857,7 +857,7 @@ contains
 
     endif
 
-    call DEBUG_rapend('____src_pres_gradient')
+    call PROF_rapend('____src_pres_gradient')
 
     return
   end subroutine src_pres_gradient
@@ -877,8 +877,8 @@ contains
        ADM_kall,    &
        ADM_kmin,    &
        ADM_kmax
-    use mod_cnst, only: &
-       GRAV => CNST_EGRAV
+    use scale_const, only: &
+       GRAV => CONST_GRAV
     use mod_vmtr, only: &
        VMTR_C2Wfact,    &
        VMTR_C2Wfact_pl
@@ -892,7 +892,7 @@ contains
     integer :: g, k, l
     !---------------------------------------------------------------------------
 
-    call DEBUG_rapstart('____src_buoyancy')
+    call PROF_rapstart('____src_buoyancy')
 
     do l = 1, ADM_lall
        do k = ADM_kmin+1, ADM_kmax
@@ -926,7 +926,7 @@ contains
        enddo
     endif
 
-    call DEBUG_rapend('____src_buoyancy')
+    call PROF_rapend('____src_buoyancy')
 
     return
   end subroutine src_buoyancy

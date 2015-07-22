@@ -12,8 +12,8 @@ module mod_ideal_init
   !
   !++ Used modules
   !
-  use mod_precision
-  use mod_debug
+  use scale_precision
+  use scale_prof
   use mod_adm, only: &
      ADM_LOG_FID, &
      ADM_NSYS
@@ -21,15 +21,14 @@ module mod_ideal_init
      test2_steady_state_mountain, &
      test2_schaer_mountain,       &
      test3_gravity_wave
-  use mod_cnst, only: &
-     pi    => CNST_PI,      &
-     a     => CNST_ERADIUS, &
-     omega => CNST_EOHM,    &
-     g     => CNST_EGRAV,   &
-     Rd    => CNST_RAIR,    &
-     Cp    => CNST_CP,      &
-     KAPPA => CNST_KAPPA,   &
-     PRE00 => CNST_PRE00
+  use scale_const, only: &
+     pi    => CONST_PI,     &
+     a     => CONST_RADIUS, &
+     omega => CONST_OHM,    &
+     g     => CONST_GRAV,   &
+     Rd    => CONST_Rdry,   &
+     Cp    => CONST_CPdry,  &
+     PRE00 => CONST_PRE00
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -202,10 +201,10 @@ contains
        ADM_kall,  &
        ADM_KNONE, &
        ADM_lall
-    use mod_random, only: &
+    use scale_random, only: &
        RANDOM_get
-    use mod_cnst, only: &
-       CNST_D2R
+    use scale_const, only: &
+       CONST_D2R
     use mod_gmtr, only: &
        GMTR_lon, &
        GMTR_lat
@@ -238,7 +237,7 @@ contains
           do l = 1, ADM_lall
           do k = 1, ADM_kall
           do g = 1, ADM_gall
-             deg = nint( GMTR_lon(g,l) / CNST_D2R )
+             deg = nint( GMTR_lon(g,l) / CONST_D2R )
              if ( mod(deg,10) == 0 ) then
                 TRC_var(g,k,l,nq) = real(ADM_kall-k+1,kind=RP)
              else
@@ -251,7 +250,7 @@ contains
           do l = 1, ADM_lall
           do k = 1, ADM_kall
           do g = 1, ADM_gall
-             deg = nint( GMTR_lat(g,l) / CNST_D2R )
+             deg = nint( GMTR_lat(g,l) / CONST_D2R )
              if ( mod(deg,10) == 0 ) then
                 TRC_var(g,k,l,nq) = real(ADM_kall-k+1,kind=RP)
              else
@@ -301,6 +300,7 @@ contains
     real(RP) :: pre(kdim), tem(kdim), dz(kdim)
     real(RP) :: pre_sfc, tem_sfc
     real(RP) :: pre_save
+    real(RP) :: kappa
 
     real(RP), parameter :: deltaT  = 60.0_RP
     real(RP), parameter :: deltaTh = 10.0_RP
@@ -311,6 +311,8 @@ contains
 
     integer :: n, k, l, itr
     !---------------------------------------------------------------------------
+
+    kappa = Rd / Cp
 
     DIAG_var(:,:,:,:) = 0.0_RP
 
@@ -1436,8 +1438,8 @@ contains
       eta_limit, &
       eta,       &
       signal     )
-    use mod_cnst, only: &
-       CNST_EPS_ZERO
+    use scale_const, only: &
+       CONST_EPS
     implicit none
 
     integer,  intent(in)    :: kdim        ! # of z dimension
@@ -1455,7 +1457,7 @@ contains
     integer  :: k
     !---------------------------------------------------------------------------
 
-    criteria = max( CNST_EPS_ZERO * 10.0_RP, 1.E-14_RP )
+    criteria = max( CONST_EPS * 10.0_RP, 1.E-14_RP )
 
     do k = 1, kdim
        F   (k) = -g*z(k) + geo(k)
@@ -1467,7 +1469,7 @@ contains
           eta(k,2) = min(eta(k,2),1.0_RP) ! not allow over 1.0 for eta
        endif
 
-       eta(k,2) = max(eta(k,2),CNST_EPS_ZERO) ! not allow over 1.0 for eta
+       eta(k,2) = max(eta(k,2),CONST_EPS) ! not allow over 1.0 for eta
 
        diff(k) = abs( eta(k,2) - eta(k,1) )
     enddo

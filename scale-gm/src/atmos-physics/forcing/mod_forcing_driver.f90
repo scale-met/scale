@@ -12,8 +12,8 @@ module mod_forcing_driver
   !
   !++ Used modules
   !
-  use mod_precision
-  use mod_debug
+  use scale_precision
+  use scale_prof
   use mod_adm, only: &
      ADM_LOG_FID
   !-----------------------------------------------------------------------------
@@ -154,7 +154,7 @@ contains
     integer :: l, nq
     !---------------------------------------------------------------------------
 
-    call DEBUG_rapstart('__Forcing')
+    call PROF_rapstart('__Forcing')
 
     call GTL_clip_region(VMTR_GSGAM2 (:,:,:),gsgam2, 1,ADM_kall)
     call GTL_clip_region(VMTR_GSGAM2H(:,:,:),gsgam2h,1,ADM_kall)
@@ -259,7 +259,7 @@ contains
                         rhoge,  & ! [IN]
                         rhogq   ) ! [IN]
 
-    call DEBUG_rapend  ('__Forcing')
+    call PROF_rapend  ('__Forcing')
 
     return
   end subroutine forcing_step
@@ -311,7 +311,7 @@ contains
     integer :: n, k ,l
     !---------------------------------------------------------------------------
 
-    call DEBUG_rapstart('__Forcing')
+    call PROF_rapstart('__Forcing')
 
     !--- update velocity
     time = time + TIME_DTL
@@ -406,7 +406,7 @@ contains
        PROG_pl(:,:,:,I_RHOGW ) = w_pl (:,:,:) * PROG_pl(:,:,:,I_RHOG)
     endif
 
-    call DEBUG_rapend  ('__Forcing')
+    call PROF_rapend  ('__Forcing')
 
     return
   end subroutine forcing_update

@@ -12,8 +12,8 @@ module mod_cnvvar
   !
   !++ Used modules
   !
-  use mod_precision
-  use mod_debug
+  use scale_precision
+  use scale_prof
   use mod_adm, only: &
      ADM_LOG_FID
   use mod_runconf, only: &
@@ -397,7 +397,7 @@ contains
     integer :: g, k, l
     !---------------------------------------------------------------------------
 
-    call DEBUG_rapstart('cnvvar_rhogkin')
+    call PROF_rapstart('cnvvar_rhogkin')
 
     do l = 1, ADM_lall
        !--- horizontal kinetic energy
@@ -467,7 +467,7 @@ contains
        enddo
     endif
 
-    call DEBUG_rapend('cnvvar_rhogkin')
+    call PROF_rapend('cnvvar_rhogkin')
 
     return
   end subroutine cnvvar_rhogkin

@@ -12,8 +12,8 @@ module mod_history_vars
   !
   !++ Used modules
   !
-  use mod_precision
-  use mod_debug
+  use scale_precision
+  use scale_prof
   use mod_adm, only: &
      ADM_LOG_FID,  &
      ADM_MAXFNAME, &
@@ -95,8 +95,8 @@ contains
        ADM_KNONE,   &
        ADM_kmin,    &
        ADM_kmax
-    use mod_cnst, only: &
-       CNST_EGRAV
+    use scale_const, only: &
+       CONST_GRAV
     use mod_grd, only: &
        GRD_dgz,  &
        GRD_ZSFC, &
@@ -273,7 +273,7 @@ contains
     ! omega
     if (out_omg) then
        do l = 1, ADM_lall
-          omg(:,:,l) = -CNST_EGRAV * rho(:,:,l) * wc(:,:,l)
+          omg(:,:,l) = -CONST_GRAV * rho(:,:,l) * wc(:,:,l)
 
           call history_in( 'ml_omg', omg(:,:,l) )
        enddo
@@ -449,8 +449,8 @@ contains
     use mod_adm, only :  &
        kdim => ADM_kall,    &
        kmin => ADM_kmin
-    use mod_cnst, only :  &
-       CNST_EGRAV
+    use scale_const, only :  &
+       CONST_GRAV
     implicit none
 
     integer, intent(in)  :: ijdim
@@ -472,7 +472,7 @@ contains
 
     !--- surface pressure ( hydrostatic balance )
     do ij = 1, ijdim
-       pre_srf(ij) = pre(ij,kmin) + 0.5_RP * ( rho_srf(ij)+rho(ij,kmin) ) * CNST_EGRAV * ( z(ij,kmin)-z_srf(ij) )
+       pre_srf(ij) = pre(ij,kmin) + 0.5_RP * ( rho_srf(ij)+rho(ij,kmin) ) * CONST_GRAV * ( z(ij,kmin)-z_srf(ij) )
     enddo
 
     return

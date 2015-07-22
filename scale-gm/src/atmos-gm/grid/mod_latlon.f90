@@ -13,8 +13,8 @@ module mod_latlon
   !++ Used modules
   !
   use mpi
-  use mod_precision
-  use mod_debug
+  use scale_precision
+  use scale_prof
   use mod_adm, only: &
      ADM_LOG_FID, &
      ADM_NSYS,    &
@@ -184,8 +184,8 @@ contains
        ADM_prc_run_master, &
        ADM_prc_me,         &
        ADM_lall
-    use mod_cnst, only: &
-       CNST_PI
+    use scale_const, only: &
+       CONST_PI
     implicit none
 
     character(len=*), intent(in) :: output_dirname
@@ -240,7 +240,7 @@ contains
     endif
     write(ADM_LOG_FID,nml=LATLONPARAM)
 
-    d2r    = CNST_PI / 180.0_RP
+    d2r    = CONST_PI / 180.0_RP
     latmax = latmax_deg * d2r
     latmin = latmin_deg * d2r
     lonmax = lonmax_deg * d2r
@@ -487,8 +487,8 @@ contains
        ADM_GIpJo,         &
        ADM_GIpJp,         &
        ADM_GIoJp
-    use mod_cnst, only: &
-       CNST_PI
+    use scale_const, only: &
+       CONST_PI
     use mod_grd, only: &
        GRD_rscale, &
        GRD_x
@@ -569,15 +569,15 @@ contains
        latmax_l = max(lat1,lat2,lat3) + eps_latlon
        latmin_l = min(lat1,lat2,lat3) - eps_latlon
 
-       if( latmin_l >  polar_limit ) latmax_l =  CNST_PI
-       if( latmax_l < -polar_limit ) latmin_l = -CNST_PI
+       if( latmin_l >  polar_limit ) latmax_l =  CONST_PI
+       if( latmax_l < -polar_limit ) latmin_l = -CONST_PI
 
        lonmax_l = max(lon1,lon2,lon3)
        lonmin_l = min(lon1,lon2,lon3)
-       if ( lonmax_l-lonmin_l > CNST_PI ) then
-          if( lon1 < 0 ) lon1 = lon1 + 2.0_RP * CNST_PI
-          if( lon2 < 0 ) lon2 = lon2 + 2.0_RP * CNST_PI
-          if( lon3 < 0 ) lon3 = lon3 + 2.0_RP * CNST_PI
+       if ( lonmax_l-lonmin_l > CONST_PI ) then
+          if( lon1 < 0 ) lon1 = lon1 + 2.0_RP * CONST_PI
+          if( lon2 < 0 ) lon2 = lon2 + 2.0_RP * CONST_PI
+          if( lon3 < 0 ) lon3 = lon3 + 2.0_RP * CONST_PI
 
           lonmax_l = max(lon1,lon2,lon3)
           lonmin_l = min(lon1,lon2,lon3)
@@ -599,10 +599,10 @@ contains
              if ( .NOT. near_pole ) then
                 if ( .NOT. (      (       ( lon(i)                <= lonmax_l ) &
                                     .AND. ( lon(i)                >= lonmin_l ) ) &
-                             .OR. (       ( lon(i) - 2.0_RP*CNST_PI <= lonmax_l ) &
-                                    .AND. ( lon(i) - 2.0_RP*CNST_PI >= lonmin_l ) ) &
-                             .OR. (       ( lon(i) + 2.0_RP*CNST_PI <= lonmax_l ) &
-                                    .AND. ( lon(i) + 2.0_RP*CNST_PI >= lonmin_l ) ) ) ) then
+                             .OR. (       ( lon(i) - 2.0_RP*CONST_PI <= lonmax_l ) &
+                                    .AND. ( lon(i) - 2.0_RP*CONST_PI >= lonmin_l ) ) &
+                             .OR. (       ( lon(i) + 2.0_RP*CONST_PI <= lonmax_l ) &
+                                    .AND. ( lon(i) + 2.0_RP*CONST_PI >= lonmin_l ) ) ) ) then
                    cycle
                 endif
              endif
@@ -926,8 +926,8 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine setup_latlon
-    use mod_cnst, only: &
-         CNST_PI
+    use scale_const, only: &
+         CONST_PI
     implicit none
     !---------------------------------------------------------------------------
 
@@ -938,8 +938,8 @@ contains
     elseif( latlon_type == 'GAUSSIAN' ) then
 
        !--- if GAUSSIAN grid is selected, latmax and latmin are overwritten.
-       latmax =  CNST_PI*0.5_RP
-       latmin = -CNST_PI*0.5_RP
+       latmax =  CONST_PI*0.5_RP
+       latmin = -CONST_PI*0.5_RP
        call set_gaussian_grid
 
     endif
@@ -978,8 +978,8 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine set_gaussian_grid
-    use mod_cnst, only: &
-         CNST_PI
+    use scale_const, only: &
+         CONST_PI
     implicit none
 
     integer, parameter :: nb = 256
@@ -1017,7 +1017,7 @@ contains
     !---  calculate gausian_grid by Newton-Rapson method
     do j = 1, jmax
 
-       mu0=sin(CNST_PI*real(jmax+1-2*j,kind=RP)/real(2*jmax+1,kind=RP))
+       mu0=sin(CONST_PI*real(jmax+1-2*j,kind=RP)/real(2*jmax+1,kind=RP))
 
        loopeps:do
 
@@ -1089,8 +1089,6 @@ contains
 !         GRD_XDIR,                 &
 !         GRD_YDIR,                 &
 !         GRD_ZDIR
-!    use mod_cnst, only :               &
-!         CNST_UNDEF
 !    use mod_oprt, only :           &
 !         OPRT_gradient
 !    use mod_comm, only :               &
@@ -1121,8 +1119,8 @@ contains
 !    !
 !    integer :: k,m,l,n
 !    !
-!    grd(:,:,:,:)=CNST_UNDEF
-!    grd_pl(:,:,:,:)=CNST_UNDEF
+!    grd(:,:,:,:)=CONST_UNDEF
+!    grd_pl(:,:,:,:)=CONST_UNDEF
 !    call OPRT_gradient(&
 !         grd(:,:,:,ix), grd_pl(:,:,:,ix),&
 !         grd(:,:,:,iy), grd_pl(:,:,:,iy),&
@@ -1143,15 +1141,15 @@ contains
 !             n4=ADM_IooJoo(n,ADM_GImJo)
 !             n5=ADM_IooJoo(n,ADM_GImJm)
 !             n6=ADM_IooJoo(n,ADM_GIoJm)
-!             if ( (var(n0,k,l)/=CNST_UNDEF) .and. &
-!                  (var(n1,k,l)/=CNST_UNDEF) .and. &
-!                  (var(n2,k,l)/=CNST_UNDEF) .and. &
-!                  (var(n3,k,l)/=CNST_UNDEF) .and. &
-!                  (var(n4,k,l)/=CNST_UNDEF) .and. &
-!                  (var(n5,k,l)/=CNST_UNDEF) .and. &
-!                  (var(n6,k,l)/=CNST_UNDEF) ) then
+!             if ( (var(n0,k,l)/=CONST_UNDEF) .and. &
+!                  (var(n1,k,l)/=CONST_UNDEF) .and. &
+!                  (var(n2,k,l)/=CONST_UNDEF) .and. &
+!                  (var(n3,k,l)/=CONST_UNDEF) .and. &
+!                  (var(n4,k,l)/=CONST_UNDEF) .and. &
+!                  (var(n5,k,l)/=CONST_UNDEF) .and. &
+!                  (var(n6,k,l)/=CONST_UNDEF) ) then
 !             else
-!                grd(n0,k,l,ix:iz)=CNST_UNDEF
+!                grd(n0,k,l,ix:iz)=CONST_UNDEF
 !             endif
 !          enddo
 !       enddo
@@ -1159,14 +1157,14 @@ contains
 !    if (adm_prc_me==adm_prc_pl) then
 !       do l=1,ADM_lall_pl
 !          do k=kmin,kmax
-!             if ( (var_pl(1,k,l)/=CNST_UNDEF) .and. &
-!                  (var_pl(2,k,l)/=CNST_UNDEF) .and. &
-!                  (var_pl(3,k,l)/=CNST_UNDEF) .and. &
-!                  (var_pl(4,k,l)/=CNST_UNDEF) .and. &
-!                  (var_pl(5,k,l)/=CNST_UNDEF) .and. &
-!                  (var_pl(6,k,l)/=CNST_UNDEF) ) then
+!             if ( (var_pl(1,k,l)/=CONST_UNDEF) .and. &
+!                  (var_pl(2,k,l)/=CONST_UNDEF) .and. &
+!                  (var_pl(3,k,l)/=CONST_UNDEF) .and. &
+!                  (var_pl(4,k,l)/=CONST_UNDEF) .and. &
+!                  (var_pl(5,k,l)/=CONST_UNDEF) .and. &
+!                  (var_pl(6,k,l)/=CONST_UNDEF) ) then
 !             else
-!                grd_pl(adm_gslf_pl,k,l,ix:iz)=CNST_UNDEF
+!                grd_pl(adm_gslf_pl,k,l,ix:iz)=CONST_UNDEF
 !             endif
 !          enddo
 !       enddo
@@ -1180,19 +1178,19 @@ contains
 !          n2 = n2_index(m)
 !          n3 = n3_index(m)
 !          l = l_index(m)
-!          if ( (grd(n1,k,l,ix)/=CNST_UNDEF) .and. &
-!               (grd(n1,k,l,iy)/=CNST_UNDEF) .and. &
-!               (grd(n1,k,l,iz)/=CNST_UNDEF) ) then
+!          if ( (grd(n1,k,l,ix)/=CONST_UNDEF) .and. &
+!               (grd(n1,k,l,iy)/=CONST_UNDEF) .and. &
+!               (grd(n1,k,l,iz)/=CONST_UNDEF) ) then
 !             def_grd(n1,k,l)=.true.
 !          endif
-!          if ( (grd(n2,k,l,ix)/=CNST_UNDEF) .and. &
-!               (grd(n2,k,l,iy)/=CNST_UNDEF) .and. &
-!               (grd(n2,k,l,iz)/=CNST_UNDEF) ) then
+!          if ( (grd(n2,k,l,ix)/=CONST_UNDEF) .and. &
+!               (grd(n2,k,l,iy)/=CONST_UNDEF) .and. &
+!               (grd(n2,k,l,iz)/=CONST_UNDEF) ) then
 !             def_grd(n2,k,l)=.true.
 !          endif
-!          if ( (grd(n3,k,l,ix)/=CNST_UNDEF) .and. &
-!               (grd(n3,k,l,iy)/=CNST_UNDEF) .and. &
-!               (grd(n3,k,l,iz)/=CNST_UNDEF) ) then
+!          if ( (grd(n3,k,l,ix)/=CONST_UNDEF) .and. &
+!               (grd(n3,k,l,iy)/=CONST_UNDEF) .and. &
+!               (grd(n3,k,l,iz)/=CONST_UNDEF) ) then
 !             def_grd(n3,k,l)=.true.
 !          endif
 !       enddo
@@ -1277,7 +1275,7 @@ contains
 !                  + 4.0_RP*w2(m)*w3(m)        *v23 &
 !                  + 4.0_RP*w3(m)*w1(m)        *v31
 !          else
-!             var_ll(m,k) = CNST_UNDEF
+!             var_ll(m,k) = CONST_UNDEF
 !          endif
 !       enddo
 !    enddo
