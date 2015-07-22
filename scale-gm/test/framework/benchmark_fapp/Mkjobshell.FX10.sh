@@ -84,11 +84,11 @@ mkdir -p ./prof_perf
 mkdir -p ./prof
 
 # run
-${PROF1} ${MPIEXEC} ./${BINNAME} || exit
-${PROF2} ${MPIEXEC} ./${BINNAME} || exit
-${PROF3} ${MPIEXEC} ./${BINNAME} || exit
-${PROF4} ${MPIEXEC} ./${BINNAME} || exit
-${PROF5} ${MPIEXEC} ./${BINNAME} || exit
+${PROF1} ${MPIEXEC} ./${BINNAME} nhm_driver.cnf || exit
+${PROF2} ${MPIEXEC} ./${BINNAME} nhm_driver.cnf || exit
+${PROF3} ${MPIEXEC} ./${BINNAME} nhm_driver.cnf || exit
+${PROF4} ${MPIEXEC} ./${BINNAME} nhm_driver.cnf || exit
+${PROF5} ${MPIEXEC} ./${BINNAME} nhm_driver.cnf || exit
 
 ################################################################################
 EOF2

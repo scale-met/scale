@@ -65,7 +65,7 @@ done
 
 cat << EOFS2 >> run.sh
 # run
-${MPIEXEC} ./${BINNAME} || exit
+${MPIEXEC} ./${BINNAME} nhm_driver.cnf || exit
 
 ################################################################################
 EOFS2
@@ -90,7 +90,7 @@ cat << EOFL1 > run_L.sh
 #PBS -O "${RUNDIR}/,ALL:./"
 
 # run
-${MPIEXEC} ./${BINNAME} || exit
+${MPIEXEC} ./${BINNAME} nhm_driver.cnf || exit
 
 ################################################################################
 EOFL1

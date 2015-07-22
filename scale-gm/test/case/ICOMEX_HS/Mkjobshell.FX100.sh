@@ -71,7 +71,7 @@ done
 cat << EOF2 >> run.sh
 
 # run
-${MPIEXEC} ./${BINNAME} || exit
+${MPIEXEC} ./${BINNAME} nhm_driver.cnf || exit
 
 ################################################################################
 EOF2

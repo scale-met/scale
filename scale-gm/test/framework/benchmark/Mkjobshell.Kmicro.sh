@@ -77,8 +77,8 @@ mkdir -p ./prof
 mkdir -p ./prof_call
 
 # run
-${PROF1} ${MPIEXEC} ./${BINNAME} || exit
-${PROF2} ${MPIEXEC} ./${BINNAME} || exit
+${PROF1} ${MPIEXEC} ./${BINNAME} nhm_driver.cnf || exit
+${PROF2} ${MPIEXEC} ./${BINNAME} nhm_driver.cnf || exit
 
 ################################################################################
 EOF2

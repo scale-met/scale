@@ -69,7 +69,7 @@ export OMP_NUM_THREADS=8
 export XOS_MMM_L_ARENA_FREE=2
 
 # run
-${MPIEXEC} ./${BINNAME} || exit
+${MPIEXEC} ./${BINNAME} nhm_driver.cnf || exit
 
 ################################################################################
 EOF1
