@@ -75,10 +75,11 @@ SCALEではオンライン・ネスティングであっても、親ドメイン
 
 \subsubsection{親ドメインの時間積分計算を行う}
 基本的には通常のシングルドメインの計算と同じ方法で実行すればよいが、``run.conf''ファイルの設定について、
-次の3点の注意点・変更点がある。
+次の5点の注意点・変更点がある。
 
 \begin{itemize}
  \item 親ドメインのhistory出力間隔を適度に細かくとること。
+ \item 親ドメインのhistory出力変数に必要なものが揃っているか確認すること。
  \item 親ドメインのhistory出力形式で\verb|ZINTERP|は``false''に設定すること。
  \item 親ドメインのhistory出力形式で\verb|STEP0|は``true''に設定すること。
  \item 親ドメインの計算領域を子ドメインへ伝える「カタログファイル」を出力すること。
@@ -116,6 +117,18 @@ SCALEではオンライン・ネスティングであっても、親ドメイン
 任意性はあるが、子ドメインの側面境界条件の更新間隔として使用可能であると考えられる範囲で指定すること。
 親ドメイン、子ドメインの解像度、および実行環境のディスク空き容量にもよるが、おおよそ最大で1時間間隔、
 出来れば10分間隔のhistoryデータ出力間隔を指定することが多い。
+
+また、historyデータを用いて初期値/境界値データを作成するために、下記の全ての変数を出力してなければならない。
+run.confファイルの``HISTORY\_ITEM''の項目を確認すること。
+
+\begin{itemize}
+ \item \verb|T2, Q2, MSLP, DENS, MOMZ, MOMX, MOMY, RHOT|
+ \item \verb|QV, QC, QR, QI, QS, QG| {\small （親の雲微物理モデルに合わせて出力; 例えばTomita08なら全て）}
+ \item \verb|NC, NR, NI, NS, NG| {\small （親の雲微物理モデルに合わせて出力; 例えばTomita08なら不要）}
+ \item \verb|LAND_SFC_TEMP, URBAN_SFC_TEMP, OCEAN_SFC_TEMP|
+ \item \verb|OCEAN_ALB_LW, OCEAN_ALB_SW, LAND_ALB_LW, LAND_ALB_SW|
+ \item \verb|OCEAN_TEMP, OCEAN_SFC_Z0M, LAND_WATER, lsmask|
+\end{itemize}
 
 設定が完了すれば、``scale-les''を実行して親ドメインの時間積分計算を行う。
 
