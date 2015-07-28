@@ -31,6 +31,23 @@ module scale_comm
   use scale_prof
   use scale_grid_index
   use scale_tracer
+
+  use scale_process, only: &
+     PRC_MPIstop
+  use scale_les_process, only: &
+     PRC_next, &
+     PRC_W,    &
+     PRC_N,    &
+     PRC_E,    &
+     PRC_S,    &
+     PRC_NW,   &
+     PRC_NE,   &
+     PRC_SW,   &
+     PRC_SE,   &
+     PRC_HAS_W, &
+     PRC_HAS_N, &
+     PRC_HAS_E, &
+     PRC_HAS_S
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -142,16 +159,6 @@ contains
     use scale_stdio, only: &
        IO_FID_CONF
     use scale_process, only: &
-       PRC_MPIstop, &
-       PRC_NEXT,    &
-       PRC_W,       &
-       PRC_N,       &
-       PRC_E,       &
-       PRC_S,       &
-       PRC_HAS_W,   &
-       PRC_HAS_E,   &
-       PRC_HAS_S,   &
-       PRC_HAS_N,   &
        LOCAL_COMM_WORLD
     implicit none
 
@@ -287,8 +294,6 @@ contains
   !-----------------------------------------------------------------------------
   !> Register variables
   subroutine COMM_vars_init(var, vid)
-    use scale_process, only: &
-       PRC_MPIstop
     implicit none
 
     real(RP), intent(inout) :: var(:,:,:) !< variable for register
@@ -329,8 +334,6 @@ contains
   !-----------------------------------------------------------------------------
   !> Register variables
   subroutine COMM_vars8_init(var, vid)
-    use scale_process, only: &
-       PRC_MPIstop
     implicit none
 
     real(RP), intent(inout) :: var(:,:,:) !< variable for register
@@ -846,8 +849,7 @@ contains
   !> Broadcast data for whole process value in 4D field
   subroutine COMM_bcast_4D( var, gIA, gJA, gKA, gTime )
     use scale_process, only: &
-       PRC_master, &
-       PRC_MPIstop
+       PRC_master
     implicit none
 
     real(RP), intent(inout) :: var(:,:,:,:) !< broadcast buffer(gIA,gJA,gKA,gTime)
@@ -1004,13 +1006,8 @@ contains
 ! private routines
 !-------------------------------------------------------------------------------
   subroutine vars_init_mpi_pc(var, vid, seqid)
-    use scale_process, only: &
-       PRC_next, &
-       PRC_W,    &
-       PRC_N,    &
-       PRC_E,    &
-       PRC_S
     implicit none
+
     real(RP), intent(inout) :: var(:,:,:)
     integer,  intent(in) :: vid
     integer,  intent(in) :: seqid
@@ -1081,21 +1078,8 @@ contains
   end subroutine vars_init_mpi_pc
 
   subroutine vars8_init_mpi_pc(var, vid, seqid)
-    use scale_process, only: &
-       PRC_next, &
-       PRC_W,    &
-       PRC_N,    &
-       PRC_E,    &
-       PRC_S,    &
-       PRC_NW,   &
-       PRC_NE,   &
-       PRC_SW,   &
-       PRC_SE,   &
-       PRC_HAS_W, &
-       PRC_HAS_N, &
-       PRC_HAS_E, &
-       PRC_HAS_S
     implicit none
+
     real(RP), intent(inout) :: var(:,:,:)
     integer,  intent(in) :: vid
     integer,  intent(in) :: seqid
@@ -1539,16 +1523,7 @@ contains
 
   subroutine vars_3D_mpi(var, vid)
     use scale_process, only: &
-       PRC_MPIstop, &
-       PRC_next, &
-       PRC_W,    &
-       PRC_N,    &
-       PRC_E,    &
-       PRC_S,    &
-       PRC_HAS_W, &
-       PRC_HAS_E, &
-       PRC_HAS_S, &
-       PRC_HAS_N
+       PRC_MPIstop
     implicit none
 
     real(RP), intent(inout) :: var(:,:,:) !< atmospheric 3D variable to communication
@@ -1679,20 +1654,7 @@ contains
 
   subroutine vars8_3D_mpi(var, vid)
     use scale_process, only: &
-       PRC_MPIstop, &
-       PRC_next, &
-       PRC_W,    &
-       PRC_N,    &
-       PRC_E,    &
-       PRC_S,    &
-       PRC_NW,   &
-       PRC_NE,   &
-       PRC_SW,   &
-       PRC_SE,   &
-       PRC_HAS_W, &
-       PRC_HAS_E, &
-       PRC_HAS_S, &
-       PRC_HAS_N
+       PRC_MPIstop
     implicit none
 
     real(RP), intent(inout) :: var(:,:,:)
@@ -2137,17 +2099,9 @@ contains
 
   subroutine vars_2D_mpi(var, vid)
     use scale_process, only: &
-       PRC_MPIstop, &
-       PRC_next, &
-       PRC_W,    &
-       PRC_N,    &
-       PRC_E,    &
-       PRC_S,    &
-       PRC_HAS_W, &
-       PRC_HAS_E, &
-       PRC_HAS_S, &
-       PRC_HAS_N
+       PRC_MPIstop
     implicit none
+
     real(RP), intent(inout) :: var(:,:)
     integer, intent(in)    :: vid
 
@@ -2297,20 +2251,7 @@ contains
 
   subroutine vars8_2D_mpi(var, vid)
     use scale_process, only: &
-       PRC_MPIstop, &
-       PRC_next, &
-       PRC_W,    &
-       PRC_N,    &
-       PRC_E,    &
-       PRC_S,    &
-       PRC_NW,   &
-       PRC_NE,   &
-       PRC_SW,   &
-       PRC_SE,   &
-       PRC_HAS_W, &
-       PRC_HAS_E, &
-       PRC_HAS_S, &
-       PRC_HAS_N
+       PRC_MPIstop
     implicit none
 
     real(RP), intent(inout) :: var(:,:)
@@ -2810,6 +2751,7 @@ contains
     use scale_process, only: &
        PRC_MPIstop
     implicit none
+
     real(RP), intent(inout) :: var(:,:,:)
     integer, intent(in)    :: vid
     integer :: ierr
@@ -2876,13 +2818,8 @@ contains
   end subroutine wait_2D_mpi
 
   subroutine wait_3D_mpi_pc(var, vid)
-    use scale_process, only: &
-       PRC_next, &
-       PRC_W,    &
-       PRC_N,    &
-       PRC_E,    &
-       PRC_S
     implicit none
+
     real(RP), intent(inout) :: var(:,:,:)
     integer,  intent(in)    :: vid
 
@@ -2903,10 +2840,8 @@ contains
   end subroutine wait_3D_mpi_pc
 
   subroutine pack_3D(var, vid)
-    use scale_process, only: &
-       PRC_HAS_W, &
-       PRC_HAS_E
     implicit none
+
     real(RP), intent(in) :: var(:,:,:)
     integer,  intent(in) :: vid
 
@@ -2987,10 +2922,8 @@ contains
   end subroutine pack_3D
 
   subroutine pack_2D(var, vid)
-    use scale_process, only: &
-       PRC_HAS_W, &
-       PRC_HAS_E
     implicit none
+
     real(RP), intent(in) :: var(:,:)
     integer,  intent(in) :: vid
 
@@ -3060,10 +2993,8 @@ contains
   end subroutine pack_2D
 
   subroutine unpack_3D(var, vid)
-    use scale_process, only: &
-       PRC_HAS_W, &
-       PRC_HAS_E
     implicit none
+
     real(RP), intent(inout) :: var(:,:,:)
     integer,  intent(in)    :: vid
 
@@ -3143,12 +3074,8 @@ contains
   end subroutine unpack_3D
 
   subroutine unpack_2D(var, vid)
-    use scale_process, only: &
-       PRC_HAS_W, &
-       PRC_HAS_E, &
-       PRC_HAS_S, &
-       PRC_HAS_N
     implicit none
+
     real(RP), intent(inout) :: var(:,:)
     integer,  intent(in)    :: vid
 
@@ -3215,11 +3142,6 @@ contains
   end subroutine unpack_2D
 
   subroutine copy_boundary_3D(var)
-    use scale_process, only: &
-       PRC_HAS_W, &
-       PRC_HAS_E, &
-       PRC_HAS_S, &
-       PRC_HAS_N
     implicit none
 
     real(RP), intent(inout) :: var(:,:,:)
@@ -3355,11 +3277,6 @@ contains
   end subroutine copy_boundary_3D
 
   subroutine copy_boundary_2D(var)
-    use scale_process, only: &
-       PRC_HAS_W, &
-       PRC_HAS_E, &
-       PRC_HAS_S, &
-       PRC_HAS_N
     implicit none
 
     real(RP), intent(inout) :: var(:,:)

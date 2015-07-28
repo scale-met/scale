@@ -52,11 +52,13 @@ contains
   use scale_precision
   use scale_stdio
   use scale_prof
+
   use scale_process, only: &
-     PRC_setup,    &
      PRC_MPIsetup, &
      PRC_myrank,   &
      PRC_IsLOCAL_master
+  use scale_les_process, only: &
+     PRC_setup
   use scale_const, only: &
      CONST_setup
   use scale_prof, only: &

@@ -20,8 +20,8 @@ program scaleles_pp_launcher
   use scale_precision
   use scale_stdio
   use scale_prof
+
   use scale_process, only: &
-     PRC_setup,         &
      PRC_MPIstart,      &
      PRC_MPIsplit,      &
      PRC_MPIfinish,     &

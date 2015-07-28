@@ -1526,7 +1526,8 @@ contains
   subroutine ATMOS_BOUNDARY_update( &
        DENS, MOMZ, MOMX, MOMY, RHOT, QTRC )
     use scale_process, only: &
-       PRC_MPIstop, &
+       PRC_MPIstop
+    use scale_les_process, only: &
        PRC_HAS_W,   &
        PRC_HAS_E,   &
        PRC_HAS_S,   &

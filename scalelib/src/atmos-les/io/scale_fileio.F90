@@ -563,8 +563,9 @@ contains
     use scale_process, only: &
        PRC_master, &
        PRC_myrank, &
-       PRC_2Drank, &
        PRC_MPIstop
+    use scale_les_process, only: &
+       PRC_2Drank
     use scale_time, only: &
        NOWSEC => TIME_NOWDAYSEC
     implicit none
@@ -684,8 +685,9 @@ contains
     use scale_process, only: &
        PRC_master, &
        PRC_myrank, &
-       PRC_2Drank, &
        PRC_MPIstop
+    use scale_les_process, only: &
+       PRC_2Drank
     use scale_time, only: &
        NOWSEC => TIME_NOWDAYSEC
     implicit none
@@ -867,8 +869,9 @@ contains
     use scale_process, only: &
        PRC_master, &
        PRC_myrank, &
-       PRC_2Drank, &
        PRC_MPIstop
+    use scale_les_process, only: &
+       PRC_2Drank
     use scale_time, only: &
        NOWSEC => TIME_NOWDAYSEC
     implicit none
@@ -1095,10 +1098,9 @@ contains
     use scale_process, only: &
        PRC_master, &
        PRC_myrank, &
-       PRC_2Drank, &
        PRC_MPIstop
-!    use scale_time, only: &
-!       NOWSEC => TIME_NOWDAYSEC
+    use scale_les_process, only: &
+       PRC_2Drank
     implicit none
 
     real(RP),          intent(in)  :: var(:,:,:,:) !< value of the variable

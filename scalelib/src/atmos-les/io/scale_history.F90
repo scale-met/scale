@@ -84,7 +84,8 @@ contains
     use scale_process, only: &
        PRC_MPIstop, &
        PRC_master, &
-       PRC_myrank, &
+       PRC_myrank
+    use scale_les_process, only: &
        PRC_2Drank, &
        PRC_HAS_W, &
        PRC_HAS_E, &

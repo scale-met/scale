@@ -178,7 +178,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Allocate arrays
   subroutine GRID_allocate
-    use scale_process, only: &
+    use scale_les_process, only: &
        PRC_NUM_X, &
        PRC_NUM_Y
     implicit none
@@ -292,7 +292,8 @@ contains
   subroutine GRID_generate
     use scale_process, only: &
        PRC_MPIstop, &
-       PRC_myrank,  &
+       PRC_myrank
+    use scale_les_process, only: &
        PRC_2Drank,  &
        PRC_NUM_X,   &
        PRC_NUM_Y

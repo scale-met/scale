@@ -281,7 +281,8 @@ contains
        PRC_master,        &
        PRC_myrank,        &
        PRC_mydom,         &
-       PRC_MPIstop,       &
+       PRC_MPIstop
+    use scale_les_process, only: &
        PRC_HAS_W,         &
        PRC_HAS_E,         &
        PRC_HAS_S,         &
@@ -936,9 +937,10 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
        PRC_myrank,  &
        PRC_master,  &
        PRC_nmax,    &
-       PRC_NUM_X,   &
-       PRC_NUM_Y,   &
        PRC_MPIstop
+    use scale_les_process, only: &
+       PRC_NUM_X,   &
+       PRC_NUM_Y
     use scale_time, only: &
        TIME_NSTEP, &
        TIME_DTSEC

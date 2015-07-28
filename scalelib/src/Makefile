@@ -30,7 +30,9 @@ VPATH = common:                     \
         atmos-les:                  \
         atmos-les/communication:    \
         atmos-les/grid:             \
+        atmos-les/io:               \
         atmos-les/dynamics:         \
+        atmos-les/forcing:          \
         land:                       \
         land/grid:                  \
         ocean:                      \
@@ -160,6 +162,7 @@ OBJS_NAME = $(scale_rdma)	\
 	scale_land_sfc.o	\
 	scale_land_sfc_slab.o	\
 	scale_landuse.o	\
+	scale_les_process.o	\
 	scale_mapproj.o	\
 	scale_matrix.o	\
 	scale_monitor.o	\
