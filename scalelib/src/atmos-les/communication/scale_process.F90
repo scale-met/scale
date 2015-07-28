@@ -50,7 +50,7 @@ module scale_process
   ! MASTER_COMM_WORLD --split--> BULK_COMM_WORLD
   !                                     |
   !                            GLOBAL_COMM_WORLD --split--> LOCAL_COMM_WORLD
-  !-----------------------------------------------------------------------------                    
+  !-----------------------------------------------------------------------------
 
   integer, public, parameter   :: PRC_master = 0      !< master node
 
@@ -65,7 +65,8 @@ module scale_process
   integer, public              :: MASTER_nmax         !< process num in master communicator
   integer, public              :: GLOBAL_myrank       !< myrank in global communicator
   integer, public              :: GLOBAL_nmax         !< process num in global communicator
-  logical, public              :: MASTER_LOG
+  logical, public              :: PRC_IsMASTER_master = .false. !< this process in master in master communicator?
+  logical, public              :: PRC_IsLOCAL_master  = .false. !< this process in master in local  communicator?
 
   integer, public              :: PRC_mybulk = 0   !< my bulk ID (Master)
   integer, public              :: PRC_mydom  = 0   !< my domain ID (Global)
@@ -134,9 +135,9 @@ contains
     call MPI_Comm_rank(MASTER_COMM_WORLD,MASTER_myrank,ierr)
 
     if ( MASTER_myrank == PRC_master ) then
-       MASTER_LOG = .true.
+       PRC_IsMASTER_master = .true.
     else
-       MASTER_LOG = .false.
+       PRC_IsMASTER_master = .false.
     endif
 
     return
@@ -145,13 +146,10 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup MPI
   subroutine PRC_MPIsetup( &
-      MY_COMM_WORLD   ) ! [in]
+      MY_COMM_WORLD ) ! [in]
     implicit none
 
     integer, intent(in) :: MY_COMM_WORLD
-
-    character(len=H_LONG)  :: fname ! name of logfile for each process
-    character(len=H_SHORT) :: info
 
     integer :: ierr
     !---------------------------------------------------------------------------
@@ -160,124 +158,10 @@ contains
     call MPI_COMM_RANK(LOCAL_COMM_WORLD,PRC_myrank,ierr)
     call MPI_COMM_SIZE(LOCAL_COMM_WORLD,PRC_nmax,  ierr)
 
-    if ( .not. IO_LOG_SUPPRESS ) then
-       if ( PRC_myrank == PRC_master ) then ! master node
-          IO_L = .true.
-       else
-          IO_L = IO_LOG_ALLNODE
-       endif
-    endif
-
-    if ( IO_LOG_NML_SUPPRESS ) then
-       IO_LNML = .false.
+    if ( PRC_myrank == PRC_master ) then
+       PRC_IsLOCAL_master = .true.
     else
-       IO_LNML = IO_L
-    endif
-
-    if ( IO_L ) then
-
-       !--- Open logfile
-       if ( IO_LOG_BASENAME == IO_STDOUT ) then
-          IO_FID_LOG = IO_FID_STDOUT
-       else
-          IO_FID_LOG = IO_get_available_fid()
-          call IO_make_idstr(fname,trim(IO_LOG_BASENAME),'pe',PRC_myrank)
-          open( unit   = IO_FID_LOG,  &
-                file   = trim(fname), &
-                form   = 'formatted', &
-                iostat = ierr         )
-          if ( ierr /= 0 ) then
-             write(*,*) 'xxx File open error! :', trim(fname)
-             call PRC_MPIstop
-          endif
-       endif
-
-       write(IO_FID_LOG,*) ''
-       write(IO_FID_LOG,*) '                                               -+++++++++;              '
-       write(IO_FID_LOG,*) '                                             ++++++++++++++=            '
-       write(IO_FID_LOG,*) '                                           ++++++++++++++++++-          '
-       write(IO_FID_LOG,*) '                                          +++++++++++++++++++++         '
-       write(IO_FID_LOG,*) '                                        .+++++++++++++++++++++++        '
-       write(IO_FID_LOG,*) '                                        +++++++++++++++++++++++++       '
-       write(IO_FID_LOG,*) '                                       +++++++++++++++++++++++++++      '
-       write(IO_FID_LOG,*) '                                      =++++++=x######+++++++++++++;     '
-       write(IO_FID_LOG,*) '                                     .++++++X####XX####++++++++++++     '
-       write(IO_FID_LOG,*) '         =+xxx=,               ++++  +++++=##+       .###++++++++++-    '
-       write(IO_FID_LOG,*) '      ,xxxxxxxxxx-            +++++.+++++=##           .##++++++++++    '
-       write(IO_FID_LOG,*) '     xxxxxxxxxxxxx           -+++x#;+++++#+              ##+++++++++.   '
-       write(IO_FID_LOG,*) '    xxxxxxxx##xxxx,          ++++# +++++XX                #+++++++++-   '
-       write(IO_FID_LOG,*) '   xxxxxxx####+xx+x         ++++#.++++++#                  #+++++++++   '
-       write(IO_FID_LOG,*) '  +xxxxxX#X   #Xx#=        =+++#x=++++=#.                  x=++++++++   '
-       write(IO_FID_LOG,*) '  xxxxxx#,    x###        .++++#,+++++#=                    x++++++++   '
-       write(IO_FID_LOG,*) ' xxxxxx#.                 ++++# +++++x#                     #++++++++   '
-       write(IO_FID_LOG,*) ' xxxxxx+                 ++++#-+++++=#                      #++++++++   '
-       write(IO_FID_LOG,*) ',xxxxxX                 -+++XX-+++++#,                      +++++++++   '
-       write(IO_FID_LOG,*) '=xxxxxX                .++++#.+++++#x                       -++++++++   '
-       write(IO_FID_LOG,*) '+xxxxx=                ++++#.++++++#                        ++++++++#   '
-       write(IO_FID_LOG,*) 'xxxxxx;               ++++#+=++++=#                         ++++++++#   '
-       write(IO_FID_LOG,*) 'xxxxxxx              ,+++x#,+++++#-                        ;++++++++-   '
-       write(IO_FID_LOG,*) '#xxxxxx              +++=# +++++xX                         ++++++++#    '
-       write(IO_FID_LOG,*) 'xxxxxxxx            ++++#-+++++=#                         +++++++++X    '
-       write(IO_FID_LOG,*) '-+xxxxxx+          ++++X#-++++=#.            -++;        =++++++++#     '
-       write(IO_FID_LOG,*) ' #xxxxxxxx.      .+++++# +++++#x            =++++-      +++++++++XX     '
-       write(IO_FID_LOG,*) ' #xxxxxxxxxx=--=++++++#.++++++#             ++++++    -+++++++++x#      '
-       write(IO_FID_LOG,*) '  #+xxxxxxxxxx+++++++#x=++++=#              ++++++;=+++++++++++x#       '
-       write(IO_FID_LOG,*) '  =#+xxxxxxxx+++++++##,+++++#=             =++++++++++++++++++##.       '
-       write(IO_FID_LOG,*) '   X#xxxxxxxx++++++## +++++x#              ;x++++++++++++++++##.        '
-       write(IO_FID_LOG,*) '    x##+xxxx+++++x## +++++=#                ##++++++++++++x##X          '
-       write(IO_FID_LOG,*) '     ,###Xx+++x###x -++++=#,                .####x+++++X####.           '
-       write(IO_FID_LOG,*) '       -########+   -#####x                   .X#########+.             '
-       write(IO_FID_LOG,*) '           .,.      ......                         .,.                  '
-       write(IO_FID_LOG,*) '                                                                        '
-       write(IO_FID_LOG,*) '    .X#######     +###-        =###+           ###x         x########   '
-       write(IO_FID_LOG,*) '   .#########    ######X      #######         ####        .#########x   '
-       write(IO_FID_LOG,*) '   ####+++++=   X#######.    -#######x       .###;        ####x+++++.   '
-       write(IO_FID_LOG,*) '   ###          ###= ####    #### x###       ####        -###.          '
-       write(IO_FID_LOG,*) '  .###         ####   ###+  X###   ###X     =###.        ####           '
-       write(IO_FID_LOG,*) '   ###-       ;###,        .###+   -###     ####        x##########+    '
-       write(IO_FID_LOG,*) '   +####x     ####         ####     ####   ####         ###########.    '
-       write(IO_FID_LOG,*) '    x######. =###          ###,     .###-  ###+        x###--------     '
-       write(IO_FID_LOG,*) '      =##### X###         -###       #### ,###         ####             '
-       write(IO_FID_LOG,*) '        .###=x###;        .###+       ###X ###X        ####.            '
-       write(IO_FID_LOG,*) ' ###########; ###########+ ###########     ########### ,##########.     '
-       write(IO_FID_LOG,*) '-###########  ,##########,  #########X      ##########  +#########      '
-       write(IO_FID_LOG,*) ',,,,,,,,,,.     ,,,,,,,,,    .,,,,,,,.       .,,,,,,,,    ,,,,,,,,      '
-       write(IO_FID_LOG,*) '                                                                        '
-       write(IO_FID_LOG,*) '     SCALE : Scalable Computing by Advanced Library and Environment     '
-       write(IO_FID_LOG,*) ''
-       write(IO_FID_LOG,*) '++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++'
-       write(IO_FID_LOG,*) '+                   LES-scale Numerical Weather Model                  +'
-       write(IO_FID_LOG,*) '++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++'
-       write(IO_FID_LOG,*) trim(H_LIBNAME)
-       write(IO_FID_LOG,*) trim(H_MODELNAME)
-       write(IO_FID_LOG,*) ''
-       write(IO_FID_LOG,*) '++++++ Start MPI'
-       write(IO_FID_LOG,*) '*** LOCAL_COMM_WORLD        : ', LOCAL_COMM_WORLD
-       write(IO_FID_LOG,*) '*** total process  [LOCAL]  : ', PRC_nmax
-       write(IO_FID_LOG,*) '*** master rank    [LOCAL]  : ', PRC_master
-       write(IO_FID_LOG,*) '*** my process ID  [LOCAL]  : ', PRC_myrank
-       write(IO_FID_LOG,*) '*** GLOBAL_COMM_WORLD       : ', GLOBAL_COMM_WORLD
-       write(IO_FID_LOG,*) '*** total process  [GLOBAL] : ', GLOBAL_nmax
-       write(IO_FID_LOG,*) '*** my process ID  [GLOBAL] : ', GLOBAL_myrank
-       write(IO_FID_LOG,*) '*** MASTER_COMM_WORLD       : ', MASTER_COMM_WORLD
-       write(IO_FID_LOG,*) '*** total process  [MASTER] : ', MASTER_nmax
-       write(IO_FID_LOG,*) '*** my process ID  [MASTER] : ', MASTER_myrank
-       write(IO_FID_LOG,*) '*** ABORT_COMM_WORLD        : ', ABORT_COMM_WORLD
-       write(IO_FID_LOG,*) ''
-       write(IO_FID_LOG,*) '++++++ Module[STDIO] / Categ[IO] / Origin[SCALElib]'
-       write(IO_FID_LOG,*) ''
-       write(IO_FID_LOG,*) '*** Open config file, FID = ', IO_FID_CONF
-       write(IO_FID_LOG,*) '*** Open log    file, FID = ', IO_FID_LOG
-       write(IO_FID_LOG,*) '*** basename of log file  = ', trim(IO_LOG_BASENAME)
-       write(IO_FID_LOG,*) '*** detailed log output   = ', IO_LNML
-       write(IO_FID_LOG,*) '*** Created Error Handler: rt=', new_abort,' st=', handler_status
-
-    else
-
-       if ( PRC_myrank == PRC_master ) then ! master node
-          write(*,*) '*** Log report is suppressed.'
-       endif
-
+       PRC_IsLOCAL_master = .false.
     endif
 
     return
@@ -475,6 +359,22 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[PROCESS] / Categ[ATMOS-LES COMM] / Origin[SCALElib]'
 
+    if ( IO_L ) then
+       write(IO_FID_LOG,*) ''
+       write(IO_FID_LOG,*) '++++++ Start MPI'
+       write(IO_FID_LOG,*) '*** LOCAL_COMM_WORLD        : ', LOCAL_COMM_WORLD
+       write(IO_FID_LOG,*) '*** total process  [LOCAL]  : ', PRC_nmax
+       write(IO_FID_LOG,*) '*** master rank    [LOCAL]  : ', PRC_master
+       write(IO_FID_LOG,*) '*** my process ID  [LOCAL]  : ', PRC_myrank
+       write(IO_FID_LOG,*) '*** GLOBAL_COMM_WORLD       : ', GLOBAL_COMM_WORLD
+       write(IO_FID_LOG,*) '*** total process  [GLOBAL] : ', GLOBAL_nmax
+       write(IO_FID_LOG,*) '*** my process ID  [GLOBAL] : ', GLOBAL_myrank
+       write(IO_FID_LOG,*) '*** MASTER_COMM_WORLD       : ', MASTER_COMM_WORLD
+       write(IO_FID_LOG,*) '*** total process  [MASTER] : ', MASTER_nmax
+       write(IO_FID_LOG,*) '*** my process ID  [MASTER] : ', MASTER_myrank
+       write(IO_FID_LOG,*) '*** ABORT_COMM_WORLD        : ', ABORT_COMM_WORLD
+    endif
+
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_PRC,iostat=ierr)
@@ -651,9 +551,9 @@ contains
           total_nmax = total_nmax + PRC_DOMAINS(i)
        enddo
        if ( total_nmax .ne. ORG_nmax ) then
-          if ( MASTER_LOG ) write (*,*) ""
-          if ( MASTER_LOG ) write (*,*) "ERROR: MPI PROCESS NUMBER is INCONSISTENT"
-          if ( MASTER_LOG ) write (*,*) "REQUESTED NPROCS = ", total_nmax, "  LAUNCHED NPROCS = ", ORG_nmax
+          if ( PRC_IsMASTER_master ) write (*,*) ""
+          if ( PRC_IsMASTER_master ) write (*,*) "ERROR: MPI PROCESS NUMBER is INCONSISTENT"
+          if ( PRC_IsMASTER_master ) write (*,*) "REQUESTED NPROCS = ", total_nmax, "  LAUNCHED NPROCS = ", ORG_nmax
           call PRC_MPIstop
        endif
 
@@ -667,7 +567,7 @@ contains
                              PRC_DOMAINS,  & ! [in ]
                              CONF_FILES,   & ! [in ]
                              color_reorder, & ! [in ]
-                             LOG_SPLIT,     & ! [in ] 
+                             LOG_SPLIT,     & ! [in ]
                              COLOR_LIST,   & ! [out]
                              PRC_ROOT,     & ! [out]
                              KEY_LIST,     & ! [out]
@@ -694,8 +594,8 @@ contains
        do_create_c(:) = .false.
        if ( .NOT. bulk_split ) then
           do i = 1, NUM_DOMAIN-1
-             if ( MASTER_LOG ) write ( *, '(1X,A,I4)' ) "relationship: ", i
-             if ( MASTER_LOG ) write ( *, '(1X,A,I4,A,I4)' ) &
+             if ( PRC_IsMASTER_master ) write ( *, '(1X,A,I4)' ) "relationship: ", i
+             if ( PRC_IsMASTER_master ) write ( *, '(1X,A,I4,A,I4)' ) &
                                "--- parent color = ", PARENT_COL(i), "  child color = ", CHILD_COL(i)
              if ( COLOR_LIST(ORG_myrank) == PARENT_COL(i) ) then
                 do_create_p(i) = .true.
@@ -727,9 +627,9 @@ contains
        deallocate ( COLOR_LIST, KEY_LIST )
 
     elseif ( NUM_DOMAIN == 1 ) then ! single domain run
-       if ( MASTER_LOG ) write (*,*) "*** a single comunicator"
+       if ( PRC_IsMASTER_master ) write (*,*) "*** a single comunicator"
     else
-       if ( MASTER_LOG ) write (*,*) "ERROR: REQUESTED DOMAIN NUMBER IS NOT ACCEPTABLE"
+       if ( PRC_IsMASTER_master ) write (*,*) "ERROR: REQUESTED DOMAIN NUMBER IS NOT ACCEPTABLE"
        call PRC_MPIstop
     endif
 
@@ -795,7 +695,7 @@ contains
        touch(:) = -1
        PRC_ORDER(:) = PRC_DOMAINS(:)
        call PRC_sort_ascd( PRC_ORDER(1:NUM_DOMAIN), 1, NUM_DOMAIN )
-   
+
        do i = 1, NUM_DOMAIN
        do j = 1, NUM_DOMAIN
           if ( PRC_DOMAINS(i) .eq. PRC_ORDER(j) .and. touch(j) < 0 ) then
@@ -806,27 +706,27 @@ contains
           endif
        enddo
        enddo
-   
+
        PARENT_COL(:) = -1
        CHILD_COL(:)  = -1
        do i = 1, NUM_DOMAIN
           id_parent = i - 1
           id_child  = i + 1
-   
+
           if ( 1 <= id_parent .and. id_parent <= NUM_DOMAIN ) then
              PARENT_COL(i) = DOM2COL(id_parent)
           endif
           if ( 1 <= id_child  .and. id_child  <= NUM_DOMAIN ) then
              CHILD_COL(i) = DOM2COL(id_child)
           endif
-   
-          if ( MASTER_LOG .and. LOG_SPLIT ) then
+
+          if ( PRC_IsMASTER_master .and. LOG_SPLIT ) then
              write( *, '(1X,A,I2,1X,A,I2,2(2X,A,I2))' )  &
                   "DOMAIN: ", i, "MY_COL: ", DOM2COL(i), &
                   "PARENT: COL= ", PARENT_COL(i), "CHILD: COL= ", CHILD_COL(i)
           endif
        enddo
-     
+
        !--- reorder following color order
        do i = 1, NUM_DOMAIN
           dnum = COL2DOM(i-1)
@@ -838,7 +738,7 @@ contains
           RO_PARENT_COL(i)  = PARENT_COL(dnum)
           RO_CHILD_COL(i)   = CHILD_COL (dnum)
        enddo
-     
+
        !--- set relationship by ordering of relationship number
        PARENT_COL(:)   = -1
        CHILD_COL(:)    = -1
@@ -846,18 +746,18 @@ contains
           PARENT_COL(i) = RO_PARENT_COL( DOM2ORDER(i+1) ) ! from child to parent
           CHILD_COL(i)  = RO_CHILD_COL ( DOM2ORDER(i)   ) ! from parent to child
        enddo
-     
+
        do i = 1, NUM_DOMAIN
-          if ( MASTER_LOG ) write ( *, * ) ""
-          if ( MASTER_LOG ) write ( *, '(1X,A,I2,A,I5)' ) "ORDER (",i,") -> DOMAIN: ", ORDER2DOM(i)
-          if ( MASTER_LOG ) write ( *, '(1X,A,I1,A,I5)' ) "NUM PRC_DOMAINS(",i,")  = ", RO_PRC_DOMAINS(i)
-          if ( MASTER_LOG ) write ( *, '(1X,A,I1,A,I3)' ) "MY COLOR(",i,") = ", RO_DOM2COL(ORDER2DOM(i))
-          if ( MASTER_LOG ) write ( *, '(1X,A,I1,A,I3)' ) "PARENT COLOR(",i,") = ", RO_PARENT_COL(i)
-          if ( MASTER_LOG ) write ( *, '(1X,A,I1,A,I3)' ) "CHILD COLOR(",i,") = ", RO_CHILD_COL(i)
-          if ( MASTER_LOG ) write ( *, '(1X,A,I1,A,A)'  ) "CONF_FILES(",i,")    = ", trim(RO_CONF_FILES(i))
+          if ( PRC_IsMASTER_master ) write ( *, * ) ""
+          if ( PRC_IsMASTER_master ) write ( *, '(1X,A,I2,A,I5)' ) "ORDER (",i,") -> DOMAIN: ", ORDER2DOM(i)
+          if ( PRC_IsMASTER_master ) write ( *, '(1X,A,I1,A,I5)' ) "NUM PRC_DOMAINS(",i,")  = ", RO_PRC_DOMAINS(i)
+          if ( PRC_IsMASTER_master ) write ( *, '(1X,A,I1,A,I3)' ) "MY COLOR(",i,") = ", RO_DOM2COL(ORDER2DOM(i))
+          if ( PRC_IsMASTER_master ) write ( *, '(1X,A,I1,A,I3)' ) "PARENT COLOR(",i,") = ", RO_PARENT_COL(i)
+          if ( PRC_IsMASTER_master ) write ( *, '(1X,A,I1,A,I3)' ) "CHILD COLOR(",i,") = ", RO_CHILD_COL(i)
+          if ( PRC_IsMASTER_master ) write ( *, '(1X,A,I1,A,A)'  ) "CONF_FILES(",i,")    = ", trim(RO_CONF_FILES(i))
        enddo
-       if ( MASTER_LOG ) write ( *, * ) ""
-   
+       if ( PRC_IsMASTER_master ) write ( *, * ) ""
+
        do i=1, NUM_DOMAIN
           COL_FILE(i-1) = RO_CONF_FILES(i) ! final copy
        enddo
@@ -869,18 +769,18 @@ contains
        RO_PRC_DOMAINS(:) = -1
        RO_PARENT_COL(:)  = -1
        RO_CHILD_COL(:)   = -1
-   
+
        do i = 1, NUM_DOMAIN
           ORDER2DOM(i)      = i
           RO_DOM2COL(i)     = i-1
           RO_PRC_DOMAINS(i) = PRC_DOMAINS(i)
           RO_CONF_FILES(i)  = CONF_FILES(i)
        enddo
-   
+
        do i = 1, NUM_DOMAIN
           id_parent = i - 1
           id_child  = i + 1
-   
+
           if ( 1 <= id_parent .and. id_parent <= NUM_DOMAIN ) then
              RO_PARENT_COL(i) = RO_DOM2COL(id_parent)
           endif
@@ -888,7 +788,7 @@ contains
              RO_CHILD_COL(i) = RO_DOM2COL(id_child)
           endif
        enddo
-   
+
        ! make relationship
        do i = 1, NUM_DOMAIN-1
           PARENT_COL(i) = RO_PARENT_COL(i+1) ! from child to parent
@@ -910,7 +810,7 @@ contains
           PRC_ROOT(COLOR_LIST(i+1)) = i
           COL_FILE(COLOR_LIST(i+1)) = RO_CONF_FILES(order)
        endif
-       if ( LOG_SPLIT .and. MASTER_LOG ) then
+       if ( LOG_SPLIT .and. PRC_IsMASTER_master ) then
           write ( *, '(1X,4(A,I5))' ) "PE:", i, "   COLOR:", COLOR_LIST(i+1), &
                 "   KEY:", KEY_LIST(i+1), "   PRC_ROOT:", PRC_ROOT(COLOR_LIST(i+1))
        endif

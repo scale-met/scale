@@ -7,10 +7,12 @@ program unit
 
   use scale_process, only: &
      GLOBAL_COMM_WORLD, &
-     PRC_setup,    &
-     PRC_MPIstart, &
-     PRC_MPIsetup, &
-     PRC_MPIfinish
+     PRC_setup,     &
+     PRC_MPIstart,  &
+     PRC_MPIsetup,  &
+     PRC_MPIfinish, &
+     PRC_myrank,    &
+     PRC_IsLOCAL_master
   use scale_const, only: &
      CONST_setup
   use scale_comm, only: &
@@ -37,6 +39,9 @@ program unit
   ! setup MPI
   GLOBAL_COMM_WORLD = MPI_COMM_WORLD
   call PRC_MPIsetup( MPI_COMM_WORLD )
+
+  ! setup Log
+  call IO_LOG_setup( PRC_myrank, PRC_IsLOCAL_master )
 
   ! setup process
   call PRC_setup

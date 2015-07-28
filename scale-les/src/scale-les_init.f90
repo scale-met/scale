@@ -31,7 +31,7 @@ program scaleles_init_launcher
      PRC_MPIfinish,     &
      PRC_MPIstop,       &
      PRC_BULKsetup,     &
-     MASTER_LOG,        &
+     PRC_IsMASTER_master,        &
      MASTER_COMM_WORLD, &
      MASTER_nmax,       &
      max_depth
@@ -96,56 +96,49 @@ program scaleles_init_launcher
 
   ! start MPI
   call PRC_MPIstart
-  if ( MASTER_LOG ) write(*,*) '*** Start Launch System for SCALE-LES'
 
-  !--- read from argument
-  if ( COMMAND_ARGUMENT_COUNT() < 1 ) then
-     if (MASTER_LOG) write(*,*) 'WARNING: No config file specified!'
-     if (MASTER_LOG) write(*,*) '         Default values are used.'
-  else
-     call get_command_argument(1,fname_launch)
-  endif
+  if ( PRC_IsMASTER_master ) write(*,*) '*** Start Launch System for SCALE-LES'
+
+  !--- get filename from command argument
+  fname_launch = IO_ARG_getfname( PRC_IsMASTER_master )
+
+  !--- open launcher config file
+  LNC_FID_CONF = IO_CNF_open( fname_launch,       & ! [IN]
+                              PRC_IsMASTER_master ) ! [IN]
+
+  ! set default
   CONF_FILES(1) = fname_launch
 
-  !--- open config file till end
-  LNC_FID_CONF = IO_get_available_fid()
-  open( LNC_FID_CONF,                &
-        file   = trim(fname_launch), &
-        form   = 'formatted',        &
-        status = 'old',              &
-        iostat = ierr                )
-  if ( ierr /= 0 ) then
-     if (MASTER_LOG) write(*,*)
-     if (MASTER_LOG) write(*,*) 'WARNING: Failed to open config file! :', trim(fname_launch)
-     if (MASTER_LOG) write(*,*) '         Default values are used.'
-     if (MASTER_LOG) write(*,*)
-  end if
-
-  !--- read PARAM_LAUNCHER
+  !--- read namelist
   rewind(LNC_FID_CONF)
   read(LNC_FID_CONF,nml=PARAM_LAUNCHER,iostat=ierr)
-  if( ierr > 0 ) then !--- fatal error
-     if (MASTER_LOG) write(*,*) ' xxx Not appropriate names in namelist PARAM_LAUNCHER. Check!'
+  if ( ierr < 0 ) then !--- missing
+     ! keep default setting (no members, no nesting)
+  elseif( ierr > 0 ) then !--- fatal error
+     if( PRC_IsMASTER_master ) write(*,*) 'xxx Not appropriate names in namelist PARAM_CONST. Check!'
      call PRC_MPIstop
   endif
-  close( LNC_FID_CONF )
+
+  !--- close launcher config file
+  close(LNC_FID_CONF)
+
   fname_local = CONF_FILES(1)
 
   !--- communicator split for bulk jobs
   check = mod(MASTER_nmax,NUM_BULKJOB)
   if( check /= 0 ) then !--- fatal error
-     if (MASTER_LOG) write(*,*) ' xxx Total Num of Processes must be divisible by NUM_BULKJOB. Check!'
-     if (MASTER_LOG) write(*,*) '     Total Num of Processes: ', MASTER_nmax
-     if (MASTER_LOG) write(*,*) '                NUM_BULKJOB: ', NUM_BULKJOB
+     if (PRC_IsMASTER_master) write(*,*) ' xxx Total Num of Processes must be divisible by NUM_BULKJOB. Check!'
+     if (PRC_IsMASTER_master) write(*,*) '     Total Num of Processes: ', MASTER_nmax
+     if (PRC_IsMASTER_master) write(*,*) '                NUM_BULKJOB: ', NUM_BULKJOB
      call PRC_MPIstop
   endif
 
   nprocs = MASTER_nmax / NUM_BULKJOB
   PRC_BULKJOB(1:NUM_BULKJOB) = nprocs
-  if ( MASTER_LOG ) write ( *, '(1X,A,I4)' ) "TOTAL BULK JOB NUMBER   = ", NUM_BULKJOB
-  if ( MASTER_LOG ) write ( *, '(1X,A,I5)' ) "PROCESS NUM of EACH JOB = ", nprocs
-  if ( MASTER_LOG ) write ( *, '(1X,A,I4)' ) "TOTAL DOMAIN NUMBER     = ", NUM_DOMAIN
-  if ( MASTER_LOG ) write ( *, * ) "Flag of ABORT ALL JOBS  = ", ABORT_ALL_JOBS
+  if ( PRC_IsMASTER_master ) write ( *, '(1X,A,I4)' ) "TOTAL BULK JOB NUMBER   = ", NUM_BULKJOB
+  if ( PRC_IsMASTER_master ) write ( *, '(1X,A,I5)' ) "PROCESS NUM of EACH JOB = ", nprocs
+  if ( PRC_IsMASTER_master ) write ( *, '(1X,A,I4)' ) "TOTAL DOMAIN NUMBER     = ", NUM_DOMAIN
+  if ( PRC_IsMASTER_master ) write ( *, * ) "Flag of ABORT ALL JOBS  = ", ABORT_ALL_JOBS
 
   call PRC_MPIsplit(     &
       MASTER_COMM_WORLD, & ! [in ]

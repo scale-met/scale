@@ -55,9 +55,11 @@ contains
     use scale_prof
 
     use scale_process, only: &
-       PRC_setup,    &
-       PRC_MPIsetup, &
-       PRC_MPIfinish
+       PRC_setup,     &
+       PRC_MPIsetup,  &
+       PRC_MPIfinish, &
+       PRC_myrank,    &
+       PRC_IsLOCAL_master
     use scale_const, only: &
        CONST_setup
     use scale_calendar, only: &
@@ -213,11 +215,12 @@ contains
     ! setup MPI
     call PRC_MPIsetup( MY_COMM_WORLD )
 
+    ! setup Log
+    call IO_LOG_setup( PRC_myrank, PRC_IsLOCAL_master )
+    call LogInit( IO_FID_CONF, IO_FID_LOG, IO_L )
+
     ! setup process
     call PRC_setup
-
-    ! setup Log
-    call LogInit( IO_FID_CONF, IO_FID_LOG, IO_L )
 
     ! setup PROF
     call PROF_setup
