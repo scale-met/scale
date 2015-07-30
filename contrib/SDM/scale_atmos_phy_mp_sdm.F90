@@ -67,6 +67,7 @@
 !! @li      2015-06-22 (S.Shima) [add] Add section specification call for profiling (fipp and fapp)
 !! @li      2015-06-27 (S.Shima) [add] Add more section specification call for profiling (fapp)
 !! @li      2015-06-27 (S.Shima) [add] Store environmental variable PARALELL to num_threads 
+!! @li      2015-07-30 (Y.Sato)  [add] Add "ifdef" for fapp and fipp module
 !<
 !-------------------------------------------------------------------------------
 #include "macro_thermodyn.h"
@@ -632,11 +633,14 @@ contains
 
     !---------------------------------------------------------------------------
 
+#ifdef _FIPP_
     ! Section specification for fipp profiler
     call fipp_start()
-
+#endif
+#ifdef _FAPP_
     ! Section specification for fapp profiler
     call fapp_start("sdm_all",0,0)
+#endif
     
     ! QTRC except QV (and QDRY) are diagnosed from super-droplets
     ! To make this doubly sure, reset QTRC to zero
@@ -646,9 +650,10 @@ contains
        end if
     end do
 
+#ifdef _FAPP_
     ! Section specification for fapp profiler
     call fapp_start("sdm_initialization",0,0)
-
+#endif
     if( sd_first ) then
       sd_first = .false.
       if( IO_L ) write(IO_FID_LOG,*) '*** S.D.: setup'
@@ -677,9 +682,10 @@ contains
       end if
     endif
 
+#ifdef _FAPP_
     ! Section specification for fapp profiler
     call fapp_stop("sdm_initialization",0,0)
-
+#endif
     if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Microphysics(Super Droplet Method)'
 
     ! -----
@@ -702,9 +708,10 @@ contains
     !--
     ! SD data output
 
+#ifdef _FAPP_
     ! Section specification for fapp profiler
     call fapp_start("sdm_out",0,0)
-
+#endif
     if( (mod(sdm_dmpvar,10)==1) .and. sdm_dmpitva>0.0_RP .and. &
          mod(10*int(1.E+2_RP*(TIME_NOWSEC+0.0010_RP)), &
              int(1.E+3_RP*(sdm_dmpitva+0.00010_RP))) == 0 ) then
@@ -727,9 +734,10 @@ contains
        write(*,*) 'ERROR: sdm_dmpvar>1 not supported for now. Set sdm_dmpvar=1 (Output Super Droplet Data in ASCII)'
     end if
 
+#ifdef _FAPP_
     ! Section specification for fapp profiler
     call fapp_stop("sdm_out",0,0)
-
+#endif
     !== run SDM at future ==!
      call sdm_calc(MOMX,MOMY,MOMZ,DENS,RHOT,QTRC,                 & 
                    sdm_calvar,sdm_mvexchg,dtcl(1:3), sdm_aslset,  &
@@ -767,19 +775,21 @@ contains
      !! For example, when we diagnose pressure or rhod during the dynamical process, 
      !! qc and qr should be 0 because they are not included in the total density
 
+#ifdef _FAPP_
      ! Section specification for fapp profiler
      call fapp_start("sdm_sd2qcqr",0,0)
-
+#endif
      call sdm_sd2qcqr(DENS,QTRC_sdm(:,:,:,I_QC),QTRC_sdm(:,:,:,I_QR),        &
                       zph_crs,                                               &
                       sdnum_s2c,sdn_s2c,sdx_s2c,sdy_s2c,                     &
                       sdr_s2c,sdri_s2c,sdrj_s2c,sdrk_s2c,sdrkl_s2c,sdrku_s2c,&
                       rhoc_scale,rhor_scale,                                 &
                       sd_itmp1,sd_itmp2,crs_dtmp1,crs_dtmp2)
-
+#ifdef _FAPP_
+     ! Section specification for 
      ! Section specification for fapp profiler
      call fapp_stop("sdm_sd2qcqr",0,0)
-
+#endif
 ! not supported yet. S.Shima
 !!$     ! Aerosol formation process of super-droplets
 !!$
@@ -844,11 +854,14 @@ contains
     call HIST_in( QTRC_sdm(:,:,:,I_QR), 'QR_sd', 'mixing ratio of rain in SDM', 'kg/kg', dt)
     call HIST_in( QHYD_sdm(:,:,:), 'QHYD_sd', 'mixing ratio of liquid in SDM', 'kg/kg', dt)
 
+#ifdef _FIPP_
     ! Section specification for fipp profiler
     call fipp_stop()
+#endif
+#ifdef _FAPP_
     ! Section specification for fapp profiler
     call fapp_stop("sdm_all",0,0)
-
+#endif
     return
   end subroutine ATMOS_PHY_MP_sdm
   !-----------------------------------------------------------------------------
@@ -1451,9 +1464,10 @@ contains
          !### Run SDM  ###!
 
          !=== 1 : condensation / evaporation ===!
+#ifdef _FAPP_
          ! Section specification for fapp profiler
          call fapp_start("sdm_condevp",0,0)
-
+#endif
          if( sdm_calvar(1) .and.                                 &
              mod(t,istep_sdm/istep_evl)==0 .and. sdm_dtevl>0.d0 ) then
 
@@ -1493,12 +1507,15 @@ contains
 
          end if
 
+#ifdef _FAPP_
          ! Section specification for fapp profiler
          call fapp_stop("sdm_condevp",0,0)
-
+#endif
          !=== 2 : stochastic coalescence ===!
+#ifdef _FAPP_
          ! Section specification for fapp profiler
          call fapp_start("sdm_coales",0,0)
+#endif
 
          if( sdm_calvar(2) .and.                                 &
              mod(t,istep_sdm/istep_col)==0 .and. sdm_dtcol>0.d0 ) then
@@ -1530,12 +1547,15 @@ contains
 
          end if
 
+#ifdef _FAPP_
          ! Section specification for fapp profiler
          call fapp_stop("sdm_coales",0,0)
-
+#endif
          !=== 3 : motion of super-droplets ===!
+#ifdef _FAPP_
          ! Section specification for fapp profiler
          call fapp_start("sdm_motion",0,0)
+#endif
 
          if( sdm_calvar(3) .and.                                 &
              mod(t,istep_sdm/istep_adv)==0 .and. sdm_dtadv>0.d0 ) then
@@ -1627,23 +1647,27 @@ contains
 
          end if
 
+#ifdef _FAPP_
          ! Section specification for fapp profiler
          call fapp_stop("sdm_motion",0,0)
-
+#endif
       end do
 
     ! Convert super-droplets to precipitation
 
+#ifdef _FAPP_
       ! Section specification for fapp profiler
       call fapp_start("sdm_sd2prec",0,0)
-
+#endif
       call sdm_sd2prec(dt,                                &
                        prec_crs,                          &
                        sd_num,sd_n,sd_x,sd_y,sd_r,sd_ri,sd_rj,sd_rk,  &
                        sd_itmp1(1:sd_num,1),crs_val1c(1,1:IA,1:JA))
 
+#ifdef _FAPP_
       ! Section specification for fapp profiler
       call fapp_stop("sdm_sd2prec",0,0)
+#endif
 
     return
   end subroutine sdm_calc

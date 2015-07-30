@@ -16,6 +16,7 @@
 !! @li      2014-07-12 (S.Shima) [new] Separated from scale_atmos_phy_mp_sdm.F90
 !! @li      2015-06-25 (S.Shima) [add] fapp_start/stop added for performance monitring
 !! @li      2015-06-26 (S.Shima) [add] OCL added for Auto parallelization on K/FX10
+!! @li      2015-07-30 (Y.Sato)  [add] Add "ifdef" for fapp and fipp module
 !!
 !<
 !-------------------------------------------------------------------------------
@@ -170,10 +171,10 @@ contains
     integer :: sort_freqm
     integer :: icptc, icptp
     !--------------------------------------------------------------------
-
+#ifdef _FAPP_
     ! Section specification for fapp profiler
     call fapp_start("sdm_coales",1,1)
-
+#endif
     call sdm_x2ri(sd_num,sd_x,sd_ri,sd_rk)
     call sdm_y2rj(sd_num,sd_y,sd_rj,sd_rk)
 
@@ -1036,9 +1037,10 @@ contains
     deallocate( fsort_tag  )
     deallocate( fsort_freq )
 
+#ifdef _FAPP_
     ! Section specification for fapp profiler
     call fapp_stop("sdm_coales",1,1)
-
+#endif
     return
   end subroutine sdm_coales
 end module m_sdm_coalescence

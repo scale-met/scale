@@ -19,6 +19,7 @@
 !! @li      2014-07-24 (Y.Sato ) [mod] Modify bugs accessing upper/lower boundary
 !! @li      2015-06-27 (S.Shima) [add] Add fapp_start/stop calls to monitor the performance
 !! @li      2015-06-27 (S.Shima) [mod] Working arrays are introduced to parallelize sd2rhow and sd2rhocr 
+!! @li      2015-07-30 (Y.Sato)  [add] Add "ifdef" for fapp and fipp module
 !!
 !<
 !-------------------------------------------------------------------------------
@@ -241,9 +242,10 @@ contains
     real(RP) :: tmp_liq_sdm(num_threads,KA,IA,JA)
     !-----------------------------------------------------------------------------
     
+#ifdef _FAPP_
     ! Section specification for fapp profiler
     call fapp_start("sdm_sd2rhocr",1,1)
-
+#endif
     call sdm_x2ri(sd_num,sd_x,sd_ri,sd_rk)
     call sdm_y2rj(sd_num,sd_y,sd_rj,sd_rk)
     
@@ -468,9 +470,10 @@ contains
 
     end if
 
+#ifdef _FAPP_
     ! Section specification for fapp profiler
     call fapp_stop("sdm_sd2rhocr",1,1)
-
+#endif
     return
   end subroutine sdm_sd2rhocr
   !-----------------------------------------------------------------------------
@@ -511,9 +514,10 @@ contains
     real(RP) :: tmp_liqw_sdm(num_threads,KA,IA,JA)
     !--------------------------------------------------------------------
 
+#ifdef _FAPP_
     ! Section specification for fapp profiler
     call fapp_start("sdm_sd2rhow",1,1)
-
+#endif
     call sdm_x2ri(sd_num,sd_x,sd_ri,sd_rk)
     call sdm_y2rj(sd_num,sd_y,sd_rj,sd_rk)
 
@@ -620,9 +624,10 @@ contains
     end do
     end do
 
+#ifdef _FAPP_
     ! Section specification for fapp profiler
     call fapp_stop("sdm_sd2rhow",1,1)
-
+#endif
     return
   end subroutine sdm_sd2rhow
 end module m_sdm_sd2fluid

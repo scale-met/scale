@@ -17,6 +17,7 @@
 !! @li      2014-07-11 (S.Shima) [rev] Fixed the bug of interpolation in sdm_getvel
 !! @li      2015-06-25 (S.Shima) [add] fapp_start/stop added for performance monitoring
 !! @li      2015-06-26 (S.Shima) [add] OCL added for Auto parallelization on K/FX10
+!! @li      2015-07-30 (Y.Sato)  [add] Add "ifdef" for fapp and fipp module
 !!
 !<
 !-------------------------------------------------------------------------------
@@ -51,9 +52,10 @@ contains
     ! The advection process of Super-Droplets.
     ! now only support uniform grid
 
+#ifdef _FAPP_
     ! Section specification for fapp profiler
     call fapp_start("sdm_move",1,1)
-
+#endif
     dz_inv=1.0_RP/DZ
     do n=1,sd_num
 
@@ -67,9 +69,10 @@ contains
        sd_rk(n) = sd_rk(n) + sd_vz(n) * real(sdm_dtadv,kind=RP) * dz_inv
     enddo
     
+#ifdef _FAPP_
     ! Section specification for fapp profiler
     call fapp_stop("sdm_move",1,1)
-
+#endif
     return
   end subroutine sdm_move
   !----------------------------------------------------------------------------
@@ -122,9 +125,10 @@ contains
     !-------------------------------------------------------------------
     ! The advection process of Super-Droplets.
 
+#ifdef _FAPP_
     ! Section specification for fapp profiler
     call fapp_start("sdm_getvel",1,1)
-
+#endif
     call sdm_x2ri(sd_num,sd_x,sd_ri,sd_rk)
     call sdm_y2rj(sd_num,sd_y,sd_rj,sd_rk)
 
@@ -226,9 +230,10 @@ contains
        sd_vzw(n) = sd_w - sd_vz
     end do
 
+#ifdef _FAPP_
     ! Section specification for fapp profiler
     call fapp_stop("sdm_getvel",1,1)
-
+#endif
     return
   end subroutine sdm_getvel
   !----------------------------------------------------------------------------
@@ -340,9 +345,10 @@ contains
     integer :: i, j, k, n, m   ! index
     !---------------------------------------------------------------------
 
+#ifdef _FAPP_
     ! Section specification for fapp profiler
     call fapp_start("sdm_getvz",1,1)
-
+#endif
     if( .not. doprecipitation ) then
        sd_vz(:) = 0.0_RP
        return
@@ -1034,9 +1040,10 @@ contains
 
     end if
 
+#ifdef _FAPP_
     ! Section specification for fapp profiler
     call fapp_stop("sdm_getvz",1,1)
-
+#endif
     return
   end subroutine sdm_getvz
 end module m_sdm_motion

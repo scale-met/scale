@@ -21,6 +21,7 @@
 !! @li      2014-12-24 (Y.Sato)  [mod] Modify the Latent Heat for SCALE library 
 !! @li      2015-06-25 (S.Shima) [add] fapp_start/stop added for performance monitoring
 !! @li      2015-06-26 (S.Shima) [add] OCL added for Auto parallelization on K/FX10
+!! @li      2015-07-30 (Y.Sato)  [add] Add "ifdef" for fapp and fipp module
 !!
 !<
 !-------------------------------------------------------------------------------
@@ -116,10 +117,10 @@ contains
     integer, parameter :: itr_max = 25   ! iteration number
 !!$    real(RP), parameter :: epsva = 0.622_RP   ! Molecular weight ratio of vapor/air
     !---------------------------------------------------------------------
-      
+#ifdef _FAPP_
     ! Section specification for fapp profiler
     call fapp_start("sdm_condevp",1,1)
-
+#endif
     call sdm_x2ri(sd_num,sd_x,sd_ri,sd_rk)
     call sdm_y2rj(sd_num,sd_y,sd_rj,sd_rk)
 
@@ -297,9 +298,10 @@ contains
 
     end do
 
+#ifdef _FAPP_
     ! Section specification for fapp profiler
     call fapp_stop("sdm_condevp",1,1)
-
+#endif
     return
   end subroutine sdm_condevp
   !-----------------------------------------------------------------------------
