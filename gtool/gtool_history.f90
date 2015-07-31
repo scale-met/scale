@@ -1283,7 +1283,8 @@ contains
 
     if ( dt < eps .AND. ( .NOT. History_tavg(itemid) ) ) then
        write(message,*) 'xxx History variable was put two times before output!: ', &
-                        trim(History_item(itemid))
+                        trim(History_item(itemid)), &
+                        step_next, History_tlststep(itemid)
        call Log('E', message)
     endif
 
@@ -1359,7 +1360,8 @@ contains
 
     if ( dt < eps .AND. ( .NOT. History_tavg(itemid) ) ) then
        write(message,*) 'xxx History variable was put two times before output!: ', &
-                        trim(History_item(itemid))
+                        trim(History_item(itemid)), &
+                        step_next, History_tlststep(itemid)
        call Log('E', message)
     endif
 
@@ -1435,7 +1437,8 @@ contains
 
     if ( dt < eps .AND. ( .NOT. History_tavg(itemid) ) ) then
        write(message,*) 'xxx History variable was put two times before output!: ', &
-                        trim(History_item(itemid))
+                        trim(History_item(itemid)), &
+                        step_next, History_tlststep(itemid)
        call Log('E', message)
     endif
 
@@ -1515,7 +1518,8 @@ contains
 
     if ( dt < eps .AND. ( .NOT. History_tavg(itemid) ) ) then
        write(message,*) 'xxx History variable was put two times before output!: ', &
-                        trim(History_item(itemid))
+                        trim(History_item(itemid)), &
+                        step_next, History_tlststep(itemid)
        call Log('E', message)
     endif
 
@@ -1595,7 +1599,8 @@ contains
 
     if ( dt < eps .AND. ( .NOT. History_tavg(itemid) ) ) then
        write(message,*) 'xxx History variable was put two times before output!: ', &
-                        trim(History_item(itemid))
+                        trim(History_item(itemid)), &
+                        step_next, History_tlststep(itemid)
        call Log('E', message)
     endif
 
@@ -1679,7 +1684,8 @@ contains
 
     if ( dt < eps .AND. ( .NOT. History_tavg(itemid) ) ) then
        write(message,*) 'xxx History variable was put two times before output!: ', &
-                        trim(History_item(itemid))
+                        trim(History_item(itemid)), &
+                        step_next, History_tlststep(itemid)
        call Log('E', message)
     endif
 
