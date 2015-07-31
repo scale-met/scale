@@ -214,9 +214,12 @@ $(LIBDIR)/$(LIBNAME): $(OBJS)
 	$(AR) $(ARFLAGS) $@ $?
 	$(RANLIB) $@
 
+ifeq ($(IGNOREDEP),)
 modules: $(OBJS)
 	install $(MODS) $(MODDIR)
-
+else
+modules:
+endif
 
 
 allclean: distclean
@@ -270,4 +273,6 @@ $(OBJ_DIR)/scale_rdma.o : scale_rdma.c
 .PHONY : clean distclean allclean depend modules dependency
 
 
+ifeq ($(IGNOREDEP),)
 -include depend
+endif
