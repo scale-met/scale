@@ -188,7 +188,8 @@ int32_t file_get_datainfo( datainfo_t *dinfo,   // (out)
   CHECK_ERROR( nc_inq_varndims(ncid, varid, &rank) );
   CHECK_ERROR( nc_inq_vardimid(ncid, varid, dimids) );
 #ifdef NETCDF3
-  CHECK_ERROR( nc_inq_unlimdim(ncid, &n) );
+  CHECK_ERROR( nc_inq_unlimdim(ncid, uldims) );
+  n = 1;
 #else
   CHECK_ERROR( nc_inq_unlimdims(ncid, &n, uldims) );
 #endif
