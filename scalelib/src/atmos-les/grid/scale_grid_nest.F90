@@ -146,11 +146,11 @@ module scale_grid_nest
 
   integer, private               :: PARENT_PRC_NUM_X(2)      !< MPI processes in x-direction in parent
   integer, private               :: PARENT_PRC_NUM_Y(2)      !< MPI processes in y-direction in parent
-  integer, private               :: PARENT_PRC_nmax(2)       !< MPI total processes in parent
+  integer, private               :: PARENT_PRC_nprocs(2)     !< MPI total processes in parent
 
   integer, private               :: DAUGHTER_PRC_NUM_X(2)    !< MPI processes in x-direction in daughter
   integer, private               :: DAUGHTER_PRC_NUM_Y(2)    !< MPI processes in y-direction in daughter
-  integer, private               :: DAUGHTER_PRC_nmax(2)     !< MPI total processes in daughter
+  integer, private               :: DAUGHTER_PRC_nprocs(2)   !< MPI total processes in daughter
 
   integer, private               :: NEST_TILE_ALL            !< NUM of TILEs in the local node
   integer, private               :: NEST_TILE_ALLMAX_p       !< MAXNUM of TILEs among whole processes for parent
@@ -277,11 +277,10 @@ contains
     use scale_const, only: &
        D2R => CONST_D2R
     use scale_process, only: &
-       PRC_nmax,          &
-       PRC_master,        &
-       PRC_myrank,        &
-       PRC_mydom,         &
-       PRC_MPIstop
+       PRC_MPIstop,         &
+       PRC_GLOBAL_domainID, &
+       PRC_nprocs,          &
+       PRC_IsMaster
     use scale_les_process, only: &
        PRC_HAS_W,         &
        PRC_HAS_E,         &
@@ -377,7 +376,7 @@ contains
     endif
     if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_NEST)
 
-    PRC_mydom = ONLINE_DOMAIN_NUM
+    PRC_GLOBAL_domainID = ONLINE_DOMAIN_NUM
 
     call INTRPNEST_setup ( interp_search_divnum, NEST_INTERP_LEVEL, OFFLINE )
     itp_nh = int( NEST_INTERP_LEVEL )
@@ -421,8 +420,8 @@ contains
          PARENT_JMAX(HANDLING_NUM)      = OFFLINE_PARENT_JMAX
          PARENT_LKMAX(HANDLING_NUM)     = OFFLINE_PARENT_LKMAX
 
-         PARENT_PRC_nmax(HANDLING_NUM) = PARENT_PRC_NUM_X(HANDLING_NUM) * PARENT_PRC_NUM_Y(HANDLING_NUM)
-         allocate( latlon_catalog(PARENT_PRC_nmax(HANDLING_NUM),4,2) )
+         PARENT_PRC_nprocs(HANDLING_NUM) = PARENT_PRC_NUM_X(HANDLING_NUM) * PARENT_PRC_NUM_Y(HANDLING_NUM)
+         allocate( latlon_catalog(PARENT_PRC_nprocs(HANDLING_NUM),4,2) )
 
          !--- read latlon catalogue
          fid = IO_get_available_fid()
@@ -437,7 +436,7 @@ contains
             call PRC_MPIstop
          endif
 
-         do i = 1, PARENT_PRC_nmax(HANDLING_NUM)
+         do i = 1, PARENT_PRC_nprocs(HANDLING_NUM)
             read(fid,'(i8,8f32.24)',iostat=ierr) parent_id, &
                                                  latlon_catalog(i,I_NW,I_LON), latlon_catalog(i,I_NE,I_LON), & ! LON: NW, NE
                                                  latlon_catalog(i,I_SW,I_LON), latlon_catalog(i,I_SE,I_LON), & ! LON: SW, SE
@@ -515,24 +514,24 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
             endif
 
             if( IO_L ) write(IO_FID_LOG,'(1x,A)'     ) '***  Informations of Parent Domain [me]'
-            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- PARENT_PRC_nmax   :', PARENT_PRC_nmax(HANDLING_NUM)
-            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- PARENT_PRC_NUM_X  :', PARENT_PRC_NUM_X(HANDLING_NUM)
-            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- PARENT_PRC_NUM_Y  :', PARENT_PRC_NUM_Y(HANDLING_NUM)
-            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- PARENT_KMAX       :', PARENT_KMAX(HANDLING_NUM)
-            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- PARENT_IMAX       :', PARENT_IMAX(HANDLING_NUM)
-            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- PARENT_JMAX       :', PARENT_JMAX(HANDLING_NUM)
-            if( IO_L ) write(IO_FID_LOG,'(1x,A,F9.3)') '***  --- PARENT_DTSEC      :', PARENT_DTSEC(HANDLING_NUM)
-            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)  ') '***  --- PARENT_NSTEP      :', PARENT_NSTEP(HANDLING_NUM)
+            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- PARENT_PRC_nprocs   :', PARENT_PRC_nprocs(HANDLING_NUM)
+            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- PARENT_PRC_NUM_X    :', PARENT_PRC_NUM_X(HANDLING_NUM)
+            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- PARENT_PRC_NUM_Y    :', PARENT_PRC_NUM_Y(HANDLING_NUM)
+            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- PARENT_KMAX         :', PARENT_KMAX(HANDLING_NUM)
+            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- PARENT_IMAX         :', PARENT_IMAX(HANDLING_NUM)
+            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- PARENT_JMAX         :', PARENT_JMAX(HANDLING_NUM)
+            if( IO_L ) write(IO_FID_LOG,'(1x,A,F9.3)') '***  --- PARENT_DTSEC        :', PARENT_DTSEC(HANDLING_NUM)
+            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)  ') '***  --- PARENT_NSTEP        :', PARENT_NSTEP(HANDLING_NUM)
             if( IO_L ) write(IO_FID_LOG,'(1x,A)'     ) '***  Informations of Daughter Domain'
-            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- DAUGHTER_PRC_nmax :', DAUGHTER_PRC_nmax(HANDLING_NUM)
-            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- DAUGHTER_PRC_NUM_X:', DAUGHTER_PRC_NUM_X(HANDLING_NUM)
-            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- DAUGHTER_PRC_NUM_Y:', DAUGHTER_PRC_NUM_Y(HANDLING_NUM)
-            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- DAUGHTER_KMAX     :', DAUGHTER_KMAX(HANDLING_NUM)
-            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- DAUGHTER_IMAX     :', DAUGHTER_IMAX(HANDLING_NUM)
-            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- DAUGHTER_JMAX     :', DAUGHTER_JMAX(HANDLING_NUM)
-            if( IO_L ) write(IO_FID_LOG,'(1x,A,F9.3)') '***  --- DAUGHTER_DTSEC    :', DAUGHTER_DTSEC(HANDLING_NUM)
-            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)  ') '***  --- DAUGHTER_NSTEP    :', DAUGHTER_NSTEP(HANDLING_NUM)
-            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)  ') '***  Limit Num. NCOMM req. :', max_rq
+            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- DAUGHTER_PRC_nprocs :', DAUGHTER_PRC_nprocs(HANDLING_NUM)
+            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- DAUGHTER_PRC_NUM_X  :', DAUGHTER_PRC_NUM_X(HANDLING_NUM)
+            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- DAUGHTER_PRC_NUM_Y  :', DAUGHTER_PRC_NUM_Y(HANDLING_NUM)
+            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- DAUGHTER_KMAX       :', DAUGHTER_KMAX(HANDLING_NUM)
+            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- DAUGHTER_IMAX       :', DAUGHTER_IMAX(HANDLING_NUM)
+            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- DAUGHTER_JMAX       :', DAUGHTER_JMAX(HANDLING_NUM)
+            if( IO_L ) write(IO_FID_LOG,'(1x,A,F9.3)') '***  --- DAUGHTER_DTSEC      :', DAUGHTER_DTSEC(HANDLING_NUM)
+            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)  ') '***  --- DAUGHTER_NSTEP      :', DAUGHTER_NSTEP(HANDLING_NUM)
+            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)  ') '***  Limit Num. NCOMM req.   :', max_rq
 
             allocate( org_DENS(PARENT_KA(HANDLING_NUM),PARENT_IA(HANDLING_NUM),PARENT_JA(HANDLING_NUM))           )
             allocate( org_MOMZ(PARENT_KA(HANDLING_NUM),PARENT_IA(HANDLING_NUM),PARENT_JA(HANDLING_NUM))           )
@@ -568,7 +567,7 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
 
             call NEST_COMM_parentsize( HANDLING_NUM )
 
-            allocate( latlon_catalog(PARENT_PRC_nmax(HANDLING_NUM),4,2) )
+            allocate( latlon_catalog(PARENT_PRC_nprocs(HANDLING_NUM),4,2) )
             call NEST_COMM_catalogue( HANDLING_NUM )
             call MPI_BARRIER(INTERCOMM_PARENT, ierr)
 
@@ -585,23 +584,23 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
             TILEAL_JA(HANDLING_NUM)   = PARENT_JMAX(HANDLING_NUM) * NEST_TILE_NUM_Y
 
             if( IO_L ) write(IO_FID_LOG,'(1x,A)'     ) '***  Informations of Parent Domain'
-            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- PARENT_PRC_nmax   :', PARENT_PRC_nmax(HANDLING_NUM)
-            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- PARENT_PRC_NUM_X  :', PARENT_PRC_NUM_X(HANDLING_NUM)
-            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- PARENT_PRC_NUM_Y  :', PARENT_PRC_NUM_Y(HANDLING_NUM)
-            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- PARENT_KMAX       :', PARENT_KMAX(HANDLING_NUM)
-            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- PARENT_IMAX       :', PARENT_IMAX(HANDLING_NUM)
-            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- PARENT_JMAX       :', PARENT_JMAX(HANDLING_NUM)
-            if( IO_L ) write(IO_FID_LOG,'(1x,A,F9.3)') '***  --- PARENT_DTSEC      :', PARENT_DTSEC(HANDLING_NUM)
-            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- PARENT_NSTEP      :', PARENT_NSTEP(HANDLING_NUM)
+            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- PARENT_PRC_nprocs   :', PARENT_PRC_nprocs(HANDLING_NUM)
+            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- PARENT_PRC_NUM_X    :', PARENT_PRC_NUM_X(HANDLING_NUM)
+            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- PARENT_PRC_NUM_Y    :', PARENT_PRC_NUM_Y(HANDLING_NUM)
+            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- PARENT_KMAX         :', PARENT_KMAX(HANDLING_NUM)
+            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- PARENT_IMAX         :', PARENT_IMAX(HANDLING_NUM)
+            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- PARENT_JMAX         :', PARENT_JMAX(HANDLING_NUM)
+            if( IO_L ) write(IO_FID_LOG,'(1x,A,F9.3)') '***  --- PARENT_DTSEC        :', PARENT_DTSEC(HANDLING_NUM)
+            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- PARENT_NSTEP        :', PARENT_NSTEP(HANDLING_NUM)
             if( IO_L ) write(IO_FID_LOG,'(1x,A)'     ) '***  Informations of Daughter Domain [me]'
-            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- DAUGHTER_PRC_nmax :', DAUGHTER_PRC_nmax(HANDLING_NUM)
-            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- DAUGHTER_PRC_NUM_X:', DAUGHTER_PRC_NUM_X(HANDLING_NUM)
-            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- DAUGHTER_PRC_NUM_Y:', DAUGHTER_PRC_NUM_Y(HANDLING_NUM)
-            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- DAUGHTER_KMAX     :', DAUGHTER_KMAX(HANDLING_NUM)
-            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- DAUGHTER_IMAX     :', DAUGHTER_IMAX(HANDLING_NUM)
-            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- DAUGHTER_JMAX     :', DAUGHTER_JMAX(HANDLING_NUM)
-            if( IO_L ) write(IO_FID_LOG,'(1x,A,F9.3)') '***  --- DAUGHTER_DTSEC    :', DAUGHTER_DTSEC(HANDLING_NUM)
-            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- DAUGHTER_NSTEP    :', DAUGHTER_NSTEP(HANDLING_NUM)
+            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- DAUGHTER_PRC_nprocs :', DAUGHTER_PRC_nprocs(HANDLING_NUM)
+            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- DAUGHTER_PRC_NUM_X  :', DAUGHTER_PRC_NUM_X(HANDLING_NUM)
+            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- DAUGHTER_PRC_NUM_Y  :', DAUGHTER_PRC_NUM_Y(HANDLING_NUM)
+            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- DAUGHTER_KMAX       :', DAUGHTER_KMAX(HANDLING_NUM)
+            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- DAUGHTER_IMAX       :', DAUGHTER_IMAX(HANDLING_NUM)
+            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- DAUGHTER_JMAX       :', DAUGHTER_JMAX(HANDLING_NUM)
+            if( IO_L ) write(IO_FID_LOG,'(1x,A,F9.3)') '***  --- DAUGHTER_DTSEC      :', DAUGHTER_DTSEC(HANDLING_NUM)
+            if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- DAUGHTER_NSTEP      :', DAUGHTER_NSTEP(HANDLING_NUM)
             if( IO_L ) write(IO_FID_LOG,'(1x,A)'     ) '***  Informations of Target Tiles'
             if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- TILEALL_KA      :', TILEAL_KA(HANDLING_NUM)
             if( IO_L ) write(IO_FID_LOG,'(1x,A,I6)'  ) '***  --- TILEALL_IA      :', TILEAL_IA(HANDLING_NUM)
@@ -767,7 +766,7 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
     integer  :: i, j, k
     !---------------------------------------------------------------------------
 
-    allocate( pd_tile_num(0:PARENT_PRC_nmax(HANDLE)-1,2) )
+    allocate( pd_tile_num(0:PARENT_PRC_nprocs(HANDLE)-1,2) )
 
     k = 0 ! MPI process number starts from zero
     do j = 1, PARENT_PRC_NUM_Y(HANDLE)
@@ -780,7 +779,7 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
 
     !--- SW search
     hit = .false.
-    do i = 1, PARENT_PRC_nmax(HANDLE)
+    do i = 1, PARENT_PRC_nprocs(HANDLE)
        wid_lon = abs((latlon_catalog(i,I_SW,I_LON) - latlon_catalog(i,I_SE,I_LON)) &
                       / real( PARENT_IMAX(HANDLE)-1, kind=RP )) * 0.8_RP
        wid_lat = abs((latlon_catalog(i,I_SW,I_LAT) - latlon_catalog(i,I_NW,I_LAT)) &
@@ -802,12 +801,12 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
        if( IO_L ) write(IO_FID_LOG,'(1x,A)') 'xxx region of daughter domain is larger than that of parent: SW search'
        if( IO_L ) write(IO_FID_LOG,*) ' grid width: half width in lat:', wid_lat, ' half width in lon:', wid_lon
        if( IO_L ) write(IO_FID_LOG,'(1x,A,F12.6)') '    daughter local (me): LON=',corner_loc(I_SW,I_LON)
-       do i = 1, PARENT_PRC_nmax(HANDLE)
+       do i = 1, PARENT_PRC_nprocs(HANDLE)
           if( IO_L ) write(IO_FID_LOG,'(1x,A,F12.6,1x,F12.6)') '     parent local SW-NE: LON=', &
                      latlon_catalog(i,I_SW,I_LON) ,latlon_catalog(i,I_NE,I_LON)
        enddo
        if( IO_L ) write(IO_FID_LOG,'(1x,A,F12.6)') '    daughter local (me): LAT=',corner_loc(I_SW,I_LAT)
-       do i = 1, PARENT_PRC_nmax(HANDLE)
+       do i = 1, PARENT_PRC_nprocs(HANDLE)
           if( IO_L ) write(IO_FID_LOG,'(1x,A,F12.6,1x,F12.6)') '     parent local SW-NE: LAT=', &
                      latlon_catalog(i,I_SW,I_LAT) ,latlon_catalog(i,I_NE,I_LAT)
        enddo
@@ -816,7 +815,7 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
 
     !--- NE search
     hit = .false.
-    do i = PARENT_PRC_nmax(HANDLE), 1, -1
+    do i = PARENT_PRC_nprocs(HANDLE), 1, -1
        wid_lon = abs((latlon_catalog(i,I_NW,I_LON) - latlon_catalog(i,I_NE,I_LON)) &
                       / real( PARENT_IMAX(HANDLE)-1, kind=RP )) * 0.8_RP
        wid_lat = abs((latlon_catalog(i,I_SE,I_LAT) - latlon_catalog(i,I_NE,I_LAT)) &
@@ -838,12 +837,12 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
        if( IO_L ) write(IO_FID_LOG,'(1x,A)') 'xxx region of daughter domain is larger than that of parent: NE search'
        if( IO_L ) write(IO_FID_LOG,*) ' grid width: half width in lat:', wid_lat, ' half width in lon:', wid_lon
        if( IO_L ) write(IO_FID_LOG,'(1x,A,F12.6)') '    daughter local (me): LON=',corner_loc(I_NE,I_LON)
-       do i = 1, PARENT_PRC_nmax(HANDLE)
+       do i = 1, PARENT_PRC_nprocs(HANDLE)
           if( IO_L ) write(IO_FID_LOG,'(1x,A,F12.6,1x,F12.6)') '     parent local SW-NE: LON=', &
                      latlon_catalog(i,I_SW,I_LON) ,latlon_catalog(i,I_NE,I_LON)
        enddo
        if( IO_L ) write(IO_FID_LOG,'(1x,A,F12.6)') '    daughter local (me): LAT=',corner_loc(I_NE,I_LAT)
-       do i = 1, PARENT_PRC_nmax(HANDLE)
+       do i = 1, PARENT_PRC_nprocs(HANDLE)
           if( IO_L ) write(IO_FID_LOG,'(1x,A,F12.6,1x,F12.6)') '     parent local SW-NE: LAT=', &
                      latlon_catalog(i,I_SW,I_LAT) ,latlon_catalog(i,I_NE,I_LAT)
        enddo
@@ -934,10 +933,10 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
   subroutine NEST_COMM_parentsize( &
       HANDLE  )
     use scale_process, only: &
+       PRC_MPIstop, &
+       PRC_nprocs,  &
        PRC_myrank,  &
-       PRC_master,  &
-       PRC_nmax,    &
-       PRC_MPIstop
+       PRC_IsMaster
     use scale_les_process, only: &
        PRC_NUM_X,   &
        PRC_NUM_Y
@@ -963,7 +962,7 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
 
     if ( NEST_Filiation( INTERCOMM_ID(HANDLE) ) > 0 ) then !--- parent
        ! from parent to daughter
-       datapack( 1) = PRC_nmax
+       datapack( 1) = PRC_nprocs
        datapack( 2) = PRC_NUM_X
        datapack( 3) = PRC_NUM_Y
        datapack( 4) = KMAX
@@ -979,16 +978,16 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
        datapack(14) = NEST_BND_QA
        buffer       = TIME_DTSEC
 
-       if ( PRC_myrank == PRC_master ) then
+       if ( PRC_IsMaster ) then
           call MPI_ISEND(datapack, ileng, MPI_INTEGER, PRC_myrank, tag, INTERCOMM_DAUGHTER, ireq1, ierr1)
           call MPI_ISEND(buffer, 1, MPI_DOUBLE_PRECISION, PRC_myrank, tag+1, INTERCOMM_DAUGHTER, ireq2, ierr2)
           call MPI_WAIT(ireq1, istatus, ierr1)
           call MPI_WAIT(ireq2, istatus, ierr2)
        endif
 
-       PARENT_PRC_nmax(HANDLE)  = datapack( 1)
-       PARENT_PRC_NUM_X(HANDLE) = datapack( 2)
-       PARENT_PRC_NUM_Y(HANDLE) = datapack( 3)
+       PARENT_PRC_nprocs(HANDLE) = datapack( 1)
+       PARENT_PRC_NUM_X (HANDLE) = datapack( 2)
+       PARENT_PRC_NUM_Y (HANDLE) = datapack( 3)
        PARENT_KMAX(HANDLE)      = datapack( 4)
        PARENT_IMAX(HANDLE)      = datapack( 5)
        PARENT_JMAX(HANDLE)      = datapack( 6)
@@ -1002,7 +1001,7 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
        PARENT_DTSEC(HANDLE)     = buffer
 
        ! from daughter to parent
-       if ( PRC_myrank == PRC_master ) then
+       if ( PRC_IsMaster ) then
           call MPI_IRECV(datapack, ileng, MPI_INTEGER, PRC_myrank, tag+2, INTERCOMM_DAUGHTER, ireq1, ierr1)
           call MPI_IRECV(buffer, 1, MPI_DOUBLE_PRECISION, PRC_myrank, tag+3, INTERCOMM_DAUGHTER, ireq2, ierr2)
           call MPI_WAIT(ireq1, istatus, ierr1)
@@ -1011,9 +1010,9 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
        call COMM_bcast(datapack, ileng)
        call COMM_bcast(buffer)
 
-       DAUGHTER_PRC_nmax(HANDLE)  = datapack( 1)
-       DAUGHTER_PRC_NUM_X(HANDLE) = datapack( 2)
-       DAUGHTER_PRC_NUM_Y(HANDLE) = datapack( 3)
+       DAUGHTER_PRC_nprocs(HANDLE) = datapack( 1)
+       DAUGHTER_PRC_NUM_X (HANDLE) = datapack( 2)
+       DAUGHTER_PRC_NUM_Y (HANDLE) = datapack( 3)
        DAUGHTER_KMAX(HANDLE)      = datapack( 4)
        DAUGHTER_IMAX(HANDLE)      = datapack( 5)
        DAUGHTER_JMAX(HANDLE)      = datapack( 6)
@@ -1030,7 +1029,7 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
 
     elseif ( NEST_Filiation( INTERCOMM_ID(HANDLE) ) < 0 ) then !--- daughter
        ! from parent to daughter
-       if ( PRC_myrank == PRC_master ) then
+       if ( PRC_IsMaster ) then
           call MPI_IRECV(datapack, ileng, MPI_INTEGER, PRC_myrank, tag, INTERCOMM_PARENT, ireq1, ierr1)
           call MPI_IRECV(buffer, 1, MPI_DOUBLE_PRECISION, PRC_myrank, tag+1, INTERCOMM_PARENT, ireq2, ierr2)
           call MPI_WAIT(ireq1, istatus, ierr1)
@@ -1039,9 +1038,9 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
        call COMM_bcast(datapack, ileng)
        call COMM_bcast(buffer)
 
-       PARENT_PRC_nmax(HANDLE)  = datapack( 1)
-       PARENT_PRC_NUM_X(HANDLE) = datapack( 2)
-       PARENT_PRC_NUM_Y(HANDLE) = datapack( 3)
+       PARENT_PRC_nprocs(HANDLE) = datapack( 1)
+       PARENT_PRC_NUM_X (HANDLE) = datapack( 2)
+       PARENT_PRC_NUM_Y (HANDLE) = datapack( 3)
        PARENT_KMAX(HANDLE)      = datapack( 4)
        PARENT_IMAX(HANDLE)      = datapack( 5)
        PARENT_JMAX(HANDLE)      = datapack( 6)
@@ -1056,7 +1055,7 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
        PARENT_DTSEC(HANDLE)     = buffer
 
        ! from daughter to parent
-       datapack( 1) = PRC_nmax
+       datapack( 1) = PRC_nprocs
        datapack( 2) = PRC_NUM_X
        datapack( 3) = PRC_NUM_Y
        datapack( 4) = KMAX
@@ -1072,16 +1071,16 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
        datapack(14) = NEST_BND_QA
        buffer       = TIME_DTSEC
 
-       if ( PRC_myrank == PRC_master ) then
+       if ( PRC_IsMaster ) then
           call MPI_ISEND(datapack, ileng, MPI_INTEGER, PRC_myrank, tag+2, INTERCOMM_PARENT, ireq1, ierr1)
           call MPI_ISEND(buffer, 1, MPI_DOUBLE_PRECISION, PRC_myrank, tag+3, INTERCOMM_PARENT, ireq2, ierr2)
           call MPI_WAIT(ireq1, istatus, ierr1)
           call MPI_WAIT(ireq2, istatus, ierr2)
        endif
 
-       DAUGHTER_PRC_nmax(HANDLE)  = datapack( 1)
-       DAUGHTER_PRC_NUM_X(HANDLE) = datapack( 2)
-       DAUGHTER_PRC_NUM_Y(HANDLE) = datapack( 3)
+       DAUGHTER_PRC_nprocs(HANDLE) = datapack( 1)
+       DAUGHTER_PRC_NUM_X (HANDLE) = datapack( 2)
+       DAUGHTER_PRC_NUM_Y (HANDLE) = datapack( 3)
        DAUGHTER_KMAX(HANDLE)      = datapack( 4)
        DAUGHTER_IMAX(HANDLE)      = datapack( 5)
        DAUGHTER_JMAX(HANDLE)      = datapack( 6)
@@ -1112,10 +1111,10 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
   subroutine NEST_COMM_catalogue( &
       HANDLE  )
     use scale_process, only: &
+       PRC_MPIstop, &
+       PRC_nprocs,  &
        PRC_myrank,  &
-       PRC_master,  &
-       PRC_nmax,    &
-       PRC_MPIstop
+       PRC_IsMaster
     use scale_grid_real, only: &
        REAL_DOMAIN_CATALOGUE
     use scale_comm, only: &
@@ -1133,19 +1132,19 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
     tag = INTERCOMM_ID(HANDLE) * 100
 
     if ( NEST_Filiation( INTERCOMM_ID(HANDLE) ) > 0 ) then !--- parent
-       ileng = PRC_nmax * 4 * 2
-       if ( PRC_myrank == PRC_master ) then
+       ileng = PRC_nprocs * 4 * 2
+       if ( PRC_IsMaster ) then
           call MPI_ISEND(REAL_DOMAIN_CATALOGUE, ileng, COMM_datatype, PRC_myrank, tag, INTERCOMM_DAUGHTER, ireq, ierr)
           call MPI_WAIT(ireq, istatus, ierr)
        endif
 
     elseif ( NEST_Filiation( INTERCOMM_ID(HANDLE) ) < 0 ) then !--- daughter
-       ileng = PARENT_PRC_nmax(HANDLE) * 4 * 2
-       if ( PRC_myrank == PRC_master ) then
+       ileng = PARENT_PRC_nprocs(HANDLE) * 4 * 2
+       if ( PRC_IsMaster ) then
           call MPI_IRECV(latlon_catalog, ileng, COMM_datatype, PRC_myrank, tag, INTERCOMM_PARENT, ireq, ierr)
           call MPI_WAIT(ireq, istatus, ierr)
        endif
-       call COMM_bcast( latlon_catalog, PARENT_PRC_nmax(HANDLE), 4, 2 )
+       call COMM_bcast( latlon_catalog, PARENT_PRC_nprocs(HANDLE), 4, 2 )
     else
        if( IO_L ) write(*,*) 'xxx internal error [nest/grid]'
        call PRC_MPIstop
@@ -1159,9 +1158,9 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
   subroutine NEST_COMM_ping( &
       HANDLE  )
     use scale_process, only: &
+       PRC_MPIstop, &
        PRC_myrank,  &
-       PRC_master,  &
-       PRC_MPIstop
+       PRC_IsMaster
     use scale_comm, only: &
        COMM_bcast
     implicit none
@@ -1182,7 +1181,7 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
        ping = ONLINE_DOMAIN_NUM
        pong = 0
 
-       if ( PRC_myrank == PRC_master ) then
+       if ( PRC_IsMaster ) then
           call MPI_ISEND(ping, 1, MPI_INTEGER, PRC_myrank, tag+1, INTERCOMM_DAUGHTER, ireq1, ierr1)
           call MPI_IRECV(pong, 1, MPI_INTEGER, PRC_myrank, tag+2, INTERCOMM_DAUGHTER, ireq2, ierr2)
           call MPI_WAIT(ireq1, istatus, ierr1)
@@ -1197,7 +1196,7 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
        ping = ONLINE_DOMAIN_NUM
        pong = 0
 
-       if ( PRC_myrank == PRC_master ) then
+       if ( PRC_IsMaster ) then
           call MPI_ISEND(ping, 1, MPI_INTEGER, PRC_myrank, tag+2, INTERCOMM_PARENT, ireq1, ierr1)
           call MPI_IRECV(pong, 1, MPI_INTEGER, PRC_myrank, tag+1, INTERCOMM_PARENT, ireq2, ierr2)
           call MPI_WAIT(ireq1, istatus, ierr1)
@@ -1226,9 +1225,9 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
   subroutine NEST_COMM_setup_nestdown( &
       HANDLE  )
     use scale_process, only: &
+       PRC_MPIstop, &
        PRC_myrank,  &
-       PRC_master,  &
-       PRC_MPIstop
+       PRC_IsMaster
     use scale_grid_real, only: &
        REAL_DOMAIN_CATALOGUE
     use scale_comm, only: &
@@ -1253,26 +1252,26 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
     if ( NEST_Filiation( INTERCOMM_ID(HANDLE) ) > 0 ) then
     !--------------------------------------------------- parent
 
-       if ( PRC_myrank == PRC_master ) then
+       if ( PRC_IsMaster ) then
           call MPI_IRECV(NEST_TILE_ALLMAX_p, 1, MPI_INTEGER, PRC_myrank, tag+1, INTERCOMM_DAUGHTER, ireq, ierr)
           call MPI_WAIT(ireq, istatus, ierr)
        endif
        call COMM_bcast(NEST_TILE_ALLMAX_p)
 
-       allocate( NEST_TILE_LIST_p (NEST_TILE_ALLMAX_p,DAUGHTER_PRC_nmax(HANDLE)) )
-       allocate( NEST_TILE_LIST_YP(NEST_TILE_ALLMAX_p*DAUGHTER_PRC_nmax(HANDLE)) )
+       allocate( NEST_TILE_LIST_p (NEST_TILE_ALLMAX_p,DAUGHTER_PRC_nprocs(HANDLE)) )
+       allocate( NEST_TILE_LIST_YP(NEST_TILE_ALLMAX_p*DAUGHTER_PRC_nprocs(HANDLE)) )
 
-       ileng = NEST_TILE_ALLMAX_p*DAUGHTER_PRC_nmax(HANDLE)
-       if ( PRC_myrank == PRC_master ) then
+       ileng = NEST_TILE_ALLMAX_p*DAUGHTER_PRC_nprocs(HANDLE)
+       if ( PRC_IsMaster ) then
           call MPI_IRECV(NEST_TILE_LIST_p, ileng, MPI_INTEGER, PRC_myrank, tag+2, INTERCOMM_DAUGHTER, ireq, ierr)
           call MPI_WAIT(ireq, istatus, ierr)
        endif
-       call COMM_bcast(NEST_TILE_LIST_p, NEST_TILE_ALLMAX_p, DAUGHTER_PRC_nmax(HANDLE))
+       call COMM_bcast(NEST_TILE_LIST_p, NEST_TILE_ALLMAX_p, DAUGHTER_PRC_nprocs(HANDLE))
 
        NEST_TILE_LIST_YP(:) = -1
 
        k = 0
-       do j = 1, DAUGHTER_PRC_nmax(HANDLE)
+       do j = 1, DAUGHTER_PRC_nprocs(HANDLE)
        do i = 1, NEST_TILE_ALLMAX_p
           if ( NEST_TILE_LIST_p(i,j) == PRC_myrank ) then
              k = k + 1
@@ -1284,7 +1283,7 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
 
        if( IO_L ) write(IO_FID_LOG,'(A,I5,A,I5)') "[P]   Num YP =",NUM_YP,"  Num TILE(MAX) =",NEST_TILE_ALLMAX_p
 
-       if ( PRC_myrank == PRC_master ) then
+       if ( PRC_IsMaster ) then
           call MPI_IRECV(ONLINE_DAUGHTER_USE_VELZ, 1, MPI_LOGICAL, PRC_myrank, tag+3, INTERCOMM_DAUGHTER, ireq, ierr)
           call MPI_WAIT(ireq, istatus, ierr)
        endif
@@ -1292,7 +1291,7 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
 
        if( IO_L ) write(IO_FID_LOG,'(1x,A,L2)') '*** NEST: ONLINE_DAUGHTER_USE_VELZ =', ONLINE_DAUGHTER_USE_VELZ
 
-       if ( PRC_myrank == PRC_master ) then
+       if ( PRC_IsMaster ) then
           call MPI_IRECV(ONLINE_DAUGHTER_NO_ROTATE, 1, MPI_LOGICAL, PRC_myrank, tag+4, INTERCOMM_DAUGHTER, ireq, ierr)
           call MPI_WAIT(ireq, istatus, ierr)
        endif
@@ -1329,14 +1328,14 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
                            ierr                )
        if( IO_L ) write(IO_FID_LOG,'(A,I5,A,I5)') "[D]   Num YP =",NEST_TILE_ALL,"  Num TILE(MAX) =",NEST_TILE_ALLMAX_d
 
-       if ( PRC_myrank == PRC_master ) then
+       if ( PRC_IsMaster ) then
           call MPI_ISEND(NEST_TILE_ALLMAX_d, 1, MPI_INTEGER, PRC_myrank, tag+1, INTERCOMM_PARENT, ireq, ierr)
           call MPI_WAIT(ireq, istatus, ierr)
        endif
 
        allocate( buffer_LIST   (NEST_TILE_ALLMAX_d)            )
-       allocate( buffer_ALLLIST(NEST_TILE_ALLMAX_d*DAUGHTER_PRC_nmax(HANDLE))   )
-       allocate( NEST_TILE_LIST_d(NEST_TILE_ALLMAX_d,DAUGHTER_PRC_nmax(HANDLE)) )
+       allocate( buffer_ALLLIST(NEST_TILE_ALLMAX_d*DAUGHTER_PRC_nprocs(HANDLE))   )
+       allocate( NEST_TILE_LIST_d(NEST_TILE_ALLMAX_d,DAUGHTER_PRC_nprocs(HANDLE)) )
 
        do i = 1, NEST_TILE_ALLMAX_d
           if ( i <= NEST_TILE_ALL ) then
@@ -1356,7 +1355,7 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
                            COMM_world,         &
                            ierr                )
        k = 1
-       do j = 1, DAUGHTER_PRC_nmax(HANDLE)
+       do j = 1, DAUGHTER_PRC_nprocs(HANDLE)
        do i = 1, NEST_TILE_ALLMAX_d
           NEST_TILE_LIST_d(i,j) = buffer_ALLLIST(k)
           k = k + 1
@@ -1366,18 +1365,18 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
        deallocate( buffer_LIST    )
        deallocate( buffer_ALLLIST )
 
-       ileng = NEST_TILE_ALLMAX_d*DAUGHTER_PRC_nmax(HANDLE)
-       if ( PRC_myrank == PRC_master ) then
+       ileng = NEST_TILE_ALLMAX_d*DAUGHTER_PRC_nprocs(HANDLE)
+       if ( PRC_IsMaster ) then
           call MPI_ISEND(NEST_TILE_LIST_d, ileng, MPI_INTEGER, PRC_myrank, tag+2, INTERCOMM_PARENT, ireq, ierr)
           call MPI_WAIT(ireq, istatus, ierr)
        endif
 
-       if ( PRC_myrank == PRC_master ) then
+       if ( PRC_IsMaster ) then
           call MPI_ISEND(ONLINE_USE_VELZ, 1, MPI_LOGICAL, PRC_myrank, tag+3, INTERCOMM_PARENT, ireq, ierr)
           call MPI_WAIT(ireq, istatus, ierr)
        endif
 
-       if ( PRC_myrank == PRC_master ) then
+       if ( PRC_IsMaster ) then
           call MPI_ISEND(ONLINE_NO_ROTATE, 1, MPI_LOGICAL, PRC_myrank, tag+4, INTERCOMM_PARENT, ireq, ierr)
           call MPI_WAIT(ireq, istatus, ierr)
        endif
@@ -1415,7 +1414,7 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
       HANDLE  )
     use scale_process, only: &
        PRC_myrank,  &
-       PRC_nmax,    &
+       PRC_nprocs,  &
        PRC_MPIstop
     use scale_grid_real, only: &
        REAL_LON,    &
@@ -1618,7 +1617,7 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
       interped_ref_QTRC    ) ! [inout]
     use scale_process, only: &
        PRC_myrank,  &
-       PRC_nmax,    &
+       PRC_nprocs,  &
        PRC_MPIstop
     use scale_grid_real, only: &
        REAL_DOMAIN_CATALOGUE
@@ -2069,7 +2068,7 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
       HANDLE     ) ! [in]
     use scale_process, only: &
        PRC_myrank,  &
-       PRC_nmax,    &
+       PRC_nprocs,  &
        PRC_MPIstop
     implicit none
 
@@ -2120,7 +2119,7 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
       flag_dens  ) ! [in ]: optional
     use scale_process, only: &
        PRC_myrank,  &
-       PRC_nmax,    &
+       PRC_nprocs,  &
        PRC_MPIstop
     use scale_comm, only: &
        COMM_datatype
@@ -2299,7 +2298,7 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
       flag_dens  ) ! [in ]: optional
     use scale_process, only: &
        PRC_myrank,  &
-       PRC_nmax,    &
+       PRC_nprocs,  &
        PRC_MPIstop
     use scale_comm, only: &
        COMM_datatype
@@ -2521,14 +2520,14 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
   !> [finalize: disconnect] Inter-communication
   subroutine NEST_COMM_disconnect ( )
     use scale_process, only: &
-       GLOBAL_COMM_WORLD
+       PRC_GLOBAL_COMM_WORLD
     implicit none
 
     integer :: ierr
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,'(1x,A)') '*** Waiting finish of whole processes'
-    call MPI_BARRIER(GLOBAL_COMM_WORLD, ierr)
+    call MPI_BARRIER(PRC_GLOBAL_COMM_WORLD, ierr)
 
     if ( ONLINE_IAM_PARENT ) then
        !if( IO_L ) write(IO_FID_LOG,'(1x,A)') '*** Waiting finish of whole processes as a parent'

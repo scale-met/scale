@@ -31,8 +31,7 @@ module mod_realinput
   use scale_index
   use scale_tracer
   use scale_process, only: &
-     myrank => PRC_myrank,  &
-     PRC_master,            &
+     PRC_IsMaster, &
      PRC_MPIstop
   use scale_external_io, only: &
      iSCALE, &
@@ -173,7 +172,7 @@ contains
 
     serial = serial_in
     if( serial ) then
-       if( myrank == PRC_master ) then
+       if( PRC_IsMaster ) then
           do_read = .true.
        else
           do_read = .false.

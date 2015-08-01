@@ -82,8 +82,8 @@ contains
     use gtool_history, only: &
        HistoryInit
     use scale_process, only: &
-       PRC_MPIstop, &
-       PRC_master, &
+       PRC_MPIstop,    &
+       PRC_masterrank, &
        PRC_myrank
     use scale_les_process, only: &
        PRC_2Drank, &
@@ -155,7 +155,7 @@ contains
                       H_SOURCE,                       &
                       H_INSTITUTE,                    &
                       im*jm*KMAX,                     &
-                      PRC_master,                     &
+                      PRC_masterrank,                 &
                       PRC_myrank,                     &
                       rankidx,                        &
                       TIME_STARTDAYSEC,               &

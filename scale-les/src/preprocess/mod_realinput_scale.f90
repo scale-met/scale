@@ -20,7 +20,6 @@ module mod_realinput_scale
   use scale_tracer
   use scale_process, only: &
        myrank => PRC_myrank,  &
-       PRC_master,            &
        PRC_MPIstop
   use scale_grid_nest, only: &
        PARENT_KMAX,     &

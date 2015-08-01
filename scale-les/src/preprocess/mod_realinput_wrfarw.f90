@@ -20,7 +20,6 @@ module mod_realinput_wrfarw
   use scale_tracer
   use scale_process, only: &
      myrank => PRC_myrank,  &
-     PRC_master,            &
      PRC_MPIstop
   use scale_external_io, only: &
      iWRFARW

@@ -20,7 +20,6 @@ module mod_realinput_grads
   use scale_tracer
   use scale_process, only: &
      myrank => PRC_myrank,  &
-     PRC_master,            &
      PRC_MPIstop
   !-----------------------------------------------------------------------------
   implicit none

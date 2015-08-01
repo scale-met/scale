@@ -83,7 +83,7 @@ contains
   !> Setup
   subroutine REAL_setup
     use scale_process, only: &
-       PRC_nmax,    &
+       PRC_nprocs,  &
        PRC_MPIstop
     use scale_grid, only: &
        GRID_DOMAIN_CENTER_X, &
@@ -118,7 +118,7 @@ contains
     allocate( REAL_AREA(   IA,JA) )
     allocate( REAL_VOL (KA,IA,JA) )
 
-    allocate( REAL_DOMAIN_CATALOGUE(PRC_nmax,4,2) )
+    allocate( REAL_DOMAIN_CATALOGUE(PRC_nprocs,4,2) )
 
     ! setup map projection
     call MPRJ_setup( GRID_DOMAIN_CENTER_X, GRID_DOMAIN_CENTER_Y )
@@ -178,10 +178,9 @@ contains
        MPRJ_basepoint_lat, &
        MPRJ_xy2lonlat
     use scale_process, only: &
-       PRC_master,           &
-       PRC_myrank,           &
-       PRC_nmax,             &
-       PRC_MPIstop
+       PRC_MPIstop, &
+       PRC_nprocs,  &
+       PRC_IsMaster
     use scale_comm, only: &
        COMM_gather,  &
        COMM_bcast
@@ -264,8 +263,8 @@ contains
                                 'SE(',REAL_LON(IE,JS)/D2R,',',REAL_LAT(IE,JS)/D2R,')'
 
 
-    allocate( mine (4, 2         ) )
-    allocate( whole(4, 2*PRC_nmax) )
+    allocate( mine (4, 2           ) )
+    allocate( whole(4, 2*PRC_nprocs) )
 
     mine(I_NW,I_LON) = REAL_LONXY(IS-1,JE  )/D2R
     mine(I_NE,I_LON) = REAL_LONXY(IE  ,JE  )/D2R
@@ -278,7 +277,7 @@ contains
 
     call COMM_gather( whole, mine, 4, 2 ) ! everytime do for online nesting
 
-    if( PRC_myrank == PRC_master )then
+    if( PRC_IsMaster )then
        if( DOMAIN_CATALOGUE_OUTPUT ) then
           fid = IO_get_available_fid()
           open( fid,                                    &
@@ -292,7 +291,7 @@ contains
              call PRC_MPIstop
           endif
 
-          do i = 1, PRC_nmax ! for offline nesting
+          do i = 1, PRC_nprocs ! for offline nesting
              write(fid,'(i8,8f32.24)',iostat=ierr) i, whole(I_NW,I_LON+2*(i-1)), whole(I_NE,I_LON+2*(i-1)), & ! LON: NW, NE
                                                       whole(I_SW,I_LON+2*(i-1)), whole(I_SE,I_LON+2*(i-1)), & ! LON: SW, SE
                                                       whole(I_NW,I_LAT+2*(i-1)), whole(I_NE,I_LAT+2*(i-1)), & ! LAT: NW, NE
@@ -302,7 +301,7 @@ contains
           close(fid)
        endif
 
-       do i = 1, PRC_nmax ! for online nesting
+       do i = 1, PRC_nprocs ! for online nesting
           REAL_DOMAIN_CATALOGUE(i,I_NW,I_LON) = whole(I_NW,I_LON+2*(i-1)) ! LON: NW
           REAL_DOMAIN_CATALOGUE(i,I_NE,I_LON) = whole(I_NE,I_LON+2*(i-1)) ! LON: NE
           REAL_DOMAIN_CATALOGUE(i,I_SW,I_LON) = whole(I_SW,I_LON+2*(i-1)) ! LON: SW
@@ -314,7 +313,7 @@ contains
        enddo
     endif
 
-    call COMM_bcast( REAL_DOMAIN_CATALOGUE, PRC_nmax, 4, 2 )
+    call COMM_bcast( REAL_DOMAIN_CATALOGUE, PRC_nprocs, 4, 2 )
 
     return
   end subroutine REAL_calc_latlon

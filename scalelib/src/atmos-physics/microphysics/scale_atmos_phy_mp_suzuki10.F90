@@ -195,9 +195,9 @@ contains
   !-----------------------------------------------------------------------------
   subroutine ATMOS_PHY_MP_suzuki10_setup( MP_TYPE )
     use scale_process, only: &
-       PRC_MPIstop, &
-       PRC_master,  &
-       PRC_myrank
+       PRC_MPIstop,    &
+       PRC_masterrank, &
+       PRC_IsMaster
     use scale_const, only: &
        CONST_DWATR, &
        CONST_DICE
@@ -339,7 +339,7 @@ contains
     mbin = S10_RNDM_MBIN
 
     !--- read micpara.dat (microphysical parameter) and broad cast
-    if( PRC_myrank == PRC_master ) then
+    if( PRC_IsMaster ) then
 
       fid_micpara = IO_get_available_fid()
       !--- open parameter of cloud microphysics
@@ -478,14 +478,14 @@ contains
 
     n = nspc_mk*nspc_mk*nbin*nbin
     COMM_world = MPI_COMM_WORLD
-    call MPI_BCAST( xctr, nbin,             COMM_datatype, PRC_master, COMM_world, ierr )
-    call MPI_BCAST( dxmic,1,                COMM_datatype, PRC_master, COMM_world, ierr )
-    call MPI_BCAST( xbnd, nbin+1,           COMM_datatype, PRC_master, COMM_world, ierr )
-    call MPI_BCAST( cctr, nbin*nspc_mk,     COMM_datatype, PRC_master, COMM_world, ierr )
-    call MPI_BCAST( cbnd, (nbin+1)*nspc_mk, COMM_datatype, PRC_master, COMM_world, ierr )
-    call MPI_BCAST( ck,   n,                COMM_datatype, PRC_master, COMM_world, ierr )
-    call MPI_BCAST( br, nbin*nspc_mk,       COMM_datatype, PRC_master, COMM_world, ierr )
-    call MPI_BCAST( vt, nbin*nspc_mk,       COMM_datatype, PRC_master, COMM_world, ierr )
+    call MPI_BCAST( xctr, nbin,             COMM_datatype, PRC_masterrank, COMM_world, ierr )
+    call MPI_BCAST( dxmic,1,                COMM_datatype, PRC_masterrank, COMM_world, ierr )
+    call MPI_BCAST( xbnd, nbin+1,           COMM_datatype, PRC_masterrank, COMM_world, ierr )
+    call MPI_BCAST( cctr, nbin*nspc_mk,     COMM_datatype, PRC_masterrank, COMM_world, ierr )
+    call MPI_BCAST( cbnd, (nbin+1)*nspc_mk, COMM_datatype, PRC_masterrank, COMM_world, ierr )
+    call MPI_BCAST( ck,   n,                COMM_datatype, PRC_masterrank, COMM_world, ierr )
+    call MPI_BCAST( br, nbin*nspc_mk,       COMM_datatype, PRC_masterrank, COMM_world, ierr )
+    call MPI_BCAST( vt, nbin*nspc_mk,       COMM_datatype, PRC_masterrank, COMM_world, ierr )
 
     !--- aerosol ( CCN ) (not supported)
     if( nccn /= 0 ) then

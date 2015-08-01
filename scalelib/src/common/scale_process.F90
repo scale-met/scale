@@ -29,14 +29,15 @@ module scale_process
   !++ Public procedure
   !
   public :: PRC_MPIstart
-  public :: PRC_MPIsetup
-  public :: PRC_NOMPIstart
+  public :: PRC_UNIVERSAL_setup
+  public :: PRC_GLOBAL_setup
+  public :: PRC_LOCAL_setup
   public :: PRC_MPIstop
   public :: PRC_MPIfinish
   public :: PRC_MPIsplit
+
   public :: PRC_MPItime
   public :: PRC_MPItimestat
-  public :: PRC_BULKsetup
 
   !-----------------------------------------------------------------------------
   !
@@ -46,31 +47,40 @@ module scale_process
   !                          [ communicator system ]
   !    MPI_COMM_WORLD
   !          |
-  ! MASTER_COMM_WORLD --split--> BULK_COMM_WORLD
+  ! PRC_UNIVERSAL_COMM_WORLD --split--> BULK_COMM_WORLD
   !                                     |
-  !                            GLOBAL_COMM_WORLD --split--> LOCAL_COMM_WORLD
+  !                            PRC_GLOBAL_COMM_WORLD --split--> PRC_LOCAL_COMM_WORLD
   !-----------------------------------------------------------------------------
+  integer, public, parameter :: PRC_masterrank      = 0            !< master process in each communicator
+  integer, public, parameter :: PRC_DOMAIN_nlim = 1000         !< max depth of domains
 
-  integer, public, parameter   :: PRC_master = 0      !< master node
+  ! universal world
+  integer, public :: PRC_UNIVERSAL_COMM_WORLD = -1      !< original communicator
+  integer, public :: PRC_UNIVERSAL_myrank     = -1      !< myrank         in universal communicator
+  integer, public :: PRC_UNIVERSAL_nprocs     = -1      !< process num    in universal communicator
+  logical, public :: PRC_UNIVERSAL_IsMaster   = .false. !< master process in universal communicator?
 
-  integer, public, parameter   :: max_depth = 1000    !< max depth of domains
-  integer, public, parameter   :: split_root = 0      !< root process in each color
+  integer, public :: PRC_UNIVERSAL_jobID      = 0       !< my job ID      in universal communicator
 
-  integer, public              :: MASTER_COMM_WORLD   !< master (original) communicator
-  integer, public              :: GLOBAL_COMM_WORLD   !< global communicator
-  integer, public              :: ABORT_COMM_WORLD    !< communicator for aborting
-  integer, public              :: LOCAL_COMM_WORLD    !< local communicator (split)
-  integer, public              :: MASTER_myrank       !< myrank in master communicator
-  integer, public              :: MASTER_nmax         !< process num in master communicator
-  integer, public              :: GLOBAL_myrank       !< myrank in global communicator
-  integer, public              :: GLOBAL_nmax         !< process num in global communicator
-  logical, public              :: PRC_IsMASTER_master = .false. !< this process in master in master communicator?
-  logical, public              :: PRC_IsLOCAL_master  = .false. !< this process in master in local  communicator?
+  ! global world
+  integer, public :: PRC_GLOBAL_COMM_WORLD    = -1      !< global communicator
+  integer, public :: PRC_GLOBAL_myrank        = -1      !< myrank         in global communicator
+  integer, public :: PRC_GLOBAL_nprocs        = -1      !< process num    in global communicator
+  logical, public :: PRC_GLOBAL_IsMaster      = .false. !< master process in global communicator?
 
-  integer, public              :: PRC_mybulk = 0   !< my bulk ID (Master)
-  integer, public              :: PRC_mydom  = 0   !< my domain ID (Global)
-  integer, public              :: PRC_myrank = 0   !< my node ID (Local)
-  integer, public              :: PRC_nmax   = 1   !< total number of processors (Local)
+  integer, public :: PRC_GLOBAL_domainID      = 0       !< my domain ID   in global communicator
+
+  ! local world
+  integer, public :: PRC_LOCAL_COMM_WORLD     = -1      !< local communicator
+  integer, public :: PRC_nprocs               = 1       !< myrank         in local communicator
+  integer, public :: PRC_myrank               = 0       !< process num    in local communicator
+  logical, public :: PRC_IsMaster             = .false. !< master process in local communicator?
+
+  ! error handling
+  logical, public :: PRC_mpi_alive = .false.            !< MPI is alive?
+  integer, public :: PRC_UNIVERSAL_handler              !< error handler  in universal communicator
+  integer, public :: PRC_ABORT_COMM_WORLD               !< communicator for aborting
+  integer, public :: PRC_ABORT_handler                  !< error handler communicator for aborting
 
   !-----------------------------------------------------------------------------
   !
@@ -83,157 +93,138 @@ module scale_process
   !
   !++ Private parameters & variables
   !
-  integer, private, parameter :: abort_code   = -1 !< mpi abort code in error handler
-!  integer, private, parameter :: abort_code_p = 2 !< mpi abort code in error handler from parent
-!  integer, private, parameter :: abort_code_d = 3 !< mpi abort code in error handler from daughter
-  logical, public :: PRC_mpi_alive   = .false. !< whether MPI is alive or not?
-
-  integer, private :: new_abort
-  integer, private :: handler_status
+  integer, private, parameter :: PRC_ABORT_code = -1     !< MPI abort code in error handler
+!  integer, private, parameter :: PRC_ABORT_code_p = 2 !< mpi abort code in error handler from parent
+!  integer, private, parameter :: PRC_ABORT_code_d = 3 !< mpi abort code in error handler from daughter
 
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
   !> Start MPI
-  subroutine PRC_MPIstart
+  subroutine PRC_MPIstart( &
+       comm )
     implicit none
+
+    integer, intent(out) :: comm ! communicator
 
     integer :: ierr
     !---------------------------------------------------------------------------
 
     call MPI_Init(ierr)
+
     PRC_mpi_alive = .true.
-    MASTER_COMM_WORLD = MPI_COMM_WORLD
-    ABORT_COMM_WORLD  = MPI_COMM_WORLD
 
-    call MPI_COMM_CREATE_ERRHANDLER( PRC_MPI_errorhandler, new_abort, ierr )
-    call MPI_COMM_SET_ERRHANDLER   ( ABORT_COMM_WORLD, new_abort, ierr )
-    call MPI_COMM_GET_ERRHANDLER   ( ABORT_COMM_WORLD, handler_status, ierr )
+    call MPI_COMM_CREATE_ERRHANDLER( PRC_MPI_errorhandler, PRC_UNIVERSAL_handler, ierr )
 
-    call MPI_Comm_size(MASTER_COMM_WORLD,MASTER_nmax,  ierr)
-    call MPI_Comm_rank(MASTER_COMM_WORLD,MASTER_myrank,ierr)
-
-    if ( MASTER_myrank == PRC_master ) then
-       PRC_IsMASTER_master = .true.
-    else
-       PRC_IsMASTER_master = .false.
-    endif
+    comm = MPI_COMM_WORLD
 
     return
   end subroutine PRC_MPIstart
 
   !-----------------------------------------------------------------------------
-  !> Setup MPI
-  subroutine PRC_MPIsetup( &
-      MY_COMM_WORLD ) ! [in]
+  !> setup MPI in universal communicator
+  subroutine PRC_UNIVERSAL_setup( &
+       comm,    &
+       nprocs,  &
+       ismaster )
     implicit none
 
-    integer, intent(in) :: MY_COMM_WORLD
+    integer, intent(in)  :: comm     ! communicator
+    integer, intent(out) :: nprocs   ! number of procs in this communicator
+    logical, intent(out) :: ismaster ! master process in this communicator?
 
     integer :: ierr
     !---------------------------------------------------------------------------
 
-    LOCAL_COMM_WORLD = MY_COMM_WORLD
-    call MPI_COMM_RANK(LOCAL_COMM_WORLD,PRC_myrank,ierr)
-    call MPI_COMM_SIZE(LOCAL_COMM_WORLD,PRC_nmax,  ierr)
+    PRC_UNIVERSAL_COMM_WORLD = comm
 
-    if ( PRC_myrank == PRC_master ) then
-       PRC_IsLOCAL_master = .true.
+    call MPI_Comm_size(PRC_UNIVERSAL_COMM_WORLD,PRC_UNIVERSAL_nprocs,ierr)
+    call MPI_Comm_rank(PRC_UNIVERSAL_COMM_WORLD,PRC_UNIVERSAL_myrank,ierr)
+
+    if ( PRC_UNIVERSAL_myrank == PRC_masterrank ) then
+       PRC_UNIVERSAL_IsMaster = .true.
     else
-       PRC_IsLOCAL_master = .false.
+       PRC_UNIVERSAL_IsMaster = .false.
     endif
 
+    nprocs   = PRC_UNIVERSAL_nprocs
+    ismaster = PRC_UNIVERSAL_IsMaster
+
+
+
+    PRC_ABORT_COMM_WORLD = PRC_UNIVERSAL_COMM_WORLD
+
+    call MPI_Comm_set_errhandler(PRC_ABORT_COMM_WORLD,PRC_UNIVERSAL_handler,ierr)
+    call MPI_Comm_get_errhandler(PRC_ABORT_COMM_WORLD,PRC_ABORT_handler    ,ierr)
+
     return
-  end subroutine PRC_MPIsetup
+  end subroutine PRC_UNIVERSAL_setup
 
   !-----------------------------------------------------------------------------
-  !> Dummy subroutine of MPIstart
-  subroutine PRC_NOMPIstart
+  !> setup MPI in global communicator
+  subroutine PRC_GLOBAL_setup( &
+       abortall, &
+       comm      )
     implicit none
 
-    character(len=H_LONG) :: fname ! name of logfile
+    logical, intent(in)  :: abortall ! abort all jobs?
+    integer, intent(in)  :: comm     ! communicator
 
     integer :: ierr
     !---------------------------------------------------------------------------
 
-    PRC_nmax   = 1
-    PRC_myrank = 0
-    PRC_mpi_alive = .false.
+    PRC_GLOBAL_COMM_WORLD = comm
 
-    if ( .not. IO_LOG_SUPPRESS ) then
-       if ( PRC_myrank == PRC_master ) then ! master node
-          IO_L = .true.
-       else
-          IO_L = IO_LOG_ALLNODE
-       endif
+    call MPI_Comm_size(PRC_GLOBAL_COMM_WORLD,PRC_GLOBAL_nprocs,ierr)
+    call MPI_Comm_rank(PRC_GLOBAL_COMM_WORLD,PRC_GLOBAL_myrank,ierr)
+
+    if ( PRC_GLOBAL_myrank == PRC_masterrank ) then
+       PRC_GLOBAL_IsMaster = .true.
+    else
+       PRC_GLOBAL_IsMaster = .false.
     endif
 
-    if ( IO_L ) then
-
-       !--- Open logfile
-       if ( IO_LOG_BASENAME == IO_STDOUT ) then
-          IO_FID_LOG = IO_FID_STDOUT
-       else
-          IO_FID_LOG = IO_get_available_fid()
-          call IO_make_idstr(fname,'LOG','pe',PRC_myrank)
-          open( unit   = IO_FID_LOG,  &
-                file   = trim(fname), &
-                form   = 'formatted', &
-                iostat = ierr         )
-          if ( ierr /= 0 ) then
-             write(*,*) 'xxx File open error! :', trim(fname)
-             call PRC_MPIstop
-          endif
-       endif
-
-       write(IO_FID_LOG,*)
-       write(IO_FID_LOG,*) '     SCALE : Scalable Computing by Advanced Library and Environment     '
-       write(IO_FID_LOG,*)
-       write(IO_FID_LOG,*) '++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++'
-       write(IO_FID_LOG,*) '+                   LES-scale Numerical Weather Model                  +'
-       write(IO_FID_LOG,*) '++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++'
-       write(IO_FID_LOG,*) trim(H_LIBNAME)
-       write(IO_FID_LOG,*) trim(H_MODELNAME)
-       write(IO_FID_LOG,*)
-       write(IO_FID_LOG,*) '++++++ Start WITHOUT MPI'
-       write(IO_FID_LOG,*)
-       write(IO_FID_LOG,*) '++++++ Module[STDIO] / Categ[IO] / Origin[SCALElib]'
-       write(IO_FID_LOG,*)
-       write(IO_FID_LOG,*) '*** Open config file, FID = ', IO_FID_CONF
-       write(IO_FID_LOG,*) '*** Open log    file, FID = ', IO_FID_LOG
-       write(IO_FID_LOG,*) '*** detailed log output   = ', IO_LNML
-
-    endif
-
-    return
-  end subroutine PRC_NOMPIstart
-
-  !-----------------------------------------------------------------------------
-  !> Setup BULK JOB
-  subroutine PRC_BULKsetup( &
-      BULK_COMM_WORLD,   & ! [in]
-      ABORT_ALL_JOBS     ) ! [in]
-    implicit none
-
-    integer, intent(in) :: BULK_COMM_WORLD
-    logical, intent(in) :: ABORT_ALL_JOBS
-
-    integer :: ierr
-    !---------------------------------------------------------------------------
-
-
-    GLOBAL_COMM_WORLD = BULK_COMM_WORLD
-    call MPI_Comm_size(GLOBAL_COMM_WORLD,GLOBAL_nmax,  ierr)
-    call MPI_Comm_rank(GLOBAL_COMM_WORLD,GLOBAL_myrank,ierr)
-
-!    if ( ABORT_ALL_JOBS ) then
-!       ABORT_COMM_WORLD = MPI_COMM_WORLD
-!    else
-!       ABORT_COMM_WORLD = GLOBAL_COMM_WORLD
+!    if ( .NOT. abortall ) then
+!       PRC_ABORT_COMM_WORLD = PRC_GLOBAL_COMM_WORLD
+!
+!       call MPI_COMM_SET_ERRHANDLER(PRC_ABORT_COMM_WORLD,PRC_UNIVERSAL_handler,ierr)
+!       call MPI_COMM_GET_ERRHANDLER(PRC_ABORT_COMM_WORLD,PRC_ABORT_handler    ,ierr)
 !    endif
 
     return
-  end subroutine PRC_BULKsetup
+  end subroutine PRC_GLOBAL_setup
+
+  !-----------------------------------------------------------------------------
+  !> Setup MPI
+  subroutine PRC_LOCAL_setup( &
+       comm,    &
+       myrank,  &
+       ismaster )
+    implicit none
+
+    integer, intent(in)  :: comm     ! communicator
+    integer, intent(out) :: myrank   ! myrank         in this communicator
+    logical, intent(out) :: ismaster ! master process in this communicator?
+
+    integer :: ierr
+    !---------------------------------------------------------------------------
+
+    PRC_LOCAL_COMM_WORLD = comm
+
+    call MPI_COMM_RANK(PRC_LOCAL_COMM_WORLD,PRC_myrank,ierr)
+    call MPI_COMM_SIZE(PRC_LOCAL_COMM_WORLD,PRC_nprocs,ierr)
+
+    if ( PRC_myrank == PRC_masterrank ) then
+       PRC_IsMaster = .true.
+    else
+       PRC_IsMaster = .false.
+    endif
+
+    myrank   = PRC_myrank
+    ismaster = PRC_IsMaster
+
+    return
+  end subroutine PRC_LOCAL_setup
 
   !-----------------------------------------------------------------------------
   !> Abort MPI
@@ -243,19 +234,9 @@ contains
     integer :: ierr
     !---------------------------------------------------------------------------
 
-    if ( IO_L ) then
-       write(IO_FID_LOG,*) ''
-       write(IO_FID_LOG,*) '++++++ PRC_MPIstop', PRC_myrank
-       write(IO_FID_LOG,*) ''
-    end if
-
-    write(*,*) ''
-    write(*,*) '++++++ PRC_MPIstop', PRC_myrank
-    write(*,*) ''
-
     if ( PRC_mpi_alive ) then
-        ! tentative approach; input "MPI_COMM_WORLD".
-        call MPI_COMM_CALL_ERRHANDLER(MPI_COMM_WORLD, abort_code, ierr)
+       ! tentative approach; input "PRC_UNIVERSAL_COMM_WORLD".
+       call MPI_COMM_CALL_ERRHANDLER(PRC_UNIVERSAL_COMM_WORLD,PRC_ABORT_code,ierr)
     endif
 
     stop
@@ -266,8 +247,6 @@ contains
   subroutine PRC_MPIfinish
     implicit none
 
-    character(len=H_SHORT) :: request = 'STOP'
-
     integer :: ierr
     !---------------------------------------------------------------------------
 
@@ -276,28 +255,23 @@ contains
        if ( IO_L ) then
           write(IO_FID_LOG,*)
           write(IO_FID_LOG,*) '++++++ Stop MPI'
-          write(IO_FID_LOG,*) '*** Broadcast STOP signal'
+          write(IO_FID_LOG,*)
        endif
 
        ! free splitted communicator
-       if ( LOCAL_COMM_WORLD .ne. GLOBAL_COMM_WORLD ) then
-          call MPI_COMM_FREE( LOCAL_COMM_WORLD, ierr )
+       if ( PRC_LOCAL_COMM_WORLD /= PRC_GLOBAL_COMM_WORLD ) then
+          call MPI_Comm_free(PRC_LOCAL_COMM_WORLD,ierr)
        endif
 
-       call MPI_BCAST( request,        &
-                       H_SHORT,      &
-                       MPI_CHARACTER,  & !--- type
-                       PRC_master,     & !--- source rank
-                       MPI_COMM_WORLD, &
-                       ierr            )
-       call MPI_Barrier(MPI_COMM_WORLD,ierr)
+       call MPI_Barrier(PRC_UNIVERSAL_COMM_WORLD,ierr)
+
        call MPI_Finalize(ierr)
        if( IO_L ) write(IO_FID_LOG,*) '*** MPI is peacefully finalized'
     endif
 
     ! Close logfile, configfile
     if ( IO_L ) then
-       if ( IO_FID_LOG /= IO_FID_STDOUT ) close(IO_FID_LOG)
+       if( IO_FID_LOG /= IO_FID_STDOUT ) close(IO_FID_LOG)
     endif
     close(IO_FID_CONF)
 
@@ -332,9 +306,9 @@ contains
     integer, intent(out) :: inter_child
     character(len=H_LONG), intent(out) :: fname_local
 
-    integer :: PARENT_COL(max_depth)        ! parent color number
-    integer :: CHILD_COL(max_depth)         ! child  color number
-    integer :: PRC_ROOT(0:max_depth)        ! root process in the color
+    integer :: PARENT_COL(PRC_DOMAIN_nlim)        ! parent color number
+    integer :: CHILD_COL(PRC_DOMAIN_nlim)         ! child  color number
+    integer :: PRC_ROOT(0:PRC_DOMAIN_nlim)        ! root process in the color
     integer, allocatable :: COLOR_LIST(:)   ! member list in each color
     integer, allocatable :: KEY_LIST(:)     ! local process number in each color
 
@@ -342,12 +316,12 @@ contains
     integer :: ORG_myrank  ! my rank number in the original communicator
     integer :: ORG_nmax    ! total rank number in the original communicator
 
-    logical :: do_create_p(max_depth)
-    logical :: do_create_c(max_depth)
+    logical :: do_create_p(PRC_DOMAIN_nlim)
+    logical :: do_create_c(PRC_DOMAIN_nlim)
     logical :: color_reorder = .false.
 
-    integer :: COL_NMAX(0:max_depth)
-    character(len=H_LONG) :: COL_FILE(0:max_depth)
+    integer :: COL_NMAX(0:PRC_DOMAIN_nlim)
+    character(len=H_LONG) :: COL_FILE(0:PRC_DOMAIN_nlim)
     character(4) :: col_num
 
     integer :: i
@@ -370,9 +344,9 @@ contains
           total_nmax = total_nmax + PRC_DOMAINS(i)
        enddo
        if ( total_nmax .ne. ORG_nmax ) then
-          if ( PRC_IsMASTER_master ) write (*,*) ""
-          if ( PRC_IsMASTER_master ) write (*,*) "ERROR: MPI PROCESS NUMBER is INCONSISTENT"
-          if ( PRC_IsMASTER_master ) write (*,*) "REQUESTED NPROCS = ", total_nmax, "  LAUNCHED NPROCS = ", ORG_nmax
+          if ( PRC_UNIVERSAL_IsMaster ) write (*,*) ""
+          if ( PRC_UNIVERSAL_IsMaster ) write (*,*) "ERROR: MPI PROCESS NUMBER is INCONSISTENT"
+          if ( PRC_UNIVERSAL_IsMaster ) write (*,*) "REQUESTED NPROCS = ", total_nmax, "  LAUNCHED NPROCS = ", ORG_nmax
           call PRC_MPIstop
        endif
 
@@ -403,7 +377,7 @@ contains
        if ( bulk_split ) then
           write(col_num,'(I4.4)') COLOR_LIST(ORG_myrank)
           fname_local = col_num
-          PRC_mybulk  = COLOR_LIST(ORG_myrank)
+          PRC_UNIVERSAL_jobID  = COLOR_LIST(ORG_myrank)
        else
           fname_local = COL_FILE(COLOR_LIST(ORG_myrank))
        endif
@@ -413,8 +387,8 @@ contains
        do_create_c(:) = .false.
        if ( .NOT. bulk_split ) then
           do i = 1, NUM_DOMAIN-1
-             if ( PRC_IsMASTER_master ) write ( *, '(1X,A,I4)' ) "relationship: ", i
-             if ( PRC_IsMASTER_master ) write ( *, '(1X,A,I4,A,I4)' ) &
+             if ( PRC_UNIVERSAL_IsMaster ) write ( *, '(1X,A,I4)' ) "relationship: ", i
+             if ( PRC_UNIVERSAL_IsMaster ) write ( *, '(1X,A,I4,A,I4)' ) &
                                "--- parent color = ", PARENT_COL(i), "  child color = ", CHILD_COL(i)
              if ( COLOR_LIST(ORG_myrank) == PARENT_COL(i) ) then
                 do_create_p(i) = .true.
@@ -431,11 +405,11 @@ contains
           do i = 1, NUM_DOMAIN-1
              itag = i*100
              if ( do_create_p(i) ) then ! as a parent
-                call MPI_INTERCOMM_CREATE( INTRA_COMM, split_root,           &
+                call MPI_INTERCOMM_CREATE( INTRA_COMM, PRC_masterrank,           &
                                            ORG_COMM,   PRC_ROOT(CHILD_COL(i)), &
                                            itag, inter_child,  ierr)
              elseif ( do_create_c(i) ) then ! as a child
-                call MPI_INTERCOMM_CREATE( INTRA_COMM, split_root,           &
+                call MPI_INTERCOMM_CREATE( INTRA_COMM, PRC_masterrank,           &
                                            ORG_COMM,   PRC_ROOT(PARENT_COL(i)), &
                                            itag, inter_parent, ierr)
              endif
@@ -446,9 +420,9 @@ contains
        deallocate ( COLOR_LIST, KEY_LIST )
 
     elseif ( NUM_DOMAIN == 1 ) then ! single domain run
-       if ( PRC_IsMASTER_master ) write (*,*) "*** a single comunicator"
+       if ( PRC_UNIVERSAL_IsMaster ) write (*,*) "*** a single comunicator"
     else
-       if ( PRC_IsMASTER_master ) write (*,*) "ERROR: REQUESTED DOMAIN NUMBER IS NOT ACCEPTABLE"
+       if ( PRC_UNIVERSAL_IsMaster ) write (*,*) "ERROR: REQUESTED DOMAIN NUMBER IS NOT ACCEPTABLE"
        call PRC_MPIstop
     endif
 
@@ -479,23 +453,23 @@ contains
     logical, intent(in)  :: color_reorder
     logical, intent(in)  :: LOG_SPLIT
     integer, intent(out) :: COLOR_LIST(:)             ! member list in each color
-    integer, intent(out) :: PRC_ROOT(0:max_depth)     ! root process in each color
+    integer, intent(out) :: PRC_ROOT(0:PRC_DOMAIN_nlim)     ! root process in each color
     integer, intent(out) :: KEY_LIST(:)               ! local process number in each color
     integer, intent(out) :: PARENT_COL(:)             ! parent color number
     integer, intent(out) :: CHILD_COL(:)              ! child  color number
-    character(len=H_LONG), intent(out) :: COL_FILE(0:max_depth) ! conf file in each color
+    character(len=H_LONG), intent(out) :: COL_FILE(0:PRC_DOMAIN_nlim) ! conf file in each color
 
-    integer :: touch(max_depth)
-    integer :: PRC_ORDER(max_depth)                   ! reordered number of process
-    integer :: ORDER2DOM(max_depth)                   ! get domain number by order number
-    integer :: DOM2ORDER(max_depth)                   ! get order number by domain number
-    integer :: DOM2COL(max_depth)                     ! get color number by domain number
-    integer :: COL2DOM(0:max_depth)                   ! get domain number by color number
-    integer :: RO_PRC_DOMAINS(max_depth)              ! reordered values
-    integer :: RO_DOM2COL(max_depth)                  ! reordered values
-    integer :: RO_PARENT_COL(max_depth)               ! reordered values
-    integer :: RO_CHILD_COL(max_depth)                ! reordered values
-    character(len=H_LONG) :: RO_CONF_FILES(max_depth) ! reordered values
+    integer :: touch(PRC_DOMAIN_nlim)
+    integer :: PRC_ORDER(PRC_DOMAIN_nlim)                   ! reordered number of process
+    integer :: ORDER2DOM(PRC_DOMAIN_nlim)                   ! get domain number by order number
+    integer :: DOM2ORDER(PRC_DOMAIN_nlim)                   ! get order number by domain number
+    integer :: DOM2COL(PRC_DOMAIN_nlim)                     ! get color number by domain number
+    integer :: COL2DOM(0:PRC_DOMAIN_nlim)                   ! get domain number by color number
+    integer :: RO_PRC_DOMAINS(PRC_DOMAIN_nlim)              ! reordered values
+    integer :: RO_DOM2COL(PRC_DOMAIN_nlim)                  ! reordered values
+    integer :: RO_PARENT_COL(PRC_DOMAIN_nlim)               ! reordered values
+    integer :: RO_CHILD_COL(PRC_DOMAIN_nlim)                ! reordered values
+    character(len=H_LONG) :: RO_CONF_FILES(PRC_DOMAIN_nlim) ! reordered values
 
     integer :: ORG_nmax   ! parent domain number
     integer :: id_parent  ! parent domain number
@@ -539,7 +513,7 @@ contains
              CHILD_COL(i) = DOM2COL(id_child)
           endif
 
-          if ( PRC_IsMASTER_master .and. LOG_SPLIT ) then
+          if ( PRC_UNIVERSAL_IsMaster .and. LOG_SPLIT ) then
              write( *, '(1X,A,I2,1X,A,I2,2(2X,A,I2))' )  &
                   "DOMAIN: ", i, "MY_COL: ", DOM2COL(i), &
                   "PARENT: COL= ", PARENT_COL(i), "CHILD: COL= ", CHILD_COL(i)
@@ -567,15 +541,15 @@ contains
        enddo
 
        do i = 1, NUM_DOMAIN
-          if ( PRC_IsMASTER_master ) write ( *, * ) ""
-          if ( PRC_IsMASTER_master ) write ( *, '(1X,A,I2,A,I5)' ) "ORDER (",i,") -> DOMAIN: ", ORDER2DOM(i)
-          if ( PRC_IsMASTER_master ) write ( *, '(1X,A,I1,A,I5)' ) "NUM PRC_DOMAINS(",i,")  = ", RO_PRC_DOMAINS(i)
-          if ( PRC_IsMASTER_master ) write ( *, '(1X,A,I1,A,I3)' ) "MY COLOR(",i,") = ", RO_DOM2COL(ORDER2DOM(i))
-          if ( PRC_IsMASTER_master ) write ( *, '(1X,A,I1,A,I3)' ) "PARENT COLOR(",i,") = ", RO_PARENT_COL(i)
-          if ( PRC_IsMASTER_master ) write ( *, '(1X,A,I1,A,I3)' ) "CHILD COLOR(",i,") = ", RO_CHILD_COL(i)
-          if ( PRC_IsMASTER_master ) write ( *, '(1X,A,I1,A,A)'  ) "CONF_FILES(",i,")    = ", trim(RO_CONF_FILES(i))
+          if ( PRC_UNIVERSAL_IsMaster ) write ( *, * ) ""
+          if ( PRC_UNIVERSAL_IsMaster ) write ( *, '(1X,A,I2,A,I5)' ) "ORDER (",i,") -> DOMAIN: ", ORDER2DOM(i)
+          if ( PRC_UNIVERSAL_IsMaster ) write ( *, '(1X,A,I1,A,I5)' ) "NUM PRC_DOMAINS(",i,")  = ", RO_PRC_DOMAINS(i)
+          if ( PRC_UNIVERSAL_IsMaster ) write ( *, '(1X,A,I1,A,I3)' ) "MY COLOR(",i,") = ", RO_DOM2COL(ORDER2DOM(i))
+          if ( PRC_UNIVERSAL_IsMaster ) write ( *, '(1X,A,I1,A,I3)' ) "PARENT COLOR(",i,") = ", RO_PARENT_COL(i)
+          if ( PRC_UNIVERSAL_IsMaster ) write ( *, '(1X,A,I1,A,I3)' ) "CHILD COLOR(",i,") = ", RO_CHILD_COL(i)
+          if ( PRC_UNIVERSAL_IsMaster ) write ( *, '(1X,A,I1,A,A)'  ) "CONF_FILES(",i,")    = ", trim(RO_CONF_FILES(i))
        enddo
-       if ( PRC_IsMASTER_master ) write ( *, * ) ""
+       if ( PRC_UNIVERSAL_IsMaster ) write ( *, * ) ""
 
        do i=1, NUM_DOMAIN
           COL_FILE(i-1) = RO_CONF_FILES(i) ! final copy
@@ -629,7 +603,7 @@ contains
           PRC_ROOT(COLOR_LIST(i+1)) = i
           COL_FILE(COLOR_LIST(i+1)) = RO_CONF_FILES(order)
        endif
-       if ( LOG_SPLIT .and. PRC_IsMASTER_master ) then
+       if ( LOG_SPLIT .and. PRC_UNIVERSAL_IsMaster ) then
           write ( *, '(1X,4(A,I5))' ) "PE:", i, "   COLOR:", COLOR_LIST(i+1), &
                 "   KEY:", KEY_LIST(i+1), "   PRC_ROOT:", PRC_ROOT(COLOR_LIST(i+1))
        endif
@@ -718,7 +692,7 @@ contains
 
     vsize = size(var(:))
 
-    allocate( statval(vsize,0:PRC_nmax-1) )
+    allocate( statval(vsize,0:PRC_nprocs-1) )
     statval(:,:) = 0.0_DP
 
     do v = 1, vsize
@@ -726,21 +700,21 @@ contains
     enddo
 
     ! MPI broadcast
-    do p = 0, PRC_nmax-1
+    do p = 0, PRC_nprocs-1
        call MPI_Bcast( statval(1,p),         &
                        vsize,                &
                        MPI_DOUBLE_PRECISION, &
                        p,                    &
-                       LOCAL_COMM_WORLD,     &
+                       PRC_LOCAL_COMM_WORLD,     &
                        ierr                  )
     enddo
 
     do v = 1, vsize
        totalvar = 0.0_DP
-       do p = 0, PRC_nmax-1
+       do p = 0, PRC_nprocs-1
           totalvar = totalvar + statval(v,p)
        enddo
-       avgvar(v) = totalvar / PRC_nmax
+       avgvar(v) = totalvar / PRC_nprocs
 
        maxvar(v)   = maxval(statval(v,:))
        minvar(v)   = minval(statval(v,:))
@@ -779,15 +753,15 @@ contains
        end if
 
        if ( IO_L ) then
-          write(*,*) '++++++ BULK   ID: ',PRC_mybulk
-          write(*,*) '++++++ DOMAIN ID: ',PRC_mydom
-          write(*,*) '++++++ MASTER LOCATION: ',MASTER_myrank,'/',MASTER_nmax
-          write(*,*) '++++++ GLOBAL LOCATION: ',GLOBAL_myrank,'/',GLOBAL_nmax
-          write(*,*) '++++++ LOCAL  LOCATION: ',PRC_myrank,'/',PRC_nmax
+          write(*,*) '++++++ BULK   ID: ',PRC_UNIVERSAL_jobID
+          write(*,*) '++++++ DOMAIN ID: ',PRC_GLOBAL_domainID
+          write(*,*) '++++++ MASTER LOCATION: ',PRC_UNIVERSAL_myrank,'/',PRC_UNIVERSAL_nprocs
+          write(*,*) '++++++ GLOBAL LOCATION: ',PRC_GLOBAL_myrank,'/',PRC_GLOBAL_nprocs
+          write(*,*) '++++++ LOCAL  LOCATION: ',PRC_myrank,'/',PRC_nprocs
           write(*,*) ''
        end if
 
-       if ( errcode .eq. abort_code ) then ! called from PRC_MPIstop
+       if ( errcode .eq. PRC_ABORT_code ) then ! called from PRC_MPIstop
        elseif ( errcode <= MPI_ERR_LASTCODE ) then
           call MPI_ERROR_STRING(errcode, msg, len, ierr)
           if ( IO_L ) write(IO_FID_LOG,*) '++++++ ', errcode, trim(msg)
@@ -797,7 +771,7 @@ contains
           write(*,*) '++++++ Unexpected error code', errcode
        endif
 
-       if ( comm .ne. ABORT_COMM_WORLD ) then
+       if ( comm .ne. PRC_ABORT_COMM_WORLD ) then
           if ( IO_L ) write(IO_FID_LOG,*) '++++++ Unexpected communicator'
           write(*,*) '++++++ Unexpected communicator'
        endif
@@ -816,7 +790,7 @@ contains
     ! Abort MPI
     if ( PRC_mpi_alive ) then
        call sleep(5)
-       call MPI_ABORT(ABORT_COMM_WORLD, abort_code, ierr)
+       call MPI_ABORT(PRC_ABORT_COMM_WORLD, PRC_ABORT_code, ierr)
     endif
 
     stop

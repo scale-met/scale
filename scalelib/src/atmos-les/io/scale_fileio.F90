@@ -561,8 +561,8 @@ contains
        FileAddVariable, &
        FileWrite
     use scale_process, only: &
-       PRC_master, &
-       PRC_myrank, &
+       PRC_masterrank, &
+       PRC_myrank,     &
        PRC_MPIstop
     use scale_les_process, only: &
        PRC_2Drank
@@ -617,7 +617,7 @@ contains
                      title,          & ! [IN]
                      H_SOURCE,       & ! [IN]
                      H_INSTITUTE,    & ! [IN]
-                     PRC_master,     & ! [IN]
+                     PRC_masterrank, & ! [IN]
                      PRC_myrank,     & ! [IN]
                      rankidx,        & ! [IN]
                      append = append ) ! [IN]
@@ -683,8 +683,8 @@ contains
        FileAddVariable, &
        FileWrite
     use scale_process, only: &
-       PRC_master, &
-       PRC_myrank, &
+       PRC_masterrank, &
+       PRC_myrank,     &
        PRC_MPIstop
     use scale_les_process, only: &
        PRC_2Drank
@@ -747,7 +747,7 @@ contains
                      title,          & ! [IN]
                      H_SOURCE,       & ! [IN]
                      H_INSTITUTE,    & ! [IN]
-                     PRC_master,     & ! [IN]
+                     PRC_masterrank, & ! [IN]
                      PRC_myrank,     & ! [IN]
                      rankidx,        & ! [IN]
                      append = append ) ! [IN]
@@ -867,8 +867,8 @@ contains
        FileAddVariable, &
        FileWrite
     use scale_process, only: &
-       PRC_master, &
-       PRC_myrank, &
+       PRC_masterrank, &
+       PRC_myrank,     &
        PRC_MPIstop
     use scale_les_process, only: &
        PRC_2Drank
@@ -939,7 +939,7 @@ contains
                      title,             & ! [IN]
                      H_SOURCE,          & ! [IN]
                      H_INSTITUTE,       & ! [IN]
-                     PRC_master,        & ! [IN]
+                     PRC_masterrank,    & ! [IN]
                      PRC_myrank,        & ! [IN]
                      rankidx,           & ! [IN]
                      append = append_sw ) ! [IN]
@@ -1096,8 +1096,8 @@ contains
        FileAddVariable, &
        FileWrite
     use scale_process, only: &
-       PRC_master, &
-       PRC_myrank, &
+       PRC_masterrank, &
+       PRC_myrank,     &
        PRC_MPIstop
     use scale_les_process, only: &
        PRC_2Drank
@@ -1174,7 +1174,7 @@ contains
                      title,             & ! [IN]
                      H_SOURCE,          & ! [IN]
                      H_INSTITUTE,       & ! [IN]
-                     PRC_master,        & ! [IN]
+                     PRC_masterrank,    & ! [IN]
                      PRC_myrank,        & ! [IN]
                      rankidx,           & ! [IN]
                      append = append_sw ) ! [IN]
