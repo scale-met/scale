@@ -89,7 +89,7 @@ contains
        PRC_HAS_S, &
        PRC_HAS_N
     use scale_time, only: &
-       TIME_DTSEC,       &
+       TIME_DTSEC_ATMOS_DYN, &
        TIME_STARTDAYSEC, &
        TIME_OFFSET_YEAR
     implicit none
@@ -156,7 +156,7 @@ contains
                       PRC_myrank,                     &
                       rankidx,                        &
                       TIME_STARTDAYSEC,               &
-                      TIME_DTSEC,                     &
+                      TIME_DTSEC_ATMOS_DYN,           &
                       time_units   = HISTORY_T_UNITS, &
                       time_since   = HISTORY_T_SINCE, &
                       namelist_fid = IO_FID_CONF      )
