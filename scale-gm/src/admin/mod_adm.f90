@@ -14,6 +14,11 @@ module mod_adm
   !
   use mpi
   use scale_precision
+  use scale_stdio
+  use scale_prof
+
+  use scale_process, only: &
+     ADM_proc_stop => PRC_MPIstop
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -21,12 +26,9 @@ module mod_adm
   !
   !++ Public procedure
   !
-  public :: ADM_proc_init
-  public :: ADM_proc_stop
-  public :: ADM_proc_finish
   public :: ADM_setup
+  public :: ADM_proc_stop
   public :: ADM_mk_suffix
-  public :: ADM_MPItime
 
   !-----------------------------------------------------------------------------
   !
@@ -263,146 +265,17 @@ module mod_adm
   !
   !++ Private parameters & variables
   !
-  integer, private :: ADM_run_type ! Run type (single or multi processes)
-
   !-----------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------
-  !> MPI initialization
-  subroutine ADM_proc_init( &
-       rtype )
-#ifdef JCUP
-    use jsp_nicam, only: &
-       jsp_n_init, &
-       jsp_n_get_my_mpi
-#endif
-    implicit none
-
-    integer, intent(in) :: rtype
-
-#ifdef JCUP
-    integer :: my_comm, my_group
-#endif
-    integer :: my_rank, prc_all
-    integer :: ierr
-    !---------------------------------------------------------------------
-
-    ADM_run_type = rtype
-
-    if ( rtype == ADM_MULTI_PRC ) then
-#ifdef JCUP
-       call jsp_n_init("./nhm_driver.cnf")
-       call jsp_n_get_my_mpi(my_comm, my_group, prc_all, my_rank)
-       ADM_COMM_WORLD = my_comm
-#else
-       call MPI_Init(ierr)
-       call MPI_Comm_size(MPI_COMM_WORLD, prc_all, ierr)
-       call MPI_Comm_rank(MPI_COMM_WORLD, my_rank, ierr)
-       ADM_COMM_WORLD = MPI_COMM_WORLD
-#endif
-       ADM_mpi_alive  = .true.
-    else
-       prc_all = 1
-       my_rank = 0
-    endif
-
-    ADM_prc_me = my_rank + 1
-    ADM_prc_pl = 1
-
-#ifdef _FIXEDINDEX_
-    if ( ADM_prc_all /= prc_all ) then
-       write(*,*) 'xxx Fixed prc_all is not match (fixed,requested): ', ADM_prc_all, prc_all
-       stop
-    endif
-#else
-    ADM_prc_all = prc_all
-#endif
-
-    return
-  end subroutine ADM_proc_init
-
-  !-----------------------------------------------------------------------
-  !> Abort MPI process
-  subroutine ADM_proc_stop
-    implicit none
-
-    integer :: ierr
-    !---------------------------------------------------------------------
-
-    ! flush 1kbyte
-    write(ADM_LOG_FID,'(32A32)') '                                '
-
-    write(ADM_LOG_FID,*) '+++ Abort MPI'
-    if ( ADM_prc_me == ADM_prc_run_master ) then
-       write(*,*) '+++ Abort MPI'
-    endif
-
-    close(ADM_LOG_FID)
-    close(ADM_CTL_FID)
-
-    ! Abort MPI
-    call MPI_Abort(MPI_COMM_WORLD, 1, ierr)
-
-    stop
-  end subroutine ADM_proc_stop
-
-  !-----------------------------------------------------------------------
-  !> Finish MPI process
-  subroutine ADM_proc_finish
-#ifdef JCUP
-    use jsp_nicam, only: &
-       jsp_n_finish,         &
-       jsp_n_is_io_coupled,  &
-       jsp_n_is_coco_coupled
-#endif
-    implicit none
-
-    integer :: ierr
-    !---------------------------------------------------------------------
-
-    if ( ADM_run_type == ADM_MULTI_PRC ) then
-
-       write(ADM_LOG_FID,*)
-       write(ADM_LOG_FID,*) '+++ finalize MPI'
-       call MPI_Barrier(ADM_COMM_WORLD,ierr)
-
-#ifdef JCUP
-       if (      jsp_n_is_io_coupled()   &
-            .OR. jsp_n_is_coco_coupled() ) then
-          call jsp_n_finish()
-       else
-          call MPI_Finalize(ierr)
-       endif
-#else
-       call MPI_Finalize(ierr)
-#endif
-
-       write(ADM_LOG_FID,*) '*** MPI is peacefully finalized'
-    else
-       write(ADM_LOG_FID,*)
-       write(ADM_LOG_FID,*) '+++ stop serial process.'
-    endif
-
-    close(ADM_LOG_FID)
-    close(ADM_CTL_FID)
-
-    return
-  end subroutine ADM_proc_finish
-
-  !-----------------------------------------------------------------------
   !> Setup
-  subroutine ADM_setup( &
-       param_fname, &
-       msg_base     )
-    use mod_misc, only: &
-       MISC_make_idstr, &
-       MISC_get_available_fid, &
-       MISC_get_fid
+  subroutine ADM_setup
+    use scale_process, only: &
+       PRC_mpi_alive,        &
+       PRC_LOCAL_COMM_WORLD, &
+       PRC_nprocs,           &
+       PRC_myrank
     implicit none
-
-    character(LEN=*), intent(in) :: param_fname ! namelist file name
-
-    character(len=*), intent(in), optional :: msg_base ! output file for msg.pexxxxx file
 
     integer                     :: glevel      = -1
     integer                     :: rlevel      = -1
@@ -427,35 +300,14 @@ contains
     character(LEN=ADM_MAXFNAME) :: msg
     !---------------------------------------------------------------------
 
-    msg = 'msg'
-    if( present(msg_base) ) msg = msg_base ! [add] H.Yashiro 20110701
+    ADM_mpi_alive  = PRC_mpi_alive
+    ADM_COMM_WORLD = PRC_LOCAL_COMM_WORLD
+    ADM_prc_all    = PRC_nprocs
+    ADM_prc_me     = PRC_myrank + 1
+    ADM_prc_pl     = 1
 
-    !--- open message file
-    ADM_LOG_FID = MISC_get_available_fid()
-    call MISC_make_idstr(fname,trim(msg),'pe',ADM_prc_me)
-    open( unit = ADM_LOG_FID, &
-          file = trim(fname), &
-          form = 'formatted'  )
-
-    write(ADM_LOG_FID,*) '############################################################'
-    write(ADM_LOG_FID,*) '#                                                          #'
-    write(ADM_LOG_FID,*) '#   NICAM : Nonhydrostatic ICosahedal Atmospheric Model    #'
-    write(ADM_LOG_FID,*) '#                                                          #'
-    write(ADM_LOG_FID,*) '############################################################'
-
-    ADM_CTL_FID = MISC_get_fid( param_fname )
-    !--- open control file
-    open( unit   = ADM_CTL_FID,       &
-          file   = trim(param_fname), &
-          form   = 'formatted',       &
-          status = 'old',             &
-          iostat = ierr               )
-
-    if ( ierr /= 0 ) then
-       write(*,*) 'xxx Cannot open parameter control file!'
-       write(*,*) 'xxx filename:', trim(param_fname)
-       call ADM_proc_stop
-    endif
+    ADM_LOG_FID    = IO_FID_LOG
+    ADM_CTL_FID    = IO_FID_CONF
 
     !--- read parameters
     write(ADM_LOG_FID,*)
@@ -603,12 +455,8 @@ contains
        ADM_have_pl = .false.
     endif
 
-    ! 2010.4.26 M.Satoh; 2010.5.11 M.Satoh
-    ! ADM_l_me: this spans from 1 to ADM_lall, if effective.
-    ! Otherwise, ADM_l_me = 0 should be set. see mod_history
     ADM_l_me = 0
 
-    !--- make suffix for list-vector loop.
     call ADM_mk_suffix
 
     call output_info
