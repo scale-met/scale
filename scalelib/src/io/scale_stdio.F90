@@ -47,15 +47,13 @@ module scale_stdio
 
   character(len=H_MID),  public            :: H_MODELNAME                !< name and version of the model
   character(len=H_MID),  public            :: H_LIBNAME                  !< name and version of the library
-
   character(len=H_MID),  public            :: H_SOURCE                   !< for file header
   character(len=H_MID),  public            :: H_INSTITUTE = 'AICS/RIKEN' !< for file header
 
-  character(len=6),      public, parameter :: IO_STDOUT = "STDOUT"
+  character(len=6),      public, parameter :: IO_STDOUT     = "STDOUT"
   integer,               public, parameter :: IO_FID_STDOUT = 6
-
-  integer,               public            :: IO_FID_CONF = 7            !< Config file ID
-  integer,               public            :: IO_FID_LOG  = 8            !< Log file ID
+  integer,               public            :: IO_FID_CONF   = 7             !< Config file ID
+  integer,               public            :: IO_FID_LOG    = 8             !< Log file ID
 
   character(len=H_LONG), public            :: IO_LOG_BASENAME     = 'LOG'   !< basename of logfile
   logical,               public            :: IO_L                = .false. !< output log or not? (this process)
@@ -229,11 +227,8 @@ contains
        write(IO_FID_LOG,*) '-###########  ,##########,  #########X      ##########  +#########      '
        write(IO_FID_LOG,*) ',,,,,,,,,,.     ,,,,,,,,,    .,,,,,,,.       .,,,,,,,,    ,,,,,,,,      '
        write(IO_FID_LOG,*) '                                                                        '
-       write(IO_FID_LOG,*) '     SCALE : Scalable Computing by Advanced Library and Environment     '
+       write(IO_FID_LOG,*) '    SCALE : Scalable Computing by Advanced Library and Environment      '
        write(IO_FID_LOG,*) ''
-       write(IO_FID_LOG,*) '++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++'
-       write(IO_FID_LOG,*) '+                   LES-scale Numerical Weather Model                  +'
-       write(IO_FID_LOG,*) '++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++'
        write(IO_FID_LOG,*) trim(H_LIBNAME)
        write(IO_FID_LOG,*) trim(H_MODELNAME)
        write(IO_FID_LOG,*) ''
