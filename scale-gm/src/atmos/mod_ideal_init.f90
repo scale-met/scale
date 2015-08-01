@@ -879,8 +879,6 @@ contains
        lall,      &
        test_case, &
        DIAG_var   )
-    use mod_misc, only: &
-       MISC_get_distance
     use mod_adm, only: &
        ADM_proc_stop, &
        ADM_kmax,      &
@@ -1274,8 +1272,8 @@ contains
        kdim,       &
        lall,       &
        DIAG_var    )
-    use mod_misc, only: &
-       MISC_get_latlon
+    use scale_vector, only: &
+       VECTR_xyz2latlon
     use mod_adm, only: &
        ADM_KNONE
     use mod_grd, only: &
@@ -1323,10 +1321,11 @@ contains
           z_local(k) = GRD_vz(n,k,l,GRD_Z)
        enddo
 
-       call MISC_get_latlon( lat, lon,               &
-                             GRD_x(n,K0,l,GRD_XDIR), &
-                             GRD_x(n,K0,l,GRD_YDIR), &
-                             GRD_x(n,K0,l,GRD_ZDIR)  )
+       call VECTR_xyz2latlon( GRD_x(n,K0,l,GRD_XDIR), &
+                              GRD_x(n,K0,l,GRD_YDIR), &
+                              GRD_x(n,K0,l,GRD_ZDIR), &
+                              lat,                    &
+                              lon                     )
 
        call tomita_2004( kdim, lat, z_local, wix, wiy, tmp, prs, logout )
        logout = .false.
@@ -1754,15 +1753,15 @@ contains
        lall,    &
        vmax,    &
        DIAG_var )
+    use scale_vector, only: &
+       VECTR_xyz2latlon
+    use mod_adm, only: &
+       K0 => ADM_KNONE
     use mod_grd, only: &
        GRD_x,    &
        GRD_XDIR, &
        GRD_YDIR, &
        GRD_ZDIR
-    use mod_misc, only: &
-       MISC_get_latlon
-    use mod_adm, only: &
-       K0 => ADM_KNONE
     implicit none
 
     integer, intent(in) :: ijdim, kdim, lall, vmax
@@ -1782,10 +1781,12 @@ contains
 
     do l = 1, lall
     do n = 1, ijdim
-       call MISC_get_latlon( lat, lon,              &
-                             GRD_x(n,K0,l,GRD_XDIR), &
-                             GRD_x(n,K0,l,GRD_YDIR), &
-                             GRD_x(n,K0,l,GRD_ZDIR)  )
+       call VECTR_xyz2latlon( GRD_x(n,K0,l,GRD_XDIR), &
+                              GRD_x(n,K0,l,GRD_YDIR), &
+                              GRD_x(n,K0,l,GRD_ZDIR), &
+                              lat,                    &
+                              lon                     )
+
        r = a * acos( sin(cla)*sin(lat) + cos(cla)*cos(lat)*cos(lon-clo) )
        rr = a / 10.0_RP
        rbyrr = r/rr

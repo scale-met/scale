@@ -92,6 +92,7 @@ $(OBJ_DIR)/scale_urban_grid.o: urban/grid/scale_urban_grid.F90 $(inc_index) $(DE
 $(OBJ_DIR)/scale_urban_grid_index.o: urban/grid/scale_urban_grid_index.F90 $(inc_index) $(DEPENDLIB) $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_process.o $(OBJ_DIR)/scale_prof.o $(OBJ_DIR)/scale_stdio.o
 $(OBJ_DIR)/scale_urban_phy.o: urban/scale_urban_phy.F90 $(inc_index) $(DEPENDLIB) $(OBJ_DIR)/scale_grid_index.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_process.o $(OBJ_DIR)/scale_stdio.o $(OBJ_DIR)/scale_urban_grid_index.o $(OBJ_DIR)/scale_urban_phy_slc.o
 $(OBJ_DIR)/scale_urban_phy_slc.o: urban/scale_urban_phy_slc.F90 $(inc_index) $(DEPENDLIB) $(OBJ_DIR)/scale_atmos_sub_saturation.o $(OBJ_DIR)/scale_atmos_sub_thermodyn.o $(OBJ_DIR)/scale_bulkflux.o $(OBJ_DIR)/scale_const.o $(OBJ_DIR)/scale_grid_index.o $(OBJ_DIR)/scale_history.o $(OBJ_DIR)/scale_landuse.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_process.o $(OBJ_DIR)/scale_stdio.o $(OBJ_DIR)/scale_urban_grid_index.o
+$(OBJ_DIR)/scale_vector.o: common/scale_vector.F90 $(inc_index) $(DEPENDLIB) $(OBJ_DIR)/scale_const.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_prof.o $(OBJ_DIR)/scale_stdio.o
 
 MODS =	\
 	$(patsubst %.o,$(OBJ_DIR)/%.mod,$(OBJS_MP))	\
@@ -177,4 +178,5 @@ MODS =	\
 	$(OBJ_DIR)/scale_urban_grid.mod	\
 	$(OBJ_DIR)/scale_urban_grid_index.mod	\
 	$(OBJ_DIR)/scale_urban_phy.mod	\
-	$(OBJ_DIR)/scale_urban_phy_slc.mod
+	$(OBJ_DIR)/scale_urban_phy_slc.mod	\
+	$(OBJ_DIR)/scale_vector.mod

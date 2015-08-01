@@ -186,7 +186,8 @@ OBJS_NAME = $(scale_rdma)	\
 	scale_urban_grid.o	\
 	scale_urban_grid_index.o	\
 	scale_urban_phy.o	\
-	scale_urban_phy_slc.o
+	scale_urban_phy_slc.o	\
+	scale_vector.o
 
 OBJS =  $(patsubst %,$(OBJ_DIR)/%,$(OBJS_NAME))
 

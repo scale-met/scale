@@ -246,9 +246,9 @@ contains
   !-----------------------------------------------------------------------------
   !> calc geometrical information for cell point
   subroutine GMTR_calc_P
-    use mod_misc, only: &
-       MISC_triangle_area, &
-       MISC_get_latlon
+    use scale_vector, only: &
+       VECTR_xyz2latlon, &
+       VECTR_triangle
     use mod_adm, only: &
        ADM_prc_me,      &
        ADM_have_pl,     &
@@ -339,19 +339,18 @@ contains
              enddo
           else
              do m = 1, 6
-                area = area + MISC_triangle_area( v(:,0,ij), v(:,m,ij), v(:,m+1,ij), &
-                                                  GMTR_polygon_type, GRD_rscale      )
+                area = area + VECTR_triangle( v(:,0,ij), v(:,m,ij), v(:,m+1,ij), GMTR_polygon_type, GRD_rscale )
              enddo
           endif
 
           GMTR_P_var(ij,K0,l,GMTR_P_AREA)  = area
           GMTR_P_var(ij,K0,l,GMTR_P_RAREA) = 1.0_RP / GMTR_P_var(ij,K0,l,GMTR_P_AREA)
 
-          call MISC_get_latlon( GMTR_P_var(ij,K0,l,GMTR_P_LAT), &
-                                GMTR_P_var(ij,K0,l,GMTR_P_LON), &
-                                GRD_x     (ij,K0,l,GRD_XDIR),   &
-                                GRD_x     (ij,K0,l,GRD_YDIR),   &
-                                GRD_x     (ij,K0,l,GRD_ZDIR)    )
+          call VECTR_xyz2latlon( GRD_x     (ij,K0,l,GRD_XDIR),   & ! [IN]
+                                 GRD_x     (ij,K0,l,GRD_YDIR),   & ! [IN]
+                                 GRD_x     (ij,K0,l,GRD_ZDIR),   & ! [IN]
+                                 GMTR_P_var(ij,K0,l,GMTR_P_LAT), & ! [OUT]
+                                 GMTR_P_var(ij,K0,l,GMTR_P_LON)  ) ! [OUT]
 
           if ( GRD_grid_type == 'ON_PLANE' ) then
 
@@ -396,18 +395,17 @@ contains
 
           area = 0.0_RP
           do m = 1, ADM_vlink_nmax ! (ICO=5)
-             area = area + MISC_triangle_area( v_pl(:,0), v_pl(:,m), v_pl(:,m+1), &
-                                               GMTR_polygon_type, GRD_rscale      )
+             area = area + VECTR_triangle( v_pl(:,0), v_pl(:,m), v_pl(:,m+1), GMTR_polygon_type, GRD_rscale )
           enddo
 
           GMTR_P_var_pl(n,K0,l,GMTR_P_AREA)  = area
           GMTR_P_var_pl(n,K0,l,GMTR_P_RAREA) = 1.0_RP / GMTR_P_var_pl(n,K0,l,GMTR_P_AREA)
 
-          call MISC_get_latlon( GMTR_P_var_pl(n,K0,l,GMTR_P_LAT), &
-                                GMTR_P_var_pl(n,K0,l,GMTR_P_LON), &
-                                GRD_x_pl     (n,K0,l,GRD_XDIR),   &
-                                GRD_x_pl     (n,K0,l,GRD_YDIR),   &
-                                GRD_x_pl     (n,K0,l,GRD_ZDIR)    )
+          call VECTR_xyz2latlon( GRD_x_pl     (n,K0,l,GRD_XDIR),   & ! [IN]
+                                 GRD_x_pl     (n,K0,l,GRD_YDIR),   & ! [IN]
+                                 GRD_x_pl     (n,K0,l,GRD_ZDIR),   & ! [IN]
+                                 GMTR_P_var_pl(n,K0,l,GMTR_P_LAT), & ! [OUT]
+                                 GMTR_P_var_pl(n,K0,l,GMTR_P_LON)  ) ! [OUT]
 
           sin_lam = sin( GMTR_P_var_pl(n,K0,l,GMTR_P_LON) )
           cos_lam = cos( GMTR_P_var_pl(n,K0,l,GMTR_P_LON) )
@@ -428,9 +426,9 @@ contains
   !-----------------------------------------------------------------------------
   !> calc geometrical information for cell vertex (triangle)
   subroutine GMTR_calc_T
-    use mod_misc, only: &
-       MISC_triangle_area, &
-       MISC_get_latlon
+    use scale_vector, only: &
+       VECTR_xyz2latlon, &
+       VECTR_triangle
     use mod_adm, only: &
        ADM_prc_me,      &
        ADM_have_pl,     &
@@ -526,9 +524,9 @@ contains
              area2 = triangle_area_on_plane( v(:,0,ij,t), v(:,3,ij,t), v(:,1,ij,t) )
              area3 = triangle_area_on_plane( v(:,0,ij,t), v(:,1,ij,t), v(:,2,ij,t) )
           else
-             area1 = MISC_triangle_area( v(:,0,ij,t), v(:,2,ij,t), v(:,3,ij,t), GMTR_polygon_type, GRD_rscale )
-             area2 = MISC_triangle_area( v(:,0,ij,t), v(:,3,ij,t), v(:,1,ij,t), GMTR_polygon_type, GRD_rscale )
-             area3 = MISC_triangle_area( v(:,0,ij,t), v(:,1,ij,t), v(:,2,ij,t), GMTR_polygon_type, GRD_rscale )
+             area1 = VECTR_triangle( v(:,0,ij,t), v(:,2,ij,t), v(:,3,ij,t), GMTR_polygon_type, GRD_rscale )
+             area2 = VECTR_triangle( v(:,0,ij,t), v(:,3,ij,t), v(:,1,ij,t), GMTR_polygon_type, GRD_rscale )
+             area3 = VECTR_triangle( v(:,0,ij,t), v(:,1,ij,t), v(:,2,ij,t), GMTR_polygon_type, GRD_rscale )
           endif
 
           area = area1 + area2 + area3
@@ -540,11 +538,11 @@ contains
           GMTR_T_var(ij,K0,l,t,GMTR_T_W2)    = area2 / area
           GMTR_T_var(ij,K0,l,t,GMTR_T_W3)    = area3 / area
 
-          call MISC_get_latlon( GMTR_T_var(ij,K0,l,t,GMTR_T_LAT), &
-                                GMTR_T_var(ij,K0,l,t,GMTR_T_LON), &
-                                GRD_xt    (ij,K0,l,t,GRD_XDIR),   &
-                                GRD_xt    (ij,K0,l,t,GRD_YDIR),   &
-                                GRD_xt    (ij,K0,l,t,GRD_ZDIR)    )
+          call VECTR_xyz2latlon( GRD_xt    (ij,K0,l,t,GRD_XDIR),   & ! [IN]
+                                 GRD_xt    (ij,K0,l,t,GRD_YDIR),   & ! [IN]
+                                 GRD_xt    (ij,K0,l,t,GRD_ZDIR),   & ! [IN]
+                                 GMTR_T_var(ij,K0,l,t,GMTR_T_LAT), & ! [OUT]
+                                 GMTR_T_var(ij,K0,l,t,GMTR_T_LON)  ) ! [OUT]
        enddo
        enddo
 
@@ -571,9 +569,9 @@ contains
           enddo
 
           do n = ADM_GMIN_PL, ADM_GMAX_PL
-             area1 = MISC_triangle_area( v_pl(:,0,n), v_pl(:,2,n), v_pl(:,3,n), GMTR_polygon_type, GRD_rscale )
-             area2 = MISC_triangle_area( v_pl(:,0,n), v_pl(:,3,n), v_pl(:,1,n), GMTR_polygon_type, GRD_rscale )
-             area3 = MISC_triangle_area( v_pl(:,0,n), v_pl(:,1,n), v_pl(:,2,n), GMTR_polygon_type, GRD_rscale )
+             area1 = VECTR_triangle( v_pl(:,0,n), v_pl(:,2,n), v_pl(:,3,n), GMTR_polygon_type, GRD_rscale )
+             area2 = VECTR_triangle( v_pl(:,0,n), v_pl(:,3,n), v_pl(:,1,n), GMTR_polygon_type, GRD_rscale )
+             area3 = VECTR_triangle( v_pl(:,0,n), v_pl(:,1,n), v_pl(:,2,n), GMTR_polygon_type, GRD_rscale )
 
              area = area1 + area2 + area3
 
@@ -584,12 +582,11 @@ contains
              GMTR_T_var_pl(n,K0,l,GMTR_T_W2)    = area2 / area
              GMTR_T_var_pl(n,K0,l,GMTR_T_W3)    = area3 / area
 
-
-             call MISC_get_latlon( GMTR_T_var_pl(n,K0,l,GMTR_T_LAT), &
-                                   GMTR_T_var_pl(n,K0,l,GMTR_T_LON), &
-                                   GRD_xt_pl    (n,K0,l,GRD_XDIR),   &
-                                   GRD_xt_pl    (n,K0,l,GRD_YDIR),   &
-                                   GRD_xt_pl    (n,K0,l,GRD_ZDIR)    )
+             call VECTR_xyz2latlon( GRD_xt_pl    (n,K0,l,GRD_XDIR),   & ! [IN]
+                                    GRD_xt_pl    (n,K0,l,GRD_YDIR),   & ! [IN]
+                                    GRD_xt_pl    (n,K0,l,GRD_ZDIR),   & ! [IN]
+                                    GMTR_T_var_pl(n,K0,l,GMTR_T_LAT), & ! [OUT]
+                                    GMTR_T_var_pl(n,K0,l,GMTR_T_LON)  ) ! [OUT]
           enddo
 
        enddo
@@ -601,8 +598,8 @@ contains
   !-----------------------------------------------------------------------------
   !> calc geometrical information for cell arc
   subroutine GMTR_calc_A
-    use mod_misc, only: &
-       MISC_mk_gmtrvec
+    use scale_vector, only: &
+       GMTR_calc_vector
     use mod_adm, only: &
        ADM_prc_me,      &
        ADM_have_pl,     &
@@ -696,7 +693,7 @@ contains
           if ( GRD_grid_type == 'ON_PLANE' ) then
              call mk_gmtrvec_on_plane( v(:,1,ij), v(:,2,ij), tvec(:), nvec(:) )
           else
-             call MISC_mk_gmtrvec( v(:,1,ij), v(:,2,ij), tvec(:), nvec(:), GMTR_polygon_type, GRD_rscale )
+             call GMTR_calc_vector( v(:,1,ij), v(:,2,ij), tvec(:), nvec(:), GMTR_polygon_type, GRD_rscale )
           endif
 
           GMTR_A_var(ij,K0,l,ADM_AI,GMTR_A_TTX) = tvec(1)
@@ -727,7 +724,7 @@ contains
           if ( GRD_grid_type == 'ON_PLANE' ) then
              call mk_gmtrvec_on_plane( v(:,1,ij), v(:,2,ij), tvec(:), nvec(:) )
           else
-             call MISC_mk_gmtrvec( v(:,1,ij), v(:,2,ij), tvec(:), nvec(:), GMTR_polygon_type, GRD_rscale )
+             call GMTR_calc_vector( v(:,1,ij), v(:,2,ij), tvec(:), nvec(:), GMTR_polygon_type, GRD_rscale )
           endif
 
           GMTR_A_var(ij,K0,l,ADM_AIJ,GMTR_A_TTX) = tvec(1)
@@ -768,7 +765,7 @@ contains
           if ( GRD_grid_type == 'ON_PLANE' ) then
              call mk_gmtrvec_on_plane( v(:,1,ij), v(:,2,ij), tvec(:), nvec(:) )
           else
-             call MISC_mk_gmtrvec( v(:,1,ij), v(:,2,ij), tvec(:), nvec(:), GMTR_polygon_type, GRD_rscale )
+             call GMTR_calc_vector( v(:,1,ij), v(:,2,ij), tvec(:), nvec(:), GMTR_polygon_type, GRD_rscale )
           endif
 
           GMTR_A_var(ij,K0,l,ADM_AJ,GMTR_A_TTX) = tvec(1)
@@ -806,7 +803,7 @@ contains
           if ( GRD_grid_type == 'ON_PLANE' ) then
              call mk_gmtrvec_on_plane( v(:,1,ij), v(:,2,ij), tvec(:), nvec(:) )
           else
-             call MISC_mk_gmtrvec( v(:,1,ij), v(:,2,ij), tvec(:), nvec(:), GMTR_polygon_type, GRD_rscale )
+             call GMTR_calc_vector( v(:,1,ij), v(:,2,ij), tvec(:), nvec(:), GMTR_polygon_type, GRD_rscale )
           endif
 
           GMTR_A_var(ij,K0,l,ADM_AI,GMTR_A_HTX) = tvec(1)
@@ -847,7 +844,7 @@ contains
           if ( GRD_grid_type == 'ON_PLANE' ) then
              call mk_gmtrvec_on_plane( v(:,1,ij), v(:,2,ij), tvec(:), nvec(:) )
           else
-             call MISC_mk_gmtrvec( v(:,1,ij), v(:,2,ij), tvec(:), nvec(:), GMTR_polygon_type, GRD_rscale )
+             call GMTR_calc_vector( v(:,1,ij), v(:,2,ij), tvec(:), nvec(:), GMTR_polygon_type, GRD_rscale )
           endif
 
           GMTR_A_var(ij,K0,l,ADM_AIJ,GMTR_A_HTX) = tvec(1)
@@ -886,7 +883,7 @@ contains
           if ( GRD_grid_type == 'ON_PLANE' ) then
              call mk_gmtrvec_on_plane( v(:,1,ij), v(:,2,ij), tvec(:), nvec(:) )
           else
-             call MISC_mk_gmtrvec( v(:,1,ij), v(:,2,ij), tvec(:), nvec(:), GMTR_polygon_type, GRD_rscale )
+             call GMTR_calc_vector( v(:,1,ij), v(:,2,ij), tvec(:), nvec(:), GMTR_polygon_type, GRD_rscale )
           endif
 
           GMTR_A_var(ij,K0,l,ADM_AJ,GMTR_A_HTX) = tvec(1)
@@ -908,7 +905,7 @@ contains
                 v_pl(d,2,ij) = GRD_x_pl(ij         ,K0,l,d)
              enddo
 
-             call MISC_mk_gmtrvec( v_pl(:,1,ij), v_pl(:,2,ij), tvec(:), nvec(:), &
+             call GMTR_calc_vector( v_pl(:,1,ij), v_pl(:,2,ij), tvec(:), nvec(:), &
                                    GMTR_polygon_type, GRD_rscale                 )
 
              GMTR_A_var_pl(ij,K0,l,GMTR_A_TTX:GMTR_A_TTZ) = tvec(1:3)
@@ -927,7 +924,7 @@ contains
           enddo
 
           do ij = ADM_GMIN_PL, ADM_GMAX_PL
-             call MISC_mk_gmtrvec( v_pl(:,1,ij), v_pl(:,2,ij), tvec(:), nvec(:), &
+             call GMTR_calc_vector( v_pl(:,1,ij), v_pl(:,2,ij), tvec(:), nvec(:), &
                                    GMTR_polygon_type, GRD_rscale                 )
 
              GMTR_A_var_pl(ij,K0,l,GMTR_A_TT2X:GMTR_A_TT2Z) = tvec(1:3)
@@ -946,7 +943,7 @@ contains
           enddo
 
           do ij = ADM_GMIN_PL, ADM_GMAX_PL
-             call MISC_mk_gmtrvec( v_pl(:,1,ij), v_pl(:,2,ij), tvec(:), nvec(:), &
+             call GMTR_calc_vector( v_pl(:,1,ij), v_pl(:,2,ij), tvec(:), nvec(:), &
                                    GMTR_polygon_type, GRD_rscale                 )
 
              GMTR_A_var_pl(ij,K0,l,GMTR_A_HTX:GMTR_A_HTZ) = tvec(1:3)

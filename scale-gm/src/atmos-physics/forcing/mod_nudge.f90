@@ -703,8 +703,8 @@ contains
        halo2_coef, &
        weight,     &
        weight_pl   )
-    use mod_misc, only: &
-       MISC_get_distance
+    use scale_vector, only: &
+       VECTR_distance
     use mod_adm, only: &
        ADM_have_pl, &
        ADM_lall,    &
@@ -749,12 +749,12 @@ contains
     do l = 1, ADM_lall
     do g = 1, ADM_gall
 
-       call MISC_get_distance( CONST_RADIUS,   & ! [IN]
-                               center_lon_rad, & ! [IN]
-                               center_lat_rad, & ! [IN]
-                               GMTR_lon(g,l),  & ! [IN]
-                               GMTR_lat(g,l),  & ! [IN]
-                               dist            ) ! [OUT]
+       call VECTR_distance( CONST_RADIUS,   & ! [IN]
+                            center_lon_rad, & ! [IN]
+                            center_lat_rad, & ! [IN]
+                            GMTR_lon(g,l),  & ! [IN]
+                            GMTR_lat(g,l),  & ! [IN]
+                            dist            ) ! [OUT]
 
        if ( dist < halo1_dist ) then
           fact = 0.0_RP
@@ -774,7 +774,7 @@ contains
        do l = 1, ADM_lall_pl
        do g = 1, ADM_gall_pl
 
-          call MISC_get_distance( CONST_RADIUS,     & ! [IN]
+          call VECTR_distance( CONST_RADIUS,     & ! [IN]
                                   center_lon,       & ! [IN]
                                   center_lat,       & ! [IN]
                                   GMTR_lon_pl(g,l), & ! [IN]

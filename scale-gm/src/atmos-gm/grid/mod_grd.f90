@@ -819,8 +819,8 @@ contains
   !> Input topography data
   subroutine GRD_input_topograph( &
        basename )
-    use mod_misc,  only: &
-       MISC_get_latlon
+    use scale_vector, only: &
+       VECTR_xyz2latlon
     use mod_adm, only: &
        ADM_prc_tab, &
        ADM_prc_me
@@ -877,11 +877,11 @@ contains
 
        do l = 1, ADM_lall
        do g = 1, ADM_gall
-          call MISC_get_latlon( lat  (g,ADM_KNONE,l),          &
-                                lon  (g,ADM_KNONE,l),          &
-                                GRD_x(g,ADM_KNONE,l,GRD_XDIR), &
-                                GRD_x(g,ADM_KNONE,l,GRD_YDIR), &
-                                GRD_x(g,ADM_KNONE,l,GRD_ZDIR)  )
+          call VECTR_xyz2latlon( GRD_x(g,ADM_KNONE,l,GRD_XDIR), & ! [IN]
+                                 GRD_x(g,ADM_KNONE,l,GRD_YDIR), & ! [IN]
+                                 GRD_x(g,ADM_KNONE,l,GRD_ZDIR), & ! [IN]
+                                 lat  (g,ADM_KNONE,l),          & ! [OUT]
+                                 lon  (g,ADM_KNONE,l)           ) ! [OUT]
        enddo
        enddo
 
