@@ -38,6 +38,7 @@ module scale_history
   public :: HIST_put
   public :: HIST_get
   public :: HIST_write
+  public :: HIST_switch
 
   interface HIST_in
      module procedure HIST_in_1D
@@ -69,6 +70,7 @@ module scale_history
   !
   !++ Private parameters & variables
   !
+  logical :: enabled
   integer :: im, jm
   integer :: ims, ime
   integer :: jms, jme
@@ -89,7 +91,7 @@ contains
        PRC_HAS_S, &
        PRC_HAS_N
     use scale_time, only: &
-       TIME_DTSEC_ATMOS_DYN, &
+       TIME_DTSEC,       &
        TIME_STARTDAYSEC, &
        TIME_OFFSET_YEAR
     implicit none
@@ -156,7 +158,7 @@ contains
                       PRC_myrank,                     &
                       rankidx,                        &
                       TIME_STARTDAYSEC,               &
-                      TIME_DTSEC_ATMOS_DYN,           &
+                      TIME_DTSEC,                     &
                       time_units   = HISTORY_T_UNITS, &
                       time_since   = HISTORY_T_SINCE, &
                       namelist_fid = IO_FID_CONF      )
@@ -165,8 +167,20 @@ contains
 
     call PROF_rapend  ('FILE_O_NetCDF', 2)
 
+    enabled = .true.
+
     return
   end subroutine HIST_setup
+
+  !-----------------------------------------------------------------------------
+  !> set switch
+  subroutine HIST_switch( switch )
+    logical, intent(in) :: switch
+
+    enabled = switch
+
+    return
+  end subroutine HIST_switch
 
   !-----------------------------------------------------------------------------
   !> Put axis coordinate to history file
@@ -588,6 +602,8 @@ contains
 
     answer = .false.
 
+    if ( .not. enabled ) return
+
     if ( itemid < 0 ) return
 
     call PROF_rapstart('FILE_O_NetCDF', 2)
@@ -616,6 +632,8 @@ contains
     real(RP) :: var2(KMAX)
     integer  :: k
     !---------------------------------------------------------------------------
+
+    if ( .not. enabled ) return
 
     if ( itemid < 0 ) return
 
@@ -655,6 +673,8 @@ contains
     integer  :: i, j
     logical :: nohalo_
     !---------------------------------------------------------------------------
+
+    if ( .not. enabled ) return
 
     if ( itemid < 0 ) return
 
@@ -748,6 +768,8 @@ contains
 
     logical :: nohalo_
     !---------------------------------------------------------------------------
+
+    if ( .not. enabled ) return
 
     if ( itemid < 0 ) return
 
@@ -929,6 +951,8 @@ contains
     logical           :: do_put
     !---------------------------------------------------------------------------
 
+    if ( .not. enabled ) return
+
     zd = ''
     if( present(zdim) ) zd = zdim
 
@@ -973,6 +997,8 @@ contains
     logical           :: zinterp
     logical           :: do_put
     !---------------------------------------------------------------------------
+
+    if ( .not. enabled ) return
 
     xd = ''
     yd = ''
@@ -1022,6 +1048,8 @@ contains
     logical           :: zinterp
     logical           :: do_put
     !---------------------------------------------------------------------------
+
+    if ( .not. enabled ) return
 
     xd = ''
     yd = ''
