@@ -349,10 +349,11 @@ contains
     use scale_atmos_boundary, only: &
        BND_QA, &
        BND_SMOOTHER_FACT => ATMOS_BOUNDARY_SMOOTHER_FACT
-#if defined( HIST_TEND ) || defined( CHECK_MASS )
     use scale_history, only: &
-       HIST_in
+#if defined( HIST_TEND ) || defined( CHECK_MASS )
+       HIST_in, &
 #endif
+       HIST_switch
     implicit none
 
     real(RP), intent(inout) :: DENS(KA,IA,JA)
@@ -682,6 +683,8 @@ contains
 
 
     do step = 1, NSTEP_ATMOS_DYN
+
+       call HIST_switch( step == NSTEP_ATMOS_DYN )
 
        !-----< prepare tendency >-----
 
