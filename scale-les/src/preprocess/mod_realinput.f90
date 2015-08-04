@@ -321,7 +321,7 @@ contains
     real(RP),         intent(out) :: momy(:,:,:,:)
     real(RP),         intent(out) :: rhot(:,:,:,:)
     real(RP),         intent(out) :: qtrc(:,:,:,:,:)
-    character(LEN=*), intent(in)  :: basename_org
+    character(len=*), intent(in)  :: basename_org
     integer,          intent(in)  :: dims(ndims)
     integer,          intent(in)  :: mdlid            ! model type id
     integer,          intent(in)  :: mptype_parent    ! microphysics type of the parent model (number of classes)
@@ -735,8 +735,8 @@ contains
     real(RP),         intent(in)   :: rhot(:,:,:,:)
     real(RP),         intent(in)   :: qtrc(:,:,:,:,:)
     real(RP),         intent(in)   :: update_dt
-    character(LEN=*), intent(in)   :: basename
-    character(LEN=*), intent(in)   :: title
+    character(len=*), intent(in)   :: basename
+    character(len=*), intent(in)   :: title
     integer,          intent(in)   :: numsteps ! total time steps
 
     character(len=H_MID)  :: atmos_boundary_out_dtype = 'DEFAULT'  !< REAL4 or REAL8
@@ -907,17 +907,17 @@ contains
     real(RP),         intent(in) :: momy(KA,IA,JA)
     real(RP),         intent(in) :: rhot(KA,IA,JA)
     real(RP),         intent(in) :: qtrc(KA,IA,JA,QA)
-    character(LEN=*), intent(in) :: basename_org
+    character(len=*), intent(in) :: basename_org
     integer,          intent(in) :: dims(ndims)
     integer,          intent(in) :: it
     logical,          intent(in) :: use_file_landwater   ! use land water data from files
     real(RP),         intent(in) :: init_landwater_ratio ! Ratio of land water to storage is constant,
                                                          !          if use_file_landwater is ".false."
-    character(LEN=*), intent(in) :: intrp_land_temp
-    character(LEN=*), intent(in) :: intrp_land_water
-    character(LEN=*), intent(in) :: intrp_land_sfc_temp
-    character(LEN=*), intent(in) :: intrp_ocean_temp
-    character(LEN=*), intent(in) :: intrp_ocean_sfc_temp
+    character(len=*), intent(in) :: intrp_land_temp
+    character(len=*), intent(in) :: intrp_land_water
+    character(len=*), intent(in) :: intrp_land_sfc_temp
+    character(len=*), intent(in) :: intrp_ocean_temp
+    character(len=*), intent(in) :: intrp_ocean_sfc_temp
     logical,          intent(in) :: soilwater_DS2VC_flag
     integer,          intent(in) :: mdlid                ! model type id
 

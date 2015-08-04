@@ -113,7 +113,7 @@ contains
     integer,          intent(out)           :: dims(:)
     integer,          intent(out)           :: timelen
     integer,          intent( in)           :: mdlid
-    character(LEN=*), intent( in)           :: basename
+    character(len=*), intent( in)           :: basename
     integer,          intent( in)           :: myrank
     logical,          intent( in), optional :: single
 
@@ -189,8 +189,8 @@ contains
 
     integer,          intent(out)           :: var(:)
     integer,          intent( in)           :: mdlid
-    character(LEN=*), intent( in)           :: basename
-    character(LEN=*), intent( in)           :: attname
+    character(len=*), intent( in)           :: basename
+    character(len=*), intent( in)           :: attname
     integer,          intent( in)           :: myrank
     logical,          intent( in), optional :: single
 
@@ -251,8 +251,8 @@ contains
 
     real(SP),         intent(out)           :: var(:)
     integer,          intent( in)           :: mdlid
-    character(LEN=*), intent( in)           :: basename
-    character(LEN=*), intent( in)           :: attname
+    character(len=*), intent( in)           :: basename
+    character(len=*), intent( in)           :: attname
     integer,          intent( in)           :: myrank
     logical,          intent( in), optional :: single
 
@@ -313,8 +313,8 @@ contains
 
     real(DP),         intent(out)           :: var(:)
     integer,          intent( in)           :: mdlid
-    character(LEN=*), intent( in)           :: basename
-    character(LEN=*), intent( in)           :: attname
+    character(len=*), intent( in)           :: basename
+    character(len=*), intent( in)           :: attname
     integer,          intent( in)           :: myrank
     logical,          intent( in), optional :: single
 
@@ -373,10 +373,10 @@ contains
     use netcdf  ![external lib]
     implicit none
 
-    character(LEN=*), intent(out)           :: chr(:)
+    character(len=*), intent(out)           :: chr(:)
     integer,          intent( in)           :: mdlid
-    character(LEN=*), intent( in)           :: basename
-    character(LEN=*), intent( in)           :: attname
+    character(len=*), intent( in)           :: basename
+    character(len=*), intent( in)           :: attname
     integer,          intent( in)           :: myrank
     logical,          intent( in), optional :: single
 
@@ -432,8 +432,8 @@ contains
     implicit none
 
     logical,          intent(out)           :: existence
-    character(LEN=*), intent( in)           :: basename
-    character(LEN=*), intent( in)           :: varname
+    character(len=*), intent( in)           :: basename
+    character(len=*), intent( in)           :: varname
     integer,          intent( in)           :: myrank
     integer,          intent( in)           :: mdlid
     logical,          intent( in), optional :: single
@@ -491,8 +491,8 @@ contains
     implicit none
 
     real(SP),         intent(out)            :: var(:,:)
-    character(LEN=*), intent( in)           :: basename
-    character(LEN=*), intent( in)           :: varname
+    character(len=*), intent( in)           :: basename
+    character(len=*), intent( in)           :: varname
     integer,          intent( in)            :: ts
     integer,          intent( in)            :: te
     integer,          intent( in)            :: myrank
@@ -567,8 +567,8 @@ contains
     implicit none
 
     real(DP),         intent(out)            :: var(:,:)
-    character(LEN=*), intent( in)           :: basename
-    character(LEN=*), intent( in)           :: varname
+    character(len=*), intent( in)           :: basename
+    character(len=*), intent( in)           :: varname
     integer,          intent( in)            :: ts
     integer,          intent( in)            :: te
     integer,          intent( in)            :: myrank
@@ -644,8 +644,8 @@ contains
     implicit none
 
     real(SP),         intent(out)            :: var(:,:,:)
-    character(LEN=*), intent( in)           :: basename
-    character(LEN=*), intent( in)           :: varname
+    character(len=*), intent( in)           :: basename
+    character(len=*), intent( in)           :: varname
     integer,          intent( in)            :: ts
     integer,          intent( in)            :: te
     integer,          intent( in)            :: myrank
@@ -737,8 +737,8 @@ contains
     implicit none
 
     real(DP),         intent(out)            :: var(:,:,:)
-    character(LEN=*), intent( in)           :: basename
-    character(LEN=*), intent( in)           :: varname
+    character(len=*), intent( in)           :: basename
+    character(len=*), intent( in)           :: varname
     integer,          intent( in)            :: ts
     integer,          intent( in)            :: te
     integer,          intent( in)            :: myrank
@@ -832,8 +832,8 @@ contains
     implicit none
 
     real(SP),         intent(out)            :: var(:,:,:,:)
-    character(LEN=*), intent( in)           :: basename
-    character(LEN=*), intent( in)           :: varname
+    character(len=*), intent( in)           :: basename
+    character(len=*), intent( in)           :: varname
     integer,          intent( in)            :: ts
     integer,          intent( in)            :: te
     integer,          intent( in)            :: myrank
@@ -943,8 +943,8 @@ contains
     implicit none
 
     real(DP),         intent(out)            :: var(:,:,:,:)
-    character(LEN=*), intent( in)           :: basename
-    character(LEN=*), intent( in)           :: varname
+    character(len=*), intent( in)           :: basename
+    character(len=*), intent( in)           :: varname
     integer,          intent( in)            :: ts
     integer,          intent( in)            :: te
     integer,          intent( in)            :: myrank
@@ -1050,8 +1050,8 @@ contains
     implicit none
 
     real(SP),         intent(out)            :: var(:,:,:)
-    character(LEN=*), intent( in)           :: basename
-    character(LEN=*), intent( in)           :: varname
+    character(len=*), intent( in)           :: basename
+    character(len=*), intent( in)           :: varname
     integer,          intent( in)            :: ts
     integer,          intent( in)            :: te
     integer,          intent( in)            :: myrank
@@ -1159,8 +1159,8 @@ contains
     implicit none
 
     real(DP),         intent(out)            :: var(:,:,:)
-    character(LEN=*), intent( in)           :: basename
-    character(LEN=*), intent( in)           :: varname
+    character(len=*), intent( in)           :: basename
+    character(len=*), intent( in)           :: varname
     integer,          intent( in)            :: ts
     integer,          intent( in)            :: te
     integer,          intent( in)            :: myrank
@@ -1270,8 +1270,8 @@ contains
     implicit none
 
     real(SP),         intent(out)            :: var(:,:,:,:)
-    character(LEN=*), intent( in)           :: basename
-    character(LEN=*), intent( in)           :: varname
+    character(len=*), intent( in)           :: basename
+    character(len=*), intent( in)           :: varname
     integer,          intent( in)            :: ts
     integer,          intent( in)            :: te
     integer,          intent( in)            :: myrank
@@ -1394,8 +1394,8 @@ contains
     implicit none
 
     real(DP),         intent(out)            :: var(:,:,:,:)
-    character(LEN=*), intent( in)            :: basename
-    character(LEN=*), intent( in)            :: varname
+    character(len=*), intent( in)            :: basename
+    character(len=*), intent( in)            :: varname
     integer,          intent( in)            :: ts
     integer,          intent( in)            :: te
     integer,          intent( in)            :: myrank
@@ -1513,9 +1513,9 @@ contains
       )
     implicit none
 
-    character(LEN=*), intent(out) :: fname
+    character(len=*), intent(out) :: fname
     integer,          intent( in)  :: mdlid
-    character(LEN=*), intent( in) :: basename
+    character(len=*), intent( in) :: basename
     integer,          intent( in)  :: myrank
     logical,          intent( in)  :: single
 

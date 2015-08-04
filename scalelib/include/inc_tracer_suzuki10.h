@@ -47,9 +47,9 @@
   character(len=H_SHORT), public, allocatable :: AQ_MP_NAME(:)
   character(len=H_MID)  , public, allocatable :: AQ_MP_DESC(:)
   character(len=H_SHORT), public, allocatable :: AQ_MP_UNIT(:)
-!  character(len=16), public :: AQ_NAME(QA)
-!  character(len=64), public :: AQ_DESC(QA)
-!  character(len=16), public :: AQ_UNIT(QA)
+!  character(len=H_SHORT), public :: AQ_NAME(QA)
+!  character(len=H_MID),   public :: AQ_DESC(QA)
+!  character(len=H_SHORT), public :: AQ_UNIT(QA)
 
   character(len=3)  :: namspc(8) =(/'Qcl','Qic','Qip','Qid','Qis','Qig','Qih','Qae'/)
   character(len=27) :: lnamspc(8) = &

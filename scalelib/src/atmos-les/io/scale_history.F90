@@ -505,7 +505,7 @@ contains
 
     logical :: existed
 
-    character(len=16) :: dims(3)
+    character(len=H_SHORT) :: dims(3)
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('FILE_O_NetCDF', 2)
@@ -757,7 +757,7 @@ contains
     intrinsic shape
     integer :: s(3)
 
-    character(len=16) :: xd, yd, zd
+    character(len=H_SHORT) :: xd, yd, zd
 
     real(RP), allocatable :: var_Z(:,:,:)
     real(RP), allocatable :: var2 (:)
@@ -946,7 +946,7 @@ contains
 
     character(len=*), intent(in), optional :: zdim
 
-    character(len=16) :: zd
+    character(len=H_SHORT) :: zd
     integer           :: itemid
     logical           :: zinterp
     logical           :: do_put
@@ -993,7 +993,7 @@ contains
     character(len=*), intent(in), optional :: ydim
     logical,          intent(in), optional :: nohalo
 
-    character(len=16) :: xd, yd
+    character(len=H_SHORT) :: xd, yd
     integer           :: itemid
     logical           :: zinterp
     logical           :: do_put
@@ -1044,7 +1044,7 @@ contains
     character(len=*), intent(in), optional :: zdim
     logical,          intent(in), optional :: nohalo
 
-    character(len=16) :: xd, yd, zd
+    character(len=H_SHORT) :: xd, yd, zd
     integer           :: itemid
     logical           :: zinterp
     logical           :: do_put

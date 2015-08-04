@@ -34,9 +34,6 @@ module mod_netcdf
   !
   !++ Used modules
   use netcdf  ! need NetCDF4/HDF5
-!  use mod_misc, only : &
-!       MISC_get_available_fid
-  !
   !-----------------------------------------------------------------------------
   implicit none
   private

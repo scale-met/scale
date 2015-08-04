@@ -211,7 +211,7 @@ contains
     real(RP),         intent(out) :: pres_org(:,:,:)
     real(RP),         intent(out) :: temp_org(:,:,:)
     real(RP),         intent(out) :: qtrc_org(:,:,:,:)
-    character(LEN=*), intent(in)  :: basename_num
+    character(len=*), intent(in)  :: basename_num
     integer,          intent(in)  :: dims(11)
     integer,          intent(in)  :: it
 
@@ -371,7 +371,7 @@ contains
     real(RP), intent(out) :: sst_org(:,:)
     real(RP), intent(out) :: lsmask_org(:,:)
     real(RP), intent(out) :: lz_org(:)
-    character(LEN=*), intent(in) :: basename_num
+    character(len=*), intent(in) :: basename_num
     integer,          intent(in) :: dims(11)
     logical,          intent(in) :: use_file_landwater   ! use land water data from files
     integer,          intent(in) :: it
