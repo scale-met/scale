@@ -13,11 +13,11 @@ module mod_thrmdyn
   !++ Used modules
   !
   use scale_precision
+  use scale_stdio
   use scale_prof
+
   use mod_adm, only: &
      ADM_LOG_FID,      &
-     ADM_MAXFNAME,     &
-     ADM_NSYS,         &
      kdim => ADM_kall, &
      kmin => ADM_kmin, &
      kmax => ADM_kmax

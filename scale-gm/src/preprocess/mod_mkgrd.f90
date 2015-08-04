@@ -13,11 +13,11 @@ module mod_mkgrd
   !++ Used modules
   !
   use scale_precision
+  use scale_stdio
   use scale_prof
+
   use mod_adm, only: &
-     ADM_LOG_FID,  &
-     ADM_MAXFNAME, &
-     ADM_NSYS
+     ADM_LOG_FID
   use mod_grd, only: &
      GRD_XDIR, &
      GRD_YDIR, &
@@ -47,10 +47,10 @@ module mod_mkgrd
   !
   !++ Public parameters & variables
   !
-  character(len=ADM_MAXFNAME), public :: MKGRD_IN_BASENAME  = ''
-  character(len=ADM_MAXFNAME), public :: MKGRD_OUT_BASENAME = ''
-  character(len=ADM_NSYS),     public :: MKGRD_IN_io_mode   = 'ADVANCED'
-  character(len=ADM_NSYS),     public :: MKGRD_OUT_io_mode  = 'ADVANCED'
+  character(len=H_LONG), public :: MKGRD_IN_BASENAME  = ''
+  character(len=H_LONG), public :: MKGRD_OUT_BASENAME = ''
+  character(len=H_SHORT),     public :: MKGRD_IN_io_mode   = 'ADVANCED'
+  character(len=H_SHORT),     public :: MKGRD_OUT_io_mode  = 'ADVANCED'
 
   !-----------------------------------------------------------------------------
   !

@@ -12,8 +12,9 @@ module mod_mnginfo_light
   !
   !++ Used modules
   !
-  use mod_misc, only : &
-     MISC_get_available_fid
+  use scale_precision
+  use scale_stdio
+  use scale_prof
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -71,7 +72,7 @@ contains
 
     mng_rgnid(:)=-1
 
-    fid = MISC_get_available_fid()
+    fid = IO_get_available_fid()
     open(fid,file=trim(fname),status='old',form='formatted',iostat=ierr)
        if (ierr /= 0) then
           write(*,*) "cannot read mnginfo file :",trim(fname)

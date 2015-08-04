@@ -14,11 +14,11 @@ module mod_latlon
   !
   use mpi
   use scale_precision
+  use scale_stdio
   use scale_prof
+
   use mod_adm, only: &
-     ADM_LOG_FID, &
-     ADM_NSYS,    &
-     ADM_MAXFNAME
+     ADM_LOG_FID
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -40,7 +40,7 @@ module mod_latlon
   real(RP), public, allocatable :: GMTR_P_ll   (:,:,:,:)
   real(RP), public, allocatable :: GMTR_P_ll_pl(:,:,:,:)
 
-  character(len=ADM_NSYS),  public :: polygon_type = 'ON_SPHERE' ! triangle is fit to the sphere
+  character(len=H_SHORT),  public :: polygon_type = 'ON_SPHERE' ! triangle is fit to the sphere
   !                                                  'ON_PLANE'  ! triangle is treated as 2D
 
   !-----------------------------------------------------------------------------
@@ -56,7 +56,7 @@ module mod_latlon
   !
   !++ Private parameters & variables
   !
-  character(len=ADM_NSYS), private :: latlon_type = 'EQUIDIST' ! grid type ( equidist or gaussian )
+  character(len=H_SHORT), private :: latlon_type = 'EQUIDIST' ! grid type ( equidist or gaussian )
   integer,                 private :: imax        = 360        ! number of longitude
   integer,                 private :: jmax        = 180        ! number of latitude
   real(RP),                 private :: lonmin      = -999.0_RP    ! minimun longitude of region window in deg
@@ -66,10 +66,10 @@ module mod_latlon
   logical,                 private :: lon_offset  = .true.     ! logitude offset
   real(RP),                 private :: polar_limit = -999.0_RP    ! search all longitude if abs(lat) > polar_limit
 
-  character(len=ADM_MAXFNAME), private :: SAMPLE_OUT_BASENAME = ''
-  character(len=ADM_NSYS),     private :: SAMPLE_io_mode      = 'ADVANCED'
+  character(len=H_LONG), private :: SAMPLE_OUT_BASENAME = ''
+  character(len=H_SHORT),     private :: SAMPLE_io_mode      = 'ADVANCED'
 
-  character(len=ADM_NSYS),     private :: output_lldata_type = 'mkllmap'
+  character(len=H_SHORT),     private :: output_lldata_type = 'mkllmap'
 
   real(RP), private, allocatable :: lat(:)
   real(RP), private, allocatable :: lon(:)
@@ -172,9 +172,6 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine LATLON_setup( output_dirname, output_lldata_type_in )
-    use mod_misc, only: &
-       MISC_get_available_fid, &
-       MISC_make_idstr
     use mod_adm, only: &
        ADM_CTL_FID,        &
        ADM_proc_stop,      &
@@ -211,7 +208,7 @@ contains
          SAMPLE_io_mode,      &
          debug
 
-    character(len=ADM_MAXFNAME) :: fname
+    character(len=H_LONG) :: fname
 
     real(RP) :: d2r
 
@@ -255,7 +252,7 @@ contains
     call setup_latlon
 
     if( ADM_prc_me == ADM_prc_run_master ) then
-       fid = MISC_get_available_fid()
+       fid = IO_get_available_fid()
        open( unit   = fid,                                 &
              file   = trim(output_dirname)//'/llmap.info', &
              form   = 'unformatted',                       &
@@ -323,9 +320,9 @@ contains
           enddo
           enddo
 
-          call MISC_make_idstr(fname,trim(output_dirname)//'/checkmap','grd',rgnid)
+          call IO_make_idstr(fname,trim(output_dirname)//'/checkmap','grd',rgnid-1)
 
-          fid = MISC_get_available_fid()
+          fid = IO_get_available_fid()
           open( unit   = fid,           &
                 file   = trim(fname),   &
                 form   = 'unformatted', &
@@ -398,9 +395,9 @@ contains
     do l = 1, ADM_lall
        rgnid = ADM_prc_tab(l,ADM_prc_me)
 
-       call MISC_make_idstr(fname,trim(output_dirname)//'/llmap','rgn',rgnid)
+       call IO_make_idstr(fname,trim(output_dirname)//'/llmap','rgn',rgnid-1)
 
-       fid = MISC_get_available_fid()
+       fid = IO_get_available_fid()
        open( unit   = fid,           &
              file   = trim(fname),   &
              form   = 'unformatted', &
@@ -431,9 +428,9 @@ contains
 !    do l = 1, ADM_lall
 !       rgnid = ADM_prc_tab(l,ADM_prc_me)
 !
-!       call MISC_make_idstr(fname,trim(output_dirname)//'/llmap','rgntxt',rgnid)
+!       call IO_make_idstr(fname,trim(output_dirname)//'/llmap','rgntxt',rgnid-1)
 !
-!       fid = MISC_get_available_fid()
+!       fid = IO_get_available_fid()
 !       open( unit   = fid,           &
 !             file   = trim(fname),   &
 !             form   = 'formatted', &
@@ -463,7 +460,6 @@ contains
   subroutine mkrelmap_ico2ll( what_is_done )
     use mod_misc, only: &
        MISC_get_latlon,      &
-       MISC_triangle_area_q, &
        MISC_3dvec_triangle,  &
        MISC_3dvec_cross,     &
        MISC_3dvec_dot,       &
@@ -672,24 +668,12 @@ contains
                       n3_index(nmax_llgrid) = ADM_IooJoo(n,ADM_GIoJp)
                    endif
 
-                   if ( output_lldata_type == 'mkllmap_q' ) then ! quad precision
-                      area1 = MISC_triangle_area_q( r0(:), r2(:), r3(:),  &
-                                                    polygon_type, rscale, &
-                                                    critical=eps_area     )
-                      area2 = MISC_triangle_area_q( r0(:), r3(:), r1(:),  &
-                                                    polygon_type, rscale, &
-                                                    critical=eps_area     )
-                      area3 = MISC_triangle_area_q( r0(:), r1(:), r2(:),  &
-                                                    polygon_type, rscale, &
-                                                    critical=eps_area     )
-                   else ! double precision
-                      area1 = MISC_3Dvec_triangle( r0(:), r2(:), r3(:), &
-                                                   polygon_type, rscale )
-                      area2 = MISC_3Dvec_triangle( r0(:), r3(:), r1(:), &
-                                                   polygon_type, rscale )
-                      area3 = MISC_3Dvec_triangle( r0(:), r1(:), r2(:), &
-                                                   polygon_type, rscale )
-                   endif
+                   area1 = MISC_3Dvec_triangle( r0(:), r2(:), r3(:), &
+                                                polygon_type, rscale )
+                   area2 = MISC_3Dvec_triangle( r0(:), r3(:), r1(:), &
+                                                polygon_type, rscale )
+                   area3 = MISC_3Dvec_triangle( r0(:), r1(:), r2(:), &
+                                                polygon_type, rscale )
 
                    if (      area1 * 0.0_RP /= 0.0_RP &
                         .OR. area2 * 0.0_RP /= 0.0_RP &
@@ -815,9 +799,6 @@ contains
   !-----------------------------------------------------------------------------
   !> Output sample output
   subroutine LL_outputsample
-    use mod_misc, only: &
-       MISC_make_idstr,&
-       MISC_get_available_fid
     use mod_adm, only: &
        ADM_proc_stop, &
        ADM_prc_tab,   &
@@ -840,7 +821,7 @@ contains
     real(RP) :: SAMPLE   ( ADM_gall,   ADM_KNONE,ADM_lall,   4)
     real(RP) :: SAMPLE_pl( ADM_gall_pl,ADM_KNONE,ADM_lall_pl,4)
 
-    character(len=ADM_MAXFNAME) :: fname
+    character(len=H_LONG) :: fname
 
     integer :: fid
     integer :: rgnid, prc
@@ -901,9 +882,9 @@ contains
 
        do l = 1, ADM_lall
           rgnid = ADM_prc_tab(l,ADM_prc_me)
-          call MISC_make_idstr(fname,trim(sample_io_mode),'rgn',rgnid)
+          call IO_make_idstr(fname,trim(sample_io_mode),'rgn',rgnid-1)
 
-          fid = MISC_get_available_fid()
+          fid = IO_get_available_fid()
           open( unit = fid, &
                file=trim(fname),   &
                form='unformatted', &

@@ -16,15 +16,14 @@ program fio_ico2ll
   !
   use mpi
   use scale_precision
+  use scale_stdio
   use scale_prof
+
   use mod_adm, only: &
      ADM_LOG_FID,    &
      ADM_mpi_alive,  &
      ADM_COMM_WORLD, &
      ADM_prc_all
-  use mod_misc, only: &
-     MISC_get_available_fid, &
-     MISC_make_idstr
   use scale_const, only: &
      CONST_UNDEF, &
      CONST_UNDEF4
@@ -32,9 +31,6 @@ program fio_ico2ll
      CALENDAR_daysec2date,   &
      CALENDAR_adjust_daysec
   use mod_fio, only: &
-     FIO_HSHORT,      &
-     FIO_HMID,        &
-     FIO_HLONG,       &
      FIO_REAL4,       &
      FIO_REAL8,       &
      FIO_BIG_ENDIAN,  &
@@ -73,19 +69,19 @@ program fio_ico2ll
   !--- NAMELIST
   integer                   :: glevel              = -1
   integer                   :: rlevel              = -1
-  character(LEN=FIO_HSHORT) :: grid_topology       = 'ICOSAHEDRON'
+  character(len=H_SHORT) :: grid_topology       = 'ICOSAHEDRON'
                                                    ! 'LCP'
                                                    ! 'MLCP'
   logical                   :: complete            = .false.
-  character(LEN=FIO_HLONG)  :: mnginfo             = ''
-  character(LEN=FIO_HLONG)  :: layerfile_dir       = ''
-  character(LEN=FIO_HLONG)  :: llmap_base          = ''
-  character(LEN=FIO_HLONG)  :: topo_base           = ''
-  character(LEN=FIO_HLONG)  :: infile(flim)        = ''
+  character(len=H_LONG)  :: mnginfo             = ''
+  character(len=H_LONG)  :: layerfile_dir       = ''
+  character(len=H_LONG)  :: llmap_base          = ''
+  character(len=H_LONG)  :: topo_base           = ''
+  character(len=H_LONG)  :: infile(flim)        = ''
   integer                   :: step_str            = 1
   integer                   :: step_end            = max_nstep
-  character(LEN=FIO_HLONG)  :: outfile_dir         = '.'
-  character(LEN=FIO_HSHORT) :: outfile_prefix      = ''
+  character(len=H_LONG)  :: outfile_dir         = '.'
+  character(len=H_SHORT) :: outfile_prefix      = ''
   integer                   :: outfile_rec         = 1
   logical                   :: lon_swap            = .false.
   logical                   :: use_NearestNeighbor = .false.
@@ -94,7 +90,7 @@ program fio_ico2ll
   logical                   :: output_gtool        = .false.
   logical                   :: output_netcdf       = .false.   ! [add] 13-04-18
   logical                   :: datainfo_nodep_pe   = .true.    ! <- can be .true. if data header do not depend on pe.
-  character(LEN=FIO_HSHORT) :: selectvar(max_nvar) = ''
+  character(len=H_SHORT) :: selectvar(max_nvar) = ''
   integer                   :: nlim_llgrid         = 10000000  ! limit number of lat-lon grid in 1 ico region
   logical                   :: comm_smallchunk     = .true.    ! apply MPI_Allreduce for each k-layer?
 
@@ -127,9 +123,9 @@ program fio_ico2ll
                     help
 
   !-----------------------------------------------------------------------------
-  character(LEN=FIO_HLONG) :: infname   = ""
-  character(LEN=FIO_HLONG) :: outbase   = ""
-  character(LEN=FIO_HLONG) :: layerfile = ""
+  character(len=H_LONG) :: infname   = ""
+  character(len=H_LONG) :: outbase   = ""
+  character(len=H_LONG) :: layerfile = ""
   integer                  :: fmode
   integer                  :: gtopology
   logical                  :: allvar = .true.
@@ -158,10 +154,10 @@ program fio_ico2ll
 
   integer                                :: num_of_data
   integer                                :: nvar
-  character(LEN=FIO_HSHORT), allocatable :: var_name(:)
-  character(LEN=FIO_HMID),   allocatable :: var_desc(:)
-  character(LEN=FIO_HSHORT), allocatable :: var_unit(:)
-  character(LEN=FIO_HSHORT), allocatable :: var_layername(:)
+  character(len=H_SHORT), allocatable :: var_name(:)
+  character(len=H_MID),   allocatable :: var_desc(:)
+  character(len=H_SHORT), allocatable :: var_unit(:)
+  character(len=H_SHORT), allocatable :: var_layername(:)
   integer,                   allocatable :: var_datatype(:)
   integer,                   allocatable :: var_nlayer(:)
   integer,                   allocatable :: var_nstep(:)
@@ -171,11 +167,11 @@ program fio_ico2ll
   real(8),                   allocatable :: var_ztop(:)
   real(8),                   allocatable :: var_zgrid(:,:)
   ! header
-  character(LEN=16),         allocatable :: var_gthead(:,:)
+  character(len=16),         allocatable :: var_gthead(:,:)
   ! NetCDF handler
   type(netcdf_handler)                   :: nc              ! [add] 13-04-18
-  character(LEN=1024)                    :: nc_time_units   ! [add] 13-04-18
-  character(LEN=4)                       :: date_str_tmp(6) ! [add] 13-04-18
+  character(len=1024)                    :: nc_time_units   ! [add] 13-04-18
+  character(len=4)                       :: date_str_tmp(6) ! [add] 13-04-18
 
   ! ico data
   integer              :: GALL
@@ -196,12 +192,12 @@ program fio_ico2ll
   ! for MPI
   integer          :: prc_nall, prc_nlocal
   integer          :: prc_myrank
-  character(LEN=6) :: rankstr
+  character(len=6) :: rankstr
   integer          :: pstr, pend, pp
 
-  character(LEN=FIO_HLONG) :: fname
-  character(LEN=20)        :: tmpl
-  character(LEN=16)        :: gthead(64)
+  character(len=H_LONG) :: fname
+  character(len=20)        :: tmpl
+  character(len=16)        :: gthead(64)
   integer(8)               :: nowsec
   integer(8)               :: recsize ! [mod] 12-04-19 H.Yashiro
   integer                  :: kmax, num_of_step, step, date_str(6)
@@ -295,7 +291,7 @@ program fio_ico2ll
   call PROF_rapstart('FIO_ICO2LL_MPI')
 
   ! borrow ADM_LOG_FID to share log file id between other module
-  ADM_LOG_FID = MISC_get_available_fid()
+  ADM_LOG_FID = IO_get_available_fid()
   if (output_netcdf) then
      call NETCDF_set_logfid( ADM_LOG_FID )
   endif
@@ -333,7 +329,7 @@ program fio_ico2ll
   call PROF_rapstart('READ LLMAP')
 
   !--- Read lat-lon grid information
-  fid = MISC_get_available_fid()
+  fid = IO_get_available_fid()
   open(fid, file=trim(llmap_base)//'.info',form='unformatted',status='old',iostat=ierr)
      if (ierr/=0) then
         write(*,*) 'Cannot open llmap info file!',trim(llmap_base)//'.info'
@@ -369,10 +365,10 @@ program fio_ico2ll
      pp = p - pstr + 1
 
      do l = 1, LALL_local
-        call MISC_make_idstr(fname,trim(llmap_base),'rgn',MNG_prc_tab(l,p))
+        call IO_make_idstr(fname,trim(llmap_base),'rgn',MNG_prc_tab(l,p)-1)
         write(ADM_LOG_FID,*) 'l=', MNG_prc_tab(l,p)
 
-        fid = MISC_get_available_fid()
+        fid = IO_get_available_fid()
         open(fid,file=trim(fname),form='unformatted',status='old',iostat=ierr)
            if (ierr/=0) then
               write(*,*) 'Cannot open llmap file!',trim(fname)
@@ -563,7 +559,7 @@ program fio_ico2ll
         else ! read from file
            layerfile = trim(layerfile_dir)//'/'//trim(dinfo%layername)//'.txt'
 
-           fid = MISC_get_available_fid()
+           fid = IO_get_available_fid()
            open(fid,file=trim(layerfile),form='formatted',status='old',iostat=ierr)
               if ( ierr /= 0 ) then
                  write(*,*) 'xxx layerfile doesnt exist!', trim(layerfile)
@@ -767,7 +763,7 @@ program fio_ico2ll
 
      !--- open output file
      outbase = trim(outfile_dir)//'/'//trim(outfile_prefix)//trim(var_name(v))
-     ofid    = MISC_get_available_fid()
+     ofid    = IO_get_available_fid()
 
      if ( .NOT. devide_template ) then
 
@@ -1190,7 +1186,7 @@ contains
   !> read option
   subroutine readoption
     use mod_misc, only : &
-      MISC_get_available_fid
+      IO_get_available_fid
     use mod_tool_option, only: &
       OPT_convert, &
       OPT_fid
@@ -1200,7 +1196,7 @@ contains
     !---------------------------------------------------------------------------
 
     ! --- Set option
-    OPT_fid = MISC_get_available_fid()
+    OPT_fid = IO_get_available_fid()
     open(OPT_fid,status='SCRATCH')
 
       call OPT_convert( fmax )
@@ -1245,9 +1241,9 @@ contains
       devide_template )
     implicit none
 
-    character(LEN=128), intent(in) :: outfile_dir
-    character(LEN=16),  intent(in) :: outfile_prefix
-    character(LEN=16),  intent(in) :: varname
+    character(len=H_LONG), intent(in) :: outfile_dir
+    character(len=16),  intent(in) :: outfile_prefix
+    character(len=16),  intent(in) :: varname
     integer,            intent(in) :: imax
     integer,            intent(in) :: jmax
     integer,            intent(in) :: kmax
@@ -1263,16 +1259,16 @@ contains
     real(8) :: pi
     real(8) :: temp(imax)
 
-    character(LEN=32)  :: outfile
+    character(len=32)  :: outfile
     integer            :: fid
-    character(LEN=20)  :: s1, s2
+    character(len=20)  :: s1, s2
     integer            :: i, j, k
     !---------------------------------------------------------------------------
     pi = 4.D0 * atan( 1.D0 )
 
     outfile = trim(outfile_prefix)//trim(var_name(v))
 
-    fid = MISC_get_available_fid()
+    fid = IO_get_available_fid()
     open( unit   = fid,         &
           file   = trim(outfile_dir)//'/'//trim(outfile)//'.ctl', &
           form   = 'formatted', &
@@ -1347,12 +1343,12 @@ contains
       lon_swap     )
     implicit none
 
-    character(LEN=16),         intent(out) :: gthead(64)
-    character(LEN=FIO_HLONG),  intent( in) :: outfile_dir
-    character(LEN=FIO_HSHORT), intent( in) :: varname
-    character(LEN=FIO_HMID),   intent( in) :: description
-    character(LEN=FIO_HSHORT), intent( in) :: unit
-    character(LEN=FIO_HSHORT), intent( in) :: layername
+    character(len=16),         intent(out) :: gthead(64)
+    character(len=H_LONG),  intent( in) :: outfile_dir
+    character(len=H_SHORT), intent( in) :: varname
+    character(len=H_MID),   intent( in) :: description
+    character(len=H_SHORT), intent( in) :: unit
+    character(len=H_SHORT), intent( in) :: layername
     integer,                   intent( in) :: imax
     integer,                   intent( in) :: jmax
     integer,                   intent( in) :: kmax
@@ -1362,15 +1358,15 @@ contains
     integer(8),                intent( in) :: dt
     logical,                   intent( in) :: lon_swap
 
-    character(LEN=16) :: axhead(64)
-    character(LEN=16) :: hitem
-    character(LEN=32) :: htitle
-    character(LEN=16) :: gt_axisx
-    character(LEN=16) :: gt_axisy
-    character(LEN=16) :: kdate
+    character(len=16) :: axhead(64)
+    character(len=16) :: hitem
+    character(len=32) :: htitle
+    character(len=16) :: gt_axisx
+    character(len=16) :: gt_axisy
+    character(len=16) :: kdate
 
     integer           :: ndttm(8)
-    character(LEN=10) :: ndate, ntime, nzone
+    character(len=10) :: ndate, ntime, nzone
 
     real(8) :: pi
     real(8) :: temp(imax)
@@ -1457,7 +1453,7 @@ contains
     write(axhead(61),'(A16)'  ) 'NICAM'
     write(axhead(63),'(A16)'  ) 'NICAM'
 
-    fid = MISC_get_available_fid()
+    fid = IO_get_available_fid()
     open( unit   = fid,           &
           file   = trim(trim(outfile_dir)//'/GTAXLOC.'//trim(gt_axisx)),&
           form   = 'unformatted', &
@@ -1553,11 +1549,11 @@ contains
     implicit none
 
     integer(8)        :: datesec
-    character(LEN=20) :: template
+    character(len=20) :: template
 
     integer :: d(6)
 
-    character(LEN=3) :: nmonth(12)
+    character(len=3) :: nmonth(12)
     data nmonth / 'JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC' /
     !---------------------------------------------------------------------------
 
@@ -1584,7 +1580,7 @@ contains
     implicit none
 
     integer(8)        :: datesec
-    character(LEN=20) :: template
+    character(len=20) :: template
 
     integer :: d(6)
     !---------------------------------------------------------------------------
@@ -1628,7 +1624,7 @@ contains
     implicit none
 
     integer(8)        :: datesec
-    character(LEN=16) :: template
+    character(len=16) :: template
 
     integer :: d(6), i
     !---------------------------------------------------------------------------

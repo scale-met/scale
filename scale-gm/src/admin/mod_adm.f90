@@ -34,43 +34,32 @@ module mod_adm
   !
   !++ Public parameters & variables
   !
-  ! Character length of system control
-  integer, public, parameter :: ADM_NSYS = 32
-  !
-  ! Maximum length of file name
-  integer, public, parameter :: ADM_MAXFNAME = 128
 
-  !
-  !====== Basic definition & information ======
-  !
   ! Log file ID & Control file ID
   integer, public      :: ADM_LOG_FID = 6 ! default is STDOUT
   integer, public      :: ADM_CTL_FID = 35
-  !
-  ! Identifier for single computation or parallel computation
-  integer, public, parameter :: ADM_MULTI_PRC  = 1
-  !
+
   ! Identifiers of directions of region edges
   integer, public, parameter :: ADM_SW = 1
   integer, public, parameter :: ADM_NW = 2
   integer, public, parameter :: ADM_NE = 3
   integer, public, parameter :: ADM_SE = 4
-  !
+
   ! Identifiers of directions of region vertices
   integer, public, parameter :: ADM_W = 1
   integer, public, parameter :: ADM_N = 2
   integer, public, parameter :: ADM_E = 3
   integer, public, parameter :: ADM_S = 4
-  !
+
   !--- Identifier of triangle element (i-axis-side or j-axis side)
   integer, public, parameter :: ADM_TI = 1
   integer, public, parameter :: ADM_TJ = 2
-  !
+
   !--- Identifier of line element (i-axis-side, ij-axis side, or j-axis side)
   integer, public, parameter :: ADM_AI  = 1
   integer, public, parameter :: ADM_AIJ = 2
   integer, public, parameter :: ADM_AJ  = 3
-  !
+
   ! Identifier of 1 variable
   integer, public, parameter :: ADM_KNONE = 1
 
@@ -156,7 +145,7 @@ module mod_adm
   !
   !====== Information for processes-region relationship ======
   !
-  character(len=ADM_MAXFNAME), public :: ADM_rgnmngfname ! file name for region management info
+  character(len=H_LONG), public :: ADM_rgnmngfname ! file name for region management info
 
   integer, public, parameter   :: PRC_RGN_NMAX   = 2560  ! maximum number of region per process.
   integer, public              :: ADM_vlink_nmax = -1    ! maximum number of vertex linkage
@@ -242,7 +231,7 @@ module mod_adm
   integer, public, allocatable :: ADM_ImpJmp(:,:)
 #endif
 
-  character(len=ADM_MAXFNAME), public :: ADM_HGRID_SYSTEM = 'ICO' ! [XTMS] Horizontal Grid type
+  character(len=H_SHORT), public :: ADM_HGRID_SYSTEM = 'ICO' ! [XTMS] Horizontal Grid type
                                                           ! 'ICO'      icosahedral
                                                           ! 'ICO-XTMS' icosahedral but XTMS is used in oprt
                                                           ! 'LCP'      Lambert-cornial (including PSP)
@@ -280,7 +269,7 @@ contains
     integer                     :: glevel      = -1
     integer                     :: rlevel      = -1
     integer                     :: vlayer      =  1
-    character(LEN=ADM_MAXFNAME) :: rgnmngfname = ''
+    character(len=H_LONG) :: rgnmngfname = ''
 
     namelist / ADMPARAM / &
         glevel,           & !--- grid division level
@@ -296,8 +285,8 @@ contains
     integer :: l, rgnid
     integer :: ierr
 
-    character(LEN=ADM_MAXFNAME) :: fname
-    character(LEN=ADM_MAXFNAME) :: msg
+    character(len=H_LONG) :: fname
+    character(len=H_LONG) :: msg
     !---------------------------------------------------------------------
 
     ADM_mpi_alive  = PRC_mpi_alive
@@ -467,11 +456,9 @@ contains
   !-----------------------------------------------------------------------
   !> Read mnginfo file
   subroutine input_mnginfo( fname )
-    use mod_misc,  only :&
-       MISC_get_available_fid
     implicit none
 
-    character(len=ADM_MAXFNAME), intent(in) :: fname
+    character(len=H_LONG), intent(in) :: fname
 
     integer :: num_of_rgn !--- number of region
 
@@ -512,7 +499,7 @@ contains
     write(ADM_LOG_FID,*)
     write(ADM_LOG_FID,*) '+++ Module[mnginfo]/Category[common share]'
 
-    fid = MISC_get_available_fid()
+    fid = IO_get_available_fid()
     open( unit   = fid,         &
           file   = trim(fname), &
           form   = 'formatted', &

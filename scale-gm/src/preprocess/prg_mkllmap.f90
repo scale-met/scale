@@ -13,7 +13,9 @@ program prg_mkllmap
   !++ Used modules
   !
   use scale_precision
+  use scale_stdio
   use scale_prof
+
   use mod_adm, only: &
      ADM_LOG_FID,     &
      ADM_MULTI_PRC,   &
@@ -21,8 +23,7 @@ program prg_mkllmap
      ADM_proc_stop,   &
      ADM_proc_finish, &
      ADM_setup,       &
-     ADM_CTL_FID,     &
-     ADM_MAXFNAME
+     ADM_CTL_FID
   use mod_fio, only: &
      FIO_setup
   use mod_comm, only: &
@@ -36,7 +37,7 @@ program prg_mkllmap
      LATLON_ico_setup
   implicit none
 
-  character(len=ADM_MAXFNAME) :: output_dir   = './'
+  character(len=H_LONG) :: output_dir   = './'
   logical                     :: use_quadprec = .false.
 
   namelist /mkllmap_param/ &

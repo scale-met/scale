@@ -13,10 +13,11 @@ module mod_time
   !++ Used modules
   !
   use scale_precision
+  use scale_stdio
   use scale_prof
+
   use mod_adm, only: &
-     ADM_LOG_FID, &
-     ADM_NSYS
+     ADM_LOG_FID
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -32,7 +33,7 @@ module mod_time
   !
   !++ Public parameters & variables
   !
-  character(len=ADM_NSYS), public :: TIME_INTEG_TYPE = 'UNDEF'  ! Integration method in large steps
+  character(len=H_SHORT), public :: TIME_INTEG_TYPE = 'UNDEF'  ! Integration method in large steps
   !                                                  = 'RK2'    ! Runge-Kutta 2nd
   !                                                  = 'RK3'    ! Runge-Kutta 3rd
   !                                                  = 'RK4'    ! Runge-Kutta 4th
@@ -96,7 +97,7 @@ contains
        TIME_OFFSET_YEAR
     implicit none
 
-    character(len=ADM_NSYS) :: integ_type !--- integration method
+    character(len=H_SHORT) :: integ_type !--- integration method
     logical                 :: split      !--- time spliting flag
     real(RP)                 :: dtl        !--- delta t in large step
     integer                 :: lstep_max  !--- maximum number of large steps

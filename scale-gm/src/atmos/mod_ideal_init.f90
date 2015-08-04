@@ -13,10 +13,11 @@ module mod_ideal_init
   !++ Used modules
   !
   use scale_precision
+  use scale_stdio
   use scale_prof
+
   use mod_adm, only: &
-     ADM_LOG_FID, &
-     ADM_NSYS
+     ADM_LOG_FID
   use dcmip_initial_conditions_test_1_2_3, only: &
      test2_steady_state_mountain, &
      test2_schaer_mountain,       &
@@ -43,8 +44,8 @@ module mod_ideal_init
   !
   !++ Public parameters & variables
   !
-  character(len=ADM_NSYS), public :: DCTEST_type = '' !
-  character(len=ADM_NSYS), public :: DCTEST_case = '' !
+  character(len=H_SHORT), public :: DCTEST_type = '' !
+  character(len=H_SHORT), public :: DCTEST_case = '' !
 
   !-----------------------------------------------------------------------------
   !
@@ -111,8 +112,8 @@ contains
 
     real(RP), intent(out) :: DIAG_var(ADM_gall,ADM_kall,ADM_lall,6+TRC_VMAX)
 
-    character(len=ADM_NSYS) :: init_type   = ''
-    character(len=ADM_NSYS) :: test_case   = ''
+    character(len=H_SHORT) :: init_type   = ''
+    character(len=H_SHORT) :: test_case   = ''
     real(RP)                :: eps_geo2prs = 1.E-2_RP
     logical                 :: nicamcore   = .true.
 
@@ -588,7 +589,7 @@ contains
     integer,                 intent(in)    :: ijdim
     integer,                 intent(in)    :: kdim
     integer,                 intent(in)    :: lall
-    character(len=ADM_NSYS), intent(in)    :: test_case
+    character(len=H_SHORT), intent(in)    :: test_case
     real(RP),                 intent(inout) :: DIAG_var(ijdim,kdim,lall,6+TRC_VMAX)
 
     real(RP) :: lon      ! longitude            [rad]
@@ -881,7 +882,6 @@ contains
     use mod_misc, only: &
        MISC_get_distance
     use mod_adm, only: &
-       ADM_NSYS,      &
        ADM_proc_stop, &
        ADM_kmax,      &
        ADM_kmin
@@ -902,7 +902,7 @@ contains
     integer,                 intent(in)    :: ijdim
     integer,                 intent(in)    :: kdim
     integer,                 intent(in)    :: lall
-    character(len=ADM_NSYS), intent(in)    :: test_case
+    character(len=H_SHORT), intent(in)    :: test_case
     real(RP),                intent(inout) :: DIAG_var(ijdim,kdim,lall,6+TRC_VMAX)
 
     real(RP) :: lon      ! longitude            [rad]
@@ -1277,8 +1277,7 @@ contains
     use mod_misc, only: &
        MISC_get_latlon
     use mod_adm, only: &
-       ADM_KNONE,      &
-       ADM_NSYS
+       ADM_KNONE
     use mod_grd, only: &
        GRD_x,          &
        GRD_XDIR,       &

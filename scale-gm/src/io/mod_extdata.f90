@@ -13,11 +13,11 @@ module mod_extdata
   !++ Used modules
   !
   use scale_precision
+  use scale_stdio
   use scale_prof
+
   use mod_adm, only: &
-     ADM_LOG_FID,  &
-     ADM_MAXFNAME, &
-     ADM_NSYS
+     ADM_LOG_FID
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -46,12 +46,12 @@ module mod_extdata
 
   !--- type definition of information of external data
   type, private :: extdatainfo
-     character(ADM_MAXFNAME) :: fname             !--- data file name
-     character(ADM_MAXFNAME) :: dataname          !--- data name
-     character(ADM_MAXFNAME) :: input_io_mode     !--- io mode                  ! [add] H.Yashiro 20110826
+     character(len=H_LONG) :: fname             !--- data file name
+     character(len=H_LONG) :: dataname          !--- data name
+     character(len=H_LONG) :: input_io_mode     !--- io mode                  ! [add] H.Yashiro 20110826
      integer                 :: input_size        !--- double/single precision
-     character(ADM_NSYS)     :: layer_type        !--- type of layer : 'ATM' or 'SFC'
-     character(ADM_NSYS)     :: layername         !--- name of layer            ! [add] H.Yashiro 20110826
+     character(len=H_SHORT)     :: layer_type        !--- type of layer : 'ATM' or 'SFC'
+     character(len=H_SHORT)     :: layername         !--- name of layer            ! [add] H.Yashiro 20110826
      integer                 :: kall              !--- number of layer
      integer                 :: num_of_data       !--- number of data
      integer, pointer        :: data_date(:,:)    !--- date of each data piece
@@ -93,12 +93,12 @@ contains
        ctime => TIME_CTIME
     implicit none
 
-    character(len=ADM_MAXFNAME) :: fname
-    character(len=ADM_MAXFNAME) :: dataname
-    character(len=ADM_MAXFNAME) :: input_io_mode ! [add] H.Yashiro 20110826
+    character(len=H_LONG) :: fname
+    character(len=H_LONG) :: dataname
+    character(len=H_LONG) :: input_io_mode ! [add] H.Yashiro 20110826
     integer                     :: input_size
-    character(LEN=ADM_NSYS)     :: layer_type
-    character(LEN=ADM_NSYS)     :: layername ! [add] H.Yashiro 20110826
+    character(len=H_SHORT)     :: layer_type
+    character(len=H_SHORT)     :: layername ! [add] H.Yashiro 20110826
     integer                     :: nlayer    ! [add] H.Yashiro 20131030
     integer                     :: num_of_data
     integer                     :: data_date(6,max_num_of_data)

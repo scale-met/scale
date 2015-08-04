@@ -20,14 +20,12 @@ module mod_misc
   !
   !++ Public parameters, variables & subroutines
   !
-  public :: MISC_make_idstr        !--- make file name with a number
-  public :: MISC_get_available_fid !--- get an available file ID
-  public :: MISC_get_fid           !--- get an information of open or not
   public :: MISC_get_latlon        !--- calculate (lat,lon) from (x,y,z)
   public :: MISC_triangle_area     !--- calculate triangle area.
-  public :: MISC_triangle_area_q   !--- calculate triangle area at quad precision.  ![Add] Y.Yamada 09/07/17
   public :: MISC_mk_gmtrvec        !--- calculate normal and tangential vecs.
-  public :: MISC_msg_nmerror       !--- output error message
+  public :: MISC_get_cartesian       !--- calc (x,y,z) from (lat,lon)
+  public :: MISC_get_distance        !--- calc horizontal distance on the sphere
+
   ![Add] H.Yashiro 11/11/11
   public :: MISC_3dvec_cross         !--- calc exterior product for 3D vector
   public :: MISC_3dvec_dot           !--- calc interior product for 3D vector
@@ -36,8 +34,6 @@ module mod_misc
   public :: MISC_3dvec_intersec      !--- calc intersection of two 3D vectors
   public :: MISC_3dvec_anticlockwise !--- sort 3D vectors anticlockwise
   public :: MISC_3Dvec_triangle      !--- calc triangle area on sphere, more precise
-  public :: MISC_get_cartesian       !--- calc (x,y,z) from (lat,lon)
-  public :: MISC_get_distance        !--- calc horizontal distance on the sphere
 
   !-----------------------------------------------------------------------------
   !
@@ -60,78 +56,6 @@ module mod_misc
   !<----      NSTR_MAX_DIGIT  = 5
   !-----------------------------------------------------------------------------
 contains
-  !-----------------------------------------------------------------------------
-  subroutine MISC_make_idstr( &
-       str,     & !--- [OUT]
-       prefix,  & !--- [IN]
-       ext,     & !--- [IN]
-       numID,   & !--- [IN]
-       digit    ) !--- [IN]
-    implicit none
-
-    character(len=*), intent(out) :: str    ! combined string (file name)
-    character(len=*), intent(in)  :: prefix ! prefix
-    character(len=*), intent(in)  :: ext    ! extention( e.g. .rgn )
-    integer,          intent(in)  :: numID  ! number
-
-    integer, optional, intent(in) :: digit  ! digit
-
-    character(len=128) :: rankstr
-    integer            :: setdigit
-    !---------------------------------------------------------------------------
-
-    if ( NSTR_ZERO_START ) then
-       write(rankstr,'(I128.128)') numID-1
-    else
-       write(rankstr,'(I128.128)') numID
-    endif
-
-    if ( present(digit) ) then
-       setdigit = digit
-    else
-       setdigit = NSTR_MAX_DIGIT
-    endif
-
-    rankstr(1:setdigit) = rankstr(128-(setdigit-1):128)
-    rankstr(setdigit+1:128) = ' '
-
-    str = trim(prefix)//'.'//trim(ext)//trim(rankstr) ! -> prefix.ext00000
-
-    return
-  end subroutine MISC_make_idstr
-
-  !-----------------------------------------------------------------------------
-  function MISC_get_available_fid()  &
-       result(fid)                     !--- file id
-    !
-    implicit none
-    !
-    integer :: fid
-    logical :: i_opened
-    !
-    do fid = min_fid,max_fid
-       INQUIRE (fid, OPENED=I_OPENED)
-       if(.not.I_OPENED) return
-    enddo
-    !
-  end function MISC_get_available_fid
-
-  !-----------------------------------------------------------------------------
-  function MISC_get_fid( fname )  &
-       result(fid)                   !--- file ID
-    !
-    implicit none
-    !
-    character(*), intent(in) :: fname
-    !
-    integer :: fid
-    logical :: i_opened
-    !
-    INQUIRE (FILE=trim(fname), OPENED=i_opened, NUMBER=fid)
-    if(.not.i_opened) fid = -1
-    !
-  end function MISC_get_fid
-
   !-----------------------------------------------------------------------------
   subroutine MISC_get_latlon( &
        lat, lon,              & !--- INOUT : latitude and longitude
@@ -368,192 +292,6 @@ contains
   end function MISC_triangle_area
 
   !-----------------------------------------------------------------------------
-  !> @return area
-  function MISC_triangle_area_q( &
-       a, b, c,                & !--- IN : three points vectors on a sphere.
-       polygon_type,           & !--- IN : sphere triangle or plane one?
-       radius,                 & !--- IN : radius
-       critical)               & !--- IN : critical value to handle the case
-                                 !         of ang=0 (optional) S.Iga060209
-       result( area )            !--- OUT : triangle area
-    !
-    implicit none
-    !
-    integer, parameter :: ix = 1
-    integer, parameter :: iy = 2
-    integer, parameter :: iz = 3
-    real(RP), parameter :: pi  = 3.14159265358979323846_RP
-    !
-    real(RP) :: area
-    real(RP),intent(in) :: a(ix:iz),b(ix:iz),c(ix:iz)
-    character(len=*), intent(in) :: polygon_type
-    real(RP) :: radius
-    !
-    !
-    real(RP) :: v01(ix:iz)
-    real(RP) :: v02(ix:iz)
-    real(RP) :: v03(ix:iz)
-    !
-    real(RP) :: v11(ix:iz)
-    real(RP) :: v12(ix:iz)
-    real(RP) :: v13(ix:iz)
-    !
-    real(RP) :: v21(ix:iz)
-    real(RP) :: v22(ix:iz)
-    real(RP) :: v23(ix:iz)
-    real(RP) :: w21(ix:iz)
-    real(RP) :: w22(ix:iz)
-    real(RP) :: w23(ix:iz)
-    real(RP) :: w11(ix:iz)
-    real(RP) :: w12(ix:iz)
-    real(RP) :: w13(ix:iz)
-
-    real(RP) :: v1(ix:iz)
-    real(RP) :: v2(ix:iz)
-    real(RP) :: w(ix:iz)
-    !
-    real(RP) :: fac11,fac12,fac13
-    real(RP) :: fac21,fac22,fac23
-    !
-    real(RP) :: r_v01_x_v01,r_v02_x_v02,r_v03_x_v03
-    !
-    real(RP) :: ang(3)
-    real(RP) :: len
-    real(RP) :: a16(3)
-    real(RP) :: area16
-
-    real(RP), optional:: critical
-    real(RP):: epsi
-
-
-    if ( .not. present(critical)) then
-       epsi = 0.0_RP
-    else
-       epsi = real(critical,kind=RP)
-    endif
-
-    if(trim(polygon_type)=='ON_PLANE') then
-       !---- Note : On a plane,
-       !----        area = | ourter product of two vectors |.
-       v1(ix:iz)= real(b(ix:iz),kind=RP) - real(a(ix:iz),kind=RP)
-       v2(ix:iz)= real(c(ix:iz),kind=RP) - real(a(ix:iz),kind=RP)
-
-       w(ix) = v1(iy)*v2(iz)-v2(iy)*v1(iz)
-       w(iy) = v1(iz)*v2(ix)-v2(iz)*v1(ix)
-       w(iz) = v1(ix)*v2(iy)-v2(ix)*v1(iy)
-
-       area16 = 0.5_RP * sqrt(w(ix)*w(ix)+w(iy)*w(iy)+w(iz)*w(iz))
-
-       a16(ix:iz) = real(a(ix:iz),kind=RP)
-       len = sqrt( a16(ix)*a16(ix)+a16(iy)*a16(iy)+a16(iz)*a16(iz) )
-       area16 = area16 * (radius/len)*(radius/len)
-
-       area = real(area16,kind=RP)
-
-       return
-    elseif(trim(polygon_type)=='ON_SPHERE') then
-       !
-       !---- NOTE : On a unit sphere,
-       !----        area = sum of angles - pi.
-       v01(ix:iz)=real(a(ix:iz),kind=RP)
-       v11(ix:iz)=real(b(ix:iz),kind=RP)-real(a(ix:iz),kind=RP)
-       v21(ix:iz)=real(c(ix:iz),kind=RP)-real(a(ix:iz),kind=RP)
-       !----
-       v02(ix:iz)=real(b(ix:iz),kind=RP)
-       v12(ix:iz)=real(a(ix:iz),kind=RP)-real(b(ix:iz),kind=RP)
-       v22(ix:iz)=real(c(ix:iz),kind=RP)-real(b(ix:iz),kind=RP)
-       !----
-       v03(ix:iz)=real(c(ix:iz),kind=RP)
-       v13(ix:iz)=real(a(ix:iz),kind=RP)-real(c(ix:iz),kind=RP)
-       v23(ix:iz)=real(b(ix:iz),kind=RP)-real(c(ix:iz),kind=RP)
-       !----
-       r_v01_x_v01&
-            =1.0_RP/(v01(ix)*v01(ix)+v01(iy)*v01(iy)+v01(iz)*v01(iz))
-       fac11=(v01(ix)*v11(ix)+v01(iy)*v11(iy)+v01(iz)*v11(iz))&
-            *r_v01_x_v01
-       fac21=(v01(ix)*v21(ix)+v01(iy)*v21(iy)+v01(iz)*v21(iz))&
-            *r_v01_x_v01
-       !---- Escape for the case arg=0 (S.Iga060209)
-       area=0.0_RP
-
-       if ((v12(ix)**2+v12(iy)**2+v12(iz)**2) * r_v01_x_v01 <= epsi**2 ) return
-       if ((v13(ix)**2+v13(iy)**2+v13(iz)**2) * r_v01_x_v01 <= epsi**2 ) return
-       if ((v23(ix)**2+v23(iy)**2+v23(iz)**2) * r_v01_x_v01 <= epsi**2 ) return
-
-       !----       !
-       w11(ix)=v11(ix)-fac11*v01(ix)
-       w11(iy)=v11(iy)-fac11*v01(iy)
-       w11(iz)=v11(iz)-fac11*v01(iz)
-       !
-       w21(ix)=v21(ix)-fac21*v01(ix)
-       w21(iy)=v21(iy)-fac21*v01(iy)
-       w21(iz)=v21(iz)-fac21*v01(iz)
-       !
-       ang(1)=(w11(ix)*w21(ix)+w11(iy)*w21(iy)+w11(iz)*w21(iz))&
-            /( sqrt(w11(ix)*w11(ix)+w11(iy)*w11(iy)+w11(iz)*w11(iz))&
-            * sqrt(w21(ix)*w21(ix)+w21(iy)*w21(iy)+w21(iz)*w21(iz)) )
-       if( ang(1) >  1.0_RP ) ang(1) =  1.0_RP
-       if( ang(1) <- 1.0_RP ) ang(1) = -1.0_RP
-       ang(1)=acos(ang(1))
-       !
-       r_v02_x_v02&
-            =1.0_RP/(v02(ix)*v02(ix)+v02(iy)*v02(iy)+v02(iz)*v02(iz))
-       fac12=(v02(ix)*v12(ix)+v02(iy)*v12(iy)+v02(iz)*v12(iz))&
-            *r_v02_x_v02
-       fac22=(v02(ix)*v22(ix)+v02(iy)*v22(iy)+v02(iz)*v22(iz))&
-            *r_v02_x_v02
-       !
-       w12(ix)=v12(ix)-fac12*v02(ix)
-       w12(iy)=v12(iy)-fac12*v02(iy)
-       w12(iz)=v12(iz)-fac12*v02(iz)
-       !
-       w22(ix)=v22(ix)-fac22*v02(ix)
-       w22(iy)=v22(iy)-fac22*v02(iy)
-       w22(iz)=v22(iz)-fac22*v02(iz)
-       !
-       ang(2)=(w12(ix)*w22(ix)+w12(iy)*w22(iy)+w12(iz)*w22(iz))&
-            /( sqrt(w12(ix)*w12(ix)+w12(iy)*w12(iy)+w12(iz)*w12(iz))&
-            *sqrt(w22(ix)*w22(ix)+w22(iy)*w22(iy)+w22(iz)*w22(iz)) )
-
-       if( ang(2) >  1.0_RP ) ang(2) =  1.0_RP
-       if( ang(2) <- 1.0_RP ) ang(2) = -1.0_RP
-
-       ang(2)=acos(ang(2))
-
-       r_v03_x_v03&
-            =1.0_RP/(v03(ix)*v03(ix)+v03(iy)*v03(iy)+v03(iz)*v03(iz))
-       fac13=(v03(ix)*v13(ix)+v03(iy)*v13(iy)+v03(iz)*v13(iz))&
-            *r_v03_x_v03
-       fac23=(v03(ix)*v23(ix)+v03(iy)*v23(iy)+v03(iz)*v23(iz))&
-            *r_v03_x_v03
-       !
-       w13(ix)=v13(ix)-fac13*v03(ix)
-       w13(iy)=v13(iy)-fac13*v03(iy)
-       w13(iz)=v13(iz)-fac13*v03(iz)
-       !
-       w23(ix)=v23(ix)-fac23*v03(ix)
-       w23(iy)=v23(iy)-fac23*v03(iy)
-       w23(iz)=v23(iz)-fac23*v03(iz)
-       !
-       ang(3)=(w13(ix)*w23(ix)+w13(iy)*w23(iy)+w13(iz)*w23(iz))&
-            /( sqrt(w13(ix)*w13(ix)+w13(iy)*w13(iy)+w13(iz)*w13(iz))&
-            *sqrt(w23(ix)*w23(ix)+w23(iy)*w23(iy)+w23(iz)*w23(iz)) )
-
-       if( ang(3) >  1.0_RP ) ang(3) =  1.0_RP
-       if( ang(3) <- 1.0_RP ) ang(3) = -1.0_RP
-
-       ang(3)=acos(ang(3))
-       !----
-       area16=(ang(1)+ang(2)+ang(3)-pi)*radius*radius
-
-       area = real(area16,kind=RP)
-
-       return
-    endif
-
-  end function MISC_triangle_area_q
-
-  !-----------------------------------------------------------------------------
   subroutine MISC_mk_gmtrvec( &
        vs, ve,                & !--- IN : vectors at the start and the end
        tv,                    & !--- INOUT : tangential vector
@@ -624,36 +362,6 @@ contains
     return
     !
   end subroutine MISC_mk_gmtrvec
-
-  !-----------------------------------------------------------------------------
-  subroutine MISC_msg_nmerror( &
-       ierr,                 & !--- IN : error id
-       fid,                  & !--- IN : file id
-       namelist_name,        & !--- IN : namelist name
-       sub_name,             & !--- IN : subroutine name
-       mod_name              & !--- IN : module name
-       )
-    implicit none
-    integer, intent(in) ::  ierr
-    integer, intent(in) ::  fid
-    character(len=*) :: namelist_name
-    character(len=*) :: sub_name
-    character(len=*) :: mod_name
-    if(ierr<0) then
-       write(fid,*) &
-            'Msg : Sub[',trim(sub_name),']/Mod[',trim(mod_name),']'
-       write(fid,*) &
-            ' *** Not found namelist. ',trim(namelist_name)
-       write(fid,*) &
-            ' *** Use default values.'
-    elseif(ierr>0) then !--- fatal error
-       write(*,*) &
-            'Msg : Sub[',trim(sub_name),']/Mod[',trim(mod_name),']'
-       write(*,*) &
-            ' *** WARNING : Not appropriate names in namelist!! ',&
-            trim(namelist_name),' CHECK!!'
-    endif
-  end subroutine MISC_msg_nmerror
 
   !-----------------------------------------------------------------------------
   !> exterior product of vector a->b and c->d

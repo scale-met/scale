@@ -13,10 +13,11 @@ module mod_bndcnd
   !++ Used modules
   !
   use scale_precision
+  use scale_stdio
   use scale_prof
+
   use mod_adm, only: &
-     ADM_LOG_FID,  &
-     ADM_NSYS
+     ADM_LOG_FID
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -44,20 +45,20 @@ module mod_bndcnd
   !++ Private parameters & variables
   !
   !--- Vertical boundary condition for temperature at the top
-  character(len=ADM_NSYS), private :: BND_TYPE_T_TOP    != 'TEM' : tem(kmax+1) = tem(kmax)
+  character(len=H_SHORT), private :: BND_TYPE_T_TOP    != 'TEM' : tem(kmax+1) = tem(kmax)
                                                         != 'EPL' : lagrange extrapolation
 
   !--- Vertical boundary condition for temperature at the ground
-  character(len=ADM_NSYS), private :: BND_TYPE_T_BOTTOM != 'FIX' : tems fix
+  character(len=H_SHORT), private :: BND_TYPE_T_BOTTOM != 'FIX' : tems fix
                                                         != 'TEM' : tem(kmin-1) = tem(kmin)
                                                         != 'EPL' : lagrange extrapolation
 
   !--- Vertical boundary condition for momentum at the top
-  character(len=ADM_NSYS), private :: BND_TYPE_M_TOP    != 'RIGID' : rigid surface
+  character(len=H_SHORT), private :: BND_TYPE_M_TOP    != 'RIGID' : rigid surface
                                                         != 'FREE'  : free surface
 
   !--- Vertical boundary condition for momentum at the ground
-  character(len=ADM_NSYS), private :: BND_TYPE_M_BOTTOM != 'RIGID' : rigid surface
+  character(len=H_SHORT), private :: BND_TYPE_M_BOTTOM != 'RIGID' : rigid surface
                                                         != 'FREE'  : free surface
 
   real(RP), private :: BND_FIXED_SFC_T ! surface temperature to fix

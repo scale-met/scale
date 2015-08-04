@@ -13,10 +13,11 @@ module mod_runconf
   !++ Used modules
   !
   use scale_precision
+  use scale_stdio
   use scale_prof
+
   use mod_adm, only: &
-     ADM_LOG_FID,  &
-     ADM_NSYS
+     ADM_LOG_FID
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -30,37 +31,37 @@ module mod_runconf
   !
   !++ Public parameters & variables
   !
-  character(len=ADM_NSYS), public :: RUNNAME = ''
+  character(len=H_SHORT), public :: RUNNAME = ''
 
   !---< Component Selector >---
 
   !--- Dynamics
   integer,                 public :: NON_HYDRO_ALPHA    = 1 ! Nonhydrostatic/hydrostatic flag
   integer,                 public :: DYN_DIV_NUM        = 1
-  character(len=ADM_NSYS), public :: TRC_ADV_TYPE       = 'MIURA2004'
-  character(len=ADM_NSYS), public :: NDIFF_LOCATION     = 'IN_LARGE_STEP2'
+  character(len=H_SHORT), public :: TRC_ADV_TYPE       = 'MIURA2004'
+  character(len=H_SHORT), public :: NDIFF_LOCATION     = 'IN_LARGE_STEP2'
   logical,                 public :: FLAG_NUDGING       = .false.
   logical,                 public :: THUBURN_LIM        = .true.  ! [add] 20130613 R.Yoshida
 
   !--- Physics
-  character(len=ADM_NSYS), public :: RAIN_TYPE          = 'DRY'
+  character(len=H_SHORT), public :: RAIN_TYPE          = 'DRY'
   logical,                 public :: opt_2moment_water  = .false.
 
-  character(len=ADM_NSYS), public :: CP_TYPE            = 'NONE'
-  character(len=ADM_NSYS), public :: MP_TYPE            = 'NONE'
-  character(len=ADM_NSYS), public :: RD_TYPE            = 'NONE'
-  character(len=ADM_NSYS), public :: SF_TYPE            = 'DEFAULT'
-  character(len=ADM_NSYS), public :: ROUGHNESS_SEA_TYPE = 'DEFAULT'
-  character(len=ADM_NSYS), public :: OCEAN_TYPE         = 'NONE'
-  character(len=ADM_NSYS), public :: RIV_TYPE           = 'NONE'
-  character(len=ADM_NSYS), public :: LAND_TYPE          = 'NONE'
-  character(len=ADM_NSYS), public :: TB_TYPE            = 'NONE'
-  character(len=ADM_NSYS), public :: AE_TYPE            = 'NONE'
-  character(len=ADM_NSYS), public :: CHEM_TYPE          = 'NONE'
-  character(len=ADM_NSYS), public :: GWD_TYPE           = 'NONE'
-  character(len=ADM_NSYS), public :: AF_TYPE            = 'NONE'
+  character(len=H_SHORT), public :: CP_TYPE            = 'NONE'
+  character(len=H_SHORT), public :: MP_TYPE            = 'NONE'
+  character(len=H_SHORT), public :: RD_TYPE            = 'NONE'
+  character(len=H_SHORT), public :: SF_TYPE            = 'DEFAULT'
+  character(len=H_SHORT), public :: ROUGHNESS_SEA_TYPE = 'DEFAULT'
+  character(len=H_SHORT), public :: OCEAN_TYPE         = 'NONE'
+  character(len=H_SHORT), public :: RIV_TYPE           = 'NONE'
+  character(len=H_SHORT), public :: LAND_TYPE          = 'NONE'
+  character(len=H_SHORT), public :: TB_TYPE            = 'NONE'
+  character(len=H_SHORT), public :: AE_TYPE            = 'NONE'
+  character(len=H_SHORT), public :: CHEM_TYPE          = 'NONE'
+  character(len=H_SHORT), public :: GWD_TYPE           = 'NONE'
+  character(len=H_SHORT), public :: AF_TYPE            = 'NONE'
 
-  character(len=ADM_NSYS), public :: OUT_FILE_TYPE      = 'DEFAULT'
+  character(len=H_SHORT), public :: OUT_FILE_TYPE      = 'DEFAULT'
 
   !---< tracer ID setting >---
 
@@ -76,7 +77,7 @@ module mod_runconf
   integer, public, parameter :: I_RHOGQstr =  7 ! tracers
   integer, public            :: I_RHOGQend = -1 !
 
-  character(len=16), public  :: PRG_name(PRG_vmax0)
+  character(len=H_SHORT), public  :: PRG_name(PRG_vmax0)
   data PRG_name / 'rhog', 'rhogvx', 'rhogvy', 'rhogvz', 'rhogw', 'rhoge' /
 
   integer, public            :: DIAG_vmax       ! total number of diagnostic variables
@@ -91,13 +92,13 @@ module mod_runconf
   integer, public, parameter :: I_qstr     =  7 ! tracers
   integer, public            :: I_qend     = -1 !
 
-  character(len=16), public  :: DIAG_name(DIAG_vmax0)
+  character(len=H_SHORT), public  :: DIAG_name(DIAG_vmax0)
   data DIAG_name / 'pre', 'tem', 'vx', 'vy', 'vz', 'w' /
 
   integer, public            :: TRC_vmax   =  0 ! total number of tracers
 
-  character(len=16),       public, allocatable :: TRC_name(:) ! short name  of tracer [add] H.Yashiro 20110819
-  character(len=ADM_NSYS), public, allocatable :: WLABEL  (:) ! description of tracer
+  character(len=H_SHORT), public, allocatable :: TRC_name(:) ! short name  of tracer [add] H.Yashiro 20110819
+  character(len=H_MID),   public, allocatable :: WLABEL  (:) ! description of tracer
 
   integer, public            :: NQW_MAX    =  0 ! subtotal number of water mass tracers
   integer, public            :: NQW_STR    = -1 ! start index of water mass tracers

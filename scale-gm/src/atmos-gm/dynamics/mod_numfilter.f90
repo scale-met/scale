@@ -13,10 +13,11 @@ module mod_numfilter
   !++ Used modules
   !
   use scale_precision
+  use scale_stdio
   use scale_prof
+
   use mod_adm, only: &
-     ADM_LOG_FID, &
-     ADM_NSYS
+     ADM_LOG_FID
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -132,23 +133,23 @@ contains
     real(RP)                 :: alpha_r         = 0.0_RP                 ! coefficient for rayleigh damping
     real(RP)                 :: ZD              = 25000.0_RP             ! lower limit of rayleigh damping [m]
     ! horizontal diffusion
-    character(len=ADM_NSYS) :: hdiff_type      = 'NONDIM_COEF'        ! diffusion type
+    character(len=H_SHORT) :: hdiff_type      = 'NONDIM_COEF'        ! diffusion type
     real(RP)                 :: gamma_h         = 1.0_RP / 16.0_RP / 10.0_RP ! coefficient    for horizontal diffusion
     real(RP)                 :: tau_h           = 160000.0_RP            ! e-folding time for horizontal diffusion [sec]
     ! horizontal diffusion (1st order laplacian)
-    character(len=ADM_NSYS) :: hdiff_type_lap1 = 'DIRECT'             ! diffusion type
+    character(len=H_SHORT) :: hdiff_type_lap1 = 'DIRECT'             ! diffusion type
     real(RP)                 :: gamma_h_lap1    = 0.0_RP                 ! height-dependent gamma_h but 1st-order laplacian
     real(RP)                 :: tau_h_lap1      = 160000.0_RP            ! height-dependent tau_h   but 1st-order laplacian [sec]
     real(RP)                 :: ZD_hdiff_lap1   = 25000.0_RP             ! lower limit of horizontal diffusion [m]
     ! vertical diffusion
     real(RP)                 :: gamma_v         = 0.0_RP                 ! coefficient of vertical diffusion
     ! 3D divergence damping
-    character(len=ADM_NSYS) :: divdamp_type    = 'NONDIM_COEF'        ! damping type
+    character(len=H_SHORT) :: divdamp_type    = 'NONDIM_COEF'        ! damping type
     real(RP)                 :: alpha_d         = 0.0_RP                 ! coefficient    for divergence damping
     real(RP)                 :: tau_d           = 132800.0_RP            ! e-folding time for divergence damping
     real(RP)                 :: alpha_dv        = 0.0_RP                 ! vertical coefficient
     ! 2D divergence damping
-    character(len=ADM_NSYS) :: divdamp_2d_type = 'NONDIM_COEF'        ! damping type
+    character(len=H_SHORT) :: divdamp_2d_type = 'NONDIM_COEF'        ! damping type
     real(RP)                 :: alpha_d_2d      = 0.0_RP                 ! coefficient    for divergence damping
     real(RP)                 :: tau_d_2d        = 1328000.0_RP           ! e-folding time for divergence damping [sec]
     real(RP)                 :: ZD_d_2d         = 25000.0_RP             ! lower limit of divergence damping [m]

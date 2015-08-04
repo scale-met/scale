@@ -14,11 +14,11 @@ module mod_gtl
   !
   use mpi
   use scale_precision
+  use scale_stdio
   use scale_prof
+
   use mod_adm, only: &
-     ADM_LOG_FID, &
-     ADM_NSYS,    &
-     ADM_MAXFNAME
+     ADM_LOG_FID
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -477,9 +477,6 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine GTL_input_var2_da( basename, var, k_start, k_end, recnum, input_size )
-    use mod_misc, only: &
-       MISC_get_available_fid, &
-       MISC_make_idstr
     use mod_adm, only: &
        ADM_prc_tab, &
        ADM_prc_me,  &
@@ -497,7 +494,7 @@ contains
     real(SP) :: var4(ADM_gall,k_start:k_end)
     real(DP) :: var8(ADM_gall,k_start:k_end)
 
-    character(len=ADM_MAXFNAME) :: fname
+    character(len=H_LONG) :: fname
 
     integer :: fid
     integer :: l, rgnid
@@ -506,8 +503,8 @@ contains
     do l = 1, ADM_lall
        rgnid = ADM_prc_tab(l,ADM_prc_me)
 
-       call MISC_make_idstr(fname,trim(basename),'rgn',rgnid)
-       fid = MISC_get_available_fid()
+       call IO_make_idstr(fname,trim(basename),'rgn',rgnid-1)
+       fid = IO_get_available_fid()
        open( unit   = fid,           &
              file   = trim(fname),   &
              form   = 'unformatted', &
@@ -531,9 +528,6 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine GTL_output_var2_da( basename, var, k_start, k_end, recnum, output_size )
-    use mod_misc, only: &
-       MISC_get_available_fid, &
-       MISC_make_idstr
     use mod_adm, only: &
        ADM_prc_tab, &
        ADM_prc_me,  &
@@ -543,7 +537,7 @@ contains
        CONST_UNDEF4
     implicit none
 
-    character(len=ADM_MAXFNAME), intent(in)  :: basename
+    character(len=H_LONG), intent(in)  :: basename
     integer,                     intent(in)  :: k_start
     integer,                     intent(in)  :: k_end
     real(RP),                     intent(in)  :: var(:,:,:)
@@ -553,7 +547,7 @@ contains
     real(4) :: var4(ADM_gall,k_start:k_end)
     real(RP) :: var8(ADM_gall,k_start:k_end)
 
-    character(len=ADM_MAXFNAME) :: fname
+    character(len=H_LONG) :: fname
 
     integer :: fid
     integer :: l, rgnid
@@ -562,8 +556,8 @@ contains
     do l = 1, ADM_lall
        rgnid = ADM_prc_tab(l,ADM_prc_me)
 
-       call MISC_make_idstr(fname,trim(basename),'rgn',rgnid)
-       fid = MISC_get_available_fid()
+       call IO_make_idstr(fname,trim(basename),'rgn',rgnid-1)
+       fid = IO_get_available_fid()
        open( unit   = fid,           &
              file   = trim(fname),   &
              form   = 'unformatted', &

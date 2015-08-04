@@ -13,11 +13,11 @@ module mod_gmtr
   !++ Used modules
   !
   use scale_precision
+  use scale_stdio
   use scale_prof
+
   use mod_adm, only: &
-     ADM_LOG_FID, &
-     ADM_NSYS,    &
-     ADM_MAXFNAME
+     ADM_LOG_FID
   use mod_adm, only: &
      ADM_TI,      &
      ADM_TJ,      &
@@ -119,7 +119,7 @@ module mod_gmtr
   real(RP), public, allocatable :: GMTR_lon_pl  (:,:)
 #endif
 
-  character(len=ADM_NSYS), public :: GMTR_polygon_type = 'ON_SPHERE'
+  character(len=H_SHORT), public :: GMTR_polygon_type = 'ON_SPHERE'
                                                        ! 'ON_SPHERE' triangle is fit to the sphere
                                                        ! 'ON_PLANE'  triangle is treated as 2D
 
@@ -139,8 +139,8 @@ module mod_gmtr
   !
   !++ Private parameters & variables
   !
-  character(len=ADM_MAXFNAME), private :: GMTR_fname   = ''
-  character(len=ADM_NSYS),     private :: GMTR_io_mode = 'LEGACY'
+  character(len=H_LONG), private :: GMTR_fname   = ''
+  character(len=H_SHORT),     private :: GMTR_io_mode = 'LEGACY'
 
   !-----------------------------------------------------------------------------
 contains
@@ -156,7 +156,7 @@ contains
        COMM_data_transfer
     implicit none
 
-    character(len=ADM_NSYS) :: polygon_type
+    character(len=H_SHORT) :: polygon_type
 
     namelist / GMTRPARAM / &
        polygon_type
@@ -962,9 +962,6 @@ contains
   !-----------------------------------------------------------------------------
   subroutine GMTR_output_metrics( &
        basename )
-    use mod_misc, only: &
-       MISC_make_idstr,&
-       MISC_get_available_fid
     use mod_adm, only: &
        ADM_proc_stop, &
        ADM_prc_tab,   &
@@ -972,16 +969,15 @@ contains
        ADM_prc_me
     use mod_fio, only: &
        FIO_output, &
-       FIO_HMID,   &
        FIO_REAL8
     use mod_comm, only: &
        COMM_data_transfer
     implicit none
 
-    character(LEN=*), intent(in) :: basename
+    character(len=*), intent(in) :: basename
 
-    character(LEN=128)      :: fname
-    character(LEN=FIO_HMID) :: desc = 'Metrics info'
+    character(len=H_LONG) :: fname
+    character(len=H_MID)  :: desc = 'Metrics info'
 
     real(RP) :: tmp   (ADM_gall   ,ADM_KNONE,ADM_lall   ,2)
     real(RP) :: tmp_pl(ADM_gall_pl,ADM_KNONE,ADM_lall_pl,2)
@@ -1042,9 +1038,9 @@ contains
 
        do l = 1, ADM_lall
           rgnid = ADM_prc_tab(l,ADM_prc_me)
-          call MISC_make_idstr(fname,trim(basename),'rgn',rgnid)
+          call IO_make_idstr(fname,trim(basename),'rgn',rgnid-1)
 
-          fid = MISC_get_available_fid()
+          fid = IO_get_available_fid()
           open( unit   = fid,           &
                 file   = trim(fname),   &
                 form   = 'unformatted', &

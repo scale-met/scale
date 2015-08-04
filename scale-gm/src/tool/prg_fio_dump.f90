@@ -14,7 +14,6 @@ program prg_fio_dump
   !++ Used modules
   !
   use mod_fio, only : &
-    FIO_HLONG,         &
     FIO_LITTLE_ENDIAN, &
     FIO_BIG_ENDIAN,    &
     FIO_DUMP_HEADER,   &
@@ -25,14 +24,14 @@ program prg_fio_dump
   !-----------------------------------------------------------------------------
   !
   !++ parameters & variables
-  character(LEN=FIO_HLONG) :: fname     = ""
+  character(len=H_LONG) :: fname     = ""
   integer                  :: mode      = FIO_DUMP_HEADER
   integer                  :: endian    = FIO_BIG_ENDIAN
   logical                  :: filelok   = .false.
   logical                  :: modelok   = .false.
   logical                  :: endianlok = .false.
 
-  character(LEN=FIO_HLONG) :: argstr
+  character(len=H_LONG) :: argstr
   integer :: n, narg
 
 #ifdef _NOF2003

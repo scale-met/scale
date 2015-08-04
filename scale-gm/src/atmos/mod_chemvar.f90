@@ -13,11 +13,11 @@ module mod_chemvar
   !++ Used modules
   !
   use scale_precision
+  use scale_stdio
   use scale_prof
+
   use mod_adm, only: &
-     ADM_LOG_FID,  &
-     ADM_MAXFNAME, &
-     ADM_NSYS
+     ADM_LOG_FID
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -34,8 +34,8 @@ module mod_chemvar
   !
   integer,                 public, parameter   :: CHEM_TRC_vlim = 100
   integer,                 public              :: CHEM_TRC_vmax = 1
-  character(len=16),       public, allocatable :: CHEM_TRC_name(:) ! short name  of tracer
-  character(len=ADM_NSYS), public, allocatable :: CHEM_TRC_desc(:) ! description of tracer
+  character(len=H_SHORT),  public, allocatable :: CHEM_TRC_name(:) ! short name  of tracer
+  character(len=H_MID),    public, allocatable :: CHEM_TRC_desc(:) ! description of tracer
 
   !-----------------------------------------------------------------------------
   !
@@ -96,7 +96,7 @@ contains
     character(len=*), intent(in) :: tracername
     integer                      :: chemvar_getid
 
-    character(len=16) :: tname
+    character(len=H_SHORT) :: tname
     integer           :: itrc
     !---------------------------------------------------------------------------
 

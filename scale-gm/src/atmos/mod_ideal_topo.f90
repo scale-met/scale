@@ -13,10 +13,11 @@ module mod_ideal_topo
   !++ Used modules
   !
   use scale_precision
+  use scale_stdio
   use scale_prof
+
   use mod_adm, only: &
-     ADM_LOG_FID,  &
-     ADM_NSYS
+     ADM_LOG_FID
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -61,7 +62,7 @@ contains
     real(RP), intent(in)  :: lon (ADM_gall,ADM_KNONE,ADM_lall)
     real(RP), intent(out) :: Zsfc(ADM_gall,ADM_KNONE,ADM_lall)
 
-    character(len=ADM_NSYS) :: topo_type = ''
+    character(len=H_SHORT) :: topo_type = ''
 
     namelist / IDEALTOPOPARAM / &
        topo_type

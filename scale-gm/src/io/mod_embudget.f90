@@ -13,7 +13,9 @@ module mod_embudget
   !++ Used modules
   !
   use scale_precision
+  use scale_stdio
   use scale_prof
+
   use mod_adm, only: &
      ADM_LOG_FID
   !-----------------------------------------------------------------------------
@@ -62,8 +64,6 @@ module mod_embudget
 contains
   !-----------------------------------------------------------------------------
   subroutine embudget_setup
-    use mod_misc, only: &
-       MISC_get_available_fid
     use mod_adm, only: &
        ADM_CTL_FID,        &
        ADM_proc_stop,      &
@@ -106,13 +106,13 @@ contains
 
     ! open budget.info file
     if ( ADM_prc_me == ADM_prc_run_master ) then
-       MNT_m_fid  = MISC_get_available_fid()
+       MNT_m_fid  = IO_get_available_fid()
        open( unit   = MNT_m_fid,          &
              file   = 'MASS_BUDGET.info', &
              form   = 'formatted',        &
              status = 'unknown'           )
 
-       MNT_e_fid = MISC_get_available_fid()
+       MNT_e_fid = IO_get_available_fid()
        open( unit   = MNT_e_fid,            &
              file   = 'ENERGY_BUDGET.info', &
              form   = 'formatted',          &

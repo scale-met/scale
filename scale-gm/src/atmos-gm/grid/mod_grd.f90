@@ -14,11 +14,11 @@ module mod_grd
   !
   use mpi
   use scale_precision
+  use scale_stdio
   use scale_prof
+
   use mod_adm, only: &
-     ADM_LOG_FID, &
-     ADM_NSYS,    &
-     ADM_MAXFNAME
+     ADM_LOG_FID
   use mod_adm, only: &
      ADM_TI,      &
      ADM_TJ,      &
@@ -198,7 +198,7 @@ module mod_grd
   real(RP), public, allocatable :: GRD_vz_pl(:,:,:,:)
 #endif
 
-  character(len=ADM_NSYS), public :: GRD_grid_type = 'ON_SPHERE' ! grid type [add] T.Ohno 110722
+  character(len=H_SHORT), public :: GRD_grid_type = 'ON_SPHERE' ! grid type [add] T.Ohno 110722
                                                    ! 'ON_PLANE'
 
   !-----------------------------------------------------------------------------
@@ -209,13 +209,13 @@ module mod_grd
   !
   !++ Private parameters & variables
   !
-  character(len=ADM_NSYS),     private :: hgrid_io_mode   = 'LEGACY' ! [add] H.Yashiro 20110819
-  character(len=ADM_NSYS),     private :: topo_io_mode    = 'LEGACY' ! [add] H.Yashiro 20110819
-  character(len=ADM_MAXFNAME), private :: hgrid_fname     = ''       ! horizontal grid file
-  character(len=ADM_MAXFNAME), private :: topo_fname      = ''       ! topography file
+  character(len=H_SHORT),     private :: hgrid_io_mode   = 'LEGACY' ! [add] H.Yashiro 20110819
+  character(len=H_SHORT),     private :: topo_io_mode    = 'LEGACY' ! [add] H.Yashiro 20110819
+  character(len=H_LONG), private :: hgrid_fname     = ''       ! horizontal grid file
+  character(len=H_LONG), private :: topo_fname      = ''       ! topography file
 
-  character(len=ADM_MAXFNAME), private :: vgrid_fname     = ''       ! vertical grid file
-  character(len=ADM_NSYS),     private :: vgrid_scheme    = 'LINEAR' ! vertical coordinate scheme
+  character(len=H_LONG), private :: vgrid_fname     = ''       ! vertical grid file
+  character(len=H_SHORT),     private :: vgrid_scheme    = 'LINEAR' ! vertical coordinate scheme
   real(RP),                     private :: h_efold         = 10000.0_RP ! e-folding height for hybrid vertical coordinate [m]
   real(RP),                     private :: hflat           =  -999.0_RP ! [m]
   logical,                     private :: output_vgrid    = .false.  ! output verical grid file?
@@ -553,9 +553,6 @@ contains
        basename,     &
        input_vertex, &
        io_mode       )
-    use mod_misc, only: &
-       MISC_make_idstr,       &
-       MISC_get_available_fid
     use mod_adm, only: &
        ADM_proc_stop, &
        ADM_prc_tab,   &
@@ -568,7 +565,7 @@ contains
     logical,          intent(in) :: input_vertex ! flag of B-grid input
     character(len=*), intent(in) :: io_mode      ! io_mode
 
-    character(len=ADM_MAXFNAME) :: fname
+    character(len=H_LONG) :: fname
 
     integer :: fid, ierr
     integer :: rgnid, l, K0
@@ -600,9 +597,9 @@ contains
 
        do l = 1, ADM_lall
           rgnid = ADM_prc_tab(l,ADM_prc_me)
-          call MISC_make_idstr(fname,trim(basename),'rgn',rgnid)
+          call IO_make_idstr(fname,trim(basename),'rgn',rgnid-1)
 
-          fid = MISC_get_available_fid()
+          fid = IO_get_available_fid()
           open( unit   = fid,           &
                 file   = trim(fname),   &
                 form   = 'unformatted', &
@@ -646,16 +643,12 @@ contains
        basename,      &
        output_vertex, &
        io_mode        )
-    use mod_misc, only: &
-       MISC_make_idstr,&
-       MISC_get_available_fid
     use mod_adm, only: &
        ADM_proc_stop, &
        ADM_prc_tab,   &
        ADM_prc_me
     use mod_fio, only: &
        FIO_output, &
-       FIO_HMID,   &
        FIO_REAL8
     implicit none
 
@@ -663,8 +656,8 @@ contains
     logical,          intent(in) :: output_vertex ! output flag of B-grid
     character(len=*), intent(in) :: io_mode       ! io_mode
 
-    character(len=ADM_MAXFNAME) :: fname
-    character(len=FIO_HMID)     :: desc = 'HORIZONTAL GRID FILE'
+    character(len=H_LONG) :: fname
+    character(len=H_MID)     :: desc = 'HORIZONTAL GRID FILE'
 
     integer :: fid
     integer :: rgnid, l, K0
@@ -718,9 +711,9 @@ contains
 
        do l = 1, ADM_lall
           rgnid = ADM_prc_tab(l,ADM_prc_me)
-          call MISC_make_idstr(fname,trim(basename),'rgn',rgnid)
+          call IO_make_idstr(fname,trim(basename),'rgn',rgnid-1)
 
-          fid = MISC_get_available_fid()
+          fid = IO_get_available_fid()
           open( unit = fid, &
                file=trim(fname),   &
                form='unformatted', &
@@ -751,14 +744,12 @@ contains
   !-----------------------------------------------------------------------------
   !> Input vertical grid
   subroutine GRD_input_vgrid( fname )
-    use mod_misc, only: &
-       MISC_get_available_fid
     use mod_adm, only: &
        ADM_proc_stop, &
        ADM_vlayer
     implicit none
 
-    character(len=ADM_MAXFNAME), intent(in) :: fname ! vertical grid file name
+    character(len=H_LONG), intent(in) :: fname ! vertical grid file name
 
     integer               :: num_of_layer
     real(DP), allocatable :: gz (:)
@@ -769,7 +760,7 @@ contains
 
     write(ADM_LOG_FID,*) '*** Read vertical grid file: ', trim(fname)
 
-    fid = MISC_get_available_fid()
+    fid = IO_get_available_fid()
     open( unit   = fid,           &
           file   = trim(fname),   &
           status = 'old',         &
@@ -805,8 +796,6 @@ contains
   !-----------------------------------------------------------------------------
   !> Output vertical grid
   subroutine GRD_output_vgrid( fname )
-    use mod_misc, only: &
-       MISC_get_available_fid
     use mod_adm, only: &
        ADM_vlayer
     implicit none
@@ -816,7 +805,7 @@ contains
     integer :: fid
     !---------------------------------------------------------------------------
 
-    fid = MISC_get_available_fid()
+    fid = IO_get_available_fid()
     open(fid,file=trim(fname),form='unformatted')
        write(fid) ADM_vlayer
        write(fid) GRD_gz
@@ -831,8 +820,6 @@ contains
   subroutine GRD_input_topograph( &
        basename )
     use mod_misc,  only: &
-       MISC_make_idstr,        &
-       MISC_get_available_fid, &
        MISC_get_latlon
     use mod_adm, only: &
        ADM_prc_tab, &
@@ -850,7 +837,7 @@ contains
     real(RP) :: lat(ADM_gall,ADM_KNONE,ADM_lall)
     real(RP) :: lon(ADM_gall,ADM_KNONE,ADM_lall)
 
-    character(len=128) :: fname
+    character(len=H_LONG) :: fname
     integer            :: g, l, rgnid
     integer            :: fid
     !---------------------------------------------------------------------------
@@ -868,8 +855,8 @@ contains
        if ( basename /= 'NONE' ) then
           do l = 1, ADM_lall
              rgnid = ADM_prc_tab(l,ADM_prc_me)
-             call MISC_make_idstr(fname,trim(basename),'rgn',rgnid)
-             fid = MISC_get_available_fid()
+             call IO_make_idstr(fname,trim(basename),'rgn',rgnid-1)
+             fid = IO_get_available_fid()
 
              open( fid,                    &
                    file   = trim(fname),   &
