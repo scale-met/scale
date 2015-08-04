@@ -651,7 +651,7 @@ configファイル内にバルクジョブ機能用に追加する設定項目�
 オンライン・ネスティング実験の場合のlaunch.confファイルに対して、\verb|NUM_BULKJOB|の設定項目を加えただけとなっている。
 ここで実行するジョブ数は3つであるので、\verb|NUM_BULKJOB|に対して``3''と指定する。シングルドメイン実験として
 バルクジョブ機能を利用する場合は、\verb|NUM_DOMAIN = 1|と指定して、\verb|CONF_FILES|に1つだけconfigファイルを指定すればよい。
-実行時のコマンドは、 
+実行時のコマンドは、
 
 \begin{verbatim}
  $ mpirun  -n  135  ./scale-les  launch.conf
@@ -667,16 +667,21 @@ configファイル内にバルクジョブ機能用に追加する設定項目�
 \ovalbox{
 \begin{tabularx}{140mm}{l}
 \verb| ++++++ Start MPI| \\
-\verb| *** LOCAL_COMM_WORLD        :  4| \\
-\verb| *** total process  [LOCAL]  :  12| \\
-\verb| *** master rank    [LOCAL]  :  0| \\
-\verb| *** my process ID  [LOCAL]  :  0| \\
-\verb| *** GLOBAL_COMM_WORLD       :  3| \\
-\verb| *** total process  [GLOBAL] :  48| \\
-\verb| *** my process ID  [GLOBAL] :  36| \\
-\verb| *** MASTER_COMM_WORLD       :  0| \\
-\verb| *** total process  [MASTER] :  1488| \\
-\verb| *** my process ID  [MASTER] :  36| \\
+\verb| *** UNIVERSAL_COMM_WORLD        :        0| \\
+\verb| *** total process [UNIVERSAL]   :      135| \\
+\verb| *** my process ID [UNIVERSAL]   :       36| \\
+\verb| *** master rank?  [UNIVERSAL]   :        F| \\
+\verb| *** GLOBAL_COMM_WORLD           :        3| \\
+\verb| *** total process [GLOBAL]      :       45| \\
+\verb| *** my process ID [GLOBAL]      :       36| \\
+\verb| *** master rank?  [GLOBAL]      :        F| \\
+\verb| *** LOCAL_COMM_WORLD            :        4| \\
+\verb| *** total process [LOCAL]       :        9| \\
+\verb| *** my process ID [LOCAL]       :        0| \\
+\verb| *** master rank?  [LOCAL]       :        T| \\
+\verb| *** ABORT_COMM_WORLD            :        0| \\
+\verb| *** master rank ID [each world] :        0| \\
+
 \end{tabularx}
 }}}\\
 

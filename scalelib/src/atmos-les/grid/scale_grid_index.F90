@@ -93,7 +93,8 @@ contains
   subroutine GRID_INDEX_setup
     use scale_process, only: &
        PRC_MPIstop, &
-       PRC_myrank,  &
+       PRC_myrank
+    use scale_les_process, only: &
        PRC_2Drank,  &
        PRC_NUM_X,   &
        PRC_NUM_Y,   &

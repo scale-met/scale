@@ -152,7 +152,8 @@ contains
        enable_coriolis,  &
        lat               )
     use scale_process, only: &
-       PRC_MPIstop, &
+       PRC_MPIstop
+    use scale_les_process, only: &
        PRC_HAS_E, &
        PRC_HAS_W, &
        PRC_HAS_N, &
@@ -314,7 +315,7 @@ contains
        Rdry   => CONST_Rdry, &
        Rvap   => CONST_Rvap, &
        CVdry  => CONST_CVdry
-    use scale_process, only: &
+    use scale_les_process, only: &
        PRC_HAS_W, &
        PRC_HAS_E, &
        PRC_HAS_S, &

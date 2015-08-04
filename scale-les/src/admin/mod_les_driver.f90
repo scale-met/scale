@@ -17,14 +17,27 @@ module mod_les_driver
   !
   !++ used modules
   !
+  use dc_log, only: &
+     LogInit
+  use gtool_file, only: &
+     FileCloseAll
+  use scale_precision
+  use scale_stdio
+  use scale_prof
   !-----------------------------------------------------------------------------
   implicit none
   private
   !-----------------------------------------------------------------------------
   !
+  !++ included parameters
+  !
+#include "scale-les.h"
+  !-----------------------------------------------------------------------------
+  !
   !++ Public procedure
   !
   public :: scaleles
+
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
@@ -37,27 +50,21 @@ module mod_les_driver
   !
   !++ Private parameters & variables
   !
+  character(len=H_MID), private, parameter :: MODELNAME = "SCALE-LES ver. "//VERSION
+
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine scaleles( &
-       MY_COMM_WORLD,  &
-       inter_parent,   &
-       inter_child,    &
-       fname           )
-    use dc_log, only: &
-       LogInit
-    use gtool_file, only: &
-       FileCloseAll
-    use scale_precision
-    use scale_stdio
-    use scale_prof
-
+       comm_world,       &
+       intercomm_parent, &
+       intercomm_child,  &
+       cnf_fname         )
     use scale_process, only: &
-       PRC_setup,    &
-       PRC_MPIsetup, &
-       PRC_MPIfinish
+       PRC_LOCAL_setup
+    use scale_les_process, only: &
+       PRC_setup
     use scale_const, only: &
        CONST_setup
     use scale_calendar, only: &
@@ -193,31 +200,32 @@ contains
        USER_setup, &
        USER_step
     implicit none
-    !-----------------------------------------------------------------------------
-#include "scale-les.h"
-    !-----------------------------------------------------------------------------
 
-    integer, intent(in)  :: MY_COMM_WORLD
-    integer, intent(in)  :: inter_parent
-    integer, intent(in)  :: inter_child
-    character(len=H_LONG), intent(in) :: fname
+    integer,               intent(in) :: comm_world
+    integer,               intent(in) :: intercomm_parent
+    integer,               intent(in) :: intercomm_child
+    character(len=H_LONG), intent(in) :: cnf_fname
 
-    character(len=H_MID), parameter :: MODELNAME = "SCALE-LES ver. "//VERSION
-    !=============================================================================
+    integer :: myrank
+    logical :: ismaster
+    !---------------------------------------------------------------------------
 
     !########## Initial setup ##########
 
     ! setup standard I/O
-    call IO_setup( MODELNAME, .true., fname )
+    call IO_setup( MODELNAME, .true., cnf_fname )
 
     ! setup MPI
-    call PRC_MPIsetup( MY_COMM_WORLD )
+    call PRC_LOCAL_setup( comm_world, & ! [IN]
+                          myrank,     & ! [OUT]
+                          ismaster    ) ! [OUT]
+
+    ! setup Log
+    call IO_LOG_setup( myrank, ismaster )
+    call LogInit( IO_FID_CONF, IO_FID_LOG, IO_L )
 
     ! setup process
     call PRC_setup
-
-    ! setup Log
-    call LogInit( IO_FID_CONF, IO_FID_LOG, IO_L )
 
     ! setup PROF
     call PROF_setup
@@ -278,7 +286,7 @@ contains
     call MONIT_setup
 
     ! setup nesting grid
-    call NEST_setup ( inter_parent, inter_child )
+    call NEST_setup ( intercomm_parent, intercomm_child )
 
     ! setup common tools
     call ATMOS_HYDROSTATIC_setup
@@ -411,11 +419,11 @@ contains
     call PROF_PAPI_rapreport
 #endif
 
-    call FileCloseAll
-
     call MONIT_finalize
+
+    call FileCloseAll
 
     return
   end subroutine scaleles
-  !=============================================================================
+
 end module mod_les_driver

@@ -22,7 +22,9 @@ module mod_user
      IO_FID_LOG, &
      IO_L
   use scale_precision
+  use scale_stdio
   use scale_prof
+
   use scale_tracer
   use scale_grid_index
   use scale_index

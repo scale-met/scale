@@ -422,9 +422,9 @@ contains
   !> Open file and write header at the first time
   subroutine MONIT_writeheader
     use scale_process, only: &
+       PRC_MPIstop, &
        PRC_myrank, &
-       PRC_master, &
-       PRC_MPIstop
+       PRC_IsMaster
     implicit none
 
     character(len=H_LONG) :: fname !< name of monitor file for each process
@@ -448,7 +448,7 @@ contains
     if( IO_L ) write(IO_FID_LOG,'(1x,A,A)') '=====================================================', &
                                             '====================================================='
 
-    if ( PRC_myrank == PRC_master ) then ! master node
+    if ( PRC_IsMaster ) then ! master node
        MONIT_L = .true.
     else
        MONIT_L = IO_LOG_ALLNODE

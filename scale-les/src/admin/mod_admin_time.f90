@@ -746,8 +746,7 @@ contains
   !> Advance the time & evaluate restart & stop
   subroutine ADMIN_TIME_advance
     use scale_process, only: &
-       PRC_master, &
-       PRC_myrank
+       PRC_IsMaster
     use scale_calendar, only: &
        CALENDAR_daysec2date,   &
        CALENDAR_adjust_daysec, &
@@ -790,7 +789,7 @@ contains
     endif
 
     ! QUIT file control
-    if ( PRC_myrank == PRC_master ) then ! master node
+    if ( PRC_IsMaster ) then ! master node
        inquire(file='QUIT', exist=exists)
 
        if( exists ) TIME_DOend = .true.

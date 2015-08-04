@@ -561,10 +561,11 @@ contains
        FileAddVariable, &
        FileWrite
     use scale_process, only: &
-       PRC_master, &
-       PRC_myrank, &
-       PRC_2Drank, &
+       PRC_masterrank, &
+       PRC_myrank,     &
        PRC_MPIstop
+    use scale_les_process, only: &
+       PRC_2Drank
     use scale_time, only: &
        NOWSEC => TIME_NOWDAYSEC
     implicit none
@@ -616,7 +617,7 @@ contains
                      title,          & ! [IN]
                      H_SOURCE,       & ! [IN]
                      H_INSTITUTE,    & ! [IN]
-                     PRC_master,     & ! [IN]
+                     PRC_masterrank, & ! [IN]
                      PRC_myrank,     & ! [IN]
                      rankidx,        & ! [IN]
                      append = append ) ! [IN]
@@ -682,10 +683,11 @@ contains
        FileAddVariable, &
        FileWrite
     use scale_process, only: &
-       PRC_master, &
-       PRC_myrank, &
-       PRC_2Drank, &
+       PRC_masterrank, &
+       PRC_myrank,     &
        PRC_MPIstop
+    use scale_les_process, only: &
+       PRC_2Drank
     use scale_time, only: &
        NOWSEC => TIME_NOWDAYSEC
     implicit none
@@ -745,7 +747,7 @@ contains
                      title,          & ! [IN]
                      H_SOURCE,       & ! [IN]
                      H_INSTITUTE,    & ! [IN]
-                     PRC_master,     & ! [IN]
+                     PRC_masterrank, & ! [IN]
                      PRC_myrank,     & ! [IN]
                      rankidx,        & ! [IN]
                      append = append ) ! [IN]
@@ -865,10 +867,11 @@ contains
        FileAddVariable, &
        FileWrite
     use scale_process, only: &
-       PRC_master, &
-       PRC_myrank, &
-       PRC_2Drank, &
+       PRC_masterrank, &
+       PRC_myrank,     &
        PRC_MPIstop
+    use scale_les_process, only: &
+       PRC_2Drank
     use scale_time, only: &
        NOWSEC => TIME_NOWDAYSEC
     implicit none
@@ -936,7 +939,7 @@ contains
                      title,             & ! [IN]
                      H_SOURCE,          & ! [IN]
                      H_INSTITUTE,       & ! [IN]
-                     PRC_master,        & ! [IN]
+                     PRC_masterrank,    & ! [IN]
                      PRC_myrank,        & ! [IN]
                      rankidx,           & ! [IN]
                      append = append_sw ) ! [IN]
@@ -1093,12 +1096,11 @@ contains
        FileAddVariable, &
        FileWrite
     use scale_process, only: &
-       PRC_master, &
-       PRC_myrank, &
-       PRC_2Drank, &
+       PRC_masterrank, &
+       PRC_myrank,     &
        PRC_MPIstop
-!    use scale_time, only: &
-!       NOWSEC => TIME_NOWDAYSEC
+    use scale_les_process, only: &
+       PRC_2Drank
     implicit none
 
     real(RP),          intent(in)  :: var(:,:,:,:) !< value of the variable
@@ -1172,7 +1174,7 @@ contains
                      title,             & ! [IN]
                      H_SOURCE,          & ! [IN]
                      H_INSTITUTE,       & ! [IN]
-                     PRC_master,        & ! [IN]
+                     PRC_masterrank,    & ! [IN]
                      PRC_myrank,        & ! [IN]
                      rankidx,           & ! [IN]
                      append = append_sw ) ! [IN]

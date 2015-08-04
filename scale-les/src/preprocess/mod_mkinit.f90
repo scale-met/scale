@@ -4445,7 +4445,7 @@ enddo
   !-----------------------------------------------------------------------------
   !> Make initial state ( sea breeze )
   subroutine MKINIT_seabreeze
-    use scale_process, only: &
+    use scale_les_process, only: &
        PRC_NUM_X
     use scale_landuse, only: &
        LANDUSE_frac_land
@@ -4486,7 +4486,7 @@ enddo
   !-----------------------------------------------------------------------------
   !> Make initial state ( heat island )
   subroutine MKINIT_heatisland
-    use scale_process, only: &
+    use scale_les_process, only: &
        PRC_NUM_X
     use scale_landuse, only: &
        LANDUSE_frac_land,    &

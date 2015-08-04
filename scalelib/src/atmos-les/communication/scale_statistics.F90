@@ -22,7 +22,7 @@ module scale_statistics
   use scale_prof
   use scale_grid_index
   use scale_process, only: &
-     LOCAL_COMM_WORLD
+     PRC_LOCAL_COMM_WORLD
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -143,7 +143,7 @@ contains
                            1,                    &
                            COMM_datatype,        &
                            MPI_SUM,              &
-                           LOCAL_COMM_WORLD,     &
+                           PRC_LOCAL_COMM_WORLD, &
                            ierr                  )
 
        call PROF_rapend  ('COMM_Allreduce', 2)
@@ -214,7 +214,7 @@ contains
                            1,                    &
                            COMM_datatype,        &
                            MPI_SUM,              &
-                           LOCAL_COMM_WORLD,     &
+                           PRC_LOCAL_COMM_WORLD, &
                            ierr                  )
 
        call PROF_rapend  ('COMM_Allreduce', 2)
@@ -241,7 +241,7 @@ contains
   !> Search global maximum & minimum value
   subroutine STAT_detail(var, varname)
     use scale_process, only: &
-       PRC_nmax,   &
+       PRC_nprocs,   &
        PRC_myrank
     use scale_const, only: &
        CONST_UNDEF8, &
@@ -275,8 +275,8 @@ contains
        halomask(:,IS:IE,JS:JE) = .true.
     endif
 
-    allocate( statval(  vsize,2,0:PRC_nmax-1) ); statval(:,:,:)   = CONST_UNDEF8
-    allocate( statidx(3,vsize,2,0:PRC_nmax-1) ); statidx(:,:,:,:) = CONST_UNDEF2
+    allocate( statval(  vsize,2,0:PRC_nprocs-1) ); statval(:,:,:)   = CONST_UNDEF8
+    allocate( statidx(3,vsize,2,0:PRC_nprocs-1) ); statidx(:,:,:,:) = CONST_UNDEF2
 
     allocate( allstatval(  vsize,2) ); allstatval(:,:)   = CONST_UNDEF8
     allocate( allstatidx(1,vsize,2) ); allstatidx(:,:,:) = CONST_UNDEF2
@@ -292,19 +292,22 @@ contains
 
     if ( STATISTICS_use_globalcomm ) then
        call PROF_rapstart('COMM_Bcast', 2)
-       do p = 0, PRC_nmax-1
-          call MPI_Bcast( statval(1,1,p),   &
-                          vsize*2,          &
-                          COMM_datatype,    &
-                          p,                &
-                          LOCAL_COMM_WORLD, &
-                          ierr              )
-          call MPI_Bcast( statidx(1,1,1,p), &
-                          3*vsize*2,        &
-                          MPI_INTEGER,      &
-                          p,                &
-                          LOCAL_COMM_WORLD, &
-                          ierr              )
+       do p = 0, PRC_nprocs-1
+
+          call MPI_Bcast( statval(1,1,p),       &
+                          vsize*2,              &
+                          COMM_datatype,        &
+                          p,                    &
+                          PRC_LOCAL_COMM_WORLD, &
+                          ierr                  )
+
+          call MPI_Bcast( statidx(1,1,1,p),     &
+                          3*vsize*2,            &
+                          MPI_INTEGER,          &
+                          p,                    &
+                          PRC_LOCAL_COMM_WORLD, &
+                          ierr                  )
+
        enddo
        call PROF_rapend  ('COMM_Bcast', 2)
 

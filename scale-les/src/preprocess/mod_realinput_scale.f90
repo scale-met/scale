@@ -20,7 +20,6 @@ module mod_realinput_scale
   use scale_tracer
   use scale_process, only: &
        myrank => PRC_myrank,  &
-       PRC_master,            &
        PRC_MPIstop
   use scale_grid_nest, only: &
        PARENT_KMAX,     &
@@ -117,7 +116,7 @@ contains
     real(RP), intent(out) :: lon_org(:,:)
     real(RP), intent(out) :: lat_org(:,:)
     real(RP), intent(out) :: cz_org (:,:,:)
-    character(LEN=*), intent(in)  :: basename_org
+    character(len=*), intent(in)  :: basename_org
     integer,  intent(in)  :: dims(11)
 
     integer :: rank
@@ -203,7 +202,7 @@ contains
     real(RP),         intent(out) :: dens_org(:,:,:)
     real(RP),         intent(out) :: pott_org(:,:,:)
     real(RP),         intent(out) :: qtrc_org(:,:,:,:)
-    character(LEN=*), intent(in)  :: basename_org
+    character(len=*), intent(in)  :: basename_org
     integer,          intent(in)  :: dims(7)
     integer,          intent(in)  :: it
 
@@ -387,7 +386,7 @@ contains
     real(RP), intent(out) :: lsmask_org(:,:)
     real(RP), intent(out) :: lz_org(:)
 
-    character(LEN=*), intent(in) :: basename_org
+    character(len=*), intent(in) :: basename_org
     integer,          intent(in) :: dims(11)
     logical,          intent(in) :: use_file_landwater   ! use land water data from files
     integer,          intent(in) :: it

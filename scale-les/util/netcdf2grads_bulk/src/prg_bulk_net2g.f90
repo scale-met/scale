@@ -15,22 +15,24 @@ program netcdf2grads_h_launcher
   !
   !++ used modules
   !
+  use dc_log, only: &
+     LogInit
+  use gtool_file, only: &
+     FileCloseAll
   use scale_precision
   use scale_stdio
   use scale_prof
+
   use scale_process, only: &
-     PRC_setup,         &
-     PRC_MPIstart,      &
-     PRC_MPIsplit,      &
-     PRC_MPIstop,       &
-     PRC_BULKsetup,     &
-     MASTER_LOG,        &
-     MASTER_COMM_WORLD, &
-     MASTER_nmax,       &
-     max_depth
+     PRC_DOMAIN_nlim,     &
+     PRC_MPIstart,        &
+     PRC_MPIstop,         &
+     PRC_MPIfinish,       &
+     PRC_MPIsplit,        &
+     PRC_UNIVERSAL_setup, &
+     PRC_GLOBAL_setup
   use mod_net2g_comm
   use mod_netcdf2grads_h
-  !
   !-----------------------------------------------------------------------------
   implicit none
   !-----------------------------------------------------------------------------
@@ -43,30 +45,12 @@ program netcdf2grads_h_launcher
   !
   !=============================================================================
 
-  integer :: NUM_BULKJOB                  ! number of bulk jobs
-  integer :: NUM_DOMAIN                   ! number of domains
-  integer :: PRC_BULKJOB(max_depth)       ! # of total process in each bulk job
-  integer :: PRC_DOMAINS(max_depth)       ! # of total process in each domain
-  integer :: BULK_COMM_WORLD              ! split communicator for each bulk job
-  integer :: MY_COMM_WORLD                ! assigned local communicator
-  integer :: inter_parent                 ! inter communicator with parent
-  integer :: inter_child                  ! inter communicator with child
-  integer :: inter_parent_null            ! inter communicator with parent
-  integer :: inter_child_null             ! inter communicator with child
-
-  logical :: ABORT_ALL_JOBS = .false.     ! flag of abort all jobs or not
-  logical :: LOG_SPLIT = .false.          ! flag of log-output for mpi splitting
-
-  character(len=H_LONG) :: CONF_FILES(max_depth)  ! names of configulation files
-  character(len=H_LONG) :: CONF_BULKS(max_depth)  ! names of configulation files (dummy)
-  character(len=H_LONG) :: fname_launch           ! config file for launcher
-  character(len=H_LONG) :: fname_local            ! config file for local domain
-  character(len=H_LONG) :: fname_bulks            ! config file for dummy use
-  character(len=H_LONG) :: fname_scaleles         ! config file for scaleles
-
-  integer :: check, nprocs
-  integer :: ierr
-  integer :: LNC_FID_CONF
+  integer               :: NUM_BULKJOB                  = 1       ! number of bulk jobs
+  integer               :: NUM_DOMAIN                   = 1       ! number of domains
+  integer               :: PRC_DOMAINS(PRC_DOMAIN_nlim) = 0       ! number of total process in each domain
+  character(len=H_LONG) :: CONF_FILES (PRC_DOMAIN_nlim) = ""      ! name of configulation files
+  logical               :: ABORT_ALL_JOBS               = .false. ! abort all jobs or not?
+  logical               :: LOG_SPLIT                    = .false. ! log-output for mpi splitting?
 
   namelist / PARAM_LAUNCHER / &
      NUM_BULKJOB,     &
@@ -75,111 +59,120 @@ program netcdf2grads_h_launcher
      CONF_FILES,      &
      ABORT_ALL_JOBS,  &
      LOG_SPLIT
+
+  integer               :: universal_comm                         ! universal communicator
+  integer               :: universal_nprocs                       ! number of procs in universal communicator
+  logical               :: universal_master                       ! master process  in universal communicator?
+  character(len=H_LONG) :: universal_cnf_fname                    ! config file for launcher
+
+  integer               :: global_comm                            ! communicator for each member
+  integer               :: global_nprocs                          ! number of procs in global communicator
+  integer               :: PRC_BULKJOB(PRC_DOMAIN_nlim) = 0       ! = global_nprocs
+  character(len=H_LONG) :: dummy1     (PRC_DOMAIN_nlim) = ""
+  integer               :: intercomm_parent_null                  ! NULL inter communicator with parent
+  integer               :: intercomm_child_null                   ! NULL inter communicator with child
+  character(len=H_LONG) :: bulk_prefix                            ! dirname of each member
+
+  integer               :: local_comm       ! assigned local communicator
+  integer               :: intercomm_parent ! inter communicator with parent
+  integer               :: intercomm_child  ! inter communicator with child
+  character(len=H_LONG) :: local_cnf_fname  ! config file for local domain
+
+  integer :: fid, ierr
   !-----------------------------------------------------------
 
-  NUM_BULKJOB      = 1
-  NUM_DOMAIN       = 1
-  PRC_BULKJOB(:)   = 0
-  PRC_DOMAINS(:)   = 0
-  CONF_FILES(:)    = ""
-  CONF_BULKS(:)    = ""
-
   ! start MPI
-  call PRC_MPIstart
-  if ( MASTER_LOG ) write(*,*) '*** Start Launch System for SCALE (POPSCA)'
+  call PRC_MPIstart( universal_comm ) ! [OUT]
 
-  !--- read from argument
-  if ( COMMAND_ARGUMENT_COUNT() < 1 ) then
-     if (MASTER_LOG) write(*,*) 'WARNING: No config file specified!'
-     if (MASTER_LOG) write(*,*) '         Default values are used.'
-  else
-     call get_command_argument(1,fname_launch)
-  endif
-  CONF_FILES(1) = fname_launch
+  call PRC_UNIVERSAL_setup( universal_comm,   & ! [IN]
+                            universal_nprocs, & ! [OUT]
+                            universal_master  ) ! [OUT]
 
-  !--- open config file till end
-  LNC_FID_CONF = IO_get_available_fid()
-  open( LNC_FID_CONF,                &
-        file   = trim(fname_launch), &
-        form   = 'formatted',        &
-        status = 'old',              &
-        iostat = ierr                )
-  if ( ierr /= 0 ) then
-     if (MASTER_LOG) write(*,*)
-     if (MASTER_LOG) write(*,*) 'WARNING: Failed to open config file! :', trim(fname_launch)
-     if (MASTER_LOG) write(*,*) '         Default values are used.'
-     if (MASTER_LOG) write(*,*)
-  end if
+  if( universal_master ) write(*,*) '*** Start Launch System for SCALE (POPSCA)'
 
-  !--- read PARAM_LAUNCHER
-  rewind(LNC_FID_CONF)
-  read(LNC_FID_CONF,nml=PARAM_LAUNCHER,iostat=ierr)
-  if( ierr > 0 ) then !--- fatal error
-     if (MASTER_LOG) write(*,*) ' xxx Not appropriate names in namelist PARAM_LAUNCHER. Check!'
-     call PRC_MPIstop
-  endif
-  close( LNC_FID_CONF )
-  fname_local = CONF_FILES(1)
+  !--- read launcher config
 
-  !--- communicator split for bulk jobs
-  check = mod(MASTER_nmax,NUM_BULKJOB)
-  if( check /= 0 ) then !--- fatal error
-     if (MASTER_LOG) write(*,*) ' xxx Total Num of Processes must be divisible by NUM_BULKJOB. Check!'
-     if (MASTER_LOG) write(*,*) '     Total Num of Processes: ', MASTER_nmax
-     if (MASTER_LOG) write(*,*) '                NUM_BULKJOB: ', NUM_BULKJOB
+  universal_cnf_fname = IO_ARG_getfname( universal_master )
+
+  fid = IO_CNF_open( universal_cnf_fname, & ! [IN]
+                     universal_master     ) ! [IN]
+
+  ! set default
+  CONF_FILES(1) = universal_cnf_fname
+
+  ! read namelist
+  rewind(fid)
+  read(fid,nml=PARAM_LAUNCHER,iostat=ierr)
+  if ( ierr < 0 ) then !--- missing
+     ! keep default setting (no members, no nesting)
+  elseif( ierr > 0 ) then !--- fatal error
+     if( universal_master ) write(*,*) 'xxx Not appropriate names in namelist PARAM_CONST. Check!'
      call PRC_MPIstop
   endif
 
-  nprocs = MASTER_nmax / NUM_BULKJOB
-  PRC_BULKJOB(1:NUM_BULKJOB) = nprocs
-  if ( MASTER_LOG ) write ( *, '(1X,A,I4)' ) "TOTAL BULK JOB NUMBER   = ", NUM_BULKJOB
-  if ( MASTER_LOG ) write ( *, '(1X,A,I5)' ) "PROCESS NUM of EACH JOB = ", nprocs
-  if ( MASTER_LOG ) write ( *, '(1X,A,I4)' ) "TOTAL DOMAIN NUMBER     = ", NUM_DOMAIN
-  if ( MASTER_LOG ) write ( *, * ) "Flag of ABORT ALL JOBS  = ", ABORT_ALL_JOBS
+  close(fid)
 
-  call PRC_MPIsplit(     &
-      MASTER_COMM_WORLD, & ! [in ]
-      NUM_BULKJOB,       & ! [in ]
-      PRC_BULKJOB,       & ! [in ]
-      CONF_BULKS,        & ! [in ] dummy
-      LOG_SPLIT,         & ! [in ]
-      .true.,            & ! [in ] flag bulk_split
-      BULK_COMM_WORLD,   & ! [out]
-      inter_parent_null, & ! [out] dummy
-      inter_child_null,  & ! [out] dummy
-      fname_bulks        ) ! [out]
+  !--- split for bulk jobs
 
-  call PRC_BULKsetup(    &
-      BULK_COMM_WORLD,   & ! [in]
-      ABORT_ALL_JOBS     ) ! [in]
+  if ( mod(universal_nprocs,NUM_BULKJOB) /= 0 ) then !--- fatal error
+     if( universal_master ) write(*,*) 'xxx Total Num of Processes must be divisible by NUM_BULKJOB. Check!'
+     if( universal_master ) write(*,*) 'xxx Total Num of Processes = ', universal_nprocs
+     if( universal_master ) write(*,*) 'xxx            NUM_BULKJOB = ', NUM_BULKJOB
+     call PRC_MPIstop
+  endif
 
-
-  !--- communicator split for nesting domains
-  call PRC_MPIsplit(     &
-      BULK_COMM_WORLD,   & ! [in ]
-      NUM_DOMAIN,        & ! [in ]
-      PRC_DOMAINS,       & ! [in ]
-      CONF_FILES,        & ! [in ]
-      LOG_SPLIT,         & ! [in ]
-      .false.,           & ! [in ] flag bulk_split
-      MY_COMM_WORLD,     & ! [out]
-      inter_parent,      & ! [out]
-      inter_child,       & ! [out]
-      fname_local        ) ! [out]
-
-
-  ! start main routine
+  global_nprocs = universal_nprocs / NUM_BULKJOB
+  PRC_BULKJOB(1:NUM_BULKJOB) = global_nprocs
   if ( NUM_BULKJOB > 1 ) then
-     fname_scaleles = trim(fname_bulks)//"/"//trim(fname_local)
-  else
-     fname_scaleles = fname_local
+     if( universal_master ) write(*,'(1x,A,I5)') "*** TOTAL BULK JOB NUMBER   = ", NUM_BULKJOB
+     if( universal_master ) write(*,'(1x,A,I5)') "*** PROCESS NUM of EACH JOB = ", global_nprocs
   endif
-  call popsca( MY_COMM_WORLD, fname_scaleles )
 
+  ! communicator split for bulk/ensemble
+  call PRC_MPIsplit( universal_comm,        & ! [IN]
+                     NUM_BULKJOB,           & ! [IN]
+                     PRC_BULKJOB(:),        & ! [IN]
+                     dummy1 (:),            & ! [IN]  dummy
+                     LOG_SPLIT,             & ! [IN]
+                     .true.,                & ! [IN]  flag bulk_split
+                     global_comm,           & ! [OUT]
+                     intercomm_parent_null, & ! [OUT] null
+                     intercomm_child_null,  & ! [OUT] null
+                     bulk_prefix            ) ! [OUT] dir name instead of file name
+
+  call PRC_GLOBAL_setup( ABORT_ALL_JOBS, & ! [IN]
+                         global_comm     ) ! [IN]
+
+  !--- split for nesting
+
+  if ( NUM_DOMAIN > 1 ) then
+     if( universal_master ) write(*,'(1x,A,I5)') "*** TOTAL DOMAIN NUMBER     = ", NUM_DOMAIN
+     if( universal_master ) write(*,'(1x,A,L5)') "*** Flag of ABORT ALL JOBS  = ", ABORT_ALL_JOBS
+  endif
+
+  ! communicator split for nesting domains
+  call PRC_MPIsplit( global_comm,      & ! [IN]
+                     NUM_DOMAIN,       & ! [IN]
+                     PRC_DOMAINS(:),   & ! [IN]
+                     CONF_FILES (:),   & ! [IN]
+                     LOG_SPLIT,        & ! [IN]
+                     .false.,          & ! [IN] flag bulk_split
+                     local_comm,       & ! [OUT]
+                     intercomm_parent, & ! [OUT]
+                     intercomm_child,  & ! [OUT]
+                     local_cnf_fname   ) ! [OUT]
+
+  !--- start main routine
+
+  if ( NUM_BULKJOB > 1 ) then
+     local_cnf_fname = trim(bulk_prefix)//"/"//trim(local_cnf_fname)
+  endif
+
+  call popsca( local_comm,     & ! [IN]
+               local_cnf_fname ) ! [IN]
 
   ! stop MPI
   call comm_finalize
 
   stop
-  !=============================================================================
 end program netcdf2grads_h_launcher

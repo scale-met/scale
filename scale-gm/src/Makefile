@@ -22,11 +22,11 @@ PPNAME7 = gm_fio_cat
 PPNAME8 = gm_fio_sel
 PPNAME9 = gm_fio_ico2ll
 
-ifeq ($(NOINIT),)
-  BINS = $(BINDIR)/$(BINNAME) $(BINDIR)/$(PPNAME1) $(BINDIR)/$(PPNAME2) $(BINDIR)/$(PPNAME3) $(BINDIR)/$(PPNAME4) $(BINDIR)/$(PPNAME5) $(BINDIR)/$(PPNAME6) $(BINDIR)/$(PPNAME7) $(BINDIR)/$(PPNAME8) $(BINDIR)/$(PPNAME9)
-else
+#ifeq ($(NOINIT),)
+#  BINS = $(BINDIR)/$(BINNAME) $(BINDIR)/$(PPNAME1) $(BINDIR)/$(PPNAME2) $(BINDIR)/$(PPNAME3) $(BINDIR)/$(PPNAME4) $(BINDIR)/$(PPNAME5) $(BINDIR)/$(PPNAME6) $(BINDIR)/$(PPNAME7) $(BINDIR)/$(PPNAME8) $(BINDIR)/$(PPNAME9)
+#else
   BINS = $(BINDIR)/$(BINNAME)
-endif
+#endif
 
 DEPENDLIB = $(LIBDIR)/libscale.a $(LIBDIR)/libgtool.a $(LIBDIR)/libdcutils.a
 
@@ -89,6 +89,7 @@ OBJS =	\
 	mod_src_tracer.o     \
 	mod_nudge.o          \
 	mod_dynamics.o       \
+	mod_gm_driver.o      \
 	orgico.o             \
 	mod_latlon.o         \
 	mod_mkgrd.o          \
@@ -197,6 +198,7 @@ $(BUILD_DIR)/mod_src.o            : mod_src.f90            mod_adm.o mod_grd.o m
 $(BUILD_DIR)/mod_vi.o             : mod_vi.f90             mod_adm.o mod_grd.o mod_comm.o mod_time.o mod_oprt.o mod_vmtr.o mod_runconf.o mod_bndcnd.o mod_numfilter.o mod_src.o mod_cnvvar.o mod_bsstate.o
 $(BUILD_DIR)/mod_dynamics.o       : mod_dynamics.f90       mod_adm.o mod_grd.o mod_time.o mod_vmtr.o mod_runconf.o mod_bsstate.o mod_bndcnd.o mod_prgvar.o mod_thrmdyn.o mod_numfilter.o mod_vi.o mod_src.o mod_src_tracer.o mod_nudge.o mod_oprt.o
 $(BUILD_DIR)/mod_forcing_driver.o : mod_forcing_driver.f90 mod_adm.o mod_grd.o mod_gmtr.o mod_vmtr.o mod_time.o mod_runconf.o mod_cnvvar.o mod_prgvar.o mod_thrmdyn.o mod_gtl.o mod_bsstate.o mod_bndcnd.o mod_misc.o mod_af_heldsuarez.o mod_history.o mod_af_trcadv.o
+$(BUILD_DIR)/mod_gm_driver.o      : mod_gm_driver.f90      mod_adm.o mod_fio.o mod_comm.o mod_grd.o mod_gmtr.o mod_oprt.o mod_vmtr.o mod_time.o mod_extdata.o mod_runconf.o mod_prgvar.o mod_dynamics.o mod_forcing_driver.o mod_history.o mod_history_vars.o mod_embudget.o mod_bsstate.o mod_numfilter.o mod_vi.o
 $(BUILD_DIR)/mod_af_heldsuarez.o  : mod_af_heldsuarez.f90  mod_adm.o
 $(BUILD_DIR)/mod_af_trcadv.o      : mod_af_trcadv.f90      mod_adm.o
 $(BUILD_DIR)/mod_nudge.o          : mod_nudge.f90          mod_adm.o mod_misc.o mod_time.o mod_grd.o mod_vmtr.o mod_history.o mod_gmtr.o mod_oprt.o mod_runconf.o mod_gtl.o mod_comm.o mod_extdata.o
