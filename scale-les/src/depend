@@ -10,7 +10,7 @@ $(BUILD_DIR)/mod_atmos_phy_ch_driver.o: atmos/mod_atmos_phy_ch_driver.f90 $(DEPE
 $(BUILD_DIR)/mod_atmos_phy_ch_vars.o: atmos/mod_atmos_phy_ch_vars.f90 $(DEPENDLIB)
 $(BUILD_DIR)/mod_atmos_phy_cp_driver.o: atmos/mod_atmos_phy_cp_driver.f90 $(DEPENDLIB) $(BUILD_DIR)/mod_atmos_admin.o $(BUILD_DIR)/mod_atmos_phy_cp_vars.o $(BUILD_DIR)/mod_atmos_vars.o
 $(BUILD_DIR)/mod_atmos_phy_cp_vars.o: atmos/mod_atmos_phy_cp_vars.f90 $(DEPENDLIB)
-$(BUILD_DIR)/mod_atmos_phy_mp_driver.o: atmos/mod_atmos_phy_mp_driver.f90 $(DEPENDLIB) $(BUILD_DIR)/mod_atmos_admin.o $(BUILD_DIR)/mod_atmos_phy_mp_vars.o $(BUILD_DIR)/mod_atmos_vars.o
+$(BUILD_DIR)/mod_atmos_phy_mp_driver.o: atmos/mod_atmos_phy_mp_driver.f90 $(DEPENDLIB) $(BUILD_DIR)/mod_atmos_admin.o $(BUILD_DIR)/mod_atmos_phy_ae_vars.o $(BUILD_DIR)/mod_atmos_phy_mp_vars.o $(BUILD_DIR)/mod_atmos_vars.o
 $(BUILD_DIR)/mod_atmos_phy_mp_vars.o: atmos/mod_atmos_phy_mp_vars.f90 $(DEPENDLIB)
 $(BUILD_DIR)/mod_atmos_phy_rd_driver.o: atmos/mod_atmos_phy_rd_driver.f90 $(DEPENDLIB) $(BUILD_DIR)/mod_atmos_admin.o $(BUILD_DIR)/mod_atmos_phy_rd_vars.o $(BUILD_DIR)/mod_atmos_phy_sf_vars.o $(BUILD_DIR)/mod_atmos_vars.o
 $(BUILD_DIR)/mod_atmos_phy_rd_vars.o: atmos/mod_atmos_phy_rd_vars.f90 $(DEPENDLIB)
@@ -32,7 +32,7 @@ $(BUILD_DIR)/mod_land_driver.o: land/mod_land_driver.f90 $(DEPENDLIB) $(BUILD_DI
 $(BUILD_DIR)/mod_land_phy_driver.o: land/mod_land_phy_driver.f90 $(DEPENDLIB) $(BUILD_DIR)/mod_admin_restart.o $(BUILD_DIR)/mod_land_admin.o $(BUILD_DIR)/mod_land_vars.o
 $(BUILD_DIR)/mod_land_vars.o: land/mod_land_vars.f90 $(DEPENDLIB) $(BUILD_DIR)/mod_land_admin.o
 $(BUILD_DIR)/mod_les_driver.o: admin/mod_les_driver.f90 $(DEPENDLIB) $(BUILD_DIR)/mod_admin_restart.o $(BUILD_DIR)/mod_admin_time.o $(BUILD_DIR)/mod_atmos_admin.o $(BUILD_DIR)/mod_atmos_driver.o $(BUILD_DIR)/mod_atmos_vars.o $(BUILD_DIR)/mod_cpl_admin.o $(BUILD_DIR)/mod_cpl_vars.o $(BUILD_DIR)/mod_land_admin.o $(BUILD_DIR)/mod_land_driver.o $(BUILD_DIR)/mod_land_vars.o $(BUILD_DIR)/mod_ocean_admin.o $(BUILD_DIR)/mod_ocean_driver.o $(BUILD_DIR)/mod_ocean_vars.o $(BUILD_DIR)/mod_urban_admin.o $(BUILD_DIR)/mod_urban_driver.o $(BUILD_DIR)/mod_urban_vars.o $(BUILD_DIR)/mod_user.o
-$(BUILD_DIR)/mod_mkinit.o: preprocess/mod_mkinit.f90 $(DEPENDLIB) $(BUILD_DIR)/mod_atmos_driver.o $(BUILD_DIR)/mod_atmos_phy_mp_vars.o $(BUILD_DIR)/mod_atmos_phy_rd_vars.o $(BUILD_DIR)/mod_atmos_vars.o $(BUILD_DIR)/mod_land_driver.o $(BUILD_DIR)/mod_land_vars.o $(BUILD_DIR)/mod_ocean_driver.o $(BUILD_DIR)/mod_ocean_vars.o $(BUILD_DIR)/mod_realinput.o $(BUILD_DIR)/mod_urban_driver.o $(BUILD_DIR)/mod_urban_vars.o
+$(BUILD_DIR)/mod_mkinit.o: preprocess/mod_mkinit.f90 $(DEPENDLIB) $(BUILD_DIR)/mod_atmos_driver.o $(BUILD_DIR)/mod_atmos_phy_ae_vars.o $(BUILD_DIR)/mod_atmos_phy_mp_vars.o $(BUILD_DIR)/mod_atmos_phy_rd_vars.o $(BUILD_DIR)/mod_atmos_vars.o $(BUILD_DIR)/mod_land_driver.o $(BUILD_DIR)/mod_land_vars.o $(BUILD_DIR)/mod_ocean_driver.o $(BUILD_DIR)/mod_ocean_vars.o $(BUILD_DIR)/mod_realinput.o $(BUILD_DIR)/mod_urban_driver.o $(BUILD_DIR)/mod_urban_vars.o
 $(BUILD_DIR)/mod_mktopo.o: preprocess/mod_mktopo.f90 $(DEPENDLIB)
 $(BUILD_DIR)/mod_ocean_admin.o: ocean/mod_ocean_admin.f90 $(DEPENDLIB)
 $(BUILD_DIR)/mod_ocean_driver.o: ocean/mod_ocean_driver.f90 $(DEPENDLIB) $(BUILD_DIR)/mod_cpl_vars.o $(BUILD_DIR)/mod_ocean_admin.o $(BUILD_DIR)/mod_ocean_phy_driver.o $(BUILD_DIR)/mod_ocean_vars.o
