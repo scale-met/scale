@@ -242,9 +242,6 @@ contains
        call FileRead( read2D(:,:), BASENAME_ORG, "T2", it, rank )
        tsfc_org(xs:xe,ys:ye) = read2D(:,:)
 
-       call FileRead( read2D(:,:), BASENAME_ORG, "Q2", it, rank )
-       qtrc_org(2,xs:xe,ys:ye,I_QV) = read2D(:,:)
-
        call FileRead( read2D(:,:), BASENAME_ORG, "MSLP", it, rank )
        pres_org(1,xs:xe,ys:ye) = read2D(:,:)
 
@@ -278,7 +275,11 @@ contains
           do k = 1, dims(1)
              qtrc_org(k+2,xs:xe,ys:ye,iq) = read3D(:,:,k)
           end do
+          qtrc_org(2,xs:xe,ys:ye,iq) = qtrc_org(3,xs:xe,ys:ye,iq)
        end do
+
+!       call FileRead( read2D(:,:), BASENAME_ORG, "Q2", it, rank )
+!       qtrc_org(2,xs:xe,ys:ye,I_QV) = read2D(:,:)
 
     end do
 
