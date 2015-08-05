@@ -4942,17 +4942,10 @@ enddo
        call PRC_MPIstop
     endif
 
-    if     ( FILETYPE_ORG == 'WRF-ARW' ) then
-      BASENAME_WITHNUM = trim(BASENAME_ORG)//"_00000"
-    else if( FILETYPE_ORG == 'SCALE-LES' ) then
-      BASENAME_WITHNUM = trim(BASENAME_ORG)
-    else if( FILETYPE_ORG == 'NICAM-NETCDF' ) then
-      BASENAME_WITHNUM = trim(BASENAME_ORG)//"_00000"
-    else if( FILETYPE_ORG == 'GrADS' ) then
-      BASENAME_WITHNUM = trim(BASENAME_ORG)//"_00000"
+    if ( NUMBER_OF_FILES > 1 ) then
+       BASENAME_WITHNUM = trim(BASENAME_ORG)//"_00000"
     else
-      write(*,*) ' xxx Unsupported FILE TYPE:', trim(FILETYPE_ORG)
-      call PRC_MPIstop
+       BASENAME_WITHNUM = trim(BASENAME_ORG)
     end if
 
     call ParentAtomSetup( dims(:), timelen, mdlid,        & ![OUT]
@@ -4978,21 +4971,13 @@ enddo
 
     !--- read external file
     do n = 1, NUMBER_OF_FILES
-       write(NUM,'(I5.5)') n-1
 
-       select case ( FILETYPE_ORG )
-       case ( 'WRF-ARW' )
+       if ( NUMBER_OF_FILES > 1 ) then
+          write(NUM,'(I5.5)') n-1
           BASENAME_WITHNUM = trim(BASENAME_ORG)//"_"//NUM
-       case ( 'SCALE-LES' )
+       else
           BASENAME_WITHNUM = trim(BASENAME_ORG)
-       case ( 'NICAM-NETCDF' )
-          BASENAME_WITHNUM = trim(BASENAME_ORG)//"_"//NUM
-       case ( 'GrADS' )
-          BASENAME_WITHNUM = trim(BASENAME_ORG)//"_"//NUM
-       case default
-          write(*,*) ' xxx Unsupported FILE TYPE:', trim(FILETYPE_ORG)
-          call PRC_MPIstop
-       end select
+       end if
 
        if( IO_L ) write(IO_FID_LOG,*) ' '
        if( IO_L ) write(IO_FID_LOG,*) '+++ Target File Name: ',trim(BASENAME_WITHNUM)
@@ -5055,20 +5040,10 @@ enddo
                              BOUNDARY_TITLE           )
 
     !--- read/write initial data for bottom boundary models
-    n = 1
-    write(NUM,'(I5.5)') n-1
-
-    if     ( FILETYPE_ORG == 'WRF-ARW' ) then
-      BASENAME_WITHNUM = trim(BASENAME_ORG)//"_"//NUM
-    else if( FILETYPE_ORG == 'SCALE-LES' ) then
-      BASENAME_WITHNUM = trim(BASENAME_ORG)
-    else if( FILETYPE_ORG == 'NICAM-NETCDF' ) then
-      BASENAME_WITHNUM = trim(BASENAME_ORG)//"_"//NUM
-    else if( FILETYPE_ORG == 'GrADS' ) then
-      BASENAME_WITHNUM = trim(BASENAME_ORG)//"_"//NUM
+    if ( NUMBER_OF_FILES > 1 ) then
+       BASENAME_WITHNUM = trim(BASENAME_ORG)//"_00000"
     else
-      write(*,*) ' xxx Unsupported FILE TYPE:', trim(FILETYPE_ORG)
-      call PRC_MPIstop
+       BASENAME_WITHNUM = trim(BASENAME_ORG)
     end if
 
     select case ( SOILWATER_DS2VC )
