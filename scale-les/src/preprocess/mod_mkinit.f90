@@ -4917,6 +4917,7 @@ enddo
 
     integer :: totaltimesteps = 1
     integer :: timelen = 1           ! NUMBER_OF_TSTEPS for nicam data
+    integer :: skip_steps
     integer :: ierr
 
     integer :: k, i, j, iq, n, ns, ne
@@ -4939,13 +4940,6 @@ enddo
     if ( BOUNDARY_UPDATE_DT <= 0.0_RP ) then
        write(*,*) 'xxx BOUNDARY_UPDATE_DT is necessary in real case preprocess'
        call PRC_MPIstop
-    endif
-
-    if( FILETYPE_ORG /= 'NICAM-NETCDF' ) then
-      if ( NUMBER_OF_SKIP_TSTEPS /= 0 ) then
-         write(*,*) 'xxx NUMBER_OF_SKIP_TSTEPS cannot be used for ',trim(FILETYPE_ORG)
-         call PRC_MPIstop
-      endif
     endif
 
     if     ( FILETYPE_ORG == 'WRF-ARW' ) then
@@ -5007,6 +5001,13 @@ enddo
        ns = NUMBER_OF_TSTEPS * (n - 1) + 1
        ne = ns + (NUMBER_OF_TSTEPS - 1)
 
+       if ( ne <= NUMBER_OF_SKIP_TSTEPS ) then
+          if( IO_L ) write(IO_FID_LOG,*) '    SKIP'
+          cycle
+       end if
+
+       skip_steps = max(NUMBER_OF_SKIP_TSTEPS - ns + 1, 0)
+
        ! read all prepared data
        call ParentAtomInput( DENS_org(:,:,:,ns:ne),   &
                              MOMZ_org(:,:,:,ns:ne),   &
@@ -5018,7 +5019,8 @@ enddo
                              dims(:),                 &
                              mdlid,                   &
                              PARENT_MP_TYPE,          &
-                             NUMBER_OF_TSTEPS         )
+                             NUMBER_OF_TSTEPS,        &
+                             skip_steps               )
     enddo
 
     !--- input initial data
