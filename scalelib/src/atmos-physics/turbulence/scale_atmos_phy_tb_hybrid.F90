@@ -99,9 +99,12 @@ module scale_atmos_phy_tb_hybrid
        real(RP), intent(in)  :: dt
      end subroutine tb
   end interface
-  procedure(tb), pointer :: LES_TB => NULL()
-  procedure(tb), pointer :: PRM_TB => NULL()
-  real(RP), allocatable :: frac(:,:)
+  procedure(tb), pointer :: SGS_TB => NULL()
+  procedure(tb), pointer :: PBL_TB => NULL()
+  real(RP), allocatable :: frac_sgs(:,:)
+  real(RP), allocatable :: frac_pbl(:,:)
+  real(RP), allocatable :: frac_sgs_tke(:,:)
+  real(RP), allocatable :: frac_pbl_tke(:,:)
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -126,16 +129,19 @@ contains
     real(RP), intent(in) :: CDY(JA)
     real(RP), intent(in) :: CZ (KA,IA,JA)
 
-    integer :: ATMOS_PHY_TB_HYBRID_LES_DX = 100.0_RP !< horizontal resolution for LES
-    integer :: ATMOS_PHY_TB_HYBRID_PRM_DX = 500.0_RP !< horizontal resolution for turbulent parametarization
-    character(len=H_SHORT) :: ATMOS_PHY_TB_HYBRID_LES_TYPE = 'SMAGORINSKY' !< scheme type for LES
-    character(len=H_SHORT) :: ATMOS_PHY_TB_HYBRID_PRM_TYPE = 'MYNN'        !< scheme type for turbulent parametarization
+    real(RP) :: ATMOS_PHY_TB_HYBRID_SGS_DX = 100.0_RP                      !< horizontal resolution for SGS model
+    real(RP) :: ATMOS_PHY_TB_HYBRID_PBL_DX = 500.0_RP                      !< horizontal resolution for PBL model
+    character(len=H_SHORT) :: ATMOS_PHY_TB_HYBRID_SGS_TYPE = 'SMAGORINSKY' !< scheme type for SGS
+    character(len=H_SHORT) :: ATMOS_PHY_TB_HYBRID_PBL_TYPE = 'MYNN'        !< scheme type for turbulent parametarization
+
+    character(len=H_SHORT) :: ATMOS_PHY_TB_HYBRID_TKE_TYPE = 'PBL'         !< SGS, PBL, or MIXED
 
     NAMELIST / PARAM_ATMOS_PHY_TB_HYBRID / &
-         ATMOS_PHY_TB_HYBRID_LES_DX, &
-         ATMOS_PHY_TB_HYBRID_PRM_DX, &
-         ATMOS_PHY_TB_HYBRID_LES_TYPE, &
-         ATMOS_PHY_TB_HYBRID_PRM_TYPE
+         ATMOS_PHY_TB_HYBRID_SGS_DX, &
+         ATMOS_PHY_TB_HYBRID_PBL_DX, &
+         ATMOS_PHY_TB_HYBRID_SGS_TYPE, &
+         ATMOS_PHY_TB_HYBRID_PBL_TYPE, &
+         ATMOS_PHY_TB_HYBRID_TKE_TYPE
 
 
     real(RP) :: dxy
@@ -146,7 +152,7 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*) ''
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[TURBULENCE] / Categ[ATMOS PHYSICS] / Origin[SCALElib]'
-    if( IO_L ) write(IO_FID_LOG,*) '+++ LES-parameterization hybrid Model'
+    if( IO_L ) write(IO_FID_LOG,*) '+++ SGS-parameterization hybrid Model'
 
     if ( TB_TYPE /= 'HYBRID' ) then
        write(*,*) 'xxx ATMOS_PHY_TB_TYPE is not HYBRID. Check!'
@@ -165,42 +171,61 @@ contains
     endif
     if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_ATMOS_PHY_TB_HYBRID)
 
-    select case ( ATMOS_PHY_TB_HYBRID_LES_TYPE )
+    select case ( ATMOS_PHY_TB_HYBRID_SGS_TYPE )
     case ('SMAGORINSKY')
        call ATMOS_PHY_TB_SMG_setup( &
-            ATMOS_PHY_TB_HYBRID_LES_TYPE, &
+            ATMOS_PHY_TB_HYBRID_SGS_TYPE, &
             CDZ, CDX, CDY, &
             CZ             )
-       LES_TB => ATMOS_PHY_TB_SMG
+       SGS_TB => ATMOS_PHY_TB_SMG
     case default
-       write(*,*) 'xxx ATMOS_PHY_TB_HYBRID_LES_TYPE is invalid'
+       write(*,*) 'xxx ATMOS_PHY_TB_HYBRID_SGS_TYPE is invalid'
        call PRC_MPIstop
     end select
 
-    select case ( ATMOS_PHY_TB_HYBRID_PRM_TYPE )
+    select case ( ATMOS_PHY_TB_HYBRID_PBL_TYPE )
     case ('MYNN')
        call ATMOS_PHY_TB_mynn_setup( &
-            ATMOS_PHY_TB_HYBRID_PRM_TYPE, &
+            ATMOS_PHY_TB_HYBRID_PBL_TYPE, &
             CDZ, CDX, CDY, &
             CZ             )
-       PRM_TB => ATMOS_PHY_TB_mynn
+       PBL_TB => ATMOS_PHY_TB_mynn
     case default
-       write(*,*) 'xxx ATMOS_PHY_TB_HYBRID_PRM_TYPE is invalid'
+       write(*,*) 'xxx ATMOS_PHY_TB_HYBRID_PBL_TYPE is invalid'
        call PRC_MPIstop
     end select
 
-    allocate( frac(IA,JA) )
+    allocate( frac_sgs(IA,JA) )
+    allocate( frac_pbl(IA,JA) )
+    allocate( frac_sgs_tke(IA,JA) )
+    allocate( frac_pbl_tke(IA,JA) )
 
     do j = 1, JA
     do i = 1, IA
-       dxy = sqrt( CDX(i)**2 + CDY(j)**2 )
-       frac(i,j) = &
-            min( 1.0_RP, &
-            max( 0.0_RP, &
-                 ( dxy - ATMOS_PHY_TB_HYBRID_LES_DX ) &
-                 / ( ATMOS_PHY_TB_HYBRID_PRM_DX - ATMOS_PHY_TB_HYBRID_LES_DX ) ) )
+       dxy = sqrt( ( CDX(i)**2 + CDY(j)**2 )*0.5_RP )
+       frac_pbl(i,j) = &
+               min( 1.0_RP, &
+               max( 0.0_RP, &
+                    ( dxy - ATMOS_PHY_TB_HYBRID_SGS_DX ) &
+                  / ( ATMOS_PHY_TB_HYBRID_PBL_DX - ATMOS_PHY_TB_HYBRID_SGS_DX ) ) )
+       frac_sgs(i,j) = 1.0_RP - frac_pbl(i,j)
     end do
     end do
+
+    select case ( ATMOS_PHY_TB_HYBRID_TKE_TYPE )
+    case ('SGS')
+       frac_pbl_tke(:,:) = 0.0_RP
+       frac_sgs_tke(:,:) = 1.0_RP
+    case ('PBL')
+       frac_pbl_tke(:,:) = 1.0_RP
+       frac_sgs_tke(:,:) = 0.0_RP
+    case ('MIXED')
+       frac_pbl_tke(:,:) = frac_pbl(:,:)
+       frac_sgs_tke(:,:) = frac_sgs(:,:)
+    case default
+       write(*,*) 'xxx ATMOS_PHY_TB_HYBRID_TKE_TYPE is invalid'
+       call PRC_MPIstop
+    end select
 
     return
   end subroutine ATMOS_PHY_TB_hybrid_setup
@@ -284,7 +309,7 @@ contains
     end do
     end do
 
-    call LES_TB( &
+    call SGS_TB( &
          w_qflx_sgs_momz(:,:,:,:,1), w_qflx_sgs_momx(:,:,:,:,1), & ! (out)
          w_qflx_sgs_momy(:,:,:,:,1), w_qflx_sgs_rhot(:,:,:,:,1), & ! (out
          w_qflx_sgs_rhoq(:,:,:,:,:,1),                           & ! (out)
@@ -295,7 +320,7 @@ contains
          SFLX_MW, SFLX_MU, SFLX_MV, SFLX_SH, SFLX_QV,            & ! (in)
          GSQRT, J13G, J23G, J33G, MAPF, dt                       ) ! (in)
 
-    call PRM_TB( &
+    call PBL_TB( &
          w_qflx_sgs_momz(:,:,:,:,2), w_qflx_sgs_momx(:,:,:,:,2), & ! (out)
          w_qflx_sgs_momy(:,:,:,:,2), w_qflx_sgs_rhot(:,:,:,:,2), & ! (out
          w_qflx_sgs_rhoq(:,:,:,:,:,2),                           & ! (out)
@@ -309,12 +334,10 @@ contains
     do j = 1, JA
     do i = 1, IA
     do k = KS, KE
-       qflx_sgs_momz(k,i,j,1) = w_qflx_sgs_momz(k,i,j,1,1) * (1.0_RP - frac(i,j)) &
-                              + w_qflx_sgs_momz(k,i,j,1,2) * frac(i,j)
-       qflx_sgs_momz(k,i,j,2) = w_qflx_sgs_momz(k,i,j,2,1) * (1.0_RP - frac(i,j)) &
-                              + w_qflx_sgs_momz(k,i,j,2,2) * frac(i,j)
-       qflx_sgs_momz(k,i,j,3) = w_qflx_sgs_momz(k,i,j,3,1) * (1.0_RP - frac(i,j)) &
-                              + w_qflx_sgs_momz(k,i,j,3,2) * frac(i,j)
+       qflx_sgs_momz(k,i,j,ZDIR) = w_qflx_sgs_momz(k,i,j,ZDIR,1) * frac_sgs(i,j) &
+                                 + w_qflx_sgs_momz(k,i,j,ZDIR,2) * frac_pbl(i,j)
+       qflx_sgs_momz(k,i,j,XDIR) = w_qflx_sgs_momz(k,i,j,XDIR,1)
+       qflx_sgs_momz(k,i,j,YDIR) = w_qflx_sgs_momz(k,i,j,YDIR,1)
     end do
     end do
     end do
@@ -322,12 +345,10 @@ contains
     do j = 1, JA
     do i = 1, IA
     do k = KS, KE
-       qflx_sgs_momx(k,i,j,1) = w_qflx_sgs_momx(k,i,j,1,1) * (1.0_RP - frac(i,j)) &
-                              + w_qflx_sgs_momx(k,i,j,1,2) * frac(i,j)
-       qflx_sgs_momx(k,i,j,2) = w_qflx_sgs_momx(k,i,j,2,1) * (1.0_RP - frac(i,j)) &
-                              + w_qflx_sgs_momx(k,i,j,2,2) * frac(i,j)
-       qflx_sgs_momx(k,i,j,3) = w_qflx_sgs_momx(k,i,j,3,1) * (1.0_RP - frac(i,j)) &
-                              + w_qflx_sgs_momx(k,i,j,3,2) * frac(i,j)
+       qflx_sgs_momx(k,i,j,ZDIR) = w_qflx_sgs_momx(k,i,j,ZDIR,1) * frac_sgs(i,j) &
+                                 + w_qflx_sgs_momx(k,i,j,ZDIR,2) * frac_pbl(i,j)
+       qflx_sgs_momx(k,i,j,XDIR) = w_qflx_sgs_momx(k,i,j,XDIR,1)
+       qflx_sgs_momx(k,i,j,YDIR) = w_qflx_sgs_momx(k,i,j,YDIR,1)
     end do
     end do
     end do
@@ -335,12 +356,10 @@ contains
     do j = 1, JA
     do i = 1, IA
     do k = KS, KE
-       qflx_sgs_momy(k,i,j,1) = w_qflx_sgs_momy(k,i,j,1,1) * (1.0_RP - frac(i,j)) &
-                              + w_qflx_sgs_momy(k,i,j,1,2) * frac(i,j)
-       qflx_sgs_momy(k,i,j,2) = w_qflx_sgs_momy(k,i,j,2,1) * (1.0_RP - frac(i,j)) &
-                              + w_qflx_sgs_momy(k,i,j,2,2) * frac(i,j)
-       qflx_sgs_momy(k,i,j,3) = w_qflx_sgs_momy(k,i,j,3,1) * (1.0_RP - frac(i,j)) &
-                              + w_qflx_sgs_momy(k,i,j,3,2) * frac(i,j)
+       qflx_sgs_momy(k,i,j,ZDIR) = w_qflx_sgs_momy(k,i,j,ZDIR,1) * frac_sgs(i,j) &
+                                 + w_qflx_sgs_momy(k,i,j,ZDIR,2) * frac_pbl(i,j)
+       qflx_sgs_momy(k,i,j,XDIR) = w_qflx_sgs_momy(k,i,j,XDIR,1)
+       qflx_sgs_momy(k,i,j,YDIR) = w_qflx_sgs_momy(k,i,j,YDIR,1)
     end do
     end do
     end do
@@ -348,12 +367,10 @@ contains
     do j = 1, JA
     do i = 1, IA
     do k = KS, KE
-       qflx_sgs_rhot(k,i,j,1) = w_qflx_sgs_rhot(k,i,j,1,1) * (1.0_RP - frac(i,j)) &
-                              + w_qflx_sgs_rhot(k,i,j,1,2) * frac(i,j)
-       qflx_sgs_rhot(k,i,j,2) = w_qflx_sgs_rhot(k,i,j,2,1) * (1.0_RP - frac(i,j)) &
-                              + w_qflx_sgs_rhot(k,i,j,2,2) * frac(i,j)
-       qflx_sgs_rhot(k,i,j,3) = w_qflx_sgs_rhot(k,i,j,3,1) * (1.0_RP - frac(i,j)) &
-                              + w_qflx_sgs_rhot(k,i,j,3,2) * frac(i,j)
+       qflx_sgs_rhot(k,i,j,ZDIR) = w_qflx_sgs_rhot(k,i,j,ZDIR,1) * frac_sgs(i,j) &
+                                 + w_qflx_sgs_rhot(k,i,j,ZDIR,2) * frac_pbl(i,j)
+       qflx_sgs_rhot(k,i,j,XDIR) = w_qflx_sgs_rhot(k,i,j,XDIR,1)
+       qflx_sgs_rhot(k,i,j,YDIR) = w_qflx_sgs_rhot(k,i,j,YDIR,1)
     end do
     end do
     end do
@@ -362,12 +379,10 @@ contains
     do j = 1, JA
     do i = 1, IA
     do k = KS, KE
-       qflx_sgs_rhoq(k,i,j,1,iq) = w_qflx_sgs_rhoq(k,i,j,1,iq,1) * (1.0_RP - frac(i,j)) &
-                                 + w_qflx_sgs_rhoq(k,i,j,1,iq,2) * frac(i,j)
-       qflx_sgs_rhoq(k,i,j,2,iq) = w_qflx_sgs_rhoq(k,i,j,2,iq,1) * (1.0_RP - frac(i,j)) &
-                                 + w_qflx_sgs_rhoq(k,i,j,2,iq,2) * frac(i,j)
-       qflx_sgs_rhoq(k,i,j,3,iq) = w_qflx_sgs_rhoq(k,i,j,3,iq,1) * (1.0_RP - frac(i,j)) &
-                                 + w_qflx_sgs_rhoq(k,i,j,3,iq,2) * frac(i,j)
+       qflx_sgs_rhoq(k,i,j,ZDIR,iq) = w_qflx_sgs_rhoq(k,i,j,ZDIR,iq,1) * frac_sgs(i,j) &
+                                    + w_qflx_sgs_rhoq(k,i,j,ZDIR,iq,2) * frac_pbl(i,j)
+       qflx_sgs_rhoq(k,i,j,XDIR,iq) = w_qflx_sgs_rhoq(k,i,j,XDIR,iq,1)
+       qflx_sgs_rhoq(k,i,j,YDIR,iq) = w_qflx_sgs_rhoq(k,i,j,YDIR,iq,1)
     end do
     end do
     end do
@@ -376,8 +391,8 @@ contains
     do j = 1, JA
     do i = 1, IA
     do k = KS, KE
-       tke(k,i,j) = w_tke(k,i,j,1) * (1.0_RP - frac(i,j)) &
-                  + w_tke(k,i,j,2) * frac(i,j)
+       tke(k,i,j) = w_tke(k,i,j,1) * frac_sgs_tke(i,j) &
+                  + w_tke(k,i,j,2) * frac_pbl_tke(i,j)
     end do
     end do
     end do
@@ -385,8 +400,8 @@ contains
     do j = 1, JA
     do i = 1, IA
     do k = KS, KE
-       tke_t(k,i,j) = w_tke_t(k,i,j,1) * (1.0_RP - frac(i,j)) &
-                    + w_tke_t(k,i,j,2) * frac(i,j)
+       tke_t(k,i,j) = w_tke_t(k,i,j,1) * frac_sgs_tke(i,j) &
+                    + w_tke_t(k,i,j,2) * frac_pbl_tke(i,j)
     end do
     end do
     end do
@@ -394,8 +409,8 @@ contains
     do j = 1, JA
     do i = 1, IA
     do k = KS, KE
-       Nu(k,i,j) = w_Nu(k,i,j,1) * (1.0_RP - frac(i,j)) &
-                 + w_Nu(k,i,j,2) * frac(i,j)
+       Nu(k,i,j) = w_Nu(k,i,j,1) * frac_sgs(i,j) &
+                 + w_Nu(k,i,j,2) * frac_pbl(i,j)
     end do
     end do
     end do
@@ -403,8 +418,8 @@ contains
     do j = 1, JA
     do i = 1, IA
     do k = KS, KE
-       Ri(k,i,j) = w_Ri(k,i,j,1) * (1.0_RP - frac(i,j)) &
-                 + w_Ri(k,i,j,2) * frac(i,j)
+       Ri(k,i,j) = w_Ri(k,i,j,1) * frac_sgs(i,j) &
+                 + w_Ri(k,i,j,2) * frac_pbl(i,j)
     end do
     end do
     end do
@@ -412,8 +427,8 @@ contains
     do j = 1, JA
     do i = 1, IA
     do k = KS, KE
-       Pr(k,i,j) = w_Pr(k,i,j,1) * (1.0_RP - frac(i,j)) &
-                 + w_Pr(k,i,j,2) * frac(i,j)
+       Pr(k,i,j) = w_Pr(k,i,j,1) * frac_sgs(i,j) &
+                 + w_Pr(k,i,j,2) * frac_pbl(i,j)
     end do
     end do
     end do
@@ -421,8 +436,8 @@ contains
     do j = 1, JA
     do i = 1, IA
     do k = KS, KE
-       N2(k,i,j) = w_N2(k,i,j,1) * (1.0_RP - frac(i,j)) &
-                 + w_N2(k,i,j,2) * frac(i,j)
+       N2(k,i,j) = w_N2(k,i,j,1) * frac_sgs(i,j) &
+                 + w_N2(k,i,j,2) * frac_pbl(i,j)
     end do
     end do
     end do
