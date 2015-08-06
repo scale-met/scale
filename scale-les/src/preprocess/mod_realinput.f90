@@ -858,6 +858,7 @@ contains
       intrp_land_sfc_temp,  &
       intrp_ocean_temp,     &
       intrp_ocean_sfc_temp, &
+      intrp_iter_max,       &
       soilwater_DS2VC_flag, &
       mdlid                 )
     use scale_land_grid, only: &
@@ -1209,7 +1210,7 @@ contains
        case ( i_intrp_fill )
           call make_mask( omask, tw_org, dims(10), dims(11), landdata=.false.)
        end select
-       call interp_OceanLand_data(tw_org, omask, dims(10), dims(11), landdata=.false.)
+       call interp_OceanLand_data(tw_org, omask, dims(10), dims(11), .false., intrp_iter_max)
     end if
 
     ! SST: interpolate over the land
@@ -1226,7 +1227,7 @@ contains
        case ( i_intrp_fill )
           call make_mask( omask, sst_org, dims(10), dims(11), landdata=.false.)
        end select
-       call interp_OceanLand_data(sst_org, omask, dims(10), dims(11), landdata=.false.)
+       call interp_OceanLand_data(sst_org, omask, dims(10), dims(11), .false., intrp_iter_max)
     end if
 
     ! Surface skin temp: interpolate over the ocean
@@ -1240,7 +1241,7 @@ contains
           write(*,*) 'xxx INTRP_LAND_SFC_TEMP is invalid. ', INTRP_LAND_SFC_TEMP
           call PRC_MPIstop
        end select
-       call interp_OceanLand_data(lst_org, lmask, dims(8), dims(9), landdata=.true.)
+       call interp_OceanLand_data(lst_org, lmask, dims(8), dims(9), .true., intrp_iter_max)
     end if
 
     ! Urban surface temp: interpolate over the ocean
@@ -1254,7 +1255,7 @@ contains
     !      write(*,*) 'xxx INTRP_URB_SFC_TEMP is invalid. ', INTRP_URB_SFC_TEMP
     !      call PRC_MPIstop
     !   end select
-    !   call interp_OceanLand_data(ust_org, lmask, dims(8), dims(9), landdata=.true.)
+    !   call interp_OceanLand_data(ust_org, lmask, dims(8), dims(9), .true., intrp_iter_max)
     !end if
 
 
@@ -1297,7 +1298,7 @@ contains
           case ( i_intrp_fill )
              call make_mask( lmask, work, dims(8), dims(9), landdata=.true.)
           end select
-          call interp_OceanLand_data( work, lmask, dims(8), dims(9), landdata=.true. )
+          call interp_OceanLand_data( work, lmask, dims(8), dims(9), .true., intrp_iter_max )
           !replace land temp using skin temp
           call replace_misval_map( work, lst_org, dims(8),  dims(9),  "STEMP")
           tg_org(k,:,:) = work(:,:)
@@ -1372,7 +1373,7 @@ contains
                 case ( i_intrp_fill )
                    call make_mask( lmask, work, dims(8), dims(9), landdata=.true.)
                 end select
-                call interp_OceanLand_data(work, lmask, dims(8), dims(9), landdata=.true.)
+                call interp_OceanLand_data(work, lmask, dims(8), dims(9), .true., intrp_iter_max)
                 lmask(:,:) = init_landwater_ratio
                 !replace missing value to init_landwater_ratio
                 call replace_misval_map( work, lmask, dims(8),  dims(9),  "SMOISDS")
@@ -1403,7 +1404,7 @@ contains
                 case ( i_intrp_fill )
                    call make_mask( lmask, work, dims(8), dims(9), landdata=.true.)
                 end select
-                call interp_OceanLand_data(work, lmask, dims(8),dims(9), landdata=.true.)
+                call interp_OceanLand_data(work, lmask, dims(8),dims(9), .true., intrp_iter_max)
                 lmask(:,:) = maskval_strg
                 !replace missing value to init_landwater_ratio
                 call replace_misval_map( work, lmask, dims(8),  dims(9),  "SMOIS")
@@ -1584,6 +1585,7 @@ contains
       nx,        & ! (in)
       ny,        & ! (in)
       landdata,  & ! (in)
+      iter_max,  & ! (in)
       maskval    & ! (out)
       )
     use scale_const, only: &
@@ -1594,13 +1596,13 @@ contains
     integer,  intent(in)            :: nx
     integer,  intent(in)            :: ny
     logical,  intent(in)            :: landdata   ! .true. => land data , .false. => ocean data
+    integer,  intent(in)            :: iter_max
     real(RP), intent(out), optional :: maskval
 
     integer                 :: untarget_mask
     integer, allocatable    :: imask(:,:),imaskr(:,:)
     real(RP),allocatable    :: newdata(:,:)
     real(RP)                :: flag(8)
-    real(RP)                :: ydata(8)
     real(RP)                :: dd
 
     integer :: i, j, kk
@@ -1631,119 +1633,114 @@ contains
     ! start interpolation
 
     imaskr = imask
-    do kk = 1, 20
-    do j  = 1, ny
-    do i  = 1, nx
-       if ( imask(i,j) == untarget_mask ) then  ! not missing value
-           newdata(i,j) = data(i,j)
-           cycle
-       else
+    do kk = 1, iter_max
+       do j  = 1, ny
+       do i  = 1, nx
+          if ( imask(i,j) == untarget_mask ) then  ! not missing value
+             newdata(i,j) = data(i,j)
+             cycle
+          else
 
-         if ( present(maskval) ) then
-         if ( abs(maskval-999.99_RP)<EPS ) then
-            if (abs(lsmask(i,j)-0.0_RP) < EPS) maskval = data(i,j)
-         endif
-         endif
+             if ( present(maskval) ) then
+             if ( abs(maskval-999.99_RP)<EPS ) then
+                if (abs(lsmask(i,j)-0.0_RP) < EPS) maskval = data(i,j)
+             endif
+             endif
 
-        !--------------------------------------
-        ! check data of neighbor grid
-        !
-        !           flag(i,j,8)
-        !
-        !     +---+---+---+---+---+---+
-        !     |       |       |       |
-        !     +   6   +   7   +   8   +
-        !     |       |       |       |
-        !     +---+---+---+---+---+---+
-        !     |       |       |       |
-        !     +   4   + (i,j) +   5   +
-        !     |       |       |       |
-        !     +---+---+---+---+---+---+
-        !     |       |       |       |
-        !     +   1   +   2   +   3   +
-        !     |       |       |       |
-        !     +---+---+---+---+---+---+
-        !---------------------------------------
-        flag    = 0.0_RP
-        ydata   = 0.0_RP
-        if((i==1).and.(j==1))then
-           if(imask(i+1,j  )==untarget_mask) flag(5)=1.0_RP
-           if(imask(i,  j+1)==untarget_mask) flag(7)=1.0_RP
-           if(imask(i+1,j+1)==untarget_mask) flag(8)=1.0_RP
-        else if((i==nx).and.(j==1))then
-           if(imask(i-1,j  )==untarget_mask) flag(4)=1.0_RP
-           if(imask(i-1,j+1)==untarget_mask) flag(6)=1.0_RP
-           if(imask(i,  j+1)==untarget_mask) flag(7)=1.0_RP
-        else if((i==1).and.(j==ny))then
-           if(imask(i,  j-1)==untarget_mask) flag(2)=1.0_RP
-           if(imask(i+1,j-1)==untarget_mask) flag(3)=1.0_RP
-           if(imask(i+1,j  )==untarget_mask) flag(5)=1.0_RP
-        else if((i==nx).and.(j==ny))then
-           if(imask(i-1,j-1)==untarget_mask) flag(1)=1.0_RP
-           if(imask(i,  j-1)==untarget_mask) flag(2)=1.0_RP
-           if(imask(i-1,j  )==untarget_mask) flag(4)=1.0_RP
-        else if(i==1)then
-           if(imask(i,  j-1)==untarget_mask) flag(2)=1.0_RP
-           if(imask(i+1,j-1)==untarget_mask) flag(3)=1.0_RP
-           if(imask(i+1,j  )==untarget_mask) flag(5)=1.0_RP
-           if(imask(i,  j+1)==untarget_mask) flag(7)=1.0_RP
-           if(imask(i+1,j+1)==untarget_mask) flag(8)=1.0_RP
-        else if(i==nx)then
-           if(imask(i-1,j-1)==untarget_mask) flag(1)=1.0_RP
-           if(imask(i,  j-1)==untarget_mask) flag(2)=1.0_RP
-           if(imask(i-1,j  )==untarget_mask) flag(4)=1.0_RP
-           if(imask(i-1,j+1)==untarget_mask) flag(6)=1.0_RP
-           if(imask(i,  j+1)==untarget_mask) flag(7)=1.0_RP
-        else if(j==1)then
-           if(imask(i-1,j  )==untarget_mask) flag(4)=1.0_RP
-           if(imask(i+1,j  )==untarget_mask) flag(5)=1.0_RP
-           if(imask(i-1,j+1)==untarget_mask) flag(6)=1.0_RP
-           if(imask(i,  j+1)==untarget_mask) flag(7)=1.0_RP
-           if(imask(i+1,j+1)==untarget_mask) flag(8)=1.0_RP
-        else if(j==ny)then
-           if(imask(i-1,j-1)==untarget_mask) flag(1)=1.0_RP
-           if(imask(i,  j-1)==untarget_mask) flag(2)=1.0_RP
-           if(imask(i+1,j-1)==untarget_mask) flag(3)=1.0_RP
-           if(imask(i-1,j  )==untarget_mask) flag(4)=1.0_RP
-           if(imask(i+1,j  )==untarget_mask) flag(5)=1.0_RP
-        else
-           if(imask(i-1,j-1)==untarget_mask) flag(1)=1.0_RP
-           if(imask(i,  j-1)==untarget_mask) flag(2)=1.0_RP
-           if(imask(i+1,j-1)==untarget_mask) flag(3)=1.0_RP
-           if(imask(i-1,j  )==untarget_mask) flag(4)=1.0_RP
-           if(imask(i+1,j  )==untarget_mask) flag(5)=1.0_RP
-           if(imask(i-1,j+1)==untarget_mask) flag(6)=1.0_RP
-           if(imask(i,  j+1)==untarget_mask) flag(7)=1.0_RP
-           if(imask(i+1,j+1)==untarget_mask) flag(8)=1.0_RP
-        endif
+             !--------------------------------------
+             ! check data of neighbor grid
+             !
+             !           flag(i,j,8)
+             !
+             !     +---+---+---+---+---+---+
+             !     |       |       |       |
+             !     +   6   +   7   +   8   +
+             !     |       |       |       |
+             !     +---+---+---+---+---+---+
+             !     |       |       |       |
+             !     +   4   + (i,j) +   5   +
+             !     |       |       |       |
+             !     +---+---+---+---+---+---+
+             !     |       |       |       |
+             !     +   1   +   2   +   3   +
+             !     |       |       |       |
+             !     +---+---+---+---+---+---+
+             !---------------------------------------
+             flag(:) = 0.0_RP
+             if((i==1).and.(j==1))then
+                if(imask(i+1,j  )==untarget_mask) flag(5)=1.0_RP
+                if(imask(i,  j+1)==untarget_mask) flag(7)=1.0_RP
+                if(imask(i+1,j+1)==untarget_mask) flag(8)=1.0_RP
+             else if((i==nx).and.(j==1))then
+                if(imask(i-1,j  )==untarget_mask) flag(4)=1.0_RP
+                if(imask(i-1,j+1)==untarget_mask) flag(6)=1.0_RP
+                if(imask(i,  j+1)==untarget_mask) flag(7)=1.0_RP
+             else if((i==1).and.(j==ny))then
+                if(imask(i,  j-1)==untarget_mask) flag(2)=1.0_RP
+                if(imask(i+1,j-1)==untarget_mask) flag(3)=1.0_RP
+                if(imask(i+1,j  )==untarget_mask) flag(5)=1.0_RP
+             else if((i==nx).and.(j==ny))then
+                if(imask(i-1,j-1)==untarget_mask) flag(1)=1.0_RP
+                if(imask(i,  j-1)==untarget_mask) flag(2)=1.0_RP
+                if(imask(i-1,j  )==untarget_mask) flag(4)=1.0_RP
+             else if(i==1)then
+                if(imask(i,  j-1)==untarget_mask) flag(2)=1.0_RP
+                if(imask(i+1,j-1)==untarget_mask) flag(3)=1.0_RP
+                if(imask(i+1,j  )==untarget_mask) flag(5)=1.0_RP
+                if(imask(i,  j+1)==untarget_mask) flag(7)=1.0_RP
+                if(imask(i+1,j+1)==untarget_mask) flag(8)=1.0_RP
+             else if(i==nx)then
+                if(imask(i-1,j-1)==untarget_mask) flag(1)=1.0_RP
+                if(imask(i,  j-1)==untarget_mask) flag(2)=1.0_RP
+                if(imask(i-1,j  )==untarget_mask) flag(4)=1.0_RP
+                if(imask(i-1,j+1)==untarget_mask) flag(6)=1.0_RP
+                if(imask(i,  j+1)==untarget_mask) flag(7)=1.0_RP
+             else if(j==1)then
+                if(imask(i-1,j  )==untarget_mask) flag(4)=1.0_RP
+                if(imask(i+1,j  )==untarget_mask) flag(5)=1.0_RP
+                if(imask(i-1,j+1)==untarget_mask) flag(6)=1.0_RP
+                if(imask(i,  j+1)==untarget_mask) flag(7)=1.0_RP
+                if(imask(i+1,j+1)==untarget_mask) flag(8)=1.0_RP
+             else if(j==ny)then
+                if(imask(i-1,j-1)==untarget_mask) flag(1)=1.0_RP
+                if(imask(i,  j-1)==untarget_mask) flag(2)=1.0_RP
+                if(imask(i+1,j-1)==untarget_mask) flag(3)=1.0_RP
+                if(imask(i-1,j  )==untarget_mask) flag(4)=1.0_RP
+                if(imask(i+1,j  )==untarget_mask) flag(5)=1.0_RP
+             else
+                if(imask(i-1,j-1)==untarget_mask) flag(1)=1.0_RP
+                if(imask(i,  j-1)==untarget_mask) flag(2)=1.0_RP
+                if(imask(i+1,j-1)==untarget_mask) flag(3)=1.0_RP
+                if(imask(i-1,j  )==untarget_mask) flag(4)=1.0_RP
+                if(imask(i+1,j  )==untarget_mask) flag(5)=1.0_RP
+                if(imask(i-1,j+1)==untarget_mask) flag(6)=1.0_RP
+                if(imask(i,  j+1)==untarget_mask) flag(7)=1.0_RP
+                if(imask(i+1,j+1)==untarget_mask) flag(8)=1.0_RP
+             endif
 
-        if(int(sum(flag(:)))>=3)then  ! coast grid : interpolate
-           dd = 0.0_RP
-           newdata(i,j) = 0.0_RP
-           if(int(flag(1))==1) newdata(i,j) = newdata(i,j) + data(i-1,j-1)
-           if(int(flag(2))==1) newdata(i,j) = newdata(i,j) + data(i,j-1)
-           if(int(flag(3))==1) newdata(i,j) = newdata(i,j) + data(i+1,j-1)
-           if(int(flag(4))==1) newdata(i,j) = newdata(i,j) + data(i-1,j)
-           if(int(flag(5))==1) newdata(i,j) = newdata(i,j) + data(i+1,j)
-           if(int(flag(6))==1) newdata(i,j) = newdata(i,j) + data(i-1,j+1)
-           if(int(flag(7))==1) newdata(i,j) = newdata(i,j) + data(i,j+1)
-           if(int(flag(8))==1) newdata(i,j) = newdata(i,j) + data(i+1,j+1)
+             dd = sum( flag(:) )
+             if( dd >= 3.0_RP )then  ! coast grid : interpolate
+                newdata(i,j) = ( data(i-1,j-1) * flag(1) &
+                               + data(i  ,j-1) * flag(2) &
+                               + data(i+1,j-1) * flag(3) &
+                               + data(i-1,j  ) * flag(4) &
+                               + data(i+1,j  ) * flag(5) &
+                               + data(i-1,j+1) * flag(6) &
+                               + data(i  ,j+1) * flag(7) &
+                               + data(i+1,j+1) * flag(8) ) / dd
 
-           dd = sum(flag(:))
-           newdata(i,j) = newdata(i,j) / dd
+                imaskr(i,j) = untarget_mask
+             else
+                newdata(i,j) = data(i,j)
+             endif
 
-           imaskr(i,j) = untarget_mask
-        else
-          newdata(i,j) = data(i,j)
-        endif
+          endif ! sea/land
 
-       endif ! sea/land
+       enddo
+       enddo
 
-    enddo
-    enddo
-
-     imask(:,:) = imaskr(:,:)
-     data(:,:)  = newdata(:,:)
+       imask(:,:) = imaskr(:,:)
+       data(:,:)  = newdata(:,:)
     enddo ! kk
 
     deallocate( imask   )
@@ -1790,6 +1787,7 @@ contains
        if( abs(data(i,j) - UNDEF) < sqrt(EPS) )then
           if( abs(maskval(i,j) - UNDEF) < sqrt(EPS) )then
              write(*,*) "Data for mask has missing value. ",trim(elem),i,j
+             call PRC_MPIstop
           else
              data(i,j) = maskval(i,j)
           endif

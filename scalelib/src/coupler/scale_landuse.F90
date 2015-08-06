@@ -131,6 +131,9 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Assume all grids are ocean'
     endif
 
+    ! tentative treatment for lake fraction
+    LANDUSE_frac_land(:,:) = LANDUSE_frac_land(:,:) * ( 1.0_RP - LANDUSE_frac_lake(:,:) )
+
     ! make factors
     allocate( LANDUSE_fact_ocean(IA,JA) )
     allocate( LANDUSE_fact_land (IA,JA) )
