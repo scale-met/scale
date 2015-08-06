@@ -280,28 +280,68 @@ int32_t file_read_data( void       *var,        // (out)
   return SUCCESS_CODE;
 }
 
-int32_t file_set_global_attributes( int32_t  fid,         // (in)
-				    char    *title,       // (in)
-				    char    *source,      // (in)
-				    char    *institution, // (in)
-				    char    *time_units,  // (in)
-				    int32_t  nodeid,      // (in)
-				    int32_t *nodeidx,     // (in)
-				    int32_t  nodeidx_dim) // (in)
+int32_t file_set_global_attribute_text( int32_t  fid,    // (in)
+				        char    *key,    // (in)
+				        char    *value ) // (in)
 {
   int ncid;
-  int tmp[1];
 
   if ( files[fid] == NULL ) return ALREADY_CLOSED_CODE;
   ncid = files[fid]->ncid;
 
-  CHECK_ERROR( nc_put_att_text(ncid, NC_GLOBAL, "title", strlen(title), title) );
-  CHECK_ERROR( nc_put_att_text(ncid, NC_GLOBAL, "source", strlen(source), source) );
-  CHECK_ERROR( nc_put_att_text(ncid, NC_GLOBAL, "institution", strlen(institution), institution) );
-  tmp[0] = nodeid;
-  CHECK_ERROR( nc_put_att_int(ncid, NC_GLOBAL, "node_id", NC_INT, 1, tmp) );
-  CHECK_ERROR( nc_put_att_int(ncid, NC_GLOBAL, "node_index", NC_INT, nodeidx_dim, nodeidx) );
+  CHECK_ERROR( nc_put_att_text(ncid, NC_GLOBAL, key, strlen(value), value) );
 
+  return SUCCESS_CODE;
+}
+
+int32_t file_set_global_attribute_int( int32_t  fid,   // (in)
+				       char    *key,   // (in)
+				       int     *value, // (in)
+				       size_t   len )  // (in)
+{
+  int ncid;
+
+  if ( files[fid] == NULL ) return ALREADY_CLOSED_CODE;
+  ncid = files[fid]->ncid;
+
+  CHECK_ERROR( nc_put_att_int(ncid, NC_GLOBAL, key, NC_INT, len, value) );
+
+  return SUCCESS_CODE;
+}
+
+int32_t file_set_global_attribute_float( int32_t  fid,   // (in)
+					 char    *key,   // (in)
+					 float   *value, // (in)
+					 size_t   len )  // (in)
+{
+  int ncid;
+
+  if ( files[fid] == NULL ) return ALREADY_CLOSED_CODE;
+  ncid = files[fid]->ncid;
+
+  CHECK_ERROR( nc_put_att_float(ncid, NC_GLOBAL, key, NC_FLOAT, len, value) );
+
+  return SUCCESS_CODE;
+}
+
+int32_t file_set_global_attribute_double( int32_t  fid,   // (in)
+					  char    *key,   // (in)
+					  double  *value, // (in)
+					  size_t   len )  // (in)
+{
+  int ncid;
+
+  if ( files[fid] == NULL ) return ALREADY_CLOSED_CODE;
+  ncid = files[fid]->ncid;
+
+  CHECK_ERROR( nc_put_att_double(ncid, NC_GLOBAL, key, NC_DOUBLE, len, value) );
+
+  return SUCCESS_CODE;
+}
+
+int32_t file_set_tunits( int32_t fid,         // (in)
+			 char    *time_units) // (in)
+{
   strcpy(files[fid]->time_units, time_units);
 
   return SUCCESS_CODE;
@@ -319,7 +359,7 @@ int32_t file_set_tattr( int32_t  fid,   // (in)
   if ( files[fid] == NULL ) return ALREADY_CLOSED_CODE;
   ncid = files[fid]->ncid;
 
- CHECK_ERROR( nc_inq_varid(ncid, vname, &varid) );
+  CHECK_ERROR( nc_inq_varid(ncid, vname, &varid) );
 
   if ( nc_inq_attid(ncid, varid, key, &attid) == NC_NOERR ) // check if existed
     return ALREADY_EXISTED_CODE;

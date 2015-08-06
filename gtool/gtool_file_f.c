@@ -105,39 +105,82 @@ void file_read_data_( void       *var,       // (out)
   *error = file_read_data( var, dinfo, *precision );
 }
 
-void file_set_global_attributes_( int32_t *fid,             // (in)
-				  char    *title,           // (in)
-				  char    *source,          // (in)
-				  char    *institution,     // (in)
-				  char    *time_units,      // (in)
-				  int32_t *nodeid,          // (in)
-				  int32_t *nodeidx,         // (in)
-				  int32_t *nodeidx_dim,     // (in)
-				  int32_t *error,           // (out)
-				  int32_t  title_len,       // (in)
-				  int32_t  source_len,      // (in)
-				  int32_t  institution_len, // (in)
-				  int32_t  time_units_len)  // (in)
+void file_set_global_attribute_text_( int32_t *fid,        // (in)
+				      char    *key,        // (in)
+				      char    *value,      // (in)
+				      int32_t *error,      // (out)
+				      int32_t  key_len,    // (in)
+				      int32_t  value_len ) // (in)
 {
-  char _title[File_HLONG+1];
-  char _source[File_HLONG+1];
-  char _institution[File_HLONG+1];
-  char _time_units[File_HMID+1];
+  char _key[File_HLONG+1];
+  char _value[File_HLONG+1];
   int32_t len;
 
-  len = title_len > File_HLONG ? File_HLONG : title_len;
-  fstr2cstr(_title, title, len);
+  len = key_len > File_HLONG ? File_HLONG : key_len;
+  fstr2cstr(_key, key, len);
 
-  len = source_len > File_HLONG ? File_HLONG : source_len;
-  fstr2cstr(_source, source, len);
+  len = value_len > File_HLONG ? File_HLONG : value_len;
+  fstr2cstr(_value, value, len);
 
-  len = institution_len > File_HLONG ? File_HLONG : institution_len;
-  fstr2cstr(_institution, institution, len);
+  *error = file_set_global_attribute_text( *fid, _key, _value );
+}
 
-  len = time_units_len > File_HMID ? File_HMID : time_units_len;
+void file_set_global_attribute_int_( int32_t *fid,      // (in)
+				     char    *key,      // (in)
+				     int32_t *value,    // (in)
+				     int32_t *len,      // (in)
+				     int32_t *error,    // (out)
+				     int32_t  key_len ) // (in)
+{
+  char _key[File_HLONG+1];
+
+  key_len = key_len > File_HLONG ? File_HLONG : key_len;
+  fstr2cstr(_key, key, key_len);
+
+  *error = file_set_global_attribute_int( *fid, _key, value, (size_t)*len );
+}
+
+void file_set_global_attribute_float_( int32_t *fid,      // (in)
+				       char    *key,      // (in)
+				       float   *value,    // (in)
+				       int32_t *len,      // (in)
+				       int32_t *error,    // (out)
+				       int32_t  key_len ) // (in)
+{
+  char _key[File_HLONG+1];
+
+  key_len = key_len > File_HLONG ? File_HLONG : key_len;
+  fstr2cstr(_key, key, key_len);
+
+  *error = file_set_global_attribute_float( *fid, _key, value, (size_t)*len );
+}
+
+void file_set_global_attribute_double_( int32_t *fid,      // (in)
+					char    *key,      // (in)
+					double  *value,    // (in)
+					int32_t *len,      // (in)
+					int32_t *error,    // (out)
+					int32_t  key_len ) // (in)
+{
+  char _key[File_HLONG+1];
+
+  key_len = key_len > File_HLONG ? File_HLONG : key_len;
+  fstr2cstr(_key, key, key_len);
+
+  *error = file_set_global_attribute_double( *fid, _key, value, (size_t)*len );
+}
+
+void file_set_tunits_( int32_t *fid,        // (in)
+		       char    *time_units, // (in)
+		       int32_t *error,      // (in)
+		       int32_t  len)        // (in)
+{
+  char _time_units[File_HLONG+1];
+
+  len = len > File_HLONG ? File_HLONG : len;
   fstr2cstr(_time_units, time_units, len);
 
-  *error = file_set_global_attributes( *fid, _title, _source, _institution, _time_units, *nodeid, nodeidx, *nodeidx_dim );
+  *error = file_set_tunits( *fid, _time_units );
 }
 
 void file_set_tattr_( int32_t *fid,       // (in)
