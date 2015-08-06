@@ -4229,9 +4229,10 @@ enddo
     character(len=H_SHORT)   :: INTRP_LAND_SFC_TEMP  = 'off'
     character(len=H_SHORT)   :: INTRP_OCEAN_TEMP     = 'off'
     character(len=H_SHORT)   :: INTRP_OCEAN_SFC_TEMP = 'off'
+    integer                  :: INTRP_ITER_MAX       = 20       ! maximum count for iteration in the interporation
 
     integer                  :: INTERP_SERC_DIV_NUM = 10        ! num of dividing blocks in interpolation search
-    character(len=H_SHORT)   :: SOILWATER_DS2VC     = 'limit' ! 'critical' or 'limit'
+    character(len=H_SHORT)   :: SOILWATER_DS2VC     = 'limit'   ! 'critical' or 'limit'
     logical                  :: SERIAL_PROC_READ    = .true.    ! read by one MPI process and broadcast
 
     ! only for SCALE boundary
@@ -4259,6 +4260,7 @@ enddo
          INTRP_LAND_SFC_TEMP,    &
          INTRP_OCEAN_TEMP,       &
          INTRP_OCEAN_SFC_TEMP,   &
+         INTRP_ITER_MAX,         &
          PARENT_MP_TYPE,         &
          SOILWATER_DS2VC,        &
          SERIAL_PROC_READ
@@ -4456,6 +4458,7 @@ enddo
                              INTRP_LAND_SFC_TEMP,   &
                              INTRP_OCEAN_TEMP,      &
                              INTRP_OCEAN_SFC_TEMP,  &
+                             INTRP_ITER_MAX,        &
                              SOILWATER_DS2VC_flag,  &
                              mdlid                  )
 
