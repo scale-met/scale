@@ -342,7 +342,7 @@ contains
        PI => CONST_PI
     use mod_comm, only: &
        COMM_data_transfer
-    use mod_gtl, only: &
+    use mod_gm_statistics, only: &
        GTL_max, &
        GTL_min
     implicit none
@@ -961,7 +961,7 @@ contains
        GMTR_P_AREA, &
        GMTR_P_var,  &
        GMTR_P_var_pl
-    use mod_gtl, only: &
+    use mod_gm_statistics, only: &
        GTL_global_sum_srf, &
        GTL_max,            &
        GTL_min

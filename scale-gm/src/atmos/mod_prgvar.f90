@@ -955,7 +955,7 @@ contains
        FIO_input
     use mod_comm, only: &
        COMM_var
-    use mod_gtl, only: &
+    use mod_gm_statistics, only: &
        GTL_max, &
        GTL_min
     use mod_runconf, only: &
@@ -1112,7 +1112,7 @@ contains
        FIO_REAL8
     use mod_time, only : &
        TIME_CTIME
-    use mod_gtl, only: &
+    use mod_gm_statistics, only: &
        GTL_max, &
        GTL_min
     use mod_runconf, only: &

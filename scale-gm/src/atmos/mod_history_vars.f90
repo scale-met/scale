@@ -108,7 +108,7 @@ contains
     use mod_vmtr, only: &
        VMTR_PHI,    &
        VMTR_GSGAM2
-    use mod_gtl, only: &
+    use mod_gm_statistics, only: &
        GTL_global_sum_eachlayer
     use mod_prgvar, only: &
        prgvar_get_withdiag

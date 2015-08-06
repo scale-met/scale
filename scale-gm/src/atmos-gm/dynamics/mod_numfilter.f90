@@ -363,7 +363,7 @@ contains
        GMTR_area_pl
     use mod_time, only: &
        TIME_DTL
-    use mod_gtl, only: &
+    use mod_gm_statistics, only: &
        GTL_max_k, &
        GTL_min_k
     use mod_runconf, only: &
@@ -721,7 +721,7 @@ contains
        GMTR_area_pl
     use mod_time, only: &
        TIME_DTS
-    use mod_gtl, only: &
+    use mod_gm_statistics, only: &
        GTL_max_k, &
        GTL_min_k
     use mod_runconf, only: &
@@ -886,7 +886,7 @@ contains
        GMTR_area_pl
     use mod_time, only: &
        TIME_DTS
-    use mod_gtl, only: &
+    use mod_gm_statistics, only: &
        GTL_max_k, &
        GTL_min_k
     use mod_runconf, only: &

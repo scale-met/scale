@@ -719,7 +719,7 @@ contains
        COMM_var
     use mod_fio, only: &
        FIO_output
-    use mod_gtl, only: &
+    use mod_gm_statistics, only: &
        GTL_max, &
        GTL_min
     use mod_vintrpl, only: &

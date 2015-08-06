@@ -163,7 +163,7 @@ contains
     use mod_time, only: &
        TIME_CSTEP, &
        TIME_DTL
-    use mod_gtl, only: &
+    use mod_gm_statistics, only: &
        GTL_global_sum, &
        GTL_global_sum_srf
     use mod_runconf, only: &
