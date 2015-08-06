@@ -135,9 +135,9 @@ contains
     allocate( LANDUSE_fact_ocean(IA,JA) )
     allocate( LANDUSE_fact_land (IA,JA) )
     allocate( LANDUSE_fact_urban(IA,JA) )
-    LANDUSE_fact_ocean(:,:) = ( 1.0_RP - LANDUSE_frac_land(:,:) )
-    LANDUSE_fact_land (:,:) = (          LANDUSE_frac_land(:,:) ) * ( 1.0_RP - LANDUSE_frac_urban(:,:) )
-    LANDUSE_fact_urban(:,:) = (          LANDUSE_frac_land(:,:) ) * (          LANDUSE_frac_urban(:,:) )
+    LANDUSE_fact_ocean(:,:) = 1.0_RP - LANDUSE_frac_land(:,:) * ( 1.0_RP - LANDUSE_frac_lake(:,:) )
+    LANDUSE_fact_land (:,:) = ( 1.0_RP - LANDUSE_fact_ocean(:,:) ) * ( 1.0_RP - LANDUSE_frac_urban(:,:) )
+    LANDUSE_fact_urban(:,:) = ( 1.0_RP - LANDUSE_fact_ocean(:,:) ) * (          LANDUSE_frac_urban(:,:) )
 
     return
   end subroutine LANDUSE_setup
