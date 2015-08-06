@@ -32,7 +32,6 @@ module scale_vector
   public :: VECTR_anticlockwise
   public :: VECTR_triangle
   public :: VECTR_distance
-  public :: GMTR_calc_vector
 
   !-----------------------------------------------------------------------------
   !
@@ -462,77 +461,5 @@ contains
 
     return
   end subroutine VECTR_distance
-
-  !-----------------------------------------------------------------------------
-  subroutine GMTR_calc_vector( &
-       vs, ve,                & !--- IN : vectors at the start and the end
-       tv,                    & !--- INOUT : tangential vector
-       nv,                    & !--- INOUT : normal vector
-       polygon_type,          & !--- IN : polygon type
-       radius )                 !--- IN : radius
-    !
-    implicit none
-    !
-    integer, parameter :: ix = 1
-    integer, parameter :: iy = 2
-    integer, parameter :: iz = 3
-    !
-    real(RP),intent(in) :: vs(ix:iz)
-    real(RP),intent(in) :: ve(ix:iz)
-    real(RP),intent(inout) :: tv(ix:iz)
-    real(RP),intent(inout) :: nv(ix:iz)
-    character(len=*), intent(in) :: polygon_type
-    real(RP), intent(in) :: radius
-    real(RP) :: vec_len
-    !
-    real(RP) :: len
-    real(RP) :: fact_nv,fact_tv
-    !
-    if(trim(polygon_type)=='ON_SPHERE') then
-       !
-       !--- NOTE : Length of a geodesic line is caluclatd
-       !---        by (angle X radius).
-       vec_len = sqrt(vs(ix)*vs(ix)+vs(iy)*vs(iy)+vs(iz)*vs(iz))
-       if(vec_len/=0.0_RP) then
-          len=acos((vs(ix)*ve(ix)+vs(iy)*ve(iy)+vs(iz)*ve(iz))/vec_len/vec_len)&
-               *radius
-       else
-          len = 0.0_RP
-       endif
-       !
-    elseif(trim(polygon_type)=='ON_PLANE') then
-       !
-       !--- NOTE : Length of a line
-       len=sqrt(&
-            +(vs(ix)-ve(ix))*(vs(ix)-ve(ix))&
-            +(vs(iy)-ve(iy))*(vs(iy)-ve(iy))&
-            +(vs(iz)-ve(iz))*(vs(iz)-ve(iz))&
-            )
-    endif
-    !
-    !
-    !--- calculate normal and tangential vecors
-    nv(ix)=vs(iy)*ve(iz)-vs(iz)*ve(iy)
-    nv(iy)=vs(iz)*ve(ix)-vs(ix)*ve(iz)
-    nv(iz)=vs(ix)*ve(iy)-vs(iy)*ve(ix)
-    tv(ix)=ve(ix)-vs(ix)
-    tv(iy)=ve(iy)-vs(iy)
-    tv(iz)=ve(iz)-vs(iz)
-    !
-    !--- scaling to radius ( normal vector )
-    fact_nv=len/sqrt(nv(ix)*nv(ix)+nv(iy)*nv(iy)+nv(iz)*nv(iz))
-    nv(ix)=nv(ix)*fact_nv
-    nv(iy)=nv(iy)*fact_nv
-    nv(iz)=nv(iz)*fact_nv
-    !
-    !--- scaling to radius ( tangential vector )
-    fact_tv=len/sqrt(tv(ix)*tv(ix)+tv(iy)*tv(iy)+tv(iz)*tv(iz))
-    tv(ix)=tv(ix)*fact_tv
-    tv(iy)=tv(iy)*fact_tv
-    tv(iz)=tv(iz)*fact_tv
-    !
-    return
-    !
-  end subroutine GMTR_calc_vector
 
 end module scale_vector

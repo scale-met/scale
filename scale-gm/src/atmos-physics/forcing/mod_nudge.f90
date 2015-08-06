@@ -485,6 +485,8 @@ contains
     use scale_const, only: &
        CONST_CVdry,   &
        CONST_GRAV
+    use mod_gmtr, only: &
+       GMTR_vxvyvz2uv
     use mod_oprt, only: &
        OPRT_horizontalize_vec
     use mod_vmtr, only: &
@@ -492,8 +494,6 @@ contains
        VMTR_GSGAM2H_pl, &
        VMTR_C2Wfact,    &
        VMTR_C2Wfact_pl
-    use mod_gtl, only: &
-       GTL_generate_uv
     use mod_history, only: &
        history_in
     implicit none
@@ -617,11 +617,12 @@ contains
 
     !--- output tendency
     if ( out_tendency ) then
-       call GTL_generate_uv( du,  du_pl,  & ! [OUT]
-                             dv,  dv_pl,  & ! [OUT]
-                             dvx, dvx_pl, & ! [IN]
-                             dvy, dvy_pl, & ! [IN]
-                             dvz, dvz_pl  ) ! [IN]
+       call GMTR_vxvyvz2uv( dvx(:,:,:), dvx_pl(:,:,:), & ! [IN]
+                            dvy(:,:,:), dvy_pl(:,:,:), & ! [IN]
+                            dvz(:,:,:), dvz_pl(:,:,:), & ! [IN]
+                            du (:,:,:), du_pl (:,:,:), & ! [OUT]
+                            dv (:,:,:), dv_pl (:,:,:), & ! [OUT]
+                            cos_flag = .false.         ) ! [IN]
 
        dtem(:,:,:) = dein(:,:,:) / CONST_CVdry
 

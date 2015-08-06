@@ -721,8 +721,7 @@ contains
        FIO_output
     use mod_gtl, only: &
        GTL_max, &
-       GTL_min, &
-       GTL_output_var2_da
+       GTL_min
     use mod_vintrpl, only: &
        VINTRPL_z_level, &
        VINTRPL_z_level2
@@ -883,8 +882,8 @@ contains
           elseif( trim(output_io_mode) == 'LEGACY' ) then
              basename = trim(output_path)//file_save(n)
 
-             call GTL_output_var2_da( basename, v_save(:,:,:,1),                        &
-                                      ksumstr(n), ksumend(n), tmax_save(n), output_size )
+!             call GTL_output_var2_da( basename, v_save(:,:,:,1),                        &
+!                                      ksumstr(n), ksumend(n), tmax_save(n), output_size )
 
              call history_timeinfo
           endif

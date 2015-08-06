@@ -587,8 +587,6 @@ contains
       ADM_LOG_FID
     use mod_fio, only : &
       FIO_input
-    use mod_gtl, only : &
-      GTL_input_var2_da
     use mod_comm, only : &
       COMM_var
     implicit none
@@ -615,11 +613,11 @@ contains
        elseif( info(np)%input_io_mode == 'LEGACY' ) then
        ! -> [add] H.Yashiro 20110826
 
-          call GTL_input_var2_da( trim(info(np)%fname),            &
-                                  info(np)%v(:,:,:,n),             &
-                                  1, info(np)%kall,                &
-                                  recnum=info(np)%data_rec(n),     &
-                                  input_size = info(np)%input_size )
+!          call GTL_input_var2_da( trim(info(np)%fname),            &
+!                                  info(np)%v(:,:,:,n),             &
+!                                  1, info(np)%kall,                &
+!                                  recnum=info(np)%data_rec(n),     &
+!                                  input_size = info(np)%input_size )
 
        endif
     enddo

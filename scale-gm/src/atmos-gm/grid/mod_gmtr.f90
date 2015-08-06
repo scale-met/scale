@@ -38,6 +38,8 @@ module mod_gmtr
   !++ Public procedure
   !
   public :: GMTR_setup
+  public :: GMTR_vxvyvz2uv
+  public :: GMTR_uv2vxvyvz
 
   !-----------------------------------------------------------------------------
   !
@@ -132,7 +134,8 @@ module mod_gmtr
   private :: GMTR_calc_A
   private :: GMTR_output_metrics
 
-  private :: mk_gmtrvec_on_plane
+  private :: GMTR_calc_vector
+  private :: GMTR_calc_vector_on_plane
   private :: triangle_area_on_plane
 
   !-----------------------------------------------------------------------------
@@ -598,8 +601,6 @@ contains
   !-----------------------------------------------------------------------------
   !> calc geometrical information for cell arc
   subroutine GMTR_calc_A
-    use scale_vector, only: &
-       GMTR_calc_vector
     use mod_adm, only: &
        ADM_prc_me,      &
        ADM_have_pl,     &
@@ -691,7 +692,7 @@ contains
           ij = ADM_ImoJmp(n,ADM_GIoJo)
 
           if ( GRD_grid_type == 'ON_PLANE' ) then
-             call mk_gmtrvec_on_plane( v(:,1,ij), v(:,2,ij), tvec(:), nvec(:) )
+             call GMTR_calc_vector_on_plane( v(:,1,ij), v(:,2,ij), tvec(:), nvec(:) )
           else
              call GMTR_calc_vector( v(:,1,ij), v(:,2,ij), tvec(:), nvec(:), GMTR_polygon_type, GRD_rscale )
           endif
@@ -722,7 +723,7 @@ contains
           ij = ADM_ImoJmo(n,ADM_GIoJo)
 
           if ( GRD_grid_type == 'ON_PLANE' ) then
-             call mk_gmtrvec_on_plane( v(:,1,ij), v(:,2,ij), tvec(:), nvec(:) )
+             call GMTR_calc_vector_on_plane( v(:,1,ij), v(:,2,ij), tvec(:), nvec(:) )
           else
              call GMTR_calc_vector( v(:,1,ij), v(:,2,ij), tvec(:), nvec(:), GMTR_polygon_type, GRD_rscale )
           endif
@@ -763,7 +764,7 @@ contains
           ij = ADM_ImpJmo(n,ADM_GIoJo)
 
           if ( GRD_grid_type == 'ON_PLANE' ) then
-             call mk_gmtrvec_on_plane( v(:,1,ij), v(:,2,ij), tvec(:), nvec(:) )
+             call GMTR_calc_vector_on_plane( v(:,1,ij), v(:,2,ij), tvec(:), nvec(:) )
           else
              call GMTR_calc_vector( v(:,1,ij), v(:,2,ij), tvec(:), nvec(:), GMTR_polygon_type, GRD_rscale )
           endif
@@ -801,7 +802,7 @@ contains
           ij = ADM_ImoJoo(n,ADM_GIoJo)
 
           if ( GRD_grid_type == 'ON_PLANE' ) then
-             call mk_gmtrvec_on_plane( v(:,1,ij), v(:,2,ij), tvec(:), nvec(:) )
+             call GMTR_calc_vector_on_plane( v(:,1,ij), v(:,2,ij), tvec(:), nvec(:) )
           else
              call GMTR_calc_vector( v(:,1,ij), v(:,2,ij), tvec(:), nvec(:), GMTR_polygon_type, GRD_rscale )
           endif
@@ -842,7 +843,7 @@ contains
           ij = ADM_ImoJmo(n,ADM_GIoJo)
 
           if ( GRD_grid_type == 'ON_PLANE' ) then
-             call mk_gmtrvec_on_plane( v(:,1,ij), v(:,2,ij), tvec(:), nvec(:) )
+             call GMTR_calc_vector_on_plane( v(:,1,ij), v(:,2,ij), tvec(:), nvec(:) )
           else
              call GMTR_calc_vector( v(:,1,ij), v(:,2,ij), tvec(:), nvec(:), GMTR_polygon_type, GRD_rscale )
           endif
@@ -881,7 +882,7 @@ contains
           ij = ADM_IooJmo(n,ADM_GIoJo)
 
           if ( GRD_grid_type == 'ON_PLANE' ) then
-             call mk_gmtrvec_on_plane( v(:,1,ij), v(:,2,ij), tvec(:), nvec(:) )
+             call GMTR_calc_vector_on_plane( v(:,1,ij), v(:,2,ij), tvec(:), nvec(:) )
           else
              call GMTR_calc_vector( v(:,1,ij), v(:,2,ij), tvec(:), nvec(:), GMTR_polygon_type, GRD_rscale )
           endif
@@ -1062,22 +1063,269 @@ contains
   end subroutine GMTR_output_metrics
 
   !-----------------------------------------------------------------------------
-  !> calc vector on plane
-  subroutine mk_gmtrvec_on_plane( vFrom, vTo, vT, vN )
+  subroutine GMTR_uv2vxvyvz( &
+       ucos, ucos_pl, &
+       vcos, vcos_pl, &
+       vx,   vx_pl,   &
+       vy,   vy_pl,   &
+       vz,   vz_pl    )
+    use mod_adm, only: &
+       ADM_have_pl, &
+       ADM_gall,    &
+       ADM_gall_pl, &
+       ADM_lall,    &
+       ADM_lall_pl, &
+       ADM_kall,    &
+       ADM_KNONE
     implicit none
 
-    real(RP), intent(in)  :: vFrom(3), vTo(3)
-    real(RP), intent(out) :: vT(3),    vN(3)
+    real(RP), intent(in)  :: ucos   (ADM_gall,   ADM_kall,ADM_lall   )
+    real(RP), intent(in)  :: ucos_pl(ADM_gall_pl,ADM_kall,ADM_lall_pl)
+    real(RP), intent(in)  :: vcos   (ADM_gall,   ADM_kall,ADM_lall   )
+    real(RP), intent(in)  :: vcos_pl(ADM_gall_pl,ADM_kall,ADM_lall_pl)
+    real(RP), intent(out) :: vx     (ADM_gall,   ADM_kall,ADM_lall   )
+    real(RP), intent(out) :: vx_pl  (ADM_gall_pl,ADM_kall,ADM_lall_pl)
+    real(RP), intent(out) :: vy     (ADM_gall,   ADM_kall,ADM_lall   )
+    real(RP), intent(out) :: vy_pl  (ADM_gall_pl,ADM_kall,ADM_lall_pl)
+    real(RP), intent(out) :: vz     (ADM_gall,   ADM_kall,ADM_lall   )
+    real(RP), intent(out) :: vz_pl  (ADM_gall_pl,ADM_kall,ADM_lall_pl)
+
+    real(RP) :: u, v, coslat, sw
+
+    integer :: n, k, l, k0
     !---------------------------------------------------------------------------
 
+    k0 = ADM_KNONE
+
+    do l = 1, ADM_lall
+    do k = 1, ADM_kall
+    do n = 1, ADM_gall
+       coslat = cos(GMTR_P_var(n,k0,l,GMTR_P_LAT))
+
+       sw = 0.5_RP + sign(0.5_RP,-abs(coslat)) ! if (coslat == 0), u=v=0
+
+       u = ucos(n,k,l) * ( 1.0_RP - sw ) / ( coslat - sw )
+       v = vcos(n,k,l) * ( 1.0_RP - sw ) / ( coslat - sw )
+
+       vx(n,k,l) = u * GMTR_P_var(n,k0,l,GMTR_P_IX) &
+                 + v * GMTR_P_var(n,k0,l,GMTR_P_JX)
+       vy(n,k,l) = u * GMTR_P_var(n,k0,l,GMTR_P_IY) &
+                 + v * GMTR_P_var(n,k0,l,GMTR_P_JY)
+       vz(n,k,l) = u * GMTR_P_var(n,k0,l,GMTR_P_IZ) &
+                 + v * GMTR_P_var(n,k0,l,GMTR_P_JZ)
+    enddo
+    enddo
+    enddo
+
+    if ( ADM_have_pl ) then
+       do l = 1, ADM_lall_pl
+       do k = 1, ADM_kall
+       do n = 1, ADM_gall_pl
+          coslat = cos(GMTR_P_var_pl(n,k0,l,GMTR_P_LAT))
+
+          sw = 0.5_RP + sign(0.5_RP,-abs(coslat)) ! if (coslat == 0), u=v=0
+
+          u = ucos_pl(n,k,l) * ( 1.0_RP - sw ) / ( coslat - sw )
+          v = vcos_pl(n,k,l) * ( 1.0_RP - sw ) / ( coslat - sw )
+
+          vx_pl(n,k,l) = u * GMTR_P_var_pl(n,k0,l,GMTR_P_IX) &
+                       + v * GMTR_P_var_pl(n,k0,l,GMTR_P_JX)
+          vy_pl(n,k,l) = u * GMTR_P_var_pl(n,k0,l,GMTR_P_IY) &
+                       + v * GMTR_P_var_pl(n,k0,l,GMTR_P_JY)
+          vz_pl(n,k,l) = u * GMTR_P_var_pl(n,k0,l,GMTR_P_IZ) &
+                       + v * GMTR_P_var_pl(n,k0,l,GMTR_P_JZ)
+       enddo
+       enddo
+       enddo
+    endif
+
+    return
+  end subroutine GMTR_uv2vxvyvz
+
+  !-----------------------------------------------------------------------------
+  subroutine GMTR_vxvyvz2uv( &
+       vx, vx_pl, &
+       vy, vy_pl, &
+       vz, vz_pl, &
+       u,  u_pl,  &
+       v,  v_pl,  &
+       cos_flag   )
+    use mod_adm, only: &
+       ADM_have_pl, &
+       ADM_gall,    &
+       ADM_gall_pl, &
+       ADM_lall,    &
+       ADM_lall_pl, &
+       ADM_kall,    &
+       ADM_KNONE
+    implicit none
+
+    real(RP), intent(in)  :: vx   (ADM_gall,   ADM_kall,ADM_lall   )
+    real(RP), intent(in)  :: vx_pl(ADM_gall_pl,ADM_kall,ADM_lall_pl)
+    real(RP), intent(in)  :: vy   (ADM_gall,   ADM_kall,ADM_lall   )
+    real(RP), intent(in)  :: vy_pl(ADM_gall_pl,ADM_kall,ADM_lall_pl)
+    real(RP), intent(in)  :: vz   (ADM_gall,   ADM_kall,ADM_lall   )
+    real(RP), intent(in)  :: vz_pl(ADM_gall_pl,ADM_kall,ADM_lall_pl)
+    real(RP), intent(out) :: u    (ADM_gall,   ADM_kall,ADM_lall   )
+    real(RP), intent(out) :: u_pl (ADM_gall_pl,ADM_kall,ADM_lall_pl)
+    real(RP), intent(out) :: v    (ADM_gall,   ADM_kall,ADM_lall   )
+    real(RP), intent(out) :: v_pl (ADM_gall_pl,ADM_kall,ADM_lall_pl)
+    logical,  intent(in)  :: cos_flag
+
+    integer :: n, k, l, k0
+    !---------------------------------------------------------------------------
+
+    k0 = ADM_KNONE
+
+    if ( cos_flag ) then
+
+       do l = 1, ADM_lall
+       do k = 1, ADM_kall
+       do n = 1, ADM_gall
+          u(n,k,l) = ( vx(n,k,l) * GMTR_P_var(n,k0,l,GMTR_P_IX) &
+                     + vy(n,k,l) * GMTR_P_var(n,k0,l,GMTR_P_IY) &
+                     + vz(n,k,l) * GMTR_P_var(n,k0,l,GMTR_P_IZ) &
+                     ) * cos(GMTR_P_var(n,k0,l,GMTR_P_LAT))
+          v(n,k,l) = ( vx(n,k,l) * GMTR_P_var(n,k0,l,GMTR_P_JX) &
+                     + vy(n,k,l) * GMTR_P_var(n,k0,l,GMTR_P_JY) &
+                     + vz(n,k,l) * GMTR_P_var(n,k0,l,GMTR_P_JZ) &
+                     ) * cos(GMTR_P_var(n,k0,l,GMTR_P_LAT))
+       enddo
+       enddo
+       enddo
+
+       if ( ADM_have_pl ) then
+          do l = 1, ADM_lall_pl
+          do k = 1, ADM_kall
+          do n = 1, ADM_gall_pl
+             u_pl(n,k,l) = ( vx_pl(n,k,l) * GMTR_P_var_pl(n,k0,l,GMTR_P_IX) &
+                           + vy_pl(n,k,l) * GMTR_P_var_pl(n,k0,l,GMTR_P_IY) &
+                           + vz_pl(n,k,l) * GMTR_P_var_pl(n,k0,l,GMTR_P_IZ) &
+                           ) * cos(GMTR_P_var_pl(n,k0,l,GMTR_P_LAT))
+             v_pl(n,k,l) = ( vx_pl(n,k,l) * GMTR_P_var_pl(n,k0,l,GMTR_P_JX) &
+                           + vy_pl(n,k,l) * GMTR_P_var_pl(n,k0,l,GMTR_P_JY) &
+                           + vz_pl(n,k,l) * GMTR_P_var_pl(n,k0,l,GMTR_P_JZ) &
+                           ) * cos(GMTR_P_var_pl(n,k0,l,GMTR_P_LAT))
+          enddo
+          enddo
+          enddo
+       endif
+
+    else
+
+       do l = 1, ADM_lall
+       do k = 1, ADM_kall
+       do n = 1, ADM_gall
+          u(n,k,l) = ( vx(n,k,l) * GMTR_P_var(n,k0,l,GMTR_P_IX) &
+                     + vy(n,k,l) * GMTR_P_var(n,k0,l,GMTR_P_IY) &
+                     + vz(n,k,l) * GMTR_P_var(n,k0,l,GMTR_P_IZ) )
+          v(n,k,l) = ( vx(n,k,l) * GMTR_P_var(n,k0,l,GMTR_P_JX) &
+                     + vy(n,k,l) * GMTR_P_var(n,k0,l,GMTR_P_JY) &
+                     + vz(n,k,l) * GMTR_P_var(n,k0,l,GMTR_P_JZ) )
+       enddo
+       enddo
+       enddo
+
+       if ( ADM_have_pl ) then
+          do l = 1, ADM_lall_pl
+          do k = 1, ADM_kall
+          do n = 1, ADM_gall_pl
+             u_pl(n,k,l) = ( vx_pl(n,k,l) * GMTR_P_var_pl(n,k0,l,GMTR_P_IX) &
+                           + vy_pl(n,k,l) * GMTR_P_var_pl(n,k0,l,GMTR_P_IY) &
+                           + vz_pl(n,k,l) * GMTR_P_var_pl(n,k0,l,GMTR_P_IZ) )
+             v_pl(n,k,l) = ( vx_pl(n,k,l) * GMTR_P_var_pl(n,k0,l,GMTR_P_JX) &
+                           + vy_pl(n,k,l) * GMTR_P_var_pl(n,k0,l,GMTR_P_JY) &
+                           + vz_pl(n,k,l) * GMTR_P_var_pl(n,k0,l,GMTR_P_JZ) )
+          enddo
+          enddo
+          enddo
+       endif
+
+    endif
+
+    return
+  end subroutine GMTR_vxvyvz2uv
+
+  !-----------------------------------------------------------------------------
+  subroutine GMTR_calc_vector( &
+       vFrom,        &
+       vTo,          &
+       vT,           &
+       vN,           &
+       polygon_type, &
+       radius        )
+    use scale_vector, only: &
+       VECTR_cross, &
+       VECTR_abs,   &
+       VECTR_angle
+    implicit none
+
+    real(RP),         intent(in)  :: vFrom(3)
+    real(RP),         intent(in)  :: vTo  (3)
+    real(RP),         intent(out) :: vT   (3)
+    real(RP),         intent(out) :: vN   (3)
+    character(len=*), intent(in)  :: polygon_type
+    real(RP),         intent(in)  :: radius
+
+    real(RP), parameter :: o(3) = 0.0_RP
+
+    real(RP) :: angle, length
+    real(RP) :: distance
+    !---------------------------------------------------------------------------
+
+    if ( polygon_type == 'ON_PLANE' ) then ! length of a line
+
+       distance = sqrt( ( vFrom(1)-vTo(1) ) * ( vFrom(1)-vTo(1) ) &
+                      + ( vFrom(2)-vTo(2) ) * ( vFrom(2)-vTo(2) ) &
+                      + ( vFrom(3)-vTo(3) ) * ( vFrom(3)-vTo(3) ) )
+
+    elseif( polygon_type == 'ON_SPHERE' ) then ! length of a geodesic line ( angle * radius )
+
+       call VECTR_angle( angle, vFrom(:), o(:), vTo(:) )
+       distance = angle * radius
+
+    endif
+
+    ! calculate tangential vector
     vT(:) = vTo(:) - vFrom(:)
 
+    call VECTR_abs( length, vT(:) )
+    vT(:) = vT(:) * distance / length
+
+    ! calculate normal vector
+    call VECTR_cross( vN(:), o(:), vFrom(:), o(:), vTo(:) )
+
+    call VECTR_abs( length, vN(:) )
+    vN(:) = vN(:) * distance / length
+
+    return
+  end subroutine GMTR_calc_vector
+
+  !-----------------------------------------------------------------------------
+  !> calc vector on plane
+  subroutine GMTR_calc_vector_on_plane( &
+       vFrom, &
+       vTo,   &
+       vT,    &
+       vN     )
+    implicit none
+
+    real(RP), intent(in)  :: vFrom(3)
+    real(RP), intent(in)  :: vTo  (3)
+    real(RP), intent(out) :: vT   (3)
+    real(RP), intent(out) :: vN   (3)
+    !---------------------------------------------------------------------------
+
+    ! calculate tangential vector
+    vT(:) = vTo(:) - vFrom(:)
+
+    ! calculate normal vector
     vN(1) = -vT(2)
     vN(2) =  vT(1)
     vN(3) =   0.0_RP
 
     return
-  end subroutine mk_gmtrvec_on_plane
+  end subroutine GMTR_calc_vector_on_plane
 
   !-----------------------------------------------------------------------------
   !> calc triangle area on plane
