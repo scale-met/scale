@@ -4917,6 +4917,7 @@ enddo
 
     integer :: totaltimesteps = 1
     integer :: timelen = 1           ! NUMBER_OF_TSTEPS for nicam data
+    integer :: skip_steps
     integer :: ierr
 
     integer :: k, i, j, iq, n, ns, ne
@@ -4941,24 +4942,10 @@ enddo
        call PRC_MPIstop
     endif
 
-    if( FILETYPE_ORG /= 'NICAM-NETCDF' ) then
-      if ( NUMBER_OF_SKIP_TSTEPS /= 0 ) then
-         write(*,*) 'xxx NUMBER_OF_SKIP_TSTEPS cannot be used for ',trim(FILETYPE_ORG)
-         call PRC_MPIstop
-      endif
-    endif
-
-    if     ( FILETYPE_ORG == 'WRF-ARW' ) then
-      BASENAME_WITHNUM = trim(BASENAME_ORG)//"_00000"
-    else if( FILETYPE_ORG == 'SCALE-LES' ) then
-      BASENAME_WITHNUM = trim(BASENAME_ORG)
-    else if( FILETYPE_ORG == 'NICAM-NETCDF' ) then
-      BASENAME_WITHNUM = trim(BASENAME_ORG)//"_00000"
-    else if( FILETYPE_ORG == 'GrADS' ) then
-      BASENAME_WITHNUM = trim(BASENAME_ORG)//"_00000"
+    if ( NUMBER_OF_FILES > 1 ) then
+       BASENAME_WITHNUM = trim(BASENAME_ORG)//"_00000"
     else
-      write(*,*) ' xxx Unsupported FILE TYPE:', trim(FILETYPE_ORG)
-      call PRC_MPIstop
+       BASENAME_WITHNUM = trim(BASENAME_ORG)
     end if
 
     call ParentAtomSetup( dims(:), timelen, mdlid,        & ![OUT]
@@ -4984,21 +4971,13 @@ enddo
 
     !--- read external file
     do n = 1, NUMBER_OF_FILES
-       write(NUM,'(I5.5)') n-1
 
-       select case ( FILETYPE_ORG )
-       case ( 'WRF-ARW' )
+       if ( NUMBER_OF_FILES > 1 ) then
+          write(NUM,'(I5.5)') n-1
           BASENAME_WITHNUM = trim(BASENAME_ORG)//"_"//NUM
-       case ( 'SCALE-LES' )
+       else
           BASENAME_WITHNUM = trim(BASENAME_ORG)
-       case ( 'NICAM-NETCDF' )
-          BASENAME_WITHNUM = trim(BASENAME_ORG)//"_"//NUM
-       case ( 'GrADS' )
-          BASENAME_WITHNUM = trim(BASENAME_ORG)//"_"//NUM
-       case default
-          write(*,*) ' xxx Unsupported FILE TYPE:', trim(FILETYPE_ORG)
-          call PRC_MPIstop
-       end select
+       end if
 
        if( IO_L ) write(IO_FID_LOG,*) ' '
        if( IO_L ) write(IO_FID_LOG,*) '+++ Target File Name: ',trim(BASENAME_WITHNUM)
@@ -5006,6 +4985,13 @@ enddo
 
        ns = NUMBER_OF_TSTEPS * (n - 1) + 1
        ne = ns + (NUMBER_OF_TSTEPS - 1)
+
+       if ( ne <= NUMBER_OF_SKIP_TSTEPS ) then
+          if( IO_L ) write(IO_FID_LOG,*) '    SKIP'
+          cycle
+       end if
+
+       skip_steps = max(NUMBER_OF_SKIP_TSTEPS - ns + 1, 0)
 
        ! read all prepared data
        call ParentAtomInput( DENS_org(:,:,:,ns:ne),   &
@@ -5018,7 +5004,8 @@ enddo
                              dims(:),                 &
                              mdlid,                   &
                              PARENT_MP_TYPE,          &
-                             NUMBER_OF_TSTEPS         )
+                             NUMBER_OF_TSTEPS,        &
+                             skip_steps               )
     enddo
 
     !--- input initial data
@@ -5053,20 +5040,10 @@ enddo
                              BOUNDARY_TITLE           )
 
     !--- read/write initial data for bottom boundary models
-    n = 1
-    write(NUM,'(I5.5)') n-1
-
-    if     ( FILETYPE_ORG == 'WRF-ARW' ) then
-      BASENAME_WITHNUM = trim(BASENAME_ORG)//"_"//NUM
-    else if( FILETYPE_ORG == 'SCALE-LES' ) then
-      BASENAME_WITHNUM = trim(BASENAME_ORG)
-    else if( FILETYPE_ORG == 'NICAM-NETCDF' ) then
-      BASENAME_WITHNUM = trim(BASENAME_ORG)//"_"//NUM
-    else if( FILETYPE_ORG == 'GrADS' ) then
-      BASENAME_WITHNUM = trim(BASENAME_ORG)//"_"//NUM
+    if ( NUMBER_OF_FILES > 1 ) then
+       BASENAME_WITHNUM = trim(BASENAME_ORG)//"_00000"
     else
-      write(*,*) ' xxx Unsupported FILE TYPE:', trim(FILETYPE_ORG)
-      call PRC_MPIstop
+       BASENAME_WITHNUM = trim(BASENAME_ORG)
     end if
 
     select case ( SOILWATER_DS2VC )

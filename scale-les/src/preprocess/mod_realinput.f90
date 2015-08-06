@@ -286,7 +286,8 @@ contains
       dims,             &
       mdlid,            &
       mptype_parent,    &
-      timelen           )
+      timelen,          &
+      skiplen           )
     use scale_comm, only: &
          COMM_vars8, &
          COMM_wait
@@ -326,6 +327,7 @@ contains
     integer,          intent(in)  :: mdlid            ! model type id
     integer,          intent(in)  :: mptype_parent    ! microphysics type of the parent model (number of classes)
     integer,          intent(in)  :: timelen          ! time steps in one file
+    integer,          intent(in)  :: skiplen          ! skip steps
 
     real(RP) :: velz  (KA,IA,JA)
     real(RP) :: velx  (KA,IA,JA)
@@ -393,7 +395,7 @@ contains
 
     end if
 
-    do n = 1, timelen
+    do n = skiplen+1, timelen
 
        if ( do_read ) then
 
