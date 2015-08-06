@@ -168,7 +168,7 @@ contains
     select case ( ATMOS_PHY_TB_HYBRID_LES_TYPE )
     case ('SMAGORINSKY')
        call ATMOS_PHY_TB_SMG_setup( &
-            TB_TYPE,       &
+            ATMOS_PHY_TB_HYBRID_LES_TYPE, &
             CDZ, CDX, CDY, &
             CZ             )
        LES_TB => ATMOS_PHY_TB_SMG
@@ -180,7 +180,7 @@ contains
     select case ( ATMOS_PHY_TB_HYBRID_PRM_TYPE )
     case ('MYNN')
        call ATMOS_PHY_TB_mynn_setup( &
-            TB_TYPE,       &
+            ATMOS_PHY_TB_HYBRID_PRM_TYPE, &
             CDZ, CDX, CDY, &
             CZ             )
        PRM_TB => ATMOS_PHY_TB_mynn
