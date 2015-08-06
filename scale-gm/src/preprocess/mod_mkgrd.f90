@@ -13,11 +13,11 @@ module mod_mkgrd
   !++ Used modules
   !
   use scale_precision
+  use scale_stdio
   use scale_prof
+
   use mod_adm, only: &
-     ADM_LOG_FID,  &
-     ADM_MAXFNAME, &
-     ADM_NSYS
+     ADM_LOG_FID
   use mod_grd, only: &
      GRD_XDIR, &
      GRD_YDIR, &
@@ -47,10 +47,10 @@ module mod_mkgrd
   !
   !++ Public parameters & variables
   !
-  character(len=ADM_MAXFNAME), public :: MKGRD_IN_BASENAME  = ''
-  character(len=ADM_MAXFNAME), public :: MKGRD_OUT_BASENAME = ''
-  character(len=ADM_NSYS),     public :: MKGRD_IN_io_mode   = 'ADVANCED'
-  character(len=ADM_NSYS),     public :: MKGRD_OUT_io_mode  = 'ADVANCED'
+  character(len=H_LONG), public :: MKGRD_IN_BASENAME  = ''
+  character(len=H_LONG), public :: MKGRD_OUT_BASENAME = ''
+  character(len=H_SHORT),     public :: MKGRD_IN_io_mode   = 'ADVANCED'
+  character(len=H_SHORT),     public :: MKGRD_OUT_io_mode  = 'ADVANCED'
 
   !-----------------------------------------------------------------------------
   !
@@ -342,7 +342,7 @@ contains
        PI => CONST_PI
     use mod_comm, only: &
        COMM_data_transfer
-    use mod_gtl, only: &
+    use mod_gm_statistics, only: &
        GTL_max, &
        GTL_min
     implicit none
@@ -625,15 +625,15 @@ contains
           g(:) = GRD_x(ij,k,l,:)
 
           ! align lowermost vertex of diamond to x-z coordinate plane
-          call MISC_3dvec_rotation( g(:),    & ! [INOUT]
+          call VECTR_rotation( g(:),    & ! [INOUT]
                                     angle_z, & ! [IN]
                                     I_Zaxis  ) ! [IN]
           ! rotate around y-axis, for fitting the center of diamond to north pole
-          call MISC_3dvec_rotation( g(:),    & ! [INOUT]
+          call VECTR_rotation( g(:),    & ! [INOUT]
                                     angle_y, & ! [IN]
                                     I_Yaxis  ) ! [IN]
           ! rotate the diamond around z-axis
-          call MISC_3dvec_rotation( g(:),       & ! [INOUT]
+          call VECTR_rotation( g(:),       & ! [INOUT]
                                     angle_tilt, & ! [IN]
                                     I_Zaxis     ) ! [IN]
 
@@ -647,15 +647,15 @@ contains
           g(:) = GRD_x_pl(ij,k,l,:)
 
           ! align lowermost vertex of diamond to x-z coordinate plane
-          call MISC_3dvec_rotation( g(:),    & ! [INOUT]
+          call VECTR_rotation( g(:),    & ! [INOUT]
                                     angle_z, & ! [IN]
                                     I_Zaxis  ) ! [IN]
           ! rotate around y-axis, for fitting the center of diamond to north pole
-          call MISC_3dvec_rotation( g(:),    & ! [INOUT]
+          call VECTR_rotation( g(:),    & ! [INOUT]
                                     angle_y, & ! [IN]
                                     I_Yaxis  ) ! [IN]
           ! rotate the diamond around z-axis
-          call MISC_3dvec_rotation( g(:),       & ! [INOUT]
+          call VECTR_rotation( g(:),       & ! [INOUT]
                                     angle_tilt, & ! [IN]
                                     I_Zaxis     ) ! [IN]
 
@@ -672,9 +672,11 @@ contains
   !-----------------------------------------------------------------------------
   !> Apply stretching to grid system
   subroutine MKGRD_stretch
-    use mod_misc, only: &
-       MISC_get_latlon, &
-       MISC_get_cartesian
+    use scale_const, only: &
+       PI => CONST_PI
+    use scale_vector, only: &
+       VECTR_xyz2latlon, &
+       VECTR_latlon2xyz
     use mod_adm, only: &
        ADM_have_pl, &
        ADM_gall,    &
@@ -682,8 +684,6 @@ contains
        ADM_KNONE,   &
        ADM_lall,    &
        ADM_lall_pl
-    use scale_const, only: &
-       PI => CONST_PI
     use mod_comm, only: &
        COMM_data_transfer
     implicit none
@@ -705,11 +705,11 @@ contains
     do l = 1, ADM_lall
        do ij = 1, ADM_gall
 
-          call MISC_get_latlon( lat,                    & ! [OUT]
-                                lon,                    & ! [OUT]
-                                GRD_x(ij,k,l,GRD_XDIR), & ! [IN]
-                                GRD_x(ij,k,l,GRD_YDIR), & ! [IN]
-                                GRD_x(ij,k,l,GRD_ZDIR)  ) ! [IN]
+          call VECTR_xyz2latlon( GRD_x(ij,k,l,GRD_XDIR), & ! [IN]
+                                 GRD_x(ij,k,l,GRD_YDIR), & ! [IN]
+                                 GRD_x(ij,k,l,GRD_ZDIR), & ! [IN]
+                                 lat,                    & ! [OUT]
+                                 lon                     ) ! [OUT]
 
           if ( 0.5_RP*PI-abs(lat) > criteria ) then
              lat_trans = asin( ( MKGRD_stretch_alpha*(1.0_RP+sin(lat)) / (1.0_RP-sin(lat)) - 1.0_RP ) &
@@ -718,12 +718,12 @@ contains
              lat_trans = lat
           endif
 
-          call MISC_get_cartesian( GRD_x(ij,k,l,GRD_XDIR), & ! [OUT]
-                                   GRD_x(ij,k,l,GRD_YDIR), & ! [OUT]
-                                   GRD_x(ij,k,l,GRD_ZDIR), & ! [OUT]
-                                   lat_trans,              & ! [IN]
-                                   lon,                    & ! [IN]
-                                   1.0_RP                    ) ! [IN]
+          call VECTR_latlon2xyz( lat_trans,              & ! [IN]
+                                 lon,                    & ! [IN]
+                                 GRD_x(ij,k,l,GRD_XDIR), & ! [OUT]
+                                 GRD_x(ij,k,l,GRD_YDIR), & ! [OUT]
+                                 GRD_x(ij,k,l,GRD_ZDIR), & ! [OUT]
+                                 1.0_RP                  ) ! [IN]
        enddo
     enddo
 
@@ -731,11 +731,11 @@ contains
        do l  = 1, ADM_lall_pl
        do ij = 1, ADM_gall_pl
 
-          call MISC_get_latlon( lat,                       & ! [OUT]
-                                lon,                       & ! [OUT]
-                                GRD_x_pl(ij,k,l,GRD_XDIR), & ! [IN]
-                                GRD_x_pl(ij,k,l,GRD_YDIR), & ! [IN]
-                                GRD_x_pl(ij,k,l,GRD_ZDIR)  ) ! [IN]
+           call VECTR_xyz2latlon( GRD_x_pl(ij,k,l,GRD_XDIR), & ! [IN]
+                                  GRD_x_pl(ij,k,l,GRD_YDIR), & ! [IN]
+                                  GRD_x_pl(ij,k,l,GRD_ZDIR), & ! [IN]
+                                  lat,                       & ! [OUT]
+                                  lon                        ) ! [OUT]
 
           if ( 0.5_RP*PI-abs(lat) > criteria ) then
              lat_trans = asin( ( MKGRD_stretch_alpha*(1.0_RP+sin(lat)) / (1.0_RP-sin(lat)) - 1.0_RP ) &
@@ -744,12 +744,12 @@ contains
              lat_trans = lat
           endif
 
-          call MISC_get_cartesian( GRD_x_pl(ij,k,l,GRD_XDIR), & ! [OUT]
-                                   GRD_x_pl(ij,k,l,GRD_YDIR), & ! [OUT]
-                                   GRD_x_pl(ij,k,l,GRD_ZDIR), & ! [OUT]
-                                   lat_trans,                 & ! [IN]
-                                   lon,                       & ! [IN]
-                                   1.0_RP                       ) ! [IN]
+           call VECTR_latlon2xyz( lat_trans,                 & ! [IN]
+                                  lon,                       & ! [IN]
+                                  GRD_x_pl(ij,k,l,GRD_XDIR), & ! [OUT]
+                                  GRD_x_pl(ij,k,l,GRD_YDIR), & ! [OUT]
+                                  GRD_x_pl(ij,k,l,GRD_ZDIR), & ! [OUT]
+                                  1.0_RP                     ) ! [IN]
        enddo
        enddo
     endif
@@ -762,9 +762,6 @@ contains
   !-----------------------------------------------------------------------------
   !> Apply shrinkng to grid system
   subroutine MKGRD_shrink
-    use mod_misc, only: &
-       MISC_get_latlon, &
-       MISC_get_cartesian
     use mod_adm, only: &
        ADM_have_pl, &
        ADM_gall,    &
@@ -878,11 +875,11 @@ contains
           g(:) = GRD_x(ij,k,l,:)
 
           ! rotate around y-axis
-          call MISC_3dvec_rotation( g(:),    & ! [INOUT]
+          call VECTR_rotation( g(:),    & ! [INOUT]
                                     angle_y, & ! [IN]
                                     I_Yaxis  ) ! [IN]
           ! rotate around z-axis
-          call MISC_3dvec_rotation( g(:),    & ! [INOUT]
+          call VECTR_rotation( g(:),    & ! [INOUT]
                                     angle_z, & ! [IN]
                                     I_Zaxis  ) ! [IN]
 
@@ -896,11 +893,11 @@ contains
           g(:) = GRD_x_pl(ij,k,l,:)
 
           ! rotate around y-axis
-          call MISC_3dvec_rotation( g(:),    & ! [INOUT]
+          call VECTR_rotation( g(:),    & ! [INOUT]
                                     angle_y, & ! [IN]
                                     I_Yaxis  ) ! [IN]
           ! rotate around z-axis
-          call MISC_3dvec_rotation( g(:),    & ! [INOUT]
+          call VECTR_rotation( g(:),    & ! [INOUT]
                                     angle_z, & ! [IN]
                                     I_Zaxis  ) ! [IN]
 
@@ -938,10 +935,10 @@ contains
   !-----------------------------------------------------------------------------
   !> Diagnose grid property
   subroutine MKGRD_diagnosis
-    use mod_misc, only: &
-       MISC_3dvec_cross, &
-       MISC_3dvec_dot,   &
-       MISC_3dvec_abs
+    use scale_vector, only: &
+       VECTR_cross, &
+       VECTR_dot,   &
+       VECTR_abs
     use mod_adm, only: &
        ADM_prc_tab,  &
        ADM_prc_me,   &
@@ -964,7 +961,7 @@ contains
        GMTR_P_AREA, &
        GMTR_P_var,  &
        GMTR_P_var_pl
-    use mod_gtl, only: &
+    use mod_gm_statistics, only: &
        GTL_global_sum_srf, &
        GTL_max,            &
        GTL_min
@@ -1030,13 +1027,13 @@ contains
              ang(:) = 0.0_RP
              do m = 1, 5
                 ! vector length of Pm->Pm-1, Pm->Pm+1
-                call MISC_3dvec_dot( len(m), p(:,m), p(:,m-1), p(:,m), p(:,m-1) )
+                call VECTR_dot( len(m), p(:,m), p(:,m-1), p(:,m), p(:,m-1) )
                 len(m) = sqrt( len(m) )
 
                 ! angle of Pm-1->Pm->Pm+1
-                call MISC_3dvec_dot( nvlenC, p(:,m), p(:,m-1), p(:,m), p(:,m+1) )
-                call MISC_3dvec_cross( nv(:), p(:,m), p(:,m-1), p(:,m), p(:,m+1) )
-                call MISC_3dvec_abs( nvlenS, nv(:) )
+                call VECTR_dot( nvlenC, p(:,m), p(:,m-1), p(:,m), p(:,m+1) )
+                call VECTR_cross( nv(:), p(:,m), p(:,m-1), p(:,m), p(:,m+1) )
+                call VECTR_abs( nvlenS, nv(:) )
 
                 ang(m) = atan2( nvlenS, nvlenC )
              enddo
@@ -1073,13 +1070,13 @@ contains
              ang(:) = 0.0_RP
              do m = 1, 6
                 ! vector length of Pm->Pm-1, Pm->Pm+1
-                call MISC_3dvec_dot( len(m), p(:,m), p(:,m-1), p(:,m), p(:,m-1) )
+                call VECTR_dot( len(m), p(:,m), p(:,m-1), p(:,m), p(:,m-1) )
                 len(m) = sqrt( len(m) )
 
                 ! angle of Pm-1->Pm->Pm+1
-                call MISC_3dvec_dot( nvlenC, p(:,m), p(:,m-1), p(:,m), p(:,m+1) )
-                call MISC_3dvec_cross( nv(:), p(:,m), p(:,m-1), p(:,m), p(:,m+1) )
-                call MISC_3dvec_abs( nvlenS, nv(:) )
+                call VECTR_dot( nvlenC, p(:,m), p(:,m-1), p(:,m), p(:,m+1) )
+                call VECTR_cross( nv(:), p(:,m), p(:,m-1), p(:,m), p(:,m+1) )
+                call VECTR_abs( nvlenS, nv(:) )
 
                 ang(m) = atan2( nvlenS, nvlenC )
              enddo
@@ -1209,7 +1206,7 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Apply rotation matrix
-  subroutine MISC_3dvec_rotation( &
+  subroutine VECTR_rotation( &
       a,     &
       angle, &
       iaxis  )
@@ -1269,11 +1266,11 @@ contains
     a(:) = b(:)
 
     return
-  end subroutine MISC_3dvec_rotation
+  end subroutine VECTR_rotation
 
   !-----------------------------------------------------------------------------
   !> gnomonic projection
-  subroutine MISC_latlon2gnom( &
+  subroutine VECTR_latlon2gnom( &
       x,          &
       y,          &
       lat,        &
@@ -1299,11 +1296,11 @@ contains
     y = ( cos(lat_center) * sin(lat)                       &
         - sin(lat_center) * cos(lat) * cos(lon-lon_center) ) / cosc
 
-  end subroutine MISC_latlon2gnom
+  end subroutine VECTR_latlon2gnom
 
   !-----------------------------------------------------------------------------
   !> gnomonic projection (inverse)
-  subroutine MISC_gnom2latlon( &
+  subroutine VECTR_gnom2latlon( &
       lat,        &
       lon,        &
       x,          &
@@ -1336,15 +1333,15 @@ contains
     lat = asin( cos(c)*sin(lat_center) + y*sin(c)*cos(lat_center) / rho )
 
     return
-  end subroutine MISC_gnom2latlon
+  end subroutine VECTR_gnom2latlon
 
   !-----------------------------------------------------------------------------
   !> Make center grid -> vertex grid
   subroutine MKGRD_center2vertex
-    use mod_misc, only: &
-       MISC_3dvec_cross, &
-       MISC_3dvec_dot,   &
-       MISC_3dvec_abs
+    use scale_vector, only: &
+       VECTR_cross, &
+       VECTR_dot,   &
+       VECTR_abs
     use mod_adm, only : &
       ADM_W,          &
       ADM_TI,         &
@@ -1456,9 +1453,9 @@ contains
              do n = 1, ADM_ImoJmo_nmax
                 oo = ADM_ImoJmo(n,ADM_GIoJo)
 
-                call MISC_3dvec_dot  ( w_lenC,    o(:), v(:,oo,m,t), o(:), v(:,oo,m+1,t) )
-                call MISC_3dvec_cross( w(:,oo,m), o(:), v(:,oo,m,t), o(:), v(:,oo,m+1,t) )
-                call MISC_3dvec_abs  ( w_lenS, w(:,oo,m) )
+                call VECTR_dot  ( w_lenC,    o(:), v(:,oo,m,t), o(:), v(:,oo,m+1,t) )
+                call VECTR_cross( w(:,oo,m), o(:), v(:,oo,m,t), o(:), v(:,oo,m+1,t) )
+                call VECTR_abs  ( w_lenS, w(:,oo,m) )
 
                 w(:,oo,m) = w(:,oo,m) / w_lenS * atan2( w_lenS, w_lenC )
              enddo
@@ -1471,7 +1468,7 @@ contains
                       + w(:,oo,2) &
                       + w(:,oo,3)
 
-             call MISC_3dvec_abs( gc_len, gc(:,oo) )
+             call VECTR_abs( gc_len, gc(:,oo) )
 
              GRD_xt(oo,k,l,t,GRD_XDIR) = gc(GRD_XDIR,oo) / gc_len
              GRD_xt(oo,k,l,t,GRD_YDIR) = gc(GRD_YDIR,oo) / gc_len
@@ -1497,9 +1494,9 @@ contains
 
           do n = ADM_GMIN_PL, ADM_GMAX_PL
              do m = 1, 3
-                call MISC_3dvec_dot  ( w_lenC,      o(:), v_pl(:,n,m), o(:), v_pl(:,n,m+1) )
-                call MISC_3dvec_cross( w_pl(:,n,m), o(:), v_pl(:,n,m), o(:), v_pl(:,n,m+1) )
-                call MISC_3dvec_abs  ( w_lenS, w_pl(:,n,m) )
+                call VECTR_dot  ( w_lenC,      o(:), v_pl(:,n,m), o(:), v_pl(:,n,m+1) )
+                call VECTR_cross( w_pl(:,n,m), o(:), v_pl(:,n,m), o(:), v_pl(:,n,m+1) )
+                call VECTR_abs  ( w_lenS, w_pl(:,n,m) )
 
                 w_pl(:,n,m) = w_pl(:,n,m) / w_lenS * atan2( w_lenS, w_lenC )
              enddo
@@ -1508,7 +1505,7 @@ contains
                         + w_pl(:,n,2) &
                         + w_pl(:,n,3)
 
-             call MISC_3dvec_abs( gc_len, gc_pl(:,n) )
+             call VECTR_abs( gc_len, gc_pl(:,n) )
 
              GRD_xt_pl(n,k,l,GRD_XDIR) = gc_pl(GRD_XDIR,n) / gc_len
              GRD_xt_pl(n,k,l,GRD_YDIR) = gc_pl(GRD_YDIR,n) / gc_len
@@ -1523,10 +1520,10 @@ contains
   !-----------------------------------------------------------------------------
   !> Make vertex grid -> center grid
   subroutine MKGRD_vertex2center
-    use mod_misc, only: &
-       MISC_3dvec_cross, &
-       MISC_3dvec_dot,   &
-       MISC_3dvec_abs
+    use scale_vector, only: &
+       VECTR_cross, &
+       VECTR_dot,   &
+       VECTR_abs
     use mod_adm, only : &
       ADM_W,          &
       ADM_TI,         &
@@ -1622,9 +1619,9 @@ contains
           do n = 1, ADM_IooJoo_nmax
              oo = ADM_IooJoo(n,ADM_GIoJo)
 
-             call MISC_3dvec_dot  ( w_lenC,    o(:), v(:,oo,m), o(:), v(:,oo,m+1) )
-             call MISC_3dvec_cross( w(:,oo,m), o(:), v(:,oo,m), o(:), v(:,oo,m+1) )
-             call MISC_3dvec_abs  ( w_lenS, w(:,oo,m) )
+             call VECTR_dot  ( w_lenC,    o(:), v(:,oo,m), o(:), v(:,oo,m+1) )
+             call VECTR_cross( w(:,oo,m), o(:), v(:,oo,m), o(:), v(:,oo,m+1) )
+             call VECTR_abs  ( w_lenS, w(:,oo,m) )
 
              w(:,oo,m) = w(:,oo,m) / w_lenS * atan2( w_lenS, w_lenC )
           enddo
@@ -1644,7 +1641,7 @@ contains
                    + w(:,oo,5) &
                    + w(:,oo,6)
 
-          call MISC_3dvec_abs( gc_len, gc(:,oo) )
+          call VECTR_abs( gc_len, gc(:,oo) )
 
           GRD_x(oo,k,l,:) = gc(:,oo) / gc_len
        enddo
@@ -1662,9 +1659,9 @@ contains
           v_pl(:,oo,6) = v_pl(:,oo,1)
 
           do m = 1, 5
-             call MISC_3dvec_dot  ( w_lenC,       o(:), v_pl(:,oo,m), o(:), v_pl(:,oo,m+1) )
-             call MISC_3dvec_cross( w_pl(:,oo,m), o(:), v_pl(:,oo,m), o(:), v_pl(:,oo,m+1) )
-             call MISC_3dvec_abs  ( w_lenS, w_pl(:,oo,m) )
+             call VECTR_dot  ( w_lenC,       o(:), v_pl(:,oo,m), o(:), v_pl(:,oo,m+1) )
+             call VECTR_cross( w_pl(:,oo,m), o(:), v_pl(:,oo,m), o(:), v_pl(:,oo,m+1) )
+             call VECTR_abs  ( w_lenS, w_pl(:,oo,m) )
 
              w_pl(:,oo,m) = w_pl(:,oo,m) / w_lenS * atan2( w_lenS, w_lenC )
           enddo
@@ -1675,7 +1672,7 @@ contains
                       + w_pl(:,oo,4) &
                       + w_pl(:,oo,5)
 
-          call MISC_3dvec_abs( gc_len, gc_pl(:,oo) )
+          call VECTR_abs( gc_len, gc_pl(:,oo) )
 
           GRD_x_pl(oo,k,l,:) = -gc_pl(:,oo) / gc_len
        enddo

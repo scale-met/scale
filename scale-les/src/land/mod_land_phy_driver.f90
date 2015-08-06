@@ -93,7 +93,7 @@ contains
        ATMOS_THERMODYN_templhv
     use scale_time, only: &
        dt => TIME_DTSEC_LAND
-    use scale_statistics, only: &
+    use scale_les_statistics, only: &
        STATISTICS_checktotal, &
        STAT_total
     use scale_history, only: &

@@ -120,7 +120,7 @@ contains
        dt_RD => TIME_DTSEC_ATMOS_PHY_RD, &
        TIME_NOWDATE,                     &
        TIME_OFFSET_YEAR
-    use scale_statistics, only: &
+    use scale_les_statistics, only: &
        STATISTICS_checktotal, &
        STAT_total
     use scale_history, only: &

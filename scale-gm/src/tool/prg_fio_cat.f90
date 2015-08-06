@@ -16,11 +16,8 @@ program fio_cat
   use mpi
   use scale_precision
   use mod_misc, only: &
-     MISC_get_available_fid
+     IO_get_available_fid
   use mod_fio, only : &
-     FIO_HSHORT,      &
-     FIO_HMID,        &
-     FIO_HLONG,       &
      FIO_REAL4,       &
      FIO_REAL8,       &
      FIO_BIG_ENDIAN,  &
@@ -46,9 +43,9 @@ program fio_cat
   !--- NAMELIST
   integer                   :: glevel       = -1
   integer                   :: rlevel       = -1
-  character(LEN=FIO_HLONG)  :: mnginfo      = ""
-  character(LEN=FIO_HLONG)  :: infile(flim) = ""
-  character(LEN=FIO_HLONG)  :: outfile      = ""
+  character(len=H_LONG)  :: mnginfo      = ""
+  character(len=H_LONG)  :: infile(flim) = ""
+  character(len=H_LONG)  :: outfile      = ""
   logical                   :: use_mpi      = .true.
   integer                   :: pe_str       =  0
   integer                   :: pe_end       = -1
@@ -65,18 +62,18 @@ program fio_cat
                     help
 
   !-----------------------------------------------------------------------------
-  character(LEN=FIO_HLONG)  :: infname  = ""
-  character(LEN=FIO_HLONG)  :: outfname = ""
+  character(len=H_LONG)  :: infname  = ""
+  character(len=H_LONG)  :: outfname = ""
 
   type(headerinfo)          :: hinfo
   type(datainfo)            :: dinfo
 
-  character(LEN=FIO_HMID)   :: pkg_desc
-  character(LEN=FIO_HLONG)  :: pkg_note
+  character(len=H_MID)   :: pkg_desc
+  character(len=H_LONG)  :: pkg_note
   integer                   :: nmax_data
 
   integer                   :: nvar
-  character(LEN=FIO_HSHORT) :: var_name (max_nvar)
+  character(len=H_SHORT) :: var_name (max_nvar)
   integer                   :: var_nstep(max_nvar)
 
   integer               :: GALL
@@ -90,7 +87,7 @@ program fio_cat
   integer              :: prc_nall, prc_nlocal
   integer              :: prc_myrank, pstr, pend
   integer              :: fid_log
-  character(LEN=6)     :: rankstr
+  character(len=6)     :: rankstr
 
   logical :: addvar
   integer :: p, f, v, vid
@@ -106,7 +103,7 @@ program fio_cat
   GALL = ( (2**(glevel-rlevel))+2 ) &
        * ( (2**(glevel-rlevel))+2 )
 
-  fid_log = MISC_get_available_fid()
+  fid_log = IO_get_available_fid()
   if ( use_mpi ) then
      !--- Parallel Excution, No communication
      call MPI_Init(ierr)
@@ -292,7 +289,7 @@ contains
   !> read option
   subroutine readoption
     use mod_misc, only : &
-      MISC_get_available_fid
+      IO_get_available_fid
     use mod_tool_option, only: &
       OPT_convert, &
       OPT_fid
@@ -302,7 +299,7 @@ contains
     !---------------------------------------------------------------------------
 
     ! --- Set option
-    OPT_fid = MISC_get_available_fid()
+    OPT_fid = IO_get_available_fid()
     open(OPT_fid,status='SCRATCH')
 
       call OPT_convert( fmax )

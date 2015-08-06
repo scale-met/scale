@@ -13,11 +13,11 @@ module mod_history_vars
   !++ Used modules
   !
   use scale_precision
+  use scale_stdio
   use scale_prof
+
   use mod_adm, only: &
-     ADM_LOG_FID,  &
-     ADM_MAXFNAME, &
-     ADM_NSYS
+     ADM_LOG_FID
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -103,15 +103,13 @@ contains
        GRD_Z,    &
        GRD_zs,   &
        GRD_vz
+    use mod_gmtr, only: &
+       GMTR_vxvyvz2uv
     use mod_vmtr, only: &
        VMTR_PHI,    &
        VMTR_GSGAM2
-    use mod_gtl, only: &
-       GTL_generate_uv,          &
-       GTL_global_sum_eachlayer, &
-       GTL_clip_region_1layer,   &  ! [add] 2010.08.20 C.Kodama
-       GTL_max, &
-       GTL_min
+    use mod_gm_statistics, only: &
+       GTL_global_sum_eachlayer
     use mod_prgvar, only: &
        prgvar_get_withdiag
     use mod_runconf, only: &
@@ -227,12 +225,12 @@ contains
     enddo
 
     ! zonal and meridonal wind
-    call GTL_generate_uv( u,  u_pl,  & ! [OUT]
-                          v,  v_pl,  & ! [OUT]
-                          vx, vx_pl, & ! [IN]
-                          vy, vy_pl, & ! [IN]
-                          vz, vz_pl, & ! [IN]
-                          icos = 0   ) ! [IN]
+    call GMTR_vxvyvz2uv( vx(:,:,:), vx_pl(:,:,:), & ! [IN]
+                         vy(:,:,:), vy_pl(:,:,:), & ! [IN]
+                         vz(:,:,:), vz_pl(:,:,:), & ! [IN]
+                         u (:,:,:), u_pl (:,:,:), & ! [OUT]
+                         v (:,:,:), v_pl (:,:,:), & ! [OUT]
+                         cos_flag = .false.       ) ! [IN]
 
     ! vertical wind at cell center
     do l = 1, ADM_lall
@@ -257,12 +255,12 @@ contains
 
     ! zonal and meridonal wind with cos(phi)
     if (out_uv_cos) then
-       call GTL_generate_uv( ucos, u_pl,  & ! [OUT]
-                             vcos, v_pl,  & ! [OUT]
-                             vx,   vx_pl, & ! [IN]
-                             vy,   vy_pl, & ! [IN]
-                             vz,   vz_pl, & ! [IN]
-                             icos = 1     ) ! [IN]
+       call GMTR_vxvyvz2uv( vx(:,:,:), vx_pl(:,:,:), & ! [IN]
+                            vy(:,:,:), vy_pl(:,:,:), & ! [IN]
+                            vz(:,:,:), vz_pl(:,:,:), & ! [IN]
+                            u (:,:,:), u_pl (:,:,:), & ! [OUT]
+                            v (:,:,:), v_pl (:,:,:), & ! [OUT]
+                            cos_flag = .true.        ) ! [IN]
 
        do l = 1, ADM_lall
           call history_in( 'ml_ucos', ucos(:,:,l) )

@@ -776,7 +776,7 @@ contains
        GRID_FDY
     use scale_comm, only: &
        COMM_horizontal_max
-    use scale_statistics, only: &
+    use scale_les_statistics, only: &
        STAT_detail
     use scale_topography, only: &
        TOPO_fillhalo

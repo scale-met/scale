@@ -13,11 +13,11 @@ module mod_history
   !++ Used modules
   !
   use scale_precision
+  use scale_stdio
   use scale_prof
+
   use mod_adm, only: &
-     ADM_LOG_FID,  &
-     ADM_MAXFNAME, &
-     ADM_NSYS
+     ADM_LOG_FID
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -34,7 +34,7 @@ module mod_history
   !++ Public parameters & variables
   !
   integer,                 public              :: HIST_req_nmax
-  character(len=ADM_NSYS), public, allocatable :: item_save(:)
+  character(len=H_SHORT), public, allocatable :: item_save(:)
   logical,                 public              :: HIST_output_step0 = .false.
 
   !-----------------------------------------------------------------------------
@@ -51,12 +51,12 @@ module mod_history
   !
   integer, private, parameter :: HIST_req_limit = 1000
 
-  character(len=ADM_MAXFNAME), private :: HIST_io_fname  = ''
-  character(len=ADM_NSYS),     private :: HIST_io_desc   = ''
+  character(len=H_LONG), private :: HIST_io_fname  = ''
+  character(len=H_SHORT),     private :: HIST_io_desc   = ''
   integer,                     private :: HIST_dtype     = -1
-  character(len=ADM_MAXFNAME), private :: output_path    = ''
-  character(len=ADM_NSYS),     private :: histall_fname  = ''
-  character(len=ADM_MAXFNAME), private :: output_io_mode != 'LEGACY'
+  character(len=H_LONG), private :: output_path    = ''
+  character(len=H_SHORT),     private :: histall_fname  = ''
+  character(len=H_LONG), private :: output_io_mode != 'LEGACY'
   integer,                     private :: output_size    = 4
   integer,                     private :: npreslev       = 1
   real(RP),                     private :: pres_levs(60)  != CONST_PRE00
@@ -65,21 +65,21 @@ module mod_history
   integer,                     private :: ksum
   logical,                     private :: calc_pressure = .false.
 
-  character(len=ADM_MAXFNAME), private, allocatable :: file_save (:)
-  character(len=ADM_NSYS),     private, allocatable :: desc_save (:)
-  character(len=ADM_NSYS),     private, allocatable :: unit_save (:)
+  character(len=H_LONG), private, allocatable :: file_save (:)
+  character(len=H_SHORT*2),     private, allocatable :: desc_save (:)
+  character(len=H_SHORT),     private, allocatable :: unit_save (:)
   integer,                     private, allocatable :: step_save (:)
-  character(len=ADM_NSYS),     private, allocatable :: ktype_save(:)
+  character(len=H_SHORT),     private, allocatable :: ktype_save(:)
   integer,                     private, allocatable :: kstr_save (:)
   integer,                     private, allocatable :: kend_save (:)
   integer,                     private, allocatable :: kmax_save (:)
-  character(len=ADM_NSYS),     private, allocatable :: output_type_save  (:)
+  character(len=H_SHORT),     private, allocatable :: output_type_save  (:)
   logical,                     private, allocatable :: out_prelev_save   (:)
   logical,                     private, allocatable :: out_vintrpl_save  (:)
   logical,                     private, allocatable :: opt_wgrid_save    (:)
   logical,                     private, allocatable :: opt_lagintrpl_save(:)
 
-  character(len=ADM_NSYS),     private, allocatable :: lname_save   (:)
+  character(len=H_SHORT),     private, allocatable :: lname_save   (:)
   integer,                     private, allocatable :: tmax_save    (:)
   real(RP),                     private, allocatable :: tstr_save    (:)
   real(RP),                     private, allocatable :: tend_save    (:)
@@ -129,29 +129,29 @@ contains
        RUNNAME
     implicit none
 
-    character(len=ADM_NSYS)     :: hist3D_layername  != ''
+    character(len=H_SHORT)     :: hist3D_layername  != ''
     integer                     :: step_def          = 1
-    character(len=ADM_NSYS)     :: ktype_def         != ''
+    character(len=H_SHORT)     :: ktype_def         != ''
     integer                     :: kstr_def          = 1
     integer                     :: kend_def          != ADM_vlayer
     integer                     :: kmax_def          != ADM_vlayer
-    character(len=ADM_NSYS)     :: output_type_def   != 'SNAPSHOT'
+    character(len=H_SHORT)     :: output_type_def   != 'SNAPSHOT'
     logical                     :: out_prelev_def    = .false.
     logical                     :: no_vintrpl        = .true.
     logical                     :: opt_wgrid_def     = .false.
     logical                     :: opt_lagintrpl_def = .true.
     logical                     :: doout_step0
 
-    character(len=ADM_NSYS)     :: item
-    character(len=ADM_MAXFNAME) :: file
-    character(len=ADM_NSYS)     :: desc
-    character(len=ADM_NSYS)     :: unit
+    character(len=H_SHORT)     :: item
+    character(len=H_LONG) :: file
+    character(len=H_SHORT)     :: desc
+    character(len=H_SHORT)     :: unit
     integer                     :: step
-    character(len=ADM_NSYS)     :: ktype
+    character(len=H_SHORT)     :: ktype
     integer                     :: kstr
     integer                     :: kend
     integer                     :: kmax
-    character(len=ADM_NSYS)     :: output_type
+    character(len=H_SHORT)     :: output_type
     logical                     :: out_prelev
     logical                     :: out_vintrpl
     logical                     :: opt_wgrid
@@ -194,7 +194,7 @@ contains
          opt_wgrid,    &
          opt_lagintrpl
 
-    character(len=ADM_NSYS) :: lname
+    character(len=H_SHORT) :: lname
 
     integer  :: idate(6)
     integer  :: histday
@@ -535,7 +535,7 @@ contains
     real(RP),          intent(in) :: gd(:,:)
     integer,          intent(in), optional :: l_region
 
-    character(len=ADM_NSYS) :: hitem
+    character(len=H_SHORT) :: hitem
     integer                 :: ijdim_input
     integer                 :: kdim_input
 
@@ -719,10 +719,9 @@ contains
        COMM_var
     use mod_fio, only: &
        FIO_output
-    use mod_gtl, only: &
+    use mod_gm_statistics, only: &
        GTL_max, &
-       GTL_min, &
-       GTL_output_var2_da
+       GTL_min
     use mod_vintrpl, only: &
        VINTRPL_z_level, &
        VINTRPL_z_level2
@@ -731,8 +730,8 @@ contains
     real(RP) :: tmp_pl(ADM_gall_pl,ADM_kall,ADM_lall_pl)
     real(RP) :: val_max, val_min
 
-    character(len=ADM_NSYS)     :: item
-    character(len=ADM_MAXFNAME) :: basename
+    character(len=H_SHORT)     :: item
+    character(len=H_LONG) :: basename
 
     logical, save :: first = .true.
 
@@ -883,8 +882,8 @@ contains
           elseif( trim(output_io_mode) == 'LEGACY' ) then
              basename = trim(output_path)//file_save(n)
 
-             call GTL_output_var2_da( basename, v_save(:,:,:,1),                        &
-                                      ksumstr(n), ksumend(n), tmax_save(n), output_size )
+!             call GTL_output_var2_da( basename, v_save(:,:,:,1),                        &
+!                                      ksumstr(n), ksumend(n), tmax_save(n), output_size )
 
              call history_timeinfo
           endif
@@ -906,11 +905,11 @@ contains
        ADM_proc_stop
     implicit none
 
-    character(len=ADM_NSYS)     :: item
-    character(len=ADM_MAXFNAME) :: file
-    character(len=ADM_NSYS)     :: unit
-    character(len=ADM_NSYS)     :: ktype
-    character(len=ADM_NSYS)     :: otype
+    character(len=H_SHORT)     :: item
+    character(len=H_LONG) :: file
+    character(len=H_SHORT)     :: unit
+    character(len=H_SHORT)     :: ktype
+    character(len=H_SHORT)     :: otype
 
     integer :: n
     !---------------------------------------------------------------------------
@@ -960,8 +959,6 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine history_timeinfo
-    use mod_misc, only: &
-       MISC_get_available_fid
     use mod_adm, only: &
        ADM_prc_me,         &
        ADM_prc_run_master
@@ -974,7 +971,7 @@ contains
     !---------------------------------------------------------------------------
 
     if ( ADM_prc_me == ADM_prc_run_master ) then
-       fid = MISC_get_available_fid()
+       fid = IO_get_available_fid()
        open( unit   = fid,                               &
              file   = trim(output_path)//'history.info', &
              form   = 'formatted',                       &

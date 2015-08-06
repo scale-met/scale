@@ -13,7 +13,9 @@ module mod_fio
   !++ Used modules
   !
   use scale_precision
+  use scale_stdio
   use scale_prof
+
   use mod_adm, only: &
      ADM_LOG_FID
   !-----------------------------------------------------------------------------
@@ -33,10 +35,6 @@ module mod_fio
   !
   !++ Public parameters & variables
   !
-  !--- character length
-  integer, public, parameter :: FIO_HSHORT =  16
-  integer, public, parameter :: FIO_HMID   =  64
-  integer, public, parameter :: FIO_HLONG  = 256
 
   !--- data type
   integer, public, parameter :: FIO_REAL4    = 0
@@ -75,9 +73,9 @@ module mod_fio
 
   !--- struct for package infomation
   type, public :: headerinfo
-     character(LEN=FIO_HLONG) :: fname
-     character(LEN=FIO_HMID)  :: description
-     character(LEN=FIO_HLONG) :: note
+     character(len=H_LONG) :: fname
+     character(len=H_MID)  :: description
+     character(len=H_LONG) :: note
      integer                  :: num_of_data
      integer                  :: fmode
      integer                  :: endiantype
@@ -90,11 +88,11 @@ module mod_fio
 
   !--- struct for data infomation
   type, public :: datainfo
-     character(LEN=FIO_HSHORT) :: varname
-     character(LEN=FIO_HMID)   :: description
-     character(LEN=FIO_HSHORT) :: unit
-     character(LEN=FIO_HSHORT) :: layername
-     character(LEN=FIO_HLONG)  :: note
+     character(len=H_SHORT) :: varname
+     character(len=H_MID)   :: description
+     character(len=H_SHORT) :: unit
+     character(len=H_SHORT) :: layername
+     character(len=H_LONG)  :: note
      integer(8)                :: datasize
      integer                   :: datatype
      integer                   :: num_of_layer
@@ -112,7 +110,7 @@ module mod_fio
   !++ Private parameters & variables
   !
   integer,                  private, parameter :: FIO_nmaxfile = 64
-  character(LEN=FIO_HLONG), private            :: FIO_fname_list(FIO_nmaxfile)
+  character(len=H_LONG), private            :: FIO_fname_list(FIO_nmaxfile)
   integer,                  private            :: FIO_fid_list  (FIO_nmaxfile)
   integer,                  private            :: FIO_fid_count = 1
 
@@ -174,15 +172,15 @@ contains
     implicit none
 
     integer,          intent(out) :: fid
-    character(LEN=*), intent( in) :: basename
+    character(len=*), intent( in) :: basename
     integer,          intent( in) :: rwtype
-    character(LEN=*), intent( in) :: pkg_desc
-    character(LEN=*), intent( in) :: pkg_note
+    character(len=*), intent( in) :: pkg_desc
+    character(len=*), intent( in) :: pkg_note
 
-    character(LEN=FIO_HSHORT) :: rwname(0:2)
+    character(len=H_SHORT) :: rwname(0:2)
     data rwname / 'READ','WRITE','APPEND' /
 
-    character(LEN=FIO_HLONG) :: fname
+    character(len=H_LONG) :: fname
     integer                  :: n
     !---------------------------------------------------------------------------
 
@@ -239,9 +237,9 @@ contains
     implicit none
 
     real(RP),         intent(out) :: var(:,:,:)
-    character(LEN=*), intent( in) :: basename
-    character(LEN=*), intent( in) :: varname
-    character(LEN=*), intent( in) :: layername
+    character(len=*), intent( in) :: basename
+    character(len=*), intent( in) :: varname
+    character(len=*), intent( in) :: layername
     integer,          intent( in) :: k_start, k_end
     integer,          intent( in) :: step
 
@@ -475,15 +473,15 @@ contains
     implicit none
 
     real(RP),          intent(in) :: var(:,:,:)
-    character(LEN=*), intent(in) :: basename
-    character(LEN=*), intent(in) :: pkg_desc
-    character(LEN=*), intent(in) :: pkg_note
-    character(LEN=*), intent(in) :: varname
-    character(LEN=*), intent(in) :: data_desc
-    character(LEN=*), intent(in) :: data_note
-    character(LEN=*), intent(in) :: unit
+    character(len=*), intent(in) :: basename
+    character(len=*), intent(in) :: pkg_desc
+    character(len=*), intent(in) :: pkg_note
+    character(len=*), intent(in) :: varname
+    character(len=*), intent(in) :: data_desc
+    character(len=*), intent(in) :: data_note
+    character(len=*), intent(in) :: unit
     integer,          intent(in) :: dtype
-    character(LEN=*), intent(in) :: layername
+    character(len=*), intent(in) :: layername
     integer,          intent(in) :: k_start, k_end
     integer,          intent(in) :: step
     real(RP),          intent(in) :: t_start, t_end
@@ -554,7 +552,7 @@ contains
        ADM_prc_me
     implicit none
 
-    character(LEN=FIO_HLONG) :: fname
+    character(len=H_LONG) :: fname
     integer                  :: n
     !---------------------------------------------------------------------------
 

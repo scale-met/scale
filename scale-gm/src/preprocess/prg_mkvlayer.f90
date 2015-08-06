@@ -125,8 +125,8 @@ contains
 
     character(len=*), intent(in) :: outfname
 
-    character(len=128) :: fname_all
-    character(len=128) :: fname_def
+    character(len=H_LONG) :: fname_all
+    character(len=H_LONG) :: fname_def
     integer :: kall, kmin, kmax
 
     integer :: fid = 10

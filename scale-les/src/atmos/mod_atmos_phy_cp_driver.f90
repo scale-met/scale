@@ -81,7 +81,7 @@ contains
   subroutine ATMOS_PHY_CP_driver( update_flag )
     use scale_time, only: &
        dt_CP => TIME_DTSEC_ATMOS_PHY_CP
-    use scale_statistics, only: &
+    use scale_les_statistics, only: &
        STATISTICS_checktotal, &
        STAT_total
     use scale_history, only: &

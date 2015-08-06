@@ -44,8 +44,8 @@ contains
 
     integer, intent(out) :: ninfile !< [out] nuber of input files
 
-    character(LEN=256) :: argstr
-    character(LEN=2)   :: snf
+    character(len=256) :: argstr
+    character(len=2)   :: snf
 
 #ifdef _NOF2003
   integer :: IARGC

@@ -13,11 +13,11 @@ module mod_bsstate
   !++ Used modules
   !
   use scale_precision
+  use scale_stdio
   use scale_prof
+
   use mod_adm, only: &
-     ADM_LOG_FID,  &
-     ADM_MAXFNAME, &
-     ADM_NSYS
+     ADM_LOG_FID
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -56,7 +56,7 @@ module mod_bsstate
   real(RP),allocatable, private :: phi_pl(:,:,:)
   !
   !--- Basic state type
-  character(ADM_NSYS), public :: ref_type = 'NOBASE'
+  character(len=H_SHORT), public :: ref_type = 'NOBASE'
   !                                  ='TEM': temerature is given.
   !                                  ='TH' : potential temperature is given.
   !                                  ='NOBASE' : no basic state
@@ -118,7 +118,7 @@ module mod_bsstate
   !--- reference potential temperature
   real(RP), allocatable, private :: th_ref(:)
   !
-  character(ADM_MAXFNAME), private :: ref_fname = 'ref.dat'
+  character(len=H_LONG), private :: ref_fname = 'ref.dat'
   !
   !-----------------------------------------------------------------------------
   !
@@ -679,13 +679,11 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine gcss_reference
-    use mod_misc, only: &
-       MISC_get_available_fid
     implicit none
 
     integer :: fid
 
-    fid = MISC_get_available_fid()
+    fid = IO_get_available_fid()
     Open(fid,file=Trim(ref_fname),status='old',form='unformatted')
     read(fid) th_ref(:)
     read(fid) pre_ref(:)
@@ -696,8 +694,6 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine ooyama_reference
-    use mod_misc, only: &
-       MISC_get_available_fid
     use mod_adm, only: &
        ADM_kmin, &
        ADM_kmax
@@ -705,7 +701,7 @@ contains
        GRD_gz
     implicit none
 
-    character(len=128) :: fname = 'ooyama_profile.dat'
+    character(len=H_LONG) :: fname = 'ooyama_profile.dat'
 
     real(RP), allocatable :: z_s  (:)
     real(RP), allocatable :: rho_s(:)
@@ -724,7 +720,7 @@ contains
     !---------------------------------------------------------------------------
 
     !--- read sounding data ( ooyama(2001) )
-    fid = MISC_get_available_fid()
+    fid = IO_get_available_fid()
     open( unit   = fid,         &
           file   = trim(fname), &
           status = 'old',       &
@@ -927,8 +923,6 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine bsstate_output_ref( basename )
-    use mod_misc, only: &
-       MISC_get_available_fid
     use mod_adm, only: &
        ADM_prc_me,     &
        ADM_prc_run_master
@@ -939,7 +933,7 @@ contains
 
     !--- output
     if ( ADM_prc_me==ADM_prc_run_master) then
-       fid = MISC_get_available_fid()
+       fid = IO_get_available_fid()
        Open(fid,file=Trim(basename),form='unformatted')
        Write(fid) pre_ref(:)
        Write(fid) tem_ref(:)
@@ -953,8 +947,6 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine bsstate_input_ref( basename )
-    use mod_misc, only : &
-         MISC_get_available_fid
     use scale_const, only: &
          CONST_GRAV,  &
          CONST_Rdry,  &
@@ -976,7 +968,7 @@ contains
     kappa = CONST_Rdry / CONST_CPdry
 
     !--- input
-    fid = MISC_get_available_fid()
+    fid = IO_get_available_fid()
     Open(fid,file=Trim(basename),status='old',form='unformatted')
     read(fid) pre_ref(:)
     read(fid) tem_ref(:)

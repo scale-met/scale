@@ -131,7 +131,7 @@ contains
        J23G  => GTRANS_J23G,  &
        J33G  => GTRANS_J33G,  &
        MAPF  => GTRANS_MAPF
-    use scale_statistics, only: &
+    use scale_les_statistics, only: &
        STATISTICS_checktotal, &
        STAT_total
     use scale_comm, only: &

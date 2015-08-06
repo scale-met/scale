@@ -13,11 +13,11 @@ module mod_prgvar
   !++ Used modules
   !
   use scale_precision
+  use scale_stdio
   use scale_prof
+
   use mod_adm, only: &
-     ADM_LOG_FID,  &
-     ADM_MAXFNAME, &
-     ADM_NSYS
+     ADM_LOG_FID
   use mod_runconf, only: &
      PRG_vmax0,  &
      I_RHOG,     &
@@ -64,8 +64,8 @@ module mod_prgvar
   real(RP), public, allocatable :: PRG_var1(:,:,:,:)
   real(RP), public, allocatable :: DIAG_var(:,:,:,:)
 
-  character(len=ADM_MAXFNAME), public :: restart_input_basename  = ''
-  character(len=ADM_MAXFNAME), public :: restart_output_basename = ''
+  character(len=H_LONG), public :: restart_input_basename  = ''
+  character(len=H_LONG), public :: restart_output_basename = ''
 
   !-----------------------------------------------------------------------------
   !
@@ -81,9 +81,9 @@ module mod_prgvar
 
   integer, private :: TRC_vmax_input ! number of input tracer variables
 
-  character(len=ADM_MAXFNAME), private :: layername      = ''
-  character(len=ADM_MAXFNAME), private :: input_io_mode  = 'ADVANCED'
-  character(len=ADM_MAXFNAME), private :: output_io_mode = 'ADVANCED'
+  character(len=H_LONG), private :: layername      = ''
+  character(len=H_LONG), private :: input_io_mode  = 'ADVANCED'
+  character(len=H_LONG), private :: output_io_mode = 'ADVANCED'
   logical,                     private :: allow_missingq = .false.
 
   !-----------------------------------------------------------------------------
@@ -106,9 +106,9 @@ contains
        TRC_vmax
     implicit none
 
-    character(len=ADM_MAXFNAME) :: input_basename    = ''
-    character(len=ADM_MAXFNAME) :: output_basename   = 'restart'
-    character(len=ADM_MAXFNAME) :: restart_layername = ''
+    character(len=H_LONG) :: input_basename    = ''
+    character(len=H_LONG) :: output_basename   = 'restart'
+    character(len=H_LONG) :: restart_layername = ''
 
     namelist / RESTARTPARAM / &
        TRC_vmax_input,    &
@@ -943,9 +943,6 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine restart_input( basename )
-    use mod_misc, only: &
-       MISC_get_available_fid, &
-       MISC_make_idstr
     use mod_adm, only: &
        ADM_prc_tab, &
        ADM_prc_me,  &
@@ -958,7 +955,7 @@ contains
        FIO_input
     use mod_comm, only: &
        COMM_var
-    use mod_gtl, only: &
+    use mod_gm_statistics, only: &
        GTL_max, &
        GTL_min
     use mod_runconf, only: &
@@ -974,9 +971,9 @@ contains
        tracer_input
     implicit none
 
-    character(len=ADM_MAXFNAME), intent(in) :: basename
+    character(len=H_LONG), intent(in) :: basename
 
-    character(len=ADM_MAXFNAME) :: fname
+    character(len=H_LONG) :: fname
 
     real(RP) :: val_max, val_min
     logical :: nonzero
@@ -1005,8 +1002,8 @@ contains
 
        do l = 1, ADM_lall
           rgnid = ADM_prc_tab(l,ADM_prc_me)
-          call MISC_make_idstr(fname,trim(basename),'rgn',rgnid)
-          fid = MISC_get_available_fid()
+          call IO_make_idstr(fname,trim(basename),'rgn',rgnid-1)
+          fid = IO_get_available_fid()
           open( unit   = fid,                 &
                 file   = trim(fname),         &
                 form   = 'unformatted',       &
@@ -1102,9 +1099,6 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine restart_output( basename )
-    use mod_misc, only: &
-       MISC_get_available_fid, &
-       MISC_make_idstr
     use mod_adm, only: &
        ADM_prc_tab, &
        ADM_prc_me,  &
@@ -1115,12 +1109,10 @@ contains
        ADM_kmin
     use mod_fio, only : & ! [add] H.Yashiro 20110819
        FIO_output, &
-       FIO_HSHORT, &
-       FIO_HMID,   &
        FIO_REAL8
     use mod_time, only : &
        TIME_CTIME
-    use mod_gtl, only: &
+    use mod_gm_statistics, only: &
        GTL_max, &
        GTL_min
     use mod_runconf, only: &
@@ -1133,11 +1125,11 @@ contains
        cnvvar_prg2diag
     implicit none
 
-    character(len=ADM_MAXFNAME), intent(in) :: basename
+    character(len=H_LONG), intent(in) :: basename
 
-    character(len=FIO_HMID)   :: desc = 'INITIAL/RESTART_data_of_prognostic_variables' ! [add] H.Yashiro 20110819
+    character(len=H_MID)   :: desc = 'INITIAL/RESTART_data_of_prognostic_variables' ! [add] H.Yashiro 20110819
 
-    character(len=FIO_HSHORT) :: DLABEL(DIAG_vmax0)
+    character(len=H_SHORT) :: DLABEL(DIAG_vmax0)
     data DLABEL / 'Pressure ',        &
                   'Temperature ',     &
                   'H-Velocity(XDIR)', &
@@ -1145,7 +1137,7 @@ contains
                   'H-Velocity(ZDIR)', &
                   'V-Velocity '       /
 
-    character(len=FIO_HSHORT) :: DUNIT(DIAG_vmax0)
+    character(len=H_SHORT) :: DUNIT(DIAG_vmax0)
     data DUNIT /  'Pa',  &
                   'K',   &
                   'm/s', &
@@ -1153,9 +1145,9 @@ contains
                   'm/s', &
                   'm/s'  /
 
-    character(len=FIO_HSHORT) :: WUNIT = 'kg/kg'
+    character(len=H_SHORT) :: WUNIT = 'kg/kg'
 
-    character(len=ADM_MAXFNAME) :: fname
+    character(len=H_LONG) :: fname
 
     real(RP) :: val_max, val_min
     logical :: nonzero
@@ -1214,8 +1206,8 @@ contains
 
        do l = 1, ADM_lall
           rgnid = ADM_prc_tab(l,ADM_prc_me)
-          call MISC_make_idstr(fname,trim(basename),'rgn',rgnid)
-          fid = MISC_get_available_fid()
+          call IO_make_idstr(fname,trim(basename),'rgn',rgnid-1)
+          fid = IO_get_available_fid()
           open( unit   = fid,                 &
                 file   = trim(fname),         &
                 form   = 'unformatted',       &

@@ -13,7 +13,9 @@ module mod_cnvvar
   !++ Used modules
   !
   use scale_precision
+  use scale_stdio
   use scale_prof
+
   use mod_adm, only: &
      ADM_LOG_FID
   use mod_runconf, only: &

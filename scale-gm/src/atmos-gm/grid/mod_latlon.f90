@@ -14,11 +14,11 @@ module mod_latlon
   !
   use mpi
   use scale_precision
+  use scale_stdio
   use scale_prof
+
   use mod_adm, only: &
-     ADM_LOG_FID, &
-     ADM_NSYS,    &
-     ADM_MAXFNAME
+     ADM_LOG_FID
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -40,7 +40,7 @@ module mod_latlon
   real(RP), public, allocatable :: GMTR_P_ll   (:,:,:,:)
   real(RP), public, allocatable :: GMTR_P_ll_pl(:,:,:,:)
 
-  character(len=ADM_NSYS),  public :: polygon_type = 'ON_SPHERE' ! triangle is fit to the sphere
+  character(len=H_SHORT),  public :: polygon_type = 'ON_SPHERE' ! triangle is fit to the sphere
   !                                                  'ON_PLANE'  ! triangle is treated as 2D
 
   !-----------------------------------------------------------------------------
@@ -56,7 +56,7 @@ module mod_latlon
   !
   !++ Private parameters & variables
   !
-  character(len=ADM_NSYS), private :: latlon_type = 'EQUIDIST' ! grid type ( equidist or gaussian )
+  character(len=H_SHORT), private :: latlon_type = 'EQUIDIST' ! grid type ( equidist or gaussian )
   integer,                 private :: imax        = 360        ! number of longitude
   integer,                 private :: jmax        = 180        ! number of latitude
   real(RP),                 private :: lonmin      = -999.0_RP    ! minimun longitude of region window in deg
@@ -66,10 +66,10 @@ module mod_latlon
   logical,                 private :: lon_offset  = .true.     ! logitude offset
   real(RP),                 private :: polar_limit = -999.0_RP    ! search all longitude if abs(lat) > polar_limit
 
-  character(len=ADM_MAXFNAME), private :: SAMPLE_OUT_BASENAME = ''
-  character(len=ADM_NSYS),     private :: SAMPLE_io_mode      = 'ADVANCED'
+  character(len=H_LONG), private :: SAMPLE_OUT_BASENAME = ''
+  character(len=H_SHORT),     private :: SAMPLE_io_mode      = 'ADVANCED'
 
-  character(len=ADM_NSYS),     private :: output_lldata_type = 'mkllmap'
+  character(len=H_SHORT),     private :: output_lldata_type = 'mkllmap'
 
   real(RP), private, allocatable :: lat(:)
   real(RP), private, allocatable :: lon(:)
@@ -98,8 +98,8 @@ contains
   !-----------------------------------------------------------------------------
   !> setup lat/lon value of the ico-grid (without mod_gmtr)
   subroutine LATLON_ico_setup
-    use mod_misc, only: &
-       MISC_get_latlon
+    use scale_vector, only: &
+       VECTR_xyz2latlon
     use mod_adm, only: &
        ADM_have_pl,     &
        ADM_lall,        &
@@ -139,25 +139,25 @@ contains
     GMTR_P_ll_pl(:,:,:,:) = 0.0_RP
 
     do l = 1, ADM_lall
-       do n = 1, ADM_IooJoo_nmax
-          ij = ADM_IooJoo(n,ADM_GIoJo)
-          call MISC_get_latlon( GMTR_P_ll(ij,k,l,GMTR_P_LAT), &
-                                GMTR_P_ll(ij,k,l,GMTR_P_LON), &
-                                GRD_x    (ij,k,l,GRD_XDIR),   &
-                                GRD_x    (ij,k,l,GRD_YDIR),   &
-                                GRD_x    (ij,k,l,GRD_ZDIR)    )
-       enddo ! ij loop
-    enddo ! l loop
+    do n = 1, ADM_IooJoo_nmax
+       ij = ADM_IooJoo(n,ADM_GIoJo)
+       call VECTR_xyz2latlon( GRD_x    (ij,k,l,GRD_XDIR),   & ! [IN]
+                              GRD_x    (ij,k,l,GRD_YDIR),   & ! [IN]
+                              GRD_x    (ij,k,l,GRD_ZDIR),   & ! [IN]
+                              GMTR_P_ll(ij,k,l,GMTR_P_LAT), & ! [OUT]
+                              GMTR_P_ll(ij,k,l,GMTR_P_LON)  ) ! [OUT]
+    enddo
+    enddo
 
     if ( ADM_have_pl ) then
        n = ADM_GSLF_PL
        do l = 1,ADM_lall_pl
-          call MISC_get_latlon( GMTR_P_ll_pl(n,k,l,GMTR_P_LAT), &
-                                GMTR_P_ll_pl(n,k,l,GMTR_P_LON), &
-                                GRD_x_pl    (n,k,l,GRD_XDIR),   &
-                                GRD_x_pl    (n,k,l,GRD_YDIR),   &
-                                GRD_x_pl    (n,k,l,GRD_ZDIR)    )
-       enddo ! l loop
+          call VECTR_xyz2latlon( GRD_x_pl    (n,k,l,GRD_XDIR),   & ! [IN]
+                                 GRD_x_pl    (n,k,l,GRD_YDIR),   & ! [IN]
+                                 GRD_x_pl    (n,k,l,GRD_ZDIR),   & ! [IN]
+                                 GMTR_P_ll_pl(n,k,l,GMTR_P_LAT), & ! [OUT]
+                                 GMTR_P_ll_pl(n,k,l,GMTR_P_LON)  ) ! [OUT]
+       enddo
     endif
 
     !--- communication of point data
@@ -172,9 +172,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine LATLON_setup( output_dirname, output_lldata_type_in )
-    use mod_misc, only: &
-       MISC_get_available_fid, &
-       MISC_make_idstr
+    use scale_const, only: &
+       CONST_PI
     use mod_adm, only: &
        ADM_CTL_FID,        &
        ADM_proc_stop,      &
@@ -184,8 +183,6 @@ contains
        ADM_prc_run_master, &
        ADM_prc_me,         &
        ADM_lall
-    use scale_const, only: &
-       CONST_PI
     implicit none
 
     character(len=*), intent(in) :: output_dirname
@@ -211,7 +208,7 @@ contains
          SAMPLE_io_mode,      &
          debug
 
-    character(len=ADM_MAXFNAME) :: fname
+    character(len=H_LONG) :: fname
 
     real(RP) :: d2r
 
@@ -255,7 +252,7 @@ contains
     call setup_latlon
 
     if( ADM_prc_me == ADM_prc_run_master ) then
-       fid = MISC_get_available_fid()
+       fid = IO_get_available_fid()
        open( unit   = fid,                                 &
              file   = trim(output_dirname)//'/llmap.info', &
              form   = 'unformatted',                       &
@@ -323,9 +320,9 @@ contains
           enddo
           enddo
 
-          call MISC_make_idstr(fname,trim(output_dirname)//'/checkmap','grd',rgnid)
+          call IO_make_idstr(fname,trim(output_dirname)//'/checkmap','grd',rgnid-1)
 
-          fid = MISC_get_available_fid()
+          fid = IO_get_available_fid()
           open( unit   = fid,           &
                 file   = trim(fname),   &
                 form   = 'unformatted', &
@@ -398,9 +395,9 @@ contains
     do l = 1, ADM_lall
        rgnid = ADM_prc_tab(l,ADM_prc_me)
 
-       call MISC_make_idstr(fname,trim(output_dirname)//'/llmap','rgn',rgnid)
+       call IO_make_idstr(fname,trim(output_dirname)//'/llmap','rgn',rgnid-1)
 
-       fid = MISC_get_available_fid()
+       fid = IO_get_available_fid()
        open( unit   = fid,           &
              file   = trim(fname),   &
              form   = 'unformatted', &
@@ -431,9 +428,9 @@ contains
 !    do l = 1, ADM_lall
 !       rgnid = ADM_prc_tab(l,ADM_prc_me)
 !
-!       call MISC_make_idstr(fname,trim(output_dirname)//'/llmap','rgntxt',rgnid)
+!       call IO_make_idstr(fname,trim(output_dirname)//'/llmap','rgntxt',rgnid-1)
 !
-!       fid = MISC_get_available_fid()
+!       fid = IO_get_available_fid()
 !       open( unit   = fid,           &
 !             file   = trim(fname),   &
 !             form   = 'formatted', &
@@ -461,13 +458,11 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine mkrelmap_ico2ll( what_is_done )
-    use mod_misc, only: &
-       MISC_get_latlon,      &
-       MISC_triangle_area_q, &
-       MISC_3dvec_triangle,  &
-       MISC_3dvec_cross,     &
-       MISC_3dvec_dot,       &
-       MISC_3dvec_abs
+    use scale_vector, only: &
+       VECTR_cross,      &
+       VECTR_dot,        &
+       VECTR_abs,        &
+       VECTR_triangle
     use mod_adm, only: &
        ADM_proc_stop,     &
        ADM_prc_tab,       &
@@ -613,20 +608,20 @@ contains
              r0(3) = sinlat(j)
 
              !--- remove the case inner product is negative
-             call MISC_3dvec_dot( ip, o(:), r1(:), o(:), r0(:) )
+             call VECTR_dot( ip, o(:), r1(:), o(:), r0(:) )
              if( ip < 0.0_RP ) cycle
              v01(:) = r1(:) - r0(:)
 
              !--- normal vector
-             call MISC_3dvec_cross( nvec(:), r1(:), r2(:), r2(:), r3(:) )
-             call MISC_3dvec_abs( len, nvec(:) )
+             call VECTR_cross( nvec(:), r1(:), r2(:), r2(:), r3(:) )
+             call VECTR_abs( len, nvec(:) )
 
              nvec(:) = nvec(:) / len
 
              !------ distance from origin to a plane with r0.
-             call MISC_3dvec_dot( rf, o(:), nvec(:), o(:), r0(:) )
+             call VECTR_dot( rf, o(:), nvec(:), o(:), r0(:) )
              !------ distance from origin to a plane with r1 or (r2,r3).
-             call MISC_3dvec_dot( rn, o(:), nvec(:), o(:), r1(:) )
+             call VECTR_dot( rn, o(:), nvec(:), o(:), r1(:) )
 
              !------ mapping r0
              r0(1) = r0(1) * (rn/rf)
@@ -634,13 +629,13 @@ contains
              r0(3) = r0(3) * (rn/rf)
 
              !--- calculate vectors from triangler points
-             call MISC_3dvec_cross( v12xv10(:), r1(:), r2(:), r0(:), r1(:) )
-             call MISC_3dvec_cross( v23xv20(:), r2(:), r3(:), r0(:), r2(:) )
-             call MISC_3dvec_cross( v31xv30(:), r3(:), r1(:), r0(:), r3(:) )
+             call VECTR_cross( v12xv10(:), r1(:), r2(:), r0(:), r1(:) )
+             call VECTR_cross( v23xv20(:), r2(:), r3(:), r0(:), r2(:) )
+             call VECTR_cross( v31xv30(:), r3(:), r1(:), r0(:), r3(:) )
 
-             call MISC_3dvec_dot( judge12, o(:), nvec(:), o(:), v12xv10(:) )
-             call MISC_3dvec_dot( judge23, o(:), nvec(:), o(:), v23xv20(:) )
-             call MISC_3dvec_dot( judge31, o(:), nvec(:), o(:), v31xv30(:) )
+             call VECTR_dot( judge12, o(:), nvec(:), o(:), v12xv10(:) )
+             call VECTR_dot( judge23, o(:), nvec(:), o(:), v23xv20(:) )
+             call VECTR_dot( judge31, o(:), nvec(:), o(:), v31xv30(:) )
 
              if (       judge12 < eps_judge &
                   .AND. judge23 < eps_judge &
@@ -672,24 +667,9 @@ contains
                       n3_index(nmax_llgrid) = ADM_IooJoo(n,ADM_GIoJp)
                    endif
 
-                   if ( output_lldata_type == 'mkllmap_q' ) then ! quad precision
-                      area1 = MISC_triangle_area_q( r0(:), r2(:), r3(:),  &
-                                                    polygon_type, rscale, &
-                                                    critical=eps_area     )
-                      area2 = MISC_triangle_area_q( r0(:), r3(:), r1(:),  &
-                                                    polygon_type, rscale, &
-                                                    critical=eps_area     )
-                      area3 = MISC_triangle_area_q( r0(:), r1(:), r2(:),  &
-                                                    polygon_type, rscale, &
-                                                    critical=eps_area     )
-                   else ! double precision
-                      area1 = MISC_3Dvec_triangle( r0(:), r2(:), r3(:), &
-                                                   polygon_type, rscale )
-                      area2 = MISC_3Dvec_triangle( r0(:), r3(:), r1(:), &
-                                                   polygon_type, rscale )
-                      area3 = MISC_3Dvec_triangle( r0(:), r1(:), r2(:), &
-                                                   polygon_type, rscale )
-                   endif
+                   area1 = VECTR_triangle( r0(:), r2(:), r3(:), polygon_type, rscale )
+                   area2 = VECTR_triangle( r0(:), r3(:), r1(:), polygon_type, rscale )
+                   area3 = VECTR_triangle( r0(:), r1(:), r2(:), polygon_type, rscale )
 
                    if (      area1 * 0.0_RP /= 0.0_RP &
                         .OR. area2 * 0.0_RP /= 0.0_RP &
@@ -770,7 +750,7 @@ contains
           r0(3) = sinlat(j)
 
           !--- remove the case inner product is negative
-          call MISC_3dvec_dot( ip, o(:), r1(:), o(:), r0(:) )
+          call VECTR_dot( ip, o(:), r1(:), o(:), r0(:) )
           if( ip < 0.0_RP ) cycle
           v01(:) = r1(:) - r0(:)
 
@@ -815,9 +795,6 @@ contains
   !-----------------------------------------------------------------------------
   !> Output sample output
   subroutine LL_outputsample
-    use mod_misc, only: &
-       MISC_make_idstr,&
-       MISC_get_available_fid
     use mod_adm, only: &
        ADM_proc_stop, &
        ADM_prc_tab,   &
@@ -840,7 +817,7 @@ contains
     real(RP) :: SAMPLE   ( ADM_gall,   ADM_KNONE,ADM_lall,   4)
     real(RP) :: SAMPLE_pl( ADM_gall_pl,ADM_KNONE,ADM_lall_pl,4)
 
-    character(len=ADM_MAXFNAME) :: fname
+    character(len=H_LONG) :: fname
 
     integer :: fid
     integer :: rgnid, prc
@@ -901,9 +878,9 @@ contains
 
        do l = 1, ADM_lall
           rgnid = ADM_prc_tab(l,ADM_prc_me)
-          call MISC_make_idstr(fname,trim(sample_io_mode),'rgn',rgnid)
+          call IO_make_idstr(fname,trim(sample_io_mode),'rgn',rgnid-1)
 
-          fid = MISC_get_available_fid()
+          fid = IO_get_available_fid()
           open( unit = fid, &
                file=trim(fname),   &
                form='unformatted', &
