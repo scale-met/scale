@@ -103,7 +103,7 @@ contains
        GTRANS_setup
     use scale_interpolation, only: &
        INTERP_setup
-    use scale_statistics, only: &
+    use scale_les_statistics, only: &
        STAT_setup
     use scale_history, only: &
        HIST_setup

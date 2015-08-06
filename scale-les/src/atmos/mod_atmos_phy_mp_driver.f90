@@ -89,7 +89,7 @@ contains
   subroutine ATMOS_PHY_MP_driver( update_flag )
     use scale_time, only: &
        dt_MP => TIME_DTSEC_ATMOS_PHY_MP
-    use scale_statistics, only: &
+    use scale_les_statistics, only: &
        STATISTICS_checktotal, &
        STAT_total
     use scale_history, only: &

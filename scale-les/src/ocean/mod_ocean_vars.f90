@@ -483,7 +483,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Budget monitor for ocean
   subroutine OCEAN_vars_total
-    use scale_statistics, only: &
+    use scale_les_statistics, only: &
        STATISTICS_checktotal, &
        STAT_total
     implicit none

@@ -1943,7 +1943,7 @@ contains
        CVdry  => CONST_CVdry
     use scale_grid_real, only: &
        REAL_CZ
-    use scale_statistics, only: &
+    use scale_les_statistics, only: &
        STATISTICS_checktotal, &
        STAT_total
     use scale_atmos_thermodyn, only: &
@@ -2149,7 +2149,7 @@ contains
     use scale_comm, only: &
        COMM_vars8, &
        COMM_wait
-    use scale_statistics, only: &
+    use scale_les_statistics, only: &
        STATISTICS_checktotal, &
        STAT_total,            &
        STAT_detail

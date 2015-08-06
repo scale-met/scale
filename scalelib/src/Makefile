@@ -163,6 +163,7 @@ OBJS_NAME = $(scale_rdma)	\
 	scale_land_sfc_slab.o	\
 	scale_landuse.o	\
 	scale_les_process.o	\
+	scale_les_statistics.o	\
 	scale_mapproj.o	\
 	scale_matrix.o	\
 	scale_monitor.o	\
@@ -176,7 +177,6 @@ OBJS_NAME = $(scale_rdma)	\
 	scale_random.o	\
 	scale_roughness.o	\
 	scale_specfunc.o	\
-	scale_statistics.o	\
 	scale_stdio.o	\
 	scale_time.o	\
 	scale_topography.o	\

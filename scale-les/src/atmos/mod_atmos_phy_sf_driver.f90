@@ -138,7 +138,7 @@ contains
        TOPO_Zsfc
     use scale_time, only: &
        dt_SF => TIME_DTSEC_ATMOS_PHY_SF
-    use scale_statistics, only: &
+    use scale_les_statistics, only: &
        STATISTICS_checktotal, &
        STAT_total
     use scale_history, only: &

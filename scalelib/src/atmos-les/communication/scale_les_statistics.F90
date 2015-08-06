@@ -11,7 +11,7 @@
 !!
 !<
 #include "inc_openmp.h"
-module scale_statistics
+module scale_les_statistics
   !-----------------------------------------------------------------------------
   !
   !++ used modules
@@ -360,5 +360,5 @@ contains
     return
   end subroutine STAT_detail
 
-end module scale_statistics
+end module scale_les_statistics
 !-------------------------------------------------------------------------------

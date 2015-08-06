@@ -287,7 +287,7 @@ contains
        I_LW => CONST_I_LW
     use scale_fileio, only: &
        FILEIO_read
-    use scale_statistics, only: &
+    use scale_les_statistics, only: &
        STAT_total
     implicit none
 
@@ -340,7 +340,7 @@ contains
        TIME_gettimelabel
     use scale_fileio, only: &
        FILEIO_write
-    use scale_statistics, only: &
+    use scale_les_statistics, only: &
        STAT_total
     implicit none
 

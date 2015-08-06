@@ -90,7 +90,7 @@ contains
     use scale_time, only: &
        NOWDATE => TIME_NOWDATE,     &
        dt      => TIME_DTSEC_URBAN
-    use scale_statistics, only: &
+    use scale_les_statistics, only: &
        STATISTICS_checktotal, &
        STAT_total
     use scale_history, only: &
