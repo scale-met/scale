@@ -1,5 +1,4 @@
 ifeq ($(ENABLE_FIXEDINDEX),T)
-      FFLAGS += -D_FIXEDINDEX_
       inc_index = $(INDEX_DIR)/inc_index.h
       OBJ_DIR = $(BUILD_DIR)
       INST_DIR = $(BUILD_DIR)
@@ -44,6 +43,10 @@ else
   else
     FFLAGS = $(FFLAGS_FAST) $(PERF_MONIT) $(RDMA)
   endif
+endif
+
+ifeq ($(ENABLE_FIXEDINDEX),T)
+      FFLAGS += -D_FIXEDINDEX_
 endif
 
 ifeq ($(ENABLE_OPENMP),T)
