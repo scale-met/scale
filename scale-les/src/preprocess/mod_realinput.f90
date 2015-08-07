@@ -921,6 +921,7 @@ contains
     character(len=*), intent(in) :: intrp_land_sfc_temp
     character(len=*), intent(in) :: intrp_ocean_temp
     character(len=*), intent(in) :: intrp_ocean_sfc_temp
+    integer,          intent(in) :: intrp_iter_max
     logical,          intent(in) :: soilwater_DS2VC_flag
     integer,          intent(in) :: mdlid                ! model type id
 
