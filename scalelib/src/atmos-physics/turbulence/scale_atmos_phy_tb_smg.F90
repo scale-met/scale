@@ -86,6 +86,7 @@ module scale_atmos_phy_tb_smg
   real(RP), private, parameter :: twoOverThree = 2.0_RP / 3.0_RP
   real(RP), private, parameter :: FourOverThree = 4.0_RP / 3.0_RP
 
+  real(RP), private :: ATMOS_PHY_TB_SMG_NU_MAX = 10000.0_RP
   logical, private  :: ATMOS_PHY_TB_SMG_implicit = .false.
   logical, private  :: ATMOS_PHY_TB_SMG_bottom = .false.
 
@@ -115,6 +116,7 @@ contains
 
     NAMELIST / PARAM_ATMOS_PHY_TB_SMG / &
          ATMOS_PHY_TB_SMG_Cs, &
+         ATMOS_PHY_TB_SMG_NU_MAX, &
          ATMOS_PHY_TB_SMG_filter_fact, &
          ATMOS_PHY_TB_SMG_implicit, &
          ATMOS_PHY_TB_SMG_consistent_tke, &
@@ -1451,6 +1453,7 @@ contains
           else ! strongly stable
              nu(k,i,j) = 0.0_RP
           endif
+          nu(k,i,j) = min( nu(k,i,j), ATMOS_PHY_TB_SMG_NU_MAX )
        enddo
        enddo
        enddo
@@ -1488,6 +1491,7 @@ contains
           else ! strongly stable
              Pr(k,i,j) = 1.0_RP
           endif
+          Pr(k,i,j) = min( Pr(k,i,j), ATMOS_PHY_TB_SMG_NU_MAX )
        enddo
        enddo
        enddo
