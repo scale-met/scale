@@ -89,6 +89,8 @@ module scale_atmos_phy_tb_smg
   logical, private  :: ATMOS_PHY_TB_SMG_implicit = .false.
   logical, private  :: ATMOS_PHY_TB_SMG_bottom = .false.
 
+  real(RP), private :: tke_fact
+
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -109,11 +111,13 @@ contains
 
     real(RP) :: ATMOS_PHY_TB_SMG_Cs
     real(RP) :: ATMOS_PHY_TB_SMG_filter_fact = 2.0_RP
+    logical  :: ATMOS_PHY_TB_SMG_consistent_tke = .true.
 
     NAMELIST / PARAM_ATMOS_PHY_TB_SMG / &
          ATMOS_PHY_TB_SMG_Cs, &
          ATMOS_PHY_TB_SMG_filter_fact, &
          ATMOS_PHY_TB_SMG_implicit, &
+         ATMOS_PHY_TB_SMG_consistent_tke, &
          ATMOS_PHY_TB_SMG_bottom
 
     integer :: k, i, j
@@ -162,8 +166,15 @@ contains
     enddo
     enddo
 #ifdef DEBUG
-       i = IUNDEF; j = IUNDEF; k = IUNDEF
+    i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
+
+    if ( ATMOS_PHY_TB_SMG_consistent_tke ) then
+       tke_fact = 1.0_RP
+    else
+       tke_fact = 0.0_RP
+    end if
+
 
     return
   end subroutine ATMOS_PHY_TB_smg_setup
@@ -1504,8 +1515,8 @@ contains
 #endif
           qflx_sgs_momz(k,i,j,ZDIR) = DENS(k,i,j) * ( &
                - 2.0_RP * nu(k,i,j) &
-               * ( S33_C(k,i,j) - ( S11_C(k,i,j) + S22_C(k,i,j) + S33_C(k,i,j) ) * OneOverThree ) &
-             + twoOverThree * tke(k,i,j) )
+               * ( S33_C(k,i,j) - ( S11_C(k,i,j) + S22_C(k,i,j) + S33_C(k,i,j) ) * OneOverThree * tke_fact ) &
+             + twoOverThree * tke(k,i,j) * tke_fact )
        enddo
        enddo
        enddo
@@ -1668,8 +1679,8 @@ contains
 #endif
           qflx_sgs_momx(k,i,j,XDIR) = DENS(k,i,j) * ( &
                - 2.0_RP * nu(k,i,j) &
-               * ( S11_C(k,i,j) - ( S11_C(k,i,j) + S22_C(k,i,j) + S33_C(k,i,j) ) * OneOverThree ) &
-             + twoOverThree * tke(k,i,j) )
+               * ( S11_C(k,i,j) - ( S11_C(k,i,j) + S22_C(k,i,j) + S33_C(k,i,j) ) * OneOverThree * tke_fact ) &
+             + twoOverThree * tke(k,i,j) * tke_fact )
        enddo
        enddo
        enddo
@@ -1832,8 +1843,8 @@ contains
 #endif
           qflx_sgs_momy(k,i,j,YDIR) = DENS(k,i,j) * ( &
                - 2.0_RP * nu(k,i,j) &
-               * ( S22_C(k,i,j) - ( S11_C(k,i,j) + S22_C(k,i,j) + S33_C(k,i,j) ) * OneOverThree ) &
-             + twoOverThree * tke(k,i,j) )
+               * ( S22_C(k,i,j) - ( S11_C(k,i,j) + S22_C(k,i,j) + S33_C(k,i,j) ) * OneOverThree * tke_fact ) &
+             + twoOverThree * tke(k,i,j) * tke_fact)
        enddo
        enddo
        enddo
