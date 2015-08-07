@@ -416,13 +416,13 @@ contains
 
        call FileRead( read3DL(:,:,:), BASENAME_ORG, "LAND_TEMP",  it, rank )
        do k = 1, dims(7)
-         tg_org(k,xs:xe,ys:ye) = read3D(:,:,k)
+         tg_org(k,xs:xe,ys:ye) = read3DL(:,:,k)
        end do
 
        if( use_file_landwater )then
           call FileRead( read3DL(:,:,:), BASENAME_ORG, "LAND_WATER", it, rank )
           do k = 1, dims(7)
-             strg_org(k,xs:xe,ys:ye) = read3D(:,:,k)
+             strg_org(k,xs:xe,ys:ye) = read3DL(:,:,k)
           end do
        endif
 

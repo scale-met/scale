@@ -5043,7 +5043,8 @@ enddo
 
     !--- read/write initial data for bottom boundary models
     if ( NUMBER_OF_FILES > 1 ) then
-       BASENAME_WITHNUM = trim(BASENAME_ORG)//"_00000"
+       write(NUM,'(I5.5)') NUMBER_OF_SKIP_TSTEPS / NUMBER_OF_TSTEPS
+       BASENAME_WITHNUM = trim(BASENAME_ORG)//"_"//NUM
     else
        BASENAME_WITHNUM = trim(BASENAME_ORG)
     end if
@@ -5066,7 +5067,7 @@ enddo
                              QTRC_ORG(:,:,:,:,ns),  &
                              BASENAME_WITHNUM,      &
                              dims,                  &
-                             ns,                    &
+                             mod(NUMBER_OF_SKIP_TSTEPS, NUMBER_OF_TSTEPS), &
                              USE_FILE_LANDWATER,    &
                              INIT_LANDWATER_RATIO,  &
                              INTRP_LAND_TEMP,       &
