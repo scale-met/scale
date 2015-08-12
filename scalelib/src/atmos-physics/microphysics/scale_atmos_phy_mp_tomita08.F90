@@ -63,8 +63,8 @@ module scale_atmos_phy_mp_tomita08
   real(RP), private            :: dens00 = 1.28_RP !< standard density [kg/m3]
 
   ! Parameter for Marshall-Palmer distribution
-  real(RP), private, parameter :: N0r = 8.E6_RP !< intercept parameter for rain    [1/m4]
-  real(RP), private, parameter :: N0s = 3.E6_RP !< intercept parameter for snow    [1/m4]
+  real(RP), private            :: N0r = 8.E6_RP !< intercept parameter for rain    [1/m4]
+  real(RP), private            :: N0s = 3.E6_RP !< intercept parameter for snow    [1/m4]
   real(RP), private            :: N0g = 4.E6_RP !< intercept parameter for graupel [1/m4]
 
   real(RP), private            :: dens_s = 100.0_RP !< density of snow    [kg/m3]
@@ -74,11 +74,13 @@ module scale_atmos_phy_mp_tomita08
   real(RP), private            :: drag_g = 0.6_RP   !< drag coefficient for graupel
   real(RP), private            :: re_qc  =  8.E-6_RP ! effective radius for cloud water
   real(RP), private            :: re_qi  = 40.E-6_RP ! effective radius for cloud ice
+  real(RP), private            :: Cr     = 130.0_RP
+  real(RP), private            :: Cs     = 4.84_RP
 
   ! Empirical parameter
   real(RP), private            :: Ar, As, Ag
   real(RP), private            :: Br, Bs, Bg
-  real(RP), private            :: Cr, Cs, Cg
+  real(RP), private            :: Cg
   real(RP), private            :: Dr, Ds, Dg
 
   ! GAMMA function
@@ -308,6 +310,14 @@ contains
        dens_g,         &
        re_qc,          &
        re_qi,          &
+       Cr,             &
+       Cs,             &
+       drag_g,         &
+       beta_saut,      &
+       gamma_saut,     &
+       gamma_sacr,     &
+       N0s,            &
+       N0g,            &
        debug
 
     real(RP), parameter :: max_term_vel = 10.0_RP  !-- terminal velocity for calculate dt of sedimentation
@@ -400,8 +410,6 @@ contains
     Bs = 3.0_RP
     Bg = 3.0_RP
 
-    Cr = 130.00_RP
-    Cs =   4.84_RP
     Cg = sqrt( ( 4.0_RP * dens_g * GRAV ) / ( 3.0_RP * dens00 * drag_g ) )
 
     Dr = 0.50_RP
