@@ -38,6 +38,7 @@ module scale_mapproj
   public :: MPRJ_lonlat2xy
   public :: MPRJ_mapfactor
   public :: MPRJ_rotcoef
+  public :: MPRJ_rotcoef_point
 
   !-----------------------------------------------------------------------------
   !
@@ -79,6 +80,12 @@ module scale_mapproj
   private :: MPRJ_PolarStereographic_rotcoef
   private :: MPRJ_Mercator_rotcoef
   private :: MPRJ_EquidistantCylindrical_rotcoef
+
+!  private :: MPRJ_None_rotcoef_point
+  private :: MPRJ_LambertConformal_rotcoef_point
+!  private :: MPRJ_PolarStereographic_rotcoef_point
+!  private :: MPRJ_Mercator_rotcoef_point
+!  private :: MPRJ_EquidistantCylindrical_rotcoef_point
 
   !-----------------------------------------------------------------------------
   !
@@ -346,6 +353,41 @@ contains
 
     return
   end subroutine MPRJ_rotcoef
+
+  !-----------------------------------------------------------------------------
+  !> u(lat,lon) = cos u(x,y) - sin v(x,y)
+  !> v(lat,lon) = sin u(x,y) + cos v(x,y)
+  subroutine MPRJ_rotcoef_point( &
+       rotc, &
+       lon,  &
+       lat   )
+    use scale_process, only: &
+       PRC_MPIstop
+    implicit none
+
+    real(RP), intent(out) :: rotc(2) !< rotc(:,:,1)->cos, rotc(:,:,2)->sin
+    real(RP), intent(in)  :: lon   ! [rad]
+    real(RP), intent(in)  :: lat   ! [rad]
+    !---------------------------------------------------------------------------
+
+    select case(MPRJ_type)
+!    case('NONE')
+!       call MPRJ_None_rotcoef_point( rotc )
+    case('LC')
+       call MPRJ_LambertConformal_rotcoef_point( rotc, lon, lat )
+!    case('PS')
+!       call MPRJ_PolarStereographic_rotcoef_point( rotc, lon, lat )
+!    case('MER')
+!       call MPRJ_Mercator_rotcoef_point( rotc )
+!    case('EC')
+!       call MPRJ_EquidistantCylindrical_rotcoef_point( rotc )
+    case default
+       write(*,*) ' xxx Unsupported TYPE. STOP'
+       call PRC_MPIstop
+    endselect
+
+    return
+  end subroutine MPRJ_rotcoef_point
 
   !-----------------------------------------------------------------------------
   !> No projection
@@ -640,6 +682,31 @@ contains
 
     return
   end subroutine MPRJ_LambertConformal_rotcoef
+
+  !-----------------------------------------------------------------------------
+  subroutine MPRJ_LambertConformal_rotcoef_point( &
+       rotc, &
+       lon,  &
+       lat   )
+    implicit none
+
+    real(RP), intent(out) :: rotc(2)
+    real(RP), intent(in)  :: lon  ! [rad]
+    real(RP), intent(in)  :: lat  ! [rad]
+
+    real(RP) :: dlon
+    real(RP) :: alpha
+    !---------------------------------------------------------------------------
+
+    dlon = lon - MPRJ_basepoint_lon * D2R
+    if( dlon >  PI ) dlon = dlon - PI*2.0_RP
+    if( dlon < -PI ) dlon = dlon + PI*2.0_RP
+    alpha = - MPRJ_LC_c * dlon * MPRJ_hemisphere
+    rotc(1) = cos( alpha )
+    rotc(2) = sin( alpha )
+
+    return
+  end subroutine MPRJ_LambertConformal_rotcoef_point
 
   !-----------------------------------------------------------------------------
   !> Polar Stereographic projection
