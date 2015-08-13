@@ -35,6 +35,7 @@ module scale_process
   public :: PRC_MPIstop
   public :: PRC_MPIfinish
   public :: PRC_MPIsplit
+  public :: PRC_MPIsplit_letkf
 
   public :: PRC_MPItime
   public :: PRC_MPItimestat
@@ -428,6 +429,48 @@ contains
 
     return
   end subroutine PRC_MPIsplit
+
+  !-----------------------------------------------------------------------------
+  !> MPI Communicator Split for SCALE-LETKF ensemble
+  subroutine PRC_MPIsplit_letkf( &
+      ORG_COMM,         & ! [in ]
+      mem_np,           & ! [in ]
+      nitmax,           & ! [in ]
+      nprocs,           & ! [in ]
+      proc2mem,         & ! [in ]
+      INTRA_COMM        ) ! [out]
+    implicit none
+
+    integer, intent(in)  :: ORG_COMM
+    integer, intent(in)  :: mem_np
+    integer, intent(in)  :: nitmax
+    integer, intent(in)  :: nprocs
+    integer, intent(in)  :: proc2mem(2,nitmax,nprocs)
+    integer, intent(out) :: intra_comm
+
+    integer :: ORG_myrank  ! my rank number in the original communicator
+    integer :: MPI_G_WORLD, MPI_G
+    integer :: ranks(mem_np)
+    integer :: ip
+    integer :: ierr
+    !---------------------------------------------------------------------------
+
+    call MPI_COMM_RANK(ORG_COMM,ORG_myrank,ierr)
+
+    if ( proc2mem(1,1,ORG_myrank+1) >= 1 ) then
+      do ip = 1, nprocs
+        if (proc2mem(1,1,ip) == proc2mem(1,1,ORG_myrank+1)) then
+          ranks(proc2mem(2,1,ip)+1) = ip-1
+        end if
+      end do
+
+      call MPI_Comm_group(ORG_COMM, MPI_G_WORLD, ierr)
+      call MPI_Group_incl(MPI_G_WORLD, mem_np,ranks, MPI_G, ierr)
+      call MPI_Comm_create(ORG_COMM, MPI_G, intra_comm, ierr)
+    end if
+
+    return
+  end subroutine PRC_MPIsplit_letkf
 
   !-----------------------------------------------------------------------------
   !> Set color and keys for COMM_SPLIT
