@@ -51,6 +51,7 @@ program netcdf2grads_h_launcher
   character(len=H_LONG) :: CONF_FILES (PRC_DOMAIN_nlim) = ""      ! name of configulation files
   logical               :: ABORT_ALL_JOBS               = .false. ! abort all jobs or not?
   logical               :: LOG_SPLIT                    = .false. ! log-output for mpi splitting?
+  logical               :: COLOR_REORDER                = .true.  ! coloring reorder for mpi splitting?
 
   namelist / PARAM_LAUNCHER / &
      NUM_BULKJOB,     &
@@ -58,7 +59,8 @@ program netcdf2grads_h_launcher
      PRC_DOMAINS,     &
      CONF_FILES,      &
      ABORT_ALL_JOBS,  &
-     LOG_SPLIT
+     LOG_SPLIT,       &
+     COLOR_REORDER
 
   integer               :: universal_comm                         ! universal communicator
   integer               :: universal_nprocs                       ! number of procs in universal communicator
@@ -106,7 +108,7 @@ program netcdf2grads_h_launcher
   if ( ierr < 0 ) then !--- missing
      ! keep default setting (no members, no nesting)
   elseif( ierr > 0 ) then !--- fatal error
-     if( universal_master ) write(*,*) 'xxx Not appropriate names in namelist PARAM_CONST. Check!'
+     if( universal_master ) write(*,*) 'xxx Not appropriate names in namelist PARAM_LAUNCHER. Check!'
      call PRC_MPIstop
   endif
 
@@ -135,6 +137,7 @@ program netcdf2grads_h_launcher
                      dummy1 (:),            & ! [IN]  dummy
                      LOG_SPLIT,             & ! [IN]
                      .true.,                & ! [IN]  flag bulk_split
+                     .false.,               & ! [IN]  no reordering
                      global_comm,           & ! [OUT]
                      intercomm_parent_null, & ! [OUT] null
                      intercomm_child_null,  & ! [OUT] null
@@ -157,6 +160,7 @@ program netcdf2grads_h_launcher
                      CONF_FILES (:),   & ! [IN]
                      LOG_SPLIT,        & ! [IN]
                      .false.,          & ! [IN] flag bulk_split
+                     COLOR_REORDER,    & ! [IN]
                      local_comm,       & ! [OUT]
                      intercomm_parent, & ! [OUT]
                      intercomm_child,  & ! [OUT]

@@ -288,6 +288,7 @@ contains
       CONF_FILES,       & ! [in ]
       LOG_SPLIT,        & ! [in ]
       bulk_split,       & ! [in ]
+      color_reorder,    & ! [in ]
       INTRA_COMM,       & ! [out]
       inter_parent,     & ! [out]
       inter_child,      & ! [out]
@@ -300,6 +301,7 @@ contains
     character(len=H_LONG), intent(in) :: CONF_FILES(:)
     logical, intent(in)  :: LOG_SPLIT
     logical, intent(in)  :: bulk_split
+    logical, intent(in)  :: color_reorder
 
     integer, intent(out) :: intra_comm
     integer, intent(out) :: inter_parent
@@ -318,7 +320,7 @@ contains
 
     logical :: do_create_p(PRC_DOMAIN_nlim)
     logical :: do_create_c(PRC_DOMAIN_nlim)
-    logical :: color_reorder = .false.
+    logical :: reordering
 
     integer :: COL_NMAX(0:PRC_DOMAIN_nlim)
     character(len=H_LONG) :: COL_FILE(0:PRC_DOMAIN_nlim)
@@ -350,17 +352,16 @@ contains
           call PRC_MPIstop
        endif
 
+       reordering = color_reorder
        if ( bulk_split ) then
-          color_reorder = .false.
-       else
-          color_reorder = .true.
+          reordering = .false.
        endif
        call PRC_MPIcoloring( ORG_COMM,     & ! [in ]
                              NUM_DOMAIN,   & ! [in ]
                              PRC_DOMAINS,  & ! [in ]
                              CONF_FILES,   & ! [in ]
-                             color_reorder, & ! [in ]
-                             LOG_SPLIT,     & ! [in ]
+                             reordering,   & ! [in ]
+                             LOG_SPLIT,    & ! [in ]
                              COLOR_LIST,   & ! [out]
                              PRC_ROOT,     & ! [out]
                              KEY_LIST,     & ! [out]
