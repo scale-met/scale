@@ -609,11 +609,11 @@ contains
     real(RP) :: dg_init = 80.e-9_RP ! initial number equivalen diameters of modes     [m]      
     real(RP) :: sg_init = 1.6_RP    ! initial standard deviation                      [-]    
 
-    real(RP), allocatable :: d_min_inp(:)
-    real(RP), allocatable :: d_max_inp(:)
-    real(RP), allocatable :: k_min_inp(:)
-    real(RP), allocatable :: k_max_inp(:)
-    integer, allocatable :: n_kap_inp(:)
+    real(RP) :: d_min_inp(2560)
+    real(RP) :: d_max_inp(2560)
+    real(RP) :: k_min_inp(2560)
+    real(RP) :: k_max_inp(2560)
+    integer  :: n_kap_inp(2560)
 
     real(RP), parameter :: d_min_def = 1.e-9_RP ! default lower bound of 1st size bin
     real(RP), parameter :: d_max_def = 1.e-5_RP ! upper bound of last size bin
@@ -675,11 +675,6 @@ contains
     allocate( n_kap(n_ctg) )
     allocate( k_min(n_ctg) )
     allocate( k_max(n_ctg) )
-    allocate( d_min_inp(n_ctg) )
-    allocate( d_max_inp(n_ctg) )
-    allocate( n_kap_inp(n_ctg) )
-    allocate( k_min_inp(n_ctg) )
-    allocate( k_max_inp(n_ctg) )
 
     d_min(1:n_ctg) = d_min_def ! lower bound of 1st size bin
     d_max(1:n_ctg) = d_max_def ! upper bound of last size bin
