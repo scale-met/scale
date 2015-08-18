@@ -39,7 +39,7 @@ contains
 
     integer, allocatable :: aero_idx(:,:,:,:)
     integer :: n_kap_max, n_siz_max, ncat_max
-    real(RP),allocatable :: NASIZ(:), NAKAP(:)
+    real(RP) :: NASIZ(3), NAKAP(3)
     character(len=H_SHORT) :: attribute, catego, aunit
 
     NAMELIST / PARAM_TRACER_KAJINO13 / &
@@ -51,8 +51,6 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '+++ READ NUMBER of TRACER for Aerosol'
 
     ncat_max = max( IC_MIX, IC_SEA, IC_DUS )
-    allocate( NASIZ(ncat_max) )
-    allocate( NAKAP(ncat_max) )
 
     NASIZ(:) = 64
     NAKAP(:) = 1
