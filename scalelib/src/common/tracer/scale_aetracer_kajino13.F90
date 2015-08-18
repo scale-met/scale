@@ -39,7 +39,7 @@ contains
 
     integer, allocatable :: aero_idx(:,:,:,:)
     integer :: n_kap_max, n_siz_max, ncat_max
-    real(RP) :: NASIZ(2560), NAKAP(2560)
+    real(RP) :: NASIZ(3), NAKAP(3)
     character(len=H_SHORT) :: attribute, catego, aunit
 
     NAMELIST / PARAM_TRACER_KAJINO13 / &

@@ -609,11 +609,11 @@ contains
     real(RP) :: dg_init = 80.e-9_RP ! initial number equivalen diameters of modes     [m]      
     real(RP) :: sg_init = 1.6_RP    ! initial standard deviation                      [-]    
 
-    real(RP) :: d_min_inp(2560)
-    real(RP) :: d_max_inp(2560)
-    real(RP) :: k_min_inp(2560)
-    real(RP) :: k_max_inp(2560)
-    integer  :: n_kap_inp(2560)
+    real(RP) :: d_min_inp(3)
+    real(RP) :: d_max_inp(3)
+    real(RP) :: k_min_inp(3)
+    real(RP) :: k_max_inp(3)
+    integer  :: n_kap_inp(3)
 
     real(RP), parameter :: d_min_def = 1.e-9_RP ! default lower bound of 1st size bin
     real(RP), parameter :: d_max_def = 1.e-5_RP ! upper bound of last size bin
