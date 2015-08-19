@@ -5062,7 +5062,7 @@ enddo
                              QTRC_ORG(:,:,:,:,ns),  &
                              BASENAME_WITHNUM,      &
                              dims,                  &
-                             mod(NUMBER_OF_SKIP_TSTEPS+1, NUMBER_OF_TSTEPS)+1, &
+                             mod(NUMBER_OF_SKIP_TSTEPS, NUMBER_OF_TSTEPS)+1, &
                              USE_FILE_LANDWATER,    &
                              INIT_LANDWATER_RATIO,  &
                              INTRP_LAND_TEMP,       &
