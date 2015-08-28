@@ -450,25 +450,24 @@ contains
     integer, intent(out) :: intra_comm
 
     integer :: ORG_myrank  ! my rank number in the original communicator
-    integer :: MPI_G_WORLD, MPI_G
-    integer :: ranks(mem_np)
-    integer :: ip
+    integer :: color, key
     integer :: ierr
     !---------------------------------------------------------------------------
 
-    call MPI_COMM_RANK(ORG_COMM,ORG_myrank,ierr)
+    call MPI_COMM_RANK( ORG_COMM, ORG_myrank, ierr)
 
     if ( proc2mem(1,1,ORG_myrank+1) >= 1 ) then
-      do ip = 1, nprocs
-        if (proc2mem(1,1,ip) == proc2mem(1,1,ORG_myrank+1)) then
-          ranks(proc2mem(2,1,ip)+1) = ip-1
-        end if
-      end do
-
-      call MPI_Comm_group(ORG_COMM, MPI_G_WORLD, ierr)
-      call MPI_Group_incl(MPI_G_WORLD, mem_np,ranks, MPI_G, ierr)
-      call MPI_Comm_create(ORG_COMM, MPI_G, intra_comm, ierr)
+       color = proc2mem(1,1,ORG_myrank+1) - 1
+       key = proc2mem(2,1,ORG_myrank+1)
+    else
+       color = MPI_UNDEFINED
+       key = MPI_UNDEFINED
     end if
+
+    call MPI_COMM_SPLIT( ORG_COMM,               &
+                         color, &
+                         key,   &
+                         intra_comm, ierr )
 
     return
   end subroutine PRC_MPIsplit_letkf
