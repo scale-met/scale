@@ -71,9 +71,16 @@ contains
     character(CMID), intent(in) :: varname
     integer, intent(out)        :: vtype
     integer, intent(inout)      :: atype
+
+    character(CMID)             :: vname
     !---------------------------------------------------------------------------
 
-    select case( trim(varname) )
+    vname=trim(varname)
+    if(vname(1:6)=="height") vname="height"
+    if(vname(1:3)=="lon")    vname="lon"
+    if(vname(1:3)=="lat")    vname="lat"
+
+    select case( trim(vname) )
     case ( "TRL_URB", "TBL_URB", "TGL_URB" )
        vtype = vt_urban
     case ( "LAND_TEMP", "LAND_WATER" )
