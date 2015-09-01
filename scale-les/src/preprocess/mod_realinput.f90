@@ -941,7 +941,7 @@ contains
     real(RP) :: tg_org    (dims(7),dims(8),dims(9))
     real(RP) :: strg_org  (dims(7),dims(8),dims(9))
     real(RP) :: smds_org  (dims(7),dims(8),dims(9))
-    real(RP) :: skint_org (        dims(8),dims(9))
+!    real(RP) :: skint_org (        dims(8),dims(9))
     real(RP) :: lst_org   (        dims(8),dims(9))
     real(RP) :: ust_org   (        dims(8),dims(9))
     real(RP) :: albg_org  (        dims(8),dims(9),2)
@@ -1602,10 +1602,10 @@ contains
     integer                 :: untarget_mask
     integer, allocatable    :: imask(:,:),imaskr(:,:)
     real(RP),allocatable    :: newdata(:,:)
-    real(RP)                :: flag(8)
-    real(RP)                :: dd
+    real(RP)                :: nd
+    integer                 :: count
 
-    integer :: i, j, kk
+    integer :: i, j, ii, jj, kk
 
     !---------------------------------------------------------------------------
     allocate( imask  (nx,ny) )
@@ -1649,86 +1649,22 @@ contains
 
              !--------------------------------------
              ! check data of neighbor grid
-             !
-             !           flag(i,j,8)
-             !
-             !     +---+---+---+---+---+---+
-             !     |       |       |       |
-             !     +   6   +   7   +   8   +
-             !     |       |       |       |
-             !     +---+---+---+---+---+---+
-             !     |       |       |       |
-             !     +   4   + (i,j) +   5   +
-             !     |       |       |       |
-             !     +---+---+---+---+---+---+
-             !     |       |       |       |
-             !     +   1   +   2   +   3   +
-             !     |       |       |       |
-             !     +---+---+---+---+---+---+
              !---------------------------------------
-             flag(:) = 0.0_RP
-             if((i==1).and.(j==1))then
-                if(imask(i+1,j  )==untarget_mask) flag(5)=1.0_RP
-                if(imask(i,  j+1)==untarget_mask) flag(7)=1.0_RP
-                if(imask(i+1,j+1)==untarget_mask) flag(8)=1.0_RP
-             else if((i==nx).and.(j==1))then
-                if(imask(i-1,j  )==untarget_mask) flag(4)=1.0_RP
-                if(imask(i-1,j+1)==untarget_mask) flag(6)=1.0_RP
-                if(imask(i,  j+1)==untarget_mask) flag(7)=1.0_RP
-             else if((i==1).and.(j==ny))then
-                if(imask(i,  j-1)==untarget_mask) flag(2)=1.0_RP
-                if(imask(i+1,j-1)==untarget_mask) flag(3)=1.0_RP
-                if(imask(i+1,j  )==untarget_mask) flag(5)=1.0_RP
-             else if((i==nx).and.(j==ny))then
-                if(imask(i-1,j-1)==untarget_mask) flag(1)=1.0_RP
-                if(imask(i,  j-1)==untarget_mask) flag(2)=1.0_RP
-                if(imask(i-1,j  )==untarget_mask) flag(4)=1.0_RP
-             else if(i==1)then
-                if(imask(i,  j-1)==untarget_mask) flag(2)=1.0_RP
-                if(imask(i+1,j-1)==untarget_mask) flag(3)=1.0_RP
-                if(imask(i+1,j  )==untarget_mask) flag(5)=1.0_RP
-                if(imask(i,  j+1)==untarget_mask) flag(7)=1.0_RP
-                if(imask(i+1,j+1)==untarget_mask) flag(8)=1.0_RP
-             else if(i==nx)then
-                if(imask(i-1,j-1)==untarget_mask) flag(1)=1.0_RP
-                if(imask(i,  j-1)==untarget_mask) flag(2)=1.0_RP
-                if(imask(i-1,j  )==untarget_mask) flag(4)=1.0_RP
-                if(imask(i-1,j+1)==untarget_mask) flag(6)=1.0_RP
-                if(imask(i,  j+1)==untarget_mask) flag(7)=1.0_RP
-             else if(j==1)then
-                if(imask(i-1,j  )==untarget_mask) flag(4)=1.0_RP
-                if(imask(i+1,j  )==untarget_mask) flag(5)=1.0_RP
-                if(imask(i-1,j+1)==untarget_mask) flag(6)=1.0_RP
-                if(imask(i,  j+1)==untarget_mask) flag(7)=1.0_RP
-                if(imask(i+1,j+1)==untarget_mask) flag(8)=1.0_RP
-             else if(j==ny)then
-                if(imask(i-1,j-1)==untarget_mask) flag(1)=1.0_RP
-                if(imask(i,  j-1)==untarget_mask) flag(2)=1.0_RP
-                if(imask(i+1,j-1)==untarget_mask) flag(3)=1.0_RP
-                if(imask(i-1,j  )==untarget_mask) flag(4)=1.0_RP
-                if(imask(i+1,j  )==untarget_mask) flag(5)=1.0_RP
-             else
-                if(imask(i-1,j-1)==untarget_mask) flag(1)=1.0_RP
-                if(imask(i,  j-1)==untarget_mask) flag(2)=1.0_RP
-                if(imask(i+1,j-1)==untarget_mask) flag(3)=1.0_RP
-                if(imask(i-1,j  )==untarget_mask) flag(4)=1.0_RP
-                if(imask(i+1,j  )==untarget_mask) flag(5)=1.0_RP
-                if(imask(i-1,j+1)==untarget_mask) flag(6)=1.0_RP
-                if(imask(i,  j+1)==untarget_mask) flag(7)=1.0_RP
-                if(imask(i+1,j+1)==untarget_mask) flag(8)=1.0_RP
-             endif
+             count = 0
+             nd = 0.0_RP
+             do  jj = j-1, j+1
+                if ( jj < 1 .or. jj > ny ) cycle
+                do ii = i-1, i+1
+                   if ( ii < 1 .or. ii > nx .or. (jj == j .and. ii == i) ) cycle
+                   if ( imask(ii,jj) == untarget_mask ) then
+                      nd = nd + data(ii,jj)
+                      count = count + 1
+                   end if
+                end do
+             end do
 
-             dd = sum( flag(:) )
-             if( dd >= 3.0_RP )then  ! coast grid : interpolate
-                newdata(i,j) = ( data(i-1,j-1) * flag(1) &
-                               + data(i  ,j-1) * flag(2) &
-                               + data(i+1,j-1) * flag(3) &
-                               + data(i-1,j  ) * flag(4) &
-                               + data(i+1,j  ) * flag(5) &
-                               + data(i-1,j+1) * flag(6) &
-                               + data(i  ,j+1) * flag(7) &
-                               + data(i+1,j+1) * flag(8) ) / dd
-
+             if( count >= 3 )then  ! coast grid : interpolate
+                newdata(i,j) = nd / count
                 imaskr(i,j) = untarget_mask
              else
                 newdata(i,j) = data(i,j)
