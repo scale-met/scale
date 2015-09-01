@@ -1359,7 +1359,7 @@ contains
        call PRC_MPIstop
     endif
     UPDATE_NSTEP = nint( ATMOS_BOUNDARY_UPDATE_DT / TIME_DTSEC )
-    if ( abs(UPDATE_NSTEP * TIME_DTSEC - ATMOS_BOUNDARY_UPDATE_DT) > EPS ) then
+    if ( abs(UPDATE_NSTEP * TIME_DTSEC - ATMOS_BOUNDARY_UPDATE_DT) > 1E-10_DP ) then
        write(*,*) 'xxx ATMOS_BOUNDARY_UPDATE_DT is not multiple of DT'
        call PRC_MPIstop
     end if
