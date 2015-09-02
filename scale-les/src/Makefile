@@ -23,7 +23,7 @@ endif
 
 LIBS = $(LIBDIR)/libscale.a $(LIBDIR)/libgtool.a $(LIBDIR)/libdcutils.a
 
-ifeq ($(IGNOREDEP),)
+ifneq ($(IGNOREDEP),T)
   DEPENDLIB = $(LIBS)
 endif
 
@@ -179,6 +179,6 @@ $(BUILD_DIR)/%.o : %.c
 .PHONY : clean distclean allclean dcutils gtool scalelib depend dependency
 
 
-ifeq ($(IGNOREDEP),)
+ifneq ($(IGNOREDEP),T)
 -include depend
 endif
