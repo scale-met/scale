@@ -51,6 +51,12 @@ export PARALLEL=8
 export OMP_NUM_THREADS=8
 #export fu08bf=1
 
+# rm -rf prof_cache
+# rm -rf prof_inst
+# rm -rf prof_mem
+# rm -rf prof_perf
+rm -rf prof
+
 EOF1
 
 if [ ! ${DATPARAM[0]} = "" ]; then

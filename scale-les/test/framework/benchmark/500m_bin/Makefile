@@ -30,4 +30,4 @@ DATDISTS    =
 
 
 # build, makedir, run, jobshell, allclean, clean is inside of common Makefile
-include ../../../Makefile.common
+include $(TESTDIR)/Makefile.common

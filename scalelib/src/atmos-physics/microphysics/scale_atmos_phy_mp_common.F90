@@ -692,10 +692,10 @@ contains
 
     call PROF_rapstart('MP_Precipitation', 3)
 
-    if( TRACER_TYPE /= 'SUZUKI10' ) then
-     do iq = I_QC, QQE
-       call COMM_vars8( vterm(:,:,:,iq), iq )
-     enddo
+    if ( TRACER_TYPE /= 'SUZUKI10' ) then
+       do iq = I_QC, QQE
+          call COMM_vars8( vterm(:,:,:,iq), iq )
+       enddo
     endif
     do iq = I_QC, QQE
        call COMM_vars8( QTRC(:,:,:,iq), QQE+iq )
@@ -726,8 +726,8 @@ contains
 
     do iq = I_QC, QQE
 
-       if( TRACER_TYPE /= 'SUZUKI10' ) then
-         call COMM_wait( vterm(:,:,:,iq), iq )
+       if ( TRACER_TYPE /= 'SUZUKI10' ) then
+          call COMM_wait( vterm(:,:,:,iq), iq )
        endif
        call COMM_wait( QTRC(:,:,:,iq), QQE+iq )
 
