@@ -711,7 +711,7 @@ contains
     real(RP) :: TEMP_ijk(KIJMAX)
     real(RP) :: Qvap_ijk(KIJMAX)
     real(RP) :: Ghyd_ijk(nbin,nspc,KIJMAX)
-    real(RP) :: Gaer_ijk(nccn,KIJMAX)
+    real(RP) :: Gaer_ijk(nccn1,KIJMAX)
 
     real(RP) :: dt
     real(RP) :: ct
@@ -1222,7 +1222,7 @@ contains
     real(RP), intent(inout) :: temp(ijkmax)           ! temperature
     real(RP), intent(inout) :: qvap(ijkmax)           ! vapor mixing ratio
     real(RP), intent(inout) :: ghyd(nbin,nspc,ijkmax) ! mass size distribution function of hydrometeor
-    real(RP), intent(inout) :: gaer(nccn,     ijkmax) ! mass size distribution function of aerosol
+    real(RP), intent(inout) :: gaer(nccn1,    ijkmax) ! mass size distribution function of aerosol
     real(RP), intent(in)    :: dt                     ! time interval
     !---------------------------------------------------------------------------
 

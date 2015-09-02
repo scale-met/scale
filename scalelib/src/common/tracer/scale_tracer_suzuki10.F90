@@ -67,6 +67,8 @@ contains
      call PRC_MPIstop
     endif
 
+    nccn1 = max(nccn,1)
+
     !-- setup QA_MP ...
     QA_MP   = I_QV+nbin*nspc+nccn
     QQA     = I_QV+nbin*nspc
