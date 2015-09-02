@@ -514,9 +514,9 @@ contains
     real(RP) :: temp  (KA,IA,JA)
     real(RP) :: pres  (KA,IA,JA)
 
-    real(RP) :: vterm   (KA,IA,JA,QA) ! terminal velocity of each tracer [m/s]
-    real(RP) :: FLX_rain(KA,IA,JA)
-    real(RP) :: FLX_snow(KA,IA,JA)
+    real(RP) :: vterm     (KA,IA,JA,QA) ! terminal velocity of each tracer [m/s]
+    real(RP) :: FLX_rain  (KA,IA,JA)
+    real(RP) :: FLX_snow  (KA,IA,JA)
     real(RP) :: wflux_rain(KA,IA,JA)
     real(RP) :: wflux_snow(KA,IA,JA)
     integer  :: step
@@ -546,64 +546,61 @@ contains
                       CCN   (:,:,:),   & ! [IN]
                       DENS  (:,:,:)    ) ! [IN]
 
-    if ( MP_doprecipitation ) then
+    FLX_rain(:,:,:) = 0.0_RP
+    FLX_snow(:,:,:) = 0.0_RP
 
-       FLX_rain(:,:,:) = 0.0_RP
-       FLX_snow(:,:,:) = 0.0_RP
+    if ( MP_doprecipitation ) then
 
        do step = 1, MP_NSTEP_SEDIMENTATION
 
-         call THERMODYN_temp_pres_E( temp(:,:,:),  & ! [OUT]
-                                     pres(:,:,:),  & ! [OUT]
-                                     DENS(:,:,:),  & ! [IN]
-                                     RHOE(:,:,:),  & ! [IN]
-                                     QTRC(:,:,:,:) ) ! [IN]
+          call THERMODYN_temp_pres_E( temp(:,:,:),  & ! [OUT]
+                                      pres(:,:,:),  & ! [OUT]
+                                      DENS(:,:,:),  & ! [IN]
+                                      RHOE(:,:,:),  & ! [IN]
+                                      QTRC(:,:,:,:) ) ! [IN]
 
-         call MP_tomita08_vterm( vterm(:,:,:,:), & ! [OUT]
-                                 DENS (:,:,:),   & ! [IN]
-                                 temp (:,:,:),   & ! [IN]
-                                 QTRC (:,:,:,:)  ) ! [IN]
+          call MP_tomita08_vterm( vterm(:,:,:,:), & ! [OUT]
+                                  DENS (:,:,:),   & ! [IN]
+                                  temp (:,:,:),   & ! [IN]
+                                  QTRC (:,:,:,:)  ) ! [IN]
 
-         call MP_precipitation( wflux_rain(:,:,:),     & ! [OUT]
-                                wflux_snow(:,:,:),     & ! [OUT]
-                                DENS    (:,:,:),       & ! [INOUT]
-                                MOMZ    (:,:,:),       & ! [INOUT]
-                                MOMX    (:,:,:),       & ! [INOUT]
-                                MOMY    (:,:,:),       & ! [INOUT]
-                                RHOE    (:,:,:),       & ! [INOUT]
-                                QTRC    (:,:,:,:),     & ! [INOUT]
-                                vterm   (:,:,:,:),     & ! [IN]
-                                temp    (:,:,:),       & ! [IN]
-                                MP_DTSEC_SEDIMENTATION ) ! [IN]
+          call MP_precipitation( wflux_rain(:,:,:),     & ! [OUT]
+                                 wflux_snow(:,:,:),     & ! [OUT]
+                                 DENS    (:,:,:),       & ! [INOUT]
+                                 MOMZ    (:,:,:),       & ! [INOUT]
+                                 MOMX    (:,:,:),       & ! [INOUT]
+                                 MOMY    (:,:,:),       & ! [INOUT]
+                                 RHOE    (:,:,:),       & ! [INOUT]
+                                 QTRC    (:,:,:,:),     & ! [INOUT]
+                                 vterm   (:,:,:,:),     & ! [IN]
+                                 temp    (:,:,:),       & ! [IN]
+                                 MP_DTSEC_SEDIMENTATION ) ! [IN]
 
-         do j = JS, JE
-         do i = IS, IE
-         do k = KS-1, KE
-            FLX_rain(k,i,j) = FLX_rain(k,i,j) + wflux_rain(k,i,j) * MP_RNSTEP_SEDIMENTATION
-            FLX_snow(k,i,j) = FLX_snow(k,i,j) + wflux_snow(k,i,j) * MP_RNSTEP_SEDIMENTATION
-         enddo
-         enddo
-         enddo
+          do j = JS, JE
+          do i = IS, IE
+          do k = KS-1, KE
+             FLX_rain(k,i,j) = FLX_rain(k,i,j) + wflux_rain(k,i,j) * MP_RNSTEP_SEDIMENTATION
+             FLX_snow(k,i,j) = FLX_snow(k,i,j) + wflux_snow(k,i,j) * MP_RNSTEP_SEDIMENTATION
+          enddo
+          enddo
+          enddo
 
        enddo
 
     else
        vterm(:,:,:,:) = 0.0_RP
-
-       FLX_rain(:,:,:) = 0.0_RP
-       FLX_snow(:,:,:) = 0.0_RP
     endif
+
+    call HIST_in( vterm(:,:,:,I_QR), 'Vterm_QR', 'terminal velocity of QR', 'm/s' )
+    call HIST_in( vterm(:,:,:,I_QI), 'Vterm_QI', 'terminal velocity of QI', 'm/s' )
+    call HIST_in( vterm(:,:,:,I_QS), 'Vterm_QS', 'terminal velocity of QS', 'm/s' )
+    call HIST_in( vterm(:,:,:,I_QG), 'Vterm_QG', 'terminal velocity of QG', 'm/s' )
 
     call MP_saturation_adjustment( RHOE_t(:,:,:),   & ! [INOUT]
                                    QTRC_t(:,:,:,:), & ! [INOUT]
                                    RHOE  (:,:,:),   & ! [INOUT]
                                    QTRC  (:,:,:,:), & ! [INOUT]
                                    DENS  (:,:,:)    ) ! [IN]
-
-    call HIST_in( vterm(:,:,:,I_QR), 'Vterm_QR', 'terminal velocity of QR', 'm/s' )
-    call HIST_in( vterm(:,:,:,I_QI), 'Vterm_QI', 'terminal velocity of QI', 'm/s' )
-    call HIST_in( vterm(:,:,:,I_QS), 'Vterm_QS', 'terminal velocity of QS', 'm/s' )
-    call HIST_in( vterm(:,:,:,I_QG), 'Vterm_QG', 'terminal velocity of QG', 'm/s' )
 
     !##### END MP Main #####
 

@@ -47,7 +47,7 @@ module scale_prof
   !
   !++ Private parameters & variables
   !
-  integer,                  private, parameter :: PROF_rapnlimit = 100
+  integer,                  private, parameter :: PROF_rapnlimit = 300
   character(len=H_SHORT),   private            :: PROF_prefix    = ''
   integer,                  private            :: PROF_rapnmax   = 0
   character(len=H_SHORT*2), private            :: PROF_rapname(PROF_rapnlimit)
