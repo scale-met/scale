@@ -38,7 +38,8 @@ module scale_atmos_phy_mp_suzuki10
 
   use scale_tracer_suzuki10
   use scale_const, only: &
-     pi => CONST_PI, &
+     pi  => CONST_PI,  &
+     EPS => CONST_EPS, &
      CONST_CPvap,  &
      CONST_CPdry,  &
      CONST_CVdry,  &
@@ -57,6 +58,14 @@ module scale_atmos_phy_mp_suzuki10
      CONST_PRE00,  &
      CONST_EPSvap, &
      CONST_THERMODYN_TYPE
+  use scale_const, only: &
+     CP    => CONST_CPdry, &
+     Rvap  => CONST_Rvap,  &
+     ESAT0 => CONST_PSAT0, &
+     QLMLT => CONST_EMELT, &
+     TMLT  => CONST_TMELT, &
+     TEMP0 => CONST_TEM00, &
+     RHOW  => CONST_DWATR
   use scale_atmos_saturation, only: &
      LovR_liq,     &
      LovR_ice,     &
@@ -139,7 +148,7 @@ module scale_atmos_phy_mp_suzuki10
   real(RP), private :: RTEM00                !--- 1/CONST_TEM00
 
   !--- constant for bin
-  real(RP), parameter :: cldmin = 1.0E-10_RP, eps = 1.0E-30_RP   !--- threshould for cloud is regarded existing
+  real(RP), parameter :: cldmin = 1.0E-10_RP !--- threshould for cloud is regarded existing
   real(RP), parameter :: OneovThird   = 1.0_RP/3.0_RP
   real(RP), parameter :: ThirdovForth = 3.0_RP/4.0_RP
   real(RP), parameter :: TwoovThird   = 2.0_RP/3.0_RP
@@ -184,15 +193,6 @@ module scale_atmos_phy_mp_suzuki10
 
   real(RP), parameter :: tcrit = 271.15_RP
   integer, private, allocatable :: kindx( :,: )
-
-  real(RP), private, allocatable :: w(:,:)        ! working array
-  real(RP), private, allocatable :: w_gc(:,:,:)   ! working array
-  real(RP), private, allocatable :: w_ga(:,:)     ! working array
-  integer,  private, parameter :: w_nmax = 4
-  integer,  private, parameter :: I_W_PRES = 1    ! index for pressure in array w
-  integer,  private, parameter :: I_W_DENS = 2    ! index for Density in array w
-  integer,  private, parameter :: I_W_QV   = 3    ! index for Qv in array w
-  integer,  private, parameter :: I_W_TEMP = 4    ! index for temperature in array w
 
   !--- for creating micpara.dat (mkpara)
   integer, parameter :: ndat = 33, icemax = 3
@@ -593,10 +593,7 @@ contains
      call random_setup( IA*JA*KA )
     endif
 
-    allocate( w(w_nmax,KMAX*IMAX*JMAX) )
-    allocate( w_gc(nbin,nspc,KMAX*IMAX*JMAX) )
     if( nccn /= 0 ) then
-     allocate( w_ga(nspc,KMAX*IMAX*JMAX) )
      do n = 1, nccn
       expxactr( n ) = exp( xactr( n ) )
       rexpxactr( n ) = 1.0_RP / exp( xactr( n ) )
@@ -694,54 +691,51 @@ contains
     real(RP), intent(out)   :: SFLX_rain(IA,JA)
     real(RP), intent(out)   :: SFLX_snow(IA,JA)
 
-    real(RP) :: dz (KA)
-    real(RP) :: dzh(KA)
+    real(RP) :: VELX (IA,JA)
+    real(RP) :: VELY (IA,JA)
+    real(RP) :: TEMP (KA,IA,JA)
+    real(RP) :: PRES (KA,IA,JA)
+    real(RP) :: rrhog(KA,IA,JA)
+    real(RP) :: qd   (KA,IA,JA)
+    real(RP) :: cva  (KA,IA,JA)
+    real(RP) :: cpa  (KA,IA,JA)
+    real(RP) :: rhoge(KA,IA,JA)
+    real(RP) :: th   (KA,IA,JA)
+    real(RP) :: ssliq(KA,IA,JA)
+    real(RP) :: ssice(KA,IA,JA)
+    real(RP) :: Rmoist
+    real(RP) :: psat
+
+    integer  :: ijk_index (KIJMAX,3)
+    integer  :: index_cld (KIJMAX)
+    integer  :: index_cld2(KIJMAX)
+    integer  :: index_cld3(KIJMAX)
+    integer  :: ijkcount, ijk_cld2, ijk_cld3
+    integer  :: ijk, indirect
+
+    real(RP) :: DENS_ijk(KIJMAX)
+    real(RP) :: PRES_ijk(KIJMAX)
+    real(RP) :: TEMP_ijk(KIJMAX)
+    real(RP) :: Qvap_ijk(KIJMAX)
+    real(RP) :: Ghyd_ijk(nbin,nspc,KIJMAX)
+    real(RP) :: Gaer_ijk(nccn,KIJMAX)
+
     real(RP) :: dt
     real(RP) :: ct
 
-    real(RP) :: TEMP  (KA,IA,JA)
-    real(RP) :: PRES  (KA,IA,JA)
     real(RP) :: wfall( KA )
-
-    real(RP) :: ssliq(KA,IA,JA)
-    real(RP) :: ssice(KA,IA,JA)
     real(RP) :: sum1, sum2
     integer :: m, n, k, i, j, iq, countbin
     logical, save :: ofirst_sdfa = .true.
-
-    real(RP) :: VELX(IA,JA)
-    real(RP) :: VELY(IA,JA)
     real(RP) :: SFLX_AERO(IA,JA,nccn)
     real(RP) :: Uabs, bparam
     real(RP) :: AMR(KA,IA,JA)
-
-    real(RP) :: rrhog(KA,IA,JA)
-    real(RP) :: qd(KA,IA,JA)
-    real(RP) :: cva(KA,IA,JA)
-    real(RP) :: cpa(KA,IA,JA)
-    real(RP) :: rhoge(KA,IA,JA)
-    real(RP) :: th(KA,IA,JA)
-    real(RP) :: Rmoist
 
     real(RP) :: wflux_rain(KA,IA,JA)
     real(RP) :: wflux_snow(KA,IA,JA)
     real(RP) :: flux_rain (KA,IA,JA)
     real(RP) :: flux_snow (KA,IA,JA)
     integer  :: step
-
-    integer  :: ijkcount, indirect
-    integer  :: ijk_index(KMAX*IMAX*JMAX,3)
-    integer  :: ijk, ijk_cld, ijk_cld2, ijk_cld3
-    integer  :: index_cld(KMAX*IMAX*JMAX)
-    integer  :: index_cld2(KMAX*IMAX*JMAX)
-    integer  :: index_cld3(KMAX*IMAX*JMAX)
-    real(RP) :: psat
-!    real(RP) :: snow (KA,IA,JA)
-
-    real(RP) :: temp_t(KA,IA,JA)
-    real(RP) :: pres_t(KA,IA,JA)
-!    real(RP) :: qv_t(KA,IA,JA)
-!    real(RP) :: dens_t(KA,IA,JA)
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('MP_SBM', 1)
@@ -761,98 +755,46 @@ contains
 
     call PROF_rapstart('MP_ijkconvert', 1)
 
-    if( flg_sf_aero ) then
-     do j = JS-2, JE+2
-     do i = IS-2, IE+1
-       VELX(i,j) = MOMX(K10_1,i,j) / ( DENS(K10_1,i+1,j)+DENS(K10_1,i,j) ) * R10M1 &
-                 + MOMX(K10_2,i,j) / ( DENS(K10_2,i+1,j)+DENS(K10_2,i,j) ) * R10M2
-     enddo
-     enddo
-
-     do j = JS-2, JE+1
-     do i = IS-2, IE+2
-       VELY(i,j) = MOMY(K10_1,i,j) / ( DENS(K10_1,i,j+1)+DENS(K10_1,i,j) ) * R10M1 &
-                 + MOMY(K10_2,i,j) / ( DENS(K10_2,i,j+1)+DENS(K10_2,i,j) ) * R10M2
-     enddo
-     enddo
-    end if
-
-    dz (:) = GRID_CDZ(:)
-    dzh(1) = GRID_FDZ(1)
-    dzh(2:KA) = GRID_FDZ(1:KA-1)
-
     dt = TIME_DTSEC_ATMOS_PHY_MP
     ct = TIME_NOWDAYSEC
 
-    ijkcount = 0
-    w(:,:) = 0.0_RP
-    w_gc(:,:,:) = 0.0_RP
-    if( nccn /= 0 ) w_ga(:,:) = 0.0_RP
+    ijk = 0
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       ijk = ijk + 1
+       ijk_index(ijk,1) = i
+       ijk_index(ijk,2) = j
+       ijk_index(ijk,3) = k
+    enddo
+    enddo
+    enddo
 
     do j = JS, JE
     do i = IS, IE
+    do k = KS, KE
+       rrhog(k,i,j) = 1.0_RP / DENS(k,i,j)
+       th(k,i,j) = RHOT(k,i,j) * rrhog(k,i,j)
+       CALC_QDRY( qd(k,i,j), QTRC, k, i, j, iq )
+       CALC_CV( cva(k,i,j), qd(k,i,j), QTRC, k, i, j, iq, CONST_CVdry, AQ_CV )
+       CALC_R( Rmoist, QTRC(k,i,j,I_QV), qd(k,i,j), CONST_Rdry, CONST_Rvap )
+       cpa(k,i,j) = cva(k,i,j) + Rmoist
+       CALC_PRE( PRES(k,i,j), DENS(k,i,j), th(k,i,j), Rmoist, cpa(k,i,j), CONST_PRE00 )
+       TEMP(k,i,j) = PRES(k,i,j) / ( DENS(k,i,j) * Rmoist )
 
-       do k = KS, KE
-          ijk = ( j - JS ) * KMAX * IMAX &
-              + ( i - IS ) * KMAX        &
-              + ( k - KS )               &
-              + 1
-          ijkcount = ijkcount + 1
-          ijk_index(ijkcount,1) = i
-          ijk_index(ijkcount,2) = j
-          ijk_index(ijkcount,3) = k
+       psat = CONST_PSAT0 * ( TEMP(k,i,j) * RTEM00 )**CPovR_liq   &
+            * exp( LovR_liq * ( RTEM00 - 1.0_RP/TEMP(k,i,j) ) )
+       ssliq(k,i,j) = CONST_EPSvap * psat / ( PRES(k,i,j) - ( 1.0_RP-CONST_EPSvap ) * psat )
+       ssliq(k,i,j) = QTRC(k,i,j,I_QV) / ssliq(k,i,j) - 1.0_RP
 
-!          w(I_W_DENS,ijk) = DENS(k,i,j)
-!          rrhog(k,i,j) = 1.0_RP / w(I_W_DENS,ijk)
-          rrhog(k,i,j) = 1.0_RP / DENS(k,i,j)
-          th(k,i,j) = RHOT(k,i,j) * rrhog(k,i,j)
-          CALC_QDRY( qd(k,i,j), QTRC, k, i, j, iq )
-          CALC_CV( cva(k,i,j), qd(k,i,j), QTRC, k, i, j, iq, CONST_CVdry, AQ_CV )
-          CALC_R( Rmoist, QTRC(k,i,j,I_QV), qd(k,i,j), CONST_Rdry, CONST_Rvap )
-          cpa(k,i,j) = cva(k,i,j) + Rmoist
-          CALC_PRE( pres_t(k,i,j), DENS(k,i,j), th(k,i,j), Rmoist, cpa(k,i,j), CONST_PRE00 )
-          temp_t(k,i,j) = pres_t(k,i,j) / ( DENS(k,i,j) * Rmoist )
-!          qv_t(k,i,j) = QTRC(k,i,j,I_QV)
-
-          psat = CONST_PSAT0 * ( temp_t(k,i,j) * RTEM00 )**CPovR_liq   &
-               * exp( LovR_liq * ( RTEM00 - 1.0_RP/temp_t(k,i,j) ) )
-          ssliq(k,i,j) = CONST_EPSvap * psat / ( pres_t(k,i,j) - ( 1.0_RP-CONST_EPSvap ) * psat )
-          psat = CONST_PSAT0 * ( temp_t(k,i,j) * RTEM00 )**CPovR_ice   &
-               * exp( LovR_ice * ( RTEM00 - 1.0_RP/temp_t(k,i,j) ) )
-          ssice(k,i,j) = CONST_EPSvap * psat / ( pres_t(k,i,j) - ( 1.0_RP-CONST_EPSvap ) * psat )
-          ssliq(k,i,j) = QTRC(k,i,j,I_QV)/ssliq(k,i,j)-1.0_RP
-          ssice(k,i,j) = QTRC(k,i,j,I_QV)/ssice(k,i,j)-1.0_RP
-
-!          countbin = 1
-!          do m = 1, nspc
-!          do n = 1, nbin
-!           w_gc( n,m,ijk ) = &
-!               QTRC(k,i,j,countbin+I_QV)*w(I_W_DENS,ijk)/dxmic
-!           countbin = countbin + 1
-!          end do
-!          end do
-       enddo
-
+       psat = CONST_PSAT0 * ( TEMP(k,i,j) * RTEM00 )**CPovR_ice   &
+            * exp( LovR_ice * ( RTEM00 - 1.0_RP/TEMP(k,i,j) ) )
+       ssice(k,i,j) = CONST_EPSvap * psat / ( PRES(k,i,j) - ( 1.0_RP-CONST_EPSvap ) * psat )
+       ssice(k,i,j) = QTRC(k,i,j,I_QV) / ssice(k,i,j) - 1.0_RP
+    enddo
     enddo
     enddo
 
-!    if( nccn /= 0 ) then
-!
-!     do j = JS, JE
-!     do i = IS, IE
-!       do k = KS, KE
-!          do n = 1, nccn
-!           ijk = ( j - JS ) * KMAX * IMAX &
-!               + ( i - IS ) * KMAX        &
-!               + ( k - KS )               &
-!               + 1
-!           w_ga( n,ijk ) = &
-!               QTRC(k,i,j,n+nbin+I_QV)*w(I_W_DENS,ijk)/dxaer
-!          end do
-!       enddo
-!     enddo
-!     enddo
-!
 !--- store initial SDF of aerosol
 !--- this option is not supported
 !    if( ofirst_sdfa ) then
@@ -872,197 +814,209 @@ contains
 !        marate( 1:nccn ) = marate( 1:nccn )/sum2
 !        ofirst_sdfa = .false.
 !      end if
-!     end if
-!
 !    endif
 
     !--- Arrange array for microphysics
-    if( nspc == 1 ) then
+    if ( nspc == 1 ) then
 
-      ijkcount = 0
-      ijk_cld = 0
-      do j = JS, JE
-      do i = IS, IE
-      do k = KS, KE
+       ijkcount = 0
 
-        ijkcount = ijkcount + 1
-        ijk = ( j - JS ) * KMAX * IMAX &
-            + ( i - IS ) * KMAX        &
-            + ( k - KS )               &
-            + 1
+       ijk = 0
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          ijk = ijk + 1
 
-        sum1 = 0.0_RP
-        countbin = 1
-        do m = 1, nspc
-        do n = 1, nbin
-          sum1 = sum1 + QTRC(k,i,j,countbin+I_QV)*DENS(k,i,j)/dxmic
-          countbin = countbin + 1
-        end do
-        end do
+          sum1     = 0.0_RP
+          countbin = I_QV
+          do m = 1, nspc
+          do n = 1, nbin
+            countbin = countbin + 1
+            sum1 = sum1 + QTRC(k,i,j,countbin) * DENS(k,i,j) / dxmic
+          enddo
+          enddo
 
-        if( ssliq(k,i,j) > 0.0_RP .or. sum1 > cldmin ) then
+          if ( ssliq(k,i,j) > 0.0_RP .OR. sum1 > cldmin ) then
+             ijkcount = ijkcount + 1
 
-            ijk_cld = ijk_cld + 1
-            index_cld(ijk_cld) = ijkcount
+             index_cld(ijkcount) = ijk
 
-            w(I_W_PRES,ijk_cld) = pres_t(k,i,j)
-            w(I_W_TEMP,ijk_cld) = temp_t(k,i,j)
-            w(I_W_QV  ,ijk_cld) = QTRC(k,i,j,I_QV)
-            w(I_W_DENS,ijk_cld) = DENS(k,i,j)
-            countbin = 1
-            do m = 1, nspc
-            do n = 1, nbin
-             w_gc( n,m,ijk_cld ) = &
-                 QTRC(k,i,j,countbin+I_QV)*DENS(k,i,j)/dxmic
-             countbin = countbin + 1
-            end do
-            end do
+             DENS_ijk(ijkcount) = DENS(k,i,j)
+             PRES_ijk(ijkcount) = PRES(k,i,j)
+             TEMP_ijk(ijkcount) = TEMP(k,i,j)
+             Qvap_ijk(ijkcount) = QTRC(k,i,j,I_QV)
 
-            if( nccn /= 0 ) then
-              do n = 1, nccn
-                w_ga( n,ijk_cld ) = &
-                    QTRC(k,i,j,n+nbin+I_QV)*DENS(k,i,j)/dxaer
-              end do
-            endif
+             countbin = I_QV
+             do m = 1, nspc
+             do n = 1, nbin
+                countbin = countbin + 1
+                Ghyd_ijk(n,m,ijkcount) = QTRC(k,i,j,countbin) * DENS(k,i,j) / dxmic
+             enddo
+             enddo
 
-        endif
-
-      enddo
-      enddo
-      enddo
+             if ( nccn /= 0 ) then
+                do n = 1, nccn
+                   countbin = countbin + 1
+                   Gaer_ijk(n,ijkcount) = QTRC(k,i,j,countbin) * DENS(k,i,j) / dxaer
+                enddo
+             endif
+          endif
+       enddo
+       enddo
+       enddo
 
     elseif( nspc > 1 ) then  ! mixed phase rain with aerosol tracer
 
-      ijkcount = 0
-      ijk_cld = 0
-      ijk_cld2 = 0
-      ijk_cld3 = 0
-      do j = JS, JE
-      do i = IS, IE
-      do k = KS, KE
+       ijkcount = 0
+       ijk_cld2 = 0
+       ijk_cld3 = 0
 
-        ijkcount = ijkcount + 1
-        ijk = ( j - JS ) * KMAX * IMAX &
-            + ( i - IS ) * KMAX        &
-            + ( k - KS )               &
-            + 1
+       ijk = 0
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          ijk = ijk + 1
 
-        sum1 = 0.0_RP
-        countbin = 1
-        do m = 1, nspc
-        do n = 1, nbin
-          sum1 = sum1 + QTRC(k,i,j,countbin+I_QV)*DENS(k,i,j)/dxmic
-          countbin = countbin + 1
-        end do
-        end do
+          sum1     = 0.0_RP
+          countbin = I_QV
+          do m = 1, nspc
+          do n = 1, nbin
+            countbin = countbin + 1
+            sum1 = sum1 + QTRC(k,i,j,countbin) * DENS(k,i,j) / dxmic
+          enddo
+          enddo
 
-        if( ssliq(k,i,j) > 0.0_RP .or. ssice(k,i,j) > 0.0_RP .or. sum1 > cldmin ) then
-            ijk_cld = ijk_cld + 1
-            index_cld(ijk_cld) = ijkcount
+          if ( ssliq(k,i,j) > 0.0_RP .OR. ssice(k,i,j) > 0.0_RP .OR. sum1 > cldmin ) then
+             ijkcount = ijkcount + 1
 
-            w(I_W_PRES,ijk_cld) = pres_t(k,i,j)
-            w(I_W_TEMP,ijk_cld) = temp_t(k,i,j)
-            w(I_W_QV  ,ijk_cld) = QTRC(k,i,j,I_QV)
-            w(I_W_DENS,ijk_cld) = DENS(k,i,j)
-            countbin = 1
-            do m = 1, nspc
-            do n = 1, nbin
-             w_gc( n,m,ijk_cld ) = &
-                 QTRC(k,i,j,countbin+I_QV)*DENS(k,i,j)/dxmic
-             countbin = countbin + 1
-            end do
-            end do
+             index_cld(ijkcount) = ijk
 
-            if( nccn /= 0 ) then
-              do n = 1, nccn
-                w_ga( n,ijk_cld ) = &
-                    QTRC(k,i,j,n+nbin+I_QV)*DENS(k,i,j)/dxaer
-              end do
-            endif
+             DENS_ijk(ijkcount) = DENS(k,i,j)
+             PRES_ijk(ijkcount) = PRES(k,i,j)
+             TEMP_ijk(ijkcount) = TEMP(k,i,j)
+             Qvap_ijk(ijkcount) = QTRC(k,i,j,I_QV)
 
-            if( temp_t(k,i,j) < CONST_TEM00 ) then
-              ijk_cld2 = ijk_cld2 + 1
-!              index_cld2(ijk_cld2) = ijk
-              index_cld2(ijk_cld2) = ijk_cld
-            else
-              ijk_cld3 = ijk_cld3 + 1
-!              index_cld3(ijk_cld3) = ijk
-              index_cld3(ijk_cld3) = ijk_cld
-            endif
-        endif
+             countbin = I_QV
+             do m = 1, nspc
+             do n = 1, nbin
+                countbin = countbin + 1
+                Ghyd_ijk(n,m,ijkcount) = QTRC(k,i,j,countbin) * DENS(k,i,j) / dxmic
+             enddo
+             enddo
 
-      enddo
-      enddo
-      enddo
+             if ( nccn /= 0 ) then
+                do n = 1, nccn
+                   countbin = countbin + 1
+                   Gaer_ijk(n,ijkcount) = QTRC(k,i,j,countbin) * DENS(k,i,j) / dxaer
+                enddo
+             endif
+
+             if ( TEMP(k,i,j) < CONST_TEM00 ) then ! cold
+               ijk_cld2 = ijk_cld2 + 1
+               index_cld2(ijk_cld2) = ijkcount
+             else ! warm
+               ijk_cld3 = ijk_cld3 + 1
+               index_cld3(ijk_cld3) = ijkcount
+             endif
+          endif
+
+       enddo
+       enddo
+       enddo
 
     endif
 
     call PROF_rapend  ('MP_ijkconvert', 1)
+
+    ! tentative timername registration
+    call PROF_rapstart('MP_SBM_Main', 1)
+    call PROF_rapend  ('MP_SBM_Main', 1)
+    call PROF_rapstart('MP_SBM_Nucleat', 1)
+    call PROF_rapend  ('MP_SBM_Nucleat', 1)
+!    call PROF_rapstart('MP_SBM_NucleatA', 1)
+!    call PROF_rapend  ('MP_SBM_NucleatA', 1)
+    call PROF_rapstart('MP_SBM_CndEvpSbl', 1)
+    call PROF_rapend  ('MP_SBM_CndEvpSbl', 1)
+!    call PROF_rapstart('MP_SBM_CndEvpSblA', 1)
+!    call PROF_rapend  ('MP_SBM_CndEvpSblA', 1)
+    call PROF_rapstart('MP_SBM_Liqphase', 1)
+    call PROF_rapend  ('MP_SBM_Liqphase', 1)
+    call PROF_rapstart('MP_SBM_Icephase', 1)
+    call PROF_rapend  ('MP_SBM_Icephase', 1)
+    call PROF_rapstart('MP_SBM_Mixphase', 1)
+    call PROF_rapstart('MP_SBM_Mixphase1', 2)
+    call PROF_rapend  ('MP_SBM_Mixphase1', 2)
+    call PROF_rapstart('MP_SBM_Mixphase2', 2)
+    call PROF_rapstart('MP_SBM_Mixphase31', 2)
+    call PROF_rapend  ('MP_SBM_Mixphase31', 2)
+    call PROF_rapstart('MP_SBM_Mixphase32', 2)
+    call PROF_rapend  ('MP_SBM_Mixphase32', 2)
+    call PROF_rapstart('MP_SBM_Mixphase33', 2)
+    call PROF_rapend  ('MP_SBM_Mixphase33', 2)
+    call PROF_rapstart('MP_SBM_Mixphase34', 2)
+    call PROF_rapend  ('MP_SBM_Mixphase34', 2)
+    call PROF_rapstart('MP_SBM_Mixphase35', 2)
+    call PROF_rapend  ('MP_SBM_Mixphase35', 2)
+    call PROF_rapend  ('MP_SBM_Mixphase2', 2)
+    call PROF_rapstart('MP_SBM_Mixphase4', 2)
+    call PROF_rapend  ('MP_SBM_Mixphase4', 2)
+    call PROF_rapend  ('MP_SBM_Mixphase',  1)
+    call PROF_rapstart('MP_SBM_IceNucleat', 1)
+    call PROF_rapend  ('MP_SBM_IceNucleat', 1)
+    call PROF_rapstart('MP_SBM_Freezing', 1)
+    call PROF_rapend  ('MP_SBM_Freezing', 1)
+    call PROF_rapstart('MP_SBM_Melting', 1)
+    call PROF_rapend  ('MP_SBM_Melting', 1)
+    call PROF_rapstart('MP_SBM_Coll', 1)
+    call PROF_rapend  ('MP_SBM_Coll', 1)
+    call PROF_rapstart('MP_SBM_CollF', 1)
+    call PROF_rapend  ('MP_SBM_CollF', 1)
+    call PROF_rapstart('MP_SBM_CollCoag', 1)
+    call PROF_rapend  ('MP_SBM_CollCoag', 1)
+!    call PROF_rapstart('MP_SBM_CollCoagR', 1)
+!    call PROF_rapend  ('MP_SBM_CollCoagR', 1)
+    call PROF_rapstart('MP_SBM_Sedim', 1)
+    call PROF_rapend  ('MP_SBM_Sedim', 1)
+
+    if ( ijkcount == 0 ) then
+       call PROF_rapend  ('MP_SBM', 1)
+
+       return
+    endif
+
     call PROF_rapstart('MP_SBM_Main', 1)
 
-    !--- Time evolution of SDF
-    if( nccn /= 0 ) then    ! with aerosol tracer
-
-     if( nspc == 1 ) then   ! warm rain only with aerosol tracer
-
-       call mp_abinw_evolve         &
-            ( w(I_W_PRES,:),        &  !--- in
-              w(I_W_DENS,:),        &  !--- in
-              dt,                   &  !--- in
-              ijk_cld,              &  !--- in
-              w_gc(:,:,:),          &  !--- inout
-              w_ga(:,:),            &  !--- inout  for aerosol tracer
-              w(I_W_QV,:),          &  !--- inout
-              w(I_W_TEMP,:)         )  !--- inout
-
-     elseif( nspc > 1 ) then  ! mixed phase rain with aerosol tracer
-
-       call mp_abinf_evolve           &
-            ( w(I_W_PRES,:),          &  !--- in
-              w(I_W_DENS,:),          &  !--- in
-              dt,                     &  !--- in
-              ijk_cld,                &  !--- in
-              ijk_cld2, index_cld2(:),&  !--- in
-              ijk_cld3, index_cld3(:),&  !--- in
-              w_gc(:,:,:),            &  !--- inout
-              w_ga(:,:),              &  !--- inout  for aerosol tracer
-              w(I_W_QV,:),            &  !--- inout
-              w(I_W_TEMP,:)           )  !--- inout
-
-     endif
-
-    elseif( nccn == 0 ) then  ! without aerosol tracer
-
-     if( nspc == 1 ) then
-
-       call mp_binw_evolve          &
-            ( w(I_W_PRES,:),        &  !--- in
-              w(I_W_DENS,:),        &  !--- in
-              dt,                   &  !--- in
-              ijk_cld,              &  !--- in
-              w_gc(:,:,:),          &  !--- inout
-              w(I_W_QV,:),          &  !--- inout
-              w(I_W_TEMP,:)         )  !--- inout
-
-     elseif( nspc > 1 ) then
-
-       call mp_binf_evolve            &
-            ( w(I_W_PRES,:),          &  !--- in
-              w(I_W_DENS,:),          &  !--- in
-              dt,                     &  !--- in
-              ijk_cld,                &  !--- in
-              ijk_cld2, index_cld2(:),&  !--- in
-              ijk_cld3, index_cld3(:),&  !--- in
-              w_gc(:,:,:),            &  !--- inout
-              w(I_W_QV,:),            &  !--- inout
-              w(I_W_TEMP,:)           )  !--- inout
-
-     endif
-
-    endif
+    call MP_Suzuki10( ijkcount,                   & ! [IN]
+                      ijk_cld2,                   & ! [IN]
+                      ijk_cld3,                   & ! [IN]
+                      index_cld2(    1:ijkcount), & ! [IN]
+                      index_cld3(    1:ijkcount), & ! [IN]
+                      DENS_ijk  (    1:ijkcount), & ! [IN]
+                      PRES_ijk  (    1:ijkcount), & ! [IN]
+                      TEMP_ijk  (    1:ijkcount), & ! [INOUT]
+                      Qvap_ijk  (    1:ijkcount), & ! [INOUT]
+                      Ghyd_ijk  (:,:,1:ijkcount), & ! [INOUT]
+                      Gaer_ijk  (:,  1:ijkcount), & ! [INOUT]
+                      DT                          ) ! [IN]
 
     call PROF_rapend  ('MP_SBM_Main', 1)
     call PROF_rapstart('MP_ijkconvert', 1)
+
+    if( flg_sf_aero ) then
+     do j = JS-2, JE+2
+     do i = IS-2, IE+1
+       VELX(i,j) = MOMX(K10_1,i,j) / ( DENS(K10_1,i+1,j)+DENS(K10_1,i,j) ) * R10M1 &
+                 + MOMX(K10_2,i,j) / ( DENS(K10_2,i+1,j)+DENS(K10_2,i,j) ) * R10M2
+     enddo
+     enddo
+
+     do j = JS-2, JE+1
+     do i = IS-2, IE+2
+       VELY(i,j) = MOMY(K10_1,i,j) / ( DENS(K10_1,i,j+1)+DENS(K10_1,i,j) ) * R10M1 &
+                 + MOMY(K10_2,i,j) / ( DENS(K10_2,i,j+1)+DENS(K10_2,i,j) ) * R10M2
+     enddo
+     enddo
+    end if
 
     !--- SURFACE FLUX by Monahan et al. (1986)
     if( flg_sf_aero .and. nccn /= 0 ) then
@@ -1083,7 +1037,7 @@ contains
          ! convert from [#/m^2/um/s] -> [kg/m^3/unit log (m)]
          SFLX_AERO(i,j,n) = SFLX_AERO(i,j,n) / DENS(KS,i,j) &
                           / GRID_CDZ(KS) * rada( n ) / 3.0_RP * dt * expxactr( n )
-         w_ga(n,ijk) = w_ga(n,ijk)+SFLX_AERO(i,j,n)/dxaer
+         Gaer_ijk(n,ijk) = Gaer_ijk(n,ijk) + SFLX_AERO(i,j,n)/dxaer
         end if
        end do
      end do
@@ -1091,94 +1045,70 @@ contains
     end if
 
     !---- return original array
-    do ijk = 1, ijk_cld
+    do ijk = 1, ijkcount
+       indirect = index_cld(ijk)
+       i = ijk_index(indirect,1)
+       j = ijk_index(indirect,2)
+       k = ijk_index(indirect,3)
 
-      indirect = index_cld(ijk)
-      i = ijk_index(indirect,1)
-      j = ijk_index(indirect,2)
-      k = ijk_index(indirect,3)
-      QTRC(k,i,j,I_QV) = w(I_W_QV,ijk)
-      temp_t(k,i,j) = w(I_W_TEMP,ijk)
-      pres_t(k,i,j) = w(I_W_PRES,ijk)
-      countbin = 1
-      do m = 1, nspc
-      do n = 1, nbin
-        countbin = countbin+1
-        QTRC(k,i,j,countbin) = w_gc(n,m,ijk)/DENS(k,i,j)*dxmic
-        if( QTRC(k,i,j,n+I_QV) <= eps ) then
-          QTRC(k,i,j,n+I_QV) = 0.0_RP
-        end if
-      end do
-      end do
+       TEMP(k,i,j)      = TEMP_ijk(ijk)
+       QTRC(k,i,j,I_QV) = Qvap_ijk(ijk)
 
+       countbin = I_QV
+       do m = 1, nspc
+       do n = 1, nbin
+          countbin = countbin + 1
+          QTRC(k,i,j,countbin) = Ghyd_ijk(n,m,ijkcount) / DENS(k,i,j) * dxmic
+       enddo
+       enddo
+
+       if ( nccn /= 0 ) then
+          do n = 1, nccn
+             countbin = countbin + 1
+              QTRC(k,i,j,countbin) = Gaer_ijk(n,ijkcount) / DENS(k,i,j) * dxmic
+          enddo
+       endif
     enddo
 
-    if( nccn /= 0 ) then
-      !---- return original array
-      do ijk = 1, ijk_cld
-        indirect = index_cld(ijk)
-        i = ijk_index(indirect,1)
-        j = ijk_index(indirect,2)
-        k = ijk_index(indirect,3)
-        do n = 1, nccn
-          QTRC(k,i,j,n+I_QV+nbin*nspc)=w_ga(n,ijk)/DENS(k,i,j)*dxaer
-        end do
-      enddo
-
-      AMR(:,:,:) = 0.0_RP
-      do j = JS, JE
-       do i = IS, IE
-         do k = KS, KE
-
-!           ijk = ( j - JS ) * KMAX * IMAX &
-!               + ( i - IS ) * KMAX        &
-!               + ( k - KS )               &
-!               + 1
-
-            do n = 1, nccn
-              AMR(k,i,j) = AMR(k,i,j) + QTRC(k,i,j,n+I_QV+nbin)
-            end do
-         enddo
-
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       countbin = I_QV
+       do m = 1, nspc
+       do n = 1, nbin
+          countbin = countbin + 1
+          if ( QTRC(k,i,j,countbin) < EPS ) then
+             QTRC(k,i,j,countbin) = 0.0_RP
+          endif
        enddo
-      enddo
+       enddo
+    enddo
+    enddo
+    enddo
 
-      !call HIST_in( AMR(:,:,:),  'aerosol', 'aerosol mass', 'kg/m^3' )
-
+    if ( nccn /= 0 ) then
+       AMR(:,:,:) = 0.0_RP
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          do n = 1, nccn
+             AMR(k,i,j) = AMR(k,i,j) + QTRC(k,i,j,QQE-1+n)
+          enddo
+       enddo
+       enddo
+       enddo
     endif
 
     do j = JS, JE
-     do i = IS, IE
-       do k = KS, KE
-
-!          ijk = ( j - JS ) * KMAX * IMAX &
-!              + ( i - IS ) * KMAX        &
-!              + ( k - KS )               &
-!              + 1
-!
-!          QTRC(k,i,j,I_QV) = w(I_W_QV,ijk)
-!          QTRC(k,i,j,I_QV) = w(I_W_QV,index_cld(ijk_cld))
-!          countbin = 1
-!          do m = 1, nspc
-!          do n = 1, nbin
-!            countbin = countbin+1
-!            QTRC(k,i,j,countbin) = w_gc(n,m,ijk)/w(I_W_DENS,ijk)*dxmic
-!            if( QTRC(k,i,j,n+I_QV) <= eps ) then
-!              QTRC(k,i,j,n+I_QV) = 0.0_RP
-!            end if
-!          end do
-!          end do
-
-          CALC_QDRY( qd(k,i,j), QTRC, k, i, j, iq )
-          CALC_CP( cpa(k,i,j), qd(k,i,j), QTRC, k, i, j, iq, CONST_CPdry, AQ_CP )
-          CALC_R( Rmoist, QTRC(k,i,j,I_QV), qd(k,i,j), CONST_Rdry, CONST_Rvap )
-          RHOT(k,i,j) = temp_t(k,i,j) * ( CONST_PRE00 / pres_t(k,i,j) )**(Rmoist/cpa(k,i,j)) &
-               * DENS(k,i,j)
-       enddo
-
-     enddo
+    do i = IS, IE
+    do k = KS, KE
+       CALC_QDRY( qd(k,i,j), QTRC, k, i, j, iq )
+       CALC_CP( cpa(k,i,j), qd(k,i,j), QTRC, k, i, j, iq, CONST_CPdry, AQ_CP )
+       CALC_R( Rmoist, QTRC(k,i,j,I_QV), qd(k,i,j), CONST_Rdry, CONST_Rvap )
+       RHOT(k,i,j) = TEMP(k,i,j) * ( CONST_PRE00 / PRES(k,i,j) )**(Rmoist/cpa(k,i,j)) * DENS(k,i,j)
     enddo
-
+    enddo
+    enddo
 
     call PROF_rapend  ('MP_ijkconvert', 1)
     call PROF_rapstart('MP_SBM_Sedim', 1)
@@ -1214,7 +1144,7 @@ contains
           TEMP(k,i,j) = PRES(k,i,j) / ( DENS(k,i,j) * Rmoist )
        enddo
        do k = KS, KE
-          rhoge(k,i,j)  = DENS(k,i,j) * TEMP(k,i,j) * cva(k,i,j)
+          rhoge(k,i,j) = DENS(k,i,j) * TEMP(k,i,j) * cva(k,i,j)
        enddo
        enddo
        enddo
@@ -1273,322 +1203,258 @@ contains
 
    return
   end subroutine ATMOS_PHY_MP_suzuki10
+
   !-----------------------------------------------------------------------------
-  subroutine mp_abinw_evolve        &
-      ( pres, dens,                 & !--- in
-        dtime,                      & !--- in
-        ijk_cld,                    & !--- in
-        gc,                         & !--- inout
-        ga,                         & !--- inout
-        qvap, temp                  ) !--- inout
+  subroutine MP_Suzuki10( &
+       ijkmax,    &
+       ijk_cld2,  &
+       ijk_cld3,  &
+       indx_cld2, &
+       indx_cld3, &
+       dens,      &
+       pres,      &
+       temp,      &
+       qvap,      &
+       ghyd,      &
+       gaer,      &
+       dt         )
+    implicit none
 
-  real(RP), intent(in) :: pres(KMAX*IMAX*JMAX)              !  pressure
-  real(RP), intent(in) :: dens(KMAX*IMAX*JMAX)              !  density of dry air
-  real(RP), intent(in) :: dtime                             !  time interval
-  integer , intent(in) :: ijk_cld                           !
+    integer,  intent(in)    :: ijkmax
+    integer,  intent(in)    :: ijk_cld2
+    integer,  intent(in)    :: ijk_cld3
+    integer , intent(in)    :: indx_cld2(ijkmax)
+    integer , intent(in)    :: indx_cld3(ijkmax)
+    real(RP), intent(in)    :: dens(ijkmax)           ! density of dry air
+    real(RP), intent(in)    :: pres(ijkmax)           ! pressure
+    real(RP), intent(inout) :: temp(ijkmax)           ! temperature
+    real(RP), intent(inout) :: qvap(ijkmax)           ! vapor mixing ratio
+    real(RP), intent(inout) :: ghyd(nbin,nspc,ijkmax) ! mass size distribution function of hydrometeor
+    real(RP), intent(inout) :: gaer(nccn,     ijkmax) ! mass size distribution function of aerosol
+    real(RP), intent(in)    :: dt                     ! time interval
+    !---------------------------------------------------------------------------
 
-  real(RP), intent(inout) :: gc( nbin,nspc,KMAX*IMAX*JMAX ) !--- size distribution function of hydrometeor
-  real(RP), intent(inout) :: ga( nccn,KMAX*IMAX*JMAX )      !--- size distribution function of aerosol
-  real(RP), intent(inout) :: qvap(KMAX*IMAX*JMAX)           !  vapor mixing ratio
-  real(RP), intent(inout) :: temp(KMAX*IMAX*JMAX)           !  temperature
-  !
-  !
-  !--- nucleat from aerosol
-  call nucleata        &
-         ( dens(:),    & !--- in
-           pres(:),    & !--- in
-           dtime,      & !--- in
-           ijk_cld,    & !--- in
-           gc(:,:,:),  & !--- inout
-           ga(:,:),    & !--- inout
-           qvap(:),    & !--- inout
-           temp(:)     ) !--- inout
+    if ( nccn /= 0 ) then
+       if ( nspc == 1 ) then
+          !---< warm rain only with aerosol tracer >---
 
-  !--- condensation / evaporation
-  call cndevpsbla      &
-         ( dtime,      & !--- in
-           ijk_cld,    & !--- in
-           dens(:),    & !--- in
-           pres(:),    & !--- in
-           gc(:,il,:), & !--- inout
-           ga(:,:),    & !--- inout
-           qvap(:),    & !--- inout
-           temp(:)     ) !--- inout
+          ! nucleation from aerosol
+          call nucleata( ijkmax,      & ! [IN]
+                         dens(:),     & ! [IN]
+                         pres(:),     & ! [IN]
+                         temp(:),     & ! [INOUT]
+                         qvap(:),     & ! [INOUT]
+                         ghyd(:,:,:), & ! [INOUT]
+                         gaer(:,:),   & ! [INOUT]
+                         dt           ) ! [IN]
 
-  if( MP_doautoconversion ) then
-  !--- collision-coagulation
-   call  collmain      &
-         ( temp(:),    & !--- in
-           dtime,      & !--- in
-           ijk_cld,    & !--- in
-           gc(:,:,:)   ) !--- inout
-  endif
+          ! condensation / evaporation
+          call cndevpsbla( ijkmax,      & ! [IN]
+                           dens(:),     & ! [IN]
+                           pres(:),     & ! [IN]
+                           temp(:),     & ! [INOUT]
+                           qvap(:),     & ! [INOUT]
+                           ghyd(:,:,:), & ! [INOUT]
+                           gaer(:,:),   & ! [INOUT]
+                           dt           ) ! [IN]
 
-  return
+          if ( MP_doautoconversion ) then
+             ! collision-coagulation
+             call collmain( ijkmax,      & ! [IN]
+                            temp(:),     & ! [IN]
+                            ghyd(:,:,:), & ! [INOUT]
+                            dt           ) ! [IN]
+          endif
 
-  end subroutine mp_abinw_evolve
+       elseif( nspc > 1 ) then
+          !---< mixed phase rain only with aerosol tracer >---
+
+          ! nucleation from aerosol
+          call nucleata( ijkmax,      & ! [IN]
+                         dens(:),     & ! [IN]
+                         pres(:),     & ! [IN]
+                         temp(:),     & ! [INOUT]
+                         qvap(:),     & ! [INOUT]
+                         ghyd(:,:,:), & ! [INOUT]
+                         gaer(:,:),   & ! [INOUT]
+                         dt           ) ! [IN]
+
+          ! freezing / melting
+          call freezing( ijkmax,       & ! [IN]
+                         ijk_cld2,     & ! [IN]
+                         indx_cld2(:), & ! [IN]
+                         dens(:),      & ! [IN]
+                         temp(:),      & ! [INOUT]
+                         ghyd(:,:,:),  & ! [INOUT]
+                         dt            ) ! [IN]
+
+!          call ice_nucleat( ijkmax,       & ! [IN]
+!                            ijk_cld2,     & ! [IN]
+!                            indx_cld2(:), & ! [IN]
+!                            dens(:),      & ! [IN]
+!                            pres(:),      & ! [IN]
+!                            temp(:),      & ! [INOUT]
+!                            qvap(:),      & ! [INOUT]
+!                            ghyd(:,:,:),  & ! [INOUT]
+!                            dt            ) ! [IN]
+
+          call melting( ijkmax,       & ! [IN]
+                        ijk_cld3,     & ! [IN]
+                        indx_cld3(:), & ! [IN]
+                        dens(:),      & ! [IN]
+                        temp(:),      & ! [INOUT]
+                        ghyd(:,:,:),  & ! [INOUT]
+                        dt            ) ! [IN]
+
+          ! condensation / evaporation
+          call cndevpsbla( ijkmax,      & ! [IN]
+                           dens(:),     & ! [IN]
+                           pres(:),     & ! [IN]
+                           temp(:),     & ! [INOUT]
+                           qvap(:),     & ! [INOUT]
+                           ghyd(:,:,:), & ! [INOUT]
+                           gaer(:,:),   & ! [INOUT]
+                           dt           ) ! [IN]
+
+          if ( MP_doautoconversion ) then
+             ! collision-coagulation
+             call collmainf( ijkmax,      & ! [IN]
+                             temp(:),     & ! [IN]
+                             ghyd(:,:,:), & ! [INOUT]
+                             dt           ) ! [IN]
+          endif
+
+       endif
+
+    elseif( nccn == 0 ) then
+
+       if ( nspc == 1 ) then
+          !---< warm rain only without aerosol tracer >---
+
+          ! nucleation
+          call nucleat( ijkmax,      & ! [IN]
+                        dens(:),     & ! [IN]
+                        pres(:),     & ! [IN]
+                        temp(:),     & ! [INOUT]
+                        qvap(:),     & ! [INOUT]
+                        ghyd(:,:,:), & ! [INOUT]
+                        dt           ) ! [IN]
+
+          ! condensation / evaporation
+          call cndevpsbl( ijkmax,      & ! [IN]
+                          dens(:),     & ! [IN]
+                          pres(:),     & ! [IN]
+                          temp(:),     & ! [INOUT]
+                          qvap(:),     & ! [INOUT]
+                          ghyd(:,:,:), & ! [INOUT]
+                          dt           ) ! [IN]
+
+          if ( MP_doautoconversion ) then
+             ! collision-coagulation
+             call collmain( ijkmax,      & ! [IN]
+                            temp(:),     & ! [IN]
+                            ghyd(:,:,:), & ! [INOUT]
+                            dt           ) ! [IN]
+          endif
+
+       elseif( nspc > 1 ) then
+          !---< mixed phase rain only without aerosol tracer >---
+
+          ! nucleation
+          call nucleat( ijkmax,      & ! [IN]
+                        dens(:),     & ! [IN]
+                        pres(:),     & ! [IN]
+                        temp(:),     & ! [INOUT]
+                        qvap(:),     & ! [INOUT]
+                        ghyd(:,:,:), & ! [INOUT]
+                        dt           ) ! [IN]
+
+          ! freezing / melting
+          call freezing( ijkmax,       & ! [IN]
+                         ijk_cld2,     & ! [IN]
+                         indx_cld2(:), & ! [IN]
+                         dens(:),      & ! [IN]
+                         temp(:),      & ! [INOUT]
+                         ghyd(:,:,:),  & ! [INOUT]
+                         dt            ) ! [IN]
+
+          call ice_nucleat( ijkmax,       & ! [IN]
+                            ijk_cld2,     & ! [IN]
+                            indx_cld2(:), & ! [IN]
+                            dens(:),      & ! [IN]
+                            pres(:),      & ! [IN]
+                            temp(:),      & ! [INOUT]
+                            qvap(:),      & ! [INOUT]
+                            ghyd(:,:,:),  & ! [INOUT]
+                            dt            ) ! [IN]
+
+          call melting( ijkmax,       & ! [IN]
+                        ijk_cld3,     & ! [IN]
+                        indx_cld3(:), & ! [IN]
+                        dens(:),      & ! [IN]
+                        temp(:),      & ! [INOUT]
+                        ghyd(:,:,:),  & ! [INOUT]
+                        dt            ) ! [IN]
+
+          ! condensation / evaporation
+          call cndevpsbl( ijkmax,      & ! [IN]
+                          dens(:),     & ! [IN]
+                          pres(:),     & ! [IN]
+                          temp(:),     & ! [INOUT]
+                          qvap(:),     & ! [INOUT]
+                          ghyd(:,:,:), & ! [INOUT]
+                          dt           ) ! [IN]
+
+          if ( MP_doautoconversion ) then
+             ! collision-coagulation
+             call collmainf( ijkmax,      & ! [IN]
+                             temp(:),     & ! [IN]
+                             ghyd(:,:,:), & ! [INOUT]
+                             dt           ) ! [IN]
+          endif
+
+       endif
+
+    endif
+
+    return
+  end subroutine MP_Suzuki10
+
   !-----------------------------------------------------------------------------
-  subroutine mp_binw_evolve         &
-      ( pres, dens,                 & !--- in
-        dtime,                      & !--- in
-        ijk_cld,                    & !--- in
-        gc,                         & !--- inout
-        qvap, temp                  ) !--- inout
+  subroutine nucleat( &
+       ijkmax, &
+       dens,   &
+       pres,   &
+       temp,   &
+       qvap,   &
+       gc,     &
+       dtime   )
+    implicit none
 
-  real(RP), intent(in) :: pres(KMAX*IMAX*JMAX)              !  pressure
-  real(RP), intent(in) :: dens(KMAX*IMAX*JMAX)              !  density of dry air
-  real(RP), intent(in) :: dtime                             !  time interval
-  integer , intent(in) :: ijk_cld
+    integer,  intent(in)    :: ijkmax
+    real(RP), intent(in)    :: dens(ijkmax)           ! Density           [kg/m3]
+    real(RP), intent(in)    :: pres(ijkmax)           ! Pressure          [Pa]
+    real(RP), intent(inout) :: temp(ijkmax)           ! Temperature       [K]
+    real(RP), intent(inout) :: qvap(ijkmax)           ! Specific humidity [kg/kg]
+    real(RP), intent(inout) :: gc  (nbin,nspc,ijkmax) ! size distribution function (hydrometeors)
+    real(RP), intent(in)    :: dtime                  ! Time step interval
 
-  real(RP), intent(inout) :: gc( nbin,nspc,KMAX*IMAX*JMAX ) !--- size distribution function of hydrometeor
-  real(RP), intent(inout) :: qvap(KMAX*IMAX*JMAX)           !  specific humidity
-  real(RP), intent(inout) :: temp(KMAX*IMAX*JMAX)           !  temperature
-  !
-  !
-  !--- nucleat
-  call nucleat            &
-          ( dens(:),      & !--- in
-            pres(:),      & !--- in
-            dtime,        & !--- in
-            ijk_cld,      & !--- in
-            gc(:,:,:),    & !--- inout
-            qvap(:),      & !--- inout
-            temp(:)       ) !--- inout
-
-   !--- condensation / evaporation
-  call cndevpsbl          &
-          ( dtime,        & !--- in
-            ijk_cld,      & !--- in
-            dens(:),      & !--- in
-            pres(:),      & !--- in
-            gc(:,:,:),    & !--- inout
-            qvap(:),      & !--- inout
-            temp(:)       ) !--- inout
-
-  if( MP_doautoconversion ) then
-   !--- collision-coagulation
-   call  collmain        &
-          ( temp(:),     & !--- in
-            dtime,       & !--- in
-            ijk_cld,     & !--- in
-            gc(:,:,:)    ) !--- inout
-  endif
-
-  return
-
-  end subroutine mp_binw_evolve
-  !-----------------------------------------------------------------------------
-  subroutine mp_binf_evolve         &
-      ( pres, dens,                 & !--- in
-        dtime,                      & !--- in
-        ijk_cld,                    & !--- in
-        ijk_cld2, indx_cld2,        & !--- in
-        ijk_cld3, indx_cld3,        & !--- in
-        gc,                         & !--- inout
-        qvap, temp                  ) !--- inout
-
-  use scale_const, only: &
-     CONST_TEM00
-  real(RP), intent(in) :: pres(KMAX*IMAX*JMAX)             !  pressure
-  real(RP), intent(in) :: dens(KMAX*IMAX*JMAX)             !  density
-  real(RP), intent(in) :: dtime                            !  time interval
-  integer , intent(in) :: ijk_cld                   !
-  integer , intent(in) :: ijk_cld2                  !
-  integer , intent(in) :: ijk_cld3                  !
-  integer , intent(in) :: indx_cld2(KMAX*IMAX*JMAX) !
-  integer , intent(in) :: indx_cld3(KMAX*IMAX*JMAX) !
-
-  real(RP), intent(inout) :: gc( nbin,nspc,KMAX*IMAX*JMAX ) !--- size distribution function of hydrometeor
-  real(RP), intent(inout) :: qvap(KMAX*IMAX*JMAX)           !  specific humidity
-  real(RP), intent(inout) :: temp(KMAX*IMAX*JMAX)           !  temperature
-  !
-  !
-  !--- nucleat
-  call nucleat           &
-         ( dens(:),      & !--- in
-           pres(:),      & !--- in
-           dtime,        & !--- in
-           ijk_cld,      & !--- in
-           gc(:,:,:),    & !--- inout
-           qvap(:),      & !--- inout
-           temp(:)       ) !--- inout
-
-  !--- freezing / melting
-  call freezing         &
-         ( dtime,       & !--- in
-           ijk_cld2,    & !--- in
-           indx_cld2(:),& !--- in
-           dens(:),     & !--- in
-           gc(:,:,:),   & !--- inout
-           temp(:)      ) !--- inout
-
-  call ice_nucleat      &
-         ( dtime,       & !--- in
-           ijk_cld2,    & !--- in
-           indx_cld2(:),& !--- in
-           dens(:),     & !--- in
-           pres(:),     & !--- in
-           gc(:,:,:),   & !--- inout
-           qvap(:),     & !--- inout
-           temp(:)      ) !--- inout
-  call melting          &
-         ( dtime,       & !--- in
-           ijk_cld3,    & !--- in
-           indx_cld3(:),& !--- in
-           dens(:),     & !--- in
-           gc(:,:,:),   & !--- inout
-           temp(:)      ) !--- inout
-
-  !--- condensation / evaporation
-  call cndevpsbl          &
-         ( dtime,         & !--- in
-           ijk_cld,       & !--- in
-           dens(:),       & !--- in
-           pres(:),       & !--- in
-           gc(:,:,:),     & !--- inout
-           qvap(:),       & !--- inout
-           temp(:)        ) !--- inout
-
-  !--- collision-coagulation
-  if( MP_doautoconversion ) then
-      call  collmainf       &
-              ( temp(:),    & !--- in
-                dtime,      & !--- in
-                ijk_cld,    & !--- in
-                gc(:,:,:)   ) !--- inout
-
-  end if
-
-  return
-
-  end subroutine mp_binf_evolve
-  !-----------------------------------------------------------------------------
-  subroutine mp_abinf_evolve        &
-      ( pres, dens,                 & !--- in
-        dtime,                      & !--- in
-        ijk_cld,                    & !--- in
-        ijk_cld2, indx_cld2,        & !--- in
-        ijk_cld3, indx_cld3,        & !--- in
-        gc,                         & !--- inout
-        ga,                         & !--- inout
-        qvap, temp                  ) !--- inout
-
-  use scale_const, only: &
-     CONST_TEM00
-  real(RP), intent(in) :: pres(KMAX*IMAX*JMAX)              !  pressure
-  real(RP), intent(in) :: dens(KMAX*IMAX*JMAX)              !  density
-  real(RP), intent(in) :: dtime                             !  time interval
-  integer , intent(in) :: ijk_cld                           !
-  integer , intent(in) :: ijk_cld2                          !
-  integer , intent(in) :: ijk_cld3                          !
-  integer , intent(in) :: indx_cld2(KMAX*IMAX*JMAX)         !
-  integer , intent(in) :: indx_cld3(KMAX*IMAX*JMAX)         !
-
-  real(RP), intent(inout) :: gc( nbin,nspc,KMAX*IMAX*JMAX ) !--- size distribution function of hydrometeor
-  real(RP), intent(inout) :: ga( nccn,KMAX*IMAX*JMAX )      !--- size distribution function of aerosol
-  real(RP), intent(inout) :: qvap(KMAX*IMAX*JMAX)           !  specific humidity
-  real(RP), intent(inout) :: temp(KMAX*IMAX*JMAX)           !  temperature
-  !
-  !
-  !--- nucleat
-  call nucleata          &
-         ( dens(:),      & !--- in
-           pres(:),      & !--- in
-           dtime,        & !--- in
-           ijk_cld,      & !--- in
-           gc(:,:,:),    & !--- inout
-           ga(:,:),      & !--- inout
-           qvap(:),      & !--- inout
-           temp(:)       )   !--- inout
-
-  !--- freezing / melting
-    call freezing         &
-           ( dtime,       & !--- in
-             ijk_cld2,    & !--- in
-             indx_cld2(:),& !--- in
-             dens(:),     & !--- in
-             gc(:,:,:),   & !--- inout
-             temp(:)      ) !--- inout
-!    call ice_nucleat      &
-!           ( dtime,       & !--- in
-!             ijk_cld2,    & !--- in
-!             indx_cld2(:),& !--- in
-!             dens(:),     & !--- in
-!             pres(:),     & !--- in
-!             gc(:,:,:),   & !--- inout
-!             qvap(:),     & !--- inout
-!             temp(:)      ) !--- inout
-    call melting          &
-           ( dtime,       & !--- in
-             ijk_cld3,    & !--- in
-             indx_cld3(:),& !--- in
-             dens(:),     & !--- in
-             gc(:,:,:),   & !--- inout
-             temp(:)      ) !--- inout
-
-  !--- condensation / evaporation
-  call cndevpsbla         &
-         ( dtime,         & !--- in
-           ijk_cld,       & !--- in
-           dens(:),       & !--- in
-           pres(:),       & !--- in
-           gc(:,:,:),     & !--- inout
-           ga(:,:),       & !--- inout
-           qvap(:),       & !--- inout
-           temp(:)        ) !--- inout
-
-  if( MP_doautoconversion ) then
-    !--- collision-coagulation
-     call  collmainf        &
-             ( temp(:),     & !--- in
-               dtime,       & !--- in
-               ijk_cld,     & !--- in
-               gc(:,:,:)    ) !--- inout
-
-  end if
-
-  return
-
-  end subroutine mp_abinf_evolve
-  !-----------------------------------------------------------------------------
-  subroutine nucleat        &
-      ( dens, pres, dtime,  & !--- in
-        ijk_cld,            & !--- in
-        gc, qvap, temp      ) !--- inout
-  !
-  !  liquid nucleation from aerosol particle
-  !
-  !
-  use scale_const, only: &
-     cp    => CONST_CPdry, &
-     rhow  => CONST_DWATR, &
-     rvap  => CONST_Rvap
-  real(RP), intent(in) :: dens(KMAX*IMAX*JMAX)          !  density  [ kg/m3 ]
-  real(RP), intent(in) :: pres(KMAX*IMAX*JMAX)          !  pressure [ Pa ]
-  real(RP), intent(in) :: dtime                         !  time step
-  integer , intent(in) :: ijk_cld                       !
-  !
-  real(RP), intent(inout) :: gc( nbin,nspc,KMAX*IMAX*JMAX )  !  size diestribution function ( hydrometeors )
-  real(RP), intent(inout) :: qvap(KMAX*IMAX*JMAX)       !  specific humidity [ kg/kg ]
-  real(RP), intent(inout) :: temp(KMAX*IMAX*JMAX)       !  temperature [ K ]
-  !
-  !--- local
-  real(RP) :: ssliq(KMAX*IMAX*JMAX)
-!  real(RP) :: ssice(KMAX*IMAX*JMAX)       ! supersaturation of liquid and ice
-  real(RP) :: qlevp(KMAX*IMAX*JMAX)              ! LH
+  real(RP) :: ssliq(ijkmax)
+!  real(RP) :: ssice(ijkmax)       ! supersaturation of liquid and ice
+  real(RP) :: qlevp(ijkmax)              ! LH
   real(RP) :: sumold, sumnew
   real(RP) :: dmp
   integer :: n
   !
   real(RP) :: n_c
-  real(RP) :: sumnum(KMAX*IMAX*JMAX)
-  real(RP) :: gcn( nbin,KMAX*IMAX*JMAX )        ! number of cloud particles in each bin (=gc/exp(xctr))
+  real(RP) :: sumnum(ijkmax)
+  real(RP) :: gcn( nbin,ijkmax )        ! number of cloud particles in each bin (=gc/exp(xctr))
   real(RP) :: psat
   integer  :: ijk
 
     call PROF_rapstart('MP_SBM_Nucleat', 1)
 
-  do ijk = 1, ijk_cld
+  do ijk = 1, ijkmax
 
     !--- lhv
     qlevp(ijk) = CONST_LHV0 + ( CONST_CPvap - CONST_CL ) * ( temp(ijk) - CONST_TEM00 ) * flg_thermodyn
@@ -1605,7 +1471,7 @@ contains
   enddo
 
   sumnum(:) = 0.0_RP
-  do ijk = 1, ijk_cld
+  do ijk = 1, ijkmax
 !    if ( ssliq <= 0.0_RP ) cycle
     if ( ssliq(ijk) > 0.0_RP ) then
 
@@ -1636,29 +1502,26 @@ contains
   return
   end subroutine nucleat
   !-----------------------------------------------------------------------------
-  subroutine nucleata       &
-      ( dens, pres, dtime,  & !--- in
-        ijk_cld,            & !--- in
-        gc, ga, qvap, temp  ) !--- inout
-  !
-  !  liquid nucleation from aerosol particle
-  !
-  !
-  use scale_const, only: &
-     cp    => CONST_CPdry, &
-     rhow  => CONST_DWATR, &
-     rvap  => CONST_Rvap
-  real(RP), intent(in) :: dens(KMAX*IMAX*JMAX)          !  density  [ kg/m3 ]
-  real(RP), intent(in) :: pres(KMAX*IMAX*JMAX)          !  pressure [ Pa ]
-  real(RP), intent(in) :: dtime                         !  time step
-  integer , intent(in) :: ijk_cld                       !
-  !
-  real(RP), intent(inout) :: gc( nbin,nspc,KMAX*IMAX*JMAX )  !  size distribution function ( hydrometeors ): mass
-  real(RP), intent(inout) :: ga( nccn,KMAX*IMAX*JMAX )  !  size distribution function ( aerosol ) : mass
-  real(RP), intent(inout) :: qvap(KMAX*IMAX*JMAX)       !  specific humidity [ kg/kg ]
-  real(RP), intent(inout) :: temp(KMAX*IMAX*JMAX)       !  temperature [ K ]
-  !
-  !--- local
+  subroutine nucleata( &
+       ijkmax, &
+       dens,   &
+       pres,   &
+       temp,   &
+       qvap,   &
+       gc,     &
+       ga,     &
+       dtime   )
+    implicit none
+
+    integer,  intent(in)    :: ijkmax
+    real(RP), intent(in)    :: dens(ijkmax)           ! Density           [kg/m3]
+    real(RP), intent(in)    :: pres(ijkmax)           ! Pressure          [Pa]
+    real(RP), intent(inout) :: temp(ijkmax)           ! Temperature       [K]
+    real(RP), intent(inout) :: qvap(ijkmax)           ! Specific humidity [kg/kg]
+    real(RP), intent(inout) :: gc  (nbin,nspc,ijkmax) ! size distribution function (hydrometeors)
+    real(RP), intent(inout) :: ga  (nccn     ,ijkmax) ! size distribution function (hydrometeors)
+    real(RP), intent(in)    :: dtime                  ! Time step interval
+
   real(RP) :: gan( nccn )           ! size distribution function ( aerosol ) : number ( gan = ga/exp( xactr ) )
   real(RP) :: ssliq, ssice, qlevp   ! supersaturatioin of liq. and ice, and LH
   real(RP) :: sumold, sumnew
@@ -1669,14 +1532,14 @@ contains
   integer :: n, nc, ncrit
 !  integer, allocatable, save :: ncld( : )
 !  integer, save :: ncld( 1:nccn )
-!  logical, save :: ofirst(1:KMAX*IMAX*JMAX) = .true.
+!  logical, save :: ofirst(1:ijkmax) = .true.
   !
   real(RP) :: psat
   integer  :: ijk
 
     call PROF_rapstart('MP_SBM_NucleatA', 1)
 
-  do ijk = 1, ijk_cld
+  do ijk = 1, ijkmax
     !
     !--- lhv
     qlevp = CONST_LHV0 + ( CONST_CPvap - CONST_CL ) * ( temp(ijk) - CONST_TEM00 ) * flg_thermodyn
@@ -1764,101 +1627,116 @@ contains
     return
   end subroutine nucleata
   !-----------------------------------------------------------------------------
-  subroutine  cndevpsbl     &
-      ( dtime,              & !--- in
-        ijk_cld,            & !--- in
-        dens, pres,         & !--- in
-        gc, qvap, temp      ) !--- inout
-  !
-  real(RP), intent(in) :: dtime                              ! time step
-  integer , intent(in) :: ijk_cld                            !
-  real(RP), intent(in) :: dens(KMAX*IMAX*JMAX)               !  atmospheric density [ kg/m3 ]
-  real(RP), intent(in) :: pres(KMAX*IMAX*JMAX)               !  atmospheric pressure [ Pa ]
-  real(RP), intent(inout) :: gc( nbin,nspc,KMAX*IMAX*JMAX )  !  Size Distribution Function(hydrometeor)
-  real(RP), intent(inout) :: qvap(KMAX*IMAX*JMAX)            !  specific humidity [ kg/kg ]
-  real(RP), intent(inout) :: temp(KMAX*IMAX*JMAX)            !  temperature [ K ]
-  !
-  !--- local variables
-  real(RP) :: regene_gcn(KMAX*IMAX*JMAX)                     !  regenerated aerosol mass(not supported)
-  real(RP) :: gc_tmp(nbin,KMAX*IMAX*JMAX)                     !  regenerated aerosol mass(not supported)
+  subroutine  cndevpsbl( &
+       ijkmax, &
+       dens,   &
+       pres,   &
+       temp,   &
+       qvap,   &
+       gc,     &
+       dtime   )
+    implicit none
+
+    integer,  intent(in)    :: ijkmax
+    real(RP), intent(in)    :: dens(ijkmax)           ! Density           [kg/m3]
+    real(RP), intent(in)    :: pres(ijkmax)           ! Pressure          [Pa]
+    real(RP), intent(inout) :: temp(ijkmax)           ! Temperature       [K]
+    real(RP), intent(inout) :: qvap(ijkmax)           ! Specific humidity [kg/kg]
+    real(RP), intent(inout) :: gc  (nbin,nspc,ijkmax) ! size distribution function (hydrometeors)
+    real(RP), intent(in)    :: dtime                  ! Time step interval
+
+    real(RP) :: regene_gcn(ijkmax)
+    !---------------------------------------------------------------------------
 
     call PROF_rapstart('MP_SBM_CndEvpSbl', 1)
 
-  call  liqphase                 &
-          ( dtime,               & !--- in
-            ijk_cld,             & !--- in
-            dens(:), pres(:),    & !--- in
-            gc(:,:,:),           & !--- inout
-            qvap(:), temp(:),    & !--- inout
-            regene_gcn(:)        ) !--- out
-  call icephase                  &
-          ( dtime,               & !--- in
-            ijk_cld,             & !--- in
-            dens(:), pres(:),    & !--- in
-            gc(:,:,:),           & !--- inout
-            qvap(:), temp(:)     ) !--- inout
-  call mixphase                  &
-          ( dtime,               & !--- in
-            ijk_cld,             & !--- in
-            dens(:), pres(:),    & !--- in
-            gc(:,:,:),           & !--- inout
-            qvap(:), temp(:)     ) !--- inout
+    call liqphase( ijkmax,        & ! [IN]
+                   dens(:),       & ! [IN]
+                   pres(:),       & ! [IN]
+                   temp(:),       & ! [INOUT]
+                   qvap(:),       & ! [INOUT]
+                   gc  (:,:,:),   & ! [INOUT]
+                   regene_gcn(:), & ! [OUT]
+                   dtime          ) ! [IN]
+
+    call icephase( ijkmax,        & ! [IN]
+                   dens(:),       & ! [IN]
+                   pres(:),       & ! [IN]
+                   temp(:),       & ! [INOUT]
+                   qvap(:),       & ! [INOUT]
+                   gc  (:,:,:),   & ! [INOUT]
+                   dtime          ) ! [IN]
+
+    call mixphase( ijkmax,        & ! [IN]
+                   dens(:),       & ! [IN]
+                   pres(:),       & ! [IN]
+                   temp(:),       & ! [INOUT]
+                   qvap(:),       & ! [INOUT]
+                   gc  (:,:,:),   & ! [INOUT]
+                   dtime          ) ! [IN]
 
     call PROF_rapend  ('MP_SBM_CndEvpSbl', 1)
+
     return
   end subroutine cndevpsbl
 
   !-----------------------------------------------------------------------------
-  subroutine  cndevpsbla    &
-      ( dtime,              & !--- in
-        ijk_cld,            & !--- in
-        dens, pres,         & !--- in
-        gc, ga, qvap, temp  ) !--- inout
-  !
-  real(RP), intent(in) :: dtime                              !  time step
-  integer , intent(in) :: ijk_cld                            !
-  real(RP), intent(in) :: dens(KMAX*IMAX*JMAX)               !  atmospheric density [ kg/m3 ]
-  real(RP), intent(in) :: pres(KMAX*IMAX*JMAX)               !  atmospheric pressure [ Pa ]
-  real(RP), intent(inout) :: gc( nbin,nspc,KMAX*IMAX*JMAX )  !  Size Distribution Function(hydrometeor): mass
-  real(RP), intent(inout) :: ga( nccn,KMAX*IMAX*JMAX )       !  Size Distribution Function ( aerosol ) : mass
-  real(RP), intent(inout) :: qvap(KMAX*IMAX*JMAX)            !  specific humidity [ kg/kg ]
-  real(RP), intent(inout) :: temp(KMAX*IMAX*JMAX)            !  temperature [ K ]
-  !
-  !--- local variables
-  real(RP) :: regene_gcn(KMAX*IMAX*JMAX)
+  subroutine  cndevpsbla( &
+       ijkmax, &
+       dens,   &
+       pres,   &
+       temp,   &
+       qvap,   &
+       gc,     &
+       ga,     &
+       dtime   )
+    implicit none
+
+    integer,  intent(in)    :: ijkmax
+    real(RP), intent(in)    :: dens(ijkmax)           ! Density           [kg/m3]
+    real(RP), intent(in)    :: pres(ijkmax)           ! Pressure          [Pa]
+    real(RP), intent(inout) :: temp(ijkmax)           ! Temperature       [K]
+    real(RP), intent(inout) :: qvap(ijkmax)           ! Specific humidity [kg/kg]
+    real(RP), intent(inout) :: gc  (nbin,nspc,ijkmax) ! size distribution function (hydrometeors)
+    real(RP), intent(inout) :: ga  (nccn     ,ijkmax) ! size distribution function (hydrometeors)
+    real(RP), intent(in)    :: dtime                  ! Time step interval
+
+    real(RP) :: regene_gcn(ijkmax)
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('MP_SBM_CndEvpSblA', 1)
 
-  call  liqphase                &
-         ( dtime,               & !--- in
-           ijk_cld,             & !--- in
-           dens(:), pres(:),    & !--- in
-           gc(:,:,:),           & !--- inout
-           qvap(:), temp(:),    & !--- inout
-           regene_gcn(:)        ) !--- out
-     !--- regeneration of aerosol
-  if( flg_regeneration ) then
-    call faero                  &
-         ( regene_gcn(:),       & !--- in
-           ijk_cld,             & !--- in
-           ga(:,:)              ) !--- inout
-  end if
+    call liqphase( ijkmax,        & ! [IN]
+                   dens(:),       & ! [IN]
+                   pres(:),       & ! [IN]
+                   temp(:),       & ! [INOUT]
+                   qvap(:),       & ! [INOUT]
+                   gc  (:,:,:),   & ! [INOUT]
+                   regene_gcn(:), & ! [OUT]
+                   dtime          ) ! [IN]
 
-  call icephase                 &
-         ( dtime,               & !--- in
-           ijk_cld,             & !--- in
-           dens(:), pres(:),    & !--- in
-           gc(:,:,:),           & !--- inout
-           qvap(:), temp(:)     ) !--- inout
+    ! regeneration of aerosol
+    if ( flg_regeneration ) then
+       call faero( ijkmax,        & ! [IN]
+                   regene_gcn(:), & ! [IN]
+                   ga(:,:)        ) ! [INOUT]
+    endif
 
-  call mixphase                 &
-         ( dtime,               & !--- in
-           ijk_cld,             & !--- in
-           dens(:), pres(:),    & !--- in
-           gc(:,:,:),           & !--- inout
-           qvap(:), temp(:)     ) !--- inout
+    call icephase( ijkmax,        & ! [IN]
+                   dens(:),       & ! [IN]
+                   pres(:),       & ! [IN]
+                   temp(:),       & ! [INOUT]
+                   qvap(:),       & ! [INOUT]
+                   gc  (:,:,:),   & ! [INOUT]
+                   dtime          ) ! [IN]
 
+    call mixphase( ijkmax,        & ! [IN]
+                   dens(:),       & ! [IN]
+                   pres(:),       & ! [IN]
+                   temp(:),       & ! [INOUT]
+                   qvap(:),       & ! [INOUT]
+                   gc  (:,:,:),   & ! [INOUT]
+                   dtime          ) ! [IN]
 
     call PROF_rapend  ('MP_SBM_CndEvpSblA', 1)
 
@@ -1866,63 +1744,58 @@ contains
   end subroutine cndevpsbla
 
   !-----------------------------------------------------------------------------
-  subroutine liqphase     &
-      ( dtime,            & !--- in
-        ijk_cld,          & !--- in
-        dens, pres,       & !--- in
-        gc, qvap, temp,   & !--- inout
-        regene_gcn        ) !--- out
-  !
-  use scale_const, only:   &
-     cp    => CONST_CPdry, &
-     rhow  => CONST_DWATR, &
-     rvap  => CONST_Rvap,  &
-     tmlt  => CONST_TMELT, &
-     temp0 => CONST_TEM00, &
-     esat0 => CONST_PSAT0, &
-     EPSILON => CONST_EPS
-  real(RP), intent(in) :: dtime                        ! time step
-  integer , intent(in) :: ijk_cld                      !
-  real(RP), intent(in) :: dens(KMAX*IMAX*JMAX)         ! density [kg/m3]
-  real(RP), intent(in) :: pres(KMAX*IMAX*JMAX)         ! pressure [Pa]
-  real(RP), intent(inout) :: gc( nbin,nspc,KMAX*IMAX*JMAX ) ! size distribution function(hydrometeor): mass
-  real(RP), intent(inout) :: qvap(KMAX*IMAX*JMAX)      ! specific humidity [kg/kg]
-  real(RP), intent(inout) :: temp(KMAX*IMAX*JMAX)      ! temperature [K]
-  real(RP), intent(out) :: regene_gcn(KMAX*IMAX*JMAX)  ! mass of regenerated aerosol
-  !
-  !--- local variables
+  subroutine liqphase( &
+       ijkmax,     &
+       dens,       &
+       pres,       &
+       temp,       &
+       qvap,       &
+       gc,         &
+       regene_gcn, &
+       dtime       )
+    implicit none
+
+    integer,  intent(in)    :: ijkmax
+    real(RP), intent(in)    :: dens(ijkmax)           ! Density           [kg/m3]
+    real(RP), intent(in)    :: pres(ijkmax)           ! Pressure          [Pa]
+    real(RP), intent(inout) :: temp(ijkmax)           ! Temperature       [K]
+    real(RP), intent(inout) :: qvap(ijkmax)           ! Specific humidity [kg/kg]
+    real(RP), intent(inout) :: gc  (nbin,nspc,ijkmax) ! size distribution function (hydrometeors)
+    real(RP), intent(out)   :: regene_gcn(ijkmax)     ! mass of regenerated aerosol
+    real(RP), intent(in)    :: dtime                  ! Time step interval
+
   integer  :: n, myu, ncount
-  integer  :: nloop(KMAX*IMAX*JMAX)                    ! number of fractional step for condensation
-  real(RP) :: gclold(KMAX*IMAX*JMAX)
-  real(RP) :: gclnew(KMAX*IMAX*JMAX)
-  real(RP) :: cndmss(KMAX*IMAX*JMAX)
-  real(RP) :: dtcnd(KMAX*IMAX*JMAX)                    ! dt for condensation with considering CFL condition
-  real(RP) :: gtliq(KMAX*IMAX*JMAX)                    ! G of eq. (A.17) of Suzuki (2004)
-  real(RP) :: qlevp(KMAX*IMAX*JMAX)                    ! LH
+  integer  :: nloop(ijkmax)                    ! number of fractional step for condensation
+  real(RP) :: gclold(ijkmax)
+  real(RP) :: gclnew(ijkmax)
+  real(RP) :: cndmss(ijkmax)
+  real(RP) :: dtcnd(ijkmax)                    ! dt for condensation with considering CFL condition
+  real(RP) :: gtliq(ijkmax)                    ! G of eq. (A.17) of Suzuki (2004)
+  real(RP) :: qlevp(ijkmax)                    ! LH
   real(RP) :: cefliq, a, sliqtnd
-  real(RP) :: sumliq(KMAX*IMAX*JMAX), umax(KMAX*IMAX*JMAX)
-  real(RP) :: ssliq(KMAX*IMAX*JMAX), ssice(KMAX*IMAX*JMAX) ! super saturation
-  real(RP) :: gcn( -1:nbin+2,1:il,1:KMAX*IMAX*JMAX )               ! size distribution function(hydrometeor): number
-!  real(RP) :: gcnold( nbin,KMAX*IMAX*JMAX )
+  real(RP) :: sumliq(ijkmax), umax(ijkmax)
+  real(RP) :: ssliq(ijkmax), ssice(ijkmax) ! super saturation
+  real(RP) :: gcn( -1:nbin+2,1:il,1:ijkmax )               ! size distribution function(hydrometeor): number
+!  real(RP) :: gcnold( nbin,ijkmax )
   real(RP), parameter :: cflfct = 0.50_RP              ! CFL limiter
 !  real(RP) :: old_sum_gcn, new_sum_gcn
-  integer  :: iflg( il,KMAX*IMAX*JMAX )                ! flag whether calculation is conduct or not
-  real(RP) :: csum( il,KMAX*IMAX*JMAX )
+  integer  :: iflg( il,ijkmax )                ! flag whether calculation is conduct or not
+  real(RP) :: csum( il,ijkmax )
   real(RP) :: f1, f2, fmyu, emu, cefd, cefk, festl, psat
   real(RP), parameter :: afmyu = 1.72E-05_RP, bfmyu = 3.93E+2_RP
   real(RP), parameter :: cfmyu = 1.2E+02_RP, fct = 1.4E+3_RP
   real(RP) :: zerosw, qvtmp
-  integer :: ijk, nn, mm, loopflg(KMAX*IMAX*JMAX)
+  integer :: ijk, nn, mm, loopflg(ijkmax)
 
   !--- local for advection
-  real(RP) :: uadv( 0:nbin+2,1:il,1:KMAX*IMAX*JMAX )
-  real(RP) :: flq( 1:nbin+1,1:il,1:KMAX*IMAX*JMAX )
+  real(RP) :: uadv( 0:nbin+2,1:il,1:ijkmax )
+  real(RP) :: flq( 1:nbin+1,1:il,1:ijkmax )
   integer, parameter :: ldeg = 2
-  real(RP) :: acoef( 0:nbin+1,1:il,0:ldeg,1:KMAX*IMAX*JMAX )
+  real(RP) :: acoef( 0:nbin+1,1:il,0:ldeg,1:ijkmax )
   real(RP) :: crn( 0:nbin+2 )
-  real(RP) :: aip( 0:nbin+1,1:il,1:KMAX*IMAX*JMAX )
-  real(RP) :: aim( 0:nbin+1,1:il,1:KMAX*IMAX*JMAX )
-  real(RP) :: ai( 0:nbin+1,1:il,1:KMAX*IMAX*JMAX )
+  real(RP) :: aip( 0:nbin+1,1:il,1:ijkmax )
+  real(RP) :: aim( 0:nbin+1,1:il,1:ijkmax )
+  real(RP) :: ai( 0:nbin+1,1:il,1:ijkmax )
   real(RP) :: cmins, cplus, sum
   integer :: j, nloopmax
 
@@ -1931,7 +1804,7 @@ contains
 
   iflg(:,:) = 0
   csum(:,:) = 0.0_RP
-  do ijk = 1, ijk_cld
+  do ijk = 1, ijkmax
 
      do n = 1, nbin
        csum( il,ijk ) = csum( il,ijk ) + gc( n,il,ijk )*dxmic
@@ -1943,7 +1816,7 @@ contains
 
   nloop(:) = 0
   gclold(:) = 0.0_RP
-  do ijk = 1, ijk_cld
+  do ijk = 1, ijkmax
 
      do n = 1, nbin
        gclold(ijk) = gclold(ijk) + gc( n,il,ijk ) * dxmic
@@ -1994,12 +1867,12 @@ contains
 !OCL LOOP_NOINTERCHANGE
   do ncount = 1, nloopmax
 
-    do ijk = 1, ijk_cld
+    do ijk = 1, ijkmax
        loopflg(ijk) = min( 1, int(nloop(ijk)/ncount) )   ! 0 or 1
     enddo
 
 !OCL LOOP_NOFUSION
-    do ijk = 1, ijk_cld
+    do ijk = 1, ijkmax
      do nn = 1, loopflg(ijk)
 
        !--- lhv
@@ -2032,12 +1905,12 @@ contains
     enddo
 
 !OCL LOOP_NOFUSION
-    do ijk = 1, ijk_cld
+    do ijk = 1, ijkmax
      do nn = 1, loopflg(ijk)
 
        !----- supersaturation tendency
-       zerosw = 0.5_RP + sign( 0.5_RP,qvap(ijk)-EPSILON )  !--- zerosw = 1 (qv>0), zerosw=0 (qv=0)
-       qvtmp = qvap(ijk) * zerosw + ( qvap(ijk)+EPSILON ) * ( 1.0_RP-zerosw )
+       zerosw = 0.5_RP + sign( 0.5_RP,qvap(ijk)-EPS )  !--- zerosw = 1 (qv>0), zerosw=0 (qv=0)
+       qvtmp = qvap(ijk) * zerosw + ( qvap(ijk)+EPS ) * ( 1.0_RP-zerosw )
        cefliq = ( ssliq(ijk)+1.0_RP )*( 1.0_RP/qvtmp + qlevp(ijk)*qlevp(ijk)/cp/rvap/temp(ijk)/temp(ijk) )
        a = - cefliq*sumliq(ijk)*gtliq(ijk)/dens(ijk)   ! a of eq. (A.19) of Suzuki (2004)
 
@@ -2067,7 +1940,7 @@ contains
     enddo
 
 !OCL LOOP_NOFUSION
-    do ijk = 1, ijk_cld
+    do ijk = 1, ijkmax
      do nn = 1, loopflg(ijk)
 
        do mm = 1, iflg( il,ijk )
@@ -2108,7 +1981,7 @@ contains
     enddo
 
 !OCL LOOP_NOFUSION
-    do ijk = 1, ijk_cld
+    do ijk = 1, ijkmax
      do nn = 1, loopflg(ijk)
 
        do mm = 1, iflg( il,ijk )
@@ -2138,7 +2011,7 @@ contains
     enddo
 
 !OCL LOOP_NOFUSION
-    do ijk = 1, ijk_cld
+    do ijk = 1, ijkmax
      do nn = 1, loopflg(ijk)
 
        !----- new mass
@@ -2166,7 +2039,7 @@ contains
   enddo   !nloop
   !
 !OCL NORECURRENCE(gc)
-  do ijk = 1, ijk_cld
+  do ijk = 1, ijkmax
      !------- number -> mass
      do n = 1 , nbin
       gc( n,il,ijk ) = gcn( n,il,ijk )*expxctr( n )
@@ -2174,7 +2047,7 @@ contains
   enddo
 
 !OCL NORECURRENCE(gc)
-  do ijk = 1, ijk_cld
+  do ijk = 1, ijkmax
       !--- lhv
       qlevp(ijk) = CONST_LHV0 + ( CONST_CPvap - CONST_CL ) * ( temp(ijk) - CONST_TEM00 ) * flg_thermodyn
       do n = 1 , nbin
@@ -2192,60 +2065,55 @@ contains
     return
   end subroutine liqphase
   !-------------------------------------------------------------------------------
-  subroutine icephase     &
-      ( dtime,            & !--- in
-        ijk_cld,          & !--- in
-        dens, pres,       & !--- in
-        gc, qvap, temp    ) !--- inout
-  !
-  use scale_const, only : rhow   => CONST_DWATR, &
-                        rvap   => CONST_Rvap,    &
-                        cp     => CONST_CPdry,   &
-                        tmlt  => CONST_TMELT,    &
-                        temp0 => CONST_TEM00,    &
-                        esat0 => CONST_PSAT0,    &
-                        EPSILON => CONST_EPS
-  !
-  real(RP), intent(in) :: dtime                            ! time step
-  integer , intent(in) :: ijk_cld                          !
-  real(RP), intent(in) :: dens(KMAX*IMAX*JMAX)             ! air density [kg/m3]
-  real(RP), intent(in) :: pres(KMAX*IMAX*JMAX)             ! pressure [Pa]
-  real(RP), intent(inout) :: gc( nbin,nspc,KMAX*IMAX*JMAX )! size distribution function (Hydrometeor): mass
-  real(RP), intent(inout) :: qvap(KMAX*IMAX*JMAX)          ! specific humidity [kg/kg]
-  real(RP), intent(inout) :: temp(KMAX*IMAX*JMAX)          ! temperature [K]
-  !
-  !--- local variables
+  subroutine icephase( &
+       ijkmax, &
+       dens,   &
+       pres,   &
+       temp,   &
+       qvap,   &
+       gc,     &
+       dtime   )
+    implicit none
+
+    integer,  intent(in)    :: ijkmax
+    real(RP), intent(in)    :: dens(ijkmax)           ! Density           [kg/m3]
+    real(RP), intent(in)    :: pres(ijkmax)           ! Pressure          [Pa]
+    real(RP), intent(inout) :: temp(ijkmax)           ! Temperature       [K]
+    real(RP), intent(inout) :: qvap(ijkmax)           ! Specific humidity [kg/kg]
+    real(RP), intent(inout) :: gc  (nbin,nspc,ijkmax) ! size distribution function (hydrometeors)
+    real(RP), intent(in)    :: dtime                  ! Time step interval
+
   integer :: myu, n, ncount
-  integer :: nloop(KMAX*IMAX*JMAX)                         !number of fractional step for condensation
-  real(RP) :: gciold(KMAX*IMAX*JMAX), gcinew(KMAX*IMAX*JMAX)
-  real(RP) :: dtcnd(KMAX*IMAX*JMAX)                        ! dt for condensation with considering CFL condition
-  real(RP) :: sblmss(KMAX*IMAX*JMAX)
-  real(RP) :: gtice(KMAX*IMAX*JMAX), umax(KMAX*IMAX*JMAX)
-  real(RP) :: qlevp(KMAX*IMAX*JMAX), qlsbl(KMAX*IMAX*JMAX)
+  integer :: nloop(ijkmax)                         !number of fractional step for condensation
+  real(RP) :: gciold(ijkmax), gcinew(ijkmax)
+  real(RP) :: dtcnd(ijkmax)                        ! dt for condensation with considering CFL condition
+  real(RP) :: sblmss(ijkmax)
+  real(RP) :: gtice(ijkmax), umax(ijkmax)
+  real(RP) :: qlevp(ijkmax), qlsbl(ijkmax)
   real(RP) :: cefice, d, uval, sicetnd
-  real(RP) :: sumice(KMAX*IMAX*JMAX)
-  real(RP) :: ssliq(KMAX*IMAX*JMAX), ssice(KMAX*IMAX*JMAX)
-  real(RP) :: gcn( -1:nbin+2,1:nspc,1:KMAX*IMAX*JMAX )     ! size distribution function (Hydrometeor): number
+  real(RP) :: sumice(ijkmax)
+  real(RP) :: ssliq(ijkmax), ssice(ijkmax)
+  real(RP) :: gcn( -1:nbin+2,1:nspc,1:ijkmax )     ! size distribution function (Hydrometeor): number
   real(RP), parameter :: cflfct = 0.50_RP
-  real(RP) :: dumm_regene(KMAX*IMAX*JMAX)
-  integer :: iflg( nspc,KMAX*IMAX*JMAX )
-  integer :: csum( nspc,KMAX*IMAX*JMAX )
+  real(RP) :: dumm_regene(ijkmax)
+  integer :: iflg( nspc,ijkmax )
+  integer :: csum( nspc,ijkmax )
   real(RP) :: f1, f2, fmyu, emu, cefd, cefk, festl, festi, psat
   real(RP), parameter :: afmyu = 1.72E-05_RP, bfmyu = 3.93E+2_RP
   real(RP), parameter :: cfmyu = 1.2E+02_RP, fct = 1.4E+3_RP
-  integer :: ijk, mm, nn, loopflg(KMAX*IMAX*JMAX)
+  integer :: ijk, mm, nn, loopflg(ijkmax)
   real(RP) :: zerosw, qvtmp
 
   !--- local for advection
 !  real(RP) :: qadv( -1:nbin+2 ), uadv( 0:nbin+2 )
-  real(RP) :: uadv( 0:nbin+2,1:nspc,1:KMAX*IMAX*JMAX )
-  real(RP) :: flq( 1:nbin+1,1:nspc,1:KMAX*IMAX*JMAX )
+  real(RP) :: uadv( 0:nbin+2,1:nspc,1:ijkmax )
+  real(RP) :: flq( 1:nbin+1,1:nspc,1:ijkmax )
   integer, parameter :: ldeg = 2
-  real(RP) :: acoef( 0:nbin+1,1:nspc,0:ldeg,1:KMAX*IMAX*JMAX )
+  real(RP) :: acoef( 0:nbin+1,1:nspc,0:ldeg,1:ijkmax )
   real(RP) :: crn( 0:nbin+2 )
-  real(RP) :: aip( 0:nbin+1,1:nspc,1:KMAX*IMAX*JMAX )
-  real(RP) :: aim( 0:nbin+1,1:nspc,1:KMAX*IMAX*JMAX )
-  real(RP) :: ai( 0:nbin+1,1:nspc,1:KMAX*IMAX*JMAX )
+  real(RP) :: aip( 0:nbin+1,1:nspc,1:ijkmax )
+  real(RP) :: aim( 0:nbin+1,1:nspc,1:ijkmax )
+  real(RP) :: ai( 0:nbin+1,1:nspc,1:ijkmax )
   real(RP) :: cmins, cplus, sum
   integer :: j, nloopmax
     !---------------------------------------------------------------------------
@@ -2254,7 +2122,7 @@ contains
 
   iflg(:,:) = 0
   csum( :,: ) = 0.0_RP
-  do ijk = 1, ijk_cld
+  do ijk = 1, ijkmax
 
      do myu = 2, nspc
      do n = 1, nbin
@@ -2270,7 +2138,7 @@ contains
 
   gciold(:) = 0.0_RP
   nloop(:) = 0
-  do ijk = 1, ijk_cld
+  do ijk = 1, ijkmax
 
      !----- old mass
      do myu = 2, nspc
@@ -2329,12 +2197,12 @@ contains
 !OCL LOOP_NOINTERCHANGE
   do ncount = 1, nloopmax
 
-    do ijk = 1, ijk_cld
+    do ijk = 1, ijkmax
       loopflg(ijk) = min( 1, int(nloop(ijk)/ncount) )   ! 0 or 1
     enddo
 
 !OCL LOOP_NOFUSION
-    do ijk = 1, ijk_cld
+    do ijk = 1, ijkmax
       do nn = 1, loopflg(ijk)
        !--- lhv
        qlsbl(ijk) = CONST_LHS0 + ( CONST_CPvap - CONST_CI ) * ( temp(ijk) - CONST_TEM00 ) * flg_thermodyn
@@ -2367,12 +2235,12 @@ contains
     enddo
 
 !OCL LOOP_NOFUSION
-    do ijk = 1, ijk_cld
+    do ijk = 1, ijkmax
       do nn = 1, loopflg(ijk)
 
         !----- supersaturation tendency
-        zerosw = 0.5_RP + sign( 0.5_RP,qvap(ijk)-EPSILON )  !--- zerosw = 1 (qv>0), zerosw=0 (qv=0)
-        qvtmp = qvap(ijk) * zerosw + ( qvap(ijk)+EPSILON ) * ( 1.0_RP-zerosw )
+        zerosw = 0.5_RP + sign( 0.5_RP,qvap(ijk)-EPS )  !--- zerosw = 1 (qv>0), zerosw=0 (qv=0)
+        qvtmp = qvap(ijk) * zerosw + ( qvap(ijk)+EPS ) * ( 1.0_RP-zerosw )
 
         cefice = ( ssice(ijk)+1.0_RP )*( 1.0_RP/qvtmp + qlsbl(ijk)*qlsbl(ijk)/cp/rvap/temp(ijk)/temp(ijk) )
         d = - cefice*sumice(ijk)*gtice(ijk)/dens(ijk)  ! d of (A.19) of Suzuki (2004)
@@ -2401,7 +2269,7 @@ contains
     enddo
 
 !OCL LOOP_NOFUSION
-    do ijk = 1, ijk_cld
+    do ijk = 1, ijkmax
       do nn = 1, loopflg(ijk)
 
        do myu = 2, nspc
@@ -2444,7 +2312,7 @@ contains
      enddo
 
 !OCL LOOP_NOFUSION
-    do ijk = 1, ijk_cld
+    do ijk = 1, ijkmax
       do nn = 1, loopflg(ijk)
 
         do myu = 2, nspc
@@ -2475,7 +2343,7 @@ contains
     enddo
 
 !OCL LOOP_NOFUSION
-    do ijk = 1, ijk_cld
+    do ijk = 1, ijkmax
       do nn = 1, loopflg(ijk)
 
        !----- new mass
@@ -2500,7 +2368,7 @@ contains
   end do ! nloop
   !
 !OCL NORECURRENCE(gc)
-  do ijk = 1, ijk_cld
+  do ijk = 1, ijkmax
     !------- number -> mass
     do myu = 2, nspc
     do n = 1, nbin
@@ -2514,63 +2382,58 @@ contains
     return
   end subroutine icephase
   !-------------------------------------------------------------------------------
-  subroutine mixphase     &
-      ( dtime,            & !--- in
-        ijk_cld,          & !--- in
-        dens, pres,       & !--- in
-        gc, qvap, temp    )!--- inout
-  !
-  use scale_const, only : rhow   => CONST_DWATR, &
-                        rvap   => CONST_Rvap,    &
-                        cp     => CONST_CPdry,   &
-                        tmlt  => CONST_TMELT,    &
-                        temp0 => CONST_TEM00,    &
-                        esat0 => CONST_PSAT0,    &
-                        EPSILON => CONST_EPS
-  !
-  real(RP), intent(in) :: dtime
-  integer , intent(in) :: ijk_cld
-  real(RP), intent(in) :: dens(KMAX*IMAX*JMAX)   !  atmospheric density [ kg/m3 ]
-  real(RP), intent(in) :: pres(KMAX*IMAX*JMAX)   !  atmospheric pressure [ Pa ]
-  real(RP), intent(inout) :: gc( nbin,nspc,KMAX*IMAX*JMAX )  ! Size Distribution Function
-  real(RP), intent(inout) :: qvap(KMAX*IMAX*JMAX)    !  specific humidity [ kg/kg ]
-  real(RP), intent(inout) :: temp(KMAX*IMAX*JMAX)    !  temperature [ K ]
-  !
-  !--- local variables
+  subroutine mixphase( &
+       ijkmax, &
+       dens,   &
+       pres,   &
+       temp,   &
+       qvap,   &
+       gc,     &
+       dtime   )
+    implicit none
+
+    integer,  intent(in)    :: ijkmax
+    real(RP), intent(in)    :: dens(ijkmax)           ! Density           [kg/m3]
+    real(RP), intent(in)    :: pres(ijkmax)           ! Pressure          [Pa]
+    real(RP), intent(inout) :: temp(ijkmax)           ! Temperature       [K]
+    real(RP), intent(inout) :: qvap(ijkmax)           ! Specific humidity [kg/kg]
+    real(RP), intent(inout) :: gc  (nbin,nspc,ijkmax) ! size distribution function (hydrometeors)
+    real(RP), intent(in)    :: dtime                  ! Time step interval
+
   integer :: n, myu, mm, ncount
-  integer :: nloop(KMAX*IMAX*JMAX)
-  real(RP) :: gclold(KMAX*IMAX*JMAX), gclnew(KMAX*IMAX*JMAX)
-  real(RP) :: gciold(KMAX*IMAX*JMAX), gcinew(KMAX*IMAX*JMAX)
-  real(RP) :: cndmss(KMAX*IMAX*JMAX), sblmss(KMAX*IMAX*JMAX)
-  real(RP) :: gtliq(KMAX*IMAX*JMAX), gtice(KMAX*IMAX*JMAX)
-  real(RP) :: umax(KMAX*IMAX*JMAX), uval, dtcnd(KMAX*IMAX*JMAX)
-  real(RP) :: qlevp(KMAX*IMAX*JMAX), qlsbl(KMAX*IMAX*JMAX)
+  integer :: nloop(ijkmax)
+  real(RP) :: gclold(ijkmax), gclnew(ijkmax)
+  real(RP) :: gciold(ijkmax), gcinew(ijkmax)
+  real(RP) :: cndmss(ijkmax), sblmss(ijkmax)
+  real(RP) :: gtliq(ijkmax), gtice(ijkmax)
+  real(RP) :: umax(ijkmax), uval, dtcnd(ijkmax)
+  real(RP) :: qlevp(ijkmax), qlsbl(ijkmax)
   real(RP) :: cef1, cef2, cef3, cef4, a, b, c, d
   real(RP) :: rmdplus, rmdmins, ssplus, ssmins, tplus, tmins
   real(RP) :: sliqtnd, sicetnd
-  real(RP) :: ssliq(KMAX*IMAX*JMAX), ssice(KMAX*IMAX*JMAX)
-  real(RP) :: sumliq(KMAX*IMAX*JMAX), sumice(KMAX*IMAX*JMAX)
-  real(RP) :: gcn( -1:nbin+2,1:nspc,1:KMAX*IMAX*JMAX )
+  real(RP) :: ssliq(ijkmax), ssice(ijkmax)
+  real(RP) :: sumliq(ijkmax), sumice(ijkmax)
+  real(RP) :: gcn( -1:nbin+2,1:nspc,1:ijkmax )
   real(RP), parameter :: cflfct = 0.50_RP
-  real(RP) :: dumm_regene(KMAX*IMAX*JMAX)
-  real(RP) :: csum( nspc,KMAX*IMAX*JMAX )
-  integer :: iflg( nspc,KMAX*IMAX*JMAX )
+  real(RP) :: dumm_regene(ijkmax)
+  real(RP) :: csum( nspc,ijkmax )
+  integer :: iflg( nspc,ijkmax )
   real(RP) :: f1, f2, fmyu, emu, cefd, cefk, festl, festi, psat
   real(RP), parameter :: afmyu = 1.72E-05_RP, bfmyu = 3.93E+2_RP
   real(RP), parameter :: cfmyu = 1.2E+02_RP, fct = 1.4E+3_RP
   real(RP) :: qvtmp, zerosw
-  integer :: ijk, nn, loopflg(KMAX*IMAX*JMAX)
+  integer :: ijk, nn, loopflg(ijkmax)
 
   !--- local for advection
 !  real(RP) :: qadv( -1:nbin+2 ), uadv( 0:nbin+2 )
-  real(RP) :: uadv( 0:nbin+2,1:nspc,1:KMAX*IMAX*JMAX )
-  real(RP) :: flq( 1:nbin+1,1:nspc,1:KMAX*IMAX*JMAX )
+  real(RP) :: uadv( 0:nbin+2,1:nspc,1:ijkmax )
+  real(RP) :: flq( 1:nbin+1,1:nspc,1:ijkmax )
   integer, parameter :: ldeg = 2
-  real(RP) :: acoef( 0:nbin+1,1:nspc,0:ldeg,1:KMAX*IMAX*JMAX )
+  real(RP) :: acoef( 0:nbin+1,1:nspc,0:ldeg,1:ijkmax )
   real(RP) :: crn( 0:nbin+2 )
-  real(RP) :: aip( 0:nbin+1,1:nspc,1:KMAX*IMAX*JMAX )
-  real(RP) :: aim( 0:nbin+1,1:nspc,1:KMAX*IMAX*JMAX )
-  real(RP) :: ai( 0:nbin+1,1:nspc,1:KMAX*IMAX*JMAX )
+  real(RP) :: aip( 0:nbin+1,1:nspc,1:ijkmax )
+  real(RP) :: aim( 0:nbin+1,1:nspc,1:ijkmax )
+  real(RP) :: ai( 0:nbin+1,1:nspc,1:ijkmax )
   real(RP) :: cmins, cplus, sum
   integer :: j, nloopmax
 
@@ -2580,7 +2443,7 @@ contains
   dumm_regene( : ) = 0.0_RP
   iflg( :,: ) = 0
   csum( :,: ) = 0.0_RP
-  do ijk = 1, ijk_cld
+  do ijk = 1, ijkmax
 
       do myu = 1, nspc
       do n = 1, nbin
@@ -2596,7 +2459,7 @@ contains
   gclold(:) = 0.0_RP
   gciold(:) = 0.0_RP
   nloop(:) = 0
-  do ijk = 1, ijk_cld
+  do ijk = 1, ijkmax
       !----- old mass
       do n = 1, nbin
         gclold(ijk) = gclold(ijk) + gc( n,il,ijk )*dxmic
@@ -2672,12 +2535,12 @@ contains
 
     call PROF_rapstart('MP_SBM_Mixphase31', 2)
 
-     do ijk = 1, ijk_cld
+     do ijk = 1, ijkmax
       loopflg(ijk) = min( 1, int(nloop(ijk)/ncount) )   ! 0 or 1
      enddo
 
 !OCL LOOP_NOFUSION
-      do ijk = 1, ijk_cld
+      do ijk = 1, ijkmax
        do nn = 1, loopflg(ijk)
          !-- thermodyn
          qlevp(ijk) = CONST_LHV0 + ( CONST_CPvap - CONST_CL ) * ( temp(ijk) - CONST_TEM00 ) * flg_thermodyn
@@ -2720,10 +2583,10 @@ contains
     call PROF_rapstart('MP_SBM_Mixphase32', 2)
 
 !OCL LOOP_NOFUSION
-      do ijk = 1, ijk_cld
+      do ijk = 1, ijkmax
        do nn = 1, loopflg(ijk)
-         zerosw = 0.5_RP + sign( 0.5_RP,qvap(ijk)-EPSILON )  !--- zerosw = 1 (qv>0), zerosw=0 (qv=0)
-         qvtmp = qvap(ijk) * zerosw + ( qvap(ijk)+EPSILON ) * ( 1.0_RP-zerosw )
+         zerosw = 0.5_RP + sign( 0.5_RP,qvap(ijk)-EPS )  !--- zerosw = 1 (qv>0), zerosw=0 (qv=0)
+         qvtmp = qvap(ijk) * zerosw + ( qvap(ijk)+EPS ) * ( 1.0_RP-zerosw )
          cef1 = ( ssliq(ijk)+1.0_RP )*( 1.0_RP/qvtmp + qlevp(ijk)/rvap/temp(ijk)/temp(ijk)*qlevp(ijk)/cp )
          cef2 = ( ssliq(ijk)+1.0_RP )*( 1.0_RP/qvtmp + qlevp(ijk)/rvap/temp(ijk)/temp(ijk)*qlsbl(ijk)/cp )
          cef3 = ( ssice(ijk)+1.0_RP )*( 1.0_RP/qvtmp + qlsbl(ijk)/rvap/temp(ijk)/temp(ijk)*qlevp(ijk)/cp )
@@ -2781,7 +2644,7 @@ contains
     call PROF_rapstart('MP_SBM_Mixphase33', 2)
 
 !OCL LOOP_NOFUSION
-      do ijk = 1, ijk_cld
+      do ijk = 1, ijkmax
        do nn = 1, loopflg(ijk)
          !--- change of SDF
          do myu = 1, nspc
@@ -2825,7 +2688,7 @@ contains
     call PROF_rapstart('MP_SBM_Mixphase34', 2)
 
 !OCL LOOP_NOFUSION
-      do ijk = 1, ijk_cld
+      do ijk = 1, ijkmax
        do nn = 1, loopflg(ijk)
          !--- change of SDF
          do myu = 1, nspc
@@ -2858,7 +2721,7 @@ contains
     call PROF_rapstart('MP_SBM_Mixphase35', 2)
 
 !OCL LOOP_NOFUSION
-      do ijk = 1, ijk_cld
+      do ijk = 1, ijkmax
        do nn = 1, loopflg(ijk)
          !--- new mass
          gclnew(ijk) = 0.0_RP
@@ -2893,7 +2756,7 @@ contains
     call PROF_rapstart('MP_SBM_Mixphase4', 2)
 
 !OCL NORECURRENCE(gc)
-  do ijk = 1, ijk_cld
+  do ijk = 1, ijkmax
     !----- number -> mass
     do myu = 1, nspc
     do n = 1, nbin
@@ -2913,26 +2776,28 @@ contains
   end subroutine mixphase
 
   !-----------------------------------------------------------------------------
-  subroutine ice_nucleat        &
-           ( dtime,             & !--- in
-             ijk_cld, indx_cld, & !--- in
-             dens, pres,        & !--- in
-             gc, qvap, temp     ) !--- inout
-  !
-  use scale_const, only : rhow  => CONST_DWATR, &
-                          tmlt  => CONST_TMELT, &
-                          qlmlt => CONST_EMELT, &
-                          cp    => CONST_CPdry
-  !
-  real(RP), intent(in) :: dtime                              ! time step
-  real(RP), intent(in) :: dens(KMAX*IMAX*JMAX)               ! air density [kg/m3]
-  real(RP), intent(in) :: pres(KMAX*IMAX*JMAX)               ! pressure [Pa]
-  integer , intent(in) :: ijk_cld                            !
-  integer , intent(in) :: indx_cld(KMAX*IMAX*JMAX)           !
-  real(RP), intent(inout) :: gc( nbin,nspc,KMAX*IMAX*JMAX )  ! Size distribution function (hydrometeor): mass
-  real(RP), intent(inout) :: temp(KMAX*IMAX*JMAX)            ! temperatuer [K]
-  real(RP), intent(inout) :: qvap(KMAX*IMAX*JMAX)            ! specific humidity [kg/kg]
-  !--- local variables
+  subroutine ice_nucleat( &
+       ijkmax,     &
+       num_cold,   &
+       index_cold, &
+       dens,       &
+       pres,       &
+       temp,       &
+       qvap,       &
+       gc,         &
+       dtime       )
+    implicit none
+
+    integer,  intent(in)    :: ijkmax
+    integer,  intent(in)    :: num_cold
+    integer,  intent(in)    :: index_cold(ijkmax)
+    real(RP), intent(in)    :: dens(ijkmax)           ! Density           [kg/m3]
+    real(RP), intent(in)    :: pres(ijkmax)           ! Pressure          [Pa]
+    real(RP), intent(inout) :: temp(ijkmax)           ! Temperature       [K]
+    real(RP), intent(inout) :: qvap(ijkmax)           ! Specific humidity [kg/kg]
+    real(RP), intent(inout) :: gc  (nbin,nspc,ijkmax) ! size distribution function (hydrometeors)
+    real(RP), intent(in)    :: dtime                  ! Time step interval
+
   real(RP) :: ssliq, ssice
   real(RP) :: numin, tdel, qdel
   real(RP), parameter :: n0 = 1.E+3_RP                       ! N_{IN0} in page 112 of Suzuki (2004)
@@ -2948,9 +2813,8 @@ contains
 
     call PROF_rapstart('MP_SBM_IceNucleat', 1)
 
-  do indirect = 1, ijk_cld
-
-    ijk = indx_cld(indirect)
+  do indirect = 1, num_cold
+     ijk = index_cold(indirect)
 
     !--- supersaturation
     psat  = CONST_PSAT0 * ( temp(ijk) * RTEM00 )**CPovR_liq   &
@@ -2990,26 +2854,26 @@ contains
 
     return
   end subroutine ice_nucleat
+
   !-----------------------------------------------------------------------------
-  subroutine  freezing      &
-      ( dtime,              & !--- in
-        ijk_cld, indx_cld,  & !--- in
-        dens,               & !--- in
-        gc, temp  )         !--- inout
-  !
-  use scale_const, only : rhow  => CONST_DWATR, &
-                          tmlt  => CONST_TMELT, &
-                          qlmlt => CONST_EMELT, &
-                          cp    => CONST_CPdry
-  !
-  real(RP), intent(in) :: dtime                              ! time step
-  real(RP), intent(in) :: dens(KMAX*IMAX*JMAX)               ! air density [kg/m3]
-  integer , intent(in) :: ijk_cld                            !
-  integer , intent(in) :: indx_cld(KMAX*IMAX*JMAX)           !
-  real(RP), intent(inout) :: gc( nbin,nspc,KMAX*IMAX*JMAX )  ! size distribution function(hydrometeor): mass
-  real(RP), intent(inout) :: temp(KMAX*IMAX*JMAX)            ! temperature
-  !
-  !--- local variables
+  subroutine  freezing( &
+       ijkmax,     &
+       num_cold,   &
+       index_cold, &
+       dens,       &
+       temp,       &
+       gc,         &
+       dtime       )
+    implicit none
+
+    integer,  intent(in)    :: ijkmax
+    integer,  intent(in)    :: num_cold
+    integer,  intent(in)    :: index_cold(ijkmax)
+    real(RP), intent(in)    :: dens(ijkmax)           ! Density           [kg/m3]
+    real(RP), intent(inout) :: temp(ijkmax)           ! Temperature       [K]
+    real(RP), intent(inout) :: gc  (nbin,nspc,ijkmax) ! size distribution function (hydrometeors)
+    real(RP), intent(in)    :: dtime                  ! Time step interval
+
   integer :: nbound, n
   real(RP) :: xbound, tc, rate, dmp, frz, sumfrz, tdel
   real(RP), parameter :: coefa = 1.0E-01_RP   ! a_{fr} of eq.(3.19) of Suzuki (2004)
@@ -3022,9 +2886,8 @@ contains
 
     call PROF_rapstart('MP_SBM_Freezing', 1)
 
-  do indirect = 1, ijk_cld
-
-      ijk = indx_cld(indirect)
+  do indirect = 1, num_cold
+     ijk = index_cold(indirect)
 
 !      if( temp <= tthreth ) then !--- Bigg (1975)
       xbound = log( rhow * 4.0_RP*pi/3.0_RP * rbound**3 )
@@ -3086,35 +2949,33 @@ contains
   end subroutine freezing
 
   !-----------------------------------------------------------------------------
-  subroutine  melting      &
-      ( dtime,             & !--- inou
-        ijk_cld, indx_cld, & !--- in
-        dens,              & !--- in
-        gc, temp           ) !--- inout
-  !
-  use scale_const, only : qlmlt => CONST_EMELT, &
-                          cp    => CONST_CPdry
-  !
-  real(RP), intent(in) :: dtime                             ! time step
-  real(RP), intent(in) :: dens(KMAX*IMAX*JMAX)              ! air density [kg/m3]
-  integer , intent(in) :: ijk_cld                           !
-  integer , intent(in) :: indx_cld(KMAX*IMAX*JMAX)          !
-  !
-  real(RP), intent(inout) :: gc( nbin,nspc,KMAX*IMAX*JMAX ) ! size distribution function(hydrometeor):mass
-  real(RP), intent(inout) :: temp(KMAX*IMAX*JMAX)           ! temperature [K]
-  !
-  !--- local variables
+  subroutine  melting( &
+       ijkmax,     &
+       num_warm,   &
+       index_warm, &
+       dens,       &
+       temp,       &
+       gc,         &
+       dtime       )
+    implicit none
+
+    integer,  intent(in)    :: ijkmax
+    integer,  intent(in)    :: num_warm
+    integer,  intent(in)    :: index_warm(ijkmax)
+    real(RP), intent(in)    :: dens(ijkmax)           ! Density           [kg/m3]
+    real(RP), intent(inout) :: temp(ijkmax)           ! Temperature       [K]
+    real(RP), intent(inout) :: gc  (nbin,nspc,ijkmax) ! size distribution function (hydrometeors)
+    real(RP), intent(in)    :: dtime                  ! Time step interval
+
   integer :: n, m
   real(RP) :: summlt, sumice, tdel
   integer :: ijk, indirect
 
     call PROF_rapstart('MP_SBM_Melting', 1)
 
-  do indirect = 1, ijk_cld
+  do indirect = 1, num_warm
+     ijk = index_warm(indirect)
 
-      ijk = indx_cld(indirect)
-      !
-      !
       summlt = 0.0_RP
       do n = 1, nbin
        sumice = 0.0_RP
@@ -3137,27 +2998,29 @@ contains
   return
   end subroutine melting
   !-------------------------------------------------------------------------------
-  subroutine collmain &
-       ( temp, dtime, & !--- in
-         ijk_cld,     & !--- in
-         gc           ) !--- inout
-  !
-  real(RP), intent(in) :: dtime                             ! time step
-  real(RP), intent(in) :: temp(KMAX*IMAX*JMAX)              ! temperature [K]
-  integer , intent(in) :: ijk_cld                           !
-  real(RP), intent(inout) :: gc( nbin,nspc,KMAX*IMAX*JMAX ) ! size distribution function(Hydrometeor): mass
+  subroutine collmain( &
+       ijkmax,     &
+       temp,       &
+       gc,         &
+       dtime       )
+    implicit none
+
+    integer,  intent(in)    :: ijkmax
+    real(RP), intent(inout) :: temp(ijkmax)           ! Temperature       [K]
+    real(RP), intent(inout) :: gc  (nbin,nspc,ijkmax) ! size distribution function (hydrometeors)
+    real(RP), intent(in)    :: dtime                  ! Time step interval
 
     call PROF_rapstart('MP_SBM_Coll', 1)
 
   if ( rndm_flgp == 1 ) then  !--- stochastic method
      call r_collcoag        &
-         ( dtime, ijk_cld,  & !--- in
+         ( dtime, ijkmax,  & !--- in
            wgtbin,          & !--- in
            temp(:),         & !--- in
            gc(:,:,:)        ) !--- inout
   else  !--- default method
      call  collcoag          &
-         ( dtime, ijk_cld,   & !--- in
+         ( dtime, ijkmax,   & !--- in
            temp(:),          & !--- in
            gc(:,:,:)         ) !--- inout
   end if
@@ -3168,30 +3031,29 @@ contains
   end subroutine collmain
 
   !-------------------------------------------------------------------------------
-  subroutine collmainf &
-       ( temp, dtime,  & !--- in
-         ijk_cld,      & !--- in
-         gc            ) !--- inout
+  subroutine collmainf( &
+       ijkmax,     &
+       temp,       &
+       gc,         &
+       dtime       )
+    implicit none
 
-  use scale_process, only: &
-     PRC_MPIstop
-  !
-  real(RP), intent(in) :: dtime                             ! time step
-  real(RP), intent(in) :: temp(KMAX*IMAX*JMAX)              ! temperature [K]
-  integer , intent(in) :: ijk_cld                           !
-  real(RP), intent(inout) :: gc( nbin,nspc,KMAX*IMAX*JMAX ) ! Size distribution function(hydrometeor):mass
+    integer,  intent(in)    :: ijkmax
+    real(RP), intent(inout) :: temp(ijkmax)           ! Temperature       [K]
+    real(RP), intent(inout) :: gc  (nbin,nspc,ijkmax) ! size distribution function (hydrometeors)
+    real(RP), intent(in)    :: dtime                  ! Time step interval
 
     call PROF_rapstart('MP_SBM_CollF', 1)
 
   if ( rndm_flgp == 1 ) then  !--- stochastic method
      call r_collcoag        &
-         ( dtime, ijk_cld,  & !--- in
+         ( dtime, ijkmax,  & !--- in
            wgtbin,          & !--- in
            temp(:),         & !--- in
            gc(:,:,:)        ) !--- inout
   else  !--- default method
     call  collcoag          &
-        ( dtime, ijk_cld,   & !--- in
+        ( dtime, ijkmax,   & !--- in
           temp(:),          & !--- in
           gc(:,:,:)       ) !--- inout
   endif
@@ -3202,16 +3064,16 @@ contains
   end subroutine collmainf
 
   !-----------------------------------------------------------------------
-  subroutine  collcoag( dtime,ijk_cld,temp,gc )
+  subroutine  collcoag( dtime,ijkmax,temp,gc )
   !------------------------------------------------------------------------------
   !--- reference paper
   !    Bott et al. (1998) J. Atmos. Sci. vol.55, pp. 2284-
   !------------------------------------------------------------------------------
   !
-  integer,  intent(in) :: ijk_cld    ! type of species coagulated(small) particle
+  integer,  intent(in) :: ijkmax    ! type of species coagulated(small) particle
   real(RP), intent(in) :: dtime   !  time step
-  real(RP), intent(in) :: temp( KMAX*IMAX*JMAX )  ! size distribution function (hydrometeor): mass
-  real(RP), intent(inout) :: gc( nbin,nspc,KMAX*IMAX*JMAX )  ! size distribution function (hydrometeor): mass
+  real(RP), intent(in) :: temp( ijkmax )  ! size distribution function (hydrometeor): mass
+  real(RP), intent(inout) :: gc( nbin,nspc,ijkmax )  ! size distribution function (hydrometeor): mass
   !
   !--- local variables
   integer :: i, j, k, l
@@ -3223,10 +3085,10 @@ contains
   real(RP) :: suri, surj
 
   integer :: myu, n, irsl, ilrg, isml
-  integer :: ibnd( KMAX*IMAX*JMAX )
-  integer :: iflg( nspc,KMAX*IMAX*JMAX )
-  integer :: iexst( nbin,nspc,KMAX*IMAX*JMAX )
-  real(RP) :: csum( nspc,KMAX*IMAX*JMAX )
+  integer :: ibnd( ijkmax )
+  integer :: iflg( nspc,ijkmax )
+  integer :: iexst( nbin,nspc,ijkmax )
+  real(RP) :: csum( nspc,ijkmax )
   integer :: ijk, nn, mm, pp, qq
 
     call PROF_rapstart('MP_SBM_CollCoag', 1)
@@ -3234,7 +3096,7 @@ contains
   iflg( :,: ) = 0
   iexst( :,:,: ) = 0
   csum( :,: ) = 0.0_RP
-  do ijk = 1, ijk_cld
+  do ijk = 1, ijkmax
      !--- judgement of particle existence
      do n = 1, nbin
        csum( il,ijk ) = csum( il,ijk ) + gc( n,il,ijk )*dxmic
@@ -3270,7 +3132,7 @@ contains
   enddo
 
 !OCL PARALLEL
-  do ijk = 1, ijk_cld
+  do ijk = 1, ijkmax
     do isml = 1, nspc
     do nn = 1, iflg( isml,ijk )
 
@@ -3503,18 +3365,19 @@ contains
   return
   !
   end subroutine getrule
-  !-----------------------------------------------------------------------------
-  subroutine faero( f0,ijk_cld,ga )
 
-  real(RP), intent(in) :: f0(KMAX*IMAX*JMAX)
-  integer , intent(in) :: ijk_cld                            !
-  real(RP), intent(inout) :: ga( nccn,KMAX*IMAX*JMAX )
+  !-----------------------------------------------------------------------------
+  subroutine faero( ijkmax,f0,ga )
+
+  integer , intent(in) :: ijkmax                            !
+  real(RP), intent(in) :: f0(ijkmax)
+  real(RP), intent(inout) :: ga( nccn,ijkmax )
   real(RP) :: gaero( nccn ) !, f1, radmax, radmin
   real(RP), parameter :: alpha = 3.0_RP
   integer :: n
   integer :: ijk
 
-  do ijk = 1, ijk_cld
+  do ijk = 1, ijkmax
 
      do n = 1, nccn
       gaero( n ) = f0(ijk)*marate( n )*expxactr( n )/dxaer
@@ -3618,7 +3481,7 @@ contains
 
   end subroutine random_setup
   !-----------------------------------------------------------------------------
-  subroutine  r_collcoag( dtime, ijk_cld, swgt, temp, gc )
+  subroutine  r_collcoag( dtime, ijkmax, swgt, temp, gc )
   !-------------------------------------------------------------------------------
   !--- reference paper
   !    Bott et al. (1998) J. Atmos. Sci. vol.55, pp. 2284-
@@ -3628,10 +3491,10 @@ contains
   use scale_random, only: &
       RANDOM_get
   real(RP), intent(in) :: dtime   !  time step
-  integer,  intent(in) :: ijk_cld    ! type of species coagulated(small) particle
+  integer,  intent(in) :: ijkmax    ! type of species coagulated(small) particle
   real(RP), intent(in) :: swgt
-  real(RP), intent(in) :: temp( KMAX*IMAX*JMAX )  ! size distribution function (hydrometeor): mass
-  real(RP), intent(inout) :: gc( nbin,nspc,KMAX*IMAX*JMAX )  ! size distribution function (hydrometeor): mass
+  real(RP), intent(in) :: temp( ijkmax )  ! size distribution function (hydrometeor): mass
+  real(RP), intent(inout) :: gc( nbin,nspc,ijkmax )  ! size distribution function (hydrometeor): mass
   !
   !--- local variables
   integer :: i, j, k, l
@@ -3649,10 +3512,10 @@ contains
 !  real(RP) :: beta
   real(RP) :: tmpi, tmpj
 
-  integer :: ibnd( KMAX*IMAX*JMAX )
-  integer :: iflg( nspc,KMAX*IMAX*JMAX )
-  integer :: iexst( nbin,nspc,KMAX*IMAX*JMAX )
-  real(RP) :: csum( nspc,KMAX*IMAX*JMAX )
+  integer :: ibnd( ijkmax )
+  integer :: iflg( nspc,ijkmax )
+  integer :: iexst( nbin,nspc,ijkmax )
+  real(RP) :: csum( nspc,ijkmax )
   integer :: ijk, nn, mm, pp, qq, myu, n, isml, ilrg, irsl
   !-----------------------------------------------------
 
@@ -3661,7 +3524,7 @@ contains
   iflg( :,: ) = 0
   iexst( :,:,: ) = 0
   csum( :,: ) = 0.0_RP
-  do ijk = 1, ijk_cld
+  do ijk = 1, ijkmax
      !--- judgement of particle existence
      do n = 1, nbin
        csum( il,ijk ) = csum( il,ijk ) + gc( n,il,ijk )*dxmic
@@ -3697,7 +3560,7 @@ contains
   enddo
 
 !OCL PARALLEL
-  do ijk = 1, ijk_cld
+  do ijk = 1, ijkmax
     do isml = 1, nspc
     do nn = 1, iflg( isml,ijk )
 
