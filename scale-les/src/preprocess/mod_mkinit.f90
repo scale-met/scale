@@ -85,7 +85,7 @@ module mod_mkinit
      RHOT, &
      QTRC
   use mod_atmos_phy_ae_vars, only: &
-     CCN => ATMOS_PHY_AE_CCN 
+     CCN => ATMOS_PHY_AE_CCN
   use mod_realinput
   !-----------------------------------------------------------------------------
   implicit none
@@ -605,9 +605,9 @@ contains
     integer, parameter ::  ia_kp  = 5
     integer, parameter ::  ik_out  = 1
 
-    real(RP) :: m0_init = 0.0_RP    ! initial total num. conc. of modes (Atk,Acm,Cor) [#/m3]   
-    real(RP) :: dg_init = 80.e-9_RP ! initial number equivalen diameters of modes     [m]      
-    real(RP) :: sg_init = 1.6_RP    ! initial standard deviation                      [-]    
+    real(RP) :: m0_init = 0.0_RP    ! initial total num. conc. of modes (Atk,Acm,Cor) [#/m3]
+    real(RP) :: dg_init = 80.e-9_RP ! initial number equivalen diameters of modes     [m]
+    real(RP) :: sg_init = 1.6_RP    ! initial standard deviation                      [-]
 
     real(RP) :: d_min_inp(3)
     real(RP) :: d_max_inp(3)
@@ -620,7 +620,7 @@ contains
     integer,  parameter :: n_kap_def = 1        ! number of kappa bins
     real(RP), parameter :: k_min_def = 0.e0_RP  ! lower bound of 1st kappa bin
     real(RP), parameter :: k_max_def = 1.e0_RP  ! upper bound of last kappa bin
-    real(RP) :: c_kappa = 0.3_RP     ! hygroscopicity of condensable mass              [-]  
+    real(RP) :: c_kappa = 0.3_RP     ! hygroscopicity of condensable mass              [-]
 
     NAMELIST / PARAM_AERO / &
        m0_init, &
@@ -847,12 +847,12 @@ contains
     enddo
     enddo
     enddo
- 
-    return       
+
+    return
 
   end subroutine AEROSOL_setup
   !----------------------------------------------------------------------------------------
-  ! subroutine 4. aerosol_activation   
+  ! subroutine 4. aerosol_activation
   !   Abdul-Razzak et al.,   JGR, 1998 [AR98]
   !   Abdul-Razzak and Ghan, JGR, 2000 [AR00]
   !----------------------------------------------------------------------------------------
@@ -864,11 +864,11 @@ contains
       CONST_Mvap, &            ! mean molecular weight for water vapor [g/mol]
       CONST_DWATR, &           ! water density   [kg/m3]
       CONST_R, &               ! universal gas constant             [J/mol/K]
-      CONST_TEM00  
+      CONST_TEM00
   implicit none
     !i/o variables
-      real(RP),intent(in) :: super      ! supersaturation                                 [-]   
-      real(RP),intent(in) :: c_kappa    ! hygroscopicity of condensable mass              [-]   
+      real(RP),intent(in) :: super      ! supersaturation                                 [-]
+      real(RP),intent(in) :: c_kappa    ! hygroscopicity of condensable mass              [-]
       real(RP),intent(in) :: temp_k     ! temperature
       integer, intent(in) :: ia_m0, ia_m2, ia_m3
       integer, intent(in) :: n_atr
@@ -888,7 +888,7 @@ contains
       real(RP) :: am,scrit_am,aa,tc,st,bb,ac
       real(RP) :: m0t,m2t,m3t,dgt,sgt,dm2
       real(RP) :: d_crit                  ! critical diameter
-      real(RP) :: tmp1, tmp2, tmp3        ! 
+      real(RP) :: tmp1, tmp2, tmp3        !
       real(RP) :: ccn_frc,cca_frc,ccv_frc ! activated number,area,volume
       integer  :: is0, ik, ic
 
@@ -923,7 +923,7 @@ contains
         am  = dgt * 0.5_RP  !geometric dry mean radius [m]
         bb  = c_kappa
         if (bb > 0._RP .and. am > 0._RP ) then
-          scrit_am = 2._RP/sqrt(bb)*(aa/(3._RP*am))**1.5_RP !AR00 Eq.9 
+          scrit_am = 2._RP/sqrt(bb)*(aa/(3._RP*am))**1.5_RP !AR00 Eq.9
         else
           scrit_am = 0._RP
         endif
@@ -1028,7 +1028,7 @@ contains
     real(RP) :: R_MAX        = 1.E-06_RP
     real(RP) :: R_MIN        = 1.E-08_RP
     real(RP) :: A_ALPHA      = 3.0_RP
-    real(RP) :: rhoa         = 2.25E+03_RP
+    real(RP) :: RHO_AERO     = 2.25E+03_RP
     integer  :: nbin_i       = 33
     integer  :: nccn_i       = 20
 
@@ -1038,7 +1038,7 @@ contains
        R_MAX,        &
        R_MIN,        &
        A_ALPHA,      &
-       rhoa,         &
+       RHO_AERO,     &
        nccn_i,       &
        nbin_i
 
@@ -1066,8 +1066,8 @@ contains
     allocate( xactr(nccn_i) )
     allocate( xabnd(nccn_i+1) )
 
-    xasta = log( rhoa*4.0_RP/3.0_RP*pi * ( R_MIN )**3 )
-    xaend = log( rhoa*4.0_RP/3.0_RP*pi * ( R_MAX )**3 )
+    xasta = log( RHO_AERO*4.0_RP/3.0_RP*pi * ( R_MIN )**3 )
+    xaend = log( RHO_AERO*4.0_RP/3.0_RP*pi * ( R_MAX )**3 )
     dxaer = ( xaend-xasta )/nccn_i
     do iq = 1, nccn_i+1
       xabnd( iq ) = xasta + dxaer*( iq-1 )
@@ -1076,7 +1076,7 @@ contains
       xactr( iq ) = ( xabnd( iq )+xabnd( iq+1 ) )*0.5_RP
     enddo
     do iq = 1, nccn_i
-      gan( iq ) = faero( F0_AERO,R0_AERO,xactr( iq ), A_ALPHA, rhoa )*exp( xactr(iq) )
+      gan( iq ) = faero( F0_AERO,R0_AERO,xactr( iq ), A_ALPHA, RHO_AERO )*exp( xactr(iq) )
     enddo
 
     !--- Hydrometeor is zero at initial time for Bin method
@@ -4695,8 +4695,8 @@ enddo
       call SATURATION_pres2qsat_all( qsat,init_temp,init_pres )
       QTRC(k,i,j,I_QV) = ( init_ssliq + 1.0_RP )*qsat
     enddo
-    enddo 
-    enddo 
+    enddo
+    enddo
 
     call AEROSOL_setup
 

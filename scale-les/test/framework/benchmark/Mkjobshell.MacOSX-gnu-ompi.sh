@@ -57,12 +57,14 @@ if [ ! ${DATDISTS[0]} = "" ]; then
    done
 fi
 
+if [ ! ${PPNAME}   = "NONE" ]; then
+   echo "${MPIEXEC} ${BINDIR}/${PPNAME}   ${PPCONF}   || exit 1" >> ./run.sh
+fi
 
-cat << EOF2 >> ./run.sh
+if [ ! ${INITNAME} = "NONE" ]; then
+   echo "${MPIEXEC} ${BINDIR}/${INITNAME} ${INITCONF} || exit 1" >> ./run.sh
+fi
 
-# run
-${MPIEXEC} ${BINDIR}/${INITNAME} ${INITCONF} || exit 1
-${MPIEXEC} ${BINDIR}/${BINNAME}  ${RUNCONF}  || exit 1
-
-################################################################################
-EOF2
+if [ ! ${BINNAME} = "NONE" ]; then
+   echo "${MPIEXEC} ${BINDIR}/${BINNAME}  ${RUNCONF}  || exit 1" >> ./run.sh
+fi
