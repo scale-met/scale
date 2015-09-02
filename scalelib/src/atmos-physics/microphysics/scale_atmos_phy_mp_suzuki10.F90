@@ -236,11 +236,11 @@ contains
        CONST_DWATR, &
        CONST_DICE
     use scale_comm, only: &
+       COMM_world,    &
        COMM_datatype
     use scale_grid, only: &
        CDZ => GRID_CDZ, &
-       CZ  => GRID_CZ,  &
-       FZ  => GRID_FZ
+       CZ  => GRID_CZ
     use scale_time, only: &
        TIME_DTSEC_ATMOS_PHY_MP
     use scale_tracer, only: &
@@ -289,7 +289,6 @@ contains
     integer :: nnspc, nnbin
     integer :: nn, mm, mmyu, nnyu
     integer :: myu, nyu, i, j, k, n, ierr
-    integer :: COMM_world
     !---------------------------------------------------------------------------
 
     !--- allocation
@@ -523,16 +522,14 @@ contains
 
     endif
 
-    n = nspc_mk*nspc_mk*nbin*nbin
-    COMM_world = MPI_COMM_WORLD
-    call MPI_BCAST( xctr, nbin,             COMM_datatype, PRC_masterrank, COMM_world, ierr )
-    call MPI_BCAST( dxmic,1,                COMM_datatype, PRC_masterrank, COMM_world, ierr )
-    call MPI_BCAST( xbnd, nbin+1,           COMM_datatype, PRC_masterrank, COMM_world, ierr )
-    call MPI_BCAST( cctr, nbin*nspc_mk,     COMM_datatype, PRC_masterrank, COMM_world, ierr )
-    call MPI_BCAST( cbnd, (nbin+1)*nspc_mk, COMM_datatype, PRC_masterrank, COMM_world, ierr )
-    call MPI_BCAST( ck,   n,                COMM_datatype, PRC_masterrank, COMM_world, ierr )
-    call MPI_BCAST( br, nbin*nspc_mk,       COMM_datatype, PRC_masterrank, COMM_world, ierr )
-    call MPI_BCAST( vt, nbin*nspc_mk,       COMM_datatype, PRC_masterrank, COMM_world, ierr )
+    call MPI_BCAST( xctr, nbin,                      COMM_datatype, PRC_masterrank, COMM_world, ierr )
+    call MPI_BCAST( dxmic,1,                         COMM_datatype, PRC_masterrank, COMM_world, ierr )
+    call MPI_BCAST( xbnd, nbin+1,                    COMM_datatype, PRC_masterrank, COMM_world, ierr )
+    call MPI_BCAST( cctr, nbin*nspc_mk,              COMM_datatype, PRC_masterrank, COMM_world, ierr )
+    call MPI_BCAST( cbnd, (nbin+1)*nspc_mk,          COMM_datatype, PRC_masterrank, COMM_world, ierr )
+    call MPI_BCAST( ck,   nspc_mk*nspc_mk*nbin*nbin, COMM_datatype, PRC_masterrank, COMM_world, ierr )
+    call MPI_BCAST( br, nbin*nspc_mk,                COMM_datatype, PRC_masterrank, COMM_world, ierr )
+    call MPI_BCAST( vt, nbin*nspc_mk,                COMM_datatype, PRC_masterrank, COMM_world, ierr )
 
     !--- aerosol ( CCN ) (not supported)
     if( nccn /= 0 ) then
@@ -662,10 +659,7 @@ contains
        TIME_DTSEC_ATMOS_PHY_MP, &
        TIME_NOWDAYSEC
     use scale_grid, only: &
-       GRID_CZ,  &
-       GRID_FZ,  &
-       GRID_CDZ, &
-       GRID_FDZ
+       GRID_CDZ
     use scale_comm, only: &
        COMM_vars8, &
        COMM_wait
@@ -677,8 +671,7 @@ contains
     use scale_atmos_phy_mp_common, only: &
        MP_negative_fixer => ATMOS_PHY_MP_negative_fixer
     use scale_tracer, only: &
-       QAD => QA, &
-       MP_QAD => MP_QA
+       QAD => QA
     implicit none
 
     real(RP), intent(inout) :: DENS(KA,IA,JA)
@@ -723,10 +716,9 @@ contains
     real(RP) :: dt
     real(RP) :: ct
 
-    real(RP) :: wfall( KA )
-    real(RP) :: sum1, sum2
+    real(RP) :: sum1
     integer :: m, n, k, i, j, iq, countbin
-    logical, save :: ofirst_sdfa = .true.
+!    logical, save :: ofirst_sdfa = .true.
     real(RP) :: SFLX_AERO(IA,JA,nccn)
     real(RP) :: Uabs, bparam
     real(RP) :: AMR(KA,IA,JA)
@@ -1440,9 +1432,7 @@ contains
     real(RP), intent(in)    :: dtime                  ! Time step interval
 
   real(RP) :: ssliq(ijkmax)
-!  real(RP) :: ssice(ijkmax)       ! supersaturation of liquid and ice
   real(RP) :: qlevp(ijkmax)              ! LH
-  real(RP) :: sumold, sumnew
   real(RP) :: dmp
   integer :: n
   !
@@ -1524,11 +1514,10 @@ contains
 
   real(RP) :: gan( nccn )           ! size distribution function ( aerosol ) : number ( gan = ga/exp( xactr ) )
   real(RP) :: ssliq, ssice, qlevp   ! supersaturatioin of liq. and ice, and LH
-  real(RP) :: sumold, sumnew
   real(RP) :: acoef, bcoef          ! A and B in eq. (A.11) of Suzuki (2004)
   real(RP) :: rcrit                 ! critical radius (rcrit, r_N,crit of (A.11) of Suzuki (2004))
   real(RP) :: xcrit                 ! exp of hydrometeror whose radi is corresponding to rcrit (xcrit)
-  real(RP) :: ractr, rcld, xcld, part, vdmp, dmp
+  real(RP) :: ractr, rcld, xcld, part, dmp
   integer :: n, nc, ncrit
 !  integer, allocatable, save :: ncld( : )
 !  integer, save :: ncld( 1:nccn )
@@ -1781,7 +1770,7 @@ contains
 !  real(RP) :: old_sum_gcn, new_sum_gcn
   integer  :: iflg( il,ijkmax )                ! flag whether calculation is conduct or not
   real(RP) :: csum( il,ijkmax )
-  real(RP) :: f1, f2, fmyu, emu, cefd, cefk, festl, psat
+  real(RP) :: f1, f2, emu, cefd, cefk, festl, psat
   real(RP), parameter :: afmyu = 1.72E-05_RP, bfmyu = 3.93E+2_RP
   real(RP), parameter :: cfmyu = 1.2E+02_RP, fct = 1.4E+3_RP
   real(RP) :: zerosw, qvtmp
@@ -2089,7 +2078,7 @@ contains
   real(RP) :: dtcnd(ijkmax)                        ! dt for condensation with considering CFL condition
   real(RP) :: sblmss(ijkmax)
   real(RP) :: gtice(ijkmax), umax(ijkmax)
-  real(RP) :: qlevp(ijkmax), qlsbl(ijkmax)
+  real(RP) :: qlsbl(ijkmax)
   real(RP) :: cefice, d, uval, sicetnd
   real(RP) :: sumice(ijkmax)
   real(RP) :: ssliq(ijkmax), ssice(ijkmax)
@@ -2098,7 +2087,7 @@ contains
   real(RP) :: dumm_regene(ijkmax)
   integer :: iflg( nspc,ijkmax )
   integer :: csum( nspc,ijkmax )
-  real(RP) :: f1, f2, fmyu, emu, cefd, cefk, festl, festi, psat
+  real(RP) :: f1, f2, emu, cefd, cefk, festi, psat
   real(RP), parameter :: afmyu = 1.72E-05_RP, bfmyu = 3.93E+2_RP
   real(RP), parameter :: cfmyu = 1.2E+02_RP, fct = 1.4E+3_RP
   integer :: ijk, mm, nn, loopflg(ijkmax)
@@ -2418,7 +2407,7 @@ contains
   real(RP) :: dumm_regene(ijkmax)
   real(RP) :: csum( nspc,ijkmax )
   integer :: iflg( nspc,ijkmax )
-  real(RP) :: f1, f2, fmyu, emu, cefd, cefk, festl, festi, psat
+  real(RP) :: f1, f2, emu, cefd, cefk, festl, festi, psat
   real(RP), parameter :: afmyu = 1.72E-05_RP, bfmyu = 3.93E+2_RP
   real(RP), parameter :: cfmyu = 1.2E+02_RP, fct = 1.4E+3_RP
   real(RP) :: qvtmp, zerosw
@@ -2800,7 +2789,7 @@ contains
 
   real(RP) :: ssliq, ssice
   real(RP) :: numin, tdel, qdel
-  real(RP), parameter :: n0 = 1.E+3_RP                       ! N_{IN0} in page 112 of Suzuki (2004)
+!  real(RP), parameter :: n0 = 1.E+3_RP                       ! N_{IN0} in page 112 of Suzuki (2004)
   real(RP), parameter :: acoef = -0.639_RP, bcoef = 12.96_RP ! A and B in paeg 112 of Suzuki (2004)
   ! threshould to determine the type of freezed hydrometeor (the detail is described in page 113 of Suzuki(2004))
   real(RP), parameter :: tcolmu = 269.0_RP, tcolml = 265.0_RP! -4[degC], -8[degC]
@@ -2879,9 +2868,9 @@ contains
   real(RP), parameter :: coefa = 1.0E-01_RP   ! a_{fr} of eq.(3.19) of Suzuki (2004)
   real(RP), parameter :: coefb = 0.66_RP      ! b_{fr} of eq.(3.19) of Suzuki (2004)
   real(RP), parameter :: rbound = 2.0E-04_RP  ! 200 um
-  real(RP), parameter :: tthreth = 235.0_RP   ! -38 [degC] threshold for using Bigg's parameterization
-  real(RP), parameter :: ncoefim = 1.0E+7_RP  ! N_{im0} of eq.(3.18) of Suzuki (2004)
-  real(RP), parameter :: gamm = 3.3_RP        ! gamma of eq.(3.18) of Suzuki (2004)
+!  real(RP), parameter :: tthreth = 235.0_RP   ! -38 [degC] threshold for using Bigg's parameterization
+!  real(RP), parameter :: ncoefim = 1.0E+7_RP  ! N_{im0} of eq.(3.18) of Suzuki (2004)
+!  real(RP), parameter :: gamm = 3.3_RP        ! gamma of eq.(3.18) of Suzuki (2004)
   integer :: ijk, indirect
 
     call PROF_rapstart('MP_SBM_Freezing', 1)
@@ -3373,7 +3362,7 @@ contains
   real(RP), intent(in) :: f0(ijkmax)
   real(RP), intent(inout) :: ga( nccn,ijkmax )
   real(RP) :: gaero( nccn ) !, f1, radmax, radmin
-  real(RP), parameter :: alpha = 3.0_RP
+!  real(RP), parameter :: alpha = 3.0_RP
   integer :: n
   integer :: ijk
 
