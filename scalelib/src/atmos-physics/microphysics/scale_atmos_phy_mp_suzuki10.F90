@@ -30,7 +30,6 @@ module scale_atmos_phy_mp_suzuki10
   !
   !++ Used modules
   !
-  use mpi
   use scale_precision
   use scale_stdio
   use scale_prof
