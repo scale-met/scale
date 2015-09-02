@@ -66,12 +66,15 @@ module scale_atmos_phy_mp_suzuki10
      TEMP0 => CONST_TEM00, &
      RHOW  => CONST_DWATR
   use scale_atmos_saturation, only: &
+     SATURATION_pres2qsat_liq => ATMOS_SATURATION_pres2qsat_liq, &
+     SATURATION_pres2qsat_ice => ATMOS_SATURATION_pres2qsat_ice, &
      LovR_liq,     &
      LovR_ice,     &
      CPovR_liq,    &
      CPovR_ice
-  use scale_history, only: &
-     HIST_in
+  use scale_atmos_thermodyn, only: &
+     THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres, &
+     THERMODYN_pott      => ATMOS_THERMODYN_pott
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -138,7 +141,7 @@ module scale_atmos_phy_mp_suzuki10
   real(RP) :: dxaer                          !--- d( log(ma) ) of aerosol bin
   real(RP) :: xasta                          !--- exponential of mass of aerosol for smallest aerosol bin
   real(RP) :: xaend                          !--- exponential of mass of aerosol for largest aerosol bin
-  real(RP), allocatable, save :: velw( :,:,:,: )      ! terminal velocity
+  real(RP), allocatable, save :: vterm( :,:,:,: )      ! terminal velocity
   integer, private, save :: MP_NSTEP_SEDIMENTATION    ! number of fractional step for sedimentation
   real(RP), private, save :: MP_RNSTEP_SEDIMENTATION  ! 1/MP_NSTEP_SEDIMENTATION
   real(RP), private, save :: MP_DTSEC_SEDIMENTATION   ! DT for sedimentation
@@ -600,11 +603,11 @@ contains
      enddo
     endif
 
-    allocate( velw(KA,IA,JA,QAD) )
-    velw(:,:,:,:) = 0.0_RP
+    allocate( vterm(KA,IA,JA,QAD) )
+    vterm(:,:,:,:) = 0.0_RP
     do myu = 1, nspc
     do n = 1, nbin
-      velw(:,:,:,I_QV+(myu-1)*nbin+n) = -vt( myu,n )
+      vterm(:,:,:,I_QV+(myu-1)*nbin+n) = -vt( myu,n )
     enddo
     enddo
     do n = 1, nbin
@@ -655,22 +658,20 @@ contains
        SFLX_snow  )
     use scale_grid_index
     use scale_time, only: &
-       TIME_DTSEC_ATMOS_PHY_MP, &
-       TIME_NOWDAYSEC
-    use scale_grid, only: &
-       GRID_CDZ
-    use scale_comm, only: &
-       COMM_vars8, &
-       COMM_wait
-    use scale_atmos_thermodyn, only: &
-       AQ_CV, &
-       AQ_CP
-    use scale_atmos_phy_mp_common, only: &
-       MP_precipitation => ATMOS_PHY_MP_PRECIPITATION
-    use scale_atmos_phy_mp_common, only: &
-       MP_negative_fixer => ATMOS_PHY_MP_negative_fixer
+       dt => TIME_DTSEC_ATMOS_PHY_MP
     use scale_tracer, only: &
        QAD => QA
+    use scale_atmos_thermodyn, only: &
+       THERMODYN_rhoe        => ATMOS_THERMODYN_rhoe,       &
+       THERMODYN_rhot        => ATMOS_THERMODYN_rhot,       &
+       THERMODYN_temp_pres_E => ATMOS_THERMODYN_temp_pres_E
+    use scale_atmos_phy_mp_common, only: &
+       MP_negative_fixer => ATMOS_PHY_MP_negative_fixer, &
+       MP_precipitation  => ATMOS_PHY_MP_precipitation
+    use scale_comm, only: &
+       COMM_barrier
+!    use scale_grid, only: &
+!       GRID_CDZ
     implicit none
 
     real(RP), intent(inout) :: DENS(KA,IA,JA)
@@ -683,26 +684,19 @@ contains
     real(RP), intent(out)   :: SFLX_rain(IA,JA)
     real(RP), intent(out)   :: SFLX_snow(IA,JA)
 
-    real(RP) :: VELX (IA,JA)
-    real(RP) :: VELY (IA,JA)
+    real(RP) :: RHOE (KA,IA,JA)
+    real(RP) :: POTT (KA,IA,JA)
     real(RP) :: TEMP (KA,IA,JA)
     real(RP) :: PRES (KA,IA,JA)
-    real(RP) :: rrhog(KA,IA,JA)
-    real(RP) :: qd   (KA,IA,JA)
-    real(RP) :: cva  (KA,IA,JA)
-    real(RP) :: cpa  (KA,IA,JA)
-    real(RP) :: rhoge(KA,IA,JA)
-    real(RP) :: th   (KA,IA,JA)
+    real(RP) :: qsat (KA,IA,JA)
     real(RP) :: ssliq(KA,IA,JA)
     real(RP) :: ssice(KA,IA,JA)
-    real(RP) :: Rmoist
-    real(RP) :: psat
 
     integer  :: ijk_index (KIJMAX,3)
     integer  :: index_cld (KIJMAX)
-    integer  :: index_cld2(KIJMAX)
-    integer  :: index_cld3(KIJMAX)
-    integer  :: ijkcount, ijk_cld2, ijk_cld3
+    integer  :: index_cold(KIJMAX)
+    integer  :: index_warm(KIJMAX)
+    integer  :: ijkcount, ijkcount_cold, ijkcount_warm
     integer  :: ijk, indirect
 
     real(RP) :: DENS_ijk(KIJMAX)
@@ -710,44 +704,38 @@ contains
     real(RP) :: TEMP_ijk(KIJMAX)
     real(RP) :: Qvap_ijk(KIJMAX)
     real(RP) :: Ghyd_ijk(nbin,nspc,KIJMAX)
-    real(RP) :: Gaer_ijk(nccn1,KIJMAX)
+    real(RP) :: Gaer_ijk(nccn1    ,KIJMAX)
+    real(RP) :: cldsum
+    integer  :: countbin
 
-    real(RP) :: dt
-    real(RP) :: ct
-
-    real(RP) :: sum1
-    integer :: m, n, k, i, j, iq, countbin
 !    logical, save :: ofirst_sdfa = .true.
-    real(RP) :: SFLX_AERO(IA,JA,nccn)
-    real(RP) :: Uabs, bparam
-    real(RP) :: AMR(KA,IA,JA)
+!    real(RP) :: VELX (IA,JA)
+!    real(RP) :: VELY (IA,JA)
+!    real(RP) :: SFLX_AERO(IA,JA,nccn)
+!    real(RP) :: Uabs, bparam
+!    real(RP) :: AMR(KA,IA,JA)
 
+    real(RP) :: FLX_rain  (KA,IA,JA)
+    real(RP) :: FLX_snow  (KA,IA,JA)
     real(RP) :: wflux_rain(KA,IA,JA)
     real(RP) :: wflux_snow(KA,IA,JA)
-    real(RP) :: flux_rain (KA,IA,JA)
-    real(RP) :: flux_snow (KA,IA,JA)
     integer  :: step
+    integer  :: k, i, j, m, n, iq
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('MP_SBM', 1)
+    if    ( nspc == 1 ) then
+       if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Cloud microphysics(SBM Liquid water only)'
+    elseif( nspc >  1 ) then
+       if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Cloud microphysics(SBM Mixed phase)'
+    endif
 
-     if( MP_donegative_fixer ) then
+    if ( MP_donegative_fixer ) then
        call MP_negative_fixer( DENS(:,:,:),  & ! [INOUT]
                                RHOT(:,:,:),  & ! [INOUT]
                                QTRC(:,:,:,:) ) ! [INOUT]
-       QTRC(:,:,:,QQE+1:QAD) = max( QTRC(:,:,:,QQE+1:QAD),0.0_RP )
-     endif
-
-    if( nspc == 1 ) then
-     if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Cloud microphysics(SBM Liquid water only)'
-    elseif( nspc == 7 ) then
-     if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Cloud microphysics(SBM Mixed phase)'
     endif
 
     call PROF_rapstart('MP_ijkconvert', 1)
-
-    dt = TIME_DTSEC_ATMOS_PHY_MP
-    ct = TIME_NOWDAYSEC
 
     ijk = 0
     do j = JS, JE
@@ -761,30 +749,39 @@ contains
     enddo
     enddo
 
+    call THERMODYN_temp_pres( TEMP(:,:,:),  & ! [OUT]
+                              PRES(:,:,:),  & ! [OUT]
+                              DENS(:,:,:),  & ! [IN]
+                              RHOT(:,:,:),  & ! [IN]
+                              QTRC(:,:,:,:) ) ! [IN]
+
+    call SATURATION_pres2qsat_liq( qsat(:,:,:), & ! [OUT]
+                                   TEMP(:,:,:), & ! [IN]
+                                   PRES(:,:,:)  ) ! [IN]
+
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       rrhog(k,i,j) = 1.0_RP / DENS(k,i,j)
-       th(k,i,j) = RHOT(k,i,j) * rrhog(k,i,j)
-       CALC_QDRY( qd(k,i,j), QTRC, k, i, j, iq )
-       CALC_CV( cva(k,i,j), qd(k,i,j), QTRC, k, i, j, iq, CONST_CVdry, AQ_CV )
-       CALC_R( Rmoist, QTRC(k,i,j,I_QV), qd(k,i,j), CONST_Rdry, CONST_Rvap )
-       cpa(k,i,j) = cva(k,i,j) + Rmoist
-       CALC_PRE( PRES(k,i,j), DENS(k,i,j), th(k,i,j), Rmoist, cpa(k,i,j), CONST_PRE00 )
-       TEMP(k,i,j) = PRES(k,i,j) / ( DENS(k,i,j) * Rmoist )
+       ssliq(k,i,j) = QTRC(k,i,j,I_QV) / qsat(k,i,j) - 1.0_RP
+    enddo
+    enddo
+    enddo
 
-       psat = CONST_PSAT0 * ( TEMP(k,i,j) * RTEM00 )**CPovR_liq   &
-            * exp( LovR_liq * ( RTEM00 - 1.0_RP/TEMP(k,i,j) ) )
-       ssliq(k,i,j) = CONST_EPSvap * psat / ( PRES(k,i,j) - ( 1.0_RP-CONST_EPSvap ) * psat )
-       ssliq(k,i,j) = QTRC(k,i,j,I_QV) / ssliq(k,i,j) - 1.0_RP
+    if ( nspc == 1 ) then
+       ssice(:,:,:) = 0.0_RP
+    else
+       call SATURATION_pres2qsat_ice( qsat(:,:,:), & ! [OUT]
+                                      TEMP(:,:,:), & ! [IN]
+                                      PRES(:,:,:)  ) ! [IN]
 
-       psat = CONST_PSAT0 * ( TEMP(k,i,j) * RTEM00 )**CPovR_ice   &
-            * exp( LovR_ice * ( RTEM00 - 1.0_RP/TEMP(k,i,j) ) )
-       ssice(k,i,j) = CONST_EPSvap * psat / ( PRES(k,i,j) - ( 1.0_RP-CONST_EPSvap ) * psat )
-       ssice(k,i,j) = QTRC(k,i,j,I_QV) / ssice(k,i,j) - 1.0_RP
-    enddo
-    enddo
-    enddo
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          ssice(k,i,j) = QTRC(k,i,j,I_QV) / qsat(k,i,j) - 1.0_RP
+       enddo
+       enddo
+       enddo
+    endif
 
 !--- store initial SDF of aerosol
 !--- this option is not supported
@@ -808,114 +805,63 @@ contains
 !    endif
 
     !--- Arrange array for microphysics
-    if ( nspc == 1 ) then
+    ijkcount = 0
+    ijkcount_cold = 0
+    ijkcount_warm = 0
 
-       ijkcount = 0
+    ijk = 0
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       ijk = ijk + 1
 
-       ijk = 0
-       do j = JS, JE
-       do i = IS, IE
-       do k = KS, KE
-          ijk = ijk + 1
+       cldsum   = 0.0_RP
+       countbin = QQS
+       do m = 1, nspc
+       do n = 1, nbin
+         countbin = countbin + 1
+         cldsum   = cldsum + QTRC(k,i,j,countbin) * DENS(k,i,j) / dxmic
+       enddo
+       enddo
 
-          sum1     = 0.0_RP
-          countbin = I_QV
+       if (      cldsum > cldmin       &
+            .OR. ssliq(k,i,j) > 0.0_RP &
+            .OR. ssice(k,i,j) > 0.0_RP ) then
+
+          ijkcount = ijkcount + 1
+
+          index_cld(ijkcount) = ijk
+
+          DENS_ijk(ijkcount) = DENS(k,i,j)
+          PRES_ijk(ijkcount) = PRES(k,i,j)
+          TEMP_ijk(ijkcount) = TEMP(k,i,j)
+          Qvap_ijk(ijkcount) = QTRC(k,i,j,I_QV)
+
+          countbin = QQS
           do m = 1, nspc
           do n = 1, nbin
-            countbin = countbin + 1
-            sum1 = sum1 + QTRC(k,i,j,countbin) * DENS(k,i,j) / dxmic
+             countbin = countbin + 1
+             Ghyd_ijk(n,m,ijkcount) = QTRC(k,i,j,countbin) * DENS(k,i,j) / dxmic
           enddo
           enddo
 
-          if ( ssliq(k,i,j) > 0.0_RP .OR. sum1 > cldmin ) then
-             ijkcount = ijkcount + 1
+          do n = 1, nccn
+             countbin = countbin + 1
+             Gaer_ijk(n,ijkcount)   = QTRC(k,i,j,countbin) * DENS(k,i,j) / dxaer
+          enddo
 
-             index_cld(ijkcount) = ijk
-
-             DENS_ijk(ijkcount) = DENS(k,i,j)
-             PRES_ijk(ijkcount) = PRES(k,i,j)
-             TEMP_ijk(ijkcount) = TEMP(k,i,j)
-             Qvap_ijk(ijkcount) = QTRC(k,i,j,I_QV)
-
-             countbin = I_QV
-             do m = 1, nspc
-             do n = 1, nbin
-                countbin = countbin + 1
-                Ghyd_ijk(n,m,ijkcount) = QTRC(k,i,j,countbin) * DENS(k,i,j) / dxmic
-             enddo
-             enddo
-
-             if ( nccn /= 0 ) then
-                do n = 1, nccn
-                   countbin = countbin + 1
-                   Gaer_ijk(n,ijkcount) = QTRC(k,i,j,countbin) * DENS(k,i,j) / dxaer
-                enddo
-             endif
+          if ( TEMP(k,i,j) < CONST_TEM00 ) then ! cold
+            ijkcount_cold = ijkcount_cold + 1
+            index_cold(ijkcount_cold) = ijkcount
+          else ! warm
+            ijkcount_warm = ijkcount_warm + 1
+            index_warm(ijkcount_warm) = ijkcount
           endif
-       enddo
-       enddo
-       enddo
+       endif
 
-    elseif( nspc > 1 ) then  ! mixed phase rain with aerosol tracer
-
-       ijkcount = 0
-       ijk_cld2 = 0
-       ijk_cld3 = 0
-
-       ijk = 0
-       do j = JS, JE
-       do i = IS, IE
-       do k = KS, KE
-          ijk = ijk + 1
-
-          sum1     = 0.0_RP
-          countbin = I_QV
-          do m = 1, nspc
-          do n = 1, nbin
-            countbin = countbin + 1
-            sum1 = sum1 + QTRC(k,i,j,countbin) * DENS(k,i,j) / dxmic
-          enddo
-          enddo
-
-          if ( ssliq(k,i,j) > 0.0_RP .OR. ssice(k,i,j) > 0.0_RP .OR. sum1 > cldmin ) then
-             ijkcount = ijkcount + 1
-
-             index_cld(ijkcount) = ijk
-
-             DENS_ijk(ijkcount) = DENS(k,i,j)
-             PRES_ijk(ijkcount) = PRES(k,i,j)
-             TEMP_ijk(ijkcount) = TEMP(k,i,j)
-             Qvap_ijk(ijkcount) = QTRC(k,i,j,I_QV)
-
-             countbin = I_QV
-             do m = 1, nspc
-             do n = 1, nbin
-                countbin = countbin + 1
-                Ghyd_ijk(n,m,ijkcount) = QTRC(k,i,j,countbin) * DENS(k,i,j) / dxmic
-             enddo
-             enddo
-
-             if ( nccn /= 0 ) then
-                do n = 1, nccn
-                   countbin = countbin + 1
-                   Gaer_ijk(n,ijkcount) = QTRC(k,i,j,countbin) * DENS(k,i,j) / dxaer
-                enddo
-             endif
-
-             if ( TEMP(k,i,j) < CONST_TEM00 ) then ! cold
-               ijk_cld2 = ijk_cld2 + 1
-               index_cld2(ijk_cld2) = ijkcount
-             else ! warm
-               ijk_cld3 = ijk_cld3 + 1
-               index_cld3(ijk_cld3) = ijkcount
-             endif
-          endif
-
-       enddo
-       enddo
-       enddo
-
-    endif
+    enddo
+    enddo
+    enddo
 
     call PROF_rapend  ('MP_ijkconvert', 1)
 
@@ -969,71 +915,68 @@ contains
     call PROF_rapstart('MP_SBM_Sedim', 1)
     call PROF_rapend  ('MP_SBM_Sedim', 1)
 
-    if ( ijkcount == 0 ) then
-       call PROF_rapend  ('MP_SBM', 1)
-
-       return
-    endif
+    if ( ijkcount > 0 ) then
 
     call PROF_rapstart('MP_SBM_Main', 1)
 
     call MP_Suzuki10( ijkcount,                   & ! [IN]
-                      ijk_cld2,                   & ! [IN]
-                      ijk_cld3,                   & ! [IN]
-                      index_cld2(    1:ijkcount), & ! [IN]
-                      index_cld3(    1:ijkcount), & ! [IN]
+                      ijkcount_cold,              & ! [IN]
+                      ijkcount_warm,              & ! [IN]
+                      index_cold(    1:ijkcount), & ! [IN]
+                      index_warm(    1:ijkcount), & ! [IN]
                       DENS_ijk  (    1:ijkcount), & ! [IN]
                       PRES_ijk  (    1:ijkcount), & ! [IN]
                       TEMP_ijk  (    1:ijkcount), & ! [INOUT]
                       Qvap_ijk  (    1:ijkcount), & ! [INOUT]
                       Ghyd_ijk  (:,:,1:ijkcount), & ! [INOUT]
                       Gaer_ijk  (:,  1:ijkcount), & ! [INOUT]
-                      DT                          ) ! [IN]
+                      dt                          ) ! [IN]
 
     call PROF_rapend  ('MP_SBM_Main', 1)
+
+!    if( flg_sf_aero ) then
+!     do j = JS-2, JE+2
+!     do i = IS-2, IE+1
+!       VELX(i,j) = MOMX(K10_1,i,j) / ( DENS(K10_1,i+1,j)+DENS(K10_1,i,j) ) * R10M1 &
+!                 + MOMX(K10_2,i,j) / ( DENS(K10_2,i+1,j)+DENS(K10_2,i,j) ) * R10M2
+!     enddo
+!     enddo
+!
+!     do j = JS-2, JE+1
+!     do i = IS-2, IE+2
+!       VELY(i,j) = MOMY(K10_1,i,j) / ( DENS(K10_1,i,j+1)+DENS(K10_1,i,j) ) * R10M1 &
+!                 + MOMY(K10_2,i,j) / ( DENS(K10_2,i,j+1)+DENS(K10_2,i,j) ) * R10M2
+!     enddo
+!     enddo
+!    end if
+!
+!    !--- SURFACE FLUX by Monahan et al. (1986)
+!    if( flg_sf_aero .and. nccn /= 0 ) then
+!     do j = JS, JE
+!     do i = IS, IE
+!          ijk = ( j - JS ) * KMAX * IMAX &
+!              + ( i - IS ) * KMAX        &
+!              + ( KS - KS )              &
+!              + 1
+!       Uabs = sqrt(  ( ( VELX(i,j) + VELX(i-1,j  ) ) * 0.50_RP )**2 &
+!                   + ( ( VELY(i,j) + VELY(i  ,j-1) ) * 0.50_RP )**2 )
+!       do n = 1, nccn
+!        if( rada( n ) <= 2.0E-5_RP .and. rada( n ) >= 3.0E-7_RP ) then
+!         bparam = ( 0.38_RP - log( rada( n ) ) )/0.65_RP
+!         SFLX_AERO(i,j,n) = 1.373_RP * Uabs**( 3.41_RP ) * rada( n )**( -3.0_RP ) &
+!                          * ( 1.0_RP + 0.057_RP * rada( n )**( 1.05_RP ) ) &
+!                          * 10.0_RP**( 1.19_RP * exp( -bparam*bparam ) )
+!         ! convert from [#/m^2/um/s] -> [kg/m^3/unit log (m)]
+!         SFLX_AERO(i,j,n) = SFLX_AERO(i,j,n) / DENS(KS,i,j) &
+!                          / GRID_CDZ(KS) * rada( n ) / 3.0_RP * dt * expxactr( n )
+!         Gaer_ijk(n,ijk) = Gaer_ijk(n,ijk) + SFLX_AERO(i,j,n)/dxaer
+!        end if
+!       end do
+!     end do
+!     end do
+!    end if
+
     call PROF_rapstart('MP_ijkconvert', 1)
-
-    if( flg_sf_aero ) then
-     do j = JS-2, JE+2
-     do i = IS-2, IE+1
-       VELX(i,j) = MOMX(K10_1,i,j) / ( DENS(K10_1,i+1,j)+DENS(K10_1,i,j) ) * R10M1 &
-                 + MOMX(K10_2,i,j) / ( DENS(K10_2,i+1,j)+DENS(K10_2,i,j) ) * R10M2
-     enddo
-     enddo
-
-     do j = JS-2, JE+1
-     do i = IS-2, IE+2
-       VELY(i,j) = MOMY(K10_1,i,j) / ( DENS(K10_1,i,j+1)+DENS(K10_1,i,j) ) * R10M1 &
-                 + MOMY(K10_2,i,j) / ( DENS(K10_2,i,j+1)+DENS(K10_2,i,j) ) * R10M2
-     enddo
-     enddo
-    end if
-
-    !--- SURFACE FLUX by Monahan et al. (1986)
-    if( flg_sf_aero .and. nccn /= 0 ) then
-     do j = JS, JE
-     do i = IS, IE
-          ijk = ( j - JS ) * KMAX * IMAX &
-              + ( i - IS ) * KMAX        &
-              + ( KS - KS )              &
-              + 1
-       Uabs = sqrt(  ( ( VELX(i,j) + VELX(i-1,j  ) ) * 0.50_RP )**2 &
-                   + ( ( VELY(i,j) + VELY(i  ,j-1) ) * 0.50_RP )**2 )
-       do n = 1, nccn
-        if( rada( n ) <= 2.0E-5_RP .and. rada( n ) >= 3.0E-7_RP ) then
-         bparam = ( 0.38_RP - log( rada( n ) ) )/0.65_RP
-         SFLX_AERO(i,j,n) = 1.373_RP * Uabs**( 3.41_RP ) * rada( n )**( -3.0_RP ) &
-                          * ( 1.0_RP + 0.057_RP * rada( n )**( 1.05_RP ) ) &
-                          * 10.0_RP**( 1.19_RP * exp( -bparam*bparam ) )
-         ! convert from [#/m^2/um/s] -> [kg/m^3/unit log (m)]
-         SFLX_AERO(i,j,n) = SFLX_AERO(i,j,n) / DENS(KS,i,j) &
-                          / GRID_CDZ(KS) * rada( n ) / 3.0_RP * dt * expxactr( n )
-         Gaer_ijk(n,ijk) = Gaer_ijk(n,ijk) + SFLX_AERO(i,j,n)/dxaer
-        end if
-       end do
-     end do
-     end do
-    end if
 
     !---- return original array
     do ijk = 1, ijkcount
@@ -1045,26 +988,24 @@ contains
        TEMP(k,i,j)      = TEMP_ijk(ijk)
        QTRC(k,i,j,I_QV) = Qvap_ijk(ijk)
 
-       countbin = I_QV
+       countbin = QQS
        do m = 1, nspc
        do n = 1, nbin
           countbin = countbin + 1
-          QTRC(k,i,j,countbin) = Ghyd_ijk(n,m,ijkcount) / DENS(k,i,j) * dxmic
+          QTRC(k,i,j,countbin) = Ghyd_ijk(n,m,ijk) / DENS(k,i,j) * dxmic
        enddo
        enddo
 
-       if ( nccn /= 0 ) then
-          do n = 1, nccn
-             countbin = countbin + 1
-              QTRC(k,i,j,countbin) = Gaer_ijk(n,ijkcount) / DENS(k,i,j) * dxmic
-          enddo
-       endif
+       do n = 1, nccn
+          countbin = countbin + 1
+          QTRC(k,i,j,countbin) = Gaer_ijk(n,ijk)   / DENS(k,i,j) * dxaer
+       enddo
     enddo
 
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       countbin = I_QV
+       countbin = QQS
        do m = 1, nspc
        do n = 1, nbin
           countbin = countbin + 1
@@ -1077,152 +1018,127 @@ contains
     enddo
     enddo
 
-    if ( nccn /= 0 ) then
-       AMR(:,:,:) = 0.0_RP
-       do j = JS, JE
-       do i = IS, IE
-       do k = KS, KE
-          do n = 1, nccn
-             AMR(k,i,j) = AMR(k,i,j) + QTRC(k,i,j,QQE-1+n)
-          enddo
-       enddo
-       enddo
-       enddo
-    endif
+    call THERMODYN_pott( POTT(:,:,:),  & ! [OUT]
+                         TEMP(:,:,:),  & ! [IN]
+                         PRES(:,:,:),  & ! [IN]
+                         QTRC(:,:,:,:) ) ! [IN]
 
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       CALC_QDRY( qd(k,i,j), QTRC, k, i, j, iq )
-       CALC_CP( cpa(k,i,j), qd(k,i,j), QTRC, k, i, j, iq, CONST_CPdry, AQ_CP )
-       CALC_R( Rmoist, QTRC(k,i,j,I_QV), qd(k,i,j), CONST_Rdry, CONST_Rvap )
-       RHOT(k,i,j) = TEMP(k,i,j) * ( CONST_PRE00 / PRES(k,i,j) )**(Rmoist/cpa(k,i,j)) * DENS(k,i,j)
+       RHOT(k,i,j) = POTT(k,i,j) * DENS(k,i,j)
     enddo
     enddo
     enddo
+
+!    if ( nccn /= 0 ) then
+!       AMR(:,:,:) = 0.0_RP
+!       do j = JS, JE
+!       do i = IS, IE
+!       do k = KS, KE
+!          do n = 1, nccn
+!             AMR(k,i,j) = AMR(k,i,j) + QTRC(k,i,j,QQE-1+n)
+!          enddo
+!       enddo
+!       enddo
+!       enddo
+!    endif
 
     call PROF_rapend  ('MP_ijkconvert', 1)
-    call PROF_rapstart('MP_SBM_Sedim', 1)
-
-    !--- gravitational falling
-    if ( MP_doprecipitation ) then
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS-1, KE
-       flux_rain(k,i,j) = 0.0_RP
-       flux_snow(k,i,j) = 0.0_RP
-    enddo
-    enddo
-    enddo
-
-    do step = 1, MP_NSTEP_SEDIMENTATION
-
-       do j = JS, JE
-       do i = IS, IE
-       do k = KS, KE
-          th(k,i,j) = RHOT(k,i,j) / DENS(k,i,j)
-       enddo
-       do k = KS, KE
-          CALC_QDRY( qd(k,i,j), QTRC, k, i, j, iq )
-       enddo
-       do k = KS, KE
-          CALC_CV( cva(k,i,j), qd(k,i,j), QTRC, k, i, j, iq, CONST_CVdry, AQ_CV )
-       enddo
-       do k = KS, KE
-          CALC_R( Rmoist, QTRC(k,i,j,I_QV), qd(k,i,j), CONST_Rdry, CONST_Rvap )
-          cpa(k,i,j) = cva(k,i,j) + Rmoist
-          CALC_PRE( PRES(k,i,j), DENS(k,i,j), th(k,i,j), Rmoist, cpa(k,i,j), CONST_PRE00 )
-          TEMP(k,i,j) = PRES(k,i,j) / ( DENS(k,i,j) * Rmoist )
-       enddo
-       do k = KS, KE
-          rhoge(k,i,j) = DENS(k,i,j) * TEMP(k,i,j) * cva(k,i,j)
-       enddo
-       enddo
-       enddo
-
-       call MP_precipitation( &
-            wflux_rain, wflux_snow, &
-            DENS, MOMZ, MOMX, MOMY, &
-            rhoge, QTRC, &
-            velw, TEMP, &
-            MP_DTSEC_SEDIMENTATION )
-
-       do j = JS, JE
-       do i = IS, IE
-          do k = KS-1, KE
-             flux_rain(k,i,j) = flux_rain(k,i,j) + wflux_rain(k,i,j) * MP_RNSTEP_SEDIMENTATION
-             flux_snow(k,i,j) = flux_snow(k,i,j) + wflux_snow(k,i,j) * MP_RNSTEP_SEDIMENTATION
-          enddo
-       enddo
-       enddo
-
-    enddo
 
     endif
 
-    call PROF_rapend  ('MP_SBM_Sedim', 1)
+    call PROF_rapstart('MP_barrier', 1)
+    call COMM_barrier
+    call PROF_rapend  ('MP_barrier', 1)
 
-    if( MP_donegative_fixer ) then
+    FLX_rain(:,:,:) = 0.0_RP
+    FLX_snow(:,:,:) = 0.0_RP
+
+    if ( MP_doprecipitation ) then
+
+       call THERMODYN_rhoe( RHOE(:,:,:),  & ! [OUT]
+                            RHOT(:,:,:),  & ! [IN]
+                            QTRC(:,:,:,:) ) ! [IN]
+
+       do step = 1, MP_NSTEP_SEDIMENTATION
+
+          call THERMODYN_temp_pres_E( temp(:,:,:),  & ! [OUT]
+                                      pres(:,:,:),  & ! [OUT]
+                                      DENS(:,:,:),  & ! [IN]
+                                      RHOE(:,:,:),  & ! [IN]
+                                      QTRC(:,:,:,:) ) ! [IN]
+
+          call MP_precipitation( wflux_rain(:,:,:),     & ! [OUT]
+                                 wflux_snow(:,:,:),     & ! [OUT]
+                                 DENS    (:,:,:),       & ! [INOUT]
+                                 MOMZ    (:,:,:),       & ! [INOUT]
+                                 MOMX    (:,:,:),       & ! [INOUT]
+                                 MOMY    (:,:,:),       & ! [INOUT]
+                                 RHOE    (:,:,:),       & ! [INOUT]
+                                 QTRC    (:,:,:,:),     & ! [INOUT]
+                                 vterm   (:,:,:,:),     & ! [IN]
+                                 temp    (:,:,:),       & ! [IN]
+                                 MP_DTSEC_SEDIMENTATION ) ! [IN]
+
+          do j = JS, JE
+          do i = IS, IE
+          do k = KS-1, KE
+             FLX_rain(k,i,j) = FLX_rain(k,i,j) + wflux_rain(k,i,j) * MP_RNSTEP_SEDIMENTATION
+             FLX_snow(k,i,j) = FLX_snow(k,i,j) + wflux_snow(k,i,j) * MP_RNSTEP_SEDIMENTATION
+          enddo
+          enddo
+          enddo
+
+       enddo
+
+       call THERMODYN_rhot( RHOT(:,:,:),  & ! [OUT]
+                            RHOE(:,:,:),  & ! [IN]
+                            QTRC(:,:,:,:) ) ! [IN]
+    endif
+
+    !##### END MP Main #####
+
+    if ( MP_donegative_fixer ) then
        call MP_negative_fixer( DENS(:,:,:),  & ! [INOUT]
                                RHOT(:,:,:),  & ! [INOUT]
                                QTRC(:,:,:,:) ) ! [INOUT]
-       QTRC(:,:,:,QQE+1:QAD) = max( QTRC(:,:,:,QQE+1:QAD),0.0_RP )
     endif
 
-    SFLX_rain(:,:) = flux_rain(KS-1,:,:)
-    SFLX_snow(:,:) = flux_snow(KS-1,:,:)
+    SFLX_rain(:,:) = FLX_rain(KS-1,:,:)
+    SFLX_snow(:,:) = FLX_snow(KS-1,:,:)
 
-    call COMM_vars8( DENS(:,:,:), 1 )
-    call COMM_vars8( MOMZ(:,:,:), 2 )
-    call COMM_vars8( MOMX(:,:,:), 3 )
-    call COMM_vars8( MOMY(:,:,:), 4 )
-    call COMM_vars8( RHOT(:,:,:), 5 )
-    call COMM_wait ( DENS(:,:,:), 1 )
-    call COMM_wait ( MOMZ(:,:,:), 2 )
-    call COMM_wait ( MOMX(:,:,:), 3 )
-    call COMM_wait ( MOMY(:,:,:), 4 )
-    call COMM_wait ( RHOT(:,:,:), 5 )
-
-    do iq = 1, QAD
-       call COMM_vars8( QTRC(:,:,:,iq), iq )
-    enddo
-    do iq = 1, QAD
-       call COMM_wait ( QTRC(:,:,:,iq), iq )
-    enddo
-
-    call PROF_rapend  ('MP_SBM', 1)
-
-   return
+    return
   end subroutine ATMOS_PHY_MP_suzuki10
 
   !-----------------------------------------------------------------------------
   subroutine MP_Suzuki10( &
-       ijkmax,    &
-       ijk_cld2,  &
-       ijk_cld3,  &
-       indx_cld2, &
-       indx_cld3, &
-       dens,      &
-       pres,      &
-       temp,      &
-       qvap,      &
-       ghyd,      &
-       gaer,      &
-       dt         )
+       ijkmax,      &
+       ijkmax_cold, &
+       ijkmax_warm, &
+       index_cold,  &
+       index_warm,  &
+       dens,        &
+       pres,        &
+       temp,        &
+       qvap,        &
+       ghyd,        &
+       gaer,        &
+       dt           )
     implicit none
 
     integer,  intent(in)    :: ijkmax
-    integer,  intent(in)    :: ijk_cld2
-    integer,  intent(in)    :: ijk_cld3
-    integer , intent(in)    :: indx_cld2(ijkmax)
-    integer , intent(in)    :: indx_cld3(ijkmax)
-    real(RP), intent(in)    :: dens(ijkmax)           ! density of dry air
-    real(RP), intent(in)    :: pres(ijkmax)           ! pressure
-    real(RP), intent(inout) :: temp(ijkmax)           ! temperature
-    real(RP), intent(inout) :: qvap(ijkmax)           ! vapor mixing ratio
-    real(RP), intent(inout) :: ghyd(nbin,nspc,ijkmax) ! mass size distribution function of hydrometeor
-    real(RP), intent(inout) :: gaer(nccn1,    ijkmax) ! mass size distribution function of aerosol
-    real(RP), intent(in)    :: dt                     ! time interval
+    integer,  intent(in)    :: ijkmax_cold
+    integer,  intent(in)    :: ijkmax_warm
+    integer , intent(in)    :: index_cold(ijkmax)
+    integer , intent(in)    :: index_warm(ijkmax)
+    real(RP), intent(in)    :: dens      (ijkmax)           ! density of dry air
+    real(RP), intent(in)    :: pres      (ijkmax)           ! pressure
+    real(RP), intent(inout) :: temp      (ijkmax)           ! temperature
+    real(RP), intent(inout) :: qvap      (ijkmax)           ! vapor mixing ratio
+    real(RP), intent(inout) :: ghyd      (nbin,nspc,ijkmax) ! mass size distribution function of hydrometeor
+    real(RP), intent(inout) :: gaer      (nccn1,    ijkmax) ! mass size distribution function of aerosol
+    real(RP), intent(in)    :: dt                           ! time interval
     !---------------------------------------------------------------------------
 
     if ( nccn /= 0 ) then
@@ -1271,31 +1187,31 @@ contains
                          dt           ) ! [IN]
 
           ! freezing / melting
-          call freezing( ijkmax,       & ! [IN]
-                         ijk_cld2,     & ! [IN]
-                         indx_cld2(:), & ! [IN]
-                         dens(:),      & ! [IN]
-                         temp(:),      & ! [INOUT]
-                         ghyd(:,:,:),  & ! [INOUT]
-                         dt            ) ! [IN]
+          call freezing( ijkmax,        & ! [IN]
+                         ijkmax_cold,   & ! [IN]
+                         index_cold(:), & ! [IN]
+                         dens(:),       & ! [IN]
+                         temp(:),       & ! [INOUT]
+                         ghyd(:,:,:),   & ! [INOUT]
+                         dt             ) ! [IN]
 
-!          call ice_nucleat( ijkmax,       & ! [IN]
-!                            ijk_cld2,     & ! [IN]
-!                            indx_cld2(:), & ! [IN]
-!                            dens(:),      & ! [IN]
-!                            pres(:),      & ! [IN]
-!                            temp(:),      & ! [INOUT]
-!                            qvap(:),      & ! [INOUT]
-!                            ghyd(:,:,:),  & ! [INOUT]
-!                            dt            ) ! [IN]
+!          call ice_nucleat( ijkmax,        & ! [IN]
+!                            ijkmax_cold,   & ! [IN]
+!                            index_cold(:), & ! [IN]
+!                            dens(:),       & ! [IN]
+!                            pres(:),       & ! [IN]
+!                            temp(:),       & ! [INOUT]
+!                            qvap(:),       & ! [INOUT]
+!                            ghyd(:,:,:),   & ! [INOUT]
+!                            dt             ) ! [IN]
 
-          call melting( ijkmax,       & ! [IN]
-                        ijk_cld3,     & ! [IN]
-                        indx_cld3(:), & ! [IN]
-                        dens(:),      & ! [IN]
-                        temp(:),      & ! [INOUT]
-                        ghyd(:,:,:),  & ! [INOUT]
-                        dt            ) ! [IN]
+          call melting( ijkmax,        & ! [IN]
+                        ijkmax_warm,   & ! [IN]
+                        index_warm(:), & ! [IN]
+                        dens(:),       & ! [IN]
+                        temp(:),       & ! [INOUT]
+                        ghyd(:,:,:),   & ! [INOUT]
+                        dt             ) ! [IN]
 
           ! condensation / evaporation
           call cndevpsbla( ijkmax,      & ! [IN]
@@ -1361,31 +1277,31 @@ contains
                         dt           ) ! [IN]
 
           ! freezing / melting
-          call freezing( ijkmax,       & ! [IN]
-                         ijk_cld2,     & ! [IN]
-                         indx_cld2(:), & ! [IN]
-                         dens(:),      & ! [IN]
-                         temp(:),      & ! [INOUT]
-                         ghyd(:,:,:),  & ! [INOUT]
-                         dt            ) ! [IN]
+          call freezing( ijkmax,        & ! [IN]
+                         ijkmax_cold,   & ! [IN]
+                         index_cold(:), & ! [IN]
+                         dens(:),       & ! [IN]
+                         temp(:),       & ! [INOUT]
+                         ghyd(:,:,:),   & ! [INOUT]
+                         dt             ) ! [IN]
 
-          call ice_nucleat( ijkmax,       & ! [IN]
-                            ijk_cld2,     & ! [IN]
-                            indx_cld2(:), & ! [IN]
-                            dens(:),      & ! [IN]
-                            pres(:),      & ! [IN]
-                            temp(:),      & ! [INOUT]
-                            qvap(:),      & ! [INOUT]
-                            ghyd(:,:,:),  & ! [INOUT]
-                            dt            ) ! [IN]
+          call ice_nucleat( ijkmax,        & ! [IN]
+                            ijkmax_cold,   & ! [IN]
+                            index_cold(:), & ! [IN]
+                            dens(:),       & ! [IN]
+                            pres(:),       & ! [IN]
+                            temp(:),       & ! [INOUT]
+                            qvap(:),       & ! [INOUT]
+                            ghyd(:,:,:),   & ! [INOUT]
+                            dt             ) ! [IN]
 
-          call melting( ijkmax,       & ! [IN]
-                        ijk_cld3,     & ! [IN]
-                        indx_cld3(:), & ! [IN]
-                        dens(:),      & ! [IN]
-                        temp(:),      & ! [INOUT]
-                        ghyd(:,:,:),  & ! [INOUT]
-                        dt            ) ! [IN]
+          call melting( ijkmax,        & ! [IN]
+                        ijkmax_warm,   & ! [IN]
+                        index_warm(:), & ! [IN]
+                        dens(:),       & ! [IN]
+                        temp(:),       & ! [INOUT]
+                        ghyd(:,:,:),   & ! [INOUT]
+                        dt             ) ! [IN]
 
           ! condensation / evaporation
           call cndevpsbl( ijkmax,      & ! [IN]
@@ -1451,11 +1367,7 @@ contains
     psat  = CONST_PSAT0 * ( temp(ijk) * RTEM00 )**CPovR_liq   &
           * exp( LovR_liq * ( RTEM00 - 1.0_RP/temp(ijk) ) )
     ssliq(ijk) = CONST_EPSvap * psat / ( pres(ijk) - ( 1.0_RP-CONST_EPSvap ) * psat )
-    psat  = CONST_PSAT0 * ( temp(ijk) * RTEM00 )**CPovR_ice   &
-          * exp( LovR_ice * ( RTEM00 - 1.0_RP/temp(ijk) ) )
-!    ssice = CONST_EPSvap * psat / ( pres(ijk) - ( 1.0_RP-CONST_EPSvap ) * psat )
     ssliq(ijk) = qvap(ijk)/ssliq(ijk)-1.0_RP
-!    ssice = qvap(ijk)/ssice-1.0_RP
 
   enddo
 
