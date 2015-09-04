@@ -306,7 +306,7 @@ contains
     allocate( expxbnd( nbin+1 ) )
     allocate( rexpxctr( nbin ) )
     allocate( rexpxbnd( nbin+1 ) )
-    if( nccn /= 0 ) then
+    if ( nccn /= 0 ) then
       allocate( xactr( nccn ) )
       allocate( xabnd( nccn+1 ) )
       allocate( rada( nccn ) )
@@ -323,10 +323,10 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Cloud Microphisics]/Categ[ATMOS]'
     if( IO_L ) write(IO_FID_LOG,*) '*** Wrapper for SBM (warm cloud)'
 
-    if ( MP_TYPE .ne. 'SUZUKI10' ) then
+    if ( MP_TYPE /= 'SUZUKI10' ) then
        write(*,*) 'xxx ATMOS_PHY_MP_TYPE is not SUZUKI10. Check!'
        call PRC_MPIstop
-    end if
+    endif
 
     RHO_AERO = rhoa
     S10_EMAER = emaer
@@ -344,29 +344,29 @@ contains
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_ATMOS_PHY_MP,iostat=ierr)
 
-    if( ierr < 0 ) then !--- missing
+    if ( ierr < 0 ) then !--- missing
      if( IO_L ) write(IO_FID_LOG,*)  '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
      write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_PHY_MP, Check!'
      call PRC_MPIstop
-    end if
+    endif
     if( IO_L ) write(IO_FID_LOG,nml=PARAM_ATMOS_PHY_MP)
 
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_ATMOS_PHY_MP_SUZUKI10,iostat=ierr)
 
-    if( ierr < 0 ) then !--- missing
+    if ( ierr < 0 ) then !--- missing
      if( IO_L ) write(IO_FID_LOG,*)  '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
      write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_PHY_MP_SUZUKI10, Check!'
      call PRC_MPIstop
-    end if
+    endif
     if( IO_L ) write(IO_FID_LOG,nml=PARAM_ATMOS_PHY_MP_SUZUKI10)
 
-    if ( nspc /= 1 .and. nspc /= 7 ) then
+    if ( nspc /= 1 .AND. nspc /= 7 ) then
        write(*,*) 'xxx nspc should be set as 1(warm rain) or 7(mixed phase) check!'
        call PRC_MPIstop
-    end if
+    endif
 
     rhoa = RHO_AERO
     emaer = S10_EMAER
@@ -382,21 +382,21 @@ contains
     mbin = S10_RNDM_MBIN
 
     !--- read micpara.dat (microphysical parameter) and broad cast
-    if( PRC_IsMaster ) then
+    if ( PRC_IsMaster ) then
 
       fid_micpara = IO_get_available_fid()
       !--- open parameter of cloud microphysics
       open ( fid_micpara, file = fname_micpara, form = 'formatted', status = 'old', iostat=ierr )
 
       !--- micpara.dat does not exist
-      if( ierr == 0 ) then
+      if ( ierr == 0 ) then
 
         read( fid_micpara,* ) nnspc, nnbin
 
-        if( nnbin /= nbin ) then
+        if ( nnbin /= nbin ) then
            write(*,*) 'xxx nbin in inc_tracer and nbin in micpara.dat is different check!'
            call PRC_MPIstop
-        end if
+        endif
 
         ! grid parameter
         if( IO_L ) write(IO_FID_LOG,*)  '*** Radius of cloud ****'
@@ -462,10 +462,10 @@ contains
 
         read( fid_micpara,* ) nnspc, nnbin
 
-        if( nnbin /= nbin ) then
+        if ( nnbin /= nbin ) then
            write(*,*) 'xxx nbin in inc_tracer and nbin in micpara.dat is different check!'
            call PRC_MPIstop
-        end if
+        endif
 
         ! grid parameter
         if( IO_L ) write(IO_FID_LOG,*)  '*** Radius of cloud ****'
@@ -533,7 +533,7 @@ contains
     call MPI_BCAST( vt, nbin*nspc_mk,                COMM_datatype, PRC_masterrank, COMM_world, ierr )
 
     !--- aerosol ( CCN ) (not supported)
-    if( nccn /= 0 ) then
+    if ( nccn /= 0 ) then
 
     allocate ( ncld( 1:nccn ) )
     xasta = log( rhoa*4.0_RP/3.0_RP*pi * ( rasta )**3 )
@@ -551,7 +551,7 @@ contains
           "Radius of ", n, "th aerosol bin (bin center)= ", rada( n ) , "[m]"
     enddo
 
-    if( flg_sf_aero ) then
+    if ( flg_sf_aero ) then
      if ( CZ(KS) >= 10.0_RP ) then
           R10M1 = 10.0_RP / CZ(KS) * 0.50_RP ! scale with height
           R10M2 = 10.0_RP / CZ(KS) * 0.50_RP ! scale with height
@@ -587,11 +587,11 @@ contains
     ATMOS_PHY_MP_DENS(I_mp_QH)  = CONST_DICE
 
     !--- random number setup for stochastic method
-    if( rndm_flgp > 0 ) then
+    if ( rndm_flgp > 0 ) then
      call random_setup( IA*JA*KA )
     endif
 
-    if( nccn /= 0 ) then
+    if ( nccn /= 0 ) then
      do n = 1, nccn
       expxactr( n ) = exp( xactr( n ) )
       rexpxactr( n ) = 1.0_RP / exp( xactr( n ) )
@@ -621,7 +621,7 @@ contains
     allocate( kindx(nbin,nbin) )
     call getrule( ifrsl,kindx )
 
-    if( CONST_THERMODYN_TYPE == 'EXACT' ) then
+    if ( CONST_THERMODYN_TYPE == 'EXACT' ) then
       flg_thermodyn = 1.0_RP
     elseif( CONST_THERMODYN_TYPE == 'SIMPLE' ) then
       flg_thermodyn = 0.0_RP
@@ -784,7 +784,7 @@ contains
 
 !--- store initial SDF of aerosol
 !--- this option is not supported
-!    if( ofirst_sdfa ) then
+!    if ( ofirst_sdfa ) then
 !      allocate( marate( nccn ) )
 !      do j = JS, JE
 !      do i = IS, IE
@@ -797,10 +797,10 @@ contains
 !         enddo
 !      enddo
 !      enddo
-!      if( sum2 /= 0.0_RP ) then
+!      if ( sum2 /= 0.0_RP ) then
 !        marate( 1:nccn ) = marate( 1:nccn )/sum2
 !        ofirst_sdfa = .false.
-!      end if
+!      endif
 !    endif
 
     !--- Arrange array for microphysics
@@ -913,7 +913,7 @@ contains
 
     call PROF_rapend  ('MP_SBM_Main', 1)
 
-!    if( flg_sf_aero ) then
+!    if ( flg_sf_aero ) then
 !     do j = JS-2, JE+2
 !     do i = IS-2, IE+1
 !       VELX(i,j) = MOMX(K10_1,i,j) / ( DENS(K10_1,i+1,j)+DENS(K10_1,i,j) ) * R10M1 &
@@ -927,10 +927,10 @@ contains
 !                 + MOMY(K10_2,i,j) / ( DENS(K10_2,i,j+1)+DENS(K10_2,i,j) ) * R10M2
 !     enddo
 !     enddo
-!    end if
+!    endif
 !
 !    !--- SURFACE FLUX by Monahan et al. (1986)
-!    if( flg_sf_aero .and. nccn /= 0 ) then
+!    if ( flg_sf_aero .AND. nccn /= 0 ) then
 !     do j = JS, JE
 !     do i = IS, IE
 !          ijk = ( j - JS ) * KMAX * IMAX &
@@ -940,7 +940,7 @@ contains
 !       Uabs = sqrt(  ( ( VELX(i,j) + VELX(i-1,j  ) ) * 0.50_RP )**2 &
 !                   + ( ( VELY(i,j) + VELY(i  ,j-1) ) * 0.50_RP )**2 )
 !       do n = 1, nccn
-!        if( rada( n ) <= 2.0E-5_RP .and. rada( n ) >= 3.0E-7_RP ) then
+!        if ( rada( n ) <= 2.0E-5_RP .AND. rada( n ) >= 3.0E-7_RP ) then
 !         bparam = ( 0.38_RP - log( rada( n ) ) )/0.65_RP
 !         SFLX_AERO(i,j,n) = 1.373_RP * Uabs**( 3.41_RP ) * rada( n )**( -3.0_RP ) &
 !                          * ( 1.0_RP + 0.057_RP * rada( n )**( 1.05_RP ) ) &
@@ -949,11 +949,11 @@ contains
 !         SFLX_AERO(i,j,n) = SFLX_AERO(i,j,n) / DENS(KS,i,j) &
 !                          / GRID_CDZ(KS) * rada( n ) / 3.0_RP * dt * expxactr( n )
 !         Gaer_ijk(n,ijk) = Gaer_ijk(n,ijk) + SFLX_AERO(i,j,n)/dxaer
-!        end if
+!        endif
 !       enddo
 !     enddo
 !     enddo
-!    end if
+!    endif
 
     call PROF_rapstart('MP_ijkconvert', 1)
 
@@ -1365,14 +1365,14 @@ contains
        sumnum(ijk) = sumnum(ijk) + gcn( n,ijk )*dxmic
      enddo
      n_c = c_ccn * ( ssliq(ijk) * 1.E+2_RP )**( kappa )
-     if( n_c > sumnum(ijk) ) then
+     if ( n_c > sumnum(ijk) ) then
        dmp = ( n_c - sumnum(ijk) ) * expxctr( 1 )
        dmp = min( dmp,qvap(ijk)*dens(ijk) )
        gc( 1,il,ijk ) = gc( 1,il,ijk ) + dmp/dxmic
        qvap(ijk) = qvap(ijk) - dmp/dens(ijk)
        qvap(ijk) = max( qvap(ijk),0.0_RP )
        temp(ijk) = temp(ijk) + dmp/dens(ijk)*qlevp(ijk)/cp
-     end if
+     endif
     endif
 
   enddo
@@ -1448,12 +1448,12 @@ contains
       ractr = ( expxactr( n )*ThirdovForth/pi/rhoa )**( OneovThird )
       rcld  = sqrt( 3.0_RP*bcoef*ractr*ractr*ractr / acoef )
       xcld  = log( rhow * 4.0_RP*pi*OneovThird*rcld*rcld*rcld )
-     if( flg_nucl ) then
+     if ( flg_nucl ) then
       ncld( n ) = 1
      else
       ncld( n ) = int( ( xcld-xctr( 1 ) )/dxmic ) + 1
       ncld( n ) = min( max( ncld( n ),1 ),nbin )
-     end if
+     endif
     enddo
 
     !--- nucleation
@@ -1477,11 +1477,11 @@ contains
 
       if ( n == ncrit ) then
         part = ( xabnd( ncrit+1 )-xcrit )/dxaer
-      else if ( n > ncrit ) then
+      elseif ( n > ncrit ) then
         part = 1.0_RP
       else
         exit
-      end if
+      endif
 
       !--- calculate mass change
       nc = ncld( n )
@@ -1924,7 +1924,7 @@ contains
       !--- lhv
       qlevp(ijk) = CONST_LHV0 + ( CONST_CPvap - CONST_CL ) * ( temp(ijk) - CONST_TEM00 ) * flg_thermodyn
       do n = 1 , nbin
-       if( gc( n,il,ijk ) < 0.0_RP ) then
+       if ( gc( n,il,ijk ) < 0.0_RP ) then
         cndmss(ijk) = -gc( n,il,ijk )
         gc( n,il,ijk ) = 0.0_RP
         qvap(ijk) = qvap(ijk) + cndmss(ijk)/dens(ijk)
@@ -2337,24 +2337,24 @@ contains
       !----- old mass
       do n = 1, nbin
         gclold(ijk) = gclold(ijk) + gc( n,il,ijk )*dxmic
-      end do
+      enddo
 
       do myu = 2, nspc
       do n = 1, nbin
         gciold(ijk) = gciold(ijk) + gc( n,myu,ijk )*dxmic
-      end do
-      end do
+      enddo
+      enddo
 
       !----- mass -> number
       do myu = 1, nspc
        do n = 1, nbin
         gcn( n,myu,ijk ) = gc( n,myu,ijk ) * rexpxctr( n )
-       end do
+       enddo
        gcn( -1,myu,ijk ) = 0.0_RP
        gcn(  0,myu,ijk ) = 0.0_RP
        gcn( nbin+1,myu,ijk ) = 0.0_RP
        gcn( nbin+2,myu,ijk ) = 0.0_RP
-      end do
+      enddo
 
       !-- thermodyn
       qlevp(ijk) = CONST_LHV0 + ( CONST_CPvap - CONST_CL ) * ( temp(ijk) - CONST_TEM00 ) * flg_thermodyn
@@ -2388,7 +2388,7 @@ contains
       do myu = 2, nspc
         uval = cbnd( 1,myu )*rexpxbnd( 1 )*gtice(ijk)*abs( ssice(ijk) )
         umax(ijk) = max( umax(ijk),uval )
-      end do
+      enddo
 
       dtcnd(ijk) = cflfct*dxmic/umax(ijk)
       nloop(ijk) = int( dtime/dtcnd(ijk) ) + 1
@@ -2439,14 +2439,14 @@ contains
          sumliq(ijk) = 0.0_RP
          do n = 1, nbin
            sumliq(ijk) = sumliq(ijk) + gcn( n,il,ijk )*cctr( n,il )*dxmic
-         end do
+         enddo
 
          sumice(ijk) = 0.0_RP
          do myu = 2, nspc
          do n = 1, nbin
            sumice(ijk) = sumice(ijk) + gcn( n,myu,ijk )*cctr( n,myu )*dxmic
-         end do
-         end do
+         enddo
+         enddo
        enddo
       enddo
 
@@ -2522,11 +2522,11 @@ contains
              acoef( n,myu,0,ijk ) = - ( gcn( n+1,myu,ijk )-26.0_RP*gcn( n,myu,ijk )+gcn( n-1,myu,ijk ) ) / 24.0_RP
              acoef( n,myu,1,ijk ) = ( gcn( n+1,myu,ijk )-gcn( n-1,myu,ijk ) ) * 0.50_RP
              acoef( n,myu,2,ijk ) = ( gcn( n+1,myu,ijk )-2.0_RP*gcn( n,myu,ijk )+gcn( n-1,myu,ijk ) ) * 0.50_RP
-           end do
+           enddo
 
            do n = 0, nbin+2
              crn( n ) = uadv( n,myu,ijk )*dtcnd(ijk)/dxmic
-           end do
+           enddo
 
            do n = 0, nbin+1
              cplus = ( crn( n+1 ) + abs( crn( n+1 ) ) ) * 0.50_RP
@@ -2534,9 +2534,9 @@ contains
              do j = 0, ldeg
                sum = sum + acoef( n,myu,j,ijk )/( j+1 )/2.0_RP**( j+1 )  &
                          *( 1.0_RP-( 1.0_RP-2.0_RP*cplus )**( j+1 ) )
-             end do
+             enddo
              aip( n,myu,ijk ) = max( sum,0.0_RP )
-           end do
+           enddo
 
            do n = 0, nbin+1
              cmins = - ( crn( n ) - abs( crn( n ) ) ) * 0.50_RP
@@ -2544,9 +2544,9 @@ contains
              do j = 0, ldeg
                sum = sum + acoef( n,myu,j,ijk )/( j+1 )/2.0_RP**( j+1 ) * (-1)**j &
                          *( 1.0_RP-( 1.0_RP-2.0_RP*cmins )**( j+1 ) )
-             end do
+             enddo
              aim( n,myu,ijk ) = max( sum,0.0_RP )
-           end do
+           enddo
          enddo
          enddo
        enddo
@@ -2563,20 +2563,20 @@ contains
              sum = 0.0_RP
              do j = 0, ldeg
                sum = sum + acoef( n,myu,j,ijk )/( j+1 )/2.0_RP**( j+1 ) * ( (-1)**j+1 )
-             end do
+             enddo
              ai( n,myu,ijk ) = max( sum,aip( n,myu,ijk )+aim( n,myu,ijk )+cldmin )
-           end do
+           enddo
 
            do n = 1, nbin+1
              flq( n,myu,ijk ) = ( aip( n-1,myu,ijk )/ai( n-1,myu,ijk )*gcn( n-1,myu,ijk )  &
                               - aim( n  ,myu,ijk )/ai( n  ,myu,ijk )*gcn( n  ,myu,ijk ) )*dxmic/dtcnd(ijk)
-           end do
+           enddo
 
            dumm_regene(ijk) = dumm_regene(ijk)+( -flq( 1,myu,ijk )*dtcnd(ijk)/dxmic )*min( uadv(1,myu,ijk),0.0_RP )/uadv(1,myu,ijk)
 
            do n = 1, nbin
              gcn( n,myu,ijk ) = gcn( n,myu,ijk ) - ( flq( n+1,myu,ijk )-flq( n,myu,ijk ) )*dtcnd(ijk)/dxmic
-           end do
+           enddo
 
          enddo
          enddo
@@ -2592,14 +2592,14 @@ contains
          gclnew(ijk) = 0.0_RP
          do n = 1, nbin
            gclnew(ijk) = gclnew(ijk) + gcn( n,il,ijk )*expxctr( n )*dxmic
-         end do
+         enddo
 
          gcinew(ijk) = 0.0_RP
          do myu = 2, nspc
          do n = 1, nbin
            gcinew(ijk) = gcinew(ijk) + gcn( n,myu,ijk )*expxctr( n )*dxmic
-         end do
-         end do
+         enddo
+         enddo
 
          !--- change of humidity and temperature
          cndmss(ijk) = gclnew(ijk) - gclold(ijk)
@@ -2623,11 +2623,11 @@ contains
     do myu = 1, nspc
     do n = 1, nbin
       gc( n,myu,ijk ) = gcn( n,myu,ijk )*expxctr( n )
-    end do
-    end do
-  end do
+    enddo
+    enddo
+  enddo
 
-  if( .not. flg_regeneration ) then
+  if ( .not. flg_regeneration ) then
    dumm_regene(:) = 0.0_RP
   endif
 
@@ -2693,10 +2693,10 @@ contains
     numin = numin * expxctr( 1 )/dxmic
     numin = min( numin,qvap(ijk)*dens(ijk) )
     !--- -4 [deg] > T >= -8 [deg] and T < -22.4 [deg] -> column
-    if( temp(ijk) <= tplatu .or. ( temp(ijk) >= tcolml .and. temp(ijk) < tcolmu ) ) then
+    if ( temp(ijk) <= tplatu .OR. ( temp(ijk) >= tcolml .AND. temp(ijk) < tcolmu ) ) then
      gc( 1,ic,ijk ) = gc( 1,ic,ijk ) + numin
     !--- -14 [deg] > T >= -18 [deg] -> dendrite
-    elseif( temp(ijk) <= tdendu .and. temp(ijk) >= tdendl ) then
+    elseif( temp(ijk) <= tdendu .AND. temp(ijk) >= tdendl ) then
      gc( 1,id,ijk ) = gc( 1,id,ijk ) + numin
     !--- else -> plate
     else
@@ -2750,7 +2750,7 @@ contains
   do indirect = 1, num_cold
      ijk = index_cold(indirect)
 
-!      if( temp <= tthreth ) then !--- Bigg (1975)
+!      if ( temp <= tthreth ) then !--- Bigg (1975)
       xbound = log( rhow * 4.0_RP*pi/3.0_RP * rbound**3 )
       nbound = int( ( xbound-xbnd( 1 ) )/dxmic ) + 1
 
@@ -2789,11 +2789,11 @@ contains
 !       frz = gc( (il-1)*nbin+n )*dmp*xctr( n )/dens
 !       frz = max( frz,gc( (il-1)*nbin+n )*dmp*xctr( n )/dens )
 !       gc( (il-1)*nbin+n ) = gc( (il-1)*nbin+n ) - frz
-!       if( n >= nbound ) then
+!       if ( n >= nbound ) then
 !        gc( (ih-1)*nbin+n ) = gc( (ih-1)*nbin+n ) + frz
 !       else
 !        gc( (ip-1)*nbin+n ) = gc( (ip-1)*nbin+n ) + frz
-!       end if
+!       endif
 !
 !       sumfrz = sumfrz + frz
 !      enddo
@@ -2974,7 +2974,7 @@ contains
      if ( csum( ig,ijk ) > cldmin ) iflg( ig,ijk ) = 1
      if ( csum( ih,ijk ) > cldmin ) iflg( ih,ijk ) = 1
 
-     if( temp(ijk) < tcrit ) then
+     if ( temp(ijk) < tcrit ) then
         ibnd(ijk) = 1
      else
         ibnd(ijk) = 2
@@ -2982,7 +2982,7 @@ contains
 
      do myu = 1, nspc
      do n = 1, nbin
-       if( gc( n,myu,ijk ) > cldmin ) then
+       if ( gc( n,myu,ijk ) > cldmin ) then
          iexst( n,myu,ijk ) = 1
        endif
      enddo
@@ -3018,17 +3018,17 @@ contains
           frci = gc( i,isml,ijk )*dmpi                               ! Dg_{i} in page 119 of Suzuki (2004)
         else
           frci = gc( i,isml,ijk )*( 1.0_RP-exp( -dmpi ) )            ! Dg_{i} in page 119 of Suzuki (2004)
-        end if
+        endif
 
         if ( dmpj <= dmpmin ) then
           frcj = gc( j,ilrg,ijk )*dmpj                               ! Dg_{j} in page 119 of Suzuki (2004)
         else
           frcj = gc( j,ilrg,ijk )*( 1.0_RP-exp( -dmpj ) )            ! Dg_{j} in page 119 of Suzuki (2004)
-        end if
+        endif
 
         gprime = frci+frcj
 !        if ( gprime <= 0.0_RP ) cycle large
-        if ( gprime > 0.0_RP .and. k < nbin ) then
+        if ( gprime > 0.0_RP .AND. k < nbin ) then
 
           suri = gc( i,isml,ijk )
           surj = gc( j,ilrg,ijk )
@@ -3290,10 +3290,10 @@ contains
    allocate( randnum(1,1,pq) )
 
    a = real( nbin )*real( nbin-1 )*0.50_RP
-   if( a < mbin ) then
+   if ( a < mbin ) then
     write(*,*) "mbin should be smaller than {nbin}_C_{2}"
     call PRC_MPIstop
-   end if
+   endif
 
    wgtbin = a/real( mbin )
    nbinr = real( nbin )
@@ -3320,18 +3320,18 @@ contains
        enddo
 
        do p = 1, mbin
-        if( p <= pq ) then
+        if ( p <= pq ) then
          rans( p ) = ranstmp( orderb( p ) )
          ranl( p ) = ranltmp( orderb( p ) )
         else
          rans( p ) = ranstmp( orderb( p-pq ) )
          ranl( p ) = ranltmp( orderb( p-pq ) )
-        end if
-         if( rans( p ) >= ranl( p ) ) then
+        endif
+         if ( rans( p ) >= ranl( p ) ) then
           tmp1 = rans( p )
           rans( p ) = ranl( p )
           ranl( p ) = tmp1
-         end if
+         endif
        enddo
          blrg( n,1:mbin ) = int( ranl( 1:mbin ) )
          bsml( n,1:mbin ) = int( rans( 1:mbin ) )
@@ -3410,7 +3410,7 @@ contains
      if ( csum( ig,ijk ) > cldmin ) iflg( ig,ijk ) = 1
      if ( csum( ih,ijk ) > cldmin ) iflg( ih,ijk ) = 1
 
-     if( temp(ijk) < tcrit ) then
+     if ( temp(ijk) < tcrit ) then
         ibnd(ijk) = 1
      else
         ibnd(ijk) = 2
@@ -3418,7 +3418,7 @@ contains
 
      do myu = 1, nspc
      do n = 1, nbin
-       if( gc( n,myu,ijk ) > cldmin ) then
+       if ( gc( n,myu,ijk ) > cldmin ) then
          iexst( n,myu,ijk ) = 1
        endif
      enddo
@@ -3462,22 +3462,22 @@ contains
             frci = gc( i,isml,ijk )*dmpi
           else
             frci = gc( i,isml,ijk )*( 1.0_RP-exp( -dmpi ) )
-          end if
+          endif
 
           if ( dmpj <= dmpmin ) then
             frcj = gc( j,ilrg,ijk )*dmpj
           else
             frcj = gc( j,ilrg,ijk )*( 1.0_RP-exp( -dmpj ) )
-          end if
+          endif
           tmpi = gc( i,isml,ijk )
           tmpj = gc( j,ilrg,ijk )
 
           gc( i,isml,ijk ) = gc( i,isml,ijk )-frci*swgt
           gc( j,ilrg,ijk ) = gc( j,ilrg,ijk )-frcj*swgt
 
-          if( j /= k ) then
+          if ( j /= k ) then
            gc( j,ilrg,ijk ) = max( gc( j,ilrg,ijk ), 0.0_RP )
-          end if
+          endif
            gc( i,isml,ijk ) = max( gc( i,isml,ijk ), 0.0_RP )
 
           frci = tmpi - gc( i,isml,ijk )
@@ -3489,7 +3489,7 @@ contains
           !--- Exponential Flux Method (Bott, 2000, JAS)
           !-----------------------------------------------
       !    if ( gprime <= 0.0_RP ) cycle !large
-      !    if ( gprime > 0.0_RP .and. k < nbin ) then
+      !    if ( gprime > 0.0_RP .AND. k < nbin ) then
       !    gprimk = gc( (irsl-1)*nbin+k ) + gprime
       !
       !    beta = log( gc( (irsl-1)*nbin+k+1 )/gprimk+1.E-60_RP )
@@ -3506,7 +3506,7 @@ contains
           !--- Flux Method (Bott, 1998, JAS)
           !-----------------------------------------------
 !          if ( gprime <= 0.0_RP ) cycle !large
-          if ( gprime > 0.0_RP .and. k < nbin ) then
+          if ( gprime > 0.0_RP .AND. k < nbin ) then
 
             gprimk = gc( k,irsl,ijk ) + gprime
             wgt = gprime / gprimk
@@ -3630,7 +3630,7 @@ contains
       sum2(k,i,j,ihydro) = 0.5_RP + sign(0.5_RP,sum2(k,i,j,ihydro)-EPS)
       sum3(k,i,j,ihydro) = 0.5_RP + sign(0.5_RP,sum3(k,i,j,ihydro)-EPS)
 
-      if( sum2(k,i,j,ihydro) /= 0.0_RP ) then
+      if ( sum2(k,i,j,ihydro) /= 0.0_RP ) then
        Re(k,i,j,ihydro) = sum3(k,i,j,ihydro) / sum2(k,i,j,ihydro) * um2cm
       else
        Re(k,i,j,ihydro) = 0.0_RP
