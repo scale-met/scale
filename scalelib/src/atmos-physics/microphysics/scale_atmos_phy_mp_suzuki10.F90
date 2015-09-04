@@ -227,8 +227,7 @@ module scale_atmos_phy_mp_suzuki10
   !----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
-  !> Setup Cloud Microphysics
-  !-----------------------------------------------------------------------------
+  !> Setup
   subroutine ATMOS_PHY_MP_suzuki10_setup( MP_TYPE )
     use scale_process, only: &
        PRC_MPIstop,    &
@@ -405,10 +404,10 @@ contains
           read( fid_micpara,* ) nn, xctr( n ), radc( n )
           if( IO_L ) write(IO_FID_LOG,'(a,1x,i3,1x,a,1x,e15.7,1x,a)') &
                     "Radius of ", n, "th cloud bin (bin center)= ", radc( n ) , "[m]"
-        end do
+        enddo
         do n = 1, nbin+1
           read( fid_micpara,* ) nn, xbnd( n )
-        end do
+        enddo
         read( fid_micpara,* ) dxmic
         if( IO_L ) write(IO_FID_LOG,*)  '*** Width of Cloud SDF= ', dxmic
 
@@ -417,12 +416,12 @@ contains
          do n = 1, nbin
 !          read( fid_micpara,* ) mmyu, nn, cctr( myu,n )
           read( fid_micpara,* ) mmyu, nn, cctr( n,myu )
-         end do
+         enddo
          do n = 1, nbin+1
 !          read( fid_micpara,* ) mmyu, nn, cbnd( myu,n )
           read( fid_micpara,* ) mmyu, nn, cbnd( n,myu )
-         end do
-        end do
+         enddo
+        enddo
 
         ! collection kernel
         do myu = 1, nspc_mk
@@ -474,10 +473,10 @@ contains
           read( fid_micpara,* ) nn, xctr( n ), radc( n )
           if( IO_L ) write(IO_FID_LOG,'(a,1x,i3,1x,a,1x,e15.7,1x,a)') &
                     "Radius of ", n, "th cloud bin (bin center)= ", radc( n ) , "[m]"
-        end do
+        enddo
         do n = 1, nbin+1
           read( fid_micpara,* ) nn, xbnd( n )
-        end do
+        enddo
         read( fid_micpara,* ) dxmic
         if( IO_L ) write(IO_FID_LOG,*)  '*** Width of Cloud SDF= ', dxmic
 
@@ -486,12 +485,12 @@ contains
          do n = 1, nbin
 !          read( fid_micpara,* ) mmyu, nn, cctr( myu,n )
           read( fid_micpara,* ) mmyu, nn, cctr( n,myu )
-         end do
+         enddo
          do n = 1, nbin+1
 !          read( fid_micpara,* ) mmyu, nn, cbnd( myu,n )
           read( fid_micpara,* ) mmyu, nn, cbnd( n,myu )
-         end do
-        end do
+         enddo
+        enddo
 
         ! collection kernel
         do myu = 1, nspc_mk
@@ -643,9 +642,9 @@ contains
     return
 
   end subroutine ATMOS_PHY_MP_suzuki10_setup
+
   !-----------------------------------------------------------------------------
   !> Cloud Microphysics
-  !-----------------------------------------------------------------------------
   subroutine ATMOS_PHY_MP_suzuki10( &
        DENS,      &
        MOMZ,      &
@@ -794,7 +793,7 @@ contains
 !           do n = 1, nccn
 !             marate( n ) = gdga(k,i,j,n)*rexpxactr( n )
 !             sum2 = sum2 + gdga(k,i,j,n)*rexpxactr( n )
-!           end do
+!           enddo
 !         enddo
 !      enddo
 !      enddo
@@ -971,9 +970,9 @@ contains
 !                          / GRID_CDZ(KS) * rada( n ) / 3.0_RP * dt * expxactr( n )
 !         Gaer_ijk(n,ijk) = Gaer_ijk(n,ijk) + SFLX_AERO(i,j,n)/dxaer
 !        end if
-!       end do
-!     end do
-!     end do
+!       enddo
+!     enddo
+!     enddo
 !    end if
 
     call PROF_rapstart('MP_ijkconvert', 1)
@@ -1132,13 +1131,13 @@ contains
     integer,  intent(in)    :: ijkmax_warm
     integer , intent(in)    :: index_cold(ijkmax)
     integer , intent(in)    :: index_warm(ijkmax)
-    real(RP), intent(in)    :: dens      (ijkmax)           ! density of dry air
-    real(RP), intent(in)    :: pres      (ijkmax)           ! pressure
-    real(RP), intent(inout) :: temp      (ijkmax)           ! temperature
-    real(RP), intent(inout) :: qvap      (ijkmax)           ! vapor mixing ratio
-    real(RP), intent(inout) :: ghyd      (nbin,nspc,ijkmax) ! mass size distribution function of hydrometeor
-    real(RP), intent(inout) :: gaer      (nccn1,    ijkmax) ! mass size distribution function of aerosol
-    real(RP), intent(in)    :: dt                           ! time interval
+    real(RP), intent(in)    :: dens      (ijkmax)           ! Density           [kg/m3]
+    real(RP), intent(in)    :: pres      (ijkmax)           ! Pressure          [Pa]
+    real(RP), intent(inout) :: temp      (ijkmax)           ! Temperature       [K]
+    real(RP), intent(inout) :: qvap      (ijkmax)           ! Specific humidity [kg/kg]
+    real(RP), intent(inout) :: ghyd      (nbin,nspc,ijkmax) ! Mass size distribution function of hydrometeor
+    real(RP), intent(inout) :: gaer      (nccn1,    ijkmax) ! Mass size distribution function of aerosol
+    real(RP), intent(in)    :: dt                           ! Time step interval
     !---------------------------------------------------------------------------
 
     if ( nccn /= 0 ) then
@@ -1343,7 +1342,7 @@ contains
     real(RP), intent(in)    :: pres(ijkmax)           ! Pressure          [Pa]
     real(RP), intent(inout) :: temp(ijkmax)           ! Temperature       [K]
     real(RP), intent(inout) :: qvap(ijkmax)           ! Specific humidity [kg/kg]
-    real(RP), intent(inout) :: gc  (nbin,nspc,ijkmax) ! size distribution function (hydrometeors)
+    real(RP), intent(inout) :: gc  (nbin,nspc,ijkmax) ! Mass size distribution function of hydrometeor
     real(RP), intent(in)    :: dtime                  ! Time step interval
 
   real(RP) :: ssliq(ijkmax)
@@ -1380,7 +1379,7 @@ contains
      !--- mass -> number
      do n = 1, nbin
        gcn( n,ijk ) = gc( n,il,ijk )*rexpxctr( n )
-     end do
+     enddo
 
      do n = 1, nbin
        sumnum(ijk) = sumnum(ijk) + gcn( n,ijk )*dxmic
@@ -1402,6 +1401,7 @@ contains
 
   return
   end subroutine nucleat
+
   !-----------------------------------------------------------------------------
   subroutine nucleata( &
        ijkmax, &
@@ -1419,8 +1419,8 @@ contains
     real(RP), intent(in)    :: pres(ijkmax)           ! Pressure          [Pa]
     real(RP), intent(inout) :: temp(ijkmax)           ! Temperature       [K]
     real(RP), intent(inout) :: qvap(ijkmax)           ! Specific humidity [kg/kg]
-    real(RP), intent(inout) :: gc  (nbin,nspc,ijkmax) ! size distribution function (hydrometeors)
-    real(RP), intent(inout) :: ga  (nccn     ,ijkmax) ! size distribution function (hydrometeors)
+    real(RP), intent(inout) :: gc  (nbin,nspc,ijkmax) ! Mass size distribution function of hydrometeor
+    real(RP), intent(inout) :: ga  (nccn     ,ijkmax) ! Mass size distribution function of aerosol
     real(RP), intent(in)    :: dtime                  ! Time step interval
 
   real(RP) :: gan( nccn )           ! size distribution function ( aerosol ) : number ( gan = ga/exp( xactr ) )
@@ -1458,7 +1458,7 @@ contains
     !--- mass -> number
     do n = 1, nccn
       gan( n ) = ga( n,ijk )*rexpxactr( n )
-    end do
+    enddo
 
     acoef = 2.0_RP*sigma/rvap/rhow/temp(ijk)   ! A in (A.11) of Suzuki (2004)
     bcoef = vhfct* rhoa/rhow * emwtr/emaer     ! B in (A.11) of Suzuki (2004)
@@ -1474,7 +1474,7 @@ contains
       ncld( n ) = int( ( xcld-xctr( 1 ) )/dxmic ) + 1
       ncld( n ) = min( max( ncld( n ),1 ),nbin )
      end if
-    end do
+    enddo
 
     !--- nucleation
     do n = nccn, 1, -1
@@ -1513,12 +1513,12 @@ contains
       qvap(ijk) = qvap(ijk) - dmp/dens(ijk)
       qvap(ijk) = max( qvap(ijk),0.0_RP )
       temp(ijk) = temp(ijk) + dmp/dens(ijk)*qlevp/cp
-    end do
+    enddo
 
     !--- number -> mass
     do n = 1, nccn
       ga( n,ijk ) = gan( n )*expxactr( n )
-    end do
+    enddo
 
   enddo
 
@@ -1526,8 +1526,9 @@ contains
 
     return
   end subroutine nucleata
+
   !-----------------------------------------------------------------------------
-  subroutine  cndevpsbl( &
+  subroutine cndevpsbl( &
        ijkmax, &
        dens,   &
        pres,   &
@@ -1542,7 +1543,7 @@ contains
     real(RP), intent(in)    :: pres(ijkmax)           ! Pressure          [Pa]
     real(RP), intent(inout) :: temp(ijkmax)           ! Temperature       [K]
     real(RP), intent(inout) :: qvap(ijkmax)           ! Specific humidity [kg/kg]
-    real(RP), intent(inout) :: gc  (nbin,nspc,ijkmax) ! size distribution function (hydrometeors)
+    real(RP), intent(inout) :: gc  (nbin,nspc,ijkmax) ! Mass size distribution function of hydrometeor
     real(RP), intent(in)    :: dtime                  ! Time step interval
 
     real(RP) :: regene_gcn(ijkmax)
@@ -1581,7 +1582,7 @@ contains
   end subroutine cndevpsbl
 
   !-----------------------------------------------------------------------------
-  subroutine  cndevpsbla( &
+  subroutine cndevpsbla( &
        ijkmax, &
        dens,   &
        pres,   &
@@ -1597,8 +1598,8 @@ contains
     real(RP), intent(in)    :: pres(ijkmax)           ! Pressure          [Pa]
     real(RP), intent(inout) :: temp(ijkmax)           ! Temperature       [K]
     real(RP), intent(inout) :: qvap(ijkmax)           ! Specific humidity [kg/kg]
-    real(RP), intent(inout) :: gc  (nbin,nspc,ijkmax) ! size distribution function (hydrometeors)
-    real(RP), intent(inout) :: ga  (nccn     ,ijkmax) ! size distribution function (hydrometeors)
+    real(RP), intent(inout) :: gc  (nbin,nspc,ijkmax) ! Mass size distribution function of hydrometeor
+    real(RP), intent(inout) :: ga  (nccn     ,ijkmax) ! Mass size distribution function of aerosol
     real(RP), intent(in)    :: dtime                  ! Time step interval
 
     real(RP) :: regene_gcn(ijkmax)
@@ -1660,7 +1661,7 @@ contains
     real(RP), intent(in)    :: pres(ijkmax)           ! Pressure          [Pa]
     real(RP), intent(inout) :: temp(ijkmax)           ! Temperature       [K]
     real(RP), intent(inout) :: qvap(ijkmax)           ! Specific humidity [kg/kg]
-    real(RP), intent(inout) :: gc  (nbin,nspc,ijkmax) ! size distribution function (hydrometeors)
+    real(RP), intent(inout) :: gc  (nbin,nspc,ijkmax) ! Mass size distribution function of hydrometeor
     real(RP), intent(out)   :: regene_gcn(ijkmax)     ! mass of regenerated aerosol
     real(RP), intent(in)    :: dtime                  ! Time step interval
 
@@ -1720,12 +1721,12 @@ contains
 
      do n = 1, nbin
        gclold(ijk) = gclold(ijk) + gc( n,il,ijk ) * dxmic
-     end do
+     enddo
      !
      !------- mass -> number
      do n = 1, nbin
        gcn( n,il,ijk ) = gc( n,il,ijk ) * rexpxctr( n )
-     end do
+     enddo
      gcn( -1,il,ijk ) = 0.0_RP
      gcn(  0,il,ijk ) = 0.0_RP
      gcn( nbin+1,il,ijk ) = 0.0_RP
@@ -1799,7 +1800,7 @@ contains
 !       old_sum_gcn = 0.0_RP
        do n = 1, nbin
          sumliq(ijk) = sumliq(ijk) + gcn( n,il,ijk )*cctr( n,il )*dxmic
-       end do
+       enddo
 
      enddo
     enddo
@@ -1849,7 +1850,7 @@ contains
            acoef( n,il,0,ijk ) = - ( gcn( n+1,il,ijk )-26.0_RP*gcn( n,il,ijk )+gcn( n-1,il,ijk ) ) / 24.0_RP
            acoef( n,il,1,ijk ) = ( gcn( n+1,il,ijk )-gcn( n-1,il,ijk ) ) * 0.50_RP
            acoef( n,il,2,ijk ) = ( gcn( n+1,il,ijk )-2.0_RP*gcn( n,il,ijk )+gcn( n-1,il,ijk ) ) * 0.50_RP
-         end do
+         enddo
 
          do n = 0, nbin+2
           crn( n ) = uadv( n,il,ijk )*dtcnd(ijk)/dxmic
@@ -1861,9 +1862,9 @@ contains
            do j = 0, ldeg
              sum = sum + acoef( n,il,j,ijk )/( j+1 )/2.0_RP**( j+1 )  &
                        *( 1.0_RP-( 1.0_RP-2.0_RP*cplus )**( j+1 ) )
-           end do
+           enddo
            aip( n,il,ijk ) = max( sum,0.0_RP )
-         end do
+         enddo
 
          do n = 0, nbin+1
            cmins = - ( crn( n ) - abs( crn( n ) ) ) * 0.50_RP
@@ -1871,9 +1872,9 @@ contains
            do j = 0, ldeg
              sum = sum + acoef( n,il,j,ijk )/( j+1 )/2.0_RP**( j+1 ) * (-1)**j &
                        *( 1.0_RP-( 1.0_RP-2.0_RP*cmins )**( j+1 ) )
-           end do
+           enddo
            aim( n,il,ijk ) = max( sum,0.0_RP )
-         end do
+         enddo
 
        enddo
 
@@ -1890,20 +1891,20 @@ contains
            sum = 0.0_RP
            do j = 0, ldeg
              sum = sum + acoef( n,il,j,ijk )/( j+1 )/2.0_RP**( j+1 ) * ( (-1)**j+1 )
-           end do
+           enddo
            ai( n,il,ijk ) = max( sum,aip( n,il,ijk )+aim( n,il,ijk )+cldmin )
-         end do
+         enddo
 
          do n = 1, nbin+1
            flq( n,il,ijk ) = ( aip( n-1,il,ijk )/ai( n-1,il,ijk )*gcn( n-1,il,ijk )  &
                              - aim( n  ,il,ijk )/ai( n  ,il,ijk )*gcn( n  ,il,ijk ) )*dxmic/dtcnd(ijk)
-         end do
+         enddo
 
          regene_gcn(ijk) = regene_gcn(ijk)+( -flq( 1,il,ijk )*dtcnd(ijk)/dxmic )*min( uadv(1,il,ijk),0.0_RP )/uadv(1,il,ijk)
 
          do n = 1, nbin
            gcn( n,il,ijk ) = gcn( n,il,ijk ) - ( flq( n+1,il,ijk )-flq( n,il,ijk ) )*dtcnd(ijk)/dxmic
-         end do
+         enddo
 
        enddo
 
@@ -1921,7 +1922,7 @@ contains
          gclnew(ijk) = gclnew(ijk) + gcn( n,il,ijk )*expxctr( n )
 !         old_sum_gcn = old_sum_gcn + gcnold( n )*dxmic
 !         new_sum_gcn = new_sum_gcn + gcn( n,ijk )*dxmic
-       end do
+       enddo
 
        gclnew(ijk) = gclnew(ijk)*dxmic
        !
@@ -1933,8 +1934,8 @@ contains
        gclold(ijk) = gclnew(ijk)
        !
        !----- continue/end
-     end do
-    end do
+     enddo
+    enddo
 
   enddo   !nloop
   !
@@ -1964,7 +1965,8 @@ contains
 
     return
   end subroutine liqphase
-  !-------------------------------------------------------------------------------
+
+  !-----------------------------------------------------------------------------
   subroutine icephase( &
        ijkmax, &
        dens,   &
@@ -1980,7 +1982,7 @@ contains
     real(RP), intent(in)    :: pres(ijkmax)           ! Pressure          [Pa]
     real(RP), intent(inout) :: temp(ijkmax)           ! Temperature       [K]
     real(RP), intent(inout) :: qvap(ijkmax)           ! Specific humidity [kg/kg]
-    real(RP), intent(inout) :: gc  (nbin,nspc,ijkmax) ! size distribution function (hydrometeors)
+    real(RP), intent(inout) :: gc  (nbin,nspc,ijkmax) ! Mass size distribution function of hydrometeor
     real(RP), intent(in)    :: dtime                  ! Time step interval
 
   integer :: myu, n, ncount
@@ -2044,19 +2046,19 @@ contains
      do myu = 2, nspc
      do n = 1, nbin
        gciold(ijk) = gciold(ijk) + gc( n,myu,ijk )*dxmic
-     end do
-     end do
+     enddo
+     enddo
 
      !----- mass -> number
      do myu = 2, nspc
        do n = 1, nbin
          gcn( n,myu,ijk ) = gc( n,myu,ijk ) * rexpxctr( n )
-       end do
+       enddo
        gcn( -1,myu,ijk ) = 0.0_RP
        gcn(  0,myu,ijk ) = 0.0_RP
        gcn( nbin+1,myu,ijk ) = 0.0_RP
        gcn( nbin+2,myu,ijk ) = 0.0_RP
-     end do
+     enddo
 
      !--- lhv
      qlsbl(ijk) = CONST_LHS0 + ( CONST_CPvap - CONST_CI ) * ( temp(ijk) - CONST_TEM00 ) * flg_thermodyn
@@ -2082,7 +2084,7 @@ contains
      do myu = 2, nspc
        uval = cbnd( 1,myu )*rexpxbnd( 1 )*gtice(ijk)*abs( ssice(ijk) )
        umax(ijk) = max( umax(ijk),uval )
-     end do
+     enddo
 
      dtcnd(ijk) = cflfct*dxmic/umax(ijk)
      nloop(ijk) = int( dtime/dtcnd(ijk) ) + 1
@@ -2128,8 +2130,8 @@ contains
        do myu = 2, nspc
          do n = 1, nbin
            sumice(ijk) = sumice(ijk) + gcn( n,myu,ijk )*cctr( n,myu )*dxmic
-         end do
-       end do
+         enddo
+       enddo
 
       enddo
     enddo
@@ -2179,11 +2181,11 @@ contains
            acoef( n,myu,0,ijk ) = - ( gcn( n+1,myu,ijk )-26.0_RP*gcn( n,myu,ijk )+gcn( n-1,myu,ijk ) ) / 24.0_RP
            acoef( n,myu,1,ijk ) = ( gcn( n+1,myu,ijk )-gcn( n-1,myu,ijk ) ) * 0.50_RP
            acoef( n,myu,2,ijk ) = ( gcn( n+1,myu,ijk )-2.0_RP*gcn( n,myu,ijk )+gcn( n-1,myu,ijk ) ) * 0.50_RP
-         end do
+         enddo
 
          do n = 0, nbin+2
            crn( n ) = uadv( n,myu,ijk )*dtcnd(ijk)/dxmic
-         end do
+         enddo
 
          do n = 0, nbin+1
            cplus = ( crn( n+1 ) + abs( crn( n+1 ) ) ) * 0.50_RP
@@ -2191,9 +2193,9 @@ contains
            do j = 0, ldeg
              sum = sum + acoef( n,myu,j,ijk )/( j+1 )/2.0_RP**( j+1 )  &
                        *( 1.0_RP-( 1.0_RP-2.0_RP*cplus )**( j+1 ) )
-           end do
+           enddo
            aip( n,myu,ijk ) = max( sum,0.0_RP )
-         end do
+         enddo
 
          do n = 0, nbin+1
            cmins = - ( crn( n ) - abs( crn( n ) ) ) * 0.50_RP
@@ -2201,9 +2203,9 @@ contains
            do j = 0, ldeg
              sum = sum + acoef( n,myu,j,ijk )/( j+1 )/2.0_RP**( j+1 ) * (-1)**j &
                        *( 1.0_RP-( 1.0_RP-2.0_RP*cmins )**( j+1 ) )
-           end do
+           enddo
            aim( n,myu,ijk ) = max( sum,0.0_RP )
-         end do
+         enddo
 
        enddo
        enddo
@@ -2222,20 +2224,20 @@ contains
            sum = 0.0_RP
            do j = 0, ldeg
              sum = sum + acoef( n,myu,j,ijk )/( j+1 )/2.0_RP**( j+1 ) * ( (-1)**j+1 )
-           end do
+           enddo
            ai( n,myu,ijk ) = max( sum,aip( n,myu,ijk )+aim( n,myu,ijk )+cldmin )
-         end do
+         enddo
 
          do n = 1, nbin+1
            flq( n,myu,ijk ) = ( aip( n-1,myu,ijk )/ai( n-1,myu,ijk )*gcn( n-1,myu,ijk )  &
                                -aim( n  ,myu,ijk )/ai( n  ,myu,ijk )*gcn( n  ,myu,ijk  ) )*dxmic/dtcnd(ijk)
-         end do
+         enddo
 
          dumm_regene(ijk) = dumm_regene(ijk)+( -flq( 1,myu,ijk )*dtcnd(ijk)/dxmic )*min( uadv(1,myu,ijk),0.0_RP )/uadv(1,myu,ijk)
 
          do n = 1, nbin
            gcn( n,myu,ijk ) = gcn( n,myu,ijk ) - ( flq( n+1,myu,ijk )-flq( n,myu,ijk ) )*dtcnd(ijk)/dxmic
-         end do
+         enddo
         enddo
         enddo
 
@@ -2251,8 +2253,8 @@ contains
        do n = 1, nbin
        do myu = 2, nspc
          gcinew(ijk) = gcinew(ijk) + gcn( n,myu,ijk )*expxctr( n )*dxmic
-       end do
-       end do
+       enddo
+       enddo
        !
        !----- change of humidity and temperature
        sblmss(ijk) = gcinew(ijk) - gciold(ijk)
@@ -2262,10 +2264,10 @@ contains
        gciold(ijk) = gcinew(ijk)
        !
        !----- continue / end
-     end do
+     enddo
     enddo
 
-  end do ! nloop
+  enddo ! nloop
   !
 !OCL NORECURRENCE(gc)
   do ijk = 1, ijkmax
@@ -2273,15 +2275,16 @@ contains
     do myu = 2, nspc
     do n = 1, nbin
       gc( n,myu,ijk ) = gcn( n,myu,ijk )*expxctr( n )
-    end do
-    end do
-  end do
+    enddo
+    enddo
+  enddo
 
     call PROF_rapend  ('MP_SBM_Icephase', 1)
 
     return
   end subroutine icephase
-  !-------------------------------------------------------------------------------
+
+  !-----------------------------------------------------------------------------
   subroutine mixphase( &
        ijkmax, &
        dens,   &
@@ -2297,7 +2300,7 @@ contains
     real(RP), intent(in)    :: pres(ijkmax)           ! Pressure          [Pa]
     real(RP), intent(inout) :: temp(ijkmax)           ! Temperature       [K]
     real(RP), intent(inout) :: qvap(ijkmax)           ! Specific humidity [kg/kg]
-    real(RP), intent(inout) :: gc  (nbin,nspc,ijkmax) ! size distribution function (hydrometeors)
+    real(RP), intent(inout) :: gc  (nbin,nspc,ijkmax) ! Mass size distribution function of hydrometeor
     real(RP), intent(in)    :: dtime                  ! Time step interval
 
   integer :: n, myu, mm, ncount
@@ -2695,7 +2698,7 @@ contains
     real(RP), intent(in)    :: pres(ijkmax)           ! Pressure          [Pa]
     real(RP), intent(inout) :: temp(ijkmax)           ! Temperature       [K]
     real(RP), intent(inout) :: qvap(ijkmax)           ! Specific humidity [kg/kg]
-    real(RP), intent(inout) :: gc  (nbin,nspc,ijkmax) ! size distribution function (hydrometeors)
+    real(RP), intent(inout) :: gc  (nbin,nspc,ijkmax) ! Mass size distribution function of hydrometeor
     real(RP), intent(in)    :: dtime                  ! Time step interval
 
   real(RP) :: ssliq, ssice
@@ -2756,7 +2759,7 @@ contains
   end subroutine ice_nucleat
 
   !-----------------------------------------------------------------------------
-  subroutine  freezing( &
+  subroutine freezing( &
        ijkmax,     &
        num_cold,   &
        index_cold, &
@@ -2771,7 +2774,7 @@ contains
     integer,  intent(in)    :: index_cold(ijkmax)
     real(RP), intent(in)    :: dens(ijkmax)           ! Density           [kg/m3]
     real(RP), intent(inout) :: temp(ijkmax)           ! Temperature       [K]
-    real(RP), intent(inout) :: gc  (nbin,nspc,ijkmax) ! size distribution function (hydrometeors)
+    real(RP), intent(inout) :: gc  (nbin,nspc,ijkmax) ! Mass size distribution function of hydrometeor
     real(RP), intent(in)    :: dtime                  ! Time step interval
 
   integer :: nbound, n
@@ -2807,7 +2810,7 @@ contains
         gc( n,ip,ijk ) = gc( n,ip,ijk ) + frz
 
         sumfrz = sumfrz + frz
-      end do
+      enddo
       do n = nbound, nbin
         dmp = rate*expxctr( n )
         frz = gc( n,il,ijk )*( 1.0_RP-exp( -dmp*dtime ) )
@@ -2818,7 +2821,7 @@ contains
         gc( n,ih,ijk ) = gc( n,ih,ijk ) + frz
 
         sumfrz = sumfrz + frz
-      end do
+      enddo
 !     elseif( temp > tthreth ) then !--- Vali (1975)
 !
 !      tc = temp-tmlt
@@ -2835,7 +2838,7 @@ contains
 !       end if
 !
 !       sumfrz = sumfrz + frz
-!      end do
+!      enddo
 !     endif
      sumfrz = sumfrz*dxmic
 
@@ -2849,7 +2852,7 @@ contains
   end subroutine freezing
 
   !-----------------------------------------------------------------------------
-  subroutine  melting( &
+  subroutine melting( &
        ijkmax,     &
        num_warm,   &
        index_warm, &
@@ -2864,7 +2867,7 @@ contains
     integer,  intent(in)    :: index_warm(ijkmax)
     real(RP), intent(in)    :: dens(ijkmax)           ! Density           [kg/m3]
     real(RP), intent(inout) :: temp(ijkmax)           ! Temperature       [K]
-    real(RP), intent(inout) :: gc  (nbin,nspc,ijkmax) ! size distribution function (hydrometeors)
+    real(RP), intent(inout) :: gc  (nbin,nspc,ijkmax) ! Mass size distribution function of hydrometeor
     real(RP), intent(in)    :: dtime                  ! Time step interval
 
   integer :: n, m
@@ -2882,10 +2885,10 @@ contains
        do m = ic, ih
         sumice = sumice + gc( n,m,ijk )
         gc( n,m,ijk ) = 0.0_RP
-       end do
+       enddo
        gc( n,il,ijk ) = gc( n,il,ijk ) + sumice
        summlt = summlt + sumice  !--- All freezed particle melt instantaneously
-      end do
+      enddo
       summlt = summlt*dxmic
 
       tdel = - summlt/dens(ijk)*qlmlt/cp
@@ -2897,7 +2900,8 @@ contains
 
   return
   end subroutine melting
-  !-------------------------------------------------------------------------------
+
+  !-----------------------------------------------------------------------------
   subroutine collmain( &
        ijkmax,     &
        temp,       &
@@ -2909,6 +2913,7 @@ contains
     real(RP), intent(inout) :: temp(ijkmax)           ! Temperature       [K]
     real(RP), intent(inout) :: gc  (nbin,nspc,ijkmax) ! size distribution function (hydrometeors)
     real(RP), intent(in)    :: dtime                  ! Time step interval
+    !---------------------------------------------------------------------------
 
     call PROF_rapstart('MP_SBM_Coll', 1)
 
@@ -2930,7 +2935,7 @@ contains
     return
   end subroutine collmain
 
-  !-------------------------------------------------------------------------------
+  !-----------------------------------------------------------------------------
   subroutine collmainf( &
        ijkmax,     &
        temp,       &
@@ -2942,6 +2947,7 @@ contains
     real(RP), intent(inout) :: temp(ijkmax)           ! Temperature       [K]
     real(RP), intent(inout) :: gc  (nbin,nspc,ijkmax) ! size distribution function (hydrometeors)
     real(RP), intent(in)    :: dtime                  ! Time step interval
+    !---------------------------------------------------------------------------
 
     call PROF_rapstart('MP_SBM_CollF', 1)
 
@@ -2990,6 +2996,7 @@ contains
   integer :: iexst( nbin,nspc,ijkmax )
   real(RP) :: csum( nspc,ijkmax )
   integer :: ijk, nn, mm, pp, qq
+    !---------------------------------------------------------------------------
 
     call PROF_rapstart('MP_SBM_CollCoag', 1)
 
@@ -3006,7 +3013,7 @@ contains
        csum( iss,ijk ) = csum( iss,ijk ) + gc( n,iss,ijk )*dxmic
        csum( ig,ijk ) = csum( ig,ijk ) + gc( n,ig,ijk )*dxmic
        csum( ih,ijk ) = csum( ih,ijk ) + gc( n,ih,ijk )*dxmic
-     end do
+     enddo
      if ( csum( il,ijk ) > cldmin ) iflg( il,ijk ) = 1
      if ( csum( ic,ijk ) > cldmin ) iflg( ic,ijk ) = 1
      if ( csum( ip,ijk ) > cldmin ) iflg( ip,ijk ) = 1
@@ -3093,7 +3100,7 @@ contains
           do l = 0, ldeg
             sum = sum + acoef( l )/( l+1 )/2.0_RP**( l+1 )   &
                       *( 1.0_RP-( 1.0_RP-2.0_RP*crn )**( l+1 ) )
-          end do
+          enddo
 
           flux = wgt*sum                                           ! f_{k+1/2} in page 119 of Suzuki (2004)
           flux = min( max( flux,0.0_RP ),gprime )
@@ -3103,25 +3110,26 @@ contains
 
         endif
 
-      end do
-      end do !large
-      end do
-      end do !small
+      enddo
+      enddo !large
+      enddo
+      enddo !small
     !
-    end do
-    end do
+    enddo
+    enddo
 
-    end do
-    end do
+    enddo
+    enddo
 
-  end do
+  enddo
 
     call PROF_rapend  ('MP_SBM_CollCoag', 1)
 
     return
   end subroutine collcoag
+
   !-------------------------------------------------------------------
-  subroutine  getrule   &
+  subroutine getrule   &
       ( ifrsl,indx      ) !--- out
   ! subroutine for creating lookup table (Table A.2 of Suzuki 2004)
   integer, intent(out) :: indx( nbin,nbin )
@@ -3267,7 +3275,11 @@ contains
   end subroutine getrule
 
   !-----------------------------------------------------------------------------
-  subroutine faero( ijkmax,f0,ga )
+  subroutine faero( &
+       ijkmax, &
+       f0,     &
+       ga      )
+    implicit none
 
   integer , intent(in) :: ijkmax                            !
   real(RP), intent(in) :: f0(ijkmax)
@@ -3288,13 +3300,12 @@ contains
 
   return
 
+    return
   end subroutine faero
-  !-------------------------------------------------------------------------------
-  !
+
+  !-----------------------------------------------------------------------------
   ! + Y. Sato added for stochastic method
   ! + Reference Sato et al. (2009) JGR, doi:10.1029/2008JD011247
-  !
-  !-------------------------------------------------------------------------------
   subroutine random_setup( mset ) !--- in
 
    use scale_random, only: &
@@ -3337,14 +3348,14 @@ contains
 
     do p = 1, pq
       orderb( p ) = p
-    end do
+    enddo
 
     do p = 1, nbin-1
       ranstmp( (p-1)*nbin-(p*(p-1))/2+1 : p*nbin-(p*(p+1))/2 ) = p
      do q = 1, nbin-p
         ranltmp( (p-1)*nbin-(p*(p-1))/2+q ) = p+q
-      end do
-   end do
+      enddo
+   enddo
 
     do n = 1, mset
       call RANDOM_get( randnum )
@@ -3354,7 +3365,7 @@ contains
         temp = orderb( p )
         orderb( p ) = orderb( k )
         orderb( k ) = temp
-       end do
+       enddo
 
        do p = 1, mbin
         if( p <= pq ) then
@@ -3369,10 +3380,10 @@ contains
           rans( p ) = ranl( p )
           ranl( p ) = tmp1
          end if
-       end do
+       enddo
          blrg( n,1:mbin ) = int( ranl( 1:mbin ) )
          bsml( n,1:mbin ) = int( rans( 1:mbin ) )
-    end do
+    enddo
 
     deallocate( ranstmp )
     deallocate( ranltmp )
@@ -3380,9 +3391,9 @@ contains
     deallocate( randnum )
 
   end subroutine random_setup
+
   !-----------------------------------------------------------------------------
   subroutine  r_collcoag( dtime, ijkmax, swgt, temp, gc )
-  !-------------------------------------------------------------------------------
   !--- reference paper
   !    Bott et al. (1998) J. Atmos. Sci. vol.55, pp. 2284-
   !    Bott et al. (2000) J. Atmos. Sci. Vol.57, pp. 284-
@@ -3434,7 +3445,7 @@ contains
        csum( iss,ijk ) = csum( iss,ijk ) + gc( n,iss,ijk )*dxmic
        csum( ig,ijk ) = csum( ig,ijk ) + gc( n,ig,ijk )*dxmic
        csum( ih,ijk ) = csum( ih,ijk ) + gc( n,ih,ijk )*dxmic
-     end do
+     enddo
      if ( csum( il,ijk ) > cldmin ) iflg( il,ijk ) = 1
      if ( csum( ic,ijk ) > cldmin ) iflg( ic,ijk ) = 1
      if ( csum( ip,ijk ) > cldmin ) iflg( ip,ijk ) = 1
@@ -3553,7 +3564,7 @@ contains
             do l = 0, ldeg
               sum = sum + acoef( l )/( l+1 )/2.0_RP**( l+1 )   &
                         *( 1.0_RP-( 1.0_RP-2.0_RP*crn )**( l+1 ) )
-            end do
+            enddo
 
             flux = wgt*sum
             flux = min( max( flux,0.0_RP ),gprime )
@@ -3562,18 +3573,18 @@ contains
             gc( k+1,irsl,ijk ) = gc( k+1,irsl,ijk ) + flux
           endif
 
-       end do
-       end do
+       enddo
+       enddo
 
-      end do ! bin
+      enddo ! bin
     !
-    end do
-    end do
+    enddo
+    enddo
 
-    end do
-    end do
+    enddo
+    enddo
 
-  end do
+  enddo
 
     call PROF_rapend  ('MP_SBM_CollCoagR', 1)
 
@@ -3582,7 +3593,6 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Calculate Cloud Fraction
-  !-----------------------------------------------------------------------------
   subroutine ATMOS_PHY_MP_suzuki10_CloudFraction( &
        cldfrac, &
        QTRC     )
@@ -3617,6 +3627,7 @@ contains
 
     return
   end subroutine ATMOS_PHY_MP_suzuki10_CloudFraction
+
   !-----------------------------------------------------------------------------
   !> Calculate Effective Radius
   subroutine ATMOS_PHY_MP_suzuki10_EffectiveRadius( &
@@ -3675,6 +3686,7 @@ contains
 
     return
   end subroutine ATMOS_PHY_MP_suzuki10_EffectiveRadius
+
   !-----------------------------------------------------------------------------
   !> Calculate mixing ratio of each category
   subroutine ATMOS_PHY_MP_suzuki10_Mixingratio( &
@@ -3711,17 +3723,17 @@ contains
 
     return
   end subroutine ATMOS_PHY_MP_suzuki10_Mixingratio
+
   !-----------------------------------------------------------------------------
   !----- mkpara is module to create micpara.dat, which is parameter file of
   !----- micrphyisical proprties of hydrometeors (collision kernel, radius...).
   !----- Imported from preprocess/mk_para2 at 2013/12/26 (Y.Sato)
-  !-----------------------------------------------------------------------------
   subroutine mkpara
 
   implicit none
 
   integer :: i, j
-  !--------------------------------------------------------------------------------------
+  !-----------------------------------------------------------------------------
 
   allocate( radc_mk( nbin ) )
   allocate( xctr_mk( nbin ) )
@@ -3763,6 +3775,7 @@ contains
   deallocate( br_mk )
 
   end subroutine mkpara
+
   !---------------------------------------------------------------------------------------
   subroutine rdkdat
 
@@ -4782,6 +4795,6 @@ contains
   return
 
   end function fspline2
-  !-----------------------------------------------------------------------------
+
 end module scale_atmos_phy_mp_suzuki10
 !-------------------------------------------------------------------------------
