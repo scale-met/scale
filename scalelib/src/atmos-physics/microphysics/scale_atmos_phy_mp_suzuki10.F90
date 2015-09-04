@@ -1812,16 +1812,16 @@ contains
      enddo
     enddo
 
-!OCL LOOP_NOFUSION
+!OCL PARALLEL
     do ijk = 1, ijkmax
      do nn = 1, loopflg(ijk)
 
        do mm = 1, iflg( il,ijk )
          !--- flux
          do n = 0, nbin+1
-           acoef( n,il,0,ijk ) = - ( gcn( n+1,il,ijk )-26.0_RP*gcn( n,il,ijk )+gcn( n-1,il,ijk ) ) / 24.0_RP
-           acoef( n,il,1,ijk ) = ( gcn( n+1,il,ijk )-gcn( n-1,il,ijk ) ) * 0.50_RP
-           acoef( n,il,2,ijk ) = ( gcn( n+1,il,ijk )-2.0_RP*gcn( n,il,ijk )+gcn( n-1,il,ijk ) ) * 0.50_RP
+           acoef( n,il,0,ijk ) = - ( gcn( n+1,il,ijk )-26.0_RP*gcn( n,il,ijk )+gcn( n-1,il,ijk ) ) / 48.0_RP
+           acoef( n,il,1,ijk ) = ( gcn( n+1,il,ijk )-gcn( n-1,il,ijk ) ) / 16.0_RP
+           acoef( n,il,2,ijk ) = ( gcn( n+1,il,ijk )-2.0_RP*gcn( n,il,ijk )+gcn( n-1,il,ijk ) ) / 48.0_RP
          enddo
 
          do n = 0, nbin+2
@@ -1830,39 +1830,26 @@ contains
 
          do n = 0, nbin+1
            cplus = ( crn( n+1 ) + abs( crn( n+1 ) ) ) * 0.50_RP
+           cplus = 1.0_RP-2.0_RP*cplus
+
            sum = 0.0_RP
            do j = 0, ldeg
-             sum = sum + acoef( n,il,j,ijk )/( j+1 )/2.0_RP**( j+1 )  &
-                       *( 1.0_RP-( 1.0_RP-2.0_RP*cplus )**( j+1 ) )
+             sum = sum + acoef( n,il,j,ijk ) * ( 1.0_RP-cplus**( j+1 ) )
            enddo
            aip( n,il,ijk ) = max( sum,0.0_RP )
-         enddo
 
-         do n = 0, nbin+1
            cmins = - ( crn( n ) - abs( crn( n ) ) ) * 0.50_RP
+           cmins = 1.0_RP-2.0_RP*cmins
+
            sum = 0.0_RP
            do j = 0, ldeg
-             sum = sum + acoef( n,il,j,ijk )/( j+1 )/2.0_RP**( j+1 ) * (-1)**j &
-                       *( 1.0_RP-( 1.0_RP-2.0_RP*cmins )**( j+1 ) )
+             sum = sum + acoef( n,il,j,ijk ) * (-1)**j * ( 1.0_RP-cmins**( j+1 ) )
            enddo
            aim( n,il,ijk ) = max( sum,0.0_RP )
-         enddo
 
-       enddo
-
-     enddo
-    enddo
-
-!OCL LOOP_NOFUSION
-    do ijk = 1, ijkmax
-     do nn = 1, loopflg(ijk)
-
-       do mm = 1, iflg( il,ijk )
-
-         do n = 0, nbin+1
            sum = 0.0_RP
            do j = 0, ldeg
-             sum = sum + acoef( n,il,j,ijk )/( j+1 )/2.0_RP**( j+1 ) * ( (-1)**j+1 )
+             sum = sum + acoef( n,il,j,ijk ) * ( (-1)**j+1 )
            enddo
            ai( n,il,ijk ) = max( sum,aip( n,il,ijk )+aim( n,il,ijk )+cldmin )
          enddo
@@ -2142,7 +2129,7 @@ contains
       enddo
     enddo
 
-!OCL LOOP_NOFUSION
+!OCL PARALLEL
     do ijk = 1, ijkmax
       do nn = 1, loopflg(ijk)
 
@@ -2150,9 +2137,9 @@ contains
        do mm = 1, iflg( myu,ijk )
          !--- flux
          do n = 0, nbin+1
-           acoef( n,myu,0,ijk ) = - ( gcn( n+1,myu,ijk )-26.0_RP*gcn( n,myu,ijk )+gcn( n-1,myu,ijk ) ) / 24.0_RP
-           acoef( n,myu,1,ijk ) = ( gcn( n+1,myu,ijk )-gcn( n-1,myu,ijk ) ) * 0.50_RP
-           acoef( n,myu,2,ijk ) = ( gcn( n+1,myu,ijk )-2.0_RP*gcn( n,myu,ijk )+gcn( n-1,myu,ijk ) ) * 0.50_RP
+           acoef( n,myu,0,ijk ) = - ( gcn( n+1,myu,ijk )-26.0_RP*gcn( n,myu,ijk )+gcn( n-1,myu,ijk ) ) / 48.0_RP
+           acoef( n,myu,1,ijk ) = ( gcn( n+1,myu,ijk )-gcn( n-1,myu,ijk ) ) / 16.0_RP
+           acoef( n,myu,2,ijk ) = ( gcn( n+1,myu,ijk )-2.0_RP*gcn( n,myu,ijk )+gcn( n-1,myu,ijk ) ) / 48.0_RP
          enddo
 
          do n = 0, nbin+2
@@ -2161,41 +2148,26 @@ contains
 
          do n = 0, nbin+1
            cplus = ( crn( n+1 ) + abs( crn( n+1 ) ) ) * 0.50_RP
+           cplus = 1.0_RP-2.0_RP*cplus
+
            sum = 0.0_RP
            do j = 0, ldeg
-             sum = sum + acoef( n,myu,j,ijk )/( j+1 )/2.0_RP**( j+1 )  &
-                       *( 1.0_RP-( 1.0_RP-2.0_RP*cplus )**( j+1 ) )
+             sum = sum + acoef( n,myu,j,ijk ) * ( 1.0_RP-cplus**( j+1 ) )
            enddo
            aip( n,myu,ijk ) = max( sum,0.0_RP )
-         enddo
 
-         do n = 0, nbin+1
            cmins = - ( crn( n ) - abs( crn( n ) ) ) * 0.50_RP
+           cmins = 1.0_RP-2.0_RP*cmins
+
            sum = 0.0_RP
            do j = 0, ldeg
-             sum = sum + acoef( n,myu,j,ijk )/( j+1 )/2.0_RP**( j+1 ) * (-1)**j &
-                       *( 1.0_RP-( 1.0_RP-2.0_RP*cmins )**( j+1 ) )
+             sum = sum + acoef( n,myu,j,ijk ) * (-1)**j * ( 1.0_RP-cmins**( j+1 ) )
            enddo
            aim( n,myu,ijk ) = max( sum,0.0_RP )
-         enddo
 
-       enddo
-       enddo
-
-      enddo
-     enddo
-
-!OCL LOOP_NOFUSION
-    do ijk = 1, ijkmax
-      do nn = 1, loopflg(ijk)
-
-        do myu = 2, nspc
-        do mm = 1, iflg( myu,ijk )
-
-         do n = 0, nbin+1
            sum = 0.0_RP
            do j = 0, ldeg
-             sum = sum + acoef( n,myu,j,ijk )/( j+1 )/2.0_RP**( j+1 ) * ( (-1)**j+1 )
+             sum = sum + acoef( n,myu,j,ijk ) * ( (-1)**j+1 )
            enddo
            ai( n,myu,ijk ) = max( sum,aip( n,myu,ijk )+aim( n,myu,ijk )+cldmin )
          enddo
@@ -2511,7 +2483,7 @@ contains
 
        call PROF_rapstart('_SBM_Advection', 3)
 
-!OCL LOOP_NOFUSION
+!OCL PARALLEL
       do ijk = 1, ijkmax
        do nn = 1, loopflg(ijk)
          !--- change of SDF
@@ -2519,9 +2491,9 @@ contains
          do mm = 1, iflg( myu,ijk )
            !--- flux
            do n = 0, nbin+1
-             acoef( n,myu,0,ijk ) = - ( gcn( n+1,myu,ijk )-26.0_RP*gcn( n,myu,ijk )+gcn( n-1,myu,ijk ) ) / 24.0_RP
-             acoef( n,myu,1,ijk ) = ( gcn( n+1,myu,ijk )-gcn( n-1,myu,ijk ) ) * 0.50_RP
-             acoef( n,myu,2,ijk ) = ( gcn( n+1,myu,ijk )-2.0_RP*gcn( n,myu,ijk )+gcn( n-1,myu,ijk ) ) * 0.50_RP
+             acoef( n,myu,0,ijk ) = - ( gcn( n+1,myu,ijk )-26.0_RP*gcn( n,myu,ijk )+gcn( n-1,myu,ijk ) ) / 48.0_RP
+             acoef( n,myu,1,ijk ) = ( gcn( n+1,myu,ijk )-gcn( n-1,myu,ijk ) ) / 16.0_RP
+             acoef( n,myu,2,ijk ) = ( gcn( n+1,myu,ijk )-2.0_RP*gcn( n,myu,ijk )+gcn( n-1,myu,ijk ) ) / 48.0_RP
            enddo
 
            do n = 0, nbin+2
@@ -2530,39 +2502,26 @@ contains
 
            do n = 0, nbin+1
              cplus = ( crn( n+1 ) + abs( crn( n+1 ) ) ) * 0.50_RP
+           cplus = 1.0_RP-2.0_RP*cplus
+
              sum = 0.0_RP
              do j = 0, ldeg
-               sum = sum + acoef( n,myu,j,ijk )/( j+1 )/2.0_RP**( j+1 )  &
-                         *( 1.0_RP-( 1.0_RP-2.0_RP*cplus )**( j+1 ) )
+               sum = sum + acoef( n,myu,j,ijk ) * ( 1.0_RP-cplus**( j+1 ) )
              enddo
              aip( n,myu,ijk ) = max( sum,0.0_RP )
-           enddo
 
-           do n = 0, nbin+1
              cmins = - ( crn( n ) - abs( crn( n ) ) ) * 0.50_RP
+             cmins = 1.0_RP-2.0_RP*cmins
+
              sum = 0.0_RP
              do j = 0, ldeg
-               sum = sum + acoef( n,myu,j,ijk )/( j+1 )/2.0_RP**( j+1 ) * (-1)**j &
-                         *( 1.0_RP-( 1.0_RP-2.0_RP*cmins )**( j+1 ) )
+               sum = sum + acoef( n,myu,j,ijk ) * (-1)**j * ( 1.0_RP-cmins**( j+1 ) )
              enddo
              aim( n,myu,ijk ) = max( sum,0.0_RP )
-           enddo
-         enddo
-         enddo
-       enddo
-      enddo
 
-
-!OCL LOOP_NOFUSION
-      do ijk = 1, ijkmax
-       do nn = 1, loopflg(ijk)
-         !--- change of SDF
-         do myu = 1, nspc
-         do mm = 1, iflg( myu,ijk )
-           do n = 0, nbin+1
              sum = 0.0_RP
              do j = 0, ldeg
-               sum = sum + acoef( n,myu,j,ijk )/( j+1 )/2.0_RP**( j+1 ) * ( (-1)**j+1 )
+               sum = sum + acoef( n,myu,j,ijk ) * ( (-1)**j+1 )
              enddo
              ai( n,myu,ijk ) = max( sum,aip( n,myu,ijk )+aim( n,myu,ijk )+cldmin )
            enddo
