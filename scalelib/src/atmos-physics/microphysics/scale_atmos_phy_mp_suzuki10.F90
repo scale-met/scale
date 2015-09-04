@@ -2861,92 +2861,93 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine collmain( &
-       ijkmax,     &
-       temp,       &
-       gc,         &
-       dtime       )
+       ijkmax, &
+       temp,   &
+       ghyd,   &
+       dt      )
     implicit none
 
     integer,  intent(in)    :: ijkmax
-    real(RP), intent(inout) :: temp(ijkmax)           ! Temperature       [K]
-    real(RP), intent(inout) :: gc  (nbin,nspc,ijkmax) ! size distribution function (hydrometeors)
-    real(RP), intent(in)    :: dtime                  ! Time step interval
+    real(RP), intent(in)    :: temp(ijkmax)           ! Temperature       [K]
+    real(RP), intent(inout) :: ghyd(nbin,nspc,ijkmax) ! Mass size distribution function of hydrometeor
+    real(RP), intent(in)    :: dt                     ! Time step interval
     !---------------------------------------------------------------------------
 
-
-  if ( rndm_flgp == 1 ) then  !--- stochastic method
-     call r_collcoag        &
-         ( dtime, ijkmax,  & !--- in
-           wgtbin,          & !--- in
-           temp(:),         & !--- in
-           gc(:,:,:)        ) !--- inout
-  else  !--- default method
-     call  collcoag          &
-         ( dtime, ijkmax,   & !--- in
-           temp(:),          & !--- in
-           gc(:,:,:)         ) !--- inout
-  end if
+    if ( rndm_flgp == 1 ) then ! stochastic method
+       call r_collcoag( ijkmax,      & ! [IN]
+                        wgtbin,      & ! [IN]
+                        temp(:),     & ! [IN]
+                        ghyd(:,:,:), & ! [INOUT]
+                        dt           ) ! [IN]
+    else  ! default
+       call collcoag( ijkmax,      & ! [IN]
+                      temp(:),     & ! [IN]
+                      ghyd(:,:,:), & ! [INOUT]
+                      dt           ) ! [IN]
+    endif
 
     return
   end subroutine collmain
 
   !-----------------------------------------------------------------------------
   subroutine collmainf( &
-       ijkmax,     &
-       temp,       &
-       gc,         &
-       dtime       )
+       ijkmax, &
+       temp,   &
+       ghyd,   &
+       dt      )
     implicit none
 
     integer,  intent(in)    :: ijkmax
-    real(RP), intent(inout) :: temp(ijkmax)           ! Temperature       [K]
-    real(RP), intent(inout) :: gc  (nbin,nspc,ijkmax) ! size distribution function (hydrometeors)
-    real(RP), intent(in)    :: dtime                  ! Time step interval
+    real(RP), intent(in)    :: temp(ijkmax)           ! Temperature       [K]
+    real(RP), intent(inout) :: ghyd(nbin,nspc,ijkmax) ! Mass size distribution function of hydrometeor
+    real(RP), intent(in)    :: dt                     ! Time step interval
     !---------------------------------------------------------------------------
 
-  if ( rndm_flgp == 1 ) then  !--- stochastic method
-     call r_collcoag        &
-         ( dtime, ijkmax,  & !--- in
-           wgtbin,          & !--- in
-           temp(:),         & !--- in
-           gc(:,:,:)        ) !--- inout
-  else  !--- default method
-    call  collcoag          &
-        ( dtime, ijkmax,   & !--- in
-          temp(:),          & !--- in
-          gc(:,:,:)       ) !--- inout
-  endif
+    if ( rndm_flgp == 1 ) then ! stochastic method
+       call r_collcoag( ijkmax,      & ! [IN]
+                        wgtbin,      & ! [IN]
+                        temp(:),     & ! [IN]
+                        ghyd(:,:,:), & ! [INOUT]
+                        dt           ) ! [IN]
+    else  ! default
+       call collcoag( ijkmax,      & ! [IN]
+                      temp(:),     & ! [IN]
+                      ghyd(:,:,:), & ! [INOUT]
+                      dt           ) ! [IN]
+    endif
 
     return
   end subroutine collmainf
 
-  !-----------------------------------------------------------------------
-  subroutine  collcoag( dtime,ijkmax,temp,gc )
-  !------------------------------------------------------------------------------
+  !-----------------------------------------------------------------------------
   !--- reference paper
   !    Bott et al. (1998) J. Atmos. Sci. vol.55, pp. 2284-
-  !------------------------------------------------------------------------------
-  !
-  integer,  intent(in) :: ijkmax    ! type of species coagulated(small) particle
-  real(RP), intent(in) :: dtime   !  time step
-  real(RP), intent(in) :: temp( ijkmax )  ! size distribution function (hydrometeor): mass
-  real(RP), intent(inout) :: gc( nbin,nspc,ijkmax )  ! size distribution function (hydrometeor): mass
-  !
-  !--- local variables
-  integer :: i, j, k, l
-  real(RP) :: xi, xj, xnew, dmpi, dmpj, frci, frcj
-  real(RP) :: gprime, gprimk, wgt, crn, sum, flux
-  integer, parameter :: ldeg = 2
-  real(RP) :: acoef( 0:ldeg )
-  real(RP), parameter :: dmpmin = 1.E-01_RP
-  real(RP) :: suri, surj
+  subroutine collcoag( &
+       ijkmax, &
+       temp,   &
+       gc,     &
+       dtime   )
+    implicit none
 
-  integer :: myu, n, irsl, ilrg, isml
-  integer :: ibnd( ijkmax )
-  integer :: iflg( nspc,ijkmax )
-  integer :: iexst( nbin,nspc,ijkmax )
-  real(RP) :: csum( nspc,ijkmax )
-  integer :: ijk, nn, mm, pp, qq
+    integer,  intent(in)    :: ijkmax
+    real(RP), intent(in)    :: temp(ijkmax)           ! Temperature       [K]
+    real(RP), intent(inout) :: gc  (nbin,nspc,ijkmax) ! Mass size distribution function of hydrometeor
+    real(RP), intent(in)    :: dtime                  ! Time step interval
+
+    integer :: i, j, k, l
+    real(RP) :: xi, xj, xnew, dmpi, dmpj, frci, frcj
+    real(RP) :: gprime, gprimk, wgt, crn, sum, flux
+    integer, parameter :: ldeg = 2
+    real(RP) :: acoef( 0:ldeg )
+    real(RP), parameter :: dmpmin = 1.E-01_RP
+    real(RP) :: suri, surj
+
+    integer :: myu, n, irsl, ilrg, isml
+    integer :: ibnd( ijkmax )
+    integer :: iflg( nspc,ijkmax )
+    integer :: iexst( nbin,nspc,ijkmax )
+    real(RP) :: csum( nspc,ijkmax )
+    integer :: ijk, nn, mm, pp, qq
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('_SBM_CollCoag', 2)
@@ -3232,24 +3233,24 @@ contains
        ga      )
     implicit none
 
-  integer , intent(in) :: ijkmax                            !
-  real(RP), intent(in) :: f0(ijkmax)
-  real(RP), intent(inout) :: ga( nccn,ijkmax )
-  real(RP) :: gaero( nccn ) !, f1, radmax, radmin
-!  real(RP), parameter :: alpha = 3.0_RP
-  integer :: n
-  integer :: ijk
+    integer , intent(in)    :: ijkmax
+    real(RP), intent(in)    :: f0(ijkmax)
+    real(RP), intent(inout) :: ga(nccn,ijkmax)
 
-  do ijk = 1, ijkmax
+!    real(RP), parameter :: alpha = 3.0_RP
 
-     do n = 1, nccn
-      gaero( n ) = f0(ijk)*marate( n )*expxactr( n )/dxaer
-      ga( n,ijk ) = ga( n,ijk )+gaero( n )
-     end do
+    integer :: ijk, n
+    !---------------------------------------------------------------------------
 
-  end do
+    call PROF_rapstart('_SBM_FAero', 2)
 
-  return
+    do ijk = 1, ijkmax
+    do n   = 1, nccn
+       ga(n,ijk) = ga(n,ijk) + f0(ijk) * marate(n) * expxactr(n) / dxaer
+    enddo
+    enddo
+
+    call PROF_rapend  ('_SBM_FAero', 2)
 
     return
   end subroutine faero
@@ -3344,43 +3345,45 @@ contains
   end subroutine random_setup
 
   !-----------------------------------------------------------------------------
-  subroutine  r_collcoag( dtime, ijkmax, swgt, temp, gc )
   !--- reference paper
   !    Bott et al. (1998) J. Atmos. Sci. vol.55, pp. 2284-
   !    Bott et al. (2000) J. Atmos. Sci. Vol.57, pp. 284-
-  !-------------------------------------------------------------------------------
-  !
-  use scale_random, only: &
-      RANDOM_get
-  real(RP), intent(in) :: dtime   !  time step
-  integer,  intent(in) :: ijkmax    ! type of species coagulated(small) particle
-  real(RP), intent(in) :: swgt
-  real(RP), intent(in) :: temp( ijkmax )  ! size distribution function (hydrometeor): mass
-  real(RP), intent(inout) :: gc( nbin,nspc,ijkmax )  ! size distribution function (hydrometeor): mass
-  !
-  !--- local variables
-  integer :: i, j, k, l
-  real(RP) :: xi, xj, xnew, dmpi, dmpj, frci, frcj
-  real(RP) :: gprime, gprimk, wgt, crn, sum, flux
-  integer, parameter :: ldeg = 2
-  real(RP), parameter :: dmpmin = 1.E-01_RP, cmin = 1.E-10_RP
-  real(RP) :: acoef( 0:ldeg )
-  !
-  !--- Y.sato added to use code6
-  integer :: nums( mbin ), numl( mbin )
-  real(RP), parameter :: gt = 1.0_RP
-  integer :: s, det
-  real(RP) :: nbinr, mbinr        ! use to weight
-!  real(RP) :: beta
-  real(RP) :: tmpi, tmpj
+  subroutine r_collcoag( &
+       ijkmax, &
+       swgt,   &
+       temp,   &
+       gc,     &
+       dtime   )
+    use scale_random, only: &
+       RANDOM_get
+    implicit none
 
-  integer :: ibnd( ijkmax )
-  integer :: iflg( nspc,ijkmax )
-  integer :: iexst( nbin,nspc,ijkmax )
-  real(RP) :: csum( nspc,ijkmax )
-  integer :: ijk, nn, mm, pp, qq, myu, n, isml, ilrg, irsl
-  !-----------------------------------------------------
+    integer,  intent(in)    :: ijkmax
+    real(RP), intent(in)    :: swgt
+    real(RP), intent(in)    :: temp(ijkmax)           ! Temperature       [K]
+    real(RP), intent(inout) :: gc  (nbin,nspc,ijkmax) ! Mass size distribution function of hydrometeor
+    real(RP), intent(in)    :: dtime                  ! Time step interval
 
+    integer :: i, j, k, l
+    real(RP) :: xi, xj, xnew, dmpi, dmpj, frci, frcj
+    real(RP) :: gprime, gprimk, wgt, crn, sum, flux
+    integer, parameter :: ldeg = 2
+    real(RP), parameter :: dmpmin = 1.E-01_RP, cmin = 1.E-10_RP
+    real(RP) :: acoef( 0:ldeg )
+    !
+    !--- Y.sato added to use code6
+    integer :: nums( mbin ), numl( mbin )
+    real(RP), parameter :: gt = 1.0_RP
+    integer :: s, det
+    real(RP) :: nbinr, mbinr        ! use to weight
+!    real(RP) :: beta
+    real(RP) :: tmpi, tmpj
+
+    integer :: ibnd( ijkmax )
+    integer :: iflg( nspc,ijkmax )
+    integer :: iexst( nbin,nspc,ijkmax )
+    real(RP) :: csum( nspc,ijkmax )
+    integer :: ijk, nn, mm, pp, qq, myu, n, isml, ilrg, irsl
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('_SBM_CollCoagR', 2)
