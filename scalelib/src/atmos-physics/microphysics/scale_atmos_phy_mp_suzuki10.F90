@@ -3081,22 +3081,14 @@ contains
   csum( :,: ) = 0.0_RP
   do ijk = 1, ijkmax
      !--- judgement of particle existence
+     do myu = 1, nspc
      do n = 1, nbin
-       csum( il,ijk ) = csum( il,ijk ) + gc( n,il,ijk )*dxmic
-       csum( ic,ijk ) = csum( ic,ijk ) + gc( n,ic,ijk )*dxmic
-       csum( ip,ijk ) = csum( ip,ijk ) + gc( n,ip,ijk )*dxmic
-       csum( id,ijk ) = csum( id,ijk ) + gc( n,id,ijk )*dxmic
-       csum( iss,ijk ) = csum( iss,ijk ) + gc( n,iss,ijk )*dxmic
-       csum( ig,ijk ) = csum( ig,ijk ) + gc( n,ig,ijk )*dxmic
-       csum( ih,ijk ) = csum( ih,ijk ) + gc( n,ih,ijk )*dxmic
+       csum( myu,ijk ) = csum( myu,ijk ) + gc( n,myu,ijk )*dxmic
      enddo
-     if ( csum( il,ijk ) > cldmin ) iflg( il,ijk ) = 1
-     if ( csum( ic,ijk ) > cldmin ) iflg( ic,ijk ) = 1
-     if ( csum( ip,ijk ) > cldmin ) iflg( ip,ijk ) = 1
-     if ( csum( id,ijk ) > cldmin ) iflg( id,ijk ) = 1
-     if ( csum( iss,ijk ) > cldmin ) iflg( iss,ijk ) = 1
-     if ( csum( ig,ijk ) > cldmin ) iflg( ig,ijk ) = 1
-     if ( csum( ih,ijk ) > cldmin ) iflg( ih,ijk ) = 1
+     enddo
+     do myu = 1, nspc
+      if ( csum( myu,ijk ) > cldmin ) iflg( myu,ijk ) = 1
+     enddo
 
      if ( temp(ijk) < tcrit ) then
         ibnd(ijk) = 1
