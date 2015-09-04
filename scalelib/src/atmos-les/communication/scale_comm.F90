@@ -1430,7 +1430,7 @@ contains
        else if ( PRC_HAS_N ) then
           tagc = 10
           do j = JE-JHALO+1, JE
-             call MPI_SEND_INIT( var(1,1,j),         COMM_size2D_4C*kd, COMM_datatype,              &
+             call MPI_SEND_INIT( var(1,IS-IHALO,j), COMM_size2D_4C*kd, COMM_datatype,              &
                              PRC_next(PRC_N), tag+tagc, COMM_world, preq_list(ireq,vid), ierr )
              ireq = ireq + 1
              tagc = tagc + 1
@@ -1482,7 +1482,7 @@ contains
        else if ( PRC_HAS_S ) then
           tagc = 30
           do j = JS, JS+JHALO-1
-             call MPI_SEND_INIT( var(1,1,j),         COMM_size2D_4C*kd, COMM_datatype,              &
+             call MPI_SEND_INIT( var(1,IS-IHALO,j),         COMM_size2D_4C*kd, COMM_datatype,              &
                              PRC_next(PRC_S), tag+tagc, COMM_world, preq_list(ireq,vid), ierr )
              ireq = ireq + 1
              tagc = tagc + 1
