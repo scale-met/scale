@@ -806,14 +806,12 @@ contains
     ! pre-calc factor
     MPRJ_M_fact = cos(lat0)
 
-    ! calc (x,y) at (lon,lat) = (0,0)
-    dlon = MPRJ_basepoint_lon * D2R
-
+    ! calc (x,y) at (lon,lat) = (base,0)
     latrot = 0.5_RP*PI - MPRJ_basepoint_lat * D2R
 
     dist = 1.0_RP / tan(0.5_RP*latrot)
 
-    MPRJ_eq_x = MPRJ_basepoint_x - RADIUS * MPRJ_M_fact * dlon
+    MPRJ_eq_x = MPRJ_basepoint_x
     MPRJ_eq_y = MPRJ_basepoint_y - RADIUS * MPRJ_M_fact * log(dist)
 
     if( IO_L ) write(IO_FID_LOG,*) ''
@@ -845,7 +843,7 @@ contains
     xx = ( x - MPRJ_eq_x ) / RADIUS / MPRJ_M_fact
     yy = ( y - MPRJ_eq_y ) / RADIUS / MPRJ_M_fact
 
-    lon = xx
+    lon = xx + MPRJ_basepoint_lon * D2R
     lon = mod( lon+2.0_RP*PI, 2.0_RP*PI )
     lat = 0.5_RP*PI - 2.0_RP*atan( 1.0_RP/exp(yy) )
 
@@ -933,10 +931,8 @@ contains
     ! pre-calc factor
     MPRJ_EC_fact = cos(lat0)
 
-    dlon = MPRJ_basepoint_lon * D2R
-
-    MPRJ_eq_x = MPRJ_basepoint_x - RADIUS * MPRJ_EC_fact * dlon
-    MPRJ_eq_y = MPRJ_basepoint_y - RADIUS * MPRJ_basepoint_lat
+    MPRJ_eq_x = MPRJ_basepoint_x
+    MPRJ_eq_y = MPRJ_basepoint_y - RADIUS * MPRJ_basepoint_lat * D2R
 
     if( IO_L ) write(IO_FID_LOG,*) ''
     if( IO_L ) write(IO_FID_LOG,*) '+++ MPRJ_EC_lat :', MPRJ_EC_lat
@@ -967,7 +963,8 @@ contains
     xx = ( x - MPRJ_eq_x ) / RADIUS / MPRJ_EC_fact
     yy = ( y - MPRJ_eq_y ) / RADIUS
 
-    lon = xx
+    lon = xx + MPRJ_basepoint_lon * D2R
+    lon = mod( lon+2.0_RP*PI, 2.0_RP*PI )
     lat = yy
 
     return
