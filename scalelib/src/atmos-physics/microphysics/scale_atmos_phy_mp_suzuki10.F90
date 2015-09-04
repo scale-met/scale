@@ -877,10 +877,12 @@ contains
     call PROF_rapend  ('_SBM_Icephase',   2)
     call PROF_rapstart('_SBM_Mixphase',   2)
     call PROF_rapend  ('_SBM_Mixphase',   2)
-    call PROF_rapstart('_SBM_Mixphase2',  2)
-    call PROF_rapend  ('_SBM_Mixphase2',  2)
-    call PROF_rapstart('_SBM_Advection',  3)
-    call PROF_rapend  ('_SBM_Advection',  3)
+    call PROF_rapstart('_SBM_AdvLiq',     3)
+    call PROF_rapend  ('_SBM_AdvLiq',     3)
+    call PROF_rapstart('_SBM_AdvIce',     3)
+    call PROF_rapend  ('_SBM_AdvIce',     3)
+    call PROF_rapstart('_SBM_AdvMix',     3)
+    call PROF_rapend  ('_SBM_AdvMix',     3)
 !    call PROF_rapstart('_SBM_FAero',      2)
 !    call PROF_rapend  ('_SBM_FAero',      2)
     call PROF_rapstart('_SBM_Freezing',   2)
@@ -1648,12 +1650,12 @@ contains
   real(RP) :: cefliq, a, sliqtnd
   real(RP) :: sumliq(ijkmax), umax(ijkmax)
   real(RP) :: ssliq(ijkmax), ssice(ijkmax) ! super saturation
-  real(RP) :: gcn( -1:nbin+2,1:il,1:ijkmax )               ! size distribution function(hydrometeor): number
+  real(RP) :: gcn( -1:nbin+2,nspc,ijkmax )               ! size distribution function(hydrometeor): number
 !  real(RP) :: gcnold( nbin,ijkmax )
   real(RP), parameter :: cflfct = 0.50_RP              ! CFL limiter
 !  real(RP) :: old_sum_gcn, new_sum_gcn
-  integer  :: iflg( il,ijkmax )                ! flag whether calculation is conduct or not
-  real(RP) :: csum( il,ijkmax )
+  integer  :: iflg( nspc,ijkmax )                ! flag whether calculation is conduct or not
+  real(RP) :: csum( nspc,ijkmax )
   real(RP) :: f1, f2, emu, cefd, cefk, festl, psat
   real(RP), parameter :: afmyu = 1.72E-05_RP, bfmyu = 3.93E+2_RP
   real(RP), parameter :: cfmyu = 1.2E+02_RP, fct = 1.4E+3_RP
@@ -1661,16 +1663,15 @@ contains
   integer :: ijk, nn, mm, loopflg(ijkmax)
 
   !--- local for advection
-  real(RP) :: uadv( 0:nbin+2,1:il,1:ijkmax )
-  real(RP) :: flq( 1:nbin+1,1:il,1:ijkmax )
-  integer, parameter :: ldeg = 2
-  real(RP) :: acoef( 0:nbin+1,1:il,0:ldeg,1:ijkmax )
-  real(RP) :: crn( 0:nbin+2 )
-  real(RP) :: aip( 0:nbin+1,1:il,1:ijkmax )
-  real(RP) :: aim( 0:nbin+1,1:il,1:ijkmax )
-  real(RP) :: ai( 0:nbin+1,1:il,1:ijkmax )
-  real(RP) :: cmins, cplus, sum
-  integer :: j, nloopmax
+  real(RP) :: uadv ( 0:nbin+2,nspc,ijkmax )
+  real(RP) :: flq  ( 1:nbin+1,nspc,ijkmax )
+  real(RP) :: acoef( 0:2,0:nbin+1,nspc,ijkmax )
+  real(RP) :: crn  ( 0:nbin+2,nspc,ijkmax )
+  real(RP) :: aip  ( 0:nbin+1,nspc,ijkmax )
+  real(RP) :: aim  ( 0:nbin+1,nspc,ijkmax )
+  real(RP) :: ai   ( 0:nbin+1,nspc,ijkmax )
+  real(RP) :: cmins, cplus
+  integer :: nloopmax
 
     call PROF_rapstart('_SBM_Liqphase', 2)
 
@@ -1812,63 +1813,121 @@ contains
      enddo
     enddo
 
-!OCL PARALLEL
-    do ijk = 1, ijkmax
-     do nn = 1, loopflg(ijk)
+       call PROF_rapstart('_SBM_AdvLiq', 3)
 
-       do mm = 1, iflg( il,ijk )
-         !--- flux
-         do n = 0, nbin+1
-           acoef( n,il,0,ijk ) = - ( gcn( n+1,il,ijk )-26.0_RP*gcn( n,il,ijk )+gcn( n-1,il,ijk ) ) / 48.0_RP
-           acoef( n,il,1,ijk ) = ( gcn( n+1,il,ijk )-gcn( n-1,il,ijk ) ) / 16.0_RP
-           acoef( n,il,2,ijk ) = ( gcn( n+1,il,ijk )-2.0_RP*gcn( n,il,ijk )+gcn( n-1,il,ijk ) ) / 48.0_RP
-         enddo
-
-         do n = 0, nbin+2
-          crn( n ) = uadv( n,il,ijk )*dtcnd(ijk)/dxmic
-         enddo
-
-         do n = 0, nbin+1
-           cplus = ( crn( n+1 ) + abs( crn( n+1 ) ) ) * 0.50_RP
-           cplus = 1.0_RP-2.0_RP*cplus
-
-           sum = 0.0_RP
-           do j = 0, ldeg
-             sum = sum + acoef( n,il,j,ijk ) * ( 1.0_RP-cplus**( j+1 ) )
-           enddo
-           aip( n,il,ijk ) = max( sum,0.0_RP )
-
-           cmins = - ( crn( n ) - abs( crn( n ) ) ) * 0.50_RP
-           cmins = 1.0_RP-2.0_RP*cmins
-
-           sum = 0.0_RP
-           do j = 0, ldeg
-             sum = sum + acoef( n,il,j,ijk ) * (-1)**j * ( 1.0_RP-cmins**( j+1 ) )
-           enddo
-           aim( n,il,ijk ) = max( sum,0.0_RP )
-
-           sum = 0.0_RP
-           do j = 0, ldeg
-             sum = sum + acoef( n,il,j,ijk ) * ( (-1)**j+1 )
-           enddo
-           ai( n,il,ijk ) = max( sum,aip( n,il,ijk )+aim( n,il,ijk )+cldmin )
-         enddo
-
-         do n = 1, nbin+1
-           flq( n,il,ijk ) = ( aip( n-1,il,ijk )/ai( n-1,il,ijk )*gcn( n-1,il,ijk )  &
-                             - aim( n  ,il,ijk )/ai( n  ,il,ijk )*gcn( n  ,il,ijk ) )*dxmic/dtcnd(ijk)
-         enddo
-
-         regene_gcn(ijk) = regene_gcn(ijk)+( -flq( 1,il,ijk )*dtcnd(ijk)/dxmic )*min( uadv(1,il,ijk),0.0_RP )/uadv(1,il,ijk)
-
-         do n = 1, nbin
-           gcn( n,il,ijk ) = gcn( n,il,ijk ) - ( flq( n+1,il,ijk )-flq( n,il,ijk ) )*dtcnd(ijk)/dxmic
-         enddo
-
+       do ijk = 1, ijkmax
+       do nn  = 1, loopflg(ijk)
+       do myu = 1, il
+       do mm  = 1, iflg( myu,ijk )
+          do n = 0, nbin+2
+             crn( n,myu,ijk ) = uadv( n,myu,ijk )*dtcnd(ijk)/dxmic
+          enddo
+       enddo
+       enddo
+       enddo
        enddo
 
-     enddo
-    enddo
+       do ijk = 1, ijkmax
+       do nn  = 1, loopflg(ijk)
+       do myu = 1, il
+       do mm  = 1, iflg( myu,ijk )
+          do n = 0, nbin+1
+             acoef(0,n,myu,ijk) = - ( gcn( n+1,myu,ijk )-26.0_RP*gcn( n,myu,ijk )+gcn( n-1,myu,ijk ) ) / 48.0_RP
+             acoef(1,n,myu,ijk) =   ( gcn( n+1,myu,ijk )                         -gcn( n-1,myu,ijk ) ) / 16.0_RP
+             acoef(2,n,myu,ijk) =   ( gcn( n+1,myu,ijk )- 2.0_RP*gcn( n,myu,ijk )+gcn( n-1,myu,ijk ) ) / 48.0_RP
+          enddo
+       enddo
+       enddo
+       enddo
+       enddo
+
+       do ijk = 1, ijkmax
+       do nn  = 1, loopflg(ijk)
+       do myu = 1, il
+       do mm  = 1, iflg( myu,ijk )
+          do n = 0, nbin+1
+             cplus = 1.0_RP - ( crn(n+1,myu,ijk) + abs(crn(n+1,myu,ijk)) )
+
+             aip(n,myu,ijk) = acoef(0,n,myu,ijk) * ( 1.0_RP-cplus**1 ) &
+                            + acoef(1,n,myu,ijk) * ( 1.0_RP-cplus**2 ) &
+                            + acoef(2,n,myu,ijk) * ( 1.0_RP-cplus**3 )
+
+             aip(n,myu,ijk) = max( aip(n,myu,ijk), 0.0_RP )
+          enddo
+       enddo
+       enddo
+       enddo
+       enddo
+
+       do ijk = 1, ijkmax
+       do nn  = 1, loopflg(ijk)
+       do myu = 1, il
+       do mm  = 1, iflg( myu,ijk )
+          do n = 0, nbin+1
+             cmins = 1.0_RP - ( abs(crn(n,myu,ijk)) - crn(n,myu,ijk) )
+
+             aim(n,myu,ijk) = acoef(0,n,myu,ijk) * ( 1.0_RP-cmins**1 ) &
+                            - acoef(1,n,myu,ijk) * ( 1.0_RP-cmins**2 ) &
+                            + acoef(2,n,myu,ijk) * ( 1.0_RP-cmins**3 )
+
+             aim(n,myu,ijk) = max( aim(n,myu,ijk), 0.0_RP )
+          enddo
+       enddo
+       enddo
+       enddo
+       enddo
+
+       do ijk = 1, ijkmax
+       do nn  = 1, loopflg(ijk)
+       do myu = 1, il
+       do mm  = 1, iflg( myu,ijk )
+          do n = 0, nbin+1
+             ai(n,myu,ijk) = acoef(0,n,myu,ijk) * 2.0_RP &
+                           + acoef(2,n,myu,ijk) * 2.0_RP
+
+             ai(n,myu,ijk) = max( ai(n,myu,ijk), aip(n,myu,ijk)+aim(n,myu,ijk)+cldmin )
+          enddo
+       enddo
+       enddo
+       enddo
+       enddo
+
+       do ijk = 1, ijkmax
+       do nn  = 1, loopflg(ijk)
+       do myu = 1, il
+       do mm  = 1, iflg( myu,ijk )
+          do n = 1, nbin+1
+             flq(n,myu,ijk) = ( aip(n-1,myu,ijk)/ai(n-1,myu,ijk)*gcn( n-1,myu,ijk ) &
+                              - aim(n  ,myu,ijk)/ai(n  ,myu,ijk)*gcn( n  ,myu,ijk ) )*dxmic/dtcnd(ijk)
+          enddo
+       enddo
+       enddo
+       enddo
+       enddo
+
+       do ijk = 1, ijkmax
+       do nn  = 1, loopflg(ijk)
+       do myu = 1, il
+       do mm  = 1, iflg( myu,ijk )
+          regene_gcn(ijk) = regene_gcn(ijk)+( -flq(1,myu,ijk)*dtcnd(ijk)/dxmic )*min( uadv(1,myu,ijk),0.0_RP )/uadv(1,myu,ijk)
+       enddo
+       enddo
+       enddo
+       enddo
+
+       do ijk = 1, ijkmax
+       do nn  = 1, loopflg(ijk)
+       do myu = 1, il
+       do mm  = 1, iflg( myu,ijk )
+          do n = 1, nbin
+             gcn( n,myu,ijk ) = gcn( n,myu,ijk ) - ( flq(n+1,myu,ijk)-flq(n,myu,ijk) )*dtcnd(ijk)/dxmic
+          enddo
+       enddo
+       enddo
+       enddo
+       enddo
+
+       call PROF_rapend  ('_SBM_AdvLiq', 3)
 
 !OCL LOOP_NOFUSION
     do ijk = 1, ijkmax
@@ -1954,7 +2013,7 @@ contains
   real(RP) :: cefice, d, uval, sicetnd
   real(RP) :: sumice(ijkmax)
   real(RP) :: ssliq(ijkmax), ssice(ijkmax)
-  real(RP) :: gcn( -1:nbin+2,1:nspc,1:ijkmax )     ! size distribution function (Hydrometeor): number
+  real(RP) :: gcn( -1:nbin+2,nspc,ijkmax )     ! size distribution function (Hydrometeor): number
   real(RP), parameter :: cflfct = 0.50_RP
   real(RP) :: dumm_regene(ijkmax)
   integer :: iflg( nspc,ijkmax )
@@ -1967,16 +2026,15 @@ contains
 
   !--- local for advection
 !  real(RP) :: qadv( -1:nbin+2 ), uadv( 0:nbin+2 )
-  real(RP) :: uadv( 0:nbin+2,1:nspc,1:ijkmax )
-  real(RP) :: flq( 1:nbin+1,1:nspc,1:ijkmax )
-  integer, parameter :: ldeg = 2
-  real(RP) :: acoef( 0:nbin+1,1:nspc,0:ldeg,1:ijkmax )
-  real(RP) :: crn( 0:nbin+2 )
-  real(RP) :: aip( 0:nbin+1,1:nspc,1:ijkmax )
-  real(RP) :: aim( 0:nbin+1,1:nspc,1:ijkmax )
-  real(RP) :: ai( 0:nbin+1,1:nspc,1:ijkmax )
-  real(RP) :: cmins, cplus, sum
-  integer :: j, nloopmax
+  real(RP) :: uadv ( 0:nbin+2,nspc,ijkmax )
+  real(RP) :: flq  ( 1:nbin+1,nspc,ijkmax )
+  real(RP) :: acoef( 0:2,0:nbin+1,nspc,ijkmax )
+  real(RP) :: crn  ( 0:nbin+2,nspc,ijkmax )
+  real(RP) :: aip  ( 0:nbin+1,nspc,ijkmax )
+  real(RP) :: aim  ( 0:nbin+1,nspc,ijkmax )
+  real(RP) :: ai   ( 0:nbin+1,nspc,ijkmax )
+  real(RP) :: cmins, cplus
+  integer :: nloopmax
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('_SBM_Icephase', 2)
@@ -2129,64 +2187,121 @@ contains
       enddo
     enddo
 
-!OCL PARALLEL
-    do ijk = 1, ijkmax
-      do nn = 1, loopflg(ijk)
+       call PROF_rapstart('_SBM_AdvIce', 3)
 
+       do ijk = 1, ijkmax
+       do nn  = 1, loopflg(ijk)
        do myu = 2, nspc
-       do mm = 1, iflg( myu,ijk )
-         !--- flux
-         do n = 0, nbin+1
-           acoef( n,myu,0,ijk ) = - ( gcn( n+1,myu,ijk )-26.0_RP*gcn( n,myu,ijk )+gcn( n-1,myu,ijk ) ) / 48.0_RP
-           acoef( n,myu,1,ijk ) = ( gcn( n+1,myu,ijk )-gcn( n-1,myu,ijk ) ) / 16.0_RP
-           acoef( n,myu,2,ijk ) = ( gcn( n+1,myu,ijk )-2.0_RP*gcn( n,myu,ijk )+gcn( n-1,myu,ijk ) ) / 48.0_RP
-         enddo
+       do mm  = 1, iflg( myu,ijk )
+          do n = 0, nbin+2
+             crn( n,myu,ijk ) = uadv( n,myu,ijk )*dtcnd(ijk)/dxmic
+          enddo
+       enddo
+       enddo
+       enddo
+       enddo
 
-         do n = 0, nbin+2
-           crn( n ) = uadv( n,myu,ijk )*dtcnd(ijk)/dxmic
-         enddo
+       do ijk = 1, ijkmax
+       do nn  = 1, loopflg(ijk)
+       do myu = 2, nspc
+       do mm  = 1, iflg( myu,ijk )
+          do n = 0, nbin+1
+             acoef(0,n,myu,ijk) = - ( gcn( n+1,myu,ijk )-26.0_RP*gcn( n,myu,ijk )+gcn( n-1,myu,ijk ) ) / 48.0_RP
+             acoef(1,n,myu,ijk) =   ( gcn( n+1,myu,ijk )                         -gcn( n-1,myu,ijk ) ) / 16.0_RP
+             acoef(2,n,myu,ijk) =   ( gcn( n+1,myu,ijk )- 2.0_RP*gcn( n,myu,ijk )+gcn( n-1,myu,ijk ) ) / 48.0_RP
+          enddo
+       enddo
+       enddo
+       enddo
+       enddo
 
-         do n = 0, nbin+1
-           cplus = ( crn( n+1 ) + abs( crn( n+1 ) ) ) * 0.50_RP
-           cplus = 1.0_RP-2.0_RP*cplus
+       do ijk = 1, ijkmax
+       do nn  = 1, loopflg(ijk)
+       do myu = 2, nspc
+       do mm  = 1, iflg( myu,ijk )
+          do n = 0, nbin+1
+             cplus = 1.0_RP - ( crn(n+1,myu,ijk) + abs(crn(n+1,myu,ijk)) )
 
-           sum = 0.0_RP
-           do j = 0, ldeg
-             sum = sum + acoef( n,myu,j,ijk ) * ( 1.0_RP-cplus**( j+1 ) )
-           enddo
-           aip( n,myu,ijk ) = max( sum,0.0_RP )
+             aip(n,myu,ijk) = acoef(0,n,myu,ijk) * ( 1.0_RP-cplus**1 ) &
+                            + acoef(1,n,myu,ijk) * ( 1.0_RP-cplus**2 ) &
+                            + acoef(2,n,myu,ijk) * ( 1.0_RP-cplus**3 )
 
-           cmins = - ( crn( n ) - abs( crn( n ) ) ) * 0.50_RP
-           cmins = 1.0_RP-2.0_RP*cmins
+             aip(n,myu,ijk) = max( aip(n,myu,ijk), 0.0_RP )
+          enddo
+       enddo
+       enddo
+       enddo
+       enddo
 
-           sum = 0.0_RP
-           do j = 0, ldeg
-             sum = sum + acoef( n,myu,j,ijk ) * (-1)**j * ( 1.0_RP-cmins**( j+1 ) )
-           enddo
-           aim( n,myu,ijk ) = max( sum,0.0_RP )
+       do ijk = 1, ijkmax
+       do nn  = 1, loopflg(ijk)
+       do myu = 2, nspc
+       do mm  = 1, iflg( myu,ijk )
+          do n = 0, nbin+1
+             cmins = 1.0_RP - ( abs(crn(n,myu,ijk)) - crn(n,myu,ijk) )
 
-           sum = 0.0_RP
-           do j = 0, ldeg
-             sum = sum + acoef( n,myu,j,ijk ) * ( (-1)**j+1 )
-           enddo
-           ai( n,myu,ijk ) = max( sum,aip( n,myu,ijk )+aim( n,myu,ijk )+cldmin )
-         enddo
+             aim(n,myu,ijk) = acoef(0,n,myu,ijk) * ( 1.0_RP-cmins**1 ) &
+                            - acoef(1,n,myu,ijk) * ( 1.0_RP-cmins**2 ) &
+                            + acoef(2,n,myu,ijk) * ( 1.0_RP-cmins**3 )
 
-         do n = 1, nbin+1
-           flq( n,myu,ijk ) = ( aip( n-1,myu,ijk )/ai( n-1,myu,ijk )*gcn( n-1,myu,ijk )  &
-                               -aim( n  ,myu,ijk )/ai( n  ,myu,ijk )*gcn( n  ,myu,ijk  ) )*dxmic/dtcnd(ijk)
-         enddo
+             aim(n,myu,ijk) = max( aim(n,myu,ijk), 0.0_RP )
+          enddo
+       enddo
+       enddo
+       enddo
+       enddo
 
-         dumm_regene(ijk) = dumm_regene(ijk)+( -flq( 1,myu,ijk )*dtcnd(ijk)/dxmic )*min( uadv(1,myu,ijk),0.0_RP )/uadv(1,myu,ijk)
+       do ijk = 1, ijkmax
+       do nn  = 1, loopflg(ijk)
+       do myu = 2, nspc
+       do mm  = 1, iflg( myu,ijk )
+          do n = 0, nbin+1
+             ai(n,myu,ijk) = acoef(0,n,myu,ijk) * 2.0_RP &
+                           + acoef(2,n,myu,ijk) * 2.0_RP
 
-         do n = 1, nbin
-           gcn( n,myu,ijk ) = gcn( n,myu,ijk ) - ( flq( n+1,myu,ijk )-flq( n,myu,ijk ) )*dtcnd(ijk)/dxmic
-         enddo
-        enddo
-        enddo
+             ai(n,myu,ijk) = max( ai(n,myu,ijk), aip(n,myu,ijk)+aim(n,myu,ijk)+cldmin )
+          enddo
+       enddo
+       enddo
+       enddo
+       enddo
 
-      enddo
-    enddo
+       do ijk = 1, ijkmax
+       do nn  = 1, loopflg(ijk)
+       do myu = 2, nspc
+       do mm  = 1, iflg( myu,ijk )
+          do n = 1, nbin+1
+             flq(n,myu,ijk) = ( aip(n-1,myu,ijk)/ai(n-1,myu,ijk)*gcn( n-1,myu,ijk ) &
+                              - aim(n  ,myu,ijk)/ai(n  ,myu,ijk)*gcn( n  ,myu,ijk ) )*dxmic/dtcnd(ijk)
+          enddo
+       enddo
+       enddo
+       enddo
+       enddo
+
+       do ijk = 1, ijkmax
+       do nn  = 1, loopflg(ijk)
+       do myu = 2, nspc
+       do mm  = 1, iflg( myu,ijk )
+           dumm_regene(ijk) = dumm_regene(ijk)+( -flq(1,myu,ijk)*dtcnd(ijk)/dxmic )*min( uadv(1,myu,ijk),0.0_RP )/uadv(1,myu,ijk)
+       enddo
+       enddo
+       enddo
+       enddo
+
+       do ijk = 1, ijkmax
+       do nn  = 1, loopflg(ijk)
+       do myu = 2, nspc
+       do mm  = 1, iflg( myu,ijk )
+          do n = 1, nbin
+             gcn( n,myu,ijk ) = gcn( n,myu,ijk ) - ( flq(n+1,myu,ijk)-flq(n,myu,ijk) )*dtcnd(ijk)/dxmic
+          enddo
+       enddo
+       enddo
+       enddo
+       enddo
+
+       call PROF_rapend  ('_SBM_AdvIce', 3)
 
 !OCL LOOP_NOFUSION
     do ijk = 1, ijkmax
@@ -2260,7 +2375,7 @@ contains
   real(RP) :: sliqtnd, sicetnd
   real(RP) :: ssliq(ijkmax), ssice(ijkmax)
   real(RP) :: sumliq(ijkmax), sumice(ijkmax)
-  real(RP) :: gcn( -1:nbin+2,1:nspc,1:ijkmax )
+  real(RP) :: gcn( -1:nbin+2,nspc,ijkmax )
   real(RP), parameter :: cflfct = 0.50_RP
   real(RP) :: dumm_regene(ijkmax)
   real(RP) :: csum( nspc,ijkmax )
@@ -2273,18 +2388,17 @@ contains
 
   !--- local for advection
 !  real(RP) :: qadv( -1:nbin+2 ), uadv( 0:nbin+2 )
-  real(RP) :: uadv( 0:nbin+2,1:nspc,1:ijkmax )
-  real(RP) :: flq( 1:nbin+1,1:nspc,1:ijkmax )
-  integer, parameter :: ldeg = 2
-  real(RP) :: acoef( 0:nbin+1,1:nspc,0:ldeg,1:ijkmax )
-  real(RP) :: crn( 0:nbin+2 )
-  real(RP) :: aip( 0:nbin+1,1:nspc,1:ijkmax )
-  real(RP) :: aim( 0:nbin+1,1:nspc,1:ijkmax )
-  real(RP) :: ai( 0:nbin+1,1:nspc,1:ijkmax )
-  real(RP) :: cmins, cplus, sum
-  integer :: j, nloopmax
-    call PROF_rapstart('_SBM_Mixphase', 2)
+  real(RP) :: uadv ( 0:nbin+2,nspc,ijkmax )
+  real(RP) :: flq  ( 1:nbin+1,nspc,ijkmax )
+  real(RP) :: acoef( 0:2,0:nbin+1,nspc,ijkmax )
+  real(RP) :: crn  ( 0:nbin+2,nspc,ijkmax )
+  real(RP) :: aip  ( 0:nbin+1,nspc,ijkmax )
+  real(RP) :: aim  ( 0:nbin+1,nspc,ijkmax )
+  real(RP) :: ai   ( 0:nbin+1,nspc,ijkmax )
+  real(RP) :: cmins, cplus
+  integer :: nloopmax
 
+    call PROF_rapstart('_SBM_Mixphase', 2)
 
   dumm_regene( : ) = 0.0_RP
   iflg( :,: ) = 0
@@ -2481,68 +2595,121 @@ contains
         enddo
       enddo
 
-       call PROF_rapstart('_SBM_Advection', 3)
+       call PROF_rapstart('_SBM_AdvMix', 3)
 
-!OCL PARALLEL
-      do ijk = 1, ijkmax
-       do nn = 1, loopflg(ijk)
-         !--- change of SDF
-         do myu = 1, nspc
-         do mm = 1, iflg( myu,ijk )
-           !--- flux
-           do n = 0, nbin+1
-             acoef( n,myu,0,ijk ) = - ( gcn( n+1,myu,ijk )-26.0_RP*gcn( n,myu,ijk )+gcn( n-1,myu,ijk ) ) / 48.0_RP
-             acoef( n,myu,1,ijk ) = ( gcn( n+1,myu,ijk )-gcn( n-1,myu,ijk ) ) / 16.0_RP
-             acoef( n,myu,2,ijk ) = ( gcn( n+1,myu,ijk )-2.0_RP*gcn( n,myu,ijk )+gcn( n-1,myu,ijk ) ) / 48.0_RP
-           enddo
-
-           do n = 0, nbin+2
-             crn( n ) = uadv( n,myu,ijk )*dtcnd(ijk)/dxmic
-           enddo
-
-           do n = 0, nbin+1
-             cplus = ( crn( n+1 ) + abs( crn( n+1 ) ) ) * 0.50_RP
-           cplus = 1.0_RP-2.0_RP*cplus
-
-             sum = 0.0_RP
-             do j = 0, ldeg
-               sum = sum + acoef( n,myu,j,ijk ) * ( 1.0_RP-cplus**( j+1 ) )
-             enddo
-             aip( n,myu,ijk ) = max( sum,0.0_RP )
-
-             cmins = - ( crn( n ) - abs( crn( n ) ) ) * 0.50_RP
-             cmins = 1.0_RP-2.0_RP*cmins
-
-             sum = 0.0_RP
-             do j = 0, ldeg
-               sum = sum + acoef( n,myu,j,ijk ) * (-1)**j * ( 1.0_RP-cmins**( j+1 ) )
-             enddo
-             aim( n,myu,ijk ) = max( sum,0.0_RP )
-
-             sum = 0.0_RP
-             do j = 0, ldeg
-               sum = sum + acoef( n,myu,j,ijk ) * ( (-1)**j+1 )
-             enddo
-             ai( n,myu,ijk ) = max( sum,aip( n,myu,ijk )+aim( n,myu,ijk )+cldmin )
-           enddo
-
-           do n = 1, nbin+1
-             flq( n,myu,ijk ) = ( aip( n-1,myu,ijk )/ai( n-1,myu,ijk )*gcn( n-1,myu,ijk )  &
-                              - aim( n  ,myu,ijk )/ai( n  ,myu,ijk )*gcn( n  ,myu,ijk ) )*dxmic/dtcnd(ijk)
-           enddo
-
-           dumm_regene(ijk) = dumm_regene(ijk)+( -flq( 1,myu,ijk )*dtcnd(ijk)/dxmic )*min( uadv(1,myu,ijk),0.0_RP )/uadv(1,myu,ijk)
-
-           do n = 1, nbin
-             gcn( n,myu,ijk ) = gcn( n,myu,ijk ) - ( flq( n+1,myu,ijk )-flq( n,myu,ijk ) )*dtcnd(ijk)/dxmic
-           enddo
-
-         enddo
-         enddo
+       do ijk = 1, ijkmax
+       do nn  = 1, loopflg(ijk)
+       do myu = 1, nspc
+       do mm  = 1, iflg( myu,ijk )
+          do n = 0, nbin+2
+             crn( n,myu,ijk ) = uadv( n,myu,ijk )*dtcnd(ijk)/dxmic
+          enddo
        enddo
-      enddo
+       enddo
+       enddo
+       enddo
 
-       call PROF_rapend  ('_SBM_Advection', 3)
+       do ijk = 1, ijkmax
+       do nn  = 1, loopflg(ijk)
+       do myu = 1, nspc
+       do mm  = 1, iflg( myu,ijk )
+          do n = 0, nbin+1
+             acoef(0,n,myu,ijk) = - ( gcn( n+1,myu,ijk )-26.0_RP*gcn( n,myu,ijk )+gcn( n-1,myu,ijk ) ) / 48.0_RP
+             acoef(1,n,myu,ijk) =   ( gcn( n+1,myu,ijk )                         -gcn( n-1,myu,ijk ) ) / 16.0_RP
+             acoef(2,n,myu,ijk) =   ( gcn( n+1,myu,ijk )- 2.0_RP*gcn( n,myu,ijk )+gcn( n-1,myu,ijk ) ) / 48.0_RP
+          enddo
+       enddo
+       enddo
+       enddo
+       enddo
+
+       do ijk = 1, ijkmax
+       do nn  = 1, loopflg(ijk)
+       do myu = 1, nspc
+       do mm  = 1, iflg( myu,ijk )
+          do n = 0, nbin+1
+             cplus = 1.0_RP - ( crn(n+1,myu,ijk) + abs(crn(n+1,myu,ijk)) )
+
+             aip(n,myu,ijk) = acoef(0,n,myu,ijk) * ( 1.0_RP-cplus**1 ) &
+                            + acoef(1,n,myu,ijk) * ( 1.0_RP-cplus**2 ) &
+                            + acoef(2,n,myu,ijk) * ( 1.0_RP-cplus**3 )
+
+             aip(n,myu,ijk) = max( aip(n,myu,ijk), 0.0_RP )
+          enddo
+       enddo
+       enddo
+       enddo
+       enddo
+
+       do ijk = 1, ijkmax
+       do nn  = 1, loopflg(ijk)
+       do myu = 1, nspc
+       do mm  = 1, iflg( myu,ijk )
+          do n = 0, nbin+1
+             cmins = 1.0_RP - ( abs(crn(n,myu,ijk)) - crn(n,myu,ijk) )
+
+             aim(n,myu,ijk) = acoef(0,n,myu,ijk) * ( 1.0_RP-cmins**1 ) &
+                            - acoef(1,n,myu,ijk) * ( 1.0_RP-cmins**2 ) &
+                            + acoef(2,n,myu,ijk) * ( 1.0_RP-cmins**3 )
+
+             aim(n,myu,ijk) = max( aim(n,myu,ijk), 0.0_RP )
+          enddo
+       enddo
+       enddo
+       enddo
+       enddo
+
+       do ijk = 1, ijkmax
+       do nn  = 1, loopflg(ijk)
+       do myu = 1, nspc
+       do mm  = 1, iflg( myu,ijk )
+          do n = 0, nbin+1
+             ai(n,myu,ijk) = acoef(0,n,myu,ijk) * 2.0_RP &
+                           + acoef(2,n,myu,ijk) * 2.0_RP
+
+             ai(n,myu,ijk) = max( ai(n,myu,ijk), aip(n,myu,ijk)+aim(n,myu,ijk)+cldmin )
+          enddo
+       enddo
+       enddo
+       enddo
+       enddo
+
+       do ijk = 1, ijkmax
+       do nn  = 1, loopflg(ijk)
+       do myu = 1, nspc
+       do mm  = 1, iflg( myu,ijk )
+          do n = 1, nbin+1
+             flq(n,myu,ijk) = ( aip(n-1,myu,ijk)/ai(n-1,myu,ijk)*gcn( n-1,myu,ijk ) &
+                              - aim(n  ,myu,ijk)/ai(n  ,myu,ijk)*gcn( n  ,myu,ijk ) )*dxmic/dtcnd(ijk)
+          enddo
+       enddo
+       enddo
+       enddo
+       enddo
+
+       do ijk = 1, ijkmax
+       do nn  = 1, loopflg(ijk)
+       do myu = 1, nspc
+       do mm  = 1, iflg( myu,ijk )
+           dumm_regene(ijk) = dumm_regene(ijk)+( -flq(1,myu,ijk)*dtcnd(ijk)/dxmic )*min( uadv(1,myu,ijk),0.0_RP )/uadv(1,myu,ijk)
+       enddo
+       enddo
+       enddo
+       enddo
+
+       do ijk = 1, ijkmax
+       do nn  = 1, loopflg(ijk)
+       do myu = 1, nspc
+       do mm  = 1, iflg( myu,ijk )
+          do n = 1, nbin
+             gcn( n,myu,ijk ) = gcn( n,myu,ijk ) - ( flq(n+1,myu,ijk)-flq(n,myu,ijk) )*dtcnd(ijk)/dxmic
+          enddo
+       enddo
+       enddo
+       enddo
+       enddo
+
+       call PROF_rapend  ('_SBM_AdvMix', 3)
 
 !OCL LOOP_NOFUSION
       do ijk = 1, ijkmax
@@ -2573,8 +2740,6 @@ contains
       enddo
 
   enddo   ! ncount
-
-    call PROF_rapend  ('_SBM_Mixphase2', 2)
 
 !OCL NORECURRENCE(gc)
   do ijk = 1, ijkmax
