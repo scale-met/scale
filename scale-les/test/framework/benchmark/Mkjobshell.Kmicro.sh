@@ -24,6 +24,12 @@ if [ ${xy} -gt 1024 ]; then
    exit
 fi
 
+# PROF1="fapp -C -Ihwm -Hevent=Cache        -d prof_cache -L 10"
+# PROF2="fapp -C -Ihwm -Hevent=Instructions -d prof_inst  -L 10"
+# PROF3="fapp -C -Ihwm -Hevent=MEM_access   -d prof_mem   -L 10"
+# PROF4="fapp -C -Ihwm -Hevent=Performance  -d prof_perf  -L 10"
+PROF5="fapp -C -Ihwm -Hevent=Statistics   -d prof       -L 10"
+
 # Generate run.sh
 
 cat << EOF1 > ./run.sh
@@ -35,7 +41,7 @@ cat << EOF1 > ./run.sh
 ################################################################################
 #PJM --rsc-list "rscgrp=micro"
 #PJM --rsc-list "node=${TPROC}"
-#PJM --rsc-list "elapse=00:25:00"
+#PJM --rsc-list "elapse=00:05:00"
 #PJM -j
 #PJM -s
 #
@@ -44,6 +50,12 @@ cat << EOF1 > ./run.sh
 export PARALLEL=8
 export OMP_NUM_THREADS=8
 #export fu08bf=1
+
+# rm -rf prof_cache
+# rm -rf prof_inst
+# rm -rf prof_mem
+# rm -rf prof_perf
+rm -rf prof
 
 EOF1
 
@@ -76,12 +88,18 @@ if [ ! ${DATDISTS[0]} = "" ]; then
    done
 fi
 
+if [ ! ${PPNAME}   = "NONE" ]; then
+   echo "${MPIEXEC} ${BINDIR}/${PPNAME}   ${PPCONF}   || exit 1" >> ./run.sh
+fi
 
-cat << EOF2 >> ./run.sh
+if [ ! ${INITNAME} = "NONE" ]; then
+   echo "${MPIEXEC} ${BINDIR}/${INITNAME} ${INITCONF} || exit 1" >> ./run.sh
+fi
 
-# run
-${MPIEXEC} ${BINDIR}/${INITNAME} ${INITCONF} || exit
-${MPIEXEC} ${BINDIR}/${BINNAME}  ${RUNCONF}  || exit
-
-################################################################################
-EOF2
+if [ ! ${BINNAME} = "NONE" ]; then
+#    echo "${PROF1} ${MPIEXEC} ${BINDIR}/${BINNAME}  ${RUNCONF}  || exit 1" >> ./run.sh
+#    echo "${PROF2} ${MPIEXEC} ${BINDIR}/${BINNAME}  ${RUNCONF}  || exit 1" >> ./run.sh
+#    echo "${PROF3} ${MPIEXEC} ${BINDIR}/${BINNAME}  ${RUNCONF}  || exit 1" >> ./run.sh
+#    echo "${PROF4} ${MPIEXEC} ${BINDIR}/${BINNAME}  ${RUNCONF}  || exit 1" >> ./run.sh
+   echo "${PROF5} ${MPIEXEC} ${BINDIR}/${BINNAME}  ${RUNCONF}  || exit 1" >> ./run.sh
+fi

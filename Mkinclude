@@ -59,7 +59,7 @@ ifeq ($(ENABLE_PAPI),T)
       PAPI_LIBS    = -L$(PAPI)/lib -lpapi
 endif
 
-ifneq ($(USE_NETCDF3),)
+ifeq ($(USE_NETCDF3),T)
       CFLAGS += -DNETCDF3
 endif
 

@@ -64,8 +64,8 @@ else
 endif
 
 ifeq ($(AE),)
-  OBJS_AE = scale_atmos_phy_ae_dummy.o \
-	    scale_atmos_phy_ae_kajino13.o
+  OBJS_AE = scale_atmos_phy_ae_dummy.o	\
+            scale_atmos_phy_ae_kajino13.o
 else
   OBJS_AE = scale_atmos_phy_ae_$(AE).o
 endif
@@ -103,7 +103,7 @@ endif
 
 ifeq ($(AETRACER),)
   OBJS_AETRACER = scale_aetracer_none.o	\
-                scale_aetracer_kajino13.o
+                  scale_aetracer_kajino13.o
 else
   OBJS_AETRACER = scale_aetracer_$(AETRACER).o
 endif
@@ -218,11 +218,11 @@ $(LIBDIR)/$(LIBNAME): $(OBJS)
 	$(AR) $(ARFLAGS) $@ $?
 	$(RANLIB) $@
 
-ifeq ($(IGNOREDEP),)
+ifeq ($(IGNOREDEP),T)
+modules:
+else
 modules: $(OBJS)
 	install $(MODS) $(MODDIR)
-else
-modules:
 endif
 
 
@@ -277,6 +277,6 @@ $(OBJ_DIR)/scale_rdma.o : scale_rdma.c
 .PHONY : clean distclean allclean depend modules dependency
 
 
-ifeq ($(IGNOREDEP),)
+ifneq ($(IGNOREDEP),T)
 -include depend
 endif

@@ -13,6 +13,7 @@
   integer, public :: nbin = 33
   integer, public :: nspc = 7
   integer, public :: nccn = 0
+  integer, public :: nccn1 = 0
   integer, public :: kphase = 0
   integer, public :: ICEFLG = 1
   integer, public :: I_QV =  1
