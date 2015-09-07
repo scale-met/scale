@@ -93,8 +93,9 @@ contains
     use mod_atmos_phy_ae_vars, only: &
        RHOQ_t_AE => ATMOS_PHY_AE_RHOQ_t, &
        CCN       => ATMOS_PHY_AE_CCN
+    use mod_admin_time, only: &
+         do_phy_ae => TIME_DOATMOS_PHY_AE
     use scale_time, only: &
-         do_phy_ae => TIME_DOATMOS_PHY_AE, &
          dtae =>  TIME_DTSEC_ATMOS_PHY_AE
 
     implicit none
