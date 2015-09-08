@@ -147,6 +147,7 @@ module scale_atmos_phy_ae_kajino13
   real(RP), allocatable :: rnum_out(:)
   real(RP) :: dg_reg = 5.E-7_RP             ! dg of regenerated aerosol (droplet mode 500 nm) [m]
   real(RP) :: sg_reg = 1.6_RP               ! sg of regenerated aerosol [-]
+  integer  :: is0_reg                       ! size bin of regenerated aerosol
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -290,6 +291,14 @@ contains
       enddo !ik (1:n_kap(ic))
   
     enddo !ic (1:n_ctg)
+
+!find size bin of regenerated aerosols
+    do is0 = 1, n_siz(ic_mix)
+      if (dg_reg .ge. d_lw(is0,ic_mix) .and. &
+          dg_reg .lt. d_up(is0,ic_mix) ) then
+       is0_reg = is0
+      endif !d_lw < dg_reg < d_up
+    enddo
   
     !--- coagulation rule 
     !   [ NOTE: current version has one category and single
@@ -541,20 +550,18 @@ contains
 ! aerosol regeneration due to evaporation of cloud droplets
 ! using prescribed size parameters and to internal mixture category (ic_mix)
        if (flag_regeneration) then
-         do is0 = 1, n_siz(ic_mix)
-           m0_reg = NREG(k,i,j)  !#/m3
-!          m2_reg = m0_reg * dg_reg**2._RP * exp( 2.0_RP *(log(sg_reg)**2._RP)) !m2/m3
-!          m3_reg = m0_reg * dg_reg**3._RP * exp( 4.5_RP *(log(sg_reg)**2._RP)) !m3/m3
-           m2_reg = m0_reg * reg_factor_m2
-           m3_reg = m0_reg * reg_factor_m3
-           aerosol_procs(ia_m0,is0,ik_out,ic_mix) = &
-           aerosol_procs(ia_m0,is0,ik_out,ic_mix) + m0_reg !#/m3
-           aerosol_procs(ia_m2,is0,ik_out,ic_mix) = &
-           aerosol_procs(ia_m2,is0,ik_out,ic_mix) + m2_reg !m2/m3
-           aerosol_procs(ia_m3,is0,ik_out,ic_mix) = &
-           aerosol_procs(ia_m3,is0,ik_out,ic_mix) + m3_reg !m3/m3
+         m0_reg = NREG(k,i,j)  !#/m3
+!        m2_reg = m0_reg * dg_reg**2._RP * exp( 2.0_RP *(log(sg_reg)**2._RP)) !m2/m3
+!        m3_reg = m0_reg * dg_reg**3._RP * exp( 4.5_RP *(log(sg_reg)**2._RP)) !m3/m3
+         m2_reg = m0_reg * reg_factor_m2
+         m3_reg = m0_reg * reg_factor_m3
+         aerosol_procs(ia_m0,is0_reg,ik_out,ic_mix) = &
+         aerosol_procs(ia_m0,is0_reg,ik_out,ic_mix) + m0_reg !#/m3
+         aerosol_procs(ia_m2,is0_reg,ik_out,ic_mix) = &
+         aerosol_procs(ia_m2,is0_reg,ik_out,ic_mix) + m2_reg !m2/m3
+         aerosol_procs(ia_m3,is0_reg,ik_out,ic_mix) = &
+         aerosol_procs(ia_m3,is0_reg,ik_out,ic_mix) + m3_reg !m3/m3
 ! additional attirbute to be added (ia_ms, ia_kp)
-         enddo
        endif !flag_regeneration
        
 ! diagnosed variables
