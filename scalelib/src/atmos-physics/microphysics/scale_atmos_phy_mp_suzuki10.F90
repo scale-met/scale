@@ -985,7 +985,7 @@ contains
 
        TEMP(k,i,j)      = TEMP_ijk(ijk)
        QTRC(k,i,j,I_QV) = Qvap_ijk(ijk)
-       EVAPORATE(k,i,j) = Evaporate_ijk(ijk)
+       EVAPORATE(k,i,j) = Evaporate_ijk(ijk) / dt ! [#/m3/s]
 
        countbin = QQS
        do m = 1, nspc
@@ -1138,7 +1138,7 @@ contains
     real(RP), intent(inout) :: qvap      (ijkmax)           ! Specific humidity [kg/kg]
     real(RP), intent(inout) :: ghyd      (nbin,nspc,ijkmax) ! Mass size distribution function of hydrometeor
     real(RP), intent(inout) :: gaer      (nccn1,    ijkmax) ! Mass size distribution function of aerosol
-    real(RP), intent(out)   :: evaporate (ijkmax)           ! Number concentration of evaporated cloud [/m3]
+    real(RP), intent(out)   :: evaporate (ijkmax)           ! Number concentration of evaporated cloud [/m3/s]
     real(DP), intent(in)    :: dt                           ! Time step interval
     !---------------------------------------------------------------------------
 

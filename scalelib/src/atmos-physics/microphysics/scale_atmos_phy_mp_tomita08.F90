@@ -507,7 +507,7 @@ contains
     real(RP), intent(inout) :: RHOT(KA,IA,JA)
     real(RP), intent(inout) :: QTRC(KA,IA,JA,QAD)
     real(RP), intent(in)    :: CCN(KA,IA,JA)
-    real(RP), intent(out)   :: EVAPORATE(KA,IA,JA)   ! number of evaporated cloud [/m3]
+    real(RP), intent(out)   :: EVAPORATE(KA,IA,JA)   ! number of evaporated cloud [/m3/s]
     real(RP), intent(out)   :: SFLX_rain(IA,JA)
     real(RP), intent(out)   :: SFLX_snow(IA,JA)
 
@@ -741,8 +741,6 @@ contains
     real(RP) :: LHFEx(KA,IA,JA)
     real(RP) :: LHSEx(KA,IA,JA)
 
-    real(RP) :: qc_before_satadj(KA,IA,JA)
- 
     logical  :: do_put
     integer  :: k, i, j, iq, ip
 
@@ -793,7 +791,7 @@ contains
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-      EVAPORATE(k,i,j) = max( qc_before_satadj(k,i,j) - QTRC0(k,i,j,I_QC), 0.0_RP ) ! if negative, condensation
+      EVAPORATE(k,i,j) = max( qc_before_satadj(k,i,j) - QTRC0(k,i,j,I_QC), 0.0_RP ) * rdt ! if negative, condensation
       EVAPORATE(k,i,j) = EVAPORATE(k,i,j) * DENS0(k,i,j) &
                        / (4.0_RP/3.0_RP*PI*DWATR*re_qc**3)  ! mass -> number (assuming constant particle radius as re_qc)
     enddo
