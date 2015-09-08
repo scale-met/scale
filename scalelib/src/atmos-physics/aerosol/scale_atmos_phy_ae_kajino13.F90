@@ -541,8 +541,8 @@ contains
        if (flag_ccn_interactive) then
          do is0 = 1, n_siz(ic_mix)
          do ia0 = 1, N_ATR       !attributes
-           aerosol_procs(ia,is0,ik_out,ic_mix) = &
-           aerosol_procs(ia,is0,ik_out,ic_mix) - aerosol_activ(ia,is0,ik_out,ic_mix)
+           aerosol_procs(ia0,is0,ik_out,ic_mix) = &
+           aerosol_procs(ia0,is0,ik_out,ic_mix) - aerosol_activ(ia0,is0,ik_out,ic_mix)
          enddo
          enddo
        endif !flag_ccn_interactive
