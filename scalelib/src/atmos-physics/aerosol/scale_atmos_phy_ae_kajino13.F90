@@ -187,6 +187,8 @@ contains
        flag_coag, &
        flag_ccn_interactive, &
        flag_regeneration,    &
+       dg_reg, &
+       sg_reg, &
        logk_aenucl, &
        nbins_out
 
