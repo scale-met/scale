@@ -46,6 +46,7 @@
 !!
 !! @par History
 !! @li      2011-10-24 (T.Seiki)    [new] import from NICAM(11/08/30 ver.)
+!! @li      2015-09-08 (Y.Sato)     [add] Add evaporated cloud number concentration
 !!
 !<
 !-------------------------------------------------------------------------------
@@ -608,6 +609,7 @@ contains
        RHOT,      &
        QTRC,      &
        CCN,       &
+       EVAPORATE, &
        SFLX_rain, &
        SFLX_snow  )
     use scale_grid_index
@@ -623,6 +625,7 @@ contains
     real(RP), intent(inout) :: RHOT(KA,IA,JA)
     real(RP), intent(inout) :: QTRC(KA,IA,JA,QAD)
     real(RP), intent(in)    :: CCN(KA,IA,JA)
+    real(RP), intent(out)   :: EVAPORATE(KA,IA,JA)
     real(RP), intent(out)   :: SFLX_rain(IA,JA)
     real(RP), intent(out)   :: SFLX_snow(IA,JA)
     !---------------------------------------------------------------------------
@@ -642,6 +645,7 @@ contains
                   RHOT,      & ! [INOUT]
                   QTRC,      & ! [INOUT]
                   CCN,       & ! [IN]
+                  EVAPORATE, & ! [OUT]
                   SFLX_rain, & ! [OUT]
                   SFLX_snow  ) ! [OUT]
 
@@ -1282,6 +1286,7 @@ contains
        RHOT,      &
        QTRC,      &
        CCN,       &
+       EVAPORATE, &
        SFLX_rain, &
        SFLX_snow  )
     use scale_time, only: &
@@ -1306,6 +1311,7 @@ contains
     real(RP), intent(inout) :: RHOT(KA,IA,JA)
     real(RP), intent(inout) :: QTRC(KA,IA,JA,QA)
     real(RP), intent(in)    :: CCN(KA,IA,JA)
+    real(RP), intent(out)   :: EVAPORATE(KA,IA,JA)
     real(RP), intent(out)   :: SFLX_rain(IA,JA)
     real(RP), intent(out)   :: SFLX_snow(IA,JA)
 
@@ -1678,6 +1684,7 @@ contains
          cva,                        & ! out
          esw, esi, rhoq2,            & ! in
          PQ,                         & ! inout
+         EVAPORATE,                  & ! out
          sl_PLCdep,                  & ! inout
          sl_PLRdep, sl_PNRdep        ) ! inout
 
@@ -3674,6 +3681,7 @@ contains
        cva,                 & ! out
        esw, esi, rhoq2,     & ! in
        PQ,                  & ! in
+       qc_evaporate,        & ! in
        sl_PLCdep,           &
        sl_PLRdep, sl_PNRdep )
     use scale_atmos_thermodyn, only: &
@@ -3709,6 +3717,7 @@ contains
     real(RP), intent(in)    :: rhoq2(QA,KA,IA,JA)
     !+++ tendency[kg/m3/s]
     real(RP), intent(inout) :: PQ(PQ_MAX,KA,IA,JA)
+    real(RP), intent(out)   :: qc_evaporate(KA,IA,JA)
     !+++ Column integrated tendency[kg/m2/s]
     real(RP), intent(inout) :: sl_PLCdep(IA,JA)
     real(RP), intent(inout) :: sl_PLRdep(IA,JA), sl_PNRdep(IA,JA)
@@ -4041,6 +4050,8 @@ contains
        ! evaporation always lose number(always negative).
        dep_dnc = max( dt*PNCdep*fac1, -rhoq2(I_NC,k,i,j) ) ! ss>0 dep=0, ss<0 dep<0 ! [Add] 11/08/30 T.Mitsui
        dep_dnr = max( dt*PQ(I_NRdep,k,i,j)*fac1, -rhoq2(I_NR,k,i,j) ) ! ss>0 dep=0, ss<0 dep<0
+
+       qc_evaporate(k,i,j) = - dep_dnc ! [Add] Y.Sato 15/09/08
 
        !--- deposition/sublimation
        lvsi    = esi(k,i,j)*r_rvaptem

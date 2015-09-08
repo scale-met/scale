@@ -12,6 +12,7 @@
 !! @li      2012-01-14 (Y.Miyamoto) [new]
 !! @li      2012-03-23 (H.Yashiro)  [mod] Explicit index parameter inclusion
 !! @li      2012-12-23 (H.Yashiro)  [mod] Reconstruction
+!! @li      2015-09-08 (Y.Sato)     [add] Add evaporated cloud number concentration
 !!
 !<
 !-------------------------------------------------------------------------------
@@ -157,6 +158,7 @@ contains
        RHOT,      &
        QTRC,      &
        CCN,       &
+       EVAPORATE, &
        SFLX_rain, &
        SFLX_snow  )
     use scale_grid_index
@@ -185,6 +187,7 @@ contains
     real(RP), intent(inout) :: RHOT(KA,IA,JA)
     real(RP), intent(inout) :: QTRC(KA,IA,JA,QAD)
     real(RP), intent(in)    :: CCN(KA,IA,JA)
+    real(RP), intent(out)   :: EVAPORATE(KA,IA,JA)   !--- number of evaporated cloud [/m3]
     real(RP), intent(out)   :: SFLX_rain(IA,JA)
     real(RP), intent(out)   :: SFLX_snow(IA,JA)
 
@@ -218,7 +221,7 @@ contains
        first = .false.
     endif
 
-
+    EVAPORATE(:,:,:)   = 0.0_RP
 
     if ( MP_donegative_fixer ) then
        call MP_negative_fixer( DENS(:,:,:),  & ! [INOUT]

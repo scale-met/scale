@@ -8,6 +8,7 @@
 !!
 !! @par History
 !! @li      2014-05-04 (H.Yashiro)    [new]
+!! @li      2015-09-08 (Y.Sato)       [add] Add ATMOS_PHY_MP_EVAPORATE
 !<
 !-------------------------------------------------------------------------------
 #include "inc_openmp.h"
@@ -44,15 +45,16 @@ module mod_atmos_phy_mp_vars
   character(len=H_MID),  public :: ATMOS_PHY_MP_RESTART_OUT_TITLE    = 'ATMOS_PHY_MP restart' !< title    of the output file
   character(len=H_MID),  public :: ATMOS_PHY_MP_RESTART_OUT_DTYPE    = 'DEFAULT'              !< REAL4 or REAL8
 
-  real(RP), public, allocatable :: ATMOS_PHY_MP_DENS_t(:,:,:)   ! tendency DENS [kg/m3/s]
-  real(RP), public, allocatable :: ATMOS_PHY_MP_MOMZ_t(:,:,:)   ! tendency MOMZ [kg/m2/s2]
-  real(RP), public, allocatable :: ATMOS_PHY_MP_MOMX_t(:,:,:)   ! tendency MOMX [kg/m2/s2]
-  real(RP), public, allocatable :: ATMOS_PHY_MP_MOMY_t(:,:,:)   ! tendency MOMY [kg/m2/s2]
-  real(RP), public, allocatable :: ATMOS_PHY_MP_RHOT_t(:,:,:)   ! tendency RHOT [K*kg/m3/s]
-  real(RP), public, allocatable :: ATMOS_PHY_MP_RHOQ_t(:,:,:,:) ! tendency rho*QTRC [kg/kg/s]
+  real(RP), public, allocatable :: ATMOS_PHY_MP_DENS_t(:,:,:)    ! tendency DENS [kg/m3/s]
+  real(RP), public, allocatable :: ATMOS_PHY_MP_MOMZ_t(:,:,:)    ! tendency MOMZ [kg/m2/s2]
+  real(RP), public, allocatable :: ATMOS_PHY_MP_MOMX_t(:,:,:)    ! tendency MOMX [kg/m2/s2]
+  real(RP), public, allocatable :: ATMOS_PHY_MP_MOMY_t(:,:,:)    ! tendency MOMY [kg/m2/s2]
+  real(RP), public, allocatable :: ATMOS_PHY_MP_RHOT_t(:,:,:)    ! tendency RHOT [K*kg/m3/s]
+  real(RP), public, allocatable :: ATMOS_PHY_MP_RHOQ_t(:,:,:,:)  ! tendency rho*QTRC [kg/kg/s]
 
-  real(RP), public, allocatable :: ATMOS_PHY_MP_SFLX_rain(:,:) ! precipitation flux (liquid) [kg/m2/s]
-  real(RP), public, allocatable :: ATMOS_PHY_MP_SFLX_snow(:,:) ! precipitation flux (solid)  [kg/m2/s]
+  real(RP), public, allocatable :: ATMOS_PHY_MP_EVAPORATE(:,:,:) ! number concentration of evaporated cloud [/m3]
+  real(RP), public, allocatable :: ATMOS_PHY_MP_SFLX_rain(:,:)   ! precipitation flux (liquid) [kg/m2/s]
+  real(RP), public, allocatable :: ATMOS_PHY_MP_SFLX_snow(:,:)   ! precipitation flux (solid)  [kg/m2/s]
 
   !-----------------------------------------------------------------------------
   !
@@ -108,6 +110,7 @@ contains
     allocate( ATMOS_PHY_MP_MOMY_t(KA,IA,JA)    )
     allocate( ATMOS_PHY_MP_RHOT_t(KA,IA,JA)    )
     allocate( ATMOS_PHY_MP_RHOQ_t(KA,IA,JA,QA) )
+    allocate( ATMOS_PHY_MP_EVAPORATE(KA,IA,JA)    )
     ! tentative approach
     ATMOS_PHY_MP_DENS_t(:,:,:)   = 0.0_RP
     ATMOS_PHY_MP_MOMZ_t(:,:,:)   = 0.0_RP
@@ -115,6 +118,7 @@ contains
     ATMOS_PHY_MP_MOMY_t(:,:,:)   = 0.0_RP
     ATMOS_PHY_MP_RHOT_t(:,:,:)   = 0.0_RP
     ATMOS_PHY_MP_RHOQ_t(:,:,:,:) = 0.0_RP
+    ATMOS_PHY_MP_EVAPORATE(:,:,:) = 0.0_RP
 
     allocate( ATMOS_PHY_MP_SFLX_rain(IA,JA) )
     allocate( ATMOS_PHY_MP_SFLX_snow(IA,JA) )

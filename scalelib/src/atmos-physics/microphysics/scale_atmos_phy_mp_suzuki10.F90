@@ -17,11 +17,13 @@
 !!
 !! @author : Team SCALE
 !!
-!! @par History: Hbinw
+!! @par History: scale_atmos_phy_mp_suzuki10
 !! @li  ver.0.00   2012-06-14 (Y.Sato) [new] Import from version 4.1 of original code
 !! @li  ver.0.01   2012-09-14 (Y.Sato) [mod] add a stochastic method (Sato et al. 2009)
-!! @li  ver.0.01   2013-02-12 (Y.Sato) [mod] modified for latest version
-!! @li  ver.0.01   2013-12-26 (Y.Sato) [mod] mearge all version of Bin scheme
+!! @li  ver.0.02   2013-02-12 (Y.Sato) [mod] modified for latest version
+!! @li  ver.0.03   2013-12-26 (Y.Sato) [mod] mearge all version of Bin scheme
+!! @li  ver.0.04   2015-09-02 (Y.Sato) [mod] Tuning for K and FX10
+!! @li  ver.0.05   2015-09-08 (Y.Sato) [mod] Add evaporated cloud number concentration
 !<
 !-------------------------------------------------------------------------------
 #include "macro_thermodyn.h"
@@ -172,10 +174,10 @@ module scale_atmos_phy_mp_suzuki10
 
   real(RP), allocatable :: marate( : )                ! mass rate of each aerosol bin to total aerosol mass
   integer, allocatable, save :: ncld( : )             ! bin number of aerosol in bin of hydrometeor
-  integer, private, save       :: K10_1, K10_2        ! scaling factor for 10m value (momentum)
-  real(RP), private            :: R10M1, R10M2        ! scaling factor for 10m value (momentum)
-  real(RP), private            :: R10H1, R10H2        ! scaling factor for 10m value (heat)
-  real(RP), private            :: R10E1, R10E2        ! scaling factor for 10m value (tracer)
+!  integer, private, save       :: K10_1, K10_2        ! scaling factor for 10m value (momentum)
+!  real(RP), private            :: R10M1, R10M2        ! scaling factor for 10m value (momentum)
+!  real(RP), private            :: R10H1, R10H2        ! scaling factor for 10m value (heat)
+!  real(RP), private            :: R10E1, R10E2        ! scaling factor for 10m value (tracer)
 
   character(11),parameter :: fname_micpara="micpara.dat" !--- file name
   integer(4) :: fid_micpara
@@ -552,29 +554,31 @@ contains
     enddo
 
     if ( flg_sf_aero ) then
-     if ( CZ(KS) >= 10.0_RP ) then
-          R10M1 = 10.0_RP / CZ(KS) * 0.50_RP ! scale with height
-          R10M2 = 10.0_RP / CZ(KS) * 0.50_RP ! scale with height
-          R10H1 = 1.0_RP * 0.50_RP
-          R10H2 = 1.0_RP * 0.0_RP
-          R10E1 = 1.0_RP * 0.50_RP
-          R10E2 = 1.0_RP * 0.50_RP
-          K10_1 = KS
-          K10_2 = KS
-     else
-       k = 1
-       do while ( CZ(k) < 10.0_RP )
-          k = k + 1
-          K10_1 = k
-          K10_2 = k + 1
-          R10M1 = ( CZ(k+1) - 10.0_RP ) / CDZ(k)
-          R10M2 = ( 10.0_RP   - CZ(k) ) / CDZ(k)
-          R10H1 = ( CZ(k+1) - 10.0_RP ) / CDZ(k)
-          R10H2 = ( 10.0_RP   - CZ(k) ) / CDZ(k)
-          R10E1 = ( CZ(k+1) - 10.0_RP ) / CDZ(k)
-          R10E2 = ( 10.0_RP   - CZ(k) ) / CDZ(k)
-       enddo
-     endif
+      write( *,* ) "flg_sf_aero=true is not supported stop!! "
+      call PRC_MPIstop
+!     if ( CZ(KS) >= 10.0_RP ) then
+!          R10M1 = 10.0_RP / CZ(KS) * 0.50_RP ! scale with height
+!          R10M2 = 10.0_RP / CZ(KS) * 0.50_RP ! scale with height
+!          R10H1 = 1.0_RP * 0.50_RP
+!          R10H2 = 1.0_RP * 0.0_RP
+!          R10E1 = 1.0_RP * 0.50_RP
+!          R10E2 = 1.0_RP * 0.50_RP
+!          K10_1 = KS
+!          K10_2 = KS
+!     else
+!       k = 1
+!       do while ( CZ(k) < 10.0_RP )
+!          k = k + 1
+!          K10_1 = k
+!          K10_2 = k + 1
+!          R10M1 = ( CZ(k+1) - 10.0_RP ) / CDZ(k)
+!          R10M2 = ( 10.0_RP   - CZ(k) ) / CDZ(k)
+!          R10H1 = ( CZ(k+1) - 10.0_RP ) / CDZ(k)
+!          R10H2 = ( 10.0_RP   - CZ(k) ) / CDZ(k)
+!          R10E1 = ( CZ(k+1) - 10.0_RP ) / CDZ(k)
+!          R10E2 = ( 10.0_RP   - CZ(k) ) / CDZ(k)
+!       enddo
+!     endif
     endif
 
     endif
@@ -653,6 +657,7 @@ contains
        RHOT,      &
        QTRC,      &
        CCN,       &
+       EVAPORATE, &
        SFLX_rain, &
        SFLX_snow  )
     use scale_grid_index
@@ -680,6 +685,7 @@ contains
     real(RP), intent(inout) :: RHOT(KA,IA,JA)
     real(RP), intent(inout) :: QTRC(KA,IA,JA,QAD)
     real(RP), intent(in)    :: CCN (KA,IA,JA)
+    real(RP), intent(out)   :: EVAPORATE(KA,IA,JA)   !---- evaporated cloud number concentration [/m3]
     real(RP), intent(out)   :: SFLX_rain(IA,JA)
     real(RP), intent(out)   :: SFLX_snow(IA,JA)
 
@@ -702,6 +708,7 @@ contains
     real(RP) :: PRES_ijk(KIJMAX)
     real(RP) :: TEMP_ijk(KIJMAX)
     real(RP) :: Qvap_ijk(KIJMAX)
+    real(RP) :: Evaporate_ijk(KIJMAX)
     real(RP) :: Ghyd_ijk(nbin,nspc,KIJMAX)
     real(RP) :: Gaer_ijk(nccn1    ,KIJMAX)
     real(RP) :: cldsum
@@ -735,6 +742,15 @@ contains
     endif
 
     call PROF_rapstart('MP_ijkconvert', 1)
+
+    ! Clear EVAPORATE
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       EVAPORATE(k,i,j) = 0.0_RP
+    enddo
+    enddo
+    enddo
 
     ijk = 0
     do j = JS, JE
@@ -911,6 +927,7 @@ contains
                       Qvap_ijk  (    1:ijkcount), & ! [INOUT]
                       Ghyd_ijk  (:,:,1:ijkcount), & ! [INOUT]
                       Gaer_ijk  (:,  1:ijkcount), & ! [INOUT]
+                      Evaporate_ijk( 1:ijkcount), & ! [OUT]
                       dt                          ) ! [IN]
 
     call PROF_rapend  ('MP_SBM_Main', 1)
@@ -968,6 +985,7 @@ contains
 
        TEMP(k,i,j)      = TEMP_ijk(ijk)
        QTRC(k,i,j,I_QV) = Qvap_ijk(ijk)
+       EVAPORATE(k,i,j) = Evaporate_ijk(ijk)
 
        countbin = QQS
        do m = 1, nspc
@@ -1105,6 +1123,7 @@ contains
        qvap,        &
        ghyd,        &
        gaer,        &
+       evaporate,   &
        dt           )
     implicit none
 
@@ -1119,6 +1138,7 @@ contains
     real(RP), intent(inout) :: qvap      (ijkmax)           ! Specific humidity [kg/kg]
     real(RP), intent(inout) :: ghyd      (nbin,nspc,ijkmax) ! Mass size distribution function of hydrometeor
     real(RP), intent(inout) :: gaer      (nccn1,    ijkmax) ! Mass size distribution function of aerosol
+    real(RP), intent(out)   :: evaporate (ijkmax)           ! Number concentration of evaporated cloud [/m3]
     real(DP), intent(in)    :: dt                           ! Time step interval
     !---------------------------------------------------------------------------
 
@@ -1144,6 +1164,7 @@ contains
                            qvap(:),     & ! [INOUT]
                            ghyd(:,:,:), & ! [INOUT]
                            gaer(:,:),   & ! [INOUT]
+                           evaporate(:),& ! [OUT]
                            dt           ) ! [IN]
 
           if ( MP_doautoconversion ) then
@@ -1202,6 +1223,7 @@ contains
                            qvap(:),     & ! [INOUT]
                            ghyd(:,:,:), & ! [INOUT]
                            gaer(:,:),   & ! [INOUT]
+                           evaporate(:),& ! [OUT]
                            dt           ) ! [IN]
 
           if ( MP_doautoconversion ) then
@@ -1235,6 +1257,7 @@ contains
                           temp(:),     & ! [INOUT]
                           qvap(:),     & ! [INOUT]
                           ghyd(:,:,:), & ! [INOUT]
+                          evaporate(:),& ! [OUT]
                           dt           ) ! [IN]
 
           if ( MP_doautoconversion ) then
@@ -1291,6 +1314,7 @@ contains
                           temp(:),     & ! [INOUT]
                           qvap(:),     & ! [INOUT]
                           ghyd(:,:,:), & ! [INOUT]
+                          evaporate(:),& ! [OUT]
                           dt           ) ! [IN]
 
           if ( MP_doautoconversion ) then
@@ -1511,13 +1535,14 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine cndevpsbl( &
-       ijkmax, &
-       dens,   &
-       pres,   &
-       temp,   &
-       qvap,   &
-       gc,     &
-       dtime   )
+       ijkmax,    &
+       dens,      &
+       pres,      &
+       temp,      &
+       qvap,      &
+       gc,        &
+       evaporate, & ! [OUT]
+       dtime      )
     implicit none
 
     integer,  intent(in)    :: ijkmax
@@ -1526,9 +1551,8 @@ contains
     real(RP), intent(inout) :: temp(ijkmax)           ! Temperature       [K]
     real(RP), intent(inout) :: qvap(ijkmax)           ! Specific humidity [kg/kg]
     real(RP), intent(inout) :: gc  (nbin,nspc,ijkmax) ! Mass size distribution function of hydrometeor
+    real(RP), intent(out)   :: evaporate(ijkmax)      ! Number concentration of evaporated cloud [/m3]
     real(DP), intent(in)    :: dtime                  ! Time step interval
-
-    real(RP) :: regene_gcn(ijkmax)
     !---------------------------------------------------------------------------
 
     call liqphase( ijkmax,        & ! [IN]
@@ -1537,7 +1561,7 @@ contains
                    temp(:),       & ! [INOUT]
                    qvap(:),       & ! [INOUT]
                    gc  (:,:,:),   & ! [INOUT]
-                   regene_gcn(:), & ! [OUT]
+                   evaporate(:),  & ! [OUT]
                    dtime          ) ! [IN]
 
     call icephase( ijkmax,        & ! [IN]
@@ -1561,14 +1585,15 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine cndevpsbla( &
-       ijkmax, &
-       dens,   &
-       pres,   &
-       temp,   &
-       qvap,   &
-       gc,     &
-       ga,     &
-       dtime   )
+       ijkmax,    &
+       dens,      &
+       pres,      &
+       temp,      &
+       qvap,      &
+       gc,        &
+       ga,        &
+       evaporate, &
+       dtime      )
     implicit none
 
     integer,  intent(in)    :: ijkmax
@@ -1578,9 +1603,8 @@ contains
     real(RP), intent(inout) :: qvap(ijkmax)           ! Specific humidity [kg/kg]
     real(RP), intent(inout) :: gc  (nbin,nspc,ijkmax) ! Mass size distribution function of hydrometeor
     real(RP), intent(inout) :: ga  (nccn     ,ijkmax) ! Mass size distribution function of aerosol
+    real(RP), intent(out)   :: evaporate(ijkmax)      ! Number concentration of evaporated cloud [/m3]
     real(DP), intent(in)    :: dtime                  ! Time step interval
-
-    real(RP) :: regene_gcn(ijkmax)
     !---------------------------------------------------------------------------
 
     call liqphase( ijkmax,        & ! [IN]
@@ -1589,13 +1613,14 @@ contains
                    temp(:),       & ! [INOUT]
                    qvap(:),       & ! [INOUT]
                    gc  (:,:,:),   & ! [INOUT]
-                   regene_gcn(:), & ! [OUT]
+                   evaporate(:),  & ! [OUT]
                    dtime          ) ! [IN]
 
     ! regeneration of aerosol
     if ( flg_regeneration ) then
        call faero( ijkmax,        & ! [IN]
-                   regene_gcn(:), & ! [IN]
+!                   regene_gcn(:), & ! [IN]
+                   evaporate(:),  & ! [IN]
                    ga(:,:)        ) ! [INOUT]
     endif
 

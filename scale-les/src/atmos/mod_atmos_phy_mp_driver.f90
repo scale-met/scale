@@ -116,6 +116,7 @@ contains
        MOMY_t_MP => ATMOS_PHY_MP_MOMY_t,    &
        RHOT_t_MP => ATMOS_PHY_MP_RHOT_t,    &
        RHOQ_t_MP => ATMOS_PHY_MP_RHOQ_t,    &
+       EVAPORATE => ATMOS_PHY_MP_EVAPORATE, &
        SFLX_rain => ATMOS_PHY_MP_SFLX_rain, &
        SFLX_snow => ATMOS_PHY_MP_SFLX_snow
     use mod_atmos_phy_ae_vars, only: &
@@ -170,6 +171,7 @@ contains
                           RHOT0    (:,:,:),   & ! [INOUT]
                           QTRC0    (:,:,:,:), & ! [INOUT]
                           CCN      (:,:,:),   & ! [IN]
+                          EVAPORATE(:,:,:),   & ! [OUT]
                           SFLX_rain(:,:),     & ! [OUT]
                           SFLX_snow(:,:)      ) ! [OUT]
 
@@ -208,6 +210,7 @@ contains
        call HIST_in( SFLX_rain(:,:), 'RAIN', 'surface rain rate',          'kg/m2/s', nohalo=.true. )
        call HIST_in( SFLX_snow(:,:), 'SNOW', 'surface snow rate',          'kg/m2/s', nohalo=.true. )
        call HIST_in( precip   (:,:), 'PREC', 'surface precipitation rate', 'kg/m2/s', nohalo=.true. )
+       call HIST_in( EVAPORATE(:,:,:), 'EVAPORATE', 'evaporated cloud number', '#/m3/s', nohalo=.true. )
 
        call HIST_in( DENS_t_MP(:,:,:), 'DENS_t_MP', 'tendency DENS in MP', 'kg/m3/s'  , nohalo=.true. )
        call HIST_in( MOMZ_t_MP(:,:,:), 'MOMZ_t_MP', 'tendency MOMZ in MP', 'kg/m2/s2' , nohalo=.true. )
