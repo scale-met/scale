@@ -125,6 +125,8 @@ module scale_atmos_phy_ae_kajino13
   logical :: flag_npf = .false.
   logical :: flag_cond = .true.
   logical :: flag_coag = .true.
+  logical :: flag_ccn_interactive = .true.
+  logical :: flag_regeneration    = .true.
 !  real(RP) :: m0_init = 0.E0      ! initial total num. conc. of modes (Atk,Acm,Cor) [#/m3]    
 !  real(RP) :: dg_init = 80.E-9    ! initial number equivalen diameters of modes     [m]     
 !  real(RP) :: sg_init = 1.6       ! initial standard deviation                      [-]     
@@ -143,6 +145,8 @@ module scale_atmos_phy_ae_kajino13
   integer, allocatable :: ik_trans2procs(:) !trans to procs conversion
   integer, allocatable :: ic_trans2procs(:) !trans to procs conversion
   real(RP), allocatable :: rnum_out(:)
+  real(RP) :: dg_reg = 5.E-7_RP             ! dg of regenerated aerosol (droplet mode 500 nm) [m]
+  real(RP) :: sg_reg = 1.6_RP               ! sg of regenerated aerosol [-]
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -181,6 +185,8 @@ contains
        flag_npf, &
        flag_cond, &
        flag_coag, &
+       flag_ccn_interactive, &
+       flag_regeneration,    &
        logk_aenucl, &
        nbins_out
 
@@ -380,6 +386,7 @@ contains
           MOMY, &
           RHOT, &
           EMIT, &
+          NREG, &
           CN,   &
           CCN,  &
           QTRC  )
@@ -405,6 +412,7 @@ contains
     real(RP), intent(inout) :: MOMY(KA,IA,JA)
     real(RP), intent(inout) :: RHOT(KA,IA,JA)
     real(RP), intent(inout) :: EMIT(KA,IA,JA,QA_AE)
+    real(RP), intent(in)    :: NREG(KA,IA,JA)
     real(RP), intent(out)   :: CN(KA,IA,JA)
     real(RP), intent(out)   :: CCN(KA,IA,JA)
     real(RP), intent(inout) :: QTRC(KA,IA,JA,QA)
@@ -422,6 +430,8 @@ contains
     real(RP) :: cpa(KA,IA,JA)
     real(RP) :: t_ccn, t_cn
     real(RP) :: Rmoist
+    real(RP) :: m0_reg, m2_reg, m3_reg      !regenerated aerosols [m^k/m3]
+    real(RP) :: reg_factor_m2,reg_factor_m3 !to save cpu time for moment conversion
     !--- aerosol variables
     real(RP),allocatable :: aerosol_procs(:,:,:,:) !(n_atr,n_siz_max,n_kap_max,n_ctg)
     real(RP),allocatable :: aerosol_activ(:,:,:,:) !(n_atr,n_siz_max,n_kap_max,n_ctg)
@@ -439,6 +449,9 @@ contains
     allocate( aerosol_activ (N_ATR,n_siz_max,n_kap_max,n_ctg)  )
     allocate( emis_procs    (N_ATR,n_siz_max,n_kap_max,n_ctg)  )
     allocate( emis_gas      (GAS_CTG)  )
+
+    reg_factor_m2 = dg_reg**2._RP * exp( 2.0_RP *(log(sg_reg)**2._RP)) !m0_reg to m2_reg
+    reg_factor_m3 = dg_reg**3._RP * exp( 4.5_RP *(log(sg_reg)**2._RP)) !m0_reg to m3_reg
 
     !--- convert SCALE variable to zerochem variable
     
@@ -513,6 +526,36 @@ contains
          emis_gas,                      & !--- out
          aerosol_activ                  ) !--- out
 
+! aerosol loss due to activation to cloud droplets
+       if (flag_ccn_interactive) then
+         do is0 = 1, n_siz(ic_mix)
+         do ia0 = 1, N_ATR       !attributes
+           aerosol_procs(ia,is0,ik_out,ic_mix) = &
+           aerosol_procs(ia,is0,ik_out,ic_mix) - aerosol_activ(ia,is0,ik_out,ic_mix)
+         enddo
+         enddo
+       endif !flag_ccn_interactive
+
+! aerosol regeneration due to evaporation of cloud droplets
+! using prescribed size parameters and to internal mixture category (ic_mix)
+       if (flag_regeneration) then
+         do is0 = 1, n_siz(ic_mix)
+           m0_reg = NREG(k,i,j)  !#/m3
+!          m2_reg = m0_reg * dg_reg**2._RP * exp( 2.0_RP *(log(sg_reg)**2._RP)) !m2/m3
+!          m3_reg = m0_reg * dg_reg**3._RP * exp( 4.5_RP *(log(sg_reg)**2._RP)) !m3/m3
+           m2_reg = m0_reg * reg_factor_m2
+           m3_reg = m0_reg * reg_factor_m3
+           aerosol_procs(ia_m0,is0,ik_out,ic_mix) = &
+           aerosol_procs(ia_m0,is0,ik_out,ic_mix) + m0_reg !#/m3
+           aerosol_procs(ia_m2,is0,ik_out,ic_mix) = &
+           aerosol_procs(ia_m2,is0,ik_out,ic_mix) + m2_reg !m2/m3
+           aerosol_procs(ia_m3,is0,ik_out,ic_mix) = &
+           aerosol_procs(ia_m3,is0,ik_out,ic_mix) + m3_reg !m3/m3
+! additional attirbute to be added (ia_ms, ia_kp)
+         enddo
+       endif !flag_regeneration
+       
+! diagnosed variables
        do is0 = 1, n_siz(ic_mix)
          CCN(k,i,j) = CCN(k,i,j) + aerosol_activ(ia_m0,is0,ik_out,ic_mix)
          CN(k,i,j)  = CN(k,i,j)  + aerosol_procs(ia_m0,is0,ik_out,ic_mix)

@@ -42,6 +42,7 @@ module scale_atmos_phy_ae
           MOMY, &
           RHOT, &
           EMIT, &
+          NREG, &
           CN,   &
           CCN,  &
           QTRC  )
@@ -54,6 +55,7 @@ module scale_atmos_phy_ae
        real(RP), intent(inout) :: MOMY(KA,IA,JA)
        real(RP), intent(inout) :: RHOT(KA,IA,JA)
        real(RP), intent(inout) :: EMIT(KA,IA,JA,QA_AE)
+       real(RP), intent(in)    :: NREG(KA,IA,JA)
        real(RP), intent(out)   :: CN(KA,IA,JA)
        real(RP), intent(out)   :: CCN(KA,IA,JA)
        real(RP), intent(inout) :: QTRC(KA,IA,JA,QA)

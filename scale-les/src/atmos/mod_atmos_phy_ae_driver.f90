@@ -101,12 +101,15 @@ contains
        RHOQ_t_AE => ATMOS_PHY_AE_RHOQ_t, &
        CCN       => ATMOS_PHY_AE_CCN, &
        AE_EMIT   => ATMOS_PHY_AE_EMIT
+    use mod_atmos_phy_mp_vars, only: &
+       EVAPORATE => ATMOS_PHY_MP_EVAPORATE
     implicit none
 
     logical, intent(in) :: update_flag
 
     real(RP) :: QTRC0(KA,IA,JA,QA)
     real(RP) :: CN(KA,IA,JA)
+    real(RP) :: NREG(KA,IA,JA)
 
     real(RP) :: total ! dummy
 
@@ -129,12 +132,15 @@ contains
        CCN(:,:,:) = 0.0_RP ! reset
        RHOQ_t_AE(:,:,:,:) = 0.0_RP ! reset
 
+       NREG(:,:,:) = EVAPORATE(:,:,:) * dt_AE 
+
        call ATMOS_PHY_AE( DENS, & ! [IN]
                           MOMZ, & ! [IN]
                           MOMX, & ! [IN]
                           MOMY, & ! [IN]
                           RHOT, & ! [IN]
-                          AE_EMIT, & ! [IN}
+                          AE_EMIT, & ! [IN]
+                          NREG,    & ! [IN]
                           CN ,  & ! [OUT]
                           CCN,  & ! [OUT]
                           QTRC0 ) ! [INOUT]
