@@ -740,6 +740,7 @@ contains
     real(RP) :: LHVEx(KA,IA,JA)
     real(RP) :: LHFEx(KA,IA,JA)
     real(RP) :: LHSEx(KA,IA,JA)
+    real(RP) :: qc_before_satadj(KA,IA,JA)
 
     logical  :: do_put
     integer  :: k, i, j, iq, ip
