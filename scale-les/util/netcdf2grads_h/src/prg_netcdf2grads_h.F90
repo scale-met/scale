@@ -237,10 +237,10 @@ program netcdf2grads_h
   nst = START_TSTEP
   nen = END_TSTEP
   nt  = (nen - nst + 1) / INC_TSTEP
-  if ( nt > max_tcount ) then
-     write (*, *) "ERROR: overflow maximum of tcount"
-     call err_abort( 1, __LINE__, loc_main )
-  endif
+  !if ( nt > max_tcount ) then
+  !   write (*, *) "ERROR: overflow maximum of tcount"
+  !   call err_abort( 1, __LINE__, loc_main )
+  !endif
 
   call cal_init( yy, mm, dd, hh, mn, sc, DELT )
 
