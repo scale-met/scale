@@ -441,6 +441,7 @@ contains
     real(RP) :: cpa(KA,IA,JA)
     real(RP) :: t_ccn, t_cn
     real(RP) :: Rmoist
+    real(RP) :: qsat_tmp
     real(RP) :: m0_reg, m2_reg, m3_reg      !regenerated aerosols [m^k/m3]
     real(RP) :: reg_factor_m2,reg_factor_m3 !to save cpu time for moment conversion
     !--- aerosol variables
@@ -494,7 +495,8 @@ contains
           temp_ae(k,i,j) = pres_ae(k,i,j) / ( DENS(k,i,j) * Rmoist )
           qv_ae(k,i,j) = QTRC(k,i,j,I_QV)
           !--- calculate super saturation of water
-          call pres2qsat_liq( ssliq_ae(k,i,j),temp_ae(k,i,j),pres_ae(k,i,j) )
+          call pres2qsat_liq( qsat_tmp,temp_ae(k,i,j),pres_ae(k,i,j) )
+          ssliq_ae(k,i,j) = qv_ae(k,i,j)/qsat_tmp - 1.0_RP
        enddo
 
     enddo
@@ -1272,8 +1274,11 @@ contains
       real(RP) :: tmp1, tmp2, tmp3        ! 
       real(RP) :: ccn_frc,cca_frc,ccv_frc ! activated number,area,volume
       integer  :: is0, ik, ic
-    
+
       aerosol_activ(:,:,:,:) = 0._RP
+
+      if (super.le.0._RP) return
+
       smax_inv = 1._RP / super
     
     !--- surface tension of water
