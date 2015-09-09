@@ -120,7 +120,7 @@ contains
        SFLX_rain => ATMOS_PHY_MP_SFLX_rain, &
        SFLX_snow => ATMOS_PHY_MP_SFLX_snow
     use mod_atmos_phy_ae_vars, only: &
-       CCN => ATMOS_PHY_AE_CCN
+       CCN_t => ATMOS_PHY_AE_CCN_t
     implicit none
 
     logical, intent(in) :: update_flag
@@ -131,6 +131,7 @@ contains
     real(RP) :: MOMY0(KA,IA,JA)
     real(RP) :: RHOT0(KA,IA,JA)
     real(RP) :: QTRC0(KA,IA,JA,QA)
+    real(RP) :: CCN(KA,IA,JA)
 
     real(RP) :: precip(IA,JA)
     real(RP) :: total ! dummy
@@ -163,6 +164,8 @@ contains
        enddo
        enddo
        enddo
+  
+       CCN(:,:,:) = CCN_t(:,:,:) * dt_MP
 
        call ATMOS_PHY_MP( DENS0    (:,:,:),   & ! [INOUT]
                           MOMZ0    (:,:,:),   & ! [INOUT]
