@@ -99,6 +99,9 @@ contains
     allocate( ATMOS_PHY_AE_CCN(KA,IA,JA) )
     ATMOS_PHY_AE_CCN(:,:,:) = UNDEF
 
+    allocate( ATMOS_PHY_AE_CCN_t(KA,IA,JA) )
+    ATMOS_PHY_AE_CCN_t(:,:,:) = UNDEF
+
     allocate( ATMOS_PHY_AE_EMIT(KA,IA,JA,QA_AE) )
     ATMOS_PHY_AE_EMIT(:,:,:,:) = 0.0_RP
 
