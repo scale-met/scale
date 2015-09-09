@@ -47,6 +47,7 @@ module mod_atmos_phy_ae_vars
   real(RP), public, allocatable :: ATMOS_PHY_AE_RHOQ_t(:,:,:,:)                               ! tendency rho*QTRC [kg/kg/s]
 
   real(RP), public, allocatable :: ATMOS_PHY_AE_CCN(:,:,:)                                    ! cloud condensation nuclei [/m3]
+  real(RP), public, allocatable :: ATMOS_PHY_AE_CCN_t(:,:,:)                                  ! tendency CCN [/m3/s]
   real(RP), public, allocatable :: ATMOS_PHY_AE_EMIT(:,:,:,:)                                 ! emission of aerosol and gas
   !-----------------------------------------------------------------------------
   !
