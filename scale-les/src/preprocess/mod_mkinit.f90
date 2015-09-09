@@ -40,6 +40,9 @@ module mod_mkinit
   use scale_tracer
 
   use scale_process, only: &
+#ifdef _SDM
+     PRC_myrank, &
+#endif
      PRC_MPIstop
   use scale_const, only: &
      PI    => CONST_PI,    &
@@ -76,7 +79,12 @@ module mod_mkinit
   use scale_atmos_saturation, only: &
      SATURATION_pres2qsat_all => ATMOS_SATURATION_pres2qsat_all, &
      SATURATION_pres2qsat_liq => ATMOS_SATURATION_pres2qsat_liq
-
+#ifdef _SDM
+  use rng_uniform_mt,only: &
+     c_rng_uniform_mt, &
+     rng_init, &
+     rng_save_state
+#endif
   use mod_atmos_vars, only: &
      DENS, &
      MOMX, &
@@ -141,6 +149,10 @@ module mod_mkinit
   integer, public, parameter :: I_BOXAERO       = 27
   integer, public, parameter :: I_WARMBUBBLEAERO = 28
 
+#ifdef _SDM
+  type(c_rng_uniform_mt), save :: rng_s2c_i
+  logical, private :: flg_sdm = .false.
+#endif
   !-----------------------------------------------------------------------------
   !
   !++ Private procedure
@@ -148,6 +160,9 @@ module mod_mkinit
   private :: BUBBLE_setup
   private :: SBMAERO_setup
   private :: AEROSOL_setup
+#ifdef _SDM
+  private :: SDM_random_setup
+#endif
 
   private :: MKINIT_planestate
   private :: MKINIT_tracerbubble
@@ -221,6 +236,9 @@ contains
 
     NAMELIST / PARAM_MKINIT / &
        MKINIT_initname, &
+#ifdef _SDM
+       flg_sdm, &
+#endif
        flg_bin
 
     integer :: ierr
@@ -406,6 +424,12 @@ contains
          if( IO_L ) write(IO_FID_LOG,*) '*** Aerosols for SBM are included ***'
          call SBMAERO_setup
       endif
+
+#ifdef _SDM
+      if ( flg_sdm ) then
+         call SDM_random_setup
+      endif
+#endif
 
       select case(MKINIT_TYPE)
       case(I_PLANESTATE)
@@ -1131,6 +1155,53 @@ contains
 
     return
   end function faero
+#ifdef _SDM
+  !-------------------------------------------------------------
+  ! generate random number set for SDM
+  subroutine SDM_random_setup
+    implicit none
+
+    character(len=H_LONG) :: basename = ''
+    character(len=H_LONG) :: RANDOM_INIT_BASENAME = '' ! name of randon number
+    integer :: fid_output, ierr
+    character(len=17) :: fmt="(A, '.', A, I*.*)"
+
+    NAMELIST / PARAM_SDMRANDOM / &
+      RANDOM_INIT_BASENAME
+
+    fid_output = IO_get_available_fid()
+
+    !--- read namelist
+    rewind(IO_FID_CONF)
+    read(IO_FID_CONF,nml=PARAM_SDMRANDOM,iostat=ierr)
+
+    if( ierr < 0 ) then !--- missing
+       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Check!'
+       call PRC_MPIstop
+    elseif( ierr > 0 ) then !--- fatal error
+       write(*,*) 'xxx Not appropriate names in namelist SDMRANDOM. Check!'
+       call PRC_MPIstop
+    endif
+    if( IO_L ) write(IO_FID_LOG,nml=PARAM_SDMRANDOM)
+
+    if( RANDOM_INIT_BASENAME == '' ) then
+       if( IO_L ) write(IO_FID_LOG,*) '*** Not found random number output file name. Default used..'
+       write(fmt(14:14),'(I1)') 6
+       write(fmt(16:16),'(I1)') 6
+       write(basename,fmt) 'random_number_output','pe',PRC_myrank
+    else
+       write(fmt(14:14),'(I1)') 6
+       write(fmt(16:16),'(I1)') 6
+       write(basename,fmt) trim(RANDOM_INIT_BASENAME),'pe',PRC_myrank
+    endif
+
+    call rng_init( rng_s2c_i, PRC_myrank )
+    call rng_save_state( rng_s2c_i, basename )
+!    call rng_save_state( rng_s2c_i, basename, fid_output )
+
+    return
+  end subroutine SDM_random_setup
+#endif
 
   !-----------------------------------------------------------------------------
   !> flux setup
@@ -1847,6 +1918,12 @@ contains
        write(*,*) 'xxx SBM cannot be used on tracerbubble. Check!'
        call PRC_MPIstop
     endif
+#ifdef _SDM
+    if ( flg_sdm ) then
+       write(*,*) 'xxx SDM cannot be used on tracerbubble. Check!'
+       call PRC_MPIstop
+    endif
+#endif
 
 #endif
     return
@@ -1954,6 +2031,12 @@ contains
        write(*,*) 'xxx SBM cannot be used on coldbubble. Check!'
        call PRC_MPIstop
     endif
+#ifdef _SDM
+    if ( flg_sdm ) then
+       write(*,*) 'xxx SDM cannot be used on tracerbubble. Check!'
+       call PRC_MPIstop
+    endif
+#endif
 
     return
   end subroutine MKINIT_coldbubble
@@ -2028,6 +2111,12 @@ contains
        write(*,*) 'xxx SBM cannot be used on lambwave. Check!'
        call PRC_MPIstop
     endif
+#ifdef _SDM
+    if ( flg_sdm ) then
+       write(*,*) 'xxx SDM cannot be used on tracerbubble. Check!'
+       call PRC_MPIstop
+    endif
+#endif
 
     return
   end subroutine MKINIT_lambwave
@@ -2125,6 +2214,12 @@ contains
        write(*,*) 'xxx SBM cannot be used on gravitywave. Check!'
        call PRC_MPIstop
     endif
+#ifdef _SDM
+    if ( flg_sdm ) then
+       write(*,*) 'xxx SDM cannot be used on tracerbubble. Check!'
+       call PRC_MPIstop
+    endif
+#endif
 
     return
   end subroutine MKINIT_gravitywave
@@ -2250,6 +2345,12 @@ contains
        write(*,*) 'xxx SBM cannot be used on khwave. Check!'
        call PRC_MPIstop
     endif
+#ifdef _SDM
+    if ( flg_sdm ) then
+       write(*,*) 'xxx SDM cannot be used on tracerbubble. Check!'
+       call PRC_MPIstop
+    endif
+#endif
 
     return
   end subroutine MKINIT_khwave
@@ -2431,6 +2532,12 @@ contains
        write(*,*) 'xxx SBM cannot be used on turbulence. Check!'
        call PRC_MPIstop
     endif
+#ifdef _SDM
+    if ( flg_sdm ) then
+       write(*,*) 'xxx SDM cannot be used on tracerbubble. Check!'
+       call PRC_MPIstop
+    endif
+#endif
 
     return
   end subroutine MKINIT_turbulence
@@ -2529,6 +2636,12 @@ contains
     enddo
     enddo
     enddo
+#ifdef _SDM
+    if ( flg_sdm ) then
+       write(*,*) 'xxx SDM cannot be used on tracerbubble. Check!'
+       call PRC_MPIstop
+    endif
+#endif
 
     return
   end subroutine MKINIT_mountainwave
