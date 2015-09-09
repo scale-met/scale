@@ -109,7 +109,7 @@ contains
     logical, intent(in) :: update_flag
 
     real(RP) :: QTRC0(KA,IA,JA,QA)
-    real(RP) :: CN(KA,IA,JA), CCN(KA,IA,JA)
+    real(RP) :: CN(KA,IA,JA)
     real(RP) :: NREG(KA,IA,JA)
 
     real(RP) :: total ! dummy
