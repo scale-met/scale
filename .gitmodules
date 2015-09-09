@@ -1,3 +1,4 @@
 [submodule "letkf"]
 	path = letkf
 	url = https://github.com/gylien/scale-letkf.git
+	branch = system_call
