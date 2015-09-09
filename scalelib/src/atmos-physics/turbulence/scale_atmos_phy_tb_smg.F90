@@ -192,6 +192,7 @@ contains
     use scale_grid_index
     use scale_tracer
     use scale_const, only: &
+       EPS  => CONST_EPS, &
        GRAV => CONST_GRAV
     use scale_grid, only: &
        FDZ  => GRID_FDZ,  &
@@ -1477,7 +1478,7 @@ contains
           endif
           Kh(k,i,j) = min( nu(k,i,j)/Pr(k,i,j), ATMOS_PHY_TB_SMG_NU_MAX )
           nu(k,i,j) = min( nu(k,i,j), ATMOS_PHY_TB_SMG_NU_MAX )
-          Pr(k,i,j) = nu(k,i,j) / Kh(k,i,j)
+          Pr(k,i,j) = nu(k,i,j) / ( Kh(k,i,j) + ( 0.5_RP - sign(0.5_RP, Kh(k,i,j)-EPS) ) )
        enddo
        enddo
        enddo
