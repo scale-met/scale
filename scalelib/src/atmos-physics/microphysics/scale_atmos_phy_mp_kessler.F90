@@ -61,6 +61,7 @@ module scale_atmos_phy_mp_kessler
   !
   logical,  private :: MP_donegative_fixer = .true. ! apply negative fixer?
   logical,  private :: MP_doprecipitation  = .true. ! apply sedimentation (precipitation)?
+  logical,  private :: MP_couple_aerosol  = .false. ! Consider CCN effect ?
 
   real(RP), private, allocatable :: factor_vterm(:) ! collection factor for terminal velocity of QR
 
@@ -91,7 +92,8 @@ contains
     NAMELIST / PARAM_ATMOS_PHY_MP / &
        MP_doprecipitation, &
        MP_donegative_fixer, &
-       MP_ntmax_sedimentation
+       MP_ntmax_sedimentation, &
+       MP_couple_aerosol
 
     real(RP), parameter :: max_term_vel = 10.0_RP  !-- terminal velocity for calculate dt of sedimentation
     integer :: nstep_max
@@ -126,6 +128,11 @@ contains
        call PRC_MPIstop
     endif
     if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_ATMOS_PHY_MP)
+
+    if( MP_couple_aerosol ) then
+       write(*,*) 'xxx MP_aerosol_couple should be .false. for KESSLER type MP!'
+       call PRC_MPIstop
+    endif
 
     if ( IO_L ) write(IO_FID_LOG,*)
     if ( IO_L ) write(IO_FID_LOG,*) '*** Enable negative fixer?                : ', MP_donegative_fixer

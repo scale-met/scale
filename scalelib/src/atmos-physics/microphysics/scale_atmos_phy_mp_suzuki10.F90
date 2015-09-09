@@ -171,6 +171,7 @@ module scale_atmos_phy_mp_suzuki10
   logical, private, save :: MP_doautoconversion = .true.  ! apply collision process ?
   logical, private, save :: MP_doprecipitation  = .true.  ! apply sedimentation of hydrometeor ?
   logical, private, save :: MP_donegative_fixer = .true.  ! apply negative fixer?
+  logical, private, save :: MP_couple_aerosol   = .false. ! apply CCN effect?
 
   real(RP), allocatable :: marate( : )                ! mass rate of each aerosol bin to total aerosol mass
   integer, allocatable, save :: ncld( : )             ! bin number of aerosol in bin of hydrometeor
@@ -269,7 +270,8 @@ contains
        MP_ntmax_sedimentation, &
        MP_doautoconversion, &
        MP_doprecipitation, &
-       MP_donegative_fixer
+       MP_donegative_fixer, &
+       MP_couple_aerosol
 
     NAMELIST / PARAM_ATMOS_PHY_MP_SUZUKI10 / &
        RHO_AERO,  &
@@ -595,6 +597,11 @@ contains
      call random_setup( IA*JA*KA )
     endif
 
+    if ( MP_couple_aerosol .and. nccn /=0 ) then
+      write(*,*) 'xxx nccn should be 0 when MP_couple_aerosol = .true. !! stop'
+      call PRC_MPIstop
+    endif
+
     if ( nccn /= 0 ) then
      do n = 1, nccn
       expxactr( n ) = exp( xactr( n ) )
@@ -708,6 +715,7 @@ contains
     real(RP) :: PRES_ijk(KIJMAX)
     real(RP) :: TEMP_ijk(KIJMAX)
     real(RP) :: Qvap_ijk(KIJMAX)
+    real(RP) :: CCN_ijk(KIJMAX)
     real(RP) :: Evaporate_ijk(KIJMAX)
     real(RP) :: Ghyd_ijk(nbin,nspc,KIJMAX)
     real(RP) :: Gaer_ijk(nccn1    ,KIJMAX)
@@ -850,6 +858,7 @@ contains
           DENS_ijk(ijkcount) = DENS(k,i,j)
           PRES_ijk(ijkcount) = PRES(k,i,j)
           TEMP_ijk(ijkcount) = TEMP(k,i,j)
+          CCN_ijk(ijkcount)  = CCN(k,i,j)
           Qvap_ijk(ijkcount) = QTRC(k,i,j,I_QV)
 
           countbin = QQS
@@ -923,6 +932,7 @@ contains
                       index_warm(    1:ijkcount), & ! [IN]
                       DENS_ijk  (    1:ijkcount), & ! [IN]
                       PRES_ijk  (    1:ijkcount), & ! [IN]
+                      CCN_ijk   (    1:ijkcount), & ! [IN]
                       TEMP_ijk  (    1:ijkcount), & ! [INOUT]
                       Qvap_ijk  (    1:ijkcount), & ! [INOUT]
                       Ghyd_ijk  (:,:,1:ijkcount), & ! [INOUT]
@@ -1119,6 +1129,7 @@ contains
        index_warm,  &
        dens,        &
        pres,        &
+       ccn,         &
        temp,        &
        qvap,        &
        ghyd,        &
@@ -1134,6 +1145,7 @@ contains
     integer , intent(in)    :: index_warm(ijkmax)
     real(RP), intent(in)    :: dens      (ijkmax)           ! Density           [kg/m3]
     real(RP), intent(in)    :: pres      (ijkmax)           ! Pressure          [Pa]
+    real(RP), intent(in)    :: ccn       (ijkmax)           ! Number concentration of CCN [#/m3]
     real(RP), intent(inout) :: temp      (ijkmax)           ! Temperature       [K]
     real(RP), intent(inout) :: qvap      (ijkmax)           ! Specific humidity [kg/kg]
     real(RP), intent(inout) :: ghyd      (nbin,nspc,ijkmax) ! Mass size distribution function of hydrometeor
@@ -1245,6 +1257,7 @@ contains
           call nucleat( ijkmax,      & ! [IN]
                         dens(:),     & ! [IN]
                         pres(:),     & ! [IN]
+                        ccn(:),      & ! [IN]
                         temp(:),     & ! [INOUT]
                         qvap(:),     & ! [INOUT]
                         ghyd(:,:,:), & ! [INOUT]
@@ -1275,6 +1288,7 @@ contains
           call nucleat( ijkmax,      & ! [IN]
                         dens(:),     & ! [IN]
                         pres(:),     & ! [IN]
+                        ccn(:),      & ! [IN]
                         temp(:),     & ! [INOUT]
                         qvap(:),     & ! [INOUT]
                         ghyd(:,:,:), & ! [INOUT]
@@ -1337,6 +1351,7 @@ contains
        ijkmax, &
        dens,   &
        pres,   &
+       ccn,    &
        temp,   &
        qvap,   &
        gc,     &
@@ -1346,6 +1361,7 @@ contains
     integer,  intent(in)    :: ijkmax
     real(RP), intent(in)    :: dens(ijkmax)           ! Density           [kg/m3]
     real(RP), intent(in)    :: pres(ijkmax)           ! Pressure          [Pa]
+    real(RP), intent(in)    :: ccn(ijkmax)            ! CCN number concentration [#/m3]
     real(RP), intent(inout) :: temp(ijkmax)           ! Temperature       [K]
     real(RP), intent(inout) :: qvap(ijkmax)           ! Specific humidity [kg/kg]
     real(RP), intent(inout) :: gc  (nbin,nspc,ijkmax) ! Mass size distribution function of hydrometeor
@@ -1364,7 +1380,20 @@ contains
 
     call PROF_rapstart('_SBM_Nucleat', 2)
 
-  do ijk = 1, ijkmax
+  if( MP_couple_aerosol ) then
+
+   do ijk = 1, ijkmax
+       dmp = ccn(ijk) * expxctr( 1 )
+       dmp = min( dmp,qvap(ijk)*dens(ijk) )
+       gc( 1,il,ijk ) = gc( 1,il,ijk ) + dmp/dxmic
+       qvap(ijk) = qvap(ijk) - dmp/dens(ijk)
+       qvap(ijk) = max( qvap(ijk),0.0_RP )
+       temp(ijk) = temp(ijk) + dmp/dens(ijk)*qlevp(ijk)/cp
+    enddo
+
+  else
+
+   do ijk = 1, ijkmax
 
     !--- lhv
     qlevp(ijk) = CONST_LHV0 + ( CONST_CPvap - CONST_CL ) * ( temp(ijk) - CONST_TEM00 ) * flg_thermodyn
@@ -1374,10 +1403,10 @@ contains
     ssliq(ijk) = CONST_EPSvap * psat / ( pres(ijk) - ( 1.0_RP-CONST_EPSvap ) * psat )
     ssliq(ijk) = qvap(ijk)/ssliq(ijk)-1.0_RP
 
-  enddo
+   enddo
 
-  sumnum(:) = 0.0_RP
-  do ijk = 1, ijkmax
+   sumnum(:) = 0.0_RP
+   do ijk = 1, ijkmax
 !    if ( ssliq <= 0.0_RP ) cycle
     if ( ssliq(ijk) > 0.0_RP ) then
 
@@ -1401,7 +1430,9 @@ contains
      endif
     endif
 
-  enddo
+   enddo
+
+  endif
 
     call PROF_rapend  ('_SBM_Nucleat', 2)
 
