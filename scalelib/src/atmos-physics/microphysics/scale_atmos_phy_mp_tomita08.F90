@@ -484,6 +484,9 @@ contains
        SFLX_rain, &
        SFLX_snow  )
     use scale_grid_index
+    use scale_const, only: &
+       DWATR => CONST_DWATR, &
+       PI    => CONST_PI
     use scale_time, only: &
        dt => TIME_DTSEC_ATMOS_PHY_MP
     use scale_history, only: &
@@ -522,6 +525,7 @@ contains
     real(RP) :: FLX_snow  (KA,IA,JA)
     real(RP) :: wflux_rain(KA,IA,JA)
     real(RP) :: wflux_snow(KA,IA,JA)
+    real(RP) :: qc_before_satadj(KA,IA,JA)
     integer  :: step
     integer  :: k, i, j
     !---------------------------------------------------------------------------
@@ -547,8 +551,7 @@ contains
                       RHOE  (:,:,:),   & ! [INOUT]
                       QTRC  (:,:,:,:), & ! [INOUT]
                       CCN   (:,:,:),   & ! [IN]
-                      DENS  (:,:,:),   & ! [IN]
-                      EVAPORATE(:,:,:) ) ! [OUT]
+                      DENS  (:,:,:)    ) ! [IN]
 
     FLX_rain(:,:,:) = 0.0_RP
     FLX_snow(:,:,:) = 0.0_RP
@@ -600,11 +603,29 @@ contains
     call HIST_in( vterm(:,:,:,I_QS), 'Vterm_QS', 'terminal velocity of QS', 'm/s' )
     call HIST_in( vterm(:,:,:,I_QG), 'Vterm_QG', 'terminal velocity of QG', 'm/s' )
 
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+      qc_before_satadj(k,i,j) = QTRC(k,i,j,I_QC)
+    enddo
+    enddo
+    enddo
+
     call MP_saturation_adjustment( RHOE_t(:,:,:),   & ! [INOUT]
                                    QTRC_t(:,:,:,:), & ! [INOUT]
                                    RHOE  (:,:,:),   & ! [INOUT]
                                    QTRC  (:,:,:,:), & ! [INOUT]
                                    DENS  (:,:,:)    ) ! [IN]
+
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+      EVAPORATE(k,i,j) = max( qc_before_satadj(k,i,j) - QTRC(k,i,j,I_QC), 0.0_RP ) / dt ! if negative, condensation
+      EVAPORATE(k,i,j) = EVAPORATE(k,i,j) * DENS(k,i,j) &
+                       / (4.0_RP/3.0_RP*PI*DWATR*re_qc**3)  ! mass -> number (assuming constant particle radius as re_qc)
+    enddo
+    enddo
+    enddo
 
     !##### END MP Main #####
 
@@ -632,8 +653,7 @@ contains
        RHOE0,     &
        QTRC0,     &
        CCN,       &
-       DENS0,     &
-       EVAPORATE  )
+       DENS0      )
     use scale_const, only: &
        PI    => CONST_PI,    &
        EPS   => CONST_EPS,   &
@@ -668,7 +688,6 @@ contains
     real(RP), intent(inout) :: QTRC0 (KA,IA,JA,QA) ! mass concentration        [kg/kg]
     real(RP), intent(in)    :: CCN(KA,IA,JA)       ! CCN number concentration  [#/m3]
     real(RP), intent(in)    :: DENS0 (KA,IA,JA)    ! density                   [kg/m3]
-    real(RP), intent(out)   :: EVAPORATE(KA,IA,JA) ! number concentration of evaporated cloud [#/m3]
 
     ! working
     real(RP) :: rdt
@@ -740,7 +759,6 @@ contains
     real(RP) :: LHVEx(KA,IA,JA)
     real(RP) :: LHFEx(KA,IA,JA)
     real(RP) :: LHSEx(KA,IA,JA)
-    real(RP) :: qc_before_satadj(KA,IA,JA)
 
     logical  :: do_put
     integer  :: k, i, j, iq, ip
@@ -769,14 +787,6 @@ contains
      enddo
     endif
 
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-      qc_before_satadj(k,i,j) = QTRC0(k,i,j,I_QC)
-    enddo
-    enddo
-    enddo
-
     rdt = 1.0_RP / dt
 
     call THERMODYN_temp_pres_E( TEMP0(:,:,:),  & ! [OUT]
@@ -788,16 +798,6 @@ contains
     call SATURATION_dens2qsat_liq( QSATL(:,:,:), & ! [OUT]
                                    TEMP0(:,:,:), & ! [IN]
                                    DENS0(:,:,:)  ) ! [IN]
-
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-      EVAPORATE(k,i,j) = max( qc_before_satadj(k,i,j) - QTRC0(k,i,j,I_QC), 0.0_RP ) * rdt ! if negative, condensation
-      EVAPORATE(k,i,j) = EVAPORATE(k,i,j) * DENS0(k,i,j) &
-                       / (4.0_RP/3.0_RP*PI*DWATR*re_qc**3)  ! mass -> number (assuming constant particle radius as re_qc)
-    enddo
-    enddo
-    enddo
 
     call SATURATION_dens2qsat_ice( QSATI(:,:,:), & ! [OUT]
                                    TEMP0(:,:,:), & ! [IN]
