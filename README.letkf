@@ -4,6 +4,12 @@ SCALE-LETKF
 SCALE-LETKF is a LETKF data assimilation package for the SCALE-LES model.
 
 
+Get the submodule
+-----------------
+- after cloning the SCALE repository, additional commands are needed to get the submodule
+ % git submodule init
+ % git submodule update
+
 Build
 -----
 - build the SCALE-LES first (set up SCALE_SYS environmental variable)
