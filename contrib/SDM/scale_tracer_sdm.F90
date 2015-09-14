@@ -72,7 +72,7 @@ module scale_tracer_sdm
   !
   !-----------------------------------------------------------------------------
 
-!  integer, public, parameter :: MP_QA = 2 ! number of hydrometeor tracer
+  integer, public, parameter :: MP_QA = 2 ! number of hydrometeor tracer
   integer, public, parameter :: I_mp_QC = 1
   integer, private, parameter :: I_m_QR = 2
 
