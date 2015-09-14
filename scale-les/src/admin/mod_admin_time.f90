@@ -92,6 +92,10 @@ module mod_admin_time
   integer,  private :: TIME_RES_URBAN         = 0
   integer,  private :: TIME_RES_URBAN_RESTART = 0
 
+  real(DP), private :: TIME_WALLCLOCK_START             ! Start time of wall clock             [sec]
+  real(DP), private :: TIME_WALLCLOCK_LIMIT   = -1.0_DP ! Elapse time limit of wall clock time [sec]
+  real(DP), private :: TIME_WALLCLOCK_SAFE    =  0.9_DP ! Safety coefficient for elapse time limit
+
   real(DP), private, parameter :: eps = 1.E-6_DP !> epsilon for timesec
 
   !-----------------------------------------------------------------------------
@@ -101,7 +105,8 @@ contains
   subroutine ADMIN_TIME_setup( &
        setup_TimeIntegration )
     use scale_process, only: &
-       PRC_MPIstop
+       PRC_MPIstop, &
+       PRC_MPItime
     use scale_const, only: &
        UNDEF8 => CONST_UNDEF8
     use scale_calendar, only: &
@@ -224,7 +229,9 @@ contains
        TIME_DT_URBAN,              &
        TIME_DT_URBAN_UNIT,         &
        TIME_DT_URBAN_RESTART,      &
-       TIME_DT_URBAN_RESTART_UNIT
+       TIME_DT_URBAN_RESTART_UNIT, &
+       TIME_WALLCLOCK_LIMIT,       &
+       TIME_WALLCLOCK_SAFE
 
     real(DP)          :: TIME_DURATIONSEC
     character(len=27) :: startchardate
@@ -623,12 +630,24 @@ contains
 
     endif
 
+    if ( TIME_WALLCLOCK_LIMIT > 0.0_DP ) then
+       TIME_WALLCLOCK_SAFE  = max( min( TIME_WALLCLOCK_SAFE, 1.0_DP ), 0.0_DP )
+       TIME_WALLCLOCK_START = PRC_MPItime()
+
+       if( IO_L ) write(IO_FID_LOG,*)
+       if( IO_L ) write(IO_FID_LOG,*)             '*** Wall clock time limit of execution is specified.'
+       if( IO_L ) write(IO_FID_LOG,'(A,F10.1,A)') '*** This job stops after ', &
+                                                  TIME_WALLCLOCK_LIMIT * TIME_WALLCLOCK_SAFE, ' seconds.'
+    endif
+
     return
   end subroutine ADMIN_TIME_setup
 
   !-----------------------------------------------------------------------------
   !> Evaluate component execution
   subroutine ADMIN_TIME_checkstate
+    use scale_process, only: &
+       PRC_MPItime
     use scale_calendar, only: &
        CALENDAR_date2char
     use scale_time, only: &
@@ -650,6 +669,7 @@ contains
        TIME_OFFSET_YEAR
     implicit none
 
+    real(DP)          :: WALLCLOCK_elapse
     character(len=27) :: nowchardate
     !---------------------------------------------------------------------------
 
@@ -737,7 +757,16 @@ contains
                              TIME_NOWMS,      & ! [IN]
                              TIME_OFFSET_YEAR ) ! [IN]
 
-    if( IO_L ) write(IO_FID_LOG,'(1x,3A,I6,A,I6)') '*** TIME: ', nowchardate,' STEP:',TIME_NOWSTEP, '/', TIME_NSTEP
+
+    if ( TIME_WALLCLOCK_LIMIT > 0.0_DP ) then
+       WALLCLOCK_elapse = PRC_MPItime() - TIME_WALLCLOCK_START
+       if( IO_L ) write(IO_FID_LOG,'(1x,3A,I6,A,I6,A,F10.1)') '*** TIME: ', nowchardate,' STEP:',TIME_NOWSTEP, '/', TIME_NSTEP, &
+                                                              ' WCLOCK:', WALLCLOCK_elapse
+    else
+       if( IO_L ) write(IO_FID_LOG,'(1x,3A,I6,A,I6)') '*** TIME: ', nowchardate,' STEP:',TIME_NOWSTEP, '/', TIME_NSTEP
+    endif
+
+
 
     return
   end subroutine ADMIN_TIME_checkstate
@@ -746,7 +775,8 @@ contains
   !> Advance the time & evaluate restart & stop
   subroutine ADMIN_TIME_advance
     use scale_process, only: &
-       PRC_IsMaster
+       PRC_IsMaster, &
+       PRC_MPItime
     use scale_calendar, only: &
        CALENDAR_daysec2date,   &
        CALENDAR_adjust_daysec, &
@@ -764,7 +794,8 @@ contains
        TIME_STARTDAYSEC
     implicit none
 
-    logical :: exists
+    real(DP) :: WALLCLOCK_elapse
+    logical  :: exists
     !---------------------------------------------------------------------------
 
     TIME_DOend = .false.
@@ -788,11 +819,22 @@ contains
        TIME_DOend = .true.
     endif
 
+    if ( TIME_WALLCLOCK_LIMIT > 0.0_DP ) then
+       WALLCLOCK_elapse = PRC_MPItime() - TIME_WALLCLOCK_START
+       if ( WALLCLOCK_elapse > TIME_WALLCLOCK_LIMIT * TIME_WALLCLOCK_SAFE ) then
+          if( IO_L ) write(IO_FID_LOG,*) '*** Elapse time limit is detected. Termination operation starts.'
+          TIME_DOend = .true.
+       endif
+    endif
+
     ! QUIT file control
     if ( PRC_IsMaster ) then ! master node
        inquire(file='QUIT', exist=exists)
 
-       if( exists ) TIME_DOend = .true.
+       if( exists ) then
+          if( IO_L ) write(IO_FID_LOG,*) '*** QUIT file is found. Termination operation starts.'
+          TIME_DOend = .true.
+       endif
     endif
 
     TIME_DOATMOS_restart = .false.
