@@ -68,7 +68,7 @@ module scale_atmos_phy_mp_kessler
   integer, private, save  :: MP_ntmax_sedimentation = 1 ! number of time step for sedimentation
   integer, private, save  :: MP_NSTEP_SEDIMENTATION
   real(RP), private, save :: MP_RNSTEP_SEDIMENTATION
-  real(RP), private, save :: MP_DTSEC_SEDIMENTATION
+  real(DP), private, save :: MP_DTSEC_SEDIMENTATION
 
   !-----------------------------------------------------------------------------
 contains

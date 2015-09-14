@@ -75,7 +75,7 @@ contains
     real(RP), intent(in)  :: RHOT    (KA,IA,JA)
     real(RP), intent(in)  :: QTRC    (KA,IA,JA,QA)
     real(RP), intent(in)  :: FZ      (0:KA,IA,JA)
-    real(RP), intent(in)  :: dt
+    real(DP), intent(in)  :: dt
     real(RP), intent(out) :: TEMP_t  (KA,IA,JA,3)
     real(RP), intent(out) :: RHOT_t  (KA,IA,JA)
 

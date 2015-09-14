@@ -778,7 +778,7 @@ contains
     real(RP) :: hourangle      ! hour angle: relative longitude of subsolar point
 
     integer  :: absday, absday_ve
-    real(RP) :: DayOfYear, abssec
+    real(DP) :: DayOfYear, abssec
     real(RP) :: nu
 
     integer :: i
@@ -821,7 +821,7 @@ contains
                               date(I_hour),  & ! [IN]
                               date(I_min),   & ! [IN]
                               date(I_sec),   & ! [IN]
-                              0.0_RP         ) ! [IN]
+                              0.0_DP         ) ! [IN]
 
     lambda_m = lambda_m0 + 2.0_RP * PI * real(absday-absday_ve,kind=RP) / DayOfYear
 
@@ -895,7 +895,7 @@ contains
     real(RP) :: hourangle(IA,JA) ! hour angle: relative longitude of subsolar point
 
     integer  :: absday, absday_ve
-    real(RP) :: DayOfYear, abssec
+    real(DP) :: DayOfYear, abssec
     real(RP) :: nu
     real(RP) :: Re_factor   ! factor of the distance of Earth from the sun (1/rho2)
 
@@ -939,7 +939,7 @@ contains
                               date(I_hour), & ! [IN]
                               date(I_min),  & ! [IN]
                               date(I_sec),  & ! [IN]
-                              0.0_RP        ) ! [IN]
+                              0.0_DP        ) ! [IN]
 
     lambda_m = lambda_m0 + 2.0_RP * PI * real(absday-absday_ve,kind=RP) / DayOfYear
 

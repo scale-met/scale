@@ -264,7 +264,7 @@ module scale_atmos_phy_mp_tomita08
 
   integer,  private :: MP_NSTEP_SEDIMENTATION
   real(RP), private :: MP_RNSTEP_SEDIMENTATION
-  real(RP), private :: MP_DTSEC_SEDIMENTATION
+  real(DP), private :: MP_DTSEC_SEDIMENTATION
 
   logical, private :: debug
 

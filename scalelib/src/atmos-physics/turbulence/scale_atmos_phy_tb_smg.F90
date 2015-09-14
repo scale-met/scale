@@ -256,7 +256,7 @@ contains
     real(RP), intent(in)  :: J23G    (KA,IA,JA,7) !< (1,3) element of Jacobian matrix
     real(RP), intent(in)  :: J33G                 !< (3,3) element of Jacobian matrix
     real(RP), intent(in)  :: MAPF(IA,JA,2,4)      !< map factor
-    real(RP), intent(in)  :: dt
+    real(DP), intent(in)  :: dt
 
     ! diagnostic variables
     real(RP) :: VELZ_C (KA,IA,JA)

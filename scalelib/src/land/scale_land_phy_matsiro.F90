@@ -109,7 +109,7 @@ contains
     real(RP), intent(in)  :: LAND_SFLX_prec   (IA,JA)
     real(RP), intent(in)  :: LAND_SFLX_evap   (IA,JA)
     real(RP), intent(in)  :: CDZ              (LKMAX)
-    real(RP), intent(in)  :: dt
+    real(DP), intent(in)  :: dt
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Land step: Matsiro'

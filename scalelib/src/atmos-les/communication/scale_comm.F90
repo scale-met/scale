@@ -631,7 +631,7 @@ contains
     integer :: k
     !---------------------------------------------------------------------------
 
-    statval(:) = -1.E99_RP
+    statval(:) = -1.E19_RP
     do k = KS, KE
        statval(k) = maxval(var(k,IS:IE,JS:JE))
     enddo
