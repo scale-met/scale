@@ -205,7 +205,7 @@ contains
     real(RP), intent(in) :: Z0M   (IA,JA) ! roughness length for momemtum [m]
     real(RP), intent(in) :: Z0H   (IA,JA) ! roughness length for heat [m]
     real(RP), intent(in) :: Z0E   (IA,JA) ! roughness length for vapor [m]
-    real(RP), intent(in) :: dt            ! delta time
+    real(DP), intent(in) :: dt            ! delta time
 
     ! works
     real(RP) :: LST1(IA,JA)

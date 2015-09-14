@@ -87,7 +87,7 @@ module scale_atmos_phy_tb
        real(RP), intent(in)  :: J23G    (KA,IA,JA,7) !< (1,3) element of Jacobian matrix
        real(RP), intent(in)  :: J33G                 !< (3,3) element of Jacobian matrix
        real(RP), intent(in)  :: MAPF    (IA,JA,2,4)  !< map factor
-       real(RP), intent(in)  :: dt
+       real(DP), intent(in)  :: dt
      end subroutine tb
   end interface
   procedure(tb), pointer :: ATMOS_PHY_TB => NULL()

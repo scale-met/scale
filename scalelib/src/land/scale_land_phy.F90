@@ -57,7 +57,7 @@ module scale_land_phy
        real(RP), intent(in)  :: LAND_SFLX_prec   (IA,JA)
        real(RP), intent(in)  :: LAND_SFLX_evap   (IA,JA)
        real(RP), intent(in)  :: CDZ              (LKMAX)
-       real(RP), intent(in)  :: dt
+       real(DP), intent(in)  :: dt
      end subroutine lnd
   end interface
   procedure(lnd), pointer :: LAND_PHY => NULL()

@@ -155,7 +155,7 @@ contains
     real(RP), intent(in)  :: SFLX_prec   (IA,JA)
     real(RP), intent(in)  :: SFLX_evap   (IA,JA)
     real(RP), intent(in)  :: CDZ         (LKMAX)
-    real(RP), intent(in)  :: dt
+    real(DP), intent(in)  :: dt
 
     ! work
     real(RP) :: TEMP1 (LKMAX,IA,JA)

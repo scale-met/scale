@@ -215,8 +215,8 @@ contains
 
     integer, allocatable :: CIRA_date(:,:)
     integer  :: nday
-    real(RP) :: nsec
-    real(RP) :: subsec = 0.0_RP
+    real(DP) :: nsec
+    real(DP) :: subsec = 0.0_DP
     integer  :: offset_year = 0
 
     real(4), allocatable :: tmp1d(:)
@@ -408,8 +408,8 @@ contains
 
     integer  :: MIPAS_date(6,0:MIPAS_ntime+1)
     integer  :: nday
-    real(RP) :: nsec
-    real(RP) :: subsec = 0.0_RP
+    real(DP) :: nsec
+    real(DP) :: subsec = 0.0_DP
     integer  :: offset_year = 0
 
     character(len=H_LONG) :: dummy
@@ -805,8 +805,8 @@ contains
 
     integer  :: now_date_mod(6), nday
     real(RP) :: nd
-    real(RP) :: nsec
-    real(RP) :: subsec = 0.0_RP
+    real(DP) :: nsec
+    real(DP) :: subsec = 0.0_DP
     integer  :: offset_year = 0
 
     integer  :: nplev_mod
@@ -934,8 +934,8 @@ contains
 
     integer  :: now_date_mod(6), nday
     real(RP) :: nd
-    real(RP) :: nsec
-    real(RP) :: subsec = 0.0_RP
+    real(DP) :: nsec
+    real(DP) :: subsec = 0.0_DP
     integer  :: offset_year = 0
 
     integer  :: indexD1, indexD2

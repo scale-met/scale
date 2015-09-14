@@ -459,7 +459,7 @@ module scale_atmos_phy_mp_sn14
 
   integer, private, save :: MP_NSTEP_SEDIMENTATION
   real(RP), private, save :: MP_RNSTEP_SEDIMENTATION
-  real(RP), private, save :: MP_DTSEC_SEDIMENTATION
+  real(DP), private, save :: MP_DTSEC_SEDIMENTATION
 
   !
   ! metrics of vertical coordinate
@@ -1404,10 +1404,10 @@ contains
     !--------------------------------------------------
     real(RP) :: qke_d(KA,IA,JA)
 
-    real(RP), parameter :: eps       = 1.E-30_RP
-    real(RP), parameter :: eps_qv    = 1.E-50_RP
-    real(RP), parameter :: eps_rhoge = 1.E-50_RP
-    real(RP), parameter :: eps_rhog  = 1.E-50_RP
+    real(RP), parameter :: eps       = 1.E-19_RP
+    real(RP), parameter :: eps_qv    = 1.E-19_RP
+    real(RP), parameter :: eps_rhoge = 1.E-19_RP
+    real(RP), parameter :: eps_rhog  = 1.E-19_RP
     integer :: ntdiv
 
     real(RP) :: Rmoist
@@ -2113,7 +2113,7 @@ contains
     real(RP), intent(in) ::  cpa(KA,IA,JA)      ! in  09/08/18 [Add] T.Mitsui
     real(RP), intent(in)  :: dTdt_rad(KA,IA,JA) ! 09/08/18 T.Mitsui
     real(RP), intent(in)  :: qke(KA,IA,JA)      ! 09/08/18 T.Mitsui
-    real(RP), intent(in)  :: dt
+    real(DP), intent(in)  :: dt
     real(RP), intent(in)  :: CCN(KA,IA,JA)   
     !
     ! namelist variables
@@ -3408,7 +3408,7 @@ contains
     ! We assumed surface temperature of droplets are same as environment.
     implicit none
 
-    real(RP), intent(in) :: dt
+    real(DP), intent(in) :: dt
     real(RP), intent(out):: PQ(PQ_MAX,KA,IA,JA)
     !
     real(RP), intent(in) :: tem(KA,IA,JA)
@@ -3691,7 +3691,7 @@ contains
     integer, intent(in)    :: ntdiv               ! [Add] 10/08/03
     integer, intent(in)    :: ntmax               ! [Add] 10/08/03
     !
-    real(RP), intent(in)    :: dt                 ! time step[s]
+    real(DP), intent(in)    :: dt                 ! time step[s]
     real(RP), intent(in)    :: gsgam2(KA,IA,JA)   ! metric
     real(RP), intent(in)    :: z(KA)              ! altitude [m]
     real(RP), intent(in)    :: dz(KA)             ! altitude [m]

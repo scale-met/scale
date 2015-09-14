@@ -155,7 +155,7 @@ module scale_urban_phy
        real(RP), intent(in) :: LON
        real(RP), intent(in) :: LAT
        integer,  intent(in) :: NOWDATE(6)
-       real(RP), intent(in) :: dt
+       real(DP), intent(in) :: dt
      end subroutine urb
   end interface
   procedure(urb), pointer :: URBAN_PHY => NULL()

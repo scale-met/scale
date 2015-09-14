@@ -571,7 +571,7 @@ contains
   
     implicit none
     ! i/o variables
-    real(RP),intent(in) :: deltt      ! delta t                                         [sec]
+    real(DP),intent(in) :: deltt      ! delta t                                         [sec]
     real(RP),intent(in) :: temp_k     ! temperature                                     [K]  
     real(RP),intent(in) :: pres_pa    ! pressure                                        [Pa] 
     real(RP),intent(in) :: super      ! supersaturation                                 [-]   
@@ -718,7 +718,7 @@ contains
     real(RP),intent(in)    :: J_1nm      ! nucleation rate of 1nm particles [#/cm3/s]
     real(RP),intent(in)    :: temp_k     ! temperature                      [K]  
     real(RP),intent(in)    :: pres_pa    ! pressure                         [Pa] 
-    real(RP),intent(in)    :: deltt      ! delta t                          [sec]
+    real(DP),intent(in)    :: deltt      ! delta t                          [sec]
     integer, intent(in)    :: ic_nuc     ! category  for 1nm new particles
     integer, intent(in)    :: ik_nuc     ! kappa bin for 1nm new particles
     integer, intent(in)    :: is_nuc     ! size bin  for 1nm new particles
@@ -947,7 +947,7 @@ contains
               n_siz,n_kap,d_lw,d_ct,d_up,aerosol_procs)
       implicit none
       !i/o variables
-      real(RP),intent(in) :: deltt      ! delta t        [sec]
+      real(DP),intent(in) :: deltt      ! delta t        [sec]
       real(RP),intent(in) :: temp_k     ! temperature    [K]  
       real(RP),intent(in) :: pres_pa    ! pressure       [Pa] 
       integer, intent(in) :: mcomb !combinations of sections

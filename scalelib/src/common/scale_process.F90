@@ -52,8 +52,8 @@ module scale_process
   !                                     |
   !                            PRC_GLOBAL_COMM_WORLD --split--> PRC_LOCAL_COMM_WORLD
   !-----------------------------------------------------------------------------
-  integer, public, parameter :: PRC_masterrank      = 0            !< master process in each communicator
-  integer, public, parameter :: PRC_DOMAIN_nlim = 1000         !< max depth of domains
+  integer, public, parameter :: PRC_masterrank      = 0    !< master process in each communicator
+  integer, public, parameter :: PRC_DOMAIN_nlim = 10000    !< max depth of domains
 
   ! universal world
   integer, public :: PRC_UNIVERSAL_COMM_WORLD = -1      !< original communicator

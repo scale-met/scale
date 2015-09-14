@@ -144,7 +144,7 @@ module scale_atmos_phy_mp_suzuki10
   real(RP), allocatable, save :: vterm( :,:,:,: )      ! terminal velocity
   integer, private, save :: MP_NSTEP_SEDIMENTATION    ! number of fractional step for sedimentation
   real(RP), private, save :: MP_RNSTEP_SEDIMENTATION  ! 1/MP_NSTEP_SEDIMENTATION
-  real(RP), private, save :: MP_DTSEC_SEDIMENTATION   ! DT for sedimentation
+  real(DP), private, save :: MP_DTSEC_SEDIMENTATION   ! DT for sedimentation
   integer, private, save :: MP_ntmax_sedimentation= 1 ! maxinum fractional step
   real(RP), private :: flg_thermodyn         !--- flg for lhv and lhs (0 -> SIMPLE, 1 -> EXACT )
   real(RP), private :: RTEM00                !--- 1/CONST_TEM00
@@ -1119,7 +1119,7 @@ contains
     real(RP), intent(inout) :: qvap      (ijkmax)           ! Specific humidity [kg/kg]
     real(RP), intent(inout) :: ghyd      (nbin,nspc,ijkmax) ! Mass size distribution function of hydrometeor
     real(RP), intent(inout) :: gaer      (nccn1,    ijkmax) ! Mass size distribution function of aerosol
-    real(RP), intent(in)    :: dt                           ! Time step interval
+    real(DP), intent(in)    :: dt                           ! Time step interval
     !---------------------------------------------------------------------------
 
     if ( nccn /= 0 ) then
@@ -1325,7 +1325,7 @@ contains
     real(RP), intent(inout) :: temp(ijkmax)           ! Temperature       [K]
     real(RP), intent(inout) :: qvap(ijkmax)           ! Specific humidity [kg/kg]
     real(RP), intent(inout) :: gc  (nbin,nspc,ijkmax) ! Mass size distribution function of hydrometeor
-    real(RP), intent(in)    :: dtime                  ! Time step interval
+    real(DP), intent(in)    :: dtime                  ! Time step interval
 
   real(RP) :: ssliq(ijkmax)
   real(RP) :: qlevp(ijkmax)              ! LH
@@ -1403,7 +1403,7 @@ contains
     real(RP), intent(inout) :: qvap(ijkmax)           ! Specific humidity [kg/kg]
     real(RP), intent(inout) :: gc  (nbin,nspc,ijkmax) ! Mass size distribution function of hydrometeor
     real(RP), intent(inout) :: ga  (nccn     ,ijkmax) ! Mass size distribution function of aerosol
-    real(RP), intent(in)    :: dtime                  ! Time step interval
+    real(DP), intent(in)    :: dtime                  ! Time step interval
 
   real(RP) :: gan( nccn )           ! size distribution function ( aerosol ) : number ( gan = ga/exp( xactr ) )
   real(RP) :: ssliq, ssice, qlevp   ! supersaturatioin of liq. and ice, and LH
@@ -1526,7 +1526,7 @@ contains
     real(RP), intent(inout) :: temp(ijkmax)           ! Temperature       [K]
     real(RP), intent(inout) :: qvap(ijkmax)           ! Specific humidity [kg/kg]
     real(RP), intent(inout) :: gc  (nbin,nspc,ijkmax) ! Mass size distribution function of hydrometeor
-    real(RP), intent(in)    :: dtime                  ! Time step interval
+    real(DP), intent(in)    :: dtime                  ! Time step interval
 
     real(RP) :: regene_gcn(ijkmax)
     !---------------------------------------------------------------------------
@@ -1578,7 +1578,7 @@ contains
     real(RP), intent(inout) :: qvap(ijkmax)           ! Specific humidity [kg/kg]
     real(RP), intent(inout) :: gc  (nbin,nspc,ijkmax) ! Mass size distribution function of hydrometeor
     real(RP), intent(inout) :: ga  (nccn     ,ijkmax) ! Mass size distribution function of aerosol
-    real(RP), intent(in)    :: dtime                  ! Time step interval
+    real(DP), intent(in)    :: dtime                  ! Time step interval
 
     real(RP) :: regene_gcn(ijkmax)
     !---------------------------------------------------------------------------
@@ -1637,7 +1637,7 @@ contains
     real(RP), intent(inout) :: qvap(ijkmax)           ! Specific humidity [kg/kg]
     real(RP), intent(inout) :: gc  (nbin,nspc,ijkmax) ! Mass size distribution function of hydrometeor
     real(RP), intent(out)   :: regene_gcn(ijkmax)     ! mass of regenerated aerosol
-    real(RP), intent(in)    :: dtime                  ! Time step interval
+    real(DP), intent(in)    :: dtime                  ! Time step interval
 
   integer  :: n, myu, ncount
   integer  :: nloop(ijkmax)                    ! number of fractional step for condensation
@@ -2001,7 +2001,7 @@ contains
     real(RP), intent(inout) :: temp(ijkmax)           ! Temperature       [K]
     real(RP), intent(inout) :: qvap(ijkmax)           ! Specific humidity [kg/kg]
     real(RP), intent(inout) :: gc  (nbin,nspc,ijkmax) ! Mass size distribution function of hydrometeor
-    real(RP), intent(in)    :: dtime                  ! Time step interval
+    real(DP), intent(in)    :: dtime                  ! Time step interval
 
   integer :: myu, n, ncount
   integer :: nloop(ijkmax)                         !number of fractional step for condensation
@@ -2360,7 +2360,7 @@ contains
     real(RP), intent(inout) :: temp(ijkmax)           ! Temperature       [K]
     real(RP), intent(inout) :: qvap(ijkmax)           ! Specific humidity [kg/kg]
     real(RP), intent(inout) :: gc  (nbin,nspc,ijkmax) ! Mass size distribution function of hydrometeor
-    real(RP), intent(in)    :: dtime                  ! Time step interval
+    real(DP), intent(in)    :: dtime                  ! Time step interval
 
   integer :: n, myu, mm, ncount
   integer :: nloop(ijkmax)
@@ -2781,7 +2781,7 @@ contains
     real(RP), intent(inout) :: temp(ijkmax)           ! Temperature       [K]
     real(RP), intent(inout) :: qvap(ijkmax)           ! Specific humidity [kg/kg]
     real(RP), intent(inout) :: gc  (nbin,nspc,ijkmax) ! Mass size distribution function of hydrometeor
-    real(RP), intent(in)    :: dtime                  ! Time step interval
+    real(DP), intent(in)    :: dtime                  ! Time step interval
 
   real(RP) :: ssliq, ssice
   real(RP) :: numin, tdel, qdel
@@ -2857,7 +2857,7 @@ contains
     real(RP), intent(in)    :: dens(ijkmax)           ! Density           [kg/m3]
     real(RP), intent(inout) :: temp(ijkmax)           ! Temperature       [K]
     real(RP), intent(inout) :: gc  (nbin,nspc,ijkmax) ! Mass size distribution function of hydrometeor
-    real(RP), intent(in)    :: dtime                  ! Time step interval
+    real(DP), intent(in)    :: dtime                  ! Time step interval
 
   integer :: nbound, n
   real(RP) :: xbound, tc, rate, dmp, frz, sumfrz, tdel
@@ -2950,7 +2950,7 @@ contains
     real(RP), intent(in)    :: dens(ijkmax)           ! Density           [kg/m3]
     real(RP), intent(inout) :: temp(ijkmax)           ! Temperature       [K]
     real(RP), intent(inout) :: gc  (nbin,nspc,ijkmax) ! Mass size distribution function of hydrometeor
-    real(RP), intent(in)    :: dtime                  ! Time step interval
+    real(DP), intent(in)    :: dtime                  ! Time step interval
 
   integer :: n, m
   real(RP) :: summlt, sumice, tdel
@@ -2994,7 +2994,7 @@ contains
     integer,  intent(in)    :: ijkmax
     real(RP), intent(in)    :: temp(ijkmax)           ! Temperature       [K]
     real(RP), intent(inout) :: ghyd(nbin,nspc,ijkmax) ! Mass size distribution function of hydrometeor
-    real(RP), intent(in)    :: dt                     ! Time step interval
+    real(DP), intent(in)    :: dt                     ! Time step interval
     !---------------------------------------------------------------------------
 
     if ( rndm_flgp == 1 ) then ! stochastic method
@@ -3024,7 +3024,7 @@ contains
     integer,  intent(in)    :: ijkmax
     real(RP), intent(in)    :: temp(ijkmax)           ! Temperature       [K]
     real(RP), intent(inout) :: ghyd(nbin,nspc,ijkmax) ! Mass size distribution function of hydrometeor
-    real(RP), intent(in)    :: dt                     ! Time step interval
+    real(DP), intent(in)    :: dt                     ! Time step interval
     !---------------------------------------------------------------------------
 
     if ( rndm_flgp == 1 ) then ! stochastic method
@@ -3056,7 +3056,7 @@ contains
     integer,  intent(in)    :: ijkmax
     real(RP), intent(in)    :: temp(ijkmax)           ! Temperature       [K]
     real(RP), intent(inout) :: gc  (nbin,nspc,ijkmax) ! Mass size distribution function of hydrometeor
-    real(RP), intent(in)    :: dtime                  ! Time step interval
+    real(DP), intent(in)    :: dtime                  ! Time step interval
 
     integer :: i, j, k, l
     real(RP) :: xi, xj, xnew, dmpi, dmpj, frci, frcj
@@ -3478,7 +3478,7 @@ contains
     real(RP), intent(in)    :: swgt
     real(RP), intent(in)    :: temp(ijkmax)           ! Temperature       [K]
     real(RP), intent(inout) :: gc  (nbin,nspc,ijkmax) ! Mass size distribution function of hydrometeor
-    real(RP), intent(in)    :: dtime                  ! Time step interval
+    real(DP), intent(in)    :: dtime                  ! Time step interval
 
     integer :: i, j, k, l
     real(RP) :: xi, xj, xnew, dmpi, dmpj, frci, frcj

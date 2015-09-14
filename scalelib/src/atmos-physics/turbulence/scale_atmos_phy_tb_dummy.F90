@@ -116,7 +116,7 @@ contains
     real(RP), intent(in)    :: J23G (KA,IA,JA,7) !< (1,3) element of Jacobian matrix
     real(RP), intent(in)    :: J33G              !< (3,3) element of Jacobian matrix
     real(RP), intent(in)    :: MAPF (IA,JA,2,4)  !< map factorp
-    real(RP), intent(in)    :: dt
+    real(DP), intent(in)    :: dt
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Turbulence(dummy)'

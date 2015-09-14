@@ -167,7 +167,7 @@ contains
     real(RP), intent(in) :: Z0M   (IA,JA) ! roughness length for momentum [m]
     real(RP), intent(in) :: Z0H   (IA,JA) ! roughness length for heat [m]
     real(RP), intent(in) :: Z0E   (IA,JA) ! roughness length for vapor [m]
-    real(RP), intent(in) :: dt            ! delta time
+    real(DP), intent(in) :: dt            ! delta time
 
     ! works
     real(RP) :: SST1(IA,JA)
@@ -291,7 +291,7 @@ contains
     real(RP), intent(out) :: SFC_albedo_t(IA,JA,2) ! tendency of sea surface albedo [0-1]
     real(RP), intent(in)  :: SFC_albedo  (IA,JA,2) ! sea surface                    [0-1]
     real(RP), intent(in)  :: cosSZA      (IA,JA)   ! cos(solar zenith angle)        [0-1]
-    real(RP), intent(in)  :: dt                    ! delta time
+    real(DP), intent(in)  :: dt                    ! delta time
 
     ! works
     real(RP) :: SFC_albedo1(IA,JA,2)

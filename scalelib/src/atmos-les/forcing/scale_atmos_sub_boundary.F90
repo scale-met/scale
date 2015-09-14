@@ -1210,18 +1210,18 @@ contains
 
     integer  :: run_time_startdate(6)
     integer  :: run_time_startday
-    real(RP) :: run_time_startsec
-    real(RP) :: run_time_startms
+    real(DP) :: run_time_startsec
+    real(DP) :: run_time_startms
     integer  :: run_time_offset_year
-    real(RP) :: run_time_nowdaysec
+    real(DP) :: run_time_nowdaysec
 
     integer  :: boundary_time_startday
-    real(RP) :: boundary_time_startsec
-    real(RP) :: boundary_time_startms
+    real(DP) :: boundary_time_startsec
+    real(DP) :: boundary_time_startms
     integer  :: boundary_time_offset_year
-    real(RP) :: boundary_time_initdaysec
+    real(DP) :: boundary_time_initdaysec
 
-    real(RP) :: boundary_diff_daysec
+    real(DP) :: boundary_diff_daysec
     real(RP) :: boundary_inc_offset
     integer  :: fillgaps_steps
 

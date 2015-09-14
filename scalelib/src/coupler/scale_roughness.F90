@@ -54,7 +54,7 @@ module scale_roughness
        real(RP), intent(in) :: UA (IA,JA) ! velocity u at the lowest atmospheric layer [m/s]
        real(RP), intent(in) :: VA (IA,JA) ! velocity v at the lowest atmospheric layer [m/s]
        real(RP), intent(in) :: Z1 (IA,JA) ! cell center height at the lowest atmospheric layer [m]
-       real(RP), intent(in) :: dt         ! delta time
+       real(DP), intent(in) :: dt         ! delta time
      end subroutine rl
   end interface
 
@@ -235,7 +235,7 @@ contains
     real(RP), intent(in) :: UA (IA,JA) ! velocity u at the lowest atomspheric layer [m/s]
     real(RP), intent(in) :: VA (IA,JA) ! velocity v at the lowest atomspheric layer [m/s]
     real(RP), intent(in) :: Z1 (IA,JA) ! cell center height at the lowest atmospheric layer [m]
-    real(RP), intent(in) :: dt         ! delta time
+    real(DP), intent(in) :: dt         ! delta time
 
     ! works
     real(RP) :: Z0M1(IA,JA)
@@ -308,7 +308,7 @@ contains
     real(RP), intent(in) :: UA (IA,JA) ! velocity u at the lowest atomspheric layer [m/s]
     real(RP), intent(in) :: VA (IA,JA) ! velocity v at the lowest atomspheric layer [m/s]
     real(RP), intent(in) :: Z1 (IA,JA) ! cell center height at the lowest atmospheric layer [m]
-    real(RP), intent(in) :: dt         ! delta time
+    real(DP), intent(in) :: dt         ! delta time
 
     ! works
     real(RP) :: Z0M1(IA,JA)

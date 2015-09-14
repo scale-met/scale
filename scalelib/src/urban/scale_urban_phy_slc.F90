@@ -340,7 +340,7 @@ contains
     real(RP), intent(in) :: LON
     real(RP), intent(in) :: LAT
     integer,  intent(in) :: NOWDATE(6)
-    real(RP), intent(in) :: dt
+    real(DP), intent(in) :: dt
 
     ! work
     real(RP) :: TR
@@ -675,7 +675,7 @@ contains
     real(RP), intent(in)    :: XLAT ! latitude                               [rad,-pi,pi]
     real(RP), intent(in)    :: XLON ! longitude                              [rad,0-2pi]
     integer,  intent(in)    :: NOWDATE(6)
-    real(RP), intent(in)    :: dt
+    real(DP), intent(in)    :: dt
 
     !-- In/Out variables from/to Coupler to/from Urban
     real(RP), intent(inout) :: TR   ! roof temperature              [K]
@@ -1595,7 +1595,7 @@ contains
     real(RP), intent(in)    :: G0
     real(RP), intent(in)    :: CAP
     real(RP), intent(in)    :: AKS
-    real(RP), intent(in)    :: DELT      ! Time step [ s ]
+    real(DP), intent(in)    :: DELT      ! Time step [ s ]
     real(RP), intent(in)    :: TSLEND
     integer,  intent(in)    :: KM
     integer,  intent(in)    :: BOUND
@@ -1665,7 +1665,7 @@ contains
     real(RP), intent(in)    :: AKS
     real(RP), intent(in)    :: CAP1      ! for 1st layer
     real(RP), intent(in)    :: AKS1      ! for 1st layer
-    real(RP), intent(in)    :: DELT      ! Time step [ s ]
+    real(DP), intent(in)    :: DELT      ! Time step [ s ]
     real(RP), intent(in)    :: TSLEND
     integer,  intent(in)    :: KM
     integer,  intent(in)    :: BOUND

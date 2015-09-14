@@ -41,7 +41,7 @@ module scale_ocean_phy
        real(RP), intent(in)  :: OCEAN_SFLX_WH  (IA,JA)
        real(RP), intent(in)  :: OCEAN_SFLX_prec(IA,JA)
        real(RP), intent(in)  :: OCEAN_SFLX_evap(IA,JA)
-       real(RP), intent(in)  :: dt
+       real(DP), intent(in)  :: dt
      end subroutine ocn
   end interface
   procedure(ocn), pointer :: OCEAN_PHY => NULL()
