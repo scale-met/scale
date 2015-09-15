@@ -46,6 +46,8 @@ else
   LIBVERSION := $(LIBVERSION)
 endif
 
+SDM_EXIST := $(shell find $(TOPDIR)/contrib -name SDM)
+
 ifeq ($(RDMA),-D_USE_RDMA)
   scale_rdma := scale_rdma.o
 else
@@ -56,6 +58,7 @@ ifeq ($(MP),)
   OBJS_MP = scale_atmos_phy_mp_dry.o	\
             scale_atmos_phy_mp_kessler.o	\
             scale_atmos_phy_mp_sn14.o	\
+	    scale_atmos_phy_mp_sdm.o	\
             scale_atmos_phy_mp_suzuki10.o	\
             scale_atmos_phy_mp_tomita08.o
 else
@@ -93,6 +96,7 @@ endif
 ifeq ($(TRACER),)
   OBJS_TRACER = scale_tracer_dry.o	\
                 scale_tracer_kessler.o	\
+		scale_tracer_sdm.o	\
                 scale_tracer_sn14.o	\
                 scale_tracer_suzuki10.o	\
                 scale_tracer_tomita08.o
@@ -191,12 +195,24 @@ OBJS_NAME = $(scale_rdma)	\
 
 OBJS =  $(patsubst %,$(OBJ_DIR)/%,$(OBJS_NAME))
 
-
 all:
 	$(MAKE) makedir
 	@echo;echo "Entering scalelib..."; echo "Current version is " $(LIBVERSION)
 	$(MAKE) -C $(DCUTILSDIR)
 	$(MAKE) -C $(GTOOLDIR)
+ifeq ($(SDM),-D_SDM)
+ifneq ($(SDM_EXIST),$(SDMDIR))
+	@echo "********************************************************************************************* "
+	@echo "** SDM module, which is compiled by [SDM=-D_SDM] in sysdep.***, is no supported.         **** "
+	@echo "** If you want to use SDM module, please contact Dr. S. Shima(s_shima@sim.u-hyogo.ac.jp) **** "
+	@echo "********************************************************************************************* "
+	exit 1
+else
+	rsync -c $(SDMDIR)/scale_atmos_phy_mp_sdm.F90 $(SCALELIBDIR)/src/atmos-physics/microphysics/
+	rsync -c $(SDMDIR)/scale_tracer_sdm.F90 $(SCALELIBDIR)/src/common/tracer/
+	$(MAKE) makesdm
+endif
+endif
 	$(MAKE) $(LIBDIR)/$(LIBNAME)
 	$(MAKE) modules
 	@echo "Complete making scalelib."
@@ -210,6 +226,31 @@ $(LIBDIR)/libdcutils.a:
 
 $(LIBDIR)/libgtool.a: $(LIBDIR)/libdcutils.a
 	$(MAKE) -C $(GTOOLDIR)
+
+ifeq ($(SDM),-D_SDM)
+makesdm: $(OBJ_DIR)/scale_precision.o \
+	$(OBJ_DIR)/scale_prof.o \
+	$(OBJ_DIR)/scale_comm.o \
+	$(OBJ_DIR)/scale_atmos_sub_thermodyn.o \
+	$(OBJ_DIR)/scale_atmos_sub_saturation.o \
+	$(OBJ_DIR)/scale_atmos_phy_mp_common.o \
+	$(OBJ_DIR)/scale_tracer.o \
+	$(OBJ_DIR)/scale_tracer_sdm.o \
+	$(OBJ_DIR)/scale_stdio.o \
+	$(OBJ_DIR)/scale_history.o \
+	$(OBJ_DIR)/scale_const.o \
+	$(OBJ_DIR)/scale_time.o \
+	$(OBJ_DIR)/scale_grid_index.o \
+	$(OBJ_DIR)/scale_topography.o \
+	$(OBJ_DIR)/scale_grid_cartesian.o \
+	$(OBJ_DIR)/scale_grid_real.o \
+	$(OBJ_DIR)/scale_gridtrans.o \
+	$(OBJ_DIR)/scale_les_process.o  
+	$(MAKE) -C $(MTDIR)
+	$(MAKE) -C $(GAGETRYDIR)
+	$(MAKE) -C $(SDMDIR)
+else
+endif
 
 $(LIBNAME): $(LIBDIR)/$(LIBNAME)
 	install $< $@
@@ -226,16 +267,38 @@ modules: $(OBJS)
 endif
 
 
+ifeq ($(SDM),-D_SDM)
+allclean: distclean
+ifeq ($(SDM_EXIST),$(SDMDIR))
+	$(MAKE) -C $(MTDIR)      allclean
+	$(MAKE) -C $(GAGETRYDIR) allclean
+	$(MAKE) -C $(SDMDIR)     allclean
+endif
+	$(MAKE) -C $(DCUTILSDIR) allclean
+	$(MAKE) -C $(GTOOLDIR)   allclean
+	rm -f $(LIBDIR)/$(LIBNAME)
+else
 allclean: distclean
 	$(MAKE) -C $(DCUTILSDIR) allclean
 	$(MAKE) -C $(GTOOLDIR)   allclean
 	rm -f $(LIBDIR)/$(LIBNAME)
+endif
 
 distclean: clean
 	rm -f $(LIBNAME)
 
+ifeq ($(SDM),-D_SDM)
 clean:
 	rm -f *.o *.mod *.lst
+ifeq ($(SDM_EXIST),$(SDMDIR))
+	$(MAKE) -C $(SDMDIR) clean
+	cp -pf $(SDMDIR)/scale_atmos_phy_mp_sdm_dummy.F90 $(SCALELIBDIR)/src/atmos-physics/microphysics/scale_atmos_phy_mp_sdm.F90
+	cp -pf $(SDMDIR)/scale_tracer_sdm_dummy.F90 $(SCALELIBDIR)/src/common/tracer/scale_tracer_sdm.F90
+endif
+else
+clean:
+	rm -f *.o *.mod *.lst
+endif
 
 dependency:
 	./makedepend .
@@ -255,7 +318,7 @@ $(MODDIR)/%.mod : %.mod
 	install $< $@
 
 $(OBJ_DIR)/%.o : %.F90
-	$(FC) $(FFLAGS)     $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(LIBVERSION)\" -I$(DCUTILSDIR) -I$(GTOOLDIR) -I$(INDEX_DIR) -I$(SCALELIBDIR)/include -I$(OBJ_DIR) $(PAPI_INCLUDE) $(NETCDF_INCLUDE) $(MODDIROPT) $(OBJ_DIR) -o $@ -c $<
+	$(FC) $(FFLAGS)     $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(LIBVERSION)\" -I$(DCUTILSDIR) -I$(GTOOLDIR) -I$(INDEX_DIR) -I$(SCALELIBDIR)/include -I$(OBJ_DIR) $(PAPI_INCLUDE) $(NETCDF_INCLUDE) $(CONTRIB_INCLUDE) $(MODDIROPT) $(OBJ_DIR) -o $@ -c $<
 $(OBJ_DIR)/scale_atmos_dyn.o:
 	$(FC) $(FFLAGS_DYN) $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(LIBVERSION)\" -I$(DCUTILSDIR) -I$(GTOOLDIR) -I$(INDEX_DIR) -I$(SCALELIBDIR)/include -I$(OBJ_DIR) $(PAPI_INCLUDE) $(MODDIROPT) $(OBJ_DIR) -o $@ -c $<
 $(OBJ_DIR)/scale_atmos_dyn_common.o:
@@ -268,7 +331,8 @@ $(OBJ_DIR)/scale_atmos_dyn_rk_hevi.o:
 	$(FC) $(FFLAGS_DYN) $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(LIBVERSION)\" -I$(DCUTILSDIR) -I$(GTOOLDIR) -I$(INDEX_DIR) -I$(SCALELIBDIR)/include -I$(OBJ_DIR) $(PAPI_INCLUDE) $(MODDIROPT) $(OBJ_DIR) -o $@ -c $<
 $(OBJ_DIR)/scale_atmos_dyn_rk_hivi.o:
 	$(FC) $(FFLAGS_DYN) $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(LIBVERSION)\" -I$(DCUTILSDIR) -I$(GTOOLDIR) -I$(INDEX_DIR) -I$(SCALELIBDIR)/include -I$(OBJ_DIR) $(PAPI_INCLUDE) $(MODDIROPT) $(OBJ_DIR) -o $@ -c $<
-
+$(OBJ_DIR)/scale_atmos_phy_mp_sdm.o:
+	$(FC) $(FFLAGS_SDM) $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(LIBVERSION)\" -I$(DCUTILSDIR) -I$(GTOOLDIR) -I$(INDEX_DIR) -I$(SCALELIBDIR)/include -I$(OBJ_DIR) $(CONTRIB_INCLUDE) $(PAPI_INCLUDE) $(MODDIROPT) $(OBJ_DIR) -o $@ -c $<
 $(OBJ_DIR)/%.o : %.c
 	$(CC) $(CFLAGS) -I$(SCALELIBDIR)/include -o $@ -c $<
 

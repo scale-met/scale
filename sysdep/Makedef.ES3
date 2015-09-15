@@ -22,11 +22,19 @@ PERF_MONIT = -Nftrace
 # ftrace
 #PERF_MONIT = -ftrace
 
+# Super Droplet Method (SDM)
+# # without SDM
+# SDM =
+# # with SDM
+# #SDM = -D_SDM
+
 FC     = sxmpif90
 FFLAGS = $(FFLAGS_FAST) $(PERF_MONIT) -D__ES2
 #FFLAGS = $(FFLAGS_DEBUG) $(PERF_MONIT) -D__ES2
 
 FFLAGS_DYN ?= $(FFLAGS)
+
+FFLAGS_SDM ?= $(FFLAGS)
 
 MODDIROPT ?= -to
 

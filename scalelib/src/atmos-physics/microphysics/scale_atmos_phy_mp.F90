@@ -165,6 +165,13 @@ contains
        ATMOS_PHY_MP_suzuki10_EffectiveRadius, &
        ATMOS_PHY_MP_suzuki10_MixingRatio, &
        ATMOS_PHY_MP_suzuki10_DENS => ATMOS_PHY_MP_DENS
+    use scale_atmos_phy_mp_sdm, only: &
+       ATMOS_PHY_MP_sdm_setup, &
+       ATMOS_PHY_MP_sdm, &
+       ATMOS_PHY_MP_sdm_CloudFraction, &
+       ATMOS_PHY_MP_sdm_EffectiveRadius, &
+       ATMOS_PHY_MP_sdm_MixingRatio, &
+       ATMOS_PHY_MP_sdm_DENS => ATMOS_PHY_MP_DENS
 #endif
     implicit none
 
@@ -215,6 +222,13 @@ contains
        ATMOS_PHY_MP_EffectiveRadius => ATMOS_PHY_MP_suzuki10_EffectiveRadius
        ATMOS_PHY_MP_MixingRatio     => ATMOS_PHY_MP_suzuki10_MixingRatio
        ATMOS_PHY_MP_DENS            => ATMOS_PHY_MP_suzuki10_DENS
+    case ( 'SDM' )
+       call ATMOS_PHY_MP_sdm_setup( MP_TYPE )
+       ATMOS_PHY_MP                 => ATMOS_PHY_MP_sdm
+       ATMOS_PHY_MP_CloudFraction   => ATMOS_PHY_MP_sdm_CloudFraction
+       ATMOS_PHY_MP_EffectiveRadius => ATMOS_PHY_MP_sdm_EffectiveRadius
+       ATMOS_PHY_MP_MixingRatio     => ATMOS_PHY_MP_sdm_MixingRatio
+       ATMOS_PHY_MP_DENS            => ATMOS_PHY_MP_sdm_DENS
     end select
 #endif
 

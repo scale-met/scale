@@ -930,6 +930,13 @@ contains
        ATMOS_PHY_TB_vars_restart_write
     use mod_atmos_phy_cp_vars, only: &
        ATMOS_PHY_CP_vars_restart_write
+#ifdef _SDM
+    use scale_atmos_phy_mp_sdm, only: &
+       sd_rest_flg_out, &
+       ATMOS_PHY_MP_sdm_restart_out
+    use scale_time, only: &
+       NOWSEC => TIME_NOWSEC
+#endif
     implicit none
 
     character(len=15)     :: timelabel
@@ -937,6 +944,13 @@ contains
 
     integer :: iq
     !---------------------------------------------------------------------------
+
+#ifdef _SDM
+    if( sd_rest_flg_out ) then
+       if( IO_L ) write(IO_FID_LOG,*) '*** Output random number for SDM ***'
+       call ATMOS_PHY_MP_sdm_restart_out(NOWSEC)
+    endif
+#endif
 
     if ( ATMOS_RESTART_OUT_BASENAME /= '' ) then
 
