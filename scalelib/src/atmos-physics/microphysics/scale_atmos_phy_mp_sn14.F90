@@ -46,6 +46,7 @@
 !!
 !! @par History
 !! @li      2011-10-24 (T.Seiki)    [new] import from NICAM(11/08/30 ver.)
+!! @li      2015-09-08 (Y.Sato)     [add] Add evaporated cloud number concentration
 !!
 !<
 !-------------------------------------------------------------------------------
@@ -608,6 +609,7 @@ contains
        RHOT,      &
        QTRC,      &
        CCN,       &
+       EVAPORATE, &
        SFLX_rain, &
        SFLX_snow  )
     use scale_grid_index
@@ -623,6 +625,7 @@ contains
     real(RP), intent(inout) :: RHOT(KA,IA,JA)
     real(RP), intent(inout) :: QTRC(KA,IA,JA,QAD)
     real(RP), intent(in)    :: CCN(KA,IA,JA)
+    real(RP), intent(out)   :: EVAPORATE(KA,IA,JA)
     real(RP), intent(out)   :: SFLX_rain(IA,JA)
     real(RP), intent(out)   :: SFLX_snow(IA,JA)
     !---------------------------------------------------------------------------
@@ -642,6 +645,7 @@ contains
                   RHOT,      & ! [INOUT]
                   QTRC,      & ! [INOUT]
                   CCN,       & ! [IN]
+                  EVAPORATE, & ! [OUT]
                   SFLX_rain, & ! [OUT]
                   SFLX_snow  ) ! [OUT]
 
@@ -1282,6 +1286,7 @@ contains
        RHOT,      &
        QTRC,      &
        CCN,       &
+       EVAPORATE, &
        SFLX_rain, &
        SFLX_snow  )
     use scale_time, only: &
@@ -1306,6 +1311,7 @@ contains
     real(RP), intent(inout) :: RHOT(KA,IA,JA)
     real(RP), intent(inout) :: QTRC(KA,IA,JA,QA)
     real(RP), intent(in)    :: CCN(KA,IA,JA)
+    real(RP), intent(out)   :: EVAPORATE(KA,IA,JA)
     real(RP), intent(out)   :: SFLX_rain(IA,JA)
     real(RP), intent(out)   :: SFLX_snow(IA,JA)
 
@@ -1678,6 +1684,7 @@ contains
          cva,                        & ! out
          esw, esi, rhoq2,            & ! in
          PQ,                         & ! inout
+         EVAPORATE,                  & ! out
          sl_PLCdep,                  & ! inout
          sl_PLRdep, sl_PNRdep        ) ! inout
 
@@ -2279,28 +2286,8 @@ contains
     end do
     end do
     !
-    if( nucl_twomey ) then
-       ! diagnose cloud condensation nuclei
+    if( MP_couple_aerosol ) then
 
-       do j = JS, JE
-       do i = IS, IE
-       do k = KS, KE
-          ! effective vertical velocity (maximum vertical velocity in turbulent flow)
-          weff_max(k,i,j) = weff(k,i,j) + sigma_w(k,i,j)
-          ! large scale upward motion region and saturated
-          if( (weff(k,i,j) > 1.E-8_RP) .and. (ssw(k,i,j) > 1.E-10_RP)  .and. pre(k,i,j) > 300.E+2_RP )then
-             ! Lohmann (2002), eq.(1)
-             nc_new_max   = coef_ccn(i,j)*weff_max(k,i,j)**slope_ccn(i,j)
-             nc_new(k,i,j) = a_max*nc_new_max**b_max
-          else
-             nc_new(k,i,j) = 0.0_RP
-          end if
-       end do
-       end do
-       end do
-    else
-       ! calculate cloud condensation nuclei
-       if( MP_couple_aerosol ) then
          do j = JS, JE
          do i = IS, IE
          do k = KS, KE
@@ -2312,19 +2299,43 @@ contains
          enddo
          enddo
          enddo
-       else
-         do j = JS, JE
-         do i = IS, IE
-         do k = KS, KE
-            if( ssw(k,i,j) > 1.e-10_RP .and. pre(k,i,j) > 300.E+2_RP ) then
-               nc_new(k,i,j) = c_ccn*ssw(k,i,j)**kappa
-            else
-               nc_new(k,i,j) = 0.0_RP
-            endif
-         enddo
-         enddo
-         enddo
-       endif
+
+    else
+
+      if( nucl_twomey ) then
+        ! diagnose cloud condensation nuclei
+
+        do j = JS, JE
+        do i = IS, IE
+        do k = KS, KE
+           ! effective vertical velocity (maximum vertical velocity in turbulent flow)
+           weff_max(k,i,j) = weff(k,i,j) + sigma_w(k,i,j)
+           ! large scale upward motion region and saturated
+           if( (weff(k,i,j) > 1.E-8_RP) .and. (ssw(k,i,j) > 1.E-10_RP)  .and. pre(k,i,j) > 300.E+2_RP )then
+              ! Lohmann (2002), eq.(1)
+              nc_new_max   = coef_ccn(i,j)*weff_max(k,i,j)**slope_ccn(i,j)
+              nc_new(k,i,j) = a_max*nc_new_max**b_max
+           else
+              nc_new(k,i,j) = 0.0_RP
+           end if
+        end do
+        end do
+        end do
+      else
+        ! calculate cloud condensation nuclei
+          do j = JS, JE
+          do i = IS, IE
+          do k = KS, KE
+             if( ssw(k,i,j) > 1.e-10_RP .and. pre(k,i,j) > 300.E+2_RP ) then
+                nc_new(k,i,j) = c_ccn*ssw(k,i,j)**kappa
+             else
+                nc_new(k,i,j) = 0.0_RP
+             endif
+          enddo
+          enddo
+          enddo
+      endif
+
     endif
 
     do j = JS, JE
@@ -2355,47 +2366,74 @@ contains
     end do
     end do
 
-    if( nucl_twomey ) then
-       do j = JS, JE
-       do i = IS, IE
-       do k = KS, KE
-          ! nucleation occurs at only cloud base.
-          ! if CCN is more than below parcel, nucleation newly occurs
-          ! effective vertical velocity
-          if ( flag_nucleation(k,i,j) .and. & ! large scale upward motion region and saturated
-               tem(k,i,j) > tem_ccn_low .and. &
-               nc_new(k,i,j) > rhoq(I_NC,k,i,j) ) then
-             dlcdt_max    = (rhoq(I_QV,k,i,j) - esw(k,i,j)/(Rvap*tem(k,i,j)))*rdt
-             dncdt_max    = dlcdt_max/xc_min
-             dnc_new      = nc_new(k,i,j)-rhoq(I_NC,k,i,j)
-             PQ(I_NCccn,k,i,j) = min( dncdt_max, dnc_new*rdt )
-             PQ(I_LCccn,k,i,j) = min( dlcdt_max, xc_min*PQ(I_NCccn,k,i,j) )
-          else
-             PQ(I_NCccn,k,i,j) = 0.0_RP
-             PQ(I_LCccn,k,i,j) = 0.0_RP
-          end if
-       end do
-       end do
-       end do
+    if( MP_couple_aerosol ) then
+
+         do j = JS, JE
+         do i = IS, IE
+         do k = KS, KE
+            ! nucleation occurs at only cloud base.
+            ! if CCN is more than below parcel, nucleation newly occurs
+            ! effective vertical velocity
+            if ( flag_nucleation(k,i,j) .and. & ! large scale upward motion region and saturated
+                 tem(k,i,j) > tem_ccn_low ) then
+               dlcdt_max    = (rhoq(I_QV,k,i,j) - esw(k,i,j)/(Rvap*tem(k,i,j)))*rdt
+               dncdt_max    = dlcdt_max/xc_min
+!               dnc_new      = nc_new(k,i,j)-rhoq(I_NC,k,i,j)
+               dnc_new      = nc_new(k,i,j)
+               PQ(I_NCccn,k,i,j) = min( dncdt_max, dnc_new*rdt )
+               PQ(I_LCccn,k,i,j) = min( dlcdt_max, xc_min*PQ(I_NCccn,k,i,j) )
+            else
+               PQ(I_NCccn,k,i,j) = 0.0_RP
+               PQ(I_LCccn,k,i,j) = 0.0_RP
+            end if
+         end do
+         end do
+         end do
+
     else
-       do j = JS, JE
-       do i = IS, IE
-       do k = KS, KE
-          ! effective vertical velocity
-          if(  tem(k,i,j) > tem_ccn_low .and. &
-               nc_new(k,i,j) > rhoq(I_NC,k,i,j) ) then
-             dlcdt_max    = (rhoq(I_QV,k,i,j) - esw(k,i,j)/(Rvap*tem(k,i,j)))*rdt
-             dncdt_max    = dlcdt_max/xc_min
-             dnc_new      = nc_new(k,i,j)-rhoq(I_NC,k,i,j)
-             PQ(I_NCccn,k,i,j) = min( dncdt_max, dnc_new*rdt )
-             PQ(I_LCccn,k,i,j) = min( dlcdt_max, xc_min*PQ(I_NCccn,k,i,j) )
-          else
-             PQ(I_NCccn,k,i,j) = 0.0_RP
-             PQ(I_LCccn,k,i,j) = 0.0_RP
-          end if
-       end do
-       end do
-       end do
+
+      if( nucl_twomey ) then
+         do j = JS, JE
+         do i = IS, IE
+         do k = KS, KE
+            ! nucleation occurs at only cloud base.
+            ! if CCN is more than below parcel, nucleation newly occurs
+            ! effective vertical velocity
+            if ( flag_nucleation(k,i,j) .and. & ! large scale upward motion region and saturated
+                 tem(k,i,j) > tem_ccn_low .and. &
+                 nc_new(k,i,j) > rhoq(I_NC,k,i,j) ) then
+               dlcdt_max    = (rhoq(I_QV,k,i,j) - esw(k,i,j)/(Rvap*tem(k,i,j)))*rdt
+               dncdt_max    = dlcdt_max/xc_min
+               dnc_new      = nc_new(k,i,j)-rhoq(I_NC,k,i,j)
+               PQ(I_NCccn,k,i,j) = min( dncdt_max, dnc_new*rdt )
+               PQ(I_LCccn,k,i,j) = min( dlcdt_max, xc_min*PQ(I_NCccn,k,i,j) )
+            else
+               PQ(I_NCccn,k,i,j) = 0.0_RP
+               PQ(I_LCccn,k,i,j) = 0.0_RP
+            end if
+         end do
+         end do
+         end do
+      else
+         do j = JS, JE
+         do i = IS, IE
+         do k = KS, KE
+            ! effective vertical velocity
+            if(  tem(k,i,j) > tem_ccn_low .and. &
+                 nc_new(k,i,j) > rhoq(I_NC,k,i,j) ) then
+               dlcdt_max    = (rhoq(I_QV,k,i,j) - esw(k,i,j)/(Rvap*tem(k,i,j)))*rdt
+               dncdt_max    = dlcdt_max/xc_min
+               dnc_new      = nc_new(k,i,j)-rhoq(I_NC,k,i,j)
+               PQ(I_NCccn,k,i,j) = min( dncdt_max, dnc_new*rdt )
+               PQ(I_LCccn,k,i,j) = min( dlcdt_max, xc_min*PQ(I_NCccn,k,i,j) )
+            else
+               PQ(I_NCccn,k,i,j) = 0.0_RP
+               PQ(I_LCccn,k,i,j) = 0.0_RP
+            end if
+         end do
+         end do
+         end do
+      endif
     endif
 
     !
@@ -3674,6 +3712,7 @@ contains
        cva,                 & ! out
        esw, esi, rhoq2,     & ! in
        PQ,                  & ! in
+       qc_evaporate,        & ! in
        sl_PLCdep,           &
        sl_PLRdep, sl_PNRdep )
     use scale_atmos_thermodyn, only: &
@@ -3709,6 +3748,7 @@ contains
     real(RP), intent(in)    :: rhoq2(QA,KA,IA,JA)
     !+++ tendency[kg/m3/s]
     real(RP), intent(inout) :: PQ(PQ_MAX,KA,IA,JA)
+    real(RP), intent(out)   :: qc_evaporate(KA,IA,JA)
     !+++ Column integrated tendency[kg/m2/s]
     real(RP), intent(inout) :: sl_PLCdep(IA,JA)
     real(RP), intent(inout) :: sl_PLRdep(IA,JA), sl_PNRdep(IA,JA)
@@ -4041,6 +4081,8 @@ contains
        ! evaporation always lose number(always negative).
        dep_dnc = max( dt*PNCdep*fac1, -rhoq2(I_NC,k,i,j) ) ! ss>0 dep=0, ss<0 dep<0 ! [Add] 11/08/30 T.Mitsui
        dep_dnr = max( dt*PQ(I_NRdep,k,i,j)*fac1, -rhoq2(I_NR,k,i,j) ) ! ss>0 dep=0, ss<0 dep<0
+
+       qc_evaporate(k,i,j) = - dep_dnc ! [Add] Y.Sato 15/09/08
 
        !--- deposition/sublimation
        lvsi    = esi(k,i,j)*r_rvaptem

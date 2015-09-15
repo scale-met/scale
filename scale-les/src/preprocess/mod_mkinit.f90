@@ -661,7 +661,7 @@ contains
     real(RP),allocatable :: k_max(:)
 
     real(RP) :: pott, qdry, pres
-    real(RP) :: temp, cpa, cva, ssliq, Rmoist
+    real(RP) :: temp, cpa, cva, qsat_tmp, ssliq, Rmoist
     real(RP) :: pi6
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -813,7 +813,8 @@ contains
                 * ( DENS(k,i,j)*Rmoist*pott/CONST_PRE00 )**( cpa/(cpa-Rmoist) )
           temp = pres / ( DENS(k,i,j) * Rmoist )
           !--- calculate super saturation of water
-          call SATURATION_pres2qsat_liq( ssliq,temp,pres )
+          call SATURATION_pres2qsat_liq( qsat_tmp,temp,pres )
+          ssliq = QTRC(k,i,j,I_QV)/qsat_tmp - 1.0_RP
           call aerosol_activation_kajino13 &
                                  (c_kappa, ssliq, temp, ia_m0, ia_m2, ia_m3, &
                                   N_ATR,n_siz_max,n_kap_max,n_ctg,NSIZ,n_kap, &
@@ -893,6 +894,9 @@ contains
       integer  :: is0, ik, ic
 
       aerosol_activ(:,:,:,:) = 0._RP
+
+      if (super.le.0._RP) return
+
       smax_inv = 1._RP / super
 
     !--- surface tension of water

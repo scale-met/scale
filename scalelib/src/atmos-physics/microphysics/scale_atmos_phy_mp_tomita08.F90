@@ -9,6 +9,7 @@
 !!
 !! @par History
 !! @li      2013-03-25 (H.Yashiro)  [new]
+!! @li      2015-09-08 (Y.Sato)     [add] Add evaporated cloud number concentration
 !!
 !<
 !-------------------------------------------------------------------------------
@@ -479,9 +480,13 @@ contains
        RHOT,      &
        QTRC,      &
        CCN,       &
+       EVAPORATE, &
        SFLX_rain, &
        SFLX_snow  )
     use scale_grid_index
+    use scale_const, only: &
+       DWATR => CONST_DWATR, &
+       PI    => CONST_PI
     use scale_time, only: &
        dt => TIME_DTSEC_ATMOS_PHY_MP
     use scale_history, only: &
@@ -505,6 +510,7 @@ contains
     real(RP), intent(inout) :: RHOT(KA,IA,JA)
     real(RP), intent(inout) :: QTRC(KA,IA,JA,QAD)
     real(RP), intent(in)    :: CCN(KA,IA,JA)
+    real(RP), intent(out)   :: EVAPORATE(KA,IA,JA)   ! number of evaporated cloud [/m3/s]
     real(RP), intent(out)   :: SFLX_rain(IA,JA)
     real(RP), intent(out)   :: SFLX_snow(IA,JA)
 
@@ -519,6 +525,7 @@ contains
     real(RP) :: FLX_snow  (KA,IA,JA)
     real(RP) :: wflux_rain(KA,IA,JA)
     real(RP) :: wflux_snow(KA,IA,JA)
+    real(RP) :: qc_before_satadj(KA,IA,JA)
     integer  :: step
     integer  :: k, i, j
     !---------------------------------------------------------------------------
@@ -596,11 +603,29 @@ contains
     call HIST_in( vterm(:,:,:,I_QS), 'Vterm_QS', 'terminal velocity of QS', 'm/s' )
     call HIST_in( vterm(:,:,:,I_QG), 'Vterm_QG', 'terminal velocity of QG', 'm/s' )
 
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+      qc_before_satadj(k,i,j) = QTRC(k,i,j,I_QC)
+    enddo
+    enddo
+    enddo
+
     call MP_saturation_adjustment( RHOE_t(:,:,:),   & ! [INOUT]
                                    QTRC_t(:,:,:,:), & ! [INOUT]
                                    RHOE  (:,:,:),   & ! [INOUT]
                                    QTRC  (:,:,:,:), & ! [INOUT]
                                    DENS  (:,:,:)    ) ! [IN]
+
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+      EVAPORATE(k,i,j) = max( qc_before_satadj(k,i,j) - QTRC(k,i,j,I_QC), 0.0_RP ) / dt ! if negative, condensation
+      EVAPORATE(k,i,j) = EVAPORATE(k,i,j) * DENS(k,i,j) &
+                       / (4.0_RP/3.0_RP*PI*DWATR*re_qc**3)  ! mass -> number (assuming constant particle radius as re_qc)
+    enddo
+    enddo
+    enddo
 
     !##### END MP Main #####
 
@@ -623,12 +648,12 @@ contains
   !-----------------------------------------------------------------------------
   !> Lin-type cold rain microphysics
   subroutine MP_tomita08( &
-       RHOE_t, &
-       QTRC_t, &
-       RHOE0,  &
-       QTRC0,  &
-       CCN,    &
-       DENS0   )
+       RHOE_t,    &
+       QTRC_t,    &
+       RHOE0,     &
+       QTRC0,     &
+       CCN,       &
+       DENS0      )
     use scale_const, only: &
        PI    => CONST_PI,    &
        EPS   => CONST_EPS,   &
@@ -640,6 +665,7 @@ contains
        LHS0  => CONST_LHS0,  &
        LHF0  => CONST_LHF0,  &
        TEM00 => CONST_TEM00, &
+       DWATR => CONST_DWATR, &
        PRE00 => CONST_PRE00
     use scale_time, only: &
        dt => TIME_DTSEC_ATMOS_PHY_MP

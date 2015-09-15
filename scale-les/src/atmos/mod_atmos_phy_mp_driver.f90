@@ -116,10 +116,11 @@ contains
        MOMY_t_MP => ATMOS_PHY_MP_MOMY_t,    &
        RHOT_t_MP => ATMOS_PHY_MP_RHOT_t,    &
        RHOQ_t_MP => ATMOS_PHY_MP_RHOQ_t,    &
+       EVAPORATE => ATMOS_PHY_MP_EVAPORATE, &
        SFLX_rain => ATMOS_PHY_MP_SFLX_rain, &
        SFLX_snow => ATMOS_PHY_MP_SFLX_snow
     use mod_atmos_phy_ae_vars, only: &
-       CCN => ATMOS_PHY_AE_CCN
+       CCN_t => ATMOS_PHY_AE_CCN_t
     implicit none
 
     logical, intent(in) :: update_flag
@@ -130,6 +131,7 @@ contains
     real(RP) :: MOMY0(KA,IA,JA)
     real(RP) :: RHOT0(KA,IA,JA)
     real(RP) :: QTRC0(KA,IA,JA,QA)
+    real(RP) :: CCN(KA,IA,JA)
 
     real(RP) :: precip(IA,JA)
     real(RP) :: total ! dummy
@@ -162,6 +164,8 @@ contains
        enddo
        enddo
        enddo
+  
+       CCN(:,:,:) = CCN_t(:,:,:) * dt_MP
 
        call ATMOS_PHY_MP( DENS0    (:,:,:),   & ! [INOUT]
                           MOMZ0    (:,:,:),   & ! [INOUT]
@@ -170,6 +174,7 @@ contains
                           RHOT0    (:,:,:),   & ! [INOUT]
                           QTRC0    (:,:,:,:), & ! [INOUT]
                           CCN      (:,:,:),   & ! [IN]
+                          EVAPORATE(:,:,:),   & ! [OUT]
                           SFLX_rain(:,:),     & ! [OUT]
                           SFLX_snow(:,:)      ) ! [OUT]
 
@@ -208,6 +213,7 @@ contains
        call HIST_in( SFLX_rain(:,:), 'RAIN', 'surface rain rate',          'kg/m2/s', nohalo=.true. )
        call HIST_in( SFLX_snow(:,:), 'SNOW', 'surface snow rate',          'kg/m2/s', nohalo=.true. )
        call HIST_in( precip   (:,:), 'PREC', 'surface precipitation rate', 'kg/m2/s', nohalo=.true. )
+       call HIST_in( EVAPORATE(:,:,:), 'EVAPORATE', 'evaporated cloud number', '#/m3/s', nohalo=.true. )
 
        call HIST_in( DENS_t_MP(:,:,:), 'DENS_t_MP', 'tendency DENS in MP', 'kg/m3/s'  , nohalo=.true. )
        call HIST_in( MOMZ_t_MP(:,:,:), 'MOMZ_t_MP', 'tendency MOMZ in MP', 'kg/m2/s2' , nohalo=.true. )

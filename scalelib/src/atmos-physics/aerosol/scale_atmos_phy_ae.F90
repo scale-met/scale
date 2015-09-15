@@ -42,6 +42,7 @@ module scale_atmos_phy_ae
           MOMY, &
           RHOT, &
           EMIT, &
+          NREG, &
           CN,   &
           CCN,  &
           QTRC  )
@@ -54,6 +55,7 @@ module scale_atmos_phy_ae
        real(RP), intent(inout) :: MOMY(KA,IA,JA)
        real(RP), intent(inout) :: RHOT(KA,IA,JA)
        real(RP), intent(inout) :: EMIT(KA,IA,JA,QA_AE)
+       real(RP), intent(in)    :: NREG(KA,IA,JA)
        real(RP), intent(out)   :: CN(KA,IA,JA)
        real(RP), intent(out)   :: CCN(KA,IA,JA)
        real(RP), intent(inout) :: QTRC(KA,IA,JA,QA)
@@ -118,9 +120,11 @@ contains
        ATMOS_PHY_AE                 => ATMOS_PHY_AE_dummy
        ATMOS_PHY_AE_EffectiveRadius => ATMOS_PHY_AE_dummy_EffectiveRadius
     case ( 'KAJINO13' )
-       call ATMOS_PHY_AE_kajino13_setup( AE_TYPE )
-       ATMOS_PHY_AE                 => ATMOS_PHY_AE_kajino13
-       ATMOS_PHY_AE_EffectiveRadius => ATMOS_PHY_AE_kajino13_EffectiveRadius
+       write(*,*) 'xxx aerosol type(', AE_TYPE, '). is not supported in current version!'
+       call PRC_MPIstop
+!       call ATMOS_PHY_AE_kajino13_setup( AE_TYPE )
+!       ATMOS_PHY_AE                 => ATMOS_PHY_AE_kajino13
+!       ATMOS_PHY_AE_EffectiveRadius => ATMOS_PHY_AE_kajino13_EffectiveRadius
     case default
        write(*,*) 'xxx invalid aerosol type(', AE_TYPE, '). CHECK!'
        call PRC_MPIstop
