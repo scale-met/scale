@@ -179,6 +179,7 @@ distclean: clean
 
 allclean: distclean
 	rm -f $(LIBDIR)/$(LIBNAME)
+	rm -f *.lst
 	cd $(MODDIR); rm -f $(MODS)
 
 .SUFFIXES:

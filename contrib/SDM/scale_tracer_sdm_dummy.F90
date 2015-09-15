@@ -54,9 +54,9 @@ module scale_tracer_sdm
   integer, public, parameter :: QIS =  0 ! start index for ice tracer
   integer, public, parameter :: QIE = -1 ! end   index for ice tracer
 
-  character(len=H_SHORT), public, save :: AQ_MP_NAME(QA)
-  character(len=H_MID), public, save :: AQ_MP_DESC(QA)
-  character(len=H_SHORT), public, save :: AQ_MP_UNIT(QA)
+  character(len=H_SHORT), public, save :: AQ_MP_NAME(QA_MP)
+  character(len=H_MID), public, save :: AQ_MP_DESC(QA_MP)
+  character(len=H_SHORT), public, save :: AQ_MP_UNIT(QA_MP)
 
   data AQ_MP_NAME / 'QV', 'QC', 'QR' /
 

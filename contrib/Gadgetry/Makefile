@@ -54,4 +54,4 @@ allclean:
 	rm -f $(MODULES)
 	rm -f $(LIBNAME)
 	rm -f $(LIBDIR)/$(LIBNAME)
-	cd $(MODDIR); rm -f $(MODULES)
+	cd $(MODDIR); rm -f $(MODULES); rm -f *.lst

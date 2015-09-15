@@ -42,7 +42,7 @@ distclean: clean
 
 allclean: distclean
 	rm -f $(LIBDIR)/$(LIBNAME)
-	cd $(MODDIR); rm -f $(MODS)
+	cd $(MODDIR); rm -f $(MODS); rm -f *.lst
 
 .SUFFIXES:
 .SUFFIXES: .o .f90 .c
