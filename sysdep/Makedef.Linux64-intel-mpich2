@@ -17,12 +17,20 @@ FFLAGS_DEBUG = -fpp -m64 -O0                        \
                -assume nobuffered_io                \
                -DDEBUG
 
+# Super Droplet Method (SDM)
+# without SDM
+SDM =
+# with SDM
+#SDM = -D_SDM
+
 FC     = mpif90
 SFC    = ifort
 FFLAGS = $(FFLAGS_FAST)
 #FFLAGS = $(FFLAGS_DEBUG)
 
 FFLAGS_DYN ?= $(FFLAGS)
+
+FFLAGS_SDM ?= $(FFLAGS)
 
 ifneq ($(DISABLE_VEC),)
       FFLAGS += -no-vec

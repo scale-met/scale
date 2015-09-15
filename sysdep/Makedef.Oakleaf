@@ -40,6 +40,12 @@ RDMA = -U_USE_RDMA
 # enable
 #RDMA = -D_USE_RDMA
 
+# Super Droplet Method (SDM)
+# without SDM
+SDM =
+# with SDM
+#SDM = -D_SDM
+
 # Single precision
 #FFLAGS += -DSINGLE
 
@@ -48,6 +54,8 @@ SFC    = frtpx
 
 FFLAGS_DYN ?= $(FFLAGS) -Knoprefetch,loop_nofission,loop_nofusion,nounroll,parallel_strong -Ksimd=2
 #FFLAGS_DYN ?= $(FFLAGS)
+
+FFLAGS_SDM ?= $(FFLAGS)
 
 MODDIROPT ?= -M
 

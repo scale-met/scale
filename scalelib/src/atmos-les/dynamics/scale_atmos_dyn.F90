@@ -1381,7 +1381,12 @@ contains
     !------------------------------------------------------------------------
     ! Update each tracer
     !------------------------------------------------------------------------
+
+#ifdef _SDM
+    do iq = 1, I_QV
+#else
     do iq = 1, QA
+#endif
 
        call PROF_rapstart("DYN_Numfilter", 2)
 

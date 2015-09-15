@@ -31,12 +31,20 @@ FFLAGS_DEBUG = -O0 $(FFLAGS_CORE) $(GNUCPPOPT) \
                -g -fbacktrace \
                -DDEBUG
 
+# Super Droplet Method (SDM)
+# without SDM
+SDM =
+# with SDM
+#SDM = -D_SDM
+
 FC     = mpif90
 SFC    = gfortran
 FFLAGS = $(FFLAGS_FAST)
 #FFLAGS = $(FFLAGS_DEBUG)
 
 FFLAGS_DYN = $(FFLAGS)
+
+FFLAGS_SDM ?= $(FFLAGS)
 
 CC     = gcc
 CFLAGS = -O3 -m64 $(SSE_FLAGS)
