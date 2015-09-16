@@ -172,7 +172,7 @@ contains
     real(RP), intent(out) :: RHOT_RK(KA,IA,JA)   !
 
     real(RP), intent(inout) :: mflx_hi(KA,IA,JA,3) ! mass flux
-    real(RP), intent(inout) :: tflx_hi(KA,IA,JA,3) ! internal energy flux
+    real(RP), intent(out)   :: tflx_hi(KA,IA,JA,3) ! internal energy flux
 
     real(RP), intent(in),target :: DENS0(KA,IA,JA) ! prognostic variables at previous dynamical time step
     real(RP), intent(in),target :: MOMZ0(KA,IA,JA) !
@@ -2205,7 +2205,7 @@ contains
 
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JJS,   JJE
-       do i = IIS-IFS_OFF, min(IIE,IEH)
+       do i = IIS-1, IIE
        do k = KS, KE
 #ifdef DEBUG
           call CHECK( __LINE__, mflx_hi(k,i,j,XDIR) )
@@ -2229,7 +2229,7 @@ contains
        ! at (x, v, z)
 
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       do j = JJS-JFS_OFF, min(JJE,JEH)
+       do j = JJS-1, JJE
        do i = IIS,   IIE
        do k = KS, KE
 #ifdef DEBUG
