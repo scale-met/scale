@@ -34,12 +34,6 @@ PERF_MONIT = -Ntl_notrt -U_FIPP_ -U_FAPP_ -U_FINEPA_
 # fine PA
 #PERF_MONIT = -Ntl_trt -U_FIPP_ -U_FAPP_ -D_FINEPA_
 
-# Super Droplet Method (SDM)
-# without SDM
-SDM =
-# with SDM
-#SDM = -D_SDM
-
 # RDMA
 # disable
 RDMA = -U_USE_RDMA
@@ -54,8 +48,6 @@ SFC    = frtpx
 
 FFLAGS_DYN ?= $(FFLAGS) -Knoprefetch,loop_nofission,loop_nofusion,nounroll,parallel_strong -Ksimd=2
 #FFLAGS_DYN ?= $(FFLAGS)
-
-FFLAGS_SDM ?= $(FFLAGS)
 
 MODDIROPT ?= -M
 

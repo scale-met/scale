@@ -36,20 +36,12 @@ FFLAGS_DEBUG = -Mpreprocess -O2 -m64 \
 #              -mcmodel=medium                    \
 #              -Msmartalloc=huge
 
-# Super Droplet Method (SDM)
-# without SDM
-SDM =
-# with SDM
-#SDM = -D_SDM
-
 FC     = mpif90
 SFC    = pgfortran
 FFLAGS = $(FFLAGS_FAST)
 #FFLAGS = $(FFLAGS_DEBUG)
 
 FFLAGS_DYN ?= $(FFLAGS)
-
-FFLAGS_SDM ?= $(FFLAGS)
 
 MODDIROPT ?= -module
 
