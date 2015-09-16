@@ -8,6 +8,7 @@ TOPDIR      = ../..
 
 SYSDEP_DIR = $(TOPDIR)/sysdep
 include $(SYSDEP_DIR)/Makedef.$(SCALE_SYS)
+include $(TOPDIR)/contrib/sysdep/Makedef.$(SCALE_SYS)
 include $(TOPDIR)/Mkinclude
 
 LIBNAME = libmt.a 
@@ -18,14 +19,18 @@ MODS	= \
 OBJS	= \
 	  rng_uniform_mt.o
 
-all:	$(LIBDIR)/$(LIBNAME) makemodules
+all: makedir $(LIBDIR)/$(LIBNAME) makemodules
 
-$(LIBDIR)/$(LIBNAME):	$(LIBNAME)
+makedir:
+	@echo;echo "Entering contrib/mt..."
+	mkdir -p $(LIBDIR)
+
+$(LIBDIR)/$(LIBNAME): $(LIBNAME)
 	mkdir -p $(LIBDIR)
 	install $(LIBNAME) $(LIBDIR)
 
 $(LIBNAME): $(OBJS)
-	$(AR) r $@ $?
+	$(AR) $(ARFLAGS) $@ $?
 	$(RANLIB) $@
 
 makemodules: $(OBJS)
