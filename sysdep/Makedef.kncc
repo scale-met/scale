@@ -7,16 +7,8 @@ FFLAGS = -mmic -fpp3 -g -O3 -parallel -openmp -assume byterecl -ftz -heap-arrays
          -assume byterecl -convert big_endian \
          -fno-alias
 
-# Super Droplet Method (SDM)
-# without SDM
-SDM =
-# with SDM
-#SDM = -D_SDM
-
 # compiler flag for scale_atmos_dyn_fent_pdfct
 FFLAGS_DYN ?= $(FFLAGS)
-
-FFLAGS_SDM ?= $(FFLAGS)
 
 # C compiler
 CC     = mpiicc

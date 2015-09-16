@@ -67,7 +67,9 @@ ifeq ($(CHECK_MASS),T)
       FFLAGS += -DCHECK_MASS
 endif
 
-ifeq ($(SDM),-D_SDM)
+# Super Droplet Method (SDM)
+ifeq ($(ENABLE_SDM),T)
+   FFLAGS         += -D_SDM $(ADDITIONAL_FFLAGS_SDM)
    GAGETRYDIR      = $(TOPDIR)/contrib/Gadgetry
    MTDIR           = $(TOPDIR)/contrib/mt
    SDMDIR          = $(TOPDIR)/contrib/SDM
@@ -76,6 +78,7 @@ ifeq ($(SDM),-D_SDM)
 else
    GAGETRYDIR      =
    MTDIR           =
+   SDMDIR          =
    CONTRIB_LIBS    =
    CONTRIB_INCLUDE =
 endif

@@ -58,7 +58,7 @@ ifeq ($(MP),)
   OBJS_MP = scale_atmos_phy_mp_dry.o	\
             scale_atmos_phy_mp_kessler.o	\
             scale_atmos_phy_mp_sn14.o	\
-	    scale_atmos_phy_mp_sdm.o	\
+            scale_atmos_phy_mp_sdm.o	\
             scale_atmos_phy_mp_suzuki10.o	\
             scale_atmos_phy_mp_tomita08.o
 else
@@ -96,7 +96,7 @@ endif
 ifeq ($(TRACER),)
   OBJS_TRACER = scale_tracer_dry.o	\
                 scale_tracer_kessler.o	\
-		scale_tracer_sdm.o	\
+                scale_tracer_sdm.o	\
                 scale_tracer_sn14.o	\
                 scale_tracer_suzuki10.o	\
                 scale_tracer_tomita08.o
@@ -195,40 +195,7 @@ OBJS_NAME = $(scale_rdma)	\
 
 OBJS =  $(patsubst %,$(OBJ_DIR)/%,$(OBJS_NAME))
 
-all:
-	$(MAKE) makedir
-	@echo;echo "Entering scalelib..."; echo "Current version is " $(LIBVERSION)
-	$(MAKE) -C $(DCUTILSDIR)
-	$(MAKE) -C $(GTOOLDIR)
-ifeq ($(SDM),-D_SDM)
-ifneq ($(SDM_EXIST),$(SDMDIR))
-	@echo "********************************************************************************************* "
-	@echo "** SDM module, which is compiled by [SDM=-D_SDM] in sysdep.***, is no supported.         **** "
-	@echo "** If you want to use SDM module, please contact Dr. S. Shima(s_shima@sim.u-hyogo.ac.jp) **** "
-	@echo "********************************************************************************************* "
-	exit 1
-else
-	rsync -c $(SDMDIR)/scale_atmos_phy_mp_sdm.F90 $(SCALELIBDIR)/src/atmos-physics/microphysics/
-	rsync -c $(SDMDIR)/scale_tracer_sdm.F90 $(SCALELIBDIR)/src/common/tracer/
-	$(MAKE) makesdm
-endif
-endif
-	$(MAKE) $(LIBDIR)/$(LIBNAME)
-	$(MAKE) modules
-	@echo "Complete making scalelib."
-
-makedir:
-	@mkdir -p $(MODDIR)
-	mkdir -p $(LIBDIR)
-
-$(LIBDIR)/libdcutils.a:
-	$(MAKE) -C $(DCUTILSDIR)
-
-$(LIBDIR)/libgtool.a: $(LIBDIR)/libdcutils.a
-	$(MAKE) -C $(GTOOLDIR)
-
-ifeq ($(SDM),-D_SDM)
-makesdm: $(OBJ_DIR)/scale_precision.o \
+OBJS_FOR_SDM = $(OBJ_DIR)/scale_precision.o \
 	$(OBJ_DIR)/scale_prof.o \
 	$(OBJ_DIR)/scale_comm.o \
 	$(OBJ_DIR)/scale_atmos_sub_thermodyn.o \
@@ -245,12 +212,31 @@ makesdm: $(OBJ_DIR)/scale_precision.o \
 	$(OBJ_DIR)/scale_grid_cartesian.o \
 	$(OBJ_DIR)/scale_grid_real.o \
 	$(OBJ_DIR)/scale_gridtrans.o \
-	$(OBJ_DIR)/scale_les_process.o  
-	$(MAKE) -C $(MTDIR)
-	$(MAKE) -C $(GAGETRYDIR)
-	$(MAKE) -C $(SDMDIR)
-else
+	$(OBJ_DIR)/scale_les_process.o
+
+all:
+	$(MAKE) makedir
+	@echo;echo "Entering scalelib..."; echo "Current version is " $(LIBVERSION)
+	$(MAKE) -C $(DCUTILSDIR)
+	$(MAKE) -C $(GTOOLDIR)
+ifeq ($(ENABLE_SDM),T)
+	$(MAKE) checksdm
+	$(MAKE) overridesdm
+	$(MAKE) makesdm
 endif
+	$(MAKE) $(LIBDIR)/$(LIBNAME)
+	$(MAKE) modules
+	@echo "Complete making scalelib."
+
+makedir:
+	@mkdir -p $(MODDIR)
+	mkdir -p $(LIBDIR)
+
+$(LIBDIR)/libdcutils.a:
+	$(MAKE) -C $(DCUTILSDIR)
+
+$(LIBDIR)/libgtool.a: $(LIBDIR)/libdcutils.a
+	$(MAKE) -C $(GTOOLDIR)
 
 $(LIBNAME): $(LIBDIR)/$(LIBNAME)
 	install $< $@
@@ -267,38 +253,66 @@ modules: $(OBJS)
 endif
 
 
-ifeq ($(SDM),-D_SDM)
-allclean: distclean
-ifeq ($(SDM_EXIST),$(SDMDIR))
+
+
+
+makesdm: $(OBJS_FOR_SDM)
+	$(MAKE) -C $(MTDIR)
+	$(MAKE) -C $(GAGETRYDIR)
+	$(MAKE) -C $(SDMDIR)
+
+checksdm:
+ifneq ($(SDM_EXIST),$(SDMDIR))
+	@echo "SDM directory is missing!" $(SDM_EXIST)
+	@echo "********************************************************************************************* "
+	@echo "** SDM module, which is compiled with 'ENABLE_SDM=T', is not supported.                  **** "
+	@echo "** If you want to use SDM module, please contact Dr. S.Shima(s_shima@sim.u-hyogo.ac.jp)  **** "
+	@echo "********************************************************************************************* "
+	exit 1
+endif
+
+overridesdm:
+	@echo;echo "Copy SDM-related file from $(SDMDIR)"
+	rsync -th $(SDMDIR)/scale_atmos_phy_mp_sdm.F90 $(SCALELIBDIR)/src/atmos-physics/microphysics/
+	rsync -th $(SDMDIR)/scale_tracer_sdm.F90       $(SCALELIBDIR)/src/common/tracer/
+	@echo
+
+restoresdm:
+	@echo;echo "Restore SDM-related file"
+	rsync -th $(SDMDIR)/scale_atmos_phy_mp_sdm_dummy.F90 $(SCALELIBDIR)/src/atmos-physics/microphysics/scale_atmos_phy_mp_sdm.F90
+	rsync -th $(SDMDIR)/scale_tracer_sdm_dummy.F90       $(SCALELIBDIR)/src/common/tracer/scale_tracer_sdm.F90
+	@echo
+
+allcleansdm:
 	$(MAKE) -C $(MTDIR)      allclean
 	$(MAKE) -C $(GAGETRYDIR) allclean
 	$(MAKE) -C $(SDMDIR)     allclean
-endif
-	$(MAKE) -C $(DCUTILSDIR) allclean
-	$(MAKE) -C $(GTOOLDIR)   allclean
-	rm -f $(LIBDIR)/$(LIBNAME)
-else
+
+cleansdm:
+	$(MAKE) -C $(SDMDIR)     clean
+
+
+
 allclean: distclean
 	$(MAKE) -C $(DCUTILSDIR) allclean
 	$(MAKE) -C $(GTOOLDIR)   allclean
-	rm -f $(LIBDIR)/$(LIBNAME)
+ifeq ($(ENABLE_SDM),T)
+	$(MAKE) checksdm
+	$(MAKE) restoresdm
+	$(MAKE) allcleansdm
 endif
+	rm -f $(LIBDIR)/$(LIBNAME)
 
 distclean: clean
 	rm -f $(LIBNAME)
 
-ifeq ($(SDM),-D_SDM)
 clean:
-	rm -f *.o *.mod *.lst
-ifeq ($(SDM_EXIST),$(SDMDIR))
-	$(MAKE) -C $(SDMDIR) clean
-	cp -pf $(SDMDIR)/scale_atmos_phy_mp_sdm_dummy.F90 $(SCALELIBDIR)/src/atmos-physics/microphysics/scale_atmos_phy_mp_sdm.F90
-	cp -pf $(SDMDIR)/scale_tracer_sdm_dummy.F90 $(SCALELIBDIR)/src/common/tracer/scale_tracer_sdm.F90
+ifeq ($(ENABLE_SDM),T)
+	$(MAKE) checksdm
+	$(MAKE) restoresdm
+	$(MAKE) cleansdm
 endif
-else
-clean:
 	rm -f *.o *.mod *.lst
-endif
 
 dependency:
 	./makedepend .
@@ -331,8 +345,6 @@ $(OBJ_DIR)/scale_atmos_dyn_rk_hevi.o:
 	$(FC) $(FFLAGS_DYN) $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(LIBVERSION)\" -I$(DCUTILSDIR) -I$(GTOOLDIR) -I$(INDEX_DIR) -I$(SCALELIBDIR)/include -I$(OBJ_DIR) $(PAPI_INCLUDE) $(MODDIROPT) $(OBJ_DIR) -o $@ -c $<
 $(OBJ_DIR)/scale_atmos_dyn_rk_hivi.o:
 	$(FC) $(FFLAGS_DYN) $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(LIBVERSION)\" -I$(DCUTILSDIR) -I$(GTOOLDIR) -I$(INDEX_DIR) -I$(SCALELIBDIR)/include -I$(OBJ_DIR) $(PAPI_INCLUDE) $(MODDIROPT) $(OBJ_DIR) -o $@ -c $<
-$(OBJ_DIR)/scale_atmos_phy_mp_sdm.o:
-	$(FC) $(FFLAGS_SDM) $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(LIBVERSION)\" -I$(DCUTILSDIR) -I$(GTOOLDIR) -I$(INDEX_DIR) -I$(SCALELIBDIR)/include -I$(OBJ_DIR) $(CONTRIB_INCLUDE) $(PAPI_INCLUDE) $(MODDIROPT) $(OBJ_DIR) -o $@ -c $<
 $(OBJ_DIR)/%.o : %.c
 	$(CC) $(CFLAGS) -I$(SCALELIBDIR)/include -o $@ -c $<
 
