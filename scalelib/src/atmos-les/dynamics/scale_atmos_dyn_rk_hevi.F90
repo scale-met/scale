@@ -203,7 +203,7 @@ contains
     real(RP), intent(out) :: RHOT_RK(KA,IA,JA)   !
 
     real(RP), intent(inout) :: mflx_hi(KA,IA,JA,3) ! rho * vel(x,y,z)
-    real(RP), intent(inout) :: tflx_hi(KA,IA,JA,3) ! rho * theta * vel(x,y,z)
+    real(RP), intent(out)   :: tflx_hi(KA,IA,JA,3) ! rho * theta * vel(x,y,z)
 
     real(RP), intent(in),target :: DENS0(KA,IA,JA) ! prognostic variables
     real(RP), intent(in),target :: MOMZ0(KA,IA,JA) ! at previous dynamical time step
@@ -845,11 +845,9 @@ contains
 #endif
 
        ! at (u, y, z)
-       iss = max(IIS-1,IS-IFS_OFF)
-       iee = min(IIE,IEH)
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JJS,   JJE
-       do i = iss, iee
+       do i = IIS-1, IIE
        do k = KS, KE
 #ifdef DEBUG
           call CHECK( __LINE__, mflx_hi(k,i,j,XDIR) )
@@ -871,7 +869,7 @@ contains
 #endif
        ! at (x, v, z)
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       do j = max(JJS-1,JS-JFS_OFF), min(JJE,JEH)
+       do j = JJS-1, JJE
        do i = IIS,   IIE
        do k = KS, KE
 #ifdef DEBUG
