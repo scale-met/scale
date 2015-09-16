@@ -1780,7 +1780,7 @@ contains
     real(RP), parameter :: d_min = 1.E-9_RP
     real(RP) :: d_lw(nbins_out), d_up(nbins_out)
   
-!    rnum_out(:) = 0._RP
+    rnum_out(:) = 0._RP
 !  
 !    dlogd = (log(d_max) - log(d_min))/float(nbins_out)
 !    dlog10d_out = (log10(d_max)-log10(d_min))/float(nbins_out)
