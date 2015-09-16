@@ -640,9 +640,6 @@ contains
        do j = JS, JE
        do k = KS, KE
           mflx_hi(k,IS-1,j,XDIR) = GSQRT(k,IS-1,j,I_UYZ) * MOMX(k,IS-1,j) / MAPF(IS-1,j,2,I_UY)
-          tflx_hi(k,IS-1,j,XDIR) = mflx_hi(k,IS-1,j,XDIR) &
-                                 * ( FACT_N * ( DAMP_POTT(k,IS  ,j)+DAMP_POTT(k,IS-1,j) ) &
-                                   + FACT_F * ( DAMP_POTT(k,IS+1,j)+DAMP_POTT(k,IS-2,j) ) )
        enddo
        enddo
     end if
@@ -651,9 +648,6 @@ contains
        do j = JS, JE
        do k = KS, KE
           mflx_hi(k,IE,j,XDIR) = GSQRT(k,IE,j,I_UYZ) * MOMX(k,IE,j) / MAPF(IE,j,2,I_UY)
-          tflx_hi(k,IE,j,XDIR) = mflx_hi(k,IE,j,XDIR) &
-                               * ( FACT_N * ( DAMP_POTT(k,IE+1,j)+DAMP_POTT(k,IE  ,j) ) &
-                                 + FACT_F * ( DAMP_POTT(k,IE+2,j)+DAMP_POTT(k,IE-1,j) ) )
        enddo
        enddo
     end if
@@ -662,9 +656,6 @@ contains
        do i = IS, IE
        do k = KS, KE
           mflx_hi(k,i,JS-1,YDIR) = GSQRT(k,i,JS-1,I_XVZ) * MOMY(k,i,JS-1) / MAPF(i,JS-1,1,I_XV)
-          tflx_hi(k,i,JS-1,YDIR) = mflx_hi(k,i,JS-1,YDIR) &
-                                 * ( FACT_N * ( DAMP_POTT(k,i,JS  )+DAMP_POTT(k,i,JS-1) ) &
-                                   + FACT_F * ( DAMP_POTT(k,i,JS+1)+DAMP_POTT(k,i,JS-2) ) )
        enddo
        enddo
     end if
@@ -673,9 +664,6 @@ contains
        do i = IS, IE
        do k = KS, KE
           mflx_hi(k,i,JE,YDIR) = GSQRT(k,i,JE,I_XVZ) * MOMY(k,i,JE) / MAPF(i,JE,1,I_XV)
-          tflx_hi(k,i,JE,YDIR) = mflx_hi(k,i,JE,YDIR) &
-                               * ( FACT_N * ( DAMP_POTT(k,i,JE+1)+DAMP_POTT(k,i,JE  ) ) &
-                                 + FACT_F * ( DAMP_POTT(k,i,JE+2)+DAMP_POTT(k,i,JE-1) ) )
        enddo
        enddo
     end if
@@ -1495,102 +1483,6 @@ contains
 
        enddo
        enddo
-
-       call PROF_rapend ("DYN_Tracer", 2)
-
-       call PROF_rapstart("DYN_Boundary", 2)
-
-       if ( iq <= BND_QA ) then
-
-          if ( BND_W ) then
-             !$omp parallel do private(j,k) OMP_SCHEDULE_ collapse(2)
-             do j = JS, JE
-             do k = KS, KE
-                qflx_hi(k,IS-1,j,XDIR) = mflx_hi(k,IS-1,j,XDIR) &
-                                       * ( FACT_N * ( DAMP_QTRC(k,IS  ,j,iq)+DAMP_QTRC(k,IS-1,j,iq) ) &
-                                         + FACT_F * ( DAMP_QTRC(k,IS+1,j,iq)+DAMP_QTRC(k,IS-2,j,iq) ) )
-             enddo
-             enddo
-             !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-             do j = JS-1, JE+1
-             do i = IS-2, IS-1
-             do k = KS, KE
-                qflx_lo(k,i,j,XDIR) = 0.5_RP &
-                                    * (     mflx_hi(k,i,j,XDIR)  * ( DAMP_QTRC(k,i+1,j,iq)+DAMP_QTRC(k,i,j,iq) ) &
-                                      - abs(mflx_hi(k,i,j,XDIR)) * ( DAMP_QTRC(k,i+1,j,iq)-DAMP_QTRC(k,i,j,iq) ) )
-             enddo
-             enddo
-             enddo
-          endif
-
-          if ( BND_E ) then
-             !$omp parallel do private(j,k) OMP_SCHEDULE_ collapse(2)
-             do j = JS, JE
-             do k = KS, KE
-                qflx_hi(k,IE  ,j,XDIR) = mflx_hi(k,IE,j,XDIR) &
-                                       * ( FACT_N * ( DAMP_QTRC(k,IE+1,j,iq)+DAMP_QTRC(k,IE  ,j,iq) ) &
-                                         + FACT_F * ( DAMP_QTRC(k,IE+2,j,iq)+DAMP_QTRC(k,IE-1,j,iq) ) )
-             enddo
-             enddo
-             !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-             do j = JS-1, JE+1
-             do i = IE,   IE+1
-             do k = KS, KE
-                qflx_lo(k,i,j,XDIR) = 0.5_RP &
-                                    * (     mflx_hi(k,i,j,XDIR)  * ( DAMP_QTRC(k,i+1,j,iq)+DAMP_QTRC(k,i,j,iq) ) &
-                                      - abs(mflx_hi(k,i,j,XDIR)) * ( DAMP_QTRC(k,i+1,j,iq)-DAMP_QTRC(k,i,j,iq) ) )
-             enddo
-             enddo
-             enddo
-          endif
-
-          if ( BND_S ) then
-             !$omp parallel do private(i,k) OMP_SCHEDULE_ collapse(2)
-             do i = IS, IE
-             do k = KS, KE
-                qflx_hi(k,i,JS-1,YDIR) = mflx_hi(k,i,JS-1,YDIR) &
-                                       * ( FACT_N * ( DAMP_QTRC(k,i,JS  ,iq)+DAMP_QTRC(k,i,JS-1,iq) ) &
-                                         + FACT_F * ( DAMP_QTRC(k,i,JS+1,iq)+DAMP_QTRC(k,i,JS-2,iq) ) )
-             enddo
-             enddo
-             !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-             do j = JS-2, JS-1
-             do i = IS-1, IE+1
-             do k = KS, KE
-                qflx_lo(k,i,j,YDIR) = 0.5_RP &
-                                    * (     mflx_hi(k,i,j,YDIR)  * ( DAMP_QTRC(k,i,j+1,iq)+DAMP_QTRC(k,i,j,iq) ) &
-                                      - abs(mflx_hi(k,i,j,YDIR)) * ( DAMP_QTRC(k,i,j+1,iq)-DAMP_QTRC(k,i,j,iq) ) )
-             enddo
-             enddo
-             enddo
-          endif
-
-          if ( BND_N ) then
-             !$omp parallel do private(i,k) OMP_SCHEDULE_ collapse(2)
-             do i = IS, IE
-             do k = KS, KE
-                qflx_hi(k,i,JE  ,YDIR) = mflx_hi(k,i,JE,YDIR) &
-                                       * ( FACT_N * ( DAMP_QTRC(k,i,JE+1,iq)+DAMP_QTRC(k,i,JE  ,iq) ) &
-                                         + FACT_F * ( DAMP_QTRC(k,i,JE+2,iq)+DAMP_QTRC(k,i,JE-1,iq) ) )
-             enddo
-             enddo
-             !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-             do j = JE, JE+1
-             do i = IS-1, IE+1
-             do k = KS, KE
-                qflx_lo(k,i,j,YDIR) = 0.5_RP &
-                                    * (     mflx_hi(k,i,j,YDIR)  * ( DAMP_QTRC(k,i,j+1,iq)+DAMP_QTRC(k,i,j,iq) ) &
-                                      - abs(mflx_hi(k,i,j,YDIR)) * ( DAMP_QTRC(k,i,j+1,iq)-DAMP_QTRC(k,i,j,iq) ) )
-             enddo
-             enddo
-             enddo
-          endif
-
-       endif
-
-       call PROF_rapend  ("DYN_Boundary", 2)
-
-       call PROF_rapstart("DYN_Tracer", 2)
 
        call ATMOS_DYN_fct( qflx_anti,                    & ! (out)
                            QTRC(:,:,:,iq), DENS00, DENS, & ! (in)
