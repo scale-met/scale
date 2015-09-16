@@ -2,7 +2,7 @@
 !> module ATMOSPHERE / Physics Cloud Microphysics
 !!
 !! @par Description
-!!          Dummy Cloud Microphysics for sdm atmosphere
+!!          Cloud Microphysics by Super Droplet Method (SDM), dummy interface
 !!
 !! @author Team SCALE
 !!
@@ -75,29 +75,34 @@ contains
   !> Cloud Microphysics
   !-----------------------------------------------------------------------------
   subroutine ATMOS_PHY_MP_sdm( &
-          DENS,      &
-          MOMZ,      &
-          MOMX,      &
-          MOMY,      &
-          RHOT,      &
-          QTRC,      &
-          CCN,       &
-          SFLX_rain, &
-          SFLX_snow  )
-    use scale_process, only: &
-       PRC_MPIstop
+       DENS,      &
+       MOMZ,      &
+       MOMX,      &
+       MOMY,      &
+       RHOT,      &
+       QTRC,      &
+       CCN,       &
+       EVAPORATE, &
+       SFLX_rain, &
+       SFLX_snow  )
+    use scale_grid_index
     use scale_tracer, only: &
        QAD => QA
+    use scale_process, only: &
+       PRC_MPIstop
     implicit none
+
     real(RP), intent(inout) :: DENS(KA,IA,JA)
     real(RP), intent(inout) :: MOMZ(KA,IA,JA)
     real(RP), intent(inout) :: MOMX(KA,IA,JA)
     real(RP), intent(inout) :: MOMY(KA,IA,JA)
     real(RP), intent(inout) :: RHOT(KA,IA,JA)
     real(RP), intent(inout) :: QTRC(KA,IA,JA,QAD)
-    real(RP), intent(in)   :: CCN(KA,IA,JA)
+    real(RP), intent(in)    :: CCN (KA,IA,JA)
+    real(RP), intent(out)   :: EVAPORATE(KA,IA,JA)   !---- evaporated cloud number concentration [/m3]
     real(RP), intent(out)   :: SFLX_rain(IA,JA)
     real(RP), intent(out)   :: SFLX_snow(IA,JA)
+    !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** SDM not supported.'
@@ -132,6 +137,7 @@ contains
        QTRC0, &
        DENS0, &
        TEMP0  )
+    use scale_grid_index
     use scale_tracer, only: &
        QAD => QA, &
        MP_QAD => MP_QA

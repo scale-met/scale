@@ -556,10 +556,10 @@ contains
        RHOT,      &
        QTRC,      &
        CCN,       &
+       EVAPORATE, &
        SFLX_rain, &
        SFLX_snow  )
     use scale_grid_index
-    use scale_precision
     use scale_tracer, only: &
        QAD => QA, &
        MP_QAD => MP_QA
@@ -605,6 +605,7 @@ contains
     real(RP), intent(inout) :: MOMY(KA,IA,JA)
     real(RP), intent(inout) :: RHOT(KA,IA,JA)        !! DENS * POTT [K*kg/m3]
     real(RP), intent(inout) :: QTRC(KA,IA,JA,QAD)    !! Ratio of mass of tracer to total mass[kg/kg]
+    real(RP), intent(out)   :: EVAPORATE(KA,IA,JA)   !---- evaporated cloud number concentration [/m3]
     real(RP), intent(in)    :: CCN(KA,IA,JA)         !! cloud condensation nuclei calculated by aerosol module
     real(RP), intent(out)   :: SFLX_rain(IA,JA)      !! rain flux at surface (used in land and urban model)
     real(RP), intent(out)   :: SFLX_snow(IA,JA)      !! snow flux at surface (used in land and urban model)
@@ -2734,15 +2735,15 @@ contains
        QTRC0, &
        DENS0, &
        TEMP0  )
-    use scale_precision
     use scale_grid_index
     use scale_tracer, only: &
-       QAD => QA
+       QAD => QA, &
+       MP_QAD => MP_QA
     use m_sdm_coordtrans, only: &
        sdm_x2ri, sdm_y2rj
     implicit none
 
-    real(RP), intent(out) :: Re   (KA,IA,JA,MP_QA) ! effective radius
+    real(RP), intent(out) :: Re   (KA,IA,JA,MP_QAD) ! effective radius
     real(RP), intent(in)  :: QTRC0(KA,IA,JA,QAD)   ! tracer mass concentration [kg/kg]
     real(RP), intent(in)  :: DENS0(KA,IA,JA)       ! density                   [kg/m3]
     real(RP), intent(in)  :: TEMP0(KA,IA,JA)       ! temperature [K]
