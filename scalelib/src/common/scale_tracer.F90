@@ -269,6 +269,33 @@ contains
     I_MP2ALL_suzuki10 => I_MP2ALL, &
     I_MP2RD_suzuki10 => I_MP2RD, &
     TRACER_suzuki10_setup
+  use scale_tracer_sdm, only: &
+    QA_MP_sdm => QA_MP, &
+    I_QV_sdm => I_QV, &
+    I_QC_sdm => I_QC, &
+    I_QR_sdm => I_QR, &
+    I_QI_sdm => I_QI, &
+    I_QS_sdm => I_QS, &
+    I_QG_sdm => I_QG, &
+    I_NC_sdm => I_NC, &
+    I_NR_sdm => I_NR, &
+    I_NI_sdm => I_NI, &
+    I_NS_sdm => I_NS, &
+    I_NG_sdm => I_NG, &
+    QQA_sdm => QQA, &
+    QQS_sdm => QQS, &
+    QQE_sdm => QQE, &
+    QWS_sdm => QWS, &
+    QWE_sdm => QWE, &
+    QIS_sdm => QIS, &
+    QIE_sdm => QIE, &
+    MP_QA_sdm => MP_QA, &
+    AQ_MP_NAME_sdm => AQ_MP_NAME, &
+    AQ_MP_DESC_sdm => AQ_MP_DESC, &
+    AQ_MP_UNIT_sdm => AQ_MP_UNIT, &
+    I_MP2ALL_sdm => I_MP2ALL, &
+    I_MP2RD_sdm => I_MP2RD, &
+    TRACER_sdm_setup
   use scale_aetracer_none, only: &
     QA_AE_none => QA_AE, &
     AE_CTG_none => AE_CTG, &
@@ -499,6 +526,38 @@ contains
        AQ_MP_UNIT = AQ_MP_UNIT_suzuki10
        I_MP2ALL = I_MP2ALL_suzuki10
        I_MP2RD = I_MP2RD_suzuki10
+    case ("SDM")
+       call TRACER_sdm_setup
+       QA_MP = QA_MP_sdm
+       I_QV = I_QV_sdm
+       I_QC = I_QC_sdm
+       I_QR = I_QR_sdm
+       I_QI = I_QI_sdm
+       I_QS = I_QS_sdm
+       I_QG = I_QG_sdm
+       I_NC = I_NC_sdm
+       I_NR = I_NR_sdm
+       I_NI = I_NI_sdm
+       I_NS = I_NS_sdm
+       I_NG = I_NG_sdm
+       QQA = QQA_sdm
+       QQS = QQS_sdm
+       QQE = QQE_sdm
+       QWS = QWS_sdm
+       QWE = QWE_sdm
+       QIS = QIS_sdm
+       QIE = QIE_sdm
+       MP_QA = MP_QA_sdm
+       allocate( AQ_MP_NAME(QA_MP) )
+       allocate( AQ_MP_DESC(QA_MP) )
+       allocate( AQ_MP_UNIT(QA_MP) )
+       allocate( I_MP2ALL(MP_QA) )
+       allocate( I_MP2RD(MP_QA) )
+       AQ_MP_NAME = AQ_MP_NAME_sdm
+       AQ_MP_DESC = AQ_MP_DESC_sdm
+       AQ_MP_UNIT = AQ_MP_UNIT_sdm
+       I_MP2ALL = I_MP2ALL_sdm
+       I_MP2RD = I_MP2RD_sdm
      case default
         write(*,*) 'xxx Unsupported AETRACER_TYPE (', trim(AETRACER_TYPE), '). Check!'
         call PRC_MPIstop
