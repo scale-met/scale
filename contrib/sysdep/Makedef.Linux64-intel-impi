@@ -1,0 +1,12 @@
+#
+# ------ FOR MacOSX & gfortran4.9 & OpenMPI1.7 -----
+#
+
+##### additional compile option for all SDM modules
+
+ADDITIONAL_FFLAGS_SDM =
+
+##### additional compile option for specific SDM modules
+
+# sdm_condensation_water.f90
+FFLAGS_SDM1 =
