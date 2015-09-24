@@ -164,7 +164,7 @@ contains
 
 #ifndef DRY
 
-    call PROF_rapstart('MP_Saturation_adjustment', 3)
+    call PROF_rapstart('MP_Saturation_adjustment', 2)
 
     rdt = 1.0_RP / dt
 
@@ -309,7 +309,7 @@ contains
     enddo
     enddo
 
-    call PROF_rapend  ('MP_Saturation_adjustment', 3)
+    call PROF_rapend  ('MP_Saturation_adjustment', 2)
 
 #else
     RHOE_t = UNDEF
@@ -690,7 +690,7 @@ contains
     integer :: k, i, j, iq
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('MP_Precipitation', 3)
+    call PROF_rapstart('MP_Precipitation', 2)
 
     if ( TRACER_TYPE /= 'SUZUKI10' ) then
        do iq = I_QC, QQE
@@ -875,7 +875,7 @@ contains
     endif
 
 
-    call PROF_rapend  ('MP_Precipitation', 3)
+    call PROF_rapend  ('MP_Precipitation', 2)
 
     return
   end subroutine ATMOS_PHY_MP_precipitation

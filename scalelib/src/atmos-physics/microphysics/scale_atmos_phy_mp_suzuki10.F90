@@ -749,7 +749,7 @@ contains
                                QTRC(:,:,:,:) ) ! [INOUT]
     endif
 
-    call PROF_rapstart('MP_ijkconvert', 1)
+    call PROF_rapstart('MP_ijkconvert', 3)
 
     ! Clear EVAPORATE
     do j = JS, JE
@@ -887,45 +887,45 @@ contains
     enddo
     enddo
 
-    call PROF_rapend  ('MP_ijkconvert', 1)
+    call PROF_rapend  ('MP_ijkconvert', 3)
 
     ! tentative timername registration
-    call PROF_rapstart('MP_SBM_Main', 1)
-    call PROF_rapend  ('MP_SBM_Main', 1)
-    call PROF_rapstart('_SBM_Nucleat',    2)
-    call PROF_rapend  ('_SBM_Nucleat',    2)
-!    call PROF_rapstart('_SBM_NucleatA',   2)
-!    call PROF_rapend  ('_SBM_NucleatA',   2)
-    call PROF_rapstart('_SBM_Liqphase',   2)
-    call PROF_rapend  ('_SBM_Liqphase',   2)
-    call PROF_rapstart('_SBM_Icephase',   2)
-    call PROF_rapend  ('_SBM_Icephase',   2)
-    call PROF_rapstart('_SBM_Mixphase',   2)
-    call PROF_rapend  ('_SBM_Mixphase',   2)
+    call PROF_rapstart('MP_suzuki10', 3)
+    call PROF_rapend  ('MP_suzuki10', 3)
+    call PROF_rapstart('_SBM_Nucleat',    3)
+    call PROF_rapend  ('_SBM_Nucleat',    3)
+!    call PROF_rapstart('_SBM_NucleatA',   3)
+!    call PROF_rapend  ('_SBM_NucleatA',   3)
+    call PROF_rapstart('_SBM_Liqphase',   3)
+    call PROF_rapend  ('_SBM_Liqphase',   3)
+    call PROF_rapstart('_SBM_Icephase',   3)
+    call PROF_rapend  ('_SBM_Icephase',   3)
+    call PROF_rapstart('_SBM_Mixphase',   3)
+    call PROF_rapend  ('_SBM_Mixphase',   3)
     call PROF_rapstart('_SBM_AdvLiq',     3)
     call PROF_rapend  ('_SBM_AdvLiq',     3)
     call PROF_rapstart('_SBM_AdvIce',     3)
     call PROF_rapend  ('_SBM_AdvIce',     3)
     call PROF_rapstart('_SBM_AdvMix',     3)
     call PROF_rapend  ('_SBM_AdvMix',     3)
-!    call PROF_rapstart('_SBM_FAero',      2)
-!    call PROF_rapend  ('_SBM_FAero',      2)
-    call PROF_rapstart('_SBM_Freezing',   2)
-    call PROF_rapend  ('_SBM_Freezing',   2)
-    call PROF_rapstart('_SBM_IceNucleat', 2)
-    call PROF_rapend  ('_SBM_IceNucleat', 2)
-    call PROF_rapstart('_SBM_Melting',    2)
-    call PROF_rapend  ('_SBM_Melting',    2)
-    call PROF_rapstart('_SBM_CollCoag',   2)
-    call PROF_rapend  ('_SBM_CollCoag',   2)
-!    call PROF_rapstart('_SBM_CollCoagR',  2)
-!    call PROF_rapend  ('_SBM_CollCoagR',  2)
+!    call PROF_rapstart('_SBM_FAero',      3)
+!    call PROF_rapend  ('_SBM_FAero',      3)
+    call PROF_rapstart('_SBM_Freezing',   3)
+    call PROF_rapend  ('_SBM_Freezing',   3)
+    call PROF_rapstart('_SBM_IceNucleat', 3)
+    call PROF_rapend  ('_SBM_IceNucleat', 3)
+    call PROF_rapstart('_SBM_Melting',    3)
+    call PROF_rapend  ('_SBM_Melting',    3)
+    call PROF_rapstart('_SBM_CollCoag',   3)
+    call PROF_rapend  ('_SBM_CollCoag',   3)
+!    call PROF_rapstart('_SBM_CollCoagR',  3)
+!    call PROF_rapend  ('_SBM_CollCoagR',  3)
 
     if ( ijkcount > 0 ) then
 
-    call PROF_rapstart('MP_SBM_Main', 1)
+    call PROF_rapstart('MP_suzuki10', 3)
 
-    call MP_Suzuki10( ijkcount,                   & ! [IN]
+    call MP_suzuki10( ijkcount,                   & ! [IN]
                       ijkcount_cold,              & ! [IN]
                       ijkcount_warm,              & ! [IN]
                       index_cold(    1:ijkcount), & ! [IN]
@@ -940,7 +940,7 @@ contains
                       Evaporate_ijk( 1:ijkcount), & ! [OUT]
                       dt                          ) ! [IN]
 
-    call PROF_rapend  ('MP_SBM_Main', 1)
+    call PROF_rapend  ('MP_suzuki10', 3)
 
 !    if ( flg_sf_aero ) then
 !     do j = JS-2, JE+2
@@ -984,7 +984,7 @@ contains
 !     enddo
 !    endif
 
-    call PROF_rapstart('MP_ijkconvert', 1)
+    call PROF_rapstart('MP_ijkconvert', 3)
 
     !---- return original array
     do ijk = 1, ijkcount
@@ -1053,13 +1053,13 @@ contains
 !       enddo
 !    endif
 
-    call PROF_rapend  ('MP_ijkconvert', 1)
+    call PROF_rapend  ('MP_ijkconvert', 3)
 
     endif
 
-    call PROF_rapstart('MP_barrier', 1)
+    call PROF_rapstart('MP_barrier', 3)
     call COMM_barrier
-    call PROF_rapend  ('MP_barrier', 1)
+    call PROF_rapend  ('MP_barrier', 3)
 
     FLX_rain(:,:,:) = 0.0_RP
     FLX_snow(:,:,:) = 0.0_RP
@@ -1121,7 +1121,7 @@ contains
   end subroutine ATMOS_PHY_MP_suzuki10
 
   !-----------------------------------------------------------------------------
-  subroutine MP_Suzuki10( &
+  subroutine MP_suzuki10( &
        ijkmax,      &
        ijkmax_cold, &
        ijkmax_warm, &
@@ -1344,7 +1344,7 @@ contains
     endif
 
     return
-  end subroutine MP_Suzuki10
+  end subroutine MP_suzuki10
 
   !-----------------------------------------------------------------------------
   subroutine nucleat( &
@@ -1378,7 +1378,7 @@ contains
   real(RP) :: psat
   integer  :: ijk
 
-    call PROF_rapstart('_SBM_Nucleat', 2)
+    call PROF_rapstart('_SBM_Nucleat', 3)
 
   if( MP_couple_aerosol ) then
 
@@ -1434,7 +1434,7 @@ contains
 
   endif
 
-    call PROF_rapend  ('_SBM_Nucleat', 2)
+    call PROF_rapend  ('_SBM_Nucleat', 3)
 
   return
   end subroutine nucleat
@@ -1474,7 +1474,7 @@ contains
   real(RP) :: psat
   integer  :: ijk
 
-    call PROF_rapstart('_SBM_NucleatA', 2)
+    call PROF_rapstart('_SBM_NucleatA', 3)
 
   do ijk = 1, ijkmax
     !
@@ -1559,7 +1559,7 @@ contains
 
   enddo
 
-    call PROF_rapend  ('_SBM_NucleatA', 2)
+    call PROF_rapend  ('_SBM_NucleatA', 3)
 
     return
   end subroutine nucleata
@@ -1729,7 +1729,7 @@ contains
   real(RP) :: cmins, cplus
   integer :: nloopmax
 
-    call PROF_rapstart('_SBM_Liqphase', 2)
+    call PROF_rapstart('_SBM_Liqphase', 3)
 
 
   iflg(:,:) = 0
@@ -2035,7 +2035,7 @@ contains
       enddo
   enddo
 
-    call PROF_rapend  ('_SBM_Liqphase', 2)
+    call PROF_rapend  ('_SBM_Liqphase', 3)
 
     return
   end subroutine liqphase
@@ -2093,7 +2093,7 @@ contains
   integer :: nloopmax
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('_SBM_Icephase', 2)
+    call PROF_rapstart('_SBM_Icephase', 3)
 
   iflg(:,:) = 0
   csum( :,: ) = 0.0_RP
@@ -2394,7 +2394,7 @@ contains
     enddo
   enddo
 
-    call PROF_rapend  ('_SBM_Icephase', 2)
+    call PROF_rapend  ('_SBM_Icephase', 3)
 
     return
   end subroutine icephase
@@ -2454,7 +2454,7 @@ contains
   real(RP) :: cmins, cplus
   integer :: nloopmax
 
-    call PROF_rapstart('_SBM_Mixphase', 2)
+    call PROF_rapstart('_SBM_Mixphase', 3)
 
   dumm_regene( : ) = 0.0_RP
   iflg( :,: ) = 0
@@ -2811,7 +2811,7 @@ contains
    dumm_regene(:) = 0.0_RP
   endif
 
-    call PROF_rapend  ('_SBM_Mixphase', 2)
+    call PROF_rapend  ('_SBM_Mixphase', 3)
 
     return
   end subroutine mixphase
@@ -2852,7 +2852,7 @@ contains
   integer :: ijk, indirect
 
 
-    call PROF_rapstart('_SBM_IceNucleat', 2)
+    call PROF_rapstart('_SBM_IceNucleat', 3)
 
   do indirect = 1, num_cold
      ijk = index_cold(indirect)
@@ -2891,7 +2891,7 @@ contains
   enddo
 
 
-    call PROF_rapend  ('_SBM_IceNucleat', 2)
+    call PROF_rapend  ('_SBM_IceNucleat', 3)
 
     return
   end subroutine ice_nucleat
@@ -2925,7 +2925,7 @@ contains
 !  real(RP), parameter :: gamm = 3.3_RP        ! gamma of eq.(3.18) of Suzuki (2004)
   integer :: ijk, indirect
 
-    call PROF_rapstart('_SBM_Freezing', 2)
+    call PROF_rapstart('_SBM_Freezing', 3)
 
   do indirect = 1, num_cold
      ijk = index_cold(indirect)
@@ -2984,7 +2984,7 @@ contains
      temp(ijk) = temp(ijk) + tdel
   enddo
 
-    call PROF_rapend  ('_SBM_Freezing', 2)
+    call PROF_rapend  ('_SBM_Freezing', 3)
 
     return
   end subroutine freezing
@@ -3012,7 +3012,7 @@ contains
   real(RP) :: summlt, sumice, tdel
   integer :: ijk, indirect
 
-    call PROF_rapstart('_SBM_Melting', 2)
+    call PROF_rapstart('_SBM_Melting', 3)
 
   do indirect = 1, num_warm
      ijk = index_warm(indirect)
@@ -3034,7 +3034,7 @@ contains
       !
   enddo
 
-    call PROF_rapend  ('_SBM_Melting', 2)
+    call PROF_rapend  ('_SBM_Melting', 3)
 
   return
   end subroutine melting
@@ -3130,7 +3130,7 @@ contains
     integer :: ijk, nn, mm, pp, qq
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('_SBM_CollCoag', 2)
+    call PROF_rapstart('_SBM_CollCoag', 3)
 
   iflg( :,: ) = 0
   iexst( :,:,: ) = 0
@@ -3247,7 +3247,7 @@ contains
 
   enddo
 
-    call PROF_rapend  ('_SBM_CollCoag', 2)
+    call PROF_rapend  ('_SBM_CollCoag', 3)
 
     return
   end subroutine collcoag
@@ -3414,7 +3414,7 @@ contains
     integer :: ijk, n
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('_SBM_FAero', 2)
+    call PROF_rapstart('_SBM_FAero', 3)
 
     do ijk = 1, ijkmax
     do n   = 1, nccn
@@ -3422,7 +3422,7 @@ contains
     enddo
     enddo
 
-    call PROF_rapend  ('_SBM_FAero', 2)
+    call PROF_rapend  ('_SBM_FAero', 3)
 
     return
   end subroutine faero
@@ -3558,7 +3558,7 @@ contains
     integer :: ijk, nn, mm, pp, qq, myu, n, isml, ilrg, irsl
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('_SBM_CollCoagR', 2)
+    call PROF_rapstart('_SBM_CollCoagR', 3)
 
   iflg( :,: ) = 0
   iexst( :,:,: ) = 0
@@ -3714,7 +3714,7 @@ contains
 
   enddo
 
-    call PROF_rapend  ('_SBM_CollCoagR', 2)
+    call PROF_rapend  ('_SBM_CollCoagR', 3)
 
     return
   end subroutine r_collcoag
