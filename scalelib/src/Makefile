@@ -119,6 +119,7 @@ OBJS_NAME = $(scale_rdma)	\
 	scale_atmos_dyn_rk_heve.o	\
 	scale_atmos_dyn_rk_hevi.o	\
 	scale_atmos_dyn_rk_hivi.o	\
+	scale_atmos_dyn_rk_none.o	\
 	scale_atmos_phy_ae.o	\
 	scale_atmos_phy_ae_dummy.o	\
 	$(OBJS_AE)	\
@@ -154,6 +155,7 @@ OBJS_NAME = $(scale_rdma)	\
 	scale_grid_index.o	\
 	scale_grid_nest.o	\
 	scale_grid_real.o	\
+	scale_index.o		\
 	scale_gridtrans.o	\
 	scale_history.o	\
 	scale_intepolation.o	\
@@ -344,6 +346,8 @@ $(OBJ_DIR)/scale_atmos_dyn_rk_heve.o:
 $(OBJ_DIR)/scale_atmos_dyn_rk_hevi.o:
 	$(FC) $(FFLAGS_DYN) $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(LIBVERSION)\" -I$(DCUTILSDIR) -I$(GTOOLDIR) -I$(INDEX_DIR) -I$(SCALELIBDIR)/include -I$(OBJ_DIR) $(PAPI_INCLUDE) $(MODDIROPT) $(OBJ_DIR) -o $@ -c $<
 $(OBJ_DIR)/scale_atmos_dyn_rk_hivi.o:
+	$(FC) $(FFLAGS_DYN) $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(LIBVERSION)\" -I$(DCUTILSDIR) -I$(GTOOLDIR) -I$(INDEX_DIR) -I$(SCALELIBDIR)/include -I$(OBJ_DIR) $(PAPI_INCLUDE) $(MODDIROPT) $(OBJ_DIR) -o $@ -c $<
+$(OBJ_DIR)/scale_atmos_dyn_rk_none.o:
 	$(FC) $(FFLAGS_DYN) $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(LIBVERSION)\" -I$(DCUTILSDIR) -I$(GTOOLDIR) -I$(INDEX_DIR) -I$(SCALELIBDIR)/include -I$(OBJ_DIR) $(PAPI_INCLUDE) $(MODDIROPT) $(OBJ_DIR) -o $@ -c $<
 $(OBJ_DIR)/%.o : %.c
 	$(CC) $(CFLAGS) -I$(SCALELIBDIR)/include -o $@ -c $<
