@@ -135,7 +135,7 @@ module mod_atmos_vars
   integer, private, allocatable :: AQ_HIST_id(:)
 
   ! history & monitor output of diagnostic variables
-  integer, private, parameter :: AD_nmax = 63 ! number of diagnostic variables for history output
+  integer, private, parameter :: AD_nmax = 70 ! number of diagnostic variables for history output
 
   integer, private, parameter :: I_W     =  1 ! velocity w at cell center
   integer, private, parameter :: I_U     =  2 ! velocity u at cell center
@@ -213,10 +213,18 @@ module mod_atmos_vars
   integer, private, parameter :: I_QLIQ_MEAN    = 60
   integer, private, parameter :: I_QICE_MEAN    = 61
 
-
   integer, private, parameter :: I_QSAT         = 62
 
   integer, private, parameter :: I_Uabs         = 63
+
+  integer, private, parameter :: I_CAPE         = 64
+  integer, private, parameter :: I_CIN          = 65
+  integer, private, parameter :: I_LCL          = 66
+  integer, private, parameter :: I_LFC          = 67
+  integer, private, parameter :: I_LNB          = 68
+
+  integer, private, parameter :: I_PBLH         = 69
+  integer, private, parameter :: I_MSE          = 70
 
   integer, private            :: AD_HIST_id (AD_nmax)
   integer, private            :: AD_PREP_sw (AD_nmax)
@@ -418,7 +426,7 @@ contains
     call HIST_reg( AD_HIST_id(I_TEMP) , zinterp, 'T',     'temperature',            'K',      ndim=3 )
 
     call HIST_reg( AD_HIST_id(I_POTL) , zinterp, 'LWPT',  'liq. potential temp.',   'K',      ndim=3 )
-    call HIST_reg( AD_HIST_id(I_RHA)  , zinterp, 'RHA',   'relative humidity(liq+ice)', '%', ndim=3 )
+    call HIST_reg( AD_HIST_id(I_RHA)  , zinterp, 'RHA',   'relative humidity(liq+ice)', '%',  ndim=3 )
     call HIST_reg( AD_HIST_id(I_RHL)  , zinterp, 'RH',    'relative humidity(liq)', '%',      ndim=3 )
     call HIST_reg( AD_HIST_id(I_RHI)  , zinterp, 'RHI',   'relative humidity(ice)', '%',      ndim=3 )
 
@@ -426,6 +434,15 @@ contains
     call HIST_reg( AD_HIST_id(I_DIV)  , zinterp, 'DIV',   'divergence',             '1/s',    ndim=3 )
     call HIST_reg( AD_HIST_id(I_HDIV) , zinterp, 'HDIV',  'horizontal divergence',  '1/s',    ndim=3 )
     call HIST_reg( AD_HIST_id(I_Uabs) , zinterp, 'Uabs',  'absolute velocity',      'm/s',    ndim=3 )
+
+    call HIST_reg( AD_HIST_id(I_CAPE) , zinterp, 'CAPE',  'convection avail. pot. energy', 'm2/s2', ndim=2 )
+    call HIST_reg( AD_HIST_id(I_CIN)  , zinterp, 'CIN',   'convection inhibition',         'm2/s2', ndim=2 )
+    call HIST_reg( AD_HIST_id(I_LCL)  , zinterp, 'LCL',   'lifted condensation level',     'm',     ndim=2 )
+    call HIST_reg( AD_HIST_id(I_LFC)  , zinterp, 'LFC',   'level of free convection',      'm',     ndim=2 )
+    call HIST_reg( AD_HIST_id(I_LNB)  , zinterp, 'LNB',   'level of neutral buoyancy',     'm',     ndim=2 )
+
+    call HIST_reg( AD_HIST_id(I_PBLH) , zinterp, 'PBLH',  'PBL height',             'm',      ndim=2 )
+    call HIST_reg( AD_HIST_id(I_MSE)  , zinterp, 'MSE',   'moist static energy',    'm2/s2',  ndim=3 )
 
     call HIST_reg( AD_HIST_id(I_DENS_MEAN), zinterp, 'DENS_MEAN', 'horiz. mean of density',    'kg/m3', ndim=1 )
     call HIST_reg( AD_HIST_id(I_W_MEAN),    zinterp, 'W_MEAN',    'horiz. mean of w',           'm/s',  ndim=1 )
@@ -575,12 +592,35 @@ contains
 
     if ( AD_PREP_sw(I_DIV) > 0 ) then
        AD_PREP_sw(I_HDIV) = 1
-    end if
+    endif
 
     if ( AD_HIST_id(I_Uabs) > 0 ) then
        AD_PREP_sw(I_U)    = 1
        AD_PREP_sw(I_V)    = 1
        AD_PREP_sw(I_Uabs) = 1
+    endif
+
+    if (      AD_HIST_id(I_CAPE) > 0 &
+         .OR. AD_HIST_id(I_CIN)  > 0 &
+         .OR. AD_HIST_id(I_LCL)  > 0 &
+         .OR. AD_HIST_id(I_LFC)  > 0 &
+         .OR. AD_HIST_id(I_LNB)  > 0 ) then
+       AD_PREP_sw(I_CAPE) = 1
+       AD_PREP_sw(I_CIN)  = 1
+       AD_PREP_sw(I_LCL)  = 1
+       AD_PREP_sw(I_LFC)  = 1
+       AD_PREP_sw(I_LNB)  = 1
+    endif
+
+    if ( AD_HIST_id(I_PBLH) > 0 ) then
+       AD_PREP_sw(I_POTT) = 1
+       AD_PREP_sw(I_PBLH) = 1
+    endif
+
+    if ( AD_HIST_id(I_MSE) > 0 ) then
+       AD_PREP_sw(I_CPTOT) = 1
+       AD_PREP_sw(I_TEMP)  = 1
+       AD_PREP_sw(I_MSE)   = 1
     endif
 
     if ( AD_HIST_id(I_DENS_PRIM) > 0 ) then
@@ -1150,13 +1190,16 @@ contains
     use scale_history, only: &
        HIST_in
     use scale_atmos_thermodyn, only: &
-       THERMODYN_qd => ATMOS_THERMODYN_qd, &
-       CPw => AQ_CP,                       &
+       THERMODYN_qd      => ATMOS_THERMODYN_qd,      &
+       THERMODYN_templhv => ATMOS_THERMODYN_templhv, &
+       CPw => AQ_CP,                                 &
        CVw => AQ_CV
     use scale_atmos_saturation, only: &
        SATURATION_psat_all => ATMOS_SATURATION_psat_all, &
        SATURATION_psat_liq => ATMOS_SATURATION_psat_liq, &
        SATURATION_psat_ice => ATMOS_SATURATION_psat_ice
+    use scale_atmos_adiabat, only: &
+       ADIABAT_cape => ATMOS_ADIABAT_cape
     implicit none
 
     real(RP) :: QDRY  (KA,IA,JA) ! dry air            [kg/kg]
@@ -1183,6 +1226,19 @@ contains
     real(RP) :: DIV   (KA,IA,JA) ! divergence            [1/s]
     real(RP) :: HDIV  (KA,IA,JA) ! horizontal divergence [1/s]
     real(RP) :: Uabs  (KA,IA,JA) ! absolute velocity     [m/s]
+
+    real(RP) :: CAPE  (IA,JA)    ! CAPE [m2/s2]
+    real(RP) :: CIN   (IA,JA)    ! CIN [m2/s2]
+    real(RP) :: LCL   (IA,JA)    ! LCL height [m]
+    real(RP) :: LFC   (IA,JA)    ! LFC height [m]
+    real(RP) :: LNB   (IA,JA)    ! LNB height [m]
+
+    real(RP) :: PBLH  (IA,JA)    ! PBL height [m]
+    real(RP) :: POTTv (KA,IA,JA) ! vertual potential temperature [K]
+    real(RP) :: fact
+
+    real(RP) :: MSE   (KA,IA,JA) ! MSE        [m2/s2]
+    real(RP) :: LHvap (KA,IA,JA) ! latent heat for vaporization [m2/s2]
 
     real(RP) :: DENS_PRIM(KA,IA,JA) ! horiz. deviation of density    [kg/m3]
     real(RP) :: W_PRIM   (KA,IA,JA) ! horiz. deviation of w          [m/s]
@@ -1945,6 +2001,78 @@ contains
     call HIST_in( ENGP (:,:,:), 'ENGP',  'potential energy',       'J/m3'   )
     call HIST_in( ENGK (:,:,:), 'ENGK',  'kinetic energy',         'J/m3'   )
     call HIST_in( ENGI (:,:,:), 'ENGI',  'internal energy',        'J/m3'   )
+
+    if (      AD_PREP_sw(I_CAPE) > 0 &
+         .OR. AD_PREP_sw(I_CIN)  > 0 &
+         .OR. AD_PREP_sw(I_LCL)  > 0 &
+         .OR. AD_PREP_sw(I_LFC)  > 0 &
+         .OR. AD_PREP_sw(I_LNB)  > 0 ) then
+
+       call ADIABAT_cape( KS,               & ! [IN]
+                          DENS   (:,:,:),   & ! [IN]
+                          TEMP   (:,:,:),   & ! [IN]
+                          PRES   (:,:,:),   & ! [IN]
+                          QTRC   (:,:,:,:), & ! [IN]
+                          REAL_CZ(:,:,:),   & ! [IN]
+                          REAL_FZ(:,:,:),   & ! [IN]
+                          CAPE   (:,:),     & ! [OUT]
+                          CIN    (:,:),     & ! [OUT]
+                          LCL    (:,:),     & ! [OUT]
+                          LFC    (:,:),     & ! [OUT]
+                          LNB    (:,:)      ) ! [OUT]
+
+    endif
+
+    call HIST_in( CAPE(:,:), 'CAPE', 'convection avail. pot. energy', 'm2/s2' )
+    call HIST_in( CIN (:,:), 'CIN',  'convection inhibition',         'm2/s2' )
+    call HIST_in( LCL (:,:), 'LCL',  'lifted condensation level',     'm'     )
+    call HIST_in( LFC (:,:), 'LFC',  'level of free convection',      'm'     )
+    call HIST_in( LNB (:,:), 'LNB',  'level of neutral buoyancy',     'm'     )
+
+    if ( AD_PREP_sw(I_PBLH) > 0 ) then
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          POTTv(k,i,j) = POTT(k,i,j) * ( 1.0_RP + 0.61_RP * QTRC(k,i,j,I_QV) - 1.61 * QTRC(k,i,j,I_QC) )
+       enddo
+       enddo
+       enddo
+
+       do j = JS, JE
+       do i = IS, IE
+          PBLH(i,j) = REAL_CZ(KS,i,j) - REAL_FZ(KS-1,i,j)
+
+          do k = KS+1, KE
+             if ( POTTv(k,i,j) > POTTv(KS,i,j) ) then
+                fact = ( POTTv(KS,i,j) - POTTv(k-1,i,j) ) &
+                     / ( POTTv(k,i,j)  - POTTv(k-1,i,j) )
+
+                PBLH(i,j) = REAL_CZ(k-1,i,j) - REAL_FZ(KS-1,i,j) &
+                          + fact * ( REAL_CZ(k,i,j) - REAL_CZ(k-1,i,j) )
+
+                exit
+             endif
+          enddo
+       enddo
+       enddo
+    endif
+    call HIST_in( PBLH(:,:), 'PBLH', 'PBL height', 'm' )
+
+    if ( AD_PREP_sw(I_MSE) > 0 ) then
+       call THERMODYN_templhv( LHvap(:,:,:), & ! [OUT]
+                               TEMP (:,:,:)  ) ! [IN]
+
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          MSE(k,i,j) = CPTOT(k,i,j) * TEMP(k,i,j)                    &
+                     + GRAV * ( REAL_CZ(k,i,j) - REAL_FZ(KS-1,i,j) ) &
+                     + LHvap(k,i,j) * QTRC(k,i,j,I_QV)
+       enddo
+       enddo
+       enddo
+    endif
+    call HIST_in( MSE(:,:,:), 'MSE', 'moist static energy', 'm2/s2' )
 
     return
   end subroutine ATMOS_vars_history
