@@ -35,4 +35,5 @@ module scale_index
   integer, public, parameter :: I_RHOT = 5
   integer, public, parameter :: I_QTRC = 6
 
+  integer, public            :: VA ! number of the additional prognostic variables
 end module scale_index

@@ -21,6 +21,7 @@ module scale_atmos_dyn_rk
   use scale_stdio
   use scale_prof
   use scale_grid_index
+  use scale_index
   use scale_tracer
   !-----------------------------------------------------------------------------
   implicit none
@@ -29,21 +30,33 @@ module scale_atmos_dyn_rk
   !
   !++ Public procedure
   !
+  public :: ATMOS_DYN_rk_regist
+
+  !> Runge-Kutta setup
+  abstract interface
+     subroutine setup( BND_W, BND_E, BND_S, BND_N )
+       use scale_precision
+       use scale_grid_index
+       implicit none
+       logical, intent(in) :: BND_W
+       logical, intent(in) :: BND_E
+       logical, intent(in) :: BND_S
+       logical, intent(in) :: BND_N
+     end subroutine setup
+  end interface
+  procedure(setup), pointer :: ATMOS_DYN_rk_setup => NULL()
   public :: ATMOS_DYN_rk_setup
 
-  !-----------------------------------------------------------------------------
-  !
-  !++ Public parameters & variables
-  !
-  !-----------------------------------------------------------------------------
   !> Runge-Kutta loop
   abstract interface
      subroutine rk( &
           DENS_RK, MOMZ_RK, MOMX_RK, MOMY_RK, RHOT_RK, &
+          PROG_RK,                                     &
           mflx_hi, tflx_hi,                            &
           DENS0,   MOMZ0,   MOMX0,   MOMY0,   RHOT0,   &
           DENS,    MOMZ,    MOMX,    MOMY,    RHOT,    &
           DENS_t,  MOMZ_t,  MOMX_t,  MOMY_t,  RHOT_t,  &
+          PROG0, PROG,                                 &
           Rtot, CVtot, CORIOLI,                        &
           num_diff, divdmp_coef,                       &
           FLAG_FCT_RHO, FLAG_FCT_MOMENTUM, FLAG_FCT_T, &
@@ -56,11 +69,14 @@ module scale_atmos_dyn_rk
           dtrk, dt                                     )
        use scale_precision
        use scale_grid_index
+       use scale_index
        real(RP), intent(out) :: DENS_RK(KA,IA,JA)   ! prognostic variables
        real(RP), intent(out) :: MOMZ_RK(KA,IA,JA)   !
        real(RP), intent(out) :: MOMX_RK(KA,IA,JA)   !
        real(RP), intent(out) :: MOMY_RK(KA,IA,JA)   !
        real(RP), intent(out) :: RHOT_RK(KA,IA,JA)   !
+
+       real(RP), intent(out) :: PROG_RK(KA,IA,JA,VA)!
 
        real(RP), intent(inout) :: mflx_hi(KA,IA,JA,3) ! mass flux
        real(RP), intent(out)   :: tflx_hi(KA,IA,JA,3) ! internal energy flux
@@ -82,6 +98,9 @@ module scale_atmos_dyn_rk
        real(RP), intent(in)  :: MOMX_t(KA,IA,JA)    !
        real(RP), intent(in)  :: MOMY_t(KA,IA,JA)    !
        real(RP), intent(in)  :: RHOT_t(KA,IA,JA)    !
+
+       real(RP), intent(in)  :: PROG0(KA,IA,JA,VA)
+       real(RP), intent(in)  :: PROG (KA,IA,JA,VA)
 
        real(RP), intent(in)  :: Rtot    (KA,IA,JA)  ! total R
        real(RP), intent(in)  :: CVtot   (KA,IA,JA)  ! total CV
@@ -126,7 +145,10 @@ module scale_atmos_dyn_rk
   procedure(rk), pointer :: ATMOS_DYN_rk => NULL()
   public :: ATMOS_DYN_rk
 
-
+  !-----------------------------------------------------------------------------
+  !
+  !++ Public parameters & variables
+  !
   !-----------------------------------------------------------------------------
   !
   !++ Private procedure
@@ -138,10 +160,15 @@ module scale_atmos_dyn_rk
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
-  !> Setup
-  subroutine ATMOS_DYN_rk_setup( ATMOS_DYN_TYPE, &
-       BND_W, BND_E, BND_S, BND_N )
-
+  !> Register
+  subroutine ATMOS_DYN_rk_regist( ATMOS_DYN_TYPE, & ! (in)
+                                  VA_out,   & ! (out)
+                                  VAR_NAME, & ! (out)
+                                  VAR_DESC, & ! (out)
+                                  VAR_UNIT  ) ! (out)
+    use scale_precision
+    use scale_grid_index
+    use scale_index
     use scale_process, only: &
        PRC_MPIstop
     use scale_stdio, only: &
@@ -150,47 +177,81 @@ contains
 #define NAME(pre, name, post) EXTM(pre, name, post)
 #ifdef DYNAMICS
     use NAME(scale_atmos_dyn_rk_, DYNAMICS,), only: &
+       NAME(ATMOS_DYN_rk_, DYNAMICS, _regist), &
        NAME(ATMOS_DYN_rk_, DYNAMICS, _setup), &
        NAME(ATMOS_DYN_rk_, DYNAMICS,)
 #else
     use scale_atmos_dyn_rk_heve, only: &
+       ATMOS_DYN_rk_heve_regist, &
        ATMOS_DYN_rk_heve_setup, &
        ATMOS_DYN_rk_heve
     use scale_atmos_dyn_rk_hevi, only: &
+       ATMOS_DYN_rk_hevi_regist, &
        ATMOS_DYN_rk_hevi_setup, &
        ATMOS_DYN_rk_hevi
     use scale_atmos_dyn_rk_hivi, only: &
+       ATMOS_DYN_rk_hivi_regist, &
        ATMOS_DYN_rk_hivi_setup, &
        ATMOS_DYN_rk_hivi
+    use scale_atmos_dyn_rk_none, only: &
+       ATMOS_DYN_rk_none_regist, &
+       ATMOS_DYN_rk_none_setup, &
+       ATMOS_DYN_rk_none
 #endif
     implicit none
-
-    character(len=*), intent(in) :: ATMOS_DYN_TYPE
-    logical, intent(in) :: BND_W
-    logical, intent(in) :: BND_E
-    logical, intent(in) :: BND_S
-    logical, intent(in) :: BND_N
+    character(len=*),       intent(in)  :: ATMOS_DYN_TYPE
+    integer,                intent(out) :: VA_out !< number of prognostic variables
+    character(len=H_SHORT), intent(out) :: VAR_NAME(:) !< name  of the variables
+    character(len=H_MID),   intent(out) :: VAR_DESC(:) !< desc. of the variables
+    character(len=H_SHORT), intent(out) :: VAR_UNIT(:) !< unit  of the variables
     !---------------------------------------------------------------------------
 
+#ifdef DYNAMICS
+    NAME(ATMOS_DYN_rk_, DYNAMICS, _regist)( &
+            ATMOS_DYN_TYPE, &
+            VA_out, &
+            VAR_NAME, VAR_DESC, VAR_UNIT )
+    ATMOS_DYN_rk_setup => NAME(ATMOS_DYN_rk_, DYNAMICS, _setup)
+    ATMOS_DYN_rk => NAME(ATMOS_DYN_rk_, DYNAMICS,)
+#else
     select case ( ATMOS_DYN_TYPE )
     case ( 'HEVE' )
-       call ATMOS_DYN_rk_heve_setup( ATMOS_DYN_TYPE, &
-            BND_W, BND_E, BND_S, BND_N )
+       call ATMOS_DYN_rk_heve_regist( &
+            ATMOS_DYN_TYPE, &
+            VA_out, &
+            VAR_NAME, VAR_DESC, VAR_UNIT )
+       ATMOS_DYN_rk_setup => ATMOS_DYN_rk_heve_setup
        ATMOS_DYN_rk => ATMOS_DYN_rk_heve
     case ( 'HEVI' )
-       call ATMOS_DYN_rk_hevi_setup( ATMOS_DYN_TYPE, &
-            BND_W, BND_E, BND_S, BND_N )
+       call ATMOS_DYN_rk_hevi_regist( &
+            ATMOS_DYN_TYPE, &
+            VA_out, &
+            VAR_NAME, VAR_DESC, VAR_UNIT )
+       ATMOS_DYN_rk_setup => ATMOS_DYN_rk_hevi_setup
        ATMOS_DYN_rk => ATMOS_DYN_rk_hevi
     case ( 'HIVI' )
-       call ATMOS_DYN_rk_hivi_setup( ATMOS_DYN_TYPE, &
-            BND_W, BND_E, BND_S, BND_N )
+       call ATMOS_DYN_rk_hivi_regist( &
+            ATMOS_DYN_TYPE, &
+            VA_out, &
+            VAR_NAME, VAR_DESC, VAR_UNIT )
+       ATMOS_DYN_rk_setup => ATMOS_DYN_rk_hivi_setup
        ATMOS_DYN_rk => ATMOS_DYN_rk_hivi
+    case ( 'NONE' )
+       call ATMOS_DYN_rk_none_regist( &
+            ATMOS_DYN_TYPE, &
+            VA_out, &
+            VAR_NAME, VAR_DESC, VAR_UNIT )
+       ATMOS_DYN_rk_setup => ATMOS_DYN_rk_none_setup
+       ATMOS_DYN_rk => ATMOS_DYN_rk_none
     case default
-       write(*,*) 'xxx ATMOS_DYN_TYPE is invalid'
+       write(*,*) 'xxx ATMOS_DYN_TYPE is invalid', ATMOS_DYN_TYPE
        call PRC_MPIstop
     end select
+#endif
+
+    VA = VA_out
 
     return
-  end subroutine ATMOS_DYN_rk_setup
+  end subroutine ATMOS_DYN_rk_regist
 
 end module scale_atmos_dyn_rk

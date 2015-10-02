@@ -19,6 +19,7 @@ module mod_atmos_dyn_driver
   use scale_stdio
   use scale_prof
   use scale_grid_index
+  use scale_index
   use scale_tracer
   !-----------------------------------------------------------------------------
   implicit none
@@ -88,7 +89,6 @@ contains
     use scale_atmos_dyn, only: &
        ATMOS_DYN_setup
     use mod_atmos_admin, only: &
-       ATMOS_DYN_TYPE, &
        ATMOS_sw_dyn
     use mod_atmos_vars, only: &
        DENS, &
@@ -97,6 +97,8 @@ contains
        MOMY, &
        RHOT, &
        QTRC
+    use mod_atmos_dyn_vars, only: &
+       PROG
     implicit none
 
     NAMELIST / PARAM_ATMOS_DYN / &
@@ -135,8 +137,9 @@ contains
 
        DT = real(TIME_DTSEC_ATMOS_DYN,kind=RP)
 
-       call ATMOS_DYN_setup( ATMOS_DYN_TYPE,                 & ! [IN]
+       call ATMOS_DYN_setup( &
                              DENS, MOMZ, MOMX, MOMY, RHOT, QTRC, & ! [IN]
+                             PROG,                           & ! [IN]
                              GRID_CDZ, GRID_CDX, GRID_CDY,   & ! [IN]
                              GRID_FDZ, GRID_FDX, GRID_FDY,   & ! [IN]
                              ATMOS_DYN_enable_coriolis,      & ! [IN]
@@ -196,6 +199,8 @@ contains
        MOMY_tp, &
        RHOT_tp, &
        RHOQ_tp
+    use mod_atmos_dyn_vars, only: &
+       PROG
     use scale_atmos_thermodyn, only: &
        AQ_CV
     use scale_atmos_refstate, only: &
@@ -226,6 +231,7 @@ contains
 
        call ATMOS_DYN( &
          DENS, MOMZ, MOMX, MOMY, RHOT, QTRC,                   & ! [INOUT]
+         PROG,                                                 & ! [IN]
          DENS_av, MOMZ_av, MOMX_av, MOMY_av, RHOT_av, QTRC_av, & ! [INOUT]
          DENS_tp, MOMZ_tp, MOMX_tp, MOMY_tp, RHOT_tp, RHOQ_tp, & ! [IN]
          GRID_CDZ,  GRID_CDX,  GRID_CDY,                       & ! [IN]

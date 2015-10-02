@@ -44,7 +44,8 @@ module mod_atmos_dyn_vars
   character(len=H_MID),  public :: ATMOS_DYN_RESTART_OUT_TITLE    = 'ATMOS_DYN restart' !< title    of the output file
   character(len=H_MID),  public :: ATMOS_DYN_RESTART_OUT_DTYPE    = 'DEFAULT'           !< REAL4 or REAL8
 
-  real(RP), public, allocatable :: ATMOS_DYN_DUM(:,:,:) ! dummy array
+  ! prognostic variables
+  real(RP), public, allocatable :: PROG(:,:,:,:)
 
   !-----------------------------------------------------------------------------
   !
@@ -54,14 +55,11 @@ module mod_atmos_dyn_vars
   !
   !++ Private parameters & variables
   !
-  integer,                private, parameter :: VMAX = 1       !< number of the variables
-  character(len=H_SHORT), private            :: VAR_NAME(VMAX) !< name  of the variables
-  character(len=H_MID),   private            :: VAR_DESC(VMAX) !< desc. of the variables
-  character(len=H_SHORT), private            :: VAR_UNIT(VMAX) !< unit  of the variables
-
-  data VAR_NAME / 'DUM' /
-  data VAR_DESC / 'dummy array' /
-  data VAR_UNIT / 'NIL' /
+  integer,                private, parameter :: VMAX = 100 !< max of number of the variables
+  integer,                private            :: VA   = 0   !< number of the variables
+  character(len=H_SHORT), private :: VAR_NAME(VMAX) !< name  of the variables
+  character(len=H_MID),   private :: VAR_DESC(VMAX) !< desc. of the variables
+  character(len=H_SHORT), private :: VAR_UNIT(VMAX) !< unit  of the variables
 
   !-----------------------------------------------------------------------------
 contains
@@ -72,6 +70,10 @@ contains
        PRC_MPIstop
     use scale_const, only: &
        UNDEF => CONST_UNDEF
+    use mod_atmos_admin, only: &
+       ATMOS_DYN_TYPE
+    use scale_atmos_dyn_rk, only: &
+       ATMOS_DYN_rk_regist
     implicit none
 
     NAMELIST / PARAM_ATMOS_DYN_VARS / &
@@ -88,9 +90,6 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[VARS] / Categ[ATMOS_DYN] / Origin[SCALE-LES]'
 
-    allocate( ATMOS_DYN_DUM(KA,IA,JA) )
-    ATMOS_DYN_DUM(:,:,:) = UNDEF
-
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_ATMOS_DYN_VARS,iostat=ierr)
@@ -102,26 +101,44 @@ contains
     endif
     if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_ATMOS_DYN_VARS)
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** [ATMOS_DYN] prognostic/diagnostic variables'
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,A15,A,A32,3(A))') &
-               '***       |','VARNAME        ','|', 'DESCRIPTION                     ','[', 'UNIT            ',']'
-    do iv = 1, VMAX
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,i3,A,A15,A,A32,3(A))') &
-                  '*** NO.',iv,'|',VAR_NAME(iv),'|',VAR_DESC(iv),'[',VAR_UNIT(iv),']'
-    enddo
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if ( ATMOS_DYN_RESTART_IN_BASENAME /= '' ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** Restart input?  : ', trim(ATMOS_DYN_RESTART_IN_BASENAME)
-    else
-       if( IO_L ) write(IO_FID_LOG,*) '*** Restart input?  : NO'
-    endif
-    if (       ATMOS_DYN_RESTART_OUTPUT             &
-         .AND. ATMOS_DYN_RESTART_OUT_BASENAME /= '' ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** Restart output? : ', trim(ATMOS_DYN_RESTART_OUT_BASENAME)
-    else
-       if( IO_L ) write(IO_FID_LOG,*) '*** Restart output? : NO'
+    call ATMOS_DYN_rk_regist( ATMOS_DYN_TYPE, & ! (in)
+                              VA,       & ! (out)
+                              VAR_NAME, & ! (out)
+                              VAR_DESC, & ! (out)
+                              VAR_UNIT  ) ! (out)
+    if ( VA > 0 ) then
+       if ( VA > VMAX ) then
+          write(*,*) 'xxx number of the prognostic variables is exceed the limit', VA, ' > ', VMAX
+          call PRC_MPIstop
+       end if
+       allocate( PROG(KA,IA,JA,VA) )
+       PROG(:,:,:,:) = UNDEF
+
+       if( IO_L ) write(IO_FID_LOG,*)
+       if( IO_L ) write(IO_FID_LOG,*) '*** [ATMOS_DYN] prognostic/diagnostic variables'
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,A15,A,A32,3(A))') &
+               '***       |','VARNAME        ','|', 'DESCRIPTION                     ','[', 'UNIT            ',']'
+       do iv = 1, VA
+          if( IO_L ) write(IO_FID_LOG,'(1x,A,i3,A,A15,A,A32,3(A))') &
+                  '*** NO.',iv,'|',VAR_NAME(iv),'|',VAR_DESC(iv),'[',VAR_UNIT(iv),']'
+       enddo
+
+       if( IO_L ) write(IO_FID_LOG,*)
+       if ( ATMOS_DYN_RESTART_IN_BASENAME /= '' ) then
+          if( IO_L ) write(IO_FID_LOG,*) '*** Restart input?  : ', trim(ATMOS_DYN_RESTART_IN_BASENAME)
+       else
+          if( IO_L ) write(IO_FID_LOG,*) '*** Restart input?  : NO'
+       endif
+       if (       ATMOS_DYN_RESTART_OUTPUT             &
+            .AND. ATMOS_DYN_RESTART_OUT_BASENAME /= '' ) then
+          if( IO_L ) write(IO_FID_LOG,*) '*** Restart output? : ', trim(ATMOS_DYN_RESTART_OUT_BASENAME)
+       else
+          if( IO_L ) write(IO_FID_LOG,*) '*** Restart output? : NO'
+          ATMOS_DYN_RESTART_OUTPUT = .false.
+       endif
+
+    else ! no additional prognostic variables
        ATMOS_DYN_RESTART_OUTPUT = .false.
     endif
 
@@ -136,18 +153,23 @@ contains
        COMM_wait
     implicit none
 
-    integer :: i, j
+    integer :: i, j, iv
     !---------------------------------------------------------------------------
 
-    do j  = JS, JE
-    do i  = IS, IE
-       ATMOS_DYN_DUM(   1:KS-1,i,j) = ATMOS_DYN_DUM(KS,i,j)
-       ATMOS_DYN_DUM(KE+1:KA,  i,j) = ATMOS_DYN_DUM(KE,i,j)
-    enddo
-    enddo
+    do iv = 1, VA
+       do j  = JS, JE
+       do i  = IS, IE
+          PROG(   1:KS-1,i,j,iv) = PROG(KS,i,j,iv)
+          PROG(KE+1:KA,  i,j,iv) = PROG(KE,i,j,iv)
+       enddo
+       enddo
 
-    call COMM_vars8( ATMOS_DYN_DUM(:,:,:), 1 )
-    call COMM_wait ( ATMOS_DYN_DUM(:,:,:), 1 )
+       call COMM_vars8( PROG(:,:,:,iv), iv )
+    end do
+
+    do iv = 1, VA
+       call COMM_wait ( PROG(:,:,:,iv), iv )
+    end do
 
     return
   end subroutine ATMOS_DYN_vars_fillhalo
@@ -162,20 +184,26 @@ contains
     implicit none
 
     real(RP) :: total
+    integer :: iv
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** Input restart file (ATMOS_DYN) ***'
 
     if ( ATMOS_DYN_RESTART_IN_BASENAME /= '' ) then
-!       if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(ATMOS_DYN_RESTART_IN_BASENAME)
-!
-!       call FILEIO_read( ATMOS_DYN_DUM(:,:,:),                                     & ! [OUT]
-!                         ATMOS_DYN_RESTART_IN_BASENAME, VAR_NAME(1), 'ZXY', step=1 ) ! [IN]
-!
-!       call ATMOS_DYN_vars_fillhalo
-!
-!       call STAT_total( total, ATMOS_DYN_DUM(:,:,:), VAR_NAME(1) )
+       if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(ATMOS_DYN_RESTART_IN_BASENAME)
+
+       do iv = 1, VA
+          call FILEIO_read( PROG(:,:,:,iv),                                     & ! [OUT]
+                            ATMOS_DYN_RESTART_IN_BASENAME, VAR_NAME(iv), 'ZXY', step=1 ) ! [IN]
+
+       end do
+
+       call ATMOS_DYN_vars_fillhalo
+
+       do iv = 1, VA
+          call STAT_total( total, PROG(:,:,:,iv), VAR_NAME(iv) )
+       end do
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** restart file for ATMOS_DYN is not specified.'
     endif
@@ -194,19 +222,22 @@ contains
 
     character(len=15)     :: timelabel
     character(len=H_LONG) :: basename
+    integer :: iv
     !---------------------------------------------------------------------------
 
     if ( ATMOS_DYN_RESTART_OUT_BASENAME /= '' ) then
 
-!       call TIME_gettimelabel( timelabel )
-!       write(basename,'(A,A,A)') trim(ATMOS_DYN_RESTART_OUT_BASENAME), '_', trim(timelabel)
-!
-!       if( IO_L ) write(IO_FID_LOG,*)
-!       if( IO_L ) write(IO_FID_LOG,*) '*** Output restart file (ATMOS_DYN) ***'
-!       if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(basename)
-!
-!       call FILEIO_write( ATMOS_DYN_DUM(:,:,:), basename,               ATMOS_DYN_RESTART_OUT_TITLE, & ! [IN]
-!                          VAR_NAME(1), VAR_DESC(1), VAR_UNIT(1), 'ZXY', ATMOS_DYN_RESTART_OUT_DTYPE  ) ! [IN]
+       call TIME_gettimelabel( timelabel )
+       write(basename,'(A,A,A)') trim(ATMOS_DYN_RESTART_OUT_BASENAME), '_', trim(timelabel)
+
+       if( IO_L ) write(IO_FID_LOG,*)
+       if( IO_L ) write(IO_FID_LOG,*) '*** Output restart file (ATMOS_DYN) ***'
+       if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(basename)
+
+       do iv = 1, VA
+          call FILEIO_write( PROG(:,:,:,iv), basename,               ATMOS_DYN_RESTART_OUT_TITLE, & ! [IN]
+                             VAR_NAME(iv), VAR_DESC(iv), VAR_UNIT(iv), 'ZXY', ATMOS_DYN_RESTART_OUT_DTYPE  ) ! [IN]
+       end do
 
     endif
 
