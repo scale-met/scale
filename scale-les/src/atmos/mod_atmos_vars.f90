@@ -1229,9 +1229,6 @@ contains
 
     real(RP) :: CAPE  (IA,JA)    ! CAPE [m2/s2]
     real(RP) :: CIN   (IA,JA)    ! CIN [m2/s2]
-    integer  :: kLCL  (IA,JA)    ! layer number of LCL
-    integer  :: kLFC  (IA,JA)    ! layer number of LFC
-    integer  :: kLNB  (IA,JA)    ! layer number of LNB
     real(RP) :: LCL   (IA,JA)    ! LCL height [m]
     real(RP) :: LFC   (IA,JA)    ! LFC height [m]
     real(RP) :: LNB   (IA,JA)    ! LNB height [m]
@@ -2011,44 +2008,19 @@ contains
          .OR. AD_PREP_sw(I_LFC)  > 0 &
          .OR. AD_PREP_sw(I_LNB)  > 0 ) then
 
-       call ADIABAT_cape( DENS   (:,:,:),   & ! [IN]
+       call ADIABAT_cape( KS,               & ! [IN]
+                          DENS   (:,:,:),   & ! [IN]
                           TEMP   (:,:,:),   & ! [IN]
                           PRES   (:,:,:),   & ! [IN]
                           QTRC   (:,:,:,:), & ! [IN]
+                          REAL_CZ(:,:,:),   & ! [IN]
                           REAL_FZ(:,:,:),   & ! [IN]
                           CAPE   (:,:),     & ! [OUT]
                           CIN    (:,:),     & ! [OUT]
-                          kLCL   (:,:),     & ! [OUT]
-                          kLFC   (:,:),     & ! [OUT]
-                          kLNB   (:,:)      ) ! [OUT]
+                          LCL    (:,:),     & ! [OUT]
+                          LFC    (:,:),     & ! [OUT]
+                          LNB    (:,:)      ) ! [OUT]
 
-       LCL(:,:) = 0.0_RP
-       LFC(:,:) = 0.0_RP
-       LNB(:,:) = 0.0_RP
-
-       do j = JS, JE
-       do i = IS, IE
-          if ( kLCL(i,j) > 1 ) then
-             LCL(i,j) = REAL_CZ(kLCL(i,j),i,j)
-          endif
-       enddo
-       enddo
-
-       do j = JS, JE
-       do i = IS, IE
-          if ( kLFC(i,j) > 1 ) then
-             LFC(i,j) = REAL_CZ(kLFC(i,j),i,j)
-          endif
-       enddo
-       enddo
-
-       do j = JS, JE
-       do i = IS, IE
-          if ( kLNB(i,j) > 1 ) then
-             LNB(i,j) = REAL_CZ(kLNB(i,j),i,j)
-          endif
-       enddo
-       enddo
     endif
 
     call HIST_in( CAPE(:,:), 'CAPE', 'convection avail. pot. energy', 'm2/s2' )

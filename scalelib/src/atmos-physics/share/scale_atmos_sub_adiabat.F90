@@ -43,17 +43,21 @@ module scale_atmos_adiabat
 contains
   !-----------------------------------------------------------------------------
   !> Calc CAPE and CIN
+  !> Type of parcel method: Pseudo-adiabatic ascend from lowermost layer of the model
+  !> Reference: Emanuel(1994)
   subroutine ATMOS_ADIABAT_cape( &
-       DENS,   &
-       TEMP,   &
-       PRES,   &
-       QTRC,   &
-       FZ,     &
-       CAPE,   &
-       CIN,    &
-       kLCL,   &
-       kLFC,   &
-       kLNB    )
+       Kstr, &
+       DENS, &
+       TEMP, &
+       PRES, &
+       QTRC, &
+       CZ,   &
+       FZ,   &
+       CAPE, &
+       CIN,  &
+       LCL,  &
+       LFC,  &
+       LNB   )
     use scale_const, only: &
        GRAV => CONST_GRAV
     use scale_atmos_thermodyn, only: &
@@ -64,16 +68,18 @@ contains
        HIST_in
     implicit none
 
-    real(RP), intent(in)  :: DENS  (KA,IA,JA)
-    real(RP), intent(in)  :: TEMP  (KA,IA,JA)
-    real(RP), intent(in)  :: PRES  (KA,IA,JA)
-    real(RP), intent(in)  :: QTRC  (KA,IA,JA,QA)
-    real(RP), intent(in)  :: FZ    (0:KA,IA,JA)
-    real(RP), intent(out) :: CAPE  (IA,JA)
-    real(RP), intent(out) :: CIN   (IA,JA)
-    integer,  intent(out) :: kLCL  (IA,JA)
-    integer,  intent(out) :: kLFC  (IA,JA)
-    integer,  intent(out) :: kLNB  (IA,JA)
+    integer,  intent(in)  :: Kstr
+    real(RP), intent(in)  :: DENS(KA,IA,JA)
+    real(RP), intent(in)  :: TEMP(KA,IA,JA)
+    real(RP), intent(in)  :: PRES(KA,IA,JA)
+    real(RP), intent(in)  :: QTRC(KA,IA,JA,QA)
+    real(RP), intent(in)  :: CZ  (  KA,IA,JA)
+    real(RP), intent(in)  :: FZ  (0:KA,IA,JA)
+    real(RP), intent(out) :: CAPE(IA,JA)
+    real(RP), intent(out) :: CIN (IA,JA)
+    real(RP), intent(out) :: LCL (IA,JA)
+    real(RP), intent(out) :: LFC (IA,JA)
+    real(RP), intent(out) :: LNB (IA,JA)
 
     real(RP) :: DENS_p (KA,IA,JA)
     real(RP) :: TEMP_p (KA,IA,JA)
@@ -83,11 +89,12 @@ contains
     real(RP) :: BUOY_pf(KA,IA,JA)
     real(RP) :: QSAT_p (KA,IA,JA)
 
-    integer :: k, i, j
-    integer :: Kstr
-    !---------------------------------------------------------------------------
+    integer :: kLCL(IA,JA)
+    integer :: kLFC(IA,JA)
+    integer :: kLNB(IA,JA)
 
-    Kstr = KS
+    integer :: k, i, j
+    !---------------------------------------------------------------------------
 
     ! entropy at start point
     call THERMODYN_entr( ENTR_p(Kstr,:,:),  & ! [OUT]
@@ -178,21 +185,52 @@ contains
     enddo
     enddo
 
+    LCL(:,:) = 0.0_RP
+    do j = JS, JE
+    do i = IS, IE
+       if ( kLCL(i,j) >= Kstr ) then
+          LCL(i,j) = CZ(kLCL(i,j),i,j)
+       endif
+    enddo
+    enddo
+
+    LFC(:,:) = 0.0_RP
+    do j = JS, JE
+    do i = IS, IE
+       if ( kLFC(i,j) >= Kstr ) then
+          LFC(i,j) = CZ(kLFC(i,j),i,j)
+       endif
+    enddo
+    enddo
+
+    LNB(:,:) = 0.0_RP
+    do j = JS, JE
+    do i = IS, IE
+       if ( kLNB(i,j) >= Kstr ) then
+          LNB(i,j) = CZ(kLNB(i,j),i,j)
+       endif
+    enddo
+    enddo
+
     CAPE(:,:) = 0.0_RP
     do j = JS, JE
     do i = IS, IE
-       do k = Kstr+1, kLNB(i,j)
-          CAPE(i,j) = CAPE(i,j) + BUOY_pf(k-1,i,j) * ( FZ(k,i,j)-FZ(k-1,i,j) )
-       enddo
+       if ( kLFC(i,j) > Kstr .AND. kLNB(i,j) > Kstr ) then
+          do k = kLFC(i,j), kLNB(i,j)
+             CAPE(i,j) = CAPE(i,j) + BUOY_pf(k-1,i,j) * ( FZ(k,i,j)-FZ(k-1,i,j) )
+          enddo
+       endif
     enddo
     enddo
 
     CIN(:,:) = 0.0_RP
     do j = JS, JE
     do i = IS, IE
-       do k = Kstr+1, kLFC(i,j)
-          CIN (i,j) = CIN (i,j) + BUOY_pf(k-1,i,j) * ( FZ(k,i,j)-FZ(k-1,i,j) )
-       enddo
+       if ( kLFC(i,j) > Kstr ) then
+          do k = Kstr+1, kLFC(i,j)
+             CIN (i,j) = CIN (i,j) + BUOY_pf(k-1,i,j) * ( FZ(k,i,j)-FZ(k-1,i,j) )
+          enddo
+       endif
     enddo
     enddo
 
@@ -201,6 +239,8 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Calc temperature profile with lifting parcel
+  !> Method: Pseudo-adiabatic ascend from lowermost layer of the model
+  !> Reference: Emanuel(1994)
   subroutine ATMOS_ADIABAT_liftparcel( &
        Kstr,   &
        TEMP,   &
@@ -310,7 +350,7 @@ contains
                                             TEMP_ite,   & ! [IN]
                                             PRES(k,i,j) ) ! [IN]
 
-             QTRC_ite(:)    = 0.0_RP
+             QTRC_ite(:)    = 0.0_RP ! Pseudo-adiabatic: no cloud water
              QTRC_ite(I_QV) = min( qtot_p(i,j), qsat_ite )
 
              call THERMODYN_entr( ENTR_ite,    & ! [OUT]
