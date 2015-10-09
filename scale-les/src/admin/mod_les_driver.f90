@@ -135,69 +135,56 @@ contains
        TIME_DOLAND_restart,   &
        TIME_DOURBAN_restart,  &
        TIME_DOOCEAN_restart,  &
+       TIME_DOresume,         &
        TIME_DOend
     use mod_atmos_admin, only: &
        ATMOS_admin_setup, &
        ATMOS_do
     use mod_atmos_vars, only: &
        ATMOS_vars_setup,                         &
-       ATMOS_vars_diagnostics,                   &
-       ATMOS_vars_monitor,                       &
-       ATMOS_vars_restart_read,                  &
        ATMOS_sw_restart => ATMOS_RESTART_OUTPUT, &
        ATMOS_vars_restart_write,                 &
        ATMOS_sw_check => ATMOS_RESTART_CHECK,    &
        ATMOS_vars_restart_check
     use mod_atmos_driver, only: &
-       ATMOS_driver_setup1,    &
-       ATMOS_driver_setup2,    &
+       ATMOS_driver_setup,    &
        ATMOS_driver,           &
-       ATMOS_driver_firstsend, &
-       ATMOS_driver_finalize,  &
-       ATMOS_SURFACE_SET
+       ATMOS_driver_finalize
     use mod_ocean_admin, only: &
        OCEAN_admin_setup, &
        OCEAN_do
     use mod_ocean_vars, only: &
        OCEAN_vars_setup,                         &
-       OCEAN_vars_restart_read,                  &
        OCEAN_sw_restart => OCEAN_RESTART_OUTPUT, &
        OCEAN_vars_restart_write
     use mod_ocean_driver, only: &
        OCEAN_driver_setup, &
-       OCEAN_driver,       &
-       OCEAN_SURFACE_SET
+       OCEAN_driver
     use mod_land_admin, only: &
        LAND_admin_setup, &
        LAND_do
     use mod_land_vars, only: &
        LAND_vars_setup,                        &
-       LAND_vars_restart_read,                 &
        LAND_sw_restart => LAND_RESTART_OUTPUT, &
        LAND_vars_restart_write
     use mod_land_driver, only: &
        LAND_driver_setup, &
-       LAND_driver,       &
-       LAND_SURFACE_SET
+       LAND_driver
     use mod_urban_admin, only: &
        URBAN_admin_setup, &
        URBAN_do
     use mod_urban_vars, only: &
        URBAN_vars_setup,                         &
-       URBAN_vars_restart_read,                  &
        URBAN_sw_restart => URBAN_RESTART_OUTPUT, &
        URBAN_vars_restart_write
     use mod_urban_driver, only: &
        URBAN_driver_setup, &
-       URBAN_driver,       &
-       URBAN_SURFACE_SET
+       URBAN_driver
     use mod_cpl_admin, only: &
        CPL_admin_setup
     use mod_cpl_vars, only: &
        CPL_vars_setup
     use mod_user, only: &
-       USER_setup0, &
-       USER_setup, &
        USER_step
     implicit none
 
@@ -310,40 +297,11 @@ contains
     call URBAN_vars_setup
     call CPL_vars_setup
 
-    ! read restart data
-    if( ATMOS_do ) call ATMOS_vars_restart_read
-    if( OCEAN_do ) call OCEAN_vars_restart_read
-    if( LAND_do  ) call LAND_vars_restart_read
-    if( URBAN_do ) call URBAN_vars_restart_read
-
-    ! setup user-defined procedure before setup of other components
-    call USER_setup0
-
-    ! calc diagnostics
-    call ATMOS_vars_diagnostics
-
-    ! first monitor
-    call ATMOS_vars_monitor
-
-    ! setup surface condition
-    call ATMOS_SURFACE_SET( countup=.false. )
-    call OCEAN_SURFACE_SET( countup=.false. )
-    call LAND_SURFACE_SET ( countup=.false. )
-    call URBAN_SURFACE_SET( countup=.false. )
-
     ! setup submodel driver
-    call ATMOS_driver_setup1
+    call ATMOS_driver_setup
     call OCEAN_driver_setup
     call LAND_driver_setup
     call URBAN_driver_setup
-    call ATMOS_driver_setup2
-
-    ! setup user-defined procedure
-    call USER_setup
-
-    ! history&monitor file output
-    call HIST_write ! if needed
-    call MONIT_write('MAIN')
 
     call PROF_rapend('Initialize', 0)
 
@@ -361,12 +319,20 @@ contains
     call PROF_setprefx('MAIN')
     call PROF_rapstart('Main_Loop', 0)
 
-    if( ATMOS_do ) call ATMOS_driver_firstsend
-
     do
 
       ! report current time
       call ADMIN_TIME_checkstate
+
+      if ( TIME_DORESUME ) then
+         ! resume state from restart files
+         call resume_state
+
+         ! history&monitor file output
+         call HIST_write ! if needed
+         call MONIT_write('MAIN')
+      end if
+
 
       ! time advance
       call ADMIN_TIME_advance
@@ -425,5 +391,77 @@ contains
 
     return
   end subroutine scaleles
+
+
+  subroutine resume_state
+    use mod_atmos_driver, only: &
+       ATMOS_driver_resume1,    &
+       ATMOS_driver_resume2,    &
+       ATMOS_SURFACE_SET
+    use mod_ocean_driver, only: &
+       OCEAN_driver_resume, &
+       OCEAN_SURFACE_SET
+    use mod_land_driver, only: &
+       LAND_driver_resume, &
+       LAND_SURFACE_SET
+    use mod_urban_driver, only: &
+       URBAN_driver_resume, &
+       URBAN_SURFACE_SET
+    use mod_atmos_vars, only: &
+       ATMOS_vars_diagnostics, &
+       ATMOS_vars_monitor,     &
+       ATMOS_vars_restart_read
+    use mod_ocean_vars, only: &
+       OCEAN_vars_restart_read
+    use mod_land_vars, only: &
+       LAND_vars_restart_read
+    use mod_urban_vars, only: &
+       URBAN_vars_restart_read
+    use mod_user, only: &
+       USER_resume0, &
+       USER_resume
+    use mod_atmos_admin, only: &
+       ATMOS_do
+    use mod_ocean_admin, only: &
+       OCEAN_do
+    use mod_land_admin, only: &
+       LAND_do
+    use mod_urban_admin, only: &
+       URBAN_do
+    implicit none
+
+    ! read restart data
+    if( ATMOS_do ) call ATMOS_vars_restart_read
+    if( OCEAN_do ) call OCEAN_vars_restart_read
+    if( LAND_do  ) call LAND_vars_restart_read
+    if( URBAN_do ) call URBAN_vars_restart_read
+
+    ! setup user-defined procedure before setup of other components
+    call USER_resume0
+
+    ! calc diagnostics
+    call ATMOS_vars_diagnostics
+
+    ! first monitor
+    call ATMOS_vars_monitor
+
+    ! setup surface condition
+    call ATMOS_SURFACE_SET( countup=.false. )
+    call OCEAN_SURFACE_SET( countup=.false. )
+    call LAND_SURFACE_SET ( countup=.false. )
+    call URBAN_SURFACE_SET( countup=.false. )
+
+    ! setup submodel driver
+    call ATMOS_driver_resume1
+    call OCEAN_driver_resume
+    call LAND_driver_resume
+    call URBAN_driver_resume
+    call ATMOS_driver_resume2
+
+    ! setup user-defined procedure
+    call USER_resume
+
+    return
+  end subroutine resume_state
 
 end module mod_les_driver

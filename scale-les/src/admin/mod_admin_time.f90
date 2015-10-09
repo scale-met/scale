@@ -34,11 +34,13 @@ module mod_admin_time
   real(DP), public :: TIME_DTSEC_OCEAN_RESTART  !< time interval of ocean restart         [sec]
   real(DP), public :: TIME_DTSEC_LAND_RESTART   !< time interval of land restart          [sec]
   real(DP), public :: TIME_DTSEC_URBAN_RESTART  !< time interval of urban restart         [sec]
+  real(DP), public :: TIME_DTSEC_RESUME         !< time interval for resume               [sec]
 
-  integer,  public :: TIME_DSTEP_ATMOS_RESTART  !< time interval of atmosphere restart    [sec]
-  integer,  public :: TIME_DSTEP_OCEAN_RESTART  !< time interval of ocean restart         [sec]
-  integer,  public :: TIME_DSTEP_LAND_RESTART   !< time interval of land restart          [sec]
-  integer,  public :: TIME_DSTEP_URBAN_RESTART  !< time interval of urban restart         [sec]
+  integer,  public :: TIME_DSTEP_ATMOS_RESTART  !< interval of atmosphere restart    [step]
+  integer,  public :: TIME_DSTEP_OCEAN_RESTART  !< interval of ocean restart         [step]
+  integer,  public :: TIME_DSTEP_LAND_RESTART   !< interval of land restart          [step]
+  integer,  public :: TIME_DSTEP_URBAN_RESTART  !< interval of urban restart         [step]
+  integer,  public :: TIME_DSTEP_RESUME         !< interval for resume               [step]
 
   logical,  public :: TIME_DOATMOS_step         !< execute atmospheric component in this step?
   logical,  public :: TIME_DOATMOS_DYN          !< execute dynamics?
@@ -56,6 +58,7 @@ module mod_admin_time
   logical,  public :: TIME_DOLAND_restart       !< execute land restart output?
   logical,  public :: TIME_DOURBAN_step         !< execute urban component in this step?
   logical,  public :: TIME_DOURBAN_restart      !< execute urban restart output?
+  logical,  public :: TIME_DOresume             !< resume in this step?
   logical,  public :: TIME_DOend                !< finish program in this step?
 
   !-----------------------------------------------------------------------------
@@ -91,6 +94,7 @@ module mod_admin_time
   integer,  private :: TIME_RES_LAND_RESTART  = 0
   integer,  private :: TIME_RES_URBAN         = 0
   integer,  private :: TIME_RES_URBAN_RESTART = 0
+  integer,  private :: TIME_RES_RESUME
 
   real(DP), private :: TIME_WALLCLOCK_START             ! Start time of wall clock             [sec]
   real(DP), private :: TIME_WALLCLOCK_LIMIT   = -1.0_DP ! Elapse time limit of wall clock time [sec]
@@ -195,6 +199,9 @@ contains
     real(DP)               :: TIME_DT_URBAN_RESTART        = UNDEF8
     character(len=H_SHORT) :: TIME_DT_URBAN_RESTART_UNIT   = ""
 
+    real(DP)               :: TIME_DT_RESUME               = UNDEF8
+    character(len=H_SHORT) :: TIME_DT_RESUME_UNIT          = ""
+
     real(DP)               :: TIME_DT_WALLCLOCK_CHECK      = UNDEF8
     character(len=H_SHORT) :: TIME_DT_WALLCLOCK_CHECK_UNIT = ""
 
@@ -237,6 +244,8 @@ contains
        TIME_DT_URBAN_RESTART_UNIT,   &
        TIME_DT_WALLCLOCK_CHECK,      &
        TIME_DT_WALLCLOCK_CHECK_UNIT, &
+       TIME_DT_RESUME,               &
+       TIME_DT_RESUME_UNIT,          &
        TIME_WALLCLOCK_LIMIT,         &
        TIME_WALLCLOCK_SAFE
 
@@ -408,6 +417,14 @@ contains
           if( IO_L ) write(IO_FID_LOG,*) '*** Not found TIME_DT_URBAN_RESTART_UNIT. TIME_DURATION_UNIT is used.'
           TIME_DT_URBAN_RESTART_UNIT = TIME_DURATION_UNIT
        endif
+       ! Resume
+       if ( TIME_DT_RESUME == UNDEF8 ) then
+          TIME_DT_RESUME = TIME_DURATION
+       endif
+       if ( TIME_DT_RESUME_UNIT == '' ) then
+          if( IO_L ) write(IO_FID_LOG,*) '*** Not found TIME_DT_RESUME_UNIT. TIME_DURATION_UNIT is used.'
+          TIME_DT_RESUME_UNIT = TIME_DURATION_UNIT
+       endif
     endif
 
     !--- calculate time
@@ -486,6 +503,7 @@ contains
        call CALENDAR_unit2sec( TIME_DTSEC_LAND_RESTART,  TIME_DT_LAND_RESTART,  TIME_DT_LAND_RESTART_UNIT  )
        call CALENDAR_unit2sec( TIME_DTSEC_URBAN,         TIME_DT_URBAN,         TIME_DT_URBAN_UNIT         )
        call CALENDAR_unit2sec( TIME_DTSEC_URBAN_RESTART, TIME_DT_URBAN_RESTART, TIME_DT_URBAN_RESTART_UNIT )
+       call CALENDAR_unit2sec( TIME_DTSEC_RESUME,        TIME_DT_RESUME,        TIME_DT_RESUME_UNIT        )
 
        TIME_NSTEP_ATMOS_DYN = max( nint( TIME_DTSEC / TIME_DTSEC_ATMOS_DYN ), 1 )
 
@@ -504,6 +522,7 @@ contains
        TIME_DTSEC_LAND_RESTART  = max( TIME_DTSEC_LAND_RESTART,  TIME_DTSEC_ATMOS_DYN*TIME_NSTEP_ATMOS_DYN )
        TIME_DTSEC_URBAN         = max( TIME_DTSEC_URBAN,         TIME_DTSEC_ATMOS_DYN*TIME_NSTEP_ATMOS_DYN )
        TIME_DTSEC_URBAN_RESTART = max( TIME_DTSEC_URBAN_RESTART, TIME_DTSEC_ATMOS_DYN*TIME_NSTEP_ATMOS_DYN )
+       TIME_DTSEC_RESUME        = max( TIME_DTSEC_RESUME,        TIME_DTSEC_ATMOS_DYN*TIME_NSTEP_ATMOS_DYN )
 
        TIME_DSTEP_ATMOS_DYN     = int( TIME_DTSEC_ATMOS_DYN*TIME_NSTEP_ATMOS_DYN / TIME_DTSEC )
        TIME_DSTEP_ATMOS_PHY_CP  = int( TIME_DTSEC_ATMOS_PHY_CP  / TIME_DTSEC )
@@ -520,6 +539,9 @@ contains
        TIME_DSTEP_OCEAN_RESTART = int( TIME_DTSEC_OCEAN_RESTART / TIME_DTSEC )
        TIME_DSTEP_LAND_RESTART  = int( TIME_DTSEC_LAND_RESTART  / TIME_DTSEC )
        TIME_DSTEP_URBAN_RESTART = int( TIME_DTSEC_URBAN_RESTART / TIME_DTSEC )
+
+       TIME_DSTEP_RESUME        = int( TIME_DTSEC_RESUME        / TIME_DTSEC )
+       TIME_RES_RESUME = TIME_DSTEP_RESUME - 1
 
        if ( abs( real(TIME_NSTEP_ATMOS_DYN,kind=DP)*TIME_DTSEC_ATMOS_DYN &
                - real(TIME_DSTEP_ATMOS_DYN,kind=DP)*TIME_DTSEC            ) > 0.D0 ) then
@@ -602,6 +624,11 @@ contains
                      TIME_DTSEC_URBAN_RESTART, real(TIME_DSTEP_URBAN_RESTART,kind=DP)*TIME_DTSEC
           call PRC_MPIstop
        endif
+       if ( abs(TIME_DTSEC_RESUME-real(TIME_DSTEP_RESUME,kind=DP)*TIME_DTSEC) > 0.D0 ) then
+          write(*,*) 'xxx delta t(RESUME) must be a multiple of delta t ', &
+                     TIME_DTSEC_RESUME, real(TIME_DSTEP_RESUME,kind=DP)*TIME_DTSEC
+          call PRC_MPIstop
+       endif
 
        if( IO_L ) write(IO_FID_LOG,*)
        if( IO_L ) write(IO_FID_LOG,*)                     '*** Time interval for each processes (sec.)'
@@ -640,6 +667,8 @@ contains
        if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3,A,I8,A)') '*** Urban Variables             : ', TIME_DTSEC_URBAN_RESTART, &
                                                           ' (steps=', TIME_DSTEP_URBAN_RESTART, ')'
 
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3,A,I8,A)') '*** Resume                      : ', TIME_DTSEC_RESUME, &
+                                                          ' (steps=', TIME_DSTEP_RESUME, ')'
     endif
 
     ! WALLCLOCK TERMINATOR SETUP
@@ -725,6 +754,7 @@ contains
     TIME_DOOCEAN_step      = .false.
     TIME_DOLAND_step       = .false.
     TIME_DOURBAN_step      = .false.
+    TIME_DOresume          = .false.
 
     TIME_RES_ATMOS_DYN    = TIME_RES_ATMOS_DYN    + 1
     TIME_RES_ATMOS_PHY_CP = TIME_RES_ATMOS_PHY_CP + 1
@@ -737,6 +767,7 @@ contains
     TIME_RES_OCEAN        = TIME_RES_OCEAN        + 1
     TIME_RES_LAND         = TIME_RES_LAND         + 1
     TIME_RES_URBAN        = TIME_RES_URBAN        + 1
+    TIME_RES_RESUME       = TIME_RES_RESUME       + 1
 
     if ( TIME_RES_ATMOS_DYN    == TIME_DSTEP_ATMOS_DYN ) then
        TIME_DOATMOS_step  = .true.
@@ -790,6 +821,10 @@ contains
     if ( TIME_RES_URBAN == TIME_DSTEP_URBAN ) then
        TIME_DOURBAN_step = .true.
        TIME_RES_URBAN    = 0
+    endif
+    if ( TIME_RES_RESUME == TIME_DSTEP_RESUME ) then
+       TIME_DOresume = .true.
+       TIME_RES_RESUME    = 0
     endif
 
     call CALENDAR_date2char( nowchardate,     & ! [OUT]

@@ -26,6 +26,7 @@ module mod_urban_driver
   !++ Public procedure
   !
   public :: URBAN_driver_setup
+  public :: URBAN_driver_resume
   public :: URBAN_driver
   public :: URBAN_SURFACE_GET
   public :: URBAN_SURFACE_SET
@@ -49,6 +50,22 @@ contains
   subroutine URBAN_driver_setup
     use mod_urban_phy_driver, only: &
        URBAN_PHY_driver_setup
+    implicit none
+    !---------------------------------------------------------------------------
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[DRIVER] / Categ[URBAN] / Origin[SCALE-LES]'
+
+    call URBAN_PHY_driver_setup
+
+    return
+  end subroutine URBAN_driver_setup
+
+  !-----------------------------------------------------------------------------
+  !> Resume
+  subroutine URBAN_driver_resume
+    use mod_urban_phy_driver, only: &
+       URBAN_PHY_driver_resume
     use mod_urban_vars, only: &
        URBAN_vars_history
     use mod_urban_admin, only: &
@@ -62,7 +79,7 @@ contains
     !########## Get Surface Boundary from coupler ##########
     call URBAN_SURFACE_GET
 
-    call URBAN_PHY_driver_setup
+    call URBAN_PHY_driver_resume
 
     !########## Set Surface Boundary to coupler ##########
     call URBAN_SURFACE_SET( countup=.true. )
@@ -75,7 +92,7 @@ contains
     endif
 
     return
-  end subroutine URBAN_driver_setup
+  end subroutine URBAN_driver_resume
 
   !-----------------------------------------------------------------------------
   !> Urban step

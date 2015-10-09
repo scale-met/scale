@@ -30,6 +30,7 @@ module mod_land_phy_driver
   !++ Public procedure
   !
   public :: LAND_PHY_driver_setup
+  public :: LAND_PHY_driver_resume
   public :: LAND_PHY_driver
 
   !-----------------------------------------------------------------------------
@@ -53,8 +54,6 @@ contains
        LAND_PHY_setup
     use scale_land_sfc, only: &
        LAND_SFC_setup
-    use mod_admin_restart, only: &
-       RESTART_RUN
     use mod_land_admin, only: &
        LAND_TYPE, &
        LAND_sw
@@ -70,15 +69,6 @@ contains
        call LAND_PHY_setup( LAND_TYPE )
        call LAND_SFC_setup( LAND_TYPE )
 
-       if( .NOT. RESTART_RUN ) then
-          ! run once (only for the diagnostic value)
-          call PROF_rapstart('LND_Physics', 1)
-          call LAND_PHY_driver( update_flag = .true. )
-          call PROF_rapend  ('LND_Physics', 1)
-       else
-          ! no update in order to use restart value
-       end if
-
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** this component is never called.'
     endif
@@ -86,6 +76,22 @@ contains
     return
   end subroutine LAND_PHY_driver_setup
 
+  !-----------------------------------------------------------------------------
+  !> Resume
+  subroutine LAND_PHY_driver_resume
+    use mod_land_admin, only: &
+       LAND_sw
+    implicit none
+
+    if ( LAND_sw ) then
+       ! run once (only for the diagnostic value)
+       call PROF_rapstart('LND_Physics', 1)
+       call LAND_PHY_driver( update_flag = .true. )
+       call PROF_rapend  ('LND_Physics', 1)
+    end if
+
+    return
+  end subroutine LAND_PHY_driver_resume
   !-----------------------------------------------------------------------------
   !> Driver
   subroutine LAND_PHY_driver( update_flag )

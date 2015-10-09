@@ -28,8 +28,9 @@ module mod_user
   !
   !++ Public procedure
   !
-  public :: USER_setup0
   public :: USER_setup
+  public :: USER_resume0
+  public :: USER_resume
   public :: USER_step
 
   !-----------------------------------------------------------------------------
@@ -50,7 +51,7 @@ module mod_user
 contains
   !-----------------------------------------------------------------------------
   !> Setup before setup of other components
-  subroutine USER_setup0
+  subroutine USER_setup
     use scale_process, only: &
        PRC_MPIstop
     implicit none
@@ -79,14 +80,20 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '*** This module is dummy.'
 
     return
-  end subroutine USER_setup0
+  end subroutine USER_setup
 
   !-----------------------------------------------------------------------------
-  !> Setup
-  subroutine USER_setup
+  !> Resume
+  subroutine USER_resume0
 
     return
-  end subroutine USER_setup
+  end subroutine USER_resume0
+
+  !-----------------------------------------------------------------------------
+  subroutine USER_resume
+
+    return
+  end subroutine USER_resume
 
   !-----------------------------------------------------------------------------
   !> User step

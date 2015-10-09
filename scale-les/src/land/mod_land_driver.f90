@@ -31,6 +31,7 @@ module mod_land_driver
   !++ Public procedure
   !
   public :: LAND_driver_setup
+  public :: LAND_driver_resume
   public :: LAND_driver
   public :: LAND_SURFACE_GET
   public :: LAND_SURFACE_SET
@@ -54,6 +55,22 @@ contains
   subroutine LAND_driver_setup
     use mod_land_phy_driver, only: &
        LAND_PHY_driver_setup
+    implicit none
+    !---------------------------------------------------------------------------
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[DRIVER] / Categ[LAND] / Origin[SCALE-LES]'
+
+    call LAND_PHY_driver_setup
+
+    return
+  end subroutine LAND_driver_setup
+
+  !-----------------------------------------------------------------------------
+  !> Resume
+  subroutine LAND_driver_resume
+    use mod_land_phy_driver, only: &
+       LAND_PHY_driver_resume
     use mod_land_vars, only: &
        LAND_vars_history
     use mod_land_admin, only: &
@@ -67,7 +84,7 @@ contains
     !########## Get Surface Boundary from coupler ##########
     call LAND_SURFACE_GET
 
-    call LAND_PHY_driver_setup
+    call LAND_PHY_driver_resume
 
     !########## Set Surface Boundary to coupler ##########
     call LAND_SURFACE_SET( countup=.true. )
@@ -80,7 +97,7 @@ contains
     endif
 
     return
-  end subroutine LAND_driver_setup
+  end subroutine LAND_driver_resume
 
   !-----------------------------------------------------------------------------
   !> Land step

@@ -31,6 +31,7 @@ module scale_atmos_refstate
   !++ Public procedure
   !
   public :: ATMOS_REFSTATE_setup
+  public :: ATMOS_REFSTATE_resume
   public :: ATMOS_REFSTATE_read
   public :: ATMOS_REFSTATE_write
   public :: ATMOS_REFSTATE_update
@@ -82,17 +83,10 @@ module scale_atmos_refstate
 contains
   !-----------------------------------------------------------------------------
   !> Setup
-  subroutine ATMOS_REFSTATE_setup( &
-       DENS, RHOT, QTRC )
+  subroutine ATMOS_REFSTATE_setup
     use scale_process, only: &
        PRC_MPIstop
-    use scale_grid, only: &
-       CZ => GRID_CZ
     implicit none
-
-    real(RP), intent(in) :: DENS(KA,IA,JA)
-    real(RP), intent(in) :: RHOT(KA,IA,JA)
-    real(RP), intent(in) :: QTRC(KA,IA,JA,QA)
 
     NAMELIST / PARAM_ATMOS_REFSTATE / &
        ATMOS_REFSTATE_IN_BASENAME,  &
@@ -106,7 +100,6 @@ contains
        ATMOS_REFSTATE_UPDATE_FLAG,  &
        ATMOS_REFSTATE_UPDATE_DT
 
-    integer :: k
     integer :: ierr
     !---------------------------------------------------------------------------
 
@@ -167,11 +160,43 @@ contains
           if( IO_L ) write(IO_FID_LOG,*) '*** Reference type: make from initial data'
           if( IO_L ) write(IO_FID_LOG,*) '*** Update state?         : ', ATMOS_REFSTATE_UPDATE_FLAG
           if( IO_L ) write(IO_FID_LOG,*) '*** Update interval [sec] : ', ATMOS_REFSTATE_UPDATE_DT
-          call ATMOS_REFSTATE_generate_frominit( DENS, RHOT, QTRC ) ! (in)
 
        else
-          write(*,*) 'xxx ATMOS_REFSTATE_TYPE must be "ISA" or "UNIFORM". Check!', trim(ATMOS_REFSTATE_TYPE)
+          write(*,*) 'xxx ATMOS_REFSTATE_TYPE must be "ISA" or "UNIFORM". Check!: ', trim(ATMOS_REFSTATE_TYPE)
           call PRC_MPIstop
+       endif
+
+    endif
+
+    return
+  end subroutine ATMOS_REFSTATE_setup
+
+  !-----------------------------------------------------------------------------
+  !> Resume
+  subroutine ATMOS_REFSTATE_resume( &
+       DENS, RHOT, QTRC )
+    use scale_process, only: &
+       PRC_MPIstop
+    use scale_grid, only: &
+       CZ => GRID_CZ
+    implicit none
+
+    real(RP), intent(in) :: DENS(KA,IA,JA)
+    real(RP), intent(in) :: RHOT(KA,IA,JA)
+    real(RP), intent(in) :: QTRC(KA,IA,JA,QA)
+
+    integer :: k
+
+    ! input or generate reference profile
+    if ( ATMOS_REFSTATE_IN_BASENAME == '' ) then
+
+       if ( ATMOS_REFSTATE_TYPE == 'INIT' ) then
+
+          if( IO_L ) write(IO_FID_LOG,*) '*** Reference type: make from initial data'
+          if( IO_L ) write(IO_FID_LOG,*) '*** Update state?         : ', ATMOS_REFSTATE_UPDATE_FLAG
+          if( IO_L ) write(IO_FID_LOG,*) '*** Update interval [sec] : ', ATMOS_REFSTATE_UPDATE_DT
+          call ATMOS_REFSTATE_generate_frominit( DENS, RHOT, QTRC ) ! (in)
+
        endif
 
        if( IO_L ) write(IO_FID_LOG,*)
@@ -198,7 +223,7 @@ contains
     call ATMOS_REFSTATE_write
 
     return
-  end subroutine ATMOS_REFSTATE_setup
+  end subroutine ATMOS_REFSTATE_resume
 
   !-----------------------------------------------------------------------------
   !> Read reference state profile
