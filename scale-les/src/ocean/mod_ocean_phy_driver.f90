@@ -30,6 +30,7 @@ module mod_ocean_phy_driver
   !++ Public procedure
   !
   public :: OCEAN_PHY_driver_setup
+  public :: OCEAN_PHY_driver_resume
   public :: OCEAN_PHY_driver
 
   !-----------------------------------------------------------------------------
@@ -53,8 +54,6 @@ contains
        OCEAN_PHY_setup
     use scale_ocean_sfc, only: &
        OCEAN_SFC_setup
-    use mod_admin_restart, only: &
-       RESTART_RUN
     use mod_ocean_admin, only: &
        OCEAN_TYPE, &
        OCEAN_sw
@@ -70,21 +69,35 @@ contains
        call OCEAN_PHY_setup( OCEAN_TYPE )
        call OCEAN_SFC_setup( OCEAN_TYPE )
 
-       if( .NOT. RESTART_RUN ) then
-          ! run once (only for the diagnostic value)
-          call PROF_rapstart('OCN_Physics', 1)
-          call OCEAN_PHY_driver( update_flag = .true. )
-          call PROF_rapend  ('OCN_Physics', 1)
-       else
-          ! no update in order to use restart value
-       end if
-
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** this component is never called.'
     endif
 
     return
   end subroutine OCEAN_PHY_driver_setup
+
+  !-----------------------------------------------------------------------------
+  !> Resume
+  subroutine OCEAN_PHY_driver_resume
+    use mod_admin_restart, only: &
+       RESTART_RUN
+    use mod_ocean_admin, only: &
+       OCEAN_sw
+    implicit none
+
+    if ( OCEAN_sw ) then
+
+       if ( .NOT. RESTART_RUN ) then ! tentative
+          ! run once (only for the diagnostic value)
+          call PROF_rapstart('OCN_Physics', 1)
+          call OCEAN_PHY_driver( update_flag = .true. )
+          call PROF_rapend  ('OCN_Physics', 1)
+       end if
+
+    end if
+
+    return
+  end subroutine OCEAN_PHY_driver_resume
 
   !-----------------------------------------------------------------------------
   !> Driver

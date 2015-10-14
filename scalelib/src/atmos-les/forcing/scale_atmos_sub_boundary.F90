@@ -39,6 +39,7 @@ module scale_atmos_boundary
   !++ Public procedure
   !
   public :: ATMOS_BOUNDARY_setup
+  public :: ATMOS_BOUNDARY_resume
   public :: ATMOS_BOUNDARY_firstsend
   public :: ATMOS_BOUNDARY_finalize
   public :: ATMOS_BOUNDARY_update
@@ -179,6 +180,8 @@ module scale_atmos_boundary
   logical,               private :: do_daughter_process     = .false.
   logical,               private :: l_bnd = .false.
 
+  real(DP),              private :: boundary_time_initdaysec
+
   integer,               private :: ref_size = 3
   integer,               private :: ref_old  = 1
   integer,               private :: ref_now  = 2
@@ -188,13 +191,7 @@ module scale_atmos_boundary
 contains
   !-----------------------------------------------------------------------------
   !> Setup
-  subroutine ATMOS_BOUNDARY_setup( &
-       DENS, &
-       MOMZ, &
-       MOMX, &
-       MOMY, &
-       RHOT, &
-       QTRC  )
+  subroutine ATMOS_BOUNDARY_setup
     use scale_process, only: &
        PRC_MPIstop
     use scale_comm, only: &
@@ -209,13 +206,6 @@ contains
        ONLINE_IAM_PARENT,   &
        ONLINE_IAM_DAUGHTER
     implicit none
-
-    real(RP), intent(in) :: DENS(KA,IA,JA)
-    real(RP), intent(in) :: MOMZ(KA,IA,JA)
-    real(RP), intent(in) :: MOMX(KA,IA,JA)
-    real(RP), intent(in) :: MOMY(KA,IA,JA)
-    real(RP), intent(in) :: RHOT(KA,IA,JA)
-    real(RP), intent(in) :: QTRC(KA,IA,JA,QA)
 
     NAMELIST / PARAM_ATMOS_BOUNDARY / &
        ATMOS_BOUNDARY_TYPE,           &
@@ -395,13 +385,6 @@ contains
 
     elseif ( ATMOS_BOUNDARY_TYPE == 'INIT' ) then
 
-       call ATMOS_BOUNDARY_setinitval( DENS, & ! [IN]
-                                       MOMZ, & ! [IN]
-                                       MOMX, & ! [IN]
-                                       MOMY, & ! [IN]
-                                       RHOT, & ! [IN]
-                                       QTRC  ) ! [IN]
-
        call ATMOS_BOUNDARY_setalpha
 
        ATMOS_BOUNDARY_UPDATE_FLAG = .false.
@@ -423,10 +406,6 @@ contains
     endif
 
     if ( USE_NESTING ) ATMOS_BOUNDARY_UPDATE_FLAG = .true.
-
-    if( ATMOS_BOUNDARY_OUT_BASENAME /= '' ) then
-       call ATMOS_BOUNDARY_write
-    endif
 
     !----- report data -----
     if( IO_L ) write(IO_FID_LOG,*) ''
@@ -469,6 +448,56 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** lateral boundary increment type                 :', ATMOS_BOUNDARY_increment_TYPE
     endif
 
+    return
+  end subroutine ATMOS_BOUNDARY_setup
+
+  !-----------------------------------------------------------------------------
+  !> Resume
+  subroutine ATMOS_BOUNDARY_resume( &
+       DENS, &
+       MOMZ, &
+       MOMX, &
+       MOMY, &
+       RHOT, &
+       QTRC  )
+    implicit none
+
+    real(RP), intent(in) :: DENS(KA,IA,JA)
+    real(RP), intent(in) :: MOMZ(KA,IA,JA)
+    real(RP), intent(in) :: MOMX(KA,IA,JA)
+    real(RP), intent(in) :: MOMY(KA,IA,JA)
+    real(RP), intent(in) :: RHOT(KA,IA,JA)
+    real(RP), intent(in) :: QTRC(KA,IA,JA,QA)
+
+
+    call ATMOS_BOUNDARY_firstsend( &
+         DENS, MOMZ, MOMX, MOMY, RHOT, QTRC )
+
+    if ( l_bnd ) then
+
+       ! initialize boundary value (reading file or waiting parent domain)
+       if ( do_daughter_process ) then
+          call ATMOS_BOUNDARY_resume_online
+       else
+          if ( ATMOS_BOUNDARY_IN_BASENAME /= '' ) then
+             call ATMOS_BOUNDARY_resume_file
+          endif
+       endif
+
+    elseif ( ATMOS_BOUNDARY_TYPE == 'INIT' ) then
+
+       call ATMOS_BOUNDARY_setinitval( DENS, & ! [IN]
+                                       MOMZ, & ! [IN]
+                                       MOMX, & ! [IN]
+                                       MOMY, & ! [IN]
+                                       RHOT, & ! [IN]
+                                       QTRC  ) ! [IN]
+    endif
+
+    if( ATMOS_BOUNDARY_OUT_BASENAME /= '' ) then
+       call ATMOS_BOUNDARY_write
+    endif
+
     if ( ATMOS_BOUNDARY_UPDATE_FLAG ) then
 
        call history_bnd( &
@@ -481,7 +510,7 @@ contains
     end if
 
     return
-  end subroutine ATMOS_BOUNDARY_setup
+  end subroutine ATMOS_BOUNDARY_resume
 
   !-----------------------------------------------------------------------------
   !> HALO Communication
@@ -1185,10 +1214,51 @@ contains
   !-----------------------------------------------------------------------------
   !> Initialize boundary value for real case experiment
   subroutine ATMOS_BOUNDARY_initialize_file
+    use scale_calendar, only: &
+       CALENDAR_date2daysec,    &
+       CALENDAR_combine_daysec, &
+       CALENDAR_date2char
+    use scale_time, only: &
+       TIME_NOWDATE
+    implicit none
+
+    integer  :: boundary_time_startday
+    real(DP) :: boundary_time_startsec
+    real(DP) :: boundary_time_startms
+    integer  :: boundary_time_offset_year
+
+    character(len=27)     :: boundary_chardate
+
+    if ( ATMOS_BOUNDARY_START_DATE(1) == -9999 ) then
+       ATMOS_BOUNDARY_START_DATE = TIME_NOWDATE
+    end if
+
+    !--- calculate time of the initial step in boundary file [no offset]
+    boundary_time_startms     = 0.0_DP
+    boundary_time_offset_year = 0
+    call CALENDAR_date2char( boundary_chardate,            & ! [OUT]
+                             ATMOS_BOUNDARY_START_DATE(:), & ! [IN]
+                             boundary_time_startms,        & ! [IN]
+                             boundary_time_offset_year     ) ! [IN]
+ 
+    call CALENDAR_date2daysec( boundary_time_startday,       & ! [OUT]
+                               boundary_time_startsec,       & ! [OUT]
+                               ATMOS_BOUNDARY_START_DATE(:), & ! [IN]
+                               boundary_time_startms,        & ! [IN]
+                               boundary_time_offset_year     ) ! [IN]
+
+    boundary_time_initdaysec = CALENDAR_combine_daysec( boundary_time_startday, boundary_time_startsec )
+
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,A)') '*** BOUNDARY START Date     : ', boundary_chardate
+
+    return
+  end subroutine ATMOS_BOUNDARY_initialize_file
+
+  !-----------------------------------------------------------------------------
+  !> Resume boundary value for real case experiment
+  subroutine ATMOS_BOUNDARY_resume_file
     use gtool_file, only: &
        FileRead
-    use scale_const, only: &
-       EPS => CONST_EPS
     use scale_process, only: &
        PRC_MPIstop
     use scale_time, only: &
@@ -1197,8 +1267,7 @@ contains
        TIME_DTSEC
     use scale_calendar, only: &
        CALENDAR_date2daysec,    &
-       CALENDAR_combine_daysec, &
-       CALENDAR_date2char
+       CALENDAR_combine_daysec
     implicit none
 
     real(RP) :: inc_DENS(KA,IA,JA)        ! damping coefficient for DENS [0-1]
@@ -1215,69 +1284,35 @@ contains
     integer  :: run_time_offset_year
     real(DP) :: run_time_nowdaysec
 
-    integer  :: boundary_time_startday
-    real(DP) :: boundary_time_startsec
-    real(DP) :: boundary_time_startms
-    integer  :: boundary_time_offset_year
-    real(DP) :: boundary_time_initdaysec
-
     real(DP) :: boundary_diff_daysec
     real(RP) :: boundary_inc_offset
     integer  :: fillgaps_steps
 
     character(len=H_LONG) :: bname
-    character(len=27)     :: boundary_chardate
 
     integer  :: i, j, k, iq
     !---------------------------------------------------------------------------
 
     bname = ATMOS_BOUNDARY_IN_BASENAME
 
-    boundary_time_startms     = 0.0_DP
-    boundary_time_offset_year = 0
-    call CALENDAR_date2char( boundary_chardate,            & ! [OUT]
-                             ATMOS_BOUNDARY_START_DATE(:), & ! [IN]
-                             boundary_time_startms,        & ! [IN]
-                             boundary_time_offset_year     ) ! [IN]
+    !--- recalculate time of the run [no offset]
+    run_time_startdate(:) = TIME_NOWDATE(:)
+    run_time_startdate(1) = TIME_OFFSET_YEAR
+    run_time_startms      = 0.0_DP
+    run_time_offset_year  = 0
 
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,A)') '*** BOUNDARY START Date     : ', boundary_chardate
+    call CALENDAR_date2daysec( run_time_startday,     & ! [OUT]
+                               run_time_startsec,     & ! [OUT]
+                               run_time_startdate(:), & ! [IN]
+                               run_time_startms,      & ! [IN]
+                               run_time_offset_year   ) ! [IN]
 
-    if ( ATMOS_BOUNDARY_START_DATE(1) == -9999 ) then
-       boundary_timestep = 1
-       boundary_inc_offset = 0.D0
-       fillgaps_steps = 0
-    else
-       !--- recalculate time of the run [no offset]
-       run_time_startdate(:) = TIME_NOWDATE(:)
-       run_time_startdate(1) = TIME_OFFSET_YEAR
-       run_time_startms      = 0.0_DP
-       run_time_offset_year  = 0
+    run_time_nowdaysec = CALENDAR_combine_daysec( run_time_startday, run_time_startsec )
 
-       call CALENDAR_date2daysec( run_time_startday,     & ! [OUT]
-                                  run_time_startsec,     & ! [OUT]
-                                  run_time_startdate(:), & ! [IN]
-                                  run_time_startms,      & ! [IN]
-                                  run_time_offset_year   ) ! [IN]
-
-       run_time_nowdaysec = CALENDAR_combine_daysec( run_time_startday, run_time_startsec )
-
-       !--- calculate time of the initial step in boundary file [no offset]
-       boundary_time_startms     = 0.0_DP
-       boundary_time_offset_year = 0
-
-       call CALENDAR_date2daysec( boundary_time_startday,       & ! [OUT]
-                                  boundary_time_startsec,       & ! [OUT]
-                                  ATMOS_BOUNDARY_START_DATE(:), & ! [IN]
-                                  boundary_time_startms,        & ! [IN]
-                                  boundary_time_offset_year     ) ! [IN]
-
-       boundary_time_initdaysec = CALENDAR_combine_daysec( boundary_time_startday, boundary_time_startsec )
-
-       boundary_diff_daysec = run_time_nowdaysec - boundary_time_initdaysec
-       boundary_timestep    = 1 + int( boundary_diff_daysec / ATMOS_BOUNDARY_UPDATE_DT )
-       boundary_inc_offset  = mod( boundary_diff_daysec, ATMOS_BOUNDARY_UPDATE_DT )
-       fillgaps_steps       = int( boundary_inc_offset / TIME_DTSEC )
-    endif
+    boundary_diff_daysec = run_time_nowdaysec - boundary_time_initdaysec
+    boundary_timestep    = 1 + int( boundary_diff_daysec / ATMOS_BOUNDARY_UPDATE_DT )
+    boundary_inc_offset  = mod( boundary_diff_daysec, ATMOS_BOUNDARY_UPDATE_DT )
+    fillgaps_steps       = int( boundary_inc_offset / TIME_DTSEC )
 
     if( IO_L ) write(IO_FID_LOG,*) '+++ BOUNDARY TIMESTEP NUMBER FOR INIT:', boundary_timestep
     if( IO_L ) write(IO_FID_LOG,*) '+++ BOUNDARY INCREMENT OFFSET:', boundary_inc_offset
@@ -1365,30 +1400,22 @@ contains
     end if
 
     return
-  end subroutine ATMOS_BOUNDARY_initialize_file
+  end subroutine ATMOS_BOUNDARY_resume_file
 
   !-----------------------------------------------------------------------------
   !> Initialize boundary value for real case experiment [online daughter]
   subroutine ATMOS_BOUNDARY_initialize_online
     use scale_process, only: &
        PRC_MPIstop
-    use scale_time, only: &
-       TIME_DTSEC,        &
-       TIME_NSTEP
     use scale_grid_nest, only: &
        NEST_COMM_recvwait_issue, &
        ONLINE_USE_VELZ,          &
        PARENT_DTSEC,             &
-       PARENT_NSTEP,             &
        NESTQA => NEST_BND_QA
     implicit none
 
     ! parameters
     integer, parameter  :: handle = 2
-
-    ! works
-    integer  :: i, j, k, iq
-    !---------------------------------------------------------------------------
 
     ATMOS_BOUNDARY_UPDATE_DT = PARENT_DTSEC(handle)
 
@@ -1399,11 +1426,35 @@ contains
        call PRC_MPIstop
     end if
 
+    call NEST_COMM_recvwait_issue( handle, NESTQA )
+
+    return
+  end subroutine ATMOS_BOUNDARY_initialize_online
+
+  !-----------------------------------------------------------------------------
+  !> Resume boundary value for real case experiment [online daughter]
+  subroutine ATMOS_BOUNDARY_resume_online
+    use scale_process, only: &
+       PRC_MPIstop
+    use scale_time, only: &
+       TIME_DTSEC,        &
+       TIME_NSTEP
+    use scale_grid_nest, only: &
+       NEST_COMM_recvwait_issue, &
+       ONLINE_USE_VELZ,          &
+       PARENT_NSTEP
+    implicit none
+
+    ! parameters
+    integer, parameter  :: handle = 2
+
+    ! works
+    integer  :: i, j, k, iq
+    !---------------------------------------------------------------------------
+
     ! import data from parent domain
     boundary_timestep = 1
     if( IO_L ) write(IO_FID_LOG,*) '+++ BOUNDARY TIMESTEP NUMBER FOR INIT:', boundary_timestep
-
-    call NEST_COMM_recvwait_issue( handle, NESTQA )
 
     call ATMOS_BOUNDARY_update_online_daughter( ref_now )
 
@@ -1469,7 +1520,7 @@ contains
     now_step = 0 ! should be set as zero in initialize process
 
     return
-  end subroutine ATMOS_BOUNDARY_initialize_online
+  end subroutine ATMOS_BOUNDARY_resume_online
 
   !-----------------------------------------------------------------------------
   !> First send boundary value

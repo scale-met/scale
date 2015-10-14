@@ -29,8 +29,9 @@ module mod_user
   !
   !++ Public procedure
   !
-  public :: USER_setup0
   public :: USER_setup
+  public :: USER_resume0
+  public :: USER_resume
   public :: USER_step
 
   !-----------------------------------------------------------------------------
@@ -42,7 +43,7 @@ module mod_user
   !++ Private procedure
   !
   !-----------------------------------------------------------------------------
-  real(RP) :: user_h2so4dt = 0.0_RP 
+  real(RP) :: user_h2so4dt = 0.0_RP
   real(RP) :: user_ocgasdt = 0.0_RP
   real(RP) :: user_emitdt = 0.0_RP
   real(RP) :: user_emitpoint(3)
@@ -50,7 +51,7 @@ module mod_user
   real(RP) :: user_dg_sulf = 80.e-9_RP
   real(RP) :: user_sg_sulf = 1.6_RP
   integer  :: user_n_kap = 1
-  integer  :: emit_indx(3) 
+  integer  :: emit_indx(3)
   data user_emitpoint / 0.0_RP, 0.0_RP, 0.0_RP /
   data emit_indx / 0, 0, 0 /
   real(RP),allocatable :: user_aerosol_procs(:,:,:,:) !(n_atr,n_siz_max,n_kap_max,n_ctg)
@@ -72,11 +73,6 @@ module mod_user
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
-  !> Setup0
-  subroutine USER_setup0
-  end subroutine USER_setup0
-
-  !-----------------------------------------------------------------------------
   !> Setup
   subroutine USER_setup
     use scale_process, only: &
@@ -93,10 +89,10 @@ contains
                user_h2so4dt,   &
                user_ocgasdt,   &
                user_emitdt,    &
-               user_emitpoint, &  
+               user_emitpoint, &
                user_m0_sulf,   &
                user_dg_sulf,   &
-               user_sg_sulf  
+               user_sg_sulf
 
     integer :: k, i, j
     integer :: ic, is0
@@ -123,19 +119,19 @@ contains
     emit_indx(:) = 0
 
     do i = IS, IE
-       if( CX(i) <= user_emitpoint(1) .and. CX(i+1) > user_emitpoint(1) ) then  
+       if( CX(i) <= user_emitpoint(1) .and. CX(i+1) > user_emitpoint(1) ) then
          emit_indx(1) = i
        endif
     enddo
 
     do j = JS, JE
-       if( CY(j) <= user_emitpoint(2) .and. CY(j+1) > user_emitpoint(2) ) then  
+       if( CY(j) <= user_emitpoint(2) .and. CY(j+1) > user_emitpoint(2) ) then
          emit_indx(2) = j
        endif
     enddo
 
     do k = KS, KE
-       if( CZ(k) <= user_emitpoint(3) .and. CZ(k+1) > user_emitpoint(3) ) then  
+       if( CZ(k) <= user_emitpoint(3) .and. CZ(k+1) > user_emitpoint(3) ) then
          emit_indx(3) = k
        endif
     enddo
@@ -183,6 +179,24 @@ contains
   end subroutine USER_setup
 
   !-----------------------------------------------------------------------------
+  !> Resuming operation, before calculating tendency
+  subroutine USER_resume0
+    implicit none
+    !---------------------------------------------------------------------------
+
+    return
+  end subroutine USER_resume0
+
+  !-----------------------------------------------------------------------------
+  !> Resuming operation
+  subroutine USER_resume
+    implicit none
+    !---------------------------------------------------------------------------
+
+    return
+  end subroutine USER_resume
+
+  !-----------------------------------------------------------------------------
   !> User step
   subroutine USER_step
     use mod_atmos_vars, only: &
@@ -224,7 +238,7 @@ contains
         m2t = m0t*dgt**(2.d0) *dexp(2.0d0 *(dlog(sgt)**2.d0)) !total M2 [m2/m3]
         m3t = m0t*dgt**(3.d0) *dexp(4.5d0 *(dlog(sgt)**2.d0)) !total M3 [m3/m3]
         mst = m3t*pi6*conv_vl_ms                              !total Ms [ug/m3]
-    
+
         do ic = 1, AE_CTG
         !aerosol_procs initial condition
         do ik = 1, n_kap(ic)   !kappa bin
@@ -262,12 +276,12 @@ contains
         enddo !ik (1:n_kap(ic)  )
         enddo !ic (1:n_ctg      )
 
-      else 
+      else
 
         AE_EMIT(:,:,:,:) = 0.0_RP
 
       endif
-    else 
+    else
       AE_EMIT(:,:,:,:) = 0.0_RP
     endif
 

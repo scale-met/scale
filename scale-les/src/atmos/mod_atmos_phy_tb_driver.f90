@@ -29,6 +29,7 @@ module mod_atmos_phy_tb_driver
   !++ Public procedure
   !
   public :: ATMOS_PHY_TB_driver_setup
+  public :: ATMOS_PHY_TB_driver_resume
   public :: ATMOS_PHY_TB_driver
 
   !-----------------------------------------------------------------------------
@@ -109,12 +110,6 @@ contains
        ! setup library component
        call ATMOS_PHY_TB_setup( ATMOS_PHY_TB_TYPE, & ! [IN]
                                 CDZ, CDX, CDY, CZ  ) ! [IN]
-
-       ! run once (only for the diagnostic value)
-       call PROF_rapstart('ATM_Turbulence', 1)
-       call ATMOS_PHY_TB_driver( update_flag = .true. )
-       call PROF_rapend  ('ATM_Turbulence', 1)
-
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** this component is never called.'
     endif
@@ -123,8 +118,27 @@ contains
   end subroutine ATMOS_PHY_TB_driver_setup
 
   !-----------------------------------------------------------------------------
-  subroutine ATMOS_PHY_TB_driver( update_flag )
+  !> Resume
+  subroutine ATMOS_PHY_TB_driver_resume
+    use mod_atmos_admin, only: &
+       ATMOS_sw_phy_tb
+    implicit none
+
+    if ( ATMOS_sw_phy_tb ) then
+
+       ! run once (only for the diagnostic value)
+       call PROF_rapstart('ATM_Turbulence', 1)
+       call ATMOS_PHY_TB_driver( update_flag = .true. )
+       call PROF_rapend  ('ATM_Turbulence', 1)
+
+    end if
+
+    return
+  end subroutine ATMOS_PHY_TB_driver_resume
+
+  !-----------------------------------------------------------------------------
   !> Driver
+  subroutine ATMOS_PHY_TB_driver( update_flag )
     use scale_gridtrans, only: &
        GSQRT => GTRANS_GSQRT, &
        J13G  => GTRANS_J13G,  &

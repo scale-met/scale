@@ -28,8 +28,9 @@ module mod_user
   !
   !++ Public procedure
   !
-  public :: USER_setup0
   public :: USER_setup
+  public :: USER_resume0
+  public :: USER_resume
   public :: USER_step
 
   !-----------------------------------------------------------------------------
@@ -108,19 +109,12 @@ module mod_user
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
-  !> Setup0
-  subroutine USER_setup0
-  end subroutine USER_setup0
-
-  !-----------------------------------------------------------------------------
   !> Setup
   subroutine USER_setup
     use scale_process, only: &
        PRC_MPIstop
     use scale_time, only: &
        TIME_DTSEC
-    use mod_cpl_vars, only: &
-       SST
     implicit none
 
     namelist / PARAM_USER / &
@@ -228,10 +222,30 @@ contains
        enddo
     enddo
 
+    return
+  end subroutine USER_setup
+
+  !-----------------------------------------------------------------------------
+  !> Resuming operation, before calculating tendency
+  subroutine USER_resume0
+    use mod_cpl_vars, only: &
+       SST
+    implicit none
+    !---------------------------------------------------------------------------
+
     SST(:,:) = CNST_SST
 
     return
-  end subroutine USER_setup
+  end subroutine USER_resume0
+
+  !-----------------------------------------------------------------------------
+  !> Resuming operation
+  subroutine USER_resume
+    implicit none
+    !---------------------------------------------------------------------------
+
+    return
+  end subroutine USER_resume
 
   !-----------------------------------------------------------------------------
   !> Step
