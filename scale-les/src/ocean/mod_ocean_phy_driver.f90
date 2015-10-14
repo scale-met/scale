@@ -79,16 +79,20 @@ contains
   !-----------------------------------------------------------------------------
   !> Resume
   subroutine OCEAN_PHY_driver_resume
+    use mod_admin_restart, only: &
+       RESTART_RUN
     use mod_ocean_admin, only: &
        OCEAN_sw
     implicit none
 
     if ( OCEAN_sw ) then
 
-       ! run once (only for the diagnostic value)
-       call PROF_rapstart('OCN_Physics', 1)
-       call OCEAN_PHY_driver( update_flag = .true. )
-       call PROF_rapend  ('OCN_Physics', 1)
+       if ( .NOT. RESTART_RUN ) then ! tentative
+          ! run once (only for the diagnostic value)
+          call PROF_rapstart('OCN_Physics', 1)
+          call OCEAN_PHY_driver( update_flag = .true. )
+          call PROF_rapend  ('OCN_Physics', 1)
+       end if
 
     end if
 

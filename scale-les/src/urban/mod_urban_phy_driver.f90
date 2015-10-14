@@ -75,16 +75,20 @@ contains
   !-----------------------------------------------------------------------------
   !> Resume
   subroutine URBAN_PHY_driver_resume
+    use mod_admin_restart, only: &
+       RESTART_RUN
     use mod_urban_admin, only: &
        URBAN_sw
     implicit none
 
     if ( URBAN_sw ) then
 
-       ! run once (only for the diagnostic value)
-       call PROF_rapstart('URB_Physics', 1)
-       call URBAN_PHY_driver( update_flag = .true. )
-       call PROF_rapend  ('URB_Physics', 1)
+       if ( .NOT. RESTART_RUN ) then ! tentative
+          ! run once (only for the diagnostic value)
+          call PROF_rapstart('URB_Physics', 1)
+          call URBAN_PHY_driver( update_flag = .true. )
+          call PROF_rapend  ('URB_Physics', 1)
+       end if
 
     end if
 

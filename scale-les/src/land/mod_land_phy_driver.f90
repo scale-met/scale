@@ -79,15 +79,20 @@ contains
   !-----------------------------------------------------------------------------
   !> Resume
   subroutine LAND_PHY_driver_resume
+    use mod_admin_restart, only: &
+       RESTART_RUN
     use mod_land_admin, only: &
        LAND_sw
     implicit none
 
     if ( LAND_sw ) then
-       ! run once (only for the diagnostic value)
-       call PROF_rapstart('LND_Physics', 1)
-       call LAND_PHY_driver( update_flag = .true. )
-       call PROF_rapend  ('LND_Physics', 1)
+
+       if ( .NOT. RESTART_RUN ) then ! tentative
+          ! run once (only for the diagnostic value)
+          call PROF_rapstart('LND_Physics', 1)
+          call LAND_PHY_driver( update_flag = .true. )
+          call PROF_rapend  ('LND_Physics', 1)
+       end if
     end if
 
     return
