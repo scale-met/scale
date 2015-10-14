@@ -139,6 +139,8 @@ contains
        endif
 
     else ! no additional prognostic variables
+       allocate( PROG(KA,IA,JA,1) ) ! for safety
+       PROG(:,:,:,:) = UNDEF
        ATMOS_DYN_RESTART_OUTPUT = .false.
     endif
 
