@@ -539,8 +539,8 @@ contains
        TIME_DSTEP_OCEAN_RESTART = int( TIME_DTSEC_OCEAN_RESTART / TIME_DTSEC )
        TIME_DSTEP_LAND_RESTART  = int( TIME_DTSEC_LAND_RESTART  / TIME_DTSEC )
        TIME_DSTEP_URBAN_RESTART = int( TIME_DTSEC_URBAN_RESTART / TIME_DTSEC )
-
        TIME_DSTEP_RESUME        = int( TIME_DTSEC_RESUME        / TIME_DTSEC )
+
        TIME_RES_RESUME = TIME_DSTEP_RESUME - 1
 
        if ( abs( real(TIME_NSTEP_ATMOS_DYN,kind=DP)*TIME_DTSEC_ATMOS_DYN &
@@ -810,21 +810,21 @@ contains
        TIME_RES_ATMOS_PHY_AE = 0
     endif
 
-    if ( TIME_RES_OCEAN == TIME_DSTEP_OCEAN ) then
+    if ( TIME_RES_OCEAN  == TIME_DSTEP_OCEAN  ) then
        TIME_DOOCEAN_step = .true.
        TIME_RES_OCEAN    = 0
     endif
-    if ( TIME_RES_LAND  == TIME_DSTEP_LAND  ) then
+    if ( TIME_RES_LAND   == TIME_DSTEP_LAND   ) then
        TIME_DOLAND_step  = .true.
        TIME_RES_LAND     = 0
     endif
-    if ( TIME_RES_URBAN == TIME_DSTEP_URBAN ) then
+    if ( TIME_RES_URBAN  == TIME_DSTEP_URBAN  ) then
        TIME_DOURBAN_step = .true.
        TIME_RES_URBAN    = 0
     endif
     if ( TIME_RES_RESUME == TIME_DSTEP_RESUME ) then
-       TIME_DOresume = .true.
-       TIME_RES_RESUME    = 0
+       TIME_DOresume     = .true.
+       TIME_RES_RESUME   = 0
     endif
 
     call CALENDAR_date2char( nowchardate,     & ! [OUT]

@@ -83,14 +83,19 @@ contains
   end subroutine USER_setup
 
   !-----------------------------------------------------------------------------
-  !> Resume
+  !> Resuming operation, before calculating tendency
   subroutine USER_resume0
+    implicit none
+    !---------------------------------------------------------------------------
 
     return
   end subroutine USER_resume0
 
   !-----------------------------------------------------------------------------
+  !> Resuming operation
   subroutine USER_resume
+    implicit none
+    !---------------------------------------------------------------------------
 
     return
   end subroutine USER_resume

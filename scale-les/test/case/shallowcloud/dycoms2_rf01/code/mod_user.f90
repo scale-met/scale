@@ -29,8 +29,9 @@ module mod_user
   !
   !++ Public procedure
   !
-  public :: USER_setup0
   public :: USER_setup
+  public :: USER_resume0
+  public :: USER_resume
   public :: USER_step
 
   !-----------------------------------------------------------------------------
@@ -68,11 +69,6 @@ module mod_user
   logical, private :: first = .true.
   !-----------------------------------------------------------------------------
 contains
-  !-----------------------------------------------------------------------------
-  !> Setup0
-  subroutine USER_setup0
-  end subroutine USER_setup0
-
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine USER_setup
@@ -236,10 +232,26 @@ contains
 
     endif
 
-    call USER_step
-
     return
   end subroutine USER_setup
+
+  !-----------------------------------------------------------------------------
+  !> Resuming operation, before calculating tendency
+  subroutine USER_resume0
+    implicit none
+    !---------------------------------------------------------------------------
+
+    return
+  end subroutine USER_resume0
+
+  !-----------------------------------------------------------------------------
+  !> Resuming operation
+  subroutine USER_resume
+    implicit none
+    !---------------------------------------------------------------------------
+
+    return
+  end subroutine USER_resume
 
   !-----------------------------------------------------------------------------
   !> User step

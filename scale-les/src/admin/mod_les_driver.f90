@@ -185,6 +185,7 @@ contains
     use mod_cpl_vars, only: &
        CPL_vars_setup
     use mod_user, only: &
+       USER_setup, &
        USER_step
     implicit none
 
@@ -302,6 +303,8 @@ contains
     call OCEAN_driver_setup
     call LAND_driver_setup
     call URBAN_driver_setup
+
+    call USER_setup
 
     call PROF_rapend('Initialize', 0)
 
