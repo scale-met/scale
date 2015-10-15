@@ -295,11 +295,12 @@ contains
        FLX_snow(:,:,:) = 0.0_RP
     endif
 
-    call MP_saturation_adjustment( RHOE_t(:,:,:),   & ! [INOUT]
-                                   QTRC_t(:,:,:,:), & ! [INOUT]
-                                   RHOE  (:,:,:),   & ! [INOUT]
-                                   QTRC  (:,:,:,:), & ! [INOUT]
-                                   DENS  (:,:,:)    ) ! [IN]
+    call MP_saturation_adjustment( RHOE_t(:,:,:),       & ! [INOUT]
+                                   QTRC_t(:,:,:,:),     & ! [INOUT]
+                                   RHOE  (:,:,:),       & ! [INOUT]
+                                   QTRC  (:,:,:,:),     & ! [INOUT]
+                                   DENS  (:,:,:),       & ! [IN]
+                                   flag_liquid = .true. ) ! [IN]
 
     call HIST_in( vterm(:,:,:,I_QR), 'Vterm_QR', 'terminal velocity of QR', 'm/s' )
 
