@@ -43,7 +43,7 @@ module scale_tracer
 #else
   integer, public :: QA
 
-  integer, public :: QA_MP 
+  integer, public :: QA_MP
   integer, public :: I_QV
   integer, public :: I_QC
   integer, public :: I_QR
@@ -71,7 +71,7 @@ module scale_tracer
   integer, public :: N_ATR   ! number of attribute
   integer, public, allocatable :: NKAP(:)
   integer, public, allocatable :: NSIZ(:)
-  integer, public :: IC_MIX 
+  integer, public :: IC_MIX
   integer, public :: IC_SEA
   integer, public :: IC_DUS
   integer, public :: IG_H2SO4
@@ -366,7 +366,7 @@ contains
     if( IO_L ) write(IO_FID_LOG,nml=PARAM_TRACER)
 
     select case (TRACER_TYPE)
-    case ("DRY")
+    case ("DRY","NONE")
        call TRACER_dry_setup
        QA_MP = QA_MP_dry
        I_QV = I_QV_dry
