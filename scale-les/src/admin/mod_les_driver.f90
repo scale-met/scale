@@ -443,23 +443,23 @@ contains
     call USER_resume0
 
     ! calc diagnostics
-    call ATMOS_vars_diagnostics
+    if( ATMOS_do ) call ATMOS_vars_diagnostics
 
     ! first monitor
-    call ATMOS_vars_monitor
+    if( ATMOS_do ) call ATMOS_vars_monitor
 
     ! setup surface condition
-    call ATMOS_SURFACE_SET( countup=.false. )
-    call OCEAN_SURFACE_SET( countup=.false. )
-    call LAND_SURFACE_SET ( countup=.false. )
-    call URBAN_SURFACE_SET( countup=.false. )
+    if( ATMOS_do ) call ATMOS_SURFACE_SET( countup=.false. )
+    if( OCEAN_do ) call OCEAN_SURFACE_SET( countup=.false. )
+    if( LAND_do  ) call LAND_SURFACE_SET ( countup=.false. )
+    if( URBAN_do ) call URBAN_SURFACE_SET( countup=.false. )
 
     ! setup submodel driver
-    call ATMOS_driver_resume1
-    call OCEAN_driver_resume
-    call LAND_driver_resume
-    call URBAN_driver_resume
-    call ATMOS_driver_resume2
+    if( ATMOS_do ) call ATMOS_driver_resume1
+    if( OCEAN_do ) call OCEAN_driver_resume
+    if( LAND_do  ) call LAND_driver_resume
+    if( URBAN_do ) call URBAN_driver_resume
+    if( ATMOS_do ) call ATMOS_driver_resume2
 
     ! setup user-defined procedure
     call USER_resume
