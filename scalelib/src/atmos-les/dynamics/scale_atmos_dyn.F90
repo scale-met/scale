@@ -221,13 +221,11 @@ contains
     allocate( num_diff  (KA,IA,JA,5,3) )
     allocate( num_diff_q(KA,IA,JA,3) )
 
-    if ( VA > 0 ) then
-       allocate( PROG_RK1(KA,IA,JA,VA) )
-       allocate( PROG_RK2(KA,IA,JA,VA) )
-       allocate( I_COMM_PROG(VA) )
-       allocate( I_COMM_PROG_RK1(VA) )
-       allocate( I_COMM_PROG_RK2(VA) )
-    end if
+    allocate( PROG_RK1(KA,IA,JA,max(VA,1)) )
+    allocate( PROG_RK2(KA,IA,JA,max(VA,1)) )
+    allocate( I_COMM_PROG    (max(VA,1)) )
+    allocate( I_COMM_PROG_RK1(max(VA,1)) )
+    allocate( I_COMM_PROG_RK2(max(VA,1)) )
 
     allocate( I_COMM_RHOQ_t(QA) )
     allocate( I_COMM_QTRC(QA) )
