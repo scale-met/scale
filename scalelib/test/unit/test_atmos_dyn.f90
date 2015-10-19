@@ -44,6 +44,7 @@ module test_atmos_dyn
   real(RP), allocatable :: MOMY(:,:,:)
   real(RP), allocatable :: RHOT(:,:,:)
   real(RP), allocatable :: QTRC(:,:,:,:)
+  real(RP), allocatable :: PROG(:,:,:,:)
 
   real(RP), allocatable :: DENS_av(:,:,:)
   real(RP), allocatable :: MOMZ_av(:,:,:)
@@ -111,8 +112,11 @@ contains
   !
   !++ used modules
   !
+  use scale_stdio
   use scale_atmos_dyn, only: &
      ATMOS_DYN_setup
+  use scale_atmos_dyn_rk, only: &
+     ATMOS_DYN_rk_regist
   use scale_grid, only: &
      GRID_CBFZ
   use scale_const, only: &
@@ -126,6 +130,9 @@ contains
   !
   !-----------------------------------------------------------------------------
   real(RP) :: lat(1,IA,JA)
+  integer :: VA
+  character(len=H_SHORT) :: CSDUMMY(1)
+  character(len=H_MID)   :: CMDUMMY(1)
   integer :: j
   !=============================================================================
 
@@ -179,6 +186,8 @@ contains
 
   allocate( ZERO(KA,IA,JA) )
 
+  allocate( PROG(KA,IA,JA,1) )
+
   ZERO(:,:,:) = 0.0_RP
 
   nd_order = 2
@@ -190,8 +199,11 @@ contains
   end do
 
   DYN_TYPE = "HEVE"
-  call ATMOS_DYN_setup( DYN_TYPE,                           & ! (in)
-                        DENS, MOMZ, MOMX, MOMY, RHOT, QTRC, & ! (in)
+  call ATMOS_DYN_rk_regist( DYN_TYPE, & !(in)
+                            VA, CSDUMMY, CMDUMMY, CSDUMMY ) ! (out)
+
+  call ATMOS_DYN_setup( DENS, MOMZ, MOMX, MOMY, RHOT, QTRC, & ! (in)
+                        PROG,                               & ! (in)
                         CDZ, CDX, CDY, FDZ, FDX, FDY,       & ! (in)
                         .false., lat                        ) ! (in)
 
@@ -283,6 +295,7 @@ subroutine test_undef
   do i = 1, 2
      call ATMOS_DYN( &
           DENS, MOMZ, MOMX, MOMY, RHOT, QTRC,          & ! (inout)
+          PROG,                                        & ! (inout)
           DENS_av, MOMZ_av, MOMX_av, MOMY_av, RHOT_av, QTRC_av, & ! (out)
           DENS_tp, MOMZ_tp, MOMX_tp, MOMY_tp, RHOT_tp, QTRC_tp, & ! (in)
           CDZ, CDX, CDY, FDZ, FDX, FDY,                & ! (in)
@@ -335,6 +348,7 @@ subroutine test_const
 
   call ATMOS_DYN( &
        DENS, MOMZ, MOMX, MOMY, RHOT, QTRC,          & ! (inout)
+       PROG,                                        & ! (inout)
        DENS_av, MOMZ_av, MOMX_av, MOMY_av, RHOT_av, QTRC_av, & ! (out)
        DENS_tp, MOMZ_tp, MOMX_tp, MOMY_tp, RHOT_tp, QTRC_tp, & ! (in)
        CDZ, CDX, CDY, FDZ, FDX, FDY,                & ! (in)
@@ -434,6 +448,7 @@ subroutine test_conserve
 
   call ATMOS_DYN( &
          DENS, MOMZ, MOMX, MOMY, RHOT, QTRC,          & ! (out)
+         PROG,                                        & ! (inout)
          DENS_av, MOMZ_av, MOMX_av, MOMY_av, RHOT_av, QTRC_av, & ! (inout)
          DENS_tp, MOMZ_tp, MOMX_tp, MOMY_tp, RHOT_tp, QTRC_tp, & ! (in)
          CDZ, CDX, CDY, FDZ, FDX, FDY,                & ! (in)
@@ -561,6 +576,7 @@ subroutine test_cwc
 
   call ATMOS_DYN( &
        DENS, MOMZ, MOMX, MOMY, RHOT, QTRC,          & ! (inout)
+       PROG,                                        & ! (inout)
        DENS_av, MOMZ_av, MOMX_av, MOMY_av, RHOT_av, QTRC_av, & ! (out)
        DENS_tp, MOMZ_tp, MOMX_tp, MOMY_tp, RHOT_tp, QTRC_tp, & ! (in)
        CDZ, CDX, CDY, FDZ, FDX, FDY,                & ! (in)
@@ -648,6 +664,7 @@ subroutine test_fctminmax
 
   call ATMOS_DYN( &
        DENS, MOMZ, MOMX, MOMY, RHOT, QTRC,          & ! (inout)
+       PROG,                                        & ! (inout)
        DENS_av, MOMZ_av, MOMX_av, MOMY_av, RHOT_av, QTRC_av, & ! (out)
        DENS_tp, MOMZ_tp, MOMX_tp, MOMY_tp, RHOT_tp, QTRC_tp, & ! (in)
        CDZ, CDX, CDY, FDZ, FDX, FDY,                & ! (in)
