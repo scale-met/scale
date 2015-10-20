@@ -406,7 +406,7 @@ contains
        if ( mod(NOWSTEP-1,MONITOR_STEP_INTERVAL) == 0 ) then
           write(MONIT_FID,'(A,i7,A,A,A)',advance='no') 'STEP=',NOWSTEP,' (',memo,')'
           do n = 1, MONIT_id_count
-             write(MONIT_FID,'(A,E15.8)',advance='no') ' ',MONIT_var(n)
+             write(MONIT_FID,'(A,ES15.8)',advance='no') ' ',MONIT_var(n)
           enddo
           write(MONIT_FID,*)
        endif

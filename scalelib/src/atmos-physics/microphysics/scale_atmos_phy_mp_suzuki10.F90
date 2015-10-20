@@ -409,7 +409,7 @@ contains
         if( IO_L ) write(IO_FID_LOG,*)  '*** Radius of cloud ****'
         do n = 1, nbin
           read( fid_micpara,* ) nn, xctr( n ), radc( n )
-          if( IO_L ) write(IO_FID_LOG,'(a,1x,i3,1x,a,1x,e15.7,1x,a)') &
+          if( IO_L ) write(IO_FID_LOG,'(A,1x,I3,1x,A,1x,ES15.7,1x,A)') &
                     "Radius of ", n, "th cloud bin (bin center)= ", radc( n ) , "[m]"
         enddo
         do n = 1, nbin+1
@@ -478,7 +478,7 @@ contains
         if( IO_L ) write(IO_FID_LOG,*)  '*** Radius of cloud ****'
         do n = 1, nbin
           read( fid_micpara,* ) nn, xctr( n ), radc( n )
-          if( IO_L ) write(IO_FID_LOG,'(a,1x,i3,1x,a,1x,e15.7,1x,a)') &
+          if( IO_L ) write(IO_FID_LOG,'(A,1x,I3,1x,A,1x,ES15.7,1x,A)') &
                     "Radius of ", n, "th cloud bin (bin center)= ", radc( n ) , "[m]"
         enddo
         do n = 1, nbin+1
@@ -555,7 +555,7 @@ contains
     do n = 1, nccn
      xactr( n ) = ( xabnd( n )+xabnd( n+1 ) )*0.50_RP
      rada( n )  = ( exp( xactr( n ) )*ThirdovForth/pi/rhoa )**( OneovThird )
-     if( IO_L ) write(IO_FID_LOG,'(a,1x,i3,1x,a,1x,e15.7,1x,a)') &
+     if( IO_L ) write(IO_FID_LOG,'(A,1x,I3,1x,A,1x,ES15.7,1x,A)') &
           "Radius of ", n, "th aerosol bin (bin center)= ", rada( n ) , "[m]"
     enddo
 
@@ -602,7 +602,7 @@ contains
         nbnd = n
       endif
     enddo
-    if( IO_L ) write(IO_FID_LOG,'(A,E15.7,A)')  '*** Radius between cloud and rain is ', radc(nbnd), '[m]'
+    if( IO_L ) write(IO_FID_LOG,'(A,ES15.7,A)')  '*** Radius between cloud and rain is ', radc(nbnd), '[m]'
 
     !--- random number setup for stochastic method
     if ( rndm_flgp > 0 ) then

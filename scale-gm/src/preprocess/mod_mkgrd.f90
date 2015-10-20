@@ -566,7 +566,7 @@ contains
        Fsum_max = GTL_max( var(:,:,:,I_Fsum), var_pl(:,:,:,I_Fsum), 1, 1, 1 )
        Ek_max   = GTL_max( var(:,:,:,I_Ek),   var_pl(:,:,:,I_Ek)  , 1, 1, 1 )
 
-       write(ADM_LOG_FID,'(I16,4(E16.8))') ite, Ek_max, Fsum_max
+       write(ADM_LOG_FID,'(I16,4(ES16.8))') ite, Ek_max, Fsum_max
 
        if( Fsum_max < criteria ) exit
 

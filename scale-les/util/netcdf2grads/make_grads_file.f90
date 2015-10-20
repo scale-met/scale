@@ -543,11 +543,11 @@ program convine
      write(10,'(a,1x,a)') "DSET", "^"//trim(vname(n))//'_d'//trim(cnest)//".grd"
      write(10,'(a)') "TITLE SCALE3 data output"
      write(10,'(a)') "OPTIONS BIG_ENDIAN"
-     write(10,'(a,1x,e15.7)') "UNDEF", -9.9999001E+30
+     write(10,'(a,1x,ES15.7)') "UNDEF", -9.9999001E+30
      write(10,'(a,3x,i7,1x,a)') "XDEF", nx, "LEVELS"
-     write(10,'(5(1x,e15.7))') cx(1:nx)*1.d-3
+     write(10,'(5(1x,ES15.7))') cx(1:nx)*1.d-3
      write(10,'(a,3x,i7,1x,a)') "YDEF", ny, "LEVELS"
-     write(10,'(5(1x,e15.7))') cy(1:ny)*1.d-3
+     write(10,'(5(1x,ES15.7))') cy(1:ny)*1.d-3
 
      if( (trim(vname(n)) == "TRL_URB").or.  &
          (trim(vname(n)) == "TBL_URB").or.  &
@@ -558,14 +558,14 @@ program convine
         write(10,'(a,3x,i7,1x,a,1x,a)') "ZDEF", lz, "linear", "1 1"
      elseif( (trim(vname(n)) == "height") )then
         write(10,'(a,3x,i7,1x,a)') "ZDEF", nz, "LEVELS"
-        write(10,'(5(1x,e15.7))') cz(nzhalo+1:nz+nzhalo)*1.d-3
+        write(10,'(5(1x,ES15.7))') cz(nzhalo+1:nz+nzhalo)*1.d-3
      elseif( (trim(vname(n)) == "topo").or.(trim(vname(n)) == "lsmask") )then
-        write(10,'(a,3x,i7,1x,a,1x,e15.7)') "ZDEF", 1, "LEVELS", cz(nzhalo+1)*1.d-3
+        write(10,'(a,3x,i7,1x,a,1x,ES15.7)') "ZDEF", 1, "LEVELS", cz(nzhalo+1)*1.d-3
      elseif( ndim == 4 ) then
         write(10,'(a,3x,i7,1x,a)') "ZDEF", nz, "LEVELS"
-        write(10,'(5(1x,e15.7))') cz(nzhalo+1:nz+nzhalo)*1.d-3
+        write(10,'(5(1x,ES15.7))') cz(nzhalo+1:nz+nzhalo)*1.d-3
      elseif( ndim == 3 ) then
-        write(10,'(a,3x,i7,1x,a,1x,e15.7)') "ZDEF", 1, "LEVELS", cz(nzhalo+1)*1.d-3
+        write(10,'(a,3x,i7,1x,a,1x,ES15.7)') "ZDEF", 1, "LEVELS", cz(nzhalo+1)*1.d-3
      endif
 
      write(10,'(a,3x,i5,1x,a,1x,a,3x,a)') "TDEF", nen-nst+1, "LINEAR", trim(stime), trim(delt)

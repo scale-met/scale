@@ -13,7 +13,7 @@ program convine
   implicit none
 
   include 'netcdf.inc'
- 
+
 !  integer(4), parameter :: nst=1, nen=1440  !--- time for average profile
 !  integer(4), parameter :: nt=nen-nst+1
 
@@ -22,7 +22,7 @@ program convine
 
   integer(4) :: nx, ny, nz, nxp, nyp
   integer(4) :: nzhalo, nxhalo, nyhalo
-  integer(4) :: xproc=2, yproc=3  !--- process number 
+  integer(4) :: xproc=2, yproc=3  !--- process number
   real(8) :: dt
   logical :: ofirst = .true.
   logical :: oread = .true.
@@ -43,7 +43,7 @@ program convine
   character*64 :: item
   character*5 :: HISTORY_DEFAULT_TUNIT
   real(8) :: HISTORY_DEFAULT_TINTERVAL
- 
+
   namelist  / PARAM_PRC / &
     PRC_NUM_X, PRC_NUM_Y
   namelist  / PARAM_HISTORY / &
@@ -60,7 +60,7 @@ program convine
   namelist /info/ timestep,idir,odir,vcount
   namelist /vari/ vname
   namelist /grads/ delt,stime
-  
+
   open(11,file='namelist.in',status='old')
   read(11,nml=info)
   write(6,nml=info)
@@ -73,7 +73,7 @@ program convine
   read(11,nml=vari)
   write(6,nml=vari)
     do n = 1, vcount
-      vname(n) = trim(vname(n)) 
+      vname(n) = trim(vname(n))
     enddo
   read(11,nml=grads)
   write(6,nml=grads)
@@ -135,7 +135,7 @@ program convine
     elseif( nrec < 100000 ) then
      write(cfile,'(a,i5,a)') "history.pe0",nrec,".nc"
     endif
-  
+
     cfile=trim(idir)//'/'//trim(cfile)
     !write(6,*) trim(cfile)
 
@@ -144,7 +144,7 @@ program convine
      write(*,*) "Stop at nf open"
      stop
     endif
- 
+
     if( ofirst ) then
       ofirst = .false.
 
@@ -273,7 +273,7 @@ program convine
      write(*,*) "stop at nf inq_varid ", trim(vname(n))
      stop
     end if
- 
+
     status = nf_inq_varndims( ncid,id01,ndim )
     if( status /= nf_noerr) then
      write(*,*) "stop at nf inq_varid dim", trim(vname(n))
@@ -282,13 +282,13 @@ program convine
 
     if( (trim(vname(n)) == "TRL_URB").or.  &
         (trim(vname(n)) == "TBL_URB").or.  &
-        (trim(vname(n)) == "TGL_URB") ) then 
+        (trim(vname(n)) == "TGL_URB") ) then
      status = nf_get_vara_double( ncid,id01,start,count_land,p_land_3d )
      if( status /= nf_noerr) then
       write(*,*) "stop at nf get_var_double land ", trim(vname(n))
       stop
      end if
-    elseif( ndim == 4 ) then 
+    elseif( ndim == 4 ) then
      status = nf_get_vara_double( ncid,id01,start,count,p_3d )
      if( status /= nf_noerr) then
       write(*,*) "stop at nf get_var_double 3 ", trim(vname(n))
@@ -301,10 +301,10 @@ program convine
       stop
      end if
     end if
- 
+
     status = nf_close(ncid)
 
-    !--- conbine variables in each processor to single  
+    !--- conbine variables in each processor to single
     do iix = (ix-1)*nxp+1, (ix-1)*nxp+nxp
       cdx(iix) = p_cdx(iix-(ix-1)*nxp+nxhalo)
       cx(iix) = p_cx(iix-(ix-1)*nxp+nxhalo)
@@ -322,7 +322,7 @@ program convine
       var_land_3d(iix,jjy,1:uz) = real(p_land_3d(iix-(ix-1)*nxp,jjy-(jy-1)*nyp,1:uz,1))
      enddo
      enddo
-    elseif( ndim == 4 ) then 
+    elseif( ndim == 4 ) then
      do iix = (ix-1)*nxp+1, (ix-1)*nxp+nxp
      do jjy = (jy-1)*nyp+1, (jy-1)*nyp+nyp
       var3d(iix,jjy,1:nz) = real(p_3d(iix-(ix-1)*nxp,jjy-(jy-1)*nyp,1:nz,1))
@@ -331,7 +331,7 @@ program convine
     elseif( ndim == 3 ) then
      do iix = (ix-1)*nxp+1, (ix-1)*nxp+nxp
      do jjy = (jy-1)*nyp+1, (jy-1)*nyp+nyp
-      var2d(iix,jjy) = real(p_2d(iix-(ix-1)*nxp,jjy-(jy-1)*nyp,1)) 
+      var2d(iix,jjy) = real(p_2d(iix-(ix-1)*nxp,jjy-(jy-1)*nyp,1))
      enddo
      enddo
     endif
@@ -345,21 +345,21 @@ program convine
      write(10,'(a,1x,a)') "DSET", "^"//trim(vname(n))//".grd"
      write(10,'(a)') "TITLE SCALE3 data output"
      write(10,'(a)') "OPTIONS BIG_ENDIAN"
-     write(10,'(a,1x,e15.7)') "UNDEF", -0.99900E+35
+     write(10,'(a,1x,ES15.7)') "UNDEF", -0.99900E+35
      write(10,'(a,3x,i7,1x,a)') "XDEF", nx, "LEVELS"
-     write(10,'(5(1x,e15.7))') cx(1:nx)*1.d-3
+     write(10,'(5(1x,ES15.7))') cx(1:nx)*1.d-3
      write(10,'(a,3x,i7,1x,a)') "YDEF", ny, "LEVELS"
-     write(10,'(5(1x,e15.7))') cy(1:ny)*1.d-3
+     write(10,'(5(1x,ES15.7))') cy(1:ny)*1.d-3
      if( (trim(vname(n)) == "TRL_URB").or.  &
          (trim(vname(n)) == "TBL_URB").or.  &
          (trim(vname(n)) == "TGL_URB") ) then
       write(10,'(a,3x,i7,1x,a)') "ZDEF", uz, "linear", "1 1"
      elseif( ndim == 4 ) then
       write(10,'(a,3x,i7,1x,a)') "ZDEF", nz, "LEVELS"
-      write(10,'(5(1x,e15.7))') cz(nzhalo+1:nz+nzhalo)*1.d-3
+      write(10,'(5(1x,ES15.7))') cz(nzhalo+1:nz+nzhalo)*1.d-3
      elseif( ndim == 3 ) then
-      write(10,'(a,3x,i7,1x,a,1x,e15.7)') "ZDEF", 1, "LEVELS", cz(nzhalo+1)*1.d-3
-     endif 
+      write(10,'(a,3x,i7,1x,a,1x,ES15.7)') "ZDEF", 1, "LEVELS", cz(nzhalo+1)*1.d-3
+     endif
      write(10,'(a,3x,i5,1x,a,1x,a,3x,a)') "TDEF", nen-nst+1, "LINEAR", trim(stime), trim(delt)
      write(10,'(a,3x,i2)') "VARS", 1
      if( (trim(vname(n)) == "TRL_URB").or.  &
@@ -370,7 +370,7 @@ program convine
       write(10,'(a,1x,i7,1x,i2,1x,a)') trim(vname(n)), nz, 99, "NONE"
      elseif( ndim == 3 ) then
       write(10,'(a,1x,i7,1x,i2,1x,a)') trim(vname(n)), 0, 99, "NONE"
-     endif 
+     endif
      write(10,'(a)') "ENDVARS"
      close(10)
    endif
@@ -406,13 +406,13 @@ program convine
     open(10,file=trim(odir)//'/'//trim(vname(n))//".grd", &
          form="unformatted", access="direct", recl=4*nx*ny*nz)
     write(10,rec=it-nst+1) (((var3d(ix,jy,kz),ix=1,nx),jy=1,ny),kz=1,nz)
-    close(10)   
+    close(10)
    elseif( ndim == 3 ) then
     print *, maxval(var2d), minval(var2d)
     open(10,file=trim(odir)//'/'//trim(vname(n))//".grd", &
          form="unformatted", access="direct", recl=4*nx*ny)
     write(10,rec=it-nst+1) ((var2d(ix,jy),ix=1,nx),jy=1,ny)
-    close(10)   
+    close(10)
    endif
   enddo !--- for variable (n)
   enddo !--- for time (it)

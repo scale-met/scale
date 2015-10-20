@@ -8,7 +8,7 @@ program convine
   integer(4) :: nx, ny, nz, nxp, nyp
   integer(4) :: lz
   integer(4) :: nzhalo, nxhalo, nyhalo
-  integer(4) :: xproc=3, yproc=3  !--- process number 
+  integer(4) :: xproc=3, yproc=3  !--- process number
   real(8)    :: dt
   logical    :: ofirst = .true.
   logical    :: oread = .true.
@@ -22,7 +22,7 @@ program convine
   integer(4) :: ierr, vcount, prc_num_x, prc_num_y
   real(8),allocatable :: cz(:), cdz(:)
   real(8),allocatable :: cdx(:), cdy(:), cx(:), cy(:)
-  real(8),allocatable :: p_cdx(:), p_cdy(:), p_cdz(:) 
+  real(8),allocatable :: p_cdx(:), p_cdy(:), p_cdz(:)
   real(8),allocatable :: p_cx(:), p_cy(:), p_cz(:)
   real(4),allocatable :: var2d(:,:), var3d(:,:,:), var_land_3d(:,:,:)
   real(8),allocatable :: p_4d(:,:,:,:), p_3d(:,:,:), p_2d(:,:), p_land_3d(:,:,:)
@@ -31,7 +31,7 @@ program convine
   real(8)      :: HISTORY_DEFAULT_TINTERVAL
   character*64 :: ATMOS_RESTART_OUT_BASENAME, rfile
   logical      :: ATMOS_RESTART_OUTPUT
- 
+
   namelist  / PARAM_PRC / &
     PRC_NUM_X, PRC_NUM_Y
   namelist  / PARAM_HISTORY / &
@@ -244,7 +244,7 @@ program convine
     end if
 
     if( (trim(vname(n)) == "LAND_TEMP")    .or.  &
-        (trim(vname(n)) == "LAND_WATER") ) then 
+        (trim(vname(n)) == "LAND_WATER") ) then
      status = nf_get_vara_double( ncid,id01,start,count_land,p_land_3d )
      if( status /= nf_noerr) then
       write(*,*) "stop at nf get_var_double land ", trim(vname(n))
@@ -331,9 +331,9 @@ program convine
     endif
 
     print *,ix,':',is,ie,jy,':',js,je
-  
+
     if( (trim(vname(n)) == "LAND_TEMP")    .or.  &
-        (trim(vname(n)) == "LAND_WATER") ) then 
+        (trim(vname(n)) == "LAND_WATER") ) then
      do iix = is,ie
      do jjy = js,je
          var_land_3d(iix,jjy,1:lz) = real(p_land_3d(1:lz,iix-is+1,jjy-js+1))
@@ -378,24 +378,24 @@ program convine
      write(10,'(a,1x,a)') "DSET", "^"//trim(vname(n))//".grd"
      write(10,'(a)') "TITLE SCALE-LES data output"
      write(10,'(a)') "OPTIONS BIG_ENDIAN"
-     write(10,'(a,1x,e15.7)') "UNDEF", -0.99900E+35
+     write(10,'(a,1x,ES15.7)') "UNDEF", -0.99900E+35
      write(10,'(a,3x,i7,1x,a)') "XDEF", nx, "LEVELS"
-     write(10,'(5(1x,e15.7))') cx(1:nx)*1.d-3
+     write(10,'(5(1x,ES15.7))') cx(1:nx)*1.d-3
      write(10,'(a,3x,i7,1x,a)') "YDEF", ny, "LEVELS"
-     write(10,'(5(1x,e15.7))') cy(1:ny)*1.d-3
+     write(10,'(5(1x,ES15.7))') cy(1:ny)*1.d-3
      if( (trim(vname(n)) == "LAND_TEMP")    .or.  &
-         (trim(vname(n)) == "LAND_WATER") ) then 
+         (trim(vname(n)) == "LAND_WATER") ) then
       write(10,'(a,3x,i7,1x,a,1x,a)') "ZDEF", lz, "linear", "1 1"
      elseif( ndim == 3 .or. ndim == 4) then
       write(10,'(a,3x,i7,1x,a)') "ZDEF", nz, "LEVELS"
-      write(10,'(5(1x,e15.7))') cz(1:nz)*1.d-3
+      write(10,'(5(1x,ES15.7))') cz(1:nz)*1.d-3
      elseif( ndim == 2 ) then
-      write(10,'(a,3x,i7,1x,a,1x,e15.7)') "ZDEF", 1, "LEVELS", cz(1)*1.d-3
+      write(10,'(a,3x,i7,1x,a,1x,ES15.7)') "ZDEF", 1, "LEVELS", cz(1)*1.d-3
      endif
      write(10,'(a,3x,i5,1x,a,1x,a,3x,a)') "TDEF", nen-nst+1, "LINEAR", "00:00Z01JAN2000", "1mn"
      write(10,'(a,3x,i2)') "VARS", 1
      if( (trim(vname(n)) == "LAND_TEMP")    .or.  &
-         (trim(vname(n)) == "LAND_WATER") ) then 
+         (trim(vname(n)) == "LAND_WATER") ) then
       write(10,'(a,1x,i7,1x,i2,1x,a)') trim(vname(n)), lz, 99, "NONE"
      elseif( ndim == 3 .or. ndim == 4 ) then
       write(10,'(a,1x,i7,1x,i2,1x,a)') trim(vname(n)), nz, 99, "NONE"
@@ -407,7 +407,7 @@ program convine
    endif
 
    if( (trim(vname(n)) == "LAND_TEMP")    .or.  &
-       (trim(vname(n)) == "LAND_WATER") ) then 
+       (trim(vname(n)) == "LAND_WATER") ) then
     open(10,file=trim(vname(n))//".grd", &
          form="unformatted", access="direct", recl=4*nx*ny*lz)
     write(10,rec=it-nst+1) (((var_land_3d(ix,jy,kz),ix=1,nx),jy=1,ny),kz=1,lz)

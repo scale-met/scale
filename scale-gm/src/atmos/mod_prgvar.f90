@@ -1044,7 +1044,7 @@ contains
     do nq = 1, DIAG_vmax0
        val_max = GTL_max( DIAG_var(:,:,:,nq), DIAG_var_pl(:,:,:,nq), ADM_kall, ADM_kmin, ADM_kmax )
        val_min = GTL_min( DIAG_var(:,:,:,nq), DIAG_var_pl(:,:,:,nq), ADM_kall, ADM_kmin, ADM_kmax )
-       write(ADM_LOG_FID,'(1x,A,A16,2(A,1PE24.17))') '--- ', DIAG_name(nq), ': max=', val_max, ', min=', val_min
+       write(ADM_LOG_FID,'(1x,A,A16,2(A,ES24.17))') '--- ', DIAG_name(nq), ': max=', val_max, ', min=', val_min
     enddo
 
     do nq = 1, TRC_vmax
@@ -1062,7 +1062,7 @@ contains
                           DIAG_var_pl(:,:,:,DIAG_vmax0+nq), &
                           ADM_kall, ADM_kmin, ADM_kmax, nonzero)
 
-       write(ADM_LOG_FID,'(1x,A,A16,2(A,1PE24.17))') '--- ', TRC_name(nq),  ': max=', val_max, ', min=', val_min
+       write(ADM_LOG_FID,'(1x,A,A16,2(A,ES24.17))') '--- ', TRC_name(nq),  ': max=', val_max, ', min=', val_min
     enddo
 
     call cnvvar_diag2prg( PRG_var (:,:,:,:), PRG_var_pl (:,:,:,:), & !--- [OUT]
@@ -1073,7 +1073,7 @@ contains
     do nq = 1, PRG_vmax0
        val_max = GTL_max( PRG_var(:,:,:,nq), PRG_var_pl(:,:,:,nq), ADM_kall, ADM_kmin, ADM_kmax )
        val_min = GTL_min( PRG_var(:,:,:,nq), PRG_var_pl(:,:,:,nq), ADM_kall, ADM_kmin, ADM_kmax )
-       write(ADM_LOG_FID,'(1x,A,A16,2(A,1PE24.17))') '--- ', PRG_name(nq), ': max=', val_max, ', min=', val_min
+       write(ADM_LOG_FID,'(1x,A,A16,2(A,ES24.17))') '--- ', PRG_name(nq), ': max=', val_max, ', min=', val_min
     enddo
 
     do nq = 1, TRC_vmax
@@ -1091,7 +1091,7 @@ contains
                           PRG_var_pl(:,:,:,PRG_vmax0+nq),      &
                           ADM_kall, ADM_kmin, ADM_kmax, nonzero)
 
-       write(ADM_LOG_FID,'(1x,A,A16,2(A,1PE24.17))') '--- rhog * ', TRC_name(nq),  ': max=', val_max, ', min=', val_min
+       write(ADM_LOG_FID,'(1x,A,A16,2(A,ES24.17))') '--- rhog * ', TRC_name(nq),  ': max=', val_max, ', min=', val_min
     enddo
 
     return
@@ -1169,7 +1169,7 @@ contains
                           DIAG_var_pl(:,:,:,nq),       &
                           ADM_kall, ADM_kmin, ADM_kmax )
 
-       write(ADM_LOG_FID,'(1x,A,A16,2(A,1PE24.17))') '--- ', DIAG_name(nq), ': max=', val_max, ', min=', val_min
+       write(ADM_LOG_FID,'(1x,A,A16,2(A,ES24.17))') '--- ', DIAG_name(nq), ': max=', val_max, ', min=', val_min
     enddo
 
     do nq = 1, TRC_vmax
@@ -1187,7 +1187,7 @@ contains
                           DIAG_var_pl(:,:,:,DIAG_vmax0+nq), &
                           ADM_kall, ADM_kmin, ADM_kmax, nonzero)
 
-       write(ADM_LOG_FID,'(1x,A,A16,2(A,1PE24.17))') '--- ', TRC_name(nq),  ': max=', val_max, ', min=', val_min
+       write(ADM_LOG_FID,'(1x,A,A16,2(A,ES24.17))') '--- ', TRC_name(nq),  ': max=', val_max, ', min=', val_min
     enddo
 
     if ( output_io_mode == 'ADVANCED' ) then

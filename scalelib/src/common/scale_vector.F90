@@ -391,7 +391,7 @@ contains
        call VECTR_abs( acac, oaoc(:) )
 
        if ( abab < CONST_EPS * radius .OR. acac < CONST_EPS * radius ) then
-          !write(*,'(A,3(E20.10))') "zero length abab or acac:", abab/radius, acac/radius
+          !write(*,'(A,3(ES20.10))') "zero length abab or acac:", abab/radius, acac/radius
           return
        endif
 
@@ -404,7 +404,7 @@ contains
        baba = abab
 
        if ( bcbc < CONST_EPS * radius .OR. baba < CONST_EPS * radius ) then
-          !write(*,'(A,3(E20.10))') "zero length bcbc or baba:", bcbc/radius, baba/radius
+          !write(*,'(A,3(ES20.10))') "zero length bcbc or baba:", bcbc/radius, baba/radius
           return
        endif
 
@@ -417,7 +417,7 @@ contains
        cbcb = bcbc
 
        if ( caca < CONST_EPS * radius .OR. cbcb < CONST_EPS * radius ) then
-          !write(*,'(A,3(E20.10))') "zero length caca or cbcb:", caca/radius, cbcb/radius
+          !write(*,'(A,3(ES20.10))') "zero length caca or cbcb:", caca/radius, cbcb/radius
           return
        endif
 

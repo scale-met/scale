@@ -384,7 +384,7 @@ contains
 
           do n = nstart, nend
              if ( abs(w1(n)+w2(n)+w3(n)-1.0_RP) > 1.E-15_RP ) then
-                write(ADM_LOG_FID,'(A,2I6,E30.20)') '(lat,lon,area)=', &
+                write(ADM_LOG_FID,'(A,2I6,ES30.20)') '(lat,lon,area)=', &
                 lat_index(n),lon_index(n),w1(n)+w2(n)+w3(n)
              endif
           enddo

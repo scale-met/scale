@@ -156,7 +156,7 @@ module scale_atmos_phy_rd_mstrnx
   integer,  private, parameter :: MSTRN_nfitPLK  =  5 !< # of fitting point for planck function
   integer,  private, parameter :: MSTRN_nplkord  =  3 !< # of orders for planck function
   integer,  private, parameter :: MSTRN_nmoment  =  6 !< absorption + # of moments for scattering phase function
-  integer,  private, save :: MSTRN_nradius  =  6 !< # of radius mode for hygroscopic parameter
+  integer,  private, save      :: MSTRN_nradius  =  6 !< # of radius mode for hygroscopic parameter
   integer,  private, parameter :: MSTRN_ncloud   =  2 !< # of cloud types [ClearSky/Cloud]
 
   logical,  private, save :: ATMOS_PHY_RD_MSTRN_ONLY_QCI = .false.

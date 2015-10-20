@@ -210,7 +210,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '###### Generated Reference State of Atmosphere ######'
        if( IO_L ) write(IO_FID_LOG,*) '   z*-coord.:    pressure: temperature:     density:   pot.temp.: water vapor'
        do k = KS, KE
-          if( IO_L ) write(IO_FID_LOG,'(6(f13.5))') CZ(k),                    &
+          if( IO_L ) write(IO_FID_LOG,'(6F13.5)')   CZ(k),                    &
                                                     ATMOS_REFSTATE1D_pres(k), &
                                                     ATMOS_REFSTATE1D_temp(k), &
                                                     ATMOS_REFSTATE1D_dens(k), &

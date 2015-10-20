@@ -1217,62 +1217,62 @@ contains
     deallocate(w1,w2,w3,w4,w5,w6,w7,w8)
 
     if( IO_L ) write(IO_FID_LOG,'(100a16)')     "LABEL       ",WLABEL(:)
-    if( IO_L ) write(IO_FID_LOG,'(a,100e16.6)') "capacity    ",cap(:) ! [Add] 11/08/30 T.Mitsui
-    if( IO_L ) write(IO_FID_LOG,'(a,100e16.6)') "coef_m2     ",coef_m2(:)
-    if( IO_L ) write(IO_FID_LOG,'(a,100e16.6)') "coef_d      ",coef_d(:)
+    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "capacity    ",cap(:) ! [Add] 11/08/30 T.Mitsui
+    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "coef_m2     ",coef_m2(:)
+    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "coef_d      ",coef_d(:)
     !
-    if( IO_L ) write(IO_FID_LOG,'(a,100e16.6)') "coef_d3     ",coef_d3(:)
-    if( IO_L ) write(IO_FID_LOG,'(a,100e16.6)') "coef_d6     ",coef_d6(:)
-    if( IO_L ) write(IO_FID_LOG,'(a,100e16.6)') "coef_d2v    ",coef_d2v(:)
-    if( IO_L ) write(IO_FID_LOG,'(a,100e16.6)') "coef_md2v   ",coef_md2v(:)
-    if( IO_L ) write(IO_FID_LOG,'(a,100e16.6)') "a_d2vt      ",a_d2vt(:)
-    if( IO_L ) write(IO_FID_LOG,'(a,100e16.6)') "b_d2vt      ",b_d2vt(:)
+    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "coef_d3     ",coef_d3(:)
+    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "coef_d6     ",coef_d6(:)
+    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "coef_d2v    ",coef_d2v(:)
+    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "coef_md2v   ",coef_md2v(:)
+    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "a_d2vt      ",a_d2vt(:)
+    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "b_d2vt      ",b_d2vt(:)
     !
-    if( IO_L ) write(IO_FID_LOG,'(a,100e16.6)') "coef_r2     ",coef_r2(:)
-    if( IO_L ) write(IO_FID_LOG,'(a,100e16.6)') "coef_r3     ",coef_r3(:)
-    if( IO_L ) write(IO_FID_LOG,'(a,100e16.6)') "coef_re     ",coef_re(:)
+    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "coef_r2     ",coef_r2(:)
+    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "coef_r3     ",coef_r3(:)
+    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "coef_re     ",coef_re(:)
     !
-    if( IO_L ) write(IO_FID_LOG,'(a,100e16.6)') "a_area      ",a_area(:)
-    if( IO_L ) write(IO_FID_LOG,'(a,100e16.6)') "b_area      ",b_area(:)
-    if( IO_L ) write(IO_FID_LOG,'(a,100e16.6)') "ax_area     ",ax_area(:)
-    if( IO_L ) write(IO_FID_LOG,'(a,100e16.6)') "bx_area     ",bx_area(:)
-    if( IO_L ) write(IO_FID_LOG,'(a,100e16.6)') "a_rea       ",a_rea(:)
-    if( IO_L ) write(IO_FID_LOG,'(a,100e16.6)') "b_rea       ",b_rea(:)
-    if( IO_L ) write(IO_FID_LOG,'(a,100e16.6)') "a_rea3      ",a_rea3(:)
-    if( IO_L ) write(IO_FID_LOG,'(a,100e16.6)') "b_rea3      ",b_rea3(:)
+    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "a_area      ",a_area(:)
+    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "b_area      ",b_area(:)
+    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "ax_area     ",ax_area(:)
+    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "bx_area     ",bx_area(:)
+    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "a_rea       ",a_rea(:)
+    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "b_rea       ",b_rea(:)
+    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "a_rea3      ",a_rea3(:)
+    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "b_rea3      ",b_rea3(:)
     !
-    if( IO_L ) write(IO_FID_LOG,'(a,100e16.6)') "coef_rea2   ",coef_rea2(:)
-    if( IO_L ) write(IO_FID_LOG,'(a,100e16.6)') "coef_rea3   ",coef_rea3(:)
-    if( IO_L ) write(IO_FID_LOG,'(a,100e16.6)') "coef_vt0    ",coef_vt0(:,1)
-    if( IO_L ) write(IO_FID_LOG,'(a,100e16.6)') "coef_vt1    ",coef_vt1(:,1)
-    if( IO_L ) write(IO_FID_LOG,'(a,100e16.6)') "coef_A      ",coef_A(:)
-    if( IO_L ) write(IO_FID_LOG,'(a,100e16.6)') "coef_lambda ",coef_lambda(:)
+    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "coef_rea2   ",coef_rea2(:)
+    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "coef_rea3   ",coef_rea3(:)
+    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "coef_vt0    ",coef_vt0(:,1)
+    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "coef_vt1    ",coef_vt1(:,1)
+    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "coef_A      ",coef_A(:)
+    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "coef_lambda ",coef_lambda(:)
 
-    if( IO_L ) write(IO_FID_LOG,'(a,100e16.6)') "ah_vent0 sml",ah_vent0(:,1)
-    if( IO_L ) write(IO_FID_LOG,'(a,100e16.6)') "ah_vent0 lrg",ah_vent0(:,2)
-    if( IO_L ) write(IO_FID_LOG,'(a,100e16.6)') "ah_vent1 sml",ah_vent1(:,1)
-    if( IO_L ) write(IO_FID_LOG,'(a,100e16.6)') "ah_vent1 lrg",ah_vent1(:,2)
-    if( IO_L ) write(IO_FID_LOG,'(a,100e16.6)') "bh_vent0 sml",bh_vent0(:,1)
-    if( IO_L ) write(IO_FID_LOG,'(a,100e16.6)') "bh_vent0 lrg",bh_vent0(:,2)
-    if( IO_L ) write(IO_FID_LOG,'(a,100e16.6)') "bh_vent1 sml",bh_vent1(:,1)
-    if( IO_L ) write(IO_FID_LOG,'(a,100e16.6)') "bh_vent1 lrg",bh_vent1(:,2)
+    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "ah_vent0 sml",ah_vent0(:,1)
+    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "ah_vent0 lrg",ah_vent0(:,2)
+    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "ah_vent1 sml",ah_vent1(:,1)
+    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "ah_vent1 lrg",ah_vent1(:,2)
+    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "bh_vent0 sml",bh_vent0(:,1)
+    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "bh_vent0 lrg",bh_vent0(:,2)
+    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "bh_vent1 sml",bh_vent1(:,1)
+    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "bh_vent1 lrg",bh_vent1(:,2)
 
-    if( IO_L ) write(IO_FID_LOG,'(a,100e16.6)') "delta_b0    ",delta_b0(:)
-    if( IO_L ) write(IO_FID_LOG,'(a,100e16.6)') "delta_b1    ",delta_b1(:)
-    if( IO_L ) write(IO_FID_LOG,'(a,100e16.6)') "theta_b0    ",theta_b0(:)
-    if( IO_L ) write(IO_FID_LOG,'(a,100e16.6)') "theta_b1    ",theta_b1(:)
+    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "delta_b0    ",delta_b0(:)
+    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "delta_b1    ",delta_b1(:)
+    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "theta_b0    ",theta_b0(:)
+    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "theta_b1    ",theta_b1(:)
 
     do ia=QQS,QQE
-       if( IO_L ) write(IO_FID_LOG,'(a,a10,a,100e16.6)') "delta0(a,b)=(",trim(WLABEL(ia)),",b)=",(delta_ab0(ia,ib),ib=QQS,QQE)
+       if( IO_L ) write(IO_FID_LOG,'(a,a10,a,100ES16.6)') "delta0(a,b)=(",trim(WLABEL(ia)),",b)=",(delta_ab0(ia,ib),ib=QQS,QQE)
     enddo
     do ia=QQS,QQE
-       if( IO_L ) write(IO_FID_LOG,'(a,a10,a,100e16.6)') "delta1(a,b)=(",trim(WLABEL(ia)),",b)=",(delta_ab1(ia,ib),ib=QQS,QQE)
+       if( IO_L ) write(IO_FID_LOG,'(a,a10,a,100ES16.6)') "delta1(a,b)=(",trim(WLABEL(ia)),",b)=",(delta_ab1(ia,ib),ib=QQS,QQE)
     enddo
     do ia=QQS,QQE
-       if( IO_L ) write(IO_FID_LOG,'(a,a10,a,100e16.6)') "theta0(a,b)=(",trim(WLABEL(ia)),",b)=",(theta_ab0(ia,ib),ib=QQS,QQE)
+       if( IO_L ) write(IO_FID_LOG,'(a,a10,a,100ES16.6)') "theta0(a,b)=(",trim(WLABEL(ia)),",b)=",(theta_ab0(ia,ib),ib=QQS,QQE)
     enddo
     do ia=QQS,QQE
-       if( IO_L ) write(IO_FID_LOG,'(a,a10,a,100e16.6)') "theta1(a,b)=(",trim(WLABEL(ia)),",b)=",(theta_ab1(ia,ib),ib=QQS,QQE)
+       if( IO_L ) write(IO_FID_LOG,'(a,a10,a,100ES16.6)') "theta1(a,b)=(",trim(WLABEL(ia)),",b)=",(theta_ab1(ia,ib),ib=QQS,QQE)
     enddo
 
     return
@@ -2121,7 +2121,7 @@ contains
     real(RP), intent(in)  :: dTdt_rad(KA,IA,JA) ! 09/08/18 T.Mitsui
     real(RP), intent(in)  :: qke(KA,IA,JA)      ! 09/08/18 T.Mitsui
     real(DP), intent(in)  :: dt
-    real(RP), intent(in)  :: CCN(KA,IA,JA)   
+    real(RP), intent(in)  :: CCN(KA,IA,JA)
     !
     ! namelist variables
     !

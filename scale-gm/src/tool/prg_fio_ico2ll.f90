@@ -1286,7 +1286,7 @@ contains
 
        write(fid,'(A)')      'TITLE NICAM data output'
        write(fid,'(A)')      'OPTIONS BIG_ENDIAN '
-       write(fid,'(A,E12.5)') 'UNDEF ', CONST_UNDEF4
+       write(fid,'(A,ES12.5)') 'UNDEF ', CONST_UNDEF4
 
        write(fid,'(A,I5,A)') 'XDEF ', imax, ' LEVELS'
        if (lon_swap) then
@@ -1412,14 +1412,14 @@ contains
     write(gthead(36),'(I16)'  ) 1
     write(gthead(37),'(I16)'  ) kmax
     write(gthead(38),'(A16)'  ) '             UR4'
-    write(gthead(39),'(E16.7)') CONST_UNDEF4
-    write(gthead(40),'(E16.7)') CONST_UNDEF4
-    write(gthead(41),'(E16.7)') CONST_UNDEF4
-    write(gthead(42),'(E16.7)') CONST_UNDEF4
-    write(gthead(43),'(E16.7)') CONST_UNDEF4
+    write(gthead(39),'(ES16.7)') CONST_UNDEF4
+    write(gthead(40),'(ES16.7)') CONST_UNDEF4
+    write(gthead(41),'(ES16.7)') CONST_UNDEF4
+    write(gthead(42),'(ES16.7)') CONST_UNDEF4
+    write(gthead(43),'(ES16.7)') CONST_UNDEF4
     write(gthead(44),'(I16)'  ) 1
     write(gthead(46),'(I16)'  ) 0
-    write(gthead(47),'(E16.7)') 0.
+    write(gthead(47),'(ES16.7)') 0.
     write(gthead(48),'(I16)'  ) 0
     write(gthead(60),'(A16)'  ) kdate
     write(gthead(62),'(A16)'  ) kdate
@@ -1443,10 +1443,10 @@ contains
     write(axhead(36),'(I16)'  ) 1
     write(axhead(37),'(I16)'  ) 1
     write(axhead(38),'(A16)'  ) '             UR4'
-    write(axhead(39),'(E16.7)') -999.0
+    write(axhead(39),'(ES16.7)') -999.0
     write(axhead(44),'(I16)'  ) 1
     write(axhead(46),'(I16)'  ) 0
-    write(axhead(47),'(E16.7)') 0.
+    write(axhead(47),'(ES16.7)') 0.
     write(axhead(48),'(I16)'  ) 0
     write(axhead(60),'(A16)'  ) kdate
     write(axhead(62),'(A16)'  ) kdate
@@ -1482,10 +1482,10 @@ contains
        write(axhead( 3),'(A16)'  ) trim(gt_axisx)
        write(axhead(29),'(A16)'  ) trim(gt_axisx)
        write(axhead(31),'(I16)'  ) imax+1
-       write(axhead(40),'(E16.7)')   0.E0
-       write(axhead(41),'(E16.7)') 360.E0
-       write(axhead(42),'(E16.7)')  10.E0
-       write(axhead(43),'(E16.7)')  30.E0
+       write(axhead(40),'(ES16.7)')   0.E0
+       write(axhead(41),'(ES16.7)') 360.E0
+       write(axhead(42),'(ES16.7)')  10.E0
+       write(axhead(43),'(ES16.7)')  30.E0
        write(axhead(64),'(I16)'  ) imax+1
 
        write(fid) axhead
@@ -1505,10 +1505,10 @@ contains
        write(axhead( 3),'(A16)'  ) trim(gt_axisy)
        write(axhead(29),'(A16)'  ) trim(gt_axisy)
        write(axhead(31),'(I16)'  ) jmax
-       write(axhead(40),'(E16.7)') -90.E0
-       write(axhead(41),'(E16.7)')  90.E0
-       write(axhead(42),'(E16.7)')  10.E0
-       write(axhead(43),'(E16.7)')  30.E0
+       write(axhead(40),'(ES16.7)') -90.E0
+       write(axhead(41),'(ES16.7)')  90.E0
+       write(axhead(42),'(ES16.7)')  10.E0
+       write(axhead(43),'(ES16.7)')  30.E0
        write(axhead(64),'(I16)'  ) jmax
 
        write(fid) axhead
@@ -1528,10 +1528,10 @@ contains
        write(axhead( 3),'(A16)'  ) trim(layername)
        write(axhead(29),'(A16)'  ) trim(layername)
        write(axhead(31),'(I16)'  ) kmax
-       write(axhead(40),'(E16.7)')     0.E0
-       write(axhead(41),'(E16.7)') real(maxval(alt),kind=4)
-       write(axhead(42),'(E16.7)')  1000.E0
-       write(axhead(43),'(E16.7)') 10000.E0
+       write(axhead(40),'(ES16.7)')     0.E0
+       write(axhead(41),'(ES16.7)') real(maxval(alt),kind=4)
+       write(axhead(42),'(ES16.7)')  1000.E0
+       write(axhead(43),'(ES16.7)') 10000.E0
        write(axhead(64),'(I16)'  ) kmax
 
        write(fid) axhead

@@ -315,7 +315,7 @@ contains
     write(ADM_LOG_FID,*) '*** vertical weight'
     write(ADM_LOG_FID,*) '   k       z   weight[0-1]'
     do k = 1, ADM_kall
-       write(ADM_LOG_FID,'(1x,I3,1x,F7.1,1x,E14.6)') k, GRD_gz(k), wgt_vertical(k)
+       write(ADM_LOG_FID,'(1x,I3,1x,F7.1,1x,ES14.6)') k, GRD_gz(k), wgt_vertical(k)
     enddo
 
     write(ADM_LOG_FID,*)

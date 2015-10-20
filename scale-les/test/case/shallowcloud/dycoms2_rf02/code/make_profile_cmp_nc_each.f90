@@ -10,7 +10,7 @@ program convine
   integer(4), parameter :: nzhalo=2
   integer(4), parameter :: nx=nxp*xproc, ny=nyp*yproc, nz=200
   real(8), parameter :: cp=1015.D0, Lp=2.47d+6, dt=60.d0 !sec
-  real(8), parameter :: rdry=287.04d0 , p00=101300.d0 , cpdry=1003.5d0 
+  real(8), parameter :: rdry=287.04d0 , p00=101300.d0 , cpdry=1003.5d0
   real(8), parameter :: lh0=2.5008D+6, rovcp=rdry/cpdry, tint=0.d0
   integer(4), parameter :: nzs=100
   real(8), parameter :: s_zmax=1.2d0
@@ -21,9 +21,9 @@ program convine
   real(8) :: s_totwqt(nzs), s_totwpt(nzs)
   integer(4) :: ntm1(1)
 
-  integer(4) :: start(4) 
-  integer(4) :: count(4) 
-  integer(4) :: count2(3) 
+  integer(4) :: start(4)
+  integer(4) :: count(4)
+  integer(4) :: count2(3)
   data count /nxp,nyp,nz,1/
   data count2 /nxp,nyp,1/
   integer(4) :: ix, jy, kz, kz1, nrec, n
@@ -64,7 +64,7 @@ program convine
   real(8),allocatable :: p_sgs_wwflx(:,:,:,:), p_sgs_vvflx(:,:,:,:), p_sgs_uuflx(:,:,:,:)
   real(8),allocatable :: p_lhflx(:,:,:,:), p_shflx(:,:,:,:)
   real(8),allocatable :: p_sgs_wqcflx(:,:,:,:), p_sgs_wqrflx(:,:,:,:)
-  !--------------  
+  !--------------
   allocate( lwp(nx,ny) )
   allocate( zb(nx,ny) )
   allocate( zi(nx,ny) )
@@ -135,7 +135,7 @@ program convine
   allocate( p_sgs_vvflx(nxp,nyp,nz,1) )
   allocate( p_lhflx(nxp,nyp,nz,1) )
   allocate( p_shflx(nxp,nyp,nz,1) )
-  !--------------  
+  !--------------
 
   open(50,file="comp_time_evolv.txt")
   write(50,'(1x,a10,9(1x,a15))') "# time ", "LWP", "TKE(GR)", "TKE(SGS)", "Zi", "Zb", "PBL", "Cloud cover", "LHFLX", "SHFLX"
@@ -197,250 +197,250 @@ program convine
       stop
      endif
 
-     if( n == 1 ) then 
+     if( n == 1 ) then
       status = nf_inq_varid( ncid,'CZ',id01 )
       if( status /= nf_noerr) then
        write(*,*) "stop at nf inq_varid cz"
       stop
       end if
-  
+
       status = nf_get_var_double( ncid,id01,cz )
       if( status /= nf_noerr) then
        write(*,*) "stop at nf get_var_double cz"
        stop
       end if
- 
+
       status = nf_inq_varid( ncid,'CDZ',id01 )
       if( status /= nf_noerr) then
        write(*,*) "stop at nf inq_varid cdz"
       stop
       end if
-  
+
       status = nf_get_var_double( ncid,id01,cdz )
       if( status /= nf_noerr) then
        write(*,*) "stop at nf get_var_double cdz"
        stop
       end if
      endif
- 
+
      status = nf_inq_varid( ncid,'W',id01 )
      if( status /= nf_noerr) then
       write(*,*) "stop at nf inq_varid w"
      stop
      end if
-  
+
      status = nf_get_vara_double( ncid,id01,start,count,p_w )
      if( status /= nf_noerr) then
       write(*,*) "stop at nf get_var_double w"
       stop
      end if
- 
+
      status = nf_inq_varid( ncid,'V',id01 )
      if( status /= nf_noerr) then
       write(*,*) "stop at nf inq_varid v"
      stop
      end if
- 
+
      status = nf_get_vara_double( ncid,id01,start,count,p_v )
      if( status /= nf_noerr) then
       write(*,*) "stop at nf get_var_double v"
       stop
      end if
- 
+
      status = nf_inq_varid( ncid,'U',id01 )
      if( status /= nf_noerr) then
       write(*,*) "stop at nf inq_varid u"
      stop
      end if
- 
+
      status = nf_get_vara_double( ncid,id01,start,count,p_u )
      if( status /= nf_noerr) then
       write(*,*) "stop at nf get_var_double u"
       stop
      end if
- 
+
      status = nf_inq_varid( ncid,'QR',id01 )
      if( status /= nf_noerr) then
       write(*,*) "stop at nf inq_varid qr"
      stop
      end if
- 
+
      status = nf_get_vara_double( ncid,id01,start,count,p_qr )
      if( status /= nf_noerr) then
       write(*,*) "stop at nf get_var_double qr"
       stop
      end if
- 
+
      status = nf_inq_varid( ncid,'QC',id01 )
      if( status /= nf_noerr) then
       write(*,*) "stop at nf inq_varid qc"
      stop
      end if
-  
+
      status = nf_get_vara_double( ncid,id01,start,count,p_qc )
      if( status /= nf_noerr) then
       write(*,*) "stop at nf get_var_double qc"
       stop
      end if
- 
+
      status = nf_inq_varid( ncid,'QV',id01 )
      if( status /= nf_noerr) then
       write(*,*) "stop at nf inq_varid qv"
      stop
      end if
- 
+
      status = nf_get_vara_double( ncid,id01,start,count,p_qv )
      if( status /= nf_noerr) then
       write(*,*) "stop at nf get_var_double qv"
       stop
      end if
- 
+
      status = nf_inq_varid( ncid,'DENS',id01 )
      if( status /= nf_noerr) then
       write(*,*) "stop at nf inq_varid dens"
      stop
      end if
-  
+
      status = nf_get_vara_double( ncid,id01,start,count,p_dens )
      if( status /= nf_noerr) then
       write(*,*) "stop at nf get_var_double dens"
       stop
      end if
-  
+
      status = nf_inq_varid( ncid,'T',id01 )
      if( status /= nf_noerr) then
       write(*,*) "stop at nf inq_varid t"
      stop
      end if
-  
+
      status = nf_get_vara_double( ncid,id01,start,count,p_t )
      if( status /= nf_noerr) then
       write(*,*) "stop at nf get_var_double dens"
       stop
      end if
-  
+
      status = nf_inq_varid( ncid,'TKE',id01 )
      if( status /= nf_noerr) then
       write(*,*) "stop at nf inq_varid sgstke"
      stop
      end if
-  
+
      status = nf_get_vara_double( ncid,id01,start,count,p_sgstke )
      if( status /= nf_noerr) then
       write(*,*) "stop at nf get_var_double sgstke"
       stop
      end if
-  
+
      status = nf_inq_varid( ncid,'PT',id01 )
      if( status /= nf_noerr) then
       write(*,*) "stop at nf inq_varid pt"
      stop
      end if
-  
+
      status = nf_get_vara_double( ncid,id01,start,count,p_pt )
      if( status /= nf_noerr) then
       write(*,*) "stop at nf get_var_double pt"
       stop
      end if
-  
+
      status = nf_inq_varid( ncid,'PRES',id01 )
      if( status /= nf_noerr) then
       write(*,*) "stop at nf inq_varid pres"
       stop
      end if
-  
+
      status = nf_get_vara_double( ncid,id01,start,count,p_pres )
      if( status /= nf_noerr) then
       write(*,*) "stop at nf get_var_double pres"
       stop
      end if
-  
+
      status = nf_inq_varid( ncid,'SGS_ZFLX_RHOT',id01 )
      if( status /= nf_noerr) then
       write(*,*) "stop at nf inq_varid sgs_wptflx"
      stop
      end if
-  
+
      status = nf_get_vara_double( ncid,id01,start,count,p_sgs_wptflx )
      if( status /= nf_noerr) then
       write(*,*) "stop at nf get_var_double p_sgs_wptflx"
       stop
      end if
-  
+
      status = nf_inq_varid( ncid,'SGS_ZFLX_QV',id01 )
      if( status /= nf_noerr) then
       write(*,*) "stop at nf inq_varid sgs_wqtflx"
      stop
      end if
-  
+
      status = nf_get_vara_double( ncid,id01,start,count,p_sgs_wqtflx )
      if( status /= nf_noerr) then
       write(*,*) "stop at nf get_var_double p_sgs_wqtflx"
       stop
      end if
-  
+
      status = nf_inq_varid( ncid,'SGS_ZFLX_QC',id01 )
      if( status /= nf_noerr) then
       write(*,*) "stop at nf inq_varid sgs_wqcflx"
      stop
      end if
-  
+
      status = nf_get_vara_double( ncid,id01,start,count,p_sgs_wqrflx )
      if( status /= nf_noerr) then
       write(*,*) "stop at nf get_var_double p_sgs_wqcflx"
       stop
      end if
-  
+
      status = nf_inq_varid( ncid,'SGS_ZFLX_QR',id01 )
      if( status /= nf_noerr) then
       write(*,*) "stop at nf inq_varid sgs_wqrflx"
      stop
      end if
-  
+
      status = nf_get_vara_double( ncid,id01,start,count,p_sgs_wqrflx )
      if( status /= nf_noerr) then
       write(*,*) "stop at nf get_var_double p_sgs_wqrflx"
       stop
      end if
-  
+
      status = nf_inq_varid( ncid,'SGS_ZFLX_MOMZ',id01 )
      if( status /= nf_noerr) then
       write(*,*) "stop at nf inq_varid sgs_wwflx"
      stop
      end if
-  
+
      status = nf_get_vara_double( ncid,id01,start,count,p_sgs_wwflx )
      if( status /= nf_noerr) then
       write(*,*) "stop at nf get_var_double p_sgs_wwflx"
       stop
      end if
-  
+
      status = nf_inq_varid( ncid,'LHFLX',id01 )
      if( status /= nf_noerr) then
       write(*,*) "stop at nf inq_varid lhflx"
      stop
      end if
-  
+
      status = nf_get_vara_double( ncid,id01,start,count2,p_lhflx )
      if( status /= nf_noerr) then
       write(*,*) "stop at nf get_var_double p_lhflx"
       stop
      end if
-  
+
      status = nf_inq_varid( ncid,'SHFLX',id01 )
      if( status /= nf_noerr) then
       write(*,*) "stop at nf inq_varid shflx"
      stop
      end if
-  
+
      status = nf_get_vara_double( ncid,id01,start,count2,p_shflx )
      if( status /= nf_noerr) then
       write(*,*) "stop at nf get_var_double p_shflx"
       stop
      end if
-  
+
      status = nf_close(ncid)
- 
+
      do iix = (ix-1)*nxp+1, (ix-1)*nxp+nxp
      do jjy = (jy-1)*nyp+1, (jy-1)*nyp+nyp
       w(iix,jjy,1:nz) = real(p_w(iix-(ix-1)*nxp,jjy-(jy-1)*nyp,1:nz,1))
@@ -471,11 +471,11 @@ program convine
       hgt(kz) = cz(kz+nzhalo)
      enddo
     endif
- 
+
     aveden_a(:) = 0.d0
     do kz = 1, nz
     do jy = 1, ny
-    do ix = 1, nx 
+    do ix = 1, nx
      aveden_a(kz) = aveden_a(kz)+dens(ix,jy,kz)
     end do
     end do
@@ -502,7 +502,7 @@ program convine
     end do
     end do
 
-    !--- cloud top height 
+    !--- cloud top height
     zi(:,:) = 0.d0
     do ix = 1, nx
     do jy = 1, ny
@@ -513,10 +513,10 @@ program convine
        exit loopzi
       end if
      end do loopzi
-    end do 
+    end do
     end do
 
-    !--- cloud base height 
+    !--- cloud base height
     zb(:,:) = 0.d0
     do ix = 1, nx
     do jy = 1, ny
@@ -526,7 +526,7 @@ program convine
        exit loopzb
       end if
      end do loopzb
-    end do 
+    end do
     end do
 
     !--- pbl height ( largest gradient of pt )
@@ -541,7 +541,7 @@ program convine
     enddo
     enddo
 
-   !  average 
+   !  average
    aveql(:)=0.d0
    avelwpt(:)=0.d0
    avevpt(:)=0.d0
@@ -604,7 +604,7 @@ program convine
      lwptp(ix,jy,kz) = lwpt(ix,jy,kz)-avelwpt(kz)
     end do
     end do
-   
+
     do ix = 1, nx
     do jy = 1, ny
      tke(ix,jy,kz) = 0.5d0 * dens(ix,jy,kz) / aveden_a(kz) &
@@ -613,7 +613,7 @@ program convine
     end do
    enddo
 
-   !--- variance and skewness 
+   !--- variance and skewness
    vv(:) = 0.d0
    uu(:) = 0.d0
    ww(:) = 0.d0
@@ -621,8 +621,8 @@ program convine
    wpt(:) = 0.d0
    wqt(:) = 0.d0
    wlwpt(:) = 0.d0
-   avetke(:) = 0.d0 
-   avesgstke(:) = 0.d0 
+   avetke(:) = 0.d0
+   avesgstke(:) = 0.d0
    if( n >= nst .and.  n <= nen ) then
     do kz = 1, nz
      do ix = 1, nx
@@ -647,7 +647,7 @@ program convine
      wlwpt(kz) = wlwpt(kz)/real(nx*ny)/aveden_a(kz)
      avesgstke(kz) = avesgstke(kz)/real(nx*ny)/aveden_a(kz)
      avetke(kz) = avetke(kz)/real(nx*ny)/aveden_a(kz)
- 
+
      aveuu(kz) = aveuu(kz)+uu(kz)
      avevv(kz) = avevv(kz)+vv(kz)
      aveww(kz) = aveww(kz)+ww(kz)
@@ -704,7 +704,7 @@ program convine
      profilecld(1,kz) = profilecld(1,kz)+cfrac(kz)
      profilecld(2,kz) = profilecld(2,kz)+wcld(kz)
     enddo
-         
+
    endif
 
 
@@ -715,7 +715,7 @@ program convine
    count1 = 0.d0
    do jy = 1, ny
    do ix = 1, nx
-   do kz = 1, nz 
+   do kz = 1, nz
     lwp(ix,jy) =lwp(ix,jy)+( qc(ix,jy,kz)+qr(ix,jy,kz) )*dens(ix,jy,kz)*1000.d0*cdz(kz+nzhalo) ! [g/m^2]
     tke2d(ix,jy) = tke2d(ix,jy)+tke(ix,jy,kz)*cdz(kz+nzhalo)
     sgstke2d(ix,jy) = sgstke2d(ix,jy)+ (sgstke(ix,jy,kz))*cdz(kz+nzhalo)
@@ -748,10 +748,10 @@ program convine
    else
     avezb(n) = 0.d0
    endif
-   write(50,'(1x,f10.3,9(1x,e15.7))') tint+int(real(n)*dt), avelwp(n), avetke2d(n), avesgstke2d(n), avezi(n), avezb(n), avepbl(n), ccover(n), avelh(n), avesh(n)
+   write(50,'(1x,f10.3,9(1x,ES15.7))') tint+int(real(n)*dt), avelwp(n), avetke2d(n), avesgstke2d(n), avezi(n), avezb(n), avepbl(n), ccover(n), avelh(n), avesh(n)
 
   enddo !--- time loop
- 
+
   aveuu(1:nz) = aveuu(1:nz)/real(nt)
   avevv(1:nz) = avevv(1:nz)/real(nt)
   aveww(1:nz) = aveww(1:nz)/real(nt)
@@ -769,9 +769,9 @@ program convine
   profilecore(2,1:nz) = profilecore(2,1:nz)/real(nt)
   profilecld(1,1:nz) = profilecld(1,1:nz)/real(nt)
   profilecld(2,1:nz) = profilecld(2,1:nz)/real(nt)
-  outavetke(1,1:nz) = outavetke(1,1:nz)/real(nt) 
-  outavetke(2,1:nz) = outavetke(2,1:nz)/real(nt) 
-!  avesgstke(1:nz) = avesgstke(1:nz)/real(nt) 
+  outavetke(1,1:nz) = outavetke(1,1:nz)/real(nt)
+  outavetke(2,1:nz) = outavetke(2,1:nz)/real(nt)
+!  avesgstke(1:nz) = avesgstke(1:nz)/real(nt)
 !  avetke(1:nz) = avetke(1:nz)/real(nt)
 
 
@@ -842,8 +842,8 @@ program convine
   open(52,file="comp_profile.txt")
 
   write(52,'(1x,a10,17(1x,a15))') "# z", "QT",  "QL", "TKE-gr", "TKE-sg-diag", "WW", "WWW", "WPT(TOT)", "WQT(TOT)", "PT", "CCORE", "WCORE", "CFRAC", "WFRAC", "U", "V"
-  do kz = 1, nz 
-   write(52,'(1x,f10.5,18(1x,e15.7))') cz(kz+nzhalo), profileqt(kz), profileql(kz), outavetke(1,kz), outavetke(2,kz), aveww(kz), avewww(kz), avewlwpt(kz)+totwpt(kz), avewqt(kz)+totwqt(kz), profilept(kz), profilecore(1,kz), profilecore(2,kz), profilecld(1,kz), profilecld(2,kz), aveuu(kz), avevv(kz)
+  do kz = 1, nz
+   write(52,'(1x,f10.5,18(1x,ES15.7))') cz(kz+nzhalo), profileqt(kz), profileql(kz), outavetke(1,kz), outavetke(2,kz), aveww(kz), avewww(kz), avewlwpt(kz)+totwpt(kz), avewqt(kz)+totwqt(kz), profilept(kz), profilecore(1,kz), profilecore(2,kz), profilecld(1,kz), profilecld(2,kz), aveuu(kz), avevv(kz)
   end do
 
   close(50)

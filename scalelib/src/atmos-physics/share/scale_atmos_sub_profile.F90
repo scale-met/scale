@@ -120,7 +120,7 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '###### ICAO International Standard Atmosphere ######'
     if( IO_L ) write(IO_FID_LOG,*) '      height:  lapse rate:    pressure: temperature'
     do n = 1, nref
-       if( IO_L ) write(IO_FID_LOG,'(4(f13.5))') z_isa(n), GAMMA(n), pres_isa(n), temp_isa(n)
+       if( IO_L ) write(IO_FID_LOG,'(4F13.5)') z_isa(n), GAMMA(n), pres_isa(n), temp_isa(n)
     enddo
     if( IO_L ) write(IO_FID_LOG,*) '####################################################'
 
@@ -219,7 +219,7 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '###### ICAO International Standard Atmosphere ######'
     if( IO_L ) write(IO_FID_LOG,*) '      height:  lapse rate:    pressure: temperature'
     do n = 1, nref
-       if( IO_L ) write(IO_FID_LOG,'(4(f13.5))') z_isa(n), GAMMA(n), pres_isa(n,IS,JS), temp_isa(n,IS,JS)
+       if( IO_L ) write(IO_FID_LOG,'(4F13.5)') z_isa(n), GAMMA(n), pres_isa(n,IS,JS), temp_isa(n,IS,JS)
     enddo
     if( IO_L ) write(IO_FID_LOG,*) '####################################################'
 

@@ -702,7 +702,7 @@ contains
        if( IO_L ) write(IO_FID_LOG,'(1x,A)') &
        '|    k        z       H2O       CO2        O3       N2O        CO       CH4        O2 |'
        do k = 1, kmax
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,I5,1F9.3,7E10.3,A)') '|',k,z(k),gas(k,:),' | '
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,I5,1F9.3,7ES10.3,A)') '|',k,z(k),gas(k,:),' | '
        enddo
        if( IO_L ) write(IO_FID_LOG,'(1x,A)') &
        '|=====================================================================================|'
