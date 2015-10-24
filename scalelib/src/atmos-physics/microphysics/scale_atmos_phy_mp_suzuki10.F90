@@ -156,6 +156,9 @@ module scale_atmos_phy_mp_suzuki10
   real(RP), parameter :: OneovThird   = 1.0_RP/3.0_RP
   real(RP), parameter :: ThirdovForth = 3.0_RP/4.0_RP
   real(RP), parameter :: TwoovThird   = 2.0_RP/3.0_RP
+
+  real(RP) :: rbnd = 40.E-06_RP              ! boundary radius of cloud and rian
+  integer  :: nbnd                           ! boundary bin number corresponding to rbnd
   !--- constant for aerosol
   real(RP) :: rhoa   = 2.25E+03_RP           ! density of aerosol ( NaCl )
   real(RP) :: emaer  = 58.0_RP               ! molecular weight of aerosol ( salt )
@@ -527,6 +530,7 @@ contains
 
     endif
 
+    call MPI_BCAST( radc, nbin,                      COMM_datatype, PRC_masterrank, COMM_world, ierr )
     call MPI_BCAST( xctr, nbin,                      COMM_datatype, PRC_masterrank, COMM_world, ierr )
     call MPI_BCAST( dxmic,1,                         COMM_datatype, PRC_masterrank, COMM_world, ierr )
     call MPI_BCAST( xbnd, nbin+1,                    COMM_datatype, PRC_masterrank, COMM_world, ierr )
@@ -591,6 +595,14 @@ contains
     ATMOS_PHY_MP_DENS(I_mp_QS)  = CONST_DICE
     ATMOS_PHY_MP_DENS(I_mp_QG)  = CONST_DICE
     ATMOS_PHY_MP_DENS(I_mp_QH)  = CONST_DICE
+
+    !--- determine nbnd
+    do n = 1, nbin
+      if( radc( n ) > rbnd ) then
+        nbnd = n
+      endif
+    enddo
+    if( IO_L ) write(IO_FID_LOG,'(A,E15.7,A)')  '*** Radius between cloud and rain is ', radc(nbnd), '[m]'
 
     !--- random number setup for stochastic method
     if ( rndm_flgp > 0 ) then
@@ -679,6 +691,8 @@ contains
     use scale_atmos_phy_mp_common, only: &
        MP_negative_fixer => ATMOS_PHY_MP_negative_fixer, &
        MP_precipitation  => ATMOS_PHY_MP_precipitation
+    use scale_history, only: &
+       HIST_in
     use scale_comm, only: &
        COMM_barrier
 !    use scale_grid, only: &
@@ -733,6 +747,7 @@ contains
     real(RP) :: FLX_snow  (KA,IA,JA)
     real(RP) :: wflux_rain(KA,IA,JA)
     real(RP) :: wflux_snow(KA,IA,JA)
+    real(RP) :: QHYD_out(KA,IA,JA,5)
     integer  :: step
     integer  :: k, i, j, m, n, iq
     !---------------------------------------------------------------------------
@@ -1113,6 +1128,39 @@ contains
                                RHOT(:,:,:),  & ! [INOUT]
                                QTRC(:,:,:,:) ) ! [INOUT]
     endif
+
+    QHYD_out(:,:,:,:) = 0.0_RP
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       do n = 1, nbnd
+         QHYD_out(k,i,j,1) = QHYD_out(k,i,j,1) + Ghyd_ijk(n,il,ijk) / DENS(k,i,j) * dxmic
+       enddo
+       do n = nbnd+1, nbin
+         QHYD_out(k,i,j,2) = QHYD_out(k,i,j,2) + Ghyd_ijk(n,il,ijk) / DENS(k,i,j) * dxmic
+       enddo
+       do m = ic, id
+        do n = 1, nbin
+         QHYD_out(k,i,j,3) = QHYD_out(k,i,j,3) + Ghyd_ijk(n,m,ijk) / DENS(k,i,j) * dxmic
+        enddo
+       enddo
+       do n = 1, nbin
+         QHYD_out(k,i,j,4) = QHYD_out(k,i,j,4) + Ghyd_ijk(n,iss,ijk) / DENS(k,i,j) * dxmic
+       enddo
+       do m = ig, ih
+        do n = 1, nbin
+         QHYD_out(k,i,j,5) = QHYD_out(k,i,j,5) + Ghyd_ijk(n,m,ijk) / DENS(k,i,j) * dxmic
+        enddo
+       enddo
+    enddo
+    enddo
+    enddo
+
+    call HIST_in( QHYD_out(:,:,:,1), 'QC', 'Mixing ratio of QC', 'kg/kg' )
+    call HIST_in( QHYD_out(:,:,:,2), 'QR', 'Mixing ratio of QR', 'kg/kg' )
+    call HIST_in( QHYD_out(:,:,:,3), 'QI', 'Mixing ratio of QI', 'kg/kg' )
+    call HIST_in( QHYD_out(:,:,:,4), 'QS', 'Mixing ratio of QS', 'kg/kg' )
+    call HIST_in( QHYD_out(:,:,:,5), 'QG', 'Mixing ratio of QG', 'kg/kg' )
 
     SFLX_rain(:,:) = FLX_rain(KS-1,:,:)
     SFLX_snow(:,:) = FLX_snow(KS-1,:,:)
