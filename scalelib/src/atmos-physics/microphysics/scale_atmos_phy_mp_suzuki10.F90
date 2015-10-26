@@ -747,7 +747,7 @@ contains
     real(RP) :: FLX_snow  (KA,IA,JA)
     real(RP) :: wflux_rain(KA,IA,JA)
     real(RP) :: wflux_snow(KA,IA,JA)
-    real(RP) :: QHYD_out(KA,IA,JA,5)
+    real(RP) :: QHYD_out(KA,IA,JA,6)
     integer  :: step
     integer  :: k, i, j, m, n, iq
     !---------------------------------------------------------------------------
@@ -1147,10 +1147,11 @@ contains
        do n = 1, nbin
          QHYD_out(k,i,j,4) = QHYD_out(k,i,j,4) + Ghyd_ijk(n,iss,ijk) / DENS(k,i,j) * dxmic
        enddo
-       do m = ig, ih
-        do n = 1, nbin
-         QHYD_out(k,i,j,5) = QHYD_out(k,i,j,5) + Ghyd_ijk(n,m,ijk) / DENS(k,i,j) * dxmic
-        enddo
+       do n = 1, nbin
+         QHYD_out(k,i,j,5) = QHYD_out(k,i,j,5) + Ghyd_ijk(n,ig,ijk) / DENS(k,i,j) * dxmic
+       enddo
+       do n = 1, nbin
+         QHYD_out(k,i,j,6) = QHYD_out(k,i,j,6) + Ghyd_ijk(n,ih,ijk) / DENS(k,i,j) * dxmic
        enddo
     enddo
     enddo
@@ -1161,6 +1162,7 @@ contains
     call HIST_in( QHYD_out(:,:,:,3), 'QI', 'Mixing ratio of QI', 'kg/kg' )
     call HIST_in( QHYD_out(:,:,:,4), 'QS', 'Mixing ratio of QS', 'kg/kg' )
     call HIST_in( QHYD_out(:,:,:,5), 'QG', 'Mixing ratio of QG', 'kg/kg' )
+    call HIST_in( QHYD_out(:,:,:,6), 'QH', 'Mixing ratio of QH', 'kg/kg' )
 
     SFLX_rain(:,:) = FLX_rain(KS-1,:,:)
     SFLX_snow(:,:) = FLX_snow(KS-1,:,:)
