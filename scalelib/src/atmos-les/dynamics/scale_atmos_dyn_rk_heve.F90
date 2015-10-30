@@ -1916,10 +1916,10 @@ contains
        do j = JJS, JJE
        do i = IIS, IIE
        do k = KS, KE
-          cor(k,i,j) = 0.0625_RP * ( CORIOLI(1,i  ,j+1)+CORIOLI(1,i  ,j) ) & ! [x,y,z->x,v,z]
-                                 * ( DENS   (k,i  ,j+1)+DENS   (k,i  ,j) ) & ! [x,y,z->x,v,z]
-                                 * ( VELX   (k,i  ,j+1)+VELX   (k,i  ,j) &
-                                   + VELX   (k,i-1,j+1)+VELX   (k,i-1,j) ) & ! [u,y,z->x,v,z]
+          cor(k,i,j) = - 0.0625_RP * ( CORIOLI(1,i  ,j+1)+CORIOLI(1,i  ,j) ) & ! [x,y,z->x,v,z]
+                                   * ( DENS   (k,i  ,j+1)+DENS   (k,i  ,j) ) & ! [x,y,z->x,v,z]
+                                   * ( VELX   (k,i  ,j+1)+VELX   (k,i  ,j) &
+                                     + VELX   (k,i-1,j+1)+VELX   (k,i-1,j) ) & ! [u,y,z->x,v,z]
                      - 0.25_RP * MAPF(i,j,1,I_XV) * MAPF(i,j,2,I_XV) * GSQRT(k,i,j,I_XVZ) &
                      * ( MOMX(k,i,j) + MOMX(k,i-1,j) + MOMX(k,i,j+1) + MOMX(k,i-1,j+1) )&
                      * ( MOMY(k,i,j) &
