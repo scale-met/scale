@@ -765,6 +765,16 @@ contains
     m0t = m0_init !total M0 [#/m3]
     dgt = dg_init ![m]
     sgt = sg_init ![-]
+
+    if ( m0t <= 20.0_RP ) then
+       m0t = 20.0_RP
+       dgt = 0.1E-6_RP
+       sgt = 1.3_RP
+       if ( IO_L ) then
+          write(IO_FID_LOG,*) '*** WARNING! Initial aerosol number is set as 20 [#/m3]'
+       endif
+    endif
+
     m2t = m0t*dgt**(2.d0) *dexp(2.0d0 *(dlog(real(sgt,kind=DP))**2.d0)) !total M2 [m2/m3]
     m3t = m0t*dgt**(3.d0) *dexp(4.5d0 *(dlog(real(sgt,kind=DP))**2.d0)) !total M3 [m3/m3]
     mst = m3t*pi6*conv_vl_ms                              !total Ms [ug/m3]
