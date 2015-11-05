@@ -1219,6 +1219,7 @@ contains
        CALENDAR_combine_daysec, &
        CALENDAR_date2char
     use scale_time, only: &
+       TIME_OFFSET_YEAR, &
        TIME_NOWDATE
     implicit none
 
@@ -1231,6 +1232,7 @@ contains
 
     if ( ATMOS_BOUNDARY_START_DATE(1) == -9999 ) then
        ATMOS_BOUNDARY_START_DATE = TIME_NOWDATE
+       ATMOS_BOUNDARY_START_DATE(1) = TIME_OFFSET_YEAR
     end if
 
     !--- calculate time of the initial step in boundary file [no offset]
