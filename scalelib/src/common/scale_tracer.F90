@@ -559,7 +559,7 @@ contains
        I_MP2ALL = I_MP2ALL_sdm
        I_MP2RD = I_MP2RD_sdm
      case default
-        write(*,*) 'xxx Unsupported AETRACER_TYPE (', trim(AETRACER_TYPE), '). Check!'
+        write(*,*) 'xxx Unsupported TRACER_TYPE (', trim(TRACER_TYPE), '). Check!'
         call PRC_MPIstop
      end select
      select case (AETRACER_TYPE)
