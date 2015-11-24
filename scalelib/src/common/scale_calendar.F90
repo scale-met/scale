@@ -492,11 +492,11 @@ contains
        m = ymdhms(I_month)
     endif
 
-    mjd_day = int( 365.25_DP * (y+oyear) )                        & ! year
-            + int( (y+oyear)/400.0_DP ) - int( (y+oyear)/100_DP ) & ! leap year
-            + int( 30.59_DP * m-2 )                               & ! month
-            + ymdhms(I_day)                                       & ! day
-            + 678912                                              ! constant
+    mjd_day = int( 365.25_DP * (y+oyear) )                          & ! year
+            + int( (y+oyear)/400.0_DP ) - int( (y+oyear)/100.0_DP ) & ! leap year
+            + int( 30.59_DP * m-2 )                                 & ! month
+            + ymdhms(I_day)                                         & ! day
+            + 678912                                                ! constant
 
     mjd     = real(mjd_day,kind=DP)       & ! day
             + ymdhms(I_hour) /    24.0_DP & ! hour

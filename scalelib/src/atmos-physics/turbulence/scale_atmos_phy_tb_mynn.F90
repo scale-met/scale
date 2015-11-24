@@ -87,10 +87,10 @@ module scale_atmos_phy_tb_mynn
   integer :: KE_PBL
   logical :: ATMOS_PHY_TB_MYNN_TKE_INIT = .false. !< set tke with that of level 2 at the first time if .true.
   real(RP) :: ATMOS_PHY_TB_MYNN_NU_MIN = 1.E-6_RP
-  real(RP) :: ATMOS_PHY_TB_MYNN_NU_MAX = 10000_RP
+  real(RP) :: ATMOS_PHY_TB_MYNN_NU_MAX = 10000._RP
   real(RP) :: ATMOS_PHY_TB_MYNN_KH_MIN = 1.E-6_RP
-  real(RP) :: ATMOS_PHY_TB_MYNN_KH_MAX = 10000_RP
-  real(RP) :: ATMOS_PHY_TB_MYNN_Lt_MAX = 700_RP ! ~ 0.23 * 3 km
+  real(RP) :: ATMOS_PHY_TB_MYNN_KH_MAX = 10000._RP
+  real(RP) :: ATMOS_PHY_TB_MYNN_Lt_MAX = 700._RP ! ~ 0.23 * 3 km
 
   !-----------------------------------------------------------------------------
 contains
