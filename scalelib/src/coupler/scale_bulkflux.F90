@@ -326,7 +326,7 @@ contains
     integer,  parameter :: nmax    = 100        ! maximum iteration number
 
     real(RP), parameter :: res_min = 1.0E-4_RP
-    real(RP), parameter :: dL      = 1.0E-8_RP  ! delta Obukhov length [m]
+    real(RP), parameter :: dL      = 1.0E-6_RP  ! delta Obukhov length [m]
 
     ! variables
     integer :: n
