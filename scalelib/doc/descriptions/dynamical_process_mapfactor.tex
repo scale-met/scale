@@ -23,15 +23,15 @@ A orthogonal curvilinear coordinate $(\xi, \eta, \zeta)$.
 
 The transform is defined by
 \begin{align}
-  \bm{e}_\xi &= \pd{x}{\xi}\bm{e}_x + \pd{y}{\xi}\bm{e}_y + \pd{z}{\xi}\bm{e}_z, \\
-  \bm{e}_\eta &= \pd{x}{\eta}\bm{e}_x + \pd{y}{\eta}\bm{e}_y + \pd{z}{\eta}\bm{e}_z, \\
-  \bm{e}_\zeta &= \pd{x}{\zeta}\bm{e}_x + \pd{y}{\zeta}\bm{e}_y + \pd{z}{\zeta}\bm{e}_z.
+  \bm{e}_\xi &= \pd{x}{\xi}\bm{\hat{e}}_x + \pd{y}{\xi}\bm{\hat{e}}_y + \pd{z}{\xi}\bm{\hat{e}}_z, \\
+  \bm{e}_\eta &= \pd{x}{\eta}\bm{\hat{e}}_x + \pd{y}{\eta}\bm{\hat{e}}_y + \pd{z}{\eta}\bm{\hat{e}}_z, \\
+  \bm{e}_\zeta &= \pd{x}{\zeta}\bm{\hat{e}}_x + \pd{y}{\zeta}\bm{\hat{e}}_y + \pd{z}{\zeta}\bm{\hat{e}}_z.
 \end{align}
 Reverse transform is
 \begin{align}
-  \bm{e}_x &= \pd{\xi}{x}\bm{e}_\xi + \pd{\eta}{x}\bm{e}_\eta + \pd{\zeta}{x}\bm{e}_\zeta, \\
-  \bm{e}_y &= \pd{\eta}{y}\bm{e}_\xi + \pd{\eta}{y}\bm{e}_\eta + \pd{\zeta}{y}\bm{e}_\zeta, \\
-  \bm{e}_z &= \pd{\zeta}{z}\bm{e}_\xi + \pd{\eta}{z}\bm{e}_\eta + \pd{\zeta}{z}\bm{e}_\zeta.
+  \bm{\hat{e}}_x &= \pd{\xi}{x}\bm{e}_\xi + \pd{\eta}{x}\bm{e}_\eta + \pd{\zeta}{x}\bm{e}_\zeta, \\
+  \bm{\hat{e}}_y &= \pd{\eta}{y}\bm{e}_\xi + \pd{\eta}{y}\bm{e}_\eta + \pd{\zeta}{y}\bm{e}_\zeta, \\
+  \bm{\hat{e}}_z &= \pd{\zeta}{z}\bm{e}_\xi + \pd{\eta}{z}\bm{e}_\eta + \pd{\zeta}{z}\bm{e}_\zeta.
 \end{align}
 
 The Jacobian matrix is $\{\pd{\xi^k}{x^i}\}$.
@@ -61,11 +61,12 @@ Velocity is transformed with the inverse of the Jacobian matrix (cotravariant tr
 
 
 The metric tensor, $g_{kl}$ is defined by
-\begin{equation}
-  g_{kl} = \bm{e}_k \cdot \bm{e}_l
-  = \left(\pd{x^i}{\xi_k}\bm{e}_i\right) \cdot \left(\pd{x^j}{\xi_l}\bm{e}_j\right)
-  = \pd{x^i}{\xi_k}\pd{x^j}{\xi_l} (\bm{e}_i\cdot\bm{e}_j).
-\end{equation}
+\begin{align}
+  g_{kl} &= \bm{e}_k \cdot \bm{e}_l
+  = \left(\pd{x^i}{\xi_k}\bm{\hat{e}}_i\right) \cdot \left(\pd{x^j}{\xi_l}\bm{\hat{e}}_j\right) \nonumber\\
+%  &= \pd{x^i}{\xi_k}\pd{x^j}{\xi_l} (\bm{\hat{e}}_i\cdot\bm{\hat{e}}_j) 
+  &= \pd{x^i}{\xi_k}\pd{x^i}{\xi_l}.
+\end{align}
 
 For orthogonal curvilinear coordinates, the matrix ${g_{kl}}$ is diagonal.
 Metric factor, $h_k$ is defined as
@@ -76,10 +77,10 @@ Metric factor, $h_k$ is defined as
 Here we define the matrix, $\bm{E}_\xi$ is
 \begin{equation}
   \bm{E}_\xi =
-  (\bm{e}_\xi \bm{e}_\eta \bm{e}_\zeta)\cdot \bm{H}^{-1}
+  (\bm{e}_\xi \; \bm{e}_\eta \; \bm{e}_\zeta)\cdot \bm{H}^{-1}
   = \bm{E}_x \cdot \left\{\pd{x^i}{\xi^k}\right\} \cdot \bm{H}^{-1},
 \end{equation}
-where $\bm{E}_x = (\bm{e}_x \bm{e}_y \bm{e}_z)$, and
+where $\bm{E}_x = (\bm{\hat{e}}_x \; \bm{\hat{e}}_y \; \bm{\hat{e}}_z)$, and
 \begin{equation}
   \bm{H} = \left(\begin{array}{ccc} h_1 & 0 & 0\\ 0 & h_2 & 0\\ 0 & 0 & h_3\end{array}\right).
 \end{equation}
@@ -87,11 +88,11 @@ The vector $\frac{1}{h_k}\bm{e}_k$ is unit vector and orthogonal each other,
 so the inverse of the $\bm{E}_\xi$ is $\bm{E}_\xi^T$.
 \begin{align}
   \left( \bm{E}_x \cdot \left\{\pd{x^i}{\xi^k}\right\} \cdot \bm{H}^{-1} \right)^{-1} &= \left( \bm{E}_x \cdot \left\{\pd{x^i}{\xi^k}\right\} \cdot \bm{H}^{-1} \right)^T, \nonumber\\
-  \bm{H} \cdot \left\{\pd{\xi^k}{x^i}\right\} \cdot \bm{E}_x^{-1} &= \bm{H}^{-1} \cdot \left\{\pd{x^i}{\xi^k}\right\}^T \cdot \bm{E}_x^T, \nonumber
+  \bm{H} \cdot \left\{\pd{\xi^i}{x^k}\right\} \cdot \bm{E}_x^{-1} &= \bm{H}^{-1} \cdot \left\{\pd{x^i}{\xi^k}\right\}^T \cdot \bm{E}_x^T, \nonumber
 \end{align}
 \begin{align}
-  \left\{\pd{\xi^k}{x^i}\right\} &= \bm{H}^{-2} \cdot \left\{\pd{x^i}{\xi^k}\right\}^T \cdot \bm{E}_x^T \cdot \bm{E}_x \nonumber \\
-  &= \bm{H}^{-2} \cdot \left\{\pd{x^i}{\xi^k}\right\}^T.
+  \left\{\pd{\xi^i}{x^k}\right\} &= \bm{H}^{-2} \cdot \left\{\pd{x^i}{\xi^k}\right\}^T \cdot \bm{E}_x^T \cdot \bm{E}_x \nonumber \\
+  &= \bm{H}^{-2} \cdot \left\{\pd{x^k}{\xi^i}\right\}.
 \end{align}
 That is
 \begin{equation}
@@ -188,9 +189,10 @@ and
 
 After all, momentum equation is
 \begin{align}
-  \pd{}{t} \rho d\xi^k + J\pd{}{\xi^l} \left( J^{-1} \rho d\xi^k d\xi^l \right)
+  \pd{}{t} \rho d\xi^k &+ J\pd{}{\xi^l} \left( J^{-1} \rho d\xi^k d\xi^l \right)
   + \rho d\xi^l d\xi^m \Gamma_{lm}^k
-  + \epsilon^{klm} \frac{1}{h_kh_lh_m}\hat{f}^l \rho d\xi^m = -\frac{1}{h_k^2}\pd{p}{\xi^k} + \rho g^p \pd{\xi^k}{x^p}.
+ + \epsilon^{klm} \frac{1}{h_kh_lh_m}\hat{f}^l \rho d\xi^m \nonumber\\
+ &= -\frac{1}{h_k^2}\pd{p}{\xi^k} + \rho g^p \pd{\xi^k}{x^p}.
 \end{align}
 
 
@@ -205,8 +207,8 @@ We introduce Map factor $m, n$.
 where is $a$ is radius of the planet.
 Assuming shallow atmospher,
 \begin{align}
-  m &= h_1, \\
-  n &= h_2.
+  m &= h_1^{-1}, \\
+  n &= h_2^{-1}.
 \end{align}
 
 Normalized velocity is defined as
@@ -222,23 +224,23 @@ The continuous equation becomes
 \end{equation}
 
 The momentum equations are
-\begin{equation}
-  \pd{\rho\hat{u}^k}{t}
-  + mn\pd{}{\xi}\frac{\rho \hat{u} \hat{u}^k}{n}
-  + mn\pd{}{\eta}\frac{\rho \hat{v} \hat{u}^k}{m}
-  + \pd{}{\zeta}\rho \hat{w} \hat{u}^k
-  + m m_k \rho \hat{u} \hat{u}^k \pd{}{\xi}\frac{1}{m_k}
-  + n m_k \rho \hat{v} \hat{u}^k \pd{}{\eta}\frac{1}{m_k}
-  - m m_k \rho \hat{u}^2 \pd{}{\xi^k}\frac{1}{m}
-  - n m_k \rho \hat{v}^2 \pd{}{\xi^k}\frac{1}{n}
-  + \epsilon^{klm} m_l \hat{f}^l \rho \hat{u}^m
-  = -m_k \pd{p}{\zeta^k} + \rho g \delta_{3k}
-\end{equation}
-
 \begin{align}
-  \pd{\rho u}{t} &+ mn\pd{}{\xi}\frac{\rho uu}{n} + mn\pd{}{\eta}\frac{\rho uv}{m} + \pd{}{\zeta}\rho uw \\
+  \pd{\rho\hat{u}^k}{t}
+  &+ mn\pd{}{\xi}\frac{\rho \hat{u} \hat{u}^k}{n}
+  + mn\pd{}{\eta}\frac{\rho \hat{v} \hat{u}^k}{m}
+  + \pd{}{\zeta}\rho \hat{w} \hat{u}^k                     \nonumber \\
+  &+ m m_k \rho \hat{u} \hat{u}^k \pd{}{\xi}\frac{1}{m_k}
+  + n m_k \rho \hat{v} \hat{u}^k \pd{}{\eta}\frac{1}{m_k}  \nonumber \\
+  &- m m_k \rho \hat{u}^2 \pd{}{\xi^k}\frac{1}{m}
+  - n m_k \rho \hat{v}^2 \pd{}{\xi^k}\frac{1}{n}
+  + \epsilon^{klm} m_l \hat{f}^l \rho \hat{u}^m        \nonumber \\
+  &= -m_k \pd{p}{\zeta^k} + \rho g \delta_{3k}.
+\end{align}
+This equation may also be written as 
+\begin{align}
+  \pd{\rho u}{t} &+ mn\pd{}{\xi}\frac{\rho uu}{n} + mn\pd{}{\eta}\frac{\rho uv}{m} + \pd{}{\zeta}\rho uw  \nonumber \\
   &- f\rho v - mn \rho v\left\{v\pd{}{\xi}\left(\frac{1}{n}\right) - u\pd{}{\eta}\left(\frac{1}{m}\right)\right\} = -m\pd{p}{\xi}, \\
-  \pd{\rho v}{t} &+ mn\pd{}{\xi}\frac{\rho uv}{n} + mn\pd{}{\eta}\frac{\rho vv}{m} + \pd{}{\zeta}\rho vw \\
+  \pd{\rho v}{t} &+ mn\pd{}{\xi}\frac{\rho uv}{n} + mn\pd{}{\eta}\frac{\rho vv}{m} + \pd{}{\zeta}\rho vw \nonumber \\
   &+f\rho u + mn \rho u\left\{v\pd{}{\xi}\left(\frac{1}{n}\right) - u\pd{}{\eta}\left(\frac{1}{m}\right)\right\} = -n\pd{p}{\eta}, \\
   \pd{\rho w}{t} &+ mn\pd{}{\xi}\frac{\rho uw}{n} + mn\pd{}{\eta}\frac{\rho vw}{m} + \pd{}{\zeta}\rho ww = -\pd{p}{\zeta} -\rho g.
 \end{align}

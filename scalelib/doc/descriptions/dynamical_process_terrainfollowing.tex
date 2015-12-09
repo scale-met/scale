@@ -34,7 +34,7 @@ where
 
 If we use the Eqs.(5.2)-(5.5), we obtain following equations:
 \begin{align}
- \nabla \cdot (G^{\frac{1}{2}} \phi) &= \left(\frac{\partial G^{\frac{1}{2}} \phi}{\partial x}\right)_{\xi}
+ \nabla (G^{\frac{1}{2}} \phi) &= \left(\frac{\partial G^{\frac{1}{2}} \phi}{\partial x}\right)_{\xi}
                                       + \left(\frac{\partial G^{\frac{1}{2}} \phi}{\partial y}\right)_{\xi}
                                       + (J^{\xi}_{13}+J^{\xi}_{23}+J^{\xi}_{33}) \frac{\partial G^{\frac{1}{2}} \phi}{\partial \xi}, \\
  \nabla \cdot (G^{\frac{1}{2}} \bf u) &= \frac{\partial G^{\frac{1}{2}} u}{\partial x}
@@ -50,9 +50,9 @@ If we use the Eqs.(5.2)-(5.5), we obtain following equations:
 
 Prognostic variables by multiplying $G^{\frac{1}{2}}$ are defined as
 \begin{align}
- (\rho Q_v)_{i,j,k}           &= G^{\frac{1}{2}}_{i,j,k}             (\rho Q_v)_{i,j,k},        \\
- (\rho Q_l)_{i,j,k}           &= G^{\frac{1}{2}}_{i,j,k}             (\rho Q_l)_{i,j,k},        \\
- (\rho Q_s)_{i,j,k}           &= G^{\frac{1}{2}}_{i,j,k}             (\rho Q_s)_{i,j,k},        \\
+ (\rho Q_v)_{i,j,k}           &= G^{\frac{1}{2}}_{i,j,k}             (\rho q_v)_{i,j,k},        \\
+ (\rho Q_l)_{i,j,k}           &= G^{\frac{1}{2}}_{i,j,k}             (\rho q_l)_{i,j,k},        \\
+ (\rho Q_s)_{i,j,k}           &= G^{\frac{1}{2}}_{i,j,k}             (\rho q_s)_{i,j,k},        \\
  R_{i,j,k}                    &= G^{\frac{1}{2}}_{i,j,k}              \rho_{i,j,k},                \\
  (\rho U)_{i+\frac{1}{2},j,k} &= G^{\frac{1}{2}}_{i+\frac{1}{2},j,k} (\rho u)_{i+\frac{1}{2},j,k}, \\
  (\rho V)_{i,j+\frac{1}{2},k} &= G^{\frac{1}{2}}_{i,j+\frac{1}{2},k} (\rho v)_{i,j+\frac{1}{2},k}, \\
