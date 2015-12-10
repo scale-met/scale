@@ -1632,7 +1632,7 @@ contains
     beta    =(1._RP-(sqrt(1._RP+alpha**3._RP)/(1._RP+sqrt(alpha**3._RP))))/(1._RP-1._RP/sqrt(2._RP))
     gamma1  =(sgi        +alpha*sgj       )/(1._RP+alpha)
     gamma2  =(sgi**2._RP +alpha*sgj**2._RP)/(1._RP+alpha)
-    bbb     = 1._RP+1.2_RP*beta*dexp(-2._RP*gamma1)-0.646_RP*beta*dexp(-0.35_RP*gamma2)! Kajino (2011) JAS
+    bbb     = 1._RP+1.2_RP*beta*dexp(real(-2._RP*gamma1,kind=DP))-0.646_RP*beta*dexp(real(-0.35_RP*gamma2,kind=DP))! Kajino (2011) JAS
   
     dm0dt_fm_i=-bbb*rkfm*(                                 &
                 m0i *m0p5j +m2i *mm1p5j +2._RP*m1i *mm0p5j &
@@ -1723,8 +1723,8 @@ contains
     dg     = m3_bar**rk1_hat*m6_bar**rk2_hat
   
     if (m3_bar/m6_bar**ratio < 1._RP) then !stdev > 1.
-      sg     = exp(dsqrt(2._RP/(rk1*(rk1-rk2))  &
-                  * log(m3_bar/m6_bar**ratio) ))
+      sg     = exp(dsqrt(real(2._RP/(rk1*(rk1-rk2))  &
+                  * log(m3_bar/m6_bar**ratio), kind=DP )))
       m2     = m0*dg**2._RP*exp(2._RP*(log(sg)**2._RP))
       m2_old = m2
     endif
