@@ -106,7 +106,7 @@ module scale_tracer
 
   integer, public, allocatable :: I_AE2RD(:)
 
-  character(len=H_SHORT), public :: TRACER_TYPE = 'NONE'
+  character(len=H_SHORT), public :: TRACER_TYPE = 'DRY'
   character(len=H_SHORT), public :: AETRACER_TYPE = 'NONE'
 #endif
   !-----------------------------------------------------------------------------
@@ -366,7 +366,7 @@ contains
     if( IO_L ) write(IO_FID_LOG,nml=PARAM_TRACER)
 
     select case (TRACER_TYPE)
-    case ("DRY","NONE")
+    case ("DRY")
        call TRACER_dry_setup
        QA_MP = QA_MP_dry
        I_QV = I_QV_dry
