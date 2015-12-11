@@ -14,6 +14,15 @@ INDEX_DIR   = .
 CODE_DIR    = .
 ORG_SRCS    =
 
+# for build
+index      = 100x32x40
+precision  = real8
+dynamics   = hevi
+tracer     = tomita08
+sfcflx     = couple
+turbulence = smagorinsky
+radiation  = mstrnx
+
 # parameters for run
 INITCONF    = 
 RUNCONF     = 

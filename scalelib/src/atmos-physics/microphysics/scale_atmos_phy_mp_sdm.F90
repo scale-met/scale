@@ -117,6 +117,7 @@ contains
   subroutine ATMOS_PHY_MP_sdm_CloudFraction( &
        cldfrac, &
        QTRC     )
+    use scale_grid_index
     use scale_tracer, only: &
        QAD => QA
     implicit none
@@ -160,6 +161,7 @@ contains
        QTRC0  )
     use scale_const, only: &
        EPS => CONST_EPS
+    use scale_grid_index
     use scale_tracer, only: &
        QAD => QA, &
        MP_QAD => MP_QA
