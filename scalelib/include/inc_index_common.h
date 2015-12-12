@@ -29,3 +29,4 @@
   integer, public, parameter :: JS   = 1    + JHALO     ! start point of inner domain: y, local
   integer, public, parameter :: JE   = JMAX + JHALO     ! end   point of inner domain: y, local
 
+  integer, public, parameter :: KIJMAX = KMAX * IMAX * JMAX ! # of computational cells: z*x*y
