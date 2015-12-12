@@ -4963,12 +4963,12 @@ enddo
 
     totaltimesteps = NUMBER_OF_FILES * NUMBER_OF_TSTEPS
 
-    allocate( dens_org(KA,IA,JA,totaltimesteps   ) )
-    allocate( momz_org(KA,IA,JA,totaltimesteps   ) )
-    allocate( momx_org(KA,IA,JA,totaltimesteps   ) )
-    allocate( momy_org(KA,IA,JA,totaltimesteps   ) )
-    allocate( rhot_org(KA,IA,JA,totaltimesteps   ) )
-    allocate( qtrc_org(KA,IA,JA,QA,totaltimesteps) )
+    allocate( dens_org(KA,IA,JA,1+NUMBER_OF_SKIP_TSTEPS:totaltimesteps   ) )
+    allocate( momz_org(KA,IA,JA,1+NUMBER_OF_SKIP_TSTEPS:totaltimesteps   ) )
+    allocate( momx_org(KA,IA,JA,1+NUMBER_OF_SKIP_TSTEPS:totaltimesteps   ) )
+    allocate( momy_org(KA,IA,JA,1+NUMBER_OF_SKIP_TSTEPS:totaltimesteps   ) )
+    allocate( rhot_org(KA,IA,JA,1+NUMBER_OF_SKIP_TSTEPS:totaltimesteps   ) )
+    allocate( qtrc_org(KA,IA,JA,QA,1+NUMBER_OF_SKIP_TSTEPS:totaltimesteps) )
 
     !--- read external file
     do n = 1, NUMBER_OF_FILES
