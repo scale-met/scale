@@ -31,6 +31,7 @@ VPATH = common:                     \
         atmos-les/communication:    \
         atmos-les/grid:             \
         atmos-les/io:               \
+        atmos-les/numeric:          \
         atmos-les/dynamics:         \
         atmos-les/forcing:          \
         land:                       \
@@ -113,14 +114,27 @@ else
   OBJS_AETRACER = scale_aetracer_$(AETRACER).o
 endif
 
+ifeq ($(NUMERIC_FDM),)
+  OBJS_NUMERIC_FDM = \
+		 scale_atmos_numeric_fdm_util.o \
+		 scale_atmos_numeric_fdm_ud.o \
+	 	 scale_atmos_numeric_fdm_cd.o
+else
+  OBJS_NUMERIC_FDM = scale_atmos_numeric_fdm_$(NUMERIC_FDM).o
+  FFLAGS += -DNUMERIC=$(NUMERIC_FDM)
+endif
+
 OBJS_NAME = $(scale_rdma)	\
 	scale_atmos_dyn.o	\
 	scale_atmos_dyn_common.o	\
 	scale_atmos_dyn_rk.o	\
+	scale_atmos_dyn_rk_fdm_heve.o	\
 	scale_atmos_dyn_rk_heve.o	\
 	scale_atmos_dyn_rk_hevi.o	\
 	scale_atmos_dyn_rk_hivi.o	\
 	scale_atmos_dyn_rk_none.o	\
+	scale_atmos_numeric_fdm.o       \
+	$(OBJS_NUMERIC_FDM) \
 	scale_atmos_phy_ae.o	\
 	scale_atmos_phy_ae_dummy.o	\
 	$(OBJS_AE)	\
@@ -250,6 +264,8 @@ $(LIBNAME): $(LIBDIR)/$(LIBNAME)
 	install $< $@
 
 $(LIBDIR)/$(LIBNAME): $(OBJS)
+	echo "test"
+	echo $(OBJS)
 	$(AR) $(ARFLAGS) $@ $?
 	$(RANLIB) $@
 
