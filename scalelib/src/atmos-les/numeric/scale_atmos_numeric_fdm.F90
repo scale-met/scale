@@ -41,10 +41,10 @@ module scale_atmos_numeric_fdm
   !
 
   public :: ATMOS_NUMERIC_FDM_setup
-  public :: ATMOS_NUMERIC_FDM_evalFlux
-
-  !* Cascade
-  public :: ATMOS_NUMERIC_FDM_evolveVar
+  public :: ATMOS_NUMERIC_FDM_SetCoordMapInfo
+  public :: ATMOS_NUMERIC_FDM_EvalFlux
+  public :: ATMOS_NUMERIC_FDM_EvalFluxMT
+  public :: ATMOS_NUMERIC_FDM_EvolveVar
   
   !**
   
@@ -62,13 +62,13 @@ module scale_atmos_numeric_fdm
   integer, parameter, public :: FLXEVALTYPE_UD3 = 202
   integer, parameter, public :: FLXEVALTYPE_UD5 = 203
 
-  integer, parameter, public :: VL_XY  = 000
-  integer, parameter, public :: VL_UY  = 010
-  integer, parameter, public :: VL_XV  = 001  
-  integer, parameter, public :: VL_ZXY = 100
-  integer, parameter, public :: VL_ZUY = 110
-  integer, parameter, public :: VL_ZXV = 101
-  integer, parameter, public :: VL_WXY = 200
+  integer, parameter, public :: VL_XY  = 011
+  integer, parameter, public :: VL_UY  = 021
+  integer, parameter, public :: VL_XV  = 012  
+  integer, parameter, public :: VL_ZXY = 111
+  integer, parameter, public :: VL_ZUY = 121
+  integer, parameter, public :: VL_ZXV = 112
+  integer, parameter, public :: VL_WXY = 211
 
   !-----------------------------------------------------------------------------
   !
@@ -83,23 +83,40 @@ module scale_atmos_numeric_fdm
   integer :: IFS_OFF
   integer :: JFS_OFF
 
+  type :: CoordinateMapInfo
+     real(RP), pointer :: GSQRT(:,:,:,:) => null()
+     real(RP), pointer :: J13G(:,:,:,:)  => null()
+     real(RP), pointer :: J23G(:,:,:,:)  => null()
+     real(RP)          :: J33G
+     real(RP), pointer :: MAPF(:,:,:,:)  => null()
+  end type CoordinateMapInfo
+  type(CoordinateMapInfo), save :: coordMapInfo
+  
   abstract interface
-     subroutine FDM_EvalFlux(FluxX, FluxY, FluxZ,                          &  ! (inout)
-          & Var, VelX_ZUY, VelY_ZXV, VelZ_WXY,                              &  ! (in)
-          & J13G, J23G, J33G, GSQRT, MAPF, num_diff,                        &  ! (in)
+     subroutine FDM_EvalFlux(FluxX, FluxY, FluxZ,                            &  ! (inout)
+          & Var, Dens_ZXY, MomX_ZUY, MomY_ZXV, MomZ_WXY,                     &  ! (in)
           & IIS, IIE, JJS, JJE, KS_, KE_ )                                      ! (in)
        use scale_precision,  only: RP
        use scale_grid_index, only: IA, JA, KA
        real(RP), intent(inout), dimension(KA,IA,JA)  :: FluxX, FluxY, FluxZ
        real(RP), intent(in), dimension(KA,IA,JA)     :: Var
-       real(RP), intent(in), dimension(KA,IA,JA)     :: VelX_ZUY, VelY_ZXV, VelZ_WXY
-       real(RP), intent(in), dimension(KA,IA,JA,7)   :: J13G, J23G, GSQRT, MAPF
-       real(RP), intent(in) :: J33G
-       real(RP), intent(in), dimension(KA,IA,JA,3) :: num_diff
-       integer, intent(in) :: IIS, IIE, JJS, JJE, KS_, KE_
+       real(RP), intent(in), dimension(KA,IA,JA)     :: Dens_ZXY, MomX_ZUY, MomY_ZXV, MomZ_WXY
+       integer,  intent(in) :: IIS, IIE, JJS, JJE, KS_, KE_
      end subroutine FDM_EvalFlux
+
+     subroutine FDM_EvalFluxMT(FluxX, FluxY, FluxZ,                          &  ! (inout)
+          & Var, Dens_ZXY, MomX_ZUY, MomY_ZXV, MomZ_WXY,                     &  ! (in)
+          & IIS, IIE, JJS, JJE, KS_, KE_ )                                      ! (in)
+       use scale_precision,  only: RP
+       use scale_grid_index, only: IA, JA, KA
+       real(RP), intent(inout), dimension(KA,IA,JA)  :: FluxX, FluxY, FluxZ
+       real(RP), intent(in), dimension(KA,IA,JA)     :: Var
+       real(RP), intent(in), dimension(KA,IA,JA)     :: Dens_ZXY, MomX_ZUY, MomY_ZXV, MomZ_WXY
+       integer,  intent(in) :: IIS, IIE, JJS, JJE, KS_, KE_
+     end subroutine FDM_EvalFluxMT
+     
   end interface
-  
+
 contains
   subroutine ATMOS_NUMERIC_FDM_setup(IFS_OFF_, JFS_OFF_)
     use scale_atmos_numeric_fdm_util, only: FDM_util_setup
@@ -116,23 +133,41 @@ contains
     
   end subroutine ATMOS_NUMERIC_FDM_setup
 
-  subroutine ATMOS_NUMERIC_FDM_EvolveVar( VarA,                       & ! (out)
-       & Var0, VarLoc, Flx,                                           & ! (in)
-       & GSQRT, MAPF, dt, RDX, RDY, RDZ,                      & ! (in)
-       & IIS, IIE, JJS, JJE, KS, KE,                          & ! (in)
+  subroutine ATMOS_NUMERIC_FDM_SetCoordMapInfo(  &
+       & GSQRT, J13G, J23G, J33G, MAPF           & ! (in)
+       & )
+
+    real(RP), intent(in), target :: GSQRT(KA,IA,JA,7)
+    real(RP), intent(in), target :: J13G (KA,IA,JA,7)
+    real(RP), intent(in), target :: J23G (KA,IA,JA,7)
+    real(RP), intent(in)         :: J33G
+    real(RP), intent(in), target :: MAPF (IA,JA,2,4)
+
+    coordMapInfo%GSQRT => GSQRT
+    coordMapInfo%J13G  => J13G
+    coordMapInfo%J23G  => J23G
+    coordMapInfo%J33G  =  J33G
+    coordMapInfo%MAPF  => MAPF
+    
+  end subroutine ATMOS_NUMERIC_FDM_SetCoordMapInfo
+
+  subroutine ATMOS_NUMERIC_FDM_EvolveVar( VarA,               & ! (out)
+       & Var0, VarLoc, Flx,                                   & ! (in)
+       & dt, RDX, RDY, RDZ,                                   & ! (in)
+       & IIS, IIE, JJS, JJE, KS_, KE_,                        & ! (in)
        & Var_t,                                               & ! (in)
        & lhist, advch_t, advcv_t )
 
     use scale_atmos_numeric_fdm_util, only: FDM_EvolveVar
+    use scale_process
     
     real(RP), intent(out), dimension(KA,IA,JA)   :: VarA
     real(RP), intent(in), dimension(KA,IA,JA)    :: Var0
     integer, intent(in) :: VarLoc
     real(RP), intent(in), dimension(KA,IA,JA,3)  :: Flx
-    real(RP), intent(in), dimension(KA,IA,JA,3)  :: GSQRT
-    real(RP), intent(in), dimension(IA,JA,2)     :: MAPF
-    real(RP), intent(in) :: dt, RDX(IA), RDY(JA), RDZ(KA)
-    integer, intent(in) :: IIS, IIE, JJS, JJE, KS, KE
+    real(RP), intent(in) :: dt
+    real(RP), intent(in) :: RDX(IA), RDY(JA), RDZ(KA)
+    integer, intent(in) :: IIS, IIE, JJS, JJE, KS_, KE_
     real(RP), intent(in), dimension(KA,IA,JA), optional :: Var_t
     logical, intent(in), optional :: lhist
     real(RP), intent(inout), optional, dimension(KA,IA,JA) :: advch_t, advcv_t
@@ -143,33 +178,31 @@ contains
     IVL2D = mapping_gridtransID(VarLoc, .true.)
     call FDM_EvolveVar( VarA,                                               & ! (out)
          & Var0, Flx(:,:,:,XDIR), Flx(:,:,:,YDIR), Flx(:,:,:,ZDIR),         & ! (in)
-         & GSQRT(:,:,:,IVL), MAPF(:,:,IVL2D), dt, RDX, RDY, RDZ,            & ! (in)
-         & IIS, IIE, JJS, JJE, KS, KE,                                      & ! (in)
+         & coordMapInfo%GSQRT(:,:,:,IVL), coordMapInfo%MAPF(:,:,:,IVL2D),   & ! (in)
+         & dt, RDX, RDY, RDZ,                                               & ! (in)
+         & IIS, IIE, JJS, JJE, KS_, KE_,                                    & ! (in)
          & Var_t,                                                           & ! (in)
          & lhist, advch_t, advcv_t )
         
   end subroutine ATMOS_NUMERIC_FDM_EvolveVar
-  
+
   subroutine ATMOS_NUMERIC_FDM_EvalFlux(Flux,                                 &  ! (inout)
-            & FlxEvalType, VarLoc, Var, VelX_ZUY, VelY_ZXV, VelZ_WXY,         &  ! (in)
-            & J13G, J23G, J33G, GSQRT, MAPF, num_diff,                        &  ! (in)
-            & IIS, IIE, JJS, JJE, KS, KE )                                       ! (in)
+       & FlxEvalType, VarLoc, Var,                                            &  ! (in)
+       & Dens_ZXY, MomX_ZUY, MomY_ZXV, MomZ_WXY,                              &  ! (in)
+       & IIS, IIE, JJS, JJE, KS, KE             )                                ! (in)
 
     use scale_atmos_numeric_fdm_cd, only: &
          & FDM_EvalFlxCD4_VarZXY, FDM_EvalFlxCD4_VarZUY, FDM_EvalFlxCD4_VarZXV, FDM_EvalFlxCD4_VarWXY 
-    use scale_atmos_numeric_fdm_ud, only: &
-         & FDM_EvalFlxUD1_VarZXY, FDM_EvalFlxUD1_VarZUY, FDM_EvalFlxUD1_VarZXV, FDM_EvalFlxUD1_VarWXY 
+!!$    use scale_atmos_numeric_fdm_ud, only: &
+!!$         & FDM_EvalFlxUD1_VarZXY, FDM_EvalFlxUD1_VarZUY, FDM_EvalFlxUD1_VarZXV, FDM_EvalFlxUD1_VarWXY 
     
     real(RP), intent(inout), dimension(KA,IA,JA,3)  :: Flux
     integer, intent(in) :: FlxEvalType
     integer, intent(in) :: VarLoc    
     real(RP), intent(in), dimension(KA,IA,JA)     :: Var
-    real(RP), intent(in), dimension(KA,IA,JA)     :: VelX_ZUY, VelY_ZXV, VelZ_WXY
-    real(RP), intent(in), dimension(KA,IA,JA,7)   :: J13G, J23G, GSQRT, MAPF
-    real(RP), intent(in) :: J33G
-    real(RP), intent(in), dimension(KA,IA,JA,3) :: num_diff
+    real(RP), intent(in), dimension(KA,IA,JA)     :: Dens_ZXY, MomX_ZUY, MomY_ZXV, MomZ_WXY
     integer, intent(in) :: IIS, IIE, JJS, JJE, KS, KE
-
+    
     procedure(FDM_EvalFlux), pointer :: Invoke_EvalFlux => NULL()
 
     !
@@ -182,40 +215,106 @@ contains
        case (VL_ZXY)
           Invoke_EvalFlux => FDM_EvalFlxCD4_VarZXY
        case (VL_ZUY)
-          Invoke_EvalFlux => FDM_EvalFlxCD4_VarZUY          
+          Invoke_EvalFlux => FDM_EvalFlxCD4_VarZUY
        case (VL_ZXV)
-          Invoke_EvalFlux => FDM_EvalFlxCD4_VarZXV          
+          Invoke_EvalFlux => FDM_EvalFlxCD4_VarZXV
        case (VL_WXY)
-          Invoke_EvalFlux => FDM_EvalFlxCD4_VarWXY          
+          Invoke_EvalFlux => FDM_EvalFlxCD4_VarWXY
        case default
           write(*,*) "VarLoc", VarLoc, " in CD4 is not supported."
           stop          
        end select
     case (FLXEVALTYPE_UD1)
-       select case(VarLoc)
-       case (VL_ZXY)
-          Invoke_EvalFlux => FDM_EvalFlxUD1_VarZXY
-       case (VL_ZUY)
-          Invoke_EvalFlux => FDM_EvalFlxUD1_VarZUY          
-       case (VL_ZXV)
-          Invoke_EvalFlux => FDM_EvalFlxUD1_VarZXV          
-       case (VL_WXY)
-          Invoke_EvalFlux => FDM_EvalFlxUD1_VarWXY          
-       case default
-          write(*,*) "VarLoc", VarLoc, " in UD1 is not supported."
-          stop
-       end select
+!!$       select case(VarLoc)
+!!$       case (VL_ZXY)
+!!$          Invoke_EvalFlux => FDM_EvalFlxUD1_VarZXY
+!!$       case (VL_ZUY)
+!!$          Invoke_EvalFlux => FDM_EvalFlxUD1_VarZUY          
+!!$       case (VL_ZXV)
+!!$          Invoke_EvalFlux => FDM_EvalFlxUD1_VarZXV          
+!!$       case (VL_WXY)
+!!$          Invoke_EvalFlux => FDM_EvalFlxUD1_VarWXY          
+!!$       case default
+!!$          write(*,*) "VarLoc", VarLoc, " in UD1 is not supported."
+!!$          stop
+!!$       end select
+       Flux = 0.0_RP; return
     case default
        write(*,*) "FlxEvalType=", FlxEvalType, "is not supported."
        stop
     end select
-    
-    call Invoke_EvalFlux(Flux(:,:,:,XDIR), Flux(:,:,:,YDIR), Flux(:,:,:,ZDIR),          &  ! (inout)
-         & Var, VelX_ZUY, VelY_ZXV, VelZ_WXY, J13G, J23G, J33G, GSQRT, MAPF, num_diff,  &  ! (in)
-         & IIS, IIE, JJS, JJE, KS, KE )          
+
+    call Invoke_EvalFlux(Flux(:,:,:,XDIR), Flux(:,:,:,YDIR), Flux(:,:,:,ZDIR),  & ! (inout)
+         & Var, Dens_ZXY, MomX_ZUY, MomY_ZXV, MomZ_WXY,                                   & ! (in)
+         & IIS, IIE, JJS, JJE, KS, KE )
 
   end subroutine ATMOS_NUMERIC_FDM_EvalFlux
 
+  subroutine ATMOS_NUMERIC_FDM_EvalFluxMT(Flux,                               &  ! (inout)
+       & FlxEvalType, VarLoc, Var,                                            &  ! (in)
+       & Dens_ZXY, MomX_ZUY, MomY_ZXV, MomZ_WXY,                              &  ! (in)
+       & IIS, IIE, JJS, JJE, KS, KE             )                                ! (in)
+
+    use scale_atmos_numeric_fdm_cd, only: &
+         & FDM_EvalFlxCD4_VarZXY, FDM_EvalFlxCD4_VarZUY, FDM_EvalFlxCD4_VarZXV, FDM_EvalFlxCD4_VarWXY 
+!!$    use scale_atmos_numeric_fdm_ud, only: &
+!!$         & FDM_EvalFlxUD1_VarZXY, FDM_EvalFlxUD1_VarZUY, FDM_EvalFlxUD1_VarZXV, FDM_EvalFlxUD1_VarWXY 
+    
+    real(RP), intent(inout), dimension(KA,IA,JA,3)  :: Flux
+    integer, intent(in) :: FlxEvalType
+    integer, intent(in) :: VarLoc    
+    real(RP), intent(in), dimension(KA,IA,JA)     :: Var
+    real(RP), intent(in), dimension(KA,IA,JA)     :: Dens_ZXY, MomX_ZUY, MomY_ZXV, MomZ_WXY
+    integer, intent(in) :: IIS, IIE, JJS, JJE, KS, KE
+    
+    procedure(FDM_EvalFluxMT), pointer :: Invoke_EvalFlux => NULL()
+
+    !
+    !
+
+    ! Dynamical dispatching
+    select case(FlxEvalType)
+    case (FLXEVALTYPE_CD4)
+       select case(VarLoc)
+       case (VL_ZXY)
+          Invoke_EvalFlux => FDM_EvalFlxCD4_VarZXY
+       case (VL_ZUY)
+          Invoke_EvalFlux => FDM_EvalFlxCD4_VarZUY
+       case (VL_ZXV)
+          Invoke_EvalFlux => FDM_EvalFlxCD4_VarZXV
+       case (VL_WXY)
+          Invoke_EvalFlux => FDM_EvalFlxCD4_VarWXY
+       case default
+          write(*,*) "VarLoc", VarLoc, " in CD4 is not supported."
+          stop          
+       end select
+    case (FLXEVALTYPE_UD1)
+!!$       select case(VarLoc)
+!!$       case (VL_ZXY)
+!!$          Invoke_EvalFlux => FDM_EvalFlxUD1_VarZXY
+!!$       case (VL_ZUY)
+!!$          Invoke_EvalFlux => FDM_EvalFlxUD1_VarZUY          
+!!$       case (VL_ZXV)
+!!$          Invoke_EvalFlux => FDM_EvalFlxUD1_VarZXV          
+!!$       case (VL_WXY)
+!!$          Invoke_EvalFlux => FDM_EvalFlxUD1_VarWXY          
+!!$       case default
+!!$          write(*,*) "VarLoc", VarLoc, " in UD1 is not supported."
+!!$          stop
+!!$       end select
+       Flux = 0.0_RP; return       
+    case default       
+       write(*,*) "FlxEvalType=", FlxEvalType, "is not supported."
+       stop
+    end select
+
+    call Invoke_EvalFlux(Flux(:,:,:,XDIR), Flux(:,:,:,YDIR), Flux(:,:,:,ZDIR),  & ! (inout)
+         & Var, Dens_ZXY, MomX_ZUY, MomY_ZXV, MomZ_WXY,                                   & ! (in)
+         & IIS, IIE, JJS, JJE, KS, KE )
+
+  end subroutine ATMOS_NUMERIC_FDM_EvalFluxMT
+  
+  
   !------------------------------
 
   function mapping_gridtransID(VarLoc, to2DFlag) result(Id)

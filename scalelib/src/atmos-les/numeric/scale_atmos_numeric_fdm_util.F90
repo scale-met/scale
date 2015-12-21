@@ -87,8 +87,8 @@ contains
 
   subroutine FDM_EvolveVar( VarA,                             & ! (out)
        & Var0, FlxX, FlxY, FlxZ,                              & ! (in)
-       & GSQRT, MAPF, dt, RCDX, RCDY, RCDZ,                   & ! (in)
-       & IIS, IIE, JJS, JJE, KS, KE,                          & ! (in)
+       & GSQRT, MAPF, dt, RDX, RDY, RDZ,                      & ! (in)
+       & IIS, IIE, JJS, JJE, KS_, KE_,                        & ! (in)
        & Var_t,                                               & ! (in)
        & lhist, advch_t, advcv_t )
     
@@ -97,47 +97,56 @@ contains
     real(RP), intent(in), dimension(KA,IA,JA)    :: FlxX, FlxY, FlxZ
     real(RP), intent(in), dimension(KA,IA,JA)    :: GSQRT
     real(RP), intent(in), dimension(IA,JA,2)     :: MAPF
-    real(RP), intent(in) :: dt, RCDX(IA), RCDY(JA), RCDZ(KA)
-    integer, intent(in) :: IIS, IIE, JJS, JJE, KS, KE
+    real(RP), intent(in) :: dt, RDX(:), RDY(:), RDZ(:)
+    integer, intent(in) :: IIS, IIE, JJS, JJE, KS_, KE_
     real(RP), intent(in), dimension(KA,IA,JA), optional :: Var_t
     logical, intent(in), optional :: lhist
     real(RP), intent(inout), optional, dimension(KA,IA,JA) :: advch_t, advcv_t
 
     integer :: i, j, k
     real(RP) :: advch, advcv
-    
-    !$omp  parallel do private(i,j,k,advch,advcv) OMP_SCHEDULE_ collapse(2)
-    do j = JJS, JJE
-       do i = IIS, IIE
-          do k = KS, KE
-#ifdef DEBUG
-             call CHECK( __LINE__, VAR0(k,i,j) )
-             call CHECK( __LINE__, FlxZ(k  ,i  ,j  ) )
-             call CHECK( __LINE__, FlxZ(k-1,i  ,j  ) )
-             call CHECK( __LINE__, FlxX(k  ,i  ,j  ) )
-             call CHECK( __LINE__, FlxX(k  ,i-1,j  ) )
-             call CHECK( __LINE__, FlxY(k  ,i  ,j  ) )
-             call CHECK( __LINE__, FlxY(k  ,i  ,j-1) )
-             call CHECK( __LINE__, Var_t(k,i,j) )
-#endif
-             advcv = - ( FlxZ(k,i,j) - FlxZ(k-1,i,  j)   ) * RCDZ(k)
-             advch = - ( FlxX(k,i,j) - FlxX(k  ,i-1,j)   ) * RCDX(i) &
-                  &  - ( FlxY(k,i,j) - FlxY(k  ,i,  j-1) ) * RCDY(j)
-             VarA(k,i,j) = Var0(k,i,j) &
-                  & + dt * ( ( advcv + advch ) * MAPF(i,j,1) * MAPF(i,j,2) / GSQRT(k,i,j) &
-                                    + Var_t(k,i,j) )
+
+    if (present(Var_t)) then
+      !$omp  parallel do private(i,j,k,advch,advcv) OMP_SCHEDULE_ collapse(2)
+      do j = JJS, JJE
+      do i = IIS, IIE
+        do k = KS_, KE_
+          advcv = - ( FlxZ(k,i,j) - FlxZ(k-1,i,  j)   ) * RDZ(k)
+          advch = - ( FlxX(k,i,j) - FlxX(k  ,i-1,j)   ) * RDX(i) &
+               &  - ( FlxY(k,i,j) - FlxY(k  ,i,  j-1) ) * RDY(j)
+          VarA(k,i,j) = Var0(k,i,j) &
+               & + dt * (  ( advcv + advch ) * MAPF(i,j,1) * MAPF(i,j,2) / GSQRT(k,i,j) &
+                         + Var_t(k,i,j) )
 #ifdef HIST_TEND
-             if ( lhist ) then
-                advcv_t(k,i,j) = advcv * MAPF(i,j,1) * MAPF(i,j,2) / GSQRT(k,i,j)
-                advch_t(k,i,j) = advch * MAPF(i,j,1) * MAPF(i,j,2) / GSQRT(k,i,j)
-             end if
+          if ( lhist ) then
+            advcv_t(k,i,j) = advcv * MAPF(i,j,1) * MAPF(i,j,2) / GSQRT(k,i,j)
+            advch_t(k,i,j) = advch * MAPF(i,j,1) * MAPF(i,j,2) / GSQRT(k,i,j)
+          end if
 #endif
-          enddo
-       enddo
-    enddo
-#ifdef DEBUG
-    k = IUNDEF; i = IUNDEF; j = IUNDEF
+        enddo
+      enddo
+      enddo
+    else
+      !$omp  parallel do private(i,j,k,advch,advcv) OMP_SCHEDULE_ collapse(2)
+      do j = JJS, JJE
+      do i = IIS, IIE
+        do k = KS_, KE_
+          advcv = - ( FlxZ(k,i,j) - FlxZ(k-1,i,  j)   ) * RDZ(k)
+          advch = - ( FlxX(k,i,j) - FlxX(k  ,i-1,j)   ) * RDX(i) &
+               &  - ( FlxY(k,i,j) - FlxY(k  ,i,  j-1) ) * RDY(j)
+          VarA(k,i,j) = Var0(k,i,j) &
+               & + dt * (  ( advcv + advch ) * MAPF(i,j,1) * MAPF(i,j,2) / GSQRT(k,i,j) )
+          
+#ifdef HIST_TEND
+          if ( lhist ) then
+            advcv_t(k,i,j) = advcv * MAPF(i,j,1) * MAPF(i,j,2) / GSQRT(k,i,j)
+            advch_t(k,i,j) = advch * MAPF(i,j,1) * MAPF(i,j,2) / GSQRT(k,i,j)
+          end if
 #endif
+        enddo
+      enddo
+      enddo      
+    endif  
   end subroutine FDM_EvolveVar
 
 !!$  subroutine ATMOS_DYN_Flx4VarZXY( FlxX_ZUY, FlxY_ZXV, FlxZ_WXY,        &  ! (inout)
