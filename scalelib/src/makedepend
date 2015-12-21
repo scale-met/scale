@@ -86,12 +86,10 @@ File.open( File.join(srcdir, "depend"), "w" ) do |file|
   mods.push "$(patsubst %.o,$(OBJ_DIR)/%.mod,$(OBJS_NUMERIC))"
   pros.keys.sort.map{|mod|
      mod = mod.downcase
-     unless /\Ascale_atmos_phy_(mp|tb|rd)_(\w+)\Z/ =~ mod && ( $2 != "common" && $2 != "convert" )
+     unless (/\Ascale_atmos_phy_(mp|tb|rd)_(\w+)\Z/ =~ mod && $2 != "common") || \
+            (/\Ascale_atmos_(numeric_fdm)_(\w+)\Z/ =~ mod && $2 != "common")
        mods.push "$(OBJ_DIR)/#{mod}.mod"
      end
-     unless /\Ascale_atmos_(numeric_fdm)_(\w+)\Z/ =~ mod && $2 != "common"
-       mods.push "$(OBJ_DIR)/#{mod}.mod"
-     end     
   }
   file.print "MODS =\t\\\n\t", mods.join("\t\\\n\t"), "\n"
 end

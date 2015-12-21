@@ -191,6 +191,10 @@ contains
        ATMOS_DYN_rk_hivi_regist, &
        ATMOS_DYN_rk_hivi_setup, &
        ATMOS_DYN_rk_hivi
+    use scale_atmos_dyn_rk_fdmheve, only: &
+       ATMOS_DYN_rk_fdmheve_regist, &
+       ATMOS_DYN_rk_fdmheve_setup, &
+       ATMOS_DYN_rk_fdmheve        
     use scale_atmos_dyn_rk_none, only: &
        ATMOS_DYN_rk_none_regist, &
        ATMOS_DYN_rk_none_setup, &
@@ -234,6 +238,13 @@ contains
             VAR_NAME, VAR_DESC, VAR_UNIT )
        ATMOS_DYN_rk_setup => ATMOS_DYN_rk_hivi_setup
        ATMOS_DYN_rk => ATMOS_DYN_rk_hivi
+    case ( 'FDM-HEVE' )
+       call ATMOS_DYN_rk_fdmheve_regist( &
+            ATMOS_DYN_TYPE, &
+            VA_out, &
+            VAR_NAME, VAR_DESC, VAR_UNIT )
+       ATMOS_DYN_rk_setup => ATMOS_DYN_rk_fdmheve_setup
+       ATMOS_DYN_rk => ATMOS_DYN_rk_fdmheve       
     case ( 'NONE' )
        call ATMOS_DYN_rk_none_regist( &
             ATMOS_DYN_TYPE, &
