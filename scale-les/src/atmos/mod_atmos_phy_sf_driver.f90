@@ -169,9 +169,6 @@ contains
        ATMOS_PHY_SF
     use mod_atmos_vars, only: &
        DENS,              &
-       MOMZ,              &
-       MOMX,              &
-       MOMY,              &
        RHOT,              &
        QTRC,              &
        TEMP,              &

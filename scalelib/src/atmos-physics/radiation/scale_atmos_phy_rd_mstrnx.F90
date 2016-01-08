@@ -1105,8 +1105,8 @@ contains
 
     ! for albedo
     real(RP) :: albedo_sfc  (IA,JA,MSTRN_ncloud) ! surface albedo
-    real(RP) :: albedo_ocean(IA,JA,2, MSTRN_ncloud) ! surface albedo
-    real(RP) :: tau_column  (IA,JA, MSTRN_ncloud)
+!     real(RP) :: albedo_ocean(IA,JA,2, MSTRN_ncloud) ! surface albedo
+!     real(RP) :: tau_column  (IA,JA, MSTRN_ncloud)
 
     ! for planck functions
     real(RP) :: bbar (rd_kmax  ,IA,JA) ! planck functions for thermal source at the interface

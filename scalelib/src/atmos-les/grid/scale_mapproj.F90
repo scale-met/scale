@@ -909,7 +909,7 @@ contains
     implicit none
 
     real(RP) :: lat0
-    real(RP) :: dlon, latrot, dist
+    real(RP) :: latrot, dist
     !---------------------------------------------------------------------------
 
     lat0 = MPRJ_M_lat * D2R
@@ -1048,7 +1048,6 @@ contains
     implicit none
 
     real(RP) :: lat0
-    real(RP) :: dlon
     !---------------------------------------------------------------------------
 
     lat0 = MPRJ_EC_lat * D2R

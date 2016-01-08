@@ -94,8 +94,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Driver
   subroutine ATMOS_PHY_CH_driver( update_flag )
-    use scale_time, only: &
-       dt_CH => TIME_DTSEC_ATMOS_PHY_CH
+!     use scale_time, only: &
+!        dt_CH => TIME_DTSEC_ATMOS_PHY_CH
     use scale_les_statistics, only: &
        STATISTICS_checktotal, &
        STAT_total
@@ -104,12 +104,12 @@ contains
 !    use scale_atmos_phy_ch, only: &
 !       ATMOS_PHY_CH
     use mod_atmos_vars, only: &
-       DENS,              &
-       MOMZ,              &
-       MOMX,              &
-       MOMY,              &
-       RHOT,              &
-       QTRC,              &
+!        DENS,              &
+!        MOMZ,              &
+!        MOMX,              &
+!        MOMY,              &
+!        RHOT,              &
+!        QTRC,              &
        RHOQ_t => RHOQ_tp
     use mod_atmos_phy_ch_vars, only: &
        RHOQ_t_CH => ATMOS_PHY_CH_RHOQ_t, &

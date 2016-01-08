@@ -171,8 +171,6 @@ contains
     use scale_grid_index
     use scale_comm, only: &
        COMM_horizontal_mean
-    use scale_time, only: &
-       dt => TIME_DTSEC_ATMOS_PHY_MP
     use scale_history, only: &
        HIST_in
     use scale_tracer, only: &

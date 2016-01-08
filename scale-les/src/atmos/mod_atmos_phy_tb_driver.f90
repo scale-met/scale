@@ -63,7 +63,6 @@ contains
     use scale_atmos_phy_tb, only: &
        ATMOS_PHY_TB_setup
     use mod_atmos_phy_tb_vars, only: &
-       TKE       => ATMOS_PHY_TB_TKE,    &
        TKE_t_TB  => ATMOS_PHY_TB_TKE_t,  &
        MOMZ_t_TB => ATMOS_PHY_TB_MOMZ_t
     implicit none

@@ -323,9 +323,8 @@ contains
     logical :: do_create_c(PRC_DOMAIN_nlim)
     logical :: reordering
 
-    integer :: COL_NMAX(0:PRC_DOMAIN_nlim)
     character(len=H_LONG) :: COL_FILE(0:PRC_DOMAIN_nlim)
-    character(4) :: col_num
+    character(len=4)      :: col_num
 
     integer :: i
     integer :: itag, ierr

@@ -409,7 +409,7 @@ contains
 
     logical,  intent(in), optional :: landgrid
 
-    integer  :: i, j, k
+    integer  :: i, j
     integer  :: is, ie
     integer  :: js, je
     logical  :: lndgrd
@@ -1064,8 +1064,6 @@ contains
       lndgrd   ) ! (in)
     use scale_process, only: &
        PRC_MPIstop
-    use scale_const, only: &
-       eps => CONST_EPS
     implicit none
 
     real(RP), intent(inout) :: vfact(:,:,:,:,:) ! vertical interp factor
@@ -1083,7 +1081,6 @@ contains
     integer,  intent(in)  :: inKA               ! grid number of you (input)
     logical,  intent(in)  :: lndgrd             ! flag of land grid
 
-    real(RP) :: distance
     real(RP) :: dist(2)
     logical  :: dflag                           ! flag: data found or not
     integer  :: ii, jj, idx
@@ -1193,7 +1190,6 @@ contains
     integer,  intent(in)  :: inKA               ! grid number of you (input)
     logical,  intent(in)  :: lndgrd             ! flag of land grid
 
-    real(RP) :: distance
     real(RP) :: denom
     real(RP) :: dist(2)
     logical  :: dflag                           ! flag: data found or not

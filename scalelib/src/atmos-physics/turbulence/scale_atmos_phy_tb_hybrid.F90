@@ -243,13 +243,7 @@ contains
     use scale_grid_index
     use scale_tracer
     use scale_const, only: &
-       GRAV   => CONST_GRAV, &
-       EPS    => CONST_EPS
-    use scale_grid, only: &
-       CDZ  => GRID_CDZ,  &
-       FDZ  => GRID_FDZ,  &
-       RCDZ => GRID_RCDZ, &
-       RFDZ => GRID_RFDZ
+       GRAV => CONST_GRAV
     implicit none
 
     real(RP), intent(out) :: qflx_sgs_momz(KA,IA,JA,3)

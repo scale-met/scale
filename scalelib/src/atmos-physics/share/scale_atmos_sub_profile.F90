@@ -96,7 +96,7 @@ contains
 
     real(RP) :: gmr   ! grav / Rdry
     real(RP) :: RovCP ! CPdry / Rdry
-    integer  :: k, i, j, n
+    integer  :: k, n
     !---------------------------------------------------------------------------
 
     gmr   = GRAV / Rdry

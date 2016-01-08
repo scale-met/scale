@@ -74,10 +74,8 @@ contains
     real(RP), intent(in) :: CZ (KA,IA,JA)
 
     NAMELIST / PARAM_ATMOS_PHY_TB_DNS / &
-         ATMOS_PHY_TB_DNS_NU, &
-         ATMOS_PHY_TB_DNS_MU
-
-    integer :: k, i, j
+       ATMOS_PHY_TB_DNS_NU, &
+       ATMOS_PHY_TB_DNS_MU
 
     integer :: ierr
     !---------------------------------------------------------------------------
@@ -116,9 +114,6 @@ contains
     use scale_const, only: &
        GRAV => CONST_GRAV
     use scale_grid, only: &
-       FDZ  => GRID_FDZ,  &
-       FDX  => GRID_FDX,  &
-       FDY  => GRID_FDY,  &
        RCDZ => GRID_RCDZ, &
        RCDX => GRID_RCDX, &
        RCDY => GRID_RCDY, &
@@ -126,16 +121,9 @@ contains
        RFDX => GRID_RFDX, &
        RFDY => GRID_RFDY
     use scale_gridtrans, only: &
-       I_XYZ, &
-       I_XYW, &
-       I_UYW, &
-       I_XVW, &
-       I_UYZ, &
-       I_XVZ, &
-       I_XY,  &
-       I_UY,  &
-       I_XV,  &
-       I_UV
+       I_XY, &
+       I_UY, &
+       I_XV
     implicit none
 
     ! SGS flux

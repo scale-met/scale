@@ -68,23 +68,15 @@ contains
        RCDX => GRID_RCDX, &
        RCDY => GRID_RCDY, &
        RFDZ => GRID_RFDZ, &
-       RFDX => GRID_RFDX, &
-       RFDY => GRID_RFDY, &
-       CDZ  => GRID_CDZ,  &
-       FDZ  => GRID_FDZ
+       CDZ  => GRID_CDZ
     use scale_gridtrans, only: &
-       I_XYZ,                 &
-       I_XYW,                 &
-       I_UYW,                 &
-       I_XVW,                 &
-       I_UYZ,                 &
-       I_XVZ,                 &
-       I_UVZ,                 &
-       I_XY,                  &
-       I_UY,                  &
-       I_XV,                  &
-       I_UV
+       I_XYZ, &
+       I_XYW, &
+       I_UYW, &
+       I_XVW, &
+       I_XY
     implicit none
+
     real(RP), intent(out) :: MOMZ_t_TB(KA,IA,JA)
     real(RP), intent(in)  :: QFLX_MOMZ(KA,IA,JA,3)
     real(RP), intent(in)  :: GSQRT(KA,IA,JA,7)
@@ -163,25 +155,16 @@ contains
        IIS, IIE, JJS, JJE )
     use scale_grid, only: &
        RCDZ => GRID_RCDZ, &
-       RCDX => GRID_RCDX, &
        RCDY => GRID_RCDY, &
        RFDZ => GRID_RFDZ, &
        RFDX => GRID_RFDX, &
-       RFDY => GRID_RFDY, &
-       CDZ  => GRID_CDZ,  &
        FDZ  => GRID_FDZ
     use scale_gridtrans, only: &
-       I_XYZ,                 &
-       I_XYW,                 &
-       I_UYW,                 &
-       I_XVW,                 &
-       I_UYZ,                 &
-       I_XVZ,                 &
-       I_UVZ,                 &
-       I_XY,                  &
-       I_UY,                  &
-       I_XV,                  &
-       I_UV
+       I_XYZ, &
+       I_UYW, &
+       I_UYZ, &
+       I_UVZ, &
+       I_UY
     implicit none
     real(RP), intent(out) :: MOMX_t_TB(KA,IA,JA)
     real(RP), intent(in)  :: QFLX_MOMX(KA,IA,JA,3)
@@ -261,25 +244,16 @@ contains
     use scale_grid, only: &
        RCDZ => GRID_RCDZ, &
        RCDX => GRID_RCDX, &
-       RCDY => GRID_RCDY, &
        RFDZ => GRID_RFDZ, &
-       RFDX => GRID_RFDX, &
        RFDY => GRID_RFDY, &
-       CDZ  => GRID_CDZ,  &
        FDZ  => GRID_FDZ
     use scale_gridtrans, only: &
-       I_XYZ,                 &
-       I_XYW,                 &
-       I_UYW,                 &
-       I_XVW,                 &
-       I_UYZ,                 &
-       I_XVZ,                 &
-       I_UVZ,                 &
-       I_XY,                  &
-       I_UY,                  &
-       I_XV,                  &
-       I_UV
+       I_XYZ, &
+       I_XVW, &
+       I_UVZ, &
+       I_XV
     implicit none
+
     real(RP), intent(out) :: MOMY_t_TB(KA,IA,JA)
     real(RP), intent(in)  :: QFLX_MOMY(KA,IA,JA,3)
     real(RP), intent(in)  :: GSQRT(KA,IA,JA,7)
@@ -360,23 +334,16 @@ contains
        RCDX => GRID_RCDX, &
        RCDY => GRID_RCDY, &
        RFDZ => GRID_RFDZ, &
-       RFDX => GRID_RFDX, &
-       RFDY => GRID_RFDY, &
-       CDZ  => GRID_CDZ,  &
        FDZ  => GRID_FDZ
     use scale_gridtrans, only: &
-       I_XYZ,                 &
-       I_XYW,                 &
-       I_UYW,                 &
-       I_XVW,                 &
-       I_UYZ,                 &
-       I_XVZ,                 &
-       I_UVZ,                 &
-       I_XY,                  &
-       I_UY,                  &
-       I_XV,                  &
-       I_UV
+       I_XYZ, &
+       I_XYW, &
+       I_UYZ, &
+       I_XVZ, &
+       I_UVZ, &
+       I_XY
     implicit none
+
     real(RP), intent(out) :: phi_t_TB(KA,IA,JA)
     real(RP), intent(in)  :: QFLX_phi(KA,IA,JA,3)
     real(RP), intent(in)  :: GSQRT(KA,IA,JA,7)

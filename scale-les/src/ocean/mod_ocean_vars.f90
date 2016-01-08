@@ -437,8 +437,6 @@ contains
   !-----------------------------------------------------------------------------
   !> History output set for ocean variables
   subroutine OCEAN_vars_history
-    use scale_time, only: &
-       TIME_DTSEC_OCEAN
     use scale_history, only: &
        HIST_in
     implicit none

@@ -176,12 +176,10 @@ contains
        GRID_FBFYG
     use scale_land_grid, only: &
        GRID_LCZ, &
-       GRID_LFZ, &
-       GRID_LCDZ
+       GRID_LFZ
     use scale_urban_grid, only: &
        GRID_UCZ, &
-       GRID_UFZ, &
-       GRID_UCDZ
+       GRID_UFZ
     implicit none
 
     integer, intent(in) :: fid
@@ -1130,7 +1128,6 @@ contains
     integer :: rankidx(2)
     logical :: append_sw
     logical :: fileexisted
-    logical :: addvar
     integer :: fid, vid
     integer :: step
     integer :: i, j, k, n

@@ -1588,8 +1588,6 @@ contains
     use scale_comm, only: &
        COMM_vars8, &
        COMM_wait
-    use scale_gridtrans, only: &
-       I_XYZ
     implicit none
 
     real(RP), intent(out) :: qflx_anti(KA,IA,JA,3)

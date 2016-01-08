@@ -193,7 +193,6 @@ contains
        GRAV   => CONST_GRAV,   &
        P00    => CONST_PRE00
     use scale_comm, only: &
-       COMM_world, &
        COMM_vars8, &
        COMM_wait
     use scale_atmos_dyn_common, only: &
@@ -3058,7 +3057,7 @@ contains
 #endif
 
     real(RP) :: lhs, rhs
-    real(RP) :: r, kapp
+    real(RP) :: kapp
     integer :: k,i,j
 
     do j = JS, JE
@@ -3067,8 +3066,7 @@ contains
 #ifndef DRY
        kapp = kappa(k,i,j)
 #else
-       R = Rdry
-       kapp  = CPdry / CVdry
+       kapp = CPdry / CVdry
 #endif
        lhs = DPRES(k,i,j) - ( PRES(k,i,j) - REF_pres(k,i,j) )
        rhs = kapp * PRES(k,i,j) * ( RHOT_RK(k,i,j) - RHOT(k,i,j) ) / RHOT(k,i,j)

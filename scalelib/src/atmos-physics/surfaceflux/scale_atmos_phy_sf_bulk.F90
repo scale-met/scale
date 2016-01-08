@@ -118,7 +118,6 @@ contains
     use scale_grid_index
     use scale_tracer
     use scale_const, only: &
-       STB   => CONST_STB,   &
        CPdry => CONST_CPdry, &
        Rdry  => CONST_Rdry
     use scale_atmos_phy_sf_bulkcoef, only: &

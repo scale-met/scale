@@ -86,11 +86,7 @@ contains
        PRC_masterrank, &
        PRC_myrank
     use scale_les_process, only: &
-       PRC_2Drank, &
-       PRC_HAS_W, &
-       PRC_HAS_E, &
-       PRC_HAS_S, &
-       PRC_HAS_N
+       PRC_2Drank
     use scale_time, only: &
        TIME_DTSEC,       &
        TIME_STARTDAYSEC, &

@@ -745,18 +745,18 @@ contains
 
     do ic = 1, n_ctg
 
-      dlogd = (log(d_max(ic)) - log(d_min(ic)))/float(NSIZ(ic))
+      dlogd = (log(d_max(ic)) - log(d_min(ic)))/real(NSIZ(ic),kind=RP)
 
       do is0 = 1, NSIZ(ic)  !size bin
-        d_lw(is0,ic) = exp(log(d_min(ic))+dlogd* float(is0-1)      )
-        d_ct(is0,ic) = exp(log(d_min(ic))+dlogd*(float(is0)-0.5_RP))
-        d_up(is0,ic) = exp(log(d_min(ic))+dlogd* float(is0)        )
+        d_lw(is0,ic) = exp(log(d_min(ic))+dlogd* real(is0-1,kind=RP)        )
+        d_ct(is0,ic) = exp(log(d_min(ic))+dlogd*(real(is0  ,kind=RP)-0.5_RP))
+        d_up(is0,ic) = exp(log(d_min(ic))+dlogd* real(is0  ,kind=RP)        )
       enddo !is (1:n_siz(ic))
-      dk    = (k_max(ic) - k_min(ic))/float(n_kap(ic))
+      dk    = (k_max(ic) - k_min(ic))/real(n_kap(ic),kind=RP)
       do ik = 1, n_kap(ic)  !size bin
-        k_lw(ik,ic) = k_min(ic) + dk  * float(ik-1)
-        k_ct(ik,ic) = k_min(ic) + dk  *(float(ik)-0.5_RP)
-        k_up(ik,ic) = k_min(ic) + dk  * float(ik)
+        k_lw(ik,ic) = k_min(ic) + dk  * real(ik-1,kind=RP)
+        k_ct(ik,ic) = k_min(ic) + dk  *(real(ik  ,kind=RP)-0.5_RP)
+        k_up(ik,ic) = k_min(ic) + dk  * real(ik  ,kind=RP)
       enddo !ik (1:n_kap(ic))
 
     enddo !ic (1:n_ctg)

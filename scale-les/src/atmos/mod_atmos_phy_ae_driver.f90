@@ -52,8 +52,8 @@ contains
     use scale_atmos_phy_ae, only: &
        ATMOS_PHY_AE_setup
     use mod_atmos_admin, only: &
-       ATMOS_PHY_AE_TYPE, &
-       ATMOS_sw_phy_ae
+       ATMOS_PHY_AE_TYPE!, &
+!       ATMOS_sw_phy_ae
     implicit none
     !---------------------------------------------------------------------------
 
@@ -76,8 +76,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Resume
   subroutine ATMOS_PHY_AE_driver_resume
-    use mod_atmos_admin, only: &
-       ATMOS_sw_phy_ae
+!     use mod_atmos_admin, only: &
+!        ATMOS_sw_phy_ae
     implicit none
 
     ! note: tentatively, aerosol module should be called at all time. we need dummy subprogram.
@@ -150,7 +150,7 @@ contains
        CCN_t(:,:,:) = 0.0_RP ! reset
        RHOQ_t_AE(:,:,:,:) = 0.0_RP ! reset
 
-       NREG(:,:,:) = EVAPORATE(:,:,:) * dt_AE 
+       NREG(:,:,:) = EVAPORATE(:,:,:) * dt_AE
 
        call ATMOS_PHY_AE( DENS, & ! [IN]
                           MOMZ, & ! [IN]
@@ -173,7 +173,7 @@ contains
        enddo
        enddo
 
-       CCN_t(:,:,:) = CCN(:,:,:) / dt_AE 
+       CCN_t(:,:,:) = CCN(:,:,:) / dt_AE
 
 !       CCN(:,:,:) = 0.0_RP ! tentative
 

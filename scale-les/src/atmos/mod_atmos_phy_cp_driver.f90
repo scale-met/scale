@@ -78,7 +78,7 @@ contains
     use mod_atmos_admin, only: &
        ATMOS_sw_phy_cp
     implicit none
-    
+
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[DRIVER] / Categ[ATMOS PHY_CP] / Origin[SCALE-LES]'
 
@@ -97,8 +97,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Driver
   subroutine ATMOS_PHY_CP_driver( update_flag )
-    use scale_time, only: &
-       dt_CP => TIME_DTSEC_ATMOS_PHY_CP
+!     use scale_time, only: &
+!        dt_CP => TIME_DTSEC_ATMOS_PHY_CP
     use scale_les_statistics, only: &
        STATISTICS_checktotal, &
        STAT_total
@@ -107,12 +107,12 @@ contains
 !    use scale_atmos_phy_cp, only: &
 !       ATMOS_PHY_CP
     use mod_atmos_vars, only: &
-       DENS,              &
-       MOMZ,              &
-       MOMX,              &
-       MOMY,              &
-       RHOT,              &
-       QTRC,              &
+!        DENS,              &
+!        MOMZ,              &
+!        MOMX,              &
+!        MOMY,              &
+!        RHOT,              &
+!        QTRC,              &
        MOMZ_t => MOMZ_tp, &
        MOMX_t => MOMX_tp, &
        MOMY_t => MOMY_tp, &
