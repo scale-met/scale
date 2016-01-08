@@ -425,13 +425,6 @@ contains
        ATMOS_BOUNDARY_finalize
     use scale_grid_nest, only: &
        NEST_COMM_disconnect
-    use mod_atmos_vars, only: &
-       DENS, &
-       MOMZ, &
-       MOMX, &
-       MOMY, &
-       RHOT, &
-       QTRC
     implicit none
     !---------------------------------------------------------------------------
 

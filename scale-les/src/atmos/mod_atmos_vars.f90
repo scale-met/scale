@@ -1177,8 +1177,6 @@ contains
        CVdry => CONST_CVdry, &
        LHV   => CONST_LHV,   &
        P00   => CONST_PRE00
-    use scale_time, only: &
-       TIME_DTSEC
     use scale_grid, only: &
        RCDX => GRID_RCDX, &
        RCDY => GRID_RCDY

@@ -289,8 +289,6 @@ contains
     real(RP) :: advch ! horizontal advection
     real(RP) :: advcv ! vertical advection
     real(RP) :: div  ! divergence damping
-    real(RP) :: pg   ! pressure gradient force
-    real(RP) :: cf   ! colioris force
 #ifdef HIST_TEND
     logical  :: lhist
 #endif

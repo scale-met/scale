@@ -472,11 +472,10 @@ contains
   !-----------------------------------------------------------------------------
   !> History output set for land variables
   subroutine LAND_vars_history
-    use scale_time, only: &
-       TIME_DTSEC_LAND
     use scale_history, only: &
        HIST_in
     implicit none
+
     real(RP) :: LAND_WATERDS(LKMAX,IA,JA)
     integer :: k, i, j
     !---------------------------------------------------------------------------

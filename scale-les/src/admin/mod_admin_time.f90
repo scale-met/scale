@@ -866,7 +866,6 @@ contains
        TIME_NOWSTEP,              &
        TIME_NSTEP,                &
        TIME_OFFSET_YEAR,          &
-       TIME_STARTDAYSEC,          &
        TIME_DSTEP_WALLCLOCK_CHECK
     implicit none
 

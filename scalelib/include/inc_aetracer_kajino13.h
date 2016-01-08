@@ -12,8 +12,8 @@
   integer, public :: AE_CTG = 1
   integer, public, parameter :: GAS_CTG = 2
   integer, public, parameter :: N_ATR = 5
-  integer, public, allocatable :: NKAP(:) 
-  integer, public, allocatable :: NSIZ(:) 
+  integer, public, allocatable :: NKAP(:)
+  integer, public, allocatable :: NSIZ(:)
   integer, public :: QA_AE
   integer, public :: QAES
   integer, public :: QAEE
@@ -26,7 +26,7 @@
   integer, public, parameter :: IG_CGAS  =  2
 
   character(len=H_SHORT), public, allocatable :: AQ_AE_NAME(:)
-  character(len=H_LONG)  , public, allocatable :: AQ_AE_DESC(:)
+  character(len=H_MID)  , public, allocatable :: AQ_AE_DESC(:)
   character(len=H_SHORT), public, allocatable :: AQ_AE_UNIT(:)
   !-----------------------------------------------------------------------------
   !
@@ -42,4 +42,3 @@
 
   integer, public :: I_AE2RD(AE_QA)
   data I_AE2RD  / 3    / ! dummy => MSTRN_nptype=3: dust
-  integer :: m, n, ierr, ik, ic, ia0, is0

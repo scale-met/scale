@@ -12,8 +12,8 @@
   integer, public, parameter :: AE_CTG = 0
   integer, public, parameter :: GAS_CTG = 0
   integer, public, parameter :: N_ATR = 0
-  integer, public            :: NKAP(AE_CTG) 
-  integer, public            :: NSIZ(AE_CTG) 
+  integer, public            :: NKAP(AE_CTG)
+  integer, public            :: NSIZ(AE_CTG)
   integer, public, parameter :: QA_AE = 0
   integer, public, parameter :: QAES = 0
   integer, public, parameter :: QAEE = 0
@@ -42,4 +42,3 @@
 
   integer, public :: I_AE2RD(AE_QA)
   data I_AE2RD  / 3    / ! none => MSTRN_nptype=3: dust
-  integer :: m, n, ierr

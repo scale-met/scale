@@ -195,20 +195,14 @@ contains
        R      => CONST_Rdry, &
        Rvap   => CONST_Rvap, &
        CP     => CONST_CPdry, &
-       EPS    => CONST_EPS, &
        EPSTvap => CONST_EPSTvap
     use scale_grid, only: &
-       CDZ  => GRID_CDZ,  &
-       FDZ  => GRID_FDZ,  &
        RCDZ => GRID_RCDZ, &
        RFDZ => GRID_RFDZ, &
        RCDX => GRID_RCDX, &
        RCDY => GRID_RCDY
     use scale_grid_real, only: &
-       CZ => REAL_CZ, &
-       FZ => REAL_FZ
-    use scale_atmos_refstate, only: &
-       PT0 => ATMOS_REFSTATE_POTT
+       CZ => REAL_CZ
     use scale_gridtrans, only: &
        I_XYZ, &
        I_XYW, &
@@ -336,9 +330,6 @@ contains
     real(RP) :: adv(KA,IA,JA)
     real(RP) :: gen(KA,IA,JA)
 #endif
-
-    real(RP) :: sw
-
 
     integer :: k, i, j, iq
     integer :: IIS, IIE, JJS, JJE
@@ -1050,8 +1041,6 @@ contains
        q, n2, &
        SFLX_MU, SFLX_MV, SFLX_PT, &
        PT0 )
-    use scale_grid, only: &
-       CDZ  => GRID_CDZ
     use scale_grid_real, only: &
        FZ => REAL_FZ
     use scale_const, only: &
@@ -1060,6 +1049,7 @@ contains
        CP     => CONST_CPdry, &
        EPS    => CONST_EPS
     implicit none
+
     real(RP), intent(out) :: l(KA,IA,JA)
     real(RP), intent(in) :: DENS(KA,IA,JA)
     real(RP), intent(in) :: q(KA,IA,JA)
@@ -1136,11 +1126,10 @@ contains
   end subroutine get_length
 
   subroutine get_q2_level2( &
-       q2_2, &
+       q2_2,        &
        dudz2, Ri, l )
-    use scale_const, only: &
-       EPS    => CONST_EPS
     implicit none
+
     real(RP), intent(out) :: q2_2(KA,IA,JA)
     real(RP), intent(in)  :: dudz2(KA,IA,JA)
     real(RP), intent(in)  :: Ri(KA,IA,JA)

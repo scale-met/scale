@@ -295,7 +295,6 @@ contains
        Rdry    => CONST_Rdry,    &
        CPdry   => CONST_CPdry,   &
        EPS     => CONST_EPS,     &
-       EPSTvap => CONST_EPSTvap, &
        PRE00   => CONST_PRE00
     implicit none
 

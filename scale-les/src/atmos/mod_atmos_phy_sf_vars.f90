@@ -258,8 +258,6 @@ contains
        COMM_vars8, &
        COMM_wait
     implicit none
-
-    integer :: iq
     !---------------------------------------------------------------------------
 
     call COMM_vars8( ATMOS_PHY_SF_SFC_TEMP  (:,:),       1 )

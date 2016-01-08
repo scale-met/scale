@@ -46,7 +46,7 @@ module scale_atmos_solarins
   logical,  public :: ATMOS_SOLARINS_fixeddate   = .false.        ! Date is fixed?
   real(RP), public :: ATMOS_SOLARINS_lon                          ! Longitude for radiation [rad]
   real(RP), public :: ATMOS_SOLARINS_lat                          ! Latitude  for radiation [rad]
-  real(RP), public :: ATMOS_SOLARINS_date(6)                      ! Date      for radiation [Y,M,D,H,M,S]
+  integer,  public :: ATMOS_SOLARINS_date(6)                      ! Date      for radiation [Y,M,D,H,M,S]
 
   !-----------------------------------------------------------------------------
   !
@@ -780,8 +780,6 @@ contains
     integer  :: absday, absday_ve
     real(DP) :: DayOfYear, abssec
     real(RP) :: nu
-
-    integer :: i
     !---------------------------------------------------------------------------
 
     lon = real_lon

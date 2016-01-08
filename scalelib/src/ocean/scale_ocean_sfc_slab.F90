@@ -179,7 +179,7 @@ contains
     real(RP) :: SQV          ! saturation water vapor mixing ratio at surface [kg/kg]
     real(RP) :: LHV(IA,JA)   ! latent heat for vaporization depending on temperature [J/kg]
 
-    integer :: i, j, n
+    integer :: i, j
     !---------------------------------------------------------------------------
 
     ! update surface temperature

@@ -104,10 +104,10 @@ module scale_atmos_phy_mp_tomita08
 
   !---< Roh and Satoh (2014) >---
   real(RP), private            :: roh_flag   = 0.0_RP !< switch for Roh scheme
-  real(RP), private, parameter :: coef_a(10) = (/ 5.065339, -0.062659, -3.032362, 0.029469, -0.000285, &
-                                                  0.31255,   0.000204,  0.003199, 0.0,      -0.015952  /)
-  real(RP), private, parameter :: coef_b(10) = (/ 0.476221, -0.015896,  0.165977, 0.007468, -0.000141, &
-                                                  0.060366,  0.000079,  0.000594, 0.0,      -0.003577  /)
+  real(RP), private, parameter :: coef_a(10) = (/ 5.065339_RP, -0.062659_RP, -3.032362_RP, 0.029469_RP, -0.000285_RP, &
+                                                  0.31255_RP,   0.000204_RP,  0.003199_RP, 0.0_RP,      -0.015952_RP  /)
+  real(RP), private, parameter :: coef_b(10) = (/ 0.476221_RP, -0.015896_RP,  0.165977_RP, 0.007468_RP, -0.000141_RP, &
+                                                  0.060366_RP,  0.000079_RP,  0.000594_RP, 0.0_RP,      -0.003577_RP  /)
 
   ! Accretion parameter
   real(RP), private            :: Eiw = 1.0_RP  !< collection efficiency of cloud ice for cloud water
@@ -151,9 +151,6 @@ module scale_atmos_phy_mp_tomita08
   real(RP), private            :: f2s = 0.39_RP  !< ventilation factor 2 for snow
   real(RP), private            :: f1g = 0.78_RP  !< ventilation factor 1 for graupel
   real(RP), private            :: f2g = 0.27_RP  !< ventilation factor 2 for graupel
-
-  real(RP), private            :: qscrt_sdep =  1.E-12_RP !< mixing ratio threshold for Psdep [kg/kg]
-  real(RP), private            :: qgcrt_gdep =  1.E-12_RP !< mixing ratio threshold for Pgdep [kg/kg]
 
   ! Freezing parameter
   real(RP), private            :: A_gfrz = 0.66_RP  !< freezing factor [/K]
@@ -258,7 +255,6 @@ module scale_atmos_phy_mp_tomita08
                 'Pgdep  ', &
                 'Pgsub  '  /
 
-  real(RP), private, allocatable :: w(:,:)        ! working array
   real(RP), private, allocatable :: work3D(:,:,:) !< for history output
 
   integer,  private :: MP_ntmax_sedimentation = 1 ! number of time step for sedimentation
@@ -659,13 +655,7 @@ contains
        EPS   => CONST_EPS,   &
        Rvap  => CONST_Rvap,  &
        CL    => CONST_CL,    &
-       LHV   => CONST_LHV,   &
-       LHF   => CONST_LHF,   &
-       LHV0  => CONST_LHV0,  &
-       LHS0  => CONST_LHS0,  &
-       LHF0  => CONST_LHF0,  &
        TEM00 => CONST_TEM00, &
-       DWATR => CONST_DWATR, &
        PRE00 => CONST_PRE00
     use scale_time, only: &
        dt => TIME_DTSEC_ATMOS_PHY_MP
@@ -760,9 +750,7 @@ contains
     real(RP) :: LHFEx(KA,IA,JA)
     real(RP) :: LHSEx(KA,IA,JA)
 
-    logical  :: do_put
-    integer  :: k, i, j, iq, ip
-
+    integer  :: k, i, j, iq
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('MP_tomita08', 3)
@@ -1082,7 +1070,7 @@ contains
 
        ! [Psmlt] melting rate of snow
        w(I_Psmlt) = 2.0_RP * PI * Rdens *       Gil * vents &
-                  + CL * temc / LHF0 * ( w(I_Psacw) + w(I_Psacr) )
+                  + CL * temc / LHFEx(k,i,j) * ( w(I_Psacw) + w(I_Psacr) )
 
        ! [Pgdep/pgsub] deposition/sublimation rate for graupel
        ventg = f1g * GAM_2 * RLMDg_2 + f2g * sqrt( Cg * rho_fact / NU * RLMDg_5dg ) * GAM_5dg_h
@@ -1094,7 +1082,7 @@ contains
 
        ! [Pgmlt] melting rate of graupel
        w(I_Pgmlt) = 2.0_RP * PI * Rdens * N0g * Gil * ventg &
-                      + CL * temc / LHF0 * ( w(I_Pgacw) + w(I_Pgacr) )
+                      + CL * temc / LHFEx(k,i,j) * ( w(I_Pgacw) + w(I_Pgacr) )
 
        ! [Pgfrz] freezing rate of graupel
        w(I_Pgfrz) = 2.0_RP * PI * Rdens * N0r * 60.0_RP * B_gfrz * Ar * ( exp(-A_gfrz*temc) - 1.0_RP ) * RLMDr_7
@@ -1433,10 +1421,10 @@ contains
        QTRC_t(k,i,j,I_QS) = QTRC_t(k,i,j,I_QS) + tend(I_QS)
        QTRC_t(k,i,j,I_QG) = QTRC_t(k,i,j,I_QG) + tend(I_QG)
 
-       RHOE_t(k,i,j) = RHOE_t(k,i,j) - DENS0(k,i,j) * ( LHV * tend(I_QV) &
-                                                      - LHF * tend(I_QI) &
-                                                      - LHF * tend(I_QS) &
-                                                      - LHF * tend(I_QG) )
+       RHOE_t(k,i,j) = RHOE_t(k,i,j) - DENS0(k,i,j) * ( LHVEx(k,i,j) * tend(I_QV) &
+                                                      - LHFEx(k,i,j) * tend(I_QI) &
+                                                      - LHFEx(k,i,j) * tend(I_QS) &
+                                                      - LHFEx(k,i,j) * tend(I_QG) )
 
        QTRC0(k,i,j,I_QV) = QTRC0(k,i,j,I_QV) + QTRC_t(k,i,j,I_QV) * dt
        QTRC0(k,i,j,I_QC) = QTRC0(k,i,j,I_QC) + QTRC_t(k,i,j,I_QC) * dt
@@ -1688,8 +1676,6 @@ contains
        cldfrac, &
        QTRC     )
     use scale_grid_index
-    use scale_const, only: &
-       EPS => CONST_EPS
     use scale_tracer, only: &
        QAD => QA
     implicit none
@@ -1697,7 +1683,7 @@ contains
     real(RP), intent(out) :: cldfrac(KA,IA,JA)
     real(RP), intent(in)  :: QTRC   (KA,IA,JA,QAD)
 
-    real(RP) :: qcriteria = 0.005E-3 ! 0.005g/kg, Tompkins & Craig
+    real(RP) :: qcriteria = 0.005E-3_RP ! 0.005g/kg, Tompkins & Craig
 
     real(RP) :: qhydro
     integer  :: k, i, j, iq

@@ -339,11 +339,6 @@ contains
        Rdry   => CONST_Rdry, &
        Rvap   => CONST_Rvap, &
        CVdry  => CONST_CVdry
-    use scale_les_process, only: &
-       PRC_HAS_W, &
-       PRC_HAS_E, &
-       PRC_HAS_S, &
-       PRC_HAS_N
     use scale_comm, only: &
 #ifdef CHECK_MASS
        COMM_datatype, &

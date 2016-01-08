@@ -83,10 +83,7 @@ contains
       topo_cd          ) ! [inout]
     use scale_process, only: &
        PRC_MPIstop
-    use scale_const, only: &
-       D2R   => CONST_D2R
     use scale_grid, only: &
-       GRID_CDZ,   &
        DX,         &
        DY,         &
        BUFFER_DX,  &
@@ -175,8 +172,7 @@ contains
        PRC_NUM_Y
     use scale_const, only: &
        RADIUS => CONST_RADIUS, &
-       EPS    => CONST_EPS,    &
-       D2R    => CONST_D2R
+       EPS    => CONST_EPS
     use scale_grid, only: &
        DX,                  &
        DY,                  &
@@ -201,7 +197,7 @@ contains
     integer :: imain, ibuff, itrans
     integer :: jmain, jbuff, jtrans
     integer :: copy_is, copy_ie, copy_js, copy_je
-    integer :: i, j, ii, jj, t
+    integer :: i, j, ii, jj
     !---------------------------------------------------------------------------
 
     ! array size (global domain)
@@ -346,11 +342,7 @@ contains
   !> Calc dumping coefficient alpha
   subroutine COPYTOPO_setalpha
     use scale_const, only: &
-       EPS => CONST_EPS, &
-       PI  => CONST_PI
-    use scale_grid, only: &
-       CBFX => GRID_CBFX, &
-       CBFY => GRID_CBFY
+       EPS => CONST_EPS
     use scale_comm, only: &
        COMM_vars8, &
        COMM_wait
@@ -457,7 +449,7 @@ contains
     integer :: PTI, PTJ    ! number of grids for a tile
     integer :: tilei, tilej
     integer :: rank
-    integer :: i, j
+    integer :: i
     integer :: cxs, cxe, cys, cye  ! for child domain
     integer :: pxs, pxe, pys, pye  ! for parent domain
     !---------------------------------------------------------------------------

@@ -171,8 +171,6 @@ contains
     use scale_index
     use scale_process, only: &
        PRC_MPIstop
-    use scale_stdio, only: &
-       IO_FID_LOG
 #define EXTM(pre, name, post) pre ## name ## post
 #define NAME(pre, name, post) EXTM(pre, name, post)
 #ifdef DYNAMICS

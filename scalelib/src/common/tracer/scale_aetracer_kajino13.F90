@@ -45,7 +45,9 @@ contains
     NAMELIST / PARAM_TRACER_KAJINO13 / &
        AE_CTG, &
        NASIZ,  &
-       NAKAP 
+       NAKAP
+
+    integer :: m, ierr, ik, ic, ia0, is0
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ READ NUMBER of TRACER for Aerosol'
@@ -114,7 +116,7 @@ contains
     do is0 = 1, NSIZ(ic)
     do ia0 = 1, N_ATR
       m = m+1
-      aero_idx(ia0,ic,ik,is0) = m 
+      aero_idx(ia0,ic,ik,is0) = m
     enddo
     enddo
     enddo
@@ -149,7 +151,7 @@ contains
 !      endif
     do ic = 1, AE_CTG       !aerosol category
     do ik = 1, NKAP(ic)   !kappa bin
-    do is0 = 1, NSIZ(ic) 
+    do is0 = 1, NSIZ(ic)
     do ia0 = 1, N_ATR
       if( ia0 == 1 ) then
          write(attribute,'(a)') "Number"
@@ -185,7 +187,7 @@ contains
     write(AQ_AE_NAME(ic),'(a)') 'H2SO4_Gas'
     ic = QA_AE-GAS_CTG+IG_CGAS
     write(AQ_AE_NAME(ic),'(a)') 'Condensable_GAS'
-    
+
     ic = QA_AE-GAS_CTG+IG_H2SO4
     write(AQ_AE_DESC(ic),'(a)') 'Mixing ratio of H2SO4 Gas'
     ic = QA_AE-GAS_CTG+IG_CGAS
