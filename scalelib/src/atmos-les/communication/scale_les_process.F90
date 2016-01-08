@@ -112,22 +112,22 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[PROCESS] / Categ[ATMOS-LES COMM] / Origin[SCALElib]'
 
     if ( IO_L ) then
-       write(IO_FID_LOG,*)           ''
-       write(IO_FID_LOG,*)           '++++++ Start MPI'
-       write(IO_FID_LOG,'(1x,A,I8)') '*** UNIVERSAL_COMM_WORLD        : ', PRC_UNIVERSAL_COMM_WORLD
-       write(IO_FID_LOG,'(1x,A,I8)') '*** total process [UNIVERSAL]   : ', PRC_UNIVERSAL_nprocs
-       write(IO_FID_LOG,'(1x,A,I8)') '*** my process ID [UNIVERSAL]   : ', PRC_UNIVERSAL_myrank
-       write(IO_FID_LOG,'(1x,A,L8)') '*** master rank?  [UNIVERSAL]   : ', PRC_UNIVERSAL_IsMaster
-       write(IO_FID_LOG,'(1x,A,I8)') '*** GLOBAL_COMM_WORLD           : ', PRC_GLOBAL_COMM_WORLD
-       write(IO_FID_LOG,'(1x,A,I8)') '*** total process [GLOBAL]      : ', PRC_GLOBAL_nprocs
-       write(IO_FID_LOG,'(1x,A,I8)') '*** my process ID [GLOBAL]      : ', PRC_GLOBAL_myrank
-       write(IO_FID_LOG,'(1x,A,L8)') '*** master rank?  [GLOBAL]      : ', PRC_GLOBAL_IsMaster
-       write(IO_FID_LOG,'(1x,A,I8)') '*** LOCAL_COMM_WORLD            : ', PRC_LOCAL_COMM_WORLD
-       write(IO_FID_LOG,'(1x,A,I8)') '*** total process [LOCAL]       : ', PRC_nprocs
-       write(IO_FID_LOG,'(1x,A,I8)') '*** my process ID [LOCAL]       : ', PRC_myrank
-       write(IO_FID_LOG,'(1x,A,L8)') '*** master rank?  [LOCAL]       : ', PRC_IsMaster
-       write(IO_FID_LOG,'(1x,A,I8)') '*** ABORT_COMM_WORLD            : ', PRC_ABORT_COMM_WORLD
-       write(IO_FID_LOG,'(1x,A,I8)') '*** master rank ID [each world] : ', PRC_masterrank
+       write(IO_FID_LOG,*)            ''
+       write(IO_FID_LOG,*)            '++++++ Start MPI'
+       write(IO_FID_LOG,'(1x,A,I12)') '*** UNIVERSAL_COMM_WORLD        : ', PRC_UNIVERSAL_COMM_WORLD
+       write(IO_FID_LOG,'(1x,A,I12)') '*** total process [UNIVERSAL]   : ', PRC_UNIVERSAL_nprocs
+       write(IO_FID_LOG,'(1x,A,I12)') '*** my process ID [UNIVERSAL]   : ', PRC_UNIVERSAL_myrank
+       write(IO_FID_LOG,'(1x,A,L12)') '*** master rank?  [UNIVERSAL]   : ', PRC_UNIVERSAL_IsMaster
+       write(IO_FID_LOG,'(1x,A,I12)') '*** GLOBAL_COMM_WORLD           : ', PRC_GLOBAL_COMM_WORLD
+       write(IO_FID_LOG,'(1x,A,I12)') '*** total process [GLOBAL]      : ', PRC_GLOBAL_nprocs
+       write(IO_FID_LOG,'(1x,A,I12)') '*** my process ID [GLOBAL]      : ', PRC_GLOBAL_myrank
+       write(IO_FID_LOG,'(1x,A,L12)') '*** master rank?  [GLOBAL]      : ', PRC_GLOBAL_IsMaster
+       write(IO_FID_LOG,'(1x,A,I12)') '*** LOCAL_COMM_WORLD            : ', PRC_LOCAL_COMM_WORLD
+       write(IO_FID_LOG,'(1x,A,I12)') '*** total process [LOCAL]       : ', PRC_nprocs
+       write(IO_FID_LOG,'(1x,A,I12)') '*** my process ID [LOCAL]       : ', PRC_myrank
+       write(IO_FID_LOG,'(1x,A,L12)') '*** master rank?  [LOCAL]       : ', PRC_IsMaster
+       write(IO_FID_LOG,'(1x,A,I12)') '*** ABORT_COMM_WORLD            : ', PRC_ABORT_COMM_WORLD
+       write(IO_FID_LOG,'(1x,A,I12)') '*** master rank ID [each world] : ', PRC_masterrank
     endif
 
     !--- read namelist
