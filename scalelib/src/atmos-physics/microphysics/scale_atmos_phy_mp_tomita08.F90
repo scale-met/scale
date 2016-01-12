@@ -668,7 +668,8 @@ contains
        Rvap  => CONST_Rvap,  &
        CL    => CONST_CL,    &
        TEM00 => CONST_TEM00, &
-       PRE00 => CONST_PRE00
+       PRE00 => CONST_PRE00, &
+       DWATR => CONST_DWATR
     use scale_time, only: &
        dt => TIME_DTSEC_ATMOS_PHY_MP
     use scale_history, only: &
