@@ -47,9 +47,9 @@ module scale_grid_index
   integer, public :: IBLOCK = -1 !< block size for cache blocking: x
   integer, public :: JBLOCK = -1 !< block size for cache blocking: y
 
-  integer, public :: KHALO  = 2  !< # of halo cells: z
-  integer, public :: IHALO  = 2  !< # of halo cells: x
-  integer, public :: JHALO  = 2  !< # of halo cells: y
+  integer, public :: KHALO  = 3  !< # of halo cells: z
+  integer, public :: IHALO  = 3  !< # of halo cells: x
+  integer, public :: JHALO  = 3  !< # of halo cells: y
 
   integer, public :: KA          !< # of z whole cells (local, with HALO)
   integer, public :: IA          !< # of x whole cells (local, with HALO)

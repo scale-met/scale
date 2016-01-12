@@ -33,15 +33,17 @@ module scale_atmos_dyn_rk_fdmheve
      IUNDEF => CONST_UNDEF2
 #endif
 
+  use scale_atmos_numeric_fdm_def, only: &
+       & FLXEVALTYPE_CD4, FLXEVALTYPE_UD1,  &
+       & VL_ZXY, VL_ZUY, VL_ZXV, VL_WXY
+  
   use scale_atmos_numeric_fdm, only: &
        & ATMOS_NUMERIC_FDM_setup,           &
        & ATMOS_NUMERIC_FDM_SetCoordMapInfo, &
-       & FLXEVALTYPE_CD4, FLXEVALTYPE_UD1,  &
-       & VL_ZXY, VL_ZUY, VL_ZXV, VL_WXY,    &
-       & ATMOS_NUMERIC_FDM_EvalFlux,          &
-       & ATMOS_NUMERIC_FDM_EvalFluxMT,        &
+       & ATMOS_NUMERIC_FDM_RhoVar2Var,      &
+       & ATMOS_NUMERIC_FDM_EvalFlux,        &
        & ATMOS_NUMERIC_FDM_EvolveVar
-  
+
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -52,7 +54,9 @@ module scale_atmos_dyn_rk_fdmheve
   public :: ATMOS_DYN_rk_fdmheve_regist
   public :: ATMOS_DYN_rk_fdmheve_setup
   public :: ATMOS_DYN_rk_fdmheve
-  
+
+  public :: ATMOS_DYN_rk_fdmheve_SetFluxEvalType
+
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
@@ -76,6 +80,9 @@ module scale_atmos_dyn_rk_fdmheve
   real(RP), allocatable :: pg_t(:,:,:,:)
   real(RP), allocatable :: cf_t(:,:,:,:)
 #endif
+
+  integer :: FlxEvalTypeID
+  
   !-----------------------------------------------------------------------------
 
 contains
@@ -143,11 +150,25 @@ contains
 #endif
 
     !
+    FlxEvalTypeID = FLXEVALTYPE_CD4
     call ATMOS_NUMERIC_FDM_setup(IFS_OFF, JFS_OFF)
     
     return
   end subroutine ATMOS_DYN_rk_fdmheve_setup
 
+  !-----------------------------------------------------------------------------
+  !> Specify type of finite difference scheme
+  subroutine ATMOS_DYN_rk_fdmheve_SetFluxEvalType(FlxEvalTypeName)
+
+    use scale_atmos_numeric_fdm, only: &
+         & FlxEvalTypeName2ID
+    
+    character(len=H_SHORT), intent(in) :: FlxEvalTypeName
+
+    FlxEvalTypeID = FlxEvalTypeName2ID(FlxEvalTypeName)
+    
+  end subroutine ATMOS_DYN_rk_fdmheve_SetFluxEvalType
+  
   !-----------------------------------------------------------------------------
   !> Runge-Kutta loop
   subroutine ATMOS_DYN_rk_fdmheve( &
@@ -198,6 +219,7 @@ contains
     use scale_history, only: &
        HIST_in
 #endif
+    
     implicit none
 
     real(RP), intent(out) :: DENS_RK(KA,IA,JA)   ! prognostic variables
@@ -321,6 +343,10 @@ contains
     integer  :: IIS, IIE
     integer  :: JJS, JJE
     integer  :: k, i, j
+
+    real(RP), parameter ::  extdmp_coef = 0.01D0
+    real(RP) :: extdiv
+    
     !---------------------------------------------------------------------------
 
 #ifdef DEBUG
@@ -357,65 +383,24 @@ contains
     do IIS = IS, IE, IBLOCK
     IIE = IIS+IBLOCK-1
 
-       ! momentum -> velocity
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       do j = JJS-1, JJE+2
-       do i = IIS-1, IIE+2
-       do k = KS, KE-1
-#ifdef DEBUG
-          call CHECK( __LINE__, MOMZ(k,i,j) )
-          call CHECK( __LINE__, DENS(k  ,i,j) )
-          call CHECK( __LINE__, DENS(k+1,i,j) )
-#endif
-          VELZ(k,i,j) = 2.0_RP * MOMZ(k,i,j) / ( DENS(k+1,i,j)+DENS(k,i,j) )
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       k = IUNDEF; i = IUNDEF; j = IUNDEF
-#endif
+      ! Momentum -> Velocity
+      call ATMOS_NUMERIC_FDM_RhoVar2Var( VELX,                        &  ! (out)
+         & MOMX, VL_ZUY, DENS,                                        &  ! (in)
+         & IIS-IHALO, IIE+IHALO-1, JJS-JHALO+1, JJE+JHALO, KS, KE )      ! (in)
 
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       do j = JJS-1, JJE+2
-       do i = IIS-2, IIE+1
-       do k = KS, KE
-#ifdef DEBUG
-          call CHECK( __LINE__, MOMX(k,i,j) )
-          call CHECK( __LINE__, DENS(k,i  ,j) )
-          call CHECK( __LINE__, DENS(k,i+1,j) )
-#endif
-          VELX(k,i,j) = 2.0_RP * MOMX(k,i,j) &
-                      / ( ( DENS(k,i+1,j)+DENS(k,i,j) ) ) !* MAPF(i,j,2,I_UY) )
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       k = IUNDEF; i = IUNDEF; j = IUNDEF
-#endif
+      call ATMOS_NUMERIC_FDM_RhoVar2Var( VELY,                        &  ! (out)
+         & MOMY, VL_ZXV, DENS,                                        &  ! (in)
+         & IIS-IHALO+1, IIE+IHALO, JJS-JHALO, JJE+JHALO-1, KS, KE )      ! (in)
 
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       do j = JJS-2, JJE+1
-       do i = IIS-1, IIE+2
-       do k = KS, KE
-#ifdef DEBUG
-          call CHECK( __LINE__, MOMY(k,i,j) )
-          call CHECK( __LINE__, DENS(k,i,j  ) )
-          call CHECK( __LINE__, DENS(k,i,j+1) )
-#endif
-          VELY(k,i,j) = 2.0_RP * MOMY(k,i,j) &
-                      / ( ( DENS(k,i,j+1)+DENS(k,i,j) ) ) !* MAPF(i,j,1,I_XV) )
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       k = IUNDEF; i = IUNDEF; j = IUNDEF
-#endif
+      call ATMOS_NUMERIC_FDM_RhoVar2Var( VELZ,                        &  ! (out)
+         & MOMZ, VL_WXY, DENS,                                        &  ! (in)
+         & IIS-IHALO+1, IIE+IHALO, JJS-JHALO+1, JJE+JHALO, KS, KE-1 )    ! (in)
 
        ! pressure, pott. temp.
 
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       do j = JJS-2, JJE+2
-       do i = IIS-2, IIE+2
+       do j = JJS-JHALO, JJE+JHALO
+       do i = IIS-IHALO, IIE+IHALO
           do k = KS, KE
 #ifdef DEBUG
              call CHECK( __LINE__, RHOT(k,i,j) )
@@ -441,20 +426,11 @@ contains
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
 
-       do j = JJS-2, JJE+2
-       do i = IIS-2, IIE+2
-       do k = KS, KE
-#ifdef DEBUG
-          call CHECK( __LINE__, RHOT(k,i,j) )
-          call CHECK( __LINE__, DENS(k,i,j) )
-#endif
-          POTT(k,i,j) = RHOT(k,i,j) / DENS(k,i,j)
-       enddo
-       enddo
-       enddo
-#ifdef DEBUG
-       k = IUNDEF; i = IUNDEF; j = IUNDEF
-#endif
+      ! RHOT --> POTT 
+      call ATMOS_NUMERIC_FDM_RhoVar2Var( POTT,                    &  ! (out)
+         & RHOT, VL_ZXY, DENS,                                    &  ! (in)
+         & IIS-IHALO, IIE+IHALO, JJS-JHALO, JJE+JHALO, KS, KE )      ! (in)
+       
 
        ! 3D divergence for damping
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
@@ -514,9 +490,9 @@ contains
       !   Phi = 1, Vec_i = MOM{X,Y,Z}, Fact = 1
       ! * Ouput
       !   [ GSQRT*MOMX/n, GSQRT*MOMY/m, GSQRT*(MOMZ*J33/(mn) + MOMX*J13/n + MOMY*J23/m) ]
-      call ATMOS_NUMERIC_FDM_EvalFluxMT(mflx_hi,                          &  ! (inout)
-         & FLXEVALTYPE_CD4, VL_ZXY, one, one, MOMX, MOMY, MOMZ,           &  ! (in)
-         & IIS, IIE, JJS, JJE, KS, KE                   )                    ! (in)
+      call ATMOS_NUMERIC_FDM_EvalFlux( mflx_hi,                           &  ! (inout)
+         & FlxEvalTypeID, VL_ZXY, one, one, MOMX, MOMY, MOMZ, .true.,     &  ! (in)
+         & IIS, IIE, JJS, JJE, KS, KE, num_diff(:,:,:,I_DENS,:))             ! (in)
     
       !-----< update density >-----
 !      mflx_hi(KS:KE-1,IIS:IIE,JJS:JJE,ZDIR) = mflx_hi(KS:KE-1,IIS:IIE,JJS:JJE,ZDIR) &
@@ -537,8 +513,8 @@ contains
          !   Phi = DENS, Vec_i = MOM{X,Y,Z}, Fact = DENS
          ! * Ouput 
          !   [ GSQRT*MOMX/n, GSQRT*MOMY/m, GSQRT*(MOMZ*J33/(mn) + MOMX*J13/n + MOMY*J23/m) ]
-         call ATMOS_NUMERIC_FDM_EvalFluxMT(qflx_lo,                               &  ! (inout)
-              & FLXEVALTYPE_UD1, VL_ZXY, DENS, DENS, MOMX, MOMY, MOMZ,            &  ! (in)
+         call ATMOS_NUMERIC_FDM_EvalFlux( qflx_lo,                                &  ! (inout)
+              & FLXEVALTYPE_UD1, VL_ZXY, DENS, DENS, MOMX, MOMY, MOMZ, .true.,    &  ! (in)
               & IIS, IIE, JJS, JJE, KS, KE )                                         ! (in)
       endif
 
@@ -669,9 +645,9 @@ contains
        !   Phi = MOMZ, Vec_i = MOM{X,Y,Z}, Fact = DENS
        ! * Ouput
        !   [ GSQRT*MOMZ*u/n, GSQRT*MOMZ*v/m, GSQRT*MOMZ*(u*J33/(mn) + u*J13/n + v*J23/m) ]
-       call ATMOS_NUMERIC_FDM_EvalFluxMT(qflx_hi,                         &  ! (inout)
-         & FLXEVALTYPE_CD4, VL_WXY, MOMZ, DENS, MOMX, MOMY, MOMZ,         &  ! (in)
-         & IIS, IIE, JJS, JJE, KS, KE)                                       ! (in)
+       call ATMOS_NUMERIC_FDM_EvalFlux( qflx_hi,                          &  ! (inout)
+         & FlxEvalTypeID, VL_WXY, MOMZ, DENS, MOMX, MOMY, MOMZ, .true.,   &  ! (in)
+         & IIS, IIE, JJS, JJE, KS, KE, num_diff(:,:,:,I_MOMZ,:) )            ! (in)
 
        !$omp parallel do private(i,j,k, div) OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE
@@ -684,9 +660,8 @@ contains
            ! buoyancy force at (x, y, w)
            buoy(k,i,j) = GRAV * 0.5_RP * (   GSQRT(k+1,i,j,I_XYZ) * ( DENS(k+1,i,j)-REF_dens(k+1,i,j) ) &
                                            + GSQRT(k  ,i,j,I_XYZ) * ( DENS(k  ,i,j)-REF_dens(k  ,i,j) ) ) ! [x,y,z]
-
            ! divergence damping
-           div = divdmp_coef * dtrk * FDZ(k) * ( DDIV(k+1,i,j)-DDIV(k,i,j) ) ! divergence damping
+           div = divdmp_coef * FDZ(k) / dtrk * ( DDIV(k+1,i,j)-DDIV(k,i,j) ) ! divergence damping
 
            ! Total tendency except advection term
            MOMZ_t_nadv(k,i,j) = &
@@ -736,8 +711,8 @@ contains
          !   Phi = MOMZ, Vec_i = MOM{X,Y,Z}, Fact = DENS
          ! * Ouput
          !   [ GSQRT*MOMZ*u/n, GSQRT*MOMZ*v/m, GSQRT*MOMZ*(u*J33/(mn) + u*J13/n + v*J23/m) ]          
-         call ATMOS_NUMERIC_FDM_EvalFluxMT(qflx_lo,                            &  ! (inout)
-           & FLXEVALTYPE_UD1, VL_WXY, MOMZ, DENS, MOMX, MOMY, MOMZ,            &  ! (in)
+         call ATMOS_NUMERIC_FDM_EvalFlux( qflx_lo,                             &  ! (inout)
+           & FLXEVALTYPE_UD1, VL_WXY, MOMZ, DENS, MOMX, MOMY, MOMZ, .true.,    &  ! (in)
            & IIS, IIE, JJS, JJE, KS, KE)                                          ! (in)
        endif
 #endif       
@@ -808,9 +783,9 @@ contains
        !   Phi = MOMX, Vec_i = MOM{X,Y,Z}, Fact = DENS
        ! * Ouput
        !   [ GSQRT*MOMX*u/n, GSQRT*MOMX*v/m, GSQRT*MOMX*(w*J33/(mn) + u*J13/n + v*J23/m) ]          
-      call ATMOS_NUMERIC_FDM_EvalFluxMT(qflx_hi,                              &  ! (inout)
-        & FLXEVALTYPE_CD4, VL_ZUY, MOMX, DENS, MOMX, MOMY, MOMZ,              &  ! (in)
-        & IIS, IIE, JJS, JJE, KS, KE)                                            ! (in)
+      call ATMOS_NUMERIC_FDM_EvalFlux( qflx_hi,                             &  ! (inout)
+        & FlxEvalTypeID, VL_ZUY, MOMX, DENS, MOMX, MOMY, MOMZ, .true.,      &  ! (in)
+        & IIS, IIE, JJS, JJE, KS, KE, num_diff(:,:,:,I_MOMX,:) )               ! (in)
     
        ! pressure gradient force at (u, y, z)
 
@@ -854,19 +829,23 @@ contains
        enddo
        enddo
 
-       !$omp parallel do private(i,j,k, div) OMP_SCHEDULE_ collapse(2)
+       !$omp parallel do private(i,j,k, div, extdiv) OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE
        do i = IIS, min(IIE, IEH)
-       do k = KS, KE
-          div = divdmp_coef * dtrk * FDX(i) * ( DDIV(k,i+1,j)-DDIV(k,i,j) ) ! divergence damping
-
-          ! Total tendency except advection term
-          MOMX_t_nadv(k,i,j) = &
+         extdiv = 0.0_RP
+         do k = KS, KE
+           div = divdmp_coef * FDX(i) / dtrk * ( DDIV(k,i+1,j)-DDIV(k,i,j) ) ! divergence damping
+!           extdiv = extdiv + CDZ(k) * extdmp_coef * div/divdmp_coef
+           
+           ! Total tendency except advection term
+           MOMX_t_nadv(k,i,j) = &
                & - pgf(k,i,j) / GSQRT(k,i,j,I_UYZ) &
                & + cor(k,i,j)                      &
                & + div                             &
                & + MOMX_t(k,i,j)
-       end do
+         end do
+        
+!         MOMX_t_nadv(KS:KE,i,j) = MOMX_t_nadv(KS:KE,i,j) + extdiv / sum(CDZ(KS:KE))
        end do
        end do
        
@@ -888,8 +867,8 @@ contains
          !   Phi = MOMX, Vec_i = MOM{X,Y,Z}, Fact = DENS
          ! * Ouput
          !   [ GSQRT*MOMX*u/n, GSQRT*MOMX*v/m, GSQRT*MOMX*(w*J33/(mn) + u*J13/n + v*J23/m) ]                    
-         call ATMOS_NUMERIC_FDM_EvalFluxMT(qflx_lo,                           &  ! (inout)
-           & FLXEVALTYPE_UD1, VL_ZUY, MOMX, DENS, MOMX, MOMY, MOMZ,           &  ! (in)
+         call ATMOS_NUMERIC_FDM_EvalFlux( qflx_lo,                            &  ! (inout)
+           & FLXEVALTYPE_UD1, VL_ZUY, MOMX, DENS, MOMX, MOMY, MOMZ, .true.,   &  ! (in)
            & IIS, IIE, JJS, JJE, KS, KE)                                         ! (in)
       endif
 #endif      
@@ -957,9 +936,9 @@ contains
       !   Phi = MOMY, Vec_i = MOM{X,Y,Z}, Fact = DENS
       ! * Ouput
       !   [ GSQRT*MOMY*u/n, GSQRT*MOMY*v/m, GSQRT*MOMY*(w*J33/(mn) + u*J13/n + v*J23/m) ]                    
-      call ATMOS_NUMERIC_FDM_EvalFluxMT(qflx_hi,                             &  ! (inout)
-        & FLXEVALTYPE_CD4, VL_ZXV, MOMY, DENS, MOMX, MOMY, MOMZ,             &  ! (in)
-        & IIS, IIE, JJS, JJE, KS, KE )                                          ! (in)
+      call ATMOS_NUMERIC_FDM_EvalFlux( qflx_hi,                            &  ! (inout)
+        & FlxEvalTypeID, VL_ZXV, MOMY, DENS, MOMX, MOMY, MOMZ, .true.,     &  ! (in)
+        & IIS, IIE, JJS, JJE, KS, KE, num_diff(:,:,:,I_MOMY,:) )              ! (in)
     
        ! pressure gradient force at (x, v, z)
 
@@ -1003,28 +982,31 @@ contains
        enddo
        enddo
 
-       !$omp parallel do private(i,j,k, div) OMP_SCHEDULE_ collapse(2)
+       !$omp parallel do private(i,j,k, div, extdiv) OMP_SCHEDULE_ collapse(2)
        do j = JJS, min(JJE,JEH)
        do i = IIS, IEH
-       do k = KS, KE
-          div = divdmp_coef * dtrk * FDY(i) * ( DDIV(k,i,j+1)-DDIV(k,i,j) ) ! divergence damping
+         extdiv = 0.0_RP 
+         do k = KS, KE            
+           div = divdmp_coef / dtrk * FDY(i) * ( DDIV(k,i,j+1)-DDIV(k,i,j) ) ! divergence damping
+!           extdiv = extdiv + CDZ(k) * extdmp_coef * div/divdmp_coef
 
-          ! Total tendency except advection term          
-          MOMY_t_nadv(k,i,j) = &
+           ! Total tendency except advection term          
+           MOMY_t_nadv(k,i,j) = &
                & - pgf(k,i,j) / GSQRT(k,i,j,I_XVZ) &
                & + cor(k,i,j)                      &
                & + div                             &
                & + MOMY_t(k,i,j)
 
 #ifdef HIST_TEND
-          if ( lhist ) then
-             pg_t(k,i,j,3) = - pgf(k,i,j) / GSQRT(k,i,j,I_XVZ)
-             cf_t(k,i,j,2) = cor(k,i,j)
-             ddiv_t(k,i,j,3) = div
-          end if
+            if ( lhist ) then
+              pg_t(k,i,j,3) = - pgf(k,i,j) / GSQRT(k,i,j,I_XVZ)
+              cf_t(k,i,j,2) = cor(k,i,j)
+              ddiv_t(k,i,j,3) = div
+            end if
 #endif
+!           MOMY_t_nadv(KS:KE,i,j) = MOMY_t_nadv(KS:KE,i,j) + extdiv / sum(CDZ(KS:KE))
           
-       end do
+         end do
        end do
        end do
        
@@ -1045,8 +1027,8 @@ contains
          !   Phi = MOMY, Vec_i = MOM{X,Y,Z}, Fact = DENS
          ! * Ouput
          !   [ GSQRT*MOMY*u/n, GSQRT*MOMY*v/m, GSQRT*MOMY*(w*J33/(mn) + u*J13/n + v*J23/m) ]                              
-         call ATMOS_NUMERIC_FDM_EvalFluxMT(qflx_lo,                            &  ! (inout)
-           & FLXEVALTYPE_UD1, VL_ZXV, MOMY, DENS, MOMX, MOMY, MOMZ,          &  ! (in)
+         call ATMOS_NUMERIC_FDM_EvalFlux( qflx_lo,                           &  ! (inout)
+           & FLXEVALTYPE_UD1, VL_ZXV, MOMY, DENS, MOMX, MOMY, MOMZ, .true.,  &  ! (in)
            & IIS, IIE, JJS, JJE, KS, KE )                                       ! (in)
        endif
 #endif
@@ -1115,10 +1097,10 @@ contains
       !   Phi = POTT, Vec_i = MomFlx{X,Y,Z}, Fact = 1.0
       ! * Ouput
       !   [ POTT*MOMFlxX, POTT*MOMFlxY, POTT*MOMFlxZ ]
-      call ATMOS_NUMERIC_FDM_EvalFlux(tflx_hi,                                           &  ! (inout)
-        & FLXEVALTYPE_CD4, VL_ZXY,                                                       &  ! (in)
-        & POTT, one, mflx_hi(:,:,:,XDIR), mflx_hi(:,:,:,YDIR), mflx_hi(:,:,:,ZDIR),      &  ! (in)
-        & IIS, IIE, JJS, JJE, KS, KE )                                                      ! (in)
+      call ATMOS_NUMERIC_FDM_EvalFlux( tflx_hi,                                              &  ! (inout)
+        & FlxEvalTypeID, VL_ZXY,                                                             &  ! (in)
+        & POTT, one, mflx_hi(:,:,:,XDIR), mflx_hi(:,:,:,YDIR), mflx_hi(:,:,:,ZDIR), .false., &  ! (in)
+        & IIS, IIE, JJS, JJE, KS, KE, num_diff(:,:,:,I_RHOT,:) )                                ! (in)
 
       !-----< update rho*theta >-----
 
@@ -1160,9 +1142,9 @@ contains
          ! * Ouput
          !   [ POTT*MOMFlxX, POTT*MOMFlxY, POTT*MOMFlxZ ]
          VARTMP(:,IIS:IIE,JJS:JJE) = 1.0_RP
-         call ATMOS_NUMERIC_FDM_EvalFlux(tflx_hi,                                           &  ! (inout)
-           & FLXEVALTYPE_UD1, VL_ZXY,                                                       &  ! (in)
-           & POTT, VARTMP, mflx_hi(:,:,:,XDIR), mflx_hi(:,:,:,YDIR), mflx_hi(:,:,:,ZDIR),   &  ! (in)
+         call ATMOS_NUMERIC_FDM_EvalFlux( tflx_hi,                                                 &  ! (inout)
+           & FLXEVALTYPE_UD1, VL_ZXY,                                                              &  ! (in)
+           & POTT, VARTMP, mflx_hi(:,:,:,XDIR), mflx_hi(:,:,:,YDIR), mflx_hi(:,:,:,ZDIR), .false., &  ! (in)
            & IIS, IIE, JJS, JJE, KS, KE )                                                      ! (in)
          
          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)

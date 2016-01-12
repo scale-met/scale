@@ -44,6 +44,19 @@ module scale_atmos_numeric_fdm_cd
      UNDEF  => CONST_UNDEF, &
      IUNDEF => CONST_UNDEF2
 #endif
+
+  use scale_atmos_numeric_fdm_def, only: &
+       & VL_XY, VL_UY, VL_XV, &
+       & VL_ZXY, VL_ZUY, VL_ZXV, VL_WXY
+
+  use scale_atmos_numeric_fdm_util, only: &
+       & FDM_AddDiffFlxX, &
+       & FDM_AddDiffFlxY, &
+       & FDM_AddDiffFlxZ, &       
+       & FDM_MomX2VelXt, &
+       & FDM_MomY2VelYt, &
+       & FDM_MomZ2VelZt
+  
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -54,11 +67,23 @@ module scale_atmos_numeric_fdm_cd
 
   public :: FDM_CD_setup
 
-  !**
+  !** 2nd order
+  public :: FDM_EvalFlxCD2_VarZXY
+  public :: FDM_EvalFlxCD2_VarZUY
+  public :: FDM_EvalFlxCD2_VarZXV
+  public :: FDM_EvalFlxCD2_VarWXY
+  
+  !** 4th order
   public :: FDM_EvalFlxCD4_VarZXY
   public :: FDM_EvalFlxCD4_VarZUY
   public :: FDM_EvalFlxCD4_VarZXV
   public :: FDM_EvalFlxCD4_VarWXY
+
+  !** 6th order
+  public :: FDM_EvalFlxCD6_VarZXY
+  public :: FDM_EvalFlxCD6_VarZUY
+  public :: FDM_EvalFlxCD6_VarZXV
+  public :: FDM_EvalFlxCD6_VarWXY
   
   !-----------------------------------------------------------------------------
   !
@@ -80,10 +105,17 @@ module scale_atmos_numeric_fdm_cd
   integer :: IFS_OFF
   integer :: JFS_OFF
 
-  ! Weights used in 4th order spacial interpolation.
-  real(RP), parameter :: FACT_N =   7.0_RP/12.0_RP
-  real(RP), parameter :: FACT_F = - 1.0_RP/12.0_RP
+  ! F_1/2 = (u_1/2*FAC1UD?) * slice( phi )
+  !
+  real(RP), parameter :: FAC1CD2(2) &
+       & = (/ 1.0_RP,  1.0_RP /) / 2.0_RP
+  
+  real(RP), parameter :: FAC1CD4(4) &
+       & = (/ -1.0_RP, 7.0_RP,  7.0_RP, -1.0_RP /) / 12.0_RP
 
+  real(RP), parameter :: FAC1CD6(6) &
+       & = (/ 1.0_RP, -8.0_RP, 37.0_RP,  37.0_RP, -8.0_RP,   1.0_RP /) / 60.0_RP
+  
 contains
   subroutine FDM_CD_setup(IFS_OFF_, JFS_OFF_)
     integer, intent(in) :: IFS_OFF_, JFS_OFF_
@@ -93,287 +125,1043 @@ contains
 
   !** --  2nd order -- *********************************************************************
 
+  subroutine EvalFlxX_CD2(FlxX, VelX, Var, IOF, i, j, KS_, KE_)
+    real(RP), intent(out)   :: FlxX(KA)
+    real(RP), intent(in)    :: VelX(KA), Var(KA,IA,JA)
+    integer,  intent(in)    :: IOF, i, j, KS_, KE_
 
-  
-  !** --  4th order -- *********************************************************************
-  
-  subroutine FDM_EvalFlxCD4_VarZXY( FlxX_ZUY, FlxY_ZXV, FlxZ_WXY,             &  ! (inout)
+    integer :: k
+
+    do k=KS_, KE_
+       FlxX(k) =   sum( VelX(k)*FAC1CD2(:)*Var(k,i+IOF:i+1+IOF,j) )           
+    enddo
+  end subroutine EvalFlxX_CD2
+
+  subroutine EvalFlxY_CD2(FlxY, VelY, Var, JOF, i, j, KS_, KE_)
+    real(RP), intent(out)    :: FlxY(KA)
+    real(RP), intent(in)    :: VelY(KA), Var(KA,IA,JA)
+    integer,  intent(in)    :: JOF, i, j, KS_, KE_
+
+    integer :: k
+
+    do k=KS_, KE_
+       FlxY(k) =   sum( VelY(k)*FAC1CD2(:)*Var(k,i,j+JOF:j+1+JOF) )           
+    enddo    
+  end subroutine EvalFlxY_CD2
+
+  subroutine EvalFlxZ_CD2(FlxZ, VelZ, Var, KOF, i, j, KS_, KE_)
+    real(RP), intent(out)   :: FlxZ(KA)
+    real(RP), intent(in)    :: VelZ(KA), Var(KA,IA,JA)
+    integer,  intent(in)    :: KOF, i, j, KS_, KE_
+
+    integer :: k
+
+    do k=KS_, KE_
+      FlxZ(k+KOF) = sum( VelZ(k+KOF)*FAC1CD2(:)*Var(k+KOF:k+1+KOF,i,j) )
+    enddo
+  end subroutine EvalFlxZ_CD2
+
+  subroutine FDM_EvalFlxCD2_VarZXY( FlxX_ZUY, FlxY_ZXV, FlxZ_WXY,             &  ! (inout)
     & Var_ZXY, Dens_ZXY, MomX_ZUY, MomY_ZXV, MomZ_WXY,                        &  ! (in)
-    & IIS, IIE, JJS, JJE, KS, KE )                                               ! (in)
+    & GSQRT, J13G, J23G, J33G, MAPF, GeneralCoordFlag,                        &  ! (in)   
+    & IIS, IIE, JJS, JJE, KS, KE,                                             &  ! (in)
+    & DiffFlxX_ZUY, DiffFlxY_ZXV, DiffFlxZ_WXY )                                 ! (in)   
 
     
-     real(RP), intent(out), dimension(KA,IA,JA)  :: FlxX_ZUY, FlxY_ZXV, FlxZ_WXY
-     real(RP), intent(in),  dimension(KA,IA,JA)  :: Var_ZXY
-     real(RP), intent(in),  dimension(KA,IA,JA)  :: Dens_ZXY, MomX_ZUY, MomY_ZXV, MomZ_WXY
-     integer, intent(in) :: IIS, IIE, JJS, JJE, KS, KE
+     real(RP), intent(out), dimension(KA,IA,JA)    :: FlxX_ZUY, FlxY_ZXV, FlxZ_WXY
+     real(RP), intent(in),  dimension(KA,IA,JA)    :: Var_ZXY
+     real(RP), intent(in),  dimension(KA,IA,JA)    :: Dens_ZXY, MomX_ZUY, MomY_ZXV, MomZ_WXY
+     real(RP), intent(in),  dimension(KA,IA,JA,7)  :: GSQRT, J13G, J23G
+     real(RP), intent(in)                          :: J33G
+     real(RP), intent(in),  dimension(IA,JA,2,4)   :: MAPF
+     logical,  intent(in)                          :: GeneralCoordFlag
+     integer,  intent(in) :: IIS, IIE, JJS, JJE, KS, KE
+     real(RP), intent(in),  dimension(KA,IA,JA), optional :: DiffFlxX_ZUY, DiffFlxY_ZXV, DiffFlxZ_WXY
 
+     real(RP), dimension(KA) :: VelZ, VelX, VelY
      integer :: i, j, k
-     real(RP) :: VelZ_W(KA)
      
      !** Calculate z-direction flux ********************************************************
     
      !$omp parallel do private(i,j,k,VelZ_W) OMP_SCHEDULE_ collapse(2)
      do j = JJS, JJE
      do i = IIS, IIE
-       !- Half-level velocity(z). 
-       do k = KS, KE-1
-         VelZ_W(k) = 2.0_RP * MomZ_WXY(k,i,j) / (Dens_ZXY(k,i,j) + Dens_ZXY(k+1,i,j))
-       enddo
-       !- FluxZ at z surface within interior region      
-       do k=KS+1, KE-2
-          FlxZ_WXY(k,i,j) = VelZ_W(k) * (   FACT_N * (Var_ZXY(  k,i,j) + Var_ZXY(k+1,i,j))   & !
-            &                             + FACT_F * (Var_ZXY(k-1,i,j) + Var_ZXY(k+2,i,j)) )   ! [ZXY -> WXY] (4th order)
-       enddo
-       !- FluxZ at bottom boundary
+       call FDM_MomZ2VelZt( VelZ,                                             & ! (out)
+            & VL_ZXY, i, j, KS, KE, Dens_ZXY, MomX_ZUY, MomY_ZXV, MomZ_WXY,   & ! (in)
+            & J13G, J23G, J33G, MAPF, GeneralCoordFlag )                        ! (in)
+
        FlxZ_WXY(KS-1,i,j) = 0.0_RP
-       !- FluxZ at z surface near bottom boundary
-       FlxZ_WXY(KS,i,j)   = VelZ_W(KS)   * 0.5_RP*(Var_ZXY(KS,i,j) + Var_ZXY(KS+1,i,j))
-       !- FluxZ at z surface near top boundary
-       FlxZ_WXY(KE-1,i,j) = VelZ_W(KE-1) * 0.5_RP*(Var_ZXY(KE-1,i,j) + Var_ZXY(KE,i,j))
-       !- FluxZ at top boundary
-       FlxZ_WXY(KE,i,j) = 0.0_RP
-    enddo
-    enddo
+       call EvalFlxZ_CD2(FlxZ_WXY(:,i,j), VelZ, Var_ZXY, 0, i, j, KS, KE-1)              
+       FlxZ_WXY(  KE,i,j) = 0.0_RP
 
-    !** Calculate x-direction flux ********************************************************
+       if (present(DiffFlxZ_WXY)) then
+         call FDM_AddDiffFlxZ(FlxZ_WXY, DiffFlxZ_WXY, GSQRT(:,:,:,I_XYW), MAPF(:,:,:,I_XY), 0, i, j, KS, KE-1)
+       end if
+     enddo
+     enddo
 
-    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-    do j = JJS, JJE
-    do i = IIS-IFS_OFF, min(IIE,IEH)
-      do k = KS, KE       
-         FlxX_ZUY(k,i,j) = &
-              & 2.0_RP * MomX_ZUY(k,i,j) / (Dens_ZXY(k,i,j) + Dens_ZXY(k,i+1,j))  & ! Half level velocity(x)
-              &   * (   FACT_N * (Var_ZXY(k,  i,j) + Var_ZXY(k,i+1,j))            & ! [ZXY -> ZUY] (4th order)
-              &       + FACT_F * (Var_ZXY(k,i-1,j) + Var_ZXY(k,i+2,j)) )            !
-      enddo
-    enddo
-    enddo
+     !** Calculate x-direction flux ********************************************************
 
-    !** Calculate y-direction flux ********************************************************
+     !$omp parallel do private(i,j,k,VelX) OMP_SCHEDULE_ collapse(2)
+     do j = JJS, JJE
+     do i = IIS-IFS_OFF, min(IIE,IEH)           
+       call FDM_MomX2VelXt( VelX,                                        & ! (out)
+         & VL_ZXY, i, j, KS, KE, Dens_ZXY, MomX_ZUY, MomY_ZXV, MomZ_WXY, & ! (in)
+         & GSQRT, MAPF, GeneralCoordFlag )
 
-    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-    do j = JJS-JFS_OFF, min(JJE,JEH)
-    do i = IIS, IIE
-      do k = KS, KE
-         FlxY_ZXV(k,i,j) = &
-              & 2.0_RP * MomY_ZXV(k,i,j) / (Dens_ZXY(k,i,j) + Dens_ZXY(k,i,j+1))  & ! Half level velocity(y)
-              &   * (   FACT_N * (Var_ZXY(k,i,  j) + Var_ZXY(k,i,j+1))            & ! [ZXY -> ZXV] (4th order)
-              &       + FACT_F * (Var_ZXY(k,i,j-1) + Var_ZXY(k,i,j+2)) )            !
-      enddo
-    enddo
-    enddo
+       call EvalFlxX_CD2(FlxX_ZUY(:,i,j), VelX, Var_ZXY, 0, i, j, KS, KE)              
+
+       if (present(DiffFlxX_ZUY)) then
+         call FDM_AddDiffFlxX(FlxX_ZUY, DiffFlxX_ZUY, GSQRT(:,:,:,I_UYZ), MAPF(:,:,:,I_UY), i, j, KS, KE)
+       end if
+     enddo
+     enddo
+
+     !** Calculate y-direction flux ********************************************************
+
+     !$omp parallel do private(i,j,k,VelY) OMP_SCHEDULE_ collapse(2)
+     do j = JJS-JFS_OFF, min(JJE,JEH)
+     do i = IIS, IIE
+       call FDM_MomY2VelYt( VelY,                                        & ! (out)
+         & VL_ZXY, i, j, KS, KE, Dens_ZXY, MomX_ZUY, MomY_ZXV, MomZ_WXY, & ! (in)
+         & GSQRT, MAPF, GeneralCoordFlag )
+
+       call EvalFlxY_CD2(FlxY_ZXV(:,i,j), VelY, Var_ZXY, 0, i, j, KS, KE)              
+
+       if (present(DiffFlxY_ZXV)) then
+         call FDM_AddDiffFlxY(FlxY_ZXV, DiffFlxY_ZXV, GSQRT(:,:,:,I_XVZ), MAPF(:,:,:,I_XV), i, j, KS, KE)
+       end if
+     enddo
+     enddo
    
-  end subroutine FDM_EvalFlxCD4_VarZXY
+  end subroutine FDM_EvalFlxCD2_VarZXY
   
-  subroutine FDM_EvalFlxCD4_VarZUY( FlxX_ZXY, FlxY_ZUV, FlxZ_WUY,             &  ! (inout)
+  subroutine FDM_EvalFlxCD2_VarZUY( FlxX_ZXY, FlxY_ZUV, FlxZ_WUY,             &  ! (inout)
     & Var_ZUY, Dens_ZXY, MomX_ZUY, MomY_ZXV, MomZ_WXY,                        &  ! (in)
-    & IIS, IIE, JJS, JJE, KS, KE )                                               ! (in)
+    & GSQRT, J13G, J23G, J33G, MAPF, GeneralCoordFlag,                        &  ! (in)   
+    & IIS, IIE, JJS, JJE, KS, KE,                                             &  ! (in)
+    & DiffFlxX_ZXY, DiffFlxY_ZUV, DiffFlxZ_WUY )                                 ! (in)   
 
     
      real(RP), intent(out), dimension(KA,IA,JA)  :: FlxX_ZXY, FlxY_ZUV, FlxZ_WUY
      real(RP), intent(in),  dimension(KA,IA,JA)  :: Var_ZUY
      real(RP), intent(in),  dimension(KA,IA,JA)  :: Dens_ZXY, MomX_ZUY, MomY_ZXV, MomZ_WXY
+     real(RP), intent(in),  dimension(KA,IA,JA,7)  :: GSQRT, J13G, J23G
+     real(RP), intent(in)                          :: J33G
+     real(RP), intent(in),  dimension(IA,JA,2,4)   :: MAPF
+     logical,  intent(in)                          :: GeneralCoordFlag
      integer, intent(in) :: IIS, IIE, JJS, JJE, KS, KE
+     real(RP), intent(in),  dimension(KA,IA,JA), optional :: DiffFlxX_ZXY, DiffFlxY_ZUV, DiffFlxZ_WUY     
 
      integer :: i, j, k
-     real(RP) :: VelZ_W(KA)
+     real(RP), dimension(KA) :: VelZ, VelX, VelY
      
      !** Calculate z-direction flux ********************************************************
 
-     !$omp parallel do private(i,j,k,VelZ_W) OMP_SCHEDULE_ collapse(2)
+     !$omp parallel do private(i,j,k,VelZ) OMP_SCHEDULE_ collapse(2)
      do j = JJS, JJE
      do i = IIS, IIE
-       !- Half-level velocity(z) and [WXY -> WUY]
-       do k = KS, KE-1
-         VelZ_W(k) = sum( MomZ_WXY(k,i:i+1,j) / (Dens_ZXY(k,i:i+1,j) + Dens_ZXY(k+1,i:i+1,j)) )
-       enddo
-       !- FluxZ at z surface within interior region      
-       do k=KS+1, KE-2
-          FlxZ_WUY(k,i,j) = VelZ_W(k) * (   FACT_N * (Var_ZUY(  k,i,j) + Var_ZUY(k+1,i,j))   & !
-            &                             + FACT_F * (Var_ZUY(k-1,i,j) + Var_ZUY(k+2,i,j)) )   ! [ZXY -> WXY] (4th order)
-       enddo
-       !- FluxZ at bottom boundary
+       call FDM_MomZ2VelZt( VelZ,                                             & ! (out)
+            & VL_ZUY, i, j, KS, KE, Dens_ZXY, MomX_ZUY, MomY_ZXV, MomZ_WXY,   & ! (in)
+            & J13G, J23G, J33G, MAPF, GeneralCoordFlag )                        ! (in)
+
        FlxZ_WUY(KS-1,i,j) = 0.0_RP
-       !- FluxZ at z surface near bottom boundary
-       FlxZ_WUY(KS,i,j)   = VelZ_W(KS)   * 0.5_RP*(Var_ZUY(KS,i,j) + Var_ZUY(KS+1,i,j))
-       !- FluxZ at z surface near top boundary
-       FlxZ_WUY(KE-1,i,j) = VelZ_W(KE-1) * 0.5_RP*(Var_ZUY(KE-1,i,j) + Var_ZUY(KE,i,j))
-       !- FluxZ at top boundary
-       FlxZ_WUY(KE,i,j) = 0.0_RP
+       call EvalFlxZ_CD2(FlxZ_WUY(:,i,j), VelZ, Var_ZUY, 0, i, j, KS, KE-1)              
+       FlxZ_WUY(  KE,i,j) = 0.0_RP
+
+       if (present(DiffFlxZ_WUY)) then
+          call FDM_AddDiffFlxZ(FlxZ_WUY, DiffFlxZ_WUY, GSQRT(:,:,:,I_UYW), MAPF(:,:,:,I_UY), 0, i, j, KS, KE-1)
+       end if
     enddo
     enddo
 
     !** Calculate x-direction flux ********************************************************
 
-    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+    !$omp parallel do private(i,j,k,VelX) OMP_SCHEDULE_ collapse(2)
     do j = JJS, JJE
     do i = IIS, IIE+1
-      do k = KS, KE       
-         FlxX_ZXY(k,i-1,j) = &
-              &  (    MomX_ZUY(k,i-1,j) / (Dens_ZXY(k,i-1,j) + Dens_ZXY(k,  i,j))   & ! Half level velocity(x) and [ ZUY -> ZXY ]
-              &     + MomX_ZUY(k,  i,j) / (Dens_ZXY(k,  i,j) + Dens_ZXY(k,i+1,j)) ) & ! 
-              &  *(   FACT_N * (Var_ZUY(k,i-1,j) + Var_ZUY(k,  i,j))                & ! [ZUY -> ZXY] (4th order)
-              &     + FACT_F * (Var_ZUY(k,i-2,j) + Var_ZUY(k,i+1,j)) )                !
-      enddo
+      call FDM_MomX2VelXt( VelX,                                        & ! (out)
+        & VL_ZUY, i, j, KS, KE, Dens_ZXY, MomX_ZUY, MomY_ZXV, MomZ_WXY, & ! (in)
+        & GSQRT, MAPF, GeneralCoordFlag )
+
+      call EvalFlxX_CD2(FlxX_ZXY(:,i-1,j), VelX, Var_ZUY, -1, i, j, KS, KE)              
+
+      if (present(DiffFlxX_ZXY)) then
+        call FDM_AddDiffFlxX(FlxX_ZXY, DiffFlxX_ZXY, GSQRT(:,:,:,I_XYZ), MAPF(:,:,:,I_XY), i, j, KS, KE)
+      end if
     enddo
     enddo
 
     !** Calculate y-direction flux ********************************************************
 
-    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+    !$omp parallel do private(i,j,k,VelY) OMP_SCHEDULE_ collapse(2)
     do j = JJS-1, JJE
     do i = IIS, IIE
-      do k = KS, KE
-         FlxY_ZUV(k,i,j) = &
-              &  (    MomY_ZXV(k,  i,j) / (Dens_ZXY(k,  i,j) + Dens_ZXY(k,  i,j+1))   & ! Half level velocity(x) and [ ZUY -> ZXY ]
-              &     + MomY_ZXV(k,i+1,j) / (Dens_ZXY(k,i+1,j) + Dens_ZXY(k,i+1,j+1)) ) & ! 
-              &  *(   FACT_N * (Var_ZUY(k,i,  j) + Var_ZUY(k,i,j+1))                  & ! [ZUY -> ZXY] (4th order)
-              &     + FACT_F * (Var_ZUY(k,i,j-1) + Var_ZUY(k,i,j+2)) )                  !
-      enddo
+      call FDM_MomY2VelYt( VelY,                                        & ! (out)
+        & VL_ZUY, i, j, KS, KE, Dens_ZXY, MomX_ZUY, MomY_ZXV, MomZ_WXY, & ! (in)
+        & GSQRT, MAPF, GeneralCoordFlag )
+
+      call EvalFlxY_CD2(FlxY_ZUV(:,i,j), VelY, Var_ZUY, 0, i, j, KS, KE)              
+
+      if (present(DiffFlxY_ZUV)) then
+        call FDM_AddDiffFlxY(FlxY_ZUV, DiffFlxY_ZUV, GSQRT(:,:,:,I_UVZ), MAPF(:,:,:,I_UV), i, j, KS, KE)
+      end if
     enddo
     enddo
-     
-  end subroutine FDM_EvalFlxCD4_VarZUY
+
+  end subroutine FDM_EvalFlxCD2_VarZUY
   
-  subroutine FDM_EvalFlxCD4_VarZXV( FlxX_ZUV, FlxY_ZXY, FlxZ_WXV,          &  ! (inout)
+  subroutine FDM_EvalFlxCD2_VarZXV( FlxX_ZUV, FlxY_ZXY, FlxZ_WXV,          &  ! (inout)
     & Var_ZXV, Dens_ZXY, MomX_ZUY, MomY_ZXV, MomZ_WXY,                        &  ! (in)
-    & IIS, IIE, JJS, JJE, KS, KE )                                               ! (in)
+    & GSQRT, J13G, J23G, J33G, MAPF, GeneralCoordFlag,                        &  ! (in)   
+    & IIS, IIE, JJS, JJE, KS, KE,                                             &  ! (in)
+    & DiffFlxX_ZUV, DiffFlxY_ZXY, DiffFlxZ_WXV )                                 ! (in)       
     
      real(RP), intent(out), dimension(KA,IA,JA)  :: FlxX_ZUV, FlxY_ZXY, FlxZ_WXV
      real(RP), intent(in),  dimension(KA,IA,JA)  :: Var_ZXV
      real(RP), intent(in),  dimension(KA,IA,JA)  :: Dens_ZXY, MomX_ZUY, MomY_ZXV, MomZ_WXY
+     real(RP), intent(in),  dimension(KA,IA,JA,7)  :: GSQRT, J13G, J23G
+     real(RP), intent(in)                          :: J33G
+     real(RP), intent(in),  dimension(IA,JA,2,4)   :: MAPF
+     logical,  intent(in)                          :: GeneralCoordFlag     
      integer, intent(in) :: IIS, IIE, JJS, JJE, KS, KE
-
+     real(RP), intent(in),  dimension(KA,IA,JA), optional :: DiffFlxX_ZUV, DiffFlxY_ZXY, DiffFlxZ_WXV
+     
      integer :: i, j, k
-     real(RP) :: VelZ_WXV(KA)
+     real(RP), dimension(KA) :: VelZ, VelX, VelY
      
      !** Calculate z-direction flux ********************************************************
     
-     !$omp parallel do private(i,j,k,VelZ_WXV) OMP_SCHEDULE_ collapse(2)
+     !$omp parallel do private(i,j,k,VelZ) OMP_SCHEDULE_ collapse(2)
      do j = JJS, JJE
      do i = IIS, IIE
-       !- Half-level velocity(z) and [WXY -> WXV]
-       do k = KS, KE-1
-         VelZ_WXV(k) = sum( MomZ_WXY(k,i,j:j+1) / (Dens_ZXY(k,i,j:j+1) + Dens_ZXY(k+1,i,j:j+1)) )
-       enddo
-       !- FluxZ at z surface within interior region      
-       do k=KS+1, KE-2
-          FlxZ_WXV(k,i,j) = VelZ_WXV(k) * (   FACT_N * (Var_ZXV(  k,i,j) + Var_ZXV(k+1,i,j))   & !
-            &                               + FACT_F * (Var_ZXV(k-1,i,j) + Var_ZXV(k+2,i,j)) )   ! [ZXV -> WXV] (4th order)
-       enddo
-       !- FluxZ at bottom boundary
+       call FDM_MomZ2VelZt( VelZ,                                             & ! (out)
+            & VL_ZXV, i, j, KS, KE, Dens_ZXY, MomX_ZUY, MomY_ZXV, MomZ_WXY,   & ! (in)
+            & J13G, J23G, J33G, MAPF, GeneralCoordFlag )                        ! (in)
+
        FlxZ_WXV(KS-1,i,j) = 0.0_RP
-       !- FluxZ at z surface near bottom boundary
-       FlxZ_WXV(KS,i,j)   = VelZ_WXV(KS)   * 0.5_RP*(Var_ZXV(KS,i,j) + Var_ZXV(KS+1,i,j))
-       !- FluxZ at z surface near top boundary
-       FlxZ_WXV(KE-1,i,j) = VelZ_WXV(KE-1) * 0.5_RP*(Var_ZXV(KE-1,i,j) + Var_ZXV(KE,i,j))
-       !- FluxZ at top boundary
-       FlxZ_WXV(KE,i,j) = 0.0_RP
+       call EvalFlxZ_CD2(FlxZ_WXV(:,i,j), VelZ, Var_ZXV, 0, i, j, KS, KE-1)              
+       FlxZ_WXV(  KE,i,j) = 0.0_RP
+
+       if (present(DiffFlxZ_WXV)) then
+          call FDM_AddDiffFlxZ(FlxZ_WXV, DiffFlxZ_WXV, GSQRT(:,:,:,I_XVW), MAPF(:,:,:,I_XV), 0, i, j, KS, KE-1)
+       end if
     enddo
     enddo
 
     !** Calculate x-direction flux ********************************************************
 
-    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+    !$omp parallel do private(i,j,k,VelX) OMP_SCHEDULE_ collapse(2)
     do j = JJS, JJE
     do i = IIS-1, IIE
-      do k = KS, KE       
-         FlxX_ZUV(k,i,j) = &
-              &  (    MomX_ZUY(k,i,j-1) / (Dens_ZXY(k,i,j-1) + Dens_ZXY(k,i+1,j-1))   & ! Half level velocity(x) and [ ZUY -> ZUV ]
-              &     + MomX_ZUY(k,i,  j) / (Dens_ZXY(k,i,j  ) + Dens_ZXY(k,i+1,j))   ) & ! 
-              &  *(   FACT_N * (Var_ZXV(k,i  ,j) + Var_ZXV(k,i+1,j))                  & ! [ZXV -> ZUV] (4th order)
-              &     + FACT_F * (Var_ZXV(k,i-1,j) + Var_ZXV(k,i+2,j)) )                  !
-      enddo
+      call FDM_MomX2VelXt( VelX,                                        & ! (out)
+        & VL_ZXV, i, j, KS, KE, Dens_ZXY, MomX_ZUY, MomY_ZXV, MomZ_WXY, & ! (in)
+        & GSQRT, MAPF, GeneralCoordFlag )
+
+      call EvalFlxX_CD2(FlxX_ZUV(:,i,j), VelX, Var_ZXV, 0, i, j, KS, KE)              
+
+      if (present(DiffFlxX_ZUV)) then
+        call FDM_AddDiffFlxX(FlxX_ZUV, DiffFlxX_ZUV, GSQRT(:,:,:,I_UVZ), MAPF(:,:,:,I_UV), i, j, KS, KE)
+      end if
     enddo
     enddo
 
     !** Calculate y-direction flux ********************************************************
 
-    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+    !$omp parallel do private(i,j,k,VelY) OMP_SCHEDULE_ collapse(2)
     do j = JJS, JJE+1
     do i = IIS, IIE
-      do k = KS, KE
-         FlxY_ZXY(k,i,j-1) = &
-              &  (    MomY_ZXV(k,i,j-1) / (Dens_ZXY(k,i,j-1) + Dens_ZXY(k,i,j))       & ! Half level velocity(x) and [ ZXV -> ZXY ]
-              &     + MomY_ZXV(k,i,j  ) / (Dens_ZXY(k,i,j-1) + Dens_ZXY(k,i,j)) )     & ! 
-              &  *(   FACT_N * (Var_ZXV(k,i,j-1) + Var_ZXV(k,i,  j))                  & ! [ZXV -> ZXY] (4th order)
-              &     + FACT_F * (Var_ZXV(k,i,j-2) + Var_ZXv(k,i,j+1)) )                  !
-      enddo
+      call FDM_MomY2VelYt( VelY,                                        & ! (out)
+        & VL_ZXV, i, j, KS, KE, Dens_ZXY, MomX_ZUY, MomY_ZXV, MomZ_WXY, & ! (in)
+        & GSQRT, MAPF, GeneralCoordFlag )
+
+      call EvalFlxY_CD2(FlxY_ZXY(:,i,j-1), VelY, Var_ZXV, -1, i, j, KS, KE)              
+
+      if (present(DiffFlxY_ZXY)) then
+        call FDM_AddDiffFlxY(FlxY_ZXY, DiffFlxY_ZXY, GSQRT(:,:,:,I_XYZ), MAPF(:,:,:,I_XY), i, j, KS, KE)
+      end if
+    enddo
+    enddo
+           
+  end subroutine FDM_EvalFlxCD2_VarZXV
+
+  subroutine FDM_EvalFlxCD2_VarWXY( FlxX_WUY, FlxY_WXV, FlxZ_ZXY,             &  ! (inout)
+    & Var_WXY, Dens_ZXY, MomX_ZUY, MomY_ZXV, MomZ_WXY,                        &  ! (in)
+    & GSQRT, J13G, J23G, J33G, MAPF, GeneralCoordFlag,                        &  ! (in)          
+    & IIS, IIE, JJS, JJE, KS, KE,                                             &  ! (in)
+    & DiffFlxX_WUY, DiffFlxY_WXV, DiffFlxZ_ZXY )                                 ! (in)   
+    
+     real(RP), intent(out), dimension(KA,IA,JA)  :: FlxX_WUY, FlxY_WXV, FlxZ_ZXY
+     real(RP), intent(in),  dimension(KA,IA,JA)  :: Var_WXY
+     real(RP), intent(in),  dimension(KA,IA,JA)  :: Dens_ZXY, MomX_ZUY, MomY_ZXV, MomZ_WXY
+     real(RP), intent(in),  dimension(KA,IA,JA,7)  :: GSQRT, J13G, J23G
+     real(RP), intent(in)                          :: J33G
+     real(RP), intent(in),  dimension(IA,JA,2,4)   :: MAPF
+     logical,  intent(in)                          :: GeneralCoordFlag
+     integer, intent(in) :: IIS, IIE, JJS, JJE, KS, KE    
+     real(RP), intent(in),  dimension(KA,IA,JA), optional :: DiffFlxX_WUY, DiffFlxY_WXV, DiffFlxZ_ZXY
+
+     integer :: i, j, k
+     real(RP), dimension(KA) :: VelZ, VelX, VelY
+
+     !** Calculate z-direction flux ********************************************************
+    
+     !$omp parallel do private(i,j,k,VelZ) OMP_SCHEDULE_ collapse(2)
+     do j = JJS, JJE
+     do i = IIS, IIE
+       call FDM_MomZ2VelZt( VelZ,                                             & ! (out)
+            & VL_WXY, i, j, KS, KE, Dens_ZXY, MomX_ZUY, MomY_ZXV, MomZ_WXY,   & ! (in)
+            & J13G, J23G, J33G, MAPF, GeneralCoordFlag )                        ! (in)
+
+       FlxZ_ZXY(KS-1,i,j) = 0.0_RP
+       call EvalFlxZ_CD2(FlxZ_ZXY(:,i,j), VelZ, Var_WXY, -1, i, j, KS+1, KE-1)              
+       FlxZ_ZXY(KE-1,i,j) = 0.0_RP
+!       FlxZ_ZXY(  KE,i,j) = 0.0_RP
+
+       if (present(DiffFlxZ_ZXY)) then
+         call FDM_AddDiffFlxZ(FlxZ_ZXY, DiffFlxZ_ZXY, GSQRT(:,:,:,I_XYZ), MAPF(:,:,:,I_XY), -1, i, j, KS+1, KE-1)
+       end if
+    enddo
+    enddo
+
+    !** Calculate x-direction flux ********************************************************
+
+    !$omp parallel do private(i,j,k,VelX) OMP_SCHEDULE_ collapse(2)
+    do j = JJS, JJE
+    do i = IIS-1, IIE
+      call FDM_MomX2VelXt( VelX,                                        & ! (out)
+        & VL_WXY, i, j, KS, KE, Dens_ZXY, MomX_ZUY, MomY_ZXV, MomZ_WXY, & ! (in)
+        & GSQRT, MAPF, GeneralCoordFlag )
+
+      call EvalFlxX_CD2(FlxX_WUY(:,i,j), VelX, Var_WXY, 0, i, j, KS, KE-1)              
+      FlxX_WUY(KE,i,j) = 0.0_RP
+
+      if (present(DiffFlxX_WUY)) then
+        call FDM_AddDiffFlxX(FlxX_WUY, DiffFlxX_WUY, GSQRT(:,:,:,I_UYW), MAPF(:,:,:,I_UY), i, j, KS, KE-1)
+      end if              
+    enddo
+    enddo
+    
+    !** Calculate y-direction flux ********************************************************
+
+    !$omp parallel do private(i,j,k,VelY) OMP_SCHEDULE_ collapse(2)
+    do j = JJS-1, JJE
+    do i = IIS, IIE
+      call FDM_MomY2VelYt( VelY,                                        & ! (out)
+        & VL_WXY, i, j, KS, KE, Dens_ZXY, MomX_ZUY, MomY_ZXV, MomZ_WXY, & ! (in)
+        & GSQRT, MAPF, GeneralCoordFlag )
+
+      call EvalFlxY_CD2(FlxY_WXV(:,i,j), VelY, Var_WXY, 0, i, j, KS, KE-1)              
+      FlxY_WXV(KE,i,j) = 0.0_RP
+      
+      if (present(DiffFlxY_WXV)) then
+        call FDM_AddDiffFlxY(FlxY_WXV, DiffFlxY_WXV, GSQRT(:,:,:,I_XVW), MAPF(:,:,:,I_XV), i, j, KS, KE-1)
+      end if      
+    enddo
+    enddo
+
+  end subroutine FDM_EvalFlxCD2_VarWXY  
+  
+  !** --  4th order -- *********************************************************************
+
+  subroutine EvalFlxX_CD4(FlxX, VelX, Var, IOF, i, j, KS_, KE_)
+    real(RP), intent(out) :: FlxX(KA)
+    real(RP), intent(in)    :: VelX(KA), Var(KA,IA,JA)
+    integer,  intent(in)    :: IOF, i, j, KS_, KE_
+
+    integer :: k
+
+    do k=KS_, KE_
+       FlxX(k) =   sum( VelX(k)*FAC1CD4(:)*Var(k,i-1+IOF:i+2+IOF,j) )           
+    enddo
+  end subroutine EvalFlxX_CD4
+
+  subroutine EvalFlxY_CD4(FlxY, VelY, Var, JOF, i, j, KS_, KE_)
+    real(RP), intent(out) :: FlxY(KA)
+    real(RP), intent(in)    :: VelY(KA), Var(KA,IA,JA)
+    integer,  intent(in)    :: JOF, i, j, KS_, KE_
+
+    integer :: k
+
+    do k=KS_, KE_
+       FlxY(k) =   sum( VelY(k)*FAC1CD4(:)*Var(k,i,j-1+JOF:j+2+JOF) )           
+    enddo    
+  end subroutine EvalFlxY_CD4
+
+  subroutine EvalFlxZ_CD4(FlxZ, VelZ, Var, KOF, i, j, KS_, KE_)
+    real(RP), intent(out) :: FlxZ(KA)
+    real(RP), intent(in)    :: VelZ(KA), Var(KA,IA,JA)
+    integer,  intent(in)    :: KOF, i, j, KS_, KE_
+
+    integer :: k
+
+    do k=KS_, KE_
+      FlxZ(k+KOF) = sum( VelZ(k+KOF)*FAC1CD4(:)*Var(k-1+KOF:k+2+KOF,i,j) )
+    enddo
+  end subroutine EvalFlxZ_CD4
+  
+  subroutine FDM_EvalFlxCD4_VarZXY( FlxX_ZUY, FlxY_ZXV, FlxZ_WXY,             &  ! (inout)
+    & Var_ZXY, Dens_ZXY, MomX_ZUY, MomY_ZXV, MomZ_WXY,                        &  ! (in)
+    & GSQRT, J13G, J23G, J33G, MAPF, GeneralCoordFlag,                        &  ! (in)   
+    & IIS, IIE, JJS, JJE, KS, KE,                                             &  ! (in)
+    & DiffFlxX_ZUY, DiffFlxY_ZXV, DiffFlxZ_WXY )                                 ! (in)   
+
+    
+     real(RP), intent(out), dimension(KA,IA,JA)    :: FlxX_ZUY, FlxY_ZXV, FlxZ_WXY
+     real(RP), intent(in),  dimension(KA,IA,JA)    :: Var_ZXY
+     real(RP), intent(in),  dimension(KA,IA,JA)    :: Dens_ZXY, MomX_ZUY, MomY_ZXV, MomZ_WXY
+     real(RP), intent(in),  dimension(KA,IA,JA,7)  :: GSQRT, J13G, J23G
+     real(RP), intent(in)                          :: J33G
+     real(RP), intent(in),  dimension(IA,JA,2,4)   :: MAPF
+     logical,  intent(in)                          :: GeneralCoordFlag
+     integer,  intent(in) :: IIS, IIE, JJS, JJE, KS, KE
+     real(RP), intent(in),  dimension(KA,IA,JA), optional :: DiffFlxX_ZUY, DiffFlxY_ZXV, DiffFlxZ_WXY
+
+     real(RP), dimension(KA) :: VelZ, VelX, VelY
+     integer :: i, j, k
+     
+     !** Calculate z-direction flux ********************************************************
+    
+     !$omp parallel do private(i,j,k,VelZ_W) OMP_SCHEDULE_ collapse(2)
+     do j = JJS, JJE
+     do i = IIS, IIE
+       call FDM_MomZ2VelZt( VelZ,                                             & ! (out)
+            & VL_ZXY, i, j, KS, KE, Dens_ZXY, MomX_ZUY, MomY_ZXV, MomZ_WXY,   & ! (in)
+            & J13G, J23G, J33G, MAPF, GeneralCoordFlag )                        ! (in)
+
+       FlxZ_WXY(KS-1,i,j) = 0.0_RP
+       call EvalFlxZ_CD2(FlxZ_WXY(:,i,j), VelZ, Var_ZXY, 0, i, j,   KS,   KS)
+       call EvalFlxZ_CD4(FlxZ_WXY(:,i,j), VelZ, Var_ZXY, 0, i, j, KS+1, KE-2)              
+       call EvalFlxZ_CD2(FlxZ_WXY(:,i,j), VelZ, Var_ZXY, 0, i, j, KE-1, KE-1)
+       FlxZ_WXY(  KE,i,j) = 0.0_RP
+
+       if (present(DiffFlxZ_WXY)) then
+         call FDM_AddDiffFlxZ(FlxZ_WXY, DiffFlxZ_WXY, GSQRT(:,:,:,I_XYW), MAPF(:,:,:,I_XY), 0, i, j, KS, KE-1)
+       end if
+     enddo
+     enddo
+
+     !** Calculate x-direction flux ********************************************************
+
+     !$omp parallel do private(i,j,k,VelX) OMP_SCHEDULE_ collapse(2)
+     do j = JJS, JJE
+     do i = IIS-IFS_OFF, min(IIE,IEH)           
+       call FDM_MomX2VelXt( VelX,                                        & ! (out)
+         & VL_ZXY, i, j, KS, KE, Dens_ZXY, MomX_ZUY, MomY_ZXV, MomZ_WXY, & ! (in)
+         & GSQRT, MAPF, GeneralCoordFlag )
+
+       call EvalFlxX_CD4(FlxX_ZUY(:,i,j), VelX, Var_ZXY, 0, i, j, KS, KE)              
+
+       if (present(DiffFlxX_ZUY)) then
+         call FDM_AddDiffFlxX(FlxX_ZUY, DiffFlxX_ZUY, GSQRT(:,:,:,I_UYZ), MAPF(:,:,:,I_UY), i, j, KS, KE)
+       end if
+     enddo
+     enddo
+
+     !** Calculate y-direction flux ********************************************************
+
+     !$omp parallel do private(i,j,k,VelY) OMP_SCHEDULE_ collapse(2)
+     do j = JJS-JFS_OFF, min(JJE,JEH)
+     do i = IIS, IIE
+       call FDM_MomY2VelYt( VelY,                                        & ! (out)
+         & VL_ZXY, i, j, KS, KE, Dens_ZXY, MomX_ZUY, MomY_ZXV, MomZ_WXY, & ! (in)
+         & GSQRT, MAPF, GeneralCoordFlag )
+
+       call EvalFlxY_CD4(FlxY_ZXV(:,i,j), VelY, Var_ZXY, 0, i, j, KS, KE)              
+
+       if (present(DiffFlxY_ZXV)) then
+         call FDM_AddDiffFlxY(FlxY_ZXV, DiffFlxY_ZXV, GSQRT(:,:,:,I_XVZ), MAPF(:,:,:,I_XV), i, j, KS, KE)
+       end if
+     enddo
+     enddo
+   
+  end subroutine FDM_EvalFlxCD4_VarZXY
+  
+  subroutine FDM_EvalFlxCD4_VarZUY( FlxX_ZXY, FlxY_ZUV, FlxZ_WUY,             &  ! (inout)
+    & Var_ZUY, Dens_ZXY, MomX_ZUY, MomY_ZXV, MomZ_WXY,                        &  ! (in)
+    & GSQRT, J13G, J23G, J33G, MAPF, GeneralCoordFlag,                        &  ! (in)   
+    & IIS, IIE, JJS, JJE, KS, KE,                                             &  ! (in)
+    & DiffFlxX_ZXY, DiffFlxY_ZUV, DiffFlxZ_WUY )                                 ! (in)   
+
+    
+     real(RP), intent(out), dimension(KA,IA,JA)  :: FlxX_ZXY, FlxY_ZUV, FlxZ_WUY
+     real(RP), intent(in),  dimension(KA,IA,JA)  :: Var_ZUY
+     real(RP), intent(in),  dimension(KA,IA,JA)  :: Dens_ZXY, MomX_ZUY, MomY_ZXV, MomZ_WXY
+     real(RP), intent(in),  dimension(KA,IA,JA,7)  :: GSQRT, J13G, J23G
+     real(RP), intent(in)                          :: J33G
+     real(RP), intent(in),  dimension(IA,JA,2,4)   :: MAPF
+     logical,  intent(in)                          :: GeneralCoordFlag
+     integer, intent(in) :: IIS, IIE, JJS, JJE, KS, KE
+     real(RP), intent(in),  dimension(KA,IA,JA), optional :: DiffFlxX_ZXY, DiffFlxY_ZUV, DiffFlxZ_WUY     
+
+     integer :: i, j, k
+     real(RP), dimension(KA) :: VelZ, VelX, VelY
+     
+     !** Calculate z-direction flux ********************************************************
+
+     !$omp parallel do private(i,j,k,VelZ) OMP_SCHEDULE_ collapse(2)
+     do j = JJS, JJE
+     do i = IIS, IIE
+       call FDM_MomZ2VelZt( VelZ,                                             & ! (out)
+            & VL_ZUY, i, j, KS, KE, Dens_ZXY, MomX_ZUY, MomY_ZXV, MomZ_WXY,   & ! (in)
+            & J13G, J23G, J33G, MAPF, GeneralCoordFlag )                        ! (in)
+
+       FlxZ_WUY(KS-1,i,j) = 0.0_RP
+       call EvalFlxZ_CD2(FlxZ_WUY(:,i,j), VelZ, Var_ZUY, 0, i, j,   KS,   KS)
+       call EvalFlxZ_CD4(FlxZ_WUY(:,i,j), VelZ, Var_ZUY, 0, i, j, KS+1, KE-2)              
+       call EvalFlxZ_CD2(FlxZ_WUY(:,i,j), VelZ, Var_ZUY, 0, i, j, KE-1, KE-1)
+       FlxZ_WUY(  KE,i,j) = 0.0_RP
+
+       if (present(DiffFlxZ_WUY)) then
+          call FDM_AddDiffFlxZ(FlxZ_WUY, DiffFlxZ_WUY, GSQRT(:,:,:,I_UYW), MAPF(:,:,:,I_UY), 0, i, j, KS, KE-1)
+       end if
+    enddo
+    enddo
+
+    !** Calculate x-direction flux ********************************************************
+
+    !$omp parallel do private(i,j,k,VelX) OMP_SCHEDULE_ collapse(2)
+    do j = JJS, JJE
+    do i = IIS, IIE+1
+      call FDM_MomX2VelXt( VelX,                                        & ! (out)
+        & VL_ZUY, i, j, KS, KE, Dens_ZXY, MomX_ZUY, MomY_ZXV, MomZ_WXY, & ! (in)
+        & GSQRT, MAPF, GeneralCoordFlag )
+
+      call EvalFlxX_CD4(FlxX_ZXY(:,i-1,j), VelX, Var_ZUY, -1, i, j, KS, KE)              
+
+      if (present(DiffFlxX_ZXY)) then
+        call FDM_AddDiffFlxX(FlxX_ZXY, DiffFlxX_ZXY, GSQRT(:,:,:,I_XYZ), MAPF(:,:,:,I_XY), i, j, KS, KE)
+      end if
+    enddo
+    enddo
+
+    !** Calculate y-direction flux ********************************************************
+
+    !$omp parallel do private(i,j,k,VelY) OMP_SCHEDULE_ collapse(2)
+    do j = JJS-1, JJE
+    do i = IIS, IIE
+      call FDM_MomY2VelYt( VelY,                                        & ! (out)
+        & VL_ZUY, i, j, KS, KE, Dens_ZXY, MomX_ZUY, MomY_ZXV, MomZ_WXY, & ! (in)
+        & GSQRT, MAPF, GeneralCoordFlag )
+
+      call EvalFlxY_CD4(FlxY_ZUV(:,i,j), VelY, Var_ZUY, 0, i, j, KS, KE)              
+
+      if (present(DiffFlxY_ZUV)) then
+        call FDM_AddDiffFlxY(FlxY_ZUV, DiffFlxY_ZUV, GSQRT(:,:,:,I_UVZ), MAPF(:,:,:,I_UV), i, j, KS, KE)
+      end if
+    enddo
+    enddo
+
+  end subroutine FDM_EvalFlxCD4_VarZUY
+  
+  subroutine FDM_EvalFlxCD4_VarZXV( FlxX_ZUV, FlxY_ZXY, FlxZ_WXV,          &  ! (inout)
+    & Var_ZXV, Dens_ZXY, MomX_ZUY, MomY_ZXV, MomZ_WXY,                        &  ! (in)
+    & GSQRT, J13G, J23G, J33G, MAPF, GeneralCoordFlag,                        &  ! (in)   
+    & IIS, IIE, JJS, JJE, KS, KE,                                             &  ! (in)
+    & DiffFlxX_ZUV, DiffFlxY_ZXY, DiffFlxZ_WXV )                                 ! (in)       
+    
+     real(RP), intent(out), dimension(KA,IA,JA)  :: FlxX_ZUV, FlxY_ZXY, FlxZ_WXV
+     real(RP), intent(in),  dimension(KA,IA,JA)  :: Var_ZXV
+     real(RP), intent(in),  dimension(KA,IA,JA)  :: Dens_ZXY, MomX_ZUY, MomY_ZXV, MomZ_WXY
+     real(RP), intent(in),  dimension(KA,IA,JA,7)  :: GSQRT, J13G, J23G
+     real(RP), intent(in)                          :: J33G
+     real(RP), intent(in),  dimension(IA,JA,2,4)   :: MAPF
+     logical,  intent(in)                          :: GeneralCoordFlag     
+     integer, intent(in) :: IIS, IIE, JJS, JJE, KS, KE
+     real(RP), intent(in),  dimension(KA,IA,JA), optional :: DiffFlxX_ZUV, DiffFlxY_ZXY, DiffFlxZ_WXV
+     
+     integer :: i, j, k
+     real(RP), dimension(KA) :: VelZ, VelX, VelY
+     
+     !** Calculate z-direction flux ********************************************************
+    
+     !$omp parallel do private(i,j,k,VelZ) OMP_SCHEDULE_ collapse(2)
+     do j = JJS, JJE
+     do i = IIS, IIE
+       call FDM_MomZ2VelZt( VelZ,                                             & ! (out)
+            & VL_ZXV, i, j, KS, KE, Dens_ZXY, MomX_ZUY, MomY_ZXV, MomZ_WXY,   & ! (in)
+            & J13G, J23G, J33G, MAPF, GeneralCoordFlag )                        ! (in)
+
+       FlxZ_WXV(KS-1,i,j) = 0.0_RP
+       call EvalFlxZ_CD2(FlxZ_WXV(:,i,j), VelZ, Var_ZXV, 0, i, j,   KS,   KS)
+       call EvalFlxZ_CD4(FlxZ_WXV(:,i,j), VelZ, Var_ZXV, 0, i, j, KS+1, KE-2)              
+       call EvalFlxZ_CD2(FlxZ_WXV(:,i,j), VelZ, Var_ZXV, 0, i, j, KE-1, KE-1)
+       FlxZ_WXV(  KE,i,j) = 0.0_RP
+
+       if (present(DiffFlxZ_WXV)) then
+          call FDM_AddDiffFlxZ(FlxZ_WXV, DiffFlxZ_WXV, GSQRT(:,:,:,I_XVW), MAPF(:,:,:,I_XV), 0, i, j, KS, KE-1)
+       end if
+    enddo
+    enddo
+
+    !** Calculate x-direction flux ********************************************************
+
+    !$omp parallel do private(i,j,k,VelX) OMP_SCHEDULE_ collapse(2)
+    do j = JJS, JJE
+    do i = IIS-1, IIE
+      call FDM_MomX2VelXt( VelX,                                        & ! (out)
+        & VL_ZXV, i, j, KS, KE, Dens_ZXY, MomX_ZUY, MomY_ZXV, MomZ_WXY, & ! (in)
+        & GSQRT, MAPF, GeneralCoordFlag )
+
+      call EvalFlxX_CD4(FlxX_ZUV(:,i,j), VelX, Var_ZXV, 0, i, j, KS, KE)              
+
+      if (present(DiffFlxX_ZUV)) then
+        call FDM_AddDiffFlxX(FlxX_ZUV, DiffFlxX_ZUV, GSQRT(:,:,:,I_UVZ), MAPF(:,:,:,I_UV), i, j, KS, KE)
+      end if
+    enddo
+    enddo
+
+    !** Calculate y-direction flux ********************************************************
+
+    !$omp parallel do private(i,j,k,VelY) OMP_SCHEDULE_ collapse(2)
+    do j = JJS, JJE+1
+    do i = IIS, IIE
+      call FDM_MomY2VelYt( VelY,                                        & ! (out)
+        & VL_ZXV, i, j, KS, KE, Dens_ZXY, MomX_ZUY, MomY_ZXV, MomZ_WXY, & ! (in)
+        & GSQRT, MAPF, GeneralCoordFlag )
+
+      call EvalFlxY_CD4(FlxY_ZXY(:,i,j-1), VelY, Var_ZXV, -1, i, j, KS, KE)              
+
+      if (present(DiffFlxY_ZXY)) then
+        call FDM_AddDiffFlxY(FlxY_ZXY, DiffFlxY_ZXY, GSQRT(:,:,:,I_XYZ), MAPF(:,:,:,I_XY), i, j, KS, KE)
+      end if
     enddo
     enddo
            
   end subroutine FDM_EvalFlxCD4_VarZXV
 
-  subroutine FDM_EvalFlxCD4_VarWXY( FlxX_WUY, FlxY_WXV, FlxZ_ZXY,          &  ! (inout)
+  subroutine FDM_EvalFlxCD4_VarWXY( FlxX_WUY, FlxY_WXV, FlxZ_ZXY,             &  ! (inout)
     & Var_WXY, Dens_ZXY, MomX_ZUY, MomY_ZXV, MomZ_WXY,                        &  ! (in)
-    & IIS, IIE, JJS, JJE, KS, KE )                                               ! (in)
-
+    & GSQRT, J13G, J23G, J33G, MAPF, GeneralCoordFlag,                        &  ! (in)          
+    & IIS, IIE, JJS, JJE, KS, KE,                                             &  ! (in)
+    & DiffFlxX_WUY, DiffFlxY_WXV, DiffFlxZ_ZXY )                                 ! (in)   
     
      real(RP), intent(out), dimension(KA,IA,JA)  :: FlxX_WUY, FlxY_WXV, FlxZ_ZXY
      real(RP), intent(in),  dimension(KA,IA,JA)  :: Var_WXY
      real(RP), intent(in),  dimension(KA,IA,JA)  :: Dens_ZXY, MomX_ZUY, MomY_ZXV, MomZ_WXY
+     real(RP), intent(in),  dimension(KA,IA,JA,7)  :: GSQRT, J13G, J23G
+     real(RP), intent(in)                          :: J33G
+     real(RP), intent(in),  dimension(IA,JA,2,4)   :: MAPF
+     logical,  intent(in)                          :: GeneralCoordFlag
      integer, intent(in) :: IIS, IIE, JJS, JJE, KS, KE    
+     real(RP), intent(in),  dimension(KA,IA,JA), optional :: DiffFlxX_WUY, DiffFlxY_WXV, DiffFlxZ_ZXY
 
      integer :: i, j, k
-     real(RP) :: VelZ_ZXY(KA), sw
-     
+     real(RP), dimension(KA) :: VelZ, VelX, VelY
+
      !** Calculate z-direction flux ********************************************************
     
-     !$omp parallel do private(i,j,k,VelZ_ZXY) OMP_SCHEDULE_ collapse(2)
+     !$omp parallel do private(i,j,k,VelZ) OMP_SCHEDULE_ collapse(2)
      do j = JJS, JJE
      do i = IIS, IIE
-       !- Half-level velocity(z) and [WXY -> ZXY]
-       do k = KS+1, KE-1
-         VelZ_ZXY(k-1) = 0.5_RP * sum(MomZ_WXY(k-1:k,i,j)) / Dens_ZXY(k,i,j)
-       enddo
-       !- FluxZ at z surface within interior region      
-       do k = KS+2, KE-2
-          FlxZ_ZXY(k-1,i,j) = VelZ_ZXY(k) * (   FACT_N * (Var_WXY(k-1,i,j) + Var_WXY(  k,i,j))   & !
-            &                                 + FACT_F * (Var_WXY(k-2,i,j) + Var_WXY(k+1,i,j)) )   ! [WXY -> ZXV] (4th order)
-       enddo
-       !- FluxZ at bottom boundary
+       call FDM_MomZ2VelZt( VelZ,                                             & ! (out)
+            & VL_WXY, i, j, KS, KE, Dens_ZXY, MomX_ZUY, MomY_ZXV, MomZ_WXY,   & ! (in)
+            & J13G, J23G, J33G, MAPF, GeneralCoordFlag )                        ! (in)
+
        FlxZ_ZXY(KS-1,i,j) = 0.0_RP
-       !- FluxZ at z surface near bottom boundary
-       FlxZ_ZXY(KS,i,j)   = VelZ_ZXY(KS)   * 0.5_RP*(Var_WXY(KS,i,j)   + Var_WXY(KS+1,i,j))
-       !- FluxZ at z surface near top boundary
-       FlxZ_ZXY(KE-2,i,j) = VelZ_ZXY(KE-2) * 0.5_RP*(Var_WXY(KE-2,i,j) + Var_WXY(KE-1,i,j))
-       !- FluxZ at top boundary
+       call EvalFlxZ_CD2(FlxZ_ZXY(:,i,j), VelZ, Var_WXY, -1, i, j, KS+1, KS+1)
+       call EvalFlxZ_CD4(FlxZ_ZXY(:,i,j), VelZ, Var_WXY, -1, i, j, KS+2, KE-2)              
+       call EvalFlxZ_CD2(FlxZ_ZXY(:,i,j), VelZ, Var_WXY, -1, i, j, KE-1, KE-1)
        FlxZ_ZXY(KE-1,i,j) = 0.0_RP
+!       FlxZ_ZXY(  KE,i,j) = 0.0_RP
+
+       if (present(DiffFlxZ_ZXY)) then
+         call FDM_AddDiffFlxZ(FlxZ_ZXY, DiffFlxZ_ZXY, GSQRT(:,:,:,I_XYZ), MAPF(:,:,:,I_XY), -1, i, j, KS+1, KE-1)
+       end if
     enddo
     enddo
 
     !** Calculate x-direction flux ********************************************************
 
-    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+    !$omp parallel do private(i,j,k,VelX) OMP_SCHEDULE_ collapse(2)
     do j = JJS, JJE
     do i = IIS-1, IIE
-      do k = KS, KE-1
-         FlxX_WUY(k,i,j) = &
-              &  (    MomX_ZUY(  k,i,j) / (Dens_ZXY(  k,i,j) + Dens_ZXY(  k,i+1,j))     & ! Half level velocity(x) and [ ZUY -> WUY ]
-              &     + MomX_ZUY(k+1,i,j) / (Dens_ZXY(k+1,i,j) + Dens_ZXY(k+1,i+1,j))   ) & ! 
-              &  *(   FACT_N * (Var_WXY(k,i  ,j) + Var_WXY(k,i+1,j))                    & ! [ZXV -> ZUV] (4th order)
-              &     + FACT_F * (Var_WXY(k,i-1,j) + Var_WXY(k,i+2,j)) )                    !
-      enddo
-      FlxX_WUY(KE,i,j) = 0.0_RP
-    enddo
-    enddo
+      call FDM_MomX2VelXt( VelX,                                        & ! (out)
+        & VL_WXY, i, j, KS, KE, Dens_ZXY, MomX_ZUY, MomY_ZXV, MomZ_WXY, & ! (in)
+        & GSQRT, MAPF, GeneralCoordFlag )
 
+      call EvalFlxX_CD4(FlxX_WUY(:,i,j), VelX, Var_WXY, 0, i, j, KS, KE-1)              
+      FlxX_WUY(KE,i,j) = 0.0_RP
+
+      if (present(DiffFlxX_WUY)) then
+        call FDM_AddDiffFlxX(FlxX_WUY, DiffFlxX_WUY, GSQRT(:,:,:,I_UYW), MAPF(:,:,:,I_UY), i, j, KS, KE-1)
+      end if              
+    enddo
+    enddo
+    
     !** Calculate y-direction flux ********************************************************
 
-    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+    !$omp parallel do private(i,j,k,VelY) OMP_SCHEDULE_ collapse(2)
     do j = JJS-1, JJE
     do i = IIS, IIE
-      do k = KS, KE-1
-         FlxY_WXV(k,i,j) = &
-              &  (    MomY_ZXV(  k,i,j) / (Dens_ZXY(  k,i,j) + Dens_ZXY(  k,i,j+1))       & ! Half level velocity(y) and [ ZYV -> WYV ]
-              &     + MomY_ZXV(k+1,i,j) / (Dens_ZXY(k+1,i,j) + Dens_ZXY(k+1,i,j+1)) )     & ! 
-              &  *(   FACT_N * (Var_WXY(k,i,  j) + Var_WXY(k,i,j+1))                      & ! [WXY -> WXV] (4th order)
-              &     + FACT_F * (Var_WXY(k,i,j-1) + Var_WXY(k,i,j+2)) )                      !
-      enddo
-      FlxY_WXV(KE,i,j) = 0.0_RP      
+      call FDM_MomY2VelYt( VelY,                                        & ! (out)
+        & VL_WXY, i, j, KS, KE, Dens_ZXY, MomX_ZUY, MomY_ZXV, MomZ_WXY, & ! (in)
+        & GSQRT, MAPF, GeneralCoordFlag )
+
+      call EvalFlxY_CD4(FlxY_WXV(:,i,j), VelY, Var_WXY, 0, i, j, KS, KE-1)              
+      FlxY_WXV(KE,i,j) = 0.0_RP
+      
+      if (present(DiffFlxY_WXV)) then
+        call FDM_AddDiffFlxY(FlxY_WXV, DiffFlxY_WXV, GSQRT(:,:,:,I_XVW), MAPF(:,:,:,I_XV), i, j, KS, KE-1)
+      end if      
     enddo
     enddo
 
   end subroutine FDM_EvalFlxCD4_VarWXY
 
+  !** --  6th order -- *********************************************************************
+
+  subroutine EvalFlxX_CD6(FlxX, VelX, Var, IOF, i, j, KS_, KE_)
+    real(RP), intent(out) :: FlxX(KA)
+    real(RP), intent(in)    :: VelX(KA), Var(KA,IA,JA)
+    integer,  intent(in)    :: IOF, i, j, KS_, KE_
+
+    integer :: k
+
+    do k=KS_, KE_
+       FlxX(k) =   sum( VelX(k)*FAC1CD6(:)*Var(k,i-2+IOF:i+3+IOF,j) )           
+    enddo
+  end subroutine EvalFlxX_CD6
+
+  subroutine EvalFlxY_CD6(FlxY, VelY, Var, JOF, i, j, KS_, KE_)
+    real(RP), intent(out) :: FlxY(KA)
+    real(RP), intent(in)    :: VelY(KA), Var(KA,IA,JA)
+    integer,  intent(in)    :: JOF, i, j, KS_, KE_
+
+    integer :: k
+
+    do k=KS_, KE_
+       FlxY(k) =   sum( VelY(k)*FAC1CD6(:)*Var(k,i,j-2+JOF:j+3+JOF) )           
+    enddo    
+  end subroutine EvalFlxY_CD6
+
+  subroutine EvalFlxZ_CD6(FlxZ, VelZ, Var, KOF, i, j, KS_, KE_)
+    real(RP), intent(out) :: FlxZ(KA)
+    real(RP), intent(in)    :: VelZ(KA), Var(KA,IA,JA)
+    integer,  intent(in)    :: KOF, i, j, KS_, KE_
+
+    integer :: k
+
+    do k=KS_, KE_
+      FlxZ(k+KOF) = sum( VelZ(k+KOF)*FAC1CD6(:)*Var(k-2+KOF:k+3+KOF,i,j) )
+    enddo
+  end subroutine EvalFlxZ_CD6
+  
+  subroutine FDM_EvalFlxCD6_VarZXY( FlxX_ZUY, FlxY_ZXV, FlxZ_WXY,             &  ! (inout)
+    & Var_ZXY, Dens_ZXY, MomX_ZUY, MomY_ZXV, MomZ_WXY,                        &  ! (in)
+    & GSQRT, J13G, J23G, J33G, MAPF, GeneralCoordFlag,                        &  ! (in)   
+    & IIS, IIE, JJS, JJE, KS, KE,                                             &  ! (in)
+    & DiffFlxX_ZUY, DiffFlxY_ZXV, DiffFlxZ_WXY )                                 ! (in)   
+
+    
+     real(RP), intent(out), dimension(KA,IA,JA)    :: FlxX_ZUY, FlxY_ZXV, FlxZ_WXY
+     real(RP), intent(in),  dimension(KA,IA,JA)    :: Var_ZXY
+     real(RP), intent(in),  dimension(KA,IA,JA)    :: Dens_ZXY, MomX_ZUY, MomY_ZXV, MomZ_WXY
+     real(RP), intent(in),  dimension(KA,IA,JA,7)  :: GSQRT, J13G, J23G
+     real(RP), intent(in)                          :: J33G
+     real(RP), intent(in),  dimension(IA,JA,2,4)   :: MAPF
+     logical,  intent(in)                          :: GeneralCoordFlag
+     integer,  intent(in) :: IIS, IIE, JJS, JJE, KS, KE
+     real(RP), intent(in),  dimension(KA,IA,JA), optional :: DiffFlxX_ZUY, DiffFlxY_ZXV, DiffFlxZ_WXY
+
+     real(RP), dimension(KA) :: VelZ, VelX, VelY
+     integer :: i, j, k
+     
+     !** Calculate z-direction flux ********************************************************
+    
+     !$omp parallel do private(i,j,k,VelZ_W) OMP_SCHEDULE_ collapse(2)
+     do j = JJS, JJE
+     do i = IIS, IIE
+       call FDM_MomZ2VelZt( VelZ,                                             & ! (out)
+            & VL_ZXY, i, j, KS, KE, Dens_ZXY, MomX_ZUY, MomY_ZXV, MomZ_WXY,   & ! (in)
+            & J13G, J23G, J33G, MAPF, GeneralCoordFlag )                        ! (in)
+
+       FlxZ_WXY(KS-1,i,j) = 0.0_RP
+       call EvalFlxZ_CD2(FlxZ_WXY(:,i,j), VelZ, Var_ZXY, 0, i, j,   KS,   KS)
+       call EvalFlxZ_CD4(FlxZ_WXY(:,i,j), VelZ, Var_ZXY, 0, i, j, KS+1, KS+1)
+       call EvalFlxZ_CD6(FlxZ_WXY(:,i,j), VelZ, Var_ZXY, 0, i, j, KS+2, KE-3)
+       call EvalFlxZ_CD4(FlxZ_WXY(:,i,j), VelZ, Var_ZXY, 0, i, j, KS-2, KS-2)
+       call EvalFlxZ_CD2(FlxZ_WXY(:,i,j), VelZ, Var_ZXY, 0, i, j, KE-1, KE-1)
+       FlxZ_WXY(  KE,i,j) = 0.0_RP
+
+       if (present(DiffFlxZ_WXY)) then
+         call FDM_AddDiffFlxZ(FlxZ_WXY, DiffFlxZ_WXY, GSQRT(:,:,:,I_XYW), MAPF(:,:,:,I_XY), 0, i, j, KS, KE-1)
+       end if
+     enddo
+     enddo
+
+     !** Calculate x-direction flux ********************************************************
+
+     !$omp parallel do private(i,j,k,VelX) OMP_SCHEDULE_ collapse(2)
+     do j = JJS, JJE
+     do i = IIS-IFS_OFF, min(IIE,IEH)           
+       call FDM_MomX2VelXt( VelX,                                        & ! (out)
+         & VL_ZXY, i, j, KS, KE, Dens_ZXY, MomX_ZUY, MomY_ZXV, MomZ_WXY, & ! (in)
+         & GSQRT, MAPF, GeneralCoordFlag )
+
+       call EvalFlxX_CD6(FlxX_ZUY(:,i,j), VelX, Var_ZXY, 0, i, j, KS, KE)              
+
+       if (present(DiffFlxX_ZUY)) then
+         call FDM_AddDiffFlxX(FlxX_ZUY, DiffFlxX_ZUY, GSQRT(:,:,:,I_UYZ), MAPF(:,:,:,I_UY), i, j, KS, KE)
+       end if
+     enddo
+     enddo
+
+     !** Calculate y-direction flux ********************************************************
+
+     !$omp parallel do private(i,j,k,VelY) OMP_SCHEDULE_ collapse(2)
+     do j = JJS-JFS_OFF, min(JJE,JEH)
+     do i = IIS, IIE
+       call FDM_MomY2VelYt( VelY,                                        & ! (out)
+         & VL_ZXY, i, j, KS, KE, Dens_ZXY, MomX_ZUY, MomY_ZXV, MomZ_WXY, & ! (in)
+         & GSQRT, MAPF, GeneralCoordFlag )
+
+       call EvalFlxY_CD6(FlxY_ZXV(:,i,j), VelY, Var_ZXY, 0, i, j, KS, KE)              
+
+       if (present(DiffFlxY_ZXV)) then
+         call FDM_AddDiffFlxY(FlxY_ZXV, DiffFlxY_ZXV, GSQRT(:,:,:,I_XVZ), MAPF(:,:,:,I_XV), i, j, KS, KE)
+       end if
+     enddo
+     enddo
+   
+  end subroutine FDM_EvalFlxCD6_VarZXY
+  
+  subroutine FDM_EvalFlxCD6_VarZUY( FlxX_ZXY, FlxY_ZUV, FlxZ_WUY,             &  ! (inout)
+    & Var_ZUY, Dens_ZXY, MomX_ZUY, MomY_ZXV, MomZ_WXY,                        &  ! (in)
+    & GSQRT, J13G, J23G, J33G, MAPF, GeneralCoordFlag,                        &  ! (in)   
+    & IIS, IIE, JJS, JJE, KS, KE,                                             &  ! (in)
+    & DiffFlxX_ZXY, DiffFlxY_ZUV, DiffFlxZ_WUY )                                 ! (in)   
+
+    
+     real(RP), intent(out), dimension(KA,IA,JA)  :: FlxX_ZXY, FlxY_ZUV, FlxZ_WUY
+     real(RP), intent(in),  dimension(KA,IA,JA)  :: Var_ZUY
+     real(RP), intent(in),  dimension(KA,IA,JA)  :: Dens_ZXY, MomX_ZUY, MomY_ZXV, MomZ_WXY
+     real(RP), intent(in),  dimension(KA,IA,JA,7)  :: GSQRT, J13G, J23G
+     real(RP), intent(in)                          :: J33G
+     real(RP), intent(in),  dimension(IA,JA,2,4)   :: MAPF
+     logical,  intent(in)                          :: GeneralCoordFlag
+     integer, intent(in) :: IIS, IIE, JJS, JJE, KS, KE
+     real(RP), intent(in),  dimension(KA,IA,JA), optional :: DiffFlxX_ZXY, DiffFlxY_ZUV, DiffFlxZ_WUY     
+
+     integer :: i, j, k
+     real(RP), dimension(KA) :: VelZ, VelX, VelY
+     
+     !** Calculate z-direction flux ********************************************************
+
+     !$omp parallel do private(i,j,k,VelZ) OMP_SCHEDULE_ collapse(2)
+     do j = JJS, JJE
+     do i = IIS, IIE
+       call FDM_MomZ2VelZt( VelZ,                                             & ! (out)
+            & VL_ZUY, i, j, KS, KE, Dens_ZXY, MomX_ZUY, MomY_ZXV, MomZ_WXY,   & ! (in)
+            & J13G, J23G, J33G, MAPF, GeneralCoordFlag )                        ! (in)
+
+       FlxZ_WUY(KS-1,i,j) = 0.0_RP
+       call EvalFlxZ_CD2(FlxZ_WUY(:,i,j), VelZ, Var_ZUY, 0, i, j,   KS,   KS)
+       call EvalFlxZ_CD4(FlxZ_WUY(:,i,j), VelZ, Var_ZUY, 0, i, j, KS+1, KS+1)
+       call EvalFlxZ_CD6(FlxZ_WUY(:,i,j), VelZ, Var_ZUY, 0, i, j, KS+2, KE-3)
+       call EvalFlxZ_CD4(FlxZ_WUY(:,i,j), VelZ, Var_ZUY, 0, i, j, KE-2, KE-2)
+       call EvalFlxZ_CD2(FlxZ_WUY(:,i,j), VelZ, Var_ZUY, 0, i, j, KE-1, KE-1)
+       FlxZ_WUY(  KE,i,j) = 0.0_RP
+
+       if (present(DiffFlxZ_WUY)) then
+          call FDM_AddDiffFlxZ(FlxZ_WUY, DiffFlxZ_WUY, GSQRT(:,:,:,I_UYW), MAPF(:,:,:,I_UY), 0, i, j, KS, KE-1)
+       end if
+    enddo
+    enddo
+
+    !** Calculate x-direction flux ********************************************************
+
+    !$omp parallel do private(i,j,k,VelX) OMP_SCHEDULE_ collapse(2)
+    do j = JJS, JJE
+    do i = IIS, IIE+1
+      call FDM_MomX2VelXt( VelX,                                        & ! (out)
+        & VL_ZUY, i, j, KS, KE, Dens_ZXY, MomX_ZUY, MomY_ZXV, MomZ_WXY, & ! (in)
+        & GSQRT, MAPF, GeneralCoordFlag )
+
+      call EvalFlxX_CD6(FlxX_ZXY(:,i-1,j), VelX, Var_ZUY, -1, i, j, KS, KE)              
+
+      if (present(DiffFlxX_ZXY)) then
+        call FDM_AddDiffFlxX(FlxX_ZXY, DiffFlxX_ZXY, GSQRT(:,:,:,I_XYZ), MAPF(:,:,:,I_XY), i, j, KS, KE)
+      end if
+    enddo
+    enddo
+
+    !** Calculate y-direction flux ********************************************************
+
+    !$omp parallel do private(i,j,k,VelY) OMP_SCHEDULE_ collapse(2)
+    do j = JJS-1, JJE
+    do i = IIS, IIE
+      call FDM_MomY2VelYt( VelY,                                        & ! (out)
+        & VL_ZUY, i, j, KS, KE, Dens_ZXY, MomX_ZUY, MomY_ZXV, MomZ_WXY, & ! (in)
+        & GSQRT, MAPF, GeneralCoordFlag )
+
+      call EvalFlxY_CD6(FlxY_ZUV(:,i,j), VelY, Var_ZUY, 0, i, j, KS, KE)              
+
+      if (present(DiffFlxY_ZUV)) then
+        call FDM_AddDiffFlxY(FlxY_ZUV, DiffFlxY_ZUV, GSQRT(:,:,:,I_UVZ), MAPF(:,:,:,I_UV), i, j, KS, KE)
+      end if
+    enddo
+    enddo
+
+  end subroutine FDM_EvalFlxCD6_VarZUY
+  
+  subroutine FDM_EvalFlxCD6_VarZXV( FlxX_ZUV, FlxY_ZXY, FlxZ_WXV,          &  ! (inout)
+    & Var_ZXV, Dens_ZXY, MomX_ZUY, MomY_ZXV, MomZ_WXY,                        &  ! (in)
+    & GSQRT, J13G, J23G, J33G, MAPF, GeneralCoordFlag,                        &  ! (in)   
+    & IIS, IIE, JJS, JJE, KS, KE,                                             &  ! (in)
+    & DiffFlxX_ZUV, DiffFlxY_ZXY, DiffFlxZ_WXV )                                 ! (in)       
+    
+     real(RP), intent(out), dimension(KA,IA,JA)  :: FlxX_ZUV, FlxY_ZXY, FlxZ_WXV
+     real(RP), intent(in),  dimension(KA,IA,JA)  :: Var_ZXV
+     real(RP), intent(in),  dimension(KA,IA,JA)  :: Dens_ZXY, MomX_ZUY, MomY_ZXV, MomZ_WXY
+     real(RP), intent(in),  dimension(KA,IA,JA,7)  :: GSQRT, J13G, J23G
+     real(RP), intent(in)                          :: J33G
+     real(RP), intent(in),  dimension(IA,JA,2,4)   :: MAPF
+     logical,  intent(in)                          :: GeneralCoordFlag     
+     integer, intent(in) :: IIS, IIE, JJS, JJE, KS, KE
+     real(RP), intent(in),  dimension(KA,IA,JA), optional :: DiffFlxX_ZUV, DiffFlxY_ZXY, DiffFlxZ_WXV
+     
+     integer :: i, j, k
+     real(RP), dimension(KA) :: VelZ, VelX, VelY
+     
+     !** Calculate z-direction flux ********************************************************
+    
+     !$omp parallel do private(i,j,k,VelZ) OMP_SCHEDULE_ collapse(2)
+     do j = JJS, JJE
+     do i = IIS, IIE
+       call FDM_MomZ2VelZt( VelZ,                                             & ! (out)
+            & VL_ZXV, i, j, KS, KE, Dens_ZXY, MomX_ZUY, MomY_ZXV, MomZ_WXY,   & ! (in)
+            & J13G, J23G, J33G, MAPF, GeneralCoordFlag )                        ! (in)
+
+       FlxZ_WXV(KS-1,i,j) = 0.0_RP
+       call EvalFlxZ_CD2(FlxZ_WXV(:,i,j), VelZ, Var_ZXV, 0, i, j,   KS,   KS)
+       call EvalFlxZ_CD4(FlxZ_WXV(:,i,j), VelZ, Var_ZXV, 0, i, j, KS+1, KS+1)
+       call EvalFlxZ_CD6(FlxZ_WXV(:,i,j), VelZ, Var_ZXV, 0, i, j, KS+2, KE-3)
+       call EvalFlxZ_CD4(FlxZ_WXV(:,i,j), VelZ, Var_ZXV, 0, i, j, KE-2, KE-2)       
+       call EvalFlxZ_CD2(FlxZ_WXV(:,i,j), VelZ, Var_ZXV, 0, i, j, KE-1, KE-1)
+       FlxZ_WXV(  KE,i,j) = 0.0_RP
+
+       if (present(DiffFlxZ_WXV)) then
+          call FDM_AddDiffFlxZ(FlxZ_WXV, DiffFlxZ_WXV, GSQRT(:,:,:,I_XVW), MAPF(:,:,:,I_XV), 0, i, j, KS, KE-1)
+       end if
+    enddo
+    enddo
+
+    !** Calculate x-direction flux ********************************************************
+
+    !$omp parallel do private(i,j,k,VelX) OMP_SCHEDULE_ collapse(2)
+    do j = JJS, JJE
+    do i = IIS-1, IIE
+      call FDM_MomX2VelXt( VelX,                                        & ! (out)
+        & VL_ZXV, i, j, KS, KE, Dens_ZXY, MomX_ZUY, MomY_ZXV, MomZ_WXY, & ! (in)
+        & GSQRT, MAPF, GeneralCoordFlag )
+
+      call EvalFlxX_CD6(FlxX_ZUV(:,i,j), VelX, Var_ZXV, 0, i, j, KS, KE)              
+
+      if (present(DiffFlxX_ZUV)) then
+        call FDM_AddDiffFlxX(FlxX_ZUV, DiffFlxX_ZUV, GSQRT(:,:,:,I_UVZ), MAPF(:,:,:,I_UV), i, j, KS, KE)
+      end if
+    enddo
+    enddo
+
+    !** Calculate y-direction flux ********************************************************
+
+    !$omp parallel do private(i,j,k,VelY) OMP_SCHEDULE_ collapse(2)
+    do j = JJS, JJE+1
+    do i = IIS, IIE
+      call FDM_MomY2VelYt( VelY,                                        & ! (out)
+        & VL_ZXV, i, j, KS, KE, Dens_ZXY, MomX_ZUY, MomY_ZXV, MomZ_WXY, & ! (in)
+        & GSQRT, MAPF, GeneralCoordFlag )
+
+      call EvalFlxY_CD6(FlxY_ZXY(:,i,j-1), VelY, Var_ZXV, -1, i, j, KS, KE)              
+
+      if (present(DiffFlxY_ZXY)) then
+        call FDM_AddDiffFlxY(FlxY_ZXY, DiffFlxY_ZXY, GSQRT(:,:,:,I_XYZ), MAPF(:,:,:,I_XY), i, j, KS, KE)
+      end if
+    enddo
+    enddo
+           
+  end subroutine FDM_EvalFlxCD6_VarZXV
+
+  subroutine FDM_EvalFlxCD6_VarWXY( FlxX_WUY, FlxY_WXV, FlxZ_ZXY,             &  ! (inout)
+    & Var_WXY, Dens_ZXY, MomX_ZUY, MomY_ZXV, MomZ_WXY,                        &  ! (in)
+    & GSQRT, J13G, J23G, J33G, MAPF, GeneralCoordFlag,                        &  ! (in)          
+    & IIS, IIE, JJS, JJE, KS, KE,                                             &  ! (in)
+    & DiffFlxX_WUY, DiffFlxY_WXV, DiffFlxZ_ZXY )                                 ! (in)   
+    
+     real(RP), intent(out), dimension(KA,IA,JA)  :: FlxX_WUY, FlxY_WXV, FlxZ_ZXY
+     real(RP), intent(in),  dimension(KA,IA,JA)  :: Var_WXY
+     real(RP), intent(in),  dimension(KA,IA,JA)  :: Dens_ZXY, MomX_ZUY, MomY_ZXV, MomZ_WXY
+     real(RP), intent(in),  dimension(KA,IA,JA,7)  :: GSQRT, J13G, J23G
+     real(RP), intent(in)                          :: J33G
+     real(RP), intent(in),  dimension(IA,JA,2,4)   :: MAPF
+     logical,  intent(in)                          :: GeneralCoordFlag
+     integer, intent(in) :: IIS, IIE, JJS, JJE, KS, KE    
+     real(RP), intent(in),  dimension(KA,IA,JA), optional :: DiffFlxX_WUY, DiffFlxY_WXV, DiffFlxZ_ZXY
+
+     integer :: i, j, k
+     real(RP), dimension(KA) :: VelZ, VelX, VelY
+
+     !** Calculate z-direction flux ********************************************************
+    
+     !$omp parallel do private(i,j,k,VelZ) OMP_SCHEDULE_ collapse(2)
+     do j = JJS, JJE
+     do i = IIS, IIE
+       call FDM_MomZ2VelZt( VelZ,                                             & ! (out)
+            & VL_WXY, i, j, KS, KE, Dens_ZXY, MomX_ZUY, MomY_ZXV, MomZ_WXY,   & ! (in)
+            & J13G, J23G, J33G, MAPF, GeneralCoordFlag )                        ! (in)
+
+       FlxZ_ZXY(KS-1,i,j) = 0.0_RP
+       call EvalFlxZ_CD2(FlxZ_ZXY(:,i,j), VelZ, Var_WXY, -1, i, j, KS+1, KS+1)
+       call EvalFlxZ_CD4(FlxZ_ZXY(:,i,j), VelZ, Var_WXY, -1, i, j, KS+2, KS+2)
+       call EvalFlxZ_CD6(FlxZ_ZXY(:,i,j), VelZ, Var_WXY, -1, i, j, KS+3, KE-3)
+       call EvalFlxZ_CD4(FlxZ_ZXY(:,i,j), VelZ, Var_WXY, -1, i, j, KE-2, KE-2)       
+       call EvalFlxZ_CD2(FlxZ_ZXY(:,i,j), VelZ, Var_WXY, -1, i, j, KE-1, KE-1)
+       FlxZ_ZXY(KE-1,i,j) = 0.0_RP
+!       FlxZ_ZXY(  KE,i,j) = 0.0_RP
+
+       if (present(DiffFlxZ_ZXY)) then
+         call FDM_AddDiffFlxZ(FlxZ_ZXY, DiffFlxZ_ZXY, GSQRT(:,:,:,I_XYZ), MAPF(:,:,:,I_XY), -1, i, j, KS+1, KE-1)
+       end if
+    enddo
+    enddo
+
+    !** Calculate x-direction flux ********************************************************
+
+    !$omp parallel do private(i,j,k,VelX) OMP_SCHEDULE_ collapse(2)
+    do j = JJS, JJE
+    do i = IIS-1, IIE
+      call FDM_MomX2VelXt( VelX,                                        & ! (out)
+        & VL_WXY, i, j, KS, KE, Dens_ZXY, MomX_ZUY, MomY_ZXV, MomZ_WXY, & ! (in)
+        & GSQRT, MAPF, GeneralCoordFlag )
+
+      call EvalFlxX_CD6(FlxX_WUY(:,i,j), VelX, Var_WXY, 0, i, j, KS, KE-1)              
+      FlxX_WUY(KE,i,j) = 0.0_RP
+
+      if (present(DiffFlxX_WUY)) then
+        call FDM_AddDiffFlxX(FlxX_WUY, DiffFlxX_WUY, GSQRT(:,:,:,I_UYW), MAPF(:,:,:,I_UY), i, j, KS, KE-1)
+      end if              
+    enddo
+    enddo
+    
+    !** Calculate y-direction flux ********************************************************
+
+    !$omp parallel do private(i,j,k,VelY) OMP_SCHEDULE_ collapse(2)
+    do j = JJS-1, JJE
+    do i = IIS, IIE
+      call FDM_MomY2VelYt( VelY,                                        & ! (out)
+        & VL_WXY, i, j, KS, KE, Dens_ZXY, MomX_ZUY, MomY_ZXV, MomZ_WXY, & ! (in)
+        & GSQRT, MAPF, GeneralCoordFlag )
+
+      call EvalFlxY_CD6(FlxY_WXV(:,i,j), VelY, Var_WXY, 0, i, j, KS, KE-1)              
+      FlxY_WXV(KE,i,j) = 0.0_RP
+      
+      if (present(DiffFlxY_WXV)) then
+        call FDM_AddDiffFlxY(FlxY_WXV, DiffFlxY_WXV, GSQRT(:,:,:,I_XVW), MAPF(:,:,:,I_XV), i, j, KS, KE-1)
+      end if      
+    enddo
+    enddo
+
+  end subroutine FDM_EvalFlxCD6_VarWXY
+  
 end module scale_atmos_numeric_fdm_cd

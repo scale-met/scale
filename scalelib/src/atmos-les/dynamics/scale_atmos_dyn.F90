@@ -175,6 +175,9 @@ contains
        ATMOS_DYN_filter_setup
     use scale_atmos_dyn_rk, only: &
        ATMOS_DYN_rk_setup
+    use scale_atmos_dyn_tracer, only: &
+       ATMOS_DYN_tracer_setup
+    
     implicit none
 
     ! MPI_RECV_INIT requires intent(inout)
@@ -262,6 +265,9 @@ contains
     call ATMOS_DYN_rk_setup( &
          BND_W, BND_E, BND_S, BND_N )
 
+    call ATMOS_DYN_tracer_setup( &
+         BND_W, BND_E, BND_S, BND_N )
+         
     call COMM_vars8_init( DENS, I_COMM_DENS )
     call COMM_vars8_init( MOMZ, I_COMM_MOMZ )
     call COMM_vars8_init( MOMX, I_COMM_MOMX )
@@ -378,6 +384,8 @@ contains
        ATMOS_DYN_fct
     use scale_atmos_dyn_rk, only: &
        ATMOS_DYN_rk
+    use scale_atmos_dyn_tracer, only: &
+       ATMOS_DYN_tracer_update
     use scale_atmos_boundary, only: &
        BND_QA, &
        BND_SMOOTHER_FACT => ATMOS_BOUNDARY_SMOOTHER_FACT
@@ -386,6 +394,9 @@ contains
        HIST_in, &
 #endif
        HIST_switch
+
+    use scale_atmos_numeric_fdm_diff
+    
     implicit none
 
     real(RP), intent(inout) :: DENS(KA,IA,JA)
@@ -519,6 +530,9 @@ contains
     integer  :: JJS, JJE
     integer  :: i, j, k, iq, step
     integer  :: iv
+
+    real(RP) :: DiffCoef
+
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Dynamics step: ', NSTEP_ATMOS_DYN, ' small steps'
@@ -1021,6 +1035,7 @@ contains
 
        !-----< prepare numerical diffusion coefficient >-----
 
+      
        if ( ND_COEF == 0.0_RP ) then
 !OCL XFILL
           num_diff(:,:,:,:,:) = 0.0_RP
@@ -1029,9 +1044,36 @@ contains
                                          DENS, MOMZ, MOMX, MOMY, RHOT,           & ! [IN]
                                          CDZ, CDX, CDY, FDZ, FDX, FDY, dt,       & ! [IN]
                                          REF_dens, REF_pott,                     & ! [IN]
-                                         ND_COEF, ND_ORDER, ND_SFC_FACT, ND_USE_RS ) ! [IN]
+                                         ND_COEF, ND_ORDER, ND_SFC_FACT, ND_USE_RS ) ! [IN]      
        endif
 
+       if (.true.) then
+         num_diff(:,:,:,I_DENS,:) = 0.0_RP
+         do JJS = JS, JE, JBLOCK
+         JJE = JJS+JBLOCK-1
+         do IIS = IS, IE, IBLOCK
+         IIE = IIS+IBLOCK-1
+           DiffCoef = 75.0_RP
+           call FDM_EvalDiffFlxCD2_VarZUY( &
+             & num_diff(:,:,:,I_MOMX,XDIR), num_diff(:,:,:,I_MOMX,YDIR), num_diff(:,:,:,I_MOMX,ZDIR), &
+             & MOMX, DENS, DiffCoef, RCDX, RFDY, RFDZ, &
+             & GSQRT, J13G, J23G, J33G, MAPF, .true., IIS, IIE, JJS, JJE, KS, KE )
+           call FDM_EvalDiffFlxCD2_VarZXV( &
+             & num_diff(:,:,:,I_MOMY,XDIR), num_diff(:,:,:,I_MOMY,YDIR), num_diff(:,:,:,I_MOMY,ZDIR), &
+             & MOMY, DENS, DiffCoef, RFDX, RCDY, RFDZ, &
+             & GSQRT, J13G, J23G, J33G, MAPF, .true., IIS, IIE, JJS, JJE, KS, KE )
+           call FDM_EvalDiffFlxCD2_VarWXY( &
+             & num_diff(:,:,:,I_MOMZ,XDIR), num_diff(:,:,:,I_MOMZ,YDIR), num_diff(:,:,:,I_MOMZ,ZDIR), &
+             & MOMZ, DENS, DiffCoef, RFDX, RFDY, RCDZ, &
+             & GSQRT, J13G, J23G, J33G, MAPF, .true., IIS, IIE, JJS, JJE, KS, KE )
+           call FDM_EvalDiffFlxCD2_VarZXY( &
+             & num_diff(:,:,:,I_RHOT,XDIR), num_diff(:,:,:,I_RHOT,YDIR), num_diff(:,:,:,I_RHOT,ZDIR), &
+             & RHOT, DENS, DiffCoef, RFDX, RFDY, RFDZ, &
+             & GSQRT, J13G, J23G, J33G, MAPF, .true., IIS, IIE, JJS, JJE, KS, KE )
+         enddo
+         enddo
+       end if
+       
        call PROF_rapend  ("DYN_Numfilter", 2)
 
        !------------------------------------------------------------------------
@@ -1584,130 +1626,136 @@ contains
 
        call PROF_rapstart("DYN_Tracer", 2)
 
-       do JJS = JS, JE, JBLOCK
-       JJE = JJS+JBLOCK-1
-       do IIS = IS, IE, IBLOCK
-       IIE = IIS+IBLOCK-1
+       call ATMOS_DYN_tracer_update( &
+            QTRC(:,:,:,iq),                                        &  ! (inout)
+            DENS, DENS00, mflx_hi, RHOQ_t(:,:,:,iq), num_diff_q,   &  ! (in)
+            RCDX, RCDY, RCDZ, GSQRT, J13G, J23G, J33G, MAPF,       &  ! (in)
+            & dt, FLAG_FCT_ALONG_STREAM  )                            ! (in)
 
-          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-          do j = JJS-1, JJE+1
-          do i = IIS-1, IIE+1
-          do k = KS+1, KE-2
-             qflx_lo(k,i,j,ZDIR) = 0.5_RP * (     mflx_hi(k,i,j,ZDIR)  * ( QTRC(k+1,i,j,iq)+QTRC(k,i,j,iq) ) &
-                                            - abs(mflx_hi(k,i,j,ZDIR)) * ( QTRC(k+1,i,j,iq)-QTRC(k,i,j,iq) ) )
-
-             qflx_hi(k,i,j,ZDIR) = mflx_hi(k,i,j,ZDIR) * ( FACT_N * ( QTRC(k+1,i,j,iq)+QTRC(k  ,i,j,iq) ) &
-                                                         + FACT_F * ( QTRC(k+2,i,j,iq)+QTRC(k-1,i,j,iq) ) ) &
-                                 + GSQRT(k,i,j,I_XYW) * num_diff_q(k,i,j,ZDIR)
-          enddo
-          enddo
-          enddo
-
-          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-          do j = JJS-1, JJE+1
-          do i = IIS-1, IIE+1
-             qflx_lo(KS-1,i,j,ZDIR) = 0.0_RP
-             qflx_lo(KS  ,i,j,ZDIR) = 0.5_RP * (     mflx_hi(KS  ,i,j,ZDIR)  * ( QTRC(KS+1,i,j,iq)+QTRC(KS,i,j,iq) ) &
-                                               - abs(mflx_hi(KS  ,i,j,ZDIR)) * ( QTRC(KS+1,i,j,iq)-QTRC(KS,i,j,iq) ) )
-
-             qflx_hi(KS-1,i,j,ZDIR) = 0.0_RP
-             qflx_hi(KS  ,i,j,ZDIR) = 0.5_RP * mflx_hi(KS  ,i,j,ZDIR) * ( QTRC(KS+1,i,j,iq)+QTRC(KS,i,j,iq) ) &
-                                    + GSQRT(k,i,j,I_XYW) * num_diff_q(KS,i,j,ZDIR)
-          enddo
-          enddo
-
-          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-          do j = JJS-1, JJE+1
-          do i = IIS-1, IIE+1
-             qflx_lo(KE-1,i,j,ZDIR) = 0.5_RP * (     mflx_hi(KE-1,i,j,ZDIR)  * ( QTRC(KE,i,j,iq)+QTRC(KE-1,i,j,iq) ) &
-                                               - abs(mflx_hi(KE-1,i,j,ZDIR)) * ( QTRC(KE,i,j,iq)-QTRC(KE-1,i,j,iq) ) )
-             qflx_lo(KE  ,i,j,ZDIR) = 0.0_RP
-
-             qflx_hi(KE-1,i,j,ZDIR) = 0.5_RP * mflx_hi(KE-1,i,j,ZDIR) * ( QTRC(KE,i,j,iq)+QTRC(KE-1,i,j,iq) ) &
-                                    + GSQRT(k,i,j,I_XYW) * num_diff_q(KE-1,i,j,ZDIR)
-             qflx_hi(KE  ,i,j,ZDIR) = 0.0_RP
-          enddo
-          enddo
-
-          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-          do j = JJS-1, JJE+1
-          do i = IIS-2, IIE+1
-          do k = KS, KE
-             qflx_lo(k,i,j,XDIR) = 0.5_RP * (     mflx_hi(k,i,j,XDIR)  * ( QTRC(k,i+1,j,iq)+QTRC(k,i,j,iq) ) &
-                                            - abs(mflx_hi(k,i,j,XDIR)) * ( QTRC(k,i+1,j,iq)-QTRC(k,i,j,iq) ) )
-          enddo
-          enddo
-          enddo
-
-          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-          do j = JJS,   JJE
-          do i = IIS-1, IIE
-          do k = KS, KE
-             qflx_hi(k,i,j,XDIR) = mflx_hi(k,i,j,XDIR) * ( FACT_N * ( QTRC(k,i+1,j,iq)+QTRC(k,i  ,j,iq) ) &
-                                                         + FACT_F * ( QTRC(k,i+2,j,iq)+QTRC(k,i-1,j,iq) ) ) &
-                                 + GSQRT(k,i,j,I_UYZ) * num_diff_q(k,i,j,XDIR)
-          enddo
-          enddo
-          enddo
-
-
-          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-          do j = JJS-2, JJE+1
-          do i = IIS-1, IIE+1
-          do k = KS, KE
-             qflx_lo(k,i,j,YDIR) = 0.5_RP * (     mflx_hi(k,i,j,YDIR)  * ( QTRC(k,i,j+1,iq)+QTRC(k,i,j,iq) ) &
-                                            - abs(mflx_hi(k,i,j,YDIR)) * ( QTRC(k,i,j+1,iq)-QTRC(k,i,j,iq) ) )
-          enddo
-          enddo
-          enddo
-
-          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-          do j = JJS-1, JJE
-          do i = IIS,   IIE
-          do k = KS, KE
-             qflx_hi(k,i,j,YDIR) = mflx_hi(k,i,j,YDIR) * ( FACT_N * ( QTRC(k,i,j+1,iq)+QTRC(k,i,j  ,iq) ) &
-                                                         + FACT_F * ( QTRC(k,i,j+2,iq)+QTRC(k,i,j-1,iq) ) ) &
-                                 + GSQRT(k,i,j,I_XVZ) * num_diff_q(k,i,j,YDIR)
-          enddo
-          enddo
-          enddo
-
-       enddo
-       enddo
-
-       call ATMOS_DYN_fct( qflx_anti,                    & ! (out)
-                           QTRC(:,:,:,iq), DENS00, DENS, & ! (in)
-                           qflx_hi, qflx_lo,             & ! (in)
-                           mflx_hi,                      & ! (in)
-                           RCDZ, RCDX, RCDY,             & ! (in)
-                           GSQRT(:,:,:,I_XYZ),           & ! (in)
-                           MAPF(:,:,:,I_XY), dt,         & ! (in)
-                           FLAG_FCT_ALONG_STREAM         ) ! (in)
-
-       do JJS = JS, JE, JBLOCK
-       JJE = JJS+JBLOCK-1
-       do IIS = IS, IE, IBLOCK
-       IIE = IIS+IBLOCK-1
-
-          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-          do j = JJS, JJE
-          do i = IIS, IIE
-          do k = KS, KE
-             QTRC(k,i,j,iq) = ( QTRC(k,i,j,iq) * DENS00(k,i,j) &
-                            + dt * ( - ( ( qflx_hi(k  ,i  ,j  ,ZDIR) - qflx_anti(k  ,i  ,j  ,ZDIR) &
-                                         - qflx_hi(k-1,i  ,j  ,ZDIR) + qflx_anti(k-1,i  ,j  ,ZDIR) ) * RCDZ(k) &
-                                       + ( qflx_hi(k  ,i  ,j  ,XDIR) - qflx_anti(k  ,i  ,j  ,XDIR) &
-                                         - qflx_hi(k  ,i-1,j  ,XDIR) + qflx_anti(k  ,i-1,j  ,XDIR) ) * RCDX(i) &
-                                       + ( qflx_hi(k  ,i  ,j  ,YDIR) - qflx_anti(k  ,i  ,j  ,YDIR) &
-                                         - qflx_hi(k  ,i  ,j-1,YDIR) + qflx_anti(k  ,i  ,j-1,YDIR) ) * RCDY(j) &
-                                       ) * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) &
-                              + RHOQ_t(k,i,j,iq) ) ) / DENS(k,i,j)
-          enddo
-          enddo
-          enddo
-
-       enddo
-       enddo
+!!$       do JJS = JS, JE, JBLOCK
+!!$       JJE = JJS+JBLOCK-1
+!!$       do IIS = IS, IE, IBLOCK
+!!$       IIE = IIS+IBLOCK-1
+!!$
+!!$          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+!!$          do j = JJS-1, JJE+1
+!!$          do i = IIS-1, IIE+1
+!!$          do k = KS+1, KE-2
+!!$             qflx_lo(k,i,j,ZDIR) = 0.5_RP * (     mflx_hi(k,i,j,ZDIR)  * ( QTRC(k+1,i,j,iq)+QTRC(k,i,j,iq) ) &
+!!$                                            - abs(mflx_hi(k,i,j,ZDIR)) * ( QTRC(k+1,i,j,iq)-QTRC(k,i,j,iq) ) )
+!!$
+!!$             qflx_hi(k,i,j,ZDIR) = mflx_hi(k,i,j,ZDIR) * ( FACT_N * ( QTRC(k+1,i,j,iq)+QTRC(k  ,i,j,iq) ) &
+!!$                                                         + FACT_F * ( QTRC(k+2,i,j,iq)+QTRC(k-1,i,j,iq) ) ) &
+!!$                                 + GSQRT(k,i,j,I_XYW) * num_diff_q(k,i,j,ZDIR)
+!!$          enddo
+!!$          enddo
+!!$          enddo
+!!$
+!!$          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+!!$          do j = JJS-1, JJE+1
+!!$          do i = IIS-1, IIE+1
+!!$             qflx_lo(KS-1,i,j,ZDIR) = 0.0_RP
+!!$             qflx_lo(KS  ,i,j,ZDIR) = 0.5_RP * (     mflx_hi(KS  ,i,j,ZDIR)  * ( QTRC(KS+1,i,j,iq)+QTRC(KS,i,j,iq) ) &
+!!$                                               - abs(mflx_hi(KS  ,i,j,ZDIR)) * ( QTRC(KS+1,i,j,iq)-QTRC(KS,i,j,iq) ) )
+!!$
+!!$             qflx_hi(KS-1,i,j,ZDIR) = 0.0_RP
+!!$             qflx_hi(KS  ,i,j,ZDIR) = 0.5_RP * mflx_hi(KS  ,i,j,ZDIR) * ( QTRC(KS+1,i,j,iq)+QTRC(KS,i,j,iq) ) &
+!!$                                    + GSQRT(k,i,j,I_XYW) * num_diff_q(KS,i,j,ZDIR)
+!!$          enddo
+!!$          enddo
+!!$
+!!$          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+!!$          do j = JJS-1, JJE+1
+!!$          do i = IIS-1, IIE+1
+!!$             qflx_lo(KE-1,i,j,ZDIR) = 0.5_RP * (     mflx_hi(KE-1,i,j,ZDIR)  * ( QTRC(KE,i,j,iq)+QTRC(KE-1,i,j,iq) ) &
+!!$                                               - abs(mflx_hi(KE-1,i,j,ZDIR)) * ( QTRC(KE,i,j,iq)-QTRC(KE-1,i,j,iq) ) )
+!!$             qflx_lo(KE  ,i,j,ZDIR) = 0.0_RP
+!!$
+!!$             qflx_hi(KE-1,i,j,ZDIR) = 0.5_RP * mflx_hi(KE-1,i,j,ZDIR) * ( QTRC(KE,i,j,iq)+QTRC(KE-1,i,j,iq) ) &
+!!$                                    + GSQRT(k,i,j,I_XYW) * num_diff_q(KE-1,i,j,ZDIR)
+!!$             qflx_hi(KE  ,i,j,ZDIR) = 0.0_RP
+!!$          enddo
+!!$          enddo
+!!$
+!!$          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+!!$          do j = JJS-1, JJE+1
+!!$          do i = IIS-2, IIE+1
+!!$          do k = KS, KE
+!!$             qflx_lo(k,i,j,XDIR) = 0.5_RP * (     mflx_hi(k,i,j,XDIR)  * ( QTRC(k,i+1,j,iq)+QTRC(k,i,j,iq) ) &
+!!$                                            - abs(mflx_hi(k,i,j,XDIR)) * ( QTRC(k,i+1,j,iq)-QTRC(k,i,j,iq) ) )
+!!$          enddo
+!!$          enddo
+!!$          enddo
+!!$
+!!$          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+!!$          do j = JJS,   JJE
+!!$          do i = IIS-1, IIE
+!!$          do k = KS, KE
+!!$             qflx_hi(k,i,j,XDIR) = mflx_hi(k,i,j,XDIR) * ( FACT_N * ( QTRC(k,i+1,j,iq)+QTRC(k,i  ,j,iq) ) &
+!!$                                                         + FACT_F * ( QTRC(k,i+2,j,iq)+QTRC(k,i-1,j,iq) ) ) &
+!!$                                 + GSQRT(k,i,j,I_UYZ) * num_diff_q(k,i,j,XDIR)
+!!$          enddo
+!!$          enddo
+!!$          enddo
+!!$
+!!$
+!!$          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+!!$          do j = JJS-2, JJE+1
+!!$          do i = IIS-1, IIE+1
+!!$          do k = KS, KE
+!!$             qflx_lo(k,i,j,YDIR) = 0.5_RP * (     mflx_hi(k,i,j,YDIR)  * ( QTRC(k,i,j+1,iq)+QTRC(k,i,j,iq) ) &
+!!$                                            - abs(mflx_hi(k,i,j,YDIR)) * ( QTRC(k,i,j+1,iq)-QTRC(k,i,j,iq) ) )
+!!$          enddo
+!!$          enddo
+!!$          enddo
+!!$
+!!$          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+!!$          do j = JJS-1, JJE
+!!$          do i = IIS,   IIE
+!!$          do k = KS, KE
+!!$             qflx_hi(k,i,j,YDIR) = mflx_hi(k,i,j,YDIR) * ( FACT_N * ( QTRC(k,i,j+1,iq)+QTRC(k,i,j  ,iq) ) &
+!!$                                                         + FACT_F * ( QTRC(k,i,j+2,iq)+QTRC(k,i,j-1,iq) ) ) &
+!!$                                 + GSQRT(k,i,j,I_XVZ) * num_diff_q(k,i,j,YDIR)
+!!$          enddo
+!!$          enddo
+!!$          enddo
+!!$
+!!$       enddo
+!!$       enddo
+!!$
+!!$       call ATMOS_DYN_fct( qflx_anti,                    & ! (out)
+!!$                           QTRC(:,:,:,iq), DENS00, DENS, & ! (in)
+!!$                           qflx_hi, qflx_lo,             & ! (in)
+!!$                           mflx_hi,                      & ! (in)
+!!$                           RCDZ, RCDX, RCDY,             & ! (in)
+!!$                           GSQRT(:,:,:,I_XYZ),           & ! (in)
+!!$                           MAPF(:,:,:,I_XY), dt,         & ! (in)
+!!$                           FLAG_FCT_ALONG_STREAM         ) ! (in)
+!!$
+!!$       do JJS = JS, JE, JBLOCK
+!!$       JJE = JJS+JBLOCK-1
+!!$       do IIS = IS, IE, IBLOCK
+!!$       IIE = IIS+IBLOCK-1
+!!$
+!!$          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+!!$          do j = JJS, JJE
+!!$          do i = IIS, IIE
+!!$          do k = KS, KE
+!!$             QTRC(k,i,j,iq) = ( QTRC(k,i,j,iq) * DENS00(k,i,j) &
+!!$                            + dt * ( - ( ( qflx_hi(k  ,i  ,j  ,ZDIR) - qflx_anti(k  ,i  ,j  ,ZDIR) &
+!!$                                         - qflx_hi(k-1,i  ,j  ,ZDIR) + qflx_anti(k-1,i  ,j  ,ZDIR) ) * RCDZ(k) &
+!!$                                       + ( qflx_hi(k  ,i  ,j  ,XDIR) - qflx_anti(k  ,i  ,j  ,XDIR) &
+!!$                                         - qflx_hi(k  ,i-1,j  ,XDIR) + qflx_anti(k  ,i-1,j  ,XDIR) ) * RCDX(i) &
+!!$                                       + ( qflx_hi(k  ,i  ,j  ,YDIR) - qflx_anti(k  ,i  ,j  ,YDIR) &
+!!$                                         - qflx_hi(k  ,i  ,j-1,YDIR) + qflx_anti(k  ,i  ,j-1,YDIR) ) * RCDY(j) &
+!!$                                       ) * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) &
+!!$                              + RHOQ_t(k,i,j,iq) ) ) / DENS(k,i,j)
+!!$          enddo
+!!$          enddo
+!!$          enddo
+!!$
+!!$       enddo
+!!$       enddo
 
        call PROF_rapend  ("DYN_Tracer", 2)
 

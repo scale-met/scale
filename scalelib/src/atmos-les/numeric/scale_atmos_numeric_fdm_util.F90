@@ -44,6 +44,10 @@ module scale_atmos_numeric_fdm_util
      UNDEF  => CONST_UNDEF, &
      IUNDEF => CONST_UNDEF2
 #endif
+
+  use scale_atmos_numeric_fdm_def, only: &
+       VL_ZXY, VL_ZUY, VL_ZXV, VL_WXY
+  
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -52,8 +56,22 @@ module scale_atmos_numeric_fdm_util
   !++ Public procedure
   !
 
-  public :: fdm_util_setup
+  interface FDM_EvolveVar
+     module procedure EvolveVar
+     module procedure EvolveVar_withVart
+  end interface FDM_EvolveVar
+  
+  public :: FDM_util_setup
   public :: FDM_EvolveVar
+
+  public :: FDM_AddDiffFlxX
+  public :: FDM_AddDiffFlxY
+  public :: FDM_AddDiffFlxZ
+
+  public :: FDM_RhoVar2Var
+  public :: FDM_MomX2VelXt
+  public :: FDM_MomY2VelYt
+  public :: FDM_MomZ2VelZt
   
   !-----------------------------------------------------------------------------
   !
@@ -71,8 +89,8 @@ module scale_atmos_numeric_fdm_util
   !
   !-----------------------------------------------------------------------------
 
-  integer :: IFS_OFF
-  integer :: JFS_OFF
+  integer, save :: IFS_OFF
+  integer, save :: JFS_OFF
   real(RP), parameter :: FACT_N =   7.0_RP/12.0_RP
   real(RP), parameter :: FACT_F = - 1.0_RP/12.0_RP
   
@@ -84,12 +102,10 @@ contains
     
   end subroutine fdm_util_setup
 
-
-  subroutine FDM_EvolveVar( VarA,                             & ! (out)
+  subroutine EvolveVar( VarA,                                 & ! (out)
        & Var0, FlxX, FlxY, FlxZ,                              & ! (in)
        & GSQRT, MAPF, dt, RDX, RDY, RDZ,                      & ! (in)
        & IIS, IIE, JJS, JJE, KS_, KE_,                        & ! (in)
-       & Var_t,                                               & ! (in)
        & lhist, advch_t, advcv_t )
     
     real(RP), intent(out), dimension(KA,IA,JA)   :: VarA
@@ -99,757 +115,381 @@ contains
     real(RP), intent(in), dimension(IA,JA,2)     :: MAPF
     real(RP), intent(in) :: dt, RDX(:), RDY(:), RDZ(:)
     integer, intent(in) :: IIS, IIE, JJS, JJE, KS_, KE_
-    real(RP), intent(in), dimension(KA,IA,JA), optional :: Var_t
     logical, intent(in), optional :: lhist
     real(RP), intent(inout), optional, dimension(KA,IA,JA) :: advch_t, advcv_t
 
     integer :: i, j, k
     real(RP) :: advch, advcv
 
-    if (present(Var_t)) then
-      !$omp  parallel do private(i,j,k,advch,advcv) OMP_SCHEDULE_ collapse(2)
-      do j = JJS, JJE
-      do i = IIS, IIE
-        do k = KS_, KE_
-          advcv = - ( FlxZ(k,i,j) - FlxZ(k-1,i,  j)   ) * RDZ(k)
-          advch = - ( FlxX(k,i,j) - FlxX(k  ,i-1,j)   ) * RDX(i) &
-               &  - ( FlxY(k,i,j) - FlxY(k  ,i,  j-1) ) * RDY(j)
-          VarA(k,i,j) = Var0(k,i,j) &
-               & + dt * (  ( advcv + advch ) * MAPF(i,j,1) * MAPF(i,j,2) / GSQRT(k,i,j) &
-                         + Var_t(k,i,j) )
-#ifdef HIST_TEND
-          if ( lhist ) then
-            advcv_t(k,i,j) = advcv * MAPF(i,j,1) * MAPF(i,j,2) / GSQRT(k,i,j)
-            advch_t(k,i,j) = advch * MAPF(i,j,1) * MAPF(i,j,2) / GSQRT(k,i,j)
-          end if
-#endif
-        enddo
-      enddo
-      enddo
-    else
-      !$omp  parallel do private(i,j,k,advch,advcv) OMP_SCHEDULE_ collapse(2)
-      do j = JJS, JJE
-      do i = IIS, IIE
-        do k = KS_, KE_
-          advcv = - ( FlxZ(k,i,j) - FlxZ(k-1,i,  j)   ) * RDZ(k)
-          advch = - ( FlxX(k,i,j) - FlxX(k  ,i-1,j)   ) * RDX(i) &
-               &  - ( FlxY(k,i,j) - FlxY(k  ,i,  j-1) ) * RDY(j)
-          VarA(k,i,j) = Var0(k,i,j) &
-               & + dt * (  ( advcv + advch ) * MAPF(i,j,1) * MAPF(i,j,2) / GSQRT(k,i,j) )
+    !$omp  parallel do private(i,j,k,advch,advcv) OMP_SCHEDULE_ collapse(2)
+    do j = JJS, JJE
+    do i = IIS, IIE
+      do k = KS_, KE_
+        advcv = - ( FlxZ(k,i,j) - FlxZ(k-1,i,  j)   ) * RDZ(k)
+        advch = - ( FlxX(k,i,j) - FlxX(k  ,i-1,j)   ) * RDX(i) &
+             &  - ( FlxY(k,i,j) - FlxY(k  ,i,  j-1) ) * RDY(j)
+        VarA(k,i,j) = Var0(k,i,j) &
+             & + dt * (  ( advcv + advch ) * MAPF(i,j,1) * MAPF(i,j,2) / GSQRT(k,i,j) )
           
 #ifdef HIST_TEND
-          if ( lhist ) then
-            advcv_t(k,i,j) = advcv * MAPF(i,j,1) * MAPF(i,j,2) / GSQRT(k,i,j)
-            advch_t(k,i,j) = advch * MAPF(i,j,1) * MAPF(i,j,2) / GSQRT(k,i,j)
-          end if
+        if ( lhist ) then
+          advcv_t(k,i,j) = advcv * MAPF(i,j,1) * MAPF(i,j,2) / GSQRT(k,i,j)
+          advch_t(k,i,j) = advch * MAPF(i,j,1) * MAPF(i,j,2) / GSQRT(k,i,j)
+       end if
 #endif
-        enddo
       enddo
-      enddo      
-    endif  
-  end subroutine FDM_EvolveVar
+    enddo
+    enddo      
 
-!!$  subroutine ATMOS_DYN_Flx4VarZXY( FlxX_ZUY, FlxY_ZXV, FlxZ_WXY,        &  ! (inout)
-!!$       & Var_ZXY, MomFlxX_ZUY, MomFlxY_ZXV, MomFlxZ_WXY,                &  ! (in)
-!!$       & J13G, J23G, J33G, GSQRT, MAPF, num_diff,                       &  ! (in)
-!!$       & FlxEvalType, IIS, IIE, JJS, JJE, KS, KE )                        ! (in)
-!!$
-!!$    real(RP), intent(inout), dimension(KA,IA,JA)  :: FlxX_ZUY, FlxY_ZXV, FlxZ_WXY
-!!$    real(RP), intent(in), dimension(KA,IA,JA)     :: Var_ZXY
-!!$    real(RP), intent(in), dimension(KA,IA,JA)     :: MomFlxX_ZUY, MomFlxY_ZXV, MomFlxZ_WXY
-!!$    real(RP), intent(in), dimension(KA,IA,JA,7)   :: J13G, J23G, GSQRT, MAPF
-!!$    real(RP), intent(in) :: J33G
-!!$    real(RP), intent(in), dimension(KA,IA,JA,3) :: num_diff
-!!$    integer, intent(in) :: FlxEvalType
-!!$    integer, intent(in) :: IIS, IIE, JJS, JJE, KS, KE
-!!$
-!!$    select case(FlxEvalType)
-!!$    case(FLXEVALTYPE_CD4)
-!!$       call ATMOS_DYN_Flx4VarZXY_CD4( FlxX_ZUY, FlxY_ZXV, FlxZ_WXY,          &  ! (inout)
-!!$            & Var_ZXY, MomFlxX_ZUY, MomFlxY_ZXV, MomFlxZ_WXY,                &  ! (in)
-!!$            & J13G, J23G, J33G, GSQRT, MAPF, num_diff,                       &  ! (in)
-!!$            & IIS, IIE, JJS, JJE, KS, KE )                                      ! (in)       
-!!$    case(FLXEVALTYPE_UD1)
-!!$       call ATMOS_DYN_Flx4VarZXY_UD1( FlxX_ZUY, FlxY_ZXV, FlxZ_WXY,          &  ! (inout)
-!!$            & Var_ZXY, MomFlxX_ZUY, MomFlxY_ZXV, MomFlxZ_WXY,                &  ! (in)
-!!$            & J13G, J23G, J33G, GSQRT, MAPF, num_diff,                       &  ! (in)
-!!$            & IIS, IIE, JJS, JJE, KS, KE )                                      ! (in)
-!!$     case default
-!!$     end select
-!!$     
-!!$  end subroutine ATMOS_DYN_Flx4VarZXY
-!!$
-!!$  subroutine ATMOS_DYN_MomFlx4VarZXY( FlxX_ZUY, FlxY_ZXV, FlxZ_WXY,    &  ! (inout)
-!!$       & MOMX_ZUY, MOMY_ZXV, MOMZ_WXY,                                 &  ! (in)
-!!$       & J13G, J23G, J33G, GSQRT, MAPF, num_diff,                      &  ! (in)
-!!$       & FlxEvalType, IIS, IIE, JJS, JJE, KS, KE )                        ! (in)
-!!$
-!!$    real(RP), intent(inout), dimension(KA,IA,JA)  :: FlxX_ZUY, FlxY_ZXV, FlxZ_WXY
-!!$    real(RP), intent(in), dimension(KA,IA,JA)     :: MOMX_ZUY, MOMY_ZXV, MOMZ_WXY
-!!$    real(RP), intent(in), dimension(KA,IA,JA,7)   :: J13G, J23G, GSQRT, MAPF
-!!$    real(RP), intent(in) :: J33G    
-!!$    real(RP), intent(in), dimension(KA,IA,JA,3)   :: num_diff
-!!$    integer, intent(in) :: FlxEvalType
-!!$    integer, intent(in) :: IIS, IIE, JJS, JJE, KS, KE
-!!$
-!!$    select case(FlxEvalType)
-!!$    case(FLXEVALTYPE_CD4)
-!!$       call ATMOS_DYN_MomFlx4VarZXY_CD4( FlxX_ZUY, FlxY_ZXV, FlxZ_WXY, &  ! (inout)
-!!$       & MOMX_ZUY, MOMY_ZXV, MOMZ_WXY,                                 &  ! (in)
-!!$       & J13G, J23G, J33G, GSQRT, MAPF, num_diff,                      &  ! (in)
-!!$       & IIS, IIE, JJS, JJE, KS, KE )                                     ! (in)       
-!!$    case(FLXEVALTYPE_UD1)
-!!$       call ATMOS_DYN_MomFlx4VarZXY_UD1( FlxX_ZUY, FlxY_ZXV, FlxZ_WXY,  &  ! (inout)
-!!$            & MOMX_ZUY, MOMY_ZXV, MOMZ_WXY,                             &  ! (in)
-!!$            & J13G, J23G, J33G, GSQRT, MAPF, num_diff,                  &  ! (in)
-!!$            & IIS, IIE, JJS, JJE, KS, KE )                                 ! (in)       
-!!$     case default
-!!$     end select
-!!$    
-!!$   end subroutine ATMOS_DYN_MomFlx4VarZXY
-!!$  
-!!$  !+ ------------------------------------------------------------------------------------------
-!!$  
-!!$  subroutine ATMOS_DYN_Flx4VarZXY_CD4( FlxX_ZUY, FlxY_ZXV, FlxZ_WXY,    &  ! (inout)
-!!$       & Var_ZXY, MomFlxX_ZUY, MomFlxY_ZXV, MomFlxZ_WXY,                &  ! (in)
-!!$       & J13G, J23G, J33G, GSQRT, MAPF, num_diff,                       &  ! (in)
-!!$       & IIS, IIE, JJS, JJE, KS, KE )                                      ! (in)
-!!$
-!!$    real(RP), intent(inout), dimension(KA,IA,JA)  :: FlxX_ZUY, FlxY_ZXV, FlxZ_WXY
-!!$    real(RP), intent(in), dimension(KA,IA,JA)     :: Var_ZXY
-!!$    real(RP), intent(in), dimension(KA,IA,JA)     :: MomFlxX_ZUY, MomFlxY_ZXV, MomFlxZ_WXY
-!!$    real(RP), intent(in), dimension(KA,IA,JA,7)   :: J13G, J23G, GSQRT, MAPF
-!!$    real(RP), intent(in) :: J33G
-!!$    real(RP), intent(in), dimension(KA,IA,JA,3) :: num_diff
-!!$    integer, intent(in) :: IIS, IIE, JJS, JJE, KS, KE
-!!$
-!!$    integer :: i, j, k
-!!$
-!!$    !* Z Dir -----------------------------------------------------
-!!$
-!!$    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-!!$    do j = JJS,   JJE
-!!$       do i = IIS,   IIE
-!!$          do k = KS+1, KE-2
-!!$#ifdef DEBUG
-!!$             call CHECK( __LINE__, FlxZ_WXY(k,i,j) )
-!!$             call CHECK( __LINE__, Var_ZXY(k-1,i,j) )
-!!$             call CHECK( __LINE__, Var_ZXY(k  ,i,j) )
-!!$             call CHECK( __LINE__, Var_ZXY(k+1,i,j) )
-!!$             call CHECK( __LINE__, Var_ZXY(k+2,i,j) )
-!!$             call CHECK( __LINE__, num_diff(k,i,j,ZDIR) )
-!!$#endif
-!!$             FlxZ_WXY(k,i,j) = & 
-!!$                  &   MomFlxZ_WXY(k,i,j)*(  FACT_N * ( Var_ZXY(k+1,i,j) + Var_ZXY(k  ,i,j) )   &
-!!$                  &                       + FACT_F * ( Var_ZXY(k+2,i,j) + Var_ZXY(k-1,i,j) ) ) & ! [{x,y,z->x,y,w}]
-!!$                  & + GSQRT(k,i,j,I_XYW) * num_diff(k,i,j,ZDIR)
-!!$          enddo
-!!$       enddo
-!!$    enddo
-!!$#ifdef DEBUG
-!!$       k = IUNDEF; i = IUNDEF; j = IUNDEF
-!!$#endif
-!!$
-!!$       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-!!$       do j = JJS, JJE
-!!$          do i = IIS, IIE
-!!$#ifdef DEBUG
-!!$             call CHECK( __LINE__, FlxZ_WXY(KS,i,j) )
-!!$             call CHECK( __LINE__, Var_ZXY(KS+1,i,j) )
-!!$             call CHECK( __LINE__, Var_ZXY(KS  ,i,j) )
-!!$             call CHECK( __LINE__, num_diff(KS,i,j,ZDIR) )
-!!$             call CHECK( __LINE__, FlxZ_WXY(KE-1,i,j) )
-!!$             call CHECK( __LINE__, Var_ZXY(KE-1,i,j) )
-!!$             call CHECK( __LINE__, Var_ZXY(KE  ,i,j) )
-!!$             call CHECK( __LINE__, num_diff(KE-1,i,j,I_RHOT,ZDIR) )
-!!$#endif
-!!$             FlxZ_WXY(KS-1,i,j) = 0.0_RP
-!!$             FlxZ_WXY(KS  ,i,j) =   MomFlxZ_WXY(KS  ,i,j) * 0.5_RP * ( Var_ZXY(KS+1,i,j) + Var_ZXY(KS,i,j)   ) &
-!!$                  &               + GSQRT(KS  ,i,j,I_XYW) * num_diff(KS  ,i,j,ZDIR)
-!!$             FlxZ_WXY(KE-1,i,j) =   MomFlxZ_WXY(KE-1,i,j) * 0.5_RP * ( Var_ZXY(KE,i,j)   + Var_ZXY(KE-1,i,j) ) &
-!!$                  &               + GSQRT(KE-1,i,j,I_XYW) * num_diff(KE-1,i,j,ZDIR)
-!!$             FlxZ_WXY(KE  ,i,j) = 0.0_RP
-!!$          enddo
-!!$       enddo
-!!$#ifdef DEBUG
-!!$       k = IUNDEF; i = IUNDEF; j = IUNDEF
-!!$#endif
-!!$    
-!!$    !* X Dir -----------------------------------------------------
-!!$    
-!!$    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-!!$    do j = JJS,   JJE
-!!$       do i = IIS-1, IIE
-!!$          do k = KS, KE
-!!$#ifdef DEBUG
-!!$             call CHECK( __LINE__, MomFlxX_ZUY(k,i,j) )
-!!$             call CHECK( __LINE__, Var_ZXY(k,i-1,j) )
-!!$             call CHECK( __LINE__, Var_ZXY(k,i  ,j) )
-!!$             call CHECK( __LINE__, Var_ZXY(k,i+1,j) )
-!!$             call CHECK( __LINE__, Var_ZXY(k,i+1,j) )
-!!$             call CHECK( __LINE__, num_diff(k,i,j,XDIR) )
-!!$#endif
-!!$             FlxX_ZUY(k,i,j) = MomFlxX_ZUY(k,i,j) &
-!!$                  *(   FACT_N * ( Var_ZXY(k,i+1,j) + Var_ZXY(k,i  ,j) )   &
-!!$                     + FACT_F * ( Var_ZXY(k,i+2,j) + Var_ZXY(k,i-1,j) ) ) & ! [{x,y,z->u,y,z}]
-!!$                  + GSQRT(k,i,j,I_UYZ) * num_diff(k,i,j,XDIR)
-!!$          enddo
-!!$       enddo
-!!$    enddo
-!!$#ifdef DEBUG
-!!$    k = IUNDEF; i = IUNDEF; j = IUNDEF
-!!$#endif
-!!$
-!!$    !* Y Dir -----------------------------------------------------
-!!$    
-!!$    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-!!$    do j = JJS-1, JJE
-!!$       do i = IIS,   IIE
-!!$          do k = KS, KE
-!!$#ifdef DEBUG
-!!$             call CHECK( __LINE__, MomFlxY_ZXV(k,i,j,YDIR) )
-!!$             call CHECK( __LINE__, Var_ZXY(k,i,j-1) )
-!!$             call CHECK( __LINE__, Var_ZXY(k,i,j  ) )
-!!$             call CHECK( __LINE__, Var_ZXY(k,i,j+1) )
-!!$             call CHECK( __LINE__, Var_ZXY(k,i,j+2) )
-!!$             call CHECK( __LINE__, num_diff(k,i,j,YDIR) )
-!!$#endif
-!!$             FlxY_ZXV(k,i,j) = MomFlxY_ZXV(k,i,j) &
-!!$                              * ( FACT_N * ( Var_ZXY(k,i,j+1) + Var_ZXY(k,i,j  ) )   &
-!!$                                + FACT_F * ( Var_ZXY(k,i,j+2) + Var_ZXY(k,i,j-1) ) ) & ! [{x,y,z->x,v,z}]
-!!$                              + GSQRT(k,i,j,I_XVZ) * num_diff(k,i,j,YDIR)
-!!$          enddo
-!!$       enddo
-!!$    enddo
-!!$#ifdef DEBUG
-!!$    k = IUNDEF; i = IUNDEF; j = IUNDEF
-!!$#endif
-!!$       
-!!$  end subroutine ATMOS_DYN_Flx4VarZXY_CD4  
-!!$
-!!$  subroutine ATMOS_DYN_Flx4VarZXY_UD1( FlxX_ZUY, FlxY_ZXV, FlxZ_WXY,    &  ! (inout)
-!!$       & Var_ZXY, MomFlxX_ZUY, MomFlxY_ZXV, MomFlxZ_WXY,                &  ! (in)
-!!$       & J13G, J23G, J33G, GSQRT, MAPF, num_diff,                       &  ! (in)
-!!$       & IIS, IIE, JJS, JJE, KS, KE )                                      ! (in)
-!!$
-!!$    real(RP), intent(inout), dimension(KA,IA,JA)  :: FlxX_ZUY, FlxY_ZXV, FlxZ_WXY
-!!$    real(RP), intent(in), dimension(KA,IA,JA)     :: Var_ZXY
-!!$    real(RP), intent(in), dimension(KA,IA,JA)     :: MomFlxX_ZUY, MomFlxY_ZXV, MomFlxZ_WXY
-!!$    real(RP), intent(in), dimension(KA,IA,JA,7)   :: J13G, J23G, GSQRT, MAPF
-!!$    real(RP), intent(in) :: J33G
-!!$    real(RP), intent(in), dimension(KA,IA,JA,3) :: num_diff
-!!$    integer, intent(in) :: IIS, IIE, JJS, JJE, KS, KE
-!!$
-!!$    integer :: i, j, k
-!!$
-!!$    !* Z Dir -----------------------------------------------------
-!!$    do j = JJS-1, JJE+1
-!!$       do i = IIS-1, IIE+1
-!!$          do k = KS, KE-1
-!!$#ifdef DEBUG
-!!$             call CHECK( __LINE__, MomFlxZ_WXY(k,i,j) )
-!!$             call CHECK( __LINE__, Var_ZXY(k  ,i,j) )
-!!$             call CHECK( __LINE__, Var_ZXY(k+1,i,j) )
-!!$#endif
-!!$             FlxZ_WXY(k,i,j) = 0.5_RP * (      MomFlxZ_WXY(k,i,j)  * ( Var_ZXY(k+1,i,j) + Var_ZXY(k,i,j)  ) &
-!!$                                         - abs(MomFlxZ_WXY(k,i,j)) * ( Var_ZXY(k+1,i,j) - Var_ZXY(k,i,j) ) )
-!!$          enddo
-!!$       enddo
-!!$    enddo
-!!$
-!!$    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-!!$    do j = JJS-1, JJE+1
-!!$       do i = IIS-1, IIE+1
-!!$          FlxZ_WXY(KS-1,i,j) = 0.0_RP
-!!$          FlxZ_WXY(KE  ,i,j) = 0.0_RP
-!!$       enddo
-!!$    enddo
-!!$
-!!$#ifdef DEBUG
-!!$    k = IUNDEF; i = IUNDEF; j = IUNDEF
-!!$#endif
-!!$
-!!$    
-!!$    !* X Dir -----------------------------------------------------
-!!$          
-!!$    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-!!$    do j = JJS-1, JJE+1
-!!$       do i = IIS-2, IIE+1
-!!$          do k = KS, KE
-!!$#ifdef DEBUG
-!!$             call CHECK( __LINE__, MomFlxX_ZUY(k,i,j) )
-!!$             call CHECK( __LINE__, Var_ZXY(k,i  ,j) )
-!!$             call CHECK( __LINE__, Var_ZXY(k,i+1,j) )
-!!$#endif
-!!$             FlxX_ZUY(k,i,j) = 0.5_RP * (       MomFlxX_ZUY(k,i,j)  * ( Var_ZXY(k,i+1,j) + Var_ZXY(k,i,j) ) &
-!!$                                          - abs(MomFlxX_ZUY(k,i,j)) * ( Var_ZXY(k,i+1,j) - Var_ZXY(k,i,j) ) )
-!!$          enddo
-!!$       enddo
-!!$    enddo
-!!$#ifdef DEBUG
-!!$    k = IUNDEF; i = IUNDEF; j = IUNDEF
-!!$#endif
-!!$
-!!$    !* Y Dir -----------------------------------------------------
-!!$    
-!!$    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-!!$    do j = JJS-2, JJE+1
-!!$       do i = IIS-1,   IIE+1
-!!$          do k = KS, KE
-!!$#ifdef DEBUG
-!!$             call CHECK( __LINE__, MomFlxY_ZXV(k,i,j,YDIR) )
-!!$             call CHECK( __LINE__, Var_ZXY(k,i,j  ) )
-!!$             call CHECK( __LINE__, Var_ZXY(k,i,j+1) )
-!!$             call CHECK( __LINE__, num_diff(k,i,j,YDIR) )
-!!$#endif
-!!$             FlxY_ZXV(k,i,j) = 0.5_RP * (       MomFlxY_ZXV(k,i,j)  * ( Var_ZXY(k,i,j+1) + Var_ZXY(k,i,j) ) &
-!!$                                          - abs(MomFlxY_ZXV(k,i,j)) * ( Var_ZXY(k,i,j+1) - Var_ZXY(k,i,j) ) )
-!!$          enddo
-!!$       enddo
-!!$    enddo
-!!$#ifdef DEBUG
-!!$    k = IUNDEF; i = IUNDEF; j = IUNDEF
-!!$#endif
-!!$       
-!!$  end subroutine ATMOS_DYN_Flx4VarZXY_UD1
-!!$
-!!$  subroutine ATMOS_DYN_Flx4VarZUY_UD1( FlxX_ZXY, FlxY_ZUV, FlxZ_WUY,    &  ! (inout)
-!!$       & Var_ZUY, MomFlxX_ZUY, MomFlxY_ZXV, MomFlxZ_WXY,                &  ! (in)
-!!$       & J13G, J23G, J33G, GSQRT, MAPF, num_diff,                       &  ! (in)
-!!$       & IIS, IIE, JJS, JJE, KS, KE )                                      ! (in)
-!!$
-!!$    real(RP), intent(inout), dimension(KA,IA,JA)  :: FlxX_ZXY, FlxY_ZUV, FlxZ_WUY
-!!$    real(RP), intent(in), dimension(KA,IA,JA)     :: Var_ZUY
-!!$    real(RP), intent(in), dimension(KA,IA,JA)     :: MomFlxX_ZUY, MomFlxY_ZXV, MomFlxZ_WXY
-!!$    real(RP), intent(in), dimension(KA,IA,JA,7)   :: J13G, J23G, GSQRT, MAPF
-!!$    real(RP), intent(in) :: J33G
-!!$    real(RP), intent(in), dimension(KA,IA,JA,3) :: num_diff
-!!$    integer, intent(in) :: IIS, IIE, JJS, JJE, KS, KE
-!!$
-!!$    integer :: i, j, k
-!!$
-!!$    !* Z Dir -----------------------------------------------------
-!!$    do j = JJS-1, JJE+1
-!!$       do i = IIS-1, IIE+1
-!!$          do k = KS, KE-1
-!!$#ifdef DEBUG
-!!$             call CHECK( __LINE__, MomFlxZ_WUY(k,i,j) )
-!!$             call CHECK( __LINE__, MomFlxZ_WUY(k,i+1,j) )
-!!$             call CHECK( __LINE__, Var_ZUY(k  ,i,j) )
-!!$             call CHECK( __LINE__, Var_ZUY(k+1,i,j) )
-!!$#endif
-!!$             FlxZ_WUY(k,i,j) = 0.25_RP *(      (MomFlxZ_WXY(k,i+1,j) + MomFlxZ_WXY(k,i,j)) * ( Var_ZUY(k+1,i,j) + Var_ZUY(k,i,j) )   &
-!!$                  &                       - abs(MomFlxZ_WXY(k,i+1,j) + MomFlxZ_WXY(k,i,j)) * ( Var_ZUY(k+1,i,j) - Var_ZUY(k,i,j) ) ) &
-!!$                  & / (MAPF(i,j,1,I_UY) * MAPF(i,j,2,I_UY))
-!!$          enddo
-!!$       enddo
-!!$    enddo
-!!$
-!!$    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-!!$    do j = JJS-1, JJE+1
-!!$       do i = IIS-1, IIE+1
-!!$          FlxZ_WUY(KS-1,i,j) = 0.0_RP
-!!$          FlxZ_WUY(KE  ,i,j) = 0.0_RP
-!!$       enddo
-!!$    enddo
-!!$
-!!$#ifdef DEBUG
-!!$    k = IUNDEF; i = IUNDEF; j = IUNDEF
-!!$#endif
-!!$
-!!$    
-!!$    !* X Dir -----------------------------------------------------
-!!$    ! note that x-index is added by -1
-!!$
-!!$    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-!!$    do j = JJS-1, JJE+1
-!!$       do i = IIS-1, IIE+2
-!!$          do k = KS, KE
-!!$#ifdef DEBUG
-!!$             call CHECK( __LINE__, MomFlxX_ZUY(k,i,j) )
-!!$             call CHECK( __LINE__, Var_ZUY(k,i  ,j) )
-!!$             call CHECK( __LINE__, Var_ZUY(k,i-1,j) )
-!!$#endif
-!!$             FlxX_ZXY(k,i,j) = 0.25_RP * (      (MomFlxX_ZUY(k,i,j) + MomFlxX_ZUY(k,i-1,j)) * ( Var_ZUY(k,i,j) + Var_ZUY(k,i-1,j) ) &
-!!$                                           - abs(MomFlxX_ZUY(k,i,j) + MomFlxX_ZUY(k,i-1,j)) * ( Var_ZUY(k,i,j) - Var_ZUY(k,i-1,j) ) )
-!!$          enddo
-!!$       enddo
-!!$    enddo
-!!$#ifdef DEBUG
-!!$    k = IUNDEF; i = IUNDEF; j = IUNDEF
-!!$#endif
-!!$
-!!$    !* Y Dir -----------------------------------------------------
-!!$    
-!!$    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-!!$    do j = JJS-2, JJE+1
-!!$       do i = IIS-1,   IIE+1
-!!$          do k = KS, KE
-!!$#ifdef DEBUG
-!!$             call CHECK( __LINE__, MomFlxY_ZXV(k,i+1,j) )
-!!$             call CHECK( __LINE__, MomFlxY_ZXV(k,i,j) )
-!!$             call CHECK( __LINE__, Var_ZUY(k,i,j  ) )
-!!$             call CHECK( __LINE__, Var_ZUY(k,i,j+1) )
-!!$#endif
-!!$             FlxY_ZUV(k,i,j) = 0.25_RP * (      (MomFlxY_ZXV(k,i+1,j) + MomFlxY_ZXV(k,i,j)) * ( Var_ZUY(k,i,j+1) + Var_ZUY(k,i,j) ) &
-!!$                                           - abs(MomFlxY_ZXV(k,i+1,j) + MomFlxY_ZXV(k,i,j)) * ( Var_ZUY(k,i,j+1) - Var_ZUY(k,i,j) ) )
-!!$          enddo
-!!$       enddo
-!!$    enddo
-!!$#ifdef DEBUG
-!!$    k = IUNDEF; i = IUNDEF; j = IUNDEF
-!!$#endif
-!!$       
-!!$  end subroutine ATMOS_DYN_Flx4VarZUY_UD1
-!!$
-!!$  subroutine ATMOS_DYN_Flx4VarZXV_UD1( FlxX_ZUV, FlxY_ZXY, FlxZ_WXV,    &  ! (inout)
-!!$       & Var_ZXV, MomFlxX_ZUY, MomFlxY_ZXV, MomFlxZ_WXY,                &  ! (in)
-!!$       & J13G, J23G, J33G, GSQRT, MAPF, num_diff,                       &  ! (in)
-!!$       & IIS, IIE, JJS, JJE, KS, KE )                                      ! (in)
-!!$
-!!$    real(RP), intent(inout), dimension(KA,IA,JA)  :: FlxX_ZUV, FlxY_ZXY, FlxZ_WXV
-!!$    real(RP), intent(in), dimension(KA,IA,JA)     :: Var_ZXV
-!!$    real(RP), intent(in), dimension(KA,IA,JA)     :: MomFlxX_ZUY, MomFlxY_ZXV, MomFlxZ_WXY
-!!$    real(RP), intent(in), dimension(KA,IA,JA,7)   :: J13G, J23G, GSQRT, MAPF
-!!$    real(RP), intent(in) :: J33G
-!!$    real(RP), intent(in), dimension(KA,IA,JA,3) :: num_diff
-!!$    integer, intent(in) :: IIS, IIE, JJS, JJE, KS, KE
-!!$
-!!$    integer :: i, j, k
-!!$
-!!$    !* Z Dir -----------------------------------------------------
-!!$    
-!!$    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)    
-!!$    do j = JJS-1, JJE+1
-!!$       do i = IIS-1, IIE+1
-!!$          do k = KS, KE-1
-!!$#ifdef DEBUG
-!!$             call CHECK( __LINE__, MomFlxZ_WXV(k,i,j) )
-!!$             call CHECK( __LINE__, MomFlxZ_WXV(k,i,j+1) )
-!!$             call CHECK( __LINE__, Var_ZXV(k  ,i,j) )
-!!$             call CHECK( __LINE__, Var_ZXV(k+1,i,j) )
-!!$#endif
-!!$             FlxZ_WXV(k,i,j) = 0.25_RP *(      (MomFlxZ_WXY(k,i,j+1) + MomFlxZ_WXY(k,i,j)) * ( Var_ZXV(k+1,i,j) + Var_ZXV(k,i,j) )   &
-!!$                  &                       - abs(MomFlxZ_WXY(k,i,j+1) + MomFlxZ_WXY(k,i,j)) * ( Var_ZXV(k+1,i,j) - Var_ZXV(k,i,j) ) ) &
-!!$                  & / (MAPF(i,j,1,I_XV) * MAPF(i,j,2,I_XV))
-!!$          enddo
-!!$          FlxZ_WXV(KS-1,i,j) = 0.0_RP
-!!$          FlxZ_WXV(KE  ,i,j) = 0.0_RP          
-!!$       enddo
-!!$    enddo
-!!$#ifdef DEBUG
-!!$    k = IUNDEF; i = IUNDEF; j = IUNDEF
-!!$#endif
-!!$
-!!$    
-!!$    !* X Dir -----------------------------------------------------
-!!$    ! note that x-index is added by -1
-!!$
-!!$    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-!!$    do j = JJS-1, JJE+1
-!!$       do i = IIS-2, IIE+1
-!!$          do k = KS, KE
-!!$#ifdef DEBUG
-!!$             call CHECK( __LINE__, MomFlxX_ZUY(k,i,j) )
-!!$             call CHECK( __LINE__, MomFlxX_ZUY(k,i,j+1) )
-!!$             call CHECK( __LINE__, Var_ZXV(k,i,j) )
-!!$             call CHECK( __LINE__, Var_ZXV(k,i+1,j) )
-!!$#endif
-!!$             FlxX_ZUV(k,i,j) = 0.25_RP * (      (MomFlxX_ZUY(k,i,j+1) + MomFlxX_ZUY(k,i,j)) * ( Var_ZXV(k,i+1,j) + Var_ZXV(k,i,j) ) &
-!!$                                           - abs(MomFlxX_ZUY(k,i,j+1) + MomFlxX_ZUY(k,i,j)) * ( Var_ZXV(k,i+1,j) - Var_ZXV(k,i,j) ) )
-!!$          enddo
-!!$       enddo
-!!$    enddo
-!!$#ifdef DEBUG
-!!$    k = IUNDEF; i = IUNDEF; j = IUNDEF
-!!$#endif
-!!$
-!!$    !* Y Dir -----------------------------------------------------
-!!$    
-!!$    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-!!$    do j = JJS-2, JJE+1
-!!$       do i = IIS-1,   IIE+1
-!!$          do k = KS, KE
-!!$#ifdef DEBUG
-!!$             call CHECK( __LINE__, MomFlxY_ZXV(k,i,j-1) )
-!!$             call CHECK( __LINE__, MomFlxY_ZXV(k,i,j) )
-!!$             call CHECK( __LINE__, Var_ZXV(k,i,j  ) )
-!!$             call CHECK( __LINE__, Var_ZXV(k,i,j-1) )
-!!$#endif
-!!$             FlxY_ZXY(k,i,j) = 0.25_RP * (      (MomFlxY_ZXV(k,i,j) + MomFlxY_ZXV(k,i,j-1)) * ( Var_ZXV(k,i,j) + Var_ZXV(k,i,j-1) ) &
-!!$                                           - abs(MomFlxY_ZXV(k,i,j) + MomFlxY_ZXV(k,i,j-1)) * ( Var_ZXV(k,i,j) - Var_ZXV(k,i,j-1) ) )
-!!$          enddo
-!!$       enddo
-!!$    enddo
-!!$#ifdef DEBUG
-!!$    k = IUNDEF; i = IUNDEF; j = IUNDEF
-!!$#endif
-!!$       
-!!$  end subroutine ATMOS_DYN_Flx4VarZXV_UD1
-!!$
-!!$  subroutine ATMOS_DYN_Flx4VarWXY_UD1( FlxX_WUY, FlxY_WXV, FlxZ_ZXY,    &  ! (inout)
-!!$       & Var_WXY, MomFlxX_ZUY, MomFlxY_ZXV, MomFlxZ_WXY,                &  ! (in)
-!!$       & J13G, J23G, J33G, GSQRT, MAPF, num_diff,                       &  ! (in)
-!!$       & IIS, IIE, JJS, JJE, KS, KE )                                      ! (in)
-!!$
-!!$    real(RP), intent(inout), dimension(KA,IA,JA)  :: FlxX_WUY, FlxY_WXV, FlxZ_ZXY
-!!$    real(RP), intent(in), dimension(KA,IA,JA)     :: Var_WXY
-!!$    real(RP), intent(in), dimension(KA,IA,JA)     :: MomFlxX_ZUY, MomFlxY_ZXV, MomFlxZ_WXY
-!!$    real(RP), intent(in), dimension(KA,IA,JA,7)   :: J13G, J23G, GSQRT, MAPF
-!!$    real(RP), intent(in) :: J33G
-!!$    real(RP), intent(in), dimension(KA,IA,JA,3) :: num_diff
-!!$    integer, intent(in) :: IIS, IIE, JJS, JJE, KS, KE
-!!$
-!!$    integer :: i, j, k
-!!$
-!!$    !* Z Dir -----------------------------------------------------
-!!$    ! note that z-index is added by -1
-!!$    
-!!$    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)    
-!!$    do j = JJS-1, JJE+1
-!!$       do i = IIS-1, IIE+1
-!!$          do k = KS+1, KE-1
-!!$#ifdef DEBUG
-!!$             call CHECK( __LINE__, MomFlxZ_WXY(k-1,i,j) )
-!!$             call CHECK( __LINE__, MomFlxZ_WXY(k,i,j) )
-!!$             call CHECK( __LINE__, Var_ZXY(k-1  ,i,j) )
-!!$             call CHECK( __LINE__, Var_ZXY(k,i,j) )
-!!$#endif
-!!$             FlxZ_ZXY(k,i,j) = 0.25_RP * (    (MomFlxZ_WXY(k,i,j) + MomFlxZ_WXY(k-1,i,j)) * ( Var_WXY(k,i,j) + Var_WXY(k,i,j)   )   &
-!!$                  &                      - abs(MomFlxZ_WXY(k,i,j) + MomFlxZ_WXY(k-1,i,j)) * ( Var_WXY(k,i,j) - Var_WXY(k-1,i,j) ) ) &
-!!$                  &            / ( MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) )
-!!$                  
-!!$          enddo
-!!$          FlxZ_ZXY(KS-1,i,j) = 0.0_RP
-!!$          FlxZ_ZXY(KE-1,i,j) = 0.0_RP          
-!!$          FlxZ_ZXY(KE  ,i,j) = 0.0_RP          
-!!$       enddo
-!!$    enddo
-!!$#ifdef DEBUG
-!!$    k = IUNDEF; i = IUNDEF; j = IUNDEF
-!!$#endif
-!!$
-!!$    
-!!$    !* X Dir -----------------------------------------------------
-!!$          
-!!$    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-!!$    do j = JJS-1, JJE+1
-!!$       do i = IIS-2, IIE+1
-!!$          do k = KS, KE-1
-!!$#ifdef DEBUG
-!!$             call CHECK( __LINE__, MomFlxX_ZUY(k,  i,j) )
-!!$             call CHECK( __LINE__, MomFlxX_ZUY(k+1,i,j) )
-!!$             call CHECK( __LINE__, Var_WXY(k,i,  j) )
-!!$             call CHECK( __LINE__, Var_WXY(k,i+1,j) )
-!!$#endif
-!!$             FlxX_WUY(k,i,j) = 0.25_RP * (    (MomFlxX_ZUY(k+1,i,j) + MomFlxX_ZUY(k,i,j)) * ( Var_WXY(k,i+1,j) + Var_WXY(k,i,j)   )   &
-!!$                  &                      - abs(MomFlxX_ZUY(k+1,i,j) + MomFlxX_ZUY(k,i,j)) * ( Var_WXY(k,i+1,j) - Var_WXY(k,i,j) ) )
-!!$          end do
-!!$          FlxX_WUY(KE,i,j) = 0.0_RP          
-!!$       enddo
-!!$    enddo
-!!$#ifdef DEBUG
-!!$    k = IUNDEF; i = IUNDEF; j = IUNDEF
-!!$#endif
-!!$
-!!$    !* Y Dir -----------------------------------------------------
-!!$
-!!$    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-!!$    do j = JJS-2, JJE+1
-!!$       do i = IIS-1, IIE+1
-!!$          do k = KS, KE-1
-!!$#ifdef DEBUG
-!!$             call CHECK( __LINE__, MomFlxY_ZXV(k,  i,j) )
-!!$             call CHECK( __LINE__, MomFlxY_ZXV(k+1,i,j) )
-!!$             call CHECK( __LINE__, Var_WXY(k,i,  j) )
-!!$             call CHECK( __LINE__, Var_WXY(k,i,j+1) )
-!!$#endif
-!!$             FlxY_WXV(k,i,j) = 0.25_RP * (    (MomFlxY_ZXV(k+1,i,j) + MomFlxY_ZXV(k,i,j)) * ( Var_WXY(k,i,j+1) + Var_WXY(k,i,j)   )   &
-!!$                  &                      - abs(MomFlxY_ZXV(k+1,i,j) + MomFlxY_ZXV(k,i,j)) * ( Var_WXY(k,i,j+1) - Var_WXY(k,i,j) ) )
-!!$          end do
-!!$          FlxY_WXV(KE,i,j) = 0.0_RP
-!!$       enddo
-!!$    enddo
-!!$#ifdef DEBUG
-!!$    k = IUNDEF; i = IUNDEF; j = IUNDEF
-!!$#endif
-!!$       
-!!$  end subroutine ATMOS_DYN_Flx4VarWXY_UD1
-!!$  
-!!$  subroutine ATMOS_DYN_MomFlx4VarZXY_CD4( FlxX_ZUY, FlxY_ZXV, FlxZ_WXY,    &  ! (inout)
-!!$       & MOMX_ZUY, MOMY_ZXV, MOMZ_WXY,                                 &  ! (in)
-!!$       & J13G, J23G, J33G, GSQRT, MAPF, num_diff,                      &  ! (in)
-!!$       & IIS, IIE, JJS, JJE, KS, KE )                                     ! (in)
-!!$
-!!$    real(RP), intent(inout), dimension(KA,IA,JA)  :: FlxX_ZUY, FlxY_ZXV, FlxZ_WXY
-!!$    real(RP), intent(in), dimension(KA,IA,JA)     :: MOMX_ZUY, MOMY_ZXV, MOMZ_WXY
-!!$    real(RP), intent(in), dimension(KA,IA,JA,7)   :: J13G, J23G, GSQRT, MAPF
-!!$    real(RP), intent(in) :: J33G    
-!!$    real(RP), intent(in), dimension(KA,IA,JA,3)   :: num_diff
-!!$    integer, intent(in) :: IIS, IIE, JJS, JJE, KS, KE
-!!$
-!!$
-!!$    integer :: i, j, k
-!!$    real(DP) :: MOMX_WXY, MOMY_WXY
-!!$
-!!$    !** Flux of Z direction at (x, y, w)
-!!$    
-!!$    !$omp  parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-!!$    !$omp& private(MOMX_WXY, MOMY_WXY)
-!!$    do j=JJS, JJE
-!!$       do i=IIS, IIE
-!!$          do k=KS, KE
-!!$#ifdef DEBUG
-!!$             call CHECK( __LINE__, MOMZ_WXY(k+1,i,j) )
-!!$             call CHECK( __LINE__, MOMZ_WXY(k  ,i,j) )
-!!$             call CHECK( __LINE__, MOMZ_WXY(k-1,i,j) )
-!!$             call CHECK( __LINE__, num_diff(k,i,j,ZDIR) )
-!!$#endif             
-!!$             MOMX_WXY = 0.25_RP*(  MOMX_ZUY(k+1,i,j) + MOMX_ZUY(k+1,i-1,j)     &
-!!$                  &              + MOMX_ZUY(k  ,i,j) + MOMX_ZUY(k  ,i-1,j) )   ! [{u,y,z->x,y,w}]
-!!$             MOMY_WXY = 0.25_RP*(  MOMY_ZXV(k+1,i,j) + MOMY_ZXV(k+1,i,j-1)     &
-!!$                                 + MOMY_ZXV(k  ,i,j) + MOMY_ZXV(k  ,i,j-1) )   ! [{x,v,z->x,y,w}]
-!!$             FlxZ_WXY(k,i,j) = &
-!!$                  &   J33G * MOMZ_WXY(k,i,j) / ( MAPF(i,j,1,I_XY)*MAPF(i,j,2,I_XY) ) &
-!!$                  & + J13G(k,i,j,I_XYW) * MOMX_WXY / MAPF(i,j,2,I_XY)                & 
-!!$                  & + J23G(k,i,j,I_XYW) * MOMY_WXY / MAPF(i,j,1,I_XY)                & 
-!!$                  & + GSQRT(k,i,j,I_XYW) * num_diff(k,i,j,ZDIR)                      &
-!!$                  &   / ( MAPF(i,j,1,I_XY)*MAPF(i,j,2, I_XY) )
-!!$          end do
-!!$       end do
-!!$    end do
-!!$#ifdef DEBUG
-!!$    k = IUNDEF; i = IUNDEF; j = IUNDEF
-!!$#endif
-!!$
-!!$    !** Flux of X direction at (x, y, w)
-!!$
-!!$    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-!!$    do j = JJS  , JJE
-!!$       do i = IIS-IFS_OFF, min(IIE,IEH)
-!!$          do k = KS, KE
-!!$#ifdef DEBUG
-!!$             call CHECK( __LINE__, MOMX_ZUY(k,i+1,j) )
-!!$             call CHECK( __LINE__, MOMX_ZUY(k,i  ,j) )
-!!$             call CHECK( __LINE__, MOMX_ZUY(k,i-1,j) )
-!!$             call CHECK( __LINE__, num_diff(k,i,j,XDIR) )
-!!$#endif
-!!$             FlxX_ZUY(k,i,j) =  GSQRT(k,i,j,I_UYZ) / MAPF(i,j,2,I_UY) &
-!!$                  &           * ( MOMX_ZUY(k,i,j) + num_diff(k,i,j,XDIR) )
-!!$          enddo
-!!$       enddo
-!!$    enddo
-!!$#ifdef DEBUG
-!!$    k = IUNDEF; i = IUNDEF; j = IUNDEF
-!!$#endif
-!!$       
-!!$    !$omp  parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-!!$    do j=JJS-JFS_OFF, min(JJE,JEH)
-!!$       do i=IIS, IIE
-!!$          do k=KS, KE
-!!$#ifdef DEBUG
-!!$          call CHECK( __LINE__, MOMY_ZXV(k,i,j+1) )
-!!$          call CHECK( __LINE__, MOMY_ZXV(k,i,j  ) )
-!!$          call CHECK( __LINE__, MOMY_ZXV(k,i,j-1) )
-!!$          call CHECK( __LINE__, num_diff(k,i,j,YDIR) )
-!!$#endif             
-!!$             FlxY_ZXV(k,i,j) = GSQRT(k,i,j,I_XVZ) / MAPF(i,j,1,I_XV) &
-!!$                  &            * ( MOMY_ZXV(k,i,j) + num_diff(k,i,j,YDIR) )
-!!$          end do
-!!$       end do
-!!$    end do
-!!$#ifdef DEBUG
-!!$    k = IUNDEF; i = IUNDEF; j = IUNDEF
-!!$#endif
-!!$       
-!!$  end subroutine ATMOS_DYN_MomFlx4VarZXY_CD4
-!!$
-!!$  subroutine ATMOS_DYN_MomFlx4VarZXY_UD1( FlxX_ZUY, FlxY_ZXV, FlxZ_WXY,    &  ! (inout)
-!!$       & MOMX_ZUY, MOMY_ZXV, MOMZ_WXY,                                 &  ! (in)
-!!$       & J13G, J23G, J33G, GSQRT, MAPF, num_diff,                      &  ! (in)
-!!$       & IIS, IIE, JJS, JJE, KS, KE )                                     ! (in)
-!!$
-!!$    real(RP), intent(inout), dimension(KA,IA,JA)  :: FlxX_ZUY, FlxY_ZXV, FlxZ_WXY
-!!$    real(RP), intent(in), dimension(KA,IA,JA)     :: MOMX_ZUY, MOMY_ZXV, MOMZ_WXY
-!!$    real(RP), intent(in), dimension(KA,IA,JA,7)   :: J13G, J23G, GSQRT, MAPF
-!!$    real(RP), intent(in) :: J33G    
-!!$    real(RP), intent(in), dimension(KA,IA,JA,3)   :: num_diff
-!!$    integer, intent(in) :: IIS, IIE, JJS, JJE, KS, KE
-!!$
-!!$
-!!$    integer :: i, j, k
-!!$    real(DP) :: MOMX_WXY, MOMY_WXY
-!!$
-!!$    !** Flux of Z direction at (x, y, w)
-!!$    
-!!$    !$omp  parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-!!$    !$omp& private(MOMX_WXY, MOMY_WXY)
-!!$    do j=JJS, JJE
-!!$       do i=IIS, IIE
-!!$          do k=KS, KE
-!!$#ifdef DEBUG
-!!$             call CHECK( __LINE__, MOMZ_WXY(k+1,i,j) )
-!!$             call CHECK( __LINE__, MOMZ_WXY(k  ,i,j) )
-!!$             call CHECK( __LINE__, MOMZ_WXY(k-1,i,j) )
-!!$             call CHECK( __LINE__, num_diff(k,i,j,ZDIR) )
-!!$#endif             
-!!$             MOMX_WXY = 0.25_RP*(  MOMX_ZUY(k+1,i,j) + MOMX_ZUY(k+1,i-1,j)     &
-!!$                  &              + MOMX_ZUY(k  ,i,j) + MOMX_ZUY(k  ,i-1,j) )   ! [{u,y,z->x,y,w}]
-!!$             MOMY_WXY = 0.25_RP*(  MOMY_ZXV(k+1,i,j) + MOMY_ZXV(k+1,i,j-1)     &
-!!$                                 + MOMY_ZXV(k  ,i,j) + MOMY_ZXV(k  ,i,j-1) )   ! [{x,v,z->x,y,w}]
-!!$             FlxZ_WXY(k,i,j) = &
-!!$                  &   J33G * MOMZ_WXY(k,i,j) / ( MAPF(i,j,1,I_XY)*MAPF(i,j,2,I_XY) ) &
-!!$                  & + J13G(k,i,j,I_XYW) * MOMX_WXY / MAPF(i,j,2,I_XY)                & 
-!!$                  & + J23G(k,i,j,I_XYW) * MOMY_WXY / MAPF(i,j,1,I_XY)                & 
-!!$                  & + GSQRT(k,i,j,I_XYW) * num_diff(k,i,j,ZDIR)                      &
-!!$                  &   / ( MAPF(i,j,1,I_XY)*MAPF(i,j,2, I_XY) )
-!!$          end do
-!!$       end do
-!!$    end do
-!!$#ifdef DEBUG
-!!$    k = IUNDEF; i = IUNDEF; j = IUNDEF
-!!$#endif
-!!$
-!!$    !** Flux of X direction at (x, y, w)
-!!$
-!!$    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-!!$    do j = JJS  , JJE
-!!$       do i = IIS-IFS_OFF, min(IIE,IEH)
-!!$          do k = KS, KE
-!!$#ifdef DEBUG
-!!$             call CHECK( __LINE__, MOMX_ZUY(k,i+1,j) )
-!!$             call CHECK( __LINE__, MOMX_ZUY(k,i  ,j) )
-!!$             call CHECK( __LINE__, MOMX_ZUY(k,i-1,j) )
-!!$             call CHECK( __LINE__, num_diff(k,i,j,XDIR) )
-!!$#endif
-!!$             FlxX_ZUY(k,i,j) =  GSQRT(k,i,j,I_UYZ) / MAPF(i,j,2,I_UY) &
-!!$                  &           * ( MOMX_ZUY(k,i,j) + num_diff(k,i,j,XDIR) )
-!!$          enddo
-!!$       enddo
-!!$    enddo
-!!$#ifdef DEBUG
-!!$    k = IUNDEF; i = IUNDEF; j = IUNDEF
-!!$#endif
-!!$       
-!!$    !$omp  parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-!!$    do j=JJS-JFS_OFF, min(JJE,JEH)
-!!$       do i=IIS, IIE
-!!$          do k=KS, KE
-!!$#ifdef DEBUG
-!!$          call CHECK( __LINE__, MOMY_ZXV(k,i,j+1) )
-!!$          call CHECK( __LINE__, MOMY_ZXV(k,i,j  ) )
-!!$          call CHECK( __LINE__, MOMY_ZXV(k,i,j-1) )
-!!$          call CHECK( __LINE__, num_diff(k,i,j,YDIR) )
-!!$#endif             
-!!$             FlxY_ZXV(k,i,j) = GSQRT(k,i,j,I_XVZ) / MAPF(i,j,1,I_XV) &
-!!$                  &            * ( MOMY_ZXV(k,i,j) + num_diff(k,i,j,YDIR) )
-!!$          end do
-!!$       end do
-!!$    end do
-!!$#ifdef DEBUG
-!!$       k = IUNDEF; i = IUNDEF; j = IUNDEF
-!!$#endif
-!!$       
-!!$     end subroutine ATMOS_DYN_MomFlx4VarZXY_UD1
-!!$     
+  end subroutine EvolveVar
+
+  subroutine EvolveVar_withVart( VarA,                 & ! (out)
+       & Var0, FlxX, FlxY, FlxZ,                       & ! (in)
+       & GSQRT, MAPF, dt, RDX, RDY, RDZ,               & ! (in)
+       & IIS, IIE, JJS, JJE, KS_, KE_,                 & ! (in)
+       & Var_t,                                        & ! (in)
+       & lhist, advch_t, advcv_t )
+    
+    real(RP), intent(out), dimension(KA,IA,JA)   :: VarA
+    real(RP), intent(in), dimension(KA,IA,JA)    :: Var0
+    real(RP), intent(in), dimension(KA,IA,JA)    :: FlxX, FlxY, FlxZ
+    real(RP), intent(in), dimension(KA,IA,JA)    :: GSQRT
+    real(RP), intent(in), dimension(IA,JA,2)     :: MAPF
+    real(RP), intent(in) :: dt, RDX(:), RDY(:), RDZ(:)
+    integer, intent(in) :: IIS, IIE, JJS, JJE, KS_, KE_
+    real(RP), intent(in), dimension(KA,IA,JA) :: Var_t
+    logical, intent(in), optional :: lhist
+    real(RP), intent(inout), optional, dimension(KA,IA,JA) :: advch_t, advcv_t
+
+    integer :: i, j, k
+    real(RP) :: advch, advcv
+
+    !$omp  parallel do private(i,j,k,advch,advcv) OMP_SCHEDULE_ collapse(2)
+    do j = JJS, JJE
+    do i = IIS, IIE
+      do k = KS_, KE_
+        advcv = - ( FlxZ(k,i,j) - FlxZ(k-1,i,  j)   ) * RDZ(k)
+        advch = - ( FlxX(k,i,j) - FlxX(k  ,i-1,j)   ) * RDX(i) &
+             &  - ( FlxY(k,i,j) - FlxY(k  ,i,  j-1) ) * RDY(j)
+        VarA(k,i,j) = Var0(k,i,j) &
+             & + dt * (  ( advcv + advch ) * MAPF(i,j,1) * MAPF(i,j,2) / GSQRT(k,i,j) &
+             &          + Var_t(k,i,j) )
+#ifdef HIST_TEND
+        if ( lhist ) then
+          advcv_t(k,i,j) = advcv * MAPF(i,j,1) * MAPF(i,j,2) / GSQRT(k,i,j)
+          advch_t(k,i,j) = advch * MAPF(i,j,1) * MAPF(i,j,2) / GSQRT(k,i,j)
+        end if
+#endif
+      enddo
+    enddo
+    enddo
+ 
+  end subroutine EvolveVar_WithVart
+
+  !-- common routines -----------------------------------------------------------
+  !
+  
+  subroutine FDM_AddDiffFlxZ(FlxZ, DiffFlxZ, GSQRT, MAPF, KOF, i, j, KS_, KE_)
+    real(RP), intent(inout) :: FlxZ(KA,IA,JA)
+    real(RP), intent(in) :: DiffFlxZ(KA,IA,JA)
+    real(RP), intent(in) :: GSQRT(KA,IA,JA), MAPF(IA,JA,2)
+    integer,  intent(in) :: KOF, i, j, KS_, KE_
+
+    integer :: k
+
+    do k=KS_, KE_
+       FlxZ(k+KOF,i,j) = FlxZ(k+KOF,i,j) + GSQRT(k,i,j) * DiffFlxZ(k,i,j)  &
+            &                        / (MAPF(i,j,1) * MAPF(i,j,2))
+    enddo
+    
+  end subroutine FDM_AddDiffFlxZ
+
+  subroutine FDM_AddDiffFlxX(FlxX, DiffFlxX, GSQRT, MAPF, i, j, KS_, KE_)
+    real(RP), intent(inout) :: FlxX(KA,IA,JA)
+    real(RP), intent(in) :: DiffFlxX(KA,IA,JA)
+    real(RP), intent(in) :: GSQRT(KA,IA,JA), MAPF(IA,JA,2)
+    integer,  intent(in) :: i, j, KS_, KE_
+
+    integer :: k
+
+    do k=KS_, KE_
+       FlxX(k,i,j) = FlxX(k,i,j) + GSQRT(k,i,j) * DiffFlxX(k,i,j) / MAPF(i,j,2)
+    enddo
+    
+  end subroutine FDM_AddDiffFlxX
+
+  subroutine FDM_AddDiffFlxY(FlxY, DiffFlxY, GSQRT, MAPF, i, j, KS_, KE_)
+    real(RP), intent(inout) :: FlxY(KA,IA,JA)
+    real(RP), intent(in) :: DiffFlxY(KA,IA,JA)
+    real(RP), intent(in) :: GSQRT(KA,IA,JA), MAPF(IA,JA,2)
+    integer,  intent(in) :: i, j, KS_, KE_
+
+    integer :: k
+
+    do k=KS_, KE_
+       FlxY(k,i,j) = FlxY(k,i,j) + GSQRT(k,i,j) * DiffFlxY(k,i,j) / MAPF(i,j,1)
+    enddo
+    
+  end subroutine FDM_AddDiffFlxY
+  
+  ! Calculation of velocity with momentum and density
+  !
+  
+  subroutine FDM_RhoVar2VarCore(  Var,                     & ! (out)
+       & RhoVar, DENS_ZXY,                                 & ! (in)
+       & IOF, JOF, KOF, IIS_, IIE_, JJS_, JJE_, KS_, KE_ )   ! (in)
+    real(RP), intent(out)   :: Var(KA,IA,JA)
+    real(RP), intent(in)    :: RhoVar(KA,IA,JA)
+    real(RP), intent(in)    :: DENS_ZXY(KA,IA,JA)
+    integer,  intent(in)    :: IOF, JOF, KOF
+    integer,  intent(in)    :: IIS_, IIE_, JJS_, JJE_, KS_, KE_
+
+    integer :: k, i, j
+
+    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+    do j = JJS_, JJE_
+    do i = IIS_, IIE_
+      do k = KS_, KE_
+        Var(k,i,j) = 2.0_RP * RhoVar(k,i,j) / (DENS_ZXY(k,i,j) + DENS_ZXY(k+KOF,i+IOF,j+JOF))
+      enddo     
+    enddo
+    enddo
+  end subroutine FDM_RhoVar2VarCore
+
+  subroutine FDM_RhoVar2Var(  Var,                                        & ! (out)
+       & RhoVar, VarLoc, DENS_ZXY, IIS_, IIE_, JJS_, JJE_, KS_, KE_ )       ! (in)
+    real(RP), intent(out)   :: Var(KA,IA,JA)
+    real(RP), intent(in)    :: RhoVar(KA,IA,JA)
+    integer,  intent(in)    :: VarLoc
+    real(RP), intent(in)    :: DENS_ZXY(KA,IA,JA)
+    integer,  intent(in)    :: IIS_, IIE_, JJS_, JJE_, KS_, KE_
+
+    integer :: IOF, JOF, KOF
+    select case(VarLoc)
+    case(VL_ZXY)
+       IOF = 0; JOF = 0; KOF = 0
+    case(VL_ZUY)
+       IOF = 1; JOF = 0; KOF = 0
+    case(VL_ZXV)
+       IOF = 0; JOF = 1; KOF = 0
+    case(VL_WXY)
+       IOF = 0; JOF = 0; KOF = 1
+    end select
+    call FDM_RhoVar2VarCore(  Var,                         & ! (out)
+       & RhoVar, DENS_ZXY,                                 & ! (in)
+       & IOF, JOF, JOF, IIS_, IIE_, JJS_, JJE_, KS_, KE_ )   ! (in)    
+  end subroutine FDM_RhoVar2Var
+  
+  subroutine FDM_MomX2VelXt( VelX, &
+       & VarLocID, i, j, KS, KE, &
+       & Dens_ZXY, MomX_ZUY, MomY_ZXV, MomZ_WXY, &
+       & GSQRT, MAPF, GeneralCoordFlag )
+    real(RP), intent(out), dimension(KA) :: VelX
+    integer,  intent(in) :: VarLocID, i, j, KS, KE
+    real(RP), intent(in),  dimension(KA,IA,JA)    :: Dens_ZXY, MomX_ZUY, MomY_ZXV, MomZ_WXY
+    real(RP), intent(in),  dimension(KA,IA,JA,7)  :: GSQRT
+    real(RP), intent(in),  dimension(IA,JA,2,4)   :: MAPF
+    logical,  intent(in)                          :: GeneralCoordFlag
+
+    integer :: k
+
+    select case (VarLocID)
+    case(VL_ZXY) ! VelX_ZUY
+      if( GeneralCoordFlag ) then
+        do k=KS, KE
+          VelX(k) =   2.0_RP * MomX_ZUY(k,i,j) / (Dens_ZXY(k,i,j) + Dens_ZXY(k,i+1,j)) &
+                &   * GSQRT(k,i,j,I_UYZ) / MAPF(i,j,2,I_UY)
+        enddo
+      else
+        do k=KS, KE
+          VelX(k) =   2.0_RP * MomX_ZUY(k,i,j) / (Dens_ZXY(k,i,j) + Dens_ZXY(k,i+1,j))
+        enddo
+      end if
+    case(VL_ZUY) ! VelX_ZXV
+      if( GeneralCoordFlag ) then
+        do k=KS, KE
+          VelX(k) =   sum( MomX_ZUY(k,i-1:i,j) / (Dens_ZXY(k,i-1:i,j) + Dens_ZXY(k,i:i+1,j)) ) &
+                &   * GSQRT(k,i,j,I_XVZ) / MAPF(i,j,2,I_XV)
+        enddo
+      else
+        do k=KS, KE
+          VelX(k) = sum( MomX_ZUY(k,i-1:i,j) / (Dens_ZXY(k,i-1:i,j) + Dens_ZXY(k,i:i+1,j)) )
+        enddo
+      end if
+    case(VL_ZXV) ! VelX_ZUV
+      if( GeneralCoordFlag ) then
+        do k=KS, KE
+          VelX(k) =   sum( MomX_ZUY(k,i,j-1:j) / (Dens_ZXY(k,i,j-1:j) + Dens_ZXY(k,i+1,j-1:j)) ) &
+                &   * GSQRT(k,i,j,I_UVZ) / MAPF(i,j,2,I_UV)
+        enddo
+      else
+        do k=KS, KE
+          VelX(k) = sum( MomX_ZUY(k,i,j-1:j) / (Dens_ZXY(k,i,j-1:j) + Dens_ZXY(k,i+1,j-1:j)) )
+        enddo
+      end if
+    case(VL_WXY) ! VelX_WUY
+     if( GeneralCoordFlag ) then
+        do k=KS, KE-1
+          VelX(k) =   sum( MomX_ZUY(k:k+1,i,j) / (Dens_ZXY(k:k+1,i,j) + Dens_ZXY(k:k+1,i+1,j)) ) &
+                &   * GSQRT(k,i,j,I_UYW) / MAPF(i,j,2,I_UY)
+        enddo
+      else
+        do k=KS, KE-1
+          VelX(k) = sum( MomX_ZUY(k:k+1,i,j) / (Dens_ZXY(k:k+1,i,j) + Dens_ZXY(k:k+1,i+1,j)) )
+        enddo
+      end if
+
+    end select
+    
+  end subroutine FDM_MomX2VelXt
+
+  subroutine FDM_MomY2VelYt( VelY,               &
+       & VarLocID, i, j, KS, KE,                 &
+       & Dens_ZXY, MomX_ZUY, MomY_ZXV, MomZ_WXY, &
+       & GSQRT, MAPF, GeneralCoordFlag )
+
+    real(RP), intent(out), dimension(KA) :: VelY
+    integer,  intent(in) :: VarLocID, i, j, KS, KE
+    real(RP), intent(in),  dimension(KA,IA,JA)    :: Dens_ZXY, MomX_ZUY, MomY_ZXV, MomZ_WXY
+    real(RP), intent(in),  dimension(KA,IA,JA,7)  :: GSQRT
+    real(RP), intent(in),  dimension(IA,JA,2,4)   :: MAPF
+    logical,  intent(in)                          :: GeneralCoordFlag
+    
+    integer :: k
+
+    select case (VarLocID)
+    case(VL_ZXY) ! VelY_ZXV
+      if( GeneralCoordFlag ) then
+        do k=KS, KE
+          VelY(k) =   2.0_RP * MomY_ZXV(k,i,j) / (Dens_ZXY(k,i,j) + Dens_ZXY(k,i,j+1)) &
+                &   * GSQRT(k,i,j,I_XVZ) / MAPF(i,j,1,I_XV)
+        enddo
+      else
+        do k=KS, KE
+          VelY(k) =   2.0_RP * MomY_ZXV(k,i,j) / (Dens_ZXY(k,i,j) + Dens_ZXY(k,i,j+1))
+        enddo
+      end if
+    case(VL_ZUY) ! VelY_ZUV
+      if( GeneralCoordFlag ) then
+        do k=KS, KE
+          VelY(k) =   sum( MomY_ZXV(k,i:i+1,j) / (Dens_ZXY(k,i:i+1,j) + Dens_ZXY(k,i:i+1,j+1)) ) &
+                &   * GSQRT(k,i,j,I_UVZ) / MAPF(i,j,1,I_UV)
+        enddo
+      else
+        do k=KS, KE
+          VelY(k) =   sum( MomY_ZXV(k,i:i+1,j) / (Dens_ZXY(k,i:i+1,j) + Dens_ZXY(k,i:i+1,j+1)) )
+        enddo
+      end if
+    case(VL_ZXV) ! VelY_ZXY
+      if( GeneralCoordFlag ) then
+        do k=KS, KE
+          VelY(k) =   sum( MomY_ZXV(k,i,j-1:j) / (Dens_ZXY(k,i,j-1:j) + Dens_ZXY(k,i,j:j+1)) ) &
+                &   * GSQRT(k,i,j,I_XYZ) / MAPF(i,j,2,I_XY)
+        enddo
+      else
+        do k=KS, KE
+          VelY(k) = sum( MomY_ZXV(k,i,j-1:j) / (Dens_ZXY(k,i,j-1:j) + Dens_ZXY(k,i,j:j+1)) )
+        enddo
+      end if
+    case(VL_WXY) ! VelX_WXV
+     if( GeneralCoordFlag ) then
+        do k=KS, KE-1
+          VelY(k) =   sum( MomY_ZXV(k:k+1,i,j) / (Dens_ZXY(k:k+1,i,j) + Dens_ZXY(k:k+1,i,j+1)) ) &
+                &   * GSQRT(k,i,j,I_XVW) / MAPF(i,j,2,I_XV)
+        enddo
+      else
+        do k=KS, KE-1
+          VelY(k) = sum( MomY_ZXV(k:k+1,i,j) / (Dens_ZXY(k:k+1,i,j) + Dens_ZXY(k:k+1,i,j+1)) )
+        enddo
+      end if
+    end select
+    
+  end subroutine FDM_MomY2VelYt
+  
+  subroutine FDM_MomZ2VelZt( VelZ, &
+       & VarLocID, i, j, KS, KE, &
+       & Dens_ZXY, MomX_ZUY, MomY_ZXV, MomZ_WXY, &
+       & J13G, J23G, J33G, MAPF, GeneralCoordFlag )
+    
+    real(RP), intent(out), dimension(KA) :: VelZ
+    integer,  intent(in) :: VarLocID, i, j, KS, KE
+    real(RP), intent(in),  dimension(KA,IA,JA)    :: Dens_ZXY, MomX_ZUY, MomY_ZXV, MomZ_WXY
+    real(RP), intent(in),  dimension(KA,IA,JA,7)  :: J13G, J23G
+    real(RP), intent(in)                          :: J33G
+    real(RP), intent(in),  dimension(IA,JA,2,4)   :: MAPF
+    logical,  intent(in)                          :: GeneralCoordFlag
+
+    integer :: k
+    
+    select case (VarLocID)
+    case(VL_ZXY) ! VelZ_WXY
+      if ( GeneralCoordFlag ) then
+        do k = KS, KE-1
+          VelZ(k) = &
+            &   J33G / (MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY))                                      & !
+            &     * 2.0_RP * MomZ_WXY(k,i,j) / (Dens_ZXY(k,i,j) + Dens_ZXY(k+1,i,j))              & !
+            & + J13G(k,i,j,I_XYW) / MAPF(i,j,2,I_XY) * 0.5_RP * sum(                              & ! Half level velocity(x) and [ ZUY -> WXY ]
+            &     MomX_ZUY(k:k+1,i-1:i,j) / (Dens_ZXY(k:k+1,i-1:i,j) + Dens_ZXY(k:k+1,i:i+1,j)) ) & ! 
+            & + J23G(k,i,j,I_XYW) / MAPF(i,j,1,I_XY) * 0.5_RP * sum(                              & ! Half level velocity(y) and [ ZXV -> WXY ]
+            &     MomY_ZXV(k:k+1,i,j-1:j) / (Dens_ZXY(k:k+1,i,j-1:j) + Dens_ZXY(k:k+1,i,j:j+1)) )   ! 
+        enddo
+      else    
+        do k = KS, KE-1
+          VelZ(k) = 2.0_RP * MomZ_WXY(k,i,j) / (Dens_ZXY(k,i,j) + Dens_ZXY(k+1,i,j))
+        enddo
+      end if
+    case(VL_ZUY) ! VelZ_WUY
+      if ( GeneralCoordFlag ) then
+        do k = KS, KE-1
+          VelZ(k) = & 
+            &   J33G / (MAPF(i,j,1,I_UY) * MAPF(i,j,2,I_UY))                                             & !
+            &     * sum( MomZ_WXY(k,i:i+1,j) / (Dens_ZXY(k,i:i+1,j) + Dens_ZXY(k+1,i:i+1,j)) )           & !
+            & + J13G(k,i,j,I_UYW) / MAPF(i,j,2,I_UY) * sum(                                              & ! Half level velocity(x) and [ ZUY -> WUY ]
+            &     MomX_ZUY(k:k+1,i,j) / (Dens_ZXY(k:k+1,i,j) + Dens_ZXY(k:k+1,i+1,j)) )                  & ! 
+            & + J23G(k,i,j,I_UYW) / MAPF(i,j,1,I_UY) * 0.25_RP * sum(                                    & ! Half level velocity(y) and [ ZXV -> WUY ]
+            &     MomY_ZXV(k:k+1,i:i+1,j-1:j) / (Dens_ZXY(k:k+1,i:i+1,j-1:j) + Dens_ZXY(k:k+1,i:i+1,j:j+1)) )
+        enddo           
+      else
+        do k = KS, KE-1
+          VelZ(k) = sum( MomZ_WXY(k,i:i+1,j) / (Dens_ZXY(k,i:i+1,j) + Dens_ZXY(k+1,i:i+1,j)) )
+        enddo
+      end if
+    case(VL_ZXV) ! VelZ_WXV
+      if ( GeneralCoordFlag ) then
+        do k = KS, KE-1
+          VelZ(k) = &
+            &   J33G / (MAPF(i,j,1,I_XV) * MAPF(i,j,2,I_XV))                                                   & !
+            &     * sum( MomZ_WXY(k,i,j:j+1) / (Dens_ZXY(k,i,j:j+1) + Dens_ZXY(k+1,i,j:j+1)) )                 & !
+            & + J13G(k,i,j,I_XVW) / MAPF(i,j,2,I_XV) * 0.25_RP * sum(                                          & ! Half level velocity(y) and [ ZXV -> WUY ]
+            &     MomX_ZUY(k:k+1,i-1:i,j:j+1) / (Dens_ZXY(k:k+1,i-1:i,j:j+1) + Dens_ZXY(k:k+1,i:i+1,j:j+1)) )  & ! 
+            & + J23G(k,i,j,I_XVW) / MAPF(i,j,1,I_XV) * sum(                                                    & ! Half level velocity(x) and [ ZUY -> WUY ]
+            &       MomY_ZXV(k:k+1,i,j) / (Dens_ZXY(k:k+1,i,j) + Dens_ZXY(k:k+1,i,j+1)) )                        ! 
+        enddo 
+      else
+        !- Half-level velocity(z) and [WXY -> WXV]
+        do k = KS, KE-1
+          VelZ(k) = sum( MomZ_WXY(k,i,j:j+1) / (Dens_ZXY(k,i,j:j+1) + Dens_ZXY(k+1,i,j:j+1)) )
+        enddo
+      end if
+    case(VL_WXY) ! VelZ_ZXY
+      if ( GeneralCoordFlag ) then
+        do k = KS+1, KE-1
+          VelZ(k-1) = &
+            &   J33G / (MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY))                              & !
+            &     * 0.5_RP * sum(MomZ_WXY(k-1:k,i,j)) / Dens_ZXY(k,i,j)                   & !
+            & + J13G(k,i,j,I_XYZ) / MAPF(i,j,2,I_XY)                                      & ! Half level velocity(y) and [ ZXV -> WUY ]
+            &     * 0.5_RP * sum(MomX_ZUY(k,i-1:i,j)) / Dens_ZXY(k,i,j)                   & !
+            & + J23G(k,i,j,I_XYZ) / MAPF(i,j,1,I_XY)                                      & ! Half level velocity(x) and [ ZUY -> WUY ]
+            &     * 0.5_RP * sum(MomY_ZXV(k,i,j-1:j)) / Dens_ZXY(k,i,j)                     !
+        enddo
+      else
+        !- Half-level velocity(z) and [WXY -> ZXY]
+        do k = KS+1, KE-1
+          VelZ(k-1) = 0.5_RP * sum(MomZ_WXY(k-1:k,i,j)) / Dens_ZXY(k,i,j)
+        enddo
+      end if      
+    end select
+    
+  end subroutine FDM_MomZ2VelZt
+  
 end module scale_atmos_numeric_fdm_util

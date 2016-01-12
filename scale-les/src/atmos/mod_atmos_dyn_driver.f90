@@ -21,6 +21,10 @@ module mod_atmos_dyn_driver
   use scale_grid_index
   use scale_index
   use scale_tracer
+
+  use scale_atmos_numeric_fdm_def, only: &
+       & FLXEVALTYPENAME_CD4
+
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -65,6 +69,12 @@ module mod_atmos_dyn_driver
   logical,  private :: ATMOS_DYN_FLAG_FCT_T        = .false.
   logical,  private :: ATMOS_DYN_FLAG_FCT_along_stream = .true.
 
+  ! lateral boundary flux adjustment
+  integer,  private :: ATMOS_DYN_adjust_flux_cell  = 1                   ! number of cells adjusting lateral boundary flux
+
+  ! Type of finite difference scheme used in advection terms
+  character(len=H_SHORT), public :: ATMOS_DYN_FLXEVAL_TYPE = FLXEVALTYPENAME_CD4
+
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -97,6 +107,12 @@ contains
        QTRC
     use mod_atmos_dyn_vars, only: &
        PROG
+
+    use scale_atmos_dyn_rk_fdmheve, only: &
+       ATMOS_DYN_rk_fdmheve_SetFluxEvalType
+    use scale_atmos_dyn_tracer, only: &
+       ATMOS_DYN_tracer_SetFluxEvalType
+    
     implicit none
 
     NAMELIST / PARAM_ATMOS_DYN / &
@@ -110,7 +126,8 @@ contains
        ATMOS_DYN_FLAG_FCT_rho,                &
        ATMOS_DYN_FLAG_FCT_momentum,           &
        ATMOS_DYN_FLAG_FCT_T,                  &
-       ATMOS_DYN_FLAG_FCT_along_stream
+       ATMOS_DYN_FLAG_FCT_along_stream,       &
+       ATMOS_DYN_FLXEVAL_TYPE
 
     real(RP) :: DT
     integer  :: ierr
@@ -142,6 +159,15 @@ contains
                              ATMOS_DYN_enable_coriolis,      & ! [IN]
                              REAL_LAT,                       & ! [IN]
                              none = ATMOS_DYN_TYPE=='NONE'   ) ! [IN]
+
+       if (ATMOS_DYN_TYPE == 'FDM-HEVE') then
+          call ATMOS_DYN_rk_fdmheve_SetFluxEvalType( &
+               & ATMOS_DYN_FLXEVAL_TYPE )               ! [IN]
+
+          call ATMOS_DYN_tracer_SetFluxEvalType( &
+               & ATMOS_DYN_FLXEVAL_TYPE )               ! [IN]
+       end if
+       
     endif
 
     return

@@ -24,7 +24,7 @@ module scale_atmos_dyn_rk_heve
   use scale_grid_index
   use scale_index
   use scale_tracer
-
+  use scale_process
 #ifdef DEBUG
   use scale_debug, only: &
      CHECK

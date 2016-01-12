@@ -115,10 +115,11 @@ else
 endif
 
 ifeq ($(NUMERIC_FDM),)
-  OBJS_NUMERIC_FDM = \
-		 scale_atmos_numeric_fdm_util.o \
-		 scale_atmos_numeric_fdm_ud.o \
-	 	 scale_atmos_numeric_fdm_cd.o
+  OBJS_NUMERIC_FDM = scale_atmos_numeric_fdm_def.o  \
+		     scale_atmos_numeric_fdm_util.o \
+	             scale_atmos_numeric_fdm_ud.o   \
+	 	     scale_atmos_numeric_fdm_cd.o   \
+	 	     scale_atmos_numeric_fdm_diff.o
 else
   OBJS_NUMERIC_FDM = scale_atmos_numeric_fdm_$(NUMERIC_FDM).o
   FFLAGS += -DNUMERIC=$(NUMERIC_FDM)
@@ -128,6 +129,7 @@ OBJS_NAME = $(scale_rdma)	\
 	scale_atmos_dyn.o	\
 	scale_atmos_dyn_common.o	\
 	scale_atmos_dyn_rk.o	\
+	scale_atmos_dyn_tracer.o	\
 	scale_atmos_dyn_rk_fdmheve.o	\
 	scale_atmos_dyn_rk_heve.o	\
 	scale_atmos_dyn_rk_hevi.o	\
