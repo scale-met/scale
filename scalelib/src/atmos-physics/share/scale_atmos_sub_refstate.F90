@@ -54,6 +54,7 @@ module scale_atmos_refstate
   !
   private :: ATMOS_REFSTATE_generate_isa
   private :: ATMOS_REFSTATE_generate_uniform
+  private :: ATMOS_REFSTATE_generate_zero
   private :: ATMOS_REFSTATE_generate_frominit
 
   !-----------------------------------------------------------------------------
@@ -153,6 +154,12 @@ contains
           if( IO_L ) write(IO_FID_LOG,*) '*** Reference type: UNIFORM POTT'
           if( IO_L ) write(IO_FID_LOG,*) '*** potential temperature : ', ATMOS_REFSTATE_POTT_UNIFORM
           call ATMOS_REFSTATE_generate_uniform
+          ATMOS_REFSTATE_UPDATE_FLAG = .false.
+
+       elseif ( ATMOS_REFSTATE_TYPE == 'ZERO' ) then
+
+          if( IO_L ) write(IO_FID_LOG,*) '*** Reference type: ZERO'
+          call ATMOS_REFSTATE_generate_zero
           ATMOS_REFSTATE_UPDATE_FLAG = .false.
 
        elseif ( ATMOS_REFSTATE_TYPE == 'INIT' ) then
@@ -483,6 +490,27 @@ contains
 
     return
   end subroutine ATMOS_REFSTATE_generate_uniform
+
+  !-----------------------------------------------------------------------------
+  !> Generate reference state profile (None reference state)
+  subroutine ATMOS_REFSTATE_generate_zero
+    implicit none
+    !---------------------------------------------------------------------------
+
+    do k = 1, KA
+    do i = 1, IA
+    do j = 1, JA
+       ATMOS_REFSTATE_dens(k,i,j) = 0.0_RP
+       ATMOS_REFSTATE_temp(k,i,j) = 0.0_RP
+       ATMOS_REFSTATE_pres(k,i,j) = 0.0_RP
+       ATMOS_REFSTATE_pott(k,i,j) = 0.0_RP
+       ATMOS_REFSTATE_qv  (k,i,j) = 0.0_RP
+    end do
+    end do
+    end do
+
+    return
+  end subroutine ATMOS_REFSTATE_generate_zero
 
   !-----------------------------------------------------------------------------
   !> Generate reference state profile (Horizontal average from initial data)
