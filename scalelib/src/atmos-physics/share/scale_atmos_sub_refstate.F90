@@ -495,6 +495,8 @@ contains
   !> Generate reference state profile (None reference state)
   subroutine ATMOS_REFSTATE_generate_zero
     implicit none
+
+    integer :: k, i, j
     !---------------------------------------------------------------------------
 
     do k = 1, KA
