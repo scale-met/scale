@@ -570,7 +570,7 @@ contains
                 History_tstrstep(id) = 1
              endif
              if ( History_output_start > 0.0_DP ) then
-                History_tstart(id) = HISTORY_STARTDAYSEC - History_output_start
+                History_tstart(id) = HISTORY_STARTDAYSEC + History_output_start
              else
                 History_tstart(id) = HISTORY_STARTDAYSEC
              end if
