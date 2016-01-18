@@ -43,8 +43,8 @@ module scale_land_sfc_slab
 
   integer,  private :: LAND_SFC_SLAB_itr_max = 100 ! maximum iteration number
 
-  real(RP), private :: LAND_SFC_SLAB_res_min = 1.0E+0_RP ! minimum number of residual
-  real(RP), private :: LAND_SFC_SLAB_dTS_max = 5.0E-2_RP ! maximum delta surface temperature [K/s]
+  real(DP), private :: LAND_SFC_SLAB_res_min = 1.0D+0 ! minimum number of residual
+  real(DP), private :: LAND_SFC_SLAB_dTS_max = 5.0D-2 ! maximum delta surface temperature [K/s]
 
   logical, allocatable, private :: is_LND(:,:)
 
@@ -161,13 +161,13 @@ contains
     implicit none
 
     ! parameters
-    real(RP), parameter :: dTS0     = 1.0E-4_RP ! delta surface temp.
-    real(RP), parameter :: dres_lim = 1.0E+2_RP ! limiter of d(residual)
+    real(DP), parameter :: dTS0     = 1.0D-4 ! delta surface temp.
+    real(DP), parameter :: dres_lim = 1.0D+2 ! limiter of d(residual)
 
-    real(RP), parameter :: redf_min = 1.0E-2_RP ! minimum reduced factor
-    real(RP), parameter :: redf_max = 1.0_RP    ! maximum reduced factor
-    real(RP), parameter :: TFa      = 0.5_RP    ! factor a in Tomita (2009)
-    real(RP), parameter :: TFb      = 1.1_RP    ! factor b in Tomita (2009)
+    real(DP), parameter :: redf_min = 1.0D-2 ! minimum reduced factor
+    real(DP), parameter :: redf_max = 1.0D+0 ! maximum reduced factor
+    real(DP), parameter :: TFa      = 0.5D+0 ! factor a in Tomita (2009)
+    real(DP), parameter :: TFb      = 1.1D+0 ! factor b in Tomita (2009)
 
     ! arguments
     real(RP), intent(out) :: LST_t(IA,JA) ! tendency of LST
@@ -208,19 +208,21 @@ contains
     real(DP), intent(in) :: dt            ! delta time
 
     ! works
-    real(RP) :: LST1(IA,JA)
+    real(DP) :: LST1(IA,JA)
 
-    real(RP) :: res    ! residual
-    real(RP) :: dres   ! d(residual)/dLST
-    real(RP) :: oldres ! residual in previous step
-    real(RP) :: redf   ! reduced factor
+    real(DP) :: res    ! residual
+    real(DP) :: dres   ! d(residual)/dLST
+    real(DP) :: oldres ! residual in previous step
+    real(DP) :: redf   ! reduced factor
 
-    real(RP) :: Ustar, dUstar ! friction velocity [m]
-    real(RP) :: Tstar, dTstar ! friction potential temperature [K]
-    real(RP) :: Qstar, dQstar ! friction water vapor mass ratio [kg/kg]
-    real(RP) :: Uabs, dUabs   ! modified absolute velocity [m/s]
+    real(DP) :: Ustar, dUstar ! friction velocity [m]
+    real(DP) :: Tstar, dTstar ! friction potential temperature [K]
+    real(DP) :: Qstar, dQstar ! friction water vapor mass ratio [kg/kg]
+    real(DP) :: Uabs, dUabs   ! modified absolute velocity [m/s]
     real(RP) :: SQV, dSQV     ! saturation water vapor mixing ratio at surface [kg/kg]
-    real(RP) :: LHV(IA,JA)    ! latent heat for vaporization depending on temperature [J/kg]
+
+    real(DP) :: LHV   (IA,JA) ! latent heat for vaporization depending on temperature [J/kg]
+    real(RP) :: LHV_RP(IA,JA) ! LHV with RP
 
     integer :: i, j, n
     !---------------------------------------------------------------------------
@@ -228,11 +230,17 @@ contains
     ! copy land surfce temperature for iteration
     do j = JS, JE
     do i = IS, IE
-      LST1(i,j) = LST(i,j)
+      LST1(i,j) = real( LST(i,j), kind=DP )
     end do
     end do
 
-    call ATMOS_THERMODYN_templhv( LHV, TMPA )
+    call ATMOS_THERMODYN_templhv( LHV_RP, TMPA )
+
+    do j = JS, JE
+    do i = IS, IE
+      LHV(i,j) = real( LHV_RP(i,j), kind=DP )
+    end do
+    end do
 
     ! update surface temperature
     if( LST_UPDATE ) then
@@ -242,63 +250,63 @@ contains
 
         if( is_LND(i,j) ) then
 
-          redf   = 1.0_RP
-          oldres = 1.0E+10_RP
+          redf   = 1.0D+0
+          oldres = 1.0D+10
 
           ! modified Newton-Raphson method (Tomita 2009)
           do n = 1, LAND_SFC_SLAB_itr_max
 
-            call qsat( SQV,       & ! [OUT]
-                       LST1(i,j), & ! [IN]
-                       PRSS(i,j)  ) ! [IN]
-            call qsat( dSQV,           & ! [OUT]
-                       LST1(i,j)+dTS0, & ! [IN]
-                       PRSS(i,j)       ) ! [IN]
+            call qsat( SQV,                        & ! [OUT]
+                       real( LST1(i,j), kind=RP ), & ! [IN]
+                       PRSS(i,j)                   ) ! [IN]
+            call qsat( dSQV,                            & ! [OUT]
+                       real( LST1(i,j)+dTS0, kind=RP ), & ! [IN]
+                       PRSS(i,j)                        ) ! [IN]
 
             call BULKFLUX( &
-                Ustar,     & ! [OUT]
-                Tstar,     & ! [OUT]
-                Qstar,     & ! [OUT]
-                Uabs,      & ! [OUT]
-                TMPA(i,j), & ! [IN]
-                LST1(i,j), & ! [IN]
-                PRSA(i,j), & ! [IN]
-                PRSS(i,j), & ! [IN]
-                QVA (i,j), & ! [IN]
-                SQV,       & ! [IN]
-                UA  (i,j), & ! [IN]
-                VA  (i,j), & ! [IN]
-                Z1  (i,j), & ! [IN]
-                PBL (i,j), & ! [IN]
-                Z0M (i,j), & ! [IN]
-                Z0H (i,j), & ! [IN]
-                Z0E (i,j)  ) ! [IN]
+                Ustar,                      & ! [OUT]
+                Tstar,                      & ! [OUT]
+                Qstar,                      & ! [OUT]
+                Uabs,                       & ! [OUT]
+                real( TMPA(i,j), kind=DP ), & ! [IN]
+                LST1(i,j),                  & ! [IN]
+                real( PRSA(i,j), kind=DP ), & ! [IN]
+                real( PRSS(i,j), kind=DP ), & ! [IN]
+                real( QVA (i,j), kind=DP ), & ! [IN]
+                real( SQV,       kind=DP ), & ! [IN]
+                real( UA  (i,j), kind=DP ), & ! [IN]
+                real( VA  (i,j), kind=DP ), & ! [IN]
+                real( Z1  (i,j), kind=DP ), & ! [IN]
+                real( PBL (i,j), kind=DP ), & ! [IN]
+                real( Z0M (i,j), kind=DP ), & ! [IN]
+                real( Z0H (i,j), kind=DP ), & ! [IN]
+                real( Z0E (i,j), kind=DP )  ) ! [IN]
 
             call BULKFLUX( &
-                dUstar,         & ! [OUT]
-                dTstar,         & ! [OUT]
-                dQstar,         & ! [OUT]
-                dUabs,          & ! [OUT]
-                TMPA(i,j),      & ! [IN]
-                LST1(i,j)+dTS0, & ! [IN]
-                PRSA(i,j),      & ! [IN]
-                PRSS(i,j),      & ! [IN]
-                QVA (i,j),      & ! [IN]
-                dSQV,           & ! [IN]
-                UA  (i,j),      & ! [IN]
-                VA  (i,j),      & ! [IN]
-                Z1  (i,j),      & ! [IN]
-                PBL (i,j),      & ! [IN]
-                Z0M (i,j),      & ! [IN]
-                Z0H (i,j),      & ! [IN]
-                Z0E (i,j)       ) ! [IN]
+                dUstar,                     & ! [OUT]
+                dTstar,                     & ! [OUT]
+                dQstar,                     & ! [OUT]
+                dUabs,                      & ! [OUT]
+                real( TMPA(i,j), kind=DP) , & ! [IN]
+                LST1(i,j)+dTS0,             & ! [IN]
+                real( PRSA(i,j), kind=DP ), & ! [IN]
+                real( PRSS(i,j), kind=DP ), & ! [IN]
+                real( QVA (i,j), kind=DP ), & ! [IN]
+                real( dSQV,      kind=DP ), & ! [IN]
+                real( UA  (i,j), kind=DP ), & ! [IN]
+                real( VA  (i,j), kind=DP ), & ! [IN]
+                real( Z1  (i,j), kind=DP ), & ! [IN]
+                real( PBL (i,j), kind=DP ), & ! [IN]
+                real( Z0M (i,j), kind=DP ), & ! [IN]
+                real( Z0H (i,j), kind=DP ), & ! [IN]
+                real( Z0E (i,j), kind=DP )  ) ! [IN]
 
             ! calculation for residual
-            res = ( 1.0_RP - ALB_SW(i,j) ) * SWD(i,j) &
-                + ( 1.0_RP - ALB_LW(i,j) ) * ( LWD(i,j) - STB * LST1(i,j)**4 ) &
+            res = ( 1.0D+0 - ALB_SW(i,j) ) * SWD(i,j) &
+                + ( 1.0D+0 - ALB_LW(i,j) ) * ( LWD(i,j) - STB * LST1(i,j)**4 ) &
                 + CPdry    * RHOA(i,j) * Ustar * Tstar &
                 + LHV(i,j) * RHOA(i,j) * Ustar * Qstar * QVEF(i,j) &
-                - 2.0_RP * TCS(i,j) * ( LST1(i,j) - TG(i,j)  ) / DZG(i,j)
+                - 2.0D+0 * TCS(i,j) * ( LST1(i,j) - TG(i,j) ) / DZG(i,j)
 
             if( abs(res) < LAND_SFC_SLAB_res_min ) then
               ! iteration converged
@@ -306,10 +314,10 @@ contains
             end if
 
             ! calculation for d(residual)/dLST
-            dres = -4.0_RP * ( 1.0_RP - ALB_LW(i,j) ) * STB * LST1(i,j)**3 &
+            dres = -4.0D+0 * ( 1.0D+0 - ALB_LW(i,j) ) * STB * LST1(i,j)**3 &
                  + CPdry    * RHOA(i,j) * ( (dUstar-Ustar)/dTS0 * Tstar + Ustar * (dTstar-Tstar)/dTS0 ) &
                  + LHV(i,j) * RHOA(i,j) * ( (dUstar-Ustar)/dTS0 * Qstar + Ustar * (dQstar-Qstar)/dTS0 ) * QVEF(i,j) &
-                 - 2.0_RP * TCS(i,j) / DZG(i,j)
+                 - 2.0D+0 * TCS(i,j) / DZG(i,j)
 
             if( abs(dres)*dres_lim < abs(res) ) then
               ! stop iteration to prevent numerical error
@@ -317,14 +325,14 @@ contains
             end if
 
             ! calculate reduced factor
-            if( dres < 0.0_RP ) then
+            if( dres < 0.0D+0 ) then
               if( abs(res) > abs(oldres) ) then
                 redf = max( TFa*abs(redf), redf_min )
               else
                 redf = min( TFb*abs(redf), redf_max )
               end if
             else
-              redf = -1.0_RP
+              redf = -1.0D+0
             end if
 
             ! estimate next surface temperature
@@ -342,7 +350,7 @@ contains
 
           if( n > LAND_SFC_SLAB_itr_max ) then
             ! check NaN
-            if ( .NOT. ( res > -1.0_RP .OR. res < 1.0_RP ) ) then ! must be NaN
+            if ( .NOT. ( res > -1.0D+0 .OR. res < 1.0D+0 ) ) then ! must be NaN
                write(*,*) 'xxx NaN is detected for land surface temperature in rank, i, j: ', PRC_myrank, i, j
 
                write(*,*) 'DEBUG Message --- Residual                            [J/m2/s]  :', res
@@ -431,7 +439,7 @@ contains
 
       do j = JS, JE
       do i = IS, IE
-         LST_t(i,j) = 0.0_RP
+         LST_t(i,j) = 0.0D+0
       end do
       end do
 
@@ -444,28 +452,28 @@ contains
 
       if( is_LND(i,j) ) then
 
-        call qsat( SQV,       & ! [OUT]
-                   LST1(i,j), & ! [IN]
-                   PRSS(i,j)  ) ! [IN]
+        call qsat( SQV,                        & ! [OUT]
+                   real( LST1(i,j), kind=RP ), & ! [IN]
+                   PRSS(i,j)                   ) ! [IN]
 
         call BULKFLUX( &
-            Ustar,     & ! [OUT]
-            Tstar,     & ! [OUT]
-            Qstar,     & ! [OUT]
-            Uabs,      & ! [OUT]
-            TMPA(i,j), & ! [IN]
-            LST1(i,j), & ! [IN]
-            PRSA(i,j), & ! [IN]
-            PRSS(i,j), & ! [IN]
-            QVA (i,j), & ! [IN]
-            SQV,       & ! [IN]
-            UA  (i,j), & ! [IN]
-            VA  (i,j), & ! [IN]
-            Z1  (i,j), & ! [IN]
-            PBL (i,j), & ! [IN]
-            Z0M (i,j), & ! [IN]
-            Z0H (i,j), & ! [IN]
-            Z0E (i,j)  ) ! [IN]
+            Ustar,                      & ! [OUT]
+            Tstar,                      & ! [OUT]
+            Qstar,                      & ! [OUT]
+            Uabs,                       & ! [OUT]
+            real( TMPA(i,j), kind=DP ), & ! [IN]
+            LST1(i,j),                  & ! [IN]
+            real( PRSA(i,j), kind=DP ), & ! [IN]
+            real( PRSS(i,j), kind=DP ), & ! [IN]
+            real( QVA (i,j), kind=DP ), & ! [IN]
+            real( SQV,       kind=DP ), & ! [IN]
+            real( UA  (i,j), kind=DP ), & ! [IN]
+            real( VA  (i,j), kind=DP ), & ! [IN]
+            real( Z1  (i,j), kind=DP ), & ! [IN]
+            real( PBL (i,j), kind=DP ), & ! [IN]
+            real( Z0M (i,j), kind=DP ), & ! [IN]
+            real( Z0H (i,j), kind=DP ), & ! [IN]
+            real( Z0E (i,j), kind=DP )  ) ! [IN]
 
         ZMFLX(i,j) = -RHOA(i,j) * Ustar**2 / Uabs * WA(i,j)
         XMFLX(i,j) = -RHOA(i,j) * Ustar**2 / Uabs * UA(i,j)
