@@ -172,10 +172,10 @@ contains
     ! works
     real(RP) :: SST1(IA,JA)
 
-    real(DP) :: Ustar        ! friction velocity [m]
-    real(DP) :: Tstar        ! friction temperature [K]
-    real(DP) :: Qstar        ! friction mixing rate [kg/kg]
-    real(DP) :: Uabs         ! modified absolute velocity [m/s]
+    real(RP) :: Ustar        ! friction velocity [m]
+    real(RP) :: Tstar        ! friction temperature [K]
+    real(RP) :: Qstar        ! friction mixing rate [kg/kg]
+    real(RP) :: Uabs         ! modified absolute velocity [m/s]
 
     real(RP) :: SQV          ! saturation water vapor mixing ratio at surface [kg/kg]
     real(RP) :: LHV(IA,JA)   ! latent heat for vaporization depending on temperature [J/kg]
@@ -207,19 +207,19 @@ contains
             Tstar,     & ! [OUT]
             Qstar,     & ! [OUT]
             Uabs,      & ! [OUT]
-            real( TMPA(i,j), kind=DP ), & ! [IN]
-            real( SST1(i,j), kind=DP ), & ! [IN]
-            real( PRSA(i,j), kind=DP ), & ! [IN]
-            real( PRSS(i,j), kind=DP ), & ! [IN]
-            real( QVA (i,j), kind=DP ), & ! [IN]
-            real( SQV,       kind=DP ), & ! [IN]
-            real( UA  (i,j), kind=DP ), & ! [IN]
-            real( VA  (i,j), kind=DP ), & ! [IN]
-            real( Z1  (i,j), kind=DP ), & ! [IN]
-            real( PBL (i,j), kind=DP ), & ! [IN]
-            real( Z0M (i,j), kind=DP ), & ! [IN]
-            real( Z0H (i,j), kind=DP ), & ! [IN]
-            real( Z0E (i,j), kind=DP )  ) ! [IN]
+            TMPA(i,j), & ! [IN]
+            SST1(i,j), & ! [IN]
+            PRSA(i,j), & ! [IN]
+            PRSS(i,j), & ! [IN]
+            QVA (i,j), & ! [IN]
+            SQV,       & ! [IN]
+            UA  (i,j), & ! [IN]
+            VA  (i,j), & ! [IN]
+            Z1  (i,j), & ! [IN]
+            PBL (i,j), & ! [IN]
+            Z0M (i,j), & ! [IN]
+            Z0H (i,j), & ! [IN]
+            Z0E (i,j)  ) ! [IN]
 
         ZMFLX(i,j) = -RHOA(i,j) * Ustar**2 / Uabs * WA(i,j)
         XMFLX(i,j) = -RHOA(i,j) * Ustar**2 / Uabs * UA(i,j)

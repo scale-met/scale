@@ -43,8 +43,9 @@ module scale_land_sfc_slab
 
   integer,  private :: LAND_SFC_SLAB_itr_max = 100 ! maximum iteration number
 
-  real(DP), private :: LAND_SFC_SLAB_res_min = 1.0D+0 ! minimum number of residual
-  real(DP), private :: LAND_SFC_SLAB_dTS_max = 5.0D-2 ! maximum delta surface temperature [K/s]
+  real(RP), private :: LAND_SFC_SLAB_res_min = 1.0E+0_RP ! minimum number of residual
+  real(RP), private :: LAND_SFC_SLAB_err_min = 1.0E-2_RP ! minimum number of error
+  real(RP), private :: LAND_SFC_SLAB_dTS_max = 5.0E-2_RP ! maximum delta surface temperature [K/s]
 
   logical, allocatable, private :: is_LND(:,:)
 
@@ -63,6 +64,7 @@ contains
     NAMELIST / PARAM_LAND_SFC_SLAB / &
        LAND_SFC_SLAB_itr_max,  &
        LAND_SFC_SLAB_res_min,  &
+       LAND_SFC_SLAB_err_min,  &
        LAND_SFC_SLAB_dTS_max
 
     integer :: i, j
@@ -148,7 +150,8 @@ contains
        PRC_myrank,  &
        PRC_MPIstop
     use scale_const, only: &
-      Rdry  => CONST_Rdry, &
+      EPS   => CONST_EPS,   &
+      Rdry  => CONST_Rdry,  &
       CPdry => CONST_CPdry, &
       STB   => CONST_STB
     use scale_grid_index
@@ -161,13 +164,13 @@ contains
     implicit none
 
     ! parameters
-    real(DP), parameter :: dTS0     = 1.0D-4 ! delta surface temp.
-    real(DP), parameter :: dres_lim = 1.0D+2 ! limiter of d(residual)
+    real(RP), parameter :: dTS0     = 1.0E-4_RP ! delta surface temp.
+    real(RP), parameter :: dres_lim = 1.0E+2_RP ! limiter of d(residual)
 
-    real(DP), parameter :: redf_min = 1.0D-2 ! minimum reduced factor
-    real(DP), parameter :: redf_max = 1.0D+0 ! maximum reduced factor
-    real(DP), parameter :: TFa      = 0.5D+0 ! factor a in Tomita (2009)
-    real(DP), parameter :: TFb      = 1.1D+0 ! factor b in Tomita (2009)
+    real(RP), parameter :: redf_min = 1.0E-2_RP ! minimum reduced factor
+    real(RP), parameter :: redf_max = 1.0E+0_RP ! maximum reduced factor
+    real(RP), parameter :: TFa      = 0.5E+0_RP ! factor a in Tomita (2009)
+    real(RP), parameter :: TFb      = 1.1E+0_RP ! factor b in Tomita (2009)
 
     ! arguments
     real(RP), intent(out) :: LST_t(IA,JA) ! tendency of LST
@@ -208,21 +211,20 @@ contains
     real(DP), intent(in) :: dt            ! delta time
 
     ! works
-    real(DP) :: LST1(IA,JA)
+    real(RP) :: LST1(IA,JA)
 
-    real(DP) :: res    ! residual
-    real(DP) :: dres   ! d(residual)/dLST
-    real(DP) :: oldres ! residual in previous step
-    real(DP) :: redf   ! reduced factor
+    real(RP) :: res    ! residual
+    real(RP) :: dres   ! d(residual)/dLST
+    real(RP) :: oldres ! residual in previous step
+    real(RP) :: redf   ! reduced factor
 
-    real(DP) :: Ustar, dUstar ! friction velocity [m]
-    real(DP) :: Tstar, dTstar ! friction potential temperature [K]
-    real(DP) :: Qstar, dQstar ! friction water vapor mass ratio [kg/kg]
-    real(DP) :: Uabs, dUabs   ! modified absolute velocity [m/s]
+    real(RP) :: Ustar, dUstar ! friction velocity [m]
+    real(RP) :: Tstar, dTstar ! friction potential temperature [K]
+    real(RP) :: Qstar, dQstar ! friction water vapor mass ratio [kg/kg]
+    real(RP) :: Uabs, dUabs   ! modified absolute velocity [m/s]
     real(RP) :: SQV, dSQV     ! saturation water vapor mixing ratio at surface [kg/kg]
 
-    real(DP) :: LHV   (IA,JA) ! latent heat for vaporization depending on temperature [J/kg]
-    real(RP) :: LHV_RP(IA,JA) ! LHV with RP
+    real(RP) :: LHV(IA,JA)    ! latent heat for vaporization depending on temperature [J/kg]
 
     integer :: i, j, n
     !---------------------------------------------------------------------------
@@ -230,17 +232,11 @@ contains
     ! copy land surfce temperature for iteration
     do j = JS, JE
     do i = IS, IE
-      LST1(i,j) = real( LST(i,j), kind=DP )
+      LST1(i,j) = LST(i,j)
     end do
     end do
 
-    call ATMOS_THERMODYN_templhv( LHV_RP, TMPA )
-
-    do j = JS, JE
-    do i = IS, IE
-      LHV(i,j) = real( LHV_RP(i,j), kind=DP )
-    end do
-    end do
+    call ATMOS_THERMODYN_templhv( LHV, TMPA )
 
     ! update surface temperature
     if( LST_UPDATE ) then
@@ -250,89 +246,90 @@ contains
 
         if( is_LND(i,j) ) then
 
-          redf   = 1.0D+0
-          oldres = 1.0D+10
+          redf   = 1.0_RP
+          oldres = huge(0.0_RP)
 
           ! modified Newton-Raphson method (Tomita 2009)
           do n = 1, LAND_SFC_SLAB_itr_max
 
-            call qsat( SQV,                        & ! [OUT]
-                       real( LST1(i,j), kind=RP ), & ! [IN]
-                       PRSS(i,j)                   ) ! [IN]
-            call qsat( dSQV,                            & ! [OUT]
-                       real( LST1(i,j)+dTS0, kind=RP ), & ! [IN]
-                       PRSS(i,j)                        ) ! [IN]
+            call qsat( SQV,       & ! [OUT]
+                       LST1(i,j), & ! [IN]
+                       PRSS(i,j)  ) ! [IN]
+            call qsat( dSQV,           & ! [OUT]
+                       LST1(i,j)+dTS0, & ! [IN]
+                       PRSS(i,j)       ) ! [IN]
 
             call BULKFLUX( &
-                Ustar,                      & ! [OUT]
-                Tstar,                      & ! [OUT]
-                Qstar,                      & ! [OUT]
-                Uabs,                       & ! [OUT]
-                real( TMPA(i,j), kind=DP ), & ! [IN]
-                LST1(i,j),                  & ! [IN]
-                real( PRSA(i,j), kind=DP ), & ! [IN]
-                real( PRSS(i,j), kind=DP ), & ! [IN]
-                real( QVA (i,j), kind=DP ), & ! [IN]
-                real( SQV,       kind=DP ), & ! [IN]
-                real( UA  (i,j), kind=DP ), & ! [IN]
-                real( VA  (i,j), kind=DP ), & ! [IN]
-                real( Z1  (i,j), kind=DP ), & ! [IN]
-                real( PBL (i,j), kind=DP ), & ! [IN]
-                real( Z0M (i,j), kind=DP ), & ! [IN]
-                real( Z0H (i,j), kind=DP ), & ! [IN]
-                real( Z0E (i,j), kind=DP )  ) ! [IN]
+                Ustar,     & ! [OUT]
+                Tstar,     & ! [OUT]
+                Qstar,     & ! [OUT]
+                Uabs,      & ! [OUT]
+                TMPA(i,j), & ! [IN]
+                LST1(i,j), & ! [IN]
+                PRSA(i,j), & ! [IN]
+                PRSS(i,j), & ! [IN]
+                QVA (i,j), & ! [IN]
+                SQV,       & ! [IN]
+                UA  (i,j), & ! [IN]
+                VA  (i,j), & ! [IN]
+                Z1  (i,j), & ! [IN]
+                PBL (i,j), & ! [IN]
+                Z0M (i,j), & ! [IN]
+                Z0H (i,j), & ! [IN]
+                Z0E (i,j)  ) ! [IN]
 
             call BULKFLUX( &
-                dUstar,                     & ! [OUT]
-                dTstar,                     & ! [OUT]
-                dQstar,                     & ! [OUT]
-                dUabs,                      & ! [OUT]
-                real( TMPA(i,j), kind=DP) , & ! [IN]
-                LST1(i,j)+dTS0,             & ! [IN]
-                real( PRSA(i,j), kind=DP ), & ! [IN]
-                real( PRSS(i,j), kind=DP ), & ! [IN]
-                real( QVA (i,j), kind=DP ), & ! [IN]
-                real( dSQV,      kind=DP ), & ! [IN]
-                real( UA  (i,j), kind=DP ), & ! [IN]
-                real( VA  (i,j), kind=DP ), & ! [IN]
-                real( Z1  (i,j), kind=DP ), & ! [IN]
-                real( PBL (i,j), kind=DP ), & ! [IN]
-                real( Z0M (i,j), kind=DP ), & ! [IN]
-                real( Z0H (i,j), kind=DP ), & ! [IN]
-                real( Z0E (i,j), kind=DP )  ) ! [IN]
+                dUstar,         & ! [OUT]
+                dTstar,         & ! [OUT]
+                dQstar,         & ! [OUT]
+                dUabs,          & ! [OUT]
+                TMPA(i,j),      & ! [IN]
+                LST1(i,j)+dTS0, & ! [IN]
+                PRSA(i,j),      & ! [IN]
+                PRSS(i,j),      & ! [IN]
+                QVA (i,j),      & ! [IN]
+                dSQV,           & ! [IN]
+                UA  (i,j),      & ! [IN]
+                VA  (i,j),      & ! [IN]
+                Z1  (i,j),      & ! [IN]
+                PBL (i,j),      & ! [IN]
+                Z0M (i,j),      & ! [IN]
+                Z0H (i,j),      & ! [IN]
+                Z0E (i,j)       ) ! [IN]
 
             ! calculation for residual
-            res = ( 1.0D+0 - ALB_SW(i,j) ) * SWD(i,j) &
-                + ( 1.0D+0 - ALB_LW(i,j) ) * ( LWD(i,j) - STB * LST1(i,j)**4 ) &
+            res = ( 1.0_RP - ALB_SW(i,j) ) * SWD(i,j) &
+                + ( 1.0_RP - ALB_LW(i,j) ) * ( LWD(i,j) - STB * LST1(i,j)**4 ) &
                 + CPdry    * RHOA(i,j) * Ustar * Tstar &
                 + LHV(i,j) * RHOA(i,j) * Ustar * Qstar * QVEF(i,j) &
-                - 2.0D+0 * TCS(i,j) * ( LST1(i,j) - TG(i,j) ) / DZG(i,j)
+                - 2.0_RP * TCS(i,j) * ( LST1(i,j) - TG(i,j) ) / DZG(i,j)
 
-            if( abs(res) < LAND_SFC_SLAB_res_min ) then
-              ! iteration converged
+            ! calculation for d(residual)/dLST
+            dres = -4.0_RP * ( 1.0_RP - ALB_LW(i,j) ) * STB * LST1(i,j)**3 &
+                 + CPdry    * RHOA(i,j) * ( (dUstar-Ustar)/dTS0 * Tstar + Ustar * (dTstar-Tstar)/dTS0 ) &
+                 + LHV(i,j) * RHOA(i,j) * ( (dUstar-Ustar)/dTS0 * Qstar + Ustar * (dQstar-Qstar)/dTS0 ) * QVEF(i,j) &
+                 - 2.0_RP * TCS(i,j) / DZG(i,j)
+
+            ! convergence test with residual and error levels
+            if( abs( res      ) < LAND_SFC_SLAB_res_min .or. &
+                abs( res/dres ) < LAND_SFC_SLAB_err_min      ) then
               exit
             end if
 
-            ! calculation for d(residual)/dLST
-            dres = -4.0D+0 * ( 1.0D+0 - ALB_LW(i,j) ) * STB * LST1(i,j)**3 &
-                 + CPdry    * RHOA(i,j) * ( (dUstar-Ustar)/dTS0 * Tstar + Ustar * (dTstar-Tstar)/dTS0 ) &
-                 + LHV(i,j) * RHOA(i,j) * ( (dUstar-Ustar)/dTS0 * Qstar + Ustar * (dQstar-Qstar)/dTS0 ) * QVEF(i,j) &
-                 - 2.0D+0 * TCS(i,j) / DZG(i,j)
-
+            ! stop iteration to prevent numerical error
             if( abs(dres)*dres_lim < abs(res) ) then
-              ! stop iteration to prevent numerical error
               exit
             end if
 
             ! calculate reduced factor
-            if( dres < 0.0D+0 ) then
+            if( dres < 0.0_RP ) then
               if( abs(res) > abs(oldres) ) then
                 redf = max( TFa*abs(redf), redf_min )
               else
                 redf = min( TFb*abs(redf), redf_max )
               end if
             else
-              redf = -1.0D+0
+              redf = -1.0_RP
             end if
 
             ! estimate next surface temperature
@@ -349,81 +346,98 @@ contains
                                 LST (i,j) + LAND_SFC_SLAB_dTS_max * dt )
 
           if( n > LAND_SFC_SLAB_itr_max ) then
-            ! check NaN
-            if ( .NOT. ( res > -1.0D+0 .OR. res < 1.0D+0 ) ) then ! must be NaN
-               write(*,*) 'xxx NaN is detected for land surface temperature in rank, i, j: ', PRC_myrank, i, j
+            ! land surface temperature was not converged
+            if( IO_L ) write(IO_FID_LOG,'(A)'       ) 'Warning: land surface tempearture was not converged.'
+            if( IO_L ) write(IO_FID_LOG,'(A)'       ) ''
+            if( IO_L ) write(IO_FID_LOG,'(A,I32)'   ) 'DEBUG --- PRC_myrank                                   :', PRC_myrank
+            if( IO_L ) write(IO_FID_LOG,'(A,I32)'   ) 'DEBUG --- number of i                                  :', i
+            if( IO_L ) write(IO_FID_LOG,'(A,I32)'   ) 'DEBUG --- number of j                                  :', j
+            if( IO_L ) write(IO_FID_LOG,'(A)'       ) ''
+            if( IO_L ) write(IO_FID_LOG,'(A,F32.16)') 'DEBUG --- Residual                           [J/m2/s]  :', res
+            if( IO_L ) write(IO_FID_LOG,'(A,F32.16)') 'DEBUG --- delta Residual                     [J/m2/s]  :', dres
+            if( IO_L ) write(IO_FID_LOG,'(A,F32.16)') ''
+            if( IO_L ) write(IO_FID_LOG,'(A,F32.16)') 'DEBUG --- temperature                        [K]       :', TMPA  (i,j)
+            if( IO_L ) write(IO_FID_LOG,'(A,F32.16)') 'DEBUG --- pressure                           [Pa]      :', PRSA  (i,j)
+            if( IO_L ) write(IO_FID_LOG,'(A,F32.16)') 'DEBUG --- velocity w                         [m/s]     :', WA    (i,j)
+            if( IO_L ) write(IO_FID_LOG,'(A,F32.16)') 'DEBUG --- velocity u                         [m/s]     :', UA    (i,j)
+            if( IO_L ) write(IO_FID_LOG,'(A,F32.16)') 'DEBUG --- velocity v                         [m/s]     :', VA    (i,j)
+            if( IO_L ) write(IO_FID_LOG,'(A,F32.16)') 'DEBUG --- density                            [kg/m3]   :', RHOA  (i,j)
+            if( IO_L ) write(IO_FID_LOG,'(A,F32.16)') 'DEBUG --- water vapor mass ratio             [kg/kg]   :', QVA   (i,j)
+            if( IO_L ) write(IO_FID_LOG,'(A,F32.16)') 'DEBUG --- cell center height                 [m]       :', Z1    (i,j)
+            if( IO_L ) write(IO_FID_LOG,'(A,F32.16)') 'DEBUG --- atmospheric mixing layer height    [m]       :', PBL   (i,j)
+            if( IO_L ) write(IO_FID_LOG,'(A,F32.16)') 'DEBUG --- pressure at the surface            [Pa]      :', PRSS  (i,j)
+            if( IO_L ) write(IO_FID_LOG,'(A,F32.16)') 'DEBUG --- downward long-wave radiation       [J/m2/s]  :', LWD   (i,j)
+            if( IO_L ) write(IO_FID_LOG,'(A,F32.16)') 'DEBUG --- downward short-wave radiation      [J/m2/s]  :', SWD   (i,j)
+            if( IO_L ) write(IO_FID_LOG,'(A)'       ) ''
+            if( IO_L ) write(IO_FID_LOG,'(A,F32.16)') 'DEBUG --- soil temperature                   [K]       :', TG    (i,j)
+            if( IO_L ) write(IO_FID_LOG,'(A,F32.16)') 'DEBUG --- land surface temperature           [K]       :', LST   (i,j)
+            if( IO_L ) write(IO_FID_LOG,'(A,F32.16)') 'DEBUG --- efficiency of evaporation          [0-1]     :', QVEF  (i,j)
+            if( IO_L ) write(IO_FID_LOG,'(A,F32.16)') 'DEBUG --- surface albedo for LW              [0-1]     :', ALB_LW(i,j)
+            if( IO_L ) write(IO_FID_LOG,'(A,F32.16)') 'DEBUG --- surface albedo for SW              [0-1]     :', ALB_SW(i,j)
+            if( IO_L ) write(IO_FID_LOG,'(A,F32.16)') 'DEBUG --- soil depth                         [m]       :', DZG   (i,j)
+            if( IO_L ) write(IO_FID_LOG,'(A,F32.16)') 'DEBUG --- thermal conductivity for soil      [J/m/K/s] :', TCS   (i,j)
+            if( IO_L ) write(IO_FID_LOG,'(A,F32.16)') 'DEBUG --- roughness length for momemtum      [m]       :', Z0M   (i,j)
+            if( IO_L ) write(IO_FID_LOG,'(A,F32.16)') 'DEBUG --- roughness length for heat          [m]       :', Z0H   (i,j)
+            if( IO_L ) write(IO_FID_LOG,'(A,F32.16)') 'DEBUG --- roughness length for vapor         [m]       :', Z0E   (i,j)
+            if( IO_L ) write(IO_FID_LOG,'(A)'       ) ''
+            if( IO_L ) write(IO_FID_LOG,'(A,F32.16)') 'DEBUG --- latent heat                        [J/kg]    :', LHV   (i,j)
+            if( IO_L ) write(IO_FID_LOG,'(A,F32.16)') 'DEBUG --- friction velocity                  [m]       :', Ustar
+            if( IO_L ) write(IO_FID_LOG,'(A,F32.16)') 'DEBUG --- friction potential temperature     [K]       :', Tstar
+            if( IO_L ) write(IO_FID_LOG,'(A,F32.16)') 'DEBUG --- friction water vapor mass ratio    [kg/kg]   :', Qstar
+            if( IO_L ) write(IO_FID_LOG,'(A,F32.16)') 'DEBUG --- d(friction velocity)               [m]       :', dUstar
+            if( IO_L ) write(IO_FID_LOG,'(A,F32.16)') 'DEBUG --- d(friction potential temperature)  [K]       :', dTstar
+            if( IO_L ) write(IO_FID_LOG,'(A,F32.16)') 'DEBUG --- d(friction water vapor mass ratio) [kg/kg]   :', dQstar
+            if( IO_L ) write(IO_FID_LOG,'(A,F32.16)') 'DEBUG --- modified absolute velocity         [m/s]     :', Uabs
+            if( IO_L ) write(IO_FID_LOG,'(A,F32.16)') 'DEBUG --- next land surface temperature      [K]       :', LST1  (i,j)
 
-               write(*,*) 'DEBUG Message --- Residual                            [J/m2/s]  :', res
-               write(*,*) 'DEBUG Message --- delta Residual                      [J/m2/s]  :', dres
+            ! check NaN
+            if ( .NOT. ( res > -1.0_RP .OR. res < 1.0_RP ) ) then ! must be NaN
+               write(*,*) 'xxx NaN is detected for land surface temperature.'
                write(*,*) ''
-               write(*,*) 'DEBUG Message --- temperature                         [K]       :', TMPA  (i,j)
-               write(*,*) 'DEBUG Message --- pressure                            [Pa]      :', PRSA  (i,j)
-               write(*,*) 'DEBUG Message --- velocity                            [m/s]     :', WA    (i,j)
-               write(*,*) 'DEBUG Message --- velocity u                          [m/s]     :', UA    (i,j)
-               write(*,*) 'DEBUG Message --- velocity v                          [m/s]     :', VA    (i,j)
-               write(*,*) 'DEBUG Message --- density                             [kg/m3]   :', RHOA  (i,j)
-               write(*,*) 'DEBUG Message --- water vapor mass ratio              [kg/kg]   :', QVA   (i,j)
-               write(*,*) 'DEBUG Message --- cell center height                  [m]       :', Z1    (i,j)
-               write(*,*) 'DEBUG Message --- the top of atmospheric mixing layer [m]       :', PBL   (i,j)
-               write(*,*) 'DEBUG Message --- pressure at the surface             [Pa]      :', PRSS  (i,j)
-               write(*,*) 'DEBUG Message --- downward long-wave radiation flux   [J/m2/s]  :', LWD   (i,j)
-               write(*,*) 'DEBUG Message --- downward short-wave radiation flux  [J/m2/s]  :', SWD   (i,j)
+               write(*,*) 'DEBUG --- PRC_myrank                                   :', PRC_myrank
+               write(*,*) 'DEBUG --- number of i                                  :', i
+               write(*,*) 'DEBUG --- number of j                                  :', j
                write(*,*) ''
-               write(*,*) 'DEBUG Message --- soil temperature                    [K]       :', TG    (i,j)
-               write(*,*) 'DEBUG Message --- land surface temperature            [K]       :', LST   (i,j)
-               write(*,*) 'DEBUG Message --- efficiency of evaporation           [0-1]     :', QVEF  (i,j)
-               write(*,*) 'DEBUG Message --- surface albedo for LW               [0-1]     :', ALB_LW(i,j)
-               write(*,*) 'DEBUG Message --- surface albedo for SW               [0-1]     :', ALB_SW(i,j)
-               write(*,*) 'DEBUG Message --- soil depth                          [m]       :', DZG   (i,j)
-               write(*,*) 'DEBUG Message --- thermal conductivity for soil       [J/m/K/s] :', TCS   (i,j)
-               write(*,*) 'DEBUG Message --- roughness length for momemtum       [m]       :', Z0M   (i,j)
-               write(*,*) 'DEBUG Message --- roughness length for heat           [m]       :', Z0H   (i,j)
-               write(*,*) 'DEBUG Message --- roughness length for vapor          [m]       :', Z0E   (i,j)
+               write(*,*) 'DEBUG --- Residual                           [J/m2/s]  :', res
+               write(*,*) 'DEBUG --- delta Residual                     [J/m2/s]  :', dres
                write(*,*) ''
-               write(*,*) 'DEBUG Message --- friction velocity                   [m]       :', Ustar
-               write(*,*) 'DEBUG Message --- friction potential temperature      [K]       :', Tstar
-               write(*,*) 'DEBUG Message --- friction water vapor mass ratio     [kg/kg]   :', Qstar
-               write(*,*) 'DEBUG Message --- modified absolute velocity          [m/s]     :', Uabs
-               write(*,*) 'DEBUG Message --- next land surface temperature       [K]       :', LST1  (i,j)
+               write(*,*) 'DEBUG --- temperature                        [K]       :', TMPA  (i,j)
+               write(*,*) 'DEBUG --- pressure                           [Pa]      :', PRSA  (i,j)
+               write(*,*) 'DEBUG --- velocity w                         [m/s]     :', WA    (i,j)
+               write(*,*) 'DEBUG --- velocity u                         [m/s]     :', UA    (i,j)
+               write(*,*) 'DEBUG --- velocity v                         [m/s]     :', VA    (i,j)
+               write(*,*) 'DEBUG --- density                            [kg/m3]   :', RHOA  (i,j)
+               write(*,*) 'DEBUG --- water vapor mass ratio             [kg/kg]   :', QVA   (i,j)
+               write(*,*) 'DEBUG --- cell center height                 [m]       :', Z1    (i,j)
+               write(*,*) 'DEBUG --- atmospheric mixing layer height    [m]       :', PBL   (i,j)
+               write(*,*) 'DEBUG --- pressure at the surface            [Pa]      :', PRSS  (i,j)
+               write(*,*) 'DEBUG --- downward long-wave radiation       [J/m2/s]  :', LWD   (i,j)
+               write(*,*) 'DEBUG --- downward short-wave radiation      [J/m2/s]  :', SWD   (i,j)
+               write(*,*) ''
+               write(*,*) 'DEBUG --- soil temperature                   [K]       :', TG    (i,j)
+               write(*,*) 'DEBUG --- land surface temperature           [K]       :', LST   (i,j)
+               write(*,*) 'DEBUG --- efficiency of evaporation          [0-1]     :', QVEF  (i,j)
+               write(*,*) 'DEBUG --- surface albedo for LW              [0-1]     :', ALB_LW(i,j)
+               write(*,*) 'DEBUG --- surface albedo for SW              [0-1]     :', ALB_SW(i,j)
+               write(*,*) 'DEBUG --- soil depth                         [m]       :', DZG   (i,j)
+               write(*,*) 'DEBUG --- thermal conductivity for soil      [J/m/K/s] :', TCS   (i,j)
+               write(*,*) 'DEBUG --- roughness length for momemtum      [m]       :', Z0M   (i,j)
+               write(*,*) 'DEBUG --- roughness length for heat          [m]       :', Z0H   (i,j)
+               write(*,*) 'DEBUG --- roughness length for vapor         [m]       :', Z0E   (i,j)
+               write(*,*) ''
+               write(*,*) 'DEBUG --- latent heat                        [J/kg]    :', LHV   (i,j)
+               write(*,*) 'DEBUG --- friction velocity                  [m]       :', Ustar
+               write(*,*) 'DEBUG --- friction potential temperature     [K]       :', Tstar
+               write(*,*) 'DEBUG --- friction water vapor mass ratio    [kg/kg]   :', Qstar
+               write(*,*) 'DEBUG --- d(friction velocity)               [m]       :', dUstar
+               write(*,*) 'DEBUG --- d(friction potential temperature)  [K]       :', dTstar
+               write(*,*) 'DEBUG --- d(friction water vapor mass ratio) [kg/kg]   :', dQstar
+               write(*,*) 'DEBUG --- modified absolute velocity         [m/s]     :', Uabs
+               write(*,*) 'DEBUG --- next land surface temperature      [K]       :', LST1  (i,j)
 
                call PRC_MPIstop
             endif
 
-            ! land surface temperature was not converged
-            if( IO_L ) write(IO_FID_LOG,*) 'Warning: land surface tempearture was not converged.'
-
-            if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- Residual                            [J/m2/s]  :', res
-            if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- delta Residual                      [J/m2/s]  :', dres
-            if( IO_L ) write(IO_FID_LOG,*) ''
-            if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- temperature                         [K]       :', TMPA  (i,j)
-            if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- pressure                            [Pa]      :', PRSA  (i,j)
-            if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- velocity                            [m/s]     :', WA    (i,j)
-            if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- velocity u                          [m/s]     :', UA    (i,j)
-            if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- velocity v                          [m/s]     :', VA    (i,j)
-            if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- density                             [kg/m3]   :', RHOA  (i,j)
-            if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- water vapor mass ratio              [kg/kg]   :', QVA   (i,j)
-            if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- cell center height                  [m]       :', Z1    (i,j)
-            if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- the top of atmospheric mixing layer [m]       :', PBL   (i,j)
-            if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- pressure at the surface             [Pa]      :', PRSS  (i,j)
-            if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- downward long-wave radiation flux   [J/m2/s]  :', LWD   (i,j)
-            if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- downward short-wave radiation flux  [J/m2/s]  :', SWD   (i,j)
-            if( IO_L ) write(IO_FID_LOG,*) ''
-            if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- soil temperature                    [K]       :', TG    (i,j)
-            if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- land surface temperature            [K]       :', LST   (i,j)
-            if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- efficiency of evaporation           [0-1]     :', QVEF  (i,j)
-            if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- surface albedo for LW               [0-1]     :', ALB_LW(i,j)
-            if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- surface albedo for SW               [0-1]     :', ALB_SW(i,j)
-            if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- soil depth                          [m]       :', DZG   (i,j)
-            if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- thermal conductivity for soil       [J/m/K/s] :', TCS   (i,j)
-            if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- roughness length for momemtum       [m]       :', Z0M   (i,j)
-            if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- roughness length for heat           [m]       :', Z0H   (i,j)
-            if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- roughness length for vapor          [m]       :', Z0E   (i,j)
-            if( IO_L ) write(IO_FID_LOG,*) ''
-            if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- friction velocity                   [m]       :', Ustar
-            if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- friction potential temperature      [K]       :', Tstar
-            if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- friction water vapor mass ratio     [kg/kg]   :', Qstar
-            if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- modified absolute velocity          [m/s]     :', Uabs
-            if( IO_L ) write(IO_FID_LOG,*) 'DEBUG Message --- next land surface temperature       [K]       :', LST1  (i,j)
           end if
 
         end if
@@ -439,7 +453,7 @@ contains
 
       do j = JS, JE
       do i = IS, IE
-         LST_t(i,j) = 0.0D+0
+         LST_t(i,j) = 0.0_RP
       end do
       end do
 
@@ -452,28 +466,28 @@ contains
 
       if( is_LND(i,j) ) then
 
-        call qsat( SQV,                        & ! [OUT]
-                   real( LST1(i,j), kind=RP ), & ! [IN]
-                   PRSS(i,j)                   ) ! [IN]
+        call qsat( SQV,       & ! [OUT]
+                   LST1(i,j), & ! [IN]
+                   PRSS(i,j)  ) ! [IN]
 
         call BULKFLUX( &
-            Ustar,                      & ! [OUT]
-            Tstar,                      & ! [OUT]
-            Qstar,                      & ! [OUT]
-            Uabs,                       & ! [OUT]
-            real( TMPA(i,j), kind=DP ), & ! [IN]
-            LST1(i,j),                  & ! [IN]
-            real( PRSA(i,j), kind=DP ), & ! [IN]
-            real( PRSS(i,j), kind=DP ), & ! [IN]
-            real( QVA (i,j), kind=DP ), & ! [IN]
-            real( SQV,       kind=DP ), & ! [IN]
-            real( UA  (i,j), kind=DP ), & ! [IN]
-            real( VA  (i,j), kind=DP ), & ! [IN]
-            real( Z1  (i,j), kind=DP ), & ! [IN]
-            real( PBL (i,j), kind=DP ), & ! [IN]
-            real( Z0M (i,j), kind=DP ), & ! [IN]
-            real( Z0H (i,j), kind=DP ), & ! [IN]
-            real( Z0E (i,j), kind=DP )  ) ! [IN]
+            Ustar,     & ! [OUT]
+            Tstar,     & ! [OUT]
+            Qstar,     & ! [OUT]
+            Uabs,      & ! [OUT]
+            TMPA(i,j), & ! [IN]
+            LST1(i,j), & ! [IN]
+            PRSA(i,j), & ! [IN]
+            PRSS(i,j), & ! [IN]
+            QVA (i,j), & ! [IN]
+            SQV,       & ! [IN]
+            UA  (i,j), & ! [IN]
+            VA  (i,j), & ! [IN]
+            Z1  (i,j), & ! [IN]
+            PBL (i,j), & ! [IN]
+            Z0M (i,j), & ! [IN]
+            Z0H (i,j), & ! [IN]
+            Z0E (i,j)  ) ! [IN]
 
         ZMFLX(i,j) = -RHOA(i,j) * Ustar**2 / Uabs * WA(i,j)
         XMFLX(i,j) = -RHOA(i,j) * Ustar**2 / Uabs * UA(i,j)

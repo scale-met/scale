@@ -275,7 +275,7 @@ contains
     ! parameter
     logical,  parameter :: LSOLAR = .false. ! [true=both, false=SSG only]
 
-    real(DP), parameter :: Uabs_min = 0.1D+0
+    real(RP), parameter :: Uabs_min = 0.1_RP
 
     ! arguments
     real(RP), intent(out) :: TR_URB_t   (IA,JA)
@@ -371,10 +371,10 @@ contains
     real(RP) :: RNG  (IA,JA)
     real(RP) :: RNgrd(IA,JA)
 
-    real(DP) :: Ustar ! friction velocity [m]
-    real(DP) :: Tstar ! friction temperature [K]
-    real(DP) :: Qstar ! friction mixing rate [kg/kg]
-    real(DP) :: Uabs  ! modified absolute velocity [m/s]
+    real(RP) :: Ustar ! friction velocity [m]
+    real(RP) :: Tstar ! friction temperature [K]
+    real(RP) :: Qstar ! friction mixing rate [kg/kg]
+    real(RP) :: Uabs  ! modified absolute velocity [m/s]
 
     real(RP) :: QVS   ! saturation water vapor mixing ratio at surface [kg/kg]
 
@@ -451,7 +451,7 @@ contains
                       PRSS    (i,j),      & ! [IN]
                       TMPA    (i,j),      & ! [IN]
                       QA      (i,j),      & ! [IN]
-                      real(Uabs,kind=RP), & ! [IN]
+                      Uabs,               & ! [IN]
                       U1      (i,j),      & ! [IN]
                       V1      (i,j),      & ! [IN]
                       Z1      (i,j),      & ! [IN]
@@ -465,12 +465,12 @@ contains
                       dt, i, j            ) ! [IN]
 
        ! calculate tendency 
-       TR_URB_t(i,j) = ( TR - TR_URB(i,j) ) /dt
-       TB_URB_t(i,j) = ( TB - TB_URB(i,j) ) /dt
-       TG_URB_t(i,j) = ( TG - TG_URB(i,j) ) /dt
-       TC_URB_t(i,j) = ( TC - TC_URB(i,j) ) /dt
-       QC_URB_t(i,j) = ( QC - QC_URB(i,j) ) /dt
-       UC_URB_t(i,j) = ( UC - UC_URB(i,j) ) /dt
+       TR_URB_t(i,j) = ( TR - TR_URB(i,j) ) / dt
+       TB_URB_t(i,j) = ( TB - TB_URB(i,j) ) / dt
+       TG_URB_t(i,j) = ( TG - TG_URB(i,j) ) / dt
+       TC_URB_t(i,j) = ( TC - TC_URB(i,j) ) / dt
+       QC_URB_t(i,j) = ( QC - QC_URB(i,j) ) / dt
+       UC_URB_t(i,j) = ( UC - UC_URB(i,j) ) / dt
 
        do k = UKS, UKE
           TRL_URB_t(k,i,j) = ( TRL(k) - TRL_URB(k,i,j) ) / dt
@@ -490,19 +490,19 @@ contains
                       Tstar,         & ! [OUT]
                       Qstar,         & ! [OUT]
                       Uabs,          & ! [OUT]
-                      real( TMPA    (i,j), kind=DP ), & ! [IN]
-                      real( SFC_TEMP(i,j), kind=DP ), & ! [IN]
-                      real( PRSA    (i,j), kind=DP ), & ! [IN]
-                      real( PRSS    (i,j), kind=DP ), & ! [IN]
-                      real( QA      (i,j), kind=DP ), & ! [IN]
-                      real( QVS,           kind=DP ), & ! [IN]
-                      real( U1      (i,j), kind=DP ), & ! [IN]
-                      real( V1      (i,j), kind=DP ), & ! [IN]
-                      real( Z1      (i,j), kind=DP ), & ! [IN]
-                      real( PBL     (i,j), kind=DP ), & ! [IN]
-                      real( Z0C,           kind=DP ), & ! [IN]
-                      real( Z0HC,          kind=DP ), & ! [IN]
-                      real( Z0HC,          kind=DP )  ) ! [IN]
+                      TMPA    (i,j), & ! [IN]
+                      SFC_TEMP(i,j), & ! [IN]
+                      PRSA    (i,j), & ! [IN]
+                      PRSS    (i,j), & ! [IN]
+                      QA      (i,j), & ! [IN]
+                      QVS,           & ! [IN]
+                      U1      (i,j), & ! [IN]
+                      V1      (i,j), & ! [IN]
+                      Z1      (i,j), & ! [IN]
+                      PBL     (i,j), & ! [IN]
+                      Z0C,           & ! [IN]
+                      Z0HC,          & ! [IN]
+                      Z0HC           ) ! [IN]
 
        MWFLX(i,j) = -DENS(i,j) * Ustar**2 / Uabs * W1(i,j)
        MUFLX(i,j) = -DENS(i,j) * Ustar**2 / Uabs * U1(i,j)
