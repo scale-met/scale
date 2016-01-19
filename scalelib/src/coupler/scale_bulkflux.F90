@@ -374,15 +374,21 @@ contains
     do n = 1, nmax
       ! unstable condition
       UabsUS  = max( sqrt( U1**2 + V1**2 + (BULKFLUX_WSCF*Wstar)**2 ), BULKFLUX_Uabs_min )
-      UstarUS = KARMAN / ( log_Z1ovZ0M - fm_unstable(Z1,L) + fm_unstable(Z0M,L) ) * UabsUS
-      TstarUS = KARMAN / ( log_Z1ovZ0H - fh_unstable(Z1,L) + fh_unstable(Z0H,L) ) / Pt * ( TH1 - TH0 )
-      QstarUS = KARMAN / ( log_Z1ovZ0E - fh_unstable(Z1,L) + fh_unstable(Z0E,L) ) / Pt * ( Q1  - Q0  )
+      UstarUS = KARMAN / ( log_Z1ovZ0M - fm_unstable(real(Z1, kind=DP),real(L,kind=DP)) &
+                                       + fm_unstable(real(Z0M,kind=DP),real(L,kind=DP)) ) * UabsUS
+      TstarUS = KARMAN / ( log_Z1ovZ0H - fh_unstable(real(Z1, kind=DP),real(L,kind=DP)) &
+                                       + fh_unstable(real(Z0H,kind=DP),real(L,kind=DP)) ) / Pt * ( TH1 - TH0 )
+      QstarUS = KARMAN / ( log_Z1ovZ0E - fh_unstable(real(Z1, kind=DP),real(L,kind=DP)) &
+                                       + fh_unstable(real(Z0E,kind=DP),real(L,kind=DP)) ) / Pt * ( Q1  - Q0  )
 
       ! stable condition
       UabsS  = max( sqrt( U1**2 + V1**2 ), BULKFLUX_Uabs_min )
-      UstarS = KARMAN / ( log_Z1ovZ0M - fm_stable(Z1,L) + fm_stable(Z0M,L) ) * UabsS
-      TstarS = KARMAN / ( log_Z1ovZ0H - fh_stable(Z1,L) + fh_stable(Z0H,L) ) / Pt * ( TH1 - TH0 )
-      QstarS = KARMAN / ( log_Z1ovZ0E - fh_stable(Z1,L) + fh_stable(Z0E,L) ) / Pt * ( Q1  - Q0  )
+      UstarS = KARMAN / ( log_Z1ovZ0M - fm_stable(real(Z1, kind=DP),real(L,kind=DP)) &
+                                      + fm_stable(real(Z0M,kind=DP),real(L,kind=DP)) ) * UabsS
+      TstarS = KARMAN / ( log_Z1ovZ0H - fh_stable(real(Z1, kind=DP),real(L,kind=DP)) &
+                                      + fh_stable(real(Z0H,kind=DP),real(L,kind=DP)) ) / Pt * ( TH1 - TH0 )
+      QstarS = KARMAN / ( log_Z1ovZ0E - fh_stable(real(Z1, kind=DP),real(L,kind=DP)) &
+                                      + fh_stable(real(Z0E,kind=DP),real(L,kind=DP)) ) / Pt * ( Q1  - Q0  )
 
       sw = 0.5_RP - sign( 0.5_RP, L ) ! if unstable, sw = 1
 
@@ -405,14 +411,20 @@ contains
 
       ! unstable condition
       dUabsUS  = max( sqrt( U1**2 + V1**2 + (BULKFLUX_WSCF*dWstar)**2 ), BULKFLUX_Uabs_min )
-      dUstarUS = KARMAN / ( log_Z1ovZ0M - fm_unstable(Z1,L+dL) + fm_unstable(Z0M,L+dL) ) * dUabsUS
-      dTstarUS = KARMAN / ( log_Z1ovZ0H - fh_unstable(Z1,L+dL) + fh_unstable(Z0H,L+dL) ) / Pt * ( TH1 - TH0 )
-      dQstarUS = KARMAN / ( log_Z1ovZ0E - fh_unstable(Z1,L+dL) + fh_unstable(Z0E,L+dL) ) / Pt * ( Q1  - Q0  )
+      dUstarUS = KARMAN / ( log_Z1ovZ0M - fm_unstable(real(Z1, kind=DP),real(L+dL,kind=DP)) &
+                                        + fm_unstable(real(Z0M,kind=DP),real(L+dL,kind=DP)) ) * dUabsUS
+      dTstarUS = KARMAN / ( log_Z1ovZ0H - fh_unstable(real(Z1, kind=DP),real(L+dL,kind=DP)) &
+                                        + fh_unstable(real(Z0H,kind=DP),real(L+dL,kind=DP)) ) / Pt * ( TH1 - TH0 )
+      dQstarUS = KARMAN / ( log_Z1ovZ0E - fh_unstable(real(Z1, kind=DP),real(L+dL,kind=DP)) &
+                                        + fh_unstable(real(Z0E,kind=DP),real(L+dL,kind=DP)) ) / Pt * ( Q1  - Q0  )
       ! stable condition
       dUabsS  = max( sqrt( U1**2 + V1**2 ), BULKFLUX_Uabs_min )
-      dUstarS = KARMAN / ( log_Z1ovZ0M - fm_stable(Z1,L+dL) + fm_stable(Z0M,L+dL) ) * dUabsS
-      dTstarS = KARMAN / ( log_Z1ovZ0H - fh_stable(Z1,L+dL) + fh_stable(Z0H,L+dL) ) / Pt * ( TH1 - TH0 )
-      dQstarS = KARMAN / ( log_Z1ovZ0E - fh_stable(Z1,L+dL) + fh_stable(Z0E,L+dL) ) / Pt * ( Q1  - Q0  )
+      dUstarS = KARMAN / ( log_Z1ovZ0M - fm_stable(real(Z1, kind=DP),real(L+dL,kind=DP)) &
+                                       + fm_stable(real(Z0M,kind=DP),real(L+dL,kind=DP)) ) * dUabsS
+      dTstarS = KARMAN / ( log_Z1ovZ0H - fh_stable(real(Z1, kind=DP),real(L+dL,kind=DP)) &
+                                       + fh_stable(real(Z0H,kind=DP),real(L+dL,kind=DP)) ) / Pt * ( TH1 - TH0 )
+      dQstarS = KARMAN / ( log_Z1ovZ0E - fh_stable(real(Z1, kind=DP),real(L+dL,kind=DP)) &
+                                       + fh_stable(real(Z0E,kind=DP),real(L+dL,kind=DP)) ) / Pt * ( Q1  - Q0  )
 
       sw = 0.5_RP - sign( 0.5_RP, L+dL ) ! if unstable, sw = 1
 
@@ -488,28 +500,28 @@ contains
     implicit none
 
     ! argument
-    real(RP), intent(in) :: Z
-    real(RP), intent(in) :: L
+    real(DP), intent(in) :: Z
+    real(DP), intent(in) :: L
 
     ! function
-    real(RP) :: fm_unstable
+    real(DP) :: fm_unstable
 
     ! works
-    real(RP) :: R
-!    real(RP) :: r4R
+    real(DP) :: R
+!    real(DP) :: r4R
     !---------------------------------------------------------------------------
 
-    R = min( Z/L, 0.0_RP )
+    R = min( Z/L, 0.0D+0 )
 
     ! Wilson (2001)
-    fm_unstable = 3.0_RP * log( ( 1.0_RP + sqrt( 1.0_RP + 3.6_RP * (-R)**(2.0_RP/3.0_RP) ) ) * 0.5_RP )
+    fm_unstable = 3.0D+0 * log( ( 1.0D+0 + sqrt( 1.0D+0 + 3.6D+0 * (-R)**(2.0D+0/3.0D+0) ) ) * 0.5D+0 )
 
     ! If you want to run with the original Beljaars scheme (Beljaars and Holtslag 1994),
     ! you should comment out the above line (Wilson 2001) and uncomment the below lines (Paulson 1974; Dyer 1974).
     !
     !! Paulson (1974); Dyer (1974)
-    !r4R = ( 1.0_RP - 16.0_RP * R )**0.25_RP
-    !fm_unstable = log( ( 1.0_RP + r4R )**2 * ( 1.0_RP + r4R * r4R ) * 0.125_RP ) - 2.0_RP * atan( r4R ) + PI * 0.5_RP
+    !r4R = ( 1.0D+0 - 16.0D+0 * R )**0.25D+0
+    !fm_unstable = log( ( 1.0D+0 + r4R )**2 * ( 1.0D+0 + r4R * r4R ) * 0.125D+0 ) - 2.0D+0 * atan( r4R ) + PI * 0.5D+0
 
     return
   end function fm_unstable
@@ -520,26 +532,26 @@ contains
     implicit none
 
     ! argument
-    real(RP), intent(in) :: Z
-    real(RP), intent(in) :: L
+    real(DP), intent(in) :: Z
+    real(DP), intent(in) :: L
 
     ! function
-    real(RP) :: fh_unstable
+    real(DP) :: fh_unstable
 
     ! works
-    real(RP) :: R
+    real(DP) :: R
     !---------------------------------------------------------------------------
 
-    R = min( Z/L, 0.0_RP )
+    R = min( Z/L, 0.0D+0 )
 
     ! Wilson (2001)
-    fh_unstable = 3.0_RP * log( ( 1.0_RP + sqrt( 1.0_RP + 7.9_RP * (-R)**(2.0_RP/3.0_RP) ) ) * 0.5_RP )
+    fh_unstable = 3.0D+0 * log( ( 1.0D+0 + sqrt( 1.0D+0 + 7.9D+0 * (-R)**(2.0D+0/3.0D+0) ) ) * 0.5D+0 )
 
     ! If you want to run with the original Beljaars scheme (Beljaars and Holtslag 1994),
     ! you should comment out the above line (Wilson 2001) and uncomment the below lines (Paulson 1974; Dyer 1974).
     !
     !! Paulson (1974); Dyer (1974)
-    !fh_unstable = 2.0_RP * log( ( 1.0_RP + sqrt( 1.0_RP - 16.0_RP * R ) ) * 0.5_RP )
+    !fh_unstable = 2.0D+0 * log( ( 1.0D+0 + sqrt( 1.0D+0 - 16.0D+0 * R ) ) * 0.5D+0 )
 
     return
   end function fh_unstable
@@ -550,23 +562,23 @@ contains
     implicit none
 
     ! argument
-    real(RP), intent(in) :: Z
-    real(RP), intent(in) :: L
+    real(DP), intent(in) :: Z
+    real(DP), intent(in) :: L
 
     ! function
-    real(RP) :: fm_stable
+    real(DP) :: fm_stable
 
     ! parameters of stability functions (Beljaars and Holtslag 1991)
-    real(RP), parameter :: a = 1.0_RP
-    real(RP), parameter :: b = 0.667_RP
-    real(RP), parameter :: c = 5.0_RP
-    real(RP), parameter :: d = 0.35_RP
+    real(DP), parameter :: a = 1.0D+0
+    real(DP), parameter :: b = 0.667D+0
+    real(DP), parameter :: c = 5.0D+0
+    real(DP), parameter :: d = 0.35D+0
 
     ! works
-    real(RP) :: R
+    real(DP) :: R
     !---------------------------------------------------------------------------
 
-    R = max( Z/L, 0.0_RP )
+    R = max( Z/L, 0.0D+0 )
 
     ! Holtslag and DeBruin (1988)
     fm_stable = - a*R - b*( R - c/d )*exp( -d*R ) - b*c/d
@@ -580,26 +592,26 @@ contains
     implicit none
 
     ! argument
-    real(RP), intent(in) :: Z
-    real(RP), intent(in) :: L
+    real(DP), intent(in) :: Z
+    real(DP), intent(in) :: L
 
     ! function
-    real(RP) :: fh_stable
+    real(DP) :: fh_stable
 
     ! parameters of stability functions (Beljaars and Holtslag 1991)
-    real(RP), parameter :: a = 1.0_RP
-    real(RP), parameter :: b = 0.667_RP
-    real(RP), parameter :: c = 5.0_RP
-    real(RP), parameter :: d = 0.35_RP
+    real(DP), parameter :: a = 1.0D+0
+    real(DP), parameter :: b = 0.667D+0
+    real(DP), parameter :: c = 5.0D+0
+    real(DP), parameter :: d = 0.35D+0
 
     ! works
-    real(RP) :: R
+    real(DP) :: R
     !---------------------------------------------------------------------------
 
-    R = max( Z/L, 0.0_RP )
+    R = max( Z/L, 0.0D+0 )
 
     ! Beljaars and Holtslag (1991)
-    fh_stable = 1.0_RP - ( 1.0_RP + 2.0_RP/3.0_RP * a*R )**1.5_RP - b*( R - c/d )*exp( -d*R ) - b*c/d
+    fh_stable = 1.0D+0 - ( 1.0D+0 + 2.0D+0/3.0D+0 * a*R )**1.5D+0 - b*( R - c/d )*exp( -d*R ) - b*c/d
 
     return
   end function fh_stable
