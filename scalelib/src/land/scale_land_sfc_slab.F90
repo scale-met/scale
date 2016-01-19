@@ -43,9 +43,10 @@ module scale_land_sfc_slab
 
   integer,  private :: LAND_SFC_SLAB_itr_max = 100 ! maximum iteration number
 
-  real(RP), private :: LAND_SFC_SLAB_res_min = 1.0E+0_RP ! minimum number of residual
-  real(RP), private :: LAND_SFC_SLAB_err_min = 1.0E-2_RP ! minimum number of error
   real(RP), private :: LAND_SFC_SLAB_dTS_max = 5.0E-2_RP ! maximum delta surface temperature [K/s]
+  real(RP), private :: LAND_SFC_SLAB_res_min = 1.0E+0_RP ! minimum value of residual
+  real(RP), private :: LAND_SFC_SLAB_err_min = 1.0E-2_RP ! minimum value of error
+  real(RP), private :: LAND_SFC_SLAB_dreslim = 1.0E+2_RP ! limiter of d(residual)
 
   logical, allocatable, private :: is_LND(:,:)
 
@@ -62,10 +63,11 @@ contains
     character(len=*), intent(in) :: LAND_TYPE
 
     NAMELIST / PARAM_LAND_SFC_SLAB / &
-       LAND_SFC_SLAB_itr_max,  &
-       LAND_SFC_SLAB_res_min,  &
-       LAND_SFC_SLAB_err_min,  &
-       LAND_SFC_SLAB_dTS_max
+       LAND_SFC_SLAB_itr_max, &
+       LAND_SFC_SLAB_dTS_max, &
+       LAND_SFC_SLAB_res_min, &
+       LAND_SFC_SLAB_err_min, &
+       LAND_SFC_SLAB_dreslim
 
     integer :: i, j
     integer :: ierr
@@ -165,7 +167,6 @@ contains
 
     ! parameters
     real(RP), parameter :: dTS0     = 1.0E-4_RP ! delta surface temp.
-    real(RP), parameter :: dres_lim = 1.0E+2_RP ! limiter of d(residual)
 
     real(RP), parameter :: redf_min = 1.0E-2_RP ! minimum reduced factor
     real(RP), parameter :: redf_max = 1.0E+0_RP ! maximum reduced factor
@@ -317,7 +318,7 @@ contains
             end if
 
             ! stop iteration to prevent numerical error
-            if( abs(dres)*dres_lim < abs(res) ) then
+            if( abs(dres) * LAND_SFC_SLAB_dreslim < abs(res) ) then
               exit
             end if
 

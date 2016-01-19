@@ -92,6 +92,11 @@ module scale_bulkflux
   !
   character(len=H_SHORT), private :: BULKFLUX_TYPE = 'B91W01'
 
+  integer,  private :: BULKFLUX_itr_max = 100 ! maximum iteration number
+
+  real(RP), private :: BULKFLUX_res_min = 1.0E+0_RP ! minimum value of residual
+  real(RP), private :: BULKFLUX_err_min = 1.0E-2_RP ! minimum value of error
+
   real(RP), private :: BULKFLUX_WSCF = 1.2_RP ! empirical scaling factor of Wstar (Beljaars 1994)
 
   ! limiter
@@ -111,6 +116,9 @@ contains
 
     NAMELIST / PARAM_BULKFLUX / &
        BULKFLUX_TYPE,      &
+       BULKFLUX_itr_max,   &
+       BULKFLUX_res_min,   &
+       BULKFLUX_err_min,   &
        BULKFLUX_WSCF,      &
        BULKFLUX_Uabs_min,  &
        BULKFLUX_RiB_min,   &
@@ -176,6 +184,13 @@ contains
       PRE00  => CONST_PRE00
     implicit none
 
+    ! parameter
+    real(RP), parameter :: tPrn = 0.74_RP    ! turbulent Prandtl number (Businger et al. 1971)
+    real(RP), parameter :: LFb  = 9.4_RP     ! Louis factor b (Louis 1979)
+    real(RP), parameter :: LFbp = 4.7_RP     ! Louis factor b' (Louis 1979)
+    real(RP), parameter :: LFdm = 7.4_RP     ! Louis factor d for momemtum (Louis 1979)
+    real(RP), parameter :: LFdh = 5.3_RP     ! Louis factor d for heat (Louis 1979)
+
     ! argument
     real(RP), intent(out) :: Ustar ! friction velocity [m/s]
     real(RP), intent(out) :: Tstar ! friction temperature [K]
@@ -195,13 +210,6 @@ contains
     real(RP), intent(in) :: Z0M ! roughness length of momentum [m]
     real(RP), intent(in) :: Z0H ! roughness length of heat [m]
     real(RP), intent(in) :: Z0E ! roughness length of moisture [m]
-
-    ! constant
-    real(RP), parameter :: tPrn = 0.74_RP    ! turbulent Prandtl number (Businger et al. 1971)
-    real(RP), parameter :: LFb  = 9.4_RP     ! Louis factor b (Louis 1979)
-    real(RP), parameter :: LFbp = 4.7_RP     ! Louis factor b' (Louis 1979)
-    real(RP), parameter :: LFdm = 7.4_RP     ! Louis factor d for momemtum (Louis 1979)
-    real(RP), parameter :: LFdh = 5.3_RP     ! Louis factor d for heat (Louis 1979)
 
     ! work
     real(RP) :: RiB0, RiB ! bulk Richardson number [no unit]
@@ -299,6 +307,8 @@ contains
     implicit none
 
     ! parameter
+    real(RP), parameter :: dL = 1.0E-6_RP ! delta Obukhov length [m]
+
     real(RP), parameter :: Pt = 0.95_RP ! turbulent Prandtl number
 
     ! argument
@@ -320,13 +330,6 @@ contains
     real(RP), intent(in) :: Z0M ! roughness length of momentum [m]
     real(RP), intent(in) :: Z0H ! roughness length of heat [m]
     real(RP), intent(in) :: Z0E ! roughness length of moisture [m]
-
-    ! constant
-    integer,  parameter :: nmax    = 100        ! maximum iteration number
-
-    real(RP), parameter :: res_min = 1.0E+0_RP
-    real(RP), parameter :: err_min = 1.0E-2_RP
-    real(RP), parameter :: dL      = 1.0E-6_RP  ! delta Obukhov length [m]
 
     ! variables
     integer :: n
@@ -371,7 +374,7 @@ contains
     Wstar  = BULKFLUX_Wstar_min
     dWstar = BULKFLUX_Wstar_min
 
-    do n = 1, nmax
+    do n = 1, BULKFLUX_itr_max
       ! unstable condition
       UabsUS  = max( sqrt( U1**2 + V1**2 + (BULKFLUX_WSCF*Wstar)**2 ), BULKFLUX_Uabs_min )
       UstarUS = KARMAN / ( log_Z1ovZ0M - fm_unstable(real(Z1, kind=DP),real(L,kind=DP)) &
@@ -445,8 +448,8 @@ contains
       dres = 1.0_RP - T1 / ( KARMAN * GRAV * dL ) * ( dUstar**2 / dTstar - Ustar**2 / Tstar )
 
       ! convergence test with residual and error levels
-      if( abs( res      ) < res_min .or. &
-          abs( res/dres ) < err_min      ) then
+      if( abs( res      ) < BULKFLUX_res_min .or. &
+          abs( res/dres ) < BULKFLUX_err_min      ) then
         exit
       end if
 
@@ -460,9 +463,10 @@ contains
 
     end do
 
-    if( n > nmax ) then
+    if( n > BULKFLUX_itr_max ) then
       if( IO_L ) write(IO_FID_LOG,'(A)'       ) 'Warning: reach maximum iteration in the function of BULKFLUX_B91W01.'
       if( IO_L ) write(IO_FID_LOG,'(A)'       ) ''
+      if( IO_L ) write(IO_FID_LOG,'(A,I32)'   ) 'DEBUG --- LOOP number                     [no unit] :', n
       if( IO_L ) write(IO_FID_LOG,'(A,F32.16)') 'DEBUG --- Residual                        [m]       :', res
       if( IO_L ) write(IO_FID_LOG,'(A,F32.16)') 'DEBUG --- delta Residual                  [m]       :', dres
       if( IO_L ) write(IO_FID_LOG,'(A)'       ) ''
