@@ -350,10 +350,11 @@ contains
             ! land surface temperature was not converged
             if( IO_L ) write(IO_FID_LOG,'(A)'       ) 'Warning: land surface tempearture was not converged.'
             if( IO_L ) write(IO_FID_LOG,'(A)'       ) ''
-            if( IO_L ) write(IO_FID_LOG,'(A,I32)'   ) 'DEBUG --- PRC_myrank                                   :', PRC_myrank
-            if( IO_L ) write(IO_FID_LOG,'(A,I32)'   ) 'DEBUG --- number of i                                  :', i
-            if( IO_L ) write(IO_FID_LOG,'(A,I32)'   ) 'DEBUG --- number of j                                  :', j
+            if( IO_L ) write(IO_FID_LOG,'(A,I32)'   ) 'DEBUG --- PRC_myrank                         [no unit] :', PRC_myrank
+            if( IO_L ) write(IO_FID_LOG,'(A,I32)'   ) 'DEBUG --- number of i                        [no unit] :', i
+            if( IO_L ) write(IO_FID_LOG,'(A,I32)'   ) 'DEBUG --- number of j                        [no unit] :', j
             if( IO_L ) write(IO_FID_LOG,'(A)'       ) ''
+            if( IO_L ) write(IO_FID_LOG,'(A,I32)'   ) 'DEBUG --- loop number                        [no unit] :', n
             if( IO_L ) write(IO_FID_LOG,'(A,F32.16)') 'DEBUG --- Residual                           [J/m2/s]  :', res
             if( IO_L ) write(IO_FID_LOG,'(A,F32.16)') 'DEBUG --- delta Residual                     [J/m2/s]  :', dres
             if( IO_L ) write(IO_FID_LOG,'(A,F32.16)') ''
