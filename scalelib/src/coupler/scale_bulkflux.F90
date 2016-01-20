@@ -280,23 +280,23 @@ contains
   !
   !-----------------------------------------------------------------------------
   subroutine BULKFLUX_B91W01( &
-       Ustar,   & ! (out)
-       Tstar,   & ! (out)
-       Qstar,   & ! (out)
-       Uabs,    & ! (out)
-       T1,      & ! (in)
-       T0,      & ! (in)
-       P1,      & ! (in)
-       P0,      & ! (in)
-       Q1,      & ! (in)
-       Q0,      & ! (in)
-       U1,      & ! (in)
-       V1,      & ! (in)
-       Z1,      & ! (in)
-       PBL,     & ! (in)
-       Z0M,     & ! (in)
-       Z0H,     & ! (in)
-       Z0E      ) ! (in)
+       RP_Ustar,   & ! (out)
+       RP_Tstar,   & ! (out)
+       RP_Qstar,   & ! (out)
+       RP_Uabs,    & ! (out)
+       RP_T1,      & ! (in)
+       RP_T0,      & ! (in)
+       RP_P1,      & ! (in)
+       RP_P0,      & ! (in)
+       RP_Q1,      & ! (in)
+       RP_Q0,      & ! (in)
+       RP_U1,      & ! (in)
+       RP_V1,      & ! (in)
+       RP_Z1,      & ! (in)
+       RP_PBL,     & ! (in)
+       RP_Z0M,     & ! (in)
+       RP_Z0H,     & ! (in)
+       RP_Z0E      ) ! (in)
     use scale_const, only: &
        GRAV    => CONST_GRAV,    &
        KARMAN  => CONST_KARMAN,  &
@@ -307,50 +307,84 @@ contains
     implicit none
 
     ! parameter
-    real(RP), parameter :: dL = 1.0E-6_RP ! delta Obukhov length [m]
+    real(DP), parameter :: dL = 1.0D-6 ! delta Obukhov length [m]
 
-    real(RP), parameter :: Pt = 0.95_RP ! turbulent Prandtl number
+    real(DP), parameter :: Pt = 0.95D+0 ! turbulent Prandtl number
 
     ! argument
-    real(RP), intent(out) :: Ustar ! friction velocity [m/s]
-    real(RP), intent(out) :: Tstar ! friction temperature [K]
-    real(RP), intent(out) :: Qstar ! friction mixing rate [kg/kg]
-    real(RP), intent(out) :: Uabs  ! modified absolute velocity [m/s]
+    real(RP), intent(out) :: RP_Ustar ! friction velocity [m/s]
+    real(RP), intent(out) :: RP_Tstar ! friction temperature [K]
+    real(RP), intent(out) :: RP_Qstar ! friction mixing rate [kg/kg]
+    real(RP), intent(out) :: RP_Uabs  ! modified absolute velocity [m/s]
 
-    real(RP), intent(in) :: T1  ! tempearature at the lowest atmospheric layer [K]
-    real(RP), intent(in) :: T0  ! skin temperature [K]
-    real(RP), intent(in) :: P1  ! pressure at the lowest atmospheric layer [Pa]
-    real(RP), intent(in) :: P0  ! surface pressure [Pa]
-    real(RP), intent(in) :: Q1  ! mixing ratio at the lowest atmospheric layer [kg/kg]
-    real(RP), intent(in) :: Q0  ! surface mixing ratio [kg/kg]
-    real(RP), intent(in) :: U1  ! zonal wind at the lowest atmospheric layer [m/s]
-    real(RP), intent(in) :: V1  ! meridional wind at the lowest atmospheric layer [m/s]
-    real(RP), intent(in) :: Z1  ! height at the lowest atmospheric layer [m]
-    real(RP), intent(in) :: PBL ! the top of atmospheric mixing layer [m]
-    real(RP), intent(in) :: Z0M ! roughness length of momentum [m]
-    real(RP), intent(in) :: Z0H ! roughness length of heat [m]
-    real(RP), intent(in) :: Z0E ! roughness length of moisture [m]
+    real(RP), intent(in) :: RP_T1  ! tempearature at the lowest atmospheric layer [K]
+    real(RP), intent(in) :: RP_T0  ! skin temperature [K]
+    real(RP), intent(in) :: RP_P1  ! pressure at the lowest atmospheric layer [Pa]
+    real(RP), intent(in) :: RP_P0  ! surface pressure [Pa]
+    real(RP), intent(in) :: RP_Q1  ! mixing ratio at the lowest atmospheric layer [kg/kg]
+    real(RP), intent(in) :: RP_Q0  ! surface mixing ratio [kg/kg]
+    real(RP), intent(in) :: RP_U1  ! zonal wind at the lowest atmospheric layer [m/s]
+    real(RP), intent(in) :: RP_V1  ! meridional wind at the lowest atmospheric layer [m/s]
+    real(RP), intent(in) :: RP_Z1  ! height at the lowest atmospheric layer [m]
+    real(RP), intent(in) :: RP_PBL ! the top of atmospheric mixing layer [m]
+    real(RP), intent(in) :: RP_Z0M ! roughness length of momentum [m]
+    real(RP), intent(in) :: RP_Z0H ! roughness length of heat [m]
+    real(RP), intent(in) :: RP_Z0E ! roughness length of moisture [m]
 
-    ! variables
+    ! work
     integer :: n
 
-    real(RP) :: L      ! Obukhov length [m]
-    real(RP) :: res    ! residual
-    real(RP) :: dres   ! d(residual)/dL
+    real(DP) :: Ustar ! friction velocity [m/s]
+    real(DP) :: Tstar ! friction temperature [K]
+    real(DP) :: Qstar ! friction mixing rate [kg/kg]
+    real(DP) :: Uabs  ! modified absolute velocity [m/s]
 
-    real(RP) :: RiB0 ! bulk Richardson number [no unit]
-    real(RP) :: Wstar, dWstar ! free convection velocity scale [m/s]
+    real(DP) :: T1  ! tempearature at the lowest atmospheric layer [K]
+    real(DP) :: T0  ! skin temperature [K]
+    real(DP) :: P1  ! pressure at the lowest atmospheric layer [Pa]
+    real(DP) :: P0  ! surface pressure [Pa]
+    real(DP) :: Q1  ! mixing ratio at the lowest atmospheric layer [kg/kg]
+    real(DP) :: Q0  ! surface mixing ratio [kg/kg]
+    real(DP) :: U1  ! zonal wind at the lowest atmospheric layer [m/s]
+    real(DP) :: V1  ! meridional wind at the lowest atmospheric layer [m/s]
+    real(DP) :: Z1  ! height at the lowest atmospheric layer [m]
+    real(DP) :: PBL ! the top of atmospheric mixing layer [m]
+    real(DP) :: Z0M ! roughness length of momentum [m]
+    real(DP) :: Z0H ! roughness length of heat [m]
+    real(DP) :: Z0E ! roughness length of moisture [m]
 
-    real(RP) :: UabsUS, UabsS, dUabsUS, dUabsS
-    real(RP) :: UstarUS, UstarS, dUstar, dUstarUS, dUstarS
-    real(RP) :: TstarUS, TstarS, dTstar, dTstarUS, dTstarS
-    real(RP) :: QstarUS, QstarS, dQstar, dQstarUS, dQstarS
+    real(DP) :: L      ! Obukhov length [m]
+    real(DP) :: res    ! residual
+    real(DP) :: dres   ! d(residual)/dL
 
-    real(RP) :: TH1, TH0
-    real(RP) :: sw, tmp
+    real(DP) :: RiB0 ! bulk Richardson number [no unit]
+    real(DP) :: Wstar, dWstar ! free convection velocity scale [m/s]
 
-    real(RP) :: log_Z1ovZ0M, log_Z1ovZ0H, log_Z1ovZ0E
+    real(DP) :: UabsUS, UabsS, dUabsUS, dUabsS
+    real(DP) :: UstarUS, UstarS, dUstar, dUstarUS, dUstarS
+    real(DP) :: TstarUS, TstarS, dTstar, dTstarUS, dTstarS
+    real(DP) :: QstarUS, QstarS, dQstar, dQstarUS, dQstarS
+
+    real(DP) :: TH1, TH0
+    real(DP) :: sw, tmp
+
+    real(DP) :: log_Z1ovZ0M, log_Z1ovZ0H, log_Z1ovZ0E
     !---------------------------------------------------------------------------
+
+    ! convert to DP
+    T1  = real( RP_T1,  kind=DP )
+    T0  = real( RP_T0,  kind=DP )
+    P1  = real( RP_P1,  kind=DP )
+    P0  = real( RP_P0,  kind=DP )
+    Q1  = real( RP_Q1,  kind=DP )
+    Q0  = real( RP_Q0,  kind=DP )
+    U1  = real( RP_U1,  kind=DP )
+    V1  = real( RP_V1,  kind=DP )
+    Z1  = real( RP_Z1,  kind=DP )
+    PBL = real( RP_PBL, kind=DP )
+    Z0M = real( RP_Z0M, kind=DP )
+    Z0H = real( RP_Z0H, kind=DP )
+    Z0E = real( RP_Z0E, kind=DP )
 
     Uabs = max( sqrt( U1**2 + V1**2 ), BULKFLUX_Uabs_min )
     TH1  = T1 * ( PRE00 / P1 )**( Rdry / CPdry )
@@ -377,75 +411,63 @@ contains
     do n = 1, BULKFLUX_itr_max
       ! unstable condition
       UabsUS  = max( sqrt( U1**2 + V1**2 + (BULKFLUX_WSCF*Wstar)**2 ), BULKFLUX_Uabs_min )
-      UstarUS = KARMAN / ( log_Z1ovZ0M - fm_unstable(real(Z1, kind=DP),real(L,kind=DP)) &
-                                       + fm_unstable(real(Z0M,kind=DP),real(L,kind=DP)) ) * UabsUS
-      TstarUS = KARMAN / ( log_Z1ovZ0H - fh_unstable(real(Z1, kind=DP),real(L,kind=DP)) &
-                                       + fh_unstable(real(Z0H,kind=DP),real(L,kind=DP)) ) / Pt * ( TH1 - TH0 )
-      QstarUS = KARMAN / ( log_Z1ovZ0E - fh_unstable(real(Z1, kind=DP),real(L,kind=DP)) &
-                                       + fh_unstable(real(Z0E,kind=DP),real(L,kind=DP)) ) / Pt * ( Q1  - Q0  )
+      UstarUS = KARMAN / ( log_Z1ovZ0M - fm_unstable(Z1,L) + fm_unstable(Z0M,L) ) * UabsUS
+      TstarUS = KARMAN / ( log_Z1ovZ0H - fh_unstable(Z1,L) + fh_unstable(Z0H,L) ) / Pt * ( TH1 - TH0 )
+      QstarUS = KARMAN / ( log_Z1ovZ0E - fh_unstable(Z1,L) + fh_unstable(Z0E,L) ) / Pt * ( Q1  - Q0  )
 
       ! stable condition
       UabsS  = max( sqrt( U1**2 + V1**2 ), BULKFLUX_Uabs_min )
-      UstarS = KARMAN / ( log_Z1ovZ0M - fm_stable(real(Z1, kind=DP),real(L,kind=DP)) &
-                                      + fm_stable(real(Z0M,kind=DP),real(L,kind=DP)) ) * UabsS
-      TstarS = KARMAN / ( log_Z1ovZ0H - fh_stable(real(Z1, kind=DP),real(L,kind=DP)) &
-                                      + fh_stable(real(Z0H,kind=DP),real(L,kind=DP)) ) / Pt * ( TH1 - TH0 )
-      QstarS = KARMAN / ( log_Z1ovZ0E - fh_stable(real(Z1, kind=DP),real(L,kind=DP)) &
-                                      + fh_stable(real(Z0E,kind=DP),real(L,kind=DP)) ) / Pt * ( Q1  - Q0  )
+      UstarS = KARMAN / ( log_Z1ovZ0M - fm_stable(Z1,L) + fm_stable(Z0M,L) ) * UabsS
+      TstarS = KARMAN / ( log_Z1ovZ0H - fh_stable(Z1,L) + fh_stable(Z0H,L) ) / Pt * ( TH1 - TH0 )
+      QstarS = KARMAN / ( log_Z1ovZ0E - fh_stable(Z1,L) + fh_stable(Z0E,L) ) / Pt * ( Q1  - Q0  )
 
-      sw = 0.5_RP - sign( 0.5_RP, L ) ! if unstable, sw = 1
+      sw = 0.5D+0 - sign( 0.5D+0, L ) ! if unstable, sw = 1
 
-      Uabs  = ( sw ) * UabsUS  + ( 1.0_RP-sw ) * UabsS
-      Ustar = ( sw ) * UstarUS + ( 1.0_RP-sw ) * UstarS
-      Tstar = ( sw ) * TstarUS + ( 1.0_RP-sw ) * TstarS
-      Qstar = ( sw ) * QstarUS + ( 1.0_RP-sw ) * QstarS
+      Uabs  = ( sw ) * UabsUS  + ( 1.0D+0-sw ) * UabsS
+      Ustar = ( sw ) * UstarUS + ( 1.0D+0-sw ) * UstarS
+      Tstar = ( sw ) * TstarUS + ( 1.0D+0-sw ) * TstarS
+      Qstar = ( sw ) * QstarUS + ( 1.0D+0-sw ) * QstarS
 
       ! avoid zero division with Tstar = 0
-      sw    = 0.5_RP + sign( 0.5_RP, abs(Tstar) - EPS )
-      Tstar = ( sw ) * Tstar + ( 1.0_RP-sw ) * EPS
+      sw    = 0.5D+0 + sign( 0.5D+0, abs(Tstar) - EPS )
+      Tstar = ( sw ) * Tstar + ( 1.0D+0-sw ) * EPS
 
       ! update free convection velocity scale
       tmp   = -PBL * GRAV / T1 * Ustar * Tstar
-      sw    = 0.5_RP + sign( 0.5_RP, tmp ) ! if tmp is plus, sw = 1
-      Wstar = ( tmp * sw )**( 1.0_RP / 3.0_RP )
+      sw    = 0.5D+0 + sign( 0.5D+0, tmp ) ! if tmp is plus, sw = 1
+      Wstar = ( tmp * sw )**( 1.0D+0 / 3.0D+0 )
 
       ! calculate residual
       res = L - Ustar**2 * T1 / ( KARMAN * GRAV * Tstar )
 
       ! unstable condition
       dUabsUS  = max( sqrt( U1**2 + V1**2 + (BULKFLUX_WSCF*dWstar)**2 ), BULKFLUX_Uabs_min )
-      dUstarUS = KARMAN / ( log_Z1ovZ0M - fm_unstable(real(Z1, kind=DP),real(L+dL,kind=DP)) &
-                                        + fm_unstable(real(Z0M,kind=DP),real(L+dL,kind=DP)) ) * dUabsUS
-      dTstarUS = KARMAN / ( log_Z1ovZ0H - fh_unstable(real(Z1, kind=DP),real(L+dL,kind=DP)) &
-                                        + fh_unstable(real(Z0H,kind=DP),real(L+dL,kind=DP)) ) / Pt * ( TH1 - TH0 )
-      dQstarUS = KARMAN / ( log_Z1ovZ0E - fh_unstable(real(Z1, kind=DP),real(L+dL,kind=DP)) &
-                                        + fh_unstable(real(Z0E,kind=DP),real(L+dL,kind=DP)) ) / Pt * ( Q1  - Q0  )
+      dUstarUS = KARMAN / ( log_Z1ovZ0M - fm_unstable(Z1,L+dL) + fm_unstable(Z0M,L+dL) ) * dUabsUS
+      dTstarUS = KARMAN / ( log_Z1ovZ0H - fh_unstable(Z1,L+dL) + fh_unstable(Z0H,L+dL) ) / Pt * ( TH1 - TH0 )
+      dQstarUS = KARMAN / ( log_Z1ovZ0E - fh_unstable(Z1,L+dL) + fh_unstable(Z0E,L+dL) ) / Pt * ( Q1  - Q0  )
       ! stable condition
       dUabsS  = max( sqrt( U1**2 + V1**2 ), BULKFLUX_Uabs_min )
-      dUstarS = KARMAN / ( log_Z1ovZ0M - fm_stable(real(Z1, kind=DP),real(L+dL,kind=DP)) &
-                                       + fm_stable(real(Z0M,kind=DP),real(L+dL,kind=DP)) ) * dUabsS
-      dTstarS = KARMAN / ( log_Z1ovZ0H - fh_stable(real(Z1, kind=DP),real(L+dL,kind=DP)) &
-                                       + fh_stable(real(Z0H,kind=DP),real(L+dL,kind=DP)) ) / Pt * ( TH1 - TH0 )
-      dQstarS = KARMAN / ( log_Z1ovZ0E - fh_stable(real(Z1, kind=DP),real(L+dL,kind=DP)) &
-                                       + fh_stable(real(Z0E,kind=DP),real(L+dL,kind=DP)) ) / Pt * ( Q1  - Q0  )
+      dUstarS = KARMAN / ( log_Z1ovZ0M - fm_stable(Z1,L+dL) + fm_stable(Z0M,L+dL) ) * dUabsS
+      dTstarS = KARMAN / ( log_Z1ovZ0H - fh_stable(Z1,L+dL) + fh_stable(Z0H,L+dL) ) / Pt * ( TH1 - TH0 )
+      dQstarS = KARMAN / ( log_Z1ovZ0E - fh_stable(Z1,L+dL) + fh_stable(Z0E,L+dL) ) / Pt * ( Q1  - Q0  )
 
-      sw = 0.5_RP - sign( 0.5_RP, L+dL ) ! if unstable, sw = 1
+      sw = 0.5D+0 - sign( 0.5D+0, L+dL ) ! if unstable, sw = 1
 
-      dUstar = ( sw ) * dUstarUS + ( 1.0_RP-sw ) * dUstarS
-      dTstar = ( sw ) * dTstarUS + ( 1.0_RP-sw ) * dTstarS
-      dQstar = ( sw ) * dQstarUS + ( 1.0_RP-sw ) * dQstarS
+      dUstar = ( sw ) * dUstarUS + ( 1.0D+0-sw ) * dUstarS
+      dTstar = ( sw ) * dTstarUS + ( 1.0D+0-sw ) * dTstarS
+      dQstar = ( sw ) * dQstarUS + ( 1.0D+0-sw ) * dQstarS
 
       ! avoid zero division with dTstar = 0
-      sw     = 0.5_RP + sign( 0.5_RP, abs(dTstar) - EPS )
-      dTstar = ( sw ) * dTstar + ( 1.0_RP-sw ) * EPS
+      sw     = 0.5D+0 + sign( 0.5D+0, abs(dTstar) - EPS )
+      dTstar = ( sw ) * dTstar + ( 1.0D+0-sw ) * EPS
 
       ! update d(free convection velocity scale)
       tmp    = -PBL * GRAV / T1 * dUstar * dTstar
-      sw     = 0.5_RP + sign( 0.5_RP, tmp ) ! if tmp is plus, sw = 1
-      dWstar = ( tmp * sw )**( 1.0_RP / 3.0_RP )
+      sw     = 0.5D+0 + sign( 0.5D+0, tmp ) ! if tmp is plus, sw = 1
+      dWstar = ( tmp * sw )**( 1.0D+0 / 3.0D+0 )
 
       ! calculate d(residual)/dL
-      dres = 1.0_RP - T1 / ( KARMAN * GRAV * dL ) * ( dUstar**2 / dTstar - Ustar**2 / Tstar )
+      dres = 1.0D+0 - T1 / ( KARMAN * GRAV * dL ) * ( dUstar**2 / dTstar - Ustar**2 / Tstar )
 
       ! convergence test with residual and error levels
       if( abs( res      ) < BULKFLUX_res_min .or. &
@@ -462,6 +484,12 @@ contains
       L = L - res / dres
 
     end do
+
+    ! revert to RP
+    RP_Ustar = real( Ustar, kind=RP )
+    RP_Tstar = real( Tstar, kind=RP )
+    RP_Qstar = real( Qstar, kind=RP )
+    RP_Uabs  = real( Uabs,  kind=RP )
 
     if( n > BULKFLUX_itr_max ) then
       if( IO_L ) write(IO_FID_LOG,'(A)'       ) 'Warning: reach maximum iteration in the function of BULKFLUX_B91W01.'
