@@ -106,6 +106,7 @@ module mod_atmos_vars
   !++ Private parameters & variables
   !
   logical,                private :: ATMOS_VARS_CHECKRANGE          = .false.
+  real(RP),               private :: ATMOS_VARS_CHECKCFL            = 0.0_RP
 
   integer,                private, parameter :: VMAX   = 5       !< number of the variables
 
@@ -271,7 +272,8 @@ contains
        ATMOS_RESTART_CHECK,            &
        ATMOS_RESTART_CHECK_BASENAME,   &
        ATMOS_RESTART_CHECK_CRITERION,  &
-       ATMOS_VARS_CHECKRANGE
+       ATMOS_VARS_CHECKRANGE,          &
+       ATMOS_VARS_CHECKCFL
 
     logical :: zinterp ! dummy
     integer :: ierr
@@ -366,13 +368,18 @@ contains
        ATMOS_RESTART_OUTPUT = .false.
     endif
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if (       ATMOS_RESTART_CHECK                &
-         .AND. ATMOS_RESTART_CHECK_BASENAME /= '' ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** Consistency check (for debug)? : YES'
-    else
-       if( IO_L ) write(IO_FID_LOG,*) '*** Consistency check (for debug)? : NO'
+    if ( ATMOS_RESTART_CHECK_BASENAME == '' ) then
        ATMOS_RESTART_CHECK = .false.
+    endif
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '*** Check restart consistency?      : ', ATMOS_RESTART_CHECK
+    if( IO_L ) write(IO_FID_LOG,*) '*** Check value range of variables? : ', ATMOS_VARS_CHECKRANGE
+    if ( ATMOS_VARS_CHECKCFL > 0.0_RP ) then
+       if( IO_L ) write(IO_FID_LOG,*) '*** Check CFL condition?            : YES'
+       if( IO_L ) write(IO_FID_LOG,*) '*** Limit of Courant number         : ', ATMOS_VARS_CHECKCFL
+    else
+       if( IO_L ) write(IO_FID_LOG,*) '*** Check CFL condition?            : NO'
     endif
 
     call ATMOS_DYN_vars_setup
@@ -2281,11 +2288,21 @@ contains
   !-----------------------------------------------------------------------------
   !> monitor output
   subroutine ATMOS_vars_monitor
+    use scale_process, only: &
+       PRC_myrank
     use scale_const, only: &
        GRAV   => CONST_GRAV,   &
        CVdry  => CONST_CVdry
+    use scale_grid, only: &
+       RFDX => GRID_RFDX, &
+       RFDY => GRID_RFDY
     use scale_grid_real, only: &
-       REAL_CZ
+       REAL_CZ, &
+       REAL_FZ
+    use scale_gridtrans, only: &
+       MAPF => GTRANS_MAPF, &
+       I_UY, &
+       I_XV
     use scale_comm, only: &
        COMM_vars8, &
        COMM_wait
@@ -2296,6 +2313,8 @@ contains
     use scale_monitor, only: &
        MONIT_put, &
        MONIT_in
+    use scale_time, only: &
+       TIME_DTSEC_ATMOS_DYN
     use scale_atmos_thermodyn, only: &
        THERMODYN_qd        => ATMOS_THERMODYN_qd,        &
        THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres, &
@@ -2333,6 +2352,7 @@ contains
 
     real(RP)               :: WORK (KA,IA,JA,3)
     character(len=H_SHORT) :: WNAME(3)
+    real(RP)               :: CFLMAX
 
     integer  :: k, i, j, iq
     !---------------------------------------------------------------------------
@@ -2493,6 +2513,37 @@ contains
        WNAME(3) = "V"
 
        call STAT_detail( WORK(:,:,:,:), WNAME(:) )
+    endif
+
+    if ( ATMOS_VARS_CHECKCFL > 0.0_RP ) then
+!OCL XFILL
+       WORK(:,:,:,:) = 0.0_RP
+
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          WORK(k,i,j,1) = 0.5_RP * abs(MOMZ(k,i,j)) / ( DENS(k+1,i,j) + DENS(k,i,j) ) &
+                        * TIME_DTSEC_ATMOS_DYN / ( REAL_CZ(k+1,i,j) - REAL_CZ(k,i,j) )
+          WORK(k,i,j,2) = 0.5_RP * abs(MOMX(k,i,j)) / ( DENS(k,i+1,j) + DENS(k,i,j) ) &
+                        * TIME_DTSEC_ATMOS_DYN * RFDX(i) * MAPF(i,j,1,I_UY)
+          WORK(k,i,j,3) = 0.5_RP * abs(MOMY(k,i,j)) / ( DENS(k,i,j+1) + DENS(k,i,j) ) &
+                        * TIME_DTSEC_ATMOS_DYN * RFDY(j) * MAPF(i,j,2,I_XV)
+       enddo
+       enddo
+       enddo
+
+       CFLMAX = maxval( WORK(:,:,:,:) )
+       if ( CFLMAX > ATMOS_VARS_CHECKCFL ) then
+          if( IO_L ) write(IO_FID_LOG,*) "*** [ATMOS_vars_monitor] Courant number exceeded the upper limit. : ", CFLMAX
+                     write(*,*)          "*** [ATMOS_vars_monitor] Courant number exceeded the upper limit. : ", CFLMAX, &
+                                         ", rank = ", PRC_myrank
+
+          WNAME(1) = "Courant num. Z"
+          WNAME(2) = "Courant num. X"
+          WNAME(3) = "Courant num. Y"
+
+          call STAT_detail( WORK(:,:,:,:), WNAME(:), supress_globalcomm=.true. )
+       endif
     endif
 
     return

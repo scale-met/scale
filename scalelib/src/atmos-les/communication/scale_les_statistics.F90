@@ -239,7 +239,7 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Search global maximum & minimum value
-  subroutine STAT_detail(var, varname)
+  subroutine STAT_detail(var, varname, supress_globalcomm)
     use scale_process, only: &
        PRC_nprocs,   &
        PRC_myrank
@@ -252,6 +252,7 @@ contains
 
     real(RP),         intent(inout) :: var(:,:,:,:) !< values
     character(len=*), intent(in)    :: varname(:)   !< name of item
+    logical,          intent(in), optional :: supress_globalcomm !< supress global comm.?
 
     logical , allocatable :: halomask  (:,:,:)
     real(RP), allocatable :: statval   (:,:,:)
@@ -259,10 +260,18 @@ contains
     real(RP), allocatable :: allstatval(:,:)
     integer,  allocatable :: allstatidx(:,:,:)
     integer               :: ksize, vsize
+    logical               :: do_globalcomm
 
     integer :: ierr
     integer :: v, p
     !---------------------------------------------------------------------------
+
+    do_globalcomm = STATISTICS_use_globalcomm
+    if ( present(supress_globalcomm) ) then
+       if ( supress_globalcomm ) then
+          do_globalcomm = .false.
+       endif
+    endif
 
     ksize = size(var(:,:,:,:),1)
     vsize = size(var(:,:,:,:),4)
@@ -290,7 +299,7 @@ contains
        statidx(:,v,2,PRC_myrank) = minloc(var(:,:,:,v),mask=halomask)
     enddo
 
-    if ( STATISTICS_use_globalcomm ) then
+    if ( do_globalcomm ) then
        call PROF_rapstart('COMM_Bcast', 2)
        do p = 0, PRC_nprocs-1
 
