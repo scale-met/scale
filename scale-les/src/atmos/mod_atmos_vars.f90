@@ -2301,7 +2301,8 @@ contains
        REAL_FZ
     use scale_gridtrans, only: &
        MAPF => GTRANS_MAPF, &
-       I_XY
+       I_UY, &
+       I_XV
     use scale_comm, only: &
        COMM_vars8, &
        COMM_wait
@@ -2524,9 +2525,9 @@ contains
           WORK(k,i,j,1) = 0.5_RP * abs(MOMZ(k,i,j)) / ( DENS(k+1,i,j) + DENS(k,i,j) ) &
                         * TIME_DTSEC_ATMOS_DYN / ( REAL_CZ(k+1,i,j) - REAL_CZ(k,i,j) )
           WORK(k,i,j,2) = 0.5_RP * abs(MOMX(k,i,j)) / ( DENS(k,i+1,j) + DENS(k,i,j) ) &
-                        * TIME_DTSEC_ATMOS_DYN * RFDX(i) * MAPF(i,j,2,I_XY)
+                        * TIME_DTSEC_ATMOS_DYN * RFDX(i) * MAPF(i,j,1,I_UY)
           WORK(k,i,j,3) = 0.5_RP * abs(MOMY(k,i,j)) / ( DENS(k,i,j+1) + DENS(k,i,j) ) &
-                        * TIME_DTSEC_ATMOS_DYN * RFDY(j) * MAPF(i,j,1,I_XY)
+                        * TIME_DTSEC_ATMOS_DYN * RFDY(j) * MAPF(i,j,2,I_XV)
        enddo
        enddo
        enddo
