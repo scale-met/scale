@@ -309,13 +309,6 @@ contains
     implicit none
     !---------------------------------------------------------------------------
 
-    !########## Reference State ###########
-    if ( ATMOS_REFSTATE_UPDATE_FLAG ) then
-       call PROF_rapstart('ATM_Refstate', 2)
-       call ATMOS_REFSTATE_update( DENS, RHOT, QTRC ) ! [IN]
-       call PROF_rapend  ('ATM_Refstate', 2)
-    endif
-
     !########## Get Surface Boundary Condition ##########
     call PROF_rapstart('ATM_SfcExch', 2)
     call ATMOS_SURFACE_GET
@@ -326,6 +319,13 @@ contains
        call PROF_rapstart('ATM_Dynamics', 1)
        call ATMOS_DYN_driver( do_dyn )
        call PROF_rapend  ('ATM_Dynamics', 1)
+    endif
+
+    !########## Reference State ###########
+    if ( ATMOS_REFSTATE_UPDATE_FLAG ) then
+       call PROF_rapstart('ATM_Refstate', 2)
+       call ATMOS_REFSTATE_update( DENS, RHOT, QTRC ) ! [IN]
+       call PROF_rapend  ('ATM_Refstate', 2)
     endif
 
     !########## Lateral/Top Boundary Condition ###########
