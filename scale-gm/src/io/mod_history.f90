@@ -855,7 +855,7 @@ contains
              enddo
           endif
 
-          write(ADM_LOG_FID,'(A,A16,A,1PE24.17,A,E24.17)') ' [', item(1:16), '] max=', val_max, ', min=', val_min
+          write(ADM_LOG_FID,'(A,A16,A,ES24.17,A,ES24.17)') ' [', item(1:16), '] max=', val_max, ', min=', val_min
 
           if ( trim(output_io_mode) == 'ADVANCED' ) then
 

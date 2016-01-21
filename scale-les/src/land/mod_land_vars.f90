@@ -700,7 +700,7 @@ contains
            LAND_PROPERTY_table(index,I_Z0H          ) = Z0H
            LAND_PROPERTY_table(index,I_Z0E          ) = Z0E
 
-           if( IO_L ) write(IO_FID_LOG,'(1x,A8,I3,1x,A12,3(1x,F9.2),(1x,1PE9.1),4(1x,F9.2))') &
+           if( IO_L ) write(IO_FID_LOG,'(1x,A8,I3,1x,A12,3(1x,F9.2),(1x,ES9.1),4(1x,F9.2))') &
                                          '*** IDX =', index, &
                                          trim(description), &
                                          STRGMAX, &

@@ -150,7 +150,7 @@ contains
 
        ! statistics over the all node
        if ( varname_trim /= "" ) then ! if varname is empty, suppress output
-          if( IO_L ) write(IO_FID_LOG,'(1x,A,A,A,1PE24.17)') &
+          if( IO_L ) write(IO_FID_LOG,'(1x,A,A,A,ES24.17)') &
                      '[', varname_trim, '] SUM(global) =', allstatval
        endif
     else
@@ -158,7 +158,7 @@ contains
 
        ! statistics on each node
        if ( varname_trim /= "" ) then ! if varname is empty, suppress output
-          if( IO_L ) write(IO_FID_LOG,'(1x,A,A,A,1PE24.17)') &
+          if( IO_L ) write(IO_FID_LOG,'(1x,A,A,A,ES24.17)') &
                      '[', varname_trim, '] SUM(local)  =', statval
        endif
     endif
@@ -221,7 +221,7 @@ contains
 
        ! statistics over the all node
        if ( varname_trim /= "" ) then ! if varname is empty, suppress output
-          if( IO_L ) write(IO_FID_LOG,'(1x,A,A,A,1PE24.17)') &
+          if( IO_L ) write(IO_FID_LOG,'(1x,A,A,A,ES24.17)') &
                      '[', varname_trim, '] SUM(global) =', allstatval
        endif
     else
@@ -229,7 +229,7 @@ contains
 
        ! statistics on each node
        if ( varname_trim /= "" ) then ! if varname is empty, suppress output
-          if( IO_L ) write(IO_FID_LOG,'(1x,A,A,A,1PE24.17)') &
+          if( IO_L ) write(IO_FID_LOG,'(1x,A,A,A,ES24.17)') &
                      '[', varname_trim, '] SUM(local)  =', statval
        endif
     endif
@@ -317,13 +317,13 @@ contains
           allstatidx(:,v,1) = maxloc(statval(v,1,:))-1
           allstatidx(:,v,2) = minloc(statval(v,2,:))-1
           if( IO_L ) write(IO_FID_LOG,*) '[', trim(varname(v)), ']'
-          if( IO_L ) write(IO_FID_LOG,'(1x,A,E17.10,A,4(I5,A))') '  MAX =', &
+          if( IO_L ) write(IO_FID_LOG,'(1x,A,ES17.10,A,4(I5,A))') '  MAX =', &
                                                        allstatval(  v,1), '(', &
                                                        allstatidx(1,v,1), ',', &
                                          statidx(1,v,1,allstatidx(1,v,1)),',', &
                                          statidx(2,v,1,allstatidx(1,v,1)),',', &
                                          statidx(3,v,1,allstatidx(1,v,1)),')'
-          if( IO_L ) write(IO_FID_LOG,'(1x,A,E17.10,A,4(I5,A))') '  MIN =', &
+          if( IO_L ) write(IO_FID_LOG,'(1x,A,ES17.10,A,4(I5,A))') '  MIN =', &
                                                        allstatval(  v,2), '(', &
                                                        allstatidx(1,v,2), ',', &
                                          statidx(1,v,2,allstatidx(1,v,2)),',', &
@@ -334,12 +334,12 @@ contains
        ! statistics on each node
        do v = 1, vsize
           if( IO_L ) write(IO_FID_LOG,*) '*** [', trim(varname(v)), ']'
-          if( IO_L ) write(IO_FID_LOG,'(1x,A,E17.10,A,3(I5,A))') '*** MAX = ', &
+          if( IO_L ) write(IO_FID_LOG,'(1x,A,ES17.10,A,3(I5,A))') '*** MAX = ', &
                                                 statval(  v,1,PRC_myrank),'(', &
                                                 statidx(1,v,1,PRC_myrank),',', &
                                                 statidx(2,v,1,PRC_myrank),',', &
                                                 statidx(3,v,1,PRC_myrank),')'
-          if( IO_L ) write(IO_FID_LOG,'(1x,A,E17.10,A,3(I5,A))') '*** MIN = ', &
+          if( IO_L ) write(IO_FID_LOG,'(1x,A,ES17.10,A,3(I5,A))') '*** MIN = ', &
                                                 statval(  v,2,PRC_myrank),'(', &
                                                 statidx(1,v,2,PRC_myrank),',', &
                                                 statidx(2,v,2,PRC_myrank),',', &

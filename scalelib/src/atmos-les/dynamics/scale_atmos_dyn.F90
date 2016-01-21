@@ -1317,7 +1317,7 @@ contains
                            COMM_world,           &
                            ierr                  )
 
-       if( IO_L ) write(IO_FID_LOG,'(A,1x,i1,1x,2PE24.17)') 'total mflx_lb:', step, allmflx_lb_total
+       if( IO_L ) write(IO_FID_LOG,'(A,1x,I1,1x,ES24.17)') 'total mflx_lb:', step, allmflx_lb_total
 
        call MPI_Allreduce( mass_total,           &
                            allmass_total,        &
@@ -1327,7 +1327,7 @@ contains
                            COMM_world,           &
                            ierr                  )
 
-       if( IO_L ) write(IO_FID_LOG,'(A,1x,i1,1x,2PE24.17)') 'total mass   :', step, allmass_total
+       if( IO_L ) write(IO_FID_LOG,'(A,1x,I1,1x,ES24.17)') 'total mass   :', step, allmass_total
 
        call MPI_Allreduce( mass_total2,          &
                            allmass_total2,       &
@@ -1337,7 +1337,7 @@ contains
                            COMM_world,           &
                            ierr                  )
 
-       if( IO_L ) write(IO_FID_LOG,'(A,1x,i1,1x,2PE24.17)') 'total mass2  :', step, allmass_total2
+       if( IO_L ) write(IO_FID_LOG,'(A,1x,I1,1x,ES24.17)') 'total mass2  :', step, allmass_total2
 
        call MPI_Allreduce( mflx_lb_horizontal(KS:KE),    &
                            allmflx_lb_horizontal(KS:KE), &

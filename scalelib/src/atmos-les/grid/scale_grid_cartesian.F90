@@ -163,11 +163,11 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*)                '*** Domain size [km] (local) :'
-    if( IO_L ) write(IO_FID_LOG,'(1x,6(A,f8.3))') '  X:',                                                          &
+    if( IO_L ) write(IO_FID_LOG,'(1x,6(A,F8.3))') '  X:',                                                          &
                                                   GRID_FX(0) *1.E-3_RP, ' -HALO- ', GRID_FX(IS-1)*1.E-3_RP, ' | ', &
                                                   GRID_CX(IS)*1.E-3_RP, ' - ',      GRID_CX(IE)  *1.E-3_RP, ' | ', &
                                                   GRID_FX(IE)*1.E-3_RP, ' -HALO- ', GRID_FX(IA)  *1.E-3_RP
-    if( IO_L ) write(IO_FID_LOG,'(1x,6(A,f8.3))') '  Y:',                    &
+    if( IO_L ) write(IO_FID_LOG,'(1x,6(A,F8.3))') '  Y:',                    &
                                                   GRID_FY(0) *1.E-3_RP, ' -HALO- ', GRID_FY(JS-1)*1.E-3_RP, ' | ', &
                                                   GRID_CY(JS)*1.E-3_RP, ' - ',      GRID_CY(JE)  *1.E-3_RP, ' | ', &
                                                   GRID_FY(JE)*1.E-3_RP, ' -HALO- ', GRID_FY(JA)  *1.E-3_RP
@@ -673,7 +673,7 @@ contains
     if( IO_L ) write(IO_FID_LOG,'(1x,2(A,I6))')   '  Y: buffer = ', jbuff,' x 2, main = ',jmain
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*)                '*** Domain size [km] (global) :'
-    if( IO_L ) write(IO_FID_LOG,'(1x,7(A,f8.3))') '  Z:',                &
+    if( IO_L ) write(IO_FID_LOG,'(1x,7(A,F8.3))') '  Z:',                &
                                                   GRID_FZ(0)       *1.E-3_RP, ' -HALO-                   ',   &
                                                   GRID_FZ(KS-1)    *1.E-3_RP, ' | ',        &
                                                   GRID_CZ(KS)      *1.E-3_RP, ' - ',        &
@@ -681,7 +681,7 @@ contains
                                                   GRID_FZ(KE-kbuff)*1.E-3_RP, ' -buffer- ', &
                                                   GRID_FZ(KE)      *1.E-3_RP, ' -HALO- ',   &
                                                   GRID_FZ(KA)      *1.E-3_RP
-    if( IO_L ) write(IO_FID_LOG,'(1x,8(A,f8.3))') '  X:',        &
+    if( IO_L ) write(IO_FID_LOG,'(1x,8(A,F8.3))') '  X:',        &
                                                   GRID_FXG(0)              *1.E-3_RP, ' -HALO- ',   &
                                                   GRID_FXG(IHALO)          *1.E-3_RP, ' -buffer- ', &
                                                   GRID_FXG(IHALO+ibuff)    *1.E-3_RP, ' | ',        &
@@ -690,7 +690,7 @@ contains
                                                   GRID_FXG(IAG-IHALO-ibuff)*1.E-3_RP, ' -buffer- ', &
                                                   GRID_FXG(IAG-IHALO)      *1.E-3_RP, ' -HALO- ',   &
                                                   GRID_FXG(IAG)            *1.E-3_RP
-    if( IO_L ) write(IO_FID_LOG,'(1x,8(A,f8.3))') '  Y:',        &
+    if( IO_L ) write(IO_FID_LOG,'(1x,8(A,F8.3))') '  Y:',        &
                                                   GRID_FYG(0)              *1.E-3_RP, ' -HALO- ',   &
                                                   GRID_FYG(JHALO)          *1.E-3_RP, ' -buffer- ', &
                                                   GRID_FYG(JHALO+jbuff)    *1.E-3_RP, ' | ',        &
@@ -701,8 +701,8 @@ contains
                                                   GRID_FYG(JAG)            *1.E-3_RP
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*)                '*** Center Position of Grid (global) :'
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,f12.3)')   '  X: ', GRID_DOMAIN_CENTER_X
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,f12.3)')   '  Y: ', GRID_DOMAIN_CENTER_Y
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,F12.3)')   '  X: ', GRID_DOMAIN_CENTER_X
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,F12.3)')   '  Y: ', GRID_DOMAIN_CENTER_Y
 
     if ( debug ) then
        if( IO_L ) write(IO_FID_LOG,*)

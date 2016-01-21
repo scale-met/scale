@@ -44,7 +44,7 @@ program scaleles_make_bufffact
 
   real(8) :: dbf
   !-----------------------------------------------------------------------------
-  
+
   ! read namelist
   open(unit=10, file='bufffact.conf', &
        status='old', delim='apostrophe')
@@ -90,7 +90,7 @@ program scaleles_make_bufffact
     dbf = ( bf**dble(num+1)*dx - bf*(L+dx) + L ) / ( bf**dble(num)*dble(num+1)*dx - (L+dx) )
     bf  = bf - dbf
 
-    write (*,'(12x,i5,1x,f24.16,2x,e24.16)') n, bf, dbf
+    write (*,'(12x,i5,1x,f24.16,2x,ES24.16)') n, bf, dbf
 
     if( dbf < EPS ) then
       exit ! stop iteration

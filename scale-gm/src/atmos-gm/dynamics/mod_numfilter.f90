@@ -315,10 +315,10 @@ contains
        if ( debug ) then
           write(ADM_LOG_FID,*) '    z[m]      ray.coef   e-time(2DX)'
           k = ADM_kmax + 1
-          write(ADM_LOG_FID,'(1x,F8.2,3E14.6)') GRD_gzh(k), rayleigh_coef_h(k), 1.0_RP/( rayleigh_coef_h(k)+EPS )
+          write(ADM_LOG_FID,'(1x,F8.2,3ES14.6)') GRD_gzh(k), rayleigh_coef_h(k), 1.0_RP/( rayleigh_coef_h(k)+EPS )
           do k = ADM_kmax, ADM_kmin, -1
-             write(ADM_LOG_FID,'(1x,F8.2,3E14.6)') GRD_gz (k), rayleigh_coef  (k), 1.0_RP/( rayleigh_coef  (k)+EPS )
-             write(ADM_LOG_FID,'(1x,F8.2,3E14.6)') GRD_gzh(k), rayleigh_coef_h(k), 1.0_RP/( rayleigh_coef_h(k)+EPS )
+             write(ADM_LOG_FID,'(1x,F8.2,3ES14.6)') GRD_gz (k), rayleigh_coef  (k), 1.0_RP/( rayleigh_coef  (k)+EPS )
+             write(ADM_LOG_FID,'(1x,F8.2,3ES14.6)') GRD_gzh(k), rayleigh_coef_h(k), 1.0_RP/( rayleigh_coef_h(k)+EPS )
           enddo
        else
           write(ADM_LOG_FID,*) '=> used.'
@@ -498,7 +498,7 @@ contains
                 eft_min  = GTL_min_k( e_fold_time, e_fold_time_pl, k )
                 coef_max = GTL_max_k( Kh_coef, Kh_coef_pl, k )
                 coef_min = GTL_min_k( Kh_coef, Kh_coef_pl, k )
-                write(ADM_LOG_FID,'(1x,F8.2,4E14.6)') GRD_gz(k), coef_min, coef_max, eft_max, eft_min
+                write(ADM_LOG_FID,'(1x,F8.2,4ES14.6)') GRD_gz(k), coef_min, coef_max, eft_max, eft_min
              enddo
           else
              write(ADM_LOG_FID,*) '=> used.'
@@ -618,7 +618,7 @@ contains
              eft_min  = GTL_min_k( e_fold_time,  e_fold_time_pl,  k )
              coef_max = GTL_max_k( Kh_coef_lap1, Kh_coef_lap1_pl, k )
              coef_min = GTL_min_k( Kh_coef_lap1, Kh_coef_lap1_pl, k )
-             write(ADM_LOG_FID,'(1x,F8.2,4E14.6)') GRD_gz(k), coef_min, coef_max, eft_max, eft_min
+             write(ADM_LOG_FID,'(1x,F8.2,4ES14.6)') GRD_gz(k), coef_min, coef_max, eft_max, eft_min
           enddo
        else
           write(ADM_LOG_FID,*) '=> used.'
@@ -676,10 +676,10 @@ contains
        if ( debug ) then
           write(ADM_LOG_FID,*) '    z[m]          coef   e-time(2DX)'
           k = ADM_kmax + 1
-          write(ADM_LOG_FID,'(1x,F8.2,3E14.6)') GRD_gzh(k), Kv_coef_h(k), (GRD_dgzh(k)/PI)**6 / ( Kv_coef_h(k)+EPS )
+          write(ADM_LOG_FID,'(1x,F8.2,3ES14.6)') GRD_gzh(k), Kv_coef_h(k), (GRD_dgzh(k)/PI)**6 / ( Kv_coef_h(k)+EPS )
           do k = ADM_kmax, ADM_kmin, -1
-             write(ADM_LOG_FID,'(1x,F8.2,3E14.6)') GRD_gzh(k), Kv_coef_h(k), (GRD_dgzh(k)/PI)**6 / ( Kv_coef_h(k)+EPS )
-             write(ADM_LOG_FID,'(1x,F8.2,3E14.6)') GRD_gz (k), Kv_coef  (k), (GRD_dgz (k)/PI)**6 / ( Kv_coef  (k)+EPS )
+             write(ADM_LOG_FID,'(1x,F8.2,3ES14.6)') GRD_gzh(k), Kv_coef_h(k), (GRD_dgzh(k)/PI)**6 / ( Kv_coef_h(k)+EPS )
+             write(ADM_LOG_FID,'(1x,F8.2,3ES14.6)') GRD_gz (k), Kv_coef  (k), (GRD_dgz (k)/PI)**6 / ( Kv_coef  (k)+EPS )
           enddo
        else
           write(ADM_LOG_FID,*) '=> used.'
@@ -838,7 +838,7 @@ contains
              eft_min  = GTL_min_k( e_fold_time,  e_fold_time_pl,  k )
              coef_max = GTL_max_k( divdamp_coef, divdamp_coef_pl, k )
              coef_min = GTL_min_k( divdamp_coef, divdamp_coef_pl, k )
-             write(ADM_LOG_FID,'(1x,F8.2,4E14.6)') GRD_gz(k), coef_min, coef_max, eft_max, eft_min
+             write(ADM_LOG_FID,'(1x,F8.2,4ES14.6)') GRD_gz(k), coef_min, coef_max, eft_max, eft_min
           enddo
        else
           write(ADM_LOG_FID,*) '=> used.'
@@ -1013,7 +1013,7 @@ contains
              eft_min  = GTL_min_k( e_fold_time,  e_fold_time_pl,  k )
              coef_max = GTL_max_k( divdamp_coef, divdamp_coef_pl, k )
              coef_min = GTL_min_k( divdamp_coef, divdamp_coef_pl, k )
-             write(ADM_LOG_FID,'(1x,F8.2,4E14.6)') GRD_gz(k), coef_min, coef_max, eft_max, eft_min
+             write(ADM_LOG_FID,'(1x,F8.2,4ES14.6)') GRD_gz(k), coef_min, coef_max, eft_max, eft_min
           enddo
        else
           write(ADM_LOG_FID,*) '=> used.'

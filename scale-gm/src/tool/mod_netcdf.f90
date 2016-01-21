@@ -1051,22 +1051,22 @@ contains
 
        write(*,'(A)',advance='no') ' valid range  : ['
        if( nc%var_valid_min /= nc%var_missing ) then
-          write(*,'(E15.7)',advance='no') nc%var_valid_min
+          write(*,'(ES15.7)',advance='no') nc%var_valid_min
        else
           write(*,'(A15)',advance='no') ' '
        endif
        write(*,'(A)',advance='no') ':'
        if( nc%var_valid_max /= nc%var_missing ) then
-          write(*,'(E15.7)',advance='no') nc%var_valid_max
+          write(*,'(ES15.7)',advance='no') nc%var_valid_max
        else
           write(*,'(A15)',advance='no') ' '
        endif
        write(*,'(A)') ' ]'
 
        write(*,'(A)',advance='no') ' actual range : ['
-       write(*,'(E15.7)',advance='no') minval( wrk_var_real4(:,:,:,:), mask=(wrk_var_real4(:,:,:,:)/=nc%var_missing) )
+       write(*,'(ES15.7)',advance='no') minval( wrk_var_real4(:,:,:,:), mask=(wrk_var_real4(:,:,:,:)/=nc%var_missing) )
        write(*,'(A)',advance='no') ':'
-          write(*,'(E15.7)',advance='no') maxval( wrk_var_real4(:,:,:,:), mask=(wrk_var_real4(:,:,:,:)/=nc%var_missing) )
+          write(*,'(ES15.7)',advance='no') maxval( wrk_var_real4(:,:,:,:), mask=(wrk_var_real4(:,:,:,:)/=nc%var_missing) )
        write(*,'(A)') ' ]'
 
        write(*,'(A,4I8)') '(i,j,k,t)   :', start(:)
@@ -1424,7 +1424,7 @@ contains
     write(fid_ctl,fmt='(2a)')        'DSET ','^'//trim(nc%var_name)//'.grd'
     write(fid_ctl,fmt='(2a)')        'TITLE ',trim(nc%title)
     write(fid_ctl,fmt='(2a)')        'OPTIONS ' // trim(wrk_endian)
-    write(fid_ctl,fmt='(a,e12.5)')   'UNDEF ',real(nc%var_missing,4)
+    write(fid_ctl,fmt='(a,ES12.5)')  'UNDEF ',real(nc%var_missing,4)
 
     if( lon_start == nc%var_missing .or. lon_int == nc%var_missing ) then
        write(fid_ctl,fmt='(a,i5,a)')    'XDEF ',nc%imax, ' LEVELS'
