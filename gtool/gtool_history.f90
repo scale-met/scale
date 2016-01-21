@@ -405,7 +405,7 @@ contains
           call Log('E', message)
        endif
 
-       if ( abs(History_req_tintsec(n)-real(History_req_tintstep(n),kind=DP)*HISTORY_DTSEC) > 0.D0 ) then
+       if ( abs(History_req_tintsec(n)-real(History_req_tintstep(n),kind=DP)*HISTORY_DTSEC) > eps ) then
           write(message,*) 'xxx time interval must be a multiple of delta t ', &
                            History_req_tintsec(n), real(History_req_tintstep(n),kind=DP)*HISTORY_DTSEC
           call Log('E', message)
