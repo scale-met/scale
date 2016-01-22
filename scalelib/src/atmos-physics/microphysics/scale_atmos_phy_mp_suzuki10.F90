@@ -3865,12 +3865,12 @@ contains
          do iq = I_QV+nbin*(ihydro-1)+1, I_QV+nbin*ihydro
             sum3(k,i,j,ihydro) = sum3(k,i,j,ihydro) + &
                                ( ( QTRC0(k,i,j,iq) * DENS0(k,i,j) ) & !--- [kg/kg] -> [kg/m3]
-                               * rexpxctr( iq-(I_QV+nbin*(ihydro-1)+iq) ) &   !--- mass -> number
-                               * radc( iq-(I_QV+nbin*(ihydro-1)+iq) )**3.0_RP )
+                               * rexpxctr( iq-(I_QV+nbin*(ihydro-1)) ) &   !--- mass -> number
+                               * radc( iq-(I_QV+nbin*(ihydro-1)) )**3.0_RP )
             sum2(k,i,j,ihydro) = sum2(k,i,j,ihydro) + &
                                ( ( QTRC0(k,i,j,iq) * DENS0(k,i,j) ) & !--- [kg/kg] -> [kg/m3]
-                               * rexpxctr( iq-(I_QV+nbin*(ihydro-1)+iq) ) &   !--- mass -> number
-                               * radc( iq-(I_QV+nbin*(ihydro-1)+iq) )**2.0_RP )
+                               * rexpxctr( iq-(I_QV+nbin*(ihydro-1)) ) &   !--- mass -> number
+                               * radc( iq-(I_QV+nbin*(ihydro-1)) )**2.0_RP )
          enddo
          sum2(k,i,j,ihydro) = 0.5_RP + sign(0.5_RP,sum2(k,i,j,ihydro)-EPS)
          sum3(k,i,j,ihydro) = 0.5_RP + sign(0.5_RP,sum3(k,i,j,ihydro)-EPS)
@@ -3893,12 +3893,12 @@ contains
          do iq = I_QV+nbin*(ihydro-1)+1, I_QV+nbin*ihydro
             sum3(k,i,j,ihydro) = sum3(k,i,j,ihydro) + &
                                ( ( QTRC0(k,i,j,iq) * DENS0(k,i,j) ) & !--- [kg/kg] -> [kg/m3]
-                               * rexpxctr( iq-(I_QV+nbin*(ihydro-1)+iq) ) &   !--- mass -> number
-                               * radc( iq-(I_QV+nbin*(ihydro-1)+iq) )**3.0_RP )
+                               * rexpxctr( iq-(I_QV+nbin*(ihydro-1)) ) &   !--- mass -> number
+                               * radc( iq-(I_QV+nbin*(ihydro-1)) )**3.0_RP )
             sum2(k,i,j,ihydro) = sum2(k,i,j,ihydro) + &
                                ( ( QTRC0(k,i,j,iq) * DENS0(k,i,j) ) & !--- [kg/kg] -> [kg/m3]
-                               * rexpxctr( iq-(I_QV+nbin*(ihydro-1)+iq) ) &   !--- mass -> number
-                               * radc( iq-(I_QV+nbin*(ihydro-1)+iq) )**2.0_RP )
+                               * rexpxctr( iq-(I_QV+nbin*(ihydro-1)) ) &   !--- mass -> number
+                               * radc( iq-(I_QV+nbin*(ihydro-1)) )**2.0_RP )
          enddo
          sum2(k,i,j,ihydro) = 0.5_RP + sign(0.5_RP,sum2(k,i,j,ihydro)-EPS)
          sum3(k,i,j,ihydro) = 0.5_RP + sign(0.5_RP,sum3(k,i,j,ihydro)-EPS)
