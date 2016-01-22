@@ -86,6 +86,12 @@ module gtool_file
     module procedure FileWrite4DRealSP
     module procedure FileWrite4DRealDP
   end interface FileWrite
+  interface FileSetGlobalAttribute
+     module procedure FileSetGlobalAttributeText
+     module procedure FileSetGlobalAttributeInt
+     module procedure FileSetGlobalAttributeFloat
+     module procedure FileSetGlobalAttributeDouble
+  end interface FileSetGlobalAttribute
 
   !-----------------------------------------------------------------------------
   !
@@ -184,16 +190,120 @@ contains
     if ( existed ) return
 
     !--- append package header to the file
-    call file_set_global_attributes( fid,         & ! (in)
-         title, source, institution, time_units_, & ! (in)
-         myrank, rankidx, size(rankidx),          & ! (in)
-         error                                    ) ! (out)
+    call FileSetGlobalAttribute( fid, & ! (in)
+         "title", title               ) ! (in)
+    call FileSetGlobalAttribute( fid, & ! (in)
+         "source", source             ) ! (in)
+    call FileSetGlobalAttribute( fid, & ! (in)
+         "institution", institution   ) ! (in)
+    call FileSetGlobalAttribute( fid, & ! (in)
+         "myrank", (/myrank/)         ) ! (in)
+    call FileSetGlobalAttribute( fid, & ! (in)
+         "rankidx", rankidx           ) ! (in)
+
+    call file_set_tunits( fid, & ! (in)
+         time_units,           & ! (in)
+         error                 ) ! (out)
     if ( error /= SUCCESS_CODE ) then
-       call Log('E', 'xxx failed to set global attributes')
+       call Log('E', 'xxx failed to set time units')
     end if
 
     return
   end subroutine FileCreate
+
+  !-----------------------------------------------------------------------------
+  subroutine FileSetGlobalAttributeText( &
+       fid,      & ! (in)
+       key,      & ! (in)
+       val       & ! (in)
+       )
+    integer,          intent(in) :: fid
+    character(LEN=*), intent(in) :: key
+    character(LEN=*), intent(in) :: val
+
+    integer error
+
+    call file_set_global_attribute_text( fid, & ! (in)
+         key, val,                            & ! (in)
+         error                                ) ! (out)
+    if ( error /= SUCCESS_CODE ) then
+       call Log('E', 'xxx failed to set text global attribute: '//trim(key))
+    end if
+
+    return
+  end subroutine FileSetGlobalAttributeText
+
+  !-----------------------------------------------------------------------------
+  subroutine FileSetGlobalAttributeInt( &
+       fid,      & ! (in)
+       key,      & ! (in)
+       val       & ! (in)
+       )
+    integer,          intent(in) :: fid
+    character(LEN=*), intent(in) :: key
+    integer,          intent(in) :: val(:)
+
+    integer error
+
+    intrinsic size
+
+    call file_set_global_attribute_int( fid, & ! (in)
+         key, val, size(val),                & ! (in)
+         error                               ) ! (out)
+    if ( error /= SUCCESS_CODE ) then
+       call Log('E', 'xxx failed to set integer global attribute: '//trim(key))
+    end if
+
+    return
+  end subroutine FileSetGlobalAttributeInt
+
+  !-----------------------------------------------------------------------------
+  subroutine FileSetGlobalAttributeFloat( &
+       fid,      & ! (in)
+       key,      & ! (in)
+       val       & ! (in)
+       )
+    integer,          intent(in) :: fid
+    character(LEN=*), intent(in) :: key
+    real(SP),          intent(in) :: val(:)
+
+    integer error
+
+    intrinsic size
+
+    call file_set_global_attribute_float( fid, & ! (in)
+         key, val, size(val),                & ! (in)
+         error                               ) ! (out)
+    if ( error /= SUCCESS_CODE ) then
+       call Log('E', 'xxx failed to set float global attribute: '//trim(key))
+    end if
+
+    return
+  end subroutine FileSetGlobalAttributeFloat
+
+  !-----------------------------------------------------------------------------
+  subroutine FileSetGlobalAttributeDouble( &
+       fid,      & ! (in)
+       key,      & ! (in)
+       val       & ! (in)
+       )
+    integer,          intent(in) :: fid
+    character(LEN=*), intent(in) :: key
+    real(DP),          intent(in) :: val(:)
+
+    integer error
+
+    intrinsic size
+
+    call file_set_global_attribute_double( fid, & ! (in)
+         key, val, size(val),                & ! (in)
+         error                               ) ! (out)
+    if ( error /= SUCCESS_CODE ) then
+       call Log('E', 'xxx failed to set double global attribute: '//trim(key))
+    end if
+
+    return
+  end subroutine FileSetGlobalAttributeDouble
 
   !-----------------------------------------------------------------------------
   subroutine FileSetOption( &

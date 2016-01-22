@@ -41,6 +41,7 @@ module scale_atmos_dyn_rk_hivi
   !
   !++ Public procedure
   !
+  public :: ATMOS_DYN_rk_hivi_regist
   public :: ATMOS_DYN_rk_hivi_setup
   public :: ATMOS_DYN_rk_hivi
 
@@ -56,6 +57,8 @@ module scale_atmos_dyn_rk_hivi
   !
   !++ Private parameters & variables
   !
+  integer, private, parameter :: VA_HIVI = 0
+
   integer,  private :: ITMAX
   real(RP), private :: epsilon
 
@@ -68,7 +71,36 @@ module scale_atmos_dyn_rk_hivi
 
 contains
 
-  subroutine ATMOS_DYN_rk_hivi_setup( ATMOS_DYN_TYPE, &
+  !-----------------------------------------------------------------------------
+  !> Register
+  subroutine ATMOS_DYN_rk_hivi_regist( &
+       ATMOS_DYN_TYPE, &
+       VA_out, &
+       VAR_NAME, VAR_DESC, VAR_UNIT )
+    use scale_process, only: &
+       PRC_MPIstop
+    implicit none
+    character(len=*),       intent(in)  :: ATMOS_DYN_TYPE
+    integer,                intent(out) :: VA_out !< number of prognostic variables
+    character(len=H_SHORT), intent(out) :: VAR_NAME(:) !< name  of the variables
+    character(len=H_MID),   intent(out) :: VAR_DESC(:) !< desc. of the variables
+    character(len=H_SHORT), intent(out) :: VAR_UNIT(:) !< unit  of the variables
+
+    if( IO_L ) write(IO_FID_LOG,*) '*** HIVI Register'
+
+    if ( ATMOS_DYN_TYPE .ne. 'HIVI' ) then
+       write(*,*) 'xxx ATMOS_DYN_TYPE is not HIVI. Check!'
+       call PRC_MPIstop
+    end if
+
+    VA_out = VA_HIVI
+
+    return
+  end subroutine ATMOS_DYN_rk_hivi_regist
+
+  !-----------------------------------------------------------------------------
+  !> Setup
+  subroutine ATMOS_DYN_rk_hivi_setup( &
        BND_W, BND_E, BND_S, BND_N )
     use scale_process, only: &
        PRC_MPIstop
@@ -79,7 +111,6 @@ contains
 #endif
     implicit none
 
-    character(len=*), intent(in) :: ATMOS_DYN_TYPE
     logical, intent(in) :: BND_W
     logical, intent(in) :: BND_E
     logical, intent(in) :: BND_S
@@ -92,12 +123,7 @@ contains
          EPSILON
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** HIVI'
-
-    if ( ATMOS_DYN_TYPE .ne. 'HIVI' ) then
-       write(*,*) 'xxx ATMOS_DYN_TYPE is not HIVI. Check!'
-       call PRC_MPIstop
-    end if
+    if( IO_L ) write(IO_FID_LOG,*) '*** HIVI Setup'
 
 #ifdef HIVI_BICGSTAB
     if ( IO_L ) write(IO_FID_LOG,*) '*** USING Bi-CGSTAB'
@@ -141,10 +167,12 @@ contains
 
   subroutine ATMOS_DYN_rk_hivi( &
     DENS_RK, MOMZ_RK, MOMX_RK, MOMY_RK, RHOT_RK, &
+    PROG_RK,                                     &
     mflx_hi, tflx_hi,                            &
     DENS0,   MOMZ0,   MOMX0,   MOMY0,   RHOT0,   &
     DENS,    MOMZ,    MOMX,    MOMY,    RHOT,    &
     DENS_t,  MOMZ_t,  MOMX_t,  MOMY_t,  RHOT_t,  &
+    PROG0, PROG,                                 &
     Rtot, CVtot, CORIOLI,                        &
     num_diff, divdmp_coef,                       &
     FLAG_FCT_RHO, FLAG_FCT_MOMENTUM, FLAG_FCT_T, &
@@ -165,7 +193,6 @@ contains
        GRAV   => CONST_GRAV,   &
        P00    => CONST_PRE00
     use scale_comm, only: &
-       COMM_world, &
        COMM_vars8, &
        COMM_wait
     use scale_atmos_dyn_common, only: &
@@ -188,6 +215,8 @@ contains
     real(RP), intent(out) :: MOMY_RK(KA,IA,JA)   !
     real(RP), intent(out) :: RHOT_RK(KA,IA,JA)   !
 
+    real(RP), intent(out) :: PROG_RK(KA,IA,JA,VA)  !
+
     real(RP), intent(inout) :: mflx_hi(KA,IA,JA,3) ! rho * vel(x,y,z)
     real(RP), intent(out)   :: tflx_hi(KA,IA,JA,3) ! rho * theta * vel(x,y,z)
 
@@ -208,6 +237,9 @@ contains
     real(RP), intent(in) :: MOMX_t(KA,IA,JA)
     real(RP), intent(in) :: MOMY_t(KA,IA,JA)
     real(RP), intent(in) :: RHOT_t(KA,IA,JA)
+
+    real(RP), intent(in)  :: PROG0(KA,IA,JA,VA)
+    real(RP), intent(in)  :: PROG (KA,IA,JA,VA)
 
     real(RP), intent(in) :: Rtot(KA,IA,JA) ! R for dry air + vapor
     real(RP), intent(in) :: CVtot(KA,IA,JA) ! CV
@@ -3025,7 +3057,7 @@ contains
 #endif
 
     real(RP) :: lhs, rhs
-    real(RP) :: r, kapp
+    real(RP) :: kapp
     integer :: k,i,j
 
     do j = JS, JE
@@ -3034,8 +3066,7 @@ contains
 #ifndef DRY
        kapp = kappa(k,i,j)
 #else
-       R = Rdry
-       kapp  = CPdry / CVdry
+       kapp = CPdry / CVdry
 #endif
        lhs = DPRES(k,i,j) - ( PRES(k,i,j) - REF_pres(k,i,j) )
        rhs = kapp * PRES(k,i,j) * ( RHOT_RK(k,i,j) - RHOT(k,i,j) ) / RHOT(k,i,j)

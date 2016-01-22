@@ -31,8 +31,7 @@ module mod_realinput
   use scale_index
   use scale_tracer
   use scale_process, only: &
-     myrank => PRC_myrank,  &
-     PRC_master,            &
+     PRC_IsMaster, &
      PRC_MPIstop
   use scale_external_io, only: &
      iSCALE, &
@@ -173,7 +172,7 @@ contains
 
     serial = serial_in
     if( serial ) then
-       if( myrank == PRC_master ) then
+       if( PRC_IsMaster ) then
           do_read = .true.
        else
           do_read = .false.
@@ -287,7 +286,8 @@ contains
       dims,             &
       mdlid,            &
       mptype_parent,    &
-      timelen           )
+      timelen,          &
+      skiplen           )
     use scale_comm, only: &
          COMM_vars8, &
          COMM_wait
@@ -322,11 +322,12 @@ contains
     real(RP),         intent(out) :: momy(:,:,:,:)
     real(RP),         intent(out) :: rhot(:,:,:,:)
     real(RP),         intent(out) :: qtrc(:,:,:,:,:)
-    character(LEN=*), intent(in)  :: basename_org
+    character(len=*), intent(in)  :: basename_org
     integer,          intent(in)  :: dims(ndims)
     integer,          intent(in)  :: mdlid            ! model type id
     integer,          intent(in)  :: mptype_parent    ! microphysics type of the parent model (number of classes)
     integer,          intent(in)  :: timelen          ! time steps in one file
+    integer,          intent(in)  :: skiplen          ! skip steps
 
     real(RP) :: velz  (KA,IA,JA)
     real(RP) :: velx  (KA,IA,JA)
@@ -394,7 +395,7 @@ contains
 
     end if
 
-    do n = 1, timelen
+    do n = skiplen+1, timelen
 
        if ( do_read ) then
 
@@ -736,8 +737,8 @@ contains
     real(RP),         intent(in)   :: rhot(:,:,:,:)
     real(RP),         intent(in)   :: qtrc(:,:,:,:,:)
     real(RP),         intent(in)   :: update_dt
-    character(LEN=*), intent(in)   :: basename
-    character(LEN=*), intent(in)   :: title
+    character(len=*), intent(in)   :: basename
+    character(len=*), intent(in)   :: title
     integer,          intent(in)   :: numsteps ! total time steps
 
     character(len=H_MID)  :: atmos_boundary_out_dtype = 'DEFAULT'  !< REAL4 or REAL8
@@ -909,17 +910,17 @@ contains
     real(RP),         intent(in) :: momy(KA,IA,JA)
     real(RP),         intent(in) :: rhot(KA,IA,JA)
     real(RP),         intent(in) :: qtrc(KA,IA,JA,QA)
-    character(LEN=*), intent(in) :: basename_org
+    character(len=*), intent(in) :: basename_org
     integer,          intent(in) :: dims(ndims)
     integer,          intent(in) :: it
     logical,          intent(in) :: use_file_landwater   ! use land water data from files
     real(RP),         intent(in) :: init_landwater_ratio ! Ratio of land water to storage is constant,
                                                          !          if use_file_landwater is ".false."
-    character(LEN=*), intent(in) :: intrp_land_temp
-    character(LEN=*), intent(in) :: intrp_land_water
-    character(LEN=*), intent(in) :: intrp_land_sfc_temp
-    character(LEN=*), intent(in) :: intrp_ocean_temp
-    character(LEN=*), intent(in) :: intrp_ocean_sfc_temp
+    character(len=*), intent(in) :: intrp_land_temp
+    character(len=*), intent(in) :: intrp_land_water
+    character(len=*), intent(in) :: intrp_land_sfc_temp
+    character(len=*), intent(in) :: intrp_ocean_temp
+    character(len=*), intent(in) :: intrp_ocean_sfc_temp
     integer,          intent(in) :: intrp_iter_max
     logical,          intent(in) :: soilwater_DS2VC_flag
     integer,          intent(in) :: mdlid                ! model type id

@@ -106,6 +106,7 @@ module mod_atmos_vars
   !++ Private parameters & variables
   !
   logical,                private :: ATMOS_VARS_CHECKRANGE          = .false.
+  real(RP),               private :: ATMOS_VARS_CHECKCFL            = 0.0_RP
 
   integer,                private, parameter :: VMAX   = 5       !< number of the variables
 
@@ -135,7 +136,7 @@ module mod_atmos_vars
   integer, private, allocatable :: AQ_HIST_id(:)
 
   ! history & monitor output of diagnostic variables
-  integer, private, parameter :: AD_nmax = 63 ! number of diagnostic variables for history output
+  integer, private, parameter :: AD_nmax = 70 ! number of diagnostic variables for history output
 
   integer, private, parameter :: I_W     =  1 ! velocity w at cell center
   integer, private, parameter :: I_U     =  2 ! velocity u at cell center
@@ -213,10 +214,18 @@ module mod_atmos_vars
   integer, private, parameter :: I_QLIQ_MEAN    = 60
   integer, private, parameter :: I_QICE_MEAN    = 61
 
-
   integer, private, parameter :: I_QSAT         = 62
 
   integer, private, parameter :: I_Uabs         = 63
+
+  integer, private, parameter :: I_CAPE         = 64
+  integer, private, parameter :: I_CIN          = 65
+  integer, private, parameter :: I_LCL          = 66
+  integer, private, parameter :: I_LFC          = 67
+  integer, private, parameter :: I_LNB          = 68
+
+  integer, private, parameter :: I_PBLH         = 69
+  integer, private, parameter :: I_MSE          = 70
 
   integer, private            :: AD_HIST_id (AD_nmax)
   integer, private            :: AD_PREP_sw (AD_nmax)
@@ -263,7 +272,8 @@ contains
        ATMOS_RESTART_CHECK,            &
        ATMOS_RESTART_CHECK_BASENAME,   &
        ATMOS_RESTART_CHECK_CRITERION,  &
-       ATMOS_VARS_CHECKRANGE
+       ATMOS_VARS_CHECKRANGE,          &
+       ATMOS_VARS_CHECKCFL
 
     logical :: zinterp ! dummy
     integer :: ierr
@@ -358,13 +368,18 @@ contains
        ATMOS_RESTART_OUTPUT = .false.
     endif
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if (       ATMOS_RESTART_CHECK                &
-         .AND. ATMOS_RESTART_CHECK_BASENAME /= '' ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** Consistency check (for debug)? : YES'
-    else
-       if( IO_L ) write(IO_FID_LOG,*) '*** Consistency check (for debug)? : NO'
+    if ( ATMOS_RESTART_CHECK_BASENAME == '' ) then
        ATMOS_RESTART_CHECK = .false.
+    endif
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '*** Check restart consistency?      : ', ATMOS_RESTART_CHECK
+    if( IO_L ) write(IO_FID_LOG,*) '*** Check value range of variables? : ', ATMOS_VARS_CHECKRANGE
+    if ( ATMOS_VARS_CHECKCFL > 0.0_RP ) then
+       if( IO_L ) write(IO_FID_LOG,*) '*** Check CFL condition?            : YES'
+       if( IO_L ) write(IO_FID_LOG,*) '*** Limit of Courant number         : ', ATMOS_VARS_CHECKCFL
+    else
+       if( IO_L ) write(IO_FID_LOG,*) '*** Check CFL condition?            : NO'
     endif
 
     call ATMOS_DYN_vars_setup
@@ -418,7 +433,7 @@ contains
     call HIST_reg( AD_HIST_id(I_TEMP) , zinterp, 'T',     'temperature',            'K',      ndim=3 )
 
     call HIST_reg( AD_HIST_id(I_POTL) , zinterp, 'LWPT',  'liq. potential temp.',   'K',      ndim=3 )
-    call HIST_reg( AD_HIST_id(I_RHA)  , zinterp, 'RHA',   'relative humidity(liq+ice)', '%', ndim=3 )
+    call HIST_reg( AD_HIST_id(I_RHA)  , zinterp, 'RHA',   'relative humidity(liq+ice)', '%',  ndim=3 )
     call HIST_reg( AD_HIST_id(I_RHL)  , zinterp, 'RH',    'relative humidity(liq)', '%',      ndim=3 )
     call HIST_reg( AD_HIST_id(I_RHI)  , zinterp, 'RHI',   'relative humidity(ice)', '%',      ndim=3 )
 
@@ -426,6 +441,15 @@ contains
     call HIST_reg( AD_HIST_id(I_DIV)  , zinterp, 'DIV',   'divergence',             '1/s',    ndim=3 )
     call HIST_reg( AD_HIST_id(I_HDIV) , zinterp, 'HDIV',  'horizontal divergence',  '1/s',    ndim=3 )
     call HIST_reg( AD_HIST_id(I_Uabs) , zinterp, 'Uabs',  'absolute velocity',      'm/s',    ndim=3 )
+
+    call HIST_reg( AD_HIST_id(I_CAPE) , zinterp, 'CAPE',  'convection avail. pot. energy', 'm2/s2', ndim=2 )
+    call HIST_reg( AD_HIST_id(I_CIN)  , zinterp, 'CIN',   'convection inhibition',         'm2/s2', ndim=2 )
+    call HIST_reg( AD_HIST_id(I_LCL)  , zinterp, 'LCL',   'lifted condensation level',     'm',     ndim=2 )
+    call HIST_reg( AD_HIST_id(I_LFC)  , zinterp, 'LFC',   'level of free convection',      'm',     ndim=2 )
+    call HIST_reg( AD_HIST_id(I_LNB)  , zinterp, 'LNB',   'level of neutral buoyancy',     'm',     ndim=2 )
+
+    call HIST_reg( AD_HIST_id(I_PBLH) , zinterp, 'PBLH',  'PBL height',             'm',      ndim=2 )
+    call HIST_reg( AD_HIST_id(I_MSE)  , zinterp, 'MSE',   'moist static energy',    'm2/s2',  ndim=3 )
 
     call HIST_reg( AD_HIST_id(I_DENS_MEAN), zinterp, 'DENS_MEAN', 'horiz. mean of density',    'kg/m3', ndim=1 )
     call HIST_reg( AD_HIST_id(I_W_MEAN),    zinterp, 'W_MEAN',    'horiz. mean of w',           'm/s',  ndim=1 )
@@ -575,12 +599,35 @@ contains
 
     if ( AD_PREP_sw(I_DIV) > 0 ) then
        AD_PREP_sw(I_HDIV) = 1
-    end if
+    endif
 
     if ( AD_HIST_id(I_Uabs) > 0 ) then
        AD_PREP_sw(I_U)    = 1
        AD_PREP_sw(I_V)    = 1
        AD_PREP_sw(I_Uabs) = 1
+    endif
+
+    if (      AD_HIST_id(I_CAPE) > 0 &
+         .OR. AD_HIST_id(I_CIN)  > 0 &
+         .OR. AD_HIST_id(I_LCL)  > 0 &
+         .OR. AD_HIST_id(I_LFC)  > 0 &
+         .OR. AD_HIST_id(I_LNB)  > 0 ) then
+       AD_PREP_sw(I_CAPE) = 1
+       AD_PREP_sw(I_CIN)  = 1
+       AD_PREP_sw(I_LCL)  = 1
+       AD_PREP_sw(I_LFC)  = 1
+       AD_PREP_sw(I_LNB)  = 1
+    endif
+
+    if ( AD_HIST_id(I_PBLH) > 0 ) then
+       AD_PREP_sw(I_POTT) = 1
+       AD_PREP_sw(I_PBLH) = 1
+    endif
+
+    if ( AD_HIST_id(I_MSE) > 0 ) then
+       AD_PREP_sw(I_CPTOT) = 1
+       AD_PREP_sw(I_TEMP)  = 1
+       AD_PREP_sw(I_MSE)   = 1
     endif
 
     if ( AD_HIST_id(I_DENS_PRIM) > 0 ) then
@@ -930,6 +977,13 @@ contains
        ATMOS_PHY_TB_vars_restart_write
     use mod_atmos_phy_cp_vars, only: &
        ATMOS_PHY_CP_vars_restart_write
+#ifdef _SDM
+    use scale_atmos_phy_mp_sdm, only: &
+       sd_rest_flg_out, &
+       ATMOS_PHY_MP_sdm_restart_out
+    use scale_time, only: &
+       NOWSEC => TIME_NOWSEC
+#endif
     implicit none
 
     character(len=15)     :: timelabel
@@ -937,6 +991,13 @@ contains
 
     integer :: iq
     !---------------------------------------------------------------------------
+
+#ifdef _SDM
+    if( sd_rest_flg_out ) then
+       if( IO_L ) write(IO_FID_LOG,*) '*** Output random number for SDM ***'
+       call ATMOS_PHY_MP_sdm_restart_out(NOWSEC)
+    endif
+#endif
 
     if ( ATMOS_RESTART_OUT_BASENAME /= '' ) then
 
@@ -1123,8 +1184,6 @@ contains
        CVdry => CONST_CVdry, &
        LHV   => CONST_LHV,   &
        P00   => CONST_PRE00
-    use scale_time, only: &
-       TIME_DTSEC
     use scale_grid, only: &
        RCDX => GRID_RCDX, &
        RCDY => GRID_RCDY
@@ -1136,13 +1195,16 @@ contains
     use scale_history, only: &
        HIST_in
     use scale_atmos_thermodyn, only: &
-       THERMODYN_qd => ATMOS_THERMODYN_qd, &
-       CPw => AQ_CP,                       &
+       THERMODYN_qd      => ATMOS_THERMODYN_qd,      &
+       THERMODYN_templhv => ATMOS_THERMODYN_templhv, &
+       CPw => AQ_CP,                                 &
        CVw => AQ_CV
     use scale_atmos_saturation, only: &
        SATURATION_psat_all => ATMOS_SATURATION_psat_all, &
        SATURATION_psat_liq => ATMOS_SATURATION_psat_liq, &
        SATURATION_psat_ice => ATMOS_SATURATION_psat_ice
+    use scale_atmos_adiabat, only: &
+       ADIABAT_cape => ATMOS_ADIABAT_cape
     implicit none
 
     real(RP) :: QDRY  (KA,IA,JA) ! dry air            [kg/kg]
@@ -1169,6 +1231,19 @@ contains
     real(RP) :: DIV   (KA,IA,JA) ! divergence            [1/s]
     real(RP) :: HDIV  (KA,IA,JA) ! horizontal divergence [1/s]
     real(RP) :: Uabs  (KA,IA,JA) ! absolute velocity     [m/s]
+
+    real(RP) :: CAPE  (IA,JA)    ! CAPE [m2/s2]
+    real(RP) :: CIN   (IA,JA)    ! CIN [m2/s2]
+    real(RP) :: LCL   (IA,JA)    ! LCL height [m]
+    real(RP) :: LFC   (IA,JA)    ! LFC height [m]
+    real(RP) :: LNB   (IA,JA)    ! LNB height [m]
+
+    real(RP) :: PBLH  (IA,JA)    ! PBL height [m]
+    real(RP) :: POTTv (KA,IA,JA) ! vertual potential temperature [K]
+    real(RP) :: fact
+
+    real(RP) :: MSE   (KA,IA,JA) ! MSE        [m2/s2]
+    real(RP) :: LHvap (KA,IA,JA) ! latent heat for vaporization [m2/s2]
 
     real(RP) :: DENS_PRIM(KA,IA,JA) ! horiz. deviation of density    [kg/m3]
     real(RP) :: W_PRIM   (KA,IA,JA) ! horiz. deviation of w          [m/s]
@@ -1932,6 +2007,78 @@ contains
     call HIST_in( ENGK (:,:,:), 'ENGK',  'kinetic energy',         'J/m3'   )
     call HIST_in( ENGI (:,:,:), 'ENGI',  'internal energy',        'J/m3'   )
 
+    if (      AD_PREP_sw(I_CAPE) > 0 &
+         .OR. AD_PREP_sw(I_CIN)  > 0 &
+         .OR. AD_PREP_sw(I_LCL)  > 0 &
+         .OR. AD_PREP_sw(I_LFC)  > 0 &
+         .OR. AD_PREP_sw(I_LNB)  > 0 ) then
+
+       call ADIABAT_cape( KS,               & ! [IN]
+                          DENS   (:,:,:),   & ! [IN]
+                          TEMP   (:,:,:),   & ! [IN]
+                          PRES   (:,:,:),   & ! [IN]
+                          QTRC   (:,:,:,:), & ! [IN]
+                          REAL_CZ(:,:,:),   & ! [IN]
+                          REAL_FZ(:,:,:),   & ! [IN]
+                          CAPE   (:,:),     & ! [OUT]
+                          CIN    (:,:),     & ! [OUT]
+                          LCL    (:,:),     & ! [OUT]
+                          LFC    (:,:),     & ! [OUT]
+                          LNB    (:,:)      ) ! [OUT]
+
+    endif
+
+    call HIST_in( CAPE(:,:), 'CAPE', 'convection avail. pot. energy', 'm2/s2' )
+    call HIST_in( CIN (:,:), 'CIN',  'convection inhibition',         'm2/s2' )
+    call HIST_in( LCL (:,:), 'LCL',  'lifted condensation level',     'm'     )
+    call HIST_in( LFC (:,:), 'LFC',  'level of free convection',      'm'     )
+    call HIST_in( LNB (:,:), 'LNB',  'level of neutral buoyancy',     'm'     )
+
+    if ( AD_PREP_sw(I_PBLH) > 0 ) then
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          POTTv(k,i,j) = POTT(k,i,j) * ( 1.0_RP + 0.61_RP * QTRC(k,i,j,I_QV) - 1.61 * QTRC(k,i,j,I_QC) )
+       enddo
+       enddo
+       enddo
+
+       do j = JS, JE
+       do i = IS, IE
+          PBLH(i,j) = REAL_CZ(KS,i,j) - REAL_FZ(KS-1,i,j)
+
+          do k = KS+1, KE
+             if ( POTTv(k,i,j) > POTTv(KS,i,j) ) then
+                fact = ( POTTv(KS,i,j) - POTTv(k-1,i,j) ) &
+                     / ( POTTv(k,i,j)  - POTTv(k-1,i,j) )
+
+                PBLH(i,j) = REAL_CZ(k-1,i,j) - REAL_FZ(KS-1,i,j) &
+                          + fact * ( REAL_CZ(k,i,j) - REAL_CZ(k-1,i,j) )
+
+                exit
+             endif
+          enddo
+       enddo
+       enddo
+    endif
+    call HIST_in( PBLH(:,:), 'PBLH', 'PBL height', 'm' )
+
+    if ( AD_PREP_sw(I_MSE) > 0 ) then
+       call THERMODYN_templhv( LHvap(:,:,:), & ! [OUT]
+                               TEMP (:,:,:)  ) ! [IN]
+
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          MSE(k,i,j) = CPTOT(k,i,j) * TEMP(k,i,j)                    &
+                     + GRAV * ( REAL_CZ(k,i,j) - REAL_FZ(KS-1,i,j) ) &
+                     + LHvap(k,i,j) * QTRC(k,i,j,I_QV)
+       enddo
+       enddo
+       enddo
+    endif
+    call HIST_in( MSE(:,:,:), 'MSE', 'moist static energy', 'm2/s2' )
+
     return
   end subroutine ATMOS_vars_history
 
@@ -1943,7 +2090,7 @@ contains
        CVdry  => CONST_CVdry
     use scale_grid_real, only: &
        REAL_CZ
-    use scale_statistics, only: &
+    use scale_les_statistics, only: &
        STATISTICS_checktotal, &
        STAT_total
     use scale_atmos_thermodyn, only: &
@@ -2141,21 +2288,33 @@ contains
   !-----------------------------------------------------------------------------
   !> monitor output
   subroutine ATMOS_vars_monitor
+    use scale_process, only: &
+       PRC_myrank
     use scale_const, only: &
        GRAV   => CONST_GRAV,   &
        CVdry  => CONST_CVdry
+    use scale_grid, only: &
+       RFDX => GRID_RFDX, &
+       RFDY => GRID_RFDY
     use scale_grid_real, only: &
-       REAL_CZ
+       REAL_CZ, &
+       REAL_FZ
+    use scale_gridtrans, only: &
+       MAPF => GTRANS_MAPF, &
+       I_UY, &
+       I_XV
     use scale_comm, only: &
        COMM_vars8, &
        COMM_wait
-    use scale_statistics, only: &
+    use scale_les_statistics, only: &
        STATISTICS_checktotal, &
        STAT_total,            &
        STAT_detail
     use scale_monitor, only: &
        MONIT_put, &
        MONIT_in
+    use scale_time, only: &
+       TIME_DTSEC_ATMOS_DYN
     use scale_atmos_thermodyn, only: &
        THERMODYN_qd        => ATMOS_THERMODYN_qd,        &
        THERMODYN_temp_pres => ATMOS_THERMODYN_temp_pres, &
@@ -2193,6 +2352,7 @@ contains
 
     real(RP)               :: WORK (KA,IA,JA,3)
     character(len=H_SHORT) :: WNAME(3)
+    real(RP)               :: CFLMAX
 
     integer  :: k, i, j, iq
     !---------------------------------------------------------------------------
@@ -2353,6 +2513,37 @@ contains
        WNAME(3) = "V"
 
        call STAT_detail( WORK(:,:,:,:), WNAME(:) )
+    endif
+
+    if ( ATMOS_VARS_CHECKCFL > 0.0_RP ) then
+!OCL XFILL
+       WORK(:,:,:,:) = 0.0_RP
+
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          WORK(k,i,j,1) = 0.5_RP * abs(MOMZ(k,i,j)) / ( DENS(k+1,i,j) + DENS(k,i,j) ) &
+                        * TIME_DTSEC_ATMOS_DYN / ( REAL_CZ(k+1,i,j) - REAL_CZ(k,i,j) )
+          WORK(k,i,j,2) = 0.5_RP * abs(MOMX(k,i,j)) / ( DENS(k,i+1,j) + DENS(k,i,j) ) &
+                        * TIME_DTSEC_ATMOS_DYN * RFDX(i) * MAPF(i,j,1,I_UY)
+          WORK(k,i,j,3) = 0.5_RP * abs(MOMY(k,i,j)) / ( DENS(k,i,j+1) + DENS(k,i,j) ) &
+                        * TIME_DTSEC_ATMOS_DYN * RFDY(j) * MAPF(i,j,2,I_XV)
+       enddo
+       enddo
+       enddo
+
+       CFLMAX = maxval( WORK(:,:,:,:) )
+       if ( CFLMAX > ATMOS_VARS_CHECKCFL ) then
+          if( IO_L ) write(IO_FID_LOG,*) "*** [ATMOS_vars_monitor] Courant number exceeded the upper limit. : ", CFLMAX
+                     write(*,*)          "*** [ATMOS_vars_monitor] Courant number exceeded the upper limit. : ", CFLMAX, &
+                                         ", rank = ", PRC_myrank
+
+          WNAME(1) = "Courant num. Z"
+          WNAME(2) = "Courant num. X"
+          WNAME(3) = "Courant num. Y"
+
+          call STAT_detail( WORK(:,:,:,:), WNAME(:), supress_globalcomm=.true. )
+       endif
     endif
 
     return

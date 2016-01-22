@@ -13,7 +13,7 @@
   integer,  parameter :: SP         = 4
   integer,  parameter :: DP         = 8
   integer,  parameter :: max_vcount = 100
-  integer,  parameter :: max_tcount = 1000
+  !integer,  parameter :: max_tcount = 1000
   integer,  parameter :: max_zcount = 192
   integer,  parameter :: max_fcount = 1000
   integer,  parameter :: master     = 0

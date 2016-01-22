@@ -29,6 +29,7 @@ module mod_atmos_phy_cp_driver
   !++ Public procedure
   !
   public :: ATMOS_PHY_CP_driver_setup
+  public :: ATMOS_PHY_CP_driver_resume
   public :: ATMOS_PHY_CP_driver
 
   !-----------------------------------------------------------------------------
@@ -64,24 +65,41 @@ contains
        ! setup library component
        !call ATMOS_PHY_CP_setup( ATMOS_PHY_CP_TYPE )
 
-       ! run once (only for the diagnostic value)
-       call PROF_rapstart('ATM_Cumulus', 1)
-       call ATMOS_PHY_CP_driver( update_flag = .true. )
-       call PROF_rapend  ('ATM_Cumulus', 1)
-
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** this component is never called.'
-    endif
+    end if
 
     return
   end subroutine ATMOS_PHY_CP_driver_setup
 
   !-----------------------------------------------------------------------------
+  !> Redume
+  subroutine ATMOS_PHY_CP_driver_resume
+    use mod_atmos_admin, only: &
+       ATMOS_sw_phy_cp
+    implicit none
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[DRIVER] / Categ[ATMOS PHY_CP] / Origin[SCALE-LES]'
+
+    if ( ATMOS_sw_phy_cp ) then
+
+       ! run once (only for the diagnostic value)
+       call PROF_rapstart('ATM_Cumulus', 1)
+       call ATMOS_PHY_CP_driver( update_flag = .true. )
+       call PROF_rapend  ('ATM_Cumulus', 1)
+
+    endif
+
+    return
+  end subroutine ATMOS_PHY_CP_driver_resume
+
+  !-----------------------------------------------------------------------------
   !> Driver
   subroutine ATMOS_PHY_CP_driver( update_flag )
-    use scale_time, only: &
-       dt_CP => TIME_DTSEC_ATMOS_PHY_CP
-    use scale_statistics, only: &
+!     use scale_time, only: &
+!        dt_CP => TIME_DTSEC_ATMOS_PHY_CP
+    use scale_les_statistics, only: &
        STATISTICS_checktotal, &
        STAT_total
     use scale_history, only: &
@@ -89,12 +107,12 @@ contains
 !    use scale_atmos_phy_cp, only: &
 !       ATMOS_PHY_CP
     use mod_atmos_vars, only: &
-       DENS,              &
-       MOMZ,              &
-       MOMX,              &
-       MOMY,              &
-       RHOT,              &
-       QTRC,              &
+!        DENS,              &
+!        MOMZ,              &
+!        MOMX,              &
+!        MOMY,              &
+!        RHOT,              &
+!        QTRC,              &
        MOMZ_t => MOMZ_tp, &
        MOMX_t => MOMX_tp, &
        MOMY_t => MOMY_tp, &

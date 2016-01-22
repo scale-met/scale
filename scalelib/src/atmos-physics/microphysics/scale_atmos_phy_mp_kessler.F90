@@ -12,6 +12,7 @@
 !! @li      2012-01-14 (Y.Miyamoto) [new]
 !! @li      2012-03-23 (H.Yashiro)  [mod] Explicit index parameter inclusion
 !! @li      2012-12-23 (H.Yashiro)  [mod] Reconstruction
+!! @li      2015-09-08 (Y.Sato)     [add] Add evaporated cloud number concentration
 !!
 !<
 !-------------------------------------------------------------------------------
@@ -27,6 +28,7 @@ module scale_atmos_phy_mp_kessler
   use scale_grid_index
 
   use scale_tracer_kessler
+  use scale_tracer, only: QA
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -59,6 +61,7 @@ module scale_atmos_phy_mp_kessler
   !
   logical,  private :: MP_donegative_fixer = .true. ! apply negative fixer?
   logical,  private :: MP_doprecipitation  = .true. ! apply sedimentation (precipitation)?
+  logical,  private :: MP_couple_aerosol  = .false. ! Consider CCN effect ?
 
   real(RP), private, allocatable :: factor_vterm(:) ! collection factor for terminal velocity of QR
 
@@ -67,7 +70,7 @@ module scale_atmos_phy_mp_kessler
   integer, private, save  :: MP_ntmax_sedimentation = 1 ! number of time step for sedimentation
   integer, private, save  :: MP_NSTEP_SEDIMENTATION
   real(RP), private, save :: MP_RNSTEP_SEDIMENTATION
-  real(RP), private, save :: MP_DTSEC_SEDIMENTATION
+  real(DP), private, save :: MP_DTSEC_SEDIMENTATION
 
   !-----------------------------------------------------------------------------
 contains
@@ -89,7 +92,8 @@ contains
     NAMELIST / PARAM_ATMOS_PHY_MP / &
        MP_doprecipitation, &
        MP_donegative_fixer, &
-       MP_ntmax_sedimentation
+       MP_ntmax_sedimentation, &
+       MP_couple_aerosol
 
     real(RP), parameter :: max_term_vel = 10.0_RP  !-- terminal velocity for calculate dt of sedimentation
     integer :: nstep_max
@@ -125,6 +129,11 @@ contains
     endif
     if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_ATMOS_PHY_MP)
 
+    if( MP_couple_aerosol ) then
+       write(*,*) 'xxx MP_aerosol_couple should be .false. for KESSLER type MP!'
+       call PRC_MPIstop
+    endif
+
     if ( IO_L ) write(IO_FID_LOG,*)
     if ( IO_L ) write(IO_FID_LOG,*) '*** Enable negative fixer?                : ', MP_donegative_fixer
     if ( IO_L ) write(IO_FID_LOG,*) '*** Enable sedimentation (precipitation)? : ', MP_doprecipitation
@@ -155,13 +164,13 @@ contains
        MOMY,      &
        RHOT,      &
        QTRC,      &
+       CCN,       &
+       EVAPORATE, &
        SFLX_rain, &
        SFLX_snow  )
     use scale_grid_index
     use scale_comm, only: &
        COMM_horizontal_mean
-    use scale_time, only: &
-       dt => TIME_DTSEC_ATMOS_PHY_MP
     use scale_history, only: &
        HIST_in
     use scale_tracer, only: &
@@ -182,16 +191,18 @@ contains
     real(RP), intent(inout) :: MOMY(KA,IA,JA)
     real(RP), intent(inout) :: RHOT(KA,IA,JA)
     real(RP), intent(inout) :: QTRC(KA,IA,JA,QAD)
+    real(RP), intent(in)    :: CCN(KA,IA,JA)
+    real(RP), intent(out)   :: EVAPORATE(KA,IA,JA)   !--- number of evaporated cloud [/m3]
     real(RP), intent(out)   :: SFLX_rain(IA,JA)
     real(RP), intent(out)   :: SFLX_snow(IA,JA)
 
     real(RP) :: RHOE_t(KA,IA,JA)
-    real(RP) :: QTRC_t(KA,IA,JA,QA)
+    real(RP) :: QTRC_t(KA,IA,JA,QAD)
     real(RP) :: RHOE  (KA,IA,JA)
     real(RP) :: temp  (KA,IA,JA)
     real(RP) :: pres  (KA,IA,JA)
 
-    real(RP) :: vterm   (KA,IA,JA,QA) ! terminal velocity of each tracer [m/s]
+    real(RP) :: vterm   (KA,IA,JA,QAD) ! terminal velocity of each tracer [m/s]
     real(RP) :: FLX_rain(KA,IA,JA)
     real(RP) :: FLX_snow(KA,IA,JA)
     real(RP) :: wflux_rain(KA,IA,JA)
@@ -215,7 +226,7 @@ contains
        first = .false.
     endif
 
-
+    EVAPORATE(:,:,:)   = 0.0_RP
 
     if ( MP_donegative_fixer ) then
        call MP_negative_fixer( DENS(:,:,:),  & ! [INOUT]
@@ -284,11 +295,12 @@ contains
        FLX_snow(:,:,:) = 0.0_RP
     endif
 
-    call MP_saturation_adjustment( RHOE_t(:,:,:),   & ! [INOUT]
-                                   QTRC_t(:,:,:,:), & ! [INOUT]
-                                   RHOE  (:,:,:),   & ! [INOUT]
-                                   QTRC  (:,:,:,:), & ! [INOUT]
-                                   DENS  (:,:,:)    ) ! [IN]
+    call MP_saturation_adjustment( RHOE_t(:,:,:),       & ! [INOUT]
+                                   QTRC_t(:,:,:,:),     & ! [INOUT]
+                                   RHOE  (:,:,:),       & ! [INOUT]
+                                   QTRC  (:,:,:,:),     & ! [INOUT]
+                                   DENS  (:,:,:),       & ! [IN]
+                                   flag_liquid = .true. ) ! [IN]
 
     call HIST_in( vterm(:,:,:,I_QR), 'Vterm_QR', 'terminal velocity of QR', 'm/s' )
 

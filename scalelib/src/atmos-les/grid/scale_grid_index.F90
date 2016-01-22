@@ -61,6 +61,8 @@ module scale_grid_index
   integer, public :: IE          !< end   point of inner domain: x, local
   integer, public :: JS          !< start point of inner domain: y, local
   integer, public :: JE          !< end   point of inner domain: y, local
+
+  integer, public :: KIJMAX = -1 !< # of computational cells: z*x*y
 #endif
 
   ! indices considering boundary
@@ -93,7 +95,8 @@ contains
   subroutine GRID_INDEX_setup
     use scale_process, only: &
        PRC_MPIstop, &
-       PRC_myrank,  &
+       PRC_myrank
+    use scale_les_process, only: &
        PRC_2Drank,  &
        PRC_NUM_X,   &
        PRC_NUM_Y,   &
@@ -147,6 +150,8 @@ contains
 
     if( IBLOCK == -1 ) IBLOCK = IMAX
     if( JBLOCK == -1 ) JBLOCK = JMAX
+
+    KIJMAX = KMAX * IMAX * JMAX
 #endif
 
     !-- Block size must be divisible

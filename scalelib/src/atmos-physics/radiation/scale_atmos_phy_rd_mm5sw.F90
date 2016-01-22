@@ -310,13 +310,6 @@ module scale_atmos_phy_rd_mm5sw
        NOWDATE => TIME_NOWDATE    !< current time [YYYY MM DD HH MM SS]
     use scale_const, only: &
        D2R    => CONST_D2R         ! degree to radian
-    use scale_calendar, only: &
-         CALENDAR_getDayOfYear,  &
-         CALENDAR_ymd2absday,    &
-         CALENDAR_hms2abssec,    &
-         I_year, I_month, I_day, &
-         I_hour, I_min, I_sec
-
 !------------------------------------------------------------------
 !     TO CALCULATE SHORT-WAVE ABSORPTION AND SCATTERING IN CLEAR
 !     AIR AND REFLECTION AND ABSORPTION IN CLOUD LAYERS (STEPHENS,
@@ -420,12 +413,6 @@ module scale_atmos_phy_rd_mm5sw
       dsec   = real(NOWDATE(5)*60 + NOWDATE(6)) / 60.0_RP /60.0_RP
       TLOCTM = real(NOWDATE(4))   + LON/15.0_RP + dsec
       HRANG  = 15.*(TLOCTM-12.)*D2R
-      !
-      !call CALENDAR_getDayOfYear( DayOfYear, now_date(I_year) )
-      !IF( DayOfYear.GE.80.)SXLONG=DPD*( DayOfYear-80.)
-      !IF( DayOfYear.LT.80.)SXLONG=DPD*( DayOfYear+285.)
-      !ARG=SIN(23.5*D2R)*SIN(SXLONG*D2R)
-      !DECLIN=ASIN(ARG)
 
       CSZA=cosSZA
 

@@ -120,11 +120,12 @@ contains
   !> Saturation adjustment
   !-----------------------------------------------------------------------------
   subroutine ATMOS_PHY_MP_saturation_adjustment( &
-       RHOE_t, &
-       QTRC_t, &
-       RHOE0,  &
-       QTRC0,  &
-       DENS0   )
+       RHOE_t,     &
+       QTRC_t,     &
+       RHOE0,      &
+       QTRC0,      &
+       DENS0,      &
+       flag_liquid )
     use scale_const, only: &
        LHV => CONST_LHV, &
        LHF => CONST_LHF
@@ -144,6 +145,7 @@ contains
     real(RP), intent(inout) :: RHOE0 (KA,IA,JA)    ! density * internal energy [J/m3]
     real(RP), intent(inout) :: QTRC0 (KA,IA,JA,QA) ! mass concentration        [kg/kg]
     real(RP), intent(in)    :: DENS0 (KA,IA,JA)    ! density                   [kg/m3]
+    logical,  intent(in)    :: flag_liquid         ! use scheme only for the liquid water?
 
     ! working
     real(RP) :: TEMP0 (KA,IA,JA)
@@ -164,7 +166,7 @@ contains
 
 #ifndef DRY
 
-    call PROF_rapstart('MP_Saturation_adjustment', 3)
+    call PROF_rapstart('MP_Saturation_adjustment', 2)
 
     rdt = 1.0_RP / dt
 
@@ -193,7 +195,7 @@ contains
                        QTRC0(:,:,:,:), & ! [IN]
                        QDRY0(:,:,:)    ) ! [IN]
 
-    if ( I_QI <= 0 ) then ! warm rain
+    if ( I_QI <= 0 .OR. flag_liquid ) then ! warm rain
 
        ! Turn QC into QV with consistency of moist internal energy
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
@@ -309,7 +311,7 @@ contains
     enddo
     enddo
 
-    call PROF_rapend  ('MP_Saturation_adjustment', 3)
+    call PROF_rapend  ('MP_Saturation_adjustment', 2)
 
 #else
     RHOE_t = UNDEF
@@ -690,11 +692,13 @@ contains
     integer :: k, i, j, iq
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('MP_Precipitation', 3)
+    call PROF_rapstart('MP_Precipitation', 2)
 
-    do iq = I_QC, QQE
-       call COMM_vars8( vterm(:,:,:,iq), iq )
-    enddo
+    if ( TRACER_TYPE /= 'SUZUKI10' ) then
+       do iq = I_QC, QQE
+          call COMM_vars8( vterm(:,:,:,iq), iq )
+       enddo
+    endif
     do iq = I_QC, QQE
        call COMM_vars8( QTRC(:,:,:,iq), QQE+iq )
     enddo
@@ -724,7 +728,9 @@ contains
 
     do iq = I_QC, QQE
 
-       call COMM_wait( vterm(:,:,:,iq), iq )
+       if ( TRACER_TYPE /= 'SUZUKI10' ) then
+          call COMM_wait( vterm(:,:,:,iq), iq )
+       endif
        call COMM_wait( QTRC(:,:,:,iq), QQE+iq )
 
        do j  = JS, JE
@@ -871,7 +877,7 @@ contains
     endif
 
 
-    call PROF_rapend  ('MP_Precipitation', 3)
+    call PROF_rapend  ('MP_Precipitation', 2)
 
     return
   end subroutine ATMOS_PHY_MP_precipitation

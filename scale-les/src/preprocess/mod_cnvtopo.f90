@@ -730,8 +730,8 @@ contains
   subroutine CNVTOPO_GMTED2010
     use scale_process, only: &
        PRC_MPIstop
-    use scale_topography, only: &
-       TOPO_Zsfc
+!     use scale_topography, only: &
+!        TOPO_Zsfc
     implicit none
 
     character(len=H_LONG) :: TOPO_GMTED2010_IN_CATALOGUE = ''      !< metadata files for GMTED2010
@@ -776,7 +776,7 @@ contains
        GRID_FDY
     use scale_comm, only: &
        COMM_horizontal_max
-    use scale_statistics, only: &
+    use scale_les_statistics, only: &
        STAT_detail
     use scale_topography, only: &
        TOPO_fillhalo

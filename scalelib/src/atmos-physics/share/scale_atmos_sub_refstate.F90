@@ -31,6 +31,7 @@ module scale_atmos_refstate
   !++ Public procedure
   !
   public :: ATMOS_REFSTATE_setup
+  public :: ATMOS_REFSTATE_resume
   public :: ATMOS_REFSTATE_read
   public :: ATMOS_REFSTATE_write
   public :: ATMOS_REFSTATE_update
@@ -53,6 +54,7 @@ module scale_atmos_refstate
   !
   private :: ATMOS_REFSTATE_generate_isa
   private :: ATMOS_REFSTATE_generate_uniform
+  private :: ATMOS_REFSTATE_generate_zero
   private :: ATMOS_REFSTATE_generate_frominit
 
   !-----------------------------------------------------------------------------
@@ -82,17 +84,10 @@ module scale_atmos_refstate
 contains
   !-----------------------------------------------------------------------------
   !> Setup
-  subroutine ATMOS_REFSTATE_setup( &
-       DENS, RHOT, QTRC )
+  subroutine ATMOS_REFSTATE_setup
     use scale_process, only: &
        PRC_MPIstop
-    use scale_grid, only: &
-       CZ => GRID_CZ
     implicit none
-
-    real(RP), intent(in) :: DENS(KA,IA,JA)
-    real(RP), intent(in) :: RHOT(KA,IA,JA)
-    real(RP), intent(in) :: QTRC(KA,IA,JA,QA)
 
     NAMELIST / PARAM_ATMOS_REFSTATE / &
        ATMOS_REFSTATE_IN_BASENAME,  &
@@ -106,7 +101,6 @@ contains
        ATMOS_REFSTATE_UPDATE_FLAG,  &
        ATMOS_REFSTATE_UPDATE_DT
 
-    integer :: k
     integer :: ierr
     !---------------------------------------------------------------------------
 
@@ -162,23 +156,61 @@ contains
           call ATMOS_REFSTATE_generate_uniform
           ATMOS_REFSTATE_UPDATE_FLAG = .false.
 
+       elseif ( ATMOS_REFSTATE_TYPE == 'ZERO' ) then
+
+          if( IO_L ) write(IO_FID_LOG,*) '*** Reference type: ZERO'
+          call ATMOS_REFSTATE_generate_zero
+          ATMOS_REFSTATE_UPDATE_FLAG = .false.
+
        elseif ( ATMOS_REFSTATE_TYPE == 'INIT' ) then
+
+          if( IO_L ) write(IO_FID_LOG,*) '*** Reference type: make from initial data'
+          if( IO_L ) write(IO_FID_LOG,*) '*** Update state?         : ', ATMOS_REFSTATE_UPDATE_FLAG
+          if( IO_L ) write(IO_FID_LOG,*) '*** Update interval [sec] : ', ATMOS_REFSTATE_UPDATE_DT
+
+       else
+          write(*,*) 'xxx ATMOS_REFSTATE_TYPE must be "ISA" or "UNIFORM". Check!: ', trim(ATMOS_REFSTATE_TYPE)
+          call PRC_MPIstop
+       endif
+
+    endif
+
+    return
+  end subroutine ATMOS_REFSTATE_setup
+
+  !-----------------------------------------------------------------------------
+  !> Resume
+  subroutine ATMOS_REFSTATE_resume( &
+       DENS, RHOT, QTRC )
+    use scale_process, only: &
+       PRC_MPIstop
+    use scale_grid, only: &
+       CZ => GRID_CZ
+    implicit none
+
+    real(RP), intent(in) :: DENS(KA,IA,JA)
+    real(RP), intent(in) :: RHOT(KA,IA,JA)
+    real(RP), intent(in) :: QTRC(KA,IA,JA,QA)
+
+    integer :: k
+
+    ! input or generate reference profile
+    if ( ATMOS_REFSTATE_IN_BASENAME == '' ) then
+
+       if ( ATMOS_REFSTATE_TYPE == 'INIT' ) then
 
           if( IO_L ) write(IO_FID_LOG,*) '*** Reference type: make from initial data'
           if( IO_L ) write(IO_FID_LOG,*) '*** Update state?         : ', ATMOS_REFSTATE_UPDATE_FLAG
           if( IO_L ) write(IO_FID_LOG,*) '*** Update interval [sec] : ', ATMOS_REFSTATE_UPDATE_DT
           call ATMOS_REFSTATE_generate_frominit( DENS, RHOT, QTRC ) ! (in)
 
-       else
-          write(*,*) 'xxx ATMOS_REFSTATE_TYPE must be "ISA" or "UNIFORM". Check!', trim(ATMOS_REFSTATE_TYPE)
-          call PRC_MPIstop
        endif
 
        if( IO_L ) write(IO_FID_LOG,*)
        if( IO_L ) write(IO_FID_LOG,*) '###### Generated Reference State of Atmosphere ######'
        if( IO_L ) write(IO_FID_LOG,*) '   z*-coord.:    pressure: temperature:     density:   pot.temp.: water vapor'
        do k = KS, KE
-          if( IO_L ) write(IO_FID_LOG,'(6(f13.5))') CZ(k),                    &
+          if( IO_L ) write(IO_FID_LOG,'(6F13.5)')   CZ(k),                    &
                                                     ATMOS_REFSTATE1D_pres(k), &
                                                     ATMOS_REFSTATE1D_temp(k), &
                                                     ATMOS_REFSTATE1D_dens(k), &
@@ -198,7 +230,7 @@ contains
     call ATMOS_REFSTATE_write
 
     return
-  end subroutine ATMOS_REFSTATE_setup
+  end subroutine ATMOS_REFSTATE_resume
 
   !-----------------------------------------------------------------------------
   !> Read reference state profile
@@ -458,6 +490,29 @@ contains
 
     return
   end subroutine ATMOS_REFSTATE_generate_uniform
+
+  !-----------------------------------------------------------------------------
+  !> Generate reference state profile (None reference state)
+  subroutine ATMOS_REFSTATE_generate_zero
+    implicit none
+
+    integer :: k, i, j
+    !---------------------------------------------------------------------------
+
+    do k = 1, KA
+    do i = 1, IA
+    do j = 1, JA
+       ATMOS_REFSTATE_dens(k,i,j) = 0.0_RP
+       ATMOS_REFSTATE_temp(k,i,j) = 0.0_RP
+       ATMOS_REFSTATE_pres(k,i,j) = 0.0_RP
+       ATMOS_REFSTATE_pott(k,i,j) = 0.0_RP
+       ATMOS_REFSTATE_qv  (k,i,j) = 0.0_RP
+    end do
+    end do
+    end do
+
+    return
+  end subroutine ATMOS_REFSTATE_generate_zero
 
   !-----------------------------------------------------------------------------
   !> Generate reference state profile (Horizontal average from initial data)

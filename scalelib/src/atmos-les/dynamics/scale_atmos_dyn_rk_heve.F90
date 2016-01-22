@@ -39,6 +39,7 @@ module scale_atmos_dyn_rk_heve
   !
   !++ Public procedure
   !
+  public :: ATMOS_DYN_rk_heve_regist
   public :: ATMOS_DYN_rk_heve_setup
   public :: ATMOS_DYN_rk_heve
 
@@ -54,6 +55,8 @@ module scale_atmos_dyn_rk_heve
   !
   !++ Private parameters & variables
   !
+  integer, parameter :: VA_HEVE = 0
+
   integer :: IFS_OFF
   integer :: JFS_OFF
 #ifdef HIST_TEND
@@ -66,30 +69,46 @@ module scale_atmos_dyn_rk_heve
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
-  !> Setup
-  subroutine ATMOS_DYN_rk_heve_setup( &
+  !> Register
+  subroutine ATMOS_DYN_rk_heve_regist( &
        ATMOS_DYN_TYPE, &
-       BND_W, &
-       BND_E, &
-       BND_S, &
-       BND_N  )
+       VA_out, &
+       VAR_NAME, VAR_DESC, VAR_UNIT )
     use scale_process, only: &
        PRC_MPIstop
     implicit none
+    character(len=*),       intent(in)  :: ATMOS_DYN_TYPE
+    integer,                intent(out) :: VA_out !< number of prognostic variables
+    character(len=H_SHORT), intent(out) :: VAR_NAME(:) !< name  of the variables
+    character(len=H_MID),   intent(out) :: VAR_DESC(:) !< desc. of the variables
+    character(len=H_SHORT), intent(out) :: VAR_UNIT(:) !< unit  of the variables
 
-    character(len=*), intent(in) :: ATMOS_DYN_TYPE
-    logical, intent(in) :: BND_W
-    logical, intent(in) :: BND_E
-    logical, intent(in) :: BND_S
-    logical, intent(in) :: BND_N
-    !---------------------------------------------------------------------------
-
-    if( IO_L ) write(IO_FID_LOG,*) '*** HEVE'
+    if( IO_L ) write(IO_FID_LOG,*) '*** HEVE Register'
 
     if ( ATMOS_DYN_TYPE .ne. 'HEVE' ) then
        write(*,*) 'xxx ATMOS_DYN_TYPE is not HEVE. Check!'
        call PRC_MPIstop
     endif
+
+    VA_out = VA_HEVE
+
+    return
+  end subroutine ATMOS_DYN_rk_heve_regist
+
+  !-----------------------------------------------------------------------------
+  !> Setup
+  subroutine ATMOS_DYN_rk_heve_setup( &
+       BND_W, &
+       BND_E, &
+       BND_S, &
+       BND_N  )
+    implicit none
+
+    logical, intent(in) :: BND_W
+    logical, intent(in) :: BND_E
+    logical, intent(in) :: BND_S
+    logical, intent(in) :: BND_N
+    !---------------------------------------------------------------------------
 
     IFS_OFF = 1
     JFS_OFF = 1
@@ -119,10 +138,12 @@ contains
   !> Runge-Kutta loop
   subroutine ATMOS_DYN_rk_heve( &
        DENS_RK, MOMZ_RK, MOMX_RK, MOMY_RK, RHOT_RK, &
+       PROG_RK,                                     &
        mflx_hi, tflx_hi,                            &
        DENS0,   MOMZ0,   MOMX0,   MOMY0,   RHOT0,   &
        DENS,    MOMZ,    MOMX,    MOMY,    RHOT,    &
        DENS_t,  MOMZ_t,  MOMX_t,  MOMY_t,  RHOT_t,  &
+       PROG0, PROG,                                 &
        Rtot, CVtot, CORIOLI,                        &
        num_diff, divdmp_coef,                       &
        FLAG_FCT_RHO, FLAG_FCT_MOMENTUM, FLAG_FCT_T, &
@@ -171,6 +192,8 @@ contains
     real(RP), intent(out) :: MOMY_RK(KA,IA,JA)   !
     real(RP), intent(out) :: RHOT_RK(KA,IA,JA)   !
 
+    real(RP), intent(out) :: PROG_RK(KA,IA,JA,VA)  !
+
     real(RP), intent(inout) :: mflx_hi(KA,IA,JA,3) ! mass flux
     real(RP), intent(out)   :: tflx_hi(KA,IA,JA,3) ! internal energy flux
 
@@ -191,6 +214,9 @@ contains
     real(RP), intent(in)  :: MOMX_t(KA,IA,JA)    !
     real(RP), intent(in)  :: MOMY_t(KA,IA,JA)    !
     real(RP), intent(in)  :: RHOT_t(KA,IA,JA)    !
+
+    real(RP), intent(in)  :: PROG0(KA,IA,JA,VA)
+    real(RP), intent(in)  :: PROG (KA,IA,JA,VA)
 
     real(RP), intent(in)  :: Rtot    (KA,IA,JA)  ! total R
     real(RP), intent(in)  :: CVtot   (KA,IA,JA)  ! total CV
@@ -263,8 +289,6 @@ contains
     real(RP) :: advch ! horizontal advection
     real(RP) :: advcv ! vertical advection
     real(RP) :: div  ! divergence damping
-    real(RP) :: pg   ! pressure gradient force
-    real(RP) :: cf   ! colioris force
 #ifdef HIST_TEND
     logical  :: lhist
 #endif

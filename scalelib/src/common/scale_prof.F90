@@ -47,7 +47,7 @@ module scale_prof
   !
   !++ Private parameters & variables
   !
-  integer,                  private, parameter :: PROF_rapnlimit = 100
+  integer,                  private, parameter :: PROF_rapnlimit = 300
   character(len=H_SHORT),   private            :: PROF_prefix    = ''
   integer,                  private            :: PROF_rapnmax   = 0
   character(len=H_SHORT*2), private            :: PROF_rapname(PROF_rapnlimit)
@@ -207,9 +207,8 @@ contains
   !> Report raptime
   subroutine PROF_rapreport
     use scale_process, only: &
-       PRC_master, &
-       PRC_myrank, &
-       PRC_MPItimestat
+       PRC_MPItimestat, &
+       PRC_IsMaster
     implicit none
 
     real(DP) :: avgvar(PROF_rapnlimit)
@@ -256,7 +255,7 @@ contains
 
        fid = -1
        if ( IO_LOG_SUPPRESS ) then ! report to STDOUT
-          if ( PRC_myrank == PRC_master ) then
+          if ( PRC_IsMaster ) then
              write(*,*) '*** Computational Time Report'
              fid = 6 ! master node
           endif
@@ -311,10 +310,9 @@ contains
   !> Report flop
   subroutine PROF_PAPI_rapreport
     use scale_process, only: &
-       PRC_master, &
-       PRC_myrank, &
-       PRC_nmax,   &
-       PRC_MPItimestat
+       PRC_MPItimestat, &
+       PRC_nprocs,      &
+       PRC_IsMaster
     implicit none
 
     real(DP) :: avgvar(3)
@@ -364,15 +362,15 @@ contains
                   ', N(max)=',maxvar(3),'[',maxidx(3),']',', N(min)=',minvar(3),'[',minidx(3),']'
        if( IO_L ) write(IO_FID_LOG,*)
        if( IO_L ) write(IO_FID_LOG,'(1x,A,F15.3,A,I6,A)') &
-                  '*** TOTAL FLOP    [GFLOP] : ', avgvar(3)*PRC_nmax, '(',PRC_nmax,' PEs)'
+                  '*** TOTAL FLOP    [GFLOP] : ', avgvar(3)*PRC_nprocs, '(',PRC_nprocs,' PEs)'
        if( IO_L ) write(IO_FID_LOG,'(1x,A,F15.3)') &
-                  '*** FLOPS        [GFLOPS] : ', avgvar(3)*PRC_nmax/maxvar(2)
+                  '*** FLOPS        [GFLOPS] : ', avgvar(3)*PRC_nprocs/maxvar(2)
        if( IO_L ) write(IO_FID_LOG,'(1x,A,F15.3)') &
                   '*** FLOPS per PE [GFLOPS] : ', avgvar(3)/maxvar(2)
        if( IO_L ) write(IO_FID_LOG,*)
 
        if ( IO_LOG_SUPPRESS ) then ! report to STDOUT
-          if ( PRC_myrank == PRC_master ) then ! master node
+          if ( PRC_IsMaster ) then ! master node
              write(*,*)
              write(*,*) '*** PAPI Report'
              write(*,'(1x,A,A,F10.3,A,F10.3,A,I5,A,A,F10.3,A,I5,A,A,I7)') &
@@ -386,9 +384,9 @@ contains
                   ', N(max)=',maxvar(3),'[',maxidx(3),']',', N(min)=',minvar(3),'[',minidx(3),']'
              write(*,*)
              write(*,'(1x,A,F15.3,A,I6,A)') &
-                  '*** TOTAL FLOP    [GFLOP] : ', avgvar(3)*PRC_nmax, '(',PRC_nmax,' PEs)'
+                  '*** TOTAL FLOP    [GFLOP] : ', avgvar(3)*PRC_nprocs, '(',PRC_nprocs,' PEs)'
              write(*,'(1x,A,F15.3)') &
-                  '*** FLOPS        [GFLOPS] : ', avgvar(3)*PRC_nmax/maxvar(2)
+                  '*** FLOPS        [GFLOPS] : ', avgvar(3)*PRC_nprocs/maxvar(2)
              write(*,'(1x,A,F15.3)') &
                   '*** FLOPS per PE [GFLOPS] : ', avgvar(3)/maxvar(2)
           endif

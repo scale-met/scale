@@ -29,6 +29,7 @@ module mod_atmos_phy_ae_driver
   !++ Public procedure
   !
   public :: ATMOS_PHY_AE_driver_setup
+  public :: ATMOS_PHY_AE_driver_resume
   public :: ATMOS_PHY_AE_driver
 
   !-----------------------------------------------------------------------------
@@ -51,8 +52,8 @@ contains
     use scale_atmos_phy_ae, only: &
        ATMOS_PHY_AE_setup
     use mod_atmos_admin, only: &
-       ATMOS_PHY_AE_TYPE, &
-       ATMOS_sw_phy_ae
+       ATMOS_PHY_AE_TYPE!, &
+!       ATMOS_sw_phy_ae
     implicit none
     !---------------------------------------------------------------------------
 
@@ -65,11 +66,6 @@ contains
        ! setup library component
        call ATMOS_PHY_AE_setup( ATMOS_PHY_AE_TYPE )
 
-       ! run once (only for the diagnostic value)
-       call PROF_rapstart('ATM_Aerosol', 1)
-       call ATMOS_PHY_AE_driver( update_flag = .true. )
-       call PROF_rapend  ('ATM_Aerosol', 1)
-
 !    else
 !       if( IO_L ) write(IO_FID_LOG,*) '*** this component is never called.'
 !    endif
@@ -78,11 +74,31 @@ contains
   end subroutine ATMOS_PHY_AE_driver_setup
 
   !-----------------------------------------------------------------------------
+  !> Resume
+  subroutine ATMOS_PHY_AE_driver_resume
+!     use mod_atmos_admin, only: &
+!        ATMOS_sw_phy_ae
+    implicit none
+
+    ! note: tentatively, aerosol module should be called at all time. we need dummy subprogram.
+!    if ( ATMOS_sw_phy_ae ) then
+
+       ! run once (only for the diagnostic value)
+       call PROF_rapstart('ATM_Aerosol', 1)
+       call ATMOS_PHY_AE_driver( update_flag = .true. )
+       call PROF_rapend  ('ATM_Aerosol', 1)
+
+!    endif
+
+    return
+  end subroutine ATMOS_PHY_AE_driver_resume
+
+  !-----------------------------------------------------------------------------
   !> Driver
   subroutine ATMOS_PHY_AE_driver( update_flag )
     use scale_time, only: &
        dt_AE => TIME_DTSEC_ATMOS_PHY_AE
-    use scale_statistics, only: &
+    use scale_les_statistics, only: &
        STATISTICS_checktotal, &
        STAT_total
     use scale_history, only: &
@@ -99,12 +115,18 @@ contains
        RHOQ_t => RHOQ_tp
     use mod_atmos_phy_ae_vars, only: &
        RHOQ_t_AE => ATMOS_PHY_AE_RHOQ_t, &
-       CCN       => ATMOS_PHY_AE_CCN
+       CCN       => ATMOS_PHY_AE_CCN,   &
+       CCN_t     => ATMOS_PHY_AE_CCN_t, &
+       AE_EMIT   => ATMOS_PHY_AE_EMIT
+    use mod_atmos_phy_mp_vars, only: &
+       EVAPORATE => ATMOS_PHY_MP_EVAPORATE
     implicit none
 
     logical, intent(in) :: update_flag
 
     real(RP) :: QTRC0(KA,IA,JA,QA)
+    real(RP) :: CN(KA,IA,JA)
+    real(RP) :: NREG(KA,IA,JA)
 
     real(RP) :: total ! dummy
 
@@ -124,27 +146,39 @@ contains
        enddo
        enddo
 
+       CCN(:,:,:) = 0.0_RP ! reset
+       CCN_t(:,:,:) = 0.0_RP ! reset
+       RHOQ_t_AE(:,:,:,:) = 0.0_RP ! reset
+
+       NREG(:,:,:) = EVAPORATE(:,:,:) * dt_AE
+
        call ATMOS_PHY_AE( DENS, & ! [IN]
                           MOMZ, & ! [IN]
                           MOMX, & ! [IN]
                           MOMY, & ! [IN]
                           RHOT, & ! [IN]
+                          AE_EMIT, & ! [IN]
+                          NREG,    & ! [IN]
+                          CN ,  & ! [OUT]
+                          CCN,  & ! [OUT]
                           QTRC0 ) ! [INOUT]
 
        do iq = 1, QA
        do j  = JS, JE
        do i  = IS, IE
        do k  = KS, KE
-          RHOQ_t_AE(k,i,j,iq) = ( QTRC0(k,i,j,iq) - QTRC(k,i,j,iq) ) * DENS(k,i,j)
+          RHOQ_t_AE(k,i,j,iq) = ( QTRC0(k,i,j,iq) - QTRC(k,i,j,iq) ) * DENS(k,i,j) / dt_AE
        enddo
        enddo
        enddo
        enddo
 
-!OCL XFILL
-       CCN(:,:,:) = 0.0_RP ! tentative
+       CCN_t(:,:,:) = CCN(:,:,:) / dt_AE
 
-       call HIST_in( CCN(:,:,:), 'CCN', 'cloud condensation nucrei', '' )
+!       CCN(:,:,:) = 0.0_RP ! tentative
+
+       call HIST_in( CN(:,:,:)*1e-6_RP,  'CN',  'condensation nucrei', '/cc' )
+       call HIST_in( CCN(:,:,:)*1e-6_RP, 'CCN', 'cloud condensation nucrei', '/cc' )
 
     endif
 

@@ -59,10 +59,26 @@ ifeq ($(ENABLE_PAPI),T)
       PAPI_LIBS    = -L$(PAPI)/lib -lpapi
 endif
 
-ifneq ($(USE_NETCDF3),)
+ifeq ($(USE_NETCDF3),T)
       CFLAGS += -DNETCDF3
 endif
 
 ifeq ($(CHECK_MASS),T)
       FFLAGS += -DCHECK_MASS
+endif
+
+# Super Droplet Method (SDM)
+ifeq ($(ENABLE_SDM),T)
+   FFLAGS         += -D_SDM $(ADDITIONAL_FFLAGS_SDM)
+   GAGETRYDIR      = $(TOPDIR)/contrib/Gadgetry
+   MTDIR           = $(TOPDIR)/contrib/mt
+   SDMDIR          = $(TOPDIR)/contrib/SDM
+   CONTRIB_LIBS    = $(LIBDIR)/libgagetry.a $(LIBDIR)/libmt.a $(LIBDIR)/libsdm.a
+   CONTRIB_INCLUDE = -I$(GAGETRYDIR) -I$(MTDIR) -I$(SDMDIR)
+else
+   GAGETRYDIR      =
+   MTDIR           =
+   SDMDIR          =
+   CONTRIB_LIBS    =
+   CONTRIB_INCLUDE =
 endif

@@ -29,6 +29,7 @@ module mod_ocean_driver
   !++ Public procedure
   !
   public :: OCEAN_driver_setup
+  public :: OCEAN_driver_resume
   public :: OCEAN_driver
   public :: OCEAN_SURFACE_GET
   public :: OCEAN_SURFACE_SET
@@ -54,6 +55,26 @@ contains
        OCEAN_PHY_driver_setup
 !    use mod_ocean_frc_nudge, only: &
 !       OCEAN_FRC_driver_setup
+    implicit none
+    !---------------------------------------------------------------------------
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[DRIVER] / Categ[OCEAN] / Origin[SCALE-LES]'
+
+    call OCEAN_PHY_driver_setup
+
+!    if( OCEAN_FRC_sw ) call OCEAN_FRC_driver_setup
+
+    return
+  end subroutine OCEAN_driver_setup
+
+  !-----------------------------------------------------------------------------
+  !> Resume
+  subroutine OCEAN_driver_resume
+    use mod_ocean_phy_driver, only: &
+       OCEAN_PHY_driver_resume
+!    use mod_ocean_frc_nudge, only: &
+!       OCEAN_FRC_driver_resume
     use mod_ocean_vars, only: &
        OCEAN_vars_history
     use mod_ocean_admin, only: &
@@ -67,9 +88,9 @@ contains
     !########## Get Surface Boundary from coupler ##########
     call OCEAN_SURFACE_GET
 
-    call OCEAN_PHY_driver_setup
+    call OCEAN_PHY_driver_resume
 
-!    if( OCEAN_FRC_sw ) call OCEAN_FRC_driver_setup
+!    if( OCEAN_FRC_sw ) call OCEAN_FRC_driver_resume
 
     !########## Set Surface Boundary to coupler ##########
     call OCEAN_SURFACE_SET( countup=.true. )
@@ -82,7 +103,7 @@ contains
     endif
 
     return
-  end subroutine OCEAN_driver_setup
+  end subroutine OCEAN_driver_resume
 
   !-----------------------------------------------------------------------------
   !> Ocean step

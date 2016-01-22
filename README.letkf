@@ -1,0 +1,37 @@
+SCALE-LETKF
+=========
+
+SCALE-LETKF is a LETKF data assimilation package for the SCALE-LES model.
+
+
+Get the submodule
+-----------------
+- after cloning the SCALE repository, additional commands are needed to get the submodule
+ % git submodule init
+ % git submodule update
+
+Build
+-----
+- build the SCALE-LES first (set up SCALE_SYS environmental variable)
+ % cd scale-les/src
+ % make
+
+- link or copy the configuration file
+ % cd letkf/scale
+ % ln -s arch/configure.user.K configure.user
+
+- make all letkf programs
+ % make
+
+- link or copy the configuration files for the test case
+ % cd letkf/scale/run
+ % ln -s config/testcase_45km_4p/config.main.K config.main
+ % ln -s config/testcase_45km_4p/config.cycle .
+ % ln -s config/testcase_45km_4p/config.nml.* .
+
+- edit 'config.main', make sure all data files are in the correct locations
+ % vi config.main
+   .. set 'DDIR' to the correct location of the test data files
+
+- run the test case
+ % ./cycle_K.sh

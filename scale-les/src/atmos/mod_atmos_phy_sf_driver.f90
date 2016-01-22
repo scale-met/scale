@@ -33,6 +33,7 @@ module mod_atmos_phy_sf_driver
   !++ Public procedure
   !
   public :: ATMOS_PHY_SF_driver_setup
+  public :: ATMOS_PHY_SF_driver_resume
   public :: ATMOS_PHY_SF_driver
 
   !-----------------------------------------------------------------------------
@@ -88,11 +89,6 @@ contains
           SFC_Z0E(:,:) = 0.0_RP
        endif
 
-       ! run once (only for the diagnostic value)
-       call PROF_rapstart('ATM_SurfaceFlux', 1)
-       call ATMOS_PHY_SF_driver( update_flag = .true. )
-       call PROF_rapend  ('ATM_SurfaceFlux', 1)
-
     else
 
        if( IO_L ) write(IO_FID_LOG,*) '*** this component is never called.'
@@ -110,6 +106,25 @@ contains
 
     return
   end subroutine ATMOS_PHY_SF_driver_setup
+
+  !-----------------------------------------------------------------------------
+  !> Resume
+  subroutine ATMOS_PHY_SF_driver_resume
+    use mod_atmos_admin, only: &
+       ATMOS_sw_phy_sf
+    implicit none
+
+    if ( ATMOS_sw_phy_sf ) then
+
+       ! run once (only for the diagnostic value)
+       call PROF_rapstart('ATM_SurfaceFlux', 1)
+       call ATMOS_PHY_SF_driver( update_flag = .true. )
+       call PROF_rapend  ('ATM_SurfaceFlux', 1)
+
+    end if
+
+    return
+  end subroutine ATMOS_PHY_SF_driver_resume
 
   !-----------------------------------------------------------------------------
   !> Driver
@@ -138,7 +153,7 @@ contains
        TOPO_Zsfc
     use scale_time, only: &
        dt_SF => TIME_DTSEC_ATMOS_PHY_SF
-    use scale_statistics, only: &
+    use scale_les_statistics, only: &
        STATISTICS_checktotal, &
        STAT_total
     use scale_history, only: &
@@ -154,9 +169,6 @@ contains
        ATMOS_PHY_SF
     use mod_atmos_vars, only: &
        DENS,              &
-       MOMZ,              &
-       MOMX,              &
-       MOMY,              &
        RHOT,              &
        QTRC,              &
        TEMP,              &

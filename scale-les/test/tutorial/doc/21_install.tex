@@ -188,6 +188,21 @@ HDF5とNetCDF4について、下記のようにPATHを設定する。
  $ export NETCDF4="/opt/netcdf"
 \end{verbatim}
 
+Intel コンパイラ等を利用して自分でHDF5をインストールした場合は、ライブラリのインストールパスが
+異なるので、\verb"sysdep/Makdef.Linux64-intel-impi"ファイルの記述を変更する必要がある。
+\noindent {\gt
+\ovalbox{
+\begin{tabularx}{140mm}{l}
+\verb| ～～中略～～| \\
+\verb|###### NetCDF library| \\
+\verb|NETCDF_INCLUDE ?= -I$(NETCDF4)/include| \\
+\verb|NETCDF_LIBS    ?= -L$(NETCDF4)/lib -L$(HDF5)/lib| \\
+\verb|　　　-lnetcdff -lnetcdf -lhdf5_hl -lhdf5 -lm -lz| \\
+\verb| ～～中略～～| \\
+\end{tabularx}
+}}\\
+上記のように、\verb"-L$(HDF5)/lib64"の記述を\verb"-L$(HDF5)/lib"に変更する。
+
 
 \subsubsection{コンパイル}
 %-----------------------------------------------------------------------------------

@@ -30,10 +30,10 @@ module mod_atmos_driver
   !
   !++ Public procedure
   !
-  public :: ATMOS_driver_setup1
-  public :: ATMOS_driver_setup2
+  public :: ATMOS_driver_setup
+  public :: ATMOS_driver_resume1
+  public :: ATMOS_driver_resume2
   public :: ATMOS_driver
-  public :: ATMOS_driver_firstsend
   public :: ATMOS_driver_finalize
   public :: ATMOS_SURFACE_GET
   public :: ATMOS_SURFACE_SET
@@ -54,24 +54,10 @@ module mod_atmos_driver
 contains
   !-----------------------------------------------------------------------------
   !> Setup
-  subroutine ATMOS_driver_setup1
+  subroutine ATMOS_driver_setup
     use scale_time, only: &
        TIME_NOWDATE,    &
        TIME_OFFSET_YEAR
-    use mod_atmos_vars, only: &
-       ATMOS_vars_diagnostics, &
-       DENS,                   &
-       MOMZ,                   &
-       MOMX,                   &
-       MOMY,                   &
-       RHOT,                   &
-       QTRC,                   &
-       DENS_tp,                &
-       MOMZ_tp,                &
-       MOMX_tp,                &
-       MOMY_tp,                &
-       RHOT_tp,                &
-       RHOQ_tp
     use scale_atmos_solarins, only: &
        ATMOS_SOLARINS_setup
     use scale_atmos_refstate, only: &
@@ -88,6 +74,12 @@ contains
        ATMOS_PHY_CH_driver_setup
     use mod_atmos_phy_ae_driver, only: &
        ATMOS_PHY_AE_driver_setup
+    use mod_atmos_phy_cp_driver, only: &
+       ATMOS_PHY_CP_driver_setup
+    use mod_atmos_phy_sf_driver, only: &
+       ATMOS_PHY_SF_driver_setup
+    use mod_atmos_phy_tb_driver, only: &
+       ATMOS_PHY_TB_driver_setup
     implicit none
     !---------------------------------------------------------------------------
 
@@ -95,17 +87,79 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[DRIVER] / Categ[ATMOS] / Origin[SCALE-LES]'
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Setup each atmospheric components 1 ...'
+    if( IO_L ) write(IO_FID_LOG,*) '*** Setup each atmospheric components ...'
 
     !--- setup solar insolation
     call ATMOS_SOLARINS_setup( TIME_NOWDATE(1)+TIME_OFFSET_YEAR )
 
     call PROF_rapstart('ATM_Refstate', 2)
-    call ATMOS_REFSTATE_setup( DENS, RHOT, QTRC )
+    call ATMOS_REFSTATE_setup
     call PROF_rapend  ('ATM_Refstate', 2)
 
     call PROF_rapstart('ATM_Boundary', 2)
-    call ATMOS_BOUNDARY_setup( DENS, MOMZ, MOMX, MOMY, RHOT, QTRC )
+    call ATMOS_BOUNDARY_setup
+    call PROF_rapend  ('ATM_Boundary', 2)
+
+    ! setup each components
+    call ATMOS_DYN_driver_setup
+    call ATMOS_PHY_MP_driver_setup
+    call ATMOS_PHY_AE_driver_setup
+    call ATMOS_PHY_CH_driver_setup
+    call ATMOS_PHY_RD_driver_setup
+    call ATMOS_PHY_SF_driver_setup
+    call ATMOS_PHY_TB_driver_setup
+    call ATMOS_PHY_CP_driver_setup
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '*** Finish setup of each atmospheric components.'
+
+    return
+  end subroutine ATMOS_driver_setup
+
+  !-----------------------------------------------------------------------------
+  !> Resume
+  subroutine ATMOS_driver_resume1
+    use mod_atmos_vars, only: &
+       ATMOS_vars_diagnostics, &
+       DENS,                   &
+       MOMZ,                   &
+       MOMX,                   &
+       MOMY,                   &
+       RHOT,                   &
+       QTRC,                   &
+       DENS_tp,                &
+       MOMZ_tp,                &
+       MOMX_tp,                &
+       MOMY_tp,                &
+       RHOT_tp,                &
+       RHOQ_tp
+    use scale_atmos_refstate, only: &
+       ATMOS_REFSTATE_resume
+    use scale_atmos_boundary, only: &
+       ATMOS_BOUNDARY_resume
+    use mod_atmos_phy_mp_driver, only: &
+       ATMOS_PHY_MP_driver_resume
+    use mod_atmos_phy_rd_driver, only: &
+       ATMOS_PHY_RD_driver_resume
+    use mod_atmos_phy_ch_driver, only: &
+       ATMOS_PHY_CH_driver_resume
+    use mod_atmos_phy_ae_driver, only: &
+       ATMOS_PHY_AE_driver_resume
+    implicit none
+    !---------------------------------------------------------------------------
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[DRIVER] / Categ[ATMOS] / Origin[SCALE-LES]'
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '*** Resume each atmospheric components 1 ...'
+
+    call PROF_rapstart('ATM_Refstate', 2)
+    call ATMOS_REFSTATE_resume( DENS, RHOT, QTRC )
+    call PROF_rapend  ('ATM_Refstate', 2)
+
+    call PROF_rapstart('ATM_Boundary', 2)
+    call ATMOS_BOUNDARY_resume( DENS, MOMZ, MOMX, MOMY, RHOT, QTRC )
     call PROF_rapend  ('ATM_Boundary', 2)
 
     !########## Get Surface Boundary Condition ##########
@@ -128,11 +182,10 @@ contains
     RHOQ_tp(:,:,:,:) = 0.0_RP
 
     ! setup each components
-    call ATMOS_DYN_driver_setup
-    call ATMOS_PHY_MP_driver_setup
-    call ATMOS_PHY_AE_driver_setup
-    call ATMOS_PHY_CH_driver_setup
-    call ATMOS_PHY_RD_driver_setup
+    call ATMOS_PHY_MP_driver_resume
+    call ATMOS_PHY_AE_driver_resume
+    call ATMOS_PHY_CH_driver_resume
+    call ATMOS_PHY_RD_driver_resume
 
     !########## Calculate diagnostic variables ##########
     call ATMOS_vars_diagnostics
@@ -142,20 +195,23 @@ contains
     call ATMOS_SURFACE_SET( countup = .false. )
     call PROF_rapend  ('ATM_SfcExch', 2)
 
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '*** Finish resume of each atmospheric components 1.'
+
     return
-  end subroutine ATMOS_driver_setup1
+  end subroutine ATMOS_driver_resume1
 
   !-----------------------------------------------------------------------------
   !> Setup
-  subroutine ATMOS_driver_setup2
+  subroutine ATMOS_driver_resume2
     use mod_atmos_vars, only: &
        ATMOS_vars_history
     use mod_atmos_phy_cp_driver, only: &
-       ATMOS_PHY_CP_driver_setup
+       ATMOS_PHY_CP_driver_resume
     use mod_atmos_phy_sf_driver, only: &
-       ATMOS_PHY_SF_driver_setup
+       ATMOS_PHY_SF_driver_resume
     use mod_atmos_phy_tb_driver, only: &
-       ATMOS_PHY_TB_driver_setup
+       ATMOS_PHY_TB_driver_resume
     implicit none
     !---------------------------------------------------------------------------
 
@@ -163,7 +219,7 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[DRIVER] / Categ[ATMOS] / Origin[SCALE-LES]'
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Setup each atmospheric components 2 ...'
+    if( IO_L ) write(IO_FID_LOG,*) '*** Resume each atmospheric components 2 ...'
 
     !########## Get Surface Boundary Condition ##########
     call PROF_rapstart('ATM_SfcExch', 2)
@@ -171,9 +227,9 @@ contains
     call PROF_rapend  ('ATM_SfcExch', 2)
 
     ! setup each components
-    call ATMOS_PHY_SF_driver_setup
-    call ATMOS_PHY_TB_driver_setup
-    call ATMOS_PHY_CP_driver_setup
+    call ATMOS_PHY_SF_driver_resume
+    call ATMOS_PHY_TB_driver_resume
+    call ATMOS_PHY_CP_driver_resume
 
     !########## Set Surface Boundary Condition ##########
     call PROF_rapstart('ATM_SfcExch', 2)
@@ -186,10 +242,10 @@ contains
     call PROF_rapend  ('ATM_History', 1)
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Finish setup of each atmospheric components.'
+    if( IO_L ) write(IO_FID_LOG,*) '*** Finish resume of each atmospheric components 2.'
 
     return
-  end subroutine ATMOS_driver_setup2
+  end subroutine ATMOS_driver_resume2
 
   !-----------------------------------------------------------------------------
   !> advance atmospheric state
@@ -253,13 +309,6 @@ contains
     implicit none
     !---------------------------------------------------------------------------
 
-    !########## Reference State ###########
-    if ( ATMOS_REFSTATE_UPDATE_FLAG ) then
-       call PROF_rapstart('ATM_Refstate', 2)
-       call ATMOS_REFSTATE_update( DENS, RHOT, QTRC ) ! [IN]
-       call PROF_rapend  ('ATM_Refstate', 2)
-    endif
-
     !########## Get Surface Boundary Condition ##########
     call PROF_rapstart('ATM_SfcExch', 2)
     call ATMOS_SURFACE_GET
@@ -270,6 +319,13 @@ contains
        call PROF_rapstart('ATM_Dynamics', 1)
        call ATMOS_DYN_driver( do_dyn )
        call PROF_rapend  ('ATM_Dynamics', 1)
+    endif
+
+    !########## Reference State ###########
+    if ( ATMOS_REFSTATE_UPDATE_FLAG ) then
+       call PROF_rapstart('ATM_Refstate', 2)
+       call ATMOS_REFSTATE_update( DENS, RHOT, QTRC ) ! [IN]
+       call PROF_rapend  ('ATM_Refstate', 2)
     endif
 
     !########## Lateral/Top Boundary Condition ###########
@@ -362,29 +418,6 @@ contains
   end subroutine ATMOS_driver
 
   !-----------------------------------------------------------------------------
-  !> First send
-  subroutine ATMOS_driver_firstsend
-    use scale_atmos_boundary, only: &
-       ATMOS_BOUNDARY_firstsend
-    use mod_atmos_vars, only: &
-       DENS, &
-       MOMZ, &
-       MOMX, &
-       MOMY, &
-       RHOT, &
-       QTRC
-    implicit none
-    !---------------------------------------------------------------------------
-
-    ! If this run is parent of online nesting, boundary data must be sent
-    call PROF_rapstart('ATM_Boundary', 2)
-    call ATMOS_BOUNDARY_firstsend( DENS, MOMZ, MOMX, MOMY, RHOT, QTRC ) ! [IN]
-    call PROF_rapend  ('ATM_Boundary', 2)
-
-    return
-  end subroutine ATMOS_driver_firstsend
-
-  !-----------------------------------------------------------------------------
   !> Finalize
   subroutine ATMOS_driver_finalize
     use scale_atmos_boundary, only: &
@@ -392,13 +425,6 @@ contains
        ATMOS_BOUNDARY_finalize
     use scale_grid_nest, only: &
        NEST_COMM_disconnect
-    use mod_atmos_vars, only: &
-       DENS, &
-       MOMZ, &
-       MOMX, &
-       MOMY, &
-       RHOT, &
-       QTRC
     implicit none
     !---------------------------------------------------------------------------
 

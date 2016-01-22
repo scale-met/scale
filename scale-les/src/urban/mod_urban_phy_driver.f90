@@ -29,6 +29,7 @@ module mod_urban_phy_driver
   !++ Public procedure
   !
   public :: URBAN_PHY_driver_setup
+  public :: URBAN_PHY_driver_resume
   public :: URBAN_PHY_driver
 
   !-----------------------------------------------------------------------------
@@ -50,8 +51,6 @@ contains
   subroutine URBAN_PHY_driver_setup
     use scale_urban_phy, only: &
        URBAN_PHY_setup
-    use mod_admin_restart, only: &
-       RESTART_RUN
     use mod_urban_admin, only: &
        URBAN_TYPE, &
        URBAN_sw
@@ -66,15 +65,6 @@ contains
        ! setup library component
        call URBAN_PHY_setup( URBAN_TYPE )
 
-       if( .NOT. RESTART_RUN ) then
-          ! run once (only for the diagnostic value)
-          call PROF_rapstart('URB_Physics', 1)
-          call URBAN_PHY_driver( update_flag = .true. )
-          call PROF_rapend  ('URB_Physics', 1)
-       else
-          ! no update in order to use restart value
-       end if
-
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** this component is never called.'
     endif
@@ -83,6 +73,28 @@ contains
   end subroutine URBAN_PHY_driver_setup
 
   !-----------------------------------------------------------------------------
+  !> Resume
+  subroutine URBAN_PHY_driver_resume
+    use mod_admin_restart, only: &
+       RESTART_RUN
+    use mod_urban_admin, only: &
+       URBAN_sw
+    implicit none
+
+    if ( URBAN_sw ) then
+
+       if ( .NOT. RESTART_RUN ) then ! tentative
+          ! run once (only for the diagnostic value)
+          call PROF_rapstart('URB_Physics', 1)
+          call URBAN_PHY_driver( update_flag = .true. )
+          call PROF_rapend  ('URB_Physics', 1)
+       end if
+
+    end if
+
+    return
+  end subroutine URBAN_PHY_driver_resume
+  !-----------------------------------------------------------------------------
   !> Driver
   subroutine URBAN_PHY_driver( update_flag )
     use scale_atmos_thermodyn, only: &
@@ -90,7 +102,7 @@ contains
     use scale_time, only: &
        NOWDATE => TIME_NOWDATE,     &
        dt      => TIME_DTSEC_URBAN
-    use scale_statistics, only: &
+    use scale_les_statistics, only: &
        STATISTICS_checktotal, &
        STAT_total
     use scale_history, only: &
@@ -156,7 +168,6 @@ contains
        ATMOS_SFC_PRES,   &
        ATMOS_SFLX_LW,    &
        ATMOS_SFLX_SW,    &
-       ATMOS_cosSZA,     &
        ATMOS_SFLX_prec
     implicit none
 

@@ -6,11 +6,13 @@ program unit
   use scale_tracer
 
   use scale_process, only: &
-     GLOBAL_COMM_WORLD, &
-     PRC_setup,    &
-     PRC_MPIstart, &
-     PRC_MPIsetup, &
-     PRC_MPIfinish
+     PRC_UNIVERSAL_setup,  &
+     PRC_global_setup,  &
+     PRC_LOCAL_setup,  &
+     PRC_MPIfinish, &
+     PRC_MPIstart
+  use scale_les_process, only: &
+     PRC_setup
   use scale_const, only: &
      CONST_setup
   use scale_comm, only: &
@@ -27,16 +29,22 @@ program unit
   use test_comm
 
   character(len=H_MID), parameter :: MODELNAME = "Unit test"
+  integer :: comm, myrank, nprocs
+  logical :: ismaster
 
   ! start MPI
-  call PRC_MPIstart
+  call PRC_MPIstart( comm )
 
   ! setup standard I/O
   call IO_setup( MODELNAME, .false. )
 
   ! setup MPI
-  GLOBAL_COMM_WORLD = MPI_COMM_WORLD
-  call PRC_MPIsetup( MPI_COMM_WORLD )
+  call PRC_UNIVERSAL_setup( MPI_COMM_WORLD, nprocs, ismaster )
+  call PRC_GLOBAL_setup( .true., MPI_COMM_WORLD )
+  call PRC_LOCAL_setup( comm, myrank, ismaster )
+
+  ! setup Log
+  call IO_LOG_setup( myrank, ismaster )
 
   ! setup process
   call PRC_setup

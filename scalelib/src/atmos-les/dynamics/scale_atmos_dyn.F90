@@ -82,11 +82,13 @@ module scale_atmos_dyn
   real(RP), private, allocatable :: MOMX_RK1(:,:,:)
   real(RP), private, allocatable :: MOMY_RK1(:,:,:)
   real(RP), private, allocatable :: RHOT_RK1(:,:,:)
+  real(RP), private, allocatable :: PROG_RK1(:,:,:,:)
   real(RP), private, allocatable :: DENS_RK2(:,:,:) ! prognostic variables (+2/3 step)
   real(RP), private, allocatable :: MOMZ_RK2(:,:,:)
   real(RP), private, allocatable :: MOMX_RK2(:,:,:)
   real(RP), private, allocatable :: MOMY_RK2(:,:,:)
   real(RP), private, allocatable :: RHOT_RK2(:,:,:)
+  real(RP), private, allocatable :: PROG_RK2(:,:,:,:)
 
   ! tendency
   real(RP), private, allocatable :: DENS_t(:,:,:)
@@ -113,6 +115,7 @@ module scale_atmos_dyn
   integer :: I_COMM_MOMX = 3
   integer :: I_COMM_MOMY = 4
   integer :: I_COMM_RHOT = 5
+  integer, allocatable :: I_COMM_PROG(:)
 
   integer :: I_COMM_DENS_t = 1
   integer :: I_COMM_MOMZ_t = 2
@@ -125,12 +128,14 @@ module scale_atmos_dyn
   integer :: I_COMM_MOMX_RK1 = 3
   integer :: I_COMM_MOMY_RK1 = 4
   integer :: I_COMM_RHOT_RK1 = 5
+  integer, allocatable :: I_COMM_PROG_RK1(:)
 
   integer :: I_COMM_DENS_RK2 = 1
   integer :: I_COMM_MOMZ_RK2 = 2
   integer :: I_COMM_MOMX_RK2 = 3
   integer :: I_COMM_MOMY_RK2 = 4
   integer :: I_COMM_RHOT_RK2 = 5
+  integer, allocatable :: I_COMM_PROG_RK2(:)
 
   integer, allocatable :: I_COMM_RHOQ_t(:)
   integer, allocatable :: I_COMM_QTRC(:)
@@ -145,14 +150,15 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine ATMOS_DYN_setup( &
-       DYN_TYPE,         &
        DENS, MOMZ, MOMX, MOMY, RHOT, QTRC, &
+       PROG,             &
        CDZ, CDX, CDY,    &
        FDZ, FDX, FDY,    &
        enable_coriolis,  &
        lat               )
     use scale_process, only: &
-       PRC_MPIstop, &
+       PRC_MPIstop
+    use scale_les_process, only: &
        PRC_HAS_E, &
        PRC_HAS_W, &
        PRC_HAS_N, &
@@ -168,8 +174,6 @@ contains
        ATMOS_DYN_rk_setup
     implicit none
 
-    character(len=H_SHORT), intent(in) :: DYN_TYPE
-
     ! MPI_RECV_INIT requires intent(inout)
     real(RP),               intent(inout) :: DENS(KA,IA,JA)
     real(RP),               intent(inout) :: MOMZ(KA,IA,JA)
@@ -177,6 +181,8 @@ contains
     real(RP),               intent(inout) :: MOMY(KA,IA,JA)
     real(RP),               intent(inout) :: RHOT(KA,IA,JA)
     real(RP),               intent(inout) :: QTRC(KA,IA,JA,QA)
+
+    real(RP),               intent(inout) :: PROG(KA,IA,JA,VA)
 
     real(RP),               intent(in) :: CDZ(KA)
     real(RP),               intent(in) :: CDX(IA)
@@ -187,7 +193,7 @@ contains
     logical,                intent(in) :: enable_coriolis
     real(RP),               intent(in) :: lat(IA,JA)
 
-    integer :: iq
+    integer :: iv, iq
     !---------------------------------------------------------------------------
 
     allocate( DENS_RK1(KA,IA,JA) )
@@ -195,6 +201,7 @@ contains
     allocate( MOMX_RK1(KA,IA,JA) )
     allocate( MOMY_RK1(KA,IA,JA) )
     allocate( RHOT_RK1(KA,IA,JA) )
+
     allocate( DENS_RK2(KA,IA,JA) )
     allocate( MOMZ_RK2(KA,IA,JA) )
     allocate( MOMX_RK2(KA,IA,JA) )
@@ -213,6 +220,12 @@ contains
 
     allocate( num_diff  (KA,IA,JA,5,3) )
     allocate( num_diff_q(KA,IA,JA,3) )
+
+    allocate( PROG_RK1(KA,IA,JA,max(VA,1)) )
+    allocate( PROG_RK2(KA,IA,JA,max(VA,1)) )
+    allocate( I_COMM_PROG    (max(VA,1)) )
+    allocate( I_COMM_PROG_RK1(max(VA,1)) )
+    allocate( I_COMM_PROG_RK2(max(VA,1)) )
 
     allocate( I_COMM_RHOQ_t(QA) )
     allocate( I_COMM_QTRC(QA) )
@@ -235,7 +248,6 @@ contains
     BND_N = .not. PRC_HAS_N
 
     call ATMOS_DYN_rk_setup( &
-         DYN_TYPE, &
          BND_W, BND_E, BND_S, BND_N )
 
     call COMM_vars8_init( DENS, I_COMM_DENS )
@@ -243,6 +255,9 @@ contains
     call COMM_vars8_init( MOMX, I_COMM_MOMX )
     call COMM_vars8_init( MOMY, I_COMM_MOMY )
     call COMM_vars8_init( RHOT, I_COMM_RHOT )
+    do iv = 1, VA
+       call COMM_vars8_init( PROG(:,:,:,iv), I_COMM_PROG(iv) )
+    end do
 
     call COMM_vars8_init( DENS_t, I_COMM_DENS_t )
     call COMM_vars8_init( MOMZ_t, I_COMM_MOMZ_t )
@@ -255,16 +270,22 @@ contains
     call COMM_vars8_init( MOMX_RK1, I_COMM_MOMX_RK1 )
     call COMM_vars8_init( MOMY_RK1, I_COMM_MOMY_RK1 )
     call COMM_vars8_init( RHOT_RK1, I_COMM_RHOT_RK1 )
+    do iv = 1, VA
+       call COMM_vars8_init( PROG_RK1(:,:,:,iv), I_COMM_PROG_RK1(iv) )
+    end do
 
     call COMM_vars8_init( DENS_RK2, I_COMM_DENS_RK2 )
     call COMM_vars8_init( MOMZ_RK2, I_COMM_MOMZ_RK2 )
     call COMM_vars8_init( MOMX_RK2, I_COMM_MOMX_RK2 )
     call COMM_vars8_init( MOMY_RK2, I_COMM_MOMY_RK2 )
     call COMM_vars8_init( RHOT_RK2, I_COMM_RHOT_RK2 )
+    do iv = 1, VA
+       call COMM_vars8_init( PROG_RK2(:,:,:,iv), I_COMM_PROG_RK2(iv) )
+    end do
 
     do iq = 1, QA
-       I_COMM_RHOQ_t(iq) = 5 + iq
-       I_COMM_QTRC(iq) = 5 + iq
+       I_COMM_RHOQ_t(iq) = 5 + VA + iq
+       I_COMM_QTRC(iq) = 5 + VA + iq
 
        call COMM_vars8_init( RHOQ_t(:,:,:,iq), I_COMM_RHOQ_t(iq) )
        call COMM_vars8_init( QTRC  (:,:,:,iq), I_COMM_QTRC(iq) )
@@ -279,11 +300,14 @@ contains
     MOMX_RK1(:,:,:) = UNDEF
     MOMY_RK1(:,:,:) = UNDEF
     RHOT_RK1(:,:,:) = UNDEF
+    if ( VA > 0 ) PROG_RK1(:,:,:,:) = UNDEF
+
     DENS_RK2(:,:,:) = UNDEF
     MOMZ_RK2(:,:,:) = UNDEF
     MOMX_RK2(:,:,:) = UNDEF
     MOMY_RK2(:,:,:) = UNDEF
     RHOT_RK2(:,:,:) = UNDEF
+    if ( VA > 0 ) PROG_RK2(:,:,:,:) = UNDEF
 
     mflx_hi(:,:,:,:) = UNDEF
 
@@ -294,6 +318,7 @@ contains
   !> Dynamical Process
   subroutine ATMOS_DYN( &
        DENS,    MOMZ,    MOMX,    MOMY,    RHOT,    QTRC,                                                    &
+       PROG,                                                                                                 &
        DENS_av, MOMZ_av, MOMX_av, MOMY_av, RHOT_av, QTRC_av,                                                 &
        DENS_tp, MOMZ_tp, MOMX_tp, MOMY_tp, RHOT_tp, RHOQ_tp,                                                 &
        CDZ, CDX, CDY, FDZ, FDX, FDY,                                                                         &
@@ -314,11 +339,6 @@ contains
        Rdry   => CONST_Rdry, &
        Rvap   => CONST_Rvap, &
        CVdry  => CONST_CVdry
-    use scale_process, only: &
-       PRC_HAS_W, &
-       PRC_HAS_E, &
-       PRC_HAS_S, &
-       PRC_HAS_N
     use scale_comm, only: &
 #ifdef CHECK_MASS
        COMM_datatype, &
@@ -349,10 +369,11 @@ contains
     use scale_atmos_boundary, only: &
        BND_QA, &
        BND_SMOOTHER_FACT => ATMOS_BOUNDARY_SMOOTHER_FACT
-#if defined( HIST_TEND ) || defined( CHECK_MASS )
     use scale_history, only: &
-       HIST_in
+#if defined( HIST_TEND ) || defined( CHECK_MASS )
+       HIST_in, &
 #endif
+       HIST_switch
     implicit none
 
     real(RP), intent(inout) :: DENS(KA,IA,JA)
@@ -361,6 +382,8 @@ contains
     real(RP), intent(inout) :: MOMY(KA,IA,JA)
     real(RP), intent(inout) :: RHOT(KA,IA,JA)
     real(RP), intent(inout) :: QTRC(KA,IA,JA,QA)
+
+    real(RP), intent(inout) :: PROG(KA,IA,JA,VA)
 
     real(RP), intent(inout) :: DENS_av(KA,IA,JA)
     real(RP), intent(inout) :: MOMZ_av(KA,IA,JA)
@@ -442,6 +465,7 @@ contains
     real(RP) :: MOMX0   (KA,IA,JA) !
     real(RP) :: MOMY0   (KA,IA,JA) !
     real(RP) :: RHOT0   (KA,IA,JA) !
+    real(RP) :: PROG0   (KA,IA,JA,VA) !
 
     ! diagnostic variables
     real(RP) :: QDRY (KA,IA,JA) ! dry air
@@ -482,6 +506,7 @@ contains
     integer  :: IIS, IIE
     integer  :: JJS, JJE
     integer  :: i, j, k, iq, step
+    integer  :: iv
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Dynamics step: ', NSTEP_ATMOS_DYN, ' small steps'
@@ -495,16 +520,20 @@ contains
     MOMX0   (:,:,:) = UNDEF
     MOMY0   (:,:,:) = UNDEF
     RHOT0   (:,:,:) = UNDEF
+    if ( VA > 0 ) PROG0(:,:,:,:) = UNDEF
     DENS_RK1(:,:,:) = UNDEF
     MOMZ_RK1(:,:,:) = UNDEF
     MOMX_RK1(:,:,:) = UNDEF
     MOMY_RK1(:,:,:) = UNDEF
     RHOT_RK1(:,:,:) = UNDEF
+    if ( VA > 0 ) PROG_RK1(:,:,:,:) = UNDEF
+
     DENS_RK2(:,:,:) = UNDEF
     MOMZ_RK2(:,:,:) = UNDEF
     MOMX_RK2(:,:,:) = UNDEF
     MOMY_RK2(:,:,:) = UNDEF
     RHOT_RK2(:,:,:) = UNDEF
+    if ( VA > 0 ) PROG_RK2(:,:,:,:) = UNDEF
 
     num_diff (:,:,:,:,:) = UNDEF
 
@@ -670,6 +699,8 @@ contains
 
 
     do step = 1, NSTEP_ATMOS_DYN
+
+       call HIST_switch( step == NSTEP_ATMOS_DYN )
 
        !-----< prepare tendency >-----
 
@@ -911,6 +942,11 @@ contains
 !OCL XFILL
        RHOT0(:,:,:) = RHOT(:,:,:)
 
+       if ( VA > 0 ) then
+!OCL XFILL
+          PROG0(:,:,:,:) = PROG(:,:,:,:)
+       end if
+
        call PROF_rapstart("DYN_RK", 2)
 
        !##### RK1 : PROG0,PROG->PROG_RK1 #####
@@ -918,10 +954,12 @@ contains
        dtrk = real(DTSEC_ATMOS_DYN,kind=RP) / 3.0_RP
 
        call ATMOS_DYN_rk( DENS_RK1, MOMZ_RK1, MOMX_RK1, MOMY_RK1, RHOT_RK1, & ! (out)
+                          PROG_RK1,                                         & ! (out)
                           mflx_hi,  tflx_hi,                                & ! (out)
                           DENS0,    MOMZ0,    MOMX0,    MOMY0,    RHOT0,    & ! (in)
                           DENS,     MOMZ,     MOMX,     MOMY,     RHOT,     & ! (in)
                           DENS_t,   MOMZ_t,   MOMX_t,   MOMY_t,   RHOT_t,   & ! (in)
+                          PROG0, PROG,                                      & ! (in)
                           Rtot, CVtot, CORIOLI,                             & ! (in)
                           num_diff, divdmp_coef,                            & ! (in)
                           FLAG_FCT_RHO, FLAG_FCT_MOMENTUM, FLAG_FCT_T,      & ! (in)
@@ -947,6 +985,9 @@ contains
              MOMX_RK1(k,i,j) = MOMX0(k,i,j)
              MOMY_RK1(k,i,j) = MOMY0(k,i,j)
              RHOT_RK1(k,i,j) = RHOT0(k,i,j)
+             do iv = 1, VA
+                PROG_RK1(k,i,j,iv) = PROG0(k,i,j,iv)
+             end do
           enddo
           enddo
           enddo
@@ -962,6 +1003,9 @@ contains
              MOMX_RK1(k,i,j) = MOMX0(k,i,j)
              MOMY_RK1(k,i,j) = MOMY0(k,i,j)
              RHOT_RK1(k,i,j) = RHOT0(k,i,j)
+             do iv = 1, VA
+                PROG_RK1(k,i,j,iv) = PROG0(k,i,j,iv)
+             end do
           enddo
           enddo
           enddo
@@ -984,6 +1028,9 @@ contains
              MOMX_RK1(k,i,j) = MOMX0(k,i,j)
              MOMY_RK1(k,i,j) = MOMY0(k,i,j)
              RHOT_RK1(k,i,j) = RHOT0(k,i,j)
+             do iv = 1, VA
+                PROG_RK1(k,i,j,iv) = PROG0(k,i,j,iv)
+             end do
           enddo
           enddo
           enddo
@@ -999,6 +1046,9 @@ contains
              MOMX_RK1(k,i,j) = MOMX0(k,i,j)
              MOMY_RK1(k,i,j) = MOMY0(k,i,j)
              RHOT_RK1(k,i,j) = RHOT0(k,i,j)
+             do iv = 1, VA
+                PROG_RK1(k,i,j,iv) = PROG0(k,i,j,iv)
+             end do
           enddo
           enddo
           enddo
@@ -1018,23 +1068,31 @@ contains
        call COMM_vars8( MOMX_RK1(:,:,:), I_COMM_MOMX_RK1 )
        call COMM_vars8( MOMY_RK1(:,:,:), I_COMM_MOMY_RK1 )
        call COMM_vars8( RHOT_RK1(:,:,:), I_COMM_RHOT_RK1 )
+       do iv = 1, VA
+          call COMM_vars8( PROG_RK1(:,:,:,iv), I_COMM_PROG_RK1(iv) )
+       end do
        call COMM_wait ( DENS_RK1(:,:,:), I_COMM_DENS_RK1, .false. )
        call COMM_wait ( MOMZ_RK1(:,:,:), I_COMM_MOMZ_RK1, .false. )
        call COMM_wait ( MOMX_RK1(:,:,:), I_COMM_MOMX_RK1, .false. )
        call COMM_wait ( MOMY_RK1(:,:,:), I_COMM_MOMY_RK1, .false. )
        call COMM_wait ( RHOT_RK1(:,:,:), I_COMM_RHOT_RK1, .false. )
+       do iv = 1, VA
+          call COMM_wait ( PROG_RK1(:,:,:,iv), I_COMM_PROG_RK1(iv), .false. )
+       end do
 
-       !##### RK2 : PROG0,PROG_RK2->PROG_RK3 #####
+       !##### RK2 : PROG0,PROG_RK1->PROG_RK2 #####
 
        call PROF_rapstart("DYN_RK", 2)
 
        dtrk = real(DTSEC_ATMOS_DYN,kind=RP) / 2.0_RP
 
        call ATMOS_DYN_rk( DENS_RK2, MOMZ_RK2, MOMX_RK2, MOMY_RK2, RHOT_RK2, & ! (out)
+                          PROG_RK2,                                         & ! (out)
                           mflx_hi,  tflx_hi,                                & ! (out)
                           DENS0,    MOMZ0,    MOMX0,    MOMY0,    RHOT0,    & ! (in)
                           DENS_RK1, MOMZ_RK1, MOMX_RK1, MOMY_RK1, RHOT_RK1, & ! (in)
                           DENS_t,   MOMZ_t,   MOMX_t,   MOMY_t,   RHOT_t,   & ! (in)
+                          PROG0, PROG_RK1,                                  & ! (in)
                           Rtot, CVtot, CORIOLI,                             & ! (in)
                           num_diff, divdmp_coef,                            & ! (in)
                           FLAG_FCT_RHO, FLAG_FCT_MOMENTUM, FLAG_FCT_T,      & ! (in)
@@ -1061,6 +1119,9 @@ contains
              MOMX_RK2(k,i,j) = MOMX0(k,i,j)
              MOMY_RK2(k,i,j) = MOMY0(k,i,j)
              RHOT_RK2(k,i,j) = RHOT0(k,i,j)
+             do iv = 1, VA
+                PROG_RK2(k,i,j,iv) = PROG0(k,i,j,iv)
+             end do
           enddo
           enddo
           enddo
@@ -1098,6 +1159,9 @@ contains
              MOMX_RK2(k,i,j) = MOMX0(k,i,j)
              MOMY_RK2(k,i,j) = MOMY0(k,i,j)
              RHOT_RK2(k,i,j) = RHOT0(k,i,j)
+             do iv = 1, VA
+                PROG_RK2(k,i,j,iv) = PROG0(k,i,j,iv)
+             end do
           enddo
           enddo
           enddo
@@ -1113,6 +1177,9 @@ contains
              MOMX_RK2(k,i,j) = MOMX0(k,i,j)
              MOMY_RK2(k,i,j) = MOMY0(k,i,j)
              RHOT_RK2(k,i,j) = RHOT0(k,i,j)
+             do iv = 1, VA
+                PROG_RK2(k,i,j,iv) = PROG0(k,i,j,iv)
+             end do
           enddo
           enddo
           enddo
@@ -1132,23 +1199,31 @@ contains
        call COMM_vars8( MOMX_RK2(:,:,:), I_COMM_MOMX_RK2 )
        call COMM_vars8( MOMY_RK2(:,:,:), I_COMM_MOMY_RK2 )
        call COMM_vars8( RHOT_RK2(:,:,:), I_COMM_RHOT_RK2 )
+       do iv = 1, VA
+          call COMM_vars8( PROG_RK2(:,:,:,iv), I_COMM_PROG_RK2(iv) )
+       end do
        call COMM_wait ( DENS_RK2(:,:,:), I_COMM_DENS_RK2, .false. )
        call COMM_wait ( MOMZ_RK2(:,:,:), I_COMM_MOMZ_RK2, .false. )
        call COMM_wait ( MOMX_RK2(:,:,:), I_COMM_MOMX_RK2, .false. )
        call COMM_wait ( MOMY_RK2(:,:,:), I_COMM_MOMY_RK2, .false. )
        call COMM_wait ( RHOT_RK2(:,:,:), I_COMM_RHOT_RK2, .false. )
+       do iv = 1, VA
+          call COMM_wait ( PROG_RK2(:,:,:,iv), I_COMM_PROG_RK2(iv), .false. )
+       end do
 
-       !##### RK3 : PROG0,PROG_RK3->PROG #####
+       !##### RK3 : PROG0,PROG_RK2->PROG #####
 
        call PROF_rapstart("DYN_RK", 2)
 
        dtrk = real(DTSEC_ATMOS_DYN,kind=RP)
 
        call ATMOS_DYN_rk( DENS,     MOMZ,     MOMX,     MOMY,     RHOT,     & ! (out)
+                          PROG,                                             & ! (out)
                           mflx_hi,  tflx_hi,                                & ! (out)
                           DENS0,    MOMZ0,    MOMX0,    MOMY0,    RHOT0,    & ! (in)
                           DENS_RK2, MOMZ_RK2, MOMX_RK2, MOMY_RK2, RHOT_RK2, & ! (in)
                           DENS_t,   MOMZ_t,   MOMX_t,   MOMY_t,   RHOT_t,   & ! (in)
+                          PROG0, PROG_RK2,                                  & ! (in)
                           Rtot, CVtot, CORIOLI,                             & ! (in)
                           num_diff, divdmp_coef,                            & ! (in)
                           FLAG_FCT_RHO, FLAG_FCT_MOMENTUM, FLAG_FCT_T,      & ! (in)
@@ -1242,7 +1317,7 @@ contains
                            COMM_world,           &
                            ierr                  )
 
-       if( IO_L ) write(IO_FID_LOG,'(A,1x,i1,1x,2PE24.17)') 'total mflx_lb:', step, allmflx_lb_total
+       if( IO_L ) write(IO_FID_LOG,'(A,1x,I1,1x,ES24.17)') 'total mflx_lb:', step, allmflx_lb_total
 
        call MPI_Allreduce( mass_total,           &
                            allmass_total,        &
@@ -1252,7 +1327,7 @@ contains
                            COMM_world,           &
                            ierr                  )
 
-       if( IO_L ) write(IO_FID_LOG,'(A,1x,i1,1x,2PE24.17)') 'total mass   :', step, allmass_total
+       if( IO_L ) write(IO_FID_LOG,'(A,1x,I1,1x,ES24.17)') 'total mass   :', step, allmass_total
 
        call MPI_Allreduce( mass_total2,          &
                            allmass_total2,       &
@@ -1262,7 +1337,7 @@ contains
                            COMM_world,           &
                            ierr                  )
 
-       if( IO_L ) write(IO_FID_LOG,'(A,1x,i1,1x,2PE24.17)') 'total mass2  :', step, allmass_total2
+       if( IO_L ) write(IO_FID_LOG,'(A,1x,I1,1x,ES24.17)') 'total mass2  :', step, allmass_total2
 
        call MPI_Allreduce( mflx_lb_horizontal(KS:KE),    &
                            allmflx_lb_horizontal(KS:KE), &
@@ -1283,11 +1358,17 @@ contains
           MOMX(   1:KS-1,i,j) = MOMX(KS,i,j)
           MOMY(   1:KS-1,i,j) = MOMY(KS,i,j)
           RHOT(   1:KS-1,i,j) = RHOT(KS,i,j)
+          do iv = 1, VA
+             PROG(   1:KS-1,i,j,iv) = PROG(KS,i,j,iv)
+          end do
           DENS(KE+1:KA,  i,j) = DENS(KE,i,j)
           MOMZ(KE+1:KA,  i,j) = MOMZ(KE,i,j)
           MOMX(KE+1:KA,  i,j) = MOMX(KE,i,j)
           MOMY(KE+1:KA,  i,j) = MOMY(KE,i,j)
           RHOT(KE+1:KA,  i,j) = RHOT(KE,i,j)
+          do iv = 1, VA
+             PROG(KE+1:KA,  i,j,iv) = PROG(KE,i,j,iv)
+          end do
        enddo
        enddo
 
@@ -1296,11 +1377,17 @@ contains
        call COMM_vars8( MOMX(:,:,:), I_COMM_MOMX )
        call COMM_vars8( MOMY(:,:,:), I_COMM_MOMY )
        call COMM_vars8( RHOT(:,:,:), I_COMM_RHOT )
+       do iv = 1, VA
+          call COMM_vars8( PROG(:,:,:,iv), I_COMM_PROG(iv) )
+       end do
        call COMM_wait ( DENS(:,:,:), I_COMM_DENS, .false. )
        call COMM_wait ( MOMZ(:,:,:), I_COMM_MOMZ, .false. )
        call COMM_wait ( MOMX(:,:,:), I_COMM_MOMX, .false. )
        call COMM_wait ( MOMY(:,:,:), I_COMM_MOMY, .false. )
        call COMM_wait ( RHOT(:,:,:), I_COMM_RHOT, .false. )
+       do iv = 1, VA
+          call COMM_wait ( PROG(:,:,:,iv), I_COMM_PROG(iv), .false. )
+       end do
 
        if ( USE_AVERAGE ) then
           DENS_av(:,:,:) = DENS_av(:,:,:) + DENS(:,:,:)
@@ -1365,7 +1452,12 @@ contains
     !------------------------------------------------------------------------
     ! Update each tracer
     !------------------------------------------------------------------------
+
+#ifdef _SDM
+    do iq = 1, I_QV
+#else
     do iq = 1, QA
+#endif
 
        call PROF_rapstart("DYN_Numfilter", 2)
 

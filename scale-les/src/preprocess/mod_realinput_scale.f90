@@ -20,7 +20,6 @@ module mod_realinput_scale
   use scale_tracer
   use scale_process, only: &
        myrank => PRC_myrank,  &
-       PRC_master,            &
        PRC_MPIstop
   use scale_grid_nest, only: &
        PARENT_KMAX,     &
@@ -117,7 +116,7 @@ contains
     real(RP), intent(out) :: lon_org(:,:)
     real(RP), intent(out) :: lat_org(:,:)
     real(RP), intent(out) :: cz_org (:,:,:)
-    character(LEN=*), intent(in)  :: basename_org
+    character(len=*), intent(in)  :: basename_org
     integer,  intent(in)  :: dims(11)
 
     integer :: rank
@@ -203,7 +202,7 @@ contains
     real(RP),         intent(out) :: dens_org(:,:,:)
     real(RP),         intent(out) :: pott_org(:,:,:)
     real(RP),         intent(out) :: qtrc_org(:,:,:,:)
-    character(LEN=*), intent(in)  :: basename_org
+    character(len=*), intent(in)  :: basename_org
     integer,          intent(in)  :: dims(7)
     integer,          intent(in)  :: it
 
@@ -243,9 +242,6 @@ contains
        call FileRead( read2D(:,:), BASENAME_ORG, "T2", it, rank )
        tsfc_org(xs:xe,ys:ye) = read2D(:,:)
 
-       call FileRead( read2D(:,:), BASENAME_ORG, "Q2", it, rank )
-       qtrc_org(2,xs:xe,ys:ye,I_QV) = read2D(:,:)
-
        call FileRead( read2D(:,:), BASENAME_ORG, "MSLP", it, rank )
        pres_org(1,xs:xe,ys:ye) = read2D(:,:)
 
@@ -279,7 +275,11 @@ contains
           do k = 1, dims(1)
              qtrc_org(k+2,xs:xe,ys:ye,iq) = read3D(:,:,k)
           end do
+          qtrc_org(2,xs:xe,ys:ye,iq) = qtrc_org(3,xs:xe,ys:ye,iq)
        end do
+
+!       call FileRead( read2D(:,:), BASENAME_ORG, "Q2", it, rank )
+!       qtrc_org(2,xs:xe,ys:ye,I_QV) = read2D(:,:)
 
     end do
 
@@ -387,7 +387,7 @@ contains
     real(RP), intent(out) :: lsmask_org(:,:)
     real(RP), intent(out) :: lz_org(:)
 
-    character(LEN=*), intent(in) :: basename_org
+    character(len=*), intent(in) :: basename_org
     integer,          intent(in) :: dims(11)
     logical,          intent(in) :: use_file_landwater   ! use land water data from files
     integer,          intent(in) :: it
@@ -416,13 +416,13 @@ contains
 
        call FileRead( read3DL(:,:,:), BASENAME_ORG, "LAND_TEMP",  it, rank )
        do k = 1, dims(7)
-         tg_org(k,xs:xe,ys:ye) = read3D(:,:,k)
+         tg_org(k,xs:xe,ys:ye) = read3DL(:,:,k)
        end do
 
        if( use_file_landwater )then
           call FileRead( read3DL(:,:,:), BASENAME_ORG, "LAND_WATER", it, rank )
           do k = 1, dims(7)
-             strg_org(k,xs:xe,ys:ye) = read3D(:,:,k)
+             strg_org(k,xs:xe,ys:ye) = read3DL(:,:,k)
           end do
        endif
 

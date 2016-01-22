@@ -29,6 +29,7 @@ module mod_atmos_phy_mp_driver
   !++ Public procedure
   !
   public :: ATMOS_PHY_MP_driver_setup
+  public :: ATMOS_PHY_MP_driver_resume
   public :: ATMOS_PHY_MP_driver
 
   !-----------------------------------------------------------------------------
@@ -67,11 +68,6 @@ contains
        ! setup library component
        call ATMOS_PHY_MP_setup( ATMOS_PHY_MP_TYPE )
 
-       ! run once (only for the diagnostic value)
-       call PROF_rapstart('ATM_Microphysics', 1)
-       call ATMOS_PHY_MP_driver( update_flag = .true. )
-       call PROF_rapend  ('ATM_Microphysics', 1)
-
     else
 
        if( IO_L ) write(IO_FID_LOG,*) '*** this component is never called.'
@@ -85,11 +81,30 @@ contains
   end subroutine ATMOS_PHY_MP_driver_setup
 
   !-----------------------------------------------------------------------------
+  !> resume
+  subroutine ATMOS_PHY_MP_driver_resume
+    use mod_atmos_admin, only: &
+       ATMOS_sw_phy_mp
+    implicit none
+
+    if ( ATMOS_sw_phy_mp ) then
+
+       ! run once (only for the diagnostic value)
+       call PROF_rapstart('ATM_Microphysics', 1)
+       call ATMOS_PHY_MP_driver( update_flag = .true. )
+       call PROF_rapend  ('ATM_Microphysics', 1)
+
+    end if
+
+    return
+  end subroutine ATMOS_PHY_MP_driver_resume
+
+  !-----------------------------------------------------------------------------
   !> Driver
   subroutine ATMOS_PHY_MP_driver( update_flag )
     use scale_time, only: &
        dt_MP => TIME_DTSEC_ATMOS_PHY_MP
-    use scale_statistics, only: &
+    use scale_les_statistics, only: &
        STATISTICS_checktotal, &
        STAT_total
     use scale_history, only: &
@@ -116,8 +131,11 @@ contains
        MOMY_t_MP => ATMOS_PHY_MP_MOMY_t,    &
        RHOT_t_MP => ATMOS_PHY_MP_RHOT_t,    &
        RHOQ_t_MP => ATMOS_PHY_MP_RHOQ_t,    &
+       EVAPORATE => ATMOS_PHY_MP_EVAPORATE, &
        SFLX_rain => ATMOS_PHY_MP_SFLX_rain, &
        SFLX_snow => ATMOS_PHY_MP_SFLX_snow
+    use mod_atmos_phy_ae_vars, only: &
+       CCN_t => ATMOS_PHY_AE_CCN_t
     implicit none
 
     logical, intent(in) :: update_flag
@@ -128,6 +146,7 @@ contains
     real(RP) :: MOMY0(KA,IA,JA)
     real(RP) :: RHOT0(KA,IA,JA)
     real(RP) :: QTRC0(KA,IA,JA,QA)
+    real(RP) :: CCN(KA,IA,JA)
 
     real(RP) :: precip(IA,JA)
     real(RP) :: total ! dummy
@@ -160,6 +179,8 @@ contains
        enddo
        enddo
        enddo
+  
+       CCN(:,:,:) = CCN_t(:,:,:) * dt_MP
 
        call ATMOS_PHY_MP( DENS0    (:,:,:),   & ! [INOUT]
                           MOMZ0    (:,:,:),   & ! [INOUT]
@@ -167,6 +188,8 @@ contains
                           MOMY0    (:,:,:),   & ! [INOUT]
                           RHOT0    (:,:,:),   & ! [INOUT]
                           QTRC0    (:,:,:,:), & ! [INOUT]
+                          CCN      (:,:,:),   & ! [IN]
+                          EVAPORATE(:,:,:),   & ! [OUT]
                           SFLX_rain(:,:),     & ! [OUT]
                           SFLX_snow(:,:)      ) ! [OUT]
 
@@ -205,6 +228,7 @@ contains
        call HIST_in( SFLX_rain(:,:), 'RAIN', 'surface rain rate',          'kg/m2/s', nohalo=.true. )
        call HIST_in( SFLX_snow(:,:), 'SNOW', 'surface snow rate',          'kg/m2/s', nohalo=.true. )
        call HIST_in( precip   (:,:), 'PREC', 'surface precipitation rate', 'kg/m2/s', nohalo=.true. )
+       call HIST_in( EVAPORATE(:,:,:), 'EVAPORATE', 'evaporated cloud number', '#/m3/s', nohalo=.true. )
 
        call HIST_in( DENS_t_MP(:,:,:), 'DENS_t_MP', 'tendency DENS in MP', 'kg/m3/s'  , nohalo=.true. )
        call HIST_in( MOMZ_t_MP(:,:,:), 'MOMZ_t_MP', 'tendency MOMZ in MP', 'kg/m2/s2' , nohalo=.true. )

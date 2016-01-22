@@ -340,7 +340,7 @@ contains
     real(RP), intent(in) :: LON
     real(RP), intent(in) :: LAT
     integer,  intent(in) :: NOWDATE(6)
-    real(RP), intent(in) :: dt
+    real(DP), intent(in) :: dt
 
     ! work
     real(RP) :: TR
@@ -375,6 +375,7 @@ contains
     real(RP) :: Tstar ! friction temperature [K]
     real(RP) :: Qstar ! friction mixing rate [kg/kg]
     real(RP) :: Uabs  ! modified absolute velocity [m/s]
+
     real(RP) :: QVS   ! saturation water vapor mixing ratio at surface [kg/kg]
 
     integer :: k, i, j
@@ -409,67 +410,67 @@ contains
        RAING = RAING_URB(i,j)
        ROFF  = ROFF_URB (i,j)
 
-       call SLC_main( TR,            & ! [INOUT]
-                      TB,            & ! [INOUT]
-                      TG,            & ! [INOUT]
-                      TC,            & ! [INOUT]
-                      QC,            & ! [INOUT]
-                      UC,            & ! [INOUT]
-                      TRL     (:),   & ! [INOUT]
-                      TBL     (:),   & ! [INOUT]
-                      TGL     (:),   & ! [INOUT]
-                      RAINR,         & ! [INOUT]
-                      RAINB,         & ! [INOUT]
-                      RAING,         & ! [INOUT]
-                      ROFF,          & ! [INOUT]
-                      ALBD_LW (i,j), & ! [OUT]
-                      ALBD_SW (i,j), & ! [OUT]
-                      SHR     (i,j), & ! [OUT]
-                      SHB     (i,j), & ! [OUT]
-                      SHG     (i,j), & ! [OUT]
-                      LHR     (i,j), & ! [OUT]
-                      LHB     (i,j), & ! [OUT]
-                      LHG     (i,j), & ! [OUT]
-                      GHR     (i,j), & ! [OUT]
-                      GHB     (i,j), & ! [OUT]
-                      GHG     (i,j), & ! [OUT]
-                      RNR     (i,j), & ! [OUT]
-                      RNB     (i,j), & ! [OUT]
-                      RNG     (i,j), & ! [OUT]
-                      SFC_TEMP(i,j), & ! [OUT]
-                      RNgrd   (i,j), & ! [OUT]
-                      SHFLX   (i,j), & ! [OUT]
-                      LHFLX   (i,j), & ! [OUT]
-                      GHFLX   (i,j), & ! [OUT]
-                      U10     (i,j), & ! [OUT]
-                      V10     (i,j), & ! [OUT]
-                      T2      (i,j), & ! [OUT]
-                      Q2      (i,j), & ! [OUT]
-                      LSOLAR,        & ! [IN]
-                      PRSA    (i,j), & ! [IN]
-                      PRSS    (i,j), & ! [IN]
-                      TMPA    (i,j), & ! [IN]
-                      QA      (i,j), & ! [IN]
-                      Uabs,          & ! [IN]
-                      U1      (i,j), & ! [IN]
-                      V1      (i,j), & ! [IN]
-                      Z1      (i,j), & ! [IN]
-                      SWD     (i,j), & ! [IN]
-                      LWD     (i,j), & ! [IN]
-                      PREC    (i,j), & ! [IN]
-                      DENS    (i,j), & ! [IN]
-                      LON,           & ! [IN]
-                      LAT,           & ! [IN]
-                      NOWDATE (:),   & ! [IN]
-                      dt, i, j       ) ! [IN]
+       call SLC_main( TR,                 & ! [INOUT]
+                      TB,                 & ! [INOUT]
+                      TG,                 & ! [INOUT]
+                      TC,                 & ! [INOUT]
+                      QC,                 & ! [INOUT]
+                      UC,                 & ! [INOUT]
+                      TRL     (:),        & ! [INOUT]
+                      TBL     (:),        & ! [INOUT]
+                      TGL     (:),        & ! [INOUT]
+                      RAINR,              & ! [INOUT]
+                      RAINB,              & ! [INOUT]
+                      RAING,              & ! [INOUT]
+                      ROFF,               & ! [INOUT]
+                      ALBD_LW (i,j),      & ! [OUT]
+                      ALBD_SW (i,j),      & ! [OUT]
+                      SHR     (i,j),      & ! [OUT]
+                      SHB     (i,j),      & ! [OUT]
+                      SHG     (i,j),      & ! [OUT]
+                      LHR     (i,j),      & ! [OUT]
+                      LHB     (i,j),      & ! [OUT]
+                      LHG     (i,j),      & ! [OUT]
+                      GHR     (i,j),      & ! [OUT]
+                      GHB     (i,j),      & ! [OUT]
+                      GHG     (i,j),      & ! [OUT]
+                      RNR     (i,j),      & ! [OUT]
+                      RNB     (i,j),      & ! [OUT]
+                      RNG     (i,j),      & ! [OUT]
+                      SFC_TEMP(i,j),      & ! [OUT]
+                      RNgrd   (i,j),      & ! [OUT]
+                      SHFLX   (i,j),      & ! [OUT]
+                      LHFLX   (i,j),      & ! [OUT]
+                      GHFLX   (i,j),      & ! [OUT]
+                      U10     (i,j),      & ! [OUT]
+                      V10     (i,j),      & ! [OUT]
+                      T2      (i,j),      & ! [OUT]
+                      Q2      (i,j),      & ! [OUT]
+                      LSOLAR,             & ! [IN]
+                      PRSA    (i,j),      & ! [IN]
+                      PRSS    (i,j),      & ! [IN]
+                      TMPA    (i,j),      & ! [IN]
+                      QA      (i,j),      & ! [IN]
+                      Uabs,               & ! [IN]
+                      U1      (i,j),      & ! [IN]
+                      V1      (i,j),      & ! [IN]
+                      Z1      (i,j),      & ! [IN]
+                      SWD     (i,j),      & ! [IN]
+                      LWD     (i,j),      & ! [IN]
+                      PREC    (i,j),      & ! [IN]
+                      DENS    (i,j),      & ! [IN]
+                      LON,                & ! [IN]
+                      LAT,                & ! [IN]
+                      NOWDATE (:),        & ! [IN]
+                      dt, i, j            ) ! [IN]
 
        ! calculate tendency 
-       TR_URB_t(i,j) = ( TR - TR_URB(i,j) ) /dt
-       TB_URB_t(i,j) = ( TB - TB_URB(i,j) ) /dt
-       TG_URB_t(i,j) = ( TG - TG_URB(i,j) ) /dt
-       TC_URB_t(i,j) = ( TC - TC_URB(i,j) ) /dt
-       QC_URB_t(i,j) = ( QC - QC_URB(i,j) ) /dt
-       UC_URB_t(i,j) = ( UC - UC_URB(i,j) ) /dt
+       TR_URB_t(i,j) = ( TR - TR_URB(i,j) ) / dt
+       TB_URB_t(i,j) = ( TB - TB_URB(i,j) ) / dt
+       TG_URB_t(i,j) = ( TG - TG_URB(i,j) ) / dt
+       TC_URB_t(i,j) = ( TC - TC_URB(i,j) ) / dt
+       QC_URB_t(i,j) = ( QC - QC_URB(i,j) ) / dt
+       UC_URB_t(i,j) = ( UC - UC_URB(i,j) ) / dt
 
        do k = UKS, UKE
           TRL_URB_t(k,i,j) = ( TRL(k) - TRL_URB(k,i,j) ) / dt
@@ -675,7 +676,7 @@ contains
     real(RP), intent(in)    :: XLAT ! latitude                               [rad,-pi,pi]
     real(RP), intent(in)    :: XLON ! longitude                              [rad,0-2pi]
     integer,  intent(in)    :: NOWDATE(6)
-    real(RP), intent(in)    :: dt
+    real(DP), intent(in)    :: dt
 
     !-- In/Out variables from/to Coupler to/from Urban
     real(RP), intent(inout) :: TR   ! roof temperature              [K]
@@ -1595,7 +1596,7 @@ contains
     real(RP), intent(in)    :: G0
     real(RP), intent(in)    :: CAP
     real(RP), intent(in)    :: AKS
-    real(RP), intent(in)    :: DELT      ! Time step [ s ]
+    real(DP), intent(in)    :: DELT      ! Time step [ s ]
     real(RP), intent(in)    :: TSLEND
     integer,  intent(in)    :: KM
     integer,  intent(in)    :: BOUND
@@ -1665,7 +1666,7 @@ contains
     real(RP), intent(in)    :: AKS
     real(RP), intent(in)    :: CAP1      ! for 1st layer
     real(RP), intent(in)    :: AKS1      ! for 1st layer
-    real(RP), intent(in)    :: DELT      ! Time step [ s ]
+    real(DP), intent(in)    :: DELT      ! Time step [ s ]
     real(RP), intent(in)    :: TSLEND
     integer,  intent(in)    :: KM
     integer,  intent(in)    :: BOUND

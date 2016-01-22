@@ -22,7 +22,9 @@ module mod_user
      IO_FID_LOG, &
      IO_L
   use scale_precision
+  use scale_stdio
   use scale_prof
+
   use scale_tracer
   use scale_grid_index
   use scale_index
@@ -50,8 +52,9 @@ module mod_user
   !
   !++ Public procedure
   !
-  public :: USER_setup0
   public :: USER_setup
+  public :: USER_resume0
+  public :: USER_resume
   public :: USER_step
 
   !-----------------------------------------------------------------------------
@@ -159,16 +162,8 @@ module mod_user
 
   !-----------------------------------------------------------------------------
 contains
-
-  !-----------------------------------------------------------------------------
-  !> Setup0
-  !-----------------------------------------------------------------------------
-  subroutine USER_setup0
-  end subroutine USER_setup0
-
   !-----------------------------------------------------------------------------
   !> Setup
-  !-----------------------------------------------------------------------------
   subroutine USER_setup
     use scale_stdio, only:  &
        IO_FID_CONF
@@ -231,13 +226,9 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[USER]/Categ[MAIN]'
 
-! if(io_l)write(IO_FID_LOG,*)'debug stop'  ! ok
-!!call PRC_MPIstop
-!call PRC_MPIfinish
-
     allocate( time_sst_in(mstep_sst) )
-    allocate( sst_in(mstep_sst) )
-    allocate( sst(ia,ja) )
+    allocate( sst_in     (mstep_sst) )
+    allocate( sst        (ia,ja)     )
 
     USER_SF_U_minM = U_minM
     USER_SF_U_minH = U_minH
@@ -260,9 +251,6 @@ contains
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_USER,iostat=ierr)
 
-    !if(io_l)write(IO_FID_LOG,*)'debug stop1',ierr ! ok
-    !call PRC_MPIfinish
-
     if( ierr < 0 ) then !--- missing
        if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
@@ -270,7 +258,7 @@ contains
        call PRC_MPIstop
     endif
     if( IO_L ) write(IO_FID_LOG,nml=PARAM_USER)
-    !
+
     U_minM = USER_SF_U_minM
     U_minH = USER_SF_U_minH
     U_minE = USER_SF_U_minE
@@ -287,13 +275,13 @@ contains
     ZeR    = USER_SF_ZeR
     ZeS    = USER_SF_ZeS
     ThS    = USER_SF_ThS
-    !
+
     allocate( time_in(mstep) )
-    allocate( lhf_in(mstep) )
-    allocate( shf_in(mstep) )
-    !
+    allocate( lhf_in (mstep) )
+    allocate( shf_in (mstep) )
+
     fid_data = IO_get_available_fid()
-    fdata_name_sst=trim(inbasedir)//'/'//trim(fdata_name_sst)
+    fdata_name_sst = trim(inbasedir)//'/'//trim(fdata_name_sst)
     open(fid_data, file=trim(fdata_name_sst), status='old',iostat=ierr)
     if(ierr /= 0) then
       write(IO_FID_LOG,*) 'Msg : Sub[mod_user_setup]/Mod[uset_setup]'
@@ -302,7 +290,7 @@ contains
       write(IO_FID_LOG,*) 'STOP!!'
       call PRC_MPIstop
     endif
-    !
+
     if(IO_L) write(io_fid_log,*) 'Reading external sst'
     read(fid_data,*)
     do t=1, mstep_sst
@@ -310,7 +298,7 @@ contains
       if(IO_L) write(io_fid_log,*) t,time_nowsec,time_sst_in(t),sst_in(t)
     enddo
     close(fid_data)
-    !
+
     if( GIVEN_HEAT_FLUX )then
       fid_data_sf = IO_get_available_fid()
       fdata_name_sf=trim(inbasedir)//'/'//trim(fdata_name_sf)
@@ -337,14 +325,30 @@ contains
         endif
     enddo
     sfc_temp(:,:)=sst(:,:)
-! write(*,*)'chksstuser00',maxval(sst(:,:)), minval(sst(:,:))
 
     return
   end subroutine USER_setup
 
   !-----------------------------------------------------------------------------
-  !> Step
+  !> Resuming operation, before calculating tendency
+  subroutine USER_resume0
+    implicit none
+    !---------------------------------------------------------------------------
+
+    return
+  end subroutine USER_resume0
+
   !-----------------------------------------------------------------------------
+  !> Resuming operation
+  subroutine USER_resume
+    implicit none
+    !---------------------------------------------------------------------------
+
+    return
+  end subroutine USER_resume
+
+  !-----------------------------------------------------------------------------
+  !> Step
   subroutine USER_step
     use scale_stdio, only: &
      IO_get_available_fid, &
@@ -402,9 +406,6 @@ contains
     use mod_atmos_phy_tb_vars, only: &
        TKE       => ATMOS_PHY_TB_TKE,    &
        NU        => ATMOS_PHY_TB_NU
-!   use mod_atmos_phy_tb_driver,only: &
-!        pr
-
     implicit none
 
     real(RP) :: WORK(KA,IA,JA)

@@ -347,7 +347,7 @@ contains
     real(DP),         intent(out) :: lat(:)
     real(DP),         intent(out) :: lev(:)
     real(DP),         intent(out) :: time(:)
-    character(LEN=*), intent(in)  :: filename
+    character(len=*), intent(in)  :: filename
     !---------------------------------------------------------------------------
 
     call FileRead( lon(:),  trim(filename), "lon",  1, 1, single=.true. )
@@ -370,8 +370,8 @@ contains
     implicit none
 
     real(SP),         intent(out) :: var(:,:,:,:)
-    character(LEN=*), intent(in)  :: filename
-    character(LEN=*), intent(in)  :: varname
+    character(len=*), intent(in)  :: filename
+    character(len=*), intent(in)  :: varname
     integer,          intent(in)  :: dimens(:)  !1:x, 2:y, 3:z, 4:t
     logical,          intent(in)  :: scoffset
 
@@ -421,8 +421,8 @@ contains
     implicit none
 
     real(SP),         intent(out) :: var(:,:,:,:)
-    character(LEN=*), intent(in)  :: filename
-    character(LEN=*), intent(in)  :: varname
+    character(len=*), intent(in)  :: filename
+    character(len=*), intent(in)  :: varname
     integer,          intent(in)  :: dimens(:)  !1:x, 2:y, 3:z, 4:t
     logical,          intent(in)  :: scoffset
 
@@ -463,9 +463,9 @@ contains
     real(DP),         intent(in) :: lev(:)
     real(DP),         intent(in) :: time(:)
     real(SP),         intent(in) :: var(:,:,:,:)
-    character(LEN=*), intent(in) :: varname
+    character(len=*), intent(in) :: varname
     integer,          intent(in) :: dimens(:)  !1:x, 2:y, 3:z, 4:t
-    character(LEN=*), intent(in) :: outputdir
+    character(len=*), intent(in) :: outputdir
     logical,          intent(in) :: scoffset
 
     integer,  parameter  :: iNICAM      = 3

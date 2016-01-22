@@ -20,7 +20,6 @@ module mod_realinput_grads
   use scale_tracer
   use scale_process, only: &
      myrank => PRC_myrank,  &
-     PRC_master,            &
      PRC_MPIstop
   !-----------------------------------------------------------------------------
   implicit none
@@ -46,10 +45,10 @@ module mod_realinput_grads
   !
   !++ Private parameters & variables
   !
-  integer,  parameter   :: num_item_list = 28
-  integer,  parameter   :: num_item_list_atm = 18
-  logical               :: data_available(num_item_list)
-  character(H_SHORT)    :: item_list     (num_item_list) ! Order and below number are very important
+  integer,  parameter    :: num_item_list = 28
+  integer,  parameter    :: num_item_list_atm = 18
+  logical                :: data_available(num_item_list)
+  character(len=H_SHORT) :: item_list     (num_item_list) ! Order and below number are very important
   data item_list /'lon','lat','plev','U','V','T','HGT','QV','RH','MSLP','PSFC','U10','V10','T2','Q2','RH2','TOPO', &
                   'lsmask','lon_sfc','lat_sfc','lon_sst','lat_sst','llev','STEMP','SMOISVC','SMOISDS','SKINT','SST'/
 
@@ -93,20 +92,20 @@ module mod_realinput_grads
                                                    !< "COPY": copy values from the highest level of outer model
 
 
-  character(H_SHORT)    :: grads_item    (num_item_list)
-  character(H_SHORT)    :: grads_kytpe   (num_item_list)
-  character(H_LONG)     :: grads_dtype   (num_item_list)
-  character(H_LONG)     :: grads_fname   (num_item_list)
-  character(H_SHORT)    :: grads_fendian (num_item_list)
-  character(H_SHORT)    :: grads_yrev    (num_item_list)
-  real(RP)              :: grads_swpoint (num_item_list)
-  real(RP)              :: grads_dd      (num_item_list)
-  integer               :: grads_lnum    (num_item_list)
-  real(RP)              :: grads_lvars   (num_item_list,lvars_limit)
-  integer               :: grads_startrec(num_item_list)
-  integer               :: grads_totalrec(num_item_list)
-  integer               :: grads_knum    (num_item_list)
-  real(SP)              :: grads_missval (num_item_list)
+  character(len=H_SHORT) :: grads_item    (num_item_list)
+  character(len=H_SHORT) :: grads_kytpe   (num_item_list)
+  character(len=H_LONG)  :: grads_dtype   (num_item_list)
+  character(len=H_LONG)  :: grads_fname   (num_item_list)
+  character(len=H_SHORT) :: grads_fendian (num_item_list)
+  character(len=H_SHORT) :: grads_yrev    (num_item_list)
+  real(RP)               :: grads_swpoint (num_item_list)
+  real(RP)               :: grads_dd      (num_item_list)
+  integer                :: grads_lnum    (num_item_list)
+  real(RP)               :: grads_lvars   (num_item_list,lvars_limit)
+  integer                :: grads_startrec(num_item_list)
+  integer                :: grads_totalrec(num_item_list)
+  integer                :: grads_knum    (num_item_list)
+  real(SP)               :: grads_missval (num_item_list)
 
   real(SP), allocatable :: gdata2D(:,:)
   real(SP), allocatable :: gdata3D(:,:,:)
@@ -165,19 +164,19 @@ contains
     integer, parameter   :: grads_vars_limit = 1000 !> limit of number of values
     integer              :: grads_vars_nmax = 0     !> number of variables in grads file
 
-    character(H_SHORT)   :: item                                      ! up to 16 characters
-    integer              :: knum                                      ! optional: vertical level
-    character(H_SHORT)   :: dtype                                     ! 'linear','levels','map'
-    character(H_LONG)    :: fname                                     ! head of file name
-    real(RP)             :: swpoint                                   ! start point (south-west point) for "linear"
-    real(RP)             :: dd                                        ! dlon,dlat for "linear"
-    integer              :: lnum                                      ! number of data
-    real(RP)             :: lvars(lvars_limit) = large_number_one     ! values for "levels"
-    integer              :: startrec                                  ! record position
-    integer              :: totalrec                                  ! total record number per one time
-    real(SP)             :: missval                                   ! missing value
-    character(H_SHORT)   :: fendian='big'                             ! option for "map"
-    character(H_SHORT)   :: yrev='off'                                ! option for "map", if yrev=on, order of data is NW to SE.
+    character(len=H_SHORT) :: item                                      ! up to 16 characters
+    integer                :: knum                                      ! optional: vertical level
+    character(len=H_SHORT) :: dtype                                     ! 'linear','levels','map'
+    character(len=H_LONG)  :: fname                                     ! head of file name
+    real(RP)               :: swpoint                                   ! start point (south-west point) for "linear"
+    real(RP)               :: dd                                        ! dlon,dlat for "linear"
+    integer                :: lnum                                      ! number of data
+    real(RP)               :: lvars(lvars_limit) = large_number_one     ! values for "levels"
+    integer                :: startrec                                  ! record position
+    integer                :: totalrec                                  ! total record number per one time
+    real(SP)               :: missval                                   ! missing value
+    character(len=H_SHORT) :: fendian='big'                             ! option for "map"
+    character(len=H_SHORT) :: yrev='off'                                ! option for "map", if yrev=on, order of data is NW to SE.
 
     namelist /grdvar/ &
         item,      &  ! necessary
@@ -495,7 +494,7 @@ contains
     real(RP),         intent(out) :: lon_org(:,:)
     real(RP),         intent(out) :: lat_org(:,:)
     real(RP),         intent(out) :: cz_org(:,:,:)
-    character(LEN=*), intent(in)  :: basename_num
+    character(len=*), intent(in)  :: basename_num
     integer,          intent(in)  :: dims(11)
     integer,          intent(in)  :: nt
 
@@ -506,18 +505,18 @@ contains
     real(RP) :: CPovR
 
     ! for namelist
-    character(H_SHORT)   :: item                                      ! up to 16 characters
-    integer              :: knum                                      ! optional: vertical level
-    character(H_SHORT)   :: dtype                                     ! 'linear','levels','map'
-    character(H_LONG)    :: fname                                     ! head of file name
-    real(RP)             :: swpoint                                   ! start point (south-west point) for linear
-    real(RP)             :: dd                                        ! dlon,dlat for linear
-    integer              :: lnum                                      ! number of data
-    real(RP)             :: lvars(lvars_limit)                        ! values for levels
-    integer              :: startrec                                  ! record position
-    integer              :: totalrec                                  ! total record number per one time
-    character(H_SHORT)   :: fendian='big_endian'                      ! option
-    character(H_SHORT)   :: yrev                                      ! option
+    character(len=H_SHORT) :: item                                      ! up to 16 characters
+    integer                :: knum                                      ! optional: vertical level
+    character(len=H_SHORT) :: dtype                                     ! 'linear','levels','map'
+    character(len=H_LONG)  :: fname                                     ! head of file name
+    real(RP)               :: swpoint                                   ! start point (south-west point) for linear
+    real(RP)               :: dd                                        ! dlon,dlat for linear
+    integer                :: lnum                                      ! number of data
+    real(RP)               :: lvars(lvars_limit)                        ! values for levels
+    integer                :: startrec                                  ! record position
+    integer                :: totalrec                                  ! total record number per one time
+    character(len=H_SHORT) :: fendian='big_endian'                      ! option
+    character(len=H_SHORT) :: yrev                                      ! option
 
     ! data
     character(len=H_LONG) :: gfile
@@ -1031,7 +1030,7 @@ contains
     real(RP), intent(out) :: olon_org  (:,:)
     real(RP), intent(out) :: olat_org  (:,:)
 
-    character(LEN=*), intent(in) :: basename_num
+    character(len=*), intent(in) :: basename_num
     integer,          intent(in) :: dims(11)
     logical,          intent(in) :: use_file_landwater   ! use land water data from files
     integer,          intent(in) :: nt
@@ -1040,20 +1039,20 @@ contains
     ! namelist.grads_boundary
     integer              :: grads_vars_nmax = 0     !> number of variables in grads file
 
-    character(H_SHORT)   :: item                                      ! up to 16 characters
-    integer              :: knum                                      ! optional: vertical level
-    character(H_SHORT)   :: dtype                                     ! 'linear','levels','map'
-    character(H_LONG)    :: fname                                     ! head of file name
-    real(RP)             :: swpoint                                   ! start point (south-west point) for linear
-    real(RP)             :: dd                                        ! dlon,dlat for linear
-    integer, parameter   :: lvars_limit = 1000                        ! limit of values for levels data
-    integer              :: lnum                                      ! number of data
-    real(RP)             :: lvars(lvars_limit) = large_number_one     ! values for levels
-    integer              :: startrec                                  ! record position
-    integer              :: totalrec                                  ! total record number per one time
-    real(SP)             :: missval                                   ! option
-    character(H_SHORT)   :: fendian                                   ! option
-    character(H_SHORT)   :: yrev                                      ! option
+    character(len=H_SHORT) :: item                                      ! up to 16 characters
+    integer                :: knum                                      ! optional: vertical level
+    character(len=H_SHORT) :: dtype                                     ! 'linear','levels','map'
+    character(len=H_LONG)  :: fname                                     ! head of file name
+    real(RP)               :: swpoint                                   ! start point (south-west point) for linear
+    real(RP)               :: dd                                        ! dlon,dlat for linear
+    integer, parameter     :: lvars_limit = 1000                        ! limit of values for levels data
+    integer                :: lnum                                      ! number of data
+    real(RP)               :: lvars(lvars_limit) = large_number_one     ! values for levels
+    integer                :: startrec                                  ! record position
+    integer                :: totalrec                                  ! total record number per one time
+    real(SP)               :: missval                                   ! option
+    character(len=H_SHORT) :: fendian                                   ! option
+    character(len=H_SHORT) :: yrev                                      ! option
 
     !> grads data
     character(len=H_LONG) :: gfile

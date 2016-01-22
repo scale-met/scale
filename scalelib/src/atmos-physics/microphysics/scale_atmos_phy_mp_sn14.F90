@@ -46,6 +46,7 @@
 !!
 !! @par History
 !! @li      2011-10-24 (T.Seiki)    [new] import from NICAM(11/08/30 ver.)
+!! @li      2015-09-08 (Y.Sato)     [add] Add evaporated cloud number concentration
 !!
 !<
 !-------------------------------------------------------------------------------
@@ -73,6 +74,7 @@ module scale_atmos_phy_mp_sn14
   use scale_grid_index
 
   use scale_tracer_sn14
+  use scale_tracer, only: QA
   use scale_const, only: &
      GRAV   => CONST_GRAV,   &
      PI     => CONST_PI,     &
@@ -458,7 +460,7 @@ module scale_atmos_phy_mp_sn14
 
   integer, private, save :: MP_NSTEP_SEDIMENTATION
   real(RP), private, save :: MP_RNSTEP_SEDIMENTATION
-  real(RP), private, save :: MP_DTSEC_SEDIMENTATION
+  real(DP), private, save :: MP_DTSEC_SEDIMENTATION
 
   !
   ! metrics of vertical coordinate
@@ -474,7 +476,9 @@ module scale_atmos_phy_mp_sn14
 
   logical, private, save :: MP_doautoconversion = .true.
   logical, private, save :: MP_doprecipitation  = .true.
+  logical, private, save :: MP_couple_aerosol   = .false. ! apply CCN effect?
   real(RP), private, save :: MP_ssw_lim = 1.E+1_RP
+
 
   !-----------------------------------------------------------------------------
 contains
@@ -497,7 +501,8 @@ contains
     NAMELIST / PARAM_ATMOS_PHY_MP / &
        MP_doautoconversion, &
        MP_doprecipitation,  &
-       MP_ssw_lim,       &
+       MP_ssw_lim,          &
+       MP_couple_aerosol,   &
        MP_ntmax_sedimentation
 
     real(RP), parameter :: max_term_vel = 10.0_RP  !-- terminal velocity for calculate dt of sedimentation
@@ -603,6 +608,8 @@ contains
        MOMY,      &
        RHOT,      &
        QTRC,      &
+       CCN,       &
+       EVAPORATE, &
        SFLX_rain, &
        SFLX_snow  )
     use scale_grid_index
@@ -617,6 +624,8 @@ contains
     real(RP), intent(inout) :: MOMY(KA,IA,JA)
     real(RP), intent(inout) :: RHOT(KA,IA,JA)
     real(RP), intent(inout) :: QTRC(KA,IA,JA,QAD)
+    real(RP), intent(in)    :: CCN(KA,IA,JA)
+    real(RP), intent(out)   :: EVAPORATE(KA,IA,JA)
     real(RP), intent(out)   :: SFLX_rain(IA,JA)
     real(RP), intent(out)   :: SFLX_snow(IA,JA)
     !---------------------------------------------------------------------------
@@ -635,6 +644,8 @@ contains
                   MOMY,      & ! [INOUT]
                   RHOT,      & ! [INOUT]
                   QTRC,      & ! [INOUT]
+                  CCN,       & ! [IN]
+                  EVAPORATE, & ! [OUT]
                   SFLX_rain, & ! [OUT]
                   SFLX_snow  ) ! [OUT]
 
@@ -1206,62 +1217,62 @@ contains
     deallocate(w1,w2,w3,w4,w5,w6,w7,w8)
 
     if( IO_L ) write(IO_FID_LOG,'(100a16)')     "LABEL       ",WLABEL(:)
-    if( IO_L ) write(IO_FID_LOG,'(a,100e16.6)') "capacity    ",cap(:) ! [Add] 11/08/30 T.Mitsui
-    if( IO_L ) write(IO_FID_LOG,'(a,100e16.6)') "coef_m2     ",coef_m2(:)
-    if( IO_L ) write(IO_FID_LOG,'(a,100e16.6)') "coef_d      ",coef_d(:)
+    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "capacity    ",cap(:) ! [Add] 11/08/30 T.Mitsui
+    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "coef_m2     ",coef_m2(:)
+    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "coef_d      ",coef_d(:)
     !
-    if( IO_L ) write(IO_FID_LOG,'(a,100e16.6)') "coef_d3     ",coef_d3(:)
-    if( IO_L ) write(IO_FID_LOG,'(a,100e16.6)') "coef_d6     ",coef_d6(:)
-    if( IO_L ) write(IO_FID_LOG,'(a,100e16.6)') "coef_d2v    ",coef_d2v(:)
-    if( IO_L ) write(IO_FID_LOG,'(a,100e16.6)') "coef_md2v   ",coef_md2v(:)
-    if( IO_L ) write(IO_FID_LOG,'(a,100e16.6)') "a_d2vt      ",a_d2vt(:)
-    if( IO_L ) write(IO_FID_LOG,'(a,100e16.6)') "b_d2vt      ",b_d2vt(:)
+    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "coef_d3     ",coef_d3(:)
+    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "coef_d6     ",coef_d6(:)
+    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "coef_d2v    ",coef_d2v(:)
+    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "coef_md2v   ",coef_md2v(:)
+    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "a_d2vt      ",a_d2vt(:)
+    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "b_d2vt      ",b_d2vt(:)
     !
-    if( IO_L ) write(IO_FID_LOG,'(a,100e16.6)') "coef_r2     ",coef_r2(:)
-    if( IO_L ) write(IO_FID_LOG,'(a,100e16.6)') "coef_r3     ",coef_r3(:)
-    if( IO_L ) write(IO_FID_LOG,'(a,100e16.6)') "coef_re     ",coef_re(:)
+    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "coef_r2     ",coef_r2(:)
+    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "coef_r3     ",coef_r3(:)
+    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "coef_re     ",coef_re(:)
     !
-    if( IO_L ) write(IO_FID_LOG,'(a,100e16.6)') "a_area      ",a_area(:)
-    if( IO_L ) write(IO_FID_LOG,'(a,100e16.6)') "b_area      ",b_area(:)
-    if( IO_L ) write(IO_FID_LOG,'(a,100e16.6)') "ax_area     ",ax_area(:)
-    if( IO_L ) write(IO_FID_LOG,'(a,100e16.6)') "bx_area     ",bx_area(:)
-    if( IO_L ) write(IO_FID_LOG,'(a,100e16.6)') "a_rea       ",a_rea(:)
-    if( IO_L ) write(IO_FID_LOG,'(a,100e16.6)') "b_rea       ",b_rea(:)
-    if( IO_L ) write(IO_FID_LOG,'(a,100e16.6)') "a_rea3      ",a_rea3(:)
-    if( IO_L ) write(IO_FID_LOG,'(a,100e16.6)') "b_rea3      ",b_rea3(:)
+    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "a_area      ",a_area(:)
+    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "b_area      ",b_area(:)
+    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "ax_area     ",ax_area(:)
+    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "bx_area     ",bx_area(:)
+    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "a_rea       ",a_rea(:)
+    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "b_rea       ",b_rea(:)
+    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "a_rea3      ",a_rea3(:)
+    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "b_rea3      ",b_rea3(:)
     !
-    if( IO_L ) write(IO_FID_LOG,'(a,100e16.6)') "coef_rea2   ",coef_rea2(:)
-    if( IO_L ) write(IO_FID_LOG,'(a,100e16.6)') "coef_rea3   ",coef_rea3(:)
-    if( IO_L ) write(IO_FID_LOG,'(a,100e16.6)') "coef_vt0    ",coef_vt0(:,1)
-    if( IO_L ) write(IO_FID_LOG,'(a,100e16.6)') "coef_vt1    ",coef_vt1(:,1)
-    if( IO_L ) write(IO_FID_LOG,'(a,100e16.6)') "coef_A      ",coef_A(:)
-    if( IO_L ) write(IO_FID_LOG,'(a,100e16.6)') "coef_lambda ",coef_lambda(:)
+    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "coef_rea2   ",coef_rea2(:)
+    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "coef_rea3   ",coef_rea3(:)
+    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "coef_vt0    ",coef_vt0(:,1)
+    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "coef_vt1    ",coef_vt1(:,1)
+    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "coef_A      ",coef_A(:)
+    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "coef_lambda ",coef_lambda(:)
 
-    if( IO_L ) write(IO_FID_LOG,'(a,100e16.6)') "ah_vent0 sml",ah_vent0(:,1)
-    if( IO_L ) write(IO_FID_LOG,'(a,100e16.6)') "ah_vent0 lrg",ah_vent0(:,2)
-    if( IO_L ) write(IO_FID_LOG,'(a,100e16.6)') "ah_vent1 sml",ah_vent1(:,1)
-    if( IO_L ) write(IO_FID_LOG,'(a,100e16.6)') "ah_vent1 lrg",ah_vent1(:,2)
-    if( IO_L ) write(IO_FID_LOG,'(a,100e16.6)') "bh_vent0 sml",bh_vent0(:,1)
-    if( IO_L ) write(IO_FID_LOG,'(a,100e16.6)') "bh_vent0 lrg",bh_vent0(:,2)
-    if( IO_L ) write(IO_FID_LOG,'(a,100e16.6)') "bh_vent1 sml",bh_vent1(:,1)
-    if( IO_L ) write(IO_FID_LOG,'(a,100e16.6)') "bh_vent1 lrg",bh_vent1(:,2)
+    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "ah_vent0 sml",ah_vent0(:,1)
+    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "ah_vent0 lrg",ah_vent0(:,2)
+    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "ah_vent1 sml",ah_vent1(:,1)
+    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "ah_vent1 lrg",ah_vent1(:,2)
+    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "bh_vent0 sml",bh_vent0(:,1)
+    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "bh_vent0 lrg",bh_vent0(:,2)
+    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "bh_vent1 sml",bh_vent1(:,1)
+    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "bh_vent1 lrg",bh_vent1(:,2)
 
-    if( IO_L ) write(IO_FID_LOG,'(a,100e16.6)') "delta_b0    ",delta_b0(:)
-    if( IO_L ) write(IO_FID_LOG,'(a,100e16.6)') "delta_b1    ",delta_b1(:)
-    if( IO_L ) write(IO_FID_LOG,'(a,100e16.6)') "theta_b0    ",theta_b0(:)
-    if( IO_L ) write(IO_FID_LOG,'(a,100e16.6)') "theta_b1    ",theta_b1(:)
+    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "delta_b0    ",delta_b0(:)
+    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "delta_b1    ",delta_b1(:)
+    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "theta_b0    ",theta_b0(:)
+    if( IO_L ) write(IO_FID_LOG,'(a,100ES16.6)') "theta_b1    ",theta_b1(:)
 
     do ia=QQS,QQE
-       if( IO_L ) write(IO_FID_LOG,'(a,a10,a,100e16.6)') "delta0(a,b)=(",trim(WLABEL(ia)),",b)=",(delta_ab0(ia,ib),ib=QQS,QQE)
+       if( IO_L ) write(IO_FID_LOG,'(a,a10,a,100ES16.6)') "delta0(a,b)=(",trim(WLABEL(ia)),",b)=",(delta_ab0(ia,ib),ib=QQS,QQE)
     enddo
     do ia=QQS,QQE
-       if( IO_L ) write(IO_FID_LOG,'(a,a10,a,100e16.6)') "delta1(a,b)=(",trim(WLABEL(ia)),",b)=",(delta_ab1(ia,ib),ib=QQS,QQE)
+       if( IO_L ) write(IO_FID_LOG,'(a,a10,a,100ES16.6)') "delta1(a,b)=(",trim(WLABEL(ia)),",b)=",(delta_ab1(ia,ib),ib=QQS,QQE)
     enddo
     do ia=QQS,QQE
-       if( IO_L ) write(IO_FID_LOG,'(a,a10,a,100e16.6)') "theta0(a,b)=(",trim(WLABEL(ia)),",b)=",(theta_ab0(ia,ib),ib=QQS,QQE)
+       if( IO_L ) write(IO_FID_LOG,'(a,a10,a,100ES16.6)') "theta0(a,b)=(",trim(WLABEL(ia)),",b)=",(theta_ab0(ia,ib),ib=QQS,QQE)
     enddo
     do ia=QQS,QQE
-       if( IO_L ) write(IO_FID_LOG,'(a,a10,a,100e16.6)') "theta1(a,b)=(",trim(WLABEL(ia)),",b)=",(theta_ab1(ia,ib),ib=QQS,QQE)
+       if( IO_L ) write(IO_FID_LOG,'(a,a10,a,100ES16.6)') "theta1(a,b)=(",trim(WLABEL(ia)),",b)=",(theta_ab1(ia,ib),ib=QQS,QQE)
     enddo
 
     return
@@ -1274,6 +1285,8 @@ contains
        MOMY,      &
        RHOT,      &
        QTRC,      &
+       CCN,       &
+       EVAPORATE, &
        SFLX_rain, &
        SFLX_snow  )
     use scale_time, only: &
@@ -1297,6 +1310,8 @@ contains
     real(RP), intent(inout) :: MOMY(KA,IA,JA)
     real(RP), intent(inout) :: RHOT(KA,IA,JA)
     real(RP), intent(inout) :: QTRC(KA,IA,JA,QA)
+    real(RP), intent(in)    :: CCN(KA,IA,JA)
+    real(RP), intent(out)   :: EVAPORATE(KA,IA,JA)
     real(RP), intent(out)   :: SFLX_rain(IA,JA)
     real(RP), intent(out)   :: SFLX_snow(IA,JA)
 
@@ -1395,10 +1410,10 @@ contains
     !--------------------------------------------------
     real(RP) :: qke_d(KA,IA,JA)
 
-    real(RP), parameter :: eps       = 1.E-30_RP
-    real(RP), parameter :: eps_qv    = 1.E-50_RP
-    real(RP), parameter :: eps_rhoge = 1.E-50_RP
-    real(RP), parameter :: eps_rhog  = 1.E-50_RP
+    real(RP), parameter :: eps       = 1.E-19_RP
+    real(RP), parameter :: eps_qv    = 1.E-19_RP
+    real(RP), parameter :: eps_rhoge = 1.E-19_RP
+    real(RP), parameter :: eps_rhog  = 1.E-19_RP
     integer :: ntdiv
 
     real(RP) :: Rmoist
@@ -1529,6 +1544,7 @@ contains
          cpa,               & ! in
          dTdt_equiv_d,      & ! in
          qke_d,             & ! in
+         CCN,               & ! in
          dt                 ) ! in
 
     do j = JS, JE
@@ -1668,6 +1684,7 @@ contains
          cva,                        & ! out
          esw, esi, rhoq2,            & ! in
          PQ,                         & ! inout
+         EVAPORATE,                  & ! out
          sl_PLCdep,                  & ! inout
          sl_PLRdep, sl_PNRdep        ) ! inout
 
@@ -2079,7 +2096,10 @@ contains
        cpa,              & ! in
        dTdt_rad,         & ! in
        qke,              & ! in
+       CCN,               & ! in
        dt                ) ! in
+    use scale_process, only: &
+       PRC_MPIstop
     use scale_atmos_saturation, only: &
        moist_psat_liq       => ATMOS_SATURATION_psat_liq, &
        moist_psat_ice       => ATMOS_SATURATION_psat_ice,   &
@@ -2100,7 +2120,8 @@ contains
     real(RP), intent(in) ::  cpa(KA,IA,JA)      ! in  09/08/18 [Add] T.Mitsui
     real(RP), intent(in)  :: dTdt_rad(KA,IA,JA) ! 09/08/18 T.Mitsui
     real(RP), intent(in)  :: qke(KA,IA,JA)      ! 09/08/18 T.Mitsui
-    real(RP), intent(in)  :: dt
+    real(DP), intent(in)  :: dt
+    real(RP), intent(in)  :: CCN(KA,IA,JA)
     !
     ! namelist variables
     !
@@ -2195,6 +2216,10 @@ contains
        read(IO_FID_CONF, nml=nm_mp_sn14_nucleation, end=100)
 100    if( IO_L ) write(IO_FID_LOG, nml=nm_mp_sn14_nucleation)
        flag_first=.false.
+       if( MP_couple_aerosol .and. nucl_twomey ) then
+        write(IO_FID_LOG,*) "nucl_twomey should be false when MP_couple_aerosol is true, stop"
+        call PRC_MPIstop
+       endif
     endif
     !
 !    c_ccn_map(1,:,:) = c_ccn
@@ -2261,38 +2286,56 @@ contains
     end do
     end do
     !
-    if( nucl_twomey ) then
-       ! diagnose cloud condensation nuclei
+    if( MP_couple_aerosol ) then
 
-       do j = JS, JE
-       do i = IS, IE
-       do k = KS, KE
-          ! effective vertical velocity (maximum vertical velocity in turbulent flow)
-          weff_max(k,i,j) = weff(k,i,j) + sigma_w(k,i,j)
-          ! large scale upward motion region and saturated
-          if( (weff(k,i,j) > 1.E-8_RP) .and. (ssw(k,i,j) > 1.E-10_RP)  .and. pre(k,i,j) > 300.E+2_RP )then
-             ! Lohmann (2002), eq.(1)
-             nc_new_max   = coef_ccn(i,j)*weff_max(k,i,j)**slope_ccn(i,j)
-             nc_new(k,i,j) = a_max*nc_new_max**b_max
-          else
-             nc_new(k,i,j) = 0.0_RP
-          end if
-       end do
-       end do
-       end do
+         do j = JS, JE
+         do i = IS, IE
+         do k = KS, KE
+            if( ssw(k,i,j) > 1.e-10_RP .and. pre(k,i,j) > 300.E+2_RP ) then
+               nc_new(k,i,j) = max( CCN(k,i,j), c_ccn )
+            else
+               nc_new(k,i,j) = 0.0_RP
+            endif
+         enddo
+         enddo
+         enddo
+
     else
-       ! calculate cloud condensation nuclei
-       do j = JS, JE
-       do i = IS, IE
-       do k = KS, KE
-          if( ssw(k,i,j) > 1.e-10_RP .and. pre(k,i,j) > 300.E+2_RP ) then
-             nc_new(k,i,j) = c_ccn*ssw(k,i,j)**kappa
-          else
-             nc_new(k,i,j) = 0.0_RP
-          endif
-       enddo
-       enddo
-       enddo
+
+      if( nucl_twomey ) then
+        ! diagnose cloud condensation nuclei
+
+        do j = JS, JE
+        do i = IS, IE
+        do k = KS, KE
+           ! effective vertical velocity (maximum vertical velocity in turbulent flow)
+           weff_max(k,i,j) = weff(k,i,j) + sigma_w(k,i,j)
+           ! large scale upward motion region and saturated
+           if( (weff(k,i,j) > 1.E-8_RP) .and. (ssw(k,i,j) > 1.E-10_RP)  .and. pre(k,i,j) > 300.E+2_RP )then
+              ! Lohmann (2002), eq.(1)
+              nc_new_max   = coef_ccn(i,j)*weff_max(k,i,j)**slope_ccn(i,j)
+              nc_new(k,i,j) = a_max*nc_new_max**b_max
+           else
+              nc_new(k,i,j) = 0.0_RP
+           end if
+        end do
+        end do
+        end do
+      else
+        ! calculate cloud condensation nuclei
+          do j = JS, JE
+          do i = IS, IE
+          do k = KS, KE
+             if( ssw(k,i,j) > 1.e-10_RP .and. pre(k,i,j) > 300.E+2_RP ) then
+                nc_new(k,i,j) = c_ccn*ssw(k,i,j)**kappa
+             else
+                nc_new(k,i,j) = 0.0_RP
+             endif
+          enddo
+          enddo
+          enddo
+      endif
+
     endif
 
     do j = JS, JE
@@ -2323,47 +2366,74 @@ contains
     end do
     end do
 
-    if( nucl_twomey ) then
-       do j = JS, JE
-       do i = IS, IE
-       do k = KS, KE
-          ! nucleation occurs at only cloud base.
-          ! if CCN is more than below parcel, nucleation newly occurs
-          ! effective vertical velocity
-          if ( flag_nucleation(k,i,j) .and. & ! large scale upward motion region and saturated
-               tem(k,i,j) > tem_ccn_low .and. &
-               nc_new(k,i,j) > rhoq(I_NC,k,i,j) ) then
-             dlcdt_max    = (rhoq(I_QV,k,i,j) - esw(k,i,j)/(Rvap*tem(k,i,j)))*rdt
-             dncdt_max    = dlcdt_max/xc_min
-             dnc_new      = nc_new(k,i,j)-rhoq(I_NC,k,i,j)
-             PQ(I_NCccn,k,i,j) = min( dncdt_max, dnc_new*rdt )
-             PQ(I_LCccn,k,i,j) = min( dlcdt_max, xc_min*PQ(I_NCccn,k,i,j) )
-          else
-             PQ(I_NCccn,k,i,j) = 0.0_RP
-             PQ(I_LCccn,k,i,j) = 0.0_RP
-          end if
-       end do
-       end do
-       end do
+    if( MP_couple_aerosol ) then
+
+         do j = JS, JE
+         do i = IS, IE
+         do k = KS, KE
+            ! nucleation occurs at only cloud base.
+            ! if CCN is more than below parcel, nucleation newly occurs
+            ! effective vertical velocity
+            if ( flag_nucleation(k,i,j) .and. & ! large scale upward motion region and saturated
+                 tem(k,i,j) > tem_ccn_low ) then
+               dlcdt_max    = (rhoq(I_QV,k,i,j) - esw(k,i,j)/(Rvap*tem(k,i,j)))*rdt
+               dncdt_max    = dlcdt_max/xc_min
+!               dnc_new      = nc_new(k,i,j)-rhoq(I_NC,k,i,j)
+               dnc_new      = nc_new(k,i,j)
+               PQ(I_NCccn,k,i,j) = min( dncdt_max, dnc_new*rdt )
+               PQ(I_LCccn,k,i,j) = min( dlcdt_max, xc_min*PQ(I_NCccn,k,i,j) )
+            else
+               PQ(I_NCccn,k,i,j) = 0.0_RP
+               PQ(I_LCccn,k,i,j) = 0.0_RP
+            end if
+         end do
+         end do
+         end do
+
     else
-       do j = JS, JE
-       do i = IS, IE
-       do k = KS, KE
-          ! effective vertical velocity
-          if(  tem(k,i,j) > tem_ccn_low .and. &
-               nc_new(k,i,j) > rhoq(I_NC,k,i,j) ) then
-             dlcdt_max    = (rhoq(I_QV,k,i,j) - esw(k,i,j)/(Rvap*tem(k,i,j)))*rdt
-             dncdt_max    = dlcdt_max/xc_min
-             dnc_new      = nc_new(k,i,j)-rhoq(I_NC,k,i,j)
-             PQ(I_NCccn,k,i,j) = min( dncdt_max, dnc_new*rdt )
-             PQ(I_LCccn,k,i,j) = min( dlcdt_max, xc_min*PQ(I_NCccn,k,i,j) )
-          else
-             PQ(I_NCccn,k,i,j) = 0.0_RP
-             PQ(I_LCccn,k,i,j) = 0.0_RP
-          end if
-       end do
-       end do
-       end do
+
+      if( nucl_twomey ) then
+         do j = JS, JE
+         do i = IS, IE
+         do k = KS, KE
+            ! nucleation occurs at only cloud base.
+            ! if CCN is more than below parcel, nucleation newly occurs
+            ! effective vertical velocity
+            if ( flag_nucleation(k,i,j) .and. & ! large scale upward motion region and saturated
+                 tem(k,i,j) > tem_ccn_low .and. &
+                 nc_new(k,i,j) > rhoq(I_NC,k,i,j) ) then
+               dlcdt_max    = (rhoq(I_QV,k,i,j) - esw(k,i,j)/(Rvap*tem(k,i,j)))*rdt
+               dncdt_max    = dlcdt_max/xc_min
+               dnc_new      = nc_new(k,i,j)-rhoq(I_NC,k,i,j)
+               PQ(I_NCccn,k,i,j) = min( dncdt_max, dnc_new*rdt )
+               PQ(I_LCccn,k,i,j) = min( dlcdt_max, xc_min*PQ(I_NCccn,k,i,j) )
+            else
+               PQ(I_NCccn,k,i,j) = 0.0_RP
+               PQ(I_LCccn,k,i,j) = 0.0_RP
+            end if
+         end do
+         end do
+         end do
+      else
+         do j = JS, JE
+         do i = IS, IE
+         do k = KS, KE
+            ! effective vertical velocity
+            if(  tem(k,i,j) > tem_ccn_low .and. &
+                 nc_new(k,i,j) > rhoq(I_NC,k,i,j) ) then
+               dlcdt_max    = (rhoq(I_QV,k,i,j) - esw(k,i,j)/(Rvap*tem(k,i,j)))*rdt
+               dncdt_max    = dlcdt_max/xc_min
+               dnc_new      = nc_new(k,i,j)-rhoq(I_NC,k,i,j)
+               PQ(I_NCccn,k,i,j) = min( dncdt_max, dnc_new*rdt )
+               PQ(I_LCccn,k,i,j) = min( dlcdt_max, xc_min*PQ(I_NCccn,k,i,j) )
+            else
+               PQ(I_NCccn,k,i,j) = 0.0_RP
+               PQ(I_LCccn,k,i,j) = 0.0_RP
+            end if
+         end do
+         end do
+         end do
+      endif
     endif
 
     !
@@ -3376,7 +3446,7 @@ contains
     ! We assumed surface temperature of droplets are same as environment.
     implicit none
 
-    real(RP), intent(in) :: dt
+    real(DP), intent(in) :: dt
     real(RP), intent(out):: PQ(PQ_MAX,KA,IA,JA)
     !
     real(RP), intent(in) :: tem(KA,IA,JA)
@@ -3642,6 +3712,7 @@ contains
        cva,                 & ! out
        esw, esi, rhoq2,     & ! in
        PQ,                  & ! in
+       qc_evaporate,        & ! in
        sl_PLCdep,           &
        sl_PLRdep, sl_PNRdep )
     use scale_atmos_thermodyn, only: &
@@ -3659,7 +3730,7 @@ contains
     integer, intent(in)    :: ntdiv               ! [Add] 10/08/03
     integer, intent(in)    :: ntmax               ! [Add] 10/08/03
     !
-    real(RP), intent(in)    :: dt                 ! time step[s]
+    real(DP), intent(in)    :: dt                 ! time step[s]
     real(RP), intent(in)    :: gsgam2(KA,IA,JA)   ! metric
     real(RP), intent(in)    :: z(KA)              ! altitude [m]
     real(RP), intent(in)    :: dz(KA)             ! altitude [m]
@@ -3677,6 +3748,7 @@ contains
     real(RP), intent(in)    :: rhoq2(QA,KA,IA,JA)
     !+++ tendency[kg/m3/s]
     real(RP), intent(inout) :: PQ(PQ_MAX,KA,IA,JA)
+    real(RP), intent(out)   :: qc_evaporate(KA,IA,JA)
     !+++ Column integrated tendency[kg/m2/s]
     real(RP), intent(inout) :: sl_PLCdep(IA,JA)
     real(RP), intent(inout) :: sl_PLRdep(IA,JA), sl_PNRdep(IA,JA)
@@ -4009,6 +4081,8 @@ contains
        ! evaporation always lose number(always negative).
        dep_dnc = max( dt*PNCdep*fac1, -rhoq2(I_NC,k,i,j) ) ! ss>0 dep=0, ss<0 dep<0 ! [Add] 11/08/30 T.Mitsui
        dep_dnr = max( dt*PQ(I_NRdep,k,i,j)*fac1, -rhoq2(I_NR,k,i,j) ) ! ss>0 dep=0, ss<0 dep<0
+
+       qc_evaporate(k,i,j) = - dep_dnc ! [Add] Y.Sato 15/09/08
 
        !--- deposition/sublimation
        lvsi    = esi(k,i,j)*r_rvaptem

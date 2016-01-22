@@ -241,7 +241,7 @@ contains
       var     )
     use scale_time, only: &
        dt => TIME_DTSEC
-    use scale_statistics, only: &
+    use scale_les_statistics, only: &
        STAT_total
     implicit none
 
@@ -286,7 +286,7 @@ contains
       var     )
     use scale_time, only: &
        dt => TIME_DTSEC
-    use scale_statistics, only: &
+    use scale_les_statistics, only: &
        STAT_total
     implicit none
 
@@ -406,7 +406,7 @@ contains
        if ( mod(NOWSTEP-1,MONITOR_STEP_INTERVAL) == 0 ) then
           write(MONIT_FID,'(A,i7,A,A,A)',advance='no') 'STEP=',NOWSTEP,' (',memo,')'
           do n = 1, MONIT_id_count
-             write(MONIT_FID,'(A,E15.8)',advance='no') ' ',MONIT_var(n)
+             write(MONIT_FID,'(A,ES15.8)',advance='no') ' ',MONIT_var(n)
           enddo
           write(MONIT_FID,*)
        endif
@@ -422,9 +422,9 @@ contains
   !> Open file and write header at the first time
   subroutine MONIT_writeheader
     use scale_process, only: &
+       PRC_MPIstop, &
        PRC_myrank, &
-       PRC_master, &
-       PRC_MPIstop
+       PRC_IsMaster
     implicit none
 
     character(len=H_LONG) :: fname !< name of monitor file for each process
@@ -448,7 +448,7 @@ contains
     if( IO_L ) write(IO_FID_LOG,'(1x,A,A)') '=====================================================', &
                                             '====================================================='
 
-    if ( PRC_myrank == PRC_master ) then ! master node
+    if ( PRC_IsMaster ) then ! master node
        MONIT_L = .true.
     else
        MONIT_L = IO_LOG_ALLNODE

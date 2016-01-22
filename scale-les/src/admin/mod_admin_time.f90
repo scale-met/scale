@@ -34,11 +34,13 @@ module mod_admin_time
   real(DP), public :: TIME_DTSEC_OCEAN_RESTART  !< time interval of ocean restart         [sec]
   real(DP), public :: TIME_DTSEC_LAND_RESTART   !< time interval of land restart          [sec]
   real(DP), public :: TIME_DTSEC_URBAN_RESTART  !< time interval of urban restart         [sec]
+  real(DP), public :: TIME_DTSEC_RESUME         !< time interval for resume               [sec]
 
-  integer,  public :: TIME_DSTEP_ATMOS_RESTART  !< time interval of atmosphere restart    [sec]
-  integer,  public :: TIME_DSTEP_OCEAN_RESTART  !< time interval of ocean restart         [sec]
-  integer,  public :: TIME_DSTEP_LAND_RESTART   !< time interval of land restart          [sec]
-  integer,  public :: TIME_DSTEP_URBAN_RESTART  !< time interval of urban restart         [sec]
+  integer,  public :: TIME_DSTEP_ATMOS_RESTART  !< interval of atmosphere restart    [step]
+  integer,  public :: TIME_DSTEP_OCEAN_RESTART  !< interval of ocean restart         [step]
+  integer,  public :: TIME_DSTEP_LAND_RESTART   !< interval of land restart          [step]
+  integer,  public :: TIME_DSTEP_URBAN_RESTART  !< interval of urban restart         [step]
+  integer,  public :: TIME_DSTEP_RESUME         !< interval for resume               [step]
 
   logical,  public :: TIME_DOATMOS_step         !< execute atmospheric component in this step?
   logical,  public :: TIME_DOATMOS_DYN          !< execute dynamics?
@@ -56,6 +58,7 @@ module mod_admin_time
   logical,  public :: TIME_DOLAND_restart       !< execute land restart output?
   logical,  public :: TIME_DOURBAN_step         !< execute urban component in this step?
   logical,  public :: TIME_DOURBAN_restart      !< execute urban restart output?
+  logical,  public :: TIME_DOresume             !< resume in this step?
   logical,  public :: TIME_DOend                !< finish program in this step?
 
   !-----------------------------------------------------------------------------
@@ -91,6 +94,11 @@ module mod_admin_time
   integer,  private :: TIME_RES_LAND_RESTART  = 0
   integer,  private :: TIME_RES_URBAN         = 0
   integer,  private :: TIME_RES_URBAN_RESTART = 0
+  integer,  private :: TIME_RES_RESUME
+
+  real(DP), private :: TIME_WALLCLOCK_START             ! Start time of wall clock             [sec]
+  real(DP), private :: TIME_WALLCLOCK_LIMIT   = -1.0_DP ! Elapse time limit of wall clock time [sec]
+  real(DP), private :: TIME_WALLCLOCK_SAFE    =  0.9_DP ! Safety coefficient for elapse time limit
 
   real(DP), private, parameter :: eps = 1.E-6_DP !> epsilon for timesec
 
@@ -101,7 +109,8 @@ contains
   subroutine ADMIN_TIME_setup( &
        setup_TimeIntegration )
     use scale_process, only: &
-       PRC_MPIstop
+       PRC_MPIstop, &
+       PRC_MPItime
     use scale_const, only: &
        UNDEF8 => CONST_UNDEF8
     use scale_calendar, only: &
@@ -109,123 +118,140 @@ contains
        CALENDAR_daysec2date,    &
        CALENDAR_adjust_daysec,  &
        CALENDAR_combine_daysec, &
-       CALENDAR_unit2sec
+       CALENDAR_unit2sec,       &
+       CALENDAR_date2char
     use scale_time, only: &
-       TIME_DTSEC,              &
-       TIME_NOWDATE,            &
-       TIME_NOWMS,              &
-       TIME_NOWDAY,             &
-       TIME_NOWSEC,             &
-       TIME_NOWDAYSEC,          &
-       TIME_NOWSTEP,            &
-       TIME_NSTEP,              &
-       TIME_DTSEC_ATMOS_DYN,    &
-       TIME_NSTEP_ATMOS_DYN,    &
-       TIME_DTSEC_ATMOS_PHY_CP, &
-       TIME_DTSEC_ATMOS_PHY_MP, &
-       TIME_DTSEC_ATMOS_PHY_RD, &
-       TIME_DTSEC_ATMOS_PHY_SF, &
-       TIME_DTSEC_ATMOS_PHY_TB, &
-       TIME_DTSEC_ATMOS_PHY_CH, &
-       TIME_DTSEC_ATMOS_PHY_AE, &
-       TIME_DTSEC_OCEAN,        &
-       TIME_DTSEC_LAND,         &
-       TIME_DTSEC_URBAN,        &
-       TIME_DSTEP_ATMOS_DYN,    &
-       TIME_DSTEP_ATMOS_PHY_CP, &
-       TIME_DSTEP_ATMOS_PHY_MP, &
-       TIME_DSTEP_ATMOS_PHY_RD, &
-       TIME_DSTEP_ATMOS_PHY_SF, &
-       TIME_DSTEP_ATMOS_PHY_TB, &
-       TIME_DSTEP_ATMOS_PHY_CH, &
-       TIME_DSTEP_ATMOS_PHY_AE, &
-       TIME_DSTEP_OCEAN,        &
-       TIME_DSTEP_LAND,         &
-       TIME_DSTEP_URBAN,        &
-       TIME_OFFSET_YEAR,        &
+       TIME_DTSEC,                 &
+       TIME_NOWDATE,               &
+       TIME_NOWMS,                 &
+       TIME_NOWDAY,                &
+       TIME_NOWSEC,                &
+       TIME_NOWDAYSEC,             &
+       TIME_NOWSTEP,               &
+       TIME_NSTEP,                 &
+       TIME_DTSEC_ATMOS_DYN,       &
+       TIME_NSTEP_ATMOS_DYN,       &
+       TIME_DTSEC_ATMOS_PHY_CP,    &
+       TIME_DTSEC_ATMOS_PHY_MP,    &
+       TIME_DTSEC_ATMOS_PHY_RD,    &
+       TIME_DTSEC_ATMOS_PHY_SF,    &
+       TIME_DTSEC_ATMOS_PHY_TB,    &
+       TIME_DTSEC_ATMOS_PHY_CH,    &
+       TIME_DTSEC_ATMOS_PHY_AE,    &
+       TIME_DTSEC_OCEAN,           &
+       TIME_DTSEC_LAND,            &
+       TIME_DTSEC_URBAN,           &
+       TIME_DTSEC_WALLCLOCK_CHECK, &
+       TIME_DSTEP_ATMOS_DYN,       &
+       TIME_DSTEP_ATMOS_PHY_CP,    &
+       TIME_DSTEP_ATMOS_PHY_MP,    &
+       TIME_DSTEP_ATMOS_PHY_RD,    &
+       TIME_DSTEP_ATMOS_PHY_SF,    &
+       TIME_DSTEP_ATMOS_PHY_TB,    &
+       TIME_DSTEP_ATMOS_PHY_CH,    &
+       TIME_DSTEP_ATMOS_PHY_AE,    &
+       TIME_DSTEP_OCEAN,           &
+       TIME_DSTEP_LAND,            &
+       TIME_DSTEP_URBAN,           &
+       TIME_DSTEP_WALLCLOCK_CHECK, &
+       TIME_OFFSET_YEAR,           &
        TIME_STARTDAYSEC
     implicit none
 
     logical, intent(in) :: setup_TimeIntegration
 
-    real(DP)               :: TIME_DURATION              = UNDEF8
-    character(len=H_SHORT) :: TIME_DURATION_UNIT         = "SEC"
-    real(DP)               :: TIME_DT                    = UNDEF8
-    character(len=H_SHORT) :: TIME_DT_UNIT               = "SEC"
+    real(DP)               :: TIME_DURATION                = UNDEF8
+    character(len=H_SHORT) :: TIME_DURATION_UNIT           = "SEC"
+    real(DP)               :: TIME_DT                      = UNDEF8
+    character(len=H_SHORT) :: TIME_DT_UNIT                 = "SEC"
 
-    real(DP)               :: TIME_DT_ATMOS_DYN          = UNDEF8
-    character(len=H_SHORT) :: TIME_DT_ATMOS_DYN_UNIT     = "SEC"
-    real(DP)               :: TIME_DT_ATMOS_PHY_CP       = UNDEF8
-    character(len=H_SHORT) :: TIME_DT_ATMOS_PHY_CP_UNIT  = ""
-    real(DP)               :: TIME_DT_ATMOS_PHY_MP       = UNDEF8
-    character(len=H_SHORT) :: TIME_DT_ATMOS_PHY_MP_UNIT  = ""
-    real(DP)               :: TIME_DT_ATMOS_PHY_RD       = UNDEF8
-    character(len=H_SHORT) :: TIME_DT_ATMOS_PHY_RD_UNIT  = ""
-    real(DP)               :: TIME_DT_ATMOS_PHY_SF       = UNDEF8
-    character(len=H_SHORT) :: TIME_DT_ATMOS_PHY_SF_UNIT  = ""
-    real(DP)               :: TIME_DT_ATMOS_PHY_TB       = UNDEF8
-    character(len=H_SHORT) :: TIME_DT_ATMOS_PHY_TB_UNIT  = ""
-    real(DP)               :: TIME_DT_ATMOS_PHY_CH       = UNDEF8
-    character(len=H_SHORT) :: TIME_DT_ATMOS_PHY_CH_UNIT  = ""
-    real(DP)               :: TIME_DT_ATMOS_PHY_AE       = UNDEF8
-    character(len=H_SHORT) :: TIME_DT_ATMOS_PHY_AE_UNIT  = ""
-    real(DP)               :: TIME_DT_ATMOS_RESTART       = UNDEF8
-    character(len=H_SHORT) :: TIME_DT_ATMOS_RESTART_UNIT = ""
+    real(DP)               :: TIME_DT_ATMOS_DYN            = UNDEF8
+    character(len=H_SHORT) :: TIME_DT_ATMOS_DYN_UNIT       = "SEC"
+    real(DP)               :: TIME_DT_ATMOS_PHY_CP         = UNDEF8
+    character(len=H_SHORT) :: TIME_DT_ATMOS_PHY_CP_UNIT    = ""
+    real(DP)               :: TIME_DT_ATMOS_PHY_MP         = UNDEF8
+    character(len=H_SHORT) :: TIME_DT_ATMOS_PHY_MP_UNIT    = ""
+    real(DP)               :: TIME_DT_ATMOS_PHY_RD         = UNDEF8
+    character(len=H_SHORT) :: TIME_DT_ATMOS_PHY_RD_UNIT    = ""
+    real(DP)               :: TIME_DT_ATMOS_PHY_SF         = UNDEF8
+    character(len=H_SHORT) :: TIME_DT_ATMOS_PHY_SF_UNIT    = ""
+    real(DP)               :: TIME_DT_ATMOS_PHY_TB         = UNDEF8
+    character(len=H_SHORT) :: TIME_DT_ATMOS_PHY_TB_UNIT    = ""
+    real(DP)               :: TIME_DT_ATMOS_PHY_CH         = UNDEF8
+    character(len=H_SHORT) :: TIME_DT_ATMOS_PHY_CH_UNIT    = ""
+    real(DP)               :: TIME_DT_ATMOS_PHY_AE         = UNDEF8
+    character(len=H_SHORT) :: TIME_DT_ATMOS_PHY_AE_UNIT    = ""
+    real(DP)               :: TIME_DT_ATMOS_RESTART        = UNDEF8
+    character(len=H_SHORT) :: TIME_DT_ATMOS_RESTART_UNIT   = ""
 
-    real(DP)               :: TIME_DT_OCEAN              = UNDEF8
-    character(len=H_SHORT) :: TIME_DT_OCEAN_UNIT         = ""
-    real(DP)               :: TIME_DT_OCEAN_RESTART      = UNDEF8
-    character(len=H_SHORT) :: TIME_DT_OCEAN_RESTART_UNIT = ""
+    real(DP)               :: TIME_DT_OCEAN                = UNDEF8
+    character(len=H_SHORT) :: TIME_DT_OCEAN_UNIT           = ""
+    real(DP)               :: TIME_DT_OCEAN_RESTART        = UNDEF8
+    character(len=H_SHORT) :: TIME_DT_OCEAN_RESTART_UNIT   = ""
 
-    real(DP)               :: TIME_DT_LAND               = UNDEF8
-    character(len=H_SHORT) :: TIME_DT_LAND_UNIT          = ""
-    real(DP)               :: TIME_DT_LAND_RESTART       = UNDEF8
-    character(len=H_SHORT) :: TIME_DT_LAND_RESTART_UNIT  = ""
+    real(DP)               :: TIME_DT_LAND                 = UNDEF8
+    character(len=H_SHORT) :: TIME_DT_LAND_UNIT            = ""
+    real(DP)               :: TIME_DT_LAND_RESTART         = UNDEF8
+    character(len=H_SHORT) :: TIME_DT_LAND_RESTART_UNIT    = ""
 
-    real(DP)               :: TIME_DT_URBAN              = UNDEF8
-    character(len=H_SHORT) :: TIME_DT_URBAN_UNIT         = ""
-    real(DP)               :: TIME_DT_URBAN_RESTART      = UNDEF8
-    character(len=H_SHORT) :: TIME_DT_URBAN_RESTART_UNIT = ""
+    real(DP)               :: TIME_DT_URBAN                = UNDEF8
+    character(len=H_SHORT) :: TIME_DT_URBAN_UNIT           = ""
+    real(DP)               :: TIME_DT_URBAN_RESTART        = UNDEF8
+    character(len=H_SHORT) :: TIME_DT_URBAN_RESTART_UNIT   = ""
+
+    real(DP)               :: TIME_DT_RESUME               = UNDEF8
+    character(len=H_SHORT) :: TIME_DT_RESUME_UNIT          = ""
+
+    real(DP)               :: TIME_DT_WALLCLOCK_CHECK      = UNDEF8
+    character(len=H_SHORT) :: TIME_DT_WALLCLOCK_CHECK_UNIT = ""
 
     NAMELIST / PARAM_TIME / &
-       TIME_STARTDATE,             &
-       TIME_STARTMS,               &
-       TIME_DURATION,              &
-       TIME_DURATION_UNIT,         &
-       TIME_DT,                    &
-       TIME_DT_UNIT,               &
-       TIME_DT_ATMOS_DYN,          &
-       TIME_DT_ATMOS_DYN_UNIT,     &
-       TIME_DT_ATMOS_PHY_CP,       &
-       TIME_DT_ATMOS_PHY_CP_UNIT,  &
-       TIME_DT_ATMOS_PHY_MP,       &
-       TIME_DT_ATMOS_PHY_MP_UNIT,  &
-       TIME_DT_ATMOS_PHY_RD,       &
-       TIME_DT_ATMOS_PHY_RD_UNIT,  &
-       TIME_DT_ATMOS_PHY_SF,       &
-       TIME_DT_ATMOS_PHY_SF_UNIT,  &
-       TIME_DT_ATMOS_PHY_TB,       &
-       TIME_DT_ATMOS_PHY_TB_UNIT,  &
-       TIME_DT_ATMOS_PHY_CH,       &
-       TIME_DT_ATMOS_PHY_CH_UNIT,  &
-       TIME_DT_ATMOS_PHY_AE,       &
-       TIME_DT_ATMOS_PHY_AE_UNIT,  &
-       TIME_DT_ATMOS_RESTART,      &
-       TIME_DT_ATMOS_RESTART_UNIT, &
-       TIME_DT_OCEAN,              &
-       TIME_DT_OCEAN_UNIT,         &
-       TIME_DT_OCEAN_RESTART,      &
-       TIME_DT_OCEAN_RESTART_UNIT, &
-       TIME_DT_LAND,               &
-       TIME_DT_LAND_UNIT,          &
-       TIME_DT_LAND_RESTART,       &
-       TIME_DT_LAND_RESTART_UNIT,  &
-       TIME_DT_URBAN,              &
-       TIME_DT_URBAN_UNIT,         &
-       TIME_DT_URBAN_RESTART,      &
-       TIME_DT_URBAN_RESTART_UNIT
+       TIME_STARTDATE,               &
+       TIME_STARTMS,                 &
+       TIME_DURATION,                &
+       TIME_DURATION_UNIT,           &
+       TIME_DT,                      &
+       TIME_DT_UNIT,                 &
+       TIME_DT_ATMOS_DYN,            &
+       TIME_DT_ATMOS_DYN_UNIT,       &
+       TIME_DT_ATMOS_PHY_CP,         &
+       TIME_DT_ATMOS_PHY_CP_UNIT,    &
+       TIME_DT_ATMOS_PHY_MP,         &
+       TIME_DT_ATMOS_PHY_MP_UNIT,    &
+       TIME_DT_ATMOS_PHY_RD,         &
+       TIME_DT_ATMOS_PHY_RD_UNIT,    &
+       TIME_DT_ATMOS_PHY_SF,         &
+       TIME_DT_ATMOS_PHY_SF_UNIT,    &
+       TIME_DT_ATMOS_PHY_TB,         &
+       TIME_DT_ATMOS_PHY_TB_UNIT,    &
+       TIME_DT_ATMOS_PHY_CH,         &
+       TIME_DT_ATMOS_PHY_CH_UNIT,    &
+       TIME_DT_ATMOS_PHY_AE,         &
+       TIME_DT_ATMOS_PHY_AE_UNIT,    &
+       TIME_DT_ATMOS_RESTART,        &
+       TIME_DT_ATMOS_RESTART_UNIT,   &
+       TIME_DT_OCEAN,                &
+       TIME_DT_OCEAN_UNIT,           &
+       TIME_DT_OCEAN_RESTART,        &
+       TIME_DT_OCEAN_RESTART_UNIT,   &
+       TIME_DT_LAND,                 &
+       TIME_DT_LAND_UNIT,            &
+       TIME_DT_LAND_RESTART,         &
+       TIME_DT_LAND_RESTART_UNIT,    &
+       TIME_DT_URBAN,                &
+       TIME_DT_URBAN_UNIT,           &
+       TIME_DT_URBAN_RESTART,        &
+       TIME_DT_URBAN_RESTART_UNIT,   &
+       TIME_DT_WALLCLOCK_CHECK,      &
+       TIME_DT_WALLCLOCK_CHECK_UNIT, &
+       TIME_DT_RESUME,               &
+       TIME_DT_RESUME_UNIT,          &
+       TIME_WALLCLOCK_LIMIT,         &
+       TIME_WALLCLOCK_SAFE
 
-    real(DP) :: TIME_DURATIONSEC
+    real(DP)          :: TIME_DURATIONSEC
+    character(len=27) :: startchardate
+    character(len=27) :: endchardate
 
     integer :: ierr
     !---------------------------------------------------------------------------
@@ -391,6 +417,14 @@ contains
           if( IO_L ) write(IO_FID_LOG,*) '*** Not found TIME_DT_URBAN_RESTART_UNIT. TIME_DURATION_UNIT is used.'
           TIME_DT_URBAN_RESTART_UNIT = TIME_DURATION_UNIT
        endif
+       ! Resume
+       if ( TIME_DT_RESUME == UNDEF8 ) then
+          TIME_DT_RESUME = TIME_DURATION
+       endif
+       if ( TIME_DT_RESUME_UNIT == '' ) then
+          if( IO_L ) write(IO_FID_LOG,*) '*** Not found TIME_DT_RESUME_UNIT. TIME_DURATION_UNIT is used.'
+          TIME_DT_RESUME_UNIT = TIME_DURATION_UNIT
+       endif
     endif
 
     !--- calculate time
@@ -402,6 +436,11 @@ contains
                                TIME_STARTDATE(:), & ! [IN]
                                TIME_STARTMS,      & ! [IN]
                                TIME_OFFSET_YEAR   ) ! [IN]
+
+    call CALENDAR_date2char( startchardate,     & ! [OUT]
+                             TIME_STARTDATE(:), & ! [IN]
+                             TIME_STARTMS,      & ! [IN]
+                             TIME_OFFSET_YEAR   ) ! [IN]
 
     TIME_STARTDAYSEC  = CALENDAR_combine_daysec( TIME_STARTDAY, TIME_STARTSEC )
 
@@ -428,16 +467,15 @@ contains
                                TIME_ENDSEC,     & ! [IN]
                                TIME_OFFSET_YEAR ) ! [IN]
 
+    call CALENDAR_date2char( endchardate,     & ! [OUT]
+                             TIME_ENDDATE(:), & ! [IN]
+                             TIME_ENDMS,      & ! [IN]
+                             TIME_OFFSET_YEAR ) ! [IN]
+
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** Date/time setting ***'
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,I4.4,A,I2.2,A,I2.2,A,I2.2,A,I2.2,A,I2.2,A,F6.3)') '*** START Date     : ', &
-         TIME_STARTDATE(1)+TIME_OFFSET_YEAR,'/',TIME_STARTDATE(2),'/',TIME_STARTDATE(3),' ',  &
-         TIME_STARTDATE(4),':',TIME_STARTDATE(5),':',TIME_STARTDATE(6),' +', &
-         TIME_STARTMS
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,I4.4,A,I2.2,A,I2.2,A,I2.2,A,I2.2,A,I2.2,A,F6.3)') '*** END   Date     : ', &
-         TIME_ENDDATE(1)+TIME_OFFSET_YEAR,'/',TIME_ENDDATE(2),'/',TIME_ENDDATE(3),' ',  &
-         TIME_ENDDATE(4),':',TIME_ENDDATE(5),':',TIME_ENDDATE(6),' +', &
-         TIME_ENDMS
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,A)') '*** START Date     : ', startchardate
+    if( IO_L ) write(IO_FID_LOG,'(1x,A,A)') '*** END   Date     : ', endchardate
 
     if ( setup_TimeIntegration ) then
 
@@ -465,6 +503,7 @@ contains
        call CALENDAR_unit2sec( TIME_DTSEC_LAND_RESTART,  TIME_DT_LAND_RESTART,  TIME_DT_LAND_RESTART_UNIT  )
        call CALENDAR_unit2sec( TIME_DTSEC_URBAN,         TIME_DT_URBAN,         TIME_DT_URBAN_UNIT         )
        call CALENDAR_unit2sec( TIME_DTSEC_URBAN_RESTART, TIME_DT_URBAN_RESTART, TIME_DT_URBAN_RESTART_UNIT )
+       call CALENDAR_unit2sec( TIME_DTSEC_RESUME,        TIME_DT_RESUME,        TIME_DT_RESUME_UNIT        )
 
        TIME_NSTEP_ATMOS_DYN = max( nint( TIME_DTSEC / TIME_DTSEC_ATMOS_DYN ), 1 )
 
@@ -483,6 +522,7 @@ contains
        TIME_DTSEC_LAND_RESTART  = max( TIME_DTSEC_LAND_RESTART,  TIME_DTSEC_ATMOS_DYN*TIME_NSTEP_ATMOS_DYN )
        TIME_DTSEC_URBAN         = max( TIME_DTSEC_URBAN,         TIME_DTSEC_ATMOS_DYN*TIME_NSTEP_ATMOS_DYN )
        TIME_DTSEC_URBAN_RESTART = max( TIME_DTSEC_URBAN_RESTART, TIME_DTSEC_ATMOS_DYN*TIME_NSTEP_ATMOS_DYN )
+       TIME_DTSEC_RESUME        = max( TIME_DTSEC_RESUME,        TIME_DTSEC_ATMOS_DYN*TIME_NSTEP_ATMOS_DYN )
 
        TIME_DSTEP_ATMOS_DYN     = int( TIME_DTSEC_ATMOS_DYN*TIME_NSTEP_ATMOS_DYN / TIME_DTSEC )
        TIME_DSTEP_ATMOS_PHY_CP  = int( TIME_DTSEC_ATMOS_PHY_CP  / TIME_DTSEC )
@@ -499,81 +539,94 @@ contains
        TIME_DSTEP_OCEAN_RESTART = int( TIME_DTSEC_OCEAN_RESTART / TIME_DTSEC )
        TIME_DSTEP_LAND_RESTART  = int( TIME_DTSEC_LAND_RESTART  / TIME_DTSEC )
        TIME_DSTEP_URBAN_RESTART = int( TIME_DTSEC_URBAN_RESTART / TIME_DTSEC )
+       TIME_DSTEP_RESUME        = int( TIME_DTSEC_RESUME        / TIME_DTSEC )
+
+       TIME_RES_RESUME = TIME_DSTEP_RESUME - 1
 
        if ( abs( real(TIME_NSTEP_ATMOS_DYN,kind=DP)*TIME_DTSEC_ATMOS_DYN &
-               - real(TIME_DSTEP_ATMOS_DYN,kind=DP)*TIME_DTSEC            ) > 0.D0 ) then
+               - real(TIME_DSTEP_ATMOS_DYN,kind=DP)*TIME_DTSEC            ) > eps ) then
           write(*,*) 'xxx delta t(ATMOS_DYN) must be a multiple of delta t ', &
                      TIME_DTSEC_ATMOS_DYN, real(TIME_DSTEP_ATMOS_DYN,kind=DP)*TIME_DTSEC
           call PRC_MPIstop
        endif
-       if ( abs(TIME_DTSEC_ATMOS_PHY_CP-real(TIME_DSTEP_ATMOS_PHY_CP,kind=DP)*TIME_DTSEC) > 0.D0 ) then
+       if ( abs(TIME_DTSEC_ATMOS_PHY_CP-real(TIME_DSTEP_ATMOS_PHY_CP,kind=DP)*TIME_DTSEC) > eps ) then
           write(*,*) 'xxx delta t(ATMOS_PHY_CP) must be a multiple of delta t ', &
                      TIME_DTSEC_ATMOS_PHY_CP, real(TIME_DSTEP_ATMOS_PHY_CP,kind=DP)*TIME_DTSEC
           call PRC_MPIstop
        endif
-       if ( abs(TIME_DTSEC_ATMOS_PHY_MP-real(TIME_DSTEP_ATMOS_PHY_MP,kind=DP)*TIME_DTSEC) > 0.D0 ) then
+       if ( abs(TIME_DTSEC_ATMOS_PHY_MP-real(TIME_DSTEP_ATMOS_PHY_MP,kind=DP)*TIME_DTSEC) > eps ) then
           write(*,*) 'xxx delta t(ATMOS_PHY_MP) must be a multiple of delta t ', &
                      TIME_DTSEC_ATMOS_PHY_MP, real(TIME_DSTEP_ATMOS_PHY_MP,kind=DP)*TIME_DTSEC
           call PRC_MPIstop
        endif
-       if ( abs(TIME_DTSEC_ATMOS_PHY_RD-real(TIME_DSTEP_ATMOS_PHY_RD,kind=DP)*TIME_DTSEC) > 0.D0 ) then
+       if ( abs(TIME_DTSEC_ATMOS_PHY_RD-real(TIME_DSTEP_ATMOS_PHY_RD,kind=DP)*TIME_DTSEC) > eps ) then
           write(*,*) 'xxx delta t(ATMOS_PHY_RD) must be a multiple of delta t ', &
                      TIME_DTSEC_ATMOS_PHY_RD, real(TIME_DSTEP_ATMOS_PHY_RD,kind=DP)*TIME_DTSEC
           call PRC_MPIstop
        endif
-       if ( abs(TIME_DTSEC_ATMOS_PHY_SF-real(TIME_DSTEP_ATMOS_PHY_SF,kind=DP)*TIME_DTSEC) > 0.D0 ) then
+       if ( abs(TIME_DTSEC_ATMOS_PHY_SF-real(TIME_DSTEP_ATMOS_PHY_SF,kind=DP)*TIME_DTSEC) > eps ) then
           write(*,*) 'xxx delta t(ATMOS_PHY_SF) must be a multiple of delta t ', &
                      TIME_DTSEC_ATMOS_PHY_SF, real(TIME_DSTEP_ATMOS_PHY_SF,kind=DP)*TIME_DTSEC
           call PRC_MPIstop
        endif
-       if ( abs(TIME_DTSEC_ATMOS_PHY_TB-real(TIME_DSTEP_ATMOS_PHY_TB,kind=DP)*TIME_DTSEC) > 0.D0 ) then
+       if ( abs(TIME_DTSEC_ATMOS_PHY_TB-real(TIME_DSTEP_ATMOS_PHY_TB,kind=DP)*TIME_DTSEC) > eps ) then
           write(*,*) 'xxx delta t(ATMOS_PHY_TB) must be a multiple of delta t ', &
                      TIME_DTSEC_ATMOS_PHY_TB, real(TIME_DSTEP_ATMOS_PHY_TB,kind=DP)*TIME_DTSEC
           call PRC_MPIstop
        endif
-       if ( abs(TIME_DTSEC_ATMOS_PHY_CH-real(TIME_DSTEP_ATMOS_PHY_CH,kind=DP)*TIME_DTSEC) > 0.D0 ) then
+       if ( abs(TIME_DTSEC_ATMOS_PHY_CH-real(TIME_DSTEP_ATMOS_PHY_CH,kind=DP)*TIME_DTSEC) > eps ) then
           write(*,*) 'xxx delta t(ATMOS_PHY_CH) must be a multiple of delta t ', &
                      TIME_DTSEC_ATMOS_PHY_CH, real(TIME_DSTEP_ATMOS_PHY_CH,kind=DP)*TIME_DTSEC
           call PRC_MPIstop
        endif
-       if ( abs(TIME_DTSEC_ATMOS_PHY_AE-real(TIME_DSTEP_ATMOS_PHY_AE,kind=DP)*TIME_DTSEC) > 0.D0 ) then
+       if ( abs(TIME_DTSEC_ATMOS_PHY_AE-real(TIME_DSTEP_ATMOS_PHY_AE,kind=DP)*TIME_DTSEC) > eps ) then
           write(*,*) 'xxx delta t(ATMOS_PHY_AE) must be a multiple of delta t ', &
                      TIME_DTSEC_ATMOS_PHY_AE, real(TIME_DSTEP_ATMOS_PHY_AE,kind=DP)*TIME_DTSEC
           call PRC_MPIstop
        endif
-       if ( abs(TIME_DTSEC_OCEAN-real(TIME_DSTEP_OCEAN,kind=DP)*TIME_DTSEC) > 0.D0 ) then
+       if ( abs(TIME_DTSEC_OCEAN-real(TIME_DSTEP_OCEAN,kind=DP)*TIME_DTSEC) > eps ) then
           write(*,*) 'xxx delta t(OCEAN) must be a multiple of delta t ', &
                      TIME_DTSEC_OCEAN, real(TIME_DSTEP_OCEAN,kind=DP)*TIME_DTSEC
           call PRC_MPIstop
        endif
-       if ( abs(TIME_DTSEC_LAND-real(TIME_DSTEP_LAND,kind=DP)*TIME_DTSEC) > 0.D0 ) then
+       if ( abs(TIME_DTSEC_LAND-real(TIME_DSTEP_LAND,kind=DP)*TIME_DTSEC) > eps ) then
           write(*,*) 'xxx delta t(LAND) must be a multiple of delta t ', &
                      TIME_DTSEC_LAND, real(TIME_DSTEP_LAND,kind=DP)*TIME_DTSEC
           call PRC_MPIstop
        endif
-       if ( abs(TIME_DTSEC_URBAN-real(TIME_DSTEP_URBAN,kind=DP)*TIME_DTSEC) > 0.D0 ) then
+       if ( abs(TIME_DTSEC_URBAN-real(TIME_DSTEP_URBAN,kind=DP)*TIME_DTSEC) > eps ) then
           write(*,*) 'xxx delta t(URBAN) must be a multiple of delta t ', &
                      TIME_DTSEC_URBAN, real(TIME_DSTEP_URBAN,kind=DP)*TIME_DTSEC
           call PRC_MPIstop
        endif
-       if ( abs(TIME_DTSEC_ATMOS_RESTART-real(TIME_DSTEP_ATMOS_RESTART,kind=DP)*TIME_DTSEC) > 0.D0 ) then
+       if ( abs(TIME_DTSEC_ATMOS_RESTART-real(TIME_DSTEP_ATMOS_RESTART,kind=DP)*TIME_DTSEC) > eps ) then
           write(*,*) 'xxx delta t(ATMOS_RESTART) must be a multiple of delta t ', &
                      TIME_DTSEC_ATMOS_RESTART, real(TIME_DSTEP_ATMOS_RESTART,kind=DP)*TIME_DTSEC
           call PRC_MPIstop
        endif
-       if ( abs(TIME_DTSEC_OCEAN_RESTART-real(TIME_DSTEP_OCEAN_RESTART,kind=DP)*TIME_DTSEC) > 0.D0 ) then
+       if ( abs(TIME_DTSEC_OCEAN_RESTART-real(TIME_DSTEP_OCEAN_RESTART,kind=DP)*TIME_DTSEC) > eps ) then
           write(*,*) 'xxx delta t(OCEAN_RESTART) must be a multiple of delta t ', &
                      TIME_DTSEC_OCEAN_RESTART, real(TIME_DSTEP_OCEAN_RESTART,kind=DP)*TIME_DTSEC
           call PRC_MPIstop
        endif
-       if ( abs(TIME_DTSEC_LAND_RESTART-real(TIME_DSTEP_LAND_RESTART,kind=DP)*TIME_DTSEC) > 0.D0 ) then
+       if ( abs(TIME_DTSEC_LAND_RESTART-real(TIME_DSTEP_LAND_RESTART,kind=DP)*TIME_DTSEC) > eps ) then
           write(*,*) 'xxx delta t(LAND_RESTART) must be a multiple of delta t ', &
                      TIME_DTSEC_LAND_RESTART, real(TIME_DSTEP_LAND_RESTART,kind=DP)*TIME_DTSEC
           call PRC_MPIstop
        endif
-       if ( abs(TIME_DTSEC_URBAN_RESTART-real(TIME_DSTEP_URBAN_RESTART,kind=DP)*TIME_DTSEC) > 0.D0 ) then
+       if ( abs(TIME_DTSEC_URBAN_RESTART-real(TIME_DSTEP_URBAN_RESTART,kind=DP)*TIME_DTSEC) > eps ) then
           write(*,*) 'xxx delta t(URBAN_RESTART) must be a multiple of delta t ', &
                      TIME_DTSEC_URBAN_RESTART, real(TIME_DSTEP_URBAN_RESTART,kind=DP)*TIME_DTSEC
+          call PRC_MPIstop
+       endif
+       if ( abs(TIME_DTSEC_URBAN_RESTART-real(TIME_DSTEP_URBAN_RESTART,kind=DP)*TIME_DTSEC) > eps ) then
+          write(*,*) 'xxx delta t(URBAN_RESTART) must be a multiple of delta t ', &
+                     TIME_DTSEC_URBAN_RESTART, real(TIME_DSTEP_URBAN_RESTART,kind=DP)*TIME_DTSEC
+          call PRC_MPIstop
+       endif
+       if ( abs(TIME_DTSEC_RESUME-real(TIME_DSTEP_RESUME,kind=DP)*TIME_DTSEC) > eps ) then
+          write(*,*) 'xxx delta t(RESUME) must be a multiple of delta t ', &
+                     TIME_DTSEC_RESUME, real(TIME_DSTEP_RESUME,kind=DP)*TIME_DTSEC
           call PRC_MPIstop
        endif
 
@@ -614,6 +667,46 @@ contains
        if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3,A,I8,A)') '*** Urban Variables             : ', TIME_DTSEC_URBAN_RESTART, &
                                                           ' (steps=', TIME_DSTEP_URBAN_RESTART, ')'
 
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3,A,I8,A)') '*** Resume                      : ', TIME_DTSEC_RESUME, &
+                                                          ' (steps=', TIME_DSTEP_RESUME, ')'
+    endif
+
+    ! WALLCLOCK TERMINATOR SETUP
+    if ( TIME_WALLCLOCK_LIMIT > 0.0_DP ) then
+       if( IO_L ) write(IO_FID_LOG,*)
+       if( IO_L ) write(IO_FID_LOG,*)                     '*** Wall clock time limit of execution is specified.'
+
+       if ( TIME_DT_WALLCLOCK_CHECK == UNDEF8 ) then
+          if( IO_L ) write(IO_FID_LOG,*) '*** Not found TIME_DT_WALLCLOCK_CHECK. largest time step interval is used.'
+          TIME_DTSEC_WALLCLOCK_CHECK = max( TIME_DTSEC_ATMOS_DYN*TIME_NSTEP_ATMOS_DYN, &
+                                            TIME_DTSEC_ATMOS_PHY_CP,                   &
+                                            TIME_DTSEC_ATMOS_PHY_MP,                   &
+                                            TIME_DTSEC_ATMOS_PHY_RD,                   &
+                                            TIME_DTSEC_ATMOS_PHY_SF,                   &
+                                            TIME_DTSEC_ATMOS_PHY_TB,                   &
+                                            TIME_DTSEC_ATMOS_PHY_CH,                   &
+                                            TIME_DTSEC_ATMOS_PHY_AE,                   &
+                                            TIME_DTSEC_OCEAN,                          &
+                                            TIME_DTSEC_LAND,                           &
+                                            TIME_DTSEC_URBAN                           )
+       else
+          if ( TIME_DT_WALLCLOCK_CHECK_UNIT == '' ) then
+             if( IO_L ) write(IO_FID_LOG,*) '*** Not found TIME_DT_WALLCLOCK_CHECK_UNIT. TIME_DURATION_UNIT is used.'
+             TIME_DT_WALLCLOCK_CHECK_UNIT = TIME_DURATION_UNIT
+          endif
+          call CALENDAR_unit2sec( TIME_DTSEC_WALLCLOCK_CHECK, TIME_DT_WALLCLOCK_CHECK, TIME_DT_WALLCLOCK_CHECK_UNIT )
+          TIME_DTSEC_WALLCLOCK_CHECK = max( TIME_DTSEC_WALLCLOCK_CHECK, TIME_DTSEC_ATMOS_DYN*TIME_NSTEP_ATMOS_DYN )
+       endif
+
+       TIME_DSTEP_WALLCLOCK_CHECK = int( TIME_DTSEC_WALLCLOCK_CHECK / TIME_DTSEC )
+
+       TIME_WALLCLOCK_SAFE  = max( min( TIME_WALLCLOCK_SAFE, 1.0_DP ), 0.0_DP )
+       TIME_WALLCLOCK_START = PRC_MPItime()
+
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.1,A)')      '*** This job stops after ', &
+                                                          TIME_WALLCLOCK_LIMIT * TIME_WALLCLOCK_SAFE, ' seconds.'
+       if( IO_L ) write(IO_FID_LOG,'(1x,A,F10.3,A,I8,A)') '*** Step interval for check     : ', TIME_DTSEC_WALLCLOCK_CHECK, &
+                                                          ' (steps=', TIME_DSTEP_WALLCLOCK_CHECK, ')'
     endif
 
     return
@@ -622,6 +715,10 @@ contains
   !-----------------------------------------------------------------------------
   !> Evaluate component execution
   subroutine ADMIN_TIME_checkstate
+    use scale_process, only: &
+       PRC_MPItime
+    use scale_calendar, only: &
+       CALENDAR_date2char
     use scale_time, only: &
        TIME_NOWDATE,            &
        TIME_NOWMS,              &
@@ -640,6 +737,9 @@ contains
        TIME_DSTEP_URBAN,        &
        TIME_OFFSET_YEAR
     implicit none
+
+    real(DP)          :: WALLCLOCK_elapse
+    character(len=27) :: nowchardate
     !---------------------------------------------------------------------------
 
     TIME_DOATMOS_step      = .false.
@@ -654,6 +754,7 @@ contains
     TIME_DOOCEAN_step      = .false.
     TIME_DOLAND_step       = .false.
     TIME_DOURBAN_step      = .false.
+    TIME_DOresume          = .false.
 
     TIME_RES_ATMOS_DYN    = TIME_RES_ATMOS_DYN    + 1
     TIME_RES_ATMOS_PHY_CP = TIME_RES_ATMOS_PHY_CP + 1
@@ -666,6 +767,7 @@ contains
     TIME_RES_OCEAN        = TIME_RES_OCEAN        + 1
     TIME_RES_LAND         = TIME_RES_LAND         + 1
     TIME_RES_URBAN        = TIME_RES_URBAN        + 1
+    TIME_RES_RESUME       = TIME_RES_RESUME       + 1
 
     if ( TIME_RES_ATMOS_DYN    == TIME_DSTEP_ATMOS_DYN ) then
        TIME_DOATMOS_step  = .true.
@@ -708,23 +810,38 @@ contains
        TIME_RES_ATMOS_PHY_AE = 0
     endif
 
-    if ( TIME_RES_OCEAN == TIME_DSTEP_OCEAN ) then
+    if ( TIME_RES_OCEAN  == TIME_DSTEP_OCEAN  ) then
        TIME_DOOCEAN_step = .true.
        TIME_RES_OCEAN    = 0
     endif
-    if ( TIME_RES_LAND  == TIME_DSTEP_LAND  ) then
+    if ( TIME_RES_LAND   == TIME_DSTEP_LAND   ) then
        TIME_DOLAND_step  = .true.
        TIME_RES_LAND     = 0
     endif
-    if ( TIME_RES_URBAN == TIME_DSTEP_URBAN ) then
+    if ( TIME_RES_URBAN  == TIME_DSTEP_URBAN  ) then
        TIME_DOURBAN_step = .true.
        TIME_RES_URBAN    = 0
     endif
+    if ( TIME_RES_RESUME == TIME_DSTEP_RESUME ) then
+       TIME_DOresume     = .true.
+       TIME_RES_RESUME   = 0
+    endif
 
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,I4.4,A,I2.2,A,I2.2,A,I2.2,A,I2.2,A,I2.2,A,F6.3,A,I6,A,I6)') &
-               '*** TIME: ', TIME_NOWDATE(1)+TIME_OFFSET_YEAR,'/',TIME_NOWDATE(2),'/',TIME_NOWDATE(3),' ', &
-                             TIME_NOWDATE(4),':',TIME_NOWDATE(5),':',TIME_NOWDATE(6),' +', &
-                             TIME_NOWMS,' STEP:',TIME_NOWSTEP, '/', TIME_NSTEP
+    call CALENDAR_date2char( nowchardate,     & ! [OUT]
+                             TIME_NOWDATE(:), & ! [IN]
+                             TIME_NOWMS,      & ! [IN]
+                             TIME_OFFSET_YEAR ) ! [IN]
+
+
+    if ( TIME_WALLCLOCK_LIMIT > 0.0_DP ) then
+       WALLCLOCK_elapse = PRC_MPItime() - TIME_WALLCLOCK_START
+       if( IO_L ) write(IO_FID_LOG,'(1x,3A,I6,A,I6,A,F10.1)') '*** TIME: ', nowchardate,' STEP:',TIME_NOWSTEP, '/', TIME_NSTEP, &
+                                                              ' WCLOCK:', WALLCLOCK_elapse
+    else
+       if( IO_L ) write(IO_FID_LOG,'(1x,3A,I6,A,I6)') '*** TIME: ', nowchardate,' STEP:',TIME_NOWSTEP, '/', TIME_NSTEP
+    endif
+
+
 
     return
   end subroutine ADMIN_TIME_checkstate
@@ -733,26 +850,27 @@ contains
   !> Advance the time & evaluate restart & stop
   subroutine ADMIN_TIME_advance
     use scale_process, only: &
-       PRC_master, &
-       PRC_myrank
+       PRC_IsMaster, &
+       PRC_MPItime
     use scale_calendar, only: &
        CALENDAR_daysec2date,   &
        CALENDAR_adjust_daysec, &
        CALENDAR_combine_daysec
     use scale_time, only: &
-       TIME_DTSEC,       &
-       TIME_NOWDATE,     &
-       TIME_NOWMS,       &
-       TIME_NOWDAY,      &
-       TIME_NOWSEC,      &
-       TIME_NOWDAYSEC,   &
-       TIME_NOWSTEP,     &
-       TIME_NSTEP,       &
-       TIME_OFFSET_YEAR, &
-       TIME_STARTDAYSEC
+       TIME_DTSEC,                &
+       TIME_NOWDATE,              &
+       TIME_NOWMS,                &
+       TIME_NOWDAY,               &
+       TIME_NOWSEC,               &
+       TIME_NOWDAYSEC,            &
+       TIME_NOWSTEP,              &
+       TIME_NSTEP,                &
+       TIME_OFFSET_YEAR,          &
+       TIME_DSTEP_WALLCLOCK_CHECK
     implicit none
 
-    logical :: exists
+    real(DP) :: WALLCLOCK_elapse
+    logical  :: exists
     !---------------------------------------------------------------------------
 
     TIME_DOend = .false.
@@ -776,11 +894,24 @@ contains
        TIME_DOend = .true.
     endif
 
+    if (       TIME_WALLCLOCK_LIMIT > 0.0_DP                     &
+         .AND. mod(TIME_NOWSTEP-1,TIME_DSTEP_WALLCLOCK_CHECK) == 0 ) then
+       WALLCLOCK_elapse = PRC_MPItime() - TIME_WALLCLOCK_START
+
+       if ( WALLCLOCK_elapse > TIME_WALLCLOCK_LIMIT * TIME_WALLCLOCK_SAFE ) then
+          if( IO_L ) write(IO_FID_LOG,*) '*** Elapse time limit is detected. Termination operation starts.'
+          TIME_DOend = .true.
+       endif
+    endif
+
     ! QUIT file control
-    if ( PRC_myrank == PRC_master ) then ! master node
+    if ( PRC_IsMaster ) then ! master node
        inquire(file='QUIT', exist=exists)
 
-       if( exists ) TIME_DOend = .true.
+       if( exists ) then
+          if( IO_L ) write(IO_FID_LOG,*) '*** QUIT file is found. Termination operation starts.'
+          TIME_DOend = .true.
+       endif
     endif
 
     TIME_DOATMOS_restart = .false.

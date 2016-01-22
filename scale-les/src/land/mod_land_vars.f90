@@ -472,11 +472,10 @@ contains
   !-----------------------------------------------------------------------------
   !> History output set for land variables
   subroutine LAND_vars_history
-    use scale_time, only: &
-       TIME_DTSEC_LAND
     use scale_history, only: &
        HIST_in
     implicit none
+
     real(RP) :: LAND_WATERDS(LKMAX,IA,JA)
     integer :: k, i, j
     !---------------------------------------------------------------------------
@@ -524,7 +523,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Budget monitor for land
   subroutine LAND_vars_total
-    use scale_statistics, only: &
+    use scale_les_statistics, only: &
        STATISTICS_checktotal, &
        STAT_total
     implicit none
@@ -701,7 +700,7 @@ contains
            LAND_PROPERTY_table(index,I_Z0H          ) = Z0H
            LAND_PROPERTY_table(index,I_Z0E          ) = Z0E
 
-           if( IO_L ) write(IO_FID_LOG,'(1x,A8,I3,1x,A12,3(1x,F9.2),(1x,1PE9.1),4(1x,F9.2))') &
+           if( IO_L ) write(IO_FID_LOG,'(1x,A8,I3,1x,A12,3(1x,F9.2),(1x,ES9.1),4(1x,F9.2))') &
                                          '*** IDX =', index, &
                                          trim(description), &
                                          STRGMAX, &

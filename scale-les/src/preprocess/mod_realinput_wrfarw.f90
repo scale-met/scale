@@ -20,7 +20,6 @@ module mod_realinput_wrfarw
   use scale_tracer
   use scale_process, only: &
      myrank => PRC_myrank,  &
-     PRC_master,            &
      PRC_MPIstop
   use scale_external_io, only: &
      iWRFARW
@@ -194,7 +193,7 @@ contains
     real(RP),         intent(out) :: lon_org(:,:)
     real(RP),         intent(out) :: lat_org(:,:)
     real(RP),         intent(out) :: cz_org(:,:,:)
-    character(LEN=*), intent(in)  :: basename
+    character(len=*), intent(in)  :: basename
     integer,          intent(in)  :: mptype_parent
     integer,          intent(in)  :: dims(7)
     integer,          intent(in)  :: it
@@ -466,7 +465,7 @@ contains
     real(RP),         intent(out)  :: z0w_org(:,:)
     real(RP),         intent(out)  :: lmask_org(:,:)
     real(RP),         intent(out)  :: lz_org(:)
-    character(LEN=*), intent( in)  :: basename
+    character(len=*), intent( in)  :: basename
     integer,          intent( in)  :: dims(11)
     logical,          intent( in)  :: use_file_landwater   ! use land water data from files
     integer,          intent( in)  :: it
@@ -612,7 +611,7 @@ contains
     real(RP), intent(in ) :: xlat(:,:)
     integer , intent(in ) :: K1, I1, J1
 
-    character(LEN=*), intent( in) :: basename
+    character(len=*), intent( in) :: basename
 
     real(RP) :: truelat1, truelat2
     real(RP) :: stand_lon

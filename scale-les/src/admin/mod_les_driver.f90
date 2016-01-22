@@ -17,14 +17,27 @@ module mod_les_driver
   !
   !++ used modules
   !
+  use dc_log, only: &
+     LogInit
+  use gtool_file, only: &
+     FileCloseAll
+  use scale_precision
+  use scale_stdio
+  use scale_prof
   !-----------------------------------------------------------------------------
   implicit none
   private
   !-----------------------------------------------------------------------------
   !
+  !++ included parameters
+  !
+#include "scale-les.h"
+  !-----------------------------------------------------------------------------
+  !
   !++ Public procedure
   !
   public :: scaleles
+
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
@@ -37,27 +50,21 @@ module mod_les_driver
   !
   !++ Private parameters & variables
   !
+  character(len=H_MID), private, parameter :: MODELNAME = "SCALE-LES ver. "//VERSION
+
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine scaleles( &
-       MY_COMM_WORLD,  &
-       inter_parent,   &
-       inter_child,    &
-       fname           )
-    use dc_log, only: &
-       LogInit
-    use gtool_file, only: &
-       FileCloseAll
-    use scale_precision
-    use scale_stdio
-    use scale_prof
-
+       comm_world,       &
+       intercomm_parent, &
+       intercomm_child,  &
+       cnf_fname         )
     use scale_process, only: &
-       PRC_setup,    &
-       PRC_MPIsetup, &
-       PRC_MPIfinish
+       PRC_LOCAL_setup
+    use scale_les_process, only: &
+       PRC_setup
     use scale_const, only: &
        CONST_setup
     use scale_calendar, only: &
@@ -94,7 +101,7 @@ contains
        GTRANS_setup
     use scale_interpolation, only: &
        INTERP_setup
-    use scale_statistics, only: &
+    use scale_les_statistics, only: &
        STAT_setup
     use scale_history, only: &
        HIST_setup, &
@@ -128,96 +135,85 @@ contains
        TIME_DOLAND_restart,   &
        TIME_DOURBAN_restart,  &
        TIME_DOOCEAN_restart,  &
+       TIME_DOresume,         &
        TIME_DOend
     use mod_atmos_admin, only: &
        ATMOS_admin_setup, &
        ATMOS_do
     use mod_atmos_vars, only: &
        ATMOS_vars_setup,                         &
-       ATMOS_vars_diagnostics,                   &
-       ATMOS_vars_monitor,                       &
-       ATMOS_vars_restart_read,                  &
        ATMOS_sw_restart => ATMOS_RESTART_OUTPUT, &
        ATMOS_vars_restart_write,                 &
        ATMOS_sw_check => ATMOS_RESTART_CHECK,    &
        ATMOS_vars_restart_check
     use mod_atmos_driver, only: &
-       ATMOS_driver_setup1,    &
-       ATMOS_driver_setup2,    &
+       ATMOS_driver_setup,    &
        ATMOS_driver,           &
-       ATMOS_driver_firstsend, &
-       ATMOS_driver_finalize,  &
-       ATMOS_SURFACE_SET
+       ATMOS_driver_finalize
     use mod_ocean_admin, only: &
        OCEAN_admin_setup, &
        OCEAN_do
     use mod_ocean_vars, only: &
        OCEAN_vars_setup,                         &
-       OCEAN_vars_restart_read,                  &
        OCEAN_sw_restart => OCEAN_RESTART_OUTPUT, &
        OCEAN_vars_restart_write
     use mod_ocean_driver, only: &
        OCEAN_driver_setup, &
-       OCEAN_driver,       &
-       OCEAN_SURFACE_SET
+       OCEAN_driver
     use mod_land_admin, only: &
        LAND_admin_setup, &
        LAND_do
     use mod_land_vars, only: &
        LAND_vars_setup,                        &
-       LAND_vars_restart_read,                 &
        LAND_sw_restart => LAND_RESTART_OUTPUT, &
        LAND_vars_restart_write
     use mod_land_driver, only: &
        LAND_driver_setup, &
-       LAND_driver,       &
-       LAND_SURFACE_SET
+       LAND_driver
     use mod_urban_admin, only: &
        URBAN_admin_setup, &
        URBAN_do
     use mod_urban_vars, only: &
        URBAN_vars_setup,                         &
-       URBAN_vars_restart_read,                  &
        URBAN_sw_restart => URBAN_RESTART_OUTPUT, &
        URBAN_vars_restart_write
     use mod_urban_driver, only: &
        URBAN_driver_setup, &
-       URBAN_driver,       &
-       URBAN_SURFACE_SET
+       URBAN_driver
     use mod_cpl_admin, only: &
        CPL_admin_setup
     use mod_cpl_vars, only: &
        CPL_vars_setup
     use mod_user, only: &
-       USER_setup0, &
        USER_setup, &
        USER_step
     implicit none
-    !-----------------------------------------------------------------------------
-#include "scale-les.h"
-    !-----------------------------------------------------------------------------
 
-    integer, intent(in)  :: MY_COMM_WORLD
-    integer, intent(in)  :: inter_parent
-    integer, intent(in)  :: inter_child
-    character(len=H_LONG), intent(in) :: fname
+    integer,               intent(in) :: comm_world
+    integer,               intent(in) :: intercomm_parent
+    integer,               intent(in) :: intercomm_child
+    character(len=H_LONG), intent(in) :: cnf_fname
 
-    character(len=H_MID), parameter :: MODELNAME = "SCALE-LES ver. "//VERSION
-    !=============================================================================
+    integer :: myrank
+    logical :: ismaster
+    !---------------------------------------------------------------------------
 
     !########## Initial setup ##########
 
     ! setup standard I/O
-    call IO_setup( MODELNAME, .true., fname )
+    call IO_setup( MODELNAME, .true., cnf_fname )
 
     ! setup MPI
-    call PRC_MPIsetup( MY_COMM_WORLD )
+    call PRC_LOCAL_setup( comm_world, & ! [IN]
+                          myrank,     & ! [OUT]
+                          ismaster    ) ! [OUT]
+
+    ! setup Log
+    call IO_LOG_setup( myrank, ismaster )
+    call LogInit( IO_FID_CONF, IO_FID_LOG, IO_L )
 
     ! setup process
     call PRC_setup
-
-    ! setup Log
-    call LogInit( IO_FID_CONF, IO_FID_LOG, IO_L )
 
     ! setup PROF
     call PROF_setup
@@ -278,7 +274,7 @@ contains
     call MONIT_setup
 
     ! setup nesting grid
-    call NEST_setup ( inter_parent, inter_child )
+    call NEST_setup ( intercomm_parent, intercomm_child )
 
     ! setup common tools
     call ATMOS_HYDROSTATIC_setup
@@ -302,40 +298,13 @@ contains
     call URBAN_vars_setup
     call CPL_vars_setup
 
-    ! read restart data
-    if( ATMOS_do ) call ATMOS_vars_restart_read
-    if( OCEAN_do ) call OCEAN_vars_restart_read
-    if( LAND_do  ) call LAND_vars_restart_read
-    if( URBAN_do ) call URBAN_vars_restart_read
-
-    ! setup user-defined procedure before setup of other components
-    call USER_setup0
-
-    ! calc diagnostics
-    call ATMOS_vars_diagnostics
-
-    ! first monitor
-    call ATMOS_vars_monitor
-
-    ! setup surface condition
-    call ATMOS_SURFACE_SET( countup=.false. )
-    call OCEAN_SURFACE_SET( countup=.false. )
-    call LAND_SURFACE_SET ( countup=.false. )
-    call URBAN_SURFACE_SET( countup=.false. )
-
     ! setup submodel driver
-    call ATMOS_driver_setup1
+    call ATMOS_driver_setup
     call OCEAN_driver_setup
     call LAND_driver_setup
     call URBAN_driver_setup
-    call ATMOS_driver_setup2
 
-    ! setup user-defined procedure
     call USER_setup
-
-    ! history&monitor file output
-    call HIST_write ! if needed
-    call MONIT_write('MAIN')
 
     call PROF_rapend('Initialize', 0)
 
@@ -353,12 +322,20 @@ contains
     call PROF_setprefx('MAIN')
     call PROF_rapstart('Main_Loop', 0)
 
-    if( ATMOS_do ) call ATMOS_driver_firstsend
-
     do
 
       ! report current time
       call ADMIN_TIME_checkstate
+
+      if ( TIME_DORESUME ) then
+         ! resume state from restart files
+         call resume_state
+
+         ! history&monitor file output
+         call HIST_write ! if needed
+         call MONIT_write('MAIN')
+      end if
+
 
       ! time advance
       call ADMIN_TIME_advance
@@ -411,11 +388,83 @@ contains
     call PROF_PAPI_rapreport
 #endif
 
-    call FileCloseAll
-
     call MONIT_finalize
+
+    call FileCloseAll
 
     return
   end subroutine scaleles
-  !=============================================================================
+
+
+  subroutine resume_state
+    use mod_atmos_driver, only: &
+       ATMOS_driver_resume1,    &
+       ATMOS_driver_resume2,    &
+       ATMOS_SURFACE_SET
+    use mod_ocean_driver, only: &
+       OCEAN_driver_resume, &
+       OCEAN_SURFACE_SET
+    use mod_land_driver, only: &
+       LAND_driver_resume, &
+       LAND_SURFACE_SET
+    use mod_urban_driver, only: &
+       URBAN_driver_resume, &
+       URBAN_SURFACE_SET
+    use mod_atmos_vars, only: &
+       ATMOS_vars_diagnostics, &
+       ATMOS_vars_monitor,     &
+       ATMOS_vars_restart_read
+    use mod_ocean_vars, only: &
+       OCEAN_vars_restart_read
+    use mod_land_vars, only: &
+       LAND_vars_restart_read
+    use mod_urban_vars, only: &
+       URBAN_vars_restart_read
+    use mod_user, only: &
+       USER_resume0, &
+       USER_resume
+    use mod_atmos_admin, only: &
+       ATMOS_do
+    use mod_ocean_admin, only: &
+       OCEAN_do
+    use mod_land_admin, only: &
+       LAND_do
+    use mod_urban_admin, only: &
+       URBAN_do
+    implicit none
+
+    ! read restart data
+    if( ATMOS_do ) call ATMOS_vars_restart_read
+    if( OCEAN_do ) call OCEAN_vars_restart_read
+    if( LAND_do  ) call LAND_vars_restart_read
+    if( URBAN_do ) call URBAN_vars_restart_read
+
+    ! setup user-defined procedure before setup of other components
+    call USER_resume0
+
+    ! calc diagnostics
+    if( ATMOS_do ) call ATMOS_vars_diagnostics
+
+    ! first monitor
+    if( ATMOS_do ) call ATMOS_vars_monitor
+
+    ! setup surface condition
+    if( ATMOS_do ) call ATMOS_SURFACE_SET( countup=.false. )
+    if( OCEAN_do ) call OCEAN_SURFACE_SET( countup=.false. )
+    if( LAND_do  ) call LAND_SURFACE_SET ( countup=.false. )
+    if( URBAN_do ) call URBAN_SURFACE_SET( countup=.false. )
+
+    ! setup submodel driver
+    if( ATMOS_do ) call ATMOS_driver_resume1
+    if( OCEAN_do ) call OCEAN_driver_resume
+    if( LAND_do  ) call LAND_driver_resume
+    if( URBAN_do ) call URBAN_driver_resume
+    if( ATMOS_do ) call ATMOS_driver_resume2
+
+    ! setup user-defined procedure
+    call USER_resume
+
+    return
+  end subroutine resume_state
+
 end module mod_les_driver

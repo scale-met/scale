@@ -258,8 +258,6 @@ contains
        COMM_vars8, &
        COMM_wait
     implicit none
-
-    integer :: iq
     !---------------------------------------------------------------------------
 
     call COMM_vars8( ATMOS_PHY_SF_SFC_TEMP  (:,:),       1 )
@@ -287,7 +285,7 @@ contains
        I_LW => CONST_I_LW
     use scale_fileio, only: &
        FILEIO_read
-    use scale_statistics, only: &
+    use scale_les_statistics, only: &
        STAT_total
     implicit none
 
@@ -340,7 +338,7 @@ contains
        TIME_gettimelabel
     use scale_fileio, only: &
        FILEIO_write
-    use scale_statistics, only: &
+    use scale_les_statistics, only: &
        STAT_total
     implicit none
 

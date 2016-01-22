@@ -8,6 +8,7 @@
 !!
 !! @par History
 !! @li      2012-10-18 (S.Nishizawa) [new]
+!! @li      2015-09-08 (Y.Sato)      [add] Add evaporated cloud number concentration
 !!
 !<
 !-------------------------------------------------------------------------------
@@ -85,6 +86,8 @@ contains
        MOMY,      &
        RHOT,      &
        QTRC,      &
+       CCN ,      &
+       EVAPORATE, &
        SFLX_rain, &
        SFLX_snow  )
     use scale_grid_index
@@ -98,12 +101,15 @@ contains
     real(RP), intent(inout) :: MOMY(KA,IA,JA)
     real(RP), intent(inout) :: RHOT(KA,IA,JA)
     real(RP), intent(inout) :: QTRC(KA,IA,JA,QAD)
+    real(RP), intent(in)    :: CCN(KA,IA,JA)
+    real(RP), intent(out)   :: EVAPORATE(KA,IA,JA) 
     real(RP), intent(out)   :: SFLX_rain(IA,JA)
     real(RP), intent(out)   :: SFLX_snow(IA,JA)
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Cloud microphysics(dummy)'
 
+    EVAPORATE(:,:,:) = 0.0_RP
     SFLX_rain(:,:) = 0.0_RP
     SFLX_snow(:,:) = 0.0_RP
 

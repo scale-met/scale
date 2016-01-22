@@ -137,8 +137,6 @@ contains
        REAL_LATY, &
        REAL_LATXY
     implicit none
-
-    integer :: i, j
     !---------------------------------------------------------------------------
 
     call MPRJ_mapfactor( REAL_LAT  , GTRANS_MAPF(:,:,1,I_XY), GTRANS_MAPF (:,:,2,I_XY))
@@ -160,8 +158,6 @@ contains
        REAL_LON,  &
        REAL_LAT
     implicit none
-
-    integer :: i, j
     !---------------------------------------------------------------------------
 
     call MPRJ_rotcoef( GTRANS_ROTC(:,:,:), & ! [OUT]

@@ -30,8 +30,9 @@ module mod_user
   !
   !++ Public procedure
   !
-  public :: USER_setup0
   public :: USER_setup
+  public :: USER_resume0
+  public :: USER_resume
   public :: USER_step
 
   !-----------------------------------------------------------------------------
@@ -67,15 +68,42 @@ module mod_user
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
-  !> Setup0
-  subroutine USER_setup0
-  end subroutine USER_setup0
-
-  !-----------------------------------------------------------------------------
   !> Setup
   subroutine USER_setup
     use scale_process, only: &
        PRC_MPIstop
+    implicit none
+
+    namelist / PARAM_USER / &
+       Ps, &
+       Ug, &
+       Vg, &
+       lat
+
+    integer :: ierr
+    !---------------------------------------------------------------------------
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[USER]/Categ[MAIN]'
+
+    !--- read namelist
+    rewind(IO_FID_CONF)
+    read(IO_FID_CONF,nml=PARAM_USER,iostat=ierr)
+
+    if( ierr < 0 ) then !--- missing
+       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+    elseif( ierr > 0 ) then !--- fatal error
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_USER. Check!'
+       call PRC_MPIstop
+    endif
+    if( IO_L ) write(IO_FID_LOG,nml=PARAM_USER)
+
+    return
+  end subroutine USER_setup
+
+  !-----------------------------------------------------------------------------
+  !> Resuming operation, before calculating tendency
+  subroutine USER_resume0
     use scale_atmos_hydrostatic, only: &
        buildrho => ATMOS_HYDROSTATIC_buildrho
     use mod_atmos_vars, only: &
@@ -95,30 +123,8 @@ contains
     real(RP) :: QC(KA)
     real(RP) :: Ts
 
-    namelist / PARAM_USER / &
-       Ps, &
-       Ug, &
-       Vg, &
-       lat
-
     integer :: i, j
-    integer :: ierr
     !---------------------------------------------------------------------------
-
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[USER]/Categ[MAIN]'
-
-    !--- read namelist
-    rewind(IO_FID_CONF)
-    read(IO_FID_CONF,nml=PARAM_USER,iostat=ierr)
-
-    if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
-    elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_USER. Check!'
-       call PRC_MPIstop
-    endif
-    if( IO_L ) write(IO_FID_LOG,nml=PARAM_USER)
 
     call interporate(PT, pt_ini)
     call interporate(QV, qv_ini)
@@ -154,7 +160,16 @@ contains
     call set_tg( 0.0_RP )
 
     return
-  end subroutine USER_setup
+  end subroutine USER_resume0
+
+  !-----------------------------------------------------------------------------
+  !> Resuming operation
+  subroutine USER_resume
+    implicit none
+    !---------------------------------------------------------------------------
+
+    return
+  end subroutine USER_resume
 
   !-----------------------------------------------------------------------------
   !> User step

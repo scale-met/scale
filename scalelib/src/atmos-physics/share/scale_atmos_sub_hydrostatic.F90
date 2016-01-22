@@ -495,19 +495,18 @@ contains
        PRC_MPIstop
     implicit none
 
-    real(RP), intent(out) :: dens(KA,IA,JA) !< density               [kg/m3]
-    real(RP), intent(out) :: temp(KA,IA,JA) !< temperature           [K]
+    real(RP), intent(out)   :: dens(KA,IA,JA) !< density               [kg/m3]
+    real(RP), intent(out)   :: temp(KA,IA,JA) !< temperature           [K]
     real(RP), intent(inout) :: pres(KA,IA,JA) !< pressure              [Pa]
-    real(RP), intent(in)  :: pott(KA,IA,JA) !< potential temperature [K]
-    real(RP), intent(in)  :: qv  (KA,IA,JA) !< water vapor           [kg/kg]
-    real(RP), intent(in)  :: qc  (KA,IA,JA) !< liquid water          [kg/kg]
+    real(RP), intent(in)    :: pott(KA,IA,JA) !< potential temperature [K]
+    real(RP), intent(in)    :: qv  (KA,IA,JA) !< water vapor           [kg/kg]
+    real(RP), intent(in)    :: qc  (KA,IA,JA) !< liquid water          [kg/kg]
 
     real(RP) :: dz(KA,IA,JA)
 
-    real(RP) :: pott_toa  (IA,JA) !< surface potential temperature [K]
-    real(RP) :: qv_toa    (IA,JA) !< surface water vapor           [kg/kg]
-    real(RP) :: qc_toa    (IA,JA) !< surface liquid water          [kg/kg]
-    real(RP) :: dens_1D   (KA)
+    real(RP) :: pott_toa(IA,JA) !< surface potential temperature [K]
+    real(RP) :: qv_toa  (IA,JA) !< surface water vapor           [kg/kg]
+    real(RP) :: qc_toa  (IA,JA) !< surface liquid water          [kg/kg]
 
     real(RP) :: Rtot
     real(RP) :: CVtot

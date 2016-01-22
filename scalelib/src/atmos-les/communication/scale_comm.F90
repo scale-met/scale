@@ -31,6 +31,23 @@ module scale_comm
   use scale_prof
   use scale_grid_index
   use scale_tracer
+
+  use scale_process, only: &
+     PRC_MPIstop
+  use scale_les_process, only: &
+     PRC_next, &
+     PRC_W,    &
+     PRC_N,    &
+     PRC_E,    &
+     PRC_S,    &
+     PRC_NW,   &
+     PRC_NE,   &
+     PRC_SW,   &
+     PRC_SE,   &
+     PRC_HAS_W, &
+     PRC_HAS_N, &
+     PRC_HAS_E, &
+     PRC_HAS_S
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -142,17 +159,7 @@ contains
     use scale_stdio, only: &
        IO_FID_CONF
     use scale_process, only: &
-       PRC_MPIstop, &
-       PRC_NEXT,    &
-       PRC_W,       &
-       PRC_N,       &
-       PRC_E,       &
-       PRC_S,       &
-       PRC_HAS_W,   &
-       PRC_HAS_E,   &
-       PRC_HAS_S,   &
-       PRC_HAS_N,   &
-       LOCAL_COMM_WORLD
+       PRC_LOCAL_COMM_WORLD
     implicit none
 
     NAMELIST / PARAM_COMM / &
@@ -235,7 +242,7 @@ contains
        call PRC_MPIstop
     endif
 
-    COMM_world = LOCAL_COMM_WORLD
+    COMM_world = PRC_LOCAL_COMM_WORLD
 
 #ifdef _USE_RDMA
     call rdma_setup( COMM_vsize_max_pc, &
@@ -287,8 +294,6 @@ contains
   !-----------------------------------------------------------------------------
   !> Register variables
   subroutine COMM_vars_init(var, vid)
-    use scale_process, only: &
-       PRC_MPIstop
     implicit none
 
     real(RP), intent(inout) :: var(:,:,:) !< variable for register
@@ -329,8 +334,6 @@ contains
   !-----------------------------------------------------------------------------
   !> Register variables
   subroutine COMM_vars8_init(var, vid)
-    use scale_process, only: &
-       PRC_MPIstop
     implicit none
 
     real(RP), intent(inout) :: var(:,:,:) !< variable for register
@@ -552,21 +555,21 @@ contains
     ! [NOTE] always communicate globally
     call PROF_rapstart('COMM_Allreduce', 2)
     ! All reduce
-    call MPI_Allreduce( statval(1),     &
-                        allstatval(1),  &
-                        KA,             &
-                        COMM_datatype,  &
-                        MPI_SUM,        &
-                        COMM_world, &
-                        ierr            )
+    call MPI_Allreduce( statval(1),    &
+                        allstatval(1), &
+                        KA,            &
+                        COMM_datatype, &
+                        MPI_SUM,       &
+                        COMM_world,    &
+                        ierr           )
     ! All reduce
-    call MPI_Allreduce( statcnt(1),     &
-                        allstatcnt(1),  &
-                        KA,             &
-                        COMM_datatype,  &
-                        MPI_SUM,        &
-                        COMM_world, &
-                        ierr            )
+    call MPI_Allreduce( statcnt(1),    &
+                        allstatcnt(1), &
+                        KA,            &
+                        COMM_datatype, &
+                        MPI_SUM,       &
+                        COMM_world,    &
+                        ierr           )
 
     call PROF_rapend  ('COMM_Allreduce', 2)
 
@@ -598,13 +601,13 @@ contains
     ! [NOTE] always communicate globally
     call PROF_rapstart('COMM_Allreduce', 2)
     ! All reduce
-    call MPI_Allreduce( statval,        &
-                        allstatval,     &
-                        1,              &
-                        COMM_datatype,  &
-                        MPI_MAX,        &
-                        COMM_world, &
-                        ierr            )
+    call MPI_Allreduce( statval,       &
+                        allstatval,    &
+                        1,             &
+                        COMM_datatype, &
+                        MPI_MAX,       &
+                        COMM_world,    &
+                        ierr           )
 
     call PROF_rapend  ('COMM_Allreduce', 2)
 
@@ -628,7 +631,7 @@ contains
     integer :: k
     !---------------------------------------------------------------------------
 
-    statval(:) = -1.E99_RP
+    statval(:) = -1.E19_RP
     do k = KS, KE
        statval(k) = maxval(var(k,IS:IE,JS:JE))
     enddo
@@ -636,13 +639,13 @@ contains
     ! [NOTE] always communicate globally
     call PROF_rapstart('COMM_Allreduce', 2)
     ! All reduce
-    call MPI_Allreduce( statval(1),     &
-                        allstatval(1),  &
-                        KA,             &
-                        COMM_datatype,  &
-                        MPI_MAX,        &
-                        COMM_world, &
-                        ierr            )
+    call MPI_Allreduce( statval(1),    &
+                        allstatval(1), &
+                        KA,            &
+                        COMM_datatype, &
+                        MPI_MAX,       &
+                        COMM_world,    &
+                        ierr           )
 
     call PROF_rapend  ('COMM_Allreduce', 2)
 
@@ -659,7 +662,7 @@ contains
   !> Get data from whole process value in 2D field
   subroutine COMM_gather_2D( recv, send, gIA, gJA )
     use scale_process, only: &
-       PRC_master
+       PRC_masterrank
     implicit none
 
     real(RP), intent(out) :: recv(:,:) !< receive buffer (gIA,gJA)
@@ -680,8 +683,8 @@ contains
                      recv(:,:),      &
                      recvcounts,     &
                      COMM_datatype,  &
-                     PRC_master,     &
-                     COMM_world, &
+                     PRC_masterrank, &
+                     COMM_world,     &
                      ierr            )
 
     return
@@ -691,7 +694,7 @@ contains
   !> Get data from whole process value in 3D field
   subroutine COMM_gather_3D( recv, send, gIA, gJA, gKA )
     use scale_process, only: &
-       PRC_master
+       PRC_masterrank
     implicit none
 
     real(RP), intent(out) :: recv(:,:,:) !< receive buffer(gIA,gJA,gKA)
@@ -713,8 +716,8 @@ contains
                      recv(:,:,:),    &
                      recvcounts,     &
                      COMM_datatype,  &
-                     PRC_master,     &
-                     COMM_world, &
+                     PRC_masterrank, &
+                     COMM_world,     &
                      ierr            )
 
     return
@@ -724,7 +727,7 @@ contains
   !> Broadcast data for whole process value in scalar field
   subroutine COMM_bcast_SCR( var )
     use scale_process, only: &
-       PRC_master
+       PRC_masterrank
     implicit none
 
     real(RP), intent(inout) :: var  !< broadcast buffer (gIA)
@@ -740,8 +743,8 @@ contains
     call MPI_BCAST( var,            &
                     counts,         &
                     COMM_datatype,  &
-                    PRC_master,     &
-                    COMM_world, &
+                    PRC_masterrank, &
+                    COMM_world,     &
                     ierr            )
 
     call PROF_rapend('COMM_Bcast', 2)
@@ -753,7 +756,7 @@ contains
   !> Broadcast data for whole process value in 1D field
   subroutine COMM_bcast_1D( var, gIA )
     use scale_process, only: &
-       PRC_master
+       PRC_masterrank
     implicit none
 
     real(RP), intent(inout) :: var(:)  !< broadcast buffer (gIA)
@@ -767,12 +770,12 @@ contains
 
     counts = gIA
 
-    call MPI_BCAST( var(:),          &
-                     counts,         &
-                     COMM_datatype,  &
-                     PRC_master,     &
-                     COMM_world, &
-                     ierr            )
+    call MPI_BCAST( var(:),         &
+                    counts,         &
+                    COMM_datatype,  &
+                    PRC_masterrank, &
+                    COMM_world,     &
+                    ierr            )
 
     call PROF_rapend('COMM_Bcast', 2)
 
@@ -783,7 +786,7 @@ contains
   !> Broadcast data for whole process value in 2D field
   subroutine COMM_bcast_2D( var, gIA, gJA )
     use scale_process, only: &
-       PRC_master
+       PRC_masterrank
     implicit none
 
     real(RP), intent(inout) :: var(:,:)  !< broadcast buffer (gIA,gJA)
@@ -799,11 +802,11 @@ contains
     counts = gIA * gJA
 
     call MPI_BCAST( var(:,:),       &
-                     counts,         &
-                     COMM_datatype,  &
-                     PRC_master,     &
-                     COMM_world, &
-                     ierr            )
+                    counts,         &
+                    COMM_datatype,  &
+                    PRC_masterrank, &
+                    COMM_world,     &
+                    ierr            )
 
     call PROF_rapend('COMM_Bcast', 2)
 
@@ -814,7 +817,7 @@ contains
   !> Broadcast data for whole process value in 3D field
   subroutine COMM_bcast_3D( var, gIA, gJA, gKA )
     use scale_process, only: &
-       PRC_master
+       PRC_masterrank
     implicit none
 
     real(RP), intent(inout) :: var(:,:,:)  !< broadcast buffer(gIA,gJA,gKA)
@@ -831,11 +834,11 @@ contains
     counts = gIA * gJA * gKA
 
     call MPI_BCAST( var(:,:,:),     &
-                     counts,         &
-                     COMM_datatype,  &
-                     PRC_master,     &
-                     COMM_world, &
-                     ierr            )
+                    counts,         &
+                    COMM_datatype,  &
+                    PRC_masterrank, &
+                    COMM_world,     &
+                    ierr            )
 
     call PROF_rapend('COMM_Bcast', 2)
 
@@ -846,8 +849,7 @@ contains
   !> Broadcast data for whole process value in 4D field
   subroutine COMM_bcast_4D( var, gIA, gJA, gKA, gTime )
     use scale_process, only: &
-       PRC_master, &
-       PRC_MPIstop
+       PRC_masterrank
     implicit none
 
     real(RP), intent(inout) :: var(:,:,:,:) !< broadcast buffer(gIA,gJA,gKA,gTime)
@@ -870,11 +872,11 @@ contains
     end if
 
     call MPI_BCAST( var(:,:,:,:),   &
-                     counts,         &
-                     COMM_datatype,  &
-                     PRC_master,     &
-                     COMM_world, &
-                     ierr            )
+                    counts,         &
+                    COMM_datatype,  &
+                    PRC_masterrank, &
+                    COMM_world,     &
+                    ierr            )
 
     call PROF_rapend('COMM_Bcast', 2)
 
@@ -885,7 +887,7 @@ contains
   !> Broadcast data for whole process value in scalar (integer)
   subroutine COMM_bcast_INT_SCR( var )
     use scale_process, only: &
-       PRC_master
+       PRC_masterrank
     implicit none
 
     integer, intent(inout) :: var   !< broadcast buffer (gIA)
@@ -901,8 +903,8 @@ contains
     call MPI_BCAST( var,            &
                     counts,         &
                     MPI_INTEGER,    &
-                    PRC_master,     &
-                    COMM_world, &
+                    PRC_masterrank, &
+                    COMM_world,     &
                     ierr            )
 
     call PROF_rapend('COMM_Bcast', 2)
@@ -914,7 +916,7 @@ contains
   !> Broadcast data for whole process value in 1D field (integer)
   subroutine COMM_bcast_INT_1D( var, gIA )
     use scale_process, only: &
-       PRC_master
+       PRC_masterrank
     implicit none
 
     integer, intent(inout) :: var(:)   !< broadcast buffer (gIA)
@@ -931,8 +933,8 @@ contains
     call MPI_BCAST( var(:),         &
                     counts,         &
                     MPI_INTEGER,    &
-                    PRC_master,     &
-                    COMM_world, &
+                    PRC_masterrank, &
+                    COMM_world,     &
                     ierr            )
 
     call PROF_rapend('COMM_Bcast', 2)
@@ -944,7 +946,7 @@ contains
   !> Broadcast data for whole process value in 2D field (integer)
   subroutine COMM_bcast_INT_2D( var, gIA, gJA )
     use scale_process, only: &
-       PRC_master
+       PRC_masterrank
     implicit none
 
     integer, intent(inout) :: var(:,:)  !< broadcast buffer (gIA,gJA)
@@ -962,8 +964,8 @@ contains
     call MPI_BCAST( var(:,:),       &
                     counts,         &
                     MPI_INTEGER,    &
-                    PRC_master,     &
-                    COMM_world, &
+                    PRC_masterrank, &
+                    COMM_world,     &
                     ierr            )
 
     call PROF_rapend('COMM_Bcast', 2)
@@ -975,7 +977,7 @@ contains
   !> Broadcast data for whole process value in scalar (logical)
   subroutine COMM_bcast_LOGICAL_SCR( var )
     use scale_process, only: &
-       PRC_master
+       PRC_masterrank
     implicit none
 
     logical, intent(inout) :: var   !< broadcast buffer
@@ -991,8 +993,8 @@ contains
     call MPI_BCAST( var,            &
                     counts,         &
                     MPI_LOGICAL,    &
-                    PRC_master,     &
-                    COMM_world, &
+                    PRC_masterrank, &
+                    COMM_world,     &
                     ierr            )
 
     call PROF_rapend('COMM_Bcast', 2)
@@ -1004,13 +1006,8 @@ contains
 ! private routines
 !-------------------------------------------------------------------------------
   subroutine vars_init_mpi_pc(var, vid, seqid)
-    use scale_process, only: &
-       PRC_next, &
-       PRC_W,    &
-       PRC_N,    &
-       PRC_E,    &
-       PRC_S
     implicit none
+
     real(RP), intent(inout) :: var(:,:,:)
     integer,  intent(in) :: vid
     integer,  intent(in) :: seqid
@@ -1081,21 +1078,8 @@ contains
   end subroutine vars_init_mpi_pc
 
   subroutine vars8_init_mpi_pc(var, vid, seqid)
-    use scale_process, only: &
-       PRC_next, &
-       PRC_W,    &
-       PRC_N,    &
-       PRC_E,    &
-       PRC_S,    &
-       PRC_NW,   &
-       PRC_NE,   &
-       PRC_SW,   &
-       PRC_SE,   &
-       PRC_HAS_W, &
-       PRC_HAS_N, &
-       PRC_HAS_E, &
-       PRC_HAS_S
     implicit none
+
     real(RP), intent(inout) :: var(:,:,:)
     integer,  intent(in) :: vid
     integer,  intent(in) :: seqid
@@ -1539,16 +1523,7 @@ contains
 
   subroutine vars_3D_mpi(var, vid)
     use scale_process, only: &
-       PRC_MPIstop, &
-       PRC_next, &
-       PRC_W,    &
-       PRC_N,    &
-       PRC_E,    &
-       PRC_S,    &
-       PRC_HAS_W, &
-       PRC_HAS_E, &
-       PRC_HAS_S, &
-       PRC_HAS_N
+       PRC_MPIstop
     implicit none
 
     real(RP), intent(inout) :: var(:,:,:) !< atmospheric 3D variable to communication
@@ -1679,20 +1654,7 @@ contains
 
   subroutine vars8_3D_mpi(var, vid)
     use scale_process, only: &
-       PRC_MPIstop, &
-       PRC_next, &
-       PRC_W,    &
-       PRC_N,    &
-       PRC_E,    &
-       PRC_S,    &
-       PRC_NW,   &
-       PRC_NE,   &
-       PRC_SW,   &
-       PRC_SE,   &
-       PRC_HAS_W, &
-       PRC_HAS_E, &
-       PRC_HAS_S, &
-       PRC_HAS_N
+       PRC_MPIstop
     implicit none
 
     real(RP), intent(inout) :: var(:,:,:)
@@ -2137,17 +2099,9 @@ contains
 
   subroutine vars_2D_mpi(var, vid)
     use scale_process, only: &
-       PRC_MPIstop, &
-       PRC_next, &
-       PRC_W,    &
-       PRC_N,    &
-       PRC_E,    &
-       PRC_S,    &
-       PRC_HAS_W, &
-       PRC_HAS_E, &
-       PRC_HAS_S, &
-       PRC_HAS_N
+       PRC_MPIstop
     implicit none
+
     real(RP), intent(inout) :: var(:,:)
     integer, intent(in)    :: vid
 
@@ -2297,20 +2251,7 @@ contains
 
   subroutine vars8_2D_mpi(var, vid)
     use scale_process, only: &
-       PRC_MPIstop, &
-       PRC_next, &
-       PRC_W,    &
-       PRC_N,    &
-       PRC_E,    &
-       PRC_S,    &
-       PRC_NW,   &
-       PRC_NE,   &
-       PRC_SW,   &
-       PRC_SE,   &
-       PRC_HAS_W, &
-       PRC_HAS_E, &
-       PRC_HAS_S, &
-       PRC_HAS_N
+       PRC_MPIstop
     implicit none
 
     real(RP), intent(inout) :: var(:,:)
@@ -2810,6 +2751,7 @@ contains
     use scale_process, only: &
        PRC_MPIstop
     implicit none
+
     real(RP), intent(inout) :: var(:,:,:)
     integer, intent(in)    :: vid
     integer :: ierr
@@ -2876,13 +2818,8 @@ contains
   end subroutine wait_2D_mpi
 
   subroutine wait_3D_mpi_pc(var, vid)
-    use scale_process, only: &
-       PRC_next, &
-       PRC_W,    &
-       PRC_N,    &
-       PRC_E,    &
-       PRC_S
     implicit none
+
     real(RP), intent(inout) :: var(:,:,:)
     integer,  intent(in)    :: vid
 
@@ -2903,10 +2840,8 @@ contains
   end subroutine wait_3D_mpi_pc
 
   subroutine pack_3D(var, vid)
-    use scale_process, only: &
-       PRC_HAS_W, &
-       PRC_HAS_E
     implicit none
+
     real(RP), intent(in) :: var(:,:,:)
     integer,  intent(in) :: vid
 
@@ -2987,10 +2922,8 @@ contains
   end subroutine pack_3D
 
   subroutine pack_2D(var, vid)
-    use scale_process, only: &
-       PRC_HAS_W, &
-       PRC_HAS_E
     implicit none
+
     real(RP), intent(in) :: var(:,:)
     integer,  intent(in) :: vid
 
@@ -3060,10 +2993,8 @@ contains
   end subroutine pack_2D
 
   subroutine unpack_3D(var, vid)
-    use scale_process, only: &
-       PRC_HAS_W, &
-       PRC_HAS_E
     implicit none
+
     real(RP), intent(inout) :: var(:,:,:)
     integer,  intent(in)    :: vid
 
@@ -3143,12 +3074,8 @@ contains
   end subroutine unpack_3D
 
   subroutine unpack_2D(var, vid)
-    use scale_process, only: &
-       PRC_HAS_W, &
-       PRC_HAS_E, &
-       PRC_HAS_S, &
-       PRC_HAS_N
     implicit none
+
     real(RP), intent(inout) :: var(:,:)
     integer,  intent(in)    :: vid
 
@@ -3215,11 +3142,6 @@ contains
   end subroutine unpack_2D
 
   subroutine copy_boundary_3D(var)
-    use scale_process, only: &
-       PRC_HAS_W, &
-       PRC_HAS_E, &
-       PRC_HAS_S, &
-       PRC_HAS_N
     implicit none
 
     real(RP), intent(inout) :: var(:,:,:)
@@ -3355,11 +3277,6 @@ contains
   end subroutine copy_boundary_3D
 
   subroutine copy_boundary_2D(var)
-    use scale_process, only: &
-       PRC_HAS_W, &
-       PRC_HAS_E, &
-       PRC_HAS_S, &
-       PRC_HAS_N
     implicit none
 
     real(RP), intent(inout) :: var(:,:)

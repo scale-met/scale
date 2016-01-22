@@ -405,7 +405,7 @@ contains
           call Log('E', message)
        endif
 
-       if ( abs(History_req_tintsec(n)-real(History_req_tintstep(n),kind=DP)*HISTORY_DTSEC) > 0.D0 ) then
+       if ( abs(History_req_tintsec(n)-real(History_req_tintstep(n),kind=DP)*HISTORY_DTSEC) > eps ) then
           write(message,*) 'xxx time interval must be a multiple of delta t ', &
                            History_req_tintsec(n), real(History_req_tintstep(n),kind=DP)*HISTORY_DTSEC
           call Log('E', message)
@@ -578,7 +578,7 @@ contains
                 History_tstrstep(id) = 1
              endif
              if ( History_output_start > 0.0_DP ) then
-                History_tstart(id) = HISTORY_STARTDAYSEC - History_output_start
+                History_tstart(id) = HISTORY_STARTDAYSEC + History_output_start
              else
                 History_tstart(id) = HISTORY_STARTDAYSEC
              end if
@@ -1283,7 +1283,8 @@ contains
 
     if ( dt < eps .AND. ( .NOT. History_tavg(itemid) ) ) then
        write(message,*) 'xxx History variable was put two times before output!: ', &
-                        trim(History_item(itemid))
+                        trim(History_item(itemid)), &
+                        step_next, History_tlststep(itemid)
        call Log('E', message)
     endif
 
@@ -1359,7 +1360,8 @@ contains
 
     if ( dt < eps .AND. ( .NOT. History_tavg(itemid) ) ) then
        write(message,*) 'xxx History variable was put two times before output!: ', &
-                        trim(History_item(itemid))
+                        trim(History_item(itemid)), &
+                        step_next, History_tlststep(itemid)
        call Log('E', message)
     endif
 
@@ -1435,7 +1437,8 @@ contains
 
     if ( dt < eps .AND. ( .NOT. History_tavg(itemid) ) ) then
        write(message,*) 'xxx History variable was put two times before output!: ', &
-                        trim(History_item(itemid))
+                        trim(History_item(itemid)), &
+                        step_next, History_tlststep(itemid)
        call Log('E', message)
     endif
 
@@ -1515,7 +1518,8 @@ contains
 
     if ( dt < eps .AND. ( .NOT. History_tavg(itemid) ) ) then
        write(message,*) 'xxx History variable was put two times before output!: ', &
-                        trim(History_item(itemid))
+                        trim(History_item(itemid)), &
+                        step_next, History_tlststep(itemid)
        call Log('E', message)
     endif
 
@@ -1595,7 +1599,8 @@ contains
 
     if ( dt < eps .AND. ( .NOT. History_tavg(itemid) ) ) then
        write(message,*) 'xxx History variable was put two times before output!: ', &
-                        trim(History_item(itemid))
+                        trim(History_item(itemid)), &
+                        step_next, History_tlststep(itemid)
        call Log('E', message)
     endif
 
@@ -1679,7 +1684,8 @@ contains
 
     if ( dt < eps .AND. ( .NOT. History_tavg(itemid) ) ) then
        write(message,*) 'xxx History variable was put two times before output!: ', &
-                        trim(History_item(itemid))
+                        trim(History_item(itemid)), &
+                        step_next, History_tlststep(itemid)
        call Log('E', message)
     endif
 
