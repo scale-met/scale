@@ -359,7 +359,7 @@ contains
     case ("SN14")
        mptype_run = 'double'
     case ("SUZUKI10")
-       mptype_run = 'double'
+       mptype_run = 'sinble-bin'
     case default
        write(*,*) 'xxx Unsupported TRACER_TYPE (', trim(TRACER_TYPE), '). Check!'
        call PRC_MPIstop
@@ -633,10 +633,11 @@ contains
 #ifdef DRY
           qc = 0.0_RP
 #else
+          qc = 0.0_RP
           if ( I_QC > 0 ) then
-             qc(:,:,:) = QTRC(:,:,:,I_QC,n)
-          else
-             qc = 0.0_RP
+             do iq = QWS, QWE
+               qc(:,:,:) = qc(:,:,:) + QTRC(:,:,:,iq,n)
+             enddo
           end if
 #endif
           ! make density & pressure profile in moist condition

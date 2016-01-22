@@ -403,7 +403,7 @@ contains
       qc_sfc  (:,:,:) = CONST_UNDEF8
 
       if ( flg_bin ) then
-         if( IO_L ) write(IO_FID_LOG,*) '*** Aerosols for SBM are included ***'
+         if( IO_L ) write(IO_FID_LOG,*) '*** Prepared Size Distribution Function (SBM) ***'
          call SBMAERO_setup
       endif
 
@@ -1021,6 +1021,8 @@ contains
   subroutine SBMAERO_setup
     use scale_const, only: &
        PI => CONST_PI
+    use scale_tracer_suzuki10, only: &
+       nccn, nbin
     implicit none
 
 #ifndef DRY
@@ -1033,8 +1035,6 @@ contains
     real(RP) :: R_MIN        = 1.E-08_RP
     real(RP) :: A_ALPHA      = 3.0_RP
     real(RP) :: RHO_AERO     = 2.25E+03_RP
-    integer  :: nbin_i       = 33
-    integer  :: nccn_i       = 20
 
     NAMELIST / PARAM_SBMAERO / &
        F0_AERO,      &
@@ -1042,9 +1042,7 @@ contains
        R_MAX,        &
        R_MIN,        &
        A_ALPHA,      &
-       RHO_AERO,     &
-       nccn_i,       &
-       nbin_i
+       RHO_AERO
 
     integer :: ierr
     integer :: iq, i, j, k
@@ -1066,22 +1064,24 @@ contains
     endif
     if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_SBMAERO)
 
-    allocate( gan( nccn_i ) )
-    allocate( xactr(nccn_i) )
-    allocate( xabnd(nccn_i+1) )
-
-    xasta = log( RHO_AERO*4.0_RP/3.0_RP*pi * ( R_MIN )**3 )
-    xaend = log( RHO_AERO*4.0_RP/3.0_RP*pi * ( R_MAX )**3 )
-    dxaer = ( xaend-xasta )/nccn_i
-    do iq = 1, nccn_i+1
-      xabnd( iq ) = xasta + dxaer*( iq-1 )
-    enddo
-    do iq = 1, nccn_i
-      xactr( iq ) = ( xabnd( iq )+xabnd( iq+1 ) )*0.5_RP
-    enddo
-    do iq = 1, nccn_i
-      gan( iq ) = faero( F0_AERO,R0_AERO,xactr( iq ), A_ALPHA, RHO_AERO )*exp( xactr(iq) )
-    enddo
+    if( nccn /= 0 ) then
+      allocate( gan( nccn ) )
+      allocate( xactr(nccn) )
+      allocate( xabnd(nccn+1) )
+  
+      xasta = log( RHO_AERO*4.0_RP/3.0_RP*pi * ( R_MIN )**3 )
+      xaend = log( RHO_AERO*4.0_RP/3.0_RP*pi * ( R_MAX )**3 )
+      dxaer = ( xaend-xasta )/nccn
+      do iq = 1, nccn+1
+        xabnd( iq ) = xasta + dxaer*( iq-1 )
+      enddo
+      do iq = 1, nccn
+        xactr( iq ) = ( xabnd( iq )+xabnd( iq+1 ) )*0.5_RP
+      enddo
+      do iq = 1, nccn
+        gan( iq ) = faero( F0_AERO,R0_AERO,xactr( iq ), A_ALPHA, RHO_AERO )*exp( xactr(iq) )
+      enddo
+    endif
 
     !--- Hydrometeor is zero at initial time for Bin method
     do iq = 2,  QQA
@@ -1095,7 +1095,7 @@ contains
     enddo
 
     !-- Aerosol distribution
-    if( nccn_i /= 0 ) then
+    if( nccn /= 0 ) then
      do iq = QQA+1, QA
      do j  = JS, JE
      do i  = IS, IE
@@ -1105,10 +1105,10 @@ contains
      enddo
      enddo
      enddo
-    endif
 
-    deallocate( xactr )
-    deallocate( xabnd )
+     deallocate( xactr )
+     deallocate( xabnd )
+    endif
 
 #endif
     return
