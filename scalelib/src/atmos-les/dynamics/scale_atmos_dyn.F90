@@ -279,6 +279,7 @@ contains
     call COMM_vars8_init( MOMY, I_COMM_MOMY )
     call COMM_vars8_init( RHOT, I_COMM_RHOT )
     do iv = 1, VA
+       I_COMM_PROG(iv) = 5 + iv
        call COMM_vars8_init( PROG(:,:,:,iv), I_COMM_PROG(iv) )
     end do
 
@@ -294,6 +295,7 @@ contains
     call COMM_vars8_init( MOMY_RK1, I_COMM_MOMY_RK1 )
     call COMM_vars8_init( RHOT_RK1, I_COMM_RHOT_RK1 )
     do iv = 1, VA
+       I_COMM_PROG_RK1(iv) = 5 + iv
        call COMM_vars8_init( PROG_RK1(:,:,:,iv), I_COMM_PROG_RK1(iv) )
     end do
 
@@ -303,6 +305,7 @@ contains
     call COMM_vars8_init( MOMY_RK2, I_COMM_MOMY_RK2 )
     call COMM_vars8_init( RHOT_RK2, I_COMM_RHOT_RK2 )
     do iv = 1, VA
+       I_COMM_PROG_RK2(iv) = 5 + iv
        call COMM_vars8_init( PROG_RK2(:,:,:,iv), I_COMM_PROG_RK2(iv) )
     end do
 
