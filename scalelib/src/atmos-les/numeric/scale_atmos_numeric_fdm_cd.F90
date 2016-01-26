@@ -195,7 +195,8 @@ contains
        FlxZ_WXY(  KE,i,j) = 0.0_RP
 
        if (present(DiffFlxZ_WXY)) then
-         call FDM_AddDiffFlxZ(FlxZ_WXY, DiffFlxZ_WXY, GSQRT(:,:,:,I_XYW), MAPF(:,:,:,I_XY), 0, i, j, KS, KE-1)
+!         call FDM_AddDiffFlxZ(FlxZ_WXY, DiffFlxZ_WXY, GSQRT(:,:,:,I_XYW), MAPF(:,:,:,I_XY), 0, i, j, KS, KE-1)
+         call FDM_AddDiffFlxZ(FlxZ_WXY, DiffFlxZ_WXY, GSQRT(:,:,:,I_XYW), MAPF(:,:,:,I_XY), 0, i, j, KS-1, KE)
        end if
      enddo
      enddo
@@ -270,7 +271,8 @@ contains
        FlxZ_WUY(  KE,i,j) = 0.0_RP
 
        if (present(DiffFlxZ_WUY)) then
-          call FDM_AddDiffFlxZ(FlxZ_WUY, DiffFlxZ_WUY, GSQRT(:,:,:,I_UYW), MAPF(:,:,:,I_UY), 0, i, j, KS, KE-1)
+!          call FDM_AddDiffFlxZ(FlxZ_WUY, DiffFlxZ_WUY, GSQRT(:,:,:,I_UYW), MAPF(:,:,:,I_UY), 0, i, j, KS, KE-1)
+          call FDM_AddDiffFlxZ(FlxZ_WUY, DiffFlxZ_WUY, GSQRT(:,:,:,I_UYW), MAPF(:,:,:,I_UY), 0, i, j, KS-1, KE)
        end if
     enddo
     enddo
@@ -344,7 +346,8 @@ contains
        FlxZ_WXV(  KE,i,j) = 0.0_RP
 
        if (present(DiffFlxZ_WXV)) then
-          call FDM_AddDiffFlxZ(FlxZ_WXV, DiffFlxZ_WXV, GSQRT(:,:,:,I_XVW), MAPF(:,:,:,I_XV), 0, i, j, KS, KE-1)
+!          call FDM_AddDiffFlxZ(FlxZ_WXV, DiffFlxZ_WXV, GSQRT(:,:,:,I_XVW), MAPF(:,:,:,I_XV), 0, i, j, KS, KE-1)
+          call FDM_AddDiffFlxZ(FlxZ_WXV, DiffFlxZ_WXV, GSQRT(:,:,:,I_XVW), MAPF(:,:,:,I_XV), 0, i, j, KS-1, KE)
        end if
     enddo
     enddo
@@ -419,7 +422,8 @@ contains
 !       FlxZ_ZXY(  KE,i,j) = 0.0_RP
 
        if (present(DiffFlxZ_ZXY)) then
-         call FDM_AddDiffFlxZ(FlxZ_ZXY, DiffFlxZ_ZXY, GSQRT(:,:,:,I_XYZ), MAPF(:,:,:,I_XY), -1, i, j, KS+1, KE-1)
+!         call FDM_AddDiffFlxZ(FlxZ_ZXY, DiffFlxZ_ZXY, GSQRT(:,:,:,I_XYZ), MAPF(:,:,:,I_XY), -1, i, j, KS+1, KE-1)
+         call FDM_AddDiffFlxZ(FlxZ_ZXY, DiffFlxZ_ZXY, GSQRT(:,:,:,I_XYZ), MAPF(:,:,:,I_XY), -1, i, j, KS-1, KE-1)
        end if
     enddo
     enddo
@@ -536,7 +540,8 @@ contains
        FlxZ_WXY(  KE,i,j) = 0.0_RP
 
        if (present(DiffFlxZ_WXY)) then
-         call FDM_AddDiffFlxZ(FlxZ_WXY, DiffFlxZ_WXY, GSQRT(:,:,:,I_XYW), MAPF(:,:,:,I_XY), 0, i, j, KS, KE-1)
+!         call FDM_AddDiffFlxZ(FlxZ_WXY, DiffFlxZ_WXY, GSQRT(:,:,:,I_XYW), MAPF(:,:,:,I_XY), 0, i, j, KS, KE-1)
+         call FDM_AddDiffFlxZ(FlxZ_WXY, DiffFlxZ_WXY, GSQRT(:,:,:,I_XYW), MAPF(:,:,:,I_XY), 0, i, j, KS-1, KE)
        end if
      enddo
      enddo
@@ -613,7 +618,8 @@ contains
        FlxZ_WUY(  KE,i,j) = 0.0_RP
 
        if (present(DiffFlxZ_WUY)) then
-          call FDM_AddDiffFlxZ(FlxZ_WUY, DiffFlxZ_WUY, GSQRT(:,:,:,I_UYW), MAPF(:,:,:,I_UY), 0, i, j, KS, KE-1)
+!          call FDM_AddDiffFlxZ(FlxZ_WUY, DiffFlxZ_WUY, GSQRT(:,:,:,I_UYW), MAPF(:,:,:,I_UY), 0, i, j, KS, KE-1)
+          call FDM_AddDiffFlxZ(FlxZ_WUY, DiffFlxZ_WUY, GSQRT(:,:,:,I_UYW), MAPF(:,:,:,I_UY), 0, i, j, KS-1, KE)
        end if
     enddo
     enddo
@@ -689,7 +695,8 @@ contains
        FlxZ_WXV(  KE,i,j) = 0.0_RP
 
        if (present(DiffFlxZ_WXV)) then
-          call FDM_AddDiffFlxZ(FlxZ_WXV, DiffFlxZ_WXV, GSQRT(:,:,:,I_XVW), MAPF(:,:,:,I_XV), 0, i, j, KS, KE-1)
+!          call FDM_AddDiffFlxZ(FlxZ_WXV, DiffFlxZ_WXV, GSQRT(:,:,:,I_XVW), MAPF(:,:,:,I_XV), 0, i, j, KS, KE-1)
+          call FDM_AddDiffFlxZ(FlxZ_WXV, DiffFlxZ_WXV, GSQRT(:,:,:,I_XVW), MAPF(:,:,:,I_XV), 0, i, j, KS-1, KE)
        end if
     enddo
     enddo
@@ -766,7 +773,8 @@ contains
 !       FlxZ_ZXY(  KE,i,j) = 0.0_RP
 
        if (present(DiffFlxZ_ZXY)) then
-         call FDM_AddDiffFlxZ(FlxZ_ZXY, DiffFlxZ_ZXY, GSQRT(:,:,:,I_XYZ), MAPF(:,:,:,I_XY), -1, i, j, KS+1, KE-1)
+!         call FDM_AddDiffFlxZ(FlxZ_ZXY, DiffFlxZ_ZXY, GSQRT(:,:,:,I_XYZ), MAPF(:,:,:,I_XY), -1, i, j, KS+1, KE-1)
+         call FDM_AddDiffFlxZ(FlxZ_ZXY, DiffFlxZ_ZXY, GSQRT(:,:,:,I_XYZ), MAPF(:,:,:,I_XY), -1, i, j, KS, KE)
        end if
     enddo
     enddo
@@ -880,12 +888,13 @@ contains
        call EvalFlxZ_CD2(FlxZ_WXY(:,i,j), VelZ, Var_ZXY, 0, i, j,   KS,   KS)
        call EvalFlxZ_CD4(FlxZ_WXY(:,i,j), VelZ, Var_ZXY, 0, i, j, KS+1, KS+1)
        call EvalFlxZ_CD6(FlxZ_WXY(:,i,j), VelZ, Var_ZXY, 0, i, j, KS+2, KE-3)
-       call EvalFlxZ_CD4(FlxZ_WXY(:,i,j), VelZ, Var_ZXY, 0, i, j, KS-2, KS-2)
+       call EvalFlxZ_CD4(FlxZ_WXY(:,i,j), VelZ, Var_ZXY, 0, i, j, KE-2, KE-2)
        call EvalFlxZ_CD2(FlxZ_WXY(:,i,j), VelZ, Var_ZXY, 0, i, j, KE-1, KE-1)
        FlxZ_WXY(  KE,i,j) = 0.0_RP
 
        if (present(DiffFlxZ_WXY)) then
-         call FDM_AddDiffFlxZ(FlxZ_WXY, DiffFlxZ_WXY, GSQRT(:,:,:,I_XYW), MAPF(:,:,:,I_XY), 0, i, j, KS, KE-1)
+!         call FDM_AddDiffFlxZ(FlxZ_WXY, DiffFlxZ_WXY, GSQRT(:,:,:,I_XYW), MAPF(:,:,:,I_XY), 0, i, j, KS, KE-1)
+         call FDM_AddDiffFlxZ(FlxZ_WXY, DiffFlxZ_WXY, GSQRT(:,:,:,I_XYW), MAPF(:,:,:,I_XY), 0, i, j, KS-1, KE)
        end if
      enddo
      enddo
@@ -964,7 +973,8 @@ contains
        FlxZ_WUY(  KE,i,j) = 0.0_RP
 
        if (present(DiffFlxZ_WUY)) then
-          call FDM_AddDiffFlxZ(FlxZ_WUY, DiffFlxZ_WUY, GSQRT(:,:,:,I_UYW), MAPF(:,:,:,I_UY), 0, i, j, KS, KE-1)
+          !          call FDM_AddDiffFlxZ(FlxZ_WUY, DiffFlxZ_WUY, GSQRT(:,:,:,I_UYW), MAPF(:,:,:,I_UY), 0, i, j, KS, KE-1)
+          call FDM_AddDiffFlxZ(FlxZ_WUY, DiffFlxZ_WUY, GSQRT(:,:,:,I_UYW), MAPF(:,:,:,I_UY), 0, i, j, KS-1, KE)          
        end if
     enddo
     enddo
@@ -1042,7 +1052,8 @@ contains
        FlxZ_WXV(  KE,i,j) = 0.0_RP
 
        if (present(DiffFlxZ_WXV)) then
-          call FDM_AddDiffFlxZ(FlxZ_WXV, DiffFlxZ_WXV, GSQRT(:,:,:,I_XVW), MAPF(:,:,:,I_XV), 0, i, j, KS, KE-1)
+!          call FDM_AddDiffFlxZ(FlxZ_WXV, DiffFlxZ_WXV, GSQRT(:,:,:,I_XVW), MAPF(:,:,:,I_XV), 0, i, j, KS, KE-1)
+          call FDM_AddDiffFlxZ(FlxZ_WXV, DiffFlxZ_WXV, GSQRT(:,:,:,I_XVW), MAPF(:,:,:,I_XV), 0, i, j, KS-1, KE)
        end if
     enddo
     enddo
@@ -1121,7 +1132,8 @@ contains
 !       FlxZ_ZXY(  KE,i,j) = 0.0_RP
 
        if (present(DiffFlxZ_ZXY)) then
-         call FDM_AddDiffFlxZ(FlxZ_ZXY, DiffFlxZ_ZXY, GSQRT(:,:,:,I_XYZ), MAPF(:,:,:,I_XY), -1, i, j, KS+1, KE-1)
+          !         call FDM_AddDiffFlxZ(FlxZ_ZXY, DiffFlxZ_ZXY, GSQRT(:,:,:,I_XYZ), MAPF(:,:,:,I_XY), -1, i, j, KS+1, KE-1)
+         call FDM_AddDiffFlxZ(FlxZ_ZXY, DiffFlxZ_ZXY, GSQRT(:,:,:,I_XYZ), MAPF(:,:,:,I_XY), -1, i, j, KS, KE)          
        end if
     enddo
     enddo

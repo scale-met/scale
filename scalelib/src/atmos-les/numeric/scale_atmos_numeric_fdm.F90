@@ -173,14 +173,23 @@ contains
 
     IVL = mapping_gridtransID(VarLoc)
     IVL2D = mapping_gridtransID(VarLoc, .true.)
-    call FDM_EvolveVar( VarA,                                               & ! (out)
+
+    if (present(Var_t)) then
+      call FDM_EvolveVar( VarA,                                             & ! (out)
          & Var0, Flx(:,:,:,XDIR), Flx(:,:,:,YDIR), Flx(:,:,:,ZDIR),         & ! (in)
          & coordMapInfo%GSQRT(:,:,:,IVL), coordMapInfo%MAPF(:,:,:,IVL2D),   & ! (in)
          & dt, RDX, RDY, RDZ,                                               & ! (in)
          & IIS, IIE, JJS, JJE, KS_, KE_,                                    & ! (in)
          & Var_t,                                                           & ! (in)
          & lhist, advch_t, advcv_t )
-        
+    else
+      call FDM_EvolveVar( VarA,                                             & ! (out)
+         & Var0, Flx(:,:,:,XDIR), Flx(:,:,:,YDIR), Flx(:,:,:,ZDIR),         & ! (in)
+         & coordMapInfo%GSQRT(:,:,:,IVL), coordMapInfo%MAPF(:,:,:,IVL2D),   & ! (in)
+         & dt, RDX, RDY, RDZ,                                               & ! (in)
+         & IIS, IIE, JJS, JJE, KS_, KE_,                                    & ! (in)
+         & lhist=lhist, advch_t=advch_t, advcv_t=advcv_t )
+    end if
   end subroutine ATMOS_NUMERIC_FDM_EvolveVar
 
   subroutine ATMOS_NUMERIC_FDM_EvalFlux(Flux,                        &  ! (inout)

@@ -109,7 +109,9 @@ contains
     endif
 
     VA_out = VA_HEVE
-
+!!$    VAR_NAME(1) = 'NC_rk'
+!!$    VAR_DESC(1) = 'NC advanced with rk schme'
+!!$    VAR_UNIT(1) = 'num/kg'
     return
     
   end subroutine ATMOS_DYN_rk_fdmheve_regist
@@ -495,9 +497,6 @@ contains
          & IIS, IIE, JJS, JJE, KS, KE, num_diff(:,:,:,I_DENS,:))             ! (in)
     
       !-----< update density >-----
-!      mflx_hi(KS:KE-1,IIS:IIE,JJS:JJE,ZDIR) = mflx_hi(KS:KE-1,IIS:IIE,JJS:JJE,ZDIR) &
-!           & + num_diff(KS:KE-1,IIS:IIE,JJS:JJE,I_DENS,ZDIR)
-      
       call ATMOS_NUMERIC_FDM_EvolveVar( DENS_RK,                         & ! (out)
          & DENS0, VL_ZXY, mflx_hi, dtrk, RCDX, RCDY, RCDZ,               & ! (in)
          & IIS, IIE, JJS, JJE, KS, KE, DENS_t                            & ! (in)
@@ -679,7 +678,7 @@ contains
        enddo
     
       !-----< update momentum (z) -----
-      call ATMOS_NUMERIC_FDM_EvolveVar( MOMZ_RK,                     & ! (out)
+       call ATMOS_NUMERIC_FDM_EvolveVar( MOMZ_RK,                     & ! (out)
          & MOMZ0, VL_WXY, qflx_hi, dtrk, RCDX, RCDY, RFDZ,           & ! (in)
          & IIS, IIE, JJS, JJE, KS, KE-1, MOMZ_t_nadv                 & ! (in)
 #ifdef HIST_TEND
@@ -850,7 +849,6 @@ contains
        end do
        
        !-----< update momentum (x) >-----
-
        call ATMOS_NUMERIC_FDM_EvolveVar( MOMX_RK,                       & ! (out)
          & MOMX0, VL_ZUY, qflx_hi, dtrk, RFDX, RCDY, RCDZ,              & ! (in)
          & IIS, min(IIE,IEH), JJS, JJE, KS, KE, MOMX_t_nadv             & ! (in)
@@ -984,10 +982,10 @@ contains
 
        !$omp parallel do private(i,j,k, div, extdiv) OMP_SCHEDULE_ collapse(2)
        do j = JJS, min(JJE,JEH)
-       do i = IIS, IEH
+       do i = IIS, IIE
          extdiv = 0.0_RP 
          do k = KS, KE            
-           div = divdmp_coef / dtrk * FDY(i) * ( DDIV(k,i,j+1)-DDIV(k,i,j) ) ! divergence damping
+           div = divdmp_coef / dtrk * FDY(j) * ( DDIV(k,i,j+1)-DDIV(k,i,j) ) ! divergence damping
 !           extdiv = extdiv + CDZ(k) * extdmp_coef * div/divdmp_coef
 
            ! Total tendency except advection term          
@@ -1011,7 +1009,6 @@ contains
        end do
        
        !-----< update momentum (y) >-----
-       
        call ATMOS_NUMERIC_FDM_EvolveVar( MOMY_RK,                     & ! (out)
          & MOMY0, VL_ZXV, qflx_hi, dtrk, RCDX, RFDY, RCDZ,            & ! (in)
          & IIS, IIE, JJS, min(JJE,JEH), KS, KE, MOMY_t_nadv           & ! (in)
@@ -1103,7 +1100,6 @@ contains
         & IIS, IIE, JJS, JJE, KS, KE, num_diff(:,:,:,I_RHOT,:) )                                ! (in)
 
       !-----< update rho*theta >-----
-
       call ATMOS_NUMERIC_FDM_EvolveVar( RHOT_RK,                      & ! (out)
          & RHOT0, VL_ZXY, tflx_hi, dtrk, RCDX, RCDY, RCDZ,            & ! (in)
          & IIS, IIE, JJS, JJE, KS, KE, RHOT_t                         & ! (in)
@@ -1185,7 +1181,7 @@ contains
 
     endif ! FLAG_FCT_T
 #endif    ! [--- End ifndef NO_FCT_DYN ---------------------------------------------------------- ]
-    
+
 #ifdef HIST_TEND
     if ( lhist ) then
        call HIST_in(advcv_t(:,:,:,I_DENS), 'DENS_t_advcv', 'tendency of density    (vert. advection)',    'kg/m3/s'   )

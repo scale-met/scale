@@ -157,7 +157,7 @@ contains
     call ATMOS_NUMERIC_FDM_SetCoordMapInfo(      &
        & GSQRT, J13G, J23G, J33G, MAPF           & ! (in)
        & )
-    
+
     do JJS = JS, JE, JBLOCK
     JJE = JJS+JBLOCK-1
     do IIS = IS, IE, IBLOCK
@@ -188,7 +188,8 @@ contains
 
     enddo
     enddo
-      
+
+#ifdef HORDCFDDYN_FCT_Q_ON    
     call ATMOS_DYN_fct( qflx_anti,                    & ! (out)
                         QTRC, DENS00, DENS,           & ! (in)
                         qflx_hi, qflx_lo,             & ! (in)
@@ -197,8 +198,10 @@ contains
                         GSQRT(:,:,:,I_XYZ),           & ! (in)
                         MAPF(:,:,:,I_XY), dt,         & ! (in)
                         FLAG_FCT_ALONG_STREAM         ) ! (in)
-!!$    qflx_anti = 0.0_RP
-
+#else
+    qflx_anti = 0.0_RP
+#endif
+    
     !--- < update rho*q >
     do JJS = JS, JE, JBLOCK
     JJE = JJS+JBLOCK-1

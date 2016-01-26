@@ -141,6 +141,9 @@ module mod_mkinit
   integer, public, parameter :: I_BOXAERO       = 27
   integer, public, parameter :: I_WARMBUBBLEAERO = 28
 
+  integer, public, parameter :: I_CAVITYFLOW    = 29
+  integer, public, parameter :: I_ADVECT        = 30
+  
   !-----------------------------------------------------------------------------
   !
   !++ Private procedure
@@ -156,6 +159,7 @@ module mod_mkinit
   private :: MKINIT_gravitywave
   private :: MKINIT_khwave
   private :: MKINIT_turbulence
+  private :: MKINIT_cavityflow
   private :: MKINIT_mountainwave
 
   private :: MKINIT_warmbubble
@@ -205,7 +209,8 @@ module mod_mkinit
   real(RP), private, allocatable :: qc_sfc  (:,:,:)
 
   real(RP), private, allocatable :: rndm  (:,:,:) ! random number (0-1)
-  real(RP), private, allocatable :: bubble(:,:,:) ! bubble factor (0-1)
+  real(RP), private, allocatable, target :: bubble(:,:,:) ! bubble factor (0-1)
+  real(RP), private, allocatable, target :: rect(:,:,:) ! rectangle factor (0-1)
 
   real(RP), private, allocatable :: gan(:) ! gamma factor (0-1)
 
@@ -248,6 +253,7 @@ contains
 
     allocate( rndm  (KA,IA,JA) )
     allocate( bubble(KA,IA,JA) )
+    allocate( rect  (KA,IA,JA) )
 
 
     !--- read namelist
@@ -331,6 +337,12 @@ contains
     case('WARMBUBBLEAERO')
        MKINIT_TYPE = I_WARMBUBBLEAERO
        call BUBBLE_setup
+    case('CAVITYFLOW')
+       MKINIT_TYPE = I_CAVITYFLOW
+    case('ADVECT')
+       MKINIT_TYPE = I_ADVECT
+       call BUBBLE_setup
+       call RECT_setup
     case default
        write(*,*) ' xxx Unsupported TYPE:', trim(MKINIT_initname)
        call PRC_MPIstop
@@ -478,6 +490,10 @@ contains
          call MKINIT_boxaero
       case(I_WARMBUBBLEAERO)
          call MKINIT_warmbubbleaero
+      case(I_CAVITYFLOW)
+         call MKINIT_cavityflow
+      case(I_ADVECT)
+         call MKINIT_advect
       case default
          write(*,*) ' xxx Unsupported TYPE:', MKINIT_TYPE
          call PRC_MPIstop
@@ -584,6 +600,90 @@ contains
     return
   end subroutine BUBBLE_setup
 
+  !-----------------------------------------------------------------------------
+  !> Bubble
+  subroutine RECT_setup
+    use scale_const, only: &
+       CONST_UNDEF8
+    implicit none
+
+    ! Bubble
+    logical  :: RCT_eachnode = .false.  ! Arrange rectangle at each node? [kg/kg]
+    real(RP) :: RCT_CZ       =  2.E3_RP ! center location [m]: z
+    real(RP) :: RCT_CX       =  2.E3_RP ! center location [m]: x
+    real(RP) :: RCT_CY       =  2.E3_RP ! center location [m]: y
+    real(RP) :: RCT_RZ       =  2.E3_RP ! rectangle z width   [m]: z
+    real(RP) :: RCT_RX       =  2.E3_RP ! rectangle x width   [m]: x
+    real(RP) :: RCT_RY       =  2.E3_RP ! rectangle y width   [m]: y
+
+    NAMELIST / PARAM_RECT / &
+       RCT_eachnode, &
+       RCT_CZ,       &
+       RCT_CX,       &
+       RCT_CY,       &
+       RCT_RZ,       &
+       RCT_RX,       &
+       RCT_RY
+
+    real(RP) :: CZ_offset
+    real(RP) :: CX_offset
+    real(RP) :: CY_offset
+    real(RP) :: dist
+
+    integer  :: ierr
+    integer  :: k, i, j
+    !---------------------------------------------------------------------------
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[RECT]/Categ[MKINIT]'
+
+    !--- read namelist
+    rewind(IO_FID_CONF)
+    read(IO_FID_CONF,nml=PARAM_RECT,iostat=ierr)
+
+    if( ierr < 0 ) then !--- missing
+       if( IO_L ) write(IO_FID_LOG,*) 'xxx Not found namelist. Check!'
+       call PRC_MPIstop
+    elseif( ierr > 0 ) then !--- fatal error
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_RECT. Check!'
+       call PRC_MPIstop
+    endif
+    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_RECT)
+
+    rect(:,:,:) = CONST_UNDEF8
+
+    if ( RCT_eachnode ) then
+       CZ_offset = GRID_CZ(KS)
+       CX_offset = GRID_CX(IS)
+       CY_offset = GRID_CY(JS)
+    else
+       CZ_offset = 0.0_RP
+       CX_offset = 0.0_RP
+       CY_offset = 0.0_RP
+    endif
+
+    do j = 1, JA
+    do i = 1, IA
+    do k = KS, KE
+
+       ! make tracer rectangle
+       dist = 2.0_RP * max( &
+            abs(GRID_CZ(k) - CZ_offset - RCT_CZ)/RCT_RZ,   &
+            abs(GRID_CX(i) - CX_offset - RCT_CX)/RCT_RX,   &
+            abs(GRID_CY(j) - CY_offset - RCT_CY)/RCT_RY    &
+            & )
+       if ( dist <= 1.0_RP ) then
+         rect(k,i,j) = 1.0_RP
+       else
+         rect(k,i,j) = 0.0_RP
+       end if
+    enddo
+    enddo
+    enddo
+
+    return
+  end subroutine RECT_setup
+  
   !-----------------------------------------------------------------------------
   !> Setup aerosol condition for Kajino 2013 scheme
   subroutine AEROSOL_setup
@@ -2453,6 +2553,197 @@ contains
     return
   end subroutine MKINIT_turbulence
 
+  !-----------------------------------------------------------------------------
+  !> Make initial state for advection experiment
+  subroutine MKINIT_advect
+    implicit none
+
+#ifndef DRY
+    ! Surface state
+    real(RP) :: SFC_THETA               ! surface potential temperature [K]
+    real(RP) :: SFC_PRES                ! surface pressure [Pa]
+    ! Environment state
+    real(RP) :: ENV_THETA               ! potential temperature of environment [K]
+    real(RP) :: ENV_U        =   0.0_RP ! velocity u of environment [m/s]
+    real(RP) :: ENV_V        =   0.0_RP ! velocity v of environment [m/s]
+    ! Advected quantity
+    character(len=H_SHORT) :: SHAPE_NC = 'BUBBLE' ! BUBBLE or RECT
+    real(RP) :: MAXMIN_NC       =   1.0_RP ! extremum of NC in bubble [kg/kg]
+
+    real(RP), pointer :: ShapeFac(:,:,:) => null()
+    
+    NAMELIST / PARAM_MKINIT_ADVECT / &
+       SFC_THETA,    &
+       SFC_PRES,     &
+       ENV_THETA,    &
+       ENV_U,        &
+       ENV_V,        &
+       SHAPE_NC,     &
+       MAXMIN_NC
+      
+    integer :: ierr
+    integer :: k, i, j, iq
+    !---------------------------------------------------------------------------
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[ADVECT]/Categ[MKINIT]'
+
+    SFC_THETA = THETAstd
+    SFC_PRES  = Pstd
+    ENV_THETA = THETAstd
+
+    !--- read namelist
+    rewind(IO_FID_CONF)
+    read(IO_FID_CONF,nml=PARAM_MKINIT_ADVECT,iostat=ierr)
+
+    if( ierr < 0 ) then !--- missing
+       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+    elseif( ierr > 0 ) then !--- fatal error
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_TRACERBUBBLE. Check!'
+       call PRC_MPIstop
+    endif
+    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_ADVECT)
+
+    ! calc in dry condition
+    pres_sfc(1,1,1) = SFC_PRES
+    pott_sfc(1,1,1) = SFC_THETA
+    qv_sfc  (1,1,1) = 0.0_RP
+    qc_sfc  (1,1,1) = 0.0_RP
+
+    do k = KS, KE
+       pott(k,1,1) = ENV_THETA
+       qv  (k,1,1) = 0.0_RP
+       qc  (k,1,1) = 0.0_RP
+    enddo
+
+    ! make density & pressure profile in dry condition
+    call HYDROSTATIC_buildrho( DENS    (:,1,1), & ! [OUT]
+                               temp    (:,1,1), & ! [OUT]
+                               pres    (:,1,1), & ! [OUT]
+                               pott    (:,1,1), & ! [IN]
+                               qv      (:,1,1), & ! [IN]
+                               qc      (:,1,1), & ! [IN]
+                               temp_sfc(1,1,1), & ! [OUT]
+                               pres_sfc(1,1,1), & ! [IN]
+                               pott_sfc(1,1,1), & ! [IN]
+                               qv_sfc  (1,1,1), & ! [IN]
+                               qc_sfc  (1,1,1)  ) ! [IN]
+
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       DENS(k,i,j) = DENS(k,1,1)
+       MOMZ(k,i,j) = 0.0_RP
+       MOMX(k,i,j) = ENV_U       * DENS(k,1,1)
+       MOMY(k,i,j) = ENV_V       * DENS(k,1,1)
+       RHOT(k,i,j) = pott(k,1,1) * DENS(k,1,1)
+
+       do iq = 1, QA
+          QTRC(k,i,j,iq) = 0.0_RP
+       enddo
+    enddo
+    enddo
+    enddo
+
+    ! set value of NC
+    if ( I_NC > 0 ) then
+       
+       select case(SHAPE_NC)
+       case('BUBBLE')
+          ShapeFac => bubble
+       case('RECT')
+          ShapeFac => rect
+       case default
+          write(*,*) 'xxx SHAPE_NC=', trim(SHAPE_NC), ' cannot be used on advect. Check!'
+          call PRC_MPIstop
+       end select
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+         QTRC(k,i,j,I_NC) = MAXMIN_NC * ShapeFac(k,i,j)
+       enddo
+       enddo
+       enddo
+    else
+       write(*,*) 'xxx tracer I_NC is not defined. Check!'
+       call PRC_MPIstop
+    endif
+
+    if ( flg_bin ) then
+       write(*,*) 'xxx SBM cannot be used on advect. Check!'
+       call PRC_MPIstop
+    endif
+
+#endif
+    return
+  end subroutine MKINIT_advect
+  
+  !-----------------------------------------------------------------------------
+  !> Make initial state for cavity flow
+  subroutine MKINIT_cavityflow
+    implicit none
+
+    ! Nondimenstional numbers for a cavity flow problem
+    real(RP) :: REYNOLDS_NUM = 4.D02 
+    real(RP) :: MACH_NUM     = 1.D-2
+    real(RP) :: TEMP0        = 300.D0
+    
+    NAMELIST / PARAM_MKINIT_CAVITYFLOW / &
+         REYNOLDS_NUM, &
+         MACH_NUM,     &
+         TEMP0
+    
+    integer :: ierr
+    integer :: k, i, j
+    real(RP) :: PRES, DENS0, Cs2, Ulid, TEMP, Gam
+    
+    !---------------------------------------------------------------------------
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '+++ Module[CAVITYFLOW]/Categ[INIT]'
+
+    !--- read namelist
+    rewind(IO_FID_CONF)
+    read(IO_FID_CONF,nml=PARAM_MKINIT_CAVITYFLOW,iostat=ierr)
+
+    if( ierr < 0 ) then !--- missing
+       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+    elseif( ierr > 0 ) then !--- fatal error
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_CAVITYFLOW. Check!'
+       call PRC_MPIstop
+    endif
+    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_CAVITYFLOW)
+
+    Gam = CPdry / (CPdry - Rdry)
+    Ulid = 1.0_RP
+    Cs2  = (Ulid / MACH_NUM)**2
+    TEMP = Cs2 / (Gam * Rdry)
+    PRES = 1.D4
+    DENS0 = PRES / (Rdry * TEMP)
+
+    do j = 1, JA
+    do i = 1, IA
+    do k = KS, KE
+       DENS(k,i,j) = DENS0
+       MOMZ(k,i,j) = 0.0_RP
+       MOMX(k,i,j) = 0.0_RP
+       MOMY(k,i,j) = 0.0_RP
+       RHOT(k,i,j) = PRES/Rdry * (P00/PRES)**((Rdry - CPdry)/CPdry)
+       QTRC(k,i,j,:) = 0.0_RP
+    enddo
+    enddo
+    enddo
+
+    MOMX(KE+1:KA,:,:) = DENS0 * Ulid
+
+    write(*,*) "DENS=", DENS0
+    write(*,*) "PRES=", PRES
+    write(*,*) "TEMP=", RHOT(10,10,4)/DENS0, TEMP
+    write(*,*) "Ulid=", Ulid
+    write(*,*) "Cs  =", sqrt(Cs2)
+    return
+  end subroutine MKINIT_cavityflow
+  
   !-----------------------------------------------------------------------------
   !> Make initial state ( horizontally uniform )
   subroutine MKINIT_mountainwave

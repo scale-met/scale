@@ -146,6 +146,11 @@ module scale_atmos_dyn
   integer :: I_COMM_mflx_x = 2
   integer :: I_COMM_mflx_y = 3
 
+  !!
+  integer :: I_COMM_NC_RK1 = 1
+  real(RP), private, allocatable :: NC_RK1(:,:,:)
+  !!
+  
   !-----------------------------------------------------------------------------
 contains
 
@@ -329,6 +334,10 @@ contains
 
     mflx_hi(:,:,:,:) = UNDEF
 
+    !!
+    call COMM_vars8_init( NC_RK1, I_COMM_NC_RK1 )
+    NC_RK1(:,:,:) = UNDEF
+    
     return
   end subroutine ATMOS_DYN_setup
 
@@ -396,6 +405,7 @@ contains
        HIST_switch
 
     use scale_atmos_numeric_fdm_diff
+    use scale_atmos_dyn_bc
     
     implicit none
 
@@ -532,7 +542,8 @@ contains
     integer  :: iv
 
     real(RP) :: DiffCoef
-
+    real(RP) :: NC0(KA,IA,JA)
+    
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Dynamics step: ', NSTEP_ATMOS_DYN, ' small steps'
@@ -1040,38 +1051,13 @@ contains
 !OCL XFILL
           num_diff(:,:,:,:,:) = 0.0_RP
        else
-          call ATMOS_DYN_numfilter_coef( num_diff(:,:,:,:,:),                    & ! [OUT]
+         if (ND_ORDER > 0) then
+            call ATMOS_DYN_numfilter_coef( num_diff(:,:,:,:,:),                    & ! [OUT]
                                          DENS, MOMZ, MOMX, MOMY, RHOT,           & ! [IN]
                                          CDZ, CDX, CDY, FDZ, FDX, FDY, dt,       & ! [IN]
                                          REF_dens, REF_pott,                     & ! [IN]
                                          ND_COEF, ND_ORDER, ND_SFC_FACT, ND_USE_RS ) ! [IN]      
-       endif
-
-       if (.true.) then
-         num_diff(:,:,:,I_DENS,:) = 0.0_RP
-         do JJS = JS, JE, JBLOCK
-         JJE = JJS+JBLOCK-1
-         do IIS = IS, IE, IBLOCK
-         IIE = IIS+IBLOCK-1
-           DiffCoef = 75.0_RP
-           call FDM_EvalDiffFlxCD2_VarZUY( &
-             & num_diff(:,:,:,I_MOMX,XDIR), num_diff(:,:,:,I_MOMX,YDIR), num_diff(:,:,:,I_MOMX,ZDIR), &
-             & MOMX, DENS, DiffCoef, RCDX, RFDY, RFDZ, &
-             & GSQRT, J13G, J23G, J33G, MAPF, .true., IIS, IIE, JJS, JJE, KS, KE )
-           call FDM_EvalDiffFlxCD2_VarZXV( &
-             & num_diff(:,:,:,I_MOMY,XDIR), num_diff(:,:,:,I_MOMY,YDIR), num_diff(:,:,:,I_MOMY,ZDIR), &
-             & MOMY, DENS, DiffCoef, RFDX, RCDY, RFDZ, &
-             & GSQRT, J13G, J23G, J33G, MAPF, .true., IIS, IIE, JJS, JJE, KS, KE )
-           call FDM_EvalDiffFlxCD2_VarWXY( &
-             & num_diff(:,:,:,I_MOMZ,XDIR), num_diff(:,:,:,I_MOMZ,YDIR), num_diff(:,:,:,I_MOMZ,ZDIR), &
-             & MOMZ, DENS, DiffCoef, RFDX, RFDY, RCDZ, &
-             & GSQRT, J13G, J23G, J33G, MAPF, .true., IIS, IIE, JJS, JJE, KS, KE )
-           call FDM_EvalDiffFlxCD2_VarZXY( &
-             & num_diff(:,:,:,I_RHOT,XDIR), num_diff(:,:,:,I_RHOT,YDIR), num_diff(:,:,:,I_RHOT,ZDIR), &
-             & RHOT, DENS, DiffCoef, RFDX, RFDY, RFDZ, &
-             & GSQRT, J13G, J23G, J33G, MAPF, .true., IIS, IIE, JJS, JJE, KS, KE )
-         enddo
-         enddo
+         end if
        end if
        
        call PROF_rapend  ("DYN_Numfilter", 2)
@@ -1080,6 +1066,12 @@ contains
        ! Start RK
        !------------------------------------------------------------------------
 
+!!$       write(*,*) '-first', NSTEP_ATMOS_DYN
+!!$       if( NSTEP_ATMOS_DYN == 1 .and. I_NC > 0 ) then
+!!$          write(*,*) "Set NC field..", I_NC
+!!$!          PROG(:,:,:,1) = QTRC(:,:,:,I_NC)
+!!$       end if
+       
        !##### SAVE #####
 !OCL XFILL
        DENS0(:,:,:) = DENS(:,:,:)
@@ -1097,6 +1089,38 @@ contains
           PROG0(:,:,:,:) = PROG(:,:,:,:)
        end if
 
+       call ATMOS_DYN_bc_apply( &
+            & DENS0, MOMX0, MOMY0, MOMZ0, RHOT0, PROG0,      &
+            & DENS, MOMX, MOMY, MOMZ, RHOT, PROG             &
+            & )
+
+       if ( ND_COEF /= 0.0_RP .and. ND_ORDER == 0 ) then
+         num_diff(:,:,:,I_DENS,:) = 0.0_RP
+         do JJS = JS, JE, JBLOCK
+         JJE = JJS+JBLOCK-1
+         do IIS = IS, IE, IBLOCK
+         IIE = IIS+IBLOCK-1
+           DiffCoef = ND_COEF
+           call FDM_EvalDiffFlxCD2_VarZUY( &
+               & num_diff(:,:,:,I_MOMX,XDIR), num_diff(:,:,:,I_MOMX,YDIR), num_diff(:,:,:,I_MOMX,ZDIR), &
+               & MOMX0, DENS0, DiffCoef, RCDX, RFDY, RFDZ, &
+               & GSQRT, J13G, J23G, J33G, MAPF, .true., IIS, IIE, JJS, JJE, KS, KE )
+           call FDM_EvalDiffFlxCD2_VarZXV( &
+               & num_diff(:,:,:,I_MOMY,XDIR), num_diff(:,:,:,I_MOMY,YDIR), num_diff(:,:,:,I_MOMY,ZDIR), &
+               & MOMY0, DENS0, DiffCoef, RFDX, RCDY, RFDZ, &
+               & GSQRT, J13G, J23G, J33G, MAPF, .true., IIS, IIE, JJS, JJE, KS, KE )
+           call FDM_EvalDiffFlxCD2_VarWXY( &
+               & num_diff(:,:,:,I_MOMZ,XDIR), num_diff(:,:,:,I_MOMZ,YDIR), num_diff(:,:,:,I_MOMZ,ZDIR), &
+               & MOMZ0, DENS0, DiffCoef, RFDX, RFDY, RCDZ, &
+               & GSQRT, J13G, J23G, J33G, MAPF, .true., IIS, IIE, JJS, JJE, KS, KE )
+           call FDM_EvalDiffFlxCD2_VarZXY( &
+               & num_diff(:,:,:,I_RHOT,XDIR), num_diff(:,:,:,I_RHOT,YDIR), num_diff(:,:,:,I_RHOT,ZDIR), &
+               & RHOT0, DENS0, DiffCoef, RFDX, RFDY, RFDZ, &
+               & GSQRT, J13G, J23G, J33G, MAPF, .true., IIS, IIE, JJS, JJE, KS, KE )
+         enddo
+         enddo
+       end if
+       
        call PROF_rapstart("DYN_RK", 2)
 
        !##### RK1 : PROG0,PROG->PROG_RK1 #####
@@ -1124,92 +1148,10 @@ contains
 
        call PROF_rapstart("DYN_Boundary", 2)
 
-       if ( BND_W ) then
-          !$omp parallel do private(j,k) OMP_SCHEDULE_ collapse(2)
-!OCL XFILL
-          do j = 1, JA
-          do i = 1, IS-1
-          do k = KS, KE
-             DENS_RK1(k,i,j) = DENS0(k,i,j)
-             MOMZ_RK1(k,i,j) = MOMZ0(k,i,j)
-             MOMX_RK1(k,i,j) = MOMX0(k,i,j)
-             MOMY_RK1(k,i,j) = MOMY0(k,i,j)
-             RHOT_RK1(k,i,j) = RHOT0(k,i,j)
-             do iv = 1, VA
-                PROG_RK1(k,i,j,iv) = PROG0(k,i,j,iv)
-             end do
-          enddo
-          enddo
-          enddo
-       end if
-       if ( BND_E ) then
-          !$omp parallel do private(j,k) OMP_SCHEDULE_ collapse(2)
-!OCL XFILL
-          do j = 1, JA
-          do i = IE+1, IA
-          do k = KS, KE
-             DENS_RK1(k,i,j) = DENS0(k,i,j)
-             MOMZ_RK1(k,i,j) = MOMZ0(k,i,j)
-             MOMX_RK1(k,i,j) = MOMX0(k,i,j)
-             MOMY_RK1(k,i,j) = MOMY0(k,i,j)
-             RHOT_RK1(k,i,j) = RHOT0(k,i,j)
-             do iv = 1, VA
-                PROG_RK1(k,i,j,iv) = PROG0(k,i,j,iv)
-             end do
-          enddo
-          enddo
-          enddo
-          !$omp parallel do private(j,k) OMP_SCHEDULE_ collapse(2)
-!OCL XFILL
-          do j = 1, JA
-          do k = KS, KE
-             MOMX_RK1(k,IE,j) = MOMX0(k,IE,j)
-          enddo
-          enddo
-       end if
-       if ( BND_S ) then
-          !$omp parallel do private(j,k) OMP_SCHEDULE_ collapse(2)
-!OCL XFILL
-          do j = 1, JS-1
-          do i = 1, IA
-          do k = KS, KE
-             DENS_RK1(k,i,j) = DENS0(k,i,j)
-             MOMZ_RK1(k,i,j) = MOMZ0(k,i,j)
-             MOMX_RK1(k,i,j) = MOMX0(k,i,j)
-             MOMY_RK1(k,i,j) = MOMY0(k,i,j)
-             RHOT_RK1(k,i,j) = RHOT0(k,i,j)
-             do iv = 1, VA
-                PROG_RK1(k,i,j,iv) = PROG0(k,i,j,iv)
-             end do
-          enddo
-          enddo
-          enddo
-       end if
-       if ( BND_N ) then
-          !$omp parallel do private(j,k) OMP_SCHEDULE_ collapse(2)
-!OCL XFILL
-          do j = JE+1, JA
-          do i = 1, IA
-          do k = KS, KE
-             DENS_RK1(k,i,j) = DENS0(k,i,j)
-             MOMZ_RK1(k,i,j) = MOMZ0(k,i,j)
-             MOMX_RK1(k,i,j) = MOMX0(k,i,j)
-             MOMY_RK1(k,i,j) = MOMY0(k,i,j)
-             RHOT_RK1(k,i,j) = RHOT0(k,i,j)
-             do iv = 1, VA
-                PROG_RK1(k,i,j,iv) = PROG0(k,i,j,iv)
-             end do
-          enddo
-          enddo
-          enddo
-          !$omp parallel do private(i,k) OMP_SCHEDULE_ collapse(2)
-!OCL XFILL
-          do i = 1, IA
-          do k = KS, KE
-             MOMY_RK1(k,i,JE) = MOMY0(k,i,JE)
-          enddo
-          enddo
-       end if
+       call ATMOS_DYN_bc_apply( &
+            & DENS_RK1, MOMX_RK1, MOMY_RK1, MOMZ_RK1, RHOT_RK1, PROG_RK1,      &
+            & DENS0, MOMX0, MOMY0, MOMZ0, RHOT0, PROG0                         &
+            & )
 
        call PROF_rapend  ("DYN_Boundary", 2)
 
@@ -1258,89 +1200,10 @@ contains
 
        call PROF_rapstart("DYN_Boundary", 2)
 
-       if ( BND_W ) then
-          !$omp parallel do private(j,k) OMP_SCHEDULE_ collapse(2)
-!OCL XFILL
-          do j = 1, JA
-          do i = 1, IS-1
-          do k = KS, KE
-             DENS_RK2(k,i,j) = DENS0(k,i,j)
-             MOMZ_RK2(k,i,j) = MOMZ0(k,i,j)
-             MOMX_RK2(k,i,j) = MOMX0(k,i,j)
-             MOMY_RK2(k,i,j) = MOMY0(k,i,j)
-             RHOT_RK2(k,i,j) = RHOT0(k,i,j)
-             do iv = 1, VA
-                PROG_RK2(k,i,j,iv) = PROG0(k,i,j,iv)
-             end do
-          enddo
-          enddo
-          enddo
-       end if
-       if ( BND_E ) then
-          !$omp parallel do private(j,k) OMP_SCHEDULE_ collapse(2)
-!OCL XFILL
-          do j = 1, JA
-          do i = IE+1, IA
-          do k = KS, KE
-             DENS_RK2(k,i,j) = DENS0(k,i,j)
-             MOMZ_RK2(k,i,j) = MOMZ0(k,i,j)
-             MOMX_RK2(k,i,j) = MOMX0(k,i,j)
-             MOMY_RK2(k,i,j) = MOMY0(k,i,j)
-             RHOT_RK2(k,i,j) = RHOT0(k,i,j)
-          enddo
-          enddo
-          enddo
-          !$omp parallel do private(j,k) OMP_SCHEDULE_ collapse(2)
-!OCL XFILL
-          do j = 1, JA
-          do k = KS, KE
-             MOMX_RK2(k,IE,j) = MOMX0(k,IE,j)
-          enddo
-          enddo
-       end if
-       if ( BND_S ) then
-          !$omp parallel do private(j,k) OMP_SCHEDULE_ collapse(2)
-!OCL XFILL
-          do j = 1, JS-1
-          do i = 1, IA
-          do k = KS, KE
-             DENS_RK2(k,i,j) = DENS0(k,i,j)
-             MOMZ_RK2(k,i,j) = MOMZ0(k,i,j)
-             MOMX_RK2(k,i,j) = MOMX0(k,i,j)
-             MOMY_RK2(k,i,j) = MOMY0(k,i,j)
-             RHOT_RK2(k,i,j) = RHOT0(k,i,j)
-             do iv = 1, VA
-                PROG_RK2(k,i,j,iv) = PROG0(k,i,j,iv)
-             end do
-          enddo
-          enddo
-          enddo
-       end if
-       if ( BND_N ) then
-          !$omp parallel do private(j,k) OMP_SCHEDULE_ collapse(2)
-!OCL XFILL
-          do j = JE+1, JA
-          do i = 1, IA
-          do k = KS, KE
-             DENS_RK2(k,i,j) = DENS0(k,i,j)
-             MOMZ_RK2(k,i,j) = MOMZ0(k,i,j)
-             MOMX_RK2(k,i,j) = MOMX0(k,i,j)
-             MOMY_RK2(k,i,j) = MOMY0(k,i,j)
-             RHOT_RK2(k,i,j) = RHOT0(k,i,j)
-             do iv = 1, VA
-                PROG_RK2(k,i,j,iv) = PROG0(k,i,j,iv)
-             end do
-          enddo
-          enddo
-          enddo
-          !$omp parallel do private(i,k) OMP_SCHEDULE_ collapse(2)
-!OCL XFILL
-          do i = 1, IA
-          do k = KS, KE
-             MOMY_RK2(k,i,JE) = MOMY0(k,i,JE)
-          enddo
-          enddo
-       end if
+       call ATMOS_DYN_bc_apply( &
+            & DENS_RK2, MOMX_RK2, MOMY_RK2, MOMZ_RK2, RHOT_RK2, PROG_RK2,      &
+            & DENS0, MOMX0, MOMY0, MOMZ0, RHOT0, PROG0                         &
+            & )
 
        call PROF_rapend  ("DYN_Boundary", 2)
 
@@ -1384,7 +1247,6 @@ contains
                           REF_pres, REF_dens,                               & ! (in)
                           BND_W, BND_E, BND_S, BND_N,                       & ! (in)
                           dtrk, dt                                          ) ! (in)
-
        call PROF_rapend  ("DYN_RK", 2)
 
 #ifdef CHECK_MASS
@@ -1500,7 +1362,6 @@ contains
        call HIST_in(allmflx_lb_horizontal(:), 'ALLMOM_lb_hz',                           &
                     'horizontally total momentum flux from lateral boundary', 'kg/m2/s' )
 #endif
-
        do j  = JS, JE
        do i  = IS, IE
           DENS(   1:KS-1,i,j) = DENS(KS,i,j)
@@ -1521,7 +1382,6 @@ contains
           end do
        enddo
        enddo
-
        call COMM_vars8( DENS(:,:,:), I_COMM_DENS )
        call COMM_vars8( MOMZ(:,:,:), I_COMM_MOMZ )
        call COMM_vars8( MOMX(:,:,:), I_COMM_MOMX )

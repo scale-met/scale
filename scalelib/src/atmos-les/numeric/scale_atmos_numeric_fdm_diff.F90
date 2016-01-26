@@ -88,7 +88,7 @@ contains
 
      do j = JJS-JHALO, JJE+JHALO
      do i = IIS-IHALO, IIE+IHALO
-       do k=KS, KE
+       do k=KS-1, KE+1
          Var_ZXY(k,i,j) = RhoVar_ZXY(k,i,j) / DENS_ZXY(k,i,j)
        enddo
      end do
@@ -147,7 +147,7 @@ contains
 
      do j = JJS-JHALO+1, JJE+JHALO
      do i = IIS-IHALO, IIE+IHALO-1
-       do k=KS, KE
+       do k=KS-1, KE+1
          Var_ZUY(k,i,j) = 2.0_RP * RhoVar_ZUY(k,i,j) / (Dens_ZXY(k,i,j) + Dens_ZXY(k,i+1,j))
        enddo
      end do
@@ -156,15 +156,15 @@ contains
      
      do j = JJS, JJE
      do i = IIS, IIE
-       do k=KS, KE-1
+       do k=KS-1, KE
          FlxZ_WUY(k,i,j) =   DiffCoef * RFDZ(k) * 0.25_RP * sum(Dens_ZXY(k:k+1,i:i+1,j)) &
            &               * (Var_ZUY(k,i,j) - Var_ZUY(k+1,i,j))
        enddo
-       FlxZ_WUY(KS-1,i,j) = 0.0_RP
-       FlxZ_WUY(  KE,i,j) = 0.0_RP
+!       FlxZ_WUY(KS-1,i,j) = 0.0_RP
+!       FlxZ_WUY(  KE,i,j) = 0.0_RP
      enddo
      enddo
-
+     
      do j = JJS, JJE
      do i = IIS, IIE+1
        do k=KS, KE
@@ -206,7 +206,7 @@ contains
 
      do j = JJS-JHALO, JJE+JHALO-1
      do i = IIS-IHALO+1, IIE+IHALO
-       do k=KS, KE-1
+       do k=KS-1, KE+1
          Var_ZXV(k,i,j) = 2.0_RP * RhoVar_ZXV(k,i,j) / (Dens_ZXY(k,i,j) + Dens_ZXY(k,i,j+1))
        enddo
      end do
@@ -216,14 +216,13 @@ contains
      do j = JJS, JJE
      do i = IIS, IIE
        do k=KS, KE-1
-         FlxZ_WXV(k,i,j) =   DiffCoef * RFDZ(k) * 0.25_RP * sum(Dens_ZXY(k:k+1,i:i+1,j)) &
+         FlxZ_WXV(k,i,j) =   DiffCoef * RFDZ(k) * 0.25_RP * sum(Dens_ZXY(k:k+1,i,j:j+1)) &
            &               * (Var_ZXV(k,i,j) - Var_ZXV(k+1,i,j))
        enddo
        FlxZ_WXV(KS-1,i,j) = 0.0_RP
        FlxZ_WXV(KE,i,j) = 0.0_RP
      enddo
      enddo
-
      
      do j = JJS, JJE
      do i = IIS-1, IIE
@@ -233,7 +232,7 @@ contains
        enddo
      enddo
      enddo
-
+     
      do j = JJS, JJE+1
      do i = IIS, IIE
        do k=KS, KE
@@ -267,11 +266,9 @@ contains
 
      do j = JJS-JHALO, JJE+JHALO
      do i = IIS-IHALO, IIE+IHALO
-       do k=KS, KE-1
+       do k=KS-1, KE
          Var_WXY(k,i,j) = 2.0_RP * RhoVar_WXY(k,i,j) / (DENS_ZXY(k,i,j) + DENS_ZXY(k+1,i,j))
        enddo
-       Var_WXY(KS-1,i,j) = 0.0_RP!- Var_WXY(KS+1,i,j)
-       Var_WXY(  KE,i,j) = 0.0_RP!- Var_WXY(KE-2,i,j)
      end do
      end do
 
@@ -288,22 +285,19 @@ contains
 
      do j = JJS, JJE
      do i = IIS-1, IIE
-       do k=KS, KE-1
+       do k=KS, KE
          FlxX_WUY(k,i,j) =   DiffCoef * RFDX(i) * 0.25_RP * sum(Dens_ZXY(k:k+1,i:i+1,j)) &
               &            * (Var_WXY(k,i,j) - Var_WXY(k,i+1,j))
        enddo
-       FlxX_WUY(KE,i,j) = 0.0_RP
      enddo
      enddo
 
      do j = JJS-1, JJE
-        
      do i = IIS, IIE
-       do k=KS, KE-1
+       do k=KS, KE
          FlxY_WXV(k,i,j) =   DiffCoef * RFDY(j) * 0.25_RP * sum(Dens_ZXY(k:k+1,i,j:j+1)) &
               &            * (Var_WXY(k,i,j) - Var_WXY(k,i,j+1))
        enddo
-       FlxY_WXV(KE,i,j) = 0.0_RP
      enddo
      enddo
      

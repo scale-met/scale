@@ -305,11 +305,11 @@ contains
           VelX(k) =   2.0_RP * MomX_ZUY(k,i,j) / (Dens_ZXY(k,i,j) + Dens_ZXY(k,i+1,j))
         enddo
       end if
-    case(VL_ZUY) ! VelX_ZXV
+    case(VL_ZUY) ! VelX_ZXY
       if( GeneralCoordFlag ) then
         do k=KS, KE
           VelX(k) =   sum( MomX_ZUY(k,i-1:i,j) / (Dens_ZXY(k,i-1:i,j) + Dens_ZXY(k,i:i+1,j)) ) &
-                &   * GSQRT(k,i,j,I_XVZ) / MAPF(i,j,2,I_XV)
+                &   * GSQRT(k,i,j,I_XYZ) / MAPF(i,j,2,I_XY)
         enddo
       else
         do k=KS, KE
@@ -384,7 +384,7 @@ contains
       if( GeneralCoordFlag ) then
         do k=KS, KE
           VelY(k) =   sum( MomY_ZXV(k,i,j-1:j) / (Dens_ZXY(k,i,j-1:j) + Dens_ZXY(k,i,j:j+1)) ) &
-                &   * GSQRT(k,i,j,I_XYZ) / MAPF(i,j,2,I_XY)
+                &   * GSQRT(k,i,j,I_XYZ) / MAPF(i,j,1,I_XY)
         enddo
       else
         do k=KS, KE
@@ -395,7 +395,7 @@ contains
      if( GeneralCoordFlag ) then
         do k=KS, KE-1
           VelY(k) =   sum( MomY_ZXV(k:k+1,i,j) / (Dens_ZXY(k:k+1,i,j) + Dens_ZXY(k:k+1,i,j+1)) ) &
-                &   * GSQRT(k,i,j,I_XVW) / MAPF(i,j,2,I_XV)
+                &   * GSQRT(k,i,j,I_XVW) / MAPF(i,j,1,I_XV)
         enddo
       else
         do k=KS, KE-1
@@ -420,7 +420,7 @@ contains
     logical,  intent(in)                          :: GeneralCoordFlag
 
     integer :: k
-    
+
     select case (VarLocID)
     case(VL_ZXY) ! VelZ_WXY
       if ( GeneralCoordFlag ) then

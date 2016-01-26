@@ -125,8 +125,14 @@ else
   FFLAGS += -DNUMERIC=$(NUMERIC_FDM)
 endif
 
+ifeq ($(DYNBC_CAVITY),T)
+  FFLAGS +=  -DDYNBC_W_RIGID -DDYNBC_E_RIGID -DDYNBC_N_RIGID -DDYNBC_S_RIGID \
+	     -DDYNBC_B_RIGID -DDYNBC_T_RIGID
+endif
+
 OBJS_NAME = $(scale_rdma)	\
 	scale_atmos_dyn.o	\
+	scale_atmos_dyn_bc.o	\
 	scale_atmos_dyn_common.o	\
 	scale_atmos_dyn_rk.o	\
 	scale_atmos_dyn_tracer.o	\
@@ -384,3 +390,4 @@ $(OBJ_DIR)/scale_rdma.o : scale_rdma.c
 ifneq ($(IGNOREDEP),T)
 -include depend
 endif
+# DO NOT DELETE

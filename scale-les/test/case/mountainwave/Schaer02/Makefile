@@ -16,7 +16,7 @@ ORG_SRCS    =
 # parameters for run
 INITCONF    = init.conf
 RUNCONF     = run.conf
-TPROC       = 16
+TPROC       = 5
 
 # required data (parameters,distributed files)
 DATDIR      = ../../../data
