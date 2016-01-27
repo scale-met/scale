@@ -209,6 +209,7 @@ module mod_mkinit
 
   real(RP), private, allocatable :: gan(:) ! gamma factor (0-1)
   logical,  private :: flg_bin = .false.
+  logical,  private :: flg_intrp = .false.
 
   !-----------------------------------------------------------------------------
 contains
@@ -221,7 +222,8 @@ contains
 
     NAMELIST / PARAM_MKINIT / &
        MKINIT_initname, &
-       flg_bin
+       flg_bin, &
+       flg_intrp
 
     integer :: ierr
     !---------------------------------------------------------------------------
@@ -403,7 +405,7 @@ contains
       qc_sfc  (:,:,:) = CONST_UNDEF8
 
       if ( flg_bin ) then
-         if( IO_L ) write(IO_FID_LOG,*) '*** Prepared Size Distribution Function (SBM) ***'
+         if( IO_L ) write(IO_FID_LOG,*) '*** Prepare Size Distribution FUnction (SBM) ***'
          call SBMAERO_setup
       endif
 
@@ -1056,8 +1058,7 @@ contains
     read(IO_FID_CONF,nml=PARAM_SBMAERO,iostat=ierr)
 
     if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) 'xxx Not found namelist. Check!'
-       call PRC_MPIstop
+       if( IO_L ) write(IO_FID_LOG,*) 'xxx Not found namelist. default value used'
     elseif( ierr > 0 ) then !--- fatal error
        write(*,*) 'xxx Not appropriate names in namelist SBMAERO. Check!'
        call PRC_MPIstop
@@ -1068,7 +1069,7 @@ contains
       allocate( gan( nccn ) )
       allocate( xactr(nccn) )
       allocate( xabnd(nccn+1) )
-  
+
       xasta = log( RHO_AERO*4.0_RP/3.0_RP*pi * ( R_MIN )**3 )
       xaend = log( RHO_AERO*4.0_RP/3.0_RP*pi * ( R_MAX )**3 )
       dxaer = ( xaend-xasta )/nccn
@@ -5004,6 +5005,7 @@ enddo
                              BASENAME_WITHNUM,        &
                              dims(:),                 &
                              mdlid,                   &
+                             flg_bin, flg_intrp,      &
                              PARENT_MP_TYPE,          &
                              NUMBER_OF_TSTEPS,        &
                              skip_steps               )
