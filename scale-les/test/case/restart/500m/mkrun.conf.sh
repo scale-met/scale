@@ -1,3 +1,33 @@
+#!/bin/bash
+
+RUN_TYPES=( "0" "A" "B" )
+
+for RUN_TYPE in ${RUN_TYPES[*]}
+do
+  CONFNAME="run.restart${RUN_TYPE}.conf"
+
+  case ${RUN_TYPE} in
+    "0" )
+      TIME_STARTDATE="0000, 1, 1, 0, 0, 0"
+      TIME_DURATION="8.D0"
+      RESTART_RUN=".false."
+      RESTART_IN_BASENAME="init_00000000000.000"
+    ;;
+    "A" )
+      TIME_STARTDATE="0000, 1, 1, 0, 0, 0"
+      TIME_DURATION="4.D0"
+      RESTART_RUN=".false."
+      RESTART_IN_BASENAME="init_00000000000.000"
+    ;;
+    "B" )
+      TIME_STARTDATE="0000, 1, 1, 0, 0, 4"
+      TIME_DURATION="4.D0"
+      RESTART_RUN=".true."
+      RESTART_IN_BASENAME="restartA_00000000004.000"
+    ;;
+  esac
+
+  cat << EOF > ${CONFNAME}
 #####
 #
 # SCALE-LES run configulation
@@ -5,12 +35,12 @@
 #####
 
 &PARAM_IO
- IO_LOG_BASENAME = "LOGB",
+ IO_LOG_BASENAME = "LOG${RUN_TYPE}",
 /
 
 &PARAM_PRC
- PRC_NUM_X       = 1,
- PRC_NUM_Y       = 1,
+ PRC_NUM_X = 1,
+ PRC_NUM_Y = 1,
 /
 
 &PARAM_INDEX
@@ -42,9 +72,9 @@
 /
 
 &PARAM_TIME
- TIME_STARTDATE             = 0000, 1, 1, 0, 0, 4,
+ TIME_STARTDATE             = ${TIME_STARTDATE},
  TIME_STARTMS               = 0.D0,
- TIME_DURATION              = 4.D0,
+ TIME_DURATION              = ${TIME_DURATION},
  TIME_DURATION_UNIT         = "SEC",
  TIME_DT                    = 1.D0,
  TIME_DT_UNIT               = "SEC",
@@ -65,10 +95,10 @@
 /
 
 &PARAM_RESTART
- RESTART_RUN          = .true.,
+ RESTART_RUN          = ${RESTART_RUN},
  RESTART_OUTPUT       = .true.,
- RESTART_IN_BASENAME  = "restartA_00000000004.000",
- RESTART_OUT_BASENAME = "restartB",
+ RESTART_IN_BASENAME  = "${RESTART_IN_BASENAME}",
+ RESTART_OUT_BASENAME = "restart${RUN_TYPE}",
 /
 
 &PARAM_MAPPROJ
@@ -167,3 +197,5 @@
  STRGB = 0.009D0,
  STRGG = 0.24D0,
 /
+EOF
+done
