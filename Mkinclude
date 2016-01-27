@@ -73,7 +73,7 @@ ifeq ($(ENABLE_SDM),T)
    GAGETRYDIR      = $(TOPDIR)/contrib/Gadgetry
    MTDIR           = $(TOPDIR)/contrib/mt
    SDMDIR          = $(TOPDIR)/contrib/SDM
-   CONTRIB_LIBS    = $(LIBDIR)/libgagetry.a $(LIBDIR)/libmt.a $(LIBDIR)/libsdm.a
+   CONTRIB_LIBS    = $(LIBDIR)/libsdm.a $(LIBDIR)/libgagetry.a $(LIBDIR)/libmt.a
    CONTRIB_INCLUDE = -I$(GAGETRYDIR) -I$(MTDIR) -I$(SDMDIR)
 else
    GAGETRYDIR      =
