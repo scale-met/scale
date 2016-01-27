@@ -36,7 +36,7 @@ $(LIBNAME): $(OBJS)
 makemodules: $(OBJS)
 
 rng_uniform_mt.o: rng_uniform_mt.F90
-	$(FC) $(FFLAGS) -o $@ -c $<
+	$(FC) $(FFLAGS) $(FFLAGS_MT1) -o $@ -c $<
 
 clean:
 	rm -f $(MODS)

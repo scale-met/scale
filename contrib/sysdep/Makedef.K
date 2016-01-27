@@ -10,3 +10,7 @@ ADDITIONAL_FFLAGS_SDM =
 
 # sdm_condensation_water.f90
 FFLAGS_SDM1 = -Kprefetch_indirect,simd=2
+
+##### additional compile option for the MT (Mersenne Twister) module
+FFLAGS_MT1 = 
+
