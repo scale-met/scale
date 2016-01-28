@@ -1292,7 +1292,7 @@ contains
 
     character(len=H_LONG) :: bname
 
-    integer  :: i, j, k, iq
+    integer  :: i, j, k, iq, n
     !---------------------------------------------------------------------------
 
     bname = ATMOS_BOUNDARY_IN_BASENAME
@@ -1380,13 +1380,15 @@ contains
     do j = 1, JA
     do i = 1, IA
     do k = 1, KA
-       ATMOS_BOUNDARY_DENS(k,i,j) = ATMOS_BOUNDARY_DENS(k,i,j) + inc_DENS(k,i,j) * dble(fillgaps_steps)
-       ATMOS_BOUNDARY_VELX(k,i,j) = ATMOS_BOUNDARY_VELX(k,i,j) + inc_VELX(k,i,j) * dble(fillgaps_steps)
-       ATMOS_BOUNDARY_VELY(k,i,j) = ATMOS_BOUNDARY_VELY(k,i,j) + inc_VELY(k,i,j) * dble(fillgaps_steps)
-       ATMOS_BOUNDARY_POTT(k,i,j) = ATMOS_BOUNDARY_POTT(k,i,j) + inc_POTT(k,i,j) * dble(fillgaps_steps)
+    do n = 1, fillgaps_steps
+       ATMOS_BOUNDARY_DENS(k,i,j) = ATMOS_BOUNDARY_DENS(k,i,j) + inc_DENS(k,i,j)
+       ATMOS_BOUNDARY_VELX(k,i,j) = ATMOS_BOUNDARY_VELX(k,i,j) + inc_VELX(k,i,j)
+       ATMOS_BOUNDARY_VELY(k,i,j) = ATMOS_BOUNDARY_VELY(k,i,j) + inc_VELY(k,i,j)
+       ATMOS_BOUNDARY_POTT(k,i,j) = ATMOS_BOUNDARY_POTT(k,i,j) + inc_POTT(k,i,j)
        do iq = 1, BND_QA
-         ATMOS_BOUNDARY_QTRC(k,i,j,iq) = ATMOS_BOUNDARY_QTRC(k,i,j,iq) + inc_QTRC(k,i,j,iq) * dble(fillgaps_steps)
+         ATMOS_BOUNDARY_QTRC(k,i,j,iq) = ATMOS_BOUNDARY_QTRC(k,i,j,iq) + inc_QTRC(k,i,j,iq)
        end do
+    end do
     end do
     end do
     end do
@@ -2463,6 +2465,5 @@ contains
 
     return
   end subroutine history_bnd
-
 
 end module scale_atmos_boundary

@@ -357,6 +357,8 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Output restart file (ATMOS_PHY_SF) ***'
        if( IO_L ) write(IO_FID_LOG,*) '*** basename: ', trim(basename)
 
+       call ATMOS_PHY_SF_vars_fillhalo
+
        call STAT_total( total, ATMOS_PHY_SF_SFC_TEMP  (:,:),      VAR_NAME(1) )
        call STAT_total( total, ATMOS_PHY_SF_SFC_albedo(:,:,I_LW), VAR_NAME(2) )
        call STAT_total( total, ATMOS_PHY_SF_SFC_albedo(:,:,I_SW), VAR_NAME(3) )
