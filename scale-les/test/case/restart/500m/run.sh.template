@@ -17,6 +17,9 @@ ln -svf ../../../data/rad/MIPAS/sum.atm .
 ln -svf ../../../data/rad/MIPAS/win.atm .
 ln -svf ../../../data/land/param.bucket.conf .
 
+# make configuration
+sh mkrun.conf.sh
+
 # run
 mpirun -np 1 ./scale-les_init init.conf || exit
 mpirun -np 1 ./scale-les  run.restart0.conf  || exit
