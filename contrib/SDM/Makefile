@@ -79,7 +79,7 @@ sdm_sd2fluid.o: sdm_sd2fluid.f90 \
 	sdm_coordtrans.o \
 	$(SCALESRCDIR)/scale_const.o \
 	$(SCALESRCDIR)/scale_precision.o
-	$(FC) $(FFLAGS) $(FFLAGS_SDM_MONIT) -I$(OBJ_DIR) -I$(SCALESRCDIR) -I$(MODDIR) -I$(DCUTILSDIR) -I$(GTOOLDIR) -I$(MTDIR) -I$(GAGETRYDIR) -I$(SDMDIR) -o $@ -c $<
+	$(FC) $(FFLAGS) $(FFLAGS_SDM2) $(FFLAGS_SDM_MONIT) -I$(OBJ_DIR) -I$(SCALESRCDIR) -I$(MODDIR) -I$(DCUTILSDIR) -I$(GTOOLDIR) -I$(MTDIR) -I$(GAGETRYDIR) -I$(SDMDIR) -o $@ -c $<
 
 sdm_coalescence.o: sdm_coalescence.f90 \
 	$(DEPENDLIB) \
@@ -91,7 +91,7 @@ sdm_coalescence.o: sdm_coalescence.f90 \
 	$(SCALESRCDIR)/scale_precision.o \
 	$(MTDIR)/rng_uniform_mt.mod \
 	$(GAGETRYDIR)/gadg_algorithm.mod
-	$(FC) $(FFLAGS) $(FFLAGS_SDM_MONIT) -I$(OBJ_DIR) -I$(SCALESRCDIR) -I$(MODDIR) -I$(DCUTILSDIR) -I$(GTOOLDIR) -I$(MTDIR) -I$(GAGETRYDIR) -I$(SDMDIR) -o $@ -c $<
+	$(FC) $(FFLAGS) $(FFLAGS_SDM3) $(FFLAGS_SDM_MONIT) -I$(OBJ_DIR) -I$(SCALESRCDIR) -I$(MODDIR) -I$(DCUTILSDIR) -I$(GTOOLDIR) -I$(MTDIR) -I$(GAGETRYDIR) -I$(SDMDIR) -o $@ -c $<
 
 sdm_idutil.o: sdm_idutil.f90 \
 	$(DEPENDLIB) \
@@ -109,7 +109,7 @@ sdm_motion.o: sdm_motion.f90 \
 	$(SCALESRCDIR)/scale_grid_index.o \
 	$(SCALESRCDIR)/scale_grid_cartesian.o \
 	$(SCALESRCDIR)/scale_precision.o
-	$(FC) $(FFLAGS) $(FFLAGS_SDM_MONIT) -I$(OBJ_DIR) -I$(SCALESRCDIR) -I$(MODDIR) -I$(DCUTILSDIR) -I$(GTOOLDIR) -I$(MTDIR) -I$(GAGETRYDIR) -I$(SDMDIR) -o $@ -c $<
+	$(FC) $(FFLAGS) $(FFLAGS_SDM4) $(FFLAGS_SDM_MONIT) -I$(OBJ_DIR) -I$(SCALESRCDIR) -I$(MODDIR) -I$(DCUTILSDIR) -I$(GTOOLDIR) -I$(MTDIR) -I$(GAGETRYDIR) -I$(SDMDIR) -o $@ -c $<
 
 sdm_boundary.o: sdm_boundary.f90 \
 	$(DEPENDLIB) \
