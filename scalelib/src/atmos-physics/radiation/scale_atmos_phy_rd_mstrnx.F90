@@ -1955,7 +1955,7 @@ contains
           SIGmns = Wmns_irgn * ( Spls - Smns )
           SIGpls = Wmns_irgn * ( Spls + Smns )
 
-          Qgamma = ( SIGpls*X*cosSZA(i,j) + SIGmns ) / ( X*Y*cosSZA(i,j) - 1.0/cosSZA(i,j) )
+          Qgamma = ( SIGpls*X*cosSZA(i,j) + SIGmns ) / max( X*Y*cosSZA(i,j) - 1.0_RP/cosSZA(i,j), RD_EPS )
 
           V0pls = 0.5_RP * ( ( 1.0_RP + 1.0_RP/(X*cosSZA(i,j)) ) * Qgamma + SIGmns / X )
           V0mns = 0.5_RP * ( ( 1.0_RP - 1.0_RP/(X*cosSZA(i,j)) ) * Qgamma - SIGmns / X )
