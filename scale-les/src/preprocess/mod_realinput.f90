@@ -285,6 +285,8 @@ contains
       basename_org,     &
       dims,             &
       mdlid,            &
+      flg_bin,          &
+      flg_intrp,        &
       mptype_parent,    &
       timelen,          &
       skiplen           )
@@ -325,6 +327,8 @@ contains
     character(len=*), intent(in)  :: basename_org
     integer,          intent(in)  :: dims(ndims)
     integer,          intent(in)  :: mdlid            ! model type id
+    logical,          intent(in)  :: flg_bin          ! flag for SBM(S10) is used or not 0-> not used, 1-> used
+    logical,          intent(in)  :: flg_intrp        ! flag for interpolation of SBM(S10) from outer bulk-MP model
     integer,          intent(in)  :: mptype_parent    ! microphysics type of the parent model (number of classes)
     integer,          intent(in)  :: timelen          ! time steps in one file
     integer,          intent(in)  :: skiplen          ! skip steps
@@ -359,7 +363,7 @@ contains
     case ("SN14")
        mptype_run = 'double'
     case ("SUZUKI10")
-       mptype_run = 'double'
+       mptype_run = 'single-bin'
     case default
        write(*,*) 'xxx Unsupported TRACER_TYPE (', trim(TRACER_TYPE), '). Check!'
        call PRC_MPIstop
@@ -405,6 +409,7 @@ contains
              call ParentAtomInputSCALE( velz_org, velx_org, vely_org, & ! (out)
                                         pres_org, dens_org, pott_org, & ! (out)
                                         qtrc_org,                     & ! (out)
+                                        flg_bin, flg_intrp,           & ! (in)
                                         basename_org, dims, n         ) ! (in)
 
           case ( iWRFARW ) ! TYPE: WRF-ARW
@@ -633,10 +638,11 @@ contains
 #ifdef DRY
           qc = 0.0_RP
 #else
+          qc = 0.0_RP
           if ( I_QC > 0 ) then
-             qc(:,:,:) = QTRC(:,:,:,I_QC,n)
-          else
-             qc = 0.0_RP
+             do iq = QWS, QWE
+               qc(:,:,:) = qc(:,:,:) + QTRC(:,:,:,iq,n)
+             enddo
           end if
 #endif
           ! make density & pressure profile in moist condition

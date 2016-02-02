@@ -126,6 +126,7 @@ OBJS_NAME = $(scale_rdma)	\
 	scale_atmos_phy_mp.o	\
 	scale_atmos_phy_mp_common.o	\
 	$(OBJS_MP)	\
+	scale_atmos_phy_mp_convert.o	\
 	scale_atmos_phy_rd.o	\
 	scale_atmos_phy_rd_common.o	\
 	$(OBJS_RD)	\
@@ -204,6 +205,7 @@ OBJS_FOR_SDM = $(OBJ_DIR)/scale_precision.o \
 	$(OBJ_DIR)/scale_atmos_sub_thermodyn.o \
 	$(OBJ_DIR)/scale_atmos_sub_saturation.o \
 	$(OBJ_DIR)/scale_atmos_phy_mp_common.o \
+	$(OBJ_DIR)/scale_atmos_phy_mp_convert.o \
 	$(OBJ_DIR)/scale_tracer.o \
 	$(OBJ_DIR)/scale_tracer_sdm.o \
 	$(OBJ_DIR)/scale_stdio.o \

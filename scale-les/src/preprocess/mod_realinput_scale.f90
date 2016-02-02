@@ -168,6 +168,8 @@ contains
        dens_org,     &
        pott_org,     &
        qtrc_org,     &
+       flg_bin,      &
+       flg_intrp,    &
        basename_org, &
        dims,         &
        it            ) ! (in)
@@ -193,6 +195,8 @@ contains
        INTRPNEST_interp_fact_llz,  &
        INTRPNEST_interp_2d,        &
        INTRPNEST_interp_3d
+    use scale_atmos_phy_mp_convert, only: &
+       ATMOS_PHY_MP_bulk2bin
     implicit none
 
     real(RP),         intent(out) :: velz_org(:,:,:)
@@ -202,6 +206,8 @@ contains
     real(RP),         intent(out) :: dens_org(:,:,:)
     real(RP),         intent(out) :: pott_org(:,:,:)
     real(RP),         intent(out) :: qtrc_org(:,:,:,:)
+    logical,          intent(in)  :: flg_bin            ! flag for SBM(S10) 
+    logical,          intent(in)  :: flg_intrp          ! flag for interpolation of SBM
     character(len=*), intent(in)  :: basename_org
     integer,          intent(in)  :: dims(7)
     integer,          intent(in)  :: it
@@ -270,13 +276,35 @@ contains
           rhot_org(k+2,xs:xe,ys:ye) = read3D(:,:,k)
        end do
 
-       do iq = 1, QA
-          call FileRead( read3D(:,:,:), BASENAME_ORG, AQ_NAME(iq), it, rank )
-          do k = 1, dims(1)
-             qtrc_org(k+2,xs:xe,ys:ye,iq) = read3D(:,:,k)
+       if( flg_bin .and. flg_intrp ) then  !--- tracers created from parent domain by interpolation
+
+          if( IO_L ) write(IO_FID_LOG,*) '+++ SDF of SBM(S10) is interpolated from Qxx and Nxx'
+          if( IO_L ) write(IO_FID_LOG,*) '+++ of outer bulk MP model'
+
+          call ATMOS_PHY_MP_bulk2bin( xs, xe,       & ! [IN]
+                                      ys, ye,       & ! [IN]
+                                      dims,         & ! [IN]
+                                      it,           & ! [IN]
+                                      rank,         & ! [IN]
+                                      handle,       & ! [IN]
+                                      BASENAME_ORG, & ! [IN]
+                                      dens_org,     & ! [IN]
+                                      qtrc_org      ) ! [INOUT]
+          do iq = 1, QA
+             qtrc_org(2,xs:xe,ys:ye,iq) = qtrc_org(3,xs:xe,ys:ye,iq)
+          enddo
+
+       else !--- tracers of paremt domain directly used
+
+          do iq = 1, QA
+             call FileRead( read3D(:,:,:), BASENAME_ORG, AQ_NAME(iq), it, rank )
+             do k = 1, dims(1)
+                qtrc_org(k+2,xs:xe,ys:ye,iq) = read3D(:,:,k)
+             end do
+             qtrc_org(2,xs:xe,ys:ye,iq) = qtrc_org(3,xs:xe,ys:ye,iq)
           end do
-          qtrc_org(2,xs:xe,ys:ye,iq) = qtrc_org(3,xs:xe,ys:ye,iq)
-       end do
+
+       endif
 
 !       call FileRead( read2D(:,:), BASENAME_ORG, "Q2", it, rank )
 !       qtrc_org(2,xs:xe,ys:ye,I_QV) = read2D(:,:)
