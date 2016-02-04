@@ -6,13 +6,17 @@ HISTORY_TINTERVAL_SEC   = "50.D0"
 CONF_GEN_RESOL_HASHLIST = \
 [ \
   { "TAG"=>"500m", "DX"=>500E0, "DZ"=>500.0E0, 
-    "KMAX"=>4, "IMAX"=>40, "JMAX"=>3, "DTDYN"=>0.25, "NPRCX"=> 1, "NPRCY"=>1}, \
+    "KMAX"=>4, "IMAX"=>40, "JMAX"=>3, "DTDYN"=>1.0, "NPRCX"=> 1, "NPRCY"=>1}, \
+#  { "TAG"=>"250m", "DX"=>250E0, "DZ"=>250.0E0, 
+#    "KMAX"=>4, "IMAX"=>40, "JMAX"=>3, "DTDYN"=>0.5, "NPRCX"=> 2, "NPRCY"=>1}, \
   { "TAG"=>"250m", "DX"=>250E0, "DZ"=>250.0E0, 
-    "KMAX"=>4, "IMAX"=>40, "JMAX"=>3, "DTDYN"=>0.125, "NPRCX"=> 2, "NPRCY"=>1}, \
-  { "TAG"=>"125m", "DX"=>125E0, "DZ"=>125.0E0, 
-    "KMAX"=>4, "IMAX"=>40, "JMAX"=>3, "DTDYN"=>0.0625, "NPRCX"=> 4, "NPRCY"=>1}, \
-#  { "TAG"=>"500m", "DX"=>500E0, "DZ"=>500.0E0, 
-#    "KMAX"=>3, "IMAX"=>40, "JMAX"=>3, "DTDYN"=>0.6E0, "NPRCX"=> 1, "NPRCY"=>1}, \
+    "KMAX"=>4, "IMAX"=>80, "JMAX"=>3, "DTDYN"=>0.5, "NPRCX"=> 1, "NPRCY"=>1}, \
+#  { "TAG"=>"125m", "DX"=>125E0, "DZ"=>125.0E0, 
+#    "KMAX"=>4, "IMAX"=>40, "JMAX"=>3, "DTDYN"=>0.25, "NPRCX"=> 4, "NPRCY"=>1}, \
+  { "TAG"=>"125m", "DX"=>125E0, "DZ"=>125E0, 
+    "KMAX"=>4, "IMAX"=>160, "JMAX"=>3, "DTDYN"=>0.25, "NPRCX"=> 1, "NPRCY"=>1}, \
+  { "TAG"=>"063m", "DX"=>62.5E0, "DZ"=>62.5E0, 
+    "KMAX"=>4, "IMAX"=>80, "JMAX"=>3, "DTDYN"=>0.125, "NPRCX"=> 4, "NPRCY"=>1} \
 ]
 CONF_GEN_CASE_HASH_LIST = \
 [ \
@@ -84,25 +88,29 @@ def gen_init_conf(conf_name, nprocx, nprocy, imax, kmax, dx, dz, shape_nc)
  ATMOS_RESTART_OUT_BASENAME   = "init",
 /
 
+&PARAM_CONST
+ CONST_GRAV      =   0.00000000000000     ,
+/
+
 &PARAM_MKINIT
  MKINIT_initname = "ADVECT",
 /
 
 &PARAM_BUBBLE
  BBL_CZ = 10.0D3,
- BBL_CX = 12.0D3,
+ BBL_CX = 10.0D3,
  BBL_CY = 12.0D3,
  BBL_RZ = 1.0D14,
- BBL_RX = 2.0D3,
+ BBL_RX = 1.0D3,
  BBL_RY = 1.0D14,
 /
 
 &PARAM_RECT
  RCT_CZ = 10.0D3,
- RCT_CX = 12.0D3,
+ RCT_CX = 10.0D3,
  RCT_CY = 12.0D3,
  RCT_RZ = 1.0D14,
- RCT_RX = 2.0D3,
+ RCT_RX = 1.0D3,
  RCT_RY = 1.0D14,
 /
 
@@ -168,6 +176,9 @@ def gen_run_conf(conf_name, nprocx, nprocy, imax, kmax, dx, dz, dtsec_dyn, flxEv
  TRACER_TYPE = 'SN14',
 /
 
+&PARAM_CONST
+ CONST_GRAV      =   0.00000000000000     ,
+/
 &PARAM_ATMOS_HYDROSTATIC
  HYDROSTATIC_uselapserate = .true.,
 /
@@ -183,9 +194,7 @@ def gen_run_conf(conf_name, nprocx, nprocy, imax, kmax, dx, dz, dtsec_dyn, flxEv
 /
 
 &PARAM_ATMOS_REFSTATE
-! ATMOS_REFSTATE_TYPE       = "INIT",
-! ATMOS_REFSTATE_TYPE       = "UNIFORM",
-  ATMOS_REFSTATE_POTT_UNIFORM = 300.0D0, 
+ ATMOS_REFSTATE_TYPE       = "INIT",
 /
 
 &PARAM_ATMOS_BOUNDARY
@@ -201,25 +210,27 @@ def gen_run_conf(conf_name, nprocx, nprocy, imax, kmax, dx, dz, dtsec_dyn, flxEv
  ATMOS_DYN_FLXEVAL_TYPE  = "#{flxEvalType}"
 /
 
+&PARAM_USER
+ USER_do = .true.
+/
+
+
 &PARAM_HISTORY
  HISTORY_DEFAULT_BASENAME  = "history",
  HISTORY_DEFAULT_TINTERVAL = #{HISTORY_TINTERVAL_SEC},
  HISTORY_DEFAULT_TUNIT     = "SEC",
  HISTORY_DEFAULT_TAVERAGE  = .false.,
- HISTORY_DEFAULT_DATATYPE  = "REAL4",
+ HISTORY_DEFAULT_DATATYPE  = "REAL8",
  HISTORY_OUTPUT_STEP0      = .true.,
 /
 
+&HISTITEM item='DENS'    /
 &HISTITEM item='U'    /
 &HISTITEM item='V'    /
 &HISTITEM item='W'    /
-&HISTITEM item='PT'   /
 &HISTITEM item='NC'   /
-!&HISTITEM item='DENS'   /
-!&HISTITEM item='MOMX'   /
-!&HISTITEM item='MOMY'   /
-!&HISTITEM item='MOMZ'   /
-!&HISTITEM item='T'   /
+&HISTITEM item='Qadv'   /
+&HISTITEM item='l2error'   /
 
 
 &PARAM_MONITOR

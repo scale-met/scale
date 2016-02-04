@@ -83,7 +83,7 @@ File.open( File.join(srcdir, "depend"), "w" ) do |file|
   mods.push "$(patsubst %.o,$(OBJ_DIR)/%.mod,$(OBJS_MP))"
   mods.push "$(patsubst %.o,$(OBJ_DIR)/%.mod,$(OBJS_TB))"
   mods.push "$(patsubst %.o,$(OBJ_DIR)/%.mod,$(OBJS_RD))"
-  mods.push "$(patsubst %.o,$(OBJ_DIR)/%.mod,$(OBJS_NUMERIC_FDM))"
+  mods.push "$(patsubst %.o,$(OBJ_DIR)/%.mod,$(OBJS_NUMERIC))"
   pros.keys.sort.map{|mod|
      mod = mod.downcase
      unless (/\Ascale_atmos_phy_(mp|tb|rd)_(\w+)\Z/ =~ mod && $2 != "common") || \

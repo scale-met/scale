@@ -69,7 +69,7 @@ module scale_atmos_dyn_rk_fdmheve
   !
   !++ Private parameters & variables
   !
-  integer, parameter :: VA_HEVE = 0
+  integer, parameter :: VA_HEVE = 1
 
   integer :: IFS_OFF
   integer :: JFS_OFF
@@ -109,9 +109,9 @@ contains
     endif
 
     VA_out = VA_HEVE
-!!$    VAR_NAME(1) = 'NC_rk'
-!!$    VAR_DESC(1) = 'NC advanced with rk schme'
-!!$    VAR_UNIT(1) = 'num/kg'
+    VAR_NAME(1) = 'NC_rk'
+    VAR_DESC(1) = 'NC advanced with rk schme'
+    VAR_UNIT(1) = 'num/kg'
     return
     
   end subroutine ATMOS_DYN_rk_fdmheve_regist
@@ -1182,6 +1182,48 @@ contains
     endif ! FLAG_FCT_T
 #endif    ! [--- End ifndef NO_FCT_DYN ---------------------------------------------------------- ]
 
+!!$    !####################################################################################
+!!$    ! PROG0 (advection test)
+!!$    !####################################################################################
+!!$
+!!$    ! RHOQ --> Q
+!!$    do JJS = JS, JE, JBLOCK
+!!$    JJE = JJS+JBLOCK-1
+!!$    do IIS = IS, IE, IBLOCK
+!!$    IIE = IIS+IBLOCK-1
+!!$      call ATMOS_NUMERIC_FDM_RhoVar2Var( VARTMP,                        &  ! (out)
+!!$         & PROG(:,:,:,1), VL_ZXY, DENS,                                 &  ! (in)
+!!$         & IIS-IHALO, IIE+IHALO, JJS-JHALO, JJE+JHALO, KS, KE )            ! (in)
+!!$    enddo
+!!$    enddo
+!!$ 
+!!$    do JJS = JS, JE, JBLOCK
+!!$    JJE = JJS+JBLOCK-1
+!!$    do IIS = IS, IE, IBLOCK
+!!$    IIE = IIS+IBLOCK-1
+!!$
+!!$      !-----< high order flux >-----
+!!$      ! * Input (Phi * Vec_i / Fact)
+!!$      !   Phi = POTT, Vec_i = MomFlx{X,Y,Z}, Fact = 1.0
+!!$      ! * Ouput
+!!$      !   [ POTT*MOMFlxX, POTT*MOMFlxY, POTT*MOMFlxZ ]
+!!$      call ATMOS_NUMERIC_FDM_EvalFlux( qflx_hi,                                                &  ! (inout)
+!!$        & FlxEvalTypeID, VL_ZXY,                                                               &  ! (in)
+!!$        & VARTMP, one, mflx_hi(:,:,:,XDIR), mflx_hi(:,:,:,YDIR), mflx_hi(:,:,:,ZDIR), .false., &  ! (in)
+!!$        & IIS, IIE, JJS, JJE, KS, KE, 0.0_RP*num_diff(:,:,:,I_RHOT,:) )                          ! (in)
+!!$
+!!$      !-----< update rho*theta >-----
+!!$      call ATMOS_NUMERIC_FDM_EvolveVar( PROG_RK(:,:,:,1),                      & ! (out)
+!!$         & PROG0(:,:,:,1), VL_ZXY, qflx_hi, dtrk, RCDX, RCDY, RCDZ,            & ! (in)
+!!$         & IIS, IIE, JJS, JJE, KS, KE                                          & ! (in)
+!!$#ifdef HIST_TEND
+!!$         & ,lhist, advch_t, advcv_t                                   &
+!!$#endif       
+!!$         & )
+!!$
+!!$    enddo
+!!$    enddo
+    
 #ifdef HIST_TEND
     if ( lhist ) then
        call HIST_in(advcv_t(:,:,:,I_DENS), 'DENS_t_advcv', 'tendency of density    (vert. advection)',    'kg/m3/s'   )

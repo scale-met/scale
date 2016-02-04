@@ -14,30 +14,35 @@ LIBNAME = libscale.a
 
 DEPENDLIB = $(LIBDIR)/libgtool.a $(LIBDIR)/libdcutils.a
 
-VPATH = common:                     \
-        common/tracer:              \
-        coupler:                    \
-        io:                         \
-        atmos-physics:              \
-        atmos-physics/share:        \
-        atmos-physics/cumulus:      \
-        atmos-physics/microphysics: \
-        atmos-physics/radiation:    \
-        atmos-physics/surfaceflux:  \
-        atmos-physics/turbulence:   \
-        atmos-physics/aerosol:      \
-        atmos-physics/chemistry:    \
-        atmos-les:                  \
-        atmos-les/communication:    \
-        atmos-les/grid:             \
-        atmos-les/io:               \
-        atmos-les/numeric:          \
-        atmos-les/dynamics:         \
-        atmos-les/forcing:          \
-        land:                       \
-        land/grid:                  \
-        ocean:                      \
-        urban:                      \
+VPATH = common:                           \
+        common/tracer:                    \
+        coupler:                          \
+        io:                               \
+        atmos-physics:                    \
+        atmos-physics/share:              \
+        atmos-physics/cumulus:            \
+        atmos-physics/microphysics:       \
+        atmos-physics/radiation:          \
+        atmos-physics/surfaceflux:        \
+        atmos-physics/turbulence:         \
+        atmos-physics/aerosol:            \
+        atmos-physics/chemistry:          \
+        atmos-les:                        \
+        atmos-les/communication:          \
+        atmos-les/grid:                   \
+        atmos-les/io:                     \
+        atmos-les/numeric:                \
+        atmos-les/dynamics:               \
+        atmos-les/dynamics/rk3m/fdm/comm: \
+        atmos-les/dynamics/rk3m/fdm/heve: \
+        atmos-les/dynamics/rk3m/fdm/hevi: \
+        atmos-les/dynamics/rk3m/fdm/hivi: \
+	atmos-les/dynamics:               \
+	atmos-les/forcing:                \
+        land:                             \
+        land/grid:                        \
+        ocean:                            \
+        urban:                            \
         urban/grid:
 
 LIBVERSION = $(shell git rev-parse --short HEAD 2> /dev/null)
@@ -114,37 +119,40 @@ else
   OBJS_AETRACER = scale_aetracer_$(AETRACER).o
 endif
 
-ifeq ($(NUMERIC_FDM),)
+ifeq ($(DYN2),)
   OBJS_NUMERIC_FDM = scale_atmos_numeric_fdm_def.o  \
 		     scale_atmos_numeric_fdm_util.o \
 	             scale_atmos_numeric_fdm_ud.o   \
 	 	     scale_atmos_numeric_fdm_cd.o   \
-	 	     scale_atmos_numeric_fdm_diff.o
-else
-  OBJS_NUMERIC_FDM = scale_atmos_numeric_fdm_$(NUMERIC_FDM).o
-  FFLAGS += -DNUMERIC=$(NUMERIC_FDM)
-endif
+	 	     scale_atmos_numeric_fdm_diff.o \
+                     scale_atmos_numeric_fdm.o       
+
+  OBJS_DYN2 += \
+		scale_atmos_dyn_bc.o	\
+		scale_atmos_dyn_advtest.o	\
+		scale_atmos_dyn_tracer.o	\
+		scale_atmos_dyn_rk_fdmheve.o    \
+		scale_atmos_dyn2.o
 
 ifeq ($(DYNBC_CAVITY),T)
   FFLAGS +=  -DDYNBC_W_RIGID -DDYNBC_E_RIGID -DDYNBC_N_RIGID -DDYNBC_S_RIGID \
 	     -DDYNBC_B_RIGID -DDYNBC_T_RIGID
 endif
+endif
+
 
 OBJS_NAME = $(scale_rdma)	\
 	scale_atmos_dyn.o	\
-	scale_atmos_dyn_bc.o	\
+	$(OBJS_DYN2)        \
 	scale_atmos_dyn_common.o	\
 	scale_atmos_dyn_rk.o	\
-	scale_atmos_dyn_tracer.o	\
-	scale_atmos_dyn_rk_fdmheve.o	\
 	scale_atmos_dyn_rk_heve.o	\
 	scale_atmos_dyn_rk_hevi.o	\
 	scale_atmos_dyn_rk_hivi.o	\
 	scale_atmos_dyn_rk_none.o	\
-	scale_atmos_numeric_fdm.o       \
-	$(OBJS_NUMERIC_FDM) \
 	scale_atmos_phy_ae.o	\
 	scale_atmos_phy_ae_dummy.o	\
+	$(OBJS_NUMERIC_FDM) \
 	$(OBJS_AE)	\
 	scale_atmos_phy_mp.o	\
 	scale_atmos_phy_mp_common.o	\

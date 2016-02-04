@@ -108,10 +108,16 @@ contains
     use mod_atmos_dyn_vars, only: &
        PROG
 
+    !-----------------------------------
+    use scale_atmos_dyn2, only: &
+       ATMOS_DYN2_setup => ATMOS_DYN_setup    
     use scale_atmos_dyn_rk_fdmheve, only: &
        ATMOS_DYN_rk_fdmheve_SetFluxEvalType
     use scale_atmos_dyn_tracer, only: &
        ATMOS_DYN_tracer_SetFluxEvalType
+    use scale_atmos_dyn_advtest, only: &
+         ATMOS_DYN_RK3_advtest_SetFluxEvalType
+    !-----------------------------------
     
     implicit none
 
@@ -151,21 +157,32 @@ contains
 
        DT = real(TIME_DTSEC_ATMOS_DYN,kind=RP)
 
-       call ATMOS_DYN_setup( &
-                             DENS, MOMZ, MOMX, MOMY, RHOT, QTRC, & ! [IN]
-                             PROG,                           & ! [IN]
-                             GRID_CDZ, GRID_CDX, GRID_CDY,   & ! [IN]
-                             GRID_FDZ, GRID_FDX, GRID_FDY,   & ! [IN]
-                             ATMOS_DYN_enable_coriolis,      & ! [IN]
-                             REAL_LAT,                       & ! [IN]
-                             none = ATMOS_DYN_TYPE=='NONE'   ) ! [IN]
-
        if (ATMOS_DYN_TYPE == 'FDM-HEVE') then
+          call ATMOS_DYN2_setup( &
+               DENS, MOMZ, MOMX, MOMY, RHOT, QTRC, & ! [IN]
+               PROG,                           & ! [IN]
+               GRID_CDZ, GRID_CDX, GRID_CDY,   & ! [IN]
+               GRID_FDZ, GRID_FDX, GRID_FDY,   & ! [IN]
+               ATMOS_DYN_enable_coriolis,      & ! [IN]
+               REAL_LAT                        ) ! [IN]
+
           call ATMOS_DYN_rk_fdmheve_SetFluxEvalType( &
                & ATMOS_DYN_FLXEVAL_TYPE )               ! [IN]
 
           call ATMOS_DYN_tracer_SetFluxEvalType( &
                & ATMOS_DYN_FLXEVAL_TYPE )               ! [IN]
+          call ATMOS_DYN_RK3_advtest_SetFluxEvalType( &
+               & ATMOS_DYN_FLXEVAL_TYPE )               ! [IN]
+
+       else
+          call ATMOS_DYN_setup( &
+               DENS, MOMZ, MOMX, MOMY, RHOT, QTRC, & ! [IN]
+               PROG,                           & ! [IN]
+               GRID_CDZ, GRID_CDX, GRID_CDY,   & ! [IN]
+               GRID_FDZ, GRID_FDX, GRID_FDY,   & ! [IN]
+               ATMOS_DYN_enable_coriolis,      & ! [IN]
+               REAL_LAT,                       & ! [IN]
+               none = ATMOS_DYN_TYPE=='NONE'   ) ! [IN]
        end if
        
     endif
