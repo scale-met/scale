@@ -33,7 +33,12 @@ VPATH = common:                           \
         atmos-les/io:                     \
         atmos-les/numeric:                \
         atmos-les/dynamics:               \
-        atmos-les/dynamics/rk3m/fdm/comm: \
+        atmos-les/dynamics/rk3m/none:     \
+	atmos-les/dynamics/rk3m/ori/comm: \
+        atmos-les/dynamics/rk3m/ori/heve: \
+        atmos-les/dynamics/rk3m/ori/hevi: \
+        atmos-les/dynamics/rk3m/ori/hivi: \
+	atmos-les/dynamics/rk3m/fdm/comm: \
         atmos-les/dynamics/rk3m/fdm/heve: \
         atmos-les/dynamics/rk3m/fdm/hevi: \
         atmos-les/dynamics/rk3m/fdm/hivi: \
@@ -119,15 +124,16 @@ else
   OBJS_AETRACER = scale_aetracer_$(AETRACER).o
 endif
 
-ifeq ($(DYN2),)
-  OBJS_NUMERIC_FDM = scale_atmos_numeric_fdm_def.o  \
-		     scale_atmos_numeric_fdm_util.o \
-	             scale_atmos_numeric_fdm_ud.o   \
-	 	     scale_atmos_numeric_fdm_cd.o   \
-	 	     scale_atmos_numeric_fdm_diff.o \
-                     scale_atmos_numeric_fdm.o       
+ifeq ($(DYN2_ENABLE),)
+  OBJS_NUMERIC_FDM = \
+             scale_atmos_numeric_fdm_def.o  \
+             scale_atmos_numeric_fdm_util.o \
+	     scale_atmos_numeric_fdm_ud.o   \
+	     scale_atmos_numeric_fdm_cd.o   \
+	     scale_atmos_numeric_fdm_diff.o \
+             scale_atmos_numeric_fdm.o       
 
-  OBJS_DYN2 += \
+  OBJS_DYN2 = \
 		scale_atmos_dyn_bc.o	\
 		scale_atmos_dyn_advtest.o	\
 		scale_atmos_dyn_tracer.o	\
@@ -138,6 +144,7 @@ ifeq ($(DYNBC_CAVITY),T)
   FFLAGS +=  -DDYNBC_W_RIGID -DDYNBC_E_RIGID -DDYNBC_N_RIGID -DDYNBC_S_RIGID \
 	     -DDYNBC_B_RIGID -DDYNBC_T_RIGID
 endif
+
 endif
 
 
@@ -238,7 +245,6 @@ OBJS_FOR_SDM = $(OBJ_DIR)/scale_precision.o \
 	$(OBJ_DIR)/scale_atmos_sub_thermodyn.o \
 	$(OBJ_DIR)/scale_atmos_sub_saturation.o \
 	$(OBJ_DIR)/scale_atmos_phy_mp_common.o \
-	$(OBJ_DIR)/scale_atmos_phy_mp_convert.o \
 	$(OBJ_DIR)/scale_tracer.o \
 	$(OBJ_DIR)/scale_tracer_sdm.o \
 	$(OBJ_DIR)/scale_stdio.o \

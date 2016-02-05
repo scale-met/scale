@@ -1145,6 +1145,10 @@ contains
                           dtrk, dt                                          ) ! (in)
        call PROF_rapend  ("DYN_RK", 2)
 
+
+       call ATMOS_DYN_RK3_advtest(PROG(:,:,:,1), &
+            & PROG0(:,:,:,1), DENS, mflx_hi, dt, RCDX, RCDY, RCDZ)
+       
 #ifdef CHECK_MASS
        call HIST_in(mflx_hi(:,:,:,ZDIR), 'MFLXZ', 'momentum flux of z-direction', 'kg/m2/s', zdim='half' )
        call HIST_in(mflx_hi(:,:,:,XDIR), 'MFLXX', 'momentum flux of x-direction', 'kg/m2/s', xdim='half' )
@@ -1258,9 +1262,6 @@ contains
        call HIST_in(allmflx_lb_horizontal(:), 'ALLMOM_lb_hz',                           &
                     'horizontally total momentum flux from lateral boundary', 'kg/m2/s' )
 #endif
-    !
-    call ATMOS_DYN_RK3_advtest(PROG(:,:,:,1), &
-         & PROG0(:,:,:,1), DENS, mflx_hi, dt, RCDX, RCDY, RCDZ)
 
        do j  = JS, JE
        do i  = IS, IE
@@ -1311,6 +1312,8 @@ contains
        mflx_av(:,:,:,:) = mflx_av(:,:,:,:) + mflx_hi(:,:,:,:)
 #endif
 
+       !
+       
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE       

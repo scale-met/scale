@@ -40,7 +40,9 @@ def parse(deps, pros, srcdir, dir="")
         when /^\s*use (\w+)/
           mod = $1
 #          next if /(dc_types|gtool|mpi|netcdf|NAME)/ =~ mod
-          next if /(dc_types|gtool|mpi|netcdf|gadg|rng|m_|mt|NAME)/ =~ mod
+#          next if /(dc_types|gtool|mpi|netcdf|gadg|rng|m_|mt|NAME)/ =~ mod
+          next if (/(dc_types|gtool|mpi|netcdf|gadg|rng|mt|NAME)/ =~ mod)
+          
           dep[:depends].push(mod) unless dep[:depends].include?(mod)
         end
       end
@@ -58,14 +60,11 @@ File.open( File.join(srcdir, "depend"), "w" ) do |file|
       ptype = $1
       file.print " $(patsubst %,$(OBJ_DIR)/%,$(OBJS_#{ptype.upcase}))"
     end
-    if /\Ascale_atmos_(numeric_fdm)\Z/ =~ name
-      ptype = $1
-      file.print " $(patsubst %,$(OBJ_DIR)/%,$(OBJS_#{ptype.upcase}))"
-    end    
-#    file.print "#{name}.o: #{name}.f90"
+
+ #   file.print "#{name}.o: #{name}.f90"   
     dep[:depends].sort.each do |mod|
       if pro = pros[mod]
-        if "scale_atmos_phy_#{ptype}" != name || /\Ascale_atmos_phy_#{ptype}_\w+\Z/ !~ pro[:file]
+        if   ( "scale_atmos_phy_#{ptype}" != name || /\Ascale_atmos_phy_#{ptype}_\w+\Z/ !~ pro[:file] )
           file.print " $(OBJ_DIR)/#{pro[:file]}.o"
         end
       else
@@ -83,11 +82,10 @@ File.open( File.join(srcdir, "depend"), "w" ) do |file|
   mods.push "$(patsubst %.o,$(OBJ_DIR)/%.mod,$(OBJS_MP))"
   mods.push "$(patsubst %.o,$(OBJ_DIR)/%.mod,$(OBJS_TB))"
   mods.push "$(patsubst %.o,$(OBJ_DIR)/%.mod,$(OBJS_RD))"
-  mods.push "$(patsubst %.o,$(OBJ_DIR)/%.mod,$(OBJS_NUMERIC))"
+
   pros.keys.sort.map{|mod|
      mod = mod.downcase
-     unless (/\Ascale_atmos_phy_(mp|tb|rd)_(\w+)\Z/ =~ mod && $2 != "common") || \
-            (/\Ascale_atmos_(numeric_fdm)_(\w+)\Z/ =~ mod && $2 != "common")
+     unless /\Ascale_atmos_phy_(mp|tb|rd)_(\w+)\Z/ =~ mod && ( $2 != "common" && $2 != "convert" )
        mods.push "$(OBJ_DIR)/#{mod}.mod"
      end
   }

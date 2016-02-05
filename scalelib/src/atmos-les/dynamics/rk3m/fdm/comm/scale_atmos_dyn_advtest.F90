@@ -80,11 +80,8 @@ contains
     call calc_RHS(RHS_RKTMP(:,:,:,4), PROG0 + dt*RHS_RKTMP(:,:,:,3), &
          & DENS, mflx_hi, RCDX, RCDY, RCDZ)
 
-!!$
-    PROG = PROG0 + dt*(RHS_RKTMP(:,:,:,1) + 2.0_RP*RHS_RKTMP(:,:,:,2) + 2.0_RP*RHS_RKTMP(:,:,:,3)  + RHS_RKTMP(:,:,:,4))/6.0_RP
-!!$    PROG = PROG  + dt * RHS_RKTMP(:,:,:,1)
-!!$    write(*,*) "--", PROG(KS,IS:IE,JS)
-!!$    write(*,*) "**", RHS_RKTMP(KS,IS:IE,JS,1)
+    PROG =   PROG0  + dt*(          RHS_RKTMP(:,:,:,1)  + 2.0_RP*RHS_RKTMP(:,:,:,2) &
+         &                 + 2.0_RP*RHS_RKTMP(:,:,:,3)  +        RHS_RKTMP(:,:,:,4))/6.0_RP
 
   end subroutine ATMOS_DYN_RK3_advtest
 

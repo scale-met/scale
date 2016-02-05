@@ -9,6 +9,12 @@
 !! @par History
 !! @li      2013-12-04 (S.Nishizawa)  [mod] splited from scale_atmos_dyn.f90
 !<
+!---------------------------------------------------------------------------------
+!= NOTE ===
+! The coding to call DYN2 routines is a temporary measure. After improving layering of
+! directories and generalizing API for each modules in dynamical core, we should remove
+! the temporary codes. 
+!---------------------------------------------------------------------------------
 !-------------------------------------------------------------------------------
 module mod_atmos_dyn_driver
   !-----------------------------------------------------------------------------
@@ -44,6 +50,7 @@ module mod_atmos_dyn_driver
   !++ Private procedure
   !
   !-----------------------------------------------------------------------------
+  !-----------------------------------------------------------------------------
   !
   !++ Private parameters & variables
   !
@@ -72,9 +79,12 @@ module mod_atmos_dyn_driver
   ! lateral boundary flux adjustment
   integer,  private :: ATMOS_DYN_adjust_flux_cell  = 1                   ! number of cells adjusting lateral boundary flux
 
+  !* For DYN2
   ! Type of finite difference scheme used in advection terms
   character(len=H_SHORT), public :: ATMOS_DYN_FLXEVAL_TYPE = FLXEVALTYPENAME_CD4
 
+  
+  
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -93,8 +103,6 @@ contains
        REAL_LAT
     use scale_time, only: &
        TIME_DTSEC_ATMOS_DYN
-    use scale_atmos_dyn, only: &
-       ATMOS_DYN_setup
     use mod_atmos_admin, only: &
        ATMOS_sw_dyn, &
        ATMOS_DYN_TYPE
@@ -108,16 +116,21 @@ contains
     use mod_atmos_dyn_vars, only: &
        PROG
 
-    !-----------------------------------
+#ifndef DYN2
+    use scale_atmos_dyn, only: &
+       ATMOS_DYN_setup    
+#else
     use scale_atmos_dyn2, only: &
-       ATMOS_DYN2_setup => ATMOS_DYN_setup    
+       ATMOS_DYN_setup    
     use scale_atmos_dyn_rk_fdmheve, only: &
        ATMOS_DYN_rk_fdmheve_SetFluxEvalType
     use scale_atmos_dyn_tracer, only: &
        ATMOS_DYN_tracer_SetFluxEvalType
     use scale_atmos_dyn_advtest, only: &
          ATMOS_DYN_RK3_advtest_SetFluxEvalType
-    !-----------------------------------
+#endif
+    
+    !-------------------------------------------------------
     
     implicit none
 
@@ -158,14 +171,7 @@ contains
        DT = real(TIME_DTSEC_ATMOS_DYN,kind=RP)
 
        if (ATMOS_DYN_TYPE == 'FDM-HEVE') then
-          call ATMOS_DYN2_setup( &
-               DENS, MOMZ, MOMX, MOMY, RHOT, QTRC, & ! [IN]
-               PROG,                           & ! [IN]
-               GRID_CDZ, GRID_CDX, GRID_CDY,   & ! [IN]
-               GRID_FDZ, GRID_FDX, GRID_FDY,   & ! [IN]
-               ATMOS_DYN_enable_coriolis,      & ! [IN]
-               REAL_LAT                        ) ! [IN]
-
+#ifdef DYN2          
           call ATMOS_DYN_rk_fdmheve_SetFluxEvalType( &
                & ATMOS_DYN_FLXEVAL_TYPE )               ! [IN]
 
@@ -173,7 +179,9 @@ contains
                & ATMOS_DYN_FLXEVAL_TYPE )               ! [IN]
           call ATMOS_DYN_RK3_advtest_SetFluxEvalType( &
                & ATMOS_DYN_FLXEVAL_TYPE )               ! [IN]
-
+#else
+          write(*,*) 'xxx Set FDM-HEVE, but specify -DDYN2 in compiling time. Check!' 
+#endif
        else
           call ATMOS_DYN_setup( &
                DENS, MOMZ, MOMX, MOMY, RHOT, QTRC, & ! [IN]
@@ -186,7 +194,6 @@ contains
        end if
        
     endif
-
     return
   end subroutine ATMOS_DYN_driver_setup
 
@@ -262,8 +269,15 @@ contains
        ATMOS_BOUNDARY_alpha_VELY, &
        ATMOS_BOUNDARY_alpha_POTT, &
        ATMOS_BOUNDARY_alpha_QTRC
+
+#ifndef DYN2
     use scale_atmos_dyn, only: &
-       ATMOS_DYN
+         ATMOS_DYN
+#else
+    use scale_atmos_dyn2, only: &
+         ATMOS_DYN
+#endif
+    
     implicit none
     logical, intent(in) :: do_flag
     !---------------------------------------------------------------------------
