@@ -1056,7 +1056,7 @@ contains
                       + qflx_J23(k,i,j) - qflx_J23(k-1,i,j) ) * RFDZ(k) &
                     + ( qflx_hi(k,i,j,XDIR) - qflx_hi(k,i-1,j,XDIR) ) * RCDX(i) &
                     + ( qflx_hi(k,i,j,YDIR) - qflx_hi(k,i,j-1,YDIR) ) * RCDY(j) ) * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY)
-          div = divdmp_coef * dtrk * FDZ(k) * ( DDIV(k+1,i,j)-DDIV(k,i,j) ) ! divergence damping
+          div = divdmp_coef / dtrk * FDZ(k) * ( DDIV(k+1,i,j)-DDIV(k,i,j) ) ! divergence damping
           MOMZ_RK(k,i,j) = MOMZ0(k,i,j) &
                          + dtrk * ( ( advcv + advch        &
                                     - pgf (k,i,j)          & ! pressure gradient force
@@ -1533,7 +1533,7 @@ contains
                     + ( qflx_hi(k,i,j,XDIR) - qflx_hi(k  ,i-1,j  ,XDIR) ) * RFDX(i) &
                     + ( qflx_hi(k,i,j,YDIR) - qflx_hi(k  ,i  ,j-1,YDIR) ) * RCDY(j) ) &
                     * MAPF(i,j,1,I_UY) * MAPF(i,j,2,I_UY)
-          div = divdmp_coef * dtrk * FDX(i) * ( DDIV(k,i+1,j)-DDIV(k,i,j) ) ! divergence damping
+          div = divdmp_coef / dtrk * FDX(i) * ( DDIV(k,i+1,j)-DDIV(k,i,j) ) ! divergence damping
           MOMX_RK(k,i,j) = MOMX0(k,i,j) &
                          + dtrk * ( ( advcv + advch        & ! advection
                                     - pgf(k,i,j)           & ! pressure gradient force
@@ -1984,7 +1984,7 @@ contains
                   - ( qflx_hi(k,i,j,XDIR) - qflx_hi(k  ,i-1,j  ,XDIR) ) * RCDX(i) &
                   - ( qflx_hi(k,i,j,YDIR) - qflx_hi(k  ,i  ,j-1,YDIR) ) * RFDY(j) &
                   * MAPF(i,j,1,I_XV) * MAPF(i,j,2,I_XV)
-          div = divdmp_coef * dtrk * FDY(j) * ( DDIV(k,i,j+1)-DDIV(k,i,j) )
+          div = divdmp_coef / dtrk * FDY(j) * ( DDIV(k,i,j+1)-DDIV(k,i,j) )
           MOMY_RK(k,i,j) = MOMY0(k,i,j) &
                          + dtrk * ( ( advcv + advch        & ! advection
                                     - pgf(k,i,j)           & ! pressure gradient force

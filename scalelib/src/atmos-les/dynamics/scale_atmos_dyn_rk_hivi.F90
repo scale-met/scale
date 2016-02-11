@@ -819,7 +819,7 @@ contains
                  + ( qflx_hi(k  ,i,j,XDIR) - qflx_hi(k,i-1,j  ,XDIR) ) * RCDX(i) &
                  + ( qflx_hi(k  ,i,j,YDIR) - qflx_hi(k,i  ,j-1,YDIR) ) * RCDY(j) &
                  ) / GSQRT(k,i,j,I_XYW) &
-               + divdmp_coef * dtrk  * ( DDIV(k+1,i,j)-DDIV(k,i,j) ) * FDZ(k) & ! divergence damping
+               + divdmp_coef * rdt  * ( DDIV(k+1,i,j)-DDIV(k,i,j) ) * FDZ(k) & ! divergence damping
                + MOMZ_t(k,i,j)
        enddo
        enddo
@@ -1033,7 +1033,7 @@ contains
                + 0.0625_RP * ( CORIOLI(1,i,j)+CORIOLI(1,i+1,j) ) &
                            * ( DENS(k,i,j)+DENS(k,i+1,j) ) &
                            * ( VELY(k,i,j)+VELY(k,i+1,j)+VELY(k,i,j-1)+VELY(k,i+1,j-1) ) & ! coriolis force
-               + divdmp_coef * dtrk * ( DDIV(k,i+1,j)-DDIV(k,i,j) ) * FDX(i) & ! divergence damping
+               + divdmp_coef * rdt * ( DDIV(k,i+1,j)-DDIV(k,i,j) ) * FDX(i) & ! divergence damping
                + MOMX_t(k,i,j)
        enddo
        enddo
@@ -1237,7 +1237,7 @@ contains
                - 0.0625_RP * ( CORIOLI(1,i  ,j+1)+CORIOLI(1,i  ,j) ) &
                            * ( DENS(k,i,j+1)+DENS(k,i,j) ) &
                            * ( VELX(k,i,j+1)+VELX(k,i,j)+VELX(k,i-1,j+1)+VELX(k,i-1,j) ) & ! coriolis force
-               + divdmp_coef * dtrk * ( DDIV(k,i,j+1)-DDIV(k,i,j) ) * FDY(j) & ! divergence damping
+               + divdmp_coef * rdt * ( DDIV(k,i,j+1)-DDIV(k,i,j) ) * FDY(j) & ! divergence damping
                + MOMY_t(k,i,j)
        enddo
        enddo
