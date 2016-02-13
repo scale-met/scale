@@ -259,6 +259,8 @@ contains
        deallocate(tmp_value)
     end if
 
+    ! [Bug] Stretched coordinate is not supported yet, but the check below is not working any more
+    ! [Bug] Must be fixed in the future when introducing generalized coordinate 
     buffact = 0.0_RP
     do k = KS, KE
       buffact = max( buffact,GRID_CDZ(k)/DZ )
@@ -280,6 +282,7 @@ contains
        write(*,*) 'ERROR: stretched coordinate is not yet supported!', buffact
        call PRC_MPIstop
     end if
+    ! [Bug] Stretched coordinate is not supported yet, but the check above is not working any more
 
     if( TOPO_exist ) then
        trnopt = 2
