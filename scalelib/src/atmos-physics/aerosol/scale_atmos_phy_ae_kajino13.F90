@@ -931,8 +931,6 @@ contains
       do ik = 1, n_kap(ic)   !kappa bin
       do is0 = 1, n_siz(ic)   !size bin
   
-    !   aerosol_procs(ia_m0,is,ik,ic) = & ! #/m3
-    !       aerosol_procs(ia_m0,is,ik,ic) + dm0dt_cnd(is,ik,ic) * dtsplt
         aerosol_procs(ia_m2,is0,ik,ic) = & ! m2/m3
             aerosol_procs(ia_m2,is0,ik,ic) + dm2dt_cnd(is0,ik,ic) * dtsplt & !m2/m3
                                           * c_ratio                        !additional mass for condensation
@@ -1050,10 +1048,6 @@ contains
       real(RP) :: rm2_pls(n_siz_max), rm2_mns(n_siz_max) ! used for moving center calc.
       real(RP) :: rm3_pls(n_siz_max), rm3_mns(n_siz_max) ! used for moving center calc.
       real(RP) :: rms_pls(n_siz_max), rms_mns(n_siz_max) ! used for moving center calc.
-      real(RP) :: dtsplt, dtrest  !time split
-      integer  :: icount
-      integer,  parameter :: icount_max = 100
-      real(RP), parameter :: cour = 0.5_RP
       real(RP) :: visair          ! viscosity of air [Pa s]=[kg/m/s]
       real(RP) :: lambda          ! mean free path of air molecules        [cm]
       real(RP) :: rkfm,rknc
@@ -1073,10 +1067,6 @@ contains
       c4 = pi*boltz*temp_k/(8._RP*mwair/avo*1.E-3_RP)       !
       lambda = visair/(0.499_RP*pres_pa)*c4**0.5_RP*1.E2_RP ! mean free path of air molecules   [cm]
 
-    !--- time split settings
-      dtrest = deltt
-      icount = 0
-      55 continue
     
     !--- 555 coagulation combination rule loop
         do mc = 1, mcomb
@@ -1110,7 +1100,7 @@ contains
             call aero_intra(m0i,  m3i,          & !i
                             dm0i, dm3i, dm6i,   & !o
                             dgi,  sgi,  lambda, & !i
-                            rknc, rkfm, dtrest  ) !i
+                            rknc, rkfm, deltt   ) !i
             dm0j = dm0i
             dm3j = dm3i
             dm6j = dm6i
@@ -1127,7 +1117,7 @@ contains
                             dgi ,sgi, rhod_ae,   & !input unchanged
                             dgj ,sgj, rhod_ae,   & !input unchanged
                             rknc, rkfm, lambda,  & !input unchanged
-                            dtrest               ) !input unchanged
+                            deltt                ) !input unchanged
           endif
     
           dt_m0(is_i(mc),ik_i(mc),ic_i(mc)) = dt_m0(is_i(mc),ik_i(mc),ic_i(mc)) + dm0i
@@ -1141,39 +1131,30 @@ contains
           dt_m6(is_k(mc),ik_k(mc),ic_k(mc)) = dt_m6(is_k(mc),ik_k(mc),ic_k(mc)) + dm6k
     
         enddo !555 continue !mc(1:mcomb)
-    
-        !--- time split confirmation
-        dtsplt = dtrest
-    
-        do ic = 1, n_ctg       !aerosol category
-        do ik = 1, n_kap(ic)   !kappa bin
-        do is0 = 1, n_siz(ic)   !size bin
-    
-          if (dt_m0(is0,ik,ic) /= 0._RP .and. &
-              aerosol_procs(ia_m0,is0,ik,ic) > 0._RP ) then
-            dtsplt = min(dtsplt, aerosol_procs(ia_m0,is0,ik,ic) * cour &
-                                  * dtrest / abs(dt_m0(is0,ik,ic)) )
-          endif
 
-        enddo 
-        enddo 
-        enddo 
-    
-        if (dtsplt < dtrest) then
-          dt_m0(:,:,:) = dt_m0(:,:,:) * dtsplt/dtrest
-          dt_m3(:,:,:) = dt_m3(:,:,:) * dtsplt/dtrest
-          dt_m6(:,:,:) = dt_m6(:,:,:) * dtsplt/dtrest
-        endif
-        dtrest = max ( dtrest - dtsplt, 0._RP )
-        !--- time split confirmation
 
         !--- redistribution 
         do ic = 1, n_ctg       !aerosol category
         do ik = 1, n_kap(ic)   !kappa bin
         do is0 = 1, n_siz(ic)   !size bin
-          aerosol_procs(ia_m0,is0,ik,ic)=aerosol_procs(ia_m0,is0,ik,ic) + dt_m0(is0,ik,ic)
-          aerosol_procs(ia_m3,is0,ik,ic)=aerosol_procs(ia_m3,is0,ik,ic) + dt_m3(is0,ik,ic)
-          sixth              (is0,ik,ic)=sixth              (is0,ik,ic) + dt_m6(is0,ik,ic)
+          if (aerosol_procs(ia_m0,is0,ik,ic) > 0._RP) then
+            aerosol_procs(ia_m0,is0,ik,ic)=aerosol_procs(ia_m0,is0,ik,ic) &
+                                          *exp( dt_m0(is0,ik,ic)/aerosol_procs(ia_m0,is0,ik,ic) )
+          else !aerosol_procs = 0
+            aerosol_procs(ia_m0,is0,ik,ic)=aerosol_procs(ia_m0,is0,ik,ic) + dt_m0(is0,ik,ic)
+          endif
+          if (aerosol_procs(ia_m3,is0,ik,ic) > 0._RP) then
+            aerosol_procs(ia_m3,is0,ik,ic)=aerosol_procs(ia_m3,is0,ik,ic) &
+                                          *exp( dt_m3(is0,ik,ic)/aerosol_procs(ia_m3,is0,ik,ic) )
+          else !aerosol_procs = 0
+            aerosol_procs(ia_m3,is0,ik,ic)=aerosol_procs(ia_m3,is0,ik,ic) + dt_m3(is0,ik,ic)
+          endif
+          if (sixth(is0,ik,ic)               > 0._RP) then
+            sixth(is0,ik,ic)              =sixth(is0,ik,ic) &
+                                          *exp( dt_m6(is0,ik,ic)/sixth(is0,ik,ic)               )
+          else !aerosol_procs = 0
+            sixth(is0,ik,ic)              =sixth(is0,ik,ic)               + dt_m6(is0,ik,ic)
+          endif
           m0t = aerosol_procs(ia_m0,is0,ik,ic)
           m3t = aerosol_procs(ia_m3,is0,ik,ic)
           m6t = sixth              (is0,ik,ic)
@@ -1185,8 +1166,6 @@ contains
           ! Y.Sato added
           aerosol_procs(ia_m0,is0,ik,ic)=m0t
           aerosol_procs(ia_m3,is0,ik,ic)=m3t
-          sixth(is0,ik,ic)=m6t
-          ! Y.Sato added
         enddo
         enddo
         enddo
@@ -1246,17 +1225,6 @@ contains
         enddo
         enddo
     
-      icount = icount + 1
-    
-      if (icount >= icount_max) then
-        if( IO_L ) write(IO_FID_LOG,*) 'number of time split in aerosol_coagulation'
-        if( IO_L ) write(IO_FID_LOG,*) 'exceeded the limit =', icount_max
-        goto 777
-      endif
-
-      if (dtrest > 0._RP) goto 55
-    
-      777 continue
     
       return
   end subroutine aerosol_coagulation
