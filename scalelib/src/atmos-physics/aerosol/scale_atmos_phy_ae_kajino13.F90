@@ -148,6 +148,7 @@ module scale_atmos_phy_ae_kajino13
   real(RP) :: dg_reg = 5.E-7_RP             ! dg of regenerated aerosol (droplet mode 500 nm) [m]
   real(RP) :: sg_reg = 1.6_RP               ! sg of regenerated aerosol [-]
   integer  :: is0_reg                       ! size bin of regenerated aerosol
+  character(len=H_SHORT),allocatable :: ctg_name(:)
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -224,6 +225,7 @@ contains
     allocate( n_kap_inp(n_ctg) )
     allocate( k_min_inp(n_ctg) )
     allocate( k_max_inp(n_ctg) )
+    allocate( ctg_name(n_ctg) )
 
     n_siz(1:n_ctg) = NSIZ(1:n_ctg)       ! number of size bins
     d_min(1:n_ctg) = d_min_def ! lower bound of 1st size bin
@@ -231,7 +233,17 @@ contains
     n_kap(1:n_ctg) = n_kap_def ! number of kappa bins
     k_min(1:n_ctg) = k_min_def ! lower bound of 1st kappa bin
     k_max(1:n_ctg) = k_max_def ! upper bound of last kappa bin
-  
+ 
+    do it = 1, n_ctg
+     if( n_ctg == 1 ) then
+       write(ctg_name(it),'(a)') "Sulfate"
+     elseif( n_ctg == 2 ) then
+       write(ctg_name(it),'(a)') "Seasalt"
+     elseif( n_ctg == 3 ) then
+       write(ctg_name(it),'(a)') "Dust"
+     endif
+    enddo
+ 
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_ATMOS_PHY_AE_KAJINO13,iostat=ierr)
@@ -416,6 +428,8 @@ contains
        pres2qsat_liq => ATMOS_SATURATION_pres2qsat_liq
     use scale_time, only: &
        TIME_DTSEC_ATMOS_PHY_AE
+    use scale_history, only: &
+       HIST_in
     implicit none
     real(RP), intent(inout) :: DENS(KA,IA,JA)
     real(RP), intent(inout) :: MOMZ(KA,IA,JA)
@@ -449,10 +463,15 @@ contains
     real(RP),allocatable :: aerosol_activ(:,:,:,:) !(n_atr,n_siz_max,n_kap_max,n_ctg)
     real(RP),allocatable :: emis_procs(:,:,:,:)    !(n_atr,n_siz_max,n_kap_max,n_ctg)
     real(RP),allocatable :: emis_gas(:)            !emission of gas
+    real(RP) :: total_aerosol_mass(KA,IA,JA,n_ctg)
+    real(RP) :: total_aerosol_number(KA,IA,JA,n_ctg)
+    real(RP) :: total_emit_aerosol_mass(KA,IA,JA,n_ctg)
+    real(RP) :: total_emit_aerosol_number(KA,IA,JA,n_ctg)
     !--- gas
 !    real(RP),allocatable :: conc_h2so4(:,:,:,:)    !concentration [ug/m3]
 !    real(RP) :: conc_gas(KA,IA,JA,GAS_CTG)    !concentration [ug/m3]
     real(RP) :: conc_gas(GAS_CTG)    !concentration [ug/m3]
+    character(len=H_LONG) :: ofilename
     integer :: i, j, k, iq, it
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Physics step: Aerosol(kajino13)'
@@ -594,9 +613,43 @@ contains
        QTRC(k,i,j,QAEE-GAS_CTG+1:QAEE-GAS_CTG+GAS_CTG) &
             = conc_gas(1:GAS_CTG) / DENS(k,i,j)*1.E-9_RP 
 
+       ! for history
+       total_aerosol_mass(k,i,j,:) = 0.0_RP
+       total_aerosol_number(k,i,j,:) = 0.0_RP
+       total_emit_aerosol_mass(k,i,j,:) = 0.0_RP
+       total_emit_aerosol_number(k,i,j,:) = 0.0_RP
+       do ic = 1, n_ctg
+       do ik = 1, n_kap(ic)
+       do is0 = 1, n_siz(ic)
+           total_aerosol_mass       (k,i,j,ic) = total_aerosol_mass (k,i,j,ic) & 
+                                               + QTRC(k,i,j,QAES-1+it_procs2trans(ia_ms,is0,ik,ic))
+           total_aerosol_number     (k,i,j,ic) = total_aerosol_number     (k,i,j,ic) &
+                                               + QTRC(k,i,j,QAES-1+it_procs2trans(ia_m0,is0,ik,ic))
+           total_emit_aerosol_mass  (k,i,j,ic) = total_emit_aerosol_mass  (k,i,j,ic) & 
+                                               + EMIT(k,i,j,it_procs2trans(ia_ms,is0,ik,ic))
+           total_emit_aerosol_number(k,i,j,ic) = total_emit_aerosol_number(k,i,j,ic) &
+                                               + EMIT(k,i,j,it_procs2trans(ia_m0,is0,ik,ic))
+       enddo
+       enddo
+       enddo
+
     enddo
     enddo
     enddo
+
+    do ic = 1, n_ctg
+      write(ofilename,'(a,a)') trim(ctg_name(ic)), 'mass'
+      call HIST_in( total_aerosol_mass  (:,:,:,ic), trim(ofilename), 'Total mass mixing ratio of aerosol', 'kg/kg' )
+      write(ofilename,'(a,a)') trim(ctg_name(ic)), 'number'
+      call HIST_in( total_aerosol_number(:,:,:,ic), trim(ofilename), 'Total number mixing ratio of aerosol', '/kg' )
+      write(ofilename,'(a,a)') trim(ctg_name(ic)), 'mass_emit'
+      call HIST_in( total_emit_aerosol_mass  (:,:,:,ic), trim(ofilename), 'Total mass mixing ratio of emitted aerosol', 'kg/kg' )
+      write(ofilename,'(a,a)') trim(ctg_name(ic)), 'number_emit'
+      call HIST_in( total_emit_aerosol_number(:,:,:,ic), trim(ofilename), 'Total number mixing ratio of emitted aerosol', '/kg' )
+    enddo
+
+    call HIST_in( EMIT(:,:,:,QA_AE-GAS_CTG+IG_H2SO4), 'H2SO4_emit', 'Emission ratio of H2SO4 gas', 'ug/m3/s' )
+    call HIST_in( EMIT(:,:,:,QA_AE-GAS_CTG+IG_CGAS),  'CGAS_emit',  'Emission ratio of Condensabule gas', 'ug/m3/s' )
 
     deallocate( aerosol_procs )
     deallocate( aerosol_activ )
@@ -607,7 +660,7 @@ contains
   end subroutine ATMOS_PHY_AE_kajino13
   !-----------------------------------------------------------------------------
   ! subroutine 4. aerosol_zerochem
-  !----------------------------------------------------------------------------------------
+  !-----------------------------------------------------------------------------
   subroutine aerosol_zerochem (        &
         deltt,                         & !--- in 
         temp_k, pres_pa, super,        & !--- in

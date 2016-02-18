@@ -208,7 +208,9 @@ module mod_mkinit
   real(RP), private, allocatable :: bubble(:,:,:) ! bubble factor (0-1)
 
   real(RP), private, allocatable :: gan(:) ! gamma factor (0-1)
-  logical,  private :: flg_intrp = .false.
+
+  logical,  private              :: flg_intrp = .false.
+  logical,  private              :: flg_aerosol_kajino13 = .false.
 
   !-----------------------------------------------------------------------------
 contains
@@ -220,8 +222,9 @@ contains
     character(len=H_SHORT) :: MKINIT_initname = 'NONE'
 
     NAMELIST / PARAM_MKINIT / &
-       MKINIT_initname, &
-       flg_intrp
+       MKINIT_initname,     &
+       flg_intrp,           &
+       flg_aerosol_kajino13
 
     integer :: ierr
     !---------------------------------------------------------------------------
@@ -3228,6 +3231,9 @@ enddo
     endif
 
 #endif
+    if( flg_aerosol_kajino13 ) then
+      call AEROSOL_setup
+    endif
     return
   end subroutine MKINIT_DYCOMS2_RF01
 
@@ -3475,6 +3481,9 @@ enddo
     endif
 
 #endif
+    if( flg_aerosol_kajino13 ) then
+      call AEROSOL_setup
+    endif
     return
   end subroutine MKINIT_DYCOMS2_RF02
 
@@ -3952,6 +3961,9 @@ enddo
     endif
 
 #endif
+    if( flg_aerosol_kajino13 ) then
+      call AEROSOL_setup
+    endif
     return
   end subroutine MKINIT_RICO
 
@@ -4687,6 +4699,12 @@ enddo
     real(RP) :: qsat
     integer :: i, j, k, ierr
 
+    if( .not. flg_aerosol_kajino13 ) then
+      if( IO_L ) write(IO_FID_LOG,*) '+++ For [Box model of aerosol],'
+      if( IO_L ) write(IO_FID_LOG,*) '+++ flg_aerosol_kajino13 should be true. Stop!'
+      call PRC_MPIstop
+    endif
+
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[Box model of aerosol]/Categ[MKINIT]'
 
@@ -4717,7 +4735,9 @@ enddo
     enddo
     enddo
 
-    call AEROSOL_setup
+    if( flg_aerosol_kajino13 ) then
+      call AEROSOL_setup
+    endif
 
   end subroutine MKINIT_boxaero
   !-----------------------------------------------------------------------------
@@ -4850,7 +4870,9 @@ enddo
     enddo
 
     call flux_setup
-    call AEROSOL_setup
+    if( flg_aerosol_kajino13 ) then
+      call AEROSOL_setup
+    endif
 
     return
   end subroutine MKINIT_warmbubbleaero
