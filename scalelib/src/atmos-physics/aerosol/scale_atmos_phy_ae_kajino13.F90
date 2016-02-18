@@ -674,11 +674,11 @@ contains
     enddo !ik (1:n_kap(ic)  )
     enddo !ic (1:n_ctg      )
 
-  ! cleanroom
+  ! tiny number, tiny mass
     do ic = 1, n_ctg       !aerosol category
     do ik = 1, n_kap(ic)   !kappa bin
     do is0 = 1, n_siz(ic)   !size bin
-      if (aerosol_procs(ia_m0,is0,ik,ic).lt.cleanroom) then
+      if (aerosol_procs(ia_m0,is0,ik,ic).lt.cleannumber) then
         do ia0 = 1, N_ATR
           aerosol_procs(ia0,is0,ik,ic) = 0._RP !to save cpu time and avoid underflow
         enddo !ia0 (1:n_atr      )
