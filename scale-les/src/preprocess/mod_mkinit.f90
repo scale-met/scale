@@ -624,6 +624,7 @@ contains
     real(RP), parameter :: k_min_def = 0.e0_RP  ! lower bound of 1st kappa bin
     real(RP), parameter :: k_max_def = 1.e0_RP  ! upper bound of last kappa bin
     real(RP) :: c_kappa = 0.3_RP     ! hygroscopicity of condensable mass              [-]
+    real(RP), parameter :: cleannumber = 1.e-3_RP
 
     NAMELIST / PARAM_AERO / &
        m0_init, &
@@ -769,12 +770,12 @@ contains
     dgt = dg_init ![m]
     sgt = sg_init ![-]
 
-    if ( m0t <= 20.0_RP ) then
-       m0t = 20.0_RP
+    if ( m0t <= cleannumber ) then
+       m0t = cleannumber
        dgt = 0.1E-6_RP
        sgt = 1.3_RP
        if ( IO_L ) then
-          write(IO_FID_LOG,*) '*** WARNING! Initial aerosol number is set as 20 [#/m3]'
+          write(IO_FID_LOG,*) '*** WARNING! Initial aerosol number is set as ', cleannumber, '[#/m3]'
        endif
     endif
 
