@@ -292,10 +292,11 @@ contains
     use scale_history, only: &
          HIST_in
     use scale_time, only: &
-         do_phy_sf => TIME_DOATMOS_PHY_SF, &
          dtsf =>  TIME_DTSEC_ATMOS_PHY_SF
     use scale_atmos_saturation, only : &
          moist_pres2qsat_liq  => ATMOS_SATURATION_pres2qsat_liq
+    use mod_admin_time, only: &
+         do_phy_sf => TIME_DOATMOS_PHY_SF
 
     implicit none
     !---------------------------------------------------------------------------
