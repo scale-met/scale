@@ -647,6 +647,8 @@ contains
     integer             :: is_nuc     ! size bin  for 1nm new particles
     real(RP)            :: c_ratio, t_elaps
     real(RP)            :: chem_gas(GAS_CTG)
+    real(RP), parameter :: cleannumber = 1.e-3 ! tiny number of aerosol per bin for neglectable mass,
+                                               !  D =10 um resulted in 1.e-6 ug/m3
 
     chem_gas(IG_H2SO4) = h2so4dt
     chem_gas(IG_CGAS) = ocgasdt 
@@ -668,6 +670,19 @@ contains
       aerosol_procs(ia0,is0,ik,ic) = aerosol_procs(ia0,is0,ik,ic) &
                                   + emis_procs(ia0,is0,ik,ic) * deltt
     enddo !ia0 (1:n_atr      )
+    enddo !is (1:n_siz(ic)  )
+    enddo !ik (1:n_kap(ic)  )
+    enddo !ic (1:n_ctg      )
+
+  ! cleanroom
+    do ic = 1, n_ctg       !aerosol category
+    do ik = 1, n_kap(ic)   !kappa bin
+    do is0 = 1, n_siz(ic)   !size bin
+      if (aerosol_procs(ia_m0,is0,ik,ic).lt.cleanroom) then
+        do ia0 = 1, N_ATR
+          aerosol_procs(ia0,is0,ik,ic) = 0._RP !to save cpu time and avoid underflow
+        enddo !ia0 (1:n_atr      )
+      endif
     enddo !is (1:n_siz(ic)  )
     enddo !ik (1:n_kap(ic)  )
     enddo !ic (1:n_ctg      )
@@ -813,6 +828,10 @@ contains
     real(RP) :: gnc2,gnc3,gfm2,gfm3,harm2,harm3
     real(RP) :: lossrate,tmps6
     integer  :: ic, ik, is0, i, is1, is2
+
+! nothing happens --> in future, c_ratio is removed and condensable gas should be used
+    if (conc_h2so4.le.0.0_RP) return 
+! nothing happens --> in future, c_ratio is removed and condensable gas should be used
   
     drive         = conc_h2so4 * mwrat_s6 * conv_ms_vl  ![ugH2SO4/m3]=>volume [m3SO4/m3]
     sq_cbar_h2so4 = 8.0_RP*rgas*temp_k/(pi*mwh2so4*1.E-3_RP)
@@ -881,6 +900,8 @@ contains
     enddo 
     enddo 
     enddo 
+
+    if (lossrate.le.0._RP) return !nothing happens
 
     isplt  = int( (lossrate*deltt) / (cour*conc_h2so4) )+1
     dtsplt = deltt/float(isplt)
