@@ -202,7 +202,7 @@ contains
          "rankidx", rankidx           ) ! (in)
 
     call file_set_tunits( fid, & ! (in)
-         time_units,           & ! (in)
+         time_units_,          & ! (in)
          error                 ) ! (out)
     if ( error /= SUCCESS_CODE ) then
        call Log('E', 'xxx failed to set time units')
