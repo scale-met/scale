@@ -141,8 +141,9 @@ contains
   !-----------------------------------------------------------------------------
   !> write axis to the file
   subroutine FILEIO_set_axes( &
-       fid,  &
-       dtype )
+       fid,   &
+       dtype, &
+       xy     )
     use gtool_file, only: &
        FilePutAxis,  &
        FileSetTAttr, &
@@ -184,49 +185,77 @@ contains
 
     integer, intent(in) :: fid
     integer, intent(in) :: dtype
+    logical, intent(in), optional :: xy
 
     character(len=2) :: AXIS_name(2)
+    logical :: xy_
     !---------------------------------------------------------------------------
 
-    call FilePutAxis( fid, 'z',   'Z',               'm', 'z',   dtype, GRID_CZ(KS:KE) )
+    if ( present(xy) ) then
+       xy_ = xy
+    else
+       xy_ = .false.
+    end if
+
+    if ( .not. xy_ ) then
+       call FilePutAxis( fid, 'z',   'Z',               'm', 'z',   dtype, GRID_CZ(KS:KE) )
+    end if
     call FilePutAxis( fid, 'x',   'X',               'm', 'x',   dtype, GRID_CX(ISB:IEB) )
     call FilePutAxis( fid, 'y',   'Y',               'm', 'y',   dtype, GRID_CY(JSB:JEB) )
-    call FilePutAxis( fid, 'zh',  'Z (half level)',  'm', 'zh',  dtype, GRID_FZ(KS:KE) )
+    if ( .not. xy_ ) then
+       call FilePutAxis( fid, 'zh',  'Z (half level)',  'm', 'zh',  dtype, GRID_FZ(KS:KE) )
+    end if
     call FilePutAxis( fid, 'xh',  'X (half level)',  'm', 'xh',  dtype, GRID_FX(ISB:IEB) )
     call FilePutAxis( fid, 'yh',  'Y (half level)',  'm', 'yh',  dtype, GRID_FY(JSB:JEB) )
 
-    call FilePutAxis( fid, 'lz',  'LZ',              'm', 'lz',  dtype, GRID_LCZ(LKS:LKE) )
-    call FilePutAxis( fid, 'lzh', 'LZ (half level)', 'm', 'lzh', dtype, GRID_LFZ(LKS:LKE) )
+    if ( .not. xy_ ) then
+       call FilePutAxis( fid, 'lz',  'LZ',              'm', 'lz',  dtype, GRID_LCZ(LKS:LKE) )
+       call FilePutAxis( fid, 'lzh', 'LZ (half level)', 'm', 'lzh', dtype, GRID_LFZ(LKS:LKE) )
+       call FilePutAxis( fid, 'uz',  'UZ',              'm', 'uz',  dtype, GRID_UCZ(UKS:UKE) )
+       call FilePutAxis( fid, 'uzh', 'UZ (half level)', 'm', 'uzh', dtype, GRID_UFZ(UKS:UKE) )
+    end if
 
-    call FilePutAxis( fid, 'uz',  'UZ',              'm', 'uz',  dtype, GRID_UCZ(UKS:UKE) )
-    call FilePutAxis( fid, 'uzh', 'UZ (half level)', 'm', 'uzh', dtype, GRID_UFZ(UKS:UKE) )
 
-    call FilePutAxis( fid, 'CZ',  'Atmos Grid Center Position Z', 'm', 'CZ',  dtype, GRID_CZ )
+    if ( .not. xy_ ) then
+       call FilePutAxis( fid, 'CZ',  'Atmos Grid Center Position Z', 'm', 'CZ',  dtype, GRID_CZ )
+    end if
     call FilePutAxis( fid, 'CX',  'Atmos Grid Center Position X', 'm', 'CX',  dtype, GRID_CX )
     call FilePutAxis( fid, 'CY',  'Atmos Grid Center Position Y', 'm', 'CY',  dtype, GRID_CY )
-    call FilePutAxis( fid, 'FZ',  'Atmos Grid Face Position Z',   'm', 'FZ',  dtype, GRID_FZ )
+    if ( .not. xy_ ) then
+       call FilePutAxis( fid, 'FZ',  'Atmos Grid Face Position Z',   'm', 'FZ',  dtype, GRID_FZ )
+    end if
     call FilePutAxis( fid, 'FX',  'Atmos Grid Face Position X',   'm', 'FX',  dtype, GRID_FX )
     call FilePutAxis( fid, 'FY',  'Atmos Grid Face Position Y',   'm', 'FY',  dtype, GRID_FY )
 
-    call FilePutAxis( fid, 'CDZ', 'Grid Cell length Z', 'm', 'CZ',  dtype, GRID_CDZ )
+    if ( .not. xy_ ) then
+       call FilePutAxis( fid, 'CDZ', 'Grid Cell length Z', 'm', 'CZ',  dtype, GRID_CDZ )
+    end if
     call FilePutAxis( fid, 'CDX', 'Grid Cell length X', 'm', 'CX',  dtype, GRID_CDX )
     call FilePutAxis( fid, 'CDY', 'Grid Cell length Y', 'm', 'CY',  dtype, GRID_CDY )
-    call FilePutAxis( fid, 'FDZ', 'Grid distance Z',    'm', 'FDZ', dtype, GRID_FDZ )
+    if ( .not. xy_ ) then
+       call FilePutAxis( fid, 'FDZ', 'Grid distance Z',    'm', 'FDZ', dtype, GRID_FDZ )
+    end if
     call FilePutAxis( fid, 'FDX', 'Grid distance X',    'm', 'FDX', dtype, GRID_FDX )
     call FilePutAxis( fid, 'FDY', 'Grid distance Y',    'm', 'FDY', dtype, GRID_FDY )
 
-    call FilePutAxis( fid, 'LCZ',  'Land Grid Center Position Z',  'm', 'LCZ', dtype, GRID_LCZ )
-    call FilePutAxis( fid, 'LFZ',  'Land Grid Face Position Z',    'm', 'LFZ', dtype, GRID_LFZ )
-    call FilePutAxis( fid, 'LCDZ', 'Land Grid Cell length Z',      'm', 'LCZ', dtype, GRID_LCZ )
+    if ( .not. xy_ ) then
+       call FilePutAxis( fid, 'LCZ',  'Land Grid Center Position Z',  'm', 'LCZ', dtype, GRID_LCZ )
+       call FilePutAxis( fid, 'LFZ',  'Land Grid Face Position Z',    'm', 'LFZ', dtype, GRID_LFZ )
+       call FilePutAxis( fid, 'LCDZ', 'Land Grid Cell length Z',      'm', 'LCZ', dtype, GRID_LCZ )
 
-    call FilePutAxis( fid, 'UCZ',  'Urban Grid Center Position Z', 'm', 'UCZ', dtype, GRID_UCZ )
-    call FilePutAxis( fid, 'UFZ',  'Urban Grid Face Position Z',   'm', 'UFZ', dtype, GRID_UFZ )
-    call FilePutAxis( fid, 'UCDZ', 'Urban Grid Cell length Z',     'm', 'UCZ', dtype, GRID_UCZ )
+       call FilePutAxis( fid, 'UCZ',  'Urban Grid Center Position Z', 'm', 'UCZ', dtype, GRID_UCZ )
+       call FilePutAxis( fid, 'UFZ',  'Urban Grid Face Position Z',   'm', 'UFZ', dtype, GRID_UFZ )
+       call FilePutAxis( fid, 'UCDZ', 'Urban Grid Cell length Z',     'm', 'UCZ', dtype, GRID_UCZ )
+    end if
 
-    call FilePutAxis( fid, 'CBFZ', 'Boundary factor Center Z', '1', 'CZ', dtype, GRID_CBFZ )
+    if ( .not. xy_ ) then
+       call FilePutAxis( fid, 'CBFZ', 'Boundary factor Center Z', '1', 'CZ', dtype, GRID_CBFZ )
+    end if
     call FilePutAxis( fid, 'CBFX', 'Boundary factor Center X', '1', 'CX', dtype, GRID_CBFX )
     call FilePutAxis( fid, 'CBFY', 'Boundary factor Center Y', '1', 'CY', dtype, GRID_CBFY )
-    call FilePutAxis( fid, 'FBFZ', 'Boundary factor Face Z',   '1', 'CZ', dtype, GRID_FBFZ )
+    if ( .not. xy_ ) then
+       call FilePutAxis( fid, 'FBFZ', 'Boundary factor Face Z',   '1', 'CZ', dtype, GRID_FBFZ )
+    end if
     call FilePutAxis( fid, 'FBFX', 'Boundary factor Face X',   '1', 'CX', dtype, GRID_FBFX )
     call FilePutAxis( fid, 'FBFY', 'Boundary factor Face Y',   '1', 'CY', dtype, GRID_FBFY )
 
@@ -268,14 +297,16 @@ contains
                                        'degrees_north', AXIS_name, dtype, AXIS_LATXY(:,:) )
 
     ! attributes
-    call FileSetTAttr( fid, 'lz',  'positive', 'down' )
-    call FileSetTAttr( fid, 'lzh', 'positive', 'down' )
-    call FileSetTAttr( fid, 'uz',  'positive', 'down' )
-    call FileSetTAttr( fid, 'uzh', 'positive', 'down' )
-    call FileSetTAttr( fid, 'LCZ', 'positive', 'down' )
-    call FileSetTAttr( fid, 'LFZ', 'positive', 'down' )
-    call FileSetTAttr( fid, 'UCZ', 'positive', 'down' )
-    call FileSetTAttr( fid, 'UFZ', 'positive', 'down' )
+    if ( .not. xy_ ) then
+       call FileSetTAttr( fid, 'lz',  'positive', 'down' )
+       call FileSetTAttr( fid, 'lzh', 'positive', 'down' )
+       call FileSetTAttr( fid, 'uz',  'positive', 'down' )
+       call FileSetTAttr( fid, 'uzh', 'positive', 'down' )
+       call FileSetTAttr( fid, 'LCZ', 'positive', 'down' )
+       call FileSetTAttr( fid, 'LFZ', 'positive', 'down' )
+       call FileSetTAttr( fid, 'UCZ', 'positive', 'down' )
+       call FileSetTAttr( fid, 'UFZ', 'positive', 'down' )
+    end if
 
     return
   end subroutine FILEIO_set_axes
@@ -714,6 +745,7 @@ contains
     integer :: fid, vid
     integer :: i, j
     logical :: nohalo_
+    logical :: xy
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('FILE_O_NetCDF', 2)
@@ -750,10 +782,7 @@ contains
                      rankidx,        & ! [IN]
                      append = append ) ! [IN]
 
-    if ( .NOT. fileexisted ) then ! only once
-       call FILEIO_set_axes( fid, dtype ) ! [IN]
-    endif
-
+    xy = .false.
     if ( axistype == 'XY' ) then
        dims = (/'x','y'/)
        dim1_max = IMAXB
@@ -762,6 +791,7 @@ contains
        dim1_E   = IEB
        dim2_S   = JSB
        dim2_E   = JEB
+       xy = .true.
     elseif ( axistype == 'UY' ) then
        dims = (/'xh','y '/)
        dim1_max = IMAXB
@@ -797,6 +827,10 @@ contains
     else
        write(*,*) 'xxx unsupported axis type. Check!', trim(axistype), ' item:',trim(varname)
        call PRC_MPIstop
+    endif
+
+    if ( .NOT. fileexisted ) then ! only once
+       call FILEIO_set_axes( fid, dtype, xy ) ! [IN]
     endif
 
     varhalo(:,:) = var(:,:)

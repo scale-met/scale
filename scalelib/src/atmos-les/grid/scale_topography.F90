@@ -122,15 +122,14 @@ contains
        PRC_MPIstop, &
        PRC_myrank
     use scale_grid, only: &
-       GRID_CBFZ, &
-       GRID_CBFX, &
-       GRID_CBFY
+       GRID_CX, &
+       GRID_CY
 
     implicit none
 
-    real(RP) :: tmp_CBFZ(KA), tmp_CBFX(IA), tmp_CBFY(JA)
+    real(RP) :: tmp_CX(IA), tmp_CY(JA)
     real(RP) :: epsilon
-    integer  :: i, j, k
+    integer  :: i, j
     !---------------------------------------------------------------------------
 
     epsilon = 0.1_RP**(RP-1)
@@ -147,28 +146,20 @@ contains
 
        TOPO_exist = .true.
 
-       call FileRead( tmp_CBFZ(:),  TOPO_IN_BASENAME, 'CBFZ', 1, PRC_myrank )
-       call FileRead( tmp_CBFX(:),  TOPO_IN_BASENAME, 'CBFX', 1, PRC_myrank )
-       call FileRead( tmp_CBFY(:),  TOPO_IN_BASENAME, 'CBFY', 1, PRC_myrank )
+       call FileRead( tmp_CX(:),  TOPO_IN_BASENAME, 'CX', 1, PRC_myrank )
+       call FileRead( tmp_CY(:),  TOPO_IN_BASENAME, 'CY', 1, PRC_myrank )
 
        do i = 1, IA
-         if( abs(tmp_CBFX(i) - GRID_CBFX(i)) > epsilon ) then
-           write( IO_FID_LOG,'(A)')  '*** Buffer layer in TOPO_IN_BASENAME is different from GRID_IN_BASENAME ***'
-           write( IO_FID_LOG,* )  "I", i, tmp_CBFX(i), GRID_CBFX(i)
+         if( abs(tmp_CX(i) - GRID_CX(i)) > epsilon ) then
+           write( IO_FID_LOG,'(A)')  '*** X position in TOPO_IN_BASENAME is different from GRID_IN_BASENAME ***'
+           write( IO_FID_LOG,* )  "I", i, tmp_CX(i), GRID_CX(i)
            call PRC_MPIstop
          endif
        enddo
        do j = 1, JA
-         if( abs(tmp_CBFY(j) - GRID_CBFY(j)) > epsilon ) then
-           write( IO_FID_LOG,'(A)')  '*** Buffer layer in TOPO_IN_BASENAME is different from GRID_IN_BASENAME ***'
-           write( IO_FID_LOG,* )  "J", j, tmp_CBFY(j), GRID_CBFY(j)
-           call PRC_MPIstop
-         endif
-       enddo
-       do k = 1, KA
-         if( abs(tmp_CBFZ(k) - GRID_CBFZ(k)) > epsilon ) then
-           write( IO_FID_LOG,'(A)')  '*** Buffer layer in TOPO_IN_BASENAME is different from GRID_IN_BASENAME ***'
-           write( IO_FID_LOG,* )  "K", k, tmp_CBFZ(k), GRID_CBFZ(k)
+         if( abs(tmp_CY(j) - GRID_CY(j)) > epsilon ) then
+           write( IO_FID_LOG,'(A)')  '*** Y position in TOPO_IN_BASENAME is different from GRID_IN_BASENAME ***'
+           write( IO_FID_LOG,* )  "J", j, tmp_CY(j), GRID_CY(j)
            call PRC_MPIstop
          endif
        enddo
