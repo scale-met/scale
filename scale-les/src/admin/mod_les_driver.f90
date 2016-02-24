@@ -365,11 +365,17 @@ contains
 
     enddo
 
-    if( ATMOS_do ) call ATMOS_driver_finalize
-
     call PROF_rapend('Main_Loop', 0)
+
     if( IO_L ) write(IO_FID_LOG,*) '++++++ END TIMESTEP ++++++'
     if( IO_L ) write(IO_FID_LOG,*)
+
+
+    call PROF_setprefx('FIN')
+
+    call PROF_rapstart('All', 1)
+
+    if( ATMOS_do ) call ATMOS_driver_finalize
 
 #ifdef _FIPP_
     call fipp_stop
@@ -383,14 +389,20 @@ contains
     ! check data
     if( ATMOS_sw_check ) call ATMOS_vars_restart_check
 
+    call PROF_rapstart('Monit', 2)
+    call MONIT_finalize
+    call PROF_rapend  ('Monit', 2)
+
+    call PROF_rapstart('File', 2)
+    call FileCloseAll
+    call PROF_rapend  ('File', 2)
+
+    call PROF_rapend  ('All', 1)
+
     call PROF_rapreport
 #ifdef _PAPI_
     call PROF_PAPI_rapreport
 #endif
-
-    call MONIT_finalize
-
-    call FileCloseAll
 
     return
   end subroutine scaleles
