@@ -701,7 +701,8 @@ contains
        axistype, &
        datatype, &
        append,   &
-       nohalo    )
+       nohalo,   &
+       nozcoord  )
     use gtool_file, only: &
        RMISS
     use gtool_file_h, only: &
@@ -731,6 +732,7 @@ contains
     character(len=*), intent(in)  :: datatype !< data type (REAL8/REAL4/default)
     logical, optional, intent(in) :: append   !< switch whether append existing file or not (default=false)
     logical, optional, intent(in) :: nohalo   !< switch whether include halo data or not (default=false)
+    logical, optional, intent(in) :: nozcoord !< switch whether include zcoordinate or not (default=false)
 
     real(RP)              :: varhalo( size(var(:,1)), size(var(1,:)) )
 
@@ -745,7 +747,6 @@ contains
     integer :: fid, vid
     integer :: i, j
     logical :: nohalo_
-    logical :: xy
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('FILE_O_NetCDF', 2)
@@ -782,7 +783,6 @@ contains
                      rankidx,        & ! [IN]
                      append = append ) ! [IN]
 
-    xy = .false.
     if ( axistype == 'XY' ) then
        dims = (/'x','y'/)
        dim1_max = IMAXB
@@ -791,7 +791,6 @@ contains
        dim1_E   = IEB
        dim2_S   = JSB
        dim2_E   = JEB
-       xy = .true.
     elseif ( axistype == 'UY' ) then
        dims = (/'xh','y '/)
        dim1_max = IMAXB
@@ -830,7 +829,7 @@ contains
     endif
 
     if ( .NOT. fileexisted ) then ! only once
-       call FILEIO_set_axes( fid, dtype, xy ) ! [IN]
+       call FILEIO_set_axes( fid, dtype, nozcoord ) ! [IN]
     endif
 
     varhalo(:,:) = var(:,:)

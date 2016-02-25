@@ -187,7 +187,8 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Output topography file ***'
 
        call FILEIO_write( TOPO_Zsfc(:,:), TOPO_OUT_BASENAME, TOPO_OUT_TITLE, & ! [IN]
-                          'TOPO', 'Topography', 'm', 'XY',   TOPO_OUT_DTYPE  ) ! [IN]
+                          'TOPO', 'Topography', 'm', 'XY',   TOPO_OUT_DTYPE, & ! [IN]
+                          nozcoord=.true. )
 
     endif
 
