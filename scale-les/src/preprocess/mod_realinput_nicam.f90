@@ -395,7 +395,8 @@ contains
                            it, it, &
                            myrank,           &
                            iNICAM,           &
-                           single=.true.     )
+                           single=.true.,    &
+                           option=.true.     )
     lsmask_org(:,:) = real( read3DS(1,:,:,1), kind=RP )
 
     basename = "la_tg"//trim(basename_num)
