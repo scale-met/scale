@@ -4855,6 +4855,7 @@ enddo
     integer                  :: NUMBER_OF_FILES     = 1
     integer                  :: NUMBER_OF_TSTEPS    = 1    ! num of time steps in one file
     character(len=H_LONG)    :: BASENAME_ORG        = ''
+    logical                  :: BASENAME_ADD_NUM    = .false.
     character(len=H_LONG)    :: FILETYPE_ORG        = ''
     character(len=H_LONG)    :: BASENAME_BOUNDARY   = 'boundary_real'
     character(len=H_LONG)    :: BOUNDARY_TITLE      = 'SCALE-LES BOUNDARY CONDITION for REAL CASE'
@@ -4887,6 +4888,7 @@ enddo
          NUMBER_OF_SKIP_TSTEPS,  &
          INTERP_SERC_DIV_NUM,    &
          BASENAME_ORG,           &
+         BASENAME_ADD_NUM,       &
          FILETYPE_ORG,           &
          BASENAME_BOUNDARY,      &
          BOUNDARY_TITLE,         &
@@ -4944,7 +4946,7 @@ enddo
        call PRC_MPIstop
     endif
 
-    if ( NUMBER_OF_FILES > 1 ) then
+    if ( NUMBER_OF_FILES > 1 .or. BASENAME_ADD_NUM ) then
        BASENAME_WITHNUM = trim(BASENAME_ORG)//"_00000"
     else
        BASENAME_WITHNUM = trim(BASENAME_ORG)
@@ -4974,7 +4976,7 @@ enddo
     !--- read external file
     do n = 1, NUMBER_OF_FILES
 
-       if ( NUMBER_OF_FILES > 1 ) then
+       if ( NUMBER_OF_FILES > 1 .or. BASENAME_ADD_NUM ) then
           write(NUM,'(I5.5)') n-1
           BASENAME_WITHNUM = trim(BASENAME_ORG)//"_"//NUM
        else
@@ -5043,7 +5045,7 @@ enddo
                              BOUNDARY_TITLE           )
 
     !--- read/write initial data for bottom boundary models
-    if ( NUMBER_OF_FILES > 1 ) then
+    if ( NUMBER_OF_FILES > 1 .or. BASENAME_ADD_NUM ) then
        write(NUM,'(I5.5)') NUMBER_OF_SKIP_TSTEPS / NUMBER_OF_TSTEPS
        BASENAME_WITHNUM = trim(BASENAME_ORG)//"_"//NUM
     else
