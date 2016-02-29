@@ -1183,6 +1183,7 @@ contains
        CPdry => CONST_CPdry, &
        CVdry => CONST_CVdry, &
        LHV   => CONST_LHV,   &
+       LHF   => CONST_LHF,   &
        P00   => CONST_PRE00
     use scale_grid, only: &
        RCDX => GRID_RCDX, &
@@ -1937,6 +1938,28 @@ contains
        enddo
        enddo
        enddo
+
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(3)
+       do j  = JSB, JEB
+       do i  = ISB, IEB
+       do k  = KS, KE
+          ENGI(k,i,j) = ENGI(k,i,j) &
+                      + DENS(k,i,j) * QTRC(k,i,j,I_QV) * LHV ! Latent Heat [vapor->liquid]
+       enddo
+       enddo
+       enddo
+
+       do iq = QIS, QIE
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(3)
+       do j  = JSB, JEB
+       do i  = ISB, IEB
+       do k  = KS, KE
+          ENGI(k,i,j) = ENGI(k,i,j) &
+                      - DENS(k,i,j) * QTRC(k,i,j,iq) * LHF ! Latent Heat [ice->liquid]
+       enddo
+       enddo
+       enddo
+       enddo
     endif
 
     if ( AD_PREP_sw(I_ENGT) > 0 ) then
@@ -2086,8 +2109,10 @@ contains
   !> Budget monitor for atmosphere
   subroutine ATMOS_vars_total
     use scale_const, only: &
-       GRAV   => CONST_GRAV,   &
-       CVdry  => CONST_CVdry
+       GRAV  => CONST_GRAV,  &
+       CVdry => CONST_CVdry, &
+       LHV   => CONST_LHV,   &
+       LHF   => CONST_LHF
     use scale_grid_real, only: &
        REAL_CZ
     use scale_les_statistics, only: &
@@ -2167,6 +2192,12 @@ contains
           do iq = QQS, QQE
              ENGI(k,i,j) = ENGI(k,i,j) &
                          + DENS(k,i,j) * QTRC(k,i,j,iq) * TEMP(k,i,j) * CVw(iq)
+          enddo
+
+          ENGI(k,i,j) = ENGI(k,i,j) + DENS(k,i,j) * QTRC(k,i,j,I_QV) * LHV ! Latent Heat [vapor->liquid]
+
+          do iq = QIS, QIE
+             ENGI(k,i,j) = ENGI(k,i,j) - DENS(k,i,j) * QTRC(k,i,j,iq) * LHF ! Latent Heat [ice->liquid]
           enddo
 
           ENGT(k,i,j) = ENGP(k,i,j) + ENGK(k,i,j) + ENGI(k,i,j)
@@ -2291,8 +2322,10 @@ contains
     use scale_process, only: &
        PRC_myrank
     use scale_const, only: &
-       GRAV   => CONST_GRAV,   &
-       CVdry  => CONST_CVdry
+       GRAV  => CONST_GRAV,  &
+       CVdry => CONST_CVdry, &
+       LHV   => CONST_LHV,   &
+       LHF   => CONST_LHF
     use scale_grid, only: &
        RFDX => GRID_RFDX, &
        RFDY => GRID_RFDY
@@ -2442,6 +2475,12 @@ contains
        do iq = QQS, QQE
           ENGI(k,i,j) = ENGI(k,i,j) &
                       + DENS(k,i,j) * QTRC(k,i,j,iq) * TEMP(k,i,j) * CVw(iq)
+       enddo
+
+       ENGI(k,i,j) = ENGI(k,i,j) + DENS(k,i,j) * QTRC(k,i,j,I_QV) * LHV ! Latent Heat [vapor->liquid]
+
+       do iq = QIS, QIE
+          ENGI(k,i,j) = ENGI(k,i,j) - DENS(k,i,j) * QTRC(k,i,j,iq) * LHF ! Latent Heat [ice->liquid]
        enddo
     enddo
     enddo
