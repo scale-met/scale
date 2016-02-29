@@ -110,14 +110,20 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Dynamics...'
 
-    if ( ATMOS_DYN_TYPE /= 'OFF' .AND. ATMOS_DYN_TYPE /= 'NONE' ) then
+    if ( ATMOS_DYN_TYPE == 'OFF' ) then
+       if( IO_L ) write(IO_FID_LOG,*) '*** +Dynamical core   : OFF'
+       if( IO_L ) write(IO_FID_LOG,*) '*** +Advection        : OFF'
+       ATMOS_sw_dyn = .false.
+    else if ( ATMOS_DYN_TYPE == 'NONE' ) then
+       ! The advection is disbled
+       ! The tendencies calculated by physical processed are added
        if( IO_L ) write(IO_FID_LOG,*) '*** +Dynamical core   : ON, ', trim(ATMOS_DYN_TYPE)
-       if( IO_L ) write(IO_FID_LOG,*) '*** +Tracer advection : ON'
+       if( IO_L ) write(IO_FID_LOG,*) '*** +Advection        : OFF'
        ATMOS_sw_dyn = .true.
     else
-       if( IO_L ) write(IO_FID_LOG,*) '*** +Dynamical core   : OFF'
-       if( IO_L ) write(IO_FID_LOG,*) '*** +Tracer advection : OFF'
-       ATMOS_sw_dyn = .false.
+       if( IO_L ) write(IO_FID_LOG,*) '*** +Dynamical core   : ON, ', trim(ATMOS_DYN_TYPE)
+       if( IO_L ) write(IO_FID_LOG,*) '*** +Advection        : ON'
+       ATMOS_sw_dyn = .true.
     endif
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Physics...'
