@@ -84,12 +84,12 @@ module scale_atmos_phy_sf_bulkcoef
   !
   character(len=H_SHORT), private :: ATMOS_PHY_SF_BULKCOEF_TYPE = 'BH91'
 
-  real(RP), private, parameter :: ATMOS_PHY_SF_BULKCOEF_Cm_max = 2.5E-3_RP ! maximum limit of bulk coefficient for momentum [NIL]
-  real(RP), private, parameter :: ATMOS_PHY_SF_BULKCOEF_Ch_max = 1.0E+0_RP ! maximum limit of bulk coefficient for heat     [NIL]
-  real(RP), private, parameter :: ATMOS_PHY_SF_BULKCOEF_Ce_max = 1.0E+0_RP ! maximum limit of bulk coefficient for moisture [NIL]
-  real(RP), private            :: ATMOS_PHY_SF_BULKCOEF_Cm_min = 1.0E-5_RP ! minimum limit of bulk coefficient for momentum [NIL]
-  real(RP), private            :: ATMOS_PHY_SF_BULKCOEF_Ch_min = 1.0E-5_RP ! minimum limit of bulk coefficient for heat     [NIL]
-  real(RP), private            :: ATMOS_PHY_SF_BULKCOEF_Ce_min = 1.0E-5_RP ! minimum limit of bulk coefficient for moisture [NIL]
+  real(RP), private :: ATMOS_PHY_SF_BULKCOEF_Cm_max = 2.5E-3_RP ! maximum limit of bulk coefficient for momentum [NIL]
+  real(RP), private :: ATMOS_PHY_SF_BULKCOEF_Ch_max = 1.0E+0_RP ! maximum limit of bulk coefficient for heat     [NIL]
+  real(RP), private :: ATMOS_PHY_SF_BULKCOEF_Ce_max = 1.0E+0_RP ! maximum limit of bulk coefficient for moisture [NIL]
+  real(RP), private :: ATMOS_PHY_SF_BULKCOEF_Cm_min = 1.0E-5_RP ! minimum limit of bulk coefficient for momentum [NIL]
+  real(RP), private :: ATMOS_PHY_SF_BULKCOEF_Ch_min = 1.0E-5_RP ! minimum limit of bulk coefficient for heat     [NIL]
+  real(RP), private :: ATMOS_PHY_SF_BULKCOEF_Ce_min = 1.0E-5_RP ! minimum limit of bulk coefficient for moisture [NIL]
 
   !-----------------------------------------------------------------------------
 contains
@@ -101,6 +101,9 @@ contains
 
     NAMELIST / PARAM_ATMOS_PHY_SF_BULKCOEF / &
        ATMOS_PHY_SF_BULKCOEF_TYPE,   &
+       ATMOS_PHY_SF_BULKCOEF_Cm_max, &
+       ATMOS_PHY_SF_BULKCOEF_Ch_max, &
+       ATMOS_PHY_SF_BULKCOEF_Ce_max, &
        ATMOS_PHY_SF_BULKCOEF_Cm_min, &
        ATMOS_PHY_SF_BULKCOEF_Ch_min, &
        ATMOS_PHY_SF_BULKCOEF_Ce_min
@@ -143,6 +146,7 @@ contains
        Cm, Ch, Ce ,            &
        R10M, R2H, R2E          )
     use scale_const, only: &
+       EPS    => CONST_EPS, &
        GRAV   => CONST_GRAV,  &
        KARMAN => CONST_KARMAN
     implicit none
@@ -195,7 +199,7 @@ contains
        C0_2m (i,j)  = ( KARMAN / log(  2.0_RP/Z0M(i,j) ) )**2
 
        RiBT(i,j)  = GRAV * Z1(i,j) * ( ATM_POTT(i,j) - SFC_TEMP(i,j)    ) &
-                                   / ( ATM_POTT(i,j) * ATM_Uabs(i,j)**2 )
+                                   / ( ATM_POTT(i,j) * ATM_Uabs(i,j)**2 + EPS )
 
        RiB (i,j)  = RiBT(i,j)
     enddo
@@ -304,6 +308,7 @@ contains
        Cm, Ch, Ce ,            &
        R10M, R2H, R2E          )
     use scale_const, only: &
+       EPS    => CONST_EPS, &
        GRAV   => CONST_GRAV,  &
        KARMAN => CONST_KARMAN
     implicit none
@@ -368,7 +373,7 @@ contains
     do j = JS, JE
     do i = IS, IE
        RiB0(i,j)  = GRAV * Z1(i,j) * ( ATM_POTT(i,j) - SFC_TEMP(i,j)    ) &
-                                   / ( ATM_POTT(i,j) * ATM_Uabs(i,j)**2 )
+                                   / ( ATM_POTT(i,j) * ATM_Uabs(i,j)**2 + EPS )
        RiB0(i,j) = max( abs(RiB0(i,j)), RiB_min )
     enddo
     enddo
@@ -503,7 +508,7 @@ contains
        enddo
        enddo
 
-       if( maxval( abs( res(:,:) ) ) < res_criteria ) exit
+       if( maxval( abs( res(IS:IE,JS:JE) ) ) < res_criteria ) exit
     enddo
 
     ! result
@@ -527,14 +532,17 @@ contains
        ! select unstable / stable
        sw = 0.5_RP - sign(0.5_RP,L(i,j)) ! if unstable, sw = 1
 
-       fm    (i,j) = (        sw ) * fmUS_Z1L  &
-                   + ( 1.0_RP-sw ) * fmS_Z1L
+       fm    (i,j) = max(EPS, &
+                     (        sw ) * fmUS_Z1L  &
+                   + ( 1.0_RP-sw ) * fmS_Z1L )
        fh    (i,j) = (        sw ) * fhUS_Z1L  &
                    + ( 1.0_RP-sw ) * fhS_Z1L
-       fm_10m(i,j) = (        sw ) * fmUS_10mL &
-                   + ( 1.0_RP-sw ) * fmS_10mL
-       fm_2m (i,j) = (        sw ) * fmUS_2mL  &
-                   + ( 1.0_RP-sw ) * fmS_2mL
+       fm_10m(i,j) = max(EPS, &
+                     (        sw ) * fmUS_10mL &
+                   + ( 1.0_RP-sw ) * fmS_10mL )
+       fm_2m (i,j) = max(EPS, &
+                     (        sw ) * fmUS_2mL  &
+                   + ( 1.0_RP-sw ) * fmS_2mL )
        fh_2m (i,j) = (        sw ) * fhUS_2mL  &
                    + ( 1.0_RP-sw ) * fhS_2mL
     enddo
