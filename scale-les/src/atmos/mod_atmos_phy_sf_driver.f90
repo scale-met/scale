@@ -83,10 +83,6 @@ contains
 
        if ( .NOT. CPL_sw ) then
           if( IO_L ) write(IO_FID_LOG,*) '*** Coupler is disabled.'
-          if( IO_L ) write(IO_FID_LOG,*) '*** SFC_Z0[MHE] is assumed to be 0.'
-          SFC_Z0M(:,:) = 0.0_RP
-          SFC_Z0H(:,:) = 0.0_RP
-          SFC_Z0E(:,:) = 0.0_RP
        endif
 
     else
