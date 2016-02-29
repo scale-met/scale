@@ -23,7 +23,7 @@ INITNAME    = NONE
 BINNAME     = scale-les
 PPCONF      = NONE
 INITCONF    = NONE
-RUNCONF     = run.conf
+RUNCONF     = run.L36.conf
 TPROC       = 16
 
 # required data (parameters,distributed files)
