@@ -109,6 +109,8 @@ module scale_atmos_dyn
   logical, private :: BND_S
   logical, private :: BND_N
 
+  logical, private :: DYN_NONE = .false.
+
   ! for communication
   integer :: I_COMM_DENS = 1
   integer :: I_COMM_MOMZ = 2
@@ -155,7 +157,8 @@ contains
        CDZ, CDX, CDY,    &
        FDZ, FDX, FDY,    &
        enable_coriolis,  &
-       lat               )
+       lat,              &
+       none              )
     use scale_process, only: &
        PRC_MPIstop
     use scale_les_process, only: &
@@ -192,6 +195,7 @@ contains
     real(RP),               intent(in) :: FDY(JA-1)
     logical,                intent(in) :: enable_coriolis
     real(RP),               intent(in) :: lat(IA,JA)
+    logical, optional,      intent(in) :: none
 
     integer :: iv, iq
     !---------------------------------------------------------------------------
@@ -230,17 +234,25 @@ contains
     allocate( I_COMM_RHOQ_t(QA) )
     allocate( I_COMM_QTRC(QA) )
 
-    ! numerical diffusion
-    call ATMOS_DYN_filter_setup( &
-         num_diff, num_diff_q, & ! (inout)
-         CDZ, CDX, CDY, FDZ, FDX, FDY ) ! (in)
+    if ( present(none) ) then
+       DYN_NONE = none
+    end if
 
-    ! coriolis parameter
-    if ( enable_coriolis ) then
-       CORIOLI(:,:) = 2.0_RP * OHM * sin( lat(:,:) )
-    else
-       CORIOLI(:,:) = 0.0_RP
-    endif
+    if ( .not. DYN_NONE ) then
+
+       ! numerical diffusion
+       call ATMOS_DYN_filter_setup( &
+            num_diff, num_diff_q, & ! (inout)
+            CDZ, CDX, CDY, FDZ, FDX, FDY ) ! (in)
+       ! coriolis parameter
+       if ( enable_coriolis ) then
+          CORIOLI(:,:) = 2.0_RP * OHM * sin( lat(:,:) )
+       else
+          CORIOLI(:,:) = 0.0_RP
+       endif
+
+    end if
+
 
     BND_W = .not. PRC_HAS_W
     BND_E = .not. PRC_HAS_E
@@ -547,44 +559,140 @@ contains
 !OCL XFILL
     DENS00(:,:,:) = DENS(:,:,:)
 
-    if ( USE_AVERAGE ) then
+
+    if ( .not. DYN_NONE ) then
+
+       if ( USE_AVERAGE ) then
 !OCL XFILL
-       DENS_av(:,:,:) = 0.0_RP
+          DENS_av(:,:,:) = 0.0_RP
 !OCL XFILL
-       MOMZ_av(:,:,:) = 0.0_RP
+          MOMZ_av(:,:,:) = 0.0_RP
 !OCL XFILL
-       MOMX_av(:,:,:) = 0.0_RP
+          MOMX_av(:,:,:) = 0.0_RP
 !OCL XFILL
-       MOMY_av(:,:,:) = 0.0_RP
+          MOMY_av(:,:,:) = 0.0_RP
 !OCL XFILL
-       RHOT_av(:,:,:) = 0.0_RP
-    endif
+          RHOT_av(:,:,:) = 0.0_RP
+       endif
 
 #ifndef DRY
 !OCL XFILL
-    mflx_av(:,:,:,:) = 0.0_RP
+       mflx_av(:,:,:,:) = 0.0_RP
 
 !OCL XFILL
-    CVtot(:,:,:) = 0.0_RP
+       CVtot(:,:,:) = 0.0_RP
 !OCL XFILL
-    QDRY (:,:,:) = 1.0_RP
-    do iq = QQS, QQE
-       CVtot(:,:,:) = CVtot(:,:,:) + AQ_CV(iq) * QTRC(:,:,:,iq)
-       QDRY (:,:,:) = QDRY (:,:,:) - QTRC(:,:,:,iq)
-    enddo
-    CVtot(:,:,:) = CVdry * QDRY(:,:,:) + CVtot(:,:,:)
-    Rtot (:,:,:) = Rdry  * QDRY(:,:,:) + Rvap * QTRC(:,:,:,I_QV)
+       QDRY (:,:,:) = 1.0_RP
+       do iq = QQS, QQE
+          CVtot(:,:,:) = CVtot(:,:,:) + AQ_CV(iq) * QTRC(:,:,:,iq)
+          QDRY (:,:,:) = QDRY (:,:,:) - QTRC(:,:,:,iq)
+       enddo
+       CVtot(:,:,:) = CVdry * QDRY(:,:,:) + CVtot(:,:,:)
+       Rtot (:,:,:) = Rdry  * QDRY(:,:,:) + Rvap * QTRC(:,:,:,I_QV)
 #endif
 
 #ifdef HIST_TEND
-    damp_t(:,:,:) = 0.0_RP
+       damp_t(:,:,:) = 0.0_RP
 #endif
+
+    end if
 
     call PROF_rapend  ("DYN_Preparation", 2)
 
     !###########################################################################
     ! Update DENS,MONZ,MOMX,MOMY,MOMZ,RHOT
     !###########################################################################
+
+    if ( DYN_NONE ) then
+
+       call PROF_rapstart("DYN_integ", 2)
+
+       dt = real(DTSEC_ATMOS_DYN * NSTEP_ATMOS_DYN,kind=RP)
+
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          DENS(k,i,j) = DENS(k,i,j) + DENS_tp(k,i,j) * dt
+       end do
+       end do
+       end do
+
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          MOMZ(k,i,j) = MOMZ(k,i,j) + MOMZ_tp(k,i,j) * dt
+       end do
+       end do
+       end do
+
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          MOMX(k,i,j) = MOMX(k,i,j) + MOMX_tp(k,i,j) * dt
+       end do
+       end do
+       end do
+
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          MOMY(k,i,j) = MOMY(k,i,j) + MOMY_tp(k,i,j) * dt
+       end do
+       end do
+       end do
+
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          RHOT(k,i,j) = RHOT(k,i,j) + RHOT_tp(k,i,j) * dt
+       end do
+       end do
+       end do
+
+       do iq = 1, QA
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          QTRC(k,i,j,iq) = max( 0.0_RP, &
+                                QTRC(k,i,j,iq) * DENS00(k,i,j) + RHOQ_tp(k,i,j,iq) * dt &
+                              ) / DENS(k,i,j)
+       end do
+       end do
+       end do
+       end do
+
+
+       call COMM_vars8( DENS(:,:,:), I_COMM_DENS )
+       call COMM_vars8( MOMZ(:,:,:), I_COMM_MOMZ )
+       call COMM_vars8( MOMX(:,:,:), I_COMM_MOMX )
+       call COMM_vars8( MOMY(:,:,:), I_COMM_MOMY )
+       call COMM_vars8( RHOT(:,:,:), I_COMM_RHOT )
+       do iq = 1, QA
+          call COMM_vars8( QTRC(:,:,:,iq), I_COMM_QTRC(iq) )
+       enddo
+       call COMM_wait ( DENS(:,:,:), I_COMM_DENS, .false. )
+       call COMM_wait ( MOMZ(:,:,:), I_COMM_MOMZ, .false. )
+       call COMM_wait ( MOMX(:,:,:), I_COMM_MOMX, .false. )
+       call COMM_wait ( MOMY(:,:,:), I_COMM_MOMY, .false. )
+       call COMM_wait ( RHOT(:,:,:), I_COMM_RHOT, .false. )
+       do iq = 1, QA
+          call COMM_wait ( QTRC(:,:,:,iq), I_COMM_QTRC(iq), .false. )
+       enddo
+
+       if ( USE_AVERAGE ) then
+          DENS_av(:,:,:) = DENS(:,:,:)
+          MOMZ_av(:,:,:) = MOMZ(:,:,:)
+          MOMX_av(:,:,:) = MOMX(:,:,:)
+          MOMY_av(:,:,:) = MOMY(:,:,:)
+          RHOT_av(:,:,:) = RHOT(:,:,:)
+          QTRC_av(:,:,:,:) = QTRC(:,:,:,:)
+       end if
+
+       call PROF_rapend("DYN_integ", 2)
+
+       return
+    end if ! if DYN_NONE == .true.
+
 
     call PROF_rapstart("DYN_Tendency", 2)
 

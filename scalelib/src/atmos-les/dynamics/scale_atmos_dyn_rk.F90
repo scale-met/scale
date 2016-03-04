@@ -241,8 +241,10 @@ contains
             VAR_NAME, VAR_DESC, VAR_UNIT )
        ATMOS_DYN_rk_setup => ATMOS_DYN_rk_none_setup
        ATMOS_DYN_rk => ATMOS_DYN_rk_none
+    case ( 'OFF' )
+       ! do nothing
     case default
-       write(*,*) 'xxx ATMOS_DYN_TYPE is invalid', ATMOS_DYN_TYPE
+       write(*,*) 'xxx ATMOS_DYN_TYPE is invalid: ', ATMOS_DYN_TYPE
        call PRC_MPIstop
     end select
 #endif

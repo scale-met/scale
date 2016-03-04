@@ -86,7 +86,8 @@ contains
     use scale_atmos_dyn, only: &
        ATMOS_DYN_setup
     use mod_atmos_admin, only: &
-       ATMOS_sw_dyn
+       ATMOS_sw_dyn, &
+       ATMOS_DYN_TYPE
     use mod_atmos_vars, only: &
        DENS, &
        MOMZ, &
@@ -139,7 +140,8 @@ contains
                              GRID_CDZ, GRID_CDX, GRID_CDY,   & ! [IN]
                              GRID_FDZ, GRID_FDX, GRID_FDY,   & ! [IN]
                              ATMOS_DYN_enable_coriolis,      & ! [IN]
-                             REAL_LAT                        ) ! [IN]
+                             REAL_LAT,                       & ! [IN]
+                             none = ATMOS_DYN_TYPE=='NONE'   ) ! [IN]
     endif
 
     return
