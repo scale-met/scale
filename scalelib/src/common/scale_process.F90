@@ -37,6 +37,7 @@ module scale_process
   public :: PRC_MPIsplit
   public :: PRC_MPIsplit_letkf
 
+  public :: PRC_MPIbarrier
   public :: PRC_MPItime
   public :: PRC_MPItimestat
 
@@ -688,6 +689,20 @@ contains
     return
   end subroutine PRC_sort_ascd
   !-----------------------------------------------------------------------------
+
+  !-----------------------------------------------------------------------------
+  !> Barrier MPI
+  subroutine PRC_MPIbarrier
+    implicit none
+
+    integer  :: ierr
+    !---------------------------------------------------------------------------
+
+    if ( PRC_mpi_alive ) then
+       call MPI_barrier(PRC_LOCAL_COMM_WORLD,ierr)
+    endif
+
+  end subroutine PRC_MPIbarrier
 
   !-----------------------------------------------------------------------------
   !> Get MPI time

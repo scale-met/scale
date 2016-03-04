@@ -1967,8 +1967,6 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
       BND_QA      ) ! [in]
     use scale_process, only: &
        PRC_MPIstop
-    use scale_comm, only: &
-       COMM_barrier
     implicit none
 
     integer, intent(in) :: HANDLE    !< id number of nesting relation in this process target
@@ -2001,9 +1999,6 @@ if( IO_L ) write(IO_FID_LOG,*) "ONLINE_IAM_PARENT", ONLINE_IAM_PARENT, "ONLINE_I
        else
           call MPI_BARRIER(INTERCOMM_DAUGHTER, ierr)
        endif
-
-       ! tentative insert: evaluate node imbalance of parent due to the P-C comm.
-       ! call COMM_barrier
 
        call PROF_rapend  ('NEST_wait_P', 2)
 

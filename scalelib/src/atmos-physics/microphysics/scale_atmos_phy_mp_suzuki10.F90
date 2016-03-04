@@ -695,10 +695,6 @@ contains
        MP_precipitation  => ATMOS_PHY_MP_precipitation
     use scale_history, only: &
        HIST_in
-    use scale_comm, only: &
-       COMM_barrier
-!    use scale_grid, only: &
-!       GRID_CDZ
     implicit none
 
     real(RP), intent(inout) :: DENS(KA,IA,JA)
@@ -1073,10 +1069,6 @@ contains
     call PROF_rapend  ('MP_ijkconvert', 3)
 
     endif
-
-    call PROF_rapstart('MP_barrier', 3)
-    call COMM_barrier
-    call PROF_rapend  ('MP_barrier', 3)
 
     FLX_rain(:,:,:) = 0.0_RP
     FLX_snow(:,:,:) = 0.0_RP

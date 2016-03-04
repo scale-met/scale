@@ -56,7 +56,6 @@ module scale_comm
   !++ Public procedure
   !
   public :: COMM_setup
-  public :: COMM_barrier
   public :: COMM_vars_init
   public :: COMM_vars8_init
   public :: COMM_vars
@@ -275,21 +274,6 @@ contains
 
     return
   end subroutine COMM_setup
-
-  !-----------------------------------------------------------------------------
-  !> MPI_Barrier for Local domain
-  subroutine COMM_barrier
-    implicit none
-
-    integer :: ierr
-    !---------------------------------------------------------------------------
-
-    call PROF_rapstart('COMM_barrier', 2)
-    call MPI_BARRIER(COMM_world,ierr)
-    call PROF_rapend  ('COMM_barrier', 2)
-
-    return
-  end subroutine COMM_barrier
 
   !-----------------------------------------------------------------------------
   !> Register variables
