@@ -1578,7 +1578,7 @@ contains
 
     real(DP) :: ts, te
 
-    integer :: error
+    integer :: error, n
     character(len=100) :: str
     !---------------------------------------------------------------------------
 
@@ -1587,7 +1587,12 @@ contains
     call file_write_data( vid, var(:), ts, te, SP, & ! (in)
          error                                     ) ! (out)
     if ( error /= SUCCESS_CODE ) then
-       write(str,*) 'xxx failed to write data: ', trim(File_vname_list(vid)), mpi_myrank
+       do n = 1, File_vid_count
+          if ( File_vid_list(n) == vid ) then
+             write(str,*) 'xxx failed to write data: ', trim(File_vname_list(n)), mpi_myrank
+             exit
+          end if
+       enddo
        call Log('E', trim(str))
     end if
 
@@ -1608,7 +1613,7 @@ contains
 
     real(DP) :: ts, te
 
-    integer :: error
+    integer :: error, n
     character(len=100) :: str
     !---------------------------------------------------------------------------
 
@@ -1617,7 +1622,12 @@ contains
     call file_write_data( vid, var(:), ts, te, DP, & ! (in)
          error                                     ) ! (out)
     if ( error /= SUCCESS_CODE ) then
-       write(str,*) 'xxx failed to write data: ', trim(File_vname_list(vid)), mpi_myrank
+       do n = 1, File_vid_count
+          if ( File_vid_list(n) == vid ) then
+             write(str,*) 'xxx failed to write data: ', trim(File_vname_list(n)), mpi_myrank
+             exit
+          end if
+       enddo
        call Log('E', trim(str))
     end if
 
@@ -1638,7 +1648,7 @@ contains
 
     real(DP) :: ts, te
 
-    integer :: error
+    integer :: error, n
     character(len=100) :: str
     !---------------------------------------------------------------------------
 
@@ -1647,7 +1657,12 @@ contains
     call file_write_data( vid, var(:,:), ts, te, SP, & ! (in)
          error                                     ) ! (out)
     if ( error /= SUCCESS_CODE ) then
-       write(str,*) 'xxx failed to write data: ', trim(File_vname_list(vid)), mpi_myrank
+       do n = 1, File_vid_count
+          if ( File_vid_list(n) == vid ) then
+             write(str,*) 'xxx failed to write data: ', trim(File_vname_list(n)), mpi_myrank
+             exit
+          end if
+       enddo
        call Log('E', trim(str))
     end if
 
@@ -1668,7 +1683,7 @@ contains
 
     real(DP) :: ts, te
 
-    integer :: error
+    integer :: error, n
     character(len=100) :: str
     !---------------------------------------------------------------------------
 
@@ -1677,7 +1692,12 @@ contains
     call file_write_data( vid, var(:,:), ts, te, DP, & ! (in)
          error                                     ) ! (out)
     if ( error /= SUCCESS_CODE ) then
-       write(str,*) 'xxx failed to write data: ', trim(File_vname_list(vid)), mpi_myrank
+       do n = 1, File_vid_count
+          if ( File_vid_list(n) == vid ) then
+             write(str,*) 'xxx failed to write data: ', trim(File_vname_list(n)), mpi_myrank
+             exit
+          end if
+       enddo
        call Log('E', trim(str))
     end if
 
@@ -1698,7 +1718,7 @@ contains
 
     real(DP) :: ts, te
 
-    integer :: error
+    integer :: error, n
     character(len=100) :: str
     !---------------------------------------------------------------------------
 
@@ -1707,7 +1727,12 @@ contains
     call file_write_data( vid, var(:,:,:), ts, te, SP, & ! (in)
          error                                     ) ! (out)
     if ( error /= SUCCESS_CODE ) then
-       write(str,*) 'xxx failed to write data: ', trim(File_vname_list(vid)), mpi_myrank
+       do n = 1, File_vid_count
+          if ( File_vid_list(n) == vid ) then
+             write(str,*) 'xxx failed to write data: ', trim(File_vname_list(n)), mpi_myrank
+             exit
+          end if
+       enddo
        call Log('E', trim(str))
     end if
 
@@ -1728,7 +1753,7 @@ contains
 
     real(DP) :: ts, te
 
-    integer :: error
+    integer :: error, n
     character(len=100) :: str
     !---------------------------------------------------------------------------
 
@@ -1737,7 +1762,12 @@ contains
     call file_write_data( vid, var(:,:,:), ts, te, DP, & ! (in)
          error                                     ) ! (out)
     if ( error /= SUCCESS_CODE ) then
-       write(str,*) 'xxx failed to write data: ', trim(File_vname_list(vid)), mpi_myrank
+       do n = 1, File_vid_count
+          if ( File_vid_list(n) == vid ) then
+             write(str,*) 'xxx failed to write data: ', trim(File_vname_list(n)), mpi_myrank
+             exit
+          end if
+       enddo
        call Log('E', trim(str))
     end if
 
@@ -1758,7 +1788,7 @@ contains
 
     real(DP) :: ts, te
 
-    integer :: error
+    integer :: error, n
     character(len=100) :: str
     !---------------------------------------------------------------------------
 
@@ -1767,7 +1797,12 @@ contains
     call file_write_data( vid, var(:,:,:,:), ts, te, SP, & ! (in)
          error                                     ) ! (out)
     if ( error /= SUCCESS_CODE ) then
-       write(str,*) 'xxx failed to write data: ', trim(File_vname_list(vid)), mpi_myrank
+       do n = 1, File_vid_count
+          if ( File_vid_list(n) == vid ) then
+             write(str,*) 'xxx failed to write data: ', trim(File_vname_list(n)), mpi_myrank
+             exit
+          end if
+       enddo
        call Log('E', trim(str))
     end if
 
@@ -1788,7 +1823,7 @@ contains
 
     real(DP) :: ts, te
 
-    integer :: error
+    integer :: error, n
     character(len=100) :: str
     !---------------------------------------------------------------------------
 
@@ -1797,7 +1832,12 @@ contains
     call file_write_data( vid, var(:,:,:,:), ts, te, DP, & ! (in)
          error                                     ) ! (out)
     if ( error /= SUCCESS_CODE ) then
-       write(str,*) 'xxx failed to write data: ', trim(File_vname_list(vid)), mpi_myrank
+       do n = 1, File_vid_count
+          if ( File_vid_list(n) == vid ) then
+             write(str,*) 'xxx failed to write data: ', trim(File_vname_list(n)), mpi_myrank
+             exit
+          end if
+       enddo
        call Log('E', trim(str))
     end if
 
