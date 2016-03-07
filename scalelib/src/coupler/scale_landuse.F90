@@ -228,28 +228,28 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** Output landuse file ***'
 
        call FILEIO_write( LANDUSE_frac_land (:,:), LANDUSE_OUT_BASENAME, LANDUSE_OUT_TITLE, & ! [IN]
-                          'FRAC_LAND',  'LAND fraction',  '0-1', 'XY',   LANDUSE_OUT_DTYPE, & ! [IN]
+                          'FRAC_LAND',  'LAND fraction',  '1', 'XY',   LANDUSE_OUT_DTYPE, & ! [IN]
                           nozcoord=.true. )
 
        call FILEIO_write( LANDUSE_frac_lake (:,:), LANDUSE_OUT_BASENAME, LANDUSE_OUT_TITLE, & ! [IN]
-                          'FRAC_LAKE',  'LAKE fraction',  '0-1', 'XY',   LANDUSE_OUT_DTYPE, & ! [IN]
+                          'FRAC_LAKE',  'LAKE fraction',  '1', 'XY',   LANDUSE_OUT_DTYPE, & ! [IN]
                           nozcoord=.true. )
        call FILEIO_write( LANDUSE_frac_urban(:,:), LANDUSE_OUT_BASENAME, LANDUSE_OUT_TITLE, & ! [IN]
-                          'FRAC_URBAN', 'URBAN fraction', '0-1', 'XY',   LANDUSE_OUT_DTYPE, & ! [IN]
+                          'FRAC_URBAN', 'URBAN fraction', '1', 'XY',   LANDUSE_OUT_DTYPE, & ! [IN]
                           nozcoord=.true. )
 
        do p = 1, LANDUSE_PFT_mosaic
           write(varname,'(A8,I1.1)') 'FRAC_PFT', p
 
           call FILEIO_write( LANDUSE_frac_PFT(:,:,p), LANDUSE_OUT_BASENAME, LANDUSE_OUT_TITLE, & ! [IN]
-                             varname, 'PFT fraction', '0-1', 'XY',          LANDUSE_OUT_DTYPE, & ! [IN]
+                             varname, 'PFT fraction', '1', 'XY',          LANDUSE_OUT_DTYPE, & ! [IN]
                              nozcoord=.true. )
 
           write(varname,'(A9,I1.1)') 'INDEX_PFT', p
           temp(:,:) = real(LANDUSE_index_PFT(:,:,p),kind=RP)
 
           call FILEIO_write( temp(:,:), LANDUSE_OUT_BASENAME,   LANDUSE_OUT_TITLE, & ! [IN]
-                             varname, 'PFT index', 'IDX', 'XY', LANDUSE_OUT_DTYPE, & ! [IN]
+                             varname, 'PFT index', '1', 'XY', LANDUSE_OUT_DTYPE, & ! [IN]
                              nozcoord=.true. )
        enddo
 
