@@ -1504,18 +1504,13 @@ contains
 
           ! update Qv, Qi with limiter
           dq   = ( Pigen + Pidep ) * dt
+          qtmp = QTRC0(k,i,j,I_QV) - dq
           if ( dq > 0.0_RP ) then ! v->i
-             qtmp = QTRC0(k,i,j,I_QV) - dq
              qtmp = max( qtmp, QSATI(k,i,j) )
-             dq   = QTRC0(k,i,j,I_QV) - qtmp
           else                    ! i->v
-             qtmp = QTRC0(k,i,j,I_QV) - dq
              qtmp = min( qtmp, QSATI(k,i,j) )
-             dq   = QTRC0(k,i,j,I_QV) - qtmp
-             qtmp = QTRC0(k,i,j,I_QI) + dq
-             qtmp = max( qtmp, 0.0_RP )
-             dq   = qtmp - QTRC0(k,i,j,I_QI)
           endif
+          dq   = QTRC0(k,i,j,I_QV) - qtmp
           QTRC0 (k,i,j,I_QI) = QTRC0 (k,i,j,I_QI) + dq
           QTRC0 (k,i,j,I_QV) = QTRC0 (k,i,j,I_QV) - dq
           QTRC_t(k,i,j,I_QI) = QTRC_t(k,i,j,I_QI) + dq /dt
