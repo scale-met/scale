@@ -1511,6 +1511,9 @@ contains
              qtmp = min( qtmp, QSATI(k,i,j) )
           endif
           dq   = QTRC0(k,i,j,I_QV) - qtmp
+          qtmp = QTRC0(k,i,j,I_QI) + dq
+          qtmp = max( qtmp, 0.0_RP )
+          dq   = qtmp - QTRC0(k,i,j,I_QI)
           QTRC0 (k,i,j,I_QI) = QTRC0 (k,i,j,I_QI) + dq
           QTRC0 (k,i,j,I_QV) = QTRC0 (k,i,j,I_QV) - dq
           QTRC_t(k,i,j,I_QI) = QTRC_t(k,i,j,I_QI) + dq /dt
@@ -1533,6 +1536,9 @@ contains
 
           dq = sw * ( dens / DWATR * QTRC0(k,i,j,I_QC)**2 / (Nc(k,i,j)*1.E+6) ) &
                   * B_frz * ( exp(-A_frz*temc) - 1.0_RP ) * dt
+          qtmp = QTRC0(k,i,j,I_QC) - dq
+          qtmp = max( qtmp, 0.0_RP )
+          dq   = qtmp - QTRC0(k,i,j,I_QC)
           QTRC0 (k,i,j,I_QI) = QTRC0 (k,i,j,I_QI) + dq
           QTRC0 (k,i,j,I_QC) = QTRC0 (k,i,j,I_QC) - dq
           QTRC_t(k,i,j,I_QI) = QTRC_t(k,i,j,I_QI) + dq /dt
