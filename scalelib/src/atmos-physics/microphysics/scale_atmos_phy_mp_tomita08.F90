@@ -1538,7 +1538,7 @@ contains
                   * B_frz * ( exp(-A_frz*temc) - 1.0_RP ) * dt
           qtmp = QTRC0(k,i,j,I_QC) - dq
           qtmp = max( qtmp, 0.0_RP )
-          dq   = qtmp - QTRC0(k,i,j,I_QC)
+          dq   = QTRC0(k,i,j,I_QC) - qtmp
           QTRC0 (k,i,j,I_QI) = QTRC0 (k,i,j,I_QI) + dq
           QTRC0 (k,i,j,I_QC) = QTRC0 (k,i,j,I_QC) - dq
           QTRC_t(k,i,j,I_QI) = QTRC_t(k,i,j,I_QI) + dq /dt
