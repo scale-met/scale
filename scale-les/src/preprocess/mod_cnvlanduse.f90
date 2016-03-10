@@ -43,6 +43,7 @@ module mod_cnvlanduse
   !
   private :: CNVLANDUSE_GLCCv2
   private :: CNVLANDUSE_LU100M
+  private :: CNVLANDUSE_cal_fact
 
   !-----------------------------------------------------------------------------
   !
@@ -124,6 +125,9 @@ contains
           write(*,*) ' xxx Unsupported TYPE:', CNVLANDUSE_TYPE
           call PRC_MPIstop
        endselect
+
+       ! calculate landuse factors
+       call CNVLANDUSE_cal_fact
 
        if( IO_L ) write(IO_FID_LOG,*) '++++++ END   CONVERT LANDUSE DATA ++++++'
 
@@ -506,7 +510,7 @@ contains
   end subroutine CNVLANDUSE_GLCCv2
 
   !-----------------------------------------------------------------------------
-  !> Convert from DEM 50m mesh
+  !> Convert from KSJ landuse 100m mesh
   subroutine CNVLANDUSE_LU100M
     use scale_process, only: &
        PRC_MPIstop
@@ -867,5 +871,36 @@ contains
 
     return
   end subroutine CNVLANDUSE_LU100M
+
+  !-----------------------------------------------------------------------------
+  !> calculate main factor
+  subroutine CNVLANDUSE_cal_fact
+    use scale_process, only: &
+       PRC_MPIstop
+    use scale_landuse, only: &
+       LANDUSE_frac_land,  &
+       LANDUSE_frac_lake,  &
+       LANDUSE_frac_urban, &
+       LANDUSE_fact_ocean, &
+       LANDUSE_fact_land,  &
+       LANDUSE_fact_urban
+    implicit none
+
+    integer  :: i, j
+    !---------------------------------------------------------------------------
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '+++ calculate landuse factor'
+
+    ! tentative treatment for lake fraction
+    LANDUSE_frac_land(:,:) = LANDUSE_frac_land(:,:) * ( 1.0_RP - LANDUSE_frac_lake(:,:) )
+
+    ! make factors
+    LANDUSE_fact_ocean(:,:) = ( 1.0_RP - LANDUSE_frac_land(:,:) )
+    LANDUSE_fact_land (:,:) = (          LANDUSE_frac_land(:,:) ) * ( 1.0_RP - LANDUSE_frac_urban(:,:) )
+    LANDUSE_fact_urban(:,:) = (          LANDUSE_frac_land(:,:) ) * (          LANDUSE_frac_urban(:,:) )
+
+    return
+  end subroutine CNVLANDUSE_cal_fact
 
 end module mod_cnvlanduse
