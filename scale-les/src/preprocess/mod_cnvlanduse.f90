@@ -126,6 +126,9 @@ contains
           call PRC_MPIstop
        endselect
 
+       ! calculate landuse factors
+       call CNVLANDUSE_cal_fact
+
        if( IO_L ) write(IO_FID_LOG,*) '++++++ END   CONVERT LANDUSE DATA ++++++'
 
        ! output landuse file
@@ -503,9 +506,6 @@ contains
        enddo
     endif
 
-    ! calculate landuse factors
-    call CNVLANDUSE_cal_fact
-
     return
   end subroutine CNVLANDUSE_GLCCv2
 
@@ -868,9 +868,6 @@ contains
        enddo
        enddo
     endif
-
-    ! calculate landuse factors
-    call CNVLANDUSE_cal_fact
 
     return
   end subroutine CNVLANDUSE_LU100M
