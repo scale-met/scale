@@ -112,6 +112,13 @@ contains
     LANDUSE_frac_PFT (:,:,1) = 1.0_RP ! tentative, mosaic is off
     LANDUSE_index_PFT(:,:,:) = 1      ! default
 
+    allocate( LANDUSE_fact_ocean(IA,JA) )
+    allocate( LANDUSE_fact_land (IA,JA) )
+    allocate( LANDUSE_fact_urban(IA,JA) )
+    LANDUSE_fact_ocean(:,:) = 0.0_RP
+    LANDUSE_fact_land (:,:) = 0.0_RP
+    LANDUSE_fact_urban(:,:) = 0.0_RP
+
     ! read from file
     call LANDUSE_read
 
@@ -130,17 +137,6 @@ contains
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** Assume all grids are ocean'
     endif
-
-    ! tentative treatment for lake fraction
-    LANDUSE_frac_land(:,:) = LANDUSE_frac_land(:,:) * ( 1.0_RP - LANDUSE_frac_lake(:,:) )
-
-    ! make factors
-    allocate( LANDUSE_fact_ocean(IA,JA) )
-    allocate( LANDUSE_fact_land (IA,JA) )
-    allocate( LANDUSE_fact_urban(IA,JA) )
-    LANDUSE_fact_ocean(:,:) = ( 1.0_RP - LANDUSE_frac_land(:,:) )
-    LANDUSE_fact_land (:,:) = (          LANDUSE_frac_land(:,:) ) * ( 1.0_RP - LANDUSE_frac_urban(:,:) )
-    LANDUSE_fact_urban(:,:) = (          LANDUSE_frac_land(:,:) ) * (          LANDUSE_frac_urban(:,:) )
 
     return
   end subroutine LANDUSE_setup
@@ -180,13 +176,27 @@ contains
        call COMM_wait ( LANDUSE_frac_lake (:,:), 2 )
        call COMM_wait ( LANDUSE_frac_urban(:,:), 3 )
 
+       call FILEIO_read( LANDUSE_fact_ocean(:,:),                            & ! [OUT]
+                         LANDUSE_IN_BASENAME, 'FRAC_OCEAN_abs', 'XY', step=1 ) ! [IN]
+       call FILEIO_read( LANDUSE_fact_land(:,:),                             & ! [OUT]
+                         LANDUSE_IN_BASENAME, 'FRAC_LAND_abs',  'XY', step=1 ) ! [IN]
+       call FILEIO_read( LANDUSE_fact_urban(:,:),                            & ! [OUT]
+                         LANDUSE_IN_BASENAME, 'FRAC_URBAN_abs', 'XY', step=1 ) ! [IN]
+
+       call COMM_vars8( LANDUSE_fact_ocean(:,:), 4 )
+       call COMM_vars8( LANDUSE_fact_land (:,:), 5 )
+       call COMM_vars8( LANDUSE_fact_urban(:,:), 6 )
+       call COMM_wait ( LANDUSE_fact_ocean(:,:), 4 )
+       call COMM_wait ( LANDUSE_fact_land (:,:), 5 )
+       call COMM_wait ( LANDUSE_fact_urban(:,:), 6 )
+
        do p = 1, LANDUSE_PFT_mosaic
           write(varname,'(A8,I1.1)') 'FRAC_PFT', p
 
           call FILEIO_read( LANDUSE_frac_PFT(:,:,p),                   & ! [OUT]
                             LANDUSE_IN_BASENAME, varname, 'XY', step=1 ) ! [IN]
 
-          tag = 4 + (p-1)*LANDUSE_PFT_mosaic
+          tag = 7 + (p-1)*LANDUSE_PFT_mosaic
           call COMM_vars8( LANDUSE_frac_PFT (:,:,p), tag )
           call COMM_wait ( LANDUSE_frac_PFT (:,:,p), tag )
 
@@ -195,7 +205,7 @@ contains
           call FILEIO_read( temp(:,:),                                 & ! [OUT]
                             LANDUSE_IN_BASENAME, varname, 'XY', step=1 ) ! [IN]
 
-          tag = 5 + (p-1)*LANDUSE_PFT_mosaic
+          tag = 8 + (p-1)*LANDUSE_PFT_mosaic
           call COMM_vars8( temp(:,:), tag )
           call COMM_wait ( temp(:,:), tag )
 
@@ -253,6 +263,17 @@ contains
                              nozcoord=.true. )
        enddo
 
+       call FILEIO_write( LANDUSE_fact_ocean(:,:), LANDUSE_OUT_BASENAME, LANDUSE_OUT_TITLE, & ! [IN]
+                          'FRAC_OCEAN_abs', 'absolute OCEAN fraction',  '0-1', 'XY',   LANDUSE_OUT_DTYPE, & ! [IN]
+                          nozcoord=.true. )
+
+       call FILEIO_write( LANDUSE_fact_land (:,:), LANDUSE_OUT_BASENAME, LANDUSE_OUT_TITLE, & ! [IN]
+                          'FRAC_LAND_abs ', 'absolute LAND fraction',  '0-1', 'XY',   LANDUSE_OUT_DTYPE, & ! [IN]
+                          nozcoord=.true. )
+
+       call FILEIO_write( LANDUSE_fact_urban(:,:), LANDUSE_OUT_BASENAME, LANDUSE_OUT_TITLE, & ! [IN]
+                          'FRAC_URBAN_abs', 'absolute URBAN fraction',  '0-1', 'XY',   LANDUSE_OUT_DTYPE, & ! [IN]
+                          nozcoord=.true. )
     endif
 
     return
