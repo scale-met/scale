@@ -69,6 +69,8 @@ module scale_roughness
   !
   !++ Private procedure
   !
+  private :: ROUGHNESS_const_setup
+  private :: ROUGHNESS_const
   private :: ROUGHNESS_miller92_setup
   private :: ROUGHNESS_moon07_setup
   private :: ROUGHNESS_miller92
@@ -139,6 +141,9 @@ contains
     case ('MOON07')
        ROUGHNESS => ROUGHNESS_moon07
        call ROUGHNESS_moon07_setup
+    case ('CONST')
+       ROUGHNESS => ROUGHNESS_const
+       call ROUGHNESS_const_setup
     case default
        write(*,*) 'xxx invalid sea roughness length scheme (', trim(ROUGHNESS_TYPE), '). CHECK!'
        call PRC_MPIstop
@@ -207,6 +212,14 @@ contains
 
     return
   end subroutine ROUGHNESS_moon07_setup
+
+  !-----------------------------------------------------------------------------
+  subroutine ROUGHNESS_const_setup
+    implicit none
+    !---------------------------------------------------------------------------
+
+    return
+  end subroutine ROUGHNESS_const_setup
 
   !-----------------------------------------------------------------------------
   subroutine ROUGHNESS_miller92( &
@@ -372,5 +385,39 @@ contains
 
     return
   end subroutine ROUGHNESS_moon07
+
+  !-----------------------------------------------------------------------------
+  subroutine ROUGHNESS_const( &
+       Z0M_t, & ! [OUT]
+       Z0H_t, & ! [OUT]
+       Z0E_t, & ! [OUT]
+       Z0M,   & ! [IN]
+       Z0H,   & ! [IN]
+       Z0E,   & ! [IN]
+       UA,    & ! [IN]
+       VA,    & ! [IN]
+       Z1,    & ! [IN]
+       dt     ) ! [IN]
+    implicit none
+
+    ! arguments
+    real(RP), intent(out) :: Z0M_t(IA,JA) ! tendency of roughness length for momentum [m]
+    real(RP), intent(out) :: Z0H_t(IA,JA) ! tendency of roughness length for heat [m]
+    real(RP), intent(out) :: Z0E_t(IA,JA) ! tendency of roughness length for vapor [m]
+
+    real(RP), intent(in) :: Z0M(IA,JA) ! roughness length for momentum [m]
+    real(RP), intent(in) :: Z0H(IA,JA) ! roughness length for heat [m]
+    real(RP), intent(in) :: Z0E(IA,JA) ! roughness length for vapor [m]
+    real(RP), intent(in) :: UA (IA,JA) ! velocity u at the lowest atomspheric layer [m/s]
+    real(RP), intent(in) :: VA (IA,JA) ! velocity v at the lowest atomspheric layer [m/s]
+    real(RP), intent(in) :: Z1 (IA,JA) ! cell center height at the lowest atmospheric layer [m]
+    real(DP), intent(in) :: dt         ! delta time
+
+    Z0M_t(:,:) = 0.0_RP
+    Z0H_t(:,:) = 0.0_RP
+    Z0E_t(:,:) = 0.0_RP
+
+    return
+  end subroutine ROUGHNESS_const
 
 end module scale_roughness

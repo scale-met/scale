@@ -121,8 +121,9 @@ module mod_atmos_phy_sf_vars
                   'm',   &
                   'm'    /
 
-  real(RP), private :: ATMOS_PHY_SF_DEFAULT_SFC_TEMP
-  real(RP), private :: ATMOS_PHY_SF_DEFAULT_SFC_albedo
+  real(RP), private :: ATMOS_PHY_SF_DEFAULT_SFC_TEMP   = 300.0_RP
+  real(RP), private :: ATMOS_PHY_SF_DEFAULT_SFC_albedo = 0.4_RP
+  real(RP), private :: ATMOS_PHY_SF_DEFAULT_SFC_Z0     = 1E-4_RP
 
   !-----------------------------------------------------------------------------
 contains
@@ -142,7 +143,8 @@ contains
        ATMOS_PHY_SF_RESTART_OUT_TITLE,    &
        ATMOS_PHY_SF_RESTART_OUT_DTYPE,    &
        ATMOS_PHY_SF_DEFAULT_SFC_TEMP,     &
-       ATMOS_PHY_SF_DEFAULT_SFC_albedo
+       ATMOS_PHY_SF_DEFAULT_SFC_albedo,   &
+       ATMOS_PHY_SF_DEFAULT_SFC_Z0
 
     integer :: ierr
     integer :: iv
@@ -174,9 +176,6 @@ contains
     ATMOS_PHY_SF_SFC_Z0M   (:,:)   = UNDEF
     ATMOS_PHY_SF_SFC_Z0H   (:,:)   = UNDEF
     ATMOS_PHY_SF_SFC_Z0E   (:,:)   = UNDEF
-
-    ATMOS_PHY_SF_DEFAULT_SFC_TEMP   = UNDEF
-    ATMOS_PHY_SF_DEFAULT_SFC_albedo = UNDEF
 
     allocate( ATMOS_PHY_SF_SFC_DENS  (IA,JA)    )
     allocate( ATMOS_PHY_SF_SFC_PRES  (IA,JA)    )
@@ -221,6 +220,9 @@ contains
     ! [add] 2014/08/28 A.Noda
     ATMOS_PHY_SF_SFC_TEMP  (:,:)   = ATMOS_PHY_SF_DEFAULT_SFC_TEMP
     ATMOS_PHY_SF_SFC_albedo(:,:,:) = ATMOS_PHY_SF_DEFAULT_SFC_albedo
+    ATMOS_PHY_SF_SFC_Z0M   (:,:)   = ATMOS_PHY_SF_DEFAULT_SFC_Z0
+    ATMOS_PHY_SF_SFC_Z0H   (:,:)   = ATMOS_PHY_SF_DEFAULT_SFC_Z0
+    ATMOS_PHY_SF_SFC_Z0E   (:,:)   = ATMOS_PHY_SF_DEFAULT_SFC_Z0
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** [ATMOS_PHY_SF] prognostic/diagnostic variables'
@@ -323,6 +325,9 @@ contains
        if( IO_L ) write(IO_FID_LOG,*) '*** restart file for ATMOS_PHY_SF is not specified.'
        ATMOS_PHY_SF_SFC_TEMP  (:,:)   = ATMOS_PHY_SF_DEFAULT_SFC_TEMP
        ATMOS_PHY_SF_SFC_albedo(:,:,:) = ATMOS_PHY_SF_DEFAULT_SFC_albedo
+       ATMOS_PHY_SF_SFC_Z0M   (:,:)   = ATMOS_PHY_SF_DEFAULT_SFC_Z0
+       ATMOS_PHY_SF_SFC_Z0H   (:,:)   = ATMOS_PHY_SF_DEFAULT_SFC_Z0
+       ATMOS_PHY_SF_SFC_Z0E   (:,:)   = ATMOS_PHY_SF_DEFAULT_SFC_Z0
     endif
 
     return
