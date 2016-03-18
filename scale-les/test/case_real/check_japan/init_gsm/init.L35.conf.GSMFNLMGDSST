@@ -42,22 +42,24 @@
  MKINIT_initname = "REAL",
 /
 
-&PARAM_MKINIT_REAL
+&PARAM_MKINIT_REAL_ATMOS
+ BASENAME_ORG        = "namelist.grads_boundary.GSMFNLMGDSST",
  BASENAME_BOUNDARY   = "boundary",
  FILETYPE_ORG        = "GrADS",
  NUMBER_OF_FILES     = 12,
  NUMBER_OF_TSTEPS    = 1,
  BOUNDARY_UPDATE_DT  = 21600.D0,
- INTERP_SERC_DIV_NUM = 20,
+/
+
+&PARAM_MKINIT_REAL_LAND
  INTRP_LAND_SFC_TEMP = 'mask',
  INTRP_LAND_TEMP     = 'fill',
  INTRP_LAND_WATER    = 'fill',
- INTRP_OCEAN_SFC_TEMP = 'fill',
- INTRP_OCEAN_TEMP     = 'fill',
 /
 
-&PARAM_MKINIT_REAL_GrADS
- grads_boundary_namelist = "namelist.grads_boundary.GSMFNLMGDSST",
+&PARAM_MKINIT_REAL_OCEAN
+ INTRP_OCEAN_SFC_TEMP = 'fill',
+ INTRP_OCEAN_TEMP     = 'fill',
 /
 
 &PARAM_NEST

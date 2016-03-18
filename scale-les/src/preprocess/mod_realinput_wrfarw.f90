@@ -34,7 +34,11 @@ module mod_realinput_wrfarw
   public :: ParentAtomSetupWRFARW
   public :: ParentAtomOpenWRFARW
   public :: ParentAtomInputWRFARW
-  public :: ParentSurfaceInputWRFARW
+  public :: ParentLandSetupWRFARW
+  public :: ParentLandInputWRFARW
+  public :: ParentOceanSetupWRFARW
+  public :: ParentOceanOpenWRFARW
+  public :: ParentOceanInputWRFARW
 
   !-----------------------------------------------------------------------------
   !
@@ -80,7 +84,7 @@ module mod_realinput_wrfarw
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
-  !> Setup
+  !> Atmos Setup
   subroutine ParentAtomSetupWRFARW( &
       dims,    &
       timelen, &
@@ -90,7 +94,7 @@ contains
          ExternalFileGetShape
     implicit none
 
-    integer,               intent(out) :: dims(11)
+    integer,               intent(out) :: dims(6)
     integer,               intent(out) :: timelen
     character(len=H_LONG), intent(in) :: basename_org
 
@@ -114,15 +118,8 @@ contains
     endif
     if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_REAL_WRFARW)
 
-
     call ExternalFileGetShape( dims_wrf, timelen, mdlid, basename_org, myrank, single=.true. )
-    dims(1:7) = dims_wrf
-    ! land
-    dims(8)  = dims(2)
-    dims(9)  = dims(3)
-    ! sst
-    dims(10) = dims(2)
-    dims(11) = dims(3)
+    dims(1:6) = dims_wrf(1:6)
 
     if ( wrf_file_type ) then
        wrfout = .true.
@@ -141,9 +138,6 @@ contains
     allocate( read_zuy (dims(1),dims(5),dims(3),1) )
     allocate( read_zxv (dims(1),dims(2),dims(6),1) )
 
-    allocate( read_lzxy(dims(7),dims(8),dims(9),1) )
-    allocate( read_lz  (dims(7),1) )
-
     allocate( p_org    (dims(1),dims(2),dims(3)) )
     allocate( pb_org   (dims(1),dims(2),dims(3)) )
     allocate( ph_org   (dims(4),dims(2),dims(3)) )
@@ -156,7 +150,7 @@ contains
   subroutine ParentAtomOpenWRFARW
     implicit none
 
-    if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[realinput]/Categ[OpenWRFARW]'
+    if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[realinput]/Categ[AtomOpenWRFARW]'
     return
   end subroutine ParentAtomOpenWRFARW
 
@@ -195,7 +189,7 @@ contains
     real(RP),         intent(out) :: cz_org(:,:,:)
     character(len=*), intent(in)  :: basename
     integer,          intent(in)  :: mptype_parent
-    integer,          intent(in)  :: dims(7)
+    integer,          intent(in)  :: dims(6)
     integer,          intent(in)  :: it
 
     ! full level
@@ -430,23 +424,82 @@ contains
   end subroutine ParentAtomInputWRFARW
 
   !-----------------------------------------------------------------------------
-  subroutine ParentSurfaceInputWRFARW( &
+  !> Land Setup
+  subroutine ParentLandSetupWRFARW( &
+       ldims,    &
+      basename_land )
+    use scale_external_io, only: &
+         iWRFARW, &
+         ExternalFileGetShape
+    implicit none
+
+    integer,               intent(out) :: ldims(3)
+    character(len=H_LONG), intent(in) :: basename_land
+
+    logical :: WRF_FILE_TYPE = .false.   ! wrf filetype: T=wrfout, F=wrfrst
+
+    NAMELIST / PARAM_MKINIT_REAL_WRFARW / &
+         WRF_FILE_TYPE
+
+    integer :: dims_wrf(7)
+    integer :: timelen
+    integer :: ierr
+    !---------------------------------------------------------------------------
+
+    if( IO_L ) write(IO_FID_LOG,*) '+++ Real Case/Atom Input File Type: WRF-ARW'
+
+    !--- read namelist
+    rewind(IO_FID_CONF)
+    read(IO_FID_CONF,nml=PARAM_MKINIT_REAL_WRFARW,iostat=ierr)
+    if( ierr > 0 ) then
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_REAL_WRFARW. Check!'
+       call PRC_MPIstop
+    endif
+    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_REAL_WRFARW)
+
+
+    call ExternalFileGetShape( dims_wrf, timelen, mdlid, basename_land, myrank, single=.true. )
+    ldims(1) = dims_wrf(7)
+    ldims(2) = dims_wrf(2)
+    ldims(3) = dims_wrf(3)
+
+    if ( wrf_file_type ) then
+       wrfout = .true.
+       if( IO_L ) write(IO_FID_LOG,*) '+++ WRF-ARW FILE-TYPE: WRF History Output'
+    else
+       wrfout = .false.
+       if( IO_L ) write(IO_FID_LOG,*) '+++ WRF-ARW FILE-TYPE: WRF Restart'
+    endif
+
+
+    if ( .not. allocated(read_xy) ) then
+       allocate( read_xy  (        ldims(2),ldims(3),1) )
+    end if
+
+    allocate( read_lzxy(ldims(1),ldims(2),ldims(3),1) )
+    allocate( read_lz  (ldims(1),1) )
+
+    return
+  end subroutine ParentLandSetupWRFARW
+
+  !-----------------------------------------------------------------------------
+  subroutine ParentLandInputWRFARW( &
       tg_org,             &
       sh2o_org,           &
-      tw_org,             &
       lst_org,            &
       ust_org,            &
-      sst_org,            &
-      albw_org,           &
       albg_org,           &
-      z0w_org,            &
+      topo_org,           &
       lmask_org,          &
+      llon_org,           &
+      llat_org,           &
       lz_org,             &
       basename,           &
-      dims,               &
+      ldims,              &
       use_file_landwater, &
       it                  )
     use scale_const, only: &
+         D2R => CONST_D2R, &
          UNDEF => CONST_UNDEF, &
          I_LW => CONST_I_LW, &
          I_SW => CONST_I_SW
@@ -456,32 +509,40 @@ contains
     implicit none
     real(RP),         intent(out)  :: tg_org(:,:,:)
     real(RP),         intent(out)  :: sh2o_org(:,:,:)
-    real(RP),         intent(out)  :: tw_org(:,:)
     real(RP),         intent(out)  :: lst_org(:,:)
     real(RP),         intent(out)  :: ust_org(:,:)
-    real(RP),         intent(out)  :: sst_org(:,:)
-    real(RP),         intent(out)  :: albw_org(:,:,:)
     real(RP),         intent(out)  :: albg_org(:,:,:)
-    real(RP),         intent(out)  :: z0w_org(:,:)
+    real(RP),         intent(out)  :: topo_org(:,:)
     real(RP),         intent(out)  :: lmask_org(:,:)
+    real(RP),         intent(out)  :: llon_org(:,:)
+    real(RP),         intent(out)  :: llat_org(:,:)
     real(RP),         intent(out)  :: lz_org(:)
     character(len=*), intent( in)  :: basename
-    integer,          intent( in)  :: dims(11)
+    integer,          intent( in)  :: ldims(3)
     logical,          intent( in)  :: use_file_landwater   ! use land water data from files
     integer,          intent( in)  :: it
 
 
-    integer  :: k, i, j, iq, iqw
+    integer  :: k, i, j
 
     logical  :: existence
 
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[realinput]/Categ[InputWRF-Surface]'
+    if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[realinput]/Categ[LandInputWRF]'
+
+    call ExternalFileRead( read_xy(:,:,:),    BASENAME, "XLAT",    it, it, myrank, mdlid, single=.true.               )
+    llat_org (:,:) = read_xy(:,:,1) * D2R
+
+    call ExternalFileRead( read_xy(:,:,:),    BASENAME, "XLONG",   it, it, myrank, mdlid, single=.true.               )
+    llon_org (:,:) = read_xy(:,:,1) * D2R
+
+    call ExternalFileRead( read_xy(:,:,:),    BASENAME, "HGT",     it, it, myrank, mdlid, single=.true.               )
+    topo_org (:,:) = read_xy(:,:,1)
 
     ! depth
     call ExternalFileRead( read_lz(:,:),                               &
-                      BASENAME, "ZS",      it, 1, myrank, mdlid, dims(7), single=.true. )
+                      BASENAME, "ZS",      it, 1, myrank, mdlid, ldims(1), single=.true. )
     lz_org(:) = read_lz(:,1)
 
     ! land mask (1:land, 0:water)
@@ -516,13 +577,6 @@ contains
 !       enddo
 
 
-    ! SEA SURFACE TEMPERATURE [K]
-    call ExternalFileRead( read_xy(:,:,:),                             &
-                      BASENAME, "SST",  it, 1, myrank, mdlid, single=.true. )
-    sst_org(:,:) = read_xy(:,:,1)
-
-    tw_org(:,:) = sst_org(:,:)
-
     ! SURFACE SKIN TEMPERATURE [K]
     call ExternalFileRead( read_xy(:,:,:),                             &
                       BASENAME, "TSK",  it, 1, myrank, mdlid, single=.true. )
@@ -533,28 +587,16 @@ contains
     ! ALBEDO [-]
     call ExternalFileRead( read_xy(:,:,:),                             &
                       BASENAME, "ALBEDO",  it, 1, myrank, mdlid, single=.true. )
-    albw_org(:,:,I_SW) = read_xy(:,:,1)
-    albg_org(:,:,I_SW) = albw_org(:,:,I_SW)
+    albg_org(:,:,I_SW) = read_xy(:,:,1)
 
     ! SURFACE EMISSIVITY [-]
     call ExternalFileRead( read_xy(:,:,:),                             &
                       BASENAME, "EMISS",  it, 1, myrank, mdlid, single=.true. )
-    do j = 1, dims(9)
-    do i = 1, dims(8)
-       albw_org(i,j,I_LW) = 1.0_DP - read_xy(i,j,1)
+    do j = 1, ldims(3)
+    do i = 1, ldims(2)
        albg_org(i,j,I_LW) = 1.0_DP - read_xy(i,j,1)
     enddo
     enddo
-
-    ! TIME-VARYING ROUGHNESS LENGTH [m] (no wrfout-default)
-    call ExternalFileVarExistence( existence, BASENAME, "ZNT", myrank, mdlid, single=.true. )
-    if ( existence ) then
-       call ExternalFileRead( read_xy(:,:,:),                             &
-                         BASENAME, "ZNT",  it, 1, myrank, mdlid, single=.true. )
-       z0w_org(:,:) = read_xy(:,:,1)
-    else
-       z0w_org(:,:) = UNDEF
-    endif
 
 
 !    ! SNOW WATER EQUIVALENT [kg m-2] (no wrfout-default)
@@ -581,9 +623,158 @@ contains
 !       snowt_org(:,:) = UNDEFF
 !    endif
 
+    return
+  end subroutine ParentLandInputWRFARW
+
+  !-----------------------------------------------------------------------------
+  !> Ocean Setup
+  subroutine ParentOceanSetupWRFARW( &
+       odims,    &
+       timelen, &
+       basename_org )
+    use scale_external_io, only: &
+         iWRFARW, &
+         ExternalFileGetShape
+    implicit none
+
+    integer,               intent(out) :: odims(2)
+    integer,               intent(out) :: timelen
+    character(len=H_LONG), intent(in) :: basename_org
+
+    logical :: WRF_FILE_TYPE = .false.   ! wrf filetype: T=wrfout, F=wrfrst
+
+    NAMELIST / PARAM_MKINIT_REAL_WRFARW / &
+         WRF_FILE_TYPE
+
+    integer :: dims_wrf(7)
+    integer :: ierr
+    !---------------------------------------------------------------------------
+
+    if( IO_L ) write(IO_FID_LOG,*) '+++ Real Case/Ocean Input File Type: WRF-ARW'
+
+    !--- read namelist
+    rewind(IO_FID_CONF)
+    read(IO_FID_CONF,nml=PARAM_MKINIT_REAL_WRFARW,iostat=ierr)
+    if( ierr > 0 ) then
+       write(*,*) 'xxx Not appropriate names in namelist PARAM_MKINIT_REAL_WRFARW. Check!'
+       call PRC_MPIstop
+    endif
+    if( IO_LNML ) write(IO_FID_LOG,nml=PARAM_MKINIT_REAL_WRFARW)
+
+
+    call ExternalFileGetShape( dims_wrf, timelen, mdlid, basename_org, myrank, single=.true. )
+    odims(1) = dims_wrf(2)
+    odims(2) = dims_wrf(3)
+
+    if ( wrf_file_type ) then
+       wrfout = .true.
+       if( IO_L ) write(IO_FID_LOG,*) '+++ WRF-ARW FILE-TYPE: WRF History Output'
+    else
+       wrfout = .false.
+       if( IO_L ) write(IO_FID_LOG,*) '+++ WRF-ARW FILE-TYPE: WRF Restart'
+    endif
+
+
+    if ( .not. allocated(read_xy) ) then
+       allocate( read_xy  (        odims(1),odims(2),1) )
+    end if
 
     return
-  end subroutine ParentSurfaceInputWRFARW
+  end subroutine ParentOceanSetupWRFARW
+
+  !-----------------------------------------------------------------------------
+  subroutine ParentOceanOpenWRFARW
+    implicit none
+
+    if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[realinput]/Categ[OceanOpenWRFARW]'
+    return
+  end subroutine ParentOceanOpenWRFARW
+
+  !-----------------------------------------------------------------------------
+  subroutine ParentOceanInputWRFARW( &
+      tw_org,             &
+      sst_org,            &
+      albw_org,           &
+      z0w_org,            &
+      omask_org,          &
+      olon_org,           &
+      olat_org,           &
+      basename,           &
+      odims,              &
+      it                  )
+    use scale_const, only: &
+         D2R => CONST_D2R, &
+         UNDEF => CONST_UNDEF, &
+         I_LW => CONST_I_LW, &
+         I_SW => CONST_I_SW
+    use scale_external_io, only: &
+         ExternalFileRead, &
+         ExternalFileVarExistence
+    implicit none
+    real(RP),         intent(out)  :: tw_org(:,:)
+    real(RP),         intent(out)  :: sst_org(:,:)
+    real(RP),         intent(out)  :: albw_org(:,:,:)
+    real(RP),         intent(out)  :: z0w_org(:,:)
+    real(RP),         intent(out)  :: omask_org(:,:)
+    real(RP),         intent(out)  :: olon_org(:,:)
+    real(RP),         intent(out)  :: olat_org(:,:)
+    character(len=*), intent( in)  :: basename
+    integer,          intent( in)  :: odims(2)
+    integer,          intent( in)  :: it
+
+
+    integer  :: i, j
+
+    logical  :: existence
+
+    !---------------------------------------------------------------------------
+
+    if( IO_L ) write(IO_FID_LOG,*) '+++ ScaleLib/IO[realinput]/Categ[OceanInputWRF]'
+
+    call ExternalFileRead( read_xy(:,:,:),    BASENAME, "XLAT",    it, it, myrank, mdlid, single=.true.               )
+    olat_org (:,:) = read_xy(:,:,1) * D2R
+
+    call ExternalFileRead( read_xy(:,:,:),    BASENAME, "XLONG",   it, it, myrank, mdlid, single=.true.               )
+    olon_org (:,:) = read_xy(:,:,1) * D2R
+
+    ! land mask (1:land, 0:water)
+    call ExternalFileRead( read_xy(:,:,:),                             &
+                      BASENAME, "LANDMASK",  it, 1, myrank, mdlid, single=.true. )
+    omask_org(:,:) = read_xy(:,:,1)
+
+    ! SEA SURFACE TEMPERATURE [K]
+    call ExternalFileRead( read_xy(:,:,:),                             &
+                      BASENAME, "SST",  it, 1, myrank, mdlid, single=.true. )
+    sst_org(:,:) = read_xy(:,:,1)
+
+    tw_org(:,:) = sst_org(:,:)
+
+    ! ALBEDO [-]
+    call ExternalFileRead( read_xy(:,:,:),                             &
+                      BASENAME, "ALBEDO",  it, 1, myrank, mdlid, single=.true. )
+    albw_org(:,:,I_SW) = read_xy(:,:,1)
+
+    ! SURFACE EMISSIVITY [-]
+    call ExternalFileRead( read_xy(:,:,:),                             &
+                      BASENAME, "EMISS",  it, 1, myrank, mdlid, single=.true. )
+    do j = 1, odims(2)
+    do i = 1, odims(1)
+       albw_org(i,j,I_LW) = 1.0_DP - read_xy(i,j,1)
+    enddo
+    enddo
+
+    ! TIME-VARYING ROUGHNESS LENGTH [m] (no wrfout-default)
+    call ExternalFileVarExistence( existence, BASENAME, "ZNT", myrank, mdlid, single=.true. )
+    if ( existence ) then
+       call ExternalFileRead( read_xy(:,:,:),                             &
+                         BASENAME, "ZNT",  it, 1, myrank, mdlid, single=.true. )
+       z0w_org(:,:) = read_xy(:,:,1)
+    else
+       z0w_org(:,:) = UNDEF
+    endif
+
+    return
+  end subroutine ParentOceanInputWRFARW
 
   !-----------------------------------------------------------------------------
   !> convert vector varibles from map-projected grid on wrf model to lat-lon grid
