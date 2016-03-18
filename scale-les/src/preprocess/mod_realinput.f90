@@ -194,6 +194,7 @@ contains
          SERIAL_PROC_READ,       &
          USE_FILE_DENSITY
 
+    character(len=H_LONG) :: BASENAME_ATMOS    = ''
     character(len=H_LONG) :: BASENAME_WITHNUM  = ''
     character(len=5)      :: NUM               = ''
 
@@ -237,10 +238,16 @@ contains
        flg_bin = .false.
     endif
 
-    if ( FILETYPE_ORG .ne. "GrADS" .and. ( NUMBER_OF_FILES > 1 .or. BASENAME_ADD_NUM ) ) then
-       BASENAME_WITHNUM = trim(BASENAME_ORG)//"_00000"
+    if ( FILETYPE_ORG == "GrADS" ) then
+       BASENAME_WITHNUM = BASENAME_ORG ! namelist file name
+       BASENAME_ATMOS = ""
     else
-       BASENAME_WITHNUM = trim(BASENAME_ORG)
+       if ( NUMBER_OF_FILES > 1 .or. BASENAME_ADD_NUM ) then
+          BASENAME_WITHNUM = trim(BASENAME_ORG)//"_00000"
+       else
+          BASENAME_WITHNUM = trim(BASENAME_ORG)
+       end if
+       BASENAME_ATMOS = BASENAME_ORG
     end if
 
     call ParentAtomSetup( dims(:), timelen, mdlid, & ![OUT]
@@ -270,12 +277,9 @@ contains
     !--- read external file
     do n = 1, NUMBER_OF_FILES
 
-       if ( mdlid == iGrADS )then
+       if ( NUMBER_OF_FILES > 1 .or. BASENAME_ADD_NUM ) then
           write(NUM,'(I5.5)') n-1
-          BASENAME_WITHNUM = "_"//NUM
-       else if ( NUMBER_OF_FILES > 1 .or. BASENAME_ADD_NUM ) then
-          write(NUM,'(I5.5)') n-1
-          BASENAME_WITHNUM = trim(BASENAME_ORG)//"_"//NUM
+          BASENAME_WITHNUM = trim(BASENAME_ATMOS)//"_"//NUM
        else
           BASENAME_WITHNUM = trim(BASENAME_ORG)
        end if
@@ -414,7 +418,7 @@ contains
     integer                  :: INTRP_ITER_MAX       = 20
     character(len=H_SHORT)   :: SOILWATER_DS2VC      = 'limit'
     logical                  :: soilwater_DS2VC_flag           ! true: 'critical', false: 'limit'
-
+    logical                  :: elevation_collection = .true.
 
     NAMELIST / PARAM_MKINIT_REAL_LAND / &
          FILETYPE_ORG,           &
@@ -429,6 +433,7 @@ contains
          INTRP_LAND_SFC_TEMP,    &
          INTRP_ITER_MAX,         &
          SOILWATER_DS2VC,        &
+         ELEVATION_COLLECTION,   &
          SERIAL_PROC_READ
 
     NAMELIST / PARAM_MKINIT_REAL_OCEAN / &
@@ -586,18 +591,19 @@ contains
     allocate( OCEAN_SFC_albedo_ORG(IA,JA,2,1+NUMBER_OF_SKIP_TSTEPS:totaltimesteps   ) )
     allocate( OCEAN_SFC_Z0_ORG    (IA,JA,1+NUMBER_OF_SKIP_TSTEPS:totaltimesteps   ) )
 
-    if ( mdlid_land == iGrADS ) then
+    if ( mdlid_land == iGrADS .and. ( NUMBER_OF_FILES > 1 .or. BASENAME_ADD_NUM ) ) then
        write(NUM,'(I5.5)') lfn
        BASENAME_LAND = "_"//NUM
+    end if
+
+    if ( mdlid_ocean == iGrADS ) then
+       BASENAME_ORG = ""
     end if
 
     !--- read external file
     do n = 1, NUMBER_OF_FILES
 
-       if ( mdlid_ocean == iGrADS ) then
-          write(NUM,'(I5.5)') n-1
-          BASENAME_OCEAN = "_"//NUM
-       else if ( NUMBER_OF_FILES > 1 .or. BASENAME_ADD_NUM ) then
+       if ( NUMBER_OF_FILES > 1 .or. BASENAME_ADD_NUM ) then
           write(NUM,'(I5.5)') n-1
           BASENAME_OCEAN = trim(BASENAME_ORG)//"_"//NUM
        else
@@ -646,6 +652,7 @@ contains
                                 INIT_LANDWATER_RATIO,    &
                                 INTRP_ITER_MAX,          &
                                 SOILWATER_DS2VC_flag,    &
+                                elevation_collection,    &
                                 NUMBER_OF_TSTEPS,        &
                                 skip_steps, lit          )
 
@@ -1734,6 +1741,7 @@ contains
        init_landwater_ratio, &
        intrp_iter_max, &
        soilwater_ds2vc_flag, &
+       elevation_collection, &
        timelen,          &
        skiplen, &
        lit )
@@ -1808,6 +1816,7 @@ contains
                                                           ! if use_file_landwater is ".false."
     integer,          intent(in)  :: intrp_iter_max
     logical,          intent(in)  :: soilwater_ds2vc_flag
+    logical,          intent(in)  :: elevation_collection
     integer,          intent(in)  :: timelen          ! time steps in one file
     integer,          intent(in)  :: skiplen          ! skip steps
     integer,          intent(in)  :: lit
@@ -1915,6 +1924,7 @@ contains
           call COMM_bcast( ust_org, ldims(2), ldims(3) )
           call COMM_bcast( albg_org(:,:,I_LW), ldims(2), ldims(3) )
           call COMM_bcast( albg_org(:,:,I_SW), ldims(2), ldims(3) )
+          call COMM_bcast( topo_org, ldims(2), ldims(3) )
           call COMM_bcast( lmask_org, ldims(2), ldims(3) )
           call COMM_bcast( llon_org, ldims(2), ldims(3) )
           call COMM_bcast( llat_org, ldims(2), ldims(3) )
@@ -2112,15 +2122,17 @@ contains
                sst_org, & ! (in)
                lmask_org, & ! (in)
                lsmask_nest, & ! (in)
+               topo_org, & ! (in)
                lz_org, llon_org, llat_org, & ! (in)
                LCZ, LON, LAT, & ! (in)
                ldims, odims, & ! (in)
                maskval_tg, maskval_strg, & ! (in)
-               init_landwater_ratio, &
-               use_file_landwater, &
-               use_waterratio, &
-               soilwater_ds2vc_flag, &
-               intrp_iter_max )
+               init_landwater_ratio, & ! (in)
+               use_file_landwater, & ! (in)
+               use_waterratio, & ! (in)
+               soilwater_ds2vc_flag, & ! (in)
+               elevation_collection, & ! (in)
+               intrp_iter_max ) ! (in)
 
        end if ! first
 
@@ -2262,6 +2274,7 @@ contains
        sst_org,              &
        lmask_org,            &
        lsmask_nest,          &
+       topo_org,             &
        lz_org,               &
        llon_org,             &
        llat_org,             &
@@ -2276,13 +2289,17 @@ contains
        use_file_landwater,   &
        use_waterratio,       &
        soilwater_ds2vc_flag, &
+       elevation_collection, &
        intrp_iter_max        )
     use scale_process, only: &
          PRC_MPIstop
     use scale_const, only: &
          UNDEF => CONST_UNDEF, &
          I_SW => CONST_I_SW, &
-         I_LW => CONST_I_LW
+         I_LW => CONST_I_LW, &
+         LAPS => CONST_LAPS
+    use scale_topography, only: &
+         TOPO_Zsfc
     use mod_land_vars, only: &
          convert_WS2VWC
     implicit none
@@ -2301,6 +2318,7 @@ contains
     real(RP), intent(inout) :: sst_org(:,:)
     real(RP), intent(in)    :: lmask_org(:,:)
     real(RP), intent(in)    :: lsmask_nest(:,:)
+    real(RP), intent(in)    :: topo_org(:,:)
     real(RP), intent(in)    :: lz_org(:)
     real(RP), intent(in)    :: llon_org(:,:)
     real(RP), intent(in)    :: llat_org(:,:)
@@ -2315,6 +2333,7 @@ contains
     logical,  intent(in)    :: use_file_landwater
     logical,  intent(in)    :: use_waterratio
     logical,  intent(in)    :: soilwater_ds2vc_flag
+    logical,  intent(in)    :: elevation_collection
     integer,  intent(in)    :: intrp_iter_max
 
     real(RP) :: lmask(ldims(2), ldims(3))
@@ -2332,6 +2351,10 @@ contains
 
     real(RP) :: lz3d_org(ldims(1),ldims(2),ldims(3))
     real(RP) :: lcz_3D(LKMAX,IA,JA)
+
+    ! elevation collection
+    real(RP) :: topo(IA,JA)
+    real(RP) :: tdiff
 
     integer :: k, i, j
 
@@ -2458,7 +2481,6 @@ contains
                               jgrd  (:,:,:),     &
                               IA, JA, 1, LKMAX-1 )
 
-    ! interpolation
     do j = 1, JA
     do i = 1, IA
        tg(LKMAX,i,j) = tg(LKMAX-1,i,j)
@@ -2469,6 +2491,28 @@ contains
     do k = 1, LKMAX
        call replace_misval_const( tg(k,:,:), maskval_tg, lsmask_nest )
     enddo
+
+
+    ! elevation collection
+    if ( elevation_collection ) then
+       call INTRPNEST_interp_2d( topo(:,:),   topo_org(:,:),   hfact(:,:,:), &
+                                 igrd(:,:,:), jgrd(:,:,:), IA, JA )
+
+       do j = 1, JA
+       do i = 1, IA
+          if ( topo(i,j) > 0.0_RP ) then ! ignore UNDEF value
+             tdiff = ( TOPO_Zsfc(i,j) - topo(i,j) ) * LAPS
+             lst(i,j) = lst(i,j) - tdiff
+             ust(i,j) = ust(i,j) - tdiff
+             do k = 1, LKMAX
+                tg(k,i,j) = tg(k,i,j) - tdiff
+             end do
+          end if
+       end do
+       end do
+    end if
+
+
 
     ! Land water: interpolate over the ocean
     if( use_file_landwater )then
