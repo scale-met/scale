@@ -25,6 +25,7 @@ module scale_landuse
   !++ Public procedure
   !
   public :: LANDUSE_setup
+  public :: LANDUSE_calc_fact
   public :: LANDUSE_write
 
   !-----------------------------------------------------------------------------
@@ -123,24 +124,18 @@ contains
     if    ( LANDUSE_AllLand ) then
        if( IO_L ) write(IO_FID_LOG,*) '*** Assume all grids are land'
        LANDUSE_frac_land (:,:) = 1.0_RP
-       LANDUSE_fact_ocean(:,:) = 0.0_RP
-       LANDUSE_fact_land (:,:) = 1.0_RP
-       LANDUSE_fact_urban(:,:) = 0.0_RP
+       call LANDUSE_calc_fact
     elseif( LANDUSE_AllUrban ) then
        if( IO_L ) write(IO_FID_LOG,*) '*** Assume all grids are land'
        LANDUSE_frac_land (:,:) = 1.0_RP
        if( IO_L ) write(IO_FID_LOG,*) '*** Assume all lands are urban'
        LANDUSE_frac_urban(:,:) = 1.0_RP
-       LANDUSE_fact_ocean(:,:) = 0.0_RP
-       LANDUSE_fact_land (:,:) = 0.0_RP
-       LANDUSE_fact_urban(:,:) = 1.0_RP
+       call LANDUSE_calc_fact
     elseif( LANDUSE_MosaicWorld ) then
        if( IO_L ) write(IO_FID_LOG,*) '*** Assume all grids have ocean, land, and urban'
        LANDUSE_frac_land (:,:) = 0.5_RP
        LANDUSE_frac_urban(:,:) = 0.5_RP
-       LANDUSE_fact_ocean(:,:) = 0.5_RP
-       LANDUSE_fact_land (:,:) = 0.25_RP
-       LANDUSE_fact_urban(:,:) = 0.25_RP
+       call LANDUSE_calc_fact
     else
        ! read from file
        call LANDUSE_read
@@ -148,6 +143,23 @@ contains
 
     return
   end subroutine LANDUSE_setup
+
+  !-----------------------------------------------------------------------------
+  subroutine LANDUSE_calc_fact
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '+++ calculate landuse factor'
+
+    ! tentative treatment for lake fraction
+    LANDUSE_frac_land(:,:) = LANDUSE_frac_land(:,:) * ( 1.0_RP - LANDUSE_frac_lake(:,:) )
+
+    ! make factors
+    LANDUSE_fact_ocean(:,:) = ( 1.0_RP - LANDUSE_frac_land(:,:) )
+    LANDUSE_fact_land (:,:) = (          LANDUSE_frac_land(:,:) ) * ( 1.0_RP - LANDUSE_frac_urban(:,:) )
+    LANDUSE_fact_urban(:,:) = (          LANDUSE_frac_land(:,:) ) * (          LANDUSE_frac_urban(:,:) )
+
+    return
+  end subroutine LANDUSE_calc_fact
 
   !-----------------------------------------------------------------------------
   !> Read landuse data

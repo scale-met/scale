@@ -4448,6 +4448,7 @@ enddo
     use scale_les_process, only: &
        PRC_NUM_X
     use scale_landuse, only: &
+       LANDUSE_calc_fact, &
        LANDUSE_frac_land
     implicit none
 
@@ -4480,6 +4481,8 @@ enddo
     enddo
     enddo
 
+    call LANDUSE_calc_fact
+
     return
   end subroutine MKINIT_seabreeze
 
@@ -4489,6 +4492,7 @@ enddo
     use scale_les_process, only: &
        PRC_NUM_X
     use scale_landuse, only: &
+       LANDUSE_calc_fact, &
        LANDUSE_frac_land,    &
        LANDUSE_frac_urban
     implicit none
@@ -4523,6 +4527,8 @@ enddo
        endif
     enddo
     enddo
+
+    call LANDUSE_calc_fact
 
     return
   end subroutine MKINIT_heatisland
