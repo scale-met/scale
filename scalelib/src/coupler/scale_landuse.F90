@@ -115,27 +115,35 @@ contains
     allocate( LANDUSE_fact_ocean(IA,JA) )
     allocate( LANDUSE_fact_land (IA,JA) )
     allocate( LANDUSE_fact_urban(IA,JA) )
-    LANDUSE_fact_ocean(:,:) = 0.0_RP
+    LANDUSE_fact_ocean(:,:) = 1.0_RP
     LANDUSE_fact_land (:,:) = 0.0_RP
     LANDUSE_fact_urban(:,:) = 0.0_RP
 
-    ! read from file
-    call LANDUSE_read
 
     if    ( LANDUSE_AllLand ) then
        if( IO_L ) write(IO_FID_LOG,*) '*** Assume all grids are land'
        LANDUSE_frac_land (:,:) = 1.0_RP
+       LANDUSE_fact_ocean(:,:) = 0.0_RP
+       LANDUSE_fact_land (:,:) = 1.0_RP
+       LANDUSE_fact_urban(:,:) = 0.0_RP
     elseif( LANDUSE_AllUrban ) then
        if( IO_L ) write(IO_FID_LOG,*) '*** Assume all grids are land'
        LANDUSE_frac_land (:,:) = 1.0_RP
        if( IO_L ) write(IO_FID_LOG,*) '*** Assume all lands are urban'
        LANDUSE_frac_urban(:,:) = 1.0_RP
+       LANDUSE_fact_ocean(:,:) = 0.0_RP
+       LANDUSE_fact_land (:,:) = 0.0_RP
+       LANDUSE_fact_urban(:,:) = 1.0_RP
     elseif( LANDUSE_MosaicWorld ) then
        if( IO_L ) write(IO_FID_LOG,*) '*** Assume all grids have ocean, land, and urban'
        LANDUSE_frac_land (:,:) = 0.5_RP
        LANDUSE_frac_urban(:,:) = 0.5_RP
+       LANDUSE_fact_ocean(:,:) = 0.5_RP
+       LANDUSE_fact_land (:,:) = 0.25_RP
+       LANDUSE_fact_urban(:,:) = 0.25_RP
     else
-       if( IO_L ) write(IO_FID_LOG,*) '*** Assume all grids are ocean'
+       ! read from file
+       call LANDUSE_read
     endif
 
     return
@@ -214,6 +222,7 @@ contains
 
     else
        if( IO_L ) write(IO_FID_LOG,*) '*** landuse file is not specified.'
+       if( IO_L ) write(IO_FID_LOG,*) '*** Assume all grids are ocean'
     endif
 
     return
