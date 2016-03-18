@@ -41,6 +41,7 @@ module gtool_file
   public :: FileAddVariable
   public :: FileSetTAttr
   public :: FileGetShape
+  public :: FileGetAllDatainfo
   public :: FileRead
   public :: FileWrite
   public :: FileClose
@@ -907,6 +908,111 @@ contains
 
     return
   end subroutine FileGetShape
+
+  !-----------------------------------------------------------------------------
+  ! FileGetData
+  !-----------------------------------------------------------------------------
+  subroutine FileGetAllDatainfo( &
+      step_limit,  &
+      dim_limit,   &
+      basename,    &
+      varname,     &
+      myrank,      &
+      step_nmax,   &
+      description, &
+      unit,        &
+      datatype,    &
+      dim_rank,    &
+      dim_name,    &
+      dim_size,    &
+      time_start,  &
+      time_end,    &
+      single       )
+    implicit none
+
+    integer,                    intent(in)  :: step_limit
+    integer,                    intent(in)  :: dim_limit
+    character(len=*),           intent(in)  :: basename
+    character(len=*),           intent(in)  :: varname
+    integer,                    intent(in)  :: myrank
+    integer,                    intent(out) :: step_nmax
+    character(len=File_HMID),   intent(out) :: description
+    character(len=File_HSHORT), intent(out) :: unit
+    integer,                    intent(out) :: datatype
+    integer,                    intent(out) :: dim_rank
+    character(len=File_HSHORT), intent(out) :: dim_name  (dim_limit)
+    integer,                    intent(out) :: dim_size  (dim_limit)
+    real(DP),                   intent(out) :: time_start(step_limit)
+    real(DP),                   intent(out) :: time_end  (step_limit)
+
+    logical,                    intent(in), optional :: single
+
+    integer        :: fid
+    type(datainfo) :: dinfo
+
+    integer :: ndim
+    integer :: istep, idim
+    logical :: flag_first = .true.
+
+    integer :: error
+    logical :: single_ = .false.
+    !---------------------------------------------------------------------------
+
+    mpi_myrank = myrank
+
+    if ( present(single) ) single_ = single
+
+    !--- search/register file
+    call FileOpen( fid,        & ! [OUT]
+                   basename,   & ! [IN]
+                   File_FREAD, & ! [IN]
+                   single_     ) ! [IN]
+
+    ! initialize
+    description   = ""
+    unit          = ""
+    datatype      = -1
+    dim_rank      = -1
+    dim_name  (:) = ""
+    dim_size  (:) = -1
+    time_start(:) = RMISS
+    time_end  (:) = RMISS
+
+    do istep = 1, step_limit
+       !--- get data information
+       call file_get_datainfo( dinfo,   & ! [OUT]
+                               fid,     & ! [IN]
+                               varname, & ! [IN]
+                               istep-1, & ! [IN]
+                               error    ) ! [OUT]
+
+       !--- verify and exit
+       if ( error /= SUCCESS_CODE ) then
+          step_nmax = istep - 1
+          exit
+       endif
+
+       if ( flag_first ) then
+          flag_first = .false.
+
+          description = dinfo%description
+          unit        = dinfo%units
+          datatype    = dinfo%datatype
+          dim_rank    = dinfo%rank
+
+          ndim = min( dinfo%rank, dim_limit ) ! limit dimension rank
+          do idim = 1, ndim
+             dim_name(idim) = dinfo%dim_name(idim)
+             dim_size(idim) = dinfo%dim_size(idim)
+          enddo
+       endif
+
+       time_start(istep) = dinfo%time_start
+       time_end  (istep) = dinfo%time_end
+    enddo
+
+    return
+  end subroutine FileGetAllDatainfo
 
   !-----------------------------------------------------------------------------
   ! interface File_read

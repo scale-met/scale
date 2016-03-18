@@ -152,6 +152,7 @@ OBJS_NAME = $(scale_rdma)	\
 	scale_const.o	\
 	scale_debug.o	\
 	scale_external_io.o	\
+	scale_external_input.o	\
 	scale_fileio.o	\
 	scale_grid_cartesian.o	\
 	scale_grid_index.o	\
