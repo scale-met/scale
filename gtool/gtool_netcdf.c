@@ -225,6 +225,8 @@ int32_t file_get_datainfo( datainfo_t *dinfo,   // (out)
     CHECK_ERROR( nc_inq_varid(ncid, name, &varid) );
     idx[1] = 0;
     CHECK_ERROR( nc_get_var1_double(ncid, varid, idx, &(dinfo->time_start)) );
+    // units
+    CHECK_ERROR( nc_get_att_text(ncid, varid, "units", &(dinfo->time_units)) );
   } else {
   }
 

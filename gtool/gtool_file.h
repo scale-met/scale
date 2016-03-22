@@ -49,6 +49,7 @@ typedef struct{
   int32_t  step;
   real64_t time_start;
   real64_t time_end;
+  char     time_units[File_HSHORT];
   int32_t  fid;
 } datainfo_t; 
 

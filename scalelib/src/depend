@@ -49,7 +49,7 @@ $(OBJ_DIR)/scale_calendar.o: common/scale_calendar.F90 $(inc_index) $(DEPENDLIB)
 $(OBJ_DIR)/scale_comm.o: atmos-les/communication/scale_comm.F90 $(inc_index) $(DEPENDLIB) $(OBJ_DIR)/scale_const.o $(OBJ_DIR)/scale_grid_index.o $(OBJ_DIR)/scale_les_process.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_process.o $(OBJ_DIR)/scale_prof.o $(OBJ_DIR)/scale_stdio.o $(OBJ_DIR)/scale_tracer.o
 $(OBJ_DIR)/scale_const.o: common/scale_const.F90 $(inc_index) $(DEPENDLIB) $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_process.o $(OBJ_DIR)/scale_stdio.o
 $(OBJ_DIR)/scale_debug.o: common/scale_debug.F90 $(inc_index) $(DEPENDLIB) $(OBJ_DIR)/scale_const.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_process.o $(OBJ_DIR)/scale_prof.o $(OBJ_DIR)/scale_stdio.o
-$(OBJ_DIR)/scale_external_input.o: atmos-les/io/scale_external_input.F90 $(inc_index) $(DEPENDLIB) $(OBJ_DIR)/scale_calendar.o $(OBJ_DIR)/scale_grid_index.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_process.o $(OBJ_DIR)/scale_prof.o $(OBJ_DIR)/scale_stdio.o
+$(OBJ_DIR)/scale_external_input.o: atmos-les/io/scale_external_input.F90 $(inc_index) $(DEPENDLIB) $(OBJ_DIR)/scale_calendar.o $(OBJ_DIR)/scale_const.o $(OBJ_DIR)/scale_grid_index.o $(OBJ_DIR)/scale_land_grid_index.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_process.o $(OBJ_DIR)/scale_prof.o $(OBJ_DIR)/scale_stdio.o $(OBJ_DIR)/scale_time.o $(OBJ_DIR)/scale_urban_grid_index.o
 $(OBJ_DIR)/scale_external_io.o: io/scale_external_io.F90 $(inc_index) $(DEPENDLIB) $(OBJ_DIR)/scale_grid_index.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_process.o $(OBJ_DIR)/scale_stdio.o
 $(OBJ_DIR)/scale_fileio.o: atmos-les/io/scale_fileio.F90 $(inc_index) $(DEPENDLIB) $(OBJ_DIR)/scale_const.o $(OBJ_DIR)/scale_grid_cartesian.o $(OBJ_DIR)/scale_grid_index.o $(OBJ_DIR)/scale_land_grid.o $(OBJ_DIR)/scale_land_grid_index.o $(OBJ_DIR)/scale_les_process.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_process.o $(OBJ_DIR)/scale_prof.o $(OBJ_DIR)/scale_stdio.o $(OBJ_DIR)/scale_time.o $(OBJ_DIR)/scale_urban_grid.o $(OBJ_DIR)/scale_urban_grid_index.o
 $(OBJ_DIR)/scale_grid_cartesian.o: atmos-les/grid/scale_grid_cartesian.F90 $(inc_index) $(DEPENDLIB) $(OBJ_DIR)/scale_grid_index.o $(OBJ_DIR)/scale_les_process.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_process.o $(OBJ_DIR)/scale_prof.o $(OBJ_DIR)/scale_stdio.o
@@ -74,7 +74,8 @@ $(OBJ_DIR)/scale_les_statistics.o: atmos-les/communication/scale_les_statistics.
 $(OBJ_DIR)/scale_mapproj.o: atmos-les/grid/scale_mapproj.F90 $(inc_index) $(DEPENDLIB) $(OBJ_DIR)/scale_const.o $(OBJ_DIR)/scale_grid_index.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_process.o $(OBJ_DIR)/scale_prof.o $(OBJ_DIR)/scale_stdio.o
 $(OBJ_DIR)/scale_matrix.o: common/scale_matrix.F90 $(inc_index) $(DEPENDLIB) $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_stdio.o
 $(OBJ_DIR)/scale_monitor.o: io/scale_monitor.F90 $(inc_index) $(DEPENDLIB) $(OBJ_DIR)/scale_grid_index.o $(OBJ_DIR)/scale_les_statistics.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_process.o $(OBJ_DIR)/scale_prof.o $(OBJ_DIR)/scale_stdio.o $(OBJ_DIR)/scale_time.o
-$(OBJ_DIR)/scale_ocean_phy.o: ocean/scale_ocean_phy.F90 $(inc_index) $(DEPENDLIB) $(OBJ_DIR)/scale_grid_index.o $(OBJ_DIR)/scale_ocean_phy_slab.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_process.o $(OBJ_DIR)/scale_prof.o $(OBJ_DIR)/scale_stdio.o
+$(OBJ_DIR)/scale_ocean_phy.o: ocean/scale_ocean_phy.F90 $(inc_index) $(DEPENDLIB) $(OBJ_DIR)/scale_grid_index.o $(OBJ_DIR)/scale_ocean_phy_file.o $(OBJ_DIR)/scale_ocean_phy_slab.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_process.o $(OBJ_DIR)/scale_prof.o $(OBJ_DIR)/scale_stdio.o
+$(OBJ_DIR)/scale_ocean_phy_file.o: ocean/scale_ocean_phy_file.F90 $(inc_index) $(DEPENDLIB) $(OBJ_DIR)/scale_debug.o $(OBJ_DIR)/scale_grid_index.o $(OBJ_DIR)/scale_landuse.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_process.o $(OBJ_DIR)/scale_prof.o $(OBJ_DIR)/scale_stdio.o
 $(OBJ_DIR)/scale_ocean_phy_slab.o: ocean/scale_ocean_phy_slab.F90 $(inc_index) $(DEPENDLIB) $(OBJ_DIR)/scale_const.o $(OBJ_DIR)/scale_debug.o $(OBJ_DIR)/scale_grid_index.o $(OBJ_DIR)/scale_landuse.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_process.o $(OBJ_DIR)/scale_prof.o $(OBJ_DIR)/scale_stdio.o
 $(OBJ_DIR)/scale_ocean_sfc.o: ocean/scale_ocean_sfc.F90 $(inc_index) $(DEPENDLIB) $(OBJ_DIR)/scale_grid_index.o $(OBJ_DIR)/scale_ocean_sfc_slab.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_process.o $(OBJ_DIR)/scale_stdio.o
 $(OBJ_DIR)/scale_ocean_sfc_slab.o: ocean/scale_ocean_sfc_slab.F90 $(inc_index) $(DEPENDLIB) $(OBJ_DIR)/scale_atmos_sub_saturation.o $(OBJ_DIR)/scale_atmos_sub_thermodyn.o $(OBJ_DIR)/scale_bulkflux.o $(OBJ_DIR)/scale_const.o $(OBJ_DIR)/scale_grid_index.o $(OBJ_DIR)/scale_landuse.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_process.o $(OBJ_DIR)/scale_stdio.o
@@ -167,6 +168,7 @@ MODS =	\
 	$(OBJ_DIR)/scale_matrix.mod	\
 	$(OBJ_DIR)/scale_monitor.mod	\
 	$(OBJ_DIR)/scale_ocean_phy.mod	\
+	$(OBJ_DIR)/scale_ocean_phy_file.mod	\
 	$(OBJ_DIR)/scale_ocean_phy_slab.mod	\
 	$(OBJ_DIR)/scale_ocean_sfc.mod	\
 	$(OBJ_DIR)/scale_ocean_sfc_slab.mod	\

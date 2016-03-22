@@ -110,6 +110,8 @@ contains
        MONIT_setup, &
        MONIT_write, &
        MONIT_finalize
+    use scale_external_input, only: &
+       EXTIN_setup
     use scale_atmos_hydrostatic, only: &
        ATMOS_HYDROSTATIC_setup
     use scale_atmos_thermodyn, only: &
@@ -272,6 +274,8 @@ contains
     call HIST_setup
     ! setup monitor I/O
     call MONIT_setup
+    ! setup external in
+    call EXTIN_setup
 
     ! setup nesting grid
     call NEST_setup ( intercomm_parent, intercomm_child )

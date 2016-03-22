@@ -35,6 +35,7 @@ module scale_calendar
   public :: CALENDAR_adjust_daysec
   public :: CALENDAR_combine_daysec
   public :: CALENDAR_unit2sec
+  public :: CALENDAR_CFunits2sec
   public :: CALENDAR_date2char
 
   !-----------------------------------------------------------------------------
@@ -389,6 +390,115 @@ contains
 
     return
   end subroutine CALENDAR_unit2sec
+
+  !-----------------------------------------------------------------------------
+  !> Convert time in units of the CF convention to second
+  function CALENDAR_CFunits2sec( cftime, cfunits, offset_year ) result( sec )
+    use scale_process, only: &
+       PRC_MPIstop
+    implicit none
+    real(DP),         intent(in) :: cftime
+    character(len=*), intent(in) :: cfunits
+    integer,          intent(in) :: offset_year
+    real(DP)                     :: sec
+
+    character(len=H_SHORT) :: tunit
+    character(len=H_SHORT) :: buf
+
+    integer  :: date(6)
+    integer  :: oyear
+    integer  :: day
+    real(DP) :: subsec
+    real(DP) :: sec0
+
+    integer :: l
+
+    intrinsic index
+
+    call CALENDAR_unit2sec(sec, cftime, tunit)
+
+    l = index(cfunits, " since ")
+    if ( l > 1 ) then
+       tunit = cfunits(1:l-1)
+       buf = cfunits(l+7:)
+
+       l = index(buf, "-")
+       if ( l .ne. 5 ) then
+          write(*,*) 'xxx units for time is invalid: ', cfunits
+          call PRC_MPIstop
+       end if
+       read( buf(1:4), *) date(1) ! year
+       buf = buf(6:)
+
+       l = index(buf, "-")
+       if ( l .ne. 3 ) then
+          write(*,*) 'xxx units for time is invalid: ', cfunits
+          call PRC_MPIstop
+       end if
+       read( buf(1:2), *) date(2) ! month
+       buf = buf(4:)
+
+       l = index(buf, " ")
+       if ( l .ne. 3 ) then
+          write(*,*) 'xxx units for time is invalid: ', cfunits
+          call PRC_MPIstop
+       end if
+       read( buf(1:2), *) date(3) ! day
+       buf = buf(4:)
+
+       l = index(buf, ":")
+       if ( l .ne. 3 ) then
+          write(*,*) 'xxx units for time is invalid: ', cfunits
+          call PRC_MPIstop
+       end if
+       read( buf(1:2), *) date(3) ! hour
+       buf = buf(4:)
+
+       l = index(buf, ":")
+       if ( l .ne. 3 ) then
+          write(*,*) 'xxx units for time is invalid: ', cfunits
+          call PRC_MPIstop
+       end if
+       read( buf(1:2), *) date(3) ! min
+       buf = buf(4:)
+
+       if ( len_trim(buf) .ne. 2 ) then
+          write(*,*) 'xxx units for time is invalid: ', cfunits
+          call PRC_MPIstop
+       end if
+       read( buf(1:2), *) date(3) ! sec
+
+       call CALENDAR_date2daysec( day,     & ! (out)
+                                  sec0,    & ! (out)
+                                  date(:), & ! (in)
+                                  subsec,  & ! (in)
+                                  0        ) ! (in)
+       sec = sec0 + sec
+
+    else
+       tunit = cfunits
+       oyear = offset_year
+       day = 0
+    end if
+
+    call CALENDAR_adjust_daysec( day, sec ) ! [INOUT]
+
+    call CALENDAR_daysec2date( date(:), & ! [OUT]
+                               subsec,  & ! [OUT]
+                               day,     & ! [IN]
+                               sec,     & ! [IN]
+                               oyear    ) ! [IN]
+
+    call CALENDAR_date2daysec( day,        & ! (out)
+                               sec,        & ! (out)
+                               date(:),    & ! (in)
+                               subsec,     & ! (in)
+                               offset_year ) ! (in)
+
+    sec = CALENDAR_combine_daysec( day, sec )
+
+    return
+  end function CALENDAR_CFunits2sec
 
   !-----------------------------------------------------------------------------
   !> Convert from gregorian date to absolute day/second
